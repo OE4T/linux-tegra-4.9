@@ -740,23 +740,23 @@ static long nvhost_channelctl(struct file *filp,
 	}
 	case NVHOST_IOCTL_CHANNEL_GET_SYNCPOINTS:
 	{
-		struct nvhost_device_data *pdata = \
-			platform_get_drvdata(priv->ch->dev);
+		struct nvhost_channel *ch = priv->ch;
 		((struct nvhost_get_param_args *)buf)->value =
-			create_mask(pdata->syncpts, NVHOST_MODULE_MAX_SYNCPTS);
+			create_mask(ch->syncpts, NVHOST_MODULE_MAX_SYNCPTS);
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_GET_SYNCPOINT:
 	{
-		struct nvhost_device_data *pdata = \
+		struct nvhost_device_data *pdata =
 			platform_get_drvdata(priv->ch->dev);
+		struct nvhost_channel *ch = priv->ch;
 		struct nvhost_get_param_arg *arg =
 			(struct nvhost_get_param_arg *)buf;
 		if (arg->param >= NVHOST_MODULE_MAX_SYNCPTS)
 			return -EINVAL;
 		/* if we already have required syncpt then return it ... */
-		if (pdata->syncpts[arg->param]) {
-			arg->value = pdata->syncpts[arg->param];
+		if (ch->syncpts[arg->param]) {
+			arg->value = ch->syncpts[arg->param];
 			break;
 		}
 		/* ... otherwise get a new syncpt dynamically */
@@ -765,7 +765,7 @@ static long nvhost_channelctl(struct file *filp,
 		if (!arg->value)
 			return -EAGAIN;
 		/* ... and store it for further references */
-		pdata->syncpts[arg->param] = arg->value;
+		ch->syncpts[arg->param] = arg->value;
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_GET_CLIENT_MANAGED_SYNCPOINT:

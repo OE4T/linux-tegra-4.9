@@ -419,12 +419,11 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 		struct nvhost_channel *ch)
 {
 	struct host1x_hwctx_handler *p = to_host1x_hwctx_handler(h);
-	struct nvhost_device_data *pdata = nvhost_get_devdata(ch->dev);
 
 	struct flcn *v = get_flcn(ch->dev);
 	struct host1x_hwctx *ctx;
 	u32 *ptr;
-	u32 syncpt = nvhost_get_devdata(ch->dev)->syncpts[0];
+	u32 syncpt = ch->syncpts[0];
 	u32 nvhost_flcn_restore_size = 10; /* number of words written below */
 
 	nvhost_dbg_fn("");
@@ -433,10 +432,9 @@ static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
 	if (!ctx)
 		return NULL;
 
-	syncpt = pdata->syncpts[0];
 	if (!syncpt) {
 		syncpt = nvhost_get_syncpt_host_managed(ch->dev, 0);
-		pdata->syncpts[0] = syncpt;
+		ch->syncpts[0] = syncpt;
 	}
 	h->syncpt = syncpt;
 

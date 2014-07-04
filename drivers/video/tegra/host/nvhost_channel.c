@@ -173,20 +173,15 @@ int nvhost_channel_unmap(struct nvhost_channel *ch)
 
 		if (pdata->deinit)
 			pdata->deinit(ch->dev);
-
-		/*
-		 * when ALL of the channels are unmapped from device,
-		 * we can free all the host managed syncpts assigned
-		 * to that device
-		 */
-		for (i = 0; i < NVHOST_MODULE_MAX_SYNCPTS; ++i) {
-			if (pdata->syncpts[i]) {
-				nvhost_free_syncpt(pdata->syncpts[i]);
-				pdata->syncpts[i] = 0;
-			}
-		}
 	}
 
+	/* Release channel syncpoinits */
+	for (i = 0; i < NVHOST_MODULE_MAX_SYNCPTS; ++i) {
+		if (ch->syncpts[i]) {
+			nvhost_free_syncpt(ch->syncpts[i]);
+			ch->syncpts[i] = 0;
+		}
+	}
 	clear_bit(ch->chid, &host->allocated_channels);
 
 	ch->chid = NVHOST_INVALID_CHANNEL;

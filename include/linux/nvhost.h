@@ -119,7 +119,6 @@ struct nvhost_device_data {
 	void __iomem	*aperture[NVHOST_MODULE_MAX_IORESOURCE_MEM];
 	struct device_dma_parameters dma_parms;
 
-	u32		syncpts[NVHOST_MODULE_MAX_SYNCPTS];
 	u32		client_managed_syncpt;
 	u32		modulemutexes[NVHOST_MODULE_MAX_MODMUTEXES];
 	u32		moduleid;	/* Module id for user space API */

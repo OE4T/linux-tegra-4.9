@@ -67,6 +67,9 @@ struct nvhost_channel {
 	struct dma_buf *error_notifier_ref;
 	struct nvhost_notification *error_notifier;
 	void *error_notifier_va;
+
+	/* channel syncpoints */
+	u32 syncpts[NVHOST_MODULE_MAX_SYNCPTS];
 };
 
 #define channel_op(ch)		(ch->ops)

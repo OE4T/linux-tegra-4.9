@@ -337,14 +337,8 @@ out:
 		/* won't need a timeout when replayed */
 		job->timeout = 0;
 
-		for (i = 0; i < job->num_syncpts; ++i) {
+		for (i = 0; i < job->num_syncpts; ++i)
 			nvhost_cdma_finalize_job_incrs(syncpt, job->sp + i);
-
-			if (job->sp[i].waitbase != NVSYNCPT_INVALID)
-				nvhost_syncpt_cpu_set_wait_base(dev,
-					job->sp[i].waitbase,
-					job->sp[i].fence);
-		}
 
 		/* cleanup push buffer */
 		cdma_op().timeout_pb_cleanup(cdma, job->first_get,

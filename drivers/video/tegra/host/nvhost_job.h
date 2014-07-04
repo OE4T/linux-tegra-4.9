@@ -46,7 +46,6 @@ struct nvhost_job_syncpt {
 	u32 id;
 	u32 incrs;
 	u32 fence;
-	u32 waitbase;
 };
 
 struct nvhost_pinid {

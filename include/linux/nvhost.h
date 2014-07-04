@@ -121,14 +121,12 @@ struct nvhost_device_data {
 
 	u32		syncpts[NVHOST_MODULE_MAX_SYNCPTS];
 	u32		client_managed_syncpt;
-	u32		waitbases[NVHOST_MODULE_MAX_WAITBASES];
 	u32		modulemutexes[NVHOST_MODULE_MAX_MODMUTEXES];
 	u32		moduleid;	/* Module id for user space API */
 
 	u32		class;		/* Device class */
 	bool		exclusive;	/* True if only one user at a time */
 	bool		keepalive;	/* Do not power gate when opened */
-	bool		waitbasesync;	/* Force sync of wait bases */
 	bool		serialize;	/* Serialize submits in the channel */
 
 	char		*firmware_name;	/* Name of firmware */
@@ -245,7 +243,7 @@ struct nvhost_device_data {
 
 	/* Allocates a context handler for the device */
 	struct nvhost_hwctx_handler *(*alloc_hwctx_handler)(u32 syncpt,
-			u32 waitbase, struct nvhost_channel *ch);
+			struct nvhost_channel *ch);
 };
 
 

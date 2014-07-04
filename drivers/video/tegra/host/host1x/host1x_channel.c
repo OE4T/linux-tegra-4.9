@@ -33,21 +33,6 @@
 #include "class_ids.h"
 #include "debug.h"
 
-static void sync_waitbases(struct nvhost_channel *ch, u32 syncpt_val)
-{
-	unsigned long waitbase;
-	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
-	if (pdata->waitbasesync) {
-		waitbase = pdata->waitbases[0];
-		nvhost_cdma_push(&ch->cdma,
-			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-				host1x_uclass_load_syncpt_base_r(),
-				1),
-				nvhost_class_host_load_syncpt_base(waitbase,
-						syncpt_val));
-	}
-}
-
 static void serialize(struct nvhost_job *job)
 {
 	struct nvhost_channel *ch = job->ch;
@@ -199,7 +184,6 @@ static void submit_nullkickoff(struct nvhost_job *job, u32 user_syncpt_incrs)
 	struct nvhost_channel *ch = job->ch;
 	int incr, i;
 	u32 op_incr;
-	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 
 	/* push increments that correspond to nulled out commands */
 	for (i = 0; i < job->num_syncpts; ++i) {
@@ -213,19 +197,6 @@ static void submit_nullkickoff(struct nvhost_job *job, u32 user_syncpt_incrs)
 		if (incrs & 1)
 			nvhost_cdma_push(&ch->cdma, op_incr,
 				NVHOST_OPCODE_NOOP);
-	}
-
-	/* for 3d, waitbase needs to be incremented after each submit */
-	if (pdata->class == NV_GRAPHICS_3D_CLASS_ID) {
-		u32 waitbase = job->hwctx->h->waitbase;
-		nvhost_cdma_push(&ch->cdma,
-			nvhost_opcode_setclass(
-				NV_HOST1X_CLASS_ID,
-				host1x_uclass_incr_syncpt_base_r(),
-				1),
-			nvhost_class_host_incr_syncpt_base(
-				waitbase,
-				job->sp[job->hwctx_syncpt_idx].incrs));
 	}
 }
 
@@ -382,8 +353,6 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	else
 		submit_gathers(job);
 
-	sync_waitbases(ch, hwctx_sp->fence);
-
 	/* end CDMA submit & stash pinned hMems into sync queue */
 	nvhost_cdma_end(&ch->cdma, job);
 
@@ -420,7 +389,7 @@ static int host1x_save_context(struct nvhost_channel *ch)
 	void *ref;
 	void *wakeup_waiter = NULL;
 	struct nvhost_job *job;
-	u32 syncpt_id, waitbase;
+	u32 syncpt_id;
 
 	wakeup_waiter = nvhost_intr_alloc_waiter();
 	if (!wakeup_waiter) {
@@ -452,7 +421,6 @@ static int host1x_save_context(struct nvhost_channel *ch)
 	hwctx_to_save->valid = true;
 	ch->cur_ctx = NULL;
 	syncpt_id = hwctx_to_save->h->syncpt;
-	waitbase = hwctx_to_save->h->waitbase;
 
 	syncpt_incrs = hwctx_to_save->save_incrs;
 	syncpt_val = nvhost_syncpt_incr_max(&nvhost_get_host(ch->dev)->syncpt,
@@ -460,7 +428,6 @@ static int host1x_save_context(struct nvhost_channel *ch)
 
 	job->hwctx_syncpt_idx = 0;
 	job->sp->id = syncpt_id;
-	job->sp->waitbase = waitbase;
 	job->sp->incrs = syncpt_incrs;
 	job->sp->fence = syncpt_val;
 	job->num_syncpts = 1;
@@ -511,11 +478,9 @@ static inline int hwctx_handler_init(struct nvhost_channel *ch)
 
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 	u32 syncpt = NVSYNCPT_INVALID;
-	u32 waitbase = pdata->waitbases[0];
 
 	if (pdata->alloc_hwctx_handler) {
-		ch->ctxhandler = pdata->alloc_hwctx_handler(syncpt,
-				waitbase, ch);
+		ch->ctxhandler = pdata->alloc_hwctx_handler(syncpt, ch);
 		if (!ch->ctxhandler)
 			err = -ENOMEM;
 	}

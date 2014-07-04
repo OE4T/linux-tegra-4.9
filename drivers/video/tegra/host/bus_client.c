@@ -378,12 +378,11 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		(struct nvhost_waitchk *)(uintptr_t)args->waitchks;
 	struct nvhost_syncpt_incr __user *syncpt_incrs =
 		(struct nvhost_syncpt_incr *)(uintptr_t)args->syncpt_incrs;
-	u32 __user *waitbases = (u32 *)(uintptr_t)args->waitbases;
 	u32 __user *fences = (u32 *)(uintptr_t)args->fences;
 	u32 __user *class_ids = (u32 *)(uintptr_t)args->class_ids;
 
 	struct nvhost_master *host = nvhost_get_host(ctx->ch->dev);
-	u32 *local_waitbases = NULL, *local_class_ids = NULL;
+	u32 *local_class_ids = NULL;
 	int err, i, hwctx_syncpt_idx = -1;
 
 	if (num_syncpt_incrs > host->info.nb_pts)
@@ -459,23 +458,6 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	if (err)
 		goto fail;
 
-	/* mass copy waitbases */
-	if (args->waitbases) {
-		local_waitbases = kzalloc(sizeof(u32) * num_syncpt_incrs,
-			GFP_KERNEL);
-		if (!local_waitbases) {
-			err = -ENOMEM;
-			goto fail;
-		}
-
-		err = copy_from_user(local_waitbases, waitbases,
-			sizeof(u32) * num_syncpt_incrs);
-		if (err) {
-			err = -EINVAL;
-			goto fail;
-		}
-	}
-
 	/* set valid id for hwctx_syncpt_idx if hwctx does not provide one */
 	if (!ctx->hwctx || ctx->hwctx->h->syncpt == NVSYNCPT_INVALID)
 		hwctx_syncpt_idx = 0;
@@ -484,12 +466,10 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	 * Go through each syncpoint from userspace. Here we:
 	 * - Copy syncpoint information
 	 * - Validate each syncpoint
-	 * - Determine waitbase for each syncpoint
 	 * - Determine the index of hwctx syncpoint in the table
 	 */
 
 	for (i = 0; i < num_syncpt_incrs; ++i) {
-		u32 waitbase;
 		struct nvhost_syncpt_incr sp;
 
 		/* Copy */
@@ -503,26 +483,14 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 			goto fail;
 		}
 
-		/* Determine waitbase */
-		if (waitbases && local_waitbases[i] != NVSYNCPT_INVALID)
-			waitbase = local_waitbases[i];
-		else
-			waitbase = nvhost_syncpt_get_waitbase(job->ch,
-				sp.syncpt_id);
-
 		/* Store */
 		job->sp[i].id = sp.syncpt_id;
 		job->sp[i].incrs = sp.syncpt_incrs;
-		job->sp[i].waitbase = waitbase;
 
 		/* Find hwctx syncpoint */
 		if (ctx->hwctx && (job->sp[i].id == ctx->hwctx->h->syncpt))
 			hwctx_syncpt_idx = i;
 	}
-
-	/* not needed anymore */
-	kfree(local_waitbases);
-	local_waitbases = NULL;
 
 	/* Is hwctx_syncpt_idx valid? */
 	if (hwctx_syncpt_idx == -1) {
@@ -592,7 +560,6 @@ fail_submit:
 fail:
 	nvhost_job_put(job);
 	kfree(local_class_ids);
-	kfree(local_waitbases);
 	return err;
 }
 
@@ -851,24 +818,12 @@ static long nvhost_channelctl(struct file *filp,
 	}
 	case NVHOST_IOCTL_CHANNEL_GET_WAITBASES:
 	{
-		struct nvhost_device_data *pdata = \
-			platform_get_drvdata(priv->ch->dev);
-		((struct nvhost_get_param_args *)buf)->value =
-			create_mask(pdata->waitbases,
-					NVHOST_MODULE_MAX_WAITBASES);
+		((struct nvhost_get_param_args *)buf)->value = 0;
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_GET_WAITBASE:
 	{
-		struct nvhost_device_data *pdata = \
-			platform_get_drvdata(priv->ch->dev);
-		struct nvhost_get_param_arg *arg =
-			(struct nvhost_get_param_arg *)buf;
-		if (arg->param >= NVHOST_MODULE_MAX_WAITBASES
-				|| !pdata->waitbases[arg->param])
-			return -EINVAL;
-		arg->value = pdata->waitbases[arg->param];
-		break;
+		return -EINVAL;
 	}
 	case NVHOST_IOCTL_CHANNEL_GET_MODMUTEXES:
 	{
@@ -967,7 +922,6 @@ static long nvhost_channelctl(struct file *filp,
 		args.relocs = args32->relocs;
 		args.reloc_shifts = args32->reloc_shifts;
 		args.waitchks = args32->waitchks;
-		args.waitbases = args32->waitbases;
 		args.class_ids = args32->class_ids;
 		args.fences = args32->fences;
 
@@ -1219,7 +1173,6 @@ int nvhost_client_device_init(struct platform_device *dev)
 	if (err)
 		goto fail_busy;
 
-	nvhost_syncpt_reset_client(dev);
 	nvhost_module_idle(nvhost_master->dev);
 
 	/* Initialize dma parameters */

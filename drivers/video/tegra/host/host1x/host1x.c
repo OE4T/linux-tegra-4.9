@@ -58,7 +58,6 @@
 
 static const char *num_syncpts_name = "num_pts";
 static const char *num_mutexes_name = "num_mlocks";
-static const char *num_waitbases_name = "num_bases";
 static const char *gather_filter_enabled_name = "gather_filter_enabled";
 
 struct nvhost_master *nvhost;
@@ -598,7 +597,7 @@ static int nvhost_user_init(struct nvhost_master *host)
 	}
 
 	host->caps_nodes = devm_kzalloc(&host->dev->dev,
-			sizeof(struct nvhost_capability_node) * 4, GFP_KERNEL);
+			sizeof(struct nvhost_capability_node) * 3, GFP_KERNEL);
 	if (!host->caps_nodes) {
 		err = -ENOMEM;
 		goto fail;
@@ -618,20 +617,14 @@ static int nvhost_user_init(struct nvhost_master *host)
 		goto fail;
 	}
 
-	if (nvhost_set_sysfs_capability_node(host, num_waitbases_name,
-		host->caps_nodes + 1, &nvhost_syncpt_nb_bases, NULL)) {
-		err = -EIO;
-		goto fail;
-	}
-
 	if (nvhost_set_sysfs_capability_node(host, num_mutexes_name,
-		host->caps_nodes + 2, &nvhost_syncpt_nb_mlocks, NULL)) {
+		host->caps_nodes + 1, &nvhost_syncpt_nb_mlocks, NULL)) {
 		err = -EIO;
 		goto fail;
 	}
 
 	if (nvhost_set_sysfs_capability_node(host,
-		gather_filter_enabled_name, host->caps_nodes + 3,
+		gather_filter_enabled_name, host->caps_nodes + 2,
 		nvhost_gather_filter_enabled, NULL)) {
 		err = -EIO;
 		goto fail;

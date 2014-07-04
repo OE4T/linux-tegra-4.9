@@ -89,8 +89,6 @@ struct nvhost_debug_ops {
 
 struct nvhost_syncpt_ops {
 	void (*reset)(struct nvhost_syncpt *, u32 id);
-	void (*reset_wait_base)(struct nvhost_syncpt *, u32 id);
-	void (*read_wait_base)(struct nvhost_syncpt *, u32 id);
 	u32 (*update_min)(struct nvhost_syncpt *, u32 id);
 	void (*cpu_incr)(struct nvhost_syncpt *, u32 id);
 	int (*patch_wait)(struct nvhost_syncpt *sp,

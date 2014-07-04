@@ -115,6 +115,8 @@ struct nvhost_gpu_characteristics {
 	__u32 pde_coverage_bit_count;
 	__u32 reserved;
 
+	__u64 flags;
+
 	/* Notes:
 	   - This struct can be safely appended with new fields. However, always
 	     keep the structure size multiple of 8 and make sure that the binary
@@ -136,6 +138,8 @@ struct nvhost_gpu_characteristics {
 
 #define NVHOST_GPU_BUS_TYPE_NONE         0
 #define NVHOST_GPU_BUS_TYPE_AXI         32
+
+#define NVHOST_GPU_FLAGS_HAS_SYNCPOINTS	(1 << 0)
 
 struct nvhost_gpu_get_characteristics {
 	/* [in]  size reserved by the user space. Can be 0.

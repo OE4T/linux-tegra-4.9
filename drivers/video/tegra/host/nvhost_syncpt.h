@@ -48,7 +48,6 @@ struct nvhost_syncpt {
 	struct mutex syncpt_mutex;
 	atomic_t *min_val;
 	atomic_t *max_val;
-	u32 *base_val;
 	atomic_t *lock_counts;
 	const char **syncpt_names;
 	const char **last_used_by;
@@ -108,7 +107,6 @@ void nvhost_syncpt_set_min_eq_max(struct nvhost_syncpt *sp, u32 id);
 int nvhost_syncpt_client_managed(struct nvhost_syncpt *sp, u32 id);
 int nvhost_syncpt_nb_pts(struct nvhost_syncpt *sp);
 int nvhost_nb_syncpts_store(struct nvhost_syncpt *sp, const char *buf);
-int nvhost_syncpt_nb_bases(struct nvhost_syncpt *sp);
 int nvhost_syncpt_nb_mlocks(struct nvhost_syncpt *sp);
 void nvhost_syncpt_set_manager(struct nvhost_syncpt *sp, int id, bool client);
 
@@ -123,8 +121,6 @@ static inline bool nvhost_syncpt_min_eq_max(struct nvhost_syncpt *sp, u32 id)
 	max = atomic_read(&sp->max_val[id]);
 	return (min == max);
 }
-
-int nvhost_syncpt_get_waitbase(struct nvhost_channel *ch, int id);
 
 void nvhost_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id);
 
@@ -144,9 +140,6 @@ void nvhost_syncpt_reset_client(struct platform_device *pdev);
 const char *nvhost_syncpt_get_name_from_id(int id);
 int nvhost_syncpt_read_check(struct nvhost_syncpt *sp, u32 id, u32 *val);
 u32 nvhost_syncpt_read(struct nvhost_syncpt *sp, u32 id);
-u32 nvhost_syncpt_read_wait_base(struct nvhost_syncpt *sp, u32 id);
-void nvhost_syncpt_cpu_set_wait_base(struct platform_device *pdev, u32 id,
-					u32 val);
 
 int nvhost_syncpt_incr(struct nvhost_syncpt *sp, u32 id);
 

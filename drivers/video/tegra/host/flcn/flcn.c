@@ -535,15 +535,13 @@ static void ctxvic03_restore_push(struct nvhost_hwctx *nctx,
 }
 
 struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(u32 syncpt,
-	u32 waitbase, struct nvhost_channel *ch)
+	struct nvhost_channel *ch)
 {
 	struct host1x_hwctx_handler *p;
 
 	p = kmalloc(sizeof(*p), GFP_KERNEL);
 	if (!p)
 		return NULL;
-
-	p->h.waitbase = waitbase;
 
 	p->h.alloc = vic03_alloc_hwctx;
 	p->h.get   = vic03_get_hwctx;

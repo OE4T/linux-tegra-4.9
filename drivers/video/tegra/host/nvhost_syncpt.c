@@ -47,7 +47,7 @@ static const char *min_name = "min";
 static const char *max_name = "max";
 
 /**
- * Resets syncpoint and waitbase values to sw shadows
+ * Resets syncpoint values to sw shadows
  */
 void nvhost_syncpt_reset(struct nvhost_syncpt *sp)
 {
@@ -55,23 +55,7 @@ void nvhost_syncpt_reset(struct nvhost_syncpt *sp)
 
 	for (i = 0; i < nvhost_syncpt_nb_pts(sp); i++)
 		syncpt_op().reset(sp, i);
-	for (i = 0; i < nvhost_syncpt_nb_bases(sp); i++)
-		syncpt_op().reset_wait_base(sp, i);
 	wmb();
-}
-
-int nvhost_syncpt_get_waitbase(struct nvhost_channel *ch, int id)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
-	int i;
-	bool ret = false;
-	for (i = 0; i < NVHOST_MODULE_MAX_SYNCPTS && pdata->syncpts[i]; ++i)
-		ret |= (pdata->syncpts[i] == id);
-
-	if (!ret)
-		return NVSYNCPT_INVALID;
-
-	return pdata->waitbases[0];
 }
 
 void nvhost_syncpt_patch_check(struct nvhost_syncpt *sp)
@@ -80,30 +64,6 @@ void nvhost_syncpt_patch_check(struct nvhost_syncpt *sp)
 	atomic_set(&sp->min_val[0], 0);
 	syncpt_op().reset(sp, 0);
 }
-
-/**
- * Resets syncpoint and waitbase values of a
- * single client to sw shadows
- */
-void nvhost_syncpt_reset_client(struct platform_device *pdev)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	struct nvhost_master *nvhost_master = nvhost_get_host(pdev);
-	u32 id;
-
-	BUG_ON(!(syncpt_op().reset && syncpt_op().reset_wait_base));
-
-	for (id = 0; (id < NVHOST_MODULE_MAX_SYNCPTS) &&
-			(pdata->syncpts[id]); ++id)
-		syncpt_op().reset(&nvhost_master->syncpt, pdata->syncpts[id]);
-
-	for (id = 0; (id < NVHOST_MODULE_MAX_WAITBASES) &&
-			(pdata->waitbases[id]); ++id)
-		syncpt_op().reset_wait_base(&nvhost_master->syncpt,
-			pdata->waitbases[id]);
-	wmb();
-}
-
 
 /**
  * Updates sw shadow state for client managed registers
@@ -124,9 +84,6 @@ void nvhost_syncpt_save(struct nvhost_syncpt *sp)
 				nvhost_syncpt_debug(sp);
 			}
 	}
-
-	for (i = 0; i < nvhost_syncpt_nb_bases(sp); i++)
-		syncpt_op().read_wait_base(sp, i);
 }
 
 /**
@@ -170,24 +127,6 @@ u32 nvhost_syncpt_read(struct nvhost_syncpt *sp, u32 id)
 		return val;
 
 	val = syncpt_op().update_min(sp, id);
-	nvhost_module_idle(syncpt_to_dev(sp)->dev);
-	return val;
-}
-
-/**
- * Get the current syncpoint base
- */
-u32 nvhost_syncpt_read_wait_base(struct nvhost_syncpt *sp, u32 id)
-{
-	u32 val = 0xffffffff;
-	int err;
-
-	err = nvhost_module_busy(syncpt_to_dev(sp)->dev);
-	if (err)
-		return val;
-
-	syncpt_op().read_wait_base(sp, id);
-	val = sp->base_val[id];
 	nvhost_module_idle(syncpt_to_dev(sp)->dev);
 	return val;
 }
@@ -968,8 +907,6 @@ int nvhost_syncpt_init(struct platform_device *dev,
 			GFP_KERNEL);
 	sp->max_val = kzalloc(sizeof(atomic_t) * nvhost_syncpt_nb_pts(sp),
 			GFP_KERNEL);
-	sp->base_val = kzalloc(sizeof(u32) * nvhost_syncpt_nb_bases(sp),
-			GFP_KERNEL);
 	sp->lock_counts =
 		kzalloc(sizeof(atomic_t) * nvhost_syncpt_nb_mlocks(sp),
 			GFP_KERNEL);
@@ -983,7 +920,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 #endif
 
 	if (!(sp->assigned && sp->client_managed && sp->min_val && sp->max_val
-		     && sp->base_val && sp->lock_counts)) {
+		     && sp->lock_counts)) {
 		/* frees happen in the deinit */
 		err = -ENOMEM;
 		goto fail;
@@ -1103,9 +1040,6 @@ void nvhost_syncpt_deinit(struct nvhost_syncpt *sp)
 	kfree(sp->max_val);
 	sp->max_val = NULL;
 
-	kfree(sp->base_val);
-	sp->base_val = NULL;
-
 	kfree(sp->lock_counts);
 	sp->lock_counts = 0;
 
@@ -1154,11 +1088,6 @@ int nvhost_nb_syncpts_store(struct nvhost_syncpt *sp, const char *buf)
 	return ret;
 }
 
-int nvhost_syncpt_nb_bases(struct nvhost_syncpt *sp)
-{
-	return syncpt_to_dev(sp)->info.nb_bases;
-}
-
 int nvhost_syncpt_nb_mlocks(struct nvhost_syncpt *sp)
 {
 	return syncpt_to_dev(sp)->info.nb_mlocks;
@@ -1185,16 +1114,6 @@ void nvhost_syncpt_cpu_incr_ext(struct platform_device *dev, u32 id)
 	nvhost_syncpt_cpu_incr(sp, id);
 }
 EXPORT_SYMBOL(nvhost_syncpt_cpu_incr_ext);
-
-void nvhost_syncpt_cpu_set_wait_base(struct platform_device *pdev, u32 id,
-					u32 val)
-{
-	struct nvhost_syncpt *sp = &(nvhost_get_host(pdev)->syncpt);
-
-	sp->base_val[id] = val;
-	syncpt_op().reset_wait_base(sp, id);
-	wmb();
-}
 
 int nvhost_syncpt_read_ext_check(struct platform_device *dev, u32 id, u32 *val)
 {

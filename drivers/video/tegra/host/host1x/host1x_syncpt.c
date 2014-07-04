@@ -37,26 +37,6 @@ static void t20_syncpt_reset(struct nvhost_syncpt *sp, u32 id)
 }
 
 /**
- * Write the current waitbase value back to hw.
- */
-static void t20_syncpt_reset_wait_base(struct nvhost_syncpt *sp, u32 id)
-{
-	struct nvhost_master *dev = syncpt_to_dev(sp);
-	writel(sp->base_val[id],
-		dev->sync_aperture + (host1x_sync_syncpt_base_0_r() + id * 4));
-}
-
-/**
- * Read waitbase value from hw.
- */
-static void t20_syncpt_read_wait_base(struct nvhost_syncpt *sp, u32 id)
-{
-	struct nvhost_master *dev = syncpt_to_dev(sp);
-	sp->base_val[id] = readl(dev->sync_aperture +
-				(host1x_sync_syncpt_base_0_r() + id * 4));
-}
-
-/**
  * Updates the last value read from hardware.
  * (was nvhost_syncpt_update_min)
  */
@@ -146,8 +126,6 @@ static void syncpt_mutex_owner(struct nvhost_syncpt *sp,
 
 static const struct nvhost_syncpt_ops host1x_syncpt_ops = {
 	.reset = t20_syncpt_reset,
-	.reset_wait_base = t20_syncpt_reset_wait_base,
-	.read_wait_base = t20_syncpt_read_wait_base,
 	.update_min = t20_syncpt_update_min,
 	.cpu_incr = t20_syncpt_cpu_incr,
 	.patch_wait = host1x_syncpt_patch_wait,

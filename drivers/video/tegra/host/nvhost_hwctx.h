@@ -59,7 +59,6 @@ struct nvhost_hwctx_handler {
 	void (*restore_push) (struct nvhost_hwctx *ctx,
 			struct nvhost_cdma *cdma);
 	u32 syncpt;
-	u32 waitbase;
 	void *priv;
 };
 

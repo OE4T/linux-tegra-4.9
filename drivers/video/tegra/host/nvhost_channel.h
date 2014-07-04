@@ -101,6 +101,6 @@ void nvhost_channel_init_gather_filter(struct nvhost_channel *ch);
 struct nvhost_hwctx *nvhost_channel_get_file_hwctx(int fd);
 
 struct nvhost_hwctx_handler *nvhost_alloc_hwctx_handler(u32 syncpt,
-	u32 waitbase, struct nvhost_channel *ch);
+	struct nvhost_channel *ch);
 
 #endif

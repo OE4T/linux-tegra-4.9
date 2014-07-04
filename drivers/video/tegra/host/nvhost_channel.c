@@ -459,7 +459,7 @@ static void put_hwctx(struct nvhost_hwctx *ctx)
 }
 
 struct nvhost_hwctx_handler *nvhost_alloc_hwctx_handler(u32 syncpt,
-	u32 waitbase, struct nvhost_channel *ch)
+	struct nvhost_channel *ch)
 {
 	struct nvhost_hwctx_handler *p;
 
@@ -468,7 +468,6 @@ struct nvhost_hwctx_handler *nvhost_alloc_hwctx_handler(u32 syncpt,
 		return NULL;
 
 	p->syncpt = NVSYNCPT_INVALID;
-	p->waitbase = waitbase;
 
 	p->alloc = alloc_hwctx;
 	p->get   = get_hwctx;

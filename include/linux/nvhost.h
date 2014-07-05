@@ -298,6 +298,9 @@ struct nvhost_device_data {
 	u32 mamask_val;
 	u64 borps_addr;
 	u32 borps_val;
+
+	/* Actmon IRQ from hintstatus_r */
+	unsigned int actmon_irq;
 };
 
 

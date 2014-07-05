@@ -85,6 +85,8 @@ struct nvhost_intr {
 	int syncpt_irq;
 	struct workqueue_struct *wq;
 	u32 intstatus;
+	void (*host_isr[32])(u32, void*);
+	void *host_isr_priv[32];
 };
 #define intr_to_dev(x) container_of(x, struct nvhost_master, intr)
 #define intr_syncpt_to_intr(is) (is->intr)
@@ -126,6 +128,10 @@ void nvhost_intr_deinit(struct nvhost_intr *intr);
 void nvhost_intr_start(struct nvhost_intr *intr, u32 hz);
 void nvhost_intr_stop(struct nvhost_intr *intr);
 int nvhost_intr_release_time(void *ref, struct timespec *ts);
+void nvhost_intr_enable_host_irq(struct nvhost_intr *intr, int irq,
+				 void (*host_isr)(u32, void *),
+				 void *priv);
+void nvhost_intr_disable_host_irq(struct nvhost_intr *intr, int irq);
 
 irqreturn_t nvhost_syncpt_thresh_fn(void *dev_id);
 irqreturn_t nvhost_intr_irq_fn(int irq, void *dev_id);

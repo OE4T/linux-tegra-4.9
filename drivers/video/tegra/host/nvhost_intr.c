@@ -556,3 +556,25 @@ void nvhost_intr_stop(struct nvhost_intr *intr)
 
 	mutex_unlock(&intr->mutex);
 }
+
+void nvhost_intr_enable_host_irq(struct nvhost_intr *intr, int irq,
+				 void (*host_isr)(u32, void *),
+				 void *priv)
+{
+	if (!irq)
+		return;
+
+	intr->host_isr[irq] = host_isr;
+	intr->host_isr_priv[irq] = priv;
+	intr_op().enable_host_irq(intr, irq);
+}
+
+void nvhost_intr_disable_host_irq(struct nvhost_intr *intr, int irq)
+{
+	if (!irq)
+		return;
+
+	intr_op().disable_host_irq(intr, irq);
+	intr->host_isr[irq] = NULL;
+	intr->host_isr_priv[irq] = NULL;
+}

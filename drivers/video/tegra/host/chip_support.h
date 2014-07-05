@@ -143,6 +143,8 @@ struct nvhost_actmon_ops {
 	void (*set_k)(struct host1x_actmon *actmon, u32 k);
 	u32 (*get_k)(struct host1x_actmon *actmon);
 	void (*debug_init)(struct host1x_actmon *actmon, struct dentry *de);
+	int (*set_high_wmark)(struct host1x_actmon *actmon, u32 val);
+	int (*set_low_wmark)(struct host1x_actmon *actmon, u32 val);
 };
 
 struct nvhost_chip_support {

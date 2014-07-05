@@ -19,12 +19,22 @@
 #ifndef __HOST1X_ACTMON_H
 #define __HOST1X_ACTMON_H
 
+#define ACTMON_INTR_ABOVE_WMARK 1
+#define ACTMON_INTR_BELOW_WMARK 2
+
 struct dentry;
+struct host1x_actmon;
 
 enum init_e {
 	ACTMON_OFF = 0,
 	ACTMON_READY = 1,
 	ACTMON_SLEEP = 2
+};
+
+struct host1x_actmon_worker {
+	int type;
+	struct host1x_actmon *actmon;
+	struct work_struct work;
 };
 
 struct host1x_actmon {
@@ -35,10 +45,6 @@ struct host1x_actmon {
 	void __iomem *regs;
 	struct clk *clk;
 
-	/* Counters for debug usage */
-	int above_wmark;
-	int below_wmark;
-
 	/* Store actmon period. clks_per_sample can be used even when host1x is
 	 * not active. */
 	long usecs_per_sample;
@@ -46,6 +52,9 @@ struct host1x_actmon {
 
 	int k;
 	int divider;
+	struct platform_device *pdev;
+	struct host1x_actmon_worker above_wmark_worker;
+	struct host1x_actmon_worker below_wmark_worker;
 };
 
 #endif

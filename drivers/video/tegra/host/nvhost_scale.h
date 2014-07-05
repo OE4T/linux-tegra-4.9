@@ -61,4 +61,5 @@ void nvhost_scale_notify_idle(struct platform_device *);
 int nvhost_scale_hw_init(struct platform_device *);
 void nvhost_scale_hw_deinit(struct platform_device *);
 
+int nvhost_get_actmon_irq(struct nvhost_device_profile *profile);
 #endif

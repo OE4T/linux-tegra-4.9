@@ -80,7 +80,7 @@
 					regulator-max-microvolt = <1400000>;
 					regulator-boot-on;
 					regulator-always-on;
-					maxim,fps-source = <FPS_SRC_NONE>;
+					maxim,fps-source = <FPS_SRC_1>;
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
 					consumers {
 						c1 {
@@ -96,14 +96,14 @@
 					regulator-always-on;
 					regulator-boot-on;
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
-					maxim,fps-source = <FPS_SRC_NONE>;
+					maxim,fps-source = <FPS_SRC_0>;
 				};
 
 				max77620_sd2: sd2 {
 					regulator-name = "vdd-pre-reg";
 					regulator-min-microvolt = <1350000>;
 					regulator-max-microvolt = <1350000>;
-					maxim,fps-source = <FPS_SRC_NONE>;
+					maxim,fps-source = <FPS_SRC_1>;
 				};
 
 				max77620_sd3: sd3 {
@@ -112,7 +112,7 @@
 					regulator-max-microvolt = <1800000>;
 					regulator-always-on;
 					regulator-boot-on;
-					maxim,fps-source = <FPS_SRC_NONE>;
+					maxim,fps-source = <FPS_SRC_0>;
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
 					consumers {
 						c1 {
@@ -284,7 +284,7 @@
 					regulator-max-microvolt = <1050000>;
 					regulator-always-on;
 					regulator-boot-on;
-					maxim,fps-source = <FPS_SRC_NONE>;
+					maxim,fps-source = <FPS_SRC_1>;
 				};
 
 				max77620_ldo8: ldo8 {

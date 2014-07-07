@@ -131,7 +131,7 @@ static int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 		BUG_ON(1);
 	}
 	gk20a_writel(g, ltc_ltcs_ltss_cbc_ctrl1_r(),
-		     gk20a_readl(g, ltc_ltcs_ltss_cbc_ctrl1_r()) || hw_op);
+		     gk20a_readl(g, ltc_ltcs_ltss_cbc_ctrl1_r()) | hw_op);
 
 	for (ltc = 0; ltc < g->ltc_count; ltc++) {
 		for (slice = 0; slice < slices_per_ltc; slice++) {

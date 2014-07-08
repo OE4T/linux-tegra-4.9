@@ -478,6 +478,7 @@ int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 					struct tegra_dsi_cmd *cmd,
 					u32 n_cmd);
 
+void tegra_dsi_init_clock_param(struct tegra_dc *dc);
 
 static inline void *tegra_dsi_get_outdata(struct tegra_dc_dsi_data *dsi)
 {

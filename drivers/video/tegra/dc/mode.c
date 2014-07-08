@@ -31,6 +31,7 @@
 
 #include "dc_reg.h"
 #include "dc_priv.h"
+#include "dsi.h"
 
 /* return non-zero if constraint is violated */
 static int calc_h_ref_to_sync(const struct tegra_dc_mode *mode, int *href)
@@ -330,9 +331,11 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 			DC_DISP_DATA_ENABLE_OPTIONS);
 
 	/* TODO: MIPI/CRT/HDMI clock cals */
-
 	val = 0;
 	if (!(dc->out->type == TEGRA_DC_OUT_DSI ||
+		dc->out->type == TEGRA_DC_OUT_FAKE_DSIA ||
+		dc->out->type == TEGRA_DC_OUT_FAKE_DSIB ||
+		dc->out->type == TEGRA_DC_OUT_FAKE_DSI_GANGED ||
 		dc->out->type == TEGRA_DC_OUT_HDMI)) {
 		val = DISP_DATA_FORMAT_DF1P1C;
 
@@ -423,9 +426,14 @@ static int _tegra_dc_set_mode(struct tegra_dc *dc,
 	else if (dc->out->type == TEGRA_DC_OUT_DSI)
 		panel_sync_rate = dc->out->dsi->rated_refresh_rate * 1000;
 
+	if (dc->out->type == TEGRA_DC_OUT_FAKE_DSIA ||
+		dc->out->type == TEGRA_DC_OUT_FAKE_DSIB ||
+		dc->out->type == TEGRA_DC_OUT_FAKE_DSI_GANGED) {
+		tegra_dsi_init_clock_param(dc);
+	}
+
 	print_mode(dc, mode, __func__);
 	dc->frametime_ns = calc_frametime_ns(mode);
-
 	return 0;
 }
 

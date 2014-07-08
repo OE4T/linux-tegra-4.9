@@ -422,6 +422,7 @@ static void tegra_dsi_setup_clk(struct tegra_dc *dc,
 	struct tegra_dc_dsi_data *dsi)
 {
 	int i = 0;
+
 	for (i = 0; i < dsi->max_instances; i++) {
 		tegra_dc_setup_clk(dc, dsi->dsi_clk[i]);
 		mdelay(3);
@@ -630,8 +631,7 @@ static void tegra_dsi_pix_correction(struct tegra_dc *dc,
 	dc->mode.h_active += h_act_corr;
 }
 
-static void tegra_dsi_init_sw(struct tegra_dc *dc,
-			struct tegra_dc_dsi_data *dsi)
+void tegra_dsi_init_clock_param(struct tegra_dc *dc)
 {
 	u32 h_width_pixels;
 	u32 v_width_lines;
@@ -639,6 +639,8 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 	u32 byte_clk_hz;
 	u32 plld_clk_mhz;
 	u8 n_data_lanes;
+
+	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 
 	switch (dsi->info.pixel_format) {
 	case TEGRA_DSI_PIXEL_FORMAT_16BIT_P:
@@ -660,10 +662,6 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 	default:
 		break;
 	}
-
-	dsi->ulpm = false;
-	dsi->enabled = false;
-	dsi->clk_ref = false;
 
 	n_data_lanes = dsi->info.n_data_lanes;
 	if (dsi->info.ganged_type == TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT ||
@@ -712,6 +710,7 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 	dsi->default_shift_clk_div.div = 2 * dsi->pixel_scaler_div *
 					dsi->info.n_data_lanes;
 
+
 	/* Calculate default DSI hs clock. DSI interface is double data rate.
 	 * Data is transferred on both rising and falling edge of clk, div by 2
 	 * to get the actual clock rate.
@@ -731,10 +730,6 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 	dev_info(&dc->ndev->dev, "DSI: HS clock rate is %d\n",
 					dsi->target_hs_clk_khz);
 
-#if DSI_USE_SYNC_POINTS
-	dsi->syncpt_id = nvhost_get_syncpt_client_managed("dsi");
-#endif
-
 	/*
 	 * Force video clock to be continuous mode if
 	 * enable_hs_clock_on_lp_cmd_mode is set
@@ -747,6 +742,20 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 
 		dsi->info.video_clock_mode = TEGRA_DSI_VIDEO_CLOCK_CONTINUOUS;
 	}
+}
+
+static void tegra_dsi_init_sw(struct tegra_dc *dc,
+			struct tegra_dc_dsi_data *dsi)
+{
+	dsi->ulpm = false;
+	dsi->enabled = false;
+	dsi->clk_ref = false;
+
+#if DSI_USE_SYNC_POINTS
+	dsi->syncpt_id = nvhost_get_syncpt_client_managed("dsi");
+#endif
+
+	tegra_dsi_init_clock_param(dc);
 
 	atomic_set(&dsi->host_ref, 0);
 	dsi->host_suspended = false;
@@ -5066,6 +5075,7 @@ static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	struct clk *parent_clk;
 	struct clk *base_clk;
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
+
 
 	/* divide by 1000 to avoid overflow */
 	dc->mode.pclk /= 1000;

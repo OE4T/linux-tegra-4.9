@@ -70,10 +70,8 @@
 			};
 
 			regulators {
-				max77620-ldo0-supply = <&max77620_sd2>;
-				max77620-ldo1-supply = <&max77620_sd2>;
-				max77620-ldo7-supply = <&max77620_sd2>;
-				max77620-ldo8-supply = <&max77620_sd2>;
+				in-ldo0-1-supply = <&max77620_sd2>;
+				in-ldo7-8-supply = <&max77620_sd2>;
 
 				max77620_sd0: sd0 {
 					regulator-name = "vdd-core";

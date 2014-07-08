@@ -1743,9 +1743,6 @@ int gk20a_do_idle(void)
 	int ref_cnt;
 	bool is_railgated;
 
-	if (!platform->can_railgate)
-		return -ENOSYS;
-
 	/* acquire busy lock to block other busy() calls */
 	down_write(&g->busy_lock);
 
@@ -1772,25 +1769,39 @@ int gk20a_do_idle(void)
 
 	/*
 	 * if GPU is now idle, we will have only one ref count
-	 * drop this ref which will rail gate the GPU
+	 * drop this ref which will rail gate the GPU (if GPU
+	 * railgate is supported)
+	 * if GPU railgate is not supported then we need to
+	 * explicitly reset it
 	 */
 	pm_runtime_put_sync(&pdev->dev);
 
-	/* add sufficient delay to allow GPU to rail gate */
-	msleep(platform->railgate_delay);
+	if (platform->can_railgate) {
+		/* add sufficient delay to allow GPU to rail gate */
+		msleep(platform->railgate_delay);
 
-	timeout = jiffies + msecs_to_jiffies(GK20A_WAIT_FOR_IDLE_MS);
+		timeout = jiffies + msecs_to_jiffies(GK20A_WAIT_FOR_IDLE_MS);
 
-	/* check in loop if GPU is railgated or not */
-	do {
-		msleep(1);
-		is_railgated = platform->is_railgated(pdev);
-	} while (!is_railgated && time_before(jiffies, timeout));
+		/* check in loop if GPU is railgated or not */
+		do {
+			msleep(1);
+			is_railgated = platform->is_railgated(pdev);
+		} while (!is_railgated && time_before(jiffies, timeout));
 
-	if (is_railgated)
+		if (is_railgated)
+			return 0;
+		else
+			goto fail_timeout;
+	} else {
+		pm_runtime_get_sync(&pdev->dev);
+		gk20a_pm_prepare_poweroff(&pdev->dev);
+
+		tegra_periph_reset_assert(platform->clk[0]);
+		udelay(10);
+
+		g->forced_reset = true;
 		return 0;
-	else
-		goto fail_timeout;
+	}
 
 fail:
 	pm_runtime_put_noidle(&pdev->dev);
@@ -1810,6 +1821,15 @@ int gk20a_do_unidle(void)
 		NULL, "gk20a.0"));
 	struct gk20a *g = get_gk20a(pdev);
 	struct gk20a_platform *platform = dev_get_drvdata(&pdev->dev);
+
+	if (g->forced_reset) {
+		tegra_periph_reset_deassert(platform->clk[0]);
+
+		gk20a_pm_finalize_poweron(&pdev->dev);
+		pm_runtime_put_sync(&pdev->dev);
+
+		g->forced_reset = false;
+	}
 
 	/* release the lock and open up all other busy() calls */
 	mutex_unlock(&platform->railgate_lock);

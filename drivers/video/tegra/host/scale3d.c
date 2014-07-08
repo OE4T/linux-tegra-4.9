@@ -76,23 +76,6 @@ static inline struct clk *clk(struct nvhost_device_profile *profile, int index)
 	return pdata->clk[index];
 }
 
-/*******************************************************************************
- * nvhost_scale3d_suspend(dev)
- *
- * Prepare the device for suspend
- ******************************************************************************/
-
-void nvhost_scale3d_suspend(struct device *dev)
-{
-	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
-	struct devfreq *df = pdata->power_manager;
-
-	if (!df)
-		return;
-
-	devfreq_suspend_device(df);
-}
-
 long nvhost_scale3d_get_emc_rate(struct nvhost_emc_params *emc_params,
 				 long freq)
 {

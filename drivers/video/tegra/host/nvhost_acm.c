@@ -621,11 +621,10 @@ int nvhost_module_suspend(struct device *dev)
 	if (atomic_read(&dev->power.usage_count) > 1)
 		return -EBUSY;
 
+	devfreq_suspend_device(pdata->power_manager);
+
 	if (pdata->prepare_poweroff)
 		pdata->prepare_poweroff(to_platform_device(dev));
-
-	if (pdata->suspend_ndev)
-		pdata->suspend_ndev(dev);
 
 	/* inform edp governor that there is no load any more */
 	if (pdata->gpu_edp_device)
@@ -641,6 +640,8 @@ int nvhost_module_resume(struct device *dev)
 
 	if (pdata->finalize_poweron)
 		pdata->finalize_poweron(to_platform_device(dev));
+
+	devfreq_resume_device(pdata->power_manager);
 
 	return 0;
 }
@@ -840,6 +841,8 @@ int nvhost_module_prepare_poweroff(struct device *dev)
 	if (!pdata)
 		return -EINVAL;
 
+	devfreq_suspend_device(pdata->power_manager);
+
 	if (pdata->prepare_poweroff)
 		pdata->prepare_poweroff(to_platform_device(dev));
 
@@ -857,6 +860,8 @@ int nvhost_module_finalize_poweron(struct device *dev)
 
 	if (pdata->finalize_poweron)
 		ret = pdata->finalize_poweron(to_platform_device(dev));
+
+	devfreq_resume_device(pdata->power_manager);
 
 	return ret;
 }

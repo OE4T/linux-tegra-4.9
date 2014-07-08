@@ -38,6 +38,9 @@ enum {
 	TEGRA_GPIO_RESET,
 	TEGRA_GPIO_BL_ENABLE,
 	TEGRA_GPIO_PWM,
+	TEGRA_GPIO_BRIDGE_EN_0,
+	TEGRA_GPIO_BRIDGE_EN_1,
+	TEGRA_GPIO_BRIDGE_REFCLK_EN,
 	TEGRA_N_GPIO_PANEL, /* add new gpio above this entry */
 };
 
@@ -47,7 +50,9 @@ struct tegra_panel_of {
 	bool panel_gpio_populated;
 };
 static struct tegra_panel_of __maybe_unused panel_of = {
-	.panel_gpio = {-1, -1, -1},
+	/* TEGRA_N_GPIO_PANEL counts of gpio should be
+	 * initialized to TEGRA_GPIO_INVALID */
+	.panel_gpio = {-1, -1, -1, -1, -1, -1},
 };
 struct tegra_panel_ops {
 	int (*enable)(struct device *);
@@ -66,6 +71,8 @@ extern struct tegra_panel_ops dsi_a_1200_1920_8_0_ops;
 extern struct tegra_panel_ops dsi_a_1200_800_8_0_ops;
 extern struct tegra_panel_ops edp_a_1080p_14_0_ops;
 extern struct tegra_panel_ops edp_i_1080p_11_6_ops;
+extern struct tegra_panel_ops lvds_c_1366_14_ops;
+extern struct tegra_panel_ops dsi_a_1080p_14_0_ops;
 
 extern struct tegra_panel_ops *fixed_primary_panel_ops;
 extern struct tegra_panel_ops *fixed_secondary_panel_ops;

@@ -46,6 +46,10 @@ static struct regulator *dvdd_lcd_1v8;
 static struct regulator *vdd_ds_1v8;
 static struct regulator *vdd_lcd_bl;
 
+static u16 en_panel_rst;
+static u16 en_bridge_0;
+static u16 en_bridge_refclk;
+
 static struct tegra_dc_sd_settings dsi_a_1080p_14_0_sd_settings = {
 	.enable = 1, /* enabled by default. */
 	.use_auto_pwm = false,
@@ -270,11 +274,37 @@ static int dsi_a_1080p_14_0_enable(struct device *dev)
 		pr_err("dsi regulator get failed\n");
 		goto fail;
 	}
-	err = laguna_dsi_gpio_get();
+
+	err = tegra_panel_gpio_get_dt("a,1080p-14-0", &panel_of);
 	if (err < 0) {
-		pr_err("dsi gpio request failed\n");
-		goto fail;
+		err = laguna_dsi_gpio_get();
+		if (err < 0) {
+			pr_err("dsi gpio request failed\n");
+			goto fail;
+		}
 	}
+
+	/* If panel gpios are specified in device tree,
+	 * ust that.
+	 */
+	if (gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_RESET]))
+		en_panel_rst = panel_of.panel_gpio[TEGRA_GPIO_RESET];
+	else
+		en_panel_rst = DSI_PANEL_RST_GPIO;
+
+	if (gpio_is_valid(
+		panel_of.panel_gpio[TEGRA_GPIO_BRIDGE_EN_0]))
+		en_bridge_0 =
+			panel_of.panel_gpio[TEGRA_GPIO_BRIDGE_EN_0];
+	else
+		en_bridge_0 = lvds_en;
+
+	if (gpio_is_valid(
+		panel_of.panel_gpio[TEGRA_GPIO_BRIDGE_REFCLK_EN]))
+		en_bridge_refclk =
+			panel_of.panel_gpio[TEGRA_GPIO_BRIDGE_REFCLK_EN];
+	else
+		en_bridge_refclk = refclk_en;
 
 	if (dvdd_lcd_1v8) {
 		err = regulator_enable(dvdd_lcd_1v8);
@@ -323,13 +353,13 @@ static int dsi_a_1080p_14_0_enable(struct device *dev)
 			goto fail;
 		}
 	}
-	gpio_direction_output(DSI_PANEL_RST_GPIO, 0);
+	gpio_direction_output(en_panel_rst, 0);
 	usleep_range(10000, 12000);
-	gpio_direction_output(lvds_en, 1);
+	gpio_direction_output(en_bridge_0, 1);
 	usleep_range(8000, 10000);
-	gpio_direction_output(refclk_en, 1);
+	gpio_direction_output(en_bridge_refclk, 1);
 	usleep_range(5000, 8000);
-	gpio_direction_output(DSI_PANEL_RST_GPIO, 1);
+	gpio_direction_output(en_panel_rst, 1);
 	return 0;
 fail:
 	return err;
@@ -338,8 +368,8 @@ fail:
 
 static int dsi_a_1080p_14_0_disable(void)
 {
-	gpio_set_value(lvds_en, 0);
-	gpio_set_value(refclk_en, 0);
+	gpio_set_value(en_bridge_0, 0);
+	gpio_set_value(en_bridge_refclk, 0);
 
 	if (vdd_lcd_bl)
 		regulator_disable(vdd_lcd_bl);
@@ -437,11 +467,24 @@ static struct platform_device __maybe_unused
 static int  __init dsi_a_1080p_14_0_register_bl_dev(void)
 {
 	int err = 0;
-	err = platform_add_devices(dsi_a_1080p_14_0_bl_devices,
-				ARRAY_SIZE(dsi_a_1080p_14_0_bl_devices));
-	if (err) {
-		pr_err("disp1 bl device registration failed");
-		return err;
+	struct device_node *dc1_node = NULL;
+	struct device_node *dc2_node = NULL;
+	struct device_node *pwm_bl_node = NULL;
+
+	find_dc_node(&dc1_node, &dc2_node);
+	pwm_bl_node = of_find_compatible_node(NULL, NULL,
+		"pwm-backlight");
+
+	if (!of_have_populated_dt() || !dc1_node ||
+		!of_device_is_available(dc1_node) ||
+		!pwm_bl_node ||
+		!of_device_is_available(pwm_bl_node)) {
+		err = platform_add_devices(dsi_a_1080p_14_0_bl_devices,
+			ARRAY_SIZE(dsi_a_1080p_14_0_bl_devices));
+		if (err) {
+			pr_err("disp1 bl device registration failed");
+			return err;
+		}
 	}
 	return err;
 }
@@ -486,11 +529,30 @@ static struct i2c_board_info laguna_sn65dsi86_dsi2edp_board_info __initdata = {
 static int __init dsi_a_1080p_14_0_i2c_bridge_register(void)
 {
 	int err = 0;
-	pr_info("dsi_a_1080p_14_0_i2c_bridge_register\n");
-	err = i2c_register_board_info(0,
+	struct device_node *bridge_node = NULL;
+	bridge_node = of_find_compatible_node(NULL, NULL,
+		"ti,sn65dsi86");
+	if (!of_have_populated_dt() || !bridge_node) {
+		pr_info("dsi_a_1080p_14_0_i2c_bridge_register\n");
+		err = i2c_register_board_info(0,
 			&laguna_sn65dsi86_dsi2edp_board_info, 1);
+	}
 	return err;
 }
+
+struct pwm_bl_data_dt_ops dsi_a_1080p_14_0_pwm_bl_ops = {
+	.notify = dsi_a_1080p_14_0_bl_notify,
+	.check_fb = dsi_a_1080p_14_0_check_fb,
+	.blnode_compatible = "a,1080p-14-0-bl",
+};
+
+struct tegra_panel_ops dsi_a_1080p_14_0_ops = {
+	.enable = dsi_a_1080p_14_0_enable,
+	.disable = dsi_a_1080p_14_0_disable,
+	.postsuspend = dsi_a_1080p_14_0_postsuspend,
+	.pwm_bl_ops = &dsi_a_1080p_14_0_pwm_bl_ops,
+};
+
 struct tegra_panel __initdata dsi_a_1080p_14_0 = {
 	.init_sd_settings = dsi_a_1080p_14_0_sd_settings_init,
 	.init_dc_out = dsi_a_1080p_14_0_dc_out_init,

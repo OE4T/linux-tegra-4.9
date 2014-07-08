@@ -213,10 +213,13 @@ static int lvds_c_1366_14_enable(struct device *dev)
 		goto fail;
 	}
 
-	err = laguna_lvds_gpio_get();
+	err = tegra_panel_gpio_get_dt("c,wxga-14-0", &panel_of);
 	if (err < 0) {
-		pr_err("lvds gpio request failed\n");
-		goto fail;
+		err = laguna_lvds_gpio_get();
+		if (err < 0) {
+			pr_err("lvds gpio request failed\n");
+			goto fail;
+		}
 	}
 
 	if (vdd_lcd_bl) {
@@ -385,11 +388,23 @@ static struct platform_device __maybe_unused
 static int  __init lvds_c_1366_14_register_bl_dev(void)
 {
 	int err = 0;
-	err = platform_add_devices(lvds_c_1366_14_bl_devices,
-				ARRAY_SIZE(lvds_c_1366_14_bl_devices));
-	if (err) {
-		pr_err("disp1 bl device registration failed");
-		return err;
+	struct device_node *dc1_node = NULL;
+	struct device_node *dc2_node = NULL;
+	struct device_node *pwm_bl_node = NULL;
+
+	find_dc_node(&dc1_node, &dc2_node);
+	pwm_bl_node = of_find_compatible_node(NULL, NULL,
+		"pwm-backlight");
+	if (!of_have_populated_dt() || !dc1_node ||
+		!of_device_is_available(dc1_node) ||
+		!pwm_bl_node ||
+		!of_device_is_available(pwm_bl_node)) {
+		err = platform_add_devices(lvds_c_1366_14_bl_devices,
+			ARRAY_SIZE(lvds_c_1366_14_bl_devices));
+		if (err) {
+			pr_err("disp1 bl device registration failed");
+			return err;
+		}
 	}
 	return err;
 }
@@ -430,6 +445,19 @@ lvds_c_1366_14_sd_settings_init(struct tegra_dc_sd_settings *settings)
 	*settings = lvds_c_1366_14_sd_settings;
 	settings->bl_device_name = "pwm-backlight";
 }
+
+struct pwm_bl_data_dt_ops lvds_c_1366_14_pwm_bl_ops = {
+	.notify = lvds_c_1366_14_bl_notify,
+	.check_fb = lvds_c_1366_14_check_fb,
+	.blnode_compatible = "c,wxga-14-0-bl",
+};
+
+struct tegra_panel_ops lvds_c_1366_14_ops = {
+	.enable = lvds_c_1366_14_enable,
+	.disable = lvds_c_1366_14_disable,
+	.postsuspend = lvds_c_1366_14_postsuspend,
+	.pwm_bl_ops = &lvds_c_1366_14_pwm_bl_ops,
+};
 
 struct tegra_panel __initdata lvds_c_1366_14 = {
 	.init_sd_settings = lvds_c_1366_14_sd_settings_init,

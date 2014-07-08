@@ -108,7 +108,7 @@ int tegra_panel_gpio_get_dt(const char *comp_str,
 				struct tegra_panel_of *panel)
 {
 	int cnt = 0;
-	char *label;
+	char *label = NULL;
 	const char *node_status;
 	int err = 0;
 	struct device_node *node =
@@ -142,6 +142,16 @@ int tegra_panel_gpio_get_dt(const char *comp_str,
 	panel->panel_gpio[TEGRA_GPIO_PWM] =
 		of_get_named_gpio(node, "nvidia,panel-bl-pwm-gpio", 0);
 
+	panel->panel_gpio[TEGRA_GPIO_BRIDGE_EN_0] =
+		of_get_named_gpio(node, "nvidia,panel-bridge-en-0-gpio", 0);
+
+	panel->panel_gpio[TEGRA_GPIO_BRIDGE_EN_1] =
+		of_get_named_gpio(node, "nvidia,panel-bridge-en-1-gpio", 0);
+
+	panel->panel_gpio[TEGRA_GPIO_BRIDGE_REFCLK_EN] =
+		of_get_named_gpio(node,
+			"nvidia,panel-bridge-refclk-en-gpio", 0);
+
 	for (cnt = 0; cnt < TEGRA_N_GPIO_PANEL; cnt++) {
 		if (gpio_is_valid(panel->panel_gpio[cnt])) {
 			switch (cnt) {
@@ -154,10 +164,23 @@ int tegra_panel_gpio_get_dt(const char *comp_str,
 			case TEGRA_GPIO_PWM:
 				label = "tegra-panel-pwm";
 				break;
+			case TEGRA_GPIO_BRIDGE_EN_0:
+				label = "tegra-panel-bridge-en-0";
+				break;
+			case TEGRA_GPIO_BRIDGE_EN_1:
+				label = "tegra-panel-bridge-en-1";
+				break;
+			case TEGRA_GPIO_BRIDGE_REFCLK_EN:
+				label = "tegra-panel-bridge-refclk-en";
+				break;
 			default:
 				pr_err("tegra panel no gpio entry\n");
 			}
-			gpio_request(panel->panel_gpio[cnt], label);
+			if (label) {
+				gpio_request(panel->panel_gpio[cnt],
+					label);
+				label = NULL;
+			}
 		}
 	}
 	if (gpio_is_valid(panel->panel_gpio[TEGRA_GPIO_PWM]))
@@ -209,6 +232,12 @@ void tegra_pwm_bl_ops_register(struct device *dev)
 	case BOARD_E1639:
 	case BOARD_E1813:
 		dev_set_drvdata(dev, dsi_s_wqxga_10_1_ops.pwm_bl_ops);
+		break;
+	case BOARD_PM366:
+		dev_set_drvdata(dev, lvds_c_1366_14_ops.pwm_bl_ops);
+		break;
+	case BOARD_PM354:
+		dev_set_drvdata(dev, dsi_a_1080p_14_0_ops.pwm_bl_ops);
 		break;
 	case BOARD_E1937:
 		if (display_board.sku == 1100)
@@ -309,6 +338,18 @@ struct device_node *tegra_primary_panel_get_dt_node(
 			tegra_panel_register_ops(dc_out,
 				&dsi_s_wqxga_10_1_ops);
 		np_panel = of_find_compatible_node(NULL, NULL, "s,wqxga-10-1");
+		break;
+	case BOARD_PM366:
+		if (pdata && dc_out)
+			tegra_panel_register_ops(dc_out,
+				&lvds_c_1366_14_ops);
+		np_panel = of_find_compatible_node(NULL, NULL, "c,wxga-14-0");
+		break;
+	case BOARD_PM354:
+		if (pdata && dc_out)
+			tegra_panel_register_ops(dc_out,
+				&dsi_a_1080p_14_0_ops);
+		np_panel = of_find_compatible_node(NULL, NULL, "a,1080p-14-0");
 		break;
 	case BOARD_E1937:
 		if (display_board.sku == 1100)

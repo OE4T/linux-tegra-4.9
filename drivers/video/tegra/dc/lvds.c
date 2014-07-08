@@ -28,7 +28,7 @@ static int tegra_dc_lvds_init(struct tegra_dc *dc)
 	struct tegra_dc_lvds_data *lvds;
 	int err;
 
-	lvds = kzalloc(sizeof(*lvds), GFP_KERNEL);
+	lvds = devm_kzalloc(&dc->ndev->dev, sizeof(*lvds), GFP_KERNEL);
 	if (!lvds)
 		return -ENOMEM;
 
@@ -45,7 +45,7 @@ static int tegra_dc_lvds_init(struct tegra_dc *dc)
 	return 0;
 
 err_init:
-	kfree(lvds);
+	devm_kfree(&dc->ndev->dev, lvds);
 
 	return err;
 }
@@ -57,7 +57,7 @@ static void tegra_dc_lvds_destroy(struct tegra_dc *dc)
 
 	if (lvds->sor)
 		tegra_dc_sor_destroy(lvds->sor);
-	kfree(lvds);
+	devm_kfree(&dc->ndev->dev, lvds);
 }
 
 

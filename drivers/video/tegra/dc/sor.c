@@ -258,6 +258,7 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	__maybe_unused struct clk *safe_clk = NULL;
 	struct device_node *np = dc->ndev->dev.of_node;
 	struct device_node *np_sor =
+		dc->ndev->id ? of_find_node_by_path("/host1x/sor1") :
 		of_find_node_by_path("/host1x/sor");
 	const char *res_name = dc->ndev->id ? "sor1" : "sor0";
 

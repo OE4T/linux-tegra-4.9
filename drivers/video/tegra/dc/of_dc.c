@@ -429,7 +429,8 @@ static int parse_disp_default_out(struct platform_device *ndev,
 	} else {
 		/* default_out->type == TEGRA_DC_OUT_DSI or
 		 * default_out->type == TEGRA_DC_OUT_DP or
-		 * default_out->type == TEGRA_DC_OUT_NVSR_DP
+		 * default_out->type == TEGRA_DC_OUT_NVSR_DP or
+		 * default_out->type == TEGRA_DC_OUT_LVDS
 		 */
 		if (!of_property_read_u32(np,
 			"nvidia,out-depth", &temp)) {
@@ -1119,6 +1120,20 @@ struct device_node *parse_dsi_settings(struct platform_device *ndev,
 		"nvidia,dsi-suspend-aggr", &temp)) {
 		dsi->suspend_aggr = (u8)temp;
 		OF_DC_LOG("dsi suspend_aggr %d\n", dsi->suspend_aggr);
+	}
+
+	if (!of_property_read_u32(np_dsi_panel,
+		"nvidia,dsi-edp-bridge", &temp)) {
+		dsi->dsi2edp_bridge_enable = (bool)temp;
+		OF_DC_LOG("dsi2edp_bridge_enabled %d\n",
+			dsi->dsi2edp_bridge_enable);
+	}
+
+	if (!of_property_read_u32(np_dsi_panel,
+		"nvidia,dsi-lvds-bridge", &temp)) {
+		dsi->dsi2lvds_bridge_enable = (bool)temp;
+		OF_DC_LOG("dsi-lvds_bridge_enabled %d\n",
+			dsi->dsi2lvds_bridge_enable);
 	}
 
 	dsi_te_gpio = of_get_named_gpio(np_dsi_panel, "nvidia,dsi-te-gpio", 0);
@@ -1816,13 +1831,16 @@ struct tegra_dc_platform_data
 	timings_np = of_get_child_by_name(np_target_disp,
 		"display-timings");
 	if (!timings_np) {
-		if (pdata->default_out->type == TEGRA_DC_OUT_DSI) {
+		if (pdata->default_out->type == TEGRA_DC_OUT_DSI ||
+			pdata->default_out->type == TEGRA_DC_OUT_LVDS) {
 			pr_err("%s: could not find display-timings node\n",
 				__func__);
 			goto fail_parse;
 		}
-	} else if (pdata->default_out->type == TEGRA_DC_OUT_DSI) {
-		/* pdata->default_out->type == TEGRA_DC_OUT_DSI
+	} else if (pdata->default_out->type == TEGRA_DC_OUT_DSI ||
+			pdata->default_out->type == TEGRA_DC_OUT_LVDS) {
+		/* pdata->default_out->type == TEGRA_DC_OUT_DSI or
+		 * pdata->default_out->type == TEGRA_DC_OUT_LVDS
 		 */
 		pdata->default_out->n_modes =
 			of_get_child_count(timings_np);

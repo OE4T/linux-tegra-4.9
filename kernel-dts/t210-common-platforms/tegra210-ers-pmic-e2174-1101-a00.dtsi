@@ -6,6 +6,34 @@
 	i2c@7000d000 {
 		nvidia,bit-banging-xfer-after-shutdown;
 
+		max77621@36 {
+			compatible = "maxim,max77621";
+			reg = <0x36>;
+			status = "disabled";
+			regulator-name = "vdd-cpu";
+			regulator-min-microvolt = <600000>;
+			regulator-max-microvolt = <1400000>;
+			regulator-boot-on;
+			regulator-always-on;
+			maxim,externally-enable;
+			maxim,dvs-default-state = <1>;
+			maxim,external-enable-gpio = <&max77620 5 0>;
+		};
+
+		max77621@38 {
+			compatible = "maxim,max77621";
+			reg = <0x38>;
+			status = "disabled";
+			regulator-name = "vdd-gpu";
+			regulator-min-microvolt = <600000>;
+			regulator-max-microvolt = <1400000>;
+			regulator-boot-on;
+			regulator-always-on;
+			maxim,externally-enable;
+			maxim,dvs-default-state = <1>;
+			maxim,external-enable-gpio = <&max77620 6 0>;
+		};
+
 		max77620: max77620@3c {
 			compatible = "maxim,max77620";
 			reg = <0x3c>;

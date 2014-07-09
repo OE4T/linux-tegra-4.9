@@ -792,6 +792,9 @@ int nvhost_module_enable_clk(struct device *dev)
 		}
 	}
 
+	trace_nvhost_module_enable_clk(pdata->pdev->name,
+					pdata->num_clks);
+
 	return 0;
 }
 EXPORT_SYMBOL(nvhost_module_enable_clk);
@@ -804,6 +807,9 @@ int nvhost_module_disable_clk(struct device *dev)
 	pdata = dev_get_drvdata(dev);
 	if (!pdata)
 		return -EINVAL;
+
+	trace_nvhost_module_disable_clk(pdata->pdev->name,
+					pdata->num_clks);
 
 	for (index = 0; index < pdata->num_channels; index++)
 		if (pdata->channels[index])
@@ -860,6 +866,8 @@ static int nvhost_module_power_on(struct generic_pm_domain *domain)
 
 	mutex_lock(&pdata->lock);
 	if (pdata->can_powergate) {
+		trace_nvhost_module_power_on(pdata->pdev->name,
+			pdata->powergate_ids[0], pdata->powergate_ids[1]);
 		do_unpowergate_locked(pdata->powergate_ids[0]);
 		do_unpowergate_locked(pdata->powergate_ids[1]);
 	}
@@ -877,6 +885,8 @@ static int nvhost_module_power_off(struct generic_pm_domain *domain)
 
 	mutex_lock(&pdata->lock);
 	if (pdata->can_powergate) {
+		trace_nvhost_module_power_off(pdata->pdev->name,
+			pdata->powergate_ids[0], pdata->powergate_ids[1]);
 		do_powergate_locked(pdata->powergate_ids[0]);
 		do_powergate_locked(pdata->powergate_ids[1]);
 	}

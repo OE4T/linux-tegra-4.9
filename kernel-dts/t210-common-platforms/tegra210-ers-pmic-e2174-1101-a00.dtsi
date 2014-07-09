@@ -50,6 +50,9 @@
 			maxim,system-pmic-power-off;
 			maxim,system-pmic-power-reset;
 
+			maxim,wdt-timeout = <16>;
+			maxim,wdt-clear-time = <13>;
+
 			pinctrl-names = "default";
 			pinctrl-0 = <&max77620_default>;
 

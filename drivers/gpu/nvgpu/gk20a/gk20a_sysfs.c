@@ -389,6 +389,55 @@ static ssize_t aelpg_param_read(struct device *device,
 static DEVICE_ATTR(aelpg_param, S_IRWXUGO,
 		aelpg_param_read, aelpg_param_store);
 
+static ssize_t aelpg_enable_store(struct device *device,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct gk20a *g = get_gk20a(ndev);
+	unsigned long val = 0;
+	int status = 0;
+	union pmu_ap_cmd ap_cmd;
+	int err;
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	err = gk20a_busy(g->dev);
+	if (g->pmu.pmu_ready) {
+		if (val && !g->aelpg_enabled) {
+			g->aelpg_enabled = true;
+			/* Enable AELPG */
+			ap_cmd.init.cmd_id = PMU_AP_CMD_ID_ENABLE_CTRL;
+			status = gk20a_pmu_ap_send_command(g, &ap_cmd, false);
+		} else if (!val && g->aelpg_enabled) {
+			g->aelpg_enabled = false;
+			/* Disable AELPG */
+			ap_cmd.init.cmd_id = PMU_AP_CMD_ID_DISABLE_CTRL;
+			status = gk20a_pmu_ap_send_command(g, &ap_cmd, false);
+		}
+	} else {
+		dev_info(device, "PMU is not ready, AELPG request failed\n");
+	}
+	gk20a_idle(g->dev);
+
+	dev_info(device, "AELPG is %s.\n", g->aelpg_enabled ? "enabled" :
+			"disabled");
+
+	return count;
+}
+
+static ssize_t aelpg_enable_read(struct device *device,
+		struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct gk20a *g = get_gk20a(ndev);
+
+	return sprintf(buf, "%d\n", g->aelpg_enabled ? 1 : 0);
+}
+
+static DEVICE_ATTR(aelpg_enable, ROOTRW,
+		aelpg_enable_read, aelpg_enable_store);
+
 #ifdef CONFIG_PM_RUNTIME
 static ssize_t force_idle_store(struct device *device,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -458,6 +507,7 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_force_idle);
 #endif
 	device_remove_file(dev, &dev_attr_aelpg_param);
+	device_remove_file(dev, &dev_attr_aelpg_enable);
 
 	if (g->host1x_dev && (dev->parent != &g->host1x_dev->dev))
 		sysfs_remove_link(&dev->kobj, dev_name(dev));
@@ -482,6 +532,7 @@ void gk20a_create_sysfs(struct platform_device *dev)
 	error |= device_create_file(&dev->dev, &dev_attr_force_idle);
 #endif
 	error |= device_create_file(&dev->dev, &dev_attr_aelpg_param);
+	error |= device_create_file(&dev->dev, &dev_attr_aelpg_enable);
 
 	if (g->host1x_dev && (dev->dev.parent != &g->host1x_dev->dev))
 		error |= sysfs_create_link(&g->host1x_dev->dev.kobj,

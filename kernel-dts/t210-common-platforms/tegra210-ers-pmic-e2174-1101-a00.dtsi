@@ -280,8 +280,8 @@
 
 				max77620_ldo5: ldo5 {
 					regulator-name = "avdd-ts-hv";
-					regulator-min-microvolt = <3000000>;
-					regulator-max-microvolt = <3000000>;
+					regulator-min-microvolt = <3300000>;
+					regulator-max-microvolt = <3300000>;
 					maxim,fps-source = <FPS_SRC_NONE>;
 					consumers {
 						c0 {

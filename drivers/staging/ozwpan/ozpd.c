@@ -40,6 +40,7 @@ static void oz_def_app_stop(struct oz_pd *pd, int pause);
 static void oz_def_app_rx(struct oz_pd *pd, struct oz_elt *elt);
 static void oz_pd_free(struct work_struct *work);
 static void oz_pd_uevent_workitem(struct work_struct *work);
+extern struct completion oz_pd_done;
 /*------------------------------------------------------------------------------
  * Counts the uncompleted isoc frames submitted to netcard.
  */
@@ -203,7 +204,6 @@ struct oz_pd *oz_pd_alloc(const u8 *mac_addr)
 		hrtimer_init(&pd->timeout, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 		pd->heartbeat.function = oz_pd_heartbeat_event;
 		pd->timeout.function = oz_pd_timeout_event;
-		pd->reset_retry = 0;
 
 		spin_lock_init(&pd->pd_destroy_lock);
 		pd->pd_destroy_scheduled = false;
@@ -269,6 +269,7 @@ static void oz_pd_free(struct work_struct *work)
 	}
 
 	kfree(pd);
+	complete(&oz_pd_done);
 }
 
 
@@ -414,11 +415,11 @@ void oz_pd_stop(struct oz_pd *pd)
 	oz_pd_set_state(pd, OZ_PD_S_STOPPED);
 
 	if (hrtimer_active(&pd->timeout)) {
-		pr_info("hrtimer timeout active\n");
+		oz_trace_msg(M, "hrtimer timeout active\n");
 		hrtimer_cancel(&pd->timeout);
 	}
 	if (hrtimer_active(&pd->heartbeat)) {
-		pr_info("hrtimer heartbeat active\n");
+		oz_trace_msg(M, "hrtimer heartbeat active\n");
 		hrtimer_cancel(&pd->heartbeat);
 	}
 	/* connect_req will restart timers */
@@ -657,6 +658,11 @@ static int oz_send_next_queued_frame(struct oz_pd *pd, int more_data)
 		oz_set_last_pkt_nb(pd, skb);
 		if ((int)atomic_read(&g_submitted_isoc) <
 							OZ_MAX_SUBMITTED_ISOC) {
+			if (!netif_running(skb->dev)) {
+				kfree_skb(skb);
+				return -1;
+			}
+
 			oz_trace_skb(skb, 'T');
 			if (dev_queue_xmit(skb) < 0) {
 				return -1;
@@ -677,6 +683,12 @@ static int oz_send_next_queued_frame(struct oz_pd *pd, int more_data)
 
 	if (more_data)
 		oz_set_more_bit(skb);
+
+	if (!netif_running(skb->dev)) {
+		kfree_skb(skb);
+		return -1;
+	}
+
 	oz_trace_skb(skb, 'T');
 	if (dev_queue_xmit(skb) < 0)
 		return -1;
@@ -765,8 +777,12 @@ static int oz_send_isoc_frame(struct oz_pd *pd)
 		memcpy(elt, ei->data, ei->length);
 		elt = oz_next_elt(elt);
 	}
-	oz_trace_skb(skb, 'T');
-	dev_queue_xmit(skb);
+
+	if (netif_running(skb->dev)) {
+		oz_trace_skb(skb, 'T');
+		dev_queue_xmit(skb);
+	} else
+		kfree_skb(skb);
 	oz_elt_info_free_chain(&pd->elt_buff, &list);
 	return 0;
 }
@@ -979,6 +995,10 @@ int oz_send_isoc_unit(struct oz_pd *pd, u8 ep_num, const u8 *data, int len)
 		if (atomic_read(&g_submitted_isoc) < OZ_MAX_SUBMITTED_ISOC) {
 			atomic_inc(&g_submitted_isoc);
 			oz_trace_skb(skb, 'T');
+
+			if (!netif_running(skb->dev))
+				goto out;
+
 			if (dev_queue_xmit(skb) < 0) {
 				return -1;
 			} else

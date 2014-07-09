@@ -51,6 +51,7 @@ static LIST_HEAD(g_pd_list);
 static LIST_HEAD(g_binding);
 static DEFINE_SPINLOCK(g_binding_lock);
 static struct sk_buff_head g_rx_queue;
+struct completion oz_pd_done;
 static u8 g_session_id;
 static u16 g_apps = 0x1;
 static int g_processing_rx;
@@ -108,6 +109,11 @@ static void oz_send_conn_rsp(struct oz_pd *pd, u8 status)
 		body->session_id = pd->session_id;
 		put_unaligned(cpu_to_le16(pd->total_apps), &body->apps);
 	}
+	if (!netif_running(dev)) {
+		kfree_skb(skb);
+		return;
+	}
+
 	oz_trace_skb(skb, 'T');
 	dev_queue_xmit(skb);
 	return;
@@ -529,11 +535,11 @@ void oz_pd_timeout_handler(unsigned long data)
 	spin_unlock_bh(&g_polling_lock);
 	switch (type) {
 	case OZ_TIMER_TOUT:
-		oz_trace_msg(M, "OZ_TIMER_TOUT:\n");
+		oz_trace_msg(D, "OZ_TIMER_TOUT:\n");
 		oz_pd_sleep(pd);
 		break;
 	case OZ_TIMER_STOP:
-		oz_trace_msg(M, "OZ_TIMER_STOP:\n");
+		oz_trace_msg(D, "OZ_TIMER_STOP:\n");
 		oz_pd_stop(pd);
 		break;
 	}
@@ -662,6 +668,14 @@ static int oz_pkt_recv(struct sk_buff *skb, struct net_device *dev,
 	skb = skb_share_check(skb, GFP_ATOMIC);
 	if (skb == NULL)
 		return 0;
+
+	if (unlikely(!dev || !netif_running(dev))) {
+		oz_trace_msg(M, "%s: netdev stopped, drop pkt\n", __func__);
+		kfree_skb(skb);
+		g_processing_rx = 0;
+		return 0;
+	}
+
 	spin_lock_bh(&g_rx_queue.lock);
 	if (g_processing_rx) {
 		/* We already hold the lock so use __ variant.
@@ -673,6 +687,13 @@ static int oz_pkt_recv(struct sk_buff *skb, struct net_device *dev,
 		do {
 
 			spin_unlock_bh(&g_rx_queue.lock);
+			if (unlikely(!dev || !netif_running(dev))) {
+				kfree_skb(skb);
+				skb_queue_purge(&g_rx_queue);
+				g_processing_rx = 0;
+				return 0;
+			}
+
 			oz_rx_frame(skb);
 			spin_lock_bh(&g_rx_queue.lock);
 			if (skb_queue_empty(&g_rx_queue)) {
@@ -754,9 +775,14 @@ static void pd_stop_all_for_device(struct net_device *net_dev)
 	}
 	spin_unlock_bh(&g_polling_lock);
 	while (!list_empty(&h)) {
+		INIT_COMPLETION(oz_pd_done);
 		pd = list_first_entry(&h, struct oz_pd, link);
 		oz_pd_stop(pd);
 		oz_pd_put(pd);
+		/* wait for PD to get destroyed */
+		if (pd)
+			wait_for_completion_timeout(&oz_pd_done,
+						msecs_to_jiffies(50));
 	}
 }
 /*------------------------------------------------------------------------------
@@ -779,14 +805,20 @@ void oz_binding_remove(const char *net_dev)
 	}
 	spin_unlock_bh(&g_binding_lock);
 	if (found) {
+		pd_stop_all_for_device(binding->ptype.dev);
+
+		/* purge pending rx skb */
+		skb_queue_purge(&g_rx_queue);
+		WARN_ON(!skb_queue_empty(&g_rx_queue));
+
 		dev_remove_pack(&binding->ptype);
 		if (binding->ptype.dev) {
 			oz_trace_msg(M, "%s: dev_put(%s)\n", __func__,
 							binding->name);
 			dev_put(binding->ptype.dev);
-			pd_stop_all_for_device(binding->ptype.dev);
 		}
 		kfree(binding);
+		g_processing_rx = 0;
 	}
 }
 /*------------------------------------------------------------------------------
@@ -827,6 +859,7 @@ static char *oz_get_next_device_name(char *s, char *dname, int max_size)
 int oz_protocol_init(char *devs)
 {
 	skb_queue_head_init(&g_rx_queue);
+	init_completion(&oz_pd_done);
 	if (devs && (devs[0] == '*')) {
 		return -1;
 	} else {

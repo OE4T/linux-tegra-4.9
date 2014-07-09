@@ -114,7 +114,6 @@ struct oz_pd {
 	struct work_struct uevent_workitem;
 	spinlock_t	pd_destroy_lock;
 	bool	pd_destroy_scheduled;
-	unsigned int reset_retry;
 	u8	up_audio_buf;
 };
 

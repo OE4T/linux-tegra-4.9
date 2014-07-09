@@ -2001,29 +2001,6 @@ static int oz_set_port_feature(struct usb_hcd *hcd, u16 wvalue, u16 windex)
 		ozhcd->ports[port_id-1].bus_addr = 0;
 		hpd = oz_claim_hpd(&ozhcd->ports[port_id-1]);
 		if (hpd != NULL) {
-			struct oz_usb_ctx *usb_ctx = (struct oz_usb_ctx *)hpd;
-			struct oz_pd *pd = (struct oz_pd *)usb_ctx->pd;
-
-			/* FIXME: Hack to reset network interface
-			 * Unrecoverable situation occured.
-			 */
-			if (pd && ((++pd->reset_retry > 2) ||
-				(!(pd->state & OZ_PD_S_CONNECTED)))) {
-				char *_net_dev = "";
-
-				pr_info("OZ: tear down network interface\n");
-				spin_lock_bh(&port->port_lock);
-				port->flags |= OZ_PORT_F_CHANGED;
-				spin_unlock_bh(&port->port_lock);
-				oz_usb_put(hpd);
-
-				oz_pd_stop(pd);
-				msleep(10);
-				oz_protocol_term();
-				msleep(100);
-				oz_protocol_init(_net_dev);
-				break;
-			}
 			oz_usb_reset_device(hpd);
 			oz_usb_put(hpd);
 		}

@@ -103,13 +103,17 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 
 	if(!size)
 		return NULL;
-	job = vzalloc(size);
+	if(size <= PAGE_SIZE)
+		job = kzalloc(size, GFP_KERNEL);
+	else
+		job = vzalloc(size);
 	if (!job)
 		return NULL;
 
 	kref_init(&job->ref);
 	job->ch = ch;
 	job->hwctx = hwctx;
+	job->size = size;
 	if (hwctx)
 		hwctx->h->get(hwctx);
 
@@ -131,7 +135,10 @@ static void job_free(struct kref *ref)
 		job->hwctxref->h->put(job->hwctxref);
 	if (job->hwctx)
 		job->hwctx->h->put(job->hwctx);
-	vfree(job);
+	if(job->size <= PAGE_SIZE)
+		kfree(job);
+	else
+		vfree(job);
 }
 
 /* Acquire reference to a hardware context. Used for keeping saved contexts in

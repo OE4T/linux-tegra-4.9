@@ -63,6 +63,9 @@ struct nvhost_job_unpin {
  * Each submit is tracked as a nvhost_job.
  */
 struct nvhost_job {
+	/* Total size of job */
+	size_t size;
+
 	/* When refcount goes to zero, job can be freed */
 	struct kref ref;
 

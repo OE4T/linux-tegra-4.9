@@ -69,8 +69,8 @@ extern struct tegra_panel_ops edp_i_1080p_11_6_ops;
 
 extern struct tegra_panel_ops *fixed_primary_panel_ops;
 extern struct tegra_panel_ops *fixed_secondary_panel_ops;
-extern const char *fixed_primary_panel_node;
-extern const char *fixed_secondary_panel_node;
+extern const char *fixed_primary_panel_compatible;
+extern const char *fixed_secondary_panel_compatible;
 
 extern struct pwm_bl_data_dt_ops *fixed_pwm_bl_ops;
 

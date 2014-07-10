@@ -1561,15 +1561,24 @@ u32 tegra_dc_get_syncpt_id(const struct tegra_dc *dc, int i)
 }
 EXPORT_SYMBOL(tegra_dc_get_syncpt_id);
 
+static u32 tegra_dc_incr_syncpt_max_locked(struct tegra_dc *dc, int i)
+{
+	u32 max;
+
+	max = nvhost_syncpt_incr_max_ext(dc->ndev,
+		dc->syncpt[i].id, ((dc->enabled) ? 1 : 0));
+	dc->syncpt[i].max = max;
+
+	return max;
+}
+
 u32 tegra_dc_incr_syncpt_max(struct tegra_dc *dc, int i)
 {
 	u32 max;
 
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
-	max = nvhost_syncpt_incr_max_ext(dc->ndev,
-		dc->syncpt[i].id, ((dc->enabled) ? 1 : 0));
-	dc->syncpt[i].max = max;
+	max = tegra_dc_incr_syncpt_max_locked(dc, i);
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
 
@@ -2979,6 +2988,7 @@ void tegra_dc_enable(struct tegra_dc *dc)
 void tegra_dc_disable_window(struct tegra_dc *dc, unsigned win)
 {
 	struct tegra_dc_win *w = &dc->windows[win];
+	u32 max;
 
 	/* reset window bandwidth */
 	w->bandwidth = 0;
@@ -2992,8 +3002,8 @@ void tegra_dc_disable_window(struct tegra_dc *dc, unsigned win)
 		return;
 
 	/* flush any pending syncpt waits */
-	dc->syncpt[win].max += 1;
-	while (dc->syncpt[win].min < dc->syncpt[win].max) {
+	max = tegra_dc_incr_syncpt_max_locked(dc, win);
+	while (dc->syncpt[win].min < max) {
 		trace_display_syncpt_flush(dc, dc->syncpt[win].id,
 			dc->syncpt[win].min, dc->syncpt[win].max);
 		dc->syncpt[win].min++;

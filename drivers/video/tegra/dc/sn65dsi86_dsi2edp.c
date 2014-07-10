@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/sn65dsi86_dsi2edp.c
  *
- * Copyright (c) 2013, NVIDIA Corporation.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Bibek Basu <bbasu@nvidia.com>
@@ -240,6 +240,37 @@ struct tegra_dsi_out_ops tegra_dsi2edp_ops = {
 static int sn65dsi86_i2c_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)
 {
+	struct device_node *np = client->dev.of_node;
+	struct device_node *pri_pn = NULL;
+	struct device_node *sec_pn = NULL;
+	bool pri_bridge = 0;
+	bool sec_bridge = 0;
+
+	if (np) {
+		/* TODO. We don't want probe itself for
+		 * panels which don't use bridge.
+		 * Until this bridge device is registered as a
+		 * sub device of /host1x/dsi/panel in device tree,
+		 * do no operation in probe in case bridge is not used.
+		 * The reason to prepare this step to check with
+		 * dsi2edp-bridge property is to consider
+		 * the case that probe contains any actual operation.
+		 */
+		pri_pn =
+			tegra_primary_panel_get_dt_node(NULL);
+		sec_pn =
+			tegra_secondary_panel_get_dt_node(NULL);
+		if (pri_pn)
+			pri_bridge =
+				of_property_read_bool(pri_pn,
+				"nvidia,dsi-edp-bridge");
+		if (sec_pn)
+			sec_bridge = of_property_read_bool(sec_pn,
+				"nvidia,dsi-edp-bridge");
+
+		if (!pri_bridge && !sec_bridge)
+			return 0;
+	}
 	sn65dsi86_i2c_client = client;
 
 	return 0;
@@ -257,9 +288,15 @@ static const struct i2c_device_id sn65dsi86_id_table[] = {
 	{},
 };
 
+static const struct of_device_id sn65dsi86_dt_match[] = {
+	{ .compatible = "ti,sn65dsi86" },
+	{ }
+};
+
 static struct i2c_driver sn65dsi86_i2c_drv = {
 	.driver = {
 		.name = "sn65dsi86_dsi2edp",
+		.of_match_table = of_match_ptr(sn65dsi86_dt_match),
 		.owner = THIS_MODULE,
 	},
 	.probe = sn65dsi86_i2c_probe,

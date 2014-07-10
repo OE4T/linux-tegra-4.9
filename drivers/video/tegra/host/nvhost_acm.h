@@ -52,7 +52,7 @@ int nvhost_module_get_rate(struct platform_device *dev,
 		unsigned long *rate,
 		int index);
 int nvhost_module_set_rate(struct platform_device *dev, void *priv,
-		unsigned long rate, int index, int bBW);
+		unsigned long constraint, int index, unsigned long attr);
 int nvhost_module_set_devfreq_rate(struct platform_device *dev, int index,
 		unsigned long rate);
 

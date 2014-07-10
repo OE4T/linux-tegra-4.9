@@ -35,6 +35,7 @@
 #include <trace/events/nvhost.h>
 #include <linux/platform_data/tegra_edp.h>
 #include <linux/tegra_pm_domains.h>
+#include <linux/nvhost_ioctl.h>
 
 #include <mach/mc.h>
 
@@ -56,7 +57,8 @@ DEFINE_MUTEX(client_list_lock);
 
 struct nvhost_module_client {
 	struct list_head node;
-	unsigned long rate[NVHOST_MODULE_MAX_CLOCKS];
+	unsigned long constraint[NVHOST_MODULE_MAX_CLOCKS];
+	unsigned long type[NVHOST_MODULE_MAX_CLOCKS];
 	void *priv;
 };
 
@@ -253,32 +255,52 @@ int nvhost_module_get_rate(struct platform_device *dev, unsigned long *rate,
 
 static int nvhost_module_update_rate(struct platform_device *dev, int index)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	unsigned long bw_constraint = 0, floor_rate = 0, pixelrate = 0;
 	unsigned long rate = 0;
 	struct nvhost_module_client *m;
-	unsigned long devfreq_rate, default_rate;
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	int ret;
 
 	if (!pdata->clk[index])
 		return -EINVAL;
 
-	/* If devfreq is on, use that clock rate, otherwise default */
-	devfreq_rate = pdata->clocks[index].devfreq_rate;
-	default_rate = devfreq_rate ?
-		devfreq_rate : pdata->clocks[index].default_rate;
-	default_rate = clk_round_rate(pdata->clk[index], default_rate);
-
+	/* aggregate client constraints */
 	list_for_each_entry(m, &pdata->client_list, node) {
-		unsigned long r = m->rate[index];
-		if (!r)
-			r = default_rate;
-		rate = max(r, rate);
-	}
-	if (!rate)
-		rate = default_rate;
+		unsigned long constraint = m->constraint[index];
+		unsigned long type = m->type[index];
 
-	trace_nvhost_module_update_rate(dev->name,
-			pdata->clocks[index].name, rate);
+		if (!constraint)
+			continue;
+
+		if (type == NVHOST_BW)
+			bw_constraint += constraint;
+		if (type == NVHOST_PIXELRATE)
+			pixelrate += constraint;
+		else
+			floor_rate = max(floor_rate, constraint);
+	}
+
+	/* use client specific aggregation if available */
+	if (pdata->aggregate_constraints)
+		rate = pdata->aggregate_constraints(dev, index, floor_rate,
+						    pixelrate, bw_constraint);
+
+	/* if frequency is not available, use default policy */
+	if (!rate) {
+		unsigned long bw_rate = tegra_emc_bw_to_freq_req(
+			(unsigned long)(bw_constraint >> 10));
+		rate = max(floor_rate, bw_rate);
+	}
+
+	/* take devfreq rate into account */
+	rate = max(rate, pdata->clocks[index].devfreq_rate);
+
+	/* if we still don't have any rate, use default */
+	if (!rate)
+		rate = pdata->clocks[index].default_rate;
+
+	trace_nvhost_module_update_rate(dev->name, pdata->clocks[index].name,
+					rate);
 
 	ret = clk_set_rate(pdata->clk[index], rate);
 
@@ -287,7 +309,7 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 }
 
 int nvhost_module_set_rate(struct platform_device *dev, void *priv,
-		unsigned long rate, int index, int bBW)
+		unsigned long constraint, int index, unsigned long type)
 {
 	struct nvhost_module_client *m;
 	int ret = 0;
@@ -298,23 +320,8 @@ int nvhost_module_set_rate(struct platform_device *dev, void *priv,
 	mutex_lock(&client_list_lock);
 	list_for_each_entry(m, &pdata->client_list, node) {
 		if (m->priv == priv) {
-			if (bBW) {
-				/*
-				 * If client sets BW, then we need to
-				 * convert it to freq.
-				 * rate is Bps and input param of
-				 * tegra_emc_bw_to_freq_req is KBps.
-				 */
-				unsigned int freq_khz =
-				tegra_emc_bw_to_freq_req
-					((unsigned long)(rate >> 10));
-
-				m->rate[index] =
-					clk_round_rate(pdata->clk[index],
-					(unsigned long)(freq_khz << 10));
-			} else
-				m->rate[index] =
-					clk_round_rate(pdata->clk[index], rate);
+			m->constraint[index] = constraint;
+			m->type[index] = type;
 		}
 	}
 

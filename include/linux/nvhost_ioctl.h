@@ -206,6 +206,7 @@ struct nvhost_cycle_stats_args {
 enum nvhost_clk_attr {
 	NVHOST_CLOCK = 0,
 	NVHOST_BW,
+	NVHOST_PIXELRATE,
 };
 
 /*

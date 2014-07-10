@@ -235,6 +235,13 @@ struct nvhost_device_data {
 	/* Preparing for power off. Used for context save. */
 	int (*prepare_poweroff)(struct platform_device *dev);
 
+	/* paring for power off. Used for context save. */
+	int (*aggregate_constraints)(struct platform_device *dev,
+				     int clk_index,
+				     unsigned long floor_rate,
+				     unsigned long pixel_rate,
+				     unsigned long bw_rate);
+
 	/* Allocates a context handler for the device */
 	struct nvhost_hwctx_handler *(*alloc_hwctx_handler)(u32 syncpt,
 			struct nvhost_channel *ch);

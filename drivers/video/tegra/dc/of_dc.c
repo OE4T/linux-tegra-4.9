@@ -1745,29 +1745,44 @@ struct tegra_dc_platform_data
 		struct device_node *np_hdmi =
 			of_find_node_by_path(HDMI_NODE);
 
-		if (np_hdmi && of_device_is_available(np_hdmi)) {
-				if (!of_property_read_u32(np_hdmi,
-					"nvidia,hotplug-report", &temp)) {
-					hotplug_report = (bool)temp;
-				}
-		}
-
-		pdata->default_out->enable = dc_hdmi_out_enable;
-		pdata->default_out->disable = dc_hdmi_out_disable;
-		pdata->default_out->hotplug_init = dc_hdmi_hotplug_init;
-		pdata->default_out->postsuspend = dc_hdmi_postsuspend;
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC) ||	\
-	defined(CONFIG_ARCH_TEGRA_12x_SOC)
-		if (hotplug_report)
-			pdata->default_out->hotplug_report =
-				dc_hdmi_hotplug_report;
+#ifndef CONFIG_TEGRA_HDMI_PRIMARY
+		np_target_disp
+			= tegra_secondary_panel_get_dt_node(pdata);
+#else
+		np_target_disp
+			= tegra_primary_panel_get_dt_node(pdata);
 #endif
-		np_target_disp =
-			of_get_child_by_name(np_hdmi, "hdmi-display");
 		if (!np_target_disp ||
 			!of_device_is_available(np_target_disp)) {
 			pr_err("/hdmi/hdmi-display node is NOT valid\n");
 			goto fail_parse;
+		}
+		/* fixed panel ops is dominant. If fixed panel ops
+		 * is not defined, we set default hdmi panel ops */
+		if (!pdata->default_out->enable &&
+			!pdata->default_out->disable &&
+			!pdata->default_out->postpoweron &&
+			!pdata->default_out->prepoweroff &&
+			!pdata->default_out->disable &&
+			!pdata->default_out->hotplug_init &&
+			!pdata->default_out->postsuspend &&
+			!pdata->default_out->hotplug_report) {
+			if (np_hdmi && of_device_is_available(np_hdmi)) {
+				if (!of_property_read_u32(np_hdmi,
+					"nvidia,hotplug-report", &temp)) {
+					hotplug_report = (bool)temp;
+				}
+			}
+			pdata->default_out->enable = dc_hdmi_out_enable;
+			pdata->default_out->disable = dc_hdmi_out_disable;
+			pdata->default_out->hotplug_init = dc_hdmi_hotplug_init;
+			pdata->default_out->postsuspend = dc_hdmi_postsuspend;
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC) ||	\
+	defined(CONFIG_ARCH_TEGRA_12x_SOC)
+			if (hotplug_report)
+				pdata->default_out->hotplug_report =
+				dc_hdmi_hotplug_report;
+#endif
 		}
 	}
 

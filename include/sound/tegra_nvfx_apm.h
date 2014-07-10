@@ -155,8 +155,8 @@ typedef struct {
 	uint16_t    mbox_id;       /* mailbox for communication */
 	apm_msgq_t  msgq_recv;
 	apm_msgq_t  msgq_send;
-	variant_t   sem_input; /* semaphore pointer for signaling data ready */
-	variant_t   sem_output;/* semaphore pointer for signaling data needed */
+	variant_t   input_event; /* event_t pointer to signal input ready */
+	variant_t   output_event;/* event_t pointer to signal output needed */
 } apm_shared_state_t;
 
 typedef struct {

@@ -42,7 +42,7 @@ typedef struct {
 	int32_t direction;
 	int32_t ahub_channel;
 	int32_t periods;
-	variant_t semaphore;
+	variant_t event;
 } nvfx_adma_init_params_t;
 
 typedef struct {

@@ -39,6 +39,7 @@ static void oz_def_app_term(void);
 static int oz_def_app_start(struct oz_pd *pd, int resume);
 static void oz_def_app_stop(struct oz_pd *pd, int pause);
 static void oz_def_app_rx(struct oz_pd *pd, struct oz_elt *elt);
+static void oz_pd_free(struct work_struct *work);
 /*------------------------------------------------------------------------------
  * Counts the uncompleted isoc frames submitted to netcard.
  */
@@ -160,8 +161,12 @@ void oz_pd_get(struct oz_pd *pd)
  */
 void oz_pd_put(struct oz_pd *pd)
 {
-	if (atomic_dec_and_test(&pd->ref_count))
-		oz_pd_destroy(pd);
+	atomic_dec(&pd->ref_count);
+
+	if (atomic_read(&pd->ref_count) > 0 || atomic_read(&pd->ref_count) < 0)
+		return;
+
+	oz_pd_destroy(pd);
 }
 /*------------------------------------------------------------------------------
  * Context: softirq-serialized
@@ -197,6 +202,9 @@ struct oz_pd *oz_pd_alloc(const u8 *mac_addr)
 		hrtimer_init(&pd->timeout, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 		pd->heartbeat.function = oz_pd_heartbeat_event;
 		pd->timeout.function = oz_pd_timeout_event;
+		atomic_set(&pd->pd_destroy_scheduled, 0);
+		memset(&pd->workitem, 0, sizeof(pd->workitem));
+		INIT_WORK(&pd->workitem, oz_pd_free);
 	}
 	return pd;
 }
@@ -249,6 +257,7 @@ static void oz_pd_free(struct work_struct *work)
 		oz_trace_msg(M, "dev_put(%p)\n", pd->net_dev);
 		dev_put(pd->net_dev);
 	}
+	atomic_set(&pd->pd_destroy_scheduled, 0);
 	kfree(pd);
 }
 
@@ -260,13 +269,17 @@ void oz_pd_destroy(struct oz_pd *pd)
 {
 	int ret;
 
+	if (atomic_read(&pd->pd_destroy_scheduled) > 0) {
+		pr_info("%s: not rescheduling oz_pd_free\n", __func__);
+		return;
+	}
+	atomic_inc(&pd->pd_destroy_scheduled);
+
 	if (hrtimer_active(&pd->timeout))
 		hrtimer_cancel(&pd->timeout);
 	if (hrtimer_active(&pd->heartbeat))
 		hrtimer_cancel(&pd->heartbeat);
 
-	memset(&pd->workitem, 0, sizeof(pd->workitem));
-	INIT_WORK(&pd->workitem, oz_pd_free);
 	ret = schedule_work(&pd->workitem);
 	if (!ret)
 		pr_info("failed to schedule workitem\n");
@@ -578,6 +591,11 @@ static void oz_retire_frame(struct oz_pd *pd, struct oz_tx_frame *f)
 {
 	struct list_head *e;
 	struct oz_elt_info *ei;
+
+	if (f == NULL) {
+		pr_info("%s: oz_tx_frame is null\n", __func__);
+		return;
+	}
 	e = f->elt_list.next;
 	while (e != &f->elt_list) {
 		ei = container_of(e, struct oz_elt_info, link);

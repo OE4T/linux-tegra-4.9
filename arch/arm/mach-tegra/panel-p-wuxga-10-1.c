@@ -39,9 +39,6 @@
 
 #define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE
 
-#define en_vdd_bl	TEGRA_GPIO_PG0
-#define lvds_en		TEGRA_GPIO_PG3
-
 static bool reg_requested;
 static bool gpio_requested;
 static struct platform_device *disp_device;
@@ -50,9 +47,7 @@ static struct regulator *vdd_lcd_bl;
 static struct regulator *vdd_lcd_bl_en;
 static struct regulator *dvdd_lcd_1v8;
 static struct regulator *vdd_ds_1v8;
-
-#define en_vdd_bl	TEGRA_GPIO_PG0
-#define lvds_en		TEGRA_GPIO_PG3
+static u16 en_panel_rst;
 
 static struct tegra_dc_sd_settings dsi_p_wuxga_10_1_sd_settings = {
 	.enable = 1, /* enabled by default. */
@@ -280,6 +275,14 @@ static int dsi_p_wuxga_10_1_enable(struct device *dev)
 			goto fail;
 		}
 	}
+	/* If panel rst gpio is specified in device tree,
+	 * use that.
+	 */
+	if (gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_RESET]))
+		en_panel_rst = panel_of.panel_gpio[TEGRA_GPIO_RESET];
+	else
+		en_panel_rst =
+			dsi_p_wuxga_10_1_pdata.dsi_panel_rst_gpio;
 
 	if (vdd_ds_1v8) {
 		err = regulator_enable(vdd_ds_1v8);
@@ -323,17 +326,12 @@ static int dsi_p_wuxga_10_1_enable(struct device *dev)
 
 	msleep(100);
 #if DSI_PANEL_RESET
-	err = tegra_panel_reset(&panel_of, 20);
-	if (err < 0) {
-		/* use platform data */
-		gpio_direction_output(
-		dsi_p_wuxga_10_1_pdata.dsi_panel_rst_gpio, 1);
-		usleep_range(1000, 5000);
-		gpio_set_value(dsi_p_wuxga_10_1_pdata.dsi_panel_rst_gpio, 0);
-		msleep(150);
-		gpio_set_value(dsi_p_wuxga_10_1_pdata.dsi_panel_rst_gpio, 1);
-		msleep(20);
-	}
+	gpio_direction_output(en_panel_rst, 1);
+	usleep_range(1000, 5000);
+	gpio_set_value(en_panel_rst, 0);
+	msleep(150);
+	gpio_set_value(en_panel_rst, 1);
+	msleep(20);
 #endif
 
 	return 0;
@@ -343,8 +341,8 @@ fail:
 
 static int dsi_p_wuxga_10_1_disable(void)
 {
-	if (gpio_is_valid(dsi_p_wuxga_10_1_pdata.dsi_panel_rst_gpio))
-		gpio_set_value(dsi_p_wuxga_10_1_pdata.dsi_panel_rst_gpio, 0);
+	if (gpio_is_valid(en_panel_rst))
+		gpio_set_value(en_panel_rst, 0);
 
 	if (vdd_lcd_bl)
 		regulator_disable(vdd_lcd_bl);

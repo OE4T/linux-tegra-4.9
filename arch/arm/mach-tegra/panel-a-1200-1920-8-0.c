@@ -250,6 +250,12 @@ static int dsi_a_1200_1920_8_0_enable(struct device *dev)
 		}
 	}
 
+	/* If panel rst gpio is specified in device tree,
+	 * use that
+	 */
+	if (gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_RESET]))
+		en_panel_rst = panel_of.panel_gpio[TEGRA_GPIO_RESET];
+
 	if (avdd_lcd_3v3) {
 		err = regulator_enable(avdd_lcd_3v3);
 		if (err < 0) {

@@ -52,9 +52,6 @@ static struct regulator *vdd_lcd_bl_en;
 static struct regulator *dvdd_lcd_1v8;
 static struct regulator *vdd_ds_1v8;
 
-#define en_vdd_bl	TEGRA_GPIO_PG0
-#define lvds_en		TEGRA_GPIO_PG3
-
 static struct tegra_dc_sd_settings dsi_a_1080p_11_6_sd_settings = {
 	.enable = 1, /* enabled by default. */
 	.use_auto_pwm = false,

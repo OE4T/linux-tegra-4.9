@@ -234,23 +234,6 @@ static int laguna_dsi_gpio_get(void)
 		pr_err("panel reset gpio request failed\n");
 		goto fail;
 	}
-	err = gpio_request(LCD_LR, "lcd_lr");
-	if (err < 0) {
-		pr_err("panel reset gpio request failed\n");
-		goto fail;
-	}
-
-	err = gpio_request(LCD_RST_L, "lcd_rst_l");
-	if (err < 0) {
-		pr_err("panel reset gpio request failed\n");
-		goto fail;
-	}
-
-	err = gpio_request(LCD_TE, "lcd_te");
-	if (err < 0) {
-		pr_err("panel lcd te request failed\n");
-		goto fail;
-	}
 
 	err = gpio_request(DSI_PANEL_BL_PWM_GPIO, "panel pwm");
 	if (err < 0) {

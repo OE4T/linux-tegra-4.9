@@ -46,9 +46,6 @@
 #define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE
 #endif
 
-#define en_vdd_bl	TEGRA_GPIO_PG0
-#define lvds_en		TEGRA_GPIO_PG3
-
 static bool reg_requested;
 static bool gpio_requested;
 static struct platform_device *disp_device;
@@ -57,9 +54,7 @@ static struct regulator *vdd_lcd_bl;
 static struct regulator *vdd_lcd_bl_en;
 static struct regulator *dvdd_lcd_1v8;
 static struct regulator *vdd_ds_1v8;
-
-#define en_vdd_bl	TEGRA_GPIO_PG0
-#define lvds_en		TEGRA_GPIO_PG3
+static u16 en_panel_rst;
 
 static struct tegra_dc_sd_settings dsi_s_wqxga_10_1_sd_settings = {
 	.enable = 1, /* enabled by default. */
@@ -275,7 +270,7 @@ fail:
 	return err;
 }
 
-static int dalmore_dsi_gpio_get(void)
+static int panel_gpio_get(void)
 {
 	int err = 0;
 
@@ -331,34 +326,6 @@ fail:
 	return err;
 }
 
-static int macallan_dsi_gpio_get(void)
-{
-	int err = 0;
-
-	if (gpio_requested)
-		return 0;
-
-	err = gpio_request(dsi_s_wqxga_10_1_pdata.dsi_panel_rst_gpio,
-        "panel rst");
-	if (err < 0) {
-		pr_err("panel reset gpio request failed\n");
-		goto fail;
-	}
-
-	/* free pwm GPIO */
-	err = gpio_request(dsi_s_wqxga_10_1_pdata.dsi_panel_bl_pwm_gpio,
-        "panel pwm");
-	if (err < 0) {
-		pr_err("panel pwm gpio request failed\n");
-		goto fail;
-	}
-	gpio_free(dsi_s_wqxga_10_1_pdata.dsi_panel_bl_pwm_gpio);
-	gpio_requested = true;
-	return 0;
-fail:
-	return err;
-}
-
 static int dsi_s_wqxga_10_1_postpoweron(struct device *dev)
 {
 	int err = 0;
@@ -375,15 +342,21 @@ static int dsi_s_wqxga_10_1_postpoweron(struct device *dev)
 	err = tegra_panel_gpio_get_dt("s,wqxga-10-1", &panel_of);
 	if (err < 0) {
 		/* try to get gpios from board file */
-		if (machine_is_macallan())
-			err = macallan_dsi_gpio_get();
-		else
-			err = dalmore_dsi_gpio_get();
+		err = panel_gpio_get();
 		if (err < 0) {
 			pr_err("dsi gpio request failed\n");
 			goto fail;
 		}
 	}
+
+	/* If panel rst gpio is specified in device tree,
+	 * use that.
+	 */
+	if (gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_RESET]))
+		en_panel_rst = panel_of.panel_gpio[TEGRA_GPIO_RESET];
+	else
+		en_panel_rst =
+			dsi_s_wqxga_10_1_pdata.dsi_panel_rst_gpio;
 
 	if (vdd_ds_1v8) {
 		err = regulator_enable(vdd_ds_1v8);
@@ -430,17 +403,13 @@ static int dsi_s_wqxga_10_1_postpoweron(struct device *dev)
 
 	msleep(20);
 #if DSI_PANEL_RESET
-	err = tegra_panel_reset(&panel_of, 20);
-	if (err < 0) {
-		/* use platform data */
-		gpio_direction_output(
-			dsi_s_wqxga_10_1_pdata.dsi_panel_rst_gpio, 1);
-		usleep_range(1000, 5000);
-		gpio_set_value(dsi_s_wqxga_10_1_pdata.dsi_panel_rst_gpio, 0);
-		usleep_range(1000, 5000);
-		gpio_set_value(dsi_s_wqxga_10_1_pdata.dsi_panel_rst_gpio, 1);
-		msleep(20);
-	}
+	/* use platform data */
+	gpio_direction_output(en_panel_rst, 1);
+	usleep_range(1000, 5000);
+	gpio_set_value(en_panel_rst, 0);
+	usleep_range(1000, 5000);
+	gpio_set_value(en_panel_rst, 1);
+	msleep(20);
 #endif
 
 	return 0;

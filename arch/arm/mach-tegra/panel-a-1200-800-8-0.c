@@ -46,6 +46,7 @@ static struct platform_device *disp_device;
 static struct regulator *avdd_lcd_3v3;
 static struct regulator *vdd_lcd_bl_en;
 static struct regulator *dvdd_lcd_1v8;
+static u16 en_panel_rst;
 
 static tegra_dc_bl_output dsi_a_1200_800_8_0_bl_output_measured = {
 	0, 0, 1, 2, 3, 4, 5, 6,
@@ -201,6 +202,15 @@ static int dsi_a_1200_800_8_0_enable(struct device *dev)
 			goto fail;
 		}
 	}
+	/* If panel rst gpio is specified in device tree,
+	 * use that.
+	 */
+	if (gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_RESET]))
+		en_panel_rst = panel_of.panel_gpio[TEGRA_GPIO_RESET];
+	else
+		en_panel_rst =
+			dsi_a_1200_800_8_0_pdata.dsi_panel_rst_gpio;
+
 
 	if (avdd_lcd_3v3) {
 		err = regulator_enable(avdd_lcd_3v3);
@@ -228,11 +238,11 @@ static int dsi_a_1200_800_8_0_enable(struct device *dev)
 
 	msleep(100);
 #if DSI_PANEL_RESET
-	gpio_direction_output(dsi_a_1200_800_8_0_pdata.dsi_panel_rst_gpio, 1);
+	gpio_direction_output(en_panel_rst, 1);
 	usleep_range(1000, 5000);
-	gpio_set_value(dsi_a_1200_800_8_0_pdata.dsi_panel_rst_gpio, 0);
+	gpio_set_value(en_panel_rst, 0);
 	msleep(150);
-	gpio_set_value(dsi_a_1200_800_8_0_pdata.dsi_panel_rst_gpio, 1);
+	gpio_set_value(en_panel_rst, 1);
 	msleep(20);
 #endif
 
@@ -243,8 +253,8 @@ fail:
 
 static int dsi_a_1200_800_8_0_disable(void)
 {
-	if (gpio_is_valid(dsi_a_1200_800_8_0_pdata.dsi_panel_rst_gpio))
-		gpio_set_value(dsi_a_1200_800_8_0_pdata.dsi_panel_rst_gpio, 0);
+	if (gpio_is_valid(en_panel_rst))
+		gpio_set_value(en_panel_rst, 0);
 
 	if (vdd_lcd_bl_en)
 		regulator_disable(vdd_lcd_bl_en);

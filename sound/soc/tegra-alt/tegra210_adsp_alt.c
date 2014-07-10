@@ -1336,7 +1336,7 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 
 		app->adma_chan = adma_params.adma_channel;
 		adma_params.direction = ADMA_MEMORY_TO_AHUB;
-		adma_params.semaphore.pvoid = app->apm->sem_output.pvoid;
+		adma_params.event.pvoid = app->apm->output_event.pvoid;
 
 		ret = tegra210_adsp_adma_params_msg(app, &adma_params, 0);
 		if (ret < 0) {
@@ -1358,8 +1358,7 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 			app = &adsp->apps[i];
 			app->adma_chan = adma_params.adma_channel;
 			adma_params.direction = ADMA_AHUB_TO_MEMORY;
-			adma_params.semaphore.pvoid =
-					app->apm->sem_output.pvoid;
+			adma_params.event.pvoid = app->apm->input_event.pvoid;
 
 			ret = tegra210_adsp_adma_params_msg(app,
 					&adma_params, 0);

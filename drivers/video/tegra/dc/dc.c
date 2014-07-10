@@ -1892,63 +1892,90 @@ static inline void enable_dc_irq(const struct tegra_dc *dc)
 		enable_irq(dc->irq);
 }
 
+/* assumes dc->lock is already taken. */
+static void _tegra_dc_vsync_enable(struct tegra_dc *dc)
+{
+	int vsync_irq;
+
+	if (dc->out->type == TEGRA_DC_OUT_DSI)
+		vsync_irq = MSF_INT;
+	else
+		vsync_irq = V_BLANK_INT;
+	if (!dc->vblank_ref_count)
+		tegra_dc_hold_dc_out(dc);
+	set_bit(V_BLANK_USER, &dc->vblank_ref_count);
+	tegra_dc_unmask_interrupt(dc, vsync_irq);
+}
+
+void tegra_dc_vsync_enable(struct tegra_dc *dc)
+{
+	mutex_lock(&dc->lock);
+	tegra_dc_vsync_enable(dc);
+	mutex_unlock(&dc->lock);
+}
+
+/* assumes dc->lock is already taken. */
+static void _tegra_dc_vsync_disable(struct tegra_dc *dc)
+{
+	int vsync_irq;
+
+	if (dc->out->type == TEGRA_DC_OUT_DSI)
+		vsync_irq = MSF_INT;
+	else
+		vsync_irq = V_BLANK_INT;
+	clear_bit(V_BLANK_USER, &dc->vblank_ref_count);
+	if (!dc->vblank_ref_count) {
+		tegra_dc_mask_interrupt(dc, vsync_irq);
+		tegra_dc_release_dc_out(dc);
+	}
+}
+
+void tegra_dc_vsync_disable(struct tegra_dc *dc)
+{
+	mutex_lock(&dc->lock);
+	_tegra_dc_vsync_disable(dc);
+	mutex_unlock(&dc->lock);
+}
+
 bool tegra_dc_has_vsync(struct tegra_dc *dc)
 {
-	return !!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE);
+	return true;
+}
+
+/* assumes dc->lock is already taken. */
+static void _tegra_dc_user_vsync_enable(struct tegra_dc *dc, bool enable)
+{
+	if (enable) {
+		dc->out->user_needs_vblank++;
+		init_completion(&dc->out->user_vblank_comp);
+		_tegra_dc_vsync_enable(dc);
+	} else {
+		_tegra_dc_vsync_disable(dc);
+		dc->out->user_needs_vblank--;
+	}
 }
 
 int tegra_dc_wait_for_vsync(struct tegra_dc *dc)
 {
-	int ret = -ENOTTY;
-
-	/* Generally vsync comes at 60Hz (~16.67ms per cycle).
-	 * 2 time periods should be good enough for the timeout.
-	 * We add some margin here for the default timeout value.
-	 */
-	unsigned long timeout_ms = 40;
-
-	if (dc->out->type == TEGRA_DC_OUT_DSI &&
-		dc->out->dsi->rated_refresh_rate != 0)
-		timeout_ms = 2 * DIV_ROUND_UP(1000,
-			 dc->out->dsi->rated_refresh_rate);
-
-	mutex_lock(&dc->one_shot_lp_lock);
-
-	if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) || !dc->enabled) {
-		mutex_unlock(&dc->one_shot_lp_lock);
-		return ret;
-	}
-
-	tegra_dc_get(dc);
-	if (dc->out_ops && dc->out_ops->hold)
-		dc->out_ops->hold(dc);
-
-	/*
-	 * Logic is as follows
-	 * a) Indicate we need a vblank.
-	 * b) Wait for completion to be signalled from isr.
-	 * c) Initialize completion for next iteration.
-	 */
-
-	dc->out->user_needs_vblank = true;
+	unsigned long timeout_ms;
+	unsigned long refresh; /* in 1000th Hz */
+	int ret;
 
 	mutex_lock(&dc->lock);
-	tegra_dc_unmask_interrupt(dc, MSF_INT);
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return -ENOTTY;
+	}
+	refresh = tegra_dc_calc_refresh(&dc->mode);
+	/* time out if waiting took more than 2 frames */
+	timeout_ms = DIV_ROUND_UP(2 * 1000000, refresh);
+	_tegra_dc_user_vsync_enable(dc, true);
 	mutex_unlock(&dc->lock);
-
 	ret = wait_for_completion_interruptible_timeout(
 		&dc->out->user_vblank_comp, msecs_to_jiffies(timeout_ms));
-	init_completion(&dc->out->user_vblank_comp);
-
 	mutex_lock(&dc->lock);
-	tegra_dc_mask_interrupt(dc, MSF_INT);
+	_tegra_dc_user_vsync_enable(dc, false);
 	mutex_unlock(&dc->lock);
-
-	if (dc->out_ops && dc->out_ops->release)
-		dc->out_ops->release(dc);
-	tegra_dc_put(dc);
-
-	mutex_unlock(&dc->one_shot_lp_lock);
 	return ret;
 }
 
@@ -1967,23 +1994,6 @@ static void tegra_dc_prism_update_backlight(struct tegra_dc *dc)
 		struct backlight_device *bl = dc->out->sd_settings->bl_device;
 		backlight_update_status(bl);
 	}
-}
-
-void tegra_dc_vsync_enable(struct tegra_dc *dc)
-{
-	mutex_lock(&dc->lock);
-	set_bit(V_BLANK_USER, &dc->vblank_ref_count);
-	tegra_dc_unmask_interrupt(dc, V_BLANK_INT);
-	mutex_unlock(&dc->lock);
-}
-
-void tegra_dc_vsync_disable(struct tegra_dc *dc)
-{
-	mutex_lock(&dc->lock);
-	clear_bit(V_BLANK_USER, &dc->vblank_ref_count);
-	if (!dc->vblank_ref_count)
-		tegra_dc_mask_interrupt(dc, V_BLANK_INT);
-	mutex_unlock(&dc->lock);
 }
 
 static void tegra_dc_vblank(struct work_struct *work)
@@ -2190,10 +2200,8 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status,
 {
 	/* pending user vblank, so wakeup */
 	if (status & (V_BLANK_INT | MSF_INT)) {
-		if (dc->out->user_needs_vblank) {
-			dc->out->user_needs_vblank = false;
+		if (dc->out->user_needs_vblank > 0)
 			complete(&dc->out->user_vblank_comp);
-		}
 #ifdef CONFIG_ADF_TEGRA
 		tegra_adf_process_vblank(dc->adf, timestamp);
 #endif

@@ -289,7 +289,7 @@ static int t20_free_syncpt_irq(struct nvhost_intr *intr)
 	/* disable syncpoint 0 interrupt */
 	t20_intr_disable_syncpt_intr(intr, 0);
 
-	free_irq(INT_HOST1X_MPCORE_SYNCPT, dev);
+	free_irq(intr->syncpt_irq, dev);
 	flush_workqueue(intr->wq);
 	return 0;
 }

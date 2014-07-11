@@ -338,6 +338,12 @@ static int parse_disp_default_out(struct platform_device *ndev,
 			default_out->max_pixclock);
 	}
 
+	if (!of_property_read_u32(np, "nvidia,dither", &temp)) {
+		default_out->dither = (unsigned)temp;
+		OF_DC_LOG("dither option %d\n",
+			default_out->dither);
+	}
+
 	of_property_for_each_u32(np, "nvidia,out-flags", prop, p, u) {
 		if (!is_dc_default_out_flag(u)) {
 			pr_err("invalid out flags\n");

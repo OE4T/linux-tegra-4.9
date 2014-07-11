@@ -394,13 +394,7 @@ void nvhost_nvjpg_deinit(struct platform_device *dev)
 
 int nvhost_nvjpg_t210_finalize_poweron(struct platform_device *dev)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-
-	/* reset device before boot */
-	tegra_periph_reset_assert(pdata->clk[0]);
-	udelay(10);
-	tegra_periph_reset_deassert(pdata->clk[0]);
-
+	nvhost_module_reset(dev, false);
 	host1x_writel(dev, 0x117c, 0x18004);
 	return nvhost_nvjpg_finalize_poweron(dev);
 }

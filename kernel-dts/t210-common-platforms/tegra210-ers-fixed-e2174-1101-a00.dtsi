@@ -70,22 +70,6 @@
 					regulator-consumer-supply = "vdd";
 					regulator-consumer-device = "0-000d";
 				};
-				c12 {
-					regulator-consumer-supply = "usb_vbus";
-					regulator-consumer-device = "tegra-ehci.1";
-				};
-				c13 {
-					regulator-consumer-supply = "usb_vbus1";
-					regulator-consumer-device = "tegra-xhci";
-				};
-				c14 {
-					regulator-consumer-supply = "usb_vbus";
-					regulator-consumer-device = "tegra-ehci.2";
-				};
-				c15 {
-					regulator-consumer-supply = "usb_vbus2";
-					regulator-consumer-device = "tegra-xhci";
-				};
 			};
 		};
 
@@ -225,6 +209,35 @@
 			regulator-name = "snsr_pm";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
+		};
+
+		vdd_usb_5v0: regulator@11 {
+			compatible = "regulator-fixed-sync";
+			reg = <11>;
+			regulator-name = "vdd-usb-5v0";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&pca9539_76 6 0>;
+			vin-supply = <&vdd_3v3>;
+			enable-active-high;
+			consumers {
+				c0 {
+					regulator-consumer-supply = "usb_vbus";
+					regulator-consumer-device = "tegra-ehci.1";
+				};
+				c1 {
+					regulator-consumer-supply = "usb_vbus1";
+					regulator-consumer-device = "tegra-xhci";
+				};
+				c2 {
+					regulator-consumer-supply = "usb_vbus";
+					regulator-consumer-device = "tegra-ehci.2";
+				};
+				c3 {
+					regulator-consumer-supply = "usb_vbus2";
+					regulator-consumer-device = "tegra-xhci";
+				};
+			};
 		};
 	};
 };

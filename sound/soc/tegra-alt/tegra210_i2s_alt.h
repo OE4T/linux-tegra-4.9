@@ -191,6 +191,7 @@ struct tegra210_i2s {
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pin_default_state;
 	struct pinctrl_state *pin_idle_state;
+	int bclk_ratio;
 	unsigned int srate;
 	const struct tegra210_i2s_soc_data *soc_data;
 };

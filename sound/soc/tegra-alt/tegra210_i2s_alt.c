@@ -196,6 +196,14 @@ static int tegra210_i2s_set_dai_sysclk(struct snd_soc_dai *dai,
 	return 0;
 }
 
+static int tegra210_i2s_set_dai_bclk_ratio(struct snd_soc_dai *dai,
+		unsigned int ratio)
+{
+	struct tegra210_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+	i2s->bclk_ratio = ratio;
+	return 0;
+}
+
 static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
@@ -240,14 +248,17 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 	frame_format = val & TEGRA210_I2S_CTRL_FRAME_FORMAT_MASK;
 
 	if (frame_format == TEGRA210_I2S_CTRL_FRAME_FORMAT_FSYNC_MODE) {
-		i2sclock = srate * channels * sample_size;
 		regmap_write(i2s->regmap, TEGRA210_I2S_SLOT_CTRL, channels - 1);
 		regmap_write(i2s->regmap, TEGRA210_I2S_AXBAR_TX_SLOT_CTRL,
 						((1 << channels) - 1));
 		regmap_write(i2s->regmap, TEGRA210_I2S_AXBAR_RX_SLOT_CTRL,
 						((1 << channels) - 1));
-	} else
-		i2sclock = srate * channels * sample_size * 2;
+	}
+
+	i2sclock = srate * channels * sample_size;
+
+	if (i2s->bclk_ratio != 0)
+		i2sclock *= i2s->bclk_ratio;
 
 	bitcnt = (i2sclock / srate) - 1;
 	if ((bitcnt < 0) ||
@@ -330,6 +341,7 @@ static struct snd_soc_dai_ops tegra210_i2s_dai_ops = {
 	.set_fmt	= tegra210_i2s_set_fmt,
 	.hw_params	= tegra210_i2s_hw_params,
 	.set_sysclk	= tegra210_i2s_set_dai_sysclk,
+	.set_bclk_ratio	= tegra210_i2s_set_dai_bclk_ratio,
 };
 
 static struct snd_soc_dai_driver tegra210_i2s_dais[] = {
@@ -540,6 +552,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, i2s);
 
 	i2s->soc_data = soc_data;
+	i2s->bclk_ratio = 2;
 
 	/* initialize srate with default sampling rate */
 	i2s->srate = 48000;

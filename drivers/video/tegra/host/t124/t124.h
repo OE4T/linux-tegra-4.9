@@ -28,16 +28,8 @@
 
 struct nvhost_chip_support;
 
-#ifdef TEGRA_12X_OR_HIGHER_CONFIG
 int nvhost_init_t124_support(struct nvhost_master *,
 		struct nvhost_chip_support *);
-#else
-static inline int nvhost_init_t124_support(struct nvhost_master *host,
-					   struct nvhost_chip_support *op)
-{
-	return -ENODEV;
-}
-#endif
 int nvhost_init_t124_channel_support(struct nvhost_master *,
 		struct nvhost_chip_support *);
 int nvhost_init_t124_cdma_support(struct nvhost_chip_support *);

@@ -947,6 +947,7 @@ struct tegra_dc_out_info {
 	void *out_data;
 	struct tegra_dc_out out;
 	struct tegra_dc_mode mode;
+	int fblistindex;
 };
 
 static struct tegra_dc_out_info dbg_dc_out_info[TEGRA_DC_OUT_MAX];
@@ -974,6 +975,19 @@ static int is_valid_dsi_out(struct tegra_dc *dc, long dc_outtype)
 		(dc_outtype <= TEGRA_DC_OUT_FAKE_DSI_GANGED)) ||
 		(dc_outtype == TEGRA_DC_OUT_DSI))
 			return 1;
+
+	return 0;
+}
+
+
+static int is_valid_fake_support(struct tegra_dc *dc, long dc_outtype)
+{
+	if ((dc_outtype == TEGRA_DC_OUT_FAKE_DP) ||
+		(dc_outtype == TEGRA_DC_OUT_FAKE_DSIA) ||
+		(dc_outtype == TEGRA_DC_OUT_FAKE_DSIB) ||
+		(dc_outtype == TEGRA_DC_OUT_FAKE_DSI_GANGED) ||
+		(dc_outtype == TEGRA_DC_OUT_NULL))
+		return 1;
 
 	return 0;
 }
@@ -1028,13 +1042,14 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 					sizeof(struct tegra_dc_out));
 		dbg_dc_out_info[cur_dc_out].mode = dc->mode;
 
-		/* Could swap dispa/b or ganged mode
-		 * for dsi fake panel, to avoid map/unmap issues
-		 * destroy the existing resources and recreate again
-		 */
 		if (is_valid_dsi_out(dc, cur_dc_out) &&
 			dbg_dc_out_info[cur_dc_out].out_data)
 			tegra_dc_destroy_dsi_resources(dc, cur_dc_out);
+
+		if (!is_valid_fake_support(dc, cur_dc_out))
+			dbg_dc_out_info[cur_dc_out].fblistindex =
+						tegra_fb_update_modelist(dc, 0);
+
 	}
 
 	/* If output already created - reuse it */
@@ -1053,6 +1068,10 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 		/* Re-init the resources that are destroyed for dsi */
 		if (is_valid_dsi_out(dc, out_type))
 			ret = tegra_dc_reinit_dsi_resources(dc, out_type);
+
+		if (!is_valid_fake_support(dc, out_type))
+			tegra_fb_update_modelist(dc,
+					dbg_dc_out_info[out_type].fblistindex);
 
 		mutex_unlock(&dc->lock);
 		mutex_unlock(&dc->one_shot_lp_lock);

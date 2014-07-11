@@ -520,6 +520,26 @@ static int tegra_fb_ioctl(struct fb_info *info,
 	return 0;
 }
 
+int tegra_fb_update_modelist(struct tegra_dc *dc, int fblistindex)
+{
+	struct list_head *pos, *n;
+	struct fb_info *info = dc->fb->info;
+	struct list_head *srclist = &info->modelist;
+	int index = 0;
+
+	list_for_each_safe(pos, n, srclist) {
+		if (fblistindex) {
+			if (index >= fblistindex) {
+				/* remove the invalid modes*/
+				list_del(pos);
+				kfree(pos);
+			}
+		}
+		index += 1;
+	}
+	return index;
+}
+
 int tegra_fb_get_mode(struct tegra_dc *dc) {
 	if (!dc->fb->info->mode)
 		return -1;

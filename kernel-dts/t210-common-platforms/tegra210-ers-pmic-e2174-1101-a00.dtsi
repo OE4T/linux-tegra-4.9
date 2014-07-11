@@ -54,6 +54,8 @@
 			maxim,wdt-timeout = <16>;
 			maxim,wdt-clear-time = <13>;
 
+			maxim,hot-die-threshold-temp = <110000>;
+
 			pinctrl-names = "default";
 			pinctrl-0 = <&max77620_default>;
 

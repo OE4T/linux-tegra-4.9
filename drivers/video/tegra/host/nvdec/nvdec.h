@@ -31,10 +31,10 @@ extern const struct file_operations tegra_nvdec_ctrl_ops;
  * too with NVDEC_BL disabled */
 #define USE_NVDEC_BOOTLOADER   1
 
-/* TBD: Addr and Size of WPR needs to be conveyed to host driver
- * from bootloader in some other manner */
-#define WPR_PHYSICAL_ADDR      0xbff00000
-#define WPR_SIZE               (1024*1024) /* 1MB */
+#define MC_BASE_ADDR				0x70019000
+#define MC_SECURITY_CARVEOUT1_BOM_0		0xc0c
+#define MC_SECURITY_CARVEOUT1_BOM_HI_0		0xc10
+#define MC_SECURITY_CARVEOUT1_SIZE_128KB_0	0xc14
 
 int nvhost_nvdec_finalize_poweron(struct platform_device *dev);
 int nvhost_nvdec_t210_finalize_poweron(struct platform_device *dev);

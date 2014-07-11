@@ -44,6 +44,7 @@
 #include "chip_support.h"
 #include "t124/t124.h"
 #include "t210/t210.h"
+#include "iomap.h"
 
 #define NVDEC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define NVDEC_IDLE_CHECK_PERIOD		10	/* 10 usec */
@@ -204,6 +205,7 @@ int nvdec_boot(struct platform_device *dev)
 	u32 fb_data_offset = 0;
 	u32 initial_dmem_offset = 0;
 	struct nvdec_bl_shared_data shared_data;
+	u32 wpr_addr_lo, wpr_addr_hi;
 
 	/* check if firmware is loaded or not */
 	if (!m || !m[0] || !m[0]->valid || !m[1] || !m[1]->valid) {
@@ -217,10 +219,22 @@ int nvdec_boot(struct platform_device *dev)
 
 	fb_data_offset = (m[0]->os.bin_data_offset +
 				m[0]->os.data_offset)/(sizeof(u32));
-	shared_data.ls_fw_start_addr = m[1]->phys;
-	shared_data.ls_fw_size       = m[1]->size;
-	shared_data.wpr_addr         = WPR_PHYSICAL_ADDR;
-	shared_data.wpr_size         = WPR_SIZE;
+
+	shared_data.ls_fw_start_addr = m[1]->phys >> 8;
+	shared_data.ls_fw_size = m[1]->size;
+	wpr_addr_lo = readl((u32 *)IO_TO_VIRT((
+				MC_BASE_ADDR +
+				MC_SECURITY_CARVEOUT1_BOM_0)));
+	wpr_addr_hi = readl((u32 *)IO_TO_VIRT((
+				MC_BASE_ADDR +
+				MC_SECURITY_CARVEOUT1_BOM_HI_0)));
+	/* Put the 40-bit addr formed by wpr_addr_hi and wpr_addr_lo
+	   divided by 256 into 32-bit wpr_addr */
+	shared_data.wpr_addr = (wpr_addr_hi << 24) + (wpr_addr_lo >> 8);
+	shared_data.wpr_size = readl((u32 *)IO_TO_VIRT((
+					MC_BASE_ADDR +
+					MC_SECURITY_CARVEOUT1_SIZE_128KB_0)));
+	shared_data.wpr_size *= 128*1024; /* multiply 128k */
 
 	memcpy(&(m[0]->mapped[fb_data_offset + initial_dmem_offset]),
 		&shared_data, sizeof(shared_data));

@@ -692,6 +692,8 @@ int _nvhost_module_add_domain(struct generic_pm_domain *domain,
 	struct platform_device *pdev, bool client)
 {
 	int ret = 0;
+
+#ifdef CONFIG_PM_GENERIC_DOMAINS
 	struct nvhost_device_data *pdata;
 	struct dev_power_governor *pm_domain_gov = NULL;
 
@@ -699,7 +701,6 @@ int _nvhost_module_add_domain(struct generic_pm_domain *domain,
 	if (!pdata)
 		return -EINVAL;
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
 	if (!pdata->can_powergate)
 		pm_domain_gov = &pm_domain_always_on_gov;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -93,5 +93,17 @@ static inline u32 actmon_avg_count_r(void)
 static inline u32 actmon_intr_status_r(void)
 {
 	return 0x20;
+}
+static inline u32 actmon_sample_ctrl_r(void)
+{
+	return 0x28;
+}
+static inline u32 actmon_sample_ctrl_tick_range_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 actmon_sample_ctrl_tick_range_m(void)
+{
+	return 0x1 << 2;
 }
 #endif

@@ -483,7 +483,6 @@ static const struct file_operations nvhost_ctrlops = {
 #endif
 };
 
-#ifdef CONFIG_PM
 static int power_on_host(struct platform_device *dev)
 {
 	struct nvhost_master *host = nvhost_get_private_data(dev);
@@ -500,6 +499,7 @@ static int power_off_host(struct platform_device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
 static void enable_irq_host(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);

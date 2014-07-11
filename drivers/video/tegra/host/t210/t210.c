@@ -61,6 +61,7 @@ struct nvhost_device_data t21_host1x_info = {
 	.bond_out_id   = BOND_OUT_HOST1X,
 };
 
+#ifdef CONFIG_TEGRA_GRHOST_ISP
 struct nvhost_device_data t21_isp_info = {
 	.modulemutexes = {NVMODMUTEX_ISP_0},
 	.class           = NV_VIDEO_STREAMING_ISP_CLASS_ID,
@@ -75,6 +76,9 @@ struct nvhost_device_data t21_isp_info = {
 	.num_channels  = 1,
 	.bond_out_id   = BOND_OUT_ISP,
 };
+#endif
+
+#if defined(CONFIG_TEGRA_GRHOST_VI) || defined(CONFIG_TEGRA_GRHOST_VI_MODULE)
 #ifdef CONFIG_VI_ONE_DEVICE
 struct nvhost_device_data t21_vi_info = {
 	.exclusive     = true,
@@ -136,6 +140,8 @@ struct nvhost_device_data t21_vi_info = {
 	.num_channels  = 1,
 	.bond_out_id   = BOND_OUT_VI,
 };
+#endif
+
 #endif
 
 struct nvhost_device_data t21_msenc_info = {

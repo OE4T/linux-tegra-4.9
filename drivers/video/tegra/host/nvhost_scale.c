@@ -22,6 +22,7 @@
 #include <linux/clk.h>
 #include <linux/export.h>
 #include <linux/slab.h>
+#include <linux/clk.h>
 #include <linux/clk/tegra.h>
 #include <linux/platform_data/tegra_edp.h>
 #include <linux/tegra-soc.h>
@@ -67,8 +68,12 @@ static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 	unsigned long max_freq =  clk_round_rate(profile->clk, UINT_MAX);
 	unsigned long min_freq =  clk_round_rate(profile->clk, 0);
 
+#ifdef CONFIG_ARCH_TEGRA
 	err = tegra_dvfs_get_freqs(clk_get_parent(profile->clk),
 				   &freqs, &num_freqs);
+#else
+	err = -ENOSYS;
+#endif
 	if (err)
 		return -ENOSYS;
 
@@ -106,10 +111,14 @@ static int nvhost_scale_target(struct device *dev, unsigned long *freq,
 	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
 	struct nvhost_device_profile *profile = pdata->power_profile;
 
+#ifdef CONFIG_ARCH_TEGRA
 	if (!tegra_is_clk_enabled(profile->clk)) {
 		*freq = profile->devfreq_profile.freq_table[0];
 		return 0;
 	}
+#else
+	return 0;
+#endif
 
 	*freq = clk_round_rate(clk_get_parent(profile->clk), *freq);
 	if (clk_get_rate(profile->clk) == *freq)

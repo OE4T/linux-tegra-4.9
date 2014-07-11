@@ -54,6 +54,7 @@
  */
 #define TEGRA_HOST1X_EMC_MODULE_ID 75
 
+#ifdef CONFIG_ARCH_TEGRA
 static struct resource tegra_host1x04_resources[] = {
 	{
 		.start = TEGRA_HOST1X_BASE,
@@ -71,6 +72,7 @@ static struct resource tegra_host1x04_resources[] = {
 		.flags = IORESOURCE_IRQ,
 	},
 };
+#endif
 
 static struct host1x_device_info host1x04_info = {
 	.nb_channels	= T124_NVHOST_NUMCHANNELS,
@@ -93,14 +95,17 @@ struct nvhost_device_data t124_host1x_info = {
 static struct platform_device tegra_host1x04_device = {
 	.name		= "host1x",
 	.id		= -1,
+#ifdef CONFIG_ARCH_TEGRA
 	.resource	= tegra_host1x04_resources,
 	.num_resources	= ARRAY_SIZE(tegra_host1x04_resources),
+#endif
 	.dev            = {
 		.platform_data = &t124_host1x_info,
 	},
 };
 
 
+#ifdef CONFIG_TEGRA_GRHOST_ISP
 static struct resource isp_resources[] = {
 	{
 		.name = "regs",
@@ -182,6 +187,10 @@ static struct platform_device tegra_isp01b_device = {
 		.platform_data = &t124_ispb_info,
 	},
 };
+
+#endif
+
+#if defined(CONFIG_TEGRA_GRHOST_VI) || defined(CONFIG_TEGRA_GRHOST_VI_MODULE)
 
 static struct resource vi_resources[] = {
 	{
@@ -308,6 +317,8 @@ static struct platform_device tegra_vi01b_device = {
 		.platform_data = &t124_vib_info,
 	},
 };
+#endif
+
 #endif
 
 static struct resource msenc_resources[] = {
@@ -472,12 +483,16 @@ static struct {
 };
 
 static struct platform_device *t124_devices[] = {
+#ifdef CONFIG_TEGRA_GRHOST_ISP
 	&tegra_isp01_device,
 	&tegra_isp01b_device,
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_VI) || defined(CONFIG_TEGRA_GRHOST_VI_MODULE)
 	&tegra_vi01_device,
+#endif
 	&tegra_msenc03_device,
 	&tegra_tsec01_device,
-#if defined(CONFIG_ARCH_TEGRA_VIC)
+#ifdef CONFIG_ARCH_TEGRA_VIC
 	&tegra_vic03_device,
 #endif
 };

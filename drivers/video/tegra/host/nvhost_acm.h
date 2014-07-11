@@ -35,8 +35,6 @@ extern const struct dev_pm_ops nvhost_module_pm_ops;
 int nvhost_clk_get(struct platform_device *dev, char *name, struct clk **clk);
 int nvhost_module_init(struct platform_device *ndev);
 void nvhost_module_deinit(struct platform_device *dev);
-int nvhost_module_suspend(struct device *dev);
-int nvhost_module_resume(struct device *dev);
 
 void nvhost_module_busy_noresume(struct platform_device *dev);
 void nvhost_module_reset(struct platform_device *dev, bool reboot);
@@ -71,7 +69,5 @@ int nvhost_module_add_domain(struct generic_pm_domain *domain,
 	struct platform_device *pdev);
 int nvhost_module_enable_clk(struct device *dev);
 int nvhost_module_disable_clk(struct device *dev);
-int nvhost_module_prepare_poweroff(struct device *dev);
-int nvhost_module_finalize_poweron(struct device *dev);
 
 #endif

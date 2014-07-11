@@ -49,8 +49,12 @@
 #define MAX_DEVID_LENGTH			16
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
+static int nvhost_module_suspend(struct device *dev);
+static int nvhost_module_resume(struct device *dev);
 static int nvhost_module_power_on(struct generic_pm_domain *domain);
 static int nvhost_module_power_off(struct generic_pm_domain *domain);
+static int nvhost_module_prepare_poweroff(struct device *dev);
+static int nvhost_module_finalize_poweron(struct device *dev);
 #endif
 
 DEFINE_MUTEX(client_list_lock);
@@ -62,6 +66,7 @@ struct nvhost_module_client {
 	void *priv;
 };
 
+#ifdef CONFIG_ARCH_TEGRA
 static void do_powergate_locked(int id)
 {
 	nvhost_dbg_fn("%d", id);
@@ -113,6 +118,38 @@ static void do_module_reset_locked(struct platform_device *dev)
 		tegra_mc_flush_done(pdata->clocks[1].reset);
 	}
 }
+
+static unsigned long nvhost_emc_bw_to_freq_req(unsigned long rate)
+{
+	return tegra_emc_bw_to_freq_req((unsigned long)(rate >> 10));
+}
+#else
+static void do_powergate_locked(int id)
+{
+	nvhost_dbg_fn("%d", id);
+}
+
+static void do_unpowergate_locked(int id)
+{
+	nvhost_dbg_fn("");
+}
+
+static void do_module_reset_locked(struct platform_device *dev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	nvhost_dbg_fn("");
+
+	if (pdata->reset) {
+		pdata->reset(dev);
+		return;
+	}
+}
+static unsigned long nvhost_emc_bw_to_freq_req(unsigned long rate)
+{
+	return 0;
+}
+#endif
 
 void nvhost_module_reset(struct platform_device *dev, bool reboot)
 {
@@ -287,8 +324,7 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 
 	/* if frequency is not available, use default policy */
 	if (!rate) {
-		unsigned long bw_rate = tegra_emc_bw_to_freq_req(
-			(unsigned long)(bw_constraint >> 10));
+		unsigned long bw_rate = nvhost_emc_bw_to_freq_req(rate);
 		rate = max(floor_rate, bw_rate);
 	}
 
@@ -622,51 +658,22 @@ fail_attrib_alloc:
 }
 EXPORT_SYMBOL(nvhost_module_init);
 
-int nvhost_module_suspend(struct device *dev)
-{
-	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
-
-	/*
-	 * device_prepare takes one ref, so expect usage count to
-	 * be 1 at this point.
-	 */
-	if (atomic_read(&dev->power.usage_count) > 1)
-		return -EBUSY;
-
-	devfreq_suspend_device(pdata->power_manager);
-
-	if (pdata->prepare_poweroff)
-		pdata->prepare_poweroff(to_platform_device(dev));
-
-	return 0;
-}
-EXPORT_SYMBOL(nvhost_module_suspend);
-
-int nvhost_module_resume(struct device *dev)
-{
-	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
-
-	if (pdata->finalize_poweron)
-		pdata->finalize_poweron(to_platform_device(dev));
-
-	devfreq_resume_device(pdata->power_manager);
-
-	return 0;
-}
-EXPORT_SYMBOL(nvhost_module_resume);
-
 void nvhost_module_deinit(struct platform_device *dev)
 {
 	int i;
 	struct kobj_attribute *attr = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
+	devfreq_suspend_device(pdata->power_manager);
+
+	if (pdata->prepare_poweroff)
+		pdata->prepare_poweroff(dev);
+
 	if (!pm_runtime_enabled(&dev->dev))
 		nvhost_module_disable_clk(&dev->dev);
 	else
 		pm_runtime_disable(&dev->dev);
 
-	nvhost_module_suspend(&dev->dev);
 	for (i = 0; i < pdata->num_clks; i++)
 		clk_put(pdata->clk[i]);
 
@@ -680,14 +687,12 @@ void nvhost_module_deinit(struct platform_device *dev)
 	}
 }
 
-#ifdef CONFIG_PM
 const struct dev_pm_ops nvhost_module_pm_ops = {
 #if defined(CONFIG_PM_RUNTIME) && !defined(CONFIG_PM_GENERIC_DOMAINS)
 	.runtime_suspend = nvhost_module_disable_clk,
 	.runtime_resume = nvhost_module_enable_clk,
 #endif
 };
-#endif
 EXPORT_SYMBOL(nvhost_module_pm_ops);
 
 /*FIXME Use API to get host1x domain */
@@ -809,6 +814,37 @@ int nvhost_module_disable_clk(struct device *dev)
 EXPORT_SYMBOL(nvhost_module_disable_clk);
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
+static int nvhost_module_suspend(struct device *dev)
+{
+	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
+
+	/*
+	 * device_prepare takes one ref, so expect usage count to
+	 * be 1 at this point.
+	 */
+	if (atomic_read(&dev->power.usage_count) > 1)
+		return -EBUSY;
+
+	devfreq_suspend_device(pdata->power_manager);
+
+	if (pdata->prepare_poweroff)
+		pdata->prepare_poweroff(to_platform_device(dev));
+
+	return 0;
+}
+
+static int nvhost_module_resume(struct device *dev)
+{
+	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
+
+	if (pdata->finalize_poweron)
+		pdata->finalize_poweron(to_platform_device(dev));
+
+	devfreq_resume_device(pdata->power_manager);
+
+	return 0;
+}
+
 static int nvhost_module_power_on(struct generic_pm_domain *domain)
 {
 	struct nvhost_device_data *pdata;
@@ -842,7 +878,7 @@ static int nvhost_module_power_off(struct generic_pm_domain *domain)
 	return 0;
 }
 
-int nvhost_module_prepare_poweroff(struct device *dev)
+static int nvhost_module_prepare_poweroff(struct device *dev)
 {
 	struct nvhost_device_data *pdata;
 
@@ -858,7 +894,7 @@ int nvhost_module_prepare_poweroff(struct device *dev)
 	return 0;
 }
 
-int nvhost_module_finalize_poweron(struct device *dev)
+static int nvhost_module_finalize_poweron(struct device *dev)
 {
 	struct nvhost_device_data *pdata;
 	int ret = 0;

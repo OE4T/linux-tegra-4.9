@@ -85,6 +85,114 @@ fail_edid_free:
 	return err;
 }
 
+static void tegra_hdmi_safe_clk_config(struct tegra_hdmi *hdmi)
+{
+	struct tegra_dc_sor_data *sor = hdmi->sor;
+	int flag = tegra_is_clk_enabled(sor->sor_clk);
+
+	if (sor->clk_type == TEGRA_SOR_SAFE_CLK)
+		return;
+
+	/*
+	 * HW bug 1425607
+	 * Disable clocks to avoid glitch when switching
+	 * between safe clock and macro pll clock
+	 */
+	if (flag)
+		clk_disable_unprepare(sor->sor_clk);
+
+	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 0);
+
+	if (flag)
+		clk_prepare_enable(sor->sor_clk);
+
+	sor->clk_type = TEGRA_SOR_SAFE_CLK;
+}
+
+static void tegra_hdmi_macro_clk_config(struct tegra_hdmi *hdmi)
+{
+	struct tegra_dc_sor_data *sor = hdmi->sor;
+	int flag = tegra_is_clk_enabled(sor->sor_clk);
+	u32 val;
+
+	if (sor->clk_type == TEGRA_SOR_MACRO_CLK)
+		return;
+
+	if (hdmi->dc->mode.pclk < 340000000)
+		val = NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G2_7;
+	else
+		val = NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G5_4;
+	val |= NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK;
+	tegra_sor_writel(sor, NV_SOR_CLK_CNTRL, val);
+	usleep_range(250, 300); /* delay for plls in the macro to settle */
+
+	/*
+	 * HW bug 1425607
+	 * Disable clocks to avoid glitch when switching
+	 * between safe clock and macro pll clock
+	 */
+	if (flag)
+		clk_disable_unprepare(sor->sor_clk);
+
+	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 1);
+
+	if (flag)
+		clk_prepare_enable(sor->sor_clk);
+
+	sor->clk_type = TEGRA_SOR_MACRO_CLK;
+}
+
+static void tegra_hdmi_hda_clk_enable(struct tegra_hdmi *hdmi)
+{
+	clk_prepare_enable(hdmi->hda_clk);
+	clk_prepare_enable(hdmi->hda2codec_clk);
+	clk_prepare_enable(hdmi->hda2hdmi_clk);
+}
+
+static void tegra_hdmi_hda_clk_disable(struct tegra_hdmi *hdmi)
+{
+	clk_disable_unprepare(hdmi->hda2hdmi_clk);
+	clk_disable_unprepare(hdmi->hda2codec_clk);
+	clk_disable_unprepare(hdmi->hda_clk);
+}
+
+static int tegra_hdmi_hda_clk_get(struct tegra_hdmi *hdmi)
+{
+	int err;
+	struct tegra_dc *dc = hdmi->dc;
+
+	hdmi->hda_clk = clk_get_sys("tegra30-hda", "hda");
+	if (IS_ERR_OR_NULL(hdmi->hda_clk)) {
+		dev_err(&dc->ndev->dev, "hdmi: can't get hda clock\n");
+		err = -ENOENT;
+		goto err_put_clock;
+	}
+
+	hdmi->hda2codec_clk = clk_get_sys("tegra30-hda", "hda2codec");
+	if (IS_ERR_OR_NULL(hdmi->hda_clk)) {
+		dev_err(&dc->ndev->dev, "hdmi: can't get hda clock\n");
+		err = -ENOENT;
+		goto err_put_clock;
+	}
+
+	hdmi->hda2hdmi_clk = clk_get_sys("tegra30-hda", "hda2hdmi");
+	if (IS_ERR_OR_NULL(hdmi->hda_clk)) {
+		dev_err(&dc->ndev->dev, "hdmi: can't get hda clock\n");
+		err = -ENOENT;
+		goto err_put_clock;
+	}
+
+	return 0;
+err_put_clock:
+	if (!IS_ERR_OR_NULL(hdmi->hda2hdmi_clk))
+		clk_put(hdmi->hda2hdmi_clk);
+	if (!IS_ERR_OR_NULL(hdmi->hda2codec_clk))
+		clk_put(hdmi->hda2codec_clk);
+	if (!IS_ERR_OR_NULL(hdmi->hda_clk))
+		clk_put(hdmi->hda_clk);
+	return err;
+}
+
 static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi;
@@ -115,12 +223,13 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	}
 #endif
 
+	tegra_hdmi_hda_clk_get(hdmi);
+
 	tegra_hdmi_ddc(hdmi);
 
 	tegra_dc_set_outdata(dc, hdmi);
 
 	return 0;
-
 fail:
 	devm_kfree(&dc->ndev->dev, hdmi);
 	return err;
@@ -134,6 +243,9 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	tegra_edid_destroy(hdmi->edid);
 	tegra_nvhdcp_destroy(hdmi->nvhdcp);
 	devm_kfree(&dc->ndev->dev, hdmi);
+	clk_put(hdmi->hda_clk);
+	clk_put(hdmi->hda2codec_clk);
+	clk_put(hdmi->hda2hdmi_clk);
 }
 
 static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
@@ -360,24 +472,22 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 
-	clk_prepare_enable(sor->sor_clk);
 	tegra_dc_io_start(dc);
-
-	tegra_sor_config_safe_clk(sor);
-	clk_prepare_enable(sor->safe_clk);
+	tegra_hdmi_safe_clk_config(hdmi);
+	tegra_sor_clk_enable(sor);
+	tegra_hdmi_hda_clk_enable(hdmi);
 
 	tegra_sor_hdmi_pad_power_up(sor);
 
 	tegra_hdmi_config_lanes(hdmi);
 	tegra_sor_power_lanes(sor, 4, true);
 
-	tegra_sor_config_hdmi_clk(sor);
-
 	tegra_dc_sor_set_internal_panel(sor, false);
 	tegra_hdmi_config(hdmi);
 	tegra_hdmi_avi_infoframe(hdmi);
 	tegra_hdmi_audio(hdmi, AUDIO_FREQ_32K, HDA);
 
+	tegra_hdmi_macro_clk_config(hdmi);
 	tegra_dc_sor_attach(sor);
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, tegra_dc_hpd(dc));
 	tegra_dc_io_end(dc);
@@ -385,6 +495,16 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 
 static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
+	struct clk *parent_clk = clk_get_sys(NULL,
+				dc->out->parent_clk ? : "pll_d_out0");
+	struct clk *base_clk =  clk_get_parent(parent_clk);
+
+	if (clk_get_parent(clk) != parent_clk)
+		clk_set_parent(clk, parent_clk);
+
+	if (clk_get_rate(base_clk) != dc->mode.pclk)
+		clk_set_rate(base_clk, dc->mode.pclk);
+
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 }
 
@@ -394,8 +514,8 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, 0);
-	clk_disable_unprepare(sor->safe_clk);
-	clk_disable_unprepare(sor->sor_clk);
+	tegra_hdmi_hda_clk_disable(hdmi);
+	tegra_sor_clk_disable(sor);
 }
 
 struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {

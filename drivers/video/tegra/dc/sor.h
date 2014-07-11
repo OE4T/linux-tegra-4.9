@@ -76,7 +76,7 @@ struct tegra_dc_dp_link_config {
 
 enum {
 	TEGRA_SOR_SAFE_CLK = 1,
-	TEGRA_SOR_LINK_CLK = 2,
+	TEGRA_SOR_MACRO_CLK = 2,
 };
 
 struct tegra_dc_sor_data {

@@ -147,6 +147,7 @@
 #define NV_SOR_CLK_CNTRL_DP_LINK_SPEED_MASK			(0x1f << 2)
 #define NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G1_62			(6 << 2)
 #define NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G2_7			(10 << 2)
+#define NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G5_4			(20 << 2)
 #define NV_SOR_CLK_CNTRL_DP_LINK_SPEED_LVDS			(7 << 2)
 #define NV_SOR_CAP						(0x14)
 #define NV_SOR_CAP_DP_A_SHIFT					(24)

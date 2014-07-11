@@ -156,6 +156,9 @@ struct tegra_hdmi {
 	struct hdmi_audio_infoframe audio;
 	bool null_sample_inject;
 	u32 audio_freq;
+	struct clk *hda_clk;
+	struct clk *hda2codec_clk;
+	struct clk *hda2hdmi_clk;
 
 	struct tegra_nvhdcp *nvhdcp;
 };

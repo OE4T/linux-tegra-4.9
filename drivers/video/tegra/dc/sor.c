@@ -103,7 +103,7 @@ void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor)
 	int flag = tegra_is_clk_enabled(sor->sor_clk);
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(sor->dc);
 
-	if (sor->clk_type == TEGRA_SOR_LINK_CLK)
+	if (sor->clk_type == TEGRA_SOR_MACRO_CLK)
 		return;
 
 	tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
@@ -125,7 +125,7 @@ void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor)
 	if (flag)
 		clk_prepare_enable(sor->sor_clk);
 
-	sor->clk_type = TEGRA_SOR_LINK_CLK;
+	sor->clk_type = TEGRA_SOR_MACRO_CLK;
 }
 
 #ifdef CONFIG_DEBUG_FS
@@ -766,7 +766,7 @@ void tegra_sor_config_hdmi_clk(struct tegra_dc_sor_data *sor)
 {
 	int flag = tegra_is_clk_enabled(sor->sor_clk);
 
-	if (sor->clk_type == TEGRA_SOR_LINK_CLK)
+	if (sor->clk_type == TEGRA_SOR_MACRO_CLK)
 		return;
 
 	tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
@@ -787,7 +787,7 @@ void tegra_sor_config_hdmi_clk(struct tegra_dc_sor_data *sor)
 	if (flag)
 		clk_prepare_enable(sor->sor_clk);
 
-	sor->clk_type = TEGRA_SOR_LINK_CLK;
+	sor->clk_type = TEGRA_SOR_MACRO_CLK;
 }
 
 /* The SOR power sequencer does not work for t124 so SW has to

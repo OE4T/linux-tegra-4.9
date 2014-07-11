@@ -113,6 +113,28 @@ struct nvhost_clock {
 	unsigned long devfreq_rate;
 };
 
+/*
+ * Defines HW and SW class identifiers.
+ *
+ * This is module ID mapping between userspace and kernelspace.
+ * The values of enum entries' are referred from NvRmModuleID enum defined
+ * in below userspace file:
+ * $TOP/vendor/nvidia/tegra/core/include/nvrm_module.h
+ * Please make sure each entry below has same value as set in above file.
+ */
+enum nvhost_module_identifier {
+
+	/* Specifies external memory (DDR RAM, etc) */
+	NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER = 75,
+
+	/* Specifies CBUS floor client module */
+	NVHOST_MODULE_ID_CBUS_FLOOR = 119,
+
+	/* Specifies shared EMC client module */
+	NVHOST_MODULE_ID_EMC_SHARED,
+	NVHOST_MODULE_ID_MAX
+};
+
 struct nvhost_device_data {
 	int		version;	/* ip version number of device */
 	int		id;		/* Separates clients of same hw */

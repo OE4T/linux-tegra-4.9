@@ -83,6 +83,8 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 /* HACK! This needs to come from DT */
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
+#define DPAUX_NODE		"/host1x/dpaux"
+
 #define TEGRA_CRC_LATCHED_DELAY		34
 
 #define DC_COM_PIN_OUTPUT_POLARITY1_INIT_VAL	0x01000000
@@ -2635,6 +2637,7 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 {
 	int failed_init = 0;
 	int i;
+	struct device_node *np_dpaux;
 
 	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
 		return false;
@@ -2678,7 +2681,9 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 		return false;
 	}
 
-	tegra_dpaux_pad_power(dc, false);
+	np_dpaux = of_find_node_by_path(DPAUX_NODE);
+	if (np_dpaux || !dc->ndev->dev.of_node)
+		tegra_dpaux_pad_power(dc, false);
 
 	if (dc->out_ops && dc->out_ops->enable)
 		dc->out_ops->enable(dc);

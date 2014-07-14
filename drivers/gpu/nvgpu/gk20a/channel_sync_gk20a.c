@@ -192,7 +192,7 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	struct channel_gk20a *c = sp->c;
 
-	incr_cmd_size = 4;
+	incr_cmd_size = 6;
 	if (wfi_cmd)
 		incr_cmd_size += 2;
 
@@ -203,11 +203,17 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 		return -EAGAIN;
 	}
 
+	/* WAR for hw bug 1491360: syncpt needs to be incremented twice */
+
 	if (gfx_class) {
 		WARN_ON(wfi_cmd); /* No sense to use gfx class + wfi. */
 		/* setobject KEPLER_C */
 		incr_cmd->ptr[j++] = 0x20010000;
 		incr_cmd->ptr[j++] = KEPLER_C;
+		/* syncpt incr */
+		incr_cmd->ptr[j++] = 0x200100B2;
+		incr_cmd->ptr[j++] = sp->id |
+			(0x1 << 20) | (0x1 << 16);
 		/* syncpt incr */
 		incr_cmd->ptr[j++] = 0x200100B2;
 		incr_cmd->ptr[j++] = sp->id |
@@ -227,10 +233,14 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 		incr_cmd->ptr[j++] = 0x2001001D;
 		/* syncpt_id, incr */
 		incr_cmd->ptr[j++] = (sp->id << 8) | 0x1;
+		/* syncpoint_b */
+		incr_cmd->ptr[j++] = 0x2001001D;
+		/* syncpt_id, incr */
+		incr_cmd->ptr[j++] = (sp->id << 8) | 0x1;
 	}
 	WARN_ON(j != incr_cmd_size);
 
-	thresh = nvhost_syncpt_incr_max_ext(sp->host1x_pdev, sp->id, 1);
+	thresh = nvhost_syncpt_incr_max_ext(sp->host1x_pdev, sp->id, 2);
 
 	if (register_irq) {
 		err = nvhost_intr_register_notifier(sp->host1x_pdev,

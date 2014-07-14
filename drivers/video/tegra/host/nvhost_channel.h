@@ -47,10 +47,9 @@ struct nvhost_channel_ops {
 
 struct nvhost_channel {
 	struct nvhost_channel_ops ops;
-	atomic_t refcount;
+	int refcount;
 	int chid;
 	int dev_chid;
-	struct mutex reflock;
 	struct mutex submitlock;
 	void __iomem *aperture;
 	struct nvhost_hwctx *cur_ctx;

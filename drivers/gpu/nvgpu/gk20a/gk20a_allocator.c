@@ -922,7 +922,8 @@ int gk20a_allocator_block_alloc(struct gk20a_allocator *allocator,
 
 	allocator_dbg(allocator, "[in] addr %d, len %d", *addr, len);
 
-	if (*addr + len > allocator->limit || /* check addr range */
+	if ((*addr != 0 && *addr < allocator->base) || /* check addr range */
+	    *addr + len > allocator->limit || /* check addr range */
 	    *addr & (allocator->align - 1) || /* check addr alignment */
 	     len == 0)			      /* check len */
 		return -EINVAL;

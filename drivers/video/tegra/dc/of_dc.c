@@ -320,8 +320,7 @@ static int parse_disp_default_out(struct platform_device *ndev,
 
 		hotplug_gpio = of_get_named_gpio_flags(np_hdmi,
 				"nvidia,hpd-gpio", 0, &flags);
-		if (hotplug_gpio != 0)
-			default_out->hotplug_gpio = hotplug_gpio;
+		default_out->hotplug_gpio = hotplug_gpio;
 	}
 	if (np_sor && of_device_is_available(np_sor) &&
 		((default_out->type == TEGRA_DC_OUT_DP) ||
@@ -351,6 +350,10 @@ static int parse_disp_default_out(struct platform_device *ndev,
 		}
 		default_out->flags |= (unsigned) u;
 	}
+	/* if hotplug not supported clear TEGRA_DC_OUT_HOTPLUG_WAKE_LP0 */
+	if (default_out->hotplug_gpio < 0)
+		default_out->flags &= ~TEGRA_DC_OUT_HOTPLUG_WAKE_LP0;
+
 	OF_DC_LOG("default_out flag %u\n", default_out->flags);
 
 	if (!of_property_read_u32(np, "nvidia,out-align", &temp)) {

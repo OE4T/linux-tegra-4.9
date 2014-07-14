@@ -707,13 +707,15 @@ static ssize_t dbg_hotplug_write(struct file *file, const char __user *addr,
 	if (ret < 0)
 		return ret;
 
-	if (dc->out->hotplug_state == 0 && new_state != 0) {
+	if (dc->out->hotplug_state == 0 && new_state != 0
+			&& tegra_dc_hotplug_supported(dc)) {
 		/* was 0, now -1 or 1.
 		 * we are overriding the hpd GPIO, so ignore the interrupt. */
 		int gpio_irq = gpio_to_irq(dc->out->hotplug_gpio);
 
 		disable_irq(gpio_irq);
-	} else if (dc->out->hotplug_state != 0 && new_state == 0) {
+	} else if (dc->out->hotplug_state != 0 && new_state == 0
+			&& tegra_dc_hotplug_supported(dc)) {
 		/* was -1 or 1, and now 0
 		 * restore the interrupt for hpd GPIO. */
 		int gpio_irq = gpio_to_irq(dc->out->hotplug_gpio);
@@ -1244,25 +1246,30 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	tegra_dc_hdmi_debug_create(hdmi);
 
-	err = gpio_request(dc->out->hotplug_gpio, "hdmi_hpd");
-	if (err < 0) {
-		dev_err(&dc->ndev->dev, "hdmi: hpd gpio_request failed\n");
-		goto err_nvhdcp_destroy;
-	}
+	if (tegra_dc_hotplug_supported(dc)) {
+		err = gpio_request(dc->out->hotplug_gpio, "hdmi_hpd");
+		if (err < 0) {
+			dev_err(&dc->ndev->dev, "hdmi: hpd gpio_request failed\n");
+			goto err_nvhdcp_destroy;
+		}
 
-	gpio_direction_input(dc->out->hotplug_gpio);
+		gpio_direction_input(dc->out->hotplug_gpio);
 
-	/* TODO: support non-hotplug */
-	ret = request_threaded_irq(gpio_to_irq(dc->out->hotplug_gpio),
-		NULL, tegra_dc_hdmi_irq,
-		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
-		dev_name(&dc->ndev->dev), dc);
+		/* TODO: support non-hotplug */
+		ret = request_threaded_irq(gpio_to_irq(dc->out->hotplug_gpio),
+				NULL, tegra_dc_hdmi_irq,
+				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING
+				| IRQF_ONESHOT,
+				dev_name(&dc->ndev->dev), dc);
 
-	if (ret) {
-		dev_err(&dc->ndev->dev, "hdmi: request_irq %d failed - %d\n",
-			gpio_to_irq(dc->out->hotplug_gpio), ret);
-		err = -EBUSY;
-		goto err_gpio_free;
+		if (ret) {
+			dev_err(&dc->ndev->dev,
+					"hdmi: request_irq %d failed - %d\n",
+					gpio_to_irq(dc->out->hotplug_gpio),
+					ret);
+			err = -EBUSY;
+			goto err_gpio_free;
+		}
 	}
 
 	/*Add sysfs node to query hdmi audio channels on startup*/
@@ -1280,7 +1287,8 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	return 0;
 
 err_gpio_free:
-	gpio_free(dc->out->hotplug_gpio);
+	if (tegra_dc_hotplug_supported(dc))
+		gpio_free(dc->out->hotplug_gpio);
 err_nvhdcp_destroy:
 	if (hdmi->nvhdcp)
 		tegra_nvhdcp_destroy(hdmi->nvhdcp);
@@ -1316,7 +1324,8 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
 
-	free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);
+	if (tegra_dc_hotplug_supported(dc))
+		free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);
 	hdmi_state_machine_shutdown();
 
 	i2c_release_client(hdmi->i2c_info.client);

@@ -42,6 +42,8 @@
 #define WIN_ALL_ACT_REQ (WIN_A_ACT_REQ | WIN_B_ACT_REQ | WIN_C_ACT_REQ)
 #endif
 
+#define tegra_dc_hotplug_supported(dc) (dc && dc->out ? \
+		(dc->out->hotplug_gpio >= 0) : 0)
 static inline int tegra_dc_io_start(struct tegra_dc *dc)
 {
 	return nvhost_module_busy_ext(dc->ndev);

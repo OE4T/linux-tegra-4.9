@@ -271,7 +271,7 @@ static int nvhost_ioctl_ctrl_module_mutex(struct nvhost_ctrl_userctx *ctx,
 	trace_nvhost_ioctl_ctrl_module_mutex(args->lock, args->id);
 	if (args->lock && !ctx->mod_locks[args->id]) {
 		if (args->id == 0)
-			nvhost_module_busy(ctx->dev->dev);
+			err = nvhost_module_busy(ctx->dev->dev);
 		else
 			err = nvhost_mutex_try_lock(&ctx->dev->syncpt,
 					args->id);
@@ -794,7 +794,9 @@ static int nvhost_probe(struct platform_device *dev)
 
 	mutex_init(&host->timeout_mutex);
 
-	nvhost_module_busy(dev);
+	err = nvhost_module_busy(dev);
+	if (err)
+		goto fail;
 
 	nvhost_syncpt_reset(&host->syncpt);
 	if (tegra_cpu_is_asim())

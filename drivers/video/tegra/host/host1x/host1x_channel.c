@@ -278,7 +278,13 @@ static int host1x_channel_submit(struct nvhost_job *job)
 
 	/* Turn on the client module and host1x */
 	for (i = 0; i < job->num_syncpts; ++i) {
-		nvhost_module_busy(ch->dev);
+		err = nvhost_module_busy(ch->dev);
+		if (err) {
+			nvhost_module_idle_mult(ch->dev, i);
+			nvhost_putchannel(ch, i);
+			return err;
+		}
+
 		nvhost_getchannel(ch);
 	}
 
@@ -376,7 +382,6 @@ static int host1x_channel_submit(struct nvhost_job *job)
 error:
 	for (i = 0; i < job->num_syncpts; ++i)
 		kfree(completed_waiters[i]);
-
 	return err;
 }
 
@@ -402,7 +407,9 @@ static int host1x_save_context(struct nvhost_channel *ch)
 		goto done;
 	}
 
-	nvhost_module_busy(nvhost_get_parent(ch->dev));
+	err = nvhost_module_busy(nvhost_get_parent(ch->dev));
+	if (err)
+		goto done;
 
 	mutex_lock(&ch->submitlock);
 	hwctx_to_save = ch->cur_ctx;
@@ -495,11 +502,17 @@ static int t124_channel_init_gather_filter(struct nvhost_channel *ch)
 	struct platform_device *pdev = ch->dev;
 	void __iomem *regs = ch->aperture;
 	struct nvhost_master *master = nvhost_get_host(pdev);
+	int err;
 
 	if (!nvhost_gather_filter_enabled(&master->syncpt))
 		return -EINVAL;
 
-	nvhost_module_busy(nvhost_get_parent(pdev));
+	err = nvhost_module_busy(nvhost_get_parent(pdev));
+	if (err) {
+		dev_warn(&ch->dev->dev, "failed to initialise gather filter");
+		return err;
+	}
+
 	writel(host1x_channel_channelctrl_kernel_filter_gbuffer_f(1),
 	       regs + host1x_channel_channelctrl_r());
 	nvhost_module_idle(nvhost_get_parent(pdev));

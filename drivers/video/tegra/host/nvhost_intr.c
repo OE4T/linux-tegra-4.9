@@ -402,7 +402,9 @@ int nvhost_intr_register_notifier(struct platform_device *pdev,
 	notifier->private_data = private_data;
 
 	/* make sure host1x stays on */
-	nvhost_module_busy(master->dev);
+	err = nvhost_module_busy(master->dev);
+	if (err)
+		goto err_busy;
 
 	err = nvhost_intr_add_action(&master->intr,
 				     id, thresh,
@@ -413,6 +415,8 @@ int nvhost_intr_register_notifier(struct platform_device *pdev,
 
 	return err;
 
+err_busy:
+	kfree(notifier);
 err_alloc_notifier:
 	kfree(waiter);
 err_alloc_waiter:

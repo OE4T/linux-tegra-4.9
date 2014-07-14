@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Actmon support for T124
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -71,6 +71,7 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 	struct nvhost_device_data *pdata =
 		(struct nvhost_device_data *)platform_get_drvdata(pdev);
 	u32 val;
+	int err;
 
 	if (actmon->init == ACTMON_READY)
 		return 0;
@@ -86,7 +87,11 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 	if (!actmon->clk)
 		return -ENODEV;
 
-	nvhost_module_busy(actmon->host->dev);
+	err = nvhost_module_busy(actmon->host->dev);
+	if (err) {
+		nvhost_warn(&pdev->dev, "failed to power on host1x. actmon initialisation failed");
+		return err;
+	}
 
 	/* Clear average and control registers */
 	actmon_writel(actmon, 0, actmon_init_avg_r());
@@ -113,13 +118,20 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 
 static void host1x_actmon_deinit(struct host1x_actmon *actmon)
 {
+	struct platform_device *pdev = actmon->host->dev;
+	int err;
+
 	if (actmon->init != ACTMON_READY)
 		return;
 
 	actmon->init = ACTMON_SLEEP;
 
 	/* Disable actmon and clear interrupt status */
-	nvhost_module_busy(actmon->host->dev);
+	err = nvhost_module_busy(actmon->host->dev);
+	if (err) {
+		nvhost_warn(&pdev->dev, "failed to power on host1x. actmon deinitialisation failed");
+		return;
+	}
 	actmon_writel(actmon, 0, actmon_ctrl_r());
 	actmon_writel(actmon, 0xffffffff, actmon_intr_status_r());
 	nvhost_module_idle(actmon->host->dev);
@@ -127,12 +139,17 @@ static void host1x_actmon_deinit(struct host1x_actmon *actmon)
 
 static int host1x_actmon_avg(struct host1x_actmon *actmon, u32 *val)
 {
+	int err;
+
 	if (actmon->init != ACTMON_READY) {
 		*val = 0;
 		return 0;
 	}
 
-	nvhost_module_busy(actmon->host->dev);
+	err = nvhost_module_busy(actmon->host->dev);
+	if (err)
+		return err;
+
 	*val = actmon_readl(actmon, actmon_avg_count_r());
 	nvhost_module_idle(actmon->host->dev);
 	rmb();
@@ -143,6 +160,7 @@ static int host1x_actmon_avg(struct host1x_actmon *actmon, u32 *val)
 static int host1x_actmon_avg_norm(struct host1x_actmon *actmon, u32 *avg)
 {
 	long val;
+	int err;
 
 	if (!(actmon->init == ACTMON_READY && actmon->clks_per_sample > 0)) {
 		*avg = 0;
@@ -150,7 +168,10 @@ static int host1x_actmon_avg_norm(struct host1x_actmon *actmon, u32 *avg)
 	}
 
 	/* Read load from hardware */
-	nvhost_module_busy(actmon->host->dev);
+	err = nvhost_module_busy(actmon->host->dev);
+	if (err)
+		return err;
+
 	val = actmon_readl(actmon, actmon_avg_count_r());
 	nvhost_module_idle(actmon->host->dev);
 	rmb();
@@ -162,13 +183,18 @@ static int host1x_actmon_avg_norm(struct host1x_actmon *actmon, u32 *avg)
 
 static int host1x_actmon_count(struct host1x_actmon *actmon, u32 *val)
 {
+	int err;
+
 	if (actmon->init != ACTMON_READY) {
 		*val = 0;
 		return 0;
 	}
 
 	/* Read load from hardware */
-	nvhost_module_busy(actmon->host->dev);
+	err = nvhost_module_busy(actmon->host->dev);
+	if (err)
+		return err;
+
 	*val = actmon_readl(actmon, actmon_count_r());
 	nvhost_module_idle(actmon->host->dev);
 	rmb();
@@ -179,6 +205,7 @@ static int host1x_actmon_count(struct host1x_actmon *actmon, u32 *val)
 static int host1x_actmon_count_norm(struct host1x_actmon *actmon, u32 *avg)
 {
 	long val;
+	int err;
 
 	if (actmon->init != ACTMON_READY) {
 		*avg = 0;
@@ -186,7 +213,10 @@ static int host1x_actmon_count_norm(struct host1x_actmon *actmon, u32 *avg)
 	}
 
 	/* Read load from hardware */
-	nvhost_module_busy(actmon->host->dev);
+	err = nvhost_module_busy(actmon->host->dev);
+	if (err)
+		return err;
+
 	val = actmon_readl(actmon, actmon_count_r());
 	nvhost_module_idle(actmon->host->dev);
 	rmb();
@@ -208,11 +238,19 @@ static int host1x_actmon_below_wmark_count(struct host1x_actmon *actmon)
 
 static void host1x_actmon_update_sample_period(struct host1x_actmon *actmon)
 {
+	struct platform_device *pdev = actmon->host->dev;
+	int err;
+
 	/* No sense to update actmon if actmon is inactive */
 	if (actmon->init != ACTMON_READY)
 		return;
 
-	nvhost_module_busy(actmon->host->dev);
+	err = nvhost_module_busy(actmon->host->dev);
+	if (err) {
+		nvhost_warn(&pdev->dev, "failed to power on host1x. sample period update failed");
+		return;
+	}
+
 	actmon_update_sample_period_safe(actmon);
 	nvhost_module_idle(actmon->host->dev);
 }
@@ -226,11 +264,18 @@ static void host1x_actmon_set_sample_period_norm(struct host1x_actmon *actmon,
 
 static void host1x_actmon_set_k(struct host1x_actmon *actmon, u32 k)
 {
+	struct platform_device *pdev = actmon->host->dev;
 	long val;
+	int err;
 
 	actmon->k = k;
 
-	nvhost_module_busy(actmon->host->dev);
+	err = nvhost_module_busy(actmon->host->dev);
+	if (err) {
+		nvhost_warn(&pdev->dev, "failed to power on host1x. sample period update failed");
+		return;
+	}
+
 	val = actmon_readl(actmon, actmon_ctrl_r());
 	val &= ~(actmon_ctrl_k_val_m());
 	val |= actmon_ctrl_k_val_f(actmon->k);

@@ -663,6 +663,7 @@ long nvdec_ioctl(struct file *file,
 {
 	struct nvdec_private *priv = file->private_data;
 	struct platform_device *pdev = priv->pdev;
+	int err;
 
 	if (WARN_ONCE(pdev == NULL, "pdata not found, %s failed\n", __func__))
 		return -ENODEV;
@@ -673,7 +674,10 @@ long nvdec_ioctl(struct file *file,
 	switch (cmd) {
 	case NVHOST_NVDEC_IOCTL_POWERON:
 		nvhost_nvdec_init(pdev);
-		nvhost_module_busy(pdev);
+		err = nvhost_module_busy(pdev);
+		if (err)
+			return err;
+
 		atomic_inc(&priv->refcnt);
 	break;
 	case NVHOST_NVDEC_IOCTL_POWEROFF:

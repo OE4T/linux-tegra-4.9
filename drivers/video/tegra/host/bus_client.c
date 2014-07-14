@@ -515,7 +515,10 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		job->sp[job->hwctx_syncpt_idx].id,
 		job->sp[job->hwctx_syncpt_idx].incrs);
 
-	nvhost_module_busy(ctx->ch->dev);
+	err = nvhost_module_busy(ctx->ch->dev);
+	if (err)
+		goto fail;
+
 	err = nvhost_job_pin(job, &nvhost_get_host(ctx->ch->dev)->syncpt);
 	nvhost_module_idle(ctx->ch->dev);
 	if (err)

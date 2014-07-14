@@ -144,6 +144,29 @@ enum tegra210_xbar_dai_link {
 	TEGRA210_DAI_LINK_AFC5_TX,
 	TEGRA210_DAI_LINK_AFC6_RX,
 	TEGRA210_DAI_LINK_AFC6_TX,
+	TEGRA210_DAI_LINK_ADMAIF1_CODEC,
+	TEGRA210_DAI_LINK_ADMAIF2_CODEC,
+	TEGRA210_DAI_LINK_ADMAIF3_CODEC,
+	TEGRA210_DAI_LINK_ADMAIF4_CODEC,
+	TEGRA210_DAI_LINK_ADMAIF5_CODEC,
+	TEGRA210_DAI_LINK_ADMAIF6_CODEC,
+	TEGRA210_DAI_LINK_ADMAIF7_CODEC,
+	TEGRA210_DAI_LINK_ADMAIF8_CODEC,
+	TEGRA210_DAI_LINK_ADMAIF9_CODEC,
+	TEGRA210_DAI_LINK_ADMAIF10_CODEC,
+	TEGRA210_DAI_LINK_ADSP_ADMAIF1,
+	TEGRA210_DAI_LINK_ADSP_ADMAIF2,
+	TEGRA210_DAI_LINK_ADSP_ADMAIF3,
+	TEGRA210_DAI_LINK_ADSP_ADMAIF4,
+	TEGRA210_DAI_LINK_ADSP_ADMAIF5,
+	TEGRA210_DAI_LINK_ADSP_ADMAIF6,
+	TEGRA210_DAI_LINK_ADSP_ADMAIF7,
+	TEGRA210_DAI_LINK_ADSP_ADMAIF8,
+	TEGRA210_DAI_LINK_ADSP_ADMAIF9,
+	TEGRA210_DAI_LINK_ADSP_ADMAIF10,
+	TEGRA210_DAI_LINK_ADSP_PCM,
+	TEGRA210_DAI_LINK_ADSP_COMPR1,
+	TEGRA210_DAI_LINK_ADSP_COMPR2,
 	TEGRA210_XBAR_DAI_LINKS, /* Total number of xbar dai links */
 };
 
@@ -218,5 +241,31 @@ void tegra_machine_remove_codec_conf(void);
 
 int tegra_machine_append_codec_conf(struct snd_soc_codec_conf *conf,
 		unsigned int conf_size);
+
+struct snd_soc_dai_link *tegra_machine_new_codec_links(
+	struct platform_device *pdev,
+	struct snd_soc_dai_link *tegra_codec_links,
+	unsigned int *pnum_codec_links);
+
+void tegra_machine_remove_new_codec_links(
+	struct snd_soc_dai_link *tegra_codec_links);
+
+struct snd_soc_codec_conf *tegra_machine_new_codec_conf(
+	struct platform_device *pdev,
+	struct snd_soc_codec_conf *tegra_codec_conf,
+	unsigned int *pnum_codec_links);
+
+void tegra_machine_remove_new_codec_conf(
+	struct snd_soc_codec_conf *tegra_codec_conf);
+
+unsigned int tegra_machine_get_codec_dai_link_idx(char *of_node_name);
+
+unsigned int tegra_machine_get_bclk_ratio(
+	struct snd_soc_pcm_runtime *rtd);
+
+unsigned int tegra_machine_get_num_dai_links(void);
+
+void tegra_machine_remove_extra_mem_alloc(unsigned int num_codec_links);
+
 
 #endif

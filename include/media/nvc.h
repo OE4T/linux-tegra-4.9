@@ -18,7 +18,6 @@
 
 #include <linux/ioctl.h>
 #include <linux/regulator/consumer.h>
-#include <mach/pinmux.h>
 
 #define MAKE_CONSTUSER_PTR(p)	(const void __user *)((unsigned long)(p))
 #define MAKE_USER_PTR(p)	(void __user *)((unsigned long)(p))
@@ -293,13 +292,6 @@ struct nvc_gpio {
 struct nvc_fuseid {
 	__u32 size;
 	__u8 data[16];
-};
-
-struct nvc_pinmux {
-	struct tegra_pingroup_config pcfg;
-	bool valid; /* set if struct data is valid */
-	bool own; /* gets set if driver initializes */
-	bool flag; /* scratch flag for driver implementation */
 };
 
 #endif /* __KERNEL__ */

@@ -34,7 +34,7 @@
 #include "tegra210_xbar_alt.h"
 #include "tegra210_amx_alt.h"
 
-#define DRV_NAME "tegra210_amx"
+#define DRV_NAME "tegra210-amx"
 
 /**
  * tegra210_amx_set_master_stream - set master stream and dependency

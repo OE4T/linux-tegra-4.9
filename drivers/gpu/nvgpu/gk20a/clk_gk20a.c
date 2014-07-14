@@ -705,6 +705,11 @@ int gk20a_init_clk_support(struct gk20a *g)
 	return err;
 }
 
+void gk20a_init_clk_ops(struct gpu_ops *gops)
+{
+	gops->clk.init_clk_support = gk20a_init_clk_support;
+}
+
 unsigned long gk20a_clk_get_rate(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;

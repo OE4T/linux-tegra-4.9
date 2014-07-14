@@ -230,6 +230,9 @@ struct gpu_ops {
 		int (*prepare_ucode)(struct gk20a *g);
 		int (*pmu_setup_hw_and_bootstrap)(struct gk20a *g);
 	} pmu;
+	struct {
+		int (*init_clk_support)(struct gk20a *g);
+	} clk;
 };
 
 struct gk20a {
@@ -494,6 +497,8 @@ static inline void gk20a_mem_wr32(void *ptr, int w, u32 data)
 #endif
 	((u32 *)ptr)[w] = data;
 }
+
+void gk20a_init_clk_ops(struct gpu_ops *gops);
 
 /* register accessors */
 int gk20a_lockout_registers(struct gk20a *g);

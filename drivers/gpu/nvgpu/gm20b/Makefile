@@ -13,4 +13,5 @@ obj-$(CONFIG_GK20A)  = \
 	gm20b_gating_reglist.o \
 	acr_gm20b.o \
 	pmu_gm20b.o \
+	clk_gm20b.o \
 	mm_gm20b.o

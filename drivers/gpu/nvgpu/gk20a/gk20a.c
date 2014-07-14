@@ -901,10 +901,12 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 	   during boot but it also significantly slows down gk20a init on
 	   simulation and emulation. We should remove SOB after graphics power
 	   saving features (blcg/slcg) are enabled. For now, do it here. */
-	err = gk20a_init_clk_support(g);
-	if (err) {
-		gk20a_err(dev, "failed to init gk20a clk");
-		goto done;
+	if (g->ops.clk.init_clk_support) {
+		err = g->ops.clk.init_clk_support(g);
+		if (err) {
+			gk20a_err(dev, "failed to init gk20a clk");
+			goto done;
+		}
 	}
 
 	/* enable pri timeout only on silicon */

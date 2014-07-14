@@ -24,6 +24,7 @@
 #include "gr_ctx_gk20a.h"
 #include "mm_gk20a.h"
 #include "pmu_gk20a.h"
+#include "clk_gk20a.h"
 
 struct gpu_ops gk20a_ops = {
 	.clock_gating = {
@@ -50,6 +51,7 @@ int gk20a_init_hal(struct gpu_ops *gops)
 	gk20a_init_gr_ctx(gops);
 	gk20a_init_mm(gops);
 	gk20a_init_pmu_ops(gops);
+	gk20a_init_clk_ops(gops);
 	gops->name = "gk20a";
 
 	return 0;

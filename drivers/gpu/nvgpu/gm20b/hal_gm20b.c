@@ -26,6 +26,7 @@
 #include "gr_ctx_gm20b.h"
 #include "mm_gm20b.h"
 #include "pmu_gm20b.h"
+#include "clk_gm20b.h"
 
 struct gpu_ops gm20b_ops = {
 	.clock_gating = {
@@ -53,6 +54,7 @@ int gm20b_init_hal(struct gpu_ops *gops)
 	gm20b_init_gr_ctx(gops);
 	gm20b_init_mm(gops);
 	gm20b_init_pmu_ops(gops);
+	gm20b_init_clk_ops(gops);
 	gops->name = "gm20b";
 
 	return 0;

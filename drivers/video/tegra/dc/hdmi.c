@@ -1958,9 +1958,6 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	const struct tmds_config *tmds_ptr;
 	size_t tmds_len;
 	bool edid_read;
-#ifdef CONFIG_SWITCH
-	int state;
-#endif
 
 	/* enable power, clocks, resets, etc. */
 
@@ -2187,13 +2184,6 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	 */
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, tegra_dc_hpd(dc));
 	tegra_dc_io_end(dc);
-
-#ifdef CONFIG_SWITCH
-	state = tegra_edid_audio_supported(hdmi->edid) ? 1 : 0;
-	switch_set_state(&hdmi->audio_switch, state);
-	pr_info("%s: audio_switch %d\n", __func__, state);
-#endif
-
 }
 
 static void tegra_dc_hdmi_disable(struct tegra_dc *dc)

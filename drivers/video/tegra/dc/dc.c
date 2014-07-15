@@ -3520,6 +3520,16 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #endif
 
 	if (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) {
+		/* WAR: BL is putting DC in bad state for EDP configuration */
+		if (dc->out->type == TEGRA_DC_OUT_DP ||
+			dc->out->type == TEGRA_DC_OUT_NVSR_DP) {
+			clk_prepare_enable(dc->clk);
+			tegra_periph_reset_assert(dc->clk);
+			udelay(10);
+			tegra_periph_reset_deassert(dc->clk);
+			udelay(10);
+			clk_disable_unprepare(dc->clk);
+		}
 		_tegra_dc_set_default_videomode(dc);
 		dc->enabled = _tegra_dc_enable(dc);
 

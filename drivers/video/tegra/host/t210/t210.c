@@ -138,12 +138,6 @@ struct nvhost_device_data t21_vi_info = {
 };
 #endif
 
-struct nvhost_device_data t21_vi_i2c_info = {
-	.exclusive     = true,
-	.keepalive = true,
-	.class           = NV_VIDEO_STREAMING_VII2C_CLASS_ID,
-};
-
 struct nvhost_device_data t21_msenc_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
 	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,

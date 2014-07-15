@@ -58,15 +58,6 @@ struct clk_gk20a {
 	bool clk_hw_on;
 };
 
-struct gpufreq_table_data {
-	unsigned int index;
-	unsigned int frequency; /* Hz */
-};
-
-struct gpufreq_table_data *tegra_gpufreq_table_get(void);
-
-unsigned int tegra_gpufreq_table_size_get(void);
-
 int gk20a_init_clk_support(struct gk20a *g);
 
 unsigned long gk20a_clk_get_rate(struct gk20a *g);

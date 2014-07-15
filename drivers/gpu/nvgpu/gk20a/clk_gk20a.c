@@ -42,19 +42,6 @@ struct pll_parms gpc_pll_params = {
 	1, 32,			/* PL */
 };
 
-static int num_gpu_cooling_freq;
-static struct gpufreq_table_data *gpu_cooling_freq;
-
-struct gpufreq_table_data *tegra_gpufreq_table_get(void)
-{
-	return gpu_cooling_freq;
-}
-
-unsigned int tegra_gpufreq_table_size_get(void)
-{
-	return num_gpu_cooling_freq;
-}
-
 static u8 pl_to_div[] = {
 /* PL:   0, 1, 2, 3, 4, 5, 6,  7,  8,  9, 10, 11, 12, 13, 14 */
 /* p: */ 1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 12, 16, 20, 24, 32 };
@@ -441,8 +428,6 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
 	static int initialized;
-	unsigned long *freqs;
-	int err, num_freqs;
 	struct clk *ref;
 	unsigned long ref_rate;
 
@@ -478,32 +463,6 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 		clk->gpc_pll.PL = 1;
 		clk->gpc_pll.freq = clk->gpc_pll.clk_in * clk->gpc_pll.N;
 		clk->gpc_pll.freq /= pl_to_div[clk->gpc_pll.PL];
-	}
-
-	err = tegra_dvfs_get_freqs(clk_get_parent(clk->tegra_clk),
-				   &freqs, &num_freqs);
-	if (!err) {
-		int i, j;
-
-		/* init j for inverse traversal of frequencies */
-		j = num_freqs - 1;
-
-		gpu_cooling_freq = kzalloc(
-				(1 + num_freqs) * sizeof(*gpu_cooling_freq),
-				GFP_KERNEL);
-
-		/* store frequencies in inverse order */
-		for (i = 0; i < num_freqs; ++i, --j) {
-			gpu_cooling_freq[i].index = i;
-			gpu_cooling_freq[i].frequency = freqs[j];
-		}
-
-		/* add 'end of table' marker */
-		gpu_cooling_freq[i].index = i;
-		gpu_cooling_freq[i].frequency = GPUFREQ_TABLE_END;
-
-		/* store number of frequencies */
-		num_gpu_cooling_freq = num_freqs + 1;
 	}
 
 	mutex_init(&clk->clk_mutex);

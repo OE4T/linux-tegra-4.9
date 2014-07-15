@@ -651,9 +651,6 @@ static void gk20a_remove_support(struct platform_device *dev)
 	if (g->pmu.remove_support)
 		g->pmu.remove_support(&g->pmu);
 
-	if (g->gk20a_cdev.gk20a_cooling_dev)
-		thermal_cooling_device_unregister(g->gk20a_cdev.gk20a_cooling_dev);
-
 	if (g->gr.remove_support)
 		g->gr.remove_support(&g->gr);
 
@@ -1007,53 +1004,6 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 	{ .compatible = "nvidia,generic-gm20b",
 		.data = &gk20a_generic_platform },
 	{ },
-};
-
-int tegra_gpu_get_max_state(struct thermal_cooling_device *cdev,
-		unsigned long *max_state)
-{
-	struct cooling_device_gk20a *gk20a_gpufreq_device = cdev->devdata;
-
-	*max_state = gk20a_gpufreq_device->gk20a_freq_table_size - 1;
-	return 0;
-}
-
-int tegra_gpu_get_cur_state(struct thermal_cooling_device *cdev,
-		unsigned long *cur_state)
-{
-	struct cooling_device_gk20a  *gk20a_gpufreq_device = cdev->devdata;
-
-	*cur_state = gk20a_gpufreq_device->gk20a_freq_state;
-	return 0;
-}
-
-int tegra_gpu_set_cur_state(struct thermal_cooling_device *c_dev,
-		unsigned long cur_state)
-{
-	u32 target_freq;
-	struct gk20a *g;
-	struct gpufreq_table_data *gpu_cooling_table;
-	struct cooling_device_gk20a *gk20a_gpufreq_device = c_dev->devdata;
-
-	BUG_ON(cur_state >= gk20a_gpufreq_device->gk20a_freq_table_size);
-
-	g = container_of(gk20a_gpufreq_device, struct gk20a, gk20a_cdev);
-
-	gpu_cooling_table = tegra_gpufreq_table_get();
-	target_freq = gpu_cooling_table[cur_state].frequency;
-
-	/* ensure a query for state will get the proper value */
-	gk20a_gpufreq_device->gk20a_freq_state = cur_state;
-
-	gk20a_clk_set_rate(g, target_freq);
-
-	return 0;
-}
-
-static struct thermal_cooling_device_ops tegra_gpu_cooling_ops = {
-	.get_max_state = tegra_gpu_get_max_state,
-	.get_cur_state = tegra_gpu_get_cur_state,
-	.set_cur_state = tegra_gpu_set_cur_state,
 };
 
 static int gk20a_create_device(
@@ -1421,7 +1371,6 @@ static int gk20a_probe(struct platform_device *dev)
 	struct gk20a *gk20a;
 	int err;
 	struct gk20a_platform *platform = NULL;
-	struct cooling_device_gk20a *gpu_cdev = NULL;
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
@@ -1524,13 +1473,6 @@ static int gk20a_probe(struct platform_device *dev)
 	/* Set DMA parameters to allow larger sgt lists */
 	dev->dev.dma_parms = &gk20a->dma_parms;
 	dma_set_max_seg_size(&dev->dev, UINT_MAX);
-
-	gpu_cdev = &gk20a->gk20a_cdev;
-	gpu_cdev->gk20a_freq_table_size = tegra_gpufreq_table_size_get();
-	gpu_cdev->gk20a_freq_state = 0;
-	gpu_cdev->g = gk20a;
-	gpu_cdev->gk20a_cooling_dev = thermal_cooling_device_register("gk20a_cdev", gpu_cdev,
-					&tegra_gpu_cooling_ops);
 
 	gk20a->gr_idle_timeout_default =
 			CONFIG_GK20A_DEFAULT_TIMEOUT;

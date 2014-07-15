@@ -362,12 +362,6 @@
 				ti,temp-polling-time-sec = <5>;
 				ti,ir-comp-voltage-millivolt = <1>;
 				ti,ir-comp-resister-ohm = <70>;
-				consumers {
-					c1 {
-						regulator-consumer-supply = "usb_bat_chg";
-						regulator-consumer-device = "tegra-udc.0";
-					};
-				};
 			};
 
 			usb0_vbus: vbus {

@@ -1728,14 +1728,14 @@ int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout)
 	if (ch->has_timedout)
 		return -ETIMEDOUT;
 
-	if (!(fence->valid && fence->wfi)) {
+	if (!(fence->valid && fence->wfi) && ch->obj_class != KEPLER_C) {
 		gk20a_dbg_fn("issuing wfi, incr to finish the channel");
 		err = gk20a_channel_submit_wfi(ch);
 	}
 	if (err)
 		return err;
 
-	BUG_ON(!(fence->valid && fence->wfi));
+	BUG_ON(!(fence->valid && fence->wfi) && ch->obj_class != KEPLER_C);
 
 	gk20a_dbg_fn("waiting for channel to finish thresh:%d sema:%p",
 		      fence->thresh, fence->semaphore);

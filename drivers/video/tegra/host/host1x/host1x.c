@@ -54,6 +54,10 @@
 #include "t124/t124.h"
 #include "t210/t210.h"
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#include "t186/t186.h"
+#endif
+
 #define DRIVER_NAME		"host1x"
 
 static const char *num_syncpts_name = "num_pts";
@@ -674,6 +678,10 @@ static struct of_device_id tegra_host1x_of_match[] = {
 #ifdef TEGRA_21X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra210-host1x",
 		.data = (struct nvhost_device_data *)&t21_host1x_info },
+#endif
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	{ .compatible = "nvidia,tegra186-host1x",
+		.data = (struct nvhost_device_data *)&t18_host1x_info },
 #endif
 	{ },
 };

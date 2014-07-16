@@ -2514,6 +2514,8 @@ static void tegra_dsi_mipi_calibration_11x(struct tegra_dc_dsi_data *dsi)
 #endif
 static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 {
+	u32 val = 0;
+
 	if (!dsi->ulpm)
 		tegra_dsi_pad_enable(dsi);
 	else
@@ -2524,6 +2526,13 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 		tegra_mipi_cal_init_hw(dsi->mipi_cal);
 
 		tegra_mipi_cal_clk_enable(dsi->mipi_cal);
+
+		/* enable mipi bias pad */
+		val = tegra_mipi_cal_read(dsi->mipi_cal,
+				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
+		val &= ~MIPI_BIAS_PAD_PDVCLAMP(0x1);
+		tegra_mipi_cal_write(dsi->mipi_cal, val,
+				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
 
 #if defined(CONFIG_ARCH_TEGRA_11x_SOC) || \
 	defined(CONFIG_ARCH_TEGRA_14x_SOC) || \
@@ -2548,6 +2557,13 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 #elif defined(CONFIG_ARCH_TEGRA_12x_SOC)
 		tegra_dsi_mipi_calibration_12x(dsi);
 #endif
+		/* disable mipi bias pad */
+		val = tegra_mipi_cal_read(dsi->mipi_cal,
+				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
+		val |= MIPI_BIAS_PAD_PDVCLAMP(0x1);
+		tegra_mipi_cal_write(dsi->mipi_cal, val,
+				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
+
 		tegra_mipi_cal_clk_disable(dsi->mipi_cal);
 	} else {
 #ifdef CONFIG_ARCH_TEGRA_3x_SOC
@@ -4615,15 +4631,6 @@ static int _tegra_dsi_host_suspend(struct tegra_dc *dc,
 		val |= DSI_PAD_PDVCLAMP(0x1);
 		tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_3_VS1);
 
-		/* disable mipi bias pad */
-		tegra_mipi_cal_clk_enable(dsi->mipi_cal);
-		val = tegra_mipi_cal_read(dsi->mipi_cal,
-				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
-		val |= MIPI_BIAS_PAD_PDVCLAMP(0x1);
-		tegra_mipi_cal_write(dsi->mipi_cal, val,
-				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
-		tegra_mipi_cal_clk_disable(dsi->mipi_cal);
-
 		/* fall through */
 	case DSI_HOST_SUSPEND_LV1:
 		/* Disable dsi fast and slow clock */
@@ -4665,15 +4672,6 @@ static int _tegra_dsi_host_resume(struct tegra_dc *dc,
 	case DSI_HOST_SUSPEND_LV2:
 		tegra_dsi_config_phy_clk(dsi, TEGRA_DSI_ENABLE);
 		tegra_dsi_clk_enable(dsi);
-
-		/* enable mipi bias pad */
-		tegra_mipi_cal_clk_enable(dsi->mipi_cal);
-		val = tegra_mipi_cal_read(dsi->mipi_cal,
-				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
-		val &= ~MIPI_BIAS_PAD_PDVCLAMP(0x1);
-		tegra_mipi_cal_write(dsi->mipi_cal, val,
-				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
-		tegra_mipi_cal_clk_disable(dsi->mipi_cal);
 
 		/* enable HS logic */
 		val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_3_VS1);

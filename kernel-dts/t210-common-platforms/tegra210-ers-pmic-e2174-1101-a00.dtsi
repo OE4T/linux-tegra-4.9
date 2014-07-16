@@ -336,10 +336,6 @@
 			};
 		};
 	};
-	/* Populate fuse supply */
-	efuse@7000f800 {
-		vpp_fuse-supply = <&max77620_sd3>;
-	};
 
 	i2c@7000c500 {
 		bq2419x: battery-charger@6b {
@@ -397,14 +393,5 @@
 			ti,v-at-chg-term = <4200>;
 			ti,tz-name = "battery-temp";
 		};
-	};
-
-
-	power-detect {
-		pwrdet-sdmmc1-supply = <&max77620_sd3>;
-		pwrdet-sdmmc4-supply = <&max77620_sd3>;
-		pwrdet-audio-supply = <&max77620_sd3>;
-		pwrdet-uart-supply = <&max77620_sd3>;
-		pwrdet-sdmmc3-supply = <&max77620_ldo2>;
 	};
 };

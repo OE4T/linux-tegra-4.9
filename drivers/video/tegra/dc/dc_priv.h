@@ -154,12 +154,17 @@ static inline int tegra_dc_fmt_bpp(int fmt)
 	case TEGRA_WIN_FMT_B5G5R5A:
 	case TEGRA_WIN_FMT_B5G6R5:
 	case TEGRA_WIN_FMT_AB5G5R5:
+	case TEGRA_WIN_FMT_T_R4G4B4A4:
 		return 16;
 
 	case TEGRA_WIN_FMT_B8G8R8A8:
 	case TEGRA_WIN_FMT_R8G8B8A8:
 	case TEGRA_WIN_FMT_B6x2G6x2R6x2A8:
 	case TEGRA_WIN_FMT_R6x2G6x2B6x2A8:
+	case TEGRA_WIN_FMT_T_A2R10G10B10:
+	case TEGRA_WIN_FMT_T_A2B10G10R10:
+	case TEGRA_WIN_FMT_T_X2BL10GL10RL10_XRBIAS:
+	case TEGRA_WIN_FMT_T_X2BL10GL10RL10_XVYCC:
 		return 32;
 
 	/* for planar formats, size of the Y plane, 8bit */
@@ -177,12 +182,29 @@ static inline int tegra_dc_fmt_bpp(int fmt)
 	case TEGRA_WIN_FMT_YUV420SP:
 	case TEGRA_WIN_FMT_YCbCr420SP:
 	case TEGRA_WIN_FMT_YCbCr422SP:
+	case TEGRA_WIN_FMT_T_Y10___U10___V10_N420:
+	case TEGRA_WIN_FMT_T_Y10___U10___V10_N444:
+	case TEGRA_WIN_FMT_T_Y10___V10U10_N420:
+	case TEGRA_WIN_FMT_T_Y10___U10V10_N422:
+	case TEGRA_WIN_FMT_T_Y10___U10V10_N422R:
+	case TEGRA_WIN_FMT_T_Y10___U10V10_N444:
+	case TEGRA_WIN_FMT_T_Y12___U12___V12_N420:
+	case TEGRA_WIN_FMT_T_Y12___U12___V12_N444:
+	case TEGRA_WIN_FMT_T_Y12___V12U12_N420:
+	case TEGRA_WIN_FMT_T_Y12___U12V12_N422:
+	case TEGRA_WIN_FMT_T_Y12___U12V12_N422R:
+	case TEGRA_WIN_FMT_T_Y12___U12V12_N444:
 		return 8;
 
-	/* YUYV packed into 32-bits */
+	/* YUV packed into 32-bits */
 	case TEGRA_WIN_FMT_YCbCr422:
 	case TEGRA_WIN_FMT_YUV422:
 		return 16;
+
+	/* RGB with 64-bits size */
+	case TEGRA_WIN_FMT_T_R16_G16_B16_A16:
+		return 64;
+
 	}
 	return 0;
 }
@@ -206,6 +228,20 @@ static inline bool tegra_dc_is_yuv(int fmt)
 	case TEGRA_WIN_FMT_YCbCr422SP:
 	case TEGRA_WIN_FMT_YCbCr420SP:
 	case TEGRA_WIN_FMT_YUV420SP:
+
+	case TEGRA_WIN_FMT_T_Y10___U10___V10_N420:
+	case TEGRA_WIN_FMT_T_Y10___U10___V10_N444:
+	case TEGRA_WIN_FMT_T_Y10___V10U10_N420:
+	case TEGRA_WIN_FMT_T_Y10___U10V10_N422:
+	case TEGRA_WIN_FMT_T_Y10___U10V10_N422R:
+	case TEGRA_WIN_FMT_T_Y10___U10V10_N444:
+	case TEGRA_WIN_FMT_T_Y12___U12___V12_N420:
+	case TEGRA_WIN_FMT_T_Y12___U12___V12_N444:
+	case TEGRA_WIN_FMT_T_Y12___V12U12_N420:
+	case TEGRA_WIN_FMT_T_Y12___U12V12_N422:
+	case TEGRA_WIN_FMT_T_Y12___U12V12_N422R:
+	case TEGRA_WIN_FMT_T_Y12___U12V12_N444:
+
 		return true;
 	}
 	return false;
@@ -224,6 +260,18 @@ static inline bool tegra_dc_is_yuv_planar(int fmt)
 	case TEGRA_WIN_FMT_YUV422RA:
 	case TEGRA_WIN_FMT_YCbCr444P:
 	case TEGRA_WIN_FMT_YUV444P:
+	case TEGRA_WIN_FMT_T_Y10___U10___V10_N420:
+	case TEGRA_WIN_FMT_T_Y10___U10___V10_N444:
+	case TEGRA_WIN_FMT_T_Y10___V10U10_N420:
+	case TEGRA_WIN_FMT_T_Y10___U10V10_N422:
+	case TEGRA_WIN_FMT_T_Y10___U10V10_N422R:
+	case TEGRA_WIN_FMT_T_Y10___U10V10_N444:
+	case TEGRA_WIN_FMT_T_Y12___U12___V12_N420:
+	case TEGRA_WIN_FMT_T_Y12___U12___V12_N444:
+	case TEGRA_WIN_FMT_T_Y12___V12U12_N420:
+	case TEGRA_WIN_FMT_T_Y12___U12V12_N422:
+	case TEGRA_WIN_FMT_T_Y12___U12V12_N422R:
+	case TEGRA_WIN_FMT_T_Y12___U12V12_N444:
 		return true;
 	}
 	return false;
@@ -234,6 +282,10 @@ static inline bool tegra_dc_is_yuv_full_planar(int fmt)
 	switch (fmt) {
 	case TEGRA_WIN_FMT_YCbCr444P:
 	case TEGRA_WIN_FMT_YUV444P:
+	case TEGRA_WIN_FMT_T_Y10___U10___V10_N420:
+	case TEGRA_WIN_FMT_T_Y10___U10___V10_N444:
+	case TEGRA_WIN_FMT_T_Y12___U12___V12_N420:
+	case TEGRA_WIN_FMT_T_Y12___U12___V12_N444:
 		return true;
 	}
 	return false;
@@ -246,6 +298,14 @@ static inline bool tegra_dc_is_yuv_semi_planar(int fmt)
 	case TEGRA_WIN_FMT_YCbCr420SP:
 	case TEGRA_WIN_FMT_YCbCr422SP:
 	case TEGRA_WIN_FMT_YUV422SP:
+	case TEGRA_WIN_FMT_T_Y10___V10U10_N420:
+	case TEGRA_WIN_FMT_T_Y10___U10V10_N422:
+	case TEGRA_WIN_FMT_T_Y10___U10V10_N422R:
+	case TEGRA_WIN_FMT_T_Y10___U10V10_N444:
+	case TEGRA_WIN_FMT_T_Y12___V12U12_N420:
+	case TEGRA_WIN_FMT_T_Y12___U12V12_N422:
+	case TEGRA_WIN_FMT_T_Y12___U12V12_N422R:
+	case TEGRA_WIN_FMT_T_Y12___U12V12_N444:
 		return true;
 	}
 	return false;

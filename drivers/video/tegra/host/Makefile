@@ -7,3 +7,4 @@ ccflags-y += -Wno-multichar
 subdir-ccflags-y := -Werror
 
 obj-$(CONFIG_TEGRA_GRHOST) += t186/
+obj-$(CONFIG_TEGRA_GRHOST) += nvcsi/

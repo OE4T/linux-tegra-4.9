@@ -21,6 +21,7 @@
 
 #include "dev.h"
 #include "class_ids.h"
+#include "class_ids_t186.h"
 
 #include "t186.h"
 #include "host1x/host1x.h"
@@ -225,6 +226,16 @@ struct nvhost_device_data t18_vic_info = {
 	.class			= NV_GRAPHICS_VIC_CLASS_ID,
 	.finalize_poweron	= nvhost_vic_finalize_poweron,
 	.firmware_name		= "vic04_ucode.bin",
+};
+
+struct nvhost_device_data t18_nvcsi_info = {
+	.num_channels		= 1,
+	.clocks			= {{"nvcsi", UINT_MAX, 0}},
+	.modulemutexes		= {NV_VIDEO_STREAMING_NVCSI_CLASS_ID},
+	.devfs_name		= "nvcsi",
+	.class			= NV_VIDEO_STREAMING_NVCSI_CLASS_ID,
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 };
 
 #include "host1x/host1x_channel.c"

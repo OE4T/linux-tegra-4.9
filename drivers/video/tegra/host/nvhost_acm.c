@@ -544,6 +544,11 @@ int nvhost_module_init(struct platform_device *dev)
 	for (i = 0; i < pdata->num_clks; ++i)
 		clk_disable_unprepare(pdata->clk[i]);
 
+	/* Disable railgating if pm runtime is not available */
+	pdata->can_powergate = IS_ENABLED(CONFIG_PM_RUNTIME) &&
+		IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS) &&
+		pdata->can_powergate;
+
 	/* power gate units that we can power gate */
 	if (pdata->can_powergate) {
 		do_powergate_locked(pdata->powergate_ids[0]);

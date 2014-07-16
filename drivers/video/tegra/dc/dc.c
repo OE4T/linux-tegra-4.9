@@ -1910,7 +1910,7 @@ static void _tegra_dc_vsync_enable(struct tegra_dc *dc)
 void tegra_dc_vsync_enable(struct tegra_dc *dc)
 {
 	mutex_lock(&dc->lock);
-	tegra_dc_vsync_enable(dc);
+	_tegra_dc_vsync_enable(dc);
 	mutex_unlock(&dc->lock);
 }
 

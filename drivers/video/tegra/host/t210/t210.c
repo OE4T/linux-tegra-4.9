@@ -268,7 +268,8 @@ struct nvhost_device_data t21_nvdec_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.keepalive		= true,
+	.powergate_delay	= 500,
+	.can_powergate		= true,
 	.clocks			= {{"nvdec", UINT_MAX, 0, TEGRA_MC_CLIENT_NVDEC},
 				   {"emc", HOST_EMC_FLOOR} },
 	.engine_cg_regs		= t21x_nvdec_gating_registers,

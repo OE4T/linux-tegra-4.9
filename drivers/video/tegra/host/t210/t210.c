@@ -238,7 +238,8 @@ struct nvhost_device_data t21_msenc_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.keepalive		= true,
+	.powergate_delay	= 500,
+	.can_powergate		= true,
 	.clocks			= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
 				   {"emc", HOST_EMC_FLOOR} },
 	.engine_cg_regs		= t21x_nvenc_gating_registers,

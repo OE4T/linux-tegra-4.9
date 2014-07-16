@@ -377,6 +377,8 @@ struct nvhost_device_data t21_vic_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.can_powergate		= true,
+	.powergate_delay	= 500,
 	.moduleid		= NVHOST_MODULE_VIC,
 	.class			= NV_GRAPHICS_VIC_CLASS_ID,
 	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,

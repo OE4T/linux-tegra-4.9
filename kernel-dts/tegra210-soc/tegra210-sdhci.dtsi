@@ -1,0 +1,72 @@
+/*
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+/ {
+	sdhci@700b0600 {
+		tap-delay = <4>;
+		trim-delay = <8>;
+		max-clk-limit = <200000000>;
+		bus-width = <8>;
+		id = <3>;
+		compad-vref-3v3 = <0x7>;
+		compad-vref-1v8 = <0x7>;
+		vddio_sdmmc-supply = <&max77620_sd3>;
+		vddio_sd_slot-supply = <&vdd_3v3>;
+	};
+
+	sdhci@700b0400 {
+		tap-delay = <1>;
+		trim-delay = <3>;
+		mmc-ocr-mask = <3>;
+		max-clk-limit = <204000000>;
+		ddr-clk-limit = <48000000>;
+		bus-width = <4>;
+		id = <2>;
+		compad-vref-3v3 = <0x1>;
+		compad-vref-1v8 = <0x2>;
+		cd-gpios = <&gpio TEGRA_GPIO_PZ2 0>;
+		wp-gpios = <&gpio TEGRA_GPIO_PZ3 0>;
+		vddio_sdmmc-supply = <&max77620_ldo2>;
+		vddio_sd_slot-supply = <&en_vdd_sd>;
+	};
+
+	sdhci@700b0200 {
+		tap-delay = <4>;
+		trim-delay = <8>;
+		max-clk-limit = <200000000>;
+		id = <1>;
+		compad-vref-3v3 = <0x7>;
+		compad-vref-1v8 = <0x7>;
+		vddio_sdmmc-supply = <&max77620_sd3>;
+		vddio_sd_slot-supply = <&vdd_3v3>;
+	};
+
+	sdhci@700b0000 {
+		tap-delay = <2>;
+		trim-delay = <2>;
+		max-clk-limit = <204000000>;
+		ddr-clk-limit = <48000000>;
+		bus-width = <4>;
+		id = <0>;
+		default-drive-type = <1>;
+		mmc-ocr-mask = <3>;
+		compad-vref-3v3 = <0x1>;
+		compad-vref-1v8 = <0x2>;
+		vddio_sdmmc-supply = <&max77620_sd3>;
+	};
+};

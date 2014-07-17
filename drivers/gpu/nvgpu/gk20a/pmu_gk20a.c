@@ -1227,7 +1227,7 @@ int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token)
 	u32 data, owner, max_retry;
 
 	if (!pmu->initialized)
-		return 0;
+		return -EINVAL;
 
 	BUG_ON(!token);
 	BUG_ON(!PMU_MUTEX_ID_IS_VALID(id));
@@ -1296,7 +1296,7 @@ int pmu_mutex_release(struct pmu_gk20a *pmu, u32 id, u32 *token)
 	u32 owner, data;
 
 	if (!pmu->initialized)
-		return 0;
+		return -EINVAL;
 
 	BUG_ON(!token);
 	BUG_ON(!PMU_MUTEX_ID_IS_VALID(id));

@@ -32,6 +32,7 @@
 
 #include "gk20a.h"
 #include "mm_gk20a.h"
+#include "fence_gk20a.h"
 #include "hw_gmmu_gk20a.h"
 #include "hw_fb_gk20a.h"
 #include "hw_bus_gk20a.h"
@@ -121,10 +122,13 @@ struct gk20a_dmabuf_priv {
 	struct sg_table *sgt;
 
 	int pin_count;
+
+	struct list_head states;
 };
 
 static void gk20a_mm_delete_priv(void *_priv)
 {
+	struct gk20a_buffer_state *s, *s_tmp;
 	struct gk20a_dmabuf_priv *priv = _priv;
 	if (!priv)
 		return;
@@ -134,6 +138,13 @@ static void gk20a_mm_delete_priv(void *_priv)
 		priv->comptag_allocator->free(priv->comptag_allocator,
 					      priv->comptags.offset,
 					      priv->comptags.lines);
+	}
+
+	/* Free buffer states */
+	list_for_each_entry_safe(s, s_tmp, &priv->states, list) {
+		gk20a_fence_put(s->fence);
+		list_del(&s->list);
+		kfree(s);
 	}
 
 	kfree(priv);
@@ -2438,6 +2449,7 @@ int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev)
 		goto priv_exist_or_err;
 	}
 	mutex_init(&priv->lock);
+	INIT_LIST_HEAD(&priv->states);
 	dma_buf_set_drvdata(dmabuf, dev, priv, gk20a_mm_delete_priv);
 priv_exist_or_err:
 	mutex_unlock(&priv_lock);
@@ -2447,6 +2459,50 @@ priv_exist_or_err:
 	return 0;
 }
 
+int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct device *dev,
+			   u64 offset, struct gk20a_buffer_state **state)
+{
+	int err = 0;
+	struct gk20a_dmabuf_priv *priv;
+	struct gk20a_buffer_state *s;
+
+	if (WARN_ON(offset >= (u64)dmabuf->size))
+		return -EINVAL;
+
+	err = gk20a_dmabuf_alloc_drvdata(dmabuf, dev);
+	if (err)
+		return err;
+
+	priv = dma_buf_get_drvdata(dmabuf, dev);
+	if (WARN_ON(!priv))
+		return -ENOSYS;
+
+	mutex_lock(&priv->lock);
+
+	list_for_each_entry(s, &priv->states, list)
+		if (s->offset == offset)
+			goto out;
+
+	/* State not found, create state. */
+	s = kzalloc(sizeof(*s), GFP_KERNEL);
+	if (!s) {
+		err = -ENOMEM;
+		goto out;
+	}
+
+	s->offset = offset;
+	INIT_LIST_HEAD(&s->list);
+	mutex_init(&s->lock);
+	list_add_tail(&priv->states, &s->list);
+
+out:
+	mutex_unlock(&priv->lock);
+	if (!err)
+		*state = s;
+	return err;
+
+
+}
 
 static int gk20a_dmabuf_get_kind(struct dma_buf *dmabuf)
 {

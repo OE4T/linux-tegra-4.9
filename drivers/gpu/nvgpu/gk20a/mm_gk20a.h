@@ -174,6 +174,25 @@ struct compbit_store_desc {
 	u64 base_iova;
 };
 
+struct gk20a_buffer_state {
+	struct list_head list;
+
+	/* The valid compbits and the fence must be changed atomically. */
+	struct mutex lock;
+
+	/* Offset of the surface within the dma-buf whose state is
+	 * described by this struct (one dma-buf can contain multiple
+	 * surfaces with different states). */
+	size_t offset;
+
+	/* A bitmask of valid sets of compbits (0 = uncompressed). */
+	u32 valid_compbits;
+
+	/* This struct reflects the state of the buffer when this
+	 * fence signals. */
+	struct gk20a_fence *fence;
+};
+
 struct page_table_gk20a {
 	/* backing for */
 	/* Either a *page or a *mem_handle */
@@ -483,6 +502,9 @@ void gk20a_get_comptags(struct device *dev, struct dma_buf *dmabuf,
 dma_addr_t gk20a_mm_gpuva_to_iova(struct vm_gk20a *vm, u64 gpu_vaddr);
 
 int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev);
+
+int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct device *dev,
+			   u64 offset, struct gk20a_buffer_state **state);
 
 int map_gmmu_pages(void *handle, struct sg_table *sgt,
 			  void **va, size_t size);

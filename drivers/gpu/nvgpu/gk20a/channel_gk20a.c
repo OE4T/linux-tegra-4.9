@@ -33,6 +33,7 @@
 
 #include "gk20a.h"
 #include "dbg_gpu_gk20a.h"
+#include "fence_gk20a.h"
 #include "semaphore_gk20a.h"
 
 #include "hw_ram_gk20a.h"
@@ -418,8 +419,8 @@ void gk20a_channel_abort(struct channel_gk20a *ch)
 	   semaphore synchronization) */
 	mutex_lock(&ch->jobs_lock);
 	list_for_each_entry_safe(job, n, &ch->jobs, list) {
-		if (job->post_fence.semaphore) {
-			gk20a_semaphore_release(job->post_fence.semaphore);
+		if (job->post_fence->semaphore) {
+			gk20a_semaphore_release(job->post_fence->semaphore);
 			released_job_semaphore = true;
 		}
 	}
@@ -685,8 +686,12 @@ unbind:
 	ch->vpr = false;
 	ch->vm = NULL;
 
-	gk20a_channel_fence_close(&ch->last_submit.pre_fence);
-	gk20a_channel_fence_close(&ch->last_submit.post_fence);
+	mutex_lock(&ch->submit_lock);
+	gk20a_fence_put(ch->last_submit.pre_fence);
+	gk20a_fence_put(ch->last_submit.post_fence);
+	ch->last_submit.pre_fence = NULL;
+	ch->last_submit.post_fence = NULL;
+	mutex_unlock(&ch->submit_lock);
 	WARN_ON(ch->sync);
 
 	/* unlink all debug sessions */
@@ -1119,8 +1124,12 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	ch_vm = c->vm;
 
 	c->cmds_pending = false;
-	gk20a_channel_fence_close(&c->last_submit.pre_fence);
-	gk20a_channel_fence_close(&c->last_submit.post_fence);
+	mutex_lock(&c->submit_lock);
+	gk20a_fence_put(c->last_submit.pre_fence);
+	gk20a_fence_put(c->last_submit.post_fence);
+	c->last_submit.pre_fence = NULL;
+	c->last_submit.post_fence = NULL;
+	mutex_unlock(&c->submit_lock);
 
 	c->ramfc.offset = 0;
 	c->ramfc.size = ram_in_ramfc_s() / 8;
@@ -1303,8 +1312,10 @@ static int gk20a_channel_submit_wfi(struct channel_gk20a *c)
 		}
 	}
 
-	gk20a_channel_fence_close(&c->last_submit.pre_fence);
-	gk20a_channel_fence_close(&c->last_submit.post_fence);
+	gk20a_fence_put(c->last_submit.pre_fence);
+	gk20a_fence_put(c->last_submit.post_fence);
+	c->last_submit.pre_fence = NULL;
+	c->last_submit.post_fence = NULL;
 
 	err = c->sync->incr_wfi(c->sync, &cmd, &c->last_submit.post_fence);
 	if (unlikely(err)) {
@@ -1312,7 +1323,7 @@ static int gk20a_channel_submit_wfi(struct channel_gk20a *c)
 		return err;
 	}
 
-	WARN_ON(!c->last_submit.post_fence.wfi);
+	WARN_ON(!c->last_submit.post_fence->wfi);
 
 	c->gpfifo.cpu_va[c->gpfifo.put].entry0 = u64_lo32(cmd->gva);
 	c->gpfifo.cpu_va[c->gpfifo.put].entry1 = u64_hi32(cmd->gva) |
@@ -1378,8 +1389,8 @@ static void trace_write_pushbuffer(struct channel_gk20a *c, struct gpfifo *g)
 }
 
 static int gk20a_channel_add_job(struct channel_gk20a *c,
-				 struct gk20a_channel_fence *pre_fence,
-				 struct gk20a_channel_fence *post_fence)
+				 struct gk20a_fence *pre_fence,
+				 struct gk20a_fence *post_fence)
 {
 	struct vm_gk20a *vm = c->vm;
 	struct channel_gk20a_job *job = NULL;
@@ -1404,8 +1415,8 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 
 	job->num_mapped_buffers = num_mapped_buffers;
 	job->mapped_buffers = mapped_buffers;
-	gk20a_channel_fence_dup(pre_fence, &job->pre_fence);
-	gk20a_channel_fence_dup(post_fence, &job->post_fence);
+	job->pre_fence = gk20a_fence_get(pre_fence);
+	job->post_fence = gk20a_fence_get(post_fence);
 
 	mutex_lock(&c->jobs_lock);
 	list_add_tail(&job->list, &c->jobs);
@@ -1424,18 +1435,19 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 	mutex_lock(&c->submit_lock);
 	mutex_lock(&c->jobs_lock);
 	list_for_each_entry_safe(job, n, &c->jobs, list) {
-		bool completed = WARN_ON(!c->sync) ||
-			c->sync->is_expired(c->sync, &job->post_fence);
+		bool completed = gk20a_fence_is_expired(job->post_fence);
 		if (!completed)
 			break;
+
+		c->sync->signal_timeline(c->sync);
 
 		gk20a_vm_put_buffers(vm, job->mapped_buffers,
 				job->num_mapped_buffers);
 
 		/* Close the fences (this will unref the semaphores and release
 		 * them to the pool). */
-		gk20a_channel_fence_close(&job->pre_fence);
-		gk20a_channel_fence_close(&job->post_fence);
+		gk20a_fence_put(job->pre_fence);
+		gk20a_fence_put(job->post_fence);
 
 		/* job is done. release its reference to vm */
 		gk20a_vm_put(vm);
@@ -1453,7 +1465,7 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 	 */
 	if (list_empty(&c->jobs)) {
 		if (c->sync && c->sync->aggressive_destroy &&
-			  c->sync->is_expired(c->sync, &c->last_submit.post_fence)) {
+			  gk20a_fence_is_expired(c->last_submit.post_fence)) {
 			c->sync->destroy(c->sync);
 			c->sync = NULL;
 		}
@@ -1477,8 +1489,9 @@ void add_wait_cmd(u32 *ptr, u32 id, u32 thresh)
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvhost_gpfifo *gpfifo,
 				u32 num_entries,
+				u32 flags,
 				struct nvhost_fence *fence,
-				u32 flags)
+				struct gk20a_fence **fence_out)
 {
 	struct gk20a *g = c->g;
 	struct device *d = dev_from_gk20a(g);
@@ -1487,8 +1500,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	int wait_fence_fd = -1;
 	struct priv_cmd_entry *wait_cmd = NULL;
 	struct priv_cmd_entry *incr_cmd = NULL;
-	struct gk20a_channel_fence pre_fence = { 0 };
-	struct gk20a_channel_fence post_fence = { 0 };
+	struct gk20a_fence *pre_fence = NULL;
+	struct gk20a_fence *post_fence = NULL;
 	/* we might need two extra gpfifo entries - one for pre fence
 	 * and one for post fence. */
 	const int extra_entries = 2;
@@ -1591,18 +1604,9 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	/* always insert syncpt increment at end of gpfifo submission
 	   to keep track of method completion for idle railgating */
-	if (flags & NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET &&
-			flags & NVHOST_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE)
-		err = c->sync->incr_user_fd(c->sync, wait_fence_fd, &incr_cmd,
-					    &post_fence,
-					    need_wfi,
-					    &fence->syncpt_id);
-	else if (flags & NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET)
-		err = c->sync->incr_user_syncpt(c->sync, &incr_cmd,
-						&post_fence,
-						need_wfi,
-						&fence->syncpt_id,
-						&fence->value);
+	if (flags & NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET)
+		err = c->sync->incr_user(c->sync, wait_fence_fd, &incr_cmd,
+					 &post_fence, need_wfi);
 	else
 		err = c->sync->incr(c->sync, &incr_cmd,
 				    &post_fence);
@@ -1653,13 +1657,15 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		incr_cmd->gp_put = c->gpfifo.put;
 	}
 
-	gk20a_channel_fence_close(&c->last_submit.pre_fence);
-	gk20a_channel_fence_close(&c->last_submit.post_fence);
+	gk20a_fence_put(c->last_submit.pre_fence);
+	gk20a_fence_put(c->last_submit.post_fence);
 	c->last_submit.pre_fence = pre_fence;
 	c->last_submit.post_fence = post_fence;
+	if (fence_out)
+		*fence_out = gk20a_fence_get(post_fence);
 
 	/* TODO! Check for errors... */
-	gk20a_channel_add_job(c, &pre_fence, &post_fence);
+	gk20a_channel_add_job(c, pre_fence, post_fence);
 
 	c->cmds_pending = true;
 	gk20a_bar1_writel(g,
@@ -1672,8 +1678,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 					     c->hw_chid,
 					     num_entries,
 					     flags,
-					     fence ? fence->syncpt_id : 0,
-					     fence ? fence->value : 0);
+					     post_fence->syncpt_id,
+					     post_fence->syncpt_value);
 
 	gk20a_dbg_info("post-submit put %d, get %d, size %d",
 		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
@@ -1685,8 +1691,8 @@ clean_up:
 	gk20a_err(d, "fail");
 	free_priv_cmdbuf(c, wait_cmd);
 	free_priv_cmdbuf(c, incr_cmd);
-	gk20a_channel_fence_close(&pre_fence);
-	gk20a_channel_fence_close(&post_fence);
+	gk20a_fence_put(pre_fence);
+	gk20a_fence_put(post_fence);
 	gk20a_idle(g->dev);
 	return err;
 }
@@ -1719,7 +1725,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout)
 {
 	int err = 0;
-	struct gk20a_channel_fence *fence = &ch->last_submit.post_fence;
+	struct gk20a_fence *fence = ch->last_submit.post_fence;
 
 	if (!ch->cmds_pending)
 		return 0;
@@ -1728,26 +1734,25 @@ int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout)
 	if (ch->has_timedout)
 		return -ETIMEDOUT;
 
-	if (!(fence->valid && fence->wfi) && ch->obj_class != KEPLER_C) {
+	if (!(fence && fence->wfi) && ch->obj_class != KEPLER_C) {
 		gk20a_dbg_fn("issuing wfi, incr to finish the channel");
 		err = gk20a_channel_submit_wfi(ch);
+		fence = ch->last_submit.post_fence;
 	}
 	if (err)
 		return err;
 
-	BUG_ON(!(fence->valid && fence->wfi) && ch->obj_class != KEPLER_C);
+	BUG_ON(!(fence && fence->wfi) && ch->obj_class != KEPLER_C);
 
 	gk20a_dbg_fn("waiting for channel to finish thresh:%d sema:%p",
-		      fence->thresh, fence->semaphore);
+		     fence->syncpt_value, fence->semaphore);
 
-	if (ch->sync) {
-		err = ch->sync->wait_cpu(ch->sync, fence, timeout);
-		if (WARN_ON(err))
-			dev_warn(dev_from_gk20a(ch->g),
-			       "timed out waiting for gk20a channel to finish");
-		else
-			ch->cmds_pending = false;
-	}
+	err = gk20a_fence_wait(fence, timeout);
+	if (WARN_ON(err))
+		dev_warn(dev_from_gk20a(ch->g),
+		       "timed out waiting for gk20a channel to finish");
+	else
+		ch->cmds_pending = false;
 
 	return err;
 }
@@ -2014,6 +2019,7 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	struct channel_gk20a *ch,
 	struct nvhost_submit_gpfifo_args *args)
 {
+	struct gk20a_fence *fence_out;
 	void *gpfifo;
 	u32 size;
 	int ret = 0;
@@ -2036,7 +2042,26 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	}
 
 	ret = gk20a_submit_channel_gpfifo(ch, gpfifo, args->num_entries,
-					&args->fence, args->flags);
+					  args->flags, &args->fence,
+					  &fence_out);
+
+	if (ret)
+		goto clean_up;
+
+	/* Convert fence_out to something we can pass back to user space. */
+	if (args->flags & NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET) {
+		if (args->flags & NVHOST_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE) {
+			int fd = gk20a_fence_install_fd(fence_out);
+			if (fd < 0)
+				ret = fd;
+			else
+				args->fence.syncpt_id = fd;
+		} else {
+			args->fence.syncpt_id = fence_out->syncpt_id;
+			args->fence.value = fence_out->syncpt_value;
+		}
+	}
+	gk20a_fence_put(fence_out);
 
 clean_up:
 	kfree(gpfifo);

@@ -29,6 +29,7 @@
 struct gk20a;
 struct gr_gk20a;
 struct dbg_session_gk20a;
+struct gk20a_fence;
 
 #include "channel_sync_gk20a.h"
 
@@ -68,8 +69,8 @@ struct channel_ctx_gk20a {
 struct channel_gk20a_job {
 	struct mapped_buffer_node **mapped_buffers;
 	int num_mapped_buffers;
-	struct gk20a_channel_fence pre_fence;
-	struct gk20a_channel_fence post_fence;
+	struct gk20a_fence *pre_fence;
+	struct gk20a_fence *post_fence;
 	struct list_head list;
 };
 
@@ -117,8 +118,9 @@ struct channel_gk20a {
 
 	bool cmds_pending;
 	struct {
-		struct gk20a_channel_fence pre_fence;
-		struct gk20a_channel_fence post_fence;
+		/* These fences should be accessed with submit_lock held. */
+		struct gk20a_fence *pre_fence;
+		struct gk20a_fence *post_fence;
 	} last_submit;
 
 	void (*remove_support)(struct channel_gk20a *);
@@ -184,8 +186,9 @@ void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a);
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvhost_gpfifo *gpfifo,
 				u32 num_entries,
+				u32 flags,
 				struct nvhost_fence *fence,
-				u32 flags);
+				struct gk20a_fence **fence_out);
 
 int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 			       struct nvhost_alloc_gpfifo_args *args);

@@ -371,12 +371,11 @@ struct sync_timeline *gk20a_sync_timeline_create(
 	return &obj->obj;
 }
 
-int gk20a_sync_fence_create(struct sync_timeline *obj,
+struct sync_fence *gk20a_sync_fence_create(struct sync_timeline *obj,
 		struct gk20a_semaphore *sema,
 		struct sync_fence *dependency,
 		const char *fmt, ...)
 {
-	int fd;
 	char name[30];
 	va_list args;
 	struct sync_pt *pt;
@@ -385,7 +384,7 @@ int gk20a_sync_fence_create(struct sync_timeline *obj,
 
 	pt = gk20a_sync_pt_create_inst(timeline, sema, dependency);
 	if (pt == NULL)
-		return -ENOMEM;
+		return NULL;
 
 	va_start(args, fmt);
 	vsnprintf(name, sizeof(name), fmt, args);
@@ -394,15 +393,7 @@ int gk20a_sync_fence_create(struct sync_timeline *obj,
 	fence = sync_fence_create(name, pt);
 	if (fence == NULL) {
 		sync_pt_free(pt);
-		return -ENOMEM;
+		return NULL;
 	}
-
-	fd = get_unused_fd();
-	if (fd < 0) {
-		sync_fence_put(fence);
-		return fd;
-	}
-
-	sync_fence_install(fence, fd);
-	return fd;
+	return fence;
 }

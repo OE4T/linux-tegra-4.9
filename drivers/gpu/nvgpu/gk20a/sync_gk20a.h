@@ -29,7 +29,7 @@ struct gk20a_semaphore;
 struct sync_timeline *gk20a_sync_timeline_create(const char *fmt, ...);
 void gk20a_sync_timeline_destroy(struct sync_timeline *);
 void gk20a_sync_timeline_signal(struct sync_timeline *);
-int gk20a_sync_fence_create(struct sync_timeline *,
+struct sync_fence *gk20a_sync_fence_create(struct sync_timeline *,
 		struct gk20a_semaphore *,
 		struct sync_fence *dependency,
 		const char *fmt, ...);

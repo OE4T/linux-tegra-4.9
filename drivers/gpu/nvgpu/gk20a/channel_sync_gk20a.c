@@ -19,6 +19,7 @@
 
 #include "channel_sync_gk20a.h"
 #include "gk20a.h"
+#include "fence_gk20a.h"
 #include "semaphore_gk20a.h"
 #include "sync_gk20a.h"
 #include "mm_gk20a.h"
@@ -52,33 +53,9 @@ static void add_wait_cmd(u32 *ptr, u32 id, u32 thresh)
 	ptr[3] = (id << 8) | 0x10;
 }
 
-int gk20a_channel_syncpt_wait_cpu(struct gk20a_channel_sync *s,
-				  struct gk20a_channel_fence *fence,
-				  int timeout)
-{
-	struct gk20a_channel_syncpt *sp =
-		container_of(s, struct gk20a_channel_syncpt, ops);
-	if (!fence->valid)
-		return 0;
-	return nvhost_syncpt_wait_timeout_ext(
-			sp->host1x_pdev, sp->id, fence->thresh,
-			timeout, NULL, NULL);
-}
-
-bool gk20a_channel_syncpt_is_expired(struct gk20a_channel_sync *s,
-				     struct gk20a_channel_fence *fence)
-{
-	struct gk20a_channel_syncpt *sp =
-		container_of(s, struct gk20a_channel_syncpt, ops);
-	if (!fence->valid)
-		return true;
-	return nvhost_syncpt_is_expired_ext(sp->host1x_pdev, sp->id,
-			fence->thresh);
-}
-
 int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s, u32 id,
 		u32 thresh, struct priv_cmd_entry **entry,
-		struct gk20a_channel_fence *fence)
+		struct gk20a_fence **fence)
 {
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
@@ -103,13 +80,13 @@ int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s, u32 id,
 	add_wait_cmd(&wait_cmd->ptr[0], id, thresh);
 
 	*entry = wait_cmd;
-	fence->valid = false;
+	*fence = NULL;
 	return 0;
 }
 
 int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 		       struct priv_cmd_entry **entry,
-		       struct gk20a_channel_fence *fence)
+		       struct gk20a_fence **fence)
 {
 #ifdef CONFIG_SYNC
 	int i;
@@ -164,7 +141,7 @@ int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 	sync_fence_put(sync_fence);
 
 	*entry = wait_cmd;
-	fence->valid = false;
+	*fence = NULL;
 	return 0;
 #else
 	return -ENODEV;
@@ -181,7 +158,7 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 				       bool gfx_class, bool wfi_cmd,
 				       bool register_irq,
 				       struct priv_cmd_entry **entry,
-				       struct gk20a_channel_fence *fence)
+				       struct gk20a_fence **fence)
 {
 	u32 thresh;
 	int incr_cmd_size;
@@ -253,16 +230,15 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 		WARN(err, "failed to set submit complete interrupt");
 	}
 
-	fence->thresh = thresh;
-	fence->valid = true;
-	fence->wfi = wfi_cmd;
+	*fence = gk20a_fence_from_syncpt(sp->host1x_pdev, sp->id, thresh,
+					 wfi_cmd);
 	*entry = incr_cmd;
 	return 0;
 }
 
 int gk20a_channel_syncpt_incr_wfi(struct gk20a_channel_sync *s,
 				  struct priv_cmd_entry **entry,
-				  struct gk20a_channel_fence *fence)
+				  struct gk20a_fence **fence)
 {
 	return __gk20a_channel_syncpt_incr(s,
 			false /* use host class */,
@@ -273,7 +249,7 @@ int gk20a_channel_syncpt_incr_wfi(struct gk20a_channel_sync *s,
 
 int gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 			      struct priv_cmd_entry **entry,
-			      struct gk20a_channel_fence *fence)
+			      struct gk20a_fence **fence)
 {
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
@@ -286,51 +262,23 @@ int gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 			entry, fence);
 }
 
-int gk20a_channel_syncpt_incr_user_syncpt(struct gk20a_channel_sync *s,
-					  struct priv_cmd_entry **entry,
-					  struct gk20a_channel_fence *fence,
-					  bool wfi,
-					  u32 *id, u32 *thresh)
+int gk20a_channel_syncpt_incr_user(struct gk20a_channel_sync *s,
+				   int wait_fence_fd,
+				   struct priv_cmd_entry **entry,
+				   struct gk20a_fence **fence,
+				   bool wfi)
 {
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	/* Need to do 'host incr + wfi' or 'gfx incr' since we return the fence
 	 * to user space. */
-	int err = __gk20a_channel_syncpt_incr(s,
+	return __gk20a_channel_syncpt_incr(s,
 			wfi &&
 			  sp->c->obj_class == KEPLER_C /* use gfx class? */,
 			wfi &&
 			  sp->c->obj_class != KEPLER_C /* wfi if host class */,
 			true /* register irq */,
 			entry, fence);
-	if (err)
-		return err;
-	*id = sp->id;
-	*thresh = fence->thresh;
-	return 0;
-}
-
-int gk20a_channel_syncpt_incr_user_fd(struct gk20a_channel_sync *s,
-				      int wait_fence_fd,
-				      struct priv_cmd_entry **entry,
-				      struct gk20a_channel_fence *fence,
-				      bool wfi,
-				      int *fd)
-{
-#ifdef CONFIG_SYNC
-	int err;
-	struct nvhost_ctrl_sync_fence_info pt;
-	struct gk20a_channel_syncpt *sp =
-		container_of(s, struct gk20a_channel_syncpt, ops);
-	err = gk20a_channel_syncpt_incr_user_syncpt(s, entry, fence, wfi,
-						    &pt.id, &pt.thresh);
-	if (err)
-		return err;
-	return nvhost_sync_create_fence_fd(sp->host1x_pdev, &pt, 1,
-					   "fence", fd);
-#else
-	return -ENODEV;
-#endif
 }
 
 void gk20a_channel_syncpt_set_min_eq_max(struct gk20a_channel_sync *s)
@@ -338,6 +286,12 @@ void gk20a_channel_syncpt_set_min_eq_max(struct gk20a_channel_sync *s)
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	nvhost_syncpt_set_min_eq_max_ext(sp->host1x_pdev, sp->id);
+}
+
+static void gk20a_channel_syncpt_signal_timeline(
+		struct gk20a_channel_sync *s)
+{
+	/* Nothing to do. */
 }
 
 static void gk20a_channel_syncpt_destroy(struct gk20a_channel_sync *s)
@@ -366,15 +320,13 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 		return NULL;
 	}
 
-	sp->ops.wait_cpu		= gk20a_channel_syncpt_wait_cpu;
-	sp->ops.is_expired		= gk20a_channel_syncpt_is_expired;
 	sp->ops.wait_syncpt		= gk20a_channel_syncpt_wait_syncpt;
 	sp->ops.wait_fd			= gk20a_channel_syncpt_wait_fd;
 	sp->ops.incr			= gk20a_channel_syncpt_incr;
 	sp->ops.incr_wfi		= gk20a_channel_syncpt_incr_wfi;
-	sp->ops.incr_user_syncpt	= gk20a_channel_syncpt_incr_user_syncpt;
-	sp->ops.incr_user_fd		= gk20a_channel_syncpt_incr_user_fd;
+	sp->ops.incr_user		= gk20a_channel_syncpt_incr_user;
 	sp->ops.set_min_eq_max		= gk20a_channel_syncpt_set_min_eq_max;
+	sp->ops.signal_timeline		= gk20a_channel_syncpt_signal_timeline;
 	sp->ops.destroy			= gk20a_channel_syncpt_destroy;
 
 	sp->ops.aggressive_destroy	= true;
@@ -460,48 +412,10 @@ static int add_sema_cmd(u32 *ptr, u64 sema, u32 payload,
 	return i;
 }
 
-static int gk20a_channel_semaphore_wait_cpu(
-		struct gk20a_channel_sync *s,
-		struct gk20a_channel_fence *fence,
-		int timeout)
-{
-	int remain;
-	struct gk20a_channel_semaphore *sp =
-		container_of(s, struct gk20a_channel_semaphore, ops);
-	if (!fence->valid || WARN_ON(!fence->semaphore))
-		return 0;
-
-	remain = wait_event_interruptible_timeout(
-		sp->c->semaphore_wq,
-		!gk20a_semaphore_is_acquired(fence->semaphore),
-		timeout);
-	if (remain == 0 && gk20a_semaphore_is_acquired(fence->semaphore))
-		return -ETIMEDOUT;
-	else if (remain < 0)
-		return remain;
-	return 0;
-}
-
-static bool gk20a_channel_semaphore_is_expired(
-		struct gk20a_channel_sync *s,
-		struct gk20a_channel_fence *fence)
-{
-	bool expired;
-	struct gk20a_channel_semaphore *sp =
-		container_of(s, struct gk20a_channel_semaphore, ops);
-	if (!fence->valid || WARN_ON(!fence->semaphore))
-		return true;
-
-	expired = !gk20a_semaphore_is_acquired(fence->semaphore);
-	if (expired)
-		gk20a_sync_timeline_signal(sp->timeline);
-	return expired;
-}
-
 static int gk20a_channel_semaphore_wait_syncpt(
 		struct gk20a_channel_sync *s, u32 id,
 		u32 thresh, struct priv_cmd_entry **entry,
-		struct gk20a_channel_fence *fence)
+		struct gk20a_fence **fence)
 {
 	struct gk20a_channel_semaphore *sema =
 		container_of(s, struct gk20a_channel_semaphore, ops);
@@ -513,7 +427,7 @@ static int gk20a_channel_semaphore_wait_syncpt(
 static int gk20a_channel_semaphore_wait_fd(
 		struct gk20a_channel_sync *s, int fd,
 		struct priv_cmd_entry **entry,
-		struct gk20a_channel_fence *fence)
+		struct gk20a_fence **fence)
 {
 	struct gk20a_channel_semaphore *sema =
 		container_of(s, struct gk20a_channel_semaphore, ops);
@@ -558,6 +472,11 @@ static int gk20a_channel_semaphore_wait_fd(
 	WARN_ON(written != wait_cmd->size);
 	sync_fence_wait_async(sync_fence, &w->waiter);
 
+	/* XXX - this fixes an actual bug, we need to hold a ref to this
+	   semaphore while the job is in flight. */
+	*fence = gk20a_fence_from_semaphore(sema->timeline, w->sema,
+					    &c->semaphore_wq,
+					    NULL, false);
 	*entry = wait_cmd;
 	return 0;
 fail:
@@ -575,8 +494,9 @@ fail:
 
 static int __gk20a_channel_semaphore_incr(
 		struct gk20a_channel_sync *s, bool wfi_cmd,
+		struct sync_fence *dependency,
 		struct priv_cmd_entry **entry,
-		struct gk20a_channel_fence *fence)
+		struct gk20a_fence **fence)
 {
 	u64 va;
 	int incr_cmd_size;
@@ -608,9 +528,9 @@ static int __gk20a_channel_semaphore_incr(
 	written = add_sema_cmd(incr_cmd->ptr, va, 1, false, wfi_cmd);
 	WARN_ON(written != incr_cmd_size);
 
-	fence->valid = true;
-	fence->wfi = wfi_cmd;
-	fence->semaphore = semaphore;
+	*fence = gk20a_fence_from_semaphore(sp->timeline, semaphore,
+					    &c->semaphore_wq,
+					    dependency, wfi_cmd);
 	*entry = incr_cmd;
 	return 0;
 }
@@ -618,56 +538,35 @@ static int __gk20a_channel_semaphore_incr(
 static int gk20a_channel_semaphore_incr_wfi(
 		struct gk20a_channel_sync *s,
 		struct priv_cmd_entry **entry,
-		struct gk20a_channel_fence *fence)
+		struct gk20a_fence **fence)
 {
 	return __gk20a_channel_semaphore_incr(s,
 			true /* wfi */,
+			NULL,
 			entry, fence);
 }
 
 static int gk20a_channel_semaphore_incr(
 		struct gk20a_channel_sync *s,
 		struct priv_cmd_entry **entry,
-		struct gk20a_channel_fence *fence)
+		struct gk20a_fence **fence)
 {
 	/* Don't put wfi cmd to this one since we're not returning
 	 * a fence to user space. */
 	return __gk20a_channel_semaphore_incr(s, false /* no wfi */,
-					      entry, fence);
+					      NULL, entry, fence);
 }
 
-static int gk20a_channel_semaphore_incr_user_syncpt(
-		struct gk20a_channel_sync *s,
-		struct priv_cmd_entry **entry,
-		struct gk20a_channel_fence *fence,
-		bool wfi,
-		u32 *id, u32 *thresh)
-{
-	struct gk20a_channel_semaphore *sema =
-		container_of(s, struct gk20a_channel_semaphore, ops);
-	struct device *dev = dev_from_gk20a(sema->c->g);
-	gk20a_err(dev, "trying to use syncpoint synchronization");
-	return -ENODEV;
-}
-
-static int gk20a_channel_semaphore_incr_user_fd(
+static int gk20a_channel_semaphore_incr_user(
 		struct gk20a_channel_sync *s,
 		int wait_fence_fd,
 		struct priv_cmd_entry **entry,
-		struct gk20a_channel_fence *fence,
-		bool wfi,
-		int *fd)
+		struct gk20a_fence **fence,
+		bool wfi)
 {
-	struct gk20a_channel_semaphore *sema =
-		container_of(s, struct gk20a_channel_semaphore, ops);
 #ifdef CONFIG_SYNC
 	struct sync_fence *dependency = NULL;
 	int err;
-
-	err = __gk20a_channel_semaphore_incr(s, wfi,
-					     entry, fence);
-	if (err)
-		return err;
 
 	if (wait_fence_fd >= 0) {
 		dependency = gk20a_sync_fence_fdget(wait_fence_fd);
@@ -675,15 +574,18 @@ static int gk20a_channel_semaphore_incr_user_fd(
 			return -EINVAL;
 	}
 
-	*fd = gk20a_sync_fence_create(sema->timeline, fence->semaphore,
-				      dependency, "fence");
-	if (*fd < 0) {
+	err = __gk20a_channel_semaphore_incr(s, wfi, dependency,
+					     entry, fence);
+	if (err) {
 		if (dependency)
 			sync_fence_put(dependency);
-		return *fd;
+		return err;
 	}
+
 	return 0;
 #else
+	struct gk20a_channel_semaphore *sema =
+		container_of(s, struct gk20a_channel_semaphore, ops);
 	gk20a_err(dev_from_gk20a(sema->c->g),
 		  "trying to use sync fds with CONFIG_SYNC disabled");
 	return -ENODEV;
@@ -693,6 +595,14 @@ static int gk20a_channel_semaphore_incr_user_fd(
 static void gk20a_channel_semaphore_set_min_eq_max(struct gk20a_channel_sync *s)
 {
 	/* Nothing to do. */
+}
+
+static void gk20a_channel_semaphore_signal_timeline(
+		struct gk20a_channel_sync *s)
+{
+	struct gk20a_channel_semaphore *sp =
+		container_of(s, struct gk20a_channel_semaphore, ops);
+	gk20a_sync_timeline_signal(sp->timeline);
 }
 
 static void gk20a_channel_semaphore_destroy(struct gk20a_channel_sync *s)
@@ -746,15 +656,13 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c)
 	if (!sema->timeline)
 		goto clean_up;
 #endif
-	sema->ops.wait_cpu	= gk20a_channel_semaphore_wait_cpu;
-	sema->ops.is_expired	= gk20a_channel_semaphore_is_expired;
 	sema->ops.wait_syncpt	= gk20a_channel_semaphore_wait_syncpt;
 	sema->ops.wait_fd	= gk20a_channel_semaphore_wait_fd;
 	sema->ops.incr		= gk20a_channel_semaphore_incr;
 	sema->ops.incr_wfi	= gk20a_channel_semaphore_incr_wfi;
-	sema->ops.incr_user_syncpt = gk20a_channel_semaphore_incr_user_syncpt;
-	sema->ops.incr_user_fd	= gk20a_channel_semaphore_incr_user_fd;
+	sema->ops.incr_user	= gk20a_channel_semaphore_incr_user;
 	sema->ops.set_min_eq_max = gk20a_channel_semaphore_set_min_eq_max;
+	sema->ops.signal_timeline = gk20a_channel_semaphore_signal_timeline;
 	sema->ops.destroy	= gk20a_channel_semaphore_destroy;
 
 	/* Aggressively destroying the semaphore sync would cause overhead
@@ -774,27 +682,4 @@ struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c)
 		return gk20a_channel_syncpt_create(c);
 #endif
 	return gk20a_channel_semaphore_create(c);
-}
-
-static inline bool gk20a_channel_fence_is_closed(struct gk20a_channel_fence *f)
-{
-	if (f->valid || f->semaphore)
-		return false;
-	return true;
-}
-
-void gk20a_channel_fence_close(struct gk20a_channel_fence *f)
-{
-	if (f->semaphore)
-		gk20a_semaphore_put(f->semaphore);
-	memset(f, 0, sizeof(*f));
-}
-
-void gk20a_channel_fence_dup(struct gk20a_channel_fence *from,
-			     struct gk20a_channel_fence *to)
-{
-	WARN_ON(!gk20a_channel_fence_is_closed(to));
-	*to = *from;
-	if (to->semaphore)
-		gk20a_semaphore_get(to->semaphore);
 }

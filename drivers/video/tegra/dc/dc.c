@@ -3205,6 +3205,12 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dev_info(&ndev->dev, "DC instances are not present on linsim\n");
 		return -ENODEV;
 	}
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+	if (tegra_bonded_out_dev(BOND_OUT_DISP2)) {
+		dev_info(&ndev->dev, "DC instance is not present on emulation\n");
+		return -ENODEV;
+	}
+#endif
 
 	if (!np && !ndev->dev.platform_data) {
 		dev_err(&ndev->dev, "no platform data\n");

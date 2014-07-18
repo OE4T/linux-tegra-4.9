@@ -19,6 +19,7 @@
 #include <linux/nvhost.h>
 #include <linux/dma-mapping.h>
 #include <linux/firmware.h>
+#include <linux/fs.h>
 #include <linux/debugfs.h>
 #include <linux/dma-buf.h>
 
@@ -596,7 +597,8 @@ static int gk20a_cde_execute_buffer(struct gk20a_cde_ctx *cde_ctx,
 					   num_entries, flags, fence, fence_out);
 }
 
-int gk20a_cde_convert(struct gk20a *g, u32 src_fd, u32 dst_fd,
+int gk20a_cde_convert(struct gk20a *g, struct dma_buf *src,
+		      struct dma_buf *dst,
 		      s32 dst_kind, u64 dst_byte_offset,
 		      u32 dst_size, struct nvhost_fence *fence,
 		      u32 __flags, struct gk20a_cde_param *params,
@@ -605,7 +607,6 @@ int gk20a_cde_convert(struct gk20a *g, u32 src_fd, u32 dst_fd,
 	struct gk20a_cde_app *cde_app = &g->cde_app;
 	struct gk20a_comptags comptags;
 	struct gk20a_cde_ctx *cde_ctx;
-	struct dma_buf *src = NULL, *dst = NULL;
 	u64 dst_vaddr = 0, src_vaddr = 0;
 	u32 flags;
 	int err, i;
@@ -622,14 +623,7 @@ int gk20a_cde_convert(struct gk20a *g, u32 src_fd, u32 dst_fd,
 	cde_app->cde_ctx_ptr = (cde_app->cde_ctx_ptr + 1) %
 		ARRAY_SIZE(cde_app->cde_ctx);
 
-	/* First, get buffer references and map the buffers to local va */
-
-	dst = dma_buf_get(dst_fd);
-	if (IS_ERR(src)) {
-		dst = NULL;
-		err = -EINVAL;
-		goto exit_unlock;
-	}
+	/* First, map the buffers to local va */
 
 	/* ensure that the dst buffer has drvdata */
 	err = gk20a_dmabuf_alloc_drvdata(dst, &g->dev->dev);
@@ -637,18 +631,13 @@ int gk20a_cde_convert(struct gk20a *g, u32 src_fd, u32 dst_fd,
 		goto exit_unlock;
 
 	/* map the destination buffer */
+	get_dma_buf(dst); /* a ref for gk20a_vm_map */
 	dst_vaddr = gk20a_vm_map(g->cde_app.vm, dst, 0,
 				 0, dst_kind, NULL, true,
 				 gk20a_mem_flag_none,
 				 0, 0);
 	if (!dst_vaddr) {
-		err = -EINVAL;
-		goto exit_unlock;
-	}
-
-	src = dma_buf_get(src_fd);
-	if (IS_ERR(src)) {
-		src = NULL;
+		dma_buf_put(dst);
 		err = -EINVAL;
 		goto exit_unlock;
 	}
@@ -659,11 +648,13 @@ int gk20a_cde_convert(struct gk20a *g, u32 src_fd, u32 dst_fd,
 		goto exit_unlock;
 
 	/* map the source buffer to prevent premature release */
+	get_dma_buf(src); /* a ref for gk20a_vm_map */
 	src_vaddr = gk20a_vm_map(g->cde_app.vm, src, 0,
 				 0, dst_kind, NULL, true,
 				 gk20a_mem_flag_none,
 				 0, 0);
 	if (!src_vaddr) {
+		dma_buf_put(src);
 		err = -EINVAL;
 		goto exit_unlock;
 	}
@@ -764,12 +755,6 @@ exit_unlock:
 		gk20a_vm_unmap(g->cde_app.vm, dst_vaddr);
 	if (src_vaddr)
 		gk20a_vm_unmap(g->cde_app.vm, src_vaddr);
-
-	/* drop dmabuf refs if work was aborted */
-	if (err && src)
-		dma_buf_put(src);
-	if (err && dst)
-		dma_buf_put(dst);
 
 	mutex_unlock(&cde_app->mutex);
 
@@ -921,4 +906,308 @@ err_init_instance:
 		cde_ctx--;
 	}
 	return ret;
+}
+
+enum cde_launch_patch_offset {
+	/* dst buffer width in roptiles */
+	PATCH_USER_CONST_XTILES,
+	/* dst buffer height in roptiles */
+	PATCH_USER_CONST_YTILES,
+	/* dst buffer log2(block height) */
+	PATCH_USER_CONST_BLOCKHEIGHTLOG2,
+	/* dst buffer pitch in bytes */
+	PATCH_USER_CONST_DSTPITCH,
+	/* dst buffer write offset */
+	PATCH_USER_CONST_DSTOFFSET,
+	/* comp cache index of the first page of the surface,
+	 * kernel looks it up from PTE */
+	PATCH_USER_CONST_FIRSTPAGEOFFSET,
+	/* gmmu translated surface address, kernel fills */
+	PATCH_USER_CONST_SURFADDR,
+	/* dst buffer address >> 8, kernel fills */
+	PATCH_VPC_DSTIMAGE_ADDR,
+	/* dst buffer address >> 8, kernel fills */
+	PATCH_VPC_DSTIMAGE_ADDR2,
+	/* dst buffer size - 1, kernel fills */
+	PATCH_VPC_DSTIMAGE_SIZE_MINUS_ONE,
+	/* dst buffer size - 1, kernel fills */
+	PATCH_VPC_DSTIMAGE_SIZE_MINUS_ONE2,
+	/* dst buffer size, kernel fills */
+	PATCH_VPC_DSTIMAGE_SIZE,
+	/* dst buffer width in roptiles / work group width */
+	PATCH_VPC_CURRENT_GRID_SIZE_X,
+	/* dst buffer height in roptiles / work group height */
+	PATCH_VPC_CURRENT_GRID_SIZE_Y,
+	/* 1 */
+	PATCH_VPC_CURRENT_GRID_SIZE_Z,
+	/* work group width, 16 seems to be quite optimal */
+	PATCH_VPC_CURRENT_GROUP_SIZE_X,
+	/* work group height, 8 seems to be quite optimal */
+	PATCH_VPC_CURRENT_GROUP_SIZE_Y,
+	/* 1 */
+	PATCH_VPC_CURRENT_GROUP_SIZE_Z,
+	/* same as PATCH_VPC_CURRENT_GRID_SIZE_X */
+	PATCH_QMD_CTA_RASTER_WIDTH,
+	/* same as PATCH_VPC_CURRENT_GRID_SIZE_Y */
+	PATCH_QMD_CTA_RASTER_HEIGHT,
+	/* same as PATCH_VPC_CURRENT_GRID_SIZE_Z */
+	PATCH_QMD_CTA_RASTER_DEPTH,
+	/* same as PATCH_VPC_CURRENT_GROUP_SIZE_X */
+	PATCH_QMD_CTA_THREAD_DIMENSION0,
+	/* same as PATCH_VPC_CURRENT_GROUP_SIZE_Y */
+	PATCH_QMD_CTA_THREAD_DIMENSION1,
+	/* same as PATCH_VPC_CURRENT_GROUP_SIZE_Z */
+	PATCH_QMD_CTA_THREAD_DIMENSION2,
+
+	NUM_CDE_LAUNCH_PATCHES
+};
+
+enum cde_launch_patch_id {
+	PATCH_QMD_CTA_RASTER_WIDTH_ID = 1024,
+	PATCH_QMD_CTA_RASTER_HEIGHT_ID = 1025,
+	PATCH_QMD_CTA_RASTER_DEPTH_ID = 1026,
+	PATCH_QMD_CTA_THREAD_DIMENSION0_ID = 1027,
+	PATCH_QMD_CTA_THREAD_DIMENSION1_ID = 1028,
+	PATCH_QMD_CTA_THREAD_DIMENSION2_ID = 1029,
+	PATCH_USER_CONST_XTILES_ID = 1030,
+	PATCH_USER_CONST_YTILES_ID = 1031,
+	PATCH_USER_CONST_BLOCKHEIGHTLOG2_ID = 1032,
+	PATCH_USER_CONST_DSTPITCH_ID = 1033,
+	PATCH_USER_CONST_DSTOFFSET_ID = 1034,
+	PATCH_VPC_CURRENT_GRID_SIZE_X_ID = 1035,
+	PATCH_VPC_CURRENT_GRID_SIZE_Y_ID = 1036,
+	PATCH_VPC_CURRENT_GRID_SIZE_Z_ID = 1037,
+	PATCH_VPC_CURRENT_GROUP_SIZE_X_ID = 1038,
+	PATCH_VPC_CURRENT_GROUP_SIZE_Y_ID = 1039,
+	PATCH_VPC_CURRENT_GROUP_SIZE_Z_ID = 1040,
+};
+
+static int gk20a_buffer_convert_gpu_to_cde(
+		struct gk20a *g, struct dma_buf *dmabuf, u32 consumer,
+		u64 offset, u64 compbits_offset,
+		u32 width, u32 height, u32 block_height_log2,
+		u32 submit_flags, struct nvhost_fence *fence_in,
+		struct gk20a_fence **fence_out)
+{
+	struct gk20a_cde_param params[NUM_CDE_LAUNCH_PATCHES];
+	int param = 0;
+	int err = 0;
+
+	/* Compute per launch parameters */
+	const bool transpose = (consumer == NVHOST_GPU_COMPBITS_CDEV);
+	const int transposed_width = transpose ? height : width;
+	const int transposed_height = transpose ? width : height;
+	const int xtiles = (transposed_width + 7) >> 3;
+	const int ytiles = (transposed_height + 7) >> 3;
+	const int wgx = 16;
+	const int wgy = 8;
+	const int compbits_per_byte = 4; /* one byte stores 4 compbit pairs */
+	const int dst_stride = 128; /* TODO chip constant */
+	const int xalign = compbits_per_byte * wgx;
+	const int yalign = wgy;
+	const int tilepitch = roundup(xtiles, xalign) / compbits_per_byte;
+	const int ytilesaligned = roundup(ytiles, yalign);
+	const int gridw = roundup(tilepitch, wgx) / wgx;
+	const int gridh = roundup(ytilesaligned, wgy) / wgy;
+
+	if (xtiles > 4096 / 8 || ytiles > 4096 / 8) {
+		gk20a_warn(&g->dev->dev, "cde: too large surface");
+		return -EINVAL;
+	}
+
+	gk20a_dbg(gpu_dbg_cde, "w=%d, h=%d, bh_log2=%d, compbits_offset=0x%llx",
+		  width, height, block_height_log2, compbits_offset);
+	gk20a_dbg(gpu_dbg_cde, "resolution (%d, %d) tiles (%d, %d) invocations (%d, %d)",
+		  width, height, xtiles, ytiles, tilepitch, ytilesaligned);
+	gk20a_dbg(gpu_dbg_cde, "group (%d, %d) grid (%d, %d)",
+		  wgx, wgy, gridw, gridh);
+
+	if (tilepitch % wgx != 0 || ytilesaligned % wgy != 0) {
+		gk20a_warn(&g->dev->dev,
+			"grid size (%d, %d) is not a multiple of work group size (%d, %d)",
+			tilepitch, ytilesaligned, wgx, wgy);
+		return -EINVAL;
+	}
+
+	/* Write parameters */
+#define WRITE_PATCH(NAME, VALUE) \
+		params[param++] = (struct gk20a_cde_param){NAME##_ID, 0, VALUE}
+	WRITE_PATCH(PATCH_USER_CONST_XTILES, xtiles);
+	WRITE_PATCH(PATCH_USER_CONST_YTILES, ytiles);
+	WRITE_PATCH(PATCH_USER_CONST_BLOCKHEIGHTLOG2, block_height_log2);
+	WRITE_PATCH(PATCH_USER_CONST_DSTPITCH, dst_stride);
+	WRITE_PATCH(PATCH_USER_CONST_DSTOFFSET, transpose ? 4 : 0); /* flag */
+	WRITE_PATCH(PATCH_VPC_CURRENT_GRID_SIZE_X, gridw);
+	WRITE_PATCH(PATCH_VPC_CURRENT_GRID_SIZE_Y, gridh);
+	WRITE_PATCH(PATCH_VPC_CURRENT_GRID_SIZE_Z, 1);
+	WRITE_PATCH(PATCH_VPC_CURRENT_GROUP_SIZE_X, wgx);
+	WRITE_PATCH(PATCH_VPC_CURRENT_GROUP_SIZE_Y, wgy);
+	WRITE_PATCH(PATCH_VPC_CURRENT_GROUP_SIZE_Z, 1);
+	WRITE_PATCH(PATCH_QMD_CTA_RASTER_WIDTH, gridw);
+	WRITE_PATCH(PATCH_QMD_CTA_RASTER_HEIGHT, gridh);
+	WRITE_PATCH(PATCH_QMD_CTA_RASTER_DEPTH, 1);
+	WRITE_PATCH(PATCH_QMD_CTA_THREAD_DIMENSION0, wgx);
+	WRITE_PATCH(PATCH_QMD_CTA_THREAD_DIMENSION1, wgy);
+	WRITE_PATCH(PATCH_QMD_CTA_THREAD_DIMENSION2, 1);
+#undef WRITE_PATCH
+
+	gk20a_busy(g->dev);
+	err = gk20a_init_cde_support(g);
+	if (err)
+		goto out;
+	err = gk20a_cde_convert(g, dmabuf, dmabuf,
+				0, /* dst kind */
+				compbits_offset,
+				0, /* dst_size, 0 = auto */
+				fence_in, submit_flags,
+				params, param, fence_out);
+out:
+	gk20a_idle(g->dev);
+	return err;
+}
+
+int gk20a_prepare_compressible_read(
+		struct gk20a *g, u32 buffer_fd, u32 request, u64 offset,
+		u64 compbits_hoffset, u64 compbits_voffset,
+		u32 width, u32 height, u32 block_height_log2,
+		u32 submit_flags, struct nvhost_fence *fence,
+		u32 *valid_compbits, struct gk20a_fence **fence_out)
+{
+	int err = 0;
+	struct gk20a_buffer_state *state;
+	struct dma_buf *dmabuf;
+	u32 missing_bits;
+
+	if (!g->cde_app.initialised) {
+		err = gk20a_cde_reload(g);
+		if (err)
+			return err;
+	}
+
+	dmabuf = dma_buf_get(buffer_fd);
+	if (IS_ERR(dmabuf))
+		return -EINVAL;
+
+	err = gk20a_dmabuf_get_state(dmabuf, dev_from_gk20a(g), offset, &state);
+	if (err) {
+		dma_buf_put(dmabuf);
+		return err;
+	}
+
+	missing_bits = (state->valid_compbits ^ request) & request;
+
+	mutex_lock(&state->lock);
+
+	if (state->valid_compbits && request == NVHOST_GPU_COMPBITS_NONE) {
+
+		gk20a_fence_put(state->fence);
+		state->fence = NULL;
+		/* state->fence = decompress();
+		state->valid_compbits = 0; */
+		err = -EINVAL;
+		goto out;
+	} else if (missing_bits) {
+		struct gk20a_fence *new_fence = NULL;
+		if ((state->valid_compbits & NVHOST_GPU_COMPBITS_GPU) &&
+			(missing_bits & NVHOST_GPU_COMPBITS_CDEH)) {
+			err = gk20a_buffer_convert_gpu_to_cde(
+					g, dmabuf,
+					NVHOST_GPU_COMPBITS_CDEH,
+					offset, compbits_hoffset,
+					width, height, block_height_log2,
+					submit_flags, fence,
+					&new_fence);
+			if (err)
+				goto out;
+
+			/* CDEH bits generated, update state & fence */
+			gk20a_fence_put(state->fence);
+			state->fence = new_fence;
+			state->valid_compbits |= NVHOST_GPU_COMPBITS_CDEH;
+		}
+		if ((state->valid_compbits & NVHOST_GPU_COMPBITS_GPU) &&
+			(missing_bits & NVHOST_GPU_COMPBITS_CDEV)) {
+			err = gk20a_buffer_convert_gpu_to_cde(
+					g, dmabuf,
+					NVHOST_GPU_COMPBITS_CDEV,
+					offset, compbits_voffset,
+					width, height, block_height_log2,
+					submit_flags, fence,
+					&new_fence);
+			if (err)
+				goto out;
+
+			/* CDEH bits generated, update state & fence */
+			gk20a_fence_put(state->fence);
+			state->fence = new_fence;
+			state->valid_compbits |= NVHOST_GPU_COMPBITS_CDEV;
+		}
+	}
+
+	if (state->fence && fence_out)
+		*fence_out = gk20a_fence_get(state->fence);
+
+	if (valid_compbits)
+		*valid_compbits = state->valid_compbits;
+
+out:
+	mutex_unlock(&state->lock);
+	dma_buf_put(dmabuf);
+	return 0;
+}
+
+int gk20a_mark_compressible_write(struct gk20a *g, u32 buffer_fd,
+				  u32 valid_compbits, u64 offset)
+{
+	int err;
+	struct gk20a_buffer_state *state;
+	struct dma_buf *dmabuf;
+
+	dmabuf = dma_buf_get(buffer_fd);
+	if (IS_ERR(dmabuf)) {
+		dev_err(dev_from_gk20a(g), "invalid dmabuf");
+		return -EINVAL;
+	}
+
+	err = gk20a_dmabuf_get_state(dmabuf, dev_from_gk20a(g), offset, &state);
+	if (err) {
+		dev_err(dev_from_gk20a(g), "could not get state from dmabuf");
+		dma_buf_put(dmabuf);
+		return err;
+	}
+
+	mutex_lock(&state->lock);
+
+	/* Update the compbits state. */
+	state->valid_compbits = valid_compbits;
+
+	/* Discard previous compbit job fence. */
+	gk20a_fence_put(state->fence);
+	state->fence = NULL;
+
+	mutex_unlock(&state->lock);
+	dma_buf_put(dmabuf);
+	return 0;
+}
+
+static ssize_t gk20a_cde_reload_write(struct file *file,
+	const char __user *userbuf, size_t count, loff_t *ppos)
+{
+	struct gk20a *g = file->private_data;
+	gk20a_cde_reload(g);
+	return count;
+}
+
+static const struct file_operations gk20a_cde_reload_fops = {
+	.open		= simple_open,
+	.write		= gk20a_cde_reload_write,
+};
+
+void gk20a_cde_debugfs_init(struct platform_device *dev)
+{
+	struct gk20a_platform *platform = platform_get_drvdata(dev);
+	struct gk20a *g = get_gk20a(dev);
+
+	debugfs_create_file("reload_cde_firmware", S_IWUSR, platform->debugfs,
+			    g, &gk20a_cde_reload_fops);
 }

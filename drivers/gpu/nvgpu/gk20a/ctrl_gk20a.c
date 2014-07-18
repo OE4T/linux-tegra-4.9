@@ -21,6 +21,7 @@
 #include <linux/nvhost_gpu_ioctl.h>
 
 #include "gk20a.h"
+#include "fence_gk20a.h"
 
 int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 {
@@ -76,6 +77,72 @@ gk20a_ctrl_ioctl_gpu_characteristics(
 		request->gpu_characteristics_buf_size = sizeof(*pgpu);
 
 	return err;
+}
+
+static int gk20a_ctrl_prepare_compressible_read(
+		struct gk20a *g,
+		struct nvhost_gpu_prepare_compressible_read_args *args)
+{
+	struct nvhost_fence fence;
+	struct gk20a_fence *fence_out = NULL;
+	int ret = 0;
+	int flags = args->submit_flags;
+
+	fence.syncpt_id = args->fence.syncpt_id;
+	fence.value = args->fence.syncpt_value;
+
+	gk20a_busy(g->dev);
+	ret = gk20a_prepare_compressible_read(g, args->handle,
+			args->request_compbits, args->offset,
+			args->compbits_hoffset, args->compbits_voffset,
+			args->width, args->height, args->block_height_log2,
+			flags, &fence, &args->valid_compbits,
+			&fence_out);
+	gk20a_idle(g->dev);
+
+	if (ret)
+		return ret;
+
+	/* Convert fence_out to something we can pass back to user space. */
+	if (flags & NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET) {
+		if (flags & NVHOST_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE) {
+			if (fence_out) {
+				int fd = gk20a_fence_install_fd(fence_out);
+				if (fd < 0)
+					ret = fd;
+				else
+					args->fence.fd = fd;
+			} else {
+				args->fence.fd = -1;
+			}
+		} else {
+			if (fence_out) {
+				args->fence.syncpt_id = fence_out->syncpt_id;
+				args->fence.syncpt_value =
+						fence_out->syncpt_value;
+			} else {
+				args->fence.syncpt_id = -1;
+				args->fence.syncpt_value = 0;
+			}
+		}
+	}
+	gk20a_fence_put(fence_out);
+
+	return 0;
+}
+
+static int gk20a_ctrl_mark_compressible_write(
+		struct gk20a *g,
+		struct nvhost_gpu_mark_compressible_write_args *args)
+{
+	int ret = 0;
+
+	gk20a_busy(g->dev);
+	ret = gk20a_mark_compressible_write(g, args->handle,
+			args->valid_compbits, args->offset);
+	gk20a_idle(g->dev);
+
+	return ret;
 }
 
 long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
@@ -225,7 +292,14 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		err = gk20a_ctrl_ioctl_gpu_characteristics(
 			g, (struct nvhost_gpu_get_characteristics *)buf);
 		break;
-
+	case NVHOST_GPU_IOCTL_PREPARE_COMPRESSIBLE_READ:
+		err = gk20a_ctrl_prepare_compressible_read(g,
+			(struct nvhost_gpu_prepare_compressible_read_args *)buf);
+		break;
+	case NVHOST_GPU_IOCTL_MARK_COMPRESSIBLE_WRITE:
+		err = gk20a_ctrl_mark_compressible_write(g,
+			(struct nvhost_gpu_mark_compressible_write_args *)buf);
+		break;
 	default:
 		gk20a_err(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;

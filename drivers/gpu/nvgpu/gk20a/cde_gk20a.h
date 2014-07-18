@@ -245,10 +245,20 @@ struct gk20a_cde_app {
 int gk20a_cde_destroy(struct gk20a *g);
 int gk20a_init_cde_support(struct gk20a *g);
 int gk20a_cde_reload(struct gk20a *g);
-int gk20a_cde_convert(struct gk20a *g, u32 src_fd, u32 dst_fd,
+int gk20a_cde_convert(struct gk20a *g, struct dma_buf *src, struct dma_buf *dst,
 		      s32 dst_kind, u64 dst_word_offset,
 		      u32 dst_size, struct nvhost_fence *fence,
 		      u32 __flags, struct gk20a_cde_param *params,
 		      int num_params, struct gk20a_fence **fence_out);
+void gk20a_cde_debugfs_init(struct platform_device *dev);
+
+int gk20a_prepare_compressible_read(
+		struct gk20a *g, u32 buffer_fd, u32 request, u64 offset,
+		u64 compbits_hoffset, u64 compbits_voffset,
+		u32 width, u32 height, u32 block_height_log2,
+		u32 submit_flags, struct nvhost_fence *fence,
+		u32 *valid_compbits, struct gk20a_fence **fence_out);
+int gk20a_mark_compressible_write(
+		struct gk20a *g, u32 buffer_fd, u32 valid_compbits, u64 offset);
 
 #endif

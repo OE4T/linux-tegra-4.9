@@ -150,6 +150,9 @@ struct tegra_hdmi {
 	struct tegra_dc_sor_data *sor;
 	struct hdmi_avi_infoframe avi;
 
+	struct tegra_edid_hdmi_eld eld;
+	bool eld_valid;
+
 	struct tegra_edid *edid;
 	struct i2c_client *ddc_i2c_client;
 
@@ -161,6 +164,16 @@ struct tegra_hdmi {
 	struct clk *hda2hdmi_clk;
 
 	struct tegra_nvhdcp *nvhdcp;
+
+	struct work_struct hpd_worker;
+	bool hpd_in_progress;
+	struct mutex hpd_lock;
+	struct {
+		u32 dc_enable:1;
+		u32 hdmi_host_enable:1;
+		u32 edid_eld_read:1;
+		u32 pix_stream_on:1;
+	} hpd_state_status;
 };
 
 #endif

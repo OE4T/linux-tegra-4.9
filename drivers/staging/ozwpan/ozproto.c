@@ -597,6 +597,7 @@ void oz_timer_add(struct oz_pd *pd, int type, unsigned long due_time)
 	case OZ_TIMER_TOUT:
 	case OZ_TIMER_STOP:
 		if (hrtimer_active(&pd->timeout)) {
+			hrtimer_cancel(&pd->timeout);
 			hrtimer_set_expires(&pd->timeout, ktime_set(due_time /
 			MSEC_PER_SEC, (due_time % MSEC_PER_SEC) *
 							NSEC_PER_MSEC));

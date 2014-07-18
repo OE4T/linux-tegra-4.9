@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -221,6 +221,10 @@ static inline u32 host1x_sync_syncpt_thresh_cpu0_int_status_r(void)
 static inline u32 host1x_sync_syncpt_thresh_cpu1_int_status_r(void)
 {
 	return 0xea0;
+}
+static inline u32 host1x_sync_syncpt_thresh_int_mask_r(void)
+{
+	return 0xec0;
 }
 static inline u32 host1x_sync_syncpt_thresh_int_disable_r(void)
 {

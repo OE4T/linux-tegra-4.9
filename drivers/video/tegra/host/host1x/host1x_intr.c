@@ -4,7 +4,7 @@
  * Tegra Graphics Host Interrupt Management
  *
  * Copyright (C) 2010 Google, Inc.
- * Copyright (c) 2010-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -294,6 +294,54 @@ static int t20_free_syncpt_irq(struct nvhost_intr *intr)
 	return 0;
 }
 
+static int intr_debug_dump(struct nvhost_intr *intr, struct output *o)
+{
+	struct nvhost_master *dev = intr_to_dev(intr);
+	void __iomem *sync_regs = intr_to_dev(intr)->sync_aperture;
+	int i;
+
+	nvhost_debug_output(o, "\n---- host general irq ----\n\n");
+	nvhost_debug_output(o, "sync_hintmask_ext = 0x%08x\n",
+		readl(sync_regs + host1x_sync_hintmask_ext_r()));
+	nvhost_debug_output(o, "sync_hintmask = 0x%08x\n",
+		readl(sync_regs + host1x_sync_hintmask_r()));
+	nvhost_debug_output(o, "sync_intc0mask = 0x%08x\n",
+		readl(sync_regs + host1x_sync_intc0mask_r()));
+	nvhost_debug_output(o, "sync_intmask = 0x%08x\n",
+		readl(sync_regs + host1x_sync_intmask_r()));
+
+	nvhost_debug_output(o, "\n---- host syncpt irq mask ----\n\n");
+	for (i = 0; i < DIV_ROUND_UP(dev->info.nb_pts, 16); i++)
+		nvhost_debug_output(o, "syncpt_thresh_int_mask(%d) = 0x%08x\n",
+			i, readl(sync_regs +
+				host1x_sync_syncpt_thresh_int_mask_r() +
+				i * REGISTER_STRIDE));
+
+	nvhost_debug_output(o, "\n---- host syncpt irq status ----\n\n");
+	for (i = 0; i < DIV_ROUND_UP(dev->info.nb_pts, 32); i++)
+		nvhost_debug_output(o, "syncpt_thresh_cpu0_int_status(%d) = 0x%08x\n",
+			i, readl(sync_regs +
+				host1x_sync_syncpt_thresh_cpu0_int_status_r() +
+				i * REGISTER_STRIDE));
+
+	nvhost_debug_output(o, "\n---- host syncpt thresh ----\n\n");
+	for (i = 0; i < dev->info.nb_pts; i++) {
+		u32 reg = readl(sync_regs +
+				host1x_sync_syncpt_thresh_int_mask_r() +
+				bit_word(i * 2) * REGISTER_STRIDE);
+		if (!(reg & bit_mask(i * 2)))
+			continue;
+
+		nvhost_debug_output(o, "syncpt_int_thresh_thresh_0(%d) = %u\n",
+			i, readl(sync_regs +
+				host1x_sync_syncpt_int_thresh_0_r() +
+				i * REGISTER_STRIDE));
+	}
+
+	return 0;
+}
+
+
 static const struct nvhost_intr_ops host1x_intr_ops = {
 	.init_host_sync = t20_intr_init_host_sync,
 	.set_host_clocks_per_usec = t20_intr_set_host_clocks_per_usec,
@@ -304,4 +352,5 @@ static const struct nvhost_intr_ops host1x_intr_ops = {
 	.request_host_general_irq = t20_intr_request_host_general_irq,
 	.free_host_general_irq = t20_intr_free_host_general_irq,
 	.free_syncpt_irq = t20_free_syncpt_irq,
+	.debug_dump = intr_debug_dump,
 };

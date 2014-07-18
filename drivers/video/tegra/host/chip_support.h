@@ -116,6 +116,7 @@ struct nvhost_intr_ops {
 	int  (*request_host_general_irq)(struct nvhost_intr *);
 	void (*free_host_general_irq)(struct nvhost_intr *);
 	int (*free_syncpt_irq)(struct nvhost_intr *);
+	int (*debug_dump)(struct nvhost_intr *, struct output *);
 };
 
 struct nvhost_dev_ops {

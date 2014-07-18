@@ -154,6 +154,8 @@ static void show_all(struct nvhost_master *m, struct output *o,
 	nvhost_debug_output(o, "---- channels ----\n");
 	nvhost_device_list_for_all(o, show_channels_fifo, locked_id);
 
+	intr_op().debug_dump(&m->intr, o);
+
 	nvhost_module_idle(m->dev);
 }
 
@@ -168,6 +170,8 @@ static void show_all_no_fifo(struct nvhost_master *m, struct output *o,
 	show_syncpts(m, o);
 	nvhost_debug_output(o, "---- channels ----\n");
 	nvhost_device_list_for_all(o, show_channels_no_fifo, locked_id);
+
+	intr_op().debug_dump(&m->intr, o);
 
 	nvhost_module_idle(m->dev);
 }

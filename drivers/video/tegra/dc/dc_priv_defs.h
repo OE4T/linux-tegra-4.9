@@ -205,13 +205,7 @@ struct tegra_dc {
 	struct tegra_adf_info		*adf;
 #endif
 
-	struct {
-		u32			id;
-		u32			min;
-		u32			max;
-	} syncpt[DC_N_WINDOWS];
 	u32				vblank_syncpt;
-	u32				win_syncpt[DC_N_WINDOWS];
 
 	unsigned long int		valid_windows;
 	unsigned long int		win_status;

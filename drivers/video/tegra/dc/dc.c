@@ -1642,19 +1642,23 @@ static inline void disable_dc_irq(const struct tegra_dc *dc)
 	disable_irq(dc->irq);
 }
 
-u32 tegra_dc_get_syncpt_id(const struct tegra_dc *dc, int i)
+u32 tegra_dc_get_syncpt_id(struct tegra_dc *dc, int i)
 {
-	return dc->syncpt[i].id;
+	struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
+	BUG_ON(!win);
+	return win->syncpt.id;
 }
 EXPORT_SYMBOL(tegra_dc_get_syncpt_id);
 
 static u32 tegra_dc_incr_syncpt_max_locked(struct tegra_dc *dc, int i)
 {
 	u32 max;
+	struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 
+	BUG_ON(!win);
 	max = nvhost_syncpt_incr_max_ext(dc->ndev,
-		dc->syncpt[i].id, ((dc->enabled) ? 1 : 0));
-	dc->syncpt[i].max = max;
+		win->syncpt.id, ((dc->enabled) ? 1 : 0));
+	win->syncpt.max = max;
 
 	return max;
 }
@@ -1674,12 +1678,15 @@ u32 tegra_dc_incr_syncpt_max(struct tegra_dc *dc, int i)
 
 void tegra_dc_incr_syncpt_min(struct tegra_dc *dc, int i, u32 val)
 {
+	struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
+
+	BUG_ON(!win);
 	mutex_lock(&dc->lock);
 
 	tegra_dc_get(dc);
-	while (dc->syncpt[i].min < val) {
-		dc->syncpt[i].min++;
-		nvhost_syncpt_cpu_incr_ext(dc->ndev, dc->syncpt[i].id);
+	while (win->syncpt.min < val) {
+		win->syncpt.min++;
+		nvhost_syncpt_cpu_incr_ext(dc->ndev, win->syncpt.id);
 		}
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
@@ -2665,13 +2672,6 @@ void tegra_dc_set_color_control(struct tegra_dc *dc)
 	tegra_dc_writel(dc, color_control, DC_DISP_DISP_COLOR_CONTROL);
 }
 
-static u32 get_syncpt(struct tegra_dc *dc, int idx)
-{
-	if (idx >= 0 && idx < ARRAY_SIZE(dc->win_syncpt))
-		return dc->win_syncpt[idx];
-	BUG();
-}
-
 static void tegra_dc_init_vpulse2_int(struct tegra_dc *dc)
 {
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
@@ -2793,16 +2793,16 @@ static int tegra_dc_init(struct tegra_dc *dc)
 #endif
 
 	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
-		u32 syncpt = get_syncpt(dc, i);
+		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
+
+		BUG_ON(!win);
 
 		/* refuse to operate on invalid syncpts */
-		if (WARN_ON(syncpt == NVSYNCPT_INVALID))
+		if (WARN_ON(win->syncpt.id == NVSYNCPT_INVALID))
 			continue;
 
-		dc->syncpt[i].id = syncpt;
-
-		if (!nvhost_syncpt_read_ext_check(dc->ndev, syncpt, &val))
-			dc->syncpt[i].min = dc->syncpt[i].max = val;
+		if (!nvhost_syncpt_read_ext_check(dc->ndev, win->syncpt.id, &val))
+			win->syncpt.min = win->syncpt.max = val;
 	}
 
 	dc->crc_pending = false;
@@ -3086,16 +3086,16 @@ void tegra_dc_disable_window(struct tegra_dc *dc, unsigned win)
 	w->flags &= ~TEGRA_WIN_FLAG_ENABLED;
 
 	/* refuse to operate on invalid syncpts */
-	if (WARN_ON(dc->syncpt[win].id == NVSYNCPT_INVALID))
+	if (WARN_ON(w->syncpt.id == NVSYNCPT_INVALID))
 		return;
 
 	/* flush any pending syncpt waits */
 	max = tegra_dc_incr_syncpt_max_locked(dc, win);
-	while (dc->syncpt[win].min < max) {
-		trace_display_syncpt_flush(dc, dc->syncpt[win].id,
-			dc->syncpt[win].min, dc->syncpt[win].max);
-		dc->syncpt[win].min++;
-		nvhost_syncpt_cpu_incr_ext(dc->ndev, dc->syncpt[win].id);
+	while (w->syncpt.min < w->syncpt.max) {
+		trace_display_syncpt_flush(dc, w->syncpt.id,
+			w->syncpt.min, w->syncpt.max);
+		w->syncpt.min++;
+		nvhost_syncpt_cpu_incr_ext(dc->ndev, w->syncpt.id);
 	}
 }
 
@@ -3529,23 +3529,30 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		goto err_release_resource_reg;
 	}
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	for (i = 0; i < DC_N_WINDOWS; i++)
-		dc->win_syncpt[i] = NVSYNCPT_INVALID;
+		dc->windows[i].syncpt.id = NVSYNCPT_INVALID;
 
 	if (TEGRA_DISPLAY_BASE == res->start) {
 		dc->vblank_syncpt = NVSYNCPT_VBLANK0;
-		dc->win_syncpt[0] = nvhost_get_syncpt_client_managed("disp0_a");
-		dc->win_syncpt[1] = nvhost_get_syncpt_client_managed("disp0_b");
-		dc->win_syncpt[2] = nvhost_get_syncpt_client_managed("disp0_c");
+		dc->windows[0].syncpt.id =
+			nvhost_get_syncpt_client_managed("disp0_a");
+		dc->windows[1].syncpt.id =
+			nvhost_get_syncpt_client_managed("disp0_b");
+		dc->windows[2].syncpt.id =
+			nvhost_get_syncpt_client_managed("disp0_c");
 		dc->valid_windows = 0x07;
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
-		dc->win_syncpt[3] = nvhost_get_syncpt_client_managed("disp0_d");
-		dc->win_syncpt[4] = nvhost_get_syncpt_client_managed("disp0_h");
+		dc->windows[3].syncpt.id =
+			nvhost_get_syncpt_client_managed("disp0_d");
+		dc->windows[4].syncpt.id =
+			nvhost_get_syncpt_client_managed("disp0_h");
 		dc->valid_windows |= 0x18;
 #elif !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
 	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
 	!defined(CONFIG_ARCH_TEGRA_11x_SOC)
-		dc->win_syncpt[3] = nvhost_get_syncpt_client_managed("disp0_d");
+		dc->windows[3].syncpt.id =
+			nvhost_get_syncpt_client_managed("disp0_d");
 		dc->valid_windows |= 0x08;
 #endif
 		dc->powergate_id = TEGRA_POWERGATE_DISA;
@@ -3557,12 +3564,16 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			&dc->slgc_notifier);
 	} else if (TEGRA_DISPLAY2_BASE == res->start) {
 		dc->vblank_syncpt = NVSYNCPT_VBLANK1;
-		dc->win_syncpt[0] = nvhost_get_syncpt_client_managed("disp1_a");
-		dc->win_syncpt[1] = nvhost_get_syncpt_client_managed("disp1_b");
-		dc->win_syncpt[2] = nvhost_get_syncpt_client_managed("disp1_c");
+		dc->windows[0].syncpt.id =
+			nvhost_get_syncpt_client_managed("disp1_a");
+		dc->windows[1].syncpt.id =
+			nvhost_get_syncpt_client_managed("disp1_b");
+		dc->windows[2].syncpt.id =
+			nvhost_get_syncpt_client_managed("disp1_c");
 		dc->valid_windows = 0x07;
 #ifdef CONFIG_ARCH_TEGRA_14x_SOC
-		dc->win_syncpt[4] = nvhost_get_syncpt_client_managed("disp1_h");
+		dc->windows[4].syncpt.id =
+			nvhost_get_syncpt_client_managed("disp1_h");
 		dc->valid_windows |= 0x10;
 #endif
 		dc->powergate_id = TEGRA_POWERGATE_DISB;
@@ -3574,6 +3585,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			"Unknown base address %llx: unable to assign syncpt\n",
 			(u64)res->start);
 	}
+#endif
 
 	if (np) {
 		struct resource of_fb_res;

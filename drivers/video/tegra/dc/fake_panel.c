@@ -263,12 +263,15 @@ static int tegra_dc_reset_fakedsi_panel(struct tegra_dc *dc, long dc_outtype)
 		dc_out->dsi->ganged_type = TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD;
 #endif
 		dc_out->dsi->dsi_instance = 0;
+		dc_out->dsi->n_data_lanes = 8;
 	} else if (dc_outtype == TEGRA_DC_OUT_FAKE_DSIB) {
 		dc_out->dsi->ganged_type = 0;
 		dc_out->dsi->dsi_instance = 1;
+		dc_out->dsi->n_data_lanes = 4;
 	} else if (dc_outtype == TEGRA_DC_OUT_FAKE_DSIA) {
 		dc_out->dsi->ganged_type = 0;
 		dc_out->dsi->dsi_instance = 0;
+		dc_out->dsi->n_data_lanes = 4;
 	}
 
 	return 0;
@@ -351,12 +354,22 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 		return -ENOMEM;
 	}
 
+	/* Since all fake DSI share the same DSI pointer, need to reset here */
+	/* to avoid misconfigurations when switching between fake DSI types */
+	tegra_dc_reset_fakedsi_panel(dc, dc_outtype);
+
 	dsi->max_instances = dc->out->dsi->ganged_type ? MAX_DSI_INSTANCE : 1;
 
 	for (i = 0; i < dsi->max_instances; i++) {
 		if (np) {
 			if (np_dsi && of_device_is_available(np_dsi)) {
-				of_address_to_resource(np_dsi, i, &dsi_res);
+				if (!dc->out->dsi->ganged_type)
+					of_address_to_resource(np_dsi,
+						dc->out->dsi->dsi_instance,
+						&dsi_res);
+				else /* ganged type */
+					of_address_to_resource(np_dsi,
+						i, &dsi_res);
 				res = &dsi_res;
 			} else {
 				err = -EINVAL;

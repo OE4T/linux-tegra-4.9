@@ -626,10 +626,6 @@ int nvhost_module_suspend(struct device *dev)
 	if (pdata->prepare_poweroff)
 		pdata->prepare_poweroff(to_platform_device(dev));
 
-	/* inform edp governor that there is no load any more */
-	if (pdata->gpu_edp_device)
-		tegra_edp_notify_gpu_load(0);
-
 	return 0;
 }
 EXPORT_SYMBOL(nvhost_module_suspend);

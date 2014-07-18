@@ -218,13 +218,6 @@ static void nvhost_scale_notify(struct platform_device *pdev, bool busy)
 	if (!profile)
 		return;
 
-	/* inform edp about new constraint */
-	if (pdata->gpu_edp_device) {
-		u32 avg = 0;
-		actmon_op().read_avg_norm(profile->actmon, &avg);
-		tegra_edp_notify_gpu_load(avg);
-	}
-
 	/* If defreq is disabled, set the freq to max or min */
 	if (!devfreq) {
 		unsigned long freq = busy ? UINT_MAX : 0;

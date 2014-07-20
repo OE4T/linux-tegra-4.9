@@ -10,12 +10,18 @@
  * GNU General Public License for more details.
  */
 
-/* Device mapping is done via two parameters:
- * 1. platform configuration in the board file:
+/* Device mapping is done via three parameters:
+ * 1. If BMP_NVI_MPU_SUPPORT (defined below) is set, the code is included to
+ *    support the device behind an Invensense MPU running an NVI (NVidia/
+ *    Invensense) driver.
+ *    If BMP_NVI_MPU_SUPPORT is 0 then this driver is only for the device in a
+ *    stand-alone configuration without any dependancies on an Invensense MPU.
+ * 2. Device tree platform configuration nvi_config:
  *    - auto = automatically detect if connected to host or MPU
  *    - mpu = connected to MPU
  *    - host = connected to host
- * 2. device in board file:
+ *    This is only available if BMP_NVI_MPU_SUPPORT is set.
+ * 3. device in board file:
  *    - bmpX80 = automatically detect the device
  *    - force the device for:
  *      - bmp180
@@ -91,6 +97,7 @@
  * data timestamp = 0.
  */
 
+#define BMP_NVI_MPU_SUPPORT		(1) /* includes NVI MPU code */
 
 #include <linux/i2c.h>
 #include <linux/module.h>
@@ -105,9 +112,11 @@
 #include <linux/iio/buffer.h>
 #include <linux/iio/kfifo_buf.h>
 #include <linux/iio/trigger.h>
+#if BMP_NVI_MPU_SUPPORT
 #include <linux/mpu_iio.h>
+#endif /* BMP_NVI_MPU_SUPPORT */
 
-#define BMP_VERSION_DRIVER		(100)
+#define BMP_VERSION_DRIVER		(101)
 #define BMP_VENDOR			"Bosch"
 #define BMP_NAME			"bmpX80"
 #define BMP180_NAME			"bmp180"
@@ -325,7 +334,6 @@ struct bmp_state {
 	struct iio_trigger *trig;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(bmp_vregs)];
 	struct delayed_work dw;
-	struct mpu_platform_data pdata;
 	struct bmp_hal *hal;		/* Hardware Abstaction Layer */
 	union bmp_rom rom;		/* calibration data */
 	unsigned int info;		/* info data to return */
@@ -358,6 +366,7 @@ struct bmp_state {
 	s32 temp;			/* true temperature */
 	int pressure;			/* true pressure hPa/100 Pa/1 mBar */
 	s64 ts;				/* sample data timestamp */
+	u8 nvi_config;			/* NVI configuration */
 };
 
 struct bmp_hal {
@@ -370,7 +379,7 @@ struct bmp_hal {
 	u8 mode_mask;
 	struct bmp_cmode *cmode_tbl;
 	int (*bmp_read)(struct iio_dev *indio_dev);
-	enum ext_slave_id mpu_id;
+	unsigned int mpu_id;
 };
 
 
@@ -422,8 +431,9 @@ static int bmp_i2c_wr(struct bmp_state *st, u8 reg, u8 val)
 
 static int bmp_nvi_mpu_bypass_request(struct bmp_state *st)
 {
-	int i;
 	int ret = 0;
+#if BMP_NVI_MPU_SUPPORT
+	int i;
 
 	if (st->mpu_en) {
 		for (i = 0; i < BMP_MPU_RETRY_COUNT; i++) {
@@ -436,6 +446,7 @@ static int bmp_nvi_mpu_bypass_request(struct bmp_state *st)
 		if (ret == -EPERM)
 			ret = 0;
 	}
+#endif /* BMP_NVI_MPU_SUPPORT */
 	return ret;
 }
 
@@ -443,15 +454,18 @@ static int bmp_nvi_mpu_bypass_release(struct bmp_state *st)
 {
 	int ret = 0;
 
+#if BMP_NVI_MPU_SUPPORT
 	if (st->mpu_en)
 		ret = nvi_mpu_bypass_release();
+#endif /* BMP_NVI_MPU_SUPPORT */
 	return ret;
 }
 
 static int bmp_mode_wr(struct bmp_state *st, u8 mode)
 {
-	int ret = 0;
+	int ret;
 
+#if BMP_NVI_MPU_SUPPORT
 	if (st->mpu_en && !st->i2c->irq) {
 		ret = nvi_mpu_data_out(st->port_id[WR], mode);
 	} else {
@@ -471,6 +485,9 @@ static int bmp_mode_wr(struct bmp_state *st, u8 mode)
 			bmp_nvi_mpu_bypass_release(st);
 		}
 	}
+#else /* BMP_NVI_MPU_SUPPORT */
+	ret = bmp_i2c_wr(st, BMP_REG_CTRL, mode);
+#endif /* BMP_NVI_MPU_SUPPORT */
 	if (!ret)
 		st->data_out = mode;
 	return ret;
@@ -634,11 +651,13 @@ static int bmp_port_free(struct bmp_state *st, int port)
 {
 	int ret = 0;
 
+#if BMP_NVI_MPU_SUPPORT
 	if (st->port_id[port] >= 0) {
 		ret = nvi_mpu_port_free(st->port_id[port]);
 		if (!ret)
 			st->port_id[port] = -1;
 	}
+#endif /* BMP_NVI_MPU_SUPPORT */
 	return ret;
 }
 
@@ -669,7 +688,7 @@ static int bmp_pm_init(struct bmp_state *st)
 	st->shutdown = false;
 	st->initd = false;
 	st->mpu_en = false;
-	st->fifo_en = false; /* DON'T ENABLE: MPU FIFO HW BROKEN */
+	st->fifo_en = true;
 	st->port_en[WR] = false;
 	st->port_en[RD] = false;
 	st->port_id[WR] = -1;
@@ -683,11 +702,13 @@ static int bmp_port_enable(struct bmp_state *st, int port, bool enable)
 {
 	int ret = 0;
 
+#if BMP_NVI_MPU_SUPPORT
 	if ((enable != st->port_en[port]) && (st->port_id[port] >= 0)) {
 		ret = nvi_mpu_enable(st->port_id[port], enable, st->fifo_en);
 		if (!ret)
 			st->port_en[port] = enable;
 	}
+#endif /* BMP_NVI_MPU_SUPPORT */
 	return ret;
 }
 
@@ -893,31 +914,6 @@ static int bmp_read_180(struct iio_dev *indio_dev)
 	return 0;
 }
 
-static void bmp_mpu_handler_180(u8 *data, unsigned int len, s64 ts, void *p_val)
-{
-	struct iio_dev *indio_dev;
-	struct bmp_state *st;
-	int ret;
-
-	indio_dev = (struct iio_dev *)p_val;
-	st = iio_priv(indio_dev);
-	if (!ts) {
-		/* no timestamp means flush done */
-		bmp_buf_push(indio_dev, 0);
-		return;
-	}
-
-	if (st->enable) {
-		ret = bmp_read_sts_180(st, data, ts);
-		if (ret > 0) {
-			bmp_buf_push(indio_dev, ts);
-			nvi_mpu_data_out(st->port_id[WR], st->data_out);
-		} else if (ret < 0) {
-			nvi_mpu_data_out(st->port_id[WR], st->data_out);
-		}
-	}
-}
-
 static void bmp_calc_temp_280(struct bmp_state *st)
 {
 	s32 adc_t;
@@ -1040,6 +1036,7 @@ static int bmp_read_280(struct iio_dev *indio_dev)
 	return 0;
 }
 
+#if BMP_NVI_MPU_SUPPORT
 static void bmp_mpu_handler_280(u8 *data, unsigned int len, s64 ts, void *p_val)
 {
 	struct iio_dev *indio_dev;
@@ -1060,6 +1057,32 @@ static void bmp_mpu_handler_280(u8 *data, unsigned int len, s64 ts, void *p_val)
 			bmp_buf_push(indio_dev, ts);
 	}
 }
+
+static void bmp_mpu_handler_180(u8 *data, unsigned int len, s64 ts, void *p_val)
+{
+	struct iio_dev *indio_dev;
+	struct bmp_state *st;
+	int ret;
+
+	indio_dev = (struct iio_dev *)p_val;
+	st = iio_priv(indio_dev);
+	if (!ts) {
+		/* no timestamp means flush done */
+		bmp_buf_push(indio_dev, 0);
+		return;
+	}
+
+	if (st->enable) {
+		ret = bmp_read_sts_180(st, data, ts);
+		if (ret > 0) {
+			bmp_buf_push(indio_dev, ts);
+			nvi_mpu_data_out(st->port_id[WR], st->data_out);
+		} else if (ret < 0) {
+			nvi_mpu_data_out(st->port_id[WR], st->data_out);
+		}
+	}
+}
+#endif /* BMP_NVI_MPU_SUPPORT */
 
 static void bmp_work(struct work_struct *ws)
 {
@@ -1110,9 +1133,11 @@ static int bmp_delay(struct bmp_state *st,
 	}
 	if (i != st->scale_i) {
 		ret = 0;
+#if BMP_NVI_MPU_SUPPORT
 		if (st->mpu_en)
 			ret = nvi_mpu_delay_ms(st->port_id[WR],
 					       st->hal->p->scale[i].delay_ms);
+#endif /* BMP_NVI_MPU_SUPPORT */
 		if (ret < 0)
 			ret_t |= ret;
 		else
@@ -1124,6 +1149,7 @@ static int bmp_delay(struct bmp_state *st,
 		if (st->dbg & BMP_DBG_SPEW_MSG)
 			dev_info(&st->i2c->dev, "%s: %u\n",
 				 __func__, delay_us);
+#if BMP_NVI_MPU_SUPPORT
 		ret = 0;
 		if (st->mpu_en)
 			ret = nvi_mpu_delay_us(st->port_id[RD],
@@ -1131,6 +1157,7 @@ static int bmp_delay(struct bmp_state *st,
 		if (ret)
 			ret_t |= ret;
 		else
+#endif /* BMP_NVI_MPU_SUPPORT */
 			st->poll_delay_us = delay_us;
 	}
 	return ret_t;
@@ -1260,7 +1287,6 @@ static ssize_t bmp_attr_store(struct device *dev,
 	struct bmp_state *st = iio_priv(indio_dev);
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
 	const char *msg;
-	unsigned i;
 	unsigned int new;
 	unsigned int old = 0;
 	int ret;
@@ -1282,6 +1308,7 @@ static ssize_t bmp_attr_store(struct device *dev,
 		ret = bmp_able(indio_dev, new);
 		break;
 
+#if BMP_NVI_MPU_SUPPORT
 	case BMP_ATTR_BATCH_FLAGS:
 		msg = "ATTR_PRES_BATCH_FLAGS";
 		old = st->batch_flags;
@@ -1299,8 +1326,9 @@ static ssize_t bmp_attr_store(struct device *dev,
 	case BMP_ATTR_BATCH_TIMEOUT:
 		msg = "ATTR_BATCH_TIMEOUT";
 		old = st->batch_timeout_ms;
-		i = st->batch_flags & BATCH_WAKE_UPON_FIFO_FULL;
-		if ((i & st->mpu_batch_flags) == i) {
+		if (((st->batch_flags & BATCH_WAKE_UPON_FIFO_FULL) &
+		     st->mpu_batch_flags) == (st->batch_flags &
+					      BATCH_WAKE_UPON_FIFO_FULL)) {
 			/* if special flags supported */
 			if (new) {
 				/* if timeout */
@@ -1348,6 +1376,7 @@ static ssize_t bmp_attr_store(struct device *dev,
 		else
 			ret = -EINVAL;
 		break;
+#endif /* BMP_NVI_MPU_SUPPORT */
 
 	default:
 		msg = "ATTR_UNKNOWN";
@@ -1384,6 +1413,7 @@ static ssize_t bmp_attr_show(struct device *dev,
 	case BMP_ATTR_VENDOR:
 		return sprintf(buf, "%s\n", BMP_VENDOR);
 
+#if BMP_NVI_MPU_SUPPORT
 	case BMP_ATTR_BATCH_FLAGS:
 		return sprintf(buf, "%u\n", st->batch_flags);
 
@@ -1411,6 +1441,7 @@ static ssize_t bmp_attr_show(struct device *dev,
 			return ret;
 
 		return sprintf(buf, "%u\n", st->fifo_max);
+#endif /* BMP_NVI_MPU_SUPPORT */
 
 	case BMP_ATTR_PRES_PART:
 		return sprintf(buf, "%s pressure\n", st->hal->part);
@@ -1433,10 +1464,10 @@ static ssize_t bmp_attr_show(struct device *dev,
 			       st->hal->t->scale[st->scale_i].power_ma);
 
 	default:
-		return -EINVAL;
+		ret = -EINVAL;
 	}
 
-	return -EINVAL;
+	return ret;
 }
 
 static ssize_t bmp_data_store(struct device *dev,
@@ -1598,6 +1629,7 @@ static IIO_DEVICE_ATTR(pressure_version, S_IRUGO,
 		       bmp_attr_show, NULL, BMP_ATTR_PRES_VERSION);
 static IIO_DEVICE_ATTR(pressure_milliamp, S_IRUGO,
 		       bmp_attr_show, NULL, BMP_ATTR_PRES_MILLIAMP);
+#if BMP_NVI_MPU_SUPPORT
 static IIO_DEVICE_ATTR(pressure_batch_flags, S_IRUGO | S_IWUSR | S_IWGRP,
 		       bmp_attr_show, bmp_attr_store,
 		       BMP_ATTR_BATCH_FLAGS);
@@ -1617,6 +1649,7 @@ static IIO_DEVICE_ATTR(pressure_fifo_max_event_count,
 		       S_IRUGO | S_IWUSR | S_IWGRP,
 		       bmp_attr_show, bmp_attr_store,
 		       BMP_ATTR_FIFO_MAX_EVNT_CNT);
+#endif /* BMP_NVI_MPU_SUPPORT */
 static IIO_DEVICE_ATTR(temp_part, S_IRUGO,
 		       bmp_attr_show, NULL, BMP_ATTR_TEMP_PART);
 static IIO_DEVICE_ATTR(temp_vendor, S_IRUGO,
@@ -1625,6 +1658,7 @@ static IIO_DEVICE_ATTR(temp_version, S_IRUGO,
 		       bmp_attr_show, NULL, BMP_ATTR_TEMP_VERSION);
 static IIO_DEVICE_ATTR(temp_milliamp, S_IRUGO,
 		       bmp_attr_show, NULL, BMP_ATTR_TEMP_MILLIAMP);
+#if BMP_NVI_MPU_SUPPORT
 static IIO_DEVICE_ATTR(temp_batch_flags, S_IRUGO | S_IWUSR | S_IWGRP,
 		       bmp_attr_show, bmp_attr_store,
 		       BMP_ATTR_BATCH_FLAGS);
@@ -1643,6 +1677,7 @@ static IIO_DEVICE_ATTR(temp_fifo_reserved_event_count,
 static IIO_DEVICE_ATTR(temp_fifo_max_event_count, S_IRUGO | S_IWUSR | S_IWGRP,
 		       bmp_attr_show, bmp_attr_store,
 		       BMP_ATTR_FIFO_MAX_EVNT_CNT);
+#endif /* BMP_NVI_MPU_SUPPORT */
 static DEVICE_ATTR(data, S_IRUGO | S_IWUSR | S_IWGRP,
 		   bmp_data_show, bmp_data_store);
 
@@ -1652,22 +1687,26 @@ static struct attribute *bmp_attrs[] = {
 	&iio_dev_attr_pressure_vendor.dev_attr.attr,
 	&iio_dev_attr_pressure_version.dev_attr.attr,
 	&iio_dev_attr_pressure_milliamp.dev_attr.attr,
+#if BMP_NVI_MPU_SUPPORT
 	&iio_dev_attr_pressure_batch_flags.dev_attr.attr,
 	&iio_dev_attr_pressure_batch_period.dev_attr.attr,
 	&iio_dev_attr_pressure_batch_timeout.dev_attr.attr,
 	&iio_dev_attr_pressure_flush.dev_attr.attr,
 	&iio_dev_attr_pressure_fifo_reserved_event_count.dev_attr.attr,
 	&iio_dev_attr_pressure_fifo_max_event_count.dev_attr.attr,
+#endif /* BMP_NVI_MPU_SUPPORT */
 	&iio_dev_attr_temp_part.dev_attr.attr,
 	&iio_dev_attr_temp_vendor.dev_attr.attr,
 	&iio_dev_attr_temp_version.dev_attr.attr,
 	&iio_dev_attr_temp_milliamp.dev_attr.attr,
+#if BMP_NVI_MPU_SUPPORT
 	&iio_dev_attr_temp_batch_flags.dev_attr.attr,
 	&iio_dev_attr_temp_batch_period.dev_attr.attr,
 	&iio_dev_attr_temp_batch_timeout.dev_attr.attr,
 	&iio_dev_attr_temp_flush.dev_attr.attr,
 	&iio_dev_attr_temp_fifo_reserved_event_count.dev_attr.attr,
 	&iio_dev_attr_temp_fifo_max_event_count.dev_attr.attr,
+#endif /* BMP_NVI_MPU_SUPPORT */
 	&dev_attr_data.attr,
 	NULL
 };
@@ -2102,7 +2141,6 @@ static struct bmp_hal bmp_hal_180 = {
 	.mode_mask			= BMP180_REG_CTRL_MODE_MASK,
 	.cmode_tbl			= NULL,
 	.bmp_read			= &bmp_read_180,
-	.mpu_id				= ID_INVALID,
 };
 
 static struct bmp_scale bmp_scale_pres_280[] = {
@@ -2259,10 +2297,12 @@ static struct bmp_hal bmp_hal_280 = {
 	.mode_mask			= BMP280_REG_CTRL_MODE_MASK,
 	.cmode_tbl			= bmp_cmode_280,
 	.bmp_read			= &bmp_read_280,
+#if BMP_NVI_MPU_SUPPORT
 	.mpu_id				= PRESSURE_ID_BMP280,
+#endif /* BMP_NVI_MPU_SUPPORT */
 };
 
-static int bmp_hal(struct bmp_state *st)
+static int bmp_id_hal(struct bmp_state *st)
 {
 	int ret = 0;
 
@@ -2286,8 +2326,7 @@ static int bmp_hal(struct bmp_state *st)
 	return ret;
 }
 
-static int bmp_id_compare(struct bmp_state *st, u8 val,
-			  const struct i2c_device_id *id)
+static int bmp_id_compare(struct bmp_state *st, u8 val, const char *name)
 {
 	unsigned int i;
 	int ret = 0;
@@ -2297,7 +2336,7 @@ static int bmp_id_compare(struct bmp_state *st, u8 val,
 			if ((st->dev_id == BMP_REG_ID_BMP180) &&
 							   (st->dev_id != val))
 				dev_err(&st->i2c->dev, "%s ERR: %x != %s\n",
-					__func__, st->dev_id, id->name);
+					__func__, st->dev_id, name);
 			if (val != BMP_REG_ID_BMP180)
 				/* BMP280 may have more ID's than 0x56 */
 				val = BMP_REG_ID_BMP280;
@@ -2308,31 +2347,33 @@ static int bmp_id_compare(struct bmp_state *st, u8 val,
 	if (!st->dev_id) {
 		ret = -ENODEV;
 		dev_err(&st->i2c->dev, "%s ERR: ID %x != %s\n",
-			__func__, val, id->name);
+			__func__, val, name);
 	} else {
 		dev_dbg(&st->i2c->dev, "%s using ID %x for %s\n",
-			__func__, st->dev_id, id->name);
+			__func__, st->dev_id, name);
 	}
 	return ret;
 }
 
-static int bmp_id_dev(struct iio_dev *indio_dev,
-		      const struct i2c_device_id *id)
+static int bmp_id_dev(struct iio_dev *indio_dev, const char *name)
 {
 	struct bmp_state *st = iio_priv(indio_dev);
+#if BMP_NVI_MPU_SUPPORT
 	struct nvi_mpu_port nmp;
 	u8 config_boot;
+#endif /* BMP_NVI_MPU_SUPPORT */
 	u8 val = 0;
 	int ret;
 
-	config_boot = st->pdata.nvi_config & NVI_CONFIG_BOOT_MASK;
-	if (!strcmp(id->name, BMP180_NAME))
+	if (!strcmp(name, BMP180_NAME))
 		st->dev_id = BMP_REG_ID_BMP180;
-	else if (!strcmp(id->name, BMP280_NAME))
+	else if (!strcmp(name, BMP280_NAME))
 		st->dev_id = BMP_REG_ID_BMP280;
+#if BMP_NVI_MPU_SUPPORT
+	config_boot = st->nvi_config & NVI_CONFIG_BOOT_MASK;
 	if ((config_boot == NVI_CONFIG_BOOT_MPU) && (!st->dev_id)) {
 		dev_err(&st->i2c->dev, "%s ERR: NVI_CONFIG_BOOT_MPU && %s\n",
-			__func__, id->name);
+			__func__, name);
 		config_boot = NVI_CONFIG_BOOT_AUTO;
 	}
 	if (config_boot == NVI_CONFIG_BOOT_AUTO) {
@@ -2342,18 +2383,18 @@ static int bmp_id_dev(struct iio_dev *indio_dev,
 		ret = nvi_mpu_dev_valid(&nmp, &val);
 		dev_info(&st->i2c->dev, "%s AUTO ID=%x ret=%d\n",
 			 __func__, val, ret);
-		/* see mpu.h for possible return values */
+		/* see mpu_iio.h for possible return values */
 		if ((ret == -EAGAIN) || (ret == -EBUSY))
 			return -EAGAIN;
 
 		if (!ret)
-			ret = bmp_id_compare(st, val, id);
+			ret = bmp_id_compare(st, val, name);
 		if ((!ret) || ((ret == -EIO) && (st->dev_id)))
 			config_boot = NVI_CONFIG_BOOT_MPU;
 	}
 	if (config_boot == NVI_CONFIG_BOOT_MPU) {
 		st->mpu_en = true;
-		bmp_hal(st);
+		bmp_id_hal(st);
 		nmp.addr = st->i2c_addr | 0x80;
 		nmp.data_out = 0;
 		nmp.delay_ms = 0;
@@ -2411,16 +2452,16 @@ static int bmp_id_dev(struct iio_dev *indio_dev,
 		}
 		return ret;
 	}
-
+#endif /* BMP_NVI_MPU_SUPPORT */
 	/* NVI_CONFIG_BOOT_HOST */
 	st->mpu_en = false;
 	ret = bmp_i2c_rd(st, BMP_REG_ID, 1, &val);
 	dev_dbg(&st->i2c->dev, "%s Host read ID=%x ret=%d\n",
 		__func__, val, ret);
 	if (!ret) {
-		ret = bmp_id_compare(st, val, id);
+		ret = bmp_id_compare(st, val, name);
 		if (!ret)
-			ret = bmp_hal(st);
+			ret = bmp_id_hal(st);
 	}
 	return ret;
 }
@@ -2439,11 +2480,11 @@ static int bmp_id_i2c(struct iio_dev *indio_dev,
 
 	if (i < ARRAY_SIZE(bmp_i2c_addrs)) {
 		st->i2c_addr = st->i2c->addr;
-		ret = bmp_id_dev(indio_dev, id);
+		ret = bmp_id_dev(indio_dev, id->name);
 	} else {
 		for (i = 0; i < ARRAY_SIZE(bmp_i2c_addrs); i++) {
 			st->i2c_addr = bmp_i2c_addrs[i];
-			ret = bmp_id_dev(indio_dev, id);
+			ret = bmp_id_dev(indio_dev, BMP_NAME);
 			if ((ret == -EAGAIN) || (!ret))
 				break;
 		}
@@ -2493,14 +2534,14 @@ static int bmp_remove(struct i2c_client *client)
 
 static int bmp_of_dt(struct i2c_client *client, struct bmp_state *st)
 {
-	struct device_node *np = client->dev.of_node;
+	struct device_node *dn = client->dev.of_node;
 	char const *pchar;
 	u8 cfg;
 
-	if (!(of_property_read_string(np, "config", &pchar))) {
+	if (!(of_property_read_string(dn, "nvi_config", &pchar))) {
 		for (cfg = 0; cfg < ARRAY_SIZE(bmp_configs); cfg++) {
 			if (!strcasecmp(pchar, bmp_configs[cfg])) {
-				st->pdata.nvi_config = cfg;
+				st->nvi_config = cfg;
 				break;
 			}
 		}
@@ -2514,7 +2555,6 @@ static int bmp_probe(struct i2c_client *client,
 {
 	struct iio_dev *indio_dev;
 	struct bmp_state *st;
-	struct mpu_platform_data *pdata;
 	int ret;
 
 	dev_info(&client->dev, "%s %s\n", id->name, __func__);
@@ -2531,11 +2571,6 @@ static int bmp_probe(struct i2c_client *client,
 		ret = bmp_of_dt(client, st);
 		if (ret)
 			goto bmp_probe_err;
-	} else {
-		pdata = (struct mpu_platform_data *)
-						dev_get_platdata(&client->dev);
-		if (pdata)
-			st->pdata = *pdata;
 	}
 
 	bmp_pm_init(st);

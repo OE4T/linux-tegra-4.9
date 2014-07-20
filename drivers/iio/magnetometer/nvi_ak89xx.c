@@ -10,13 +10,19 @@
  * GNU General Public License for more details.
  */
 
-/* Device mapping is done via two parameters:
- * 1. platform configuration in the board file:
+/* Device mapping is done via three parameters:
+ * 1. If AKM_NVI_MPU_SUPPORT (defined below) is set, the code is included to
+ *    support the device behind an Invensense MPU running an NVI (NVidia/
+ *    Invensense) driver.
+ *    If AKM_NVI_MPU_SUPPORT is 0 then this driver is only for the device in a
+ *    stand-alone configuration without any dependencies on an Invensense MPU.
+ * 2. Device tree platform configuration nvi_config:
  *    - auto = automatically detect if connected to host or MPU
  *    - mpu = connected to MPU
  *    - host = connected to host
- * 2. device in board file:
- *    - akm89xx = automatically detect the device
+ *    This is only available if AKM_NVI_MPU_SUPPORT is set.
+ * 3. device in board file:
+ *    - ak89xx = automatically detect the device
  *    - force the device for:
  *      - ak8963
  *      - ak8975
@@ -99,6 +105,7 @@
  * data timestamp = 0.
  */
 
+#define AKM_NVI_MPU_SUPPORT		(1) /* includes NVI MPU code */
 
 #include <linux/i2c.h>
 #include <linux/module.h>
@@ -114,9 +121,11 @@
 #include <linux/iio/buffer.h>
 #include <linux/iio/kfifo_buf.h>
 #include <linux/iio/trigger.h>
+#if AKM_NVI_MPU_SUPPORT
 #include <linux/mpu_iio.h>
+#endif /* AKM_NVI_MPU_SUPPORT */
 
-#define AKM_VERSION_DRIVER		(100)
+#define AKM_VERSION_DRIVER		(101)
 #define AKM_VENDOR			"AsahiKASEI"
 #define AKM_NAME			"ak89xx"
 #define AKM_NAME_AK8963			"ak8963"
@@ -239,7 +248,6 @@ struct akm_state {
 	struct iio_trigger *trig;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(akm_vregs)];
 	struct delayed_work dw;
-	struct mpu_platform_data pdata;
 	struct akm_hal *hal;		/* Hardware Abstraction Layer */
 	u8 asa[3];			/* axis sensitivity adjustment */
 	unsigned int info;		/* info data to return */
@@ -267,6 +275,8 @@ struct akm_state {
 	s16 magn_uc[AXIS_N];		/* uncalibrated sample data */
 	s16 magn[AXIS_N];		/* sample data after calibration */
 	s64 ts;				/* sample data timestamp */
+	signed char matrix[9];		/* device orientation on platform */
+	u8 nvi_config;			/* NVI configuration */
 };
 
 struct akm_hal {
@@ -289,7 +299,7 @@ struct akm_hal {
 	u8 mode_rom_read;
 	struct akm_cmode *cmode_tbl;
 	bool irq;
-	enum ext_slave_id mpu_id;
+	unsigned int mpu_id;
 };
 
 
@@ -341,8 +351,9 @@ static int akm_i2c_wr(struct akm_state *st, u8 reg, u8 val)
 
 static int akm_nvi_mpu_bypass_request(struct akm_state *st)
 {
-	int i;
 	int ret = 0;
+#if AKM_NVI_MPU_SUPPORT
+	int i;
 
 	if (st->mpu_en) {
 		for (i = 0; i < AKM_MPU_RETRY_COUNT; i++) {
@@ -355,6 +366,7 @@ static int akm_nvi_mpu_bypass_request(struct akm_state *st)
 		if (ret == -EPERM)
 			ret = 0;
 	}
+#endif /* AKM_NVI_MPU_SUPPORT */
 	return ret;
 }
 
@@ -362,8 +374,10 @@ static int akm_nvi_mpu_bypass_release(struct akm_state *st)
 {
 	int ret = 0;
 
+#if AKM_NVI_MPU_SUPPORT
 	if (st->mpu_en)
 		ret = nvi_mpu_bypass_release();
+#endif /* AKM_NVI_MPU_SUPPORT */
 	return ret;
 }
 
@@ -371,6 +385,7 @@ static int akm_mode_wr(struct akm_state *st, u8 mode)
 {
 	int ret = 0;
 
+#if AKM_NVI_MPU_SUPPORT
 	if (st->mpu_en && !st->i2c->irq) {
 		ret = nvi_mpu_data_out(st->port_id[WR], mode);
 	} else {
@@ -391,6 +406,20 @@ static int akm_mode_wr(struct akm_state *st, u8 mode)
 			akm_nvi_mpu_bypass_release(st);
 		}
 	}
+#else /* AKM_NVI_MPU_SUPPORT */
+	if (st->i2c->irq) {
+		ret = akm_i2c_wr(st, st->hal->reg_mode,
+				 AKM_MODE_POWERDOWN);
+		if (mode & st->hal->mode_mask) {
+			udelay(AKM_HW_DELAY_US);
+			ret |= akm_i2c_wr(st,
+					  st->hal->reg_mode,
+					  mode);
+		}
+	} else {
+		ret = akm_i2c_wr(st, st->hal->reg_mode, mode);
+	}
+#endif /* AKM_NVI_MPU_SUPPORT */
 	if (!ret)
 		st->data_out = mode;
 	return ret;
@@ -554,11 +583,13 @@ static int akm_port_free(struct akm_state *st, int port)
 {
 	int ret = 0;
 
+#if AKM_NVI_MPU_SUPPORT
 	if (st->port_id[port] >= 0) {
 		ret = nvi_mpu_port_free(st->port_id[port]);
 		if (!ret)
 			st->port_id[port] = -1;
 	}
+#endif /* AKM_NVI_MPU_SUPPORT */
 	return ret;
 }
 
@@ -587,7 +618,7 @@ static int akm_pm_init(struct akm_state *st)
 	st->shutdown = false;
 	st->initd = false;
 	st->mpu_en = false;
-	st->fifo_en = false; /* DON'T ENABLE: MPU FIFO HW BROKEN */
+	st->fifo_en = true;
 	st->port_en[WR] = false;
 	st->port_en[RD] = false;
 	st->port_id[WR] = -1;
@@ -601,11 +632,13 @@ static int akm_port_enable(struct akm_state *st, int port, bool enable)
 {
 	int ret = 0;
 
+#if AKM_NVI_MPU_SUPPORT
 	if ((enable != st->port_en[port]) && (st->port_id[port] >= 0)) {
 		ret = nvi_mpu_enable(st->port_id[port], enable, st->fifo_en);
 		if (!ret)
 			st->port_en[port] = enable;
 	}
+#endif /* AKM_NVI_MPU_SUPPORT */
 	return ret;
 }
 
@@ -795,6 +828,7 @@ static int akm_read(struct iio_dev *indio_dev)
 	return ret;
 }
 
+#if AKM_NVI_MPU_SUPPORT
 static void akm_mpu_handler(u8 *data, unsigned int len, s64 ts, void *p_val)
 {
 	struct iio_dev *indio_dev;
@@ -817,6 +851,7 @@ static void akm_mpu_handler(u8 *data, unsigned int len, s64 ts, void *p_val)
 		}
 	}
 }
+#endif /* AKM_NVI_MPU_SUPPORT */
 
 static void akm_work(struct work_struct *ws)
 {
@@ -920,10 +955,12 @@ static int akm_delay(struct akm_state *st, unsigned int delay_us)
 	if (delay_us < st->hal->min_delay_us)
 		delay_us = st->hal->min_delay_us;
 	if (delay_us != st->poll_delay_us) {
+#if AKM_NVI_MPU_SUPPORT
 		if (st->port_id[RD] >= 0)
 			ret = nvi_mpu_delay_us(st->port_id[RD],
 					       (unsigned long)delay_us);
 		if (!ret)
+#endif /* AKM_NVI_MPU_SUPPORT */
 			st->poll_delay_us = delay_us;
 	}
 	return ret;
@@ -1047,7 +1084,6 @@ static ssize_t akm_attr_store(struct device *dev,
 	struct akm_state *st = iio_priv(indio_dev);
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
 	const char *msg;
-	unsigned i;
 	unsigned int new;
 	unsigned int old = 0;
 	int ret;
@@ -1069,6 +1105,7 @@ static ssize_t akm_attr_store(struct device *dev,
 		ret = akm_able(indio_dev, new);
 		break;
 
+#if AKM_NVI_MPU_SUPPORT
 	case AKM_ATTR_BATCH_FLAGS:
 		msg = "ATTR_BATCH_FLAGS";
 		old = st->batch_flags;
@@ -1086,8 +1123,9 @@ static ssize_t akm_attr_store(struct device *dev,
 	case AKM_ATTR_BATCH_TIMEOUT:
 		msg = "ATTR_BATCH_TIMEOUT";
 		old = st->batch_timeout_ms;
-		i = st->batch_flags & BATCH_WAKE_UPON_FIFO_FULL;
-		if ((i & st->mpu_batch_flags) == i) {
+		if (((st->batch_flags & BATCH_WAKE_UPON_FIFO_FULL) &
+		     st->mpu_batch_flags) == (st->batch_flags &
+					      BATCH_WAKE_UPON_FIFO_FULL)) {
 			/* if special flags supported */
 			if (new) {
 				/* if timeout */
@@ -1134,6 +1172,7 @@ static ssize_t akm_attr_store(struct device *dev,
 		else
 			ret = -EINVAL;
 		break;
+#endif /* AKM_NVI_MPU_SUPPORT */
 
 	default:
 		msg = "ATTR_UNKNOWN";
@@ -1181,6 +1220,7 @@ static ssize_t akm_attr_show(struct device *dev,
 	case AKM_ATTR_MILLIAMP:
 		return sprintf(buf, "%s\n", st->hal->power_ma);
 
+#if AKM_NVI_MPU_SUPPORT
 	case AKM_ATTR_BATCH_FLAGS:
 		return sprintf(buf, "%u\n", st->batch_flags);
 
@@ -1208,6 +1248,7 @@ static ssize_t akm_attr_show(struct device *dev,
 			return ret;
 
 		return sprintf(buf, "%u\n", st->fifo_max);
+#endif /* AKM_NVI_MPU_SUPPORT */
 
 	case AKM_ATTR_SELF_TEST:
 		mutex_lock(&indio_dev->mlock);
@@ -1385,13 +1426,13 @@ static ssize_t akm_data_show(struct device *dev,
 	return -EINVAL;
 }
 
-static ssize_t akm_orientation_show(struct device *dev,
-				    struct device_attribute *attr, char *buf)
+static ssize_t akm_matrix_show(struct device *dev,
+			       struct device_attribute *attr, char *buf)
 {
 	struct akm_state *st = iio_priv(dev_get_drvdata(dev));
 	signed char *m;
 
-	m = st->pdata.orientation;
+	m = st->matrix;
 	return sprintf(buf, "%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
 		       m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8]);
 }
@@ -1406,6 +1447,7 @@ static IIO_DEVICE_ATTR(magn_version, S_IRUGO,
 		       akm_attr_show, NULL, AKM_ATTR_VERSION);
 static IIO_DEVICE_ATTR(magn_milliamp, S_IRUGO,
 		       akm_attr_show, NULL, AKM_ATTR_MILLIAMP);
+#if AKM_NVI_MPU_SUPPORT
 static IIO_DEVICE_ATTR(magn_batch_flags, S_IRUGO | S_IWUSR | S_IWGRP,
 		       akm_attr_show, akm_attr_store, AKM_ATTR_BATCH_FLAGS);
 static IIO_DEVICE_ATTR(magn_batch_period, S_IRUGO | S_IWUSR | S_IWGRP,
@@ -1421,10 +1463,11 @@ static IIO_DEVICE_ATTR(magn_fifo_reserved_event_count,
 static IIO_DEVICE_ATTR(magn_fifo_max_event_count, S_IRUGO | S_IWUSR | S_IWGRP,
 		       akm_attr_show, akm_attr_store,
 		       AKM_ATTR_FIFO_MAX_EVNT_CNT);
+#endif /* AKM_NVI_MPU_SUPPORT */
 static IIO_DEVICE_ATTR(magn_self_test, S_IRUGO,
 		       akm_attr_show, NULL, AKM_ATTR_SELF_TEST);
-static DEVICE_ATTR(magn_orientation, S_IRUGO,
-		   akm_orientation_show, NULL);
+static DEVICE_ATTR(magn_matrix, S_IRUGO,
+		   akm_matrix_show, NULL);
 static DEVICE_ATTR(data, S_IRUGO | S_IWUSR | S_IWGRP,
 		   akm_data_show, akm_data_store);
 
@@ -1434,14 +1477,16 @@ static struct attribute *akm_attrs[] = {
 	&iio_dev_attr_magn_vendor.dev_attr.attr,
 	&iio_dev_attr_magn_version.dev_attr.attr,
 	&iio_dev_attr_magn_milliamp.dev_attr.attr,
+#if AKM_NVI_MPU_SUPPORT
 	&iio_dev_attr_magn_batch_flags.dev_attr.attr,
 	&iio_dev_attr_magn_batch_period.dev_attr.attr,
 	&iio_dev_attr_magn_batch_timeout.dev_attr.attr,
 	&iio_dev_attr_magn_flush.dev_attr.attr,
 	&iio_dev_attr_magn_fifo_reserved_event_count.dev_attr.attr,
 	&iio_dev_attr_magn_fifo_max_event_count.dev_attr.attr,
+#endif /* AKM_NVI_MPU_SUPPORT */
 	&iio_dev_attr_magn_self_test.dev_attr.attr,
-	&dev_attr_magn_orientation.attr,
+	&dev_attr_magn_matrix.attr,
 	&dev_attr_data.attr,
 	NULL
 };
@@ -1706,8 +1751,8 @@ static struct akm_scale akm_scale_09911[] = {
 			.micro		= 600000,
 		},
 		.scale			= {
-			.ival		= 19661,
-			.micro		= 0,
+			.ival		= 0,
+			.micro		= 600000,
 		},
 		.range_lo[AXIS_X]	= -30,
 		.range_hi[AXIS_X]	= 30,
@@ -1740,7 +1785,7 @@ static struct akm_cmode akm_cmode_09911[] = {
 
 static struct akm_hal akm_hal_09911 = {
 	.part				= AKM_NAME_AK09911,
-	.version			= 1,
+	.version			= 2,
 	.scale				= akm_scale_09911,
 	.scale_i_max			= ARRAY_SIZE(akm_scale_09911) - 1,
 	.power_ma			= "2.4",
@@ -1758,7 +1803,9 @@ static struct akm_hal akm_hal_09911 = {
 	.mode_rom_read			= 0x1F,
 	.cmode_tbl			= akm_cmode_09911,
 	.irq				= false,
+#if AKM_NVI_MPU_SUPPORT
 	.mpu_id				= COMPASS_ID_AK09911,
+#endif /* AKM_NVI_MPU_SUPPORT */
 };
 
 static struct akm_scale akm_scale_8975[] = {
@@ -1772,8 +1819,8 @@ static struct akm_scale akm_scale_8975[] = {
 			.micro		= 300000,
 		},
 		.scale			= {
-			.ival		= 9830,
-			.micro		= 0,
+			.ival		= 0,
+			.micro		= 300000,
 		},
 		.range_lo[AXIS_X]	= -100,
 		.range_hi[AXIS_X]	= 100,
@@ -1786,7 +1833,7 @@ static struct akm_scale akm_scale_8975[] = {
 
 static struct akm_hal akm_hal_8975 = {
 	.part				= AKM_NAME_AK8975,
-	.version			= 1,
+	.version			= 2,
 	.scale				= akm_scale_8975,
 	.scale_i_max			= ARRAY_SIZE(akm_scale_8975) - 1,
 	.power_ma			= "3.0",
@@ -1804,7 +1851,9 @@ static struct akm_hal akm_hal_8975 = {
 	.mode_rom_read			= 0x0F,
 	.cmode_tbl			= NULL,
 	.irq				= true,
+#if AKM_NVI_MPU_SUPPORT
 	.mpu_id				= COMPASS_ID_AK8975,
+#endif /* AKM_NVI_MPU_SUPPORT */
 };
 
 static struct akm_scale akm_scale_8963[] = {
@@ -1818,8 +1867,8 @@ static struct akm_scale akm_scale_8963[] = {
 			.micro		= 600000,
 		},
 		.scale			= {
-			.ival		= 19661,
-			.micro		= 0,
+			.ival		= 0,
+			.micro		= 600000,
 		},
 		.range_lo[AXIS_X]	= -50,
 		.range_hi[AXIS_X]	= 50,
@@ -1838,8 +1887,8 @@ static struct akm_scale akm_scale_8963[] = {
 			.micro		= 150000,
 		},
 		.scale			= {
-			.ival		= 4915,
-			.micro		= 0,
+			.ival		= 0,
+			.micro		= 150000,
 		},
 		.range_lo[AXIS_X]	= -200,
 		.range_hi[AXIS_X]	= 200,
@@ -1864,7 +1913,7 @@ static struct akm_cmode akm_cmode_8963[] = {
 
 static struct akm_hal akm_hal_8963 = {
 	.part				= AKM_NAME_AK8963,
-	.version			= 1,
+	.version			= 2,
 	.scale				= akm_scale_8963,
 	.scale_i_max			= ARRAY_SIZE(akm_scale_8963) - 1,
 	.power_ma			= "2.8",
@@ -1882,10 +1931,12 @@ static struct akm_hal akm_hal_8963 = {
 	.mode_rom_read			= 0x0F,
 	.cmode_tbl			= akm_cmode_8963,
 	.irq				= true,
+#if AKM_NVI_MPU_SUPPORT
 	.mpu_id				= COMPASS_ID_AK8963,
+#endif /* AKM_NVI_MPU_SUPPORT */
 };
 
-static int akm_hal(struct akm_state *st, u8 dev_id)
+static int akm_id_hal(struct akm_state *st, u8 dev_id)
 {
 	int ret = 0;
 
@@ -1910,7 +1961,7 @@ static int akm_hal(struct akm_state *st, u8 dev_id)
 	return ret;
 }
 
-static int akm_id_compare(struct akm_state *st, const struct i2c_device_id *id)
+static int akm_id_compare(struct akm_state *st, const char *name)
 {
 	u8 wia;
 	u8 val;
@@ -1922,7 +1973,7 @@ static int akm_id_compare(struct akm_state *st, const struct i2c_device_id *id)
 		ret_t = akm_i2c_rd(st, AKM_REG_WIA2, 1, &wia);
 		if (ret_t)
 			wia = 0;
-		akm_hal(st, wia);
+		akm_id_hal(st, wia);
 		if (wia != AKM_DEVID_AK09911) {
 			/* we can autodetect AK8963 with BITM */
 			ret = akm_i2c_wr(st, st->hal->reg_mode,
@@ -1935,7 +1986,7 @@ static int akm_id_compare(struct akm_state *st, const struct i2c_device_id *id)
 						wia = AKM_DEVID_AK8963;
 					else
 						wia = AKM_DEVID_AK8975;
-					akm_hal(st, wia);
+					akm_id_hal(st, wia);
 				} else {
 					ret_t |= ret;
 					wia = 0;
@@ -1947,45 +1998,47 @@ static int akm_id_compare(struct akm_state *st, const struct i2c_device_id *id)
 		akm_nvi_mpu_bypass_release(st);
 		if ((!st->dev_id) && (!wia)) {
 			dev_err(&st->i2c->dev, "%s ERR: %s HW ID FAIL\n",
-				__func__, id->name);
+				__func__, name);
 			ret = -ENODEV;
 		} else if ((!st->dev_id) && wia) {
 			st->dev_id = wia;
 			dev_dbg(&st->i2c->dev, "%s %s using ID %x\n",
-				__func__, id->name, st->dev_id);
+				__func__, name, st->dev_id);
 		} else if (st->dev_id && (!wia)) {
 			dev_err(&st->i2c->dev, "%s WARN: %s HW ID FAIL\n",
-				__func__, id->name);
+				__func__, name);
 		} else if (st->dev_id != wia) {
 			dev_err(&st->i2c->dev, "%s WARN: %s != HW ID %x\n",
-				__func__, id->name, wia);
+				__func__, name, wia);
 			st->dev_id = wia;
 		} else {
 			dev_dbg(&st->i2c->dev, "%s %s == HW ID %x\n",
-				__func__, id->name, wia);
+				__func__, name, wia);
 		}
 	}
 	return ret_t;
 }
 
-static int akm_id_dev(struct iio_dev *indio_dev,
-		      const struct i2c_device_id *id)
+static int akm_id_dev(struct iio_dev *indio_dev, const char *name)
 {
 	struct akm_state *st = iio_priv(indio_dev);
+#if AKM_NVI_MPU_SUPPORT
 	struct nvi_mpu_port nmp;
 	u8 config_boot;
+#endif /* AKM_NVI_MPU_SUPPORT */
 	u8 val = 0;
 	int ret;
 
 	if (st->i2c->irq < 0)
 		st->i2c->irq = 0;
-	config_boot = st->pdata.nvi_config & NVI_CONFIG_BOOT_MASK;
-	if (!strcmp(id->name, AKM_NAME_AK8963))
+	if (!strcmp(name, AKM_NAME_AK8963))
 		st->dev_id = AKM_DEVID_AK8963;
-	else if (!strcmp(id->name, AKM_NAME_AK8975))
+	else if (!strcmp(name, AKM_NAME_AK8975))
 		st->dev_id = AKM_DEVID_AK8975;
-	else if (!strcmp(id->name, AKM_NAME_AK09911))
+	else if (!strcmp(name, AKM_NAME_AK09911))
 		st->dev_id = AKM_DEVID_AK09911;
+#if AKM_NVI_MPU_SUPPORT
+	config_boot = st->nvi_config & NVI_CONFIG_BOOT_MASK;
 	if (config_boot == NVI_CONFIG_BOOT_AUTO) {
 		nmp.addr = st->i2c_addr | 0x80;
 		nmp.reg = AKM_REG_WIA;
@@ -1993,7 +2046,7 @@ static int akm_id_dev(struct iio_dev *indio_dev,
 		ret = nvi_mpu_dev_valid(&nmp, &val);
 		dev_info(&st->i2c->dev, "%s AUTO ID=%x ret=%d\n",
 			 __func__, val, ret);
-		/* see mpu.h for possible return values */
+		/* see mpu_iio.h for possible return values */
 		if ((ret == -EAGAIN) || (ret == -EBUSY))
 			return -EAGAIN;
 
@@ -2003,9 +2056,9 @@ static int akm_id_dev(struct iio_dev *indio_dev,
 	if (config_boot == NVI_CONFIG_BOOT_MPU) {
 		st->mpu_en = true;
 		if (st->dev_id)
-			ret = akm_hal(st, st->dev_id);
+			ret = akm_id_hal(st, st->dev_id);
 		else
-			ret = akm_id_compare(st, id);
+			ret = akm_id_compare(st, name);
 		if (!ret) {
 			nmp.addr = st->i2c_addr | 0x80;
 			nmp.reg = st->hal->reg_start_rd;
@@ -2059,17 +2112,17 @@ static int akm_id_dev(struct iio_dev *indio_dev,
 		}
 		return ret;
 	}
-
+#endif /* AKM_NVI_MPU_SUPPORT */
 	/* NVI_CONFIG_BOOT_HOST */
 	st->mpu_en = false;
 	if (st->dev_id) {
-		ret = akm_hal(st, st->dev_id);
+		ret = akm_id_hal(st, st->dev_id);
 	} else {
 		ret = akm_i2c_rd(st, AKM_REG_WIA, 1, &val);
 		dev_info(&st->i2c->dev, "%s Host read ID=%x ret=%d\n",
 			__func__, val, ret);
 		if ((!ret) && (val == AKM_WIA_ID))
-			ret = akm_id_compare(st, id);
+			ret = akm_id_compare(st, name);
 	}
 	if (st->i2c->irq && !ret) {
 		if ((st->hal->cmode_tbl == NULL) || !st->hal->irq) {
@@ -2094,11 +2147,11 @@ static int akm_id_i2c(struct iio_dev *indio_dev,
 
 	if (i < ARRAY_SIZE(akm_i2c_addrs)) {
 		st->i2c_addr = st->i2c->addr;
-		ret = akm_id_dev(indio_dev, id);
+		ret = akm_id_dev(indio_dev, id->name);
 	} else {
 		for (i = 0; i < ARRAY_SIZE(akm_i2c_addrs); i++) {
 			st->i2c_addr = akm_i2c_addrs[i];
-			ret = akm_id_dev(indio_dev, id);
+			ret = akm_id_dev(indio_dev, AKM_NAME);
 			if ((ret == -EAGAIN) || (!ret))
 				break;
 		}
@@ -2130,11 +2183,11 @@ static int akm_remove(struct i2c_client *client)
 		if (indio_dev->dev.devt)
 			iio_device_unregister(indio_dev);
 		if (st->trig != NULL) {
+			if (client->irq && !st->mpu_en)
+				free_irq(client->irq, st);
 			iio_trigger_unregister(st->trig);
 			iio_trigger_free(st->trig);
 		}
-		if (st->i2c->irq && !st->mpu_en)
-			free_irq(st->i2c->irq, st);
 		if (indio_dev->buffer != NULL) {
 			iio_buffer_unregister(indio_dev);
 			iio_kfifo_free(indio_dev->buffer);
@@ -2150,23 +2203,23 @@ static int akm_remove(struct i2c_client *client)
 
 static int akm_of_dt(struct i2c_client *client, struct akm_state *st)
 {
-	struct device_node *np = client->dev.of_node;
+	struct device_node *dn = client->dev.of_node;
 	char const *pchar;
 	int len;
 	u8 cfg;
 
-	pchar = of_get_property(np, "orientation", &len);
-	if (pchar && len == sizeof(st->pdata.orientation)) {
-		memcpy(&st->pdata.orientation, pchar, len);
-	} else {
-		dev_err(&client->dev, "%s ERR: orientation\n", __func__);
-		return -EINVAL;
+	pchar = of_get_property(dn, "matrix", &len);
+	if (pchar && len == sizeof(st->matrix)) {
+		memcpy(&st->matrix, pchar, len);
+	} else { /* obsolete */
+		pchar = of_get_property(dn, "orientation", &len);
+		if (pchar && len == sizeof(st->matrix))
+			memcpy(&st->matrix, pchar, len);
 	}
-
-	if (!(of_property_read_string(np, "config", &pchar))) {
+	if (!(of_property_read_string(dn, "nvi_config", &pchar))) {
 		for (cfg = 0; cfg < ARRAY_SIZE(akm_configs); cfg++) {
 			if (!strcasecmp(pchar, akm_configs[cfg])) {
-				st->pdata.nvi_config = cfg;
+				st->nvi_config = cfg;
 				break;
 			}
 		}
@@ -2180,7 +2233,6 @@ static int akm_probe(struct i2c_client *client,
 {
 	struct iio_dev *indio_dev;
 	struct akm_state *st;
-	struct mpu_platform_data *pdata;
 	int ret;
 
 	dev_info(&client->dev, "%s %s\n", id->name, __func__);
@@ -2197,17 +2249,6 @@ static int akm_probe(struct i2c_client *client,
 		ret = akm_of_dt(client, st);
 		if (ret)
 			goto akm_probe_err;
-	} else {
-		pdata = (struct mpu_platform_data *)
-						dev_get_platdata(&client->dev);
-		if (pdata) {
-			st->pdata = *pdata;
-		} else {
-			dev_err(&client->dev, "%s dev_get_platdata ERR\n",
-				__func__);
-			ret = -EINVAL;
-			goto akm_probe_err;
-		}
 	}
 
 	akm_pm_init(st);

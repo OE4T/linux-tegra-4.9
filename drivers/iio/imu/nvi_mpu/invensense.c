@@ -1035,17 +1035,12 @@ static int inv_do_test(struct nvi_state *st, int self_test_flag,
 		int *gyro_result, int *accel_result)
 {
 	int result, i, j, packet_size;
-	u8 data[BYTES_PER_SENSOR * 2], d;
-	bool has_accel;
+	u8 data[BYTES_PER_SENSOR * 2], d, lpf;
+	u16 fifo_en;
 	int fifo_count, packet_count, ind, s;
 
-	has_accel = true;
-	if (has_accel)
-		packet_size = BYTES_PER_SENSOR * 2;
-	else
-		packet_size = BYTES_PER_SENSOR;
-
-	result = nvi_wr_int_enable(st, 0);
+	packet_size = BYTES_PER_SENSOR * 2;
+	result = nvi_int_able(st, false);
 	if (result)
 		return result;
 	/* disable the sensor output to FIFO */
@@ -1058,37 +1053,28 @@ static int inv_do_test(struct nvi_state *st, int self_test_flag,
 	if (result)
 		return result;
 	/* setup parameters */
-	result = nvi_wr_config(st, INV_FILTER_98HZ);
+	result = nvi_wr_gyro_config(st, (self_test_flag >> 5),
+				    DEF_SELFTEST_GYRO_FS, INV_FILTER_98HZ);
 	if (result < 0)
 		return result;
 
-	if (st->hal->part >= MPU6500) {
-		/* config accel LPF register for MPU6500 */
-		result = nvi_wr_accel_config2(st, DEF_ST_MPU6500_ACCEL_LPF |
-						BIT_FIFO_SIZE_1K);
-		if (result < 0)
-			return result;
-	}
-
-	result = nvi_wr_smplrt_div(st, DEF_SELFTEST_SAMPLE_RATE);
+	result = nvi_wr_smplrt_div(st, DEV_ANGLVEL, DEF_SELFTEST_SAMPLE_RATE);
 	if (result)
 		return result;
 	/* wait for the sampling rate change to stabilize */
 	mdelay(INV_MPU_SAMPLE_RATE_CHANGE_STABLE);
-	result = nvi_wr_gyro_config(st, (self_test_flag >> 5),
-				    DEF_SELFTEST_GYRO_FS);
+	if (st->hal->part >= MPU6500) {
+		d = DEF_SELFTEST_6500_ACCEL_FS;
+		lpf = DEF_ST_MPU6500_ACCEL_LPF;
+	} else {
+		d = DEF_SELFTEST_ACCEL_FS;
+		lpf = 0;
+	}
+	result = nvi_wr_accel_config(st, (self_test_flag >> 5),
+				     (d >> 3), lpf);
 	if (result < 0)
 		return result;
-	if (has_accel) {
-		if (st->hal->part >= MPU6500)
-			d = DEF_SELFTEST_6500_ACCEL_FS;
-		else
-			d = DEF_SELFTEST_ACCEL_FS;
-		result = nvi_wr_accel_config(st, (self_test_flag >> 5),
-					     (d >> 3), 0);
-		if (result < 0)
-			return result;
-	}
+
 	/* wait for the output to get stable */
 	if (self_test_flag) {
 		if (st->hal->part >= MPU6500)
@@ -1102,10 +1088,10 @@ static int inv_do_test(struct nvi_state *st, int self_test_flag,
 	if (result)
 		return result;
 	/* enable sensor output to FIFO */
-	if (has_accel)
-		d = BITS_GYRO_OUT | BIT_ACCEL_OUT;
-	else
-		d = BITS_GYRO_OUT;
+	fifo_en = ((1 << st->hal->bit->accel_fifo_en) |
+		   (1 << st->hal->bit->gyro_z_fifo_en) |
+		   (1 << st->hal->bit->gyro_y_fifo_en) |
+		   (1 << st->hal->bit->gyro_x_fifo_en));
 	for (i = 0; i < THREE_AXIS; i++) {
 		gyro_result[i] = 0;
 		accel_result[i] = 0;
@@ -1113,7 +1099,7 @@ static int inv_do_test(struct nvi_state *st, int self_test_flag,
 	s = 0;
 	while (s < st->self_test.samples) {
 		/* enable sensor output to FIFO */
-		result = nvi_wr_fifo_en(st, d);
+		result = nvi_wr_fifo_en(st, fifo_en);
 		if (result)
 			return result;
 		mdelay(DEF_GYRO_WAIT_TIME);
@@ -1139,18 +1125,16 @@ static int inv_do_test(struct nvi_state *st, int self_test_flag,
 			if (result)
 				return result;
 			ind = 0;
-			if (has_accel) {
-				for (j = 0; j < THREE_AXIS; j++) {
-					vals[j] = (short)be16_to_cpup(
-					    (__be16 *)(&data[ind + 2 * j]));
-					accel_result[j] += vals[j];
-				}
-				ind += BYTES_PER_SENSOR;
-				pr_debug(
-				    "%s self_test accel data - %d %+d %+d %+d",
-					 st->hal->part_name,
-					 s, vals[0], vals[1], vals[2]);
+			for (j = 0; j < THREE_AXIS; j++) {
+				vals[j] = (short)be16_to_cpup(
+				    (__be16 *)(&data[ind + 2 * j]));
+				accel_result[j] += vals[j];
 			}
+			ind += BYTES_PER_SENSOR;
+			pr_debug(
+			    "%s self_test accel data - %d %+d %+d %+d",
+				 st->hal->part_name,
+				 s, vals[0], vals[1], vals[2]);
 
 			for (j = 0; j < THREE_AXIS; j++) {
 				vals[j] = (short)be16_to_cpup(
@@ -1166,11 +1150,9 @@ static int inv_do_test(struct nvi_state *st, int self_test_flag,
 		}
 	}
 
-	if (has_accel) {
-		for (j = 0; j < THREE_AXIS; j++) {
-			accel_result[j] = accel_result[j] / s;
-			accel_result[j] *= DEF_ST_PRECISION;
-		}
+	for (j = 0; j < THREE_AXIS; j++) {
+		accel_result[j] = accel_result[j] / s;
+		accel_result[j] *= DEF_ST_PRECISION;
 	}
 	for (j = 0; j < THREE_AXIS; j++) {
 		gyro_result[j] = gyro_result[j] / s;
@@ -2147,6 +2129,12 @@ firmware_write_fail:
 		return result;
 
 	return size;
+}
+
+int inv_icm_init(struct nvi_state *st)
+{
+	st->chip_info.multi = 1;
+	return 0;
 }
 
 /*

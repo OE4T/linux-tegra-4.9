@@ -343,11 +343,9 @@ int nvi_mpu_delay_us(int port, unsigned long delay_us);
  * typically used to guarantee a delay after an I2C write to a
  * device to allow the device to process the request and be read
  * by another port before another write at the sampling delay.
- *
  * @param port
  * @param delay_ms
- * @return int error/delay used or 0 if request is to disable
- *            and is successful.
+ * @return int error
  *            Possible errors are:
  *            - -EAGAIN: MPU is not initialized yet.
  *            - -EPERM: MPU is shutdown.  MPU API won't be

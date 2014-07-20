@@ -31,8 +31,6 @@
 #define ICM20628_ID			(0xA2)
 
 #define NVI_BYPASS_TIMEOUT_MS		(1000)
-#define NVI_DELAY_US_MAX		(256000)
-#define NVI_DELAY_DEFAULT		(100000)
 #define POWER_UP_TIME			(100)
 #define REG_UP_TIME			(5)
 #define POR_MS				(100)
@@ -44,29 +42,24 @@
 #define FIFO_RESERVED_EVENT_COUNT	(64)
 #define FIFO_MAX_EVENT_COUNT		(1024)
 
-#define MOTION_DURATION			(128)
-#define MOTION_THRESHOLD		(128)
-#define SELF_TEST_GYRO_FULL_SCALE	(250)
-#define SELF_TEST_ACCEL_FULL_SCALE	(8)
-#define SELF_TEST_ACCEL_6500_SCALE	(2)
-
 #define AXIS_X				(0)
 #define AXIS_Y				(1)
 #define AXIS_Z				(2)
 #define AXIS_N				(3)
-#define DEV_MASTER			(0)
-#define DEV_ACCEL			(1)
-#define DEV_ANGLVEL			(2)
-#define DEV_TEMP			(3)
+#define DEV_ACCEL			(0)
+#define DEV_ANGLVEL			(1)
+#define DEV_TEMP			(2)
 #define DEV_TEMP_EN			(1 << 0)
 #define DEV_TEMP_GYRO			(1 << 1)
-#define DEV_N				(4)
-#define DEV_AUX				(5)
-#define DEV_DMP				(6)
+#define DEV_N				(3)
+#define DEV_AUX				(3)
+#define DEV_N_AUX			(4)
+#define DEV_DMP				(5)
 #define EN_STDBY			(16)
 #define EN_LPA				(17)
 #define EN_FW				(18)
 #define EN_SELF_TEST			(19)
+#define DEV_MASTER			(31)
 #define DEV_MPU_MASK			((1 << DEV_ACCEL) | \
 					(1 << DEV_ANGLVEL) | \
 					(1 << DEV_TEMP))
@@ -107,15 +100,8 @@
 #define BITS_SELF_TEST_EN		(0xE0)
 #define BIT_ACCEL_FCHOCIE_B		(0x08)
 #define BIT_FIFO_SIZE_1K		(0x40)
-#define BIT_ACCEL_OUT			(0x08)
-#define BIT_GYRO_ZOUT			(0x10)
-#define BIT_GYRO_YOUT			(0x20)
-#define BIT_GYRO_XOUT			(0x40)
 #define BITS_GYRO_OUT			(0x70)
-#define BIT_TEMP_OUT			(0x80)
 #define BIT_I2C_MST_P_NSR		(0x10)
-#define BIT_SLV3_FIFO_EN		(0x20)
-#define BIT_WAIT_FOR_ES			(0x40)
 #define BIT_I2C_READ			(0x80)
 #define BITS_I2C_SLV_CTRL_LEN		(0x0F)
 #define BIT_I2C_SLV_REG_DIS		(0x10)
@@ -158,12 +144,13 @@
 #define BIT_LPA_FREQ			(0xC0)
 
 #define AUX_PORT_MAX			(5)
-#define AUX_PORT_SPECIAL		(4)
-#define AUX_PORT_BYPASS			(-1)
+#define AUX_PORT_IO			(4)
 #define AUX_EXT_DATA_REG_MAX		(24)
 #define AUX_DEV_VALID_READ_LOOP_MAX	(20)
 #define AUX_DEV_VALID_READ_DELAY_MS	(5)
 
+
+struct nvi_state;
 
 enum nvi_part {
 	MPU6050 = 1,
@@ -200,15 +187,30 @@ struct nvi_rr {
 
 struct nvi_hal_dev {
 	int version;
+	int selftest_scale;
 	struct nvi_rr *rr;
 	struct nvi_iio_float scale;
 	struct nvi_iio_float offset;
 	const char *power_ma;
 };
 
+struct nvi_smplrt {
+	unsigned int dev;
+	unsigned int delay_us_min;
+	unsigned int delay_us_max;
+	unsigned int delay_us_dflt;
+	unsigned int dev_delays_n;
+	const unsigned int *dev_delays;
+	unsigned int lpf_us_tbl_n;
+	const unsigned int *lpf_us_tbl;
+	unsigned int base_hz;
+	int (*lpf_wr)(struct nvi_state *st, u8 test, u8 fsr, u8 lpf);
+};
+
 struct nvi_br {
 	u8 bank;
 	u8 reg;
+	u32 dflt;
 };
 
 struct nvi_hal_reg {
@@ -222,21 +224,15 @@ struct nvi_hal_reg {
 	struct nvi_br yg_offset_h;
 	struct nvi_br zg_offset_h;
 	struct nvi_br a_offset_h[AXIS_N];
-	struct nvi_br smplrt_div;
-	struct nvi_br config;
-	struct nvi_br gyro_config;
+	struct nvi_br smplrt_div[DEV_N_AUX];
+	struct nvi_br gyro_config1;
+	struct nvi_br gyro_config2;
 	struct nvi_br accel_config;
 	struct nvi_br accel_config2;
-	struct nvi_br lp_accel_odr;
+	struct nvi_br lp_config;
 	struct nvi_br mot_thr;
 	struct nvi_br mot_dur;
 	struct nvi_br fifo_en;
-	struct nvi_br i2c_mst_ctrl;
-	struct nvi_br i2c_slv0_addr;
-	struct nvi_br i2c_slv0_reg;
-	struct nvi_br i2c_slv0_ctrl;
-	struct nvi_br i2c_slv4_ctrl;
-	struct nvi_br i2c_mst_status;
 	struct nvi_br int_pin_cfg;
 	struct nvi_br int_enable;
 	struct nvi_br int_status;
@@ -244,10 +240,6 @@ struct nvi_hal_reg {
 	struct nvi_br temp_out_h;
 	struct nvi_br gyro_xout_h;
 	struct nvi_br ext_sens_data_00;
-	struct nvi_br i2c_slv0_do;
-	struct nvi_br i2c_slv4_do;
-	struct nvi_br i2c_slv4_di;
-	struct nvi_br i2c_mst_delay_ctrl;
 	struct nvi_br signal_path_reset;
 	struct nvi_br accel_intel_ctrl;
 	struct nvi_br user_ctrl;
@@ -256,36 +248,69 @@ struct nvi_hal_reg {
 	struct nvi_br fifo_count_h;
 	struct nvi_br fifo_r_w;
 	struct nvi_br who_am_i;
+	struct nvi_br i2c_mst_status;
+	struct nvi_br i2c_mst_odr_config;
+	struct nvi_br i2c_mst_ctrl;
+	struct nvi_br i2c_mst_delay_ctrl;
+	struct nvi_br i2c_slv0_addr;
+	struct nvi_br i2c_slv0_reg;
+	struct nvi_br i2c_slv0_ctrl;
+	struct nvi_br i2c_slv4_ctrl;
+	struct nvi_br i2c_slv0_do;
+	struct nvi_br i2c_slv4_do;
+	struct nvi_br i2c_slv4_di;
 	struct nvi_br reg_bank_sel;
 };
 
+struct nvi_hal_bit {
+	u8 smplrt_div_n[DEV_N_AUX];
+	u8 i2c_mst_int_en;
+	u8 dmp_int_en;
+	u8 pll_rdy_en;
+	u8 wom_int_en;
+	u8 reg_wof_en;
+	u8 raw_data_0_rdy_en;
+	u8 raw_data_1_rdy_en;
+	u8 raw_data_2_rdy_en;
+	u8 raw_data_3_rdy_en;
+	u8 fifo_overflow_en;
+	u8 fifo_wm_en;
+	u8 bit_int_enable_max;
+	u8 slv_fifo_en[AUX_PORT_IO];
+	u8 temp_fifo_en;
+	u8 gyro_x_fifo_en;
+	u8 gyro_y_fifo_en;
+	u8 gyro_z_fifo_en;
+	u8 accel_fifo_en;
+	u8 bit_fifo_en_max;
+};
+
 struct nvi_rc {
-	u8 reg_bank_sel;
 	u16 accel_offset[AXIS_N];
 	u16 gyro_offset[AXIS_N];
-	u8 smplrt_div;
-	u8 config;
-	u8 gyro_config;
+	u16 smplrt_div[DEV_N_AUX];
+	u8 gyro_config1;
+	u8 gyro_config2;
 	u8 accel_config;
 	u8 accel_config2;
-	u8 lp_accel_odr;
+	u8 lp_config;
 	u8 mot_thr;
 	u8 mot_dur;
-	u8 fifo_en;
+	u16 fifo_en;
+	u8 int_pin_cfg;
+	u32 int_enable;
+	u8 i2c_mst_odr_config;
 	u8 i2c_mst_ctrl;
+	u8 i2c_mst_delay_ctrl;
 	u8 i2c_slv_addr[AUX_PORT_MAX];
 	u8 i2c_slv_reg[AUX_PORT_MAX];
-	u8 i2c_slv_ctrl[AUX_PORT_SPECIAL];
-	u8 i2c_slv4_ctrl;
-	u8 int_pin_cfg;
-	u8 int_enable;
-	u8 i2c_slv_do[AUX_PORT_SPECIAL];
-	u8 i2c_slv4_do;
-	u8 i2c_mst_delay_ctrl;
+	u8 i2c_slv_ctrl[AUX_PORT_MAX];
+	u8 i2c_slv_do[AUX_PORT_MAX];
 	u8 mot_detect_ctrl;
 	u8 user_ctrl;
 	u8 pwr_mgmt_1;
 	u8 pwr_mgmt_2;
+	u8 reg_bank_sel;
 };
 
 struct nvi_hal {
@@ -295,15 +320,17 @@ struct nvi_hal {
 	unsigned int reg_bank_n;
 	bool dmp;
 	unsigned int fifo_size;
-	unsigned int min_delay_us;
 	const unsigned long *lpa_tbl;
 	unsigned int lpa_tbl_n;
+	const struct nvi_smplrt *smplrt[DEV_N_AUX];
+	const struct nvi_hal_dev *dev[DEV_N];
 	const struct nvi_hal_reg *reg;
-	const struct nvi_hal_dev *accel;
-	const struct nvi_hal_dev *anglvel;
-	const struct nvi_hal_dev *temp;
-	int accel_self_test_scale;
-	int anglvel_self_test_scale;
+	const struct nvi_hal_bit *bit;
+	unsigned int fifo_read_n;
+	unsigned int (**fifo_read)(struct nvi_state *st,
+				   unsigned int buf_i, s64 ts);
+	void (*por2rc)(struct nvi_state *st);
+	int (*init)(struct nvi_state *st);
 };
 
 struct aux_port {
@@ -312,7 +339,6 @@ struct aux_port {
 	bool hw_valid;
 	bool hw_en;
 	bool hw_do;
-	bool enable;
 	bool fifo_en;
 	unsigned int batch_flags;
 	unsigned int batch_period_us;
@@ -505,9 +531,9 @@ struct nvi_state {
 	unsigned int dbg;		/* debug flags */
 	unsigned int errs;		/* error count */
 	unsigned int master_enable;	/* global enable */
-	unsigned int enable[DEV_N];	/* enable status */
-	unsigned int poll_delay_us;	/* global sampling delay */
-	unsigned int delay_us[DEV_N];	/* device sampling delay */
+	unsigned int enable[DEV_N_AUX];	/* enable status */
+	unsigned int delay_us[DEV_N_AUX]; /* device sampling delay */
+	unsigned int smplrt_delay_us[DEV_N_AUX]; /* source sampling delay */
 	unsigned int batch_flags[DEV_N]; /* batch flags */
 	unsigned int batch_period_us[DEV_N]; /* batch period us */
 	unsigned int batch_timeout_ms[DEV_N]; /* batch timeout ms */
@@ -547,6 +573,7 @@ struct nvi_state {
 	u8 buf[NVI_FIFO_SAMPLE_SIZE_MAX * 2]; /* (* 2)=FIFO OVERFLOW OFFSET */
 #ifdef NVI_I2C_DEBUG_INTERFACE
 	u16 dbg_i2c_addr;
+	u8 dbg_bank;
 	u8 dbg_reg;
 #endif /* NVI_I2C_DEBUG_INTERFACE */
 };
@@ -557,13 +584,11 @@ int nvi_i2c_write(struct nvi_state *st, u16 addr, u16 len, u8 *buf);
 int nvi_i2c_wr(struct nvi_state *st, u8 reg, u8 val);
 int nvi_wr_accel_offset(struct nvi_state *st, unsigned int axis, u16 offset);
 int nvi_wr_gyro_offset(struct nvi_state *st, unsigned int axis, u16 offset);
-int nvi_wr_smplrt_div(struct nvi_state *st, u8 smplrt_div);
-int nvi_wr_config(struct nvi_state *st, u8 val);
-int nvi_wr_gyro_config(struct nvi_state *st, u8 test, u8 fsr);
-int nvi_wr_accel_config2(struct nvi_state *st, u8 val);
-int nvi_wr_accel_config(struct nvi_state *st, u8 test, u8 fsr, u8 hpf);
-int nvi_wr_fifo_en(struct nvi_state *st, u8 fifo_en);
-int nvi_wr_int_enable(struct nvi_state *st, u8 int_enable);
+int nvi_wr_gyro_config(struct nvi_state *st, u8 test, u8 fsr, u8 lpf);
+int nvi_wr_accel_config(struct nvi_state *st, u8 test, u8 fsr, u8 lpf);
+int nvi_wr_smplrt_div(struct nvi_state *st, unsigned int dev, u16 val);
+int nvi_wr_fifo_en(struct nvi_state *st, u16 fifo_en);
+int nvi_int_able(struct nvi_state *st, bool enable);
 int nvi_wr_user_ctrl(struct nvi_state *st, u8 user_ctrl);
 int nvi_user_ctrl_en(struct nvi_state *st, bool fifo_enable, bool i2c_enable);
 int nvi_wr_pwr_mgmt_1(struct nvi_state *st, u8 pwr_mgmt_1);
@@ -571,6 +596,7 @@ int nvi_pm_wr(struct nvi_state *st, u8 pwr_mgmt_1, u8 pwr_mgmt_2, u8 lpa);
 int nvi_pm(struct nvi_state *st, int pm_req);
 int nvi_enable(struct iio_dev *indio_dev);
 
+int inv_icm_init(struct nvi_state *st);
 int inv_get_silicon_rev_mpu6050(struct nvi_state *st);
 int inv_get_silicon_rev_mpu6500(struct nvi_state *st);
 int inv_hw_self_test(struct iio_dev *indio_dev);

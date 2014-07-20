@@ -42,7 +42,42 @@
  * Keep in mind the data is buffered but the NVS HAL will display the data and
  * scale/offset parameters in the log.  See calibration steps below.
  */
-/* NVS light/proximity drivers have a calibration mechanism:
+/* NVS light/proximity drivers have two calibration mechanisms:
+ * Method 1 (preferred):
+ * This method uses interpolation and requires a low and high uncalibrated
+ * value along with the corresponding low and high calibrated values.  The
+ * uncalibrated values are what is read from the sensor in the steps below.
+ * The corresponding calibrated values are what the correct value should be.
+ * All values are programmed into the device tree settings.
+ * 1. Read scale sysfs attribute.  This value will need to be written back.
+ * 2. Disable device.
+ * 3. Write 1 to the scale sysfs attribute.
+ * 4. Enable device.
+ * 5. The NVS HAL will announce in the log that calibration mode is enabled and
+ *    display the data along with the scale and offset parameters applied.
+ * 6. Write the scale value read in step 1 back to the scale sysfs attribute.
+ * 7. Put the device into a state where the data read is a low value.
+ * 8. Note the values displayed in the log.  Separately measure the actual
+ *    value.  The value from the sensor will be the uncalibrated value and the
+ *    separately measured value will be the calibrated value for the current
+ *    state (low or high values).
+ * 9. Put the device into a state where the data read is a high value.
+ * 10. Repeat step 8.
+ * 11. Enter the values in the device tree settings for the device.  Both
+ *     calibrated and uncalibrated values will be the values before scale and
+ *     offset are applied.
+ *     For example, a light sensor has the following device tree parameters:
+ *     light_uncalibrated_lo
+ *     light_calibrated_lo
+ *     light_uncalibrated_hi
+ *     light_calibrated_hi
+ *     The proximity sensor parameters are:
+ *     proximity_uncalibrated_lo
+ *     proximity_calibrated_lo
+ *     proximity_uncalibrated_hi
+ *     proximity_calibrated_hi
+ *
+ * Method 2:
  * 1. Disable device.
  * 2. Write 1 to the scale sysfs attribute.
  * 3. Enable device.
@@ -75,7 +110,7 @@
 #include <linux/iio/kfifo_buf.h>
 #include <linux/iio/trigger.h>
 
-#define CM_VERSION_DRIVER		(100)
+#define CM_VERSION_DRIVER		(101)
 #define CM_VENDOR			"Capella Microsystems, Inc."
 #define CM_NAME				"cm3218x"
 #define CM_NAME_CM3218			"cm3218"
@@ -94,7 +129,7 @@
 #define CM_DEVID_CM32181		(0x02)
 #define CM_HW_DELAY_MS			(10)
 #define CM_POLL_DELAY_MS_DFLT		(2000)
-#define CM_THRESHOLD_LUX_DFLT		(100)
+#define CM_THRESHOLD_LUX_DFLT		(10)
 #define CM_ALS_SM_DFLT			(0x01)
 #define CM_ALS_PERS_DFLT		(0x00)
 #define CM_ALS_PSM_DFLT			(0x07)
@@ -123,7 +158,8 @@
 #define CM_DBG_SPEW_MSG			(1 << 0)
 #define CM_DBG_SPEW_LIGHT		(1 << 1)
 #define CM_DBG_SPEW_LIGHT_POLL		(1 << 2)
-#define CM_DBG_VAL_LIGHT		(1 << 3)
+#define CM_DBG_IRQ			(1 << 3)
+#define CM_DBG_VAL_LIGHT		(1 << 4)
 
 enum CM_ATTR {
 	CM_ATTR_PART,
@@ -143,6 +179,7 @@ enum CM_INFO {
 	CM_INFO_DBG,
 	CM_INFO_LIGHT_SPEW,
 	CM_INFO_LIGHT_POLL_SPEW,
+	CM_INFO_DBG_IRQ,
 	CM_INFO_LIMIT_MAX,
 };
 
@@ -194,6 +231,12 @@ struct cm_state {
 	int scale_val2;			/* user scale val2 */
 	int offset_val;			/* user offset val */
 	int offset_val2;		/* user offset val2 */
+	int lux_uc_lo;			/* interpolation x1 uncalibrated lo */
+	int lux_uc_hi;			/* interpolation x3 uncalibrated hi */
+	int lux_c_lo;			/* interpolation y1 calibrated lo */
+	int lux_c_hi;			/* interpolation y3 calibrated hi */
+	unsigned int report;		/* used to report first valid sample */
+	unsigned int report_n;		/* this many on-change data reports */
 	unsigned int lux_thr_lo;	/* report when new lux below this */
 	unsigned int lux_thr_hi;	/* report when new lux above this */
 	unsigned int it_i_lo;		/* integration time index low limit */
@@ -201,7 +244,6 @@ struct cm_state {
 	unsigned int psm_ms;		/* additional IT for PSM */
 	bool shutdown;			/* shutdown active flag */
 	bool suspend;			/* suspend active flag */
-	bool report;			/* used to report first valid sample */
 	bool hw_change;			/* HW changed so drop first sample */
 	bool hw_sync;			/* queue time match HW sample time */
 	const char *part;		/* part name */
@@ -238,7 +280,7 @@ static int cm_i2c_rd(struct cm_state *st, u8 reg, u16 *val)
 		return -EIO;
 	}
 
-	*val = be16_to_cpup(val);
+	*val = le16_to_cpup(val);
 	return 0;
 }
 
@@ -248,6 +290,7 @@ static int cm_i2c_wr(struct cm_state *st, u8 reg, u16 val)
 	u8 buf[3];
 
 	buf[0] = reg;
+	val = cpu_to_le16(val);
 	buf[1] = val & 0xFF;
 	buf[2] = val >> 8;
 	msg.addr = st->i2c_addr;
@@ -577,6 +620,29 @@ static int cm_step(struct cm_state *st, u16 step, u32 lux, bool irq_en)
 	return ret;
 }
 
+static int cm_interpolate(int x1, int x2, int x3, int y1, int *y2, int y3)
+{
+	int dividend;
+	int divisor;
+
+	/* y2 = ((x2 - x1)(y3 - y1)/(x3 - x1)) + y1 */
+	divisor = (x3 - x1);
+	if (!divisor)
+		return -EINVAL;
+
+	dividend = (x2 - x1) * (y3 - y1);
+	*y2 = (dividend / divisor) + y1;
+	return 0;
+}
+
+static void cm_report_init(struct cm_state *st)
+{
+	if (st->report_n)
+		st->report = st->report_n;
+	else
+		st->report = 1;
+}
+
 static int cm_rd(struct iio_dev *indio_dev)
 {
 	struct cm_state *st = iio_priv(indio_dev);
@@ -596,7 +662,14 @@ static int cm_rd(struct iio_dev *indio_dev)
 	if (ret)
 		return ret;
 
+	if (st->hw_change && !st->report)
+		/* drop first sample after HW change */
+		return 0;
+
+	st->hw_change = false;
 	lux = step * cm_it_tbl[st->scale_i].resolution;
+	cm_interpolate(st->lux_uc_lo, lux, st->lux_uc_hi,
+		       st->lux_c_lo, &lux, st->lux_c_hi);
 	if (sts & (CM_REG_ALS_IF_L | CM_REG_ALS_IF_H)) {
 		report = true;
 	} else {
@@ -611,11 +684,6 @@ static int cm_rd(struct iio_dev *indio_dev)
 			report = true;
 		}
 	}
-	if (st->hw_change && !st->report)
-		/* drop first sample after HW change */
-		return 0;
-
-	st->hw_change = false;
 	/* calculate elapsed time for allowed report rate */
 	ts = iio_get_time_ns();
 	ts_elapsed = ts - st->ts;
@@ -623,22 +691,26 @@ static int cm_rd(struct iio_dev *indio_dev)
 		t_min = true;
 	ms = ts_elapsed;
 	ms /= 1000000;
+	if (st->dbg & CM_DBG_SPEW_LIGHT_POLL)
+		dev_info(&st->i2c->dev, "poll light %d %lld  diff: %d %ums\n",
+			 lux, ts, lux - st->light, ms);
 	/* if IIO scale == 1 then in calibrate/test mode */
-	if ((st->scale_val == 1) && !st->scale_val2)
-		st->report = true;
+	if ((st->scale_val == 1) && (st->scale_val2 == 0))
+		cm_report_init(st);
 	/* report if:
 	 * - st->report (usually used to report the first sample regardless)
 	 * - time since last report >= polling delay && data outside thresholds
 	 * - report regardless of change (for test and calibration)
 	 */
 	if (st->report || (report && t_min)) {
-		st->report = false;
+		if (st->report)
+			st->report--;
 		if (!(st->dbg & CM_DBG_VAL_LIGHT))
 			st->light = lux;
 		st->ts = ts;
 		cm_buf_push(indio_dev, st);
 		ret = cm_step(st, step, lux, true);
-	} else if (t_min) {
+	} else if (t_min && !st->report) {
 		ret = cm_step(st, step, lux, true);
 	} else {
 		/* data changes are happening faster than allowed to report
@@ -646,9 +718,6 @@ static int cm_rd(struct iio_dev *indio_dev)
 		 */
 		ret = cm_step(st, step, lux, false);
 	}
-	if (st->dbg & CM_DBG_SPEW_LIGHT_POLL)
-		dev_info(&st->i2c->dev, "poll light %d %lld  diff: %d %ums\n",
-			 lux, ts, lux - st->light, ms);
 	return ret;
 }
 
@@ -681,6 +750,8 @@ static irqreturn_t cm_irq_thread(int irq, void *dev_id)
 	struct cm_state *st = (struct cm_state *)dev_id;
 	struct iio_dev *indio_dev = iio_priv_to_dev(st);
 
+	if (st->dbg & CM_DBG_IRQ)
+		dev_info(&st->i2c->dev, "%s\n", __func__);
 	cm_read(indio_dev);
 	return IRQ_HANDLED;
 }
@@ -708,7 +779,7 @@ static int cm_enable(struct iio_dev *indio_dev)
 	if (iio_scan_mask_query(indio_dev, indio_dev->buffer, CM_SCAN_LIGHT)) {
 		ret = cm_pm(st, true);
 		if (!ret) {
-			st->report = true;
+			cm_report_init(st);
 			ret = cm_it_wr(st, 0);
 			cm_delay(st, true);
 			if (ret) {
@@ -725,8 +796,8 @@ static int cm_enable(struct iio_dev *indio_dev)
 }
 
 static ssize_t cm_attr_store(struct device *dev,
-			      struct device_attribute *attr,
-			      const char *buf, size_t count)
+			     struct device_attribute *attr,
+			     const char *buf, size_t count)
 {
 	struct iio_dev *indio_dev = dev_get_drvdata(dev);
 	struct cm_state *st = iio_priv(indio_dev);
@@ -774,7 +845,9 @@ static ssize_t cm_attr_store(struct device *dev,
 		ret = -EINVAL;
 	}
 
+	cm_report_init(st);
 	mutex_unlock(&indio_dev->mlock);
+	cm_read(indio_dev);
 	if (st->dbg & CM_DBG_SPEW_MSG) {
 		if (ret)
 			dev_err(&st->i2c->dev, "%s %s %d->%d ERR=%d\n",
@@ -790,7 +863,7 @@ static ssize_t cm_attr_store(struct device *dev,
 }
 
 static ssize_t cm_attr_show(struct device *dev, struct device_attribute *attr,
-			     char *buf)
+			    char *buf)
 {
 	struct iio_dev *indio_dev = dev_get_drvdata(dev);
 	struct cm_state *st = iio_priv(indio_dev);
@@ -858,6 +931,10 @@ static ssize_t cm_data_store(struct device *dev,
 		st->dbg ^= CM_DBG_SPEW_LIGHT_POLL;
 		break;
 
+	case CM_INFO_DBG_IRQ:
+		st->dbg ^= CM_DBG_IRQ;
+		break;
+
 	default:
 		break;
 	}
@@ -896,7 +973,7 @@ static ssize_t cm_data_show(struct device *dev,
 		for (i = 0; i <= CM_REG_ALS_IF; i++) {
 			ret = cm_i2c_rd(st, i, &val);
 			if (!ret)
-				t += sprintf(buf + t, "%hhx: %hx\n", i, val);
+				t += sprintf(buf + t, "%#2x=%#4x\n", i, val);
 		}
 		return t;
 
@@ -911,6 +988,10 @@ static ssize_t cm_data_show(struct device *dev,
 	case CM_INFO_LIGHT_POLL_SPEW:
 		return sprintf(buf, "lux_poll_ts spew=%x\n",
 			       !!(st->dbg & CM_DBG_SPEW_LIGHT_POLL));
+
+	case CM_INFO_DBG_IRQ:
+		return sprintf(buf, "debug IRQ=%x\n",
+			       !!(st->dbg & CM_DBG_IRQ));
 
 	default:
 		break;
@@ -1056,7 +1137,9 @@ static int cm_write_raw(struct iio_dev *indio_dev,
 		ret = -EINVAL;
 	}
 
+	cm_report_init(st);
 	mutex_unlock(&indio_dev->mlock);
+	cm_read(indio_dev);
 	if (st->dbg & CM_DBG_SPEW_MSG) {
 		if (ret)
 			dev_err(&st->i2c->dev, "%s c=%d %d:%d->%d:%d ERR=%d\n",
@@ -1259,6 +1342,8 @@ static int cm_remove(struct i2c_client *client)
 		if (indio_dev->dev.devt)
 			iio_device_unregister(indio_dev);
 		if (st->trig != NULL) {
+			if (client->irq)
+				free_irq(client->irq, st);
 			iio_trigger_unregister(st->trig);
 			iio_trigger_free(st->trig);
 		}
@@ -1299,19 +1384,21 @@ static int cm_of_dt(struct i2c_client *client, struct cm_state *st)
 	/* device tree parameters */
 	if (client->dev.of_node) {
 		/* device specific parameters */
-		of_property_read_u16(np, "als_sm",
-				     &als_sm);
-		of_property_read_u16(np, "als_pers",
-				     &als_pers);
-		of_property_read_u16(np, "als_psm",
-				     &st->als_psm);
+		of_property_read_u16(np, "als_sm", &als_sm);
+		of_property_read_u16(np, "als_pers", &als_pers);
+		of_property_read_u16(np, "als_psm", &st->als_psm);
+		/* common NVS programmable parameters */
+		of_property_read_u32(np, "report_count", &st->report_n);
 		/* common NVS ALS programmable parameters */
-		of_property_read_s32(np, "light_scale_val",
-				     &st->scale_val);
-		of_property_read_s32(np, "light_scale_val2",
-				     &st->scale_val2);
-		of_property_read_s32(np, "light_offset_val",
-				     &st->offset_val);
+		of_property_read_s32(np, "light_uncalibrated_lo",
+				     &st->lux_uc_lo);
+		of_property_read_s32(np, "light_uncalibrated_hi",
+				     &st->lux_uc_hi);
+		of_property_read_s32(np, "light_calibrated_lo", &st->lux_c_lo);
+		of_property_read_s32(np, "light_calibrated_hi", &st->lux_c_hi);
+		of_property_read_s32(np, "light_scale_val", &st->scale_val);
+		of_property_read_s32(np, "light_scale_val2", &st->scale_val2);
+		of_property_read_s32(np, "light_offset_val", &st->offset_val);
 		of_property_read_s32(np, "light_offset_val2",
 				     &st->offset_val2);
 		if (of_property_read_u32(np, "light_threshold_lo", &val))

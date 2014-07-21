@@ -26,7 +26,6 @@
 #include <linux/leds.h>
 #include <linux/ioport.h>
 #include <linux/export.h>
-#include <linux/tegra-soc.h>
 
 #include <generated/mach-types.h>
 
@@ -154,22 +153,7 @@ static u8 fbuf_mode_sel[] = {0x10, 0x00, 0x17}; /* odd-even, DRAM through */
 
 static u8 __maybe_unused mipi_if_sel[] = {0x10, 0x01, 0x01}; /* cmd mode */
 static u8 __maybe_unused smode[] = {0x10, 0x07, 0x07}; /* vsync mode */
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) && \
-	!(DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE)
-static u8 fbuf_mode_sel_fpga[] = {0x10, 0x00, 0x3F}; /* odd/even, DRAM */
-static struct tegra_dsi_cmd dsi_s_wqxga_10_1_init_fpga_cmd[] = {
-	DSI_CMD_LONG(DSI_GENERIC_LONG_WRITE, fbuf_mode_sel_fpga),
-	DSI_DLY_MS(20),
-	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_NO_OP, 0x0),
-	DSI_DLY_MS(20),
-	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_EXIT_SLEEP_MODE, 0x0),
-	DSI_DLY_MS(120),
-	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_SET_DISPLAY_ON, 0x0),
-	DSI_DLY_MS(20),
-	DSI_SEND_FRAME(1),
-	DSI_DLY_MS(120),
-};
-#endif
+
 static struct tegra_dsi_cmd dsi_s_wqxga_10_1_init_cmd[] = {
 	DSI_CMD_LONG(DSI_GENERIC_LONG_WRITE, fbuf_mode_sel),
 	DSI_DLY_MS(20),
@@ -788,15 +772,6 @@ static void dsi_s_wqxga_10_1_set_disp_device(
 
 static void dsi_s_wqxga_10_1_dc_out_init(struct tegra_dc_out *dc)
 {
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) && \
-	!(DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE)
-	if (tegra_platform_is_fpga()) {
-		dsi_s_wqxga_10_1_pdata.dsi_init_cmd =
-			dsi_s_wqxga_10_1_init_fpga_cmd;
-		dsi_s_wqxga_10_1_pdata.n_init_cmd =
-			ARRAY_SIZE(dsi_s_wqxga_10_1_init_fpga_cmd);
-	}
-#endif
 	dc->dsi = &dsi_s_wqxga_10_1_pdata;
 	dc->parent_clk = "pll_d_out0";
 	dc->modes = dsi_s_wqxga_10_1_modes;

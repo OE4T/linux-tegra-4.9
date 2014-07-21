@@ -178,5 +178,16 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed);
 void gk20a_init_channel(struct gpu_ops *gops);
 
 int gk20a_wait_channel_idle(struct channel_gk20a *ch);
+struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g);
+void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a);
+
+int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
+				struct nvhost_gpfifo *gpfifo,
+				u32 num_entries,
+				struct nvhost_fence *fence,
+				u32 flags);
+
+int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
+			       struct nvhost_alloc_gpfifo_args *args);
 
 #endif /*__CHANNEL_GK20A_H__*/

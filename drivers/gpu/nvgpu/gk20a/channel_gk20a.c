@@ -59,7 +59,6 @@ static int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 			u64 gpfifo_base, u32 gpfifo_entries);
 
 static void channel_gk20a_bind(struct channel_gk20a *ch_gk20a);
-static void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a);
 
 static int channel_gk20a_alloc_inst(struct gk20a *g,
 				struct channel_gk20a *ch);
@@ -323,7 +322,7 @@ static void channel_gk20a_bind(struct channel_gk20a *ch_gk20a)
 		 ccsr_channel_enable_set_true_f());
 }
 
-static void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a)
+void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a)
 {
 	struct gk20a *g = ch_gk20a->g;
 
@@ -632,7 +631,7 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 	if (!ch->bound)
 		return;
 
-	if (!gk20a_channel_as_bound(ch))
+	if (!gk20a_channel_as_bound(ch) && !ch->vm)
 		goto unbind;
 
 	gk20a_dbg_info("freeing bound channel context, timeout=%ld",
@@ -674,7 +673,10 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 	}
 
 	/* release channel binding to the as_share */
-	gk20a_as_release_share(ch_vm->as_share);
+	if (ch_vm->as_share)
+		gk20a_as_release_share(ch_vm->as_share);
+	else
+		gk20a_vm_put(ch_vm);
 
 unbind:
 	channel_gk20a_unbind(ch);
@@ -723,7 +725,7 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-static struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
+struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch;
@@ -1088,8 +1090,8 @@ static void recycle_priv_cmdbuf(struct channel_gk20a *c)
 }
 
 
-static int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
-				      struct nvhost_alloc_gpfifo_args *args)
+int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
+			       struct nvhost_alloc_gpfifo_args *args)
 {
 	struct gk20a *g = c->g;
 	struct device *d = dev_from_gk20a(g);
@@ -1472,7 +1474,7 @@ void add_wait_cmd(u32 *ptr, u32 id, u32 thresh)
 	ptr[3] = (id << 8) | 0x10;
 }
 
-static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
+int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvhost_gpfifo *gpfifo,
 				u32 num_entries,
 				struct nvhost_fence *fence,
@@ -1519,7 +1521,8 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 					  c->hw_chid,
 					  num_entries,
 					  flags,
-					  fence->syncpt_id, fence->value);
+					  fence ? fence->syncpt_id : 0,
+					  fence ? fence->value : 0);
 	check_gp_put(g, c);
 	update_gp_get(g, c);
 
@@ -1669,7 +1672,8 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 					     c->hw_chid,
 					     num_entries,
 					     flags,
-					     fence->syncpt_id, fence->value);
+					     fence ? fence->syncpt_id : 0,
+					     fence ? fence->value : 0);
 
 	gk20a_dbg_info("post-submit put %d, get %d, size %d",
 		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);

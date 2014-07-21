@@ -21,6 +21,9 @@
 
 #include <linux/mutex.h>
 
+/* APIs used for separate HAL */
 void gm20b_init_clk_ops(struct gpu_ops *gops);
+int gm20b_init_clk_support(struct gk20a *g);
+int gm20b_suspend_clk_support(struct gk20a *g);
 
 #endif /* _NVHOST_CLK_GM20B_H_ */

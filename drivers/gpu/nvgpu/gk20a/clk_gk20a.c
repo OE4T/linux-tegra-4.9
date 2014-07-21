@@ -33,7 +33,7 @@
 	gk20a_dbg(gpu_dbg_clk, fmt, ##arg)
 
 /* from vbios PLL info table */
-struct pll_parms gpc_pll_params = {
+static struct pll_parms gpc_pll_params = {
 	144000, 2064000,	/* freq */
 	1000000, 2064000,	/* vco */
 	12000, 38000,		/* u */
@@ -677,6 +677,7 @@ int gk20a_init_clk_support(struct gk20a *g)
 void gk20a_init_clk_ops(struct gpu_ops *gops)
 {
 	gops->clk.init_clk_support = gk20a_init_clk_support;
+	gops->clk.suspend_clk_support = gk20a_suspend_clk_support;
 }
 
 unsigned long gk20a_clk_get_rate(struct gk20a *g)

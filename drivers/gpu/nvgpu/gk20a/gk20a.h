@@ -232,6 +232,7 @@ struct gpu_ops {
 	} pmu;
 	struct {
 		int (*init_clk_support)(struct gk20a *g);
+		int (*suspend_clk_support)(struct gk20a *g);
 	} clk;
 };
 

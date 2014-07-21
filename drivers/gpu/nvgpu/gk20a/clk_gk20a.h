@@ -59,15 +59,15 @@ struct clk_gk20a {
 	bool debugfs_set;
 };
 
+/* APIs used for separate HAL */
 int gk20a_init_clk_support(struct gk20a *g);
-
-unsigned long gk20a_clk_get_rate(struct gk20a *g);
-int gk20a_clk_set_rate(struct gk20a *g, unsigned long rate);
 int gk20a_suspend_clk_support(struct gk20a *g);
 struct clk *gk20a_clk_get(struct gk20a *g);
-long gk20a_clk_round_rate(struct gk20a *g, unsigned long rate);
 
-extern struct pll_parms gpc_pll_params;
+/* APIs used for both GK20A and GM20B */
+unsigned long gk20a_clk_get_rate(struct gk20a *g);
+int gk20a_clk_set_rate(struct gk20a *g, unsigned long rate);
+long gk20a_clk_round_rate(struct gk20a *g, unsigned long rate);
 
 #define KHZ 1000
 #define MHZ 1000000

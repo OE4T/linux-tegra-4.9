@@ -191,9 +191,9 @@ struct tegra_dc {
 	wait_queue_head_t		wq;
 	wait_queue_head_t		timestamp_wq;
 
+	struct mutex			lp_lock;
 	struct mutex			lock;
 	struct mutex			one_shot_lock;
-	struct mutex			one_shot_lp_lock;
 
 	struct resource			*fb_mem;
 	struct tegra_fb_info		*fb;

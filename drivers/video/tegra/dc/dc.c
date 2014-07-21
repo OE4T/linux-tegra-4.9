@@ -1054,7 +1054,7 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 
 	/* If output already created - reuse it */
 	if (dbg_dc_out_info[out_type].out_data) {
-		mutex_lock(&dc->one_shot_lp_lock);
+		mutex_lock(&dc->lp_lock);
 		mutex_lock(&dc->lock);
 
 		/* Change the out type */
@@ -1074,7 +1074,7 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 					dbg_dc_out_info[out_type].fblistindex);
 
 		mutex_unlock(&dc->lock);
-		mutex_unlock(&dc->one_shot_lp_lock);
+		mutex_unlock(&dc->lp_lock);
 
 		if (ret) {
 			dev_err(&dc->ndev->dev, "Failed to reinit!!!\n");
@@ -1920,8 +1920,7 @@ static void _tegra_dc_vsync_enable(struct tegra_dc *dc)
 		vsync_irq = MSF_INT;
 	else
 		vsync_irq = V_BLANK_INT;
-	if (!dc->vblank_ref_count)
-		tegra_dc_hold_dc_out(dc);
+	tegra_dc_hold_dc_out(dc);
 	set_bit(V_BLANK_USER, &dc->vblank_ref_count);
 	tegra_dc_unmask_interrupt(dc, vsync_irq);
 }
@@ -1943,10 +1942,9 @@ static void _tegra_dc_vsync_disable(struct tegra_dc *dc)
 	else
 		vsync_irq = V_BLANK_INT;
 	clear_bit(V_BLANK_USER, &dc->vblank_ref_count);
-	if (!dc->vblank_ref_count) {
+	if (!dc->vblank_ref_count)
 		tegra_dc_mask_interrupt(dc, vsync_irq);
-		tegra_dc_release_dc_out(dc);
-	}
+	tegra_dc_release_dc_out(dc);
 }
 
 void tegra_dc_vsync_disable(struct tegra_dc *dc)
@@ -1980,10 +1978,11 @@ int tegra_dc_wait_for_vsync(struct tegra_dc *dc)
 	unsigned long refresh; /* in 1000th Hz */
 	int ret;
 
+	mutex_lock(&dc->lp_lock);
 	mutex_lock(&dc->lock);
 	if (!dc->enabled) {
-		mutex_unlock(&dc->lock);
-		return -ENOTTY;
+		ret = -ENOTTY;
+		goto out;
 	}
 	refresh = tegra_dc_calc_refresh(&dc->mode);
 	/* time out if waiting took more than 2 frames */
@@ -1994,7 +1993,9 @@ int tegra_dc_wait_for_vsync(struct tegra_dc *dc)
 		&dc->out->user_vblank_comp, msecs_to_jiffies(timeout_ms));
 	mutex_lock(&dc->lock);
 	_tegra_dc_user_vsync_enable(dc, false);
+out:
 	mutex_unlock(&dc->lock);
+	mutex_unlock(&dc->lp_lock);
 	return ret;
 }
 
@@ -3026,8 +3027,7 @@ void tegra_dc_disable(struct tegra_dc *dc)
 	 * lock is acquired. */
 	cancel_delayed_work_sync(&dc->underflow_work);
 
-	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
-		mutex_lock(&dc->one_shot_lp_lock);
+	mutex_lock(&dc->lp_lock);
 	mutex_lock(&dc->lock);
 
 	if (dc->enabled) {
@@ -3042,8 +3042,7 @@ void tegra_dc_disable(struct tegra_dc *dc)
 	switch_set_state(&dc->modeset_switch, 0);
 #endif
 	mutex_unlock(&dc->lock);
-	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
-		mutex_unlock(&dc->one_shot_lp_lock);
+	mutex_unlock(&dc->lp_lock);
 	synchronize_irq(dc->irq);
 	trace_display_mode(dc, &dc->mode);
 
@@ -3391,7 +3390,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 	mutex_init(&dc->lock);
 	mutex_init(&dc->one_shot_lock);
-	mutex_init(&dc->one_shot_lp_lock);
+	mutex_init(&dc->lp_lock);
 	init_completion(&dc->frame_end_complete);
 	init_completion(&dc->crc_complete);
 	init_waitqueue_head(&dc->wq);

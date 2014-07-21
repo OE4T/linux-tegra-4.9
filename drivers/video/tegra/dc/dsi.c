@@ -4718,7 +4718,7 @@ fail:
 static int tegra_dsi_host_suspend_trylock(struct tegra_dc *dc,
 					struct tegra_dc_dsi_data *dsi)
 {
-	if (!mutex_trylock(&dc->one_shot_lp_lock))
+	if (!mutex_trylock(&dc->lp_lock))
 		goto fail;
 	if (!mutex_trylock(&dc->lock))
 		goto unlock_one_shot_lp;
@@ -4734,7 +4734,7 @@ unlock_host_lock:
 unlock_dc_lock:
 	mutex_unlock(&dc->lock);
 unlock_one_shot_lp:
-	mutex_unlock(&dc->one_shot_lp_lock);
+	mutex_unlock(&dc->lp_lock);
 fail:
 	return 0;
 }
@@ -4745,7 +4745,7 @@ static void tegra_dsi_host_suspend_unlock(struct tegra_dc *dc,
 	mutex_unlock(&dc->one_shot_lock);
 	mutex_unlock(&dsi->host_lock);
 	mutex_unlock(&dc->lock);
-	mutex_unlock(&dc->one_shot_lp_lock);
+	mutex_unlock(&dc->lp_lock);
 }
 
 static int tegra_dsi_host_suspend(struct tegra_dc *dc)

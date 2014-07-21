@@ -976,6 +976,7 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 		goto done;
 	}
 
+
 	gk20a_channel_resume(g);
 	set_user_nice(current, nice_value);
 
@@ -983,6 +984,8 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 
 	trace_gk20a_finalize_poweron_done(dev_name(dev));
 
+	if (IS_ENABLED(CONFIG_GK20A_CDE))
+		gk20a_init_cde_support(g);
 done:
 	return err;
 }

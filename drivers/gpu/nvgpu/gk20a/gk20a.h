@@ -48,6 +48,7 @@ struct acr_gm20b;
 #include "therm_gk20a.h"
 #include "platform_gk20a.h"
 #include "gm20b/acr_gm20b.h"
+#include "cde_gk20a.h"
 
 extern struct platform_device tegra_gk20a_device;
 
@@ -356,6 +357,8 @@ struct gk20a {
 	struct gk20a_scale_profile *scale_profile;
 
 	struct device_dma_parameters dma_parms;
+
+	struct gk20a_cde_app cde_app;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)
@@ -422,6 +425,7 @@ enum gk20a_dbg_categories {
 	gpu_dbg_clk     = BIT(7),  /* gk20a clk */
 	gpu_dbg_map     = BIT(8),  /* mem mappings */
 	gpu_dbg_gpu_dbg = BIT(9),  /* gpu debugger/profiler */
+	gpu_dbg_cde     = BIT(10), /* cde info messages */
 	gpu_dbg_mem     = BIT(31), /* memory accesses, very verbose */
 };
 

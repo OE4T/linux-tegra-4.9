@@ -198,6 +198,11 @@ enum gmmu_pgsz_gk20a {
 	gmmu_nr_page_sizes   = 2
 };
 
+struct gk20a_comptags {
+	u32 offset;
+	u32 lines;
+};
+
 
 struct page_directory_gk20a {
 	/* backing for */
@@ -473,6 +478,9 @@ int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
 			u64 buffer_offset,
 			u64 mapping_size);
 int gk20a_vm_unmap_buffer(struct gk20a_as_share *, u64 offset);
+void gk20a_get_comptags(struct device *dev, struct dma_buf *dmabuf,
+			struct gk20a_comptags *comptags);
+dma_addr_t gk20a_mm_gpuva_to_iova(struct vm_gk20a *vm, u64 gpu_vaddr);
 
 int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev);
 

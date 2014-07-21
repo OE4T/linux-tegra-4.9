@@ -111,11 +111,6 @@ static const u64 gmmu_page_offset_masks[gmmu_nr_page_sizes] = { 0xfffLL,
 								0x1ffffLL };
 static const u64 gmmu_page_masks[gmmu_nr_page_sizes] = { ~0xfffLL, ~0x1ffffLL };
 
-struct gk20a_comptags {
-	u32 offset;
-	u32 lines;
-};
-
 struct gk20a_dmabuf_priv {
 	struct mutex lock;
 
@@ -197,10 +192,8 @@ void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
 	mutex_unlock(&priv->lock);
 }
 
-
-static void gk20a_get_comptags(struct device *dev,
-			       struct dma_buf *dmabuf,
-			       struct gk20a_comptags *comptags)
+void gk20a_get_comptags(struct device *dev, struct dma_buf *dmabuf,
+			struct gk20a_comptags *comptags)
 {
 	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
 
@@ -1537,6 +1530,20 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 	gk20a_mm_tlb_invalidate(vm);
 
 	return vaddr;
+}
+
+dma_addr_t gk20a_mm_gpuva_to_iova(struct vm_gk20a *vm, u64 gpu_vaddr)
+{
+	struct mapped_buffer_node *buffer;
+	dma_addr_t addr = 0;
+
+	mutex_lock(&vm->update_gmmu_lock);
+	buffer = find_mapped_buffer_locked(&vm->mapped_buffers, gpu_vaddr);
+	if (buffer)
+		addr = gk20a_mm_iova_addr(buffer->sgt->sgl);
+	mutex_unlock(&vm->update_gmmu_lock);
+
+	return addr;
 }
 
 void gk20a_gmmu_unmap(struct vm_gk20a *vm,

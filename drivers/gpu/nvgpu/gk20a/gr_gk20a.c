@@ -76,8 +76,6 @@ static void gr_gk20a_free_channel_patch_ctx(struct channel_gk20a *c);
 /* golden ctx image */
 static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 					  struct channel_gk20a *c);
-static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
-					  struct channel_gk20a *c);
 
 void gk20a_fecs_dump_falcon_stats(struct gk20a *g)
 {
@@ -1656,7 +1654,7 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 }
 
 /* load saved fresh copy of gloden image into channel gr_ctx */
-static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
+int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 					struct channel_gk20a *c)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -2786,7 +2784,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 	gk20a_dbg_fn("");
 
 	/* an address space needs to have been bound at this point.*/
-	if (!gk20a_channel_as_bound(c)) {
+	if (!gk20a_channel_as_bound(c) && !c->vm) {
 		gk20a_err(dev_from_gk20a(g),
 			   "not bound to address space at time"
 			   " of grctx allocation");

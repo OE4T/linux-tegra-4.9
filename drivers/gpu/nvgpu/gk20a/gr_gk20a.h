@@ -316,6 +316,8 @@ struct gk20a_ctxsw_bootloader_desc {
 };
 
 struct gpu_ops;
+int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
+					struct channel_gk20a *c);
 void gk20a_init_gr(struct gk20a *g);
 void gk20a_init_gr_ops(struct gpu_ops *gops);
 int gk20a_init_gr_support(struct gk20a *g);

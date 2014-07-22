@@ -82,6 +82,22 @@ static inline u32 trim_sys_gpcpll_cfg_iddq_power_on_v(void)
 {
 	return 0x00000000;
 }
+static inline u32 trim_sys_gpcpll_cfg_sync_mode_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 trim_sys_gpcpll_cfg_sync_mode_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 trim_sys_gpcpll_cfg_sync_mode_enable_f(void)
+{
+	return 0x4;
+}
+static inline u32 trim_sys_gpcpll_cfg_sync_mode_disable_f(void)
+{
+	return 0x0;
+}
 static inline u32 trim_sys_gpcpll_cfg_enb_lckdet_m(void)
 {
 	return 0x1 << 4;
@@ -182,9 +198,21 @@ static inline u32 trim_sys_gpc2clk_out_bypdiv_by31_f(void)
 {
 	return 0x3c;
 }
+static inline u32 trim_sys_gpc2clk_out_vcodiv_s(void)
+{
+	return 6;
+}
+static inline u32 trim_sys_gpc2clk_out_vcodiv_f(u32 v)
+{
+	return (v & 0x3f) << 8;
+}
 static inline u32 trim_sys_gpc2clk_out_vcodiv_m(void)
 {
 	return 0x3f << 8;
+}
+static inline u32 trim_sys_gpc2clk_out_vcodiv_v(u32 r)
+{
+	return (r >> 8) & 0x3f;
 }
 static inline u32 trim_sys_gpc2clk_out_vcodiv_by1_f(void)
 {
@@ -285,5 +313,21 @@ static inline u32 trim_gpc_bcast_gpcpll_ndiv_slowdown_debug_r(void)
 static inline u32 trim_gpc_bcast_gpcpll_ndiv_slowdown_debug_pll_dynramp_done_synced_v(u32 r)
 {
 	return (r >> 24) & 0x1;
+}
+static inline u32 trim_sys_bypassctrl_r(void)
+{
+	return 0x00137340;
+}
+static inline u32 trim_sys_bypassctrl_gpcpll_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 trim_sys_bypassctrl_gpcpll_bypassclk_f(void)
+{
+	return 0x1;
+}
+static inline u32 trim_sys_bypassctrl_gpcpll_vco_f(void)
+{
+	return 0x0;
 }
 #endif

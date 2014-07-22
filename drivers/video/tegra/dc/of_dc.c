@@ -832,10 +832,10 @@ struct tegra_dsi_cmd *tegra_dsi_parse_cmd_dt(struct platform_device *ndev,
 					struct property *prop,
 					u32 n_cmd)
 {
-	struct tegra_dsi_cmd *dsi_cmd, *temp;
+	struct tegra_dsi_cmd *dsi_cmd = NULL, *temp;
 	u32 *prop_val_ptr;
 	u32 cnt = 0, i = 0;
-	u8 arg1, arg2, arg3;
+	u8 arg1 = 0, arg2 = 0, arg3 = 0;
 	bool long_pkt = false;
 
 	if (!n_cmd)

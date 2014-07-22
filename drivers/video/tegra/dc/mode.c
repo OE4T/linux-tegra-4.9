@@ -72,7 +72,9 @@ static int calc_h_ref_to_sync(const struct tegra_dc_mode *mode, int *href)
 static int calc_v_ref_to_sync(const struct tegra_dc_mode *mode, int *vref)
 {
 	long a;
-	a = 1; /* Constraint 5: V_REF_TO_SYNC >= 1 */
+
+	/* Constraint 5: V_REF_TO_SYNC >= 1 */
+	a = mode->v_front_porch - 1;
 
 	/* Constraint 2: V_REF_TO_SYNC + V_SYNC_WIDTH + V_BACK_PORCH > 1 */
 	if (a + mode->v_sync_width + mode->v_back_porch <= 1)

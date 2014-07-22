@@ -27,6 +27,7 @@
 #define APE_FPGA_MISC_CLK_SOURCE_I2S3_0  0x24
 #define APE_FPGA_MISC_CLK_SOURCE_I2S4_0  0x2c
 #define APE_FPGA_MISC_CLK_SOURCE_I2S5_0  0x30
+#define APE_FPGA_MISC_CLK_SOURCE_DMIC1_0	0x14
 
 #define I2C_I2C_CMD_ADDR0_0 0x4
 #define I2C_I2C_CNFG_0 0x0
@@ -81,6 +82,10 @@
 #define NV_ADDRESS_MAP_APE_AHUB_I2C_BASE			0x7000c000
 #else
 #define NV_ADDRESS_MAP_APE_AHUB_I2C_BASE			1882047744
+#define NV_ADDRESS_MAP_APE_AHUB_GPIO_BASE		0x702DC700
+#define APE_AHUB_GPIO_CNF_0	0x0
+#define APE_AHUB_GPIO_OE_0	0x10
+#define APE_AHUB_GPIO_OUT_0	0x20
 #endif
 
 #define NV_ADDRESS_MAP_APE_AHUB_I2C_LIMIT			1882048255
@@ -424,6 +429,8 @@ void i2c_pinmux_setup(void);
 void i2c_clk_setup(u32 divider);
 void i2s_pinmux_setup(u32 i2s, u32 i2s_b);
 void program_io_expander(void);
+void program_dmic_gpio(void);
+void program_dmic_clk(int dmic_clk);
 
 void OnAD1937CaptureAndPlayback(int mode,
 	int codec_data_format,

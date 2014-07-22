@@ -34,6 +34,7 @@
 static void __iomem *ahub_fpga_misc_base = IO_ADDRESS(NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_BASE);
 static void __iomem *ahub_i2c_base = IO_ADDRESS(NV_ADDRESS_MAP_APE_AHUB_I2C_BASE);
 static void __iomem *pinmux_base = IO_ADDRESS(NV_ADDRESS_MAP_APB_PP_BASE);
+static void __iomem *ahub_gpio_base = IO_ADDRESS(NV_ADDRESS_MAP_APE_AHUB_GPIO_BASE);
 
 static void __iomem *rst_clk_base = IO_ADDRESS(NV_ADDRESS_MAP_PPSB_CLK_RST_BASE);
 static void __iomem *i2s5_base = IO_ADDRESS(NV_ADDRESS_MAP_APE_I2S5_BASE);
@@ -488,6 +489,81 @@ void program_max_codec(void)
 			codec_slv_add, i, read_data);
 #endif
 	}
+}
+
+/* DMIC */
+
+void program_dmic_gpio(void)
+{
+#if !SYSTEM_FPGA
+	writel(0x1, ahub_gpio_base + APE_AHUB_GPIO_CNF_0);
+	writel(0x1, ahub_gpio_base + APE_AHUB_GPIO_OE_0);
+	writel(0x1, ahub_gpio_base + APE_AHUB_GPIO_OUT_0);
+#endif
+}
+
+void program_dmic_clk(int dmic_clk)
+{
+#if !SYSTEM_FPGA
+	writel(0x1, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_I2C1_0);
+
+	switch (dmic_clk) {
+	case 256000:
+		program_cdc_pll(2, CLK_OUT_4_0960_MHZ);
+		writel(0xf, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		break;
+	case 512000:
+		program_cdc_pll(2, CLK_OUT_4_0960_MHZ);
+		writel(0x7, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		break;
+	case 1024000:
+		program_cdc_pll(2, CLK_OUT_4_0960_MHZ);
+		writel(0x3, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		break;
+	case 1411200:
+		program_cdc_pll(2, CLK_OUT_5_6448_MHZ);
+		writel(0x3, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		break;
+	case 1536000:
+		program_cdc_pll(2, CLK_OUT_6_1440_MHZ);
+		writel(0x3, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		break;
+	case 2048000:
+		program_cdc_pll(2, CLK_OUT_4_0960_MHZ);
+		writel(0x1, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		break;
+	case 2822400:
+		program_cdc_pll(2, CLK_OUT_5_6448_MHZ);
+		writel(0x1, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		break;
+	case 3072000:
+		program_cdc_pll(2, CLK_OUT_6_1440_MHZ);
+		writel(0x1, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		break;
+	case 4096000:
+		program_cdc_pll(2, CLK_OUT_4_0960_MHZ);
+		writel(0x0, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		break;
+	case 5644800:
+		program_cdc_pll(2, CLK_OUT_11_2896_MHZ);
+		writel(0x1, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		break;
+	case 6144000:
+		program_cdc_pll(2, CLK_OUT_12_2888_MHZ);
+		writel(0x1, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		break;
+	case 11289600:
+		program_cdc_pll(2, CLK_OUT_11_2896_MHZ);
+		writel(0x0, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		break;
+	case 12288000:
+		program_cdc_pll(2, CLK_OUT_12_2888_MHZ);
+		writel(0x0, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		break;
+	default:
+		pr_err("Unsupported sample rate and OSR combination\n");
+	}
+	#endif
 }
 
 /**

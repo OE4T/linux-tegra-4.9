@@ -94,6 +94,12 @@ config SND_SOC_TEGRA210_I2S_ALT
 	help
 	  Say Y or M if you want to add support for Tegra210 I2S module.
 
+config SND_SOC_TEGRA210_DMIC_ALT
+	tristate "Tegra210 DMIC driver"
+	depends on SND_SOC_TEGRA_ALT && SND_SOC_TEGRA_ALT_210
+	help
+	  Say Y or M if you want to add support for Tegra210 DMIC module.
+
 config SND_SOC_TEGRA210_AMX_ALT
 	tristate "Tegra210 AMX driver"
 	depends on SND_SOC_TEGRA_ALT && SND_SOC_TEGRA_ALT_210
@@ -172,6 +178,7 @@ config SND_SOC_TEGRA_GRENADA_ALT
 	select SND_SOC_TEGRA210_ADMA_ALT
 	select SND_SOC_TEGRA210_ADMAIF_ALT
 	select SND_SOC_TEGRA210_I2S_ALT
+	select SND_SOC_TEGRA210_DMIC_ALT
 	select SND_SOC_TEGRA210_AMX_ALT
 	select SND_SOC_TEGRA210_ADX_ALT
 	select SND_SOC_TEGRA210_MIXER_ALT

@@ -606,6 +606,9 @@ static const struct snd_soc_dapm_widget tegra210_xbar_widgets[] = {
 	{ name " Mux",      "IQC1-2",		"IQC1-2 RX" },		\
 	{ name " Mux",      "IQC2-1",		"IQC2-1 RX" },		\
 	{ name " Mux",      "IQC2-2",		"IQC2-2 RX" },		\
+	{ name " Mux",      "DMIC1",		"DMIC1 RX" },		\
+	{ name " Mux",      "DMIC2",		"DMIC2 RX" },		\
+	{ name " Mux",      "DMIC3",		"DMIC3 RX" },		\
 	{ name " Mux",      "AMX1",		"AMX1 RX" },		\
 	{ name " Mux",      "ADX1-1",		"ADX1-1 RX" },		\
 	{ name " Mux",      "ADX1-2",		"ADX1-2 RX" },		\
@@ -761,6 +764,9 @@ struct of_dev_auxdata tegra210_xbar_auxdata[] = {
 	OF_DEV_AUXDATA("nvidia,tegra210-sfc", 0x702d2600, "tegra210-sfc.3", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-mvc", 0x702da000, "tegra210-mvc.0", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-mvc", 0x702da200, "tegra210-mvc.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-dmic", 0x702d4000, "tegra210-dmic.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-dmic", 0x702d4100, "tegra210-dmic.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-dmic", 0x702d4200, "tegra210-dmic.2", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-amixer", 0x702dbb00, "tegra210-mixer", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-spdif", 0x702d6000, "tegra210-spdif", NULL),
 	{}

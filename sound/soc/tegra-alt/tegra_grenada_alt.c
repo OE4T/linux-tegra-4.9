@@ -207,6 +207,7 @@ static int tegra_grenada_sfc_init(struct snd_soc_pcm_runtime *rtd)
 					SND_SOC_CLOCK_OUT);
 	err = snd_soc_dai_set_sysclk(codec_dai, 0, in_srate,
 					SND_SOC_CLOCK_IN);
+
 	return 0;
 }
 
@@ -1161,6 +1162,66 @@ static struct snd_soc_dai_link tegra_grenada_links[] = {
 		.codec_dai_name = "ADSP-FE3",
 		.ops = &tegra_grenada_ops,
 	},
+	{
+		/* 90 */
+		.name = "dmic-x spdif-dit",
+		.stream_name = "Playback",
+		/* .cpu_of_node = DMIC1 */
+		.cpu_dai_name = "DAP",
+		/* .codec_of_node = SPDIF dummy */
+		.codec_dai_name = "dit-hifi",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 91 */
+		.name = "DMIC1 CIF",
+		.stream_name = "DMIC1 CIF",
+		/* .cpu_of_node = AHUB XBAR */
+		.cpu_dai_name = "DMIC1",
+		/* .codec_of_node = DMIC1 */
+		.codec_dai_name = "CIF",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 92 */
+		.name = "dmic-y spdif-dit",
+		.stream_name = "Playback",
+		/* .cpu_of_node = DMIC2 */
+		.cpu_dai_name = "DAP",
+		/* .codec_of_node = SPDIF dummy */
+		.codec_dai_name = "dit-hifi",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 93 */
+		.name = "DMIC2 CIF",
+		.stream_name = "DMIC2 CIF",
+		/* .cpu_of_node = AHUB XBAR */
+		.cpu_dai_name = "DMIC2",
+		/* .codec_of_node = DMIC2 */
+		.codec_dai_name = "CIF",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 94 */
+		.name = "dmic-z spdif-dit",
+		.stream_name = "Playback",
+		/* .cpu_of_node = DMIC3 */
+		.cpu_dai_name = "DAP",
+		/* .codec_of_node = SPDIF dummy */
+		.codec_dai_name = "dit-hifi",
+		.params = &i2s_link_params,
+	},
+	{
+		/* 95 */
+		.name = "DMIC3 CIF",
+		.stream_name = "DMIC3 CIF",
+		/* .cpu_of_node = AHUB XBAR */
+		.cpu_dai_name = "DMIC3",
+		/* .codec_of_node = DMIC3 */
+		.codec_dai_name = "CIF",
+		.params = &i2s_link_params,
+	},
 };
 
 static struct snd_soc_codec_conf ad193x_codec_conf[] = {
@@ -1630,6 +1691,43 @@ static int tegra_grenada_driver_probe(struct platform_device *pdev)
 			tegra_grenada_links[i].platform_of_node =
 				tegra_grenada_links[i].cpu_of_node;
 		}
+
+		/* DMIC dai links */
+		tegra_grenada_links[90].codec_of_node = tegra_grenada_links[10].codec_of_node;
+		tegra_grenada_links[90].cpu_of_node = of_parse_phandle(np,
+					"nvidia,dmic-1", 0);
+		if (!tegra_grenada_links[90].cpu_of_node) {
+			dev_err(&pdev->dev,
+				"Property 'nvidia,dmic-1' missing or invalid\n");
+			ret = -EINVAL;
+			goto err;
+		}
+		tegra_grenada_links[91].cpu_of_node = tegra_grenada_links[0].codec_of_node;
+		tegra_grenada_links[91].codec_of_node = tegra_grenada_links[90].cpu_of_node;
+
+		tegra_grenada_links[92].codec_of_node = tegra_grenada_links[12].codec_of_node;
+		tegra_grenada_links[92].cpu_of_node = of_parse_phandle(np,
+					"nvidia,dmic-2", 0);
+		if (!tegra_grenada_links[92].cpu_of_node) {
+			dev_err(&pdev->dev,
+				"Property 'nvidia,dmic-2' missing or invalid\n");
+			ret = -EINVAL;
+			goto err;
+		}
+		tegra_grenada_links[93].cpu_of_node = tegra_grenada_links[0].codec_of_node;
+		tegra_grenada_links[93].codec_of_node = tegra_grenada_links[92].cpu_of_node;
+
+		tegra_grenada_links[94].codec_of_node = tegra_grenada_links[14].codec_of_node;
+		tegra_grenada_links[94].cpu_of_node = of_parse_phandle(np,
+					"nvidia,dmic-3", 0);
+		if (!tegra_grenada_links[94].cpu_of_node) {
+			dev_err(&pdev->dev,
+				"Property 'nvidia,dmic-3' missing or invalid\n");
+			ret = -EINVAL;
+			goto err;
+		}
+		tegra_grenada_links[95].cpu_of_node = tegra_grenada_links[0].codec_of_node;
+		tegra_grenada_links[95].codec_of_node = tegra_grenada_links[94].cpu_of_node;
 	}
 
 #ifndef CONFIG_MACH_GRENADA

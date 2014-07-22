@@ -619,6 +619,9 @@ void nvmap_vma_open(struct vm_area_struct *vma)
 	struct nvmap_vma_priv *priv;
 	struct nvmap_handle *h;
 	struct nvmap_vma_list *vma_list, *tmp;
+	struct list_head *tmp_head = NULL;
+	pid_t current_pid = current->pid;
+	bool vma_pos_found = false;
 
 	priv = vma->vm_private_data;
 	BUG_ON(!priv);
@@ -631,11 +634,27 @@ void nvmap_vma_open(struct vm_area_struct *vma)
 	vma_list = kmalloc(sizeof(*vma_list), GFP_KERNEL);
 	if (vma_list) {
 		mutex_lock(&h->lock);
-		list_for_each_entry(tmp, &h->vmas, list)
+		tmp_head = &h->vmas;
+
+		/* insert vma into handle's vmas list in the increasing order of
+		 * handle offsets
+		 */
+		list_for_each_entry(tmp, &h->vmas, list) {
 			BUG_ON(tmp->vma == vma);
 
+			if (!vma_pos_found && (current_pid == tmp->pid)) {
+				if (vma->vm_pgoff < tmp->vma->vm_pgoff) {
+					tmp_head = &tmp->list;
+					vma_pos_found = true;
+				} else {
+					tmp_head = tmp->list.next;
+				}
+			}
+		}
+
 		vma_list->vma = vma;
-		list_add(&vma_list->list, &h->vmas);
+		vma_list->pid = current_pid;
+		list_add_tail(&vma_list->list, tmp_head);
 		mutex_unlock(&h->lock);
 	} else {
 		WARN(1, "vma not tracked");

@@ -469,6 +469,32 @@ static ssize_t allow_all_enable_store(struct device *device,
 static DEVICE_ATTR(allow_all, ROOTRW,
 		allow_all_enable_read, allow_all_enable_store);
 
+static ssize_t emc3d_ratio_store(struct device *device,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct gk20a *g = get_gk20a(ndev);
+	unsigned long val = 0;
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	g->emc3d_ratio = val;
+
+	return count;
+}
+
+static ssize_t emc3d_ratio_read(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct gk20a *g = get_gk20a(ndev);
+
+	return sprintf(buf, "%d\n", g->emc3d_ratio);
+}
+
+static DEVICE_ATTR(emc3d_ratio, ROOTRW, emc3d_ratio_read, emc3d_ratio_store);
+
 #ifdef CONFIG_PM_RUNTIME
 static ssize_t force_idle_store(struct device *device,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -566,6 +592,7 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_slcg_enable);
 	device_remove_file(dev, &dev_attr_ptimer_scale_factor);
 	device_remove_file(dev, &dev_attr_elpg_enable);
+	device_remove_file(dev, &dev_attr_emc3d_ratio);
 	device_remove_file(dev, &dev_attr_counters);
 	device_remove_file(dev, &dev_attr_counters_reset);
 	device_remove_file(dev, &dev_attr_load);
@@ -593,6 +620,7 @@ void gk20a_create_sysfs(struct platform_device *dev)
 	error |= device_create_file(&dev->dev, &dev_attr_slcg_enable);
 	error |= device_create_file(&dev->dev, &dev_attr_ptimer_scale_factor);
 	error |= device_create_file(&dev->dev, &dev_attr_elpg_enable);
+	error |= device_create_file(&dev->dev, &dev_attr_emc3d_ratio);
 	error |= device_create_file(&dev->dev, &dev_attr_counters);
 	error |= device_create_file(&dev->dev, &dev_attr_counters_reset);
 	error |= device_create_file(&dev->dev, &dev_attr_load);

@@ -297,6 +297,8 @@ struct gk20a {
 	bool forced_reset;
 	bool allow_all;
 
+	u32 emc3d_ratio;
+
 #ifdef CONFIG_DEBUG_FS
 	spinlock_t debugfs_lock;
 	struct dentry *debugfs_ltc_enabled;

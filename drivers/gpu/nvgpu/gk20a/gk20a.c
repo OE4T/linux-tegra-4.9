@@ -71,6 +71,8 @@
 
 #define GK20A_NUM_CDEVS 6
 
+#define EMC3D_DEFAULT_RATIO 750
+
 #if defined(GK20A_DEBUG)
 u32 gk20a_dbg_mask = GK20A_DEFAULT_DBG_MASK;
 u32 gk20a_dbg_ftrace;
@@ -1461,6 +1463,8 @@ static int gk20a_probe(struct platform_device *dev)
 		dev_err(&dev->dev, "pm init failed");
 		return err;
 	}
+
+	gk20a->emc3d_ratio = EMC3D_DEFAULT_RATIO;
 
 	/* Initialise scaling */
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))

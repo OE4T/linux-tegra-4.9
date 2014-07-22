@@ -3688,6 +3688,7 @@ int gk20a_pmu_load_update(struct gk20a *g)
 
 	pmu_copy_from_dmem(pmu, pmu->sample_buffer, (u8 *)&_load, 2, 0);
 	pmu->load_shadow = _load / 10;
+	pmu->load_avg = (((9*pmu->load_avg) + pmu->load_shadow) / 10);
 
 	return 0;
 }

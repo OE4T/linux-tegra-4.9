@@ -1080,6 +1080,7 @@ struct pmu_gk20a {
 
 	u32 sample_buffer;
 	u32 load_shadow;
+	u32 load_avg;
 
 	struct mutex isr_mutex;
 	bool isr_enabled;

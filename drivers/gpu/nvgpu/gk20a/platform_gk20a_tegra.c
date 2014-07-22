@@ -39,16 +39,15 @@
 #define TEGRA_GK20A_SIM_BASE 0x538F0000 /*tbd: get from iomap.h */
 #define TEGRA_GK20A_SIM_SIZE 0x1000     /*tbd: this is a high-side guess */
 
+#define TEGRA_GK20A_BW_PER_FREQ 32
+#define TEGRA_GM20B_BW_PER_FREQ 64
+#define TEGRA_DDR3_BW_PER_FREQ 16
+
 extern struct device tegra_vpr_dev;
 struct gk20a_platform t132_gk20a_tegra_platform;
 
 struct gk20a_emc_params {
-	long				emc_slope;
-	long				emc_offset;
-	long				emc_dip_slope;
-	long				emc_dip_offset;
-	long				emc_xmid;
-	bool				linear;
+	long bw_ratio;
 };
 
 /*
@@ -189,20 +188,17 @@ fail:
  * This function returns the minimum emc clock based on gpu frequency
  */
 
-long gk20a_tegra_get_emc_rate(struct gk20a_emc_params *emc_params, long freq)
+long gk20a_tegra_get_emc_rate(struct gk20a *g,
+			      struct gk20a_emc_params *emc_params, long freq)
 {
 	long hz;
 
-	freq = INT_TO_FX(HZ_TO_MHZ(freq));
-	hz = FXMUL(freq, emc_params->emc_slope) + emc_params->emc_offset;
+	freq = HZ_TO_MHZ(freq);
 
-	hz -= FXMUL(emc_params->emc_dip_slope,
-		FXMUL(freq - emc_params->emc_xmid,
-			freq - emc_params->emc_xmid)) +
-		emc_params->emc_dip_offset;
+	hz = (freq * emc_params->bw_ratio);
+	hz = (hz * min(g->pmu.load_avg, g->emc3d_ratio)) / 1000;
 
-	hz = MHZ_TO_HZ(FX_TO_INT(hz + FX_HALF)); /* round to nearest */
-	hz = (hz < 0) ? 0 : hz;
+	hz = MHZ_TO_HZ(hz);
 
 	return hz;
 }
@@ -222,7 +218,7 @@ static void gk20a_tegra_postscale(struct platform_device *pdev,
 	struct gk20a *g = get_gk20a(pdev);
 
 	long after = gk20a_clk_get_rate(g);
-	long emc_target = gk20a_tegra_get_emc_rate(emc_params, after);
+	long emc_target = gk20a_tegra_get_emc_rate(g, emc_params, after);
 
 	clk_set_rate(platform->clk[2], emc_target);
 }
@@ -245,94 +241,34 @@ static void gk20a_tegra_prescale(struct platform_device *pdev)
 /*
  * gk20a_tegra_calibrate_emc()
  *
- * Compute emc scaling parameters
- *
- * Remc = S * R3d + O - (Sd * (R3d - Rm)^2 + Od)
- *
- * Remc - 3d.emc rate
- * R3d  - 3d.cbus rate
- * Rm   - 3d.cbus 'middle' rate = (max + min)/2
- * S    - emc_slope
- * O    - emc_offset
- * Sd   - emc_dip_slope
- * Od   - emc_dip_offset
- *
- * this superposes a quadratic dip centered around the middle 3d
- * frequency over a linear correlation of 3d.emc to 3d clock
- * rates.
- *
- * S, O are chosen so that the maximum 3d rate produces the
- * maximum 3d.emc rate exactly, and the minimum 3d rate produces
- * at least the minimum 3d.emc rate.
- *
- * Sd and Od are chosen to produce the largest dip that will
- * keep 3d.emc frequencies monotonously decreasing with 3d
- * frequencies. To achieve this, the first derivative of Remc
- * with respect to R3d should be zero for the minimal 3d rate:
- *
- *   R'emc = S - 2 * Sd * (R3d - Rm)
- *   R'emc(R3d-min) = 0
- *   S = 2 * Sd * (R3d-min - Rm)
- *     = 2 * Sd * (R3d-min - R3d-max) / 2
- *
- *   +------------------------------+
- *   | Sd = S / (R3d-min - R3d-max) |
- *   +------------------------------+
- *
- *   dip = Sd * (R3d - Rm)^2 + Od
- *
- * requiring dip(R3d-min) = 0 and dip(R3d-max) = 0 gives
- *
- *   Sd * (R3d-min - Rm)^2 + Od = 0
- *   Od = -Sd * ((R3d-min - R3d-max) / 2)^2
- *      = -Sd * ((R3d-min - R3d-max)^2) / 4
- *
- *   +------------------------------+
- *   | Od = (emc-max - emc-min) / 4 |
- *   +------------------------------+
- *
  */
 
-void gk20a_tegra_calibrate_emc(struct gk20a_emc_params *emc_params,
-			       struct clk *clk_3d, struct clk *clk_3d_emc)
+void gk20a_tegra_calibrate_emc(struct platform_device *pdev,
+			       struct gk20a_emc_params *emc_params)
 {
-	long correction;
-	unsigned long max_emc;
-	unsigned long min_emc;
-	unsigned long min_rate_3d;
-	unsigned long max_rate_3d;
+	struct gk20a *g = get_gk20a(pdev);
+	long gpu_bw, emc_bw;
 
-	max_emc = clk_round_rate(clk_3d_emc, UINT_MAX);
-	max_emc = INT_TO_FX(HZ_TO_MHZ(max_emc));
+	/* Detect and store gpu bw */
+        u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
+        switch (ver) {
+        case GK20A_GPUID_GK20A:
+		gpu_bw = TEGRA_GK20A_BW_PER_FREQ;
+                break;
+        case GK20A_GPUID_GM20B:
+		gpu_bw = TEGRA_GM20B_BW_PER_FREQ;
+                break;
+        default:
+		gpu_bw = 0;
+		break;
+        }
 
-	min_emc = clk_round_rate(clk_3d_emc, 0);
-	min_emc = INT_TO_FX(HZ_TO_MHZ(min_emc));
+	/* TODO detect DDR3 vs DDR4 */
+	emc_bw = TEGRA_DDR3_BW_PER_FREQ;
 
-	max_rate_3d = clk_round_rate(clk_3d, UINT_MAX);
-	max_rate_3d = INT_TO_FX(HZ_TO_MHZ(max_rate_3d));
-
-	min_rate_3d = clk_round_rate(clk_3d, 0);
-	min_rate_3d = INT_TO_FX(HZ_TO_MHZ(min_rate_3d));
-
-	emc_params->emc_slope =
-		FXDIV((max_emc - min_emc), (max_rate_3d - min_rate_3d));
-	emc_params->emc_offset = max_emc -
-		FXMUL(emc_params->emc_slope, max_rate_3d);
-	/* Guarantee max 3d rate maps to max emc rate */
-	emc_params->emc_offset += max_emc -
-		(FXMUL(emc_params->emc_slope, max_rate_3d) +
-		emc_params->emc_offset);
-
-	emc_params->emc_dip_offset = (max_emc - min_emc) / 4;
-	emc_params->emc_dip_slope =
-		-FXDIV(emc_params->emc_slope, max_rate_3d - min_rate_3d);
-	emc_params->emc_xmid = (max_rate_3d + min_rate_3d) / 2;
-	correction =
-		emc_params->emc_dip_offset +
-			FXMUL(emc_params->emc_dip_slope,
-			FXMUL(max_rate_3d - emc_params->emc_xmid,
-				max_rate_3d - emc_params->emc_xmid));
-	emc_params->emc_dip_offset -= correction;
+	/* Calculate the bandwidth ratio of gpu_freq <-> emc_freq
+	 *   NOTE the ratio must come out as an integer */
+	emc_params->bw_ratio = (gpu_bw / emc_bw);
 }
 
 /*
@@ -427,7 +363,7 @@ static void gk20a_tegra_scale_init(struct platform_device *pdev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(pdev);
 	struct gk20a_scale_profile *profile = platform->g->scale_profile;
-		struct gk20a_emc_params *emc_params;
+	struct gk20a_emc_params *emc_params;
 
 	if (!profile)
 		return;
@@ -436,8 +372,7 @@ static void gk20a_tegra_scale_init(struct platform_device *pdev)
 	if (!emc_params)
 		return;
 
-	gk20a_tegra_calibrate_emc(emc_params, gk20a_clk_get(platform->g),
-				  platform->clk[2]);
+	gk20a_tegra_calibrate_emc(pdev, emc_params);
 
 	profile->private_data = emc_params;
 }

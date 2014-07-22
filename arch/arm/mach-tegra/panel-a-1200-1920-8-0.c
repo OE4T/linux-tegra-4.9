@@ -274,12 +274,12 @@ static int dsi_a_1200_1920_8_0_enable(struct device *dev)
 		}
 	}
 
-	msleep(100);
+	msleep(20);
 #if DSI_PANEL_RESET
 	gpio_direction_output(en_panel_rst, 1);
 	usleep_range(1000, 5000);
 	gpio_set_value(en_panel_rst, 0);
-	msleep(150);
+	usleep_range(1000, 5000);
 	gpio_set_value(en_panel_rst, 1);
 	msleep(20);
 #endif
@@ -296,8 +296,6 @@ static int dsi_a_1200_1920_8_0_disable(void)
 		msleep(50);
 		gpio_set_value(en_panel_rst, 0);
 	}
-
-	msleep(120);
 
 	if (vdd_lcd_bl_en)
 		regulator_disable(vdd_lcd_bl_en);

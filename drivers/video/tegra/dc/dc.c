@@ -1751,6 +1751,16 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 #elif defined(CONFIG_TEGRA_HDMI)
 		dc->out_ops = &tegra_dc_hdmi_ops;
 #endif
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+	if (tegra_platform_is_fpga()) {
+		if (tegra_bonded_out_dev(BOND_OUT_SOR1)) {
+			dev_info(&dc->ndev->dev,
+				"SOR1 instance is bonded out\n");
+			dc->out_ops = NULL;
+			err = -ENODEV;
+		}
+	}
+#endif
 		break;
 
 	case TEGRA_DC_OUT_DSI:
@@ -1758,6 +1768,17 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 	case TEGRA_DC_OUT_FAKE_DSIB:
 	case TEGRA_DC_OUT_FAKE_DSI_GANGED:
 		dc->out_ops = &tegra_dc_dsi_ops;
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+	if (tegra_platform_is_fpga()) {
+		if (tegra_bonded_out_dev(BOND_OUT_DSI) ||
+			tegra_bonded_out_dev(BOND_OUT_DSIB)) {
+			dev_info(&dc->ndev->dev,
+				"DSI instance is bonded out\n");
+			dc->out_ops = NULL;
+			err = -ENODEV;
+		}
+	}
+#endif
 		break;
 
 #ifdef CONFIG_TEGRA_DP
@@ -1780,7 +1801,6 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		dc->out_ops = NULL;
 		break;
 	}
-
 	if (dc->out_ops && dc->out_ops->init) {
 		err = dc->out_ops->init(dc);
 		if (err < 0) {
@@ -3213,12 +3233,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dev_info(&ndev->dev, "DC instances are not present on linsim\n");
 		return -ENODEV;
 	}
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
-	if (tegra_bonded_out_dev(BOND_OUT_DISP2)) {
-		dev_info(&ndev->dev, "DC instance is not present on emulation\n");
-		return -ENODEV;
-	}
-#endif
 
 	if (!np && !ndev->dev.platform_data) {
 		dev_err(&ndev->dev, "no platform data\n");
@@ -3547,8 +3561,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		 * Adding an extra powergate to balance the refcount
 		 * since _tegra_dc_enable() increases the refcount.
 		 */
-		if (dc->powergate_id == TEGRA_POWERGATE_DISA)
-			tegra_dc_powergate_locked(dc);
+		if (!tegra_platform_is_fpga())
+			if (dc->powergate_id == TEGRA_POWERGATE_DISA)
+				tegra_dc_powergate_locked(dc);
 #endif
 	}
 

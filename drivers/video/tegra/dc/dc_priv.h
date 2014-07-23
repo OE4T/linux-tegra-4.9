@@ -368,19 +368,16 @@ static inline unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
 {
-	if (!tegra_platform_is_fpga())
-		tegra_powergate_partition(dc->powergate_id);
+	tegra_powergate_partition(dc->powergate_id);
 }
 
 static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc)
 {
-	if (!tegra_platform_is_fpga()) {
-		int ret;
-		ret = tegra_unpowergate_partition(dc->powergate_id);
-		if (ret < 0)
-			dev_err(&dc->ndev->dev, "%s: could not unpowergate %d\n",
-								__func__, ret);
-	}
+	int ret;
+	ret = tegra_unpowergate_partition(dc->powergate_id);
+	if (ret < 0)
+		dev_err(&dc->ndev->dev, "%s: could not unpowergate %d\n",
+							__func__, ret);
 }
 
 static inline bool tegra_dc_is_powered(struct tegra_dc *dc)

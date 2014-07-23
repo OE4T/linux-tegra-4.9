@@ -27,6 +27,7 @@
 #include <linux/of_address.h>
 
 #include <mach/dc.h>
+#include <mach/io_dpd.h>
 
 #include "sor.h"
 #include "sor_regs.h"
@@ -687,12 +688,17 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 {
 	u32 mask;
 	u32 val;
+	struct tegra_io_dpd hdmi_dpd = {
+		.name = "hdmi",
+		.io_dpd_reg_index = 0,
+		.io_dpd_bit = 28,
+	};
 
 	tegra_sor_write_field(sor, NV_SOR_DP_SPARE(sor->portnum),
 				NV_SOR_DP_SPARE_SEQ_ENABLE_YES,
 				NV_SOR_DP_SPARE_SEQ_ENABLE_YES);
 
-	/* TODO: deassert dpd */
+	tegra_io_dpd_disable(&hdmi_dpd);
 	usleep_range(10, 15);
 
 	tegra_sor_write_field(sor, NV_SOR_PLL2,
@@ -760,6 +766,35 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 				NV_SOR_SEQ_CTL_SWITCH_WAIT);
 
 	tegra_dc_sor_set_power_state(sor, 1);
+}
+
+void tegra_sor_hdmi_pad_power_down(struct tegra_dc_sor_data *sor)
+{
+	struct tegra_io_dpd hdmi_dpd = {
+		.name = "hdmi",
+		.io_dpd_reg_index = 0,
+		.io_dpd_bit = 28,
+	};
+
+	tegra_sor_write_field(sor, NV_SOR_PLL2,
+				NV_SOR_PLL2_AUX7_PORT_POWERDOWN_MASK,
+				NV_SOR_PLL2_AUX7_PORT_POWERDOWN_ENABLE);
+	usleep_range(25, 30);
+
+	tegra_sor_write_field(sor, NV_SOR_PLL0, NV_SOR_PLL0_PWR_MASK |
+				NV_SOR_PLL0_VCOPD_MASK, NV_SOR_PLL0_PWR_OFF |
+				NV_SOR_PLL0_VCOPD_ASSERT);
+	tegra_sor_write_field(sor, NV_SOR_PLL2, NV_SOR_PLL2_AUX1_SEQ_MASK |
+				NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_MASK,
+				NV_SOR_PLL2_AUX1_SEQ_PLLCAPPD_OVERRIDE |
+				NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_ENABLE);
+	usleep_range(25, 30);
+
+	tegra_sor_write_field(sor, NV_SOR_PLL2,
+				NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_MASK,
+				NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_ENABLE);
+
+	tegra_io_dpd_enable(&hdmi_dpd);
 }
 
 void tegra_sor_config_hdmi_clk(struct tegra_dc_sor_data *sor)

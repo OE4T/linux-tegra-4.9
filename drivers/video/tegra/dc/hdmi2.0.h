@@ -146,12 +146,15 @@ struct hdmi_audio_infoframe {
 struct tegra_hdmi {
 	struct tegra_dc *dc;
 	struct tegra_hdmi_out *pdata;
-	bool enabled;
 	struct tegra_dc_sor_data *sor;
 	struct hdmi_avi_infoframe avi;
+	bool enabled;
 
 	struct tegra_edid_hdmi_eld eld;
 	bool eld_valid;
+
+	struct fb_monspecs mon_spec;
+	bool mon_spec_valid;
 
 	struct tegra_edid *edid;
 	struct i2c_client *ddc_i2c_client;
@@ -172,8 +175,8 @@ struct tegra_hdmi {
 		u32 dc_enable:1;
 		u32 hdmi_host_enable:1;
 		u32 edid_eld_read:1;
-		u32 pix_stream_on:1;
 	} hpd_state_status;
+	int irq;
 };
 
 #endif

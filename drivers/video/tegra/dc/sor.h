@@ -151,6 +151,7 @@ void tegra_sor_stop_dc(struct tegra_dc_sor_data *sor);
 void tegra_sor_start_dc(struct tegra_dc_sor_data *sor);
 void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor);
 void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor);
+void tegra_sor_hdmi_pad_power_down(struct tegra_dc_sor_data *sor);
 void tegra_sor_config_hdmi_clk(struct tegra_dc_sor_data *sor);
 
 static inline u32 tegra_sor_readl(struct tegra_dc_sor_data *sor, u32 reg)

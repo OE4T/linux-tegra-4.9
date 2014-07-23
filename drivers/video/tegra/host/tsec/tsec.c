@@ -104,7 +104,7 @@ static int tsec_dma_wait_idle(struct platform_device *dev, u32 *timeout)
 
 		udelay(TSEC_IDLE_CHECK_PERIOD);
 		*timeout -= check;
-	} while (*timeout);
+	} while (*timeout || !tegra_platform_is_silicon());
 
 	dev_err(&dev->dev, "dma idle timeout");
 
@@ -143,7 +143,7 @@ static int tsec_wait_idle(struct platform_device *dev, u32 *timeout)
 			return 0;
 		udelay(TSEC_IDLE_CHECK_PERIOD);
 		*timeout -= check;
-	} while (*timeout);
+	} while (*timeout || !tegra_platform_is_silicon());
 
 	return -1;
 }
@@ -174,7 +174,7 @@ static int tsec_load_kfuse(struct platform_device *pdev)
 			break;
 		udelay(TSEC_IDLE_CHECK_PERIOD);
 		timeout -= check;
-	} while (timeout);
+	} while (timeout || !tegra_platform_is_silicon());
 
 	val = host1x_readl(pdev, tsec_tegra_ctl_r());
 	val |= tsec_tegra_ctl_tkfi_kfuse_m();

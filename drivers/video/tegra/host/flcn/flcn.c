@@ -75,7 +75,7 @@ static int flcn_wait_idle(struct platform_device *pdev,
 		}
 		udelay(FLCN_IDLE_CHECK_PERIOD);
 		*timeout -= check;
-	} while (*timeout);
+	} while (*timeout || !tegra_platform_is_silicon());
 
 	dev_err(&pdev->dev, "flcn flcn idle timeout");
 
@@ -100,7 +100,7 @@ static int flcn_dma_wait_idle(struct platform_device *pdev, u32 *timeout)
 		}
 		udelay(FLCN_IDLE_CHECK_PERIOD);
 		*timeout -= check;
-	} while (*timeout);
+	} while (*timeout || !tegra_platform_is_silicon());
 
 	dev_err(&pdev->dev, "dma idle timeout");
 

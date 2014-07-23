@@ -84,7 +84,7 @@ static int nvjpg_dma_wait_idle(struct platform_device *dev, u32 *timeout)
 
 		udelay(NVJPG_IDLE_CHECK_PERIOD);
 		*timeout -= check;
-	} while (*timeout);
+	} while (*timeout || !tegra_platform_is_silicon());
 
 	dev_err(&dev->dev, "dma idle timeout");
 
@@ -127,7 +127,7 @@ static int nvjpg_wait_idle(struct platform_device *dev, u32 *timeout)
 		}
 		udelay(NVJPG_IDLE_CHECK_PERIOD);
 		*timeout -= check;
-	} while (*timeout);
+	} while (*timeout || !tegra_platform_is_silicon());
 
 	return -1;
 }

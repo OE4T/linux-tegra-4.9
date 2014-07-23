@@ -799,6 +799,89 @@ static void allocations_stringify(struct nvmap_client *client,
 	nvmap_ref_unlock(client);
 }
 
+/* compute the total amount of handle physical memory that is mapped
+ * into client's virtual address space. Remember that vmas list is
+ * sorted in ascending order of handle offsets.
+ * NOTE: This function should be called while holding handle's lock mutex.
+ */
+static void nvmap_get_client_handle_mss(struct nvmap_client *client,
+				struct nvmap_handle *handle, u64 *total)
+{
+	struct nvmap_vma_list *vma_list = NULL;
+	struct vm_area_struct *vma = NULL;
+	u64 end_offset = 0, vma_start_offset, vma_size;
+	int64_t overlap_size;
+
+	*total = 0;
+	list_for_each_entry(vma_list, &handle->vmas, list) {
+
+		if (client->task->pid == vma_list->pid) {
+			vma = vma_list->vma;
+			vma_size = vma->vm_end - vma->vm_start;
+
+			vma_start_offset = vma->vm_pgoff << PAGE_SHIFT;
+			if (end_offset < vma_start_offset + vma_size) {
+				*total += vma_size;
+
+				overlap_size = end_offset - vma_start_offset;
+				if (overlap_size > 0)
+					*total -= overlap_size;
+				end_offset = vma_start_offset + vma_size;
+			}
+		}
+	}
+}
+
+static void maps_stringify(struct nvmap_client *client,
+				struct seq_file *s, u32 heap_type)
+{
+	struct rb_node *n;
+	struct nvmap_vma_list *vma_list = NULL;
+	struct vm_area_struct *vma = NULL;
+	u64 total_mapped_size, vma_size;
+
+	nvmap_ref_lock(client);
+	n = rb_first(&client->handle_refs);
+	for (; n != NULL; n = rb_next(n)) {
+		struct nvmap_handle_ref *ref =
+			rb_entry(n, struct nvmap_handle_ref, node);
+		struct nvmap_handle *handle = ref->handle;
+		if (handle->alloc && handle->heap_type == heap_type) {
+			phys_addr_t base = heap_type == NVMAP_HEAP_IOVMM ? 0 :
+					   (handle->carveout->base);
+			seq_printf(s,
+				"%-18s %-18s %8llx %10zuK %8x %6u %16p "
+				"%12s %12s ",
+				"", "",
+				(unsigned long long)base, K(handle->size),
+				handle->userflags,
+				atomic_read(&handle->share_count),
+				handle, "", "");
+
+			mutex_lock(&handle->lock);
+			nvmap_get_client_handle_mss(client, handle,
+							&total_mapped_size);
+			seq_printf(s, "%6lluK\n", K(total_mapped_size));
+
+			list_for_each_entry(vma_list, &handle->vmas, list) {
+
+				if (vma_list->pid == client->task->pid) {
+					vma = vma_list->vma;
+					vma_size = vma->vm_end - vma->vm_start;
+					seq_printf(s,
+					  "%-18s %-18s %8s %11s %8s %6s %16s "
+					  "%-12lx-%12lx %6lluK\n",
+					  "", "", "", "", "", "", "",
+					  vma->vm_start, vma->vm_end,
+					  K(vma_size));
+				}
+			}
+			mutex_unlock(&handle->lock);
+		}
+	}
+	nvmap_ref_unlock(client);
+}
+
 static void nvmap_get_client_mss(struct nvmap_client *client,
 				 u64 *total, u32 heap_type)
 {
@@ -885,6 +968,36 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 }
 
 DEBUGFS_OPEN_FOPS(allocations);
+
+static int nvmap_debug_maps_show(struct seq_file *s, void *unused)
+{
+	u64 total;
+	struct nvmap_client *client;
+	u32 heap_type = (u32)(uintptr_t)s->private;
+
+	spin_lock(&nvmap_dev->clients_lock);
+	seq_printf(s, "%-18s %18s %8s %11s\n",
+		"CLIENT", "PROCESS", "PID", "SIZE");
+	seq_printf(s, "%-18s %18s %8s %11s %8s %6s %9s %21s %18s\n",
+		"", "", "BASE", "SIZE", "FLAGS", "SHARE", "UID",
+		"MAPS", "MAPSIZE");
+
+	list_for_each_entry(client, &nvmap_dev->clients, list) {
+		u64 client_total;
+		client_stringify(client, s);
+		nvmap_get_client_mss(client, &client_total, heap_type);
+		seq_printf(s, " %10lluK\n", K(client_total));
+		maps_stringify(client, s, heap_type);
+		seq_printf(s, "\n");
+	}
+	spin_unlock(&nvmap_dev->clients_lock);
+
+	nvmap_get_total_mss(NULL, NULL, &total, heap_type);
+	seq_printf(s, "%-18s %-18s %8s %10lluK\n", "total", "", "", K(total));
+	return 0;
+}
+
+DEBUGFS_OPEN_FOPS(maps);
 
 static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
 {
@@ -1352,6 +1465,10 @@ int nvmap_probe(struct platform_device *pdev)
 					heap_root,
 					(void *)(uintptr_t)node->heap_bit,
 					&debug_allocations_fops);
+				debugfs_create_file("maps", S_IRUGO,
+					heap_root,
+					(void *)(uintptr_t)node->heap_bit,
+					&debug_maps_fops);
 				nvmap_heap_debugfs_init(heap_root,
 							node->carveout);
 			}
@@ -1367,6 +1484,9 @@ int nvmap_probe(struct platform_device *pdev)
 			debugfs_create_file("allocations", S_IRUGO, iovmm_root,
 				(void *)(uintptr_t)NVMAP_HEAP_IOVMM,
 				&debug_allocations_fops);
+			debugfs_create_file("maps", S_IRUGO, iovmm_root,
+				(void *)(uintptr_t)NVMAP_HEAP_IOVMM,
+				&debug_maps_fops);
 			debugfs_create_file("procrank", S_IRUGO, iovmm_root,
 				dev, &debug_iovmm_procrank_fops);
 		}

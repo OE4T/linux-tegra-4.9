@@ -42,6 +42,14 @@
 #include "nvhost_intr.h"
 #include "t124/t124.h"
 #include "t210/t210.h"
+#include "nvhost_job.h"
+#include "nvhost_channel.h"
+#include "nvhost_cdma.h"
+#include "host1x/host1x01_hardware.h"
+#include "class_ids.h"
+#include "host1x/host1x_hwctx.h"
+#include "tsec_methods.h"
+#include "tsec_drv.h"
 
 #define TSEC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define TSEC_IDLE_CHECK_PERIOD		10	/* 10 usec */
@@ -57,11 +65,423 @@
 #define get_tsec(ndev) ((struct tsec *)(ndev)->dev.platform_data)
 #define set_tsec(ndev, f) ((ndev)->dev.platform_data = f)
 
+#define hdcp_align(var)	(((unsigned long)((u8 *)hdcp_context->var \
+			+ HDCP_ALIGNMENT_256 - 1)) & ~HDCP_ALIGNMENT_256);
+
+#define hdcp_align_dma(var) (((unsigned long)(hdcp_context->var \
+			+ HDCP_ALIGNMENT_256 - 1)) & ~HDCP_ALIGNMENT_256);
+
 /* The key value in ascii hex */
 static u8 otf_key[TSEC_KEY_LENGTH];
 
 phys_addr_t tsec_carveout_addr;
 phys_addr_t tsec_carveout_size;
+
+/* Pointer to this device */
+struct platform_device *tsec;
+
+int tsec_hdcp_create_context(struct hdcp_context_t *hdcp_context)
+{
+	int err = 0;
+	DEFINE_DMA_ATTRS(attrs);
+	if (!hdcp_context) {
+		err = -EINVAL;
+		goto exit;
+	}
+	hdcp_context->cpuvaddr_scratch = dma_alloc_attrs(&tsec->dev,
+					HDCP_SCRATCH_BUFFER_SIZE,
+					&hdcp_context->dma_handle_scratch,
+					GFP_KERNEL,
+					&attrs);
+	if (!hdcp_context->cpuvaddr_scratch) {
+		err = -ENOMEM;
+		goto exit;
+	}
+	hdcp_context->cpuvaddr_dcp_kpub = dma_alloc_attrs(&tsec->dev,
+					HDCP_DCP_KPUB_SIZE_ALIGNED,
+					&hdcp_context->dma_handle_dcp_kpub,
+					GFP_KERNEL,
+					&attrs);
+	if (!hdcp_context->cpuvaddr_dcp_kpub) {
+		err = -ENOMEM;
+		goto exit;
+	}
+	if ((unsigned int)hdcp_context->dma_handle_dcp_kpub &
+	(HDCP_ALIGNMENT_256 - 1)) {
+		hdcp_context->cpuvaddr_dcp_kpub_aligned =
+				(u32 *)hdcp_align(cpuvaddr_dcp_kpub);
+		hdcp_context->dma_handle_dcp_kpub_aligned =
+				(dma_addr_t)hdcp_align_dma(dma_handle_dcp_kpub);
+	} else {
+		hdcp_context->cpuvaddr_dcp_kpub_aligned =
+				hdcp_context->cpuvaddr_dcp_kpub;
+		hdcp_context->dma_handle_dcp_kpub_aligned =
+				hdcp_context->dma_handle_dcp_kpub;
+	}
+
+	hdcp_context->cpuvaddr_srm = dma_alloc_attrs(&tsec->dev,
+					HDCP_SRM_SIZE_ALIGNED,
+					&hdcp_context->dma_handle_srm,
+					GFP_KERNEL,
+					&attrs);
+	if (!hdcp_context->cpuvaddr_srm) {
+		err = -ENOMEM;
+		goto exit;
+	}
+
+	hdcp_context->cpuvaddr_cert = dma_alloc_attrs(&tsec->dev,
+				HDCP_CERT_SIZE + HDCP_ALIGNMENT_256 - 1,
+				&hdcp_context->dma_handle_cert,
+				GFP_KERNEL,
+				&attrs);
+
+	if (!hdcp_context->cpuvaddr_cert) {
+		err = -ENOMEM;
+		goto exit;
+	}
+
+	if ((unsigned int)hdcp_context->dma_handle_cert &
+	(HDCP_ALIGNMENT_256 - 1)) {
+		hdcp_context->cpuvaddr_cert_aligned =
+				(u32 *)hdcp_align(cpuvaddr_cert);
+		hdcp_context->dma_handle_cert_aligned =
+				(dma_addr_t)hdcp_align_dma(dma_handle_cert);
+	} else {
+		hdcp_context->cpuvaddr_cert_aligned =
+				hdcp_context->cpuvaddr_cert;
+		hdcp_context->dma_handle_cert_aligned =
+				hdcp_context->dma_handle_cert;
+	}
+
+	hdcp_context->cpuvaddr_mthd_buf = dma_alloc_attrs(&tsec->dev,
+					HDCP_MTHD_BUF_SIZE,
+					&hdcp_context->dma_handle_mthd_buf,
+					GFP_KERNEL,
+					&attrs);
+	if (!hdcp_context->cpuvaddr_mthd_buf) {
+		err = -ENOMEM;
+		goto exit;
+	}
+
+	if ((unsigned int)hdcp_context->dma_handle_mthd_buf &
+	(HDCP_ALIGNMENT_256 - 1)) {
+		hdcp_context->cpuvaddr_mthd_buf_aligned =
+			(u32 *)hdcp_align(cpuvaddr_mthd_buf);
+		hdcp_context->dma_handle_mthd_buf_aligned =
+			(dma_addr_t)hdcp_align_dma(dma_handle_mthd_buf);
+	} else {
+		hdcp_context->cpuvaddr_mthd_buf_aligned =
+				hdcp_context->cpuvaddr_mthd_buf;
+		hdcp_context->dma_handle_mthd_buf_aligned =
+				hdcp_context->dma_handle_mthd_buf;
+	}
+
+	hdcp_context->cpuvaddr_rcvr_id_list = dma_alloc_attrs(&tsec->dev,
+					HDCP_RCVR_ID_LIST_SIZE,
+					&hdcp_context->dma_handle_rcvr_id_list,
+					GFP_KERNEL,
+					&attrs);
+	if (!hdcp_context->cpuvaddr_rcvr_id_list) {
+		err = -ENOMEM;
+		goto exit;
+	}
+
+	hdcp_context->cpuvaddr_input_buf = dma_alloc_attrs(&tsec->dev,
+					HDCP_CONTENT_BUF_SIZE,
+					&hdcp_context->dma_handle_input_buf,
+					GFP_KERNEL,
+					&attrs);
+	if (!hdcp_context->cpuvaddr_input_buf) {
+		err = -ENOMEM;
+		goto exit;
+	}
+
+	hdcp_context->cpuvaddr_output_buf = dma_alloc_attrs(&tsec->dev,
+					HDCP_CONTENT_BUF_SIZE,
+					&hdcp_context->dma_handle_output_buf,
+					GFP_KERNEL,
+					&attrs);
+	if (!hdcp_context->cpuvaddr_output_buf) {
+		err = -ENOMEM;
+		goto exit;
+	}
+exit:
+	return err;
+}
+
+int tsec_hdcp_free_context(struct hdcp_context_t *hdcp_context)
+{
+	int err = 0;
+	DEFINE_DMA_ATTRS(attrs);
+	if (!hdcp_context) {
+		err = -EINVAL;
+		goto exit;
+	}
+	if (hdcp_context->cpuvaddr_scratch) {
+		dma_free_attrs(&tsec->dev,
+			HDCP_SCRATCH_BUFFER_SIZE,
+			hdcp_context->cpuvaddr_scratch,
+			hdcp_context->dma_handle_scratch,
+			&attrs);
+		hdcp_context->cpuvaddr_scratch = NULL;
+	}
+	if (hdcp_context->cpuvaddr_dcp_kpub) {
+		dma_free_attrs(&tsec->dev,
+			HDCP_DCP_KPUB_SIZE_ALIGNED,
+			hdcp_context->cpuvaddr_dcp_kpub,
+			hdcp_context->dma_handle_dcp_kpub,
+			&attrs);
+		hdcp_context->cpuvaddr_dcp_kpub = NULL;
+	}
+	if (hdcp_context->cpuvaddr_srm) {
+		dma_free_attrs(&tsec->dev,
+			HDCP_SRM_SIZE_ALIGNED,
+			hdcp_context->cpuvaddr_srm,
+			hdcp_context->dma_handle_srm,
+			&attrs);
+		hdcp_context->cpuvaddr_srm = NULL;
+	}
+
+	if (hdcp_context->cpuvaddr_cert) {
+		dma_free_attrs(&tsec->dev,
+			HDCP_CERT_SIZE_ALIGNED,
+			hdcp_context->cpuvaddr_cert,
+			hdcp_context->dma_handle_cert,
+			&attrs);
+		hdcp_context->cpuvaddr_cert = NULL;
+	}
+
+	if (hdcp_context->cpuvaddr_mthd_buf) {
+		dma_free_attrs(&tsec->dev,
+			HDCP_MTHD_BUF_SIZE,
+			hdcp_context->cpuvaddr_mthd_buf,
+			hdcp_context->dma_handle_mthd_buf,
+			&attrs);
+		hdcp_context->cpuvaddr_mthd_buf = NULL;
+	}
+
+	if (hdcp_context->cpuvaddr_rcvr_id_list) {
+		dma_free_attrs(&tsec->dev,
+			HDCP_RCVR_ID_LIST_SIZE,
+			hdcp_context->cpuvaddr_rcvr_id_list,
+			hdcp_context->dma_handle_rcvr_id_list,
+			&attrs);
+		hdcp_context->cpuvaddr_rcvr_id_list = NULL;
+	}
+
+	if (hdcp_context->cpuvaddr_input_buf) {
+		dma_free_attrs(&tsec->dev,
+			HDCP_CONTENT_BUF_SIZE,
+			hdcp_context->cpuvaddr_input_buf,
+			hdcp_context->dma_handle_input_buf,
+			&attrs);
+		hdcp_context->cpuvaddr_input_buf = NULL;
+	}
+
+	if (hdcp_context->cpuvaddr_output_buf) {
+		dma_free_attrs(&tsec->dev,
+			HDCP_CONTENT_BUF_SIZE,
+			hdcp_context->cpuvaddr_output_buf,
+			hdcp_context->dma_handle_output_buf,
+			&attrs);
+		hdcp_context->cpuvaddr_output_buf = NULL;
+	}
+exit:
+	return err;
+
+}
+
+void tsec_execute_method(dma_addr_t dma_handle,
+	u32 *cpuvaddr,
+	u32 opcode_len)
+{
+	struct nvhost_channel *channel = NULL;
+	struct nvhost_job *job = NULL;
+	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
+	int err = 0;
+	u32 syncpt_incrs = 1;
+	u32 syncval = 0;
+	void *completed_waiter = NULL;
+	void *wakeup_waiter = NULL;
+	u32 id = 0;
+	void *ref;
+	struct nvhost_device_data *pdata = platform_get_drvdata(tsec);
+	channel = pdata->channels[0];
+	if (!channel) {
+		err = nvhost_channel_map(pdata, &channel);
+		if (err)
+			nvhost_err(&tsec->dev, "Channel map failed\n");
+		}
+	completed_waiter = nvhost_intr_alloc_waiter();
+	wakeup_waiter = nvhost_intr_alloc_waiter();
+	if (!completed_waiter || !wakeup_waiter) {
+		err = -ENOMEM;
+		goto exit;
+	}
+
+	job = nvhost_job_alloc(channel, NULL, 0, 0, 0, syncpt_incrs);
+	if (!job) {
+		err = -ENOMEM;
+		goto exit;
+	}
+
+	/* keep module powered */
+	nvhost_module_busy(tsec);
+
+	/* get submit lock */
+	err = mutex_lock_interruptible(&channel->submitlock);
+	if (err) {
+		nvhost_module_idle(tsec);
+		goto exit;
+	}
+	id = channel->syncpts[0];
+	if (!id) {
+		id = nvhost_get_syncpt_host_managed(channel->dev, 0);
+		channel->syncpts[0] = id;
+	}
+	job->sp->id = id;
+	syncval = nvhost_syncpt_incr_max(&nvhost_get_host(tsec)->syncpt,
+		id, syncpt_incrs);
+	job->sp->incrs = syncpt_incrs;
+	job->sp->fence = syncval;
+	job->num_syncpts = syncpt_incrs;
+
+	/* begin a CDMA submit */
+	nvhost_cdma_begin(&channel->cdma, job);
+
+	/* Wait for idle first */
+	nvhost_cdma_push(&channel->cdma,
+		nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
+		host1x_uclass_wait_syncpt_r(), 1),
+		nvhost_class_host_wait_syncpt(id,
+		syncval - syncpt_incrs));
+	nvhost_cdma_push(&channel->cdma,
+		nvhost_opcode_setclass(NV_TSEC_CLASS_ID, 0, 0),
+		NVHOST_OPCODE_NOOP);
+	nvhost_cdma_push_gather(&channel->cdma,
+		cpuvaddr,
+		dma_handle,
+		0,
+		nvhost_opcode_gather(opcode_len),
+		dma_handle);
+
+	nvhost_cdma_push(&channel->cdma,
+		nvhost_opcode_imm_incr_syncpt(
+		host1x_uclass_incr_syncpt_cond_op_done_v(), id),
+		NVHOST_OPCODE_NOOP);
+
+	nvhost_cdma_end(&channel->cdma, job);
+
+	/* Schedule a submit complete interrupt */
+	err = nvhost_intr_add_action(&nvhost_get_host(tsec)->intr,
+		id, syncval,
+		NVHOST_INTR_ACTION_SUBMIT_COMPLETE, channel,
+		completed_waiter, NULL);
+
+	completed_waiter = NULL;
+	if (err)
+		nvhost_err(&tsec->dev, "Failed to set submit complete intr\n");
+	err = nvhost_intr_add_action(&nvhost_get_host(tsec)->intr,
+			id, syncval,
+			NVHOST_INTR_ACTION_WAKEUP, &wq,
+			wakeup_waiter,
+			&ref);
+	wakeup_waiter = NULL;
+	if (err)
+		nvhost_err(&tsec->dev, "Failed to set wakeup intr\n");
+
+	mutex_unlock(&channel->submitlock);
+
+	/* Wait for read to be ready */
+
+	wait_event(wq,
+	nvhost_syncpt_is_expired(&nvhost_get_host(tsec)->syncpt,
+		id, syncval));
+
+	nvhost_intr_put_ref(&nvhost_get_host(tsec)->intr, id, ref);
+
+exit:
+	nvhost_job_put(job);
+	job = NULL;
+	return;
+}
+
+void tsec_write_mthd(u32 *buf, u32 mid, u32 data, u32 *offset)
+{
+	int i = 0;
+	buf[i++] = nvhost_opcode_incr(NV_PSEC_THI_METHOD0>>2, 1);
+	buf[i++] = mid>>2;
+	buf[i++] = nvhost_opcode_incr(NV_PSEC_THI_METHOD1>>2, 1);
+	buf[i++] = data;
+	*offset = *offset + 4;
+}
+
+void tsec_send_method(struct hdcp_context_t *hdcp_context,
+	u32 method, u32 flags)
+{
+	u32 opcode_len = 0;
+	u32 *cpuvaddr = NULL;
+	dma_addr_t dma_handle = 0;
+	DEFINE_DMA_ATTRS(attrs);
+	cpuvaddr = dma_alloc_attrs(&tsec->dev, HDCP_MTHD_BUF_SIZE,
+			&dma_handle, GFP_KERNEL,
+			&attrs);
+	memset(cpuvaddr, 0x0, HDCP_MTHD_BUF_SIZE);
+	tsec_write_mthd(&cpuvaddr[opcode_len],
+		SET_APPLICATION_ID,
+		SET_APPLICATION_ID_ID_HDCP,
+		&opcode_len);
+	if (flags & HDCP_MTHD_FLAGS_SB)
+		tsec_write_mthd(&cpuvaddr[opcode_len],
+			HDCP_SET_SCRATCH_BUFFER,
+			hdcp_context->dma_handle_scratch>>8,
+			&opcode_len);
+	if (flags & HDCP_MTHD_FLAGS_DCP_KPUB)
+		tsec_write_mthd(&cpuvaddr[opcode_len],
+			HDCP_SET_DCP_KPUB,
+			hdcp_context->dma_handle_dcp_kpub_aligned>>8,
+			&opcode_len);
+	if (flags & HDCP_MTHD_FLAGS_SRM)
+		tsec_write_mthd(&cpuvaddr[opcode_len],
+			HDCP_SET_SRM,
+			hdcp_context->dma_handle_srm>>8,
+			&opcode_len);
+	if (flags & HDCP_MTHD_FLAGS_CERT)
+		tsec_write_mthd(&cpuvaddr[opcode_len],
+			HDCP_SET_CERT_RX,
+			hdcp_context->dma_handle_cert_aligned>>8,
+			&opcode_len);
+	if (flags & HDCP_MTHD_FLAGS_RECV_ID_LIST)
+		tsec_write_mthd(&cpuvaddr[opcode_len],
+			HDCP_SET_RECEIVER_ID_LIST,
+			hdcp_context->dma_handle_rcvr_id_list>>8,
+			&opcode_len);
+	if (flags & HDCP_MTHD_FLAGS_INPUT_BUFFER)
+		tsec_write_mthd(&cpuvaddr[opcode_len],
+			HDCP_SET_ENC_INPUT_BUFFER,
+			hdcp_context->dma_handle_input_buf>>8,
+			&opcode_len);
+	if (flags & HDCP_MTHD_FLAGS_OUTPUT_BUFFER)
+		tsec_write_mthd(&cpuvaddr[opcode_len],
+			HDCP_SET_ENC_OUTPUT_BUFFER,
+			hdcp_context->dma_handle_output_buf>>8,
+			&opcode_len);
+	tsec_write_mthd(&cpuvaddr[opcode_len],
+			method, hdcp_context->dma_handle_mthd_buf_aligned>>8,
+			&opcode_len);
+	tsec_write_mthd(&cpuvaddr[opcode_len],
+			EXECUTE,
+			0x100,
+			&opcode_len);
+	tsec_execute_method(dma_handle, cpuvaddr, opcode_len);
+
+	if (cpuvaddr)
+		dma_free_attrs(&tsec->dev,
+			HDCP_MTHD_BUF_SIZE, cpuvaddr,
+			dma_handle, &attrs);
+}
+
+
 
 /* caller is responsible for freeing */
 static char *tsec_get_fw_name(struct platform_device *dev)
@@ -559,7 +979,8 @@ static int tsec_probe(struct platform_device *dev)
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
 		return err;
-
+	if (!tsec)
+		tsec = dev;
 	nvhost_module_init(dev);
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
@@ -604,7 +1025,7 @@ static struct platform_driver tsec_driver = {
 static int __init tsec_key_setup(char *line)
 {
 	int i;
-	u8 tmp[] = {0,0,0};
+	u8 tmp[] = {0, 0, 0};
 	pr_debug("tsec otf key: %s\n", line);
 
 	if (strlen(line) != TSEC_KEY_LENGTH*2) {

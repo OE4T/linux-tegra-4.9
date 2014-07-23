@@ -1,5 +1,6 @@
 GCOV_PROFILE := y
 ccflags-y += -Idrivers/video/tegra/host
+ccflags-y += -Idrivers/video/tegra/dc
 ccflags-y += -Werror
 
 nvhost-tsec-objs  = \

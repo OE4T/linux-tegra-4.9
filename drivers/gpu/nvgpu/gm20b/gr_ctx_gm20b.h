@@ -22,7 +22,7 @@
 
 /* production netlist, one and only one from below */
 /*#undef GM20B_NETLIST_IMAGE_FW_NAME*/
-#define GM20B_NETLIST_IMAGE_FW_NAME GK20A_NETLIST_IMAGE_A
+#define GM20B_NETLIST_IMAGE_FW_NAME GK20A_NETLIST_IMAGE_B
 
 void gm20b_init_gr_ctx(struct gpu_ops *gops);
 

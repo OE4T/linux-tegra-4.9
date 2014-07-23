@@ -591,10 +591,6 @@ static inline int support_gk20a_pmu(void){return 0;}
 
 void gk20a_create_sysfs(struct platform_device *dev);
 
-#ifdef CONFIG_DEBUG_FS
-int clk_gk20a_debugfs_init(struct platform_device *dev);
-#endif
-
 #define GK20A_BAR0_IORESOURCE_MEM 0
 #define GK20A_BAR1_IORESOURCE_MEM 1
 #define GK20A_SIM_IORESOURCE_MEM 2

@@ -1502,8 +1502,6 @@ static int gk20a_probe(struct platform_device *dev)
 	gk20a_create_sysfs(dev);
 
 #ifdef CONFIG_DEBUG_FS
-	clk_gk20a_debugfs_init(dev);
-
 	spin_lock_init(&gk20a->debugfs_lock);
 	gk20a->mm.ltc_enabled = true;
 	gk20a->mm.ltc_enabled_debug = true;

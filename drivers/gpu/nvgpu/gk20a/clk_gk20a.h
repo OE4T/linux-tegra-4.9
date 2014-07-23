@@ -56,6 +56,7 @@ struct clk_gk20a {
 	struct mutex clk_mutex;
 	bool sw_ready;
 	bool clk_hw_on;
+	bool debugfs_set;
 };
 
 int gk20a_init_clk_support(struct gk20a *g);

@@ -42,6 +42,10 @@ struct pll_parms gpc_pll_params = {
 	1, 32,			/* PL */
 };
 
+#ifdef CONFIG_DEBUG_FS
+static int clk_gk20a_debugfs_init(struct gk20a *g);
+#endif
+
 static u8 pl_to_div[] = {
 /* PL:   0, 1, 2, 3, 4, 5, 6,  7,  8,  9, 10, 11, 12, 13, 14 */
 /* p: */ 1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 12, 16, 20, 24, 32 };
@@ -661,6 +665,12 @@ int gk20a_init_clk_support(struct gk20a *g)
 	if (err)
 		return err;
 
+#ifdef CONFIG_DEBUG_FS
+	if (!clk->debugfs_set) {
+		if (!clk_gk20a_debugfs_init(g))
+			clk->debugfs_set = true;
+	}
+#endif
 	return err;
 }
 
@@ -800,11 +810,10 @@ static int monitor_get(void *data, u64 *val)
 }
 DEFINE_SIMPLE_ATTRIBUTE(monitor_fops, monitor_get, NULL, "%llu\n");
 
-int clk_gk20a_debugfs_init(struct platform_device *dev)
+static int clk_gk20a_debugfs_init(struct gk20a *g)
 {
 	struct dentry *d;
-	struct gk20a_platform *platform = platform_get_drvdata(dev);
-	struct gk20a *g = get_gk20a(dev);
+	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
 
 	d = debugfs_create_file(
 		"rate", S_IRUGO|S_IWUSR, platform->debugfs, g, &rate_fops);

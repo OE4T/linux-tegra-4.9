@@ -239,6 +239,7 @@ struct gpu_ops {
 			       u32 num_pages, u32 pgsz_idx);
 		void (*clear_sparse)(struct vm_gk20a *vm, u64 vaddr,
 			       u64 size, u32 pgsz_idx);
+		bool (*is_debug_mode_enabled)(struct gk20a *g);
 	} mm;
 	struct {
 		int (*prepare_ucode)(struct gk20a *g);

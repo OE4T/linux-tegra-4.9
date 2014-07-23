@@ -3210,6 +3210,14 @@ static inline u32 gr_gpcs_pri_mmu_debug_ctrl_r(void)
 {
 	return 0x004188b0;
 }
+static inline u32 gr_gpcs_pri_mmu_debug_ctrl_debug_v(u32 r)
+{
+	return (r >> 16) & 0x1;
+}
+static inline u32 gr_gpcs_pri_mmu_debug_ctrl_debug_enabled_v(void)
+{
+	return 0x00000001;
+}
 static inline u32 gr_gpcs_pri_mmu_debug_wr_r(void)
 {
 	return 0x004188b4;

@@ -3111,5 +3111,6 @@ void gk20a_init_mm(struct gpu_ops *gops)
 	gops->mm.set_sparse = gk20a_vm_put_sparse;
 	gops->mm.put_empty = gk20a_vm_put_empty;
 	gops->mm.clear_sparse = gk20a_vm_clear_sparse;
+	gops->mm.is_debug_mode_enabled = gk20a_mm_mmu_debug_mode_enabled;
 }
 

@@ -5267,7 +5267,7 @@ static int gk20a_gr_lock_down_sm(struct gk20a *g, u32 global_esr_mask)
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
-	bool mmu_debug_mode_enabled = gk20a_mm_mmu_debug_mode_enabled(g);
+	bool mmu_debug_mode_enabled = g->ops.mm.is_debug_mode_enabled(g);
 	u32 dbgr_control0;
 
 	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "locking down SM");

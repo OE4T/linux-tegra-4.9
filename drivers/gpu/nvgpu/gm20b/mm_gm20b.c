@@ -18,6 +18,7 @@
 #include "mm_gm20b.h"
 #include "hw_gmmu_gm20b.h"
 #include "hw_fb_gm20b.h"
+#include "hw_gr_gm20b.h"
 
 static const u32 gmmu_page_sizes[gmmu_nr_page_sizes] = { SZ_4K, SZ_128K };
 static const u32 gmmu_page_shifts[gmmu_nr_page_sizes] = { 12, 17 };
@@ -314,8 +315,16 @@ void gm20b_vm_clear_sparse(struct vm_gk20a *vm, u64 vaddr,
 	return;
 }
 
+bool gm20b_mm_mmu_debug_mode_enabled(struct gk20a *g)
+{
+	u32 debug_ctrl = gk20a_readl(g, gr_gpcs_pri_mmu_debug_ctrl_r());
+	return gr_gpcs_pri_mmu_debug_ctrl_debug_v(debug_ctrl) ==
+		gr_gpcs_pri_mmu_debug_ctrl_debug_enabled_v();
+}
+
 void gm20b_init_mm(struct gpu_ops *gops)
 {
 	gops->mm.set_sparse = gm20b_vm_put_sparse;
 	gops->mm.clear_sparse = gm20b_vm_clear_sparse;
+	gops->mm.is_debug_mode_enabled = gm20b_mm_mmu_debug_mode_enabled;
 }

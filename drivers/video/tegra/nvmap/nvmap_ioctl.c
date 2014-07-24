@@ -31,6 +31,7 @@
 #include <linux/uaccess.h>
 #include <linux/nvmap.h>
 #include <linux/vmalloc.h>
+#include <linux/highmem.h>
 
 #include <asm/memory.h>
 
@@ -728,8 +729,7 @@ static void outer_cache_maint(unsigned int op, phys_addr_t paddr, size_t size)
 
 static void heap_page_cache_maint(
 	struct nvmap_handle *h, unsigned long start, unsigned long end,
-	unsigned int op, bool inner, bool outer,
-	unsigned long kaddr, pgprot_t prot, bool clean_only_dirty)
+	unsigned int op, bool inner, bool outer, bool clean_only_dirty)
 {
 	if (h->userflags & NVMAP_HANDLE_CACHE_SYNC) {
 		/*
@@ -756,7 +756,8 @@ static void heap_page_cache_maint(
 			if (!pages)
 				goto per_page_cache_maint;
 			vaddr = vm_map_ram(pages,
-					h->size >> PAGE_SHIFT, -1, prot);
+					h->size >> PAGE_SHIFT, -1,
+					nvmap_pgprot(h, PG_PROT_KERNEL));
 			nvmap_altfree(pages,
 				(h->size >> PAGE_SHIFT) * sizeof(*pages));
 		}
@@ -780,6 +781,7 @@ per_page_cache_maint:
 
 	while (start < end) {
 		struct page *page;
+		void *kaddr, *vaddr;
 		phys_addr_t paddr;
 		unsigned long next;
 		unsigned long off;
@@ -792,12 +794,11 @@ per_page_cache_maint:
 		paddr = page_to_phys(page) + off;
 
 		if (inner) {
-			void *vaddr = (void *)kaddr + off;
+			kaddr = kmap(page);
+			vaddr = (void *)kaddr + off;
 			BUG_ON(!kaddr);
-			ioremap_page_range(kaddr, kaddr + PAGE_SIZE,
-				paddr, prot);
 			inner_cache_maint(op, vaddr, size);
-			unmap_kernel_range(kaddr, PAGE_SIZE);
+			kunmap(page);
 		}
 
 		if (outer)
@@ -875,7 +876,7 @@ static bool fast_cache_maint(struct nvmap_handle *h,
 		{
 			if (h->heap_pgalloc) {
 				heap_page_cache_maint(h, start,
-					end, op, false, true, 0, 0,
+					end, op, false, true,
 					clean_only_dirty);
 			} else  {
 				phys_addr_t pstart;
@@ -933,19 +934,10 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 	if (fast_cache_maint(h, pstart, pend, op, cache_work->clean_only_dirty))
 		goto out;
 
-	prot = nvmap_pgprot(h, PG_PROT_KERNEL);
-	area = alloc_vm_area(PAGE_SIZE, NULL);
-	if (!area) {
-		err = -ENOMEM;
-		goto out;
-	}
-	kaddr = (ulong)area->addr;
-
 	if (h->heap_pgalloc) {
 		heap_page_cache_maint(h, pstart, pend, op, true,
 			(h->flags == NVMAP_HANDLE_INNER_CACHEABLE) ?
-			false : true, kaddr, prot,
-			cache_work->clean_only_dirty);
+			false : true, cache_work->clean_only_dirty);
 		goto out;
 	}
 
@@ -954,6 +946,14 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 		err = -EINVAL;
 		goto out;
 	}
+
+	prot = nvmap_pgprot(h, PG_PROT_KERNEL);
+	area = alloc_vm_area(PAGE_SIZE, NULL);
+	if (!area) {
+		err = -ENOMEM;
+		goto out;
+	}
+	kaddr = (ulong)area->addr;
 
 	pstart += h->carveout->base;
 	pend += h->carveout->base;

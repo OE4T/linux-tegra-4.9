@@ -24,8 +24,8 @@
 #include <mach/thermal.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/hw_trim_gk20a.h"
-#include "gk20a/hw_timer_gk20a.h"
+#include "hw_trim_gm20b.h"
+#include "hw_timer_gm20b.h"
 #include "clk_gm20b.h"
 
 #define gk20a_dbg_clk(fmt, arg...) \

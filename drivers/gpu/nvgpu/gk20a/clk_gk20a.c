@@ -415,11 +415,15 @@ struct clk *gk20a_clk_get(struct gk20a *g)
 {
 	if (!g->clk.tegra_clk) {
 		struct clk *clk;
+		char clk_dev_id[32];
+		struct device *dev = dev_from_gk20a(g);
 
-		clk = clk_get_sys("tegra_gk20a", "gpu");
+		snprintf(clk_dev_id, 32, "tegra_%s", dev_name(dev));
+
+		clk = clk_get_sys(clk_dev_id, "gpu");
 		if (IS_ERR(clk)) {
-			gk20a_err(dev_from_gk20a(g),
-				"fail to get tegra gpu clk tegra_gk20a/gpu");
+			gk20a_err(dev, "fail to get tegra gpu clk %s/gpu\n",
+				  clk_dev_id);
 			return NULL;
 		}
 		g->clk.tegra_clk = clk;

@@ -217,6 +217,14 @@ struct gpu_ops {
 				struct pmu_sequence *seq);
 		void (*set_pmu_cmdline_args_secure_mode)(struct pmu_gk20a *pmu,
 			u32 val);
+		u32 (*get_perfmon_cntr_sz)(struct pmu_gk20a *pmu);
+		void * (*get_perfmon_cntr_ptr)(struct pmu_gk20a *pmu);
+		void (*set_perfmon_cntr_ut)(struct pmu_gk20a *pmu, u16 ut);
+		void (*set_perfmon_cntr_lt)(struct pmu_gk20a *pmu, u16 lt);
+		void (*set_perfmon_cntr_valid)(struct pmu_gk20a *pmu, u8 val);
+		void (*set_perfmon_cntr_index)(struct pmu_gk20a *pmu, u8 val);
+		void (*set_perfmon_cntr_group_id)(struct pmu_gk20a *pmu,
+				u8 gid);
 	} pmu_ver;
 	struct {
 		int (*get_netlist_name)(int index, char *name);

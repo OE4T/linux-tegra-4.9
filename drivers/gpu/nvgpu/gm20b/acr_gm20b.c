@@ -80,7 +80,7 @@ static void free_blob_res(struct gk20a *g)
 
 int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 {
-	const struct firmware *pmu_fw;
+	const struct firmware *pmu_fw, *pmu_desc;
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct lsf_ucode_desc *lsf_desc;
 	int err;
@@ -93,18 +93,28 @@ int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	}
 	gm20b_dbg_pmu("Loaded PMU ucode in for blob preparation");
 
-	pmu->desc = (struct pmu_ucode_desc *)pmu_fw->data;
-	pmu->ucode_image = (u32 *)((u8 *)pmu->desc +
-			pmu->desc->descriptor_size);
+	gm20b_dbg_pmu("requesting PMU ucode desc in GM20B\n");
+	pmu_desc = gk20a_request_firmware(g, GM20B_PMU_UCODE_DESC);
+	if (!pmu_desc) {
+		gk20a_err(dev_from_gk20a(g), "failed to load pmu ucode desc!!");
+		gm20b_dbg_pmu("requesting PMU ucode in GM20B failed\n");
+		err = -ENOENT;
+		goto release_img_fw;
+	}
+	pmu->desc = (struct pmu_ucode_desc *)pmu_desc->data;
+	pmu->ucode_image = (u32 *)pmu_fw->data;
+
 	err = gk20a_init_pmu(pmu);
 	if (err) {
 		gm20b_dbg_pmu("failed to set function pointers\n");
-		return err;
+		goto release_desc;
 	}
 
 	lsf_desc = kzalloc(sizeof(struct lsf_ucode_desc), GFP_KERNEL);
-	if (!lsf_desc)
-		return -ENOMEM;
+	if (!lsf_desc) {
+		err = -ENOMEM;
+		goto release_desc;
+	}
 	lsf_desc->falcon_id = LSF_FALCON_ID_PMU;
 
 	p_img->desc = pmu->desc;
@@ -115,6 +125,11 @@ int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	p_img->lsf_desc = (struct lsf_ucode_desc *)lsf_desc;
 	gm20b_dbg_pmu("requesting PMU ucode in GM20B exit\n");
 	return 0;
+release_desc:
+	release_firmware(pmu_desc);
+release_img_fw:
+	release_firmware(pmu_fw);
+	return err;
 }
 
 int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
@@ -378,10 +393,8 @@ int pmu_populate_loader_cfg(struct gk20a *g,
 	g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq(pmu,
 				clk_get_rate(platform->clk[1]));
 	g->ops.pmu_ver.set_pmu_cmdline_args_secure_mode(pmu, 1);
-	pmu_copy_to_dmem(pmu, addr_args,
-			(u8 *)(g->ops.pmu_ver.get_pmu_cmdline_args_ptr(pmu)),
-			g->ops.pmu_ver.get_pmu_cmdline_args_size(pmu), 0);
 	*p_bl_gen_desc_size = sizeof(p_bl_gen_desc->loader_cfg);
+	g->acr.pmu_args = addr_args;
 	return 0;
 }
 
@@ -1026,7 +1039,10 @@ int gm20b_init_pmu_setup_hw1(struct gk20a *g, struct flcn_bl_dmem_desc *desc,
 	int err;
 
 	gk20a_dbg_fn("");
+	mutex_lock(&pmu->isr_enable_lock);
 	pmu_reset(pmu);
+	pmu->isr_enabled = true;
+	mutex_unlock(&pmu->isr_enable_lock);
 
 	/* setup apertures - virtual */
 	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_UCODE),
@@ -1045,6 +1061,9 @@ int gm20b_init_pmu_setup_hw1(struct gk20a *g, struct flcn_bl_dmem_desc *desc,
 			pwr_fbif_transcfg_mem_type_physical_f() |
 			pwr_fbif_transcfg_target_noncoherent_sysmem_f());
 
+	pmu_copy_to_dmem(pmu, g->acr.pmu_args,
+			(u8 *)(g->ops.pmu_ver.get_pmu_cmdline_args_ptr(pmu)),
+			g->ops.pmu_ver.get_pmu_cmdline_args_size(pmu), 0);
 	err = bl_bootstrap(pmu, desc, bl_sz);
 	if (err)
 		return err;

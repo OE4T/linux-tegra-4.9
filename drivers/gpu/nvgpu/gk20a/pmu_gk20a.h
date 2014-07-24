@@ -51,6 +51,7 @@
 /* Mapping between AP_CTRLs and Idle counters */
 #define PMU_AP_IDLE_MASK_GRAPHICS	(PMU_AP_IDLE_MASK_HIST_IDX_1)
 
+#define APP_VERSION_GM20B_2 18694072
 #define APP_VERSION_GM20B_1 18547257
 #define APP_VERSION_GM20B 17615280
 #define APP_VERSION_2 18542378
@@ -336,6 +337,17 @@ struct pmu_cmdline_args_v1 {
 	u32 falc_trace_dma_base;	/* 256-byte block address */
 	u32 falc_trace_dma_idx;		/* dmaIdx for DMA operations */
 	u8 secure_mode;
+	struct pmu_mem_v1 gc6_ctx;		/* dmem offset of gc6 context */
+};
+
+struct pmu_cmdline_args_v2 {
+	u32 cpu_freq_hz;		/* Frequency of the clock driving PMU */
+	u32 falc_trace_size;		/* falctrace buffer size (bytes) */
+	u32 falc_trace_dma_base;	/* 256-byte block address */
+	u32 falc_trace_dma_idx;		/* dmaIdx for DMA operations */
+	u8 secure_mode;
+	u8 raise_priv_sec;     /*Raise priv level required for desired
+					registers*/
 	struct pmu_mem_v1 gc6_ctx;		/* dmem offset of gc6 context */
 };
 
@@ -641,13 +653,23 @@ struct pmu_pg_cmd {
 #define PMU_PERFMON_PCT_TO_INC		58
 #define PMU_PERFMON_PCT_TO_DEC		23
 
-struct pmu_perfmon_counter {
+struct pmu_perfmon_counter_v0 {
 	u8 index;
 	u8 flags;
 	u8 group_id;
 	u8 valid;
 	u16 upper_threshold; /* units of 0.01% */
 	u16 lower_threshold; /* units of 0.01% */
+};
+
+struct pmu_perfmon_counter_v2 {
+	u8 index;
+	u8 flags;
+	u8 group_id;
+	u8 valid;
+	u16 upper_threshold; /* units of 0.01% */
+	u16 lower_threshold; /* units of 0.01% */
+	u32 scale;
 };
 
 #define PMU_PERFMON_FLAG_ENABLE_INCREASE	(0x00000001)
@@ -1044,7 +1066,10 @@ struct pmu_gk20a {
 	struct mutex elpg_mutex; /* protect elpg enable/disable */
 	int elpg_refcnt; /* disable -1, enable +1, <=0 elpg disabled, > 0 elpg enabled */
 
-	struct pmu_perfmon_counter perfmon_counter;
+	union {
+		struct pmu_perfmon_counter_v2 perfmon_counter_v2;
+		struct pmu_perfmon_counter_v0 perfmon_counter_v0;
+	};
 	u32 perfmon_state_id[PMU_DOMAIN_GROUP_NUM];
 
 	bool initialized;
@@ -1063,6 +1088,7 @@ struct pmu_gk20a {
 	union {
 		struct pmu_cmdline_args_v0 args_v0;
 		struct pmu_cmdline_args_v1 args_v1;
+		struct pmu_cmdline_args_v2 args_v2;
 	};
 	unsigned long perfmon_events_cnt;
 	bool perfmon_sampling_enabled;

@@ -24,7 +24,8 @@
 #define MAX_SUPPORTED_LSFM 2 /*PMU, FECS, GPCCS*/
 #define LSF_UCODE_DATA_ALIGNMENT 4096
 
-#define GM20B_PMU_UCODE_IMAGE "gpmu_ucode.bin"
+#define GM20B_PMU_UCODE_IMAGE "gpmu_ucode_image.bin"
+#define GM20B_PMU_UCODE_DESC "gpmu_ucode_desc.bin"
 #define GM20B_HSBIN_PMU_UCODE_IMAGE "acr_ucode.bin"
 #define GM20B_HSBIN_PMU_BL_UCODE_IMAGE "pmu_bl.bin"
 
@@ -363,6 +364,7 @@ struct acr_gm20b {
 	struct hsflcn_bl_desc *pmu_hsbl_desc;
 	struct bin_hdr *hsbin_hdr;
 	struct acr_fw_header *fw_hdr;
+	u32 pmu_args;
 };
 
 void gm20b_init_secure_pmu(struct gpu_ops *gops);

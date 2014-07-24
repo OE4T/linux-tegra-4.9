@@ -15,5 +15,7 @@
 
 #ifndef __PMU_GM20B_H_
 #define __PMU_GM20B_H_
+
 void gm20b_init_pmu_ops(struct gpu_ops *gops);
+
 #endif /*__PMU_GM20B_H_*/

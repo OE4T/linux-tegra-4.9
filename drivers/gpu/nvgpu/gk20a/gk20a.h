@@ -238,6 +238,7 @@ struct gpu_ops {
 	struct {
 		int (*prepare_ucode)(struct gk20a *g);
 		int (*pmu_setup_hw_and_bootstrap)(struct gk20a *g);
+		int (*pmu_setup_elpg)(struct gk20a *g);
 	} pmu;
 	struct {
 		int (*init_clk_support)(struct gk20a *g);

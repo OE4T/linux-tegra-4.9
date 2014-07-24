@@ -2280,8 +2280,12 @@ static void pmu_setup_hw_enable_elpg(struct gk20a *g)
 	/* Save zbc table after PMU is initialized. */
 	gr_gk20a_pmu_save_zbc(g, 0xf);
 
-	if (g->elpg_enabled)
+	if (g->elpg_enabled) {
+		/* Init reg with prod values*/
+		if (g->ops.pmu.pmu_setup_elpg)
+			g->ops.pmu.pmu_setup_elpg(g);
 		gk20a_pmu_enable_elpg(g);
+	}
 
 	udelay(50);
 
@@ -2296,6 +2300,7 @@ void gk20a_init_pmu_ops(struct gpu_ops *gops)
 {
 	gops->pmu.prepare_ucode = gk20a_prepare_ucode;
 	gops->pmu.pmu_setup_hw_and_bootstrap = gk20a_init_pmu_setup_hw1;
+	gops->pmu.pmu_setup_elpg = NULL;
 }
 
 int gk20a_init_pmu_support(struct gk20a *g)

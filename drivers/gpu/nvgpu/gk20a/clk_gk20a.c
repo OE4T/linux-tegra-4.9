@@ -624,7 +624,7 @@ static int gk20a_clk_register_export_ops(struct gk20a *g)
 	return ret;
 }
 
-int gk20a_init_clk_support(struct gk20a *g)
+static int gk20a_init_clk_support(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
 	u32 err;
@@ -674,6 +674,20 @@ int gk20a_init_clk_support(struct gk20a *g)
 	return err;
 }
 
+static int gk20a_suspend_clk_support(struct gk20a *g)
+{
+	int ret;
+
+	clk_disable(g->clk.tegra_clk);
+
+	/* The prev call may not disable PLL if gbus is unbalanced - force it */
+	mutex_lock(&g->clk.clk_mutex);
+	ret = clk_disable_gpcpll(g, 1);
+	g->clk.clk_hw_on = false;
+	mutex_unlock(&g->clk.clk_mutex);
+	return ret;
+}
+
 void gk20a_init_clk_ops(struct gpu_ops *gops)
 {
 	gops->clk.init_clk_support = gk20a_init_clk_support;
@@ -698,20 +712,6 @@ long gk20a_clk_round_rate(struct gk20a *g, unsigned long rate)
 int gk20a_clk_set_rate(struct gk20a *g, unsigned long rate)
 {
 	return clk_set_rate(g->clk.tegra_clk, rate);
-}
-
-int gk20a_suspend_clk_support(struct gk20a *g)
-{
-	int ret;
-
-	clk_disable(g->clk.tegra_clk);
-
-	/* The prev call may not disable PLL if gbus is unbalanced - force it */
-	mutex_lock(&g->clk.clk_mutex);
-	ret = clk_disable_gpcpll(g, 1);
-	g->clk.clk_hw_on = false;
-	mutex_unlock(&g->clk.clk_mutex);
-	return ret;
 }
 
 #ifdef CONFIG_DEBUG_FS

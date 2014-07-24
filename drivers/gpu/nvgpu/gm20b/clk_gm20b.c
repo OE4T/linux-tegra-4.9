@@ -623,7 +623,7 @@ static int gm20b_clk_register_export_ops(struct gk20a *g)
 	return ret;
 }
 
-int gm20b_init_clk_support(struct gk20a *g)
+static int gm20b_init_clk_support(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
 	u32 err;
@@ -673,13 +673,7 @@ int gm20b_init_clk_support(struct gk20a *g)
 	return err;
 }
 
-void gm20b_init_clk_ops(struct gpu_ops *gops)
-{
-	gops->clk.init_clk_support = gm20b_init_clk_support;
-	gops->clk.suspend_clk_support = gm20b_suspend_clk_support;
-}
-
-int gm20b_suspend_clk_support(struct gk20a *g)
+static int gm20b_suspend_clk_support(struct gk20a *g)
 {
 	int ret;
 
@@ -691,6 +685,12 @@ int gm20b_suspend_clk_support(struct gk20a *g)
 	g->clk.clk_hw_on = false;
 	mutex_unlock(&g->clk.clk_mutex);
 	return ret;
+}
+
+void gm20b_init_clk_ops(struct gpu_ops *gops)
+{
+	gops->clk.init_clk_support = gm20b_init_clk_support;
+	gops->clk.suspend_clk_support = gm20b_suspend_clk_support;
 }
 
 #ifdef CONFIG_DEBUG_FS

@@ -60,8 +60,6 @@ struct clk_gk20a {
 };
 
 /* APIs used for separate HAL */
-int gk20a_init_clk_support(struct gk20a *g);
-int gk20a_suspend_clk_support(struct gk20a *g);
 struct clk *gk20a_clk_get(struct gk20a *g);
 
 /* APIs used for both GK20A and GM20B */

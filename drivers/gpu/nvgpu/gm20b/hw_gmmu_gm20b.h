@@ -138,13 +138,13 @@ static inline u32 gmmu_pte_valid_w(void)
 {
 	return 0;
 }
-static inline u32 gmmu_pte_valid_false_f(void)
-{
-	return 0x0;
-}
 static inline u32 gmmu_pte_valid_true_f(void)
 {
 	return 0x1;
+}
+static inline u32 gmmu_pte_valid_false_f(void)
+{
+	return 0x0;
 }
 static inline u32 gmmu_pte_address_sys_f(u32 v)
 {

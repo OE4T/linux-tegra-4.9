@@ -58,10 +58,6 @@ static inline u32 fb_mmu_ctrl_r(void)
 {
 	return 0x00100c80;
 }
-static inline u32 fb_priv_mmu_phy_secure_r(void)
-{
-	return 0x00100ce4;
-}
 static inline u32 fb_mmu_ctrl_vm_pg_size_f(u32 v)
 {
 	return (v & 0x1) << 0;
@@ -81,6 +77,10 @@ static inline u32 fb_mmu_ctrl_pri_fifo_empty_false_f(void)
 static inline u32 fb_mmu_ctrl_pri_fifo_space_v(u32 r)
 {
 	return (r >> 16) & 0xff;
+}
+static inline u32 fb_priv_mmu_phy_secure_r(void)
+{
+	return 0x00100ce4;
 }
 static inline u32 fb_mmu_invalidate_pdb_r(void)
 {

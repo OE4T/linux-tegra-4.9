@@ -33,27 +33,34 @@
 
 /* from vbios PLL info table */
 static struct pll_parms gpc_pll_params = {
-	144000, 2064000,	/* freq */
-	1000000, 2064000,	/* vco */
-	12000, 38000,		/* u */
+	128000,  2600000,	/* freq */
+	1300000, 2600000,	/* vco */
+	12000,   38400,		/* u */
 	1, 255,			/* M */
 	8, 255,			/* N */
-	1, 32,			/* PL */
+	1, 31,			/* PL */
 };
 
 #ifdef CONFIG_DEBUG_FS
 static int clk_gm20b_debugfs_init(struct gk20a *g);
 #endif
 
-static u8 pl_to_div[] = {
-/* PL:   0, 1, 2, 3, 4, 5, 6,  7,  8,  9, 10, 11, 12, 13, 14 */
-/* p: */ 1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 12, 16, 20, 24, 32 };
+/* 1:1 match between post divider settings and divisor value */
+static inline u32 pl_to_div(u32 pl)
+{
+	return pl;
+}
+
+static inline u32 div_to_pl(u32 div)
+{
+	return div;
+}
 
 /* Calculate and update M/N/PL as well as pll->freq
-    ref_clk_f = clk_in_f / src_div = clk_in_f; (src_div = 1 on gk20a)
+    ref_clk_f = clk_in_f;
     u_f = ref_clk_f / M;
-    PLL output = vco_f = u_f * N = ref_clk_f * N / M;
-    gpc2clk = target clock frequency = vco_f / PL;
+    vco_f = u_f * N = ref_clk_f * N / M;
+    PLL output = gpc2clk = target clock frequency = vco_f / pl_to_pdiv(PL);
     gpcclk = gpc2clk / 2; */
 static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 	struct pll_parms *pll_params, u32 *target_freq, bool best_fit)
@@ -65,7 +72,7 @@ static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 	u32 target_vco_f, vco_f;
 	u32 ref_clk_f, target_clk_f, u_f;
 	u32 delta, lwv, best_delta = ~0;
-	int pl;
+	u32 pl;
 
 	BUG_ON(target_freq == NULL);
 
@@ -83,32 +90,20 @@ static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 	if (max_vco_f < target_vco_f)
 		max_vco_f = target_vco_f;
 
-	high_PL = (max_vco_f + target_vco_f - 1) / target_vco_f;
+	/* Set PL search boundaries. */
+	high_PL = div_to_pl((max_vco_f + target_vco_f - 1) / target_vco_f);
 	high_PL = min(high_PL, pll_params->max_PL);
 	high_PL = max(high_PL, pll_params->min_PL);
 
-	low_PL = min_vco_f / target_vco_f;
+	low_PL = div_to_pl(min_vco_f / target_vco_f);
 	low_PL = min(low_PL, pll_params->max_PL);
 	low_PL = max(low_PL, pll_params->min_PL);
 
-	/* Find Indices of high_PL and low_PL */
-	for (pl = 0; pl < 14; pl++) {
-		if (pl_to_div[pl] >= low_PL) {
-			low_PL = pl;
-			break;
-		}
-	}
-	for (pl = 0; pl < 14; pl++) {
-		if (pl_to_div[pl] >= high_PL) {
-			high_PL = pl;
-			break;
-		}
-	}
 	gk20a_dbg_info("low_PL %d(div%d), high_PL %d(div%d)",
-			low_PL, pl_to_div[low_PL], high_PL, pl_to_div[high_PL]);
+			low_PL, pl_to_div(low_PL), high_PL, pl_to_div(high_PL));
 
 	for (pl = low_PL; pl <= high_PL; pl++) {
-		target_vco_f = target_clk_f * pl_to_div[pl];
+		target_vco_f = target_clk_f * pl_to_div(pl);
 
 		for (m = pll_params->min_M; m <= pll_params->max_M; m++) {
 			u_f = ref_clk_f / m;
@@ -133,8 +128,8 @@ static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 				vco_f = ref_clk_f * n / m;
 
 				if (vco_f >= min_vco_f && vco_f <= max_vco_f) {
-					lwv = (vco_f + (pl_to_div[pl] / 2))
-						/ pl_to_div[pl];
+					lwv = (vco_f + (pl_to_div(pl) / 2))
+						/ pl_to_div(pl);
 					delta = abs(lwv - target_clk_f);
 
 					if (delta < best_delta) {
@@ -169,12 +164,12 @@ found_match:
 	pll->PL = best_PL;
 
 	/* save current frequency */
-	pll->freq = ref_clk_f * pll->N / (pll->M * pl_to_div[pll->PL]);
+	pll->freq = ref_clk_f * pll->N / (pll->M * pl_to_div(pll->PL));
 
 	*target_freq = pll->freq;
 
 	gk20a_dbg_clk("actual target freq %d MHz, M %d, N %d, PL %d(div%d)",
-		*target_freq, pll->M, pll->N, pll->PL, pl_to_div[pll->PL]);
+		*target_freq, pll->M, pll->N, pll->PL, pl_to_div(pll->PL));
 
 	gk20a_dbg_fn("done");
 
@@ -465,7 +460,7 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 					clk->gpc_pll.clk_in);
 		clk->gpc_pll.PL = 3;
 		clk->gpc_pll.freq = clk->gpc_pll.clk_in * clk->gpc_pll.N;
-		clk->gpc_pll.freq /= pl_to_div[clk->gpc_pll.PL];
+		clk->gpc_pll.freq /= pl_to_div(clk->gpc_pll.PL);
 	}
 
 	mutex_init(&clk->clk_mutex);
@@ -744,7 +739,7 @@ static int pll_reg_show(struct seq_file *s, void *data)
 	m = trim_sys_gpcpll_coeff_mdiv_v(reg);
 	n = trim_sys_gpcpll_coeff_ndiv_v(reg);
 	pl = trim_sys_gpcpll_coeff_pldiv_v(reg);
-	f = g->clk.gpc_pll.clk_in * n / (m * pl_to_div[pl]);
+	f = g->clk.gpc_pll.clk_in * n / (m * pl_to_div(pl));
 	seq_printf(s, "coef = 0x%x : m = %u : n = %u : pl = %u", reg, m, n, pl);
 	seq_printf(s, " : pll_f(gpu_f) = %u(%u) kHz\n", f, f/2);
 	mutex_unlock(&g->clk.clk_mutex);

@@ -58,10 +58,6 @@
 
 #if defined(__KERNEL__)
 
-struct platform_device;
-
-struct platform_device *nvmap_get_platform_dev(void);
-
 struct dma_buf *nvmap_alloc_dmabuf(size_t size, size_t align,
 				   unsigned int flags,
 				   unsigned int heap_mask);

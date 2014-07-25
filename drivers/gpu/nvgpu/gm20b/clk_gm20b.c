@@ -457,13 +457,13 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	clk->gpc_pll.id = GK20A_GPC_PLL;
 	clk->gpc_pll.clk_in = ref_rate / KHZ;
 
-	/* Decide initial frequency */
+	/* Initial frequency: 1/3 VCO min (low enough to be safe at Vmin) */
 	if (!initialized) {
 		initialized = 1;
 		clk->gpc_pll.M = 1;
 		clk->gpc_pll.N = DIV_ROUND_UP(gpc_pll_params.min_vco,
 					clk->gpc_pll.clk_in);
-		clk->gpc_pll.PL = 1;
+		clk->gpc_pll.PL = 3;
 		clk->gpc_pll.freq = clk->gpc_pll.clk_in * clk->gpc_pll.N;
 		clk->gpc_pll.freq /= pl_to_div[clk->gpc_pll.PL];
 	}
@@ -482,6 +482,7 @@ static int gm20b_init_clk_setup_hw(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
+	/* LDIV: Div4 mode (required); both  bypass and vco ratios 1:1 */
 	data = gk20a_readl(g, trim_sys_gpc2clk_out_r());
 	data = set_field(data,
 			trim_sys_gpc2clk_out_sdiv14_m() |
@@ -491,6 +492,15 @@ static int gm20b_init_clk_setup_hw(struct gk20a *g)
 			trim_sys_gpc2clk_out_vcodiv_by1_f() |
 			trim_sys_gpc2clk_out_bypdiv_f(0));
 	gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
+
+	/*
+	 * Clear global bypass control; PLL is still under bypass, since SEL_VCO
+	 * is cleared by default.
+	 */
+	data = gk20a_readl(g, trim_sys_bypassctrl_r());
+	data = set_field(data, trim_sys_bypassctrl_gpcpll_m(),
+			 trim_sys_bypassctrl_gpcpll_vco_f());
+	gk20a_writel(g, trim_sys_bypassctrl_r(), data);
 
 	return 0;
 }
@@ -719,6 +729,11 @@ static int pll_reg_show(struct seq_file *s, void *data)
 		mutex_unlock(&g->clk.clk_mutex);
 		return 0;
 	}
+
+	reg = gk20a_readl(g, trim_sys_bypassctrl_r());
+	seq_printf(s, "bypassctrl = %s, ", reg ? "bypass" : "vco");
+	reg = gk20a_readl(g, trim_sys_sel_vco_r());
+	seq_printf(s, "sel_vco = %s, ", reg ? "vco" : "bypass");
 
 	reg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 	seq_printf(s, "cfg  = 0x%x : %s : %s\n", reg,

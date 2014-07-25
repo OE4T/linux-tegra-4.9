@@ -1021,6 +1021,9 @@ quadd_get_user_callchain_ut(struct pt_regs *regs,
 	struct ex_region_info ri;
 	struct stackframe frame;
 
+	if (!regs || !mm)
+		return 0;
+
 #ifdef CONFIG_ARM64
 	if (!compat_user_mode(regs)) {
 		pr_warn_once("user_mode 64: unsupported\n");
@@ -1032,9 +1035,6 @@ quadd_get_user_callchain_ut(struct pt_regs *regs,
 		return nr_prev;
 
 	cc->unw_rc = QUADD_URC_FAILURE;
-
-	if (!regs || !mm)
-		return 0;
 
 	if (nr_prev > 0) {
 		ip = cc->curr_pc;

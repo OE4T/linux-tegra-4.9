@@ -179,4 +179,21 @@ struct tegra_hdmi {
 	int irq;
 };
 
+#define HDMI_ELD_BUF 96
+
+/* eld field indexes */
+enum {
+	HDMI_ELD_VER = 0,
+	HDMI_ELD_BASELINE_ELD_LEN = 2,
+	HDMI_ELD_CEA_EDID_VER_MNL = 4,
+	HDMI_ELD_SAD_CNT_CON_TYPE_S_AI_S_HDCP = 5,
+	HDMI_ELD_AUDIO_SYNC_DELAY = 6,
+	HDMI_ELD_RLRC_FLRC_RC_RLR_FC_LFE_FLR = 7,
+	HDMI_ELD_PORT_ID = 8, /* 8 bytes */
+	HDMI_ELD_MANUFACTURER_NAME = 16, /* 2 bytes */
+	HDMI_ELD_PRODUCT_CODE = 18, /* 2 bytes */
+	HDMI_ELD_MONITOR_NAME_STR = 20, /* MNL bytes */
+	HDMI_ELD_CEA_SAD, /* SAD_CNT * 3 bytes, index depends on MNL */
+};
+
 #endif

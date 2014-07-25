@@ -917,6 +917,12 @@
 #define NV_SOR_HDMI_CTRL_SAMPLE_FLAT			(1 << 12)
 #define NV_SOR_HDMI_CTRL_MAX_AC_PACKET(x)		(((x) & 0x1f) << 16)
 #define NV_SOR_HDMI_CTRL_ENABLE			(1 << 30)
+#define NV_SOR_AUDIO_HDA_ELD_BUFWR			(0x10c)
+#define NV_SOR_AUDIO_HDA_ELD_BUFWR_INDEX(x)		(((x) & 0xff) << 8)
+#define NV_SOR_AUDIO_HDA_ELD_BUFWR_DATA(x)		(((x) & 0xff) << 0)
+#define NV_SOR_AUDIO_HDA_PRESENCE			(0x10d)
+#define NV_SOR_AUDIO_HDA_PRESENCE_ELDV(x)		((x) << 1)
+#define NV_SOR_AUDIO_HDA_PRESENCE_PD(x)		(x)
 #define NV_SOR_AUDIO_AVAL_0320				0x10f
 #define NV_SOR_HDMI_AUDIO_N			0x13c
 #define NV_SOR_HDMI_AUDIO_N_VALUE(x)		(((x) & 0xfffff) << 0)
@@ -989,5 +995,4 @@
 #define NV_SOR_KEY_HDCP_KEY_TRIG			0xf2
 #define LOAD_HDCP_KEY					(1 << 8)
 #define NV_SOR_KEY_SKEY_INDEX				0xf3
-
 #endif

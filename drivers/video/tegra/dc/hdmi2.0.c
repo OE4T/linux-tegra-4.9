@@ -71,6 +71,120 @@ static inline void tegra_hdmi_reset(struct tegra_hdmi *hdmi)
 	mdelay(20);
 }
 
+static void tegra_hdmi_get_eld_header(struct tegra_hdmi *hdmi,
+					u8 *eld_mem_block)
+{
+	struct tegra_edid_hdmi_eld *eld = &hdmi->eld;
+
+	eld->baseline_len = HDMI_ELD_MONITOR_NAME_STR + eld->mnl +
+				eld->sad_count * 3 - HDMI_ELD_CEA_EDID_VER_MNL;
+
+	eld_mem_block[HDMI_ELD_VER] = eld->eld_ver << 3;
+	eld_mem_block[HDMI_ELD_BASELINE_ELD_LEN] =
+			DIV_ROUND_UP(eld->baseline_len, 4);
+
+}
+
+static void tegra_hdmi_get_eld_baseline(struct tegra_hdmi *hdmi,
+						u8 *eld_mem_block)
+{
+	struct tegra_edid_hdmi_eld *eld = &hdmi->eld;
+	u8 tmp;
+
+	tmp = eld->mnl | (eld->cea_edid_ver << 5);
+	eld_mem_block[HDMI_ELD_CEA_EDID_VER_MNL] = tmp;
+
+	tmp = eld->support_hdcp | (eld->support_ai << 1) |
+		(eld->conn_type << 2) | (eld->sad_count << 4);
+	eld_mem_block[HDMI_ELD_SAD_CNT_CON_TYPE_S_AI_S_HDCP] = tmp;
+
+	eld_mem_block[HDMI_ELD_AUDIO_SYNC_DELAY] = eld->aud_synch_delay;
+
+	eld_mem_block[HDMI_ELD_RLRC_FLRC_RC_RLR_FC_LFE_FLR] = eld->spk_alloc;
+
+	memcpy(&eld_mem_block[HDMI_ELD_PORT_ID], eld->port_id, 8);
+
+	memcpy(&eld_mem_block[HDMI_ELD_MANUFACTURER_NAME],
+					eld->manufacture_id, 2);
+
+	memcpy(&eld_mem_block[HDMI_ELD_PRODUCT_CODE], eld->product_id, 2);
+
+	memcpy(&eld_mem_block[HDMI_ELD_MONITOR_NAME_STR],
+				eld->monitor_name, eld->mnl);
+
+	memcpy(&eld_mem_block[HDMI_ELD_MONITOR_NAME_STR + eld->mnl],
+						eld->sad, eld->sad_count);
+}
+
+static void tegra_hdmi_get_eld_vendor(struct tegra_hdmi *hdmi,
+						u8 *eld_mem_block)
+{
+	struct tegra_edid_hdmi_eld *eld = &hdmi->eld;
+	u32 vendor_block_index = 4 + eld->baseline_len; /* 4 byte header */
+
+	if (!eld->baseline_len)
+		dev_err(&hdmi->dc->ndev->dev,
+			"hdm: eld baseline length not populated\n");
+
+	memset(&eld_mem_block[vendor_block_index], 0,
+		HDMI_ELD_BUF - vendor_block_index + 1);
+}
+
+static int tegra_hdmi_eld_setup(struct tegra_hdmi *hdmi)
+{
+	u8 *eld_mem;
+	int cnt;
+
+	eld_mem = devm_kzalloc(&hdmi->dc->ndev->dev,
+				HDMI_ELD_BUF, GFP_KERNEL);
+	if (!eld_mem) {
+		dev_warn(&hdmi->dc->ndev->dev,
+			"hdmi: eld memory allocation failed\n");
+		return -ENOMEM;
+	}
+
+	tegra_hdmi_get_eld_header(hdmi, eld_mem);
+	tegra_hdmi_get_eld_baseline(hdmi, eld_mem);
+	tegra_hdmi_get_eld_vendor(hdmi, eld_mem);
+
+	for (cnt = 0; cnt < HDMI_ELD_BUF; cnt++)
+		tegra_sor_writel(hdmi->sor, NV_SOR_AUDIO_HDA_ELD_BUFWR,
+				NV_SOR_AUDIO_HDA_ELD_BUFWR_INDEX(cnt) |
+				NV_SOR_AUDIO_HDA_ELD_BUFWR_DATA(eld_mem[cnt]));
+
+	devm_kfree(&hdmi->dc->ndev->dev, eld_mem);
+	return 0;
+}
+
+int tegra_hdmi_setup_hda_presence(void)
+{
+	struct tegra_hdmi *hdmi = dc_hdmi;
+	struct tegra_dc *dc = hdmi->dc;
+
+	if (!hdmi)
+		return -EAGAIN;
+
+	if (hdmi->enabled && hdmi->eld_valid) {
+		tegra_dc_unpowergate_locked(dc);
+		tegra_dc_io_start(dc);
+
+		/* remove hda presence while setting up eld */
+		tegra_sor_writel(hdmi->sor, NV_SOR_AUDIO_HDA_PRESENCE, 0);
+
+		tegra_hdmi_eld_setup(hdmi);
+		tegra_sor_writel(hdmi->sor, NV_SOR_AUDIO_HDA_PRESENCE,
+				NV_SOR_AUDIO_HDA_PRESENCE_ELDV(1) |
+				NV_SOR_AUDIO_HDA_PRESENCE_PD(1));
+
+		tegra_dc_io_end(dc);
+		tegra_dc_powergate_locked(dc);
+
+		return 0;
+	}
+
+	return -ENODEV;
+}
+
 static int tegra_hdmi_ddc_i2c_xfer(struct tegra_dc *dc,
 					struct i2c_msg *msgs, int num)
 {
@@ -370,6 +484,8 @@ static int tegra_hdmi_host_disable(struct tegra_hdmi *hdmi)
 
 	hdmi->hpd_state_status.hdmi_host_enable = 0;
 	hdmi->hpd_state_status.edid_eld_read = 0;
+	hdmi->eld_valid = false;
+	hdmi->mon_spec_valid = false;
 	return 0;
 }
 

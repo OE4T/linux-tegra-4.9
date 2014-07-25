@@ -33,11 +33,19 @@
 
 static int dbg_dsi_show(struct seq_file *s, void *unused)
 {
-	struct tegra_dc_dsi_data *dsi = s->private;
+	struct tegra_dc_dsi_data *dsi;
+	struct tegra_dc *dc;
 	unsigned long i = 0, j = 0;
 	u32 col = 0;
 	u32 base[MAX_DSI_INSTANCE] = {TEGRA_DSI_BASE, TEGRA_DSIB_BASE};
 
+	dc = ((struct tegra_dc_dsi_data *) s->private)->dc;
+	dsi = (struct tegra_dc_dsi_data *) dc->out_data;
+
+	/* for compatibility with fake OR, check
+	 * s->private->dc->out_data->enabled instead of
+	 * s->private->enabled
+	 */
 	if (!dsi->enabled) {
 		seq_puts(s, "DSI controller suspended\n");
 		return 0;
@@ -179,8 +187,7 @@ static int read_panel_get(struct seq_file *s, void *unused)
 			if ((k%4) == 0 && b != max_ret_payload_size) {
 				seq_printf(s, " %x  ", buf[k]);
 				seq_printf(s, "\n Read data[%d] ", b);
-			}
-			else
+			} else
 				seq_printf(s, " %x ", buf[k]);
 	}
 	seq_puts(s, "\n");
@@ -437,6 +444,92 @@ static const struct file_operations write_data_fops = {
 	.release = single_release,
 };
 
+static int dsi_crc_show(struct seq_file *s, void *unused)
+{
+	struct tegra_dc_dsi_data *dsi;
+	struct tegra_dc *dc;
+	unsigned long crc = 0;
+	int    i;
+
+	dc = ((struct tegra_dc_dsi_data *) s->private)->dc;
+	dsi = (struct tegra_dc_dsi_data *) dc->out_data;
+
+	/* for compatibility with fake OR, use
+	 * s->private->dc->out_data->enabled instead of
+	 * s->private->enabled
+	 */
+	if (!dsi->enabled) {
+		seq_puts(s, "dsi not enabled, aborting\n");
+		return 0;
+	}
+	mutex_lock(&dc->lock); /*TODO: is this necessary?*/
+
+	for (i = 0; i < dsi->max_instances; i++) {
+		if (dsi->base[i] == NULL) {
+			pr_err("dsi->base[%d] = NULL, force CRC = 0\n", i);
+			crc = 0;
+		} else {
+			crc = tegra_dsi_controller_readl(dsi, DSI_TX_CRC, i);
+		}
+		seq_printf(s, "DSI_DSI_TX_CRC[%d] = 0x%08lx\n",
+			i + dsi->info.dsi_instance, crc);
+	}
+
+	mutex_unlock(&dc->lock); /*TODO: is this necessary?*/
+	return 0;
+}
+
+static ssize_t dsi_crc_write(struct file *file,
+				const char  *buf, size_t count, loff_t *off)
+{
+	struct seq_file *s = file->private_data;
+	struct tegra_dc_dsi_data *dsi;
+	struct tegra_dc *dc;
+	u32    dsi_ctrl, data;
+	int    i;
+
+	dc = ((struct tegra_dc_dsi_data *) s->private)->dc;
+	dsi = (struct tegra_dc_dsi_data *) dc->out_data;
+
+	if (!dsi->enabled) {
+		seq_puts(s, "dsi not enabled, aborting\n");
+		return -EINVAL;
+	}
+	if (sscanf(buf, "%x", &data) != 1) {
+		seq_puts(s, "parameter not found, aborting\n");
+		return -EINVAL;
+	}
+
+	data &= 1;             /* only keep bit0 */
+	mutex_lock(&dc->lock); /* TODO: is this necessary? */
+	for (i = 0; i < dsi->max_instances; i++) {
+		if (dsi->base[i] == NULL) {
+			pr_err("dsi->base[%d] = NULL, exit\n", i);
+			break;
+		}
+		dsi_ctrl = tegra_dsi_controller_readl(dsi, DSI_CONTROL, i);
+		dsi_ctrl &= ~DSI_CONTROL_DBG_ENABLE_MASK;
+		dsi_ctrl |= DSI_CONTROL_DBG_ENABLE(data);
+		tegra_dsi_controller_writel(dsi, dsi_ctrl, DSI_CONTROL, i);
+	}
+	mutex_unlock(&dc->lock); /* TODO: is this necessary? */
+
+	return count;
+}
+
+static int dsi_crc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dsi_crc_show, inode->i_private);
+}
+
+static const struct file_operations crc_fops = {
+	.open = dsi_crc_open,
+	.read = seq_read,
+	.write = dsi_crc_write,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static struct dentry *dsidir;
 
 void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
@@ -468,6 +561,10 @@ void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
 		goto free_out;
 	retval = debugfs_create_file("write_data", S_IRUGO|S_IWUSR,
 				 dsidir, dsi, &write_data_fops);
+	if (!retval)
+		goto free_out;
+	retval = debugfs_create_file("crc", S_IRUGO, dsidir, dsi,
+				&crc_fops);
 	if (!retval)
 		goto free_out;
 	return;

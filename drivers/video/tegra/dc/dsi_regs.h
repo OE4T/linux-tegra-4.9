@@ -85,6 +85,7 @@ enum {
 
 #define DSI_CONTROL 0x10
 #define   DSI_CONTROL_DBG_ENABLE(x)			(((x) & 0x1) << 31)
+#define   DSI_CONTROL_DBG_ENABLE_MASK		(DSI_CONTROL_DBG_ENABLE(1))
 enum {
 	CONTINUOUS,
 	TX_ONLY,

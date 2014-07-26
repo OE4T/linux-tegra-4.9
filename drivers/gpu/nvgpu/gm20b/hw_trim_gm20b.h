@@ -126,6 +126,10 @@ static inline u32 trim_sys_gpcpll_coeff_mdiv_f(u32 v)
 {
 	return (v & 0xff) << 0;
 }
+static inline u32 trim_sys_gpcpll_coeff_mdiv_m(void)
+{
+	return 0xff << 0;
+}
 static inline u32 trim_sys_gpcpll_coeff_mdiv_v(u32 r)
 {
 	return (r >> 0) & 0xff;
@@ -145,6 +149,10 @@ static inline u32 trim_sys_gpcpll_coeff_ndiv_v(u32 r)
 static inline u32 trim_sys_gpcpll_coeff_pldiv_f(u32 v)
 {
 	return (v & 0x3f) << 16;
+}
+static inline u32 trim_sys_gpcpll_coeff_pldiv_m(void)
+{
+	return 0x3f << 16;
 }
 static inline u32 trim_sys_gpcpll_coeff_pldiv_v(u32 r)
 {

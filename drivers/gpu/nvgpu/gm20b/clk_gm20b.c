@@ -249,10 +249,94 @@ static int clk_slide_gpc_pll(struct gk20a *g, u32 n)
 	return 0;
 }
 
+static int clk_lock_gpc_pll_under_bypass(struct gk20a *g, u32 m, u32 n, u32 pl)
+{
+	u32 data, cfg, coeff, timeout;
+
+	/* put PLL in bypass before programming it */
+	data = gk20a_readl(g, trim_sys_sel_vco_r());
+	data = set_field(data, trim_sys_sel_vco_gpc2clk_out_m(),
+		trim_sys_sel_vco_gpc2clk_out_bypass_f());
+	gk20a_writel(g, trim_sys_sel_vco_r(), data);
+
+	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+	if (trim_sys_gpcpll_cfg_iddq_v(cfg)) {
+		/* get out from IDDQ (1st power up) */
+		cfg = set_field(cfg, trim_sys_gpcpll_cfg_iddq_m(),
+				trim_sys_gpcpll_cfg_iddq_power_on_v());
+		gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
+		gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+		udelay(5);
+	} else {
+		/* clear SYNC_MODE before disabling PLL */
+		cfg = set_field(cfg, trim_sys_gpcpll_cfg_sync_mode_m(),
+				trim_sys_gpcpll_cfg_sync_mode_disable_f());
+		gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
+		gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+
+		/* disable running PLL before changing coefficients */
+		cfg = set_field(cfg, trim_sys_gpcpll_cfg_enable_m(),
+				trim_sys_gpcpll_cfg_enable_no_f());
+		gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
+		gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+	}
+
+	/* change coefficients */
+	coeff = trim_sys_gpcpll_coeff_mdiv_f(m) |
+		trim_sys_gpcpll_coeff_ndiv_f(n) |
+		trim_sys_gpcpll_coeff_pldiv_f(pl);
+	gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
+
+	/* enable PLL after changing coefficients */
+	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+	cfg = set_field(cfg, trim_sys_gpcpll_cfg_enable_m(),
+			trim_sys_gpcpll_cfg_enable_yes_f());
+	gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
+
+	/* lock pll */
+	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+	if (cfg & trim_sys_gpcpll_cfg_enb_lckdet_power_off_f()){
+		cfg = set_field(cfg, trim_sys_gpcpll_cfg_enb_lckdet_m(),
+			trim_sys_gpcpll_cfg_enb_lckdet_power_on_f());
+		gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
+	}
+
+	/* wait pll lock */
+	timeout = g->clk.pll_delay / 2 + 1;
+	do {
+		cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+		if (cfg & trim_sys_gpcpll_cfg_pll_lock_true_f())
+			goto pll_locked;
+		udelay(2);
+	} while (--timeout > 0);
+
+	/* PLL is messed up. What can we do here? */
+	BUG();
+	return -EBUSY;
+
+pll_locked:
+	gk20a_dbg_clk("locked config_pll under bypass r=0x%x v=0x%x",
+		trim_sys_gpcpll_cfg_r(), cfg);
+
+	/* set SYNC_MODE for glitchless switch out of bypass */
+	cfg = set_field(cfg, trim_sys_gpcpll_cfg_sync_mode_m(),
+			trim_sys_gpcpll_cfg_sync_mode_enable_f());
+	gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
+	gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+
+	/* put PLL back on vco */
+	data = gk20a_readl(g, trim_sys_sel_vco_r());
+	data = set_field(data, trim_sys_sel_vco_gpc2clk_out_m(),
+		trim_sys_sel_vco_gpc2clk_out_vco_f());
+	gk20a_writel(g, trim_sys_sel_vco_r(), data);
+
+	return 0;
+}
+
 static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 			int allow_slide)
 {
-	u32 data, cfg, coeff, timeout;
+	u32 data, cfg, coeff;
 	u32 m, n, pl;
 	u32 nlo;
 
@@ -287,73 +371,20 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 	data = set_field(data, trim_sys_gpc2clk_out_vcodiv_m(),
 		trim_sys_gpc2clk_out_vcodiv_f(2));
 	gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
-
-	/* put PLL in bypass before programming it */
-	data = gk20a_readl(g, trim_sys_sel_vco_r());
-	data = set_field(data, trim_sys_sel_vco_gpc2clk_out_m(),
-		trim_sys_sel_vco_gpc2clk_out_bypass_f());
+	gk20a_readl(g, trim_sys_gpc2clk_out_r());
 	udelay(2);
-	gk20a_writel(g, trim_sys_sel_vco_r(), data);
 
-	/* get out from IDDQ */
-	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
-	if (trim_sys_gpcpll_cfg_iddq_v(cfg)) {
-		cfg = set_field(cfg, trim_sys_gpcpll_cfg_iddq_m(),
-				trim_sys_gpcpll_cfg_iddq_power_on_v());
-		gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
-		gk20a_readl(g, trim_sys_gpcpll_cfg_r());
-		udelay(2);
-	}
-
-	/* disable PLL before changing coefficients */
-	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
-	cfg = set_field(cfg, trim_sys_gpcpll_cfg_enable_m(),
-			trim_sys_gpcpll_cfg_enable_no_f());
-	gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
-	gk20a_readl(g, trim_sys_gpcpll_cfg_r());
-
-	/* change coefficients */
-	nlo = DIV_ROUND_UP(clk->gpc_pll.M * gpc_pll_params.min_vco,
-			clk->gpc_pll.clk_in);
-	coeff = trim_sys_gpcpll_coeff_mdiv_f(clk->gpc_pll.M) |
-		trim_sys_gpcpll_coeff_ndiv_f(allow_slide ?
-					     nlo : clk->gpc_pll.N) |
-		trim_sys_gpcpll_coeff_pldiv_f(clk->gpc_pll.PL);
-	gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
-
-	/* enable PLL after changing coefficients */
-	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
-	cfg = set_field(cfg, trim_sys_gpcpll_cfg_enable_m(),
-			trim_sys_gpcpll_cfg_enable_yes_f());
-	gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
-
-	/* lock pll */
-	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
-	if (cfg & trim_sys_gpcpll_cfg_enb_lckdet_power_off_f()){
-		cfg = set_field(cfg, trim_sys_gpcpll_cfg_enb_lckdet_m(),
-			trim_sys_gpcpll_cfg_enb_lckdet_power_on_f());
-		gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
-	}
-
-	/* wait pll lock */
-	timeout = clk->pll_delay / 2 + 1;
-	do {
-		cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
-		if (cfg & trim_sys_gpcpll_cfg_pll_lock_true_f())
-			goto pll_locked;
-		udelay(2);
-	} while (--timeout > 0);
-
-	/* PLL is messed up. What can we do here? */
-	BUG();
-	return -EBUSY;
-
-pll_locked:
-	/* put PLL back on vco */
-	data = gk20a_readl(g, trim_sys_sel_vco_r());
-	data = set_field(data, trim_sys_sel_vco_gpc2clk_out_m(),
-		trim_sys_sel_vco_gpc2clk_out_vco_f());
-	gk20a_writel(g, trim_sys_sel_vco_r(), data);
+	/*
+	 * Program and lock pll under bypass. On exit PLL is out of bypass,
+	 * enabled, and locked. VCO is at vco_min if sliding is allowed.
+	 * Otherwise it is at VCO target (and therefore last slide call below
+	 * is effectively NOP).
+	 */
+	m = clk->gpc_pll.M;
+	nlo = DIV_ROUND_UP(m * gpc_pll_params.min_vco, clk->gpc_pll.clk_in);
+	n = allow_slide ? nlo : clk->gpc_pll.N;
+	pl = clk->gpc_pll.PL;
+	clk_lock_gpc_pll_under_bypass(g, m, n, pl);
 	clk->gpc_pll.enabled = true;
 
 	/* restore out divider 1:1 */
@@ -731,9 +762,10 @@ static int pll_reg_show(struct seq_file *s, void *data)
 	seq_printf(s, "sel_vco = %s, ", reg ? "vco" : "bypass");
 
 	reg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
-	seq_printf(s, "cfg  = 0x%x : %s : %s\n", reg,
-		   trim_sys_gpcpll_cfg_enable_v(reg) ? "enabled" : "disabled",
-		   trim_sys_gpcpll_cfg_pll_lock_v(reg) ? "locked" : "unlocked");
+	seq_printf(s, "cfg  = 0x%x : %s : %s : %s\n", reg,
+		trim_sys_gpcpll_cfg_enable_v(reg) ? "enabled" : "disabled",
+		trim_sys_gpcpll_cfg_pll_lock_v(reg) ? "locked" : "unlocked",
+		trim_sys_gpcpll_cfg_sync_mode_v(reg) ? "sync_on" : "sync_off");
 
 	reg = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
 	m = trim_sys_gpcpll_coeff_mdiv_v(reg);

@@ -176,10 +176,46 @@ found_match:
 	return 0;
 }
 
+static void clk_setup_slide(struct gk20a *g, u32 clk_u)
+{
+	u32 data, step_a, step_b;
+
+	switch (clk_u) {
+	case 12000:
+	case 12800:
+	case 13000:			/* only on FPGA */
+		step_a = 0x2B;
+		step_b = 0x0B;
+		break;
+	case 19200:
+		step_a = 0x12;
+		step_b = 0x08;
+		break;
+	case 38400:
+		step_a = 0x04;
+		step_b = 0x05;
+		break;
+	default:
+		gk20a_err(dev_from_gk20a(g), "Unexpected reference rate %u kHz",
+			  clk_u);
+		BUG();
+	}
+
+	/* setup */
+	data = gk20a_readl(g, trim_sys_gpcpll_cfg2_r());
+	data = set_field(data, trim_sys_gpcpll_cfg2_pll_stepa_m(),
+			trim_sys_gpcpll_cfg2_pll_stepa_f(step_a));
+	gk20a_writel(g, trim_sys_gpcpll_cfg2_r(), data);
+	data = gk20a_readl(g, trim_sys_gpcpll_cfg3_r());
+	data = set_field(data, trim_sys_gpcpll_cfg3_pll_stepb_m(),
+			trim_sys_gpcpll_cfg3_pll_stepb_f(step_b));
+	gk20a_writel(g, trim_sys_gpcpll_cfg3_r(), data);
+}
+
 static int clk_slide_gpc_pll(struct gk20a *g, u32 n)
 {
 	u32 data, coeff;
-	u32 nold;
+	u32 nold, m;
 	int ramp_timeout = 500;
 
 	/* get old coefficients */
@@ -190,15 +226,9 @@ static int clk_slide_gpc_pll(struct gk20a *g, u32 n)
 	if (n == nold)
 		return 0;
 
-	/* setup */
-	data = gk20a_readl(g, trim_sys_gpcpll_cfg2_r());
-	data = set_field(data, trim_sys_gpcpll_cfg2_pll_stepa_m(),
-			trim_sys_gpcpll_cfg2_pll_stepa_f(0x2b));
-	gk20a_writel(g, trim_sys_gpcpll_cfg2_r(), data);
-	data = gk20a_readl(g, trim_sys_gpcpll_cfg3_r());
-	data = set_field(data, trim_sys_gpcpll_cfg3_pll_stepb_m(),
-			trim_sys_gpcpll_cfg3_pll_stepb_f(0xb));
-	gk20a_writel(g, trim_sys_gpcpll_cfg3_r(), data);
+	/* dynamic ramp setup based on update rate */
+	m = trim_sys_gpcpll_coeff_mdiv_v(coeff);
+	clk_setup_slide(g, g->clk.gpc_pll.clk_in / m);
 
 	/* pll slowdown mode */
 	data = gk20a_readl(g, trim_sys_gpcpll_ndiv_slowdown_r());

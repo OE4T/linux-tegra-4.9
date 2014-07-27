@@ -56,6 +56,9 @@ static inline u32 div_to_pl(u32 div)
 	return div;
 }
 
+/* FIXME: remove after on-silicon testing */
+#define PLDIV_GLITCHLESS 1
+
 /* Calculate and update M/N/PL as well as pll->freq
     ref_clk_f = clk_in_f;
     u_f = ref_clk_f / M;
@@ -366,9 +369,12 @@ pll_locked:
 static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 			int allow_slide)
 {
-	u32 data, cfg, coeff;
-	u32 m, n, pl;
-	u32 nlo;
+#if !PLDIV_GLITCHLESS
+	u32 data;
+#endif
+	u32 cfg, coeff;
+	u32 m, n, pl, nlo;
+	bool can_slide;
 
 	gk20a_dbg_fn("");
 
@@ -383,19 +389,41 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 
 	/* do NDIV slide if there is no change in M and PL */
 	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
-	if (allow_slide && clk->gpc_pll.M == m && clk->gpc_pll.PL == pl
-		&& trim_sys_gpcpll_cfg_enable_v(cfg)) {
+	can_slide = allow_slide && trim_sys_gpcpll_cfg_enable_v(cfg);
+
+	if (can_slide && (clk->gpc_pll.M == m) && (clk->gpc_pll.PL == pl))
 		return clk_slide_gpc_pll(g, clk->gpc_pll.N);
-	}
 
 	/* slide down to NDIV_LO */
 	nlo = DIV_ROUND_UP(m * gpc_pll_params.min_vco, clk->gpc_pll.clk_in);
-	if (allow_slide && trim_sys_gpcpll_cfg_enable_v(cfg)) {
+	if (can_slide) {
 		int ret = clk_slide_gpc_pll(g, nlo);
 		if (ret)
 			return ret;
 	}
 
+#if PLDIV_GLITCHLESS
+	/*
+	 * Limit either FO-to-FO (path A below) or FO-to-bypass (path B below)
+	 * jump to min_vco/2 by setting post divider >= 1:2.
+	 */
+	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
+	if ((clk->gpc_pll.PL < 2) || (pl < 2)) {
+		if (pl != 2) {
+			coeff = set_field(coeff,
+				trim_sys_gpcpll_coeff_pldiv_m(),
+				trim_sys_gpcpll_coeff_pldiv_f(2));
+			gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
+			coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
+			udelay(2);
+		}
+	}
+
+	if (can_slide && (clk->gpc_pll.M == m))
+		goto set_pldiv;	/* path A: no need to bypass */
+
+	/* path B: bypass if either M changes or PLL is disabled */
+#else
 	/* split FO-to-bypass jump in halfs by setting out divider 1:2 */
 	data = gk20a_readl(g, trim_sys_gpc2clk_out_r());
 	data = set_field(data, trim_sys_gpc2clk_out_vcodiv_m(),
@@ -403,27 +431,44 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 	gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
 	gk20a_readl(g, trim_sys_gpc2clk_out_r());
 	udelay(2);
-
+#endif
 	/*
 	 * Program and lock pll under bypass. On exit PLL is out of bypass,
 	 * enabled, and locked. VCO is at vco_min if sliding is allowed.
 	 * Otherwise it is at VCO target (and therefore last slide call below
-	 * is effectively NOP).
+	 * is effectively NOP). PL is preserved (not set to target) of post
+	 * divider is glitchless. Otherwise it is at PL target.
 	 */
 	m = clk->gpc_pll.M;
 	nlo = DIV_ROUND_UP(m * gpc_pll_params.min_vco, clk->gpc_pll.clk_in);
 	n = allow_slide ? nlo : clk->gpc_pll.N;
+#if PLDIV_GLITCHLESS
+	pl = trim_sys_gpcpll_coeff_pldiv_v(coeff);
+#else
 	pl = clk->gpc_pll.PL;
+#endif
 	clk_lock_gpc_pll_under_bypass(g, m, n, pl);
 	clk->gpc_pll.enabled = true;
 
+#if PLDIV_GLITCHLESS
+	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
+	udelay(2);
+
+set_pldiv:
+	/* coeff must be current from either path A or B */
+	if (trim_sys_gpcpll_coeff_pldiv_v(coeff) != clk->gpc_pll.PL) {
+		coeff = set_field(coeff, trim_sys_gpcpll_coeff_pldiv_m(),
+			trim_sys_gpcpll_coeff_pldiv_f(clk->gpc_pll.PL));
+		gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
+	}
+#else
 	/* restore out divider 1:1 */
 	data = gk20a_readl(g, trim_sys_gpc2clk_out_r());
 	data = set_field(data, trim_sys_gpc2clk_out_vcodiv_m(),
 		trim_sys_gpc2clk_out_vcodiv_by1_f());
 	udelay(2);
 	gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
-
+#endif
 	/* slide up to target NDIV */
 	return clk_slide_gpc_pll(g, clk->gpc_pll.N);
 }

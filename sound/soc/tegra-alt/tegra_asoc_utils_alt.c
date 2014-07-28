@@ -37,6 +37,10 @@
 
 #include "tegra_asoc_utils_alt.h"
 
+#ifdef CONFIG_SWITCH
+static bool is_switch_registered;
+#endif
+
 #if !defined(CONFIG_ARCH_TEGRA_21x_SOC)
 static atomic_t dap_ref_count[5];
 static const char *tegra_dap_group_names[4][4] = {
@@ -441,6 +445,34 @@ void tegra_alt_asoc_utils_fini(struct tegra_asoc_audio_clock_info *data)
 		clk_put(data->clk_pll_p_out1);
 }
 EXPORT_SYMBOL_GPL(tegra_alt_asoc_utils_fini);
+
+#ifdef CONFIG_SWITCH
+int tegra_alt_asoc_switch_register(struct switch_dev *sdev)
+{
+	int ret;
+
+	if (is_switch_registered)
+		return -EBUSY;
+
+	ret = switch_dev_register(sdev);
+
+	if (ret >= 0)
+		is_switch_registered = true;
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(tegra_alt_asoc_switch_register);
+
+void tegra_alt_asoc_switch_unregister(struct switch_dev *sdev)
+{
+	if (!is_switch_registered)
+		return;
+
+	switch_dev_unregister(sdev);
+	is_switch_registered = false;
+}
+EXPORT_SYMBOL_GPL(tegra_alt_asoc_switch_unregister);
+#endif
 
 MODULE_AUTHOR("Stephen Warren <swarren@nvidia.com>");
 MODULE_DESCRIPTION("Tegra ASoC utility code");

@@ -1640,6 +1640,37 @@ int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 }
 EXPORT_SYMBOL(tegra_dc_update_cmu);
 
+static int _tegra_dc_config_frame_end_intr(struct tegra_dc *dc, bool enable)
+{
+	tegra_dc_io_start(dc);
+	if (enable) {
+		atomic_inc(&dc->frame_end_ref);
+		tegra_dc_unmask_interrupt(dc, FRAME_END_INT);
+	} else if (!atomic_dec_return(&dc->frame_end_ref))
+		tegra_dc_mask_interrupt(dc, FRAME_END_INT);
+	tegra_dc_io_end(dc);
+
+	return 0;
+}
+
+int tegra_dc_update_cmu_aligned(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
+{
+	mutex_lock(&dc->lock);
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return 0;
+	}
+
+	memcpy(&dc->cmu_shadow, cmu, sizeof(dc->cmu));
+	dc->cmu_shadow_dirty = true;
+	_tegra_dc_config_frame_end_intr(dc, true);
+
+	mutex_unlock(&dc->lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_dc_update_cmu_aligned);
+
 static struct tegra_dc_cmu *tegra_dc_get_cmu(struct tegra_dc *dc)
 {
 	if (dc->pdata->cmu)
@@ -1659,6 +1690,7 @@ void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable)
 #define tegra_dc_cache_cmu(dc, src_cmu)
 #define tegra_dc_set_cmu(dc, cmu)
 #define tegra_dc_update_cmu(dc, cmu)
+#define tegra_dc_update_cmu_aligned(dc, cmu)
 #endif
 
 /* disable_irq() blocks until handler completes, calling this function while
@@ -2194,19 +2226,6 @@ out:
 	return ret;
 }
 
-static int _tegra_dc_config_frame_end_intr(struct tegra_dc *dc, bool enable)
-{
-	tegra_dc_io_start(dc);
-	if (enable) {
-		atomic_inc(&dc->frame_end_ref);
-		tegra_dc_unmask_interrupt(dc, FRAME_END_INT);
-	} else if (!atomic_dec_return(&dc->frame_end_ref))
-		tegra_dc_mask_interrupt(dc, FRAME_END_INT);
-	tegra_dc_io_end(dc);
-
-	return 0;
-}
-
 int _tegra_dc_wait_for_frame_end(struct tegra_dc *dc,
 	u32 timeout_ms)
 {
@@ -2291,6 +2310,61 @@ static void tegra_dc_vblank(struct work_struct *work)
 	/* Do the actual brightness update outside of the mutex dc->lock */
 	if (nvsd_updated)
 		tegra_dc_prism_update_backlight(dc);
+}
+
+#define CSC_UPDATE_IF_CHANGED(entry, ENTRY) do { \
+		if (cmu_active->csc.entry != cmu_shadow->csc.entry) { \
+			cmu_active->csc.entry = cmu_shadow->csc.entry; \
+			tegra_dc_writel(dc, \
+				cmu_active->csc.entry, \
+				DC_COM_CMU_CSC_##ENTRY); \
+		} \
+	} while (0)
+
+static void tegra_dc_frame_end(struct work_struct *work)
+{
+	struct tegra_dc *dc = container_of(work,
+		struct tegra_dc, frame_end_work);
+	u32 val;
+	u32 i;
+
+	mutex_lock(&dc->lock);
+
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return;
+	}
+
+	tegra_dc_get(dc);
+
+	if (dc->cmu_shadow_dirty) {
+		struct tegra_dc_cmu *cmu_active = &dc->cmu;
+		struct tegra_dc_cmu *cmu_shadow = &dc->cmu_shadow;
+
+		CSC_UPDATE_IF_CHANGED(krr, KRR);
+		CSC_UPDATE_IF_CHANGED(kgr, KGR);
+		CSC_UPDATE_IF_CHANGED(kbr, KBR);
+		CSC_UPDATE_IF_CHANGED(krg, KRG);
+		CSC_UPDATE_IF_CHANGED(kgg, KGG);
+		CSC_UPDATE_IF_CHANGED(kbg, KBG);
+		CSC_UPDATE_IF_CHANGED(krb, KRB);
+		CSC_UPDATE_IF_CHANGED(kgb, KGB);
+		CSC_UPDATE_IF_CHANGED(kbb, KBB);
+
+		for (i = 0; i < 960; i++)
+			if (cmu_active->lut2[i] != cmu_shadow->lut2[i]) {
+				cmu_active->lut2[i] = cmu_shadow->lut2[i];
+				val = LUT2_ADDR(i) |
+					LUT2_DATA(cmu_active->lut2[i]);
+				tegra_dc_writel(dc, val, DC_COM_CMU_LUT2);
+			}
+
+		dc->cmu_shadow_dirty = false;
+		_tegra_dc_config_frame_end_intr(dc, false);
+	}
+
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
 }
 
 static void tegra_dc_one_shot_worker(struct work_struct *work)
@@ -2503,6 +2577,8 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status,
 
 		if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE && !dc->nvsr)
 			tegra_dc_put(dc);
+
+		queue_work(system_freezable_wq, &dc->frame_end_work);
 	}
 
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
@@ -2533,6 +2609,8 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status,
 			complete(&dc->crc_complete);
 
 		tegra_dc_trigger_windows(dc);
+
+		queue_work(system_freezable_wq, &dc->frame_end_work);
 	}
 
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
@@ -3731,6 +3809,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #endif
 	INIT_WORK(&dc->vblank_work, tegra_dc_vblank);
 	dc->vblank_ref_count = 0;
+	INIT_WORK(&dc->frame_end_work, tegra_dc_frame_end);
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	INIT_WORK(&dc->vpulse2_work, tegra_dc_vpulse2);
 #endif

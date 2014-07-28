@@ -1236,6 +1236,36 @@ static int tegra_dc_ext_set_cmu(struct tegra_dc_ext_user *user,
 	kfree(cmu);
 	return 0;
 }
+
+static int tegra_dc_ext_set_cmu_aligned(struct tegra_dc_ext_user *user,
+				struct tegra_dc_ext_cmu *args)
+{
+	int i;
+	struct tegra_dc_cmu *cmu;
+	struct tegra_dc *dc = user->ext->dc;
+
+	cmu = kzalloc(sizeof(*cmu), GFP_KERNEL);
+	if (!cmu)
+		return -ENOMEM;
+
+	cmu->csc.krr = args->csc[0];
+	cmu->csc.kgr = args->csc[1];
+	cmu->csc.kbr = args->csc[2];
+	cmu->csc.krg = args->csc[3];
+	cmu->csc.kgg = args->csc[4];
+	cmu->csc.kbg = args->csc[5];
+	cmu->csc.krb = args->csc[6];
+	cmu->csc.kgb = args->csc[7];
+	cmu->csc.kbb = args->csc[8];
+
+	for (i = 0; i < 960; i++)
+		cmu->lut2[i] = args->lut2[i];
+
+	tegra_dc_update_cmu_aligned(dc, cmu);
+
+	kfree(cmu);
+	return 0;
+}
 #endif
 
 #ifdef CONFIG_TEGRA_ISOMGR
@@ -1719,6 +1749,33 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			return -EFAULT;
 
 		return tegra_dc_ext_set_vblank(user->ext, args.enable);
+	}
+
+	/* Update only modified elements in CSC and LUT2.
+	 * Align writes to FRAME_END_INT */
+	case TEGRA_DC_EXT_SET_CMU_ALIGNED:
+	{
+#ifdef CONFIG_TEGRA_DC_CMU
+		int ret;
+		struct tegra_dc_ext_cmu *args;
+
+		args = kzalloc(sizeof(*args), GFP_KERNEL);
+		if (!args)
+			return -ENOMEM;
+
+		if (copy_from_user(args, user_arg, sizeof(*args))) {
+			kfree(args);
+			return -EFAULT;
+		}
+
+		ret = tegra_dc_ext_set_cmu_aligned(user, args);
+
+		kfree(args);
+
+		return ret;
+#else
+		return -EACCES;
+#endif
 	}
 
 	default:

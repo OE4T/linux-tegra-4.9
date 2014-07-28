@@ -169,6 +169,7 @@ struct nvhost_device_data {
 
 	int		num_channels;	/* Max num of channel supported */
 	int		num_mapped_chs;	/* Num of channel mapped to device */
+	int		num_ppc;	/* Number of pixels per clock cycle */
 
 	/* Channel(s) assigned for the module */
 	struct nvhost_channel **channels;

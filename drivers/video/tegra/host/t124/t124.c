@@ -441,6 +441,8 @@ struct nvhost_device_data t124_vic_info = {
 	.linear_emc		= true,
 	.firmware_name		= "vic03_ucode.bin",
 	.gather_filter_enabled = true,
+	.aggregate_constraints	= nvhost_vic_aggregate_constraints,
+	.num_ppc		= 2,
 };
 
 struct platform_device tegra_vic03_device = {

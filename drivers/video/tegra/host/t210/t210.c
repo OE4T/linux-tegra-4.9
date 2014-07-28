@@ -255,7 +255,9 @@ struct nvhost_device_data t21_vic_info = {
 	.alloc_hwctx_handler	= nvhost_vic03_alloc_hwctx_handler,
 	.finalize_poweron	= nvhost_vic_finalize_poweron,
 	.firmware_name		= "vic04_ucode.bin",
-	.bond_out_id		= BOND_OUT_VIC
+	.bond_out_id		= BOND_OUT_VIC,
+	.aggregate_constraints	= nvhost_vic_aggregate_constraints,
+	.num_ppc		= 8,
 };
 #endif
 

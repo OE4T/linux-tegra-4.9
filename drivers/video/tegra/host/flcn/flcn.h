@@ -96,6 +96,11 @@ void nvhost_flcn_deinit(struct platform_device *);
 int nvhost_flcn_finalize_poweron(struct platform_device *);
 int nvhost_nvenc_t210_finalize_poweron(struct platform_device *dev);
 
+int nvhost_vic_aggregate_constraints(struct platform_device *dev,
+				     int clk_index,
+				     unsigned long floor_rate,
+				     unsigned long pixelrate,
+				     unsigned long bw_constraint);
 
 /* hack, get these from elsewhere */
 #define NVA0B6_VIDEO_COMPOSITOR_SET_APPLICATION_ID		(0x00000200)

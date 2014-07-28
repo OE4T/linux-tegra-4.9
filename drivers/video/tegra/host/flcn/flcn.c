@@ -580,6 +580,31 @@ int nvhost_vic_prepare_poweroff(struct platform_device *dev)
 	return 0;
 }
 
+int nvhost_vic_aggregate_constraints(struct platform_device *dev,
+				     int clk_index,
+				     unsigned long floor_rate,
+				     unsigned long pixelrate,
+				     unsigned long bw_constraint)
+{
+	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
+
+	if (!pdata) {
+		dev_err(&dev->dev, "no platform data\n");
+		/* return 0 to fall-back on default policy */
+		return 0;
+	}
+
+	/* Fall-back to default policy if pixelrate
+	 * is unavailable or clk index is incorrect.
+	 * Here clk_index 2 is for floor client.
+	 */
+	if (!pixelrate || clk_index != 2)
+		return 0;
+
+	/* Compute VIC frequency based on pixelrate */
+	return pixelrate / pdata->num_ppc;
+}
+
 int nvhost_nvenc_t210_finalize_poweron(struct platform_device *pdev)
 {
 	nvhost_dbg_fn("");

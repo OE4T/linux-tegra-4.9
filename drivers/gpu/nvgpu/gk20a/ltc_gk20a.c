@@ -96,7 +96,7 @@ static int gk20a_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 			      1); /* align */
 
 	gr->comptags_per_cacheline = comptags_per_cacheline;
-	gr->slices_per_fbp = slices_per_fbp;
+	gr->slices_per_ltc = slices_per_fbp / g->ltc_count;
 	gr->cacheline_size = cacheline_size;
 
 	return 0;

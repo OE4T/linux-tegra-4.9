@@ -95,6 +95,10 @@ static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 			      max_comptag_lines - 1, /* length*/
 			      1); /* align */
 
+	gr->comptags_per_cacheline = comptags_per_cacheline;
+	gr->slices_per_ltc = slices_per_ltc;
+	gr->cacheline_size = cacheline_size;
+
 	return 0;
 }
 

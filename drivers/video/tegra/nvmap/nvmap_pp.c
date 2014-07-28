@@ -645,7 +645,6 @@ int nvmap_page_pool_debugfs_init(struct dentry *nvmap_root)
 
 int nvmap_page_pool_init(struct nvmap_device *dev)
 {
-	static int reg = 1;
 	unsigned long totalram_mb;
 	struct sysinfo info;
 	struct nvmap_page_pool *pool = &dev->pool;
@@ -670,20 +669,17 @@ int nvmap_page_pool_init(struct nvmap_device *dev)
 
 	pr_info("nvmap page pool size: %u pages (%u MB)\n", pool->length,
 		pool->length >> 8);
+
 	pool->page_array = vzalloc(sizeof(struct page *) * pool->length);
 	if (!pool->page_array)
 		goto fail;
 
-	if (reg) {
-		reg = 0;
-		register_shrinker(&nvmap_page_pool_shrinker);
-	}
-
 	background_allocator = kthread_create(nvmap_background_zero_allocator,
 					    NULL, "nvmap-bz");
-	if (IS_ERR_OR_NULL(background_allocator))
+	if (IS_ERR(background_allocator))
 		goto fail;
 
+	register_shrinker(&nvmap_page_pool_shrinker);
 	nvmap_pp_wake_up_allocator();
 	return 0;
 fail:
@@ -695,7 +691,8 @@ int nvmap_page_pool_fini(struct nvmap_device *dev)
 {
 	struct nvmap_page_pool *pool = &dev->pool;
 
-	if (!IS_ERR_OR_NULL(background_allocator))
+	unregister_shrinker(&nvmap_page_pool_shrinker);
+	if (!IS_ERR(background_allocator))
 		kthread_stop(background_allocator);
 	pool->length = 0;
 	vfree(pool->page_array);

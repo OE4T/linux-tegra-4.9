@@ -94,6 +94,12 @@ struct gk20a_platform {
 	 */
 	int (*late_probe)(struct platform_device *dev);
 
+	/* Poweron platform dependencies */
+	int (*busy)(struct platform_device *dev);
+
+	/* Powerdown platform dependencies */
+	void (*idle)(struct platform_device *dev);
+
 	/* This function is called to allocate secure memory (memory that the
 	 * CPU cannot see). The function should fill the context buffer
 	 * descriptor (especially fields destroy, sgt, size).

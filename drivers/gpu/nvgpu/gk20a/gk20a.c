@@ -1604,16 +1604,30 @@ int gk20a_busy(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct gk20a *g = get_gk20a(pdev);
+	struct gk20a_platform *platform = gk20a_get_platform(pdev);
 
 	down_read(&g->busy_lock);
 
 #ifdef CONFIG_PM_RUNTIME
+	if (platform->busy) {
+		ret = platform->busy(pdev);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "%s: failed to poweron platform dependency\n",
+				__func__);
+			goto fail;
+		}
+	}
+
 	ret = pm_runtime_get_sync(&pdev->dev);
-	if (ret < 0)
+	if (ret < 0) {
 		pm_runtime_put_noidle(&pdev->dev);
+		if (platform->idle)
+			platform->idle(pdev);
+	}
 #endif
 	gk20a_scale_notify_busy(pdev);
 
+fail:
 	up_read(&g->busy_lock);
 
 	return ret < 0 ? ret : 0;
@@ -1621,11 +1635,15 @@ int gk20a_busy(struct platform_device *pdev)
 
 void gk20a_idle(struct platform_device *pdev)
 {
+	struct gk20a_platform *platform = gk20a_get_platform(pdev);
 #ifdef CONFIG_PM_RUNTIME
 	if (atomic_read(&pdev->dev.power.usage_count) == 1)
 		gk20a_scale_notify_idle(pdev);
 	pm_runtime_mark_last_busy(&pdev->dev);
 	pm_runtime_put_sync_autosuspend(&pdev->dev);
+
+	if (platform->idle)
+		platform->idle(pdev);
 #else
 	gk20a_scale_notify_idle(pdev);
 #endif

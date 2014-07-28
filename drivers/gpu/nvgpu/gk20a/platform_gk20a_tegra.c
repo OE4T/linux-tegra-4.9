@@ -449,6 +449,25 @@ static void gk20a_tegra_debug_dump(struct platform_device *pdev)
 	nvhost_debug_dump_device(g->host1x_dev);
 }
 
+static int gk20a_tegra_busy(struct platform_device *dev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a *g = platform->g;
+
+	if (g->host1x_dev)
+		return nvhost_module_busy_ext(g->host1x_dev);
+	return 0;
+}
+
+static void gk20a_tegra_idle(struct platform_device *dev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a *g = platform->g;
+
+	if (g->host1x_dev)
+		nvhost_module_idle_ext(g->host1x_dev);
+}
+
 static int gk20a_tegra_probe(struct platform_device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
@@ -554,6 +573,9 @@ struct gk20a_platform t132_gk20a_tegra_platform = {
 	.unrailgate = gk20a_tegra_unrailgate,
 	.is_railgated = gk20a_tegra_is_railgated,
 
+	.busy = gk20a_tegra_busy,
+	.idle = gk20a_tegra_idle,
+
 	/* frequency scaling configuration */
 	.prescale = gk20a_tegra_prescale,
 	.postscale = gk20a_tegra_postscale,
@@ -587,6 +609,9 @@ struct gk20a_platform gk20a_tegra_platform = {
 	.unrailgate = gk20a_tegra_unrailgate,
 	.is_railgated = gk20a_tegra_is_railgated,
 
+	.busy = gk20a_tegra_busy,
+	.idle = gk20a_tegra_idle,
+
 	/* frequency scaling configuration */
 	.prescale = gk20a_tegra_prescale,
 	.postscale = gk20a_tegra_postscale,
@@ -617,6 +642,9 @@ struct gk20a_platform gm20b_tegra_platform = {
 
 	/* power management callbacks */
 	.suspend = gk20a_tegra_suspend,
+
+	.busy = gk20a_tegra_busy,
+	.idle = gk20a_tegra_idle,
 
 	/* frequency scaling configuration */
 	.prescale = gk20a_tegra_prescale,

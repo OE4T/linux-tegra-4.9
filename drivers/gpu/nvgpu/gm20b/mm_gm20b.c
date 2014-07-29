@@ -27,7 +27,8 @@ static const u64 gmmu_page_masks[gmmu_nr_page_sizes] = { ~0xfffLL, ~0x1ffffLL };
 
 static int allocate_gmmu_ptes_sparse(struct vm_gk20a *vm,
 				enum gmmu_pgsz_gk20a pgsz_idx,
-				u64 first_vaddr, u64 last_vaddr)
+				u64 first_vaddr, u64 last_vaddr,
+				bool clear, bool refplus)
 {
 	int err;
 	u32 pte_lo, pte_hi;
@@ -50,6 +51,8 @@ static int allocate_gmmu_ptes_sparse(struct vm_gk20a *vm,
 	BUG_ON(pde_lo != pde_hi);
 
 	pte = vm->pdes.ptes[pgsz_idx] + pde_lo;
+	if (refplus)
+		pte->ref_cnt++;
 
 	pte_lo = pte_index_from_vaddr(vm, first_vaddr, pgsz_idx);
 	pte_hi = pte_index_from_vaddr(vm, last_vaddr, pgsz_idx);
@@ -62,7 +65,7 @@ static int allocate_gmmu_ptes_sparse(struct vm_gk20a *vm,
 	gk20a_dbg(gpu_dbg_pte, "pte_lo=%d, pte_hi=%d", pte_lo, pte_hi);
 	for (pte_cur = pte_lo; pte_cur <= pte_hi; pte_cur++) {
 		pte_w[0] = gmmu_pte_valid_false_f();
-		pte_w[1] = gmmu_pte_vol_true_f();
+		pte_w[1] = clear ? 0 : gmmu_pte_vol_true_f();
 
 		gk20a_dbg(gpu_dbg_pte,
 			   "pte_cur=%d addr=%llx refs=%d"
@@ -147,7 +150,7 @@ static bool gm20b_vm_is_pde_in_range(struct vm_gk20a *vm, u64 vaddr_lo,
 }
 
 static int gm20b_vm_put_sparse(struct vm_gk20a *vm, u64 vaddr,
-			       u32 num_pages, u32 pgsz_idx)
+			       u32 num_pages, u32 pgsz_idx, bool refplus)
 {
 	struct mm_gk20a *mm = vm->mm;
 	u32 pgsz = gmmu_page_sizes[pgsz_idx];
@@ -168,8 +171,8 @@ static int gm20b_vm_put_sparse(struct vm_gk20a *vm, u64 vaddr,
 
 	gk20a_dbg_info("vaddr: 0x%llx, vaddr_hi: 0x%llx, pde_lo: 0x%x, "
 			"pde_hi: 0x%x, pgsz: %d, pde_stride_shift: %d",
-			vaddr, vaddr_hi, pde_lo, pde_hi,
-			vm->mm->pde_stride_shift, pgsz);
+			vaddr, vaddr_hi, pde_lo, pde_hi, pgsz,
+			vm->mm->pde_stride_shift);
 
 	for (i = pde_lo; i <= pde_hi; i++) {
 		/* Mark all ptes as sparse. */
@@ -188,20 +191,22 @@ static int gm20b_vm_put_sparse(struct vm_gk20a *vm, u64 vaddr,
 			allocate_gmmu_ptes_sparse(vm, pgsz_idx,
 				vaddr_pde_start,
 				PDE_ADDR_END(vaddr_pde_start,
-				pde_shift));
+				pde_shift), false, refplus);
 		} else {
 			/* Check leading and trailing spaces which doesn't fit
 			 * into entire pde. */
 			if (pde_lo == pde_hi)
 				allocate_gmmu_ptes_sparse(vm, pgsz_idx, vaddr,
-							vaddr_hi);
+						vaddr_hi, false, refplus);
 			else if (i == pde_lo)
 				allocate_gmmu_ptes_sparse(vm, pgsz_idx, vaddr,
-					PDE_ADDR_END(vaddr, pde_shift));
+					PDE_ADDR_END(vaddr, pde_shift), false,
+					refplus);
 			else
 				allocate_gmmu_ptes_sparse(vm, pgsz_idx,
 					PDE_ADDR_START(vaddr_hi, pde_shift),
-							vaddr_hi);
+							vaddr_hi, false,
+							refplus);
 		}
 	}
 
@@ -265,7 +270,52 @@ fail:
 	return ret;
 }
 
+void gm20b_vm_clear_sparse(struct vm_gk20a *vm, u64 vaddr,
+			       u64 size, u32 pgsz) {
+	int pgsz_idx;
+	u64 vaddr_hi;
+	u32 pde_lo, pde_hi, pde_i;
+
+	gk20a_dbg_fn("");
+	/* determine pagesz idx */
+	for (pgsz_idx = gmmu_page_size_small;
+	     pgsz_idx < gmmu_nr_page_sizes;
+	     pgsz_idx++) {
+		if (gmmu_page_sizes[pgsz_idx] == pgsz)
+			break;
+	}
+	vaddr_hi = vaddr + size - 1;
+	pde_range_from_vaddr_range(vm,
+				   vaddr,
+				   vaddr_hi,
+				   &pde_lo, &pde_hi);
+
+	gk20a_dbg_info("vaddr: 0x%llx, vaddr_hi: 0x%llx, pde_lo: 0x%x, "
+			"pde_hi: 0x%x, pgsz: %d, pde_stride_shift: %d",
+			vaddr, vaddr_hi, pde_lo, pde_hi, pgsz,
+			vm->mm->pde_stride_shift);
+
+	for (pde_i = pde_lo; pde_i <= pde_hi; pde_i++) {
+		u32 pte_lo, pte_hi;
+		u32 pte_cur;
+		void *pte_kv_cur;
+
+		struct page_table_gk20a *pte = vm->pdes.ptes[pgsz_idx] + pde_i;
+		pte->ref_cnt--;
+
+		if (pte->ref_cnt == 0) {
+			free_gmmu_pages(vm, pte->ref, pte->sgt,
+				vm->mm->page_table_sizing[pgsz_idx].order,
+				pte->size);
+			update_gmmu_pde_locked(vm, pde_i);
+		}
+	}
+
+	return;
+}
+
 void gm20b_init_mm(struct gpu_ops *gops)
 {
 	gops->mm.set_sparse = gm20b_vm_put_sparse;
+	gops->mm.clear_sparse = gm20b_vm_clear_sparse;
 }

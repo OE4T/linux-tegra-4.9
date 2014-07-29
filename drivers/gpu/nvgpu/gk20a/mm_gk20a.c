@@ -100,7 +100,6 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   u64 first_vaddr, u64 last_vaddr,
 				   u8 kind_v, u32 ctag_offset, bool cacheable,
 				   int rw_flag);
-static void update_gmmu_pde_locked(struct vm_gk20a *vm, u32 i);
 static void gk20a_vm_remove_support(struct vm_gk20a *vm);
 static int gk20a_init_system_vm(struct mm_gk20a *mm);
 static int gk20a_init_bar1_vm(struct mm_gk20a *mm);
@@ -444,7 +443,7 @@ err_out:
 	return -ENOMEM;
 }
 
-static void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
+void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
 			    struct sg_table *sgt, u32 order,
 			    size_t size)
 {
@@ -534,7 +533,7 @@ err_out:
 	return -ENOMEM;
 }
 
-static void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
+void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
 			    struct sg_table *sgt, u32 order,
 			    size_t size)
 {
@@ -1865,7 +1864,7 @@ static inline u32 small_valid_pde1_bits(u64 pte_addr)
    made.  So, superfluous updates will cause unnecessary
    pde invalidations.
 */
-static void update_gmmu_pde_locked(struct vm_gk20a *vm, u32 i)
+void update_gmmu_pde_locked(struct vm_gk20a *vm, u32 i)
 {
 	bool small_valid, big_valid;
 	u64 pte_addr[2] = {0, 0};
@@ -1882,6 +1881,7 @@ static void update_gmmu_pde_locked(struct vm_gk20a *vm, u32 i)
 	if (small_valid)
 		pte_addr[gmmu_page_size_small] =
 			gk20a_mm_iova_addr(small_pte->sgt->sgl);
+
 	if (big_valid)
 		pte_addr[gmmu_page_size_big] =
 			gk20a_mm_iova_addr(big_pte->sgt->sgl);
@@ -1919,7 +1919,6 @@ static void update_gmmu_pde_locked(struct vm_gk20a *vm, u32 i)
 
 	vm->tlb_dirty  = true;
 }
-
 
 static int gk20a_vm_put_empty(struct vm_gk20a *vm, u64 vaddr,
 			       u32 num_pages, u32 pgsz_idx)
@@ -1986,6 +1985,18 @@ err_unmap:
 	return -EINVAL;
 }
 
+static int gk20a_vm_put_sparse(struct vm_gk20a *vm, u64 vaddr,
+			       u32 num_pages, u32 pgsz_idx, bool refplus)
+{
+	return gk20a_vm_put_empty(vm, vaddr, num_pages, pgsz_idx);
+}
+
+void gk20a_vm_clear_sparse(struct vm_gk20a *vm, u64 vaddr,
+			       u64 size, u32 pgsz_idx) {
+	__locked_gmmu_unmap(vm, vaddr, size, pgsz_idx,
+				false, gk20a_mem_flag_none);
+}
+
 /* NOTE! mapped_buffers lock must be held */
 static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 {
@@ -2000,8 +2011,18 @@ static void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 			gmmu_page_shifts[pgsz_idx];
 
 		/* there is little we can do if this fails... */
-		g->ops.mm.set_sparse(vm, vaddr, num_pages, pgsz_idx);
-
+		if (g->ops.mm.put_empty) {
+			g->ops.mm.put_empty(vm, vaddr, num_pages, pgsz_idx);
+		} else {
+			__locked_gmmu_unmap(vm,
+				mapped_buffer->addr,
+				mapped_buffer->size,
+				mapped_buffer->pgsz_idx,
+				mapped_buffer->va_allocated,
+				gk20a_mem_flag_none);
+			g->ops.mm.set_sparse(vm, vaddr,
+					num_pages, pgsz_idx, false);
+		}
 	} else
 		__locked_gmmu_unmap(vm,
 				mapped_buffer->addr,
@@ -2328,7 +2349,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 	/* mark that we need to use sparse mappings here */
 	if (args->flags & NVHOST_AS_ALLOC_SPACE_FLAGS_SPARSE) {
 		err = g->ops.mm.set_sparse(vm, vaddr_start, args->pages,
-					 pgsz_idx);
+					 pgsz_idx, true);
 		if (err) {
 			mutex_unlock(&vm->update_gmmu_lock);
 			vma->free(vma, start_page_nr, args->pages);
@@ -2357,6 +2378,7 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 	struct gk20a_allocator *vma;
 	struct vm_gk20a *vm = as_share->vm;
 	struct vm_reserved_va_node *va_node;
+	struct gk20a *g = gk20a_from_vm(vm);
 
 	gk20a_dbg_fn("pgsz=0x%x nr_pages=0x%x o/a=0x%llx", args->page_size,
 			args->pages, args->offset);
@@ -2400,12 +2422,10 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 
 		/* if this was a sparse mapping, free the va */
 		if (va_node->sparse)
-			__locked_gmmu_unmap(vm,
-				va_node->vaddr_start,
-				va_node->size,
-				va_node->pgsz_idx,
-				false,
-				gk20a_mem_flag_none);
+			g->ops.mm.clear_sparse(vm,
+					va_node->vaddr_start,
+					va_node->size,
+					va_node->pgsz_idx);
 		kfree(va_node);
 	}
 	mutex_unlock(&vm->update_gmmu_lock);
@@ -3088,6 +3108,8 @@ bool gk20a_mm_mmu_debug_mode_enabled(struct gk20a *g)
 
 void gk20a_init_mm(struct gpu_ops *gops)
 {
-	gops->mm.set_sparse = gk20a_vm_put_empty;
+	gops->mm.set_sparse = gk20a_vm_put_sparse;
+	gops->mm.put_empty = gk20a_vm_put_empty;
+	gops->mm.clear_sparse = gk20a_vm_clear_sparse;
 }
 

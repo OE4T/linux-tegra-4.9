@@ -524,6 +524,12 @@ int validate_gmmu_page_table_gk20a_locked(struct vm_gk20a *vm,
 int zalloc_gmmu_page_table_gk20a(struct vm_gk20a *vm,
 					enum gmmu_pgsz_gk20a gmmu_pgsz_idx,
 					struct page_table_gk20a *pte);
+
+void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
+			    struct sg_table *sgt, u32 order,
+			    size_t size);
+void update_gmmu_pde_locked(struct vm_gk20a *vm, u32 i);
+
 struct gpu_ops;
 void gk20a_init_mm(struct gpu_ops *gops);
 #endif /*_MM_GK20A_H_ */

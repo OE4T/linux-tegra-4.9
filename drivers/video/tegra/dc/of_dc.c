@@ -976,6 +976,9 @@ struct device_node *parse_dsi_settings(struct platform_device *ndev,
 	int bl_name_len = 0;
 	struct tegra_dsi_out *dsi = pdata->default_out->dsi;
 	struct device_node *np_dsi_panel = NULL;
+	struct property *prop;
+	const __be32 *p;
+	u32 u;
 
 	if (ndev->id == 0)
 		np_dsi_panel = tegra_primary_panel_get_dt_node(pdata);
@@ -1141,6 +1144,12 @@ struct device_node *parse_dsi_settings(struct platform_device *ndev,
 	if (gpio_is_valid(dsi_te_gpio)) {
 		dsi->te_gpio = dsi_te_gpio;
 		OF_DC_LOG("dsi te_gpio %d\n", dsi_te_gpio);
+	}
+
+	of_property_for_each_u32(np_dsi_panel, "nvidia,dsi-dpd-pads",
+		prop, p, u) {
+		dsi->dpd_dsi_pads |= (u32)u;
+		OF_DC_LOG("dpd_dsi_pads %u\n", dsi->dpd_dsi_pads);
 	}
 
 	if (!of_property_read_u32(np_dsi_panel,

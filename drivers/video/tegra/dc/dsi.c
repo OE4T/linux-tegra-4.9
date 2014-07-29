@@ -41,6 +41,7 @@
 #include <mach/dc.h>
 #include <mach/fb.h>
 #include <mach/csi.h>
+#include <mach/io_dpd.h>
 
 #include "dc_reg.h"
 #include "dc_priv.h"
@@ -107,6 +108,27 @@ static bool enable_read_debug;
 module_param(enable_read_debug, bool, 0644);
 MODULE_PARM_DESC(enable_read_debug,
 		"Enable to print read fifo and return packet type");
+
+static struct tegra_io_dpd dsi_io = {
+	.name                   = "DSI",
+	.io_dpd_reg_index       = 0,
+	.io_dpd_bit             = 2,
+};
+static struct tegra_io_dpd dsib_io = {
+	.name                   = "DSIB",
+	.io_dpd_reg_index       = 1,
+	.io_dpd_bit             = 7,
+};
+static struct tegra_io_dpd dsic_io = {
+	.name                   = "DSIC",
+	.io_dpd_reg_index       = 1,
+	.io_dpd_bit             = 8,
+};
+static struct tegra_io_dpd dsid_io = {
+	.name                   = "DSID",
+	.io_dpd_reg_index       = 1,
+	.io_dpd_bit             = 9,
+};
 
 bool tegra_dsi_enable_read_debug(struct tegra_dc_dsi_data *dsi)
 {
@@ -4483,6 +4505,21 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 
 	tegra_dc_set_outdata(dc, dsi);
 	__tegra_dc_dsi_init(dc);
+
+	/*
+	 * Enable DPD mode for DSI pads if required.
+	 */
+	if (!dsi->info.ganged_type &&
+		(dsi->info.controller_vs >= DSI_VS_1)) {
+		if (dsi->info.dpd_dsi_pads & DSI_DPD_EN)
+			tegra_io_dpd_enable(&dsi_io);
+		if (dsi->info.dpd_dsi_pads & DSIB_DPD_EN)
+			tegra_io_dpd_enable(&dsib_io);
+		if (dsi->info.dpd_dsi_pads & DSIC_DPD_EN)
+			tegra_io_dpd_enable(&dsic_io);
+		if (dsi->info.dpd_dsi_pads & DSID_DPD_EN)
+			tegra_io_dpd_enable(&dsid_io);
+	}
 
 	return 0;
 

@@ -528,6 +528,9 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 		       sizeof(struct tegra_dc_win));
 	}
 
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	tegra_nvdisp_update_windows(windows, n, dirty_rect, wait_for_vblank);
+#else
 	for (i = 0; i < n; i++) {
 		struct tegra_dc_win *win = windows[i];
 		struct tegra_dc_win *dc_win = tegra_dc_get_window(dc, win->idx);
@@ -1017,6 +1020,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 		update_mask |= NC_HOST_TRIG;
 
 	tegra_dc_writel(dc, update_mask, DC_CMD_STATE_CONTROL);
+#endif	/* NVDISPLAY */
 
 	/*
 	 * tegra_dc_put() called at frame end, for one shot.

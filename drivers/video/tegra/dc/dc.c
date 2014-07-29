@@ -1347,6 +1347,9 @@ unsigned long tegra_dc_poll_register(struct tegra_dc *dc, u32 reg, u32 mask,
 	unsigned long timeout_jf = jiffies + msecs_to_jiffies(timeout_ms);
 	u32 reg_val = 0;
 
+	if (tegra_platform_is_linsim())
+		return 0;
+
 	do {
 		usleep_range(poll_interval_us, poll_interval_us << 1);
 		reg_val = tegra_dc_readl(dc, reg);
@@ -3436,6 +3439,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	void __iomem *base;
 	int irq;
 	int i;
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	static char *clk_name = "disp1";
+#endif
 
 #ifdef CONFIG_ARCH_TEGRA_21x_SOC
 	if (tegra_platform_is_linsim()) {
@@ -3531,7 +3537,11 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		goto err_release_resource_reg;
 	}
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	ret = tegra_nvdisp_init(dc);
+	if (ret)
+		goto err_release_resource_reg;
+#else
 	for (i = 0; i < DC_N_WINDOWS; i++)
 		dc->windows[i].syncpt.id = NVSYNCPT_INVALID;
 
@@ -3587,7 +3597,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			"Unknown base address %llx: unable to assign syncpt\n",
 			(u64)res->start);
 	}
-#endif
+#endif	/* !CONFIG_TEGRA_NVDISPLAY */
 
 	if (np) {
 		struct resource of_fb_res;
@@ -3610,7 +3620,12 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			IORESOURCE_MEM, "fbmem");
 	}
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	clk_name[4] += dc->ctrl_num;
+	clk = clk_get(NULL, clk_name);
+#else
 	clk = clk_get(&ndev->dev, NULL);
+#endif
 	if (IS_ERR_OR_NULL(clk)) {
 		dev_err(&ndev->dev, "can't get clock\n");
 		ret = -ENOENT;
@@ -3690,7 +3705,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->switchdev_registered = true;
 #endif
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_dc_feature_register(dc);
+#endif
 
 	if (dc->pdata->default_out) {
 		if (dc->pdata->default_out->hotplug_init)
@@ -3884,8 +3901,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			dc->connected = dc->out_ops->detect(dc);
 		else
 			dc->connected = true;
-	}
-	else
+	} else
 		dc->connected = false;
 
 	/* Powergate display module when it's unconnected. */
@@ -4139,6 +4155,7 @@ static struct of_device_id tegra_display_of_match[] = {
 	{.compatible = "nvidia,tegra114-dc", },
 	{.compatible = "nvidia,tegra124-dc", },
 	{.compatible = "nvidia,tegra210-dc", },
+	{.compatible = "nvidia,tegra186-dc", },
 	{ },
 };
 #endif

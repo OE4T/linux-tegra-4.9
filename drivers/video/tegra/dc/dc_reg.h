@@ -598,10 +598,6 @@
 
 #endif
 
-
-
-#define DC_WIN_HP_FETCH_CONTROL			0x714
-
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
 #define DC_WIN_GLOBAL_ALPHA			0x715
 #define  GLOBAL_ALPHA_ENABLE		0x10000

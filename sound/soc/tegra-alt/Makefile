@@ -30,8 +30,8 @@ snd-soc-tegra210-alt-fpga-clock-objs := ahub_unit_fpga_clock.o
 
 obj-$(CONFIG_SND_SOC_TEGRA_ALT) += snd-soc-tegra-alt-utils.o
 obj-$(CONFIG_SND_SOC_TEGRA_ALT) += snd-soc-tegra-alt-pcm.o
-obj-$(CONFIG_SND_SOC_TEGRA_ALT) += snd-soc-tegra-alt-hwdep.o
 obj-$(CONFIG_SND_SOC_TEGRA_ALT) += snd-soc-tegra210-alt-fpga-clock.o
+obj-$(CONFIG_SND_SOC_TEGRA_ASOC_HWDEP_ALT) += snd-soc-tegra-alt-hwdep.o
 obj-$(CONFIG_SND_SOC_TEGRA30_APBIF_ALT) += snd-soc-tegra30-alt-apbif.o
 obj-$(CONFIG_SND_SOC_TEGRA30_XBAR_ALT) += snd-soc-tegra30-alt-xbar.o
 obj-$(CONFIG_SND_SOC_TEGRA30_I2S_ALT) += snd-soc-tegra30-alt-i2s.o

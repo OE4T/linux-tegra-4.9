@@ -1,9 +1,9 @@
 /*
- * Copyright (C) 2014 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014, NVIDIA CORPORATION. All rights reserved.
  *
- * Hypervisor related routines
+ * Linux spesific hv syscall tests
  *
- * This file is BSD licensed so anyone can use the definitions to implement
+ * This header is BSD licensed so anyone can use the definitions to implement
  * compatible drivers/servers.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -17,7 +17,7 @@
  * 3. Neither the name of NVIDIA CORPORATION nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
-
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS IS''
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -30,59 +30,41 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+
 #include <linux/init.h>
-#include <linux/linkage.h>
-#include <asm/hwcap.h>
-#include <asm/assembler.h>
-#include <asm/asm-offsets.h>
+#include <linux/string.h>
+#include <linux/printk.h>
 
 #include "syscalls.h"
 
-#.arch_extension virt
+/* #define TEGRA_HVC_DEBUG	*/
+
+#if defined(TEGRA_HVC_DEBUG)
+struct hyp_ipa_pa_info info;
 
 /*
- * Old toolchains cannot assemble this so we use a macro.
+ * Test this hypercall by inspecting its result in console output.
+ * Usually the given ipa value is a valid mapping in the guest.
  */
-.macro hvc nr
-.if \nr > 15
-.error "Unsupported hvc call number, too high for this macro"
-.endif
-.word 0xe140007\nr
-.endm
-/*
- * Declares a system call entry exit function with
- * HVC value, a pointer and number of words sent/received.
- */
-.macro declare_syscall name, syscall_nr
-	ENTRY(hvc_\name)
-		stmfd	sp!, {r0-r12}	@ sp->|r0-r12|
-		hvc	\syscall_nr	@ HVC Call
-		stmfd	sp!, {r0}	@ Store result |->res|r0-r12|
-		ldr	r0, [sp, #4]	@ Load struct ptr from stack
-		stmia	r0, {r1-r12}	@ Fill structure
-		ldmfd	sp!, {r0}	@ Restore result in r0 |->r0-r12|
-		add	sp, sp, #16 	@ Unwind until r4
-		ldmfd	sp!, {r4-r12}	@ Restore regs to preserve.
-		mov	pc, lr
-	ENDPROC(hvc_\name)
-.endm
+int test_hyp_read_ipa_pa_info(void)
+{
+	uint64_t ipa = 0x80000000;
+	int guestid = 0;
+	int err;
 
-/* Those who need to read data use this */
-declare_syscall read_gid HVC_NR_READ_GID
-declare_syscall read_nguests HVC_NR_READ_NGUESTS
-declare_syscall read_ivc_info HVC_NR_READ_IVC
-declare_syscall read_ipa_pa_info HVC_NR_READ_IPA_PA
+	memset(&info, 0, sizeof(info));
 
-/* TODO: Define calls with no read in a way that does less reg. read/writes */
-/*
- * r0 = irqnr
- * r1 = vmid
- *
- * Return:
- * r0 = return value
- */
-ENTRY(hvc_raise_irq)
-	hvc	HVC_NR_RAISE_IRQ	@ HVC Call
-	mov	pc, lr
-ENDPROC(hvc_raise_irq)
+	err = hyp_read_ipa_pa_info(&info, 0, ipa);
+	if (err < 0)
+		printk(KERN_DEBUG " %s: syscall failed for IPA=%llx, "
+		       "guestid=%d, err=%d\n", __func__, ipa, guestid, err);
+	else
+		printk(KERN_DEBUG " %s: for IPA=%llx, guestid=%d, we got, "
+		       "PA base: %llx, offset: %llx, size: %llx\n",
+		       __func__, ipa, guestid, info.base, info.offset,
+		       info.size);
+	return 0;
+}
+late_initcall(test_hyp_read_ipa_pa_info);
+#endif
 

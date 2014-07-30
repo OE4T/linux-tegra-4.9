@@ -70,6 +70,16 @@ int hyp_read_ivc_info(struct hyp_ivc_info *data, int guestid)
 	return ret;
 }
 
+int hyp_read_ipa_pa_info(struct hyp_ipa_pa_info *info, int guestid, u64 ipa)
+{
+	int sysregs[12];
+	int ret;
+
+	ret = hvc_read_ipa_pa_info(sysregs, guestid, ipa);
+	*info = *((struct hyp_ipa_pa_info *)&sysregs[0]);
+	return ret;
+}
+
 int hyp_raise_irq(unsigned int irq, unsigned int vmid)
 {
 	return hvc_raise_irq(irq, vmid);

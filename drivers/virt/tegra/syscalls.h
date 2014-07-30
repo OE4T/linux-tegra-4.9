@@ -39,11 +39,16 @@
 #define HVC_NR_READ_GID		3
 #define HVC_NR_RAISE_IRQ	4
 #define HVC_NR_READ_NGUESTS	5
+#define HVC_NR_READ_IPA_PA	6
 
 #define GUEST_PRIMARY		0
 #define GUEST_IVC_SERVER	0
 
 #ifndef __ASSEMBLY__
+
+#if defined(__KERNEL__)
+#include <linux/types.h>
+#endif
 
 /*
  * IVC communication information for each unique guest pair.
@@ -55,14 +60,23 @@ struct hyp_ivc_info {
 	unsigned int  virq_total;	/* Number of irqs allocated per guest */
 };
 
+
+struct hyp_ipa_pa_info {
+	uint64_t base;       /* base of contiguous pa region */
+	uint64_t offset;     /* offset for requested ipa address */
+	uint64_t size;       /* size of pa region */
+};
+
 int hyp_read_gid(unsigned int *gid);
 int hyp_read_nguests(unsigned int *nguests);
-int hyp_read_ivc_info(struct hyp_ivc_info *data, int guestid);
+int hyp_read_ivc_info(struct hyp_ivc_info *info, int guestid);
+int hyp_read_ipa_pa_info(struct hyp_ipa_pa_info *info, int guestid, u64 ipa);
 int hyp_raise_irq(unsigned int irq, unsigned int vmid);
 
 /* ASM prototypes */
 extern int hvc_read_gid(void *);
 extern int hvc_read_ivc_info(void *, int guestid);
+extern int hvc_read_ipa_pa_info(void *, int guestid, uint64_t ipa);
 extern int hvc_read_nguests(void *);
 extern int hvc_raise_irq(unsigned int irq, unsigned int vmid);
 

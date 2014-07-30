@@ -224,16 +224,8 @@
 					regulator-consumer-device = "tegra-ehci.1";
 				};
 				c1 {
-					regulator-consumer-supply = "usb_vbus1";
-					regulator-consumer-device = "tegra-xhci";
-				};
-				c2 {
 					regulator-consumer-supply = "usb_vbus";
 					regulator-consumer-device = "tegra-ehci.2";
-				};
-				c3 {
-					regulator-consumer-supply = "usb_vbus2";
-					regulator-consumer-device = "tegra-xhci";
 				};
 			};
 		};

@@ -30,7 +30,7 @@
 #include "t210.h"
 #include "t124/t124.h"
 #include "host1x/host1x.h"
-#include "hardware_t124.h"
+#include "t210_hardware.h"
 #include "syncpt_t124.h"
 #include "flcn/flcn.h"
 #include "nvdec/nvdec.h"
@@ -286,6 +286,14 @@ struct nvhost_device_data t21_nvdec_info = {
 	.moduleid		= NVHOST_MODULE_NVDEC,
 	.ctrl_ops		= &tegra_nvdec_ctrl_ops,
 	.num_channels		= 1,
+	.scaling_init		= nvhost_scale_init,
+	.scaling_deinit		= nvhost_scale_deinit,
+	.actmon_regs		= HOST1X_CHANNEL_ACTMON3_REG_BASE,
+	.mamask_addr		= 0x0000164c,
+	.mamask_val		= 0x3d,
+	.borps_addr		= 0x00001650,
+	.borps_val		= 0x2008,
+	.actmon_enabled		= true,
 	.bond_out_id		= BOND_OUT_NVDEC,
 };
 

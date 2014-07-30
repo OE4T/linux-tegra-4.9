@@ -206,7 +206,11 @@ static void __nvmap_dmabuf_free_sgt_locked(struct nvmap_handle_sgt *nvmap_sgt)
 
 	list_del(&nvmap_sgt->maps_entry);
 
-	if (info->handle->heap_pgalloc) {
+	if (info->handle->heap_type == NVMAP_HEAP_CARVEOUT_IRAM) {
+		sg_dma_address(nvmap_sgt->sgt->sgl) = 0;
+	} else if (info->handle->heap_type == NVMAP_HEAP_CARVEOUT_VPR) {
+		sg_dma_address(nvmap_sgt->sgt->sgl) = 0;
+	} else {
 		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
 		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
 		dma_unmap_sg_attrs(nvmap_sgt->dev,
@@ -370,7 +374,13 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 		return sgt;
 	}
 
-	if (info->handle->heap_pgalloc && info->handle->alloc) {
+	if (!info->handle->alloc) {
+		goto err_map;
+	} else if (info->handle->heap_type == NVMAP_HEAP_CARVEOUT_IRAM) {
+		sg_dma_address(sgt->sgl) = info->handle->carveout->base;
+	} else if (info->handle->heap_type == NVMAP_HEAP_CARVEOUT_VPR) {
+		sg_dma_address(sgt->sgl) = 0;
+	} else {
 		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
 		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
 		ents = dma_map_sg_attrs(attach->dev, sgt->sgl,
@@ -380,8 +390,6 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 			goto err_map;
 		}
 		BUG_ON(ents != 1);
-	} else if (!info->handle->alloc) {
-		goto err_map;
 	}
 
 	if (__nvmap_dmabuf_prep_sgt_locked(attach, dir, sgt)) {

@@ -29,6 +29,7 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/regulator/consumer.h>
 #include <linux/of_device.h>
 #include <linux/debugfs.h>
 
@@ -90,6 +91,13 @@ static int tegra210_i2s_runtime_suspend(struct device *dev)
 			dev_err(dev, "setting dap pinctrl idle state failed\n");
 	}
 
+	if (i2s->num_supplies > 0) {
+		ret = regulator_bulk_disable(i2s->num_supplies,
+							i2s->supplies);
+		if (ret < 0)
+			dev_err(dev, "failed to disable i2s io regulator\n");
+	}
+
 	regcache_cache_only(i2s->regmap, true);
 	clk_disable_unprepare(i2s->clk_i2s);
 
@@ -106,6 +114,13 @@ static int tegra210_i2s_runtime_resume(struct device *dev)
 					i2s->pin_default_state);
 		if (ret < 0)
 			dev_err(dev, "setting dap pinctrl default state failed\n");
+	}
+
+	if (i2s->num_supplies > 0) {
+		ret = regulator_bulk_enable(i2s->num_supplies,
+							i2s->supplies);
+		if (ret < 0)
+			dev_err(dev, "failed to enable i2s io regulator\n");
 	}
 
 	ret = clk_prepare_enable(i2s->clk_i2s);
@@ -528,12 +543,15 @@ static const struct of_device_id tegra210_i2s_of_match[] = {
 
 static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 {
+	const struct of_device_id *match;
+	struct device_node *np = pdev->dev.of_node;
+	struct tegra210_i2s_soc_data *soc_data;
 	struct tegra210_i2s *i2s;
 	struct resource *mem, *memregion;
+	struct property *prop;
 	void __iomem *regs;
-	int ret = 0;
-	const struct of_device_id *match;
-	struct tegra210_i2s_soc_data *soc_data;
+	int ret = 0, count = 0, num_supplies;
+	const char *supply;
 
 	match = of_match_device(tegra210_i2s_of_match, &pdev->dev);
 	if (!match) {
@@ -609,14 +627,28 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	}
 	regcache_cache_only(i2s->regmap, true);
 
-	if (of_property_read_u32(pdev->dev.of_node,
-				"nvidia,ahub-i2s-id",
+	if (of_property_read_u32(np, "nvidia,ahub-i2s-id",
 				&pdev->dev.id) < 0) {
 		dev_err(&pdev->dev,
 			"Missing property nvidia,ahub-i2s-id\n");
 		ret = -ENODEV;
 		goto err_pll_a_out0_clk_put;
 	}
+
+	num_supplies = of_property_count_strings(np, "regulator-supplies");
+	if (num_supplies > 0) {
+		i2s->num_supplies = num_supplies;
+		i2s->supplies = devm_kzalloc(&pdev->dev, num_supplies *
+				sizeof(*i2s->supplies), GFP_KERNEL);
+		if (!i2s->supplies) {
+			ret = -ENOMEM;
+			goto err_pll_a_out0_clk_put;
+		}
+		of_property_for_each_string(np, "regulator-supplies",
+				prop, supply)
+		i2s->supplies[count++].supply = supply;
+	}
+
 
 	i2s->pinctrl = devm_pinctrl_get(&pdev->dev);
 	if (IS_ERR(i2s->pinctrl)) {

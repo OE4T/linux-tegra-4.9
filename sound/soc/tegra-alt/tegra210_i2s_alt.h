@@ -184,6 +184,7 @@ struct tegra210_i2s_soc_data {
 };
 
 struct tegra210_i2s {
+	const struct tegra210_i2s_soc_data *soc_data;
 	struct clk *clk_i2s;
 	struct clk *clk_i2s_sync;
 	struct clk *clk_pll_a_out0;
@@ -191,9 +192,10 @@ struct tegra210_i2s {
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pin_default_state;
 	struct pinctrl_state *pin_idle_state;
-	int bclk_ratio;
+	struct regulator_bulk_data *supplies;
 	unsigned int srate;
-	const struct tegra210_i2s_soc_data *soc_data;
+	int num_supplies;
+	int bclk_ratio;
 };
 
 #endif

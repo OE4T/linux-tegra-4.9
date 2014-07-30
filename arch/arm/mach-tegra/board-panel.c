@@ -134,6 +134,9 @@ int tegra_panel_gpio_get_dt(const char *comp_str,
 	panel->panel_gpio[TEGRA_GPIO_RESET] =
 		of_get_named_gpio(node, "nvidia,panel-rst-gpio", 0);
 
+	panel->panel_gpio[TEGRA_GPIO_PANEL_EN] =
+		of_get_named_gpio(node, "nvidia,panel-en-gpio", 0);
+
 	panel->panel_gpio[TEGRA_GPIO_BL_ENABLE] =
 		of_get_named_gpio(node, "nvidia,panel-bl-en-gpio", 0);
 
@@ -155,6 +158,9 @@ int tegra_panel_gpio_get_dt(const char *comp_str,
 			switch (cnt) {
 			case TEGRA_GPIO_RESET:
 				label = "tegra-panel-reset";
+				break;
+			case TEGRA_GPIO_PANEL_EN:
+				label = "tegra-panel-en";
 				break;
 			case TEGRA_GPIO_BL_ENABLE:
 				label = "tegra-panel-bl-enable";
@@ -236,6 +242,9 @@ void tegra_pwm_bl_ops_register(struct device *dev)
 		break;
 	case BOARD_PM354:
 		dev_set_drvdata(dev, dsi_a_1080p_14_0_ops.pwm_bl_ops);
+		break;
+	case BOARD_E2129:
+		dev_set_drvdata(dev, dsi_j_1440_810_5_8_ops.pwm_bl_ops);
 		break;
 	case BOARD_E1937:
 		if (display_board.sku == 1100)
@@ -348,6 +357,13 @@ struct device_node *tegra_primary_panel_get_dt_node(
 			tegra_panel_register_ops(dc_out,
 				&dsi_a_1080p_14_0_ops);
 		np_panel = of_find_compatible_node(NULL, NULL, "a,1080p-14-0");
+		break;
+	case BOARD_E2129:
+		if (pdata && dc_out)
+			tegra_panel_register_ops(dc_out,
+				&dsi_j_1440_810_5_8_ops);
+		np_panel = of_find_compatible_node(NULL,
+			NULL, "j,1440-810-5-8");
 		break;
 	case BOARD_E1937:
 		if (display_board.sku == 1100)

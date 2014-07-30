@@ -16,7 +16,7 @@
 			interrupts = <TEGRA_GPIO(X, 1) 0x01>; /* GPIO_PX1 */
 			reset-gpio = <&gpio TEGRA_GPIO(V, 6) 0>; /* GPIO_PV6 */
 			config = <0>;
-			platform-id = <RM_PLATFORM_T008>;
+			platform-id = <RM_PLATFORM_T008_2>;
 			name-of-clock = "clk_out_2";
 			name-of-clock-con = "extern2";
 			avdd-supply = <&max77620_ldo5>;

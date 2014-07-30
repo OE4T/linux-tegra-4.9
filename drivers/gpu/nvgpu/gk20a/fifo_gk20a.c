@@ -1701,6 +1701,7 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	struct channel_gk20a *ch = NULL;
 	struct tsg_gk20a *tsg = NULL;
 	u32 count = 0;
+	u32 count_channels_in_tsg;
 	runlist = &f->runlist_info[runlist_id];
 
 	/* valid channel, add/remove it from active list.
@@ -1784,6 +1785,7 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 			count++;
 
 			/* add runnable channels bound to this TSG */
+			count_channels_in_tsg = 0;
 			mutex_lock(&tsg->ch_list_lock);
 			list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
 				if (!test_bit(ch->hw_chid,
@@ -1796,8 +1798,12 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 				runlist_entry[1] = 0;
 				runlist_entry += 2;
 				count++;
+				count_channels_in_tsg++;
 			}
 			mutex_unlock(&tsg->ch_list_lock);
+
+			WARN_ON(tsg->num_active_channels !=
+				count_channels_in_tsg);
 		}
 		mutex_unlock(&f->tsg_inuse_mutex);
 	} else	/* suspend to remove all channels */

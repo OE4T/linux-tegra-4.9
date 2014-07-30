@@ -60,30 +60,6 @@
 					regulator-consumer-supply = "vdd";
 					regulator-consumer-device = "1-004d";
 				};
-				c6 {
-					regulator-consumer-supply = "vdd";
-					regulator-consumer-device = "0-0069";
-				};
-				c7 {
-					regulator-consumer-supply = "vdd";
-					regulator-consumer-device = "0-0077";
-				};
-				c8 {
-					regulator-consumer-supply = "vdd";
-					regulator-consumer-device = "0-0010";
-				};
-				c9 {
-					regulator-consumer-supply = "vdd";
-					regulator-consumer-device = "0-0048";
-				};
-				c10 {
-					regulator-consumer-supply = "vdd";
-					regulator-consumer-device = "0-0044";
-				};
-				c11 {
-					regulator-consumer-supply = "vdd";
-					regulator-consumer-device = "0-000d";
-				};
 			};
 		};
 

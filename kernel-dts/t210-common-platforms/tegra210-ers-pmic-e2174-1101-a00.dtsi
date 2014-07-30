@@ -214,18 +214,6 @@
 							regulator-consumer-supply = "vdd";
 							regulator-consumer-device = "0-004c";
 						};
-						c19 {
-							regulator-consumer-supply = "vlogic";
-							regulator-consumer-device = "0-0069";
-						};
-						c20 {
-							regulator-consumer-supply = "vid";
-							regulator-consumer-device = "0-000d";
-						};
-						c21 {
-							regulator-consumer-supply = "vddio";
-							regulator-consumer-device = "0-0077";
-						};
 					};
 				};
 

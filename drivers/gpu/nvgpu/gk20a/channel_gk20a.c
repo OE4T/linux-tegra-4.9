@@ -2264,6 +2264,48 @@ long gk20a_channel_ioctl(struct file *filp,
 			((struct nvhost_set_priority_args *)buf)->priority);
 		gk20a_idle(dev);
 		break;
+	case NVHOST_IOCTL_CHANNEL_ENABLE:
+		err = gk20a_busy(dev);
+		if (err) {
+			dev_err(&dev->dev,
+				"%s: failed to host gk20a for ioctl cmd: 0x%x",
+				__func__, cmd);
+			return err;
+		}
+		/* enable channel */
+		gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
+			gk20a_readl(ch->g, ccsr_channel_r(ch->hw_chid)) |
+			ccsr_channel_enable_set_true_f());
+		gk20a_idle(dev);
+		break;
+	case NVHOST_IOCTL_CHANNEL_DISABLE:
+		err = gk20a_busy(dev);
+		if (err) {
+			dev_err(&dev->dev,
+				"%s: failed to host gk20a for ioctl cmd: 0x%x",
+				__func__, cmd);
+			return err;
+		}
+		/* disable channel */
+		gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
+			gk20a_readl(ch->g, ccsr_channel_r(ch->hw_chid)) |
+			ccsr_channel_enable_clr_true_f());
+		gk20a_idle(dev);
+		break;
+	case NVHOST_IOCTL_CHANNEL_PREEMPT:
+		if (gk20a_is_channel_marked_as_tsg(ch))
+			return -EINVAL;
+		err = gk20a_busy(dev);
+		if (err) {
+			dev_err(&dev->dev,
+				"%s: failed to host gk20a for ioctl cmd: 0x%x",
+				__func__, cmd);
+			return err;
+		}
+		/* preempt channel */
+		err = gk20a_fifo_preempt_channel(ch->g, ch->hw_chid);
+		gk20a_idle(dev);
+		break;
 	default:
 		dev_err(&dev->dev, "unrecognized ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;

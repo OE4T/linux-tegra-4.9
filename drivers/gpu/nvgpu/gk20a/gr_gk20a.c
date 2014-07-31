@@ -5550,8 +5550,8 @@ int gk20a_gr_isr(struct gk20a *g)
 	isr_data.curr_ctx = gk20a_readl(g, gr_fecs_current_ctx_r());
 	isr_data.offset = gr_trapped_addr_mthd_v(isr_data.addr);
 	isr_data.sub_chan = gr_trapped_addr_subch_v(isr_data.addr);
-	obj_table = gk20a_readl(g,
-		gr_fe_object_table_r(isr_data.sub_chan));
+	obj_table = (isr_data.sub_chan < 4) ? gk20a_readl(g,
+		gr_fe_object_table_r(isr_data.sub_chan)) : 0;
 	isr_data.class_num = gr_fe_object_table_nvclass_v(obj_table);
 
 	isr_data.chid =

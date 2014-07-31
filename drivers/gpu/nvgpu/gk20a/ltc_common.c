@@ -136,12 +136,12 @@ static int gk20a_ltc_alloc_phys_cbc(struct gk20a *g,
 				    size_t compbit_backing_size)
 {
 	struct gr_gk20a *gr = &g->gr;
-	int order = ffs(compbit_backing_size >> PAGE_SHIFT);
+	int order = order_base_2(compbit_backing_size >> PAGE_SHIFT);
 	struct page *pages;
 	struct sg_table *sgt;
 	int err = 0;
 
-	/* allocate few pages */
+	/* allocate pages */
 	pages = alloc_pages(GFP_KERNEL, order);
 	if (!pages) {
 		gk20a_dbg(gpu_dbg_pte, "alloc_pages failed\n");

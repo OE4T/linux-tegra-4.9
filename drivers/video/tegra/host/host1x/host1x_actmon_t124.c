@@ -46,6 +46,34 @@ u32 static actmon_readl(struct host1x_actmon *actmon, u32 reg)
  *
  */
 
+#ifdef NVHOST_T210_ACTMON
+static void actmon_update_sample_period_safe(struct host1x_actmon *actmon)
+{
+	long freq_mhz, clks_per_sample;
+	u32 val = actmon_readl(actmon, actmon_sample_ctrl_r());
+
+	/* We use MHz and us instead of Hz and s due to numerical limitations */
+	freq_mhz = clk_get_rate(actmon->clk) / 1000000;
+
+	if ((freq_mhz * actmon->usecs_per_sample/256) > 255) {
+		val |= actmon_sample_ctrl_tick_range_f(1);
+		clks_per_sample = freq_mhz * actmon->usecs_per_sample/65536;
+	} else {
+		val &= actmon_sample_ctrl_tick_range_f(0);
+		clks_per_sample = freq_mhz * actmon->usecs_per_sample/256;
+	}
+	actmon->clks_per_sample = clks_per_sample;
+	actmon_writel(actmon, val, actmon_sample_ctrl_r());
+
+	val = actmon_readl(actmon, actmon_ctrl_r());
+	val &= ~actmon_ctrl_sample_period_m();
+	val |= actmon_ctrl_sample_period_f(clks_per_sample);
+	actmon_writel(actmon, val, actmon_ctrl_r());
+
+	/* AVG value depends on sample period => clear it */
+	actmon_writel(actmon, 0, actmon_init_avg_r());
+}
+#else
 static void actmon_update_sample_period_safe(struct host1x_actmon *actmon)
 {
 	long freq_mhz, clks_per_sample;
@@ -64,6 +92,7 @@ static void actmon_update_sample_period_safe(struct host1x_actmon *actmon)
 	/* AVG value depends on sample period => clear it */
 	actmon_writel(actmon, 0, actmon_init_avg_r());
 }
+#endif
 
 static int host1x_actmon_init(struct host1x_actmon *actmon)
 {

@@ -232,6 +232,8 @@ struct gk20a_cde_ctx {
 	int convert_cmd_num_entries;
 
 	struct kobj_attribute attr;
+
+	bool init_cmd_executed;
 };
 
 struct gk20a_cde_app {

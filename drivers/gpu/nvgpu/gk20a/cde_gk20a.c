@@ -78,6 +78,7 @@ static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 	cde_ctx->num_params = 0;
 	cde_ctx->init_cmd_num_entries = 0;
 	cde_ctx->convert_cmd_num_entries = 0;
+	cde_ctx->init_cmd_executed = false;
 }
 
 static int gk20a_cde_remove(struct gk20a_cde_ctx *cde_ctx)
@@ -681,22 +682,6 @@ int gk20a_cde_convert(struct gk20a *g, struct dma_buf *src,
 		goto exit_unlock;
 	}
 
-	/* disable the channel */
-	gk20a_writel(g, ccsr_channel_r(cde_ctx->ch->hw_chid),
-		gk20a_readl(g, ccsr_channel_r(cde_ctx->ch->hw_chid)) |
-		ccsr_channel_enable_clr_true_f());
-	gk20a_fifo_preempt_channel(g, cde_ctx->ch->hw_chid);
-	channel_gk20a_unbind(&g->fifo.channel[cde_ctx->ch->hw_chid]);
-
-	/* reinitialise the graphics context of the channel */
-	gr_gk20a_load_golden_ctx_image(g, cde_ctx->ch);
-
-	/* re-enable the channel */
-	g->ops.fifo.bind_channel(&g->fifo.channel[cde_ctx->ch->hw_chid]);
-	gk20a_writel(g, ccsr_channel_r(cde_ctx->ch->hw_chid),
-		gk20a_readl(g, ccsr_channel_r(cde_ctx->ch->hw_chid)) |
-		ccsr_channel_enable_set_true_f());
-
 	/* store source buffer compression tags */
 	gk20a_get_comptags(&g->dev->dev, src, &comptags);
 	cde_ctx->src_vaddr = src_vaddr;
@@ -738,10 +723,14 @@ int gk20a_cde_convert(struct gk20a *g, struct dma_buf *src,
 	gk20a_cde_dump(cde_ctx);
 
 	/* execute the init push buffer */
-	err = gk20a_cde_execute_buffer(cde_ctx, TYPE_BUF_COMMAND_INIT,
-				       NULL, 0, NULL);
-	if (err)
-		goto exit_unlock;
+	if (!cde_ctx->init_cmd_executed) {
+		err = gk20a_cde_execute_buffer(cde_ctx, TYPE_BUF_COMMAND_INIT,
+					       NULL, 0, NULL);
+		if (err)
+			goto exit_unlock;
+
+		cde_ctx->init_cmd_executed = true;
+	}
 
 	/* take always the postfence as it is needed for protecting the
 	 * cde context */

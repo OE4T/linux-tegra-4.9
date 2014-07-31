@@ -23,7 +23,6 @@
 #include <linux/module.h>
 #include <linux/debugfs.h>
 #include <linux/clk/tegra.h>
-#include <mach/thermal.h>
 
 #include "gk20a.h"
 #include "hw_trim_gk20a.h"

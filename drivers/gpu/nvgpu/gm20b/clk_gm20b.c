@@ -21,7 +21,6 @@
 #include <linux/module.h>
 #include <linux/debugfs.h>
 #include <linux/clk/tegra.h>
-#include <mach/thermal.h>
 
 #include "gk20a/gk20a.h"
 #include "hw_trim_gm20b.h"

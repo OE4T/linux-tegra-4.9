@@ -113,10 +113,54 @@ int vi_disable_irq(struct vi *tegra_vi)
 }
 EXPORT_SYMBOL(vi_disable_irq);
 
+static irqreturn_t vi_checkwd(struct vi *tegra_vi, int stream)
+{
+	int err_addr, wd_addr, val;
+
+	switch (stream) {
+	case 0:
+		err_addr = VI_CSI_0_ERROR_STATUS;
+		wd_addr = VI_CSI_0_WD_CTRL;
+		break;
+	case 1:
+		err_addr = VI_CSI_1_ERROR_STATUS;
+		wd_addr = VI_CSI_1_WD_CTRL;
+		break;
+#ifdef TEGRA_21X_OR_HIGHER_CONFIG
+	case 2:
+		err_addr = VI_CSI_2_ERROR_STATUS;
+		wd_addr = VI_CSI_2_WD_CTRL;
+		break;
+	case 3:
+		err_addr = VI_CSI_3_ERROR_STATUS;
+		wd_addr = VI_CSI_3_WD_CTRL;
+		break;
+#endif
+	default:
+		return IRQ_NONE;
+	}
+
+	val = host1x_readl(tegra_vi->ndev, err_addr);
+	if (val & 0x20) {
+		host1x_writel(tegra_vi->ndev, err_addr, 0x20);
+		host1x_writel(tegra_vi->ndev, wd_addr, 0);
+		return IRQ_HANDLED;
+	}
+
+	return IRQ_NONE;
+}
+
 static irqreturn_t vi_isr(int irq, void *dev_id)
 {
 	struct vi *tegra_vi = (struct vi *)dev_id;
-	int val;
+	int i, val;
+	irqreturn_t result;
+
+	for (i = 0; i < NUM_VI_WATCHDOG; i++) {
+		result = vi_checkwd(tegra_vi, i);
+		if (result == IRQ_HANDLED)
+			goto handled;
+	}
 
 	dev_dbg(&tegra_vi->ndev->dev, "%s: ++", __func__);
 
@@ -147,6 +191,8 @@ static irqreturn_t vi_isr(int irq, void *dev_id)
 	}
 
 	schedule_work(&tegra_vi->stats_work);
+
+handled:
 	return IRQ_HANDLED;
 }
 EXPORT_SYMBOL(vi_isr);

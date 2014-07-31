@@ -24,6 +24,7 @@
 #include <mach/isomgr.h>
 
 #include "camera_priv_defs.h"
+#include "chip_support.h"
 
 #define CSI_CSI_PIXEL_PARSER_A_INTERRUPT_MASK_0		0x850
 #define CSI_CSI_PIXEL_PARSER_A_STATUS_0			0x854
@@ -32,6 +33,22 @@
 #define CSI_CSI_PIXEL_PARSER_B_INTERRUPT_MASK_0		0x884
 #define CSI_CSI_PIXEL_PARSER_B_STATUS_0			0x888
 #define PPB_FIFO_OVRF					(1 << 5)
+
+#define VI_CSI_0_ERROR_STATUS					0x184
+#define VI_CSI_1_ERROR_STATUS					0x284
+#define VI_CSI_0_WD_CTRL						0x18c
+#define VI_CSI_1_WD_CTRL						0x28c
+
+#ifdef TEGRA_21X_OR_HIGHER_CONFIG
+#define VI_CSI_2_ERROR_STATUS					0x384
+#define VI_CSI_3_ERROR_STATUS					0x484
+#define VI_CSI_2_WD_CTRL						0x38c
+#define VI_CSI_3_WD_CTRL						0x48c
+
+#define NUM_VI_WATCHDOG							4
+#else
+#define NUM_VI_WATCHDOG							2
+#endif
 
 struct tegra_vi_stats {
 	atomic_t overflow;

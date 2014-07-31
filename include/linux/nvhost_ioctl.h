@@ -399,9 +399,15 @@ struct nvhost_set_ctxswitch_args {
 	_IOWR(NVHOST_IOCTL_MAGIC, 111, struct nvhost_set_error_notifier)
 #define NVHOST_IOCTL_CHANNEL_OPEN	\
 	_IOR(NVHOST_IOCTL_MAGIC,  112, struct nvhost_channel_open_args)
+#define NVHOST_IOCTL_CHANNEL_ENABLE	\
+	_IO(NVHOST_IOCTL_MAGIC,  113)
+#define NVHOST_IOCTL_CHANNEL_DISABLE	\
+	_IO(NVHOST_IOCTL_MAGIC,  114)
+#define NVHOST_IOCTL_CHANNEL_PREEMPT	\
+	_IO(NVHOST_IOCTL_MAGIC,  115)
 
 #define NVHOST_IOCTL_CHANNEL_LAST	\
-	_IOC_NR(NVHOST_IOCTL_CHANNEL_OPEN)
+	_IOC_NR(NVHOST_IOCTL_CHANNEL_PREEMPT)
 #define NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvhost_submit_args)
 
 struct nvhost_ctrl_syncpt_read_args {

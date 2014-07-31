@@ -89,8 +89,6 @@
 #define TEGRA_DC_HDMI_MIN_ASPECT_RATIO_PERCENT	80
 #define TEGRA_DC_HDMI_MAX_ASPECT_RATIO_PERCENT	320
 
-#define HDMI_NODE "/host1x/hdmi"
-
 struct tegra_dc_hdmi_data *dc_hdmi;
 
 static ssize_t hdmi_audio_get_max_channel(struct kobject *kobj,
@@ -1062,7 +1060,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	struct device_node *np = dc->ndev->dev.of_node;
 #ifdef CONFIG_USE_OF
 	struct device_node *np_hdmi =
-		of_find_node_by_path("/host1x/hdmi");
+		of_find_node_by_path(HDMI_NODE);
 #else
 	struct device_node *np_hdmi = NULL;
 #endif

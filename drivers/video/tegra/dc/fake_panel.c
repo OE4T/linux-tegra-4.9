@@ -340,7 +340,7 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 	struct device_node *np = dc->ndev->dev.of_node;
 #ifdef CONFIG_USE_OF
 	struct device_node *np_dsi =
-		of_find_node_by_path("/host1x/dsi");
+		of_find_node_by_path(DSI_NODE);
 #else
 	struct device_node *np_dsi = NULL;
 #endif

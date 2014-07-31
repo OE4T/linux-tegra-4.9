@@ -67,10 +67,6 @@
 #define OF_DC_LOG(fmt, args...)
 #endif
 
-#define DSI_NODE		"/host1x/dsi"
-#define HDMI_NODE		"/host1x/hdmi"
-#define SOR_NODE		"/host1x/sor"
-
 static struct regulator *of_hdmi_vddio;
 static struct regulator *of_hdmi_reg;
 static struct regulator *of_hdmi_pll;
@@ -281,6 +277,7 @@ static int parse_disp_default_out(struct platform_device *ndev,
 	struct device_node *np_hdmi =
 		of_find_node_by_path(HDMI_NODE);
 	struct device_node *np_sor =
+		(ndev->id) ? of_find_node_by_path(SOR1_NODE) :
 		of_find_node_by_path(SOR_NODE);
 	struct property *prop;
 	const __be32 *p;
@@ -1756,7 +1753,8 @@ struct tegra_dc_platform_data
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_DP ||
 		pdata->default_out->type == TEGRA_DC_OUT_NVSR_DP) {
-		np_sor = of_find_node_by_path(SOR_NODE);
+		np_sor = (ndev->id) ? of_find_node_by_path(SOR1_NODE) :
+			of_find_node_by_path(SOR_NODE);
 
 		if (!np_sor) {
 			pr_err("%s: could not find sor node\n", __func__);

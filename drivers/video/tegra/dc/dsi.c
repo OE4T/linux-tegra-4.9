@@ -4396,7 +4396,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	struct device_node *np = dc->ndev->dev.of_node;
 #ifdef CONFIG_USE_OF
 	struct device_node *np_dsi =
-		of_find_node_by_path("/host1x/dsi");
+		of_find_node_by_path(DSI_NODE);
 #else
 	struct device_node *np_dsi = NULL;
 #endif

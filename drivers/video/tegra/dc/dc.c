@@ -86,8 +86,6 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 /* HACK! This needs to come from DT */
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
-#define DPAUX_NODE		"/host1x/dpaux"
-
 #define TEGRA_CRC_LATCHED_DELAY		34
 
 #define DC_COM_PIN_OUTPUT_POLARITY1_INIT_VAL	0x01000000

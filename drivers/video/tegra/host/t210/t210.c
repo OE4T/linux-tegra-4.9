@@ -52,6 +52,7 @@ static struct host1x_device_info host1x04_info = {
 	.nb_channels	= T124_NVHOST_NUMCHANNELS,
 	.nb_pts		= NV_HOST1X_SYNCPT_NB_PTS,
 	.nb_mlocks	= NV_HOST1X_NB_MLOCKS,
+	.initialize_chip_support = nvhost_init_t210_support,
 };
 
 struct nvhost_device_data t21_host1x_info = {
@@ -287,6 +288,8 @@ int nvhost_init_t210_support(struct nvhost_master *host,
 {
 	int err;
 	struct t124 *t210 = 0;
+
+	op->soc_name = "tegra21x";
 
 	/* don't worry about cleaning up on failure... "remove" does it. */
 	err = nvhost_init_t210_channel_support(host, op);

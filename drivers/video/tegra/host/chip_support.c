@@ -22,6 +22,7 @@
 #include <linux/slab.h>
 #include <linux/tegra-soc.h>
 
+#include "host1x/host1x.h"
 #include "chip_support.h"
 #include "t124/t124.h"
 #include "t210/t210.h"
@@ -46,27 +47,10 @@ int nvhost_init_chip_support(struct nvhost_master *host)
 		}
 	}
 
-	switch (tegra_get_chipid()) {
-	case TEGRA_CHIPID_TEGRA12:
-		nvhost_chip_ops->soc_name = "tegra12x";
-		err = nvhost_init_t124_support(host, nvhost_chip_ops);
-		break;
+	if (!host->info.initialize_chip_support)
+		return -ENODEV;
 
-	case TEGRA_CHIPID_TEGRA13:
-		nvhost_chip_ops->soc_name = "tegra13x";
-		err = nvhost_init_t124_support(host, nvhost_chip_ops);
-		break;
-
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
-	case TEGRA_CHIPID_TEGRA21:
-		nvhost_chip_ops->soc_name = "tegra21x";
-		err = nvhost_init_t210_support(host, nvhost_chip_ops);
-		break;
-#endif
-
-	default:
-		err = -ENODEV;
-	}
+	err = host->info.initialize_chip_support(host, nvhost_chip_ops);
 
 	return err;
 }

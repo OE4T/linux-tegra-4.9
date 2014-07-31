@@ -31,6 +31,7 @@
 #define TRACE_MAX_LENGTH	128U
 #define IFACE_NAME		"nvhost"
 
+struct nvhost_chip_support;
 struct nvhost_channel;
 struct mem_mgr;
 
@@ -38,6 +39,8 @@ struct host1x_device_info {
 	int		nb_channels;	/* host1x: num channels supported */
 	int		nb_pts; 	/* host1x: num syncpoints supported */
 	int		nb_mlocks;	/* host1x: number of mlocks */
+	int		(*initialize_chip_support)(struct nvhost_master *,
+						struct nvhost_chip_support *);
 };
 
 struct nvhost_master {

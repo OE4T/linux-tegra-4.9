@@ -341,7 +341,7 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 	char *ganged_reg_name[2] = {"ganged_dsia_regs", "ganged_dsib_regs"};
 
 	struct device_node *np = dc->ndev->dev.of_node;
-#ifdef CONFIG_USE_OF
+#ifdef CONFIG_OF
 	struct device_node *np_dsi =
 		of_find_node_by_path(DSI_NODE);
 #else

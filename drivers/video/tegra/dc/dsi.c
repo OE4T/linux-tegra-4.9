@@ -4379,7 +4379,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	char *dsi_clk_name[2] = {"dsia", "dsib"};
 	char *dsi_lp_clk_name[2] = {"dsialp", "dsiblp"};
 	struct device_node *np = dc->ndev->dev.of_node;
-#ifdef CONFIG_USE_OF
+#ifdef CONFIG_OF
 	struct device_node *np_dsi =
 		of_find_node_by_path(DSI_NODE);
 #else

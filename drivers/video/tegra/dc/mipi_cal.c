@@ -144,7 +144,7 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 	struct clk *fixed_clk = NULL;
 	void __iomem *base;
 	int err = 0;
-#ifdef CONFIG_USE_OF
+#ifdef CONFIG_OF
 	struct device_node *np_mipi_cal =
 		of_find_node_by_path("/mipical");
 #else
@@ -236,7 +236,7 @@ EXPORT_SYMBOL(tegra_mipi_cal_init_sw);
 
 void tegra_mipi_cal_destroy(struct tegra_dc *dc)
 {
-#ifdef CONFIG_USE_OF
+#ifdef CONFIG_OF
 	struct device_node *np_mipi_cal =
 		of_find_node_by_path("/mipical");
 #else

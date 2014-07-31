@@ -1069,7 +1069,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	struct i2c_adapter *adapter = NULL;
 	int err;
 	struct device_node *np = dc->ndev->dev.of_node;
-#ifdef CONFIG_USE_OF
+#ifdef CONFIG_OF
 	struct device_node *np_hdmi =
 		of_find_node_by_path(HDMI_NODE);
 #else

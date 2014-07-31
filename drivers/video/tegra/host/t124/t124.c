@@ -49,11 +49,6 @@
 #define TSEC_POWERGATE_DELAY 500
 #define HOST1X_POWERGATE_DELAY 50
 
-/* Host1x driver matches module IDs while setting a
- * particular clock, This ID is used for EMC module.
- */
-#define TEGRA_HOST1X_EMC_MODULE_ID 75
-
 #ifdef CONFIG_ARCH_TEGRA
 static struct resource tegra_host1x04_resources[] = {
 	{
@@ -131,7 +126,7 @@ struct nvhost_device_data t124_isp_info = {
 	.powergate_delay = ISP_POWERGATE_DELAY,
 	.clocks          = {
 		{"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP},
-		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID},
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},
 		{"sclk", 80000000} },
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
@@ -171,7 +166,7 @@ struct nvhost_device_data t124_ispb_info = {
 	.powergate_delay = ISP_POWERGATE_DELAY,
 	.clocks          = {
 		{"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISPB},
-		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID},
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},
 		{"sclk", 80000000} },
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
@@ -222,7 +217,7 @@ struct nvhost_device_data t124_vi_info = {
 		{"cilab", 102000000},
 		{"cilcd", 102000000},
 		{"cile", 102000000},
-		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID},
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},
 		{"sclk", 80000000} },
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,
 	.finalize_poweron = nvhost_vi_finalize_poweron,
@@ -261,7 +256,7 @@ struct nvhost_device_data t124_vi_info = {
 		{"vi", UINT_MAX, 0},
 		{"csi", 0},
 		{"cilab", 102000000},
-		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID},
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},
 		{"sclk", 80000000} },
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,
 	.finalize_poweron = nvhost_vi_finalize_poweron,
@@ -300,7 +295,7 @@ struct nvhost_device_data t124_vib_info = {
 		{"csi", 0},
 		{"cilcd", 102000000},
 		{"cile", 102000000},
-		{"emc", 0, TEGRA_HOST1X_EMC_MODULE_ID},
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},
 		{"sclk", 80000000} },
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,
 	.finalize_poweron = nvhost_vi_finalize_poweron,
@@ -336,7 +331,8 @@ struct nvhost_device_data t124_msenc_info = {
 	.version	= NVHOST_ENCODE_FLCN_VER(3, 1),
 	.class		= NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.clocks		= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
-			  {"emc", HOST_EMC_FLOOR, TEGRA_HOST1X_EMC_MODULE_ID} },
+			  {"emc", HOST_EMC_FLOOR,
+				NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid	= NVHOST_MODULE_MSENC,
 	.powergate_ids	= { TEGRA_POWERGATE_MPE, -1 },
@@ -414,9 +410,12 @@ static struct resource vic03_resources[] = {
 
 struct nvhost_device_data t124_vic_info = {
 	.num_channels	= 1,
-	.modulemutexes		= {NVMODMUTEX_VIC},
-	.clocks			= {{"vic03", UINT_MAX, 0, TEGRA_MC_CLIENT_VIC},
-				  {"emc", UINT_MAX} },
+	.modulemutexes	= {NVMODMUTEX_VIC},
+	.clocks		= {{"vic03", UINT_MAX, 0, TEGRA_MC_CLIENT_VIC},
+			{"emc", UINT_MAX,
+				NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},
+			{"vic_floor", 0,
+				NVHOST_MODULE_ID_CBUS_FLOOR} },
 	.version = NVHOST_ENCODE_FLCN_VER(3, 0),
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -463,7 +462,8 @@ struct nvhost_device_data t132_msenc_info = {
 	.version	= NVHOST_ENCODE_FLCN_VER(3, 1),
 	.class		= NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.clocks		= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
-			  {"emc", HOST_EMC_FLOOR, TEGRA_HOST1X_EMC_MODULE_ID} },
+			  {"emc", HOST_EMC_FLOOR,
+				NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid	= NVHOST_MODULE_MSENC,
 	.powergate_ids	= { TEGRA_POWERGATE_MPE, -1 },

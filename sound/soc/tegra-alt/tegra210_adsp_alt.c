@@ -62,13 +62,13 @@ static struct tegra210_adsp_app_desc {
 	const uint32_t reg_end;
 	nvadsp_app_handle_t handle;
 } adsp_app_desc[] = {
-	{"apm", "nvfx.elf",
+	{"apm", "nvapm.elf",
 		TEGRA210_ADSP_APM_IN1, TEGRA210_ADSP_APM_IN8},
-	{"mp3dec", "mp3dec_plugin.elf",
+	{"mp3dec", "nvmp3dec.elf",
 		TEGRA210_ADSP_PLUGIN_MP3_DEC1, TEGRA210_ADSP_PLUGIN_MP3_DEC2},
-	{"adma", "adma_plugin.elf",
+	{"adma", "nvadma.elf",
 		TEGRA210_ADSP_PLUGIN_ADMA1, TEGRA210_ADSP_PLUGIN_ADMA4},
-	{"spkprot", "spkprot_plugin.elf",
+	{"spkprot", "nvspkprot.elf",
 		TEGRA210_ADSP_PLUGIN_SPKPROT, TEGRA210_ADSP_PLUGIN_SPKPROT},
 };
 

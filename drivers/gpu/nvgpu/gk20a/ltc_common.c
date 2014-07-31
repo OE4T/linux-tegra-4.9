@@ -242,7 +242,7 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 	compbit_base_post_divide = u64_lo32(compbit_base_post_divide64);
 
 	compbit_base_post_multiply64 = ((u64)compbit_base_post_divide *
-		gr->num_fbps) << ltc_ltcs_ltss_cbc_base_alignment_shift_v();
+		g->ltc_count) << ltc_ltcs_ltss_cbc_base_alignment_shift_v();
 
 	if (compbit_base_post_multiply64 < compbit_store_base_iova)
 		compbit_base_post_divide++;

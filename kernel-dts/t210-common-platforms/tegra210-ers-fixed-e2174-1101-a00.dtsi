@@ -229,5 +229,16 @@
 				};
 			};
 		};
+
+		vdd_cdc_1v2_aud: regulator@101 {
+			compatible = "regulator-fixed-sync";
+			reg = <101>;
+			regulator-name = "vdd_cdc_1v2_aud";
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			gpio = <&pca9539_76 9 0>;
+			enable-active-high;
+			startup-delay-us = <250000>;
+		};
 	};
 };

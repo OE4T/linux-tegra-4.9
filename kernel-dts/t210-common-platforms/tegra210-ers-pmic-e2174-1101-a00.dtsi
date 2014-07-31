@@ -11,9 +11,8 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <dt-bindings/mfd/max77620.h>
@@ -370,6 +369,15 @@
 			ti,terminate-voltage = <3150>;
 			ti,v-at-chg-term = <4200>;
 			ti,tz-name = "battery-temp";
+		};
+
+		imx135@10 {
+			compatible = "nvidia,imx135";
+			reg = <0x10>;
+			vana-supply = <&max77620_ldo3>;
+			vdig-supply = <&max77620_ldo1>;
+			vif-supply = <&max77620_sd3>;
+			cam1-gpios = <&gpio 221 0>;
 		};
 	};
 };

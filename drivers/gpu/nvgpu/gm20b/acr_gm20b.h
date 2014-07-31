@@ -365,6 +365,13 @@ struct acr_gm20b {
 	struct bin_hdr *hsbin_hdr;
 	struct acr_fw_header *fw_hdr;
 	u32 pmu_args;
+	const struct firmware *acr_fw;
+	struct pmu_mem_desc acr_ucode;
+	const struct firmware *hsbl_fw;
+	struct pmu_mem_desc hsbl_ucode;
+	struct flcn_bl_dmem_desc bl_dmem_desc;
+	const struct firmware *pmu_fw;
+	const struct firmware *pmu_desc;
 };
 
 void gm20b_init_secure_pmu(struct gpu_ops *gops);

@@ -52,6 +52,7 @@ static int acr_ucode_patch_sig(struct gk20a *g,
 		unsigned int *p_dbg_sig,
 		unsigned int *p_patch_loc,
 		unsigned int *p_patch_ind);
+static void free_acr_resources(struct gk20a *g, struct ls_flcn_mgr *plsfm);
 
 /*Globals*/
 static void __iomem *mc = IO_ADDRESS(TEGRA_MC_BASE);
@@ -72,11 +73,7 @@ void gm20b_init_secure_pmu(struct gpu_ops *gops)
 	gops->pmu.prepare_ucode = prepare_ucode_blob;
 	gops->pmu.pmu_setup_hw_and_bootstrap = gm20b_bootstrap_hs_flcn;
 }
-
-static void free_blob_res(struct gk20a *g)
-{
-	/*TODO */
-}
+/* TODO - check if any free blob res needed*/
 
 int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 {
@@ -91,6 +88,7 @@ int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 		gm20b_dbg_pmu("requesting PMU ucode in GM20B failed\n");
 		return -ENOENT;
 	}
+	g->acr.pmu_fw = pmu_fw;
 	gm20b_dbg_pmu("Loaded PMU ucode in for blob preparation");
 
 	gm20b_dbg_pmu("requesting PMU ucode desc in GM20B\n");
@@ -103,6 +101,7 @@ int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	}
 	pmu->desc = (struct pmu_ucode_desc *)pmu_desc->data;
 	pmu->ucode_image = (u32 *)pmu_fw->data;
+	g->acr.pmu_desc = pmu_desc;
 
 	err = gk20a_init_pmu(pmu);
 	if (err) {
@@ -134,7 +133,6 @@ release_img_fw:
 
 int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 {
-	int err = 0;
 	struct lsf_ucode_desc *lsf_desc;
 
 	lsf_desc = kzalloc(sizeof(struct lsf_ucode_desc), GFP_KERNEL);
@@ -190,10 +188,18 @@ int prepare_ucode_blob(struct gk20a *g)
 	u32 status;
 	void *nonwpr_addr;
 	struct ls_flcn_mgr lsfm_l, *plsfm;
-	struct sg_table *sgt_nonwpr;
-	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct pmu_gk20a *pmu = &g->pmu;
 
+	if (g->acr.ucode_blob_start) {
+		/*Recovery case, we do not need to form
+		non WPR blob of ucodes*/
+		status = gk20a_init_pmu(pmu);
+		if (status) {
+			gm20b_dbg_pmu("failed to set function pointers\n");
+			return status;
+		}
+		return 0;
+	}
 	plsfm = &lsfm_l;
 	memset((void *)plsfm, 0, sizeof(struct ls_flcn_mgr));
 	gm20b_dbg_pmu("fetching GMMU regs\n");
@@ -231,6 +237,7 @@ int prepare_ucode_blob(struct gk20a *g)
 		gm20b_dbg_pmu("LSFM is managing no falcons.\n");
 	}
 	gm20b_dbg_pmu("prepare ucode blob return 0\n");
+	free_acr_resources(g, plsfm);
 	return 0;
 }
 
@@ -257,7 +264,7 @@ static int lsfm_discover_ucode_images(struct gk20a *g,
 	if (status == 0) {
 		if (ucode_img.lsf_desc != NULL) {
 			/* The falon_id is formed by grabbing the static base
-			 * falonId from the image and adding the
+			 * falon_id from the image and adding the
 			 * engine-designated falcon instance.*/
 			pmu->pmu_mode |= PMU_SECURE_MODE;
 			falcon_id = ucode_img.lsf_desc->falcon_id +
@@ -288,7 +295,7 @@ static int lsfm_discover_ucode_images(struct gk20a *g,
 
 	/*0th index is always PMU which is already handled in earlier
 	if condition*/
-	for (i = 1; i < MAX_SUPPORTED_LSFM; i++) {
+	for (i = 1; i < (MAX_SUPPORTED_LSFM); i++) {
 		memset(&ucode_img, 0, sizeof(ucode_img));
 		if (pmu_acr_supp_ucode_list[i](g, &ucode_img) == 0) {
 			if (ucode_img.lsf_desc != NULL) {
@@ -729,6 +736,23 @@ static void lsfm_free_nonpmu_ucode_img_res(struct flcn_ucode_img *p_img)
 	}
 }
 
+static void free_acr_resources(struct gk20a *g, struct ls_flcn_mgr *plsfm)
+{
+	u32 cnt = plsfm->managed_flcn_cnt;
+	struct lsfm_managed_ucode_img *mg_ucode_img;
+	while (cnt) {
+		mg_ucode_img = plsfm->ucode_img_list;
+		if (mg_ucode_img->ucode_img.lsf_desc->falcon_id ==
+				LSF_FALCON_ID_PMU)
+			lsfm_free_ucode_img_res(&mg_ucode_img->ucode_img);
+		else
+			lsfm_free_nonpmu_ucode_img_res(
+				&mg_ucode_img->ucode_img);
+		plsfm->ucode_img_list = mg_ucode_img->next;
+		kfree(mg_ucode_img);
+		cnt--;
+	}
+}
 
 /* Generate WPR requirements for ACR allocation request */
 static int lsf_gen_wpr_requirements(struct gk20a *g, struct ls_flcn_mgr *plsfm)
@@ -811,102 +835,120 @@ int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 	dma_addr_t iova;
 	u64 *pacr_ucode_cpuva = NULL, pacr_ucode_pmu_va, *acr_dmem;
 	u32 img_size_in_bytes;
-	struct flcn_bl_dmem_desc bl_dmem_desc;
 	u32 status, size;
 	u64 start;
-	const struct firmware *acr_fw;
 	struct acr_gm20b *acr = &g->acr;
+	const struct firmware *acr_fw = acr->acr_fw;
+	struct flcn_bl_dmem_desc *bl_dmem_desc = &acr->bl_dmem_desc;
 	u32 *acr_ucode_header_t210_load;
 	u32 *acr_ucode_data_t210_load;
 
-	start = g->acr.ucode_blob_start;
-	size = g->acr.ucode_blob_size;
+	start = acr->ucode_blob_start;
+	size = acr->ucode_blob_size;
 
 	gm20b_dbg_pmu("");
 
-	acr_fw = gk20a_request_firmware(g, GM20B_HSBIN_PMU_UCODE_IMAGE);
 	if (!acr_fw) {
-		gk20a_err(dev_from_gk20a(g), "failed to load pmu ucode!!");
-		return -ENOENT;
-	}
-	acr->hsbin_hdr = (struct bin_hdr *)acr_fw->data;
-	acr->fw_hdr = (struct acr_fw_header *)(acr_fw->data +
-		acr->hsbin_hdr->header_offset);
-	acr_ucode_data_t210_load = (u32 *)(acr_fw->data +
-		acr->hsbin_hdr->data_offset);
-	acr_ucode_header_t210_load = (u32 *)(acr_fw->data +
-		acr->fw_hdr->hdr_offset);
-	img_size_in_bytes = ALIGN((acr->hsbin_hdr->data_size), 256);
+		/*First time init case*/
+		acr_fw = gk20a_request_firmware(g, GM20B_HSBIN_PMU_UCODE_IMAGE);
+		if (!acr_fw) {
+			gk20a_err(dev_from_gk20a(g), "pmu ucode get fail");
+			return -ENOENT;
+		}
+		acr->acr_fw = acr_fw;
+		acr->hsbin_hdr = (struct bin_hdr *)acr_fw->data;
+		acr->fw_hdr = (struct acr_fw_header *)(acr_fw->data +
+				acr->hsbin_hdr->header_offset);
+		acr_ucode_data_t210_load = (u32 *)(acr_fw->data +
+				acr->hsbin_hdr->data_offset);
+		acr_ucode_header_t210_load = (u32 *)(acr_fw->data +
+				acr->fw_hdr->hdr_offset);
+		img_size_in_bytes = ALIGN((acr->hsbin_hdr->data_size), 256);
 
-	/* Lets patch the signatures first.. */
-	if (acr_ucode_patch_sig(g, acr_ucode_data_t210_load,
-		(u32 *)(acr_fw->data + acr->fw_hdr->sig_prod_offset),
-		(u32 *)(acr_fw->data + acr->fw_hdr->sig_dbg_offset),
-		(u32 *)(acr_fw->data + acr->fw_hdr->patch_loc),
-		(u32 *)(acr_fw->data + acr->fw_hdr->patch_sig)) < 0)
-		return -1;
-	pacr_ucode_cpuva = dma_alloc_coherent(d, img_size_in_bytes, &iova,
-			GFP_KERNEL);
-	if (!pacr_ucode_cpuva)
-		return -ENOMEM;
+		/* Lets patch the signatures first.. */
+		if (acr_ucode_patch_sig(g, acr_ucode_data_t210_load,
+					(u32 *)(acr_fw->data +
+						acr->fw_hdr->sig_prod_offset),
+					(u32 *)(acr_fw->data +
+						acr->fw_hdr->sig_dbg_offset),
+					(u32 *)(acr_fw->data +
+						acr->fw_hdr->patch_loc),
+					(u32 *)(acr_fw->data +
+						acr->fw_hdr->patch_sig)) < 0) {
+			gk20a_err(dev_from_gk20a(g), "patch signatures fail");
+			err = -1;
+			goto err_release_acr_fw;
+		}
+		pacr_ucode_cpuva = dma_alloc_coherent(d, img_size_in_bytes,
+			&iova, GFP_KERNEL);
+		if (!pacr_ucode_cpuva) {
+			err = -ENOMEM;
+			goto err_release_acr_fw;
+		}
 
-	err = gk20a_get_sgtable(d, &sgt_pmu_ucode,
+		err = gk20a_get_sgtable(d, &sgt_pmu_ucode,
 				pacr_ucode_cpuva,
 				iova,
 				img_size_in_bytes);
-	if (err) {
-		gk20a_err(d, "failed to allocate sg table\n");
-		err = -ENOMEM;
-		goto err_free_acr_buf;
-	}
-	pacr_ucode_pmu_va = gk20a_gmmu_map(vm, &sgt_pmu_ucode,
-					img_size_in_bytes,
-					0, /* flags */
-					gk20a_mem_flag_read_only);
-	if (!pacr_ucode_pmu_va) {
-		gk20a_err(d, "failed to map pmu ucode memory!!");
-		err = -ENOMEM;
-		goto err_free_ucode_sgt;
-	}
-	acr_dmem = (u64 *)
-		&(((u8 *)acr_ucode_data_t210_load)[
-		acr_ucode_header_t210_load[2]]);
-	((struct flcn_acr_desc *)acr_dmem)->nonwpr_ucode_blob_start =
-		start;
-	((struct flcn_acr_desc *)acr_dmem)->nonwpr_ucode_blob_size =
-		size;
-	((struct flcn_acr_desc *)acr_dmem)->regions.no_regions = 2;
-	((struct flcn_acr_desc *)acr_dmem)->wpr_offset = 0;
+		if (err) {
+			gk20a_err(d, "failed to allocate sg table\n");
+			err = -ENOMEM;
+			goto err_free_acr_buf;
+		}
+		pacr_ucode_pmu_va = gk20a_gmmu_map(vm, &sgt_pmu_ucode,
+				img_size_in_bytes,
+				0, /* flags */
+				gk20a_mem_flag_read_only);
+		if (!pacr_ucode_pmu_va) {
+			gk20a_err(d, "failed to map pmu ucode memory!!");
+			err = -ENOMEM;
+			goto err_free_ucode_sgt;
+		}
+		acr_dmem = (u64 *)
+			&(((u8 *)acr_ucode_data_t210_load)[
+					acr_ucode_header_t210_load[2]]);
+		((struct flcn_acr_desc *)acr_dmem)->nonwpr_ucode_blob_start =
+			start;
+		((struct flcn_acr_desc *)acr_dmem)->nonwpr_ucode_blob_size =
+			size;
+		((struct flcn_acr_desc *)acr_dmem)->regions.no_regions = 2;
+		((struct flcn_acr_desc *)acr_dmem)->wpr_offset = 0;
 
-	for (i = 0; i < (img_size_in_bytes/4); i++) {
-		gk20a_mem_wr32(pacr_ucode_cpuva, i,
-			acr_ucode_data_t210_load[i]);
-	}
-	/*
-	 * In order to execute this binary, we will be using PMU HAL to run
-	 * a bootloader which will load this image into PMU IMEM/DMEM.
-	 * Fill up the bootloader descriptor for PMU HAL to use..
-	 * TODO: Use standard descriptor which the generic bootloader is
-	 * checked in.
-	 */
+		for (i = 0; i < (img_size_in_bytes/4); i++) {
+			gk20a_mem_wr32(pacr_ucode_cpuva, i,
+					acr_ucode_data_t210_load[i]);
+		}
+		acr->acr_ucode.cpuva = pacr_ucode_cpuva;
+		acr->acr_ucode.iova = iova;
+		acr->acr_ucode.pmu_va = pacr_ucode_pmu_va;
+		acr->acr_ucode.size = img_size_in_bytes;
+		/*
+		 * In order to execute this binary, we will be using
+		 * a bootloader which will load this image into PMU IMEM/DMEM.
+		 * Fill up the bootloader descriptor for PMU HAL to use..
+		 * TODO: Use standard descriptor which the generic bootloader is
+		 * checked in.
+		 */
 
-	bl_dmem_desc.signature[0] = 0;
-	bl_dmem_desc.signature[1] = 0;
-	bl_dmem_desc.signature[2] = 0;
-	bl_dmem_desc.signature[3] = 0;
-	bl_dmem_desc.ctx_dma = GK20A_PMU_DMAIDX_VIRT;
-	bl_dmem_desc.code_dma_base =
-		(unsigned int)(((u64)pacr_ucode_pmu_va >> 8));
-	bl_dmem_desc.non_sec_code_off  = acr_ucode_header_t210_load[0];
-	bl_dmem_desc.non_sec_code_size = acr_ucode_header_t210_load[1];
-	bl_dmem_desc.sec_code_off = acr_ucode_header_t210_load[5];
-	bl_dmem_desc.sec_code_size = acr_ucode_header_t210_load[6];
-	bl_dmem_desc.code_entry_point = 0; /* Start at 0th offset */
-	bl_dmem_desc.data_dma_base =
-				bl_dmem_desc.code_dma_base +
-				((acr_ucode_header_t210_load[2]) >> 8);
-	bl_dmem_desc.data_size = acr_ucode_header_t210_load[3];
-	status = pmu_exec_gen_bl(g, &bl_dmem_desc, 1);
+		bl_dmem_desc->signature[0] = 0;
+		bl_dmem_desc->signature[1] = 0;
+		bl_dmem_desc->signature[2] = 0;
+		bl_dmem_desc->signature[3] = 0;
+		bl_dmem_desc->ctx_dma = GK20A_PMU_DMAIDX_VIRT;
+		bl_dmem_desc->code_dma_base =
+			(unsigned int)(((u64)pacr_ucode_pmu_va >> 8));
+		bl_dmem_desc->non_sec_code_off  = acr_ucode_header_t210_load[0];
+		bl_dmem_desc->non_sec_code_size = acr_ucode_header_t210_load[1];
+		bl_dmem_desc->sec_code_off = acr_ucode_header_t210_load[5];
+		bl_dmem_desc->sec_code_size = acr_ucode_header_t210_load[6];
+		bl_dmem_desc->code_entry_point = 0; /* Start at 0th offset */
+		bl_dmem_desc->data_dma_base =
+			bl_dmem_desc->code_dma_base +
+			((acr_ucode_header_t210_load[2]) >> 8);
+		bl_dmem_desc->data_size = acr_ucode_header_t210_load[3];
+		gk20a_free_sgtable(&sgt_pmu_ucode);
+	}
+	status = pmu_exec_gen_bl(g, bl_dmem_desc, 1);
 	if (status != 0) {
 		err = status;
 		goto err_free_ucode_map;
@@ -915,11 +957,17 @@ int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 err_free_ucode_map:
 	gk20a_gmmu_unmap(vm, pacr_ucode_pmu_va,
 			img_size_in_bytes, gk20a_mem_flag_none);
+	acr->acr_ucode.pmu_va = 0;
 err_free_ucode_sgt:
 	gk20a_free_sgtable(&sgt_pmu_ucode);
 err_free_acr_buf:
 	dma_free_coherent(d, img_size_in_bytes,
-		pacr_ucode_cpuva, iova);
+			pacr_ucode_cpuva, iova);
+	acr->acr_ucode.cpuva = NULL;
+	acr->acr_ucode.iova = 0;
+err_release_acr_fw:
+	release_firmware(acr_fw);
+	acr->acr_fw = NULL;
 	return err;
 }
 
@@ -927,7 +975,7 @@ u8 pmu_is_debug_mode_en(struct gk20a *g)
 {
 	int ctl_stat =  gk20a_readl(g, pwr_pmu_scpctl_stat_r());
 	return 1;
-/*TODO return (ctl_stat & pwr_pmu_scpctl_stat_debug_mode_m());*/
+	/*TODO return (ctl_stat & pwr_pmu_scpctl_stat_debug_mode_m());*/
 }
 
 /*
@@ -966,8 +1014,8 @@ static int bl_bootstrap(struct pmu_gk20a *pmu,
 	struct flcn_bl_dmem_desc *pbl_desc, u32 bl_sz)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
+	struct acr_gm20b *acr = &g->acr;
 	struct mm_gk20a *mm = &g->mm;
-	struct pmu_ucode_desc *desc = pmu->desc;
 	u32 imem_dst_blk = 0;
 	u32 virt_addr = 0;
 	u32 tag = 0;
@@ -1007,7 +1055,7 @@ static int bl_bootstrap(struct pmu_gk20a *pmu,
 			pwr_falcon_imemc_aincw_f(1));
 	virt_addr = pmu_bl_gm10x_desc->bl_start_tag << 8;
 	tag = virt_addr >> 8; /* tag is always 256B aligned */
-	bl_ucode = (u32 *)(pmu->ucode.cpuva);
+	bl_ucode = (u32 *)(acr->hsbl_ucode.cpuva);
 	for (index = 0; index < bl_sz/4; index++) {
 		if ((index % 64) == 0) {
 			gk20a_writel(g, pwr_falcon_imemt_r(0),
@@ -1026,8 +1074,6 @@ static int bl_bootstrap(struct pmu_gk20a *pmu,
 
 	gk20a_writel(g, pwr_falcon_cpuctl_r(),
 			pwr_falcon_cpuctl_startcpu_f(1));
-
-	gk20a_writel(g, pwr_falcon_os_r(), desc->app_version);
 
 	return 0;
 }
@@ -1082,7 +1128,6 @@ int gm20b_init_pmu_setup_hw1(struct gk20a *g, struct flcn_bl_dmem_desc *desc,
 */
 int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct device *d = dev_from_gk20a(g);
@@ -1092,29 +1137,73 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 	u32 bl_sz;
 	void *bl_cpuva;
 	u64 bl_pmu_va;
-	const struct firmware *hsbl_fw;
 	struct acr_gm20b *acr = &g->acr;
+	const struct firmware *hsbl_fw = acr->hsbl_fw;
 	struct hsflcn_bl_desc *pmu_bl_gm10x_desc;
 	u32 *pmu_bl_gm10x = NULL;
 	DEFINE_DMA_ATTRS(attrs);
 	gm20b_dbg_pmu("");
 
-	hsbl_fw = gk20a_request_firmware(g, GM20B_HSBIN_PMU_BL_UCODE_IMAGE);
 	if (!hsbl_fw) {
-		gk20a_err(dev_from_gk20a(g), "failed to load pmu ucode!!");
-		return -ENOENT;
-	}
-	acr->bl_bin_hdr = (struct bin_hdr *)hsbl_fw->data;
-	acr->pmu_hsbl_desc = (struct hsflcn_bl_desc *)(hsbl_fw->data +
-		acr->bl_bin_hdr->header_offset);
-	pmu_bl_gm10x_desc = acr->pmu_hsbl_desc;
-	pmu_bl_gm10x = (u32 *)(hsbl_fw->data + acr->bl_bin_hdr->data_offset);
-	bl_sz = ALIGN(pmu_bl_gm10x_desc->bl_img_hdr.bl_code_size,
-			256);
-	gm20b_dbg_pmu("Executing Generic Bootloader\n");
+		hsbl_fw = gk20a_request_firmware(g,
+			GM20B_HSBIN_PMU_BL_UCODE_IMAGE);
+		if (!hsbl_fw) {
+			gk20a_err(dev_from_gk20a(g), "pmu ucode load fail");
+			return -ENOENT;
+		}
+		acr->hsbl_fw = hsbl_fw;
+		acr->bl_bin_hdr = (struct bin_hdr *)hsbl_fw->data;
+		acr->pmu_hsbl_desc = (struct hsflcn_bl_desc *)(hsbl_fw->data +
+				acr->bl_bin_hdr->header_offset);
+		pmu_bl_gm10x_desc = acr->pmu_hsbl_desc;
+		pmu_bl_gm10x = (u32 *)(hsbl_fw->data +
+			acr->bl_bin_hdr->data_offset);
+		bl_sz = ALIGN(pmu_bl_gm10x_desc->bl_img_hdr.bl_code_size,
+				256);
+		acr->hsbl_ucode.size = bl_sz;
+		gm20b_dbg_pmu("Executing Generic Bootloader\n");
 
-	/*TODO in code verify that enable PMU is done, scrubbing etc is done*/
-	/*TODO in code verify that gmmu vm init is done*/
+		/*TODO in code verify that enable PMU is done,
+			scrubbing etc is done*/
+		/*TODO in code verify that gmmu vm init is done*/
+		dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
+		bl_cpuva = dma_alloc_attrs(d, bl_sz,
+				&iova,
+				GFP_KERNEL,
+				&attrs);
+		gm20b_dbg_pmu("bl size is %x\n", bl_sz);
+		if (!bl_cpuva) {
+			gk20a_err(d, "failed to allocate memory\n");
+			err = -ENOMEM;
+			goto err_done;
+		}
+		acr->hsbl_ucode.cpuva = bl_cpuva;
+		acr->hsbl_ucode.iova = iova;
+
+		err = gk20a_get_sgtable(d, &sgt_pmu_ucode,
+				bl_cpuva,
+				iova,
+				bl_sz);
+		if (err) {
+			gk20a_err(d, "failed to allocate sg table\n");
+			goto err_free_cpu_va;
+		}
+
+		bl_pmu_va = gk20a_gmmu_map(vm, &sgt_pmu_ucode,
+				bl_sz,
+				0, /* flags */
+				gk20a_mem_flag_read_only);
+		if (!bl_pmu_va) {
+			gk20a_err(d, "failed to map pmu ucode memory!!");
+			goto err_free_ucode_sgt;
+		}
+		acr->hsbl_ucode.pmu_va = bl_pmu_va;
+
+		for (i = 0; i < (bl_sz) >> 2; i++)
+			gk20a_mem_wr32(bl_cpuva, i, pmu_bl_gm10x[i]);
+		gm20b_dbg_pmu("Copied bl ucode to bl_cpuva\n");
+		gk20a_free_sgtable(&sgt_pmu_ucode);
+	}
 	/*
 	 * Disable interrupts to avoid kernel hitting breakpoint due
 	 * to PMU halt
@@ -1122,43 +1211,13 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 
 	gk20a_writel(g, pwr_falcon_irqsclr_r(),
 		gk20a_readl(g, pwr_falcon_irqsclr_r()) & (~(0x10)));
+	gm20b_dbg_pmu("err reg :%x\n", readl(mc +
+		MC_ERR_GENERALIZED_CARVEOUT_STATUS_0));
+	gm20b_dbg_pmu("phys sec reg %x\n", gk20a_readl(g,
+		pwr_falcon_mmu_phys_sec_r()));
+	gm20b_dbg_pmu("sctl reg %x\n", gk20a_readl(g, pwr_falcon_sctl_r()));
 
-	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
-	bl_cpuva = dma_alloc_attrs(d, bl_sz,
-			&iova,
-			GFP_KERNEL,
-			&attrs);
-	gm20b_dbg_pmu("bl size is %x\n", bl_sz);
-	if (!bl_cpuva) {
-		gk20a_err(d, "failed to allocate memory\n");
-		err = -ENOMEM;
-		goto err_done;
-	}
-
-	err = gk20a_get_sgtable(d, &sgt_pmu_ucode,
-			bl_cpuva,
-			iova,
-			bl_sz);
-	if (err) {
-		gk20a_err(d, "failed to allocate sg table\n");
-		goto err_free_cpu_va;
-	}
-
-	bl_pmu_va = gk20a_gmmu_map(vm, &sgt_pmu_ucode,
-			bl_sz,
-			0, /* flags */
-			gk20a_mem_flag_read_only);
-	if (!bl_pmu_va) {
-		gk20a_err(d, "failed to map pmu ucode memory!!");
-		goto err_free_ucode_sgt;
-	}
-
-	for (i = 0; i < (bl_sz) >> 2; i++)
-		gk20a_mem_wr32(bl_cpuva, i, pmu_bl_gm10x[i]);
-	gm20b_dbg_pmu("Copied bl ucode to bl_cpuva\n");
-	pmu->ucode.cpuva = bl_cpuva;
-	pmu->ucode.pmu_va = bl_pmu_va;
-	gm20b_init_pmu_setup_hw1(g, desc, bl_sz);
+	gm20b_init_pmu_setup_hw1(g, desc, acr->hsbl_ucode.size);
 	/* Poll for HALT */
 	if (b_wait_for_halt) {
 		err = pmu_wait_for_halt(g, GPU_TIMEOUT_DEFAULT);
@@ -1176,16 +1235,17 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 		pwr_falcon_mmu_phys_sec_r()));
 	gm20b_dbg_pmu("sctl reg %x\n", gk20a_readl(g, pwr_falcon_sctl_r()));
 	start_gm20b_pmu(g);
-	err = 0;
+	return 0;
 err_unmap_bl:
-	gk20a_gmmu_unmap(vm, pmu->ucode.pmu_va,
-			bl_sz, gk20a_mem_flag_none);
+	gk20a_gmmu_unmap(vm, acr->hsbl_ucode.pmu_va,
+			acr->hsbl_ucode.size, gk20a_mem_flag_none);
 err_free_ucode_sgt:
 	gk20a_free_sgtable(&sgt_pmu_ucode);
 err_free_cpu_va:
-	dma_free_attrs(d, bl_sz,
-			bl_cpuva, iova, &attrs);
+	dma_free_attrs(d, acr->hsbl_ucode.size,
+			acr->hsbl_ucode.cpuva, acr->hsbl_ucode.iova, &attrs);
 err_done:
+	release_firmware(hsbl_fw);
 	return err;
 }
 

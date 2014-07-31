@@ -31,8 +31,6 @@
 #include "board.h"
 #include "iomap.h"
 
-#define HDMI_NODE	"/host1x/hdmi"
-
 atomic_t sd_brightness = ATOMIC_INIT(255);
 EXPORT_SYMBOL(sd_brightness);
 
@@ -464,7 +462,7 @@ int tegra_init_hdmi(struct platform_device *pdev,
 #ifdef CONFIG_OF
 	struct device_node *hdmi_node = NULL;
 
-	hdmi_node = of_find_node_by_path("/host1x/hdmi");
+	hdmi_node = of_find_node_by_path(HDMI_NODE);
 	/* disable HDMI if explicitly set that way in the device tree */
 	enabled = !hdmi_node || of_device_is_available(hdmi_node);
 #endif

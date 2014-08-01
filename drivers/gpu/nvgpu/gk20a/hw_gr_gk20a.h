@@ -718,6 +718,22 @@ static inline u32 gr_fecs_method_push_adr_set_watchdog_timeout_f(void)
 {
 	return 0x21;
 }
+static inline u32 gr_fecs_host_int_status_r(void)
+{
+	return 0x00409c18;
+}
+static inline u32 gr_fecs_host_int_status_umimp_firmware_method_f(u32 v)
+{
+	return (v & 0x1) << 17;
+}
+static inline u32 gr_fecs_host_int_status_umimp_illegal_method_f(u32 v)
+{
+	return (v & 0x1) << 18;
+}
+static inline u32 gr_fecs_host_int_clear_r(void)
+{
+	return 0x00409c20;
+}
 static inline u32 gr_fecs_host_int_enable_r(void)
 {
 	return 0x00409c24;

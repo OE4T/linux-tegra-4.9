@@ -4995,14 +4995,21 @@ static int gk20a_gr_handle_fecs_error(struct gk20a *g,
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
-	u32 gr_fecs_intr = gk20a_readl(g, gr_fecs_intr_r());
+	u32 gr_fecs_intr = gk20a_readl(g, gr_fecs_host_int_status_r());
 	gk20a_dbg_fn("");
 
 	gk20a_err(dev_from_gk20a(g),
 		   "unhandled fecs error interrupt 0x%08x for channel %u",
 		   gr_fecs_intr, ch->hw_chid);
 
-	gk20a_writel(g, gr_fecs_intr_r(), gr_fecs_intr);
+	if (gr_fecs_intr & gr_fecs_host_int_status_umimp_firmware_method_f(1)) {
+		gk20a_err(dev_from_gk20a(g),
+			  "firmware method error 0x%08x for offset 0x%04x",
+			  gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(6)),
+			  isr_data->data_lo);
+	}
+
+	gk20a_writel(g, gr_fecs_host_int_clear_r(), gr_fecs_intr);
 	return -EINVAL;
 }
 
@@ -5021,6 +5028,23 @@ static int gk20a_gr_handle_class_error(struct gk20a *g,
 		   "class error 0x%08x, offset 0x%08x, unhandled intr 0x%08x for channel %u\n",
 		   isr_data->class_num, isr_data->offset,
 		   gr_class_error, ch->hw_chid);
+	return -EINVAL;
+}
+
+static int gk20a_gr_handle_firmware_method(struct gk20a *g,
+					     struct gr_isr_data *isr_data)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	struct channel_gk20a *ch = &f->channel[isr_data->chid];
+
+	gk20a_dbg_fn("");
+
+	gk20a_set_error_notifier(ch,
+			NVHOST_CHANNEL_GR_ERROR_SW_NOTIFY);
+	gk20a_err(dev_from_gk20a(g),
+		   "firmware method 0x%08x, offset 0x%08x for channel %u\n",
+		   isr_data->class_num, isr_data->offset,
+		   ch->hw_chid);
 	return -EINVAL;
 }
 
@@ -5513,7 +5537,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	/* this one happens if someone tries to hit a non-whitelisted
 	 * register using set_falcon[4] */
 	if (gr_intr & gr_intr_firmware_method_pending_f()) {
-		need_reset |= true;
+		need_reset |= gk20a_gr_handle_firmware_method(g, &isr_data);
 		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "firmware method intr pending\n");
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_firmware_method_reset_f());

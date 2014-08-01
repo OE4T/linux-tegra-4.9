@@ -4596,13 +4596,9 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 	if (err)
 		goto clean_up;
 
-	if (tegra_cpu_is_asim())
-		gr->max_comptag_mem = 1; /* MBs worth of comptag coverage */
-	else {
-		gk20a_dbg_info("total ram pages : %lu", totalram_pages);
-		gr->max_comptag_mem = totalram_pages
-					 >> (10 - (PAGE_SHIFT - 10));
-	}
+	gk20a_dbg_info("total ram pages : %lu", totalram_pages);
+	gr->max_comptag_mem = totalram_pages
+				 >> (10 - (PAGE_SHIFT - 10));
 	err = g->ops.ltc.init_comptags(g, gr);
 	if (err)
 		goto clean_up;

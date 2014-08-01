@@ -33,10 +33,14 @@ phys_addr_t __weak tegra_carveout_start;
 phys_addr_t __weak  tegra_carveout_size;
 phys_addr_t __weak tegra_vpr_start;
 phys_addr_t __weak tegra_vpr_size;
+bool __weak tegra_vpr_resize;
 
 struct device __weak tegra_generic_dev;
 struct device __weak tegra_vpr_dev;
 struct device __weak tegra_iram_dev;
+struct device __weak tegra_generic_cma_dev;
+struct device __weak tegra_vpr_cma_dev;
+struct dma_resize_notifier_ops __weak vpr_dev_ops;
 
 static const struct of_device_id nvmap_of_ids[] = {
 	{ .compatible = "nvidia,carveouts" },
@@ -66,10 +70,6 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.base		= 0,
 		.size		= 0,
 		.dma_dev	= &tegra_generic_dev,
-#ifdef CONFIG_NVMAP_USE_CMA_FOR_CARVEOUT
-		.cma_dev	= &tegra_generic_cma_dev,
-		.resize		= false,
-#endif
 	},
 	[2] = {
 		.name		= "vpr",
@@ -77,10 +77,6 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.base		= 0,
 		.size		= 0,
 		.dma_dev	= &tegra_vpr_dev,
-#ifdef CONFIG_NVMAP_USE_CMA_FOR_CARVEOUT
-		.cma_dev	= &tegra_vpr_cma_dev,
-		.resize		= true,
-#endif
 	},
 };
 
@@ -174,6 +170,11 @@ static int __nvmap_init_legacy(void)
 	nvmap_carveouts[2].base = tegra_vpr_start;
 	nvmap_carveouts[2].size = tegra_vpr_size;
 
+	if (tegra_vpr_resize) {
+		nvmap_carveouts[1].cma_dev = &tegra_generic_cma_dev;
+		nvmap_carveouts[2].cma_dev = &tegra_vpr_cma_dev;
+	}
+
 	return 0;
 }
 
@@ -183,11 +184,9 @@ static int __nvmap_init_legacy(void)
  */
 int nvmap_init(struct platform_device *pdev)
 {
-	int err = 0;
-#ifdef CONFIG_NVMAP_USE_CMA_FOR_CARVEOUT
+	int err;
 	struct dma_declare_info vpr_dma_info;
 	struct dma_declare_info generic_dma_info;
-#endif
 
 	if (pdev->dev.platform_data) {
 		err = __nvmap_init_legacy();
@@ -201,18 +200,14 @@ int nvmap_init(struct platform_device *pdev)
 			return err;
 	}
 
-	nvmap_carveouts[1].dma_dev = &tegra_generic_dev;
-	nvmap_carveouts[2].dma_dev = &tegra_vpr_dev;
-
-#ifdef CONFIG_NVMAP_USE_CMA_FOR_CARVEOUT
+	if (!tegra_vpr_resize)
+		goto end;
 	generic_dma_info.name = "generic";
-	generic_dma_info.resize = false;
-	generic_dma_info.cma_dev = NULL;
+	generic_dma_info.size = 0;
+	generic_dma_info.cma_dev = nvmap_carveouts[1].cma_dev;
 
 	vpr_dma_info.name = "vpr";
-	vpr_dma_info.base = nvmap_carveouts[2].base;
 	vpr_dma_info.size = SZ_32M;
-	vpr_dma_info.resize = true;
 	vpr_dma_info.cma_dev = nvmap_carveouts[2].cma_dev;
 	vpr_dma_info.notifier.ops = &vpr_dev_ops;
 
@@ -232,8 +227,8 @@ int nvmap_init(struct platform_device *pdev)
 			return err;
 		}
 	}
-#endif
 
+end:
 	return err;
 }
 

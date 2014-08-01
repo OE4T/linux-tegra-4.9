@@ -254,12 +254,16 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 #ifdef CONFIG_CMA
 		struct dma_contiguous_stats stats;
 
-		dma_get_contiguous_stats(co->cma_dev, &stats);
+		if (dma_get_contiguous_stats(co->cma_dev, &stats))
+			goto fail;
+
 		base = stats.base;
 		len = stats.size;
 		h->cma_dev = co->cma_dev;
 		h->dma_dev = co->dma_dev;
 #else
+		dev_err(parent, "invalid resize config for carveout %s\n",
+				co->name);
 		goto fail;
 #endif
 	} else {
@@ -272,21 +276,24 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 			 * pass dma_dev ptr.
 			 */
 			h->dma_dev = &h->dev;
-		dev_set_name(h->dma_dev, "%s", co->name);
-		dma_set_coherent_mask(h->dma_dev, DMA_BIT_MASK(64));
+
 		/* declare Non-CMA heap */
 		err = dma_declare_coherent_memory(h->dma_dev, 0, base, len,
 				DMA_MEMORY_NOMAP | DMA_MEMORY_EXCLUSIVE);
 		if (err & DMA_MEMORY_NOMAP) {
-			dev_info(h->dma_dev, "dma coherent mem declare %pa,%zu\n",
-				&base, len);
+			dev_info(parent,
+				"%s :dma coherent mem declare %pa,%zu\n",
+				co->name, &base, len);
 		} else {
-			dev_dbg(h->dma_dev, "dma coherent declare fail %pa,%zu\n",
-				&base, len);
+			dev_err(parent,
+				"%s: dma coherent declare fail %pa,%zu\n",
+				co->name, &base, len);
 			goto fail;
 		}
 	}
 
+	dev_set_name(h->dma_dev, "%s", co->name);
+	dma_set_coherent_mask(h->dma_dev, DMA_BIT_MASK(64));
 	h->name = co->name;
 	h->arg = arg;
 	h->base = base;

@@ -3167,7 +3167,8 @@ void tegra_dc_disable(struct tegra_dc *dc)
 	}
 
 #ifdef CONFIG_SWITCH
-	switch_set_state(&dc->modeset_switch, 0);
+	if (dc->switchdev_registered)
+		switch_set_state(&dc->modeset_switch, 0);
 #endif
 	mutex_unlock(&dc->lock);
 	mutex_unlock(&dc->lp_lock);
@@ -3554,8 +3555,12 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	dc->modeset_switch.state = 0;
 	dc->modeset_switch.print_state = switch_modeset_print_mode;
 	ret = switch_dev_register(&dc->modeset_switch);
-	if (ret < 0)
-		dev_err(&ndev->dev, "failed to register switch driver\n");
+	if (ret < 0) {
+		dev_err(&ndev->dev,
+			"failed to register switch driver ret(%d)\n", ret);
+		dc->switchdev_registered = false;
+	} else
+		dc->switchdev_registered = true;
 #endif
 
 	tegra_dc_feature_register(dc);
@@ -3784,15 +3789,16 @@ err_disable_dc:
 		_tegra_dc_disable(dc);
 	dc->enabled = false;
 	mutex_unlock(&dc->lock);
-#ifdef CONFIG_SWITCH
-	switch_dev_unregister(&dc->modeset_switch);
-#endif
 #ifdef CONFIG_TEGRA_ISOMGR
 	tegra_isomgr_unregister(dc->isomgr_handle);
 #else
 	clk_put(emc_clk);
 #endif
 err_put_clk:
+#ifdef CONFIG_SWITCH
+	if (dc->switchdev_registered)
+		switch_dev_unregister(&dc->modeset_switch);
+#endif
 	clk_put(clk);
 err_iounmap_reg:
 	iounmap(base);
@@ -3852,7 +3858,8 @@ static int tegra_dc_remove(struct platform_device *ndev)
 	synchronize_irq(dc->irq); /* wait for IRQ handlers to finish */
 
 #ifdef CONFIG_SWITCH
-	switch_dev_unregister(&dc->modeset_switch);
+	if (dc->switchdev_registered)
+		switch_dev_unregister(&dc->modeset_switch);
 #endif
 	free_irq(dc->irq, dc);
 #ifdef CONFIG_TEGRA_ISOMGR

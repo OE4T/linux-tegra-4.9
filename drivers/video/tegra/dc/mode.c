@@ -393,7 +393,8 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 			DC_DISP_DISP_CLOCK_CONTROL);
 
 #ifdef CONFIG_SWITCH
-	switch_set_state(&dc->modeset_switch,
+	if (dc->switchdev_registered)
+		switch_set_state(&dc->modeset_switch,
 			 (mode->h_active << 16) | mode->v_active);
 #endif
 

@@ -924,6 +924,12 @@
 #define NV_SOR_AUDIO_HDA_PRESENCE_ELDV(x)		((x) << 1)
 #define NV_SOR_AUDIO_HDA_PRESENCE_PD(x)		(x)
 #define NV_SOR_AUDIO_AVAL_0320				0x10f
+#define NV_SOR_AUDIO_AVAL_0441				0x110
+#define NV_SOR_AUDIO_AVAL_0882				0x111
+#define NV_SOR_AUDIO_AVAL_1764				0x112
+#define NV_SOR_AUDIO_AVAL_0480				0x113
+#define NV_SOR_AUDIO_AVAL_0960				0x114
+#define NV_SOR_AUDIO_AVAL_1920				0x115
 #define NV_SOR_HDMI_AUDIO_N			0x13c
 #define NV_SOR_HDMI_AUDIO_N_VALUE(x)		(((x) & 0xfffff) << 0)
 #define NV_SOR_HDMI_AUDIO_N_RESET_ASSERT	(1 << 20)

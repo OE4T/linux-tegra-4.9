@@ -113,7 +113,7 @@ static void tegra_hdmi_get_eld_baseline(struct tegra_hdmi *hdmi,
 				eld->monitor_name, eld->mnl);
 
 	memcpy(&eld_mem_block[HDMI_ELD_MONITOR_NAME_STR + eld->mnl],
-						eld->sad, eld->sad_count);
+						eld->sad, eld->sad_count * 3);
 }
 
 static void tegra_hdmi_get_eld_vendor(struct tegra_hdmi *hdmi,
@@ -879,12 +879,11 @@ static void tegra_hdmi_audio_infoframe(struct tegra_hdmi *hdmi)
 		NV_SOR_HDMI_AUDIO_INFOFRAME_CTRL_CHECKSUM_ENABLE);
 }
 
-/*
- * Config HW to generate CTS and N.
- * Use HW PoR Aval.
- */
-static void tegra_hdmi_audio_acr(struct tegra_hdmi *hdmi)
+/* HW generated CTS and N */
+static void tegra_hdmi_audio_acr(struct tegra_hdmi *hdmi, u32 audio_freq)
 {
+#define GET_AVAL(n, fs_khz) ((24000 * n) / (128 * fs_khz))
+
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 	u32 val;
 
@@ -906,32 +905,48 @@ static void tegra_hdmi_audio_acr(struct tegra_hdmi *hdmi)
 
 	/* N from table 7.1, 7.2, 7.3 hdmi spec v1.4 */
 	tegra_sor_writel(sor, NV_SOR_AUDIO_NVAL_0320, 4096);
+	tegra_sor_writel(sor, NV_SOR_AUDIO_AVAL_0320,
+			GET_AVAL(4096, audio_freq));
 	tegra_sor_writel(sor, NV_SOR_AUDIO_NVAL_0441, 6272);
+	tegra_sor_writel(sor, NV_SOR_AUDIO_AVAL_0441,
+			GET_AVAL(6272, audio_freq));
 	tegra_sor_writel(sor, NV_SOR_AUDIO_NVAL_0882, 12544);
+	tegra_sor_writel(sor, NV_SOR_AUDIO_AVAL_0882,
+			GET_AVAL(12544, audio_freq));
 	tegra_sor_writel(sor, NV_SOR_AUDIO_NVAL_1764, 25088);
+	tegra_sor_writel(sor, NV_SOR_AUDIO_AVAL_1764,
+			GET_AVAL(25088, audio_freq));
 	tegra_sor_writel(sor, NV_SOR_AUDIO_NVAL_0480, 6144);
+	tegra_sor_writel(sor, NV_SOR_AUDIO_AVAL_0480,
+			GET_AVAL(6144, audio_freq));
 	tegra_sor_writel(sor, NV_SOR_AUDIO_NVAL_0960, 12288);
+	tegra_sor_writel(sor, NV_SOR_AUDIO_AVAL_0960,
+			GET_AVAL(12288, audio_freq));
 	tegra_sor_writel(sor, NV_SOR_AUDIO_NVAL_1920, 24576);
+	tegra_sor_writel(sor, NV_SOR_AUDIO_AVAL_1920,
+			GET_AVAL(24576, audio_freq));
 
 	tegra_sor_write_field(sor, NV_SOR_HDMI_AUDIO_N,
 				NV_SOR_HDMI_AUDIO_N_RESET_ASSERT,
 				NV_SOR_HDMI_AUDIO_N_RESET_DEASSERT);
+#undef GET_AVAL
 }
 
-static void tegra_hdmi_audio(struct tegra_hdmi *hdmi,
+static void tegra_hdmi_audio_config(struct tegra_hdmi *hdmi,
 				u32 audio_freq,
 				u32 audio_src)
 {
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 	u32 val;
 
+	/* hda is the only audio source */
 	val = NV_SOR_AUDIO_CTRL_AFIFO_FLUSH |
 		NV_SOR_AUDIO_CTRL_SRC_HDA;
 	if (hdmi->null_sample_inject)
 		val |= NV_SOR_AUDIO_CTRL_NULL_SAMPLE_EN;
 	tegra_sor_writel(sor, NV_SOR_AUDIO_CTRL, val);
 
-	tegra_hdmi_audio_acr(hdmi);
+	tegra_hdmi_audio_acr(hdmi, audio_freq);
 	tegra_hdmi_audio_infoframe(hdmi);
 }
 
@@ -953,7 +968,7 @@ int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq,
 			AUDIO_FREQ_192K == audio_freq;
 	if (valid_freq) {
 		tegra_dc_io_start(hdmi->dc);
-		tegra_hdmi_audio(hdmi, audio_freq, audio_source);
+		tegra_hdmi_audio_config(hdmi, audio_freq, audio_source);
 		tegra_dc_io_end(hdmi->dc);
 		hdmi->audio_freq = audio_freq;
 	} else {
@@ -1017,7 +1032,7 @@ static int tegra_hdmi_host_enable(struct tegra_hdmi *hdmi)
 	tegra_dc_sor_set_internal_panel(sor, false);
 	tegra_hdmi_config(hdmi);
 	tegra_hdmi_avi_infoframe(hdmi);
-	tegra_hdmi_audio(hdmi, AUDIO_FREQ_32K, HDA);
+	tegra_hdmi_audio_config(hdmi, AUDIO_FREQ_32K, HDA);
 
 	tegra_hdmi_macro_clk_config(hdmi);
 	tegra_dc_sor_attach(sor);

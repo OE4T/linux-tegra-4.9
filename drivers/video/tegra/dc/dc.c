@@ -1777,14 +1777,12 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		dc->out_ops = &tegra_dc_hdmi_ops;
 #endif
 #ifdef CONFIG_ARCH_TEGRA_21x_SOC
-	if (tegra_platform_is_fpga()) {
 		if (tegra_bonded_out_dev(BOND_OUT_SOR1)) {
 			dev_info(&dc->ndev->dev,
 				"SOR1 instance is bonded out\n");
 			dc->out_ops = NULL;
 			err = -ENODEV;
 		}
-	}
 #endif
 		break;
 
@@ -1794,7 +1792,6 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 	case TEGRA_DC_OUT_FAKE_DSI_GANGED:
 		dc->out_ops = &tegra_dc_dsi_ops;
 #ifdef CONFIG_ARCH_TEGRA_21x_SOC
-	if (tegra_platform_is_fpga()) {
 		if (tegra_bonded_out_dev(BOND_OUT_DSI) ||
 			tegra_bonded_out_dev(BOND_OUT_DSIB)) {
 			dev_info(&dc->ndev->dev,
@@ -1802,7 +1799,6 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 			dc->out_ops = NULL;
 			err = -ENODEV;
 		}
-	}
 #endif
 		break;
 

@@ -23,7 +23,7 @@
 	i2c@7000d000 {
 		nvidia,bit-banging-xfer-after-shutdown;
 
-		max8973@1b {
+		cpu_max77621_reg: max8973@1b {
 			compatible = "maxim,max8973";
 			reg = <0x1b>;
 			status = "disabled";
@@ -38,7 +38,7 @@
 			maxim,external-enable-gpio = <&max77620 5 0>;
 		};
 
-		max8973@1c {
+		gpu_max77621_reg: max8973@1c {
 			compatible = "maxim,max8973";
 			reg = <0x1c>;
 			status = "disabled";

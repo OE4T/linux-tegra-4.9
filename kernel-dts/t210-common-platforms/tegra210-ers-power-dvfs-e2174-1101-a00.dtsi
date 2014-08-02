@@ -1,0 +1,131 @@
+#include <dt-bindings/gpio/tegra-gpio.h>
+
+/ {
+	dfll-ovr@70110000 {
+		status = "okay";
+		compatible = "nvidia,tegra210-dfll";
+		reg = <0x0 0x70110000 0x0 0x400>;
+		out-clock-name="dfll_cpu";
+		board-params = <&dfll_ovr_params>;
+
+		pwm_dfll: pwm-pmic-integration {
+			compatible = "nvidia,tegra210-dfll-pwm";
+			pwm-1wire-direct;
+			pwm-data-gpio = <&gpio TEGRA_GPIO(BB, 1) 0>;
+			#pwm-cells = <2>;
+			pwm-regulator = <&cpu_ovr_reg>;
+		};
+
+		dfll_ovr_params: dfll-ovr-board-params {
+			sample-rate = <50000>;
+			fixed-output-forcing;
+			cf = <10>;
+			ci = <0>;
+			cg = <2>;
+			droop-cut-value = <0xf>;
+			droop-restore-ramp = <0x0>;
+			scale-out-ramp = <0x0>;
+		};
+	};
+
+	dfll-max77621@70110000 {
+		status = "disabled";
+		compatible = "nvidia,tegra210-dfll";
+		reg = <0x0 0x70110000 0x0 0x400>;
+		out-clock-name="dfll_cpu";
+		board-params = <&dfll_max77621_parms>;
+		i2c-pmic-integration = <&i2c_dfll>;
+
+		i2c_dfll: dfll-max77621-integration {
+			pmic-i2c-address = <0x36>;
+			pmic-i2c-voltage-register = <0x01>;
+			i2c-fs-rate = <400000>;
+			sel-conversion-slope = <1>;
+		};
+
+		dfll_max77621_parms: dfll-max77621-board-params {
+			sample-rate = <12500>;
+			fixed-output-forcing;
+			cf = <10>;
+			ci = <0>;
+			cg = <2>;
+			droop-cut-value = <0xf>;
+			droop-restore-ramp = <0x0>;
+			scale-out-ramp = <0x0>;
+		};
+	};
+
+
+	pwm_regulators {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu_ovr_reg: pwm-regulator@0 {
+			status = "okay";
+			reg = <0>;
+			compatible = "regulator-pwm";
+			pwms = <&pwm_dfll 0 2500>;
+			regulator-name = "vdd_cpu";
+			regulator-min-microvolt = <709000>;
+			regulator-max-microvolt = <1320200>;
+			regulator-init-microvolt = <1000000>;
+			regulator-always-on;
+			regulator-boot-on;
+			regulator-n-voltages = <33>;
+			voltage-time-sel = <80>;
+		};
+
+		gpu_ovr_reg: pwm-regulator@1 {
+			status = "okay";
+			reg = <1>;
+			compatible = "regulator-pwm";
+			pwms = <&tegra_pwm 0 4880>;
+			regulator-name = "vdd_gpu";
+			regulator-min-microvolt = <710000>;
+			regulator-max-microvolt = <1320000>;
+			regulator-init-microvolt = <1000000>;
+			regulator-ramp-delay = <500>;
+			regulator-n-voltages = <62>;
+			regulator-enable-ramp-delay = <500>;
+			regulator-boot-on;
+			enable-gpio = <&max77620 6 0>;
+		};
+	};
+
+	dvfs_rails {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		vdd-cpu-rail-ovr@0 {
+			status = "okay";
+			reg = <0>;
+			compatible = "nvidia,tegra210-dvfs-rail";
+			vdd_cpu-supply = <&en_vdd_cpu_fixed>;
+			vdd_cpu_dfll-supply = <&cpu_ovr_reg>;
+		};
+
+		vdd-gpu-rail-ovr@1 {
+			status = "okay";
+			reg = <1>;
+			compatible = "nvidia,tegra210-dvfs-rail";
+			vdd_gpu-supply = <&gpu_ovr_reg>;
+		};
+
+
+		vdd-cpu-rail-max77621@2 {
+			status = "disabled";
+			reg = <2>;
+			compatible = "nvidia,tegra210-dvfs-rail";
+			vdd_cpu-supply = <&cpu_max77621_reg>;
+		};
+
+		vdd-gpu-rail-max77621@3 {
+			status = "disabled";
+			reg = <3>;
+			compatible = "nvidia,tegra210-dvfs-rail";
+			vdd_gpu-supply = <&gpu_max77621_reg>;
+		};
+	};
+};

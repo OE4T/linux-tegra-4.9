@@ -140,6 +140,18 @@
 		clock-frequency = <38400000>;
 	};
 
+        smmu {
+                compatible = "arm,smmu-v2";
+                reg = <0x0 0x32000000 0x0 0x32ffffff>;
+                #global-interrupts = <2>;
+                interrupts = <0 32 4>,
+                             <0 33 4>,
+                             <0 34 4>, /* This is the first context interrupt */
+                             <0 35 4>,
+                             <0 36 4>,
+                             <0 37 4>;
+        };
+
 	uarta: serial@70006000 {
 		compatible = "nvidia,tegra210-uart";
 		reg = <0x0 0x70006000 0x0 0x40>;

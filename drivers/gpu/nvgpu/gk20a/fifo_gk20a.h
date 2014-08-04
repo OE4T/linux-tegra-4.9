@@ -138,8 +138,6 @@ struct fifo_gk20a {
 	u32 mmu_fault_engines;
 	bool deferred_reset_pending;
 	struct mutex deferred_reset_mutex;
-
-	struct work_struct fault_restore_thread;
 };
 
 int gk20a_init_fifo_support(struct gk20a *g);

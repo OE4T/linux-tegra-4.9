@@ -39,7 +39,6 @@
 static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 					    u32 hw_chid, bool add,
 					    bool wait_for_finish);
-static void gk20a_fifo_handle_mmu_fault_thread(struct work_struct *work);
 
 /*
  * Link engine IDs to MMU IDs and vice versa.
@@ -498,8 +497,6 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 
 	f->g = g;
 
-	INIT_WORK(&f->fault_restore_thread,
-		  gk20a_fifo_handle_mmu_fault_thread);
 	mutex_init(&f->intr.isr.mutex);
 	gk20a_init_fifo_pbdma_intr_descs(f); /* just filling in data/tables */
 
@@ -835,26 +832,6 @@ static void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 		gk20a_reset(g, mc_enable_ce2_m());
 }
 
-static void gk20a_fifo_handle_mmu_fault_thread(struct work_struct *work)
-{
-	struct fifo_gk20a *f = container_of(work, struct fifo_gk20a,
-					    fault_restore_thread);
-	struct gk20a *g = f->g;
-	int i;
-
-	/* It is safe to enable ELPG again. */
-	gk20a_pmu_enable_elpg(g);
-
-	/* Restore the runlist */
-	for (i = 0; i < g->fifo.max_runlists; i++)
-		gk20a_fifo_update_runlist_locked(g, i, ~0, true, true);
-
-	/* unlock all runlists */
-	for (i = 0; i < g->fifo.max_runlists; i++)
-		mutex_unlock(&g->fifo.runlist_info[i].mutex);
-
-}
-
 static void gk20a_fifo_handle_chsw_fault(struct gk20a *g)
 {
 	u32 intr;
@@ -895,7 +872,6 @@ static bool gk20a_fifo_should_defer_engine_reset(struct gk20a *g, u32 engine_id,
 void fifo_gk20a_finish_mmu_fault_handling(struct gk20a *g,
 		unsigned long fault_id) {
 	u32 engine_mmu_id;
-	int i;
 
 	/* reset engines */
 	for_each_set_bit(engine_mmu_id, &fault_id, 32) {
@@ -904,11 +880,6 @@ void fifo_gk20a_finish_mmu_fault_handling(struct gk20a *g,
 			gk20a_fifo_reset_engine(g, engine_id);
 	}
 
-	/* CLEAR the runlists. Do not wait for runlist to start as
-	 * some engines may not be available right now */
-	for (i = 0; i < g->fifo.max_runlists; i++)
-		gk20a_fifo_update_runlist_locked(g, i, ~0, false, false);
-
 	/* clear interrupt */
 	gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id);
 
@@ -916,8 +887,13 @@ void fifo_gk20a_finish_mmu_fault_handling(struct gk20a *g,
 	gk20a_writel(g, fifo_error_sched_disable_r(),
 		     gk20a_readl(g, fifo_error_sched_disable_r()));
 
-	/* Spawn a work to enable PMU and restore runlists */
-	schedule_work(&g->fifo.fault_restore_thread);
+	/* Re-enable fifo access */
+	gk20a_writel(g, gr_gpfifo_ctl_r(),
+		     gr_gpfifo_ctl_access_enabled_f() |
+		     gr_gpfifo_ctl_semaphore_access_enabled_f());
+
+	/* It is safe to enable ELPG again. */
+	gk20a_pmu_enable_elpg(g);
 }
 
 static bool gk20a_fifo_set_ctx_mmu_error(struct gk20a *g,
@@ -960,14 +936,23 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 	bool fake_fault;
 	unsigned long fault_id;
 	unsigned long engine_mmu_id;
-	int i;
 	bool verbose = true;
+	u32 grfifo_ctl;
 	gk20a_dbg_fn("");
 
 	g->fifo.deferred_reset_pending = false;
 
 	/* Disable ELPG */
 	gk20a_pmu_disable_elpg(g);
+
+	/* Disable fifo access */
+	grfifo_ctl = gk20a_readl(g, gr_gpfifo_ctl_r());
+	grfifo_ctl &= ~gr_gpfifo_ctl_semaphore_access_f(1);
+	grfifo_ctl &= ~gr_gpfifo_ctl_access_f(1);
+
+	gk20a_writel(g, gr_gpfifo_ctl_r(),
+		grfifo_ctl | gr_gpfifo_ctl_access_f(0) |
+		gr_gpfifo_ctl_semaphore_access_f(0));
 
 	/* If we have recovery in progress, MMU fault id is invalid */
 	if (g->fifo.mmu_fault_engines) {
@@ -980,17 +965,12 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		gk20a_debug_dump(g->dev);
 	}
 
-	/* lock all runlists. Note that locks are are released in
-	 * gk20a_fifo_handle_mmu_fault_thread() */
-	for (i = 0; i < g->fifo.max_runlists; i++)
-		mutex_lock(&g->fifo.runlist_info[i].mutex);
 
 	/* go through all faulted engines */
 	for_each_set_bit(engine_mmu_id, &fault_id, 32) {
 		/* bits in fifo_intr_mmu_fault_id_r do not correspond 1:1 to
 		 * engines. Convert engine_mmu_id to engine_id */
 		u32 engine_id = gk20a_mmu_id_to_engine_id(engine_mmu_id);
-		struct fifo_runlist_info_gk20a *runlist = g->fifo.runlist_info;
 		struct fifo_mmu_fault_info_gk20a f;
 		struct channel_gk20a *ch = NULL;
 
@@ -1055,10 +1035,6 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 				/* disable the channel from hw and increment
 				 * syncpoints */
 				gk20a_channel_abort(ch);
-
-				/* remove the channel from runlist */
-				clear_bit(ch->hw_chid,
-					  runlist->active_channels);
 			}
 
 		} else if (f.inst_ptr ==

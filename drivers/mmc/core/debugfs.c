@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2008 Atmel Corporation
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -525,6 +525,29 @@ static int mmc_get_ext_csd_byte_val(struct mmc_card *card, u64 *val,
 	return err;
 }
 
+static int mmc_dbg_ext_csd_life_time_type_a(void *data, u64 *val)
+{
+	struct mmc_card *card = data;
+
+	return mmc_get_ext_csd_byte_val(card, val,
+			EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_A);
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(mmc_dbg_ext_csd_life_time_type_a_fops,
+		mmc_dbg_ext_csd_life_time_type_a, NULL, "%llu\n");
+
+
+static int mmc_dbg_ext_csd_life_time_type_b(void *data, u64 *val)
+{
+	struct mmc_card *card = data;
+
+	return mmc_get_ext_csd_byte_val(card, val,
+			EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_B);
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(mmc_dbg_ext_csd_life_time_type_b_fops,
+		mmc_dbg_ext_csd_life_time_type_b, NULL, "%llu\n");
+
 #define EXT_CSD_STR_LEN 1025
 
 /* Here index starts with zero*/
@@ -673,6 +696,12 @@ void mmc_add_card_debugfs(struct mmc_card *card)
 			goto err;
 		if (!debugfs_create_file("firmware_version", S_IRUSR, root,
 					card, &mmc_dbg_ext_csd_fw_v_fops))
+			goto err;
+		if (!debugfs_create_file("dhs_type_a", 0400, root, card,
+					&mmc_dbg_ext_csd_life_time_type_a_fops))
+			goto err;
+		if (!debugfs_create_file("dhs_type_b", 0400, root, card,
+					&mmc_dbg_ext_csd_life_time_type_b_fops))
 			goto err;
 	}
 

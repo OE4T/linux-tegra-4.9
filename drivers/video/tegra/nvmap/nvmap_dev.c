@@ -1449,8 +1449,6 @@ int nvmap_probe(struct platform_device *pdev)
 		}
 		node->index = dev->nr_carveouts;
 		dev->nr_carveouts++;
-		spin_lock_init(&node->clients_lock);
-		INIT_LIST_HEAD(&node->clients);
 		node->heap_bit = co->usage_mask;
 
 		if (!IS_ERR_OR_NULL(nvmap_debug_root)) {

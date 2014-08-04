@@ -98,9 +98,7 @@ struct nvmap_carveout_node {
 	unsigned int		heap_bit;
 	struct nvmap_heap	*carveout;
 	int			index;
-	struct list_head	clients;
-	spinlock_t		clients_lock;
-	phys_addr_t			base;
+	phys_addr_t		base;
 	size_t			size;
 };
 

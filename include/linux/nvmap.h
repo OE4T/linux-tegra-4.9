@@ -66,13 +66,8 @@ int nvmap_get_dmabuf_param(struct dma_buf *dmabuf, u32 param, u64 *result);
 
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 ulong nvmap_page_pool_get_unused_pages(void);
-ulong nvmap_page_pool_get_pool_size(void);
 #else
 static inline int nvmap_page_pool_get_unused_pages(void)
-{
-	return 0;
-}
-static inline int nvmap_page_pool_get_pool_size(void)
 {
 	return 0;
 }

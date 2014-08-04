@@ -397,14 +397,6 @@ ulong nvmap_page_pool_get_unused_pages(void)
 	return total;
 }
 
-ulong nvmap_page_pool_get_pool_size(void)
-{
-	if (!nvmap_dev)
-		return 0;
-
-	return nvmap_dev->pool.length;
-}
-
 /*
  * Remove and free to the system all the pages currently in the page
  * pool. This operation will happen even if the page pools are disabled.

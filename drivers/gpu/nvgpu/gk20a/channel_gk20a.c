@@ -680,6 +680,9 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 		gk20a_vm_put(ch_vm);
 
 unbind:
+	if (gk20a_is_channel_marked_as_tsg(ch))
+		gk20a_tsg_unbind_channel(ch);
+
 	channel_gk20a_unbind(ch);
 	channel_gk20a_free_inst(g, ch);
 

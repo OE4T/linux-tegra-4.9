@@ -27,8 +27,7 @@ long gk20a_tsg_dev_ioctl(struct file *filp,
 
 int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid);
 
-int gk20a_bind_runnable_channel_to_tsg(struct channel_gk20a *ch, int tsgid);
-int gk20a_unbind_channel_from_tsg(struct channel_gk20a *ch, int tsgid);
+int gk20a_tsg_unbind_channel(struct channel_gk20a *ch);
 
 struct tsg_gk20a {
 	struct gk20a *g;
@@ -36,8 +35,8 @@ struct tsg_gk20a {
 	bool in_use;
 	int tsgid;
 
-	struct list_head ch_runnable_list;
-	int num_runnable_channels;
+	struct list_head ch_list;
+	int num_active_channels;
 	struct mutex ch_list_lock;
 
 	struct gr_ctx_desc *tsg_gr_ctx;

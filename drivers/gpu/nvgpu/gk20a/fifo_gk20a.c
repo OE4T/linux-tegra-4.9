@@ -1722,41 +1722,32 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	phys_addr_t runlist_pa;
 	u32 old_buf, new_buf;
 	u32 chid, tsgid;
-	struct channel_gk20a *ch;
-	struct tsg_gk20a *tsg;
+	struct channel_gk20a *ch = NULL;
+	struct tsg_gk20a *tsg = NULL;
 	u32 count = 0;
-	int num_ch;
 	runlist = &f->runlist_info[runlist_id];
 
 	/* valid channel, add/remove it from active list.
 	   Otherwise, keep active list untouched for suspend/resume. */
 	if (hw_chid != ~0) {
+		ch = &f->channel[hw_chid];
+		if (gk20a_is_channel_marked_as_tsg(ch))
+			tsg = &f->tsg[ch->tsgid];
+
 		if (add) {
 			if (test_and_set_bit(hw_chid,
 				runlist->active_channels) == 1)
 				return 0;
-			if (gk20a_is_channel_marked_as_tsg(
-							&f->channel[hw_chid])) {
-				num_ch = gk20a_bind_runnable_channel_to_tsg(
-						&f->channel[hw_chid],
-						f->channel[hw_chid].tsgid);
-				if (num_ch > 0)
-					set_bit(f->channel[hw_chid].tsgid,
-						runlist->active_tsgs);
-			}
+			if (tsg && ++tsg->num_active_channels > 0)
+				set_bit(f->channel[hw_chid].tsgid,
+					runlist->active_tsgs);
 		} else {
 			if (test_and_clear_bit(hw_chid,
 				runlist->active_channels) == 0)
 				return 0;
-			if (gk20a_is_channel_marked_as_tsg(
-							&f->channel[hw_chid])) {
-				num_ch = gk20a_unbind_channel_from_tsg(
-						&f->channel[hw_chid],
-						f->channel[hw_chid].tsgid);
-				if (!num_ch)
-					clear_bit(f->channel[hw_chid].tsgid,
-						runlist->active_tsgs);
-			}
+			if (tsg && --tsg->num_active_channels == 0)
+				clear_bit(f->channel[hw_chid].tsgid,
+					runlist->active_tsgs);
 		}
 	}
 
@@ -1811,15 +1802,17 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 				ram_rl_entry_timeslice_timeout_f(
 				       ram_rl_entry_timeslice_timeout_128_f()) |
 				ram_rl_entry_tsg_length_f(
-					tsg->num_runnable_channels);
+					tsg->num_active_channels);
 			runlist_entry[1] = 0;
 			runlist_entry += 2;
 			count++;
 
-			/* add channels bound to this TSG */
+			/* add runnable channels bound to this TSG */
 			mutex_lock(&tsg->ch_list_lock);
-			list_for_each_entry(ch,
-					&tsg->ch_runnable_list, ch_entry) {
+			list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+				if (!test_bit(ch->hw_chid,
+						runlist->active_channels))
+					continue;
 				gk20a_dbg_info("add channel %d to runlist",
 					ch->hw_chid);
 				runlist_entry[0] =

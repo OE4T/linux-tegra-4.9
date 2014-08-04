@@ -352,9 +352,9 @@ struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 	mutex_init(&client->ref_lock);
 	atomic_set(&client->count, 1);
 
-	spin_lock(&dev->clients_lock);
+	mutex_lock(&dev->clients_lock);
 	list_add(&client->list, &dev->clients);
-	spin_unlock(&dev->clients_lock);
+	mutex_unlock(&dev->clients_lock);
 	return client;
 }
 
@@ -365,9 +365,9 @@ static void destroy_client(struct nvmap_client *client)
 	if (!client)
 		return;
 
-	spin_lock(&nvmap_dev->clients_lock);
+	mutex_lock(&nvmap_dev->clients_lock);
 	list_del(&client->list);
-	spin_unlock(&nvmap_dev->clients_lock);
+	mutex_unlock(&nvmap_dev->clients_lock);
 
 	while ((n = rb_first(&client->handle_refs))) {
 		struct nvmap_handle_ref *ref;
@@ -947,7 +947,7 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 	struct nvmap_client *client;
 	u32 heap_type = (u32)(uintptr_t)s->private;
 
-	spin_lock(&nvmap_dev->clients_lock);
+	mutex_lock(&nvmap_dev->clients_lock);
 	seq_printf(s, "%-18s %18s %8s %11s\n",
 		"CLIENT", "PROCESS", "PID", "SIZE");
 	seq_printf(s, "%-18s %18s %8s %11s %8s %6s %6s %6s %6s %6s %6s %8s\n",
@@ -961,7 +961,7 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 		allocations_stringify(client, s, heap_type);
 		seq_printf(s, "\n");
 	}
-	spin_unlock(&nvmap_dev->clients_lock);
+	mutex_unlock(&nvmap_dev->clients_lock);
 	nvmap_get_total_mss(NULL, NULL, &total, heap_type);
 	seq_printf(s, "%-18s %-18s %8s %10lluK\n", "total", "", "", K(total));
 	return 0;
@@ -975,7 +975,7 @@ static int nvmap_debug_maps_show(struct seq_file *s, void *unused)
 	struct nvmap_client *client;
 	u32 heap_type = (u32)(uintptr_t)s->private;
 
-	spin_lock(&nvmap_dev->clients_lock);
+	mutex_lock(&nvmap_dev->clients_lock);
 	seq_printf(s, "%-18s %18s %8s %11s\n",
 		"CLIENT", "PROCESS", "PID", "SIZE");
 	seq_printf(s, "%-18s %18s %8s %11s %8s %6s %9s %21s %18s\n",
@@ -990,7 +990,7 @@ static int nvmap_debug_maps_show(struct seq_file *s, void *unused)
 		maps_stringify(client, s, heap_type);
 		seq_printf(s, "\n");
 	}
-	spin_unlock(&nvmap_dev->clients_lock);
+	mutex_unlock(&nvmap_dev->clients_lock);
 
 	nvmap_get_total_mss(NULL, NULL, &total, heap_type);
 	seq_printf(s, "%-18s %-18s %8s %10lluK\n", "total", "", "", K(total));
@@ -1005,7 +1005,7 @@ static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
 	struct nvmap_client *client;
 	ulong heap_type = (ulong)s->private;
 
-	spin_lock(&nvmap_dev->clients_lock);
+	mutex_lock(&nvmap_dev->clients_lock);
 	seq_printf(s, "%-18s %18s %8s %11s\n",
 		"CLIENT", "PROCESS", "PID", "SIZE");
 	list_for_each_entry(client, &nvmap_dev->clients, list) {
@@ -1014,7 +1014,7 @@ static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
 		nvmap_get_client_mss(client, &client_total, heap_type);
 		seq_printf(s, " %10lluK\n", K(client_total));
 	}
-	spin_unlock(&nvmap_dev->clients_lock);
+	mutex_unlock(&nvmap_dev->clients_lock);
 	nvmap_get_total_mss(NULL, NULL, &total, heap_type);
 	seq_printf(s, "%-18s %18s %8s %10lluK\n", "total", "", "", K(total));
 	return 0;
@@ -1101,7 +1101,7 @@ static int nvmap_debug_iovmm_procrank_show(struct seq_file *s, void *unused)
 	struct nvmap_device *dev = s->private;
 	u64 total_memory, total_pss, total_non_pss;
 
-	spin_lock(&dev->clients_lock);
+	mutex_lock(&dev->clients_lock);
 	seq_printf(s, "%-18s %18s %8s %11s %11s %11s\n",
 		"CLIENT", "PROCESS", "PID", "PSS", "NON-PSS", "TOTAL");
 	list_for_each_entry(client, &dev->clients, list) {
@@ -1110,7 +1110,7 @@ static int nvmap_debug_iovmm_procrank_show(struct seq_file *s, void *unused)
 		seq_printf(s, " %10lluK %10lluK %10lluK\n", K(pss),
 			K(non_pss), K(total));
 	}
-	spin_unlock(&dev->clients_lock);
+	mutex_unlock(&dev->clients_lock);
 
 	nvmap_get_total_mss(&total_pss, &total_non_pss, &total_memory, NVMAP_HEAP_IOVMM);
 	seq_printf(s, "%-18s %18s %8s %10lluK %10lluK %10lluK\n",
@@ -1402,7 +1402,7 @@ int nvmap_probe(struct platform_device *pdev)
 
 	spin_lock_init(&dev->handle_lock);
 	INIT_LIST_HEAD(&dev->clients);
-	spin_lock_init(&dev->clients_lock);
+	mutex_init(&dev->clients_lock);
 	INIT_LIST_HEAD(&dev->lru_handles);
 	spin_lock_init(&dev->lru_lock);
 

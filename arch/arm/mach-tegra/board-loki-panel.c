@@ -395,6 +395,11 @@ static void loki_panel_select(void)
 		break;
 	}
 
+	/*
+	 * TODO
+	 * dpd enabling for dsi pads in board
+	 * will be deprecated.
+	 */
 	tegra_io_dpd_enable(&dsic_io);
 	tegra_io_dpd_enable(&dsid_io);
 

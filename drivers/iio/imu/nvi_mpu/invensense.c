@@ -1385,7 +1385,7 @@ int inv_read_pedometer_counter(struct nvi_state *st)
 	curr_counter = (u32)be32_to_cpup((__be32 *)(d));
 	if (0 != last_step_counter)
 		/* get_time_ns() - */
-		st->ped.last_step_time = iio_get_time_ns() -
+		st->ped.last_step_time = nvi_get_time_ns(st) -
 			((u64)(curr_counter - last_step_counter)) *
 			DMP_INTERVAL_INIT;
 

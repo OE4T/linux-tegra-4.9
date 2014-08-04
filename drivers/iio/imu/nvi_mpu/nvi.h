@@ -538,6 +538,7 @@ struct nvi_state {
 	unsigned int batch_period_us[DEV_N]; /* batch period us */
 	unsigned int batch_timeout_ms[DEV_N]; /* batch timeout ms */
 	unsigned short i2c_addr;	/* I2C address */
+	bool iio_ts_en;			/* use IIO timestamps */
 	bool shutdown;
 	bool suspend;
 	bool flush;
@@ -578,6 +579,7 @@ struct nvi_state {
 #endif /* NVI_I2C_DEBUG_INTERFACE */
 };
 
+s64 nvi_get_time_ns(struct nvi_state *st);
 int nvi_i2c_read(struct nvi_state *st, u16 addr, u8 reg, u16 len, u8 *buf);
 int nvi_i2c_rd(struct nvi_state *st, u8 bank, u8 reg, u16 len, u8 *buf);
 int nvi_i2c_write(struct nvi_state *st, u16 addr, u16 len, u8 *buf);

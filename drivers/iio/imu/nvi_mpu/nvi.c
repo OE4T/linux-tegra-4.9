@@ -15,6 +15,7 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
+#include <linux/ktime.h>
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
 #include <linux/regulator/consumer.h>
@@ -27,7 +28,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(101)
+#define NVI_DRIVER_VERSION		(102)
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"MPU6050"
 #define NVI_NAME_MPU6500		"MPU6500"
@@ -99,6 +100,9 @@ static unsigned short nvi_i2c_addrs[] = {
 	0x69,
 };
 
+static struct iio_dev *indio_dev_local;
+
+
 static int nvi_nb_vreg(struct nvi_state *st,
 		       unsigned long event, unsigned int i);
 
@@ -124,7 +128,16 @@ static int (* const nvi_nb_vreg_pf[])(struct notifier_block *nb,
 	nvi_nb_vreg_vlogic,
 };
 
-static struct iio_dev *indio_dev_local;
+s64 nvi_get_time_ns(struct nvi_state *st)
+{
+	struct timespec ts;
+
+	if (st->iio_ts_en)
+		return iio_get_time_ns();
+
+	ktime_get_ts(&ts);
+	return timespec_to_ns(&ts);
+}
 
 static void nvi_err(struct nvi_state *st)
 {
@@ -386,7 +399,6 @@ static int nvi_wr_gyro_config1(struct nvi_state *st, u8 val)
 					 st->hal->reg->gyro_config1.reg,
 					 st->rc.gyro_config1, val);
 			st->rc.gyro_config1 = val;
-			ret = 1; /* flag change made */
 		}
 	}
 	return ret;
@@ -449,7 +461,6 @@ int nvi_wr_gyro_config(struct nvi_state *st, u8 test, u8 fsr, u8 lpf)
 					 st->hal->reg->gyro_config2.reg,
 					 st->rc.gyro_config2, val);
 			st->rc.gyro_config2 = val;
-			ret = 1; /* flag change made */
 		}
 	}
 	return ret;
@@ -478,7 +489,6 @@ int nvi_wr_accel_config2(struct nvi_state *st, u8 val)
 					 st->hal->reg->accel_config2.reg,
 					 st->rc.accel_config2, val);
 			st->rc.accel_config2 = val;
-			ret = 1; /* flag change made */
 		}
 	}
 	return ret;
@@ -543,7 +553,6 @@ int nvi_wr_accel_config(struct nvi_state *st, u8 test, u8 fsr, u8 lpf)
 					 st->hal->reg->accel_config.reg,
 					 st->rc.accel_config, val);
 			st->rc.accel_config = val;
-			ret = 1; /* flag change made */
 		}
 	}
 	return ret;
@@ -1255,12 +1264,12 @@ static int nvi_vreg_init(struct nvi_state *st)
 			ret = PTR_ERR(st->vreg[i].consumer);
 			dev_err(&st->i2c->dev, "%s ERR %d for %s\n",
 				__func__, ret, st->vreg[i].supply);
-			st->vreg_en_ts[i] = iio_get_time_ns();
+			st->vreg_en_ts[i] = nvi_get_time_ns(st);
 			st->vreg[i].consumer = NULL;
 		} else {
 			ret = regulator_is_enabled(st->vreg[i].consumer);
 			if (ret > 0)
-				st->vreg_en_ts[i] = iio_get_time_ns();
+				st->vreg_en_ts[i] = nvi_get_time_ns(st);
 			else
 				st->vreg_en_ts[i] = 0;
 			st->nb_vreg[i].notifier_call = nvi_nb_vreg_pf[i];
@@ -1278,7 +1287,7 @@ static int nvi_nb_vreg(struct nvi_state *st,
 		       unsigned long event, unsigned int i)
 {
 	if (event & REGULATOR_EVENT_POST_ENABLE)
-		st->vreg_en_ts[i] = iio_get_time_ns();
+		st->vreg_en_ts[i] = nvi_get_time_ns(st);
 	else if (event & (REGULATOR_EVENT_DISABLE |
 			  REGULATOR_EVENT_FORCE_DISABLE))
 		st->vreg_en_ts[i] = 0;
@@ -1304,7 +1313,7 @@ int nvi_pm_wr(struct nvi_state *st, u8 pwr_mgmt_1, u8 pwr_mgmt_2, u8 lp)
 		st->rc_dis = true;
 		delay_ms = 0;
 		for (i = 0; i < ARRAY_SIZE(nvi_vregs); i++) {
-			por_ns = iio_get_time_ns() - st->vreg_en_ts[i];
+			por_ns = nvi_get_time_ns(st) - st->vreg_en_ts[i];
 			if ((por_ns < 0) || (!st->vreg_en_ts[i])) {
 				delay_ms = (POR_MS * 1000000);
 				break;
@@ -1528,7 +1537,7 @@ int nvi_pm(struct nvi_state *st, int pm_req)
 		if (pm > NVI_PM_ON_CYCLE)
 			nvi_user_ctrl_en(st, true, true);
 		if ((pm == NVI_PM_ON_FULL) && (!st->push_ts))
-			st->push_ts = iio_get_time_ns() +
+			st->push_ts = nvi_get_time_ns(st) +
 					   st->chip_config.gyro_start_delay_ns;
 	} else {
 		/* interrupts are disabled until NVI_PM_AUTO */
@@ -1655,6 +1664,7 @@ static int nvi_dev_delay(struct nvi_state *st, unsigned int dev)
 				break;
 		}
 	}
+
 	if (st->dbg)
 		dev_info(&st->i2c->dev, "%s dev=%u delay=%u\n",
 			 __func__, dev, st->smplrt_delay_us[dev]);
@@ -2049,7 +2059,7 @@ static int nvi_reset(struct nvi_state *st,
 		spin_lock_irqsave(&st->time_stamp_lock, flags);
 		kfifo_reset(&st->timestamps);
 		spin_unlock_irqrestore(&st->time_stamp_lock, flags);
-		st->fifo_ts = iio_get_time_ns();
+		st->fifo_ts = nvi_get_time_ns(st);
 	}
 	if (irq)
 		ret |= nvi_int_able(st, true);
@@ -2128,13 +2138,13 @@ static int nvi_aux_bypass_request(struct nvi_state *st, bool enable)
 	int ret = 0;
 
 	if ((bool)(st->rc.int_pin_cfg & BIT_BYPASS_EN) == enable) {
-		st->aux.bypass_timeout_ns = iio_get_time_ns();
+		st->aux.bypass_timeout_ns = nvi_get_time_ns(st);
 		st->aux.bypass_lock++;
 		if (!st->aux.bypass_lock)
 			dev_err(&st->i2c->dev, "%s rollover ERR\n", __func__);
 	} else {
 		if (st->aux.bypass_lock) {
-			ns = iio_get_time_ns() - st->aux.bypass_timeout_ns;
+			ns = nvi_get_time_ns(st) - st->aux.bypass_timeout_ns;
 			to = st->chip_config.bypass_timeout_ms * 1000000;
 			if (ns > to)
 				st->aux.bypass_lock = 0;
@@ -2855,7 +2865,7 @@ static irqreturn_t nvi_irq_thread(int irq, void *dev_id)
 
 	mutex_lock(&st->srlock);
 	mutex_lock(&indio_dev->mlock);
-	ts = iio_get_time_ns();
+	ts = nvi_get_time_ns(st);
 	/* if only accelermeter data */
 	if (st->rc.pwr_mgmt_1 & BIT_CYCLE) {
 		ret = nvi_accel_read(st, ts);
@@ -3070,7 +3080,7 @@ static irqreturn_t nvi_irq_handler(int irq, void *dev_id)
 	s64 ts = 0;
 
 	if (!(st->master_enable & (1 << DEV_DMP))) {
-		ts = iio_get_time_ns();
+		ts = nvi_get_time_ns(st);
 		kfifo_in_spinlocked(&st->timestamps, &ts, 1,
 				    &st->time_stamp_lock);
 		if (kfifo_is_full(&st->timestamps)) {
@@ -4268,8 +4278,8 @@ static struct nvi_rr nvi_rr_accel[] = {
 	/* all accelerometer values are in g's */
 	{
 		.max_range		= {
-			.ival		= 2,
-			.micro		= 0,
+			.ival		= 19,
+			.micro		= 613300,
 		},
 		.resolution		= {
 			.ival		= 0,
@@ -4278,8 +4288,8 @@ static struct nvi_rr nvi_rr_accel[] = {
 	},
 	{
 		.max_range		= {
-			.ival		= 4,
-			.micro		= 0,
+			.ival		= 39,
+			.micro		= 226600,
 		},
 		.resolution		= {
 			.ival		= 0,
@@ -4288,8 +4298,8 @@ static struct nvi_rr nvi_rr_accel[] = {
 	},
 	{
 		.max_range		= {
-			.ival		= 8,
-			.micro		= 0,
+			.ival		= 78,
+			.micro		= 453200,
 		},
 		.resolution		= {
 			.ival		= 0,
@@ -4298,8 +4308,8 @@ static struct nvi_rr nvi_rr_accel[] = {
 	},
 	{
 		.max_range		= {
-			.ival		= 16,
-			.micro		= 0,
+			.ival		= 156,
+			.micro		= 906400,
 		},
 		.resolution		= {
 			.ival		= 0,
@@ -4309,44 +4319,45 @@ static struct nvi_rr nvi_rr_accel[] = {
 };
 
 static struct nvi_rr nvi_rr_anglvel[] = {
+	/* rad / sec */
 	{
 		.max_range		= {
-			.ival		= 250, /* degrees / sec */
-			.micro		= 0,
+			.ival		= 4,
+			.micro		= 363323,
 		},
 		.resolution		= {
 			.ival		= 0,
-			.micro		= 133, /* rad / sec */
+			.micro		= 133,
 		},
 	},
 	{
 		.max_range		= {
-			.ival		= 500, /* degrees / sec */
-			.micro		= 0,
+			.ival		= 8,
+			.micro		= 726646,
 		},
 		.resolution		= {
 			.ival		= 0,
-			.micro		= 266, /* rad / sec */
+			.micro		= 266,
 		},
 	},
 	{
 		.max_range		= {
-			.ival		= 1000, /* degrees / sec */
-			.micro		= 0,
+			.ival		= 17,
+			.micro		= 453292,
 		},
 		.resolution		= {
 			.ival		= 0,
-			.micro		= 533, /* rad / sec */
+			.micro		= 533,
 		},
 	},
 	{
 		.max_range		= {
-			.ival		= 2000, /* degrees / sec */
-			.micro		= 0,
+			.ival		= 34,
+			.micro		= 906585,
 		},
 		.resolution		= {
 			.ival		= 0,
-			.micro		= 1065, /* rad / sec */
+			.micro		= 1065,
 		},
 	},
 };
@@ -4365,7 +4376,7 @@ static struct nvi_rr nvi_rr_temp[] = {
 };
 
 static const struct nvi_hal_dev nvi_hal_6050_accel = {
-	.version			= 2,
+	.version			= 3,
 	.selftest_scale			= 8,
 	.rr				= nvi_rr_accel,
 	.scale				= {
@@ -4380,7 +4391,7 @@ static const struct nvi_hal_dev nvi_hal_6050_accel = {
 };
 
 static const struct nvi_hal_dev nvi_hal_6050_anglvel = {
-	.version			= 2,
+	.version			= 3,
 	.selftest_scale			= 250,
 	.rr				= nvi_rr_anglvel,
 	.scale				= {
@@ -4595,7 +4606,7 @@ static const unsigned long nvi_lpa_delay_us_tbl_6500[] = {
 };
 
 static const struct nvi_hal_dev nvi_hal_6500_accel = {
-	.version			= 2,
+	.version			= 3,
 	.selftest_scale			= 2,
 	.rr				= nvi_rr_accel,
 	.scale				= {
@@ -5297,7 +5308,7 @@ static void nvi_shutdown(struct i2c_client *client)
 	mutex_lock(&indio_dev->mlock);
 	st->shutdown = true;
 	if (st->i2c->irq)
-		disable_irq(st->i2c->irq);
+		disable_irq_nosync(st->i2c->irq);
 	if (st->hal)
 		nvi_pm(st, NVI_PM_OFF);
 	mutex_unlock(&indio_dev->mlock);
@@ -5340,6 +5351,9 @@ static int nvi_of_dt(struct i2c_client *client, struct nvi_state *st)
 	u32 tmp;
 	int len;
 
+	/* common NVS programmable parameters */
+	st->iio_ts_en = of_property_read_bool(dn, "invensense,iio_timestamps");
+	/* device specific parameters */
 	pchar = of_get_property(dn, "invensense,matrix", &len);
 	if (pchar && len == sizeof(st->pdata.orientation)) {
 		memcpy(&st->pdata.orientation, pchar, len);

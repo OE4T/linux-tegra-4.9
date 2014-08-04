@@ -136,6 +136,7 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
+#include <linux/ktime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
@@ -147,7 +148,7 @@
 #include <linux/iio/trigger.h>
 
 
-#define MX_VERSION_DRIVER		(101)
+#define MX_VERSION_DRIVER		(102)
 #define MX_VENDOR			"Maxim"
 #define MX_NAME				"max4400x"
 #define MX_NAME_MAX44005		"max44005"
@@ -159,12 +160,14 @@
 #define MX_HW_DELAY_MS			(1)
 #define MX_POLL_DLY_MS_DFLT		(2000)
 #define MX_POLL_DLY_MS_MIN		(100)
-#define MX_THRESHOLD_LUX_DFLT		(50)
-#define MX_THRESHOLD_PROX_DFLT		(10)
-#define MX_THRESHOLD_PROX_BINARY_DFLT	(1)
+/* setting _REPORT_N to 2 causes an extra reading after crossing the threshold
+ * allowing a more accurate settled reported value.
+ */
+#define MX_REPORT_N			(2)
 #define MX_AMB_CFG_DFLT			(0x43)
 #define MX_PRX_CFG_DFLT			(0x12)
 /* light defines */
+#define MX_LIGHT_THRESHOLD_DFLT		(50)
 #define MX_LIGHT_VERSION		(1)
 #define MX_LIGHT_MAX_RANGE_IVAL		(14323)
 #define MX_LIGHT_MAX_RANGE_MICRO	(0)
@@ -176,6 +179,7 @@
 #define MX_LIGHT_OFFSET_MICRO		(0)
 #define MX_LIGHT_MILLIAMP		"0.0135"
 /* temp defines */
+#define MX_TEMP_THRESHOLD_DFLT		(2)
 #define MX_TEMP_VERSION			(1)
 #define MX_TEMP_MAX_RANGE_IVAL		(125)
 #define MX_TEMP_MAX_RANGE_MICRO		(0)
@@ -187,6 +191,8 @@
 #define MX_TEMP_OFFSET_MICRO		(0)
 #define MX_TEMP_MILLIAMP		"0.0135"
 /* proximity defines */
+#define MX_PROX_THRESHOLD_DFLT		(10)
+#define MX_PROX_THRESHOLD_BINARY_DFLT	(1) /* > 0 = enable */
 #define MX_PROX_VERSION			(1)
 #define MX_PROX_MAX_RANGE_IVAL		(1)
 #define MX_PROX_MAX_RANGE_MICRO		(0)
@@ -199,6 +205,7 @@
 #define MX_PROX_MILLIAMP		"10.0195"
 /* HW registers */
 #define MX_REG_STS			(0x00)
+#define MX_REG_STS_POR			(0x04)
 #define MX_REG_STS_RESET		(4)
 #define MX_REG_STS_SHDN			(3)
 #define MX_REG_STS_PWRON		(2)
@@ -210,6 +217,7 @@
 #define MX_REG_CFG_MAIN_AMBSEL		(2)
 #define MX_REG_CFG_MAIN_PRXINTE		(1)
 #define MX_REG_CFG_MAIN_AMBINTE		(0)
+#define MX_REG_CFG_MAIN_INTE_MASK	(0x03)
 #define MX_REG_CFG_AMB			(0x02)
 #define MX_REG_CFG_AMB_POR		(0x20)
 #define MX_REG_CFG_AMB_TRIM		(7)
@@ -289,6 +297,8 @@ enum MX_ATTR {
 	MX_ATTR_TEMP_PART,
 	MX_ATTR_TEMP_VERSION,
 	MX_ATTR_TEMP_MILLIAMP,
+	MX_ATTR_TEMP_THRESH_LO,
+	MX_ATTR_TEMP_THRESH_HI,
 	MX_ATTR_PROX_PART,
 	MX_ATTR_PROX_VERSION,
 	MX_ATTR_PROX_MILLIAMP,
@@ -334,10 +344,10 @@ static u8 mx_mode_tbl[] = {		/* device enable */
 	0x00,				/* light */
 	0x00,				/* temp */
 	0x00,				/* temp + light */
-	0x05,				/* proximity */
-	0x03,				/* proximity + light */
-	0x03,				/* proximity + temp */
-	0x03				/* proximity + temp + light */
+	0x50,				/* proximity */
+	0x30,				/* proximity + light */
+	0x30,				/* proximity + temp */
+	0x30				/* proximity + temp + light */
 };
 
 /* 1 nW/cm^2 = 0.00683 lux */
@@ -392,13 +402,12 @@ struct mx_state {
 	int i_uc_hi[MX_DEV_N];		/* interpolation x3 uncalibrated hi */
 	int i_c_lo[MX_DEV_N];		/* interpolation y1 calibrated lo */
 	int i_c_hi[MX_DEV_N];		/* interpolation y3 calibrated hi */
-	unsigned int report;		/* used to report first valid sample */
-	unsigned int report_n;		/* this many on-change data reports */
-	unsigned int lux_thr_lo;	/* report when lux below this */
-	unsigned int lux_thr_hi;	/* report when lux above this */
-	unsigned int prx_thr_lo;	/* report when proximity below this */
-	unsigned int prx_thr_hi;	/* report when proximity above this */
+	int thr_lo[MX_DEV_N];		/* report when reported value < this */
+	int thr_hi[MX_DEV_N];		/* report when reported value > this */
 	unsigned int prx_thr_bin;	/* proximity binary mode threshold */
+	unsigned int report;		/* report count */
+	unsigned int report_n;		/* this many on-change data reports */
+	bool iio_ts_en;			/* use IIO timestamps */
 	bool shutdown;			/* shutdown active flag */
 	bool suspend;			/* suspend active flag */
 	const char *part;		/* part name */
@@ -410,12 +419,23 @@ struct mx_state {
 	u8 rc_main_cfg;			/* cache of main configuration */
 	u8 rc_amb_cfg;			/* cache of ambient configuration */
 	u32 light;			/* sample light data */
-	s16 temp;			/* sample temp data */
+	s32 temp;			/* sample temp data */
 	u32 proximity;			/* reported proximity data */
 	u32 prox;			/* actual proximity data */
 	s64 ts;				/* sample data timestamp */
 };
 
+
+static s64 mx_get_time_ns(struct mx_state *st)
+{
+	struct timespec ts;
+
+	if (st->iio_ts_en)
+		return iio_get_time_ns();
+
+	ktime_get_ts(&ts);
+	return timespec_to_ns(&ts);
+}
 
 static void mx_err(struct mx_state *st)
 {
@@ -453,13 +473,15 @@ static int mx_i2c_write(struct mx_state *st, u16 len, u8 *buf)
 {
 	struct i2c_msg msg;
 
-	msg.addr = st->i2c_addr;
-	msg.flags = 0;
-	msg.len = len;
-	msg.buf = buf;
-	if (i2c_transfer(st->i2c->adapter, &msg, 1) != 1) {
-		mx_err(st);
-		return -EIO;
+	if (st->i2c_addr) {
+		msg.addr = st->i2c_addr;
+		msg.flags = 0;
+		msg.len = len;
+		msg.buf = buf;
+		if (i2c_transfer(st->i2c->adapter, &msg, 1) != 1) {
+			mx_err(st);
+			return -EIO;
+		}
 	}
 
 	return 0;
@@ -595,13 +617,12 @@ static int mx_pm(struct mx_state *st, bool enable)
 
 	if (enable) {
 		ret = mx_vreg_en_all(st);
-		if (ret) {
+		if (ret)
 			mdelay(MX_HW_DELAY_MS);
-			mx_i2c_wr(st, MX_REG_STS, (1 << MX_REG_STS_RESET));
-			mdelay(MX_HW_DELAY_MS);
-			st->rc_main_cfg = MX_REG_CFG_MAIN_POR;
-			st->rc_amb_cfg = MX_REG_CFG_AMB_POR;
-		}
+		mx_i2c_wr(st, MX_REG_STS, (1 << MX_REG_STS_RESET));
+		mdelay(MX_HW_DELAY_MS);
+		st->rc_main_cfg = MX_REG_CFG_MAIN_POR;
+		st->rc_amb_cfg = MX_REG_CFG_AMB_POR;
 		mx_i2c_wr(st, MX_REG_STS, 0);
 	} else {
 		ret = mx_vreg_sts(st);
@@ -664,38 +685,39 @@ static void mx_buf_push(struct iio_dev *indio_dev)
 	unsigned int i;
 	unsigned int bytes = 0;
 
+	if (!iio_buffer_enabled(indio_dev))
+		return;
+
 	if (iio_scan_mask_query(indio_dev, indio_dev->buffer, MX_SCAN_LIGHT)) {
 		n = sizeof(st->light);
 		i = mx_buf_index(n, &bytes);
 		memcpy(&buf[i], &st->light, n);
+		if (st->dbg & MX_DBG_SPEW_LIGHT)
+			dev_info(&st->i2c->dev, "light: %u %lld\n",
+				 st->light, st->ts);
 	}
 	if (iio_scan_mask_query(indio_dev, indio_dev->buffer, MX_SCAN_TEMP)) {
 		n = sizeof(st->temp);
 		i = mx_buf_index(n, &bytes);
 		memcpy(&buf[i], &st->temp, n);
+		if (st->dbg & MX_DBG_SPEW_TEMP)
+			dev_info(&st->i2c->dev, "temp: %d %lld\n",
+				 st->temp, st->ts);
 	}
 	if (iio_scan_mask_query(indio_dev, indio_dev->buffer, MX_SCAN_PROX)) {
 		n = sizeof(st->proximity);
 		i = mx_buf_index(n, &bytes);
 		memcpy(&buf[i], &st->proximity, n);
+		if (st->dbg & MX_DBG_SPEW_PROX)
+			dev_info(&st->i2c->dev, "proximity: %u %lld\n",
+				 st->proximity, st->ts);
 	}
 	if (indio_dev->buffer->scan_timestamp) {
 		n = sizeof(st->ts);
 		i = mx_buf_index(n, &bytes);
 		memcpy(&buf[i], &st->ts, n);
 	}
-	if (iio_buffer_enabled(indio_dev)) {
-		iio_push_to_buffers(indio_dev, buf);
-		if (st->dbg & MX_DBG_SPEW_LIGHT)
-			dev_info(&st->i2c->dev, "light: %u %lld\n",
-				 st->light, st->ts);
-		if (st->dbg & MX_DBG_SPEW_TEMP)
-			dev_info(&st->i2c->dev, "temp: %hd %lld\n",
-				 st->temp, st->ts);
-		if (st->dbg & MX_DBG_SPEW_PROX)
-			dev_info(&st->i2c->dev, "proximity: %u %lld\n",
-				 st->proximity, st->ts);
-	}
+	iio_push_to_buffers(indio_dev, buf);
 }
 
 static int mx_cmd_wr(struct mx_state *st, unsigned int enable, bool irq_en)
@@ -717,8 +739,8 @@ static int mx_cmd_wr(struct mx_state *st, unsigned int enable, bool irq_en)
 			dev_info(&st->i2c->dev, "%s amb_cfg=%hhx err=%d\n",
 				 __func__, amb_cfg, ret);
 	}
-	main_cfg = mx_mode_tbl[enable] << MX_REG_CFG_MAIN_MODE;
-	if (irq_en) {
+	main_cfg = mx_mode_tbl[enable];
+	if (irq_en && st->i2c->irq) {
 		if (enable & (1 << MX_DEV_LIGHT))
 			main_cfg |= (1 << MX_REG_CFG_MAIN_AMBINTE);
 		if (enable & (1 << MX_DEV_PROX))
@@ -734,7 +756,7 @@ static int mx_cmd_wr(struct mx_state *st, unsigned int enable, bool irq_en)
 			dev_info(&st->i2c->dev, "%s main_cfg=%hhx err=%d\n",
 				 __func__, main_cfg, ret);
 	}
-	if (irq_en && !ret_t)
+	if (st->rc_main_cfg & MX_REG_CFG_MAIN_INTE_MASK)
 		ret_t = 1; /* flag IRQ enabled */
 	return ret_t;
 }
@@ -774,11 +796,8 @@ static int mx_interpolate(int x1, int x2, int x3, int y1, int *y2, int y3)
 
 static void mx_report_init(struct mx_state *st)
 {
-	st->ts = iio_get_time_ns();
-	if (st->report_n)
-		st->report = st->report_n;
-	else
-		st->report = 1;
+	st->ts = 0;
+	st->report = st->report_n;
 }
 
 static int mx_thr_wr(struct mx_state *st, u8 reg, u16 thr_lo, u16 thr_hi)
@@ -804,21 +823,39 @@ static int mx_thr_wr(struct mx_state *st, u8 reg, u16 thr_lo, u16 thr_hi)
 	return ret;
 }
 
-static int mx_thr(struct mx_state *st, unsigned int dev, u8 reg, unsigned lsb,
-		  int val_new, int val_old, int thr_lo, int thr_hi, u16 hw_max)
+static int mx_thr(struct mx_state *st, unsigned int dev, u8 reg,
+		  unsigned int lsb, int val_new, int *val_old, u16 hw_max)
 {
 	u64 calc;
-	int ret = 0;
+	int thr_lo;
+	int thr_hi;
+	int ret = 1;
 
-	if (thr_lo || thr_hi) {
-		if (val_new > (val_old + thr_hi)) {
-			ret = 1;
-		} else if (val_old > thr_lo) {
-			if (val_new < (val_old - thr_lo))
-				ret = 1;
-		}
-		if (ret) {
-			thr_lo = val_new - thr_lo;
+	/* get calibrated value */
+	mx_interpolate(st->i_uc_lo[dev], val_new,
+		       st->i_uc_hi[dev],
+		       st->i_c_lo[dev], &val_new,
+		       st->i_c_hi[dev]);
+	if ((st->scale_val[dev] == 1) && (st->scale_val2[dev] == 0)) {
+		/* calibration mode */
+		st->report = 2; /* 2 causes polling after reporting */
+		*val_old = val_new;
+		return 0;
+	}
+
+	if (val_new > (*val_old + st->thr_hi[dev])) {
+		ret = 0;
+	} else if (*val_old > st->thr_lo[dev]) {
+		if (val_new < (*val_old - st->thr_lo[dev]))
+			ret = 0;
+	}
+	/* if already reporting IIO buffer, might as well set new thresholds */
+	if (st->report || !ret) {
+		if (!st->report)
+			st->report = st->report_n;
+		*val_old = val_new;
+		if (st->i2c->irq && reg) {
+			thr_lo = val_new - st->thr_lo[dev];
 			/* get the uncalibrated value */
 			mx_interpolate(st->i_c_lo[dev], thr_lo,
 				       st->i_c_hi[dev],
@@ -833,7 +870,7 @@ static int mx_thr(struct mx_state *st, unsigned int dev, u8 reg, unsigned lsb,
 			if (lsb)
 				do_div(calc, lsb);
 			thr_lo = calc;
-			thr_hi = val_new + thr_hi;
+			thr_hi = val_new + st->thr_hi[dev];
 			/* get the uncalibrated value */
 			mx_interpolate(st->i_c_lo[dev], thr_hi,
 				       st->i_c_hi[dev],
@@ -849,161 +886,140 @@ static int mx_thr(struct mx_state *st, unsigned int dev, u8 reg, unsigned lsb,
 			if (thr_hi > hw_max)
 				thr_hi = hw_max;
 			ret = mx_thr_wr(st, reg, thr_lo, thr_hi);
-			if (ret)
-				ret = 2; /* poll mode */
-			else
-				ret = 1; /* flag report */
 		}
-	} else if (val_new != val_old) {
-		ret = 2; /* poll mode */
 	}
-	return ret;
+	return ret; /* ret == 0: report, ret < 0: report && poll (error) */
 }
 
 static int mx_rd_light(struct mx_state *st, s64 ts)
 {
-	u16 lux;
-	u16 lux_max;
 	u64 calc;
 	u32 light;
+	u16 hw;
 	unsigned int lsb;
 	int i;
 	int ret;
 
-	ret = mx_i2c_read(st, MX_REG_DATA_AMB_CLEAR, 2, (u8 *)&lux);
+	ret = mx_i2c_read(st, MX_REG_DATA_AMB_CLEAR, 2, (u8 *)&hw);
 	if (ret)
 		return ret;
 
-	lux = be16_to_cpu(lux);
+	hw = be16_to_cpu(hw);
 	i = st->rc_amb_cfg & MX_REG_CFG_AMB_AMBPGA_MASK;
 	if (st->dev_id == MX_DEVID_MAX44005)
 		lsb = mx_ambpga_44005[i];
 	else
 		lsb = mx_ambpga_44006[i];
 	calc = lsb;
-	calc *= lux;
+	calc *= hw;
 	if (st->scale_val2[MX_DEV_LIGHT])
 		do_div(calc, st->scale_val2[MX_DEV_LIGHT]);
 	light = calc;
-	/* get calibrated value */
-	mx_interpolate(st->i_uc_lo[MX_DEV_LIGHT], light,
-		       st->i_uc_hi[MX_DEV_LIGHT],
-		       st->i_c_lo[MX_DEV_LIGHT], &light,
-		       st->i_c_hi[MX_DEV_LIGHT]);
-	i = st->rc_amb_cfg & MX_REG_CFG_AMB_AMBTIM_MASK;
-	i >>= MX_REG_CFG_AMB_AMBTIM;
-	lux_max = mx_ambtim_mask[i];
-	ret = mx_thr(st, MX_DEV_LIGHT, MX_REG_AMB_UPTHR_H, lsb, light,
-		     st->light, st->lux_thr_lo, st->lux_thr_hi, lux_max);
-	if ((ret > 0) && !(st->dbg & MX_DBG_VAL_LIGHT))
-		st->light = light;
-	if (st->dbg & MX_DBG_SPEW_LIGHT_POLL) {
+	if (st->dbg & MX_DBG_SPEW_LIGHT_POLL)
 		dev_info(&st->i2c->dev,
 			 "poll light %u %lld  diff=%d %lldns  hw=%hu\n",
-			 light, ts, light - st->light, ts - st->ts, lux);
-		if (ret > 0)
-			ret = 2; /* poll mode */
-		else
-			ret = -1; /* poll without report */
-	}
+			 light, ts, light - st->light, ts - st->ts, hw);
+	i = st->rc_amb_cfg & MX_REG_CFG_AMB_AMBTIM_MASK;
+	i >>= MX_REG_CFG_AMB_AMBTIM;
+	ret = mx_thr(st, MX_DEV_LIGHT, MX_REG_AMB_UPTHR_H, lsb, light,
+		     &st->light, mx_ambtim_mask[i]);
 	return ret;
 }
 
 static int mx_rd_temp(struct mx_state *st, s64 ts)
 {
-	u16 temp;
+	s32 temp;
+	s16 hw;
 	int ret;
 
-	ret = mx_i2c_read(st, MX_REG_DATA_TEMP_H, 2, (u8 *)&temp);
+	ret = mx_i2c_read(st, MX_REG_DATA_TEMP_H, 2, (u8 *)&hw);
 	if (ret)
 		return ret;
 
-	temp = be16_to_cpu(temp);
-	if (!(st->dbg & MX_DBG_VAL_TEMP))
-		st->temp = temp;
-	if (st->dbg & MX_DBG_SPEW_TEMP_POLL) {
+	hw = be16_to_cpu(hw);
+	temp = hw;
+	temp *= (MX_TEMP_RESOLUTION_MICRO / 10000);
+	if (st->dbg & MX_DBG_SPEW_TEMP_POLL)
 		dev_info(&st->i2c->dev,
 			 "poll temp %d %lld  diff=%d %lldns  hw=%hd\n",
-			 temp, ts, temp - st->temp, ts - st->ts, temp);
-		if (ret > 0)
-			ret = 2; /* poll mode */
-		else
-			ret = -1; /* poll without report */
-	}
-	return 1;
+			 temp, ts, temp - st->temp, ts - st->ts, hw);
+	ret = mx_thr(st, MX_DEV_TEMP, 0, 0, temp, &st->temp, 0);
+	return ret;
 }
 
 static int mx_rd_prox(struct mx_state *st, s64 ts)
 {
-	u16 prox;
-	u16 prox_lo;
-	u16 prox_hi;
+	u16 hw;
+	u16 hw_lo;
+	u16 hw_hi;
 	unsigned int proximity;
 	int ret = 0;
 
-	ret = mx_i2c_read(st, MX_REG_DATA_PROX_H, 2, (u8 *)&prox);
+	ret = mx_i2c_read(st, MX_REG_DATA_PROX_H, 2, (u8 *)&hw);
 	if (ret)
 		return ret;
 
-	st->prox = be16_to_cpu(prox);
+	hw = be16_to_cpu(hw);
 	if (st->prx_cfg & (1 << MX_REG_CFG_PRX_PRXTIM))
-		prox_hi = 0x00FF;
+		hw_hi = 0x00FF;
 	else
-		prox_hi = 0x03FF;
+		hw_hi = 0x03FF;
 	if (st->prx_thr_bin) {
 		/* proximity has binary threshold */
+		if (st->dbg & MX_DBG_SPEW_PROX_POLL)
+			dev_info(&st->i2c->dev,
+				 "poll proximity %hu %lld  diff=%d %lldns\n",
+				 hw, ts, hw - st->prox, ts - st->ts);
 		if ((st->scale_val[MX_DEV_PROX] == 1) &&
 					  (st->scale_val2[MX_DEV_PROX] == 0)) {
-			/* binary proximity in test mode - display raw data */
-			proximity = st->prox;
-			ret = 2; /* flag report and poll */
+			st->report = 2; /* 2 causes polling after reporting */
+			st->proximity = hw; /* display raw data */
 		} else {
-			if (st->prox > st->prx_thr_bin) {
+			/* the proximity threshold lo/hi are reversed */
+			if (hw > st->prx_thr_bin) {
 				proximity = 0;
-				if (st->prx_thr_bin > st->prx_thr_lo)
-					prox_lo = st->prx_thr_bin -
-								st->prx_thr_lo;
+				if (st->prx_thr_bin > st->thr_hi[MX_DEV_PROX])
+					hw_lo = st->prx_thr_bin -
+						       st->thr_hi[MX_DEV_PROX];
 				else
-					prox_lo = 1;
+					hw_lo = 1;
 				/* prox_hi already disabled */
 			} else {
 				proximity = 1;
-				prox_lo = 0; /* disable */
-				prox = st->prx_thr_bin + st->prx_thr_hi;
-				if (prox < prox_hi)
-					prox_hi = prox;
+				hw_lo = 0; /* disable */
+				hw = st->prx_thr_bin + st->thr_lo[MX_DEV_PROX];
+				if (hw < hw_hi)
+					hw_hi = hw;
 				else
-					prox_hi--;
+					hw_hi--;
 			}
 			if (proximity != st->proximity) {
+				if (!st->report)
+					st->report = st->report_n;
+				st->proximity = proximity;
+				st->prox = hw;
 				ret = mx_thr_wr(st, MX_REG_PRX_UPTHR_H,
-						prox_lo, prox_hi);
-				if (ret)
-					ret = 2; /* flag report */
-				else
-					ret = 1; /* flag report */
+						hw_lo, hw_hi);
 			}
 		}
 	} else {
-		/* FIXME */
-		/* reverse the lo/hi thresholds */
-		ret = mx_thr(st, MX_DEV_PROX, MX_REG_PRX_UPTHR_H, 0,
-			     st->prox, st->proximity,
-			     st->prx_thr_hi, st->prx_thr_lo, prox_hi);
 		/* reverse the high/low order */
-		proximity = prox_hi - st->prox;
-	}
-	if ((ret > 0) && !(st->dbg & MX_DBG_VAL_PROX))
-		st->proximity = proximity;
-	if (st->dbg & MX_DBG_SPEW_PROX_POLL) {
-		dev_info(&st->i2c->dev,
-			 "poll proximity %u %lld  diff=%d %lldns  hw=%hu\n",
-			 proximity, ts,
-			 proximity - st->proximity, ts - st->ts, st->prox);
-		if (ret > 0)
-			ret = 2; /* poll mode */
-		else
-			ret = -1; /* poll without report */
+		proximity = hw_hi - hw;
+		/* get calibrated value with reversed lo/hi */
+		mx_interpolate(st->i_uc_lo[MX_DEV_PROX], proximity,
+			       st->i_uc_hi[MX_DEV_PROX],
+			       st->i_c_lo[MX_DEV_PROX], &proximity,
+			       st->i_c_hi[MX_DEV_PROX]);
+		if (st->dbg & MX_DBG_SPEW_PROX_POLL)
+			dev_info(&st->i2c->dev,
+				 "poll prox %u %lld  diff=%d %lldns  hw=%hu\n",
+				 proximity, ts,
+				 proximity - st->proximity, ts - st->ts, hw);
+		/* the proximity threshold lo/hi are reversed */
+		ret = mx_thr(st, MX_DEV_PROX, MX_REG_PRX_UPTHR_H, 0,
+			     hw, &st->prox, hw_hi);
+		if (ret <= 0)
+			st->proximity = proximity;
 	}
 	return ret;
 }
@@ -1034,10 +1050,7 @@ static int mx_rd(struct iio_dev *indio_dev)
 	struct mx_state *st = iio_priv(indio_dev);
 	u8 sts;
 	s64 ts;
-	bool report = false;
-	unsigned int i;
 	int ret;
-	int ret_t = 0;
 
 	/* clear possible IRQ */
 	ret = mx_i2c_rd(st, MX_REG_STS, &sts);
@@ -1050,60 +1063,33 @@ static int mx_rd(struct iio_dev *indio_dev)
 		return -1;
 	}
 
-	ts = iio_get_time_ns();
-	if ((st->report < st->report_n) || !st->report) {
+	ts = mx_get_time_ns(st);
+	if (st->report < st->report_n) {
 		/* calculate elapsed time for allowed report rate */
 		if ((ts - st->ts) < st->poll_delay_ms * 1000000)
 			/* data changes are happening faster than allowed to
 			 * report so we poll for the next data at an allowed
 			 * rate with interrupts disabled.
 			 */
-			ret = mx_cmd_wr(st, st->enable, false);
+			return mx_cmd_wr(st, st->enable, false);
 	}
-	/* proximity device */
-	if (st->enable & (1 << MX_DEV_PROX)) {
-		ret = mx_rd_prox(st, ts);
-		if (ret > 0)
-			report = true;
-		if ((ret < 0) || (ret > 1))
-			ret_t |= ret;
-	}
-	/* temp device */
-	if (st->enable & (1 << MX_DEV_TEMP)) {
-		ret = mx_rd_temp(st, ts);
-		if (ret > 0)
-			report = true;
-		if ((ret < 0) || (ret > 1))
-			ret_t |= ret;
-	}
-	/* light device */
-	if (st->enable & (1 << MX_DEV_LIGHT)) {
-		ret = mx_rd_light(st, ts);
-		if (ret > 0)
-			report = true;
-		if ((ret < 0) || (ret > 1))
-			ret_t |= ret;
-	}
-	/* if IIO scale == 1 then in calibrate/test mode */
-	for (i = 0; i < MX_DEV_N; i++) {
-		if ((st->scale_val[i] == 1) && (st->scale_val2[i] == 0)) {
-			report = true;
-			break;
-		}
-	}
-	/* report if:
-	 * - st->report (usually used to report the first sample regardless)
-	 * - time since last report >= polling delay && data outside thresholds
-	 * - report regardless of change (for test and calibration)
-	 */
-	if (st->report || report) {
+	if ((st->enable & (1 << MX_DEV_PROX)) &&
+						(!(st->dbg & MX_DBG_VAL_PROX)))
+		ret |= mx_rd_prox(st, ts);
+	if ((st->enable & (1 << MX_DEV_TEMP)) &&
+						(!(st->dbg & MX_DBG_VAL_TEMP)))
+		ret |= mx_rd_temp(st, ts);
+	if ((st->enable & (1 << MX_DEV_LIGHT)) &&
+					       (!(st->dbg & MX_DBG_VAL_LIGHT)))
+		ret |= mx_rd_light(st, ts);
+	if (st->report) {
 		if (st->report)
 			st->report--;
 		st->ts = ts;
 		mx_buf_push(indio_dev);
 	}
-	if (ret_t || st->report)
-		/* poll if error or forcing reports */
+	if (st->report || ret < 0)
+		/* poll if error or more reporting */
 		ret = mx_cmd_wr(st, st->enable, false);
 	else
 		ret = mx_cmd_wr(st, st->enable, true);
@@ -1232,26 +1218,40 @@ static ssize_t mx_attr_store(struct device *dev,
 
 	case MX_ATTR_LIGHT_THRESH_LO:
 		msg = "ATTR_THRESH_LO";
-		old = st->lux_thr_lo;
-		st->lux_thr_lo = new;
+		old = st->thr_lo[MX_DEV_LIGHT];
+		st->thr_lo[MX_DEV_LIGHT] = new;
 		break;
 
 	case MX_ATTR_LIGHT_THRESH_HI:
 		msg = "ATTR_LIGHT_THRESH_HI";
-		old = st->lux_thr_hi;
-		st->lux_thr_hi = new;
+		old = st->thr_hi[MX_DEV_LIGHT];
+		st->thr_hi[MX_DEV_LIGHT] = new;
+		break;
+
+	case MX_ATTR_TEMP_THRESH_LO:
+		msg = "ATTR_TEMP_THRESH_LO";
+		old = st->thr_lo[MX_DEV_TEMP];
+		st->thr_lo[MX_DEV_TEMP] = new;
+		break;
+
+	case MX_ATTR_TEMP_THRESH_HI:
+		msg = "ATTR_TEMP_THRESH_HI";
+		old = st->thr_hi[MX_DEV_TEMP];
+		st->thr_hi[MX_DEV_TEMP] = new;
 		break;
 
 	case MX_ATTR_PROX_THRESH_LO:
 		msg = "ATTR_PROX_THRESH_LO";
-		old = st->prx_thr_lo;
-		st->prx_thr_lo = new;
+		/* proximity threshold lo/hi are reversed */
+		old = st->thr_hi[MX_DEV_PROX];
+		st->thr_hi[MX_DEV_PROX] = new;
 		break;
 
 	case MX_ATTR_PROX_THRESH_HI:
 		msg = "ATTR_PROX_THRESH_HI";
-		old = st->prx_thr_hi;
-		st->prx_thr_hi = new;
+		/* proximity threshold lo/hi are reversed */
+		old = st->thr_lo[MX_DEV_PROX];
+		st->thr_lo[MX_DEV_PROX] = new;
 		break;
 
 	default:
@@ -1300,10 +1300,10 @@ static ssize_t mx_attr_show(struct device *dev, struct device_attribute *attr,
 		return sprintf(buf, "%s\n", MX_LIGHT_MILLIAMP);
 
 	case MX_ATTR_LIGHT_THRESH_LO:
-		return sprintf(buf, "%u\n", st->lux_thr_lo);
+		return sprintf(buf, "%u\n", st->thr_lo[MX_DEV_LIGHT]);
 
 	case MX_ATTR_LIGHT_THRESH_HI:
-		return sprintf(buf, "%u\n", st->lux_thr_hi);
+		return sprintf(buf, "%u\n", st->thr_hi[MX_DEV_LIGHT]);
 
 	case MX_ATTR_TEMP_PART:
 		return sprintf(buf, "%s temperature\n", st->part);
@@ -1313,6 +1313,12 @@ static ssize_t mx_attr_show(struct device *dev, struct device_attribute *attr,
 
 	case MX_ATTR_TEMP_MILLIAMP:
 		return sprintf(buf, "%s\n", MX_TEMP_MILLIAMP);
+
+	case MX_ATTR_TEMP_THRESH_LO:
+		return sprintf(buf, "%u\n", st->thr_lo[MX_DEV_TEMP]);
+
+	case MX_ATTR_TEMP_THRESH_HI:
+		return sprintf(buf, "%u\n", st->thr_hi[MX_DEV_TEMP]);
 
 	case MX_ATTR_PROX_PART:
 		return sprintf(buf, "%s proximity\n", st->part);
@@ -1324,10 +1330,12 @@ static ssize_t mx_attr_show(struct device *dev, struct device_attribute *attr,
 		return sprintf(buf, "%s\n", MX_PROX_MILLIAMP);
 
 	case MX_ATTR_PROX_THRESH_LO:
-		return sprintf(buf, "%u\n", st->prx_thr_lo);
+		/* proximity threshold lo/hi are reversed */
+		return sprintf(buf, "%u\n", st->thr_hi[MX_DEV_PROX]);
 
 	case MX_ATTR_PROX_THRESH_HI:
-		return sprintf(buf, "%u\n", st->prx_thr_hi);
+		/* proximity threshold lo/hi are reversed */
+		return sprintf(buf, "%u\n", st->thr_lo[MX_DEV_PROX]);
 
 	default:
 		return -EINVAL;
@@ -1521,6 +1529,12 @@ static IIO_DEVICE_ATTR(temp_version, S_IRUGO,
 		       mx_attr_show, NULL, MX_ATTR_TEMP_VERSION);
 static IIO_DEVICE_ATTR(temp_milliamp, S_IRUGO,
 		       mx_attr_show, NULL, MX_ATTR_TEMP_MILLIAMP);
+static IIO_DEVICE_ATTR(temp_thresh_rising_value,
+		       S_IRUGO | S_IWUSR | S_IWGRP,
+		       mx_attr_show, mx_attr_store, MX_ATTR_TEMP_THRESH_HI);
+static IIO_DEVICE_ATTR(temp_thresh_falling_value,
+		       S_IRUGO | S_IWUSR | S_IWGRP,
+		       mx_attr_show, mx_attr_store, MX_ATTR_TEMP_THRESH_LO);
 static IIO_DEVICE_ATTR(proximity_part, S_IRUGO,
 		       mx_attr_show, NULL, MX_ATTR_PROX_PART);
 static IIO_DEVICE_ATTR(proximity_vendor, S_IRUGO,
@@ -1551,6 +1565,8 @@ static struct attribute *mx_attrs[] = {
 	&iio_dev_attr_temp_vendor.dev_attr.attr,
 	&iio_dev_attr_temp_version.dev_attr.attr,
 	&iio_dev_attr_temp_milliamp.dev_attr.attr,
+	&iio_dev_attr_temp_thresh_rising_value.dev_attr.attr,
+	&iio_dev_attr_temp_thresh_falling_value.dev_attr.attr,
 	/* proximity_part must be the first proximity attribute */
 	&iio_dev_attr_proximity_part.dev_attr.attr,
 	&iio_dev_attr_proximity_vendor.dev_attr.attr,
@@ -1691,18 +1707,24 @@ static int mx_write_raw(struct iio_dev *indio_dev,
 			old = st->light;
 			st->light = val;
 			st->dbg |= MX_DBG_VAL_LIGHT;
+			if ((st->enable & (1 << MX_DEV_LIGHT)) && !st->report)
+				st->report = 1;
 			break;
 
 		case IIO_TEMP:
 			old = st->temp;
 			st->temp = val;
 			st->dbg |= MX_DBG_VAL_TEMP;
+			if ((st->enable & (1 << MX_DEV_TEMP)) && !st->report)
+				st->report = 1;
 			break;
 
 		case IIO_PROXIMITY:
 			old = st->proximity;
 			st->proximity = val;
 			st->dbg |= MX_DBG_VAL_PROX;
+			if ((st->enable & (1 << MX_DEV_PROX)) && !st->report)
+				st->report = 1;
 			break;
 
 		default:
@@ -1754,7 +1776,7 @@ static struct iio_chan_spec mx_channels[] = {
 	{
 		.type			= IIO_TEMP,
 		.scan_index		= MX_SCAN_TEMP,
-		.scan_type		= IIO_ST('s', 14, 16, 0),
+		.scan_type		= IIO_ST('s', 32, 32, 0),
 		.info_mask_separate	= BIT(IIO_CHAN_INFO_RAW) |
 					  BIT(IIO_CHAN_INFO_PEAK) |
 					  BIT(IIO_CHAN_INFO_PEAK_SCALE) |
@@ -1858,40 +1880,36 @@ static SIMPLE_DEV_PM_OPS(mx_pm_ops, mx_suspend, mx_resume);
 static int mx_id_dev(struct iio_dev *indio_dev, const char *name)
 {
 	struct mx_state *st = iio_priv(indio_dev);
-	u8 val = 0;
+	u8 val;
 	int ret = 0;
 
-	if (!strcmp(name, MX_NAME_MAX44005)) {
-		st->dev_id = MX_DEVID_MAX44005;
-		st->part = MX_NAME_MAX44005;
+	if (!strcmp(name, MX_NAME_MAX44008)) {
+		st->dev_id = MX_DEVID_MAX44008;
+		st->part = MX_NAME_MAX44008;
 	} else if (!strcmp(name, MX_NAME_MAX44006)) {
 		st->dev_id = MX_DEVID_MAX44006;
 		st->part = MX_NAME_MAX44006;
-	} else if (!strcmp(name, MX_NAME_MAX44008)) {
-		st->dev_id = MX_DEVID_MAX44008;
-		st->part = MX_NAME_MAX44008;
-	}
-	if (!st->dev_id) {
+	} else if (!strcmp(name, MX_NAME_MAX44005)) {
+		st->dev_id = MX_DEVID_MAX44005;
+		st->part = MX_NAME_MAX44005;
+	} else if (!strcmp(name, MX_NAME)) {
+		/* There is no way to auto-detect the device since the
+		 * MX44006/8 has actual proximity HW that works but just
+		 * doesn't have the undetectable LED driver HW.  And of
+		 * course there isn't an ID register either.  So we'll
+		 * just confirm that our device exists and default to the
+		 * MX44005 with proximity support if using max4400x.
+		 */
+		st->dev_id = MX_DEVID_MAX44005;
+		st->part = MX_NAME_MAX44005;
 		ret = mx_i2c_rd(st, MX_REG_STS, &val);
 		if (ret)
 			return -ENODEV;
 
-		if (val != (1 << MX_REG_STS_PWRON))
+		if (val != MX_REG_STS_POR)
 			return -ENODEV;
-
-		ret = mx_i2c_rd(st, MX_REG_CFG_PRX, &val);
-		if (!ret) {
-			if (val == (1 << MX_REG_CFG_PRX_PRXTIM)) {
-				st->dev_id = MX_DEVID_MAX44005;
-				st->part = MX_NAME_MAX44005;
-			} else {
-				st->dev_id = MX_DEVID_MAX44006;
-				st->part = MX_NAME_MAX44006;
-			}
-			dev_info(&st->i2c->dev, "%s found %s\n",
-				__func__, st->part);
-		}
 	}
+
 	return ret;
 }
 
@@ -1910,7 +1928,6 @@ static int mx_id_i2c(struct iio_dev *indio_dev, const char *name)
 		st->i2c_addr = st->i2c->addr;
 		ret = mx_id_dev(indio_dev, name);
 	} else {
-		name = MX_NAME;
 		for (i = 0; i < ARRAY_SIZE(mx_i2c_addrs); i++) {
 			st->i2c_addr = mx_i2c_addrs[i];
 			ret = mx_id_dev(indio_dev, name);
@@ -1918,6 +1935,8 @@ static int mx_id_i2c(struct iio_dev *indio_dev, const char *name)
 				break;
 		}
 	}
+	if (ret)
+		st->i2c_addr = 0;
 	return ret;
 }
 
@@ -2023,9 +2042,16 @@ static const struct mx_iio_float mx_peak_scale_dflt[] = {
 	},
 };
 
+static const unsigned int mx_threshold_dflt[] = {
+	MX_LIGHT_THRESHOLD_DFLT,
+	MX_TEMP_THRESHOLD_DFLT,
+	MX_PROX_THRESHOLD_DFLT,
+};
+
 static int mx_parse_dt(struct i2c_client *client, struct mx_state *st)
 {
-	struct device_node *np = client->dev.of_node;
+	struct device_node *dn = client->dev.of_node;
+	unsigned int thresh;
 	unsigned int i;
 
 	/* default device specific parameters */
@@ -2041,102 +2067,106 @@ static int mx_parse_dt(struct i2c_client *client, struct mx_state *st)
 		st->peak_val2[i] = mx_peak_dflt[i].micro;
 		st->peak_scale_val[i] = mx_peak_scale_dflt[i].ival;
 		st->peak_scale_val2[i] = mx_peak_scale_dflt[i].micro;
+		if (st->scale_val2[i]) {
+			thresh = 1000000 / st->scale_val2[i];
+			thresh *= mx_threshold_dflt[i];
+		} else {
+			thresh = mx_threshold_dflt[i];
+		}
+		st->thr_lo[i] = thresh;
+		st->thr_hi[i] = thresh;
 	}
-
-	if (st->scale_val2[MX_DEV_LIGHT]) {
-		st->lux_thr_lo = 1000000 / st->scale_val2[MX_DEV_LIGHT];
-		st->lux_thr_hi = 1000000 / st->scale_val2[MX_DEV_LIGHT];
-	}
-	st->lux_thr_lo *= MX_THRESHOLD_LUX_DFLT;
-	st->lux_thr_hi *= MX_THRESHOLD_LUX_DFLT;
-	/* proximity has binary threshold */
-	st->prx_thr_bin = 1;
-	st->prx_thr_lo = MX_THRESHOLD_PROX_DFLT;
-	st->prx_thr_hi = MX_THRESHOLD_PROX_DFLT;
+	st->prx_thr_bin = MX_PROX_THRESHOLD_BINARY_DFLT;
 	/* device tree parameters */
 	if (client->dev.of_node) {
 		/* device specific parameters */
-		of_property_read_u8(np, "ambient_cfg_reg", &st->amb_cfg);
-		of_property_read_u8(np, "proximity_cfg_reg", &st->prx_cfg);
-		of_property_read_u8(np, "threshold_persist_reg", &st->thr_cfg);
+		of_property_read_u8(dn, "ambient_cfg_reg", &st->amb_cfg);
+		of_property_read_u8(dn, "proximity_cfg_reg", &st->prx_cfg);
+		of_property_read_u8(dn, "threshold_persist_reg", &st->thr_cfg);
 		/* common NVS programmable parameters */
-		of_property_read_u32(np, "report_count", &st->report_n);
+		st->iio_ts_en = of_property_read_bool(dn, "iio_timestamps");
+		of_property_read_u32(dn, "report_count", &st->report_n);
 		/* common NVS ALS programmable parameters */
-		of_property_read_s32(np, "light_uncalibrated_lo",
+		of_property_read_s32(dn, "light_uncalibrated_lo",
 				     &st->i_uc_lo[MX_DEV_LIGHT]);
-		of_property_read_s32(np, "light_uncalibrated_hi",
+		of_property_read_s32(dn, "light_uncalibrated_hi",
 				     &st->i_uc_hi[MX_DEV_LIGHT]);
-		of_property_read_s32(np, "light_calibrated_lo",
+		of_property_read_s32(dn, "light_calibrated_lo",
 				     &st->i_c_lo[MX_DEV_LIGHT]);
-		of_property_read_s32(np, "light_calibrated_hi",
+		of_property_read_s32(dn, "light_calibrated_hi",
 				     &st->i_c_hi[MX_DEV_LIGHT]);
-		of_property_read_s32(np, "light_max_range_val",
+		of_property_read_s32(dn, "light_max_range_val",
 				     &st->peak_val[MX_DEV_LIGHT]);
-		of_property_read_s32(np, "light_max_range_val2",
+		of_property_read_s32(dn, "light_max_range_val2",
 				     &st->peak_val2[MX_DEV_LIGHT]);
-		of_property_read_s32(np, "light_resolution_val",
+		of_property_read_s32(dn, "light_resolution_val",
 				     &st->peak_scale_val[MX_DEV_LIGHT]);
-		of_property_read_s32(np, "light_resolution_val2",
+		of_property_read_s32(dn, "light_resolution_val2",
 				     &st->peak_scale_val2[MX_DEV_LIGHT]);
-		of_property_read_s32(np, "light_scale_val",
+		of_property_read_s32(dn, "light_scale_val",
 				     &st->scale_val[MX_DEV_LIGHT]);
-		of_property_read_s32(np, "light_scale_val2",
+		of_property_read_s32(dn, "light_scale_val2",
 				     &st->scale_val2[MX_DEV_LIGHT]);
-		of_property_read_s32(np, "light_offset_val",
+		of_property_read_s32(dn, "light_offset_val",
 				     &st->offset_val[MX_DEV_LIGHT]);
-		of_property_read_s32(np, "light_offset_val2",
+		of_property_read_s32(dn, "light_offset_val2",
 				     &st->offset_val2[MX_DEV_LIGHT]);
-		of_property_read_u32(np, "light_threshold_lo",
-				     &st->lux_thr_lo);
-		of_property_read_u32(np, "light_threshold_hi",
-				     &st->lux_thr_hi);
+		of_property_read_u32(dn, "light_threshold_lo",
+				     &st->thr_lo[MX_DEV_LIGHT]);
+		of_property_read_u32(dn, "light_threshold_hi",
+				     &st->thr_hi[MX_DEV_LIGHT]);
 		/* common NVS temp programmable parameters */
-		of_property_read_s32(np, "temp_max_range_val",
+		of_property_read_s32(dn, "temp_max_range_val",
 				     &st->peak_val[MX_DEV_TEMP]);
-		of_property_read_s32(np, "temp_max_range_val2",
+		of_property_read_s32(dn, "temp_max_range_val2",
 				     &st->peak_val2[MX_DEV_TEMP]);
-		of_property_read_s32(np, "temp_resolution_val",
+		of_property_read_s32(dn, "temp_resolution_val",
 				     &st->peak_scale_val[MX_DEV_TEMP]);
-		of_property_read_s32(np, "temp_resolution_val2",
+		of_property_read_s32(dn, "temp_resolution_val2",
 				     &st->peak_scale_val2[MX_DEV_TEMP]);
-		of_property_read_s32(np, "temp_scale_val",
+		of_property_read_s32(dn, "temp_scale_val",
 				     &st->scale_val[MX_DEV_TEMP]);
-		of_property_read_s32(np, "temp_scale_val2",
+		of_property_read_s32(dn, "temp_scale_val2",
 				     &st->scale_val2[MX_DEV_TEMP]);
-		of_property_read_s32(np, "temp_offset_val",
+		of_property_read_s32(dn, "temp_offset_val",
 				     &st->offset_val[MX_DEV_TEMP]);
-		of_property_read_s32(np, "temp_offset_val2",
+		of_property_read_s32(dn, "temp_offset_val2",
 				     &st->offset_val2[MX_DEV_TEMP]);
+		of_property_read_u32(dn, "temp_threshold_lo",
+				     &st->thr_lo[MX_DEV_TEMP]);
+		of_property_read_u32(dn, "temp_threshold_hi",
+				     &st->thr_hi[MX_DEV_TEMP]);
 		/* common NVS proximity programmable parameters */
-		of_property_read_s32(np, "proximity_uncalibrated_lo",
+		of_property_read_s32(dn, "proximity_uncalibrated_lo",
 				     &st->i_uc_lo[MX_DEV_PROX]);
-		of_property_read_s32(np, "proximity_uncalibrated_hi",
+		of_property_read_s32(dn, "proximity_uncalibrated_hi",
 				     &st->i_uc_hi[MX_DEV_PROX]);
-		of_property_read_s32(np, "proximity_calibrated_lo",
+		of_property_read_s32(dn, "proximity_calibrated_lo",
 				     &st->i_c_lo[MX_DEV_PROX]);
-		of_property_read_s32(np, "proximity_calibrated_hi",
+		of_property_read_s32(dn, "proximity_calibrated_hi",
 				     &st->i_c_hi[MX_DEV_PROX]);
-		of_property_read_s32(np, "proximity_max_range_val",
+		of_property_read_s32(dn, "proximity_max_range_val",
 				     &st->peak_val[MX_DEV_PROX]);
-		of_property_read_s32(np, "proximity_max_range_val2",
+		of_property_read_s32(dn, "proximity_max_range_val2",
 				     &st->peak_val2[MX_DEV_PROX]);
-		of_property_read_s32(np, "proximity_resolution_val",
+		of_property_read_s32(dn, "proximity_resolution_val",
 				     &st->peak_scale_val[MX_DEV_PROX]);
-		of_property_read_s32(np, "proximity_resolution_val2",
+		of_property_read_s32(dn, "proximity_resolution_val2",
 				     &st->peak_scale_val2[MX_DEV_PROX]);
-		of_property_read_s32(np, "proximity_scale_val",
+		of_property_read_s32(dn, "proximity_scale_val",
 				     &st->scale_val[MX_DEV_PROX]);
-		of_property_read_s32(np, "proximity_scale_val2",
+		of_property_read_s32(dn, "proximity_scale_val2",
 				     &st->scale_val2[MX_DEV_PROX]);
-		of_property_read_s32(np, "proximity_offset_val",
+		of_property_read_s32(dn, "proximity_offset_val",
 				     &st->offset_val[MX_DEV_PROX]);
-		of_property_read_s32(np, "proximity_offset_val2",
+		of_property_read_s32(dn, "proximity_offset_val2",
 				     &st->offset_val2[MX_DEV_PROX]);
-		of_property_read_u32(np, "proximity_threshold_lo",
-				     &st->prx_thr_lo);
-		of_property_read_u32(np, "proximity_threshold_hi",
-				     &st->prx_thr_hi);
-		of_property_read_u32(np, "proximity_binary_threshold",
+		/* proximity threshold lo/hi are reversed */
+		of_property_read_u32(dn, "proximity_threshold_lo",
+				     &st->thr_hi[MX_DEV_PROX]);
+		of_property_read_u32(dn, "proximity_threshold_hi",
+				     &st->thr_lo[MX_DEV_PROX]);
+		of_property_read_u32(dn, "proximity_binary_threshold",
 				     &st->prx_thr_bin);
 		if (st->prx_thr_bin) {
 			/* proximity has binary threshold */
@@ -2150,6 +2180,8 @@ static int mx_parse_dt(struct i2c_client *client, struct mx_state *st)
 			st->offset_val2[MX_DEV_PROX] = 0;
 		}
 	}
+	if (!st->report_n)
+		st->report_n = MX_REPORT_N;
 	return 0;
 }
 
@@ -2157,6 +2189,7 @@ static int mx_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct iio_dev *indio_dev;
 	struct mx_state *st;
+	unsigned long irqflags;
 	unsigned int i;
 	int ret;
 
@@ -2223,7 +2256,7 @@ static int mx_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	INIT_DELAYED_WORK(&st->dw, mx_work);
 	if (client->irq) {
-		unsigned long irqflags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT;
+		irqflags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT;
 		if (st->dev_id == MX_DEVID_MAX44005)
 			irqflags |= IRQF_NO_SUSPEND; /* for proximity */
 		ret = request_threaded_irq(client->irq, NULL, mx_irq_thread,

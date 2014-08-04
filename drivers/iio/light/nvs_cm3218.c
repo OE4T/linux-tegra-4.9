@@ -100,6 +100,7 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
+#include <linux/ktime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
@@ -110,11 +111,15 @@
 #include <linux/iio/kfifo_buf.h>
 #include <linux/iio/trigger.h>
 
-#define CM_VERSION_DRIVER		(101)
+#define CM_VERSION_DRIVER		(102)
 #define CM_VENDOR			"Capella Microsystems, Inc."
 #define CM_NAME				"cm3218x"
 #define CM_NAME_CM3218			"cm3218"
 #define CM_NAME_CM32181			"cm32181"
+/* setting _REPORT_N to 2 causes an extra reading after crossing the threshold
+ * allowing a more accurate settled reported value.
+ */
+#define CM_REPORT_N			(2)
 #define CM_LIGHT_VERSION		(1)
 #define CM_LIGHT_MAX_RANGE_IVAL		(119156)
 #define CM_LIGHT_MAX_RANGE_MICRO	(0)
@@ -129,7 +134,7 @@
 #define CM_DEVID_CM32181		(0x02)
 #define CM_HW_DELAY_MS			(10)
 #define CM_POLL_DELAY_MS_DFLT		(2000)
-#define CM_THRESHOLD_LUX_DFLT		(10)
+#define CM_THRESHOLD_LUX_DFLT		(50)
 #define CM_ALS_SM_DFLT			(0x01)
 #define CM_ALS_PERS_DFLT		(0x00)
 #define CM_ALS_PSM_DFLT			(0x07)
@@ -195,17 +200,17 @@ static unsigned short cm_i2c_addrs[] = {
 
 struct cm_it {				/* integration time */
 	unsigned int ms;		/* time ms */
-	unsigned int resolution;	/* lux/bit * 1000 */
+	unsigned int resolution;	/* lux/bit to be scaled by val2 */
 	u8 als_it;			/* FD_IT HW */
 };
 
 static struct cm_it cm_it_tbl[] = {
-	{ 800, 5, 0x03 },
-	{ 400, 10, 0x02 },
-	{ 200, 21, 0x01 },
-	{ 100, 42, 0x00 },
-	{ 50, 84, 0x08 },
-	{ 25, 168, 0x0C }
+	{ 800, 5000, 0x03 },		/* 0.005 lux / LSb */
+	{ 400, 10000, 0x02 },		/* 0.010 lux / LSb */
+	{ 200, 21000, 0x01 },		/* 0.021 lux / LSb */
+	{ 100, 42000, 0x00 },		/* 0.042 lux / LSb */
+	{ 50, 84000, 0x08 },		/* 0.084 lux / LSb */
+	{ 25, 167000, 0x0C }		/* 0.168 lux / LSb */
 };
 
 static unsigned int cm_psm_ms_tbl[] = {
@@ -242,6 +247,7 @@ struct cm_state {
 	unsigned int it_i_lo;		/* integration time index low limit */
 	unsigned int it_i_hi;		/* integration time index high limit */
 	unsigned int psm_ms;		/* additional IT for PSM */
+	bool iio_ts_en;			/* use IIO timestamps */
 	bool shutdown;			/* shutdown active flag */
 	bool suspend;			/* suspend active flag */
 	bool hw_change;			/* HW changed so drop first sample */
@@ -255,6 +261,17 @@ struct cm_state {
 	s64 ts;				/* sample data timestamp */
 };
 
+
+static s64 cm_get_time_ns(struct cm_state *st)
+{
+	struct timespec ts;
+
+	if (st->iio_ts_en)
+		return iio_get_time_ns();
+
+	ktime_get_ts(&ts);
+	return timespec_to_ns(&ts);
+}
 
 static void cm_err(struct cm_state *st)
 {
@@ -289,17 +306,19 @@ static int cm_i2c_wr(struct cm_state *st, u8 reg, u16 val)
 	struct i2c_msg msg;
 	u8 buf[3];
 
-	buf[0] = reg;
-	val = cpu_to_le16(val);
-	buf[1] = val & 0xFF;
-	buf[2] = val >> 8;
-	msg.addr = st->i2c_addr;
-	msg.flags = 0;
-	msg.len = 3;
-	msg.buf = buf;
-	if (i2c_transfer(st->i2c->adapter, &msg, 1) != 1) {
-		cm_err(st);
-		return -EIO;
+	if (st->i2c_addr) {
+		buf[0] = reg;
+		val = cpu_to_le16(val);
+		buf[1] = val & 0xFF;
+		buf[2] = val >> 8;
+		msg.addr = st->i2c_addr;
+		msg.flags = 0;
+		msg.len = 3;
+		msg.buf = buf;
+		if (i2c_transfer(st->i2c->adapter, &msg, 1) != 1) {
+			cm_err(st);
+			return -EIO;
+		}
 	}
 
 	return 0;
@@ -493,22 +512,23 @@ static void cm_buf_push(struct iio_dev *indio_dev, struct cm_state *st)
 	unsigned int i;
 	unsigned int bytes = 0;
 
+	if (!iio_buffer_enabled(indio_dev))
+		return;
+
 	if (iio_scan_mask_query(indio_dev, indio_dev->buffer, CM_SCAN_LIGHT)) {
 		n = sizeof(st->light);
 		i = cm_buf_index(n, &bytes);
 		memcpy(&buf[i], &st->light, n);
+		if (st->dbg & CM_DBG_SPEW_LIGHT)
+			dev_info(&st->i2c->dev, "light %u %lld\n",
+				 st->light, st->ts);
 	}
 	if (indio_dev->buffer->scan_timestamp) {
 		n = sizeof(st->ts);
 		i = cm_buf_index(n, &bytes);
 		memcpy(&buf[i], &st->ts, n);
 	}
-	if (iio_buffer_enabled(indio_dev)) {
-		iio_push_to_buffers(indio_dev, buf);
-		if (st->dbg & CM_DBG_SPEW_LIGHT)
-			dev_info(&st->i2c->dev, "light %u %lld\n",
-				 st->light, st->ts);
-	}
+	iio_push_to_buffers(indio_dev, buf);
 }
 
 static int cm_cmd_wr(struct cm_state *st, int als_it, bool irq_en)
@@ -518,35 +538,13 @@ static int cm_cmd_wr(struct cm_state *st, int als_it, bool irq_en)
 
 	als_cfg = st->als_cfg;
 	als_cfg |= als_it << CM_REG_CFG_ALS_IT;
-	if (irq_en)
+	if (irq_en && st->i2c->irq)
 		als_cfg |= (1 << CM_REG_CFG_ALS_INT_EN);
 	ret = cm_i2c_wr(st, CM_REG_CFG, als_cfg);
 	if (st->dbg & CM_DBG_SPEW_MSG)
 		dev_info(&st->i2c->dev, "%s als_cfg=%hx\n",
 			 __func__, als_cfg);
 	return ret;
-}
-
-static void cm_delay(struct cm_state *st, bool hw_sync)
-{
-	unsigned int ms;
-
-	if (hw_sync)
-		st->hw_sync = true;
-	ms = cm_it_tbl[st->scale_i].ms + st->psm_ms;
-	if ((ms < st->poll_delay_ms) && !hw_sync)
-		st->queue_delay_ms = st->poll_delay_ms;
-	else
-		/* we're either outside the HW integration time (IT) window and
-		 * want to get within the window as fast as HW allows us
-		 * (hw_sync = true)
-		 * OR
-		 * HW IT is not as fast as requested polling time
-		 */
-		st->queue_delay_ms = ms;
-	if (st->dbg & CM_DBG_SPEW_MSG)
-		dev_info(&st->i2c->dev, "%s queue_delay_ms=%u\n",
-			 __func__, st->queue_delay_ms);
 }
 
 static int cm_it_wr(struct cm_state *st, unsigned int ms)
@@ -572,52 +570,26 @@ static int cm_it_wr(struct cm_state *st, unsigned int ms)
 	return ret;
 }
 
-static int cm_step(struct cm_state *st, u16 step, u32 lux, bool irq_en)
+static void cm_delay(struct cm_state *st, bool hw_sync)
 {
-	u16 step_lo;
-	u16 step_hi;
-	int ret = 0;
+	unsigned int ms;
 
-	/* lux back to HW values */
-	if (lux > st->lux_thr_lo)
-		step_lo = (lux - st->lux_thr_lo) /
-			   cm_it_tbl[st->scale_i].resolution;
+	if (hw_sync)
+		st->hw_sync = true;
+	ms = cm_it_tbl[st->scale_i].ms + st->psm_ms;
+	if ((ms < st->poll_delay_ms) && !hw_sync)
+		st->queue_delay_ms = st->poll_delay_ms;
 	else
-		step_lo = 0;
-	step_hi = (lux + st->lux_thr_hi) / cm_it_tbl[st->scale_i].resolution;
-	/* adjust IT if need be to make room for HW thresholds */
-	if ((step > (0xFFFF - step_hi)) && (st->scale_i < (st->it_i_hi - 1))) {
-		/* too many photons - need to decrease integration time */
-		ret = cm_it_wr(st, cm_it_tbl[st->scale_i + 1].ms);
-		if (!ret)
-			cm_delay(st, true);
-		return ret;
-	} else if ((step < step_lo) && (st->scale_i > (st->it_i_lo + 1))) {
-		/* not enough photons - need to increase integration time */
-		ret = cm_it_wr(st, cm_it_tbl[st->scale_i - 1].ms);
-		if (!ret)
-			cm_delay(st, true);
-		return ret;
-	} else if (st->hw_sync) {
-		/* adjust queue time to max(polling delay, HW IT) */
-		st->hw_sync = false;
-		cm_delay(st, false);
-	}
-	if (irq_en && st->i2c->irq && (st->lux_thr_lo || st->lux_thr_hi)) {
-		ret = cm_i2c_wr(st, CM_REG_WL, step_lo);
-		ret |= cm_i2c_wr(st, CM_REG_WH, step_hi);
-		if (!ret) {
-			if (st->dbg & CM_DBG_SPEW_MSG)
-				dev_info(&st->i2c->dev,
-					 "%s lo=%hu step=%hu hi=%hu\n",
-					 __func__, step_lo, step, step_hi);
-			ret = cm_cmd_wr(st,
-					cm_it_tbl[st->scale_i].als_it, true);
-			if (!ret)
-				ret = 1; /* flag IRQ enabled */
-		}
-	}
-	return ret;
+		/* we're either outside the HW integration time (IT) window and
+		 * want to get within the window as fast as HW allows us
+		 * (hw_sync = true)
+		 * OR
+		 * HW IT is not as fast as requested polling time
+		 */
+		st->queue_delay_ms = ms;
+	if (st->dbg & CM_DBG_SPEW_MSG)
+		dev_info(&st->i2c->dev, "%s queue_delay_ms=%u\n",
+			 __func__, st->queue_delay_ms);
 }
 
 static int cm_interpolate(int x1, int x2, int x3, int y1, int *y2, int y3)
@@ -637,10 +609,77 @@ static int cm_interpolate(int x1, int x2, int x3, int y1, int *y2, int y3)
 
 static void cm_report_init(struct cm_state *st)
 {
-	if (st->report_n)
-		st->report = st->report_n;
-	else
-		st->report = 1;
+	st->ts = 0;
+	st->report = st->report_n;
+}
+
+static int cm_step(struct cm_state *st, u16 step, u32 lux, bool irq_en)
+{
+	u64 calc;
+	int thr_lo;
+	int thr_hi;
+	int ret = 0;
+
+	/* lux lo threshold to HW value */
+	thr_lo = lux - st->lux_thr_lo;
+	/* get the uncalibrated value */
+	cm_interpolate(st->lux_c_lo, thr_lo, st->lux_c_hi,
+		       st->lux_uc_lo, &thr_lo, st->lux_uc_hi);
+	if (thr_lo < 0)
+		thr_lo = 0;
+	/* convert to HW value */
+	calc = thr_lo;
+	if (st->scale_val2)
+		calc *= st->scale_val2;
+	if (cm_it_tbl[st->scale_i].resolution)
+		do_div(calc, cm_it_tbl[st->scale_i].resolution);
+	thr_lo = calc;
+	/* lux hi threshold to HW value */
+	thr_hi = lux + st->lux_thr_hi;
+	/* get the uncalibrated value */
+	cm_interpolate(st->lux_c_lo, thr_hi, st->lux_c_hi,
+		       st->lux_uc_lo, &thr_hi, st->lux_uc_hi);
+	/* convert to HW value */
+	calc = thr_hi;
+	if (st->scale_val2)
+		calc *= st->scale_val2;
+	if (cm_it_tbl[st->scale_i].resolution)
+		do_div(calc, cm_it_tbl[st->scale_i].resolution);
+	thr_hi = calc;
+	if (thr_hi > 0xFFFF)
+		thr_hi = 0xFFFF;
+	if (st->dbg & CM_DBG_SPEW_MSG)
+		dev_info(&st->i2c->dev, "%s lo=%d step=%hu hi=%d\n",
+			 __func__, thr_lo, step, thr_hi);
+	/* adjust IT if need be to make room for HW thresholds */
+	if ((step > (0xFFFF - thr_hi)) && (st->scale_i < (st->it_i_hi - 1))) {
+		/* too many photons - need to decrease integration time */
+		ret = cm_it_wr(st, cm_it_tbl[st->scale_i + 1].ms);
+		if (!ret)
+			cm_delay(st, true);
+		return ret;
+	} else if ((step < thr_lo) && (st->scale_i > (st->it_i_lo + 1))) {
+		/* not enough photons - need to increase integration time */
+		ret = cm_it_wr(st, cm_it_tbl[st->scale_i - 1].ms);
+		if (!ret)
+			cm_delay(st, true);
+		return ret;
+	} else if (st->hw_sync) {
+		/* adjust queue time to max(polling delay, HW IT) */
+		st->hw_sync = false;
+		cm_delay(st, false);
+	}
+	if (irq_en && st->i2c->irq && (st->lux_thr_lo || st->lux_thr_hi)) {
+		ret = cm_i2c_wr(st, CM_REG_WL, thr_lo);
+		ret |= cm_i2c_wr(st, CM_REG_WH, thr_hi);
+		if (!ret) {
+			ret = cm_cmd_wr(st,
+					cm_it_tbl[st->scale_i].als_it, true);
+			if (!ret)
+				ret = 1; /* flag IRQ enabled */
+		}
+	}
+	return ret;
 }
 
 static int cm_rd(struct iio_dev *indio_dev)
@@ -649,11 +688,10 @@ static int cm_rd(struct iio_dev *indio_dev)
 	u16 sts;
 	u16 step;
 	u32 lux;
+	u64 calc;
 	s64 ts;
 	s64 ts_elapsed;
-	bool report = false;
 	bool t_min = false;
-	unsigned int ms;
 	int ret;
 
 	/* spec is vague so one of these should clear the IRQ */
@@ -662,54 +700,55 @@ static int cm_rd(struct iio_dev *indio_dev)
 	if (ret)
 		return ret;
 
-	if (st->hw_change && !st->report)
+	if (st->hw_change && !st->report) {
 		/* drop first sample after HW change */
+		st->hw_change = false;
 		return 0;
+	}
 
-	st->hw_change = false;
-	lux = step * cm_it_tbl[st->scale_i].resolution;
+	calc = cm_it_tbl[st->scale_i].resolution;
+	calc *= step;
+	if (st->scale_val2)
+		do_div(calc, st->scale_val2);
+	lux = calc;
+	/* get calibrated value */
 	cm_interpolate(st->lux_uc_lo, lux, st->lux_uc_hi,
 		       st->lux_c_lo, &lux, st->lux_c_hi);
-	if (sts & (CM_REG_ALS_IF_L | CM_REG_ALS_IF_H)) {
-		report = true;
+	if (sts & ((1 << CM_REG_ALS_IF_L) | (1 << CM_REG_ALS_IF_H))) {
+		st->report = st->report_n;
 	} else {
-		if (st->lux_thr_lo || st->lux_thr_hi) {
-			if (lux > (st->light + st->lux_thr_hi)) {
-				report = true;
-			} else if (st->light > st->lux_thr_lo) {
-				if (lux < (st->light - st->lux_thr_lo))
-					report = true;
-			}
-		} else {
-			report = true;
+		if (lux > (st->light + st->lux_thr_hi)) {
+			st->report = st->report_n;
+		} else if (st->light > st->lux_thr_lo) {
+			if (lux < (st->light - st->lux_thr_lo))
+				st->report = st->report_n;
 		}
 	}
 	/* calculate elapsed time for allowed report rate */
-	ts = iio_get_time_ns();
+	ts = cm_get_time_ns(st);
 	ts_elapsed = ts - st->ts;
 	if (ts_elapsed >= st->poll_delay_ms * 1000000)
 		t_min = true;
-	ms = ts_elapsed;
-	ms /= 1000000;
 	if (st->dbg & CM_DBG_SPEW_LIGHT_POLL)
-		dev_info(&st->i2c->dev, "poll light %d %lld  diff: %d %ums\n",
-			 lux, ts, lux - st->light, ms);
-	/* if IIO scale == 1 then in calibrate/test mode */
-	if ((st->scale_val == 1) && (st->scale_val2 == 0))
-		cm_report_init(st);
-	/* report if:
-	 * - st->report (usually used to report the first sample regardless)
-	 * - time since last report >= polling delay && data outside thresholds
-	 * - report regardless of change (for test and calibration)
-	 */
-	if (st->report || (report && t_min)) {
+		dev_info(&st->i2c->dev,
+			 "poll light %d %lld  diff: %d %lldns\n",
+			 lux, ts, lux - st->light, ts_elapsed);
+	if ((st->report && t_min) || ((st->scale_val == 1) &&
+				      !st->scale_val2)) {
+		/* report if:
+		 * - st->report && time since last report >= polling delay
+		 * - in calibration mode (scale == 1)
+		 */
 		if (st->report)
 			st->report--;
 		if (!(st->dbg & CM_DBG_VAL_LIGHT))
 			st->light = lux;
 		st->ts = ts;
 		cm_buf_push(indio_dev, st);
-		ret = cm_step(st, step, lux, true);
+		if (st->report)
+			ret = cm_step(st, step, lux, false);
+		else
+			ret = cm_step(st, step, lux, true);
 	} else if (t_min && !st->report) {
 		ret = cm_step(st, step, lux, true);
 	} else {
@@ -779,13 +818,12 @@ static int cm_enable(struct iio_dev *indio_dev)
 	if (iio_scan_mask_query(indio_dev, indio_dev->buffer, CM_SCAN_LIGHT)) {
 		ret = cm_pm(st, true);
 		if (!ret) {
-			cm_report_init(st);
 			ret = cm_it_wr(st, 0);
-			cm_delay(st, true);
 			if (ret) {
 				cm_disable(indio_dev);
 			} else {
-				st->ts = iio_get_time_ns();
+				cm_delay(st, true);
+				cm_report_init(st);
 				st->enable = 1;
 				schedule_delayed_work(&st->dw,
 					     msecs_to_jiffies(CM_HW_DELAY_MS));
@@ -1127,7 +1165,7 @@ static int cm_write_raw(struct iio_dev *indio_dev,
 		msg = "IIO_CHAN_INFO_RAW";
 		old = st->light;
 		st->light = val;
-		st->ts = iio_get_time_ns();
+		st->ts = cm_get_time_ns(st);
 		st->dbg |= CM_DBG_VAL_LIGHT;
 		cm_buf_push(indio_dev, st);
 		break;
@@ -1315,6 +1353,8 @@ static int cm_id_i2c(struct iio_dev *indio_dev, const char *name)
 				break;
 		}
 	}
+	if (ret)
+		st->i2c_addr = 0;
 	return ret;
 }
 
@@ -1362,7 +1402,7 @@ static int cm_remove(struct i2c_client *client)
 
 static int cm_of_dt(struct i2c_client *client, struct cm_state *st)
 {
-	struct device_node *np = client->dev.of_node;
+	struct device_node *dn = client->dev.of_node;
 	u16 als_sm;
 	u16 als_pers;
 	unsigned int val;
@@ -1384,29 +1424,30 @@ static int cm_of_dt(struct i2c_client *client, struct cm_state *st)
 	/* device tree parameters */
 	if (client->dev.of_node) {
 		/* device specific parameters */
-		of_property_read_u16(np, "als_sm", &als_sm);
-		of_property_read_u16(np, "als_pers", &als_pers);
-		of_property_read_u16(np, "als_psm", &st->als_psm);
+		of_property_read_u16(dn, "als_sm", &als_sm);
+		of_property_read_u16(dn, "als_pers", &als_pers);
+		of_property_read_u16(dn, "als_psm", &st->als_psm);
 		/* common NVS programmable parameters */
-		of_property_read_u32(np, "report_count", &st->report_n);
+		st->iio_ts_en = of_property_read_bool(dn, "iio_timestamps");
+		of_property_read_u32(dn, "report_count", &st->report_n);
 		/* common NVS ALS programmable parameters */
-		of_property_read_s32(np, "light_uncalibrated_lo",
+		of_property_read_s32(dn, "light_uncalibrated_lo",
 				     &st->lux_uc_lo);
-		of_property_read_s32(np, "light_uncalibrated_hi",
+		of_property_read_s32(dn, "light_uncalibrated_hi",
 				     &st->lux_uc_hi);
-		of_property_read_s32(np, "light_calibrated_lo", &st->lux_c_lo);
-		of_property_read_s32(np, "light_calibrated_hi", &st->lux_c_hi);
-		of_property_read_s32(np, "light_scale_val", &st->scale_val);
-		of_property_read_s32(np, "light_scale_val2", &st->scale_val2);
-		of_property_read_s32(np, "light_offset_val", &st->offset_val);
-		of_property_read_s32(np, "light_offset_val2",
+		of_property_read_s32(dn, "light_calibrated_lo", &st->lux_c_lo);
+		of_property_read_s32(dn, "light_calibrated_hi", &st->lux_c_hi);
+		of_property_read_s32(dn, "light_scale_val", &st->scale_val);
+		of_property_read_s32(dn, "light_scale_val2", &st->scale_val2);
+		of_property_read_s32(dn, "light_offset_val", &st->offset_val);
+		of_property_read_s32(dn, "light_offset_val2",
 				     &st->offset_val2);
-		if (of_property_read_u32(np, "light_threshold_lo", &val))
-			st->lux_thr_lo = val;
-		if (of_property_read_u32(np, "light_threshold_hi", &val))
-			st->lux_thr_hi = val;
+		of_property_read_u32(dn, "light_threshold_lo",
+				     &st->lux_thr_lo);
+		of_property_read_u32(dn, "light_threshold_hi",
+				     &st->lux_thr_hi);
 		/* this device supports these programmable parameters */
-		if (of_property_read_u32(np, "light_integration_time_ms_lo",
+		if (of_property_read_u32(dn, "light_integration_time_ms_lo",
 					 &val)) {
 			for (i = ARRAY_SIZE(cm_it_tbl); i > 1; i--) {
 				if (val <= cm_it_tbl[i - 1].ms)
@@ -1414,7 +1455,7 @@ static int cm_of_dt(struct i2c_client *client, struct cm_state *st)
 			}
 			st->it_i_hi = i;
 		}
-		if (of_property_read_u32(np, "light_integration_time_ms_hi",
+		if (of_property_read_u32(dn, "light_integration_time_ms_hi",
 					 &val)) {
 			for (i = 0; i < ARRAY_SIZE(cm_it_tbl) - 1; i++) {
 				if (val >= cm_it_tbl[i].ms)
@@ -1430,6 +1471,8 @@ static int cm_of_dt(struct i2c_client *client, struct cm_state *st)
 			st->it_i_hi = ARRAY_SIZE(cm_it_tbl);
 		}
 	}
+	if (!st->report_n)
+		st->report_n = CM_REPORT_N;
 	st->als_psm &= CM_REG_PSM_MASK;
 	if (st->als_psm & (1 << CM_REG_PSM_EN))
 		st->psm_ms = cm_psm_ms_tbl[st->als_psm >> 1];

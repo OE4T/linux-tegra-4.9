@@ -112,6 +112,7 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
+#include <linux/ktime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
@@ -125,7 +126,7 @@
 #include <linux/mpu_iio.h>
 #endif /* AKM_NVI_MPU_SUPPORT */
 
-#define AKM_VERSION_DRIVER		(101)
+#define AKM_VERSION_DRIVER		(102)
 #define AKM_VENDOR			"AsahiKASEI"
 #define AKM_NAME			"ak89xx"
 #define AKM_NAME_AK8963			"ak8963"
@@ -264,8 +265,10 @@ struct akm_state {
 	unsigned int fifo_max;		/* fifoMaxEventCount */
 	u16 i2c_addr;			/* I2C address */
 	u8 dev_id;			/* device ID */
+	bool iio_ts_en;			/* use IIO timestamps */
 	bool shutdown;			/* shutdown active flag */
 	bool suspend;			/* suspend active flag */
+	bool irq_dis;			/* interrupt host disable flag */
 	bool initd;			/* set if initialized */
 	bool mpu_en;			/* if device behind MPU */
 	bool fifo_en;			/* MPU FIFO enable */
@@ -303,6 +306,17 @@ struct akm_hal {
 };
 
 
+static s64 akm_get_time_ns(struct akm_state *st)
+{
+	struct timespec ts;
+
+	if (st->iio_ts_en)
+		return iio_get_time_ns();
+
+	ktime_get_ts(&ts);
+	return timespec_to_ns(&ts);
+}
+
 static void akm_err(struct akm_state *st)
 {
 	st->errs++;
@@ -335,15 +349,17 @@ static int akm_i2c_wr(struct akm_state *st, u8 reg, u8 val)
 	struct i2c_msg msg;
 	u8 buf[2];
 
-	buf[0] = reg;
-	buf[1] = val;
-	msg.addr = st->i2c_addr;
-	msg.flags = 0;
-	msg.len = 2;
-	msg.buf = buf;
-	if (i2c_transfer(st->i2c->adapter, &msg, 1) != 1) {
-		akm_err(st);
-		return -EIO;
+	if (st->i2c_addr) {
+		buf[0] = reg;
+		buf[1] = val;
+		msg.addr = st->i2c_addr;
+		msg.flags = 0;
+		msg.len = 2;
+		msg.buf = buf;
+		if (i2c_transfer(st->i2c->adapter, &msg, 1) != 1) {
+			akm_err(st);
+			return -EIO;
+		}
 	}
 
 	return 0;
@@ -732,6 +748,9 @@ static void akm_buf_push(struct iio_dev *indio_dev, s64 ts)
 	unsigned int bytes = 0;
 	unsigned int axis;
 
+	if (!iio_buffer_enabled(indio_dev))
+		return;
+
 	for (axis = 0; axis < AXIS_N; axis++) {
 		if (iio_scan_mask_query(indio_dev, indio_dev->buffer, axis)) {
 			n = sizeof(st->magn[axis]);
@@ -744,8 +763,7 @@ static void akm_buf_push(struct iio_dev *indio_dev, s64 ts)
 		i = akm_buf_index(n, &bytes);
 		memcpy(&buf[i], &ts, n);
 	}
-	if (iio_buffer_enabled(indio_dev))
-		iio_push_to_buffers(indio_dev, buf);
+	iio_push_to_buffers(indio_dev, buf);
 	if (st->dbg & AKM_DBG_SPEW_MAGNETIC_FIELD_UC)
 		dev_info(&st->i2c->dev, "uc %hd %hd %hd %lld\n",
 			 st->magn_uc[AXIS_X], st->magn_uc[AXIS_Y],
@@ -819,7 +837,7 @@ static int akm_read(struct iio_dev *indio_dev)
 	if (ret)
 		return ret;
 
-	ts = iio_get_time_ns();
+	ts = akm_get_time_ns(st);
 	ret = akm_read_sts(st, data);
 	if (ret > 0) {
 		akm_calc(st, data, ts);
@@ -987,6 +1005,22 @@ static int akm_init_hw(struct akm_state *st)
 	return ret;
 }
 
+static void nvi_disable_irq(struct akm_state *st)
+{
+	if (!st->irq_dis) {
+		disable_irq_nosync(st->i2c->irq);
+		st->irq_dis = true;
+	}
+}
+
+static void nvi_enable_irq(struct akm_state *st)
+{
+	if (st->irq_dis) {
+		enable_irq(st->i2c->irq);
+		st->irq_dis = false;
+	}
+}
+
 static int akm_dis(struct akm_state *st)
 {
 	int ret = 0;
@@ -995,7 +1029,7 @@ static int akm_dis(struct akm_state *st)
 		ret = akm_ports_enable(st, false);
 	} else {
 		if (st->i2c->irq)
-			disable_irq(st->i2c->irq);
+			nvi_disable_irq(st);
 		else
 			cancel_delayed_work_sync(&st->dw);
 	}
@@ -1053,7 +1087,7 @@ static int akm_enable(struct iio_dev *indio_dev)
 				st->enable = 1;
 				if (!st->mpu_en) {
 					if (st->i2c->irq)
-						enable_irq(st->i2c->irq);
+						nvi_enable_irq(st);
 					else
 						schedule_delayed_work(&st->dw,
 							      usecs_to_jiffies(
@@ -2126,7 +2160,7 @@ static int akm_id_dev(struct iio_dev *indio_dev, const char *name)
 	}
 	if (st->i2c->irq && !ret) {
 		if ((st->hal->cmode_tbl == NULL) || !st->hal->irq) {
-			disable_irq(st->i2c->irq);
+			nvi_disable_irq(st);
 			st->i2c->irq = 0;
 		}
 	}
@@ -2156,6 +2190,8 @@ static int akm_id_i2c(struct iio_dev *indio_dev,
 				break;
 		}
 	}
+	if (ret)
+		st->i2c_addr = 0;
 	return ret;
 }
 
@@ -2208,6 +2244,9 @@ static int akm_of_dt(struct i2c_client *client, struct akm_state *st)
 	int len;
 	u8 cfg;
 
+	/* common NVS programmable parameters */
+	st->iio_ts_en = of_property_read_bool(dn, "iio_timestamps");
+	/* magn programmable parameters */
 	pchar = of_get_property(dn, "matrix", &len);
 	if (pchar && len == sizeof(st->matrix)) {
 		memcpy(&st->matrix, pchar, len);
@@ -2216,6 +2255,7 @@ static int akm_of_dt(struct i2c_client *client, struct akm_state *st)
 		if (pchar && len == sizeof(st->matrix))
 			memcpy(&st->matrix, pchar, len);
 	}
+	/* this device supports these programmable parameters */
 	if (!(of_property_read_string(dn, "nvi_config", &pchar))) {
 		for (cfg = 0; cfg < ARRAY_SIZE(akm_configs); cfg++) {
 			if (!strcasecmp(pchar, akm_configs[cfg])) {

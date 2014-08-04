@@ -104,6 +104,7 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
+#include <linux/ktime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/of.h>
@@ -116,7 +117,7 @@
 #include <linux/mpu_iio.h>
 #endif /* BMP_NVI_MPU_SUPPORT */
 
-#define BMP_VERSION_DRIVER		(101)
+#define BMP_VERSION_DRIVER		(102)
 #define BMP_VENDOR			"Bosch"
 #define BMP_NAME			"bmpX80"
 #define BMP180_NAME			"bmp180"
@@ -352,6 +353,7 @@ struct bmp_state {
 	unsigned int fifo_max;		/* fifoMaxEventCount */
 	u16 i2c_addr;			/* I2C address */
 	u8 dev_id;			/* device ID */
+	bool iio_ts_en;			/* use IIO timestamps */
 	bool shutdown;			/* shutdown active flag */
 	bool suspend;			/* suspend active flag */
 	bool initd;			/* set if initialized */
@@ -382,6 +384,17 @@ struct bmp_hal {
 	unsigned int mpu_id;
 };
 
+
+static s64 bmp_get_time_ns(struct bmp_state *st)
+{
+	struct timespec ts;
+
+	if (st->iio_ts_en)
+		return iio_get_time_ns();
+
+	ktime_get_ts(&ts);
+	return timespec_to_ns(&ts);
+}
 
 static void bmp_err(struct bmp_state *st)
 {
@@ -415,15 +428,17 @@ static int bmp_i2c_wr(struct bmp_state *st, u8 reg, u8 val)
 	struct i2c_msg msg;
 	u8 buf[2];
 
-	buf[0] = reg;
-	buf[1] = val;
-	msg.addr = st->i2c_addr;
-	msg.flags = 0;
-	msg.len = 2;
-	msg.buf = buf;
-	if (i2c_transfer(st->i2c->adapter, &msg, 1) != 1) {
-		bmp_err(st);
-		return -EIO;
+	if (st->i2c_addr) {
+		buf[0] = reg;
+		buf[1] = val;
+		msg.addr = st->i2c_addr;
+		msg.flags = 0;
+		msg.len = 2;
+		msg.buf = buf;
+		if (i2c_transfer(st->i2c->adapter, &msg, 1) != 1) {
+			bmp_err(st);
+			return -EIO;
+		}
 	}
 
 	return 0;
@@ -807,31 +822,34 @@ static void bmp_buf_push(struct iio_dev *indio_dev, s64 ts)
 	unsigned int i;
 	unsigned int bytes = 0;
 
+	if (!iio_buffer_enabled(indio_dev))
+		return;
+
 	if (iio_scan_mask_query(indio_dev, indio_dev->buffer, BMP_SCAN_PRES)) {
 		n = sizeof(st->pressure);
 		i = bmp_buf_index(n, &bytes);
 		memcpy(&buf[i], &st->pressure, n);
+		if (st->dbg & BMP_DBG_SPEW_PRESSURE_RAW)
+			dev_info(&st->i2c->dev, "pr %d %lld\n", st->up, ts);
+		if (st->dbg & BMP_DBG_SPEW_PRESSURE)
+			dev_info(&st->i2c->dev, "p %d %lld\n",
+				 st->pressure, ts);
 	}
 	if (iio_scan_mask_query(indio_dev, indio_dev->buffer, BMP_SCAN_TEMP)) {
 		n = sizeof(st->temp);
 		i = bmp_buf_index(n, &bytes);
 		memcpy(&buf[i], &st->temp, n);
+		if (st->dbg & BMP_DBG_SPEW_TEMPERATURE_UC)
+			dev_info(&st->i2c->dev, "tr %d %lld\n", st->ut, ts);
+		if (st->dbg & BMP_DBG_SPEW_TEMPERATURE)
+			dev_info(&st->i2c->dev, "t %d %lld\n", st->temp, ts);
 	}
 	if (indio_dev->buffer->scan_timestamp) {
 		n = sizeof(ts);
 		i = bmp_buf_index(n, &bytes);
 		memcpy(&buf[i], &ts, n);
 	}
-	if (iio_buffer_enabled(indio_dev))
-		iio_push_to_buffers(indio_dev, buf);
-	if (st->dbg & BMP_DBG_SPEW_PRESSURE_RAW)
-		dev_info(&st->i2c->dev, "pr %d %lld\n", st->up, ts);
-	if (st->dbg & BMP_DBG_SPEW_PRESSURE)
-		dev_info(&st->i2c->dev, "p %d %lld\n", st->pressure, ts);
-	if (st->dbg & BMP_DBG_SPEW_TEMPERATURE_UC)
-		dev_info(&st->i2c->dev, "tr %d %lld\n", st->ut, ts);
-	if (st->dbg & BMP_DBG_SPEW_TEMPERATURE)
-		dev_info(&st->i2c->dev, "t %d %lld\n", st->temp, ts);
+	iio_push_to_buffers(indio_dev, buf);
 }
 
 static void bmp_calc_180(struct bmp_state *st)
@@ -903,7 +921,7 @@ static int bmp_read_180(struct iio_dev *indio_dev)
 	if (ret)
 		return ret;
 
-	ts = iio_get_time_ns();
+	ts = bmp_get_time_ns(st);
 	ret = bmp_read_sts_180(st, data, ts);
 	if (ret > 0) {
 		bmp_buf_push(indio_dev, ts);
@@ -1027,7 +1045,7 @@ static int bmp_read_280(struct iio_dev *indio_dev)
 	if (ret)
 		return ret;
 
-	ts = iio_get_time_ns();
+	ts = bmp_get_time_ns(st);
 	ret = bmp_read_sts_280(st, data, ts);
 	if (ret > 0) {
 		bmp_buf_push(indio_dev, ts);
@@ -2489,6 +2507,8 @@ static int bmp_id_i2c(struct iio_dev *indio_dev,
 				break;
 		}
 	}
+	if (ret)
+		st->i2c_addr = 0;
 	return ret;
 }
 
@@ -2538,6 +2558,9 @@ static int bmp_of_dt(struct i2c_client *client, struct bmp_state *st)
 	char const *pchar;
 	u8 cfg;
 
+	/* common NVS programmable parameters */
+	st->iio_ts_en = of_property_read_bool(dn, "iio_timestamps");
+	/* this device supports these programmable parameters */
 	if (!(of_property_read_string(dn, "nvi_config", &pchar))) {
 		for (cfg = 0; cfg < ARRAY_SIZE(bmp_configs); cfg++) {
 			if (!strcasecmp(pchar, bmp_configs[cfg])) {

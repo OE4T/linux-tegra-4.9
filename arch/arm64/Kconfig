@@ -4,6 +4,7 @@ config ARCH_TEGRA_18x_SOC_PRIVATE
 	select ARM_GIC
 	select COMMON_CLK
 	select SOC_BUS
+	select TEGRA_NVDISPLAY
 	default n
 	help
 	  Support for NVIDIA Tegra 18x family of SoCs

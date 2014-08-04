@@ -136,6 +136,12 @@ config SND_SOC_TEGRA210_MVC_ALT
 	help
 	  Say Y or M if you want to add support for Tegra210 MVC module.
 
+config SND_SOC_TEGRA210_IQC_ALT
+	tristate "Tegra210 IQC driver"
+	depends on SND_SOC_TEGRA_ALT && SND_SOC_TEGRA_ALT_210
+	help
+	  Say Y or M if you want to add support for Tegra210 IQC module.
+
 config SND_SOC_TEGRA210_SPDIF_ALT
 	tristate "Tegra210 SPDIF driver"
 	depends on SND_SOC_TEGRA_ALT && SND_SOC_TEGRA_ALT_210
@@ -193,6 +199,7 @@ config SND_SOC_TEGRA_GRENADA_ALT
 	select SND_SOC_TEGRA210_SFC_ALT
 	select SND_SOC_TEGRA210_AFC_ALT
 	select SND_SOC_TEGRA210_MVC_ALT
+	select SND_SOC_TEGRA210_IQC_ALT
 	select SND_SOC_TEGRA210_SPDIF_ALT
 	select SND_SOC_TEGRA210_ADSP_ALT
 	select SND_SOC_SPDIF

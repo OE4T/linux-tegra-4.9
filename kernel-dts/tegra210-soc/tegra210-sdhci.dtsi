@@ -20,6 +20,7 @@
 	sdhci@700b0600 {
 		tap-delay = <4>;
 		trim-delay = <8>;
+		mmc-ocr-mask = <0>;
 		dqs-trim-delay = <17>;
 		max-clk-limit = <200000000>;
 		bus-width = <8>;
@@ -49,6 +50,7 @@
 	sdhci@700b0200 {
 		tap-delay = <4>;
 		trim-delay = <8>;
+		mmc-ocr-mask = <0>;
 		max-clk-limit = <200000000>;
 		id = <1>;
 		compad-vref-3v3 = <0x7>;

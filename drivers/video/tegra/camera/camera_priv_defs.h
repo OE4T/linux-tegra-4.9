@@ -32,10 +32,11 @@
 #include <linux/clk/tegra.h>
 #include <linux/tegra-powergate.h>
 
-#include <mach/mc.h>
 #if defined(CONFIG_TEGRA_ISOMGR)
 #include <mach/isomgr.h>
 #endif
+
+#include <tegra/mc.h>
 
 #include <video/tegra_camera.h>
 

@@ -26,8 +26,9 @@
 #include <drm/drm_mode.h>
 
 #include <mach/dc.h>
-#include <mach/mc.h>
 #include <trace/events/display.h>
+
+#include <tegra/mc.h>
 
 #include "dc_reg.h"
 #include "dc_priv.h"

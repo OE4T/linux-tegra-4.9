@@ -54,10 +54,11 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 
 #include <mach/dc.h>
 #include <mach/fb.h>
-#include <mach/mc.h>
 #include <linux/nvhost.h>
 #include <linux/nvhost_ioctl.h>
 #include <mach/latency_allowance.h>
+
+#include <tegra/mc.h>
 
 #include "dc_reg.h"
 #include "dc_config.h"

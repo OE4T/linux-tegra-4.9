@@ -24,11 +24,12 @@
 
 #include <mach/dc.h>
 #include <mach/fb.h>
-#include <mach/mc.h>
 #include <linux/nvhost.h>
 #include <mach/latency_allowance.h>
 #include <mach/tegra_emc.h>
 #include <trace/events/display.h>
+
+#include <tegra/mc.h>
 
 #include "dc_reg.h"
 #include "dc_config.h"

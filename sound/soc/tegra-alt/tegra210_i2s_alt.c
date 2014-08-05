@@ -137,15 +137,25 @@ static int tegra210_i2s_set_fmt(struct snd_soc_dai *dai,
 				unsigned int fmt)
 {
 	struct tegra210_i2s *i2s = snd_soc_dai_get_drvdata(dai);
-	unsigned int mask, val;
+	unsigned int mask, val, data_offset;
 
 	mask = TEGRA210_I2S_CTRL_EDGE_CTRL_MASK;
 	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
 	case SND_SOC_DAIFMT_NB_NF:
 		val = TEGRA210_I2S_CTRL_EDGE_CTRL_POS_EDGE;
+		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_LOW;
+		break;
+	case SND_SOC_DAIFMT_NB_IF:
+		val = TEGRA210_I2S_CTRL_EDGE_CTRL_POS_EDGE;
+		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_HIGH;
 		break;
 	case SND_SOC_DAIFMT_IB_NF:
 		val = TEGRA210_I2S_CTRL_EDGE_CTRL_NEG_EDGE;
+		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_LOW;
+		break;
+	case SND_SOC_DAIFMT_IB_IF:
+		val = TEGRA210_I2S_CTRL_EDGE_CTRL_NEG_EDGE;
+		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_HIGH;
 		break;
 	default:
 		return -EINVAL;
@@ -168,23 +178,25 @@ static int tegra210_i2s_set_fmt(struct snd_soc_dai *dai,
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_DSP_A:
 		val |= TEGRA210_I2S_CTRL_FRAME_FORMAT_FSYNC_MODE;
-		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_LOW;
+		data_offset = 1;
 		break;
 	case SND_SOC_DAIFMT_DSP_B:
 		val |= TEGRA210_I2S_CTRL_FRAME_FORMAT_FSYNC_MODE;
-		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_HIGH;
+		data_offset = 0;
 		break;
+	/* I2S mode has data offset of 1 */
 	case SND_SOC_DAIFMT_I2S:
 		val |= TEGRA210_I2S_CTRL_FRAME_FORMAT_LRCK_MODE;
-		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_LOW;
+		data_offset = 1;
 		break;
+	/* LJ/RJ mode assumed to operate at bclk = 64fs */
 	case SND_SOC_DAIFMT_RIGHT_J:
 		val |= TEGRA210_I2S_CTRL_FRAME_FORMAT_LRCK_MODE;
-		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_LOW;
+		data_offset = 16;
 		break;
 	case SND_SOC_DAIFMT_LEFT_J:
 		val |= TEGRA210_I2S_CTRL_FRAME_FORMAT_LRCK_MODE;
-		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_LOW;
+		data_offset = 0;
 		break;
 	default:
 		return -EINVAL;
@@ -195,7 +207,13 @@ static int tegra210_i2s_set_fmt(struct snd_soc_dai *dai,
 	/* FIXME: global enabling */
 	regmap_update_bits(i2s->regmap, TEGRA210_I2S_ENABLE,
 					TEGRA210_I2S_EN_MASK, TEGRA210_I2S_EN);
-
+	/* set I2S data offset */
+	regmap_update_bits(i2s->regmap, TEGRA210_I2S_AXBAR_TX_CTRL,
+		TEGRA210_I2S_AXBAR_TX_CTRL_DATA_OFFSET_MASK,
+		(data_offset << TEGRA210_I2S_AXBAR_TX_CTRL_DATA_OFFSET_SHIFT));
+	regmap_update_bits(i2s->regmap, TEGRA210_I2S_AXBAR_RX_CTRL,
+		TEGRA210_I2S_AXBAR_RX_CTRL_DATA_OFFSET_MASK,
+		(data_offset << TEGRA210_I2S_AXBAR_RX_CTRL_DATA_OFFSET_SHIFT));
 	pm_runtime_put(dai->dev);
 
 	return 0;
@@ -318,19 +336,10 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 	cif_conf.mono_conv = 0;
 
 	/* As a COCEC DAI, CAPTURE is transmit */
-	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
-		regmap_update_bits(i2s->regmap, TEGRA210_I2S_AXBAR_RX_CTRL,
-			TEGRA210_I2S_AXBAR_RX_CTRL_DATA_OFFSET_MASK,
-			(1 << TEGRA210_I2S_AXBAR_RX_CTRL_DATA_OFFSET_SHIFT));
-
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
 		reg = TEGRA210_I2S_AXBAR_RX_CIF_CTRL;
-	} else {
-		regmap_update_bits(i2s->regmap, TEGRA210_I2S_AXBAR_TX_CTRL,
-			TEGRA210_I2S_AXBAR_TX_CTRL_DATA_OFFSET_MASK,
-			(1 << TEGRA210_I2S_AXBAR_TX_CTRL_DATA_OFFSET_SHIFT));
-
+	else
 		reg = TEGRA210_I2S_AXBAR_TX_CIF_CTRL;
-	}
 
 	i2s->soc_data->set_audio_cif(i2s->regmap, reg, &cif_conf);
 

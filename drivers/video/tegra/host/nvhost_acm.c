@@ -37,7 +37,7 @@
 #include <linux/tegra_pm_domains.h>
 #include <linux/nvhost_ioctl.h>
 
-#include <mach/mc.h>
+#include <tegra/mc.h>
 
 #include "nvhost_acm.h"
 #include "nvhost_channel.h"

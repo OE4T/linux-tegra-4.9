@@ -18,9 +18,10 @@
 #include <linux/slab.h>
 #include <linux/io.h>
 
-#include <mach/mc.h>
 #include <linux/tegra-powergate.h>
 #include <linux/tegra-soc.h>
+
+#include <tegra/mc.h>
 
 #include "dev.h"
 #include "nvhost_job.h"

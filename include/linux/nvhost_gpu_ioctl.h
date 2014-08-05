@@ -152,6 +152,42 @@ struct nvhost_gpu_get_characteristics {
 	__u64 gpu_characteristics_buf_addr;
 };
 
+#define NVHOST_GPU_COMPBITS_NONE	0
+#define NVHOST_GPU_COMPBITS_GPU		(1 << 0)
+#define NVHOST_GPU_COMPBITS_CDEH	(1 << 1)
+#define NVHOST_GPU_COMPBITS_CDEV	(1 << 2)
+
+struct nvhost_gpu_prepare_compressible_read_args {
+	__u32 handle;			/* in, dmabuf fd */
+	union {
+		__u32 request_compbits;	/* in */
+		__u32 valid_compbits;	/* out */
+	};
+	__u64 offset;			/* in, within handle */
+	__u64 compbits_hoffset;		/* in, within handle */
+	__u64 compbits_voffset;		/* in, within handle */
+	__u32 width;			/* in, in pixels */
+	__u32 height;			/* in, in pixels */
+	__u32 block_height_log2;	/* in */
+	__u32 submit_flags;		/* in (NVHOST_SUBMIT_GPFIFO_FLAGS_) */
+	union {
+		struct {
+			__u32 syncpt_id;
+			__u32 syncpt_value;
+		};
+		__s32 fd;
+	} fence;			/* in/out */
+	__u32 zbc_color;		/* out */
+	__u32 reserved[5];		/* must be zero */
+};
+
+struct nvhost_gpu_mark_compressible_write_args {
+	__u32 handle;			/* in, dmabuf fd */
+	__u32 valid_compbits;		/* in */
+	__u64 offset;			/* in, within handle */
+	__u32 zbc_color;		/* in */
+	__u32 reserved[3];		/* must be zero */
+};
 
 #define NVHOST_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
 	_IOR(NVHOST_GPU_IOCTL_MAGIC, 1, struct nvhost_gpu_zcull_get_ctx_size_args)
@@ -163,11 +199,15 @@ struct nvhost_gpu_get_characteristics {
 	_IOWR(NVHOST_GPU_IOCTL_MAGIC, 4, struct nvhost_gpu_zbc_query_table_args)
 #define NVHOST_GPU_IOCTL_GET_CHARACTERISTICS   \
 	_IOWR(NVHOST_GPU_IOCTL_MAGIC, 5, struct nvhost_gpu_get_characteristics)
+#define NVHOST_GPU_IOCTL_PREPARE_COMPRESSIBLE_READ \
+	_IOWR(NVHOST_GPU_IOCTL_MAGIC, 6, struct nvhost_gpu_prepare_compressible_read_args)
+#define NVHOST_GPU_IOCTL_MARK_COMPRESSIBLE_WRITE \
+	_IOWR(NVHOST_GPU_IOCTL_MAGIC, 7, struct nvhost_gpu_mark_compressible_write_args)
 
 #define NVHOST_GPU_IOCTL_LAST		\
-	_IOC_NR(NVHOST_GPU_IOCTL_GET_CHARACTERISTICS)
+	_IOC_NR(NVHOST_GPU_IOCTL_MARK_COMPRESSIBLE_WRITE)
 #define NVHOST_GPU_IOCTL_MAX_ARG_SIZE	\
-	sizeof(struct nvhost_gpu_zbc_query_table_args)
+	sizeof(struct nvhost_gpu_prepare_compressible_read_args)
 
 
 /*

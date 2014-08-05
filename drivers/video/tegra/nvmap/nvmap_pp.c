@@ -35,7 +35,7 @@
 #include "nvmap_priv.h"
 
 #define NVMAP_TEST_PAGE_POOL_SHRINKER     1
-#define PENDING_PAGES_SIZE                32
+#define PENDING_PAGES_SIZE                (SZ_1M / PAGE_SIZE)
 
 static bool enable_pp = 1;
 static int pool_size;
@@ -66,6 +66,23 @@ static inline void __pp_dbg_var_add(u64 *dbg_var, u32 nr)
 
 static int __nvmap_page_pool_fill_lots_locked(struct nvmap_page_pool *pool,
 				       struct page **pages, u32 nr);
+
+/*
+ * Make sure any data in the caches is cleaned out before
+ * passing these pages to userspace. otherwise, It can lead to
+ * corruption in pages that get mapped as something
+ * other than WB in userspace and leaked kernel data.
+ *
+ * Must be called with pool->lock held.
+ */
+static void pp_clean_cache(struct nvmap_page_pool *pool)
+{
+	if (pool->contains_dirty_pages) {
+		inner_clean_cache_all();
+		outer_clean_all();
+		pool->contains_dirty_pages = false;
+	}
+}
 
 static inline struct page *get_zero_list_page(struct nvmap_page_pool *pool)
 {
@@ -152,6 +169,13 @@ static void nvmap_pp_do_background_zero_pages(struct nvmap_page_pool *pool)
 out:
 	for (; ret < i; ret++)
 		__free_page(pending_zero_pages[ret]);
+
+	/* clean cache in the background so that allocations immediately
+	 * after fill don't suffer the cache clean overhead.
+	 */
+	mutex_lock(&pool->lock);
+	pp_clean_cache(pool);
+	mutex_unlock(&pool->lock);
 }
 
 /*
@@ -205,6 +229,7 @@ static struct page *nvmap_page_pool_alloc_locked(struct nvmap_page_pool *pool,
 	if (IS_ENABLED(CONFIG_NVMAP_PAGE_POOL_DEBUG))
 		BUG_ON(pool->count == 0);
 
+	pp_clean_cache(pool);
 	page = get_page_list_page(pool);
 	if (!page)
 		return NULL;
@@ -236,6 +261,7 @@ int nvmap_page_pool_alloc_lots(struct nvmap_page_pool *pool,
 		return 0;
 
 	mutex_lock(&pool->lock);
+	pp_clean_cache(pool);
 
 	real_nr = min_t(u32, nr, pool->count);
 
@@ -274,6 +300,8 @@ static int __nvmap_page_pool_fill_lots_locked(struct nvmap_page_pool *pool,
 
 	if (!enable_pp)
 		return 0;
+
+	pool->contains_dirty_pages = true;
 
 	real_nr = min_t(u32, pool->max - pool->count, nr);
 	if (real_nr == 0)

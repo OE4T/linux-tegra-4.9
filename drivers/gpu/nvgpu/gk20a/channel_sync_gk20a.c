@@ -458,6 +458,9 @@ static int gk20a_channel_semaphore_wait_fd(
 		goto fail;
 	}
 
+	/* worker takes one reference */
+	gk20a_semaphore_get(w->sema);
+
 	gk20a_channel_alloc_priv_cmdbuf(c, 8, &wait_cmd);
 	if (wait_cmd == NULL) {
 		gk20a_err(dev_from_gk20a(c->g),

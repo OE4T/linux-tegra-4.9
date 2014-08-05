@@ -139,6 +139,7 @@ static const struct gk20a_fence_ops gk20a_semaphore_fence_ops = {
 	.is_expired = &gk20a_semaphore_fence_is_expired,
 };
 
+/* This function takes ownership of the semaphore */
 struct gk20a_fence *gk20a_fence_from_semaphore(
 		struct sync_timeline *timeline,
 		struct gk20a_semaphore *semaphore,
@@ -163,7 +164,7 @@ struct gk20a_fence *gk20a_fence_from_semaphore(
 #endif
 		return NULL;
 	}
-	gk20a_semaphore_get(semaphore);
+
 	f->semaphore = semaphore;
 	f->semaphore_wq = semaphore_wq;
 	return f;

@@ -19,8 +19,8 @@
  */
 
 /{
-	bthrot_cdv {
-		compatible = "nvidia,tegra30-throttle";
+	bthrot_cdev {
+		compatible = "nvidia,balanced-throttle";
 		skin_balanced {
 			cdev-type = "skin-balanced";
 			num_states = <83>;
@@ -294,7 +294,7 @@
 				204000		 84000		288000		420000		252000		396000
 			>;
 		};
-		emergency_balanced{
+		emergency_balanced {
 			cdev-type = "emergency-balanced";
 			num_states = <1>;
 			status = "okay";

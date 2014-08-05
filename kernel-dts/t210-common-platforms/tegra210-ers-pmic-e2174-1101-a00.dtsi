@@ -121,6 +121,12 @@
 				};
 			};
 
+			backup-battery {
+				maxim,backup-battery-charging-current = <100>;
+				maxim,backup-battery-charging-voltage = <3000000>;
+				maxim,backup-battery-output-resister = <100>;
+			};
+
 			regulators {
 				in-ldo0-1-supply = <&max77620_sd2>;
 				in-ldo7-8-supply = <&max77620_sd2>;

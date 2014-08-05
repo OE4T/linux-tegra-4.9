@@ -32,7 +32,7 @@
 #include "nvmap_priv.h"
 
 #define NVMAP_TEST_PAGE_POOL_SHRINKER     1
-#define PENDING_PAGES_SIZE                128
+#define PENDING_PAGES_SIZE                (SZ_1M / PAGE_SIZE)
 
 static bool enable_pp = 1;
 static int pool_size;
@@ -47,6 +47,7 @@ module_param(min_available_mb, uint, 0644);
 static struct task_struct *background_allocator;
 static struct page *pending_pages[PENDING_PAGES_SIZE];
 static atomic_t bg_pages_to_fill;
+static atomic_t pp_dirty;
 
 #ifdef CONFIG_NVMAP_PAGE_POOL_DEBUG
 static inline void __pp_dbg_var_add(u64 *dbg_var, u32 nr)
@@ -61,6 +62,21 @@ static inline void __pp_dbg_var_add(u64 *dbg_var, u32 nr)
 #define pp_fill_add(pool, nr)  __pp_dbg_var_add(&(pool)->fills, nr)
 #define pp_hit_add(pool, nr)   __pp_dbg_var_add(&(pool)->hits, nr)
 #define pp_miss_add(pool, nr)  __pp_dbg_var_add(&(pool)->misses, nr)
+
+static void pp_clean_cache(void)
+{
+	if (atomic_read(&pp_dirty)) {
+		/*
+		 * Make sure any data in the caches is cleaned out before
+		 * passing these pages to userspace. otherwise, It can lead to
+		 * corruption in pages that get mapped as something
+		 * other than WB in userspace and leaked kernel data.
+		 */
+		inner_clean_cache_all();
+		outer_clean_all();
+		atomic_set(&pp_dirty, 0);
+	}
+}
 
 /*
  * Allocate n pages one by one. Not the most efficient allocation scheme ever;
@@ -124,6 +140,7 @@ static void nvmap_pp_do_background_fill(struct nvmap_page_pool *pool)
 		}
 
 		nvmap_page_pool_lock(pool);
+		atomic_set(&pp_dirty, 1);
 		i = __nvmap_page_pool_fill_lots_locked(pool, pending_pages, nr);
 		nvmap_page_pool_unlock(pool);
 		pages -= nr;
@@ -131,6 +148,10 @@ static void nvmap_pp_do_background_fill(struct nvmap_page_pool *pool)
 
 	for (; i < nr; i++)
 		__free_page(pending_pages[i]);
+	/* clean cache in the background so that allocations immediately
+	 * after fill don't suffer the cache clean overhead.
+	 */
+	pp_clean_cache();
 }
 
 /*
@@ -217,6 +238,7 @@ static struct page *nvmap_page_pool_alloc_locked(struct nvmap_page_pool *pool,
 	if (IS_ENABLED(CONFIG_NVMAP_PAGE_POOL_DEBUG))
 		BUG_ON(pool->count == 0);
 
+	pp_clean_cache();
 	page = pool->page_array[pool->alloc];
 	pool->page_array[pool->alloc] = NULL;
 	nvmap_pp_alloc_inc(pool);
@@ -250,6 +272,8 @@ int __nvmap_page_pool_alloc_lots_locked(struct nvmap_page_pool *pool,
 	if (!enable_pp || !pool->page_array)
 		return 0;
 
+	pp_clean_cache();
+
 	real_nr = min_t(u32, nr, pool->count);
 
 	while (real_nr--) {
@@ -273,35 +297,6 @@ int __nvmap_page_pool_alloc_lots_locked(struct nvmap_page_pool *pool,
 	nvmap_pp_wake_up_allocator();
 
 	return ind;
-}
-
-/*
- * This adds a page to the pool. Returns true if the passed page is added.
- * That means if the pool is full this operation will fail.
- */
-static bool nvmap_page_pool_fill_locked(struct nvmap_page_pool *pool,
-					struct page *page)
-{
-	if (!enable_pp || !pool->page_array)
-		return false;
-
-	if (pp_full(pool))
-		return false;
-
-	/* Sanity check. */
-	if (IS_ENABLED(CONFIG_NVMAP_PAGE_POOL_DEBUG)) {
-		atomic_inc(&page->_count);
-		BUG_ON(atomic_read(&page->_count) != 2);
-		BUG_ON(pool->count > pool->length);
-		BUG_ON(pool->page_array[pool->fill] != NULL);
-	}
-
-	pool->page_array[pool->fill] = page;
-	nvmap_pp_fill_inc(pool);
-	pool->count++;
-	pp_fill_add(pool, 1);
-
-	return true;
 }
 
 /*
@@ -339,19 +334,6 @@ int __nvmap_page_pool_fill_lots_locked(struct nvmap_page_pool *pool,
 	pp_fill_add(pool, ind);
 
 	return ind;
-}
-
-bool nvmap_page_pool_fill(struct nvmap_page_pool *pool, struct page *page)
-{
-	bool ret = false;
-
-	if (pool) {
-		nvmap_page_pool_lock(pool);
-		ret = nvmap_page_pool_fill_locked(pool, page);
-		nvmap_page_pool_unlock(pool);
-	}
-
-	return ret;
 }
 
 static int nvmap_page_pool_get_available_count(struct nvmap_page_pool *pool)

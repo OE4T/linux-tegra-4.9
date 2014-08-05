@@ -226,10 +226,11 @@ static int handle_page_alloc(struct nvmap_client *client,
 	 * FIXME: For ARMv7 we don't have __clean_dcache_page() so we continue
 	 * to use the flush cache version.
 	 */
+	if (page_index < nr_page)
 #ifdef ARM64
-	nvmap_clean_cache(pages, nr_page);
+		nvmap_clean_cache(&pages[page_index], nr_page - page_index);
 #else
-	nvmap_flush_cache(pages, nr_page);
+		nvmap_flush_cache(&pages[page_index], nr_page - page_index);
 #endif
 
 	h->size = size;

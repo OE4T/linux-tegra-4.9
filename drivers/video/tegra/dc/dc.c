@@ -2051,6 +2051,30 @@ out:
 	return ret;
 }
 
+int tegra_dc_wait_for_frame_end(struct tegra_dc *dc,
+	u32 timeout_ms)
+{
+	int ret;
+
+	reinit_completion(&dc->frame_end_complete);
+
+	tegra_dc_get(dc);
+
+	tegra_dc_flush_interrupt(dc, FRAME_END_INT);
+	/* unmask frame end interrupt */
+	tegra_dc_config_frame_end_intr(dc, true);
+
+	ret = wait_for_completion_interruptible_timeout(
+			&dc->frame_end_complete,
+			msecs_to_jiffies(timeout_ms));
+
+	tegra_dc_config_frame_end_intr(dc, false);
+
+	tegra_dc_put(dc);
+
+	return ret;
+}
+
 static void tegra_dc_prism_update_backlight(struct tegra_dc *dc)
 {
 	/* Do the actual brightness update outside of the mutex dc->lock */
@@ -2274,6 +2298,30 @@ static void tegra_dc_process_vblank(struct tegra_dc *dc, ktime_t timestamp)
 #ifdef CONFIG_ADF_TEGRA
 	tegra_adf_process_vblank(dc->adf, timestamp);
 #endif
+}
+
+int tegra_dc_config_frame_end_intr(struct tegra_dc *dc, bool enable)
+{
+	bool locked_by_caller;
+
+	/* This function is called in situations where dc->lock
+	 * is either free or already acquired - avoid a deadlock. */
+	locked_by_caller = mutex_is_locked(&dc->lock);
+	if (!locked_by_caller)
+		mutex_lock(&dc->lock);
+
+	tegra_dc_io_start(dc);
+	if (enable) {
+		atomic_inc(&dc->frame_end_ref);
+		tegra_dc_unmask_interrupt(dc, FRAME_END_INT);
+	} else if (!atomic_dec_return(&dc->frame_end_ref))
+		tegra_dc_mask_interrupt(dc, FRAME_END_INT);
+	tegra_dc_io_end(dc);
+
+	if (!locked_by_caller)
+		mutex_unlock(&dc->lock);
+
+	return 0;
 }
 
 static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status,

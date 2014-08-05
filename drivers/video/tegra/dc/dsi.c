@@ -1728,7 +1728,6 @@ static int tegra_dsi_wait_frame_end(struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi,
 				u32 timeout_n_frames)
 {
-	int val;
 	long timeout;
 	u32 frame_period = DIV_ROUND_UP(S_TO_MS(1), dsi->info.refresh_rate);
 	struct tegra_dc_mode mode = dc->mode;
@@ -1741,25 +1740,11 @@ static int tegra_dsi_wait_frame_end(struct tegra_dc *dc,
 		dev_WARN(&dc->ndev->dev,
 		"dsi: to stop at next frame give at least 2 frame delay\n");
 
-	reinit_completion(&dc->frame_end_complete);
-
-	tegra_dc_get(dc);
-
-	tegra_dc_flush_interrupt(dc, FRAME_END_INT);
-	/* unmask frame end interrupt */
-	val = tegra_dc_unmask_interrupt(dc, FRAME_END_INT);
-
-	timeout = wait_for_completion_interruptible_timeout(
-			&dc->frame_end_complete,
-			msecs_to_jiffies(timeout_n_frames * frame_period));
-
-	/* reinstate interrupt mask */
-	tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
+	timeout = tegra_dc_wait_for_frame_end(dc, timeout_n_frames *
+		frame_period);
 
 	/* wait for v_ref_to_sync no. of lines after frame end interrupt */
 	udelay(mode.v_ref_to_sync * line_period);
-
-	tegra_dc_put(dc);
 
 	return timeout;
 }

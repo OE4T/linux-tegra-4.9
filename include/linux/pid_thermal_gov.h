@@ -27,6 +27,9 @@ struct pid_thermal_gov_params {
 	int gain_p; /* proportional gain */
 	int gain_d; /* derivative gain */
 
+	/* max derivative output, percentage of max error */
+	unsigned long max_dout;
+
 	unsigned long up_compensation;
 	unsigned long down_compensation;
 };

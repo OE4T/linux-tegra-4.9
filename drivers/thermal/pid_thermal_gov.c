@@ -29,8 +29,19 @@
 #define MAX_ERR_GAIN_DEFAULT		1000
 #define GAIN_P_DEFAULT			1000
 #define GAIN_D_DEFAULT			0
+#define MAX_DOUT_DEFAULT		0
 #define UP_COMPENSATION_DEFAULT		20
 #define DOWN_COMPENSATION_DEFAULT	20
+
+static struct pid_thermal_gov_params pm_default = {
+	.max_err_temp		= MAX_ERR_TEMP_DEFAULT,
+	.max_err_gain		= MAX_ERR_GAIN_DEFAULT,
+	.gain_p			= GAIN_P_DEFAULT,
+	.gain_d			= GAIN_D_DEFAULT,
+	.max_dout		= MAX_DOUT_DEFAULT,
+	.up_compensation	= UP_COMPENSATION_DEFAULT,
+	.down_compensation	= DOWN_COMPENSATION_DEFAULT,
+};
 
 struct pid_thermal_gov_attribute {
 	struct attribute attr;
@@ -42,19 +53,7 @@ struct pid_thermal_gov_attribute {
 
 struct pid_thermal_governor {
 	struct kobject kobj;
-
-	int max_err_temp; /* max error temperature in mC */
-	int max_err_gain; /* max error gain */
-
-	int gain_p; /* proportional gain */
-	int gain_i; /* integral gain */
-	int gain_d; /* derivative gain */
-
-	/* max derivative output, percentage of max error */
-	unsigned long max_dout;
-
-	unsigned long up_compensation;
-	unsigned long down_compensation;
+	struct pid_thermal_gov_params pm;
 };
 
 #define tz_to_gov(t)		\
@@ -74,7 +73,7 @@ static ssize_t max_err_temp_show(struct kobject *kobj, struct attribute *attr,
 	if (!gov)
 		return -ENODEV;
 
-	return sprintf(buf, "%d\n", gov->max_err_temp);
+	return sprintf(buf, "%d\n", gov->pm.max_err_temp);
 }
 
 static ssize_t max_err_temp_store(struct kobject *kobj, struct attribute *attr,
@@ -89,7 +88,7 @@ static ssize_t max_err_temp_store(struct kobject *kobj, struct attribute *attr,
 	if (!sscanf(buf, "%d\n", &val))
 		return -EINVAL;
 
-	gov->max_err_temp = val;
+	gov->pm.max_err_temp = val;
 	return count;
 }
 
@@ -104,7 +103,7 @@ static ssize_t max_err_gain_show(struct kobject *kobj, struct attribute *attr,
 	if (!gov)
 		return -ENODEV;
 
-	return sprintf(buf, "%d\n", gov->max_err_gain);
+	return sprintf(buf, "%d\n", gov->pm.max_err_gain);
 }
 
 static ssize_t max_err_gain_store(struct kobject *kobj, struct attribute *attr,
@@ -119,7 +118,7 @@ static ssize_t max_err_gain_store(struct kobject *kobj, struct attribute *attr,
 	if (!sscanf(buf, "%d\n", &val))
 		return -EINVAL;
 
-	gov->max_err_gain = val;
+	gov->pm.max_err_gain = val;
 	return count;
 }
 
@@ -134,7 +133,7 @@ static ssize_t max_dout_show(struct kobject *kobj,
 	if (!gov)
 		return -ENODEV;
 
-	return sprintf(buf, "%lu\n", gov->max_dout);
+	return sprintf(buf, "%lu\n", gov->pm.max_dout);
 }
 
 static ssize_t max_dout_store(struct kobject *kobj, struct attribute *attr,
@@ -149,7 +148,7 @@ static ssize_t max_dout_store(struct kobject *kobj, struct attribute *attr,
 	if (!sscanf(buf, "%lu\n", &val))
 		return -EINVAL;
 
-	gov->max_dout = val;
+	gov->pm.max_dout = val;
 	return count;
 }
 
@@ -164,7 +163,7 @@ static ssize_t gain_p_show(struct kobject *kobj, struct attribute *attr,
 	if (!gov)
 		return -ENODEV;
 
-	return sprintf(buf, "%d\n", gov->gain_p);
+	return sprintf(buf, "%d\n", gov->pm.gain_p);
 }
 
 static ssize_t gain_p_store(struct kobject *kobj, struct attribute *attr,
@@ -179,7 +178,7 @@ static ssize_t gain_p_store(struct kobject *kobj, struct attribute *attr,
 	if (!sscanf(buf, "%d\n", &val))
 		return -EINVAL;
 
-	gov->gain_p = val;
+	gov->pm.gain_p = val;
 	return count;
 }
 
@@ -194,7 +193,7 @@ static ssize_t gain_d_show(struct kobject *kobj, struct attribute *attr,
 	if (!gov)
 		return -ENODEV;
 
-	return sprintf(buf, "%d\n", gov->gain_d);
+	return sprintf(buf, "%d\n", gov->pm.gain_d);
 }
 
 static ssize_t gain_d_store(struct kobject *kobj, struct attribute *attr,
@@ -209,7 +208,7 @@ static ssize_t gain_d_store(struct kobject *kobj, struct attribute *attr,
 	if (!sscanf(buf, "%d\n", &val))
 		return -EINVAL;
 
-	gov->gain_d = val;
+	gov->pm.gain_d = val;
 	return count;
 }
 
@@ -224,7 +223,7 @@ static ssize_t up_compensation_show(struct kobject *kobj,
 	if (!gov)
 		return -ENODEV;
 
-	return sprintf(buf, "%lu\n", gov->up_compensation);
+	return sprintf(buf, "%lu\n", gov->pm.up_compensation);
 }
 
 static ssize_t up_compensation_store(struct kobject *kobj,
@@ -240,7 +239,7 @@ static ssize_t up_compensation_store(struct kobject *kobj,
 	if (!sscanf(buf, "%lu\n", &val))
 		return -EINVAL;
 
-	gov->up_compensation = val;
+	gov->pm.up_compensation = val;
 	return count;
 }
 
@@ -256,7 +255,7 @@ static ssize_t down_compensation_show(struct kobject *kobj,
 	if (!gov)
 		return -ENODEV;
 
-	return sprintf(buf, "%lu\n", gov->down_compensation);
+	return sprintf(buf, "%lu\n", gov->pm.down_compensation);
 }
 
 static ssize_t down_compensation_store(struct kobject *kobj,
@@ -272,7 +271,7 @@ static ssize_t down_compensation_store(struct kobject *kobj,
 	if (!sscanf(buf, "%lu\n", &val))
 		return -EINVAL;
 
-	gov->down_compensation = val;
+	gov->pm.down_compensation = val;
 	return count;
 }
 
@@ -346,24 +345,9 @@ static int pid_thermal_gov_start(struct thermal_zone_device *tz)
 		return ret;
 	}
 
-	if (tz->tzp->governor_params) {
-		params = (struct pid_thermal_gov_params *)
-					tz->tzp->governor_params;
-		gov->max_err_temp = params->max_err_temp;
-		gov->max_err_gain = params->max_err_gain;
-		gov->gain_p = params->gain_p;
-		gov->gain_d = params->gain_d;
-		gov->up_compensation = params->up_compensation;
-		gov->down_compensation = params->down_compensation;
-	} else {
-		gov->max_err_temp = MAX_ERR_TEMP_DEFAULT;
-		gov->max_err_gain = MAX_ERR_GAIN_DEFAULT;
-		gov->gain_p = GAIN_P_DEFAULT;
-		gov->gain_d = GAIN_D_DEFAULT;
-		gov->up_compensation = UP_COMPENSATION_DEFAULT;
-		gov->down_compensation = DOWN_COMPENSATION_DEFAULT;
-	}
-	tz->governor_data = gov;
+	params = (struct pid_thermal_gov_params *)tz->tzp->governor_params;
+	gov->pm = params ? *params : pm_default;
+	tz_to_gov(tz) = gov;
 
 	return 0;
 }
@@ -412,19 +396,19 @@ pid_thermal_gov_get_target(struct thermal_zone_device *tz,
 	if (cdev->ops->get_cur_state(cdev, &cur_state) < 0)
 		return 0;
 
-	max_err = (s64)gov->max_err_temp * (s64)gov->max_err_gain;
+	max_err = (s64)gov->pm.max_err_temp * (s64)gov->pm.max_err_gain;
 
 	/* Calculate proportional term */
 	proportional = (s64)tz->temperature - (s64)trip_temp;
-	proportional *= gov->gain_p;
+	proportional *= gov->pm.gain_p;
 
 	/* Calculate derivative term */
 	derivative = (s64)tz->temperature - (s64)last_temperature;
-	derivative *= gov->gain_d;
+	derivative *= gov->pm.gain_d;
 	derivative *= MSEC_PER_SEC;
 	derivative = div64_s64(derivative, passive_delay);
-	if (gov->max_dout) {
-		s64 max_dout = div64_s64(max_err * gov->max_dout, 100);
+	if (gov->pm.max_dout) {
+		s64 max_dout = div64_s64(max_err * gov->pm.max_dout, 100);
 		if (derivative < 0)
 			derivative = -min_t(s64, abs64(derivative), max_dout);
 		else
@@ -441,11 +425,11 @@ pid_thermal_gov_get_target(struct thermal_zone_device *tz,
 		return target;
 
 	if (target > cur_state) {
-		compensation = DIV_ROUND_UP(gov->up_compensation *
+		compensation = DIV_ROUND_UP(gov->pm.up_compensation *
 					    (target - cur_state), 100);
 		target = min(cur_state + compensation, max_state);
 	} else if (target < cur_state) {
-		compensation = DIV_ROUND_UP(gov->down_compensation *
+		compensation = DIV_ROUND_UP(gov->pm.down_compensation *
 					    (cur_state - target), 100);
 		target = (cur_state > compensation) ?
 			 (cur_state - compensation) : 0;
@@ -501,11 +485,44 @@ static int pid_thermal_gov_throttle(struct thermal_zone_device *tz, int trip)
 	return 0;
 }
 
+static int pid_thermal_gov_of_parse(struct thermal_zone_params *tzp,
+				    struct device_node *np)
+{
+	u32 val;
+	struct pid_thermal_gov_params *gpm;
+
+	gpm = kzalloc(sizeof(struct pid_thermal_gov_params), GFP_KERNEL);
+	if (!gpm)
+		return -ENOMEM;
+
+	*gpm = pm_default; /* start with default parameters */
+
+	/* parse and populate governor_params explicitly specified in DT */
+	if (!of_property_read_u32(np, "max_err_temp", &val))
+		gpm->max_err_temp = val;
+	if (!of_property_read_u32(np, "max_err_gain", &val))
+		gpm->max_err_gain = val;
+	if (!of_property_read_u32(np, "gain_p", &val))
+		gpm->gain_p = val;
+	if (!of_property_read_u32(np, "gain_d", &val))
+		gpm->gain_d = val;
+	if (!of_property_read_u32(np, "max_dout", &val))
+		gpm->max_dout = val;
+	if (!of_property_read_u32(np, "up_compensation", &val))
+		gpm->up_compensation = val;
+	if (!of_property_read_u32(np, "down_compensation", &val))
+		gpm->down_compensation = val;
+
+	tzp->governor_params = gpm;
+	return 0;
+}
+
 static struct thermal_governor pid_thermal_gov = {
 	.name		= DRV_NAME,
 	.start		= pid_thermal_gov_start,
 	.stop		= pid_thermal_gov_stop,
 	.throttle	= pid_thermal_gov_throttle,
+	.of_parse	= pid_thermal_gov_of_parse,
 };
 
 int pid_thermal_gov_register(void)

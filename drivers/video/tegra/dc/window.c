@@ -616,13 +616,9 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 		}
 
 #if defined(CONFIG_TEGRA_DC_CDE)
-		if (win->flags & TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED) {
+		if (win->cde.cde_addr) {
 			tegra_dc_writel(dc, ENABLESURFACE0,
 				DC_WINBUF_CDE_CONTROL);
-
-			if (WARN_ONCE(!win->cde.cde_addr,
-				"CDE address is NULL!"))
-				return -EINVAL;
 			tegra_dc_writel(dc, tegra_dc_reg_l32(win->cde.cde_addr),
 				DC_WINBUF_CDE_COMPTAG_BASE_0);
 			tegra_dc_writel(dc, tegra_dc_reg_h32(win->cde.cde_addr),

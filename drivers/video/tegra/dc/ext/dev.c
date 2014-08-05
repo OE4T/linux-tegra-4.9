@@ -349,7 +349,7 @@ static void tegra_dc_ext_set_windowattr_basic(struct tegra_dc_win *win,
 #if defined(CONFIG_TEGRA_DC_CDE)
 	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED) {
 		win->cde.zbc_color = flip_win->cde.zbc_color;
-		win->cde.offset_y = flip_win->cde.offset_x;
+		win->cde.offset_x = flip_win->cde.offset_x;
 		win->cde.offset_y = flip_win->cde.offset_y;
 		win->cde.ctb_entry = 0x02;
 	}

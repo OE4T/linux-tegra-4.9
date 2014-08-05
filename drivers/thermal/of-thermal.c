@@ -963,13 +963,22 @@ static int of_parse_thermal_zone_params(struct device_node *np,
 		struct thermal_zone_params *tzp)
 {
 	const char *pstr;
+	struct thermal_governor *gov;
 
-	pstr =  of_get_property(np, "governer-name", NULL);
-	if (pstr) {
-		int len = strlen(pstr);
-		len = min(len, THERMAL_NAME_LENGTH);
-		strncpy(tzp->governor_name, pstr, len);
-	}
+	pstr =  of_get_property(np, "governor-name", NULL);
+	if (!pstr)
+		return 0;
+
+	strncpy(tzp->governor_name, pstr, THERMAL_NAME_LENGTH);
+
+	gov = thermal_find_governor(tzp->governor_name);
+	if (!gov)
+		return 0;
+	else if (!gov->of_parse)
+		return 0;
+	else if (gov->of_parse(tzp, np))
+		pr_err("failed to parse governor '%s' params\n",
+		       tzp->governor_name);
 	return 0;
 }
 

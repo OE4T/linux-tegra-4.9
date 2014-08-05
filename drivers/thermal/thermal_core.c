@@ -64,7 +64,7 @@ static atomic_t in_suspend;
 
 static struct thermal_governor *def_governor;
 
-static struct thermal_governor *__find_governor(const char *name)
+struct thermal_governor *thermal_find_governor(const char *name)
 {
 	struct thermal_governor *pos;
 
@@ -142,7 +142,7 @@ int thermal_register_governor(struct thermal_governor *governor)
 	mutex_lock(&thermal_governor_lock);
 
 	err = -EBUSY;
-	if (__find_governor(governor->name) == NULL) {
+	if (thermal_find_governor(governor->name) == NULL) {
 		err = 0;
 		list_add(&governor->governor_list, &thermal_governor_list);
 		if (!def_governor && !strncmp(governor->name,
@@ -188,7 +188,7 @@ void thermal_unregister_governor(struct thermal_governor *governor)
 
 	mutex_lock(&thermal_governor_lock);
 
-	if (__find_governor(governor->name) == NULL)
+	if (thermal_find_governor(governor->name) == NULL)
 		goto exit;
 
 	mutex_lock(&thermal_list_lock);
@@ -962,7 +962,7 @@ policy_store(struct device *dev, struct device_attribute *attr,
 	mutex_lock(&thermal_governor_lock);
 	mutex_lock(&tz->lock);
 
-	gov = __find_governor(strim(name));
+	gov = thermal_find_governor((const char *)strim(name));
 	if (!gov)
 		goto exit;
 
@@ -2066,7 +2066,7 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 	mutex_lock(&thermal_governor_lock);
 
 	if (tz->tzp) {
-		governor = __find_governor(tz->tzp->governor_name);
+		governor = thermal_find_governor(tz->tzp->governor_name);
 		/*
 		 * This situation can arise if a governor is not enabled from a config
 		 * file but is used in the device tree

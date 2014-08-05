@@ -31,6 +31,6 @@
 		interrupts = <TEGRA_GPIO(H, 2) 0x14>;
 		wlan-pwr-gpio = <&gpio TEGRA_GPIO(H, 0) 0>;
 		wlan-rst-gpio = <&gpio TEGRA_GPIO(H, 1) 0>;
-		status = "disabled";
+		status = "okay";
 	};
 };

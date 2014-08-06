@@ -1030,7 +1030,11 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 
 	/* get the xbar dai link/codec conf structure */
 	tegra_machine_dai_links = tegra_machine_get_dai_link();
+	if (!tegra_machine_dai_links)
+		goto err_alloc_dai_link;
 	tegra_machine_codec_conf = tegra_machine_get_codec_conf();
+	if (!tegra_machine_codec_conf)
+		goto err_alloc_dai_link;
 
 	/* set AMX/ADX dai_init */
 	tegra_machine_set_dai_init(TEGRA124_DAI_LINK_AMX0,
@@ -1043,26 +1047,56 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 		&tegra_vcm30t124_adx1_init);
 
     /* set AMX/ADX params */
-	for (i = 0; i < machine->pdata->num_amx; i++) {
-		tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX0_0,
-			&machine->pdata->amx_config[i].params[0]);
-		tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX0_1,
-			&machine->pdata->amx_config[i].params[1]);
-		tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX0_2,
-			&machine->pdata->amx_config[i].params[2]);
-		tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX0_3,
-			&machine->pdata->amx_config[i].params[3]);
+	if (machine->pdata->num_amx) {
+		switch (machine->pdata->num_amx) {
+		case 2:
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX1_0,
+				&machine->pdata->amx_config[1].params[0]);
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX1_1,
+				&machine->pdata->amx_config[1].params[1]);
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX1_2,
+				&machine->pdata->amx_config[1].params[2]);
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX1_3,
+				&machine->pdata->amx_config[1].params[3]);
+		case 1:
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX0_0,
+				&machine->pdata->amx_config[0].params[0]);
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX0_1,
+				&machine->pdata->amx_config[0].params[1]);
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX0_2,
+				&machine->pdata->amx_config[0].params[2]);
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX0_3,
+				&machine->pdata->amx_config[0].params[3]);
+			break;
+		default:
+			break;
+		}
 	}
 
-	for (i = 0; i < machine->pdata->num_adx; i++) {
-		tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX0_0,
-			&machine->pdata->adx_config[i].params[0]);
-		tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX0_1,
-			&machine->pdata->adx_config[i].params[1]);
-		tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX0_2,
-			&machine->pdata->adx_config[i].params[2]);
-		tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX0_3,
-			&machine->pdata->adx_config[i].params[3]);
+	if (machine->pdata->num_adx) {
+		switch (machine->pdata->num_adx) {
+		case 2:
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX1_0,
+				&machine->pdata->adx_config[1].params[0]);
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX1_1,
+				&machine->pdata->adx_config[1].params[1]);
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX1_2,
+				&machine->pdata->adx_config[1].params[2]);
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX1_3,
+				&machine->pdata->adx_config[1].params[3]);
+		case 1:
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX0_0,
+				&machine->pdata->adx_config[0].params[0]);
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX0_1,
+				&machine->pdata->adx_config[0].params[1]);
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX0_2,
+				&machine->pdata->adx_config[0].params[2]);
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX0_3,
+				&machine->pdata->adx_config[0].params[3]);
+			break;
+		default:
+			break;
+		}
 	}
 
 	/* set DAM dai_init */
@@ -1119,6 +1153,10 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 			num_codec_links);
 	tegra_machine_codec_conf = tegra_machine_get_codec_conf();
 	card->codec_conf = tegra_machine_codec_conf;
+
+	/* remove vcm30t124 specific dai links and conf */
+	tegra_vcm30t124_free_codec_links();
+	tegra_vcm30t124_free_codec_conf();
 
 	machine->gpio_dap_direction = GPIO_PR0;
 	machine->wm_rate_via_kcontrol = 0;
@@ -1178,6 +1216,9 @@ err_gpio_free:
 err_i2c_unregister:
 	if (machine->max9485_client)
 		i2c_unregister_device(machine->max9485_client);
+err_alloc_dai_link:
+	tegra_machine_remove_dai_link();
+	tegra_machine_remove_codec_conf();
 err:
 	return ret;
 }
@@ -1186,9 +1227,6 @@ static int tegra_vcm30t124_driver_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
-
-	tegra_vcm30t124_free_codec_links();
-	tegra_vcm30t124_free_codec_conf();
 
 	snd_soc_unregister_card(card);
 

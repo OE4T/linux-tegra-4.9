@@ -22,6 +22,8 @@
 
 #include "tegra_asoc_machine_alt.h"
 
+#define MAX_STR_SIZE		20
+
 static struct snd_soc_dai_link *tegra_asoc_machine_links;
 static struct snd_soc_codec_conf *tegra_asoc_codec_conf;
 static const unsigned int *bclk_ratio;
@@ -42,10 +44,6 @@ static const struct snd_soc_pcm_stream tdm_link_params = {
 	.channels_min = 8,
 	.channels_max = 8,
 };
-
-static const char * const dai_link_name[] = {"nvidia,dai-link-1",
-	"nvidia,dai-link-2", "nvidia,dai-link-3",
-	"nvidia,dai-link-4", "nvidia,dai-link-5"};
 
 static const char * const bit_format[] = {
 	"s8", "u8", "s16_le", "s16_be",
@@ -1755,6 +1753,7 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 	unsigned int i, j, num_codec_links;
 	struct device_node *np = pdev->dev.of_node, *subnp;
 	struct snd_soc_pcm_stream *params;
+	char dai_link_name[MAX_STR_SIZE];
 	char *str;
 	const char *prefix;
 
@@ -1789,14 +1788,16 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 
 	/* i is for DAP and j is for CIF */
 	for (i = 0, j = num_codec_links; i < num_codec_links; i++, j++) {
-		subnp = of_get_child_by_name(np, dai_link_name[i]);
+		memset((void *)dai_link_name, '\0', MAX_STR_SIZE);
+		sprintf(dai_link_name, "nvidia,dai-link-%d", i+1);
+		subnp = of_get_child_by_name(np, dai_link_name);
 		if (subnp) {
 			tegra_codec_links[i].codec_of_node =
 				of_parse_phandle(subnp, "codec-dai", 0);
 			if (!tegra_codec_links[i].codec_of_node) {
 				dev_err(&pdev->dev,
 					"Property '%s.codec-dai' missing or invalid\n",
-					dai_link_name[i]);
+					dai_link_name);
 				goto err;
 			}
 
@@ -1805,7 +1806,7 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 			if (!tegra_codec_links[i].cpu_of_node) {
 				dev_err(&pdev->dev,
 					"Property '%s.cpu-dai' missing or invalid\n",
-					dai_link_name[i]);
+					dai_link_name);
 				goto err;
 			}
 
@@ -1910,7 +1911,7 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 		} else {
 			dev_err(&pdev->dev,
 				"Property '%s' missing or invalid\n",
-				dai_link_name[i]);
+				dai_link_name);
 			goto err;
 		}
 	}
@@ -1923,12 +1924,6 @@ err:
 }
 EXPORT_SYMBOL_GPL(tegra_machine_new_codec_links);
 
-void tegra_machine_remove_new_codec_links(
-	struct snd_soc_dai_link *tegra_codec_links)
-{
-	kfree(tegra_codec_links);
-}
-EXPORT_SYMBOL_GPL(tegra_machine_remove_new_codec_links);
 
 struct snd_soc_codec_conf *tegra_machine_new_codec_conf(
 	struct platform_device *pdev,
@@ -1938,6 +1933,7 @@ struct snd_soc_codec_conf *tegra_machine_new_codec_conf(
 	unsigned int i, num_codec_links;
 	struct device_node *np = pdev->dev.of_node, *subnp;
 	const struct device_node *of_node;
+	char dai_link_name[MAX_STR_SIZE];
 
 	if (tegra_codec_conf)
 		return tegra_codec_conf;
@@ -1952,11 +1948,13 @@ struct snd_soc_codec_conf *tegra_machine_new_codec_conf(
 		goto err;
 	}
 
-	tegra_codec_conf = kzalloc(num_codec_links *
+	tegra_codec_conf =  devm_kzalloc(&pdev->dev, num_codec_links *
 		sizeof(struct snd_soc_codec_conf), GFP_KERNEL);
 
 	for (i = 0; i < num_codec_links; i++) {
-		subnp = of_get_child_by_name(np, dai_link_name[i]);
+		memset((void *)dai_link_name, '\0', MAX_STR_SIZE);
+		sprintf(dai_link_name, "nvidia,dai-link-%d", i+1);
+		subnp = of_get_child_by_name(np, dai_link_name);
 		if (subnp) {
 			of_node = of_parse_phandle(subnp, "codec-dai", 0);
 			tegra_codec_conf[i].dev_name = of_node->name;
@@ -1975,12 +1973,6 @@ err:
 }
 EXPORT_SYMBOL_GPL(tegra_machine_new_codec_conf);
 
-void tegra_machine_remove_new_codec_conf(
-	struct snd_soc_codec_conf *tegra_codec_conf)
-{
-	kfree(tegra_codec_conf);
-}
-EXPORT_SYMBOL_GPL(tegra_machine_remove_new_codec_conf);
 
 /* This function is valid when dai_link is initiated from the DT */
 unsigned int tegra_machine_get_codec_dai_link_idx(char *of_node_name)
@@ -2040,8 +2032,6 @@ EXPORT_SYMBOL_GPL(tegra_machine_get_num_dai_links);
 void tegra_machine_remove_extra_mem_alloc(unsigned int num_codec_links)
 {
 	int i, j;
-
-	kfree(bclk_ratio);
 
 	if (num_dai_links > TEGRA210_XBAR_DAI_LINKS)
 		for (i = TEGRA210_XBAR_DAI_LINKS,

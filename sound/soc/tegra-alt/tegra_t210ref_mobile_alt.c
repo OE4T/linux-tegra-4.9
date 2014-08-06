@@ -546,8 +546,9 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		goto err_alloc_dai_link;
 #endif
 
-	pdata = kzalloc(sizeof(struct tegra_asoc_platform_data),
-			GFP_KERNEL);
+	pdata = devm_kzalloc(&pdev->dev,
+				sizeof(struct tegra_asoc_platform_data),
+				GFP_KERNEL);
 	if (!pdata) {
 		dev_err(&pdev->dev,
 			"Can't allocate tegra_asoc_platform_data struct\n");
@@ -639,17 +640,12 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		goto err_alloc_dai_link;
 	}
 
-	/* release new codec_links and codec_conf */
-	tegra_machine_remove_new_codec_links(tegra_t210ref_codec_links);
-	tegra_machine_remove_new_codec_conf(tegra_t210ref_codec_conf);
-
 	return 0;
 
 err_alloc_dai_link:
-	tegra_machine_remove_codec_conf();
+	tegra_machine_remove_extra_mem_alloc(machine->num_codec_links);
 	tegra_machine_remove_dai_link();
-	tegra_machine_remove_new_codec_links(tegra_t210ref_codec_links);
-	tegra_machine_remove_new_codec_conf(tegra_t210ref_codec_conf);
+	tegra_machine_remove_codec_conf();
 err:
 	return ret;
 }

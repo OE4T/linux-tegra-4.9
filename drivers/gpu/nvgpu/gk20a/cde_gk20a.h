@@ -240,6 +240,8 @@ struct gk20a_cde_app {
 
 	struct gk20a_cde_ctx cde_ctx[1];
 	int cde_ctx_ptr;
+
+	u32 shader_parameter;
 };
 
 int gk20a_cde_destroy(struct gk20a *g);

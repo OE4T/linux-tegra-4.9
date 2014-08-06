@@ -1036,7 +1036,8 @@ static int gk20a_buffer_convert_gpu_to_cde(
 	WRITE_PATCH(PATCH_USER_CONST_YTILES, ytiles);
 	WRITE_PATCH(PATCH_USER_CONST_BLOCKHEIGHTLOG2, block_height_log2);
 	WRITE_PATCH(PATCH_USER_CONST_DSTPITCH, dst_stride);
-	WRITE_PATCH(PATCH_USER_CONST_DSTOFFSET, transpose ? 4 : 0); /* flag */
+	WRITE_PATCH(PATCH_USER_CONST_DSTOFFSET,
+		    (transpose ? 4 : 0) | g->cde_app.shader_parameter);
 	WRITE_PATCH(PATCH_VPC_CURRENT_GRID_SIZE_X, gridw);
 	WRITE_PATCH(PATCH_VPC_CURRENT_GRID_SIZE_Y, gridh);
 	WRITE_PATCH(PATCH_VPC_CURRENT_GRID_SIZE_Z, 1);
@@ -1208,6 +1209,8 @@ void gk20a_cde_debugfs_init(struct platform_device *dev)
 	struct gk20a_platform *platform = platform_get_drvdata(dev);
 	struct gk20a *g = get_gk20a(dev);
 
+	debugfs_create_u32("cde_parameter", S_IWUSR | S_IRUGO,
+			   platform->debugfs, &g->cde_app.shader_parameter);
 	debugfs_create_file("reload_cde_firmware", S_IWUSR, platform->debugfs,
 			    g, &gk20a_cde_reload_fops);
 }

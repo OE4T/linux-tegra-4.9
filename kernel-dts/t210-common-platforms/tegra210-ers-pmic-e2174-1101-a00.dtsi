@@ -24,7 +24,7 @@
 		nvidia,bit-banging-xfer-after-shutdown;
 
 		cpu_max77621_reg: max8973@1b {
-			compatible = "maxim,max8973";
+			compatible = "maxim,max77621";
 			reg = <0x1b>;
 			status = "disabled";
 			regulator-name = "vdd-cpu";
@@ -39,7 +39,7 @@
 		};
 
 		gpu_max77621_reg: max8973@1c {
-			compatible = "maxim,max8973";
+			compatible = "maxim,max77621";
 			reg = <0x1c>;
 			status = "disabled";
 			regulator-name = "vdd-gpu";

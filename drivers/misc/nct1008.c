@@ -29,6 +29,7 @@
 #include <linux/gpio.h>
 #include <linux/device.h>
 #include <linux/nct1008.h>
+#include <linux/of_gpio.h>
 #include <linux/delay.h>
 #include <linux/thermal.h>
 #include <linux/regulator/consumer.h>
@@ -394,7 +395,8 @@ static ssize_t nct1008_set_temp_overheat(struct device *dev,
 		goto error;
 
 	data->plat_data.sensors[EXT].shutdown_limit = num;
-	nct1008_setup_shutdown_warning(data);
+	if (!client->dev.of_node)
+		nct1008_setup_shutdown_warning(data);
 
 	return count;
 error:
@@ -802,6 +804,11 @@ static int nct1008_ext_get_temp(struct thermal_zone_device *thz,
 	return nct1008_get_temp_common(EXT, data, temp);
 }
 
+static int nct1008_ext_get_temp_as_sensor(void *data, long *temp)
+{
+	return nct1008_get_temp_common(EXT, (struct nct1008_data *) data, temp);
+}
+
 static int nct1008_ext_bind(struct thermal_zone_device *thz,
 			    struct thermal_cooling_device *cdev)
 {
@@ -991,6 +998,19 @@ static int nct1008_get_trend(int sensor,
 	return 0;
 }
 
+static int nct1008_get_trend_as_sensor(int sensor,
+				struct nct1008_data *data,
+					long *trend)
+{
+	 /*FIXME this function will not be used,
+	bug 200025971 to solve this issue*/
+	struct thermal_trip_info *trip_state;
+	int trip = 0;
+	trip_state = &data->plat_data.sensors[sensor].trips[trip];
+	*trend = data->sensors[sensor].temp - trip_state->trip_temp;
+	return 0;
+}
+
 /* Helper function to get trend for the local sensor. */
 static inline int nct1008_loc_get_trend(struct thermal_zone_device *thz,
 						int trip,
@@ -998,6 +1018,13 @@ static inline int nct1008_loc_get_trend(struct thermal_zone_device *thz,
 {
 	return nct1008_get_trend(LOC, thz, trip, trend);
 }
+static inline int nct1008_loc_get_trend_as_sensor(void *data,
+						long *trend)
+{
+	return nct1008_get_trend_as_sensor(LOC,
+		(struct nct1008_data *) data, trend);
+}
+
 /* Helper function to get trend for the external sensor. */
 static inline int nct1008_ext_get_trend(struct thermal_zone_device *thz,
 						int trip,
@@ -1005,6 +1032,13 @@ static inline int nct1008_ext_get_trend(struct thermal_zone_device *thz,
 {
 	return nct1008_get_trend(EXT, thz, trip, trend);
 }
+static inline int nct1008_ext_get_trend_as_sensor(void *data,
+						long *trend)
+{
+	return nct1008_get_trend_as_sensor
+		(EXT, (struct nct1008_data *) data, trend);
+}
+
 
 /* Helper function to get temperature of the local sensor. */
 static int nct1008_loc_get_temp(struct thermal_zone_device *thz,
@@ -1015,6 +1049,10 @@ static int nct1008_loc_get_temp(struct thermal_zone_device *thz,
 	return nct1008_get_temp_common(LOC, data, temp);
 }
 
+static int nct1008_loc_get_temp_as_sensor(void *data, long *temp)
+{
+	return nct1008_get_temp_common(LOC, (struct nct1008_data *) data, temp);
+}
 /* Helper function to bind local sensor with the cooling device specified. */
 static int nct1008_loc_bind(struct thermal_zone_device *thz,
 				struct thermal_cooling_device *cdev)
@@ -1370,7 +1408,8 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 	data->sensors[LOC].current_hi_limit =
 		value_to_temperature(pdata->extended_range, value);
 
-	nct1008_setup_shutdown_warning(data);
+	if (!client->dev.of_node)
+		nct1008_setup_shutdown_warning(data);
 
 	return 0;
 error:
@@ -1394,6 +1433,137 @@ static int nct1008_configure_irq(struct nct1008_data *data)
 			data);
 }
 
+static struct nct1008_platform_data *nct1008_dt_parse(struct i2c_client *client)
+{
+	struct device_node *np = client->dev.of_node;
+	struct device_node *child_sensor;
+	struct nct1008_platform_data *pdata;
+	int nct72_gpio;
+	unsigned int proc, index = 0;
+	if (!np) {
+		dev_err(&client->dev,
+			"Cannot found the DT node\n");
+		goto err_parse_dt;
+	}
+
+	dev_info(&client->dev, "starting parse dt\n");
+	pdata = devm_kzalloc(&client->dev, sizeof(*pdata), GFP_KERNEL);
+	if (!pdata) {
+		dev_err(&client->dev,
+			"Parse DT fails at malloc pdata\n");
+		goto err_parse_dt;
+	}
+
+	pdata->loc_name = of_get_property(np, "sensor-name", NULL);
+	if (pdata->loc_name == NULL) {
+		dev_err(&client->dev,
+			"Cannot found the name\n");
+		goto err_parse_dt;
+	}
+
+	if (client->irq == 0)
+		client->irq = -1;
+
+	if (of_property_read_u32(np, "conv-rate", &proc))
+		goto err_parse_dt;
+	pdata->conv_rate = proc;
+
+	if (of_property_read_u32(np, "supported-hwrev", &proc))
+		goto err_parse_dt;
+	pdata->supported_hwrev = (bool) proc;
+
+	if (of_property_read_u32(np, "extended-rage", &proc))
+		goto err_parse_dt;
+	pdata->extended_range = (bool) proc;
+
+	if (of_property_read_u32(np, "offset", &proc))
+		goto err_parse_dt;
+	pdata->offset =  proc;
+
+	if (of_property_read_bool(np, "temp-alert-gpio")) {
+		nct72_gpio = of_get_named_gpio(
+			np,  "temp-alert-gpio", 0);
+		if (gpio_request(nct72_gpio, "temp_alert") < 0)
+			dev_err(&client->dev,
+				"%s gpio request error\n", __FILE__);
+		if (gpio_direction_input(nct72_gpio) < 0) {
+			dev_err(&client->dev,
+				"%s gpio direction_input fail\n", __FILE__);
+			gpio_free(nct72_gpio);
+		}
+	}
+
+	for_each_child_of_node(np, child_sensor) {
+		if (of_property_read_u32(child_sensor, "shutdown-limit", &proc))
+			goto err_parse_dt;
+		pdata->sensors[index].shutdown_limit = proc;
+
+		proc = 0;
+		of_property_read_u32(child_sensor, "suspend_limit_hi", &proc);
+		pdata->sensors[index].suspend_limit_hi = proc;
+		of_property_read_u32(child_sensor, "suspend_limit_lo", &proc);
+		pdata->sensors[index].suspend_limit_lo = proc;
+		index++;
+	}
+
+	dev_info(&client->dev, "success parsing dt\n");
+	client->dev.platform_data = pdata;
+	return pdata;
+
+err_parse_dt:
+	dev_err(&client->dev, "Parsing device tree data error.\n");
+	return NULL;
+}
+
+void nct1008_get_trip(int sensor, struct nct1008_data *data)
+{
+	/* TODO: this function assumes that the thermal zone
+	driver doesn't allow the trip temperature and trip
+	hysteresis to change at runtime. If they do, the
+	values in data->plat_data.sensors[sensor].trips[count].trip_temp
+	and .trip_hyst become stale. */
+
+	struct thermal_zone_device *thz;
+	int count;
+	long proc;
+	enum thermal_trip_type trip_type;
+
+	thz = data->sensors[sensor].thz;
+	data->plat_data.sensors[sensor].num_trips = thz->trips;
+
+	for (count = 0; count < thz->trips; count++) {
+		if (thz->ops && thz->ops->get_trip_temp)
+			thz->ops->get_trip_temp(thz, 0, &proc);
+		else
+			dev_err(&data->client->dev,
+				"Cannot found the get_trip_temp");
+		data->plat_data.sensors[sensor].trips[count].trip_temp = proc;
+		if (thz->ops && thz->ops->get_trip_hyst)
+			thz->ops->get_trip_hyst(thz, 0, &proc);
+		else
+			dev_err(&data->client->dev,
+				"Cannot found the get_trip_hyst");
+		data->plat_data.sensors[sensor].trips[count].hysteresis = proc;
+
+		if (thz->ops && thz->ops->get_trip_type)
+			thz->ops->get_trip_type(thz, 0, &trip_type);
+		else
+			dev_err(&data->client->dev,
+				"Cannot found the get_trip_type");
+		data->plat_data.sensors[sensor]
+			.trips[count].trip_type = trip_type;
+	}
+}
+
+static struct thermal_zone_of_device_ops loc_sops = {
+	.get_temp = nct1008_loc_get_temp_as_sensor,
+};
+
+static struct thermal_zone_of_device_ops ext_sops = {
+	.get_temp = nct1008_ext_get_temp_as_sensor,
+};
+
+
 /*
  * Manufacturer(OnSemi) recommended sequence for
  * Extended Range mode is as follows
@@ -1414,6 +1584,7 @@ static int nct1008_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)
 {
 	struct nct1008_data *data;
+	struct nct1008_platform_data *pdata;
 	int err;
 	int i;
 	u64 mask = 0;
@@ -1428,8 +1599,21 @@ static int nct1008_probe(struct i2c_client *client,
 
 	data->client = client;
 	data->chip = id->driver_data;
+
+	if (client->dev.of_node) {
+		dev_info(&client->dev, "find device tree node, parsing dt\n");
+		pdata = nct1008_dt_parse(client);
+		if (IS_ERR(pdata)) {
+			err = PTR_ERR(pdata);
+			dev_err(&client->dev,
+				"Parsing of node failed, %d\n", err);
+			return err;
+		}
+	}
+
 	memcpy(&data->plat_data, client->dev.platform_data,
 		sizeof(struct nct1008_platform_data));
+
 	i2c_set_clientdata(client, data);
 	mutex_init(&data->mutex);
 
@@ -1485,52 +1669,83 @@ static int nct1008_probe(struct i2c_client *client,
 		strcpy(nct_ext_name, "Tdiode");
 	}
 
-	sensor_data = &data->plat_data.sensors[LOC];
+	if (client->dev.of_node) {
+		/* Config for the Local sensor. */
+		data->sensors[LOC].thz = thermal_zone_of_sensor_register
+			(&(client->dev), LOC, data, &loc_sops);
 
-	/* Config for the Local sensor. */
-	mask = 0;
-	for (i = 0; i < sensor_data->num_trips; i++)
-		mask |=
-		(((u64)(data->plat_data.sensors[LOC].trips[i].mask > 0)) << i);
+		if (IS_ERR_OR_NULL(data->sensors[LOC].thz))
+			goto error;
 
-	data->sensors[LOC].thz = thermal_zone_device_register(
-		nct_loc_name,
-		sensor_data->num_trips,
-		mask,
-		data,
-		&nct_loc_ops,
-		sensor_data->tzp,
-		2000,
-		0);
+		/* check ext sensor connection before registering zone */
+		if (ext_err)
+			/* skip registering unconneted sensor as zone */
+			return 0;
 
-	if (IS_ERR_OR_NULL(data->sensors[LOC].thz))
-		goto error;
+		/* Config for the External sensor. */
+		data->sensors[EXT].thz = thermal_zone_of_sensor_register
+			(&(client->dev), EXT, data, &ext_sops);
 
-	/* check ext sensor connection before registering zone */
-	if (ext_err)
-		return 0; /* skip registering unconneted sensor as zone */
+		if (IS_ERR_OR_NULL(data->sensors[EXT].thz)) {
+			thermal_zone_of_sensor_unregister(&(client->dev),
+				data->sensors[LOC].thz);
+			data->sensors[LOC].thz = NULL;
+			goto error;
+		}
 
-	/* Config for the External sensor. */
-	mask = 0;
-	for (i = 0; i < data->plat_data.sensors[EXT].num_trips; i++)
-		mask |=
-		(((u64)(data->plat_data.sensors[EXT].trips[i].mask > 0)) << i);
+		nct1008_get_trip(LOC, data);
+		nct1008_get_trip(EXT, data);
+	} else {
+		sensor_data = &data->plat_data.sensors[LOC];
 
-	data->sensors[EXT].thz = thermal_zone_device_register(nct_ext_name,
-		data->plat_data.sensors[EXT].num_trips,
-		mask,
-		data,
-		&nct_ext_ops,
-		data->plat_data.sensors[EXT].tzp,
-		data->plat_data.sensors[EXT].passive_delay,
-		data->plat_data.sensors[EXT].polling_delay);
+		/* Config for the Local sensor. */
+		mask = 0;
+		for (i = 0; i < sensor_data->num_trips; i++)
+			mask |=
+			(((u64)(data->plat_data.sensors[LOC]
+			.trips[i].mask > 0)) << i);
 
-	if (IS_ERR_OR_NULL(data->sensors[EXT].thz)) {
-		thermal_zone_device_unregister(data->sensors[LOC].thz);
-		data->sensors[LOC].thz = NULL;
-		goto error;
+		data->sensors[LOC].thz = thermal_zone_device_register(
+			nct_loc_name,
+			sensor_data->num_trips,
+			mask,
+			data,
+			&nct_loc_ops,
+			sensor_data->tzp,
+			2000,
+			0);
+
+		if (IS_ERR_OR_NULL(data->sensors[LOC].thz))
+			goto error;
+
+		/* check ext sensor connection before registering zone */
+		if (ext_err)
+			/* skip registering unconneted sensor as zone */
+			return 0;
+
+		/* Config for the External sensor. */
+		mask = 0;
+		for (i = 0; i < data->plat_data.sensors[EXT].num_trips; i++)
+			mask |=
+			(((u64)(data->plat_data.sensors[EXT]
+			.trips[i].mask > 0)) << i);
+
+		data->sensors[EXT].thz =
+			thermal_zone_device_register(nct_ext_name,
+			data->plat_data.sensors[EXT].num_trips,
+			mask,
+			data,
+			&nct_ext_ops,
+			data->plat_data.sensors[EXT].tzp,
+			data->plat_data.sensors[EXT].passive_delay,
+			data->plat_data.sensors[EXT].polling_delay);
+
+		if (IS_ERR_OR_NULL(data->sensors[EXT].thz)) {
+			thermal_zone_device_unregister(data->sensors[LOC].thz);
+			data->sensors[LOC].thz = NULL;
+			goto error;
+		}
 	}
-
 	nct1008_update(EXT, data);
 	nct1008_update(LOC, data);
 #endif
@@ -1578,11 +1793,19 @@ static void nct1008_shutdown(struct i2c_client *client)
 	mutex_unlock(&data->mutex);
 
 	if (data->sensors[LOC].thz) {
-		thermal_zone_device_unregister(data->sensors[LOC].thz);
+		if (client->dev.of_node)
+			thermal_zone_of_sensor_unregister
+				(&(client->dev), data->sensors[LOC].thz);
+		else
+			thermal_zone_device_unregister(data->sensors[LOC].thz);
 		data->sensors[LOC].thz = NULL;
 	}
 	if (data->sensors[EXT].thz) {
-		thermal_zone_device_unregister(data->sensors[EXT].thz);
+		if (client->dev.of_node)
+			thermal_zone_of_sensor_unregister
+				(&(client->dev), data->sensors[EXT].thz);
+		else
+			thermal_zone_device_unregister(data->sensors[EXT].thz);
 		data->sensors[EXT].thz = NULL;
 	}
 
@@ -1747,12 +1970,18 @@ static const struct i2c_device_id nct1008_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, nct1008_id);
 
+static const struct of_device_id nct1008_of_match[] = {
+	{.compatible = "onsemi,nct72", },
+	{ }
+};
+
 static struct i2c_driver nct1008_driver = {
 	.driver = {
 		.name	= "nct1008_nct72",
 #ifdef CONFIG_PM_SLEEP
 		.pm = &nct1008_pm_ops,
 #endif
+		.of_match_table = nct1008_of_match,
 	},
 	.probe		= nct1008_probe,
 	.remove		= nct1008_remove,

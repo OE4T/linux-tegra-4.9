@@ -20,11 +20,12 @@
 #include <linux/io.h>
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
+#include <linux/platform/tegra/mc.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "gk20a/semaphore_gk20a.h"
 #include "hw_pwr_gm20b.h"
-#include "mc_carveout_reg.h"
 
 /*Defines*/
 #define gm20b_dbg_pmu(fmt, arg...) \
@@ -53,7 +54,6 @@ static int acr_ucode_patch_sig(struct gk20a *g,
 static void free_acr_resources(struct gk20a *g, struct ls_flcn_mgr *plsfm);
 
 /*Globals*/
-static void __iomem *mc = IO_ADDRESS(TEGRA_MC_BASE);
 static get_ucode_details pmu_acr_supp_ucode_list[] = {
 	pmu_ucode_details,
 	fecs_ucode_details,
@@ -255,10 +255,6 @@ int prepare_ucode_blob(struct gk20a *g)
 		g->acr.ucode_blob_start = g->ops.mm.get_iova_addr(g,
 				plsfm->mem.sgt->sgl, 0);
 		g->acr.ucode_blob_size = plsfm->wpr_size;
-		gm20b_dbg_pmu("base reg carveout 2:%x\n",
-		readl(mc + MC_SECURITY_CARVEOUT2_BOM_0));
-		gm20b_dbg_pmu("base reg carveout 3:%x\n",
-		readl(mc + MC_SECURITY_CARVEOUT3_BOM_0));
 	} else {
 		gm20b_dbg_pmu("LSFM is managing no falcons.\n");
 	}
@@ -363,6 +359,7 @@ static int pmu_populate_loader_cfg(struct gk20a *g,
 	struct lsfm_managed_ucode_img *lsfm,
 	union flcn_bl_generic_desc *p_bl_gen_desc, u32 *p_bl_gen_desc_size)
 {
+	struct mc_carveout_info inf;
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct flcn_ucode_img *p_img = &(lsfm->ucode_img);
 	struct loader_config *ldr_cfg =
@@ -385,7 +382,8 @@ static int pmu_populate_loader_cfg(struct gk20a *g,
 	 physical addresses of each respective segment.
 	*/
 	addr_base = lsfm->lsb_header.ucode_off;
-	addr_base += readl(mc + MC_SECURITY_CARVEOUT2_BOM_0);
+	mc_get_carveout_info(&inf, NULL, MC_SECURITY_CARVEOUT2);
+	addr_base += inf.base;
 	gm20b_dbg_pmu("pmu loader cfg u32 addrbase %x\n", (u32)addr_base);
 	/*From linux*/
 	addr_code = u64_lo32((addr_base +
@@ -430,7 +428,7 @@ static int flcn_populate_bl_dmem_desc(struct gk20a *g,
 	struct lsfm_managed_ucode_img *lsfm,
 	union flcn_bl_generic_desc *p_bl_gen_desc, u32 *p_bl_gen_desc_size)
 {
-
+	struct mc_carveout_info inf;
 	struct flcn_ucode_img *p_img = &(lsfm->ucode_img);
 	struct flcn_bl_dmem_desc *ldr_cfg =
 		(struct flcn_bl_dmem_desc *)(&p_bl_gen_desc->bl_dmem_desc);
@@ -452,7 +450,8 @@ static int flcn_populate_bl_dmem_desc(struct gk20a *g,
 	 physical addresses of each respective segment.
 	*/
 	addr_base = lsfm->lsb_header.ucode_off;
-	addr_base += readl(mc + MC_SECURITY_CARVEOUT2_BOM_0);
+	mc_get_carveout_info(&inf, NULL, MC_SECURITY_CARVEOUT2);
+	addr_base += inf.base;
 	gm20b_dbg_pmu("gen loader cfg %x u32 addrbase %x ID\n", (u32)addr_base,
 		lsfm->wpr_header.falcon_id);
 	addr_code = u64_lo32((addr_base +
@@ -1214,8 +1213,6 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 	if (clear_halt_interrupt_status(g, gk20a_get_gr_idle_timeout(g)))
 		goto err_unmap_bl;
 
-	gm20b_dbg_pmu("err reg :%x\n", readl(mc +
-		MC_ERR_GENERALIZED_CARVEOUT_STATUS_0));
 	gm20b_dbg_pmu("phys sec reg %x\n", gk20a_readl(g,
 		pwr_falcon_mmu_phys_sec_r()));
 	gm20b_dbg_pmu("sctl reg %x\n", gk20a_readl(g, pwr_falcon_sctl_r()));
@@ -1233,8 +1230,6 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 			goto err_unmap_bl;
 	}
 	gm20b_dbg_pmu("after waiting for halt, err %x\n", err);
-	gm20b_dbg_pmu("err reg :%x\n", readl(mc +
-		MC_ERR_GENERALIZED_CARVEOUT_STATUS_0));
 	gm20b_dbg_pmu("phys sec reg %x\n", gk20a_readl(g,
 		pwr_falcon_mmu_phys_sec_r()));
 	gm20b_dbg_pmu("sctl reg %x\n", gk20a_readl(g, pwr_falcon_sctl_r()));

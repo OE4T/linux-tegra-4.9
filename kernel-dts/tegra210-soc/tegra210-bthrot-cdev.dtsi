@@ -24,6 +24,9 @@
 		skin_balanced {
 			cdev-type = "skin-balanced";
 			num_states = <83>;
+			cooling-min-state = <0>;
+			cooling-max-state = <83>;
+			#cooling-cells = <2>;
 			status = "okay";
 			throttle_table = <
 				/*CPU		GPU		C2BUS		C3BUS		SCLK		EMC	*/
@@ -115,6 +118,9 @@
 		gpu_balanced {
 			cdev-type = "gpu-balanced";
 			num_states = <83>;
+			cooling-min-state = <0>;
+			cooling-max-state = <83>;
+			#cooling-cells = <2>;
 			status = "okay";
 			throttle_table = <
 				/*CPU		GPU		C2BUS		C3BUS		SCLK		EMC	*/
@@ -206,6 +212,9 @@
 		cpu_balanced {
 			cdev-type = "cpu-balanced";
 			num_states = <83>;
+			cooling-min-state = <0>;
+			cooling-max-state = <83>;
+			#cooling-cells = <2>;
 			status = "okay";
 			throttle_table = <
 				/*CPU		GPU		C2BUS		C3BUS		SCLK		EMC	*/
@@ -297,6 +306,9 @@
 		emergency_balanced {
 			cdev-type = "emergency-balanced";
 			num_states = <1>;
+			cooling-min-state = <0>;
+			cooling-max-state = <1>;
+			#cooling-cells = <2>;
 			status = "okay";
 			throttle_table = <
 				/*CPU		GPU		C2BUS		C3BUS		SCLK		EMC	*/

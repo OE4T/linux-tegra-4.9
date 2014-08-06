@@ -278,6 +278,7 @@ static ssize_t gk20a_load_show(struct device *dev,
 		busy_time = 0;
 	} else {
 		gk20a_busy(g->dev);
+		gk20a_pmu_load_update(g);
 		gk20a_pmu_load_norm(g, &busy_time);
 		gk20a_idle(g->dev);
 	}

@@ -1079,6 +1079,7 @@ struct pmu_gk20a {
 	bool perfmon_ready;
 
 	u32 sample_buffer;
+	u32 load_shadow;
 
 	struct mutex isr_mutex;
 	struct mutex isr_enable_lock;
@@ -1119,6 +1120,7 @@ int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token);
 int pmu_mutex_release(struct pmu_gk20a *pmu, u32 id, u32 *token);
 int gk20a_pmu_destroy(struct gk20a *g);
 int gk20a_pmu_load_norm(struct gk20a *g, u32 *load);
+int gk20a_pmu_load_update(struct gk20a *g);
 int gk20a_pmu_debugfs_init(struct platform_device *dev);
 void gk20a_pmu_reset_load_counters(struct gk20a *g);
 void gk20a_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,

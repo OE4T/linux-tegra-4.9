@@ -192,6 +192,9 @@ static void gk20a_scale_notify(struct platform_device *pdev, bool busy)
 	struct gk20a_scale_profile *profile = g->scale_profile;
 	struct devfreq *devfreq = g->devfreq;
 
+	/* update the software shadow */
+	gk20a_pmu_load_update(g);
+
 	/* inform edp about new constraint */
 	if (platform->prescale)
 		platform->prescale(pdev);

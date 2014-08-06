@@ -3677,16 +3677,22 @@ int gk20a_pmu_destroy(struct gk20a *g)
 
 int gk20a_pmu_load_norm(struct gk20a *g, u32 *load)
 {
+	*load = g->pmu.load_shadow;
+	return 0;
+}
+
+int gk20a_pmu_load_update(struct gk20a *g)
+{
 	struct pmu_gk20a *pmu = &g->pmu;
 	u16 _load = 0;
 
 	if (!pmu->perfmon_ready) {
-		*load = 0;
+		pmu->load_shadow = 0;
 		return 0;
 	}
 
 	pmu_copy_from_dmem(pmu, pmu->sample_buffer, (u8 *)&_load, 2, 0);
-	*load = _load / 10;
+	pmu->load_shadow = _load / 10;
 
 	return 0;
 }

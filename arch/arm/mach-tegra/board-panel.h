@@ -113,6 +113,8 @@ int tegra_panel_reset(struct tegra_panel_of *panel, unsigned int delay_ms);
 int tegra_init_hdmi(struct platform_device *pdev,
 			struct platform_device *phost1x);
 
+void tegra_fb_copy_or_clear(void);
+
 void tegra_set_fixed_panel_ops(bool is_primary,
 			struct tegra_panel_ops *p_ops, char *panel_node);
 

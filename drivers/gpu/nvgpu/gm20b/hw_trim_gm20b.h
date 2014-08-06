@@ -266,6 +266,30 @@ static inline u32 trim_sys_gpcpll_cfg2_r(void)
 {
 	return 0x0013700c;
 }
+static inline u32 trim_sys_gpcpll_cfg2_sdm_din_f(u32 v)
+{
+	return (v & 0xff) << 0;
+}
+static inline u32 trim_sys_gpcpll_cfg2_sdm_din_m(void)
+{
+	return 0xff << 0;
+}
+static inline u32 trim_sys_gpcpll_cfg2_sdm_din_v(u32 r)
+{
+	return (r >> 0) & 0xff;
+}
+static inline u32 trim_sys_gpcpll_cfg2_sdm_din_new_f(u32 v)
+{
+	return (v & 0xff) << 8;
+}
+static inline u32 trim_sys_gpcpll_cfg2_sdm_din_new_m(void)
+{
+	return 0xff << 8;
+}
+static inline u32 trim_sys_gpcpll_cfg2_sdm_din_new_v(u32 r)
+{
+	return (r >> 8) & 0xff;
+}
 static inline u32 trim_sys_gpcpll_cfg2_pll_stepa_f(u32 v)
 {
 	return (v & 0xff) << 24;
@@ -278,6 +302,14 @@ static inline u32 trim_sys_gpcpll_cfg3_r(void)
 {
 	return 0x00137018;
 }
+static inline u32 trim_sys_gpcpll_cfg3_vco_ctrl_f(u32 v)
+{
+	return (v & 0x1ff) << 0;
+}
+static inline u32 trim_sys_gpcpll_cfg3_vco_ctrl_m(void)
+{
+	return 0x1ff << 0;
+}
 static inline u32 trim_sys_gpcpll_cfg3_pll_stepb_f(u32 v)
 {
 	return (v & 0xff) << 16;
@@ -285,6 +317,122 @@ static inline u32 trim_sys_gpcpll_cfg3_pll_stepb_f(u32 v)
 static inline u32 trim_sys_gpcpll_cfg3_pll_stepb_m(void)
 {
 	return 0xff << 16;
+}
+static inline u32 trim_sys_gpcpll_dvfs0_r(void)
+{
+	return 0x00137010;
+}
+static inline u32 trim_sys_gpcpll_dvfs0_dfs_coeff_f(u32 v)
+{
+	return (v & 0x7f) << 0;
+}
+static inline u32 trim_sys_gpcpll_dvfs0_dfs_coeff_m(void)
+{
+	return 0x7f << 0;
+}
+static inline u32 trim_sys_gpcpll_dvfs0_dfs_coeff_v(u32 r)
+{
+	return (r >> 0) & 0x7f;
+}
+static inline u32 trim_sys_gpcpll_dvfs0_dfs_det_max_f(u32 v)
+{
+	return (v & 0x7f) << 8;
+}
+static inline u32 trim_sys_gpcpll_dvfs0_dfs_det_max_m(void)
+{
+	return 0x7f << 8;
+}
+static inline u32 trim_sys_gpcpll_dvfs0_dfs_det_max_v(u32 r)
+{
+	return (r >> 8) & 0x7f;
+}
+static inline u32 trim_sys_gpcpll_dvfs0_dfs_dc_offset_f(u32 v)
+{
+	return (v & 0x3f) << 16;
+}
+static inline u32 trim_sys_gpcpll_dvfs0_dfs_dc_offset_m(void)
+{
+	return 0x3f << 16;
+}
+static inline u32 trim_sys_gpcpll_dvfs0_dfs_dc_offset_v(u32 r)
+{
+	return (r >> 16) & 0x3f;
+}
+static inline u32 trim_sys_gpcpll_dvfs0_mode_m(void)
+{
+	return 0x1 << 28;
+}
+static inline u32 trim_sys_gpcpll_dvfs0_mode_dvfspll_f(void)
+{
+	return 0x0;
+}
+static inline u32 trim_sys_gpcpll_dvfs1_r(void)
+{
+	return 0x00137014;
+}
+static inline u32 trim_sys_gpcpll_dvfs1_dfs_ext_det_f(u32 v)
+{
+	return (v & 0x7f) << 0;
+}
+static inline u32 trim_sys_gpcpll_dvfs1_dfs_ext_det_m(void)
+{
+	return 0x7f << 0;
+}
+static inline u32 trim_sys_gpcpll_dvfs1_dfs_ext_det_v(u32 r)
+{
+	return (r >> 0) & 0x7f;
+}
+static inline u32 trim_sys_gpcpll_dvfs1_dfs_ext_strb_m(void)
+{
+	return 0x1 << 7;
+}
+static inline u32 trim_sys_gpcpll_dvfs1_dfs_ext_cal_f(u32 v)
+{
+	return (v & 0x7f) << 8;
+}
+static inline u32 trim_sys_gpcpll_dvfs1_dfs_ext_cal_m(void)
+{
+	return 0x7f << 8;
+}
+static inline u32 trim_sys_gpcpll_dvfs1_dfs_ext_cal_v(u32 r)
+{
+	return (r >> 8) & 0x7f;
+}
+static inline u32 trim_sys_gpcpll_dvfs1_dfs_ext_sel_m(void)
+{
+	return 0x1 << 15;
+}
+static inline u32 trim_sys_gpcpll_dvfs1_dfs_ctrl_f(u32 v)
+{
+	return (v & 0xfff) << 16;
+}
+static inline u32 trim_sys_gpcpll_dvfs1_dfs_ctrl_m(void)
+{
+	return 0xfff << 16;
+}
+static inline u32 trim_sys_gpcpll_dvfs1_dfs_ctrl_v(u32 r)
+{
+	return (r >> 16) & 0xfff;
+}
+static inline u32 trim_sys_gpcpll_dvfs1_en_sdm_m(void)
+{
+	return 0x1 << 28;
+}
+static inline u32 trim_sys_gpcpll_dvfs1_en_dfs_m(void)
+{
+	return 0x1 << 29;
+}
+static inline u32 trim_sys_gpcpll_dvfs1_en_dfs_cal_m(void)
+{
+	return 0x1 << 30;
+}
+static inline u32 trim_sys_gpcpll_dvfs1_dfs_cal_done_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 trim_sys_gpcpll_dvfs2_r(void)
+{
+	return 0x00137020;
 }
 static inline u32 trim_sys_gpcpll_ndiv_slowdown_r(void)
 {

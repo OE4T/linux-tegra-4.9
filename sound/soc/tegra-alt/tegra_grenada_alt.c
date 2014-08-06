@@ -394,17 +394,12 @@ static int tegra_grenada_driver_probe(struct platform_device *pdev)
 		goto err_alloc_dai_link;
 	}
 
-	/* release new codec_links and codec_conf */
-	tegra_machine_remove_new_codec_links(tegra_grenada_codec_links);
-	tegra_machine_remove_new_codec_conf(tegra_grenada_codec_conf);
-
 	return 0;
 
 err_alloc_dai_link:
-	tegra_machine_remove_codec_conf();
+	tegra_machine_remove_extra_mem_alloc(machine->num_codec_links);
 	tegra_machine_remove_dai_link();
-	tegra_machine_remove_new_codec_links(tegra_grenada_codec_links);
-	tegra_machine_remove_new_codec_conf(tegra_grenada_codec_conf);
+	tegra_machine_remove_codec_conf();
 err:
 	return ret;
 }

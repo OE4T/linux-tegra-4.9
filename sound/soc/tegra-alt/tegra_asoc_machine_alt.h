@@ -247,16 +247,10 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 	struct snd_soc_dai_link *tegra_codec_links,
 	unsigned int *pnum_codec_links);
 
-void tegra_machine_remove_new_codec_links(
-	struct snd_soc_dai_link *tegra_codec_links);
-
 struct snd_soc_codec_conf *tegra_machine_new_codec_conf(
 	struct platform_device *pdev,
 	struct snd_soc_codec_conf *tegra_codec_conf,
 	unsigned int *pnum_codec_links);
-
-void tegra_machine_remove_new_codec_conf(
-	struct snd_soc_codec_conf *tegra_codec_conf);
 
 unsigned int tegra_machine_get_codec_dai_link_idx(char *of_node_name);
 

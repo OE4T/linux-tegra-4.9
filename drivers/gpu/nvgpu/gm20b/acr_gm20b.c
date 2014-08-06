@@ -1085,10 +1085,10 @@ int gm20b_init_pmu_setup_hw1(struct gk20a *g, struct flcn_bl_dmem_desc *desc,
 	int err;
 
 	gk20a_dbg_fn("");
-	mutex_lock(&pmu->isr_enable_lock);
+	mutex_lock(&pmu->isr_mutex);
 	pmu_reset(pmu);
 	pmu->isr_enabled = true;
-	mutex_unlock(&pmu->isr_enable_lock);
+	mutex_unlock(&pmu->isr_mutex);
 
 	/* setup apertures - virtual */
 	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_UCODE),

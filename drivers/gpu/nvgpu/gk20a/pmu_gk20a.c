@@ -636,7 +636,6 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 
 	mutex_init(&pmu->elpg_mutex);
 	mutex_init(&pmu->isr_mutex);
-	mutex_init(&pmu->isr_enable_lock);
 	mutex_init(&pmu->pmu_copy_lock);
 	mutex_init(&pmu->pmu_seq_lock);
 
@@ -2076,10 +2075,10 @@ int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	mutex_lock(&pmu->isr_enable_lock);
+	mutex_lock(&pmu->isr_mutex);
 	pmu_reset(pmu);
 	pmu->isr_enabled = true;
-	mutex_unlock(&pmu->isr_enable_lock);
+	mutex_unlock(&pmu->isr_mutex);
 
 	/* setup apertures - virtual */
 	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_UCODE),
@@ -3192,13 +3191,11 @@ void gk20a_pmu_isr(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	mutex_lock(&pmu->isr_enable_lock);
+	mutex_lock(&pmu->isr_mutex);
 	if (!pmu->isr_enabled) {
-		mutex_unlock(&pmu->isr_enable_lock);
+		mutex_unlock(&pmu->isr_mutex);
 		return;
 	}
-
-	mutex_lock(&pmu->isr_mutex);
 
 	mask = gk20a_readl(g, pwr_falcon_irqmask_r()) &
 		gk20a_readl(g, pwr_falcon_irqdest_r());
@@ -3210,7 +3207,6 @@ void gk20a_pmu_isr(struct gk20a *g)
 	if (!intr || pmu->pmu_state == PMU_STATE_OFF) {
 		gk20a_writel(g, pwr_falcon_irqsclr_r(), intr);
 		mutex_unlock(&pmu->isr_mutex);
-		mutex_unlock(&pmu->isr_enable_lock);
 		return;
 	}
 
@@ -3243,7 +3239,6 @@ void gk20a_pmu_isr(struct gk20a *g)
 	}
 
 	mutex_unlock(&pmu->isr_mutex);
-	mutex_unlock(&pmu->isr_enable_lock);
 }
 
 static bool pmu_validate_cmd(struct pmu_gk20a *pmu, struct pmu_cmd *cmd,
@@ -3661,10 +3656,10 @@ int gk20a_pmu_destroy(struct gk20a *g)
 	g->pg_ungating_time_us += (u64)elpg_ungating_time;
 	g->pg_gating_cnt += gating_cnt;
 
-	mutex_lock(&pmu->isr_enable_lock);
+	mutex_lock(&pmu->isr_mutex);
 	pmu_enable(pmu, false);
 	pmu->isr_enabled = false;
-	mutex_unlock(&pmu->isr_enable_lock);
+	mutex_unlock(&pmu->isr_mutex);
 
 	pmu->pmu_state = PMU_STATE_OFF;
 	pmu->pmu_ready = false;

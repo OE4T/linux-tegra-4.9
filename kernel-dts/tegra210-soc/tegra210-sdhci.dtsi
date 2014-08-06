@@ -46,6 +46,12 @@
 		wp-gpios = <&gpio TEGRA_GPIO_PZ3 0>;
 		vddio_sdmmc-supply = <&max77620_ldo2>;
 		vddio_sd_slot-supply = <&en_vdd_sd>;
+		nvidia,update-pinctrl-settings;
+		pinctrl-names = "sdmmc_schmitt_enable", "sdmmc_schmitt_disable", "sdmmc_clk_schmitt_enable", "sdmmc_clk_schmitt_disable";
+		pinctrl-0 = <&sdmmc3_schmitt_enable_state>;
+		pinctrl-1 = <&sdmmc3_schmitt_disable_state>;
+		pinctrl-2 = <&sdmmc3_clk_schmitt_enable_state>;
+		pinctrl-3 = <&sdmmc3_clk_schmitt_disable_state>;
 	};
 
 	sdhci@700b0200 {
@@ -74,5 +80,11 @@
 		compad-vref-3v3 = <0x1>;
 		compad-vref-1v8 = <0x2>;
 		vddio_sdmmc-supply = <&max77620_sd3>;
+		nvidia,update-pinctrl-settings;
+		pinctrl-names = "sdmmc_schmitt_enable", "sdmmc_schmitt_disable", "sdmmc_clk_schmitt_enable", "sdmmc_clk_schmitt_disable";
+		pinctrl-0 = <&sdmmc1_schmitt_enable_state>;
+		pinctrl-1 = <&sdmmc1_schmitt_disable_state>;
+		pinctrl-2 = <&sdmmc1_clk_schmitt_enable_state>;
+		pinctrl-3 = <&sdmmc1_clk_schmitt_disable_state>;
 	};
 };

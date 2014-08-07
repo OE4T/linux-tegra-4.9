@@ -27,6 +27,7 @@
 #include <linux/irq.h>
 #include <linux/workqueue.h>
 #include <linux/tegra_pm_domains.h>
+#include <linux/tegra-fuse.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -42,8 +43,9 @@
 
 #define T12_ISP_CG_CTRL		0x74
 #define T12_CG_2ND_LEVEL_EN	1
-#define T12_ISPA_DEV_ID		0
-#define T12_ISPB_DEV_ID		1
+
+#define ISPA_DEV_ID		0
+#define ISPB_DEV_ID		1
 
 /*
  * MAX_BW = max(default ISP clock) * 2BPP, in KBps.
@@ -90,9 +92,9 @@ static int isp_isomgr_register(struct isp *tegra_isp)
 
 	dev_dbg(&tegra_isp->ndev->dev, "%s++\n", __func__);
 
-	if (tegra_isp->dev_id == T12_ISPB_DEV_ID)
+	if (tegra_isp->dev_id == ISPB_DEV_ID)
 		iso_client_id = TEGRA_ISO_CLIENT_ISP_B;
-	if (tegra_isp->dev_id == T12_ISPA_DEV_ID)
+	if (tegra_isp->dev_id == ISPA_DEV_ID)
 		iso_client_id = TEGRA_ISO_CLIENT_ISP_A;
 
 	/* Register with max possible BW for ISP usecases.*/
@@ -269,10 +271,23 @@ static int isp_probe(struct platform_device *dev)
 #ifdef TEGRA_12X_OR_HIGHER_CONFIG
 		if (sscanf(dev->name, "isp.%1d", &dev_id) != 1)
 			return -EINVAL;
-		if (dev_id == T12_ISPB_DEV_ID)
-			pdata = &t124_ispb_info;
-		if (dev_id == T12_ISPA_DEV_ID)
-			pdata = &t124_isp_info;
+		switch (tegra_get_chipid()) {
+		case TEGRA_CHIPID_TEGRA12:
+		case TEGRA_CHIPID_TEGRA13:
+			if (dev_id == ISPB_DEV_ID)
+				pdata = &t124_ispb_info;
+			if (dev_id == ISPA_DEV_ID)
+				pdata = &t124_isp_info;
+			break;
+		case TEGRA_CHIPID_TEGRA21:
+			if (dev_id == ISPB_DEV_ID)
+				pdata = &t21_ispb_info;
+			if (dev_id == ISPA_DEV_ID)
+				pdata = &t21_isp_info;
+			break;
+		default:
+			return -EINVAL;
+		}
 #endif
 
 	} else
@@ -430,7 +445,7 @@ static int isp_set_la(struct isp *tegra_isp, uint isp_bw, uint la_client)
 {
 	int ret = 0;
 
-	if (tegra_isp->dev_id == T12_ISPB_DEV_ID)
+	if (tegra_isp->dev_id == ISPB_DEV_ID)
 		ret = tegra_set_camera_ptsa(TEGRA_LA_ISP_WAB,
 				isp_bw, la_client);
 	else

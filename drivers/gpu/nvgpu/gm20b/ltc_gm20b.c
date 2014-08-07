@@ -58,21 +58,20 @@ static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	if (max_comptag_lines > hw_max_comptag_lines)
 		max_comptag_lines = hw_max_comptag_lines;
 
-	/* no hybird fb */
 	compbit_backing_size =
 		DIV_ROUND_UP(max_comptag_lines, comptags_per_cacheline) *
-		cacheline_size * slices_per_ltc * gr->num_fbps;
+		cacheline_size * slices_per_ltc * g->ltc_count;
 
-	/* aligned to 2KB * num_fbps */
+	/* aligned to 2KB * ltc_count */
 	compbit_backing_size +=
-		gr->num_fbps << ltc_ltcs_ltss_cbc_base_alignment_shift_v();
+		g->ltc_count << ltc_ltcs_ltss_cbc_base_alignment_shift_v();
 
 	/* must be a multiple of 64KB */
 	compbit_backing_size = roundup(compbit_backing_size, 64*1024);
 
 	max_comptag_lines =
 		(compbit_backing_size * comptags_per_cacheline) /
-		cacheline_size * slices_per_ltc * gr->num_fbps;
+		cacheline_size * slices_per_ltc * g->ltc_count;
 
 	if (max_comptag_lines > hw_max_comptag_lines)
 		max_comptag_lines = hw_max_comptag_lines;

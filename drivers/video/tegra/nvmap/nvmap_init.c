@@ -29,6 +29,15 @@
 #include "board.h"
 #include "common.h"
 
+phys_addr_t __weak tegra_carveout_start;
+phys_addr_t __weak  tegra_carveout_size;
+phys_addr_t __weak tegra_vpr_start;
+phys_addr_t __weak tegra_vpr_size;
+
+struct device __weak tegra_generic_dev;
+struct device __weak tegra_vpr_dev;
+struct device __weak tegra_iram_dev;
+
 static const struct of_device_id nvmap_of_ids[] = {
 	{ .compatible = "nvidia,carveouts" },
 	{ }

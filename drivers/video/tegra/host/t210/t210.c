@@ -57,63 +57,95 @@ static struct host1x_device_info host1x04_info = {
 };
 
 struct nvhost_device_data t21_host1x_info = {
-	.clocks		= {{"host1x", UINT_MAX}, {"actmon", UINT_MAX}, {} },
+	.clocks			= {{"host1x", UINT_MAX}, {"actmon", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
-	.private_data	= &host1x04_info,
-	.bond_out_id   = BOND_OUT_HOST1X,
+	.private_data		= &host1x04_info,
+	.bond_out_id		= BOND_OUT_HOST1X,
 };
 
 #ifdef CONFIG_TEGRA_GRHOST_ISP
 struct nvhost_device_data t21_isp_info = {
-	.modulemutexes = {NVMODMUTEX_ISP_0},
-	.class           = NV_VIDEO_STREAMING_ISP_CLASS_ID,
-	.exclusive     = true,
+	.num_channels		= 1,
+	.moduleid		= NVHOST_MODULE_ISP,
+	.class			= NV_VIDEO_STREAMING_ISP_CLASS_ID,
+	.modulemutexes		= {NVMODMUTEX_ISP_0},
+	.exclusive		= true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
-	.keepalive = true,
+	.keepalive		= true,
+#ifdef TEGRA_POWERGATE_VE
+	.powergate_ids		= {TEGRA_POWERGATE_VE, -1},
+#else
 	NVHOST_MODULE_NO_POWERGATE_IDS,
+#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.clocks        = {{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP }},
-	.moduleid      = NVHOST_MODULE_ISP,
-	.ctrl_ops      = &tegra_isp_ctrl_ops,
-	.num_channels  = 1,
-	.bond_out_id   = BOND_OUT_ISP,
+	.clocks			= {{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP }},
+	.moduleid		= NVHOST_MODULE_ISP,
+	.ctrl_ops		= &tegra_isp_ctrl_ops,
+	.bond_out_id		= BOND_OUT_ISP,
+};
+
+struct nvhost_device_data t21_ispb_info = {
+	.num_channels		= 1,
+	.moduleid		= (1 << 16) | NVHOST_MODULE_ISP,
+	.class			= NV_VIDEO_STREAMING_ISPB_CLASS_ID,
+	.modulemutexes		= {NVMODMUTEX_ISP_1},
+	.exclusive		= true,
+	/* HACK: Mark as keepalive until 1188795 is fixed */
+	.keepalive		= true,
+#ifdef TEGRA_POWERGATE_VE2
+	.powergate_ids		= {TEGRA_POWERGATE_VE2, -1},
+#else
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+#endif
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.clocks			= {{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP }},
+	.ctrl_ops		= &tegra_isp_ctrl_ops,
+	.bond_out_id		= BOND_OUT_ISP,
 };
 #endif
 
 #if defined(CONFIG_TEGRA_GRHOST_VI) || defined(CONFIG_TEGRA_GRHOST_VI_MODULE)
 #ifdef CONFIG_VI_ONE_DEVICE
 struct nvhost_device_data t21_vi_info = {
-	.exclusive     = true,
-	.class           = NV_VIDEO_STREAMING_VI_CLASS_ID,
+	.exclusive		= true,
+	.class			= NV_VIDEO_STREAMING_VI_CLASS_ID,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
-	.keepalive = true,
+	.keepalive		= true,
+#ifdef TEGRA_POWERGATE_VE
+	.powergate_ids		= {TEGRA_POWERGATE_VE, -1},
+#else
 	NVHOST_MODULE_NO_POWERGATE_IDS,
+#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_VI,
+	.moduleid		= NVHOST_MODULE_VI,
 	.clocks = {
 		{"vi", UINT_MAX},
 		{"csi", 0},
 		{"cilab", 102000000},
 		{"cilcd", 102000000},
 		{"cile", 102000000} },
-	.ctrl_ops         = &tegra_vi_ctrl_ops,
-	.num_channels  = 4,
-	.bond_out_id   = BOND_OUT_VI,
+	.ctrl_ops		= &tegra_vi_ctrl_ops,
+	.num_channels		= 4,
+	.bond_out_id		= BOND_OUT_VI,
 };
 #else
 struct nvhost_device_data t21_vib_info = {
-	.modulemutexes = {NVMODMUTEX_VI_1},
-	.class           = NV_VIDEO_STREAMING_VI_CLASS_ID,
-	.exclusive     = true,
+	.modulemutexes		= {NVMODMUTEX_VI_1},
+	.class			= NV_VIDEO_STREAMING_VI_CLASS_ID,
+	.exclusive		= true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
-	.keepalive = true,
-	.clocks		= {{"vi", UINT_MAX}, {"csi", UINT_MAX}, {} },
+	.keepalive		= true,
+	.clocks			= {{"vi", UINT_MAX}, {"csi", UINT_MAX}, {} },
+#ifdef TEGRA_POWERGATE_VE
+	.powergate_ids		= {TEGRA_POWERGATE_VE, -1},
+#else
 	NVHOST_MODULE_NO_POWERGATE_IDS,
+#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_VI,
-	.ctrl_ops         = &tegra_vi_ctrl_ops,
-	.num_channels  = 1,
-	.bond_out_id   = BOND_OUT_VI,
+	.moduleid		= NVHOST_MODULE_VI,
+	.ctrl_ops		= &tegra_vi_ctrl_ops,
+	.num_channels		= 1,
+	.bond_out_id		= BOND_OUT_VI,
 };
 
 static struct platform_device tegra_vi01b_device = {
@@ -125,22 +157,26 @@ static struct platform_device tegra_vi01b_device = {
 };
 
 struct nvhost_device_data t21_vi_info = {
-	.modulemutexes = {NVMODMUTEX_VI_0},
-	.class           = NV_VIDEO_STREAMING_VI_CLASS_ID,
-	.exclusive     = true,
+	.modulemutexes		= {NVMODMUTEX_VI_0},
+	.class			= NV_VIDEO_STREAMING_VI_CLASS_ID,
+	.exclusive		= true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
-	.keepalive = true,
+	.keepalive		= true,
+#ifdef TEGRA_POWERGATE_VE
+	.powergate_ids		= {TEGRA_POWERGATE_VE, -1},
+#else
 	NVHOST_MODULE_NO_POWERGATE_IDS,
+#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.moduleid      = NVHOST_MODULE_VI,
+	.moduleid		= NVHOST_MODULE_VI,
 	.clocks = {
 		{"vi", UINT_MAX},
 		{"csi", 0},
 		{"cilab", 102000000} },
-	.ctrl_ops         = &tegra_vi_ctrl_ops,
-	.slave         = &tegra_vi01b_device,
-	.num_channels  = 1,
-	.bond_out_id   = BOND_OUT_VI,
+	.ctrl_ops		= &tegra_vi_ctrl_ops,
+	.slave			= &tegra_vi01b_device,
+	.num_channels		= 1,
+	.bond_out_id		= BOND_OUT_VI,
 };
 #endif
 
@@ -149,7 +185,11 @@ struct nvhost_device_data t21_vi_info = {
 struct nvhost_device_data t21_msenc_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
 	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,
+#ifdef TEGRA_POWERGATE_NVENC
+	.powergate_ids		= { TEGRA_POWERGATE_NVENC, -1 },
+#else
 	NVHOST_MODULE_NO_POWERGATE_IDS,
+#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.keepalive		= true,
 	.clocks			= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
@@ -166,7 +206,11 @@ struct nvhost_device_data t21_msenc_info = {
 struct nvhost_device_data t21_nvdec_info = {
 	.version		= NVHOST_ENCODE_NVDEC_VER(2, 0),
 	.class			= NV_NVDEC_CLASS_ID,
+#ifdef TEGRA_POWERGATE_NVDEC
+	.powergate_ids		= { TEGRA_POWERGATE_NVDEC, -1 },
+#else
 	NVHOST_MODULE_NO_POWERGATE_IDS,
+#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.keepalive		= true,
 	.clocks			= {{"nvdec", UINT_MAX, 0, TEGRA_MC_CLIENT_NVDEC},
@@ -183,7 +227,11 @@ struct nvhost_device_data t21_nvdec_info = {
 struct nvhost_device_data t21_nvjpg_info = {
 	.version		= NVHOST_ENCODE_NVJPG_VER(1, 0),
 	.class			= NV_NVJPG_CLASS_ID,
+#ifdef TEGRA_POWERGATE_NVJPG
+	.powergate_ids		= { TEGRA_POWERGATE_NVJPG, -1 },
+#else
 	NVHOST_MODULE_NO_POWERGATE_IDS,
+#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.keepalive		= true,
 	.clocks			= { {"nvjpg", UINT_MAX, 0, TEGRA_MC_CLIENT_NVJPG},
@@ -243,7 +291,11 @@ struct nvhost_device_data t21_vic_info = {
 				   {"vic_floor", 0,
 				   NVHOST_MODULE_ID_CBUS_FLOOR}, {} },
 	.version		= NVHOST_ENCODE_FLCN_VER(4, 0),
+#ifdef TEGRA_POWERGATE_VIC
+	.powergate_ids	= { TEGRA_POWERGATE_VIC, -1 },
+#else
 	NVHOST_MODULE_NO_POWERGATE_IDS,
+#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid		= NVHOST_MODULE_VIC,
 	.class			= NV_GRAPHICS_VIC_CLASS_ID,

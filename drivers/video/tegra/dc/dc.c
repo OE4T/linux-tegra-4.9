@@ -3066,20 +3066,12 @@ static void _tegra_dc_disable(struct tegra_dc *dc)
 	 * causes CMU to be restored in tegra_dc_init(). */
 	dc->cmu_dirty = true;
 #endif
-
-	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
-		mutex_lock(&dc->one_shot_lock);
-		cancel_delayed_work_sync(&dc->one_shot_work);
-	}
-
 	tegra_dc_io_start(dc);
 	_tegra_dc_controller_disable(dc);
 	tegra_dc_io_end(dc);
 
 	tegra_dc_powergate_locked(dc);
 
-	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
-		mutex_unlock(&dc->one_shot_lock);
 	pm_runtime_put(&dc->ndev->dev);
 
 	tegra_log_suspend_time();
@@ -3097,6 +3089,12 @@ void tegra_dc_disable(struct tegra_dc *dc)
 	 * lock is acquired. */
 	cancel_delayed_work_sync(&dc->underflow_work);
 
+
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
+		mutex_lock(&dc->one_shot_lock);
+		cancel_delayed_work_sync(&dc->one_shot_work);
+	}
+
 	mutex_lock(&dc->lp_lock);
 	mutex_lock(&dc->lock);
 
@@ -3113,6 +3111,8 @@ void tegra_dc_disable(struct tegra_dc *dc)
 #endif
 	mutex_unlock(&dc->lock);
 	mutex_unlock(&dc->lp_lock);
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+		mutex_unlock(&dc->one_shot_lock);
 	synchronize_irq(dc->irq);
 	trace_display_mode(dc, &dc->mode);
 
@@ -3778,11 +3778,17 @@ static int tegra_dc_remove(struct platform_device *ndev)
 	if (dc->ext)
 		tegra_dc_ext_unregister(dc->ext);
 
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
+		mutex_lock(&dc->one_shot_lock);
+		cancel_delayed_work_sync(&dc->one_shot_work);
+	}
 	mutex_lock(&dc->lock);
 	if (dc->enabled)
 		_tegra_dc_disable(dc);
 	dc->enabled = false;
 	mutex_unlock(&dc->lock);
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+		mutex_unlock(&dc->one_shot_lock);
 	synchronize_irq(dc->irq); /* wait for IRQ handlers to finish */
 
 #ifdef CONFIG_SWITCH
@@ -3819,6 +3825,11 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 	tegra_dc_ext_disable(dc->ext);
 
 	tegra_dc_cursor_suspend(dc);
+
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
+		mutex_lock(&dc->one_shot_lock);
+		cancel_delayed_work_sync(&dc->one_shot_work);
+	}
 	mutex_lock(&dc->lock);
 	ret = tegra_dc_io_start(dc);
 
@@ -3847,6 +3858,8 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 		tegra_dc_io_end(dc);
 
 	mutex_unlock(&dc->lock);
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+		mutex_unlock(&dc->one_shot_lock);
 	synchronize_irq(dc->irq); /* wait for IRQ handlers to finish */
 
 	return 0;

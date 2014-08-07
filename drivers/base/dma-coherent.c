@@ -238,7 +238,7 @@ int dma_declare_coherent_resizable_cma_memory(struct device *dev,
 	strcpy(heap_info->name, dma_info->name);
 	dev_set_name(dev, "dma-%s", heap_info->name);
 	heap_info->cma_dev = dma_info->cma_dev;
-	heap_info->cma_chunk_size = dma_info->size;
+	heap_info->cma_chunk_size = dma_info->size ? : stats.size;
 	heap_info->cma_base = stats.base;
 	heap_info->cma_len = stats.size;
 	dev_set_name(heap_info->cma_dev, "cma-%s-heap", heap_info->name);

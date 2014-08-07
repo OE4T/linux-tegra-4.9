@@ -30,6 +30,7 @@
 		compad-vref-1v8 = <0x7>;
 		vddio_sdmmc-supply = <&max77620_sd3>;
 		vddio_sd_slot-supply = <&vdd_3v3>;
+		nvidia,dll-calib-needed;
 	};
 
 	sdhci@700b0400 {

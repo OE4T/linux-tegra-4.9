@@ -701,7 +701,7 @@ static int cm_disable(struct iio_dev *indio_dev)
 	if (!(iio_scan_mask_query(indio_dev, indio_dev->buffer,
 				  CM_SCAN_LIGHT)))
 		st->dbg &= ~CM_DBG_VAL_LIGHT;
-	cancel_delayed_work_sync(&st->dw);
+	cancel_delayed_work(&st->dw);
 	ret = cm_pm(st, false);
 	if (!ret)
 		st->enable = 0;

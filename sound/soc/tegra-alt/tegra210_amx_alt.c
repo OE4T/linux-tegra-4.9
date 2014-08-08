@@ -173,9 +173,7 @@ static int tegra210_amx_runtime_suspend(struct device *dev)
 
 	regcache_cache_only(amx->regmap, true);
 
-#ifndef CONFIG_MACH_GRENADA
 	clk_disable_unprepare(amx->clk_amx);
-#endif
 
 	return 0;
 }
@@ -214,7 +212,6 @@ static unsigned int tegra210_amx_read_map_ram(struct tegra210_amx *amx,
 static int tegra210_amx_runtime_resume(struct device *dev)
 {
 	struct tegra210_amx *amx = dev_get_drvdata(dev);
-#ifndef CONFIG_MACH_GRENADA
 	int ret;
 
 	ret = clk_prepare_enable(amx->clk_amx);
@@ -222,7 +219,6 @@ static int tegra210_amx_runtime_resume(struct device *dev)
 		dev_err(dev, "clk_enable failed: %d\n", ret);
 		return ret;
 	}
-#endif
 
 	regcache_cache_only(amx->regmap, false);
 
@@ -572,14 +568,12 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
 
 	amx->soc_data = soc_data;
 
-#ifndef CONFIG_MACH_GRENADA
 	amx->clk_amx = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(amx->clk_amx)) {
 		dev_err(&pdev->dev, "Can't retrieve tegra210_amx clock\n");
 		ret = PTR_ERR(amx->clk_amx);
 		goto err;
 	}
-#endif
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
@@ -644,20 +638,14 @@ err_suspend:
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 err_clk_put:
-#ifndef CONFIG_MACH_GRENADA
 	devm_clk_put(&pdev->dev, amx->clk_amx);
-#else
-	dev_err(&pdev->dev, "error\n");
-#endif
 err:
 	return ret;
 }
 
 static int tegra210_amx_platform_remove(struct platform_device *pdev)
 {
-#ifndef CONFIG_MACH_GRENADA
 	struct tegra210_amx *amx = dev_get_drvdata(&pdev->dev);
-#endif
 
 	snd_soc_unregister_codec(&pdev->dev);
 
@@ -665,9 +653,7 @@ static int tegra210_amx_platform_remove(struct platform_device *pdev)
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_amx_runtime_suspend(&pdev->dev);
 
-#ifndef CONFIG_MACH_GRENADA
 	devm_clk_put(&pdev->dev, amx->clk_amx);
-#endif
 
 	return 0;
 }

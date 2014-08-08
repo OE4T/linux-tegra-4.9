@@ -42,9 +42,7 @@ static int tegra210_sfc_runtime_suspend(struct device *dev)
 
 	regcache_cache_only(sfc->regmap, true);
 
-#ifndef CONFIG_MACH_GRENADA
 	clk_disable_unprepare(sfc->clk_sfc);
-#endif
 
 	return 0;
 }
@@ -53,7 +51,6 @@ static int tegra210_sfc_runtime_resume(struct device *dev)
 {
 	struct tegra210_sfc *sfc = dev_get_drvdata(dev);
 
-#ifndef CONFIG_MACH_GRENADA
 	int ret;
 
 	ret = clk_prepare_enable(sfc->clk_sfc);
@@ -61,7 +58,6 @@ static int tegra210_sfc_runtime_resume(struct device *dev)
 		dev_err(dev, "clk_enable failed: %d\n", ret);
 		return ret;
 	}
-#endif
 
 	regcache_cache_only(sfc->regmap, false);
 
@@ -473,14 +469,12 @@ static int tegra210_sfc_platform_probe(struct platform_device *pdev)
 	/* initialize default output srate */
 	sfc->srate_out = TEGRA210_SFC_FS48;
 
-#ifndef CONFIG_MACH_GRENADA
 	sfc->clk_sfc = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(sfc->clk_sfc)) {
 		dev_err(&pdev->dev, "Can't retrieve sfc clock\n");
 		ret = PTR_ERR(sfc->clk_sfc);
 		goto err;
 	}
-#endif
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
@@ -545,29 +539,22 @@ err_suspend:
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 err_clk_put:
-#ifndef CONFIG_MACH_GRENADA
 	devm_clk_put(&pdev->dev, sfc->clk_sfc);
-#else
-	dev_err(&pdev->dev, "error\n");
-#endif
 err:
 	return ret;
 }
 
 static int tegra210_sfc_platform_remove(struct platform_device *pdev)
 {
-#ifndef CONFIG_MACH_GRENADA
 	struct tegra210_sfc *sfc = dev_get_drvdata(&pdev->dev);
-#endif
+
 	snd_soc_unregister_codec(&pdev->dev);
 
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_sfc_runtime_suspend(&pdev->dev);
 
-#ifndef CONFIG_MACH_GRENADA
 	devm_clk_put(&pdev->dev, sfc->clk_sfc);
-#endif
 
 	return 0;
 }

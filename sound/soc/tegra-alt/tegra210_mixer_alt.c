@@ -46,9 +46,7 @@ static int tegra210_mixer_runtime_suspend(struct device *dev)
 
 	regcache_cache_only(mixer->regmap, true);
 
-#ifndef CONFIG_MACH_GRENADA
 	clk_disable_unprepare(mixer->clk_mixer);
-#endif
 
 	return 0;
 }
@@ -56,7 +54,6 @@ static int tegra210_mixer_runtime_suspend(struct device *dev)
 static int tegra210_mixer_runtime_resume(struct device *dev)
 {
 	struct tegra210_mixer *mixer = dev_get_drvdata(dev);
-#ifndef CONFIG_MACH_GRENADA
 	int ret;
 
 	ret = clk_prepare_enable(mixer->clk_mixer);
@@ -64,7 +61,6 @@ static int tegra210_mixer_runtime_resume(struct device *dev)
 		dev_err(dev, "clk_enable failed: %d\n", ret);
 		return ret;
 	}
-#endif
 
 	regcache_cache_only(mixer->regmap, false);
 
@@ -582,14 +578,12 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 	mixer->gain_coeff[12] = 0x3e80;
 	mixer->gain_coeff[13] = 0x83126E;
 
-#ifndef CONFIG_MACH_GRENADA
 	mixer->clk_mixer = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(mixer->clk_mixer)) {
 		dev_err(&pdev->dev, "Can't retrieve tegra210_mixer clock\n");
 		ret = PTR_ERR(mixer->clk_mixer);
 		goto err;
 	}
-#endif
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
@@ -654,20 +648,14 @@ err_suspend:
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 err_clk_put:
-#ifndef CONFIG_MACH_GRENADA
 	devm_clk_put(&pdev->dev, mixer->clk_mixer);
-#else
-	dev_err(&pdev->dev, "error\n");
-#endif
 err:
 	return ret;
 }
 
 static int tegra210_mixer_platform_remove(struct platform_device *pdev)
 {
-#ifndef CONFIG_MACH_GRENADA
 	struct tegra210_mixer *mixer = dev_get_drvdata(&pdev->dev);
-#endif
 
 	snd_soc_unregister_codec(&pdev->dev);
 
@@ -675,9 +663,7 @@ static int tegra210_mixer_platform_remove(struct platform_device *pdev)
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_mixer_runtime_suspend(&pdev->dev);
 
-#ifndef CONFIG_MACH_GRENADA
 	devm_clk_put(&pdev->dev, mixer->clk_mixer);
-#endif
 
 	return 0;
 }

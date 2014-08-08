@@ -214,6 +214,10 @@ static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_v(u32 r)
 {
 	return (r >> 0) & 0x3;
 }
+static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_allow_all_f(void)
+{
+	return 0x0;
+}
 static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_use_map_f(void)
 {
 	return 0x2;

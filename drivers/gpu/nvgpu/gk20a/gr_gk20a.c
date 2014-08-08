@@ -1713,8 +1713,13 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	virt_addr_hi =
 		 u64_hi32(ch_ctx->global_ctx_buffer_va[PRIV_ACCESS_MAP_VA]);
 
+	if (g->allow_all)
+		data = ctxsw_prog_main_image_priv_access_map_config_mode_allow_all_f();
+	else
+		data = ctxsw_prog_main_image_priv_access_map_config_mode_use_map_f();
+
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_priv_access_map_config_o(), 0,
-		 ctxsw_prog_main_image_priv_access_map_config_mode_use_map_f());
+		 data);
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_priv_access_map_addr_lo_o(), 0,
 		 virt_addr_lo);
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_priv_access_map_addr_hi_o(), 0,

@@ -112,8 +112,10 @@ static struct tegra_dc_mode override_disp_mode[TEGRA_DC_OUT_NULL + 1];
 static void _tegra_dc_controller_disable(struct tegra_dc *dc);
 
 static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out);
+#ifdef PM
 static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state);
 static int tegra_dc_resume(struct platform_device *ndev);
+#endif
 
 struct tegra_dc *tegra_dcs[TEGRA_MAX_DC];
 

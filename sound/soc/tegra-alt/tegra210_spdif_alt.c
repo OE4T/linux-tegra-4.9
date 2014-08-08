@@ -42,10 +42,8 @@ static int tegra210_spdif_runtime_suspend(struct device *dev)
 
 	regcache_cache_only(spdif->regmap, true);
 
-#ifndef CONFIG_MACH_GRENADA
 	clk_disable_unprepare(spdif->clk_spdif_out);
 	clk_disable_unprepare(spdif->clk_spdif_in);
-#endif
 
 	return 0;
 }
@@ -55,7 +53,6 @@ static int tegra210_spdif_runtime_resume(struct device *dev)
 	struct tegra210_spdif *spdif = dev_get_drvdata(dev);
 	int ret = 0;
 
-#ifndef CONFIG_MACH_GRENADA
 	ret = clk_prepare_enable(spdif->clk_spdif_out);
 	if (ret) {
 		dev_err(dev, "spdif_out_clk_enable failed: %d\n", ret);
@@ -67,7 +64,6 @@ static int tegra210_spdif_runtime_resume(struct device *dev)
 		dev_err(dev, "spdif_in_clk_enable failed: %d\n", ret);
 		return ret;
 	}
-#endif
 
 	regcache_cache_only(spdif->regmap, false);
 
@@ -77,7 +73,6 @@ static int tegra210_spdif_runtime_resume(struct device *dev)
 static int tegra210_spdif_set_dai_sysclk(struct snd_soc_dai *dai,
 		int clk_id, unsigned int freq, int dir)
 {
-#ifndef CONFIG_MACH_GRENADA
 	struct device *dev = dai->dev;
 	struct tegra210_spdif *spdif = snd_soc_dai_get_drvdata(dai);
 	int spdif_out_clock_rate, spdif_in_clock_rate;
@@ -131,7 +126,6 @@ static int tegra210_spdif_set_dai_sysclk(struct snd_soc_dai *dai,
 			return ret;
 		}
 	}
-#endif
 
 	return 0;
 }
@@ -361,7 +355,6 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 
 	spdif->soc_data = soc_data;
 
-	#ifndef CONFIG_MACH_GRENADA
 	spdif->clk_spdif_out = devm_clk_get(&pdev->dev, "spdif_out");
 	if (IS_ERR(spdif->clk_spdif_out)) {
 		dev_err(&pdev->dev, "Can't retrieve spdif clock\n");
@@ -375,7 +368,6 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 		ret = PTR_ERR(spdif->clk_spdif_in);
 		goto err_spdif_out_clk_put;
 	}
-	#endif
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
@@ -440,26 +432,16 @@ err_suspend:
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 err_spdif_in_clk_put:
-#ifndef CONFIG_MACH_GRENADA
 	devm_clk_put(&pdev->dev, spdif->clk_spdif_in);
-#else
-	dev_err(&pdev->dev, "error\n");
-#endif
-#ifndef CONFIG_MACH_GRENADA
 err_spdif_out_clk_put:
 	devm_clk_put(&pdev->dev, spdif->clk_spdif_out);
-#else
-	dev_err(&pdev->dev, "error\n");
-#endif
 err:
 	return ret;
 }
 
 static int tegra210_spdif_platform_remove(struct platform_device *pdev)
 {
-	#ifndef CONFIG_MACH_GRENADA
 	struct tegra210_spdif *spdif = dev_get_drvdata(&pdev->dev);
-	#endif
 
 	snd_soc_unregister_codec(&pdev->dev);
 
@@ -467,10 +449,8 @@ static int tegra210_spdif_platform_remove(struct platform_device *pdev)
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_spdif_runtime_suspend(&pdev->dev);
 
-	#ifndef CONFIG_MACH_GRENADA
 	devm_clk_put(&pdev->dev, spdif->clk_spdif_out);
 	devm_clk_put(&pdev->dev, spdif->clk_spdif_in);
-	#endif
 
 	return 0;
 }

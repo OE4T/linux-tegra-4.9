@@ -40,7 +40,6 @@
 
 static int tegra210_i2s_set_clock_rate(struct device *dev, int clock_rate)
 {
-#ifndef CONFIG_MACH_GRENADA
 	unsigned int val;
 	struct tegra210_i2s *i2s = dev_get_drvdata(dev);
 	int ret;
@@ -75,9 +74,6 @@ static int tegra210_i2s_set_clock_rate(struct device *dev, int clock_rate)
 	}
 
 	return ret;
-#else
-	return 0;
-#endif
 }
 
 static int tegra210_i2s_runtime_suspend(struct device *dev)

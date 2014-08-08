@@ -261,6 +261,8 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 		   (u32)(compbit_store_base_iova & 0xffffffff),
 		   compbit_base_post_divide);
 
+	gr->compbit_store.base_hw = compbit_base_post_divide;
+
 	g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_invalidate,
 			    0, max_comptag_lines - 1);
 

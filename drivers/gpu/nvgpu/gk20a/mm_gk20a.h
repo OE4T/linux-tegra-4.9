@@ -172,6 +172,10 @@ struct compbit_store_desc {
 	struct sg_table *sgt;
 	size_t size;
 	u64 base_iova;
+
+	/* The value that is written to the hardware. This depends on
+	 * on the number of ltcs and is not an address. */
+	u64 base_hw;
 };
 
 struct gk20a_buffer_state {

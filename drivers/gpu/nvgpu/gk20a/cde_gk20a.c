@@ -321,6 +321,9 @@ static int gk20a_cde_patch_params(struct gk20a_cde_ctx *cde_ctx)
 			if (new_data == 0)
 				err = -EINVAL;
 			break;
+		case TYPE_PARAM_BACKINGSTORE_BASE_HW:
+			new_data = g->gr.compbit_store.base_hw;
+			break;
 		default:
 			user_id = param->id - NUM_RESERVED_PARAMS;
 			if (user_id < 0 || user_id >= MAX_CDE_USER_PARAMS)

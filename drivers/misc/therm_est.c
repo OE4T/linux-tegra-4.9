@@ -58,6 +58,7 @@ struct therm_estimator {
 	int tc2;
 	int ndevs;
 	struct therm_est_subdevice *devs;
+	bool *tripped_info;
 
 	int use_activator;
 #ifdef CONFIG_PM
@@ -72,22 +73,6 @@ struct therm_estimator {
 #define TIMER_TRIP_STATE_STOP		BIT(1)
 #define TIMER_TRIP_STATE_UP		BIT(2)
 #define TIMER_TRIP_STATE_DOWN		BIT(3)
-
-static int __get_trip_temp(struct thermal_zone_device *thz, int trip,
-			   long *temp);
-
-static struct therm_est_timer_trip_info *
-__find_timer_trip(struct therm_estimator *est, int trip)
-{
-	int i;
-
-	/* Find matched timer trip info with trip. */
-	for (i = 0; i < est->num_timer_trips; i++) {
-		if (est->timer_trips[i].trip == trip)
-			return &est->timer_trips[i];
-	}
-	return NULL;
-}
 
 static int __get_timer_trip_delay(struct therm_est_timer_trip_info *timer_info,
 				 s64 now, s64 *delay)
@@ -123,15 +108,25 @@ static void therm_est_update_limits(struct therm_estimator *est)
 	long low_temp = 0, high_temp = MAX_HIGH_TEMP;
 	long trip_temp, passive_low_temp = MAX_HIGH_TEMP;
 	enum thermal_trip_type trip_type;
-	struct thermal_trip_info *trip_state;
+	long hysteresis, zone_temp;
 	int i;
 
 	for (i = 0; i < est->num_trips; i++) {
-		trip_state = &est->trips[i];
-		__get_trip_temp(est->thz, i, &trip_temp);
+		est->thz->ops->get_trip_temp(est->thz, i, &trip_temp);
+		est->thz->ops->get_trip_hyst(est->thz, i, &hysteresis);
 		est->thz->ops->get_trip_type(est->thz, i, &trip_type);
+		zone_temp = est->thz->temperature;
 
-		if (!trip_state->tripped) { /* not tripped? update high */
+		if (zone_temp >= trip_temp) {
+			trip_temp -= hysteresis;
+			est->tripped_info[i] = true;
+		} else if (est->tripped_info[i]) {
+			trip_temp -= hysteresis;
+			if (zone_temp < trip_temp)
+				est->tripped_info[i] = false;
+		}
+
+		if (!est->tripped_info[i]) { /* not tripped? update high */
 			if (trip_temp < high_temp)
 				high_temp = trip_temp;
 		} else { /* tripped? update low */
@@ -275,182 +270,25 @@ static void therm_est_work_func(struct work_struct *work)
 	}
 }
 
-static int therm_est_bind(struct thermal_zone_device *thz,
-				struct thermal_cooling_device *cdev)
+static int therm_est_get_temp(void *of_data, long *temp)
 {
-	struct therm_estimator *est = thz->devdata;
-	struct thermal_trip_info *trip_state;
-	int i;
-
-	for (i = 0; i < est->num_trips; i++) {
-		trip_state = &est->trips[i];
-		if (trip_state->cdev_type &&
-		    !strncmp(trip_state->cdev_type, cdev->type,
-			     THERMAL_NAME_LENGTH))
-			thermal_zone_bind_cooling_device(thz, i, cdev,
-							 trip_state->upper,
-							 trip_state->lower);
-	}
-
-	return 0;
-}
-
-static int therm_est_unbind(struct thermal_zone_device *thz,
-				struct thermal_cooling_device *cdev)
-{
-	struct therm_estimator *est = thz->devdata;
-	struct thermal_trip_info *trip_state;
-	int i;
-
-	for (i = 0; i < est->num_trips; i++) {
-		trip_state = &est->trips[i];
-		if (trip_state->cdev_type &&
-		    !strncmp(trip_state->cdev_type, cdev->type,
-			     THERMAL_NAME_LENGTH))
-			thermal_zone_unbind_cooling_device(thz, i, cdev);
-	}
-
-	return 0;
-}
-
-static int therm_est_get_trip_type(struct thermal_zone_device *thz,
-				   int trip, enum thermal_trip_type *type)
-{
-	struct therm_estimator *est = thz->devdata;
-
-	*type = est->trips[trip].trip_type;
-	return 0;
-}
-
-static int __get_trip_temp(struct thermal_zone_device *thz, int trip,
-			   long *temp)
-{
-	struct therm_estimator *est = thz->devdata;
-	struct thermal_trip_info *trip_state = &est->trips[trip];
-	struct therm_est_timer_trip_info *timer_info;
-	long zone_temp, trip_temp, hysteresis;
-	int cur = TIMER_TRIP_INACTIVE;
-	int ret = TIMER_TRIP_STATE_NONE;
-
-	zone_temp = thz->temperature;
-	trip_temp = trip_state->trip_temp;
-	hysteresis = trip_state->hysteresis;
-
-	timer_info = __find_timer_trip(est, trip);
-	if (timer_info) {
-		cur = timer_info->cur;
-		/* If timer trip is available, use trip_temp and hysteresis in
-		 * the timer trip to trip_temp for this trip. */
-		if (timer_info->cur >= 0) {
-			trip_temp = timer_info->timers[cur].trip_temp;
-			hysteresis = timer_info->timers[cur].hysteresis;
-		}
-	}
-
-	if (zone_temp >= trip_temp) {
-		trip_temp -= hysteresis;
-		if (timer_info && !trip_state->tripped)
-			ret = TIMER_TRIP_STATE_START;
-		trip_state->tripped = true;
-	} else if (trip_state->tripped) {
-		trip_temp -= hysteresis;
-		if (zone_temp < trip_temp) {
-			if (!timer_info) {
-				trip_state->tripped = false;
-			} else {
-				if (cur == TIMER_TRIP_INACTIVE)
-					trip_state->tripped = false;
-				else
-					ret = TIMER_TRIP_STATE_DOWN;
-			}
-		}
-	}
-
-	*temp = trip_temp;
-	return ret;
-}
-
-static int therm_est_get_trip_temp(struct thermal_zone_device *thz,
-				   int trip, long *temp)
-{
-	struct therm_estimator *est = thz->devdata;
-	struct therm_est_timer_trip_info *timer_info;
-	int ret;
-
-	ret = __get_trip_temp(thz, trip, temp);
-	if (ret & (TIMER_TRIP_STATE_START | TIMER_TRIP_STATE_DOWN)) {
-		timer_info = __find_timer_trip(est, trip);
-
-		mutex_lock(&est->timer_trip_lock);
-		timer_info->last_tripped = ktime_to_ms(ktime_get());
-
-		if (ret & TIMER_TRIP_STATE_START) {
-			timer_info->cur = TIMER_TRIP_INACTIVE + 1;
-		} else if (ret & TIMER_TRIP_STATE_DOWN) {
-			if (--timer_info->cur < TIMER_TRIP_INACTIVE)
-				timer_info->cur = TIMER_TRIP_INACTIVE;
-		}
-		mutex_unlock(&est->timer_trip_lock);
-
-		/* Update limits, because trip temp was changed by timer trip
-		 * changing. */
-		therm_est_update_limits(est);
-	}
-
-	return 0;
-}
-
-static int therm_est_set_trip_temp(struct thermal_zone_device *thz,
-				   int trip, long temp)
-{
-	struct therm_estimator *est = thz->devdata;
-
-	est->trips[trip].trip_temp = temp;
-
-	/* Update limits, because trip temp was changed. */
-	therm_est_update_limits(est);
-	return 0;
-}
-
-static int therm_est_get_temp(struct thermal_zone_device *thz, long *temp)
-{
-	struct therm_estimator *est = thz->devdata;
+	struct therm_estimator *est = (struct therm_estimator *)of_data;
 
 	*temp = est->cur_temp;
 	return 0;
 }
 
-static int therm_est_get_trend(struct thermal_zone_device *thz,
-			       int trip, enum thermal_trend *trend)
+static int therm_est_get_trend(void *of_data, long *trend)
 {
-	struct therm_estimator *est = thz->devdata;
-	struct thermal_trip_info *trip_state = &est->trips[trip];
-	long trip_temp;
-	int new_trend;
-	int cur_temp;
+	struct therm_estimator *est = (struct therm_estimator *)of_data;
 
-	__get_trip_temp(thz, trip, &trip_temp);
-
-	cur_temp = thz->temperature;
-	new_trend = (est->tc1 * (cur_temp - thz->last_temperature)) +
-		    (est->tc2 * (cur_temp - trip_temp));
-
-	switch (trip_state->trip_type) {
-	case THERMAL_TRIP_ACTIVE:
-		/* aggressive active cooling */
+	if (est->thz->temperature > est->thz->last_temperature + 100)
 		*trend = THERMAL_TREND_RAISING;
-		break;
-	case THERMAL_TRIP_PASSIVE:
-		if (new_trend > 0)
-			*trend = THERMAL_TREND_RAISING;
-		else if (new_trend < 0)
-			*trend = THERMAL_TREND_DROPPING;
-		else
-			*trend = THERMAL_TREND_STABLE;
-		break;
-	default:
-		return -EINVAL;
-	}
+	else if (est->thz->temperature < est->thz->last_temperature - 100)
+		*trend = THERMAL_TREND_DROPPING;
+	else
+		*trend = THERMAL_TREND_STABLE;
+
 	return 0;
 }
 
@@ -500,16 +338,6 @@ static int therm_est_polling(struct therm_estimator *est,
 	}
 	return 0;
 }
-
-static struct thermal_zone_device_ops therm_est_ops = {
-	.bind = therm_est_bind,
-	.unbind = therm_est_unbind,
-	.get_trip_type = therm_est_get_trip_type,
-	.get_trip_temp = therm_est_get_trip_temp,
-	.set_trip_temp = therm_est_set_trip_temp,
-	.get_temp = therm_est_get_temp,
-	.get_trend = therm_est_get_trend,
-};
 
 static ssize_t show_coeff(struct device *dev,
 				struct device_attribute *da,
@@ -768,9 +596,113 @@ struct thermal_cooling_device *thermal_est_activation_device_register(
 	return cdev;
 }
 
+static int __parse_dt_subdev(struct device_node *np,
+			     struct therm_est_subdevice *subdev)
+{
+	const char *str;
+	char *sbegin;
+	int i = 0;
+	int ret;
+
+	subdev->dev_data = (void *)of_get_property(np, "dev-data", NULL);
+	if (!subdev->dev_data)
+		return -ENODATA;
+
+	ret = of_property_read_string(np, "coeffs", &str);
+	if (ret < 0)
+		return ret;
+
+	while (str && (i < HIST_LEN)) {
+		str = skip_spaces(str);
+		sbegin = strsep((char **)&str, " ");
+		if (!sbegin || (kstrtol((const char *)sbegin, 10,
+				&subdev->coeffs[i++]) < 0))
+			break;
+	}
+	if (i != HIST_LEN)
+		return -EINVAL;
+
+	return 0;
+}
+
+static struct therm_est_data *therm_est_get_pdata(struct device *dev)
+{
+	struct therm_est_data *data;
+	struct device_node *np;
+	struct device_node *ch;
+	u32 val;
+	int num_subdev;
+	int ret;
+
+	np = dev->of_node;
+	if (!np)
+		return dev->platform_data;
+
+	data = devm_kzalloc(dev, sizeof(struct therm_est_data), GFP_KERNEL);
+	if (!data)
+		return ERR_PTR(-ENOMEM);
+
+	ret = of_property_read_u32(np, "toffset", &val);
+	if (ret < 0)
+		return ERR_PTR(ret);
+	data->toffset = val;
+
+	ret = of_property_read_u32(np, "polling-period", &val);
+	if (ret < 0)
+		return ERR_PTR(ret);
+	data->polling_period = val;
+
+	ret = of_property_read_u32(np, "tc1", &val);
+	if (ret < 0)
+		return ERR_PTR(ret);
+	data->tc1 = val;
+
+	ret = of_property_read_u32(np, "tc2", &val);
+	if (ret < 0)
+		return ERR_PTR(ret);
+	data->tc2 = val;
+
+	ret = of_property_read_u32(np, "use_activator", &val);
+	if (ret < 0)
+		return ERR_PTR(ret);
+	data->use_activator = val;
+
+	num_subdev = 0;
+	ch = np;
+	while ((ch = of_find_node_by_type(ch, "therm-est-subdev")))
+		num_subdev++;
+
+	/* subdevices are must required data. */
+	if (num_subdev == 0)
+		return ERR_PTR(-ENOENT);
+
+	data->devs = devm_kzalloc(dev,
+			sizeof(struct therm_est_subdevice) * num_subdev,
+			GFP_KERNEL);
+	if (!data->devs)
+		return ERR_PTR(-ENOMEM);
+
+	num_subdev = 0;
+	ch = np;
+	while ((ch = of_find_node_by_type(ch, "therm-est-subdev"))) {
+		ret = __parse_dt_subdev(ch, &data->devs[num_subdev++]);
+		if (ret < 0)
+			return ERR_PTR(ret);
+		}
+
+	data->ndevs = num_subdev;
+
+	return data;
+}
+
+static struct thermal_zone_of_device_ops sops = {
+	.get_temp = therm_est_get_temp,
+	.get_trend = therm_est_get_trend,
+};
+
 static int therm_est_probe(struct platform_device *pdev)
 {
-	int i;
+	int i, ret;
 	struct therm_estimator *est;
 	struct therm_est_data *data;
 	struct thermal_zone_device *thz;
@@ -782,6 +714,8 @@ static int therm_est_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, est);
 
 	data = pdev->dev.platform_data;
+	if (!data)
+		data = therm_est_get_pdata(&pdev->dev);
 
 	for (i = 0; i < data->ndevs; i++) {
 		thz = thermal_zone_device_find(data->devs[i].dev_data,
@@ -821,18 +755,21 @@ static int therm_est_probe(struct platform_device *pdev)
 	est->cdev = thermal_est_activation_device_register(est,
 							"therm_est_activ");
 
-	est->num_trips = data->num_trips;
 	est->trips = data->trips;
 	est->tzp = data->tzp;
 
-	est->thz = thermal_zone_device_register(dev_name(&pdev->dev),
-						est->num_trips,
-						(1 << est->num_trips) - 1,
-						est,
-						&therm_est_ops,
-						est->tzp,
-						data->passive_delay,
-						0);
+	est->thz = thermal_zone_of_sensor_register(&pdev->dev, 0, est, &sops);
+	if (IS_ERR(est->thz)) {
+		ret = PTR_ERR(est->thz);
+		dev_err(&pdev->dev,
+			"Device can not register as thermal sensor: %d\n", ret);
+		goto err;
+	}
+
+	est->num_trips = est->thz->trips;
+	est->tripped_info = devm_kzalloc(&pdev->dev,
+				sizeof(bool) * est->num_trips,
+				GFP_KERNEL);
 	if (IS_ERR_OR_NULL(est->thz))
 		goto err;
 
@@ -870,7 +807,6 @@ static int therm_est_remove(struct platform_device *pdev)
 #endif
 	for (i = 0; i < ARRAY_SIZE(therm_est_nodes); i++)
 		device_remove_file(&pdev->dev, &therm_est_nodes[i].dev_attr);
-	thermal_zone_device_unregister(est->thz);
 	thermal_cooling_device_unregister(est->cdev);
 	kfree(est->thz);
 	destroy_workqueue(est->workqueue);
@@ -884,14 +820,18 @@ static void therm_est_shutdown(struct platform_device *pdev)
 
 	cancel_delayed_work_sync(&est->therm_est_work);
 	cancel_delayed_work_sync(&est->timer_trip_work);
-	thermal_zone_device_unregister(est->thz);
 	thermal_cooling_device_unregister(est->cdev);
 }
 
+static struct of_device_id therm_est_of_match[] = {
+	{ .compatible = "nvidia,therm-est", },
+	{ },
+};
 static struct platform_driver therm_est_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
 		.name  = "therm_est",
+		.of_match_table = of_match_ptr(therm_est_of_match),
 	},
 	.probe  = therm_est_probe,
 	.remove = therm_est_remove,

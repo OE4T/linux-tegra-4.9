@@ -1013,10 +1013,9 @@ static int gk20a_buffer_convert_gpu_to_cde(
 	const int gridw = roundup(tilepitch, wgx) / wgx;
 	const int gridh = roundup(ytilesaligned, wgy) / wgy;
 
-	if (xtiles > 4096 / 8 || ytiles > 4096 / 8) {
-		gk20a_warn(&g->dev->dev, "cde: too large surface");
-		return -EINVAL;
-	}
+	if (xtiles > 4096 / 8 || ytiles > 4096 / 8)
+		gk20a_warn(&g->dev->dev, "cde: surface is exceptionally large (xtiles=%d, ytiles=%d)",
+			   xtiles, ytiles);
 
 	gk20a_dbg(gpu_dbg_cde, "w=%d, h=%d, bh_log2=%d, compbits_offset=0x%llx",
 		  width, height, block_height_log2, compbits_offset);

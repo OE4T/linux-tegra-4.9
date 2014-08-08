@@ -68,9 +68,6 @@
 			maxim,system-pmic-power-off;
 			maxim,system-pmic-power-reset;
 
-			maxim,wdt-timeout = <16>;
-			maxim,wdt-clear-time = <13>;
-
 			maxim,hot-die-threshold-temp = <110000>;
 
 			pinctrl-names = "default";
@@ -99,6 +96,12 @@
 					drive-open-drain = <1>;
 				};
 
+			};
+
+			watchdog {
+				maxim,wdt-timeout = <16>;
+				maxim,wdt-clear-time = <13>;
+				status = "disabled";
 			};
 
 			fps {

@@ -387,15 +387,21 @@ static int parse_disp_default_out(struct platform_device *ndev,
 	}
 	n_outpins = n_outpins/2;
 	default_out->n_out_pins = (unsigned)n_outpins;
-	default_out->out_pins = devm_kzalloc(&ndev->dev,
-		n_outpins * sizeof(struct tegra_dc_out_pin),
-		GFP_KERNEL);
-	if (!default_out->out_pins) {
+	if (n_outpins)
+		default_out->out_pins = devm_kzalloc(&ndev->dev,
+			n_outpins * sizeof(struct tegra_dc_out_pin),
+			GFP_KERNEL);
+
+	if (n_outpins && !default_out->out_pins) {
 		dev_err(&ndev->dev, "not enough memory\n");
 		return -ENOMEM;
 	}
 	n_outpins = 0;
 	addr = (u8 *)default_out->out_pins;
+
+	/*
+	 * There's no below iteration in case of NULL addr
+	 */
 	of_property_for_each_u32(np, "nvidia,out-pins", prop, p, u) {
 		if ((n_outpins & 0x1) == 0)
 			((struct tegra_dc_out_pin *)addr)->name = (int)u;
@@ -411,9 +417,9 @@ static int parse_disp_default_out(struct platform_device *ndev,
 		default_out->parent_clk = temp_str0;
 		OF_DC_LOG("parent clk %s\n",
 			default_out->parent_clk);
-	} else {
-		goto fail_disp_default_out;
-	}
+	} else
+		pr_info("%s: No parent clk. dft clk will be used.\n",
+			__func__);
 
 	if (default_out->type == TEGRA_DC_OUT_HDMI) {
 		default_out->depth = 0;
@@ -452,10 +458,6 @@ static int parse_disp_default_out(struct platform_device *ndev,
 	}
 
 	return 0;
-
-fail_disp_default_out:
-	pr_err("%s: a parse error\n", __func__);
-	return -EINVAL;
 }
 
 int parse_tmds_config(struct platform_device *ndev,

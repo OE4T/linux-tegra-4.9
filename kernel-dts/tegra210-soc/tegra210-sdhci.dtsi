@@ -52,12 +52,14 @@
 		tap-delay = <4>;
 		trim-delay = <8>;
 		mmc-ocr-mask = <0>;
-		max-clk-limit = <200000000>;
+		max-clk-limit = <136000000>;
+		ddr-clk-limit = <41000000>;
 		id = <1>;
 		compad-vref-3v3 = <0x7>;
 		compad-vref-1v8 = <0x7>;
 		vddio_sdmmc-supply = <&max77620_sd3>;
 		vddio_sd_slot-supply = <&vdd_3v3>;
+		default-drive-type = <1>;
 	};
 
 	sdhci@700b0000 {

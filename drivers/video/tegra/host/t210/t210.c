@@ -177,6 +177,7 @@ struct nvhost_device_data t21_vi_info = {
 	.moduleid		= NVHOST_MODULE_VI,
 	.clocks = {
 		{"vi", UINT_MAX},
+		{"cam-mipi-cal", 68000000},
 		{"csi", 0},
 		{"cilab", 102000000} },
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
@@ -186,6 +187,22 @@ struct nvhost_device_data t21_vi_info = {
 };
 #endif
 
+#endif
+
+#if defined(CONFIG_TEGRA_GRHOST_VII2C)
+struct nvhost_device_data t21_vii2c_info = {
+	.class		= NV_VIDEO_STREAMING_VII2C_CLASS_ID,
+	.exclusive	= true,
+	.keepalive	= true,
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid	= NVHOST_MODULE_VII2C,
+	.clocks = {
+		{"vii2c", 86400000},
+		{"i2cslow", 1000000},
+	},
+	.num_channels	= 1,
+};
 #endif
 
 struct nvhost_device_data t21_msenc_info = {

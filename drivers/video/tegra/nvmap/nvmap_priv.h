@@ -55,9 +55,7 @@
 #define __GFP_NVMAP     (GFP_KERNEL | __GFP_HIGHMEM)
 #endif
 
-#define GFP_NVMAP       (__GFP_NVMAP | __GFP_NOWARN)
-
-extern bool zero_memory;
+#define GFP_NVMAP              (__GFP_NVMAP | __GFP_NOWARN)
 
 #ifdef CONFIG_64BIT
 #define NVMAP_LAZY_VFREE

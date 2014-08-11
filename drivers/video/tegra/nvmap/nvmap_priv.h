@@ -201,23 +201,13 @@ struct nvmap_page_pool {
 #endif
 };
 
-static inline void nvmap_page_pool_lock(struct nvmap_page_pool *pool)
-{
-	mutex_lock(&pool->lock);
-}
-
-static inline void nvmap_page_pool_unlock(struct nvmap_page_pool *pool)
-{
-	mutex_unlock(&pool->lock);
-}
-
 int nvmap_page_pool_init(struct nvmap_device *dev);
 int nvmap_page_pool_fini(struct nvmap_device *dev);
 struct page *nvmap_page_pool_alloc(struct nvmap_page_pool *pool);
 bool nvmap_page_pool_fill(struct nvmap_page_pool *pool, struct page *page);
-int __nvmap_page_pool_alloc_lots_locked(struct nvmap_page_pool *pool,
+int nvmap_page_pool_alloc_lots(struct nvmap_page_pool *pool,
 					struct page **pages, u32 nr);
-int __nvmap_page_pool_fill_lots_locked(struct nvmap_page_pool *pool,
+int nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
 				       struct page **pages, u32 nr);
 int nvmap_page_pool_clear(void);
 int nvmap_page_pool_debugfs_init(struct dentry *nvmap_root);

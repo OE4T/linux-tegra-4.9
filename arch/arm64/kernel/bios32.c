@@ -504,6 +504,7 @@ void pci_common_init_dev(struct device *parent, struct hw_pci *hw)
 		pci_bus_add_devices(bus);
 	}
 }
+EXPORT_SYMBOL(pci_common_init_dev);
 
 void pci_common_exit(struct list_head *head)
 {
@@ -522,6 +523,7 @@ void pci_common_exit(struct list_head *head)
 		kfree(sys);
 	}
 }
+EXPORT_SYMBOL(pci_common_exit);
 
 #ifndef CONFIG_PCI_HOST_ITE8152
 void pcibios_set_master(struct pci_dev *dev)

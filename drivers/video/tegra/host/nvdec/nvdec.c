@@ -56,6 +56,8 @@
 #endif
 #define set_nvdec(ndev, f) ((ndev)->dev.platform_data = f)
 
+#define BRINGUP_NO_WPR 1
+
 /* caller is responsible for freeing */
 #if USE_NVDEC_BOOTLOADER
 enum {
@@ -75,12 +77,18 @@ static char *nvdec_get_fw_name(struct platform_device *dev, int fw)
 		return NULL;
 
 	decode_nvdec_ver(pdata->version, &maj, &min);
-	if (fw == host_nvdec_fw_bl)
+	if (fw == host_nvdec_fw_bl) {
+#if BRINGUP_NO_WPR
+		sprintf(fw_name, "nvhost_nvdec_bl_no_wpr0%d%d.fw",
+			maj, min);
+#else
 		if (tegra_platform_is_qt() || tegra_platform_is_linsim())
 			sprintf(fw_name, "nvhost_nvdec_bl_no_wpr0%d%d.fw",
 				maj, min);
 		else
 			sprintf(fw_name, "nvhost_nvdec_bl0%d%d.fw", maj, min);
+#endif
+	}
 	else
 		sprintf(fw_name, "nvhost_nvdec0%d%d.fw", maj, min);
 	dev_info(&dev->dev, "fw name:%s\n", fw_name);

@@ -100,6 +100,7 @@ struct nvhost_notification {
 #define	NVHOST_CHANNEL_GR_SEMAPHORE_TIMEOUT	24
 #define	NVHOST_CHANNEL_GR_ILLEGAL_NOTIFY	25
 #define	NVHOST_CHANNEL_FIFO_ERROR_MMU_ERR_FLT	31
+#define	NVHOST_CHANNEL_PBDMA_ERROR		32
 	__u16 info16;	/* info returned depends on method 000c-000d */
 	__u16 status;	/* user sets bit 15, NV sets status 000e-000f */
 #define	NVHOST_CHANNEL_SUBMIT_TIMEOUT		1

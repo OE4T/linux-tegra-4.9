@@ -1898,17 +1898,12 @@ struct tegra_dc_platform_data
 		pr_info("%s: could not find SD settings node\n",
 			__func__);
 	} else {
-		if (of_device_is_available(sd_np)) {
-			pdata->default_out->sd_settings =
-				devm_kzalloc(&ndev->dev,
-				sizeof(struct tegra_dc_sd_settings),
-				GFP_KERNEL);
-			if (!pdata->default_out->sd_settings) {
-				dev_err(&ndev->dev, "not enough memory\n");
-				goto fail_parse;
-			}
-		} else {
-			dev_err(&ndev->dev, "sd_settings: No data in node\n");
+		pdata->default_out->sd_settings =
+			devm_kzalloc(&ndev->dev,
+			sizeof(struct tegra_dc_sd_settings),
+			GFP_KERNEL);
+		if (!pdata->default_out->sd_settings) {
+			dev_err(&ndev->dev, "not enough memory\n");
 			goto fail_parse;
 		}
 	}
@@ -1921,15 +1916,10 @@ struct tegra_dc_platform_data
 		pr_info("%s: could not find cmu node\n",
 			__func__);
 	} else {
-		if (of_device_is_available(cmu_np)) {
-			pdata->cmu = devm_kzalloc(&ndev->dev,
-				sizeof(struct tegra_dc_cmu), GFP_KERNEL);
-			if (!pdata->cmu) {
-				dev_err(&ndev->dev, "not enough memory\n");
-				goto fail_parse;
-			}
-		} else {
-			dev_err(&ndev->dev, "cmu: No data in node\n");
+		pdata->cmu = devm_kzalloc(&ndev->dev,
+			sizeof(struct tegra_dc_cmu), GFP_KERNEL);
+		if (!pdata->cmu) {
+			dev_err(&ndev->dev, "not enough memory\n");
 			goto fail_parse;
 		}
 	}

@@ -123,4 +123,11 @@ int pci_ioremap_io(unsigned int offset, phys_addr_t phys_addr)
 				  __pgprot(PROT_DEVICE_nGnRE));
 }
 EXPORT_SYMBOL_GPL(pci_ioremap_io);
+
+void pci_iounmap_io(unsigned int offset)
+{
+	unmap_kernel_range(PCI_IOBASE + offset, SZ_64K);
+}
+EXPORT_SYMBOL_GPL(pci_iounmap_io);
+
 #endif

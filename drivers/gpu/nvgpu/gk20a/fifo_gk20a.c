@@ -1410,6 +1410,9 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 		u32 hw_chid = fifo_pbdma_status_id_v(status);
 		if (fifo_pbdma_status_id_type_v(status)
 				== fifo_pbdma_status_id_type_chid_v()) {
+			struct channel_gk20a *ch = &f->channel[hw_chid];
+			gk20a_set_error_notifier(ch,
+				NVHOST_CHANNEL_PBDMA_ERROR);
 			gk20a_fifo_recover_ch(g, hw_chid, true);
 		}
 	}

@@ -5058,6 +5058,10 @@ static inline bool is_valid_cyclestats_bar0_offset_gk20a(struct gk20a *g,
 {
 	/* support only 24-bit 4-byte aligned offsets */
 	bool valid = !(offset & 0xFF000003);
+
+	if (g->allow_all)
+		return true;
+
 	/* whitelist check */
 	valid = valid &&
 		is_bar0_global_offset_whitelisted_gk20a(offset);

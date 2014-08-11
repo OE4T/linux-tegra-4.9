@@ -106,13 +106,6 @@ config NVMAP_FORCE_ZEROED_USER_PAGES
 	  significant overhead to allocation operations depending on the
 	  allocation size requested.
 
-config NVMAP_USE_CMA_FOR_CARVEOUT
-	bool "Use CMA memory for carveouts"
-	help
-	  Say Y here to reserve carveout memory using CMA
-	  API. CMA reserved memory can be used by applications
-	  when it is not in use by the device that reserved it.
-
 config NVMAP_FD_START
 	hex "FD number to start allocation from"
 	default 0x400

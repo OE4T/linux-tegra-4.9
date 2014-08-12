@@ -3999,6 +3999,7 @@ module_param_call(suspend, suspend_set, suspend_get, &suspend, 0644);
 static struct of_device_id tegra_display_of_match[] = {
 	{.compatible = "nvidia,tegra114-dc", },
 	{.compatible = "nvidia,tegra124-dc", },
+	{.compatible = "nvidia,tegra210-dc", },
 	{ },
 };
 #endif

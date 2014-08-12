@@ -111,6 +111,30 @@
 #define TEGRA210_AUDIOCIF_CTRL_MONO_CONV_ZERO		(TEGRA210_AUDIOCIF_MONO_CONV_ZERO << TEGRA210_AUDIOCIF_CTRL_MONO_CONV_SHIFT)
 #define TEGRA210_AUDIOCIF_CTRL_MONO_CONV_COPY		(TEGRA210_AUDIOCIF_MONO_CONV_COPY << TEGRA210_AUDIOCIF_CTRL_MONO_CONV_SHIFT)
 
+/* Fields in *AHUBRAMCTL_CTRL; used by different AHUB modules */
+#define TEGRA210_AHUBRAMCTL_CTRL_READ_BUSY_SHIFT	31
+#define TEGRA210_AHUBRAMCTL_CTRL_READ_BUSY_MASK		(1 << TEGRA210_AHUBRAMCTL_CTRL_READ_BUSY_SHIFT)
+#define TEGRA210_AHUBRAMCTL_CTRL_READ_BUSY		(1 << TEGRA210_AHUBRAMCTL_CTRL_READ_BUSY_SHIFT)
+
+#define TEGRA210_AHUBRAMCTL_CTRL_SEQ_READ_COUNT_SHIFT	16
+#define TEGRA210_AHUBRAMCTL_CTRL_SEQ_READ_COUNT_MASK	(0xff << TEGRA210_AHUBRAMCTL_CTRL_SEQ_READ_COUNT_SHIFT)
+
+#define TEGRA210_AHUBRAMCTL_CTRL_RW_SHIFT		14
+#define TEGRA210_AHUBRAMCTL_CTRL_RW_MASK		(1 << TEGRA210_AHUBRAMCTL_CTRL_RW_SHIFT)
+#define TEGRA210_AHUBRAMCTL_CTRL_RW_READ		(0 << TEGRA210_AHUBRAMCTL_CTRL_RW_SHIFT)
+#define TEGRA210_AHUBRAMCTL_CTRL_RW_WRITE		(1 << TEGRA210_AHUBRAMCTL_CTRL_RW_SHIFT)
+
+#define TEGRA210_AHUBRAMCTL_CTRL_ADDR_INIT_EN_SHIFT	13
+#define TEGRA210_AHUBRAMCTL_CTRL_ADDR_INIT_EN_MASK	(1 << TEGRA210_AHUBRAMCTL_CTRL_ADDR_INIT_EN_SHIFT)
+#define TEGRA210_AHUBRAMCTL_CTRL_ADDR_INIT_EN		(1 << TEGRA210_AHUBRAMCTL_CTRL_ADDR_INIT_EN_SHIFT)
+
+#define TEGRA210_AHUBRAMCTL_CTRL_SEQ_ACCESS_EN_SHIFT	12
+#define TEGRA210_AHUBRAMCTL_CTRL_SEQ_ACCESS_EN_MASK	(1 << TEGRA210_AHUBRAMCTL_CTRL_SEQ_ACCESS_EN_SHIFT)
+#define TEGRA210_AHUBRAMCTL_CTRL_SEQ_ACCESS_EN		(1 << TEGRA210_AHUBRAMCTL_CTRL_SEQ_ACCESS_EN_SHIFT)
+
+#define TEGRA210_AHUBRAMCTL_CTRL_RAM_ADDR_SHIFT		0
+#define TEGRA210_AHUBRAMCTL_CTRL_RAM_ADDR_MASK		(0x1ff << TEGRA210_AHUBRAMCTL_CTRL_RAM_ADDR_SHIFT)
+
 /* maximum mux count in T210 */
 #define TEGRA210_XBAR_UPDATE_MAX_REG	3
 
@@ -129,7 +153,12 @@ struct tegra210_xbar_cif_conf {
 
 void tegra210_xbar_set_cif(struct regmap *regmap, unsigned int reg,
 			  struct tegra210_xbar_cif_conf *conf);
-
+void tegra210_xbar_write_ahubram(struct regmap *regmap, unsigned int reg_ctrl,
+				unsigned int reg_data, unsigned int ram_offset,
+				unsigned int *data, size_t size);
+void tegra210_xbar_read_ahubram(struct regmap *regmap, unsigned int reg_ctrl,
+				unsigned int reg_data, unsigned int ram_offset,
+				unsigned int *data, size_t size);
 int tegra210_xbar_read_reg (unsigned int reg, unsigned int *val);
 
 struct tegra210_xbar_soc_data {
@@ -146,4 +175,18 @@ struct tegra210_xbar {
 	const struct tegra210_xbar_soc_data *soc_data;
 };
 
+/* Extension of soc_bytes structure defined in sound/soc.h */
+struct tegra_soc_bytes {
+	struct soc_bytes soc;
+	u32 shift; /* Used as offset for ahub ram related programing */
+};
+
+/* Utility structures for using mixer control of type snd_soc_bytes */
+#define TEGRA_SOC_BYTES_EXT(xname, xbase, xregs, xshift, xmask, \
+	xhandler_get, xhandler_put) \
+	{.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, \
+	 .info = snd_soc_bytes_info, .get = xhandler_get, .put = xhandler_put, \
+	 .private_value = ((unsigned long)&(struct tegra_soc_bytes) \
+		{.soc.base = xbase, .soc.num_regs = xregs, .soc.mask = xmask, \
+		 .shift = xshift })}
 #endif

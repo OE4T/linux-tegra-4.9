@@ -26,6 +26,9 @@ snd-soc-tegra210-alt-afc-objs := tegra210_afc_alt.o
 snd-soc-tegra210-alt-mvc-objs := tegra210_mvc_alt.o
 snd-soc-tegra210-alt-iqc-objs := tegra210_iqc_alt.o
 snd-soc-tegra210-alt-spdif-objs := tegra210_spdif_alt.o
+snd-soc-tegra210-alt-ope-objs := tegra210_ope_alt.o
+snd-soc-tegra210-alt-peq-objs := tegra210_peq_alt.o
+snd-soc-tegra210-alt-mbdrc-objs := tegra210_mbdrc_alt.o
 snd-soc-tegra210-alt-adsp-objs := tegra210_adsp_alt.o
 snd-soc-tegra210-alt-fpga-clock-objs := ahub_unit_fpga_clock.o
 
@@ -53,6 +56,9 @@ obj-$(CONFIG_SND_SOC_TEGRA210_AFC_ALT) += snd-soc-tegra210-alt-afc.o
 obj-$(CONFIG_SND_SOC_TEGRA210_MVC_ALT) += snd-soc-tegra210-alt-mvc.o
 obj-$(CONFIG_SND_SOC_TEGRA210_IQC_ALT) += snd-soc-tegra210-alt-iqc.o
 obj-$(CONFIG_SND_SOC_TEGRA210_SPDIF_ALT) += snd-soc-tegra210-alt-spdif.o
+obj-$(CONFIG_SND_SOC_TEGRA210_OPE_ALT) += snd-soc-tegra210-alt-ope.o
+obj-$(CONFIG_SND_SOC_TEGRA210_OPE_ALT) += snd-soc-tegra210-alt-peq.o
+obj-$(CONFIG_SND_SOC_TEGRA210_OPE_ALT) += snd-soc-tegra210-alt-mbdrc.o
 obj-$(CONFIG_SND_SOC_TEGRA210_ADSP_ALT) += snd-soc-tegra210-alt-adsp.o
 
 # Tegra machine Support

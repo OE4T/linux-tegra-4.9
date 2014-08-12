@@ -769,6 +769,8 @@ struct of_dev_auxdata tegra210_xbar_auxdata[] = {
 	OF_DEV_AUXDATA("nvidia,tegra210-dmic", 0x702d4000, "tegra210-dmic.0", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-dmic", 0x702d4100, "tegra210-dmic.1", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-dmic", 0x702d4200, "tegra210-dmic.2", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-ope", 0x702d8000, "tegra210-ope.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-ope", 0x702d8400, "tegra210-ope.1", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-amixer", 0x702dbb00, "tegra210-mixer", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-spdif", 0x702d6000, "tegra210-spdif", NULL),
 	{}
@@ -960,6 +962,50 @@ void tegra210_xbar_set_cif(struct regmap *regmap, unsigned int reg,
 	regmap_update_bits(regmap, reg, 0x3fffffff, value);
 }
 EXPORT_SYMBOL_GPL(tegra210_xbar_set_cif);
+
+void tegra210_xbar_write_ahubram(struct regmap *regmap, unsigned int reg_ctrl,
+				unsigned int reg_data, unsigned int ram_offset,
+				unsigned int *data, size_t size)
+{
+	unsigned int val = 0;
+	int i = 0;
+
+	val = (ram_offset << TEGRA210_AHUBRAMCTL_CTRL_RAM_ADDR_SHIFT) &
+		TEGRA210_AHUBRAMCTL_CTRL_RAM_ADDR_MASK;
+	val |= TEGRA210_AHUBRAMCTL_CTRL_ADDR_INIT_EN;
+	val |= TEGRA210_AHUBRAMCTL_CTRL_SEQ_ACCESS_EN;
+	val |= TEGRA210_AHUBRAMCTL_CTRL_RW_WRITE;
+
+	regmap_write(regmap, reg_ctrl, val);
+	for (i = 0; i < size; i++)
+		regmap_write(regmap, reg_data, data[i]);
+
+	return;
+}
+EXPORT_SYMBOL_GPL(tegra210_xbar_write_ahubram);
+
+void tegra210_xbar_read_ahubram(struct regmap *regmap, unsigned int reg_ctrl,
+				unsigned int reg_data, unsigned int ram_offset,
+				unsigned int *data, size_t size)
+{
+	unsigned int val = 0;
+	int i = 0;
+
+	val = (ram_offset << TEGRA210_AHUBRAMCTL_CTRL_RAM_ADDR_SHIFT) &
+		TEGRA210_AHUBRAMCTL_CTRL_RAM_ADDR_MASK;
+	val |= TEGRA210_AHUBRAMCTL_CTRL_ADDR_INIT_EN;
+	val |= TEGRA210_AHUBRAMCTL_CTRL_SEQ_ACCESS_EN;
+	val |= TEGRA210_AHUBRAMCTL_CTRL_RW_READ;
+
+	regmap_write(regmap, reg_ctrl, val);
+	/* Since all ahub non-io modules work under same ahub clock it is not
+	   necessary to check ahub read busy bit after every read */
+	for (i = 0; i < size; i++)
+		regmap_read(regmap, reg_data, &data[i]);
+
+	return;
+}
+EXPORT_SYMBOL_GPL(tegra210_xbar_read_ahubram);
 
 int tegra210_xbar_read_reg (unsigned int reg, unsigned int *val)
 {

@@ -148,6 +148,12 @@ config SND_SOC_TEGRA210_SPDIF_ALT
 	help
 	  Say Y or M if you want to add support for Tegra210 SPDIF module.
 
+config SND_SOC_TEGRA210_OPE_ALT
+	tristate "Tegra210 OPE driver"
+	depends on SND_SOC_TEGRA_ALT && SND_SOC_TEGRA_ALT_210
+	help
+	  Say Y or M if you want to add support for Tegra210 OPE module.
+
 config SND_SOC_TEGRA210_ADSP_ALT
         tristate "Tegra210 ADSP driver"
         depends on SND_SOC_TEGRA_ALT && SND_SOC_TEGRA_ALT_210 && TEGRA_NVADSP
@@ -199,6 +205,7 @@ config SND_SOC_TEGRA_GRENADA_ALT
 	select SND_SOC_TEGRA210_SFC_ALT
 	select SND_SOC_TEGRA210_AFC_ALT
 	select SND_SOC_TEGRA210_MVC_ALT
+	select SND_SOC_TEGRA210_OPE_ALT
 	select SND_SOC_TEGRA210_IQC_ALT
 	select SND_SOC_TEGRA210_SPDIF_ALT
 	select SND_SOC_TEGRA210_ADSP_ALT
@@ -222,6 +229,7 @@ config SND_SOC_TEGRA_T210REF_MOBILE_ALT
 	select SND_SOC_TEGRA210_SFC_ALT
 	select SND_SOC_TEGRA210_AFC_ALT
 	select SND_SOC_TEGRA210_MVC_ALT
+	select SND_SOC_TEGRA210_OPE_ALT
 	select SND_SOC_TEGRA210_SPDIF_ALT
 	select SND_SOC_TEGRA210_ADSP_ALT
 	select SND_SOC_SPDIF

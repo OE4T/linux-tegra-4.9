@@ -1250,6 +1250,42 @@ static struct snd_soc_dai_link
 		.codec_name = "tegra210-axbar",
 		.params = &default_link_params,
 	},
+	[TEGRA210_DAI_LINK_OPE1_RX] = {
+		.name = "OPE1 RX",
+		.stream_name = "OPE1 RX",
+		.cpu_dai_name = "OPE1",
+		.codec_dai_name = "OPE IN",
+		.cpu_name = "tegra210-axbar",
+		.codec_name = "tegra210-ope.0",
+		.params = &default_link_params,
+	},
+	[TEGRA210_DAI_LINK_OPE1_TX] = {
+		.name = "OPE1 TX",
+		.stream_name = "OPE1 TX",
+		.cpu_dai_name = "OPE OUT",
+		.codec_dai_name = "OPE1",
+		.cpu_name = "tegra210-ope.0",
+		.codec_name = "tegra210-axbar",
+		.params = &default_link_params,
+	},
+	[TEGRA210_DAI_LINK_OPE2_RX] = {
+		.name = "OPE2 RX",
+		.stream_name = "OPE2 RX",
+		.cpu_dai_name = "OPE2",
+		.codec_dai_name = "OPE IN",
+		.cpu_name = "tegra210-axbar",
+		.codec_name = "tegra210-ope.1",
+		.params = &default_link_params,
+	},
+	[TEGRA210_DAI_LINK_OPE2_TX] = {
+		.name = "OPE2 TX",
+		.stream_name = "OPE2 TX",
+		.cpu_dai_name = "OPE OUT",
+		.codec_dai_name = "OPE2",
+		.cpu_name = "tegra210-ope.1",
+		.codec_name = "tegra210-axbar",
+		.params = &default_link_params,
+	},
 	[TEGRA210_DAI_LINK_ADMAIF1_CODEC] = {
 		.name = "ADMAIF1 CODEC",
 		.stream_name = "ADMAIF1 CODEC",
@@ -1520,6 +1556,14 @@ static struct snd_soc_codec_conf
 	[TEGRA210_CODEC_MVC2_CONF] = {
 		.dev_name = "tegra210-mvc.1",
 		.name_prefix = "MVC2",
+	},
+	[TEGRA210_CODEC_OPE1_CONF] = {
+		.dev_name = "tegra210-ope.0",
+		.name_prefix = "OPE1",
+	},
+	[TEGRA210_CODEC_OPE2_CONF] = {
+		.dev_name = "tegra210-ope.1",
+		.name_prefix = "OPE2",
 	},
 	[TEGRA210_CODEC_AFC1_CONF] = {
 		.dev_name = "tegra210-afc.0",

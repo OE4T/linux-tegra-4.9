@@ -980,6 +980,7 @@ void tegra_clk_sync_state_pllcx(struct clk *c);
 void tegra_clk_sync_state_iddq(struct clk *c);
 void tegra_clk_sync_state_pll(struct clk *c);
 void tegra_clk_sync_state_pll_out(struct clk *clk);
+void tegra_clk_osc_resume(void __iomem *clk_base);
 #endif
 
 #endif /* TEGRA_CLK_H */

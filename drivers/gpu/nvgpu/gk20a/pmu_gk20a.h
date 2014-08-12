@@ -261,7 +261,7 @@ union pmu_ap_msg {
 #define APCTRL_MINIMUM_IDLE_FILTER_DEFAULT_US                   (100)
 #define APCTRL_MINIMUM_TARGET_SAVING_DEFAULT_US                 (10000)
 #define APCTRL_POWER_BREAKEVEN_DEFAULT_US                       (2000)
-#define APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT                    (100)
+#define APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT                    (200)
 
 /*
  * Disable reason for Adaptive Power Controller

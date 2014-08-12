@@ -34,6 +34,7 @@
 #define __CBUF_H__
 
 #include <asm/barrier.h>
+#include <linux/compiler.h>
 
 struct cbuf {
 	int end_idx;	/* Array size - 1 */
@@ -86,60 +87,71 @@ static inline struct cbuf *cbuf_init(void *buf, int struct_size, int elems)
 
 static inline int cbuf_is_empty(struct cbuf *cbuf)
 {
-	cbuf_rmb();
-	return cbuf->w_pos == cbuf->r_pos;
+	return ACCESS_ONCE(cbuf->w_pos) == ACCESS_ONCE(cbuf->r_pos);
 }
 
 static inline int cbuf_is_full(struct cbuf *cbuf)
 {
-	cbuf_rmb();
+	int w_pos = ACCESS_ONCE(cbuf->w_pos);
+	int r_pos = ACCESS_ONCE(cbuf->r_pos);
 
 	/* Full when r=0, w=end_idx */
-	if (cbuf->w_pos - cbuf->end_idx == cbuf->r_pos)
+	if (w_pos - cbuf->end_idx == r_pos)
 		return 1;
 	/* Full when w=r-1 */
-	else if (cbuf->w_pos == cbuf->r_pos - 1)
+	else if (w_pos == r_pos - 1)
 		return 1;
 	else
 		return 0;
 }
 
+/*
+ * WARNING: In the following two functions, if cb is located in memory shared
+ * with untrusted code (i.e., user space, another VM, or another OS), the
+ * pointer returned cannot be trusted and must be validated before it can safely
+ * be dereferenced.
+ */
+
 /* assumes check for empty earlier */
 static inline void __iomem *cbuf_read_data_ptr(struct cbuf *cb)
 {
-	cbuf_rmb();
-
-	return &cb->buf[cb->r_pos * cb->struct_size];
+	/*
+	 * Use ACCESS_ONCE() to prevent additional re-calculations of the data
+	 * pointer potentially after a pointer has already been validated.
+	 */
+	return &cb->buf[ACCESS_ONCE(cb->r_pos) * cb->struct_size];
 }
 
 /* assumes check for full earlier */
 static inline void __iomem *cbuf_write_data_ptr(struct cbuf *cb)
 {
-	cbuf_rmb();
-
-	return &cb->buf[cb->w_pos * cb->struct_size];
+	/*
+	 * Use ACCESS_ONCE() to prevent additional re-calculations of the data
+	 * pointer potentially after a pointer has already been validated.
+	 */
+	return &cb->buf[ACCESS_ONCE(cb->w_pos) * cb->struct_size];
 }
 
 static inline void cbuf_advance_w_pos(struct cbuf *cb)
 {
-	/* Check if need to wrap */
-	if (cb->w_pos >= cb->end_idx)
-		cb->w_pos = 0;	/* Wrap position */
-	else
-		cb->w_pos++;	/* Go to next empty pos */
+	int w_pos = ACCESS_ONCE(cb->w_pos);
 
-	cbuf_wmb();
+	/* Check if need to wrap */
+	if (w_pos >= cb->end_idx)
+		ACCESS_ONCE(cb->w_pos) = 0;	/* Wrap position */
+	else
+		ACCESS_ONCE(cb->w_pos) = w_pos + 1; /* Go to next empty pos */
 }
 
 static inline void cbuf_advance_r_pos(struct cbuf *cb)
 {
-	/* Check if need to wrap */
-	if (cb->r_pos >= cb->end_idx)
-		cb->r_pos = 0;
-	else
-		cb->r_pos++;
+	int r_pos = ACCESS_ONCE(cb->r_pos);
 
-	cbuf_wmb();
+	/* Check if need to wrap */
+	if (r_pos >= cb->end_idx)
+		ACCESS_ONCE(cb->r_pos) = 0;
+	else
+		ACCESS_ONCE(cb->r_pos) = r_pos + 1;
 }
 
 int cbuf_write(struct cbuf *cb, void *data);

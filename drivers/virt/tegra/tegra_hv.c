@@ -86,7 +86,7 @@ struct ivc_dev {
 	char			name[32];
 
 	/* channel configuration */
-	struct tegra_hv_queue_data *qd;
+	struct tegra_hv_queue_data qd;
 	struct cbuf		*rx_cbuf;
 	struct cbuf		*tx_cbuf;
 	int			other_guestid;
@@ -206,7 +206,7 @@ static void ivc_raise_irq(struct ivc_dev *ivc)
 		/* not really efficient, but emulation is a special case */
 		mutex_lock(&ivc->hvd->ivc_devs_lock);
 		list_for_each_entry(ivcd, &ivc->hvd->ivc_devs, list) {
-			if (ivcd->qd->id == ivc->local_loopback) {
+			if (ivcd->qd.id == ivc->local_loopback) {
 				ivckd = &ivcd->cookie;
 				goto found;
 			}
@@ -451,11 +451,25 @@ static int tegra_hv_dt_parse(struct tegra_hv_data *hvd,
 		if (pqd.frame_size == 1)
 			qd->flags |= TQF_STREAM_MODE;
 
+		/*
+		 * The first cbuf is guaranteed to be adequately aligned given
+		 * that it follows a struct placed at the start of a page.
+		 */
+		BUG_ON((uintptr_t)p & (sizeof(int) - 1));
 		tx_cbuf = cbuf_init(p, pqd.frame_size, pqd.nframes);
 		p += pqd.size + sizeof(struct cbuf);
 		if ((qd->flags & TQF_STREAM_MODE) != 0)
 			p += pqd.nframes * sizeof(u32);
 
+		/*
+		 * The cbuf must at least be aligned enough for its counters
+		 * to be accessed atomically.
+		 */
+		if ((uintptr_t)p & (sizeof(int) - 1)) {
+			pr_err("qid %u: rx_cbuf start not aligned: %p\n",
+					qd->id, p);
+			return -EINVAL;
+		}
 		rx_cbuf = cbuf_init(p, pqd.frame_size, pqd.nframes);
 		p += pqd.size + sizeof(struct cbuf);
 		if ((qd->flags & TQF_STREAM_MODE) != 0)
@@ -475,20 +489,42 @@ static int tegra_hv_dt_parse(struct tegra_hv_data *hvd,
 	givci->shd->sum = 0;	/* initial */
 	givci->shd->magic = TEGRA_HV_SHD_MAGIC;
 
+	/*
+	 * Ensure that a valid shd checksum is visible only after all other
+	 * stores to the configuration area.
+	 */
+	cbuf_wmb();
+
 	/* update checksum */
 	givci->shd->sum = tegra_hv_server_data_sum(givci->shd);
-
-	cbuf_wmb();
 
 out:
 	of_node_put(qdn);
 	return ret;
 }
 
+/*
+ * Confirm that ptr is the start of at least a frame-sized region within the
+ * cbuf starting at cb using no information obtained from shared data. This is
+ * important because ptr may have been formed using untrustworthy values
+ * accessed through cb.
+ */
+static int ivc_valid_pointer(struct ivc_dev *ivc, struct cbuf *cb,
+		const void *ptr)
+{
+	size_t size = ivc->qd.frame_size * ivc->qd.nframes;
+	uintptr_t base = (uintptr_t)&cb->buf;
+	uintptr_t first = (uintptr_t)ptr;
+	uintptr_t last = first + ivc->qd.frame_size - 1;
+	return (first - base < size) && (last - base < size);
+}
+
 static int ivc_perform_loopback(struct ivc_dev *ivc)
 {
 	struct cbuf *rx, *tx;
 	int count;
+	/* Use the struct_size that was previously validated. */
+	size_t struct_size = ivc->qd.frame_size;
 
 	if (!ivc->loopback)
 		return -EINVAL;
@@ -496,15 +532,26 @@ static int ivc_perform_loopback(struct ivc_dev *ivc)
 	rx = ivc->rx_cbuf;
 	tx = ivc->tx_cbuf;
 
-	BUG_ON(rx->struct_size != tx->struct_size);
-
 	/* got input and space is available */
 	count = 0;
 	while (!cbuf_is_empty(rx) && !cbuf_is_full(tx)) {
+		void *dest = cbuf_write_data_ptr(tx);
+		const void *src = cbuf_read_data_ptr(rx);
+
+		if (!ivc_valid_pointer(ivc, tx, dest)) {
+			dev_err(ivc->device,
+					"cbuf write pointer out of range\n");
+			return -EINVAL;
+		}
+
+		if (!ivc_valid_pointer(ivc, rx, src)) {
+			dev_err(ivc->device,
+					"cbuf read pointer out of range\n");
+			return -EINVAL;
+		}
 
 		/* copy data directly from rx to tx */
-		memcpy(cbuf_write_data_ptr(tx), cbuf_read_data_ptr(rx),
-				tx->struct_size);
+		memcpy(dest, src, struct_size);
 		cbuf_advance_r_pos(rx);
 		cbuf_advance_w_pos(tx);
 		count++;
@@ -660,8 +707,8 @@ static int ivc_dump(struct ivc_dev *ivc)
 	struct cbuf *cb;
 
 	dev_info(dev, "IVC#%d: IRQ=%d nframes=%d frame_size=%d offset=%d\n",
-			ivc->qd->id, ivc->irq,
-			ivc->qd->nframes, ivc->qd->frame_size, ivc->qd->offset);
+			ivc->qd.id, ivc->irq,
+			ivc->qd.nframes, ivc->qd.frame_size, ivc->qd.offset);
 
 	cb = ivc->rx_cbuf;
 	dev_info(dev, " RXCB: end_idx=%d struct_size=%d w_pos=%d r_pos=%d\n",
@@ -677,19 +724,32 @@ static int ivc_rx_read(struct ivc_dev *ivc, void *buf, int max_read)
 {
 	struct cbuf *cb = ivc->rx_cbuf;
 	int ret, chunk, left;
+	const void *src;
+	/* Use the frame_size value that was previously validated. */
+	size_t struct_size = ivc->qd.frame_size;
 
 	if (cbuf_is_empty(cb))
 		return -ENOMEM;
 
-	if (max_read > cb->struct_size) {
-		chunk = cb->struct_size;
+	if (max_read > struct_size) {
+		chunk = struct_size;
 		left = max_read - chunk;
 	} else {
 		chunk = max_read;
 		left = 0;
 	}
 
-	memcpy(buf, cbuf_read_data_ptr(cb), chunk);
+	src = cbuf_read_data_ptr(cb);
+	if (!ivc_valid_pointer(ivc, cb, src))
+		return -EINVAL;
+
+	/*
+	 * Order observation of w_pos potentially indicating new data before
+	 * data read.
+	 */
+	cbuf_rmb();
+
+	memcpy(buf, src, chunk);
 	memset(buf + chunk, 0, left);
 
 	cbuf_advance_r_pos(cb);
@@ -704,19 +764,32 @@ static int ivc_rx_read_user(struct ivc_dev *ivc, void __user *buf, int max_read)
 {
 	struct cbuf *cb = ivc->rx_cbuf;
 	int ret, chunk, left;
+	const void *src;
+	/* Use the frame_size value that was previously validated. */
+	size_t struct_size = ivc->qd.frame_size;
 
 	if (cbuf_is_empty(cb))
 		return -ENOMEM;
 
-	if (max_read > cb->struct_size) {
-		chunk = cb->struct_size;
+	if (max_read > struct_size) {
+		chunk = struct_size;
 		left = max_read - chunk;
 	} else {
 		chunk = max_read;
 		left = 0;
 	}
 
-	if (copy_to_user(buf, cbuf_read_data_ptr(cb), chunk))
+	src = cbuf_read_data_ptr(cb);
+	if (!ivc_valid_pointer(ivc, cb, src))
+		return -EINVAL;
+
+	/*
+	 * Order observation of w_pos potentially indicating new data before
+	 * data read.
+	 */
+	cbuf_rmb();
+
+	if (copy_to_user(buf, src, chunk))
 		return -EFAULT;
 	if (left > 0 && clear_user(buf + chunk, left))
 		return -EFAULT;
@@ -734,19 +807,32 @@ static int ivc_rx_peek(struct ivc_dev *ivc, void *buf, int off, int count)
 {
 	struct cbuf *cb = ivc->rx_cbuf;
 	int chunk, rem;
+	const void *src;
+	/* Use the frame_size value that was previously validated. */
+	size_t struct_size = ivc->qd.frame_size;
 
 	if (cbuf_is_empty(cb))
 		return -ENOMEM;
 
 	/* get maximum available number of bytes */
-	rem = cb->struct_size - off;
+	rem = struct_size - off;
 	chunk = count;
 
 	/* if request is for more than rem, return only rem */
 	if (chunk > rem)
 		chunk = rem;
 
-	memcpy(buf, cbuf_read_data_ptr(cb) + off, chunk);
+	src = cbuf_read_data_ptr(cb);
+	if (!ivc_valid_pointer(ivc, cb, src))
+		return -EINVAL;
+
+	/*
+	 * Order observation of w_pos potentially indicating new data before
+	 * data read.
+	 */
+	cbuf_rmb();
+
+	memcpy(buf, src + off, chunk);
 
 	/* note, no interrupt is generated */
 
@@ -757,11 +843,22 @@ static int ivc_rx_peek(struct ivc_dev *ivc, void *buf, int off, int count)
 static void *ivc_rx_get_next_frame(struct ivc_dev *ivc)
 {
 	struct cbuf *cb = ivc->rx_cbuf;
+	void *src;
 
 	if (cbuf_is_empty(cb))
 		return ERR_PTR(-ENOMEM);
 
-	return cbuf_read_data_ptr(cb);
+	/*
+	 * Order observation of w_pos potentially indicating new data before
+	 * data read.
+	 */
+	cbuf_rmb();
+
+	src = cbuf_read_data_ptr(cb);
+	if (!ivc_valid_pointer(ivc, cb, src))
+		return ERR_PTR(-EINVAL);
+	else
+		return src;
 }
 
 /* advance the rx buffer */
@@ -783,6 +880,8 @@ static int ivc_tx_write(struct ivc_dev *ivc, const void *buf, int size)
 	struct cbuf *cb;
 	void __iomem *p;
 	int ret, left, chunk;
+	/* Use the frame_size value that was previously validated. */
+	size_t struct_size = ivc->qd.frame_size;
 
 	/* in emulation mode, only local loopback modes are possible */
 	if (ivc->hvd->emulation && ivc->local_loopback == -1)
@@ -792,18 +891,26 @@ static int ivc_tx_write(struct ivc_dev *ivc, const void *buf, int size)
 	if (cbuf_is_full(cb))
 		return -ENOMEM;
 
-	if (size > cb->struct_size) {
-		chunk = cb->struct_size;
-		left = size - cb->struct_size;
+	if (size > struct_size) {
+		chunk = struct_size;
+		left = size - struct_size;
 	} else {
 		chunk = size;
-		left = cb->struct_size - chunk;
+		left = struct_size - chunk;
 	}
 
 	p = cbuf_write_data_ptr(cb);
+	if (!ivc_valid_pointer(ivc, cb, p))
+		return -EINVAL;
 
 	memcpy(p, buf, chunk);
 	memset(p + chunk, 0, left);
+
+	/*
+	 * Ensure that updated data is visible before the w_pos counter
+	 * indicates that it is ready.
+	 */
+	cbuf_wmb();
 
 	cbuf_advance_w_pos(cb);
 	ivc_raise_irq(ivc);
@@ -819,6 +926,8 @@ static int ivc_tx_write_user(struct ivc_dev *ivc,
 	struct cbuf *cb;
 	void __iomem *p;
 	int ret, left, chunk;
+	/* Use the frame_size value that was previously validated. */
+	size_t struct_size = ivc->qd.frame_size;
 
 	/* in emulation mode, only local loopback modes are possible */
 	if (ivc->hvd->emulation && ivc->local_loopback == -1)
@@ -828,19 +937,27 @@ static int ivc_tx_write_user(struct ivc_dev *ivc,
 	if (cbuf_is_full(cb))
 		return -ENOMEM;
 
-	if (size > cb->struct_size) {
-		chunk = cb->struct_size;
-		left = size - cb->struct_size;
+	if (size > struct_size) {
+		chunk = struct_size;
+		left = size - struct_size;
 	} else {
 		chunk = size;
-		left = cb->struct_size - chunk;
+		left = struct_size - chunk;
 	}
 
 	p = cbuf_write_data_ptr(cb);
+	if (!ivc_valid_pointer(ivc, cb, p))
+		return -EINVAL;
 	if (copy_from_user(p, buf, chunk))
 		return -EFAULT;
 	if (left > 0)
 		memset(p + chunk, 0, left);
+
+	/*
+	 * Ensure that updated data is visible before the w_pos counter
+	 * indicates that it is ready.
+	 */
+	cbuf_wmb();
 
 	cbuf_advance_w_pos(cb);
 	ivc_raise_irq(ivc);
@@ -855,6 +972,9 @@ static int ivc_tx_poke(struct ivc_dev *ivc, const void *buf, int off, int count)
 {
 	struct cbuf *cb;
 	int rem, chunk;
+	/* Use the frame_size value that was previously validated. */
+	size_t struct_size = ivc->qd.frame_size;
+	void *dest;
 
 	/* in emulation mode, only local loopback modes are possible */
 	if (ivc->hvd->emulation && ivc->local_loopback == -1)
@@ -864,12 +984,15 @@ static int ivc_tx_poke(struct ivc_dev *ivc, const void *buf, int off, int count)
 	if (cbuf_is_full(cb))
 		return -ENOMEM;
 
-	rem = cb->struct_size + off;
+	rem = struct_size + off;
 	chunk = count;
 	if (chunk > rem)
 		chunk = rem;
 
-	memcpy(cbuf_write_data_ptr(cb) + off, buf, chunk);
+	dest = cbuf_write_data_ptr(cb);
+	if (!ivc_valid_pointer(ivc, cb, dest))
+		return -EINVAL;
+	memcpy(dest + off, buf, chunk);
 
 	return chunk;
 }
@@ -878,6 +1001,7 @@ static int ivc_tx_poke(struct ivc_dev *ivc, const void *buf, int off, int count)
 static void *ivc_tx_get_next_frame(struct ivc_dev *ivc)
 {
 	struct cbuf *cb;
+	void *dest;
 
 	/* in emulation mode, only local loopback modes are possible */
 	if (ivc->hvd->emulation && ivc->local_loopback == -1)
@@ -887,7 +1011,11 @@ static void *ivc_tx_get_next_frame(struct ivc_dev *ivc)
 	if (cbuf_is_full(cb))
 		return ERR_PTR(-ENOMEM);
 
-	return cbuf_write_data_ptr(cb);
+	dest = cbuf_write_data_ptr(cb);
+	if (!ivc_valid_pointer(ivc, cb, dest))
+		return ERR_PTR(-EINVAL);
+	else
+		return dest;
 }
 
 /* advance the tx buffer */
@@ -902,6 +1030,11 @@ static int ivc_tx_advance(struct ivc_dev *ivc)
 	cb = ivc_tx_cbuf(ivc);
 	if (cbuf_is_full(cb))
 		return -ENOMEM;
+
+	/*
+	 * Order any possible stores to the frame before update of w_pos.
+	 */
+	cbuf_wmb();
 
 	cbuf_advance_w_pos(cb);
 	ivc_raise_irq(ivc);
@@ -930,7 +1063,7 @@ static ssize_t ivc_dev_read(struct file *filp, char __user *buf,
 
 	while (left > 0 && !ivc_rx_empty(ivc)) {
 
-		chunk = ivc->qd->frame_size;
+		chunk = ivc->qd.frame_size;
 		if (chunk > left)
 			chunk = left;
 		ret = ivc_rx_read_user(ivc, buf, chunk);
@@ -960,10 +1093,10 @@ static ssize_t ivc_dev_write(struct file *filp, const char __user *buf,
 
 		left = count - done;
 
-		if (left < ivc->qd->frame_size)
+		if (left < ivc->qd.frame_size)
 			chunk = left;
 		else
-			chunk = ivc->qd->frame_size;
+			chunk = ivc->qd.frame_size;
 
 		/* is queue full? */
 		if (ivc_tx_full(ivc)) {
@@ -1036,7 +1169,7 @@ static ssize_t id_show(struct device *dev,
 {
 	struct ivc_dev *ivc = dev_get_drvdata(dev);
 
-	return snprintf(buf, PAGE_SIZE, "%d\n", ivc->qd->id);
+	return snprintf(buf, PAGE_SIZE, "%d\n", ivc->qd.id);
 }
 
 static ssize_t frame_size_show(struct device *dev,
@@ -1044,7 +1177,7 @@ static ssize_t frame_size_show(struct device *dev,
 {
 	struct ivc_dev *ivc = dev_get_drvdata(dev);
 
-	return snprintf(buf, PAGE_SIZE, "%d\n", ivc->qd->frame_size);
+	return snprintf(buf, PAGE_SIZE, "%d\n", ivc->qd.frame_size);
 }
 
 static ssize_t nframes_show(struct device *dev,
@@ -1052,7 +1185,7 @@ static ssize_t nframes_show(struct device *dev,
 {
 	struct ivc_dev *ivc = dev_get_drvdata(dev);
 
-	return snprintf(buf, PAGE_SIZE, "%d\n", ivc->qd->nframes);
+	return snprintf(buf, PAGE_SIZE, "%d\n", ivc->qd.nframes);
 }
 
 static ssize_t opened_show(struct device *dev,
@@ -1137,7 +1270,7 @@ ssize_t local_loopback_store(struct device *dev, struct device_attribute *attr,
 		return len;
 
 	/* can't bind self */
-	if (dest == ivc->qd->id)
+	if (dest == ivc->qd.id)
 		return -EINVAL;
 
 	found = 0;
@@ -1146,7 +1279,7 @@ ssize_t local_loopback_store(struct device *dev, struct device_attribute *attr,
 	/* add to the list */
 	mutex_lock(&hvd->ivc_devs_lock);
 	list_for_each_entry(ivcd, &hvd->ivc_devs, list) {
-		if (ivcd->qd->id == to_find)
+		if (ivcd->qd.id == to_find)
 			goto found;
 	}
 	mutex_unlock(&hvd->ivc_devs_lock);
@@ -1155,7 +1288,7 @@ ssize_t local_loopback_store(struct device *dev, struct device_attribute *attr,
 
 found:
 	/* lock low to high id to avoid deadlocks */
-	if (ivcd->qd->id < ivc->qd->id) {
+	if (ivcd->qd.id < ivc->qd.id) {
 		spin_lock(&ivcd->lock);
 		spin_lock(&ivc->lock);
 	} else {
@@ -1168,12 +1301,12 @@ found:
 		ivc->loopback_rx_cbuf = ivcd->rx_cbuf;
 		ivc->loopback_tx_cbuf = ivcd->tx_cbuf;
 		ivc->loopback_irq = ivcd->irq;
-		ivc->local_loopback = ivcd->qd->id;
+		ivc->local_loopback = ivcd->qd.id;
 
 		ivcd->loopback_rx_cbuf = ivc->rx_cbuf;
 		ivcd->loopback_tx_cbuf = ivc->tx_cbuf;
 		ivcd->loopback_irq = ivc->irq;
-		ivcd->local_loopback = ivc->qd->id;
+		ivcd->local_loopback = ivc->qd.id;
 	} else {
 		/* unlink them */
 		ivc->loopback_rx_cbuf = NULL;
@@ -1188,7 +1321,7 @@ found:
 	}
 
 	/* unlock high to low */
-	if (ivcd->qd->id < ivc->qd->id) {
+	if (ivcd->qd.id < ivc->qd.id) {
 		spin_unlock(&ivc->lock);
 		spin_unlock(&ivcd->lock);
 	} else {
@@ -1232,12 +1365,16 @@ static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 		return -ENOMEM;
 	}
 	ivc->hvd = hvd;
-	ivc->qd = qd;
+
+	/*
+	 * Make another copy of qd in the ivc_dev because qd is presumed to be
+	 * in local, temporary memory.
+	 */
+	ivc->qd = *qd;
 
 	spin_lock_init(&ivc->lock);
 	init_waitqueue_head(&ivc->wq);
 
-	ivc->qd = qd;
 	ivc->minor = qd->id;
 	ivc->dev = MKDEV(hvd->ivc_major, ivc->minor);
 	cdev_init(&ivc->cdev, &ivc_fops);
@@ -1279,7 +1416,7 @@ static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 	if (!hvd->emulation) {
 		/* IRQ# of this IVC channel */
 		ivc->irq = tegra_hv_get_queue_irq(hvd, ivc->other_guestid,
-				ivc->qd->id);
+				ivc->qd.id);
 	}
 
 	/* no loopback yet */
@@ -1310,7 +1447,7 @@ struct ivc_dev *ivc_reserve(struct tegra_hv_data *hvd, int id)
 
 	mutex_lock(&hvd->ivc_devs_lock);
 	list_for_each_entry(ivc, &hvd->ivc_devs, list) {
-		if (ivc->qd->id != id)
+		if (ivc->qd.id != id)
 			continue;
 
 		spin_lock(&ivc->lock);
@@ -1396,20 +1533,22 @@ static int tegra_hv_prepare_to_instantiate(struct tegra_hv_data *hvd,
 		/* 8 second timeout */
 		timeout = jiffies + 8 * HZ;
 		while (time_before(jiffies, timeout)) {
-			cbuf_rmb();
-			if (tegra_hv_server_data_valid(shd))
+			if (tegra_hv_server_data_valid(shd)) {
+				/*
+				 * Order validation of shd before queue data
+				 * reads.
+				 */
+				cbuf_rmb();
 				break;
+			}
 			msleep(20);
 		}
-	}
-
-	cbuf_rmb();
-	if (!tegra_hv_server_data_valid(shd)) {
-		if (!givci->server) {
+		if (!tegra_hv_server_data_valid(shd)) {
 			dev_warn(dev, "guest #%d, no configuration found\n",
 					target_guestid);
 			return 0;
 		}
+	} else if (!tegra_hv_server_data_valid(shd)) {
 		/* on server this is fatal */
 		dev_err(dev, "server guest #%d, no configuration found\n",
 				target_guestid);
@@ -1436,11 +1575,40 @@ static int tegra_hv_prepare_to_instantiate(struct tegra_hv_data *hvd,
 	return 0;
 }
 
+static int queue_fits_in_shared_memory(struct tegra_hv_queue_data *qd,
+		struct guest_ivc_info *givci)
+{
+	/*
+	 * The config parameters are all 32-bit unsigned values, so we can
+	 * eliminate a number of overflow checks related to the multiplication
+	 * of two 32-bit unsigned values by promoting to 64-bit unsigned values.
+	 */
+	uint64_t area_size, frames_size, end_offset;
+
+	/* Ensure that no 64-bit overflows can happen. */
+	BUG_ON(!(sizeof(qd->offset) == 4 && sizeof(qd->nframes) == 4 &&
+			sizeof(qd->frame_size) == 4));
+
+	/* Ensure that area_size calculation can't underflow. */
+	BUG_ON(givci->res.size <= sizeof(*givci->shd));
+
+	area_size = givci->res.size - sizeof(*givci->shd);
+	frames_size = qd->nframes * qd->frame_size;
+
+	end_offset = frames_size + qd->offset;
+	if (end_offset < frames_size) {
+		/* end_offset overflowed */
+		return 0;
+	}
+
+	return end_offset <= area_size;
+}
+
 static int tegra_hv_instantiate(struct tegra_hv_data *hvd, int target_guestid)
 {
 	struct platform_device *pdev = hvd->pdev;
 	struct device *dev = &pdev->dev;
-	struct tegra_hv_queue_data *qd;
+	struct tegra_hv_queue_data qd;
 	struct guest_ivc_info *givci;
 	struct tegra_hv_shared_data *shd;
 	int ret, i, our_count;
@@ -1458,21 +1626,33 @@ static int tegra_hv_instantiate(struct tegra_hv_data *hvd, int target_guestid)
 	our_count = 0;
 	for (i = 0; i < shd->nr_queues; i++) {
 
-		qd = tegra_hv_shd_to_queue_data(shd) + i;
+		/*
+		 * Copy the queue data structure out of shared memory before
+		 * validating its contents. We must perform these checks on a
+		 * local copy of the structure, otherwise the checks could be
+		 * performed on values that could be asynchronously modified,
+		 * potentially after we've checked them.
+		 */
+		qd = ACCESS_ONCE(*(tegra_hv_shd_to_queue_data(shd) + i));
 
 		/* we have to be one of the peers */
-		if (qd->peers[0] != hvd->guestid &&
-				qd->peers[1] != hvd->guestid)
+		if (qd.peers[0] != hvd->guestid && qd.peers[1] != hvd->guestid)
 			continue;
 
 		/* the target must be one of the peers */
-		if (qd->peers[0] != target_guestid &&
-				qd->peers[1] != target_guestid) {
+		if (qd.peers[0] != target_guestid &&
+				qd.peers[1] != target_guestid) {
+			continue;
+		}
+
+		if (!queue_fits_in_shared_memory(&qd, givci)) {
+			dev_err(dev, "queue %u doesn't fit in shared memory!\n",
+					qd.id);
 			continue;
 		}
 
 		/* add the IVC device */
-		ret = tegra_hv_add_ivc(hvd, qd);
+		ret = tegra_hv_add_ivc(hvd, &qd);
 		if (ret != 0) {
 			dev_err(dev, "tegra_hv_add_ivc() failed\n");
 			tegra_hv_ivc_cleanup(hvd);
@@ -1506,9 +1686,9 @@ static int tegra_hv_perform_local_loopback(struct tegra_hv_data *hvd)
 		ivct[0] = ivct[1] = NULL;
 
 		list_for_each_entry(ivc, &hvd->ivc_devs, list) {
-			if (ivc->qd->id == loop[0])
+			if (ivc->qd.id == loop[0])
 				ivct[0] = ivc;
-			if (ivc->qd->id == loop[1])
+			if (ivc->qd.id == loop[1])
 				ivct[1] = ivc;
 		}
 
@@ -1520,15 +1700,15 @@ static int tegra_hv_perform_local_loopback(struct tegra_hv_data *hvd)
 		ivct[0]->loopback_rx_cbuf = ivct[1]->rx_cbuf;
 		ivct[0]->loopback_tx_cbuf = ivct[1]->tx_cbuf;
 		ivct[0]->loopback_irq = ivct[1]->irq;
-		ivct[0]->local_loopback = ivct[1]->qd->id;
+		ivct[0]->local_loopback = ivct[1]->qd.id;
 
 		ivct[1]->loopback_rx_cbuf = ivct[0]->rx_cbuf;
 		ivct[1]->loopback_tx_cbuf = ivct[0]->tx_cbuf;
 		ivct[1]->loopback_irq = ivct[0]->irq;
-		ivct[1]->local_loopback = ivct[0]->qd->id;
+		ivct[1]->local_loopback = ivct[0]->qd.id;
 
 		dev_info(dev, "Local looback on %d <-> %d\n",
-				ivct[0]->qd->id, ivct[1]->qd->id);
+				ivct[0]->qd.id, ivct[1]->qd.id);
 	}
 
 	mutex_unlock(&hvd->ivc_devs_lock);
@@ -1859,8 +2039,8 @@ struct tegra_hv_ivc_cookie *tegra_hv_ivc_reserve(struct device_node *dn,
 	ivck = &ivc->cookie;
 	ivck->irq = ivc->irq;
 	ivck->peer_vmid = ivc->other_guestid;
-	ivck->nframes = ivc->qd->nframes;
-	ivck->frame_size = ivc->qd->frame_size;
+	ivck->nframes = ivc->qd.nframes;
+	ivck->frame_size = ivc->qd.frame_size;
 
 	ivc->cookie_ops = ops;
 

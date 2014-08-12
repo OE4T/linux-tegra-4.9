@@ -72,6 +72,10 @@ int cbuf_write(struct cbuf *cb, void *data)
 	/* Write */
 	memcpy(cbuf_write_data_ptr(cb), data, cb->struct_size);
 
+	/*
+	 * Order store of new data before w_pos update indicating the
+	 * availability of new data.
+	 */
 	cbuf_wmb();
 
 	/* Check if need to wrap */
@@ -88,6 +92,12 @@ int cbuf_read(struct cbuf *cb, void *data)
 	/* Check if empty */
 	if (cbuf_is_empty(cb))
 		return -ENOMEM;
+
+	/*
+	 * Order observation of w_pos potentially indicating new data before
+	 * data read.
+	 */
+	cbuf_rmb();
 
 	/* Read */
 	memcpy(data, cbuf_read_data_ptr(cb), cb->struct_size);

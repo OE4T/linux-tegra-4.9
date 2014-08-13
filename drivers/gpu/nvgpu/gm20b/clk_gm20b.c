@@ -368,7 +368,9 @@ pll_locked:
 static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 			int allow_slide)
 {
-#if !PLDIV_GLITCHLESS
+#if PLDIV_GLITCHLESS
+	bool skip_bypass;
+#else
 	u32 data;
 #endif
 	u32 cfg, coeff;
@@ -406,8 +408,9 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 	 * Limit either FO-to-FO (path A below) or FO-to-bypass (path B below)
 	 * jump to min_vco/2 by setting post divider >= 1:2.
 	 */
+	skip_bypass = can_slide && (clk->gpc_pll.M == m);
 	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
-	if ((clk->gpc_pll.PL < 2) || (pl < 2)) {
+	if ((skip_bypass && (clk->gpc_pll.PL < 2)) || (pl < 2)) {
 		if (pl != 2) {
 			coeff = set_field(coeff,
 				trim_sys_gpcpll_coeff_pldiv_m(),
@@ -418,7 +421,7 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 		}
 	}
 
-	if (can_slide && (clk->gpc_pll.M == m))
+	if (skip_bypass)
 		goto set_pldiv;	/* path A: no need to bypass */
 
 	/* path B: bypass if either M changes or PLL is disabled */
@@ -442,7 +445,7 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 	nlo = DIV_ROUND_UP(m * gpc_pll_params.min_vco, clk->gpc_pll.clk_in);
 	n = allow_slide ? nlo : clk->gpc_pll.N;
 #if PLDIV_GLITCHLESS
-	pl = trim_sys_gpcpll_coeff_pldiv_v(coeff);
+	pl = (clk->gpc_pll.PL < 2) ? 2 : clk->gpc_pll.PL;
 #else
 	pl = clk->gpc_pll.PL;
 #endif

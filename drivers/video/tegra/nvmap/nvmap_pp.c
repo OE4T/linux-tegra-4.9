@@ -49,7 +49,6 @@ module_param(min_available_mb, uint, 0644);
 
 static struct task_struct *background_allocator;
 static DECLARE_WAIT_QUEUE_HEAD(nvmap_bg_wait);
-static struct page *pending_pages[PENDING_PAGES_SIZE];
 
 #ifdef CONFIG_NVMAP_PAGE_POOL_DEBUG
 static inline void __pp_dbg_var_add(u64 *dbg_var, u32 nr)
@@ -125,28 +124,34 @@ static void nvmap_pp_do_background_zero_pages(struct nvmap_page_pool *pool)
 	struct page *page;
 	int ret;
 
+	/*
+	 * Statically declared array of pages to be zeroed in a batch,
+	 * local to this thread but too big for the stack.
+	 */
+	static struct page *pending_zero_pages[PENDING_PAGES_SIZE];
+
 	mutex_lock(&pool->lock);
 	for (i = 0; i < PENDING_PAGES_SIZE; i++) {
 		page = get_zero_list_page(pool);
 		if (page == NULL)
 			break;
-		pending_pages[i] = page;
+		pending_zero_pages[i] = page;
 	}
 	mutex_unlock(&pool->lock);
 
-	ret = nvmap_pp_zero_pages(pending_pages, i);
+	ret = nvmap_pp_zero_pages(pending_zero_pages, i);
 	if (ret < 0) {
 		ret = 0;
 		goto out;
 	}
 
 	mutex_lock(&pool->lock);
-	ret = __nvmap_page_pool_fill_lots_locked(pool, pending_pages, i);
+	ret = __nvmap_page_pool_fill_lots_locked(pool, pending_zero_pages, i);
 	mutex_unlock(&pool->lock);
 
 out:
 	for (; ret < i; ret++)
-		__free_page(pending_pages[ret]);
+		__free_page(pending_zero_pages[ret]);
 }
 
 /*
@@ -220,17 +225,17 @@ static struct page *nvmap_page_pool_alloc_locked(struct nvmap_page_pool *pool,
  * Alloc a bunch of pages from the page pool. This will alloc as many as it can
  * and return the number of pages allocated. Pages are placed into the passed
  * array in a linear fashion starting from index 0.
- *
- * You must lock the page pool before using this.
  */
-static int __nvmap_page_pool_alloc_lots_locked(struct nvmap_page_pool *pool,
-					struct page **pages, u32 nr)
+int nvmap_page_pool_alloc_lots(struct nvmap_page_pool *pool,
+				struct page **pages, u32 nr)
 {
 	u32 real_nr;
 	u32 ind = 0;
 
 	if (!enable_pp)
 		return 0;
+
+	mutex_lock(&pool->lock);
 
 	real_nr = min_t(u32, nr, pool->count);
 
@@ -245,24 +250,13 @@ static int __nvmap_page_pool_alloc_lots_locked(struct nvmap_page_pool *pool,
 			BUG_ON(atomic_read(&page->_count) != 1);
 		}
 	}
+	mutex_unlock(&pool->lock);
 
 	pp_alloc_add(pool, ind);
 	pp_hit_add(pool, ind);
 	pp_miss_add(pool, nr - ind);
 
 	return ind;
-}
-
-int nvmap_page_pool_alloc_lots(struct nvmap_page_pool *pool,
-				struct page **pages, u32 nr)
-{
-	int ret;
-
-	mutex_lock(&pool->lock);
-	ret = __nvmap_page_pool_alloc_lots_locked(pool, pages, nr);
-	mutex_unlock(&pool->lock);
-
-	return ret;
 }
 
 /*

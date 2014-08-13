@@ -2306,6 +2306,19 @@ long gk20a_channel_ioctl(struct file *filp,
 		err = gk20a_fifo_preempt_channel(ch->g, ch->hw_chid);
 		gk20a_idle(dev);
 		break;
+	case NVHOST_IOCTL_CHANNEL_FORCE_RESET:
+		err = gk20a_busy(dev);
+		if (err) {
+			dev_err(&dev->dev,
+				"%s: failed to host gk20a for ioctl cmd: 0x%x",
+				__func__, cmd);
+			return err;
+		}
+		gk20a_set_error_notifier(ch,
+			NVHOST_CHANNEL_RESETCHANNEL_VERIF_ERROR);
+		gk20a_fifo_recover_ch(ch->g, ch->hw_chid, true);
+		gk20a_idle(dev);
+		break;
 	default:
 		dev_err(&dev->dev, "unrecognized ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;

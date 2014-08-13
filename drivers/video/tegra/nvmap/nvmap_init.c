@@ -183,7 +183,7 @@ static int __nvmap_init_legacy(void)
  */
 int nvmap_init(struct platform_device *pdev)
 {
-	int err;
+	int err = 0;
 #ifdef CONFIG_NVMAP_USE_CMA_FOR_CARVEOUT
 	struct dma_declare_info vpr_dma_info;
 	struct dma_declare_info generic_dma_info;

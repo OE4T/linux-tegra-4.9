@@ -152,8 +152,6 @@
 
 				max77620_sd1: sd1 {
 					regulator-name = "vddio-ddr";
-					regulator-min-microvolt = <1200000>;
-					regulator-max-microvolt = <1200000>;
 					regulator-always-on;
 					regulator-boot-on;
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;

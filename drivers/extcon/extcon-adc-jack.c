@@ -27,6 +27,7 @@
 #include <linux/iio/consumer.h>
 #include <linux/extcon/extcon-adc-jack.h>
 #include <linux/extcon.h>
+#include <linux/of.h>
 
 /**
  * struct adc_jack_data - internal data for adc_jack device driver
@@ -44,7 +45,7 @@ struct adc_jack_data {
 	struct device *dev;
 	struct extcon_dev *edev;
 
-	const unsigned int **cable_names;
+	unsigned int *cable_names;
 	struct adc_jack_cond *adc_conditions;
 	int num_conditions;
 
@@ -96,11 +97,96 @@ static irqreturn_t adc_jack_irq_thread(int irq, void *_data)
 	return IRQ_HANDLED;
 }
 
+static struct adc_jack_pdata *of_get_platform_data(
+		struct platform_device *pdev)
+{
+	struct adc_jack_pdata *pdata;
+	struct device_node *np = pdev->dev.of_node;
+	u32 pval;
+	int ret;
+	u32 state, min_adc, max_adc;
+	int nstates, ncables;
+	int i;
+
+	pdata = devm_kzalloc(&pdev->dev, sizeof(*pdata), GFP_KERNEL);
+	if (!pdata)
+		return ERR_PTR(-ENOMEM);
+
+	of_property_read_string(np, "extcon-adc-jack,name", &pdata->name);
+	if (!pdata->name)
+		pdata->name = np->name;
+
+	of_property_read_string_index(np, "io-channel-names", 0,
+				&pdata->consumer_channel);
+	if (!pdata->name)
+		pdata->name = np->name;
+
+	ret = of_property_read_u32(np, "extcon-adc-jack,irq-flags", &pval);
+	if (!ret)
+		pdata->irq_flags = pval;
+
+	ret = of_property_read_u32(np, "extcon-adc-jack,handling-delay", &pval);
+	if (!ret)
+		pdata->handling_delay_ms = pval;
+
+	nstates = of_property_count_u32_elems(np, "extcon-adc-jack,states");
+	if (nstates < 0)
+		return ERR_PTR(nstates);
+	if (!nstates)
+		return ERR_PTR(-EINVAL);
+
+	pdata->adc_conditions = devm_kzalloc(&pdev->dev, nstates *
+				sizeof(*pdata->adc_conditions), GFP_KERNEL);
+	if (!pdata->adc_conditions)
+		return ERR_PTR(-ENOMEM);
+	for (i = 0; i < nstates; ++i) {
+		min_adc = 0;
+		max_adc = 0;
+		state = 0;
+
+		of_property_read_u32_index(np, "extcon-adc-jack,states",
+					i * 3 + 0, &state);
+		of_property_read_u32_index(np, "extcon-adc-jack,states",
+					i * 3 + 1, &min_adc);
+		of_property_read_u32_index(np, "extcon-adc-jack,states",
+					i * 3 + 2, &max_adc);
+
+		pdata->adc_conditions[i].state = state;
+		pdata->adc_conditions[i].min_adc= min_adc;
+		pdata->adc_conditions[i].max_adc = max_adc;
+	};
+
+	ncables = of_property_count_u32_elems(np, "extcon-adc-jack,cable-names");
+	if (ncables < 0)
+		return ERR_PTR(ncables);
+
+	pdata->cable_names = devm_kzalloc(&pdev->dev, ncables *
+				sizeof(*pdata->cable_names), GFP_KERNEL);
+	if (!pdata->cable_names)
+		return ERR_PTR(-ENOMEM);
+
+	ret = of_property_read_u32_array(np, "extcon-adc-jack,cable-names",
+			pdata->cable_names, ncables);
+	if (ret)
+		return ERR_PTR(-EINVAL);
+
+	return pdata;
+}
+
 static int adc_jack_probe(struct platform_device *pdev)
 {
 	struct adc_jack_data *data;
 	struct adc_jack_pdata *pdata = dev_get_platdata(&pdev->dev);
 	int i, err = 0;
+
+	if (!pdata && pdev->dev.of_node) {
+		pdata = of_get_platform_data(pdev);
+		if (IS_ERR(pdata))
+			return PTR_ERR(pdata);
+	}
+
+	if (!pdata)
+		return -EINVAL;
 
 	data = devm_kzalloc(&pdev->dev, sizeof(*data), GFP_KERNEL);
 	if (!data)
@@ -201,12 +287,20 @@ static int adc_jack_resume(struct device *dev)
 static SIMPLE_DEV_PM_OPS(adc_jack_pm_ops,
 		adc_jack_suspend, adc_jack_resume);
 
+static struct of_device_id of_adc_jack_tbl[] = {
+	{ .compatible = "extcon-adc-jack", },
+	{ /* end */ }
+};
+MODULE_DEVICE_TABLE(of, of_adc_jack_tbl);
+
 static struct platform_driver adc_jack_driver = {
 	.probe          = adc_jack_probe,
 	.remove         = adc_jack_remove,
 	.driver         = {
 		.name   = "adc-jack",
 		.pm = &adc_jack_pm_ops,
+		.owner  = THIS_MODULE,
+		.of_match_table = of_adc_jack_tbl,
 	},
 };
 

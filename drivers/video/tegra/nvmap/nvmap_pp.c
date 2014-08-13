@@ -683,9 +683,15 @@ int nvmap_page_pool_fini(struct nvmap_device *dev)
 {
 	struct nvmap_page_pool *pool = &dev->pool;
 
-	unregister_shrinker(&nvmap_page_pool_shrinker);
-	if (!IS_ERR(background_allocator))
+	/*
+	 * if background allocator is not initialzed or not
+	 * properly initialized, then shrinker is also not
+	 * registered
+	 */
+	if (!IS_ERR_OR_NULL(background_allocator)) {
+		unregister_shrinker(&nvmap_page_pool_shrinker);
 		kthread_stop(background_allocator);
+	}
 	pool->length = 0;
 	vfree(pool->page_array);
 

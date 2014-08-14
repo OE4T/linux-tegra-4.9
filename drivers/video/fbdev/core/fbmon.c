@@ -903,7 +903,7 @@ static void get_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 		specs->misc |= FB_MISC_1ST_DETAIL;
 	}
 	if (c & 0x01) {
-		printk("      Display is GTF capable\n");
+		DPRINTK("      Display is GTF capable\n");
 		specs->gtf = 1;
 	}
 }

@@ -116,9 +116,9 @@ struct ov5693_power_rail {
 };
 
 struct ov5693_regulators {
-	char *avdd;
-	char *dvdd;
-	char *dovdd;
+	const char *avdd;
+	const char *dvdd;
+	const char *dovdd;
 };
 
 struct ov5693_platform_data {

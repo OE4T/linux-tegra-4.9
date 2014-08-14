@@ -493,6 +493,12 @@ static int clk_disable_gpcpll(struct gk20a *g, int allow_slide)
 			trim_sys_sel_vco_gpc2clk_out_bypass_f());
 	gk20a_writel(g, trim_sys_sel_vco_r(), cfg);
 
+	/* clear SYNC_MODE before disabling PLL */
+	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+	cfg = set_field(cfg, trim_sys_gpcpll_cfg_sync_mode_m(),
+			trim_sys_gpcpll_cfg_sync_mode_disable_f());
+	gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
+
 	/* disable PLL */
 	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 	cfg = set_field(cfg, trim_sys_gpcpll_cfg_enable_m(),

@@ -622,7 +622,6 @@ int nvmap_page_pool_debugfs_init(struct dentry *nvmap_root)
 
 int nvmap_page_pool_init(struct nvmap_device *dev)
 {
-	unsigned long totalram_mb;
 	struct sysinfo info;
 	struct nvmap_page_pool *pool = &dev->pool;
 
@@ -630,13 +629,12 @@ int nvmap_page_pool_init(struct nvmap_device *dev)
 	mutex_init(&pool->lock);
 
 	si_meminfo(&info);
-	totalram_mb = (info.totalram * info.mem_unit) >> 20;
-	pr_info("Total MB RAM: %lu\n", totalram_mb);
+	pr_info("Total RAM pages: %lu\n", info.totalram);
 
 	if (!CONFIG_NVMAP_PAGE_POOL_SIZE)
-		/* The ratio is KB to MB so this ends up being mem in KB which
-		 * when >> 2 -> total pages in the pool. */
-		pool->length = (totalram_mb * NVMAP_PP_POOL_SIZE) >> 2;
+		/* The ratio is pool pages per 1K ram pages.
+		 * So, the >> 10 */
+		pool->length = (info.totalram * NVMAP_PP_POOL_SIZE) >> 10;
 	else
 		pool->length = CONFIG_NVMAP_PAGE_POOL_SIZE;
 
@@ -645,7 +643,7 @@ int nvmap_page_pool_init(struct nvmap_device *dev)
 	pool_size = pool->length;
 
 	pr_info("nvmap page pool size: %u pages (%u MB)\n", pool->length,
-		pool->length >> 8);
+		(pool->length * info.mem_unit) >> 20);
 
 	pool->page_array = vzalloc(sizeof(struct page *) * pool->length);
 	if (!pool->page_array)

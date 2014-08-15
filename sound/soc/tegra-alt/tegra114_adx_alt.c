@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/device.h>
 #include <linux/io.h>
@@ -143,6 +144,25 @@ static void tegra114_adx_update_map_ram(struct tegra114_adx *adx)
 
 	for (i = 0; i < TEGRA_ADX_RAM_DEPTH; i++)
 		tegra114_adx_write_map_ram(adx, i, adx->map[i]);
+}
+
+static int tegra114_adx_soft_reset(struct tegra114_adx *adx)
+{
+	unsigned int val;
+	int dcnt = 10;
+
+	regmap_update_bits(adx->regmap, TEGRA_ADX_CTRL,
+		TEGRA_ADX_CTRL_SOFT_RESET, TEGRA_ADX_CTRL_SOFT_RESET);
+
+	do {
+		udelay(100);
+		regmap_read(adx->regmap, TEGRA_ADX_CTRL, &val);
+	} while ((val & TEGRA_ADX_CTRL_SOFT_RESET) && dcnt--);
+
+	regmap_update_bits(adx->regmap, TEGRA_ADX_CTRL,
+		TEGRA_ADX_CTRL_SOFT_RESET, 0);
+
+	return (dcnt < 0) ? -ETIMEDOUT : 0;
 }
 
 static int tegra114_adx_runtime_suspend(struct device *dev)
@@ -276,7 +296,7 @@ int tegra114_adx_set_channel_map(struct snd_soc_dai *dai,
 	struct tegra114_adx *adx = snd_soc_dai_get_drvdata(dai);
 	unsigned int byte_mask1 = 0, byte_mask2 = 0;
 	unsigned int out_stream_idx, out_ch_idx, out_byte_idx;
-	int i;
+	int i, ret = 0;
 
 	if ((rx_num < 1) || (rx_num > 64)) {
 		dev_err(dev, "Doesn't support %d rx_num, need to be 1 to 64\n",
@@ -288,6 +308,16 @@ int tegra114_adx_set_channel_map(struct snd_soc_dai *dai,
 		dev_err(dev, "rx_slot is NULL\n");
 		return -EINVAL;
 	}
+
+	/* soft reset ADX */
+	ret = tegra114_adx_soft_reset(adx);
+	if (ret) {
+		dev_err(dev, "Failed at ADX sw reset\n");
+		return ret;
+	}
+
+	/* flush the mapping values if any */
+	memset(adx->map, 0, sizeof(adx->map));
 
 	for (i = 0; i < rx_num; i++) {
 		if (rx_slot[i] != 0) {
@@ -438,6 +468,7 @@ static const struct regmap_config tegra114_adx_regmap_config = {
 	.max_register = TEGRA_ADX_AUDIOCIF_CH3_CTRL,
 	.writeable_reg = tegra114_adx_wr_rd_reg,
 	.readable_reg = tegra114_adx_wr_rd_reg,
+	.volatile_reg = tegra114_adx_wr_rd_reg,
 	.cache_type = REGCACHE_RBTREE,
 };
 

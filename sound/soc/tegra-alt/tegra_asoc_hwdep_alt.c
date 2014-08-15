@@ -95,8 +95,8 @@ static int tegra_asoc_hwdep_update_mapping_table(struct snd_soc_card *card,
 	/* update hw_param for each CIF */
 	for (i = 0; i < 4; i++) {
 		dai_params = (struct snd_soc_pcm_stream *)
-				card->rtd[dai_idx + i].dai_link;
-		dai_params->formats = map_info->params[i].formats;
+				card->rtd[dai_idx + i].dai_link->params;
+		dai_params->formats = (1ULL << map_info->params[i].formats);
 		dai_params->channels_min =
 		dai_params->channels_max = map_info->params[i].channels;
 	}

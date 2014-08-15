@@ -2048,6 +2048,9 @@ unsigned int tegra_machine_get_codec_dai_link_idx(char *of_node_name)
 		idx++;
 	}
 
+	if (num_dai_links == idx)
+		goto err;
+
 	return idx;
 
 err:

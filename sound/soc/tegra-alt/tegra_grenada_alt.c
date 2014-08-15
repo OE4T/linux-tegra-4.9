@@ -35,6 +35,9 @@
 #include "tegra_asoc_machine_alt.h"
 #include "ahub_unit_fpga_clock.h"
 
+#include <linux/clk.h>
+#include <mach/clk.h>
+
 #define DRV_NAME "tegra-snd-grenada"
 
 #define MAX_TX_SLOT_SIZE 32
@@ -48,6 +51,64 @@ struct tegra_grenada {
 static int tegra_grenada_hw_params(struct snd_pcm_substream *substream,
 					struct snd_pcm_hw_params *params)
 {
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_card *card = rtd->codec_dai->codec->card;
+	struct tegra_grenada *machine = snd_soc_card_get_drvdata(card);
+	int idx = tegra_machine_get_codec_dai_link_idx("spdif-dit");
+	struct snd_soc_pcm_stream *dai_params;
+	int mclk, clk_out_rate;
+	int err;
+
+	/* check if idx has valid number */
+	if (idx == -EINVAL)
+		return idx;
+
+	dai_params =
+		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+	switch (dai_params->rate_min) {
+	case 11025:
+	case 22050:
+	case 44100:
+	case 88200:
+	case 176000:
+		clk_out_rate = 11289600; /* Codec rate */
+		mclk = 11289600 * 2; /* PLL_A rate */
+		break;
+	case 8000:
+	case 16000:
+	case 32000:
+	case 48000:
+	case 64000:
+	case 96000:
+	case 192000:
+	default:
+		clk_out_rate = 12288000;
+		mclk = 12288000 * 2;
+		break;
+	}
+
+	pr_info("Setting pll_a = %d Hz clk_out = %d Hz\n", mclk, clk_out_rate);
+	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
+				dai_params->rate_min, mclk, clk_out_rate);
+	if (err < 0) {
+		dev_err(card->dev, "Can't configure clocks\n");
+		return err;
+	}
+
+	err = snd_soc_dai_set_sysclk(card->rtd[idx].cpu_dai, 0,
+			dai_params->rate_min, SND_SOC_CLOCK_IN);
+	if (err < 0) {
+		dev_err(card->dev, "cpu_dai clock not set\n");
+		return err;
+	}
+
+	err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
+		tegra_machine_get_bclk_ratio(&card->rtd[idx]));
+	if (err < 0) {
+		dev_err(card->dev, "Failed to set cpu dai bclk ratio\n");
+		return err;
+	}
+
 	return 0;
 }
 static int tegra_grenada_startup(struct snd_pcm_substream *substream)
@@ -64,10 +125,10 @@ static int tegra_grenada_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
+	struct tegra_grenada *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai *i2s_dai = rtd->cpu_dai;
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
-
 	unsigned int srate;
 	int err;
 	AD1937_EXTRA_INFO ad1937_info;
@@ -77,6 +138,13 @@ static int tegra_grenada_init(struct snd_soc_pcm_runtime *rtd)
 	err = snd_soc_dai_set_sysclk(i2s_dai, 0, srate, SND_SOC_CLOCK_IN);
 	if (err < 0) {
 		dev_err(card->dev, "i2s clock not set\n");
+		return err;
+	}
+
+	err = tegra_alt_asoc_utils_set_extern_parent(&machine->audio_clock,
+							"pll_a_out0");
+	if (err < 0) {
+		dev_err(card->dev, "Failed to set extern clk parent\n");
 		return err;
 	}
 
@@ -387,15 +455,23 @@ static int tegra_grenada_driver_probe(struct platform_device *pdev)
 	tegra_machine_codec_conf = tegra_machine_get_codec_conf();
 	card->codec_conf = tegra_machine_codec_conf;
 
+	ret = tegra_alt_asoc_utils_init(&machine->audio_clock,
+					&pdev->dev,
+					card);
+	if (ret)
+		goto err_alloc_dai_link;
+
 	ret = snd_soc_register_card(card);
 	if (ret) {
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n",
 			ret);
-		goto err_alloc_dai_link;
+		goto err_fini_utils;
 	}
 
 	return 0;
 
+err_fini_utils:
+	tegra_alt_asoc_utils_fini(&machine->audio_clock);
 err_alloc_dai_link:
 	tegra_machine_remove_extra_mem_alloc(machine->num_codec_links);
 	tegra_machine_remove_dai_link();
@@ -413,10 +489,7 @@ static int tegra_grenada_driver_remove(struct platform_device *pdev)
 
 	tegra_machine_remove_extra_mem_alloc(machine->num_codec_links);
 	tegra_machine_remove_dai_link();
-	tegra_machine_remove_codec_conf();
-#ifndef CONFIG_MACH_GRENADA
 	tegra_alt_asoc_utils_fini(&machine->audio_clock);
-#endif
 
 	return 0;
 }

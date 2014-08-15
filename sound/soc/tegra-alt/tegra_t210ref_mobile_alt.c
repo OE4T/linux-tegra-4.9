@@ -171,9 +171,8 @@ static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_stream *dai_params;
 	unsigned int fmt;
 	int srate;
-	unsigned int mclk;
+	int mclk, clk_out_rate;
 	int err;
-
 
 	/* check if idx has valid number */
 	if (idx == -EINVAL)
@@ -190,24 +189,60 @@ static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 	dai_params->channels_min = params_channels(params);
 	dai_params->formats = (1ULL << (params_format(params)));
 
-	mclk = (256 * 48000);
+	switch (dai_params->rate_min) {
+	case 11025:
+	case 22050:
+	case 44100:
+	case 88200:
+	case 176000:
+		clk_out_rate = 11289600; /* Codec rate */
+		mclk = 11289600 * 2; /* PLL_A rate */
+		break;
+	case 8000:
+	case 16000:
+	case 32000:
+	case 48000:
+	case 64000:
+	case 96000:
+	case 192000:
+	default:
+		clk_out_rate = 12288000;
+		mclk = 12288000 * 2;
+		break;
+	}
 
-	/* I2S1: 23 for 8Khz, 3 for 48Khz */
-	if (srate == 8000)
-		i2s_clk_divider(I2S1, 23);
-	else
-		i2s_clk_divider(I2S1, 3);
+	pr_info("Setting pll_a = %d Hz clk_out = %d Hz\n", mclk, clk_out_rate);
+	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
+				dai_params->rate_min, mclk, clk_out_rate);
+	if (err < 0) {
+		dev_err(card->dev, "Can't configure clocks\n");
+		return err;
+	}
 
 	err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
-				RT5639_SCLK_S_MCLK, mclk, SND_SOC_CLOCK_IN);
+			RT5639_SCLK_S_MCLK, clk_out_rate, SND_SOC_CLOCK_IN);
 	if (err < 0) {
 		dev_err(card->dev, "codec_dai clock not set\n");
+		return err;
+	}
+
+	err = snd_soc_dai_set_sysclk(card->rtd[idx].cpu_dai, 0,
+			dai_params->rate_min, SND_SOC_CLOCK_IN);
+	if (err < 0) {
+		dev_err(card->dev, "cpu_dai clock not set\n");
 		return err;
 	}
 
 	err = snd_soc_dai_set_fmt(card->rtd[idx].codec_dai, fmt);
 	if (err < 0) {
 		dev_err(card->dev, "codec_dai fmt not set\n");
+		return err;
+	}
+
+	err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
+		tegra_machine_get_bclk_ratio(&card->rtd[idx]));
+	if (err < 0) {
+		dev_err(card->dev, "Failed to set cpu dai bclk ratio\n");
 		return err;
 	}
 
@@ -241,6 +276,13 @@ static int tegra_t210ref_init(struct snd_soc_pcm_runtime *rtd)
 	err = snd_soc_dai_set_sysclk(i2s_dai, 0, srate, SND_SOC_CLOCK_IN);
 	if (err < 0) {
 		dev_err(card->dev, "i2s clock not set %d\n", srate);
+		return err;
+	}
+
+	err = tegra_alt_asoc_utils_set_extern_parent(&machine->audio_clock,
+							"pll_a_out0");
+	if (err < 0) {
+		dev_err(card->dev, "Failed to set extern clk parent\n");
 		return err;
 	}
 

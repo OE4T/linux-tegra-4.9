@@ -281,13 +281,6 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 	data->dev = dev;
 	data->card = card;
 
-	data->clk_pll_p_out1 = clk_get_sys(NULL, "pll_p_out1");
-	if (IS_ERR(data->clk_pll_p_out1)) {
-		dev_err(data->dev, "Can't retrieve clk pll_p_out1\n");
-		ret = PTR_ERR(data->clk_pll_p_out1);
-		goto err;
-	}
-
 	if (of_machine_is_compatible("nvidia,tegra20"))
 		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA20;
 	else if (of_machine_is_compatible("nvidia,tegra30"))
@@ -298,6 +291,8 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA148;
 	else if (of_machine_is_compatible("nvidia,tegra124"))
 		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA124;
+	else if (of_machine_is_compatible("nvidia,tegra210"))
+		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA210;
 	else if (!dev->of_node) {
 		/* non-DT is always Tegra20 */
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC)
@@ -314,6 +309,15 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 	} else
 		/* DT boot, but unknown SoC */
 		return -EINVAL;
+
+	if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA210) {
+		data->clk_pll_p_out1 = clk_get_sys(NULL, "pll_p_out1");
+		if (IS_ERR(data->clk_pll_p_out1)) {
+			dev_err(data->dev, "Can't retrieve clk pll_p_out1\n");
+			ret = PTR_ERR(data->clk_pll_p_out1);
+			goto err;
+		}
+	}
 
 	data->clk_pll_a = clk_get_sys(NULL, "pll_a");
 	if (IS_ERR(data->clk_pll_a)) {
@@ -426,6 +430,40 @@ int tegra_alt_asoc_utils_set_parent(struct tegra_asoc_audio_clock_info *data,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(tegra_alt_asoc_utils_set_parent);
+
+int tegra_alt_asoc_utils_set_extern_parent(
+	struct tegra_asoc_audio_clock_info *data, const char *parent)
+{
+	unsigned long rate;
+	int err;
+
+	if (data->soc == TEGRA_ASOC_UTILS_SOC_TEGRA20)
+		return -ENODEV;
+
+	rate = clk_get_rate(data->clk_cdev1);
+	if (!strcmp(parent, "clk_m")) {
+		err = clk_set_parent(data->clk_cdev1, data->clk_m);
+		if (err) {
+			dev_err(data->dev, "Can't set clk extern1 parent");
+			return err;
+		}
+	} else if (!strcmp(parent, "pll_a_out0")) {
+		err = clk_set_parent(data->clk_cdev1, data->clk_pll_a_out0);
+		if (err) {
+			dev_err(data->dev, "Can't set clk cdev1/extern1 parent");
+			return err;
+		}
+	}
+
+	err = clk_set_rate(data->clk_cdev1, rate);
+	if (err) {
+		dev_err(data->dev, "Can't set clk rate");
+		return err;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra_alt_asoc_utils_set_extern_parent);
 
 void tegra_alt_asoc_utils_fini(struct tegra_asoc_audio_clock_info *data)
 {

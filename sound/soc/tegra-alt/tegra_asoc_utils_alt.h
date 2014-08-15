@@ -36,6 +36,7 @@ enum tegra_asoc_utils_soc {
 	TEGRA_ASOC_UTILS_SOC_TEGRA114,
 	TEGRA_ASOC_UTILS_SOC_TEGRA148,
 	TEGRA_ASOC_UTILS_SOC_TEGRA124,
+	TEGRA_ASOC_UTILS_SOC_TEGRA210,
 };
 
 /* These values are copied from WiredAccessoryObserver */
@@ -75,6 +76,8 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 				struct device *dev, struct snd_soc_card *card);
 void tegra_alt_asoc_utils_fini(struct tegra_asoc_audio_clock_info *data);
 
+int tegra_alt_asoc_utils_set_extern_parent(
+	struct tegra_asoc_audio_clock_info *data, const char *parent);
 int tegra_alt_asoc_utils_set_parent(struct tegra_asoc_audio_clock_info *data,
 				int is_i2s_master);
 int tegra_alt_asoc_utils_clk_enable(struct tegra_asoc_audio_clock_info *data);

@@ -453,7 +453,6 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 	gpll.PL = (gpll_new->PL < 2) ? 2 : gpll_new->PL;
 #endif
 	clk_lock_gpc_pll_under_bypass(g, &gpll);
-	gpll_new->enabled = true;
 
 #if PLDIV_GLITCHLESS
 	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
@@ -646,28 +645,31 @@ static int set_pll_target(struct gk20a *g, u32 freq, u32 old_freq)
 	return 0;
 }
 
-static int set_pll_freq(struct gk20a *g, u32 freq, u32 old_freq)
+static int set_pll_freq(struct gk20a *g, int allow_slide)
 {
 	struct clk_gk20a *clk = &g->clk;
 	int err = 0;
 
-	gk20a_dbg_fn("curr freq: %dMHz, target freq %dMHz", old_freq, freq);
+	gk20a_dbg_fn("last freq: %dMHz, target freq %dMHz",
+		     clk->gpc_pll_last.freq, clk->gpc_pll.freq);
 
-	if ((freq == old_freq) && clk->gpc_pll.enabled)
+	/* If programming with dynamic sliding failed, re-try under bypass */
+	err = clk_program_gpc_pll(g, &clk->gpc_pll, allow_slide);
+	if (err && allow_slide)
+		err = clk_program_gpc_pll(g, &clk->gpc_pll, 0);
+
+	if (!err) {
+		clk->gpc_pll.enabled = true;
+		clk->gpc_pll_last = clk->gpc_pll;
 		return 0;
-
-	/* change frequency only if power is on */
-	if (g->clk.clk_hw_on) {
-		err = clk_program_gpc_pll(g, &clk->gpc_pll, 1);
-		if (err)
-			err = clk_program_gpc_pll(g, &clk->gpc_pll, 0);
 	}
 
-	/* Just report error but not restore PLL since dvfs could already change
-	    voltage even when it returns error. */
-	if (err)
-		gk20a_err(dev_from_gk20a(g),
-			"failed to set pll to %d", freq);
+	/*
+	 * Just report error but not restore PLL since dvfs could already change
+	 * voltage even when programming failed.
+	 */
+	gk20a_err(dev_from_gk20a(g), "failed to set pll to %d",
+		  clk->gpc_pll.freq);
 	return err;
 }
 
@@ -682,8 +684,8 @@ static int gm20b_clk_export_set_rate(void *data, unsigned long *rate)
 		mutex_lock(&clk->clk_mutex);
 		old_freq = clk->gpc_pll.freq;
 		ret = set_pll_target(g, rate_gpu_to_gpc2clk(*rate), old_freq);
-		if (!ret && clk->gpc_pll.enabled)
-			ret = set_pll_freq(g, clk->gpc_pll.freq, old_freq);
+		if (!ret && clk->gpc_pll.enabled && clk->clk_hw_on)
+			ret = set_pll_freq(g, 1);
 		if (!ret)
 			*rate = rate_gpc2clk_to_gpu(clk->gpc_pll.freq);
 		mutex_unlock(&clk->clk_mutex);
@@ -693,12 +695,13 @@ static int gm20b_clk_export_set_rate(void *data, unsigned long *rate)
 
 static int gm20b_clk_export_enable(void *data)
 {
-	int ret;
+	int ret = 0;
 	struct gk20a *g = data;
 	struct clk_gk20a *clk = &g->clk;
 
 	mutex_lock(&clk->clk_mutex);
-	ret = set_pll_freq(g, clk->gpc_pll.freq, clk->gpc_pll.freq);
+	if (!clk->gpc_pll.enabled && clk->clk_hw_on)
+		ret = set_pll_freq(g, 1);
 	mutex_unlock(&clk->clk_mutex);
 	return ret;
 }
@@ -709,7 +712,7 @@ static void gm20b_clk_export_disable(void *data)
 	struct clk_gk20a *clk = &g->clk;
 
 	mutex_lock(&clk->clk_mutex);
-	if (g->clk.clk_hw_on)
+	if (clk->gpc_pll.enabled && clk->clk_hw_on)
 		clk_disable_gpcpll(g, 1);
 	mutex_unlock(&clk->clk_mutex);
 }
@@ -789,7 +792,8 @@ static int gm20b_init_clk_support(struct gk20a *g)
 
 	/* The prev call may not enable PLL if gbus is unbalanced - force it */
 	mutex_lock(&clk->clk_mutex);
-	err = set_pll_freq(g, clk->gpc_pll.freq, clk->gpc_pll.freq);
+	if (!clk->gpc_pll.enabled)
+		err = set_pll_freq(g, 1);
 	mutex_unlock(&clk->clk_mutex);
 	if (err)
 		return err;
@@ -805,13 +809,14 @@ static int gm20b_init_clk_support(struct gk20a *g)
 
 static int gm20b_suspend_clk_support(struct gk20a *g)
 {
-	int ret;
+	int ret = 0;
 
 	clk_disable(g->clk.tegra_clk);
 
 	/* The prev call may not disable PLL if gbus is unbalanced - force it */
 	mutex_lock(&g->clk.clk_mutex);
-	ret = clk_disable_gpcpll(g, 1);
+	if (g->clk.gpc_pll.enabled)
+		ret = clk_disable_gpcpll(g, 1);
 	g->clk.clk_hw_on = false;
 	mutex_unlock(&g->clk.clk_mutex);
 	return ret;

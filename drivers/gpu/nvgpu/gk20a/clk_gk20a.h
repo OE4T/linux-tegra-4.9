@@ -52,6 +52,7 @@ struct clk_gk20a {
 	struct gk20a *g;
 	struct clk *tegra_clk;
 	struct pll gpc_pll;
+	struct pll gpc_pll_last;
 	u32 pll_delay; /* default PLL settle time */
 	struct mutex clk_mutex;
 	bool sw_ready;

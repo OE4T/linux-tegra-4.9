@@ -1,2 +1,1 @@
-#### REMOVE THE DUMMY TARGET AND IT'S C FILE ONCE A REAL TARGET IS ADDED ####
-obj-y += dummy.o
+obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra18_speedo.o

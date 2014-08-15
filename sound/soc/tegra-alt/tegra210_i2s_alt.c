@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/device.h>
 #include <linux/io.h>
@@ -94,6 +96,112 @@ static int tegra210_i2s_set_clock_rate(struct device *dev, int clock_rate)
 	}
 
 	return ret;
+}
+
+static int tegra210_i2s_sw_reset(struct tegra210_i2s *i2s,
+				int direction, int timeout)
+{
+	unsigned int sw_reset_reg, sw_reset_mask, sw_reset_en, sw_reset_default;
+	unsigned int tx_cif_ctrl, rx_cif_ctrl, tx_ctrl, rx_ctrl, ctrl, val;
+	int wait = timeout;
+
+	regmap_read(i2s->regmap, TEGRA210_I2S_AXBAR_TX_CIF_CTRL, &tx_cif_ctrl);
+	regmap_read(i2s->regmap, TEGRA210_I2S_AXBAR_RX_CIF_CTRL, &rx_cif_ctrl);
+	regmap_read(i2s->regmap, TEGRA210_I2S_AXBAR_TX_CTRL, &tx_ctrl);
+	regmap_read(i2s->regmap, TEGRA210_I2S_AXBAR_RX_CTRL, &rx_ctrl);
+	regmap_read(i2s->regmap, TEGRA210_I2S_CTRL, &ctrl);
+
+	if (direction == SNDRV_PCM_STREAM_PLAYBACK) {
+		sw_reset_reg = TEGRA210_I2S_AXBAR_TX_SOFT_RESET;
+		sw_reset_mask = TEGRA210_I2S_AXBAR_TX_SOFT_RESET_MASK;
+		sw_reset_en = TEGRA210_I2S_AXBAR_TX_SOFT_RESET_EN;
+		sw_reset_default = TEGRA210_I2S_AXBAR_TX_SOFT_RESET_DEFAULT;
+	} else {
+		sw_reset_reg = TEGRA210_I2S_AXBAR_RX_SOFT_RESET;
+		sw_reset_mask = TEGRA210_I2S_AXBAR_RX_SOFT_RESET_MASK;
+		sw_reset_en = TEGRA210_I2S_AXBAR_RX_SOFT_RESET_EN;
+		sw_reset_default = TEGRA210_I2S_AXBAR_RX_SOFT_RESET_DEFAULT;
+	}
+
+	regmap_update_bits(i2s->regmap, sw_reset_reg, sw_reset_mask, sw_reset_en);
+
+	do {
+		regmap_read(i2s->regmap, sw_reset_reg, &val);
+		wait--;
+		if (!wait)
+			return -EINVAL;
+	} while (val & sw_reset_mask);
+
+	regmap_update_bits(i2s->regmap, sw_reset_reg, sw_reset_mask, sw_reset_default);
+
+	regmap_write(i2s->regmap, TEGRA210_I2S_AXBAR_TX_CIF_CTRL, tx_cif_ctrl);
+	regmap_write(i2s->regmap, TEGRA210_I2S_AXBAR_RX_CIF_CTRL, rx_cif_ctrl);
+	regmap_write(i2s->regmap, TEGRA210_I2S_AXBAR_TX_CTRL, tx_ctrl);
+	regmap_write(i2s->regmap, TEGRA210_I2S_AXBAR_RX_CTRL, rx_ctrl);
+	regmap_write(i2s->regmap, TEGRA210_I2S_CTRL, ctrl);
+
+	return 0;
+}
+
+static int tegra210_i2s_get_status(struct tegra210_i2s *i2s,
+				int direction)
+{
+	unsigned int status_reg, val;
+
+	status_reg = (direction == SNDRV_PCM_STREAM_PLAYBACK) ?
+		TEGRA210_I2S_AXBAR_TX_STATUS :
+		TEGRA210_I2S_AXBAR_RX_STATUS;
+
+	regmap_read(i2s->regmap, status_reg, &val);
+	val = val & 0x00000001;
+
+	return val;
+}
+
+static int tegra210_i2s_rx_stop(struct snd_soc_dapm_widget *w,
+				struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = w->codec;
+	struct device *dev = codec->dev;
+	struct tegra210_i2s *i2s = dev_get_drvdata(dev);
+	int dcnt = 10, ret;
+
+	/* wait until I2S RX status is disabled;
+	ADMAIF is first disabled followed by I2S */
+	while (tegra210_i2s_get_status(i2s, SNDRV_PCM_STREAM_CAPTURE) &&
+			dcnt--)
+		udelay(100);
+
+	/* HW needs sw reset to make sure previous transaction be clean */
+	ret = tegra210_i2s_sw_reset(i2s, SNDRV_PCM_STREAM_CAPTURE, 0xffff);
+	if (ret) {
+		dev_err(dev, "Failed at I2S%d_RX sw reset\n", dev->id);
+		return ret;
+	}
+	return 0;
+}
+
+static int tegra210_i2s_tx_stop(struct snd_soc_dapm_widget *w,
+				struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = w->codec;
+	struct device *dev = codec->dev;
+	struct tegra210_i2s *i2s = dev_get_drvdata(dev);
+	int dcnt = 10, ret;
+
+	/* wait until  I2S TX status is disabled;
+	ADMAIF is first disabled followed by I2S */
+	while (tegra210_i2s_get_status(i2s, SNDRV_PCM_STREAM_PLAYBACK) &&
+			dcnt--)
+		udelay(100);
+
+	/* HW needs sw reset to make sure previous transaction be clean */
+	ret = tegra210_i2s_sw_reset(i2s, SNDRV_PCM_STREAM_PLAYBACK, 0xffff);
+	if (ret) {
+		dev_err(dev, "Failed at I2S%d_TX sw reset\n", dev->id);
+		return ret;
+	}
+	return 0;
 }
 
 static int tegra210_i2s_runtime_suspend(struct device *dev)
@@ -489,10 +597,12 @@ static const struct snd_soc_dapm_widget tegra210_i2s_widgets[] = {
 				0, 0),
 	SND_SOC_DAPM_AIF_OUT("CIF TX", NULL, 0, SND_SOC_NOPM,
 				0, 0),
-	SND_SOC_DAPM_AIF_IN("DAP RX", NULL, 0, TEGRA210_I2S_AXBAR_TX_ENABLE,
-				TEGRA210_I2S_AXBAR_TX_EN_SHIFT, 0),
-	SND_SOC_DAPM_AIF_OUT("DAP TX", NULL, 0, TEGRA210_I2S_AXBAR_RX_ENABLE,
-				TEGRA210_I2S_AXBAR_RX_EN_SHIFT, 0),
+	SND_SOC_DAPM_AIF_IN_E("DAP RX", NULL, 0, TEGRA210_I2S_AXBAR_TX_ENABLE,
+				TEGRA210_I2S_AXBAR_TX_EN_SHIFT, 0,
+				tegra210_i2s_rx_stop, SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_AIF_OUT_E("DAP TX", NULL, 0, TEGRA210_I2S_AXBAR_RX_ENABLE,
+				TEGRA210_I2S_AXBAR_RX_EN_SHIFT, 0,
+				tegra210_i2s_tx_stop, SND_SOC_DAPM_POST_PMD),
 };
 
 static const struct snd_soc_dapm_route tegra210_i2s_routes[] = {

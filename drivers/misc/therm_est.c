@@ -35,14 +35,6 @@
 
 struct therm_estimator {
 	struct thermal_zone_device *thz;
-	int num_trips;
-	struct thermal_trip_info *trips;
-	struct thermal_zone_params *tzp;
-
-	int num_timer_trips;
-	struct therm_est_timer_trip_info *timer_trips;
-	struct delayed_work timer_trip_work;
-	struct mutex timer_trip_lock;
 
 	struct thermal_cooling_device *cdev; /* activation device */
 	struct workqueue_struct *workqueue;
@@ -65,28 +57,6 @@ struct therm_estimator {
 	struct notifier_block pm_nb;
 #endif
 };
-
-#define TIMER_TRIP_INACTIVE		-2
-
-#define TIMER_TRIP_STATE_NONE		0
-#define TIMER_TRIP_STATE_START		BIT(0)
-#define TIMER_TRIP_STATE_STOP		BIT(1)
-#define TIMER_TRIP_STATE_UP		BIT(2)
-#define TIMER_TRIP_STATE_DOWN		BIT(3)
-
-static int __get_timer_trip_delay(struct therm_est_timer_trip_info *timer_info,
-				 s64 now, s64 *delay)
-{
-	int cur = timer_info->cur;
-	int next = (cur + 1 < timer_info->num_timers) ? cur + 1 : cur;
-
-	if (cur == next) /* No more timer on this trip. */
-		return -ENOENT;
-
-	*delay = timer_info->timers[next].time_after -
-		 (now - timer_info->last_tripped);
-	return 0;
-}
 
 static int therm_est_subdev_match(struct thermal_zone_device *thz, void *data)
 {
@@ -111,11 +81,11 @@ static void therm_est_update_limits(struct therm_estimator *est)
 	long hysteresis, zone_temp;
 	int i;
 
-	for (i = 0; i < est->num_trips; i++) {
+	zone_temp = est->thz->temperature;
+	for (i = 0; i < est->thz->trips; i++) {
 		est->thz->ops->get_trip_temp(est->thz, i, &trip_temp);
 		est->thz->ops->get_trip_hyst(est->thz, i, &hysteresis);
 		est->thz->ops->get_trip_type(est->thz, i, &trip_type);
-		zone_temp = est->thz->temperature;
 
 		if (zone_temp >= trip_temp) {
 			trip_temp -= hysteresis;
@@ -149,87 +119,6 @@ static void therm_est_update_limits(struct therm_estimator *est)
 	est->high_limit = high_temp;
 }
 
-static void therm_est_update_timer_trips(struct therm_estimator *est)
-{
-	struct thermal_trip_info *trip_state;
-	struct therm_est_timer_trip_info *timer_info;
-	s64 now, delay, min_delay;
-	int i;
-
-	mutex_lock(&est->timer_trip_lock);
-	min_delay = LLONG_MAX;
-	now = ktime_to_ms(ktime_get());
-
-	for (i = 0; i < est->num_timer_trips; i++) {
-		timer_info = &est->timer_trips[i];
-		trip_state = &est->trips[timer_info->trip];
-
-		pr_debug("%s: i %d, trip %d, tripped %d, cur %d\n",
-			__func__, i, timer_info->trip, trip_state->tripped,
-			timer_info->cur);
-		if ((timer_info->cur == TIMER_TRIP_INACTIVE) ||
-			(__get_timer_trip_delay(timer_info, now, &delay) < 0))
-			continue;
-
-		if (delay > 0)
-			min_delay = min(min_delay, delay);
-		pr_debug("%s: delay %lld, min_delay %lld\n",
-			__func__, delay, min_delay);
-	}
-	mutex_unlock(&est->timer_trip_lock);
-
-	cancel_delayed_work(&est->timer_trip_work);
-	if (min_delay != LLONG_MAX)
-		queue_delayed_work(est->workqueue, &est->timer_trip_work,
-				   msecs_to_jiffies(min_delay));
-}
-
-static void therm_est_timer_trip_work_func(struct work_struct *work)
-{
-	struct therm_estimator *est = container_of(work, struct therm_estimator,
-						   timer_trip_work.work);
-	struct thermal_trip_info *trip_state;
-	struct therm_est_timer_trip_info *timer_info;
-	s64 now, delay;
-	int timer_trip_state, i;
-
-	mutex_lock(&est->timer_trip_lock);
-	timer_trip_state = TIMER_TRIP_STATE_NONE;
-	now = ktime_to_ms(ktime_get());
-
-	for (i = 0; i < est->num_timer_trips; i++) {
-		timer_info = &est->timer_trips[i];
-		trip_state = &est->trips[timer_info->trip];
-
-		pr_debug("%s: i %d, trip %d, tripped %d, cur %d\n",
-			__func__, i, timer_info->trip, trip_state->tripped,
-			timer_info->cur);
-		if ((timer_info->cur == TIMER_TRIP_INACTIVE) ||
-			(__get_timer_trip_delay(timer_info, now, &delay) < 0))
-			continue;
-
-		if (delay <= 0) { /* Timer on this trip has expired. */
-			if (timer_info->cur + 1 < timer_info->num_timers) {
-				timer_info->last_tripped = now;
-				timer_info->cur++;
-				timer_trip_state |= TIMER_TRIP_STATE_UP;
-			}
-		}
-
-		/* If delay > 0, timer on this trip has not yet expired.
-		 * So need to restart timer with remaining delay. */
-		timer_trip_state |= TIMER_TRIP_STATE_START;
-		pr_debug("%s: new_cur %d, delay %lld, timer_trip_state 0x%x\n",
-			__func__, timer_info->cur, delay, timer_trip_state);
-	}
-	mutex_unlock(&est->timer_trip_lock);
-
-	if (timer_trip_state & (TIMER_TRIP_STATE_START | TIMER_TRIP_STATE_UP)) {
-		therm_est_update_timer_trips(est);
-		therm_est_update_limits(est);
-	}
-}
-
 static void therm_est_work_func(struct work_struct *work)
 {
 	int i, j, index, sum = 0;
@@ -260,7 +149,6 @@ static void therm_est_work_func(struct work_struct *work)
 	if (est->thz && ((est->cur_temp < est->low_limit) ||
 			(est->cur_temp >= est->high_limit))) {
 		thermal_zone_device_update(est->thz);
-		therm_est_update_timer_trips(est);
 		therm_est_update_limits(est);
 	}
 
@@ -292,14 +180,6 @@ static int therm_est_get_trend(void *of_data, long *trend)
 	return 0;
 }
 
-static void therm_est_init_timer_trips(struct therm_estimator *est)
-{
-	int i;
-
-	for (i = 0; i < est->num_timer_trips; i++)
-		est->timer_trips[i].cur = TIMER_TRIP_INACTIVE;
-}
-
 static int therm_est_init_history(struct therm_estimator *est)
 {
 	int i, j;
@@ -328,7 +208,6 @@ static int therm_est_polling(struct therm_estimator *est,
 		est->low_limit = 0;
 		est->high_limit = 0;
 		therm_est_init_history(est);
-		therm_est_init_timer_trips(est);
 		queue_delayed_work(est->workqueue,
 			&est->therm_est_work,
 			msecs_to_jiffies(est->polling_period));
@@ -526,13 +405,11 @@ static int therm_est_pm_notify(struct notifier_block *nb,
 	switch (event) {
 	case PM_SUSPEND_PREPARE:
 		cancel_delayed_work_sync(&est->therm_est_work);
-		cancel_delayed_work_sync(&est->timer_trip_work);
 		break;
 	case PM_POST_SUSPEND:
 		est->low_limit = 0;
 		est->high_limit = 0;
 		therm_est_init_history(est);
-		therm_est_init_timer_trips(est);
 		queue_delayed_work(est->workqueue,
 				&est->therm_est_work,
 				msecs_to_jiffies(est->polling_period));
@@ -737,14 +614,6 @@ static int therm_est_probe(struct platform_device *pdev)
 	/* initialize history */
 	therm_est_init_history(est);
 
-	/* initialize timer trips */
-	est->num_timer_trips = data->num_timer_trips;
-	est->timer_trips = data->timer_trips;
-	therm_est_init_timer_trips(est);
-	mutex_init(&est->timer_trip_lock);
-	INIT_DELAYED_WORK(&est->timer_trip_work,
-			  therm_est_timer_trip_work_func);
-
 	est->workqueue = alloc_workqueue(dev_name(&pdev->dev),
 				    WQ_HIGHPRI | WQ_UNBOUND, 1);
 	if (!est->workqueue)
@@ -755,9 +624,6 @@ static int therm_est_probe(struct platform_device *pdev)
 	est->cdev = thermal_est_activation_device_register(est,
 							"therm_est_activ");
 
-	est->trips = data->trips;
-	est->tzp = data->tzp;
-
 	est->thz = thermal_zone_of_sensor_register(&pdev->dev, 0, est, &sops);
 	if (IS_ERR(est->thz)) {
 		ret = PTR_ERR(est->thz);
@@ -766,9 +632,8 @@ static int therm_est_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	est->num_trips = est->thz->trips;
 	est->tripped_info = devm_kzalloc(&pdev->dev,
-				sizeof(bool) * est->num_trips,
+				sizeof(bool) * est->thz->trips,
 				GFP_KERNEL);
 	if (IS_ERR_OR_NULL(est->thz))
 		goto err;
@@ -800,7 +665,6 @@ static int therm_est_remove(struct platform_device *pdev)
 	int i;
 
 	cancel_delayed_work_sync(&est->therm_est_work);
-	cancel_delayed_work_sync(&est->timer_trip_work);
 
 #ifdef CONFIG_PM
 	unregister_pm_notifier(&est->pm_nb);
@@ -819,7 +683,6 @@ static void therm_est_shutdown(struct platform_device *pdev)
 	struct therm_estimator *est = platform_get_drvdata(pdev);
 
 	cancel_delayed_work_sync(&est->therm_est_work);
-	cancel_delayed_work_sync(&est->timer_trip_work);
 	thermal_cooling_device_unregister(est->cdev);
 }
 

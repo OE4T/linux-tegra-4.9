@@ -1740,7 +1740,7 @@ static int tegra_dsi_wait_frame_end(struct tegra_dc *dc,
 		dev_WARN(&dc->ndev->dev,
 		"dsi: to stop at next frame give at least 2 frame delay\n");
 
-	timeout = tegra_dc_wait_for_frame_end(dc, timeout_n_frames *
+	timeout = _tegra_dc_wait_for_frame_end(dc, timeout_n_frames *
 		frame_period);
 
 	/* wait for v_ref_to_sync no. of lines after frame end interrupt */

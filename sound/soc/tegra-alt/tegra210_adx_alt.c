@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/device.h>
 #include <linux/io.h>
@@ -140,6 +141,62 @@ static void tegra210_adx_update_map_ram(struct tegra210_adx *adx)
 
 	for (i = 0; i < TEGRA210_ADX_RAM_DEPTH; i++)
 		tegra210_adx_write_map_ram(adx, i, adx->map[i]);
+}
+
+static int tegra210_adx_sw_reset(struct tegra210_adx *adx,
+				int timeout)
+{
+	unsigned int val;
+	int wait = timeout;
+
+	regmap_update_bits(adx->regmap, TEGRA210_ADX_SOFT_RESET,
+		TEGRA210_ADX_SOFT_RESET_SOFT_RESET_MASK,
+		TEGRA210_ADX_SOFT_RESET_SOFT_EN);
+
+	do {
+		regmap_read(adx->regmap, TEGRA210_ADX_SOFT_RESET, &val);
+		wait--;
+		if (!wait)
+			return -EINVAL;
+	} while (val & 0x00000001);
+
+	regmap_update_bits(adx->regmap, TEGRA210_ADX_SOFT_RESET,
+		TEGRA210_ADX_SOFT_RESET_SOFT_RESET_MASK,
+		TEGRA210_ADX_SOFT_RESET_SOFT_DEFAULT);
+
+	return 0;
+}
+
+static int tegra210_adx_get_status(struct tegra210_adx *adx)
+{
+	unsigned int val;
+
+	regmap_read(adx->regmap, TEGRA210_ADX_STATUS, &val);
+	val = (val & 0x00000001);
+
+	return val;
+}
+
+static int tegra210_adx_stop(struct snd_soc_dapm_widget *w,
+				struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = w->codec;
+	struct device *dev = codec->dev;
+	struct tegra210_adx *adx = dev_get_drvdata(dev);
+	int dcnt = 10, ret = 0;
+
+	/* wait until ADX status is disabled */
+	while (tegra210_adx_get_status(adx) && dcnt--)
+		udelay(100);
+
+	/* HW needs sw reset to make sure previous transaction be clean */
+	ret = tegra210_adx_sw_reset(adx, 0xffff);
+	if (ret) {
+		dev_err(dev, "Failed at ADX%d sw reset\n", dev->id);
+		return ret;
+	}
+
+	return (dcnt < 0) ? -ETIMEDOUT : 0;
 }
 
 #ifdef TEGRA210_ADX_MAP_READ
@@ -301,7 +358,14 @@ int tegra210_adx_set_channel_map(struct snd_soc_dai *dai,
 	struct tegra210_adx *adx = snd_soc_dai_get_drvdata(dai);
 	unsigned int byte_mask1 = 0, byte_mask2 = 0;
 	unsigned int out_stream_idx, out_ch_idx, out_byte_idx;
-	int i;
+	int i, ret = 0;
+
+	/* HW needs sw reset to make sure previous transaction be clean */
+	tegra210_adx_sw_reset(adx, 0xffff);
+	if (ret) {
+		dev_err(dev, "Failed at ADX sw reset\n");
+		return ret;
+	}
 
 	if ((rx_num < 1) || (rx_num > 64)) {
 		dev_err(dev, "Doesn't support %d rx_num, need to be 1 to 64\n",
@@ -402,7 +466,9 @@ static struct snd_soc_dai_driver tegra210_adx_dais[] = {
 };
 
 static const struct snd_soc_dapm_widget tegra210_adx_widgets[] = {
-	SND_SOC_DAPM_AIF_IN("IN", NULL, 0, TEGRA210_ADX_ENABLE, 0, 0),
+	SND_SOC_DAPM_AIF_IN_E("IN", NULL, 0, TEGRA210_ADX_ENABLE,
+				TEGRA210_ADX_ENABLE_SHIFT, 0,
+				tegra210_adx_stop, SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_AIF_OUT("OUT1", NULL, 0, TEGRA210_ADX_CTRL, 0, 0),
 	SND_SOC_DAPM_AIF_OUT("OUT2", NULL, 0, TEGRA210_ADX_CTRL, 1, 0),
 	SND_SOC_DAPM_AIF_OUT("OUT3", NULL, 0, TEGRA210_ADX_CTRL, 2, 0),
@@ -481,6 +547,8 @@ static bool tegra210_adx_rd_reg(struct device *dev,
 	case TEGRA210_ADX_ENABLE:
 	case TEGRA210_ADX_SOFT_RESET:
 	case TEGRA210_ADX_CG:
+	case TEGRA210_ADX_STATUS:
+	case TEGRA210_ADX_INT_STATUS:
 	case TEGRA210_ADX_CTRL:
 	case TEGRA210_ADX_IN_BYTE_EN0:
 	case TEGRA210_ADX_IN_BYTE_EN1:
@@ -493,6 +561,29 @@ static bool tegra210_adx_rd_reg(struct device *dev,
 	};
 }
 
+static bool tegra210_adx_volatile_reg(struct device *dev,
+				unsigned int reg)
+{
+	switch (reg) {
+	case TEGRA210_ADX_AXBAR_RX_STATUS:
+	case TEGRA210_ADX_AXBAR_RX_INT_STATUS:
+	case TEGRA210_ADX_AXBAR_RX_INT_SET:
+	case TEGRA210_ADX_AXBAR_TX_STATUS:
+	case TEGRA210_ADX_AXBAR_TX_INT_STATUS:
+	case TEGRA210_ADX_AXBAR_TX_INT_SET:
+	case TEGRA210_ADX_SOFT_RESET:
+	case TEGRA210_ADX_STATUS:
+	case TEGRA210_ADX_INT_STATUS:
+	case TEGRA210_ADX_AHUBRAMCTL_ADX_CTRL:
+	case TEGRA210_ADX_AHUBRAMCTL_ADX_DATA:
+		return true;
+	default:
+		break;
+	};
+
+	return false;
+}
+
 static const struct regmap_config tegra210_adx_regmap_config = {
 	.reg_bits = 32,
 	.reg_stride = 4,
@@ -500,6 +591,7 @@ static const struct regmap_config tegra210_adx_regmap_config = {
 	.max_register = TEGRA210_ADX_AHUBRAMCTL_ADX_DATA,
 	.writeable_reg = tegra210_adx_wr_reg,
 	.readable_reg = tegra210_adx_rd_reg,
+	.volatile_reg = tegra210_adx_volatile_reg,
 	.cache_type = REGCACHE_RBTREE,
 };
 

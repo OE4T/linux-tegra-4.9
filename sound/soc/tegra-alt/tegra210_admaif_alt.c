@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/device.h>
 #include <linux/io.h>
@@ -154,6 +156,25 @@ static int tegra210_admaif_sw_reset(struct snd_soc_dai *dai,
 	return 0;
 }
 
+static int tegra210_admaif_get_status(struct snd_soc_dai *dai,
+				int direction)
+{
+	struct tegra210_admaif *admaif = snd_soc_dai_get_drvdata(dai);
+	unsigned int status_reg, val;
+
+	if (direction == SNDRV_PCM_STREAM_PLAYBACK) {
+		status_reg = TEGRA210_ADMAIF_XBAR_RX_STATUS +
+			(dai->id * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
+	} else {
+		status_reg = TEGRA210_ADMAIF_XBAR_TX_STATUS +
+			(dai->id * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
+	}
+	regmap_read(admaif->regmap, status_reg, &val);
+	val = (val & 0x00000001);
+
+	return val;
+}
+
 static int tegra210_admaif_runtime_suspend(struct device *dev)
 {
 	struct tegra210_admaif *admaif = dev_get_drvdata(dev);
@@ -224,7 +245,7 @@ static int tegra210_admaif_hw_params(struct snd_pcm_substream *substream,
 	struct tegra210_admaif *admaif = snd_soc_dai_get_drvdata(dai);
 	struct tegra210_xbar_cif_conf cif_conf;
 	unsigned int reg, fifo_ctrl, fifo_size;
-	int valid_bit, ret;
+	int valid_bit;
 
 	cif_conf.audio_channels = params_channels(params);
 	cif_conf.client_channels = params_channels(params);
@@ -266,13 +287,6 @@ static int tegra210_admaif_hw_params(struct snd_pcm_substream *substream,
 		fifo_size = 3;
 	}
 
-	/* HW needs sw reset to make sure previous transaction be clean */
-	ret = tegra210_admaif_sw_reset(dai, substream->stream, 0xffff);
-	if (ret) {
-		dev_err(dev, "Failed at sw reset\n");
-		return ret;
-	}
-
 	tegra210_admaif_set_pack_mode(admaif->regmap, reg, valid_bit);
 	admaif->soc_data->set_audio_cif(admaif->regmap, reg, &cif_conf);
 
@@ -304,8 +318,10 @@ static void tegra210_admaif_start_playback(struct snd_soc_dai *dai)
 
 static void tegra210_admaif_stop_playback(struct snd_soc_dai *dai)
 {
+	struct device *dev = dai->dev;
 	struct tegra210_admaif *admaif = snd_soc_dai_get_drvdata(dai);
 	unsigned int reg;
+	int dcnt = 10, ret;
 
 	tegra210_admaif_global_enable(admaif, 0);
 	reg = TEGRA210_ADMAIF_XBAR_TX_ENABLE +
@@ -313,6 +329,16 @@ static void tegra210_admaif_stop_playback(struct snd_soc_dai *dai)
 	regmap_update_bits(admaif->regmap, reg,
 				TEGRA210_ADMAIF_XBAR_TX_ENABLE_MASK,
 				0);
+
+	/* wait until ADMAIF TX status is disabled */
+	while (tegra210_admaif_get_status(dai, SNDRV_PCM_STREAM_PLAYBACK) &&
+			dcnt--)
+		udelay(100);
+
+	/* HW needs sw reset to make sure previous transaction be clean */
+	ret = tegra210_admaif_sw_reset(dai, SNDRV_PCM_STREAM_PLAYBACK, 0xffff);
+	if (ret)
+		dev_err(dev, "Failed at ADMAIF%d_TX sw reset\n", dev->id);
 }
 
 static void tegra210_admaif_start_capture(struct snd_soc_dai *dai)
@@ -330,8 +356,10 @@ static void tegra210_admaif_start_capture(struct snd_soc_dai *dai)
 
 static void tegra210_admaif_stop_capture(struct snd_soc_dai *dai)
 {
+	struct device *dev = dai->dev;
 	struct tegra210_admaif *admaif = snd_soc_dai_get_drvdata(dai);
 	unsigned int reg;
+	int dcnt = 10, ret;
 
 	tegra210_admaif_global_enable(admaif, 0);
 	reg = TEGRA210_ADMAIF_XBAR_RX_ENABLE +
@@ -339,6 +367,16 @@ static void tegra210_admaif_stop_capture(struct snd_soc_dai *dai)
 	regmap_update_bits(admaif->regmap, reg,
 				TEGRA210_ADMAIF_XBAR_RX_ENABLE_MASK,
 				0);
+
+	/* wait until ADMAIF RX status is disabled */
+	while (tegra210_admaif_get_status(dai, SNDRV_PCM_STREAM_CAPTURE) &&
+			dcnt--)
+		udelay(100);
+
+	/* HW needs sw reset to make sure previous transaction be clean */
+	ret = tegra210_admaif_sw_reset(dai, SNDRV_PCM_STREAM_CAPTURE, 0xffff);
+	if (ret)
+		dev_err(dev, "Failed at ADMAIF%d_RX sw reset\n", dev->id);
 }
 
 static int tegra210_admaif_trigger(struct snd_pcm_substream *substream, int cmd,

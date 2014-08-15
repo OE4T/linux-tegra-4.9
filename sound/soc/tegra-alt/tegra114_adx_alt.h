@@ -1,7 +1,7 @@
 /*
  * tegra114_adx_alt.h - Definitions for Tegra114 ADX driver
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2014 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -37,6 +37,7 @@
 /* Fields inTEGRA_ADX_CTRL */
 #define TEGRA_ADX_CTRL_SOFT_RESET_SHIFT	31
 #define TEGRA_ADX_CTRL_CG_EN_SHIFT		30
+#define TEGRA_ADX_CTRL_SOFT_RESET		(1 << TEGRA_ADX_CTRL_SOFT_RESET_SHIFT)
 
 /* Fields inTEGRA_ADX_OUT_CH_CTRL */
 #define TEGRA_ADX_OUT_CH_ENABLE	1

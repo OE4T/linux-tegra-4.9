@@ -382,9 +382,11 @@ static int tegra30_i2s_hw_params(struct snd_pcm_substream *substream,
 static int tegra30_i2s_soft_reset(struct tegra30_i2s *i2s)
 {
 	int dcnt = 10;
-	unsigned int val, ctrl_val;
+	unsigned int val, i2s_ctrl, edge_ctrl, offset;
 
-	regmap_read(i2s->regmap, TEGRA30_I2S_CTRL, &ctrl_val);
+	regmap_read(i2s->regmap, TEGRA30_I2S_CTRL, &i2s_ctrl);
+	regmap_read(i2s->regmap, TEGRA30_I2S_CH_CTRL, &edge_ctrl);
+	regmap_read(i2s->regmap, TEGRA30_I2S_OFFSET, &offset);
 
 	regmap_update_bits(i2s->regmap, TEGRA30_I2S_CTRL,
 		TEGRA30_I2S_CTRL_SOFT_RESET, TEGRA30_I2S_CTRL_SOFT_RESET);
@@ -399,7 +401,9 @@ static int tegra30_i2s_soft_reset(struct tegra30_i2s *i2s)
 	regmap_update_bits(i2s->regmap, TEGRA30_I2S_CTRL,
 		TEGRA30_I2S_CTRL_SOFT_RESET, 0);
 
-	regmap_write(i2s->regmap, TEGRA30_I2S_CTRL, ctrl_val);
+	regmap_write(i2s->regmap, TEGRA30_I2S_CTRL, i2s_ctrl);
+	regmap_write(i2s->regmap, TEGRA30_I2S_CH_CTRL, edge_ctrl);
+	regmap_write(i2s->regmap, TEGRA30_I2S_OFFSET, offset);
 
 	return (dcnt < 0) ? -ETIMEDOUT : 0;
 }

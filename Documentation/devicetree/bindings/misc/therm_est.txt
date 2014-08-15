@@ -10,14 +10,14 @@ Properties :
      This node can be numerous.
 
 Properties in subdevice node : Required. Can be numerous.
- - compatible : Should contain "nvidia,therm-est-subdev".
+ - device_type : Should contain "therm-est-subdev".
  - dev_data : Thermal zone device type for thermal estimation.
  - coeffs : An array of coefficients, the number of entries should be twenty.
 
 Example:
 
 	therm_est {
-		compatible = "nvidia,therm-est";
+		device_type = "therm-est-subdev";
 		toffset = <0>;
 		polling-period = <1100>;
 		tc1 = <10>;

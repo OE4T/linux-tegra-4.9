@@ -39,12 +39,9 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include "../codecs/rt5639.h"
-#include "../codecs/wm8731.h"
-#include "../codecs/ad193x.h"
 
 #include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"
-#include "ahub_unit_fpga_clock.h"
 
 #define DRV_NAME "tegra-snd-t210ref-mobile"
 
@@ -285,31 +282,6 @@ static int tegra_t210ref_init(struct snd_soc_pcm_runtime *rtd)
 		dev_err(card->dev, "Failed to set extern clk parent\n");
 		return err;
 	}
-
-#if SYSTEM_FPGA
-	i2c_pinmux_setup();
-	i2c_clk_setup(10 - 1);
-	program_cdc_pll(2, CLK_OUT_12_2888_MHZ);
-	program_io_expander();
-	i2s_clk_setup(I2S1, 0, 23);
-	i2s_clk_setup(I2S3, 0, 0);
-	i2s_clk_setup(I2S5, 0, 3);
-
-	i2s_pinmux_setup(I2S1, 0);
-	i2s_pinmux_setup(I2S3, 0);
-	i2s_pinmux_setup(I2S5, 1);
-
-#else
-	/* PLL, I2S and Codec programming */
-	program_cdc_pll(2, CLK_OUT_12_2888_MHZ);
-	program_io_expander();
-	i2c_clk_divider(10 - 1);
-
-	/* I2S1: 23 for 8Khz, 3 for 48Khz */
-	i2s_clk_divider(I2S1, 23);
-	i2s_clk_divider(I2S3, 0);
-	i2s_clk_divider(I2S5, 3);
-#endif
 
 	if (gpio_is_valid(pdata->gpio_hp_det)) {
 		tegra_t210ref_hp_jack_gpio.gpio = pdata->gpio_hp_det;
@@ -702,9 +674,7 @@ static int tegra_t210ref_driver_remove(struct platform_device *pdev)
 	tegra_machine_remove_extra_mem_alloc(machine->num_codec_links);
 	tegra_machine_remove_dai_link();
 	tegra_machine_remove_codec_conf();
-#ifndef CONFIG_MACH_t210ref
 	tegra_alt_asoc_utils_fini(&machine->audio_clock);
-#endif
 
 	return 0;
 }

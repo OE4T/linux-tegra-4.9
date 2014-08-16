@@ -49,6 +49,7 @@ static int tegra210_xbar_runtime_suspend(struct device *dev)
 	regcache_cache_only(xbar->regmap, true);
 
 	clk_disable(xbar->clk);
+	clk_disable(xbar->clk_ape);
 
 	return 0;
 }
@@ -56,6 +57,12 @@ static int tegra210_xbar_runtime_suspend(struct device *dev)
 static int tegra210_xbar_runtime_resume(struct device *dev)
 {
 	int ret;
+
+	ret = clk_enable(xbar->clk_ape);
+	if (ret) {
+		dev_err(dev, "clk_enable failed: %d\n", ret);
+		return ret;
+	}
 
 	ret = clk_enable(xbar->clk);
 	if (ret) {
@@ -834,23 +841,30 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 		goto err_clk_put;
 	}
 
+	xbar->clk_ape = clk_get_sys(NULL, "ape");
+	if (IS_ERR(xbar->clk_ape)) {
+		dev_err(&pdev->dev, "Can't retrieve ape clock\n");
+		ret = PTR_ERR(xbar->clk_ape);
+		goto err_clk_put_parent;
+	}
+
 	parent_clk = clk_get_parent(xbar->clk);
 	if (IS_ERR(parent_clk)) {
 		dev_err(&pdev->dev, "Can't get parent clock for xbar\n");
 		ret = PTR_ERR(parent_clk);
-		goto err_clk_put;
+		goto err_clk_put_ape;
 	}
 
 	ret = clk_set_rate(xbar->clk_parent, 24560000);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to set clock rate of pll_a_out0\n");
-		goto err_clk_put;
+		goto err_clk_put_ape;
 	}
 
 	ret = clk_set_parent(xbar->clk, xbar->clk_parent);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to set parent clock with pll_a_out0\n");
-		goto err_clk_put;
+		goto err_clk_put_ape;
 	}
 
 	regs = devm_request_and_ioremap(&pdev->dev, pdev->resource);
@@ -865,7 +879,7 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 	if (IS_ERR(xbar->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
 		ret = PTR_ERR(xbar->regmap);
-		goto err_clk_put_parent;
+		goto err_clk_set_parent;
 	}
 	regcache_cache_only(xbar->regmap, true);
 
@@ -892,10 +906,12 @@ err_suspend:
 		tegra210_xbar_runtime_suspend(&pdev->dev);
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
-err_clk_put_parent:
-	clk_put(xbar->clk_parent);
 err_clk_set_parent:
 	clk_set_parent(xbar->clk, parent_clk);
+err_clk_put_ape:
+	clk_put(xbar->clk_ape);
+err_clk_put_parent:
+	clk_put(xbar->clk_parent);
 err_clk_put:
 	devm_clk_put(&pdev->dev, xbar->clk);
 err:
@@ -912,6 +928,7 @@ static int tegra210_xbar_remove(struct platform_device *pdev)
 
 	devm_clk_put(&pdev->dev, xbar->clk);
 	clk_put(xbar->clk_parent);
+	clk_put(xbar->clk_ape);
 
 	return 0;
 }

@@ -45,7 +45,18 @@ struct isp {
 
 extern const struct file_operations tegra_isp_ctrl_ops;
 int nvhost_isp_t124_finalize_poweron(struct platform_device *);
+
+#ifdef CONFIG_TEGRA_GRHOST_ISP
 int tegra_isp_register_mfi_cb(callback cb, void *cb_arg);
 int tegra_isp_unregister_mfi_cb(void);
-
+#else
+static inline int tegra_isp_register_mfi_cb(callback cb, void *cb_arg)
+{
+	return -ENOSYS;
+}
+static inline int tegra_isp_unregister_mfi_cb(void)
+{
+	return -ENOSYS;
+}
+#endif
 #endif

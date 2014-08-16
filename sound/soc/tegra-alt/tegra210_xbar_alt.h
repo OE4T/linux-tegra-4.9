@@ -171,6 +171,7 @@ struct tegra210_xbar_soc_data {
 struct tegra210_xbar {
 	struct clk *clk;
 	struct clk *clk_parent;
+	struct clk *clk_ape;
 	struct regmap *regmap;
 	const struct tegra210_xbar_soc_data *soc_data;
 };

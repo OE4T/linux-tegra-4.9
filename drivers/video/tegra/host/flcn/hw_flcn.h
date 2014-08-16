@@ -54,6 +54,10 @@ static inline u32 flcn_slcg_override_high_a_r(void)
 {
 	return 0x00000088;
 }
+static inline u32 flcn_slcg_override_low_a_r(void)
+{
+	return 0x0000008c;
+}
 static inline u32 flcn_irqmset_r(void)
 {
 	return 0x00001010;

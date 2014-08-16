@@ -577,6 +577,9 @@ struct gk20a_platform gm20b_tegra_platform = {
 
 	/* power management callbacks */
 	.suspend = gk20a_tegra_suspend,
+	.railgate = gk20a_tegra_railgate,
+	.unrailgate = gk20a_tegra_unrailgate,
+	.is_railgated = gk20a_tegra_is_railgated,
 
 	.busy = gk20a_tegra_busy,
 	.idle = gk20a_tegra_idle,

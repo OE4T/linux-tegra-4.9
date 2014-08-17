@@ -193,6 +193,7 @@
 			regulator-max-microvolt = <5000000>;
 			gpio = <&pca9539_76 6 0>;
 			vin-supply = <&vdd_3v3>;
+			regulator-always-on;
 			enable-active-high;
 			consumers {
 				c0 {

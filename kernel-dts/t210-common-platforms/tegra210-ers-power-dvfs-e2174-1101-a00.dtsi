@@ -102,8 +102,7 @@
 			status = "okay";
 			reg = <0>;
 			compatible = "nvidia,tegra210-dvfs-rail";
-			vdd_cpu-supply = <&en_vdd_cpu_fixed>;
-			vdd_cpu_dfll-supply = <&cpu_ovr_reg>;
+			vdd_cpu-supply = <&cpu_ovr_reg>;
 		};
 
 		vdd-gpu-rail-ovr@1 {

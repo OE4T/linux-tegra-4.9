@@ -70,8 +70,20 @@ static int tegra210_dmic_runtime_resume(struct device *dev)
 #endif
 
 	regcache_cache_only(dmic->regmap, false);
+	regcache_sync(dmic->regmap);
+
 	return 0;
 }
+
+#ifdef CONFIG_PM_SLEEP
+static int tegra210_dmic_suspend(struct device *dev)
+{
+	struct tegra210_dmic *dmic = dev_get_drvdata(dev);
+
+	regcache_mark_dirty(dmic->regmap);
+	return 0;
+}
+#endif
 
 static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
@@ -201,6 +213,7 @@ static struct snd_soc_codec_driver tegra210_dmic_codec = {
 	.num_dapm_widgets = ARRAY_SIZE(tegra210_dmic_widgets),
 	.dapm_routes = tegra210_dmic_routes,
 	.num_dapm_routes = ARRAY_SIZE(tegra210_dmic_routes),
+	.idle_bias_off = 1,
 };
 
 /* Regmap callback functions */
@@ -415,6 +428,7 @@ static int tegra210_dmic_platform_remove(struct platform_device *pdev)
 static const struct dev_pm_ops tegra210_dmic_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra210_dmic_runtime_suspend,
 			   tegra210_dmic_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(tegra210_dmic_suspend, NULL)
 };
 
 static struct platform_driver tegra210_dmic_driver = {

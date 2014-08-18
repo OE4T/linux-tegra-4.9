@@ -73,9 +73,20 @@ static int tegra210_spdif_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(spdif->regmap, false);
+	regcache_sync(spdif->regmap);
 
 	return ret;
 }
+
+#ifdef CONFIG_PM_SLEEP
+static int tegra210_spdif_suspend(struct device *dev)
+{
+	struct tegra210_spdif *spdif = dev_get_drvdata(dev);
+
+	regcache_mark_dirty(spdif->regmap);
+	return 0;
+}
+#endif
 
 static int tegra210_spdif_set_dai_sysclk(struct snd_soc_dai *dai,
 		int clk_id, unsigned int freq, int dir)
@@ -271,6 +282,7 @@ static struct snd_soc_codec_driver tegra210_spdif_codec = {
 	.num_dapm_widgets = ARRAY_SIZE(tegra210_spdif_widgets),
 	.dapm_routes = tegra210_spdif_routes,
 	.num_dapm_routes = ARRAY_SIZE(tegra210_spdif_routes),
+	.idle_bias_off = 1,
 };
 
 static bool tegra210_spdif_wr_rd_reg(struct device *dev, unsigned int reg)
@@ -465,6 +477,7 @@ static int tegra210_spdif_platform_remove(struct platform_device *pdev)
 static const struct dev_pm_ops tegra210_spdif_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra210_spdif_runtime_suspend,
 			   tegra210_spdif_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(tegra210_spdif_suspend, NULL)
 };
 
 static struct platform_driver tegra210_spdif_driver = {

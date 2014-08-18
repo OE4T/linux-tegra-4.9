@@ -60,9 +60,20 @@ static int tegra210_afc_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(afc->regmap, false);
+	regcache_sync(afc->regmap);
 
 	return 0;
 }
+
+#ifdef CONFIG_PM_SLEEP
+static int tegra210_afc_suspend(struct device *dev)
+{
+	struct tegra210_afc *afc = dev_get_drvdata(dev);
+
+	regcache_mark_dirty(afc->regmap);
+	return 0;
+}
+#endif
 
 /* returns the destination I2S id connected along the AFC path */
 static unsigned int tegra210_afc_get_i2s_id(unsigned int afc_id)
@@ -265,6 +276,7 @@ static struct snd_soc_codec_driver tegra210_afc_codec = {
 	.num_dapm_widgets = ARRAY_SIZE(tegra210_afc_widgets),
 	.dapm_routes = tegra210_afc_routes,
 	.num_dapm_routes = ARRAY_SIZE(tegra210_afc_routes),
+	.idle_bias_off = 1,
 };
 
 static bool tegra210_afc_wr_rd_reg(struct device *dev, unsigned int reg)
@@ -451,6 +463,7 @@ static int tegra210_afc_platform_remove(struct platform_device *pdev)
 static const struct dev_pm_ops tegra210_afc_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra210_afc_runtime_suspend,
 			   tegra210_afc_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(tegra210_afc_suspend, NULL)
 };
 
 static struct platform_driver tegra210_afc_driver = {

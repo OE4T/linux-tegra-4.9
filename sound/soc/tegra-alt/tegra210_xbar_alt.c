@@ -34,18 +34,23 @@
 
 struct tegra210_xbar *xbar;
 
+static bool tegra210_xbar_volatile_reg(struct device *dev, unsigned int reg)
+{
+	return false;
+}
+
 static const struct regmap_config tegra210_xbar_regmap_config = {
 	.reg_bits = 32,
 	.val_bits = 32,
 	.reg_stride = 4,
 	.max_register = TEGRA210_XBAR_PART2_RX + (TEGRA210_XBAR_RX_STRIDE *
 			(TEGRA210_XBAR_AUDIO_RX_COUNT - 1)),
+	.volatile_reg = tegra210_xbar_volatile_reg,
 	.cache_type = REGCACHE_FLAT,
 };
 
 static int tegra210_xbar_runtime_suspend(struct device *dev)
 {
-
 	regcache_cache_only(xbar->regmap, true);
 
 	clk_disable(xbar->clk);
@@ -71,9 +76,18 @@ static int tegra210_xbar_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(xbar->regmap, false);
+	regcache_sync(xbar->regmap);
 
 	return 0;
 }
+
+#ifdef CONFIG_PM_SLEEP
+static int tegra210_xbar_suspend(struct device *dev)
+{
+	regcache_mark_dirty(xbar->regmap);
+	return 0;
+}
+#endif
 
 static int tegra210_xbar_codec_probe(struct snd_soc_codec *codec)
 {
@@ -715,6 +729,7 @@ static struct snd_soc_codec_driver tegra210_xbar_codec = {
 	.dapm_routes = tegra210_xbar_routes,
 	.num_dapm_widgets = ARRAY_SIZE(tegra210_xbar_widgets),
 	.num_dapm_routes = ARRAY_SIZE(tegra210_xbar_routes),
+	.idle_bias_off = 1,
 };
 
 static const struct tegra210_xbar_soc_data soc_data_tegra210 = {
@@ -942,6 +957,7 @@ static int tegra210_xbar_remove(struct platform_device *pdev)
 static const struct dev_pm_ops tegra210_xbar_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra210_xbar_runtime_suspend,
 			   tegra210_xbar_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(tegra210_xbar_suspend, NULL)
 };
 
 static struct platform_driver tegra210_xbar_driver = {

@@ -652,8 +652,15 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 		of_property_for_each_string(np, "regulator-supplies",
 				prop, supply)
 		i2s->supplies[count++].supply = supply;
-	}
 
+		ret = devm_regulator_bulk_get(&pdev->dev, i2s->num_supplies,
+						  i2s->supplies);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"Failed to get supplies: %d\n", ret);
+			return ret;
+		}
+	}
 
 	i2s->pinctrl = devm_pinctrl_get(&pdev->dev);
 	if (IS_ERR(i2s->pinctrl)) {

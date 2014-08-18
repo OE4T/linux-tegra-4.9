@@ -361,6 +361,13 @@ static int tegra_hv_dt_parse(struct tegra_hv_data *hvd,
 
 	givci = &hvd->guest_ivc_info[target_guestid];
 
+	/*
+	 * Skip areas disabled by the hypervisor, regardless of whether they're
+	 * present in the device tree.
+	 */
+	if (!givci->shd)
+		return 0;
+
 	/* queues node must exist (on server or client both) */
 	qdn = of_get_child_by_name(dev->of_node, "queues");
 	if (qdn == NULL)
@@ -1520,6 +1527,13 @@ static int tegra_hv_prepare_to_instantiate(struct tegra_hv_data *hvd,
 		return -EINVAL;
 
 	givci = &hvd->guest_ivc_info[target_guestid];
+
+	/*
+	 * Skip areas disabled by the hypervisor, regardless of whether they're
+	 * present in the device tree.
+	 */
+	if (!givci->shd)
+		return 0;
 
 	/* non-valid guest on server just return */
 	if (givci->server && !givci->valid)

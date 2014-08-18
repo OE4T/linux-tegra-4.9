@@ -50,6 +50,14 @@
 #ifndef _hw_tsec_h_
 #define _hw_tsec_h_
 
+static inline u32 tsec_slcg_override_high_a_r(void)
+{
+	return 0x00000088;
+}
+static inline u32 tsec_slcg_override_low_a_r(void)
+{
+	return 0x0000008c;
+}
 static inline u32 tsec_irqsclr_r(void)
 {
 	return 0x1004;

@@ -408,9 +408,16 @@ void nvhost_flcn_deinit(struct platform_device *dev)
 
 int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+
 	nvhost_dbg_fn("");
 
 	nvhost_module_reset(pdev, false);
+
+	if (!pdata->can_slcg) {
+		host1x_writel(pdev, flcn_slcg_override_high_a_r(), 0xff);
+		host1x_writel(pdev, flcn_slcg_override_low_a_r(), 0xffffffff);
+	}
 
 	return nvhost_flcn_boot(pdev);
 }
@@ -552,11 +559,13 @@ struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(u32 syncpt,
 
 int nvhost_vic_finalize_poweron(struct platform_device *pdev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+
 	nvhost_dbg_fn("");
 
 	nvhost_module_reset(pdev, false);
 
-	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA21) {
+	if (!pdata->can_slcg) {
 		host1x_writel(pdev, flcn_slcg_override_high_a_r(), 0xff);
 		host1x_writel(pdev, flcn_slcg_override_low_a_r(), 0xffffffff);
 	} else {

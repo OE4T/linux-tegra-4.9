@@ -74,6 +74,14 @@ static inline u32 nvdec_irqmset_swgen1_set_f(void)
 {
 	return 0x80;
 }
+static inline u32 nvdec_slcg_override_high_a_r(void)
+{
+	return 0x00000088;
+}
+static inline u32 nvdec_slcg_override_low_a_r(void)
+{
+	return 0x0000008c;
+}
 static inline u32 nvdec_irqmset_ext_f(u32 v)
 {
 	return (v & 0xff) << 8;

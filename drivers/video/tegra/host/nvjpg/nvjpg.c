@@ -394,8 +394,17 @@ void nvhost_nvjpg_deinit(struct platform_device *dev)
 
 int nvhost_nvjpg_t210_finalize_poweron(struct platform_device *dev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
 	nvhost_module_reset(dev, false);
+
+	if (!pdata->can_slcg) {
+		host1x_writel(dev, nvjpg_slcg_override_high_a_r(), 0xff);
+		host1x_writel(dev, nvjpg_slcg_override_low_a_r(), 0xffffffff);
+	}
+
 	host1x_writel(dev, 0x117c, 0x18004);
+
 	return nvhost_nvjpg_finalize_poweron(dev);
 }
 

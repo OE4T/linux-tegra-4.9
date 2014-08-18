@@ -618,9 +618,17 @@ void nvhost_nvdec_deinit(struct platform_device *dev)
 
 int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
 	nvhost_module_reset(dev, false);
 
+	if (!pdata->can_slcg) {
+		host1x_writel(dev, nvdec_slcg_override_high_a_r(), 0xff);
+		host1x_writel(dev, nvdec_slcg_override_low_a_r(), 0xffffffff);
+	}
+
 	host1x_writel(dev, 0x117c, 0x18004);
+
 	host1x_writel(dev, 0x2314, 0x10940000);
 	host1x_writel(dev, 0x2318, 0xff00a725);
 	host1x_writel(dev, 0x2328, 0x0);

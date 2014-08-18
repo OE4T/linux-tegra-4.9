@@ -899,7 +899,15 @@ void nvhost_tsec_deinit(struct platform_device *dev)
 
 int nvhost_tsec_finalize_poweron(struct platform_device *dev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
 	nvhost_module_reset(dev, false);
+
+	if (!pdata->can_slcg) {
+		host1x_writel(dev, tsec_slcg_override_high_a_r(), 0xff);
+		host1x_writel(dev, tsec_slcg_override_low_a_r(), 0xffffffff);
+	}
+
 	return tsec_boot(dev);
 }
 

@@ -582,6 +582,8 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 					false);
 			g->ops.clock_gating.slcg_perf_load_gating_prod(g,
 					false);
+			g->ops.clock_gating.slcg_ltc_load_gating_prod(g,
+					false);
 			gr_gk20a_init_blcg_mode(g, BLCG_RUN, ENGINE_GR_GK20A);
 
 			g->elcg_enabled = false;

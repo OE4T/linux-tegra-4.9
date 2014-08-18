@@ -251,6 +251,19 @@ static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 	if (g->ops.fb.reset)
 		g->ops.fb.reset(g);
 
+	if (g->ops.clock_gating.slcg_fb_load_gating_prod)
+		g->ops.clock_gating.slcg_fb_load_gating_prod(g,
+				g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_ltc_load_gating_prod)
+		g->ops.clock_gating.slcg_ltc_load_gating_prod(g,
+				g->slcg_enabled);
+	if (g->ops.clock_gating.blcg_fb_load_gating_prod)
+		g->ops.clock_gating.blcg_fb_load_gating_prod(g,
+				g->blcg_enabled);
+	if (g->ops.clock_gating.blcg_ltc_load_gating_prod)
+		g->ops.clock_gating.blcg_ltc_load_gating_prod(g,
+				g->blcg_enabled);
+
 	if (g->ops.fb.init_fs_state)
 		g->ops.fb.init_fs_state(g);
 

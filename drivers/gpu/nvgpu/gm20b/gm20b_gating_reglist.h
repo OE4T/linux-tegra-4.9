@@ -21,17 +21,69 @@
 
 #include "gk20a/gk20a.h"
 
+void gm20b_slcg_bus_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_slcg_ce2_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_slcg_chiplet_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_slcg_ctxsw_firmware_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_slcg_fb_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_slcg_fifo_load_gating_prod(struct gk20a *g,
+	bool prod);
+
 void gr_gm20b_slcg_gr_load_gating_prod(struct gk20a *g,
 	bool prod);
 
-void gr_gm20b_slcg_perf_load_gating_prod(struct gk20a *g,
+void ltc_gm20b_slcg_ltc_load_gating_prod(struct gk20a *g,
 	bool prod);
 
-void gr_gm20b_blcg_gr_load_gating_prod(struct gk20a *g,
+void gm20b_slcg_perf_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_slcg_priring_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_slcg_pmu_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_slcg_therm_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_slcg_xbar_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_blcg_bus_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_blcg_ctxsw_firmware_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_blcg_fb_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_blcg_fifo_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_blcg_gr_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_blcg_ltc_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_blcg_pwr_csb_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_blcg_pmu_load_gating_prod(struct gk20a *g,
 	bool prod);
 
 void gr_gm20b_pg_gr_load_gating_prod(struct gk20a *g,
 	bool prod);
 
-void gr_gm20b_slcg_therm_load_gating_prod(struct gk20a *g,
-	bool prod);

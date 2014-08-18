@@ -94,7 +94,19 @@ static ssize_t blcg_enable_store(struct device *device,
 		g->blcg_enabled = false;
 
 	gk20a_busy(g->dev);
+	if (g->ops.clock_gating.blcg_bus_load_gating_prod)
+		g->ops.clock_gating.blcg_bus_load_gating_prod(g, g->blcg_enabled);
+	if (g->ops.clock_gating.blcg_ctxsw_firmware_load_gating_prod)
+		g->ops.clock_gating.blcg_ctxsw_firmware_load_gating_prod(g, g->blcg_enabled);
+	if (g->ops.clock_gating.blcg_fb_load_gating_prod)
+		g->ops.clock_gating.blcg_fb_load_gating_prod(g, g->blcg_enabled);
+	if (g->ops.clock_gating.blcg_fifo_load_gating_prod)
+		g->ops.clock_gating.blcg_fifo_load_gating_prod(g, g->blcg_enabled);
 	g->ops.clock_gating.blcg_gr_load_gating_prod(g, g->blcg_enabled);
+	if (g->ops.clock_gating.blcg_ltc_load_gating_prod)
+		g->ops.clock_gating.blcg_ltc_load_gating_prod(g, g->blcg_enabled);
+	if (g->ops.clock_gating.blcg_pmu_load_gating_prod)
+		g->ops.clock_gating.blcg_pmu_load_gating_prod(g, g->blcg_enabled);
 	gk20a_idle(g->dev);
 
 	dev_info(device, "BLCG is %s.\n", g->blcg_enabled ? "enabled" :
@@ -136,8 +148,28 @@ static ssize_t slcg_enable_store(struct device *device,
 	 * it is added to init, we should add it here too.
 	 */
 	gk20a_busy(g->dev);
+	if (g->ops.clock_gating.slcg_bus_load_gating_prod)
+		g->ops.clock_gating.slcg_bus_load_gating_prod(g, g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_ce2_load_gating_prod)
+		g->ops.clock_gating.slcg_ce2_load_gating_prod(g, g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_chiplet_load_gating_prod)
+		g->ops.clock_gating.slcg_chiplet_load_gating_prod(g, g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_ctxsw_firmware_load_gating_prod)
+		g->ops.clock_gating.slcg_ctxsw_firmware_load_gating_prod(g, g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_fb_load_gating_prod)
+		g->ops.clock_gating.slcg_fb_load_gating_prod(g, g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_fifo_load_gating_prod)
+		g->ops.clock_gating.slcg_fifo_load_gating_prod(g, g->slcg_enabled);
 	g->ops.clock_gating.slcg_gr_load_gating_prod(g, g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_ltc_load_gating_prod)
+		g->ops.clock_gating.slcg_ltc_load_gating_prod(g, g->slcg_enabled);
 	g->ops.clock_gating.slcg_perf_load_gating_prod(g, g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_priring_load_gating_prod)
+		g->ops.clock_gating.slcg_priring_load_gating_prod(g, g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_pmu_load_gating_prod)
+		g->ops.clock_gating.slcg_pmu_load_gating_prod(g, g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_xbar_load_gating_prod)
+		g->ops.clock_gating.slcg_xbar_load_gating_prod(g, g->slcg_enabled);
 	gk20a_idle(g->dev);
 
 	dev_info(device, "SLCG is %s.\n", g->slcg_enabled ? "enabled" :

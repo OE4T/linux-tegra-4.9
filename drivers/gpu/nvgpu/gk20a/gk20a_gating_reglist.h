@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/gk20a/gk20a_gating_reglist.h
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,9 @@ void gr_gk20a_slcg_gr_load_gating_prod(struct gk20a *g,
 	bool prod);
 
 void gr_gk20a_slcg_perf_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void ltc_gk20a_slcg_ltc_load_gating_prod(struct gk20a *g,
 	bool prod);
 
 void gr_gk20a_blcg_gr_load_gating_prod(struct gk20a *g,

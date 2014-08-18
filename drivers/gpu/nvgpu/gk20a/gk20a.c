@@ -907,6 +907,13 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 	gk20a_writel(g, mc_intr_en_0_r(),
 		mc_intr_en_0_inta_hardware_f());
 
+	if (g->ops.clock_gating.slcg_bus_load_gating_prod)
+		g->ops.clock_gating.slcg_bus_load_gating_prod(g,
+				g->slcg_enabled);
+	if (g->ops.clock_gating.blcg_bus_load_gating_prod)
+		g->ops.clock_gating.blcg_bus_load_gating_prod(g,
+				g->blcg_enabled);
+
 	if (!tegra_platform_is_silicon())
 		gk20a_writel(g, bus_intr_en_0_r(), 0x0);
 	else
@@ -914,6 +921,7 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 			        bus_intr_en_0_pri_squash_m() |
 			        bus_intr_en_0_pri_fecserr_m() |
 			        bus_intr_en_0_pri_timeout_m());
+
 	gk20a_reset_priv_ring(g);
 
 	gk20a_detect_chip(g);

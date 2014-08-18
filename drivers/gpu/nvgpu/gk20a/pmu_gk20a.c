@@ -1124,6 +1124,13 @@ static int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 		int retries = GR_IDLE_CHECK_MAX / GR_IDLE_CHECK_DEFAULT;
 		gk20a_enable(g, mc_enable_pwr_enabled_f());
 
+		if (g->ops.clock_gating.slcg_pmu_load_gating_prod)
+			g->ops.clock_gating.slcg_pmu_load_gating_prod(g,
+					g->slcg_enabled);
+		if (g->ops.clock_gating.blcg_pmu_load_gating_prod)
+			g->ops.clock_gating.blcg_pmu_load_gating_prod(g,
+					g->blcg_enabled);
+
 		do {
 			u32 w = gk20a_readl(g, pwr_falcon_dmactl_r()) &
 				(pwr_falcon_dmactl_dmem_scrubbing_m() |

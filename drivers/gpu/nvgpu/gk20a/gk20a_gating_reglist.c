@@ -311,6 +311,11 @@ void gr_gk20a_slcg_gr_load_gating_prod(struct gk20a *g,
 	}
 }
 
+void ltc_gk20a_slcg_ltc_load_gating_prod(struct gk20a *g,
+	bool prod)
+{
+}
+
 void gr_gk20a_slcg_perf_load_gating_prod(struct gk20a *g,
 	bool prod)
 {

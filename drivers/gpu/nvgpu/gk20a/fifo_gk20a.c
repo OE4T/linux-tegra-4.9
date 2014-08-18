@@ -385,6 +385,16 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	gk20a_reset(g, mc_enable_pfifo_enabled_f()
 			| mc_enable_ce2_enabled_f());
 
+	if (g->ops.clock_gating.slcg_ce2_load_gating_prod)
+		g->ops.clock_gating.slcg_ce2_load_gating_prod(g,
+				g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_fifo_load_gating_prod)
+		g->ops.clock_gating.slcg_fifo_load_gating_prod(g,
+				g->slcg_enabled);
+	if (g->ops.clock_gating.blcg_fifo_load_gating_prod)
+		g->ops.clock_gating.blcg_fifo_load_gating_prod(g,
+				g->blcg_enabled);
+
 	/* enable pbdma */
 	mask = 0;
 	for (i = 0; i < proj_host_num_pbdma_v(); ++i)

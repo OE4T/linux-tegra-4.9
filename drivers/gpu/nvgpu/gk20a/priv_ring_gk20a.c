@@ -39,6 +39,10 @@ void gk20a_reset_priv_ring(struct gk20a *g)
 
 	gk20a_reset(g, mc_enable_priv_ring_enabled_f());
 
+	if (g->ops.clock_gating.slcg_priring_load_gating_prod)
+		g->ops.clock_gating.slcg_priring_load_gating_prod(g,
+				g->slcg_enabled);
+
 	gk20a_writel(g,pri_ringmaster_command_r(),
 			0x4);
 

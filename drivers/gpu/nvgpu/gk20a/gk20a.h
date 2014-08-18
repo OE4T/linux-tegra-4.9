@@ -150,11 +150,28 @@ struct gpu_ops {
 		void (*init_kind_attr)(struct gk20a *g);
 	} fb;
 	struct {
+		void (*slcg_bus_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*slcg_ce2_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*slcg_chiplet_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*slcg_ctxsw_firmware_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*slcg_fb_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*slcg_fifo_load_gating_prod)(struct gk20a *g, bool prod);
 		void (*slcg_gr_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*slcg_ltc_load_gating_prod)(struct gk20a *g, bool prod);
 		void (*slcg_perf_load_gating_prod)(struct gk20a *g, bool prod);
-		void (*blcg_gr_load_gating_prod)(struct gk20a *g, bool prod);
-		void (*pg_gr_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*slcg_priring_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*slcg_pmu_load_gating_prod)(struct gk20a *g, bool prod);
 		void (*slcg_therm_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*slcg_xbar_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*blcg_bus_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*blcg_ctxsw_firmware_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*blcg_fb_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*blcg_fifo_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*blcg_gr_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*blcg_ltc_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*blcg_pwr_csb_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*blcg_pmu_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*pg_gr_load_gating_prod)(struct gk20a *g, bool prod);
 	} clock_gating;
 	struct {
 		void (*bind_channel)(struct channel_gk20a *ch_gk20a);

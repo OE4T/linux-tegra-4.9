@@ -1523,6 +1523,19 @@ struct device_node *parse_dp_settings(struct platform_device *ndev,
 	return np_dp_panel;
 }
 
+struct device_node *parse_lvds_settings(struct platform_device *ndev,
+	struct tegra_dc_platform_data *pdata)
+{
+	struct device_node *np_lvds_panel = NULL;
+
+	if (ndev->id == 0)
+		np_lvds_panel = tegra_primary_panel_get_dt_node(pdata);
+	else
+		np_lvds_panel = tegra_secondary_panel_get_dt_node(pdata);
+
+	return np_lvds_panel;
+}
+
 static int dc_hdmi_out_enable(struct device *dev)
 {
 	int ret;
@@ -1824,6 +1837,17 @@ struct tegra_dc_platform_data
 				dc_hdmi_hotplug_report;
 #endif
 		}
+	} else if (pdata->default_out->type == TEGRA_DC_OUT_LVDS) {
+		np_sor = of_find_node_by_path(SOR_NODE);
+
+		if (!np_sor) {
+			pr_err("%s: could not find sor node\n", __func__);
+			goto fail_parse;
+		} else if (of_device_is_available(np_sor)) {
+			np_target_disp = parse_lvds_settings(ndev, pdata);
+			if (!np_target_disp)
+				goto fail_parse;
+		}
 	}
 
 	default_out_np = of_get_child_by_name(np_target_disp,
@@ -1847,8 +1871,7 @@ struct tegra_dc_platform_data
 	timings_np = of_get_child_by_name(np_target_disp,
 		"display-timings");
 	if (!timings_np) {
-		if (pdata->default_out->type == TEGRA_DC_OUT_DSI ||
-			pdata->default_out->type == TEGRA_DC_OUT_LVDS) {
+		if (pdata->default_out->type == TEGRA_DC_OUT_DSI) {
 			pr_err("%s: could not find display-timings node\n",
 				__func__);
 			goto fail_parse;

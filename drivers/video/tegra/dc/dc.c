@@ -76,6 +76,7 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #ifdef CONFIG_FRAMEBUFFER_CONSOLE
 #include "hdmi.h"
 #endif /* CONFIG_FRAMEBUFFER_CONSOLE */
+#include "edid.h"
 
 #ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
 #include "fake_panel.h"
@@ -3605,6 +3606,14 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		}
 	}
 #endif /* CONFIG_FRAMEBUFFER_CONSOLE */
+
+	if ((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
+			dc->out && dc->out->type == TEGRA_DC_OUT_LVDS) {
+		struct fb_monspecs specs;
+		struct tegra_dc_lvds_data *lvds = tegra_dc_get_outdata(dc);
+		if (!tegra_edid_get_monspecs(lvds->edid, &specs))
+			tegra_dc_set_fb_mode(dc, specs.modedb, false);
+	}
 
 #ifndef CONFIG_TEGRA_ISOMGR
 		/*

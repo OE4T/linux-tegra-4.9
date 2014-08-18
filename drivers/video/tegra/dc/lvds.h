@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/lvds.h
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -22,6 +22,7 @@
 
 struct tegra_dc_lvds_data {
 	struct tegra_dc			*dc;
+	struct tegra_edid		*edid;
 	struct tegra_dc_sor_data	*sor;
 
 	bool   suspended;

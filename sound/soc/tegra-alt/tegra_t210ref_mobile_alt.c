@@ -585,7 +585,7 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 
 
 	if (gpio_is_valid(pdata->gpio_ldo1_en)) {
-		ret = gpio_request(pdata->gpio_ldo1_en, "rt5639");
+		ret = gpio_request(pdata->gpio_ldo1_en, "audio_ldo1");
 		if (ret)
 			dev_err(&pdev->dev, "Fail gpio_request AUDIO_LDO1\n");
 		else {
@@ -646,6 +646,12 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 
 	machine->pdata = pdata;
 	machine->pcard = card;
+
+	ret = tegra_alt_asoc_utils_init(&machine->audio_clock,
+					&pdev->dev,
+					card);
+	if (ret)
+		goto err_alloc_dai_link;
 
 	ret = snd_soc_register_card(card);
 	if (ret) {

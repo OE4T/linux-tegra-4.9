@@ -80,7 +80,7 @@
 			status = "okay";
 			reg = <1>;
 			compatible = "regulator-pwm";
-			pwms = <&tegra_pwm 0 4880>;
+			pwms = <&tegra_pwm 1 4880>;
 			regulator-name = "vdd_gpu";
 			regulator-min-microvolt = <710000>;
 			regulator-max-microvolt = <1320000>;

@@ -279,7 +279,12 @@ void gk20a_tegra_calibrate_emc(struct platform_device *pdev,
 
 static bool gk20a_tegra_is_railgated(struct platform_device *pdev)
 {
-	return !tegra_powergate_is_powered(TEGRA_POWERGATE_GPU);
+	bool ret = false;
+
+	if (!tegra_platform_is_linsim())
+		ret = !tegra_powergate_is_powered(TEGRA_POWERGATE_GPU);
+
+	return ret;
 }
 
 /*
@@ -290,7 +295,8 @@ static bool gk20a_tegra_is_railgated(struct platform_device *pdev)
 
 static int gk20a_tegra_railgate(struct platform_device *pdev)
 {
-	if (tegra_powergate_is_powered(TEGRA_POWERGATE_GPU))
+	if (!tegra_platform_is_linsim() &&
+	    tegra_powergate_is_powered(TEGRA_POWERGATE_GPU))
 		tegra_powergate_partition(TEGRA_POWERGATE_GPU);
 	return 0;
 }
@@ -303,8 +309,9 @@ static int gk20a_tegra_railgate(struct platform_device *pdev)
 
 static int gk20a_tegra_unrailgate(struct platform_device *pdev)
 {
-	int ret;
-	ret = tegra_unpowergate_partition(TEGRA_POWERGATE_GPU);
+	int ret = 0;
+	if (!tegra_platform_is_linsim())
+		ret = tegra_unpowergate_partition(TEGRA_POWERGATE_GPU);
 	return ret;
 }
 

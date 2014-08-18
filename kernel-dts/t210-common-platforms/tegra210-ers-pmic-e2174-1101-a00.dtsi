@@ -199,6 +199,10 @@
 							regulator-consumer-supply = "avdd_pll_utmip";
 							regulator-consumer-device = "tegra-ehci.2";
 						};
+						c10 {
+							regulator-consumer-supply = "avdd_pll_utmip";
+							regulator-consumer-device = "tegra-xudc";
+						};
 						c11 {
 							regulator-consumer-supply = "vddio_audio";
 						};
@@ -246,6 +250,12 @@
 					regulator-min-microvolt = <1050000>;
 					regulator-max-microvolt = <1050000>;
 					maxim,fps-source = <FPS_SRC_NONE>;
+					consumers {
+						c0 {
+							regulator-consumer-supply = "avddio_usb";
+							regulator-consumer-device = "tegra-xudc";
+						};
+					};
 				};
 
 				max77620_ldo2: ldo2 {

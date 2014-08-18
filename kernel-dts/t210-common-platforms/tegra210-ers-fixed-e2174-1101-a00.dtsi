@@ -56,6 +56,10 @@
 					regulator-consumer-supply = "avdd_usb";
 					regulator-consumer-device = "tegra-ehci.2";
 				};
+				c4 {
+					regulator-consumer-supply = "hvdd_usb";
+					regulator-consumer-device = "tegra-xudc";
+				};
 				c5 {
 					regulator-consumer-supply = "vdd";
 					regulator-consumer-device = "1-004d";

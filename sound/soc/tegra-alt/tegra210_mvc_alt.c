@@ -59,9 +59,20 @@ static int tegra210_mvc_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(mvc->regmap, false);
+	regcache_sync(mvc->regmap);
 
 	return 0;
 }
+
+#ifdef CONFIG_PM_SLEEP
+static int tegra210_mvc_suspend(struct device *dev)
+{
+	struct tegra210_mvc *mvc = dev_get_drvdata(dev);
+
+	regcache_mark_dirty(mvc->regmap);
+	return 0;
+}
+#endif
 
 static int tegra210_mvc_write_ram(struct tegra210_mvc *mvc,
 				unsigned int addr,
@@ -289,6 +300,7 @@ static struct snd_soc_codec_driver tegra210_mvc_codec = {
 	.num_dapm_routes = ARRAY_SIZE(tegra210_mvc_routes),
 	.controls = tegra210_mvc_vol_ctrl,
 	.num_controls = ARRAY_SIZE(tegra210_mvc_vol_ctrl),
+	.idle_bias_off = 1,
 };
 
 static bool tegra210_mvc_wr_rd_reg(struct device *dev, unsigned int reg)
@@ -501,6 +513,7 @@ static int tegra210_mvc_platform_remove(struct platform_device *pdev)
 static const struct dev_pm_ops tegra210_mvc_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra210_mvc_runtime_suspend,
 			   tegra210_mvc_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(tegra210_mvc_suspend, NULL)
 };
 
 static struct platform_driver tegra210_mvc_driver = {

@@ -667,6 +667,8 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_switch_unregister;
 
+	card->dapm.idle_bias_off = 1;
+
 	ret = snd_soc_register_card(card);
 	if (ret) {
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n",

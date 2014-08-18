@@ -259,10 +259,22 @@ static int tegra210_i2s_runtime_resume(struct device *dev)
 		dev_err(dev, "clk_enable failed: %d\n", ret);
 		return ret;
 	}
+
 	regcache_cache_only(i2s->regmap, false);
+	regcache_sync(i2s->regmap);
 
 	return 0;
 }
+
+#ifdef CONFIG_PM_SLEEP
+static int tegra210_i2s_suspend(struct device *dev)
+{
+	struct tegra210_i2s *i2s = dev_get_drvdata(dev);
+
+	regcache_mark_dirty(i2s->regmap);
+	return 0;
+}
+#endif
 
 static int tegra210_i2s_set_fmt(struct snd_soc_dai *dai,
 				unsigned int fmt)
@@ -630,6 +642,7 @@ static struct snd_soc_codec_driver tegra210_i2s_codec = {
 	.num_dapm_routes = ARRAY_SIZE(tegra210_i2s_routes),
 	.controls = tegra210_i2s_controls,
 	.num_controls = ARRAY_SIZE(tegra210_i2s_controls),
+	.idle_bias_off = 1,
 };
 
 static bool tegra210_i2s_wr_reg(struct device *dev, unsigned int reg)
@@ -962,6 +975,7 @@ static int tegra210_i2s_platform_remove(struct platform_device *pdev)
 static const struct dev_pm_ops tegra210_i2s_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra210_i2s_runtime_suspend,
 			   tegra210_i2s_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(tegra210_i2s_suspend, NULL)
 };
 
 static struct platform_driver tegra210_i2s_driver = {

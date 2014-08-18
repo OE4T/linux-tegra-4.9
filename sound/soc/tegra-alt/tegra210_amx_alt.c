@@ -278,9 +278,20 @@ static int tegra210_amx_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(amx->regmap, false);
+	regcache_sync(amx->regmap);
 
 	return 0;
 }
+
+#ifdef CONFIG_PM_SLEEP
+static int tegra210_amx_suspend(struct device *dev)
+{
+	struct tegra210_amx *amx = dev_get_drvdata(dev);
+
+	regcache_mark_dirty(amx->regmap);
+	return 0;
+}
+#endif
 
 static int tegra210_amx_set_audio_cif(struct tegra210_amx *amx,
 				struct snd_pcm_hw_params *params,
@@ -525,6 +536,7 @@ static struct snd_soc_codec_driver tegra210_amx_codec = {
 	.num_dapm_widgets = ARRAY_SIZE(tegra210_amx_widgets),
 	.dapm_routes = tegra210_amx_routes,
 	.num_dapm_routes = ARRAY_SIZE(tegra210_amx_routes),
+	.idle_bias_off = 1,
 };
 
 static bool tegra210_amx_wr_reg(struct device *dev,
@@ -744,6 +756,7 @@ static int tegra210_amx_platform_remove(struct platform_device *pdev)
 static const struct dev_pm_ops tegra210_amx_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra210_amx_runtime_suspend,
 			   tegra210_amx_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(tegra210_amx_suspend, NULL)
 };
 
 static struct platform_driver tegra210_amx_driver = {

@@ -49,11 +49,7 @@ static DEFINE_MUTEX(la_lock);
 #define T12_CSI_CSICIL_SW_SENSOR_B_RESET 0x980
 #define T12_VI_CSI_1_CSI_IMAGE_DT 0x220
 
-/*
- * MAX_BW = max(VI clock) * 2BPP, in KBps.
- * Here default max VI clock is 420MHz.
- */
-#define VI_DEFAULT_MAX_BW	840000
+#define VI_MAX_BPP 2
 
 #ifdef TEGRA_12X_OR_HIGHER_CONFIG
 
@@ -105,15 +101,26 @@ fail:
 static int vi_isomgr_register(struct vi *tegra_vi)
 {
 	int iso_client_id = TEGRA_ISO_CLIENT_VI_0;
+	struct clk *vi_clk;
+	unsigned long max_bw = 0;
+	struct nvhost_device_data *pdata =
+				platform_get_drvdata(tegra_vi->ndev);
 
 	dev_dbg(&tegra_vi->ndev->dev, "%s++\n", __func__);
+
+	if (WARN_ONCE(pdata == NULL, "pdata not found, %s failed\n", __func__))
+		return -ENODEV;
 
 	if (tegra_vi->ndev->id)
 		iso_client_id = TEGRA_ISO_CLIENT_VI_1;
 
+	/* Get max VI BW */
+	vi_clk = pdata->clk[0];
+	max_bw = (clk_round_rate(vi_clk, UINT_MAX) / 1000) * VI_MAX_BPP;
+
 	/* Register with max possible BW in VI usecases.*/
 	tegra_vi->isomgr_handle = tegra_isomgr_register(iso_client_id,
-					VI_DEFAULT_MAX_BW,
+					max_bw,
 					NULL,	/* tegra_isomgr_renegotiate */
 					NULL);	/* *priv */
 

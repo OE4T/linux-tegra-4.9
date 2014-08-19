@@ -311,7 +311,7 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 
 		if (type == NVHOST_BW)
 			bw_constraint += constraint;
-		if (type == NVHOST_PIXELRATE)
+		else if (type == NVHOST_PIXELRATE)
 			pixelrate += constraint;
 		else
 			floor_rate = max(floor_rate, constraint);
@@ -324,8 +324,9 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 
 	/* if frequency is not available, use default policy */
 	if (!rate) {
-		unsigned long bw_rate = nvhost_emc_bw_to_freq_req(rate);
-		rate = max(floor_rate, bw_rate);
+		unsigned long bw_freq_khz =
+			nvhost_emc_bw_to_freq_req(bw_constraint);
+		rate = max(floor_rate, bw_freq_khz << 10);
 	}
 
 	/* take devfreq rate into account */

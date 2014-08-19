@@ -180,3 +180,62 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 
 	return 0;
 }
+
+
+/* detach window idx from current head */
+int tegra_nvdisp_detach_win(struct tegra_dc *dc, unsigned idx)
+{
+	struct tegra_dc_win *win = tegra_dc_get_window(dc, idx);
+
+	if (!win || win->dc != dc) {
+		dev_err(&dc->ndev->dev,
+			"%s: window %d does not belong to head %d\n",
+			__func__, idx, dc->ctrl_num);
+		return -EINVAL;
+	}
+
+	mutex_lock(&tegra_nvdisp_lock);
+
+	/* detach window idx */
+	nvdisp_win_write(win,
+		SET_CONTROL_NONE,
+		WIN_CORE_WINDOWGROUP_SET_CONTROL);
+
+
+	dc->valid_windows &= ~(0x1 << idx);
+	win->dc = NULL;
+	mutex_unlock(&tegra_nvdisp_lock);
+	return 0;
+}
+
+
+/* Assign window idx to head dc */
+int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
+{
+	struct tegra_dc_win *win = tegra_dc_get_window(dc, idx);
+
+	if (win && win->dc == dc) /* already assigned to current head */
+		return 0;
+
+	mutex_lock(&tegra_nvdisp_lock);
+	dc->valid_windows |= 0x1 << idx;
+
+	win = tegra_dc_get_window(dc, idx);
+
+	if (win->dc) {		/* window is owned by another head */
+		dev_err(&dc->ndev->dev,
+			"%s: cannot assign win %d to head %d, it owned by %d\n",
+			__func__, idx, dc->ctrl_num, win->dc->ctrl_num);
+		dc->valid_windows &= ~(0x1 << idx);
+		mutex_unlock(&tegra_nvdisp_lock);
+		return -EINVAL;
+	}
+
+	win->dc = dc;
+
+	/* attach window idx */
+	nvdisp_win_write(win, dc->ctrl_num, WIN_CORE_WINDOWGROUP_SET_CONTROL);
+
+	mutex_unlock(&tegra_nvdisp_lock);
+	return 0;
+}

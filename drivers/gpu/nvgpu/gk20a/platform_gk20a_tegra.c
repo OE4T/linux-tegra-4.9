@@ -235,7 +235,7 @@ static void gk20a_tegra_prescale(struct platform_device *pdev)
 	u32 avg = 0;
 
 	gk20a_pmu_load_norm(g, &avg);
-	tegra_edp_notify_gpu_load(avg);
+	tegra_edp_notify_gpu_load(avg, gk20a_clk_get_rate(g));
 }
 
 /*
@@ -460,7 +460,7 @@ static int gk20a_tegra_late_probe(struct platform_device *dev)
 
 static int gk20a_tegra_suspend(struct device *dev)
 {
-	tegra_edp_notify_gpu_load(0);
+	tegra_edp_notify_gpu_load(0, 0);
 	return 0;
 }
 

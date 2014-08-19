@@ -33,6 +33,8 @@
 #include "comm.h"
 #include "version.h"
 
+#define QUADD_DATA_BUFF_SIZE	(PAGE_SIZE * 8)
+
 struct quadd_comm_ctx comm_ctx;
 
 static inline void *rb_alloc(unsigned long size)
@@ -139,7 +141,8 @@ rb_write(struct quadd_ring_buffer *rb, char *data, size_t length)
 	return length;
 }
 
-static ssize_t rb_read_undo(struct quadd_ring_buffer *rb, size_t length)
+static ssize_t
+rb_read_undo(struct quadd_ring_buffer *rb, size_t length)
 {
 	if (rb_get_free_space(rb) < length)
 		return -EIO;
@@ -153,9 +156,10 @@ static ssize_t rb_read_undo(struct quadd_ring_buffer *rb, size_t length)
 	return length;
 }
 
-static size_t rb_read(struct quadd_ring_buffer *rb, char *data, size_t length)
+static ssize_t
+rb_read(struct quadd_ring_buffer *rb, char *data, size_t length)
 {
-	unsigned int new_pos_read, chunk1;
+	size_t new_pos_read, chunk1;
 
 	if (length > rb->fill_count)
 		return 0;
@@ -177,7 +181,7 @@ static size_t rb_read(struct quadd_ring_buffer *rb, char *data, size_t length)
 	return length;
 }
 
-static ssize_t
+static ssize_t __maybe_unused
 rb_read_user(struct quadd_ring_buffer *rb, char __user *data, size_t length)
 {
 	size_t new_pos_read, chunk1;
@@ -250,7 +254,7 @@ write_sample(struct quadd_record_data *sample,
 	wake_up_interruptible(&comm_ctx.read_wait);
 }
 
-static ssize_t read_sample(char __user *buffer, size_t max_length)
+static ssize_t read_sample(char *buffer, size_t max_length)
 {
 	u32 sed;
 	unsigned int type;
@@ -272,7 +276,8 @@ static ssize_t read_sample(char __user *buffer, size_t max_length)
 	if (rb->fill_count < sizeof(record))
 		goto out;
 
-	if (!rb_read(rb, (char *)&record, sizeof(record)))
+	retval = rb_read(rb, (char *)&record, sizeof(record));
+	if (retval <= 0)
 		goto out;
 
 	was_read += sizeof(record);
@@ -286,7 +291,8 @@ static ssize_t read_sample(char __user *buffer, size_t max_length)
 		if (rb->fill_count < sizeof(sed))
 			goto out;
 
-		if (!rb_read(rb, (char *)&sed, sizeof(sed)))
+		retval = rb_read(rb, (char *)&sed, sizeof(sed));
+		if (retval <= 0)
 			goto out;
 
 		was_read += sizeof(sed);
@@ -358,21 +364,18 @@ static ssize_t read_sample(char __user *buffer, size_t max_length)
 	if (length_extra > rb->fill_count)
 		goto out;
 
-	if (copy_to_user(buffer, &record, sizeof(record)))
-		goto out_fault_error;
+	memcpy(buffer, &record, sizeof(record));
 
 	write_offset += sizeof(record);
 
 	if (type == QUADD_RECORD_TYPE_SAMPLE) {
-		if (copy_to_user(buffer + write_offset, &sed, sizeof(sed)))
-			goto out_fault_error;
-
+		memcpy(buffer + write_offset, &sed, sizeof(sed));
 		write_offset += sizeof(sed);
 	}
 
 	if (length_extra > 0) {
-		retval = rb_read_user(rb, buffer + write_offset,
-				      length_extra);
+		retval = rb_read(rb, buffer + write_offset,
+				 length_extra);
 		if (retval <= 0)
 			goto out;
 
@@ -382,11 +385,28 @@ static ssize_t read_sample(char __user *buffer, size_t max_length)
 	spin_unlock_irqrestore(&rb->lock, flags);
 	return write_offset;
 
-out_fault_error:
-	retval = -EFAULT;
-
 out:
 	spin_unlock_irqrestore(&rb->lock, flags);
+	return retval;
+}
+
+static ssize_t
+__read_sample(char __user *buffer, size_t max_length)
+{
+	ssize_t retval;
+	char *tmp_buf = comm_ctx.tmp_buf;
+
+	max_length = min_t(size_t, max_length, QUADD_DATA_BUFF_SIZE);
+
+	retval = read_sample(tmp_buf, max_length);
+	if (retval <= 0)
+		return retval;
+
+	if (copy_to_user(buffer, tmp_buf, retval)) {
+		pr_err("%s: error: copy_to_user\n", __func__);
+		return -EFAULT;
+	}
+
 	return retval;
 }
 
@@ -526,10 +546,11 @@ device_read(struct file *filp,
 	min_size = sizeof(struct quadd_record_data) + sizeof(u32);
 
 	while (was_read + min_size < length) {
-		res = read_sample(buffer + was_read, length - was_read);
+		res = __read_sample(buffer + was_read, length - was_read);
 		if (res < 0) {
 			mutex_unlock(&comm_ctx.io_mutex);
-			pr_err("Error: data is corrupted\n");
+			pr_err("%s: error: data is corrupted (%zd)\n",
+				__func__, res);
 			return res;
 		}
 
@@ -684,6 +705,15 @@ device_ioctl(struct file *file,
 				goto error_out;
 			}
 
+			comm_ctx.tmp_buf = kzalloc(QUADD_DATA_BUFF_SIZE,
+						GFP_KERNEL);
+			if (!comm_ctx.tmp_buf) {
+				pr_err("%s: error: alloc failed\n", __func__);
+				atomic_set(&comm_ctx.active, 0);
+				err = -ENOMEM;
+				goto error_out;
+			}
+
 			err = comm_ctx.control->start();
 			if (err) {
 				pr_err("error: start failed\n");
@@ -699,6 +729,10 @@ device_ioctl(struct file *file,
 			comm_ctx.control->stop();
 			wake_up_interruptible(&comm_ctx.read_wait);
 			rb_deinit(&comm_ctx.rb);
+
+			kfree(comm_ctx.tmp_buf);
+			comm_ctx.tmp_buf = NULL;
+
 			pr_info("Stop profiling success\n");
 		}
 		break;
@@ -870,6 +904,9 @@ static void unregister(void)
 static void free_ctx(void)
 {
 	rb_deinit(&comm_ctx.rb);
+
+	kfree(comm_ctx.tmp_buf);
+	comm_ctx.tmp_buf = NULL;
 }
 
 static const struct file_operations qm_fops = {
@@ -911,6 +948,7 @@ static int comm_init(void)
 	comm_ctx.params_ok = 0;
 	comm_ctx.process_pid = 0;
 	comm_ctx.nr_users = 0;
+	comm_ctx.tmp_buf = NULL;
 
 	init_waitqueue_head(&comm_ctx.read_wait);
 

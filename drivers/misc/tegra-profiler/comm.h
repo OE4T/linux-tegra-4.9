@@ -91,6 +91,8 @@ struct quadd_comm_ctx {
 
 	struct list_head ext_mmaps;
 	spinlock_t mmaps_lock;
+
+	char *tmp_buf;
 };
 
 struct quadd_comm_data_interface *

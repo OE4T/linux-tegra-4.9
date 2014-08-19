@@ -31,6 +31,7 @@
 		vddio_sdmmc-supply = <&max77620_sd3>;
 		vddio_sd_slot-supply = <&vdd_3v3>;
 		nvidia,dll-calib-needed;
+		pll_source = "pll_p";
 	};
 
 	sdhci@700b0400 {
@@ -52,6 +53,7 @@
 		pinctrl-1 = <&sdmmc3_schmitt_disable_state>;
 		pinctrl-2 = <&sdmmc3_clk_schmitt_enable_state>;
 		pinctrl-3 = <&sdmmc3_clk_schmitt_disable_state>;
+		pll_source = "pll_p";
 	};
 
 	sdhci@700b0200 {
@@ -66,6 +68,7 @@
 		vddio_sdmmc-supply = <&max77620_sd3>;
 		vddio_sd_slot-supply = <&vdd_3v3>;
 		default-drive-type = <1>;
+		pll_source = "pll_p";
 	};
 
 	sdhci@700b0000 {
@@ -87,5 +90,6 @@
 		pinctrl-1 = <&sdmmc1_schmitt_disable_state>;
 		pinctrl-2 = <&sdmmc1_clk_schmitt_enable_state>;
 		pinctrl-3 = <&sdmmc1_clk_schmitt_disable_state>;
+		pll_source = "pll_p";
 	};
 };

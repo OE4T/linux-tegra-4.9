@@ -699,12 +699,13 @@ static int nct1008_shutdown_warning_set_cur_state(
 
 	if ((temp >= (limit - THERM_WARN_RANGE_HIGH_OFFSET)) &&
 		(temp != temp_sav)) {
-		pr_warn("NCT%s: Warning: Temperature (%ld.%02ldC) is %s SHUTDOWN (%c)\n",
+		pr_warn("NCT%s: Warning: chip temperature (%ld.%02ldC) is %s SHUTDOWN limit (%c%ld.%02ldC).\n",
 			(data->chip == NCT72) ? "72" : "1008",
 			temp / 1000, (temp % 1000) / 10,
 			temp > limit ? "above" :
 			temp == limit ? "at" : "near",
-			temp > temp_sav ? '^' : 'v');
+			temp > temp_sav ? '>' : '<',
+			limit / 1000, (limit % 1000) / 10);
 		temp_sav = temp;
 	}
 	return 0;
@@ -1249,7 +1250,7 @@ static void nct1008_setup_shutdown_warning(struct nct1008_data *data)
 		}
 	}
 
-	pr_debug("NCT%s: Enabled overheat logging at %ld.%02ldC\n",
+	pr_info("NCT%s: Enabled overheat logging at %ld.%02ldC\n",
 			(data->chip == NCT72) ? "72" : "1008",
 			warn_temp / 1000, (warn_temp % 1000) / 10);
 }

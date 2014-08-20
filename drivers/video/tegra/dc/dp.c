@@ -60,6 +60,10 @@ static bool tegra_dp_channel_eq_status(struct tegra_dc_dp_data *dp);
 static void tegra_dp_set_tx_pu(struct tegra_dc_dp_data *dp,
 				u32 pe[4], u32 vs[4], u32 pc[4]);
 static int tegra_dp_full_lt(struct tegra_dc_dp_data *dp);
+static bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
+	const struct tegra_dc_mode *mode,
+	struct tegra_dc_dp_link_config *cfg);
+
 
 static inline u32 tegra_dpaux_readl(struct tegra_dc_dp_data *dp, u32 reg)
 {
@@ -714,7 +718,6 @@ static inline u64 tegra_div64(u64 dividend, u32 divisor)
 	return dividend;
 }
 
-
 #ifdef CONFIG_DEBUG_FS
 static int dbg_dp_show(struct seq_file *s, void *unused)
 {
@@ -755,6 +758,138 @@ static const struct file_operations dbg_fops = {
 	.release	= single_release,
 };
 
+static int lane_count_show(struct seq_file *s, void *unused)
+{
+	struct tegra_dc_dp_data *dp = s->private;
+	struct tegra_dc_dp_link_config *cfg = &dp->link_cfg;
+
+	seq_puts(s, "\n");
+	seq_printf(s,
+		"\tDP Lane_Count: \t%d\n",
+		cfg->lane_count);
+	return 0;
+}
+
+static ssize_t lane_count_set(struct file *file, const char  *buf,
+						size_t count, loff_t *off)
+{
+	struct seq_file *s = file->private_data;
+	struct tegra_dc_dp_data *dp = s->private;
+	struct tegra_dc_dp_link_config *cfg = &dp->link_cfg;
+	long lane_count = 0;
+	int ret = 0;
+
+	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP)
+		return -EINVAL;
+
+	ret = kstrtol_from_user(buf, count, 10, &lane_count);
+	if (ret < 0)
+		return ret;
+
+	if (cfg->lane_count == lane_count)
+		return -EINVAL;
+
+	/* disable the dc and output controllers */
+	if (dp->dc->enabled)
+		tegra_dc_disable(dp->dc);
+
+	dev_info(&dp->dc->ndev->dev, "Setting the lanecount from %d to %ld\n",
+			cfg->lane_count, lane_count);
+
+	cfg->lane_count = lane_count;
+
+	/* check if needed or not for validity purpose */
+	ret = tegra_dc_dp_calc_config(dp, dp->mode, cfg);
+	if (!ret)
+		dev_info(&dp->dc->ndev->dev,
+			"Unable to set lane_count properly\n");
+
+	/* disable the dc and output controllers */
+	if (!dp->dc->enabled)
+		tegra_dc_enable(dp->dc);
+
+	return count;
+}
+
+static int lane_count_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, lane_count_show, inode->i_private);
+}
+
+static const struct file_operations lane_count_fops = {
+	.open		= lane_count_open,
+	.read		= seq_read,
+	.write		= lane_count_set,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int link_speed_show(struct seq_file *s, void *unused)
+{
+	struct tegra_dc_dp_data *dp = s->private;
+	struct tegra_dc_dp_link_config *cfg = &dp->link_cfg;
+
+	seq_puts(s, "\n");
+	seq_printf(s,
+		"\tDP Link Speed: \t%d\n",
+		cfg->link_bw);
+	return 0;
+}
+
+static ssize_t link_speed_set(struct file *file, const char  *buf,
+						size_t count, loff_t *off)
+{
+	struct seq_file *s = file->private_data;
+	struct tegra_dc_dp_data *dp = s->private;
+	struct tegra_dc_dp_link_config *cfg = &dp->link_cfg;
+	long link_speed = 0;
+	int ret = 0;
+
+	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP)
+		return -EINVAL;
+
+	ret = kstrtol_from_user(buf, count, 10, &link_speed);
+	if (ret < 0)
+		return ret;
+
+	if (cfg->link_bw == link_speed)
+		return -EINVAL;
+
+	/* disable the dc and output controllers */
+	if (dp->dc->enabled)
+		tegra_dc_disable(dp->dc);
+
+	dev_info(&dp->dc->ndev->dev, "Setting the linkspeed from %d to %ld\n",
+			cfg->link_bw, link_speed);
+
+	cfg->link_bw = link_speed;
+
+	/* check if needed or not for validity purpose */
+	ret = tegra_dc_dp_calc_config(dp, dp->mode, cfg);
+	if (!ret)
+		dev_info(&dp->dc->ndev->dev,
+			"Unable to set linkspeed properly\n");
+
+	/* disable the dc and output controllers */
+	if (!dp->dc->enabled)
+		tegra_dc_enable(dp->dc);
+
+	return count;
+}
+
+static int link_speed_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, link_speed_show, inode->i_private);
+}
+
+static const struct file_operations link_speed_fops = {
+	.open		= link_speed_open,
+	.read		= seq_read,
+	.write		= link_speed_set,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static struct dentry *dpdir;
 
 static void tegra_dc_dp_debug_create(struct tegra_dc_dp_data *dp)
@@ -767,6 +902,15 @@ static void tegra_dc_dp_debug_create(struct tegra_dc_dp_data *dp)
 	retval = debugfs_create_file("regs", S_IRUGO, dpdir, dp, &dbg_fops);
 	if (!retval)
 		goto free_out;
+	retval = debugfs_create_file("lanes", S_IRUGO, dpdir, dp,
+		&lane_count_fops);
+	if (!retval)
+		goto free_out;
+	retval = debugfs_create_file("linkspeed", S_IRUGO, dpdir, dp,
+		&link_speed_fops);
+	if (!retval)
+		goto free_out;
+
 	return;
 free_out:
 	debugfs_remove_recursive(dpdir);

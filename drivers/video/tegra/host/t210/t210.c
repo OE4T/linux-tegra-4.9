@@ -102,7 +102,8 @@ struct nvhost_device_data t21_ispb_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.clocks			= {{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP }},
+	.clocks			= {{ "isp", UINT_MAX, 0,
+					TEGRA_MC_CLIENT_ISPB } },
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,

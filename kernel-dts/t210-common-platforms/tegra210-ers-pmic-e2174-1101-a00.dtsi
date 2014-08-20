@@ -210,7 +210,7 @@
 						};
 						c18 {
 							regulator-consumer-supply = "vdd";
-							regulator-consumer-device = "0-004c";
+							regulator-consumer-device = "2-004c";
 						};
 					};
 				};

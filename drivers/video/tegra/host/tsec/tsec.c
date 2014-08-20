@@ -423,10 +423,16 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 	u32 *cpuvaddr = NULL;
 	dma_addr_t dma_handle = 0;
 	DEFINE_DMA_ATTRS(attrs);
+
 	cpuvaddr = dma_alloc_attrs(&tsec->dev, HDCP_MTHD_BUF_SIZE,
 			&dma_handle, GFP_KERNEL,
 			&attrs);
+	if (!cpuvaddr) {
+		nvhost_err(&tsec->dev, "Failed to allocate memory\n");
+		return;
+	}
 	memset(cpuvaddr, 0x0, HDCP_MTHD_BUF_SIZE);
+
 	tsec_write_mthd(&cpuvaddr[opcode_len],
 		SET_APPLICATION_ID,
 		SET_APPLICATION_ID_ID_HDCP,
@@ -475,10 +481,9 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 			&opcode_len);
 	tsec_execute_method(dma_handle, cpuvaddr, opcode_len);
 
-	if (cpuvaddr)
-		dma_free_attrs(&tsec->dev,
-			HDCP_MTHD_BUF_SIZE, cpuvaddr,
-			dma_handle, &attrs);
+	dma_free_attrs(&tsec->dev,
+		HDCP_MTHD_BUF_SIZE, cpuvaddr,
+		dma_handle, &attrs);
 }
 
 

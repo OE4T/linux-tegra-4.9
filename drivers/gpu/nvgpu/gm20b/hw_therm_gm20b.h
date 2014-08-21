@@ -90,23 +90,23 @@ static inline u32 therm_peakpower_config1_window_en_enabled_f(void)
 {
 	return 0x80000000;
 }
-static inline u32 therm_peakpower_config1_r(u32 i)
+static inline u32 therm_peakpower_config8_r(u32 i)
 {
 	return 0x000202e8 + i*4;
 }
-static inline u32 therm_peakpower_config1_ba_sum_shift_s(void)
+static inline u32 therm_peakpower_config8_ba_sum_shift_s(void)
 {
 	return 5;
 }
-static inline u32 therm_peakpower_config1_ba_sum_shift_f(u32 v)
+static inline u32 therm_peakpower_config8_ba_sum_shift_f(u32 v)
 {
 	return (v & 0x1f) << 8;
 }
-static inline u32 therm_peakpower_config1_ba_sum_shift_m(void)
+static inline u32 therm_peakpower_config8_ba_sum_shift_m(void)
 {
 	return 0x1f << 8;
 }
-static inline u32 therm_peakpower_config1_ba_sum_shift_v(u32 r)
+static inline u32 therm_peakpower_config8_ba_sum_shift_v(u32 r)
 {
 	return (r >> 8) & 0x1f;
 }
@@ -121,10 +121,6 @@ static inline u32 therm_peakpower_config4_r(u32 i)
 static inline u32 therm_peakpower_config6_r(u32 i)
 {
 	return 0x00020270 + i*4;
-}
-static inline u32 therm_peakpower_config8_r(u32 i)
-{
-	return 0x000202e8 + i*4;
 }
 static inline u32 therm_peakpower_config9_r(u32 i)
 {
@@ -221,5 +217,25 @@ static inline u32 therm_hubmmu_idle_filter_r(void)
 static inline u32 therm_hubmmu_idle_filter_value_m(void)
 {
 	return 0xffffffff << 0;
+}
+static inline u32 therm_clk_slowdown_r(u32 i)
+{
+	return 0x00020160 + i*4;
+}
+static inline u32 therm_clk_slowdown_idle_factor_f(u32 v)
+{
+	return (v & 0x3f) << 16;
+}
+static inline u32 therm_clk_slowdown_idle_factor_m(void)
+{
+	return 0x3f << 16;
+}
+static inline u32 therm_clk_slowdown_idle_factor_v(u32 r)
+{
+	return (r >> 16) & 0x3f;
+}
+static inline u32 therm_clk_slowdown_idle_factor_disabled_f(void)
+{
+	return 0x0;
 }
 #endif

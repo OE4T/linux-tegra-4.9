@@ -267,7 +267,7 @@ int gm20b_mm_mmu_vpr_info_fetch(struct gk20a *g)
 	ret = gm20b_mm_mmu_vpr_info_fetch_wait(g, VPR_INFO_FETCH_WAIT);
 
 fail:
-	gk20a_idle(g->dev);
+	pm_runtime_put(&g->dev->dev);
 	return ret;
 }
 

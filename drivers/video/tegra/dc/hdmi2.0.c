@@ -25,6 +25,7 @@
 #include <linux/nvhost.h>
 #include <linux/gpio.h>
 #include <linux/interrupt.h>
+#include <linux/debugfs.h>
 
 #include <mach/dc.h>
 #include <mach/hdmi-audio.h>
@@ -38,9 +39,13 @@
 #include "hdmi2.0.h"
 #include "hdmihdcp.h"
 
+#include "../../../../arch/arm/mach-tegra/iomap.h"
+
 static struct tegra_hdmi *dc_hdmi;
 
 static int tegra_hdmi_host_enable(struct tegra_hdmi *);
+static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type);
+static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk);
 
 static inline void tegra_hdmi_irq_enable(struct tegra_hdmi *hdmi)
 {
@@ -233,63 +238,6 @@ fail_edid_free:
 	return err;
 }
 
-static void tegra_hdmi_safe_clk_config(struct tegra_hdmi *hdmi)
-{
-	struct tegra_dc_sor_data *sor = hdmi->sor;
-	int flag = tegra_is_clk_enabled(sor->sor_clk);
-
-	if (sor->clk_type == TEGRA_SOR_SAFE_CLK)
-		return;
-
-	/*
-	 * HW bug 1425607
-	 * Disable clocks to avoid glitch when switching
-	 * between safe clock and macro pll clock
-	 */
-	if (flag)
-		clk_disable_unprepare(sor->sor_clk);
-
-	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 0);
-
-	if (flag)
-		clk_prepare_enable(sor->sor_clk);
-
-	sor->clk_type = TEGRA_SOR_SAFE_CLK;
-}
-
-static void tegra_hdmi_macro_clk_config(struct tegra_hdmi *hdmi)
-{
-	struct tegra_dc_sor_data *sor = hdmi->sor;
-	int flag = tegra_is_clk_enabled(sor->sor_clk);
-	u32 val;
-
-	if (sor->clk_type == TEGRA_SOR_MACRO_CLK)
-		return;
-
-	if (hdmi->dc->mode.pclk < 340000000)
-		val = NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G2_7;
-	else
-		val = NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G5_4;
-	val |= NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK;
-	tegra_sor_writel(sor, NV_SOR_CLK_CNTRL, val);
-	usleep_range(250, 300); /* delay for plls in the macro to settle */
-
-	/*
-	 * HW bug 1425607
-	 * Disable clocks to avoid glitch when switching
-	 * between safe clock and macro pll clock
-	 */
-	if (flag)
-		clk_disable_unprepare(sor->sor_clk);
-
-	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 1);
-
-	if (flag)
-		clk_prepare_enable(sor->sor_clk);
-
-	sor->clk_type = TEGRA_SOR_MACRO_CLK;
-}
-
 static void tegra_hdmi_hda_clk_enable(struct tegra_hdmi *hdmi)
 {
 	clk_prepare_enable(hdmi->hda_clk);
@@ -371,6 +319,7 @@ static bool tegra_hdmi_check_dc_constraint(const struct fb_videomode *mode)
 		(mode->xres >= 16) && (mode->yres >= 16);
 }
 
+__maybe_unused
 static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 					struct fb_videomode *mode)
 {
@@ -392,6 +341,8 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 
 static int tegra_hdmi_edid_eld_read(struct tegra_hdmi *hdmi)
 {
+/* TODO: Enable edid */
+#if 0
 	int err;
 
 	memset(&hdmi->mon_spec, 0, sizeof(hdmi->mon_spec));
@@ -429,6 +380,12 @@ static int tegra_hdmi_edid_eld_read(struct tegra_hdmi *hdmi)
 	hdmi->hpd_state_status.edid_eld_read = 1;
 
 	return 0;
+#else
+	hdmi->dc->connected = true;
+	hdmi->hpd_state_status.edid_eld_read = 1;
+	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
+	return 0;
+#endif
 }
 
 static int (*tegra_hdmi_plug_func[])(struct tegra_hdmi *) = {
@@ -781,6 +738,8 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 {
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 	struct tegra_dc *dc = hdmi->dc;
+	u32 h_pulse_start, h_pulse_end;
+	u32 dispclk_div_8_2;
 
 	tegra_sor_write_field(sor, NV_SOR_INPUT_CONTROL,
 			NV_SOR_INPUT_CONTROL_ARM_VIDEO_RANGE_LIMITED |
@@ -788,12 +747,19 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 			NV_SOR_INPUT_CONTROL_ARM_VIDEO_RANGE_LIMITED |
 			NV_SOR_INPUT_CONTROL_HDMI_SRC_SELECT_DISPLAYB);
 
-	/* TODO: fix hardcoding */
-	tegra_sor_writel(sor, NV_SOR_REFCLK, 6912);
+	dispclk_div_8_2 = clk_get_rate(hdmi->sor->sor_clk) / 1000000 * 4;
+	tegra_sor_writel(sor, NV_SOR_REFCLK,
+			NV_SOR_REFCLK_DIV_INT(dispclk_div_8_2 >> 2) |
+			NV_SOR_REFCLK_DIV_FRAC(dispclk_div_8_2));
 	tegra_sor_writel(sor, NV_SOR_HDMI_CTRL, 0x40020038);
 
 	tegra_dc_writel(dc, 0x180, DC_DISP_H_PULSE2_CONTROL);
-	tegra_dc_writel(dc, 0x790071, DC_DISP_H_PULSE2_POSITION_A);
+	h_pulse_start = dc->mode.h_ref_to_sync +
+					dc->mode.h_sync_width +
+					dc->mode.h_back_porch - 10;
+	h_pulse_end = h_pulse_start + 8;
+	tegra_dc_writel(dc, PULSE_START(h_pulse_start) | PULSE_END(h_pulse_end),
+		  DC_DISP_H_PULSE2_POSITION_A);
 	tegra_dc_writel(dc, 0x1000, DC_DISP_DISP_SIGNAL_OPTIONS0);
 }
 
@@ -825,7 +791,7 @@ static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 	avi->act_format = HDMI_AVI_ACTIVE_FORMAT_SAME;
 
 	/* TODO: read from edid */
-	avi->video_format = 0x3;
+	avi->video_format = 16;
 }
 
 static void tegra_hdmi_avi_infoframe(struct tegra_hdmi *hdmi)
@@ -1007,8 +973,14 @@ static void tegra_hdmi_config_lanes(struct tegra_hdmi *hdmi)
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 
 	tegra_sor_writel(sor, NV_SOR_LANE_DRIVE_CURRENT(sor->portnum),
-			0xffffffff);
+			0x22222222);
 	tegra_sor_writel(sor, NV_SOR_PR(sor->portnum), 0x0);
+}
+
+static void tegra_hdmi_config_xbar(struct tegra_hdmi *hdmi)
+{
+	/* TODO: confirm with HW */
+	tegra_sor_writel(hdmi->sor, NV_SOR_XBAR_CTRL, 0x8d111828);
 }
 
 static int tegra_hdmi_host_enable(struct tegra_hdmi *hdmi)
@@ -1020,7 +992,9 @@ static int tegra_hdmi_host_enable(struct tegra_hdmi *hdmi)
 		return 0;
 
 	tegra_dc_io_start(dc);
-	tegra_hdmi_safe_clk_config(hdmi);
+	tegra_dc_get(dc);
+
+	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_SAFE_CLK);
 	tegra_sor_clk_enable(sor);
 	tegra_hdmi_hda_clk_enable(hdmi);
 
@@ -1034,10 +1008,19 @@ static int tegra_hdmi_host_enable(struct tegra_hdmi *hdmi)
 	tegra_hdmi_avi_infoframe(hdmi);
 	tegra_hdmi_audio_config(hdmi, AUDIO_FREQ_32K, HDA);
 
-	tegra_hdmi_macro_clk_config(hdmi);
+	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_BRICK_CLK);
 	tegra_dc_sor_attach(sor);
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, tegra_dc_hpd(dc));
 	tegra_dc_io_end(dc);
+
+	tegra_dc_hdmi_setup_clk(dc, hdmi->sor->sor_clk);
+
+	tegra_hdmi_config_xbar(hdmi);
+
+	/* TODO: Confirm sequence with HW */
+	tegra_sor_writel(sor,  NV_SOR_SEQ_INST(0), 0x8080);
+	tegra_sor_writel(sor,  NV_SOR_PWR, 0x80000000);
+	tegra_sor_writel(sor,  NV_SOR_PWR, 0x80000001);
 
 	hdmi->hpd_state_status.hdmi_host_enable = 1;
 
@@ -1064,17 +1047,62 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	hdmi->enabled = true;
 }
 
+static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
+{
+	if (clk_type == hdmi->clk_type)
+		return;
+
+	if (clk_type == TEGRA_HDMI_BRICK_CLK) {
+		u32 val;
+
+		/* TODO: Set sor divider */
+		tegra_clk_writel(0, 0xff, 0x410);
+
+		/* Select brick muxes */
+		val = (hdmi->dc->mode.pclk < 340000000) ?
+			NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G2_7 :
+			NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G5_4;
+		val |= NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK;
+		tegra_sor_writel(hdmi->sor, NV_SOR_CLK_CNTRL, val);
+		usleep_range(250, 300); /* sor brick pll stabilization delay */
+
+		/* TODO: Select sor clock muxes */
+		tegra_clk_writel((3 << 14), (0x3 << 14), 0x410);
+
+		tegra_dc_writel(hdmi->dc, 0x0, DC_DISP_DISP_CLOCK_CONTROL);
+
+		hdmi->clk_type = TEGRA_HDMI_BRICK_CLK;
+	} else if (clk_type == TEGRA_HDMI_SAFE_CLK) {
+		/* Select sor clock muxes */
+		tegra_clk_cfg_ex(hdmi->sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 0);
+
+		hdmi->clk_type = TEGRA_HDMI_SAFE_CLK;
+	} else {
+		dev_err(&hdmi->dc->ndev->dev, "hdmi: incorrect clk type configured\n");
+	}
+}
+
 static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	struct clk *parent_clk = clk_get_sys(NULL,
-				dc->out->parent_clk ? : "pll_d_out0");
-	struct clk *base_clk =  clk_get_parent(parent_clk);
+				dc->out->parent_clk ? : "pll_d2");
+
+	if (IS_ERR_OR_NULL(parent_clk)) {
+		dev_err(&dc->ndev->dev, "hdmi: parent clk get failed\n");
+		return 0;
+	}
 
 	if (clk_get_parent(clk) != parent_clk)
 		clk_set_parent(clk, parent_clk);
 
-	if (clk_get_rate(base_clk) != dc->mode.pclk)
-		clk_set_rate(base_clk, dc->mode.pclk);
+	/* TODO: Set parent manually */
+	if (clk == dc->clk)
+		tegra_clk_writel(5 << 29, (0x7 << 29), 0x13c);
+	else
+		tegra_clk_writel((5 << 29), (0x7 << 29), 0x410);
+
+	if (clk_get_rate(parent_clk) != dc->mode.pclk)
+		clk_set_rate(parent_clk, dc->mode.pclk);
 
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 }

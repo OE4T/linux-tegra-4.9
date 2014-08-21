@@ -443,6 +443,12 @@ static int parse_disp_default_out(struct platform_device *ndev,
 		}
 	}
 
+	if (!of_property_read_u32(np,
+			"nvidia,out-hotplug-state", &temp)) {
+			default_out->hotplug_state = (unsigned) temp;
+			OF_DC_LOG("out-hotplug-state %d\n", temp);
+	}
+
 	/*
 	 * construct fb
 	 */
@@ -1870,17 +1876,9 @@ struct tegra_dc_platform_data
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_HDMI) {
 		/* pdata->default_out->type == TEGRA_DC_OUT_HDMI */
-		pdata->default_out->n_modes = 0;
-#ifdef CONFIG_FRAMEBUFFER_CONSOLE
 		pdata->default_out->n_modes =
 			of_get_child_count(timings_np);
-		if (pdata->default_out->n_modes == 0) {
-			/*
-			 * Should never happen !
-			 */
-			dev_err(&ndev->dev, "no timing given\n");
-			goto fail_parse;
-		} else {
+		if (pdata->default_out->n_modes) {
 			pdata->default_out->modes = devm_kzalloc(&ndev->dev,
 				pdata->default_out->n_modes *
 				sizeof(struct tegra_dc_mode), GFP_KERNEL);
@@ -1888,8 +1886,15 @@ struct tegra_dc_platform_data
 				dev_err(&ndev->dev, "not enough memory\n");
 				goto fail_parse;
 			}
-		}
+		} else {
+#ifdef CONFIG_FRAMEBUFFER_CONSOLE
+			/*
+			 * Should never happen !
+			 */
+			dev_err(&ndev->dev, "no timing provided\n");
+			goto fail_parse;
 #endif
+		}
 	}
 
 	sd_np = of_get_child_by_name(np_target_disp,
@@ -1980,6 +1985,8 @@ struct tegra_dc_platform_data
 		pdata->low_v_win = (unsigned long)temp;
 		OF_DC_LOG("low_v_win %lu\n", pdata->low_v_win);
 	}
+
+	dev_info(&ndev->dev, "DT parsed successfully\n");
 	return pdata;
 
 fail_parse:

@@ -143,12 +143,19 @@ struct hdmi_audio_infoframe {
 	u32 reg_hole1:16;
 } __packed;
 
+enum {
+	TEGRA_HDMI_SAFE_CLK = 1,
+	TEGRA_HDMI_BRICK_CLK = 2,
+};
+
 struct tegra_hdmi {
 	struct tegra_dc *dc;
 	struct tegra_hdmi_out *pdata;
 	struct tegra_dc_sor_data *sor;
 	struct hdmi_avi_infoframe avi;
 	bool enabled;
+
+	u32 clk_type;
 
 	struct tegra_edid_hdmi_eld eld;
 	bool eld_valid;

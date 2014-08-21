@@ -25,6 +25,7 @@
 #include "gk20a/gk20a.h"
 #include "hw_trim_gm20b.h"
 #include "hw_timer_gm20b.h"
+#include "hw_therm_gm20b.h"
 #include "clk_gm20b.h"
 
 #define gk20a_dbg_clk(fmt, arg...) \
@@ -877,6 +878,7 @@ static int monitor_get(void *data, u64 *val)
 {
 	struct gk20a *g = (struct gk20a *)data;
 	struct clk_gk20a *clk = &g->clk;
+	u32 clk_slowdown, clk_slowdown_save;
 	int err;
 
 	u32 ncycle = 100; /* count GPCCLK for ncycle of clkin */
@@ -887,6 +889,16 @@ static int monitor_get(void *data, u64 *val)
 	if (err)
 		return err;
 
+	mutex_lock(&g->clk.clk_mutex);
+
+	/* Disable clock slowdown during measurements */
+	clk_slowdown_save = gk20a_readl(g, therm_clk_slowdown_r(0));
+	clk_slowdown = set_field(clk_slowdown_save,
+				 therm_clk_slowdown_idle_factor_m(),
+				 therm_clk_slowdown_idle_factor_disabled_f());
+	gk20a_writel(g, therm_clk_slowdown_r(0), clk_slowdown);
+	gk20a_readl(g, therm_clk_slowdown_r(0));
+
 	gk20a_writel(g, trim_gpc_clk_cntr_ncgpcclk_cfg_r(0),
 		     trim_gpc_clk_cntr_ncgpcclk_cfg_reset_asserted_f());
 	gk20a_writel(g, trim_gpc_clk_cntr_ncgpcclk_cfg_r(0),
@@ -895,10 +907,10 @@ static int monitor_get(void *data, u64 *val)
 		     trim_gpc_clk_cntr_ncgpcclk_cfg_noofipclks_f(ncycle));
 	/* start */
 
-	/* It should take about 8us to finish 100 cycle of 12MHz.
+	/* It should take less than 5us to finish 100 cycle of 38.4MHz.
 	   But longer than 100us delay is required here. */
 	gk20a_readl(g, trim_gpc_clk_cntr_ncgpcclk_cfg_r(0));
-	udelay(2000);
+	udelay(200);
 
 	count1 = gk20a_readl(g, trim_gpc_clk_cntr_ncgpcclk_cnt_r(0));
 	udelay(100);
@@ -906,6 +918,10 @@ static int monitor_get(void *data, u64 *val)
 	freq *= trim_gpc_clk_cntr_ncgpcclk_cnt_value_v(count2);
 	do_div(freq, ncycle);
 	*val = freq;
+
+	/* Restore clock slowdown */
+	gk20a_writel(g, therm_clk_slowdown_r(0), clk_slowdown_save);
+	mutex_unlock(&g->clk.clk_mutex);
 
 	gk20a_idle(g->dev);
 

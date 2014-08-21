@@ -96,16 +96,17 @@ static void set_max9485_clk(struct i2c_client *i2s, int mclk)
 	i2c_master_send(i2s, &clk, 1);
 }
 
-static unsigned int tegra_vcm30t124_get_dai_link_idx(char *codec_name)
+static unsigned int tegra_vcm30t124_get_dai_link_idx(const char *codec_name)
 {
 	unsigned int idx = TEGRA124_XBAR_DAI_LINKS, i;
 
-	for (i = 0; i < num_codec_links; i++)
-		if (tegra_vcm30t124_codec_links[i].codec_name &&
-			strstr(tegra_vcm30t124_codec_links[i].codec_name,
-				codec_name))
-			idx = idx + i;
-
+	for (i = 0; i < num_codec_links; i++) {
+		if (tegra_machine_dai_links[idx + i].name)
+			if (!strcmp(tegra_machine_dai_links[idx + i].name,
+				codec_name)) {
+				return idx + i;
+			}
+	}
 	return idx;
 }
 
@@ -117,7 +118,7 @@ static int tegra_vcm30t124_ak4618_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
-	unsigned int idx = tegra_vcm30t124_get_dai_link_idx("ak4618");
+	unsigned int idx = tegra_vcm30t124_get_dai_link_idx("ak-playback");
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 	unsigned int fmt = card->rtd[idx].dai_link->dai_fmt;
@@ -182,13 +183,6 @@ static int tegra_vcm30t124_ak4618_hw_params(struct snd_pcm_substream *substream,
 		return err;
 	}
 
-	err = snd_soc_dai_set_sysclk(card->rtd[idx].cpu_dai, 0,
-			dai_params->rate_min, SND_SOC_CLOCK_IN);
-	if (err < 0) {
-		dev_err(card->dev, "x cpu_dai clock not set\n");
-		return err;
-	}
-
 	if ((fmt & SND_SOC_DAIFMT_FORMAT_MASK) == SND_SOC_DAIFMT_DSP_A) {
 		snd_soc_dai_set_tdm_slot(card->rtd[idx].codec_dai,
 					0, 0, dai_params->channels_min, 32);
@@ -208,7 +202,7 @@ static int tegra_vcm30t124_wm8731_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
-	unsigned int idx = tegra_vcm30t124_get_dai_link_idx("wm8731");
+	unsigned int idx = tegra_vcm30t124_get_dai_link_idx("wm-playback");
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 	int mclk, clk_out_rate;
@@ -264,13 +258,6 @@ static int tegra_vcm30t124_wm8731_hw_params(struct snd_pcm_substream *substream,
 		return err;
 	}
 
-	err = snd_soc_dai_set_sysclk(card->rtd[idx].cpu_dai, 0,
-			dai_params->rate_min, SND_SOC_CLOCK_IN);
-	if (err < 0) {
-		dev_err(card->dev, "wm8731 cpu_dai clock not set\n");
-		return err;
-	}
-
 	return 0;
 }
 
@@ -282,7 +269,7 @@ static int tegra_vcm30t124_ad1937_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
-	unsigned int idx =  tegra_vcm30t124_get_dai_link_idx("ad193x");
+	unsigned int idx =  tegra_vcm30t124_get_dai_link_idx("ad-playback");
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 	unsigned int fmt = card->rtd[idx].dai_link->dai_fmt;
@@ -313,13 +300,6 @@ static int tegra_vcm30t124_ad1937_hw_params(struct snd_pcm_substream *substream,
 			SND_SOC_CLOCK_IN);
 	if (err < 0) {
 		dev_err(card->dev, "y codec_dai clock not set\n");
-		return err;
-	}
-
-	err = snd_soc_dai_set_sysclk(card->rtd[idx].cpu_dai, 0,
-			dai_params->rate_min, SND_SOC_CLOCK_IN);
-	if (err < 0) {
-		dev_err(card->dev, "y cpu_dai clock not set\n");
 		return err;
 	}
 
@@ -381,8 +361,11 @@ static int tegra_vcm30t124_wm8731_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_codec *codec = wm8731_dai->codec;
 	struct snd_soc_card *card = codec->card;
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
+	struct tegra_vcm30t124_platform_data *pdata = machine->pdata;
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
+	const char *identifier = (const char *)rtd->dai_link->name;
+	unsigned int idx =  tegra_vcm30t124_get_dai_link_idx(identifier);
 	unsigned int clk_out, mclk;
 	int err;
 
@@ -406,11 +389,15 @@ static int tegra_vcm30t124_wm8731_init(struct snd_soc_pcm_runtime *rtd)
 		return err;
 	}
 
-	err = snd_soc_dai_set_sysclk(i2s_dai, 0, dai_params->rate_min,
-			SND_SOC_CLOCK_IN);
-	if (err < 0) {
-		dev_err(card->dev, "i2s clock not set\n");
-		return err;
+	if (i2s_dai->driver->ops->set_bclk_ratio) {
+		idx = idx - TEGRA124_XBAR_DAI_LINKS;
+		err = snd_soc_dai_set_bclk_ratio(i2s_dai,
+				pdata->dai_config[idx].bclk_ratio);
+		if (err < 0) {
+			dev_err(card->dev, "%s cpu DAI bclk not set\n",
+				i2s_dai->name);
+			return err;
+		}
 	}
 
 	return 0;
@@ -423,8 +410,11 @@ static int tegra_vcm30t124_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_codec *codec = ad1937_dai->codec;
 	struct snd_soc_card *card = codec->card;
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
+	struct tegra_vcm30t124_platform_data *pdata = machine->pdata;
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
+	const char *identifier = (const char *)rtd->dai_link->name;
+	unsigned int idx =  tegra_vcm30t124_get_dai_link_idx(identifier);
 	unsigned int fmt = rtd->dai_link->dai_fmt;
 	unsigned int mclk, val;
 	int err;
@@ -457,15 +447,24 @@ static int tegra_vcm30t124_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 		snd_soc_write(ad1937_dai->codec, AD193X_PLL_CLK_CTRL0, 0xb9);
 	}
 
-	err = snd_soc_dai_set_sysclk(i2s_dai, 0, dai_params->rate_min,
-		SND_SOC_CLOCK_IN);
-	if (err < 0) {
-		dev_err(card->dev, "i2s clock not set %d\n", __LINE__);
-		return err;
+	if (i2s_dai->driver->ops->set_bclk_ratio) {
+		idx = idx - TEGRA124_XBAR_DAI_LINKS;
+		err = snd_soc_dai_set_bclk_ratio(i2s_dai,
+				pdata->dai_config[idx].bclk_ratio);
+		if (err < 0) {
+			dev_err(card->dev, "%s cpu DAI bclk not set\n",
+				i2s_dai->name);
+			return err;
+		}
 	}
 
-	if ((fmt & SND_SOC_DAIFMT_FORMAT_MASK) == SND_SOC_DAIFMT_DSP_A)
-		ad1937_dai->driver->ops->set_tdm_slot(ad1937_dai, 0, 0, 8, 0);
+	if ((fmt & SND_SOC_DAIFMT_FORMAT_MASK) == SND_SOC_DAIFMT_DSP_A) {
+		snd_soc_dai_set_tdm_slot(ad1937_dai, 0, 0, 8, 0);
+		snd_soc_dai_set_tdm_slot(i2s_dai,
+				pdata->dai_config[idx].tx_mask,
+				pdata->dai_config[idx].rx_mask,
+				0, 0);
+	}
 
 	return 0;
 }
@@ -477,10 +476,13 @@ static int tegra_vcm30t124_ak4618_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
+	struct tegra_vcm30t124_platform_data *pdata = machine->pdata;
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
-	unsigned int fmt = rtd->dai_link->dai_fmt;
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
+	const char *identifier = (const char *)rtd->dai_link->name;
+	unsigned int idx =  tegra_vcm30t124_get_dai_link_idx(identifier);
+	unsigned int fmt = rtd->dai_link->dai_fmt;
 	unsigned int clk_out, mclk, srate;
 	int err;
 
@@ -506,14 +508,24 @@ static int tegra_vcm30t124_ak4618_init(struct snd_soc_pcm_runtime *rtd)
 		return err;
 	}
 
-	err = snd_soc_dai_set_sysclk(cpu_dai, 0, srate, SND_SOC_CLOCK_IN);
-	if (err < 0) {
-		dev_err(card->dev, "i2s clock not set\n");
-		return err;
+	if (cpu_dai->driver->ops->set_bclk_ratio) {
+		idx = idx - TEGRA124_XBAR_DAI_LINKS;
+		err = snd_soc_dai_set_bclk_ratio(cpu_dai,
+				pdata->dai_config[idx].bclk_ratio);
+		if (err < 0) {
+			dev_err(card->dev, "%s cpu DAI bclk not set\n",
+				cpu_dai->name);
+			return err;
+		}
 	}
 
-	if ((fmt & SND_SOC_DAIFMT_FORMAT_MASK) == SND_SOC_DAIFMT_DSP_A)
+	if ((fmt & SND_SOC_DAIFMT_FORMAT_MASK) == SND_SOC_DAIFMT_DSP_A) {
 		snd_soc_dai_set_tdm_slot(codec_dai, 0, 0, 8, 32);
+		snd_soc_dai_set_tdm_slot(cpu_dai,
+				pdata->dai_config[idx].tx_mask,
+				pdata->dai_config[idx].rx_mask,
+				0, 0);
+	}
 
 	snd_soc_dapm_force_enable_pin(dapm, "x MICBIAS");
 
@@ -527,8 +539,12 @@ static int tegra_vcm30t124_spdif_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
+	struct tegra_vcm30t124_platform_data *pdata = machine->pdata;
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
+	const char *identifier = (const char *)rtd->dai_link->name;
+	unsigned int idx =  tegra_vcm30t124_get_dai_link_idx(identifier);
+	unsigned int fmt = rtd->dai_link->dai_fmt;
 	unsigned int mclk, clk_out_rate, srate;
 	int err = 0;
 
@@ -544,15 +560,47 @@ static int tegra_vcm30t124_spdif_init(struct snd_soc_pcm_runtime *rtd)
 		return err;
 	}
 
-	err = snd_soc_dai_set_sysclk(cpu_dai, 0, srate,
-					SND_SOC_CLOCK_OUT);
-	err = snd_soc_dai_set_sysclk(cpu_dai, 0, srate,
-					SND_SOC_CLOCK_IN);
-	if (err < 0) {
-		dev_err(card->dev, "%s cpu DAI clock not set\n",
-			cpu_dai->name);
+	/* set sys clk */
+	if (cpu_dai->driver->ops->set_sysclk) {
+		err = snd_soc_dai_set_sysclk(cpu_dai, 0, srate,
+						SND_SOC_CLOCK_OUT);
+		err = snd_soc_dai_set_sysclk(cpu_dai, 0, srate,
+						SND_SOC_CLOCK_IN);
+		if (err < 0) {
+			dev_err(card->dev, "%s cpu DAI srate not set\n",
+				cpu_dai->name);
+			return err;
+		}
 	}
 
+	/* set bclk ratio */
+	if (cpu_dai->driver->ops->set_bclk_ratio) {
+		idx = idx - TEGRA124_XBAR_DAI_LINKS;
+		err = snd_soc_dai_set_bclk_ratio(cpu_dai,
+				pdata->dai_config[idx].bclk_ratio);
+		if (err < 0) {
+			dev_err(card->dev, "%s cpu DAI bclk not set\n",
+				cpu_dai->name);
+			return err;
+		}
+	}
+
+	/* set tdm slot mask */
+	if (cpu_dai->driver->ops->set_tdm_slot) {
+		fmt = fmt & SND_SOC_DAIFMT_FORMAT_MASK;
+		if ((fmt == SND_SOC_DAIFMT_DSP_A) ||
+			(fmt == SND_SOC_DAIFMT_DSP_B)) {
+			err = snd_soc_dai_set_tdm_slot(cpu_dai,
+					pdata->dai_config[idx].tx_mask,
+					pdata->dai_config[idx].rx_mask,
+					0, 0);
+			if (err < 0) {
+				dev_err(card->dev,
+					"%s cpu DAI slot mask not set\n",
+					cpu_dai->name);
+			}
+		}
+	}
 	return err;
 }
 
@@ -768,7 +816,7 @@ static void tegra_vcm30t124_new_codec_links(
 	for (i = 0, j = num_codec_links; i < num_codec_links; i++, j++) {
 		/* initialize DAI links on DAP side */
 		tegra_vcm30t124_codec_links[i].name =
-			pdata->dai_config[i].codec_name;
+			pdata->dai_config[i].link_name;
 		tegra_vcm30t124_codec_links[i].stream_name = "Playback";
 		tegra_vcm30t124_codec_links[i].cpu_dai_name = "DAP";
 		tegra_vcm30t124_codec_links[i].codec_dai_name =
@@ -781,21 +829,28 @@ static void tegra_vcm30t124_new_codec_links(
 			&pdata->dai_config[i].params;
 		tegra_vcm30t124_codec_links[i].dai_fmt =
 			pdata->dai_config[i].dai_fmt;
-		if (tegra_vcm30t124_codec_links[i].codec_name) {
-			if (strstr(tegra_vcm30t124_codec_links[i].codec_name,
-				"ad193x"))
+		if (tegra_vcm30t124_codec_links[i].name) {
+			if (strstr(tegra_vcm30t124_codec_links[i].name,
+				"ad-playback"))
 				tegra_vcm30t124_codec_links[i].init =
 					tegra_vcm30t124_ad1937_init;
-			else if (strstr(tegra_vcm30t124_codec_links[i].codec_name,
-				"wm8731"))
+			else if (strstr(tegra_vcm30t124_codec_links[i].name,
+				"wm-playback"))
 				tegra_vcm30t124_codec_links[i].init =
 					tegra_vcm30t124_wm8731_init;
-			else if (strstr(tegra_vcm30t124_codec_links[i].codec_name,
-				"ak4618"))
+			else if (strstr(tegra_vcm30t124_codec_links[i].name,
+				"ak-playback"))
 				tegra_vcm30t124_codec_links[i].init =
 					tegra_vcm30t124_ak4618_init;
-			else if (strstr(tegra_vcm30t124_codec_links[i].codec_name,
-				"spdif"))
+			else if (strstr(tegra_vcm30t124_codec_links[i].name,
+				"spdif-playback"))
+				tegra_vcm30t124_codec_links[i].init =
+					tegra_vcm30t124_spdif_init;
+			else if (strstr(tegra_vcm30t124_codec_links[i].name,
+				"vc-playback"))
+				tegra_vcm30t124_codec_links[i].init =
+					tegra_vcm30t124_spdif_init;
+			else
 				tegra_vcm30t124_codec_links[i].init =
 					tegra_vcm30t124_spdif_init;
 		}
@@ -904,7 +959,7 @@ static int tegra_vcm30t124_wm8731_put_rate(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
-	unsigned int idx = tegra_vcm30t124_get_dai_link_idx("wm8731");
+	unsigned int idx = tegra_vcm30t124_get_dai_link_idx("wm-playback");
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)card->dai_link[idx].params;
 
@@ -934,7 +989,7 @@ static int tegra_vcm30t124_ad1937_put_rate(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
-	unsigned int idx =  tegra_vcm30t124_get_dai_link_idx("ad193x");
+	unsigned int idx =  tegra_vcm30t124_get_dai_link_idx("ad-playback");
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)card->dai_link[idx].params;
 
@@ -964,7 +1019,7 @@ static int tegra_vcm30t124_ak4618_put_rate(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
-	unsigned int idx = tegra_vcm30t124_get_dai_link_idx("ak4618");
+	unsigned int idx = tegra_vcm30t124_get_dai_link_idx("ak-playback");
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)card->dai_link[idx].params;
 
@@ -1116,23 +1171,23 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 		tegra_machine_set_dai_ops(i, &tegra_vcm30t124_spdif_ops);
 
 	for (i = 0; i < num_codec_links; i++) {
-		if (machine->pdata->dai_config[i].codec_name) {
-			if (strstr(machine->pdata->dai_config[i].codec_name,
-				"ad193x")) {
+		if (machine->pdata->dai_config[i].link_name) {
+			if (!strcmp(machine->pdata->dai_config[i].link_name,
+				"ad-playback")) {
 				for (j = TEGRA124_DAI_LINK_APBIF0;
 					j <= TEGRA124_DAI_LINK_APBIF3; j++)
 					tegra_machine_set_dai_ops(j,
 						&tegra_vcm30t124_ad1937_ops);
-			} else if (strstr(
-				machine->pdata->dai_config[i].codec_name,
-				"ak4618")) {
+			} else if (!strcmp(
+				machine->pdata->dai_config[i].link_name,
+				"ak-playback")) {
 				for (j = TEGRA124_DAI_LINK_APBIF4;
 					j <= TEGRA124_DAI_LINK_APBIF7; j++)
 					tegra_machine_set_dai_ops(j,
 						&tegra_vcm30t124_ak4618_ops);
-			} else if (strstr(
-				machine->pdata->dai_config[i].codec_name,
-				"wm8731")) {
+			} else if (!strcmp(
+				machine->pdata->dai_config[i].link_name,
+				"wm-playback")) {
 					tegra_machine_set_dai_ops(
 						TEGRA124_DAI_LINK_APBIF4,
 						&tegra_vcm30t124_wm8731_ops);

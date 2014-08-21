@@ -430,11 +430,8 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 		gk20a_writel(g, pbdma_timeout_r(i), timeout);
 	}
 
-	if (tegra_platform_is_silicon()) {
-		timeout = gk20a_readl(g, fifo_pb_timeout_r());
-		timeout &= ~fifo_pb_timeout_detection_enabled_f();
-		gk20a_writel(g, fifo_pb_timeout_r(), timeout);
-	}
+	if (g->ops.fifo.apply_pb_timeout)
+		g->ops.fifo.apply_pb_timeout(g);
 
 	timeout = GRFIFO_TIMEOUT_CHECK_PERIOD_US |
 			fifo_eng_timeout_detection_enabled_f();
@@ -1949,8 +1946,20 @@ int gk20a_fifo_wait_engine_idle(struct gk20a *g)
 	return ret;
 }
 
+static void gk20a_fifo_apply_pb_timeout(struct gk20a *g)
+{
+	u32 timeout;
+
+	if (tegra_platform_is_silicon()) {
+		timeout = gk20a_readl(g, fifo_pb_timeout_r());
+		timeout &= ~fifo_pb_timeout_detection_enabled_f();
+		gk20a_writel(g, fifo_pb_timeout_r(), timeout);
+	}
+}
+
 void gk20a_init_fifo(struct gpu_ops *gops)
 {
 	gk20a_init_channel(gops);
 	gops->fifo.trigger_mmu_fault = gk20a_fifo_trigger_mmu_fault;
+	gops->fifo.apply_pb_timeout = gk20a_fifo_apply_pb_timeout;
 }

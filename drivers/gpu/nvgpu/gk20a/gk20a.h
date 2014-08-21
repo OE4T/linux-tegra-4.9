@@ -150,6 +150,7 @@ struct gpu_ops {
 		void (*bind_channel)(struct channel_gk20a *ch_gk20a);
 		void (*trigger_mmu_fault)(struct gk20a *g,
 				unsigned long engine_ids);
+		void (*apply_pb_timeout)(struct gk20a *g);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/

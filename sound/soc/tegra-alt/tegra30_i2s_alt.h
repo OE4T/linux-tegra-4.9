@@ -1,7 +1,7 @@
 /*
  * tegra30_i2s_alt.h - Definitions for Tegra30 I2S driver
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -259,7 +259,10 @@ struct tegra30_i2s {
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pin_default_state;
 	struct pinctrl_state *pin_idle_state;
-	unsigned int srate;
+	int bclk_ratio;
+	unsigned int fsync_width;
+	unsigned int tx_mask;
+	unsigned int rx_mask;
 	const struct tegra30_i2s_soc_data *soc_data;
 };
 

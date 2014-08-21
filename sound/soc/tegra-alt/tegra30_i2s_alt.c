@@ -149,6 +149,28 @@ static int tegra30_i2s_runtime_resume(struct device *dev)
 	return 0;
 }
 
+static int tegra30_i2s_set_tdm_slot(struct snd_soc_dai *dai,
+		unsigned int tx_mask, unsigned int rx_mask,
+		int slots, int slot_width)
+{
+	struct tegra30_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+
+	/* copy the required tx and rx mask */
+	i2s->tx_mask = (tx_mask > 0xFFFF) ? 0xFFFF : tx_mask;
+	i2s->rx_mask = (rx_mask > 0xFFFF) ? 0xFFFF : rx_mask;
+
+	return 0;
+}
+static int tegra30_i2s_set_dai_bclk_ratio(struct snd_soc_dai *dai,
+		unsigned int ratio)
+{
+	struct tegra30_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+
+	i2s->bclk_ratio = ratio;
+
+	return 0;
+}
+
 static int tegra30_i2s_set_fmt(struct snd_soc_dai *dai,
 				unsigned int fmt)
 {
@@ -230,17 +252,10 @@ static int tegra30_i2s_set_fmt(struct snd_soc_dai *dai,
 	regmap_update_bits(i2s->regmap, TEGRA30_I2S_CTRL,
 		mask, i2s_ctrl);
 	regmap_write(i2s->regmap, TEGRA30_I2S_OFFSET, val);
+	regmap_update_bits(i2s->regmap, TEGRA30_I2S_CH_CTRL,
+		TEGRA30_I2S_CH_CTRL_FSYNC_WIDTH_MASK,
+		i2s->fsync_width << TEGRA30_I2S_CH_CTRL_FSYNC_WIDTH_SHIFT);
 	pm_runtime_put(dai->dev);
-
-	return 0;
-}
-
-static int tegra30_i2s_set_dai_sysclk(struct snd_soc_dai *dai,
-		int clk_id, unsigned int freq, int dir)
-{
-	struct tegra30_i2s *i2s = snd_soc_dai_get_drvdata(dai);
-
-	i2s->srate = freq;
 
 	return 0;
 }
@@ -294,16 +309,13 @@ static int tegra30_i2s_hw_params(struct snd_pcm_substream *substream,
 
 	regmap_update_bits(i2s->regmap, TEGRA30_I2S_CTRL, mask, val);
 
-	srate = i2s->srate;
+	srate = params_rate(params);
 
 	regmap_read(i2s->regmap, TEGRA30_I2S_CTRL, &val);
 	if ((val & TEGRA30_I2S_CTRL_FRAME_FORMAT_MASK) ==
 		TEGRA30_I2S_CTRL_FRAME_FORMAT_FSYNC) {
-
-		i2sclock = srate * channels * sample_size;
 		i2s->soc_data->set_slot_ctrl(i2s->regmap, channels,
-				(1 << channels) - 1,
-				(1 << channels) - 1);
+				i2s->tx_mask, i2s->rx_mask);
 		/* I2S fifo threshold set to 3 when AFC is connected */
 		cif_conf.threshold = 3;
 		cif_conf.audio_channels = channels;
@@ -314,12 +326,6 @@ static int tegra30_i2s_hw_params(struct snd_pcm_substream *substream,
 		cif_conf.truncate = 0;
 		cif_conf.mono_conv = 0;
 	} else {
-		if (channels == 1)
-			i2sclock = srate * 2 * sample_size * 2;
-		else
-			i2sclock = srate * channels * sample_size * 2;
-		/* In LRCK mode, hw doesn't support mono.
-		   We should convert mono to steroe through acif */
 		cif_conf.threshold = 3;
 		cif_conf.audio_channels = channels;
 		cif_conf.client_channels = (channels == 1) ? 2 : channels;
@@ -329,6 +335,11 @@ static int tegra30_i2s_hw_params(struct snd_pcm_substream *substream,
 		cif_conf.truncate = 0;
 		cif_conf.mono_conv = 0;
 	}
+
+	i2sclock = srate * sample_size * cif_conf.client_channels;
+
+	if (i2s->bclk_ratio != 0)
+		i2sclock *= i2s->bclk_ratio;
 
 	bitcnt = (i2sclock / srate) - 1;
 	if ((bitcnt < 0) ||
@@ -343,7 +354,8 @@ static int tegra30_i2s_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	if (channels > 2)
+	if ((val & TEGRA30_I2S_CTRL_FRAME_FORMAT_MASK) ==
+		TEGRA30_I2S_CTRL_FRAME_FORMAT_FSYNC)
 		val = bitcnt << TEGRA30_I2S_TIMING_CHANNEL_BIT_COUNT_SHIFT;
 	else
 		val = (bitcnt >> 1) <<
@@ -363,10 +375,6 @@ static int tegra30_i2s_hw_params(struct snd_pcm_substream *substream,
 		reg = TEGRA30_I2S_AUDIOCIF_I2SRX_CTRL;
 	}
 	i2s->soc_data->set_audio_cif(i2s->regmap, reg, &cif_conf);
-
-	regmap_update_bits(i2s->regmap, TEGRA30_I2S_CH_CTRL,
-		TEGRA30_I2S_CH_CTRL_FSYNC_WIDTH_MASK,
-		31 << TEGRA30_I2S_CH_CTRL_FSYNC_WIDTH_SHIFT);
 
 	return 0;
 }
@@ -466,7 +474,8 @@ static int tegra30_i2s_codec_probe(struct snd_soc_codec *codec)
 static struct snd_soc_dai_ops tegra30_i2s_dai_ops = {
 	.set_fmt	= tegra30_i2s_set_fmt,
 	.hw_params	= tegra30_i2s_hw_params,
-	.set_sysclk	= tegra30_i2s_set_dai_sysclk,
+	.set_bclk_ratio	= tegra30_i2s_set_dai_bclk_ratio,
+	.set_tdm_slot	= tegra30_i2s_set_tdm_slot,
 };
 
 static struct snd_soc_dai_driver tegra30_i2s_dais[] = {
@@ -662,9 +671,8 @@ static int tegra30_i2s_platform_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, i2s);
 
 	i2s->soc_data = soc_data;
-
-	/* initialize srate with default sampling rate */
-	i2s->srate = 48000;
+	i2s->tx_mask = i2s->rx_mask = 0xFFFF;
+	i2s->bclk_ratio = 2;
 
 	i2s->clk_i2s = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(i2s->clk_i2s)) {
@@ -730,6 +738,19 @@ static int tegra30_i2s_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Missing property nvidia,ahub-i2s-id\n");
 		ret = -ENODEV;
 		goto err;
+	}
+
+	if (of_property_read_u32(pdev->dev.of_node,
+		"fsync-width", &i2s->fsync_width) < 0) {
+		dev_warn(&pdev->dev, "Missing prop fsync-width for I2S%d\n",
+			pdev->dev.id);
+		i2s->fsync_width = 31;
+	}
+
+	if (i2s->fsync_width > 255) {
+		dev_warn(&pdev->dev, "Default fsync-width to 31 for I2S%d\n",
+			pdev->dev.id);
+		i2s->fsync_width = 31;
 	}
 
 	pm_runtime_enable(&pdev->dev);

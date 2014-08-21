@@ -642,15 +642,6 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 			else
 				update_blend_par = true;
 		}
-		if ((win->flags & TEGRA_WIN_BLEND_FLAGS_MASK) !=
-			dc->blend.flags[win->idx]) {
-			dc->blend.flags[win->idx] =
-				win->flags & TEGRA_WIN_BLEND_FLAGS_MASK;
-			if (tegra_dc_feature_is_gen2_blender(dc, win->idx))
-				update_blend_seq = true;
-			else
-				update_blend_par = true;
-		}
 
 		tegra_dc_writel(dc, WINDOW_A_SELECT << win->idx,
 				DC_CMD_DISPLAY_WINDOW_HEADER);
@@ -661,12 +652,6 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 			act_control &= ~WIN_ACT_CNTR_SEL_HCOUNTER(win->idx);
 		else
 			act_control |= WIN_ACT_CNTR_SEL_HCOUNTER(win->idx);
-
-		if (!WIN_IS_ENABLED(win)) {
-			dc_win->dirty = 1;
-			tegra_dc_writel(dc, 0, DC_WIN_WIN_OPTIONS);
-			continue;
-		}
 
 #if defined(CONFIG_TEGRA_DC_CDE)
 		if (win->cde.cde_addr) {

@@ -546,4 +546,17 @@ int tegra_dc_cursor_set(struct tegra_dc *dc, bool enable, int x, int y);
 int tegra_dc_cursor_clip(struct tegra_dc *dc, unsigned clip);
 int tegra_dc_cursor_suspend(struct tegra_dc *dc);
 int tegra_dc_cursor_resume(struct tegra_dc *dc);
+void tegra_dc_win_partial_update(struct tegra_dc *dc, struct tegra_dc_win *win,
+	unsigned int xoff, unsigned int yoff, unsigned int width,
+	unsigned int height);
+
+#ifdef CONFIG_TEGRA_NVDISPLAY
+int tegra_nvdisp_init(struct tegra_dc *dc);
+int tegra_nvdisp_update_windows(struct tegra_dc *dc,
+	struct tegra_dc_win *windows[], int n,
+	u16 *dirty_rect, bool wait_for_vblank);
+
+
+#endif
+
 #endif

@@ -50,6 +50,7 @@ static bool tegra_dc_windows_are_clean(struct tegra_dc_win *windows[],
 	return true;
 }
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 static int get_topmost_window(u32 *depths, unsigned long *wins, int win_num)
 {
 	int idx, best = -1;
@@ -264,6 +265,7 @@ static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 	}
 	tegra_dc_io_end(dc);
 }
+#endif	/* TEGRA_NVDISPLAY */
 
 /* does not support syncing windows on multiple dcs in one call */
 int tegra_dc_sync_windows(struct tegra_dc_win *windows[], int n)
@@ -439,6 +441,66 @@ static bool update_is_hsync_safe(struct tegra_dc_win *cur_win,
 			sizeof(struct tegra_dc_csc))));
 }
 
+void tegra_dc_win_partial_update(struct tegra_dc *dc, struct tegra_dc_win *win,
+	unsigned int xoff, unsigned int yoff, unsigned int width,
+	unsigned int height)
+{
+	if (!win->out_w || !win->out_h ||
+		(win->out_x >= (xoff + width)) ||
+		(win->out_y >= (yoff + height)) ||
+		(xoff >= (win->out_x + win->out_w)) ||
+		(yoff >= (win->out_y + win->out_h))) {
+		tegra_dc_writel(dc, 0, DC_WIN_WIN_OPTIONS);
+		return;
+	} else {
+		u64 tmp_64;
+		fixed20_12 fixed_tmp;
+		unsigned int xoff_2;
+		unsigned int yoff_2;
+		unsigned int width_2;
+		unsigned int height_2;
+
+		xoff_2 = (win->out_x < xoff) ? xoff : win->out_x;
+		yoff_2 = (win->out_y < yoff) ? yoff : win->out_y;
+		width_2 = ((win->out_x + win->out_w) > (xoff + width)) ?
+			(xoff + width - xoff_2) :
+			(win->out_x + win->out_w - xoff_2);
+		height_2 = ((win->out_y + win->out_h) > (yoff + height)) ?
+			(yoff + height - yoff_2) :
+			(win->out_y + win->out_h - yoff_2);
+
+		tmp_64 = (u64)(xoff_2 - win->out_x) * win->w.full;
+		do_div(tmp_64, win->out_w);
+		fixed_tmp.full = (u32)tmp_64;
+		win->x.full += dfixed_floor(fixed_tmp);
+
+		tmp_64 = (u64)(yoff_2 - win->out_y) * win->h.full;
+		do_div(tmp_64, win->out_h);
+		fixed_tmp.full = (u32)tmp_64;
+		win->y.full += dfixed_floor(fixed_tmp);
+
+		tmp_64 = (u64)(width_2) * win->w.full;
+		do_div(tmp_64, win->out_w);
+		fixed_tmp.full = (u32)tmp_64;
+		win->w.full = dfixed_floor(fixed_tmp);
+
+		tmp_64 = (u64)(height_2) * win->h.full;
+		do_div(tmp_64, win->out_h);
+		fixed_tmp.full = (u32)tmp_64;
+		win->h.full = dfixed_floor(fixed_tmp);
+
+		/* Move the partial region to the up-left corner
+		 * so dc can only scan out this region. */
+		win->out_x = xoff_2 - xoff;
+		win->out_y = yoff_2 - yoff;
+		win->out_w = width_2;
+		win->out_h = height_2;
+
+		/* Update shadow registers */
+		memcpy(&dc->shadow_windows[win->idx], win,
+			sizeof(struct tegra_dc_win));
+	}
+}
 
 /* Does not support updating windows on multiple dcs in one call.
  * Requires a matching sync_windows to avoid leaking ref-count on clocks. */
@@ -447,10 +509,12 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 {
 	struct tegra_dc *dc;
 	unsigned long update_mask = GENERAL_ACT_REQ;
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	unsigned long act_control = 0;
 	unsigned long win_options;
 	bool update_blend_par = false;
 	bool update_blend_seq = false;
+#endif
 	int i;
 	bool do_partial_update = false;
 	unsigned int xoff;
@@ -529,7 +593,8 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 	}
 
 #if defined(CONFIG_TEGRA_NVDISPLAY)
-	tegra_nvdisp_update_windows(windows, n, dirty_rect, wait_for_vblank);
+	tegra_nvdisp_update_windows(dc, windows, n, dirty_rect,
+		wait_for_vblank);
 #else
 	for (i = 0; i < n; i++) {
 		struct tegra_dc_win *win = windows[i];
@@ -635,69 +700,9 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 			DC_WIN_BYTE_SWAP);
 
 
-		if (do_partial_update) {
-			if (!win->out_w || !win->out_h ||
-				(win->out_x >= (xoff + width)) ||
-				(win->out_y >= (yoff + height)) ||
-				(xoff >= (win->out_x + win->out_w)) ||
-				(yoff >= (win->out_y + win->out_h))) {
-				tegra_dc_writel(dc, 0, DC_WIN_WIN_OPTIONS);
-				continue;
-			} else {
-				u64 tmp_64;
-				fixed20_12 fixed_tmp;
-				unsigned int xoff_2;
-				unsigned int yoff_2;
-				unsigned int width_2;
-				unsigned int height_2;
-
-				xoff_2 = (win->out_x < xoff) ? xoff :
-					win->out_x;
-				yoff_2 = (win->out_y < yoff) ? yoff :
-					win->out_y;
-				width_2 = ((win->out_x + win->out_w) >
-					(xoff + width)) ?
-					(xoff + width - xoff_2) :
-					(win->out_x + win->out_w - xoff_2);
-				height_2 = ((win->out_y + win->out_h) >
-					(yoff + height)) ?
-					(yoff + height - yoff_2) :
-					(win->out_y + win->out_h - yoff_2);
-
-				tmp_64 = (u64)(xoff_2 - win->out_x) *
-					win->w.full;
-				do_div(tmp_64, win->out_w);
-				fixed_tmp.full = (u32)tmp_64;
-				win->x.full += dfixed_floor(fixed_tmp);
-
-				tmp_64 = (u64)(yoff_2 - win->out_y) *
-					win->h.full;
-				do_div(tmp_64, win->out_h);
-				fixed_tmp.full = (u32)tmp_64;
-				win->y.full += dfixed_floor(fixed_tmp);
-
-				tmp_64 = (u64)(width_2) * win->w.full;
-				do_div(tmp_64, win->out_w);
-				fixed_tmp.full = (u32)tmp_64;
-				win->w.full = dfixed_floor(fixed_tmp);
-
-				tmp_64 = (u64)(height_2) * win->h.full;
-				do_div(tmp_64, win->out_h);
-				fixed_tmp.full = (u32)tmp_64;
-				win->h.full = dfixed_floor(fixed_tmp);
-
-				/* Move the partial region to the up-left corner
-				 * so dc can only scan out this region. */
-				win->out_x = xoff_2 - xoff;
-				win->out_y = yoff_2 - yoff;
-				win->out_w = width_2;
-				win->out_h = height_2;
-
-				/* Update shadow registers */
-				memcpy(&dc->shadow_windows[win->idx], win,
-						sizeof(struct tegra_dc_win));
-			}
-		}
+		if (do_partial_update)
+			tegra_dc_win_partial_update(dc, win, xoff, yoff,
+				width, height);
 
 		tegra_dc_writel(dc,
 			V_POSITION(win->out_y) | H_POSITION(win->out_x),

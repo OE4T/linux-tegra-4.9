@@ -129,9 +129,6 @@ static int nct1008_sensor_regs[SENSORS_COUNT][REGS_COUNT] = {
 #define CELSIUS_TO_MILLICELSIUS(x) ((x)*1000)
 #define MILLICELSIUS_TO_CELSIUS(x) ((x)/1000)
 
-#define THERM_WARN_RANGE_HIGH_OFFSET	2000
-#define THERM_WARN_RANGE_LOW_OFFSET	7000
-
 struct nct1008_adjust_offset_table {
 	int temp;
 	int offset;
@@ -142,7 +139,6 @@ struct nct1008_sensor_data {
 	struct thermal_zone_device *thz;
 	long current_hi_limit;
 	long current_lo_limit;
-	long temp;
 };
 
 struct nct1008_data {
@@ -274,7 +270,6 @@ static int nct1008_get_temp_common(int sensor,
 		return -1;
 
 	*temp = temp_milli;
-	data->sensors[sensor].temp = temp_milli;
 
 	return 0;
 }
@@ -658,11 +653,16 @@ static const struct attribute_group nct1008_attr_group = {
 	.attrs = nct1008_attributes,
 };
 
+static const unsigned long THERM_WARN_RANGE_HIGH_OFFSET = 3000;
+static unsigned long nct1008_shutdown_warning_cur_state;
+static long nct1008_shutdown_warning_saved_temp;
+
 static int nct1008_shutdown_warning_get_max_state(
 					struct thermal_cooling_device *cdev,
 					unsigned long *max_state)
 {
-	*max_state = 1;
+	/* A state for every 250mC */
+	*max_state = THERM_WARN_RANGE_HIGH_OFFSET / 250;
 	return 0;
 }
 
@@ -678,7 +678,7 @@ static int nct1008_shutdown_warning_get_cur_state(
 		return -1;
 
 	if (temp >= (limit - THERM_WARN_RANGE_HIGH_OFFSET))
-		*cur_state = 1;
+		*cur_state = nct1008_shutdown_warning_cur_state;
 	else
 		*cur_state = 0;
 
@@ -689,25 +689,28 @@ static int nct1008_shutdown_warning_set_cur_state(
 					struct thermal_cooling_device *cdev,
 					unsigned long cur_state)
 {
-	static long temp_sav;
 	struct nct1008_data *data = cdev->devdata;
 	long limit = data->plat_data.sensors[EXT].shutdown_limit * 1000;
 	long temp;
 
 	if (nct1008_get_temp_common(EXT, data, &temp))
 		return -1;
+	else if (temp < 0)
+		goto ret;
 
 	if ((temp >= (limit - THERM_WARN_RANGE_HIGH_OFFSET)) &&
-		(temp != temp_sav)) {
-		pr_warn("NCT%s: Warning: chip temperature (%ld.%02ldC) is %s SHUTDOWN limit (%c%ld.%02ldC).\n",
+		(temp != nct1008_shutdown_warning_saved_temp)) {
+		pr_warn("NCT%s: Warning: chip temperature (%ld.%02ldC) is %s SHUTDOWN limit (%c%ldC).\n",
 			(data->chip == NCT72) ? "72" : "1008",
 			temp / 1000, (temp % 1000) / 10,
 			temp > limit ? "above" :
 			temp == limit ? "at" : "near",
-			temp > temp_sav ? '>' : '<',
-			limit / 1000, (limit % 1000) / 10);
-		temp_sav = temp;
+			temp > limit ? '>' : '<', limit / 1000);
+		nct1008_shutdown_warning_saved_temp = temp;
 	}
+
+ ret:
+	nct1008_shutdown_warning_cur_state = cur_state;
 	return 0;
 }
 
@@ -981,21 +984,23 @@ static int nct1008_get_trend(int sensor,
 
 	switch (trip_state->trip_type) {
 	case THERMAL_TRIP_ACTIVE:
-		if (data->sensors[sensor].temp >= trip_state->trip_temp)
+		if (thz->temperature >= trip_state->trip_temp)
 			*trend = THERMAL_TREND_RAISING;
 		else
 			*trend = THERMAL_TREND_DROPPING;
 		break;
 	case THERMAL_TRIP_PASSIVE:
-		if (data->sensors[sensor].temp > trip_state->trip_temp)
+		if (thz->temperature > thz->last_temperature)
 			*trend = THERMAL_TREND_RAISING;
-		else
+		else if (thz->temperature < (thz->last_temperature -
+						trip_state->hysteresis))
 			*trend = THERMAL_TREND_DROPPING;
+		else
+			*trend = THERMAL_TREND_STABLE;
 		break;
 	default:
 		return -EINVAL;
 	}
-
 	return 0;
 }
 
@@ -1749,6 +1754,9 @@ static int nct1008_probe(struct i2c_client *client,
 	}
 	nct1008_update(EXT, data);
 	nct1008_update(LOC, data);
+
+	nct1008_shutdown_warning_saved_temp =
+				data->sensors[EXT].thz->temperature;
 #endif
 	return 0;
 

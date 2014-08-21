@@ -45,7 +45,6 @@
 		compad-vref-3v3 = <0x1>;
 		compad-vref-1v8 = <0x2>;
 		cd-gpios = <&gpio TEGRA_GPIO_PZ2 0>;
-		wp-gpios = <&gpio TEGRA_GPIO_PZ3 0>;
 		vddio_sdmmc-supply = <&max77620_ldo2>;
 		nvidia,update-pinctrl-settings;
 		pinctrl-names = "sdmmc_schmitt_enable", "sdmmc_schmitt_disable", "sdmmc_clk_schmitt_enable", "sdmmc_clk_schmitt_disable";

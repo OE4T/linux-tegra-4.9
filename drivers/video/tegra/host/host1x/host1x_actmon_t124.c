@@ -1,5 +1,5 @@
 /*
- * Tegra Graphics Host Actmon support for T124
+ * Tegra Graphics Host Actmon support for T124 and T210
  *
  * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -55,14 +55,17 @@ static void actmon_update_sample_period_safe(struct host1x_actmon *actmon)
 	/* We use MHz and us instead of Hz and s due to numerical limitations */
 	freq_mhz = clk_get_rate(actmon->clk) / 1000000;
 
-	if ((freq_mhz * actmon->usecs_per_sample/256) > 255) {
+	if ((freq_mhz * actmon->usecs_per_sample) / 256 > 255) {
 		val |= actmon_sample_ctrl_tick_range_f(1);
-		clks_per_sample = freq_mhz * actmon->usecs_per_sample/65536;
+		actmon->divider = 65536;
 	} else {
-		val &= actmon_sample_ctrl_tick_range_f(0);
-		clks_per_sample = freq_mhz * actmon->usecs_per_sample/256;
+		val &= ~actmon_sample_ctrl_tick_range_f(1);
+		actmon->divider = 256;
 	}
-	actmon->clks_per_sample = clks_per_sample;
+
+	clks_per_sample = (freq_mhz * actmon->usecs_per_sample) /
+		actmon->divider;
+	actmon->clks_per_sample = clks_per_sample + 1;
 	actmon_writel(actmon, val, actmon_sample_ctrl_r());
 
 	val = actmon_readl(actmon, actmon_ctrl_r());
@@ -83,6 +86,7 @@ static void actmon_update_sample_period_safe(struct host1x_actmon *actmon)
 	freq_mhz = clk_get_rate(actmon->clk) / 1000000;
 	clks_per_sample = freq_mhz * actmon->usecs_per_sample;
 	actmon->clks_per_sample = clks_per_sample;
+	actmon->divider = 1;
 
 	val = actmon_readl(actmon, actmon_ctrl_r());
 	val &= ~actmon_ctrl_sample_period_m();
@@ -99,6 +103,7 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 	struct platform_device *pdev = actmon->host->dev;
 	struct nvhost_device_data *pdata =
 		(struct nvhost_device_data *)platform_get_drvdata(pdev);
+
 	u32 val;
 	int err;
 
@@ -191,7 +196,8 @@ static int host1x_actmon_avg_norm(struct host1x_actmon *actmon, u32 *avg)
 	long val;
 	int err;
 
-	if (!(actmon->init == ACTMON_READY && actmon->clks_per_sample > 0)) {
+	if (!(actmon->init == ACTMON_READY && actmon->clks_per_sample > 0 &&
+	    actmon->divider)) {
 		*avg = 0;
 		return 0;
 	}
@@ -205,7 +211,7 @@ static int host1x_actmon_avg_norm(struct host1x_actmon *actmon, u32 *avg)
 	nvhost_module_idle(actmon->host->dev);
 	rmb();
 
-	*avg = (val * 1000) / actmon->clks_per_sample;
+	*avg = (val * 1000) / (actmon->clks_per_sample * actmon->divider);
 
 	return 0;
 }
@@ -236,7 +242,8 @@ static int host1x_actmon_count_norm(struct host1x_actmon *actmon, u32 *avg)
 	long val;
 	int err;
 
-	if (actmon->init != ACTMON_READY) {
+	if (!(actmon->init == ACTMON_READY && actmon->clks_per_sample > 0 &&
+	    actmon->divider)) {
 		*avg = 0;
 		return 0;
 	}
@@ -250,7 +257,7 @@ static int host1x_actmon_count_norm(struct host1x_actmon *actmon, u32 *avg)
 	nvhost_module_idle(actmon->host->dev);
 	rmb();
 
-	*avg = (val * 1000) / actmon->clks_per_sample;
+	*avg = (val * 1000) / (actmon->clks_per_sample * actmon->divider);
 
 	return 0;
 }

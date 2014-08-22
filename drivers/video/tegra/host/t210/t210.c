@@ -344,6 +344,7 @@ static void t210_remove_support(struct nvhost_chip_support *op)
 #include "host1x/host1x_cdma.c"
 #include "host1x/host1x_syncpt.c"
 #include "host1x/host1x_intr.c"
+#define NVHOST_T210_ACTMON
 #include "host1x/host1x_actmon_t124.c"
 #include "host1x/host1x_debug.c"
 

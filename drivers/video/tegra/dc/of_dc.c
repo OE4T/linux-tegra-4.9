@@ -197,51 +197,36 @@ static int parse_tmds(struct device_node *np,
 	if (!of_property_read_u32(np, "pclk", &temp)) {
 		tmds_cfg_addr->pclk = (int)temp;
 		OF_DC_LOG("tmds pclk %d\n", temp);
-	} else {
-		goto parse_tmds_fail;
 	}
 	if (!of_property_read_u32(np, "pll0", &temp)) {
 		tmds_cfg_addr->pll0 = (u32)temp;
 		OF_DC_LOG("tmds pll0 0x%x\n", temp);
-	} else {
-		goto parse_tmds_fail;
 	}
 	if (!of_property_read_u32(np, "pll1", &temp)) {
 		tmds_cfg_addr->pll1 = (u32)temp;
 		OF_DC_LOG("tmds pll1 0x%x\n", temp);
-	} else {
-		goto parse_tmds_fail;
 	}
 	if (!of_property_read_u32(np, "pe-current", &temp)) {
 		tmds_cfg_addr->pe_current = (u32)temp;
 		OF_DC_LOG("tmds pe-current 0x%x\n", temp);
-	} else {
-		goto parse_tmds_fail;
 	}
 	if (!of_property_read_u32(np, "drive-current", &temp)) {
 		tmds_cfg_addr->drive_current = (u32)temp;
 		OF_DC_LOG("tmds drive-current 0x%x\n", temp);
-	} else {
-		goto parse_tmds_fail;
 	}
 	if (!of_property_read_u32(np, "peak-current", &temp)) {
 		tmds_cfg_addr->peak_current = (u32)temp;
 		OF_DC_LOG("tmds peak-current 0x%x\n", temp);
-	} else {
-		goto parse_tmds_fail;
 	}
 	if (!of_property_read_u32(np, "pad-ctls0-mask", &temp)) {
 		tmds_cfg_addr->pad_ctls0_mask = (u32)temp;
 		OF_DC_LOG("tmds pad_ctls0_mask 0x%x\n", temp);
-	} else {
-		goto parse_tmds_fail;
 	}
 	if (!of_property_read_u32(np, "pad-ctls0-setting", &temp)) {
 		tmds_cfg_addr->pad_ctls0_setting = (u32)temp;
 		OF_DC_LOG("tmds pad_ctls0_setting 0x%x\n", temp);
-	} else {
-		goto parse_tmds_fail;
 	}
+
 	return 0;
 parse_tmds_fail:
 	pr_err("parse tmds fail!\n");
@@ -296,6 +281,10 @@ static int parse_disp_default_out(struct platform_device *ndev,
 	if (!of_property_read_u32(np, "nvidia,out-height", &temp)) {
 		default_out->height = (unsigned) temp;
 		OF_DC_LOG("out_height %d\n", default_out->height);
+	}
+	if (!of_property_read_u32(np, "nvidia,out-rotation", &temp)) {
+		default_out->rotation = (unsigned) temp;
+		OF_DC_LOG("out_rotation %d\n", temp);
 	}
 	if (np_hdmi && of_device_is_available(np_hdmi) &&
 		(default_out->type == TEGRA_DC_OUT_HDMI)) {
@@ -1780,11 +1769,6 @@ struct tegra_dc_platform_data
 	if (err) {
 		pr_err("parse_dc_out_type err\n");
 		goto fail_parse;
-	}
-
-	if (!of_property_read_u32(np, "nvidia,out-rotation", &temp)) {
-		pdata->default_out->rotation = (unsigned) temp;
-		OF_DC_LOG("out_rotation %d\n", temp);
 	}
 
 	if (!of_property_read_u32(np, "nvidia,fb-bpp", &temp)) {

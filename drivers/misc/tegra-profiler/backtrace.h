@@ -62,6 +62,9 @@ unsigned long
 quadd_user_stack_pointer(struct pt_regs *regs);
 
 unsigned long
+quadd_get_user_frame_pointer(struct pt_regs *regs);
+
+unsigned long
 quadd_user_link_register(struct pt_regs *regs);
 
 static inline int
@@ -77,6 +80,17 @@ static inline int
 validate_pc_addr(unsigned long addr, unsigned long nbytes)
 {
 	return addr && addr < TASK_SIZE - nbytes;
+}
+
+static inline int
+validate_stack_addr(unsigned long addr,
+		    struct vm_area_struct *vma,
+		    unsigned long nbytes)
+{
+	if (addr & 0x03)
+		return 0;
+
+	return is_vma_addr(addr, vma, nbytes);
 }
 
 #endif  /* __QUADD_BACKTRACE_H */

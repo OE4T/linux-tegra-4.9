@@ -26,7 +26,8 @@ tegra-profiler-y := \
 	power_clk.o \
 	auth.o \
 	quadd_proc.o \
-	eh_unwind.o
+	eh_unwind.o \
+	dwarf_unwind.o
 
 obj-$(CONFIG_CACHE_L2X0) += pl310.o
 

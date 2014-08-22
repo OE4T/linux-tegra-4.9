@@ -274,6 +274,9 @@ struct nvhost_device_data {
 
 	/* bond out device id */
 	unsigned int bond_out_id;
+
+	phys_addr_t carveout_addr;
+	phys_addr_t carveout_size;
 };
 
 

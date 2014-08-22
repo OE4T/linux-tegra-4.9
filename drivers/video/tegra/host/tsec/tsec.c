@@ -74,9 +74,6 @@
 /* The key value in ascii hex */
 static u8 otf_key[TSEC_KEY_LENGTH];
 
-phys_addr_t tsec_carveout_addr;
-phys_addr_t tsec_carveout_size;
-
 /* Pointer to this device */
 struct platform_device *tsec;
 
@@ -702,6 +699,7 @@ static int tsec_setup_ucode_image(struct platform_device *dev,
 		u32 *ucode_ptr,
 		const struct firmware *ucode_fw)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	struct tsec *m = get_tsec(dev);
 	/* image data is little endian. */
 	struct tsec_ucode_v1 ucode;
@@ -779,9 +777,9 @@ static int tsec_setup_ucode_image(struct platform_device *dev,
 	tsec_carveout_size_off = reserved_offset + TSEC_CARVEOUT_SIZE_OFFSET;
 
 	*((phys_addr_t *)(((void *)ucode_ptr) + tsec_carveout_addr_off)) =
-							tsec_carveout_addr;
+		pdata->carveout_addr;
 	*((phys_addr_t *)(((void *)ucode_ptr) + tsec_carveout_size_off)) =
-							tsec_carveout_size;
+		pdata->carveout_size;
 
 	m->os.size = ucode.bin_header->os_bin_size;
 	m->os.reserved_offset = reserved_offset;
@@ -981,15 +979,17 @@ static int tsec_probe(struct platform_device *dev)
 	node = of_find_node_by_name(dev->dev.of_node, "carveout");
 	if (node) {
 		err = of_property_read_u32(node, "carveout_addr",
-					(u32 *)&tsec_carveout_addr);
+					(u32 *)&pdata->carveout_addr);
 		if (!err)
 			err = of_property_read_u32(node, "carveout_size",
-				(u32 *)&tsec_carveout_size);
+				(u32 *)&pdata->carveout_size);
 		if (!err) {
 			dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
 			dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
-			dma_map_linear_attrs(&dev->dev, tsec_carveout_addr,
-				tsec_carveout_size, DMA_TO_DEVICE, &attrs);
+			dma_map_linear_attrs(&dev->dev,
+				pdata->carveout_addr,
+				pdata->carveout_size, DMA_TO_DEVICE,
+				&attrs);
 		}
 	}
 

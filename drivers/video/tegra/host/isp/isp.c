@@ -79,9 +79,34 @@ static int __init init_tegra_isp_isr_callback(void)
 pure_initcall(init_tegra_isp_isr_callback);
 #endif
 
+int nvhost_isp_t124_prepare_poweroff(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct isp *tegra_isp = pdata->private_data;
+
+	disable_irq(tegra_isp->irq);
+
+	return 0;
+}
+
 int nvhost_isp_t124_finalize_poweron(struct platform_device *pdev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct isp *tegra_isp = pdata->private_data;
+
 	host1x_writel(pdev, T12_ISP_CG_CTRL, T12_CG_2ND_LEVEL_EN);
+	enable_irq(tegra_isp->irq);
+
+	return 0;
+}
+
+int nvhost_isp_t210_finalize_poweron(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct isp *tegra_isp = pdata->private_data;
+
+	enable_irq(tegra_isp->irq);
+
 	return 0;
 }
 
@@ -371,8 +396,9 @@ static int isp_probe(struct platform_device *dev)
 	}
 
 	INIT_WORK((struct work_struct *)tegra_isp->my_isr_work, isp_isr_work);
+
 	disable_irq(tegra_isp->irq);
-	enable_irq(tegra_isp->irq);
+
 #endif
 
 	nvhost_module_init(dev);

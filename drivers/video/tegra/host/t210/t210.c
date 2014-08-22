@@ -81,6 +81,8 @@ struct nvhost_device_data t21_isp_info = {
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.clocks			= {{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP }},
+	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
+	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
 	.moduleid		= NVHOST_MODULE_ISP,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
 	.bond_out_id		= BOND_OUT_ISP,
@@ -101,6 +103,8 @@ struct nvhost_device_data t21_ispb_info = {
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.clocks			= {{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP }},
+	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
+	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
 	.bond_out_id		= BOND_OUT_ISP,
 };

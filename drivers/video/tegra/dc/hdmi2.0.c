@@ -43,6 +43,15 @@
 
 static struct tegra_hdmi *dc_hdmi;
 
+static void tegra_clk_writel(u32 val, u32 mask, u32 offset)
+{
+	u32 temp = readl(IO_ADDRESS(0x60006000 + offset));
+
+	temp &= ~(mask);
+	temp |= val;
+	writel(temp, IO_ADDRESS(0x60006000 + offset));
+}
+
 static int tegra_hdmi_host_enable(struct tegra_hdmi *);
 static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type);
 static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk);

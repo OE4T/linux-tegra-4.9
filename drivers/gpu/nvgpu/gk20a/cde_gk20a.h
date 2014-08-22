@@ -26,6 +26,14 @@
 #define MAX_CDE_USER_PARAMS	32
 #define MAX_CDE_OBJ_IDS		4
 
+/*
+ * The size of the context ring buffer that is dedicated for handling cde
+ * jobs.  Re-using a context (=channel) for a differnt cde job forces a cpu
+ * wait on the previous job to that channel, so increasing this value
+ * reduces the likelihood of stalls.
+ */
+#define NUM_CDE_CONTEXTS	4
+
 struct dma_buf;
 struct gk20a;
 
@@ -241,7 +249,7 @@ struct gk20a_cde_app {
 	struct mutex mutex;
 	struct vm_gk20a *vm;
 
-	struct gk20a_cde_ctx cde_ctx[1];
+	struct gk20a_cde_ctx cde_ctx[NUM_CDE_CONTEXTS];
 	int cde_ctx_ptr;
 
 	u32 shader_parameter;

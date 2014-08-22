@@ -4,10 +4,6 @@
 	spi@7000da00 {
 		status = "okay";
 		spi-max-frequency = <12000000>;
-		controller-data {
-			nvidia,rx-clk-tap-delay = <0>;
-			nvidia,tx-clk-tap-delay = <16>;
-		};
 		spi-touch@0 {
 			compatible = "raydium,rm_ts_spidev";
 			reg = <0>; /* spi chip select 0 */
@@ -21,6 +17,10 @@
 			name-of-clock-con = "extern2";
 			avdd-supply = <&max77620_ldo5>;
 			dvdd-supply = <&max77620_ldo6>;
+			controller-data {
+				nvidia,rx-clk-tap-delay = <0>;
+				nvidia,tx-clk-tap-delay = <16>;
+			};
 		};
 	};
 };

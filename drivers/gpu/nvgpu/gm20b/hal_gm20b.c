@@ -27,6 +27,10 @@
 #include "mm_gm20b.h"
 #include "pmu_gm20b.h"
 #include "clk_gm20b.h"
+#include <linux/tegra-fuse.h>
+
+#define FUSE_OPT_PRIV_SEC_DIS_0 0x264
+#define PRIV_SECURITY_DISABLE 0x01
 
 struct gpu_ops gm20b_ops = {
 	.clock_gating = {
@@ -46,6 +50,34 @@ struct gpu_ops gm20b_ops = {
 int gm20b_init_hal(struct gpu_ops *gops)
 {
 	*gops = gm20b_ops;
+#ifdef CONFIG_TEGRA_ACR
+	if (tegra_platform_is_linsim()) {
+		gops->privsecurity = 1;
+	} else {
+		if (tegra_fuse_readl(FUSE_OPT_PRIV_SEC_DIS_0) &
+				PRIV_SECURITY_DISABLE) {
+			gk20a_dbg_info("priv security is disabled in HW");
+			gops->privsecurity = 0;
+		} else {
+			gops->privsecurity = 1;
+		}
+	}
+#else
+	if (tegra_platform_is_linsim()) {
+		gk20a_dbg_info("running ASIM with PRIV security disabled");
+		gops->privsecurity = 0;
+	} else {
+		if (tegra_fuse_readl(FUSE_OPT_PRIV_SEC_DIS_0) &
+				PRIV_SECURITY_DISABLE) {
+			gops->privsecurity = 0;
+		} else {
+			gk20a_dbg_info("priv security is not supported but enabled");
+			gops->privsecurity = 1;
+			return -EPERM;
+		}
+	}
+#endif
+
 	gm20b_init_ltc(gops);
 	gm20b_init_gr(gops);
 	gm20b_init_ltc(gops);

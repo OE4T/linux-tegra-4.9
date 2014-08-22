@@ -297,6 +297,7 @@ struct gpu_ops {
 		int (*init_clk_support)(struct gk20a *g);
 		int (*suspend_clk_support)(struct gk20a *g);
 	} clk;
+	bool privsecurity;
 };
 
 struct gk20a {

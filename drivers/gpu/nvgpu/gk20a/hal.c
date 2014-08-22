@@ -26,7 +26,9 @@ int gpu_init_hal(struct gk20a *g)
 		gk20a_init_hal(&g->ops);
 		break;
 	case GK20A_GPUID_GM20B:
-		gm20b_init_hal(&g->ops);
+		gk20a_dbg_info("gm20b detected");
+		if (gm20b_init_hal(&g->ops))
+			return -ENODEV;
 		break;
 	default:
 		gk20a_err(&g->dev->dev, "no support for %x", ver);

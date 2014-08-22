@@ -150,10 +150,9 @@ int gm20b_pmu_setup_elpg(struct gk20a *g)
 
 void gm20b_init_pmu_ops(struct gpu_ops *gops)
 {
-#ifdef CONFIG_TEGRA_ACR
-	gm20b_init_secure_pmu(gops);
-#else
-	gk20a_init_pmu_ops(gops);
-#endif
+	if (gops->privsecurity)
+		gm20b_init_secure_pmu(gops);
+	else
+		gk20a_init_pmu_ops(gops);
 	gops->pmu.pmu_setup_elpg = gm20b_pmu_setup_elpg;
 }

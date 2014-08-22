@@ -31,12 +31,11 @@ static void gr_gm20b_init_gpc_mmu(struct gk20a *g)
 
 	gk20a_dbg_info("initialize gpc mmu");
 
-#ifndef CONFIG_TEGRA_ACR
-	/* Bypass MMU check for non-secure boot. For
-	 * secure-boot,this register write has no-effect */
-	gk20a_writel(g, fb_priv_mmu_phy_secure_r(), 0xffffffff);
-#endif
-
+	if (!g->ops.privsecurity) {
+		/* Bypass MMU check for non-secure boot. For
+		 * secure-boot,this register write has no-effect */
+		gk20a_writel(g, fb_priv_mmu_phy_secure_r(), 0xffffffff);
+	}
 	temp = gk20a_readl(g, fb_mmu_ctrl_r());
 	temp &= gr_gpcs_pri_mmu_ctrl_vm_pg_size_m() |
 		gr_gpcs_pri_mmu_ctrl_use_pdb_big_page_size_m() |
@@ -722,6 +721,13 @@ static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 
 	return 0;
 }
+#else
+
+static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
+{
+	return -EPERM;
+}
+
 #endif
 
 void gm20b_init_gr(struct gpu_ops *gops)
@@ -745,11 +751,10 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.init_fs_state = gr_gm20b_ctx_state_floorsweep;
 	gops->gr.set_hww_esr_report_mask = gr_gm20b_set_hww_esr_report_mask;
 	gops->gr.falcon_load_ucode = gr_gm20b_load_ctxsw_ucode_segments;
-#ifdef CONFIG_TEGRA_ACR
-	gops->gr.load_ctxsw_ucode = gr_gm20b_load_ctxsw_ucode;
-#else
-	gops->gr.load_ctxsw_ucode = gr_gk20a_load_ctxsw_ucode;
-#endif
+	if (gops->privsecurity)
+		gops->gr.load_ctxsw_ucode = gr_gm20b_load_ctxsw_ucode;
+	else
+		gops->gr.load_ctxsw_ucode = gr_gk20a_load_ctxsw_ucode;
 	gops->gr.get_gpc_tpc_mask = gr_gm20b_get_gpc_tpc_mask;
 	gops->gr.free_channel_ctx = gk20a_free_channel_ctx;
 	gops->gr.alloc_obj_ctx = gk20a_alloc_obj_ctx;

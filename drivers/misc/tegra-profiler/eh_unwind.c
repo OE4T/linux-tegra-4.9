@@ -16,6 +16,9 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+/*#pragma message("--- version header: remove for static version ---")*/
+#include <linux/version.h>
+
 #include <linux/mm.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
@@ -28,6 +31,7 @@
 #include "eh_unwind.h"
 #include "backtrace.h"
 #include "comm.h"
+#include "dwarf_unwind.h"
 
 #define QUADD_EXTABS_SIZE	0x100
 
@@ -41,28 +45,6 @@ enum regs {
 	SP = 13,
 	LR = 14,
 	PC = 15
-};
-
-struct extab_info {
-	unsigned long addr;
-	unsigned long length;
-
-	unsigned long mmap_offset;
-};
-
-struct extables {
-	struct extab_info extab;
-	struct extab_info exidx;
-};
-
-struct ex_region_info {
-	unsigned long vm_start;
-	unsigned long vm_end;
-
-	struct extables tabs;
-	struct quadd_extabs_mmap *mmap;
-
-	struct list_head list;
 };
 
 struct regions_data {
@@ -108,18 +90,7 @@ struct pin_pages_work {
 	unsigned long vm_start;
 };
 
-struct quadd_unwind_ctx ctx;
-
-static inline int
-validate_stack_addr(unsigned long addr,
-		    struct vm_area_struct *vma,
-		    unsigned long nbytes)
-{
-	if (addr & 0x03)
-		return 0;
-
-	return is_vma_addr(addr, vma, nbytes);
-}
+static struct quadd_unwind_ctx ctx;
 
 static inline int
 validate_mmap_addr(struct quadd_extabs_mmap *mmap,
@@ -146,10 +117,6 @@ validate_mmap_addr(struct quadd_extabs_mmap *mmap,
 	return 1;
 }
 
-/*
- * TBD: why probe_kernel_address() can lead to random crashes
- * on 64-bit kernel, and replacing it to __get_user() fixed the issue.
- */
 #define read_user_data(addr, retval)				\
 ({								\
 	int ret;						\
@@ -346,8 +313,7 @@ remove_ex_region(struct regions_data *rd,
 static struct ex_region_info *
 search_ex_region(struct ex_region_info *array,
 		 unsigned long size,
-		 unsigned long key,
-		 struct ex_region_info *ri)
+		 unsigned long key)
 {
 	unsigned int i_min, i_max, mid;
 
@@ -366,16 +332,13 @@ search_ex_region(struct ex_region_info *array,
 			i_min = mid + 1;
 	}
 
-	if (array[i_max].vm_start == key) {
-		memcpy(ri, &array[i_max], sizeof(*ri));
+	if (array[i_max].vm_start == key)
 		return &array[i_max];
-	}
 
 	return NULL;
 }
 
-static long
-__search_ex_region(unsigned long key, struct ex_region_info *ri)
+long quadd_search_ex_region(unsigned long key, struct ex_region_info *ri)
 {
 	struct regions_data *rd;
 	struct ex_region_info *ri_p = NULL;
@@ -386,7 +349,9 @@ __search_ex_region(unsigned long key, struct ex_region_info *ri)
 	if (!rd)
 		goto out;
 
-	ri_p = search_ex_region(rd->entries, rd->curr_nr, key, ri);
+	ri_p = search_ex_region(rd->entries, rd->curr_nr, key);
+	if (ri_p)
+		memcpy(ri, ri_p, sizeof(*ri));
 
 out:
 	rcu_read_unlock();
@@ -397,11 +362,11 @@ static struct regions_data *rd_alloc(unsigned long size)
 {
 	struct regions_data *rd;
 
-	rd = kzalloc(sizeof(*rd), GFP_KERNEL);
+	rd = kzalloc(sizeof(*rd), GFP_ATOMIC);
 	if (!rd)
 		return NULL;
 
-	rd->entries = kzalloc(size * sizeof(*rd->entries), GFP_KERNEL);
+	rd->entries = kzalloc(size * sizeof(*rd->entries), GFP_ATOMIC);
 	if (!rd->entries) {
 		kfree(rd);
 		return NULL;
@@ -470,6 +435,9 @@ int quadd_unwind_set_extab(struct quadd_extables *extabs,
 
 	ri_entry.mmap = mmap;
 
+	ri_entry.tf_start = 0;
+	ri_entry.tf_end = 0;
+
 	ti = &ri_entry.tabs.exidx;
 	ti->addr = extabs->exidx.addr;
 	ti->length = extabs->exidx.length;
@@ -485,9 +453,10 @@ int quadd_unwind_set_extab(struct quadd_extables *extabs,
 	nr_added = add_ex_region(rd_new, &ri_entry);
 	if (nr_added == 0)
 		goto error_free;
+
 	rd_new->curr_nr += nr_added;
 
-	ex_entry = kzalloc(sizeof(*ex_entry), GFP_KERNEL);
+	ex_entry = kzalloc(sizeof(*ex_entry), GFP_ATOMIC);
 	if (!ex_entry) {
 		err = -ENOMEM;
 		goto error_free;
@@ -511,6 +480,57 @@ error_free:
 error_out:
 	spin_unlock(&ctx.lock);
 	return err;
+}
+
+void
+quadd_unwind_set_tail_info(unsigned long vm_start,
+			   unsigned long tf_start,
+			   unsigned long tf_end)
+{
+	struct ex_region_info *ri;
+	unsigned long nr_entries, size;
+	struct regions_data *rd, *rd_new;
+
+	spin_lock(&ctx.lock);
+
+	rd = rcu_dereference(ctx.rd);
+
+	if (!rd || rd->curr_nr == 0)
+		goto error_out;
+
+	size = rd->size;
+	nr_entries = rd->curr_nr;
+
+	rd_new = rd_alloc(size);
+	if (IS_ERR_OR_NULL(rd_new)) {
+		pr_err_once("%s: error: rd_alloc\n", __func__);
+		goto error_out;
+	}
+
+	memcpy(rd_new->entries, rd->entries,
+	       nr_entries * sizeof(*rd->entries));
+
+	rd_new->curr_nr = nr_entries;
+
+	ri = search_ex_region(rd_new->entries, nr_entries, vm_start);
+	if (!ri)
+		goto error_free;
+
+	ri->tf_start = tf_start;
+	ri->tf_end = tf_end;
+
+	rcu_assign_pointer(ctx.rd, rd_new);
+
+	call_rcu(&rd->rcu, rd_free_rcu);
+	spin_unlock(&ctx.lock);
+
+	return;
+
+error_free:
+	rd_free(rd_new);
+
+error_out:
+	spin_unlock(&ctx.lock);
 }
 
 static int
@@ -979,7 +999,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 			break;
 
 		if (!is_vma_addr(ri->tabs.exidx.addr, vma_pc, sizeof(u32))) {
-			err = __search_ex_region(vma_pc->vm_start, &ri_new);
+			err = quadd_search_ex_region(vma_pc->vm_start, &ri_new);
 			if (err) {
 				cc->unw_rc = QUADD_URC_TBL_NOT_EXIST;
 				break;
@@ -1009,9 +1029,9 @@ unwind_backtrace(struct quadd_callchain *cc,
 }
 
 unsigned int
-quadd_get_user_callchain_ut(struct pt_regs *regs,
-			    struct quadd_callchain *cc,
-			    struct task_struct *task)
+quadd_aarch32_get_user_callchain_ut(struct pt_regs *regs,
+				    struct quadd_callchain *cc,
+				    struct task_struct *task)
 {
 	long err;
 	int nr_prev = cc->nr;
@@ -1069,7 +1089,7 @@ quadd_get_user_callchain_ut(struct pt_regs *regs,
 	if (!vma_sp)
 		return 0;
 
-	err = __search_ex_region(vma->vm_start, &ri);
+	err = quadd_search_ex_region(vma->vm_start, &ri);
 	if (err) {
 		cc->unw_rc = QUADD_URC_TBL_NOT_EXIST;
 		return 0;
@@ -1081,9 +1101,9 @@ quadd_get_user_callchain_ut(struct pt_regs *regs,
 }
 
 int
-quadd_is_ex_entry_exist(struct pt_regs *regs,
-			unsigned long addr,
-			struct task_struct *task)
+quadd_aarch32_is_ex_entry_exist(struct pt_regs *regs,
+				unsigned long addr,
+				struct task_struct *task)
 {
 	long err;
 	u32 value;
@@ -1095,16 +1115,11 @@ quadd_is_ex_entry_exist(struct pt_regs *regs,
 	if (!regs || !mm)
 		return 0;
 
-#ifdef CONFIG_ARM64
-	if (!compat_user_mode(regs))
-		return 0;
-#endif
-
 	vma = find_vma(mm, addr);
 	if (!vma)
 		return 0;
 
-	err = __search_ex_region(vma->vm_start, &ri);
+	err = quadd_search_ex_region(vma->vm_start, &ri);
 	if (err)
 		return 0;
 
@@ -1124,20 +1139,26 @@ quadd_is_ex_entry_exist(struct pt_regs *regs,
 
 int quadd_unwind_start(struct task_struct *task)
 {
+	int err;
 	struct regions_data *rd, *rd_old;
+
 	rd = rd_alloc(QUADD_EXTABS_SIZE);
+	if (IS_ERR_OR_NULL(rd)) {
+		pr_err("%s: error: rd_alloc\n", __func__);
+		return -ENOMEM;
+	}
+
+	err = quadd_dwarf_unwind_start();
+	if (err) {
+		rd_free(rd);
+		return err;
+	}
 
 	spin_lock(&ctx.lock);
 
 	rd_old = rcu_dereference(ctx.rd);
 	if (rd_old)
 		pr_warn("%s: warning: rd_old\n", __func__);
-
-	if (IS_ERR_OR_NULL(rd)) {
-		pr_err("%s: error: rd_alloc\n", __func__);
-		spin_unlock(&ctx.lock);
-		return -ENOMEM;
-	}
 
 	rcu_assign_pointer(ctx.rd, rd);
 
@@ -1159,6 +1180,8 @@ void quadd_unwind_stop(void)
 	unsigned long nr_entries, size;
 	struct regions_data *rd;
 	struct ex_region_info *ri;
+
+	quadd_dwarf_unwind_stop();
 
 	spin_lock(&ctx.lock);
 
@@ -1186,6 +1209,12 @@ out:
 
 int quadd_unwind_init(void)
 {
+	int err;
+
+	err = quadd_dwarf_unwind_init();
+	if (err)
+		return err;
+
 	spin_lock_init(&ctx.lock);
 	rcu_assign_pointer(ctx.rd, NULL);
 	ctx.pid = 0;

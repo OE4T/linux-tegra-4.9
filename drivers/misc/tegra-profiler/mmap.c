@@ -88,11 +88,7 @@ void quadd_process_mmap(struct vm_area_struct *vma, pid_t pid)
 		if (IS_ERR(file_name))
 			goto out;
 
-		if (strstr(file_name, " (deleted)"))
-			goto out;
-
 		length = strlen(file_name) + 1;
-
 		is_file_exists = 1;
 	} else {
 		const char *name = NULL;
@@ -182,9 +178,6 @@ int quadd_get_current_mmap(pid_t pid)
 
 			file_name = d_path(path, tmp_buf, PATH_MAX);
 			if (IS_ERR(file_name))
-				continue;
-
-			if (strstr(file_name, " (deleted)"))
 				continue;
 
 			length = strlen(file_name) + 1;

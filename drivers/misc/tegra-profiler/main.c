@@ -195,6 +195,8 @@ set_parameters(struct quadd_parameters *p, uid_t *debug_app_uid)
 	if (p->nr_pids != 1)
 		return -EINVAL;
 
+	p->package_name[sizeof(p->package_name) - 1] = '\0';
+
 	rcu_read_lock();
 	task = pid_task(find_vpid(p->pids[0]), PIDTYPE_PID);
 	rcu_read_unlock();
@@ -297,7 +299,9 @@ set_parameters(struct quadd_parameters *p, uid_t *debug_app_uid)
 	if (extra & QUADD_PARAM_EXTRA_BT_MIXED)
 		pr_info("unwinding: mixed mode\n");
 
-	quadd_unwind_start(task);
+	err = quadd_unwind_start(task);
+	if (err)
+		return err;
 
 	pr_info("New parameters have been applied\n");
 

@@ -778,10 +778,10 @@ bool nvsd_update_brightness(struct tegra_dc *dc)
 		}
 
 		if (settings->smooth_k_enable) {
-			if (smooth_k_frames_left--)
+			if (smooth_k_frames_left) {
+				smooth_k_frames_left--;
 				return true;
-			else
-				smooth_k_frames_left = smooth_k_duration_frames;
+			}
 		}
 	}
 

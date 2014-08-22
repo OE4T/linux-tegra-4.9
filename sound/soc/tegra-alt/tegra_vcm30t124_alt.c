@@ -269,7 +269,7 @@ static int tegra_vcm30t124_ad1937_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
-	unsigned int idx =  tegra_vcm30t124_get_dai_link_idx("ad-playback");
+	unsigned int idx = tegra_vcm30t124_get_dai_link_idx("ad-playback");
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 	unsigned int fmt = card->rtd[idx].dai_link->dai_fmt;
@@ -328,6 +328,24 @@ static int tegra_vcm30t124_spdif_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+static int tegra_vcm30t124_bt_sco_hw_params(struct snd_pcm_substream *substream,
+					struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
+	unsigned int idx = tegra_vcm30t124_get_dai_link_idx("bt-playback");
+	struct snd_soc_pcm_stream *dai_params =
+		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+
+	dai_params->rate_min = params_rate(params);
+	dai_params->channels_min = params_channels(params);
+	dai_params->formats = (1ULL << (params_format(params)));
+
+	return 0;
+}
+
 static struct snd_soc_ops tegra_vcm30t124_ak4618_ops = {
 	.hw_params = tegra_vcm30t124_ak4618_hw_params,
 };
@@ -344,6 +362,10 @@ static struct snd_soc_ops tegra_vcm30t124_spdif_ops = {
 	.hw_params = tegra_vcm30t124_spdif_hw_params,
 };
 
+static struct snd_soc_ops tegra_vcm30t124_bt_sco_ops = {
+	.hw_params = tegra_vcm30t124_bt_sco_hw_params,
+};
+
 static const struct snd_soc_dapm_widget tegra_vcm30t124_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone-x", NULL),
 	SND_SOC_DAPM_HP("Headphone-y", NULL),
@@ -352,6 +374,8 @@ static const struct snd_soc_dapm_widget tegra_vcm30t124_dapm_widgets[] = {
 	SND_SOC_DAPM_LINE("LineIn-y", NULL),
 	SND_SOC_DAPM_SPK("Spdif-out", NULL),
 	SND_SOC_DAPM_LINE("Spdif-in", NULL),
+	SND_SOC_DAPM_SPK("BT-out", NULL),
+	SND_SOC_DAPM_LINE("BT-in", NULL),
 };
 
 static int tegra_vcm30t124_wm8731_init(struct snd_soc_pcm_runtime *rtd)
@@ -365,7 +389,7 @@ static int tegra_vcm30t124_wm8731_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	const char *identifier = (const char *)rtd->dai_link->name;
-	unsigned int idx =  tegra_vcm30t124_get_dai_link_idx(identifier);
+	unsigned int idx = tegra_vcm30t124_get_dai_link_idx(identifier);
 	unsigned int clk_out, mclk;
 	int err;
 
@@ -414,7 +438,7 @@ static int tegra_vcm30t124_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	const char *identifier = (const char *)rtd->dai_link->name;
-	unsigned int idx =  tegra_vcm30t124_get_dai_link_idx(identifier);
+	unsigned int idx = tegra_vcm30t124_get_dai_link_idx(identifier);
 	unsigned int fmt = rtd->dai_link->dai_fmt;
 	unsigned int mclk, val;
 	int err;
@@ -481,7 +505,7 @@ static int tegra_vcm30t124_ak4618_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	const char *identifier = (const char *)rtd->dai_link->name;
-	unsigned int idx =  tegra_vcm30t124_get_dai_link_idx(identifier);
+	unsigned int idx = tegra_vcm30t124_get_dai_link_idx(identifier);
 	unsigned int fmt = rtd->dai_link->dai_fmt;
 	unsigned int clk_out, mclk, srate;
 	int err;
@@ -543,7 +567,7 @@ static int tegra_vcm30t124_spdif_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	const char *identifier = (const char *)rtd->dai_link->name;
-	unsigned int idx =  tegra_vcm30t124_get_dai_link_idx(identifier);
+	unsigned int idx = tegra_vcm30t124_get_dai_link_idx(identifier);
 	unsigned int fmt = rtd->dai_link->dai_fmt;
 	unsigned int mclk, clk_out_rate, srate;
 	int err = 0;
@@ -574,6 +598,49 @@ static int tegra_vcm30t124_spdif_init(struct snd_soc_pcm_runtime *rtd)
 	}
 
 	/* set bclk ratio */
+	if (cpu_dai->driver->ops->set_bclk_ratio) {
+		idx = idx - TEGRA124_XBAR_DAI_LINKS;
+		err = snd_soc_dai_set_bclk_ratio(cpu_dai,
+				pdata->dai_config[idx].bclk_ratio);
+		if (err < 0) {
+			dev_err(card->dev, "%s cpu DAI bclk not set\n",
+				cpu_dai->name);
+			return err;
+		}
+	}
+
+	/* set tdm slot mask */
+	if (cpu_dai->driver->ops->set_tdm_slot) {
+		fmt = fmt & SND_SOC_DAIFMT_FORMAT_MASK;
+		if ((fmt == SND_SOC_DAIFMT_DSP_A) ||
+			(fmt == SND_SOC_DAIFMT_DSP_B)) {
+			err = snd_soc_dai_set_tdm_slot(cpu_dai,
+					pdata->dai_config[idx].tx_mask,
+					pdata->dai_config[idx].rx_mask,
+					0, 0);
+			if (err < 0) {
+				dev_err(card->dev,
+					"%s cpu DAI slot mask not set\n",
+					cpu_dai->name);
+			}
+		}
+	}
+	return err;
+}
+
+static int tegra_vcm30t124_bt_sco_init(struct snd_soc_pcm_runtime *rtd)
+{
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
+	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
+	struct tegra_vcm30t124_platform_data *pdata = machine->pdata;
+	const char *identifier = (const char *)rtd->dai_link->name;
+	unsigned int idx = tegra_vcm30t124_get_dai_link_idx(identifier);
+	unsigned int fmt = rtd->dai_link->dai_fmt;
+	int err = 0;
+
 	if (cpu_dai->driver->ops->set_bclk_ratio) {
 		idx = idx - TEGRA124_XBAR_DAI_LINKS;
 		err = snd_soc_dai_set_bclk_ratio(cpu_dai,
@@ -843,6 +910,10 @@ static void tegra_vcm30t124_new_codec_links(
 				tegra_vcm30t124_codec_links[i].init =
 					tegra_vcm30t124_ak4618_init;
 			else if (strstr(tegra_vcm30t124_codec_links[i].name,
+				"bt-playback"))
+				tegra_vcm30t124_codec_links[i].init =
+					tegra_vcm30t124_bt_sco_init;
+			else if (strstr(tegra_vcm30t124_codec_links[i].name,
 				"spdif-playback"))
 				tegra_vcm30t124_codec_links[i].init =
 					tegra_vcm30t124_spdif_init;
@@ -989,7 +1060,7 @@ static int tegra_vcm30t124_ad1937_put_rate(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(card);
-	unsigned int idx =  tegra_vcm30t124_get_dai_link_idx("ad-playback");
+	unsigned int idx = tegra_vcm30t124_get_dai_link_idx("ad-playback");
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)card->dai_link[idx].params;
 
@@ -1191,6 +1262,12 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 					tegra_machine_set_dai_ops(
 						TEGRA124_DAI_LINK_APBIF4,
 						&tegra_vcm30t124_wm8731_ops);
+			} else if (!strcmp(
+				machine->pdata->dai_config[i].link_name,
+				"bt-playback")) {
+					tegra_machine_set_dai_ops(
+						TEGRA124_DAI_LINK_APBIF8,
+						&tegra_vcm30t124_bt_sco_ops);
 			}
 		}
 	}

@@ -41,6 +41,7 @@
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h>
 #include <linux/debugfs.h>
+#include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/i2c.h>
@@ -204,6 +205,37 @@
 #define REF_CLK_CYC_PER_DVCO_SAMPLE	4
 
 /*
+ * DFLL_OUTPUT_RAMP_DELAY: after the DFLL's I2C PMIC output starts
+ * requesting the minimum TUNE_HIGH voltage, the minimum number of
+ * microseconds to wait for the PMIC's voltage output to finish
+ * slewing
+ */
+#define DFLL_OUTPUT_RAMP_DELAY		100
+
+/*
+ * DFLL_TUNE_HIGH_DELAY: number of microseconds to wait between tests
+ * to see if the high voltage has been reached yet, during a
+ * transition from the low-voltage range to the high-voltage range
+ */
+#define DFLL_TUNE_HIGH_DELAY		2000
+
+/*
+ * DFLL_TUNE_HIGH_MARGIN_STEPS: attempt to initially program the DFLL
+ * voltage target to a (DFLL_TUNE_HIGH_MARGIN_STEPS * 10 millivolt)
+ * margin above the high voltage floor, in closed-loop mode in the
+ * high-voltage range
+ */
+#define DFLL_TUNE_HIGH_MARGIN_STEPS	2
+
+/*
+ * I2C_OUTPUT_ACTIVE_TEST_US: mandatory minimum interval (in
+ * microseconds) between testing whether the I2C controller is
+ * currently sending a voltage-set command.  Some comments list this
+ * as being a worst-case margin for "disable propagation."
+ */
+#define I2C_OUTPUT_ACTIVE_TEST_US	2
+
+/*
  * REF_CLOCK_RATE: the DFLL reference clock rate currently supported by this
  * driver, in Hz
  */
@@ -234,6 +266,9 @@ enum dfll_ctrl_mode {
  * enum dfll_tune_range - voltage range that the driver believes it's in
  * @DFLL_TUNE_UNINITIALIZED: DFLL tuning not yet programmed
  * @DFLL_TUNE_LOW: DFLL in the low-voltage range (or open-loop mode)
+ * @DFLL_TUNE_WAIT_DFLL: waiting for DFLL voltage output to reach high
+ * @DFLL_TUNE_WAIT_PMIC: waiting for PMIC to react to DFLL output
+ * @DFLL_TUNE_HIGH: DFLL in the high-voltage range
  *
  * Some DFLL tuning parameters may need to change depending on the
  * DVCO's voltage; these states represent the ranges that the driver
@@ -242,7 +277,10 @@ enum dfll_ctrl_mode {
  */
 enum dfll_tune_range {
 	DFLL_TUNE_UNINITIALIZED = 0,
-	DFLL_TUNE_LOW = 1,
+	DFLL_TUNE_LOW,
+	DFLL_TUNE_WAIT_DFLL,
+	DFLL_TUNE_WAIT_PMIC,
+	DFLL_TUNE_HIGH,
 };
 
 
@@ -294,6 +332,9 @@ struct tegra_dfll {
 	struct dfll_rate_req		last_req;
 	unsigned long			last_unrounded_rate;
 
+	struct timer_list		tune_timer;
+	unsigned long			tune_delay;
+
 	/* Parameters from DT */
 	u32				droop_ctrl;
 	u32				sample_rate;
@@ -314,6 +355,11 @@ struct tegra_dfll {
 	unsigned			lut_uv[MAX_DFLL_VOLTAGES];
 	int				lut_size;
 	u8				lut_bottom, lut_min, lut_max, lut_safe;
+
+	/* tuning parameters */
+	u8				tune_high_out_start;
+	u8				tune_high_out_min;
+	u8				tune_out_last;
 
 	/* PWM interface */
 	enum tegra_dfll_pmu_if		pmu_if;
@@ -336,6 +382,8 @@ static const char * const mode_name[] = {
 	[DFLL_OPEN_LOOP] = "open_loop",
 	[DFLL_CLOSED_LOOP] = "closed_loop",
 };
+
+static void dfll_load_i2c_lut(struct tegra_dfll *td);
 
 /*
  * Register accessors
@@ -372,6 +420,36 @@ static inline void dfll_i2c_writel(struct tegra_dfll *td, u32 val, u32 offs)
 static inline void dfll_i2c_wmb(struct tegra_dfll *td)
 {
 	dfll_i2c_readl(td, DFLL_I2C_CFG);
+}
+
+/**
+ * is_output_i2c_req_pending - is an I2C voltage-set command in progress?
+ * @pdev: DFLL instance
+ *
+ * Returns 1 if an I2C request is in progress, or 0 if not.  The DFLL
+ * IP block requires two back-to-back reads of the I2C_REQ_PENDING
+ * field to return 0 before the software can be sure that no I2C
+ * request is currently pending.  Also, a minimum time interval
+ * between DFLL_I2C_STS reads is required by the IP block.
+ */
+static int is_output_i2c_req_pending(struct tegra_dfll *td)
+{
+	u32 sts;
+
+	if (td->pmu_if == TEGRA_DFLL_PMU_PWM)
+		return 0;
+
+	sts = dfll_i2c_readl(td, DFLL_I2C_STS);
+	if (sts & DFLL_I2C_STS_I2C_REQ_PENDING)
+		return 1;
+
+	udelay(I2C_OUTPUT_ACTIVE_TEST_US);
+
+	sts = dfll_i2c_readl(td, DFLL_I2C_STS);
+	if (sts & DFLL_I2C_STS_I2C_REQ_PENDING)
+		return 1;
+
+	return 0;
 }
 
 /**
@@ -472,6 +550,142 @@ static void dfll_tune_low(struct tegra_dfll *td)
 		td->soc->set_clock_trimmers_low();
 }
 
+/**
+ * dfll_tune_high - tune DFLL and CPU clock shaper for high voltages
+ * @td: DFLL instance
+ *
+ * Tune the DFLL oscillator parameters and the CPU clock shaper
+ * for the high-voltage range.  The bottom end of the high-voltage
+ * range is represented by the index td->soc->tune_high_min_millivolts.
+ * Used in closed-loop mode.  No return value.
+ */
+static void dfll_tune_high(struct tegra_dfll *td)
+{
+	td->tune_range = DFLL_TUNE_HIGH;
+
+	dfll_writel(td, td->soc->tune0_high, DFLL_TUNE0);
+	dfll_writel(td, td->soc->tune1, DFLL_TUNE1);
+	dfll_wmb(td);
+
+	if (td->soc->set_clock_trimmers_high)
+		td->soc->set_clock_trimmers_high();
+}
+
+/**
+ * dfll_set_open_loop_config - prepare to switch to open-loop mode
+ * @td: DFLL instance
+ *
+ * Prepare to switch the DFLL to open-loop mode. This switches the
+ * DFLL to the low-voltage tuning range, ensures that I2C output
+ * forcing is disabled, and disables the output clock rate scaler.
+ * The DFLL's low-voltage tuning range parameters must be
+ * characterized to keep the downstream device stable at any DVCO
+ * input voltage. No return value.
+ */
+static void dfll_set_open_loop_config(struct tegra_dfll *td)
+{
+	u32 val;
+
+	/* always tune low (safe) in open loop */
+	if (td->tune_range != DFLL_TUNE_LOW)
+		dfll_tune_low(td);
+
+	val = dfll_readl(td, DFLL_FREQ_REQ);
+	val |= DFLL_FREQ_REQ_SCALE_MASK;
+	val &= ~DFLL_FREQ_REQ_FORCE_ENABLE;
+	dfll_writel(td, val, DFLL_FREQ_REQ);
+	dfll_wmb(td);
+}
+
+/**
+ * dfll_set_close_loop_config - prepare to switch to closed-loop mode
+ * @pdev: DFLL instance
+ * @req: requested output rate
+ *
+ * Prepare to switch the DFLL to closed-loop mode.  This involves
+ * switching the DFLL's tuning voltage regime (if necessary), and
+ * rewriting the LUT to restrict the minimum and maximum voltages.  No
+ * return value.
+ */
+static void dfll_set_close_loop_config(struct tegra_dfll *td,
+			  struct dfll_rate_req *req)
+{
+	bool sample_tune_out_last = false;
+
+	switch (td->tune_range) {
+	case DFLL_TUNE_LOW:
+		if (req->lut_index > td->tune_high_out_start) {
+			td->tune_range = DFLL_TUNE_WAIT_DFLL;
+			mod_timer(&td->tune_timer, jiffies + td->tune_delay);
+		}
+		sample_tune_out_last = true;
+		break;
+
+	case DFLL_TUNE_HIGH:
+	case DFLL_TUNE_WAIT_DFLL:
+	case DFLL_TUNE_WAIT_PMIC:
+		if (req->lut_index <= td->tune_high_out_start)
+			dfll_tune_low(td);
+		break;
+	default:
+		BUG();
+	}
+
+	td->lut_min = td->tune_range == DFLL_TUNE_LOW ?
+			0 : td->tune_high_out_min;
+
+	if (sample_tune_out_last && td->pmu_if == TEGRA_DFLL_PMU_I2C) {
+		u32 val;
+
+		val  = dfll_i2c_readl(td, DFLL_I2C_STS);
+		td->tune_out_last = val >> DFLL_I2C_STS_I2C_LAST_SHIFT;
+		td->tune_out_last &= OUT_MASK;
+	}
+}
+
+/**
+ * dfll_tune_timer_cb - timer callback while tuning low to high
+ * @data: struct platform_device * of the DFLL instance
+ *
+ * Timer callback, used when switching from TUNE_LOW to TUNE_HIGH in
+ * closed-loop mode.  Waits for DFLL I2C voltage command output to
+ * reach tune_high_out_min, then waits for the PMIC to react to the
+ * command.  No return value.
+ */
+static void dfll_tune_timer_cb(unsigned long data)
+{
+	struct tegra_dfll *td = (struct tegra_dfll *)data;
+	u32 val, out_min, out_last;
+	bool use_ramp_delay;
+
+	if (td->tune_range == DFLL_TUNE_WAIT_DFLL) {
+		out_min = td->lut_min;
+
+		if (td->pmu_if == TEGRA_DFLL_PMU_I2C) {
+			val = dfll_i2c_readl(td, DFLL_I2C_STS);
+			out_last = val >> DFLL_I2C_STS_I2C_LAST_SHIFT;
+			out_last &= OUT_MASK;
+		} else {
+			out_last = out_min;
+		}
+
+		use_ramp_delay = !is_output_i2c_req_pending(td);
+		use_ramp_delay |= td->tune_out_last != out_last;
+
+		if (use_ramp_delay &&
+		    (out_last >= td->tune_high_out_min) &&
+		    (out_min >= td->tune_high_out_min)) {
+			td->tune_range = DFLL_TUNE_WAIT_PMIC;
+			mod_timer(&td->tune_timer, jiffies +
+				  usecs_to_jiffies(DFLL_OUTPUT_RAMP_DELAY));
+		} else {
+			mod_timer(&td->tune_timer, jiffies + td->tune_delay);
+		}
+	} else if (td->tune_range == DFLL_TUNE_WAIT_PMIC) {
+		dfll_tune_high(td);
+	}
+}
+
 /*
  * Output clock scaler helpers
  */
@@ -568,7 +782,6 @@ static int dfll_i2c_set_output_enabled(struct tegra_dfll *td, bool enable)
 
 	return 0;
 }
-
 
 /*
  * DFLL-to-PWM controller interface
@@ -816,6 +1029,15 @@ static void dfll_init_out_if(struct tegra_dfll *td)
  * Set/get the DFLL's targeted output clock rate
  */
 
+static int lut_index_to_uv(struct tegra_dfll *td, int index)
+{
+	if (td->pmu_if == TEGRA_DFLL_PMU_PWM)
+		return td->soc->alignment.offset_uv
+			+ index * td->soc->alignment.step_uv;
+	else
+		return regulator_list_voltage(td->vdd_reg, td->lut[index]);
+}
+
 /**
  * find_lut_index_for_rate - determine I2C LUT index for given DFLL rate
  * @td: DFLL instance
@@ -989,6 +1211,7 @@ static int dfll_request_rate(struct tegra_dfll *td, unsigned long rate)
 
 	if (td->mode == DFLL_CLOSED_LOOP) {
 		spin_lock_irqsave(&td->lock, flags);
+		dfll_set_close_loop_config(td, &td->last_req);
 		dfll_set_frequency_request(td, &td->last_req);
 		spin_unlock_irqrestore(&td->lock, flags);
 	}
@@ -1053,32 +1276,6 @@ static int dfll_enable(struct tegra_dfll *td)
 }
 
 /**
- * dfll_set_open_loop_config - prepare to switch to open-loop mode
- * @td: DFLL instance
- *
- * Prepare to switch the DFLL to open-loop mode. This switches the
- * DFLL to the low-voltage tuning range, ensures that I2C output
- * forcing is disabled, and disables the output clock rate scaler.
- * The DFLL's low-voltage tuning range parameters must be
- * characterized to keep the downstream device stable at any DVCO
- * input voltage. No return value.
- */
-static void dfll_set_open_loop_config(struct tegra_dfll *td)
-{
-	u32 val;
-
-	/* always tune low (safe) in open loop */
-	if (td->tune_range != DFLL_TUNE_LOW)
-		dfll_tune_low(td);
-
-	val = dfll_readl(td, DFLL_FREQ_REQ);
-	val |= DFLL_FREQ_REQ_SCALE_MASK;
-	val &= ~DFLL_FREQ_REQ_FORCE_ENABLE;
-	dfll_writel(td, val, DFLL_FREQ_REQ);
-	dfll_wmb(td);
-}
-
-/**
  * tegra_dfll_lock - switch from open-loop to closed-loop mode
  * @td: DFLL instance
  *
@@ -1109,6 +1306,7 @@ static int dfll_lock(struct tegra_dfll *td)
 
 		spin_lock_irqsave(&td->lock, flags);
 		dfll_set_mode(td, DFLL_CLOSED_LOOP);
+		dfll_set_close_loop_config(td, req);
 		dfll_set_frequency_request(td, req);
 		dfll_set_force_output_enabled(td, false);
 		spin_unlock_irqrestore(&td->lock, flags);
@@ -1564,6 +1762,43 @@ static int dfll_init_clks(struct tegra_dfll *td)
 }
 
 /**
+ * dfll_init_tuning_thresholds - set up the high voltage range, if possible
+ * @td: DFLL instance
+ *
+ * Determine whether the DFLL tuning parameters need to be
+ * reprogrammed when the DFLL voltage reaches a certain minimum
+ * threshold.  No return value.
+ */
+static void dfll_init_tuning_thresholds(struct tegra_dfll *td)
+{
+	u8 out_min, out_start, max_voltage_index;
+
+	max_voltage_index = td->lut_size - 1;
+
+	/*
+	 * Convert high tuning voltage threshold into output LUT
+	 * index, and add necessary margin.  If voltage threshold is
+	 * outside operating range set it at maximum output level to
+	 * effectively disable tuning parameters adjustment.
+	 */
+	td->tune_high_out_min = max_voltage_index;
+	td->tune_high_out_start = max_voltage_index;
+	if (td->soc->tune_high_min_millivolts < td->soc->min_millivolts)
+		return;	/* no difference between low & high voltage range */
+
+	out_min = find_mv_out_cap(td, td->soc->tune_high_min_millivolts);
+	if ((out_min + 2) > max_voltage_index)
+		return;
+
+	out_start = out_min + DFLL_TUNE_HIGH_MARGIN_STEPS;
+	if (out_start > max_voltage_index)
+		return;
+
+	td->tune_high_out_min = out_min;
+	td->tune_high_out_start = out_start;
+}
+
+/**
  * dfll_init - Prepare the DFLL IP block for use
  * @td: DFLL instance
  *
@@ -1617,6 +1852,8 @@ static int dfll_init(struct tegra_dfll *td)
 	dfll_set_open_loop_config(td);
 
 	dfll_init_out_if(td);
+
+	dfll_init_tuning_thresholds(td);
 
 	pm_runtime_put_sync(td->dev);
 
@@ -2116,6 +2353,12 @@ int tegra_dfll_register(struct platform_device *pdev,
 		dev_err(&pdev->dev, "DFLL clk registration failed\n");
 		return ret;
 	}
+
+	/* Initialize tuning timer */
+	init_timer(&td->tune_timer);
+	td->tune_timer.function = dfll_tune_timer_cb;
+	td->tune_timer.data = (unsigned long)td;
+	td->tune_delay = usecs_to_jiffies(DFLL_TUNE_HIGH_DELAY);
 
 #ifdef CONFIG_DEBUG_FS
 	dfll_debug_init(td);

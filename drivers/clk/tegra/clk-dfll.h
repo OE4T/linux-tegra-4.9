@@ -42,7 +42,6 @@ struct tegra_dfll_soc_data {
 	u32 tune0_low;
 	u32 tune0_high;
 	u32 tune1;
-
 	void (*init_clock_trimmers)(void);
 	void (*set_clock_trimmers_high)(void);
 	void (*set_clock_trimmers_low)(void);

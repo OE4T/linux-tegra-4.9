@@ -612,6 +612,13 @@ static int gm20b_init_clk_setup_hw(struct gk20a *g)
 			 trim_sys_bypassctrl_gpcpll_vco_f());
 	gk20a_writel(g, trim_sys_bypassctrl_r(), data);
 
+	/* Disable idle slow down */
+	data = gk20a_readl(g, therm_clk_slowdown_r(0));
+	data = set_field(data, therm_clk_slowdown_idle_factor_m(),
+			 therm_clk_slowdown_idle_factor_disabled_f());
+	gk20a_writel(g, therm_clk_slowdown_r(0), data);
+	gk20a_readl(g, therm_clk_slowdown_r(0));
+
 	return 0;
 }
 

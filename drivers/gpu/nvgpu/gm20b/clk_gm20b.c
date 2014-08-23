@@ -20,6 +20,7 @@
 #include <linux/delay.h>	/* for mdelay */
 #include <linux/module.h>
 #include <linux/debugfs.h>
+#include <linux/uaccess.h>
 #include <linux/clk/tegra.h>
 
 #include "gk20a/gk20a.h"
@@ -881,6 +882,87 @@ static const struct file_operations pll_reg_fops = {
 	.release	= single_release,
 };
 
+static int pll_reg_raw_show(struct seq_file *s, void *data)
+{
+	struct gk20a *g = s->private;
+	u32 reg;
+
+	mutex_lock(&g->clk.clk_mutex);
+	if (!g->clk.clk_hw_on) {
+		seq_puts(s, "gk20a powered down - no access to registers\n");
+		mutex_unlock(&g->clk.clk_mutex);
+		return 0;
+	}
+
+	seq_puts(s, "GPCPLL REGISTERS:\n");
+	for (reg = trim_sys_gpcpll_cfg_r(); reg <= trim_sys_gpcpll_dvfs2_r();
+	      reg += sizeof(u32))
+		seq_printf(s, "[0x%02x] = 0x%08x\n", reg, gk20a_readl(g, reg));
+
+	seq_puts(s, "\nGPC CLK OUT REGISTERS:\n");
+
+	reg = trim_sys_sel_vco_r();
+	seq_printf(s, "[0x%02x] = 0x%08x\n", reg, gk20a_readl(g, reg));
+	reg = trim_sys_gpc2clk_out_r();
+	seq_printf(s, "[0x%02x] = 0x%08x\n", reg, gk20a_readl(g, reg));
+	reg = trim_sys_bypassctrl_r();
+	seq_printf(s, "[0x%02x] = 0x%08x\n", reg, gk20a_readl(g, reg));
+
+	mutex_unlock(&g->clk.clk_mutex);
+	return 0;
+}
+
+static int pll_reg_raw_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, pll_reg_raw_show, inode->i_private);
+}
+
+static ssize_t pll_reg_raw_write(struct file *file,
+	const char __user *userbuf, size_t count, loff_t *ppos)
+{
+	struct gk20a *g = file->f_path.dentry->d_inode->i_private;
+	char buf[80];
+	u32 reg, val;
+
+	if (sizeof(buf) <= count)
+		return -EINVAL;
+
+	if (copy_from_user(buf, userbuf, count))
+		return -EFAULT;
+
+	/* terminate buffer and trim - white spaces may be appended
+	 *  at the end when invoked from shell command line */
+	buf[count] = '\0';
+	strim(buf);
+
+	if (sscanf(buf, "[0x%x] = 0x%x", &reg, &val) != 2)
+		return -EINVAL;
+
+	if (((reg < trim_sys_gpcpll_cfg_r()) ||
+	    (reg > trim_sys_gpcpll_dvfs2_r())) &&
+	    (reg != trim_sys_sel_vco_r()) &&
+	    (reg != trim_sys_gpc2clk_out_r()) &&
+	    (reg != trim_sys_bypassctrl_r()))
+		return -EPERM;
+
+	mutex_lock(&g->clk.clk_mutex);
+	if (!g->clk.clk_hw_on) {
+		mutex_unlock(&g->clk.clk_mutex);
+		return -EBUSY;
+	}
+	gk20a_writel(g, reg, val);
+	mutex_unlock(&g->clk.clk_mutex);
+	return count;
+}
+
+static const struct file_operations pll_reg_raw_fops = {
+	.open		= pll_reg_raw_open,
+	.read		= seq_read,
+	.write		= pll_reg_raw_write,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static int monitor_get(void *data, u64 *val)
 {
 	struct gk20a *g = (struct gk20a *)data;
@@ -950,6 +1032,11 @@ static int clk_gm20b_debugfs_init(struct gk20a *g)
 
 	d = debugfs_create_file(
 		"pll_reg", S_IRUGO, platform->debugfs, g, &pll_reg_fops);
+	if (!d)
+		goto err_out;
+
+	d = debugfs_create_file("pll_reg_raw",
+		S_IRUGO, platform->debugfs, g, &pll_reg_raw_fops);
 	if (!d)
 		goto err_out;
 

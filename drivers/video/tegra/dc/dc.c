@@ -66,7 +66,7 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #include "dev.h"
 #include "nvhost_sync.h"
 #include "nvsd.h"
-#include "dp.h"
+#include "dpaux.h"
 #include "nvsr.h"
 
 #ifdef CONFIG_ADF_TEGRA
@@ -2795,7 +2795,7 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 
 	np_dpaux = of_find_node_by_path(DPAUX_NODE);
 	if (np_dpaux || !dc->ndev->dev.of_node)
-		tegra_dpaux_pad_power(dc, false);
+		tegra_dpaux_pad_power(dc, TEGRA_DPAUX_INSTANCE_0, false);
 
 	if (dc->out_ops && dc->out_ops->enable)
 		dc->out_ops->enable(dc);
@@ -3566,10 +3566,8 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	tegra_dc_feature_register(dc);
 
 	if (dc->pdata->default_out) {
-#ifdef CONFIG_FRAMEBUFFER_CONSOLE
 		if (dc->pdata->default_out->hotplug_init)
 			dc->pdata->default_out->hotplug_init(&dc->ndev->dev);
-#endif /* CONFIG_FRAMEBUFFER_CONSOLE */
 		ret = tegra_dc_set_out(dc, dc->pdata->default_out);
 		if (ret < 0) {
 			dev_err(&dc->ndev->dev, "failed to initialize DC out ops\n");
@@ -3745,11 +3743,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		}
 #endif
 	}
-
-#ifndef CONFIG_FRAMEBUFFER_CONSOLE
-	if (dc->out && dc->out->hotplug_init)
-		dc->out->hotplug_init(&ndev->dev);
-#endif /* !CONFIG_FRAMEBUFFER_CONSOLE */
 
 	if (dc->out_ops) {
 		if (dc->out_ops->detect)

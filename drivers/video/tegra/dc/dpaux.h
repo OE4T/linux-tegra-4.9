@@ -1,0 +1,40 @@
+/*
+ * drivers/video/tegra/dc/dpaux.h
+ *
+ * Copyright (c) 2014, NVIDIA CORPORATION, All rights reserved.
+ * Author: Animesh Kishore <ankishore@nvidia.com>
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
+
+#ifndef __DRIVER_VIDEO_TEGRA_DC_DPAUX_H__
+#define __DRIVER_VIDEO_TEGRA_DC_DPAUX_H__
+
+enum tegra_dpaux_pad_mode {
+	TEGRA_DPAUX_PAD_MODE_AUX = 0,
+	TEGRA_DPAUX_PAD_MODE_I2C = 1,
+};
+
+enum tegra_dpaux_instance {
+	TEGRA_DPAUX_INSTANCE_0 = 0,
+	TEGRA_DPAUX_INSTANCE_1 = 1,
+	TEGRA_DPAUX_INSTANCE_N,
+};
+
+int tegra_dpaux_clk_en(enum tegra_dpaux_instance id);
+void tegra_dpaux_clk_dis(enum tegra_dpaux_instance id);
+void tegra_dpaux_pad_power(struct tegra_dc *dc,
+			enum tegra_dpaux_instance id,
+			bool on);
+void tegra_dpaux_config_pad_mode(struct tegra_dc *dc,
+				enum tegra_dpaux_instance id,
+				enum tegra_dpaux_pad_mode mode);
+#endif

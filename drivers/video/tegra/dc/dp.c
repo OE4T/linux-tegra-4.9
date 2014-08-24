@@ -35,6 +35,7 @@
 #include "sor.h"
 #include "sor_regs.h"
 #include "dpaux_regs.h"
+#include "dpaux.h"
 #include "dc_priv.h"
 #include "edid.h"
 
@@ -784,7 +785,7 @@ static void tegra_dpaux_enable(struct tegra_dc_dp_data *dp)
 		0x18 << DPAUX_HYBRID_PADCTL_AUX_DRVI_SHIFT |
 		DPAUX_HYBRID_PADCTL_AUX_INPUT_RCV_ENABLE);
 
-	tegra_dpaux_pad_power(dp->dc, true);
+	tegra_dpaux_pad_power(dp->dc, TEGRA_DPAUX_INSTANCE_0, true);
 }
 
 static int tegra_dp_panel_power_state(struct tegra_dc_dp_data *dp, u8 state)
@@ -2234,7 +2235,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 error_enable:
 	tegra_dp_default_int(dp, false);
-	tegra_dpaux_pad_power(dp->dc, false);
+	tegra_dpaux_pad_power(dp->dc, TEGRA_DPAUX_INSTANCE_0, false);
 	tegra_dpaux_clk_disable(dp);
 	tegra_dc_io_end(dc);
 	return;
@@ -2278,7 +2279,7 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 		tegra_dp_disable_irq(dp->irq);
 	}
 
-	tegra_dpaux_pad_power(dp->dc, false);
+	tegra_dpaux_pad_power(dp->dc, TEGRA_DPAUX_INSTANCE_0, false);
 
 	/* Power down SOR */
 	tegra_dc_sor_detach(dp->sor);
@@ -2356,5 +2357,3 @@ struct tegra_dc_out_ops tegra_dc_dp_ops = {
 	.setup_clk = tegra_dc_dp_setup_clk,
 	.modeset_notifier = tegra_dc_dp_modeset_notifier,
 };
-
-

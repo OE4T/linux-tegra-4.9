@@ -421,25 +421,4 @@ int tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 #define NV_DPCD_HDCP_BINFO_OFFSET			(0x0006802A)
 #define NV_DPCD_HDCP_KSV_FIFO_OFFSET			(0x0006802C)
 #define NV_DPCD_HDCP_AINFO_OFFSET			(0x0006803B)
-
-static __maybe_unused
-void tegra_dpaux_pad_power(struct tegra_dc *dc, bool on)
-{
-	struct clk *clk;
-
-	clk = clk_get_sys("dpaux", NULL);
-	if (IS_ERR_OR_NULL(clk))
-		return;
-
-	clk_prepare_enable(clk);
-	tegra_dc_io_start(dc);
-
-	writel((on ? DPAUX_HYBRID_SPARE_PAD_PWR_POWERUP :
-		DPAUX_HYBRID_SPARE_PAD_PWR_POWERDOWN),
-		IO_ADDRESS(TEGRA_DPAUX_BASE + DPAUX_HYBRID_SPARE * 4));
-
-	tegra_dc_io_end(dc);
-	clk_disable_unprepare(clk);
-}
-
 #endif

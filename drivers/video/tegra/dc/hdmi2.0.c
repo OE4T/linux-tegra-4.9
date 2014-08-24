@@ -38,6 +38,7 @@
 #include "edid.h"
 #include "hdmi2.0.h"
 #include "hdmihdcp.h"
+#include "dpaux.h"
 
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
@@ -350,9 +351,12 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 
 static int tegra_hdmi_edid_eld_read(struct tegra_hdmi *hdmi)
 {
-/* TODO: Enable edid */
-#if 0
 	int err;
+
+	tegra_dpaux_clk_en(TEGRA_DPAUX_INSTANCE_1);
+	tegra_dpaux_config_pad_mode(hdmi->dc, TEGRA_DPAUX_INSTANCE_1,
+					TEGRA_DPAUX_PAD_MODE_I2C);
+	mdelay(100);
 
 	memset(&hdmi->mon_spec, 0, sizeof(hdmi->mon_spec));
 	hdmi->mon_spec_valid = false;
@@ -381,6 +385,8 @@ static int tegra_hdmi_edid_eld_read(struct tegra_hdmi *hdmi)
 					&hdmi->mon_spec,
 					tegra_hdmi_fb_mode_filter);
 #endif
+	if (!hdmi->dc->out->modes)
+		tegra_dc_set_fb_mode(hdmi->dc, hdmi->mon_spec.modedb, false);
 
 	hdmi->dc->connected = true;
 
@@ -389,24 +395,18 @@ static int tegra_hdmi_edid_eld_read(struct tegra_hdmi *hdmi)
 	hdmi->hpd_state_status.edid_eld_read = 1;
 
 	return 0;
-#else
-	hdmi->dc->connected = true;
-	hdmi->hpd_state_status.edid_eld_read = 1;
-	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
-	return 0;
-#endif
 }
 
 static int (*tegra_hdmi_plug_func[])(struct tegra_hdmi *) = {
 	tegra_hdmi_dc_enable,
-	tegra_hdmi_host_enable,
 	tegra_hdmi_edid_eld_read,
+	tegra_hdmi_host_enable,
 };
 
 enum tegra_hdmi_plug_states {
 	TEGRA_DC_ENABLE,
-	TEGRA_HDMI_HOST_ENABLE,
 	TEGRA_EDID_ELD_READ,
+	TEGRA_HDMI_HOST_ENABLE,
 	TEGRA_HDMI_MONITOR_ENABLE,
 };
 
@@ -792,6 +792,37 @@ static void tegra_hdmi_infoframe_pkt_write(struct tegra_hdmi *hdmi,
 		tegra_sor_writel(sor, data_reg, *data);
 }
 
+static int tegra_hdmi_find_cea_vic(const struct tegra_dc_mode *mode)
+{
+	struct fb_videomode m;
+	unsigned i;
+	unsigned best = 0;
+
+	tegra_dc_to_fb_videomode(&m, mode);
+
+	m.vmode &= ~FB_VMODE_STEREO_MASK; /* stereo modes have the same VICs */
+
+	for (i = 1; i < CEA_MODEDB_SIZE; i++) {
+		const struct fb_videomode *curr = &cea_modes[i];
+
+		if (!fb_mode_is_equal(&m, curr))
+			continue;
+
+		if (!best)
+			best = i;
+		/* if either flag is set, then match is required */
+		if (curr->flag & (FB_FLAG_RATIO_4_3 | FB_FLAG_RATIO_16_9)) {
+			if (m.flag & curr->flag & FB_FLAG_RATIO_4_3)
+				best = i;
+			else if (m.flag & curr->flag & FB_FLAG_RATIO_16_9)
+				best = i;
+		} else {
+			best = i;
+		}
+	}
+	return best;
+}
+
 static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 {
 	struct hdmi_avi_infoframe *avi = &hdmi->avi;
@@ -799,8 +830,7 @@ static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 	avi->act_fmt_valid = 1;
 	avi->act_format = HDMI_AVI_ACTIVE_FORMAT_SAME;
 
-	/* TODO: read from edid */
-	avi->video_format = 16;
+	avi->video_format = tegra_hdmi_find_cea_vic(&hdmi->dc->mode);
 }
 
 static void tegra_hdmi_avi_infoframe(struct tegra_hdmi *hdmi)
@@ -1022,6 +1052,7 @@ static int tegra_hdmi_host_enable(struct tegra_hdmi *hdmi)
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, tegra_dc_hpd(dc));
 	tegra_dc_io_end(dc);
 
+	tegra_dc_setup_clk(dc, dc->clk);
 	tegra_dc_hdmi_setup_clk(dc, hdmi->sor->sor_clk);
 
 	tegra_hdmi_config_xbar(hdmi);
@@ -1046,7 +1077,7 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	if (!hdmi->hpd_in_progress) {
 		mutex_lock(&hdmi->hpd_lock);
 		tegra_hdmi_hpd_start(hdmi,
-				TEGRA_HDMI_HOST_ENABLE,
+				TEGRA_EDID_ELD_READ,
 				TEGRA_HDMI_HOST_DISABLE);
 		mutex_unlock(&hdmi->hpd_lock);
 	}

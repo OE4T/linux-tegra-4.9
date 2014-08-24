@@ -22,6 +22,7 @@ obj-$(CONFIG_DEBUG_FS) += dsi_debug.o
 obj-y += dc_sysfs.o
 obj-y += dc_config.o
 obj-y += sor.o
+obj-y += dpaux.o
 obj-$(CONFIG_TEGRA_DP) += dp.o
 obj-$(CONFIG_TEGRA_LVDS) += lvds.o
 obj-$(CONFIG_TEGRA_NVSR) += nvsr.o

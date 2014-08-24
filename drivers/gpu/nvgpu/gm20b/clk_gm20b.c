@@ -367,7 +367,7 @@ pll_locked:
 	return 0;
 }
 
-static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
+static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 			int allow_slide)
 {
 #if PLDIV_GLITCHLESS
@@ -394,11 +394,11 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 	can_slide = allow_slide && trim_sys_gpcpll_cfg_enable_v(cfg);
 
-	if (can_slide && (clk->gpc_pll.M == m) && (clk->gpc_pll.PL == pl))
-		return clk_slide_gpc_pll(g, clk->gpc_pll.N);
+	if (can_slide && (gpll_new->M == m) && (gpll_new->PL == pl))
+		return clk_slide_gpc_pll(g, gpll_new->N);
 
 	/* slide down to NDIV_LO */
-	nlo = DIV_ROUND_UP(m * gpc_pll_params.min_vco, clk->gpc_pll.clk_in);
+	nlo = DIV_ROUND_UP(m * gpc_pll_params.min_vco, gpll_new->clk_in);
 	if (can_slide) {
 		int ret = clk_slide_gpc_pll(g, nlo);
 		if (ret)
@@ -410,9 +410,9 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 	 * Limit either FO-to-FO (path A below) or FO-to-bypass (path B below)
 	 * jump to min_vco/2 by setting post divider >= 1:2.
 	 */
-	skip_bypass = can_slide && (clk->gpc_pll.M == m);
+	skip_bypass = can_slide && (gpll_new->M == m);
 	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
-	if ((skip_bypass && (clk->gpc_pll.PL < 2)) || (pl < 2)) {
+	if ((skip_bypass && (gpll_new->PL < 2)) || (pl < 2)) {
 		if (pl != 2) {
 			coeff = set_field(coeff,
 				trim_sys_gpcpll_coeff_pldiv_m(),
@@ -443,16 +443,16 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 	 * is effectively NOP). PL is preserved (not set to target) of post
 	 * divider is glitchless. Otherwise it is at PL target.
 	 */
-	m = clk->gpc_pll.M;
-	nlo = DIV_ROUND_UP(m * gpc_pll_params.min_vco, clk->gpc_pll.clk_in);
-	n = allow_slide ? nlo : clk->gpc_pll.N;
+	m = gpll_new->M;
+	nlo = DIV_ROUND_UP(m * gpc_pll_params.min_vco, gpll_new->clk_in);
+	n = allow_slide ? nlo : gpll_new->N;
 #if PLDIV_GLITCHLESS
-	pl = (clk->gpc_pll.PL < 2) ? 2 : clk->gpc_pll.PL;
+	pl = (gpll_new->PL < 2) ? 2 : gpll_new->PL;
 #else
-	pl = clk->gpc_pll.PL;
+	pl = gpll_new->PL;
 #endif
 	clk_lock_gpc_pll_under_bypass(g, m, n, pl);
-	clk->gpc_pll.enabled = true;
+	gpll_new->enabled = true;
 
 #if PLDIV_GLITCHLESS
 	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
@@ -460,9 +460,9 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 
 set_pldiv:
 	/* coeff must be current from either path A or B */
-	if (trim_sys_gpcpll_coeff_pldiv_v(coeff) != clk->gpc_pll.PL) {
+	if (trim_sys_gpcpll_coeff_pldiv_v(coeff) != gpll_new->PL) {
 		coeff = set_field(coeff, trim_sys_gpcpll_coeff_pldiv_m(),
-			trim_sys_gpcpll_coeff_pldiv_f(clk->gpc_pll.PL));
+			trim_sys_gpcpll_coeff_pldiv_f(gpll_new->PL));
 		gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
 	}
 #else
@@ -474,7 +474,7 @@ set_pldiv:
 	gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
 #endif
 	/* slide up to target NDIV */
-	return clk_slide_gpc_pll(g, clk->gpc_pll.N);
+	return clk_slide_gpc_pll(g, gpll_new->N);
 }
 
 static int clk_disable_gpcpll(struct gk20a *g, int allow_slide)
@@ -656,9 +656,9 @@ static int set_pll_freq(struct gk20a *g, u32 freq, u32 old_freq)
 
 	/* change frequency only if power is on */
 	if (g->clk.clk_hw_on) {
-		err = clk_program_gpc_pll(g, clk, 1);
+		err = clk_program_gpc_pll(g, &clk->gpc_pll, 1);
 		if (err)
-			err = clk_program_gpc_pll(g, clk, 0);
+			err = clk_program_gpc_pll(g, &clk->gpc_pll, 0);
 	}
 
 	/* Just report error but not restore PLL since dvfs could already change

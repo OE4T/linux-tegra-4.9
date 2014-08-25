@@ -207,25 +207,29 @@ static struct tegra_dc_mode dsi_fake_panel_modes[] = {
 	},
 };
 
+static bool dp_fake_init = false;
+
 int tegra_dc_init_fake_panel_link_cfg(struct tegra_dc_dp_link_config *cfg)
 {
 	/*
 	 * Currently fake the values for testing - same as eDp
 	 * will need to add a method to update as needed
 	 */
-	cfg->max_lane_count = 4;
-	cfg->tps3_supported = false;
-	cfg->support_enhanced_framing = true;
-	cfg->downspread = true;
-	cfg->support_fast_lt = true;
-	cfg->aux_rd_interval = 0;
-	cfg->alt_scramber_reset_cap = true;
-	cfg->only_enhanced_framing = true;
-	cfg->edp_cap = true;
-	cfg->max_link_bw = 20;
-	cfg->scramble_ena = 0;
-	cfg->lt_data_valid = 0;
-
+	if (!dp_fake_init) {
+		cfg->max_lane_count = 4;
+		cfg->tps3_supported = false;
+		cfg->support_enhanced_framing = true;
+		cfg->downspread = true;
+		cfg->support_fast_lt = true;
+		cfg->aux_rd_interval = 0;
+		cfg->alt_scramber_reset_cap = true;
+		cfg->only_enhanced_framing = true;
+		cfg->edp_cap = true;
+		cfg->max_link_bw = 20;
+		cfg->scramble_ena = 0;
+		cfg->lt_data_valid = 0;
+		dp_fake_init = true;
+	}
 	return 0;
 }
 

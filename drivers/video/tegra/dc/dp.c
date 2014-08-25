@@ -883,8 +883,11 @@ static bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 		return false;
 
 	if ((u64)rate * cfg->bits_per_pixel >=
-		(u64)link_rate * 8 * cfg->lane_count)
+		(u64)link_rate * 8 * cfg->lane_count) {
+		dev_dbg(&dp->dc->ndev->dev,
+			"Requested rate calc > link_rate calc\n");
 		return false;
+	}
 
 	num_linkclk_line = (u32)tegra_div64(
 		(u64)link_rate * mode->h_active, rate);
@@ -1031,7 +1034,7 @@ static int tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 		tegra_dc_init_fake_panel_link_cfg(cfg);
 	else
 #endif
-	 {
+	{
 		u8 dpcd_data;
 		int ret;
 
@@ -2021,7 +2024,7 @@ static void tegra_dp_dpcd_init(struct tegra_dc_dp_data *dp)
 		(NV_IEEE_OUI >> 8) & 0xff,
 		NV_IEEE_OUI & 0xff};
 
-	if (cfg->is_valid)
+	if (cfg->is_valid && (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP))
 		return;
 
 	/* Check DP version */

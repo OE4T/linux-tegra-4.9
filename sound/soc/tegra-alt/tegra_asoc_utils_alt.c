@@ -377,9 +377,12 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 		}
 	}
 
-	ret = tegra_alt_asoc_utils_set_rate(data, 48000, 256 * 48000, 256 * 48000);
-	if (ret)
-		goto err_put_out1;
+	if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA210) {
+		ret = tegra_alt_asoc_utils_set_rate(data, 48000,
+					256 * 48000, 256 * 48000);
+		if (ret)
+			goto err_put_out1;
+	}
 
 	return 0;
 

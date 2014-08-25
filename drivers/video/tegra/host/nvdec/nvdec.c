@@ -70,6 +70,8 @@ static char *nvdec_get_fw_name(struct platform_device *dev, int fw)
 	char *fw_name;
 	u8 maj, min;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	u32 debug_mode = host1x_readl(dev, nvdec_scp_ctl_stat_r()) &
+					nvdec_scp_ctl_stat_debug_mode_m();
 
 	/* note size here is a little over...*/
 	fw_name = kzalloc(32, GFP_KERNEL);
@@ -77,20 +79,36 @@ static char *nvdec_get_fw_name(struct platform_device *dev, int fw)
 		return NULL;
 
 	decode_nvdec_ver(pdata->version, &maj, &min);
-	if (fw == host_nvdec_fw_bl) {
+	if (debug_mode) {
+		if (fw == host_nvdec_fw_bl) {
 #if BRINGUP_NO_WPR
-		sprintf(fw_name, "nvhost_nvdec_bl_no_wpr0%d%d.fw",
-			maj, min);
-#else
-		if (tegra_platform_is_qt() || tegra_platform_is_linsim())
 			sprintf(fw_name, "nvhost_nvdec_bl_no_wpr0%d%d.fw",
 				maj, min);
-		else
-			sprintf(fw_name, "nvhost_nvdec_bl0%d%d.fw", maj, min);
+#else
+			if (tegra_platform_is_qt() ||
+				tegra_platform_is_linsim())
+				sprintf(fw_name,
+					"nvhost_nvdec_bl_no_wpr0%d%d.fw",
+					maj, min);
+			else
+				sprintf(fw_name, "nvhost_nvdec_bl0%d%d.fw",
+					maj, min);
 #endif
+		} else
+			sprintf(fw_name, "nvhost_nvdec0%d%d.fw", maj, min);
+	} else {
+		if (fw == host_nvdec_fw_bl)
+			if (tegra_platform_is_qt() ||
+				tegra_platform_is_linsim()) {
+				dev_info(&dev->dev,
+					"Prod + No-WPR not allowed\n");
+				return NULL;
+			} else
+				sprintf(fw_name, "nvhost_nvdec_bl0%d%d_prod.fw",
+					maj, min);
+		else
+			sprintf(fw_name, "nvhost_nvdec0%d%d_prod.fw", maj, min);
 	}
-	else
-		sprintf(fw_name, "nvhost_nvdec0%d%d.fw", maj, min);
 	dev_info(&dev->dev, "fw name:%s\n", fw_name);
 
 	return fw_name;

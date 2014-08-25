@@ -230,4 +230,12 @@ static inline u32 nvdec_engine_cg4_r(void)
 {
 	return 0x00002330;
 }
+static inline u32 nvdec_scp_ctl_stat_r(void)
+{
+	return 0x1808;
+}
+static inline u32 nvdec_scp_ctl_stat_debug_mode_m(void)
+{
+	return 0x1 << 20;
+}
 #endif

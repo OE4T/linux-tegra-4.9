@@ -5439,6 +5439,7 @@ static int nvi_probe(struct i2c_client *client,
 	}
 
 	mutex_init(&st->srlock);
+	spin_lock_init(&st->time_stamp_lock);
 	nvi_pm_init(st);
 	ret = nvi_id_i2c(indio_dev, id);
 	if (ret) {

@@ -41,7 +41,6 @@
 					nvidia,out-order = <TEGRA_DC_ORDER_RED_BLUE>;
 					nvidia,out-xres = <1920>;
 					nvidia,out-yres = <1080>;
-					nvidia,out-hotplug-state = <1>;
 				};
 				tmds-config {
 					tmds-cfg@0 {

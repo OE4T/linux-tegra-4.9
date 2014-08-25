@@ -1785,13 +1785,13 @@ struct tegra_dc_platform_data
 		struct device_node *np_hdmi =
 			of_find_node_by_path(HDMI_NODE);
 
-#ifndef CONFIG_TEGRA_HDMI_PRIMARY
-		np_target_disp
-			= tegra_secondary_panel_get_dt_node(pdata);
-#else
-		np_target_disp
-			= tegra_primary_panel_get_dt_node(pdata);
-#endif
+		if (ndev->id == 0)
+			np_target_disp
+				= tegra_primary_panel_get_dt_node(pdata);
+		else
+			np_target_disp
+				= tegra_secondary_panel_get_dt_node(pdata);
+
 		if (!np_target_disp ||
 			!of_device_is_available(np_target_disp)) {
 			pr_err("/hdmi/hdmi-display node is NOT valid\n");

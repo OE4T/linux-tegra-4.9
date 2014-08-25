@@ -20,9 +20,6 @@
  *
  */
 
-#define VERBOSE_DEBUG 1
-#define DEBUG 1
-
 #include <linux/module.h>
 #include <linux/device.h>
 #include <linux/fs.h>
@@ -54,6 +51,9 @@
 #include "tegra210_adsp_alt.h"
 
 #define DRV_NAME "tegra210-adsp"
+
+/* Flag to enable/disable loading of ADSP firmware */
+#define ENABLE_ADSP 0
 
 static struct tegra210_adsp_app_desc {
 	const char name[NVADSP_NAME_SZ];
@@ -1233,6 +1233,7 @@ static struct snd_pcm_ops tegra210_adsp_pcm_ops = {
 
 static int tegra210_adsp_pcm_new(struct snd_soc_pcm_runtime *rtd)
 {
+#if ENABLE_ADSP
 	struct snd_card *card = rtd->card->snd_card;
 	struct snd_pcm *pcm = rtd->pcm;
 	int ret = 0;
@@ -1266,6 +1267,9 @@ err:
 	tegra210_adsp_deallocate_dma_buffer(
 		&pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream->dma_buffer);
 	return ret;
+#else
+	return 0;
+#endif
 }
 
 static void tegra210_adsp_pcm_free(struct snd_pcm *pcm)
@@ -1999,7 +2003,9 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 		goto err_unregister_platform;
 	}
 
+#if ENABLE_ADSP
 	schedule_work(&adsp->work);
+#endif
 
 	pr_info("tegra210_adsp_audio_platform_probe probe successfull.");
 	return 0;

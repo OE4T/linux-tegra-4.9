@@ -455,6 +455,8 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED)
 		win->cde.cde_addr =
 			flip_win->phys_addr_cde + flip_win->attr.cde.offset;
+	else
+		win->cde.cde_addr = 0;
 #endif
 
 	err = tegra_dc_ext_check_windowattr(ext, win);

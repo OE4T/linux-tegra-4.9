@@ -833,7 +833,7 @@ static int pwm_fan_probe(struct platform_device *pdev)
 			fan_data->fan_state_cap, fan_data->fan_cap_pwm);
 
 	fan_data->cdev =
-		thermal_cooling_device_register((char *)dev_name(&pdev->dev),
+		thermal_cooling_device_register("pwm-fan",
 					fan_data, &pwm_fan_cooling_ops);
 
 	if (IS_ERR_OR_NULL(fan_data->cdev)) {

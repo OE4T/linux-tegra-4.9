@@ -311,9 +311,10 @@ struct device_node *tegra_primary_panel_get_dt_node(
 			struct tegra_dc_platform_data *pdata)
 {
 	struct device_node *np_panel = NULL;
-#ifndef CONFIG_TEGRA_HDMI_PRIMARY
 	struct tegra_dc_out *dc_out = NULL;
 	struct board_info display_board;
+	struct device_node *np_hdmi =
+		of_find_node_by_path(HDMI_NODE);
 
 	bool is_dsi_a_1200_1920_8_0 = false;
 	bool is_dsi_a_1200_800_8_0 = false;
@@ -328,42 +329,42 @@ struct device_node *tegra_primary_panel_get_dt_node(
 	switch (display_board.board_id) {
 	case BOARD_E1627:
 	case BOARD_E1797:
-		if (pdata && dc_out)
+		np_panel = of_find_compatible_node(NULL, NULL, "p,wuxga-10-1");
+		if (np_panel && pdata && dc_out)
 			tegra_panel_register_ops(dc_out,
 				&dsi_p_wuxga_10_1_ops);
-		np_panel = of_find_compatible_node(NULL, NULL, "p,wuxga-10-1");
 		break;
 	case BOARD_E1549:
-		if (pdata && dc_out)
+		np_panel = of_find_compatible_node(NULL, NULL, "lg,wxga-7");
+		if (np_panel && pdata && dc_out)
 			tegra_panel_register_ops(dc_out,
 				&dsi_lgd_wxga_7_0_ops);
-		np_panel = of_find_compatible_node(NULL, NULL, "lg,wxga-7");
 		break;
 	case BOARD_E1639:
 	case BOARD_E1813:
-		if (pdata && dc_out)
+		np_panel = of_find_compatible_node(NULL, NULL, "s,wqxga-10-1");
+		if (np_panel && pdata && dc_out)
 			tegra_panel_register_ops(dc_out,
 				&dsi_s_wqxga_10_1_ops);
-		np_panel = of_find_compatible_node(NULL, NULL, "s,wqxga-10-1");
 		break;
 	case BOARD_PM366:
-		if (pdata && dc_out)
+		np_panel = of_find_compatible_node(NULL, NULL, "c,wxga-14-0");
+		if (np_panel && pdata && dc_out)
 			tegra_panel_register_ops(dc_out,
 				&lvds_c_1366_14_ops);
-		np_panel = of_find_compatible_node(NULL, NULL, "c,wxga-14-0");
 		break;
 	case BOARD_PM354:
-		if (pdata && dc_out)
+		np_panel = of_find_compatible_node(NULL, NULL, "a,1080p-14-0");
+		if (np_panel && pdata && dc_out)
 			tegra_panel_register_ops(dc_out,
 				&dsi_a_1080p_14_0_ops);
-		np_panel = of_find_compatible_node(NULL, NULL, "a,1080p-14-0");
 		break;
 	case BOARD_E2129:
-		if (pdata && dc_out)
-			tegra_panel_register_ops(dc_out,
-				&dsi_j_1440_810_5_8_ops);
 		np_panel = of_find_compatible_node(NULL,
 			NULL, "j,1440-810-5-8");
+		if (np_panel && pdata && dc_out)
+			tegra_panel_register_ops(dc_out,
+				&dsi_j_1440_810_5_8_ops);
 		break;
 	case BOARD_E1937:
 		if (display_board.sku == 1100)
@@ -393,50 +394,54 @@ struct device_node *tegra_primary_panel_get_dt_node(
 		 */
 		if (fixed_primary_panel_ops &&
 			fixed_primary_panel_compatible) {
-			if (pdata && dc_out)
-				tegra_panel_register_ops(dc_out,
-					fixed_primary_panel_ops);
 			np_panel = of_find_compatible_node(NULL, NULL,
 				fixed_primary_panel_compatible);
-		} else
-			WARN(1, "Display panel not supported\n");
+			if (np_panel && pdata && dc_out)
+				tegra_panel_register_ops(dc_out,
+					fixed_primary_panel_ops);
+		}
 	};
 
 	if (is_dsi_a_1200_1920_8_0) {
-		if (pdata && dc_out)
-			tegra_panel_register_ops(dc_out,
-				&dsi_a_1200_1920_8_0_ops);
 		np_panel = of_find_compatible_node(NULL, NULL,
 				"a,wuxga-8-0");
+		if (np_panel && pdata && dc_out)
+			tegra_panel_register_ops(dc_out,
+				&dsi_a_1200_1920_8_0_ops);
 	}
 	if (is_dsi_a_1200_800_8_0) {
-		if (pdata && dc_out)
-			tegra_panel_register_ops(dc_out,
-				&dsi_a_1200_800_8_0_ops);
 		np_panel = of_find_compatible_node(NULL, NULL,
 				"a,wxga-8-0");
+		if (np_panel && pdata && dc_out)
+			tegra_panel_register_ops(dc_out,
+				&dsi_a_1200_800_8_0_ops);
 	}
 
 	if (is_edp_i_1080p_11_6) {
-		if (pdata && dc_out)
-			tegra_panel_register_ops(dc_out,
-				&edp_i_1080p_11_6_ops);
 		np_panel = of_find_compatible_node(NULL, NULL,
 				"i-edp,1080p-11-6");
+		if (np_panel && pdata && dc_out)
+			tegra_panel_register_ops(dc_out,
+				&edp_i_1080p_11_6_ops);
 	}
 	if (is_edp_a_1080p_14_0) {
-		if (pdata && dc_out)
-			tegra_panel_register_ops(dc_out,
-				&edp_a_1080p_14_0_ops);
 		np_panel = of_find_compatible_node(NULL, NULL,
 				"a-edp,1080p-14-0");
+		if (np_panel && pdata && dc_out)
+			tegra_panel_register_ops(dc_out,
+				&edp_a_1080p_14_0_ops);
 	}
-#else
-	struct device_node *np_hdmi =
-		of_find_node_by_path(HDMI_NODE);
+	if (np_panel && of_device_is_available(np_panel))
+		return np_panel;
+	else {
+		/*
+		 * Check hdmi primary, if there's neither
+		 * valid internal panel nor fixed panel.
+		 */
+		np_panel =
+			of_get_child_by_name(np_hdmi, "hdmi-display");
+	}
 
-	np_panel = of_get_child_by_name(np_hdmi, "hdmi-display");
-#endif
 	return of_device_is_available(np_panel) ? np_panel : NULL;
 }
 
@@ -453,11 +458,11 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 
 	if (fixed_secondary_panel_ops &&
 			fixed_secondary_panel_compatible) {
-			if (pdata && dc_out)
-				tegra_panel_register_ops(dc_out,
-					fixed_secondary_panel_ops);
 			np_panel = of_find_compatible_node(NULL, NULL,
 				fixed_secondary_panel_compatible);
+			if (np_panel && pdata && dc_out)
+				tegra_panel_register_ops(dc_out,
+					fixed_secondary_panel_ops);
 	} else
 		np_panel =
 			of_get_child_by_name(np_hdmi, "hdmi-display");

@@ -126,7 +126,7 @@
 #include <linux/mpu_iio.h>
 #endif /* AKM_NVI_MPU_SUPPORT */
 
-#define AKM_VERSION_DRIVER		(102)
+#define AKM_VERSION_DRIVER		(103)
 #define AKM_VENDOR			"AsahiKASEI"
 #define AKM_NAME			"ak89xx"
 #define AKM_NAME_AK8963			"ak8963"
@@ -1031,7 +1031,7 @@ static int akm_dis(struct akm_state *st)
 		if (st->i2c->irq)
 			nvi_disable_irq(st);
 		else
-			cancel_delayed_work_sync(&st->dw);
+			cancel_delayed_work(&st->dw);
 	}
 	if (!ret)
 		st->enable = 0;

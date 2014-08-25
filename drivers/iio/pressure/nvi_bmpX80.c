@@ -117,7 +117,7 @@
 #include <linux/mpu_iio.h>
 #endif /* BMP_NVI_MPU_SUPPORT */
 
-#define BMP_VERSION_DRIVER		(102)
+#define BMP_VERSION_DRIVER		(103)
 #define BMP_VENDOR			"Bosch"
 #define BMP_NAME			"bmpX80"
 #define BMP180_NAME			"bmp180"
@@ -1221,7 +1221,7 @@ static int bmp_dis(struct bmp_state *st)
 	if (st->mpu_en)
 		ret = bmp_ports_enable(st, false);
 	else
-		cancel_delayed_work_sync(&st->dw);
+		cancel_delayed_work(&st->dw);
 	if (!ret)
 		st->enable = 0;
 	return ret;

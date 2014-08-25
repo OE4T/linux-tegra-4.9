@@ -148,7 +148,7 @@
 #include <linux/iio/trigger.h>
 
 
-#define MX_VERSION_DRIVER		(102)
+#define MX_VERSION_DRIVER		(103)
 #define MX_VENDOR			"Maxim"
 #define MX_NAME				"max4400x"
 #define MX_NAME_MAX44005		"max44005"
@@ -496,6 +496,19 @@ static int mx_i2c_wr(struct mx_state *st, u8 reg, u8 val)
 	return mx_i2c_write(st, sizeof(buf), buf);
 }
 
+static int mx_reset_sw(struct mx_state *st)
+{
+	int ret;
+
+	ret = mx_i2c_wr(st, MX_REG_STS, (1 << MX_REG_STS_RESET));
+	if (!ret) {
+		mdelay(MX_HW_DELAY_MS);
+		st->rc_main_cfg = MX_REG_CFG_MAIN_POR;
+		st->rc_amb_cfg = MX_REG_CFG_AMB_POR;
+	}
+	return ret;
+}
+
 static int mx_vreg_dis(struct mx_state *st, unsigned int i)
 {
 	int ret = 0;
@@ -619,11 +632,7 @@ static int mx_pm(struct mx_state *st, bool enable)
 		ret = mx_vreg_en_all(st);
 		if (ret)
 			mdelay(MX_HW_DELAY_MS);
-		mx_i2c_wr(st, MX_REG_STS, (1 << MX_REG_STS_RESET));
-		mdelay(MX_HW_DELAY_MS);
-		st->rc_main_cfg = MX_REG_CFG_MAIN_POR;
-		st->rc_amb_cfg = MX_REG_CFG_AMB_POR;
-		mx_i2c_wr(st, MX_REG_STS, 0);
+		ret = mx_reset_sw(st);
 	} else {
 		ret = mx_vreg_sts(st);
 		if ((ret < 0) || (ret == ARRAY_SIZE(mx_vregs))) {
@@ -986,14 +995,15 @@ static int mx_rd_prox(struct mx_state *st, s64 ts)
 				/* prox_hi already disabled */
 			} else {
 				proximity = 1;
-				hw_lo = 0; /* disable */
-				hw = st->prx_thr_bin + st->thr_lo[MX_DEV_PROX];
-				if (hw < hw_hi)
-					hw_hi = hw;
+				hw_lo = st->prx_thr_bin +
+						       st->thr_lo[MX_DEV_PROX];
+				if (hw_lo < hw_hi)
+					hw_hi = hw_lo;
 				else
 					hw_hi--;
+				hw_lo = 0; /* disable */
 			}
-			if (proximity != st->proximity) {
+			if ((proximity != st->proximity) || st->report) {
 				if (!st->report)
 					st->report = st->report_n;
 				st->proximity = proximity;
@@ -1145,7 +1155,7 @@ static int mx_disable(struct iio_dev *indio_dev)
 	if (!(iio_scan_mask_query(indio_dev, indio_dev->buffer,
 				  MX_SCAN_PROX)))
 		st->dbg &= ~MX_DBG_VAL_PROX;
-	cancel_delayed_work_sync(&st->dw);
+	cancel_delayed_work(&st->dw);
 	if (st->enable & (1 << MX_DEV_PROX))
 		ret = mx_i2c_wr(st, MX_REG_CFG_PRX, 0);
 	ret |= mx_pm(st, false);
@@ -1902,7 +1912,8 @@ static int mx_id_dev(struct iio_dev *indio_dev, const char *name)
 		 */
 		st->dev_id = MX_DEVID_MAX44005;
 		st->part = MX_NAME_MAX44005;
-		ret = mx_i2c_rd(st, MX_REG_STS, &val);
+		ret = mx_reset_sw(st);
+		ret |= mx_i2c_rd(st, MX_REG_STS, &val);
 		if (ret)
 			return -ENODEV;
 
@@ -1928,6 +1939,7 @@ static int mx_id_i2c(struct iio_dev *indio_dev, const char *name)
 		st->i2c_addr = st->i2c->addr;
 		ret = mx_id_dev(indio_dev, name);
 	} else {
+		name = MX_NAME;
 		for (i = 0; i < ARRAY_SIZE(mx_i2c_addrs); i++) {
 			st->i2c_addr = mx_i2c_addrs[i];
 			ret = mx_id_dev(indio_dev, name);
@@ -2048,7 +2060,7 @@ static const unsigned int mx_threshold_dflt[] = {
 	MX_PROX_THRESHOLD_DFLT,
 };
 
-static int mx_parse_dt(struct i2c_client *client, struct mx_state *st)
+static int mx_of_dt(struct i2c_client *client, struct mx_state *st)
 {
 	struct device_node *dn = client->dev.of_node;
 	unsigned int thresh;
@@ -2203,8 +2215,9 @@ static int mx_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	st = iio_priv(indio_dev);
 	st->i2c = client;
 	i2c_set_clientdata(client, indio_dev);
-	ret = mx_parse_dt(client, st);
+	ret = mx_of_dt(client, st);
 	if (ret) {
+		dev_err(&client->dev, "%s _of_dt ERR\n", __func__);
 		ret = -ENODEV;
 		goto mx_probe_err;
 	}
@@ -2212,6 +2225,7 @@ static int mx_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	mx_pm_init(st);
 	ret = mx_id_i2c(indio_dev, id->name);
 	if (ret) {
+		dev_err(&client->dev, "%s _id_i2c ERR\n", __func__);
 		ret = -ENODEV;
 		goto mx_probe_exit;
 	}
@@ -2251,8 +2265,11 @@ static int mx_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	indio_dev->setup_ops = &mx_buffer_setup_ops;
 	ret = iio_buffer_register(indio_dev, indio_dev->channels,
 				  indio_dev->num_channels);
-	if (ret)
+	if (ret) {
+		dev_err(&client->dev, "%s iio_buffer_register ERR\n",
+			__func__);
 		goto mx_probe_err;
+	}
 
 	INIT_DELAYED_WORK(&st->dw, mx_work);
 	if (client->irq) {
@@ -2291,8 +2308,11 @@ static int mx_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	indio_dev->trig = st->trig;
 	indio_dev->modes |= INDIO_BUFFER_TRIGGERED;
 	ret = iio_device_register(indio_dev);
-	if (ret)
+	if (ret) {
+		dev_err(&client->dev, "%s iio_device_register ERR\n",
+			__func__);
 		goto mx_probe_err;
+	}
 
 	dev_info(&client->dev, "%s done\n", __func__);
 	return 0;

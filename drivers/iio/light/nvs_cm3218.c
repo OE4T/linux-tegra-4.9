@@ -111,7 +111,7 @@
 #include <linux/iio/kfifo_buf.h>
 #include <linux/iio/trigger.h>
 
-#define CM_VERSION_DRIVER		(102)
+#define CM_VERSION_DRIVER		(103)
 #define CM_VENDOR			"Capella Microsystems, Inc."
 #define CM_NAME				"cm3218x"
 #define CM_NAME_CM3218			"cm3218"
@@ -313,7 +313,7 @@ static int cm_i2c_wr(struct cm_state *st, u8 reg, u16 val)
 		buf[2] = val >> 8;
 		msg.addr = st->i2c_addr;
 		msg.flags = 0;
-		msg.len = 3;
+		msg.len = sizeof(buf);
 		msg.buf = buf;
 		if (i2c_transfer(st->i2c->adapter, &msg, 1) != 1) {
 			cm_err(st);
@@ -651,15 +651,15 @@ static int cm_step(struct cm_state *st, u16 step, u32 lux, bool irq_en)
 	if (st->dbg & CM_DBG_SPEW_MSG)
 		dev_info(&st->i2c->dev, "%s lo=%d step=%hu hi=%d\n",
 			 __func__, thr_lo, step, thr_hi);
-	/* adjust IT if need be to make room for HW thresholds */
+	/* adjust resolution if need to make room for HW thresholds */
 	if ((step > (0xFFFF - thr_hi)) && (st->scale_i < (st->it_i_hi - 1))) {
-		/* too many photons - need to decrease integration time */
+		/* too many photons - need to decrease resolution */
 		ret = cm_it_wr(st, cm_it_tbl[st->scale_i + 1].ms);
 		if (!ret)
 			cm_delay(st, true);
 		return ret;
 	} else if ((step < thr_lo) && (st->scale_i > (st->it_i_lo + 1))) {
-		/* not enough photons - need to increase integration time */
+		/* not enough photons - need to increase resolution */
 		ret = cm_it_wr(st, cm_it_tbl[st->scale_i - 1].ms);
 		if (!ret)
 			cm_delay(st, true);
@@ -669,6 +669,7 @@ static int cm_step(struct cm_state *st, u16 step, u32 lux, bool irq_en)
 		st->hw_sync = false;
 		cm_delay(st, false);
 	}
+
 	if (irq_en && st->i2c->irq && (st->lux_thr_lo || st->lux_thr_hi)) {
 		ret = cm_i2c_wr(st, CM_REG_WL, thr_lo);
 		ret |= cm_i2c_wr(st, CM_REG_WH, thr_hi);
@@ -700,7 +701,7 @@ static int cm_rd(struct iio_dev *indio_dev)
 	if (ret)
 		return ret;
 
-	if (st->hw_change && !st->report) {
+	if (st->hw_change) {
 		/* drop first sample after HW change */
 		st->hw_change = false;
 		return 0;
@@ -731,8 +732,8 @@ static int cm_rd(struct iio_dev *indio_dev)
 		t_min = true;
 	if (st->dbg & CM_DBG_SPEW_LIGHT_POLL)
 		dev_info(&st->i2c->dev,
-			 "poll light %d %lld  diff: %d %lldns\n",
-			 lux, ts, lux - st->light, ts_elapsed);
+			 "poll light %d %lld  diff: %d %lldns  hw=%hu\n",
+			 lux, ts, lux - st->light, ts_elapsed, step);
 	if ((st->report && t_min) || ((st->scale_val == 1) &&
 				      !st->scale_val2)) {
 		/* report if:
@@ -826,7 +827,7 @@ static int cm_enable(struct iio_dev *indio_dev)
 				cm_report_init(st);
 				st->enable = 1;
 				schedule_delayed_work(&st->dw,
-					     msecs_to_jiffies(CM_HW_DELAY_MS));
+					 msecs_to_jiffies(st->queue_delay_ms));
 			}
 		}
 	}
@@ -1502,6 +1503,7 @@ static int cm_probe(struct i2c_client *client,
 	i2c_set_clientdata(client, indio_dev);
 	ret = cm_of_dt(client, st);
 	if (ret) {
+		dev_err(&client->dev, "%s _of_dt ERR\n", __func__);
 		ret = -ENODEV;
 		goto cm_probe_err;
 	}
@@ -1509,6 +1511,7 @@ static int cm_probe(struct i2c_client *client,
 	cm_pm_init(st);
 	ret = cm_id_i2c(indio_dev, id->name);
 	if (ret) {
+		dev_err(&client->dev, "%s _id_i2c ERR\n", __func__);
 		ret = -ENODEV;
 		goto cm_probe_exit;
 	}
@@ -1532,8 +1535,11 @@ static int cm_probe(struct i2c_client *client,
 	indio_dev->setup_ops = &cm_buffer_setup_ops;
 	ret = iio_buffer_register(indio_dev, indio_dev->channels,
 				  indio_dev->num_channels);
-	if (ret)
+	if (ret) {
+		dev_err(&client->dev, "%s iio_buffer_register ERR\n",
+			__func__);
 		goto cm_probe_err;
+	}
 
 	INIT_DELAYED_WORK(&st->dw, cm_work);
 	if (client->irq) {
@@ -1570,8 +1576,11 @@ static int cm_probe(struct i2c_client *client,
 	indio_dev->trig = st->trig;
 	indio_dev->modes |= INDIO_BUFFER_TRIGGERED;
 	ret = iio_device_register(indio_dev);
-	if (ret)
+	if (ret) {
+		dev_err(&client->dev, "%s iio_device_register ERR\n",
+			__func__);
 		goto cm_probe_err;
+	}
 
 	dev_info(&client->dev, "%s done\n", __func__);
 	return 0;

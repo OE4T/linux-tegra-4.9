@@ -69,6 +69,7 @@
 			maxim,system-pmic-power-reset;
 
 			maxim,hot-die-threshold-temp = <110000>;
+			#thermal-sensor-cells = <0>;
 
 			pinctrl-names = "default";
 			pinctrl-0 = <&max77620_default>;

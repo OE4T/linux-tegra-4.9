@@ -283,7 +283,7 @@ static int clk_slide_gpc_pll(struct gk20a *g, u32 n)
 	return 0;
 }
 
-static int clk_lock_gpc_pll_under_bypass(struct gk20a *g, u32 m, u32 n, u32 pl)
+static int clk_lock_gpc_pll_under_bypass(struct gk20a *g, struct pll *gpll)
 {
 	u32 data, cfg, coeff, timeout;
 
@@ -316,9 +316,9 @@ static int clk_lock_gpc_pll_under_bypass(struct gk20a *g, u32 m, u32 n, u32 pl)
 	}
 
 	/* change coefficients */
-	coeff = trim_sys_gpcpll_coeff_mdiv_f(m) |
-		trim_sys_gpcpll_coeff_ndiv_f(n) |
-		trim_sys_gpcpll_coeff_pldiv_f(pl);
+	coeff = trim_sys_gpcpll_coeff_mdiv_f(gpll->M) |
+		trim_sys_gpcpll_coeff_ndiv_f(gpll->N) |
+		trim_sys_gpcpll_coeff_pldiv_f(gpll->PL);
 	gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
 
 	/* enable PLL after changing coefficients */
@@ -378,6 +378,7 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 	u32 cfg, coeff;
 	u32 m, n, pl, nlo;
 	bool can_slide;
+	struct pll gpll;
 
 	gk20a_dbg_fn("");
 
@@ -443,15 +444,14 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 	 * is effectively NOP). PL is preserved (not set to target) of post
 	 * divider is glitchless. Otherwise it is at PL target.
 	 */
-	m = gpll_new->M;
-	nlo = DIV_ROUND_UP(m * gpc_pll_params.min_vco, gpll_new->clk_in);
-	n = allow_slide ? nlo : gpll_new->N;
+	gpll = *gpll_new;
+	if (allow_slide)
+		gpll.N = DIV_ROUND_UP(gpll_new->M * gpc_pll_params.min_vco,
+				      gpll_new->clk_in);
 #if PLDIV_GLITCHLESS
-	pl = (gpll_new->PL < 2) ? 2 : gpll_new->PL;
-#else
-	pl = gpll_new->PL;
+	gpll.PL = (gpll_new->PL < 2) ? 2 : gpll_new->PL;
 #endif
-	clk_lock_gpc_pll_under_bypass(g, m, n, pl);
+	clk_lock_gpc_pll_under_bypass(g, &gpll);
 	gpll_new->enabled = true;
 
 #if PLDIV_GLITCHLESS

@@ -216,10 +216,10 @@ static void clk_setup_slide(struct gk20a *g, u32 clk_u)
 	gk20a_writel(g, trim_sys_gpcpll_cfg3_r(), data);
 }
 
-static int clk_slide_gpc_pll(struct gk20a *g, u32 n)
+static int clk_slide_gpc_pll(struct gk20a *g, struct pll *gpll)
 {
 	u32 data, coeff;
-	u32 nold, m;
+	u32 nold;
 	int ramp_timeout = 500;
 
 	/* get old coefficients */
@@ -227,12 +227,11 @@ static int clk_slide_gpc_pll(struct gk20a *g, u32 n)
 	nold = trim_sys_gpcpll_coeff_ndiv_v(coeff);
 
 	/* do nothing if NDIV is same */
-	if (n == nold)
+	if (gpll->N == nold)
 		return 0;
 
 	/* dynamic ramp setup based on update rate */
-	m = trim_sys_gpcpll_coeff_mdiv_v(coeff);
-	clk_setup_slide(g, g->clk.gpc_pll.clk_in / m);
+	clk_setup_slide(g, gpll->clk_in / gpll->M);
 
 	/* pll slowdown mode */
 	data = gk20a_readl(g, trim_sys_gpcpll_ndiv_slowdown_r());
@@ -244,7 +243,7 @@ static int clk_slide_gpc_pll(struct gk20a *g, u32 n)
 	/* new ndiv ready for ramp */
 	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
 	coeff = set_field(coeff, trim_sys_gpcpll_coeff_ndiv_m(),
-			trim_sys_gpcpll_coeff_ndiv_f(n));
+			trim_sys_gpcpll_coeff_ndiv_f(gpll->N));
 	udelay(1);
 	gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
 
@@ -376,7 +375,6 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 	u32 data;
 #endif
 	u32 cfg, coeff;
-	u32 m, n, pl, nlo;
 	bool can_slide;
 	struct pll gpll;
 
@@ -387,21 +385,24 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 
 	/* get old coefficients */
 	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
-	m = trim_sys_gpcpll_coeff_mdiv_v(coeff);
-	n = trim_sys_gpcpll_coeff_ndiv_v(coeff);
-	pl = trim_sys_gpcpll_coeff_pldiv_v(coeff);
+	gpll.M = trim_sys_gpcpll_coeff_mdiv_v(coeff);
+	gpll.N = trim_sys_gpcpll_coeff_ndiv_v(coeff);
+	gpll.PL = trim_sys_gpcpll_coeff_pldiv_v(coeff);
+	gpll.clk_in = gpll_new->clk_in;
 
 	/* do NDIV slide if there is no change in M and PL */
 	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 	can_slide = allow_slide && trim_sys_gpcpll_cfg_enable_v(cfg);
 
-	if (can_slide && (gpll_new->M == m) && (gpll_new->PL == pl))
-		return clk_slide_gpc_pll(g, gpll_new->N);
+	if (can_slide && (gpll_new->M == gpll.M) && (gpll_new->PL == gpll.PL))
+		return clk_slide_gpc_pll(g, gpll_new);
 
 	/* slide down to NDIV_LO */
-	nlo = DIV_ROUND_UP(m * gpc_pll_params.min_vco, gpll_new->clk_in);
 	if (can_slide) {
-		int ret = clk_slide_gpc_pll(g, nlo);
+		int ret;
+		gpll.N = DIV_ROUND_UP(gpll.M * gpc_pll_params.min_vco,
+				      gpll.clk_in);
+		ret = clk_slide_gpc_pll(g, &gpll);
 		if (ret)
 			return ret;
 	}
@@ -411,10 +412,10 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 	 * Limit either FO-to-FO (path A below) or FO-to-bypass (path B below)
 	 * jump to min_vco/2 by setting post divider >= 1:2.
 	 */
-	skip_bypass = can_slide && (gpll_new->M == m);
+	skip_bypass = can_slide && (gpll_new->M == gpll.M);
 	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
-	if ((skip_bypass && (gpll_new->PL < 2)) || (pl < 2)) {
-		if (pl != 2) {
+	if ((skip_bypass && (gpll_new->PL < 2)) || (gpll.PL < 2)) {
+		if (gpll.PL != 2) {
 			coeff = set_field(coeff,
 				trim_sys_gpcpll_coeff_pldiv_m(),
 				trim_sys_gpcpll_coeff_pldiv_f(2));
@@ -474,22 +475,23 @@ set_pldiv:
 	gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
 #endif
 	/* slide up to target NDIV */
-	return clk_slide_gpc_pll(g, gpll_new->N);
+	return clk_slide_gpc_pll(g, gpll_new);
 }
 
 static int clk_disable_gpcpll(struct gk20a *g, int allow_slide)
 {
-	u32 cfg, coeff, m, nlo;
+	u32 cfg, coeff;
 	struct clk_gk20a *clk = &g->clk;
+	struct pll gpll = clk->gpc_pll;
 
 	/* slide to VCO min */
 	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 	if (allow_slide && trim_sys_gpcpll_cfg_enable_v(cfg)) {
 		coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
-		m = trim_sys_gpcpll_coeff_mdiv_v(coeff);
-		nlo = DIV_ROUND_UP(m * gpc_pll_params.min_vco,
-				   clk->gpc_pll.clk_in);
-		clk_slide_gpc_pll(g, nlo);
+		gpll.M = trim_sys_gpcpll_coeff_mdiv_v(coeff);
+		gpll.N = DIV_ROUND_UP(gpll.M * gpc_pll_params.min_vco,
+				      gpll.clk_in);
+		clk_slide_gpc_pll(g, &gpll);
 	}
 
 	/* put PLL in bypass before disabling it */

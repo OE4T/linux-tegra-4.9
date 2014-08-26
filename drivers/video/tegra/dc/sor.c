@@ -384,6 +384,11 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		of_find_node_by_path(SOR_NODE);
 	const char *res_name = dc->ndev->id ? "sor1" : "sor0";
 
+	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
+		np_sor = of_find_node_by_path(SOR1_NODE);
+		res_name = "sor1";
+	}
+
 	sor = devm_kzalloc(&dc->ndev->dev, sizeof(*sor), GFP_KERNEL);
 	if (!sor) {
 		err = -ENOMEM;
@@ -502,6 +507,10 @@ void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 	struct device_node *np_sor = (sor->dc->ndev->id) ?
 		of_find_node_by_path(SOR1_NODE) :
 		of_find_node_by_path(SOR_NODE);
+
+	if (sor->dc->out->type == TEGRA_DC_OUT_HDMI)
+		np_sor = of_find_node_by_path(SOR1_NODE);
+
 	clk_put(sor->sor_clk);
 	if (sor->safe_clk)
 		clk_put(sor->safe_clk);
@@ -1259,6 +1268,9 @@ static void tegra_dc_sor_enable_sor(struct tegra_dc_sor_data *sor, bool enable)
 	struct tegra_dc *dc = sor->dc;
 	u32 reg_val = tegra_dc_readl(sor->dc, DC_DISP_DISP_WIN_OPTIONS);
 	u32 enb = dc->ndev->id ? SOR1_ENABLE : SOR_ENABLE;
+
+	if (sor->dc->out->type == TEGRA_DC_OUT_HDMI)
+		enb = SOR1_ENABLE;
 
 	if (dc->out->type == TEGRA_DC_OUT_HDMI)
 		enb |= SOR1_TIMING_CYA;

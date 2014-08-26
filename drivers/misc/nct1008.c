@@ -139,6 +139,7 @@ struct nct1008_sensor_data {
 	struct thermal_zone_device *thz;
 	long current_hi_limit;
 	long current_lo_limit;
+	int temp;
 };
 
 struct nct1008_data {
@@ -270,6 +271,7 @@ static int nct1008_get_temp_common(int sensor,
 		return -1;
 
 	*temp = temp_milli;
+	data->sensors[sensor].temp = temp_milli;
 
 	return 0;
 }

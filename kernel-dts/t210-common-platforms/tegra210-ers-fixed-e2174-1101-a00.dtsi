@@ -76,6 +76,7 @@
 			regulator-boot-on;
 			gpio = <&max77620 7 0>;
 			enable-active-high;
+			vin-supply = <&max77620_ldo0>;
 			consumers {
 				c0 {
 					regulator-consumer-supply = "avdd_lcd";

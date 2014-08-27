@@ -170,11 +170,22 @@ static void set_pmu_cmdline_args_falctracesize_v1(
 	pmu->args_v1.falc_trace_size = size;
 }
 
+int find_hex_in_string(char *strings, struct gk20a *g)
+{
+	u32 i = 0, j = strlen(strings);
+	for (; i < j; i++) {
+		if (strings[i] == '%')
+			if (strings[i + 1] == 'x' || strings[i + 1] == 'X')
+				return i;
+	}
+	return 0xFF;
+}
 
 void printtrace(struct pmu_gk20a *pmu)
 {
-	u32 i = 0, j = 0;
+	u32 i = 0, j = 0, k, l, m, count;
 	char *trace = pmu->trace_buf.cpuva;
+	char part_str[40], buf[0x40];
 	u32 *trace1 = pmu->trace_buf.cpuva;
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	gk20a_err(dev_from_gk20a(g), "Dump pmutrace");
@@ -184,13 +195,21 @@ void printtrace(struct pmu_gk20a *pmu)
 				break;
 		if (j == 0x40)
 			return;
-		gk20a_err(dev_from_gk20a(g), "Index %d: ",
-			trace1[(i / 4)]);
-		gk20a_err(dev_from_gk20a(g),
-			"Params: 0x%x 0x%x 0x%x 0x%x Message: ",
-			trace1[(i / 4) + 1], trace1[(i / 4) + 2],
-			trace1[(i / 4) + 3], trace1[(i / 4) + 4]);
-		gk20a_err(dev_from_gk20a(g), "%s", (trace+i+20));
+		count = scnprintf(buf, 0x40, "Index %x: ", trace1[(i / 4)]);
+		k = find_hex_in_string((trace+i+20), g);
+		l = 0;
+		m = 0;
+		while (k < 0xFF) {
+			strncpy(part_str, (trace+i+20+m), k);
+			part_str[k] = 0;
+			count += scnprintf((buf + count), 0x40, "%s0x%x",
+					part_str, trace1[(i / 4) + 1 + l]);
+			l++;
+			m += k + 2;
+			k = find_hex_in_string((trace+i+20+m), g);
+		}
+		count += scnprintf((buf + count), 0x40, "%s", (trace+i+20+m));
+		gk20a_err(dev_from_gk20a(g), "%s", buf);
 	}
 }
 
@@ -3979,8 +3998,9 @@ static int falc_trace_show(struct seq_file *s, void *data)
 {
 	struct gk20a *g = s->private;
 	struct pmu_gk20a *pmu = &g->pmu;
-	u32 i = 0, j = 0;
+	u32 i = 0, j = 0, k, l, m;
 	char *trace = pmu->trace_buf.cpuva;
+	char part_str[40];
 	u32 *trace1 = pmu->trace_buf.cpuva;
 	for (i = 0; i < GK20A_PMU_TRACE_BUFSIZE; i += 0x40) {
 		for (j = 0; j < 0x40; j++)
@@ -3989,10 +4009,19 @@ static int falc_trace_show(struct seq_file *s, void *data)
 		if (j == 0x40)
 			return 0;
 		seq_printf(s, "Index %x: ", trace1[(i / 4)]);
-		seq_printf(s, "Params: 0x%x 0x%x 0x%x 0x%x Message: ",
-			trace1[(i / 4) + 1], trace1[(i / 4) + 2],
-			trace1[(i / 4) + 3], trace1[(i / 4) + 4]);
-		seq_printf(s, "%s", (trace+i+20));
+		k = find_hex_in_string((trace+i+20), g);
+		l = 0;
+		m = 0;
+		while (k < 0xFF) {
+			strncpy(part_str, (trace+i+20+m), k);
+			part_str[k] = 0;
+			seq_printf(s, "%s0x%x", part_str,
+					trace1[(i / 4) + 1 + l]);
+			l++;
+			m += k + 2;
+			k = find_hex_in_string((trace+i+20+m), g);
+		}
+		seq_printf(s, "%s", (trace+i+20+m));
 	}
 	return 0;
 }

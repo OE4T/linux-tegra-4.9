@@ -143,17 +143,9 @@ static struct tegra_dsi_out dsi_fake_panel_pdata = {
 	.controller_vs = DSI_VS_1,
 	.n_data_lanes = 4,
 
-#if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
-	.video_data_type = TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE,
-	.suspend_aggr = DSI_HOST_SUSPEND_LV2,
-	.refresh_rate = 61,
-	.rated_refresh_rate = 60,
-	.te_polarity_low = true,
-#else
 	.video_data_type = TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE,
-	.video_burst_mode = TEGRA_DSI_VIDEO_NONE_BURST_MODE_WITH_SYNC_END,
+	.video_burst_mode = TEGRA_DSI_VIDEO_NONE_BURST_MODE,
 	.refresh_rate = 60,
-#endif
 
 	.pixel_format = TEGRA_DSI_PIXEL_FORMAT_24BIT_P,
 	.virtual_channel = TEGRA_DSI_VIRTUAL_CHANNEL_0,
@@ -168,30 +160,6 @@ static struct tegra_dsi_out dsi_fake_panel_pdata = {
 
 static struct tegra_dc_mode dsi_fake_panel_modes[] = {
 	{
-#if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
-		.pclk = 294264000, /* @61Hz*/
-		.h_ref_to_sync = 0,
-
-		/* dc constraint, min 1*/
-		.v_ref_to_sync = 1,
-
-		.h_sync_width = 32,
-
-		/* dc constraint, min 1*/
-		.v_sync_width = 1,
-
-		.h_back_porch = 80,
-
-		/* panel constraint, send frame after TE deassert*/
-		.v_back_porch = 5,
-
-		.h_active = 2560,
-		.v_active = 1600,
-		.h_front_porch = 328,
-
-		/* dc constraint, min v_ref_to_sync + 1*/
-		.v_front_porch = 2,
-#else
 		.pclk = 154700000, /* @60Hz*/
 		.h_ref_to_sync = 4,
 		.v_ref_to_sync = 1,
@@ -203,7 +171,6 @@ static struct tegra_dc_mode dsi_fake_panel_modes[] = {
 		.v_active = 1200,
 		.h_front_porch = 120,
 		.v_front_porch = 17,
-#endif
 	},
 };
 
@@ -260,12 +227,7 @@ static int tegra_dc_reset_fakedsi_panel(struct tegra_dc *dc, long dc_outtype)
 {
 	struct tegra_dc_out *dc_out = dc->out;
 	if (dc_outtype == TEGRA_DC_OUT_FAKE_DSI_GANGED) {
-#if DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE
-		dc_out->dsi->ganged_type =
-					TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT;
-#else
 		dc_out->dsi->ganged_type = TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD;
-#endif
 		dc_out->dsi->dsi_instance = 0;
 		dc_out->dsi->n_data_lanes = 8;
 	} else if (dc_outtype == TEGRA_DC_OUT_FAKE_DSIB) {
@@ -298,7 +260,7 @@ int tegra_dc_init_fakedsi_panel(struct tegra_dc *dc, long dc_outtype)
 	dc_out->postsuspend	= NULL;
 	dc_out->width = 217;
 	dc_out->height = 135;
-	dc_out->flags = TEGRA_DC_OUT_CONTINUOUS_MODE;
+	dc_out->flags = DC_CTRL_MODE;
 	tegra_dc_reset_fakedsi_panel(dc, dc_outtype);
 	return 0;
 }

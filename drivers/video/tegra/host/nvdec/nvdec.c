@@ -236,6 +236,7 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 	struct nvdec_bl_shared_data shared_data;
 	u32 wpr_addr_lo, wpr_addr_hi;
 
+	dev_dbg(&dev->dev, "nvdec_boot: start\n");
 	err = nvhost_nvdec_init_sw(dev);
 	if (err)
 		return err;
@@ -273,6 +274,7 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 		(m[0]->phys + m[0]->os.bin_data_offset) >> 8);
 
 	/* Write BL data to dmem */
+	dev_dbg(&dev->dev, "nvdec_boot: load dmem\n");
 	for (offset = 0; offset < m[0]->os.data_size; offset += 256) {
 		nvdec_dma_pa_to_internal_256b(dev,
 					   m[0]->os.data_offset + offset,
@@ -280,6 +282,7 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 	}
 
 	/* Write BL code to imem */
+	dev_dbg(&dev->dev, "nvdec_boot: load imem\n");
 	host1x_writel(dev, nvdec_dmatrfbase_r(),
 		(m[0]->phys + m[0]->os.bin_data_offset) >> 8);
 	nvdec_dma_pa_to_internal_256b(dev, m[0]->os.code_offset, 0, true);
@@ -300,11 +303,13 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 	host1x_writel(dev, nvdec_dmatrfbase_r(),
 		(m->phys + m->os.bin_data_offset) >> 8);
 
+	dev_dbg(&dev->dev, "nvdec_boot: load dmem\n");
 	for (offset = 0; offset < m->os.data_size; offset += 256)
 		nvdec_dma_pa_to_internal_256b(dev,
 					   m->os.data_offset + offset,
 					   offset, false);
 
+	dev_dbg(&dev->dev, "nvdec_boot: load imem\n");
 	nvdec_dma_pa_to_internal_256b(dev, m->os.code_offset, 0, true);
 #endif /* USE_NVDEC_BOOTLOADER */
 	/* setup nvdec interrupts and enable interface */
@@ -326,6 +331,7 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 				nvdec_itfen_ctxen_enable_f()));
 
 	/* boot nvdec */
+	dev_dbg(&dev->dev, "nvdec_boot: start falcon\n");
 	host1x_writel(dev, nvdec_bootvec_r(), nvdec_bootvec_vec_f(0));
 	host1x_writel(dev, nvdec_cpuctl_r(),
 			nvdec_cpuctl_startcpu_true_f());
@@ -337,6 +343,7 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 		dev_err(&dev->dev, "boot failed due to timeout");
 		return err;
 	}
+	dev_info(&dev->dev, "nvdec_boot: success\n");
 
 	return 0;
 }

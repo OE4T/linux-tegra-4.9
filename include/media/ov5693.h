@@ -100,6 +100,7 @@ struct ov5693_cal_data {
 /* See notes in the nvc.h file on the GPIO usage */
 enum ov5693_gpio_type {
 	OV5693_GPIO_TYPE_PWRDN = 0,
+	OV5693_GPIO_TYPE_RESET,
 };
 
 struct ov5693_eeprom_data {

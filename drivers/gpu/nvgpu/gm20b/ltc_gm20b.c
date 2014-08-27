@@ -81,7 +81,7 @@ static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	gk20a_dbg_info("max comptag lines : %d",
 		max_comptag_lines);
 
-	if (IS_ENABLED(CONFIG_GK20A_PHYS_PAGE_TABLES))
+	if (tegra_platform_is_linsim())
 		err = gk20a_ltc_alloc_phys_cbc(g, compbit_backing_size);
 	else
 		err = gk20a_ltc_alloc_virt_cbc(g, compbit_backing_size);

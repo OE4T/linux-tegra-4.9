@@ -399,8 +399,7 @@ int gk20a_init_mm_support(struct gk20a *g)
 	return err;
 }
 
-#ifdef CONFIG_GK20A_PHYS_PAGE_TABLES
-static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
+static int alloc_gmmu_phys_pages(struct vm_gk20a *vm, u32 order,
 			    void **handle,
 			    struct sg_table **sgt,
 			    size_t *size)
@@ -443,18 +442,17 @@ err_out:
 	return -ENOMEM;
 }
 
-void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
+void free_gmmu_phys_pages(struct vm_gk20a *vm, void *handle,
 			    struct sg_table *sgt, u32 order,
 			    size_t size)
 {
 	gk20a_dbg_fn("");
-	BUG_ON(sgt == NULL);
 	free_pages((unsigned long)handle, order);
 	sg_free_table(sgt);
 	kfree(sgt);
 }
 
-int map_gmmu_pages(void *handle, struct sg_table *sgt,
+int map_gmmu_phys_pages(void *handle, struct sg_table *sgt,
 			  void **va, size_t size)
 {
 	FLUSH_CPU_DCACHE(handle, sg_phys(sgt->sgl), sgt->sgl->length);
@@ -462,11 +460,10 @@ int map_gmmu_pages(void *handle, struct sg_table *sgt,
 	return 0;
 }
 
-void unmap_gmmu_pages(void *handle, struct sg_table *sgt, void *va)
+void unmap_gmmu_phys_pages(void *handle, struct sg_table *sgt, void *va)
 {
 	FLUSH_CPU_DCACHE(handle, sg_phys(sgt->sgl), sgt->sgl->length);
 }
-#else
 
 static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 			    void **handle,
@@ -483,6 +480,9 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 	int err = 0;
 
 	gk20a_dbg_fn("");
+
+	if (tegra_platform_is_linsim())
+		return alloc_gmmu_phys_pages(vm, order,	handle, sgt, size);
 
 	*size = len;
 
@@ -545,6 +545,11 @@ void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
 	gk20a_dbg_fn("");
 	BUG_ON(sgt == NULL);
 
+	if (tegra_platform_is_linsim()) {
+		free_gmmu_phys_pages(vm, handle, sgt, order, size);
+		return;
+	}
+
 	iova = sg_dma_address(sgt->sgl);
 
 	gk20a_free_sgtable(&sgt);
@@ -569,6 +574,9 @@ int map_gmmu_pages(void *handle, struct sg_table *sgt,
 	struct page **pages;
 	gk20a_dbg_fn("");
 
+	if (tegra_platform_is_linsim())
+		return map_gmmu_phys_pages(handle, sgt, kva, size);
+
 	if (IS_ENABLED(CONFIG_ARM64)) {
 		*kva = handle;
 	} else {
@@ -585,11 +593,15 @@ void unmap_gmmu_pages(void *handle, struct sg_table *sgt, void *va)
 {
 	gk20a_dbg_fn("");
 
+	if (tegra_platform_is_linsim()) {
+		unmap_gmmu_phys_pages(handle, sgt, va);
+		return;
+	}
+
 	if (!IS_ENABLED(CONFIG_ARM64))
 		vunmap(va);
 	va = NULL;
 }
-#endif
 
 /* allocate a phys contig region big enough for a full
  * sized gmmu page table for the given gmmu_page_size.

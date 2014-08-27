@@ -1478,6 +1478,34 @@ void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
 	tegra_dc_put(dc);
 }
 
+static void tegra_sor_config_lvds_clk(struct tegra_dc_sor_data *sor)
+{
+	int flag = tegra_is_clk_enabled(sor->sor_clk);
+
+	if (sor->clk_type == TEGRA_SOR_MACRO_CLK)
+		return;
+
+	tegra_sor_writel(sor, NV_SOR_CLK_CNTRL,
+		NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK |
+		NV_SOR_CLK_CNTRL_DP_LINK_SPEED_LVDS);
+
+	tegra_dc_sor_set_link_bandwidth(sor, SOR_LINK_SPEED_LVDS);
+
+	/*
+	 * HW bug 1425607
+	 * Disable clocks to avoid glitch when switching
+	 * between safe clock and macro pll clock
+	 */
+	if (flag)
+		clk_disable_unprepare(sor->sor_clk);
+
+	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 1);
+
+	if (flag)
+		clk_prepare_enable(sor->sor_clk);
+
+	sor->clk_type = TEGRA_SOR_MACRO_CLK;
+}
 void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
 	bool balanced, bool conforming)
 {
@@ -1547,19 +1575,10 @@ void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
 		NV_SOR_DP_SPARE_SOR_CLK_SEL_MACRO_SORCLK);
 
 	tegra_dc_sor_enable_lane_sequencer(sor, true, true);
-	tegra_dc_sor_set_link_bandwidth(sor, SOR_LINK_SPEED_LVDS);
+
+	tegra_sor_config_lvds_clk(sor);
 
 	tegra_dc_sor_attach_lvds(sor);
-
-	tegra_sor_writel(sor, NV_SOR_CLK_CNTRL,
-		NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK |
-		NV_SOR_CLK_CNTRL_DP_LINK_SPEED_LVDS);
-
-
-
-
-	/* re-enable SOR clock */
-	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 1);
 
 	if ((tegra_dc_sor_set_power_state(sor, 1))) {
 		dev_err(&sor->dc->ndev->dev,

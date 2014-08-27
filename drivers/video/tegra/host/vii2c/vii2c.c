@@ -33,7 +33,6 @@
 
 #include <media/tegra_v4l2_camera.h>
 #include <media/camera.h>
-
 #include "../../../../../arch/arm/mach-tegra/iomap.h"
 #include "dev.h"
 #include "bus_client.h"
@@ -54,7 +53,7 @@ struct vii2c_struct {
 	atomic_t in_use;
 	struct platform_device *pdev;
 	struct regulator *reg;
-	void __iomem *vi_base;
+	void __iomem *base;
 	struct nvhost_syncpt *sp;
 };
 
@@ -62,7 +61,7 @@ static struct of_device_id vii2c_of_match[] = {
 #if defined(CONFIG_TEGRA_GRHOST_VII2C)
 	{
 		.compatible = "nvidia,tegra210-vi-i2c",
-		.data = (struct nvhost_device_data *)&t21_vii2c_info
+		.data = (struct nvhost_device_data *)&t21_vii2c_info,
 	},
 #endif
 	{ },
@@ -188,7 +187,6 @@ fail:
 
 static int nvhost_vii2c_start(struct nvhost_vii2c_struct *p_vii2c)
 {
-	u32 read_data = 0;
 	int err;
 
 	dev_dbg(&p_vii2c->pdev->dev, "%s: ++ %p\n", __func__, p_vii2c->pdev);
@@ -204,9 +202,9 @@ static int nvhost_vii2c_start(struct nvhost_vii2c_struct *p_vii2c)
 	p_vii2c->syncval = nvhost_syncpt_incr_max(vii2c.sp, NVSYNCPT_VII2C, 1);
 
 	mdelay(2);
-	read_data = readw(IO_ADDRESS(TEGRA_CLK_RESET_BASE) + 0x6c8);
-	dev_dbg(&p_vii2c->pdev->dev, "%s: -%x- %d\n",
-		__func__, read_data, p_vii2c->syncval);
+	dev_dbg(&p_vii2c->pdev->dev, "%s: syncval = %d\n",
+		__func__, p_vii2c->syncval);
+
 	return 0;
 }
 
@@ -324,7 +322,7 @@ static int vii2c_probe(struct platform_device *dev)
 				dev->resource[i].name, dev->resource[i].flags,
 				pdata->aperture[i]);
 	}
-	vii2c.vi_base = pdata->aperture[0];
+	vii2c.base = pdata->aperture[0];
 
 	nvhost_module_init(dev);
 

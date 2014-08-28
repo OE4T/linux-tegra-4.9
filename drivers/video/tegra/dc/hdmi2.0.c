@@ -26,6 +26,9 @@
 #include <linux/gpio.h>
 #include <linux/interrupt.h>
 #include <linux/debugfs.h>
+#ifdef CONFIG_SWITCH
+#include <linux/switch.h>
+#endif
 
 #include <mach/dc.h>
 #include <mach/hdmi-audio.h>
@@ -498,6 +501,9 @@ static int tegra_hdmi_controller_disable(struct tegra_hdmi *hdmi)
 	tegra_sor_clk_disable(sor);
 
 	tegra_dc_put(dc);
+#ifdef CONFIG_SWITCH
+	switch_set_state(&hdmi->audio_switch, 0);
+#endif
 
 	return 0;
 }
@@ -667,6 +673,14 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	tegra_dc_set_outdata(dc, hdmi);
 
+#ifdef CONFIG_SWITCH
+	hdmi->audio_switch.name = "hdmi_audio";
+	err = switch_dev_register(&hdmi->audio_switch);
+	if (err)
+		dev_err(&dc->ndev->dev,
+			"hdmi: failed to register audio switch %d\n", err);
+#endif
+
 	return 0;
 fail:
 	devm_kfree(&dc->ndev->dev, hdmi);
@@ -683,6 +697,9 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);
 	gpio_free(dc->out->hotplug_gpio);
 	devm_kfree(&dc->ndev->dev, hdmi);
+#ifdef CONFIG_SWITCH
+	switch_dev_unregister(&hdmi->audio_switch);
+#endif
 	clk_put(hdmi->hda_clk);
 	clk_put(hdmi->hda2codec_clk);
 	clk_put(hdmi->hda2hdmi_clk);
@@ -1006,6 +1023,9 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	tegra_sor_writel(sor,  NV_SOR_PWR, 0x80000001);
 
 	hdmi->enabled = true;
+#ifdef CONFIG_SWITCH
+	switch_set_state(&hdmi->audio_switch, 1);
+#endif
 
 	return 0;
 }

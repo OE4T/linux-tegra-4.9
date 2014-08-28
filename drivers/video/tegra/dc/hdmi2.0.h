@@ -172,6 +172,9 @@ struct tegra_hdmi {
 	struct clk *hda_clk;
 	struct clk *hda2codec_clk;
 	struct clk *hda2hdmi_clk;
+#ifdef CONFIG_SWITCH
+	struct switch_dev audio_switch;
+#endif
 
 	struct tegra_nvhdcp *nvhdcp;
 

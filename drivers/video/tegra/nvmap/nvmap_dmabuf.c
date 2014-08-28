@@ -165,6 +165,7 @@ static void nvmap_dmabuf_detach(struct dma_buf *dmabuf,
  * Add this sgt to the stash - should be called when the SGT's ref count hits
  * 0.
  */
+#ifdef CONFIG_NVMAP_DMABUF_STASH
 static void __nvmap_dmabuf_add_stash(struct nvmap_handle_sgt *nvmap_sgt)
 {
 	pr_debug("Adding mapping to stash.\n");
@@ -174,6 +175,7 @@ static void __nvmap_dmabuf_add_stash(struct nvmap_handle_sgt *nvmap_sgt)
 	stash_stat_inc(stashed_maps);
 	stash_stat_add_iova(nvmap_sgt->owner->handle);
 }
+#endif
 
 /*
  * Make sure this mapping is no longer stashed - this corresponds to a "hit". If

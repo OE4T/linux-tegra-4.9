@@ -37,6 +37,7 @@
  *
  */
 
+#include <dt-bindings/thermal/tegra210-dfll-trips.h>
 #include <linux/clk.h>
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h>
@@ -230,6 +231,12 @@
 #define DFLL_TUNE_HIGH_MARGIN_STEPS	2
 
 /*
+ * DFLL_CAP_GUARD_BAND_STEPS: the minimum volage is at least
+ * DFLL_CAP_GUARD_BAND_STEPS below maximum voltage
+ */
+#define DFLL_CAP_GUARD_BAND_STEPS	2
+
+/*
  * I2C_OUTPUT_ACTIVE_TEST_US: mandatory minimum interval (in
  * microseconds) between testing whether the I2C controller is
  * currently sending a voltage-set command.  Some comments list this
@@ -245,6 +252,8 @@
 
 #define DVCO_RATE_TO_MULT(rate, ref_rate)	((rate) / ((ref_rate) / 2))
 #define MULT_TO_DVCO_RATE(mult, ref_rate)	((mult) * ((ref_rate) / 2))
+#define ROUND_DVCO_MIN_RATE(rate, ref_rate)	\
+	(DIV_ROUND_UP(rate, (ref_rate) / 2) * ((ref_rate) / 2))
 
 /**
  * enum dfll_ctrl_mode - DFLL hardware operating mode
@@ -325,6 +334,7 @@ struct tegra_dfll {
 	unsigned long			ref_rate;
 	unsigned long			i2c_clk_rate;
 	unsigned long			dvco_rate_min;
+	unsigned long			out_rate_min;
 
 	enum dfll_ctrl_mode		mode;
 	enum dfll_tune_range		tune_range;
@@ -373,12 +383,20 @@ struct tegra_dfll {
 	/* spinlock protecting register accesses */
 	spinlock_t			lock;
 
+	/* Thermal parameters */
+	unsigned int			thermal_floor_output;
+	unsigned int			thermal_floor_index;
+	unsigned int			thermal_cap_output;
+	unsigned int			thermal_cap_index;
+
 };
 
 enum dfll_monitor_mode {
 	DFLL_OUTPUT_VALUE = 5,
 	DFLL_FREQ = 6,
 };
+
+static struct tegra_dfll *tegra_dfll_dev;
 
 #define clk_hw_to_dfll(_hw) container_of(_hw, struct tegra_dfll, dfll_clk_hw)
 
@@ -391,6 +409,8 @@ static const char * const mode_name[] = {
 };
 
 static void dfll_load_i2c_lut(struct tegra_dfll *td);
+static u8 find_mv_out_cap(struct tegra_dfll *td, int mv);
+static u8 find_mv_out_floor(struct tegra_dfll *td, int mv);
 
 /*
  * Register accessors
@@ -541,6 +561,43 @@ int tegra_dfll_runtime_suspend(struct device *dev)
 }
 EXPORT_SYMBOL(tegra_dfll_runtime_suspend);
 
+/**
+  * dfll_set_output_limits - set DFLL output min and max limits
+  * @td: DFLL instance
+  * @out_min: min lut index
+  * @out_max: max lut index
+  *
+  * Set the minimum and maximum lut index into DFLL output config
+  * register.
+  */
+static void dfll_set_output_limits(struct tegra_dfll *td,
+				   u32 out_min, u32 out_max)
+{
+	u32 val;
+
+	td->lut_min = out_min;
+	td->lut_max = out_max;
+
+	if (td->pmu_if == TEGRA_DFLL_PMU_PWM)
+		val = dfll_readl(td, DFLL_OUTPUT_CFG);
+	else
+		val = dfll_i2c_readl(td, DFLL_OUTPUT_CFG);
+
+	val &= ~DFLL_OUTPUT_CFG_MAX_MASK &
+		~DFLL_OUTPUT_CFG_MIN_MASK;
+
+	val |= (td->lut_max << DFLL_OUTPUT_CFG_MAX_SHIFT) |
+		(td->lut_min << DFLL_OUTPUT_CFG_MIN_SHIFT);
+
+	if (td->pmu_if == TEGRA_DFLL_PMU_PWM) {
+		dfll_writel(td, val, DFLL_OUTPUT_CFG);
+		dfll_wmb(td);
+	} else {
+		dfll_i2c_writel(td, val, DFLL_OUTPUT_CFG);
+		dfll_i2c_wmb(td);
+	}
+}
+
 /*
  * DFLL tuning operations (per-voltage-range tuning settings)
  */
@@ -563,6 +620,10 @@ static void dfll_tune_low(struct tegra_dfll *td)
 
 	if (td->soc->set_clock_trimmers_low)
 		td->soc->set_clock_trimmers_low();
+
+	if (td->lut_min != td->thermal_floor_output)
+		dfll_set_output_limits(td, td->thermal_floor_output,
+					td->lut_max);
 }
 
 /**
@@ -600,10 +661,17 @@ static void dfll_tune_high(struct tegra_dfll *td)
 static void dfll_set_open_loop_config(struct tegra_dfll *td)
 {
 	u32 val;
+	u32 out_min, out_max;
 
+	out_min = td->lut_min;
+	out_max = td->lut_max;
 	/* always tune low (safe) in open loop */
-	if (td->tune_range != DFLL_TUNE_LOW)
+	if (td->tune_range != DFLL_TUNE_LOW) {
 		dfll_tune_low(td);
+		out_min = dfll_get_output_min(td);
+	}
+
+	dfll_set_output_limits(td, out_min, out_max);
 
 	val = dfll_readl(td, DFLL_FREQ_REQ);
 	val |= DFLL_FREQ_REQ_SCALE_MASK;
@@ -626,6 +694,7 @@ static void dfll_set_close_loop_config(struct tegra_dfll *td,
 			  struct dfll_rate_req *req)
 {
 	bool sample_tune_out_last = false;
+	u32 tune_min, out_min, out_max;
 
 	switch (td->tune_range) {
 	case DFLL_TUNE_LOW:
@@ -646,16 +715,17 @@ static void dfll_set_close_loop_config(struct tegra_dfll *td,
 		BUG();
 	}
 
-	td->lut_min = td->tune_range == DFLL_TUNE_LOW ?
+	tune_min = td->tune_range == DFLL_TUNE_LOW ?
 			0 : td->tune_high_out_min;
+	out_min = max(tune_min, td->thermal_floor_output);
 
-	if (sample_tune_out_last && td->pmu_if == TEGRA_DFLL_PMU_I2C) {
-		u32 val;
+	if (td->thermal_cap_output > out_min + DFLL_CAP_GUARD_BAND_STEPS)
+		out_max = td->thermal_cap_output;
+	else
+		out_max = out_min + DFLL_CAP_GUARD_BAND_STEPS;
 
-		val  = dfll_i2c_readl(td, DFLL_I2C_STS);
-		td->tune_out_last = val >> DFLL_I2C_STS_I2C_LAST_SHIFT;
-		td->tune_out_last &= OUT_MASK;
-	}
+	if ((td->lut_min != out_min) || (td->lut_max != out_max))
+		dfll_set_output_limits(td, out_min, out_max);
 }
 
 /**
@@ -699,6 +769,52 @@ static void dfll_tune_timer_cb(unsigned long data)
 	} else if (td->tune_range == DFLL_TUNE_WAIT_PMIC) {
 		dfll_tune_high(td);
 	}
+}
+
+/*
+ * DVCO rate control
+ */
+
+/**
+ * set_dvco_rate_min - set the minimum DVCO output rate & interval
+ * @td: DFLL instance
+ *
+ * Find and cache the "minimum" DVCO output frequency. No return value.
+ */
+static void set_dvco_rate_min(struct tegra_dfll *td)
+{
+	struct dev_pm_opp *opp;
+	unsigned long rate, prev_rate;
+	int min_uv, uv;
+
+	min_uv = td->lut_uv[td->thermal_floor_output];
+
+	td->dvco_rate_min = td->out_rate_min;
+
+	for (rate = 0, prev_rate = 0; ; rate++) {
+		rcu_read_lock();
+		opp = dev_pm_opp_find_freq_ceil(td->soc->dev, &rate);
+		if (IS_ERR(opp)) {
+			rcu_read_unlock();
+			break;
+		}
+		uv = dev_pm_opp_get_voltage(opp);
+		rcu_read_unlock();
+
+		if (uv) {
+			if (uv == min_uv)
+				td->dvco_rate_min = rate;
+			else if (uv > min_uv) {
+				td->dvco_rate_min = prev_rate;
+				break;
+			}
+		}
+		prev_rate = rate;
+	}
+
+	/* round minimum rate to request unit (ref_rate/2) boundary */
+	td->dvco_rate_min = ROUND_DVCO_MIN_RATE(td->dvco_rate_min,
+							td->ref_rate);
 }
 
 /*
@@ -846,6 +962,7 @@ static int dfll_pwm_set_output_enabled(struct tegra_dfll *td, bool enable)
 
 	return 0;
 }
+
 /**
  * dfll_set_force_output_value - set fixed value for force output
  * @td: DFLL instance
@@ -984,10 +1101,33 @@ static void dfll_init_i2c_if(struct tegra_dfll *td)
 static void dfll_init_out_if(struct tegra_dfll *td)
 {
 	u32 val;
+	int index, mv;
 
 	td->lut_min = 0;
 	td->lut_max = td->lut_size - 1;
 	td->lut_safe = td->lut_min + (td->lut_min < td->lut_max ? 1 : 0);
+
+	td->thermal_floor_output = 0;
+	if (td->soc->thermal_floor_table_size) {
+		index = 0;
+		mv = td->soc->thermal_floor_table[index].millivolts;
+		td->thermal_floor_output = find_mv_out_cap(td, mv);
+		td->thermal_floor_index = index;
+	}
+
+	td->thermal_cap_output = td->lut_size - 1;
+	if (td->soc->thermal_cap_table_size) {
+		index = td->soc->thermal_cap_table_size - 1;
+		mv = td->soc->thermal_cap_table[index].millivolts;
+		td->thermal_cap_output = find_mv_out_floor(td, mv);
+		td->thermal_cap_index = index;
+	}
+
+	set_dvco_rate_min(td);
+
+	td->lut_min = td->thermal_floor_output;
+	td->lut_max = td->thermal_cap_output;
+	td->lut_safe = td->lut_min + 1;
 
 	if (td->pmu_if == TEGRA_DFLL_PMU_PWM) {
 		int vinit = td->reg_init_uV;
@@ -1044,15 +1184,6 @@ static void dfll_init_out_if(struct tegra_dfll *td)
  * Set/get the DFLL's targeted output clock rate
  */
 
-static int lut_index_to_uv(struct tegra_dfll *td, int index)
-{
-	if (td->pmu_if == TEGRA_DFLL_PMU_PWM)
-		return td->soc->alignment.offset_uv
-			+ index * td->soc->alignment.step_uv;
-	else
-		return regulator_list_voltage(td->vdd_reg, td->lut[index]);
-}
-
 /**
  * find_lut_index_for_rate - determine I2C LUT index for given DFLL rate
  * @td: DFLL instance
@@ -1093,7 +1224,7 @@ static int find_lut_index_for_rate(struct tegra_dfll *td, unsigned long rate)
  * @mv: millivolts
  *
  * Find the lut index with voltage greater than or equal to @mv,
- * and return it.  If all of the voltages in out_map are less than
+ * and return it. If all of the voltages in out_map are less than
  * @mv, then return the lut index * corresponding to the highest
  * possible voltage, even though it's less than @mv.
  */
@@ -1102,11 +1233,38 @@ static u8 find_mv_out_cap(struct tegra_dfll *td, int mv)
 	u8 i;
 
 	for (i = td->lut_bottom; i < td->lut_size; i++) {
-		if (lut_index_to_uv(td, i) >= mv * 1000)
+		if (td->lut_uv[i] >= mv * 1000)
 			return i;
 	}
 
 	return i - 1;	/* maximum possible output */
+}
+
+/**
+ * find_mv_out_floor - find the largest out_map index with voltage < @mv
+ * @pdev: DFLL instance
+ * @mv: millivolts
+ *
+ * Find the largest out_map index with voltage lesser to @mv,
+ * and return it. If all of the voltages in out_map are greater than
+ * @mv, then return the out_map index * corresponding to the minimum
+ * possible voltage, even though it's greater than @mv.
+ */
+static u8 find_mv_out_floor(struct tegra_dfll *td, int mv)
+{
+	u8 i;
+
+	for (i = td->lut_bottom; i < td->lut_size; i++) {
+		if (td->lut_uv[i] > mv * 1000) {
+			if (!i)
+				/* minimum possible output */
+				return 0;
+			else
+				break;
+		}
+	}
+
+	return i - 1;
 }
 
 /**
@@ -1552,6 +1710,538 @@ static int dfll_get_monitor_data(struct tegra_dfll *td, u32 *reg)
 }
 
 /*
+ * Thermal interface
+ */
+
+/**
+ * tegra_dfll_update_thermal_index - tell the DFLL how hot it is
+ * @pdev: DFLL instance
+ * @type: type of thermal floor or cap
+ * @new_index: current DFLL temperature index
+ *
+ * Update the DFLL driver's sense of what temperature the DFLL is
+ * running at.  Intended to be called by the function supplied to the struct
+ * thermal_cooling_device_ops.set_cur_state function pointer.  Returns
+ * 0 upon success or -ERANGE if @new_index is out of range.
+ */
+int tegra_dfll_update_thermal_index(struct tegra_dfll *td,
+			enum tegra_dfll_thermal_type type,
+			unsigned long new_index)
+{
+	int mv;
+	unsigned long flags;
+
+	if (type == TEGRA_DFLL_THERMAL_FLOOR && td->soc->thermal_floor_table) {
+		if (new_index >= td->soc->thermal_floor_table_size)
+			return -ERANGE;
+
+		spin_lock_irqsave(&td->lock, flags);
+		mv = td->soc->thermal_floor_table[new_index].millivolts;
+		td->thermal_floor_output = find_mv_out_cap(td, mv);
+		td->thermal_floor_index = new_index;
+
+		set_dvco_rate_min(td);
+
+		if (td->mode == DFLL_CLOSED_LOOP) {
+			dfll_set_close_loop_config(td, &td->last_req);
+			dfll_set_frequency_request(td, &td->last_req);
+		}
+		spin_unlock_irqrestore(&td->lock, flags);
+	} else if (type == TEGRA_DFLL_THERMAL_CAP &&
+		   td->soc->thermal_cap_table) {
+		if (new_index >= td->soc->thermal_cap_table_size)
+			return -ERANGE;
+
+		spin_lock_irqsave(&td->lock, flags);
+		mv = td->soc->thermal_cap_table[new_index].millivolts;
+		td->thermal_cap_output = find_mv_out_floor(td, mv);
+		td->thermal_cap_index = new_index;
+
+		if (td->mode == DFLL_CLOSED_LOOP) {
+			dfll_set_close_loop_config(td, &td->last_req);
+			dfll_set_frequency_request(td, &td->last_req);
+		}
+		spin_unlock_irqrestore(&td->lock, flags);
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_dfll_update_thermal_index);
+
+/**
+ * tegra_dfll_get_thermal_index - return the DFLL's current thermal states
+ * @pdev: DFLL instance
+ * @type: type of thermal floor or cap
+ *
+ * Return the DFLL driver's copy of the DFLL's current temperature
+ * index, set by tegra_dfll_update_thermal_index(). Intended to be
+ * called by the function supplied to the struct
+ * thermal_cooling_device_ops.get_cur_state function pointer.
+ */
+int tegra_dfll_get_thermal_index(struct tegra_dfll *td,
+			enum tegra_dfll_thermal_type type)
+{
+	int index;
+
+	switch (type) {
+	case TEGRA_DFLL_THERMAL_FLOOR:
+		index = td->thermal_floor_index;
+		break;
+	case TEGRA_DFLL_THERMAL_CAP:
+		index = td->thermal_cap_index;
+		break;
+	default:
+		index = -EINVAL;
+	}
+
+	return index;
+}
+EXPORT_SYMBOL(tegra_dfll_get_thermal_index);
+
+/**
+ * tegra_dfll_count_thermal_states - return the number of thermal states
+ * @pdev: DFLL instance
+ * @type: type of thermal floor or cap
+ *
+ * Return the number of thermal states passed into the DFLL driver
+ * from the SoC data. Intended to be called by the function supplied
+ * to the struct thermal_cooling_device_ops.get_max_state function
+ * pointer, and by the integration code that binds a thermal zone to
+ * the DFLL thermal reaction driver.
+ */
+int tegra_dfll_count_thermal_states(struct tegra_dfll *td,
+			enum tegra_dfll_thermal_type type)
+{
+	int size;
+
+	switch (type) {
+	case TEGRA_DFLL_THERMAL_FLOOR:
+		size = td->soc->thermal_floor_table_size;
+		break;
+	case TEGRA_DFLL_THERMAL_CAP:
+		size = td->soc->thermal_cap_table_size;
+		break;
+	default:
+		size = -EINVAL;
+	}
+
+	return size;
+}
+EXPORT_SYMBOL(tegra_dfll_count_thermal_states);
+
+/**
+ * tegra_dfll_get_by_phandle - get DFLL device from a phandle
+ * @np: device node
+ * @prop: property name
+ *
+ * Returns the DFLL instance referred to by the phandle @prop in node @np
+ * or an ERR_PTR() on failure.
+ */
+struct tegra_dfll *tegra_dfll_get_by_phandle(struct device_node *np,
+					     const char *prop)
+{
+	struct device_node *dfll_np;
+	struct tegra_dfll *td;
+
+	dfll_np = of_parse_phandle(np, prop, 0);
+	if (!dfll_np)
+		return ERR_PTR(-ENOENT);
+
+	if (!tegra_dfll_dev) {
+		td = ERR_PTR(-EPROBE_DEFER);
+		goto error;
+	}
+
+	if (tegra_dfll_dev->dev->of_node != dfll_np) {
+		td = ERR_PTR(-EINVAL);
+		goto error;
+	}
+
+	td = tegra_dfll_dev;
+
+error:
+	of_node_put(dfll_np);
+	return td;
+}
+EXPORT_SYMBOL(tegra_dfll_get_by_phandle);
+
+/*
+ * DFLL initialization
+ */
+
+/**
+ * dfll_set_default_params - program non-output related DFLL parameters
+ * @td: DFLL instance
+ *
+ * During DFLL driver initialization or resume from context loss,
+ * program parameters for the closed loop integrator, DVCO tuning,
+ * voltage droop control and monitor control.
+ */
+static void dfll_set_default_params(struct tegra_dfll *td)
+{
+	u32 val;
+
+	val = DIV_ROUND_UP(td->ref_rate, td->sample_rate * 32);
+	BUG_ON(val > DFLL_CONFIG_DIV_MASK);
+	dfll_writel(td, val, DFLL_CONFIG);
+
+	val = (td->force_mode << DFLL_PARAMS_FORCE_MODE_SHIFT) |
+		(td->cf << DFLL_PARAMS_CF_PARAM_SHIFT) |
+		(td->ci << DFLL_PARAMS_CI_PARAM_SHIFT) |
+		(td->cg << DFLL_PARAMS_CG_PARAM_SHIFT) |
+		(td->cg_scale ? DFLL_PARAMS_CG_SCALE : 0);
+	dfll_writel(td, val, DFLL_PARAMS);
+
+	dfll_tune_low(td);
+	dfll_writel(td, td->droop_ctrl, DFLL_DROOP_CTRL);
+	dfll_set_monitor_mode(td, DFLL_FREQ);
+}
+
+/**
+ * dfll_init_clks - clk_get() the DFLL source clocks
+ * @td: DFLL instance
+ *
+ * Call clk_get() on the DFLL source clocks and save the pointers for later
+ * use. Returns 0 upon success or error (see devm_clk_get) if one or more
+ * of the clocks couldn't be looked up.
+ */
+static int dfll_init_clks(struct tegra_dfll *td)
+{
+	td->ref_clk = devm_clk_get(td->dev, "ref");
+	if (IS_ERR(td->ref_clk)) {
+		dev_err(td->dev, "missing ref clock\n");
+		return PTR_ERR(td->ref_clk);
+	}
+
+	td->soc_clk = devm_clk_get(td->dev, "soc");
+	if (IS_ERR(td->soc_clk)) {
+		dev_err(td->dev, "missing soc clock\n");
+		return PTR_ERR(td->soc_clk);
+	}
+
+	td->i2c_clk = devm_clk_get(td->dev, "i2c");
+	if (IS_ERR(td->i2c_clk)) {
+		dev_err(td->dev, "missing i2c clock\n");
+		return PTR_ERR(td->i2c_clk);
+	}
+	td->i2c_clk_rate = clk_get_rate(td->i2c_clk);
+
+	return 0;
+}
+
+/**
+ * dfll_init_tuning_thresholds - set up the high voltage range, if possible
+ * @td: DFLL instance
+ *
+ * Determine whether the DFLL tuning parameters need to be
+ * reprogrammed when the DFLL voltage reaches a certain minimum
+ * threshold.  No return value.
+ */
+static void dfll_init_tuning_thresholds(struct tegra_dfll *td)
+{
+	u8 out_min, out_start, max_voltage_index;
+
+	max_voltage_index = td->lut_size - 1;
+
+	/*
+	 * Convert high tuning voltage threshold into output LUT
+	 * index, and add necessary margin.  If voltage threshold is
+	 * outside operating range set it at maximum output level to
+	 * effectively disable tuning parameters adjustment.
+	 */
+	td->tune_high_out_min = max_voltage_index;
+	td->tune_high_out_start = max_voltage_index;
+	if (td->soc->tune_high_min_millivolts < td->soc->min_millivolts)
+		return;	/* no difference between low & high voltage range */
+
+	out_min = find_mv_out_cap(td, td->soc->tune_high_min_millivolts);
+	if ((out_min + 2) > max_voltage_index)
+		return;
+
+	out_start = out_min + DFLL_TUNE_HIGH_MARGIN_STEPS;
+	if (out_start > max_voltage_index)
+		return;
+
+	td->tune_high_out_min = out_min;
+	td->tune_high_out_start = out_start;
+}
+
+/**
+ * dfll_init - Prepare the DFLL IP block for use
+ * @td: DFLL instance
+ *
+ * Do everything necessary to prepare the DFLL IP block for use. The
+ * DFLL will be left in DISABLED state. Called by dfll_probe().
+ * Returns 0 upon success, or passes along the error from whatever
+ * function returned it.
+ */
+static int dfll_init(struct tegra_dfll *td)
+{
+	int ret;
+
+	td->ref_rate = clk_get_rate(td->ref_clk);
+	if (td->ref_rate != REF_CLOCK_RATE) {
+		dev_err(td->dev, "unexpected ref clk rate %lu, expecting %lu",
+			td->ref_rate, REF_CLOCK_RATE);
+		return -EINVAL;
+	}
+
+	reset_control_deassert(td->dvco_rst);
+
+	ret = clk_prepare(td->ref_clk);
+	if (ret) {
+		dev_err(td->dev, "failed to prepare ref_clk\n");
+		return ret;
+	}
+
+	ret = clk_prepare(td->soc_clk);
+	if (ret) {
+		dev_err(td->dev, "failed to prepare soc_clk\n");
+		goto di_err1;
+	}
+
+	ret = clk_prepare(td->i2c_clk);
+	if (ret) {
+		dev_err(td->dev, "failed to prepare i2c_clk\n");
+		goto di_err2;
+	}
+
+	td->last_unrounded_rate = 0;
+
+	pm_runtime_enable(td->dev);
+	pm_runtime_get_sync(td->dev);
+
+	dfll_set_mode(td, DFLL_DISABLED);
+	dfll_set_default_params(td);
+
+	if (td->soc->init_clock_trimmers)
+		td->soc->init_clock_trimmers();
+
+	dfll_set_open_loop_config(td);
+
+	dfll_init_out_if(td);
+
+	dfll_init_tuning_thresholds(td);
+
+	pm_runtime_put_sync(td->dev);
+
+	return 0;
+
+di_err2:
+	clk_unprepare(td->soc_clk);
+di_err1:
+	clk_unprepare(td->ref_clk);
+
+	reset_control_assert(td->dvco_rst);
+
+	return ret;
+}
+
+/*
+ * DT data fetch
+ */
+
+/*
+ * Find a PMIC voltage register-to-voltage mapping for the given voltage.
+ * An exact voltage match is required.
+ */
+static int find_vdd_map_entry_exact(struct tegra_dfll *td, int uV)
+{
+	int i, n_voltages, reg_mult, align_mult;
+
+	align_mult = uV / td->soc->alignment.step_uv;
+	n_voltages = regulator_count_voltages(td->vdd_reg);
+	for (i = 0; i < n_voltages; i++) {
+		reg_mult = regulator_list_voltage(td->vdd_reg, i) /
+					td->soc->alignment.step_uv;
+		if (reg_mult < 0)
+			break;
+
+		if (align_mult == reg_mult)
+			return i;
+	}
+
+	dev_err(td->dev, "no voltage map entry for %d uV\n", uV);
+	return -EINVAL;
+}
+
+/*
+ * Find a PMIC voltage register-to-voltage mapping for the given voltage,
+ * rounding up to the closest supported voltage.
+ * */
+static int find_vdd_map_entry_min(struct tegra_dfll *td, int uV)
+{
+	int i, n_voltages, reg_mult, align_mult;
+
+	align_mult = uV / td->soc->alignment.step_uv;
+	n_voltages = regulator_count_voltages(td->vdd_reg);
+	for (i = 0; i < n_voltages; i++) {
+		reg_mult = regulator_list_voltage(td->vdd_reg, i) /
+					td->soc->alignment.step_uv;
+		if (reg_mult < 0)
+			break;
+
+		if (align_mult <= reg_mult)
+			return i;
+	}
+
+	dev_err(td->dev, "no voltage map entry rounding to %d uV\n", uV);
+	return -EINVAL;
+}
+
+/*
+ * Look-up table in h/w is ignored when PWM is used as DFLL interface to PMIC.
+ * In this case closed loop output is controlling duty cycle directly. The s/w
+ * look-up that maps PWM duty cycle to voltage is still built by this function.
+ */
+static int dfll_build_lut_pwm(struct tegra_dfll *td, int v_max)
+{
+	int i, reg_volt;
+	unsigned long rate;
+	u8 lut_bottom = MAX_DFLL_VOLTAGES;
+	int v_min = td->soc->cvb->min_millivolts * 1000;
+
+	for (i = 0; i < MAX_DFLL_VOLTAGES; i++) {
+		reg_volt = td->lut_uv[i];
+
+		/* since opp voltage is exact mv */
+		reg_volt = (reg_volt / 1000) * 1000;
+		if (reg_volt > v_max)
+			break;
+
+		td->lut[i] = i;
+		if ((lut_bottom == MAX_DFLL_VOLTAGES) && (reg_volt >= v_min))
+			lut_bottom = i;
+	}
+
+	/* determine voltage boundaries */
+	td->lut_size = i;
+	if ((lut_bottom == MAX_DFLL_VOLTAGES) ||
+	    (lut_bottom + 1 >= td->lut_size)) {
+		dev_err(td->dev, "no voltage above DFLL minimum %d mV\n",
+			td->soc->cvb->min_millivolts);
+		return -EINVAL;
+	}
+	td->lut_bottom = lut_bottom;
+
+	/* determine rate boundaries */
+	rate = get_dvco_rate_below(td, td->lut_bottom);
+	if (!rate) {
+		dev_err(td->dev, "no opp below DFLL minimum voltage %d mV\n",
+			td->soc->cvb->min_millivolts);
+		return -EINVAL;
+	}
+	td->dvco_rate_min = td->out_rate_min = rate;
+
+	return 0;
+}
+
+/**
+ * dfll_build_i2c_lut - build the I2C voltage register lookup table
+ * @td: DFLL instance
+ *
+ * The DFLL hardware has 33 bytes of look-up table RAM that must be filled with
+ * PMIC voltage register values that span the entire DFLL operating range.
+ * This function builds the look-up table based on the OPP table provided by
+ * the soc-specific platform driver (td->soc->opp_dev) and the PMIC
+ * register-to-voltage mapping queried from the regulator framework.
+ *
+ * On success, fills in td->i2c_lut and returns 0, or -err on failure.
+ */
+static int dfll_build_i2c_lut(struct tegra_dfll *td, int v_max)
+{
+	unsigned long rate;
+	int ret = -EINVAL;
+	int j, v, v_opp;
+	int selector;
+	int lut;
+
+	rcu_read_lock();
+
+	v = td->soc->cvb->min_millivolts * 1000;
+	lut = find_vdd_map_entry_exact(td, v);
+	if (lut < 0)
+		goto out;
+	td->lut[0] = lut;
+	td->lut_bottom = 0;
+
+	for (j = 1, rate = 0; ; rate++) {
+		struct dev_pm_opp *opp;
+
+		opp = dev_pm_opp_find_freq_ceil(td->soc->dev, &rate);
+		if (IS_ERR(opp))
+			break;
+		v_opp = dev_pm_opp_get_voltage(opp);
+		if (v_opp <= td->soc->cvb->min_millivolts * 1000)
+			td->out_rate_min = dev_pm_opp_get_freq(opp);
+
+		for (;;) {
+			v += max(1, (v_max - v) / (MAX_DFLL_VOLTAGES - j));
+			if (v >= v_opp)
+				break;
+
+			selector = find_vdd_map_entry_min(td, v);
+			if (selector < 0)
+				goto out;
+			if (selector != td->lut[j - 1])
+				td->lut[j++] = selector;
+		}
+
+		v = (j == MAX_DFLL_VOLTAGES - 1) ? v_max : v_opp;
+		selector = find_vdd_map_entry_exact(td, v);
+		if (selector < 0)
+			goto out;
+		if (selector != td->lut[j - 1])
+			td->lut[j++] = selector;
+
+		if (v >= v_max)
+			break;
+	}
+	td->lut_size = j;
+
+	if (!td->out_rate_min) {
+		dev_err(td->dev, "no opp above DFLL minimum voltage %d mV\n",
+			td->soc->cvb->min_millivolts);
+	} else {
+		ret = 0;
+		for (j = 0; j < td->lut_size; j++)
+			td->lut_uv[j] =
+				regulator_list_voltage(td->vdd_reg,
+						       td->lut[j]);
+		td->dvco_rate_min = td->out_rate_min;
+	}
+
+out:
+	rcu_read_unlock();
+
+	return ret;
+}
+
+static int dfll_build_lut(struct tegra_dfll *td)
+{
+	unsigned long rate;
+	struct dev_pm_opp *opp;
+	int v_max;
+
+	rcu_read_lock();
+
+	rate = ULONG_MAX;
+	opp = dev_pm_opp_find_freq_floor(td->soc->dev, &rate);
+	if (IS_ERR(opp)) {
+		dev_err(td->dev, "couldn't get vmax opp, empty opp table?\n");
+		return -EINVAL;
+	}
+	v_max = dev_pm_opp_get_voltage(opp);
+
+	rcu_read_unlock();
+
+	if (td->pmu_if == TEGRA_DFLL_PMU_PWM) {
+		return dfll_build_lut_pwm(td, v_max);
+	} else
+		return dfll_build_i2c_lut(td, v_max);
+}
+
+/*
  * Debugfs interface
  */
 
@@ -1850,6 +2540,67 @@ static const struct file_operations registers_fops = {
 	.release	= single_release,
 };
 
+static int profiles_show(struct seq_file *s, void *data)
+{
+	struct thermal_tv tv;
+	int i, size;
+	unsigned long r;
+	struct tegra_dfll *td = s->private;
+	u8 v;
+
+	size = td->soc->thermal_cap_table_size;
+	seq_printf(s, "THERM CAPS:%s\n", size ? "" : " NONE");
+	for (i = 0; i < size; i++) {
+		tv = td->soc->thermal_cap_table[i];
+		if (tv.temp == TEGRA210_DFLL_THERMAL_CAP_NOCAP / 1000)
+			continue;
+		v = find_mv_out_floor(td, tv.millivolts);
+		seq_printf(s, "%3dC.. %5dmV\n",
+			   tv.temp, tegra_dfll_dev->lut_uv[v] / 1000);
+	}
+
+	if (td->tune_high_target_rate_min == ULONG_MAX) {
+		seq_puts(s, "TUNE HIGH: NONE\n");
+	} else {
+		seq_puts(s, "TUNE HIGH:\n");
+		seq_printf(s, "min    %5dmV%9lukHz\n",
+			   td->lut_uv[td->tune_high_out_min],
+			   td->tune_high_dvco_rate_min / 1000);
+		seq_printf(s, "%-14s%9lukHz\n", "rate threshold",
+			   td->tune_high_target_rate_min / 1000);
+	}
+
+	size = td->soc->thermal_floor_table_size;
+	seq_printf(s, "THERM FLOORS:%s\n", size ? "" : " NONE");
+	for (i = 0; i < size; i++) {
+		tv = td->soc->thermal_floor_table[i];
+		r = td->dvco_rate_floors[i];
+		v = find_mv_out_cap(td, tv.millivolts);
+		seq_printf(s, " ..%3dC%5dmV%9lukHz%s\n",
+			   tv.temp, tegra_dfll_dev->lut_uv[v] / 1000,
+			   (r ? : get_dvco_rate_below(td, v)) / 1000,
+			   r ? " (calibrated)"  : "");
+	}
+	r = td->dvco_rate_floors[i];
+	seq_printf(s, "  vmin:%5dmV%9lukHz%s\n", td->lut_uv[0] / 1000,
+		   (r ? : td->out_rate_min) / 1000,
+		   r ? " (calibrated)"  : "");
+
+	return 0;
+}
+
+static int profiles_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, profiles_show, inode->i_private);
+}
+
+static const struct file_operations profiles_fops = {
+	.open		= profiles_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static struct {
 	char				*name;
 	umode_t				mode;
@@ -1858,12 +2609,16 @@ static struct {
 	{ "enable", S_IRUGO | S_IWUSR, &enable_fops },
 	{ "lock", S_IRUGO | S_IWUSR, &lock_fops },
 	{ "force_out_mv", S_IRUGO | S_IWUSR, &fout_mv_fops },
+	{ "pmu_undershoot_gb", S_IRUGO | S_IWUSR, &undershoot_fops },
+	{ "tune_high_mv", S_IRUGO | S_IWUSR, &tune_high_mv_fops },
+	{ "calibr_delay", S_IRUGO | S_IWUSR, &calibr_delay_fops },
 	{ "rate", S_IRUGO, &rate_fops },
 	{ "dvco_rate_min", S_IRUGO, &dvco_rate_min_fops },
 	{ "registers", S_IRUGO, &registers_fops },
 	{ "vmin_mv", S_IRUGO, &vmin_fops },
 	{ "vmax_mv", S_IRUGO, &vmax_fops },
 	{ "output_mv", S_IRUGO, &output_fops },
+	{ "profiles", S_IRUGO, &profiles_fops },
 };
 
 static int dfll_debug_init(struct tegra_dfll *td)
@@ -1896,384 +2651,6 @@ err_out:
 }
 
 #endif /* CONFIG_DEBUG_FS */
-
-/*
- * DFLL initialization
- */
-
-/**
- * dfll_set_default_params - program non-output related DFLL parameters
- * @td: DFLL instance
- *
- * During DFLL driver initialization or resume from context loss,
- * program parameters for the closed loop integrator, DVCO tuning,
- * voltage droop control and monitor control.
- */
-static void dfll_set_default_params(struct tegra_dfll *td)
-{
-	u32 val;
-
-	val = DIV_ROUND_UP(td->ref_rate, td->sample_rate * 32);
-	BUG_ON(val > DFLL_CONFIG_DIV_MASK);
-	dfll_writel(td, val, DFLL_CONFIG);
-
-	val = (td->force_mode << DFLL_PARAMS_FORCE_MODE_SHIFT) |
-		(td->cf << DFLL_PARAMS_CF_PARAM_SHIFT) |
-		(td->ci << DFLL_PARAMS_CI_PARAM_SHIFT) |
-		(td->cg << DFLL_PARAMS_CG_PARAM_SHIFT) |
-		(td->cg_scale ? DFLL_PARAMS_CG_SCALE : 0);
-	dfll_writel(td, val, DFLL_PARAMS);
-
-	dfll_tune_low(td);
-	dfll_writel(td, td->droop_ctrl, DFLL_DROOP_CTRL);
-	dfll_set_monitor_mode(td, DFLL_FREQ);
-}
-
-/**
- * dfll_init_clks - clk_get() the DFLL source clocks
- * @td: DFLL instance
- *
- * Call clk_get() on the DFLL source clocks and save the pointers for later
- * use. Returns 0 upon success or error (see devm_clk_get) if one or more
- * of the clocks couldn't be looked up.
- */
-static int dfll_init_clks(struct tegra_dfll *td)
-{
-	td->ref_clk = devm_clk_get(td->dev, "ref");
-	if (IS_ERR(td->ref_clk)) {
-		dev_err(td->dev, "missing ref clock\n");
-		return PTR_ERR(td->ref_clk);
-	}
-
-	td->soc_clk = devm_clk_get(td->dev, "soc");
-	if (IS_ERR(td->soc_clk)) {
-		dev_err(td->dev, "missing soc clock\n");
-		return PTR_ERR(td->soc_clk);
-	}
-
-	td->i2c_clk = devm_clk_get(td->dev, "i2c");
-	if (IS_ERR(td->i2c_clk)) {
-		dev_err(td->dev, "missing i2c clock\n");
-		return PTR_ERR(td->i2c_clk);
-	}
-	td->i2c_clk_rate = clk_get_rate(td->i2c_clk);
-
-	return 0;
-}
-
-/**
- * dfll_init_tuning_thresholds - set up the high voltage range, if possible
- * @td: DFLL instance
- *
- * Determine whether the DFLL tuning parameters need to be
- * reprogrammed when the DFLL voltage reaches a certain minimum
- * threshold.  No return value.
- */
-static void dfll_init_tuning_thresholds(struct tegra_dfll *td)
-{
-	u8 out_min, out_start, max_voltage_index;
-
-	max_voltage_index = td->lut_size - 1;
-
-	/*
-	 * Convert high tuning voltage threshold into output LUT
-	 * index, and add necessary margin.  If voltage threshold is
-	 * outside operating range set it at maximum output level to
-	 * effectively disable tuning parameters adjustment.
-	 */
-	td->tune_high_out_min = max_voltage_index;
-	td->tune_high_out_start = max_voltage_index;
-	if (td->soc->tune_high_min_millivolts < td->soc->min_millivolts)
-		return;	/* no difference between low & high voltage range */
-
-	out_min = find_mv_out_cap(td, td->soc->tune_high_min_millivolts);
-	if ((out_min + 2) > max_voltage_index)
-		return;
-
-	out_start = out_min + DFLL_TUNE_HIGH_MARGIN_STEPS;
-	if (out_start > max_voltage_index)
-		return;
-
-	td->tune_high_out_min = out_min;
-	td->tune_high_out_start = out_start;
-}
-
-/**
- * dfll_init - Prepare the DFLL IP block for use
- * @td: DFLL instance
- *
- * Do everything necessary to prepare the DFLL IP block for use. The
- * DFLL will be left in DISABLED state. Called by dfll_probe().
- * Returns 0 upon success, or passes along the error from whatever
- * function returned it.
- */
-static int dfll_init(struct tegra_dfll *td)
-{
-	int ret;
-
-	td->ref_rate = clk_get_rate(td->ref_clk);
-	if (td->ref_rate != REF_CLOCK_RATE) {
-		dev_err(td->dev, "unexpected ref clk rate %lu, expecting %lu",
-			td->ref_rate, REF_CLOCK_RATE);
-		return -EINVAL;
-	}
-
-	reset_control_deassert(td->dvco_rst);
-
-	ret = clk_prepare(td->ref_clk);
-	if (ret) {
-		dev_err(td->dev, "failed to prepare ref_clk\n");
-		return ret;
-	}
-
-	ret = clk_prepare(td->soc_clk);
-	if (ret) {
-		dev_err(td->dev, "failed to prepare soc_clk\n");
-		goto di_err1;
-	}
-
-	ret = clk_prepare(td->i2c_clk);
-	if (ret) {
-		dev_err(td->dev, "failed to prepare i2c_clk\n");
-		goto di_err2;
-	}
-
-	td->last_unrounded_rate = 0;
-
-	pm_runtime_enable(td->dev);
-	pm_runtime_get_sync(td->dev);
-
-	dfll_set_mode(td, DFLL_DISABLED);
-	dfll_set_default_params(td);
-
-	if (td->soc->init_clock_trimmers)
-		td->soc->init_clock_trimmers();
-
-	dfll_set_open_loop_config(td);
-
-	dfll_init_out_if(td);
-
-	dfll_init_tuning_thresholds(td);
-
-	pm_runtime_put_sync(td->dev);
-
-	return 0;
-
-di_err2:
-	clk_unprepare(td->soc_clk);
-di_err1:
-	clk_unprepare(td->ref_clk);
-
-	reset_control_assert(td->dvco_rst);
-
-	return ret;
-}
-
-/*
- * DT data fetch
- */
-
-/*
- * Find a PMIC voltage register-to-voltage mapping for the given voltage.
- * An exact voltage match is required.
- */
-static int find_vdd_map_entry_exact(struct tegra_dfll *td, int uV)
-{
-	int i, n_voltages, reg_mult, align_mult;
-
-	align_mult = uV / td->soc->alignment.step_uv;
-	n_voltages = regulator_count_voltages(td->vdd_reg);
-	for (i = 0; i < n_voltages; i++) {
-		reg_mult = regulator_list_voltage(td->vdd_reg, i) /
-					td->soc->alignment.step_uv;
-		if (reg_mult < 0)
-			break;
-
-		if (align_mult == reg_mult)
-			return i;
-	}
-
-	dev_err(td->dev, "no voltage map entry for %d uV\n", uV);
-	return -EINVAL;
-}
-
-/*
- * Find a PMIC voltage register-to-voltage mapping for the given voltage,
- * rounding up to the closest supported voltage.
- * */
-static int find_vdd_map_entry_min(struct tegra_dfll *td, int uV)
-{
-	int i, n_voltages, reg_mult, align_mult;
-
-	align_mult = uV / td->soc->alignment.step_uv;
-	n_voltages = regulator_count_voltages(td->vdd_reg);
-	for (i = 0; i < n_voltages; i++) {
-		reg_mult = regulator_list_voltage(td->vdd_reg, i) /
-					td->soc->alignment.step_uv;
-		if (reg_mult < 0)
-			break;
-
-		if (align_mult <= reg_mult)
-			return i;
-	}
-
-	dev_err(td->dev, "no voltage map entry rounding to %d uV\n", uV);
-	return -EINVAL;
-}
-
-/*
- * Look-up table in h/w is ignored when PWM is used as DFLL interface to PMIC.
- * In this case closed loop output is controlling duty cycle directly. The s/w
- * look-up that maps PWM duty cycle to voltage is still built by this function.
- */
-static int dfll_build_lut_pwm(struct tegra_dfll *td, int v_max)
-{
-	int i, reg_volt;
-	unsigned long rate;
-	u8 lut_bottom = MAX_DFLL_VOLTAGES;
-	int v_min = td->soc->cvb->min_millivolts * 1000;
-
-	for (i = 0; i < MAX_DFLL_VOLTAGES; i++) {
-		reg_volt = td->lut_uv[i];
-
-		/* since opp voltage is exact mv */
-		reg_volt = (reg_volt / 1000) * 1000;
-		if (reg_volt > v_max)
-			break;
-
-		td->lut[i] = i;
-		if ((lut_bottom == MAX_DFLL_VOLTAGES) && (reg_volt >= v_min))
-			lut_bottom = i;
-	}
-
-	/* determine voltage boundaries */
-	td->lut_size = i;
-	if ((lut_bottom == MAX_DFLL_VOLTAGES) ||
-	    (lut_bottom + 1 >= td->lut_size)) {
-		dev_err(td->dev, "no voltage above DFLL minimum %d mV\n",
-			td->soc->cvb->min_millivolts);
-		return -EINVAL;
-	}
-	td->lut_bottom = lut_bottom;
-
-	/* determine rate boundaries */
-	rate = get_dvco_rate_below(td, td->lut_bottom);
-	if (!rate) {
-		dev_err(td->dev, "no opp below DFLL minimum voltage %d mV\n",
-			td->soc->cvb->min_millivolts);
-		return -EINVAL;
-	}
-	td->dvco_rate_min = rate;
-
-	return 0;
-}
-
-/**
- * dfll_build_i2c_lut - build the I2C voltage register lookup table
- * @td: DFLL instance
- *
- * The DFLL hardware has 33 bytes of look-up table RAM that must be filled with
- * PMIC voltage register values that span the entire DFLL operating range.
- * This function builds the look-up table based on the OPP table provided by
- * the soc-specific platform driver (td->soc->opp_dev) and the PMIC
- * register-to-voltage mapping queried from the regulator framework.
- *
- * On success, fills in td->i2c_lut and returns 0, or -err on failure.
- */
-static int dfll_build_i2c_lut(struct tegra_dfll *td, int v_max)
-{
-	unsigned long rate;
-	int ret = -EINVAL;
-	int j, v, v_opp;
-	int selector;
-	int lut;
-
-	rcu_read_lock();
-
-	v = td->soc->cvb->min_millivolts * 1000;
-	lut = find_vdd_map_entry_exact(td, v);
-	if (lut < 0)
-		goto out;
-	td->lut[0] = lut;
-	td->lut_bottom = 0;
-
-	for (j = 1, rate = 0; ; rate++) {
-		struct dev_pm_opp *opp;
-
-		opp = dev_pm_opp_find_freq_ceil(td->soc->dev, &rate);
-		if (IS_ERR(opp))
-			break;
-		v_opp = dev_pm_opp_get_voltage(opp);
-
-		if (v_opp <= td->soc->cvb->min_millivolts * 1000)
-			td->dvco_rate_min = dev_pm_opp_get_freq(opp);
-
-		for (;;) {
-			v += max(1, (v_max - v) / (MAX_DFLL_VOLTAGES - j));
-			if (v >= v_opp)
-				break;
-
-			selector = find_vdd_map_entry_min(td, v);
-			if (selector < 0)
-				goto out;
-			if (selector != td->lut[j - 1])
-				td->lut[j++] = selector;
-		}
-
-		v = (j == MAX_DFLL_VOLTAGES - 1) ? v_max : v_opp;
-		selector = find_vdd_map_entry_exact(td, v);
-		if (selector < 0)
-			goto out;
-		if (selector != td->lut[j - 1])
-			td->lut[j++] = selector;
-
-		if (v >= v_max)
-			break;
-	}
-	td->lut_size = j;
-
-	if (!td->dvco_rate_min)
-		dev_err(td->dev, "no opp above DFLL minimum voltage %d mV\n",
-			td->soc->cvb->min_millivolts);
-	else {
-		ret = 0;
-		for (j = 0; j < td->lut_size; j++)
-			td->lut_uv[j] =
-				regulator_list_voltage(td->vdd_reg,
-						       td->lut[j]);
-	}
-
-
-
-out:
-	rcu_read_unlock();
-
-	return ret;
-}
-
-static int dfll_build_lut(struct tegra_dfll *td)
-{
-	unsigned long rate;
-	struct dev_pm_opp *opp;
-	int v_max;
-
-	rcu_read_lock();
-
-	rate = ULONG_MAX;
-	opp = dev_pm_opp_find_freq_floor(td->soc->dev, &rate);
-	if (IS_ERR(opp)) {
-		dev_err(td->dev, "couldn't get vmax opp, empty opp table?\n");
-		return -EINVAL;
-	}
-	v_max = dev_pm_opp_get_voltage(opp);
-
-	rcu_read_unlock();
-
-	if (td->pmu_if == TEGRA_DFLL_PMU_PWM) {
-		return dfll_build_lut_pwm(td, v_max);
-	} else
-		return dfll_build_i2c_lut(td, v_max);
-}
 
 /**
  * read_dt_param - helper function for reading required parameters from the DT
@@ -2388,7 +2765,6 @@ static int dfll_fetch_pwm_params(struct tegra_dfll *td)
 
 	return 0;
 }
-
 /**
  * dfll_fetch_common_params - read DFLL parameters from the device tree
  * @td: DFLL instance
@@ -2565,6 +2941,8 @@ int tegra_dfll_register(struct platform_device *pdev,
 #endif
 	tegra_clk_debugfs_add(td->dfll_clk);
 
+	tegra_dfll_dev = td;
+
 	return 0;
 }
 EXPORT_SYMBOL(tegra_dfll_register);
@@ -2587,6 +2965,8 @@ int tegra_dfll_unregister(struct platform_device *pdev)
 			"must disable DFLL before removing driver\n");
 		return -EBUSY;
 	}
+
+	tegra_dfll_dev = NULL;
 
 	debugfs_remove_recursive(td->debugfs_dir);
 

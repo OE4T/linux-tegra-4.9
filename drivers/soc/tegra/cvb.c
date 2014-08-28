@@ -73,6 +73,25 @@ int tegra_round_voltage(int mv, const struct rail_alignment *align, int up)
 	return mv;
 }
 
+/**
+ * cvb_t_mv =
+ * ((c2 * speedo / s_scale + c1) * speedo / s_scale + c0) +
+ * ((c3 * speedo / s_scale + c4 + c5 * T / t_scale) * T / t_scale)
+ */
+static inline int get_cvb_thermal_floor(int speedo, int temp,
+					int s_scale, int t_scale,
+					const struct thermal_coefficients *coef)
+{
+	int cvb_mv, mv;
+
+	cvb_mv = tegra_get_cvb_voltage(speedo, s_scale, &coef->cvb_coef);
+
+	mv = DIV_ROUND_CLOSEST(coef->c3 * speedo, s_scale) + coef->c4 +
+		DIV_ROUND_CLOSEST(coef->c5 * temp, t_scale);
+	mv = DIV_ROUND_CLOSEST(mv * temp, t_scale) + cvb_mv;
+	return mv;
+}
+
 static int build_opp_table(struct device *dev, const struct cvb_table *table,
 			   struct rail_alignment *align,
 			   int speedo_value, unsigned long max_freq, int *vmin)
@@ -175,4 +194,42 @@ void tegra_cvb_remove_opp_table(struct device *dev,
 
 		dev_pm_opp_remove(dev, entry->freq);
 	}
+}
+
+/**
+ * tegra_cvb_build_thermal_table - build thermal table from Tegra CVB tables
+ * @table: the hardware characterization thermal table
+ * @speedo_value: speedo value of the HW module
+ * @soc_min_mv: minimum voltage applied across all temperature ranges
+ *
+ * The minimum voltage for the IP blocks inside Tegra SoCs might depend on
+ * the current temperature. This function calculates the voltage-thermal
+ * relations according to the given coefficients.   Note that if the
+ * coefficients are not defined, the fixed thermal floors in the @table will
+ * be used.  Returns 0 on success or a negative error code on failure.
+ */
+int tegra_cvb_build_thermal_table(const struct thermal_table *table,
+		int speedo_value, unsigned int soc_min_mv)
+{
+	int i;
+
+	if (!table)
+		return -EINVAL;
+
+	/* The vmin for the lowest trip point is fixed */
+	for (i = 1; i < table->thermal_floor_table_size; i++) {
+		unsigned int mv;
+
+		mv = get_cvb_thermal_floor(speedo_value,
+				table->thermal_floor_table[i-1].temp,
+				table->speedo_scale,
+				table->temp_scale,
+				&table->coefficients);
+		mv = DIV_ROUND_UP(mv, table->voltage_scale);
+		mv = max(mv, soc_min_mv);
+		table->thermal_floor_table[i].millivolts = max(mv,
+				table->thermal_floor_table[i].millivolts);
+	}
+
+	return 0;
 }

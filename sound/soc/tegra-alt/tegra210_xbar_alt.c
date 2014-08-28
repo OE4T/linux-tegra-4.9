@@ -744,7 +744,6 @@ static const struct of_device_id tegra210_xbar_of_match[] = {
 static const struct {
 	const char *clk_name;
 } configlink_clocks[] = {
-	{ "ape" },
 };
 
 /* FIXME: base address for T210 */

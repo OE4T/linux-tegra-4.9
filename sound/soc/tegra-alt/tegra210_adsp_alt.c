@@ -53,7 +53,7 @@
 #define DRV_NAME "tegra210-adsp"
 
 /* Flag to enable/disable loading of ADSP firmware */
-#define ENABLE_ADSP 0
+#define ENABLE_ADSP 1
 
 static struct tegra210_adsp_app_desc {
 	const char name[NVADSP_NAME_SZ];

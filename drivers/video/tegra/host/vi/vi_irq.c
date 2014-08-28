@@ -142,8 +142,8 @@ static irqreturn_t vi_checkwd(struct vi *tegra_vi, int stream)
 
 	val = host1x_readl(tegra_vi->ndev, err_addr);
 	if (val & 0x20) {
-		host1x_writel(tegra_vi->ndev, err_addr, 0x20);
 		host1x_writel(tegra_vi->ndev, wd_addr, 0);
+		host1x_writel(tegra_vi->ndev, err_addr, 0x20);
 		return IRQ_HANDLED;
 	}
 

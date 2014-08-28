@@ -295,7 +295,9 @@ struct nvhost_device_data t21_vic_info = {
 				   {"emc", UINT_MAX,
 				   NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},
 				   {"vic_floor", 0,
-				   NVHOST_MODULE_ID_CBUS_FLOOR}, {} },
+				   NVHOST_MODULE_ID_CBUS_FLOOR},
+				   {"emc_shared", 0,
+				   NVHOST_MODULE_ID_EMC_SHARED}, {} },
 	.version		= NVHOST_ENCODE_FLCN_VER(4, 0),
 #ifdef TEGRA_POWERGATE_VIC
 	.powergate_ids	= { TEGRA_POWERGATE_VIC, -1 },

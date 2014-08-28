@@ -1855,6 +1855,8 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 
 #define ADSP_SPKPROT_MUX_ROUTES(name)				\
 	{ name " TX",		NULL, name " MUX"},		\
+	ADSP_APM_IN_ROUTES(name),				\
+	ADSP_DEC_ROUTES(name),					\
 	ADSP_ADMA_ROUTES(name)
 
 static const struct snd_soc_dapm_route tegra210_adsp_routes[] = {

@@ -175,14 +175,9 @@ struct tegra_hdmi {
 
 	struct tegra_nvhdcp *nvhdcp;
 
-	struct work_struct hpd_worker;
-	bool hpd_in_progress;
+	struct delayed_work  hpd_worker;
 	struct mutex hpd_lock;
-	struct {
-		u32 dc_enable:1;
-		u32 hdmi_host_enable:1;
-		u32 edid_eld_read:1;
-	} hpd_state_status;
+
 	int irq;
 };
 

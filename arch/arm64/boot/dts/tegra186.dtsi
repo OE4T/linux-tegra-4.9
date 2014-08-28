@@ -142,6 +142,11 @@
 		clock-frequency = <38400000>;
 	};
 
+	tegra_car: clock {
+		compatible = "nvidia,tegra18x-car";
+		#clock-cells = <1>;
+	};
+
         smmu {
                 compatible = "arm,smmu-v2";
                 reg = <0x0 0x32000000 0x0 0xffffff>; /* 16MB */

@@ -23,13 +23,13 @@
 	i2c@7000d000 {
 		nvidia,bit-banging-xfer-after-shutdown;
 
-		cpu_max77621_reg: max8973@1b {
+		cpu_max77621_reg: max77621@1b {
 			compatible = "maxim,max77621";
 			reg = <0x1b>;
 			interrupts = <0 86 IRQ_TYPE_NONE>;
 			status = "disabled";
 			regulator-name = "vdd-cpu";
-			regulator-min-microvolt = <600000>;
+			regulator-min-microvolt = <606250>;
 			regulator-max-microvolt = <1400000>;
 			regulator-boot-on;
 			regulator-always-on;
@@ -40,13 +40,13 @@
 			maxim,external-enable-gpio = <&max77620 5 0>;
 		};
 
-		gpu_max77621_reg: max8973@1c {
+		gpu_max77621_reg: max77621@1c {
 			compatible = "maxim,max77621";
 			reg = <0x1c>;
 			interrupts = <0 86 IRQ_TYPE_NONE>;
 			status = "disabled";
 			regulator-name = "vdd-gpu";
-			regulator-min-microvolt = <600000>;
+			regulator-min-microvolt = <606250>;
 			regulator-max-microvolt = <1400000>;
 			regulator-boot-on;
 			regulator-always-on;

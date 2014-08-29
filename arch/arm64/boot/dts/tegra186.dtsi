@@ -142,7 +142,7 @@
 
         smmu {
                 compatible = "arm,smmu-v2";
-                reg = <0x0 0x32000000 0x0 0x32ffffff>;
+                reg = <0x0 0x32000000 0x0 0xffffff>; /* 16MB */
                 #global-interrupts = <2>;
                 interrupts = <0 32 4>,
                              <0 33 4>,

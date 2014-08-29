@@ -202,6 +202,13 @@ static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 		return err;
 	}
 
+	err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
+		tegra_machine_get_bclk_ratio(&card->rtd[idx]));
+	if (err < 0) {
+			dev_err(card->dev, "Failed to set cpu dai bclk ratio\n");
+			return err;
+	}
+
 	return 0;
 }
 

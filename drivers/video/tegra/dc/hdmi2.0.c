@@ -333,27 +333,46 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 static inline void tegra_hdmi_ddc_enable(struct tegra_hdmi *hdmi)
 {
 	/*
-	 * hdmi uses i2c lanes on dpaux1 channel.
-	 * Enable dpaux1 pads.
+	 * hdmi uses i2c lane muxed on dpaux1 pad.
+	 * Enable dpaux1 pads and configure the mux.
 	 */
 	tegra_dpaux_config_pad_mode(hdmi->dc, TEGRA_DPAUX_INSTANCE_1,
 					TEGRA_DPAUX_PAD_MODE_I2C);
 }
 
+static inline void tegra_hdmi_ddc_disable(struct tegra_hdmi *hdmi)
+{
+	/*
+	 * hdmi uses i2c lane muxed on dpaux1 pad.
+	 * Disable dpaux1 pads.
+	 */
+	tegra_dpaux_pad_power(hdmi->dc, TEGRA_DPAUX_INSTANCE_1, false);
+}
+
 static int tegra_hdmi_get_mon_spec(struct tegra_hdmi *hdmi)
 {
 #define MAX_RETRY 5
+#define MIN_RETRY_DELAY_US 200
+#define MAX_RETRY_DELAY_US (MIN_RETRY_DELAY_US + 200)
 
 	size_t attempt_cnt = 0;
 	int err = 0;
 
-	memset(&hdmi->mon_spec, 0, sizeof(hdmi->mon_spec));
+	if (IS_ERR_OR_NULL(hdmi->edid)) {
+		dev_err(&hdmi->dc->ndev->dev, "hdmi: edid not initialized\n");
+		return PTR_ERR(hdmi->edid);
+	}
 
 	hdmi->mon_spec_valid = false;
+	if (hdmi->mon_spec_valid)
+		fb_destroy_modedb(hdmi->mon_spec.modedb);
+	memset(&hdmi->mon_spec, 0, sizeof(hdmi->mon_spec));
 
 	do {
 		err = tegra_edid_get_monspecs(hdmi->edid, &hdmi->mon_spec);
-		(err < 0) ? ({usleep_range(200, 400); }) : ({break; });
+		(err < 0) ?
+		({usleep_range(MIN_RETRY_DELAY_US, MAX_RETRY_DELAY_US); }) :
+		({break; });
 	} while (++attempt_cnt < MAX_RETRY);
 
 	if (err < 0) {
@@ -364,15 +383,22 @@ static int tegra_hdmi_get_mon_spec(struct tegra_hdmi *hdmi)
 	hdmi->mon_spec_valid = true;
 	return 0;
 
+#undef MAX_RETRY_DELAY_US
+#undef MIN_RETRY_DELAY_US
 #undef MAX_RETRY
+}
+
+static inline int tegra_hdmi_edid_read(struct tegra_hdmi *hdmi)
+{
+	return tegra_hdmi_get_mon_spec(hdmi);
 }
 
 static int tegra_hdmi_get_eld(struct tegra_hdmi *hdmi)
 {
 	int err;
 
-	memset(&hdmi->eld, 0, sizeof(hdmi->eld));
 	hdmi->eld_valid = false;
+	memset(&hdmi->eld, 0, sizeof(hdmi->eld));
 
 	err = tegra_edid_get_eld(hdmi->edid, &hdmi->eld);
 	if (err < 0) {
@@ -384,26 +410,24 @@ static int tegra_hdmi_get_eld(struct tegra_hdmi *hdmi)
 	return 0;
 }
 
-static inline int tegra_hdmi_edid_read(struct tegra_hdmi *hdmi)
-{
-	return tegra_hdmi_get_mon_spec(hdmi);
-}
-
 static inline int tegra_hdmi_eld_read(struct tegra_hdmi *hdmi)
 {
 	return tegra_hdmi_get_eld(hdmi);
 }
 
-/* use edid to configure sw or hw */
 static void tegra_hdmi_edid_config(struct tegra_hdmi *hdmi)
 {
+#define CM_TO_MM(x) (x * 10)
+
 	struct tegra_dc *dc = hdmi->dc;
 
 	if (!hdmi->mon_spec_valid)
 		return;
 
-	dc->out->h_size = hdmi->mon_spec.max_x * 10;
-	dc->out->v_size = hdmi->mon_spec.max_y * 10;
+	dc->out->h_size = CM_TO_MM(hdmi->mon_spec.max_x);
+	dc->out->v_size = CM_TO_MM(hdmi->mon_spec.max_y);
+
+#undef CM_TO_MM
 }
 
 static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
@@ -425,8 +449,8 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 		tegra_fb_update_monspecs(hdmi->dc->fb, mon_spec, NULL);
 #endif
 
-	hdmi->dc->connected = is_asserted;
-	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
+	dc->connected = is_asserted;
+	tegra_dc_ext_process_hotplug(dc->ndev->id);
 }
 
 static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
@@ -655,6 +679,9 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi->dc = dc;
 	dc_hdmi = hdmi;
 	hdmi->nvhdcp = NULL;
+	hdmi->mon_spec_valid = false;
+	hdmi->eld_valid = false;
+	hdmi->enabled = false;
 
 #ifdef CONFIG_TEGRA_HDMIHDCP
 	hdmi->nvhdcp = tegra_nvhdcp_create(hdmi, dc->ndev->id,

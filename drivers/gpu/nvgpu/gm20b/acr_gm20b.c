@@ -400,6 +400,11 @@ int pmu_populate_loader_cfg(struct gk20a *g,
 	g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq(pmu,
 				clk_get_rate(platform->clk[1]));
 	g->ops.pmu_ver.set_pmu_cmdline_args_secure_mode(pmu, 1);
+	g->ops.pmu_ver.set_pmu_cmdline_args_trace_size(
+		pmu, GK20A_PMU_TRACE_BUFSIZE);
+	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_base(pmu);
+	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_idx(
+		pmu, GK20A_PMU_DMAIDX_VIRT);
 	*p_bl_gen_desc_size = sizeof(p_bl_gen_desc->loader_cfg);
 	g->acr.pmu_args = addr_args;
 	return 0;

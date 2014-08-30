@@ -2269,7 +2269,10 @@ static void gk20a_gr_destroy_ctx_buffer(struct platform_device *pdev,
 					struct gr_ctx_buffer_desc *desc)
 {
 	struct device *dev = &pdev->dev;
-	gk20a_free_sgtable(&desc->sgt);
+	if (!desc)
+		return;
+	if (desc->sgt)
+		gk20a_free_sgtable(&desc->sgt);
 	dma_free_attrs(dev, desc->size, desc->pages,
 		       desc->iova, &desc->attrs);
 }

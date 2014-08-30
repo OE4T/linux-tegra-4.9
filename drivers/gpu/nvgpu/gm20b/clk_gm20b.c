@@ -998,7 +998,7 @@ static int monitor_get(void *data, u64 *val)
 	u32 clk_slowdown, clk_slowdown_save;
 	int err;
 
-	u32 ncycle = 100; /* count GPCCLK for ncycle of clkin */
+	u32 ncycle = 800; /* count GPCCLK for ncycle of clkin */
 	u64 freq = clk->gpc_pll.clk_in;
 	u32 count1, count2;
 
@@ -1024,7 +1024,7 @@ static int monitor_get(void *data, u64 *val)
 		     trim_gpc_clk_cntr_ncgpcclk_cfg_noofipclks_f(ncycle));
 	/* start */
 
-	/* It should take less than 5us to finish 100 cycle of 38.4MHz.
+	/* It should take less than 25us to finish 800 cycle of 38.4MHz.
 	   But longer than 100us delay is required here. */
 	gk20a_readl(g, trim_gpc_clk_cntr_ncgpcclk_cfg_r(0));
 	udelay(200);

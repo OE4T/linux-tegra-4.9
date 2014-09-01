@@ -180,6 +180,42 @@ static int tegra30_apbif_runtime_resume(struct device *dev)
 	return 0;
 }
 
+int tegra30_apbif_i2s_underrun_interrupt_status_clear(int i2s_id)
+{
+	regmap_write(apbif->regmap[0], TEGRA_AHUB_I2S_INT_STATUS,
+			 TEGRA_AHUB_I2S_INT_STATUS_I2S0_RXCIF_UNDERRUN
+			 << (i2s_id * 2));
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra30_apbif_i2s_underrun_interrupt_status_clear);
+
+int tegra30_apbif_i2s_overrun_interrupt_status_clear(int i2s_id)
+{
+	regmap_write(apbif->regmap[0], TEGRA_AHUB_I2S_INT_STATUS,
+			 TEGRA_AHUB_I2S_INT_STATUS_I2S0_TXCIF_OVERRUN
+			 << (i2s_id * 2));
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra30_apbif_i2s_overrun_interrupt_status_clear);
+
+int tegra30_apbif_i2s_underrun_interrupt_status(int i2s_id)
+{
+	int val;
+	regmap_read(apbif->regmap[0], TEGRA_AHUB_I2S_INT_STATUS, &val);
+	return val & (TEGRA_AHUB_I2S_INT_STATUS_I2S0_RXCIF_UNDERRUN
+						 << (i2s_id * 2));
+}
+EXPORT_SYMBOL_GPL(tegra30_apbif_i2s_underrun_interrupt_status);
+
+int tegra30_apbif_i2s_overrun_interrupt_status(int i2s_id)
+{
+	int val;
+	regmap_read(apbif->regmap[0], TEGRA_AHUB_I2S_INT_STATUS, &val);
+	return val & (TEGRA_AHUB_I2S_INT_STATUS_I2S0_TXCIF_OVERRUN
+						 << (i2s_id * 2));
+}
+EXPORT_SYMBOL_GPL(tegra30_apbif_i2s_overrun_interrupt_status);
+
 int tegra30_apbif_i2s_rx_fifo_is_enabled(int i2s_id)
 {
 	int val;
@@ -334,6 +370,10 @@ static void tegra30_apbif_start_playback(struct snd_soc_dai *dai)
 		base_ch = FIFOS_IN_FIRST_REG_BLOCK;
 		regmap = apbif->regmap[1];
 	}
+	/* Currently we don't have mapping of APBIF channels
+	 to I2S enabling interrupts for all I2S at once */
+	regmap_update_bits(apbif->regmap[0], TEGRA_AHUB_I2S_INT_MASK,
+				TEGRA_AHUB_I2S_INT_MASK_I2S_RXCIF_UNDERRUN, 0);
 
 	reg = TEGRA_AHUB_CHANNEL_CTRL +
 		((dai->id - base_ch) * TEGRA_AHUB_CHANNEL_CTRL_STRIDE);
@@ -379,6 +419,11 @@ static void tegra30_apbif_start_capture(struct snd_soc_dai *dai)
 		base_ch = FIFOS_IN_FIRST_REG_BLOCK;
 		regmap = apbif->regmap[1];
 	}
+
+	/* Currently we don't have mapping of APBIF channels
+	 to I2S enabling interrupts for all I2S at once */
+	regmap_update_bits(apbif->regmap[0], TEGRA_AHUB_I2S_INT_MASK,
+				TEGRA_AHUB_I2S_INT_MASK_I2S_TXCIF_OVERRUN, 0);
 
 	reg = TEGRA_AHUB_CHANNEL_CTRL +
 		((dai->id - base_ch) * TEGRA_AHUB_CHANNEL_CTRL_STRIDE);

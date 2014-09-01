@@ -21,7 +21,6 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/err.h>
-#include <linux/ratelimit.h>
 
 #include <asm/unaligned.h>
 
@@ -130,7 +129,6 @@ struct dw_cie {
 
 	unsigned char fde_encoding;
 	unsigned char lsda_encoding;
-	unsigned char per_encoding;
 
 	unsigned long code_align_factor;
 	long data_align_factor;
@@ -139,8 +137,8 @@ struct dw_cie {
 	unsigned char *initial_insn;
 
 	int z_aug;
-
 	unsigned int retaddr_reg;
+	void *personality;
 
 	unsigned char *data;
 };
@@ -168,7 +166,6 @@ struct eh_sec_data {
 };
 
 typedef	u64 dw_word_t;
-#define dw_addr_size	sizeof(dw_word_t)
 
 #define read_user_data(addr, retval)				\
 ({								\
@@ -523,13 +520,18 @@ dwarf_read_encoded_value(struct ex_region_info *ri,
 	long stmp = 0, err = 0;
 	unsigned long utmp, res = 0;
 
+	pr_debug("encoding: %#x\n", encoding);
+
 	if (encoding == DW_EH_PE_omit) {
+		pr_debug("DW_EH_PE_omit\n");
+
 		*val = 0;
 		return 0;
 	} else if (encoding == DW_EH_PE_aligned) {
-		unsigned long aligned =
-			((unsigned long)addr + dw_addr_size - 1) &
-			-dw_addr_size;
+		unsigned long aligned = ALIGN((unsigned long)addr,
+					      sizeof(dw_word_t));
+
+		pr_debug("DW_EH_PE_aligned\n");
 
 		if (sizeof(dw_word_t) == 4) {
 			*val = read_mmap_data_u32(ri, (u32 *)aligned, st, &err);
@@ -543,7 +545,6 @@ dwarf_read_encoded_value(struct ex_region_info *ri,
 		if (err)
 			return err;
 
-		pr_debug("DW_EH_PE_aligned\n");
 		return sizeof(dw_word_t);
 	}
 
@@ -556,8 +557,8 @@ dwarf_read_encoded_value(struct ex_region_info *ri,
 		} else if (sizeof(dw_word_t) == 8) {
 			*val = read_mmap_data_u64(ri, (u64 *)addr, st, &err);
 		} else {
-			pr_err_once("%s: error: encoding\n", __func__);
-			return -QUADD_URC_TBL_IS_CORRUPT;
+			pr_err_once("error: wrong dwarf size\n");
+			return -QUADD_URC_UNHANDLED_INSTRUCTION;
 		}
 
 		if (err)
@@ -659,12 +660,13 @@ dwarf_read_encoded_value(struct ex_region_info *ri,
 				res = read_mmap_data_u64(ri, (u64 *)res,
 							 st, &err);
 			} else {
-				pr_err_once("%s: error: encoding\n", __func__);
-				return -QUADD_URC_TBL_IS_CORRUPT;
+				pr_err_once("error: wrong dwarf size\n");
+				return -QUADD_URC_UNHANDLED_INSTRUCTION;
 			}
 
+			/* we ignore links to unloaded sections */
 			if (err)
-				return err;
+				res = 0;
 		}
 	}
 
@@ -1148,8 +1150,8 @@ decode_cie_entry(struct ex_region_info *ri,
 	}
 
 	cie->fde_encoding = 0;
-	cie->per_encoding = 0;
 	cie->lsda_encoding = DW_EH_PE_omit;
+	cie->personality = NULL;
 
 	while (*aug != '\0') {
 		if (p >= end)
@@ -1173,14 +1175,31 @@ decode_cie_entry(struct ex_region_info *ri,
 			aug++;
 			pr_debug("fde_encoding: %#x\n", cie->fde_encoding);
 		} else if (*aug == 'P') {
-			cie->per_encoding = read_mmap_data_u8(ri, p++,
-							      DW_SEC_TYPE_TAB,
-							      &err);
-			if (err)
-				return err;
+			int count;
+			void *pcrel_base;
+			unsigned char handler_encoding;
+			unsigned long personality;
 
+			handler_encoding = *p++;
+
+			pcrel_base = (void *)
+				mmap_addr_to_ex_addr((unsigned long)p,
+						     ri, DW_SEC_TYPE_TAB);
+
+			count = dwarf_read_encoded_value(ri, p, pcrel_base,
+							 &personality,
+							 handler_encoding,
+							 DW_SEC_TYPE_TAB);
+			if (count < 0) {
+				pr_err_once("%s: error: personality routine\n",
+					    __func__);
+				return count;
+			}
+			p += count;
+
+			pr_debug("personality: %#lx\n", personality);
+			cie->personality = (void *)personality;
 			aug++;
-			pr_debug("%s: aug: P\n", __func__);
 		} else if (*aug == 'S') {
 			aug++;
 			pr_debug("%s: aug: S\n", __func__);

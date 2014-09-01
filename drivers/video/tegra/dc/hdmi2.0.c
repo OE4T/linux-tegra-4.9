@@ -451,6 +451,10 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 
 	dc->connected = is_asserted;
 	tegra_dc_ext_process_hotplug(dc->ndev->id);
+
+#ifdef CONFIG_SWITCH
+	switch_set_state(&hdmi->audio_switch, is_asserted ? 1 : 0);
+#endif
 }
 
 static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
@@ -512,8 +516,6 @@ static int tegra_hdmi_controller_disable(struct tegra_hdmi *hdmi)
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 	struct tegra_dc *dc = hdmi->dc;
 
-	hdmi->enabled = false;
-
 	tegra_dc_get(dc);
 
 	tegra_dc_sor_detach(sor);
@@ -525,20 +527,18 @@ static int tegra_hdmi_controller_disable(struct tegra_hdmi *hdmi)
 	tegra_sor_clk_disable(sor);
 
 	tegra_dc_put(dc);
-#ifdef CONFIG_SWITCH
-	switch_set_state(&hdmi->audio_switch, 0);
-#endif
 
 	return 0;
 }
 
 static int tegra_hdmi_disable(struct tegra_hdmi *hdmi)
 {
+	if (!hdmi->enabled)
+		return 0;
+
+	hdmi->enabled = false;
 	hdmi->eld_valid = false;
 	hdmi->mon_spec_valid = false;
-
-	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_SAFE_CLK);
-	tegra_hdmi_controller_disable(hdmi);
 
 	tegra_dc_disable(hdmi->dc);
 
@@ -607,7 +607,8 @@ static irqreturn_t tegra_hdmi_hpd_irq_handler(int irq, void *ptr)
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 
 	cancel_delayed_work(&hdmi->hpd_worker);
-	schedule_delayed_work(&hdmi->hpd_worker, msecs_to_jiffies(1000));
+	schedule_delayed_work(&hdmi->hpd_worker,
+				msecs_to_jiffies(HDMI_HPD_DEBOUNCE_DELAY_MS));
 
 	return IRQ_HANDLED;
 }
@@ -724,6 +725,7 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);
 	gpio_free(dc->out->hotplug_gpio);
 	devm_kfree(&dc->ndev->dev, hdmi);
+
 #ifdef CONFIG_SWITCH
 	switch_dev_unregister(&hdmi->audio_switch);
 #endif
@@ -1049,11 +1051,6 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	tegra_sor_writel(sor,  NV_SOR_PWR, 0x80000000);
 	tegra_sor_writel(sor,  NV_SOR_PWR, 0x80000001);
 
-	hdmi->enabled = true;
-#ifdef CONFIG_SWITCH
-	switch_set_state(&hdmi->audio_switch, 1);
-#endif
-
 	return 0;
 }
 
@@ -1061,13 +1058,11 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 
-	if (!hdmi->mon_spec_valid) {
-		cancel_delayed_work(&hdmi->hpd_worker);
-		schedule_delayed_work(&hdmi->hpd_worker,
-					msecs_to_jiffies(1000));
-	}
+	if (hdmi->enabled)
+		return;
 
 	tegra_hdmi_controller_enable(hdmi);
+	hdmi->enabled = true;
 }
 
 static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
@@ -1132,12 +1127,25 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 
 static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 {
-	/* TODO */
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+
+	hdmi->enabled = false;
+
+	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_SAFE_CLK);
+	tegra_hdmi_controller_disable(hdmi);
 	return;
 }
 
 static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 {
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+
+	if (tegra_dc_hpd(dc)) {
+		cancel_delayed_work(&hdmi->hpd_worker);
+		schedule_delayed_work(&hdmi->hpd_worker,
+				msecs_to_jiffies(HDMI_HPD_DEBOUNCE_DELAY_MS));
+	}
+
 	return tegra_dc_hpd(dc);
 }
 

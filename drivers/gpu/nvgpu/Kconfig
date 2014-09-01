@@ -61,14 +61,6 @@ config GK20A_CYCLE_STATS
 	help
 	  Say Y here to enable the cycle stats debugging features.
 
-config GK20A_PHYS_PAGE_TABLES
-	bool "Use physical addressing for gk20a page tables"
-	depends on GK20A
-	default y if TEGRA_SIMULATION_PLATFORM
-	help
-	  Use physical addressing for gk20a page tables. If this is off, we
-	  use SMMU translation.
-
 config TEGRA_GK20A
 	bool "Enable the GK20A GPU on Tegra"
 	depends on TEGRA_GRHOST

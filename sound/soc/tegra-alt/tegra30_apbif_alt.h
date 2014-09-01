@@ -238,7 +238,8 @@
 /* TEGRA_AHUB_I2S_INT_MASK */
 
 #define TEGRA_AHUB_I2S_INT_MASK				0xb0
-
+#define TEGRA_AHUB_I2S_INT_MASK_I2S_RXCIF_UNDERRUN	((1 << 16)|(1 << 18)|(1 << 20)|(1 << 22)|(1 << 24))
+#define TEGRA_AHUB_I2S_INT_MASK_I2S_TXCIF_OVERRUN	((1 << 17)|(1 << 19)|(1 << 21)|(1 << 23)|(1 << 25))
 /* TEGRA_AHUB_DAM_INT_MASK */
 
 #define TEGRA_AHUB_DAM_INT_MASK				0xb4
@@ -254,7 +255,8 @@
 /* TEGRA_AHUB_I2S_INT_STATUS */
 
 #define TEGRA_AHUB_I2S_INT_STATUS				0xc8
-
+#define TEGRA_AHUB_I2S_INT_STATUS_I2S0_RXCIF_UNDERRUN		(1 << 16)
+#define TEGRA_AHUB_I2S_INT_STATUS_I2S0_TXCIF_OVERRUN		(1 << 17)
 /* TEGRA_AHUB_DAM_INT_STATUS */
 
 #define TEGRA_AHUB_DAM_INT_STATUS				0xcc
@@ -306,7 +308,10 @@ int tegra30_apbif_i2s_rx_fifo_is_enabled(int i2s_id);
 int tegra30_apbif_i2s_tx_fifo_is_enabled(int i2s_id);
 int tegra30_apbif_i2s_rx_fifo_is_empty(int i2s_id);
 int tegra30_apbif_i2s_tx_fifo_is_empty(int i2s_id);
-
+int tegra30_apbif_i2s_underrun_interrupt_status_clear(int i2s_id);
+int tegra30_apbif_i2s_overrun_interrupt_status_clear(int i2s_id);
+int tegra30_apbif_i2s_underrun_interrupt_status(int i2s_id);
+int tegra30_apbif_i2s_overrun_interrupt_status(int i2s_id);
 struct tegra30_apbif_soc_data {
 	unsigned int num_ch;
 	unsigned int clk_list_mask;

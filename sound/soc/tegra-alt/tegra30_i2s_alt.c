@@ -649,6 +649,22 @@ static const struct of_device_id tegra30_i2s_of_match[] = {
 	{},
 };
 
+static irqreturn_t tegra30_i2s_interrupt_handler(int irq, void *data)
+{
+
+	struct device *dev = data;
+	struct tegra30_i2s *i2s = dev_get_drvdata(data);
+	if (tegra30_apbif_i2s_overrun_interrupt_status(dev->id)) {
+		tegra30_apbif_i2s_overrun_interrupt_status_clear(dev->id);
+		tegra30_i2s_soft_reset(i2s);
+	} else if (tegra30_apbif_i2s_underrun_interrupt_status(dev->id)) {
+		tegra30_apbif_i2s_underrun_interrupt_status_clear(dev->id);
+		tegra30_i2s_soft_reset(i2s);
+	}
+
+	return IRQ_HANDLED;
+}
+
 static int tegra30_i2s_platform_probe(struct platform_device *pdev)
 {
 	struct tegra30_i2s *i2s;
@@ -772,6 +788,11 @@ static int tegra30_i2s_platform_probe(struct platform_device *pdev)
 		goto err_suspend;
 	}
 
+	i2s->irq = platform_get_irq(pdev, 0);
+	if (request_irq(i2s->irq, tegra30_i2s_interrupt_handler,
+			IRQF_SHARED, pdev->name, &pdev->dev) < 0)
+		dev_err(&pdev->dev, "Could not register INTERRUPT\n");
+
 	return 0;
 
 err_suspend:
@@ -801,6 +822,7 @@ static int tegra30_i2s_platform_remove(struct platform_device *pdev)
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra30_i2s_runtime_suspend(&pdev->dev);
 
+	free_irq(i2s->irq, &pdev->dev);
 	devm_clk_put(&pdev->dev, i2s->clk_i2s);
 	devm_clk_put(&pdev->dev, i2s->clk_i2s_sync);
 	devm_clk_put(&pdev->dev, i2s->clk_audio_2x);

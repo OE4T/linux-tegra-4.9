@@ -264,6 +264,7 @@ struct tegra30_i2s {
 	unsigned int tx_mask;
 	unsigned int rx_mask;
 	const struct tegra30_i2s_soc_data *soc_data;
+	unsigned int irq;
 };
 
 #endif

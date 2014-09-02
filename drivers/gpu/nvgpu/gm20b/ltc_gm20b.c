@@ -72,7 +72,7 @@ static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	max_comptag_lines =
 		(compbit_backing_size * comptags_per_cacheline) /
-		cacheline_size * slices_per_ltc * g->ltc_count;
+		(cacheline_size * slices_per_ltc * g->ltc_count);
 
 	if (max_comptag_lines > hw_max_comptag_lines)
 		max_comptag_lines = hw_max_comptag_lines;

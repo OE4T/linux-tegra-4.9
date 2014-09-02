@@ -16,6 +16,7 @@
 #include <linux/types.h>
 #include <linux/jiffies.h>
 
+#include "hw_mc_gm20b.h"
 #include "hw_ltc_gm20b.h"
 #include "hw_top_gm20b.h"
 #include "hw_proj_gm20b.h"
@@ -172,6 +173,8 @@ out:
 
 static void gm20b_ltc_init_fs_state(struct gk20a *g)
 {
+	u32 reg;
+
 	gk20a_dbg_info("initialize gm20b l2");
 
 	g->max_ltc_count = gk20a_readl(g, top_num_ltcs_r());
@@ -188,16 +191,34 @@ static void gm20b_ltc_init_fs_state(struct gk20a *g)
 		     ltc_ltcs_ltss_dstg_cfg0_vdc_4to2_disable_m());
 
 	/* Disable LTC interrupts */
-	gk20a_writel(g, ltc_ltcs_ltss_intr_r(), 0);
+	reg = gk20a_readl(g, ltc_ltcs_ltss_intr_r());
+	reg &= ~(1<<20);
+	gk20a_writel(g, ltc_ltcs_ltss_intr_r(), reg);
 }
 
 void gm20b_ltc_isr(struct gk20a *g)
 {
-	u32 intr;
+	u32 mc_intr, ltc_intr;
+	int ltc, slice;
 
-	intr = gk20a_readl(g, ltc_ltc0_ltss_intr_r());
-	gk20a_err(dev_from_gk20a(g), "ltc: %08x\n", intr);
-	gk20a_writel(g, ltc_ltc0_ltss_intr_r(), intr);
+	mc_intr = gk20a_readl(g, mc_intr_ltc_r());
+	gk20a_err(dev_from_gk20a(g), "mc_ltc_intr: %08x",
+		  mc_intr);
+	for (ltc = 0; ltc < g->ltc_count; ltc++) {
+		if ((mc_intr & 1 << ltc) == 0)
+			continue;
+		for (slice = 0; slice < g->gr.slices_per_ltc; slice++) {
+			ltc_intr = gk20a_readl(g, ltc_ltc0_lts0_intr_r() +
+					   proj_ltc_stride_v() * ltc +
+					   proj_lts_stride_v() * slice);
+			gk20a_err(dev_from_gk20a(g), "ltc%d, slice %d: %08x",
+				  ltc, slice, ltc_intr);
+			gk20a_writel(g, ltc_ltc0_lts0_intr_r() +
+					   proj_ltc_stride_v() * ltc +
+					   proj_lts_stride_v() * slice,
+				     ltc_intr);
+		}
+	}
 }
 
 static void gm20b_ltc_g_elpg_flush_locked(struct gk20a *g)

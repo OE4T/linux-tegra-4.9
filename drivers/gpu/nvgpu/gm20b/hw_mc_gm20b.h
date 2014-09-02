@@ -186,6 +186,10 @@ static inline u32 mc_enable_hub_enabled_f(void)
 {
 	return 0x20000000;
 }
+static inline u32 mc_intr_ltc_r(void)
+{
+	return 0x0000017c;
+}
 static inline u32 mc_enable_pb_r(void)
 {
 	return 0x00000204;

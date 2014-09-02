@@ -122,10 +122,6 @@ static inline u32 ltc_ltcs_ltss_cbc_ctrl2_clear_lower_bound_f(u32 v)
 {
 	return (v & 0x1ffff) << 0;
 }
-static inline u32 ltc_ltcs_ltss_intr_r(void)
-{
-	return 0x0017e20c;
-}
 static inline u32 ltc_ltcs_ltss_cbc_ctrl3_r(void)
 {
 	return 0x0017e274;
@@ -274,9 +270,17 @@ static inline u32 ltc_ltc1_ltss_g_elpg_flush_pending_f(void)
 {
 	return 0x1;
 }
-static inline u32 ltc_ltc0_ltss_intr_r(void)
+static inline u32 ltc_ltcs_ltss_intr_r(void)
 {
-	return 0x0014020c;
+	return 0x0017e20c;
+}
+static inline u32 ltc_ltcs_ltss_intr_en_evicted_cb_m(void)
+{
+	return 0x1 << 20;
+}
+static inline u32 ltc_ltc0_lts0_intr_r(void)
+{
+	return 0x0014040c;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_r(void)
 {

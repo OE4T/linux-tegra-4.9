@@ -346,6 +346,12 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	ret = escore_read(NULL, ES_POWER_STATE);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "No ES755 CODEC found");
+		return -ENODEV;
+	}
+
 	machine = devm_kzalloc(&pdev->dev, sizeof(struct tegra_t210ref),
 			       GFP_KERNEL);
 	if (!machine) {

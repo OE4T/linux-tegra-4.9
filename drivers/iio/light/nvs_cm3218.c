@@ -1448,7 +1448,7 @@ static int cm_of_dt(struct i2c_client *client, struct cm_state *st)
 		of_property_read_u32(dn, "light_threshold_hi",
 				     &st->lux_thr_hi);
 		/* this device supports these programmable parameters */
-		if (of_property_read_u32(dn, "light_integration_time_ms_lo",
+		if (!of_property_read_u32(dn, "light_integration_time_ms_lo",
 					 &val)) {
 			for (i = ARRAY_SIZE(cm_it_tbl); i > 1; i--) {
 				if (val <= cm_it_tbl[i - 1].ms)
@@ -1456,7 +1456,7 @@ static int cm_of_dt(struct i2c_client *client, struct cm_state *st)
 			}
 			st->it_i_hi = i;
 		}
-		if (of_property_read_u32(dn, "light_integration_time_ms_hi",
+		if (!of_property_read_u32(dn, "light_integration_time_ms_hi",
 					 &val)) {
 			for (i = 0; i < ARRAY_SIZE(cm_it_tbl) - 1; i++) {
 				if (val >= cm_it_tbl[i].ms)

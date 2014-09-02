@@ -23,6 +23,7 @@
 #include <linux/anon_inodes.h>
 
 #include "gk20a.h"
+#include "hw_ccsr_gk20a.h"
 
 static void gk20a_tsg_release(struct kref *ref);
 
@@ -225,6 +226,60 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		 * Channel will be unbounded from TSG when it is closed.
 		 */
 		break;
+
+	case NVGPU_IOCTL_TSG_ENABLE:
+		{
+		struct channel_gk20a *ch;
+		err = gk20a_busy(g->dev);
+		if (err) {
+			gk20a_err(&g->dev->dev,
+			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
+			return err;
+		}
+		mutex_lock(&tsg->ch_list_lock);
+		list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+			gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
+				gk20a_readl(ch->g, ccsr_channel_r(ch->hw_chid))
+				| ccsr_channel_enable_set_true_f());
+		}
+		mutex_unlock(&tsg->ch_list_lock);
+		gk20a_idle(g->dev);
+		break;
+		}
+
+	case NVGPU_IOCTL_TSG_DISABLE:
+		{
+		struct channel_gk20a *ch;
+		err = gk20a_busy(g->dev);
+		if (err) {
+			gk20a_err(&g->dev->dev,
+			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
+			return err;
+		}
+		mutex_lock(&tsg->ch_list_lock);
+		list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+			gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
+				gk20a_readl(ch->g, ccsr_channel_r(ch->hw_chid))
+				| ccsr_channel_enable_clr_true_f());
+		}
+		mutex_unlock(&tsg->ch_list_lock);
+		gk20a_idle(g->dev);
+		break;
+		}
+
+	case NVGPU_IOCTL_TSG_PREEMPT:
+		{
+		err = gk20a_busy(g->dev);
+		if (err) {
+			gk20a_err(&g->dev->dev,
+			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
+			return err;
+		}
+		/* preempt TSG */
+		err = gk20a_fifo_preempt_tsg(g, tsg->tsgid);
+		gk20a_idle(g->dev);
+		break;
+		}
 
 	default:
 		gk20a_err(dev_from_gk20a(g),

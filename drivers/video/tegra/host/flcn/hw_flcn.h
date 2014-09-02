@@ -58,6 +58,10 @@ static inline u32 flcn_slcg_override_low_a_r(void)
 {
 	return 0x0000008c;
 }
+static inline u32 flcn_clk_override_r(void)
+{
+	return 0x00000e00;
+}
 static inline u32 flcn_irqmset_r(void)
 {
 	return 0x00001010;
@@ -125,6 +129,10 @@ static inline u32 flcn_itfen_mthden_enable_f(void)
 static inline u32 flcn_idlestate_r(void)
 {
 	return 0x0000104c;
+}
+static inline u32 flcn_cgctl_r(void)
+{
+	return 0x000010a0;
 }
 static inline u32 flcn_cpuctl_r(void)
 {
@@ -217,5 +225,41 @@ static inline u32 flcn_cg_idle_cg_en_f(u32 v)
 static inline u32 flcn_cg_wakeup_dly_cnt_f(u32 v)
 {
 	return (v & 0xf) << 16;
+}
+static inline u32 nvenc_cg1_r(void)
+{
+	return 0x0000117c;
+}
+static inline u32 vic_cg1_r(void)
+{
+	return 0x0000117c;
+}
+static inline u32 vic_cg2_r(void)
+{
+	return 0x00001134;
+}
+static inline u32 nvenc_cg2_r(void)
+{
+	return 0x0000117c;
+}
+static inline u32 vic_tfbif_mccif_fifoctrl_r(void)
+{
+	return 0x00001604;
+}
+static inline u32 nvenc_tfbif_mccif_fifoctrl_r(void)
+{
+	return 0x00001804;
+}
+static inline u32 nvenc_engine_cg2_r(void)
+{
+	return 0x00002200;
+}
+static inline u32 nvenc_engine_cg3_r(void)
+{
+	return 0x00002204;
+}
+static inline u32 nvenc_engine_cg4_r(void)
+{
+	return 0x00002208;
 }
 #endif

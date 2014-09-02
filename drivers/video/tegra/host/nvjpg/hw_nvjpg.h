@@ -82,6 +82,10 @@ static inline u32 nvjpg_slcg_override_low_a_r(void)
 {
 	return 0x0000008c;
 }
+static inline u32 nvjpg_clk_override_r(void)
+{
+	return 0x00000e00;
+}
 static inline u32 nvjpg_irqmset_ext_f(u32 v)
 {
 	return (v & 0xff) << 8;
@@ -125,6 +129,10 @@ static inline u32 nvjpg_itfen_mthden_enable_f(void)
 static inline u32 nvjpg_idlestate_r(void)
 {
 	return 0x104c;
+}
+static inline u32 nvjpg_cgctl_r(void)
+{
+	return 0x000010a0;
 }
 static inline u32 nvjpg_cpuctl_r(void)
 {
@@ -201,5 +209,13 @@ static inline u32 nvjpg_dmatrffboffs_r(void)
 static inline u32 nvjpg_dmatrffboffs_offs_f(u32 v)
 {
 	return (v & 0xffffffff) << 0;
+}
+static inline u32 nvjpg_cg2_r(void)
+{
+	return 0x0000117c;
+}
+static inline u32 nvjpg_tfbif_mccif_fifoctrl_r(void)
+{
+	return 0x00001404;
 }
 #endif

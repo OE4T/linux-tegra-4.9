@@ -392,20 +392,24 @@ void nvhost_nvjpg_deinit(struct platform_device *dev)
 	kfree(m);
 }
 
-int nvhost_nvjpg_t210_finalize_poweron(struct platform_device *dev)
+int nvhost_nvjpg_t210_finalize_poweron(struct platform_device *pdev)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 
-	nvhost_module_reset(dev, false);
+	nvhost_module_reset(pdev, false);
 
 	if (!pdata->can_slcg) {
-		host1x_writel(dev, nvjpg_slcg_override_high_a_r(), 0xff);
-		host1x_writel(dev, nvjpg_slcg_override_low_a_r(), 0xffffffff);
+		host1x_writel(pdev, nvjpg_clk_override_r(), 0xffffffff);
+		host1x_writel(pdev, nvjpg_slcg_override_high_a_r(), 0xff);
+		host1x_writel(pdev, nvjpg_slcg_override_low_a_r(), 0xffffffff);
+		host1x_writel(pdev, nvjpg_cg2_r(), 0xffffffff);
+		host1x_writel(pdev, nvjpg_cgctl_r(), 0xffffffff);
+		host1x_writel(pdev, nvjpg_tfbif_mccif_fifoctrl_r(), 0xffffffff);
+	} else {
+		host1x_writel(pdev, nvjpg_cg2_r(), 0x18004);
 	}
 
-	host1x_writel(dev, 0x117c, 0x18004);
-
-	return nvhost_nvjpg_finalize_poweron(dev);
+	return nvhost_nvjpg_finalize_poweron(pdev);
 }
 
 int nvhost_nvjpg_finalize_poweron(struct platform_device *dev)

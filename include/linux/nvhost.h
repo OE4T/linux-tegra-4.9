@@ -59,7 +59,6 @@ struct sync_pt;
 #define NVSYNCPT_3D			(22)	/* t20, t30, t114, t148 */
 #define NVSYNCPT_VBLANK0		(26)	/* t20, t30, t114, t148 */
 #define NVSYNCPT_VBLANK1		(27)	/* t20, t30, t114, t148 */
-#define NVSYNCPT_VII2C			(52)	/* t210 */
 
 #define NVWAITBASE_2D_0			(1)	/* t20, t30, t114 */
 #define NVWAITBASE_2D_1			(2)	/* t20, t30, t114 */

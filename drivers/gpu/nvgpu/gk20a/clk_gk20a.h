@@ -29,6 +29,21 @@ enum {
 	GK20A_GPC_PLL = 0,
 };
 
+enum gpc_pll_mode {
+	GPC_PLL_MODE_F = 0,
+	GPC_PLL_MODE_DVFS,
+};
+
+struct na_dvfs {
+	u32 n_int;
+	u32 sdm_din;
+	int dfs_coeff;
+	int dfs_det_max;
+	int dfs_ext_cal;
+	int uv_cal;
+	int mv;
+};
+
 struct pll {
 	u32 id;
 	u32 clk_in;	/* KHz */
@@ -37,6 +52,8 @@ struct pll {
 	u32 PL;
 	u32 freq;	/* KHz */
 	bool enabled;
+	enum gpc_pll_mode mode;
+	struct na_dvfs dvfs;
 };
 
 struct pll_parms {
@@ -46,6 +63,10 @@ struct pll_parms {
 	u32 min_M,   max_M;
 	u32 min_N,   max_N;
 	u32 min_PL,  max_PL;
+	/* NA mode parameters*/
+	int coeff_slope, coeff_offs; /* coeff = slope * V + offs */
+	int uvdet_slope, uvdet_offs; /* uV = slope * det + offs */
+	u32 vco_ctrl;
 };
 
 struct clk_gk20a {
@@ -54,6 +75,7 @@ struct clk_gk20a {
 	struct pll gpc_pll;
 	struct pll gpc_pll_last;
 	u32 pll_delay; /* default PLL settle time */
+	u32 na_pll_delay; /* default PLL settle time in NA mode */
 	struct mutex clk_mutex;
 	bool sw_ready;
 	bool clk_hw_on;

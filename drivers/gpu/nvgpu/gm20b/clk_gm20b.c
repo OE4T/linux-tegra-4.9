@@ -22,6 +22,7 @@
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #include <linux/clk/tegra.h>
+#include <linux/tegra-fuse.h>
 
 #include "gk20a/gk20a.h"
 #include "hw_trim_gm20b.h"
@@ -29,10 +30,19 @@
 #include "hw_therm_gm20b.h"
 #include "clk_gm20b.h"
 
+#define ALLOW_NON_CALIBRATED_NA_MODE	1
+
 #define gk20a_dbg_clk(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_clk, fmt, ##arg)
 
-/* from vbios PLL info table */
+#define DFS_DET_RANGE	6	/* -2^6 ... 2^6-1 */
+#define SDM_DIN_RANGE	12	/* -2^12 ... 2^12-1 */
+#define DFS_EXT_CAL_EN	BIT(9)
+#define DFS_EXT_STROBE	BIT(16)
+
+#define BOOT_GPU_UV	1000000	/* gpu rail boot voltage 1.0V */
+#define ADC_SLOPE_UV	10000	/* default ADC detection slope 10mV */
+
 static struct pll_parms gpc_pll_params = {
 	128000,  2600000,	/* freq */
 	1300000, 2600000,	/* vco */
@@ -40,6 +50,7 @@ static struct pll_parms gpc_pll_params = {
 	1, 255,			/* M */
 	8, 255,			/* N */
 	1, 31,			/* PL */
+	-58700, 86789,		/* DFS_COEFF */
 };
 
 #ifdef CONFIG_DEBUG_FS
@@ -218,6 +229,244 @@ found_match:
 	return 0;
 }
 
+/* GPCPLL NA/DVFS mode methods */
+
+/*
+ * Read ADC characteristic parmeters from fuses.
+ * Determine clibration settings.
+ */
+static int clk_config_calibration_params(struct gk20a *g)
+{
+	int slope, offs;
+	struct pll_parms *p = &gpc_pll_params;
+
+	if (!tegra_fuse_calib_gpcpll_get_adc(&slope, &offs)) {
+		p->uvdet_slope = slope;
+		p->uvdet_offs = offs;
+	}
+
+	if (!p->uvdet_slope || !p->uvdet_offs) {
+		/*
+		 * If ADC conversion slope/offset parameters are not fused
+		 * (non-production config), report error, but allow to use
+		 * boot internal calibration with default slope.
+		 */
+		gk20a_err(dev_from_gk20a(g), "ADC coeff are not fused\n");
+		return -EINVAL;
+	}
+	return 0;
+}
+
+/*
+ * Determine DFS_COEFF for the requested voltage. Always select external
+ * calibration override equal to the voltage, and set maximum detection
+ * limit "0" (to make sure that PLL output remains under F/V curve when
+ * voltage increases).
+ */
+static void clk_config_dvfs_detection(int mv, struct na_dvfs *d)
+{
+	u32 coeff, coeff_max;
+	struct pll_parms *p = &gpc_pll_params;
+
+	coeff_max = trim_sys_gpcpll_dvfs0_dfs_coeff_v(
+		trim_sys_gpcpll_dvfs0_dfs_coeff_m());
+	coeff = DIV_ROUND_CLOSEST(mv * p->coeff_slope, 1000) + p->coeff_offs;
+	coeff = DIV_ROUND_CLOSEST(coeff, 1000);
+	coeff = min(coeff, coeff_max);
+	d->dfs_coeff = coeff;
+
+	d->dfs_ext_cal = DIV_ROUND_CLOSEST(mv * 1000 - p->uvdet_offs,
+					   p->uvdet_slope);
+	BUG_ON(abs(d->dfs_ext_cal) >= (1 << DFS_DET_RANGE));
+	d->uv_cal = p->uvdet_offs + d->dfs_ext_cal * p->uvdet_slope;
+	d->dfs_det_max = 0;
+}
+
+/*
+ * Solve equation for integer and fractional part of the effective NDIV:
+ *
+ * n_eff = n_int + 1/2 + SDM_DIN / 2^(SDM_DIN_RANGE + 1) +
+ * DVFS_COEFF * DVFS_DET_DELTA / 2^DFS_DET_RANGE
+ *
+ * The SDM_DIN LSB is finally shifted out, since it is not accessible by s/w.
+ */
+static void clk_config_dvfs_ndiv(int mv, u32 n_eff, struct na_dvfs *d)
+{
+	int n, det_delta;
+	u32 rem, rem_range;
+	struct pll_parms *p = &gpc_pll_params;
+
+	det_delta = (mv * 1000 - d->uv_cal);
+	det_delta = min(det_delta, d->dfs_det_max * p->uvdet_slope);
+	det_delta = det_delta * d->dfs_coeff;
+	det_delta = DIV_ROUND_CLOSEST(det_delta, p->uvdet_slope);
+
+	n = (int)(n_eff << DFS_DET_RANGE) - det_delta;
+	BUG_ON((n < 0) || (n > (p->max_N << DFS_DET_RANGE)));
+	d->n_int = ((u32)n) >> DFS_DET_RANGE;
+
+	rem = ((u32)n) & ((1 << DFS_DET_RANGE) - 1);
+	rem_range = SDM_DIN_RANGE + 1 - DFS_DET_RANGE;
+	d->sdm_din = (rem << rem_range) - (1 << SDM_DIN_RANGE);
+	d->sdm_din = (d->sdm_din >> BITS_PER_BYTE) & 0xff;
+}
+
+/* Voltage dependent configuration */
+static void clk_config_dvfs(struct gk20a *g, struct pll *gpll)
+{
+	struct na_dvfs *d = &gpll->dvfs;
+
+	d->mv = tegra_dvfs_predict_millivolts_t(
+			clk_get_parent(g->clk.tegra_clk),
+			rate_gpc2clk_to_gpu(gpll->freq));
+	clk_config_dvfs_detection(d->mv, d);
+	clk_config_dvfs_ndiv(d->mv, gpll->N, d);
+}
+
+/* Update DVFS detection settings in flight */
+static void clk_set_dfs_coeff(struct gk20a *g, u32 dfs_coeff)
+{
+	u32 data = gk20a_readl(g, trim_gpc_bcast_gpcpll_dvfs2_r());
+	data |= DFS_EXT_STROBE;
+	gk20a_writel(g, trim_gpc_bcast_gpcpll_dvfs2_r(), data);
+
+	data = gk20a_readl(g, trim_sys_gpcpll_dvfs0_r());
+	data = set_field(data, trim_sys_gpcpll_dvfs0_dfs_coeff_m(),
+		trim_sys_gpcpll_dvfs0_dfs_coeff_f(dfs_coeff));
+	gk20a_writel(g, trim_sys_gpcpll_dvfs0_r(), data);
+
+	data = gk20a_readl(g, trim_gpc_bcast_gpcpll_dvfs2_r());
+	udelay(1);
+	data &= ~DFS_EXT_STROBE;
+	gk20a_writel(g, trim_gpc_bcast_gpcpll_dvfs2_r(), data);
+}
+
+static void __maybe_unused clk_set_dfs_det_max(struct gk20a *g, u32 dfs_det_max)
+{
+	u32 data = gk20a_readl(g, trim_gpc_bcast_gpcpll_dvfs2_r());
+	data |= DFS_EXT_STROBE;
+	gk20a_writel(g, trim_gpc_bcast_gpcpll_dvfs2_r(), data);
+
+	data = gk20a_readl(g, trim_sys_gpcpll_dvfs0_r());
+	data = set_field(data, trim_sys_gpcpll_dvfs0_dfs_det_max_m(),
+		trim_sys_gpcpll_dvfs0_dfs_det_max_f(dfs_det_max));
+	gk20a_writel(g, trim_sys_gpcpll_dvfs0_r(), data);
+
+	data = gk20a_readl(g, trim_gpc_bcast_gpcpll_dvfs2_r());
+	udelay(1);
+	data &= ~DFS_EXT_STROBE;
+	gk20a_writel(g, trim_gpc_bcast_gpcpll_dvfs2_r(), data);
+}
+
+static void clk_set_dfs_ext_cal(struct gk20a *g, u32 dfs_det_cal)
+{
+	u32 data;
+
+	data = gk20a_readl(g, trim_gpc_bcast_gpcpll_dvfs2_r());
+	data &= ~(BIT(DFS_DET_RANGE + 1) - 1);
+	data |= dfs_det_cal;
+	gk20a_writel(g, trim_gpc_bcast_gpcpll_dvfs2_r(), data);
+
+	data = gk20a_readl(g, trim_sys_gpcpll_dvfs1_r());
+	udelay(1);
+	if (~trim_sys_gpcpll_dvfs1_dfs_ctrl_v(data) & DFS_EXT_CAL_EN) {
+		data = set_field(data, trim_sys_gpcpll_dvfs1_dfs_ctrl_m(),
+			trim_sys_gpcpll_dvfs1_dfs_ctrl_f(DFS_EXT_CAL_EN));
+		gk20a_writel(g, trim_sys_gpcpll_dvfs1_r(), data);
+	}
+}
+
+static void clk_setup_dvfs_detection(struct gk20a *g, struct pll *gpll)
+{
+	struct na_dvfs *d = &gpll->dvfs;
+
+	u32 data = gk20a_readl(g, trim_gpc_bcast_gpcpll_dvfs2_r());
+	data |= DFS_EXT_STROBE;
+	gk20a_writel(g, trim_gpc_bcast_gpcpll_dvfs2_r(), data);
+
+	data = gk20a_readl(g, trim_sys_gpcpll_dvfs0_r());
+	data = set_field(data, trim_sys_gpcpll_dvfs0_dfs_coeff_m(),
+		trim_sys_gpcpll_dvfs0_dfs_coeff_f(d->dfs_coeff));
+	data = set_field(data, trim_sys_gpcpll_dvfs0_dfs_det_max_m(),
+		trim_sys_gpcpll_dvfs0_dfs_det_max_f(d->dfs_det_max));
+	gk20a_writel(g, trim_sys_gpcpll_dvfs0_r(), data);
+
+	data = gk20a_readl(g, trim_gpc_bcast_gpcpll_dvfs2_r());
+	udelay(1);
+	data &= ~DFS_EXT_STROBE;
+	gk20a_writel(g, trim_gpc_bcast_gpcpll_dvfs2_r(), data);
+
+	clk_set_dfs_ext_cal(g, d->dfs_ext_cal);
+}
+
+/* Enable NA/DVFS mode */
+static int clk_enbale_pll_dvfs(struct gk20a *g)
+{
+	u32 data;
+	int delay = 5;	/* use for iddq exit delay & calib timeout */
+	struct pll_parms *p = &gpc_pll_params;
+	bool calibrated = p->uvdet_slope && p->uvdet_offs;
+
+	/* FIXME: Set VCO_CTRL */
+
+	/* Enable NA DVFS */
+	data = gk20a_readl(g, trim_sys_gpcpll_dvfs1_r());
+	data |= trim_sys_gpcpll_dvfs1_en_dfs_m();
+	gk20a_writel(g, trim_sys_gpcpll_dvfs1_r(), data);
+
+	/*
+	 * If calibration parameters are known (either from fuses, or from
+	 * internal calibration on boot) - use them. Internal calibration is
+	 * started anyway; it will complete, but results will not be used.
+	 */
+	if (calibrated) {
+		data = gk20a_readl(g, trim_sys_gpcpll_dvfs1_r());
+		data |= trim_sys_gpcpll_dvfs1_en_dfs_cal_m();
+		gk20a_writel(g, trim_sys_gpcpll_dvfs1_r(), data);
+	}
+
+	/* Exit IDDQ mode */
+	data = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+	data = set_field(data, trim_sys_gpcpll_cfg_iddq_m(),
+			 trim_sys_gpcpll_cfg_iddq_power_on_v());
+	gk20a_writel(g, trim_sys_gpcpll_cfg_r(), data);
+	gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+	udelay(delay);
+
+	if (calibrated)
+		return 0;
+
+	/*
+	 * If calibration parameters are not fused, start internal calibration,
+	 * wait for completion, and use results along with default slope to
+	 * calculate ADC offset during boot.
+	 */
+	data = gk20a_readl(g, trim_sys_gpcpll_dvfs1_r());
+	data |= trim_sys_gpcpll_dvfs1_en_dfs_cal_m();
+	gk20a_writel(g, trim_sys_gpcpll_dvfs1_r(), data);
+
+	/* Wait for internal calibration done (spec < 2us). */
+	do {
+		data = gk20a_readl(g, trim_sys_gpcpll_dvfs1_r());
+		if (trim_sys_gpcpll_dvfs1_dfs_cal_done_v(data))
+			break;
+		udelay(1);
+		delay--;
+	} while (delay > 0);
+
+	if (delay <= 0) {
+		gk20a_err(dev_from_gk20a(g), "GPCPLL calibration timeout");
+		return -ETIMEDOUT;
+	}
+
+	data = gk20a_readl(g, trim_sys_gpcpll_cfg3_r());
+	data = trim_sys_gpcpll_cfg3_dfs_testout_v(data);
+	p->uvdet_offs = BOOT_GPU_UV - data * ADC_SLOPE_UV;
+	p->uvdet_slope = ADC_SLOPE_UV;
+	return 0;
+}
+
+/* GPCPLL slide methods */
 static void clk_setup_slide(struct gk20a *g, u32 clk_u)
 {
 	u32 data, step_a, step_b;
@@ -320,6 +569,7 @@ static int clk_slide_gpc_pll(struct gk20a *g, struct pll *gpll)
 	return 0;
 }
 
+/* GPCPLL bypass methods */
 static int clk_change_pldiv_under_bypass(struct gk20a *g, struct pll *gpll)
 {
 	u32 data, coeff;
@@ -381,16 +631,37 @@ static int clk_lock_gpc_pll_under_bypass(struct gk20a *g, struct pll *gpll)
 	}
 
 	/* change coefficients */
-	coeff = trim_sys_gpcpll_coeff_mdiv_f(gpll->M) |
-		trim_sys_gpcpll_coeff_ndiv_f(gpll->N) |
-		trim_sys_gpcpll_coeff_pldiv_f(gpll->PL);
-	gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
+	if (gpll->mode == GPC_PLL_MODE_DVFS) {
+		clk_setup_dvfs_detection(g, gpll);
+
+		coeff = gk20a_readl(g, trim_sys_gpcpll_cfg2_r());
+		coeff = set_field(coeff, trim_sys_gpcpll_cfg2_sdm_din_m(),
+			trim_sys_gpcpll_cfg2_sdm_din_f(gpll->dvfs.sdm_din));
+		gk20a_writel(g, trim_sys_gpcpll_cfg2_r(), coeff);
+
+		coeff = trim_sys_gpcpll_coeff_mdiv_f(gpll->M) |
+			trim_sys_gpcpll_coeff_ndiv_f(gpll->dvfs.n_int) |
+			trim_sys_gpcpll_coeff_pldiv_f(gpll->PL);
+		gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
+	} else {
+		coeff = trim_sys_gpcpll_coeff_mdiv_f(gpll->M) |
+			trim_sys_gpcpll_coeff_ndiv_f(gpll->N) |
+			trim_sys_gpcpll_coeff_pldiv_f(gpll->PL);
+		gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
+	}
 
 	/* enable PLL after changing coefficients */
 	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 	cfg = set_field(cfg, trim_sys_gpcpll_cfg_enable_m(),
 			trim_sys_gpcpll_cfg_enable_yes_f());
 	gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
+
+	/* just delay in DVFS mode (lock cannot be used) */
+	if (gpll->mode == GPC_PLL_MODE_DVFS) {
+		gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+		udelay(g->clk.na_pll_delay);
+		goto pll_locked;
+	}
 
 	/* lock pll */
 	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
@@ -434,6 +705,7 @@ pll_locked:
 	return 0;
 }
 
+/* GPCPLL programming in legacy (non-DVFS) mode */
 static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 			int allow_slide)
 {
@@ -549,6 +821,16 @@ set_pldiv:
 	return clk_slide_gpc_pll(g, gpll_new);
 }
 
+/* GPCPLL programming in DVFS mode */
+static int clk_program_na_gpc_pll(struct gk20a *g, struct pll *gpll_new,
+				  int allow_slide)
+{
+	clk_config_dvfs(g, gpll_new);
+
+	/* always under bypass, for now */
+	return clk_program_gpc_pll(g, gpll_new, 0);
+}
+
 static int clk_disable_gpcpll(struct gk20a *g, int allow_slide)
 {
 	u32 cfg, coeff;
@@ -617,6 +899,7 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	static int initialized;
 	struct clk *ref;
 	unsigned long ref_rate;
+	bool calibrated;
 
 	gk20a_dbg_fn("");
 
@@ -636,7 +919,14 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	}
 	ref_rate = clk_get_rate(ref);
 
+	/*
+	 * Locking time in both legacy and DVFS mode is 40us. However, in legacy
+	 * mode we rely on lock detection signal, and delay is just timeout
+	 * limit, so we can afford set it longer. In DVFS mode each lock inserts
+	 * specified delay, so it should be set as short as h/w allows.
+	 */
 	clk->pll_delay = 300; /* usec */
+	clk->na_pll_delay = 40; /* usec*/
 
 	clk->gpc_pll.id = GK20A_GPC_PLL;
 	clk->gpc_pll.clk_in = ref_rate / KHZ;
@@ -651,6 +941,17 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 		clk->gpc_pll.freq = clk->gpc_pll.clk_in * clk->gpc_pll.N;
 		clk->gpc_pll.freq /= pl_to_div(clk->gpc_pll.PL);
 	}
+
+	calibrated = !clk_config_calibration_params(g);
+#ifdef CONFIG_TEGRA_USE_NA_GPCPLL
+	if (ALLOW_NON_CALIBRATED_NA_MODE || calibrated) {
+		/* NA mode is supported only at max update rate 38.4 MHz */
+		if (clk->gpc_pll.clk_in == gpc_pll_params.max_u) {
+			clk->gpc_pll.mode = GPC_PLL_MODE_DVFS;
+			gpc_pll_params.min_u = gpc_pll_params.max_u;
+		}
+	}
+#endif
 
 	mutex_init(&clk->clk_mutex);
 
@@ -693,6 +994,9 @@ static int gm20b_init_clk_setup_hw(struct gk20a *g)
 	gk20a_writel(g, therm_clk_slowdown_r(0), data);
 	gk20a_readl(g, therm_clk_slowdown_r(0));
 
+	if (g->clk.gpc_pll.mode == GPC_PLL_MODE_DVFS)
+		return clk_enbale_pll_dvfs(g);
+
 	return 0;
 }
 
@@ -726,9 +1030,15 @@ static int set_pll_freq(struct gk20a *g, int allow_slide)
 		     clk->gpc_pll_last.freq, clk->gpc_pll.freq);
 
 	/* If programming with dynamic sliding failed, re-try under bypass */
-	err = clk_program_gpc_pll(g, &clk->gpc_pll, allow_slide);
-	if (err && allow_slide)
-		err = clk_program_gpc_pll(g, &clk->gpc_pll, 0);
+	if (clk->gpc_pll.mode == GPC_PLL_MODE_DVFS) {
+		err = clk_program_na_gpc_pll(g, &clk->gpc_pll, allow_slide);
+		if (err && allow_slide)
+			err = clk_program_na_gpc_pll(g, &clk->gpc_pll, 0);
+	} else {
+		err = clk_program_gpc_pll(g, &clk->gpc_pll, allow_slide);
+		if (err && allow_slide)
+			err = clk_program_gpc_pll(g, &clk->gpc_pll, 0);
+	}
 
 	if (!err) {
 		clk->gpc_pll.enabled = true;

@@ -308,6 +308,7 @@ void gm20b_vm_clear_sparse(struct vm_gk20a *vm, u64 vaddr,
 			free_gmmu_pages(vm, pte->ref, pte->sgt,
 				vm->mm->page_table_sizing[pgsz_idx].order,
 				pte->size);
+			pte->ref = NULL;
 			update_gmmu_pde_locked(vm, pde_i);
 		}
 	}

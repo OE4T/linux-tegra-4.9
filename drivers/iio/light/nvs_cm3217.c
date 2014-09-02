@@ -1249,12 +1249,12 @@ static int cm_of_dt(struct i2c_client *client, struct cm_state *st)
 				     &st->offset_val);
 		of_property_read_s32(dn, "light_offset_val2",
 				     &st->offset_val2);
-		if (of_property_read_u32(dn, "light_threshold_lo", &val))
-			st->lux_thr_lo = val;
-		if (of_property_read_u32(dn, "light_threshold_hi", &val))
-			st->lux_thr_hi = val;
+		of_property_read_u32(dn, "light_threshold_lo",
+				     &st->lux_thr_lo);
+		of_property_read_u32(dn, "light_threshold_hi",
+				     &st->lux_thr_hi);
 		/* this device supports these programmable parameters */
-		if (of_property_read_u32(dn, "light_integration_time_ms_lo",
+		if (!of_property_read_u32(dn, "light_integration_time_ms_lo",
 					 &val)) {
 			for (i = ARRAY_SIZE(cm_it_tbl); i > 1; i--) {
 				if (val <= cm_it_tbl[i - 1].ms)
@@ -1262,7 +1262,7 @@ static int cm_of_dt(struct i2c_client *client, struct cm_state *st)
 			}
 			st->it_i_hi = i;
 		}
-		if (of_property_read_u32(dn, "light_integration_time_ms_hi",
+		if (!of_property_read_u32(dn, "light_integration_time_ms_hi",
 					 &val)) {
 			for (i = 0; i < ARRAY_SIZE(cm_it_tbl) - 1; i++) {
 				if (val >= cm_it_tbl[i].ms)

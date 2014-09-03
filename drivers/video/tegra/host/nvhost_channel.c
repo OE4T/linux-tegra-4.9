@@ -158,6 +158,9 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 
 	pdata->num_mapped_chs--;
 
+	trace_nvhost_channel_unmap_locked(pdata->pdev->name, ch->chid,
+		pdata->num_mapped_chs);
+
 	/* Allow keep-alive'd module to be turned off
 	 * make sure that all channels are unmapped before calling
 	 * nvhost_module_enable_poweroff
@@ -288,6 +291,9 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 	if (pdata->keepalive && pdata->num_mapped_chs)
 		nvhost_module_disable_poweroff(pdata->pdev);
 
+	 trace_nvhost_channel_map(pdata->pdev->name, ch->chid,
+		pdata->num_mapped_chs);
+
 	dev_dbg(&ch->dev->dev, "channel %d mapped\n", ch->chid);
 	mutex_unlock(&host->chlist_mutex);
 
@@ -367,6 +373,7 @@ void nvhost_getchannel(struct nvhost_channel *ch)
 
 	mutex_lock(&host->chlist_mutex);
 	ch->refcount++;
+	trace_nvhost_getchannel(pdata->pdev->name, ch->refcount, ch->chid);
 	mutex_unlock(&host->chlist_mutex);
 }
 
@@ -377,7 +384,7 @@ void nvhost_putchannel(struct nvhost_channel *ch, int cnt)
 
 	mutex_lock(&host->chlist_mutex);
 	ch->refcount -= cnt;
-
+	trace_nvhost_putchannel(pdata->pdev->name, ch->refcount, ch->chid);
 	/* WARN on negative reference, with zero reference unmap channel*/
 	if (!ch->refcount)
 		nvhost_channel_unmap_locked(ch);

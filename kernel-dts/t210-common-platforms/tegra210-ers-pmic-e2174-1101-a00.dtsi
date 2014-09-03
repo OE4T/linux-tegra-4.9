@@ -33,6 +33,7 @@
 			regulator-max-microvolt = <1400000>;
 			regulator-boot-on;
 			regulator-always-on;
+			#thermal-sensor-cells = <0>;
 			maxim,externally-enable;
 			maxim,sleep-on-dvs;
 			maxim,dvs-default-state = <1>;
@@ -49,6 +50,7 @@
 			regulator-max-microvolt = <1400000>;
 			regulator-boot-on;
 			regulator-always-on;
+			#thermal-sensor-cells = <0>;
 			maxim,externally-enable;
 			maxim,dvs-default-state = <1>;
 			maxim,external-enable-gpio = <&max77620 6 0>;

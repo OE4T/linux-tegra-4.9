@@ -25,8 +25,8 @@
 
 int nvhost_nvjpg_finalize_poweron(struct platform_device *dev);
 int nvhost_nvjpg_t210_finalize_poweron(struct platform_device *dev);
+int nvhost_nvjpg_prepare_poweroff(struct platform_device *dev);
 int nvhost_nvjpg_init(struct platform_device *dev);
-void nvhost_nvjpg_deinit(struct platform_device *dev);
 
 /* Would have preferred a static inline here... but we're using this
  * in a place where a constant initializer is required */

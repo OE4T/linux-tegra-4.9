@@ -171,9 +171,6 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 
 		if (pdata->keepalive)
 			nvhost_module_enable_poweroff(pdata->pdev);
-
-		if (pdata->deinit)
-			pdata->deinit(ch->dev);
 	}
 
 	/* Release channel syncpoinits */

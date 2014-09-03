@@ -3,7 +3,7 @@
  *
  * Tegra TSEC Module Support
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -30,7 +30,6 @@ int nvhost_tsec_prepare_poweroff(struct platform_device *dev);
 int nvhost_tsec_init(struct platform_device *dev);
 void nvhost_tsec_isr(void);
 void nvhost_tsec_isr_thread(void);
-void nvhost_tsec_deinit(struct platform_device *dev);
 
 /* Would have preferred a static inline here... but we're using this
  * in a place where a constant initializer is required */

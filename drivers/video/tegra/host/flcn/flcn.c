@@ -356,6 +356,9 @@ int nvhost_flcn_init(struct platform_device *dev)
 
 	nvhost_dbg_fn("in dev:%p v:%p", dev, v);
 
+	if (v)
+		return 0;
+
 	v = kzalloc(sizeof(*v), GFP_KERNEL);
 	if (!v) {
 		dev_err(&dev->dev, "couldn't alloc flcn support");
@@ -369,41 +372,11 @@ int nvhost_flcn_init(struct platform_device *dev)
 	if (err || !v->valid)
 		goto clean_up;
 
-	if (pdata->scaling_init)
-		nvhost_scale_hw_init(dev);
-
 	return 0;
 
  clean_up:
 	nvhost_err(&dev->dev, "failed");
 	return err;
-}
-
-void nvhost_flcn_deinit(struct platform_device *dev)
-{
-	struct flcn *v = get_flcn(dev);
-	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
-
-	DEFINE_DMA_ATTRS(attrs);
-	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
-
-	if (!v)
-		return;
-
-	if (pdata->scaling_init)
-		nvhost_scale_hw_deinit(dev);
-
-	if (v->mapped) {
-		dma_free_attrs(&dev->dev,
-			v->size, v->mapped,
-			v->dma_addr, &attrs);
-		v->mapped = NULL;
-		v->dma_addr = 0;
-	}
-
-	/* zap, free */
-	set_flcn(dev, NULL);
-	kfree(v);
 }
 
 int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
@@ -420,6 +393,9 @@ int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
 		host1x_writel(pdev, flcn_slcg_override_low_a_r(), 0xffffffff);
 		host1x_writel(pdev, flcn_cgctl_r(), 0xffffffff);
 	}
+
+	if (pdata->scaling_init)
+		nvhost_scale_hw_init(pdev);
 
 	return nvhost_flcn_boot(pdev);
 }
@@ -577,11 +553,16 @@ int nvhost_vic_t210_finalize_poweron(struct platform_device *pdev)
 		host1x_writel(pdev, vic_tfbif_mccif_fifoctrl_r(), 0xffffffff);
 	}
 
+	if (pdata->scaling_init)
+		nvhost_scale_hw_init(pdev);
+
 	return nvhost_flcn_boot(pdev);
 }
 
 int nvhost_vic_finalize_poweron(struct platform_device *pdev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+
 	nvhost_dbg_fn("");
 
 	nvhost_module_reset(pdev, false);
@@ -591,7 +572,22 @@ int nvhost_vic_finalize_poweron(struct platform_device *pdev)
 		     flcn_cg_idle_cg_en_f(1) |
 		     flcn_cg_wakeup_dly_cnt_f(4));
 
+	if (pdata->scaling_init)
+		nvhost_scale_hw_init(pdev);
+
 	return nvhost_flcn_boot(pdev);
+}
+
+int nvhost_flcn_prepare_poweroff(struct platform_device *dev)
+{
+	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
+
+	nvhost_dbg_fn("");
+
+	if (pdata->scaling_deinit)
+		nvhost_scale_hw_deinit(dev);
+
+	return 0;
 }
 
 int nvhost_vic_prepare_poweroff(struct platform_device *dev)
@@ -606,6 +602,9 @@ int nvhost_vic_prepare_poweroff(struct platform_device *dev)
 		ch->cur_ctx = NULL;
 		mutex_unlock(&ch->submitlock);
 	}
+
+	if (pdata->scaling_deinit)
+		nvhost_scale_hw_deinit(dev);
 
 	return 0;
 }
@@ -659,6 +658,9 @@ int nvhost_nvenc_t210_finalize_poweron(struct platform_device *pdev)
 		host1x_writel(pdev, nvenc_engine_cg3_r(), 0x10000000);
 		host1x_writel(pdev, nvenc_engine_cg4_r(), 0x0);
 	}
+
+	if (pdata->scaling_init)
+		nvhost_scale_hw_init(pdev);
 
 	return nvhost_flcn_boot(pdev);
 }

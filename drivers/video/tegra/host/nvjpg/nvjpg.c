@@ -330,10 +330,13 @@ int nvhost_nvjpg_init(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	int err = 0;
-	struct nvjpg *m;
+	struct nvjpg *m = get_nvjpg(dev);
 	char *fw_name;
 
 	nvhost_dbg_fn("in dev:%p", dev);
+
+	if (m)
+		return 0;
 
 	fw_name = nvjpg_get_fw_name(dev);
 	if (!fw_name) {
@@ -369,29 +372,6 @@ clean_up:
 	return err;
 }
 
-void nvhost_nvjpg_deinit(struct platform_device *dev)
-{
-	struct nvjpg *m = get_nvjpg(dev);
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-
-	if (pdata->scaling_init)
-		nvhost_scale_hw_deinit(dev);
-
-	if (!m)
-		return;
-
-	/* unpin, free ucode memory */
-	if (m->mapped) {
-		dma_free_attrs(&dev->dev,
-				m->size, m->mapped,
-				m->phys, &m->attrs);
-		m->mapped = NULL;
-	}
-	set_nvjpg(dev, NULL);
-	m->valid = false;
-	kfree(m);
-}
-
 int nvhost_nvjpg_t210_finalize_poweron(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
@@ -409,12 +389,30 @@ int nvhost_nvjpg_t210_finalize_poweron(struct platform_device *pdev)
 		host1x_writel(pdev, nvjpg_cg2_r(), 0x18004);
 	}
 
+	if (pdata->scaling_init)
+		nvhost_scale_hw_init(pdev);
+
 	return nvhost_nvjpg_finalize_poweron(pdev);
 }
 
 int nvhost_nvjpg_finalize_poweron(struct platform_device *dev)
 {
+	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
+
+	if (pdata->scaling_init)
+		nvhost_scale_hw_init(dev);
+
 	return nvjpg_boot(dev);
+}
+
+int nvhost_nvjpg_prepare_poweroff(struct platform_device *dev)
+{
+	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
+
+	if (pdata->scaling_deinit)
+		nvhost_scale_hw_deinit(dev);
+
+	return 0;
 }
 
 static struct of_device_id tegra_nvjpg_of_match[] = {

@@ -847,8 +847,11 @@ clean_up:
 int nvhost_tsec_init(struct platform_device *dev)
 {
 	int err = 0;
-	struct tsec *m;
+	struct tsec *m = get_tsec(dev);
 	char *fw_name;
+
+	if (m)
+		return 0;
 
 	fw_name = tsec_get_fw_name(dev);
 	if (!fw_name) {
@@ -879,25 +882,6 @@ int nvhost_tsec_init(struct platform_device *dev)
 clean_up:
 	dev_err(&dev->dev, "failed");
 	return err;
-}
-
-void nvhost_tsec_deinit(struct platform_device *dev)
-{
-	struct tsec *m = get_tsec(dev);
-
-	DEFINE_DMA_ATTRS(attrs);
-	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
-
-	if (m->mapped) {
-		dma_free_attrs(&dev->dev,
-			m->size, m->mapped,
-			m->dma_addr, &attrs);
-		m->mapped = NULL;
-		m->dma_addr = 0;
-	}
-
-	kfree(m);
-	set_tsec(dev, NULL);
 }
 
 int nvhost_tsec_finalize_poweron(struct platform_device *pdev)

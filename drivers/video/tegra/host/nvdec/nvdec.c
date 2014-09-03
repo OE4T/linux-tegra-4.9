@@ -558,69 +558,11 @@ int nvhost_nvdec_init(struct platform_device *dev)
 		goto clean_up;
 	}
 
-	if (pdata->scaling_init)
-		nvhost_scale_hw_init(dev);
-
 	return 0;
 
 clean_up:
 	dev_err(&dev->dev, "failed");
 	return err;
-}
-#endif
-
-#if USE_NVDEC_BOOTLOADER
-void nvhost_nvdec_deinit(struct platform_device *dev)
-{
-	struct nvdec **m = get_nvdec(dev);
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	int i;
-
-	if (pdata->scaling_init)
-		nvhost_scale_hw_deinit(dev);
-
-	if (!m)
-		return;
-
-	for (i = 0; i < 2; i++) {
-		if (!m[i])
-			continue;
-		/* unpin, free ucode memory */
-		if (m[i]->mapped) {
-			dma_free_attrs(&dev->dev,
-					m[i]->size, m[i]->mapped,
-					m[i]->phys, &m[i]->attrs);
-			m[i]->mapped = NULL;
-		}
-		kfree(m[i]);
-		m[i]->valid = false;
-	}
-	kfree(m);
-	m = NULL;
-	set_nvdec(dev, NULL);
-}
-#else
-void nvhost_nvdec_deinit(struct platform_device *dev)
-{
-	struct nvdec *m = get_nvdec(dev);
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-
-	if (pdata->scaling_init)
-		nvhost_scale_hw_deinit(dev);
-
-	if (!m)
-		return;
-
-	/* unpin, free ucode memory */
-	if (m->mapped) {
-		dma_free_attrs(&dev->dev,
-				m->size, m->mapped,
-				m->phys, &m->attrs);
-		m->mapped = NULL;
-	}
-	set_nvdec(dev, NULL);
-	m->valid = false;
-	kfree(m);
 }
 #endif
 
@@ -647,7 +589,20 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *pdev)
 		host1x_writel(pdev, nvdec_engine_cg4_r(), 0xfffffff8);
 	}
 
+	if (pdata->scaling_init)
+		nvhost_scale_hw_init(pdev);
+
 	return nvdec_boot(pdev);
+}
+
+int nvhost_nvdec_prepare_poweroff(struct platform_device *dev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	if (pdata->scaling_deinit)
+		nvhost_scale_hw_deinit(dev);
+
+	return 0;
 }
 
 static struct of_device_id tegra_nvdec_of_match[] = {
@@ -711,10 +666,8 @@ long nvdec_ioctl(struct file *file,
 		atomic_inc(&priv->refcnt);
 	break;
 	case NVHOST_NVDEC_IOCTL_POWEROFF:
-		if (atomic_dec_if_positive(&priv->refcnt)) {
+		if (atomic_dec_if_positive(&priv->refcnt))
 			nvhost_module_idle(pdev);
-			nvhost_nvdec_deinit(pdev);
-		}
 	break;
 	default:
 		dev_err(&pdev->dev,

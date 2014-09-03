@@ -312,18 +312,31 @@ void __migration_entry_wait(struct mm_struct *mm, pte_t *ptep,
 
 	page = migration_entry_to_page(entry);
 
-	/*
-	 * Once radix-tree replacement of page migration started, page_count
-	 * *must* be zero. And, we don't want to call wait_on_page_locked()
-	 * against a page without get_page().
-	 * So, we use get_page_unless_zero(), here. Even failed, page fault
-	 * will occur again.
-	 */
-	if (!get_page_unless_zero(page))
-		goto out;
-	pte_unmap_unlock(ptep, ptl);
-	wait_on_page_locked(page);
-	put_page(page);
+	if (is_cma_page(page)) {
+		pte_unmap_unlock(ptep, ptl);
+		/* don't take ref on page, as it causes
+		 * migration to get aborted in between.
+		 * migration goes ahead after locking the page.
+		 * Wait on page to be unlocked. In case page get
+		 * unlocked, allocated and locked again forever,
+		 * before this function call, it would timeout in
+		 * next tick and exit.
+		 */
+		wait_on_page_locked_timeout(page);
+	} else {
+		/*
+		 * Once radix-tree replacement of page migration started, page_count
+		 * *must* be zero. And, we don't want to call wait_on_page_locked()
+		 * against a page without get_page().
+		 * So, we use get_page_unless_zero(), here. Even failed, page fault
+		 * will occur again.
+		 */
+		if (!get_page_unless_zero(page))
+			goto out;
+		pte_unmap_unlock(ptep, ptl);
+		wait_on_page_locked(page);
+		put_page(page);
+	}
 	return;
 out:
 	pte_unmap_unlock(ptep, ptl);

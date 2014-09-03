@@ -471,6 +471,47 @@ static int check_vma_flags(struct vm_area_struct *vma, unsigned long gup_flags)
 }
 
 /**
+ * replace_cma_page() - migrate page out of CMA page blocks
+ * @page:	source page to be migrated
+ *
+ * Returns either the old page (if migration was not possible) or the pointer
+ * to the newly allocated page (with additional reference taken).
+ *
+ * get_user_pages() might take a reference to a page for a long period of time,
+ * what prevent such page from migration. This is fatal to the preffered usage
+ * pattern of CMA pageblocks. This function replaces the given user page with
+ * a new one allocated from NON-MOVABLE pageblock, so locking CMA page can be
+ * avoided.
+ */
+static inline struct page *migrate_replace_cma_page(struct page *page)
+{
+	struct page *newpage = alloc_page(GFP_HIGHUSER);
+
+	if (!newpage)
+		goto out;
+
+	/*
+	 * Take additional reference to the new page to ensure it won't get
+	 * freed after migration procedure end.
+	 */
+	get_page_foll(newpage);
+
+	if (migrate_replace_page(page, newpage) == 0) {
+		put_page(newpage);
+		return newpage;
+	}
+
+	put_page(newpage);
+	__free_page(newpage);
+out:
+	/*
+	 * Migration errors in case of get_user_pages() might not
+	 * be fatal to CMA itself, so better don't fail here.
+	 */
+	return page;
+}
+
+/**
  * __get_user_pages() - pin user pages in memory
  * @tsk:	task_struct of target task
  * @mm:		mm_struct of target mm
@@ -552,6 +593,7 @@ static long __get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
 		struct page *page;
 		unsigned int foll_flags = gup_flags;
 		unsigned int page_increm;
+		static DEFINE_MUTEX(s_follow_page_lock);
 
 		/* first iteration or cross vma bound */
 		if (!vma || start >= vma->vm_end) {
@@ -584,11 +626,13 @@ retry:
 		if (unlikely(fatal_signal_pending(current)))
 			return i ? i : -ERESTARTSYS;
 		cond_resched();
+		mutex_lock(&s_follow_page_lock);
 		page = follow_page_mask(vma, start, foll_flags, &page_mask);
 		if (!page) {
 			int ret;
 			ret = faultin_page(tsk, vma, start, &foll_flags,
 					nonblocking);
+			mutex_unlock(&s_follow_page_lock);
 			switch (ret) {
 			case 0:
 				goto retry;
@@ -611,6 +655,48 @@ retry:
 		} else if (IS_ERR(page)) {
 			return i ? i : PTR_ERR(page);
 		}
+
+		if (is_cma_page(page) && (foll_flags & FOLL_GET)) {
+			struct page *old_page = page;
+			unsigned int fault_flags = 0;
+
+			put_page(page);
+			wait_on_page_locked_timeout(page);
+			page = migrate_replace_cma_page(page);
+			/* migration might be successful. vma mapping
+			 * might have changed if there had been a write
+			 * fault from other accesses before migration
+			 * code locked the page. Follow the page again
+			 * to get the latest mapping. If migration was
+			 * successful, follow again would get
+			 * non-CMA page. If there had been a write
+			 * page fault, follow page and CMA page
+			 * replacement(if necessary) would restart with
+			 * new page.
+			 */
+			if (page == old_page)
+				wait_on_page_locked_timeout(page);
+			if (foll_flags & FOLL_WRITE) {
+				/* page would be marked as old during
+				 * migration. To make it young, call
+				 * handle_mm_fault.
+				 * This to avoid the sanity check
+				 * failures in the calling code, which
+				 * check for pte write permission
+				 * bits.
+				 */
+				fault_flags |= FAULT_FLAG_WRITE;
+				handle_mm_fault(mm, vma,
+					start, fault_flags);
+			}
+			foll_flags = gup_flags;
+			mutex_unlock(&s_follow_page_lock);
+			goto retry;
+		}
+
+		mutex_unlock(&s_follow_page_lock);
+		BUG_ON(is_cma_page(page) && (foll_flags & FOLL_GET));
+
 		if (pages) {
 			pages[i] = page;
 			flush_anon_page(vma, page, start);

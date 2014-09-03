@@ -433,11 +433,11 @@ alloc_success:
 
 		if (PageHighMem(page)) {
 			void *ptr = kmap_atomic(page);
-			__dma_flush_area(ptr, PAGE_SIZE);
+//			__dma_flush_area(ptr, PAGE_SIZE);
 			kunmap_atomic(ptr);
 		} else {
 			void *ptr = page_address(page);
-			__dma_flush_area(ptr, PAGE_SIZE);
+//			__dma_flush_area(ptr, PAGE_SIZE);
 		}
 	}
 

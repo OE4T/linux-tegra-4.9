@@ -78,7 +78,7 @@ static inline u32 div_to_pl(u32 div)
 }
 
 /* FIXME: remove after on-silicon testing */
-#define PLDIV_GLITCHLESS 1
+#define PLDIV_GLITCHLESS 0
 
 /* Calculate and update M/N/PL as well as pll->freq
     ref_clk_f = clk_in_f;

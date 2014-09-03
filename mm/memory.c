@@ -2736,6 +2736,7 @@ static inline int check_stack_guard_page(struct vm_area_struct *vma, unsigned lo
 	return 0;
 }
 
+bool is_vma_temporary_stack(struct vm_area_struct *vma);
 /*
  * We enter with non-exclusive mmap_sem (to exclude vma changes,
  * but allow concurrent faults), and pte mapped but not yet locked.
@@ -2793,7 +2794,12 @@ static int do_anonymous_page(struct fault_env *fe)
 	/* Allocate our own private page. */
 	if (unlikely(anon_vma_prepare(vma)))
 		goto oom;
-	page = alloc_zeroed_user_highpage_movable(vma, fe->address);
+	if (vma->vm_flags & VM_LOCKED || vma->vm_flags & FAULT_FLAG_NO_CMA ||
+	    is_vma_temporary_stack(vma)) {
+		page = alloc_zeroed_user_highpage(GFP_HIGHUSER, vma, fe->address);
+	} else {
+		page = alloc_zeroed_user_highpage_movable(vma, fe->address);
+	}
 	if (!page)
 		goto oom;
 

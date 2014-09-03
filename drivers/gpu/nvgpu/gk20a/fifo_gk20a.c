@@ -1512,29 +1512,22 @@ void gk20a_fifo_nonstall_isr(struct gk20a *g)
 	return;
 }
 
-int gk20a_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
+static int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 {
-	struct fifo_gk20a *f = &g->fifo;
+	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	unsigned long end_jiffies = jiffies
 		+ msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
-	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	u32 ret = 0;
-	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
-	u32 mutex_ret = 0;
-	u32 i;
-
-	gk20a_dbg_fn("%d", hw_chid);
-
-	/* we have no idea which runlist we are using. lock all */
-	for (i = 0; i < g->fifo.max_runlists; i++)
-		mutex_lock(&f->runlist_info[i].mutex);
-
-	mutex_ret = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	/* issue preempt */
-	gk20a_writel(g, fifo_preempt_r(),
-		fifo_preempt_chid_f(hw_chid) |
-		fifo_preempt_type_channel_f());
+	if (is_tsg)
+		gk20a_writel(g, fifo_preempt_r(),
+			fifo_preempt_id_f(id) |
+			fifo_preempt_type_tsg_f());
+	else
+		gk20a_writel(g, fifo_preempt_r(),
+			fifo_preempt_chid_f(id) |
+			fifo_preempt_type_channel_f());
 
 	/* wait for preempt */
 	ret = -EBUSY;
@@ -1551,15 +1544,69 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 			!tegra_platform_is_silicon());
 
 	if (ret) {
-		struct channel_gk20a *ch = &g->fifo.channel[hw_chid];
+		if (is_tsg) {
+			/* TODO: recovery for TSG */
+			gk20a_err(dev_from_gk20a(g),
+				"preempt TSG %d timeout\n", id);
+		} else {
+			struct channel_gk20a *ch = &g->fifo.channel[id];
 
-		gk20a_err(dev_from_gk20a(g), "preempt channel %d timeout\n",
-			    hw_chid);
+			gk20a_err(dev_from_gk20a(g),
+				"preempt channel %d timeout\n", id);
 
-		gk20a_set_error_notifier(ch,
-				NVHOST_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
-		gk20a_fifo_recover_ch(g, hw_chid, true);
+			gk20a_set_error_notifier(ch,
+					NVHOST_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
+			gk20a_fifo_recover_ch(g, id, true);
+		}
 	}
+
+	return ret;
+}
+
+int gk20a_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	u32 ret = 0;
+	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
+	u32 mutex_ret = 0;
+	u32 i;
+
+	gk20a_dbg_fn("%d", hw_chid);
+
+	/* we have no idea which runlist we are using. lock all */
+	for (i = 0; i < g->fifo.max_runlists; i++)
+		mutex_lock(&f->runlist_info[i].mutex);
+
+	mutex_ret = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+
+	ret = __locked_fifo_preempt(g, hw_chid, false);
+
+	if (!mutex_ret)
+		pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+
+	for (i = 0; i < g->fifo.max_runlists; i++)
+		mutex_unlock(&f->runlist_info[i].mutex);
+
+	return ret;
+}
+
+int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	u32 ret = 0;
+	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
+	u32 mutex_ret = 0;
+	u32 i;
+
+	gk20a_dbg_fn("%d", tsgid);
+
+	/* we have no idea which runlist we are using. lock all */
+	for (i = 0; i < g->fifo.max_runlists; i++)
+		mutex_lock(&f->runlist_info[i].mutex);
+
+	mutex_ret = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+
+	ret = __locked_fifo_preempt(g, tsgid, true);
 
 	if (!mutex_ret)
 		pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);

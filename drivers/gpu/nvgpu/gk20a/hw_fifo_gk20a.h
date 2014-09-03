@@ -398,7 +398,15 @@ static inline u32 fifo_preempt_type_channel_f(void)
 {
 	return 0x0;
 }
+static inline u32 fifo_preempt_type_tsg_f(void)
+{
+	return 0x1000000;
+}
 static inline u32 fifo_preempt_chid_f(u32 v)
+{
+	return (v & 0xfff) << 0;
+}
+static inline u32 fifo_preempt_id_f(u32 v)
 {
 	return (v & 0xfff) << 0;
 }

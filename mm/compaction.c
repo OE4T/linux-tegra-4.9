@@ -868,7 +868,8 @@ isolate_success:
 			cc->last_migrated_pfn = low_pfn;
 
 		/* Avoid isolating too much */
-		if (cc->nr_migratepages == COMPACT_CLUSTER_MAX) {
+		if (cc->nr_migratepages == COMPACT_CLUSTER_MAX &&
+			!is_cma_page(pfn_to_page(low_pfn))) {
 			++low_pfn;
 			break;
 		}

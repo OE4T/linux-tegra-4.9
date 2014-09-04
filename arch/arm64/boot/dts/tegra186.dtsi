@@ -26,7 +26,7 @@
 
 	host1x {
 		compatible = "nvidia,tegra186-host1x", "simple-bus";
-		reg = <0x0 0x50000000 0x0 0x00040000>;
+		reg = <0x0 0x3de00000 0x0 0x00040000>;
 		interrupts = <0 65 0x04   /* mpcore syncpt */
 			      0 67 0x04>; /* mpcore general */
 

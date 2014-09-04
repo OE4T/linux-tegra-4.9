@@ -429,17 +429,19 @@ static ssize_t powergate_delay_store(struct kobject *kobj,
 		return count;
 	}
 
-	mutex_lock(&pdata->lock);
 	ret = sscanf(buf, "%d", &powergate_delay);
 	if (ret == 1 && powergate_delay >= 0) {
 		struct generic_pm_domain *genpd =
 			pd_to_genpd(dev->dev.pm_domain);
+
+		mutex_lock(&pdata->lock);
 		pdata->powergate_delay = powergate_delay;
+		mutex_unlock(&pdata->lock);
+
 		pm_genpd_set_poweroff_delay(genpd, pdata->powergate_delay);
-	}
-	else
+	} else {
 		dev_err(&dev->dev, "Invalid powergate delay\n");
-	mutex_unlock(&pdata->lock);
+	}
 
 	return count;
 }
@@ -471,16 +473,17 @@ static ssize_t clockgate_delay_store(struct kobject *kobj,
 	struct platform_device *dev = power_attribute->ndev;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	mutex_lock(&pdata->lock);
 	ret = sscanf(buf, "%d", &clockgate_delay);
 	if (ret == 1 && clockgate_delay >= 0) {
+		mutex_lock(&pdata->lock);
 		pdata->clockgate_delay = clockgate_delay;
+		mutex_unlock(&pdata->lock);
+
 		pm_runtime_set_autosuspend_delay(&dev->dev,
-			pdata->clockgate_delay);
-	}
-	else
+				pdata->clockgate_delay);
+	} else {
 		dev_err(&dev->dev, "Invalid clockgate delay\n");
-	mutex_unlock(&pdata->lock);
+	}
 
 	return count;
 }

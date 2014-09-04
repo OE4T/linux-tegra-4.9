@@ -35,6 +35,8 @@ struct tsg_gk20a {
 	bool in_use;
 	int tsgid;
 
+	struct kref refcount;
+
 	struct list_head ch_list;
 	int num_active_channels;
 	struct mutex ch_list_lock;

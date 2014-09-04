@@ -24,6 +24,8 @@
 
 #include "gk20a.h"
 
+static void gk20a_tsg_release(struct kref *ref);
+
 bool gk20a_is_channel_marked_as_tsg(struct channel_gk20a *ch)
 {
 	return !(ch->tsgid == NVGPU_INVALID_TSG_ID);
@@ -51,6 +53,8 @@ static int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg, int ch_fd)
 	list_add_tail(&ch->ch_entry, &tsg->ch_list);
 	mutex_unlock(&tsg->ch_list_lock);
 
+	kref_get(&tsg->refcount);
+
 	gk20a_dbg(gpu_dbg_fn, "BIND tsg:%d channel:%d\n",
 					tsg->tsgid, ch->hw_chid);
 
@@ -67,6 +71,8 @@ int gk20a_tsg_unbind_channel(struct channel_gk20a *ch)
 	mutex_lock(&tsg->ch_list_lock);
 	list_del_init(&ch->ch_entry);
 	mutex_unlock(&tsg->ch_list_lock);
+
+	kref_put(&tsg->refcount, gk20a_tsg_release);
 
 	ch->tsgid = NVGPU_INVALID_TSG_ID;
 
@@ -134,6 +140,7 @@ int gk20a_tsg_dev_open(struct inode *inode, struct file *filp)
 
 	tsg->g = g;
 	tsg->num_active_channels = 0;
+	kref_init(&tsg->refcount);
 
 	tsg->tsg_gr_ctx = NULL;
 	tsg->vm = NULL;
@@ -145,18 +152,10 @@ int gk20a_tsg_dev_open(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-int gk20a_tsg_dev_release(struct inode *inode, struct file *filp)
+static void gk20a_tsg_release(struct kref *ref)
 {
-	struct tsg_gk20a *tsg = filp->private_data;
-	struct gk20a *g = container_of(inode->i_cdev,
-			 struct gk20a, tsg.cdev);
-
-	if (tsg->num_active_channels) {
-		gk20a_err(dev_from_gk20a(g),
-			"Trying to free TSG %d with active channels %d\n",
-			tsg->tsgid, tsg->num_active_channels);
-		return -EBUSY;
-	}
+	struct tsg_gk20a *tsg = container_of(ref, struct tsg_gk20a, refcount);
+	struct gk20a *g = tsg->g;
 
 	if (tsg->tsg_gr_ctx) {
 		gr_gk20a_free_tsg_gr_ctx(tsg);
@@ -168,7 +167,12 @@ int gk20a_tsg_dev_release(struct inode *inode, struct file *filp)
 	release_used_tsg(&g->fifo, tsg);
 
 	gk20a_dbg(gpu_dbg_fn, "tsg released %d\n", tsg->tsgid);
+}
 
+int gk20a_tsg_dev_release(struct inode *inode, struct file *filp)
+{
+	struct tsg_gk20a *tsg = filp->private_data;
+	kref_put(&tsg->refcount, gk20a_tsg_release);
 	return 0;
 }
 

@@ -161,8 +161,10 @@ static void gk20a_tsg_release(struct kref *ref)
 		gr_gk20a_free_tsg_gr_ctx(tsg);
 		tsg->tsg_gr_ctx = NULL;
 	}
-	if (tsg->vm)
+	if (tsg->vm) {
+		gk20a_vm_put(tsg->vm);
 		tsg->vm = NULL;
+	}
 
 	release_used_tsg(&g->fifo, tsg);
 

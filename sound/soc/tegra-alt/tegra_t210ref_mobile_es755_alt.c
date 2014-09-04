@@ -302,8 +302,21 @@ static int tegra_t210ref_sfc_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
+static int tegra_es755_startup(struct snd_pcm_substream *substream)
+{
+	escore_pm_get_sync();
+	return 0;
+}
+
+static void tegra_es755_shutdown(struct snd_pcm_substream *substream)
+{
+	escore_pm_put_autosuspend();
+}
+
 static struct snd_soc_ops tegra_t210ref_ops = {
 	.hw_params = tegra_t210ref_hw_params,
+	.startup = tegra_es755_startup,
+	.shutdown = tegra_es755_shutdown,
 };
 
 static const struct snd_soc_dapm_widget tegra_t210ref_dapm_widgets[] = {
@@ -384,8 +397,7 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	ret = escore_read(NULL, ES_POWER_STATE);
-	if (ret < 0) {
+	if (escore_is_probe_error()) {
 		dev_err(&pdev->dev, "No ES755 CODEC found");
 		return -ENODEV;
 	}
@@ -395,6 +407,15 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	if (!machine) {
 		dev_err(&pdev->dev, "Can't allocate tegra_t210ref struct\n");
 		ret = -ENOMEM;
+		goto err;
+	}
+
+	pdata = devm_kzalloc(&pdev->dev,
+				sizeof(struct tegra_asoc_platform_data),
+				GFP_KERNEL);
+	if (!pdata) {
+		dev_err(&pdev->dev,
+			"Can't allocate tegra_asoc_platform_data struct\n");
 		goto err;
 	}
 
@@ -449,15 +470,6 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		i <= TEGRA210_DAI_LINK_ADSP_COMPR2; i++) {
 		tegra_machine_set_dai_ops(i,
 			&tegra_t210ref_ops);
-	}
-
-	pdata = devm_kzalloc(&pdev->dev,
-				sizeof(struct tegra_asoc_platform_data),
-				GFP_KERNEL);
-	if (!pdata) {
-		dev_err(&pdev->dev,
-			"Can't allocate tegra_asoc_platform_data struct\n");
-		return -ENOMEM;
 	}
 
 	pdata->gpio_hp_det = of_get_named_gpio(np,
@@ -548,17 +560,45 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 					&pdev->dev,
 					card);
 	if (ret)
-		goto err_alloc_dai_link;
+		goto err_switch_unregister;
 
 	ret = snd_soc_register_card(card);
 	if (ret) {
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n",
 			ret);
-		goto err_alloc_dai_link;
+		goto err_fini_utils;
 	}
 
 	return 0;
 
+err_fini_utils:
+	tegra_alt_asoc_utils_fini(&machine->audio_clock);
+err_switch_unregister:
+#ifdef CONFIG_SWITCH
+	tegra_alt_asoc_switch_unregister(&tegra_t210ref_headset_switch);
+#endif
+	if (machine->gpio_requested & GPIO_HP_DET)
+		snd_soc_jack_free_gpios(&tegra_t210ref_hp_jack,
+					1,
+					&tegra_t210ref_hp_jack_gpio);
+
+	if (machine->digital_reg) {
+		regulator_disable(machine->digital_reg);
+		regulator_put(machine->digital_reg);
+	}
+	if (machine->analog_reg) {
+		regulator_disable(machine->analog_reg);
+		regulator_put(machine->analog_reg);
+	}
+	if (machine->spk_reg)
+		regulator_put(machine->spk_reg);
+
+	if (machine->dmic_reg)
+		regulator_put(machine->dmic_reg);
+	if (machine->codec_reg) {
+		regulator_disable(machine->codec_reg);
+		regulator_put(machine->codec_reg);
+	}
 err_alloc_dai_link:
 	tegra_machine_remove_extra_mem_alloc(machine->num_codec_links);
 	tegra_machine_remove_dai_link();

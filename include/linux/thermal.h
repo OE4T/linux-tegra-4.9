@@ -35,7 +35,7 @@
 #define THERMAL_MAX_TRIPS	12
 
 /* invalid cooling state */
-#define THERMAL_CSTATE_INVALID -1UL
+#define THERMAL_CSTATE_INVALID	0xffffffff
 
 /* No upper/lower limit requirement */
 #define THERMAL_NO_LIMIT	((u32)~0)

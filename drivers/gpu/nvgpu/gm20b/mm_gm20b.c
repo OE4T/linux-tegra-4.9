@@ -272,19 +272,11 @@ fail:
 }
 
 void gm20b_vm_clear_sparse(struct vm_gk20a *vm, u64 vaddr,
-			       u64 size, u32 pgsz) {
-	int pgsz_idx;
+			       u64 size, u32 pgsz_idx) {
 	u64 vaddr_hi;
 	u32 pde_lo, pde_hi, pde_i;
 
 	gk20a_dbg_fn("");
-	/* determine pagesz idx */
-	for (pgsz_idx = gmmu_page_size_small;
-	     pgsz_idx < gmmu_nr_page_sizes;
-	     pgsz_idx++) {
-		if (gmmu_page_sizes[pgsz_idx] == pgsz)
-			break;
-	}
 	vaddr_hi = vaddr + size - 1;
 	pde_range_from_vaddr_range(vm,
 				   vaddr,
@@ -292,8 +284,8 @@ void gm20b_vm_clear_sparse(struct vm_gk20a *vm, u64 vaddr,
 				   &pde_lo, &pde_hi);
 
 	gk20a_dbg_info("vaddr: 0x%llx, vaddr_hi: 0x%llx, pde_lo: 0x%x, "
-			"pde_hi: 0x%x, pgsz: %d, pde_stride_shift: %d",
-			vaddr, vaddr_hi, pde_lo, pde_hi, pgsz,
+			"pde_hi: 0x%x, pgsz_idx: %d, pde_stride_shift: %d",
+			vaddr, vaddr_hi, pde_lo, pde_hi, pgsz_idx,
 			vm->mm->pde_stride_shift);
 
 	for (pde_i = pde_lo; pde_i <= pde_hi; pde_i++) {

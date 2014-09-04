@@ -2379,7 +2379,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 
 	va_node->vaddr_start = vaddr_start;
 	va_node->size = (u64)args->page_size * (u64)args->pages;
-	va_node->pgsz_idx = args->page_size;
+	va_node->pgsz_idx = pgsz_idx;
 	INIT_LIST_HEAD(&va_node->va_buffers_list);
 	INIT_LIST_HEAD(&va_node->reserved_va_list);
 

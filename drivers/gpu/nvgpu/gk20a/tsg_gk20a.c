@@ -27,6 +27,8 @@
 
 static void gk20a_tsg_release(struct kref *ref);
 
+static void gk20a_tsg_release(struct kref *ref);
+
 bool gk20a_is_channel_marked_as_tsg(struct channel_gk20a *ch)
 {
 	return !(ch->tsgid == NVGPU_INVALID_TSG_ID);

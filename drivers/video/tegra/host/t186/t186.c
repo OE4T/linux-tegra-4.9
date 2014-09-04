@@ -22,10 +22,8 @@
 #include "dev.h"
 
 #include "t186.h"
-#include "t124/t124.h"
 #include "host1x/host1x.h"
-#include "hardware_t124.h"
-#include "syncpt_t124.h"
+#include "hardware_t186.h"
 
 #include "chip_support.h"
 
@@ -66,17 +64,15 @@ static void t186_remove_support(struct nvhost_chip_support *op)
 	op->priv = 0;
 }
 
-#include "host1x/host1x_cdma.c"
+#include "host1x/host1x_cdma_t186.c"
 #include "host1x/host1x_syncpt.c"
-#include "host1x/host1x_intr.c"
-#include "host1x/host1x_actmon_t124.c"
-#include "host1x/host1x_debug.c"
+#include "host1x/host1x_intr_t186.c"
+#include "host1x/host1x_debug_t186.c"
 
 int nvhost_init_t186_support(struct nvhost_master *host,
 			     struct nvhost_chip_support *op)
 {
 	int err;
-	struct t124 *t186 = 0;
 
 	op->soc_name = "tegra18x";
 
@@ -89,27 +85,11 @@ int nvhost_init_t186_support(struct nvhost_master *host,
 	op->push_buffer = host1x_pushbuffer_ops;
 	op->debug = host1x_debug_ops;
 
-	host->sync_aperture = host->aperture + HOST1X_CHANNEL_SYNC_REG_BASE;
+	host->sync_aperture = host->aperture;
 	op->syncpt = host1x_syncpt_ops;
 	op->intr = host1x_intr_ops;
-	op->actmon = host1x_actmon_ops;
 
-	t186 = kzalloc(sizeof(struct t124), GFP_KERNEL);
-	if (!t186) {
-		err = -ENOMEM;
-		goto err;
-	}
-
-	t186->host = host;
-	op->priv = t186;
 	op->remove_support = t186_remove_support;
 
 	return 0;
-
-err:
-	kfree(t186);
-
-	op->priv = 0;
-	op->remove_support = 0;
-	return err;
 }

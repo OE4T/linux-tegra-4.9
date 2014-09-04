@@ -854,6 +854,7 @@ static int nvhost_pod_init(struct devfreq *df)
 		case TEGRA_CHIPID_TEGRA11:
 		case TEGRA_CHIPID_TEGRA12:
 		case TEGRA_CHIPID_TEGRA13:
+		case TEGRA_CHIPID_TEGRA21:
 			podgov->p_load_max = 900;
 			podgov->p_load_target = 700;
 			podgov->p_bias = 80;

@@ -1494,6 +1494,7 @@ static struct snd_soc_dai_link
 		.cpu_name = "adsp_audio.3",
 		.codec_name = "adsp_audio.3",
 		.platform_name = "adsp_audio.3",
+		.ignore_pmdown_time = 1,
 	},
 	[TEGRA210_DAI_LINK_ADSP_COMPR1] = {
 		.name = "ADSP COMPR1",
@@ -1503,6 +1504,7 @@ static struct snd_soc_dai_link
 		.cpu_name = "adsp_audio.3",
 		.codec_name = "adsp_audio.3",
 		.platform_name = "adsp_audio.3",
+		.ignore_pmdown_time = 1,
 	},
 	[TEGRA210_DAI_LINK_ADSP_COMPR2] = {
 		.name = "ADSP COMPR2",
@@ -1512,6 +1514,7 @@ static struct snd_soc_dai_link
 		.cpu_name = "adsp_audio.3",
 		.codec_name = "adsp_audio.3",
 		.platform_name = "adsp_audio.3",
+		.ignore_pmdown_time = 1,
 	},
 };
 

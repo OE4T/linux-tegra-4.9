@@ -302,6 +302,33 @@ static int clk_slide_gpc_pll(struct gk20a *g, struct pll *gpll)
 	return 0;
 }
 
+static int clk_change_pldiv_under_bypass(struct gk20a *g, struct pll *gpll)
+{
+	u32 data, coeff;
+
+	/* put PLL in bypass before programming it */
+	data = gk20a_readl(g, trim_sys_sel_vco_r());
+	data = set_field(data, trim_sys_sel_vco_gpc2clk_out_m(),
+		trim_sys_sel_vco_gpc2clk_out_bypass_f());
+	gk20a_writel(g, trim_sys_sel_vco_r(), data);
+
+	/* change PLDIV */
+	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
+	udelay(1);
+	coeff = set_field(coeff, trim_sys_gpcpll_coeff_pldiv_m(),
+			  trim_sys_gpcpll_coeff_pldiv_f(gpll->PL));
+	gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
+
+	/* put PLL back on vco */
+	data = gk20a_readl(g, trim_sys_sel_vco_r());
+	udelay(1);
+	data = set_field(data, trim_sys_sel_vco_gpc2clk_out_m(),
+		trim_sys_sel_vco_gpc2clk_out_vco_f());
+	gk20a_writel(g, trim_sys_sel_vco_r(), data);
+
+	return 0;
+}
+
 static int clk_lock_gpc_pll_under_bypass(struct gk20a *g, struct pll *gpll)
 {
 	u32 data, cfg, coeff, timeout;
@@ -313,6 +340,7 @@ static int clk_lock_gpc_pll_under_bypass(struct gk20a *g, struct pll *gpll)
 	gk20a_writel(g, trim_sys_sel_vco_r(), data);
 
 	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+	udelay(1);
 	if (trim_sys_gpcpll_cfg_iddq_v(cfg)) {
 		/* get out from IDDQ (1st power up) */
 		cfg = set_field(cfg, trim_sys_gpcpll_cfg_iddq_m(),
@@ -352,15 +380,16 @@ static int clk_lock_gpc_pll_under_bypass(struct gk20a *g, struct pll *gpll)
 		cfg = set_field(cfg, trim_sys_gpcpll_cfg_enb_lckdet_m(),
 			trim_sys_gpcpll_cfg_enb_lckdet_power_on_f());
 		gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
+		cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 	}
 
 	/* wait pll lock */
-	timeout = g->clk.pll_delay / 2 + 1;
+	timeout = g->clk.pll_delay + 1;
 	do {
+		udelay(1);
 		cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 		if (cfg & trim_sys_gpcpll_cfg_pll_lock_true_f())
 			goto pll_locked;
-		udelay(2);
 	} while (--timeout > 0);
 
 	/* PLL is messed up. What can we do here? */
@@ -390,13 +419,11 @@ pll_locked:
 static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 			int allow_slide)
 {
-#if PLDIV_GLITCHLESS
-	bool skip_bypass;
-#else
+#if !PLDIV_GLITCHLESS
 	u32 data;
 #endif
 	u32 cfg, coeff;
-	bool can_slide;
+	bool can_slide, pldiv_only;
 	struct pll gpll;
 
 	gk20a_dbg_fn("");
@@ -427,15 +454,15 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 		if (ret)
 			return ret;
 	}
+	pldiv_only = can_slide && (gpll_new->M == gpll.M);
 
 #if PLDIV_GLITCHLESS
 	/*
 	 * Limit either FO-to-FO (path A below) or FO-to-bypass (path B below)
 	 * jump to min_vco/2 by setting post divider >= 1:2.
 	 */
-	skip_bypass = can_slide && (gpll_new->M == gpll.M);
 	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
-	if ((skip_bypass && (gpll_new->PL < 2)) || (gpll.PL < 2)) {
+	if ((pldiv_only && (gpll_new->PL < 2)) || (gpll.PL < 2)) {
 		if (gpll.PL != 2) {
 			coeff = set_field(coeff,
 				trim_sys_gpcpll_coeff_pldiv_m(),
@@ -446,7 +473,7 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 		}
 	}
 
-	if (skip_bypass)
+	if (pldiv_only)
 		goto set_pldiv;	/* path A: no need to bypass */
 
 	/* path B: bypass if either M changes or PLL is disabled */
@@ -473,7 +500,10 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 #if PLDIV_GLITCHLESS
 	gpll.PL = (gpll_new->PL < 2) ? 2 : gpll_new->PL;
 #endif
-	clk_lock_gpc_pll_under_bypass(g, &gpll);
+	if (pldiv_only)
+		clk_change_pldiv_under_bypass(g, &gpll);
+	else
+		clk_lock_gpc_pll_under_bypass(g, &gpll);
 
 #if PLDIV_GLITCHLESS
 	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());

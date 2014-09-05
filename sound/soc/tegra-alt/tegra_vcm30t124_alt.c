@@ -954,6 +954,7 @@ static void tegra_vcm30t124_new_codec_links(
 static void tegra_vcm30t124_free_codec_links(void)
 {
 	kfree(tegra_vcm30t124_codec_links);
+	tegra_vcm30t124_codec_links = NULL;
 }
 
 static void tegra_vcm30t124_new_codec_conf(
@@ -980,6 +981,7 @@ static void tegra_vcm30t124_new_codec_conf(
 static void tegra_vcm30t124_free_codec_conf(void)
 {
 	kfree(tegra_vcm30t124_codec_conf);
+	tegra_vcm30t124_codec_conf = NULL;
 }
 
 static const int tegra_vcm30t124_srate_values[] = {

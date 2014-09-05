@@ -1797,7 +1797,8 @@ struct tegra_dc_platform_data
 				np_target_disp = np_dsi_panel;
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_DP ||
-		pdata->default_out->type == TEGRA_DC_OUT_NVSR_DP) {
+		pdata->default_out->type == TEGRA_DC_OUT_NVSR_DP ||
+		   pdata->default_out->type == TEGRA_DC_OUT_FAKE_DP) {
 		np_sor = (ndev->id) ? of_find_node_by_path(SOR1_NODE) :
 			of_find_node_by_path(SOR_NODE);
 
@@ -1872,7 +1873,9 @@ struct tegra_dc_platform_data
 			if (!np_target_disp)
 				goto fail_parse;
 		}
-	}
+	} else
+		pr_err("Failed to parse out type %d\n",
+			pdata->default_out->type);
 
 	default_out_np = of_get_child_by_name(np_target_disp,
 		"disp-default-out");

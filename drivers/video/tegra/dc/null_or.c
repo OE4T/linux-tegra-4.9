@@ -39,8 +39,10 @@ static struct resource all_disp1_resources[] = {
 	},
 	{
 		.name	= "irq",
+#ifndef CONFIG_TEGRA_NVDISPLAY
 		.start	= INT_DISPLAY_GENERAL,
 		.end	= INT_DISPLAY_GENERAL,
+#endif
 		.flags	= IORESOURCE_IRQ,
 	},
 	{
@@ -94,8 +96,10 @@ static struct resource all_disp1_resources[] = {
 	},
 	{
 		.name	= "irq_dp",
+#ifndef CONFIG_TEGRA_NVDISPLAY
 		.start	= INT_DPAUX,
 		.end	= INT_DPAUX,
+#endif
 		.flags	= IORESOURCE_IRQ,
 	},
 
@@ -182,7 +186,7 @@ static long tegra_dc_null_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	struct clk *base_clk;
 	long rate;
 
-	if ((clk == NULL) || (parent_clk == NULL))
+	if ((clk == NULL) || (parent_clk == NULL) || tegra_platform_is_linsim())
 		return 0;
 
 	if (dc->ndev->id == 0)

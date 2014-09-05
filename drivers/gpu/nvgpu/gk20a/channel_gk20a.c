@@ -708,8 +708,11 @@ unbind:
 int gk20a_channel_release(struct inode *inode, struct file *filp)
 {
 	struct channel_gk20a *ch = (struct channel_gk20a *)filp->private_data;
-	struct gk20a *g = ch->g;
+	struct gk20a *g = ch ? ch->g : NULL;
 	int err;
+
+	if (!ch)
+		return 0;
 
 	trace_gk20a_channel_release(dev_name(&g->dev->dev));
 

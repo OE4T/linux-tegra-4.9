@@ -74,11 +74,15 @@ static inline void tegra_dpaux_writel(struct tegra_dc_dp_data *dp,
 
 static inline void tegra_dpaux_clk_enable(struct tegra_dc_dp_data *dp)
 {
+	if (tegra_platform_is_linsim())
+		return;
 	clk_prepare_enable(dp->dpaux_clk);
 }
 
 static inline void tegra_dpaux_clk_disable(struct tegra_dc_dp_data *dp)
 {
+	if (tegra_platform_is_linsim())
+		return;
 	clk_disable_unprepare(dp->dpaux_clk);
 }
 
@@ -148,6 +152,9 @@ tegra_dc_dpaux_poll_register(struct tegra_dc_dp_data *dp,
 {
 	unsigned long	timeout_jf = jiffies + msecs_to_jiffies(timeout_ms);
 	u32		reg_val	   = 0;
+
+	if (tegra_platform_is_linsim())
+		return 0;
 
 	do {
 		usleep_range(poll_interval_us, poll_interval_us << 1);
@@ -1511,7 +1518,12 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		goto err_release_resource_reg;
 	}
 
+
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	clk = clk_get(NULL, "dpaux");
+#else
 	clk = clk_get_sys("dpaux", NULL);
+#endif
 	if (IS_ERR_OR_NULL(clk)) {
 		dev_err(&dc->ndev->dev, "dp: dc clock %s.edp unavailable\n",
 			dev_name(&dc->ndev->dev));
@@ -1519,7 +1531,11 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		goto err_iounmap_reg;
 	}
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	parent_clk = clk_get(NULL, "pll_dp");
+#else
 	parent_clk = tegra_get_clock_by_name("pll_dp");
+#endif
 	if (IS_ERR_OR_NULL(parent_clk)) {
 		dev_err(&dc->ndev->dev, "dp: clock pll_dp unavailable\n");
 		err = -EFAULT;
@@ -2170,6 +2186,8 @@ fail:
 
 static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp)
 {
+	if (tegra_platform_is_linsim())
+		return;
 	tegra_periph_reset_assert(dp->dpaux_clk);
 	mdelay(2);
 	tegra_periph_reset_deassert(dp->dpaux_clk);

@@ -66,6 +66,8 @@ __maybe_unused
 void tegra_dpaux_pad_power(struct tegra_dc *dc,
 				enum tegra_dpaux_instance id, bool on)
 {
+	if (tegra_platform_is_linsim())
+		return;
 	tegra_dpaux_clk_en(id);
 	tegra_dc_io_start(dc);
 

@@ -63,6 +63,8 @@ tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 	unsigned long timeout_jf = jiffies + msecs_to_jiffies(timeout_ms);
 	u32 reg_val = 0;
 
+	if (tegra_platform_is_linsim())
+		return 0;
 	do {
 		usleep_range(poll_interval_us, poll_interval_us << 1);
 		reg_val = tegra_sor_readl(sor, reg);
@@ -80,7 +82,7 @@ void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
 {
 	int flag = tegra_is_clk_enabled(sor->sor_clk);
 
-	if (sor->clk_type == TEGRA_SOR_SAFE_CLK)
+	if (sor->clk_type == TEGRA_SOR_SAFE_CLK || tegra_platform_is_linsim())
 		return;
 
 	/*
@@ -433,7 +435,11 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		goto err_release_resource_reg;
 	}
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	clk = clk_get(NULL, res_name);
+#else
 	clk = clk_get_sys(res_name, NULL);
+#endif
 	if (IS_ERR_OR_NULL(clk)) {
 		dev_err(&dc->ndev->dev, "sor: can't get clock\n");
 		err = -ENOENT;
@@ -441,7 +447,11 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	}
 
 #ifndef	CONFIG_ARCH_TEGRA_12x_SOC
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	safe_clk = clk_get(NULL, "sor_safe");
+#else
 	safe_clk = clk_get_sys("sor_safe", NULL);
+#endif
 	if (IS_ERR_OR_NULL(clk)) {
 		dev_err(&dc->ndev->dev, "sor: can't get safe clock\n");
 		err = -ENOENT;
@@ -783,6 +793,9 @@ static void tegra_dc_sor_io_set_dpd(struct tegra_dc_sor_data *sor, bool up)
 	u32 reg_val;
 	static void __iomem *pmc_base = IO_ADDRESS(TEGRA_PMC_BASE);
 	unsigned long timeout_jf;
+
+	if (tegra_platform_is_linsim())
+		return;
 
 	if (up) {
 		writel(APBDEV_PMC_DPD_SAMPLE_ON_ENABLE,
@@ -1236,6 +1249,9 @@ void tegra_sor_dp_cal(struct tegra_dc_sor_data *sor)
 
 static inline void tegra_sor_reset(struct tegra_dc_sor_data *sor)
 {
+	if (tegra_platform_is_linsim())
+		return;
+
 	tegra_periph_reset_assert(sor->sor_clk);
 	mdelay(2);
 	tegra_periph_reset_deassert(sor->sor_clk);
@@ -1602,6 +1618,9 @@ void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds)
 		return;
 	}
 
+	if (tegra_platform_is_linsim())
+		return;
+
 	tegra_sor_clk_disable(sor);
 	/* Reset SOR clk */
 	tegra_periph_reset_assert(sor->sor_clk);
@@ -1708,6 +1727,8 @@ void tegra_sor_setup_clk(struct tegra_dc_sor_data *sor, struct clk *clk,
 	struct clk *dc_parent_clk;
 	struct tegra_dc *dc = sor->dc;
 
+	if (tegra_platform_is_linsim())
+		return;
 	if (clk == dc->clk) {
 		dc_parent_clk = clk_get_parent(clk);
 		BUG_ON(!dc_parent_clk);

@@ -620,6 +620,9 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 
 	fb_destroy_modelist(&fb_info->info->modelist);
 
+	/* Notify layers above fb.c that the hardware is unavailable */
+	fb_info->info->state = FBINFO_STATE_SUSPENDED;
+
 	if (specs == NULL) {
 		struct tegra_dc_mode mode;
 		memset(&fb_info->info->monspecs, 0x0,
@@ -655,6 +658,8 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 	}
 
 	event.info = fb_info->info;
+	/* Restoring to state running. */
+	fb_info->info->state =  FBINFO_STATE_RUNNING;
 #ifdef CONFIG_FRAMEBUFFER_CONSOLE
 	console_lock();
 	fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);

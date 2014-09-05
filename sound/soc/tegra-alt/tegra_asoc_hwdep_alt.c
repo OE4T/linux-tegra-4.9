@@ -103,6 +103,7 @@ static int tegra_asoc_hwdep_update_mapping_table(struct snd_soc_card *card,
 
 ERR:
 	kfree(map);
+	map = NULL;
 	return err;
 }
 

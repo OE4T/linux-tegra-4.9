@@ -1655,6 +1655,7 @@ EXPORT_SYMBOL_GPL(tegra_machine_get_dai_link);
 void tegra_machine_remove_dai_link(void)
 {
 	kfree(tegra_asoc_machine_links);
+	tegra_asoc_machine_links = NULL;
 }
 EXPORT_SYMBOL_GPL(tegra_machine_remove_dai_link);
 
@@ -1750,6 +1751,7 @@ EXPORT_SYMBOL_GPL(tegra_machine_get_codec_conf);
 void tegra_machine_remove_codec_conf(void)
 {
 	kfree(tegra_asoc_codec_conf);
+	tegra_asoc_codec_conf = NULL;
 }
 EXPORT_SYMBOL_GPL(tegra_machine_remove_codec_conf);
 
@@ -2099,6 +2101,10 @@ void tegra_machine_remove_extra_mem_alloc(unsigned int num_codec_links)
 			kfree(tegra_asoc_machine_links[i].name);
 			kfree(tegra_asoc_machine_links[i].params);
 			kfree(tegra_asoc_machine_links[j].name);
+
+			tegra_asoc_machine_links[i].name = NULL;
+			tegra_asoc_machine_links[i].params = NULL;
+			tegra_asoc_machine_links[j].name = NULL;
 		}
 }
 EXPORT_SYMBOL_GPL(tegra_machine_remove_extra_mem_alloc);

@@ -3147,9 +3147,12 @@ bool gk20a_mm_mmu_debug_mode_enabled(struct gk20a *g)
 
 void gk20a_init_mm(struct gpu_ops *gops)
 {
+	/* remember to remove NVHOST_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS in
+	 * characteristics flags if sparse support is removed */
 	gops->mm.set_sparse = gk20a_vm_put_sparse;
 	gops->mm.put_empty = gk20a_vm_put_empty;
 	gops->mm.clear_sparse = gk20a_vm_clear_sparse;
+
 	gops->mm.is_debug_mode_enabled = gk20a_mm_mmu_debug_mode_enabled;
 	gops->mm.gmmu_map = gk20a_locked_gmmu_map;
 	gops->mm.gmmu_unmap = gk20a_locked_gmmu_unmap;

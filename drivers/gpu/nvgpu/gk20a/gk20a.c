@@ -1907,7 +1907,8 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->compression_page_size = g->mm.compression_page_size;
 	gpu->pde_coverage_bit_count = g->mm.pde_stride_shift;
 
-	gpu->flags = 0;
+	gpu->flags = NVHOST_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS
+		| NVHOST_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS;
 
 	if (IS_ENABLED(CONFIG_TEGRA_GK20A) &&
 	    gk20a_platform_has_syncpoints(g->dev))

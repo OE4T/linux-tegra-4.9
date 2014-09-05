@@ -54,8 +54,8 @@ const struct gating_desc gm20b_slcg_ctxsw_firmware[] = {
 
 /* slcg fb */
 const struct gating_desc gm20b_slcg_fb[] = {
-	{.addr = 0x00100d14, .prod = 0x00000000, .disable = 0xfffffffe},
-	{.addr = 0x00100c9c, .prod = 0x00000000, .disable = 0x000001fe},
+	{.addr = 0x00100d14, .prod = 0xfffffffe, .disable = 0xfffffffe},
+	{.addr = 0x00100c9c, .prod = 0x000001fe, .disable = 0x000001fe},
 };
 
 /* slcg fifo */

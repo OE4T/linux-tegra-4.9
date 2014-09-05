@@ -5224,6 +5224,7 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 
 /* Used by sw interrupt thread to translate current ctx to chid.
  * For performance, we don't want to go through 128 channels every time.
+ * curr_ctx should be the value read from gr_fecs_current_ctx_r().
  * A small tlb is used here to cache translation */
 static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx)
 {
@@ -5231,6 +5232,13 @@ static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx)
 	struct gr_gk20a *gr = &g->gr;
 	u32 chid = -1;
 	u32 i;
+
+	/* when contexts are unloaded from GR, the valid bit is reset
+	 * but the instance pointer information remains intact. So the
+	 * valid bit must be checked to be absolutely certain that a
+	 * valid context is currently resident. */
+	if (!gr_fecs_current_ctx_valid_v(curr_ctx))
+		return -1;
 
 	spin_lock(&gr->ch_tlb_lock);
 

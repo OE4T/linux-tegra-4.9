@@ -41,7 +41,6 @@ struct nvhost_channel_ops {
 	int (*init)(struct nvhost_channel *,
 		    struct nvhost_master *);
 	int (*submit)(struct nvhost_job *job);
-	int (*save_context)(struct nvhost_channel *channel);
 	int (*init_gather_filter)(struct nvhost_channel *ch);
 };
 
@@ -97,7 +96,6 @@ int nvhost_channel_read_reg(struct nvhost_channel *channel,
 struct nvhost_channel *nvhost_alloc_channel_internal(int chindex,
 	int max_channels);
 
-int nvhost_channel_save_context(struct nvhost_channel *ch);
 void nvhost_channel_init_gather_filter(struct nvhost_channel *ch);
 
 struct nvhost_hwctx *nvhost_channel_get_file_hwctx(int fd);

@@ -385,94 +385,6 @@ error:
 	return err;
 }
 
-static int host1x_save_context(struct nvhost_channel *ch)
-{
-	struct nvhost_hwctx *hwctx_to_save;
-	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
-	u32 syncpt_incrs, syncpt_val;
-	int err = 0;
-	void *ref;
-	void *wakeup_waiter = NULL;
-	struct nvhost_job *job;
-	u32 syncpt_id;
-
-	wakeup_waiter = nvhost_intr_alloc_waiter();
-	if (!wakeup_waiter) {
-		err = -ENOMEM;
-		goto done;
-	}
-
-	if (!ch || !ch->dev) {
-		err = -EINVAL;
-		goto done;
-	}
-
-	err = nvhost_module_busy(nvhost_get_parent(ch->dev));
-	if (err)
-		goto done;
-
-	mutex_lock(&ch->submitlock);
-	hwctx_to_save = ch->cur_ctx;
-	if (!hwctx_to_save) {
-		mutex_unlock(&ch->submitlock);
-		goto done;
-	}
-
-	job = nvhost_job_alloc(ch, hwctx_to_save, 0, 0, 0, 1);
-	if (!job) {
-		err = -ENOMEM;
-		mutex_unlock(&ch->submitlock);
-		goto done;
-	}
-
-	hwctx_to_save->valid = true;
-	ch->cur_ctx = NULL;
-	syncpt_id = hwctx_to_save->h->syncpt;
-
-	syncpt_incrs = hwctx_to_save->save_incrs;
-	syncpt_val = nvhost_syncpt_incr_max(&nvhost_get_host(ch->dev)->syncpt,
-					syncpt_id, syncpt_incrs);
-
-	job->hwctx_syncpt_idx = 0;
-	job->sp->id = syncpt_id;
-	job->sp->incrs = syncpt_incrs;
-	job->sp->fence = syncpt_val;
-	job->num_syncpts = 1;
-
-	err = nvhost_cdma_begin(&ch->cdma, job);
-	if (err) {
-		mutex_unlock(&ch->submitlock);
-		goto done;
-	}
-
-	hwctx_to_save->h->save_push(hwctx_to_save, &ch->cdma);
-	nvhost_cdma_end(&ch->cdma, job);
-	nvhost_job_put(job);
-	job = NULL;
-
-	err = nvhost_intr_add_action(&nvhost_get_host(ch->dev)->intr,
-			syncpt_id, syncpt_val,
-			NVHOST_INTR_ACTION_WAKEUP, &wq,
-			wakeup_waiter,
-			&ref);
-	wakeup_waiter = NULL;
-	WARN(err, "Failed to set wakeup interrupt");
-	wait_event(wq,
-		nvhost_syncpt_is_expired(&nvhost_get_host(ch->dev)->syncpt,
-				syncpt_id, syncpt_val));
-
-	nvhost_intr_put_ref(&nvhost_get_host(ch->dev)->intr, syncpt_id, ref);
-
-	nvhost_cdma_update(&ch->cdma);
-
-	mutex_unlock(&ch->submitlock);
-	nvhost_module_idle(nvhost_get_parent(ch->dev));
-
-done:
-	kfree(wakeup_waiter);
-	return err;
-}
-
 static inline void __iomem *host1x_channel_aperture(void __iomem *p, int ndx)
 {
 	p += ndx * NV_HOST1X_CHANNEL_MAP_SIZE_BYTES;
@@ -534,6 +446,5 @@ static int host1x_channel_init(struct nvhost_channel *ch,
 static const struct nvhost_channel_ops host1x_channel_ops = {
 	.init = host1x_channel_init,
 	.submit = host1x_channel_submit,
-	.save_context = host1x_save_context,
 	.init_gather_filter = t124_channel_init_gather_filter,
 };

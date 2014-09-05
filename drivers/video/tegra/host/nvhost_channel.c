@@ -412,17 +412,6 @@ struct nvhost_channel *nvhost_alloc_channel_internal(int chindex,
 	return ch;
 }
 
-int nvhost_channel_save_context(struct nvhost_channel *ch)
-{
-	int err = 0;
-
-	if (ch && ch->cur_ctx)
-		err = channel_op(ch).save_context(ch);
-
-	return err;
-
-}
-
 static struct nvhost_hwctx *alloc_hwctx(struct nvhost_hwctx_handler *h,
 		struct nvhost_channel *ch)
 {

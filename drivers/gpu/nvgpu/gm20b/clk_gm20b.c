@@ -77,8 +77,26 @@ static inline u32 div_to_pl(u32 div)
 	return div;
 }
 
-/* FIXME: remove after on-silicon testing */
-#define PLDIV_GLITCHLESS 0
+#define PLDIV_GLITCHLESS 1
+
+#if PLDIV_GLITCHLESS
+/*
+ * Post divider tarnsition is glitchless only if there is common "1" in binary
+ * representation of old and new settings.
+ */
+static u32 get_interim_pldiv(u32 old_pl, u32 new_pl)
+{
+	u32 pl;
+
+	if (old_pl & new_pl)
+		return 0;
+
+	pl = old_pl | BIT(ffs(new_pl) - 1);	/* pl never 0 */
+	new_pl |= BIT(ffs(old_pl) - 1);
+
+	return min(pl, new_pl);
+}
+#endif
 
 /* Calculate and update M/N/PL as well as pll->freq
     ref_clk_f = clk_in_f;
@@ -419,10 +437,7 @@ pll_locked:
 static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 			int allow_slide)
 {
-#if !PLDIV_GLITCHLESS
-	u32 data;
-#endif
-	u32 cfg, coeff;
+	u32 cfg, coeff, data;
 	bool can_slide, pldiv_only;
 	struct pll gpll;
 
@@ -456,50 +471,51 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 	}
 	pldiv_only = can_slide && (gpll_new->M == gpll.M);
 
-#if PLDIV_GLITCHLESS
 	/*
-	 * Limit either FO-to-FO (path A below) or FO-to-bypass (path B below)
-	 * jump to min_vco/2 by setting post divider >= 1:2.
+	 *  Split FO-to-bypass jump in halfs by setting out divider 1:2.
+	 *  (needed even if PLDIV_GLITCHLESS is set, since 1:1 <=> 1:2 direct
+	 *  transition is not really glitch-less - see get_interim_pldiv
+	 *  function header).
 	 */
-	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
-	if ((pldiv_only && (gpll_new->PL < 2)) || (gpll.PL < 2)) {
-		if (gpll.PL != 2) {
-			coeff = set_field(coeff,
-				trim_sys_gpcpll_coeff_pldiv_m(),
-				trim_sys_gpcpll_coeff_pldiv_f(2));
-			gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
-			coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
-			udelay(2);
-		}
+	if ((gpll_new->PL < 2) || (gpll.PL < 2)) {
+		data = gk20a_readl(g, trim_sys_gpc2clk_out_r());
+		data = set_field(data, trim_sys_gpc2clk_out_vcodiv_m(),
+			trim_sys_gpc2clk_out_vcodiv_f(2));
+		gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
+		/* Intentional 2nd write to assure linear divider operation */
+		gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
+		gk20a_readl(g, trim_sys_gpc2clk_out_r());
+		udelay(2);
 	}
 
-	if (pldiv_only)
+#if PLDIV_GLITCHLESS
+	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
+	if (pldiv_only) {
+		/* Insert interim PLDIV state if necessary */
+		u32 interim_pl = get_interim_pldiv(gpll_new->PL, gpll.PL);
+		if (interim_pl) {
+			coeff = set_field(coeff,
+				trim_sys_gpcpll_coeff_pldiv_m(),
+				trim_sys_gpcpll_coeff_pldiv_f(interim_pl));
+			gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
+			coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
+		}
 		goto set_pldiv;	/* path A: no need to bypass */
+	}
 
 	/* path B: bypass if either M changes or PLL is disabled */
-#else
-	/* split FO-to-bypass jump in halfs by setting out divider 1:2 */
-	data = gk20a_readl(g, trim_sys_gpc2clk_out_r());
-	data = set_field(data, trim_sys_gpc2clk_out_vcodiv_m(),
-		trim_sys_gpc2clk_out_vcodiv_f(2));
-	gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
-	gk20a_readl(g, trim_sys_gpc2clk_out_r());
-	udelay(2);
 #endif
 	/*
 	 * Program and lock pll under bypass. On exit PLL is out of bypass,
 	 * enabled, and locked. VCO is at vco_min if sliding is allowed.
 	 * Otherwise it is at VCO target (and therefore last slide call below
-	 * is effectively NOP). PL is preserved (not set to target) of post
-	 * divider is glitchless. Otherwise it is at PL target.
+	 * is effectively NOP). PL is set to target. Output divider is engaged
+	 * at 1:2 if either entry, or exit PL setting is 1:1.
 	 */
 	gpll = *gpll_new;
 	if (allow_slide)
 		gpll.N = DIV_ROUND_UP(gpll_new->M * gpc_pll_params.min_vco,
 				      gpll_new->clk_in);
-#if PLDIV_GLITCHLESS
-	gpll.PL = (gpll_new->PL < 2) ? 2 : gpll_new->PL;
-#endif
 	if (pldiv_only)
 		clk_change_pldiv_under_bypass(g, &gpll);
 	else
@@ -507,7 +523,6 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 
 #if PLDIV_GLITCHLESS
 	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
-	udelay(2);
 
 set_pldiv:
 	/* coeff must be current from either path A or B */
@@ -516,14 +531,20 @@ set_pldiv:
 			trim_sys_gpcpll_coeff_pldiv_f(gpll_new->PL));
 		gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
 	}
-#else
+#endif
 	/* restore out divider 1:1 */
 	data = gk20a_readl(g, trim_sys_gpc2clk_out_r());
-	data = set_field(data, trim_sys_gpc2clk_out_vcodiv_m(),
-		trim_sys_gpc2clk_out_vcodiv_by1_f());
-	udelay(2);
-	gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
-#endif
+	if ((data & trim_sys_gpc2clk_out_vcodiv_m()) !=
+	    trim_sys_gpc2clk_out_vcodiv_by1_f()) {
+		data = set_field(data, trim_sys_gpc2clk_out_vcodiv_m(),
+				 trim_sys_gpc2clk_out_vcodiv_by1_f());
+		udelay(2);
+		gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
+		/* Intentional 2nd write to assure linear divider operation */
+		gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
+		gk20a_readl(g, trim_sys_gpc2clk_out_r());
+	}
+
 	/* slide up to target NDIV */
 	return clk_slide_gpc_pll(g, gpll_new);
 }

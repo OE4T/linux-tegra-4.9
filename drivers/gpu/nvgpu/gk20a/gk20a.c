@@ -84,8 +84,6 @@ u32 gk20a_dbg_ftrace;
 
 #define GK20A_WAIT_FOR_IDLE_MS	2000
 
-static struct gk20a *gk20a_handle;
-
 static int gk20a_pm_finalize_poweron(struct device *dev);
 static int gk20a_pm_prepare_poweroff(struct device *dev);
 
@@ -1455,7 +1453,6 @@ static int gk20a_probe(struct platform_device *dev)
 
 	set_gk20a(dev, gk20a);
 	gk20a->dev = dev;
-	gk20a_handle = gk20a;
 
 	gk20a->irq_stall = platform_get_irq(dev, 0);
 	gk20a->irq_nonstall = platform_get_irq(dev, 1);
@@ -1611,7 +1608,6 @@ static int __exit gk20a_remove(struct platform_device *dev)
 
 	gk20a_user_deinit(dev);
 
-	gk20a_handle = NULL;
 	set_gk20a(dev, 0);
 #ifdef CONFIG_DEBUG_FS
 	debugfs_remove(g->debugfs_ltc_enabled);
@@ -1754,14 +1750,13 @@ void gk20a_reset(struct gk20a *g, u32 units)
 
 #ifdef CONFIG_PM_RUNTIME
 /**
- * gk20a_do_idle() - force the GPU to idle and railgate
+ * __gk20a_do_idle() - force the GPU to idle and railgate
  *
- * In success, this call MUST be balanced by caller with gk20a_do_unidle()
+ * In success, this call MUST be balanced by caller with __gk20a_do_unidle()
  */
-int gk20a_do_idle(void)
+int __gk20a_do_idle(struct platform_device *pdev)
 {
-	struct gk20a *g = gk20a_handle;
-	struct platform_device *pdev = g->dev;
+	struct gk20a *g = get_gk20a(pdev);
 	struct gk20a_platform *platform = dev_get_drvdata(&pdev->dev);
 	unsigned long timeout = jiffies +
 		msecs_to_jiffies(GK20A_WAIT_FOR_IDLE_MS);
@@ -1837,12 +1832,30 @@ fail_timeout:
 }
 
 /**
- * gk20a_do_unidle() - unblock all the tasks blocked by gk20a_do_idle()
+ * gk20a_do_idle() - wrap up for __gk20a_do_idle() to be called
+ * from outside of GPU driver
+ *
+ * In success, this call MUST be balanced by caller with gk20a_do_unidle()
  */
-int gk20a_do_unidle(void)
+int gk20a_do_idle(void)
 {
-	struct gk20a *g = gk20a_handle;
-	struct platform_device *pdev = g->dev;
+	struct device_node *node =
+			of_find_matching_node(NULL, tegra_gk20a_of_match);
+	struct platform_device *pdev = of_find_device_by_node(node);
+
+	int ret =  __gk20a_do_idle(pdev);
+
+	of_node_put(node);
+
+	return ret;
+}
+
+/**
+ * __gk20a_do_unidle() - unblock all the tasks blocked by __gk20a_do_idle()
+ */
+int __gk20a_do_unidle(struct platform_device *pdev)
+{
+	struct gk20a *g = get_gk20a(pdev);
 	struct gk20a_platform *platform = dev_get_drvdata(&pdev->dev);
 
 	if (g->forced_reset) {
@@ -1859,6 +1872,22 @@ int gk20a_do_unidle(void)
 	up_write(&g->busy_lock);
 
 	return 0;
+}
+
+/**
+ * gk20a_do_unidle() - wrap up for __gk20a_do_unidle()
+ */
+int gk20a_do_unidle(void)
+{
+	struct device_node *node =
+			of_find_matching_node(NULL, tegra_gk20a_of_match);
+	struct platform_device *pdev = of_find_device_by_node(node);
+
+	int ret = __gk20a_do_unidle(pdev);
+
+	of_node_put(node);
+
+	return ret;
 }
 #endif
 

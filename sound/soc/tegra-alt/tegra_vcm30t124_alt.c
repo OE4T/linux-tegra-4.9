@@ -40,6 +40,11 @@
 
 #define DRV_NAME "tegra-snd-vcm30t124"
 
+#define CODEC_NAME      "spdif-dit.0"
+#define CODEC_DAI_NAME  "dit-hifi"
+#define LINK_CPU_NAME   "tegra30-ahub-xbar"
+#define MAX_APBIF_ID 10
+
 #define GPIO_PR0 136
 #define CODEC_TO_DAP 0
 #define DAP_TO_CODEC 1
@@ -958,13 +963,11 @@ static void tegra_vcm30t124_new_codec_links(
 		}
 	}
 }
-
 static void tegra_vcm30t124_free_codec_links(void)
 {
 	kfree(tegra_vcm30t124_codec_links);
 	tegra_vcm30t124_codec_links = NULL;
 }
-
 static void tegra_vcm30t124_new_codec_conf(
 		struct tegra_vcm30t124_platform_data *pdata)
 {
@@ -985,7 +988,6 @@ static void tegra_vcm30t124_new_codec_conf(
 			pdata->dai_config[i].codec_prefix;
 	}
 }
-
 static void tegra_vcm30t124_free_codec_conf(void)
 {
 	kfree(tegra_vcm30t124_codec_conf);
@@ -1308,6 +1310,19 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 		tegra_machine_append_dai_link(tegra_vcm30t124_codec_links,
 			2 * num_codec_links);
 	tegra_machine_dai_links = tegra_machine_get_dai_link();
+
+	/* update APBIF dai links for virtualization only */
+	if (of_find_compatible_node(NULL, NULL,
+		"nvidia,tegra124-virt-ahub-master")) {
+		for (i = 0; i < MAX_APBIF_ID; i++) {
+			tegra_machine_dai_links[i].codec_dai_name =
+				CODEC_DAI_NAME;
+			tegra_machine_dai_links[i].codec_name = CODEC_NAME;
+			tegra_machine_dai_links[i].cpu_name = LINK_CPU_NAME;
+			tegra_machine_dai_links[i].platform_name = NULL;
+			tegra_machine_set_dai_params(i, NULL);
+		}
+	}
 	card->dai_link = tegra_machine_dai_links;
 
 	/* append vcm30t124 specific codec_conf */

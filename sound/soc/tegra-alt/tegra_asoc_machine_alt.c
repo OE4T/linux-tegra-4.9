@@ -1723,7 +1723,9 @@ EXPORT_SYMBOL_GPL(tegra_machine_set_dai_init);
 void tegra_machine_set_dai_params(int link,
 		struct snd_soc_pcm_stream *params)
 {
-	if (tegra_asoc_machine_links)
+	if (tegra_asoc_machine_links && (NULL == params))
+		tegra_asoc_machine_links[link].params = &default_link_params;
+	else if (tegra_asoc_machine_links)
 		tegra_asoc_machine_links[link].params = params;
 }
 EXPORT_SYMBOL_GPL(tegra_machine_set_dai_params);

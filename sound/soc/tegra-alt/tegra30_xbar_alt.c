@@ -730,6 +730,8 @@ static const struct of_device_id tegra30_xbar_of_match[] = {
 	{ .compatible = "nvidia,tegra30-ahub", .data = &soc_data_tegra30 },
 	{ .compatible = "nvidia,tegra114-ahub", .data = &soc_data_tegra114 },
 	{ .compatible = "nvidia,tegra124-ahub", .data = &soc_data_tegra124 },
+	{ .compatible = "nvidia,tegra124-virt-ahub-master",
+			.data = &soc_data_tegra124 },
 	{},
 };
 

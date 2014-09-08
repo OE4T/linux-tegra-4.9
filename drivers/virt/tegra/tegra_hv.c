@@ -413,7 +413,7 @@ static int tegra_hv_dt_parse(struct tegra_hv_data *hvd,
 	cfgsize = tegra_hv_server_data_size(count);
 	if (cfgsize >= givci->res.size) {
 		dev_err(dev, "guest #%d, size %d too large (> %lu)\n",
-				target_guestid, pqd.size, givci->res.size);
+				target_guestid, cfgsize, givci->res.size);
 		ret = -ENOMEM;
 		goto out;
 	}

@@ -470,9 +470,8 @@ clean_up:
 }
 
 #if USE_NVDEC_BOOTLOADER
-int nvhost_nvdec_init(struct platform_device *dev)
+int nvhost_nvdec_init_sw(struct platform_device *dev)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	int err = 0;
 	struct nvdec **m = get_nvdec(dev);
 	char **fw_name;
@@ -529,9 +528,6 @@ int nvhost_nvdec_init(struct platform_device *dev)
 	kfree(fw_name);
 	fw_name = NULL;
 
-	if (pdata->scaling_init)
-		nvhost_scale_hw_init(dev);
-
 	return 0;
 
 clean_up:
@@ -539,7 +535,7 @@ clean_up:
 	return err;
 }
 #else
-int nvhost_nvdec_init(struct platform_device *dev)
+int nvhost_nvdec_init_sw(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	int err = 0;
@@ -587,6 +583,7 @@ clean_up:
 int nvhost_nvdec_finalize_poweron(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	int err;
 
 	nvhost_module_reset(pdev, false);
 
@@ -606,6 +603,10 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *pdev)
 		host1x_writel(pdev, nvdec_engine_cg3_r(), 0x80000);
 		host1x_writel(pdev, nvdec_engine_cg4_r(), 0xfffffff8);
 	}
+
+	err = nvhost_nvdec_init_sw(pdev);
+	if (err)
+		return err;
 
 	if (pdata->scaling_init)
 		nvhost_scale_hw_init(pdev);
@@ -676,7 +677,6 @@ long nvdec_ioctl(struct file *file,
 
 	switch (cmd) {
 	case NVHOST_NVDEC_IOCTL_POWERON:
-		nvhost_nvdec_init(pdev);
 		err = nvhost_module_busy(pdev);
 		if (err)
 			return err;

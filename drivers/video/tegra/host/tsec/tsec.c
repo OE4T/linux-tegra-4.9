@@ -844,7 +844,7 @@ clean_up:
 	return err;
 }
 
-int nvhost_tsec_init(struct platform_device *dev)
+static int nvhost_tsec_init_sw(struct platform_device *dev)
 {
 	int err = 0;
 	struct tsec *m = get_tsec(dev);
@@ -887,6 +887,11 @@ clean_up:
 int nvhost_tsec_finalize_poweron(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	int err;
+
+	err = nvhost_tsec_init_sw(pdev);
+	if (err)
+		return err;
 
 	nvhost_module_reset(pdev, false);
 

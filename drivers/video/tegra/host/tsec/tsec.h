@@ -27,7 +27,6 @@
 
 int nvhost_tsec_finalize_poweron(struct platform_device *dev);
 int nvhost_tsec_prepare_poweroff(struct platform_device *dev);
-int nvhost_tsec_init(struct platform_device *dev);
 void nvhost_tsec_isr(void);
 void nvhost_tsec_isr_thread(void);
 

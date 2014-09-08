@@ -326,9 +326,8 @@ clean_up:
 	return err;
 }
 
-int nvhost_nvjpg_init(struct platform_device *dev)
+static int nvhost_nvjpg_init_sw(struct platform_device *dev)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	int err = 0;
 	struct nvjpg *m = get_nvjpg(dev);
 	char *fw_name;
@@ -361,9 +360,6 @@ int nvhost_nvjpg_init(struct platform_device *dev)
 		dev_err(&dev->dev, "ucode not valid");
 		goto clean_up;
 	}
-
-	if (pdata->scaling_init)
-		nvhost_scale_hw_init(dev);
 
 	return 0;
 
@@ -398,6 +394,11 @@ int nvhost_nvjpg_t210_finalize_poweron(struct platform_device *pdev)
 int nvhost_nvjpg_finalize_poweron(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
+	int err;
+
+	err = nvhost_nvjpg_init_sw(dev);
+	if (err)
+		return err;
 
 	if (pdata->scaling_init)
 		nvhost_scale_hw_init(dev);

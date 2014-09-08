@@ -92,7 +92,6 @@ int nvhost_flcn_boot(struct platform_device *);
 void nvhost_flcn_busy(struct platform_device *);
 void nvhost_flcn_idle(struct platform_device *);
 void nvhost_flcn_suspend(struct platform_device *);
-int nvhost_flcn_init(struct platform_device *);
 int nvhost_flcn_finalize_poweron(struct platform_device *);
 int nvhost_flcn_prepare_poweroff(struct platform_device *);
 int nvhost_nvenc_t210_finalize_poweron(struct platform_device *dev);

@@ -348,7 +348,7 @@ int nvhost_flcn_boot(struct platform_device *pdev)
 	return 0;
 }
 
-int nvhost_flcn_init(struct platform_device *dev)
+int nvhost_flcn_init_sw(struct platform_device *dev)
 {
 	int err = 0;
 	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
@@ -382,8 +382,13 @@ int nvhost_flcn_init(struct platform_device *dev)
 int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	int err;
 
 	nvhost_dbg_fn("");
+
+	err = nvhost_flcn_init_sw(pdev);
+	if (err)
+		return err;
 
 	nvhost_module_reset(pdev, false);
 
@@ -538,8 +543,13 @@ struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(u32 syncpt,
 int nvhost_vic_t210_finalize_poweron(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	int err;
 
 	nvhost_dbg_fn("");
+
+	err = nvhost_flcn_init_sw(pdev);
+	if (err)
+		return err;
 
 	nvhost_module_reset(pdev, false);
 
@@ -562,8 +572,13 @@ int nvhost_vic_t210_finalize_poweron(struct platform_device *pdev)
 int nvhost_vic_finalize_poweron(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	int err;
 
 	nvhost_dbg_fn("");
+
+	err = nvhost_flcn_init_sw(pdev);
+	if (err)
+		return err;
 
 	nvhost_module_reset(pdev, false);
 
@@ -637,8 +652,13 @@ int nvhost_vic_aggregate_constraints(struct platform_device *dev,
 int nvhost_nvenc_t210_finalize_poweron(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = nvhost_get_devdata(pdev);
+	int err;
 
 	nvhost_dbg_fn("");
+
+	err = nvhost_flcn_init_sw(pdev);
+	if (err)
+		return err;
 
 	nvhost_module_reset(pdev, false);
 

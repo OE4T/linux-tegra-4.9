@@ -252,9 +252,6 @@ struct nvhost_device_data {
 	void (*scaling_post_cb)(struct nvhost_device_profile *profile,
 				unsigned long freq);
 
-	/* Device is initialized */
-	int (*init)(struct platform_device *dev);
-
 	/* Preparing for power off. Used for context save. */
 	int (*prepare_poweroff)(struct platform_device *dev);
 

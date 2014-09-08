@@ -278,6 +278,10 @@ static inline u32 ltc_ltcs_ltss_intr_en_evicted_cb_m(void)
 {
 	return 0x1 << 20;
 }
+static inline u32 ltc_ltcs_ltss_intr_en_illegal_compstat_access_m(void)
+{
+	return 0x1 << 30;
+}
 static inline u32 ltc_ltc0_lts0_intr_r(void)
 {
 	return 0x0014040c;

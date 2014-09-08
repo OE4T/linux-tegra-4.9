@@ -446,6 +446,14 @@ static const struct snd_soc_dapm_widget tegra114_amx_widgets[] = {
 	SND_SOC_DAPM_AIF_OUT("OUT", NULL, 0, SND_SOC_NOPM, 0, 0),
 };
 
+static const struct snd_soc_dapm_widget tegra124_virt_amx_widgets[] = {
+	SND_SOC_DAPM_AIF_IN("IN0", NULL, 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_IN("IN1", NULL, 0, SND_SOC_NOPM, 1, 0),
+	SND_SOC_DAPM_AIF_IN("IN2", NULL, 0, SND_SOC_NOPM, 2, 0),
+	SND_SOC_DAPM_AIF_IN("IN3", NULL, 0, SND_SOC_NOPM, 3, 0),
+	SND_SOC_DAPM_AIF_OUT("OUT", NULL, 0, SND_SOC_NOPM, 0, 0),
+};
+
 static const struct snd_soc_dapm_route tegra114_amx_routes[] = {
 	{ "IN0",       NULL, "IN0 Receive" },
 	{ "IN1",       NULL, "IN1 Receive" },
@@ -509,6 +517,8 @@ static const struct tegra114_amx_soc_data soc_data_tegra124 = {
 static const struct of_device_id tegra114_amx_of_match[] = {
 	{ .compatible = "nvidia,tegra114-amx", .data = &soc_data_tegra114 },
 	{ .compatible = "nvidia,tegra124-amx", .data = &soc_data_tegra124 },
+	{ .compatible = "nvidia,tegra124-virt-amx",
+			.data = &soc_data_tegra124 },
 	{},
 };
 
@@ -582,6 +592,14 @@ static int tegra114_amx_platform_probe(struct platform_device *pdev)
 		ret = tegra114_amx_runtime_resume(&pdev->dev);
 		if (ret)
 			goto err_pm_disable;
+	}
+
+	if (of_device_is_compatible(pdev->dev.of_node,
+				"nvidia,tegra124-virt-amx")) {
+			tegra114_amx_codec.dapm_widgets =
+					tegra124_virt_amx_widgets;
+			tegra114_amx_codec.num_dapm_widgets =
+					ARRAY_SIZE(tegra124_virt_amx_widgets);
 	}
 
 	ret = snd_soc_register_codec(&pdev->dev, &tegra114_amx_codec,

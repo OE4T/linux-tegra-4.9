@@ -46,14 +46,14 @@
 		cpu@2 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
-			reg = <0x0 0x0>;
+			reg = <0x0 0x100>;
 			enable-method = "psci";
 		};
 
 		cpu@3 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
-			reg = <0x0 0x1>;
+			reg = <0x0 0x101>;
 			enable-method = "psci";
 		};
 	};

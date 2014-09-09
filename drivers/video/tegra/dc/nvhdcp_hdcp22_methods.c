@@ -341,6 +341,60 @@ exit:
 	return err;
 }
 
+int tsec_hdcp_session_ctrl(struct hdcp_context_t *hdcp_context, int flag)
+{
+	int err = 0;
+	struct hdcp_session_ctrl_param session_ctrl_param;
+	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
+		HDCP_MTHD_RPLY_BUF_SIZE);
+	session_ctrl_param.session_id = hdcp_context->session_id;
+	session_ctrl_param.ctrl_flag = flag;
+	memcpy(hdcp_context->cpuvaddr_mthd_buf_aligned,
+		&session_ctrl_param,
+		sizeof(struct hdcp_session_ctrl_param));
+	tsec_send_method(hdcp_context,
+		HDCP_SESSION_CTRL,
+		HDCP_MTHD_FLAGS_SB);
+	memcpy(&session_ctrl_param,
+		hdcp_context->cpuvaddr_mthd_buf_aligned,
+		sizeof(struct hdcp_session_ctrl_param));
+	if (session_ctrl_param.ret_code) {
+		hdcp_err("tsec_hdcp_session_ctrl: failed with error %d\n",
+			session_ctrl_param.ret_code);
+		goto exit;
+	}
+exit:
+	err = session_ctrl_param.ret_code;
+	return err;
+}
+/*
+int tsec_hdcp_revocation_check(struct hdcp_context_t *hdcp_context)
+{
+	int err = 0;
+	struct hdcp_revocation_check_param revocation_check_param;
+	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
+		HDCP_MTHD_RPLY_BUF_SIZE);
+	session_ctrl_param.session_id = hdcp_context->session_id;
+	session_ctrl_param.ctrl_flag = flag;
+	memcpy(hdcp_context->cpuvaddr_mthd_buf_aligned,
+		&session_ctrl_param,
+		sizeof(struct hdcp_session_ctrl_param));
+	tsec_send_method(hdcp_context,
+		HDCP_SESSION_CTRL,
+		HDCP_MTHD_FLAGS_SB);
+	memcpy(&session_ctrl_param,
+		hdcp_context->cpuvaddr_mthd_buf_aligned,
+		sizeof(struct hdcp_session_ctrl_param));
+	if (session_ctrl_param.ret_code) {
+		hdcp_err("tsec_hdcp_session_ctrl: failed with error %d\n",
+			session_ctrl_param.ret_code);
+		goto exit;
+	}
+exit:
+	err = session_ctrl_param.ret_code;
+	return err;
+}
+*/
 int tsec_hdcp_verify_vprime(struct hdcp_context_t *hdcp_context)
 {
 	int err = 0;

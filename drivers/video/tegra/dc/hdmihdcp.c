@@ -82,43 +82,6 @@ DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 #define nvhdcp_info(...)	\
 		pr_info("nvhdcp: " __VA_ARGS__)
 
-
-/* for nvhdcp.state */
-enum tegra_nvhdcp_state {
-	STATE_OFF,
-	STATE_UNAUTHENTICATED,
-	STATE_LINK_VERIFY,
-	STATE_RENEGOTIATE,
-};
-
-struct tegra_nvhdcp {
-	struct delayed_work		work;
-	struct tegra_hdmi		*hdmi;
-	struct workqueue_struct		*downstream_wq;
-	struct mutex			lock;
-	struct miscdevice		miscdev;
-	char				name[12];
-	unsigned			id;
-	bool				plugged; /* true if hotplug detected */
-	atomic_t			policy; /* set policy */
-	enum tegra_nvhdcp_state		state; /* STATE_xxx */
-	struct i2c_client		*client;
-	struct i2c_board_info		info;
-	int				bus;
-	u32				b_status;
-	u64				a_n;
-	u64				c_n;
-	u64				a_ksv;
-	u64				b_ksv;
-	u64				c_ksv;
-	u64				d_ksv;
-	u8				v_prime[20];
-	u64				m_prime;
-	u32				num_bksv_list;
-	u64				bksv_list[TEGRA_NVHDCP_MAX_DEVS];
-	int				fail_count;
-};
-
 struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_hdmi *hdmi)
 {
 	return hdmi ? hdmi->dc : NULL;
@@ -130,7 +93,7 @@ static inline u32 nvhdcp_sor_readl(struct tegra_hdmi *hdmi, u32 reg)
 }
 
 static inline void nvhdcp_sor_writel(struct tegra_hdmi *hdmi,
-	u32 reg, u32 val)
+	u32 val, u32 reg)
 {
 	writel(val, hdmi->sor->base + reg * 4);
 }
@@ -1020,51 +983,34 @@ static int nvhdcp_poll_rptr_reauth(struct tegra_nvhdcp *nvhdcp, int timeout)
 		return -1;
 }
 
-#if HDCP_DEBUG
-static void nvhdcp_print_buf(u8 *buf, int size)
-{
-	int i = 0;
-	nvhdcp_info("\n*************************************************\n");
-	for (i = 0; i < size; i++) {
-		nvhdcp_info("%x ", buf[i]);
-		if (i%15 == 0)
-			nvhdcp_info("\n");
-	}
-	nvhdcp_info("\n*************************************************\n");
-}
-#endif
-
-static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp)
+static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
+				struct hdcp_context_t *hdcp_context)
 {
 	int err = 0;
 	u8 version = 2;
 	u16 caps = 0;
 	u16 txcaps = 0x0;
-	struct hdcp_context_t hdcp_context;
-	err = tsec_hdcp_create_context(&hdcp_context);
+	err =  tsec_hdcp_readcaps(hdcp_context);
 	if (err)
 		goto exit;
-	err =  tsec_hdcp_readcaps(&hdcp_context);
+	err =  tsec_hdcp_init(hdcp_context);
 	if (err)
 		goto exit;
-	err =  tsec_hdcp_init(&hdcp_context);
+	err =  tsec_hdcp_create_session(hdcp_context);
 	if (err)
 		goto exit;
-	err =  tsec_hdcp_create_session(&hdcp_context);
-	if (err)
-		goto exit;
-	err =  tsec_hdcp_exchange_info(&hdcp_context,
+	err =  tsec_hdcp_exchange_info(hdcp_context,
 			HDCP_EXCHANGE_INFO_GET_TMTR_INFO,
 			&version,
 			&caps);
 	if (err)
 		goto exit;
-	hdcp_context.msg.txcaps_version = version;
-	hdcp_context.msg.txcaps_capmask = txcaps;
-	hdcp_context.msg.ake_init_msg_id = ID_AKE_INIT;
+	hdcp_context->msg.txcaps_version = version;
+	hdcp_context->msg.txcaps_capmask = txcaps;
+	hdcp_context->msg.ake_init_msg_id = ID_AKE_INIT;
 
 	err = nvhdcp_ake_init_send(nvhdcp,
-		(u8 *)&hdcp_context.msg.ake_init_msg_id);
+		(u8 *)&hdcp_context->msg.ake_init_msg_id);
 	if (err)
 		goto exit;
 
@@ -1072,162 +1018,161 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp)
 	if (err)
 		goto exit;
 	err = nvhdcp_ake_cert_receive(nvhdcp,
-		&hdcp_context.msg.ake_send_cert_msg_id);
+		&hdcp_context->msg.ake_send_cert_msg_id);
 	if (err)
 		goto exit;
-	if (hdcp_context.msg.ake_send_cert_msg_id != ID_AKE_SEND_CERT) {
+	if (hdcp_context->msg.ake_send_cert_msg_id != ID_AKE_SEND_CERT) {
 		nvhdcp_err("Not ID_AKE_SEND_CERT but %d instead\n",
-			hdcp_context.msg.ake_send_cert_msg_id);
+			hdcp_context->msg.ake_send_cert_msg_id);
 		err = -EINVAL;
 		goto exit;
 	}
-	err =  tsec_hdcp_verify_cert(&hdcp_context);
+	err =  tsec_hdcp_verify_cert(hdcp_context);
 	if (err)
 		goto exit;
-	err =  tsec_hdcp_update_rrx(&hdcp_context);
+	err =  tsec_hdcp_update_rrx(hdcp_context);
 	if (err)
 		goto exit;
-	err =  tsec_hdcp_generate_ekm(&hdcp_context);
+	err =  tsec_hdcp_generate_ekm(hdcp_context);
 	if (err)
 		goto exit;
-	hdcp_context.msg.ake_no_stored_km_msg_id = ID_AKE_NO_STORED_KM;
+	hdcp_context->msg.ake_no_stored_km_msg_id = ID_AKE_NO_STORED_KM;
 	err = nvhdcp_ake_no_stored_km_send(nvhdcp,
-		&hdcp_context.msg.ake_no_stored_km_msg_id);
+		&hdcp_context->msg.ake_no_stored_km_msg_id);
 	if (err)
 		goto exit;
-	err =  tsec_hdcp_exchange_info(&hdcp_context,
+	err =  tsec_hdcp_exchange_info(hdcp_context,
 		HDCP_EXCHANGE_INFO_SET_RCVR_INFO,
-		&hdcp_context.msg.rxcaps_version,
-		&hdcp_context.msg.rxcaps_capmask);
+		&hdcp_context->msg.rxcaps_version,
+		&hdcp_context->msg.rxcaps_capmask);
 	if (err)
 		goto exit;
 	err = nvhdcp_poll_ready(nvhdcp, 1000);
 	if (err)
 		goto exit;
 	err = nvhdcp_ake_hprime_receive(nvhdcp,
-		&hdcp_context.msg.ake_send_hprime_msg_id);
+		&hdcp_context->msg.ake_send_hprime_msg_id);
 	if (err)
 		goto exit;
-	if (hdcp_context.msg.ake_send_hprime_msg_id != ID_AKE_SEND_HPRIME) {
+	if (hdcp_context->msg.ake_send_hprime_msg_id != ID_AKE_SEND_HPRIME) {
 		nvhdcp_err("Not ID_AKE_SEND_HPRIME but %d instead\n",
-			hdcp_context.msg.ake_send_hprime_msg_id);
+			hdcp_context->msg.ake_send_hprime_msg_id);
 		err = -EINVAL;
 		goto exit;
 	}
-	err =  tsec_hdcp_verify_hprime(&hdcp_context);
+	err =  tsec_hdcp_verify_hprime(hdcp_context);
 	if (err)
 		goto exit;
 	err = nvhdcp_poll_ready(nvhdcp, 200);
 	if (err)
 		goto exit;
 	err = nvhdcp_ake_pairing_info_receive(nvhdcp,
-		&hdcp_context.msg.ake_send_pairing_info_msg_id);
+		&hdcp_context->msg.ake_send_pairing_info_msg_id);
 	if (err)
 		goto exit;
-	if (hdcp_context.msg.ake_send_pairing_info_msg_id !=
+	if (hdcp_context->msg.ake_send_pairing_info_msg_id !=
 	ID_AKE_SEND_PAIRING_INFO) {
 		nvhdcp_err("Not ID_AKE_SEND_PAIRING_INFO but %d instead\n",
-			hdcp_context.msg.ake_send_hprime_msg_id);
+			hdcp_context->msg.ake_send_hprime_msg_id);
 		err = -EINVAL;
 		goto exit;
 	}
-	err =  tsec_hdcp_encrypt_pairing_info(&hdcp_context);
+	err =  tsec_hdcp_encrypt_pairing_info(hdcp_context);
 	if (err)
 		goto exit;
-	err =  tsec_hdcp_generate_lc_init(&hdcp_context);
+	err =  tsec_hdcp_generate_lc_init(hdcp_context);
 	if (err)
 		goto exit;
-	hdcp_context.msg.lc_init_msg_id = ID_LC_INIT;
-	err = nvhdcp_lc_init_send(nvhdcp, &hdcp_context.msg.lc_init_msg_id);
+	hdcp_context->msg.lc_init_msg_id = ID_LC_INIT;
+	err = nvhdcp_lc_init_send(nvhdcp, &hdcp_context->msg.lc_init_msg_id);
 	if (err)
 		goto exit;
 	err = nvhdcp_poll_ready(nvhdcp, 20);
 	if (err)
 		goto exit;
 	err = nvhdcp_lc_lprime_receive(nvhdcp,
-		&hdcp_context.msg.lc_send_lprime_msg_id);
+		&hdcp_context->msg.lc_send_lprime_msg_id);
 	if (err)
 		goto exit;
-	if (hdcp_context.msg.lc_send_lprime_msg_id != ID_LC_SEND_LPRIME) {
+	if (hdcp_context->msg.lc_send_lprime_msg_id != ID_LC_SEND_LPRIME) {
 		nvhdcp_err("Not ID_LC_SEND_LPRIME but %d instead\n",
-			hdcp_context.msg.lc_send_lprime_msg_id);
+			hdcp_context->msg.lc_send_lprime_msg_id);
 		err = -EINVAL;
 		goto exit;
 	}
-	err =  tsec_hdcp_verify_lprime(&hdcp_context);
+	err =  tsec_hdcp_verify_lprime(hdcp_context);
 	if (err)
 		goto exit;
-	err =  tsec_hdcp_ske_init(&hdcp_context);
+	err =  tsec_hdcp_ske_init(hdcp_context);
 	if (err)
 		goto exit;
-	hdcp_context.msg.ske_send_eks_msg_id = ID_SKE_SEND_EKS;
+	hdcp_context->msg.ske_send_eks_msg_id = ID_SKE_SEND_EKS;
 	err = nvhdcp_ske_eks_send(nvhdcp,
-		&hdcp_context.msg.ske_send_eks_msg_id);
+		&hdcp_context->msg.ske_send_eks_msg_id);
 	if (err)
 		goto exit;
-	if (hdcp_context.msg.rxcaps_capmask & HDCP_22_REPEATER) {
+	if (hdcp_context->msg.rxcaps_capmask & HDCP_22_REPEATER) {
 		err = nvhdcp_poll_ready(nvhdcp, 2000);
 		if (err)
 			goto exit;
 		err = nvhdcp_receiverid_list_receive(nvhdcp,
-				&hdcp_context.msg.send_receiverid_list_msg_id);
+				&hdcp_context->msg.send_receiverid_list_msg_id);
 		if (err)
 			goto exit;
-		if (hdcp_context.msg.send_receiverid_list_msg_id !=
+		if (hdcp_context->msg.send_receiverid_list_msg_id !=
 		ID_SEND_RCVR_ID_LIST) {
 			nvhdcp_err("Not ID_SEND_RCVR_ID_LIST but %d instead\n",
-				hdcp_context.msg.send_receiverid_list_msg_id);
+				hdcp_context->msg.send_receiverid_list_msg_id);
 			err = -EINVAL;
 			goto exit;
 		}
-		err =  tsec_hdcp_verify_vprime(&hdcp_context);
+		err =  tsec_hdcp_verify_vprime(hdcp_context);
 		if (err)
 			goto exit;
-		hdcp_context.msg.rptr_send_ack_msg_id = ID_SEND_RPTR_ACK;
+		hdcp_context->msg.rptr_send_ack_msg_id = ID_SEND_RPTR_ACK;
 		err = nvhdcp_rptr_ack_send(nvhdcp,
-			&hdcp_context.msg.rptr_send_ack_msg_id);
+			&hdcp_context->msg.rptr_send_ack_msg_id);
 		if (err)
 			goto exit;
 		/* Poll for 5secs to see if Rxstatus has ReAuth bit set */
 		err = nvhdcp_poll_rptr_reauth(nvhdcp, 5);
 		if (err)
 			goto exit;
-		hdcp_context.msg.rptr_auth_stream_manage_msg_id =
+		hdcp_context->msg.rptr_auth_stream_manage_msg_id =
 			ID_SEND_RPTR_STREAM_MANAGE;
-		memset(hdcp_context.msg.seq_num_m, 0x0, HDCP_SIZE_SEQ_NUM_V_8);
+		memset(hdcp_context->msg.seq_num_m, 0x0, HDCP_SIZE_SEQ_NUM_V_8);
 		/* Num of streams = 1, only video, big endian */
-		hdcp_context.msg.k = 0x0100;
+		hdcp_context->msg.k = 0x0100;
 		/* STREAM_ID = 0 and Type = 0  */
-		hdcp_context.msg.streamid_type[0] = 0x0000;
+		hdcp_context->msg.streamid_type[0] = 0x0000;
 		err = nvhdcp_rptr_stream_manage_send(nvhdcp,
-			&hdcp_context.msg.rptr_auth_stream_manage_msg_id);
+			&hdcp_context->msg.rptr_auth_stream_manage_msg_id);
 		if (err)
 			goto exit;
 		err = nvhdcp_poll_ready(nvhdcp, 100);
 		if (err)
 			goto exit;
 		err = nvhdcp_rptr_stream_ready_receive(nvhdcp,
-			&hdcp_context.msg.rptr_auth_stream_ready_msg_id);
+			&hdcp_context->msg.rptr_auth_stream_ready_msg_id);
 		if (err)
 			goto exit;
-		if (hdcp_context.msg.rptr_auth_stream_ready_msg_id !=
+		if (hdcp_context->msg.rptr_auth_stream_ready_msg_id !=
 		ID_SEND_RPTR_STREAM_READY) {
 			nvhdcp_err("Not ID_SEND_RPTR_STREAM_READY but %d\n",
-				hdcp_context.msg.rptr_auth_stream_ready_msg_id);
+			hdcp_context->msg.rptr_auth_stream_ready_msg_id);
 			err = -EINVAL;
 			goto exit;
 		}
-		err =  tsec_hdcp_rptr_stream_ready(&hdcp_context);
+		err =  tsec_hdcp_rptr_stream_ready(hdcp_context);
 		if (err)
 			goto exit;
 	}
 
+	nvhdcp_info("HDCP Authentication successful!\n");
+
 exit:
 	if (err)
 		nvhdcp_err("HDCP authentication failed with err %d\n", err);
-	else
-		nvhdcp_info("HDCP Authentication successful!\n");
-	err = tsec_hdcp_free_context(&hdcp_context);
 	return err;
 }
 
@@ -1457,6 +1402,10 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 	struct tegra_hdmi *hdmi = nvhdcp->hdmi;
 	struct tegra_dc *dc = tegra_dc_hdmi_get_dc(hdmi);
 	int e;
+	struct hdcp_context_t hdcp_context;
+	e = tsec_hdcp_create_context(&hdcp_context);
+	if (e)
+		goto err;
 
 	nvhdcp_vdbg("%s():started thread %s\n", __func__, nvhdcp->name);
 	tegra_dc_io_start(dc);
@@ -1475,8 +1424,17 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 	}
 	nvhdcp_vdbg("%s():hpd=%d\n", __func__, nvhdcp->plugged);
 
-	if (tsec_hdcp_authentication(nvhdcp))
+	if (tsec_hdcp_authentication(nvhdcp, &hdcp_context))
 		goto failure;
+
+	mdelay(250);
+	e = tsec_hdcp_session_ctrl(&hdcp_context,
+		HDCP_SESSION_CTRL_FLAG_ACTIVATE);
+	if (e) {
+		nvhdcp_info("tsec_hdcp_session_ctrl failed\n");
+		goto failure;
+	}
+	nvhdcp_info("HDCP 2.2 crypt enabled!\n");
 
 	/* bail out if unplugged in the middle of negotiation */
 	if (!nvhdcp_is_plugged(nvhdcp))
@@ -1488,8 +1446,6 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 		nvhdcp_err("link integrity check failed err %d\n", e);
 		goto failure;
 	}
-
-	nvhdcp_vdbg("CRYPT enabled\n");
 
 	nvhdcp->state = STATE_LINK_VERIFY;
 	nvhdcp_info("link integrity check passed!\n");
@@ -1516,6 +1472,7 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 	}
 
 failure:
+
 	nvhdcp->fail_count++;
 	if (nvhdcp->fail_count > 5) {
 		nvhdcp_err("nvhdcp failure - too many failures, giving up!\n");
@@ -1529,19 +1486,27 @@ failure:
 
 lost_hdmi:
 	nvhdcp->state = STATE_UNAUTHENTICATED;
-	hdcp_ctrl_run(hdmi, 0);
 
 err:
 	mutex_unlock(&nvhdcp->lock);
 	tegra_dc_io_end(dc);
+	e = tsec_hdcp_free_context(&hdcp_context);
 	return;
 }
 
 static int tegra_nvhdcp_on(struct tegra_nvhdcp *nvhdcp)
 {
+	u8 hdcp2version;
 	nvhdcp->state = STATE_UNAUTHENTICATED;
 	if (nvhdcp_is_plugged(nvhdcp)) {
 		nvhdcp->fail_count = 0;
+		nvhdcp_i2c_read8(nvhdcp, HDCP_HDCP2_VERSION, &hdcp2version);
+		if (hdcp2version & HDCP_HDCP2_VERSION_HDCP22_YES)
+			INIT_DELAYED_WORK(&nvhdcp->work,
+				nvhdcp2_downstream_worker);
+		else
+			INIT_DELAYED_WORK(&nvhdcp->work,
+				nvhdcp_downstream_worker);
 		queue_delayed_work(nvhdcp->downstream_wq, &nvhdcp->work,
 						msecs_to_jiffies(100));
 	}
@@ -1715,7 +1680,6 @@ struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_hdmi *hdmi,
 	static struct tegra_nvhdcp *nvhdcp; /* prevent multiple calls */
 	struct i2c_adapter *adapter;
 	int e;
-	u8 hdcp2version;
 
 	if (nvhdcp)
 		return ERR_PTR(-EMFILE);
@@ -1754,11 +1718,6 @@ struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_hdmi *hdmi,
 	nvhdcp->state = STATE_UNAUTHENTICATED;
 
 	nvhdcp->downstream_wq = create_singlethread_workqueue(nvhdcp->name);
-	nvhdcp_i2c_read8(nvhdcp, HDCP_HDCP2_VERSION, &hdcp2version);
-	if (hdcp2version & HDCP_HDCP2_VERSION_HDCP22_YES)
-		INIT_DELAYED_WORK(&nvhdcp->work, nvhdcp2_downstream_worker);
-	else
-		INIT_DELAYED_WORK(&nvhdcp->work, nvhdcp_downstream_worker);
 
 	nvhdcp->miscdev.minor = MISC_DYNAMIC_MINOR;
 	nvhdcp->miscdev.name = nvhdcp->name;

@@ -32,7 +32,42 @@
 
 #define HDCP_READ_MSG			0x80
 
-struct tegra_nvhdcp;
+/* for nvhdcp.state */
+enum tegra_nvhdcp_state {
+	STATE_OFF,
+	STATE_UNAUTHENTICATED,
+	STATE_LINK_VERIFY,
+	STATE_RENEGOTIATE,
+};
+
+struct tegra_nvhdcp {
+	struct delayed_work		work;
+	struct tegra_hdmi		*hdmi;
+	struct workqueue_struct		*downstream_wq;
+	struct mutex			lock;
+	struct miscdevice		miscdev;
+	char				name[12];
+	unsigned			id;
+	bool				plugged; /* true if hotplug detected */
+	atomic_t			policy; /* set policy */
+	enum tegra_nvhdcp_state		state; /* STATE_xxx */
+	struct i2c_client		*client;
+	struct i2c_board_info		info;
+	int				bus;
+	u32				b_status;
+	u64				a_n;
+	u64				c_n;
+	u64				a_ksv;
+	u64				b_ksv;
+	u64				c_ksv;
+	u64				d_ksv;
+	u8				v_prime[20];
+	u64				m_prime;
+	u32				num_bksv_list;
+	u64				bksv_list[TEGRA_NVHDCP_MAX_DEVS];
+	int				fail_count;
+};
+
 #ifdef CONFIG_TEGRA_HDMIHDCP
 void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd);
 int tegra_nvhdcp_set_policy(struct tegra_nvhdcp *nvhdcp, int pol);

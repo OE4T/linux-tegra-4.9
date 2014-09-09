@@ -1020,7 +1020,6 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 
 	tegra_dc_io_start(dc);
 	tegra_dc_get(dc);
-
 	clk_prepare_enable(sor->safe_clk);
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_SAFE_CLK);
 	tegra_sor_clk_enable(sor);
@@ -1133,6 +1132,7 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_SAFE_CLK);
 	tegra_hdmi_controller_disable(hdmi);
+	tegra_nvhdcp_set_plug(hdmi->nvhdcp, 0);
 	return;
 }
 

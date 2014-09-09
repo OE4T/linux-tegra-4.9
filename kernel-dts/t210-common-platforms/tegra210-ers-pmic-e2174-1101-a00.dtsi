@@ -78,6 +78,9 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&max77620_default>;
 
+			gpio-init-names = "default";
+			gpio-init-0 = <&max77620_gpio_default>;
+
 			max77620_default: pinmux@0 {
 				pin_gpio0 {
 					pins = "gpio0";
@@ -101,6 +104,10 @@
 					drive-open-drain = <1>;
 				};
 
+			};
+
+			max77620_gpio_default:gpio_default {
+				gpio-output-high = <2>;
 			};
 
 			watchdog {

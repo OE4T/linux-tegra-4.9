@@ -1210,6 +1210,73 @@ static const struct file_operations outtype_fops = {
 	.release	= single_release,
 };
 
+static int dbg_hotplug_show(struct seq_file *s, void *unused)
+{
+	struct tegra_dc *dc = s->private;
+
+	if (WARN_ON(!dc || !dc->out))
+		return -EINVAL;
+
+	seq_put_decimal_ll(s, '\0', dc->out->hotplug_state);
+	seq_putc(s, '\n');
+	return 0;
+}
+
+static int dbg_hotplug_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_hotplug_show, inode->i_private);
+}
+
+static ssize_t dbg_hotplug_write(struct file *file, const char __user *addr,
+	size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data; /* single_open() initialized */
+	struct tegra_dc *dc = m ? m->private : NULL;
+	int ret;
+	long new_state;
+
+	if (WARN_ON(!dc || !dc->out))
+		return -EINVAL;
+
+	ret = kstrtol_from_user(addr, len, 10, &new_state);
+	if (ret < 0)
+		return ret;
+
+	mutex_lock(&dc->lock);
+	if (dc->out->hotplug_state == 0 && new_state != 0
+			&& tegra_dc_hotplug_supported(dc)) {
+		/* was 0, now -1 or 1.
+		 * we are overriding the hpd GPIO, so ignore the interrupt. */
+		int gpio_irq = gpio_to_irq(dc->out->hotplug_gpio);
+
+		disable_irq(gpio_irq);
+	} else if (dc->out->hotplug_state != 0 && new_state == 0
+			&& tegra_dc_hotplug_supported(dc)) {
+		/* was -1 or 1, and now 0
+		 * restore the interrupt for hpd GPIO. */
+		int gpio_irq = gpio_to_irq(dc->out->hotplug_gpio);
+
+		enable_irq(gpio_irq);
+	}
+
+	dc->out->hotplug_state = new_state;
+
+	/* retrigger the hotplug */
+	if (dc->out_ops->detect)
+		dc->connected = dc->out_ops->detect(dc);
+	mutex_unlock(&dc->lock);
+
+	return len;
+}
+
+static const struct file_operations dbg_hotplug_fops = {
+	.open		= dbg_hotplug_open,
+	.read		= seq_read,
+	.write		= dbg_hotplug_write,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static void tegra_dc_remove_debugfs(struct tegra_dc *dc)
 {
 	if (dc->debugdir)
@@ -1249,6 +1316,14 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 		&outtype_fops);
 	if (!retval)
 		goto remove_out;
+
+	if (dc->out_ops->detect) {
+		/* only create the file if hotplug is supported */
+		retval = debugfs_create_file("hotplug", S_IRUGO, dc->debugdir,
+			dc, &dbg_hotplug_fops);
+		if (!retval)
+			goto remove_out;
+	}
 
 	return;
 remove_out:

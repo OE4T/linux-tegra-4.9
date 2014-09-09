@@ -19,6 +19,7 @@
  */
 
 #include <dt-bindings/memory/tegra-swgroup.h>
+#include <dt-bindings/display/tegra-dc.h>
 
 / {
 	compatible = "nvidia,tegra186";
@@ -65,6 +66,8 @@
 			reg = <0x0 0x54200000 0x0 0x00080000>;
 			interrupts = <0 73 0x04
 				      0 74 0x04>;
+			nvidia,fb-bpp = <32>; /* bits per pixel */
+			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 		};
 
 		dsi {
@@ -103,6 +106,30 @@
 			reg = <0x0 0x54100000 0x0 0x00040000>;
 		};
 
+		sor {
+			compatible = "nvidia,tegra186-sor";
+			reg = <0x0 0x54540000 0x0 0x00040000>;
+		};
+
+		sor1 {
+			compatible = "nvidia,tegra186-sor1";
+			reg = <0x0 0x54580000 0x0 0x00040000>;
+			interrupts = <0 76 0x4>; /* INT_SOR_1 */
+			status = "disabled";
+		};
+
+		dpaux {
+			compatible = "nvidia,tegra186-dpaux";
+			reg = <0x0 0x545c0000 0x0 0x00040000>;
+			interrupts = <0 159 0x4>; /* INT_DPAUX */
+		};
+
+		dpaux1 {
+			compatible = "nvidia,tegra186-dpaux1";
+			reg = <0x0 0x54040000 0x0 0x00040000>;
+			interrupts = <0 11 0x4>; /* INT_DPAUX_1 */
+			status = "disabled";
+		};
 	};
 
 	psci {

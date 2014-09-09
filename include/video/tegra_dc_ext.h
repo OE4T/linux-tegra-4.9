@@ -533,6 +533,9 @@ struct tegra_dc_ext_feature {
 #define TEGRA_DC_EXT_GET_CUSTOM_CMU_V2 \
 	_IOR('D', 0x1A, struct tegra_dc_ext_cmu_v2)
 
+#define TEGRA_DC_EXT_SET_PROPOSED_BW_3 \
+	_IOR('D', 0x1B, struct tegra_dc_ext_flip_3)
+
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,
 	TEGRA_DC_EXT_LVDS,

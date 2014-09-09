@@ -1670,6 +1670,41 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 		return ret;
 	}
+	case TEGRA_DC_EXT_SET_PROPOSED_BW_3:
+	{
+		int ret;
+		int win_num;
+		struct tegra_dc_ext_flip_3 args;
+		struct tegra_dc_ext_flip_windowattr *win;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		win_num = args.win_num;
+		win = kzalloc(sizeof(*win) * win_num, GFP_KERNEL);
+
+		if (copy_from_user(win, (void *)(uintptr_t)args.win,
+				   sizeof(*win) * win_num)) {
+			kfree(win);
+			return -EFAULT;
+		}
+
+		ret = tegra_dc_ext_negotiate_bw(user, win, win_num);
+
+		kfree(win);
+
+		return ret;
+	}
+#else
+/* if isomgr is not present, allow any request to pass. */
+#ifdef CONFIG_COMPAT
+	case TEGRA_DC_EXT_SET_PROPOSED_BW32:
+		return 0;
+#endif
+	case TEGRA_DC_EXT_SET_PROPOSED_BW:
+		return 0;
+	case TEGRA_DC_EXT_SET_PROPOSED_BW_3:
+		return 0;
 #endif
 	case TEGRA_DC_EXT_GET_CURSOR:
 		return tegra_dc_ext_get_cursor(user);

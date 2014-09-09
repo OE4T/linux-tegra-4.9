@@ -88,15 +88,15 @@ static u32 BASE_ADDRESS_DC_WIN_WINBUF[] = {
 static u32 nvdisp_win_offset(const u32 win, const u32 word_offset)
 {
 
-	if (word_offset >= BASE_ADDRESS_DC_WINBUF /* WINBUF */
+	if (word_offset >= BASE_ADDRESS_DC_WINBUF) /* WINBUF */
 		return (word_offset - BASE_ADDRESS_DC_WINBUF) +
 			BASE_ADDRESS_DC_WIN_WINBUF[win];
 
-	else if (word_offset >= BASE_ADDRESS_DC_WIN /* WIN */
+	else if (word_offset >= BASE_ADDRESS_DC_WIN) /* WIN */
 		return (word_offset - BASE_ADDRESS_DC_WIN) +
 			BASE_ADDRESS_DC_WIN_WIN[win];
 
-	else if (word_offset >= BASE_ADDRESS_DC_WINC /* WINC */
+	else if (word_offset >= BASE_ADDRESS_DC_WINC) /* WINC */
 		return (word_offset - BASE_ADDRESS_DC_WINC) +
 			 BASE_ADDRESS_DC_WIN_WINC[win];
 
@@ -106,10 +106,11 @@ static u32 nvdisp_win_offset(const u32 win, const u32 word_offset)
 	return 0;
 }
 
-static inline u32 nvdisp_win_read(struct tegra_dc *dc, u32 win_idx, u32 off)
+static inline u32 nvdisp_win_read(struct tegra_dc_win *win, u32 off)
 {
 	u32 ret;
 	u32 reg;
+	struct tegra_dc *dc = win->dc;
 
 #if 0
 	if (likely(tegra_platform_is_silicon())) {
@@ -123,17 +124,17 @@ static inline u32 nvdisp_win_read(struct tegra_dc *dc, u32 win_idx, u32 off)
 #endif
 
 	/* assuming we create three instances of dc for the three heads */
-	reg = NVDISP_WIN_ADDR(dc->ndev->id, win_idx, off);
+	reg = NVDISP_WIN_ADDR(dc->ctrl_num, win->idx, off);
 	ret = readl(dc->base + reg);
 	trace_display_readl(dc, ret, dc->base + reg);
 	return ret;
 }
 
 
-static inline void nvdisp_win_write(struct tegra_dc *dc, u32 win_idx, u32 val,
-			 u32 off)
+static inline void nvdisp_win_write(struct tegra_dc_win *win, u32 val, u32 off)
 {
 	u32 reg;
+	struct tegra_dc *dc = win->dc;
 
 #if 0
 	if (likely(tegra_platform_is_silicon())) {
@@ -146,7 +147,7 @@ static inline void nvdisp_win_write(struct tegra_dc *dc, u32 win_idx, u32 val,
 	}
 #endif
 
-	reg = NVDISP_WIN_ADDR(dc->ndev->id, win_idx, off);
+	reg = NVDISP_WIN_ADDR(dc->ctrl_num, win->idx, off);
 	trace_display_writel(dc, val, dc->base + reg);
 	writel(val, dc->base + reg);
 }

@@ -984,6 +984,18 @@ static void tegra_vcm30t124_free_codec_conf(void)
 	tegra_vcm30t124_codec_conf = NULL;
 }
 
+static int tegra_vcm30t124_suspend_pre(struct snd_soc_card *card)
+{
+	unsigned int idx;
+
+	/* DAPM dai link stream work for non pcm links */
+	for (idx = 0; idx < card->num_rtd; idx++) {
+		if (card->rtd[idx].dai_link->params)
+			INIT_DELAYED_WORK(&card->rtd[idx].delayed_work, NULL);
+	}
+	return 0;
+}
+
 static const int tegra_vcm30t124_srate_values[] = {
 	0,
 	8000,
@@ -1130,6 +1142,7 @@ static struct snd_soc_card snd_soc_tegra_vcm30t124 = {
 	.name = "tegra-generic",
 	.owner = THIS_MODULE,
 	.remove = tegra_vcm30t124_remove,
+	.suspend_pre = tegra_vcm30t124_suspend_pre,
 	.dapm_widgets = tegra_vcm30t124_dapm_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(tegra_vcm30t124_dapm_widgets),
 	.controls = tegra_vcm30t124_controls,

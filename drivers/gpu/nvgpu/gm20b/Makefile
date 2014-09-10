@@ -1,6 +1,7 @@
 GCOV_PROFILE := y
 ccflags-y += -Idrivers/gpu/nvgpu
 ccflags-y += -Wno-multichar
+ccflags-y += -Werror
 
 obj-$(CONFIG_GK20A)  = \
 	hal_gm20b.o \

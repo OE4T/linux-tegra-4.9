@@ -90,52 +90,6 @@ fail:
 
 }
 
-static void allocate_gmmu_pde_sparse(struct vm_gk20a *vm, u32 i)
-{
-	bool small_valid, big_valid;
-	u64 pte_addr[2] = {0, 0};
-	struct page_table_gk20a *small_pte =
-		vm->pdes.ptes[gmmu_page_size_small] + i;
-	struct page_table_gk20a *big_pte =
-		vm->pdes.ptes[gmmu_page_size_big] + i;
-	u32 pde_v[2] = {0, 0};
-	u32 *pde;
-
-	gk20a_dbg_fn("");
-
-	small_valid = small_pte && small_pte->ref;
-	big_valid   = big_pte && big_pte->ref;
-
-	if (small_valid)
-		pte_addr[gmmu_page_size_small] =
-			gk20a_mm_iova_addr(small_pte->sgt->sgl);
-	if (big_valid)
-		pte_addr[gmmu_page_size_big] =
-			gk20a_mm_iova_addr(big_pte->sgt->sgl);
-
-	pde_v[0] = gmmu_pde_size_full_f();
-	pde_v[0] |= gmmu_pde_aperture_big_invalid_f();
-	pde_v[1] |= gmmu_pde_aperture_small_invalid_f() |
-			gmmu_pde_vol_big_true_f();
-
-	pde = pde_from_index(vm, i);
-
-	gk20a_mem_wr32(pde, 0, pde_v[0]);
-	gk20a_mem_wr32(pde, 1, pde_v[1]);
-
-	smp_mb();
-
-	FLUSH_CPU_DCACHE(pde,
-			 sg_phys(vm->pdes.sgt->sgl) + (i*gmmu_pde__size_v()),
-			 sizeof(u32)*2);
-
-	gk20a_mm_l2_invalidate(vm->mm->g);
-
-	gk20a_dbg(gpu_dbg_pte, "pde:%d = 0x%x,0x%08x\n", i, pde_v[1], pde_v[0]);
-
-	vm->tlb_dirty  = true;
-}
-
 static bool gm20b_vm_is_pde_in_range(struct vm_gk20a *vm, u64 vaddr_lo,
 					u64 vaddr_hi, u32 pde)
 {
@@ -289,10 +243,6 @@ void gm20b_vm_clear_sparse(struct vm_gk20a *vm, u64 vaddr,
 			vm->mm->pde_stride_shift);
 
 	for (pde_i = pde_lo; pde_i <= pde_hi; pde_i++) {
-		u32 pte_lo, pte_hi;
-		u32 pte_cur;
-		void *pte_kv_cur;
-
 		struct page_table_gk20a *pte = vm->pdes.ptes[pgsz_idx] + pde_i;
 		pte->ref_cnt--;
 

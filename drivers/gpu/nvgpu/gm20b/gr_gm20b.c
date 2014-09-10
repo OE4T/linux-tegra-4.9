@@ -497,7 +497,7 @@ static int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 	u32 sm_id = 0, gpc_id = 0;
 	u32 sm_id_to_gpc_id[proj_scal_max_gpcs_v() * proj_scal_max_tpc_per_gpc_v()];
 	u32 tpc_per_gpc;
-	u32 tpc_fs_mask = 0, tpc_sm_id, gpc_tpc_id;
+	u32 tpc_fs_mask = 0, tpc_sm_id = 0, gpc_tpc_id = 0;
 
 	gk20a_dbg_fn("");
 
@@ -689,10 +689,6 @@ static void gr_gm20b_load_gpccs_with_bootloader(struct gk20a *g)
 
 static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 {
-	struct gk20a_ctxsw_ucode_info *ucode_info = &g->ctxsw_ucode_info;
-	u64 addr_base = ucode_info->ucode_gpuva;
-	int i;
-
 	gk20a_dbg_fn("");
 
 	if (tegra_platform_is_linsim()) {
@@ -702,11 +698,7 @@ static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 			gr_gpccs_ctxsw_mailbox_value_f(0xc0de7777));
 	}
 
-	gr_gk20a_load_falcon_bind_instblk(g);
-	g->ops.gr.falcon_load_ucode(g, addr_base,
-		&g->ctxsw_ucode_info.gpccs,
-		gr_gpcs_gpccs_falcon_hwcfg_r() -
-		gr_fecs_falcon_hwcfg_r());
+	gr_gm20b_load_gpccs_with_bootloader(g);
 
 	gk20a_writel(g, gr_fecs_ctxsw_mailbox_clear_r(0), 0x0);
 	gk20a_writel(g, gr_fecs_ctxsw_mailbox_r(1), 0x1);

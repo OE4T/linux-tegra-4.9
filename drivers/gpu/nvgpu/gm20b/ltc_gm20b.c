@@ -364,4 +364,7 @@ void gm20b_init_ltc(struct gpu_ops *gops)
 	gops->ltc.isr = gm20b_ltc_isr;
 	gops->ltc.cbc_fix_config = gm20b_ltc_cbc_fix_config;
 	gops->ltc.flush = gm20b_flush_ltc;
+#ifdef CONFIG_DEBUG_FS
+	gops->ltc.sync_debugfs = gk20a_ltc_sync_debugfs;
+#endif
 }

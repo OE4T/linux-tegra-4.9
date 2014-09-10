@@ -838,8 +838,8 @@ int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 	int i, err = 0;
 	struct sg_table *sgt_pmu_ucode = NULL;
 	dma_addr_t iova;
-	u64 *pacr_ucode_cpuva = NULL, pacr_ucode_pmu_va, *acr_dmem;
-	u32 img_size_in_bytes;
+	u64 *pacr_ucode_cpuva = NULL, pacr_ucode_pmu_va = 0, *acr_dmem;
+	u32 img_size_in_bytes = 0;
 	u32 status, size;
 	u64 start;
 	struct acr_gm20b *acr = &g->acr;
@@ -980,9 +980,7 @@ err_release_acr_fw:
 
 u8 pmu_is_debug_mode_en(struct gk20a *g)
 {
-	int ctl_stat =  gk20a_readl(g, pwr_pmu_scpctl_stat_r());
 	return 1;
-	/*TODO return (ctl_stat & pwr_pmu_scpctl_stat_debug_mode_m());*/
 }
 
 /*

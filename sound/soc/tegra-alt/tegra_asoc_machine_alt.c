@@ -1706,6 +1706,13 @@ void tegra_machine_set_dai_ops(int link, struct snd_soc_ops *ops)
 }
 EXPORT_SYMBOL_GPL(tegra_machine_set_dai_ops);
 
+void tegra_machine_set_dai_compr_ops(int link, struct snd_soc_compr_ops *ops)
+{
+	if (tegra_asoc_machine_links)
+		tegra_asoc_machine_links[link].compr_ops = ops;
+}
+EXPORT_SYMBOL_GPL(tegra_machine_set_dai_compr_ops);
+
 void tegra_machine_set_dai_init(int link, void *ptr)
 {
 	if (tegra_asoc_machine_links)

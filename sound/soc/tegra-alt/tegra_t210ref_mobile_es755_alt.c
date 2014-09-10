@@ -142,10 +142,11 @@ static struct snd_soc_jack_pin tegra_t210ref_hp_jack_pins[] = {
 };
 #endif
 
-static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
-					struct snd_pcm_hw_params *params)
+static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
+					int rate,
+					int channels,
+					u64 formats)
 {
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
@@ -153,9 +154,7 @@ static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_stream *dai_params;
 	unsigned int idx =
 		tegra_machine_get_codec_dai_link_idx("earSmart-codec");
-	unsigned int fmt;
 	unsigned int mclk, clk_out_rate;
-	int srate;
 	int err;
 
 	/* check if idx has valid number */
@@ -164,16 +163,13 @@ static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 
 	dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
-	fmt = card->rtd[idx].dai_link->dai_fmt;
-
-	srate = params_rate(params);
 
 	/* update link_param to update hw_param for DAPM */
-	dai_params->rate_min = srate;
-	dai_params->channels_min = params_channels(params);
-	dai_params->formats = (1ULL << (params_format(params)));
+	dai_params->rate_min = rate;
+	dai_params->channels_min = channels;
+	dai_params->formats = formats;
 
-	switch (dai_params->rate_min) {
+	switch (rate) {
 	case 11025:
 	case 22050:
 	case 44100:
@@ -197,7 +193,7 @@ static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 
 	pr_info("Setting pll_a = %d Hz clk_out = %d Hz\n", mclk, clk_out_rate);
 	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
-			dai_params->rate_min, mclk, clk_out_rate);
+				rate, mclk, clk_out_rate);
 	if (err < 0) {
 		dev_err(card->dev, "Can't configure clocks\n");
 		return err;
@@ -206,8 +202,65 @@ static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 	err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
 		tegra_machine_get_bclk_ratio(&card->rtd[idx]));
 	if (err < 0) {
-			dev_err(card->dev, "Failed to set cpu dai bclk ratio\n");
+		dev_err(card->dev, "Failed to set cpu dai bclk ratio\n");
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
+					struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
+	int err;
+
+	err = tegra_t210ref_dai_init(rtd, params_rate(params),
+			params_channels(params),
+			(1ULL << (params_format(params))));
+	if (err < 0) {
+		dev_err(card->dev, "Failed dai init\n");
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra_t210ref_compr_set_params(struct snd_compr_stream *cstream)
+{
+	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
+	struct snd_soc_platform *platform = rtd->platform;
+	struct snd_codec codec_params;
+	int srate;
+	int err;
+
+	if (platform->driver->compr_ops &&
+		platform->driver->compr_ops->get_params) {
+		err = platform->driver->compr_ops->get_params(cstream,
+			&codec_params);
+		if (err < 0) {
+			dev_err(card->dev, "Failed to get compr params\n");
 			return err;
+		}
+	} else {
+		dev_err(card->dev, "compr ops not set\n");
+		return -EINVAL;
+	}
+
+	/* TODO: Add SRC in offload path */
+	srate = 48000;
+
+	err = tegra_t210ref_dai_init(rtd, srate, codec_params.ch_out,
+			SNDRV_PCM_FMTBIT_S16_LE);
+	if (err < 0) {
+		dev_err(card->dev, "Failed dai init\n");
+		return err;
 	}
 
 	return 0;
@@ -313,10 +366,27 @@ static void tegra_es755_shutdown(struct snd_pcm_substream *substream)
 	escore_pm_put_autosuspend();
 }
 
+static int tegra_es755_startup_compr(struct snd_compr_stream *cstream)
+{
+	escore_pm_get_sync();
+	return 0;
+}
+
+static void tegra_es755_shutdown_compr(struct snd_compr_stream *cstream)
+{
+	escore_pm_put_autosuspend();
+}
+
 static struct snd_soc_ops tegra_t210ref_ops = {
 	.hw_params = tegra_t210ref_hw_params,
 	.startup = tegra_es755_startup,
 	.shutdown = tegra_es755_shutdown,
+};
+
+static struct snd_soc_compr_ops tegra_t210ref_compr_ops = {
+	.set_params = tegra_t210ref_compr_set_params,
+	.startup = tegra_es755_startup_compr,
+	.shutdown = tegra_es755_shutdown_compr,
 };
 
 static const struct snd_soc_dapm_widget tegra_t210ref_dapm_widgets[] = {
@@ -479,11 +549,15 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	tegra_machine_set_dai_init(TEGRA210_DAI_LINK_SFC1_RX,
 		&tegra_t210ref_sfc_init);
 
-	/* set ADSP PCM/COMPR */
-	for (i = TEGRA210_DAI_LINK_ADSP_PCM;
-		i <= TEGRA210_DAI_LINK_ADSP_COMPR2; i++) {
-		tegra_machine_set_dai_ops(i,
+	/* set ADSP PCM */
+	tegra_machine_set_dai_ops(TEGRA210_DAI_LINK_ADSP_PCM,
 			&tegra_t210ref_ops);
+
+	/* set ADSP COMPR */
+	for (i = TEGRA210_DAI_LINK_ADSP_COMPR1;
+		i <= TEGRA210_DAI_LINK_ADSP_COMPR2; i++) {
+		tegra_machine_set_dai_compr_ops(i,
+			&tegra_t210ref_compr_ops);
 	}
 
 	pdata->gpio_hp_det = of_get_named_gpio(np,

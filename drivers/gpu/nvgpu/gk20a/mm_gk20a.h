@@ -192,6 +192,9 @@ struct gk20a_buffer_state {
 	/* A bitmask of valid sets of compbits (0 = uncompressed). */
 	u32 valid_compbits;
 
+	/* The ZBC color used on this buffer. */
+	u32 zbc_color;
+
 	/* This struct reflects the state of the buffer when this
 	 * fence signals. */
 	struct gk20a_fence *fence;

@@ -97,7 +97,7 @@ static int gk20a_ctrl_prepare_compressible_read(
 			args->compbits_hoffset, args->compbits_voffset,
 			args->width, args->height, args->block_height_log2,
 			flags, &fence, &args->valid_compbits,
-			&fence_out);
+			&args->zbc_color, &fence_out);
 	gk20a_idle(g->dev);
 
 	if (ret)
@@ -139,7 +139,7 @@ static int gk20a_ctrl_mark_compressible_write(
 
 	gk20a_busy(g->dev);
 	ret = gk20a_mark_compressible_write(g, args->handle,
-			args->valid_compbits, args->offset);
+			args->valid_compbits, args->offset, args->zbc_color);
 	gk20a_idle(g->dev);
 
 	return ret;

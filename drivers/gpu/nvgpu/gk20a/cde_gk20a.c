@@ -1069,7 +1069,8 @@ int gk20a_prepare_compressible_read(
 		u64 compbits_hoffset, u64 compbits_voffset,
 		u32 width, u32 height, u32 block_height_log2,
 		u32 submit_flags, struct nvhost_fence *fence,
-		u32 *valid_compbits, struct gk20a_fence **fence_out)
+		u32 *valid_compbits, u32 *zbc_color,
+		struct gk20a_fence **fence_out)
 {
 	int err = 0;
 	struct gk20a_buffer_state *state;
@@ -1142,6 +1143,9 @@ int gk20a_prepare_compressible_read(
 	if (valid_compbits)
 		*valid_compbits = state->valid_compbits;
 
+	if (zbc_color)
+		*zbc_color = state->zbc_color;
+
 out:
 	mutex_unlock(&state->lock);
 	dma_buf_put(dmabuf);
@@ -1149,7 +1153,7 @@ out:
 }
 
 int gk20a_mark_compressible_write(struct gk20a *g, u32 buffer_fd,
-				  u32 valid_compbits, u64 offset)
+				  u32 valid_compbits, u64 offset, u32 zbc_color)
 {
 	int err;
 	struct gk20a_buffer_state *state;
@@ -1172,6 +1176,7 @@ int gk20a_mark_compressible_write(struct gk20a *g, u32 buffer_fd,
 
 	/* Update the compbits state. */
 	state->valid_compbits = valid_compbits;
+	state->zbc_color = zbc_color;
 
 	/* Discard previous compbit job fence. */
 	gk20a_fence_put(state->fence);

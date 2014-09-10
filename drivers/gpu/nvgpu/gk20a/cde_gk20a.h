@@ -262,8 +262,10 @@ int gk20a_prepare_compressible_read(
 		u64 compbits_hoffset, u64 compbits_voffset,
 		u32 width, u32 height, u32 block_height_log2,
 		u32 submit_flags, struct nvhost_fence *fence,
-		u32 *valid_compbits, struct gk20a_fence **fence_out);
+		u32 *valid_compbits, u32 *zbc_color,
+		struct gk20a_fence **fence_out);
 int gk20a_mark_compressible_write(
-		struct gk20a *g, u32 buffer_fd, u32 valid_compbits, u64 offset);
+		struct gk20a *g, u32 buffer_fd, u32 valid_compbits, u64 offset,
+		u32 zbc_color);
 
 #endif

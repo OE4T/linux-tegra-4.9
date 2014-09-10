@@ -1291,6 +1291,29 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 	g->ops.fifo.trigger_mmu_fault(g, engine_ids);
 }
 
+int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch, bool verbose)
+{
+	struct tsg_gk20a *tsg = NULL;
+	struct channel_gk20a *ch_tsg = NULL;
+
+	if (gk20a_is_channel_marked_as_tsg(ch)) {
+		tsg = &ch->g->fifo.tsg[ch->hw_chid];
+
+		mutex_lock(&tsg->ch_list_lock);
+		list_for_each_entry(ch_tsg, &tsg->ch_list, ch_entry) {
+			gk20a_set_error_notifier(ch_tsg,
+			       NVHOST_CHANNEL_RESETCHANNEL_VERIF_ERROR);
+		}
+		mutex_unlock(&tsg->ch_list_lock);
+		gk20a_fifo_recover_tsg(ch->g, ch->tsgid, verbose);
+	} else {
+		gk20a_set_error_notifier(ch,
+			NVHOST_CHANNEL_RESETCHANNEL_VERIF_ERROR);
+		gk20a_fifo_recover_ch(ch->g, ch->hw_chid, verbose);
+	}
+
+	return 0;
+}
 
 static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 {
@@ -1482,13 +1505,26 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 	if (reset) {
 		/* Remove the channel from runlist */
 		u32 status = gk20a_readl(g, fifo_pbdma_status_r(pbdma_id));
-		u32 hw_chid = fifo_pbdma_status_id_v(status);
+		u32 id = fifo_pbdma_status_id_v(status);
 		if (fifo_pbdma_status_id_type_v(status)
 				== fifo_pbdma_status_id_type_chid_v()) {
-			struct channel_gk20a *ch = &f->channel[hw_chid];
+			struct channel_gk20a *ch = &f->channel[id];
+
 			gk20a_set_error_notifier(ch,
 				NVHOST_CHANNEL_PBDMA_ERROR);
-			gk20a_fifo_recover_ch(g, hw_chid, true);
+			gk20a_fifo_recover_ch(g, id, true);
+		} else if (fifo_pbdma_status_id_type_v(status)
+				== fifo_pbdma_status_id_type_tsgid_v()) {
+			struct tsg_gk20a *tsg = &f->tsg[id];
+			struct channel_gk20a *ch = NULL;
+
+			mutex_lock(&tsg->ch_list_lock);
+			list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+				gk20a_set_error_notifier(ch,
+					NVHOST_CHANNEL_PBDMA_ERROR);
+			}
+			mutex_unlock(&tsg->ch_list_lock);
+			gk20a_fifo_recover_tsg(g, id, true);
 		}
 	}
 
@@ -1606,9 +1642,19 @@ static int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 
 	if (ret) {
 		if (is_tsg) {
-			/* TODO: recovery for TSG */
+			struct tsg_gk20a *tsg = &g->fifo.tsg[id];
+			struct channel_gk20a *ch = NULL;
+
 			gk20a_err(dev_from_gk20a(g),
 				"preempt TSG %d timeout\n", id);
+
+			mutex_lock(&tsg->ch_list_lock);
+			list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+				gk20a_set_error_notifier(ch,
+					NVHOST_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
+			}
+			mutex_unlock(&tsg->ch_list_lock);
+			gk20a_fifo_recover_tsg(g, id, true);
 		} else {
 			struct channel_gk20a *ch = &g->fifo.channel[id];
 
@@ -1676,6 +1722,18 @@ int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 		mutex_unlock(&f->runlist_info[i].mutex);
 
 	return ret;
+}
+
+int gk20a_fifo_preempt(struct gk20a *g, struct channel_gk20a *ch)
+{
+	int err;
+
+	if (gk20a_is_channel_marked_as_tsg(ch))
+		err = gk20a_fifo_preempt_tsg(ch->g, ch->tsgid);
+	else
+		err = gk20a_fifo_preempt_channel(ch->g, ch->hw_chid);
+
+	return err;
 }
 
 int gk20a_fifo_enable_engine_activity(struct gk20a *g,

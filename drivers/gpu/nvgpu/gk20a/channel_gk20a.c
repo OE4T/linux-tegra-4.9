@@ -2293,8 +2293,6 @@ long gk20a_channel_ioctl(struct file *filp,
 		gk20a_idle(dev);
 		break;
 	case NVHOST_IOCTL_CHANNEL_PREEMPT:
-		if (gk20a_is_channel_marked_as_tsg(ch))
-			return -EINVAL;
 		err = gk20a_busy(dev);
 		if (err) {
 			dev_err(&dev->dev,
@@ -2302,8 +2300,7 @@ long gk20a_channel_ioctl(struct file *filp,
 				__func__, cmd);
 			return err;
 		}
-		/* preempt channel */
-		err = gk20a_fifo_preempt_channel(ch->g, ch->hw_chid);
+		err = gk20a_fifo_preempt(ch->g, ch);
 		gk20a_idle(dev);
 		break;
 	case NVHOST_IOCTL_CHANNEL_FORCE_RESET:
@@ -2314,9 +2311,7 @@ long gk20a_channel_ioctl(struct file *filp,
 				__func__, cmd);
 			return err;
 		}
-		gk20a_set_error_notifier(ch,
-			NVHOST_CHANNEL_RESETCHANNEL_VERIF_ERROR);
-		gk20a_fifo_recover_ch(ch->g, ch->hw_chid, true);
+		err = gk20a_fifo_force_reset_ch(ch, true);
 		gk20a_idle(dev);
 		break;
 	default:

@@ -147,6 +147,7 @@ void gk20a_fifo_nonstall_isr(struct gk20a *g);
 
 int gk20a_fifo_preempt_channel(struct gk20a *g, u32 hw_chid);
 int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid);
+int gk20a_fifo_preempt(struct gk20a *g, struct channel_gk20a *ch);
 
 int gk20a_fifo_enable_engine_activity(struct gk20a *g,
 			struct fifo_engine_info_gk20a *eng_info);
@@ -164,6 +165,7 @@ bool gk20a_fifo_mmu_fault_pending(struct gk20a *g);
 void gk20a_fifo_recover(struct gk20a *g, u32 engine_ids, bool verbose);
 void gk20a_fifo_recover_ch(struct gk20a *g, u32 hw_chid, bool verbose);
 void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose);
+int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch, bool verbose);
 int gk20a_init_fifo_reset_enable_hw(struct gk20a *g);
 void gk20a_init_fifo(struct gpu_ops *gops);
 

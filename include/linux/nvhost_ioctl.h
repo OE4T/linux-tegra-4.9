@@ -335,6 +335,17 @@ struct nvhost_set_ctxswitch_args {
 	__u32 pad;
 };
 
+/* Enable/disable/clear event notifications */
+struct nvhost_channel_events_ctrl_args {
+	__u32 cmd; /* in */
+	__u32 _pad0[1];
+};
+
+/* valid event ctrl values */
+#define NVHOST_IOCTL_CHANNEL_EVENTS_CTRL_CMD_DISABLE 0
+#define NVHOST_IOCTL_CHANNEL_EVENTS_CTRL_CMD_ENABLE  1
+#define NVHOST_IOCTL_CHANNEL_EVENTS_CTRL_CMD_CLEAR   2
+
 #define NVHOST_IOCTL_CHANNEL_GET_SYNCPOINTS	\
 	_IOR(NVHOST_IOCTL_MAGIC, 2, struct nvhost_get_param_args)
 #define NVHOST_IOCTL_CHANNEL_GET_WAITBASES	\
@@ -407,9 +418,11 @@ struct nvhost_set_ctxswitch_args {
 	_IO(NVHOST_IOCTL_MAGIC,  115)
 #define NVHOST_IOCTL_CHANNEL_FORCE_RESET	\
 	_IO(NVHOST_IOCTL_MAGIC,  116)
+#define NVHOST_IOCTL_CHANNEL_EVENTS_CTRL	\
+	_IOW(NVHOST_IOCTL_MAGIC,  117, struct nvhost_channel_events_ctrl_args)
 
 #define NVHOST_IOCTL_CHANNEL_LAST	\
-	_IOC_NR(NVHOST_IOCTL_CHANNEL_FORCE_RESET)
+	_IOC_NR(NVHOST_IOCTL_CHANNEL_EVENTS_CTRL)
 #define NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvhost_submit_args)
 
 struct nvhost_ctrl_syncpt_read_args {

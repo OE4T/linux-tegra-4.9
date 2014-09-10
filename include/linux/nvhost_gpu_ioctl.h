@@ -99,7 +99,11 @@ struct nvhost_gpu_zbc_query_table_args {
 #define NVHOST_GPU_BUS_TYPE_NONE         0
 #define NVHOST_GPU_BUS_TYPE_AXI         32
 
-#define NVHOST_GPU_FLAGS_HAS_SYNCPOINTS	(1 << 0)
+#define NVHOST_GPU_FLAGS_HAS_SYNCPOINTS			(1 << 0)
+/* MAP_BUFFER_EX with partial mappings */
+#define NVHOST_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS	(1 << 1)
+/* MAP_BUFFER_EX with sparse allocations */
+#define NVHOST_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS		(1 << 2)
 
 struct nvhost_gpu_characteristics {
 	__u32 arch;

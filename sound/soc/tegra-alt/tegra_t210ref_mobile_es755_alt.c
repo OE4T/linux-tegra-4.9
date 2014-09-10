@@ -324,13 +324,26 @@ static const struct snd_soc_dapm_widget tegra_t210ref_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("y Mic", NULL),
 };
 
-static int tegra_t210ref_suspend_post(struct snd_soc_card *card)
+static int tegra_t210ref_suspend_pre(struct snd_soc_card *card)
 {
 	struct snd_soc_jack_gpio *gpio = &tegra_t210ref_hp_jack_gpio;
-	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
+	unsigned int idx;
+
+	/* DAPM dai link stream work for non pcm links */
+	for (idx = 0; idx < card->num_rtd; idx++) {
+		if (card->rtd[idx].dai_link->params)
+			INIT_DELAYED_WORK(&card->rtd[idx].delayed_work, NULL);
+	}
 
 	if (gpio_is_valid(gpio->gpio))
 		disable_irq(gpio_to_irq(gpio->gpio));
+
+	return 0;
+}
+
+static int tegra_t210ref_suspend_post(struct snd_soc_card *card)
+{
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 
 	if (machine->clock_enabled) {
 		machine->clock_enabled = 0;
@@ -374,6 +387,7 @@ static struct snd_soc_card snd_soc_tegra_t210ref = {
 	.owner = THIS_MODULE,
 	.remove = tegra_t210ref_remove,
 	.suspend_post = tegra_t210ref_suspend_post,
+	.suspend_pre = tegra_t210ref_suspend_pre,
 	.resume_pre = tegra_t210ref_resume_pre,
 	.dapm_widgets = tegra_t210ref_dapm_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(tegra_t210ref_dapm_widgets),

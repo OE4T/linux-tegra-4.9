@@ -773,6 +773,10 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 	init_waitqueue_head(&ch->semaphore_wq);
 	init_waitqueue_head(&ch->submit_wq);
 
+	mutex_init(&ch->poll_events.lock);
+	ch->poll_events.events_enabled = false;
+	ch->poll_events.num_pending_events = 0;
+
 	return ch;
 }
 
@@ -1891,6 +1895,119 @@ notif_clean_up:
 	return ret;
 }
 
+/* poll events for semaphores */
+
+static void gk20a_channel_events_enable(struct channel_gk20a_poll_events *ev)
+{
+	gk20a_dbg_fn("");
+
+	mutex_lock(&ev->lock);
+
+	ev->events_enabled = true;
+	ev->num_pending_events = 0;
+
+	mutex_unlock(&ev->lock);
+}
+
+static void gk20a_channel_events_disable(struct channel_gk20a_poll_events *ev)
+{
+	gk20a_dbg_fn("");
+
+	mutex_lock(&ev->lock);
+
+	ev->events_enabled = false;
+	ev->num_pending_events = 0;
+
+	mutex_unlock(&ev->lock);
+}
+
+static void gk20a_channel_events_clear(struct channel_gk20a_poll_events *ev)
+{
+	gk20a_dbg_fn("");
+
+	mutex_lock(&ev->lock);
+
+	if (ev->events_enabled &&
+			ev->num_pending_events > 0)
+		ev->num_pending_events--;
+
+	mutex_unlock(&ev->lock);
+}
+
+static int gk20a_channel_events_ctrl(struct channel_gk20a *ch,
+			  struct nvhost_channel_events_ctrl_args *args)
+{
+	int ret = 0;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_info,
+			"channel events ctrl cmd %d", args->cmd);
+
+	switch (args->cmd) {
+	case NVHOST_IOCTL_CHANNEL_EVENTS_CTRL_CMD_ENABLE:
+		gk20a_channel_events_enable(&ch->poll_events);
+		break;
+
+	case NVHOST_IOCTL_CHANNEL_EVENTS_CTRL_CMD_DISABLE:
+		gk20a_channel_events_disable(&ch->poll_events);
+		break;
+
+	case NVHOST_IOCTL_CHANNEL_EVENTS_CTRL_CMD_CLEAR:
+		gk20a_channel_events_clear(&ch->poll_events);
+		break;
+
+	default:
+		gk20a_err(dev_from_gk20a(ch->g),
+			   "unrecognized channel events ctrl cmd: 0x%x",
+			   args->cmd);
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret;
+}
+
+void gk20a_channel_event(struct channel_gk20a *ch)
+{
+	mutex_lock(&ch->poll_events.lock);
+
+	if (ch->poll_events.events_enabled) {
+		gk20a_dbg_info("posting event on channel id %d",
+				ch->hw_chid);
+		gk20a_dbg_info("%d channel events pending",
+				ch->poll_events.num_pending_events);
+
+		ch->poll_events.num_pending_events++;
+		/* not waking up here, caller does that */
+	}
+
+	mutex_unlock(&ch->poll_events.lock);
+}
+
+unsigned int gk20a_channel_poll(struct file *filep, poll_table *wait)
+{
+	unsigned int mask = 0;
+	struct channel_gk20a *ch = filep->private_data;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_info, "");
+
+	poll_wait(filep, &ch->semaphore_wq, wait);
+
+	mutex_lock(&ch->poll_events.lock);
+
+	if (ch->poll_events.events_enabled &&
+			ch->poll_events.num_pending_events > 0) {
+		gk20a_dbg_info("found pending event on channel id %d",
+				ch->hw_chid);
+		gk20a_dbg_info("%d channel events pending",
+				ch->poll_events.num_pending_events);
+		mask = (POLLPRI | POLLIN);
+	}
+
+	mutex_unlock(&ch->poll_events.lock);
+
+	return mask;
+}
+
 static int gk20a_channel_set_priority(struct channel_gk20a *ch,
 		u32 priority)
 {
@@ -2313,6 +2430,10 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = gk20a_fifo_force_reset_ch(ch, true);
 		gk20a_idle(dev);
+		break;
+	case NVHOST_IOCTL_CHANNEL_EVENTS_CTRL:
+		err = gk20a_channel_events_ctrl(ch,
+			   (struct nvhost_channel_events_ctrl_args *)buf);
 		break;
 	default:
 		dev_err(&dev->dev, "unrecognized ioctl cmd: 0x%x", cmd);

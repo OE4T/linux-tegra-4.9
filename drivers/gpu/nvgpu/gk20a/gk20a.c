@@ -100,6 +100,7 @@ static const struct file_operations gk20a_channel_ops = {
 	.compat_ioctl = gk20a_channel_ioctl,
 #endif
 	.unlocked_ioctl = gk20a_channel_ioctl,
+	.poll = gk20a_channel_poll,
 };
 
 static const struct file_operations gk20a_ctrl_ops = {

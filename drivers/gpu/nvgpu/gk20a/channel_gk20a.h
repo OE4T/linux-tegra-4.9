@@ -26,6 +26,8 @@
 #include <linux/wait.h>
 #include <linux/mutex.h>
 #include <linux/nvhost_ioctl.h>
+#include <linux/poll.h>
+
 struct gk20a;
 struct gr_gk20a;
 struct dbg_session_gk20a;
@@ -72,6 +74,12 @@ struct channel_gk20a_job {
 	struct gk20a_fence *pre_fence;
 	struct gk20a_fence *post_fence;
 	struct list_head list;
+};
+
+struct channel_gk20a_poll_events {
+	struct mutex lock;
+	bool events_enabled;
+	int num_pending_events;
 };
 
 /* this is the priv element of struct nvhost_channel */
@@ -148,6 +156,9 @@ struct channel_gk20a {
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	u64 virt_ctx;
 #endif
+
+	/* event support */
+	struct channel_gk20a_poll_events poll_events;
 };
 
 static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)
@@ -180,6 +191,8 @@ long gk20a_channel_ioctl(struct file *filp,
 int gk20a_channel_release(struct inode *inode, struct file *filp);
 struct channel_gk20a *gk20a_get_channel_from_file(int fd);
 void gk20a_channel_update(struct channel_gk20a *c, int nr_completed);
+unsigned int gk20a_channel_poll(struct file *filep, poll_table *wait);
+void gk20a_channel_event(struct channel_gk20a *ch);
 
 void gk20a_init_channel(struct gpu_ops *gops);
 

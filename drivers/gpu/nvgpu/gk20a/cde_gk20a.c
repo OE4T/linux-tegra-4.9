@@ -1002,6 +1002,12 @@ static int gk20a_buffer_convert_gpu_to_cde(
 	const int gridw = roundup(tilepitch, wgx) / wgx;
 	const int gridh = roundup(ytilesaligned, wgy) / wgy;
 
+	if (!g->cde_app.initialised) {
+		err = gk20a_cde_reload(g);
+		if (err)
+			return err;
+	}
+
 	if (xtiles > 4096 / 8 || ytiles > 4096 / 8)
 		gk20a_warn(&g->dev->dev, "cde: surface is exceptionally large (xtiles=%d, ytiles=%d)",
 			   xtiles, ytiles);
@@ -1069,12 +1075,6 @@ int gk20a_prepare_compressible_read(
 	struct gk20a_buffer_state *state;
 	struct dma_buf *dmabuf;
 	u32 missing_bits;
-
-	if (!g->cde_app.initialised) {
-		err = gk20a_cde_reload(g);
-		if (err)
-			return err;
-	}
 
 	dmabuf = dma_buf_get(buffer_fd);
 	if (IS_ERR(dmabuf))
@@ -1145,7 +1145,7 @@ int gk20a_prepare_compressible_read(
 out:
 	mutex_unlock(&state->lock);
 	dma_buf_put(dmabuf);
-	return 0;
+	return err;
 }
 
 int gk20a_mark_compressible_write(struct gk20a *g, u32 buffer_fd,

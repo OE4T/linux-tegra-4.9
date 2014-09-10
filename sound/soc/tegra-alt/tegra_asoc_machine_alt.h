@@ -237,6 +237,8 @@ int tegra_machine_append_dai_link(struct snd_soc_dai_link *link,
 
 void tegra_machine_set_dai_ops(int link, struct snd_soc_ops *ops);
 
+void tegra_machine_set_dai_compr_ops(int link, struct snd_soc_compr_ops *ops);
+
 void tegra_machine_set_dai_init(int link, void *ptr);
 
 void tegra_machine_set_dai_params(int link,

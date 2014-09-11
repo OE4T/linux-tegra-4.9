@@ -684,7 +684,7 @@ long nvdec_ioctl(struct file *file,
 		atomic_inc(&priv->refcnt);
 	break;
 	case NVHOST_NVDEC_IOCTL_POWEROFF:
-		if (atomic_dec_if_positive(&priv->refcnt))
+		if (atomic_dec_if_positive(&priv->refcnt) >= 0)
 			nvhost_module_idle(pdev);
 	break;
 	default:

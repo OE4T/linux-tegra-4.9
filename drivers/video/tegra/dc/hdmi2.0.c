@@ -515,6 +515,8 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 {
 	int err;
 
+	tegra_dc_unpowergate_locked(hdmi->dc); /* BUG! this is a race */
+
 	tegra_hdmi_ddc_enable(hdmi);
 
 	err = tegra_hdmi_edid_read(hdmi);
@@ -524,6 +526,8 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 	err = tegra_hdmi_eld_read(hdmi);
 	if (err < 0)
 		goto fail;
+
+	tegra_dc_unpowergate_locked(hdmi->dc); /* BUG! this is a race */
 
 	tegra_hdmi_edid_config(hdmi);
 
@@ -535,6 +539,7 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 	tegra_hdmi_hotplug_notify(hdmi, true);
 	return 0;
 fail:
+	tegra_dc_unpowergate_locked(hdmi->dc); /* BUG! this is a race */
 	return err;
 }
 

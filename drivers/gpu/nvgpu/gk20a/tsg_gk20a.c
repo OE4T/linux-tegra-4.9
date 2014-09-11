@@ -27,11 +27,24 @@
 
 static void gk20a_tsg_release(struct kref *ref);
 
-static void gk20a_tsg_release(struct kref *ref);
-
 bool gk20a_is_channel_marked_as_tsg(struct channel_gk20a *ch)
 {
 	return !(ch->tsgid == NVGPU_INVALID_TSG_ID);
+}
+
+static bool gk20a_is_channel_active(struct gk20a *g, struct channel_gk20a *ch)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	struct fifo_runlist_info_gk20a *runlist;
+	int i;
+
+	for (i = 0; i < f->max_runlists; ++i) {
+		runlist = &f->runlist_info[i];
+		if (test_bit(ch->hw_chid, runlist->active_channels))
+			return true;
+	}
+
+	return false;
 }
 
 /*
@@ -46,6 +59,12 @@ static int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg, int ch_fd)
 
 	/* check if channel is already bound to some TSG */
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
+		fput(f);
+		return -EINVAL;
+	}
+
+	/* channel cannot be bound to TSG if it is already active */
+	if (gk20a_is_channel_active(tsg->g, ch)) {
 		fput(f);
 		return -EINVAL;
 	}

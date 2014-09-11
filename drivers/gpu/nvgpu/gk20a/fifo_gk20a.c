@@ -1779,7 +1779,7 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 			if (test_and_set_bit(hw_chid,
 				runlist->active_channels) == 1)
 				return 0;
-			if (tsg && ++tsg->num_active_channels > 0)
+			if (tsg && ++tsg->num_active_channels)
 				set_bit(f->channel[hw_chid].tsgid,
 					runlist->active_tsgs);
 		} else {

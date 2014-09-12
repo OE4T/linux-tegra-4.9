@@ -246,4 +246,12 @@ static inline u32 tsec_scp_ctl_pkey_loaded_m(void)
 {
 	return 0x1 << 1;
 }
+static inline u32 tsec_scp_ctl_stat_r(void)
+{
+	return 0x1408;
+}
+static inline u32 tsec_scp_ctl_stat_debug_mode_m(void)
+{
+	return 0x1 << 20;
+}
 #endif

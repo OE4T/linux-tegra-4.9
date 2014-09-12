@@ -491,6 +491,8 @@ static char *tsec_get_fw_name(struct platform_device *dev)
 	char *fw_name;
 	u8 maj, min;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	u32 debug_mode = host1x_readl(dev, tsec_scp_ctl_stat_r()) &
+				      tsec_scp_ctl_stat_debug_mode_m();
 
 	/* note size here is a little over...*/
 	fw_name = kzalloc(32, GFP_KERNEL);
@@ -500,7 +502,8 @@ static char *tsec_get_fw_name(struct platform_device *dev)
 	decode_tsec_ver(pdata->version, &maj, &min);
 	if (maj == 1) {
 		/* there are no minor versions so far for maj==1 */
-		sprintf(fw_name, "nvhost_tsec.fw");
+		sprintf(fw_name, "nvhost_tsec%s.fw",
+			debug_mode ? "_dbg" : "");
 	} else {
 		kfree(fw_name);
 		return NULL;

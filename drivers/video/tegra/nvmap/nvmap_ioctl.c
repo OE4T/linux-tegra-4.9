@@ -48,6 +48,9 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 			 unsigned long sys_stride, unsigned long elem_size,
 			 unsigned long count);
 
+/* NOTE: Callers of this utility function must invoke nvmap_handle_put after
+ * using the returned nvmap_handle.
+ */
 struct nvmap_handle *nvmap_fd_to_handle(int handle)
 {
 	struct nvmap_handle *h;
@@ -105,8 +108,8 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg,
 	struct nvmap_handle *on_stack[16];
 	struct nvmap_handle **refs;
 	unsigned long __user *output = NULL;
-	unsigned int i;
 	int err = 0;
+	u32 i, n_unmarshal_handles = 0;
 
 #ifdef CONFIG_COMPAT
 	if (is32) {
@@ -149,6 +152,7 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg,
 				err = -EINVAL;
 				goto out;
 			}
+			n_unmarshal_handles++;
 		}
 	} else {
 		refs = on_stack;
@@ -158,6 +162,7 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg,
 			err = -EINVAL;
 			goto out;
 		}
+		n_unmarshal_handles++;
 	}
 
 	trace_nvmap_ioctl_pinop(filp->private_data, is_pin, op.count, refs);
@@ -220,6 +225,9 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg,
 		nvmap_unpin_ids(filp->private_data, op.count, refs);
 
 out:
+	for (i = 0; i < n_unmarshal_handles; i++)
+		nvmap_handle_put(refs[i]);
+
 	if (refs != on_stack)
 		kfree(refs);
 
@@ -237,11 +245,6 @@ int nvmap_ioctl_getid(struct file *filp, void __user *arg)
 	h = nvmap_fd_to_handle(op.handle);
 	if (!h)
 		return -EINVAL;
-
-	h = nvmap_handle_get(h);
-
-	if (!h)
-		return -EPERM;
 
 	op.id = marshal_id(h);
 	nvmap_handle_put(h);
@@ -284,6 +287,7 @@ int nvmap_ioctl_getfd(struct file *filp, void __user *arg)
 		return -EINVAL;
 
 	op.fd = nvmap_get_dmabuf_fd(client, handle);
+	nvmap_handle_put(handle);
 	if (op.fd < 0)
 		return op.fd;
 
@@ -299,24 +303,27 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	struct nvmap_alloc_handle op;
 	struct nvmap_client *client = filp->private_data;
 	struct nvmap_handle *handle;
+	int err;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
 
-	handle = nvmap_fd_to_handle(op.handle);
-	if (!handle)
+	if (op.align & (op.align - 1))
 		return -EINVAL;
 
-	if (op.align & (op.align - 1))
+	handle = nvmap_fd_to_handle(op.handle);
+	if (!handle)
 		return -EINVAL;
 
 	/* user-space handles are aligned to page boundaries, to prevent
 	 * data leakage. */
 	op.align = max_t(size_t, op.align, PAGE_SIZE);
 
-	return nvmap_alloc_handle(client, handle, op.heap_mask, op.align,
+	err = nvmap_alloc_handle(client, handle, op.heap_mask, op.align,
 				  0, /* no kind */
 				  op.flags & (~NVMAP_HANDLE_KIND_SPECIFIED));
+	nvmap_handle_put(handle);
+	return err;
 }
 
 int nvmap_ioctl_alloc_kind(struct file *filp, void __user *arg)
@@ -324,26 +331,29 @@ int nvmap_ioctl_alloc_kind(struct file *filp, void __user *arg)
 	struct nvmap_alloc_kind_handle op;
 	struct nvmap_client *client = filp->private_data;
 	struct nvmap_handle *handle;
+	int err;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
 
-	handle = nvmap_fd_to_handle(op.handle);
-	if (!handle)
+	if (op.align & (op.align - 1))
 		return -EINVAL;
 
-	if (op.align & (op.align - 1))
+	handle = nvmap_fd_to_handle(op.handle);
+	if (!handle)
 		return -EINVAL;
 
 	/* user-space handles are aligned to page boundaries, to prevent
 	 * data leakage. */
 	op.align = max_t(size_t, op.align, PAGE_SIZE);
 
-	return nvmap_alloc_handle(client, handle,
+	err = nvmap_alloc_handle(client, handle,
 				  op.heap_mask,
 				  op.align,
 				  op.kind,
 				  op.flags);
+	nvmap_handle_put(handle);
+	return err;
 }
 
 int nvmap_create_fd(struct nvmap_client *client, struct nvmap_handle *h)
@@ -436,14 +446,8 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg, bool is32)
 			return -EFAULT;
 
 	h = nvmap_fd_to_handle(op.handle);
-
 	if (!h)
 		return -EINVAL;
-
-	h = nvmap_handle_get(h);
-
-	if (!h)
-		return -EPERM;
 
 	if(!h->alloc) {
 		nvmap_handle_put(h);
@@ -537,10 +541,6 @@ int nvmap_ioctl_get_param(struct file *filp, void __user *arg, bool is32)
 	if (!h)
 		return -EINVAL;
 
-	h = nvmap_handle_get(h);
-	if (!h)
-		return -EINVAL;
-
 	nvmap_ref_lock(client);
 	ref = __nvmap_validate_locked(client, h);
 	if (IS_ERR_OR_NULL(ref)) {
@@ -593,13 +593,12 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 		if (copy_from_user(&op, arg, sizeof(op)))
 			return -EFAULT;
 
-	h = nvmap_fd_to_handle(op.handle);
-	if (!h || !op.addr || !op.count || !op.elem_size)
+	if (!op.addr || !op.count || !op.elem_size)
 		return -EINVAL;
 
-	h = nvmap_handle_get(h);
+	h = nvmap_fd_to_handle(op.handle);
 	if (!h)
-		return -EPERM;
+		return -EINVAL;
 
 	nvmap_kmaps_inc(h);
 	trace_nvmap_ioctl_rw_handle(client, h, is_read, op.offset,
@@ -638,9 +637,12 @@ static int __nvmap_cache_maint(struct nvmap_client *client,
 	unsigned long end;
 	int err = 0;
 
-	handle = nvmap_fd_to_handle(op->handle);
-	if (!handle || !op->addr || op->op < NVMAP_CACHE_OP_WB ||
+	if (!op->addr || op->op < NVMAP_CACHE_OP_WB ||
 	    op->op > NVMAP_CACHE_OP_WB_INV)
+		return -EINVAL;
+
+	handle = nvmap_fd_to_handle(op->handle);
+	if (!handle)
 		return -EINVAL;
 
 	down_read(&current->mm->mmap_sem);
@@ -669,6 +671,7 @@ static int __nvmap_cache_maint(struct nvmap_client *client,
 				     false);
 out:
 	up_read(&current->mm->mmap_sem);
+	nvmap_handle_put(handle);
 	return err;
 }
 
@@ -1140,7 +1143,8 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 	u32 *offset_ptr;
 	u32 *size_ptr;
 	struct nvmap_handle **refs;
-	int i, err = 0;
+	int err = 0;
+	u32 i, n_unmarshal_handles = 0;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
@@ -1182,6 +1186,7 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 			err = -EINVAL;
 			goto free_mem;
 		}
+		n_unmarshal_handles++;
 	}
 
 	if (is_reserve_ioctl)
@@ -1192,6 +1197,8 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 						op.op, op.nr);
 
 free_mem:
+	for (i = 0; i < n_unmarshal_handles; i++)
+		nvmap_handle_put(refs[i]);
 	kfree(refs);
 	return err;
 }

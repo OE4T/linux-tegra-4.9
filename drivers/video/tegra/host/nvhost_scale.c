@@ -29,10 +29,12 @@
 #include <linux/tegra-soc.h>
 #include <linux/platform_data/tegra_edp.h>
 #include <linux/pm_qos.h>
+#include <trace/events/nvhost.h>
 
 #include <governor.h>
 
 #include "dev.h"
+#include "debug.h"
 #include "chip_support.h"
 #include "nvhost_acm.h"
 #include "nvhost_scale.h"
@@ -226,6 +228,12 @@ static void nvhost_scale_notify(struct platform_device *pdev, bool busy)
 	/* Is the device profile initialised? */
 	if (!profile)
 		return;
+
+	if (nvhost_debug_trace_actmon) {
+		u32 load;
+		actmon_op().read_avg_norm(profile->actmon, &load);
+		trace_nvhost_scale_notify(pdev->name, load, busy);
+	}
 
 	/* If defreq is disabled, set the freq to max or min */
 	if (!devfreq) {

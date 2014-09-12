@@ -32,6 +32,7 @@
 
 pid_t nvhost_debug_null_kickoff_pid;
 unsigned int nvhost_debug_trace_cmdbuf;
+unsigned int nvhost_debug_trace_actmon;
 
 pid_t nvhost_debug_force_timeout_pid;
 u32 nvhost_debug_force_timeout_val;
@@ -278,6 +279,8 @@ void nvhost_debug_init(struct nvhost_master *master)
 #endif
 	debugfs_create_u32("timeout_default_ms", S_IRUGO|S_IWUSR, de,
 			&pdata->nvhost_timeout_default);
+	debugfs_create_u32("trace_actmon", S_IRUGO|S_IWUSR, de,
+			&nvhost_debug_trace_actmon);
 }
 
 void nvhost_debug_dump_locked(struct nvhost_master *master, int locked_id)

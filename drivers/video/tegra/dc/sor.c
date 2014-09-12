@@ -206,6 +206,50 @@ static int dbg_sor_show(struct seq_file *s, void *unused)
 	DUMP_REG(NV_SOR_DP_SPARE(1));
 	DUMP_REG(NV_SOR_DP_TPG);
 	DUMP_REG(NV_SOR_HDMI2_CTRL);
+	if (sor->dc->ndev->id == 1) { /* sor1 */
+		DUMP_REG(NV_SOR_DP_AUDIO_CTRL);
+
+		DUMP_REG(NV_SOR_DP_GENERIC_INFOFRAME_HEADER);
+		DUMP_REG(NV_SOR_DP_GENERIC_INFOFRAME_SUBPACK(0));
+		DUMP_REG(NV_SOR_DP_GENERIC_INFOFRAME_SUBPACK(1));
+		DUMP_REG(NV_SOR_DP_GENERIC_INFOFRAME_SUBPACK(2));
+		DUMP_REG(NV_SOR_DP_GENERIC_INFOFRAME_SUBPACK(3));
+		DUMP_REG(NV_SOR_DP_GENERIC_INFOFRAME_SUBPACK(4));
+		DUMP_REG(NV_SOR_DP_GENERIC_INFOFRAME_SUBPACK(5));
+		DUMP_REG(NV_SOR_DP_GENERIC_INFOFRAME_SUBPACK(6));
+
+		DUMP_REG(NV_SOR_DP_OUTPUT_CHANNEL_STATUS1);
+		DUMP_REG(NV_SOR_DP_OUTPUT_CHANNEL_STATUS2);
+
+		DUMP_REG(NV_SOR_HDMI_AUDIO_N);
+		DUMP_REG(NV_SOR_HDMI2_CTRL);
+
+		DUMP_REG(NV_SOR_AUDIO_NVAL_0320);
+		DUMP_REG(NV_SOR_AUDIO_NVAL_0441);
+		DUMP_REG(NV_SOR_AUDIO_NVAL_0882);
+		DUMP_REG(NV_SOR_AUDIO_NVAL_1764);
+		DUMP_REG(NV_SOR_AUDIO_NVAL_0480);
+		DUMP_REG(NV_SOR_AUDIO_NVAL_0960);
+		DUMP_REG(NV_SOR_AUDIO_NVAL_1920);
+
+		DUMP_REG(NV_SOR_AUDIO_AVAL_0320);
+		DUMP_REG(NV_SOR_AUDIO_AVAL_0441);
+		DUMP_REG(NV_SOR_AUDIO_AVAL_0882);
+		DUMP_REG(NV_SOR_AUDIO_AVAL_1764);
+		DUMP_REG(NV_SOR_AUDIO_AVAL_0480);
+		DUMP_REG(NV_SOR_AUDIO_AVAL_0960);
+		DUMP_REG(NV_SOR_AUDIO_AVAL_1920);
+
+		DUMP_REG(NV_SOR_DP_AUDIO_TIMESTAMP_0320);
+		DUMP_REG(NV_SOR_DP_AUDIO_TIMESTAMP_0441);
+		DUMP_REG(NV_SOR_DP_AUDIO_TIMESTAMP_0882);
+		DUMP_REG(NV_SOR_DP_AUDIO_TIMESTAMP_1764);
+		DUMP_REG(NV_SOR_DP_AUDIO_TIMESTAMP_0480);
+		DUMP_REG(NV_SOR_DP_AUDIO_TIMESTAMP_0960);
+		DUMP_REG(NV_SOR_DP_AUDIO_TIMESTAMP_1920);
+
+
+	}
 
 	tegra_sor_clk_disable(sor);
 	tegra_dc_io_end(sor->dc);
@@ -342,11 +386,15 @@ static const struct file_operations crc_fops = {
 
 static struct dentry *sordir;
 
-static void tegra_dc_sor_debug_create(struct tegra_dc_sor_data *sor)
+static void tegra_dc_sor_debug_create(struct tegra_dc_sor_data *sor,
+	const char *res_name)
 {
 	struct dentry *retval;
+	char sor_path[16];
 
-	sordir = debugfs_create_dir("tegra_sor", NULL);
+	BUG_ON(!res_name);
+	snprintf(sor_path, sizeof(sor_path), "tegra_%s", res_name ? : "sor");
+	sordir = debugfs_create_dir(sor_path, NULL);
 	if (!sordir)
 		return;
 	retval = debugfs_create_file("regs", S_IRUGO, sordir, sor, &dbg_fops);
@@ -366,7 +414,8 @@ free_out:
 }
 EXPORT_SYMBOL(tegra_dc_sor_debug_create);
 #else
-static inline void tegra_dc_sor_debug_create(struct tegra_dc_sor_data *sor)
+static inline void tegra_dc_sor_debug_create(struct tegra_dc_sor_data *sor,
+	const char *res_name)
 { }
 #endif
 
@@ -468,7 +517,7 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	sor->link_cfg = cfg;
 	sor->portnum = 0;
 
-	tegra_dc_sor_debug_create(sor);
+	tegra_dc_sor_debug_create(sor, res_name);
 
 	return sor;
 err_iounmap_reg:

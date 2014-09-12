@@ -262,4 +262,12 @@ static inline u32 nvenc_engine_cg4_r(void)
 {
 	return 0x00002208;
 }
+static inline u32 nvjpg_cg2_r(void)
+{
+	return 0x0000117c;
+}
+static inline u32 nvjpg_tfbif_mccif_fifoctrl_r(void)
+{
+	return 0x00001404;
+}
 #endif

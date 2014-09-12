@@ -685,6 +685,36 @@ int nvhost_nvenc_t210_finalize_poweron(struct platform_device *pdev)
 	return nvhost_flcn_boot(pdev);
 }
 
+int nvhost_nvjpg_t210_finalize_poweron(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	int err;
+
+	nvhost_dbg_fn("");
+
+	err = nvhost_flcn_init_sw(pdev);
+	if (err)
+		return err;
+
+	nvhost_module_reset(pdev, false);
+
+	if (!pdata->can_slcg) {
+		host1x_writel(pdev, flcn_clk_override_r(), 0xffffffff);
+		host1x_writel(pdev, flcn_slcg_override_high_a_r(), 0xff);
+		host1x_writel(pdev, flcn_slcg_override_low_a_r(), 0xffffffff);
+		host1x_writel(pdev, nvjpg_cg2_r(), 0xffffffff);
+		host1x_writel(pdev, flcn_cgctl_r(), 0xffffffff);
+		host1x_writel(pdev, nvjpg_tfbif_mccif_fifoctrl_r(), 0xffffffff);
+	} else {
+		host1x_writel(pdev, nvjpg_cg2_r(), 0x18004);
+	}
+
+	if (pdata->scaling_init)
+		nvhost_scale_hw_init(pdev);
+
+	return nvhost_flcn_boot(pdev);
+}
+
 static struct of_device_id tegra_flcn_of_match[] = {
 #ifdef CONFIG_ARCH_TEGRA_VIC
 	{ .compatible = "nvidia,tegra124-vic",
@@ -699,6 +729,10 @@ static struct of_device_id tegra_flcn_of_match[] = {
 #ifdef TEGRA_21X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra210-nvenc",
 		.data = (struct nvhost_device_data *)&t21_msenc_info },
+#endif
+#ifdef TEGRA_21X_OR_HIGHER_CONFIG
+	{ .compatible = "nvidia,tegra210-nvjpg",
+		.data = (struct nvhost_device_data *)&t21_nvjpg_info },
 #endif
 	{ },
 };
@@ -776,6 +810,7 @@ static struct platform_device_id flcn_id_table[] = {
 	{ .name = "vic03" },
 	{ .name = "msenc" },
 	{ .name = "msenc" },
+	{ .name = "nvjpg" },
 	{},
 };
 static struct platform_driver flcn_driver = {

@@ -34,7 +34,6 @@
 #include "syncpt_t124.h"
 #include "flcn/flcn.h"
 #include "nvdec/nvdec.h"
-#include "nvjpg/nvjpg.h"
 #include "tsec/tsec.h"
 #include "vi/vi.h"
 #include "isp/isp.h"
@@ -232,7 +231,7 @@ struct nvhost_device_data t21_nvdec_info = {
 };
 
 struct nvhost_device_data t21_nvjpg_info = {
-	.version		= NVHOST_ENCODE_NVJPG_VER(1, 0),
+	.version		= NVHOST_ENCODE_FLCN_VER(1, 0),
 	.class			= NV_NVJPG_CLASS_ID,
 #ifdef TEGRA_POWERGATE_NVJPG
 	.powergate_ids		= { TEGRA_POWERGATE_NVJPG, -1 },
@@ -244,10 +243,11 @@ struct nvhost_device_data t21_nvjpg_info = {
 	.clocks			= { {"nvjpg", UINT_MAX, 0, TEGRA_MC_CLIENT_NVJPG},
 				    {"emc", HOST_EMC_FLOOR} },
 	.finalize_poweron	= nvhost_nvjpg_t210_finalize_poweron,
-	.prepare_poweroff	= nvhost_nvjpg_prepare_poweroff,
+	.prepare_poweroff	= nvhost_flcn_prepare_poweroff,
 	.moduleid		= NVHOST_MODULE_NVJPG,
 	.num_channels		= 1,
 	.bond_out_id		= BOND_OUT_NVJPG,
+	.firmware_name		= "nvhost_nvjpg010.fw",
 };
 
 struct nvhost_device_data t21_tsec_info = {

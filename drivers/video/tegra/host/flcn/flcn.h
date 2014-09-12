@@ -95,6 +95,7 @@ void nvhost_flcn_suspend(struct platform_device *);
 int nvhost_flcn_finalize_poweron(struct platform_device *);
 int nvhost_flcn_prepare_poweroff(struct platform_device *);
 int nvhost_nvenc_t210_finalize_poweron(struct platform_device *dev);
+int nvhost_nvjpg_t210_finalize_poweron(struct platform_device *pdev);
 
 int nvhost_vic_aggregate_constraints(struct platform_device *dev,
 				     int clk_index,

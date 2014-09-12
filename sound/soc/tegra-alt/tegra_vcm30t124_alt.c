@@ -696,13 +696,15 @@ static int tegra_vcm30t124_amx0_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_dai *amx_dai = rtd->cpu_dai;
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(rtd->card);
 	unsigned int default_slot[32], i, j;
+	unsigned int slot_size = 32;
 	unsigned int *tx_slot;
 
 	/* AMX0 slot map may be initialized through platform data */
 	if (machine->pdata->num_amx) {
 		tx_slot = machine->pdata->amx_config[0].slot_map;
+		slot_size = machine->pdata->amx_config[0].slot_size;
 	} else {
-		for (i = 0, j = 0; i < 32; i += 8) {
+		for (i = 0, j = 0; i < slot_size; i += 8) {
 			default_slot[i] = 0;
 			default_slot[i + 1] = 0;
 			default_slot[i + 2] = (j << 16) | (1 << 8) | 0;
@@ -718,7 +720,7 @@ static int tegra_vcm30t124_amx0_init(struct snd_soc_pcm_runtime *rtd)
 
 	if (amx_dai->driver->ops->set_channel_map)
 		amx_dai->driver->ops->set_channel_map(amx_dai,
-							32, tx_slot, 0, 0);
+					slot_size, tx_slot, 0, 0);
 
 	return 0;
 }
@@ -728,13 +730,15 @@ static int tegra_vcm30t124_amx1_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_dai *amx_dai = rtd->cpu_dai;
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(rtd->card);
 	unsigned int default_slot[32], i, j;
+	unsigned int slot_size = 32;
 	unsigned int *tx_slot;
 
 	/* AMX1 slot map may be initialized through platform data */
 	if (machine->pdata->num_amx > 1) {
 		tx_slot = machine->pdata->amx_config[1].slot_map;
+		slot_size = machine->pdata->amx_config[1].slot_size;
 	} else {
-		for (i = 0, j = 0; i < 32; i += 8) {
+		for (i = 0, j = 0; i < slot_size; i += 8) {
 			default_slot[i] = 0;
 			default_slot[i + 1] = 0;
 			default_slot[i + 2] = (j << 16) | (1 << 8) | 0;
@@ -750,7 +754,7 @@ static int tegra_vcm30t124_amx1_init(struct snd_soc_pcm_runtime *rtd)
 
 	if (amx_dai->driver->ops->set_channel_map)
 		amx_dai->driver->ops->set_channel_map(amx_dai,
-							32, tx_slot, 0, 0);
+					slot_size, tx_slot, 0, 0);
 
 	return 0;
 }
@@ -760,13 +764,15 @@ static int tegra_vcm30t124_adx0_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_dai *adx_dai = rtd->codec_dai;
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(rtd->card);
 	unsigned int default_slot[32], i, j;
+	unsigned int slot_size = 32;
 	unsigned int *rx_slot;
 
 	/* ADX0 slot map may be initialized through platform data */
 	if (machine->pdata->num_adx) {
 		rx_slot = machine->pdata->adx_config[0].slot_map;
+		slot_size = machine->pdata->adx_config[0].slot_size;
 	} else {
-		for (i = 0, j = 0; i < 32; i += 8) {
+		for (i = 0, j = 0; i < slot_size; i += 8) {
 			default_slot[i] = 0;
 			default_slot[i + 1] = 0;
 			default_slot[i + 2] = (j << 16) | (1 << 8) | 0;
@@ -782,7 +788,7 @@ static int tegra_vcm30t124_adx0_init(struct snd_soc_pcm_runtime *rtd)
 
 	if (adx_dai->driver->ops->set_channel_map)
 		adx_dai->driver->ops->set_channel_map(adx_dai,
-							0, 0, 32, rx_slot);
+					0, 0, slot_size, rx_slot);
 
 	return 0;
 }
@@ -792,13 +798,15 @@ static int tegra_vcm30t124_adx1_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_dai *adx_dai = rtd->codec_dai;
 	struct tegra_vcm30t124 *machine = snd_soc_card_get_drvdata(rtd->card);
 	unsigned int default_slot[32], i, j;
+	unsigned int slot_size = 32;
 	unsigned int *rx_slot;
 
 	/* ADX1 slot map may be initialized through platform data */
 	if (machine->pdata->num_adx > 1) {
 		rx_slot = machine->pdata->adx_config[1].slot_map;
+		slot_size = machine->pdata->adx_config[1].slot_size;
 	} else {
-		for (i = 0, j = 0; i < 32; i += 8) {
+		for (i = 0, j = 0; i < slot_size; i += 8) {
 			default_slot[i] = 0;
 			default_slot[i + 1] = 0;
 			default_slot[i + 2] = (j << 16) | (1 << 8) | 0;
@@ -814,7 +822,7 @@ static int tegra_vcm30t124_adx1_init(struct snd_soc_pcm_runtime *rtd)
 
 	if (adx_dai->driver->ops->set_channel_map)
 		adx_dai->driver->ops->set_channel_map(adx_dai,
-							0, 0, 32, rx_slot);
+					0, 0, slot_size, rx_slot);
 
 	return 0;
 }
@@ -1192,22 +1200,26 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 		switch (machine->pdata->num_amx) {
 		case 2:
 			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX1_0,
-				&machine->pdata->amx_config[1].params[0]);
+				&machine->pdata->amx_config[1].in_params[0]);
 			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX1_1,
-				&machine->pdata->amx_config[1].params[1]);
+				&machine->pdata->amx_config[1].in_params[1]);
 			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX1_2,
-				&machine->pdata->amx_config[1].params[2]);
+				&machine->pdata->amx_config[1].in_params[2]);
 			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX1_3,
-				&machine->pdata->amx_config[1].params[3]);
+				&machine->pdata->amx_config[1].in_params[3]);
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX1,
+				&machine->pdata->amx_config[1].out_params[0]);
 		case 1:
 			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX0_0,
-				&machine->pdata->amx_config[0].params[0]);
+				&machine->pdata->amx_config[0].in_params[0]);
 			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX0_1,
-				&machine->pdata->amx_config[0].params[1]);
+				&machine->pdata->amx_config[0].in_params[1]);
 			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX0_2,
-				&machine->pdata->amx_config[0].params[2]);
+				&machine->pdata->amx_config[0].in_params[2]);
 			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX0_3,
-				&machine->pdata->amx_config[0].params[3]);
+				&machine->pdata->amx_config[0].in_params[3]);
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_AMX0,
+				&machine->pdata->amx_config[0].out_params[0]);
 			break;
 		default:
 			break;
@@ -1218,22 +1230,26 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 		switch (machine->pdata->num_adx) {
 		case 2:
 			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX1_0,
-				&machine->pdata->adx_config[1].params[0]);
+				&machine->pdata->adx_config[1].out_params[0]);
 			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX1_1,
-				&machine->pdata->adx_config[1].params[1]);
+				&machine->pdata->adx_config[1].out_params[1]);
 			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX1_2,
-				&machine->pdata->adx_config[1].params[2]);
+				&machine->pdata->adx_config[1].out_params[2]);
 			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX1_3,
-				&machine->pdata->adx_config[1].params[3]);
+				&machine->pdata->adx_config[1].out_params[3]);
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX1,
+				&machine->pdata->adx_config[1].in_params[0]);
 		case 1:
 			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX0_0,
-				&machine->pdata->adx_config[0].params[0]);
+				&machine->pdata->adx_config[0].out_params[0]);
 			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX0_1,
-				&machine->pdata->adx_config[0].params[1]);
+				&machine->pdata->adx_config[0].out_params[1]);
 			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX0_2,
-				&machine->pdata->adx_config[0].params[2]);
+				&machine->pdata->adx_config[0].out_params[2]);
 			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX0_3,
-				&machine->pdata->adx_config[0].params[3]);
+				&machine->pdata->adx_config[0].out_params[3]);
+			tegra_machine_set_dai_params(TEGRA124_DAI_LINK_ADX0,
+				&machine->pdata->adx_config[0].in_params[0]);
 			break;
 		default:
 			break;

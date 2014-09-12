@@ -318,6 +318,10 @@ static inline u32 trim_sys_gpcpll_cfg3_pll_stepb_m(void)
 {
 	return 0xff << 16;
 }
+static inline u32 trim_sys_gpcpll_cfg3_dfs_testout_v(u32 r)
+{
+	return (r >> 24) & 0x7f;
+}
 static inline u32 trim_sys_gpcpll_dvfs0_r(void)
 {
 	return 0x00137010;
@@ -469,6 +473,10 @@ static inline u32 trim_gpc_bcast_gpcpll_ndiv_slowdown_debug_r(void)
 static inline u32 trim_gpc_bcast_gpcpll_ndiv_slowdown_debug_pll_dynramp_done_synced_v(u32 r)
 {
 	return (r >> 24) & 0x1;
+}
+static inline u32 trim_gpc_bcast_gpcpll_dvfs2_r(void)
+{
+	return 0x00132820;
 }
 static inline u32 trim_sys_bypassctrl_r(void)
 {

@@ -758,7 +758,7 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	return ret;
 }
 
-static unsigned long tegra_dc_get_bandwidth(
+unsigned long tegra_dc_get_bandwidth(
 	struct tegra_dc_win *windows[], int n)
 {
 	int i;
@@ -777,6 +777,7 @@ static unsigned long tegra_dc_get_bandwidth(
 
 	return tegra_dc_find_max_bandwidth(windows, n);
 }
+EXPORT_SYMBOL(tegra_dc_get_bandwidth);
 
 #ifdef CONFIG_TEGRA_ISOMGR
 /* to save power, call when display memory clients would be idle */

@@ -501,6 +501,7 @@ int tegra_dc_bandwidth_negotiate_bw(struct tegra_dc *dc,
 			struct tegra_dc_win *windows[], int n);
 void tegra_dc_bandwidth_renegotiate(void *p, u32 avail_bw);
 #endif
+unsigned long tegra_dc_get_bandwidth(struct tegra_dc_win *windows[], int n);
 long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc);
 
 /* defined in mode.c, used in dc.c and window.c */

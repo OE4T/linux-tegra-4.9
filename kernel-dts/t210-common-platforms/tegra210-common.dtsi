@@ -258,6 +258,13 @@
 		status = "okay";
 	};
 
+	usb_cd: usb_cd@7009f000 {
+		compatible = "nvidia,tegra210-usb-cd";
+		reg = <0x0 0x7009f000 0x0 0x1000>;
+		#extcon-cells = <1>;
+		status = "disabled";
+	};
+
         psy_extcon {
                 compatible = "power-supply-extcon";
                 extcon-cables = <&udc 1 &udc 2 &udc 3

@@ -17,8 +17,10 @@
 #ifndef __DRIVER_VIDEO_TEGRA_DC_NVDISP_H
 #define __DRIVER_VIDEO_TEGRA_DC_NVDISP_H
 
-/* Placeholder */
-
 extern struct mutex tegra_nvdisp_lock;
+
+
+int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx);
+int tegra_nvdisp_detach_win(struct tegra_dc *dc, unsigned idx);
 
 #endif

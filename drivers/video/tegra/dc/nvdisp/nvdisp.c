@@ -16,14 +16,19 @@
 
 
 #include <linux/interrupt.h>
+#include <linux/of_irq.h>
+#include <linux/of_address.h>
+#include <linux/dma-mapping.h>
 
 #include <mach/dc.h>
+#include <mach/fb.h>
 
 #include "nvdisp.h"
 #include "dc_reg.h"
 #include "dc_config.h"
 #include "dc_priv.h"
 #include "dp.h"
+#include "dpaux.h"
 
 /* static struct tegra_dc_nvdisp	tegra_nvdisp; */
 DEFINE_MUTEX(tegra_nvdisp_lock);
@@ -263,6 +268,8 @@ static int tegra_nvdisp_cursor_init(struct tegra_dc *dc)
 int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 {
 	int i;
+	int res;
+	struct device_node *np_dpaux;
 
 	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
 		return false;
@@ -270,7 +277,7 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	/* TODO: confirm power domains for parker */
 	/* tegra_dc_unpowergate_locked(dc); */
 
-	tegra_dc_io_start(dc);
+	tegra_dc_get(dc);
 
 	/* Enable OR -- need to enable the connection first */
 	if (dc->out->enable)
@@ -279,12 +286,25 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	/* TODO: clock setup */
 
 	tegra_dc_power_on(dc);
+
+	/* Mask interrupts duirng init */
+	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
+	
 	enable_irq(dc->irq);
 
-	tegra_nvdisp_head_init(dc);
-	tegra_nvdisp_postcomp_init(dc);
-	tegra_nvdisp_rg_init(dc);
-	tegra_nvdisp_cursor_init(dc);
+	res = tegra_nvdisp_head_init(dc);
+	res |= tegra_nvdisp_postcomp_init(dc);
+	res |= tegra_nvdisp_rg_init(dc);
+	res |= tegra_nvdisp_cursor_init(dc);
+
+	if (res) {
+		dev_err(&dc->ndev->dev, "%s, failed head enable\n", __func__);
+		goto failed_enable;
+	}
+
+	np_dpaux = of_find_node_by_path(DPAUX_NODE);
+	if (np_dpaux || !dc->ndev->dev.of_node)
+		tegra_dpaux_pad_power(dc, TEGRA_DPAUX_INSTANCE_0, false);
 
 	if (dc->out_ops && dc->out_ops->enable)
 		dc->out_ops->enable(dc);
@@ -294,7 +314,6 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 		dc->blend.z[i] = -1;
 
 	tegra_dc_ext_enable(dc->ext);
-
 	trace_display_enable(dc);
 
 	/* tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL); */
@@ -312,9 +331,53 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	 */
 	dc->out->flags &= ~TEGRA_DC_OUT_INITIALIZED_MODE;
 
-	tegra_dc_io_end(dc);
-
+	tegra_dc_put(dc);
 	return 0;
 
-	/* TODO: error processing and clear up */
+failed_enable:
+	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
+	disable_irq_nosync(dc->irq);
+	tegra_dc_clear_bandwidth(dc);
+	if (dc->out && dc->out->disable)
+		dc->out->disable();
+	tegra_dc_put(dc);
+
+	/* TODO: disable DC clock */
+	return -EINVAL;
+}
+
+struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
+	struct tegra_dc *dc, struct tegra_fb_data *fb_data,
+	struct resource *fb_mem)
+{
+	/* Assign the given window to current dc */
+	if (!tegra_dc_get_window(dc, fb_data->win) &&
+		tegra_nvdisp_assign_win(dc, fb_data->win)) {
+		dev_err(&ndev->dev, "Cannot assign window %d to head %d\n",
+			fb_data->win, dc->ctrl_num);
+		return ERR_PTR(-ENOENT);
+	}
+
+	/* Allocate FBMem if not already allcoated */
+	if (!fb_mem->start || !fb_mem->end) {
+		int fb_size = ((fb_data->xres + 63)/64) * fb_data->yres *
+			fb_data->bits_per_pixel;
+		/* dma_addr_t fb_handle; */
+		
+		if (!fb_size)
+			return ERR_PTR(-ENOENT);
+
+		/* fb_mem->start = (resource_size_t) dma_alloc_writecombine( */
+		/* 	&ndev->dev, fb_size, &fb_handle, GFP_KERNEL); */
+		fb_mem->start = (resource_size_t) kzalloc(fb_size,
+			GFP_KERNEL);
+		if (!fb_mem->start) {
+			dev_err(&ndev->dev, "Failed to allocate FBMem\n");
+			return ERR_PTR(-ENOENT);
+		}
+		fb_mem->end = fb_mem->start + fb_size - 1;
+		dev_info(&ndev->dev, "Allocated %d as FBmem\n", fb_size);
+	}
+
+	return tegra_fb_register(ndev, dc, fb_data, fb_mem);
 }

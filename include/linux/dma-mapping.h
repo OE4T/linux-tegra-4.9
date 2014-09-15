@@ -736,6 +736,11 @@ struct dma_declare_info {
 	struct dma_resize_notifier notifier;
 };
 
+struct dma_coherent_stats {
+	phys_addr_t base;
+	size_t size;
+};
+
 #else
 static inline int
 dma_declare_coherent_memory(struct device *dev, phys_addr_t phys_addr,

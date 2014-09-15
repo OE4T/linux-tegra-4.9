@@ -23,6 +23,7 @@ int dma_mmap_from_coherent(struct device *dev, struct vm_area_struct *vma,
  */
 #define ARCH_HAS_DMA_DECLARE_COHERENT_MEMORY
 struct dma_declare_info;
+struct dma_coherent_stats;
 
 extern int
 dma_declare_coherent_resizable_cma_memory(struct device *dev,
@@ -43,6 +44,10 @@ void dma_release_declared_memory(struct device *dev);
 
 bool dma_is_coherent_dev(struct device *dev);
 
+extern int
+dma_get_coherent_stats(struct device *dev,
+			struct dma_coherent_stats *stats);
+
 #else
 #define dma_alloc_from_coherent_attr(dev, size, handle, ret, attr) (0)
 #define dma_release_from_coherent_attr(dev, size, vaddr, attr, dma_handle) (0)
@@ -51,6 +56,7 @@ bool dma_is_coherent_dev(struct device *dev);
 #define dma_mmap_from_coherent(dev, vma, vaddr, order, ret) (0)
 #define dma_declare_coherent_resizable_cma_memory(dev, dma_info) (0)
 #define dma_is_coherent_dev(dev) (0)
+#define dma_get_coherent_stats(dev, dma_stats) (0)
 #endif
 
 #endif

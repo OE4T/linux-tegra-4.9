@@ -334,6 +334,7 @@ struct nvhost_device_data t21_vic_info = {
 	.scaling_deinit         = nvhost_scale_deinit,
 	.actmon_regs            = HOST1X_CHANNEL_ACTMON2_REG_BASE,
 	.actmon_enabled         = true,
+	.serialize		= true,
 	.firmware_name		= "vic04_ucode.bin",
 	.bond_out_id		= BOND_OUT_VIC,
 	.aggregate_constraints	= nvhost_vic_aggregate_constraints,

@@ -33,6 +33,8 @@
 #include <linux/hwmon-sysfs.h>
 #include <linux/suspend.h>
 
+#define	DEFAULT_TSKIN			25000 /* default tskin in mC */
+
 struct therm_estimator {
 	struct thermal_zone_device *thz;
 
@@ -212,8 +214,8 @@ static int therm_est_polling(struct therm_estimator *est,
 			&est->therm_est_work,
 			msecs_to_jiffies(est->polling_period));
 	} else {
-		est->cur_temp = 25000;
 		cancel_delayed_work_sync(&est->therm_est_work);
+		est->cur_temp = DEFAULT_TSKIN;
 	}
 	return 0;
 }
@@ -609,6 +611,7 @@ static int therm_est_probe(struct platform_device *pdev)
 	est->polling_enabled = 0; /* By default polling is switched off */
 	est->tc1 = data->tc1;
 	est->tc2 = data->tc2;
+	est->cur_temp = DEFAULT_TSKIN;
 	est->use_activator = data->use_activator;
 
 	/* initialize history */

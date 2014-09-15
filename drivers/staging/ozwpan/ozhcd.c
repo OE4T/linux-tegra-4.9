@@ -87,11 +87,18 @@ struct oz_endpoint {
 	u8 max_buffer_units;
 	unsigned flags;
 	int start_frame;
+	u8 next_frame;
+	u8 lost_frames;
+	u16 dropped_frames;
+	struct timespec timestamp2;
 };
 /* Bits in the flags field. */
-#define OZ_F_EP_BUFFERING	0x1
-#define OZ_F_EP_HAVE_STREAM	0x2
-
+#define OZ_F_EP_BUFFERING			(1<<0)
+#define OZ_F_EP_HAVE_STREAM			(1<<1)
+#define OZ_F_EP_ISOC_FRAME_NUM_VALID		(1<<2)
+#define OZ_F_EP_ISOC_FRAME_TIME_SET		(1<<3)
+#define OZ_F_EP_ISOC_DUPLICATE_FRAME		(1<<4)
+#define OZ_F_EP_HAVE_REF_CLK_STREAM		(1<<5)
 
 /* Buffer_size.
 Total size of buffer (in bytes) for the endpoint buffer for isochronous data,
@@ -201,7 +208,6 @@ static DEFINE_SPINLOCK(g_tasklet_lock);
 static struct tasklet_struct g_urb_process_tasklet;
 static struct tasklet_struct g_urb_cancel_tasklet;
 static atomic_t g_pending_urbs = ATOMIC_INIT(0);
-static atomic_t g_usb_frame_number = ATOMIC_INIT(0);
 static const struct hc_driver g_oz_hc_drv = {
 	.description =		g_hcd_name,
 	.product_desc =		"Ozmo Devices WPAN",
@@ -261,6 +267,16 @@ static int oz_get_port_from_addr(struct oz_hcd *ozhcd, u8 bus_addr)
 	}
 	return ozhcd->conn_port;
 }
+/*------------------------------------------------------------------------------
+ * Context: unknown
+ */
+static inline int oz_usb_get_frame_number(void)
+{
+	struct timespec ts;
+	getrawmonotonic(&ts);
+	return (int)(div64_u64(timespec_to_ns(&ts), NSEC_PER_MSEC));
+}
+
 /*------------------------------------------------------------------------------
  * Allocates an urb link, first trying the pool but going to heap if empty.
  * Context: any
@@ -334,6 +350,7 @@ static struct oz_endpoint *oz_ep_alloc(gfp_t mem_flags, int buffer_size)
 		INIT_LIST_HEAD(&ep->urb_list);
 		INIT_LIST_HEAD(&ep->link);
 		ep->credit = -1;
+		getrawmonotonic(&ep->timestamp2);
 		if (buffer_size) {
 			ep->buffer_size = buffer_size;
 			ep->buffer = (u8 *)(ep+1);
@@ -1008,6 +1025,187 @@ static int oz_hcd_buffer_data(struct oz_endpoint *ep, const u8 *data,
 	return 0;
 }
 /*------------------------------------------------------------------------------
+ */
+static int oz_hcd_buffer_frame(struct oz_endpoint *ep,
+				u8 frame, const u8 *data, int data_len)
+{
+	int space;
+	int copy_len;
+	struct timespec ts, delta;
+	int delta_ms;
+
+	if (!ep->buffer)
+		return -1;
+
+
+	getrawmonotonic(&ts);
+	delta = timespec_sub(ts, ep->timestamp2);
+	delta_ms = div64_u64(timespec_to_ns(&delta)+5000, NSEC_PER_MSEC);
+	ep->timestamp2 = ts;
+
+	if (delta_ms >= (ep->max_buffer_units/2)) {
+		oz_trace_msg(M,
+			"Network outage: %dms #%02X\n", delta_ms, frame);
+	}
+
+	space = ep->out_ix-ep->in_ix-1;
+	if (space < 0)
+		space += ep->buffer_size;
+	if (space < (data_len+2)) {
+		oz_trace_msg(I, "EP:%02X u:%d FULL len:%d spc:%d\n",
+				ep->ep_num | USB_DIR_IN,
+				ep->buffered_units,
+				data_len, space);
+		return -1;
+	}
+
+	ep->buffer[ep->in_ix] = frame;
+	if (++ep->in_ix == ep->buffer_size)
+		ep->in_ix = 0;
+
+	ep->buffer[ep->in_ix] = (u8)data_len;
+	if (++ep->in_ix == ep->buffer_size)
+		ep->in_ix = 0;
+
+	copy_len = ep->buffer_size - ep->in_ix;
+	if (copy_len > data_len)
+		copy_len = data_len;
+	memcpy(&ep->buffer[ep->in_ix], data, copy_len);
+
+	if (copy_len < data_len) {
+		memcpy(ep->buffer, data+copy_len, data_len-copy_len);
+		ep->in_ix = data_len-copy_len;
+	} else {
+		ep->in_ix += copy_len;
+	}
+	if (ep->in_ix == ep->buffer_size)
+		ep->in_ix = 0;
+	ep->buffered_units++;
+
+	if (ep->buffered_units >= ep->max_buffer_units*2) {
+		int len;
+		while (ep->buffered_units > ep->max_buffer_units) {
+			/* Skip out frame number field. */
+			if (++ep->out_ix == ep->buffer_size)
+				ep->out_ix = 0;
+
+			len = ep->buffer[ep->out_ix];
+			if (++ep->out_ix == ep->buffer_size)
+				ep->out_ix = 0;
+
+			copy_len = ep->buffer_size - ep->out_ix;
+			if (copy_len > len)
+				copy_len = len;
+			if (copy_len < len)
+				ep->out_ix = len - copy_len;
+			else
+				ep->out_ix += copy_len;
+
+			if (ep->out_ix == ep->buffer_size)
+				ep->out_ix = 0;
+
+			ep->buffered_units--;
+		}
+		ep->flags &= ~OZ_F_EP_ISOC_FRAME_NUM_VALID;
+	}
+
+	return 0;
+}
+/*------------------------------------------------------------------------------
+ * Context: unknown
+ */
+void oz_hcd_advance_buffered_frame(struct oz_endpoint *ep)
+{
+	if (ep->buffered_units) {
+		int len;
+		int copy_len;
+		int out_ix;
+		ep->buffered_units--;
+
+		out_ix = ep->out_ix;
+		if (++out_ix == ep->buffer_size)
+			out_ix = 0;
+
+		len = ep->buffer[out_ix];
+		if (++out_ix == ep->buffer_size)
+			out_ix = 0;
+		copy_len = ep->buffer_size - out_ix;
+		if (copy_len > len)
+			copy_len = len;
+		if (copy_len < len)
+			out_ix = len-copy_len;
+		else
+			out_ix += copy_len;
+
+		if (out_ix == ep->buffer_size)
+			out_ix = 0;
+		ep->out_ix = out_ix;
+	}
+}
+/*------------------------------------------------------------------------------
+ */
+#define oz_hcd_get_next_queued_frame(ep)\
+	((ep)->buffer[(ep)->out_ix])
+/*------------------------------------------------------------------------------
+ */
+int oz_hcd_copy_isoc_frame(struct oz_endpoint *ep,
+				u8 *buffer, int update)
+{
+	int len = 0;
+	int out_ix = ep->out_ix;
+	int copy_len;
+
+	if (ep->buffered_units) {
+
+		if (++out_ix == ep->buffer_size)
+			out_ix = 0;
+
+		len = ep->buffer[out_ix];
+		if (++out_ix == ep->buffer_size)
+			out_ix = 0;
+		copy_len = ep->buffer_size - out_ix;
+		if (copy_len > len)
+			copy_len = len;
+
+		memcpy(buffer, &ep->buffer[out_ix], copy_len);
+		if (copy_len < len) {
+			memcpy(buffer+copy_len, ep->buffer, len-copy_len);
+			out_ix = len-copy_len;
+		} else
+			out_ix += copy_len;
+
+		if (out_ix == ep->buffer_size)
+			out_ix = 0;
+
+		if (update) {
+			ep->out_ix = out_ix;
+			ep->buffered_units--;
+		}
+	}
+	return len;
+}
+/*------------------------------------------------------------------------------
+ * Context: unknown
+ */
+void oz_hcd_isoc_frame(void *hport, u8 endpoint, u8 frame,
+				const u8 *data, int data_len)
+{
+	struct oz_port *port = (struct oz_port *)hport;
+	struct oz_endpoint *ep;
+	struct oz_hcd *ozhcd = port->ozhcd;
+	spin_lock_bh(&ozhcd->hcd_lock);
+	ep = port->in_ep[endpoint & USB_ENDPOINT_NUMBER_MASK];
+	if (ep == NULL)
+		goto done;
+	switch (ep->attrib & USB_ENDPOINT_XFERTYPE_MASK) {
+	case USB_ENDPOINT_XFER_ISOC:
+		oz_hcd_buffer_frame(ep, frame, data, data_len);
+		break;
+	}
+done:
+	spin_unlock_bh(&ozhcd->hcd_lock);
+}
+/*------------------------------------------------------------------------------
  * Context: softirq-serialized
  */
 void oz_hcd_data_ind(void *hport, u8 endpoint, const u8 *data, int data_len)
@@ -1073,13 +1271,6 @@ done:
 	spin_unlock_bh(&ozhcd->hcd_lock);
 }
 /*------------------------------------------------------------------------------
- * Context: unknown
- */
-static inline int oz_usb_get_frame_number(void)
-{
-	return atomic_inc_return(&g_usb_frame_number);
-}
-/*------------------------------------------------------------------------------
  * Context: softirq
  */
 int oz_hcd_heartbeat(void *hport)
@@ -1138,7 +1329,7 @@ int oz_hcd_heartbeat(void *hport)
 	spin_lock_bh(&ozhcd->hcd_lock);
 	list_for_each(e, &port->isoc_in_ep) {
 		struct oz_endpoint *ep = ep_from_link(e);
-
+		int complete_frames = 0;
 		if (ep->flags & OZ_F_EP_BUFFERING) {
 			if (ep->buffered_units >= ep->max_buffer_units) {
 				ep->flags &= ~OZ_F_EP_BUFFERING;
@@ -1146,11 +1337,13 @@ int oz_hcd_heartbeat(void *hport)
 				ep->credit2 = 0;
 				ep->timestamp = ts;
 				ep->start_frame = 0;
+				ep->dropped_frames = 0;
 			}
-			continue;
+			/* continue; */
 		}
 		delta = timespec_sub(ts, ep->timestamp);
-		ep->credit += div64_u64(timespec_to_ns(&delta)+5000, NSEC_PER_MSEC);
+		ep->credit += div64_u64(timespec_to_ns(&delta)+5000,
+						NSEC_PER_MSEC);
 		ep->timestamp = ts;
 		while (!list_empty(&ep->urb_list)) {
 			struct oz_urb_link *urbl =
@@ -1158,35 +1351,125 @@ int oz_hcd_heartbeat(void *hport)
 					struct oz_urb_link, link);
 			struct urb *urb = urbl->urb;
 			int len = 0;
-			int copy_len;
 			int i;
-			if (ep->buffered_units < urb->number_of_packets)
-				break;
+			u8 frame;
+			u8 proc = 0;
+			#define STREAM_PROC_INSERT_SILENCE_FRAME	1
+			#define STREAM_PROC_DUPLICATE_FRAME		2
+			#define STREAM_PROC_SKIP_FRAME			4
+
 			urb->actual_length = 0;
 			for (i = 0; i < urb->number_of_packets; i++) {
-				len = ep->buffer[ep->out_ix];
-				if (++ep->out_ix == ep->buffer_size)
-					ep->out_ix = 0;
-				copy_len = ep->buffer_size - ep->out_ix;
-				if (copy_len > len)
-					copy_len = len;
-				memcpy(urb->transfer_buffer,
-					&ep->buffer[ep->out_ix], copy_len);
-				if (copy_len < len) {
-					memcpy(urb->transfer_buffer+copy_len,
-						ep->buffer, len-copy_len);
-					ep->out_ix = len-copy_len;
-				} else
-					ep->out_ix += copy_len;
-				if (ep->out_ix == ep->buffer_size)
-					ep->out_ix = 0;
+				complete_frames++;
+				proc = 0;
+				do {
+					if (ep->flags & OZ_F_EP_BUFFERING) {
+						/*oz_trace_msg(M, "EP_BUFFERING %d/%d\n",
+								ep->buffered_units,
+								ep->max_buffer_units);
+						*/
+						proc = STREAM_PROC_INSERT_SILENCE_FRAME;
+						if (ep->flags & OZ_F_EP_ISOC_FRAME_NUM_VALID) {
+							if (++ep->lost_frames >= 128) {
+								/* Untracable */
+								ep->flags &=
+									~OZ_F_EP_ISOC_FRAME_NUM_VALID;
+							} else
+								ep->next_frame++;
+						}
+						break;
+					}
+
+					/* No frame */
+					if (ep->buffered_units == 0) {
+						oz_trace_msg(I,
+							"EP:%02X Buffer under run #%02X\n",
+							ep->ep_num | USB_DIR_IN,
+							ep->next_frame);
+						proc = STREAM_PROC_INSERT_SILENCE_FRAME;
+						ep->flags |= OZ_F_EP_BUFFERING;
+						ep->next_frame++;
+						ep->lost_frames = 1;
+						break;
+					}
+
+					frame = oz_hcd_get_next_queued_frame(ep);
+
+					if (ep->flags & OZ_F_EP_ISOC_FRAME_NUM_VALID) {
+						/* Advance pointer, and try again.*/
+						if ((frame - ep->next_frame) & 0x80) {
+							oz_trace_msg(I,
+								"Too late:#%02X #%02X\n",
+								ep->next_frame, frame);
+							oz_hcd_advance_buffered_frame(ep);
+							continue;
+						}
+						/* Drop frame, insert slience frame.*/
+						if (frame - ep->next_frame) {
+							/*
+							oz_trace_msg(I,
+								"Drop frame:#%02X #%02X\n",
+								ep->next_frame, frame);
+							*/
+							ep->dropped_frames++;
+							ep->next_frame++;
+							proc = STREAM_PROC_INSERT_SILENCE_FRAME;
+							break;
+						}
+						/*
+						if (frame == ??) {
+							oz_trace_msg(M, "Too much:%02X %02X\n",
+								ep->next_frame, frame);
+							oz_hcd_advance_buffered_frame(ep);
+							continue;
+						}
+						if (frame == ??) {
+							oz_trace_msg(M, "Dup:%02X %02X\n",
+								ep->next_frame, frame);
+							op = STREAM_PROC_DUPLICATE_FRAME;
+							break;
+						}
+						*/
+					} else
+						oz_trace_msg(I, "Frame#%02X\n", frame);
+
+					ep->next_frame = frame + 1;
+					ep->flags |= OZ_F_EP_ISOC_FRAME_NUM_VALID;
+					break;
+				} while (1);
+
+				switch (proc) {
+				case STREAM_PROC_INSERT_SILENCE_FRAME:
+					len = urb->transfer_buffer_length
+						 / urb->number_of_packets;
+					memset(urb->transfer_buffer, 0, len);
+					break;
+				case STREAM_PROC_SKIP_FRAME:
+					break;
+				case STREAM_PROC_DUPLICATE_FRAME:
+					len = oz_hcd_copy_isoc_frame(
+						ep,
+						&(((u8 *)urb->transfer_buffer)
+							[urb->actual_length]),
+						0);
+					break;
+				default:
+					len = oz_hcd_copy_isoc_frame(
+						ep,
+						&(((u8 *)urb->transfer_buffer)
+							[urb->actual_length]),
+						1);
+					break;
+				}
+
+				/* update urb */
 				urb->iso_frame_desc[i].offset =
 					urb->actual_length;
 				urb->actual_length += len;
 				urb->iso_frame_desc[i].actual_length = len;
 				urb->iso_frame_desc[i].status = 0;
 			}
-			ep->buffered_units -= urb->number_of_packets;
+
 			urb->error_count = 0;
 			urb->start_frame = ep->start_frame;
 			ep->start_frame += urb->number_of_packets;
@@ -1194,23 +1477,23 @@ int oz_hcd_heartbeat(void *hport)
 			ep->credit -= urb->number_of_packets;
 			ep->credit2 += urb->number_of_packets;
 		}
-		if (ep->buffered_units == 0) {
-			oz_trace_msg(I, "EP:%02X Buffer under run\n",
-					ep->ep_num | USB_DIR_IN);
-			ep->flags |= OZ_F_EP_BUFFERING;
-			continue;
+
+		if (complete_frames != 8) {
+			oz_trace_msg(I, "Complete %d frames\n", complete_frames);
 		}
+
 		if (ep->credit2 >= 1000)
 		{
 			static int buffered_units=-1;
 			static int max_buffer_units=-1;
 			{
 				int diff = ep->buffered_units - buffered_units;
-				oz_trace_msg(I, "u:%d o:%04d b:%d\n",
+				oz_trace_msg(I, "u:%d o:%d b:%d d:%d\n",
 						ep->credit2,
 						ep->credit2 + diff,
-						ep->buffered_units);
-
+						ep->buffered_units,
+						ep->dropped_frames);
+				ep->dropped_frames = 0;
 				buffered_units = ep->buffered_units;
 				max_buffer_units = ep->max_buffer_units;
 			}

@@ -44,6 +44,9 @@ void oz_hcd_mark_urb_submitted(void *hport, int ep_ix, u8 req_id);
  */
 void oz_hcd_data_ind(void *hport, u8 endpoint, const u8 *data, int data_len);
 
+void oz_hcd_isoc_frame(void *hport, u8 endpoint,
+	u8 frame, const u8 *data, int data_len);
+
 int oz_hcd_heartbeat(void *hport);
 
 /* Get information.

@@ -346,6 +346,7 @@ void oz_usb_handle_ep_data(struct oz_usb_ctx *usb_ctx,
 				(struct oz_isoc_fixed *)data_hdr;
 			int data_len = len-sizeof(struct oz_isoc_fixed)+1;
 			int unit_size = body->unit_size;
+			u8 frame_number = body->frame_number;
 			u8 *data = body->data;
 			int count;
 			int i;
@@ -353,9 +354,11 @@ void oz_usb_handle_ep_data(struct oz_usb_ctx *usb_ctx,
 				break;
 			count = data_len/unit_size;
 			for (i = 0; i < count; i++) {
-				oz_hcd_data_ind(usb_ctx->hport,
-					body->endpoint, data, unit_size);
+				oz_hcd_isoc_frame(usb_ctx->hport,
+					body->endpoint,
+					frame_number, data, unit_size);
 				data += unit_size;
+				frame_number++;
 			}
 		}
 		break;
@@ -460,5 +463,6 @@ void oz_usb_farewell(struct oz_pd *pd, u8 ep_num, u8 *data, u8 len)
 u8 oz_get_up_max_buffer_units(void *hpd)
 {
 	struct oz_usb_ctx *usb_ctx = (struct oz_usb_ctx *)hpd;
+	oz_trace_msg(M, "max_buffer_units:%d\n", usb_ctx->pd->up_audio_buf);
 	return usb_ctx->pd->up_audio_buf;
 }

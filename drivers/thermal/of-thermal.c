@@ -446,6 +446,9 @@ thermal_zone_of_add_sensor(struct device_node *zone,
 
 	mutex_unlock(&tzd->lock);
 
+	if (tzd->polling_delay)
+		thermal_zone_device_update(tzd, THERMAL_EVENT_UNSPECIFIED);
+
 	return tzd;
 }
 

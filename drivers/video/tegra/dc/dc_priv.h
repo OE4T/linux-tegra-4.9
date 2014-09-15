@@ -555,8 +555,11 @@ int tegra_nvdisp_init(struct tegra_dc *dc);
 int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	struct tegra_dc_win *windows[], int n,
 	u16 *dirty_rect, bool wait_for_vblank);
+int tegra_nvdisp_head_enable(struct tegra_dc *dc);
 
-
+struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
+	struct tegra_dc *dc, struct tegra_fb_data *fb_data,
+	struct resource *fb_mem);
 #endif
 
 #endif

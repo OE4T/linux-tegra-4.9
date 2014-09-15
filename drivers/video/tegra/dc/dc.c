@@ -1514,6 +1514,7 @@ bool tegra_dc_hpd(struct tegra_dc *dc)
 }
 EXPORT_SYMBOL(tegra_dc_hpd);
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 static void tegra_dc_set_scaling_filter(struct tegra_dc *dc)
 {
 	unsigned i;
@@ -1531,6 +1532,7 @@ static void tegra_dc_set_scaling_filter(struct tegra_dc *dc)
 		v1 += 8;
 	}
 }
+#endif
 
 #ifdef CONFIG_TEGRA_DC_CMU
 static void tegra_dc_cache_cmu(struct tegra_dc *dc,
@@ -2675,6 +2677,7 @@ void tegra_dc_set_color_control(struct tegra_dc *dc)
 	tegra_dc_writel(dc, color_control, DC_DISP_DISP_COLOR_CONTROL);
 }
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 static void tegra_dc_init_vpulse2_int(struct tegra_dc *dc)
 {
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
@@ -2931,6 +2934,7 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 
 	return true;
 }
+#endif
 
 #ifdef CONFIG_ARCH_TEGRA_2x_SOC
 static bool _tegra_dc_controller_reset_enable(struct tegra_dc *dc)
@@ -3054,7 +3058,11 @@ static bool _tegra_dc_enable(struct tegra_dc *dc)
 	if (dc->out->type == TEGRA_DC_OUT_HDMI && !tegra_dc_hpd(dc))
 		return false;
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (tegra_nvdisp_head_enable(dc)) {
+#else
 	if (!_tegra_dc_controller_enable(dc)) {
+#endif
 		pm_runtime_put_sync(&dc->ndev->dev);
 		return false;
 	}
@@ -3674,16 +3682,16 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 	dc->n_windows = DC_N_WINDOWS;
 	for (i = 0; i < DC_N_WINDOWS; i++) {
+		struct tegra_dc_win *tmp_win = &dc->tmp_wins[i];
 #ifdef CONFIG_TEGRA_NVDISPLAY
 		struct tegra_dc_win *win = &tegra_dc_windows[i];
 #else
 		struct tegra_dc_win *win = &dc->windows[i];
+		win->dc = dc;
 #endif
-		struct tegra_dc_win *tmp_win = &dc->tmp_wins[i];
 		if (!test_bit(i, &dc->valid_windows))
 			win->flags |= TEGRA_WIN_FLAG_INVALID;
 		win->idx = i;
-		win->dc = dc;
 		tmp_win->idx = i;
 		tmp_win->dc = dc;
 		tegra_dc_init_csc_defaults(&win->csc);
@@ -3886,7 +3894,12 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		}
 #else
 		tegra_dc_io_start(dc);
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		dc->fb = tegra_nvdisp_fb_register(ndev, dc, dc->pdata->fb,
+			fb_mem);
+#else
 		dc->fb = tegra_fb_register(ndev, dc, dc->pdata->fb, fb_mem);
+#endif
 		tegra_dc_io_end(dc);
 		if (IS_ERR_OR_NULL(dc->fb)) {
 			dc->fb = NULL;

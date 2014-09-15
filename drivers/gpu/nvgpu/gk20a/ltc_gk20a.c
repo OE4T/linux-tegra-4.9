@@ -174,28 +174,6 @@ out:
 }
 
 
-#ifdef CONFIG_DEBUG_FS
-static void gk20a_ltc_sync_debugfs(struct gk20a *g)
-{
-	u32 reg_f = ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_enabled_f();
-
-	spin_lock(&g->debugfs_lock);
-	if (g->mm.ltc_enabled != g->mm.ltc_enabled_debug) {
-		u32 reg = gk20a_readl(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r());
-		if (g->mm.ltc_enabled_debug)
-			/* bypass disabled (normal caching ops)*/
-			reg &= ~reg_f;
-		else
-			/* bypass enabled (no caching) */
-			reg |= reg_f;
-
-		gk20a_writel(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r(), reg);
-		g->mm.ltc_enabled = g->mm.ltc_enabled_debug;
-	}
-	spin_unlock(&g->debugfs_lock);
-}
-#endif
-
 static void gk20a_ltc_init_fs_state(struct gk20a *g)
 {
 	gk20a_dbg_info("initialize gk20a L2");

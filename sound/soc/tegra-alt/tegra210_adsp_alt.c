@@ -34,7 +34,6 @@
 #include <linux/platform_device.h>
 #include <linux/firmware.h>
 #include <linux/kthread.h>
-#include <linux/workqueue.h>
 #include <linux/tegra_nvadsp.h>
 #include <linux/irqchip/tegra-agic.h>
 
@@ -104,7 +103,6 @@ struct tegra210_adsp_compr_rtd {
 
 struct tegra210_adsp {
 	struct device *dev;
-	struct work_struct work;
 	struct tegra210_adsp_app apps[TEGRA210_ADSP_VIRT_REG_MAX];
 	atomic_t reg_val[TEGRA210_ADSP_VIRT_REG_MAX];
 	DECLARE_BITMAP(adma_usage, TEGRA210_ADSP_ADMA_CHANNEL_COUNT);
@@ -321,24 +319,6 @@ static void tegra210_adsp_deinit(struct tegra210_adsp *adsp)
 		adsp->init_done = 0;
 	}
 	mutex_unlock(&adsp->mutex);
-}
-
-static void tegra210_adsp_init_work(struct work_struct *work)
-{
-	struct tegra210_adsp *adsp =
-		container_of(work, struct tegra210_adsp, work);
-	int retry = 10;
-	int ret = 0;
-
-	while (retry) {
-		ret = tegra210_adsp_init(adsp);
-		if (!ret)
-			break;
-
-		dev_warn(adsp->dev, "Failed to load adsp OS. Will retry.");
-		msleep(5000);
-		retry--;
-	}
 }
 
 /* ADSP-CPU message send-receive utility functions */
@@ -1428,6 +1408,9 @@ static int tegra210_adsp_mux_put(struct snd_kcontrol *kcontrol,
 	uint32_t cur_val = 0;
 	int ret = 0;
 
+	if (!adsp->init_done)
+		return -ENODEV;
+
 	/* Init or de-init app based on connection */
 	if (IS_ADSP_APP(e->reg)) {
 		app = &adsp->apps[e->reg];
@@ -1973,8 +1956,6 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	}
 	/* HACK end */
 
-	INIT_WORK(&adsp->work, tegra210_adsp_init_work);
-
 	for (i = 0; i < TEGRA210_ADSP_VIRT_REG_MAX; i++)
 		adsp->apps[i].reg = i;
 
@@ -2004,10 +1985,6 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
 		goto err_unregister_platform;
 	}
-
-#if ENABLE_ADSP
-	schedule_work(&adsp->work);
-#endif
 
 	pr_info("tegra210_adsp_audio_platform_probe probe successfull.");
 	return 0;

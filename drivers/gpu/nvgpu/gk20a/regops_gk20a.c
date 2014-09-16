@@ -393,7 +393,7 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 
 	ch = dbg_s->ch;
 
-	ok = validate_reg_ops(dbg_s,
+	ok = g->allow_all || validate_reg_ops(dbg_s,
 			      &ctx_rd_count, &ctx_wr_count,
 			      ops, num_ops);
 	if (!ok) {

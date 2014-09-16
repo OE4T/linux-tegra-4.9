@@ -102,6 +102,7 @@ static char *nvdec_get_fw_name(struct platform_device *dev, int fw)
 				tegra_platform_is_linsim()) {
 				dev_info(&dev->dev,
 					"Prod + No-WPR not allowed\n");
+				kfree(fw_name);
 				return NULL;
 			} else
 				sprintf(fw_name, "nvhost_nvdec_bl0%d%d_prod.fw",
@@ -494,35 +495,37 @@ int nvhost_nvdec_init_sw(struct platform_device *dev)
 	fw_name = kzalloc(2*sizeof(char *), GFP_KERNEL);
 	if (!fw_name) {
 		dev_err(&dev->dev, "couldn't allocate firmware ptr");
-		kfree(m);
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto error;
 	}
 
 	fw_name[0] = nvdec_get_fw_name(dev, host_nvdec_fw_bl);
 	if (!fw_name[0]) {
 		dev_err(&dev->dev, "couldn't determine BL firmware name");
-		return -EINVAL;
+		err = -EINVAL;
+		goto error;
 	}
 	fw_name[1] = nvdec_get_fw_name(dev, host_nvdec_fw_ls);
 	if (!fw_name[1]) {
 		dev_err(&dev->dev, "couldn't determine LS firmware name");
-		return -EINVAL;
+		err = -EINVAL;
+		goto err_fw;
 	}
 
 	for (i = 0; i < 2; i++) {
 		m[i] = kzalloc(sizeof(struct nvdec), GFP_KERNEL);
 		if (!m[i]) {
 			dev_err(&dev->dev, "couldn't alloc ucode");
-			kfree(fw_name[i]);
-			return -ENOMEM;
+			err = -ENOMEM;
+			goto err_ucode;
 		}
 
 		err = nvdec_read_ucode(dev, fw_name[i], m[i]);
 		kfree(fw_name[i]);
-		fw_name[i] = 0;
+		fw_name[i] = NULL;
 		if (err || !m[i]->valid) {
 			dev_err(&dev->dev, "ucode not valid");
-			goto clean_up;
+			goto err_ucode;
 		}
 	}
 	kfree(fw_name);
@@ -530,7 +533,16 @@ int nvhost_nvdec_init_sw(struct platform_device *dev)
 
 	return 0;
 
-clean_up:
+err_ucode:
+	kfree(m[0]);
+	kfree(m[1]);
+	kfree(fw_name[1]);
+err_fw:
+	kfree(fw_name[0]);
+	kfree(fw_name);
+error:
+	kfree(m);
+	set_nvdec(dev, NULL);
 	dev_err(&dev->dev, "failed");
 	return err;
 }
@@ -575,6 +587,8 @@ int nvhost_nvdec_init_sw(struct platform_device *dev)
 	return 0;
 
 clean_up:
+	kfree(m);
+	set_nvdec(dev, NULL);
 	dev_err(&dev->dev, "failed");
 	return err;
 }

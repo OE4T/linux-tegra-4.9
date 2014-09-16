@@ -881,7 +881,8 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		}
 
 		err = request_irq(fan_data->tach_irq, fan_tach_isr,
-			IRQF_TRIGGER_FALLING , "pwm-fan-tach", NULL);
+			IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
+			"pwm-fan-tach", NULL);
 		if (err < 0)
 			goto tach_request_irq_fail;
 		disable_irq_nosync(fan_data->tach_irq);

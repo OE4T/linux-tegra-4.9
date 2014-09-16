@@ -28,6 +28,7 @@
 #include "hw_trim_gm20b.h"
 #include "hw_timer_gm20b.h"
 #include "hw_therm_gm20b.h"
+#include "hw_fuse_gm20b.h"
 #include "clk_gm20b.h"
 
 #define ALLOW_NON_CALIBRATED_NA_MODE	1
@@ -1166,6 +1167,19 @@ static int gm20b_init_clk_setup_hw(struct gk20a *g)
 	data = set_field(data, trim_sys_bypassctrl_gpcpll_m(),
 			 trim_sys_bypassctrl_gpcpll_vco_f());
 	gk20a_writel(g, trim_sys_bypassctrl_r(), data);
+
+	/* If not fused, set RAM SVOP PDP data 0x2, and enable fuse override */
+	data = gk20a_readl(g, fuse_ctrl_opt_ram_svop_pdp_r());
+	if (!fuse_ctrl_opt_ram_svop_pdp_data_v(data)) {
+		data = set_field(data, fuse_ctrl_opt_ram_svop_pdp_data_m(),
+			 fuse_ctrl_opt_ram_svop_pdp_data_f(0x2));
+		gk20a_writel(g, fuse_ctrl_opt_ram_svop_pdp_r(), data);
+		data = gk20a_readl(g, fuse_ctrl_opt_ram_svop_pdp_override_r());
+		data = set_field(data,
+			fuse_ctrl_opt_ram_svop_pdp_override_data_m(),
+			fuse_ctrl_opt_ram_svop_pdp_override_data_yes_f());
+		gk20a_writel(g, fuse_ctrl_opt_ram_svop_pdp_override_r(), data);
+	}
 
 	/* Disable idle slow down */
 	data = gk20a_readl(g, therm_clk_slowdown_r(0));

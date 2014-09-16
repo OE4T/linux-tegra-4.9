@@ -573,7 +573,7 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.clockgate_delay	= 50,
 	/* Disable all power features for gm20b */
 	.can_railgate           = true,
-	.enable_slcg            = false,
+	.enable_slcg            = true,
 	.enable_blcg            = true,
 	.enable_elcg            = true,
 	.enable_elpg            = false,

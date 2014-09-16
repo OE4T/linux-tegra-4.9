@@ -33,6 +33,7 @@ extern struct nvhost_device_data t21_nvjpg_info;
 extern struct nvhost_device_data t21_tsec_info;
 extern struct nvhost_device_data t21_tsecb_info;
 extern struct nvhost_device_data t21_vic_info;
+extern struct nvhost_device_data t21_vii2c_info;
 
 int nvhost_init_t210_support(struct nvhost_master *host,
        struct nvhost_chip_support *op);

@@ -36,6 +36,7 @@
 #include "nvdec/nvdec.h"
 #include "tsec/tsec.h"
 #include "vi/vi.h"
+#include "vii2c/vii2c.h"
 #include "isp/isp.h"
 
 #include "../../../../arch/arm/mach-tegra/iomap.h"
@@ -188,6 +189,29 @@ struct nvhost_device_data t21_vi_info = {
 };
 #endif
 
+#endif
+
+#if defined(CONFIG_TEGRA_GRHOST_VII2C)
+struct nvhost_device_data t21_vii2c_info = {
+	.class			= NV_VIDEO_STREAMING_VII2C_CLASS_ID,
+	.exclusive		= true,
+	.keepalive		= true,
+	.finalize_poweron	= nvhost_vii2c_finalize_poweron,
+	.prepare_poweroff	= nvhost_vii2c_prepare_poweroff,
+	.reset			= nvhost_vii2c_module_reset,
+#ifdef TEGRA_POWERGATE_VE
+	.powergate_ids		= {TEGRA_POWERGATE_VE, -1},
+#else
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+#endif
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid		= NVHOST_MODULE_VII2C,
+	.clocks = {
+		{"vii2c", 86400000},
+		{"i2cslow", 1000000},
+	},
+	.num_channels		= 1,
+};
 #endif
 
 struct nvhost_device_data t21_msenc_info = {

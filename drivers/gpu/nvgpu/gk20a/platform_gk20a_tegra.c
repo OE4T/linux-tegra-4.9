@@ -574,7 +574,7 @@ struct gk20a_platform gm20b_tegra_platform = {
 	/* Disable all power features for gm20b */
 	.can_railgate           = true,
 	.enable_slcg            = false,
-	.enable_blcg            = false,
+	.enable_blcg            = true,
 	.enable_elcg            = false,
 	.enable_elpg            = false,
 	.enable_aelpg           = false,

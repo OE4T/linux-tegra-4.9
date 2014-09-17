@@ -585,7 +585,7 @@ void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error)
 		ch->error_notifier->info32 = error;
 		ch->error_notifier->status = 0xffff;
 		gk20a_err(dev_from_gk20a(ch->g),
-				"error notifier set to %d\n", error);
+		    "error notifier set to %d for ch %d\n", error, ch->hw_chid);
 	}
 }
 

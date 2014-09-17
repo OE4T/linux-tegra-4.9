@@ -163,6 +163,7 @@ int gk20a_fifo_suspend(struct gk20a *g);
 bool gk20a_fifo_mmu_fault_pending(struct gk20a *g);
 void gk20a_fifo_recover(struct gk20a *g, u32 engine_ids, bool verbose);
 void gk20a_fifo_recover_ch(struct gk20a *g, u32 hw_chid, bool verbose);
+void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose);
 int gk20a_init_fifo_reset_enable_hw(struct gk20a *g);
 void gk20a_init_fifo(struct gpu_ops *gops);
 

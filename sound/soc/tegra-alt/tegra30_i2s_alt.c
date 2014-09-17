@@ -654,6 +654,9 @@ static irqreturn_t tegra30_i2s_interrupt_handler(int irq, void *data)
 
 	struct device *dev = data;
 	struct tegra30_i2s *i2s = dev_get_drvdata(data);
+
+	spin_lock_irq(&i2s->int_lock);
+
 	if (tegra30_apbif_i2s_overrun_interrupt_status(dev->id)) {
 		tegra30_apbif_i2s_overrun_interrupt_status_clear(dev->id);
 		tegra30_i2s_soft_reset(i2s);
@@ -661,6 +664,8 @@ static irqreturn_t tegra30_i2s_interrupt_handler(int irq, void *data)
 		tegra30_apbif_i2s_underrun_interrupt_status_clear(dev->id);
 		tegra30_i2s_soft_reset(i2s);
 	}
+
+	spin_unlock_irq(&i2s->int_lock);
 
 	return IRQ_HANDLED;
 }
@@ -792,6 +797,7 @@ static int tegra30_i2s_platform_probe(struct platform_device *pdev)
 	if (request_irq(i2s->irq, tegra30_i2s_interrupt_handler,
 			IRQF_SHARED, pdev->name, &pdev->dev) < 0)
 		dev_err(&pdev->dev, "Could not register INTERRUPT\n");
+	 spin_lock_init(&i2s->int_lock);
 
 	return 0;
 

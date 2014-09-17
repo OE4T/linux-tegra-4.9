@@ -265,6 +265,7 @@ struct tegra30_i2s {
 	unsigned int rx_mask;
 	const struct tegra30_i2s_soc_data *soc_data;
 	unsigned int irq;
+	spinlock_t int_lock;
 };
 
 #endif

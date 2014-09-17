@@ -76,15 +76,14 @@ static struct dentry *fan_debugfs_root;
 
 static void fan_update_target_pwm(struct fan_dev_data *fan_data, int val)
 {
-	if (!fan_data)
-		return -EINVAL;
+	if (fan_data) {
+		fan_data->next_target_pwm = min(val, fan_data->fan_cap_pwm);
 
-	fan_data->next_target_pwm = min(val, fan_data->fan_cap_pwm);
-
-	if (fan_data->next_target_pwm != fan_data->fan_cur_pwm)
-		queue_delayed_work(fan_data->workqueue,
+		if (fan_data->next_target_pwm != fan_data->fan_cur_pwm)
+			queue_delayed_work(fan_data->workqueue,
 					&fan_data->fan_ramp_work,
 					msecs_to_jiffies(fan_data->step_time));
+	}
 }
 
 static int fan_target_pwm_show(void *data, u64 *val)

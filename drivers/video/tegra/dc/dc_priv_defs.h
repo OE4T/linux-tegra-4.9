@@ -34,7 +34,7 @@
 #include <mach/dc.h>
 
 #include <mach/tegra_dc_ext.h>
-#include <mach/isomgr.h>
+#include <linux/platform/tegra/isomgr.h>
 
 #include "dc_reg.h"
 

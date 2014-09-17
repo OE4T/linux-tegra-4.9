@@ -33,7 +33,7 @@
 #include <linux/tegra-powergate.h>
 
 #if defined(CONFIG_TEGRA_ISOMGR)
-#include <mach/isomgr.h>
+#include <linux/platform/tegra/isomgr.h>
 #endif
 
 #include <tegra/mc.h>

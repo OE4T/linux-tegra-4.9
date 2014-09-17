@@ -896,14 +896,39 @@ static int nvhost_module_prepare_poweroff(struct device *dev)
 	return 0;
 }
 
+static void nvhost_module_load_regs(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_gating_register *regs = pdata->engine_cg_regs;
+	bool prod = pdata->engine_can_cg;
+
+	if (!regs)
+		return;
+
+	while (regs->addr) {
+		if (prod)
+			host1x_writel(pdev, regs->addr, regs->prod);
+		else
+			host1x_writel(pdev, regs->addr, regs->disable);
+		regs++;
+	}
+}
+
 static int nvhost_module_finalize_poweron(struct device *dev)
 {
+	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_device_data *pdata;
 	int ret = 0;
 
 	pdata = dev_get_drvdata(dev);
 	if (!pdata)
 		return -EINVAL;
+
+	if (pdata->poweron_reset)
+		nvhost_module_reset(pdev, false);
+
+	/* Load clockgating registers */
+	nvhost_module_load_regs(pdev);
 
 	if (pdata->finalize_poweron)
 		ret = pdata->finalize_poweron(to_platform_device(dev));

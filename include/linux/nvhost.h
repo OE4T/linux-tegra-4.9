@@ -105,6 +105,12 @@ struct nvhost_notification {
 #define	NVHOST_CHANNEL_SUBMIT_TIMEOUT		1
 };
 
+struct nvhost_gating_register {
+	u64 addr;
+	u32 prod;
+	u32 disable;
+};
+
 struct nvhost_clock {
 	char *name;
 	unsigned long default_rate;
@@ -149,16 +155,22 @@ struct nvhost_device_data {
 	bool		exclusive;	/* True if only one user at a time */
 	bool		keepalive;	/* Do not power gate when opened */
 	bool		serialize;	/* Serialize submits in the channel */
+	bool		poweron_reset;	/* Reset the engine before powerup */
 	bool		virtual_dev;	/* True if virtualized device */
 
 	char		*firmware_name;	/* Name of firmware */
 
 	int		powergate_ids[NVHOST_MODULE_MAX_POWERGATE_IDS];
+	bool		engine_can_cg;	/* True if CG is enabled */
 	bool		can_slcg;	/* True if SLCG is enabled */
 	bool		can_powergate;	/* True if module can be power gated */
 	int		clockgate_delay;/* Delay before clock gated */
 	int		powergate_delay;/* Delay before power gated */
 	struct nvhost_clock clocks[NVHOST_MODULE_MAX_CLOCKS];/* Clock names */
+
+	/* Clock gating registers */
+	struct nvhost_gating_register *engine_cg_regs;
+
 
 	struct platform_device *master;	/* Master of a slave device */
 	struct platform_device *slave;	/* Slave device to create in probe */

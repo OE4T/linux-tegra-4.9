@@ -21,7 +21,7 @@
 #ifndef __NVHOST_VI_H__
 #define __NVHOST_VI_H__
 
-#include <mach/isomgr.h>
+#include <linux/platform/tegra/isomgr.h>
 
 #include "camera_priv_defs.h"
 #include "chip_support.h"

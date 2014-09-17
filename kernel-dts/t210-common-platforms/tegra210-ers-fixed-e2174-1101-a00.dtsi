@@ -186,6 +186,7 @@
 			compatible = "regulator-fixed-sync";
 			reg = <10>;
 			regulator-name = "snsr_pm";
+			enable-active-high;
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
 		};

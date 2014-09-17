@@ -66,6 +66,7 @@ struct tegra_nvhdcp {
 	u32				num_bksv_list;
 	u64				bksv_list[TEGRA_NVHDCP_MAX_DEVS];
 	int				fail_count;
+	char				hdcp22;
 };
 
 #ifdef CONFIG_TEGRA_HDMIHDCP

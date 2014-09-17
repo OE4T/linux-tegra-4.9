@@ -61,7 +61,8 @@ DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 #define HDCP_READY			1
 #define HDCP_REAUTH			2
 #define HDCP_REAUTH_MASK		(1 << 11)
-
+#define HDCP22_PROTOCOL			1
+#define HDCP1X_PROTOCOL			0
 #define HDCP_DEBUG                      0
 
 #ifdef VERBOSE_DEBUG
@@ -482,6 +483,7 @@ static int get_nvhdcp_state(struct tegra_nvhdcp *nvhdcp,
 		pkt->b_ksv = nvhdcp->b_ksv;
 		memcpy(pkt->v_prime, nvhdcp->v_prime, sizeof(nvhdcp->v_prime));
 		pkt->packet_results = TEGRA_NVHDCP_RESULT_SUCCESS;
+		pkt->hdcp22 = nvhdcp->hdcp22;
 	}
 	mutex_unlock(&nvhdcp->lock);
 	return 0;
@@ -1501,12 +1503,15 @@ static int tegra_nvhdcp_on(struct tegra_nvhdcp *nvhdcp)
 	if (nvhdcp_is_plugged(nvhdcp)) {
 		nvhdcp->fail_count = 0;
 		nvhdcp_i2c_read8(nvhdcp, HDCP_HDCP2_VERSION, &hdcp2version);
-		if (hdcp2version & HDCP_HDCP2_VERSION_HDCP22_YES)
+		if (hdcp2version & HDCP_HDCP2_VERSION_HDCP22_YES) {
 			INIT_DELAYED_WORK(&nvhdcp->work,
 				nvhdcp2_downstream_worker);
-		else
+			nvhdcp->hdcp22 = HDCP22_PROTOCOL;
+		} else {
 			INIT_DELAYED_WORK(&nvhdcp->work,
 				nvhdcp_downstream_worker);
+			nvhdcp->hdcp22 = HDCP1X_PROTOCOL;
+		}
 		queue_delayed_work(nvhdcp->downstream_wq, &nvhdcp->work,
 						msecs_to_jiffies(100));
 	}

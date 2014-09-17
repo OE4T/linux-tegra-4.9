@@ -224,7 +224,7 @@ static int nvdec_wait_mem_scrubbing(struct platform_device *dev)
 	return -ETIMEDOUT;
 }
 
-int nvdec_boot(struct platform_device *dev)
+int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 {
 	u32 timeout;
 	u32 offset;
@@ -596,32 +596,6 @@ clean_up:
 	return err;
 }
 #endif
-
-int nvhost_nvdec_finalize_poweron(struct platform_device *pdev)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-
-	nvhost_module_reset(pdev, false);
-
-	if (!pdata->can_slcg) {
-		host1x_writel(pdev, nvdec_clk_override_r(), 0xffffffff);
-		host1x_writel(pdev, nvdec_slcg_override_high_a_r(), 0xff);
-		host1x_writel(pdev, nvdec_slcg_override_low_a_r(), 0xffffffff);
-		host1x_writel(pdev, nvdec_cg2_r(), 0xffffffff);
-		host1x_writel(pdev, nvdec_cgctl_r(), 0xffffffff);
-		host1x_writel(pdev, nvdec_tfbif_mccif_fifoctrl_r(), 0xffffffff);
-		host1x_writel(pdev, nvdec_engine_cg2_r(), 0xffffffff);
-		host1x_writel(pdev, nvdec_engine_cg3_r(), 0xffffffff);
-		host1x_writel(pdev, nvdec_engine_cg4_r(), 0xffffffff);
-	} else {
-		host1x_writel(pdev, nvdec_cg2_r(), 0x18004);
-		host1x_writel(pdev, nvdec_engine_cg2_r(), 0x0);
-		host1x_writel(pdev, nvdec_engine_cg3_r(), 0x80000);
-		host1x_writel(pdev, nvdec_engine_cg4_r(), 0xfffffff8);
-	}
-
-	return nvdec_boot(pdev);
-}
 
 static struct of_device_id tegra_nvdec_of_match[] = {
 #ifdef TEGRA_21X_OR_HIGHER_CONFIG

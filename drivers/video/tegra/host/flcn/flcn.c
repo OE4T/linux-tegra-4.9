@@ -287,7 +287,7 @@ static int flcn_wait_mem_scrubbing(struct platform_device *dev)
 	return -ETIMEDOUT;
 }
 
-int nvhost_flcn_boot(struct platform_device *pdev)
+int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
 {
 	struct flcn *v;
 	u32 timeout;
@@ -380,24 +380,6 @@ static int nvhost_flcn_init_sw(struct platform_device *dev)
  clean_up:
 	nvhost_err(&dev->dev, "failed");
 	return err;
-}
-
-int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-
-	nvhost_dbg_fn("");
-
-	nvhost_module_reset(pdev, false);
-
-	if (!pdata->can_slcg) {
-		host1x_writel(pdev, flcn_clk_override_r(), 0xffffffff);
-		host1x_writel(pdev, flcn_slcg_override_high_a_r(), 0xff);
-		host1x_writel(pdev, flcn_slcg_override_low_a_r(), 0xffffffff);
-		host1x_writel(pdev, flcn_cgctl_r(), 0xffffffff);
-	}
-
-	return nvhost_flcn_boot(pdev);
 }
 
 static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
@@ -535,41 +517,6 @@ struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(u32 syncpt,
 	return &p->h;
 }
 
-int nvhost_vic_t210_finalize_poweron(struct platform_device *pdev)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-
-	nvhost_dbg_fn("");
-
-	nvhost_module_reset(pdev, false);
-
-	if (!pdata->can_slcg) {
-		host1x_writel(pdev, flcn_clk_override_r(), 0xffffffff);
-		host1x_writel(pdev, flcn_slcg_override_high_a_r(), 0xff);
-		host1x_writel(pdev, flcn_slcg_override_low_a_r(), 0xffffffff);
-		host1x_writel(pdev, vic_cg1_r(), 0xffffffff);
-		host1x_writel(pdev, vic_cg2_r(), 0xffffffff);
-		host1x_writel(pdev, flcn_cgctl_r(), 0xffffffff);
-		host1x_writel(pdev, vic_tfbif_mccif_fifoctrl_r(), 0xffffffff);
-	}
-
-	return nvhost_flcn_boot(pdev);
-}
-
-int nvhost_vic_finalize_poweron(struct platform_device *pdev)
-{
-	nvhost_dbg_fn("");
-
-	nvhost_module_reset(pdev, false);
-
-	host1x_writel(pdev, flcn_cg_r(),
-		     flcn_cg_idle_cg_dly_cnt_f(4) |
-		     flcn_cg_idle_cg_en_f(1) |
-		     flcn_cg_wakeup_dly_cnt_f(4));
-
-	return nvhost_flcn_boot(pdev);
-}
-
 int nvhost_vic_prepare_poweroff(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
@@ -609,56 +556,6 @@ int nvhost_vic_aggregate_constraints(struct platform_device *dev,
 
 	/* Compute VIC frequency based on pixelrate */
 	return pixelrate / pdata->num_ppc;
-}
-
-int nvhost_nvenc_t210_finalize_poweron(struct platform_device *pdev)
-{
-	struct nvhost_device_data *pdata = nvhost_get_devdata(pdev);
-
-	nvhost_dbg_fn("");
-
-	nvhost_module_reset(pdev, false);
-
-	if (!pdata->can_slcg) {
-		host1x_writel(pdev, flcn_clk_override_r(), 0xffffffff);
-		host1x_writel(pdev, flcn_slcg_override_high_a_r(), 0xff);
-		host1x_writel(pdev, flcn_slcg_override_low_a_r(), 0xffffffff);
-		host1x_writel(pdev, nvenc_cg2_r(), 0xffffffff);
-		host1x_writel(pdev, flcn_cgctl_r(), 0xffffffff);
-		host1x_writel(pdev, nvenc_tfbif_mccif_fifoctrl_r(), 0xffffffff);
-		host1x_writel(pdev, nvenc_engine_cg2_r(), 0xffffffff);
-		host1x_writel(pdev, nvenc_engine_cg3_r(), 0xffffffff);
-		host1x_writel(pdev, nvenc_engine_cg4_r(), 0xffffffff);
-	} else {
-		host1x_writel(pdev, nvenc_cg2_r(), 0x18004);
-		host1x_writel(pdev, nvenc_engine_cg2_r(), 0x800040);
-		host1x_writel(pdev, nvenc_engine_cg3_r(), 0x10000000);
-		host1x_writel(pdev, nvenc_engine_cg4_r(), 0x0);
-	}
-
-	return nvhost_flcn_boot(pdev);
-}
-
-int nvhost_nvjpg_t210_finalize_poweron(struct platform_device *pdev)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-
-	nvhost_dbg_fn("");
-
-	nvhost_module_reset(pdev, false);
-
-	if (!pdata->can_slcg) {
-		host1x_writel(pdev, flcn_clk_override_r(), 0xffffffff);
-		host1x_writel(pdev, flcn_slcg_override_high_a_r(), 0xff);
-		host1x_writel(pdev, flcn_slcg_override_low_a_r(), 0xffffffff);
-		host1x_writel(pdev, nvjpg_cg2_r(), 0xffffffff);
-		host1x_writel(pdev, flcn_cgctl_r(), 0xffffffff);
-		host1x_writel(pdev, nvjpg_tfbif_mccif_fifoctrl_r(), 0xffffffff);
-	} else {
-		host1x_writel(pdev, nvjpg_cg2_r(), 0x18004);
-	}
-
-	return nvhost_flcn_boot(pdev);
 }
 
 static struct of_device_id tegra_flcn_of_match[] = {

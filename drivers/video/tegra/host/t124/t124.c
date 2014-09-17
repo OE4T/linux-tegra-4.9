@@ -342,8 +342,8 @@ struct nvhost_device_data t124_msenc_info = {
 	.moduleid	= NVHOST_MODULE_MSENC,
 	.powergate_ids	= { TEGRA_POWERGATE_MPE, -1 },
 	.powergate_delay = 100,
-	.can_slcg	= true,
 	.can_powergate	= true,
+	.poweron_reset	= true,
 	.finalize_poweron = nvhost_flcn_finalize_poweron,
 	.scaling_init	= nvhost_scale_init,
 	.scaling_deinit	= nvhost_scale_deinit,
@@ -381,8 +381,8 @@ struct nvhost_device_data t124_tsec_info = {
 			 {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.can_powergate    = true,
-	.can_slcg         = true,
+	.can_powergate   = true,
+	.poweron_reset   = true,
 	.powergate_delay = TSEC_POWERGATE_DELAY,
 	.keepalive       = true,
 	.moduleid      = NVHOST_MODULE_TSEC,
@@ -411,6 +411,11 @@ static struct resource vic03_resources[] = {
 	},
 };
 
+static struct nvhost_gating_register vic_cg_gating_registers[] = {
+	{.addr = 0x000016d0, .prod = 0x00040044, .disable = 0x00000000},
+	{},
+};
+
 struct nvhost_device_data t124_vic_info = {
 	.num_channels	= 1,
 	.modulemutexes	= {NVMODMUTEX_VIC},
@@ -428,11 +433,13 @@ struct nvhost_device_data t124_vic_info = {
 	.class                  = NV_GRAPHICS_VIC_CLASS_ID,
 	.alloc_hwctx_handler = nvhost_vic03_alloc_hwctx_handler,
 	.can_powergate		= true,
-	.can_slcg		= true,
+	.engine_can_cg		= true,
+	.engine_cg_regs		= vic_cg_gating_registers,
+	.poweron_reset		= true,
 	.powergate_delay	= 500,
 	.powergate_ids		= { TEGRA_POWERGATE_VIC, -1 },
 	.alloc_hwctx_handler	= nvhost_vic03_alloc_hwctx_handler,
-	.finalize_poweron	= nvhost_vic_finalize_poweron,
+	.finalize_poweron	= nvhost_flcn_finalize_poweron,
 	.prepare_poweroff	= nvhost_vic_prepare_poweroff,
 	.scaling_init		= nvhost_scale3d_init,
 	.scaling_deinit		= nvhost_scale3d_deinit,
@@ -475,7 +482,7 @@ struct nvhost_device_data t132_msenc_info = {
 	.powergate_ids	= { TEGRA_POWERGATE_MPE, -1 },
 	.powergate_delay = 100,
 	.can_powergate	= true,
-	.can_slcg       = true,
+	.poweron_reset	= true,
 	.finalize_poweron = nvhost_flcn_finalize_poweron,
 	.firmware_name	= "nvhost_msenc031.fw",
 	.gather_filter_enabled = true,

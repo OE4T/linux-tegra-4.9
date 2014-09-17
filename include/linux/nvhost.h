@@ -162,7 +162,6 @@ struct nvhost_device_data {
 
 	int		powergate_ids[NVHOST_MODULE_MAX_POWERGATE_IDS];
 	bool		engine_can_cg;	/* True if CG is enabled */
-	bool		can_slcg;	/* True if SLCG is enabled */
 	bool		can_powergate;	/* True if module can be power gated */
 	int		clockgate_delay;/* Delay before clock gated */
 	int		powergate_delay;/* Delay before power gated */

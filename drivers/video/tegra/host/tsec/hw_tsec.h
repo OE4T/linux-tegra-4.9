@@ -58,10 +58,6 @@ static inline u32 tsec_slcg_override_low_a_r(void)
 {
 	return 0x0000008c;
 }
-static inline u32 tsec_clk_override_r(void)
-{
-	return 0x00000e00;
-}
 static inline u32 tsec_irqsclr_r(void)
 {
 	return 0x1004;
@@ -133,10 +129,6 @@ static inline u32 tsec_itfen_mthden_enable_f(void)
 static inline u32 tsec_idlestate_r(void)
 {
 	return 0x104c;
-}
-static inline u32 tsec_cgctl_r(void)
-{
-	return 0x000010a0;
 }
 static inline u32 tsec_cpuctl_r(void)
 {
@@ -217,14 +209,6 @@ static inline u32 tsec_dmatrffboffs_offs_f(u32 v)
 static inline u32 tsec_thi_int_status_r(void)
 {
 	return 0x78;
-}
-static inline u32 tsec_cg2_r(void)
-{
-	return 0x0000117c;
-}
-static inline u32 tsec_tfbif_mccif_fifoctrl_r(void)
-{
-	return 0x1604;
 }
 static inline u32 tsec_tegra_ctl_r(void)
 {

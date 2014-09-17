@@ -634,7 +634,7 @@ static int tsec_wait_mem_scrubbing(struct platform_device *dev)
 	return -ETIMEDOUT;
 }
 
-int tsec_boot(struct platform_device *dev)
+int nvhost_tsec_finalize_poweron(struct platform_device *dev)
 {
 	u32 timeout;
 	u32 offset;
@@ -890,24 +890,6 @@ static int nvhost_tsec_init_sw(struct platform_device *dev)
 clean_up:
 	dev_err(&dev->dev, "failed");
 	return err;
-}
-
-int nvhost_tsec_finalize_poweron(struct platform_device *pdev)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-
-	nvhost_module_reset(pdev, false);
-
-	if (!pdata->can_slcg) {
-		host1x_writel(pdev, tsec_clk_override_r(), 0xffffffff);
-		host1x_writel(pdev, tsec_slcg_override_high_a_r(), 0xff);
-		host1x_writel(pdev, tsec_slcg_override_low_a_r(), 0xffffffff);
-		host1x_writel(pdev, tsec_cg2_r(), 0xffffffff);
-		host1x_writel(pdev, tsec_cgctl_r(), 0xffffffff);
-		host1x_writel(pdev, tsec_tfbif_mccif_fifoctrl_r(), 0xffffffff);
-	}
-
-	return tsec_boot(pdev);
 }
 
 int nvhost_tsec_prepare_poweroff(struct platform_device *dev)

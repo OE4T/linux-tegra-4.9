@@ -251,6 +251,47 @@ fail_edid_free:
 	return err;
 }
 
+static int tegra_hdmi_scdc_i2c_xfer(struct tegra_dc *dc,
+					struct i2c_msg *msgs, int num)
+{
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+
+	return i2c_transfer(hdmi->scdc_i2c_client->adapter, msgs, num);
+}
+
+static int tegra_hdmi_scdc_init(struct tegra_hdmi *hdmi)
+{
+	struct tegra_dc *dc = hdmi->dc;
+	struct i2c_adapter *i2c_adap;
+	int err = 0;
+	struct i2c_board_info i2c_dev_info = {
+		.type = "tegra_hdmi_scdc",
+		.addr = 0x54,
+	};
+
+	i2c_adap = i2c_get_adapter(dc->out->ddc_bus);
+	if (!i2c_adap) {
+		dev_err(&dc->ndev->dev,
+			"hdmi: can't get adpater for scdc bus %d\n",
+			dc->out->ddc_bus);
+		err = -EBUSY;
+		goto fail;
+	}
+
+	hdmi->scdc_i2c_client = i2c_new_device(i2c_adap, &i2c_dev_info);
+	i2c_put_adapter(i2c_adap);
+	if (!hdmi->scdc_i2c_client) {
+		dev_err(&dc->ndev->dev,
+			"hdmi: can't create scdc i2c device\n");
+		err = -EBUSY;
+		goto fail;
+	}
+
+	return 0;
+fail:
+	return err;
+}
+
 static void tegra_hdmi_hda_clk_enable(struct tegra_hdmi *hdmi)
 {
 	clk_prepare_enable(hdmi->hda_clk);
@@ -320,7 +361,7 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 	if (mode->xres > 4096)
 		return false;
 
-	if (mode->pixclock &&
+	if (mode->pixclock && tegra_dc_get_out_max_pixclock(dc) &&
 		mode->pixclock > tegra_dc_get_out_max_pixclock(dc))
 		return false;
 
@@ -446,7 +487,8 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 		tegra_adf_process_hotplug_connected(hdmi->dc->adf, mon_spec);
 #else
 	if (dc->fb)
-		tegra_fb_update_monspecs(hdmi->dc->fb, mon_spec, NULL);
+		tegra_fb_update_monspecs(hdmi->dc->fb, mon_spec,
+					tegra_hdmi_fb_mode_filter);
 #endif
 
 	dc->connected = is_asserted;
@@ -697,6 +739,8 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	tegra_hdmi_ddc_init(hdmi);
 
+	tegra_hdmi_scdc_init(hdmi);
+
 	tegra_hdmi_hpd_init(hdmi);
 
 	tegra_dc_set_outdata(dc, hdmi);
@@ -783,6 +827,7 @@ static void tegra_hdmi_infoframe_pkt_write(struct tegra_hdmi *hdmi,
 		tegra_sor_writel(sor, data_reg, *data);
 }
 
+__maybe_unused
 static int tegra_hdmi_find_cea_vic(const struct tegra_dc_mode *mode)
 {
 	struct fb_videomode m;
@@ -998,19 +1043,144 @@ int tegra_hdmi_audio_null_sample_inject(bool on)
 }
 EXPORT_SYMBOL(tegra_hdmi_audio_null_sample_inject);
 
-static void tegra_hdmi_config_lanes(struct tegra_hdmi *hdmi)
-{
-	struct tegra_dc_sor_data *sor = hdmi->sor;
-
-	tegra_sor_writel(sor, NV_SOR_LANE_DRIVE_CURRENT(sor->portnum),
-			0x22222222);
-	tegra_sor_writel(sor, NV_SOR_PR(sor->portnum), 0x0);
-}
-
 static void tegra_hdmi_config_xbar(struct tegra_hdmi *hdmi)
 {
 	/* TODO: confirm with HW */
 	tegra_sor_writel(hdmi->sor, NV_SOR_XBAR_CTRL, 0x8d111828);
+}
+
+static void tegra_hdmi_calib(struct tegra_hdmi *hdmi)
+{
+#define MAX_TX_PU 0x60
+#define LOAD_ADJUST_DEFAULT 0x5
+
+	struct tegra_dc_sor_data *sor = hdmi->sor;
+	u32 tx_pu = MAX_TX_PU;
+	u32 load_adjust = LOAD_ADJUST_DEFAULT;
+
+	tegra_sor_pad_cal_power(sor, true);
+
+	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(0),
+			NV_SOR_DP_PADCTL_TX_PU_VALUE_DEFAULT_MASK |
+			NV_SOR_DP_PADCTL_TX_PU_ENABLE,
+			tx_pu << NV_SOR_DP_PADCTL_TX_PU_VALUE_SHIFT |
+			NV_SOR_DP_PADCTL_TX_PU_ENABLE);
+
+	tegra_dc_sor_termination_cal(sor);
+
+	tegra_sor_write_field(sor, NV_SOR_PLL1,
+			NV_SOR_PLL1_LOADADJ_DEFAULT_MASK,
+			load_adjust << NV_SOR_PLL1_LOADADJ_SHIFT);
+
+	tegra_sor_writel(sor, NV_SOR_LANE_DRIVE_CURRENT(sor->portnum),
+			0x37373737);
+	tegra_sor_writel(sor, NV_SOR_PR(sor->portnum), 0x14141414);
+
+	tegra_sor_pad_cal_power(sor, false);
+
+#undef MAX_TX_PU
+#undef LOAD_ADJUST_DEFAULT
+}
+
+__maybe_unused
+static int tegra_hdmi_scdc_read(struct tegra_hdmi *hdmi,
+					u8 offset_data[][2], u32 n_entries)
+{
+	u32 i;
+	struct i2c_msg msg[] = {
+		{
+			.addr = 0x54,
+			.len = 1,
+			.buf = NULL,
+		},
+		{
+			.addr = 0x54,
+			.flags = I2C_M_RD,
+			.len = 1,
+			.buf = NULL,
+		},
+	};
+
+	tegra_hdmi_ddc_enable(hdmi);
+
+	for (i = 0; i < n_entries; i++) {
+		msg[0].buf = offset_data[i];
+		msg[1].buf = &offset_data[i][1];
+		tegra_hdmi_scdc_i2c_xfer(hdmi->dc, msg, ARRAY_SIZE(msg));
+	}
+
+	tegra_hdmi_ddc_disable(hdmi);
+
+	return 0;
+}
+
+static int tegra_hdmi_scdc_write(struct tegra_hdmi *hdmi,
+					u8 offset_data[][2], u32 n_entries)
+{
+	u32 i;
+	struct i2c_msg msg[] = {
+		{
+			.addr = 0x54,
+			.len = 2,
+			.buf = NULL,
+		},
+	};
+
+	tegra_hdmi_ddc_enable(hdmi);
+
+	for (i = 0; i < n_entries; i++) {
+		msg[0].buf = offset_data[i];
+		tegra_hdmi_scdc_i2c_xfer(hdmi->dc, msg, ARRAY_SIZE(msg));
+	}
+
+	tegra_hdmi_ddc_disable(hdmi);
+
+	return 0;
+}
+
+static int tegra_hdmi_v2_x_mon_config(struct tegra_hdmi *hdmi, bool enable)
+{
+	u8 tmds_config_en[][2] = {
+		{
+			HDMI_SCDC_TMDS_CONFIG_OFFSET,
+			(HDMI_SCDC_TMDS_CONFIG_BIT_CLK_RATIO_40 |
+			HDMI_SCDC_TMDS_CONFIG_SCRAMBLING_EN)
+		},
+	};
+	u8 tmds_config_dis[][2] = {
+		{
+			HDMI_SCDC_TMDS_CONFIG_OFFSET,
+			0
+		},
+	};
+
+	tegra_hdmi_scdc_write(hdmi,
+			enable ? tmds_config_en : tmds_config_dis,
+			ARRAY_SIZE(tmds_config_en));
+
+	return 0;
+}
+
+static void tegra_hdmi_v2_x_host_config(struct tegra_hdmi *hdmi, bool enable)
+{
+	u32 val = NV_SOR_HDMI2_CTRL_SCRAMBLE_ENABLE |
+		NV_SOR_HDMI2_CTRL_CLK_MODE_DIV_BY_4 |
+		NV_SOR_HDMI2_CTRL_SSCP_LEN |
+		NV_SOR_HDMI2_CTRL_SSCP_START;
+
+	tegra_sor_writel(hdmi->sor, NV_SOR_HDMI2_CTRL, enable ? val : 0);
+}
+
+static int tegra_hdmi_v2_x_config(struct tegra_hdmi *hdmi)
+{
+	/* reset hdmi2.x config on host and monitor */
+	tegra_hdmi_v2_x_mon_config(hdmi, false);
+	tegra_hdmi_v2_x_host_config(hdmi, false);
+
+	tegra_hdmi_v2_x_mon_config(hdmi, true);
+	tegra_hdmi_v2_x_host_config(hdmi, true);
+
+	return 0;
 }
 
 static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
@@ -1018,16 +1188,15 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	struct tegra_dc *dc = hdmi->dc;
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 
-	tegra_dc_io_start(dc);
 	tegra_dc_get(dc);
 	clk_prepare_enable(sor->safe_clk);
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_SAFE_CLK);
 	tegra_sor_clk_enable(sor);
+
 	tegra_hdmi_hda_clk_enable(hdmi);
 
 	tegra_sor_hdmi_pad_power_up(sor);
 
-	tegra_hdmi_config_lanes(hdmi);
 	tegra_sor_power_lanes(sor, 4, true);
 
 	tegra_dc_sor_set_internal_panel(sor, false);
@@ -1038,10 +1207,10 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_BRICK_CLK);
 	tegra_dc_sor_attach(sor);
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, tegra_dc_hpd(dc));
-	tegra_dc_io_end(dc);
 
 	tegra_dc_setup_clk(dc, dc->clk);
 	tegra_dc_hdmi_setup_clk(dc, hdmi->sor->sor_clk);
+	tegra_hdmi_config(hdmi);
 
 	tegra_hdmi_config_xbar(hdmi);
 
@@ -1050,6 +1219,12 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	tegra_sor_writel(sor,  NV_SOR_PWR, 0x80000000);
 	tegra_sor_writel(sor,  NV_SOR_PWR, 0x80000001);
 
+	tegra_hdmi_calib(hdmi);
+
+	if (hdmi->dc->mode.pclk > 340000000)
+		tegra_hdmi_v2_x_config(hdmi);
+
+	tegra_dc_put(dc);
 	return 0;
 }
 
@@ -1061,6 +1236,7 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 		return;
 
 	tegra_hdmi_controller_enable(hdmi);
+
 	hdmi->enabled = true;
 }
 
@@ -1073,12 +1249,16 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 		u32 val;
 
 		/* TODO: Set sor divider */
-		tegra_clk_writel(0, 0xff, 0x410);
+		if (hdmi->dc->mode.pclk < 340000000)
+			tegra_clk_writel(0, 0xff, 0x410);
+		else
+			tegra_clk_writel(2, 0xff, 0x410);
 
 		/* Select brick muxes */
 		val = (hdmi->dc->mode.pclk < 340000000) ?
 			NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G2_7 :
 			NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G5_4;
+
 		val |= NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK;
 		tegra_sor_writel(hdmi->sor, NV_SOR_CLK_CNTRL, val);
 		usleep_range(250, 300); /* sor brick pll stabilization delay */
@@ -1120,6 +1300,9 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 
 	if (clk_get_rate(parent_clk) != dc->mode.pclk)
 		clk_set_rate(parent_clk, dc->mode.pclk);
+
+	tegra_dvfs_set_rate(parent_clk, dc->mode.pclk);
+	tegra_dvfs_set_rate(clk, dc->mode.pclk);
 
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 }

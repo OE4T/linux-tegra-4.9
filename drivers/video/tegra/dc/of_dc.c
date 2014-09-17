@@ -717,10 +717,13 @@ static int parse_sd_settings(struct device_node *np,
 	return 0;
 }
 
-static int parse_modes(struct device_node *np,
-	struct tegra_dc_mode *modes)
+static int parse_modes(struct tegra_dc_out *default_out,
+						struct device_node *np,
+						struct tegra_dc_mode *modes)
 {
 	u32 temp;
+	const struct tegra_dc_out_pin *pins = default_out->out_pins;
+	int i;
 
 	if (!of_property_read_u32(np, "clock-frequency", &temp)) {
 		modes->pclk = temp;
@@ -788,6 +791,27 @@ static int parse_modes(struct device_node *np,
 		OF_DC_LOG("of v_front_porch %d\n", temp);
 		goto parse_modes_fail;
 	}
+
+	for (i = 0; pins && (i < default_out->n_out_pins); i++) {
+		switch (pins[i].name) {
+		case TEGRA_DC_OUT_PIN_DATA_ENABLE:
+			if (pins[i].pol == TEGRA_DC_OUT_PIN_POL_LOW)
+				modes->flags |= TEGRA_DC_MODE_FLAG_NEG_DE;
+			break;
+		case TEGRA_DC_OUT_PIN_H_SYNC:
+			if (pins[i].pol == TEGRA_DC_OUT_PIN_POL_LOW)
+				modes->flags |= TEGRA_DC_MODE_FLAG_NEG_H_SYNC;
+			break;
+		case TEGRA_DC_OUT_PIN_V_SYNC:
+			if (pins[i].pol == TEGRA_DC_OUT_PIN_POL_LOW)
+				modes->flags |= TEGRA_DC_MODE_FLAG_NEG_V_SYNC;
+			break;
+		default:
+			/* Ignore other pin setting */
+			break;
+		}
+	}
+
 	return 0;
 parse_modes_fail:
 	pr_err("a mode parameter parse fail!\n");
@@ -1966,7 +1990,7 @@ struct tegra_dc_platform_data
 		struct tegra_dc_mode *cur_mode
 			= pdata->default_out->modes;
 		for_each_child_of_node(timings_np, entry) {
-			err = parse_modes(entry, cur_mode);
+			err = parse_modes(pdata->default_out, entry, cur_mode);
 			if (err)
 				goto fail_parse;
 			cur_mode++;

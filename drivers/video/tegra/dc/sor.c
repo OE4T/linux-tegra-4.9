@@ -664,6 +664,7 @@ int tegra_sor_power_lanes(struct tegra_dc_sor_data *sor,
 	return tegra_dc_sor_enable_lane_sequencer(sor, pu, false);
 }
 
+/* power on/off pad calibration logic */
 void tegra_sor_pad_cal_power(struct tegra_dc_sor_data *sor,
 					bool power_up)
 {
@@ -677,7 +678,7 @@ void tegra_sor_pad_cal_power(struct tegra_dc_sor_data *sor,
 				NV_SOR_DP_PADCTL_PAD_CAL_PD_POWERDOWN, val);
 }
 
-static void tegra_dc_sor_termination_cal(struct tegra_dc_sor_data *sor)
+void tegra_dc_sor_termination_cal(struct tegra_dc_sor_data *sor)
 {
 	u32 termadj;
 	u32 cur_try;
@@ -1028,50 +1029,39 @@ static void tegra_dc_sor_power_down(struct tegra_dc_sor_data *sor)
 
 
 static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
-	bool is_lvds)
+						bool is_lvds)
 {
-	const struct tegra_dc_out_pin *pins = sor->dc->out->out_pins;
-	const struct tegra_dc_mode	*dc_mode = &sor->dc->mode;
-	int	head_num = sor->dc->ctrl_num;
+	struct tegra_dc *dc = sor->dc;
+	const struct tegra_dc_mode *dc_mode = &dc->mode;
+	int head_num = dc->ctrl_num;
 	u32 reg_val = NV_SOR_STATE1_ASY_OWNER_HEAD0 << head_num;
 	u32 vtotal, htotal;
 	u32 vsync_end, hsync_end;
 	u32 vblank_end, hblank_end;
 	u32 vblank_start, hblank_start;
-	int i;
+	int out_type = dc->out->type;
 
-	if (sor->dc->out->type == TEGRA_DC_OUT_HDMI)
+	if (out_type == TEGRA_DC_OUT_HDMI)
 		reg_val |= NV_SOR_STATE1_ASY_PROTOCOL_SINGLE_TMDS_A;
+	else if (out_type == TEGRA_DC_OUT_DP)
+		reg_val |= NV_SOR_STATE1_ASY_PROTOCOL_DP_A;
 	else
-		reg_val |= is_lvds ? NV_SOR_STATE1_ASY_PROTOCOL_LVDS_CUSTOM :
-				NV_SOR_STATE1_ASY_PROTOCOL_DP_A;
+		reg_val |= NV_SOR_STATE1_ASY_PROTOCOL_LVDS_CUSTOM;
 
 	reg_val |= NV_SOR_STATE1_ASY_SUBOWNER_NONE |
 		NV_SOR_STATE1_ASY_CRCMODE_COMPLETE_RASTER;
 
-	for (i = 0; pins && (i < sor->dc->out->n_out_pins); i++) {
-		switch (pins[i].name) {
-		case TEGRA_DC_OUT_PIN_DATA_ENABLE:
-			if (pins[i].pol == TEGRA_DC_OUT_PIN_POL_LOW)
-				reg_val |=
-				NV_SOR_STATE1_ASY_DEPOL_NEGATIVE_TRUE;
-			break;
-		case TEGRA_DC_OUT_PIN_H_SYNC:
-			if (pins[i].pol == TEGRA_DC_OUT_PIN_POL_LOW)
-				reg_val |=
-				NV_SOR_STATE1_ASY_HSYNCPOL_NEGATIVE_TRUE;
-			break;
-		case TEGRA_DC_OUT_PIN_V_SYNC:
-			if (pins[i].pol == TEGRA_DC_OUT_PIN_POL_LOW)
-				reg_val |=
-				NV_SOR_STATE1_ASY_VSYNCPOL_NEGATIVE_TRUE;
-			break;
-		default:	/* Ignore other pin setting */
-			break;
-		}
-	}
+	if (dc_mode->flags & TEGRA_DC_MODE_FLAG_NEG_H_SYNC)
+		reg_val |= NV_SOR_STATE1_ASY_HSYNCPOL_NEGATIVE_TRUE;
+	else
+		reg_val |= NV_SOR_STATE1_ASY_HSYNCPOL_POSITIVE_TRUE;
 
-	reg_val |= (sor->dc->out->depth > 18 || !sor->dc->out->depth) ?
+	if (dc_mode->flags & TEGRA_DC_MODE_FLAG_NEG_V_SYNC)
+		reg_val |= NV_SOR_STATE1_ASY_VSYNCPOL_NEGATIVE_TRUE;
+	else
+		reg_val |= NV_SOR_STATE1_ASY_VSYNCPOL_POSITIVE_TRUE;
+
+	reg_val |= (dc->out->depth > 18 || !dc->out->depth) ?
 		NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_24_444 :
 		NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_18_444;
 
@@ -1085,30 +1075,30 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 		dc_mode->v_active + dc_mode->v_front_porch;
 	htotal = dc_mode->h_sync_width + dc_mode->h_back_porch +
 		dc_mode->h_active + dc_mode->h_front_porch;
-	tegra_sor_writel(sor, NV_HEAD_STATE1(sor->portnum),
+	tegra_sor_writel(sor, NV_HEAD_STATE1(head_num),
 		vtotal << NV_HEAD_STATE1_VTOTAL_SHIFT |
 		htotal << NV_HEAD_STATE1_HTOTAL_SHIFT);
 
 	vsync_end = dc_mode->v_sync_width - 1;
 	hsync_end = dc_mode->h_sync_width - 1;
-	tegra_sor_writel(sor, NV_HEAD_STATE2(sor->portnum),
+	tegra_sor_writel(sor, NV_HEAD_STATE2(head_num),
 		vsync_end << NV_HEAD_STATE2_VSYNC_END_SHIFT |
 		hsync_end << NV_HEAD_STATE2_HSYNC_END_SHIFT);
 
 	vblank_end = vsync_end + dc_mode->v_back_porch;
 	hblank_end = hsync_end + dc_mode->h_back_porch;
-	tegra_sor_writel(sor, NV_HEAD_STATE3(sor->portnum),
+	tegra_sor_writel(sor, NV_HEAD_STATE3(head_num),
 		vblank_end << NV_HEAD_STATE3_VBLANK_END_SHIFT |
 		hblank_end << NV_HEAD_STATE3_HBLANK_END_SHIFT);
 
 	vblank_start = vblank_end + dc_mode->v_active;
 	hblank_start = hblank_end + dc_mode->h_active;
-	tegra_sor_writel(sor, NV_HEAD_STATE4(sor->portnum),
+	tegra_sor_writel(sor, NV_HEAD_STATE4(head_num),
 		vblank_start << NV_HEAD_STATE4_VBLANK_START_SHIFT |
 		hblank_start << NV_HEAD_STATE4_HBLANK_START_SHIFT);
 
 	/* TODO: adding interlace mode support */
-	tegra_sor_writel(sor, NV_HEAD_STATE5(sor->portnum), 0x1);
+	tegra_sor_writel(sor, NV_HEAD_STATE5(head_num), 0x1);
 
 	tegra_sor_write_field(sor, NV_SOR_CSTM,
 		NV_SOR_CSTM_ROTCLK_DEFAULT_MASK |

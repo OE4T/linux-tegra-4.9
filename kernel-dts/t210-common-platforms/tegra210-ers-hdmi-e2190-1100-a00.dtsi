@@ -32,15 +32,9 @@
 				disp-default-out {
 					nvidia,out-type = <TEGRA_DC_OUT_HDMI>;
 					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_LOW>;
-					nvidia,out-pins = <TEGRA_DC_OUT_PIN_H_SYNC TEGRA_DC_OUT_PIN_POL_LOW
-							   TEGRA_DC_OUT_PIN_V_SYNC TEGRA_DC_OUT_PIN_POL_LOW
-							   TEGRA_DC_OUT_PIN_DATA_ENABLE TEGRA_DC_OUT_PIN_POL_HIGH>;
 					nvidia,out-parent-clk = "pll_d2";
-					nvidia,out-max-pixclk = <3367>; /* KHZ2PICOS(297000) */
 					nvidia,out-align = <TEGRA_DC_ALIGN_MSB>;
 					nvidia,out-order = <TEGRA_DC_ORDER_RED_BLUE>;
-					nvidia,out-xres = <1920>;
-					nvidia,out-yres = <1080>;
 				};
 				tmds-config {
 					tmds-cfg@0 {

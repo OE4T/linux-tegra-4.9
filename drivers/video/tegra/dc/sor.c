@@ -203,6 +203,7 @@ static int dbg_sor_show(struct seq_file *s, void *unused)
 	DUMP_REG(NV_SOR_DP_SPARE(0));
 	DUMP_REG(NV_SOR_DP_SPARE(1));
 	DUMP_REG(NV_SOR_DP_TPG);
+	DUMP_REG(NV_SOR_HDMI2_CTRL);
 
 	tegra_sor_clk_disable(sor);
 	tegra_dc_io_end(sor->dc);

@@ -59,6 +59,7 @@ static void tegra_clk_writel(u32 val, u32 mask, u32 offset)
 static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi);
 static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type);
 static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk);
+static void tegra_hdmi_scdc_worker(struct work_struct *work);
 
 static inline void tegra_hdmi_irq_enable(struct tegra_hdmi *hdmi)
 {
@@ -245,6 +246,8 @@ static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi)
 		goto fail_edid_free;
 	}
 
+	mutex_init(&hdmi->ddc_lock);
+
 	return 0;
 fail_edid_free:
 	tegra_edid_destroy(hdmi->edid);
@@ -286,6 +289,8 @@ static int tegra_hdmi_scdc_init(struct tegra_hdmi *hdmi)
 		err = -EBUSY;
 		goto fail;
 	}
+
+	INIT_DELAYED_WORK(&hdmi->scdc_work, tegra_hdmi_scdc_worker);
 
 	return 0;
 fail:
@@ -431,7 +436,13 @@ static int tegra_hdmi_get_mon_spec(struct tegra_hdmi *hdmi)
 
 static inline int tegra_hdmi_edid_read(struct tegra_hdmi *hdmi)
 {
-	return tegra_hdmi_get_mon_spec(hdmi);
+	int err;
+
+	mutex_lock(&hdmi->ddc_lock);
+	err = tegra_hdmi_get_mon_spec(hdmi);
+	mutex_unlock(&hdmi->ddc_lock);
+
+	return err;
 }
 
 static int tegra_hdmi_get_eld(struct tegra_hdmi *hdmi)
@@ -1164,23 +1175,63 @@ static int tegra_hdmi_v2_x_mon_config(struct tegra_hdmi *hdmi, bool enable)
 static void tegra_hdmi_v2_x_host_config(struct tegra_hdmi *hdmi, bool enable)
 {
 	u32 val = NV_SOR_HDMI2_CTRL_SCRAMBLE_ENABLE |
-		NV_SOR_HDMI2_CTRL_CLK_MODE_DIV_BY_4 |
-		NV_SOR_HDMI2_CTRL_SSCP_LEN |
-		NV_SOR_HDMI2_CTRL_SSCP_START;
+		NV_SOR_HDMI2_CTRL_CLK_MODE_DIV_BY_4;
 
-	tegra_sor_writel(hdmi->sor, NV_SOR_HDMI2_CTRL, enable ? val : 0);
+	tegra_sor_write_field(hdmi->sor, NV_SOR_HDMI2_CTRL,
+			NV_SOR_HDMI2_CTRL_SCRAMBLE_ENABLE |
+			NV_SOR_HDMI2_CTRL_CLK_MODE_DIV_BY_4,
+			enable ? val : 0);
 }
 
-static int tegra_hdmi_v2_x_config(struct tegra_hdmi *hdmi)
+static int _tegra_hdmi_v2_x_config(struct tegra_hdmi *hdmi)
 {
+#define SCDC_STABILIZATION_DELAY_MS (20)
+
 	/* reset hdmi2.x config on host and monitor */
 	tegra_hdmi_v2_x_mon_config(hdmi, false);
 	tegra_hdmi_v2_x_host_config(hdmi, false);
 
 	tegra_hdmi_v2_x_mon_config(hdmi, true);
+	msleep(SCDC_STABILIZATION_DELAY_MS);
+
 	tegra_hdmi_v2_x_host_config(hdmi, true);
 
 	return 0;
+#undef SCDC_STABILIZATION_DELAY_MS
+}
+
+static int tegra_hdmi_v2_x_config(struct tegra_hdmi *hdmi)
+{
+	mutex_lock(&hdmi->ddc_lock);
+	_tegra_hdmi_v2_x_config(hdmi);
+	mutex_unlock(&hdmi->ddc_lock);
+
+	return 0;
+}
+
+static void tegra_hdmi_scdc_worker(struct work_struct *work)
+{
+	struct tegra_hdmi *hdmi = container_of(to_delayed_work(work),
+				struct tegra_hdmi, scdc_work);
+	u8 rd_tmds_config[][2] = {
+		{HDMI_SCDC_TMDS_CONFIG_OFFSET, 0x0}
+	};
+
+	if (!hdmi->enabled)
+		return;
+
+	mutex_lock(&hdmi->ddc_lock);
+
+	tegra_hdmi_scdc_read(hdmi, rd_tmds_config, ARRAY_SIZE(rd_tmds_config));
+	if (!rd_tmds_config[0][1])
+		_tegra_hdmi_v2_x_config(hdmi);
+
+	mutex_unlock(&hdmi->ddc_lock);
+
+	/* reschedule the worker */
+	cancel_delayed_work(&hdmi->scdc_work);
+	schedule_delayed_work(&hdmi->scdc_work,
+			msecs_to_jiffies(HDMI_SCDC_MONITOR_TIMEOUT_MS));
 }
 
 static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
@@ -1221,8 +1272,11 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 
 	tegra_hdmi_calib(hdmi);
 
-	if (hdmi->dc->mode.pclk > 340000000)
+	if (hdmi->dc->mode.pclk > 340000000) {
 		tegra_hdmi_v2_x_config(hdmi);
+		schedule_delayed_work(&hdmi->scdc_work,
+			msecs_to_jiffies(HDMI_SCDC_MONITOR_TIMEOUT_MS));
+	}
 
 	tegra_dc_put(dc);
 	return 0;

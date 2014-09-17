@@ -18,6 +18,7 @@
 #define __DRIVERS_VIDEO_TEGRA_DC_HDMI2_0_H__
 
 #define HDMI_HPD_DEBOUNCE_DELAY_MS	(40)
+#define HDMI_SCDC_MONITOR_TIMEOUT_MS	(5000)
 
 /* SCDC block */
 #define HDMI_SCDC_TMDS_CONFIG_OFFSET	(0x20)
@@ -174,7 +175,10 @@ struct tegra_hdmi {
 
 	struct tegra_edid *edid;
 	struct i2c_client *ddc_i2c_client;
+	struct mutex ddc_lock;
+
 	struct i2c_client *scdc_i2c_client;
+	struct delayed_work scdc_work;
 
 	struct hdmi_audio_infoframe audio;
 	bool null_sample_inject;

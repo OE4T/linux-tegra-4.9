@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/device.h>
 #include <linux/io.h>
@@ -103,6 +104,13 @@ static unsigned int tegra210_afc_get_sfc_id(unsigned int afc_id)
 	return val;
 }
 
+static void tegra210_afc_set_ppm_diff(struct tegra210_afc *afc,
+			unsigned int ppm_diff)
+{
+	regmap_update_bits(afc->regmap,
+		TEGRA210_AFC_CLK_PPM_DIFF, 0xFFFF, ppm_diff);
+}
+
 static int tegra210_afc_set_thresholds(struct tegra210_afc *afc,
 				unsigned int afc_id)
 {
@@ -185,6 +193,8 @@ static int tegra210_afc_hw_params(struct snd_pcm_substream *substream,
 		dev_err(dev, "Can't set AFC TX CIF: %d\n", ret);
 		return ret;
 	}
+
+	tegra210_afc_set_ppm_diff(afc, 50);
 
 	/* program the thresholds, destn i2s id, PPM values */
 	tegra210_afc_set_thresholds(afc, dev->id);
@@ -410,6 +420,10 @@ static int tegra210_afc_platform_probe(struct platform_device *pdev)
 		if (ret)
 			goto err_pm_disable;
 	}
+
+	/* Disable SLGC */
+	regmap_write(afc->regmap, TEGRA210_AFC_CG, 0);
+	regcache_cache_only(afc->regmap, true);
 
 	ret = snd_soc_register_codec(&pdev->dev, &tegra210_afc_codec,
 				     tegra210_afc_dais,

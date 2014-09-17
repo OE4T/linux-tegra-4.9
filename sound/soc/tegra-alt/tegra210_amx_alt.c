@@ -237,8 +237,14 @@ static int tegra210_amx_set_audio_cif(struct tegra210_amx *amx,
 		return -EINVAL;
 
 	switch (params_format(params)) {
+	case SNDRV_PCM_FORMAT_S8:
+		audio_bits = TEGRA210_AUDIOCIF_BITS_8;
+		break;
 	case SNDRV_PCM_FORMAT_S16_LE:
 		audio_bits = TEGRA210_AUDIOCIF_BITS_16;
+		break;
+	case SNDRV_PCM_FORMAT_S24_LE:
+		audio_bits = TEGRA210_AUDIOCIF_BITS_24;
 		break;
 	case SNDRV_PCM_FORMAT_S32_LE:
 		audio_bits = TEGRA210_AUDIOCIF_BITS_32;

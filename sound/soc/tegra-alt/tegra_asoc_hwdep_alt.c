@@ -20,6 +20,7 @@
 #include <sound/hwdep.h>
 #include <sound/asound.h>
 #include <linux/module.h>
+#include <linux/of.h>
 
 #include "tegra_asoc_machine_alt.h"
 #include "tegra_asoc_hwdep_alt.h"
@@ -33,6 +34,18 @@ static int tegra_asoc_hwdep_update_mapping_table(struct snd_soc_card *card,
 		struct tegra_asoc_hwdep_tdm_map *map_info,
 		unsigned int amx_adx)
 {
+	unsigned int amx_out_dai_link =
+		of_machine_is_compatible("nvidia,tegra210") ?
+			TEGRA210_DAI_LINK_AMX1 : TEGRA124_DAI_LINK_AMX0;
+	unsigned int amx_in_dai_link =
+		of_machine_is_compatible("nvidia,tegra210") ?
+			TEGRA210_DAI_LINK_AMX1_1 : TEGRA124_DAI_LINK_AMX0_0;
+	unsigned int adx_in_dai_link =
+		of_machine_is_compatible("nvidia,tegra210") ?
+			TEGRA210_DAI_LINK_ADX1 : TEGRA124_DAI_LINK_ADX0;
+	unsigned int adx_out_dai_link =
+		of_machine_is_compatible("nvidia,tegra210") ?
+			TEGRA210_DAI_LINK_ADX1_1 : TEGRA124_DAI_LINK_ADX0_0;
 	struct snd_soc_dai *amx_adx_dai;
 	struct snd_soc_pcm_stream *dai_params;
 	unsigned int *map;
@@ -61,7 +74,7 @@ static int tegra_asoc_hwdep_update_mapping_table(struct snd_soc_card *card,
 
 	if (!amx_adx) {
 		/* DAI LINK for AMX OUT to XBAR */
-		amx_adx_dai = card->rtd[AMX_ADX_LINK_IDX(TEGRA124_DAI_LINK_AMX0,
+		amx_adx_dai = card->rtd[AMX_ADX_LINK_IDX(amx_out_dai_link,
 						map_info->id)].cpu_dai;
 
 		if (amx_adx_dai->driver->ops->set_channel_map)
@@ -70,11 +83,11 @@ static int tegra_asoc_hwdep_update_mapping_table(struct snd_soc_card *card,
 				0, 0);
 
 		/* update dai_idx to set the CIF of AMX INPUT DAI */
-		dai_idx = AMX_ADX_LINK_IDX(TEGRA124_DAI_LINK_AMX0_0,
+		dai_idx = AMX_ADX_LINK_IDX(amx_in_dai_link,
 				map_info->id);
 	} else {
 		/* DAI LINK for XBAR to ADX IN */
-		amx_adx_dai = card->rtd[AMX_ADX_LINK_IDX(TEGRA124_DAI_LINK_ADX0,
+		amx_adx_dai = card->rtd[AMX_ADX_LINK_IDX(adx_in_dai_link,
 						map_info->id)].codec_dai;
 
 		if (amx_adx_dai->driver->ops->set_channel_map)
@@ -83,7 +96,7 @@ static int tegra_asoc_hwdep_update_mapping_table(struct snd_soc_card *card,
 				map_info->num_byte_map, map);
 
 		/* update dai_idx to set the CIF of ADX OUTPUT DAI */
-		dai_idx = AMX_ADX_LINK_IDX(TEGRA124_DAI_LINK_ADX0_0,
+		dai_idx = AMX_ADX_LINK_IDX(adx_out_dai_link,
 				map_info->id);
 	}
 

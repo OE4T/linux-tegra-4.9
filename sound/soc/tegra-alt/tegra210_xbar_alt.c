@@ -621,11 +621,11 @@ static const struct snd_soc_dapm_widget tegra210_xbar_widgets[] = {
 	{ name " Mux",      "ADX1-2",		"ADX1-2 RX" },		\
 	{ name " Mux",      "ADX1-3",		"ADX1-3 RX" },		\
 	{ name " Mux",      "ADX1-4",		"ADX1-4 RX" },		\
-	{ name " Mux",      "AMX2",		"AMX1 RX" },		\
-	{ name " Mux",      "ADX2-1",		"ADX1-1 RX" },		\
-	{ name " Mux",      "ADX2-2",		"ADX1-2 RX" },		\
-	{ name " Mux",      "ADX2-3",		"ADX1-3 RX" },		\
-	{ name " Mux",      "ADX2-4",		"ADX1-4 RX" },
+	{ name " Mux",      "AMX2",		"AMX2 RX" },		\
+	{ name " Mux",      "ADX2-1",		"ADX2-1 RX" },		\
+	{ name " Mux",      "ADX2-2",		"ADX2-2 RX" },		\
+	{ name " Mux",      "ADX2-3",		"ADX2-3 RX" },		\
+	{ name " Mux",      "ADX2-4",		"ADX2-4 RX" },
 
 
 #define IN_OUT_ROUTES(name)				\
@@ -863,6 +863,13 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 	ret = clk_set_parent(xbar->clk, xbar->clk_parent);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to set parent clock with pll_a_out0\n");
+		goto err_clk_put_ape;
+	}
+
+	ret = clk_set_rate(xbar->clk, 12288000);
+
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to set clock rate of ahub\n");
 		goto err_clk_put_ape;
 	}
 

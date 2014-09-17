@@ -66,9 +66,15 @@ static int tegra210_i2s_set_clock_rate(struct device *dev, int clock_rate)
 			return ret;
 		}
 
-		ret = clk_set_parent(i2s->clk_i2s, i2s->clk_i2s_sync);
+		ret = clk_set_parent(i2s->clk_i2s, i2s->clk_audio_sync);
 		if (ret) {
 			dev_err(dev, "Can't set parent of i2s clock\n");
+			return ret;
+		}
+
+		ret = clk_set_rate(i2s->clk_i2s, clock_rate);
+		if (ret) {
+			dev_err(dev, "Can't set I2S clock rate: %d\n", ret);
 			return ret;
 		}
 	}
@@ -215,16 +221,6 @@ static int tegra210_i2s_set_fmt(struct snd_soc_dai *dai,
 	return 0;
 }
 
-static int tegra210_i2s_set_dai_sysclk(struct snd_soc_dai *dai,
-		int clk_id, unsigned int freq, int dir)
-{
-	struct tegra210_i2s *i2s = snd_soc_dai_get_drvdata(dai);
-
-	i2s->srate = freq;
-
-	return 0;
-}
-
 static int tegra210_i2s_set_dai_bclk_ratio(struct snd_soc_dai *dai,
 		unsigned int ratio)
 {
@@ -270,7 +266,7 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 
 	regmap_update_bits(i2s->regmap, TEGRA210_I2S_CTRL, mask, val);
 
-	srate = i2s->srate;
+	srate = params_rate(params);
 
 	regmap_read(i2s->regmap, TEGRA210_I2S_CTRL, &val);
 
@@ -360,7 +356,6 @@ static int tegra210_i2s_codec_probe(struct snd_soc_codec *codec)
 static struct snd_soc_dai_ops tegra210_i2s_dai_ops = {
 	.set_fmt	= tegra210_i2s_set_fmt,
 	.hw_params	= tegra210_i2s_hw_params,
-	.set_sysclk	= tegra210_i2s_set_dai_sysclk,
 	.set_bclk_ratio	= tegra210_i2s_set_dai_bclk_ratio,
 };
 
@@ -372,14 +367,20 @@ static struct snd_soc_dai_driver tegra210_i2s_dais[] = {
 			.channels_min = 1,
 			.channels_max = 16,
 			.rates = SNDRV_PCM_RATE_8000_96000,
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.formats = SNDRV_PCM_FMTBIT_S8 |
+				SNDRV_PCM_FMTBIT_S16_LE |
+				SNDRV_PCM_FMTBIT_S24_LE |
+				SNDRV_PCM_FMTBIT_S32_LE,
 		},
 		.capture = {
 			.stream_name = "CIF Transmit",
 			.channels_min = 1,
 			.channels_max = 16,
 			.rates = SNDRV_PCM_RATE_8000_96000,
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.formats = SNDRV_PCM_FMTBIT_S8 |
+				SNDRV_PCM_FMTBIT_S16_LE |
+				SNDRV_PCM_FMTBIT_S24_LE |
+				SNDRV_PCM_FMTBIT_S32_LE,
 		},
 	},
 	{
@@ -389,14 +390,20 @@ static struct snd_soc_dai_driver tegra210_i2s_dais[] = {
 			.channels_min = 1,
 			.channels_max = 16,
 			.rates = SNDRV_PCM_RATE_8000_96000,
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.formats = SNDRV_PCM_FMTBIT_S8 |
+				SNDRV_PCM_FMTBIT_S16_LE |
+				SNDRV_PCM_FMTBIT_S24_LE |
+				SNDRV_PCM_FMTBIT_S32_LE,
 		},
 		.capture = {
 			.stream_name = "DAP Transmit",
 			.channels_min = 1,
 			.channels_max = 16,
 			.rates = SNDRV_PCM_RATE_8000_96000,
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.formats = SNDRV_PCM_FMTBIT_S8 |
+				SNDRV_PCM_FMTBIT_S16_LE |
+				SNDRV_PCM_FMTBIT_S24_LE |
+				SNDRV_PCM_FMTBIT_S32_LE,
 		},
 		.ops = &tegra210_i2s_dai_ops,
 		.symmetric_rates = 1,
@@ -577,9 +584,6 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	i2s->soc_data = soc_data;
 	i2s->bclk_ratio = 2;
 
-	/* initialize srate with default sampling rate */
-	i2s->srate = 48000;
-
 	i2s->clk_i2s = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(i2s->clk_i2s)) {
 		dev_err(&pdev->dev, "Can't retrieve i2s clock\n");
@@ -594,11 +598,18 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 		goto err_clk_put;
 	}
 
+	i2s->clk_audio_sync = devm_clk_get(&pdev->dev, "audio_sync");
+	if (IS_ERR(i2s->clk_audio_sync)) {
+		dev_err(&pdev->dev, "Can't retrieve audio sync clock\n");
+		ret = PTR_ERR(i2s->clk_audio_sync);
+		goto err_i2s_sync_clk_put;
+	}
+
 	i2s->clk_pll_a_out0 = clk_get_sys(NULL, "pll_a_out0");
 	if (IS_ERR(i2s->clk_pll_a_out0)) {
 		dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
 		ret = PTR_ERR(i2s->clk_pll_a_out0);
-		goto err_i2s_sync_clk_put;
+		goto err_audio_sync_clk_put;
 	}
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -713,6 +724,8 @@ err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 err_pll_a_out0_clk_put:
 	clk_put(i2s->clk_pll_a_out0);
+err_audio_sync_clk_put:
+	devm_clk_put(&pdev->dev, i2s->clk_audio_sync);
 err_i2s_sync_clk_put:
 	devm_clk_put(&pdev->dev, i2s->clk_i2s_sync);
 err_clk_put:
@@ -732,6 +745,7 @@ static int tegra210_i2s_platform_remove(struct platform_device *pdev)
 		tegra210_i2s_runtime_suspend(&pdev->dev);
 
 	devm_clk_put(&pdev->dev, i2s->clk_i2s);
+	devm_clk_put(&pdev->dev, i2s->clk_audio_sync);
 	devm_clk_put(&pdev->dev, i2s->clk_i2s_sync);
 	clk_put(i2s->clk_pll_a_out0);
 

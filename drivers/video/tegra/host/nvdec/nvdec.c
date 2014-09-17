@@ -58,6 +58,8 @@
 
 #define BRINGUP_NO_WPR 1
 
+static int nvhost_nvdec_init_sw(struct platform_device *dev);
+
 /* caller is responsible for freeing */
 #if USE_NVDEC_BOOTLOADER
 enum {
@@ -228,17 +230,17 @@ int nvdec_boot(struct platform_device *dev)
 	u32 offset;
 	int err = 0;
 #if USE_NVDEC_BOOTLOADER
-	struct nvdec **m = get_nvdec(dev);
+	struct nvdec **m;
 	u32 fb_data_offset = 0;
 	u32 initial_dmem_offset = 0;
 	struct nvdec_bl_shared_data shared_data;
 	u32 wpr_addr_lo, wpr_addr_hi;
 
-	/* check if firmware is loaded or not */
-	if (!m || !m[0] || !m[0]->valid || !m[1] || !m[1]->valid) {
-		dev_err(&dev->dev, "firmware not loaded");
-		return -ENOMEDIUM;
-	}
+	err = nvhost_nvdec_init_sw(dev);
+	if (err)
+		return err;
+
+	m = get_nvdec(dev);
 
 	err = nvdec_wait_mem_scrubbing(dev);
 	if (err)
@@ -282,11 +284,13 @@ int nvdec_boot(struct platform_device *dev)
 		(m[0]->phys + m[0]->os.bin_data_offset) >> 8);
 	nvdec_dma_pa_to_internal_256b(dev, m[0]->os.code_offset, 0, true);
 #else /* USE_NVDEC_BOOTLOADER */
-	struct nvdec *m = get_nvdec(dev);
+	struct nvdec *m;
 
-	/* check if firmware is loaded or not */
-	if (!m || !m->valid)
-		return -ENOMEDIUM;
+	err = nvhost_nvdec_init_sw(dev);
+	if (err)
+		return err;
+
+	m = get_nvdec(dev);
 
 	err = nvdec_wait_mem_scrubbing(dev);
 	if (err)
@@ -471,7 +475,7 @@ clean_up:
 }
 
 #if USE_NVDEC_BOOTLOADER
-int nvhost_nvdec_init_sw(struct platform_device *dev)
+static int nvhost_nvdec_init_sw(struct platform_device *dev)
 {
 	int err = 0;
 	struct nvdec **m = get_nvdec(dev);
@@ -547,9 +551,8 @@ error:
 	return err;
 }
 #else
-int nvhost_nvdec_init_sw(struct platform_device *dev)
+static int nvhost_nvdec_init_sw(struct platform_device *dev)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	int err = 0;
 	struct nvdec *m = get_nvdec(dev);
 	char *fw_name;
@@ -597,7 +600,6 @@ clean_up:
 int nvhost_nvdec_finalize_poweron(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	int err;
 
 	nvhost_module_reset(pdev, false);
 
@@ -617,10 +619,6 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *pdev)
 		host1x_writel(pdev, nvdec_engine_cg3_r(), 0x80000);
 		host1x_writel(pdev, nvdec_engine_cg4_r(), 0xfffffff8);
 	}
-
-	err = nvhost_nvdec_init_sw(pdev);
-	if (err)
-		return err;
 
 	return nvdec_boot(pdev);
 }

@@ -71,6 +71,8 @@
 #define hdcp_align_dma(var) (((unsigned long)(hdcp_context->var \
 			+ HDCP_ALIGNMENT_256 - 1)) & ~HDCP_ALIGNMENT_256);
 
+static int nvhost_tsec_init_sw(struct platform_device *dev);
+
 /* The key value in ascii hex */
 static u8 otf_key[TSEC_KEY_LENGTH];
 
@@ -637,10 +639,13 @@ int tsec_boot(struct platform_device *dev)
 	u32 timeout;
 	u32 offset;
 	int err = 0;
-	struct tsec *m = get_tsec(dev);
+	struct tsec *m;
 
-	if (!m || !m->valid)
-		return -ENOMEDIUM;
+	err = nvhost_tsec_init_sw(dev);
+	if (err)
+		return err;
+
+	m = get_tsec(dev);
 
 	if (m->is_booted)
 		return 0;
@@ -890,11 +895,6 @@ clean_up:
 int nvhost_tsec_finalize_poweron(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	int err;
-
-	err = nvhost_tsec_init_sw(pdev);
-	if (err)
-		return err;
 
 	nvhost_module_reset(pdev, false);
 

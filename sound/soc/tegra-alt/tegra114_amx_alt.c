@@ -360,9 +360,9 @@ int tegra114_amx_set_channel_map(struct snd_soc_dai *dai,
 
 			/* making byte_mask */
 			if (i > 32)
-				byte_mask2 |= 1 << (32 - i);
+				byte_mask2 |= (1 << (i - 32));
 			else
-				byte_mask1 |= 1 << i;
+				byte_mask1 |= (1 << i);
 		}
 	}
 

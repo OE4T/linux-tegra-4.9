@@ -40,6 +40,7 @@
 #include <tegra/mc.h>
 
 #include "nvhost_acm.h"
+#include "nvhost_scale.h"
 #include "nvhost_channel.h"
 #include "dev.h"
 #include "bus_client.h"
@@ -887,6 +888,7 @@ static int nvhost_module_prepare_poweroff(struct device *dev)
 		return -EINVAL;
 
 	devfreq_suspend_device(pdata->power_manager);
+	nvhost_scale_hw_deinit(to_platform_device(dev));
 
 	if (pdata->prepare_poweroff)
 		pdata->prepare_poweroff(to_platform_device(dev));
@@ -906,6 +908,7 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 	if (pdata->finalize_poweron)
 		ret = pdata->finalize_poweron(to_platform_device(dev));
 
+	nvhost_scale_hw_init(to_platform_device(dev));
 	devfreq_resume_device(pdata->power_manager);
 
 	return ret;

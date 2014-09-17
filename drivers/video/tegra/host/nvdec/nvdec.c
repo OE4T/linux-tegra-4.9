@@ -622,20 +622,7 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *pdev)
 	if (err)
 		return err;
 
-	if (pdata->scaling_init)
-		nvhost_scale_hw_init(pdev);
-
 	return nvdec_boot(pdev);
-}
-
-int nvhost_nvdec_prepare_poweroff(struct platform_device *dev)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-
-	if (pdata->scaling_deinit)
-		nvhost_scale_hw_deinit(dev);
-
-	return 0;
 }
 
 static struct of_device_id tegra_nvdec_of_match[] = {

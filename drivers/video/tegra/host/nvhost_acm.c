@@ -50,7 +50,6 @@
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 static int nvhost_module_suspend(struct device *dev);
-static int nvhost_module_resume(struct device *dev);
 static int nvhost_module_power_on(struct generic_pm_domain *domain);
 static int nvhost_module_power_off(struct generic_pm_domain *domain);
 static int nvhost_module_prepare_poweroff(struct device *dev);
@@ -735,7 +734,7 @@ int _nvhost_module_add_domain(struct generic_pm_domain *domain,
 		domain->dev_ops.restore_state = nvhost_module_finalize_poweron;
 		if (client) {
 			domain->dev_ops.suspend = nvhost_module_suspend;
-			domain->dev_ops.resume = nvhost_module_resume;
+			domain->dev_ops.resume = nvhost_module_finalize_poweron;
 		}
 
 		/* Set only host1x as wakeup capable */
@@ -832,8 +831,6 @@ EXPORT_SYMBOL(nvhost_module_disable_clk);
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 static int nvhost_module_suspend(struct device *dev)
 {
-	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
-
 	/*
 	 * device_prepare takes one ref, so expect usage count to
 	 * be 1 at this point.
@@ -841,24 +838,7 @@ static int nvhost_module_suspend(struct device *dev)
 	if (atomic_read(&dev->power.usage_count) > 1)
 		return -EBUSY;
 
-	devfreq_suspend_device(pdata->power_manager);
-
-	if (pdata->prepare_poweroff)
-		pdata->prepare_poweroff(to_platform_device(dev));
-
-	return 0;
-}
-
-static int nvhost_module_resume(struct device *dev)
-{
-	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
-
-	if (pdata->finalize_poweron)
-		pdata->finalize_poweron(to_platform_device(dev));
-
-	devfreq_resume_device(pdata->power_manager);
-
-	return 0;
+	return nvhost_module_prepare_poweroff(dev);
 }
 
 static int nvhost_module_power_on(struct generic_pm_domain *domain)

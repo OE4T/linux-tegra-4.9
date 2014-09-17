@@ -74,6 +74,8 @@ struct tegra_nvhdcp_packet {
 
 	// (OUT) Up to 127 receivers & repeaters
 	__u64	bksv_list[TEGRA_NVHDCP_MAX_DEVS];
+
+	__u32	hdcp22;
 };
 
 /* parameters to TEGRAIO_NVHDCP_SET_POLICY */

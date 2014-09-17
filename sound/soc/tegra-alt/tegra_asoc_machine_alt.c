@@ -1854,7 +1854,7 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 		}
 	}
 
-	/* i is for DAP and j is for CIF */
+	/* variable i is for DAP and j is for CIF */
 	for (i = 0, j = num_codec_links; i < num_codec_links; i++, j++) {
 		memset((void *)dai_link_name, '\0', MAX_STR_SIZE);
 		sprintf(dai_link_name, "nvidia,dai-link-%d", i+1);
@@ -2118,7 +2118,6 @@ void tegra_machine_remove_extra_mem_alloc(unsigned int num_codec_links)
 		}
 }
 EXPORT_SYMBOL_GPL(tegra_machine_remove_extra_mem_alloc);
-
 
 MODULE_AUTHOR("Arun Shamanna Lakshmi <aruns@nvidia.com>");
 MODULE_AUTHOR("Junghyun Kim <juskim@nvidia.com>");

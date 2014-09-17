@@ -280,6 +280,11 @@ static int tegra210_admaif_hw_params(struct snd_pcm_substream *substream,
 			TEGRA210_ADMAIF_XBAR_DMA_FIFO_SIZE_MASK,
 			fifo_size << TEGRA210_ADMAIF_XBAR_DMA_FIFO_SIZE_SHIFT);
 
+	regmap_update_bits(admaif->regmap, fifo_ctrl,
+		TEGRA210_ADMAIF_XBAR_DMA_FIFO_START_ADDR_MASK,
+		(0x4 * dai->id)
+			<< TEGRA210_ADMAIF_XBAR_DMA_FIFO_START_ADDR_SHIFT);
+
 	return 0;
 }
 

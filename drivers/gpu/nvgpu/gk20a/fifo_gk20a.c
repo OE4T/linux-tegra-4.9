@@ -339,7 +339,6 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 		runlist->mem[i].size = runlist_size;
 	}
 	mutex_init(&runlist->mutex);
-	init_waitqueue_head(&runlist->runlist_wq);
 
 	/* None of buffers is pinned if this value doesn't change.
 	    Otherwise, one of them (cur_buffer) must have been pinned. */
@@ -632,19 +631,12 @@ clean_up:
 
 static void gk20a_fifo_handle_runlist_event(struct gk20a *g)
 {
-	struct fifo_gk20a *f = &g->fifo;
-	struct fifo_runlist_info_gk20a *runlist;
-	unsigned long runlist_event;
-	u32 runlist_id;
+	u32 runlist_event = gk20a_readl(g, fifo_intr_runlist_r());
 
-	runlist_event = gk20a_readl(g, fifo_intr_runlist_r());
+	gk20a_dbg(gpu_dbg_intr, "runlist event %08x\n",
+		  runlist_event);
+
 	gk20a_writel(g, fifo_intr_runlist_r(), runlist_event);
-
-	for_each_set_bit(runlist_id, &runlist_event, f->max_runlists) {
-		runlist = &f->runlist_info[runlist_id];
-		wake_up(&runlist->runlist_wq);
-	}
-
 }
 
 static int gk20a_init_fifo_setup_hw(struct gk20a *g)
@@ -1853,19 +1845,25 @@ static void gk20a_fifo_runlist_reset_engines(struct gk20a *g, u32 runlist_id)
 static int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)
 {
 	struct fifo_runlist_info_gk20a *runlist;
-	u32 remain;
-	bool pending;
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
+	int ret = -ETIMEDOUT;
 
 	runlist = &g->fifo.runlist_info[runlist_id];
-	remain = wait_event_timeout(runlist->runlist_wq,
-		((pending = gk20a_readl(g, fifo_eng_runlist_r(runlist_id)) &
-			fifo_eng_runlist_pending_true_f()) == 0),
-		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g)));
+	do {
+		if ((gk20a_readl(g, fifo_eng_runlist_r(runlist_id)) &
+				fifo_eng_runlist_pending_true_f()) == 0) {
+			ret = 0;
+			break;
+		}
 
-	if (remain == 0 && pending != 0)
-		return -ETIMEDOUT;
+		usleep_range(delay, delay * 2);
+		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+	} while (time_before(jiffies, end_jiffies) ||
+		 !tegra_platform_is_silicon());
 
-	return 0;
+	return ret;
 }
 
 static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,

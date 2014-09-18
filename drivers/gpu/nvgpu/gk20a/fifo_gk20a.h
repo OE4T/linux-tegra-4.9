@@ -38,7 +38,6 @@ struct fifo_runlist_info_gk20a {
 	bool stopped;
 	bool support_tsg;
 	struct mutex mutex; /* protect channel preempt and runlist upate */
-	wait_queue_head_t runlist_wq;
 };
 
 /* so far gk20a has two engines: gr and ce2(gr_copy) */

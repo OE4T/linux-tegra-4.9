@@ -532,6 +532,9 @@ void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable);
 int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu);
 #endif
 
+struct device_node *tegra_get_panel_node_out_type_check
+	(struct tegra_dc *dc, u32 out_type);
+
 struct tegra_dc_platform_data
 	*of_dc_parse_platform_data(struct platform_device *ndev);
 

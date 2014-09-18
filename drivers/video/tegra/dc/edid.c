@@ -618,6 +618,40 @@ void tegra_edid_put_data(struct tegra_dc_edid *data)
 	kref_put(&pvt->refcnt, data_release);
 }
 
+int tegra_dc_edid_blob(struct tegra_dc *dc, struct i2c_msg *msgs, int num)
+{
+	struct i2c_msg *pmsg;
+	int i;
+	int status = 0;
+	u32 len = 0;
+	struct device_node *np_panel = NULL;
+
+	np_panel = tegra_get_panel_node_out_type_check(dc,
+		dc->pdata->default_out->type);
+
+	if (!np_panel || !of_device_is_available(np_panel))
+		return -ENOENT;
+
+	for (i = 0; i < num; ++i) {
+		pmsg = &msgs[i];
+
+		if (pmsg->flags & I2C_M_RD) { /* Read */
+			len = pmsg->len;
+			status = of_property_read_u8_array(np_panel,
+				"nvidia,edid", pmsg->buf, len);
+
+			if (status) {
+				dev_err(&dc->ndev->dev,
+					"Failed to read EDID blob from DT"
+					" addr:%d, size:%d\n",
+					pmsg->addr, len);
+				return status;
+			}
+		}
+	}
+	return i;
+}
+
 struct tegra_dc_edid *tegra_dc_get_edid(struct tegra_dc *dc)
 {
 	if (!dc->edid)

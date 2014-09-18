@@ -24,57 +24,23 @@
 #include "dc_priv.h"
 #include "edid.h"
 
-static int tegra_dc_lvds_edid_blob(struct tegra_dc *dc, struct i2c_msg *msgs,
-	int num)
-{
-	struct i2c_msg *pmsg;
-	int i;
-	int status = 0;
-	u32 len = 0;
-	struct device_node *np_sor = of_find_node_by_path(SOR_NODE);
-
-	/* TODO: support extension block */
-	if (!np_sor)
-		return -ENOENT;
-
-	for (i = 0; i < num; ++i) {
-		pmsg = &msgs[i];
-
-		if (pmsg->flags & I2C_M_RD) { /* Read */
-			len = pmsg->len;
-			status = of_property_read_u8_array(np_sor,
-				"nvidia,edid", pmsg->buf, len);
-
-			if (status) {
-				dev_err(&dc->ndev->dev,
-					"lvds: Failed to read EDID blob from DT"
-					" addr:%d, size:%d\n",
-					pmsg->addr, len);
-				return status;
-			}
-		}
-	}
-	return i;
-}
-
 static int tegra_dc_lvds_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_lvds_data *lvds;
 	int err;
 	struct device_node *np = dc->ndev->dev.of_node;
-#ifdef CONFIG_OF
-	struct device_node *np_sor = of_find_node_by_path(SOR_NODE);
-#else
-	struct device_node *np_sor = NULL;
-#endif
+	struct device_node *np_panel = NULL;
 	bool virtual_edid = false;
 
 	lvds = devm_kzalloc(&dc->ndev->dev, sizeof(*lvds), GFP_KERNEL);
 	if (!lvds)
 		return -ENOMEM;
+
 	if (np) {
-		if (np_sor && of_device_is_available(np_sor)) {
-			virtual_edid = of_property_read_bool(np_sor,
+		np_panel = tegra_get_panel_node_out_type_check(dc,
+			TEGRA_DC_OUT_LVDS);
+		if (np_panel && of_device_is_available(np_panel)) {
+			virtual_edid = of_property_read_bool(np_panel,
 					"nvidia,edid");
 		} else {
 			err = -EINVAL;
@@ -90,7 +56,7 @@ static int tegra_dc_lvds_init(struct tegra_dc *dc)
 		goto err_init;
 	}
 	if (virtual_edid) {
-		lvds->edid = tegra_edid_create(dc, tegra_dc_lvds_edid_blob);
+		lvds->edid = tegra_edid_create(dc, tegra_dc_edid_blob);
 		if (IS_ERR_OR_NULL(lvds->edid)) {
 			dev_err(&dc->ndev->dev,
 				"lvds: failed to create edid obj\n");

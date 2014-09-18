@@ -1692,6 +1692,38 @@ static void dc_hdmi_hotplug_report(bool state)
 }
 #endif
 
+struct device_node *tegra_get_panel_node_out_type_check
+	(struct tegra_dc *dc, u32 out_type)
+{
+	struct device_node *np_panel = NULL;
+	struct device_node *np_def_out = NULL;
+	u32 temp;
+
+	if (dc->ndev->id == 0)
+		np_panel = tegra_primary_panel_get_dt_node(NULL);
+	else
+		np_panel = tegra_secondary_panel_get_dt_node(NULL);
+	if (!np_panel) {
+		pr_err("There is no valid panel node\n");
+		return NULL;
+	}
+
+	/*
+	 * check if target panel node has expected output type
+	 */
+	np_def_out = of_get_child_by_name(np_panel,
+		"disp-default-out");
+	if (np_def_out)
+		of_property_read_u32(np_def_out,
+			"nvidia,out-type", &temp);
+	if (temp == out_type)
+		return np_panel;
+	else {
+		pr_err("target panel node has not proper out type\n");
+		return NULL;
+	}
+}
+
 struct tegra_dc_platform_data
 		*of_dc_parse_platform_data(struct platform_device *ndev)
 {

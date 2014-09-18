@@ -77,6 +77,7 @@ int tegra_edid_get_eld(struct tegra_edid *edid, struct tegra_edid_hdmi_eld *eldd
 
 struct tegra_dc_edid *tegra_edid_get_data(struct tegra_edid *edid);
 void tegra_edid_put_data(struct tegra_dc_edid *data);
+int tegra_dc_edid_blob(struct tegra_dc *dc, struct i2c_msg *msgs, int num);
 
 int tegra_edid_underscan_supported(struct tegra_edid *edid);
 int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data);

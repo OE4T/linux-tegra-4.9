@@ -990,39 +990,6 @@ static int tegra_dc_hdmi_i2c_xfer(struct tegra_dc *dc, struct i2c_msg *msgs,
 	return i2c_transfer(hdmi->i2c_info.client->adapter, msgs, num);
 }
 
-static int tegra_dc_hdmi_edid_blob(struct tegra_dc *dc, struct i2c_msg *msgs,
-	int num)
-{
-	struct i2c_msg *pmsg;
-	int i;
-	int status = 0;
-	u32 len = 0;
-	struct device_node *np_hdmi = of_find_node_by_path(HDMI_NODE);
-
-	/* TODO: support extension block */
-	if (!np_hdmi)
-		return -ENOENT;
-
-	for (i = 0; i < num; ++i) {
-		pmsg = &msgs[i];
-
-		if (pmsg->flags & I2C_M_RD) { /* Read */
-			len = pmsg->len;
-			status = of_property_read_u8_array(np_hdmi,
-				"nvidia,edid", pmsg->buf, len);
-
-			if (status) {
-				dev_err(&dc->ndev->dev,
-					"hdmi: Failed to read EDID blob from DT"
-					" addr:%d, size:%d\n",
-					pmsg->addr, len);
-				return status;
-			}
-		}
-	}
-	return i;
-}
-
 /* This is needed to obtain audio channel info before HAL
  * opens pcm stream and copies edid audio data */
 static int tegra_hdmi_get_max_channels(void)
@@ -1075,6 +1042,8 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 #else
 	struct device_node *np_hdmi = NULL;
 #endif
+	struct device_node *np_panel = NULL;
+
 	bool virtual_edid = false;
 	hdmi = kzalloc(sizeof(*hdmi), GFP_KERNEL);
 	if (!hdmi)
@@ -1083,7 +1052,10 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		if (np_hdmi && of_device_is_available(np_hdmi)) {
 			of_address_to_resource(np_hdmi, 0, &hdmi_res);
 			res = &hdmi_res;
-			virtual_edid = of_property_read_bool(np_hdmi,
+			np_panel = tegra_get_panel_node_out_type_check(dc,
+				TEGRA_DC_OUT_HDMI);
+			if (np_panel && of_device_is_available(np_panel))
+				virtual_edid = of_property_read_bool(np_panel,
 					"nvidia,edid");
 		} else {
 			err = -EINVAL;
@@ -1164,7 +1136,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		memcpy(&hdmi->info, hdmi_out, sizeof(hdmi->info));
 
 	if (virtual_edid)
-		hdmi->edid = tegra_edid_create(dc, tegra_dc_hdmi_edid_blob);
+		hdmi->edid = tegra_edid_create(dc, tegra_dc_edid_blob);
 	else
 		hdmi->edid = tegra_edid_create(dc, tegra_dc_hdmi_i2c_xfer);
 

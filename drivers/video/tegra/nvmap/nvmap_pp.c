@@ -25,6 +25,7 @@
 #include <linux/kernel.h>
 #include <linux/vmalloc.h>
 #include <linux/moduleparam.h>
+#include <linux/nodemask.h>
 #include <linux/shrinker.h>
 #include <linux/kthread.h>
 #include <linux/debugfs.h>
@@ -466,23 +467,24 @@ exit:
 	nvmap_page_pool_unlock(pool);
 }
 
-static int nvmap_page_pool_shrink(struct shrinker *shrinker,
-				  struct shrink_control *sc)
+static unsigned long nvmap_page_pool_count_objects(struct shrinker *shrinker,
+						   struct shrink_control *sc)
 {
-	int shrink_pages = sc->nr_to_scan;
-
-	if (!shrink_pages)
-		goto out;
-
-	pr_debug("sh_pages=%d", shrink_pages);
-
-	shrink_pages = nvmap_page_pool_free(&nvmap_dev->pool, shrink_pages);
-out:
 	return nvmap_page_pool_get_unused_pages();
 }
 
+static unsigned long nvmap_page_pool_scan_objects(struct shrinker *shrinker,
+						  struct shrink_control *sc)
+{
+	pr_debug("sh_pages=%lu", sc->nr_to_scan);
+
+	return sc->nr_to_scan - \
+		nvmap_page_pool_free(&nvmap_dev->pool, sc->nr_to_scan);
+}
+
 static struct shrinker nvmap_page_pool_shrinker = {
-	.shrink = nvmap_page_pool_shrink,
+	.count_objects = nvmap_page_pool_count_objects,
+	.scan_objects = nvmap_page_pool_scan_objects,
 	.seeks = 1,
 };
 
@@ -493,10 +495,11 @@ static void shrink_page_pools(int *total_pages, int *available_pages)
 	if (*total_pages == 0) {
 		sc.gfp_mask = GFP_KERNEL;
 		sc.nr_to_scan = 0;
-		*total_pages = nvmap_page_pool_shrink(NULL, &sc);
+		*total_pages = nvmap_page_pool_count_objects(NULL, &sc);
 	}
 	sc.nr_to_scan = *total_pages;
-	*available_pages = nvmap_page_pool_shrink(NULL, &sc);
+	nvmap_page_pool_scan_objects(NULL, &sc);
+	*available_pages = nvmap_page_pool_count_objects(NULL, &sc);
 }
 
 #if NVMAP_TEST_PAGE_POOL_SHRINKER

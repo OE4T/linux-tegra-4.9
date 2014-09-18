@@ -402,14 +402,14 @@ static int tegra210_admaif_dai_probe(struct snd_soc_dai *dai)
 		.probe = tegra210_admaif_dai_probe,		\
 		.playback = {					\
 			.stream_name = "Playback " #id,		\
-			.channels_min = 2,			\
+			.channels_min = 1,			\
 			.channels_max = 2,			\
 			.rates = SNDRV_PCM_RATE_8000_96000,	\
 			.formats = SNDRV_PCM_FMTBIT_S16_LE,	\
 		},						\
 		.capture = {					\
 			.stream_name = "Capture " #id,		\
-			.channels_min = 2,			\
+			.channels_min = 1,			\
 			.channels_max = 2,			\
 			.rates = SNDRV_PCM_RATE_8000_96000,	\
 			.formats = SNDRV_PCM_FMTBIT_S16_LE,	\

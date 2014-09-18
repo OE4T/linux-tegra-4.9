@@ -135,6 +135,8 @@ struct gpu_ops {
 				u32 mode);
 		int (*get_zcull_info)(struct gk20a *g, struct gr_gk20a *gr,
 				struct gr_zcull_info *zcull_params);
+		bool (*is_tpc_addr)(u32 addr);
+		u32 (*get_tpc_num)(u32 addr);
 	} gr;
 	const char *name;
 	struct {

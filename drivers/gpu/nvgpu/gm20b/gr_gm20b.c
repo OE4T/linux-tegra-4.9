@@ -614,6 +614,37 @@ static int gr_gm20b_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,
 	return 0;
 }
 
+static bool gr_gm20b_is_tpc_addr_shared(u32 addr)
+{
+	return (addr >= proj_tpc_in_gpc_shared_base_v()) &&
+		(addr < (proj_tpc_in_gpc_shared_base_v() +
+			 proj_tpc_in_gpc_stride_v()));
+}
+
+static bool gr_gm20b_is_tpc_addr(u32 addr)
+{
+	return ((addr >= proj_tpc_in_gpc_base_v()) &&
+		(addr < proj_tpc_in_gpc_base_v() +
+		 (proj_scal_litter_num_tpc_per_gpc_v() *
+		  proj_tpc_in_gpc_stride_v())))
+		|| gr_gm20b_is_tpc_addr_shared(addr);
+}
+
+static u32 gr_gm20b_get_tpc_num(u32 addr)
+{
+	u32 i, start;
+	u32 num_tpcs = proj_scal_litter_num_tpc_per_gpc_v();
+
+	for (i = 0; i < num_tpcs; i++) {
+		start = proj_tpc_in_gpc_base_v() +
+			(i * proj_tpc_in_gpc_stride_v());
+		if ((addr >= start) &&
+		    (addr < (start + proj_tpc_in_gpc_stride_v())))
+			return i;
+	}
+	return 0;
+}
+
 #ifdef CONFIG_TEGRA_ACR
 static void gr_gm20b_load_gpccs_with_bootloader(struct gk20a *g)
 {
@@ -748,4 +779,6 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.free_obj_ctx = gk20a_free_obj_ctx;
 	gops->gr.bind_ctxsw_zcull = gr_gk20a_bind_ctxsw_zcull;
 	gops->gr.get_zcull_info = gr_gk20a_get_zcull_info;
+	gops->gr.is_tpc_addr = gr_gm20b_is_tpc_addr;
+	gops->gr.get_tpc_num = gr_gm20b_get_tpc_num;
 }

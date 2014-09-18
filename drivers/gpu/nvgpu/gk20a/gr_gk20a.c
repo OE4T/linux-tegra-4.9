@@ -5922,13 +5922,13 @@ int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
 		} else
 			*gpc_num = pri_get_gpc_num(addr);
 
-		if (pri_is_tpc_addr(gpc_addr)) {
+		if (g->ops.gr.is_tpc_addr(gpc_addr)) {
 			*addr_type = CTXSW_ADDR_TYPE_TPC;
 			if (pri_is_tpc_addr_shared(gpc_addr)) {
 				*broadcast_flags |= PRI_BROADCAST_FLAGS_TPC;
 				return 0;
 			}
-			*tpc_num = pri_get_tpc_num(gpc_addr);
+			*tpc_num = g->ops.gr.get_tpc_num(gpc_addr);
 		}
 		return 0;
 	} else if (pri_is_be_addr(addr)) {
@@ -6261,7 +6261,7 @@ static void gr_gk20a_access_smpc_reg(struct gk20a *g, u32 quad, u32 offset)
 
 	gpc = pri_get_gpc_num(offset);
 	gpc_tpc_addr = pri_gpccs_addr_mask(offset);
-	tpc = pri_get_tpc_num(gpc_tpc_addr);
+	tpc = g->ops.gr.get_tpc_num(gpc_tpc_addr);
 
 	quad_ctrl = quad & 0x1; /* first bit tells us quad */
 	half_ctrl = (quad >> 1) & 0x1; /* second bit tells us half */
@@ -6364,8 +6364,8 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 		u32 gpc_addr = 0;
 		gpc_num = pri_get_gpc_num(addr);
 		gpc_addr = pri_gpccs_addr_mask(addr);
-		if (pri_is_tpc_addr(gpc_addr))
-			tpc_num = pri_get_tpc_num(gpc_addr);
+		if (g->ops.gr.is_tpc_addr(gpc_addr))
+			tpc_num = g->ops.gr.get_tpc_num(gpc_addr);
 		else
 			return -EINVAL;
 
@@ -7174,6 +7174,30 @@ void gk20a_init_gr(struct gk20a *g)
 	init_waitqueue_head(&g->gr.init_wq);
 }
 
+static bool gr_gk20a_is_tpc_addr(u32 addr)
+{
+	return ((addr >= proj_tpc_in_gpc_base_v()) &&
+		(addr < proj_tpc_in_gpc_base_v() +
+		 (proj_scal_litter_num_tpc_per_gpc_v() *
+		  proj_tpc_in_gpc_stride_v())))
+		|| pri_is_tpc_addr_shared(addr);
+}
+
+static u32 gr_gk20a_get_tpc_num(u32 addr)
+{
+	u32 i, start;
+	u32 num_tpcs = proj_scal_litter_num_tpc_per_gpc_v();
+
+	for (i = 0; i < num_tpcs; i++) {
+		start = proj_tpc_in_gpc_base_v() +
+			(i * proj_tpc_in_gpc_stride_v());
+		if ((addr >= start) &&
+		    (addr < (start + proj_tpc_in_gpc_stride_v())))
+			return i;
+	}
+	return 0;
+}
+
 void gk20a_init_gr_ops(struct gpu_ops *gops)
 {
 	gops->gr.access_smpc_reg = gr_gk20a_access_smpc_reg;
@@ -7205,4 +7229,6 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.free_obj_ctx = gk20a_free_obj_ctx;
 	gops->gr.bind_ctxsw_zcull = gr_gk20a_bind_ctxsw_zcull;
 	gops->gr.get_zcull_info = gr_gk20a_get_zcull_info;
+	gops->gr.is_tpc_addr = gr_gk20a_is_tpc_addr;
+	gops->gr.get_tpc_num = gr_gk20a_get_tpc_num;
 }

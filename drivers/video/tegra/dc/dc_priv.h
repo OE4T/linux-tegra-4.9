@@ -539,7 +539,8 @@ struct tegra_dc_platform_data
 bool tegra_dc_windows_are_dirty(struct tegra_dc *dc, u32 win_act_req_mask);
 
 /* defined in cursor.c, used in dc.c and ext/cursor.c */
-int tegra_dc_cursor_image(struct tegra_dc *dc, u32 format, unsigned size,
+int tegra_dc_cursor_image(struct tegra_dc *dc,
+	enum tegra_dc_cursor_format format, enum tegra_dc_cursor_size size,
 	u32 fg, u32 bg, dma_addr_t phys_addr);
 int tegra_dc_cursor_set(struct tegra_dc *dc, bool enable, int x, int y);
 int tegra_dc_cursor_clip(struct tegra_dc *dc, unsigned clip);

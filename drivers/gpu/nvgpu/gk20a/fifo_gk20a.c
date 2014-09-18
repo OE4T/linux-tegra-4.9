@@ -1482,6 +1482,7 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 				    pbdma_intr_0);
 		}
 
+		gk20a_writel(g, pbdma_method0_r(pbdma_id), 0);
 		gk20a_writel(g, pbdma_intr_0_r(pbdma_id), pbdma_intr_0);
 	}
 

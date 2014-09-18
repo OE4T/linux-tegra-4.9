@@ -59,7 +59,7 @@
 		tap-delay = <4>;
 		trim-delay = <8>;
 		mmc-ocr-mask = <0>;
-		max-clk-limit = <136000000>;
+		max-clk-limit = <204000000>;
 		ddr-clk-limit = <41000000>;
 		id = <1>;
 		compad-vref-3v3 = <0x7>;

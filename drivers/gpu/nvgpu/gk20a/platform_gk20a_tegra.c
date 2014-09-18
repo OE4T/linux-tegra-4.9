@@ -440,6 +440,18 @@ static int gk20a_tegra_probe(struct platform_device *dev)
 		*platform = t132_gk20a_tegra_platform;
 	}
 
+	/* WAR for bug 1547668: Disable railgating and scaling irrespective of
+	 * platform data if the rework has not been made. */
+
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA21) {
+		np = of_find_node_by_path("/gpu-dvfs-rework");
+		if (!(np && of_device_is_available(np))) {
+			platform->can_railgate = false;
+			platform->devfreq_governor = "";
+			dev_warn(&dev->dev, "board does not support scaling or powergating");
+		}
+	}
+
 	gk20a_tegra_get_clocks(dev);
 
 	return 0;

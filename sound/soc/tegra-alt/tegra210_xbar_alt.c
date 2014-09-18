@@ -94,14 +94,14 @@ static int tegra210_xbar_codec_probe(struct snd_soc_codec *codec)
 		.name = #sname,					\
 		.playback = {					\
 			.stream_name = #sname " Receive",	\
-			.channels_min = 2,			\
+			.channels_min = 1,			\
 			.channels_max = 2,			\
 			.rates = SNDRV_PCM_RATE_8000_96000,	\
 			.formats = SNDRV_PCM_FMTBIT_S16_LE,	\
 		},						\
 		.capture = {					\
 			.stream_name = #sname " Transmit",	\
-			.channels_min = 2,			\
+			.channels_min = 1,			\
 			.channels_max = 2,			\
 			.rates = SNDRV_PCM_RATE_8000_96000,	\
 			.formats = SNDRV_PCM_FMTBIT_S16_LE,	\

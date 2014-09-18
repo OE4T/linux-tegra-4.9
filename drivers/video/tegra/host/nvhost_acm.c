@@ -56,6 +56,8 @@ static int nvhost_module_power_on(struct generic_pm_domain *domain);
 static int nvhost_module_power_off(struct generic_pm_domain *domain);
 static int nvhost_module_prepare_poweroff(struct device *dev);
 static int nvhost_module_finalize_poweron(struct device *dev);
+static int nvhost_module_toggle_slcg(struct notifier_block *nb,
+				     unsigned long action, void *data);
 #endif
 
 DEFINE_MUTEX(client_list_lock);
@@ -602,6 +604,23 @@ int nvhost_module_init(struct platform_device *dev)
 		IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS) &&
 		pdata->can_powergate;
 
+	if (pdata->poweron_toggle_slcg) {
+		pdata->toggle_slcg_notifier.notifier_call =
+			&nvhost_module_toggle_slcg;
+		if (pdata->powergate_ids[0] != -1)
+			slcg_register_notifier(pdata->powergate_ids[0],
+					       &pdata->toggle_slcg_notifier);
+		if (pdata->powergate_ids[1] != -1)
+			slcg_register_notifier(pdata->powergate_ids[1],
+					       &pdata->toggle_slcg_notifier);
+
+		/* Ensure that the above WAR gets applied */
+		do_powergate_locked(pdata->powergate_ids[0]);
+		do_powergate_locked(pdata->powergate_ids[1]);
+		do_unpowergate_locked(pdata->powergate_ids[0]);
+		do_unpowergate_locked(pdata->powergate_ids[1]);
+	}
+
 	/* power gate units that we can power gate */
 	if (pdata->can_powergate) {
 		do_powergate_locked(pdata->powergate_ids[0]);
@@ -659,6 +678,7 @@ int nvhost_module_init(struct platform_device *dev)
 	pm_runtime_enable(&dev->dev);
 	if (!pm_runtime_enabled(&dev->dev))
 		nvhost_module_enable_clk(&dev->dev);
+
 	return 0;
 
 fail_powergatedelay:
@@ -903,11 +923,10 @@ static int nvhost_module_prepare_poweroff(struct device *dev)
 	return 0;
 }
 
-static void nvhost_module_load_regs(struct platform_device *pdev)
+static void nvhost_module_load_regs(struct platform_device *pdev, bool prod)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_gating_register *regs = pdata->engine_cg_regs;
-	bool prod = pdata->engine_can_cg;
 
 	if (!regs)
 		return;
@@ -931,11 +950,15 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 	if (!pdata)
 		return -EINVAL;
 
-	if (pdata->poweron_reset)
-		nvhost_module_reset(pdev, false);
+	/* If poweron_toggle_slcg is set, following is already executed.
+	 * Skip to avoid doing it twice. */
+	if (!pdata->poweron_toggle_slcg) {
+		if (pdata->poweron_reset)
+			nvhost_module_reset(pdev, false);
 
-	/* Load clockgating registers */
-	nvhost_module_load_regs(pdev);
+		/* Load clockgating registers */
+		nvhost_module_load_regs(pdev, pdata->engine_can_cg);
+	}
 
 	if (pdata->finalize_poweron)
 		ret = pdata->finalize_poweron(to_platform_device(dev));
@@ -944,6 +967,26 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 	devfreq_resume_device(pdata->power_manager);
 
 	return ret;
+}
+
+static int nvhost_module_toggle_slcg(struct notifier_block *nb,
+				     unsigned long action, void *data)
+{
+	struct nvhost_device_data *pdata =
+		container_of(nb, struct nvhost_device_data,
+			     toggle_slcg_notifier);
+	struct platform_device *pdev = pdata->pdev;
+
+	/* First, reset the engine */
+	do_module_reset_locked(pdev);
+
+	/* Then, disable slcg, wait a while and re-enable it */
+	nvhost_module_load_regs(pdev, false);
+	udelay(1);
+	if (pdata->engine_can_cg)
+		nvhost_module_load_regs(pdev, true);
+
+	return 0;
 }
 #endif
 

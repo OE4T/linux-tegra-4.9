@@ -151,6 +151,9 @@ struct nvhost_device_data {
 	u32		modulemutexes[NVHOST_MODULE_MAX_MODMUTEXES];
 	u32		moduleid;	/* Module id for user space API */
 
+	/* Should we toggle the engine SLCG when we turn on the domain? */
+	bool		poweron_toggle_slcg;
+
 	u32		class;		/* Device class */
 	bool		exclusive;	/* True if only one user at a time */
 	bool		keepalive;	/* Do not power gate when opened */
@@ -233,6 +236,8 @@ struct nvhost_device_data {
 	bool gather_filter_enabled;
 
 	struct dev_pm_qos_request no_poweroff_req;
+
+	struct notifier_block		toggle_slcg_notifier;
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 	struct generic_pm_domain pd;	/* power domain representing power partition */

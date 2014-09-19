@@ -188,7 +188,7 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 
 	if (!of_device_is_compatible(np,
 	  "nvidia,tegra-audio-t210ref-mobile-foster")) {
-		idx = tegra_machine_get_codec_dai_link_idx("earSmart-codec");
+		idx = tegra_machine_get_codec_dai_link_idx("earSmart-playback");
 		/* check if idx has valid number */
 		if (idx == -EINVAL)
 			return idx;
@@ -572,9 +572,9 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 
 		/* set codec init */
 	for (i = 0; i < machine->num_codec_links; i++) {
-		if (tegra_t210ref_codec_links[i].codec_of_node->name) {
+		if (tegra_t210ref_codec_links[i].name) {
 			if (strstr(tegra_t210ref_codec_links[i]
-				.codec_of_node->name, "earSmart-codec"))
+				.name, "earSmart-playback"))
 				tegra_t210ref_codec_links[i].init =
 						tegra_t210ref_init;
 

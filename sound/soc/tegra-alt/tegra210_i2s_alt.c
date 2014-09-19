@@ -40,6 +40,18 @@
 
 #define DRV_NAME "tegra210-i2s"
 
+static void tegra210_i2s_set_slot_ctrl(struct regmap *regmap,
+				unsigned int total_slots,
+				unsigned int tx_slot_mask,
+				unsigned int rx_slot_mask)
+{
+	regmap_write(regmap, TEGRA210_I2S_SLOT_CTRL, total_slots - 1);
+	regmap_write(regmap, TEGRA210_I2S_AXBAR_TX_SLOT_CTRL,
+		tx_slot_mask);
+	regmap_write(regmap, TEGRA210_I2S_AXBAR_RX_SLOT_CTRL,
+		rx_slot_mask);
+}
+
 static int tegra210_i2s_set_clock_rate(struct device *dev, int clock_rate)
 {
 	unsigned int val;
@@ -218,7 +230,23 @@ static int tegra210_i2s_set_fmt(struct snd_soc_dai *dai,
 	regmap_update_bits(i2s->regmap, TEGRA210_I2S_AXBAR_RX_CTRL,
 		TEGRA210_I2S_AXBAR_RX_CTRL_DATA_OFFSET_MASK,
 		(data_offset << TEGRA210_I2S_AXBAR_RX_CTRL_DATA_OFFSET_SHIFT));
+	regmap_update_bits(i2s->regmap, TEGRA210_I2S_CTRL,
+		TEGRA210_I2S_CTRL_FSYNC_WIDTH_MASK,
+		i2s->fsync_width << TEGRA210_I2S_CTRL_FSYNC_WIDTH_SHIFT);
 	pm_runtime_put(dai->dev);
+
+	return 0;
+}
+
+static int tegra210_i2s_set_tdm_slot(struct snd_soc_dai *dai,
+		unsigned int tx_mask, unsigned int rx_mask,
+		int slots, int slot_width)
+{
+	struct tegra210_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+
+	/* copy the required tx and rx mask */
+	i2s->tx_mask = (tx_mask > 0xFFFF) ? 0xFFFF : tx_mask;
+	i2s->rx_mask = (rx_mask > 0xFFFF) ? 0xFFFF : rx_mask;
 
 	return 0;
 }
@@ -249,17 +277,29 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 
 	mask = TEGRA210_I2S_CTRL_BIT_SIZE_MASK;
 	switch (params_format(params)) {
+	case SNDRV_PCM_FORMAT_S8:
+		val = TEGRA210_I2S_CTRL_BIT_SIZE_8;
+		sample_size = 8;
+		cif_conf.audio_bits = TEGRA210_AUDIOCIF_BITS_8;
+		cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_8;
+		break;
 	case SNDRV_PCM_FORMAT_S16_LE:
 		val = TEGRA210_I2S_CTRL_BIT_SIZE_16;
 		sample_size = 16;
+		cif_conf.audio_bits = TEGRA210_AUDIOCIF_BITS_16;
+		cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_16;
 		break;
 	case SNDRV_PCM_FORMAT_S24_LE:
 		val = TEGRA210_I2S_CTRL_BIT_SIZE_24;
 		sample_size = 24;
+		cif_conf.audio_bits = TEGRA210_AUDIOCIF_BITS_24;
+		cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_24;
 		break;
 	case SNDRV_PCM_FORMAT_S32_LE:
 		val = TEGRA210_I2S_CTRL_BIT_SIZE_32;
 		sample_size = 32;
+		cif_conf.audio_bits = TEGRA210_AUDIOCIF_BITS_32;
+		cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_32;
 		break;
 	default:
 		dev_err(dev, "Wrong format!\n");
@@ -275,19 +315,35 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 	frame_format = val & TEGRA210_I2S_CTRL_FRAME_FORMAT_MASK;
 
 	if (frame_format == TEGRA210_I2S_CTRL_FRAME_FORMAT_FSYNC_MODE) {
-		regmap_write(i2s->regmap, TEGRA210_I2S_SLOT_CTRL, channels - 1);
-		regmap_write(i2s->regmap, TEGRA210_I2S_AXBAR_TX_SLOT_CTRL,
-						((1 << channels) - 1));
-		regmap_write(i2s->regmap, TEGRA210_I2S_AXBAR_RX_SLOT_CTRL,
-						((1 << channels) - 1));
+		i2s->soc_data->set_slot_ctrl(i2s->regmap, channels,
+			i2s->tx_mask, i2s->rx_mask);
+		/* FIXUP : I2S fifo threshold set to 3 when AFC is connected */
+		cif_conf.threshold = 3;
+		cif_conf.audio_channels = channels;
+		cif_conf.client_channels = channels;
+		cif_conf.expand = 0;
+		cif_conf.stereo_conv = 0;
+		cif_conf.replicate = 0;
+		cif_conf.truncate = 0;
+		cif_conf.mono_conv = 0;
+	} else {
+		cif_conf.threshold = 3;
+		cif_conf.audio_channels = channels;
+		cif_conf.client_channels = (channels == 1) ? 2 : channels;
+		cif_conf.expand = 0;
+		cif_conf.stereo_conv = 0;
+		cif_conf.replicate = 0;
+		cif_conf.truncate = 0;
+		cif_conf.mono_conv = 0;
 	}
 
-	i2sclock = srate * channels * sample_size;
+	i2sclock = srate * sample_size * cif_conf.client_channels;
 
 	if (i2s->bclk_ratio != 0)
 		i2sclock *= i2s->bclk_ratio;
 
 	bitcnt = (i2sclock / srate) - 1;
+
 	if ((bitcnt < 0) ||
 		(bitcnt > TEGRA210_I2S_TIMING_CHANNEL_BIT_CNT_MASK)) {
 		dev_err(dev, "Can't set channel bit count\n");
@@ -310,24 +366,6 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 		val |= TEGRA210_I2S_TIMING_NON_SYM_EN;
 
 	regmap_write(i2s->regmap, TEGRA210_I2S_TIMING, val);
-
-	regmap_update_bits(i2s->regmap, TEGRA210_I2S_CTRL,
-		TEGRA210_I2S_CTRL_FSYNC_WIDTH_MASK,
-		31 << TEGRA210_I2S_CTRL_FSYNC_WIDTH_SHIFT);
-
-	cif_conf.threshold = 0;
-	cif_conf.audio_channels = channels;
-	cif_conf.client_channels = channels;
-	cif_conf.audio_bits = (sample_size == 16 ? TEGRA210_AUDIOCIF_BITS_16 :
-						TEGRA210_AUDIOCIF_BITS_32);
-
-	cif_conf.client_bits = (sample_size == 16 ? TEGRA210_AUDIOCIF_BITS_16 :
-						TEGRA210_AUDIOCIF_BITS_32);
-	cif_conf.expand = 0;
-	cif_conf.stereo_conv = 0;
-	cif_conf.replicate = 0;
-	cif_conf.truncate = 0;
-	cif_conf.mono_conv = 0;
 
 	/* As a COCEC DAI, CAPTURE is transmit */
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
@@ -388,6 +426,7 @@ static struct snd_soc_dai_ops tegra210_i2s_dai_ops = {
 	.set_fmt	= tegra210_i2s_set_fmt,
 	.hw_params	= tegra210_i2s_hw_params,
 	.set_bclk_ratio	= tegra210_i2s_set_dai_bclk_ratio,
+	.set_tdm_slot	= tegra210_i2s_set_tdm_slot,
 };
 
 static struct snd_soc_dai_driver tegra210_i2s_dais[] = {
@@ -577,6 +616,7 @@ static const struct regmap_config tegra210_i2s_regmap_config = {
 
 static const struct tegra210_i2s_soc_data soc_data_tegra210 = {
 	.set_audio_cif = tegra210_xbar_set_cif,
+	.set_slot_ctrl = tegra210_i2s_set_slot_ctrl,
 };
 
 static const struct of_device_id tegra210_i2s_of_match[] = {
@@ -613,6 +653,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, i2s);
 
 	i2s->soc_data = soc_data;
+	i2s->tx_mask = i2s->rx_mask = 0xFFFF;
 	i2s->bclk_ratio = 2;
 
 	i2s->clk_i2s = devm_clk_get(&pdev->dev, NULL);
@@ -685,6 +726,19 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 			"Missing property nvidia,ahub-i2s-id\n");
 		ret = -ENODEV;
 		goto err_pll_a_out0_clk_put;
+	}
+
+	if (of_property_read_u32(pdev->dev.of_node,
+		"fsync-width", &i2s->fsync_width) < 0) {
+		dev_warn(&pdev->dev, "Missing prop fsync-width for I2S%d\n",
+			pdev->dev.id);
+		i2s->fsync_width = 31;
+	}
+
+	if (i2s->fsync_width > 255) {
+		dev_warn(&pdev->dev, "Default fsync-width to 31 for I2S%d\n",
+			pdev->dev.id);
+		i2s->fsync_width = 31;
 	}
 
 	num_supplies = of_property_count_strings(np, "regulator-supplies");

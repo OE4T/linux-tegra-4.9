@@ -33,7 +33,6 @@
 #include <sound/pcm_params.h>
 #include <asm-generic/gpio.h>
 #include <sound/soc.h>
-#include "../codecs/wm8731.h"
 #include "../codecs/ad193x.h"
 
 #include "tegra_asoc_utils_alt.h"
@@ -42,19 +41,26 @@
 
 #define DRV_NAME "tegra-snd-t210ref"
 
-#define MAX_TX_SLOT_SIZE 32
-#define MAX_RX_SLOT_SIZE 32
+#define MAX_AMX_SLOT_SIZE 64
+#define MAX_ADX_SLOT_SIZE 64
+#define DEFAULT_AMX_SLOT_SIZE 32
+#define DEFAULT_ADX_SLOT_SIZE 32
+#define MAX_AMX_NUM 2
+#define MAX_ADX_NUM 2
+
+struct tegra_t210ref_amx_adx_conf {
+	unsigned int num_amx;
+	unsigned int num_adx;
+	unsigned int amx_slot_size[MAX_AMX_NUM];
+	unsigned int adx_slot_size[MAX_ADX_NUM];
+};
 
 struct tegra_t210ref {
 	struct tegra_asoc_audio_clock_info audio_clock;
+	struct tegra_t210ref_amx_adx_conf amx_adx_conf;
 	unsigned int num_codec_links;
 	int ad_rate_via_kcontrol;
-	int ak_rate_via_kcontrol;
 	struct i2c_client *max9485_client;
-	struct regulator *codec_reg;
-	struct regulator *digital_reg;
-	struct regulator *analog_reg;
-	struct regulator *dmic_reg;
 };
 
 static struct i2c_board_info max9485_info = {
@@ -125,7 +131,18 @@ static struct snd_soc_pcm_stream tegra_t210ref_amx_input_params[] = {
 	},
 };
 
-static struct snd_soc_pcm_stream tegra_t210ref_adx_input_params[] = {
+static struct snd_soc_pcm_stream tegra_t210ref_amx_output_params[] = {
+	[0] = {
+		.formats = SNDRV_PCM_FMTBIT_S32_LE,
+		.rate_min = 48000,
+		.rate_max = 48000,
+		.channels_min = 8,
+		.channels_max = 8,
+	},
+};
+
+
+static struct snd_soc_pcm_stream tegra_t210ref_adx_output_params[] = {
 	[0] = {
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,
 		.rate_min = 48000,
@@ -156,6 +173,17 @@ static struct snd_soc_pcm_stream tegra_t210ref_adx_input_params[] = {
 	},
 };
 
+static struct snd_soc_pcm_stream tegra_t210ref_adx_input_params[] = {
+	[0] = {
+		.formats = SNDRV_PCM_FMTBIT_S32_LE,
+		.rate_min = 48000,
+		.rate_max = 48000,
+		.channels_min = 8,
+		.channels_max = 8,
+	},
+};
+
+
 static int tegra_t210ref_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_dai *ad1937_dai = rtd->codec_dai;
@@ -165,8 +193,11 @@ static int tegra_t210ref_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
+	struct device_node *np =
+		(struct device_node *)rtd->dai_link->cpu_of_node;
+	struct device_node *parentnp = np->parent;
 	unsigned int fmt = rtd->dai_link->dai_fmt;
-	unsigned int mclk, val;
+	unsigned int mclk, val, tx_mask = (1<<8) - 1, rx_mask = (1<<8) - 1;
 	int err;
 
 	mclk = dai_params->rate_min * 512;
@@ -217,8 +248,15 @@ static int tegra_t210ref_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 		return err;
 	}
 
-	if ((fmt & SND_SOC_DAIFMT_FORMAT_MASK) == SND_SOC_DAIFMT_DSP_A)
-		ad1937_dai->driver->ops->set_tdm_slot(ad1937_dai, 0, 0, 8, 0);
+	if (parentnp) {
+		of_property_read_u32(np, "tx-mask", (u32 *)&tx_mask);
+		of_property_read_u32(np, "rx-mask", (u32 *)&rx_mask);
+	}
+
+	if ((fmt & SND_SOC_DAIFMT_FORMAT_MASK) == SND_SOC_DAIFMT_DSP_A) {
+		snd_soc_dai_set_tdm_slot(ad1937_dai, 0, 0, 8, 0);
+		snd_soc_dai_set_tdm_slot(i2s_dai, tx_mask, rx_mask, 0, 0);
+	}
 
 	return 0;
 }
@@ -232,42 +270,99 @@ static int tegra_t210ref_spdif_init(struct snd_soc_pcm_runtime *rtd)
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
-	unsigned int mclk, clk_out_rate, srate;
+	struct device_node *np =
+		(struct device_node *)rtd->dai_link->cpu_of_node;
+	struct device_node *parentnp = np->parent;
+	const char *identifier = (const char *)rtd->dai_link->name;
+	unsigned int idx = tegra_machine_get_codec_dai_link_idx(identifier);
+	unsigned int fmt = rtd->dai_link->dai_fmt;
+	unsigned int mclk, clk_out_rate;
+	unsigned int tx_mask = (1<<8) - 1, rx_mask = (1<<8) - 1;
 	int err = 0;
 
 	/* Default sampling rate*/
-	srate = dai_params->rate_min;
-	clk_out_rate = srate * 256;
+	clk_out_rate = dai_params->rate_min * 256;
 	mclk = clk_out_rate * 2;
 
 	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
-					srate, mclk, clk_out_rate);
+		dai_params->rate_min, mclk, clk_out_rate);
 	if (err < 0) {
 		dev_err(card->dev, "Can't configure clocks\n");
 		return err;
 	}
 
-	err = snd_soc_dai_set_sysclk(cpu_dai, 0, srate,
-					SND_SOC_CLOCK_OUT);
-	err = snd_soc_dai_set_sysclk(cpu_dai, 0, srate,
-					SND_SOC_CLOCK_IN);
-	if (err < 0) {
-		dev_err(card->dev, "%s cpu DAI clock not set\n",
-			cpu_dai->name);
+	/* set sys clk */
+	if (cpu_dai->driver->ops->set_sysclk) {
+		err = snd_soc_dai_set_sysclk(cpu_dai, 0, dai_params->rate_min,
+						SND_SOC_CLOCK_OUT);
+		err = snd_soc_dai_set_sysclk(cpu_dai, 0, dai_params->rate_min,
+						SND_SOC_CLOCK_IN);
+		if (err < 0) {
+			dev_err(card->dev, "%s cpu DAI rate not set\n",
+				cpu_dai->name);
+			return err;
+		}
 	}
 
+	/* set bclk ratio */
+	if (cpu_dai->driver->ops->set_bclk_ratio) {
+		idx = idx - TEGRA210_XBAR_DAI_LINKS;
+		err = snd_soc_dai_set_bclk_ratio(cpu_dai,
+			tegra_machine_get_bclk_ratio(rtd));
+		if (err < 0) {
+			dev_err(card->dev, "%s cpu DAI bclk not set\n",
+				cpu_dai->name);
+			return err;
+		}
+	}
+
+	if (parentnp) {
+		of_property_read_u32(np, "tx-mask", (u32 *)&tx_mask);
+		of_property_read_u32(np, "rx-mask", (u32 *)&rx_mask);
+	}
+
+	/* set tdm slot mask */
+	if (cpu_dai->driver->ops->set_tdm_slot) {
+		fmt = fmt & SND_SOC_DAIFMT_FORMAT_MASK;
+		if ((fmt == SND_SOC_DAIFMT_DSP_A) ||
+			(fmt == SND_SOC_DAIFMT_DSP_B)) {
+			err = snd_soc_dai_set_tdm_slot(cpu_dai,
+					tx_mask,
+					rx_mask,
+					0, 0);
+			if (err < 0) {
+				dev_err(card->dev,
+					"%s cpu DAI slot mask not set\n",
+					cpu_dai->name);
+			}
+		}
+	}
 	return err;
 }
 
+
 static int tegra_t210ref_amx1_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai *amx_dai = rtd->cpu_dai;
 	struct device_node *np = rtd->card->dev->of_node;
-	unsigned int tx_slot[MAX_TX_SLOT_SIZE], i, j;
+	unsigned int tx_slot[MAX_AMX_SLOT_SIZE];
+	unsigned int i, j, default_slot_mode = 0;
+	unsigned int slot_size = machine->amx_adx_conf.amx_slot_size[0];
 
-	if (of_property_read_u32_array(np, "nvidia,amx-slot-map",
-		tx_slot, MAX_TX_SLOT_SIZE))
-		for (i = 0, j = 0; i < MAX_TX_SLOT_SIZE; i += 8) {
+	if (machine->amx_adx_conf.num_amx && slot_size) {
+		if (of_property_read_u32_array(np,
+			"nvidia,amx-slot-map", tx_slot, slot_size))
+			default_slot_mode = 1;
+	} else
+		default_slot_mode = 1;
+
+	if (default_slot_mode) {
+		slot_size = DEFAULT_AMX_SLOT_SIZE;
+		for (i = 0, j = 0; i < slot_size; i += 8) {
 			tx_slot[i] = 0;
 			tx_slot[i + 1] = 0;
 			tx_slot[i + 2] = (j << 16) | (1 << 8) | 0;
@@ -278,23 +373,37 @@ static int tegra_t210ref_amx1_dai_init(struct snd_soc_pcm_runtime *rtd)
 			tx_slot[i + 7] = (j << 16) | (2 << 8) | 1;
 			j++;
 		}
+	}
 
 	if (amx_dai->driver->ops->set_channel_map)
 		amx_dai->driver->ops->set_channel_map(amx_dai,
-			MAX_TX_SLOT_SIZE, tx_slot, 0, 0);
+			slot_size, tx_slot, 0, 0);
 
 	return 0;
 }
 
 static int tegra_t210ref_amx2_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai *amx_dai = rtd->cpu_dai;
 	struct device_node *np = rtd->card->dev->of_node;
-	unsigned int tx_slot[MAX_TX_SLOT_SIZE], i, j;
+	unsigned int tx_slot[MAX_AMX_SLOT_SIZE];
+	unsigned int i, j, default_slot_mode = 0;
+	unsigned int slot_size = machine->amx_adx_conf.amx_slot_size[1];
 
-	if (of_property_read_u32_array(np, "nvidia,amx-slot-map",
-		tx_slot, MAX_TX_SLOT_SIZE))
-		for (i = 0, j = 0; i < MAX_TX_SLOT_SIZE; i += 8) {
+	if ((machine->amx_adx_conf.num_amx > 1) && slot_size) {
+		if (of_property_read_u32_array(np,
+			"nvidia,amx-slot-map", tx_slot, slot_size))
+			default_slot_mode = 1;
+	} else
+		default_slot_mode = 1;
+
+	if (default_slot_mode) {
+		slot_size = DEFAULT_AMX_SLOT_SIZE;
+		for (i = 0, j = 0; i < slot_size; i += 8) {
 			tx_slot[i] = 0;
 			tx_slot[i + 1] = 0;
 			tx_slot[i + 2] = (j << 16) | (1 << 8) | 0;
@@ -305,23 +414,39 @@ static int tegra_t210ref_amx2_dai_init(struct snd_soc_pcm_runtime *rtd)
 			tx_slot[i + 7] = (j << 16) | (2 << 8) | 1;
 			j++;
 		}
+	}
 
 	if (amx_dai->driver->ops->set_channel_map)
 		amx_dai->driver->ops->set_channel_map(amx_dai,
-			MAX_TX_SLOT_SIZE, tx_slot, 0, 0);
+			slot_size, tx_slot, 0, 0);
 
 	return 0;
 }
 
+
+
 static int tegra_t210ref_adx1_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai *adx_dai = rtd->codec_dai;
 	struct device_node *np = rtd->card->dev->of_node;
-	unsigned int rx_slot[MAX_RX_SLOT_SIZE], i, j;
+	unsigned int rx_slot[MAX_ADX_SLOT_SIZE];
+	unsigned int i, j, default_slot_mode = 0;
+	unsigned int slot_size = machine->amx_adx_conf.adx_slot_size[0];
 
-	if (of_property_read_u32_array(np, "nvidia,adx-slot-map",
-		rx_slot, MAX_RX_SLOT_SIZE))
-		for (i = 0, j = 0; i < MAX_RX_SLOT_SIZE; i += 8) {
+	if (machine->amx_adx_conf.num_adx && slot_size) {
+		if (of_property_read_u32_array(np,
+			"nvidia,adx-slot-map", rx_slot, slot_size))
+			default_slot_mode = 1;
+	} else
+		default_slot_mode = 1;
+
+	if (default_slot_mode) {
+		slot_size = DEFAULT_ADX_SLOT_SIZE;
+		for (i = 0, j = 0; i < slot_size; i += 8) {
 			rx_slot[i] = 0;
 			rx_slot[i + 1] = 0;
 			rx_slot[i + 2] = (j << 16) | (1 << 8) | 0;
@@ -332,23 +457,37 @@ static int tegra_t210ref_adx1_dai_init(struct snd_soc_pcm_runtime *rtd)
 			rx_slot[i + 7] = (j << 16) | (2 << 8) | 1;
 			j++;
 		}
+	}
 
 	if (adx_dai->driver->ops->set_channel_map)
 		adx_dai->driver->ops->set_channel_map(adx_dai,
-			0, 0, MAX_RX_SLOT_SIZE, rx_slot);
+			0, 0, slot_size, rx_slot);
 
 	return 0;
 }
 
 static int tegra_t210ref_adx2_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai *adx_dai = rtd->codec_dai;
 	struct device_node *np = rtd->card->dev->of_node;
-	unsigned int rx_slot[MAX_RX_SLOT_SIZE], i, j;
+	unsigned int rx_slot[MAX_ADX_SLOT_SIZE];
+	unsigned int i, j, default_slot_mode = 0;
+	unsigned int slot_size = machine->amx_adx_conf.adx_slot_size[1];
 
-	if (of_property_read_u32_array(np, "nvidia,adx-slot-map",
-		rx_slot, MAX_RX_SLOT_SIZE))
-		for (i = 0, j = 0; i < MAX_RX_SLOT_SIZE; i += 8) {
+	if ((machine->amx_adx_conf.num_adx > 1) && slot_size) {
+		if (of_property_read_u32_array(np,
+			"nvidia,adx-slot-map", rx_slot, slot_size))
+			default_slot_mode = 1;
+	} else
+		default_slot_mode = 1;
+
+	if (default_slot_mode) {
+		slot_size = DEFAULT_ADX_SLOT_SIZE;
+		for (i = 0, j = 0; i < slot_size; i += 8) {
 			rx_slot[i] = 0;
 			rx_slot[i + 1] = 0;
 			rx_slot[i + 2] = (j << 16) | (1 << 8) | 0;
@@ -359,10 +498,11 @@ static int tegra_t210ref_adx2_dai_init(struct snd_soc_pcm_runtime *rtd)
 			rx_slot[i + 7] = (j << 16) | (2 << 8) | 1;
 			j++;
 		}
+	}
 
 	if (adx_dai->driver->ops->set_channel_map)
 		adx_dai->driver->ops->set_channel_map(adx_dai,
-			0, 0, MAX_RX_SLOT_SIZE, rx_slot);
+			0, 0, slot_size, rx_slot);
 
 	return 0;
 }
@@ -454,11 +594,15 @@ static int tegra_t210ref_ad1937_hw_params(
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 	fmt = card->rtd[idx].dai_link->dai_fmt;
 
-	/* rate is either supplied by pcm params or via kcontrol */
-	if (!machine->ad_rate_via_kcontrol)
+	/* rate set by pcm params or via kcontrol for ad1937-x codec */
+	if (!strcmp(prefix, "x") &&
+		!machine->ad_rate_via_kcontrol)
 		dai_params->rate_min = params_rate(params);
 
 	switch (dai_params->rate_min) {
+	case 8000:
+		clk_out_rate = dai_params->rate_min * 512;
+		break;
 	case 64000:
 	case 88200:
 	case 96000:
@@ -505,14 +649,14 @@ static int tegra_t210ref_ad1937_x_hw_params(struct snd_pcm_substream *substream,
 					struct snd_pcm_hw_params *params)
 {
 	return tegra_t210ref_ad1937_hw_params(substream, params,
-		tegra_machine_get_codec_dai_link_idx("ad193x.0-0004"), "x");
+		tegra_machine_get_codec_dai_link_idx("ad-playback-x"), "x");
 }
 
 static int tegra_t210ref_ad1937_y_hw_params(struct snd_pcm_substream *substream,
 					struct snd_pcm_hw_params *params)
 {
 	return tegra_t210ref_ad1937_hw_params(substream, params,
-		tegra_machine_get_codec_dai_link_idx("ad193x.0-0005"), "y");
+		tegra_machine_get_codec_dai_link_idx("ad-playback-y"), "y");
 }
 
 static int tegra_t210ref_spdif_hw_params(struct snd_pcm_substream *substream,
@@ -550,6 +694,19 @@ static const struct snd_soc_dapm_widget tegra_t210ref_dapm_widgets[] = {
 
 static const struct snd_soc_dapm_route tegra_t210ref_audio_map[] = {
 };
+
+static int tegra_t210ref_suspend_pre(struct snd_soc_card *card)
+{
+	unsigned int idx;
+
+	/* DAPM dai link stream work for non pcm links */
+	for (idx = 0; idx < card->num_rtd; idx++) {
+		if (card->rtd[idx].dai_link->params)
+			INIT_DELAYED_WORK(&card->rtd[idx].delayed_work, NULL);
+	}
+
+	return 0;
+}
 
 static const int tegra_t210ref_srate_values[] = {
 	0,
@@ -599,7 +756,8 @@ static int tegra_t210ref_ad1937_put_rate(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
-	unsigned int idx =  tegra_machine_get_codec_dai_link_idx("ad193x");
+	unsigned int idx =
+		tegra_machine_get_codec_dai_link_idx("ad-playback-x");
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)card->dai_link[idx].params;
 
@@ -622,7 +780,7 @@ static const struct soc_enum tegra_t210ref_codec_rate =
 	SOC_ENUM_SINGLE_EXT(13, tegra_t210ref_srate_text);
 
 static const struct snd_kcontrol_new tegra_t210ref_controls[] = {
-	SOC_ENUM_EXT("codec-ad rate", tegra_t210ref_codec_rate,
+	SOC_ENUM_EXT("codec-ad-x rate", tegra_t210ref_codec_rate,
 		tegra_t210ref_ad1937_get_rate,
 		tegra_t210ref_ad1937_put_rate),
 };
@@ -631,6 +789,7 @@ static struct snd_soc_card snd_soc_tegra_t210ref = {
 	.name = "tegra-t210ref",
 	.owner = THIS_MODULE,
 	.remove = tegra_t210ref_remove,
+	.suspend_pre = tegra_t210ref_suspend_pre,
 	.dapm_widgets = tegra_t210ref_dapm_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(tegra_t210ref_dapm_widgets),
 	.controls = tegra_t210ref_controls,
@@ -647,7 +806,6 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	struct snd_soc_dai_link *tegra_t210ref_codec_links = NULL;
 	struct snd_soc_codec_conf *tegra_machine_codec_conf = NULL;
 	struct snd_soc_codec_conf *tegra_t210ref_codec_conf = NULL;
-	unsigned int num_amx, num_adx;
 	int ret = 0, i, j;
 
 	machine = devm_kzalloc(&pdev->dev, sizeof(struct tegra_t210ref),
@@ -672,13 +830,26 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		if (ret)
 			goto err;
 
-		if (of_property_read_u32(np,
-			"nvidia,num-amx", (u32 *)&num_amx)) {
-			goto err;
+		if (of_property_read_u32(np, "nvidia,num-amx",
+			(u32 *)&machine->amx_adx_conf.num_amx))
+			machine->amx_adx_conf.num_amx = 0;
+		if (of_property_read_u32_array(np, "nvidia,amx-slot-size",
+			(u32 *)machine->amx_adx_conf.amx_slot_size,
+			MAX_AMX_NUM) ||
+			!machine->amx_adx_conf.num_amx) {
+			for (i = 0; i < MAX_AMX_NUM; i++)
+				machine->amx_adx_conf.amx_slot_size[i] = 0;
 		}
-		if (of_property_read_u32(np,
-			"nvidia,num-adx", (u32 *)&num_adx)) {
-			goto err;
+
+		if (of_property_read_u32(np, "nvidia,num-adx",
+			(u32 *)&machine->amx_adx_conf.num_adx))
+			machine->amx_adx_conf.num_adx = 0;
+		if (of_property_read_u32_array(np, "nvidia,adx-slot-size",
+			(u32 *)machine->amx_adx_conf.adx_slot_size,
+			MAX_ADX_NUM) ||
+			!machine->amx_adx_conf.num_adx) {
+			for (i = 0; i < MAX_ADX_NUM; i++)
+				machine->amx_adx_conf.adx_slot_size[i] = 0;
 		}
 	}
 
@@ -714,21 +885,25 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 
 	/* set codec init */
 	for (i = 0; i < machine->num_codec_links; i++) {
-		if (tegra_t210ref_codec_links[i].codec_of_node->name) {
-			if (strstr(tegra_t210ref_codec_links[i]
-				.codec_of_node->name, "ad193x"))
+		if (tegra_t210ref_codec_links[i].name) {
+			if (strstr(tegra_t210ref_codec_links[i].name,
+				"ad-playback-x"))
 				tegra_t210ref_codec_links[i].init =
 					tegra_t210ref_ad1937_init;
-			else if (strstr(tegra_t210ref_codec_links[i]
-				.codec_of_node->name, "spdif"))
+			else if (strstr(tegra_t210ref_codec_links[i].name,
+				"ad-playback-y"))
+				tegra_t210ref_codec_links[i].init =
+					tegra_t210ref_ad1937_init;
+			else if (strstr(tegra_t210ref_codec_links[i].name,
+				"spdif-playback"))
 				tegra_t210ref_codec_links[i].init =
 				tegra_t210ref_spdif_init;
 		}
 	}
 
 	/* set AMX/ADX params */
-	if (num_amx) {
-		switch (num_amx) {
+	if (machine->amx_adx_conf.num_amx) {
+		switch (machine->amx_adx_conf.num_amx) {
 		case 2:
 			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_AMX2_1,
 				(struct snd_soc_pcm_stream *)
@@ -742,6 +917,9 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_AMX2_4,
 				(struct snd_soc_pcm_stream *)
 				&tegra_t210ref_amx_input_params[3]);
+			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_AMX2,
+				(struct snd_soc_pcm_stream *)
+				&tegra_t210ref_amx_output_params[0]);
 		case 1:
 			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_AMX1_1,
 				(struct snd_soc_pcm_stream *)
@@ -755,40 +933,49 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_AMX1_4,
 				(struct snd_soc_pcm_stream *)
 				&tegra_t210ref_amx_input_params[3]);
+			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_AMX1,
+				(struct snd_soc_pcm_stream *)
+				&tegra_t210ref_amx_output_params[0]);
 			break;
 		default:
 			break;
 		}
 	}
 
-	if (num_adx) {
-		switch (num_adx) {
+	if (machine->amx_adx_conf.num_adx) {
+		switch (machine->amx_adx_conf.num_adx) {
 		case 2:
 			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_ADX2_1,
 				(struct snd_soc_pcm_stream *)
-				&tegra_t210ref_adx_input_params[0]);
+				&tegra_t210ref_adx_output_params[0]);
 			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_ADX2_2,
 				(struct snd_soc_pcm_stream *)
-				&tegra_t210ref_adx_input_params[1]);
+				&tegra_t210ref_adx_output_params[1]);
 			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_ADX2_3,
 				(struct snd_soc_pcm_stream *)
-				&tegra_t210ref_adx_input_params[2]);
+				&tegra_t210ref_adx_output_params[2]);
 			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_ADX2_4,
 				(struct snd_soc_pcm_stream *)
-				&tegra_t210ref_adx_input_params[3]);
+				&tegra_t210ref_adx_output_params[3]);
+			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_ADX2,
+				(struct snd_soc_pcm_stream *)
+				&tegra_t210ref_adx_input_params[0]);
 		case 1:
 			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_ADX1_1,
 				(struct snd_soc_pcm_stream *)
-				&tegra_t210ref_adx_input_params[0]);
+				&tegra_t210ref_adx_output_params[0]);
 			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_ADX1_2,
 				(struct snd_soc_pcm_stream *)
-				&tegra_t210ref_adx_input_params[1]);
+				&tegra_t210ref_adx_output_params[1]);
 			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_ADX1_3,
 				(struct snd_soc_pcm_stream *)
-				&tegra_t210ref_adx_input_params[2]);
+				&tegra_t210ref_adx_output_params[2]);
 			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_ADX1_4,
 				(struct snd_soc_pcm_stream *)
-				&tegra_t210ref_adx_input_params[3]);
+				&tegra_t210ref_adx_output_params[3]);
+			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_ADX1,
+				(struct snd_soc_pcm_stream *)
+				&tegra_t210ref_adx_input_params[0]);
 			break;
 		default:
 			break;
@@ -817,15 +1004,15 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		tegra_machine_set_dai_ops(i, &tegra_t210ref_spdif_ops);
 
 	for (i = 0; i < machine->num_codec_links; i++) {
-		if (tegra_t210ref_codec_links[i].codec_of_node->name) {
-			if (strstr(tegra_t210ref_codec_links[i]
-				.codec_of_node->name, "ad193x.0-0004")) {
+		if (tegra_t210ref_codec_links[i].name) {
+			if (strstr(tegra_t210ref_codec_links[i].name,
+				"ad-playback-x")) {
 				for (j = TEGRA210_DAI_LINK_ADMAIF1;
 					j <= TEGRA210_DAI_LINK_ADMAIF4; j++)
 					tegra_machine_set_dai_ops(j,
 						&tegra_t210ref_ad1937_x_ops);
-			} else if (strstr(tegra_t210ref_codec_links[i]
-				.codec_of_node->name, "ad193x.0-0005")) {
+			} else if (strstr(tegra_t210ref_codec_links[i].name,
+				"ad-playback-y")) {
 				for (j = TEGRA210_DAI_LINK_ADMAIF5;
 					j <= TEGRA210_DAI_LINK_ADMAIF8; j++)
 					tegra_machine_set_dai_ops(j,
@@ -849,7 +1036,6 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	card->codec_conf = tegra_machine_codec_conf;
 
 	machine->ad_rate_via_kcontrol = 0;
-	machine->ak_rate_via_kcontrol = 0;
 
 	ret = of_property_read_u32(np,
 		"nvidia,addr_max9485", (u32 *)&max9485_info.addr);

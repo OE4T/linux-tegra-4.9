@@ -181,6 +181,10 @@ struct tegra210_i2s_soc_data {
 	void (*set_audio_cif)(struct regmap *map,
 			unsigned int reg,
 			struct tegra210_xbar_cif_conf *conf);
+	void (*set_slot_ctrl)(struct regmap *map,
+				unsigned int total_slots,
+				unsigned int tx_slot_mask,
+				unsigned int rx_slot_mask);
 };
 
 struct tegra210_i2s {
@@ -197,6 +201,9 @@ struct tegra210_i2s {
 	struct notifier_block slgc_notifier;
 	int num_supplies;
 	int bclk_ratio;
+	unsigned int fsync_width;
+	unsigned int tx_mask;
+	unsigned int rx_mask;
 };
 
 #endif

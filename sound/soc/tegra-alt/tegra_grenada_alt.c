@@ -40,11 +40,23 @@
 
 #define DRV_NAME "tegra-snd-grenada"
 
-#define MAX_TX_SLOT_SIZE 32
-#define MAX_RX_SLOT_SIZE 32
+#define MAX_AMX_SLOT_SIZE 64
+#define MAX_ADX_SLOT_SIZE 64
+#define DEFAULT_AMX_SLOT_SIZE 32
+#define DEFAULT_ADX_SLOT_SIZE 32
+#define MAX_AMX_NUM 2
+#define MAX_ADX_NUM 2
+
+struct tegra_t210ref_amx_adx_conf {
+	unsigned int num_amx;
+	unsigned int num_adx;
+	unsigned int amx_slot_size[MAX_AMX_NUM];
+	unsigned int adx_slot_size[MAX_ADX_NUM];
+};
 
 struct tegra_grenada {
 	struct tegra_asoc_audio_clock_info audio_clock;
+	struct tegra_t210ref_amx_adx_conf amx_adx_conf;
 	unsigned int num_codec_links;
 };
 
@@ -54,7 +66,7 @@ static int tegra_grenada_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->codec_dai->codec->card;
 	struct tegra_grenada *machine = snd_soc_card_get_drvdata(card);
-	int idx = tegra_machine_get_codec_dai_link_idx("spdif-dit");
+	int idx = tegra_machine_get_codec_dai_link_idx("spdif-dit-0");
 	struct snd_soc_pcm_stream *dai_params;
 	int mclk, clk_out_rate;
 	int err;
@@ -126,20 +138,8 @@ static int tegra_grenada_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
 	struct tegra_grenada *machine = snd_soc_card_get_drvdata(card);
-	struct snd_soc_dai *i2s_dai = rtd->cpu_dai;
-	struct snd_soc_pcm_stream *dai_params =
-		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
-	unsigned int srate;
 	int err;
 	AD1937_EXTRA_INFO ad1937_info;
-
-	srate = dai_params->rate_min;
-
-	err = snd_soc_dai_set_sysclk(i2s_dai, 0, srate, SND_SOC_CLOCK_IN);
-	if (err < 0) {
-		dev_err(card->dev, "i2s clock not set\n");
-		return err;
-	}
 
 	err = tegra_alt_asoc_utils_set_extern_parent(&machine->audio_clock,
 							"pll_a_out0");
@@ -199,13 +199,26 @@ static int tegra_grenada_init(struct snd_soc_pcm_runtime *rtd)
 
 static int tegra_grenada_amx1_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
+	struct tegra_grenada *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai *amx_dai = rtd->cpu_dai;
 	struct device_node *np = rtd->card->dev->of_node;
-	unsigned int tx_slot[MAX_TX_SLOT_SIZE], i, j;
+	unsigned int tx_slot[MAX_AMX_SLOT_SIZE];
+	unsigned int i, j, default_slot_mode = 0;
+	unsigned int slot_size = machine->amx_adx_conf.amx_slot_size[0];
 
-	if (of_property_read_u32_array(np, "nvidia,amx-slot-map",
-		tx_slot, MAX_TX_SLOT_SIZE))
-		for (i = 0, j = 0; i < MAX_TX_SLOT_SIZE; i += 8) {
+	if (machine->amx_adx_conf.num_amx && slot_size) {
+		if (of_property_read_u32_array(np,
+			"nvidia,amx-slot-map", tx_slot, slot_size))
+			default_slot_mode = 1;
+	} else
+		default_slot_mode = 1;
+
+	if (default_slot_mode) {
+		slot_size = DEFAULT_AMX_SLOT_SIZE;
+		for (i = 0, j = 0; i < slot_size; i += 8) {
 			tx_slot[i] = 0;
 			tx_slot[i + 1] = 0;
 			tx_slot[i + 2] = (j << 16) | (1 << 8) | 0;
@@ -216,23 +229,37 @@ static int tegra_grenada_amx1_dai_init(struct snd_soc_pcm_runtime *rtd)
 			tx_slot[i + 7] = (j << 16) | (2 << 8) | 1;
 			j++;
 		}
+	}
 
 	if (amx_dai->driver->ops->set_channel_map)
 		amx_dai->driver->ops->set_channel_map(amx_dai,
-				MAX_TX_SLOT_SIZE, tx_slot, 0, 0);
+			slot_size, tx_slot, 0, 0);
 
 	return 0;
 }
 
 static int tegra_grenada_amx2_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
+	struct tegra_grenada *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai *amx_dai = rtd->cpu_dai;
 	struct device_node *np = rtd->card->dev->of_node;
-	unsigned int tx_slot[MAX_TX_SLOT_SIZE], i, j;
+	unsigned int tx_slot[MAX_AMX_SLOT_SIZE];
+	unsigned int i, j, default_slot_mode = 0;
+	unsigned int slot_size = machine->amx_adx_conf.amx_slot_size[1];
 
-	if (of_property_read_u32_array(np, "nvidia,amx-slot-map",
-		tx_slot, MAX_TX_SLOT_SIZE))
-		for (i = 0, j = 0; i < MAX_TX_SLOT_SIZE; i += 8) {
+	if ((machine->amx_adx_conf.num_amx > 1) && slot_size) {
+		if (of_property_read_u32_array(np,
+			"nvidia,amx-slot-map", tx_slot, slot_size))
+			default_slot_mode = 1;
+	} else
+		default_slot_mode = 1;
+
+	if (default_slot_mode) {
+		slot_size = DEFAULT_AMX_SLOT_SIZE;
+		for (i = 0, j = 0; i < slot_size; i += 8) {
 			tx_slot[i] = 0;
 			tx_slot[i + 1] = 0;
 			tx_slot[i + 2] = (j << 16) | (1 << 8) | 0;
@@ -243,10 +270,11 @@ static int tegra_grenada_amx2_dai_init(struct snd_soc_pcm_runtime *rtd)
 			tx_slot[i + 7] = (j << 16) | (2 << 8) | 1;
 			j++;
 		}
+	}
 
 	if (amx_dai->driver->ops->set_channel_map)
 		amx_dai->driver->ops->set_channel_map(amx_dai,
-				MAX_TX_SLOT_SIZE, tx_slot, 0, 0);
+			slot_size, tx_slot, 0, 0);
 
 	return 0;
 }
@@ -254,13 +282,26 @@ static int tegra_grenada_amx2_dai_init(struct snd_soc_pcm_runtime *rtd)
 
 static int tegra_grenada_adx1_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
+	struct tegra_grenada *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai *adx_dai = rtd->codec_dai;
 	struct device_node *np = rtd->card->dev->of_node;
-	unsigned int rx_slot[MAX_RX_SLOT_SIZE], i, j;
+	unsigned int rx_slot[MAX_ADX_SLOT_SIZE];
+	unsigned int i, j, default_slot_mode = 0;
+	unsigned int slot_size = machine->amx_adx_conf.adx_slot_size[0];
 
-	if (of_property_read_u32_array(np, "nvidia,adx-slot-map",
-		rx_slot, MAX_RX_SLOT_SIZE))
-		for (i = 0, j = 0; i < MAX_RX_SLOT_SIZE; i += 8) {
+	if (machine->amx_adx_conf.num_adx && slot_size) {
+		if (of_property_read_u32_array(np,
+			"nvidia,adx-slot-map", rx_slot, slot_size))
+			default_slot_mode = 1;
+	} else
+		default_slot_mode = 1;
+
+	if (default_slot_mode) {
+		slot_size = DEFAULT_ADX_SLOT_SIZE;
+		for (i = 0, j = 0; i < slot_size; i += 8) {
 			rx_slot[i] = 0;
 			rx_slot[i + 1] = 0;
 			rx_slot[i + 2] = (j << 16) | (1 << 8) | 0;
@@ -271,23 +312,37 @@ static int tegra_grenada_adx1_dai_init(struct snd_soc_pcm_runtime *rtd)
 			rx_slot[i + 7] = (j << 16) | (2 << 8) | 1;
 			j++;
 		}
+	}
 
 	if (adx_dai->driver->ops->set_channel_map)
 		adx_dai->driver->ops->set_channel_map(adx_dai,
-				0, 0, MAX_RX_SLOT_SIZE, rx_slot);
+			0, 0, slot_size, rx_slot);
 
 	return 0;
 }
 
 static int tegra_grenada_adx2_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
+	struct tegra_grenada *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai *adx_dai = rtd->codec_dai;
 	struct device_node *np = rtd->card->dev->of_node;
-	unsigned int rx_slot[MAX_RX_SLOT_SIZE], i, j;
+	unsigned int rx_slot[MAX_ADX_SLOT_SIZE];
+	unsigned int i, j, default_slot_mode = 0;
+	unsigned int slot_size = machine->amx_adx_conf.adx_slot_size[1];
 
-	if (of_property_read_u32_array(np, "nvidia,adx-slot-map",
-		rx_slot, MAX_RX_SLOT_SIZE))
-		for (i = 0, j = 0; i < MAX_RX_SLOT_SIZE; i += 8) {
+	if ((machine->amx_adx_conf.num_adx > 1) && slot_size) {
+		if (of_property_read_u32_array(np,
+			"nvidia,adx-slot-map", rx_slot, slot_size))
+			default_slot_mode = 1;
+	} else
+		default_slot_mode = 1;
+
+	if (default_slot_mode) {
+		slot_size = DEFAULT_ADX_SLOT_SIZE;
+		for (i = 0, j = 0; i < slot_size; i += 8) {
 			rx_slot[i] = 0;
 			rx_slot[i + 1] = 0;
 			rx_slot[i + 2] = (j << 16) | (1 << 8) | 0;
@@ -298,10 +353,11 @@ static int tegra_grenada_adx2_dai_init(struct snd_soc_pcm_runtime *rtd)
 			rx_slot[i + 7] = (j << 16) | (2 << 8) | 1;
 			j++;
 		}
+	}
 
 	if (adx_dai->driver->ops->set_channel_map)
 		adx_dai->driver->ops->set_channel_map(adx_dai,
-				0, 0, MAX_RX_SLOT_SIZE, rx_slot);
+			0, 0, slot_size, rx_slot);
 
 	return 0;
 }
@@ -390,6 +446,28 @@ static int tegra_grenada_driver_probe(struct platform_device *pdev)
 					"nvidia,audio-routing");
 		if (ret)
 			goto err;
+
+		if (of_property_read_u32(np, "nvidia,num-amx",
+			(u32 *)&machine->amx_adx_conf.num_amx))
+			machine->amx_adx_conf.num_amx = 0;
+		if (of_property_read_u32_array(np, "nvidia,amx-slot-size",
+			(u32 *)machine->amx_adx_conf.amx_slot_size,
+			MAX_AMX_NUM) ||
+			!machine->amx_adx_conf.num_amx) {
+			for (i = 0; i < MAX_AMX_NUM; i++)
+				machine->amx_adx_conf.amx_slot_size[i] = 0;
+		}
+
+		if (of_property_read_u32(np, "nvidia,num-adx",
+			(u32 *)&machine->amx_adx_conf.num_adx))
+			machine->amx_adx_conf.num_adx = 0;
+		if (of_property_read_u32_array(np, "nvidia,adx-slot-size",
+			(u32 *)machine->amx_adx_conf.adx_slot_size,
+			MAX_ADX_NUM) ||
+			!machine->amx_adx_conf.num_adx) {
+			for (i = 0; i < MAX_ADX_NUM; i++)
+				machine->amx_adx_conf.adx_slot_size[i] = 0;
+		}
 	}
 
 	/* set new codec links and conf */
@@ -413,7 +491,39 @@ static int tegra_grenada_driver_probe(struct platform_device *pdev)
 	if (!tegra_machine_codec_conf)
 		goto err_alloc_dai_link;
 
-	tegra_grenada_codec_links[1].init = tegra_grenada_init;
+	/* set codec init */
+	for (i = 0; i < machine->num_codec_links; i++) {
+		if (tegra_grenada_codec_links[i].codec_of_node->name) {
+			if (strstr(tegra_grenada_codec_links[i].name,
+				"spdif-dit-0"))
+				tegra_grenada_codec_links[i].init =
+					tegra_grenada_init;
+			else if (strstr(tegra_grenada_codec_links[i].name,
+				"spdif-dit-1"))
+				tegra_grenada_codec_links[i].init =
+					tegra_grenada_init;
+			else if (strstr(tegra_grenada_codec_links[i].name,
+				"spdif-dit-2"))
+				tegra_grenada_codec_links[i].init =
+				tegra_grenada_init;
+			else if (strstr(tegra_grenada_codec_links[i].name,
+				"spdif-dit-3"))
+				tegra_grenada_codec_links[i].init =
+				tegra_grenada_init;
+			else if (strstr(tegra_grenada_codec_links[i].name,
+				"spdif-dit-4"))
+				tegra_grenada_codec_links[i].init =
+				tegra_grenada_init;
+			else if (strstr(tegra_grenada_codec_links[i].name,
+				"spdif-dit-5"))
+				tegra_grenada_codec_links[i].init =
+				tegra_grenada_init;
+			else if (strstr(tegra_grenada_codec_links[i].name,
+				"spdif-dit-6"))
+				tegra_grenada_codec_links[i].init =
+				tegra_grenada_init;
+		}
+	}
 
 	/* set ADMAIF dai_ops */
 	for (i = TEGRA210_DAI_LINK_ADMAIF1;

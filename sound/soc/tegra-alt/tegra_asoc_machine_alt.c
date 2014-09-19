@@ -1881,24 +1881,14 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 			}
 
 			/* DAP configuration */
-			if (of_property_read_string(subnp,
-				"name-prefix", &prefix)) {
+			of_property_read_string(subnp, "name-prefix", &prefix);
+
+			if (of_property_read_string(subnp, "link-name",
+				&tegra_codec_links[i].name)) {
 				dev_err(&pdev->dev,
-					"Property 'name-prefix' missing or invalid\n");
+					"Property 'link-name' missing or invalid\n");
 				goto err;
 			}
-
-			str = kzalloc(
-				sizeof(prefix) + 1 +
-				sizeof(tegra_codec_links[i]
-				.codec_of_node->name),
-				GFP_KERNEL);
-			str = strcat(str, prefix);
-			str = strcat(str, " ");
-			str = strcat(str, tegra_codec_links[i]
-					.codec_of_node->name);
-
-			tegra_codec_links[i].name = str;
 
 			tegra_codec_links[i].stream_name = "Playback";
 			tegra_codec_links[i].cpu_dai_name = "DAP";
@@ -2045,7 +2035,7 @@ EXPORT_SYMBOL_GPL(tegra_machine_new_codec_conf);
 
 
 /* This function is valid when dai_link is initiated from the DT */
-unsigned int tegra_machine_get_codec_dai_link_idx(char *of_node_name)
+unsigned int tegra_machine_get_codec_dai_link_idx(const char *codec_name)
 {
 	unsigned int idx = of_machine_is_compatible("nvidia,tegra210") ?
 		TEGRA210_XBAR_DAI_LINKS : TEGRA124_XBAR_DAI_LINKS;
@@ -2054,18 +2044,12 @@ unsigned int tegra_machine_get_codec_dai_link_idx(char *of_node_name)
 		goto err;
 
 	while (idx < num_dai_links) {
-		if (tegra_asoc_machine_links[idx].codec_of_node->name &&
-			strstr(tegra_asoc_machine_links[idx]
-				.codec_of_node->name,
-			of_node_name))
-			break;
+		if (tegra_asoc_machine_links[idx].name)
+			if (!strcmp(tegra_asoc_machine_links[idx].name,
+				codec_name))
+				return idx;
 		idx++;
 	}
-
-	if (num_dai_links == idx)
-		goto err;
-
-	return idx;
 
 err:
 	return -EINVAL;
@@ -2076,9 +2060,9 @@ unsigned int tegra_machine_get_bclk_ratio(
 	struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_dai_link *codec_dai_link = rtd->dai_link;
-	char *codec_of_node_name = (char *)codec_dai_link->codec_of_node->name;
+	char *codec_name = (char *)codec_dai_link->name;
 	unsigned int idx =
-		tegra_machine_get_codec_dai_link_idx(codec_of_node_name);
+		tegra_machine_get_codec_dai_link_idx(codec_name);
 
 	if (idx == -EINVAL)
 		goto err;
@@ -2110,11 +2094,9 @@ void tegra_machine_remove_extra_mem_alloc(unsigned int num_codec_links)
 		for (i = TEGRA210_XBAR_DAI_LINKS,
 			j = TEGRA210_XBAR_DAI_LINKS+num_codec_links;
 			j < num_dai_links; i++, j++) {
-			kfree(tegra_asoc_machine_links[i].name);
 			kfree(tegra_asoc_machine_links[i].params);
 			kfree(tegra_asoc_machine_links[j].name);
 
-			tegra_asoc_machine_links[i].name = NULL;
 			tegra_asoc_machine_links[i].params = NULL;
 			tegra_asoc_machine_links[j].name = NULL;
 		}

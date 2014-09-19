@@ -263,7 +263,7 @@ struct snd_soc_codec_conf *tegra_machine_new_codec_conf(
 	struct snd_soc_codec_conf *tegra_codec_conf,
 	unsigned int *pnum_codec_links);
 
-unsigned int tegra_machine_get_codec_dai_link_idx(char *of_node_name);
+unsigned int tegra_machine_get_codec_dai_link_idx(const char *codec_name);
 
 unsigned int tegra_machine_get_bclk_ratio(
 	struct snd_soc_pcm_runtime *rtd);

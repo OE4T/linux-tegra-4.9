@@ -4239,7 +4239,6 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	struct aiv_list_gk20a *sw_ctx_load = &g->gr.ctx_vars.sw_ctx_load;
 	struct av_list_gk20a *sw_method_init = &g->gr.ctx_vars.sw_method_init;
 	u32 data;
-	u32 addr_lo, addr_hi;
 	u64 addr;
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
@@ -4249,31 +4248,25 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	if (g->ops.gr.init_gpc_mmu)
-		g->ops.gr.init_gpc_mmu(g);
-
 	/* init mmu debug buffer */
 	addr = NV_MC_SMMU_VADDR_TRANSLATE(gr->mmu_wr_mem.iova);
-	addr_lo = u64_lo32(addr);
-	addr_hi = u64_hi32(addr);
-	addr = (addr_lo >> fb_mmu_debug_wr_addr_alignment_v()) |
-		(addr_hi << (32 - fb_mmu_debug_wr_addr_alignment_v()));
+	addr >>= fb_mmu_debug_wr_addr_alignment_v();
 
 	gk20a_writel(g, fb_mmu_debug_wr_r(),
 		     fb_mmu_debug_wr_aperture_vid_mem_f() |
 		     fb_mmu_debug_wr_vol_false_f() |
-		     fb_mmu_debug_wr_addr_v(addr));
+		     fb_mmu_debug_wr_addr_f(addr));
 
 	addr = NV_MC_SMMU_VADDR_TRANSLATE(gr->mmu_rd_mem.iova);
-	addr_lo = u64_lo32(addr);
-	addr_hi = u64_hi32(addr);
-	addr = (addr_lo >> fb_mmu_debug_rd_addr_alignment_v()) |
-		(addr_hi << (32 - fb_mmu_debug_rd_addr_alignment_v()));
+	addr >>= fb_mmu_debug_rd_addr_alignment_v();
 
 	gk20a_writel(g, fb_mmu_debug_rd_r(),
 		     fb_mmu_debug_rd_aperture_vid_mem_f() |
 		     fb_mmu_debug_rd_vol_false_f() |
-		     fb_mmu_debug_rd_addr_v(addr));
+		     fb_mmu_debug_rd_addr_f(addr));
+
+	if (g->ops.gr.init_gpc_mmu)
+		g->ops.gr.init_gpc_mmu(g);
 
 	/* load gr floorsweeping registers */
 	data = gk20a_readl(g, gr_gpc0_ppc0_pes_vsc_strem_r());

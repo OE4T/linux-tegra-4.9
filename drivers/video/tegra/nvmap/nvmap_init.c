@@ -27,7 +27,7 @@
 #include "nvmap_priv.h"
 #include "iomap.h"
 #include "board.h"
-#include "common.h"
+#include <linux/platform/tegra/common.h>
 
 phys_addr_t __weak tegra_carveout_start;
 phys_addr_t __weak  tegra_carveout_size;

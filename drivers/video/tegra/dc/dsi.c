@@ -4896,10 +4896,16 @@ static void tegra_dc_dsi_postpoweroff(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 
-	if (!dsi->enabled && dsi->avdd_dsi_csi)
+	/* Do not disable regulator when device is shutting down */
+	if (!dsi->device_shutdown && !dsi->enabled && dsi->avdd_dsi_csi)
 		regulator_disable(dsi->avdd_dsi_csi);
 }
+static void tegra_dc_dsi_shutdown(struct tegra_dc *dc)
+{
+	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 
+	dsi->device_shutdown = true;
+}
 static int tegra_dsi_host_resume(struct tegra_dc *dc)
 {
 	int err = 0;
@@ -5145,6 +5151,7 @@ struct tegra_dc_out_ops tegra_dc_dsi_ops = {
 	.postpoweroff = tegra_dc_dsi_postpoweroff,
 	.hold = tegra_dc_dsi_hold_host,
 	.release = tegra_dc_dsi_release_host,
+	.shutdown = tegra_dc_dsi_shutdown,
 #ifdef CONFIG_PM
 	.suspend = tegra_dc_dsi_suspend,
 	.resume = tegra_dc_dsi_resume,

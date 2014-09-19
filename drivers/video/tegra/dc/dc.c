@@ -4054,6 +4054,10 @@ static void tegra_dc_shutdown(struct platform_device *ndev)
 	if (!dc->enabled)
 		return;
 
+	/* Let dc clients know about shutdown event before calling disable */
+	if (dc->out_ops && dc->out_ops->shutdown)
+		dc->out_ops->shutdown(dc);
+
 	tegra_dc_disable(dc);
 }
 

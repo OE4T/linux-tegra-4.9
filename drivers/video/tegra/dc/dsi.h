@@ -117,6 +117,7 @@ struct tegra_dc_dsi_data {
 	struct regulator *avdd_dsi_csi;
 
 	u32 dsi_control_val;
+	u32 device_shutdown;
 };
 
 /* Max number of data lanes supported */

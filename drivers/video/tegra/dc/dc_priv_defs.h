@@ -79,6 +79,8 @@ struct tegra_dc_out_ops {
 	int (*init)(struct tegra_dc *dc);
 	/* destroy output.  dc clocks are not on at this point */
 	void (*destroy)(struct tegra_dc *dc);
+	/* shutdown output.  dc clocks are on at this point */
+	void (*shutdown)(struct tegra_dc *dc);
 	/* detect connected display.  can sleep.*/
 	bool (*detect)(struct tegra_dc *dc);
 	/* enable output.  dc clocks are on at this point */

@@ -513,7 +513,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	mutex_init(&f->intr.isr.mutex);
 	gk20a_init_fifo_pbdma_intr_descs(f); /* just filling in data/tables */
 
-	f->num_channels = ccsr_channel__size_1_v();
+	f->num_channels = g->ops.fifo.get_num_fifos(g);
 	f->num_pbdma = proj_host_num_pbdma_v();
 	f->max_engines = ENGINE_INVAL_GK20A;
 
@@ -2132,6 +2132,11 @@ static void gk20a_fifo_apply_pb_timeout(struct gk20a *g)
 	}
 }
 
+static u32 gk20a_fifo_get_num_fifos(struct gk20a *g)
+{
+	return ccsr_channel__size_1_v();
+}
+
 void gk20a_init_fifo(struct gpu_ops *gops)
 {
 	gk20a_init_channel(gops);
@@ -2140,4 +2145,5 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.trigger_mmu_fault = gk20a_fifo_trigger_mmu_fault;
 	gops->fifo.apply_pb_timeout = gk20a_fifo_apply_pb_timeout;
 	gops->fifo.wait_engine_idle = gk20a_fifo_wait_engine_idle;
+	gops->fifo.get_num_fifos = gk20a_fifo_get_num_fifos;
 }

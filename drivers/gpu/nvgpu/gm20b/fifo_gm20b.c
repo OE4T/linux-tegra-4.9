@@ -99,6 +99,11 @@ static void gm20b_fifo_trigger_mmu_fault(struct gk20a *g,
 		gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_id), 0);
 }
 
+static u32 gm20b_fifo_get_num_fifos(struct gk20a *g)
+{
+	return ccsr_channel__size_1_v();
+}
+
 void gm20b_init_fifo(struct gpu_ops *gops)
 {
 	gops->fifo.bind_channel = channel_gm20b_bind;
@@ -112,4 +117,5 @@ void gm20b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.update_runlist = gk20a_fifo_update_runlist;
 	gops->fifo.trigger_mmu_fault = gm20b_fifo_trigger_mmu_fault;
 	gops->fifo.wait_engine_idle = gk20a_fifo_wait_engine_idle;
+	gops->fifo.get_num_fifos = gm20b_fifo_get_num_fifos;
 }

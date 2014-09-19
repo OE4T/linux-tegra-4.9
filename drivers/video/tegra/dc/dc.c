@@ -3388,6 +3388,24 @@ static ssize_t switch_modeset_print_mode(struct switch_dev *sdev, char *buf)
 }
 #endif
 
+static int _tegra_dc_slgc_disp0(struct notifier_block *nb,
+	unsigned long unused0, void *unused1)
+{
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+	struct tegra_dc *dc = container_of(nb, struct tegra_dc, slgc_notifier);
+	u32 val;
+
+	val = tegra_dc_readl(dc, DC_COM_DSC_TOP_CTL);
+	val |= DSC_SLCG_OVERRIDE;
+	tegra_dc_writel(dc, val, DC_COM_DSC_TOP_CTL); /* set */
+	/* flush the previous write */
+	(void)tegra_dc_readl(dc, DC_CMD_DISPLAY_COMMAND);
+	val &= ~DSC_SLCG_OVERRIDE;
+	tegra_dc_writel(dc, val, DC_COM_DSC_TOP_CTL); /* restore */
+#endif
+	return NOTIFY_OK;
+}
+
 static int tegra_dc_probe(struct platform_device *ndev)
 {
 	struct tegra_dc *dc;
@@ -3524,6 +3542,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #ifdef CONFIG_TEGRA_ISOMGR
 		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_0;
 #endif
+		dc->slgc_notifier.notifier_call = _tegra_dc_slgc_disp0;
+		slcg_register_notifier(TEGRA_POWERGATE_DISA,
+			&dc->slgc_notifier);
 	} else if (TEGRA_DISPLAY2_BASE == res->start) {
 		dc->vblank_syncpt = NVSYNCPT_VBLANK1;
 		dc->win_syncpt[0] = nvhost_get_syncpt_client_managed("disp1_a");

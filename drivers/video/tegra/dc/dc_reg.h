@@ -229,6 +229,8 @@
 #define  LUT2_READ_ADDR(x)		(((x) & 0x3ff) << 8)
 #define  LUT2_READ_EN			(1 << 0)
 
+#define DC_COM_DSC_TOP_CTL			0x33e
+#define  DSC_SLCG_OVERRIDE		(1U << 2)
 
 #define DC_DISP_DISP_SIGNAL_OPTIONS0		0x400
 #define  H_PULSE_0_ENABLE		(1 << 8)

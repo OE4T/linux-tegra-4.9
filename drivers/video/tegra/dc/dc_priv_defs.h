@@ -283,5 +283,7 @@ struct tegra_dc {
 
 	int	ctrl_num;
 	bool	switchdev_registered;
+
+	struct notifier_block slgc_notifier;
 };
 #endif

@@ -208,7 +208,6 @@ struct tegra_dc {
 	u32				vblank_syncpt;
 
 	unsigned long int		valid_windows;
-	unsigned long int		win_status;
 
 	unsigned long			underflow_mask;
 	struct work_struct		reset_work;

@@ -904,18 +904,14 @@ int tegra_dc_set_dynamic_emc(struct tegra_dc *dc)
 	struct tegra_dc_win *windows[DC_N_WINDOWS];
 	unsigned i;
 	unsigned len;
-	unsigned win_status = 0;
 
 	if (!use_dynamic_emc)
 		return 0;
 
 	for (i = 0, len = 0; i < DC_N_WINDOWS; i++) {
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
-		if (win) {
+		if (win)
 			windows[len++] = win;
-			if (win->flags & TEGRA_WIN_FLAG_ENABLED)
-				win_status |= 1 << i;
-		}
 	}
 #ifdef CONFIG_TEGRA_ISOMGR
 	new_rate = tegra_dc_get_bandwidth(windows, len);
@@ -929,19 +925,6 @@ int tegra_dc_set_dynamic_emc(struct tegra_dc *dc)
 	dc->new_bw_kbps = new_rate;
 	trace_set_dynamic_emc(dc);
 
-	/* if low_v_win is set, we can lower vdd_core when
-		that windows is the only one active */
-	if (dc->pdata->low_v_win != 0) {
-		if (win_status == dc->pdata->low_v_win &&
-			dc->win_status != dc->pdata->low_v_win) {
-			tegra_dvfs_use_alt_freqs_on_clk(dc->clk, true);
-			dc->win_status = dc->pdata->low_v_win;
-		} else if (win_status != dc->pdata->low_v_win &&
-			dc->win_status == dc->pdata->low_v_win) {
-			tegra_dvfs_use_alt_freqs_on_clk(dc->clk, false);
-			dc->win_status = win_status;
-		}
-	}
 	return 0;
 }
 

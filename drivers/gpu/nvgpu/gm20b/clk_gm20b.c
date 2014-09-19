@@ -56,6 +56,7 @@ static struct pll_parms gpc_pll_params = {
 #ifdef CONFIG_DEBUG_FS
 static int clk_gm20b_debugfs_init(struct gk20a *g);
 #endif
+static void clk_setup_slide(struct gk20a *g, u32 clk_u);
 
 #define DUMP_REG(addr_func) \
 do {									\
@@ -433,6 +434,12 @@ static int clk_enbale_pll_dvfs(struct gk20a *g)
 	gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 	udelay(delay);
 
+	/*
+	 * Dynamic ramp setup based on update rate, which in DVFS mode on GM20b
+	 * is always 38.4 MHz, the same as reference clock rate.
+	 */
+	clk_setup_slide(g, g->clk.gpc_pll.clk_in);
+
 	if (calibrated)
 		return 0;
 
@@ -506,7 +513,7 @@ static void clk_setup_slide(struct gk20a *g, u32 clk_u)
 static int clk_slide_gpc_pll(struct gk20a *g, struct pll *gpll)
 {
 	u32 data, coeff;
-	u32 nold;
+	u32 nold, sdm_old;
 	int ramp_timeout = 500;
 
 	/* get old coefficients */
@@ -514,11 +521,20 @@ static int clk_slide_gpc_pll(struct gk20a *g, struct pll *gpll)
 	nold = trim_sys_gpcpll_coeff_ndiv_v(coeff);
 
 	/* do nothing if NDIV is same */
-	if (gpll->N == nold)
-		return 0;
+	if (gpll->mode == GPC_PLL_MODE_DVFS) {
+		/* in DVFS mode check both integer and fraction */
+		coeff = gk20a_readl(g, trim_sys_gpcpll_cfg2_r());
+		sdm_old = trim_sys_gpcpll_cfg2_sdm_din_v(coeff);
+		if ((gpll->dvfs.n_int == nold) &&
+		    (gpll->dvfs.sdm_din == sdm_old))
+			return 0;
+	} else {
+		if (gpll->N == nold)
+			return 0;
 
-	/* dynamic ramp setup based on update rate */
-	clk_setup_slide(g, gpll->clk_in / gpll->M);
+		/* dynamic ramp setup based on update rate */
+		clk_setup_slide(g, gpll->clk_in / gpll->M);
+	}
 
 	/* pll slowdown mode */
 	data = gk20a_readl(g, trim_sys_gpcpll_ndiv_slowdown_r());
@@ -528,11 +544,25 @@ static int clk_slide_gpc_pll(struct gk20a *g, struct pll *gpll)
 	gk20a_writel(g, trim_sys_gpcpll_ndiv_slowdown_r(), data);
 
 	/* new ndiv ready for ramp */
-	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
-	coeff = set_field(coeff, trim_sys_gpcpll_coeff_ndiv_m(),
-			trim_sys_gpcpll_coeff_ndiv_f(gpll->N));
-	udelay(1);
-	gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
+	if (gpll->mode == GPC_PLL_MODE_DVFS) {
+		/* in DVFS mode SDM is updated via "new" field */
+		coeff = gk20a_readl(g, trim_sys_gpcpll_cfg2_r());
+		coeff = set_field(coeff, trim_sys_gpcpll_cfg2_sdm_din_new_m(),
+			trim_sys_gpcpll_cfg2_sdm_din_new_f(gpll->dvfs.sdm_din));
+		gk20a_writel(g, trim_sys_gpcpll_cfg2_r(), coeff);
+
+		coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
+		coeff = set_field(coeff, trim_sys_gpcpll_coeff_ndiv_m(),
+			trim_sys_gpcpll_coeff_ndiv_f(gpll->dvfs.n_int));
+		udelay(1);
+		gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
+	} else {
+		coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
+		coeff = set_field(coeff, trim_sys_gpcpll_coeff_ndiv_m(),
+				trim_sys_gpcpll_coeff_ndiv_f(gpll->N));
+		udelay(1);
+		gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
+	}
 
 	/* dynamic ramp to new ndiv */
 	data = gk20a_readl(g, trim_sys_gpcpll_ndiv_slowdown_r());
@@ -550,6 +580,14 @@ static int clk_slide_gpc_pll(struct gk20a *g, struct pll *gpll)
 		if (trim_gpc_bcast_gpcpll_ndiv_slowdown_debug_pll_dynramp_done_synced_v(data))
 			break;
 	} while (ramp_timeout > 0);
+
+	if ((gpll->mode == GPC_PLL_MODE_DVFS) && (ramp_timeout > 0)) {
+		/* in DVFS mode complete SDM update */
+		coeff = gk20a_readl(g, trim_sys_gpcpll_cfg2_r());
+		coeff = set_field(coeff, trim_sys_gpcpll_cfg2_sdm_din_m(),
+			trim_sys_gpcpll_cfg2_sdm_din_f(gpll->dvfs.sdm_din));
+		gk20a_writel(g, trim_sys_gpcpll_cfg2_r(), coeff);
+	}
 
 	/* exit slowdown mode */
 	data = gk20a_readl(g, trim_sys_gpcpll_ndiv_slowdown_r());
@@ -725,6 +763,10 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 	gpll.PL = trim_sys_gpcpll_coeff_pldiv_v(coeff);
 	gpll.clk_in = gpll_new->clk_in;
 
+	/* combine target dvfs with old coefficients */
+	gpll.dvfs = gpll_new->dvfs;
+	gpll.mode = gpll_new->mode;
+
 	/* do NDIV slide if there is no change in M and PL */
 	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 	can_slide = allow_slide && trim_sys_gpcpll_cfg_enable_v(cfg);
@@ -737,6 +779,8 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 		int ret;
 		gpll.N = DIV_ROUND_UP(gpll.M * gpc_pll_params.min_vco,
 				      gpll.clk_in);
+		if (gpll.mode == GPC_PLL_MODE_DVFS)
+			clk_config_dvfs_ndiv(gpll.dvfs.mv, gpll.N, &gpll.dvfs);
 		ret = clk_slide_gpc_pll(g, &gpll);
 		if (ret)
 			return ret;
@@ -785,9 +829,12 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 	 * at 1:2 if either entry, or exit PL setting is 1:1.
 	 */
 	gpll = *gpll_new;
-	if (allow_slide)
+	if (allow_slide) {
 		gpll.N = DIV_ROUND_UP(gpll_new->M * gpc_pll_params.min_vco,
 				      gpll_new->clk_in);
+		if (gpll.mode == GPC_PLL_MODE_DVFS)
+			clk_config_dvfs_ndiv(gpll.dvfs.mv, gpll.N, &gpll.dvfs);
+	}
 	if (pldiv_only)
 		clk_change_pldiv_under_bypass(g, &gpll);
 	else
@@ -827,6 +874,9 @@ static int clk_program_na_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 {
 	clk_config_dvfs(g, gpll_new);
 
+	if (!gpll_new->enabled)
+		return clk_program_gpc_pll(g, gpll_new, allow_slide);
+
 	/* always under bypass, for now */
 	return clk_program_gpc_pll(g, gpll_new, 0);
 }
@@ -844,6 +894,8 @@ static int clk_disable_gpcpll(struct gk20a *g, int allow_slide)
 		gpll.M = trim_sys_gpcpll_coeff_mdiv_v(coeff);
 		gpll.N = DIV_ROUND_UP(gpll.M * gpc_pll_params.min_vco,
 				      gpll.clk_in);
+		if (gpll.mode == GPC_PLL_MODE_DVFS)
+			clk_config_dvfs_ndiv(gpll.dvfs.mv, gpll.N, &gpll.dvfs);
 		clk_slide_gpc_pll(g, &gpll);
 	}
 
@@ -867,6 +919,7 @@ static int clk_disable_gpcpll(struct gk20a *g, int allow_slide)
 	gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 
 	clk->gpc_pll.enabled = false;
+	clk->gpc_pll_last.enabled = false;
 	return 0;
 }
 

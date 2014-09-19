@@ -40,7 +40,7 @@
 #include "tegra12_host1x_devices.h"
 #include "board-panel.h"
 #include "board-common.h"
-#include "common.h"
+#include <linux/platform/tegra/common.h>
 #include "tegra-board-id.h"
 
 struct platform_device * __init loki_host1x_init(void)

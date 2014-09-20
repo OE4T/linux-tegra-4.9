@@ -934,7 +934,7 @@ static void tegra_hdmi_audio_infoframe(struct tegra_hdmi *hdmi)
 /* HW generated CTS and N */
 static void tegra_hdmi_audio_acr(struct tegra_hdmi *hdmi, u32 audio_freq)
 {
-#define GET_AVAL(n, fs_khz) ((24000 * n) / (128 * fs_khz))
+#define GET_AVAL(n, fs_hz) ((24000 * n) / (128 * fs_hz / 1000))
 
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 	u32 val;

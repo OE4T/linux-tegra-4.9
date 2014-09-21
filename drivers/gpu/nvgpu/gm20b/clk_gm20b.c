@@ -43,6 +43,10 @@
 #define BOOT_GPU_UV	1000000	/* gpu rail boot voltage 1.0V */
 #define ADC_SLOPE_UV	10000	/* default ADC detection slope 10mV */
 
+/* FIXME: need characterized safe margin constant or table, and minimum */
+#define DVFS_SAFE_MARGIN	(2*38400)
+#define DVFS_SAFE_MIN_FREQ	(2*307200)
+
 static struct pll_parms gpc_pll_params = {
 	128000,  2600000,	/* freq */
 	1300000, 2600000,	/* vco */
@@ -222,7 +226,7 @@ found_match:
 
 	*target_freq = pll->freq;
 
-	gk20a_dbg_clk("actual target freq %d MHz, M %d, N %d, PL %d(div%d)",
+	gk20a_dbg_clk("actual target freq %d kHz, M %d, N %d, PL %d(div%d)",
 		*target_freq, pll->M, pll->N, pll->PL, pl_to_div(pll->PL));
 
 	gk20a_dbg_fn("done");
@@ -743,7 +747,14 @@ pll_locked:
 	return 0;
 }
 
-/* GPCPLL programming in legacy (non-DVFS) mode */
+/*
+ *  Change GPCPLL frequency:
+ *  - in legacy (non-DVFS) mode
+ *  - in DVFS mode at constant DVFS detection settings, matching current/lower
+ *    voltage; the same procedure can be used in this case, since maximum DVFS
+ *    detection limit makes sure that PLL output remains under F/V curve when
+ *    voltage increases arbitrary.
+ */
 static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 			int allow_slide)
 {
@@ -868,17 +879,115 @@ set_pldiv:
 	return clk_slide_gpc_pll(g, gpll_new);
 }
 
-/* GPCPLL programming in DVFS mode */
+/* Find GPCPLL config safe at DVFS coefficient = 0, matching target frequency */
+static void clk_config_pll_safe_dvfs(struct gk20a *g, struct pll *gpll)
+{
+	u32 nsafe, nmin;
+
+	if (gpll->freq > DVFS_SAFE_MIN_FREQ)
+		gpll->freq -= DVFS_SAFE_MARGIN;
+
+	nmin = DIV_ROUND_UP(gpll->M * gpc_pll_params.min_vco, gpll->clk_in);
+	nsafe = gpll->M * gpll->freq / gpll->clk_in;
+
+	/*
+	 * If safe frequency is above VCOmin, it can be used in safe PLL config
+	 * as is. Since safe frequency is below both old and new frequencies,
+	 * in this case all three configurations have same post divider 1:1, and
+	 * direct old=>safe=>new n-sliding will be used for transitions.
+	 *
+	 * Otherwise, if safe frequency is below VCO min, post-divider in safe
+	 * configuration (and possibly in old and/or new configurations) is
+	 * above 1:1, and each old=>safe and safe=>new transitions includes
+	 * sliding to/from VCOmin, as well as divider changes. To avoid extra
+	 * dynamic ramps from VCOmin during old=>safe transition and to VCOmin
+	 * during safe=>new transition, select nmin as safe NDIV, and set safe
+	 * post divider to assure PLL output is below safe frequency
+	 */
+	if (nsafe < nmin) {
+		gpll->PL = DIV_ROUND_UP(nmin * gpll->clk_in,
+					gpll->M * gpll->freq);
+		nsafe = nmin;
+	}
+	gpll->N = nsafe;
+	clk_config_dvfs_ndiv(gpll->dvfs.mv, gpll->N, &gpll->dvfs);
+
+	gk20a_dbg_clk("safe freq %d kHz, M %d, N %d, PL %d(div%d)",
+		gpll->freq, gpll->M, gpll->N, gpll->PL, pl_to_div(gpll->PL));
+}
+
+/* Change GPCPLL frequency and DVFS detection settings in DVFS mode */
 static int clk_program_na_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 				  int allow_slide)
 {
+	int ret;
+	struct pll gpll_safe;
+	struct pll *gpll_old = &g->clk.gpc_pll_last;
+
+	BUG_ON(gpll_new->M != 1);	/* the only MDIV in NA mode  */
 	clk_config_dvfs(g, gpll_new);
 
-	if (!gpll_new->enabled)
+	/*
+	 * In cases below no intermediate steps in PLL DVFS configuration are
+	 * necessary because either
+	 * - PLL DVFS will be configured under bypass directly to target, or
+	 * - voltage is not changing, so DVFS detection settings are the same
+	 */
+	if (!allow_slide || !gpll_new->enabled ||
+	    (gpll_old->dvfs.mv == gpll_new->dvfs.mv))
 		return clk_program_gpc_pll(g, gpll_new, allow_slide);
 
-	/* always under bypass, for now */
-	return clk_program_gpc_pll(g, gpll_new, 0);
+	/*
+	 * Interim step for changing DVFS detection settings: low enough
+	 * frequency to be safe at at DVFS coeff = 0.
+	 *
+	 * 1. If voltage is increasing:
+	 * - safe frequency target matches the lowest - old - frequency
+	 * - DVFS settings are still old
+	 * - Voltage already increased to new level by tegra DVFS, but maximum
+	 *    detection limit assures PLL output remains under F/V curve
+	 *
+	 * 2. If voltage is decreasing:
+	 * - safe frequency target matches the lowest - new - frequency
+	 * - DVFS settings are still old
+	 * - Voltage is also old, it will be lowered by tegra DVFS afterwards
+	 *
+	 * Interim step can be skipped if old frequency is below safe minimum,
+	 * i.e., it is low enough to be safe at any voltage in operating range
+	 * with zero DVFS coefficient.
+	 */
+	if (gpll_old->freq > DVFS_SAFE_MIN_FREQ) {
+		if (gpll_old->dvfs.mv < gpll_new->dvfs.mv) {
+			gpll_safe = *gpll_old;
+			gpll_safe.dvfs.mv = gpll_new->dvfs.mv;
+		} else {
+			gpll_safe = *gpll_new;
+			gpll_safe.dvfs = gpll_old->dvfs;
+		}
+		clk_config_pll_safe_dvfs(g, &gpll_safe);
+
+		ret = clk_program_gpc_pll(g, &gpll_safe, 1);
+		if (ret) {
+			gk20a_err(dev_from_gk20a(g), "Safe dvfs program fail\n");
+			return ret;
+		}
+	}
+
+	/*
+	 * DVFS detection settings transition:
+	 * - Set DVFS coefficient zero (safe, since already at frequency safe
+	 *   at DVFS coeff = 0 for the lowest of the old/new end-points)
+	 * - Set calibration level to new voltage (safe, since DVFS coeff = 0)
+	 * - Set DVFS coefficient to match new voltage (safe, since already at
+	 *   frequency safe at DVFS coeff = 0 for the lowest of the old/new
+	 *   end-points.
+	 */
+	clk_set_dfs_coeff(g, 0);
+	clk_set_dfs_ext_cal(g, gpll_new->dvfs.dfs_ext_cal);
+	clk_set_dfs_coeff(g, gpll_new->dvfs.dfs_coeff);
+
+	/* Finally set target rate (with DVFS detection settings already new) */
+	return clk_program_gpc_pll(g, gpll_new, 1);
 }
 
 static int clk_disable_gpcpll(struct gk20a *g, int allow_slide)

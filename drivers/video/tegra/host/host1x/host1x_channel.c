@@ -440,5 +440,7 @@ static int host1x_channel_init(struct nvhost_channel *ch,
 static const struct nvhost_channel_ops host1x_channel_ops = {
 	.init = host1x_channel_init,
 	.submit = host1x_channel_submit,
+#ifdef _hw_host1x04_channel_h_
 	.init_gather_filter = t124_channel_init_gather_filter,
+#endif
 };

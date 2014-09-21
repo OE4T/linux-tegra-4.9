@@ -3,7 +3,7 @@
  *
  * Tegra T124 HOST1X Register Definitions
  *
- * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -75,6 +75,12 @@ static inline u32 nvhost_class_host_incr_syncpt(
 {
 	return host1x_uclass_incr_syncpt_cond_f(cond)
 		| host1x_uclass_incr_syncpt_indx_f(indx);
+}
+
+static inline void __iomem *host1x_channel_aperture(void __iomem *p, int ndx)
+{
+	p += ndx * NV_HOST1X_CHANNEL_MAP_SIZE_BYTES;
+	return p;
 }
 
 enum {

@@ -385,12 +385,6 @@ error:
 	return err;
 }
 
-static inline void __iomem *host1x_channel_aperture(void __iomem *p, int ndx)
-{
-	p += ndx * NV_HOST1X_CHANNEL_MAP_SIZE_BYTES;
-	return p;
-}
-
 static inline int hwctx_handler_init(struct nvhost_channel *ch)
 {
 	int err = 0;

@@ -637,7 +637,8 @@ int gk20a_cde_convert(struct gk20a *g, struct dma_buf *src,
 	/* map the destination buffer */
 	get_dma_buf(dst); /* a ref for gk20a_vm_map */
 	dst_vaddr = gk20a_vm_map(g->cde_app.vm, dst, 0,
-				 0, dst_kind, NULL, true,
+				 NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+				 dst_kind, NULL, true,
 				 gk20a_mem_flag_none,
 				 0, 0);
 	if (!dst_vaddr) {
@@ -654,7 +655,8 @@ int gk20a_cde_convert(struct gk20a *g, struct dma_buf *src,
 	/* map the source buffer to prevent premature release */
 	get_dma_buf(src); /* a ref for gk20a_vm_map */
 	src_vaddr = gk20a_vm_map(g->cde_app.vm, src, 0,
-				 0, dst_kind, NULL, true,
+				 NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+				 dst_kind, NULL, true,
 				 gk20a_mem_flag_none,
 				 0, 0);
 	if (!src_vaddr) {
@@ -794,7 +796,8 @@ int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 
 	/* map backing store to gpu virtual space */
 	vaddr = gk20a_gmmu_map(ch->vm, &gr->compbit_store.sgt,
-			       g->gr.compbit_store.size, 0,
+			       g->gr.compbit_store.size,
+			       NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 			       gk20a_mem_flag_read_only);
 
 	if (!vaddr) {
@@ -991,16 +994,14 @@ static int gk20a_buffer_convert_gpu_to_cde(
 	const int transposed_height = transpose ? width : height;
 	const int xtiles = (transposed_width + 7) >> 3;
 	const int ytiles = (transposed_height + 7) >> 3;
-	const int wgx = 16;
+	const int wgx = 8;
 	const int wgy = 8;
 	const int compbits_per_byte = 4; /* one byte stores 4 compbit pairs */
 	const int dst_stride = 128; /* TODO chip constant */
 	const int xalign = compbits_per_byte * wgx;
 	const int yalign = wgy;
-	const int tilepitch = roundup(xtiles, xalign) / compbits_per_byte;
-	const int ytilesaligned = roundup(ytiles, yalign);
-	const int gridw = roundup(tilepitch, wgx) / wgx;
-	const int gridh = roundup(ytilesaligned, wgy) / wgy;
+	const int gridw = roundup(xtiles, xalign) / xalign;
+	const int gridh = roundup(ytiles, yalign) / yalign;
 
 	if (!g->cde_app.initialised) {
 		err = gk20a_cde_reload(g);
@@ -1015,16 +1016,9 @@ static int gk20a_buffer_convert_gpu_to_cde(
 	gk20a_dbg(gpu_dbg_cde, "w=%d, h=%d, bh_log2=%d, compbits_offset=0x%llx",
 		  width, height, block_height_log2, compbits_offset);
 	gk20a_dbg(gpu_dbg_cde, "resolution (%d, %d) tiles (%d, %d) invocations (%d, %d)",
-		  width, height, xtiles, ytiles, tilepitch, ytilesaligned);
+		  width, height, xtiles, ytiles, gridw*wgx, gridh*wgy);
 	gk20a_dbg(gpu_dbg_cde, "group (%d, %d) grid (%d, %d)",
 		  wgx, wgy, gridw, gridh);
-
-	if (tilepitch % wgx != 0 || ytilesaligned % wgy != 0) {
-		gk20a_warn(&g->dev->dev,
-			"grid size (%d, %d) is not a multiple of work group size (%d, %d)",
-			tilepitch, ytilesaligned, wgx, wgy);
-		return -EINVAL;
-	}
 
 	/* Write parameters */
 #define WRITE_PATCH(NAME, VALUE) \

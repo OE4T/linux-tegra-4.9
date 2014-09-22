@@ -231,8 +231,19 @@ EXPORT_SYMBOL(nvhost_vii2c_open);
 
 void nvhost_vii2c_close(void)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(vii2c_pdev);
-	struct vii2c *vii2c = pdata->private_data;
+	struct nvhost_device_data *pdata;
+	struct vii2c *vii2c;
+
+	if (!vii2c_pdev)
+		return;
+
+	pdata = platform_get_drvdata(vii2c_pdev);
+	if (!pdata)
+		return;
+
+	vii2c = pdata->private_data;
+	if (!vii2c)
+		return;
 
 	vii2c->registered = false;
 }

@@ -1026,6 +1026,7 @@ static int pwm_fan_resume(struct platform_device *pdev)
 
 static const struct of_device_id of_pwm_fan_match[] = {
 	{ .compatible = "loki-pwm-fan", },
+	{ .compatible = "ers-pwm-fan", },
 	{ .compatible = "foster-pwm-fan", },
 	{},
 };

@@ -309,7 +309,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 			(struct nvhost_gpu_mark_compressible_write_args *)buf);
 		break;
 	default:
-		gk20a_err(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x", cmd);
+		dev_dbg(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;
 		break;
 	}

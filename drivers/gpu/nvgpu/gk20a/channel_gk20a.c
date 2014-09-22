@@ -2436,7 +2436,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			   (struct nvhost_channel_events_ctrl_args *)buf);
 		break;
 	default:
-		dev_err(&dev->dev, "unrecognized ioctl cmd: 0x%x", cmd);
+		dev_dbg(&dev->dev, "unrecognized ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;
 		break;
 	}

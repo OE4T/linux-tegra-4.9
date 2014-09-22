@@ -419,7 +419,7 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 		break;
 
 	default:
-		gk20a_err(dev_from_gk20a(g),
+		dev_dbg(dev_from_gk20a(g),
 			   "unrecognized dbg gpu ioctl cmd: 0x%x",
 			   cmd);
 		err = -ENOTTY;

@@ -280,7 +280,7 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				(struct nvhost_as_unmap_buffer_args *)buf);
 		break;
 	default:
-		dev_err(dev_from_gk20a(g), "unrecognized as ioctl: 0x%x", cmd);
+		dev_dbg(dev_from_gk20a(g), "unrecognized as ioctl: 0x%x", cmd);
 		err = -ENOTTY;
 		break;
 	}

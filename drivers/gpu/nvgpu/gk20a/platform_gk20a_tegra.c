@@ -590,7 +590,7 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.enable_blcg            = true,
 	.enable_elcg            = true,
 	.enable_elpg            = true,
-	.enable_aelpg           = false,
+	.enable_aelpg           = true,
 
 	.probe = gk20a_tegra_probe,
 	.late_probe = gk20a_tegra_late_probe,

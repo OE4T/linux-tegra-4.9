@@ -86,6 +86,7 @@ struct nvhost_device_data t21_isp_info = {
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
 	.moduleid		= NVHOST_MODULE_ISP,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
+	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
 	.bond_out_id		= BOND_OUT_ISP,
 };
 
@@ -108,6 +109,7 @@ struct nvhost_device_data t21_ispb_info = {
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
+	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
 	.bond_out_id		= BOND_OUT_ISP,
 };
 #endif
@@ -136,6 +138,7 @@ struct nvhost_device_data t21_vi_info = {
 		{"i2cslow", 1000000} },
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
 	.num_channels		= 4,
+	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
 	.bond_out_id		= BOND_OUT_VI,
 };
 #else
@@ -155,6 +158,7 @@ struct nvhost_device_data t21_vib_info = {
 	.moduleid		= NVHOST_MODULE_VI,
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
 	.num_channels		= 1,
+	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
 	.bond_out_id		= BOND_OUT_VI,
 };
 
@@ -186,6 +190,7 @@ struct nvhost_device_data t21_vi_info = {
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
 	.slave			= &tegra_vi01b_device,
 	.num_channels		= 1,
+	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
 	.bond_out_id		= BOND_OUT_VI,
 };
 #endif

@@ -28,8 +28,8 @@
 #define HDCP_DCP_KPUB_SIZE                   388
 #define HDCP_DCP_KPUB_SIZE_ALIGNED           512
 
-#define HDCP_SRM_SIZE                        5120
-#define HDCP_SRM_SIZE_ALIGNED                5120
+#define HDCP_SRM_SIZE                        512
+#define HDCP_SRM_SIZE_ALIGNED                512
 
 #define HDCP_CERT_SIZE                       522
 #define HDCP_CERT_SIZE_ALIGNED               768
@@ -194,8 +194,6 @@ struct hdcp_context_t {
 	dma_addr_t			dma_handle_dcp_kpub_aligned;
 	u32				*cpuvaddr_srm;
 	dma_addr_t			dma_handle_srm;
-	u32				*cpuvaddr_srm_aligned;
-	dma_addr_t			dma_handle_srm_aligned;
 	u32				*cpuvaddr_cert;
 	dma_addr_t			dma_handle_cert;
 	u32				*cpuvaddr_cert_aligned;

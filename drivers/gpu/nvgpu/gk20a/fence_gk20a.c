@@ -205,7 +205,7 @@ struct gk20a_fence *gk20a_fence_from_syncpt(struct platform_device *host1x_pdev,
 
 	sync_fence = nvhost_sync_create_fence(host1x_pdev, &pt, 1,
 					      "fence");
-	if (!sync_fence)
+	if (IS_ERR(sync_fence))
 		return NULL;
 #endif
 

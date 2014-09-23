@@ -228,6 +228,17 @@ static int vi_set_la(struct vi *tegra_vi1, uint vi_bw)
 
 	ret = tegra_set_camera_ptsa(TEGRA_LA_VI_W, total_vi_bw, 1);
 
+	if (!ret) {
+		ret = tegra_set_latency_allowance(TEGRA_LA_VI_W,
+			total_vi_bw);
+
+		if (ret)
+			pr_err("%s: set latency failed: %d\n",
+				__func__, ret);
+	} else {
+		pr_err("%s: set ptsa failed: %d\n", __func__, ret);
+	}
+
 	return ret;
 }
 

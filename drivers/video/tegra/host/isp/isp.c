@@ -478,12 +478,37 @@ static int isp_set_la(struct isp *tegra_isp, uint isp_bw, uint la_client)
 {
 	int ret = 0;
 
-	if (tegra_isp->dev_id == ISPB_DEV_ID)
+	if (tegra_isp->dev_id == ISPB_DEV_ID) {
 		ret = tegra_set_camera_ptsa(TEGRA_LA_ISP_WAB,
 				isp_bw, la_client);
-	else
+
+		if (!ret) {
+			ret = tegra_set_latency_allowance(TEGRA_LA_ISP_WAB,
+				isp_bw);
+
+			if (ret)
+				pr_err("%s: set latency failed for %d: %d\n",
+					__func__, tegra_isp->dev_id, ret);
+		} else {
+			pr_err("%s: set ptsa failed for %d: %d\n", __func__,
+				tegra_isp->dev_id, ret);
+		}
+	} else {
 		ret = tegra_set_camera_ptsa(TEGRA_LA_ISP_WA,
 				isp_bw, la_client);
+
+		if (!ret) {
+			ret = tegra_set_latency_allowance(TEGRA_LA_ISP_WA,
+				isp_bw);
+
+			if (ret)
+				pr_err("%s: set latency failed for %d: %d\n",
+					__func__, tegra_isp->dev_id, ret);
+		} else {
+			pr_err("%s: set ptsa failed for %d: %d\n", __func__,
+				tegra_isp->dev_id, ret);
+		}
+	}
 
 	return ret;
 }

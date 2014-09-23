@@ -36,8 +36,6 @@
 #include "nvhost_scale.h"
 #include "nvhost_channel.h"
 
-#include "host1x/host1x_hwctx.h"
-
 #include "flcn.h"
 #include "hw_flcn.h"
 
@@ -382,139 +380,29 @@ static int nvhost_flcn_init_sw(struct platform_device *dev)
 	return err;
 }
 
-static struct nvhost_hwctx *vic03_alloc_hwctx(struct nvhost_hwctx_handler *h,
-		struct nvhost_channel *ch)
+int nvhost_vic_finalize_poweron(struct platform_device *pdev)
 {
-	struct host1x_hwctx_handler *p = to_host1x_hwctx_handler(h);
+	struct flcn *v;
+	int err;
 
-	struct flcn *v = get_flcn(ch->dev);
-	struct host1x_hwctx *ctx;
-	u32 *ptr;
-	u32 syncpt = ch->syncpts[0];
-	u32 nvhost_flcn_restore_size = 10; /* number of words written below */
+	err = nvhost_flcn_finalize_poweron(pdev);
+	if (err)
+		return err;
 
-	nvhost_dbg_fn("");
+	v = get_flcn(pdev);
 
-	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
-	if (!ctx)
-		return NULL;
+	host1x_writel(pdev, VIC_UCLASS_METHOD_OFFSET * 4,
+		      NVA0B6_VIDEO_COMPOSITOR_SET_APPLICATION_ID >> 2);
+	host1x_writel(pdev, VIC_UCLASS_METHOD_DATA * 4, 1);
+	host1x_writel(pdev, VIC_UCLASS_METHOD_OFFSET * 4,
+		      NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_SIZE >> 2);
+	host1x_writel(pdev, VIC_UCLASS_METHOD_DATA * 4, v->fce.size);
+	host1x_writel(pdev, VIC_UCLASS_METHOD_OFFSET * 4,
+		      NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_OFFSET >> 2);
+	host1x_writel(pdev, VIC_UCLASS_METHOD_DATA * 4,
+		      (v->dma_addr + v->fce.data_offset) >> 8);
 
-	if (!syncpt) {
-		syncpt = nvhost_get_syncpt_host_managed(ch->dev, 0);
-		ch->syncpts[0] = syncpt;
-	}
-	h->syncpt = syncpt;
-
-	ctx->restore_size = nvhost_flcn_restore_size;
-
-	ctx->cpuva = dma_alloc_writecombine(&ch->dev->dev,
-						nvhost_flcn_restore_size * 4,
-						&ctx->iova,
-						GFP_KERNEL);
-	if (!ctx->cpuva) {
-		dev_err(&ch->dev->dev, "memory allocation failed\n");
-		goto fail;
-	}
-
-	ptr = ctx->cpuva;
-
-	/* set app id, fce ucode size, offset */
-	ptr[0] = nvhost_opcode_incr(VIC_UCLASS_METHOD_OFFSET, 2);
-	ptr[1] = NVA0B6_VIDEO_COMPOSITOR_SET_APPLICATION_ID  >> 2;
-	ptr[2] = 1;
-
-	ptr[3] = nvhost_opcode_incr(VIC_UCLASS_METHOD_OFFSET, 2);
-	ptr[4] = NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_SIZE >> 2;
-	ptr[5] = v->fce.size;
-
-	ptr[6] = nvhost_opcode_incr(VIC_UCLASS_METHOD_OFFSET, 2);
-	ptr[7] = NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_OFFSET >> 2;
-	ptr[8] = (v->dma_addr + v->fce.data_offset) >> 8;
-
-	/* syncpt increment to track restore gather. */
-	ptr[9] = nvhost_opcode_imm_incr_syncpt(
-			host1x_uclass_incr_syncpt_cond_op_done_v(),
-			syncpt);
-
-	kref_init(&ctx->hwctx.ref);
-	ctx->hwctx.h = &p->h;
-	ctx->hwctx.channel = ch;
-	ctx->hwctx.valid = true; /* this is a preconditioning sequence... */
-	ctx->hwctx.save_incrs = 0;
-	ctx->hwctx.save_slots = 0;
-
-	ctx->hwctx.restore_incrs = 1;
-
-	return &ctx->hwctx;
-
- fail:
-	kfree(ctx);
-	return NULL;
-}
-
-static void vic03_free_hwctx(struct kref *ref)
-{
-	struct nvhost_hwctx *nctx = container_of(ref, struct nvhost_hwctx, ref);
-	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
-
-	if (ctx->cpuva) {
-		dma_free_writecombine(&nctx->channel->dev->dev,
-					ctx->restore_size * 4,
-					ctx->cpuva,
-					ctx->iova);
-		ctx->cpuva = NULL;
-		ctx->iova = 0;
-	}
-	kfree(ctx);
-}
-
-static void vic03_get_hwctx(struct nvhost_hwctx *ctx)
-{
-	nvhost_dbg_fn("");
-	kref_get(&ctx->ref);
-}
-static void vic03_put_hwctx(struct nvhost_hwctx *ctx)
-{
-	nvhost_dbg_fn("");
-	kref_put(&ctx->ref, vic03_free_hwctx);
-}
-static void vic03_save_push_hwctx(struct nvhost_hwctx *ctx,
-				  struct nvhost_cdma *cdma)
-{
-	nvhost_dbg_fn("");
-}
-
-static void ctxvic03_restore_push(struct nvhost_hwctx *nctx,
-		struct nvhost_cdma *cdma)
-{
-	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
-	nvhost_cdma_push(cdma,
-		nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID, 0, 0),
-		NVHOST_OPCODE_NOOP);
-	nvhost_cdma_push_gather(cdma,
-		ctx->cpuva,
-		ctx->iova,
-		0,
-		nvhost_opcode_gather(ctx->restore_size),
-		ctx->iova);
-}
-
-struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(u32 syncpt,
-	struct nvhost_channel *ch)
-{
-	struct host1x_hwctx_handler *p;
-
-	p = kmalloc(sizeof(*p), GFP_KERNEL);
-	if (!p)
-		return NULL;
-
-	p->h.alloc = vic03_alloc_hwctx;
-	p->h.get   = vic03_get_hwctx;
-	p->h.put   = vic03_put_hwctx;
-	p->h.save_push = vic03_save_push_hwctx;
-	p->h.restore_push = ctxvic03_restore_push;
-
-	return &p->h;
+	return 0;
 }
 
 int nvhost_vic_prepare_poweroff(struct platform_device *dev)

@@ -87,6 +87,7 @@ struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(
 
 int nvhost_vic_prepare_poweroff(struct platform_device *);
 int nvhost_flcn_finalize_poweron(struct platform_device *);
+int nvhost_vic_finalize_poweron(struct platform_device *);
 int nvhost_flcn_prepare_poweroff(struct platform_device *);
 
 int nvhost_vic_aggregate_constraints(struct platform_device *dev,
@@ -100,6 +101,7 @@ int nvhost_vic_aggregate_constraints(struct platform_device *dev,
 #define NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_SIZE		(0x0000071C)
 #define NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_OFFSET		(0x0000072C)
 #define VIC_UCLASS_METHOD_OFFSET 0x10
+#define VIC_UCLASS_METHOD_DATA 0x11
 
 #define NVHOST_ENCODE_FLCN_VER(maj, min) \
 	((((maj) & 0xff) << 8) | ((min) & 0xff))

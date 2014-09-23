@@ -115,6 +115,8 @@ int tegra_init_hdmi(struct platform_device *pdev,
 
 void tegra_fb_copy_or_clear(void);
 
+int tegra_disp_defer_vcore_override(void);
+
 void tegra_set_fixed_panel_ops(bool is_primary,
 			struct tegra_panel_ops *p_ops, char *panel_node);
 

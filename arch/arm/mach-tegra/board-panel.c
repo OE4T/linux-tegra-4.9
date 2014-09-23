@@ -19,6 +19,7 @@
 #include <linux/of.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
+#include <linux/clk.h>
 #include <linux/of_gpio.h>
 #include <linux/export.h>
 #include <linux/platform_device.h>
@@ -30,6 +31,7 @@
 #include "board-panel.h"
 #include "board.h"
 #include "iomap.h"
+#include <linux/platform/tegra/dvfs.h>
 
 atomic_t sd_brightness = ATOMIC_INIT(255);
 EXPORT_SYMBOL(sd_brightness);
@@ -541,4 +543,101 @@ void tegra_fb_copy_or_clear(void)
 			__tegra_clear_framebuffer(NULL,
 				tegra_fb2_start, tegra_fb2_size);
 	}
+}
+
+int tegra_disp_defer_vcore_override(void)
+{
+#if defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_13x_SOC)
+	struct clk *disp1_clk = clk_get_sys("tegradc.0", NULL);
+	struct clk *disp2_clk = clk_get_sys("tegradc.1", NULL);
+	long disp1_rate = 0;
+	long disp2_rate = 0;
+	struct device_node *np_target_disp1 = NULL;
+	struct device_node *np_target_disp2 = NULL;
+	struct device_node *np_disp1_timings = NULL;
+	struct device_node *np_disp1_def_out = NULL;
+	struct device_node *np_disp2_def_out = NULL;
+	struct device_node *entry = NULL;
+	u32 temp = 0;
+	bool is_hdmi_primary = false;
+
+	if (WARN_ON(IS_ERR(disp1_clk))) {
+		if (disp2_clk && !IS_ERR(disp2_clk))
+			clk_put(disp2_clk);
+		return PTR_ERR(disp1_clk);
+	}
+
+	if (WARN_ON(IS_ERR(disp2_clk))) {
+		clk_put(disp1_clk);
+		return PTR_ERR(disp1_clk);
+	}
+
+	np_target_disp1 = tegra_primary_panel_get_dt_node(NULL);
+	np_target_disp2 = tegra_secondary_panel_get_dt_node(NULL);
+
+	if (np_target_disp1)
+		if (of_device_is_compatible(np_target_disp1, "hdmi,display"))
+			is_hdmi_primary = true;
+
+	if (!is_hdmi_primary) {
+		/*
+		 * internal panel is mapped to dc0,
+		 * hdmi disp is mapped to dc1.
+		 */
+		if (np_target_disp1) {
+			np_disp1_timings =
+				of_get_child_by_name(np_target_disp1,
+				"display-timings");
+		}
+		if (np_disp1_timings) {
+			for_each_child_of_node(np_disp1_timings, entry) {
+				if (!of_property_read_u32(entry,
+					"clock-frequency", &temp)) {
+					disp1_rate = (long) temp;
+					break;
+				}
+			}
+		}
+		if (np_target_disp2) {
+			np_disp2_def_out =
+				of_get_child_by_name(np_target_disp2,
+				"disp-default-out");
+		}
+
+		if (np_disp2_def_out) {
+			if (!of_property_read_u32(np_disp2_def_out,
+				"nvidia,out-max-pixclk", &temp)) {
+				disp2_rate = PICOS2KHZ(temp) * 1000;
+			}
+		} else
+			disp2_rate = 297000000; /* HDMI 4K */
+		if (disp1_rate)
+			tegra_dvfs_resolve_override(disp1_clk, disp1_rate);
+		if (disp2_rate)
+			tegra_dvfs_resolve_override(disp2_clk, disp2_rate);
+	} else {
+		/*
+		 * this is hdmi primary
+		 */
+		if (np_target_disp1) {
+			np_disp1_def_out =
+				of_get_child_by_name(np_target_disp1,
+				"disp-default-out");
+		}
+		if (np_disp1_def_out) {
+			if (!of_property_read_u32(np_disp1_def_out,
+				"nvidia,out-max-pixclk", &temp)) {
+				disp1_rate = PICOS2KHZ(temp) * 1000;
+			}
+		} else
+			disp1_rate = 297000000; /* HDMI 4K */
+
+		if (disp1_rate)
+			tegra_dvfs_resolve_override(disp1_clk, disp1_rate);
+	}
+
+	clk_put(disp1_clk);
+	clk_put(disp2_clk);
+#endif
+	return 0;
 }

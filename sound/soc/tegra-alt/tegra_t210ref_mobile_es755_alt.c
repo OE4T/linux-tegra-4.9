@@ -273,18 +273,12 @@ static int tegra_t210ref_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_card *card = codec->card;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct tegra_asoc_platform_data *pdata = machine->pdata;
-	struct snd_soc_dai *i2s_dai = rtd->cpu_dai;
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	unsigned int srate;
 	int err;
 
 	srate = dai_params->rate_min;
-	err = snd_soc_dai_set_sysclk(i2s_dai, 0, srate, SND_SOC_CLOCK_IN);
-	if (err < 0) {
-		dev_err(card->dev, "i2s clock not set %d\n", srate);
-		return err;
-	}
 
 	err = tegra_alt_asoc_utils_set_extern_parent(&machine->audio_clock,
 							"clk_m");

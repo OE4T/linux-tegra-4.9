@@ -141,7 +141,7 @@ struct nvhost_device_data t21_vi_info = {
 		{"i2cslow", 1000000},
 		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
-	.num_channels		= 4,
+	.num_channels		= 6,
 	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
 	.slcg_notifier_enable	= true,
 	.bond_out_id		= BOND_OUT_VI,

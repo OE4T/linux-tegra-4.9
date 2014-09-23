@@ -411,8 +411,16 @@ int nvhost_scale_hw_init(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_device_profile *profile = pdata->power_profile;
 
-	if (profile && profile->actmon)
+	if (profile && profile->actmon) {
 		actmon_op().init(profile->actmon);
+		if (pdata->mamask_addr)
+			host1x_writel(pdev, pdata->mamask_addr,
+					pdata->mamask_val);
+
+		if (pdata->borps_addr)
+			host1x_writel(pdev, pdata->borps_addr,
+					pdata->borps_val);
+	}
 
 	return 0;
 }
@@ -428,6 +436,13 @@ void nvhost_scale_hw_deinit(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_device_profile *profile = pdata->power_profile;
 
-	if (profile && profile->actmon)
+	if (profile && profile->actmon) {
+		if (pdata->mamask_addr)
+			host1x_writel(pdev, pdata->mamask_addr, 0x0);
+
+		if (pdata->borps_addr)
+			host1x_writel(pdev, pdata->borps_addr, 0x0);
+
 		actmon_op().deinit(profile->actmon);
+	}
 }

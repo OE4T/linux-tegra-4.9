@@ -282,6 +282,11 @@ struct nvhost_device_data {
 
 	phys_addr_t carveout_addr;
 	phys_addr_t carveout_size;
+
+	u64 mamask_addr;
+	u32 mamask_val;
+	u64 borps_addr;
+	u32 borps_val;
 };
 
 

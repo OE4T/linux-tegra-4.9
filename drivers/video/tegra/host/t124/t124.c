@@ -42,6 +42,8 @@
 
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
+#include "cg_regs.c"
+
 #define HOST_EMC_FLOOR 300000000
 #define VI_CLOCKGATE_DELAY 60
 #define VI_POWERGATE_DELAY 500
@@ -412,11 +414,6 @@ static struct resource vic03_resources[] = {
 	},
 };
 
-static struct nvhost_gating_register vic_cg_gating_registers[] = {
-	{.addr = 0x000016d0, .prod = 0x00040044, .disable = 0x00000000},
-	{},
-};
-
 struct nvhost_device_data t124_vic_info = {
 	.num_channels	= 1,
 	.modulemutexes	= {NVMODMUTEX_VIC},
@@ -435,7 +432,7 @@ struct nvhost_device_data t124_vic_info = {
 	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
 	.can_powergate		= true,
 	.engine_can_cg		= true,
-	.engine_cg_regs		= vic_cg_gating_registers,
+	.engine_cg_regs		= t12x_vic_gating_registers,
 	.poweron_reset		= true,
 	.powergate_delay	= 500,
 	.powergate_ids		= { TEGRA_POWERGATE_VIC, -1 },

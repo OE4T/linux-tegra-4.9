@@ -44,6 +44,8 @@
 #include "chip_support.h"
 #include "nvhost_scale.h"
 
+#include "cg_regs.c"
+
 #define HOST_EMC_FLOOR 300000000
 #define TSEC_POWERGATE_DELAY 500
 
@@ -221,19 +223,6 @@ struct nvhost_device_data t21_vii2c_info = {
 };
 #endif
 
-static struct nvhost_gating_register nvenc_cg_gating_registers[] = {
-	{.addr = 0x00000e00, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x00000088, .prod = 0x00000000, .disable = 0x000000ff},
-	{.addr = 0x0000008c, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x000010a0, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x00001804, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x0000117c, .prod = 0x00018004, .disable = 0xffffffff},
-	{.addr = 0x00002200, .prod = 0x80000040, .disable = 0xffffffff},
-	{.addr = 0x00002204, .prod = 0x10000000, .disable = 0xffffffff},
-	{.addr = 0x00002208, .prod = 0x00000000, .disable = 0xffffffff},
-	{},
-};
-
 struct nvhost_device_data t21_msenc_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
 	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,
@@ -246,7 +235,7 @@ struct nvhost_device_data t21_msenc_info = {
 	.keepalive		= true,
 	.clocks			= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
 				   {"emc", HOST_EMC_FLOOR} },
-	.engine_cg_regs		= nvenc_cg_gating_registers,
+	.engine_cg_regs		= t21x_nvenc_gating_registers,
 	.engine_can_cg		= false,
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_flcn_finalize_poweron,
@@ -264,18 +253,6 @@ struct nvhost_device_data t21_msenc_info = {
 	.bond_out_id		= BOND_OUT_NVENC
 };
 
-static struct nvhost_gating_register nvdec_cg_gating_registers[] = {
-	{.addr = 0x00000e00, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x00000088, .prod = 0x00000000, .disable = 0x000000ff},
-	{.addr = 0x0000008c, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x000010a0, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x00001604, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x0000117c, .prod = 0x00018004, .disable = 0xffffffff},
-	{.addr = 0x00002328, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x0000232c, .prod = 0x00080000, .disable = 0xffffffff},
-	{.addr = 0x00002330, .prod = 0xfffffff8, .disable = 0xffffffff},
-	{},
-};
 struct nvhost_device_data t21_nvdec_info = {
 	.version		= NVHOST_ENCODE_NVDEC_VER(2, 0),
 	.class			= NV_NVDEC_CLASS_ID,
@@ -288,7 +265,7 @@ struct nvhost_device_data t21_nvdec_info = {
 	.keepalive		= true,
 	.clocks			= {{"nvdec", UINT_MAX, 0, TEGRA_MC_CLIENT_NVDEC},
 				   {"emc", HOST_EMC_FLOOR} },
-	.engine_cg_regs		= nvdec_cg_gating_registers,
+	.engine_cg_regs		= t21x_nvdec_gating_registers,
 	.engine_can_cg		= false,
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_nvdec_finalize_poweron,
@@ -306,16 +283,6 @@ struct nvhost_device_data t21_nvdec_info = {
 	.bond_out_id		= BOND_OUT_NVDEC,
 };
 
-static struct nvhost_gating_register nvjpg_cg_gating_registers[] = {
-	{.addr = 0x00000e00, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x00000088, .prod = 0x00000000, .disable = 0x000000ff},
-	{.addr = 0x0000008c, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x000010a0, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x00001404, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x0000117c, .prod = 0x00018004, .disable = 0xffffffff},
-	{},
-};
-
 struct nvhost_device_data t21_nvjpg_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(1, 0),
 	.class			= NV_NVJPG_CLASS_ID,
@@ -328,7 +295,7 @@ struct nvhost_device_data t21_nvjpg_info = {
 	.keepalive		= true,
 	.clocks			= { {"nvjpg", UINT_MAX, 0, TEGRA_MC_CLIENT_NVJPG},
 				    {"emc", HOST_EMC_FLOOR} },
-	.engine_cg_regs		= nvjpg_cg_gating_registers,
+	.engine_cg_regs		= t21x_nvjpg_gating_registers,
 	.engine_can_cg		= false,
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_flcn_finalize_poweron,
@@ -346,15 +313,6 @@ struct nvhost_device_data t21_nvjpg_info = {
 	.firmware_name		= "nvhost_nvjpg010.fw",
 };
 
-static struct nvhost_gating_register tsec_cg_gating_registers[] = {
-	{.addr = 0x00000e00, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x00000088, .prod = 0x00000000, .disable = 0x000000ff},
-	{.addr = 0x0000008c, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x000010a0, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x0000117c, .prod = 0x00000000, .disable = 0xffffffff},
-	{},
-};
-
 struct nvhost_device_data t21_tsec_info = {
 	.num_channels		= 1,
 	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
@@ -367,7 +325,7 @@ struct nvhost_device_data t21_tsec_info = {
 	.keepalive		= true,
 	.moduleid		= NVHOST_MODULE_TSEC,
 	.engine_can_cg		= false,
-	.engine_cg_regs		= tsec_cg_gating_registers,
+	.engine_cg_regs		= t21x_tsec_gating_registers,
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_tsec_finalize_poweron,
 	.prepare_poweroff	= nvhost_tsec_prepare_poweroff,
@@ -388,24 +346,13 @@ struct nvhost_device_data t21_tsecb_info = {
 	.powergate_delay	= TSEC_POWERGATE_DELAY,
 	.keepalive		= true,
 	.engine_can_cg		= false,
-	.engine_cg_regs		= tsec_cg_gating_registers,
+	.engine_cg_regs		= t21x_tsec_gating_registers,
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_tsec_finalize_poweron,
 	.prepare_poweroff	= nvhost_tsec_prepare_poweroff,
 	.bond_out_id		= BOND_OUT_TSEC,
 };
 #ifdef CONFIG_ARCH_TEGRA_VIC
-
-static struct nvhost_gating_register vic_cg_gating_registers[] = {
-	{.addr = 0x00000e00, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x00000088, .prod = 0x00000000, .disable = 0x000000ff},
-	{.addr = 0x0000008c, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x000010a0, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x0000117c, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x00001134, .prod = 0x00000000, .disable = 0xffffffff},
-	{.addr = 0x00001604, .prod = 0x00000000, .disable = 0xffffffff},
-	{},
-};
 
 struct nvhost_device_data t21_vic_info = {
 	.num_channels		= 1,
@@ -428,7 +375,7 @@ struct nvhost_device_data t21_vic_info = {
 	.class			= NV_GRAPHICS_VIC_CLASS_ID,
 	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
 	.prepare_poweroff	= nvhost_vic_prepare_poweroff,
-	.engine_cg_regs		= vic_cg_gating_registers,
+	.engine_cg_regs		= t21x_vic_gating_registers,
 	.engine_can_cg		= false,
 	.poweron_toggle_slcg	= true,
 	.finalize_poweron	= nvhost_vic_finalize_poweron,

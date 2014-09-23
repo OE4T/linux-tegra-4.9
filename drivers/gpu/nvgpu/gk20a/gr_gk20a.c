@@ -4006,8 +4006,9 @@ static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
 			floorsweep = true;
 	}
 
-	/* 1.0f / 1.0f * gr_gpc0_zcull_sm_num_rcp_conservative__max_v() */
-	rcp_conserv = gr_gpc0_zcull_sm_num_rcp_conservative__max_v();
+	/* ceil(1.0f / SM_NUM * gr_gpc0_zcull_sm_num_rcp_conservative__max_v()) */
+	rcp_conserv = DIV_ROUND_UP(gr_gpc0_zcull_sm_num_rcp_conservative__max_v(),
+		gr->gpc_tpc_count[0]);
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
 		offset = gpc_index * proj_gpc_stride_v();

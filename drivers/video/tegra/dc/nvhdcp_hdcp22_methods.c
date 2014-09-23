@@ -25,6 +25,8 @@
 #include <linux/wait.h>
 #include <linux/workqueue.h>
 #include <linux/atomic.h>
+#include <linux/fs.h>
+#include <linux/uaccess.h>
 #include "tsec/tsec_methods.h"
 #include "nvhdcp_hdcp22_methods.h"
 #include "tsec_drv.h"
@@ -33,6 +35,8 @@
 		pr_debug("hdcp: " __VA_ARGS__)
 #define hdcp_err(...) \
 		pr_err("hdcp: Error: " __VA_ARGS__)
+
+#define HDCP22_SRM_PATH "etc/hdcpsrm/hdcp2x.srm"
 
 u8 g_srm_2x_prod[] = {
 0x91, 0x00, 0x00, 0x01, 0x01, 0x00, 0x01, 0x87, 0x00, 0x00, 0x00, 0x00, 0x8B,
@@ -367,34 +371,48 @@ exit:
 	err = session_ctrl_param.ret_code;
 	return err;
 }
-/*
+
 int tsec_hdcp_revocation_check(struct hdcp_context_t *hdcp_context)
 {
 	int err = 0;
+	struct file *fp = NULL;
+	mm_segment_t seg;
 	struct hdcp_revocation_check_param revocation_check_param;
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
-	session_ctrl_param.session_id = hdcp_context->session_id;
-	session_ctrl_param.ctrl_flag = flag;
+	revocation_check_param.trans_id.session_id = hdcp_context->session_id;
+	revocation_check_param.is_ver_hdcp2x = 1;
+	fp = filp_open(HDCP22_SRM_PATH, O_RDONLY, 0);
+	if (!fp) {
+		hdcp_err("Opening SRM file failed!\n");
+		return -ENOENT;
+	}
+	seg = get_fs();
+	set_fs(get_ds());
+	fp->f_op->read(fp, (u8 *)hdcp_context->cpuvaddr_srm,
+			HDCP_SRM_SIZE, &fp->f_pos);
+	set_fs(seg);
+	revocation_check_param.srm_size = fp->f_pos;
+	filp_close(fp, NULL);
 	memcpy(hdcp_context->cpuvaddr_mthd_buf_aligned,
-		&session_ctrl_param,
-		sizeof(struct hdcp_session_ctrl_param));
+		&revocation_check_param,
+		sizeof(struct hdcp_revocation_check_param));
 	tsec_send_method(hdcp_context,
-		HDCP_SESSION_CTRL,
-		HDCP_MTHD_FLAGS_SB);
-	memcpy(&session_ctrl_param,
+		HDCP_REVOCATION_CHECK,
+		HDCP_MTHD_FLAGS_SB | HDCP_MTHD_FLAGS_SRM);
+	memcpy(&revocation_check_param,
 		hdcp_context->cpuvaddr_mthd_buf_aligned,
-		sizeof(struct hdcp_session_ctrl_param));
-	if (session_ctrl_param.ret_code) {
-		hdcp_err("tsec_hdcp_session_ctrl: failed with error %d\n",
-			session_ctrl_param.ret_code);
+		sizeof(struct hdcp_revocation_check_param));
+	if (revocation_check_param.ret_code) {
+		hdcp_err("tsec_hdcp_revocation_check: failed with error %d\n",
+			revocation_check_param.ret_code);
 		goto exit;
 	}
 exit:
-	err = session_ctrl_param.ret_code;
+	err = revocation_check_param.ret_code;
 	return err;
 }
-*/
+
 int tsec_hdcp_verify_vprime(struct hdcp_context_t *hdcp_context)
 {
 	int err = 0;
@@ -402,9 +420,7 @@ int tsec_hdcp_verify_vprime(struct hdcp_context_t *hdcp_context)
 	struct hdcp_verify_vprime_param verify_vprime_param;
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
-	/* Read anr copy srm to the buffer */
-	memcpy(hdcp_context->cpuvaddr_srm, g_srm_2x_prod,
-		sizeof(g_srm_2x_prod));
+	/* SRM is already copied into the buffer during revocation check */
 	/* Copy receiver id list into buf */
 	memcpy(hdcp_context->cpuvaddr_rcvr_id_list,
 		hdcp_context->msg.rcvr_id_list,

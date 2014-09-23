@@ -1049,6 +1049,9 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 		&hdcp_context->msg.rxcaps_capmask);
 	if (err)
 		goto exit;
+	err =  tsec_hdcp_revocation_check(hdcp_context);
+	if (err)
+		goto exit;
 	err = nvhdcp_poll_ready(nvhdcp, 1000);
 	if (err)
 		goto exit;

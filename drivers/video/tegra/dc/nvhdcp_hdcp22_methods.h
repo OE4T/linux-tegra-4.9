@@ -37,3 +37,4 @@ int tsec_hdcp_exchange_info(struct hdcp_context_t *hdcp_context,
 int tsec_hdcp_update_rrx(struct hdcp_context_t *hdcp_context);
 int tsec_hdcp_rptr_stream_ready(struct hdcp_context_t *hdcp_context);
 int tsec_hdcp_session_ctrl(struct hdcp_context_t *hdcp_context, int flag);
+int tsec_hdcp_revocation_check(struct hdcp_context_t *hdcp_context);

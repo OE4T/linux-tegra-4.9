@@ -391,31 +391,23 @@ int nvhost_sync_create_fence_fd(struct platform_device *pdev,
 		u32 num_pts, const char *name, int *fence_fd)
 {
 	int fd;
-	int err;
 	struct sync_fence *fence = NULL;
 
 	fence = nvhost_sync_create_fence(pdev, pts, num_pts, name);
 
-	if (fence == NULL) {
-		err = -EINVAL;
-		goto err;
-	}
+	if (IS_ERR(fence))
+		return -EINVAL;
 
 	fd = get_unused_fd();
 	if (fd < 0) {
-		err = fd;
-		goto err;
+		sync_fence_put(fence);
+		return fd;
 	}
 
 	*fence_fd = fd;
 	sync_fence_install(fence, fd);
+
 	return 0;
-
-err:
-	if (fence)
-		sync_fence_put(fence);
-
-	return err;
 }
 EXPORT_SYMBOL(nvhost_sync_create_fence_fd);
 

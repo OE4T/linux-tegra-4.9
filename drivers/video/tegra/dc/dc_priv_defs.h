@@ -261,6 +261,7 @@ struct tegra_dc {
 	atomic_t			frame_end_ref;
 
 	bool				mode_dirty;
+	bool				yuv_bypass;
 	atomic_t			holding;
 
 	u32				reserved_bw;

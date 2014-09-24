@@ -94,6 +94,8 @@
 #define TEGRA_DC_EXT_FLIP_FLAG_INTERLACE	(1 << 7)
 #define TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED	(1 << 8)
 #define TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC	(1 << 9)
+/*Passthrough condition for running 4K HDMI*/
+#define TEGRA_DC_EXT_FLIP_HEAD_FLAG_YUVBYPASS	(1 << 0)
 
 struct tegra_timespec {
 	__s32	tv_sec; /* seconds */
@@ -189,7 +191,7 @@ struct tegra_dc_ext_flip_2 {
 struct tegra_dc_ext_flip_3 {
 	__u64 win; /* pointer: struct tegra_dc_ext_flip_windowattr* */
 	__u8 win_num;
-	__u8 reserved1; /* unused - must be 0 */
+	__u8 flags;
 	__u16 reserved2; /* unused - must be 0 */
 	__s32 post_syncpt_fd;
 	__u16 dirty_rect[4]; /* x,y,w,h for partial screen update. 0 ignores */

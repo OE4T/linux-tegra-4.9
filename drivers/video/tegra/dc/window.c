@@ -948,6 +948,9 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 			dc_win->csc_dirty = false;
 		}
 
+		if (dc->yuv_bypass)
+			win_options &= ~CP_ENABLE;
+
 		tegra_dc_writel(dc, win_options, DC_WIN_WIN_OPTIONS);
 
 		dc_win->dirty = 1;

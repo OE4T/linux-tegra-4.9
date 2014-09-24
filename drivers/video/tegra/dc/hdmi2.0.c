@@ -1077,7 +1077,10 @@ static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 	avi->scan = HDMI_AVI_UNDERSCAN;
 	avi->bar_valid = HDMI_AVI_BAR_INVALID;
 	avi->act_fmt_valid = HDMI_AVI_ACTIVE_FORMAT_VALID;
-	avi->rgb_ycc = HDMI_AVI_RGB;
+	if (hdmi->dc->yuv_bypass)
+		avi->rgb_ycc = HDMI_AVI_YCC_420;
+	else
+		avi->rgb_ycc = HDMI_AVI_RGB;
 
 	avi->act_format = HDMI_AVI_ACTIVE_FORMAT_SAME;
 	avi->aspect_ratio = tegra_hdmi_get_aspect_ratio(hdmi);

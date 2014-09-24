@@ -74,6 +74,7 @@ enum {
 	HDMI_AVI_RGB = 0x0,
 	HDMI_AVI_YCC_422 = 0x1,
 	HDMI_AVI_YCC_444 = 0x2,
+	HDMI_AVI_YCC_420 = 0x3,
 };
 
 enum {

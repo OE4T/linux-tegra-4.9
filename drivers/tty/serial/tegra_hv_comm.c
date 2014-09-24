@@ -101,7 +101,7 @@ static void xmit_timer_setup(struct tegra_hv_comm *pp, int in_timer)
 		if (pp->tx_en) {
 			pp->tx_en = 0;
 			if (!in_timer)
-				del_timer_sync(&pp->tx_timer);
+				del_timer(&pp->tx_timer);
 		}
 	}
 }
@@ -384,7 +384,7 @@ static void tegra_hv_comm_shutdown(struct uart_port *port)
 	pp->rx_en = 0;
 	if (pp->tx_en) {
 		pp->tx_en = 0;
-		del_timer_sync(&pp->tx_timer);
+		del_timer(&pp->tx_timer);
 	}
 	spin_unlock_irqrestore(&port->lock, flags);
 }

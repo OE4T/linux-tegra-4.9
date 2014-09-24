@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <dt-bindings/thermal/thermal.h>
 
 /{
 	therm_est_sensor {
@@ -53,7 +54,7 @@
 				map0 {
 					trip = <&{/thermal-zones/therm_est/trips/skin_trip}>;
 					cdev-type = "skin-balanced";
-					cooling-device = <&{/bthrot_cdev/skin_balanced} 0 82>;
+					cooling-device = <&{/bthrot_cdev/skin_balanced} THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
 			};
 			thermal-zone-params {

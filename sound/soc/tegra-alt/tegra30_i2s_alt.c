@@ -654,8 +654,9 @@ static irqreturn_t tegra30_i2s_interrupt_handler(int irq, void *data)
 
 	struct device *dev = data;
 	struct tegra30_i2s *i2s = dev_get_drvdata(data);
+	unsigned long flags;
 
-	spin_lock_irq(&i2s->int_lock);
+	spin_lock_irqsave(&i2s->int_lock, flags);
 
 	if (tegra30_apbif_i2s_overrun_interrupt_status(dev->id)) {
 		tegra30_apbif_i2s_overrun_interrupt_status_clear(dev->id);
@@ -665,7 +666,7 @@ static irqreturn_t tegra30_i2s_interrupt_handler(int irq, void *data)
 		tegra30_i2s_soft_reset(i2s);
 	}
 
-	spin_unlock_irq(&i2s->int_lock);
+	spin_unlock_irqrestore(&i2s->int_lock, flags);
 
 	return IRQ_HANDLED;
 }

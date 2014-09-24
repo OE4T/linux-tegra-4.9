@@ -817,7 +817,13 @@ int gk20a_channel_open(struct inode *inode, struct file *filp)
 {
 	struct gk20a *g = container_of(inode->i_cdev,
 			struct gk20a, channel.cdev);
-	return __gk20a_channel_open(g, filp);
+	int ret;
+
+	gk20a_dbg_fn("start");
+	ret = __gk20a_channel_open(g, filp);
+
+	gk20a_dbg_fn("end");
+	return ret;
 }
 
 /* allocate private cmd buffer.
@@ -2201,6 +2207,8 @@ long gk20a_channel_ioctl(struct file *filp,
 	u8 buf[NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE];
 	int err = 0;
 
+	gk20a_dbg_fn("start %d", _IOC_NR(cmd));
+
 	if ((_IOC_TYPE(cmd) != NVHOST_IOCTL_MAGIC) ||
 		(_IOC_NR(cmd) == 0) ||
 		(_IOC_NR(cmd) > NVHOST_IOCTL_CHANNEL_LAST) ||
@@ -2443,6 +2451,8 @@ long gk20a_channel_ioctl(struct file *filp,
 
 	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ))
 		err = copy_to_user((void __user *)arg, buf, _IOC_SIZE(cmd));
+
+	gk20a_dbg_fn("end");
 
 	return err;
 }

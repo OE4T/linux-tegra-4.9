@@ -138,7 +138,8 @@ struct nvhost_device_data t21_vi_info = {
 		{"cilcd", 102000000},
 		{"cile", 102000000},
 		{"vii2c", 86400000},
-		{"i2cslow", 1000000} },
+		{"i2cslow", 1000000},
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
 	.num_channels		= 4,
 	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
@@ -151,7 +152,10 @@ struct nvhost_device_data t21_vib_info = {
 	.exclusive		= true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive		= true,
-	.clocks			= {{"vi", UINT_MAX}, {"csi", UINT_MAX}, {} },
+	.clocks	= {
+		{"vi", UINT_MAX},
+		{"csi", UINT_MAX},
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
 #ifdef TEGRA_POWERGATE_VE
 	.powergate_ids		= {TEGRA_POWERGATE_VE, -1},
 #else
@@ -189,7 +193,8 @@ struct nvhost_device_data t21_vi_info = {
 	.clocks = {
 		{"vi", UINT_MAX},
 		{"csi", 0},
-		{"cilab", 102000000} },
+		{"cilab", 102000000},
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
 	.slave			= &tegra_vi01b_device,
 	.num_channels		= 1,

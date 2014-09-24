@@ -43,7 +43,7 @@ struct nvhost_sync_timeline;
 struct nvhost_sync_pt;
 struct sync_pt;
 
-#define NVHOST_MODULE_MAX_CLOCKS		7
+#define NVHOST_MODULE_MAX_CLOCKS		8
 #define NVHOST_MODULE_MAX_POWERGATE_IDS 	2
 #define NVHOST_MODULE_MAX_SYNCPTS		8
 #define NVHOST_MODULE_MAX_WAITBASES		3

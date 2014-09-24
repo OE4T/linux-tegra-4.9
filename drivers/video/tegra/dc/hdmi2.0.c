@@ -870,14 +870,62 @@ static int tegra_hdmi_find_cea_vic(const struct tegra_dc_mode *mode)
 	return best;
 }
 
+static u32 tegra_hdmi_get_aspect_ratio(struct tegra_hdmi *hdmi)
+{
+	u32 aspect_ratio;
+
+	switch (hdmi->dc->mode.avi_m) {
+	case HDMI_AVI_ASPECT_RATIO_4_3:
+		aspect_ratio = HDMI_AVI_ASPECT_RATIO_4_3;
+		break;
+	case HDMI_AVI_ASPECT_RATIO_16_9:
+		aspect_ratio = HDMI_AVI_ASPECT_RATIO_16_9;
+		break;
+	default:
+		aspect_ratio = HDMI_AVI_ASPECT_RATIO_NO_DATA;
+	}
+
+	return aspect_ratio;
+}
+
 static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 {
 	struct hdmi_avi_infoframe *avi = &hdmi->avi;
 
-	avi->act_fmt_valid = 1;
-	avi->act_format = HDMI_AVI_ACTIVE_FORMAT_SAME;
+	memset(&hdmi->avi, 0, sizeof(hdmi->avi));
 
+	avi->scan = HDMI_AVI_UNDERSCAN;
+	avi->bar_valid = HDMI_AVI_BAR_INVALID;
+	avi->act_fmt_valid = HDMI_AVI_ACTIVE_FORMAT_VALID;
+	avi->rgb_ycc = HDMI_AVI_RGB;
+
+	avi->act_format = HDMI_AVI_ACTIVE_FORMAT_SAME;
+	avi->aspect_ratio = tegra_hdmi_get_aspect_ratio(hdmi);
+	avi->colorimetry = HDMI_AVI_COLORIMETRY_DEFAULT;
+
+	avi->scaling = HDMI_AVI_SCALING_UNKNOWN;
+	avi->rgb_quant = HDMI_AVI_RGB_QUANT_DEFAULT;
+	avi->ext_colorimetry = HDMI_AVI_EXT_COLORIMETRY_INVALID;
+	avi->it_content = HDMI_AVI_IT_CONTENT_FALSE;
+
+	/* set correct vic if video format is cea defined else set 0 */
 	avi->video_format = tegra_hdmi_find_cea_vic(&hdmi->dc->mode);
+
+	avi->pix_rep = HDMI_AVI_NO_PIX_REPEAT;
+	avi->it_content_type = HDMI_AVI_IT_CONTENT_NONE;
+	avi->ycc_quant = HDMI_AVI_YCC_QUANT_NONE;
+
+	avi->top_bar_end_line_low_byte = 0;
+	avi->top_bar_end_line_high_byte = 0;
+
+	avi->bot_bar_start_line_low_byte = 0;
+	avi->bot_bar_start_line_high_byte = 0;
+
+	avi->left_bar_end_pixel_low_byte = 0;
+	avi->left_bar_end_pixel_high_byte = 0;
+
+	avi->right_bar_start_pixel_low_byte = 0;
+	avi->right_bar_start_pixel_high_byte = 0;
 }
 
 static void tegra_hdmi_avi_infoframe(struct tegra_hdmi *hdmi)

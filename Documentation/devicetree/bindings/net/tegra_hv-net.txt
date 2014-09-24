@@ -7,6 +7,15 @@ Required properties:
 
 Optional properties:
 - mac-address: The MAC address to assign, if not available uses a random one.
+- high-watermark-mult: High watermark multiplication factor for netif queue control.
+  default is 50. The network queue will be stopped when the number of queued skbs
+  reaches the 'high-watermark-mult' * 'the capacity in frames' is reached.
+  Note this is set at a very high limit for good throughput.
+- low-watermark-mult: Low watermark multiplication factor for netif queue control.
+  default is 25. When the network queue is stopped and the amount of queued skbs
+  falls below the 'low-watermark-mult' * 'the capacity in frames' level the network
+  queue will be started. Note that high-watermark-mult must be higher than the
+  low-watermark-mult value.
 
 Example:
 	tegra_hv_net {

@@ -70,6 +70,9 @@
 /* jumbo frame limit */
 #define MAX_MTU 9000
 
+#define DEFAULT_HIGH_WATERMARK_MULT	50
+#define DEFAULT_LOW_WATERMARK_MULT	25
+
 enum drop_kind {
 	dk_none,
 	/* tx */
@@ -123,6 +126,9 @@ struct tegra_hv_net {
 	struct work_struct xmit_work;
 	struct workqueue_struct *xmit_wq;
 	wait_queue_head_t wq;
+
+	unsigned int high_watermark;	/* mult * framesize */
+	unsigned int low_watermark;
 };
 
 static int tegra_hv_net_open(struct net_device *ndev)
@@ -165,6 +171,12 @@ static void tegra_hv_net_xmit_work(struct work_struct *work)
 
 	dk = dk_none;
 	while ((skb = skb_dequeue(&hvn->tx_q)) != NULL) {
+
+		/* start the queue if it is short again */
+		if (netif_queue_stopped(ndev) &&
+				skb_queue_len(&hvn->tx_q) < hvn->low_watermark)
+			netif_start_queue(ndev);
+
 		ret = skb_linearize(skb);
 		if (ret != 0) {
 			netdev_err(hvn->ndev,
@@ -270,9 +282,15 @@ static netdev_tx_t tegra_hv_net_xmit(struct sk_buff *skb,
 	skb_orphan(skb);
 	nf_reset(skb);
 	skb_queue_tail(&hvn->tx_q, skb);
-	if (skb_queue_len(&hvn->tx_q) >= hvn->ivck->nframes * 2)
-		netif_stop_queue(ndev);
 	queue_work_on(WORK_CPU_UNBOUND, hvn->xmit_wq, &hvn->xmit_work);
+
+	/* stop the queue if it gets too long */
+	if (!netif_queue_stopped(ndev) &&
+			skb_queue_len(&hvn->tx_q) >= hvn->high_watermark)
+		netif_stop_queue(ndev);
+	else if (netif_queue_stopped(ndev) &&
+			skb_queue_len(&hvn->tx_q) < hvn->low_watermark)
+		netif_start_queue(ndev);
 
 	return NETDEV_TX_OK;
 }
@@ -540,6 +558,7 @@ static int tegra_hv_net_probe(struct platform_device *pdev)
 	struct tegra_hv_net *hvn = NULL;
 	int ret;
 	u32 id;
+	u32 highmark, lowmark;
 
 	if (!is_tegra_hypervisor_mode()) {
 		dev_info(dev, "Hypervisor is not present\n");
@@ -564,6 +583,20 @@ static int tegra_hv_net_probe(struct platform_device *pdev)
 		goto out_of_put;
 	}
 
+	ret = of_property_read_u32(dn, "high-watermark-mult", &highmark);
+	if (ret != 0)
+		highmark = DEFAULT_HIGH_WATERMARK_MULT;
+
+	ret = of_property_read_u32(dn, "high-watermark-mult", &lowmark);
+	if (ret != 0)
+		lowmark = DEFAULT_LOW_WATERMARK_MULT;
+
+	if (highmark <= lowmark) {
+		dev_err(dev, "Bad watermark configuration (high <= low = %u < %u)\n",
+				highmark, lowmark);
+		goto out_of_put;
+	}
+
 	ndev = alloc_etherdev(sizeof(*hvn));
 	if (ndev == NULL) {
 		dev_err(dev, "Failed to allocate netdev\n");
@@ -583,6 +616,9 @@ static int tegra_hv_net_probe(struct platform_device *pdev)
 	hvn->ivck = tegra_hv_ivc_reserve(hv_dn, id, NULL);
 	of_node_put(hv_dn);
 	hv_dn = NULL;
+
+	hvn->high_watermark = highmark * hvn->ivck->nframes;
+	hvn->low_watermark = lowmark * hvn->ivck->nframes;
 
 	if (IS_ERR_OR_NULL(hvn->ivck)) {
 		dev_err(dev, "Failed to reserve IVC channel %d\n", id);

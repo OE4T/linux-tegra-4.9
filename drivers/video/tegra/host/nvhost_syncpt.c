@@ -821,6 +821,30 @@ u32 nvhost_get_syncpt_host_managed(struct platform_device *pdev,
 EXPORT_SYMBOL_GPL(nvhost_get_syncpt_host_managed);
 
 /**
+ * Interface to get a new free (host managed) syncpt dynamically
+ * with a specified name (used for in-kernel operations)
+ */
+u32 nvhost_get_syncpt_host_managed_by_name(const char *syncpt_name)
+{
+	u32 id;
+	struct nvhost_master *nvhost_master = nvhost;
+
+	if (!syncpt_name)
+		syncpt_name = kasprintf(GFP_KERNEL, "host_managed");
+	else
+		syncpt_name = kasprintf(GFP_KERNEL, "%s", syncpt_name);
+
+	id = nvhost_get_syncpt(&nvhost_master->syncpt, false, syncpt_name);
+	if (!id) {
+		nvhost_err(&nvhost_master->dev->dev, "failed to get syncpt\n");
+		return 0;
+	}
+
+	return id;
+}
+EXPORT_SYMBOL_GPL(nvhost_get_syncpt_host_managed_by_name);
+
+/**
  * Interface to get a new free (client managed) syncpt dynamically
  */
 u32 nvhost_get_syncpt_client_managed(const char *syncpt_name)

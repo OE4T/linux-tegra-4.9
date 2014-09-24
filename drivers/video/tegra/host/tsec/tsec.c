@@ -333,10 +333,10 @@ void tsec_execute_method(dma_addr_t dma_handle,
 		nvhost_module_idle(tsec);
 		goto exit;
 	}
-	id = channel->syncpts[0];
+	id = nvhost_get_syncpt_host_managed_by_name("tsec_hdcp");
 	if (!id) {
-		id = nvhost_get_syncpt_host_managed(channel->dev, 0);
-		channel->syncpts[0] = id;
+		nvhost_module_idle(tsec);
+		goto exit;
 	}
 	job->sp->id = id;
 	syncval = nvhost_syncpt_incr_max(&nvhost_get_host(tsec)->syncpt,
@@ -398,6 +398,8 @@ void tsec_execute_method(dma_addr_t dma_handle,
 		id, syncval));
 
 	nvhost_intr_put_ref(&nvhost_get_host(tsec)->intr, id, ref);
+
+	nvhost_free_syncpt(id);
 
 exit:
 	nvhost_job_put(job);

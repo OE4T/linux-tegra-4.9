@@ -31,7 +31,9 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/regulator/consumer.h>
 #include <linux/of_device.h>
+#include <linux/delay.h>
 #include <linux/debugfs.h>
+#include <linux/tegra-powergate.h>
 
 #include "tegra210_xbar_alt.h"
 #include "tegra210_i2s_alt.h"
@@ -353,6 +355,35 @@ static int tegra210_i2s_codec_probe(struct snd_soc_codec *codec)
 	return 0;
 }
 
+static int _tegra210_i2s_slcg_notifier(struct notifier_block *nb,
+	unsigned long unused0, void *unused1)
+{
+	struct tegra210_i2s *i2s = container_of(nb, struct tegra210_i2s,
+								slgc_notifier);
+	unsigned int mask, val, i2s_ctrl;
+
+	/* Save the I2S CTRL before implement MBIST WAR */
+	regmap_read(i2s->regmap, TEGRA210_I2S_CTRL, &i2s_ctrl);
+
+	mask = TEGRA210_I2S_CTRL_MASTER_EN_MASK;
+	val = TEGRA210_I2S_CTRL_MASTER_EN;
+	/* Set I2S controller in master mode */
+	regmap_update_bits(i2s->regmap, TEGRA210_I2S_CTRL, mask, val);
+	/* Disable slcg, wait a while and re-enable it */
+	regmap_write(i2s->regmap, TEGRA210_I2S_CG, 0);
+	regmap_read(i2s->regmap, TEGRA210_I2S_CG, &val);
+
+	udelay(1);
+
+	regmap_write(i2s->regmap, TEGRA210_I2S_CG, 1);
+
+	/* Restore the I2S CTRL */
+	regmap_write(i2s->regmap, TEGRA210_I2S_CTRL, i2s_ctrl);
+
+	return NOTIFY_OK;
+}
+
+
 static struct snd_soc_dai_ops tegra210_i2s_dai_ops = {
 	.set_fmt	= tegra210_i2s_set_fmt,
 	.hw_params	= tegra210_i2s_hw_params,
@@ -641,6 +672,11 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 		ret = PTR_ERR(i2s->regmap);
 		goto err_pll_a_out0_clk_put;
 	}
+
+	i2s->slgc_notifier.notifier_call = _tegra210_i2s_slcg_notifier;
+	slcg_register_notifier(TEGRA_POWERGATE_APE,
+		&i2s->slgc_notifier);
+
 	regcache_cache_only(i2s->regmap, true);
 
 	if (of_property_read_u32(np, "nvidia,ahub-i2s-id",

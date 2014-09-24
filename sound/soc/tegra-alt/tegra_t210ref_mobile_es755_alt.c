@@ -150,24 +150,11 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
+	struct device_node *np = card->dev->of_node;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_stream *dai_params;
-	unsigned int idx =
-		tegra_machine_get_codec_dai_link_idx("earSmart-codec");
-	unsigned int mclk, clk_out_rate;
+	unsigned int idx, mclk, clk_out_rate;
 	int err;
-
-	/* check if idx has valid number */
-	if (idx == -EINVAL)
-		return idx;
-
-	dai_params =
-		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
-
-	/* update link_param to update hw_param for DAPM */
-	dai_params->rate_min = rate;
-	dai_params->channels_min = channels;
-	dai_params->formats = formats;
 
 	switch (rate) {
 	case 11025:
@@ -199,11 +186,27 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		return err;
 	}
 
-	err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
-		tegra_machine_get_bclk_ratio(&card->rtd[idx]));
-	if (err < 0) {
-		dev_err(card->dev, "Failed to set cpu dai bclk ratio\n");
-		return err;
+	if (!of_device_is_compatible(np,
+	  "nvidia,tegra-audio-t210ref-mobile-foster")) {
+		idx = tegra_machine_get_codec_dai_link_idx("earSmart-codec");
+		/* check if idx has valid number */
+		if (idx == -EINVAL)
+			return idx;
+
+		dai_params =
+		  (struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+
+		/* update link_param to update hw_param for DAPM */
+		dai_params->rate_min = rate;
+		dai_params->channels_min = channels;
+		dai_params->formats = formats;
+
+		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
+			tegra_machine_get_bclk_ratio(&card->rtd[idx]));
+		if (err < 0) {
+			dev_err(card->dev, "Can't set cpu dai bclk ratio\n");
+			return err;
+		}
 	}
 
 	return 0;
@@ -475,9 +478,12 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	if (escore_is_probe_error()) {
-		dev_err(&pdev->dev, "No ES755 CODEC found");
-		return -ENODEV;
+	if (!of_device_is_compatible(np,
+	  "nvidia,tegra-audio-t210ref-mobile-foster")) {
+		if (escore_is_probe_error()) {
+			dev_err(&pdev->dev, "No ES755 CODEC found");
+			return -ENODEV;
+		}
 	}
 
 	machine = devm_kzalloc(&pdev->dev, sizeof(struct tegra_t210ref),
@@ -733,6 +739,7 @@ static int tegra_t210ref_driver_remove(struct platform_device *pdev)
 
 static const struct of_device_id tegra_t210ref_of_match[] = {
 	{ .compatible = "nvidia,tegra-audio-t210ref-mobile-es755", },
+	{ .compatible = "nvidia,tegra-audio-t210ref-mobile-foster", },
 	{},
 };
 

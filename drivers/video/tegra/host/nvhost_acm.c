@@ -50,7 +50,7 @@
 #define MAX_DEVID_LENGTH			16
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
-static void nvhost_module_load_regs(struct platform_device *pdev);
+static void nvhost_module_load_regs(struct platform_device *pdev, bool prod);
 static int nvhost_module_suspend(struct device *dev);
 static int nvhost_module_power_on(struct generic_pm_domain *domain);
 static int nvhost_module_power_off(struct generic_pm_domain *domain);
@@ -169,7 +169,7 @@ void nvhost_module_reset(struct platform_device *dev, bool reboot)
 
 	if (reboot) {
 		/* Load clockgating registers */
-		nvhost_module_load_regs(dev);
+		nvhost_module_load_regs(dev, pdata->engine_can_cg);
 
 		/* ..and execute engine specific operations (i.e. boot) */
 		if (pdata->finalize_poweron)

@@ -143,6 +143,7 @@ struct nvhost_device_data t21_vi_info = {
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
 	.num_channels		= 4,
 	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
+	.slcg_notifier_enable	= true,
 	.bond_out_id		= BOND_OUT_VI,
 };
 #else

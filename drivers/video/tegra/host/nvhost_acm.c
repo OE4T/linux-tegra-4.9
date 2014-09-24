@@ -615,8 +615,10 @@ int nvhost_module_init(struct platform_device *dev)
 		if (pdata->powergate_ids[1] != -1)
 			slcg_register_notifier(pdata->powergate_ids[1],
 					       &pdata->toggle_slcg_notifier);
+	}
 
-		/* Ensure that the above WAR gets applied */
+	/* Ensure that the above or device specific MBIST WAR gets applied */
+	if (pdata->poweron_toggle_slcg || pdata->slcg_notifier_enable) {
 		do_powergate_locked(pdata->powergate_ids[0]);
 		do_powergate_locked(pdata->powergate_ids[1]);
 		do_unpowergate_locked(pdata->powergate_ids[0]);

@@ -154,6 +154,9 @@ struct nvhost_device_data {
 	/* Should we toggle the engine SLCG when we turn on the domain? */
 	bool		poweron_toggle_slcg;
 
+	/* Flag to set SLCG notifier (for the modules other than VIC) */
+	bool slcg_notifier_enable;
+
 	u32		class;		/* Device class */
 	bool		exclusive;	/* True if only one user at a time */
 	bool		keepalive;	/* Do not power gate when opened */

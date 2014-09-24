@@ -130,6 +130,55 @@ create_debugfs_fail:
 	vi_remove_debugfs(vi);
 }
 
+static int nvhost_vi_slcg_handler(struct notifier_block *nb,
+		unsigned long action, void *data)
+{
+	struct clk *clk;
+	int ret = 0;
+
+	struct nvhost_device_data *pdata =
+		container_of(nb, struct nvhost_device_data,
+			toggle_slcg_notifier);
+
+	clk = clk_get(&pdata->pdev->dev, "pll_d");
+	if (IS_ERR(clk))
+		return -EINVAL;
+
+	/* Make CSI sourced from PLL_D */
+	ret = tegra_clk_cfg_ex(clk, TEGRA_CLK_PLLD_CSI_OUT_ENB, 1);
+	if (ret) {
+		dev_err(&pdata->pdev->dev,
+		"%s: failed to select CSI source pll_d: %d\n",
+		__func__, ret);
+		return ret;
+	}
+
+	/* Enable PLL_D */
+	ret = clk_prepare_enable(clk);
+	if (ret) {
+		dev_err(&pdata->pdev->dev, "Can't enable pll_d: %d\n", ret);
+		return ret;
+	}
+
+	udelay(1);
+
+	/* Disable PLL_D */
+	clk_disable_unprepare(clk);
+
+	/* Restore CSI source */
+	ret = tegra_clk_cfg_ex(clk, TEGRA_CLK_MIPI_CSI_OUT_ENB, 1);
+	if (ret) {
+		dev_err(&pdata->pdev->dev,
+		"%s: failed to restore csi source: %d\n",
+		__func__, ret);
+		return ret;
+	}
+
+	clk_put(clk);
+
+	return NOTIFY_OK;
+}
+
 static int vi_probe(struct platform_device *dev)
 {
 	int err = 0;
@@ -218,6 +267,15 @@ static int vi_probe(struct platform_device *dev)
 		goto vi_regulator_put;
 	}
 #endif
+
+	if (pdata->slcg_notifier_enable &&
+			(pdata->powergate_ids[0] != -1)) {
+		pdata->toggle_slcg_notifier.notifier_call =
+		&nvhost_vi_slcg_handler;
+
+		slcg_register_notifier(pdata->powergate_ids[0],
+			&pdata->toggle_slcg_notifier);
+	}
 
 	nvhost_module_init(dev);
 

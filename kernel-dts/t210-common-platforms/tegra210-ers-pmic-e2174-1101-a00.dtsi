@@ -359,13 +359,14 @@
 				ti,auto-recharge-time = <1800>;
 				ti,disbale-suspend-during-charging;
 				ti,charge-voltage-limit-millivolt = <4200>;
-				ti,charge-term-current-limit-milliamp = <260>;
+				ti,charge-term-current-limit-milliamp = <384>;
 				ti,temp-range = <10 15 60>;
 				ti,charge-current-limit = <1024 2048 5200>;
 				ti,thermal-zone = "battery";
 				ti,temp-polling-time-sec = <5>;
-				ti,ir-comp-voltage-millivolt = <1>;
+				ti,ir-comp-voltage-millivolt = <112>;
 				ti,ir-comp-resister-ohm = <70>;
+				ti,pre-charge-current-limit-milliamp = <768>;
 			};
 
 			usb0_vbus: vbus {
@@ -384,11 +385,11 @@
 			status = "disabled";
 			compatible = "ti,bq27441";
 			reg = <0x55>;
-			ti,design-capacity = <7800>;
-			ti,design-energy = <28314>;
+			ti,design-capacity = <7700>;
+			ti,design-energy = <27720>;
 			ti,taper-rate = <167>;
 			ti,terminate-voltage = <3150>;
-			ti,v-at-chg-term = <4200>;
+			ti,v-at-chg-term = <4190>;
 			ti,cc-gain = <0x7F738FE1>;
 			ti,cc-delta = <0x940A8F4A>;
 			ti,tz-name = "battery-temp";

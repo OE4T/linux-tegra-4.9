@@ -35,6 +35,16 @@ struct nvhost_chip_support;
 struct nvhost_channel;
 struct mem_mgr;
 
+/*
+ * Policy determines how do we store the syncpts,
+ * i.e. either per channel (in struct nvhost_channel)
+ * or per channel instance (in struct nvhost_channel_userctx)
+ */
+enum nvhost_syncpt_policy {
+	SYNCPT_PER_CHANNEL = 0,
+	SYNCPT_PER_CHANNEL_INSTANCE,
+};
+
 struct host1x_device_info {
 	int		nb_channels;	/* host1x: num channels supported */
 	int		nb_pts; 	/* host1x: num syncpoints supported */
@@ -43,6 +53,7 @@ struct host1x_device_info {
 						struct nvhost_chip_support *);
 	int		pts_base;	/* host1x: syncpoint base */
 	int		pts_limit;	/* host1x: syncpoint limit */
+	enum nvhost_syncpt_policy syncpt_policy; /* host1x: syncpoint policy */
 };
 
 struct nvhost_master {
@@ -81,6 +92,12 @@ void nvhost_set_chanops(struct nvhost_channel *ch);
 int nvhost_gather_filter_enabled(struct nvhost_syncpt *sp);
 
 extern pid_t nvhost_debug_null_kickoff_pid;
+
+static inline enum nvhost_syncpt_policy nvhost_get_syncpt_policy(void)
+{
+	struct nvhost_master *host = nvhost;
+	return host->info.syncpt_policy;
+}
 
 static inline void *nvhost_get_private_data(struct platform_device *_dev)
 {

@@ -179,11 +179,13 @@ struct nvhost_channel_userctx {
 	u32 priority;
 	int clientid;
 	bool timeout_debug_dump;
+	u32 syncpts[NVHOST_MODULE_MAX_SYNCPTS];
 };
 
 static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 {
 	struct nvhost_channel_userctx *priv = filp->private_data;
+	int i = 0;
 
 	mutex_lock(&channel_lock);
 	if (!priv->ch || !priv->ch->dev) {
@@ -213,6 +215,17 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 
 	mutex_unlock(&channel_lock);
 	nvhost_putchannel(priv->ch, 1);
+
+	if (nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL_INSTANCE) {
+		/* Release instance syncpoints */
+		for (i = 0; i < NVHOST_MODULE_MAX_SYNCPTS; ++i) {
+			if (priv->syncpts[i]) {
+				nvhost_free_syncpt(priv->syncpts[i]);
+				priv->syncpts[i] = 0;
+			}
+		}
+	}
+
 	kfree(priv);
 	return 0;
 }
@@ -687,6 +700,65 @@ static u32 create_mask(u32 *words, int num)
 	return word;
 }
 
+static u32 nvhost_ioctl_channel_get_syncpt_mask(
+		struct nvhost_channel_userctx *priv)
+{
+	u32 mask;
+
+	if (nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL_INSTANCE)
+		mask = create_mask(priv->syncpts, NVHOST_MODULE_MAX_SYNCPTS);
+	else
+		mask = create_mask(priv->ch->syncpts,
+						NVHOST_MODULE_MAX_SYNCPTS);
+
+	return mask;
+}
+
+static u32 nvhost_ioctl_channel_get_syncpt_channel(struct nvhost_channel *ch,
+		struct nvhost_device_data *pdata, u32 index)
+{
+	u32 id;
+
+	/* if we already have required syncpt then return it ... */
+	if (ch->syncpts[index]) {
+		id = ch->syncpts[index];
+		return id;
+	}
+
+	/* ... otherwise get a new syncpt dynamically */
+	id = nvhost_get_syncpt_host_managed(pdata->pdev, index);
+	if (!id)
+		return 0;
+
+	/* ... and store it for further references */
+	ch->syncpts[index] = id;
+
+	return id;
+}
+
+static u32 nvhost_ioctl_channel_get_syncpt_instance(
+		struct nvhost_channel_userctx *ctx,
+		struct nvhost_device_data *pdata, u32 index)
+{
+	u32 id;
+
+	/* if we already have required syncpt then return it ... */
+	if (ctx->syncpts[index]) {
+		id = ctx->syncpts[index];
+		return id;
+	}
+
+	/* ... otherwise get a new syncpt dynamically */
+	id = nvhost_get_syncpt_host_managed(pdata->pdev, index);
+	if (!id)
+		return 0;
+
+	/* ... and store it for further references */
+	ctx->syncpts[index] = id;
+
+	return id;
+}
+
 static long nvhost_channelctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
@@ -753,32 +825,28 @@ static long nvhost_channelctl(struct file *filp,
 	}
 	case NVHOST_IOCTL_CHANNEL_GET_SYNCPOINTS:
 	{
-		struct nvhost_channel *ch = priv->ch;
 		((struct nvhost_get_param_args *)buf)->value =
-			create_mask(ch->syncpts, NVHOST_MODULE_MAX_SYNCPTS);
+			nvhost_ioctl_channel_get_syncpt_mask(priv);
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_GET_SYNCPOINT:
 	{
 		struct nvhost_device_data *pdata =
 			platform_get_drvdata(priv->ch->dev);
-		struct nvhost_channel *ch = priv->ch;
 		struct nvhost_get_param_arg *arg =
 			(struct nvhost_get_param_arg *)buf;
+
 		if (arg->param >= NVHOST_MODULE_MAX_SYNCPTS)
 			return -EINVAL;
-		/* if we already have required syncpt then return it ... */
-		if (ch->syncpts[arg->param]) {
-			arg->value = ch->syncpts[arg->param];
-			break;
-		}
-		/* ... otherwise get a new syncpt dynamically */
-		arg->value = nvhost_get_syncpt_host_managed(pdata->pdev,
-							    arg->param);
+
+		if (nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL_INSTANCE)
+			arg->value = nvhost_ioctl_channel_get_syncpt_instance(
+						priv, pdata, arg->param);
+		else
+			arg->value = nvhost_ioctl_channel_get_syncpt_channel(
+						priv->ch, pdata, arg->param);
 		if (!arg->value)
 			return -EAGAIN;
-		/* ... and store it for further references */
-		ch->syncpts[arg->param] = arg->value;
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_GET_CLIENT_MANAGED_SYNCPOINT:

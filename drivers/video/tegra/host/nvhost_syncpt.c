@@ -807,8 +807,12 @@ u32 nvhost_get_syncpt_host_managed(struct platform_device *pdev,
 	char *syncpt_name;
 	struct nvhost_master *nvhost_master = nvhost;
 
-	syncpt_name = kasprintf(GFP_KERNEL, "%s_%d",
-				dev_name(&pdev->dev), param);
+	if (nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL_INSTANCE)
+		syncpt_name = kasprintf(GFP_KERNEL, "%s_%s_%d",
+				dev_name(&pdev->dev), current->comm, param);
+	else
+		syncpt_name = kasprintf(GFP_KERNEL, "%s_%d",
+					dev_name(&pdev->dev), param);
 
 	id = nvhost_get_syncpt(&nvhost_master->syncpt, false, syncpt_name);
 	if (!id) {

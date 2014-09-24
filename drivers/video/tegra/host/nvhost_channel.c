@@ -173,13 +173,16 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 			nvhost_module_enable_poweroff(pdata->pdev);
 	}
 
-	/* Release channel syncpoinits */
-	for (i = 0; i < NVHOST_MODULE_MAX_SYNCPTS; ++i) {
-		if (ch->syncpts[i]) {
-			nvhost_free_syncpt(ch->syncpts[i]);
-			ch->syncpts[i] = 0;
+	if (nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL) {
+		/* Release channel syncpoints */
+		for (i = 0; i < NVHOST_MODULE_MAX_SYNCPTS; ++i) {
+			if (ch->syncpts[i]) {
+				nvhost_free_syncpt(ch->syncpts[i]);
+				ch->syncpts[i] = 0;
+			}
 		}
 	}
+
 	clear_bit(ch->chid, &host->allocated_channels);
 
 	ch->chid = NVHOST_INVALID_CHANNEL;

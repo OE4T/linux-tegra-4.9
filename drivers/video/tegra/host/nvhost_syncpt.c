@@ -52,9 +52,10 @@ static const char *max_name = "max";
  */
 void nvhost_syncpt_reset(struct nvhost_syncpt *sp)
 {
+	struct nvhost_master *host = syncpt_to_dev(sp);
 	u32 i;
 
-	for (i = 0; i < nvhost_syncpt_nb_pts(sp); i++)
+	for (i = host->info.pts_base; i < host->info.pts_limit; i++)
 		syncpt_op().reset(sp, i);
 	wmb();
 }

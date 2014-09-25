@@ -880,7 +880,7 @@ static int nvhost_tsec_init_sw(struct platform_device *dev)
 
 	err = tsec_read_ucode(dev, fw_name);
 	kfree(fw_name);
-	fw_name = 0;
+	fw_name = NULL;
 
 	if (err || !m->valid) {
 		dev_err(&dev->dev, "ucode not valid");

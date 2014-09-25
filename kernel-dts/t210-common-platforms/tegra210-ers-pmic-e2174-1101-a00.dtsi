@@ -121,11 +121,13 @@
 				#size-cells = <0>;
 				fps@0 {
 					reg = <0>;
+					maxim,fps-time-period = <5120>;
 					maxim,fps-enable-input = <FPS_EN_SRC_EN0>;
 				};
 
 				fps@1 {
 					reg = <1>;
+					maxim,fps-time-period = <5120>;
 					maxim,fps-enable-input = <FPS_EN_SRC_EN1>;
 					maxim,enable-sleep;
 				};

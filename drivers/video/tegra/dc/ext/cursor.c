@@ -48,7 +48,7 @@ int tegra_dc_ext_put_cursor(struct tegra_dc_ext_user *user)
 	mutex_lock(&ext->cursor.lock);
 
 	if (ext->cursor.user == user)
-		ext->cursor.user = 0;
+		ext->cursor.user = NULL;
 	else
 		ret = -EACCES;
 

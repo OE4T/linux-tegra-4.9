@@ -176,7 +176,7 @@ static int tegra_dc_ext_put_window(struct tegra_dc_ext_user *user,
 
 	if (win->user == user) {
 		flush_workqueue(win->flip_wq);
-		win->user = 0;
+		win->user = NULL;
 		win->enabled = false;
 	} else {
 		ret = -EACCES;
@@ -785,7 +785,7 @@ static int sanitize_flip_args(struct tegra_dc_ext_user *user,
 			(height == dc->mode.v_active))) {
 			/* Partial update undesired, unsupported,
 			 * or dirty_rect covers entire frame. */
-			*dirty_rect = 0;
+			*dirty_rect = NULL;
 		} else {
 			if (!width || !height ||
 				(xoff + width) > dc->mode.h_active ||

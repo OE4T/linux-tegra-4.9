@@ -55,7 +55,7 @@ struct nvmap_handle *nvmap_fd_to_handle(int handle)
 	h = nvmap_get_id_from_dmabuf_fd(NULL, handle);
 	if (!IS_ERR(h))
 		return h;
-	return 0;
+	return NULL;
 }
 
 /*
@@ -89,7 +89,7 @@ static struct nvmap_handle *unmarshal_id(__u32 id)
 struct nvmap_handle *__nvmap_ref_to_id(struct nvmap_handle_ref *ref)
 {
 	if (!virt_addr_valid(ref))
-		return 0;
+		return NULL;
 	return ref->handle;
 }
 

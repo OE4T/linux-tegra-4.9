@@ -1192,6 +1192,25 @@ static struct attribute *devfreq_attrs[] = {
 };
 ATTRIBUTE_GROUPS(devfreq);
 
+/**
+ * devfreq_watermark_event() - Handles watermark events
+ * @devfreq: the devfreq instance to be updated
+ * @type: type of watermark event
+ */
+int devfreq_watermark_event(struct devfreq *devfreq, int type)
+{
+	if (!devfreq)
+		return -EINVAL;
+
+	if (!devfreq->governor)
+		return -EINVAL;
+
+	return devfreq->governor->event_handler(devfreq,
+				DEVFREQ_GOV_WMARK, &type);
+}
+EXPORT_SYMBOL(devfreq_watermark_event);
+
+
 static int __init devfreq_init(void)
 {
 	devfreq_class = class_create(THIS_MODULE, "devfreq");

@@ -56,8 +56,6 @@
 #endif
 #define set_nvdec(ndev, f) ((ndev)->dev.platform_data = f)
 
-#define BRINGUP_NO_WPR 1
-
 static int nvhost_nvdec_init_sw(struct platform_device *dev);
 
 /* caller is responsible for freeing */
@@ -83,10 +81,6 @@ static char *nvdec_get_fw_name(struct platform_device *dev, int fw)
 	decode_nvdec_ver(pdata->version, &maj, &min);
 	if (debug_mode) {
 		if (fw == host_nvdec_fw_bl) {
-#if BRINGUP_NO_WPR
-			sprintf(fw_name, "nvhost_nvdec_bl_no_wpr0%d%d.fw",
-				maj, min);
-#else
 			if (tegra_platform_is_qt() ||
 				tegra_platform_is_linsim())
 				sprintf(fw_name,
@@ -95,7 +89,6 @@ static char *nvdec_get_fw_name(struct platform_device *dev, int fw)
 			else
 				sprintf(fw_name, "nvhost_nvdec_bl0%d%d.fw",
 					maj, min);
-#endif
 		} else
 			sprintf(fw_name, "nvhost_nvdec0%d%d.fw", maj, min);
 	} else {

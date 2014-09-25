@@ -626,7 +626,7 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 	if (!ch->bound)
 		return;
 
-	if (!gk20a_channel_as_bound(ch) && !ch->vm)
+	if (!gk20a_channel_as_bound(ch))
 		goto unbind;
 
 	gk20a_dbg_info("freeing bound channel context, timeout=%ld",
@@ -1122,12 +1122,11 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	if (args->flags & NVHOST_ALLOC_GPFIFO_FLAGS_VPR_ENABLED)
 		c->vpr = true;
 
-	/* an address space needs to have been bound at this point.   */
+	/* an address space needs to have been bound at this point. */
 	if (!gk20a_channel_as_bound(c)) {
 		gk20a_err(d,
 			    "not bound to an address space at time of gpfifo"
-			    " allocation.  Attempting to create and bind to"
-			    " one...");
+			    " allocation.");
 		return -EINVAL;
 	}
 	ch_vm = c->vm;
@@ -1524,6 +1523,14 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		      NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET)) &&
 	    !fence)
 		return -EINVAL;
+
+	/* an address space needs to have been bound at this point. */
+	if (!gk20a_channel_as_bound(c)) {
+		gk20a_err(d,
+			    "not bound to an address space at time of gpfifo"
+			    " submission.");
+		return -EINVAL;
+	}
 
 #ifdef CONFIG_DEBUG_FS
 	/* update debug settings */

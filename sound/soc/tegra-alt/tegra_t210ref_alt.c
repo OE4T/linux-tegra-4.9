@@ -686,6 +686,7 @@ static const struct snd_soc_dapm_widget tegra_t210ref_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone-s", NULL),
 	SND_SOC_DAPM_LINE("LineIn-x", NULL),
 	SND_SOC_DAPM_LINE("LineIn-y", NULL),
+	SND_SOC_DAPM_LINE("LineIn-z", NULL),
 	SND_SOC_DAPM_MIC("Mic-x", NULL),
 	SND_SOC_DAPM_MIC("Mic-y", NULL),
 	SND_SOC_DAPM_MIC("Mic-z", NULL),
@@ -897,7 +898,7 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 			else if (strstr(tegra_t210ref_codec_links[i].name,
 				"spdif-playback"))
 				tegra_t210ref_codec_links[i].init =
-				tegra_t210ref_spdif_init;
+					tegra_t210ref_spdif_init;
 		}
 	}
 
@@ -1017,6 +1018,11 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 					j <= TEGRA210_DAI_LINK_ADMAIF8; j++)
 					tegra_machine_set_dai_ops(j,
 						&tegra_t210ref_ad1937_y_ops);
+			} else if (strstr(tegra_t210ref_codec_links[i].name,
+				"spdif-playback")) {
+				tegra_machine_set_dai_ops(
+					TEGRA210_DAI_LINK_ADMAIF9,
+					&tegra_t210ref_spdif_ops);
 			}
 		}
 	}

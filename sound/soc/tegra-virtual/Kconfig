@@ -18,15 +18,6 @@ config SND_SOC_TEGRA_124_OR_LATER
 		for T124 or later SoC. For this option to work, all the dependencies
 		should be selected in defconfig file.
 
-config SND_SOC_TEGRA124_VIRT_APBIF_MASTER
-	tristate "Tegra124 APBIF master"
-	depends on SND_SOC_TEGRA_124_OR_LATER
-	help
-		Say Y or M if you want to add support for Tegra124_virt APBIF master module.
-		APBIF_MASTER module does not exposes any dai link. This module performs
-		config_link clock settings. These are required for all the AHUB component
-		operation.
-
 config SND_SOC_TEGRA124_VIRT_APBIF_SLAVE
 	tristate "Tegra124 APBIF slave"
 	depends on SND_SOC_TEGRA_124_OR_LATER
@@ -37,33 +28,11 @@ config SND_SOC_TEGRA124_VIRT_APBIF_SLAVE
 		can be build independent of APBIF_MASTER module. This module provides
 		a pcm interface to slave card in audio virtualization use case.
 
-config SND_SOC_TEGRA_VCM30T124_MASTER
-  tristate "SoC Audio support for VCM30_T124"
-	help
-		Say Y or M here if you want to add support for SoC audio on the
-		TEGRA VCM30_T124 using wm8731 and ad1937 codecs or using ak4618
-		and ad1937. This is specifically required for virtualization use
-		case to choose only machine driver obj file.
-
 config SND_SOC_TEGRA_VIRT_VCM30T124_MASTER
 	tristate "SoC Audio master for VCM30_T124"
 	depends on SND_SOC_TEGRA_VIRT_MASTER
 	depends on MACH_P1859
-	select SND_SOC_TEGRA30_XBAR_ALT
-	select SND_SOC_TEGRA30_I2S_ALT
-	select SND_SOC_TEGRA30_DAM_ALT
-	select SND_SOC_TEGRA30_SPDIF_ALT
-	select SND_SOC_TEGRA114_AMX_ALT
-	select SND_SOC_TEGRA114_ADX_ALT
-	select SND_SOC_TEGRA124_VIRT_APBIF_MASTER
-	select SND_SOC_TEGRA124_AFC_ALT
-	select SND_SOC_TEGRA_ALT
-	select SND_SOC_TEGRA_VCM30T124_MASTER
-	select SND_SOC_AD193X
-	select SND_SOC_WM8731
-	select SND_SOC_AK4618
-	select SND_SOC_SPDIF
-	select SND_SOC_TEGRA_ASOC_HWDEP_ALT
+	select SND_SOC_TEGRA_VCM30T124_ALT
 	help
 		Say Y or M here if you want to add master support for SoC audio on the
 		TEGRA VCM30_T124 using wm8731 and ad1937 codecs. This Kconfig automatically

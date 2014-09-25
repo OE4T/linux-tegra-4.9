@@ -1478,10 +1478,10 @@ bool tegra_dc_hpd(struct tegra_dc *dc)
 	if (WARN_ON(!dc || !dc->out))
 		return false;
 
-	if (dc->out->hotplug_state != 0) {
-		if (dc->out->hotplug_state == 1) /* force on */
+	if (dc->out->hotplug_state != TEGRA_HPD_STATE_NORMAL) {
+		if (dc->out->hotplug_state == TEGRA_HPD_STATE_FORCE_ASSERT)
 			return true;
-		if (dc->out->hotplug_state == -1) /* force off */
+		if (dc->out->hotplug_state == TEGRA_HPD_STATE_FORCE_DEASSERT)
 			return false;
 	}
 

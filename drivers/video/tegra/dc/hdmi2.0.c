@@ -60,6 +60,7 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi);
 static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type);
 static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk);
 static void tegra_hdmi_scdc_worker(struct work_struct *work);
+static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi);
 
 static inline void tegra_hdmi_irq_enable(struct tegra_hdmi *hdmi)
 {
@@ -754,6 +755,8 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	tegra_hdmi_hpd_init(hdmi);
 
+	tegra_hdmi_debugfs_init(hdmi);
+
 	tegra_dc_set_outdata(dc, hdmi);
 
 #ifdef CONFIG_SWITCH
@@ -1433,6 +1436,106 @@ static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 
 	return tegra_dc_hpd(dc);
 }
+
+#ifdef CONFIG_DEBUG_FS
+/* show current hpd state */
+static int tegra_hdmi_hotplug_dbg_show(struct seq_file *m, void *unused)
+{
+	struct tegra_hdmi *hdmi = m->private;
+	struct tegra_dc *dc = hdmi->dc;
+
+	if (WARN_ON(!hdmi || !dc || !dc->out))
+		return -EINVAL;
+
+	seq_printf(m, "hdmi hpd state: %d\n", dc->out->hotplug_state);
+
+	return 0;
+}
+
+/*
+ * sw control for hpd.
+ * 0 is normal state, hw drives hpd.
+ * -1 is force deassert, sw drives hpd.
+ * 1 is force assert, sw drives hpd.
+ * before releasing to hw, sw must ensure hpd state is normal i.e. 0
+ */
+static ssize_t tegra_hdmi_hotplug_dbg_write(struct file *file,
+					const char __user *addr,
+					size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data;
+	struct tegra_hdmi *hdmi = m->private;
+	struct tegra_dc *dc = hdmi->dc;
+	long new_hpd_state;
+	int ret;
+
+	if (WARN_ON(!hdmi || !dc || !dc->out))
+		return -EINVAL;
+
+	ret = kstrtol_from_user(addr, len, 10, &new_hpd_state);
+	if (ret < 0)
+		return ret;
+
+	if (dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL &&
+		new_hpd_state != TEGRA_HPD_STATE_NORMAL &&
+		tegra_dc_hotplug_supported(dc)) {
+		disable_irq(gpio_to_irq(dc->out->hotplug_gpio));
+	} else if (dc->out->hotplug_state != TEGRA_HPD_STATE_NORMAL &&
+		new_hpd_state == TEGRA_HPD_STATE_NORMAL &&
+		tegra_dc_hotplug_supported(dc)) {
+		enable_irq(gpio_to_irq(dc->out->hotplug_gpio));
+	}
+
+	dc->out->hotplug_state = new_hpd_state;
+
+	/*
+	 * sw controlled plug/unplug.
+	 * wait for any already executing hpd worker thread.
+	 * No debounce delay, schedule immedately
+	 */
+	cancel_delayed_work_sync(&hdmi->hpd_worker);
+	schedule_delayed_work(&hdmi->hpd_worker, 0);
+
+	return len;
+}
+
+static int tegra_hdmi_hotplug_dbg_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, tegra_hdmi_hotplug_dbg_show, inode->i_private);
+}
+
+static const struct file_operations tegra_hdmi_hotplug_dbg_ops = {
+	.open = tegra_hdmi_hotplug_dbg_open,
+	.read = seq_read,
+	.write = tegra_hdmi_hotplug_dbg_write,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi)
+{
+	struct dentry *dir, *ret;
+
+	dir = debugfs_create_dir("tegra_hdmi",  NULL);
+	if (IS_ERR_OR_NULL(dir))
+		return;
+
+	ret = debugfs_create_file("hotplug", S_IRUGO, dir,
+				hdmi, &tegra_hdmi_hotplug_dbg_ops);
+	if (IS_ERR_OR_NULL(ret))
+		goto fail;
+
+	return;
+fail:
+	debugfs_remove_recursive(dir);
+	return;
+}
+#else
+static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi)
+{
+	return;
+}
+#endif
 
 struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.init = tegra_dc_hdmi_init,

@@ -599,6 +599,10 @@ struct of_dev_auxdata tegra30_apbif_auxdata[] = {
 	OF_DEV_AUXDATA("nvidia,tegra124-spdif", 0x70306000, "tegra30-spdif", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-amx", 0x70303000, "tegra124-amx.0", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-amx", 0x70303100, "tegra124-amx.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra124-virt-amx", 0x70303000,
+		"tegra124-amx.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra124-virt-amx", 0x70303100,
+		"tegra124-amx.1", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-adx", 0x70303800, "tegra124-adx.0", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-adx", 0x70303900, "tegra124-adx.1", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-afc", 0x70307000, "tegra124-afc.0", NULL),
@@ -632,6 +636,8 @@ static const struct of_device_id tegra30_apbif_of_match[] = {
 	{ .compatible = "nvidia,tegra30-ahub", .data = &soc_data_tegra30 },
 	{ .compatible = "nvidia,tegra114-ahub", .data = &soc_data_tegra114 },
 	{ .compatible = "nvidia,tegra124-ahub", .data = &soc_data_tegra124 },
+	{ .compatible = "nvidia,tegra124-virt-ahub-master",
+			.data = &soc_data_tegra124 },
 	{},
 };
 
@@ -687,28 +693,7 @@ static int tegra30_apbif_probe(struct platform_device *pdev)
 	}
 
 	dev_set_drvdata(&pdev->dev, apbif);
-
 	apbif->soc_data = soc_data;
-
-	apbif->capture_dma_data = devm_kzalloc(&pdev->dev,
-			sizeof(struct tegra_alt_pcm_dma_params) *
-				apbif->soc_data->num_ch,
-			GFP_KERNEL);
-	if (!apbif->capture_dma_data) {
-		dev_err(&pdev->dev, "Can't allocate tegra_alt_pcm_dma_params\n");
-		ret = -ENOMEM;
-		goto err;
-	}
-
-	apbif->playback_dma_data = devm_kzalloc(&pdev->dev,
-			sizeof(struct tegra_alt_pcm_dma_params) *
-				apbif->soc_data->num_ch,
-			GFP_KERNEL);
-	if (!apbif->playback_dma_data) {
-		dev_err(&pdev->dev, "Can't allocate tegra_alt_pcm_dma_params\n");
-		ret = -ENOMEM;
-		goto err;
-	}
 
 	apbif->clk = devm_clk_get(&pdev->dev, "apbif");
 	if (IS_ERR(apbif->clk)) {
@@ -766,16 +751,6 @@ static int tegra30_apbif_probe(struct platform_device *pdev)
 		regcache_cache_only(apbif->regmap[1], true);
 	}
 
-	if (of_property_read_u32_array(pdev->dev.of_node,
-				"dmas",
-				&of_dma[0][0],
-				apbif->soc_data->num_ch * 2) < 0) {
-		dev_err(&pdev->dev,
-			"Missing property nvidia,dma-request-selector\n");
-		ret = -ENODEV;
-		goto err_clk_put;
-	}
-
 	pm_runtime_enable(&pdev->dev);
 	if (!pm_runtime_enabled(&pdev->dev)) {
 		ret = tegra30_apbif_runtime_resume(&pdev->dev);
@@ -783,70 +758,105 @@ static int tegra30_apbif_probe(struct platform_device *pdev)
 			goto err_pm_disable;
 	}
 
-	/* default DAI number is 4 */
-	for (i = 0; i < apbif->soc_data->num_ch; i++) {
-		if (i < FIFOS_IN_FIRST_REG_BLOCK) {
-			apbif->playback_dma_data[i].addr = res[0]->start +
-					TEGRA_AHUB_CHANNEL_TXFIFO +
-					(i * TEGRA_AHUB_CHANNEL_TXFIFO_STRIDE);
-
-			apbif->capture_dma_data[i].addr = res[0]->start +
-					TEGRA_AHUB_CHANNEL_RXFIFO +
-					(i * TEGRA_AHUB_CHANNEL_RXFIFO_STRIDE);
-		} else {
-			apbif->playback_dma_data[i].addr = res[1]->start +
-					TEGRA_AHUB_CHANNEL_TXFIFO +
-					((i - FIFOS_IN_FIRST_REG_BLOCK) *
-					TEGRA_AHUB_CHANNEL_TXFIFO_STRIDE);
-
-			apbif->capture_dma_data[i].addr = res[1]->start +
-					TEGRA_AHUB_CHANNEL_RXFIFO +
-					((i - FIFOS_IN_FIRST_REG_BLOCK) *
-					TEGRA_AHUB_CHANNEL_RXFIFO_STRIDE);
+	if (!of_device_is_compatible(pdev->dev.of_node,
+				"nvidia,tegra124-virt-ahub-master")) {
+		apbif->capture_dma_data = devm_kzalloc(&pdev->dev,
+			sizeof(struct tegra_alt_pcm_dma_params) *
+			apbif->soc_data->num_ch,
+			GFP_KERNEL);
+		if (!apbif->capture_dma_data) {
+			dev_err(&pdev->dev, "Can't allocate tegra_alt_pcm_dma_params\n");
+			ret = -ENOMEM;
+			goto err;
 		}
 
-		apbif->playback_dma_data[i].wrap = 4;
-		apbif->playback_dma_data[i].width = 32;
-		apbif->playback_dma_data[i].req_sel = of_dma[(i * 2) + 1][1];
-		if (of_property_read_string_index(pdev->dev.of_node,
+		apbif->playback_dma_data = devm_kzalloc(&pdev->dev,
+			sizeof(struct tegra_alt_pcm_dma_params) *
+			apbif->soc_data->num_ch,
+			GFP_KERNEL);
+		if (!apbif->playback_dma_data) {
+			dev_err(&pdev->dev, "Can't allocate tegra_alt_pcm_dma_params\n");
+			ret = -ENOMEM;
+			goto err;
+		}
+
+		if (of_property_read_u32_array(pdev->dev.of_node,
+			"dmas",
+			&of_dma[0][0],
+			apbif->soc_data->num_ch * 2) < 0) {
+				dev_err(&pdev->dev,
+					"Missing property nvidia,dma-request-selector\n");
+				ret = -ENODEV;
+				goto err_clk_put;
+		}
+
+		/* default DAI number is 4 */
+		for (i = 0; i < apbif->soc_data->num_ch; i++) {
+			if (i < FIFOS_IN_FIRST_REG_BLOCK) {
+				apbif->playback_dma_data[i].addr = res[0]->start
+				+ TEGRA_AHUB_CHANNEL_TXFIFO
+				+ (i * TEGRA_AHUB_CHANNEL_TXFIFO_STRIDE);
+
+				apbif->capture_dma_data[i].addr = res[0]->start
+				+ TEGRA_AHUB_CHANNEL_RXFIFO
+				+ (i * TEGRA_AHUB_CHANNEL_RXFIFO_STRIDE);
+			} else {
+				apbif->playback_dma_data[i].addr = res[1]->start
+				+ TEGRA_AHUB_CHANNEL_TXFIFO
+				+ ((i - FIFOS_IN_FIRST_REG_BLOCK) *
+				TEGRA_AHUB_CHANNEL_TXFIFO_STRIDE);
+
+				apbif->capture_dma_data[i].addr = res[1]->start
+				+ TEGRA_AHUB_CHANNEL_RXFIFO
+				+ ((i - FIFOS_IN_FIRST_REG_BLOCK) *
+				TEGRA_AHUB_CHANNEL_RXFIFO_STRIDE);
+			}
+
+			apbif->playback_dma_data[i].wrap = 4;
+			apbif->playback_dma_data[i].width = 32;
+			apbif->playback_dma_data[i].req_sel =
+				of_dma[(i * 2) + 1][1];
+			if (of_property_read_string_index(pdev->dev.of_node,
 				"dma-names",
 				(i * 2) + 1,
 				&apbif->playback_dma_data[i].chan_name) < 0) {
-			dev_err(&pdev->dev,
-				"Missing property nvidia,dma-names\n");
-			ret = -ENODEV;
-			goto err_suspend;
-		}
+					dev_err(&pdev->dev,
+						"Missing property nvidia,dma-names\n");
+					ret = -ENODEV;
+					goto err_suspend;
+			}
 
-		apbif->capture_dma_data[i].wrap = 4;
-		apbif->capture_dma_data[i].width = 32;
-		apbif->capture_dma_data[i].req_sel = of_dma[(i * 2)][1];
-		if (of_property_read_string_index(pdev->dev.of_node,
+			apbif->capture_dma_data[i].wrap = 4;
+			apbif->capture_dma_data[i].width = 32;
+			apbif->capture_dma_data[i].req_sel = of_dma[(i * 2)][1];
+			if (of_property_read_string_index(pdev->dev.of_node,
 				"dma-names",
 				(i * 2),
 				&apbif->capture_dma_data[i].chan_name) < 0) {
-			dev_err(&pdev->dev,
-				"Missing property nvidia,dma-names\n");
-			ret = -ENODEV;
+					dev_err(&pdev->dev,
+						"Missing property nvidia,dma-names\n");
+					ret = -ENODEV;
+					goto err_suspend;
+			}
+		}
+
+		ret = snd_soc_register_component(&pdev->dev,
+				&tegra30_apbif_dai_driver,
+				tegra30_apbif_dais,
+				apbif->soc_data->num_ch);
+		if (ret) {
+			dev_err(&pdev->dev, "Could not register DAIs %d: %d\n",
+				i, ret);
+			ret = -ENOMEM;
 			goto err_suspend;
 		}
-	}
 
-	ret = snd_soc_register_component(&pdev->dev,
-					&tegra30_apbif_dai_driver,
-					tegra30_apbif_dais,
-					apbif->soc_data->num_ch);
-	if (ret) {
-		dev_err(&pdev->dev, "Could not register DAIs %d: %d\n",
-			i, ret);
-		ret = -ENOMEM;
-		goto err_suspend;
-	}
-
-	ret = tegra_alt_pcm_platform_register(&pdev->dev);
-	if (ret) {
-		dev_err(&pdev->dev, "Could not register PCM: %d\n", ret);
-		goto err_unregister_dais;
+		ret = tegra_alt_pcm_platform_register(&pdev->dev);
+		if (ret) {
+			dev_err(&pdev->dev, "Could not register PCM: %d\n",
+				ret);
+			goto err_unregister_dais;
+		}
 	}
 
 	tegra30_xbar_device_info.res = platform_get_resource(pdev,

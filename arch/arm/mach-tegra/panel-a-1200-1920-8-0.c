@@ -528,7 +528,7 @@ static int dsi_a_1200_1920_8_0_bl_notify(struct device *dev, int brightness)
 static int dsi_a_1200_1920_8_0_check_fb(struct device *dev,
 	struct fb_info *info)
 {
-	return info->device == &disp_device->dev;
+	return (info->device == &disp_device->dev) && (info->node == 0);
 }
 
 static struct platform_pwm_backlight_data dsi_a_1200_1920_8_0_bl_data = {

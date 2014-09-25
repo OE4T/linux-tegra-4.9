@@ -864,7 +864,7 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);
 	gpio_free(dc->out->hotplug_gpio);
 	devm_kfree(&dc->ndev->dev, hdmi);
-	tegra_prod_release(hdmi->prod_list);
+	tegra_prod_release(&hdmi->prod_list);
 
 #ifdef CONFIG_SWITCH
 	switch_dev_unregister(&hdmi->audio_switch);

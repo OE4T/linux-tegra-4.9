@@ -49,15 +49,16 @@
 #define POWERGATE_DELAY 			10
 #define MAX_DEVID_LENGTH			16
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
 static void nvhost_module_load_regs(struct platform_device *pdev, bool prod);
+static int nvhost_module_toggle_slcg(struct notifier_block *nb,
+				     unsigned long action, void *data);
+
+#ifdef CONFIG_PM_GENERIC_DOMAINS
 static int nvhost_module_suspend(struct device *dev);
 static int nvhost_module_power_on(struct generic_pm_domain *domain);
 static int nvhost_module_power_off(struct generic_pm_domain *domain);
 static int nvhost_module_prepare_poweroff(struct device *dev);
 static int nvhost_module_finalize_poweron(struct device *dev);
-static int nvhost_module_toggle_slcg(struct notifier_block *nb,
-				     unsigned long action, void *data);
 #endif
 
 DEFINE_MUTEX(client_list_lock);
@@ -599,11 +600,12 @@ int nvhost_module_init(struct platform_device *dev)
 	for (i = 0; i < pdata->num_clks; ++i)
 		clk_disable_unprepare(pdata->clk[i]);
 
-	/* Disable railgating if pm runtime is not available */
+	/* disable railgating if pm runtime is not available */
 	pdata->can_powergate = IS_ENABLED(CONFIG_PM_RUNTIME) &&
 		IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS) &&
 		pdata->can_powergate;
 
+	/* needed to WAR MBIST issue */
 	if (pdata->poweron_toggle_slcg) {
 		pdata->toggle_slcg_notifier.notifier_call =
 			&nvhost_module_toggle_slcg;
@@ -628,6 +630,27 @@ int nvhost_module_init(struct platform_device *dev)
 	} else {
 		do_unpowergate_locked(pdata->powergate_ids[0]);
 		do_unpowergate_locked(pdata->powergate_ids[1]);
+	}
+
+	/* set pm runtime delays */
+	if (pdata->clockgate_delay) {
+		pm_runtime_set_autosuspend_delay(&dev->dev,
+			pdata->clockgate_delay);
+		pm_runtime_use_autosuspend(&dev->dev);
+	}
+
+	/* turn on pm runtime */
+	pm_runtime_enable(&dev->dev);
+	if (!pm_runtime_enabled(&dev->dev))
+		nvhost_module_enable_clk(&dev->dev);
+
+	/* if genpd is not available, the domain is powered already.
+	 * just ensure that we load the gating registers now */
+	if (!(IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS) &&
+	      IS_ENABLED(CONFIG_PM_RUNTIME))) {
+		nvhost_module_enable_clk(&dev->dev);
+		nvhost_module_load_regs(dev, pdata->engine_can_cg);
+		nvhost_module_disable_clk(&dev->dev);
 	}
 
 	/* Init the power sysfs attributes for this device */
@@ -669,15 +692,6 @@ int nvhost_module_init(struct platform_device *dev)
 		err = -EIO;
 		goto fail_powergatedelay;
 	}
-
-	if (pdata->clockgate_delay) {
-		pm_runtime_set_autosuspend_delay(&dev->dev,
-			pdata->clockgate_delay);
-		pm_runtime_use_autosuspend(&dev->dev);
-	}
-	pm_runtime_enable(&dev->dev);
-	if (!pm_runtime_enabled(&dev->dev))
-		nvhost_module_enable_clk(&dev->dev);
 
 	return 0;
 
@@ -842,7 +856,7 @@ int nvhost_module_disable_clk(struct device *dev)
 					pdata->num_clks);
 
 	for (index = 0; index < pdata->num_channels; index++)
-		if (pdata->channels[index])
+		if (pdata->channels && pdata->channels[index])
 			nvhost_channel_suspend(pdata->channels[index]);
 
 	for (index = 0; index < pdata->num_clks; index++)
@@ -855,6 +869,23 @@ int nvhost_module_disable_clk(struct device *dev)
 	return 0;
 }
 EXPORT_SYMBOL(nvhost_module_disable_clk);
+
+static void nvhost_module_load_regs(struct platform_device *pdev, bool prod)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_gating_register *regs = pdata->engine_cg_regs;
+
+	if (!regs)
+		return;
+
+	while (regs->addr) {
+		if (prod)
+			host1x_writel(pdev, regs->addr, regs->prod);
+		else
+			host1x_writel(pdev, regs->addr, regs->disable);
+		regs++;
+	}
+}
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 static int nvhost_module_suspend(struct device *dev)
@@ -923,23 +954,6 @@ static int nvhost_module_prepare_poweroff(struct device *dev)
 	return 0;
 }
 
-static void nvhost_module_load_regs(struct platform_device *pdev, bool prod)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	struct nvhost_gating_register *regs = pdata->engine_cg_regs;
-
-	if (!regs)
-		return;
-
-	while (regs->addr) {
-		if (prod)
-			host1x_writel(pdev, regs->addr, regs->prod);
-		else
-			host1x_writel(pdev, regs->addr, regs->disable);
-		regs++;
-	}
-}
-
 static int nvhost_module_finalize_poweron(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -968,6 +982,7 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 
 	return ret;
 }
+#endif
 
 static int nvhost_module_toggle_slcg(struct notifier_block *nb,
 				     unsigned long action, void *data)
@@ -988,7 +1003,6 @@ static int nvhost_module_toggle_slcg(struct notifier_block *nb,
 
 	return 0;
 }
-#endif
 
 /* public host1x power management APIs */
 bool nvhost_module_powered_ext(struct platform_device *dev)

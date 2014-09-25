@@ -648,7 +648,7 @@ void nvhost_set_chanops(struct nvhost_channel *ch)
 static void nvhost_free_resources(struct nvhost_master *host)
 {
 	kfree(host->intr.syncpt);
-	host->intr.syncpt = 0;
+	host->intr.syncpt = NULL;
 }
 
 static int nvhost_alloc_resources(struct nvhost_master *host)

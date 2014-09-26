@@ -209,6 +209,23 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		}
 	}
 
+	idx = tegra_machine_get_codec_dai_link_idx("spdif-dit-1");
+	if (idx != -EINVAL) {
+		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
+			tegra_machine_get_bclk_ratio(&card->rtd[idx]));
+		if (err < 0) {
+			dev_err(card->dev, "Can't set cpu dai bclk ratio\n");
+			return err;
+		}
+
+		err = snd_soc_dai_set_tdm_slot(card->rtd[idx].cpu_dai,
+			(1 << channels) - 1, (1 << channels) - 1, 0, 0);
+		if (err < 0) {
+			dev_err(card->dev, "Can't set cpu dai slot ctrl\n");
+			return err;
+		}
+	}
+
 	return 0;
 }
 

@@ -335,6 +335,7 @@ struct gpu_ops {
 		const struct regop_offset_range* (
 				*get_qctl_whitelist_ranges)(void);
 		int (*get_qctl_whitelist_ranges_count)(void);
+		int (*apply_smpc_war)(struct dbg_session_gk20a *dbg_s);
 	} regops;
 	struct {
 		void (*intr_enable)(struct gk20a *g);

@@ -757,6 +757,42 @@ int gk20a_get_qctl_whitelist_ranges_count(void)
 	return gk20a_qctl_whitelist_ranges_count;
 }
 
+int gk20a_apply_smpc_war(struct dbg_session_gk20a *dbg_s)
+{
+	/* The following regops are a hack/war to make up for the fact that we
+	 * just scribbled into the ctxsw image w/o really knowing whether
+	 * it was already swapped out in/out once or not, etc.
+	 */
+	struct nvgpu_dbg_gpu_reg_op ops[4];
+	int i;
+	for (i = 0; i < ARRAY_SIZE(ops); i++) {
+		ops[i].op     = REGOP(WRITE_32);
+		ops[i].type   = REGOP(TYPE_GR_CTX);
+		ops[i].status = REGOP(STATUS_SUCCESS);
+		ops[i].value_hi      = 0;
+		ops[i].and_n_mask_lo = 0;
+		ops[i].and_n_mask_hi = 0;
+	}
+
+	/* gr_pri_gpcs_tpcs_sm_dsm_perf_counter_control_sel1_r();*/
+	ops[0].offset   = 0x00419e08;
+	ops[0].value_lo = 0x1d;
+
+	/* gr_pri_gpcs_tpcs_sm_dsm_perf_counter_control5_r(); */
+	ops[1].offset   = 0x00419e58;
+	ops[1].value_lo = 0x1;
+
+	/* gr_pri_gpcs_tpcs_sm_dsm_perf_counter_control3_r(); */
+	ops[2].offset   = 0x00419e68;
+	ops[2].value_lo = 0xaaaa;
+
+	/* gr_pri_gpcs_tpcs_sm_dsm_perf_counter4_control_r(); */
+	ops[3].offset   = 0x00419f40;
+	ops[3].value_lo = 0x18;
+
+	return dbg_s->ops->exec_reg_ops(dbg_s, ops, ARRAY_SIZE(ops));
+}
+
 void gk20a_init_regops(struct gpu_ops *gops)
 {
 	gops->regops.get_global_whitelist_ranges =
@@ -788,4 +824,7 @@ void gk20a_init_regops(struct gpu_ops *gops)
 		gk20a_get_qctl_whitelist_ranges;
 	gops->regops.get_qctl_whitelist_ranges_count =
 		gk20a_get_qctl_whitelist_ranges_count;
+
+	gops->regops.apply_smpc_war =
+		gk20a_apply_smpc_war;
 }

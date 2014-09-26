@@ -494,6 +494,12 @@ int gm20b_get_qctl_whitelist_ranges_count(void)
 	return gm20b_qctl_whitelist_ranges_count;
 }
 
+int gm20b_apply_smpc_war(struct dbg_session_gk20a *dbg_s)
+{
+	/* Not needed on gm20b */
+	return 0;
+}
+
 void gm20b_init_regops(struct gpu_ops *gops)
 {
 	gops->regops.get_global_whitelist_ranges =
@@ -525,4 +531,7 @@ void gm20b_init_regops(struct gpu_ops *gops)
 		gm20b_get_qctl_whitelist_ranges;
 	gops->regops.get_qctl_whitelist_ranges_count =
 		gm20b_get_qctl_whitelist_ranges_count;
+
+	gops->regops.apply_smpc_war =
+		gm20b_apply_smpc_war;
 }

@@ -42,6 +42,8 @@ static void ap_callback_init_and_enable_ctrl(
 		struct gk20a *g, struct pmu_msg *msg,
 		void *param, u32 seq_desc, u32 status);
 
+static int pmu_init_powergating(struct gk20a *g);
+
 static u32 pmu_perfmon_cntr_sz_v0(struct pmu_gk20a *pmu)
 {
 	return sizeof(struct pmu_perfmon_counter_v0);
@@ -2089,12 +2091,13 @@ static void pmu_handle_pg_buf_config_msg(struct gk20a *g, struct pmu_msg *msg,
 		return;
 	}
 
-	if (eng_buf_stat->status == PMU_PG_MSG_ENG_BUF_FAILED) {
-		gk20a_err(dev_from_gk20a(g), "failed to load PGENG buffer");
-	}
-
 	pmu->buf_loaded = (eng_buf_stat->status == PMU_PG_MSG_ENG_BUF_LOADED);
-	schedule_work(&pmu->pg_init);
+	if ((!pmu->buf_loaded) &&
+	    (pmu->pmu_state == PMU_STATE_LOADING_PG_BUF))
+		gk20a_err(dev_from_gk20a(g), "failed to load PGENG buffer");
+	else {
+	  schedule_work(&pmu->pg_init);
+	}
 }
 
 int gk20a_init_pmu_setup_hw1(struct gk20a *g)
@@ -2143,6 +2146,10 @@ void pmu_setup_hw(struct work_struct *work)
 	struct gk20a *g = gk20a_from_pmu(pmu);
 
 	switch (pmu->pmu_state) {
+	case PMU_STATE_INIT_RECEIVED:
+		gk20a_dbg_pmu("pmu starting");
+		pmu_init_powergating(g);
+		break;
 	case PMU_STATE_ELPG_BOOTED:
 		gk20a_dbg_pmu("elpg booted");
 		gk20a_init_pmu_bind_fecs(g);
@@ -2180,11 +2187,16 @@ int gk20a_init_pmu_bind_fecs(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	size = 0;
-	gk20a_gr_wait_initialized(g);
 	err = gr_gk20a_fecs_get_reglist_img_size(g, &size);
-	if (err) {
+	if (err && (pmu->pmu_state == PMU_STATE_ELPG_BOOTED)) {
 		gk20a_err(dev_from_gk20a(g),
 			"fail to query fecs pg buffer size");
+		return err;
+	}
+
+	if (err) {
+		gk20a_err(dev_from_gk20a(g),
+			"fail to query fecs pg buffer size invalid boot state");
 		return err;
 	}
 
@@ -2224,16 +2236,28 @@ int gk20a_init_pmu_bind_fecs(struct gk20a *g)
 	}
 
 	err = gr_gk20a_fecs_set_reglist_bind_inst(g, mm->pmu.inst_block.cpu_pa);
-	if (err) {
+	if (err && (pmu->pmu_state == PMU_STATE_ELPG_BOOTED)) {
 		gk20a_err(dev_from_gk20a(g),
 			"fail to bind pmu inst to gr");
 		return err;
 	}
 
-	err = gr_gk20a_fecs_set_reglist_virtual_addr(g, pmu->pg_buf.pmu_va);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g),
+			"fail to bind pmu inst to gr invalid boot state");
+		return err;
+	}
+
+	err = gr_gk20a_fecs_set_reglist_virtual_addr(g, pmu->pg_buf.pmu_va);
+	if (err && (pmu->pmu_state == PMU_STATE_ELPG_BOOTED)) {
+		gk20a_err(dev_from_gk20a(g),
 			"fail to set pg buffer pmu va");
+		return err;
+	}
+
+	if (err) {
+		gk20a_err(dev_from_gk20a(g),
+			"fail to set pg buffer pmu va invalid boot state");
 		return err;
 	}
 
@@ -2384,9 +2408,10 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 	case PMU_PG_ELPG_MSG_DISALLOW_ACK:
 		gk20a_dbg_pmu("DISALLOW is acknowledged from PMU");
 		pmu->elpg_stat = PMU_ELPG_STAT_OFF;
-		if (pmu->pmu_state == PMU_STATE_ELPG_BOOTING)
+		if (pmu->pmu_state == PMU_STATE_ELPG_BOOTING) {
 			pmu->pmu_state = PMU_STATE_ELPG_BOOTED;
-		schedule_work(&pmu->pg_init);
+			schedule_work(&pmu->pg_init);
+		}
 		break;
 	default:
 		gk20a_err(dev_from_gk20a(g),
@@ -2419,9 +2444,9 @@ static void pmu_handle_pg_stat_msg(struct gk20a *g, struct pmu_msg *msg,
 	}
 }
 
-static int pmu_init_powergating(struct pmu_gk20a *pmu)
+static int pmu_init_powergating(struct gk20a *g)
 {
-	struct gk20a *g = gk20a_from_pmu(pmu);
+	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq;
 
@@ -2440,6 +2465,8 @@ static int pmu_init_powergating(struct pmu_gk20a *pmu)
 		gk20a_writel(g, pwr_pmu_pg_ppuidlefilth_r(ENGINE_GR_GK20A),
 				PMU_PG_POST_POWERUP_IDLE_THRESHOLD);
 	}
+
+	gk20a_gr_wait_initialized(g);
 
 	/* init ELPG */
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
@@ -2481,7 +2508,8 @@ static int pmu_init_powergating(struct pmu_gk20a *pmu)
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
 
-	pmu->pmu_state = PMU_STATE_ELPG_BOOTING;
+	if (pmu->pmu_state == PMU_STATE_INIT_RECEIVED)
+		pmu->pmu_state = PMU_STATE_ELPG_BOOTING;
 
 	return 0;
 }
@@ -2596,6 +2624,7 @@ static int pmu_process_init_msg(struct pmu_gk20a *pmu,
 	union pmu_init_msg_pmu *init;
 	struct pmu_sha1_gid_data gid_data;
 	u32 i, tail = 0;
+	gk20a_dbg_pmu("init received\n");
 
 	tail = pwr_pmu_msgq_tail_val_v(
 		gk20a_readl(g, pwr_pmu_msgq_tail_r()));
@@ -2653,6 +2682,9 @@ static int pmu_process_init_msg(struct pmu_gk20a *pmu,
 				PMU_DMEM_ALLOC_ALIGNMENT);
 
 	pmu->pmu_ready = true;
+	pmu->pmu_state = PMU_STATE_INIT_RECEIVED;
+	schedule_work(&pmu->pg_init);
+	gk20a_dbg_pmu("init received end\n");
 
 	return 0;
 }
@@ -2964,7 +2996,6 @@ static int pmu_process_message(struct pmu_gk20a *pmu)
 
 	if (unlikely(!pmu->pmu_ready)) {
 		pmu_process_init_msg(pmu, &msg);
-		pmu_init_powergating(pmu);
 		pmu_init_perfmon(pmu);
 		return 0;
 	}

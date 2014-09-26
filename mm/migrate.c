@@ -1408,15 +1408,15 @@ int migrate_replace_page(struct page *page, struct page *newpage)
 
 	migrate_prep();
 
-	spin_lock_irqsave(&zone->lru_lock, flags);
+	spin_lock_irqsave(zone_lru_lock(zone), flags);
 
 	if (PageLRU(page) &&
 	    __isolate_lru_page(page, ISOLATE_UNEVICTABLE) == 0) {
-		struct lruvec *lruvec = mem_cgroup_page_lruvec(page, zone);
+		struct lruvec *lruvec = mem_cgroup_page_lruvec(page, zone->zone_pgdat);
 		del_page_from_lru_list(page, lruvec, page_lru(page));
-		spin_unlock_irqrestore(&zone->lru_lock, flags);
+		spin_unlock_irqrestore(zone_lru_lock(zone), flags);
 	} else {
-		spin_unlock_irqrestore(&zone->lru_lock, flags);
+		spin_unlock_irqrestore(zone_lru_lock(zone), flags);
 		return -EAGAIN;
 	}
 

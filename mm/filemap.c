@@ -343,7 +343,7 @@ void delete_from_page_cache(struct page *page)
 }
 EXPORT_SYMBOL(delete_from_page_cache);
 
-static int sleep_on_page_timeout(struct wait_bit_key *word)
+static int sleep_on_page_timeout(struct wait_bit_key *word, int unused)
 {
 	return io_schedule_timeout(2) ? 0 : -EAGAIN;
 }

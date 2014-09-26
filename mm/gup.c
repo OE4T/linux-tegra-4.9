@@ -13,6 +13,7 @@
 #include <linux/sched.h>
 #include <linux/rwsem.h>
 #include <linux/hugetlb.h>
+#include <linux/migrate.h>
 
 #include <asm/mmu_context.h>
 #include <asm/pgtable.h>
@@ -494,8 +495,7 @@ static inline struct page *migrate_replace_cma_page(struct page *page)
 	 * Take additional reference to the new page to ensure it won't get
 	 * freed after migration procedure end.
 	 */
-	get_page_foll(newpage);
-
+	page_ref_add(newpage, 1);
 	if (migrate_replace_page(page, newpage) == 0) {
 		put_page(newpage);
 		return newpage;
@@ -686,7 +686,7 @@ retry:
 				 * bits.
 				 */
 				fault_flags |= FAULT_FLAG_WRITE;
-				handle_mm_fault(mm, vma,
+				handle_mm_fault(vma,
 					start, fault_flags);
 			}
 			foll_flags = gup_flags;

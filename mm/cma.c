@@ -36,6 +36,10 @@
 #include <linux/highmem.h>
 #include <linux/io.h>
 #include <trace/events/cma.h>
+#include <linux/dma-mapping.h>
+
+#include <asm/tlbflush.h>
+#include <asm/cacheflush.h>
 
 #include "cma.h"
 
@@ -353,6 +357,47 @@ err:
 	return ret;
 }
 
+static int __dma_update_pte(pte_t *pte, pgtable_t token, unsigned long addr,
+			    void *data)
+{
+	struct page *page = virt_to_page(addr);
+	pgprot_t prot = *(pgprot_t *)data;
+
+	set_pte_at(&init_mm, addr, pte, mk_pte(page, prot));
+	return 0;
+}
+
+static void __dma_remap(struct page *page, size_t size, pgprot_t prot)
+{
+	unsigned long start = (unsigned long) page_address(page);
+	unsigned end = start + size;
+	int err;
+
+	err = apply_to_page_range(&init_mm, start,
+		size, __dma_update_pte, &prot);
+	if (err)
+		pr_err("***%s: error=%d, pfn=%lx\n", __func__,
+			err, page_to_pfn(page));
+	dsb(sy);
+	flush_tlb_kernel_range(start, end);
+}
+
+static void __dma_clear_buffer(struct page *page, size_t size)
+{
+	void *ptr;
+	/*
+	 * Ensure that the allocated pages are zeroed, and that any data
+	 * lurking in the kernel direct-mapped region is invalidated.
+	 */
+	ptr = page_address(page);
+	if (ptr) {
+		memset(ptr, 0, size);
+		__dma_flush_area(ptr, size);
+		/* comment out as not present for arm64 */
+		/* outer_flush_range(__pa(ptr), __pa(ptr) + size);*/
+	}
+}
+
 struct page *cma_alloc_at(struct cma *cma, size_t count,
 				unsigned int align, phys_addr_t at_addr)
 {
@@ -424,6 +469,11 @@ struct page *cma_alloc_at(struct cma *cma, size_t count,
 	trace_cma_alloc(pfn, page, count, align);
 
 	pr_debug("%s(): returned %p\n", __func__, page);
+	if (page) {
+		__dma_remap(page, count << PAGE_SHIFT,
+			pgprot_writecombine(PAGE_KERNEL));
+		__dma_clear_buffer(page, count << PAGE_SHIFT);
+	}
 	return page;
 }
 
@@ -466,6 +516,8 @@ bool cma_release(struct cma *cma, const struct page *pages, unsigned int count)
 		return false;
 
 	VM_BUG_ON(pfn + count > cma->base_pfn + cma->count);
+
+	__dma_remap(pages, count << PAGE_SHIFT, PAGE_KERNEL_EXEC);
 
 	free_contig_range(pfn, count);
 	cma_clear_bitmap(cma, pfn, count);

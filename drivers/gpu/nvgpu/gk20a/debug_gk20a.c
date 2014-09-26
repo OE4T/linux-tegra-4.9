@@ -166,9 +166,14 @@ void gk20a_debug_show_dump(struct platform_device *pdev,
 	struct gk20a *g = platform->g;
 	struct fifo_gk20a *f = &g->fifo;
 	u32 chid;
-	int i;
+	int i, err;
 
-	gk20a_busy(g->dev);
+	err = gk20a_busy(g->dev);
+	if (err) {
+		gk20a_debug_output(o, "failed to power on gpu: %d\n", err);
+		return;
+	}
+
 	for (i = 0; i < fifo_pbdma_status__size_1_v(); i++) {
 		u32 status = gk20a_readl(g, fifo_pbdma_status_r(i));
 		u32 chan_status = fifo_pbdma_status_chan_status_v(status);

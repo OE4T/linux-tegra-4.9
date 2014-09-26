@@ -3721,13 +3721,12 @@ int gk20a_pmu_load_update(struct gk20a *g)
 void gk20a_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,
 				 u32 *total_cycles)
 {
-	if (!g->power_on) {
+	if (!g->power_on || gk20a_busy(g->dev)) {
 		*busy_cycles = 0;
 		*total_cycles = 0;
 		return;
 	}
 
-	gk20a_busy(g->dev);
 	*busy_cycles = pwr_pmu_idle_count_value_v(
 		gk20a_readl(g, pwr_pmu_idle_count_r(1)));
 	rmb();
@@ -3740,10 +3739,9 @@ void gk20a_pmu_reset_load_counters(struct gk20a *g)
 {
 	u32 reg_val = pwr_pmu_idle_count_reset_f(1);
 
-	if (!g->power_on)
+	if (!g->power_on || gk20a_busy(g->dev))
 		return;
 
-	gk20a_busy(g->dev);
 	gk20a_writel(g, pwr_pmu_idle_count_r(2), reg_val);
 	wmb();
 	gk20a_writel(g, pwr_pmu_idle_count_r(1), reg_val);
@@ -3929,10 +3927,14 @@ static int elpg_residency_show(struct seq_file *s, void *data)
 	u32 ungating_time = 0;
 	u32 gating_cnt;
 	u64 total_ingating, total_ungating, residency, divisor, dividend;
+	int err;
 
 	/* Don't unnecessarily power on the device */
 	if (g->power_on) {
-		gk20a_busy(g->dev);
+		err = gk20a_busy(g->dev);
+		if (err)
+			return err;
+
 		gk20a_pmu_get_elpg_residency_gating(g, &ingating_time,
 			&ungating_time, &gating_cnt);
 		gk20a_idle(g->dev);
@@ -3974,9 +3976,13 @@ static int elpg_transitions_show(struct seq_file *s, void *data)
 	struct gk20a *g = s->private;
 	u32 ingating_time, ungating_time, total_gating_cnt;
 	u32 gating_cnt = 0;
+	int err;
 
 	if (g->power_on) {
-		gk20a_busy(g->dev);
+		err = gk20a_busy(g->dev);
+		if (err)
+			return err;
+
 		gk20a_pmu_get_elpg_residency_gating(g, &ingating_time,
 			&ungating_time, &gating_cnt);
 		gk20a_idle(g->dev);
@@ -4066,6 +4072,7 @@ static ssize_t perfmon_events_enable_write(struct file *file,
 	unsigned long val = 0;
 	char buf[40];
 	int buf_size;
+	int err;
 
 	memset(buf, 0, sizeof(buf));
 	buf_size = min(count, (sizeof(buf)-1));
@@ -4078,7 +4085,10 @@ static ssize_t perfmon_events_enable_write(struct file *file,
 
 	/* Don't turn on gk20a unnecessarily */
 	if (g->power_on) {
-		gk20a_busy(g->dev);
+		err = gk20a_busy(g->dev);
+		if (err)
+			return err;
+
 		if (val && !g->pmu.perfmon_sampling_enabled) {
 			g->pmu.perfmon_sampling_enabled = true;
 			pmu_perfmon_start_sampling(&(g->pmu));

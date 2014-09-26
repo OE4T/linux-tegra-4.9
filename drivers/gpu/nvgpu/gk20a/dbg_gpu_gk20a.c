@@ -571,7 +571,10 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 		    (g->dbg_powergating_disabled_refcount++ == 0)) {
 
 			gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn, "module busy");
-			gk20a_busy(g->dev);
+			err = gk20a_busy(g->dev);
+			if (err)
+				return err;
+
 			err = gk20a_busy(dbg_s->pdev);
 			if (err)
 				return -EPERM;

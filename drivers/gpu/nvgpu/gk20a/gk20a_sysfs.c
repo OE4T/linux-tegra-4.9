@@ -45,11 +45,15 @@ static ssize_t elcg_enable_store(struct device *device,
 	struct platform_device *ndev = to_platform_device(device);
 	struct gk20a *g = get_gk20a(ndev);
 	unsigned long val = 0;
+	int err;
 
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
-	gk20a_busy(g->dev);
+	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
+
 	if (val) {
 		g->elcg_enabled = true;
 		gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
@@ -84,6 +88,7 @@ static ssize_t blcg_enable_store(struct device *device,
 	struct platform_device *ndev = to_platform_device(device);
 	struct gk20a *g = get_gk20a(ndev);
 	unsigned long val = 0;
+	int err;
 
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
@@ -93,7 +98,10 @@ static ssize_t blcg_enable_store(struct device *device,
 	else
 		g->blcg_enabled = false;
 
-	gk20a_busy(g->dev);
+	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
+
 	if (g->ops.clock_gating.blcg_bus_load_gating_prod)
 		g->ops.clock_gating.blcg_bus_load_gating_prod(g, g->blcg_enabled);
 	if (g->ops.clock_gating.blcg_ctxsw_firmware_load_gating_prod)
@@ -133,6 +141,7 @@ static ssize_t slcg_enable_store(struct device *device,
 	struct platform_device *ndev = to_platform_device(device);
 	struct gk20a *g = get_gk20a(ndev);
 	unsigned long val = 0;
+	int err;
 
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
@@ -147,7 +156,10 @@ static ssize_t slcg_enable_store(struct device *device,
 	 * init. Therefore, it would be incongruous to add it here. Once
 	 * it is added to init, we should add it here too.
 	 */
-	gk20a_busy(g->dev);
+	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
+
 	if (g->ops.clock_gating.slcg_bus_load_gating_prod)
 		g->ops.clock_gating.slcg_bus_load_gating_prod(g, g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_ce2_load_gating_prod)
@@ -305,11 +317,15 @@ static ssize_t gk20a_load_show(struct device *dev,
 	struct gk20a *g = get_gk20a(pdev);
 	u32 busy_time;
 	ssize_t res;
+	int err;
 
 	if (!g->power_on) {
 		busy_time = 0;
 	} else {
-		gk20a_busy(g->dev);
+		err = gk20a_busy(g->dev);
+		if (err)
+			return err;
+
 		gk20a_pmu_load_update(g);
 		gk20a_pmu_load_norm(g, &busy_time);
 		gk20a_idle(g->dev);
@@ -436,6 +452,9 @@ static ssize_t aelpg_enable_store(struct device *device,
 		return -EINVAL;
 
 	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
+
 	if (g->pmu.pmu_ready) {
 		if (val && !g->aelpg_enabled) {
 			g->aelpg_enabled = true;

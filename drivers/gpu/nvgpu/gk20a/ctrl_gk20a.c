@@ -136,7 +136,7 @@ static int gk20a_ctrl_mark_compressible_write(
 		struct gk20a *g,
 		struct nvgpu_gpu_mark_compressible_write_args *args)
 {
-	int ret = 0;
+	int ret;
 
 	ret = gk20a_busy(g->dev);
 	if (ret)

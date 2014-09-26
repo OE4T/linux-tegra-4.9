@@ -82,8 +82,12 @@ int gk20a_as_release_share(struct gk20a_as_share *as_share)
 	if (atomic_dec_return(&as_share->ref_cnt) > 0)
 		return 0;
 
-	gk20a_busy(g->dev);
+	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
+
 	err = gk20a_vm_release_share(as_share);
+
 	gk20a_idle(g->dev);
 
 	release_as_share_id(as_share->as, as_share->id);

@@ -91,7 +91,10 @@ static int gk20a_ctrl_prepare_compressible_read(
 	fence.syncpt_id = args->fence.syncpt_id;
 	fence.value = args->fence.syncpt_value;
 
-	gk20a_busy(g->dev);
+	ret = gk20a_busy(g->dev);
+	if (ret)
+		return ret;
+
 	ret = gk20a_prepare_compressible_read(g, args->handle,
 			args->request_compbits, args->offset,
 			args->compbits_hoffset, args->compbits_voffset,
@@ -137,7 +140,9 @@ static int gk20a_ctrl_mark_compressible_write(
 {
 	int ret = 0;
 
-	gk20a_busy(g->dev);
+	ret = gk20a_busy(g->dev);
+	if (ret)
+		return ret;
 	ret = gk20a_mark_compressible_write(g, args->handle,
 			args->valid_compbits, args->offset, args->zbc_color);
 	gk20a_idle(g->dev);
@@ -249,8 +254,10 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		}
 
 		if (!err) {
-			gk20a_busy(dev);
-			err = gk20a_gr_zbc_set_table(g, &g->gr, zbc_val);
+			err = gk20a_busy(dev);
+			if (!err)
+				err = gk20a_gr_zbc_set_table(g, &g->gr,
+							     zbc_val);
 			gk20a_idle(dev);
 		}
 

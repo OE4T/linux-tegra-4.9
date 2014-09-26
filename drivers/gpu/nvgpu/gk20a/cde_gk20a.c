@@ -842,7 +842,9 @@ int gk20a_cde_reload(struct gk20a *g)
 	int err, i;
 
 	if (!cde_app->initialised) {
-		gk20a_busy(g->dev);
+		err = gk20a_busy(g->dev);
+		if (err)
+			return err;
 		gk20a_init_cde_support(g);
 		gk20a_idle(g->dev);
 		if (!cde_app->initialised)
@@ -850,7 +852,10 @@ int gk20a_cde_reload(struct gk20a *g)
 		return 0;
 	}
 
-	gk20a_busy(g->dev);
+	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
+
 	mutex_lock(&cde_app->mutex);
 	for (i = 0; i < ARRAY_SIZE(cde_app->cde_ctx); i++, cde_ctx++) {
 		gk20a_cde_remove(cde_ctx);
@@ -1043,7 +1048,9 @@ static int gk20a_buffer_convert_gpu_to_cde(
 	WRITE_PATCH(PATCH_QMD_CTA_THREAD_DIMENSION2, 1);
 #undef WRITE_PATCH
 
-	gk20a_busy(g->dev);
+	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
 	err = gk20a_init_cde_support(g);
 	if (err)
 		goto out;

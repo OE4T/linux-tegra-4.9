@@ -43,9 +43,8 @@
 #define BOOT_GPU_UV	1000000	/* gpu rail boot voltage 1.0V */
 #define ADC_SLOPE_UV	10000	/* default ADC detection slope 10mV */
 
-/* FIXME: need characterized safe margin constant or table, and minimum */
-#define DVFS_SAFE_MARGIN	(2*38400)
-#define DVFS_SAFE_MIN_FREQ	(2*307200)
+#define DVFS_SAFE_MARGIN	8	/* 8% */
+static unsigned long dvfs_safe_max_freq;
 
 static struct pll_parms gpc_pll_params = {
 	128000,  2600000,	/* freq */
@@ -55,6 +54,8 @@ static struct pll_parms gpc_pll_params = {
 	8, 255,			/* N */
 	1, 31,			/* PL */
 	-58700, 86789,		/* DFS_COEFF */
+	0, 0,			/* ADC char coeff - to be read from fuses */
+	0,			/* FIXME: vco control data */
 };
 
 #ifdef CONFIG_DEBUG_FS
@@ -412,12 +413,18 @@ static int clk_enbale_pll_dvfs(struct gk20a *g)
 	struct pll_parms *p = &gpc_pll_params;
 	bool calibrated = p->uvdet_slope && p->uvdet_offs;
 
-	/* FIXME: Set VCO_CTRL */
-
 	/* Enable NA DVFS */
 	data = gk20a_readl(g, trim_sys_gpcpll_dvfs1_r());
 	data |= trim_sys_gpcpll_dvfs1_en_dfs_m();
 	gk20a_writel(g, trim_sys_gpcpll_dvfs1_r(), data);
+
+	/* Set VCO_CTRL */
+	if (p->vco_ctrl) {
+		data = gk20a_readl(g, trim_sys_gpcpll_cfg3_r());
+		data = set_field(data, trim_sys_gpcpll_cfg3_vco_ctrl_m(),
+				 trim_sys_gpcpll_cfg3_vco_ctrl_f(p->vco_ctrl));
+		gk20a_writel(g, trim_sys_gpcpll_cfg3_r(), data);
+	}
 
 	/*
 	 * If calibration parameters are known (either from fuses, or from
@@ -884,8 +891,8 @@ static void clk_config_pll_safe_dvfs(struct gk20a *g, struct pll *gpll)
 {
 	u32 nsafe, nmin;
 
-	if (gpll->freq > DVFS_SAFE_MIN_FREQ)
-		gpll->freq -= DVFS_SAFE_MARGIN;
+	if (gpll->freq > dvfs_safe_max_freq)
+		gpll->freq = gpll->freq * (100 - DVFS_SAFE_MARGIN) / 100;
 
 	nmin = DIV_ROUND_UP(gpll->M * gpc_pll_params.min_vco, gpll->clk_in);
 	nsafe = gpll->M * gpll->freq / gpll->clk_in;
@@ -956,7 +963,7 @@ static int clk_program_na_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 	 * i.e., it is low enough to be safe at any voltage in operating range
 	 * with zero DVFS coefficient.
 	 */
-	if (gpll_old->freq > DVFS_SAFE_MIN_FREQ) {
+	if (gpll_old->freq > dvfs_safe_max_freq) {
 		if (gpll_old->dvfs.mv < gpll_new->dvfs.mv) {
 			gpll_safe = *gpll_old;
 			gpll_safe.dvfs.mv = gpll_new->dvfs.mv;
@@ -1060,7 +1067,6 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	struct clk_gk20a *clk = &g->clk;
 	static int initialized;
 	struct clk *ref;
-	unsigned long ref_rate;
 	bool calibrated;
 
 	gk20a_dbg_fn("");
@@ -1073,13 +1079,17 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	if (!gk20a_clk_get(g))
 		return -EINVAL;
 
+	/*
+	 * On Tegra GPU clock exposed to frequency governor is a shared user on
+	 * GPCPLL bus (gbus). The latter can be accessed as GPU clock parent.
+	 * Respectively the grandparent is PLL reference clock.
+	 */
 	ref = clk_get_parent(clk_get_parent(clk->tegra_clk));
 	if (IS_ERR(ref)) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to get GPCPLL reference clock");
 		return -EINVAL;
 	}
-	ref_rate = clk_get_rate(ref);
 
 	/*
 	 * Locking time in both legacy and DVFS mode is 40us. However, in legacy
@@ -1091,7 +1101,7 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	clk->na_pll_delay = 40; /* usec*/
 
 	clk->gpc_pll.id = GK20A_GPC_PLL;
-	clk->gpc_pll.clk_in = ref_rate / KHZ;
+	clk->gpc_pll.clk_in = clk_get_rate(ref) / KHZ;
 
 	/* Initial frequency: 1/3 VCO min (low enough to be safe at Vmin) */
 	if (!initialized) {
@@ -1109,8 +1119,14 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	if (ALLOW_NON_CALIBRATED_NA_MODE || calibrated) {
 		/* NA mode is supported only at max update rate 38.4 MHz */
 		if (clk->gpc_pll.clk_in == gpc_pll_params.max_u) {
+			unsigned long safe_rate;
 			clk->gpc_pll.mode = GPC_PLL_MODE_DVFS;
 			gpc_pll_params.min_u = gpc_pll_params.max_u;
+
+			safe_rate = tegra_dvfs_get_therm_safe_fmax(
+				clk_get_parent(clk->tegra_clk));
+			safe_rate = safe_rate * (100 - DVFS_SAFE_MARGIN) / 100;
+			dvfs_safe_max_freq = rate_gpu_to_gpc2clk(safe_rate);
 		}
 	}
 #endif

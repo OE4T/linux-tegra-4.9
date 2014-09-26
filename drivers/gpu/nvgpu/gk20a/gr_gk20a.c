@@ -5292,14 +5292,17 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 }
 
 /* Used by sw interrupt thread to translate current ctx to chid.
+ * Also used by regops to translate current ctx to chid and tsgid.
  * For performance, we don't want to go through 128 channels every time.
  * curr_ctx should be the value read from gr_fecs_current_ctx_r().
  * A small tlb is used here to cache translation */
-static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx)
+static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx,
+				      int *curr_tsgid)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct gr_gk20a *gr = &g->gr;
 	u32 chid = -1;
+	int tsgid = NVGPU_INVALID_TSG_ID;
 	u32 i;
 
 	/* when contexts are unloaded from GR, the valid bit is reset
@@ -5315,6 +5318,7 @@ static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx)
 	for (i = 0; i < GR_CHANNEL_MAP_TLB_SIZE; i++) {
 		if (gr->chid_tlb[i].curr_ctx == curr_ctx) {
 			chid = gr->chid_tlb[i].hw_chid;
+			tsgid = gr->chid_tlb[i].tsgid;
 			goto unlock;
 		}
 	}
@@ -5324,8 +5328,10 @@ static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx)
 		if (f->channel[chid].in_use) {
 			if ((u32)(f->channel[chid].inst_block.cpu_pa >>
 				ram_in_base_shift_v()) ==
-				gr_fecs_current_ctx_ptr_v(curr_ctx))
+				gr_fecs_current_ctx_ptr_v(curr_ctx)) {
+				tsgid = f->channel[chid].tsgid;
 				break;
+			}
 	}
 
 	if (chid >= f->num_channels) {
@@ -5338,6 +5344,7 @@ static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx)
 		if (gr->chid_tlb[i].curr_ctx == 0) {
 			gr->chid_tlb[i].curr_ctx = curr_ctx;
 			gr->chid_tlb[i].hw_chid = chid;
+			gr->chid_tlb[i].tsgid = tsgid;
 			goto unlock;
 		}
 	}
@@ -5345,6 +5352,7 @@ static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx)
 	/* no free entry, flush one */
 	gr->chid_tlb[gr->channel_tlb_flush_index].curr_ctx = curr_ctx;
 	gr->chid_tlb[gr->channel_tlb_flush_index].hw_chid = chid;
+	gr->chid_tlb[gr->channel_tlb_flush_index].tsgid = tsgid;
 
 	gr->channel_tlb_flush_index =
 		(gr->channel_tlb_flush_index + 1) &
@@ -5352,6 +5360,8 @@ static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx)
 
 unlock:
 	spin_unlock(&gr->ch_tlb_lock);
+	if (curr_tsgid)
+		*curr_tsgid = tsgid;
 	return chid;
 }
 
@@ -5623,7 +5633,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	isr_data.class_num = gr_fe_object_table_nvclass_v(obj_table);
 
 	isr_data.chid =
-		gk20a_gr_get_chid_from_ctx(g, isr_data.curr_ctx);
+		gk20a_gr_get_chid_from_ctx(g, isr_data.curr_ctx, NULL);
 	if (isr_data.chid == -1) {
 		gk20a_err(dev_from_gk20a(g), "invalid channel ctx 0x%08x",
 			   isr_data.curr_ctx);
@@ -6847,6 +6857,31 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 	return -EINVAL;
 }
 
+bool gk20a_is_channel_ctx_resident(struct channel_gk20a *ch)
+{
+	int curr_gr_chid, curr_gr_ctx, curr_gr_tsgid;
+	struct gk20a *g = ch->g;
+
+	curr_gr_ctx  = gk20a_readl(g, gr_fecs_current_ctx_r());
+	curr_gr_chid = gk20a_gr_get_chid_from_ctx(g, curr_gr_ctx,
+						  &curr_gr_tsgid);
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"curr_gr_chid=%d curr_tsgid=%d, ch->tsgid=%d"
+			" ch->hw_chid=%d", curr_gr_chid,
+			curr_gr_tsgid, ch->tsgid, ch->hw_chid);
+
+	if (curr_gr_chid == -1)
+		return false;
+
+	if (ch->hw_chid == curr_gr_chid)
+		return true;
+
+	if (gk20a_is_channel_marked_as_tsg(ch) && (ch->tsgid == curr_gr_tsgid))
+		return true;
+
+	return false;
+}
 
 int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 			  struct nvgpu_dbg_gpu_reg_op *ctx_ops, u32 num_ops,
@@ -6855,7 +6890,6 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 	struct gk20a *g = ch->g;
 	struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
 	void *ctx_ptr = NULL;
-	int curr_gr_chid, curr_gr_ctx;
 	bool ch_is_curr_ctx, restart_gr_ctxsw = false;
 	u32 i, j, offset, v;
 	u32 max_offsets = proj_scal_litter_num_gpcs_v() *
@@ -6881,11 +6915,10 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 
 	restart_gr_ctxsw = true;
 
-	curr_gr_ctx  = gk20a_readl(g, gr_fecs_current_ctx_r());
-	curr_gr_chid = gk20a_gr_get_chid_from_ctx(g, curr_gr_ctx);
-	ch_is_curr_ctx = (curr_gr_chid != -1) && (ch->hw_chid == curr_gr_chid);
+	ch_is_curr_ctx = gk20a_is_channel_ctx_resident(ch);
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "is curr ctx=%d", ch_is_curr_ctx);
+
 	if (ch_is_curr_ctx) {
 		for (pass = 0; pass < 2; pass++) {
 			ctx_op_nr = 0;

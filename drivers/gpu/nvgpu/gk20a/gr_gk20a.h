@@ -93,6 +93,7 @@ enum {
 struct gr_channel_map_tlb_entry {
 	u32 curr_ctx;
 	u32 hw_chid;
+	u32 tsgid;
 };
 
 struct gr_zcull_gk20a {

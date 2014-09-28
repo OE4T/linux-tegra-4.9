@@ -18,6 +18,8 @@
  *
  */
 
+#include <dt-bindings/memory/tegra-swgroup.h>
+
 / {
 	compatible = "nvidia,tegra186";
 	interrupt-parent = <&intc>;
@@ -150,6 +152,11 @@
                              <0 35 4>,
                              <0 36 4>,
                              <0 37 4>;
+
+		mmu-masters = <&{/sdhci@700b0600} TEGRA_SWGROUP_SDMMC4A>,
+			      <&{/sdhci@700b0400} TEGRA_SWGROUP_SDMMC3A>,
+			      <&{/sdhci@700b0200} TEGRA_SWGROUP_SDMMC2A>,
+			      <&{/sdhci@700b0000} TEGRA_SWGROUP_SDMMC1A>;
         };
 
 	uarta: serial@70006000 {

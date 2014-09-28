@@ -13,6 +13,8 @@
 # Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
 #
 
+ccflags-y += -Werror
+
 obj-$(CONFIG_TEGRA_PROFILER) := tegra-profiler.o
 
 tegra-profiler-y := \

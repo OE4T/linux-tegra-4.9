@@ -20,9 +20,11 @@
 #include <linux/io.h>
 
 #include "dev.h"
+#include "class_ids.h"
 
 #include "t186.h"
 #include "host1x/host1x.h"
+#include "flcn/flcn.h"
 #include "hardware_t186.h"
 
 #include "chip_support.h"
@@ -40,6 +42,32 @@ struct nvhost_device_data t18_host1x_info = {
 	.clocks		= {{"host1x", UINT_MAX}, {"actmon", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	.private_data	= &host1x04_info,
+};
+
+struct nvhost_device_data t18_vic_info = {
+	.num_channels		= 1,
+	.modulemutexes		= {NVMODMUTEX_VIC},
+	.clocks			= {{"vic03", UINT_MAX, 0},
+				   {"emc", UINT_MAX,
+				   NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},
+				   {"vic_floor", 0,
+				   NVHOST_MODULE_ID_CBUS_FLOOR},
+				   {"emc_shared", 0,
+				   NVHOST_MODULE_ID_EMC_SHARED}, {} },
+	.version		= NVHOST_ENCODE_FLCN_VER(4, 0),
+#ifdef TEGRA_POWERGATE_VIC
+	.powergate_ids	= { TEGRA_POWERGATE_VIC, -1 },
+#else
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+#endif
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.moduleid		= NVHOST_MODULE_VIC,
+	.poweron_reset		= true,
+	.class			= NV_GRAPHICS_VIC_CLASS_ID,
+	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
+	.prepare_poweroff	= nvhost_vic_prepare_poweroff,
+	.finalize_poweron	= nvhost_vic_finalize_poweron,
+	.firmware_name		= "vic04_ucode.bin",
 };
 
 #include "host1x/host1x_channel.c"

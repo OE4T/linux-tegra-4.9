@@ -24,6 +24,7 @@
 #define T186_NVHOST_NUMCHANNELS 12
 
 extern struct nvhost_device_data t18_host1x_info;
+extern struct nvhost_device_data t18_vic_info;
 
 int nvhost_init_t186_support(struct nvhost_master *host,
 			     struct nvhost_chip_support *op);

@@ -10,6 +10,7 @@
 #include <linux/dma-contiguous.h>
 #include <linux/debugfs.h>
 #include <linux/highmem.h>
+#include <linux/kthread.h>
 
 #ifdef pr_fmt
 #undef pr_fmt
@@ -42,6 +43,12 @@ struct heap_info {
 	size_t rem_chunk_size;
 	struct dentry *dma_debug_root;
 	int (*update_resize_cfg)(phys_addr_t , size_t);
+	/* The timer used to wakeup the shrink thread */
+	struct timer_list shrink_timer;
+	/* Pointer to the current shrink thread for this resizable heap */
+	struct task_struct *task;
+	unsigned long shrink_interval;
+	size_t floor_size;
 };
 
 #ifdef CONFIG_ARM_DMA_IOMMU_ALIGNMENT
@@ -59,6 +66,11 @@ struct dma_coherent_mem {
 	unsigned long	*bitmap;
 	spinlock_t	spinlock;
 };
+
+static int shrink_thread(void *arg);
+static void shrink_resizable_heap(struct heap_info *h);
+static int heap_resize_locked(struct heap_info *h);
+#define RESIZE_DEFAULT_SHRINK_AGE 3
 
 static bool dma_is_coherent_dev(struct device *dev)
 {
@@ -85,7 +97,7 @@ static void dma_debugfs_init(struct device *dev, struct heap_info *heap)
 
 	debugfs_create_x32("curr_base", S_IRUGO,
 		heap->dma_debug_root, (u32 *)&heap->curr_base);
-	debugfs_create_x32("curr_len", S_IRUGO,
+	debugfs_create_x32("curr_size", S_IRUGO,
 		heap->dma_debug_root, (u32 *)&heap->curr_len);
 	debugfs_create_x32("cma_base", S_IRUGO,
 		heap->dma_debug_root, (u32 *)&heap->cma_base);
@@ -95,7 +107,34 @@ static void dma_debugfs_init(struct device *dev, struct heap_info *heap)
 		heap->dma_debug_root, (u32 *)&heap->cma_chunk_size);
 	debugfs_create_x32("num_cma_chunks", S_IRUGO,
 		heap->dma_debug_root, (u32 *)&heap->num_chunks);
+	debugfs_create_x32("floor_size", S_IRUGO,
+		heap->dma_debug_root, (u32 *)&heap->floor_size);
 }
+
+int dma_set_resizable_heap_floor_size(struct device *dev, size_t floor_size)
+{
+	int ret = 0;
+	struct heap_info *h = NULL;
+
+	if (!dma_is_coherent_dev(dev))
+		return -ENODEV;
+
+	h = dev_get_drvdata(dev);
+	if (!h)
+		return -ENOENT;
+
+	mutex_lock(&h->resize_lock);
+	h->floor_size = floor_size > h->cma_len ? h->cma_len : floor_size;
+	while (!ret && h->curr_len < h->floor_size)
+		ret = heap_resize_locked(h);
+	if (h->task)
+		mod_timer(&h->shrink_timer, jiffies + h->shrink_interval);
+	mutex_unlock(&h->resize_lock);
+	if (!h->task)
+		shrink_resizable_heap(h);
+	return ret;
+}
+EXPORT_SYMBOL(dma_set_resizable_heap_floor_size);
 
 static bool dma_init_coherent_memory(
 	phys_addr_t phys_addr, dma_addr_t device_addr, size_t size, int flags,
@@ -252,7 +291,12 @@ int dma_declare_coherent_resizable_cma_memory(struct device *dev,
 				  heap_info->cma_base, heap_info->cma_len))
 		goto declare_fail;
 	heap_info->dev.dma_mem->size = 0;
+	heap_info->shrink_interval = HZ * RESIZE_DEFAULT_SHRINK_AGE;
+	kthread_run(shrink_thread, heap_info, "%s-shrink_thread",
+		heap_info->name);
 
+	if (dma_info->notifier.ops && dma_info->notifier.ops->resize)
+		dma_contiguous_enable_replace_pages(dma_info->cma_dev);
 	pr_info("resizable cma heap=%s create successful", heap_info->name);
 	return 0;
 declare_fail:
@@ -373,7 +417,7 @@ static int heap_resize_locked(struct heap_info *h)
 	int alloc_at_idx = 0;
 	int first_alloc_idx;
 	int last_alloc_idx;
-	phys_addr_t start_addr = 0;
+	phys_addr_t start_addr = h->cma_base;
 
 	get_first_and_last_idx(h, &first_alloc_idx, &last_alloc_idx);
 	pr_debug("req resize, fi=%d,li=%d\n", first_alloc_idx, last_alloc_idx);
@@ -382,13 +426,12 @@ static int heap_resize_locked(struct heap_info *h)
 	if (first_alloc_idx == 0 && last_alloc_idx == h->num_chunks - 1)
 		return -ENOMEM;
 
-	/* All chunks are free. Can allocate anywhere in CMA with
-	 * cma_chunk_size alignment.
-	 */
+	/* All chunks are free. Attempt to allocate the first chunk. */
 	if (first_alloc_idx == -1) {
 		base = alloc_from_contiguous_heap(h, start_addr, len);
-		if (!dma_mapping_error(h->cma_dev, base))
+		if (base == start_addr)
 			goto alloc_success;
+		BUG_ON(!dma_mapping_error(h->cma_dev, base));
 	}
 
 	/* Free chunk before previously allocated chunk. Attempt
@@ -625,13 +668,7 @@ static int dma_release_from_coherent_heap_dev(struct device *dev, size_t len,
 {
 	int idx = 0;
 	int err = 0;
-	int resize_err = 0;
-	void *ret = NULL;
-	dma_addr_t dev_base;
 	struct heap_info *h = NULL;
-	size_t chunk_size;
-	int first_alloc_idx;
-	int last_alloc_idx;
 
 	if (!dma_is_coherent_dev(dev))
 		return 0;
@@ -650,80 +687,150 @@ static int dma_release_from_coherent_heap_dev(struct device *dev, size_t len,
 	attrs |= DMA_ATTR_ALLOC_EXACT_SIZE;
 
 	mutex_lock(&h->resize_lock);
-
 	idx = div_u64((uintptr_t)base - h->cma_base, h->cma_chunk_size);
 	dev_dbg(&h->dev, "req free addr (%p) size (0x%zx) idx (%d)\n",
 		base, len, idx);
 	err = dma_release_from_coherent_dev(&h->dev, len, base, attrs);
+	/* err = 0 on failure, !0 on successful release */
+	if (err && h->task)
+		mod_timer(&h->shrink_timer, jiffies + h->shrink_interval);
+	mutex_unlock(&h->resize_lock);
 
-	if (!err)
-		goto out_unlock;
+	if (err && !h->task)
+		shrink_resizable_heap(h);
+	return err;
+}
+
+static bool shrink_chunk_locked(struct heap_info *h, int idx)
+{
+	size_t chunk_size;
+	int resize_err;
+	void *ret = NULL;
+	dma_addr_t dev_base;
+	unsigned long attrs = DMA_ATTR_ALLOC_EXACT_SIZE;
+
+	/* check if entire chunk is free */
+	chunk_size = (idx == h->num_chunks - 1) ? h->rem_chunk_size :
+						  h->cma_chunk_size;
+	resize_err = dma_alloc_from_coherent_dev_at(&h->dev,
+				chunk_size, &dev_base, &ret, attrs,
+				idx * h->cma_chunk_size >> PAGE_SHIFT);
+	if (!resize_err) {
+		goto out;
+	} else if (dev_base != h->cma_base + idx * h->cma_chunk_size) {
+		resize_err = dma_release_from_coherent_dev(
+				&h->dev, chunk_size,
+				(void *)(uintptr_t)dev_base, attrs);
+		BUG_ON(!resize_err);
+		goto out;
+	} else {
+		dev_dbg(&h->dev,
+			"prep to remove chunk b=0x%pa, s=0x%zx\n",
+			&dev_base, chunk_size);
+		resize_err = dma_release_from_coherent_dev(
+				&h->dev, chunk_size,
+				(void *)(uintptr_t)dev_base, attrs);
+		BUG_ON(!resize_err);
+		if (!resize_err) {
+			dev_err(&h->dev, "failed to rel mem\n");
+			goto out;
+		}
+
+		/* Handle VPR configuration updates */
+		if (h->update_resize_cfg) {
+			phys_addr_t new_base = h->curr_base;
+			size_t new_len = h->curr_len - chunk_size;
+			if (h->curr_base == dev_base)
+				new_base += chunk_size;
+			dev_dbg(&h->dev, "update vpr base to %pa, size=%zx\n",
+				&new_base, new_len);
+			resize_err =
+				h->update_resize_cfg(new_base, new_len);
+			if (resize_err) {
+				dev_err(&h->dev,
+					"update resize failed\n");
+				goto out;
+			}
+		}
+
+		if (h->curr_base == dev_base)
+			h->curr_base += chunk_size;
+		h->curr_len -= chunk_size;
+		update_alloc_range(h);
+		release_from_contiguous_heap(h, dev_base, chunk_size);
+		dev_dbg(&h->dev, "removed chunk b=0x%pa, s=0x%zx"
+			" new heap b=0x%pa, s=0x%zx\n", &dev_base,
+			chunk_size, &h->curr_base, h->curr_len);
+		return true;
+	}
+out:
+	return false;
+}
+
+static void shrink_resizable_heap(struct heap_info *h)
+{
+	bool unlock = false;
+	int first_alloc_idx, last_alloc_idx;
 
 check_next_chunk:
-	get_first_and_last_idx(h, &first_alloc_idx, &last_alloc_idx);
-
-	/* Check if heap can be shrinked */
-	if (idx == first_alloc_idx || idx == last_alloc_idx) {
-		/* check if entire chunk is free */
-		chunk_size = (idx == h->num_chunks - 1) ? h->rem_chunk_size :
-							  h->cma_chunk_size;
-		resize_err = dma_alloc_from_coherent_dev_at(&h->dev,
-					chunk_size, &dev_base, &ret, attrs,
-					idx * h->cma_chunk_size >> PAGE_SHIFT);
-		if (!resize_err) {
-			goto out_unlock;
-		} else if (dev_base != h->cma_base + idx * h->cma_chunk_size) {
-			resize_err = dma_release_from_coherent_dev(
-					&h->dev, chunk_size,
-					(void *)(uintptr_t)dev_base, attrs);
-			BUG_ON(!resize_err);
-			goto out_unlock;
-		} else {
-			dev_dbg(&h->dev,
-				"prep to remove chunk b=0x%pa, s=0x%zx\n",
-				&dev_base, chunk_size);
-			resize_err = dma_release_from_coherent_dev(
-					&h->dev, chunk_size,
-					(void *)(uintptr_t)dev_base, attrs);
-			BUG_ON(!resize_err);
-			if (!resize_err) {
-				dev_err(&h->dev, "failed to rel mem\n");
-				goto out_unlock;
-			}
-
-			/* Handle VPR configuration updates */
-			if (h->update_resize_cfg) {
-				phys_addr_t new_base = h->curr_base;
-				size_t new_len = h->curr_len - chunk_size;
-				if (h->curr_base == dev_base)
-					new_base += chunk_size;
-				dev_dbg(&h->dev, "update vpr base to %pa, size=%zx\n",
-					&new_base, new_len);
-				resize_err =
-					h->update_resize_cfg(new_base, new_len);
-				if (resize_err) {
-					dev_err(&h->dev,
-						"update resize failed\n");
-					goto out_unlock;
-				}
-			}
-
-			if (h->curr_base == dev_base)
-				h->curr_base += chunk_size;
-			h->curr_len -= chunk_size;
-			update_alloc_range(h);
-			idx == first_alloc_idx ? ++idx : --idx;
-			release_from_contiguous_heap(h, dev_base, chunk_size);
-			dev_dbg(&h->dev, "removed chunk b=0x%pa, s=0x%zx"
-				" new heap b=0x%pa, s=0x%zx\n", &dev_base,
-				chunk_size, &h->curr_base, h->curr_len);
-		}
-		if (idx < h->num_chunks)
-			goto check_next_chunk;
+	if (unlock) {
+		mutex_unlock(&h->resize_lock);
+		cond_resched();
 	}
+	mutex_lock(&h->resize_lock);
+	unlock = true;
+	if (h->curr_len <= h->floor_size)
+		goto out_unlock;
+	get_first_and_last_idx(h, &first_alloc_idx, &last_alloc_idx);
+	/* All chunks are free. Exit. */
+	if (first_alloc_idx == -1)
+		goto out_unlock;
+	if (shrink_chunk_locked(h, first_alloc_idx))
+		goto check_next_chunk;
+	/* Only one chunk is in use. */
+	if (first_alloc_idx == last_alloc_idx)
+		goto out_unlock;
+	if (shrink_chunk_locked(h, last_alloc_idx))
+		goto check_next_chunk;
+
 out_unlock:
 	mutex_unlock(&h->resize_lock);
-	return err;
+}
+
+/*
+ * Helper function used to manage resizable heap shrink timeouts
+ */
+
+static void shrink_timeout(unsigned long __data)
+{
+	struct task_struct *p = (struct task_struct *) __data;
+
+	wake_up_process(p);
+}
+
+static int shrink_thread(void *arg)
+{
+	struct heap_info *h = arg;
+
+	/*
+	 * Set up an interval timer which can be used to trigger a commit wakeup
+	 * after the commit interval expires
+	 */
+	setup_timer(&h->shrink_timer, shrink_timeout,
+			(unsigned long)current);
+	h->task = current;
+
+	while (1) {
+		if (kthread_should_stop())
+			break;
+
+		shrink_resizable_heap(h);
+		/* resize done. goto sleep */
+		set_current_state(TASK_INTERRUPTIBLE);
+		schedule();
+	}
+
+	return 0;
 }
 
 void dma_release_declared_memory(struct device *dev)

@@ -28,6 +28,9 @@ extern int
 dma_declare_coherent_resizable_cma_memory(struct device *dev,
 				struct dma_declare_info *dma_info);
 
+extern int
+dma_set_resizable_heap_floor_size(struct device *dev, size_t floor_size);
+
 int dma_declare_coherent_memory(struct device *dev, phys_addr_t phys_addr,
 				dma_addr_t device_addr, size_t size, int flags);
 

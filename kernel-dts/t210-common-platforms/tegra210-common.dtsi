@@ -19,6 +19,7 @@
 #include "tegra210.dtsi"
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/tegra-gpio.h>
+#include "tegra210-platforms/tegra210-prods.dtsi"
 #include "tegra210-platforms/tegra210-ers-touch-e1937-1000-a00.dtsi"
 
 / {

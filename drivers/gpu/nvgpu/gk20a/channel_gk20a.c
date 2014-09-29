@@ -2220,7 +2220,7 @@ long gk20a_channel_ioctl(struct file *filp,
 		(_IOC_NR(cmd) == 0) ||
 		(_IOC_NR(cmd) > NVHOST_IOCTL_CHANNEL_LAST) ||
 		(_IOC_SIZE(cmd) > NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE))
-		return -EFAULT;
+		return -EINVAL;
 
 	if (_IOC_DIR(cmd) & _IOC_WRITE) {
 		if (copy_from_user(buf, (void __user *)arg, _IOC_SIZE(cmd)))

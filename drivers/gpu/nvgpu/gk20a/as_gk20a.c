@@ -219,7 +219,7 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	if ((_IOC_TYPE(cmd) != NVHOST_AS_IOCTL_MAGIC) ||
 		(_IOC_NR(cmd) == 0) ||
 		(_IOC_NR(cmd) > NVHOST_AS_IOCTL_LAST))
-		return -EFAULT;
+		return -EINVAL;
 
 	BUG_ON(_IOC_SIZE(cmd) > NVHOST_AS_IOCTL_MAX_ARG_SIZE);
 

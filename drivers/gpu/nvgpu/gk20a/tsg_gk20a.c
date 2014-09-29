@@ -213,7 +213,7 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 	if ((_IOC_TYPE(cmd) != NVGPU_TSG_IOCTL_MAGIC) ||
 	    (_IOC_NR(cmd) == 0) ||
 	    (_IOC_NR(cmd) > NVGPU_TSG_IOCTL_LAST))
-		return -EFAULT;
+		return -EINVAL;
 
 	BUG_ON(_IOC_SIZE(cmd) > NVGPU_TSG_IOCTL_MAX_ARG_SIZE);
 

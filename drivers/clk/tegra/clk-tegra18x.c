@@ -138,11 +138,13 @@ static const char *tegra_clk_name[] = {
 	"sdr",
 	"disp1",
 	"disp2",
-	"sor",
+	"sor0",
 	"sor1",
 	"dpaux",
 	"dpaux2",
 	"hdmi",
+	"pll_dp",
+	"sor_safe",
 	/* Get complete list from BPMP */
 };
 

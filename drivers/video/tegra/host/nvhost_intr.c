@@ -397,7 +397,7 @@ int nvhost_intr_add_action(struct nvhost_intr *intr, u32 id, u32 thresh,
 	return 0;
 }
 
-void *nvhost_intr_alloc_waiter()
+void *nvhost_intr_alloc_waiter(void)
 {
 	return kzalloc(sizeof(struct nvhost_waitlist),
 			GFP_KERNEL|__GFP_REPEAT);

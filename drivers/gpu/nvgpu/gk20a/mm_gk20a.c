@@ -26,7 +26,7 @@
 #include <linux/tegra-soc.h>
 #include <linux/vmalloc.h>
 #include <linux/dma-buf.h>
-#include <linux/nvhost_as_ioctl.h>
+#include <uapi/linux/nvgpu.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"

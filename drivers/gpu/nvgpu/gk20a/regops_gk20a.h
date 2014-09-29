@@ -18,7 +18,7 @@
 #ifndef REGOPS_GK20A_H
 #define REGOPS_GK20A_H
 
-#include <linux/nvhost_dbg_gpu_ioctl.h>
+#include <uapi/linux/nvgpu.h>
 
 struct regop_offset_range {
 	u32 base:24;

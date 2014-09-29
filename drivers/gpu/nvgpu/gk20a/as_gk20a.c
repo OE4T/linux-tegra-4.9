@@ -20,7 +20,7 @@
 
 #include <trace/events/gk20a.h>
 
-#include <linux/nvhost_as_ioctl.h>
+#include <uapi/linux/nvgpu.h>
 
 #include "gk20a.h"
 

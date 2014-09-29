@@ -16,7 +16,7 @@
 
 #include <linux/highmem.h>
 #include <linux/cdev.h>
-#include <linux/nvhost_gpu_ioctl.h>
+#include <uapi/linux/nvgpu.h>
 
 #include "gk20a.h"
 #include "fence_gk20a.h"

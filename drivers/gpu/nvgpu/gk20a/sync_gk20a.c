@@ -21,7 +21,7 @@
 #include <linux/hrtimer.h>
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/nvhost_ioctl.h>
+#include <uapi/linux/nvgpu.h>
 #include "../../../staging/android/sync.h"
 #include "semaphore_gk20a.h"
 

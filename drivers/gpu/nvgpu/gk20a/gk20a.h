@@ -29,7 +29,7 @@ struct acr_gm20b;
 
 #include <linux/sched.h>
 #include <linux/spinlock.h>
-#include <linux/nvhost_gpu_ioctl.h>
+#include <uapi/linux/nvgpu.h>
 #include <linux/tegra-soc.h>
 
 #include "../../../arch/arm/mach-tegra/iomap.h"

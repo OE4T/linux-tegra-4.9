@@ -22,7 +22,7 @@
 #include <linux/slab.h>
 #include <linux/wait.h>
 #include <linux/mutex.h>
-#include <linux/nvhost_ioctl.h>
+#include <uapi/linux/nvgpu.h>
 #include <linux/poll.h>
 
 struct gk20a;

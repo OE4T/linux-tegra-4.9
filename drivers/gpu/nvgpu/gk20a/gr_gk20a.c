@@ -21,7 +21,7 @@
 #include <linux/mm.h>		/* for totalram_pages */
 #include <linux/scatterlist.h>
 #include <linux/tegra-soc.h>
-#include <linux/nvhost_dbg_gpu_ioctl.h>
+#include <uapi/linux/nvgpu.h>
 #include <linux/vmalloc.h>
 #include <linux/dma-mapping.h>
 #include <linux/firmware.h>

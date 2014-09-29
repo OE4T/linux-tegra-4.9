@@ -45,13 +45,6 @@
 #define NVHOST_SUBMIT_VERSION_V2		0x2
 #define NVHOST_SUBMIT_VERSION_MAX_SUPPORTED	NVHOST_SUBMIT_VERSION_V2
 
-#define NVGPU_IOCTL_MAGIC 'H'
-#define NVGPU_NO_TIMEOUT (-1)
-#define NVGPU_PRIORITY_LOW 50
-#define NVGPU_PRIORITY_MEDIUM 100
-#define NVGPU_PRIORITY_HIGH 150
-#define NVGPU_TIMEOUT_FLAG_DISABLE_DUMP		0
-
 struct nvhost_cmdbuf {
 	__u32 mem;
 	__u32 offset;
@@ -81,11 +74,6 @@ struct nvhost_waitchk {
 	__u32 thresh;
 };
 
-struct nvgpu_gpfifo {
-	__u32 entry0; /* first word of gpfifo entry */
-	__u32 entry1; /* second word of gpfifo entry */
-};
-
 struct nvhost_syncpt_incr {
 	__u32 syncpt_id;
 	__u32 syncpt_incrs;
@@ -95,16 +83,7 @@ struct nvhost_get_param_args {
 	__u32 value;
 } __packed;
 
-struct nvgpu_get_param_args {
-	__u32 value;
-} __packed;
-
 struct nvhost_get_param_arg {
-	__u32 param;
-	__u32 value;
-};
-
-struct nvgpu_get_param_arg {
 	__u32 param;
 	__u32 value;
 };
@@ -124,113 +103,14 @@ struct nvhost_channel_open_args {
 	__s32 channel_fd;
 };
 
-struct nvgpu_channel_open_args {
-	__s32 channel_fd;
-};
-
 struct nvhost_set_nvmap_fd_args {
 	__u32 fd;
 } __packed;
-
-struct nvgpu_set_nvmap_fd_args {
-	__u32 fd;
-} __packed;
-
-struct nvgpu_alloc_obj_ctx_args {
-	__u32 class_num; /* kepler3d, 2d, compute, etc       */
-	__u32 padding;
-	__u64 obj_id;    /* output, used to free later       */
-};
-
-struct nvgpu_free_obj_ctx_args {
-	__u64 obj_id; /* obj ctx to free */
-};
-
-struct nvgpu_alloc_gpfifo_args {
-	__u32 num_entries;
-#define NVGPU_ALLOC_GPFIFO_FLAGS_VPR_ENABLED	(1 << 0) /* set owner channel of this gpfifo as a vpr channel */
-	__u32 flags;
-
-};
 
 struct nvhost_fence {
 	__u32 syncpt_id; /* syncpoint id or sync fence fd */
 	__u32 value;     /* syncpoint value (discarded when using sync fence) */
 };
-
-struct nvgpu_fence {
-	__u32 id;        /* syncpoint id or sync fence fd */
-	__u32 value;     /* syncpoint value (discarded when using sync fence) */
-};
-
-/* insert a wait on the fence before submitting gpfifo */
-#define NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT	BIT(0)
-/* insert a fence update after submitting gpfifo and
-   return the new fence for others to wait on */
-#define NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET	BIT(1)
-/* choose between different gpfifo entry formats */
-#define NVGPU_SUBMIT_GPFIFO_FLAGS_HW_FORMAT	BIT(2)
-/* interpret fence as a sync fence fd instead of raw syncpoint fence */
-#define NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE	BIT(3)
-/* suppress WFI before fence trigger */
-#define NVGPU_SUBMIT_GPFIFO_FLAGS_SUPPRESS_WFI	BIT(4)
-
-struct nvgpu_submit_gpfifo_args {
-	__u64 gpfifo;
-	__u32 num_entries;
-	__u32 flags;
-	struct nvgpu_fence fence;
-};
-
-struct nvgpu_map_buffer_args {
-	__u32 flags;
-#define NVGPU_MAP_BUFFER_FLAGS_ALIGN		0x0
-#define NVGPU_MAP_BUFFER_FLAGS_OFFSET		BIT(0)
-#define NVGPU_MAP_BUFFER_FLAGS_KIND_PITCH	0x0
-#define NVGPU_MAP_BUFFER_FLAGS_KIND_SPECIFIED	BIT(1)
-#define NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_FALSE	0x0
-#define NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE	BIT(2)
-	__u32 nvmap_handle;
-	union {
-		__u64 offset; /* valid if _offset flag given (in|out) */
-		__u64 align;  /* alignment multiple (0:={1 or n/a})   */
-	} offset_alignment;
-	__u32 kind;
-#define NVGPU_MAP_BUFFER_KIND_GENERIC_16BX2 0xfe
-};
-
-struct nvgpu_unmap_buffer_args {
-	__u64 offset;
-};
-
-struct nvgpu_wait_args {
-#define NVGPU_WAIT_TYPE_NOTIFIER	0x0
-#define NVGPU_WAIT_TYPE_SEMAPHORE	0x1
-	__u32 type;
-	__u32 timeout;
-	union {
-		struct {
-			/* handle and offset for notifier memory */
-			__u32 dmabuf_fd;
-			__u32 offset;
-			__u32 padding1;
-			__u32 padding2;
-		} notifier;
-		struct {
-			/* handle and offset for semaphore memory */
-			__u32 dmabuf_fd;
-			__u32 offset;
-			/* semaphore payload to wait for */
-			__u32 payload;
-			__u32 padding;
-		} semaphore;
-	} condition; /* determined by type field */
-};
-
-/* cycle stats support */
-struct nvgpu_cycle_stats_args {
-	__u32 dmabuf_fd;
-} __packed;
 
 enum nvhost_clk_attr {
 	NVHOST_CLOCK = 0,
@@ -255,16 +135,7 @@ struct nvhost_set_timeout_args {
 	__u32 timeout;
 } __packed;
 
-struct nvgpu_set_timeout_args {
-	__u32 timeout;
-} __packed;
-
 struct nvhost_set_timeout_ex_args {
-	__u32 timeout;
-	__u32 flags;
-};
-
-struct nvgpu_set_timeout_ex_args {
 	__u32 timeout;
 	__u32 flags;
 };
@@ -273,29 +144,7 @@ struct nvhost_set_priority_args {
 	__u32 priority;
 } __packed;
 
-struct nvgpu_set_priority_args {
-	__u32 priority;
-} __packed;
-
-#define NVGPU_ZCULL_MODE_GLOBAL		0
-#define NVGPU_ZCULL_MODE_NO_CTXSW		1
-#define NVGPU_ZCULL_MODE_SEPARATE_BUFFER	2
-#define NVGPU_ZCULL_MODE_PART_OF_REGULAR_BUF	3
-
-struct nvgpu_zcull_bind_args {
-	__u64 gpu_va;
-	__u32 mode;
-	__u32 padding;
-};
-
 struct nvhost_set_error_notifier {
-	__u64 offset;
-	__u64 size;
-	__u32 mem;
-	__u32 padding;
-};
-
-struct nvgpu_set_error_notifier {
 	__u64 offset;
 	__u64 size;
 	__u32 mem;
@@ -384,17 +233,6 @@ struct nvhost_set_ctxswitch_args {
 	__u32 pad;
 };
 
-/* Enable/disable/clear event notifications */
-struct nvgpu_channel_events_ctrl_args {
-	__u32 cmd; /* in */
-	__u32 _pad0[1];
-};
-
-/* valid event ctrl values */
-#define NVGPU_IOCTL_CHANNEL_EVENTS_CTRL_CMD_DISABLE 0
-#define NVGPU_IOCTL_CHANNEL_EVENTS_CTRL_CMD_ENABLE  1
-#define NVGPU_IOCTL_CHANNEL_EVENTS_CTRL_CMD_CLEAR   2
-
 #define NVHOST_IOCTL_CHANNEL_GET_SYNCPOINTS	\
 	_IOR(NVHOST_IOCTL_MAGIC, 2, struct nvhost_get_param_args)
 #define NVHOST_IOCTL_CHANNEL_GET_WAITBASES	\
@@ -434,66 +272,20 @@ struct nvgpu_channel_events_ctrl_args {
 #define NVHOST_IOCTL_CHANNEL_SET_CTXSWITCH	\
 	_IOWR(NVHOST_IOCTL_MAGIC, 25, struct nvhost_set_ctxswitch_args)
 
-#define NVGPU_IOCTL_CHANNEL_SET_NVMAP_FD	\
-	_IOW(NVGPU_IOCTL_MAGIC, 5, struct nvgpu_set_nvmap_fd_args)
-#define NVGPU_IOCTL_CHANNEL_SET_TIMEOUT	\
-	_IOW(NVGPU_IOCTL_MAGIC, 11, struct nvgpu_set_timeout_args)
-#define NVGPU_IOCTL_CHANNEL_GET_TIMEDOUT	\
-	_IOR(NVGPU_IOCTL_MAGIC, 12, struct nvgpu_get_param_args)
-#define NVGPU_IOCTL_CHANNEL_SET_PRIORITY	\
-	_IOW(NVGPU_IOCTL_MAGIC, 13, struct nvgpu_set_priority_args)
-#define NVGPU_IOCTL_CHANNEL_SET_TIMEOUT_EX	\
-	_IOWR(NVGPU_IOCTL_MAGIC, 18, struct nvgpu_set_timeout_ex_args)
-
 /* ioctls added for 64bit compatibility */
 #define NVHOST_IOCTL_CHANNEL_SUBMIT	\
 	_IOWR(NVHOST_IOCTL_MAGIC, 26, struct nvhost_submit_args)
 #define	NVHOST_IOCTL_CHANNEL_MODULE_REGRDWR	\
 	_IOWR(NVHOST_IOCTL_MAGIC, 27, struct nvhost_ctrl_module_regrdwr_args)
 
-#define NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO	\
-	_IOW(NVGPU_IOCTL_MAGIC,  100, struct nvgpu_alloc_gpfifo_args)
-#define NVGPU_IOCTL_CHANNEL_WAIT		\
-	_IOWR(NVGPU_IOCTL_MAGIC, 102, struct nvgpu_wait_args)
-#define NVGPU_IOCTL_CHANNEL_CYCLE_STATS	\
-	_IOWR(NVGPU_IOCTL_MAGIC, 106, struct nvgpu_cycle_stats_args)
-#define NVGPU_IOCTL_CHANNEL_SUBMIT_GPFIFO	\
-	_IOWR(NVGPU_IOCTL_MAGIC, 107, struct nvgpu_submit_gpfifo_args)
-#define NVGPU_IOCTL_CHANNEL_ALLOC_OBJ_CTX	\
-	_IOWR(NVGPU_IOCTL_MAGIC, 108, struct nvgpu_alloc_obj_ctx_args)
-#define NVGPU_IOCTL_CHANNEL_FREE_OBJ_CTX	\
-	_IOR(NVGPU_IOCTL_MAGIC,  109, struct nvgpu_free_obj_ctx_args)
-#define NVGPU_IOCTL_CHANNEL_ZCULL_BIND		\
-	_IOWR(NVGPU_IOCTL_MAGIC, 110, struct nvgpu_zcull_bind_args)
-
 #define NVHOST_IOCTL_CHANNEL_SET_ERROR_NOTIFIER  \
 	_IOWR(NVHOST_IOCTL_MAGIC, 111, struct nvhost_set_error_notifier)
 #define NVHOST_IOCTL_CHANNEL_OPEN	\
 	_IOR(NVHOST_IOCTL_MAGIC,  112, struct nvhost_channel_open_args)
 
-#define NVGPU_IOCTL_CHANNEL_SET_ERROR_NOTIFIER  \
-	_IOWR(NVGPU_IOCTL_MAGIC, 111, struct nvgpu_set_error_notifier)
-#define NVGPU_IOCTL_CHANNEL_OPEN	\
-	_IOR(NVGPU_IOCTL_MAGIC,  112, struct nvgpu_channel_open_args)
-
-#define NVGPU_IOCTL_CHANNEL_ENABLE	\
-	_IO(NVGPU_IOCTL_MAGIC,  113)
-#define NVGPU_IOCTL_CHANNEL_DISABLE	\
-	_IO(NVGPU_IOCTL_MAGIC,  114)
-#define NVGPU_IOCTL_CHANNEL_PREEMPT	\
-	_IO(NVGPU_IOCTL_MAGIC,  115)
-#define NVGPU_IOCTL_CHANNEL_FORCE_RESET	\
-	_IO(NVGPU_IOCTL_MAGIC,  116)
-#define NVGPU_IOCTL_CHANNEL_EVENTS_CTRL	\
-	_IOW(NVGPU_IOCTL_MAGIC,  117, struct nvgpu_channel_events_ctrl_args)
-
 #define NVHOST_IOCTL_CHANNEL_LAST	\
 	_IOC_NR(NVHOST_IOCTL_CHANNEL_OPEN)
 #define NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvhost_submit_args)
-
-#define NVGPU_IOCTL_CHANNEL_LAST	\
-	_IOC_NR(NVGPU_IOCTL_CHANNEL_EVENTS_CTRL)
-#define NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvgpu_submit_gpfifo_args)
 
 struct nvhost_ctrl_syncpt_read_args {
 	__u32 id;
@@ -526,10 +318,6 @@ struct nvhost_ctrl_syncpt_waitmex_args {
 	__u32 tv_nsec;
 	__u32 reserved_1;
 	__u32 reserved_2;
-};
-
-struct gk20a_sync_pt_info {
-	__u64 hw_op_ns;
 };
 
 struct nvhost_ctrl_sync_fence_info {

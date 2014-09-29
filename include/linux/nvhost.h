@@ -105,6 +105,23 @@ struct nvhost_notification {
 #define	NVHOST_CHANNEL_SUBMIT_TIMEOUT		1
 };
 
+struct nvgpu_notification {
+	struct {			/* 0000- */
+		__u32 nanoseconds[2];	/* nanoseconds since Jan. 1, 1970 */
+	} time_stamp;			/* -0007 */
+	__u32 info32;	/* info returned depends on method 0008-000b */
+#define	NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT	8
+#define	NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY	13
+#define	NVGPU_CHANNEL_GR_SEMAPHORE_TIMEOUT	24
+#define	NVGPU_CHANNEL_GR_ILLEGAL_NOTIFY	25
+#define	NVGPU_CHANNEL_FIFO_ERROR_MMU_ERR_FLT	31
+#define	NVGPU_CHANNEL_PBDMA_ERROR		32
+#define	NVGPU_CHANNEL_RESETCHANNEL_VERIF_ERROR	43
+	__u16 info16;	/* info returned depends on method 000c-000d */
+	__u16 status;	/* user sets bit 15, NV sets status 000e-000f */
+#define	NVGPU_CHANNEL_SUBMIT_TIMEOUT		1
+};
+
 struct nvhost_gating_register {
 	u64 addr;
 	u32 prod;

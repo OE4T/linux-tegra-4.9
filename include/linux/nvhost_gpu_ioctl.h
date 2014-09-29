@@ -29,7 +29,7 @@
 #define __user
 #endif
 
-#define NVHOST_GPU_IOCTL_MAGIC 'G'
+#define NVGPU_GPU_IOCTL_MAGIC 'G'
 
 /*
  * /dev/nvhost-ctrl-gr3d devices
@@ -43,12 +43,12 @@
  */
 
 /* return zcull ctx size */
-struct nvhost_gpu_zcull_get_ctx_size_args {
+struct nvgpu_gpu_zcull_get_ctx_size_args {
 	__u32 size;
 } __packed;
 
 /* return zcull info */
-struct nvhost_gpu_zcull_get_info_args {
+struct nvgpu_gpu_zcull_get_info_args {
 	__u32 width_align_pixels;
 	__u32 height_align_pixels;
 	__u32 pixel_squares_by_aliquots;
@@ -61,24 +61,24 @@ struct nvhost_gpu_zcull_get_info_args {
 	__u32 subregion_count;
 };
 
-#define NVHOST_ZBC_COLOR_VALUE_SIZE	4
-#define NVHOST_ZBC_TYPE_INVALID		0
-#define NVHOST_ZBC_TYPE_COLOR		1
-#define NVHOST_ZBC_TYPE_DEPTH		2
+#define NVGPU_ZBC_COLOR_VALUE_SIZE	4
+#define NVGPU_ZBC_TYPE_INVALID		0
+#define NVGPU_ZBC_TYPE_COLOR		1
+#define NVGPU_ZBC_TYPE_DEPTH		2
 
-struct nvhost_gpu_zbc_set_table_args {
-	__u32 color_ds[NVHOST_ZBC_COLOR_VALUE_SIZE];
-	__u32 color_l2[NVHOST_ZBC_COLOR_VALUE_SIZE];
+struct nvgpu_gpu_zbc_set_table_args {
+	__u32 color_ds[NVGPU_ZBC_COLOR_VALUE_SIZE];
+	__u32 color_l2[NVGPU_ZBC_COLOR_VALUE_SIZE];
 	__u32 depth;
 	__u32 format;
 	__u32 type;	/* color or depth */
 } __packed;
 /* TBD: remove this once mobilerm removed old references */
-#define nvhost_zbc_set_table_args nvhost_gpu_zbc_set_table_args
+#define nvgpu_zbc_set_table_args nvgpu_gpu_zbc_set_table_args
 
-struct nvhost_gpu_zbc_query_table_args {
-	__u32 color_ds[NVHOST_ZBC_COLOR_VALUE_SIZE];
-	__u32 color_l2[NVHOST_ZBC_COLOR_VALUE_SIZE];
+struct nvgpu_gpu_zbc_query_table_args {
+	__u32 color_ds[NVGPU_ZBC_COLOR_VALUE_SIZE];
+	__u32 color_l2[NVGPU_ZBC_COLOR_VALUE_SIZE];
 	__u32 depth;
 	__u32 ref_cnt;
 	__u32 format;
@@ -90,22 +90,22 @@ struct nvhost_gpu_zbc_query_table_args {
 /* This contains the minimal set by which the userspace can
    determine all the properties of the GPU */
 
-#define NVHOST_GPU_ARCH_GK100 0x000000E0
-#define NVHOST_GPU_IMPL_GK20A 0x0000000A
+#define NVGPU_GPU_ARCH_GK100 0x000000E0
+#define NVGPU_GPU_IMPL_GK20A 0x0000000A
 
-#define NVHOST_GPU_ARCH_GM200 0x00000120
-#define NVHOST_GPU_IMPL_GM20B 0x0000000B
+#define NVGPU_GPU_ARCH_GM200 0x00000120
+#define NVGPU_GPU_IMPL_GM20B 0x0000000B
 
-#define NVHOST_GPU_BUS_TYPE_NONE         0
-#define NVHOST_GPU_BUS_TYPE_AXI         32
+#define NVGPU_GPU_BUS_TYPE_NONE         0
+#define NVGPU_GPU_BUS_TYPE_AXI         32
 
-#define NVHOST_GPU_FLAGS_HAS_SYNCPOINTS			(1 << 0)
+#define NVGPU_GPU_FLAGS_HAS_SYNCPOINTS			(1 << 0)
 /* MAP_BUFFER_EX with partial mappings */
-#define NVHOST_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS	(1 << 1)
+#define NVGPU_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS	(1 << 1)
 /* MAP_BUFFER_EX with sparse allocations */
-#define NVHOST_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS		(1 << 2)
+#define NVGPU_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS		(1 << 2)
 
-struct nvhost_gpu_characteristics {
+struct nvgpu_gpu_characteristics {
 	__u32 arch;
 	__u32 impl;
 	__u32 rev;
@@ -135,23 +135,23 @@ struct nvhost_gpu_characteristics {
 	*/
 };
 
-struct nvhost_gpu_get_characteristics {
+struct nvgpu_gpu_get_characteristics {
 	/* [in]  size reserved by the user space. Can be 0.
 	   [out] full buffer size by kernel */
 	__u64 gpu_characteristics_buf_size;
 
-	/* [in]  address of nvhost_gpu_characteristics buffer. Filled with field
+	/* [in]  address of nvgpu_gpu_characteristics buffer. Filled with field
 	   values by exactly MIN(buf_size_in, buf_size_out) bytes. Ignored, if
 	   buf_size_in is zero.  */
 	__u64 gpu_characteristics_buf_addr;
 };
 
-#define NVHOST_GPU_COMPBITS_NONE	0
-#define NVHOST_GPU_COMPBITS_GPU		(1 << 0)
-#define NVHOST_GPU_COMPBITS_CDEH	(1 << 1)
-#define NVHOST_GPU_COMPBITS_CDEV	(1 << 2)
+#define NVGPU_GPU_COMPBITS_NONE	0
+#define NVGPU_GPU_COMPBITS_GPU		(1 << 0)
+#define NVGPU_GPU_COMPBITS_CDEH	(1 << 1)
+#define NVGPU_GPU_COMPBITS_CDEV	(1 << 2)
 
-struct nvhost_gpu_prepare_compressible_read_args {
+struct nvgpu_gpu_prepare_compressible_read_args {
 	__u32 handle;			/* in, dmabuf fd */
 	union {
 		__u32 request_compbits;	/* in */
@@ -163,7 +163,7 @@ struct nvhost_gpu_prepare_compressible_read_args {
 	__u32 width;			/* in, in pixels */
 	__u32 height;			/* in, in pixels */
 	__u32 block_height_log2;	/* in */
-	__u32 submit_flags;		/* in (NVHOST_SUBMIT_GPFIFO_FLAGS_) */
+	__u32 submit_flags;		/* in (NVGPU_SUBMIT_GPFIFO_FLAGS_) */
 	union {
 		struct {
 			__u32 syncpt_id;
@@ -175,7 +175,7 @@ struct nvhost_gpu_prepare_compressible_read_args {
 	__u32 reserved[5];		/* must be zero */
 };
 
-struct nvhost_gpu_mark_compressible_write_args {
+struct nvgpu_gpu_mark_compressible_write_args {
 	__u32 handle;			/* in, dmabuf fd */
 	__u32 valid_compbits;		/* in */
 	__u64 offset;			/* in, within handle */
@@ -183,25 +183,25 @@ struct nvhost_gpu_mark_compressible_write_args {
 	__u32 reserved[3];		/* must be zero */
 };
 
-#define NVHOST_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
-	_IOR(NVHOST_GPU_IOCTL_MAGIC, 1, struct nvhost_gpu_zcull_get_ctx_size_args)
-#define NVHOST_GPU_IOCTL_ZCULL_GET_INFO \
-	_IOR(NVHOST_GPU_IOCTL_MAGIC, 2, struct nvhost_gpu_zcull_get_info_args)
-#define NVHOST_GPU_IOCTL_ZBC_SET_TABLE	\
-	_IOW(NVHOST_GPU_IOCTL_MAGIC, 3, struct nvhost_gpu_zbc_set_table_args)
-#define NVHOST_GPU_IOCTL_ZBC_QUERY_TABLE	\
-	_IOWR(NVHOST_GPU_IOCTL_MAGIC, 4, struct nvhost_gpu_zbc_query_table_args)
-#define NVHOST_GPU_IOCTL_GET_CHARACTERISTICS   \
-	_IOWR(NVHOST_GPU_IOCTL_MAGIC, 5, struct nvhost_gpu_get_characteristics)
-#define NVHOST_GPU_IOCTL_PREPARE_COMPRESSIBLE_READ \
-	_IOWR(NVHOST_GPU_IOCTL_MAGIC, 6, struct nvhost_gpu_prepare_compressible_read_args)
-#define NVHOST_GPU_IOCTL_MARK_COMPRESSIBLE_WRITE \
-	_IOWR(NVHOST_GPU_IOCTL_MAGIC, 7, struct nvhost_gpu_mark_compressible_write_args)
+#define NVGPU_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
+	_IOR(NVGPU_GPU_IOCTL_MAGIC, 1, struct nvgpu_gpu_zcull_get_ctx_size_args)
+#define NVGPU_GPU_IOCTL_ZCULL_GET_INFO \
+	_IOR(NVGPU_GPU_IOCTL_MAGIC, 2, struct nvgpu_gpu_zcull_get_info_args)
+#define NVGPU_GPU_IOCTL_ZBC_SET_TABLE	\
+	_IOW(NVGPU_GPU_IOCTL_MAGIC, 3, struct nvgpu_gpu_zbc_set_table_args)
+#define NVGPU_GPU_IOCTL_ZBC_QUERY_TABLE	\
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 4, struct nvgpu_gpu_zbc_query_table_args)
+#define NVGPU_GPU_IOCTL_GET_CHARACTERISTICS   \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 5, struct nvgpu_gpu_get_characteristics)
+#define NVGPU_GPU_IOCTL_PREPARE_COMPRESSIBLE_READ \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 6, struct nvgpu_gpu_prepare_compressible_read_args)
+#define NVGPU_GPU_IOCTL_MARK_COMPRESSIBLE_WRITE \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 7, struct nvgpu_gpu_mark_compressible_write_args)
 
-#define NVHOST_GPU_IOCTL_LAST		\
-	_IOC_NR(NVHOST_GPU_IOCTL_MARK_COMPRESSIBLE_WRITE)
-#define NVHOST_GPU_IOCTL_MAX_ARG_SIZE	\
-	sizeof(struct nvhost_gpu_prepare_compressible_read_args)
+#define NVGPU_GPU_IOCTL_LAST		\
+	_IOC_NR(NVGPU_GPU_IOCTL_MARK_COMPRESSIBLE_WRITE)
+#define NVGPU_GPU_IOCTL_MAX_ARG_SIZE	\
+	sizeof(struct nvgpu_gpu_prepare_compressible_read_args)
 
 
 /*

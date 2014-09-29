@@ -43,6 +43,7 @@
 #define TEGRA_GK20A_BW_PER_FREQ 32
 #define TEGRA_GM20B_BW_PER_FREQ 64
 #define TEGRA_DDR3_BW_PER_FREQ 16
+#define TEGRA_DDR4_BW_PER_FREQ 16
 
 extern struct device tegra_vpr_dev;
 struct gk20a_platform t132_gk20a_tegra_platform;
@@ -247,24 +248,26 @@ static void gk20a_tegra_prescale(struct platform_device *pdev)
 void gk20a_tegra_calibrate_emc(struct platform_device *pdev,
 			       struct gk20a_emc_params *emc_params)
 {
-	struct gk20a *g = get_gk20a(pdev);
+	enum tegra_chipid cid = tegra_get_chipid();
 	long gpu_bw, emc_bw;
 
-	/* Detect and store gpu bw */
-        u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
-        switch (ver) {
-        case GK20A_GPUID_GK20A:
-		gpu_bw = TEGRA_GK20A_BW_PER_FREQ;
-                break;
-        case GK20A_GPUID_GM20B:
+	/* store gpu bw based on soc */
+	switch (cid) {
+	case TEGRA_CHIPID_TEGRA21:
 		gpu_bw = TEGRA_GM20B_BW_PER_FREQ;
-                break;
-        default:
+		break;
+	case TEGRA_CHIPID_TEGRA12:
+	case TEGRA_CHIPID_TEGRA13:
+		gpu_bw = TEGRA_GK20A_BW_PER_FREQ;
+		break;
+	case TEGRA_CHIPID_UNKNOWN:
+	default:
 		gpu_bw = 0;
 		break;
-        }
+	}
 
-	/* TODO detect DDR3 vs DDR4 */
+	/* TODO detect DDR type.
+	 * Okay for now since DDR3 and DDR4 have the same BW ratio */
 	emc_bw = TEGRA_DDR3_BW_PER_FREQ;
 
 	/* Calculate the bandwidth ratio of gpu_freq <-> emc_freq

@@ -61,34 +61,6 @@ struct nvmap_handle *nvmap_fd_to_handle(int handle)
 	return NULL;
 }
 
-/*
- * marshal_id/unmarshal_id are for get_id/handle_from_id.
- * These are added to support using Fd's for handle.
- */
-#ifdef CONFIG_ARM64
-static __u32 marshal_id(struct nvmap_handle *handle)
-{
-	return (__u32)((uintptr_t)handle >> 2);
-}
-
-static struct nvmap_handle *unmarshal_id(__u32 id)
-{
-	uintptr_t h = ((id << 2) | PAGE_OFFSET);
-
-	return (struct nvmap_handle *)h;
-}
-#else
-static __u32 marshal_id(struct nvmap_handle *handle)
-{
-	return (uintptr_t)handle;
-}
-
-static struct nvmap_handle *unmarshal_id(__u32 id)
-{
-	return (struct nvmap_handle *)id;
-}
-#endif
-
 struct nvmap_handle *__nvmap_ref_to_id(struct nvmap_handle_ref *ref)
 {
 	if (!virt_addr_valid(ref))
@@ -234,24 +206,6 @@ out:
 	return err;
 }
 
-int nvmap_ioctl_getid(struct file *filp, void __user *arg)
-{
-	struct nvmap_create_handle op;
-	struct nvmap_handle *h = NULL;
-
-	if (copy_from_user(&op, arg, sizeof(op)))
-		return -EFAULT;
-
-	h = nvmap_fd_to_handle(op.handle);
-	if (!h)
-		return -EINVAL;
-
-	op.id = marshal_id(h);
-	nvmap_handle_put(h);
-
-	return copy_to_user(arg, &op, sizeof(op)) ? -EFAULT : 0;
-}
-
 static int nvmap_share_release(struct inode *inode, struct file *file)
 {
 	struct nvmap_handle *h = file->private_data;
@@ -392,8 +346,6 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 		ref = nvmap_create_handle(client, PAGE_ALIGN(op.size));
 		if (!IS_ERR(ref))
 			ref->handle->orig_size = op.size;
-	} else if (cmd == NVMAP_IOC_FROM_ID) {
-		ref = nvmap_duplicate_handle(client, unmarshal_id(op.id), 0);
 	} else if (cmd == NVMAP_IOC_FROM_FD) {
 		ref = nvmap_create_handle_from_fd(client, op.fd);
 	} else {

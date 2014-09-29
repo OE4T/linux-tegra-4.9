@@ -627,7 +627,7 @@ struct nvmap_handle *nvmap_duplicate_handle_id_ex(struct nvmap_client *client,
 	struct nvmap_handle_ref *ref = nvmap_duplicate_handle(client, h, 0);
 
 	if (IS_ERR(ref))
-		return 0;
+		return NULL;
 
 	return __nvmap_ref_to_id(ref);
 }

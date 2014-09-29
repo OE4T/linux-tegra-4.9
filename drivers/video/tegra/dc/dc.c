@@ -3409,7 +3409,7 @@ static ssize_t switch_modeset_print_mode(struct switch_dev *sdev, char *buf)
 }
 #endif
 
-static int _tegra_dc_slgc_disp0(struct notifier_block *nb,
+int tegra_dc_slgc_disp0(struct notifier_block *nb,
 	unsigned long unused0, void *unused1)
 {
 #ifdef CONFIG_ARCH_TEGRA_21x_SOC
@@ -3579,7 +3579,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #ifdef CONFIG_TEGRA_ISOMGR
 		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_0;
 #endif
-		dc->slgc_notifier.notifier_call = _tegra_dc_slgc_disp0;
+		dc->slgc_notifier.notifier_call = tegra_dc_slgc_disp0;
 		slcg_register_notifier(TEGRA_POWERGATE_DISA,
 			&dc->slgc_notifier);
 	} else if (TEGRA_DISPLAY2_BASE == res->start) {

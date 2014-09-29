@@ -549,6 +549,8 @@ int tegra_dc_cursor_resume(struct tegra_dc *dc);
 void tegra_dc_win_partial_update(struct tegra_dc *dc, struct tegra_dc_win *win,
 	unsigned int xoff, unsigned int yoff, unsigned int width,
 	unsigned int height);
+int tegra_dc_slgc_disp0(struct notifier_block *nb, unsigned long unused0,
+	void *unused1);
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 int tegra_nvdisp_init(struct tegra_dc *dc);

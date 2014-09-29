@@ -229,7 +229,7 @@ int tegra_isp_register_mfi_cb(callback cb, void *cb_arg)
 }
 EXPORT_SYMBOL(tegra_isp_register_mfi_cb);
 
-int tegra_isp_unregister_mfi_cb()
+int tegra_isp_unregister_mfi_cb(void)
 {
 	mutex_lock(&isp_isr_lock);
 	mfi_callback = NULL;

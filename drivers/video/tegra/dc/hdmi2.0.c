@@ -43,7 +43,36 @@
 #include "hdmihdcp.h"
 #include "dpaux.h"
 
+#include <linux/tegra_prod.h>
 #include "../../../../arch/arm/mach-tegra/iomap.h"
+
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+#define TMDS_NODE	"/host1x/sor1"
+#endif
+
+struct tmds_prod_pair {
+	int clk;
+	const char *name;
+};
+
+static struct tmds_prod_pair tmds_config_modes[] = {
+	{ /* 54 MHz */
+	.clk = 54000000,
+	.name = "prod_c_54M"
+	},
+	{ /* 75 MHz */
+	.clk = 75000000,
+	.name = "prod_c_75M"
+	},
+	{ /* 300 MHz */
+	.clk = 300000000,
+	.name = "prod_c_300M"
+	},
+	{ /* HDMI 2.0 */
+	.clk = 600000000,
+	.name = "prod_c_600M"
+	}
+};
 
 static struct tegra_hdmi *dc_hdmi;
 
@@ -720,6 +749,51 @@ fail:
 	return err;
 }
 
+static int tegra_hdmi_tmds_init(struct tegra_hdmi *hdmi)
+{
+	const struct device_node *np_prod = of_find_node_by_path(TMDS_NODE);
+
+	if (!np_prod) {
+		dev_warn(&hdmi->dc->ndev->dev,
+			"hdmi: find tmds prod node failed\n");
+		return -EINVAL;
+	}
+
+
+	hdmi->prod_list = tegra_prod_init(np_prod);
+	if (IS_ERR(hdmi->prod_list)) {
+		dev_warn(&hdmi->dc->ndev->dev,
+			"hdmi: prod list init failed with error %ld\n",
+			PTR_ERR(hdmi->prod_list));
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
+{
+	size_t tmds_len;
+	int i;
+	int err = 0;
+
+	/* Select mode with smallest clk freq > pclk */
+	tmds_len = ARRAY_SIZE(tmds_config_modes);
+	for (i = 0; i < tmds_len - 1 &&
+		tmds_config_modes[i].clk < hdmi->dc->mode.pclk; i++)
+		;
+
+	err = tegra_prod_set_by_name(hdmi->sor->base,
+				tmds_config_modes[i].name, hdmi->prod_list);
+	if (err) {
+		dev_warn(&hdmi->dc->ndev->dev,
+			"hdmi: tmds prod set failed\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi;
@@ -762,6 +836,8 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	tegra_hdmi_debugfs_init(hdmi);
 
+	tegra_hdmi_tmds_init(hdmi);
+
 	tegra_dc_set_outdata(dc, hdmi);
 
 #ifdef CONFIG_SWITCH
@@ -788,6 +864,7 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);
 	gpio_free(dc->out->hotplug_gpio);
 	devm_kfree(&dc->ndev->dev, hdmi);
+	tegra_prod_release(hdmi->prod_list);
 
 #ifdef CONFIG_SWITCH
 	switch_dev_unregister(&hdmi->audio_switch);
@@ -1289,7 +1366,6 @@ static void tegra_hdmi_scdc_worker(struct work_struct *work)
 	schedule_delayed_work(&hdmi->scdc_work,
 			msecs_to_jiffies(HDMI_SCDC_MONITOR_TIMEOUT_MS));
 }
-
 static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 {
 	struct tegra_dc *dc = hdmi->dc;
@@ -1310,6 +1386,8 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	tegra_hdmi_config(hdmi);
 	tegra_hdmi_avi_infoframe(hdmi);
 	tegra_hdmi_audio_config(hdmi, AUDIO_FREQ_32K, HDA);
+
+	tegra_hdmi_config_tmds(hdmi);
 
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_BRICK_CLK);
 	tegra_dc_sor_attach(sor);

@@ -274,6 +274,7 @@ struct tegra_hdmi {
 	struct mutex hpd_lock;
 
 	int irq;
+	struct tegra_prod_list *prod_list;
 };
 
 #define HDMI_ELD_BUF 96
@@ -292,5 +293,6 @@ enum {
 	HDMI_ELD_MONITOR_NAME_STR = 20, /* MNL bytes */
 	HDMI_ELD_CEA_SAD, /* SAD_CNT * 3 bytes, index depends on MNL */
 };
+
 
 #endif

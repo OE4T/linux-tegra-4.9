@@ -338,9 +338,9 @@ void nvhost_free_error_notifiers(struct nvhost_channel *ch)
 	if (ch->error_notifier_ref) {
 		dma_buf_vunmap(ch->error_notifier_ref, ch->error_notifier_va);
 		dma_buf_put(ch->error_notifier_ref);
-		ch->error_notifier_ref = 0;
-		ch->error_notifier = 0;
-		ch->error_notifier_va = 0;
+		ch->error_notifier_ref = NULL;
+		ch->error_notifier = NULL;
+		ch->error_notifier_va = NULL;
 	}
 }
 

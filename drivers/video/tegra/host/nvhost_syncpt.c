@@ -1097,7 +1097,7 @@ void nvhost_syncpt_deinit(struct nvhost_syncpt *sp)
 	sp->max_val = NULL;
 
 	kfree(sp->lock_counts);
-	sp->lock_counts = 0;
+	sp->lock_counts = NULL;
 
 	kfree(sp->syncpt_attrs);
 	sp->syncpt_attrs = NULL;

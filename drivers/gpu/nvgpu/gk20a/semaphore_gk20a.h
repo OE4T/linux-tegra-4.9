@@ -1,8 +1,4 @@
 /*
- * drivers/video/tegra/host/gk20a/semaphore_gk20a.h
- *
- * GK20A Semaphores
- *
  * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,8 +11,8 @@
  * more details.
  */
 
-#ifndef _GK20A_SEMAPHORE_H_
-#define _GK20A_SEMAPHORE_H_
+#ifndef SEMAPHORE_GK20A_H
+#define SEMAPHORE_GK20A_H
 
 #include <linux/kref.h>
 #include "gk20a_allocator.h"
@@ -33,6 +29,12 @@ struct gk20a_semaphore_pool {
 	struct mutex maps_mutex;
 	struct kref ref;
 	struct gk20a_allocator alloc;
+};
+
+enum gk20a_mem_rw_flag {
+	gk20a_mem_flag_none = 0,
+	gk20a_mem_flag_read_only = 1,
+	gk20a_mem_flag_write_only = 2,
 };
 
 /* A semaphore pool can be mapped to multiple GPU address spaces. */

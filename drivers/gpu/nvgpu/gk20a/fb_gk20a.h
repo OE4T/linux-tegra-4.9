@@ -1,6 +1,4 @@
 /*
- * GK20A FB
- *
  * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,8 +11,8 @@
  * more details.
  */
 
-#ifndef _NVHOST_GK20A_FB
-#define _NVHOST_GK20A_FB
+#ifndef FB_GK20A_H
+#define FB_GK20A_H
 struct gk20a;
 
 void gk20a_init_fb(struct gpu_ops *gops);

@@ -1,6 +1,4 @@
 /*
- * drivers/video/tegra/host/gk20a/sync_gk20a.h
- *
  * GK20A Sync Framework Integration
  *
  * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.

@@ -1,6 +1,4 @@
 /*
- * gk20a allocator
- *
  * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -16,8 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __NVHOST_ALLOCATOR_H__
-#define __NVHOST_ALLOCATOR_H__
+#ifndef GK20A_ALLOCATOR_H
+#define GK20A_ALLOCATOR_H
 
 #include <linux/rbtree.h>
 #include <linux/rwsem.h>
@@ -112,4 +110,4 @@ do {								\
 
 #endif /* ALLOCATOR_DEBUG */
 
-#endif /*__NVHOST_ALLOCATOR_H__ */
+#endif /* GK20A_ALLOCATOR_H */

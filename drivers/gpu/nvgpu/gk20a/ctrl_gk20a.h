@@ -1,8 +1,4 @@
 /*
- * drivers/video/tegra/host/gk20a/gk20a_ctrl.h
- *
- * GK20A Ctrl
- *
  * Copyright (c) 2011-2012, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,15 +10,14 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _NVHOST_GK20A_CTRL_H_
-#define _NVHOST_GK20A_CTRL_H_
+#ifndef CTRL_GK20A_H
+#define CTRL_GK20A_H
 
 int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp);
 int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp);
 long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 
-#endif /* _NVHOST_GK20A_CTRL_H_ */
+#endif /* CTRL_GK20A_H */

@@ -1,6 +1,4 @@
 /*
- * drivers/video/tegra/host/gk20a/gk20a.c
- *
  * GK20A Graphics
  *
  * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
@@ -45,6 +43,10 @@
 #include <linux/sched.h>
 #include <linux/input-cfboost.h>
 
+#ifdef CONFIG_TEGRA_GK20A
+#include <linux/nvhost.h>
+#endif
+
 #include "gk20a.h"
 #include "debug_gk20a.h"
 #include "ctrl_gk20a.h"
@@ -57,7 +59,6 @@
 #include "gk20a_scale.h"
 #include "dbg_gpu_gk20a.h"
 #include "hal.h"
-#include "nvhost_acm.h"
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 #include "vgpu/vgpu.h"
 #endif
@@ -850,11 +851,11 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 
 static void gk20a_detect_chip(struct gk20a *g)
 {
-	struct nvhost_gpu_characteristics *gpu = &g->gpu_characteristics;
+	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
 
 	u32 mc_boot_0_value = gk20a_readl(g, mc_boot_0_r());
 	gpu->arch = mc_boot_0_architecture_v(mc_boot_0_value) <<
-		NVHOST_GPU_ARCHITECTURE_SHIFT;
+		NVGPU_GPU_ARCHITECTURE_SHIFT;
 	gpu->impl = mc_boot_0_implementation_v(mc_boot_0_value);
 	gpu->rev =
 		(mc_boot_0_major_revision_v(mc_boot_0_value) << 4) |
@@ -1622,7 +1623,7 @@ static int __exit gk20a_remove(struct platform_device *dev)
 	pm_runtime_put(&dev->dev);
 	pm_runtime_disable(&dev->dev);
 #else
-	nvhost_module_disable_clk(&dev->dev);
+	gk20a_pm_disable_clk(&dev->dev);
 #endif
 
 	return 0;
@@ -1894,7 +1895,7 @@ int gk20a_do_unidle(void)
 
 int gk20a_init_gpu_characteristics(struct gk20a *g)
 {
-	struct nvhost_gpu_characteristics *gpu = &g->gpu_characteristics;
+	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
 
 	gpu->L2_cache_size = g->ops.ltc.determine_L2_size_bytes(g);
 	gpu->on_board_video_memory_size = 0; /* integrated GPU */
@@ -1902,18 +1903,18 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->num_gpc = g->gr.gpc_count;
 	gpu->num_tpc_per_gpc = g->gr.max_tpc_per_gpc_count;
 
-	gpu->bus_type = NVHOST_GPU_BUS_TYPE_AXI; /* always AXI for now */
+	gpu->bus_type = NVGPU_GPU_BUS_TYPE_AXI; /* always AXI for now */
 
 	gpu->big_page_size = g->mm.big_page_size;
 	gpu->compression_page_size = g->mm.compression_page_size;
 	gpu->pde_coverage_bit_count = g->mm.pde_stride_shift;
 
-	gpu->flags = NVHOST_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS
-		| NVHOST_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS;
+	gpu->flags = NVGPU_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS
+		| NVGPU_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS;
 
 	if (IS_ENABLED(CONFIG_TEGRA_GK20A) &&
 	    gk20a_platform_has_syncpoints(g->dev))
-		gpu->flags |= NVHOST_GPU_FLAGS_HAS_SYNCPOINTS;
+		gpu->flags |= NVGPU_GPU_FLAGS_HAS_SYNCPOINTS;
 
 	gpu->reserved = 0;
 

@@ -14,7 +14,10 @@
  *
  */
 
+#ifdef CONFIG_TEGRA_GK20A
 #include <linux/nvhost.h>
+#endif
+
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 
@@ -141,6 +144,7 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 		gk20a_mem_rd32(inst_ptr, ram_fc_semaphorec_w()),
 		gk20a_mem_rd32(inst_ptr, ram_fc_semaphored_w()));
 
+#ifdef CONFIG_TEGRA_GK20A
 	if ((pbdma_syncpointb_op_v(syncpointb) == pbdma_syncpointb_op_wait_v())
 		&& (pbdma_syncpointb_wait_switch_v(syncpointb) ==
 			pbdma_syncpointb_wait_switch_en_v()))
@@ -150,6 +154,7 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 			nvhost_syncpt_get_name(g->host1x_dev,
 				pbdma_syncpointb_syncpt_index_v(syncpointb)),
 			pbdma_syncpointa_payload_v(syncpointa));
+#endif
 
 	gk20a_debug_output(o, "\n");
 }

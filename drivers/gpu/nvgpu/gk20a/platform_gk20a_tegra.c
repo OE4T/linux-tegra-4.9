@@ -16,6 +16,7 @@
  */
 
 #include <linux/of_platform.h>
+#include <linux/nvhost.h>
 #include <linux/debugfs.h>
 #include <linux/tegra-powergate.h>
 #include <linux/platform_data/tegra_edp.h>

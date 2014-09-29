@@ -1,5 +1,4 @@
 /*
- *
  * Tegra GK20A GPU Debugger Driver Register Ops
  *
  * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.

@@ -16,7 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/nvhost.h>
 #include <linux/dma-mapping.h>
 #include <linux/firmware.h>
 #include <linux/fs.h>
@@ -30,6 +29,7 @@
 #include "fence_gk20a.h"
 #include "gr_gk20a.h"
 #include "debug_gk20a.h"
+#include "semaphore_gk20a.h"
 
 #include "hw_ccsr_gk20a.h"
 #include "hw_pbdma_gk20a.h"
@@ -65,7 +65,7 @@ static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 
 	for (i = 0; i < cde_ctx->num_obj_ids; i++)
 		gk20a_free_obj_ctx(cde_ctx->ch,
-			&(struct nvhost_free_obj_ctx_args)
+			&(struct nvgpu_free_obj_ctx_args)
 			{ cde_ctx->obj_ids[i] });
 
 	kfree(cde_ctx->init_cmd);
@@ -400,7 +400,7 @@ static int gk20a_init_cde_required_class(struct gk20a_cde_ctx *cde_ctx,
 					 const struct firmware *img,
 					 u32 required_class)
 {
-	struct nvhost_alloc_obj_ctx_args alloc_obj_ctx;
+	struct nvgpu_alloc_obj_ctx_args alloc_obj_ctx;
 	int err;
 
 	if (cde_ctx->num_obj_ids >= MAX_CDE_OBJ_IDS) {
@@ -430,7 +430,7 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 				  struct gk20a_cde_cmd_elem *cmd_elem,
 				  u32 num_elems)
 {
-	struct nvhost_gpfifo **gpfifo, *gpfifo_elem;
+	struct nvgpu_gpfifo **gpfifo, *gpfifo_elem;
 	u32 *num_entries;
 	int i;
 
@@ -448,7 +448,7 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 	}
 
 	/* allocate gpfifo entries to be pushed */
-	*gpfifo = kzalloc(sizeof(struct nvhost_gpfifo) * num_elems,
+	*gpfifo = kzalloc(sizeof(struct nvgpu_gpfifo) * num_elems,
 			  GFP_KERNEL);
 	if (!*gpfifo) {
 		gk20a_warn(&cde_ctx->pdev->dev, "cde: could not allocate memory for gpfifo entries");
@@ -574,10 +574,10 @@ deinit_image:
 }
 
 static int gk20a_cde_execute_buffer(struct gk20a_cde_ctx *cde_ctx,
-				    u32 op, struct nvhost_fence *fence,
+				    u32 op, struct nvgpu_fence *fence,
 				    u32 flags, struct gk20a_fence **fence_out)
 {
-	struct nvhost_gpfifo *gpfifo = NULL;
+	struct nvgpu_gpfifo *gpfifo = NULL;
 	int num_entries = 0;
 
 	/* check command type */
@@ -604,7 +604,7 @@ static int gk20a_cde_execute_buffer(struct gk20a_cde_ctx *cde_ctx,
 int gk20a_cde_convert(struct gk20a *g, struct dma_buf *src,
 		      struct dma_buf *dst,
 		      s32 dst_kind, u64 dst_byte_offset,
-		      u32 dst_size, struct nvhost_fence *fence,
+		      u32 dst_size, struct nvgpu_fence *fence,
 		      u32 __flags, struct gk20a_cde_param *params,
 		      int num_params, struct gk20a_fence **fence_out)
 {
@@ -637,7 +637,7 @@ int gk20a_cde_convert(struct gk20a *g, struct dma_buf *src,
 	/* map the destination buffer */
 	get_dma_buf(dst); /* a ref for gk20a_vm_map */
 	dst_vaddr = gk20a_vm_map(g->cde_app.vm, dst, 0,
-				 NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+				 NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				 dst_kind, NULL, true,
 				 gk20a_mem_flag_none,
 				 0, 0);
@@ -655,7 +655,7 @@ int gk20a_cde_convert(struct gk20a *g, struct dma_buf *src,
 	/* map the source buffer to prevent premature release */
 	get_dma_buf(src); /* a ref for gk20a_vm_map */
 	src_vaddr = gk20a_vm_map(g->cde_app.vm, src, 0,
-				 NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+				 NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				 dst_kind, NULL, true,
 				 gk20a_mem_flag_none,
 				 0, 0);
@@ -736,7 +736,7 @@ int gk20a_cde_convert(struct gk20a *g, struct dma_buf *src,
 
 	/* take always the postfence as it is needed for protecting the
 	 * cde context */
-	flags = __flags | NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET;
+	flags = __flags | NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET;
 
 	/* execute the conversion buffer */
 	err = gk20a_cde_execute_buffer(cde_ctx, TYPE_BUF_COMMAND_CONVERT,
@@ -788,7 +788,7 @@ int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 
 	/* allocate gpfifo (1024 should be more than enough) */
 	err = gk20a_alloc_channel_gpfifo(ch,
-		&(struct nvhost_alloc_gpfifo_args){1024, 0});
+		&(struct nvgpu_alloc_gpfifo_args){1024, 0});
 	if (err) {
 		gk20a_warn(&cde_ctx->pdev->dev, "cde: unable to allocate gpfifo");
 		goto err_alloc_gpfifo;
@@ -797,7 +797,7 @@ int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	/* map backing store to gpu virtual space */
 	vaddr = gk20a_gmmu_map(ch->vm, &gr->compbit_store.sgt,
 			       g->gr.compbit_store.size,
-			       NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+			       NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 			       gk20a_mem_flag_read_only);
 
 	if (!vaddr) {
@@ -986,7 +986,7 @@ static int gk20a_buffer_convert_gpu_to_cde(
 		struct gk20a *g, struct dma_buf *dmabuf, u32 consumer,
 		u64 offset, u64 compbits_offset,
 		u32 width, u32 height, u32 block_height_log2,
-		u32 submit_flags, struct nvhost_fence *fence_in,
+		u32 submit_flags, struct nvgpu_fence *fence_in,
 		struct gk20a_fence **fence_out)
 {
 	struct gk20a_cde_param params[NUM_CDE_LAUNCH_PATCHES];
@@ -994,7 +994,7 @@ static int gk20a_buffer_convert_gpu_to_cde(
 	int err = 0;
 
 	/* Compute per launch parameters */
-	const bool transpose = (consumer == NVHOST_GPU_COMPBITS_CDEV);
+	const bool transpose = (consumer == NVGPU_GPU_COMPBITS_CDEV);
 	const int transposed_width = transpose ? height : width;
 	const int transposed_height = transpose ? width : height;
 	const int xtiles = (transposed_width + 7) >> 3;
@@ -1069,7 +1069,7 @@ int gk20a_prepare_compressible_read(
 		struct gk20a *g, u32 buffer_fd, u32 request, u64 offset,
 		u64 compbits_hoffset, u64 compbits_voffset,
 		u32 width, u32 height, u32 block_height_log2,
-		u32 submit_flags, struct nvhost_fence *fence,
+		u32 submit_flags, struct nvgpu_fence *fence,
 		u32 *valid_compbits, u32 *zbc_color,
 		struct gk20a_fence **fence_out)
 {
@@ -1092,7 +1092,7 @@ int gk20a_prepare_compressible_read(
 
 	mutex_lock(&state->lock);
 
-	if (state->valid_compbits && request == NVHOST_GPU_COMPBITS_NONE) {
+	if (state->valid_compbits && request == NVGPU_GPU_COMPBITS_NONE) {
 
 		gk20a_fence_put(state->fence);
 		state->fence = NULL;
@@ -1102,11 +1102,11 @@ int gk20a_prepare_compressible_read(
 		goto out;
 	} else if (missing_bits) {
 		struct gk20a_fence *new_fence = NULL;
-		if ((state->valid_compbits & NVHOST_GPU_COMPBITS_GPU) &&
-			(missing_bits & NVHOST_GPU_COMPBITS_CDEH)) {
+		if ((state->valid_compbits & NVGPU_GPU_COMPBITS_GPU) &&
+			(missing_bits & NVGPU_GPU_COMPBITS_CDEH)) {
 			err = gk20a_buffer_convert_gpu_to_cde(
 					g, dmabuf,
-					NVHOST_GPU_COMPBITS_CDEH,
+					NVGPU_GPU_COMPBITS_CDEH,
 					offset, compbits_hoffset,
 					width, height, block_height_log2,
 					submit_flags, fence,
@@ -1117,13 +1117,13 @@ int gk20a_prepare_compressible_read(
 			/* CDEH bits generated, update state & fence */
 			gk20a_fence_put(state->fence);
 			state->fence = new_fence;
-			state->valid_compbits |= NVHOST_GPU_COMPBITS_CDEH;
+			state->valid_compbits |= NVGPU_GPU_COMPBITS_CDEH;
 		}
-		if ((state->valid_compbits & NVHOST_GPU_COMPBITS_GPU) &&
-			(missing_bits & NVHOST_GPU_COMPBITS_CDEV)) {
+		if ((state->valid_compbits & NVGPU_GPU_COMPBITS_GPU) &&
+			(missing_bits & NVGPU_GPU_COMPBITS_CDEV)) {
 			err = gk20a_buffer_convert_gpu_to_cde(
 					g, dmabuf,
-					NVHOST_GPU_COMPBITS_CDEV,
+					NVGPU_GPU_COMPBITS_CDEV,
 					offset, compbits_voffset,
 					width, height, block_height_log2,
 					submit_flags, fence,
@@ -1134,7 +1134,7 @@ int gk20a_prepare_compressible_read(
 			/* CDEH bits generated, update state & fence */
 			gk20a_fence_put(state->fence);
 			state->fence = new_fence;
-			state->valid_compbits |= NVHOST_GPU_COMPBITS_CDEV;
+			state->valid_compbits |= NVGPU_GPU_COMPBITS_CDEV;
 		}
 	}
 

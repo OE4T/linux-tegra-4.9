@@ -1,6 +1,4 @@
 /*
- * drivers/video/tegra/host/gk20a/pmu_gk20a.c
- *
  * GK20A PMU (aka. gPMU outside gk20a context)
  *
  * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
@@ -14,9 +12,8 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <linux/delay.h>	/* for mdelay */
@@ -29,6 +26,7 @@
 
 #include "gk20a.h"
 #include "gr_gk20a.h"
+#include "semaphore_gk20a.h"
 #include "hw_mc_gk20a.h"
 #include "hw_pwr_gk20a.h"
 #include "hw_top_gk20a.h"

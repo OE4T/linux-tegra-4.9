@@ -1,5 +1,4 @@
 /*
- *
  * Tegra GK20A GPU Debugger Driver Register Ops
  *
  * Copyright (c) 2013-2014, NVIDIA CORPORATION. All rights reserved.
@@ -16,8 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __REGOPS_GK20A_H_
-#define __REGOPS_GK20A_H_
+#ifndef REGOPS_GK20A_H
+#define REGOPS_GK20A_H
 
 #include <linux/nvhost_dbg_gpu_ioctl.h>
 
@@ -27,11 +26,11 @@ struct regop_offset_range {
 };
 
 int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
-		      struct nvhost_dbg_gpu_reg_op *ops,
+		      struct nvgpu_dbg_gpu_reg_op *ops,
 		      u64 num_ops);
 
 /* turn seriously unwieldy names -> something shorter */
-#define REGOP(x) NVHOST_DBG_GPU_REG_OP_##x
+#define REGOP(x) NVGPU_DBG_GPU_REG_OP_##x
 
 static inline bool reg_op_is_gr_ctx(u8 type)
 {
@@ -51,4 +50,4 @@ static inline bool reg_op_is_read(u8 op)
 bool is_bar0_global_offset_whitelisted_gk20a(struct gk20a *g, u32 offset);
 
 void gk20a_init_regops(struct gpu_ops *gops);
-#endif /* __REGOPS_GK20A_H_ */
+#endif /* REGOPS_GK20A_H */

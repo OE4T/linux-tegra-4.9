@@ -1,6 +1,4 @@
 /*
- * drivers/video/tegra/host/gk20a/gk20a.h
- *
  * GK20A Graphics
  *
  * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
@@ -14,12 +12,11 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _NVHOST_GK20A_H_
-#define _NVHOST_GK20A_H_
+#ifndef GK20A_H
+#define GK20A_H
 
 
 struct gk20a;
@@ -133,9 +130,9 @@ struct gpu_ops {
 		u32 (*get_gpc_tpc_mask)(struct gk20a *g, u32 gpc_index);
 		void (*free_channel_ctx)(struct channel_gk20a *c);
 		int (*alloc_obj_ctx)(struct channel_gk20a  *c,
-				struct nvhost_alloc_obj_ctx_args *args);
+				struct nvgpu_alloc_obj_ctx_args *args);
 		int (*free_obj_ctx)(struct channel_gk20a  *c,
-				struct nvhost_free_obj_ctx_args *args);
+				struct nvgpu_free_obj_ctx_args *args);
 		int (*bind_ctxsw_zcull)(struct gk20a *g, struct gr_gk20a *gr,
 				struct channel_gk20a *c, u64 zcull_va,
 				u32 mode);
@@ -405,7 +402,7 @@ struct gk20a {
 
 	spinlock_t mc_enable_lock;
 
-	struct nvhost_gpu_characteristics gpu_characteristics;
+	struct nvgpu_gpu_characteristics gpu_characteristics;
 
 	struct {
 		struct cdev cdev;
@@ -504,11 +501,11 @@ struct gk20a_cyclestate_buffer_elem {
 #ifdef CONFIG_DEBUG_FS
     /* debug info, default is compiled-in but effectively disabled (0 mask) */
     #define GK20A_DEBUG
-    /*e.g: echo 1 > /d/tegra_host/dbg_mask */
+    /*e.g: echo 1 > /d/gk20a.0/dbg_mask */
     #define GK20A_DEFAULT_DBG_MASK 0
 #else
     /* manually enable and turn it on the mask */
-    /*#define NVHOST_DEBUG*/
+    /*#define NVGPU_DEBUG*/
     #define GK20A_DEFAULT_DBG_MASK (dbg_info)
 #endif
 
@@ -719,21 +716,21 @@ int __gk20a_do_unidle(struct platform_device *pdev);
 const struct firmware *
 gk20a_request_firmware(struct gk20a *g, const char *fw_name);
 
-#define NVHOST_GPU_ARCHITECTURE_SHIFT 4
+#define NVGPU_GPU_ARCHITECTURE_SHIFT 4
 
-/* constructs unique and compact GPUID from nvhost_gpu_characteristics
+/* constructs unique and compact GPUID from nvgpu_gpu_characteristics
  * arch/impl fields */
 #define GK20A_GPUID(arch, impl) ((u32) ((arch) | (impl)))
 
 #define GK20A_GPUID_GK20A \
-	GK20A_GPUID(NVHOST_GPU_ARCH_GK100, NVHOST_GPU_IMPL_GK20A)
+	GK20A_GPUID(NVGPU_GPU_ARCH_GK100, NVGPU_GPU_IMPL_GK20A)
 
 #define GK20A_GPUID_GM20B \
-	GK20A_GPUID(NVHOST_GPU_ARCH_GM200, NVHOST_GPU_IMPL_GM20B)
+	GK20A_GPUID(NVGPU_GPU_ARCH_GM200, NVGPU_GPU_IMPL_GM20B)
 
 int gk20a_init_gpu_characteristics(struct gk20a *g);
 
 int gk20a_user_init(struct platform_device *dev);
 void gk20a_user_deinit(struct platform_device *dev);
 
-#endif /* _NVHOST_GK20A_H_ */
+#endif /* GK20A_H */

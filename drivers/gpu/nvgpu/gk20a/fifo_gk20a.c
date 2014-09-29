@@ -1,6 +1,4 @@
 /*
- * drivers/video/tegra/host/gk20a/fifo_gk20a.c
- *
  * GK20A Graphics FIFO (gr host)
  *
  * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
@@ -27,6 +25,7 @@
 
 #include "gk20a.h"
 #include "debug_gk20a.h"
+#include "semaphore_gk20a.h"
 #include "hw_fifo_gk20a.h"
 #include "hw_pbdma_gk20a.h"
 #include "hw_ccsr_gk20a.h"
@@ -917,11 +916,11 @@ static bool gk20a_fifo_set_ctx_mmu_error(struct gk20a *g,
 			 * error condition.
 			 * Don't overwrite error flag. */
 			/* Fifo timeout debug spew is controlled by user */
-			if (err == NVHOST_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT)
+			if (err == NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT)
 				verbose = ch->timeout_debug_dump;
 		} else {
 			gk20a_set_error_notifier(ch,
-				NVHOST_CHANNEL_FIFO_ERROR_MMU_ERR_FLT);
+				NVGPU_CHANNEL_FIFO_ERROR_MMU_ERR_FLT);
 		}
 	}
 	/* mark channel as faulted */
@@ -1294,13 +1293,13 @@ int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch, bool verbose)
 		mutex_lock(&tsg->ch_list_lock);
 		list_for_each_entry(ch_tsg, &tsg->ch_list, ch_entry) {
 			gk20a_set_error_notifier(ch_tsg,
-			       NVHOST_CHANNEL_RESETCHANNEL_VERIF_ERROR);
+			       NVGPU_CHANNEL_RESETCHANNEL_VERIF_ERROR);
 		}
 		mutex_unlock(&tsg->ch_list_lock);
 		gk20a_fifo_recover_tsg(ch->g, ch->tsgid, verbose);
 	} else {
 		gk20a_set_error_notifier(ch,
-			NVHOST_CHANNEL_RESETCHANNEL_VERIF_ERROR);
+			NVGPU_CHANNEL_RESETCHANNEL_VERIF_ERROR);
 		gk20a_fifo_recover_ch(ch->g, ch->hw_chid, verbose);
 	}
 
@@ -1364,7 +1363,7 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 		if (gk20a_channel_update_and_check_timeout(ch,
 			GRFIFO_TIMEOUT_CHECK_PERIOD_US / 1000)) {
 			gk20a_set_error_notifier(ch,
-				NVHOST_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
+				NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
 			gk20a_err(dev_from_gk20a(g),
 				"fifo sched ctxsw timeout error:"
 				"engine = %u, ch = %d", engine_id, id);
@@ -1504,7 +1503,7 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 			struct channel_gk20a *ch = &f->channel[id];
 
 			gk20a_set_error_notifier(ch,
-				NVHOST_CHANNEL_PBDMA_ERROR);
+				NVGPU_CHANNEL_PBDMA_ERROR);
 			gk20a_fifo_recover_ch(g, id, true);
 		} else if (fifo_pbdma_status_id_type_v(status)
 				== fifo_pbdma_status_id_type_tsgid_v()) {
@@ -1514,7 +1513,7 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 			mutex_lock(&tsg->ch_list_lock);
 			list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
 				gk20a_set_error_notifier(ch,
-					NVHOST_CHANNEL_PBDMA_ERROR);
+					NVGPU_CHANNEL_PBDMA_ERROR);
 			}
 			mutex_unlock(&tsg->ch_list_lock);
 			gk20a_fifo_recover_tsg(g, id, true);
@@ -1644,7 +1643,7 @@ static int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 			mutex_lock(&tsg->ch_list_lock);
 			list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
 				gk20a_set_error_notifier(ch,
-					NVHOST_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
+					NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
 			}
 			mutex_unlock(&tsg->ch_list_lock);
 			gk20a_fifo_recover_tsg(g, id, true);
@@ -1655,7 +1654,7 @@ static int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 				"preempt channel %d timeout\n", id);
 
 			gk20a_set_error_notifier(ch,
-					NVHOST_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
+					NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
 			gk20a_fifo_recover_ch(g, id, true);
 		}
 	}

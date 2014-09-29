@@ -1,8 +1,6 @@
 /*
- * GM20B ACR
- *
  * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
-*
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
  * version 2, as published by the Free Software Foundation.
@@ -24,6 +22,7 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
+#include "gk20a/semaphore_gk20a.h"
 #include "hw_pwr_gm20b.h"
 #include "mc_carveout_reg.h"
 

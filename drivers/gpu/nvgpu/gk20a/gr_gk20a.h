@@ -15,8 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __GR_GK20A_H__
-#define __GR_GK20A_H__
+#ifndef GR_GK20A_H
+#define GR_GK20A_H
 
 #include <linux/slab.h>
 
@@ -330,13 +330,13 @@ int gk20a_init_gr_channel(struct channel_gk20a *ch_gk20a);
 
 int gr_gk20a_init_ctx_vars(struct gk20a *g, struct gr_gk20a *gr);
 
-struct nvhost_alloc_obj_ctx_args;
-struct nvhost_free_obj_ctx_args;
+struct nvgpu_alloc_obj_ctx_args;
+struct nvgpu_free_obj_ctx_args;
 
 int gk20a_alloc_obj_ctx(struct channel_gk20a *c,
-			struct nvhost_alloc_obj_ctx_args *args);
+			struct nvgpu_alloc_obj_ctx_args *args);
 int gk20a_free_obj_ctx(struct channel_gk20a *c,
-			struct nvhost_free_obj_ctx_args *args);
+			struct nvgpu_free_obj_ctx_args *args);
 void gk20a_free_channel_ctx(struct channel_gk20a *c);
 
 int gk20a_gr_isr(struct gk20a *g);
@@ -384,9 +384,9 @@ bool gk20a_gr_sm_debugger_attached(struct gk20a *g);
 
 int gk20a_gr_suspend(struct gk20a *g);
 
-struct nvhost_dbg_gpu_reg_op;
+struct nvgpu_dbg_gpu_reg_op;
 int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
-			  struct nvhost_dbg_gpu_reg_op *ctx_ops, u32 num_ops,
+			  struct nvgpu_dbg_gpu_reg_op *ctx_ops, u32 num_ops,
 			  u32 num_ctx_wr_ops, u32 num_ctx_rd_ops);
 int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,
 				    u32 addr,
@@ -424,4 +424,4 @@ int gr_gk20a_load_ctxsw_ucode(struct gk20a *g);
 void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g);
 
 void gr_gk20a_free_tsg_gr_ctx(struct tsg_gk20a *c);
-#endif /*__GR_GK20A_H__*/
+#endif /* GR_GK20A_H */

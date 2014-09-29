@@ -51,6 +51,7 @@
 #include "gr_pri_gk20a.h"
 #include "regops_gk20a.h"
 #include "dbg_gpu_gk20a.h"
+#include "semaphore_gk20a.h"
 
 #define BLK_SIZE (256)
 
@@ -2174,8 +2175,8 @@ int gr_gk20a_load_ctxsw_ucode(struct gk20a *g)
 	 * In case bootloader is not supported, revert to the old way of
 	 * loading gr ucode, without the faster bootstrap routine.
 	 */
-	if (g->gpu_characteristics.arch != NVHOST_GPU_ARCH_GK100 &&
-	    g->gpu_characteristics.arch != NVHOST_GPU_ARCH_GM200) {
+	if (g->gpu_characteristics.arch != NVGPU_GPU_ARCH_GK100 &&
+	    g->gpu_characteristics.arch != NVGPU_GPU_ARCH_GM200) {
 		gr_gk20a_load_falcon_dmem(g);
 		gr_gk20a_load_falcon_imem(g);
 		gr_gk20a_start_falcon_ucode(g);
@@ -2437,7 +2438,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	}
 
 	gpu_va = gk20a_gmmu_map(ch_vm, &sgt, size,
-				NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				gk20a_mem_flag_none);
 	if (!gpu_va)
 		goto clean_up;
@@ -2454,7 +2455,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	}
 
 	gpu_va = gk20a_gmmu_map(ch_vm, &sgt, size,
-				NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				gk20a_mem_flag_none);
 	if (!gpu_va)
 		goto clean_up;
@@ -2471,7 +2472,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	}
 
 	gpu_va = gk20a_gmmu_map(ch_vm, &sgt, size,
-				NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				gk20a_mem_flag_none);
 	if (!gpu_va)
 		goto clean_up;
@@ -2574,7 +2575,7 @@ static int __gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 		goto err_free;
 
 	gr_ctx->gpu_va = gk20a_gmmu_map(vm, &sgt, gr_ctx->size,
-				NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				gk20a_mem_flag_none);
 	if (!gr_ctx->gpu_va)
 		goto err_free_sgt;
@@ -2780,7 +2781,7 @@ static bool gr_gk20a_is_valid_class(struct gk20a *g, u32 class_num)
 }
 
 int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
-			struct nvhost_alloc_obj_ctx_args *args)
+			struct nvgpu_alloc_obj_ctx_args *args)
 {
 	struct gk20a *g = c->g;
 	struct fifo_gk20a *f = &g->fifo;
@@ -2943,7 +2944,7 @@ out:
 }
 
 int gk20a_free_obj_ctx(struct channel_gk20a  *c,
-		       struct nvhost_free_obj_ctx_args *args)
+		       struct nvgpu_free_obj_ctx_args *args)
 {
 	unsigned long timeout = gk20a_get_gr_idle_timeout(c->g);
 
@@ -4956,7 +4957,7 @@ static int gk20a_gr_handle_semaphore_timeout_pending(struct gk20a *g,
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
 	gk20a_dbg_fn("");
 	gk20a_set_error_notifier(ch,
-				NVHOST_CHANNEL_GR_SEMAPHORE_TIMEOUT);
+				NVGPU_CHANNEL_GR_SEMAPHORE_TIMEOUT);
 	gk20a_err(dev_from_gk20a(g),
 		   "gr semaphore timeout\n");
 	return -EINVAL;
@@ -4969,7 +4970,7 @@ static int gk20a_gr_intr_illegal_notify_pending(struct gk20a *g,
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
 	gk20a_dbg_fn("");
 	gk20a_set_error_notifier(ch,
-				NVHOST_CHANNEL_GR_ILLEGAL_NOTIFY);
+				NVGPU_CHANNEL_GR_ILLEGAL_NOTIFY);
 	/* This is an unrecoverable error, reset is needed */
 	gk20a_err(dev_from_gk20a(g),
 		   "gr semaphore timeout\n");
@@ -4997,7 +4998,7 @@ static int gk20a_gr_handle_illegal_class(struct gk20a *g,
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
 	gk20a_dbg_fn("");
 	gk20a_set_error_notifier(ch,
-				NVHOST_CHANNEL_GR_ERROR_SW_NOTIFY);
+				NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
 	gk20a_err(dev_from_gk20a(g),
 		   "invalid class 0x%08x, offset 0x%08x",
 		   isr_data->class_num, isr_data->offset);
@@ -5037,7 +5038,7 @@ static int gk20a_gr_handle_class_error(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	gk20a_set_error_notifier(ch,
-			NVHOST_CHANNEL_GR_ERROR_SW_NOTIFY);
+			NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
 	gk20a_err(dev_from_gk20a(g),
 		   "class error 0x%08x, offset 0x%08x, unhandled intr 0x%08x for channel %u\n",
 		   isr_data->class_num, isr_data->offset,
@@ -5054,7 +5055,7 @@ static int gk20a_gr_handle_firmware_method(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	gk20a_set_error_notifier(ch,
-			NVHOST_CHANNEL_GR_ERROR_SW_NOTIFY);
+			NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
 	gk20a_err(dev_from_gk20a(g),
 		   "firmware method 0x%08x, offset 0x%08x for channel %u\n",
 		   isr_data->class_num, isr_data->offset,
@@ -5674,7 +5675,7 @@ int gk20a_gr_isr(struct gk20a *g)
 
 			if (need_reset)
 				gk20a_set_error_notifier(ch,
-					NVHOST_CHANNEL_GR_ERROR_SW_NOTIFY);
+					NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
 		}
 
 		gk20a_writel(g, gr_intr_r(), gr_intr_exception_reset_f());
@@ -6774,7 +6775,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 
 
 int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
-			  struct nvhost_dbg_gpu_reg_op *ctx_ops, u32 num_ops,
+			  struct nvgpu_dbg_gpu_reg_op *ctx_ops, u32 num_ops,
 			  u32 num_ctx_wr_ops, u32 num_ctx_rd_ops)
 {
 	struct gk20a *g = ch->g;
@@ -6921,7 +6922,7 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 					   "ctx op invalid offset: offset=0x%x",
 					   ctx_ops[i].offset);
 				ctx_ops[i].status =
-					NVHOST_DBG_GPU_REG_OP_STATUS_INVALID_OFFSET;
+					NVGPU_DBG_GPU_REG_OP_STATUS_INVALID_OFFSET;
 				continue;
 			}
 

@@ -1,6 +1,4 @@
 /*
- * GK20A Ctrl
- *
  * Copyright (c) 2011-2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -57,9 +55,9 @@ int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
 static long
 gk20a_ctrl_ioctl_gpu_characteristics(
 	struct gk20a *g,
-	struct nvhost_gpu_get_characteristics *request)
+	struct nvgpu_gpu_get_characteristics *request)
 {
-	struct nvhost_gpu_characteristics *pgpu = &g->gpu_characteristics;
+	struct nvgpu_gpu_characteristics *pgpu = &g->gpu_characteristics;
 	long err = 0;
 
 	if (request->gpu_characteristics_buf_size > 0) {
@@ -81,14 +79,14 @@ gk20a_ctrl_ioctl_gpu_characteristics(
 
 static int gk20a_ctrl_prepare_compressible_read(
 		struct gk20a *g,
-		struct nvhost_gpu_prepare_compressible_read_args *args)
+		struct nvgpu_gpu_prepare_compressible_read_args *args)
 {
-	struct nvhost_fence fence;
+	struct nvgpu_fence fence;
 	struct gk20a_fence *fence_out = NULL;
 	int ret = 0;
 	int flags = args->submit_flags;
 
-	fence.syncpt_id = args->fence.syncpt_id;
+	fence.id = args->fence.syncpt_id;
 	fence.value = args->fence.syncpt_value;
 
 	ret = gk20a_busy(g->dev);
@@ -107,8 +105,8 @@ static int gk20a_ctrl_prepare_compressible_read(
 		return ret;
 
 	/* Convert fence_out to something we can pass back to user space. */
-	if (flags & NVHOST_SUBMIT_GPFIFO_FLAGS_FENCE_GET) {
-		if (flags & NVHOST_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE) {
+	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET) {
+		if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE) {
 			if (fence_out) {
 				int fd = gk20a_fence_install_fd(fence_out);
 				if (fd < 0)
@@ -136,7 +134,7 @@ static int gk20a_ctrl_prepare_compressible_read(
 
 static int gk20a_ctrl_mark_compressible_write(
 		struct gk20a *g,
-		struct nvhost_gpu_mark_compressible_write_args *args)
+		struct nvgpu_gpu_mark_compressible_write_args *args)
 {
 	int ret = 0;
 
@@ -154,11 +152,11 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 {
 	struct platform_device *dev = filp->private_data;
 	struct gk20a *g = get_gk20a(dev);
-	struct nvhost_gpu_zcull_get_ctx_size_args *get_ctx_size_args;
-	struct nvhost_gpu_zcull_get_info_args *get_info_args;
-	struct nvhost_gpu_zbc_set_table_args *set_table_args;
-	struct nvhost_gpu_zbc_query_table_args *query_table_args;
-	u8 buf[NVHOST_GPU_IOCTL_MAX_ARG_SIZE];
+	struct nvgpu_gpu_zcull_get_ctx_size_args *get_ctx_size_args;
+	struct nvgpu_gpu_zcull_get_info_args *get_info_args;
+	struct nvgpu_gpu_zbc_set_table_args *set_table_args;
+	struct nvgpu_gpu_zbc_query_table_args *query_table_args;
+	u8 buf[NVGPU_GPU_IOCTL_MAX_ARG_SIZE];
 	struct gr_zcull_info *zcull_info;
 	struct zbc_entry *zbc_val;
 	struct zbc_query_params *zbc_tbl;
@@ -169,12 +167,12 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 
 	gk20a_dbg_fn("");
 
-	if ((_IOC_TYPE(cmd) != NVHOST_GPU_IOCTL_MAGIC) ||
+	if ((_IOC_TYPE(cmd) != NVGPU_GPU_IOCTL_MAGIC) ||
 		(_IOC_NR(cmd) == 0) ||
-		(_IOC_NR(cmd) > NVHOST_GPU_IOCTL_LAST))
+		(_IOC_NR(cmd) > NVGPU_GPU_IOCTL_LAST))
 		return -EINVAL;
 
-	BUG_ON(_IOC_SIZE(cmd) > NVHOST_GPU_IOCTL_MAX_ARG_SIZE);
+	BUG_ON(_IOC_SIZE(cmd) > NVGPU_GPU_IOCTL_MAX_ARG_SIZE);
 
 	if (_IOC_DIR(cmd) & _IOC_WRITE) {
 		if (copy_from_user(buf, (void __user *)arg, _IOC_SIZE(cmd)))
@@ -190,16 +188,16 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	}
 
 	switch (cmd) {
-	case NVHOST_GPU_IOCTL_ZCULL_GET_CTX_SIZE:
-		get_ctx_size_args = (struct nvhost_gpu_zcull_get_ctx_size_args *)buf;
+	case NVGPU_GPU_IOCTL_ZCULL_GET_CTX_SIZE:
+		get_ctx_size_args = (struct nvgpu_gpu_zcull_get_ctx_size_args *)buf;
 
 		get_ctx_size_args->size = gr_gk20a_get_ctxsw_zcull_size(g, &g->gr);
 
 		break;
-	case NVHOST_GPU_IOCTL_ZCULL_GET_INFO:
-		get_info_args = (struct nvhost_gpu_zcull_get_info_args *)buf;
+	case NVGPU_GPU_IOCTL_ZCULL_GET_INFO:
+		get_info_args = (struct nvgpu_gpu_zcull_get_info_args *)buf;
 
-		memset(get_info_args, 0, sizeof(struct nvhost_gpu_zcull_get_info_args));
+		memset(get_info_args, 0, sizeof(struct nvgpu_gpu_zcull_get_info_args));
 
 		zcull_info = kzalloc(sizeof(struct gr_zcull_info), GFP_KERNEL);
 		if (zcull_info == NULL)
@@ -224,8 +222,8 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 
 		kfree(zcull_info);
 		break;
-	case NVHOST_GPU_IOCTL_ZBC_SET_TABLE:
-		set_table_args = (struct nvhost_gpu_zbc_set_table_args *)buf;
+	case NVGPU_GPU_IOCTL_ZBC_SET_TABLE:
+		set_table_args = (struct nvgpu_gpu_zbc_set_table_args *)buf;
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 		if (platform->virtual_dev)
@@ -264,8 +262,8 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		if (zbc_val)
 			kfree(zbc_val);
 		break;
-	case NVHOST_GPU_IOCTL_ZBC_QUERY_TABLE:
-		query_table_args = (struct nvhost_gpu_zbc_query_table_args *)buf;
+	case NVGPU_GPU_IOCTL_ZBC_QUERY_TABLE:
+		query_table_args = (struct nvgpu_gpu_zbc_query_table_args *)buf;
 
 		zbc_tbl = kzalloc(sizeof(struct zbc_query_params), GFP_KERNEL);
 		if (zbc_tbl == NULL)
@@ -303,17 +301,17 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 			kfree(zbc_tbl);
 		break;
 
-	case NVHOST_GPU_IOCTL_GET_CHARACTERISTICS:
+	case NVGPU_GPU_IOCTL_GET_CHARACTERISTICS:
 		err = gk20a_ctrl_ioctl_gpu_characteristics(
-			g, (struct nvhost_gpu_get_characteristics *)buf);
+			g, (struct nvgpu_gpu_get_characteristics *)buf);
 		break;
-	case NVHOST_GPU_IOCTL_PREPARE_COMPRESSIBLE_READ:
+	case NVGPU_GPU_IOCTL_PREPARE_COMPRESSIBLE_READ:
 		err = gk20a_ctrl_prepare_compressible_read(g,
-			(struct nvhost_gpu_prepare_compressible_read_args *)buf);
+			(struct nvgpu_gpu_prepare_compressible_read_args *)buf);
 		break;
-	case NVHOST_GPU_IOCTL_MARK_COMPRESSIBLE_WRITE:
+	case NVGPU_GPU_IOCTL_MARK_COMPRESSIBLE_WRITE:
 		err = gk20a_ctrl_mark_compressible_write(g,
-			(struct nvhost_gpu_mark_compressible_write_args *)buf);
+			(struct nvgpu_gpu_mark_compressible_write_args *)buf);
 		break;
 	default:
 		dev_dbg(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x", cmd);

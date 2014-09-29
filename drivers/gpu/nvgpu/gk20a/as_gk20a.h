@@ -1,7 +1,5 @@
 /*
- * drivers/video/tegra/host/gk20a/as_gk20a.h
- *
- * GK20A Address Space
+ * GK20A Address Spaces
  *
  * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -14,14 +12,12 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
-#ifndef __GK20A_AS_H
-#define __GK20A_AS_H
+#ifndef AS_GK20A_H
+#define AS_GK20A_H
 
 #include <linux/atomic.h>
 #include <linux/cdev.h>
 #include <linux/fs.h>
-
-#include <linux/nvhost_as_ioctl.h>
 
 struct gk20a_as;
 struct gk20a_as_share;

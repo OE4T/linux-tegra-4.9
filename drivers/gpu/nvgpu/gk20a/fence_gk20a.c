@@ -1,8 +1,4 @@
 /*
- * drivers/video/tegra/host/gk20a/fence_gk20a.c
- *
- * GK20A Fences
- *
  * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -31,6 +27,7 @@
 
 #ifdef CONFIG_TEGRA_GK20A
 #include <linux/nvhost.h>
+#include <linux/nvhost_ioctl.h>
 #endif
 
 struct gk20a_fence_ops {

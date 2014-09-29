@@ -15,8 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _NVHOST_GR_PRI_GK20A_H_
-#define _NVHOST_GR_PRI_GK20A_H_
+#ifndef GR_PRI_GK20A_H
+#define GR_PRI_GK20A_H
 
 /*
  * These convenience macros are generally for use in the management/modificaiton
@@ -176,4 +176,4 @@ enum ctxsw_addr_type {
 #define PRI_BROADCAST_FLAGS_BE    BIT(2)
 #define PRI_BROADCAST_FLAGS_PPC   BIT(3)
 
-#endif /*_NVHOST_GR_PRI_GK20A_H_ */
+#endif /* GR_PRI_GK20A_H */

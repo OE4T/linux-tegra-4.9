@@ -1,6 +1,4 @@
 /*
- * drivers/video/tegra/host/gk20a/mm_gk20a.c
- *
  * GK20A memory management
  *
  * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
@@ -14,9 +12,8 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <linux/delay.h>
@@ -29,6 +26,7 @@
 #include <linux/tegra-soc.h>
 #include <linux/vmalloc.h>
 #include <linux/dma-buf.h>
+#include <linux/nvhost_as_ioctl.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"
@@ -42,6 +40,7 @@
 #include "hw_ltc_gk20a.h"
 
 #include "kind_gk20a.h"
+#include "semaphore_gk20a.h"
 
 /*
  * GPU mapping life cycle
@@ -819,7 +818,7 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 		return;
 	}
 
-	if (mapped_buffer->flags & NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
+	if (mapped_buffer->flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
 		mutex_unlock(&vm->update_gmmu_lock);
 
 		if (tegra_platform_is_silicon())
@@ -1175,7 +1174,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 				      kind_v,
 				      ctag_offset,
 				      flags &
-				      NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+				      NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				      rw_flag);
 	if (err) {
 		gk20a_err(d, "failed to update ptes on map");
@@ -1256,7 +1255,7 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 	if (mapped_buffer->flags != flags)
 		return 0;
 
-	if (flags & NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET &&
+	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET &&
 	    mapped_buffer->addr != offset_align)
 		return 0;
 
@@ -1303,7 +1302,7 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 u64 gk20a_vm_map(struct vm_gk20a *vm,
 			struct dma_buf *dmabuf,
 			u64 offset_align,
-			u32 flags /*NVHOST_AS_MAP_BUFFER_FLAGS_*/,
+			u32 flags /*NVGPU_AS_MAP_BUFFER_FLAGS_*/,
 			int kind,
 			struct sg_table **sgt,
 			bool user_mapped,
@@ -1364,7 +1363,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	/* If FIX_OFFSET is set, pgsz is determined. Otherwise, select
 	 * page size according to memory alignment */
-	if (flags & NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
+	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
 		bfr.pgsz_idx = NV_GMMU_VA_IS_UPPER(offset_align) ?
 				gmmu_page_size_big : gmmu_page_size_small;
 	} else {
@@ -1390,7 +1389,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	/* Check if we should use a fixed offset for mapping this buffer */
 
-	if (flags & NVHOST_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)  {
+	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)  {
 		err = validate_fixed_buffer(vm, &bfr,
 			offset_align, mapping_size);
 		if (err)
@@ -1996,7 +1995,7 @@ static int gk20a_vm_put_empty(struct vm_gk20a *vm, u64 vaddr,
 	for (i = 0; i < num_pages; i++) {
 		u64 page_vaddr = g->ops.mm.gmmu_map(vm, vaddr,
 			vm->zero_page_sgt, 0, pgsz, pgsz_idx, 0, 0,
-			NVHOST_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET,
+			NVGPU_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET,
 			gk20a_mem_flag_none, false);
 
 		if (!page_vaddr) {
@@ -2322,7 +2321,7 @@ int gk20a_vm_release_share(struct gk20a_as_share *as_share)
 
 
 int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
-			 struct nvhost_as_alloc_space_args *args)
+			 struct nvgpu_as_alloc_space_args *args)
 
 {	int err = -ENOMEM;
 	int pgsz_idx;
@@ -2356,7 +2355,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 		goto clean_up;
 	}
 
-	if (args->flags & NVHOST_AS_ALLOC_SPACE_FLAGS_SPARSE &&
+	if (args->flags & NVGPU_AS_ALLOC_SPACE_FLAGS_SPARSE &&
 	    pgsz_idx != gmmu_page_size_big) {
 		err = -ENOSYS;
 		kfree(va_node);
@@ -2364,7 +2363,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 	}
 
 	start_page_nr = 0;
-	if (args->flags & NVHOST_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET)
+	if (args->flags & NVGPU_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET)
 		start_page_nr = (u32)(args->o_a.offset >>
 				      gmmu_page_shifts[pgsz_idx]);
 
@@ -2386,7 +2385,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 	mutex_lock(&vm->update_gmmu_lock);
 
 	/* mark that we need to use sparse mappings here */
-	if (args->flags & NVHOST_AS_ALLOC_SPACE_FLAGS_SPARSE) {
+	if (args->flags & NVGPU_AS_ALLOC_SPACE_FLAGS_SPARSE) {
 		err = g->ops.mm.set_sparse(vm, vaddr_start, args->pages,
 					 pgsz_idx, true);
 		if (err) {
@@ -2409,7 +2408,7 @@ clean_up:
 }
 
 int gk20a_vm_free_space(struct gk20a_as_share *as_share,
-			struct nvhost_as_free_space_args *args)
+			struct nvgpu_as_free_space_args *args)
 {
 	int err = -ENOMEM;
 	int pgsz_idx;
@@ -2580,7 +2579,7 @@ static int gk20a_dmabuf_get_kind(struct dma_buf *dmabuf)
 int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
 			int dmabuf_fd,
 			u64 *offset_align,
-			u32 flags, /*NVHOST_AS_MAP_BUFFER_FLAGS_*/
+			u32 flags, /*NVGPU_AS_MAP_BUFFER_FLAGS_*/
 			int kind,
 			u64 buffer_offset,
 			u64 mapping_size)
@@ -3147,7 +3146,7 @@ bool gk20a_mm_mmu_debug_mode_enabled(struct gk20a *g)
 
 void gk20a_init_mm(struct gpu_ops *gops)
 {
-	/* remember to remove NVHOST_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS in
+	/* remember to remove NVGPU_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS in
 	 * characteristics flags if sparse support is removed */
 	gops->mm.set_sparse = gk20a_vm_put_sparse;
 	gops->mm.put_empty = gk20a_vm_put_empty;

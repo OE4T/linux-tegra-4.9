@@ -1,6 +1,4 @@
 /*
- * drivers/video/tegra/host/gk20a/as_gk20a.c
- *
  * GK20A Address Spaces
  *
  * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
@@ -21,6 +19,8 @@
 #include <linux/uaccess.h>
 
 #include <trace/events/gk20a.h>
+
+#include <linux/nvhost_as_ioctl.h>
 
 #include "gk20a.h"
 
@@ -93,7 +93,7 @@ int gk20a_as_release_share(struct gk20a_as_share *as_share)
 
 static int gk20a_as_ioctl_bind_channel(
 		struct gk20a_as_share *as_share,
-		struct nvhost_as_bind_channel_args *args)
+		struct nvgpu_as_bind_channel_args *args)
 {
 	int err = 0;
 	struct channel_gk20a *ch;
@@ -118,7 +118,7 @@ static int gk20a_as_ioctl_bind_channel(
 
 static int gk20a_as_ioctl_alloc_space(
 		struct gk20a_as_share *as_share,
-		struct nvhost_as_alloc_space_args *args)
+		struct nvgpu_as_alloc_space_args *args)
 {
 	gk20a_dbg_fn("");
 	return gk20a_vm_alloc_space(as_share, args);
@@ -126,7 +126,7 @@ static int gk20a_as_ioctl_alloc_space(
 
 static int gk20a_as_ioctl_free_space(
 		struct gk20a_as_share *as_share,
-		struct nvhost_as_free_space_args *args)
+		struct nvgpu_as_free_space_args *args)
 {
 	gk20a_dbg_fn("");
 	return gk20a_vm_free_space(as_share, args);
@@ -134,12 +134,12 @@ static int gk20a_as_ioctl_free_space(
 
 static int gk20a_as_ioctl_map_buffer_ex(
 		struct gk20a_as_share *as_share,
-		struct nvhost_as_map_buffer_ex_args *args)
+		struct nvgpu_as_map_buffer_ex_args *args)
 {
 	gk20a_dbg_fn("");
 
 	return gk20a_vm_map_buffer(as_share, args->dmabuf_fd,
-				   &args->as_offset, args->flags,
+				   &args->offset, args->flags,
 				   args->kind,
 				   args->buffer_offset,
 				   args->mapping_size
@@ -148,10 +148,10 @@ static int gk20a_as_ioctl_map_buffer_ex(
 
 static int gk20a_as_ioctl_map_buffer(
 		struct gk20a_as_share *as_share,
-		struct nvhost_as_map_buffer_args *args)
+		struct nvgpu_as_map_buffer_args *args)
 {
 	gk20a_dbg_fn("");
-	return gk20a_vm_map_buffer(as_share, args->nvmap_handle,
+	return gk20a_vm_map_buffer(as_share, args->dmabuf_fd,
 				   &args->o_a.offset,
 				   args->flags, NV_KIND_DEFAULT,
 				   0, 0);
@@ -160,7 +160,7 @@ static int gk20a_as_ioctl_map_buffer(
 
 static int gk20a_as_ioctl_unmap_buffer(
 		struct gk20a_as_share *as_share,
-		struct nvhost_as_unmap_buffer_args *args)
+		struct nvgpu_as_unmap_buffer_args *args)
 {
 	gk20a_dbg_fn("");
 	return gk20a_vm_unmap_buffer(as_share, args->offset);
@@ -214,14 +214,14 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	struct gk20a_as_share *as_share = filp->private_data;
 	struct gk20a *g = gk20a_from_as(as_share->as);
 
-	u8 buf[NVHOST_AS_IOCTL_MAX_ARG_SIZE];
+	u8 buf[NVGPU_AS_IOCTL_MAX_ARG_SIZE];
 
-	if ((_IOC_TYPE(cmd) != NVHOST_AS_IOCTL_MAGIC) ||
+	if ((_IOC_TYPE(cmd) != NVGPU_AS_IOCTL_MAGIC) ||
 		(_IOC_NR(cmd) == 0) ||
-		(_IOC_NR(cmd) > NVHOST_AS_IOCTL_LAST))
+		(_IOC_NR(cmd) > NVGPU_AS_IOCTL_LAST))
 		return -EINVAL;
 
-	BUG_ON(_IOC_SIZE(cmd) > NVHOST_AS_IOCTL_MAX_ARG_SIZE);
+	BUG_ON(_IOC_SIZE(cmd) > NVGPU_AS_IOCTL_MAX_ARG_SIZE);
 
 	if (_IOC_DIR(cmd) & _IOC_WRITE) {
 		if (copy_from_user(buf, (void __user *)arg, _IOC_SIZE(cmd)))
@@ -233,17 +233,17 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		return err;
 
 	switch (cmd) {
-	case NVHOST_AS_IOCTL_BIND_CHANNEL:
+	case NVGPU_AS_IOCTL_BIND_CHANNEL:
 		trace_gk20a_as_ioctl_bind_channel(dev_name(dev_from_gk20a(g)));
 		err = gk20a_as_ioctl_bind_channel(as_share,
-			       (struct nvhost_as_bind_channel_args *)buf);
+			       (struct nvgpu_as_bind_channel_args *)buf);
 
 		break;
-	case NVHOST32_AS_IOCTL_ALLOC_SPACE:
+	case NVGPU32_AS_IOCTL_ALLOC_SPACE:
 	{
-		struct nvhost32_as_alloc_space_args *args32 =
-			(struct nvhost32_as_alloc_space_args *)buf;
-		struct nvhost_as_alloc_space_args args;
+		struct nvgpu32_as_alloc_space_args *args32 =
+			(struct nvgpu32_as_alloc_space_args *)buf;
+		struct nvgpu_as_alloc_space_args args;
 
 		args.pages = args32->pages;
 		args.page_size = args32->page_size;
@@ -254,30 +254,30 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		args32->o_a.offset = args.o_a.offset;
 		break;
 	}
-	case NVHOST_AS_IOCTL_ALLOC_SPACE:
+	case NVGPU_AS_IOCTL_ALLOC_SPACE:
 		trace_gk20a_as_ioctl_alloc_space(dev_name(dev_from_gk20a(g)));
 		err = gk20a_as_ioctl_alloc_space(as_share,
-				(struct nvhost_as_alloc_space_args *)buf);
+				(struct nvgpu_as_alloc_space_args *)buf);
 		break;
-	case NVHOST_AS_IOCTL_FREE_SPACE:
+	case NVGPU_AS_IOCTL_FREE_SPACE:
 		trace_gk20a_as_ioctl_free_space(dev_name(dev_from_gk20a(g)));
 		err = gk20a_as_ioctl_free_space(as_share,
-				(struct nvhost_as_free_space_args *)buf);
+				(struct nvgpu_as_free_space_args *)buf);
 		break;
-	case NVHOST_AS_IOCTL_MAP_BUFFER:
+	case NVGPU_AS_IOCTL_MAP_BUFFER:
 		trace_gk20a_as_ioctl_map_buffer(dev_name(dev_from_gk20a(g)));
 		err = gk20a_as_ioctl_map_buffer(as_share,
-				(struct nvhost_as_map_buffer_args *)buf);
+				(struct nvgpu_as_map_buffer_args *)buf);
 		break;
-	case NVHOST_AS_IOCTL_MAP_BUFFER_EX:
+	case NVGPU_AS_IOCTL_MAP_BUFFER_EX:
 		trace_gk20a_as_ioctl_map_buffer(dev_name(dev_from_gk20a(g)));
 		err = gk20a_as_ioctl_map_buffer_ex(as_share,
-				(struct nvhost_as_map_buffer_ex_args *)buf);
+				(struct nvgpu_as_map_buffer_ex_args *)buf);
 		break;
-	case NVHOST_AS_IOCTL_UNMAP_BUFFER:
+	case NVGPU_AS_IOCTL_UNMAP_BUFFER:
 		trace_gk20a_as_ioctl_unmap_buffer(dev_name(dev_from_gk20a(g)));
 		err = gk20a_as_ioctl_unmap_buffer(as_share,
-				(struct nvhost_as_unmap_buffer_args *)buf);
+				(struct nvgpu_as_unmap_buffer_args *)buf);
 		break;
 	default:
 		dev_dbg(dev_from_gk20a(g), "unrecognized as ioctl: 0x%x", cmd);

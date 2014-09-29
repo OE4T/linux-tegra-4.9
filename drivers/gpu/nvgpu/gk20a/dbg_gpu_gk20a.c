@@ -154,7 +154,7 @@ static void gk20a_dbg_gpu_events_clear(struct dbg_session_gk20a *dbg_s)
 }
 
 static int gk20a_dbg_gpu_events_ctrl(struct dbg_session_gk20a *dbg_s,
-			  struct nvhost_dbg_gpu_events_ctrl_args *args)
+			  struct nvgpu_dbg_gpu_events_ctrl_args *args)
 {
 	int ret = 0;
 
@@ -167,15 +167,15 @@ static int gk20a_dbg_gpu_events_ctrl(struct dbg_session_gk20a *dbg_s,
 	}
 
 	switch (args->cmd) {
-	case NVHOST_DBG_GPU_EVENTS_CTRL_CMD_ENABLE:
+	case NVGPU_DBG_GPU_EVENTS_CTRL_CMD_ENABLE:
 		gk20a_dbg_gpu_events_enable(dbg_s);
 		break;
 
-	case NVHOST_DBG_GPU_EVENTS_CTRL_CMD_DISABLE:
+	case NVGPU_DBG_GPU_EVENTS_CTRL_CMD_DISABLE:
 		gk20a_dbg_gpu_events_disable(dbg_s);
 		break;
 
-	case NVHOST_DBG_GPU_EVENTS_CTRL_CMD_CLEAR:
+	case NVGPU_DBG_GPU_EVENTS_CTRL_CMD_CLEAR:
 		gk20a_dbg_gpu_events_clear(dbg_s);
 		break;
 
@@ -278,7 +278,7 @@ static int dbg_unbind_channel_gk20a(struct dbg_session_gk20a *dbg_s)
 	 * which called powergate disable ioctl, to be killed without calling
 	 * powergate enable ioctl
 	 */
-	dbg_set_powergate(dbg_s, NVHOST_DBG_GPU_POWERGATE_MODE_ENABLE);
+	dbg_set_powergate(dbg_s, NVGPU_DBG_GPU_POWERGATE_MODE_ENABLE);
 
 	dbg_s->ch = NULL;
 	fput(dbg_s->ch_f);
@@ -307,7 +307,7 @@ int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp)
 }
 
 static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
-			  struct nvhost_dbg_gpu_bind_channel_args *args)
+			  struct nvgpu_dbg_gpu_bind_channel_args *args)
 {
 	struct file *f;
 	struct gk20a *g;
@@ -350,31 +350,31 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	return 0;
 }
 
-static int nvhost_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
-				struct nvhost_dbg_gpu_exec_reg_ops_args *args);
+static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
+				struct nvgpu_dbg_gpu_exec_reg_ops_args *args);
 
-static int nvhost_ioctl_powergate_gk20a(struct dbg_session_gk20a *dbg_s,
-				struct nvhost_dbg_gpu_powergate_args *args);
+static int nvgpu_ioctl_powergate_gk20a(struct dbg_session_gk20a *dbg_s,
+				struct nvgpu_dbg_gpu_powergate_args *args);
 
-static int nvhost_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
-			      struct nvhost_dbg_gpu_smpc_ctxsw_mode_args *args);
+static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
+			      struct nvgpu_dbg_gpu_smpc_ctxsw_mode_args *args);
 
 long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
 {
 	struct dbg_session_gk20a *dbg_s = filp->private_data;
 	struct gk20a *g = get_gk20a(dbg_s->pdev);
-	u8 buf[NVHOST_DBG_GPU_IOCTL_MAX_ARG_SIZE];
+	u8 buf[NVGPU_DBG_GPU_IOCTL_MAX_ARG_SIZE];
 	int err = 0;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
 
-	if ((_IOC_TYPE(cmd) != NVHOST_DBG_GPU_IOCTL_MAGIC) ||
+	if ((_IOC_TYPE(cmd) != NVGPU_DBG_GPU_IOCTL_MAGIC) ||
 	    (_IOC_NR(cmd) == 0) ||
-	    (_IOC_NR(cmd) > NVHOST_DBG_GPU_IOCTL_LAST))
+	    (_IOC_NR(cmd) > NVGPU_DBG_GPU_IOCTL_LAST))
 		return -EINVAL;
 
-	BUG_ON(_IOC_SIZE(cmd) > NVHOST_DBG_GPU_IOCTL_MAX_ARG_SIZE);
+	BUG_ON(_IOC_SIZE(cmd) > NVGPU_DBG_GPU_IOCTL_MAX_ARG_SIZE);
 
 	if (_IOC_DIR(cmd) & _IOC_WRITE) {
 		if (copy_from_user(buf, (void __user *)arg, _IOC_SIZE(cmd)))
@@ -390,32 +390,32 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 	}
 
 	switch (cmd) {
-	case NVHOST_DBG_GPU_IOCTL_BIND_CHANNEL:
+	case NVGPU_DBG_GPU_IOCTL_BIND_CHANNEL:
 		err = dbg_bind_channel_gk20a(dbg_s,
-			     (struct nvhost_dbg_gpu_bind_channel_args *)buf);
+			     (struct nvgpu_dbg_gpu_bind_channel_args *)buf);
 		gk20a_dbg(gpu_dbg_gpu_dbg, "ret=%d", err);
 		break;
 
-	case NVHOST_DBG_GPU_IOCTL_REG_OPS:
-		err = nvhost_ioctl_channel_reg_ops(dbg_s,
-			   (struct nvhost_dbg_gpu_exec_reg_ops_args *)buf);
+	case NVGPU_DBG_GPU_IOCTL_REG_OPS:
+		err = nvgpu_ioctl_channel_reg_ops(dbg_s,
+			   (struct nvgpu_dbg_gpu_exec_reg_ops_args *)buf);
 		gk20a_dbg(gpu_dbg_gpu_dbg, "ret=%d", err);
 		break;
 
-	case NVHOST_DBG_GPU_IOCTL_POWERGATE:
-		err = nvhost_ioctl_powergate_gk20a(dbg_s,
-			   (struct nvhost_dbg_gpu_powergate_args *)buf);
+	case NVGPU_DBG_GPU_IOCTL_POWERGATE:
+		err = nvgpu_ioctl_powergate_gk20a(dbg_s,
+			   (struct nvgpu_dbg_gpu_powergate_args *)buf);
 		gk20a_dbg(gpu_dbg_gpu_dbg, "ret=%d", err);
 		break;
 
-	case NVHOST_DBG_GPU_IOCTL_EVENTS_CTRL:
+	case NVGPU_DBG_GPU_IOCTL_EVENTS_CTRL:
 		err = gk20a_dbg_gpu_events_ctrl(dbg_s,
-			   (struct nvhost_dbg_gpu_events_ctrl_args *)buf);
+			   (struct nvgpu_dbg_gpu_events_ctrl_args *)buf);
 		break;
 
-	case NVHOST_DBG_GPU_IOCTL_SMPC_CTXSW_MODE:
-		err = nvhost_dbg_gpu_ioctl_smpc_ctxsw_mode(dbg_s,
-			   (struct nvhost_dbg_gpu_smpc_ctxsw_mode_args *)buf);
+	case NVGPU_DBG_GPU_IOCTL_SMPC_CTXSW_MODE:
+		err = nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(dbg_s,
+			   (struct nvgpu_dbg_gpu_smpc_ctxsw_mode_args *)buf);
 		break;
 
 	default:
@@ -456,15 +456,15 @@ static bool gr_context_info_available(struct dbg_session_gk20a *dbg_s,
 
 }
 
-static int nvhost_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
-				struct nvhost_dbg_gpu_exec_reg_ops_args *args)
+static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
+				struct nvgpu_dbg_gpu_exec_reg_ops_args *args)
 {
 	int err = 0, powergate_err = 0;
 	bool is_pg_disabled = false;
 
 	struct device *dev = dbg_s->dev;
 	struct gk20a *g = get_gk20a(dbg_s->pdev);
-	struct nvhost_dbg_gpu_reg_op *ops;
+	struct nvgpu_dbg_gpu_reg_op *ops;
 	u64 ops_size = sizeof(ops[0]) * args->num_ops;
 
 	gk20a_dbg_fn("%d ops, total size %llu", args->num_ops, ops_size);
@@ -506,7 +506,7 @@ static int nvhost_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 
 	if (!dbg_s->is_pg_disabled) {
 		powergate_err = dbg_set_powergate(dbg_s,
-					NVHOST_DBG_GPU_POWERGATE_MODE_DISABLE);
+					NVGPU_DBG_GPU_POWERGATE_MODE_DISABLE);
 		is_pg_disabled = true;
 	}
 
@@ -515,7 +515,7 @@ static int nvhost_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 		/* enable powergate, if previously disabled */
 		if (is_pg_disabled) {
 			powergate_err = dbg_set_powergate(dbg_s,
-					NVHOST_DBG_GPU_POWERGATE_MODE_ENABLE);
+					NVGPU_DBG_GPU_POWERGATE_MODE_ENABLE);
 		}
 	}
 
@@ -554,7 +554,7 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 		   dev_name(dbg_s->dev), powermode);
 
 	switch (powermode) {
-	case NVHOST_DBG_GPU_POWERGATE_MODE_DISABLE:
+	case NVGPU_DBG_GPU_POWERGATE_MODE_DISABLE:
 		/* save off current powergate, clk state.
 		 * set gpu module's can_powergate = 0.
 		 * set gpu module's clk to max.
@@ -595,7 +595,7 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 		dbg_s->is_pg_disabled = true;
 		break;
 
-	case NVHOST_DBG_GPU_POWERGATE_MODE_ENABLE:
+	case NVGPU_DBG_GPU_POWERGATE_MODE_ENABLE:
 		/* restore (can) powergate, clk state */
 		/* release pending exceptions to fault/be handled as usual */
 		/*TBD: ordering of these? */
@@ -640,8 +640,8 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 	return err;
 }
 
-static int nvhost_ioctl_powergate_gk20a(struct dbg_session_gk20a *dbg_s,
-				struct nvhost_dbg_gpu_powergate_args *args)
+static int nvgpu_ioctl_powergate_gk20a(struct dbg_session_gk20a *dbg_s,
+				struct nvgpu_dbg_gpu_powergate_args *args)
 {
 	int err;
 	struct gk20a *g = get_gk20a(dbg_s->pdev);
@@ -654,8 +654,8 @@ static int nvhost_ioctl_powergate_gk20a(struct dbg_session_gk20a *dbg_s,
 	return  err;
 }
 
-static int nvhost_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
-			       struct nvhost_dbg_gpu_smpc_ctxsw_mode_args *args)
+static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
+			       struct nvgpu_dbg_gpu_smpc_ctxsw_mode_args *args)
 {
 	int err;
 	struct gk20a *g = get_gk20a(dbg_s->pdev);
@@ -677,7 +677,7 @@ static int nvhost_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	}
 
 	err = gr_gk20a_update_smpc_ctxsw_mode(g, ch_gk20a,
-		      args->mode == NVHOST_DBG_GPU_SMPC_CTXSW_MODE_CTXSW);
+		      args->mode == NVGPU_DBG_GPU_SMPC_CTXSW_MODE_CTXSW);
 	if (err) {
 		gk20a_err(dev_from_gk20a(dbg_s->g),
 			  "error (%d) during smpc ctxsw mode update\n", err);
@@ -688,12 +688,12 @@ static int nvhost_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	 * it was already swapped out in/out once or not, etc.
 	 */
 	{
-		struct nvhost_dbg_gpu_reg_op ops[4];
+		struct nvgpu_dbg_gpu_reg_op ops[4];
 		int i;
 		for (i = 0; i < ARRAY_SIZE(ops); i++) {
-			ops[i].op     = NVHOST_DBG_GPU_REG_OP_WRITE_32;
-			ops[i].type   = NVHOST_DBG_GPU_REG_OP_TYPE_GR_CTX;
-			ops[i].status = NVHOST_DBG_GPU_REG_OP_STATUS_SUCCESS;
+			ops[i].op     = NVGPU_DBG_GPU_REG_OP_WRITE_32;
+			ops[i].type   = NVGPU_DBG_GPU_REG_OP_TYPE_GR_CTX;
+			ops[i].status = NVGPU_DBG_GPU_REG_OP_STATUS_SUCCESS;
 			ops[i].value_hi      = 0;
 			ops[i].and_n_mask_lo = 0;
 			ops[i].and_n_mask_hi = 0;

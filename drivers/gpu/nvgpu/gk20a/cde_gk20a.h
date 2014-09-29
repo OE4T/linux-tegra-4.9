@@ -233,10 +233,10 @@ struct gk20a_cde_ctx {
 
 	u64 backing_store_vaddr;
 
-	struct nvhost_gpfifo *init_cmd;
+	struct nvgpu_gpfifo *init_cmd;
 	int init_cmd_num_entries;
 
-	struct nvhost_gpfifo *convert_cmd;
+	struct nvgpu_gpfifo *convert_cmd;
 	int convert_cmd_num_entries;
 
 	struct kobj_attribute attr;
@@ -260,7 +260,7 @@ int gk20a_init_cde_support(struct gk20a *g);
 int gk20a_cde_reload(struct gk20a *g);
 int gk20a_cde_convert(struct gk20a *g, struct dma_buf *src, struct dma_buf *dst,
 		      s32 dst_kind, u64 dst_word_offset,
-		      u32 dst_size, struct nvhost_fence *fence,
+		      u32 dst_size, struct nvgpu_fence *fence,
 		      u32 __flags, struct gk20a_cde_param *params,
 		      int num_params, struct gk20a_fence **fence_out);
 void gk20a_cde_debugfs_init(struct platform_device *dev);
@@ -269,7 +269,7 @@ int gk20a_prepare_compressible_read(
 		struct gk20a *g, u32 buffer_fd, u32 request, u64 offset,
 		u64 compbits_hoffset, u64 compbits_voffset,
 		u32 width, u32 height, u32 block_height_log2,
-		u32 submit_flags, struct nvhost_fence *fence,
+		u32 submit_flags, struct nvgpu_fence *fence,
 		u32 *valid_compbits, u32 *zbc_color,
 		struct gk20a_fence **fence_out);
 int gk20a_mark_compressible_write(

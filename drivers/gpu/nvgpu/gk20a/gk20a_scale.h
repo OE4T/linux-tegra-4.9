@@ -19,7 +19,6 @@
 #ifndef GK20A_SCALE_H
 #define GK20A_SCALE_H
 
-#include <linux/nvhost.h>
 #include <linux/devfreq.h>
 
 struct platform_device;

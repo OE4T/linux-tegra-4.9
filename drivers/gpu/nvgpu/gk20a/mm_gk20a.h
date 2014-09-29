@@ -1,6 +1,4 @@
 /*
- * drivers/video/tegra/host/gk20a/mm_gk20a.h
- *
  * GK20A memory management
  *
  * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
@@ -14,12 +12,11 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __MM_GK20A_H__
-#define __MM_GK20A_H__
+#ifndef MM_GK20A_H
+#define MM_GK20A_H
 
 #include <linux/scatterlist.h>
 #include <linux/dma-attrs.h>
@@ -209,14 +206,6 @@ struct page_table_gk20a {
 	struct sg_table *sgt;
 	size_t size;
 };
-
-#ifndef _NVHOST_MEM_MGR_H
-enum gk20a_mem_rw_flag {
-	gk20a_mem_flag_none = 0,
-	gk20a_mem_flag_read_only = 1,
-	gk20a_mem_flag_write_only = 2,
-};
-#endif
 
 enum gmmu_pgsz_gk20a {
 	gmmu_page_size_small = 0,
@@ -476,7 +465,7 @@ void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
 u64 gk20a_vm_map(struct vm_gk20a *vm,
 		struct dma_buf *dmabuf,
 		u64 offset_align,
-		u32 flags /*NVHOST_AS_MAP_BUFFER_FLAGS_*/,
+		u32 flags /*NVGPU_AS_MAP_BUFFER_FLAGS_*/,
 		int kind,
 		struct sg_table **sgt,
 		bool user_mapped,
@@ -521,20 +510,20 @@ int gk20a_vm_free_va(struct vm_gk20a *vm,
 		     enum gmmu_pgsz_gk20a pgsz_idx);
 
 /* vm-as interface */
-struct nvhost_as_alloc_space_args;
-struct nvhost_as_free_space_args;
+struct nvgpu_as_alloc_space_args;
+struct nvgpu_as_free_space_args;
 int gk20a_vm_alloc_share(struct gk20a_as_share *as_share);
 int gk20a_vm_release_share(struct gk20a_as_share *as_share);
 int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
-			 struct nvhost_as_alloc_space_args *args);
+			 struct nvgpu_as_alloc_space_args *args);
 int gk20a_vm_free_space(struct gk20a_as_share *as_share,
-			struct nvhost_as_free_space_args *args);
+			struct nvgpu_as_free_space_args *args);
 int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
 			  struct channel_gk20a *ch);
 int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
 			int dmabuf_fd,
 			u64 *offset_align,
-			u32 flags, /*NVHOST_AS_MAP_BUFFER_FLAGS_*/
+			u32 flags, /* NVGPU_AS_MAP_BUFFER_FLAGS_ */
 			int kind,
 			u64 buffer_offset,
 			u64 mapping_size);
@@ -570,4 +559,4 @@ void update_gmmu_pde_locked(struct vm_gk20a *vm, u32 i);
 
 struct gpu_ops;
 void gk20a_init_mm(struct gpu_ops *gops);
-#endif /*_MM_GK20A_H_ */
+#endif /* MM_GK20A_H */

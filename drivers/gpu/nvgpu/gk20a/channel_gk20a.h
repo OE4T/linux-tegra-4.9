@@ -1,6 +1,4 @@
 /*
- * drivers/video/tegra/host/gk20a/channel_gk20a.h
- *
  * GK20A graphics channel
  *
  * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
@@ -14,12 +12,11 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __CHANNEL_GK20A_H__
-#define __CHANNEL_GK20A_H__
+#ifndef CHANNEL_GK20A_H
+#define CHANNEL_GK20A_H
 
 #include <linux/log2.h>
 #include <linux/slab.h>
@@ -37,6 +34,7 @@ struct gk20a_fence;
 
 #include "mm_gk20a.h"
 #include "gr_gk20a.h"
+#include "fence_gk20a.h"
 
 struct gpfifo {
 	u32 entry0;
@@ -148,7 +146,7 @@ struct channel_gk20a {
 	bool timeout_debug_dump;
 
 	struct dma_buf *error_notifier_ref;
-	struct nvhost_notification *error_notifier;
+	struct nvgpu_notification *error_notifier;
 	void *error_notifier_va;
 
 	struct gk20a_channel_sync *sync;
@@ -201,14 +199,14 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g);
 void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a);
 
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
-				struct nvhost_gpfifo *gpfifo,
+				struct nvgpu_gpfifo *gpfifo,
 				u32 num_entries,
 				u32 flags,
-				struct nvhost_fence *fence,
+				struct nvgpu_fence *fence,
 				struct gk20a_fence **fence_out);
 
 int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
-			       struct nvhost_alloc_gpfifo_args *args);
+			       struct nvgpu_alloc_gpfifo_args *args);
 
 void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a);
 void channel_gk20a_disable(struct channel_gk20a *ch);
@@ -217,4 +215,4 @@ void channel_gk20a_free_inst(struct gk20a *g, struct channel_gk20a *ch);
 int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 			u64 gpfifo_base, u32 gpfifo_entries);
 
-#endif /*__CHANNEL_GK20A_H__*/
+#endif /* CHANNEL_GK20A_H */

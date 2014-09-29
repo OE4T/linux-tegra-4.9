@@ -17,6 +17,8 @@
 #ifndef _DEBUG_GK20A_H_
 #define _DEBUG_GK20A_H_
 
+struct platform_device;
+
 extern unsigned int gk20a_debug_trace_cmdbuf;
 
 void gk20a_debug_dump(struct platform_device *pdev);

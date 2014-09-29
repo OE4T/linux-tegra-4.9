@@ -45,10 +45,6 @@ struct tegra_hv_queue_data {
 	uint32_t	flags;
 };
 
-/* Queue flags */
-#define TQF_STREAM_MODE		(1 << 0)
-#define TQF_PAGE_ALIGNED	(1 << 1)
-
 struct tegra_hv_shared_data {
 	uint32_t	magic;
 	uint32_t	sum;

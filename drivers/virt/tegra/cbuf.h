@@ -105,33 +105,6 @@ static inline int cbuf_is_full(struct cbuf *cbuf)
 		return 0;
 }
 
-/*
- * WARNING: In the following two functions, if cb is located in memory shared
- * with untrusted code (i.e., user space, another VM, or another OS), the
- * pointer returned cannot be trusted and must be validated before it can safely
- * be dereferenced.
- */
-
-/* assumes check for empty earlier */
-static inline void __iomem *cbuf_read_data_ptr(struct cbuf *cb)
-{
-	/*
-	 * Use ACCESS_ONCE() to prevent additional re-calculations of the data
-	 * pointer potentially after a pointer has already been validated.
-	 */
-	return &cb->buf[ACCESS_ONCE(cb->r_pos) * cb->struct_size];
-}
-
-/* assumes check for full earlier */
-static inline void __iomem *cbuf_write_data_ptr(struct cbuf *cb)
-{
-	/*
-	 * Use ACCESS_ONCE() to prevent additional re-calculations of the data
-	 * pointer potentially after a pointer has already been validated.
-	 */
-	return &cb->buf[ACCESS_ONCE(cb->w_pos) * cb->struct_size];
-}
-
 static inline void cbuf_advance_w_pos(struct cbuf *cb)
 {
 	int w_pos = ACCESS_ONCE(cb->w_pos);
@@ -153,8 +126,5 @@ static inline void cbuf_advance_r_pos(struct cbuf *cb)
 	else
 		ACCESS_ONCE(cb->r_pos) = r_pos + 1;
 }
-
-int cbuf_write(struct cbuf *cb, void *data);
-int cbuf_read(struct cbuf *cb, void *data);
 
 #endif /*__CBUF_H__ */

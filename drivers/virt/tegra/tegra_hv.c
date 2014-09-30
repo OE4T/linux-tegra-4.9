@@ -662,12 +662,8 @@ static ssize_t ivc_dev_read(struct file *filp, char __user *buf,
 
 		ret = wait_event_interruptible(ivcd->wq,
 				tegra_ivc_can_read(ivc));
-		if (ret) {
-			if (ret != -ERESTARTSYS)
-				dev_err(ivcd->device,
-					"wait_event_interruptible %d\n", ret);
+		if (ret)
 			return ret;
-		}
 	}
 
 	while (left > 0 && tegra_ivc_can_read(ivc)) {
@@ -722,13 +718,8 @@ static ssize_t ivc_dev_write(struct file *filp, const char __user *buf,
 
 			ret = wait_event_interruptible(ivcd->wq,
 					tegra_ivc_can_write(ivc));
-			if (ret) {
-				if (ret != -ERESTARTSYS)
-					dev_err(ivcd->device,
-						"wait_event_interruptible %d\n",
-							ret);
+			if (ret)
 				break;
-			}
 		}
 
 		ret = tegra_ivc_write_user(ivc, buf, chunk);

@@ -289,7 +289,7 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 
 	/* Mask interrupts duirng init */
 	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
-	
+
 	enable_irq(dc->irq);
 
 	res = tegra_nvdisp_head_init(dc);
@@ -350,6 +350,8 @@ struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
 	struct tegra_dc *dc, struct tegra_fb_data *fb_data,
 	struct resource *fb_mem)
 {
+	void *virt_addr = NULL;
+
 	/* Assign the given window to current dc */
 	if (!tegra_dc_get_window(dc, fb_data->win) &&
 		tegra_nvdisp_assign_win(dc, fb_data->win)) {
@@ -362,16 +364,13 @@ struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
 	if (!fb_mem->start || !fb_mem->end) {
 		int fb_size = ((fb_data->xres + 63)/64) * fb_data->yres *
 			fb_data->bits_per_pixel;
-		/* dma_addr_t fb_handle; */
-		
+
 		if (!fb_size)
 			return ERR_PTR(-ENOENT);
 
-		/* fb_mem->start = (resource_size_t) dma_alloc_writecombine( */
-		/* 	&ndev->dev, fb_size, &fb_handle, GFP_KERNEL); */
-		fb_mem->start = (resource_size_t) kzalloc(fb_size,
-			GFP_KERNEL);
-		if (!fb_mem->start) {
+		virt_addr = dma_alloc_writecombine(&ndev->dev, fb_size,
+			&fb_mem->start, GFP_KERNEL);
+		if (!virt_addr) {
 			dev_err(&ndev->dev, "Failed to allocate FBMem\n");
 			return ERR_PTR(-ENOENT);
 		}
@@ -379,5 +378,5 @@ struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
 		dev_info(&ndev->dev, "Allocated %d as FBmem\n", fb_size);
 	}
 
-	return tegra_fb_register(ndev, dc, fb_data, fb_mem);
+	return tegra_fb_register(ndev, dc, fb_data, fb_mem, virt_addr);
 }

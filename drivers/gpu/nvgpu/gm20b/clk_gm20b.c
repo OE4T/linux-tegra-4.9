@@ -1065,7 +1065,7 @@ struct clk *gm20b_clk_get(struct gk20a *g)
 static int gm20b_init_clk_setup_sw(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
-	static int initialized;
+	unsigned long safe_rate;
 	struct clk *ref;
 	bool calibrated;
 
@@ -1103,30 +1103,28 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	clk->gpc_pll.id = GK20A_GPC_PLL;
 	clk->gpc_pll.clk_in = clk_get_rate(ref) / KHZ;
 
+	safe_rate = tegra_dvfs_get_therm_safe_fmax(
+		clk_get_parent(clk->tegra_clk));
+	safe_rate = safe_rate * (100 - DVFS_SAFE_MARGIN) / 100;
+	dvfs_safe_max_freq = rate_gpu_to_gpc2clk(safe_rate);
+	clk->gpc_pll.PL = DIV_ROUND_UP(gpc_pll_params.min_vco,
+				       dvfs_safe_max_freq);
+
 	/* Initial frequency: 1/3 VCO min (low enough to be safe at Vmin) */
-	if (!initialized) {
-		initialized = 1;
-		clk->gpc_pll.M = 1;
-		clk->gpc_pll.N = DIV_ROUND_UP(gpc_pll_params.min_vco,
-					clk->gpc_pll.clk_in);
-		clk->gpc_pll.PL = 3;
-		clk->gpc_pll.freq = clk->gpc_pll.clk_in * clk->gpc_pll.N;
-		clk->gpc_pll.freq /= pl_to_div(clk->gpc_pll.PL);
-	}
+	clk->gpc_pll.M = 1;
+	clk->gpc_pll.N = DIV_ROUND_UP(gpc_pll_params.min_vco,
+				clk->gpc_pll.clk_in);
+	clk->gpc_pll.PL = max(clk->gpc_pll.PL, 3U);
+	clk->gpc_pll.freq = clk->gpc_pll.clk_in * clk->gpc_pll.N;
+	clk->gpc_pll.freq /= pl_to_div(clk->gpc_pll.PL);
 
 	calibrated = !clk_config_calibration_params(g);
 #ifdef CONFIG_TEGRA_USE_NA_GPCPLL
 	if (ALLOW_NON_CALIBRATED_NA_MODE || calibrated) {
 		/* NA mode is supported only at max update rate 38.4 MHz */
 		if (clk->gpc_pll.clk_in == gpc_pll_params.max_u) {
-			unsigned long safe_rate;
 			clk->gpc_pll.mode = GPC_PLL_MODE_DVFS;
 			gpc_pll_params.min_u = gpc_pll_params.max_u;
-
-			safe_rate = tegra_dvfs_get_therm_safe_fmax(
-				clk_get_parent(clk->tegra_clk));
-			safe_rate = safe_rate * (100 - DVFS_SAFE_MARGIN) / 100;
-			dvfs_safe_max_freq = rate_gpu_to_gpc2clk(safe_rate);
 		}
 	}
 #endif
@@ -1136,6 +1134,9 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	clk->sw_ready = true;
 
 	gk20a_dbg_fn("done");
+	pr_info("GM20b GPCPLL initial settings:%s M=%u, N=%u, P=%u\n",
+		clk->gpc_pll.mode == GPC_PLL_MODE_DVFS ? " NA mode," : "",
+		clk->gpc_pll.M, clk->gpc_pll.N, clk->gpc_pll.PL);
 	return 0;
 }
 

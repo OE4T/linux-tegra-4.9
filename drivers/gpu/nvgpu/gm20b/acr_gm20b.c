@@ -340,7 +340,6 @@ int pmu_populate_loader_cfg(struct gk20a *g,
 	struct flcn_ucode_img *p_img = &(lsfm->ucode_img);
 	struct loader_config *ldr_cfg =
 		(struct loader_config *)(&p_bl_gen_desc->loader_cfg);
-	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
 	u64 addr_base;
 	struct pmu_ucode_desc *desc;
 	u64 addr_code, addr_data;
@@ -395,15 +394,6 @@ int pmu_populate_loader_cfg(struct gk20a *g,
 	ldr_cfg->argc = 1;
 	ldr_cfg->argv = addr_args;
 
-	/*Copying pmu cmdline args*/
-	g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq(pmu,
-				clk_get_rate(platform->clk[1]));
-	g->ops.pmu_ver.set_pmu_cmdline_args_secure_mode(pmu, 1);
-	g->ops.pmu_ver.set_pmu_cmdline_args_trace_size(
-		pmu, GK20A_PMU_TRACE_BUFSIZE);
-	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_base(pmu);
-	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_idx(
-		pmu, GK20A_PMU_DMAIDX_VIRT);
 	*p_bl_gen_desc_size = sizeof(p_bl_gen_desc->loader_cfg);
 	g->acr.pmu_args = addr_args;
 	return 0;
@@ -1085,10 +1075,13 @@ static int bl_bootstrap(struct pmu_gk20a *pmu,
 int gm20b_init_pmu_setup_hw1(struct gk20a *g, struct flcn_bl_dmem_desc *desc,
 		u32 bl_sz)
 {
+
 	struct pmu_gk20a *pmu = &g->pmu;
 	int err;
+	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
 
 	gk20a_dbg_fn("");
+
 	mutex_lock(&pmu->isr_mutex);
 	pmu_reset(pmu);
 	pmu->isr_enabled = true;
@@ -1111,6 +1104,15 @@ int gm20b_init_pmu_setup_hw1(struct gk20a *g, struct flcn_bl_dmem_desc *desc,
 			pwr_fbif_transcfg_mem_type_physical_f() |
 			pwr_fbif_transcfg_target_noncoherent_sysmem_f());
 
+	/*Copying pmu cmdline args*/
+	g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq(pmu,
+				clk_get_rate(platform->clk[1]));
+	g->ops.pmu_ver.set_pmu_cmdline_args_secure_mode(pmu, 1);
+	g->ops.pmu_ver.set_pmu_cmdline_args_trace_size(
+		pmu, GK20A_PMU_TRACE_BUFSIZE);
+	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_base(pmu);
+	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_idx(
+		pmu, GK20A_PMU_DMAIDX_VIRT);
 	pmu_copy_to_dmem(pmu, g->acr.pmu_args,
 			(u8 *)(g->ops.pmu_ver.get_pmu_cmdline_args_ptr(pmu)),
 			g->ops.pmu_ver.get_pmu_cmdline_args_size(pmu), 0);

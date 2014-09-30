@@ -213,7 +213,6 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 		runlist->mem[i].size = runlist_size;
 	}
 	mutex_init(&runlist->mutex);
-	init_waitqueue_head(&runlist->runlist_wq);
 
 	/* None of buffers is pinned if this value doesn't change.
 	    Otherwise, one of them (cur_buffer) must have been pinned. */

@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -74,9 +74,7 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #include "tegra_adf.h"
 #endif
 
-#ifdef CONFIG_FRAMEBUFFER_CONSOLE
 #include "hdmi.h"
-#endif /* CONFIG_FRAMEBUFFER_CONSOLE */
 #include "edid.h"
 
 #ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
@@ -4033,32 +4031,17 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	}
 	dc->mode_dirty = false; /* ignore changes tegra_dc_set_out has done */
 
-#ifdef CONFIG_FRAMEBUFFER_CONSOLE
-	if (dc->out && dc->out->n_modes &&
-	    (dc->out->type == TEGRA_DC_OUT_HDMI)) {
+	if ((config_enabled(CONFIG_FRAMEBUFFER_CONSOLE) ||
+			((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
+			(dc->pdata->flags & TEGRA_DC_FLAG_SET_EARLY_MODE))) &&
+			dc->out && (dc->out->type == TEGRA_DC_OUT_HDMI)) {
 		struct fb_monspecs specs;
 		struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
-		if (!tegra_edid_get_monspecs(hdmi->edid, &specs, NULL)) {
-			struct tegra_dc_mode *dcmode = &dc->out->modes[0];
-			dcmode->pclk          = specs.modedb->pixclock;
-			dcmode->pclk          = PICOS2KHZ(dcmode->pclk);
-			dcmode->pclk         *= 1000;
-			dcmode->h_ref_to_sync = 1;
-			dcmode->v_ref_to_sync = 1;
-			dcmode->h_sync_width  = specs.modedb->hsync_len;
-			dcmode->v_sync_width  = specs.modedb->vsync_len;
-			dcmode->h_back_porch  = specs.modedb->left_margin;
-			dcmode->v_back_porch  = specs.modedb->upper_margin;
-			dcmode->h_active      = specs.modedb->xres;
-			dcmode->v_active      = specs.modedb->yres;
-			dcmode->h_front_porch = specs.modedb->right_margin;
-			dcmode->v_front_porch = specs.modedb->lower_margin;
-			tegra_dc_set_mode(dc, dcmode);
-			dc->pdata->fb->xres = dcmode->h_active;
-			dc->pdata->fb->yres = dcmode->v_active;
-		}
+		if (!tegra_edid_get_monspecs(hdmi->edid, &specs, NULL))
+			if (tegra_dc_hpd(dc) && (!dc->initialized)) {
+				tegra_dc_set_fb_mode(dc, specs.modedb, false);
+			}
 	}
-#endif /* CONFIG_FRAMEBUFFER_CONSOLE */
 
 	if ((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
 			dc->out && dc->out->type == TEGRA_DC_OUT_LVDS) {

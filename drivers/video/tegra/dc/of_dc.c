@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/of_dc.c
  *
- * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1804,6 +1804,16 @@ struct device_node *tegra_get_panel_node_out_type_check
 	}
 }
 
+static bool is_dc_default_flag(u32 flag)
+{
+	if ((flag == 0) ||
+		(flag & TEGRA_DC_FLAG_ENABLED) ||
+		(flag & TEGRA_DC_FLAG_SET_EARLY_MODE))
+		return true;
+	else
+		return false;
+}
+
 struct tegra_dc_platform_data
 		*of_dc_parse_platform_data(struct platform_device *ndev)
 {
@@ -1822,6 +1832,8 @@ struct tegra_dc_platform_data
 #ifdef CONFIG_TEGRA_DC_CMU
 	struct device_node *cmu_np = NULL;
 #endif
+	struct property *prop;
+	const __be32 *p;
 	int err;
 	u32 temp;
 
@@ -2134,16 +2146,14 @@ struct tegra_dc_platform_data
 	}
 #endif
 
-	if (!of_property_read_u32(np, "nvidia,dc-flags", &temp)) {
-		if ((temp != TEGRA_DC_FLAG_ENABLED) &&
-			(temp != 0)) {
-			pr_err("%s: invalid dc platform data flag\n",
-				__func__);
+	of_property_for_each_u32(np, "nvidia,dc-flags", prop, p, temp) {
+		if (!is_dc_default_flag(temp)) {
+			pr_err("invalid dc-flags\n");
 			goto fail_parse;
 		}
-		pdata->flags = (unsigned long)temp;
-		OF_DC_LOG("dc flag %lu\n", pdata->flags);
+		pdata->flags |= (unsigned long)temp;
 	}
+	OF_DC_LOG("dc flag %lu\n", pdata->flags);
 
 	if (!of_property_read_u32(np, "nvidia,dc-ctrlnum", &temp)) {
 		pdata->ctrl_num = (unsigned long)temp;

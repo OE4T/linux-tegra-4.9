@@ -396,6 +396,14 @@ static int channel_gk20a_update_runlist(struct channel_gk20a *c, bool add)
 	return c->g->ops.fifo.update_runlist(c->g, 0, c->hw_chid, add, true);
 }
 
+void channel_gk20a_enable(struct channel_gk20a *ch)
+{
+	/* enable channel */
+	gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
+		gk20a_readl(ch->g, ccsr_channel_r(ch->hw_chid)) |
+		ccsr_channel_enable_set_true_f());
+}
+
 void channel_gk20a_disable(struct channel_gk20a *ch)
 {
 	/* disable channel */

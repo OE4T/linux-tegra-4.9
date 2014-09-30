@@ -449,4 +449,11 @@ void gr_gk20a_load_ctxsw_ucode_boot(struct gk20a *g, u64 addr_base,
 
 
 void gr_gk20a_free_tsg_gr_ctx(struct tsg_gk20a *c);
-#endif /* GR_GK20A_H */
+int gr_gk20a_disable_ctxsw(struct gk20a *g);
+int gr_gk20a_enable_ctxsw(struct gk20a *g);
+void gk20a_resume_all_sms(struct gk20a *g);
+void gk20a_suspend_all_sms(struct gk20a *g);
+int gk20a_gr_lock_down_sm(struct gk20a *g,
+				 u32 gpc, u32 tpc, u32 global_esr_mask);
+bool gk20a_is_channel_ctx_resident(struct channel_gk20a *ch);
+#endif /*__GR_GK20A_H__*/

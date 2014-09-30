@@ -365,9 +365,19 @@ struct nvgpu_dbg_gpu_smpc_ctxsw_mode_args {
 #define NVGPU_DBG_GPU_IOCTL_SMPC_CTXSW_MODE \
 	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 5, struct nvgpu_dbg_gpu_smpc_ctxsw_mode_args)
 
+/* Suspend /Resume SM control */
+#define NVGPU_DBG_GPU_SUSPEND_ALL_SMS 1
+#define NVGPU_DBG_GPU_RESUME_ALL_SMS  2
+
+struct nvgpu_dbg_gpu_suspend_resume_all_sms_args {
+	__u32 mode;
+} __packed;
+
+#define NVGPU_DBG_GPU_IOCTL_SUSPEND_RESUME_ALL_SMS			\
+	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 6, struct nvgpu_dbg_gpu_suspend_resume_all_sms_args)
 
 #define NVGPU_DBG_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_DBG_GPU_IOCTL_SMPC_CTXSW_MODE)
+	_IOC_NR(NVGPU_DBG_GPU_IOCTL_SUSPEND_RESUME_ALL_SMS)
 #define NVGPU_DBG_GPU_IOCTL_MAX_ARG_SIZE		\
 	sizeof(struct nvgpu_dbg_gpu_exec_reg_ops_args)
 

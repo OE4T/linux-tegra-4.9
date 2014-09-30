@@ -28,6 +28,7 @@
 #include "dbg_gpu_gk20a.h"
 #include "regops_gk20a.h"
 #include "hw_therm_gk20a.h"
+#include "hw_gr_gk20a.h"
 
 struct dbg_gpu_session_ops dbg_gpu_session_ops_gk20a = {
 	.exec_reg_ops = exec_regops_gk20a,
@@ -359,6 +360,11 @@ static int nvgpu_ioctl_powergate_gk20a(struct dbg_session_gk20a *dbg_s,
 static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 			      struct nvgpu_dbg_gpu_smpc_ctxsw_mode_args *args);
 
+static int nvgpu_dbg_gpu_ioctl_suspend_resume_sm(
+		struct dbg_session_gk20a *dbg_s,
+		struct nvgpu_dbg_gpu_suspend_resume_all_sms_args *args);
+
+
 long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
 {
@@ -418,8 +424,13 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 			   (struct nvgpu_dbg_gpu_smpc_ctxsw_mode_args *)buf);
 		break;
 
+	case NVGPU_DBG_GPU_IOCTL_SUSPEND_RESUME_ALL_SMS:
+		err = nvgpu_dbg_gpu_ioctl_suspend_resume_sm(dbg_s,
+		       (struct nvgpu_dbg_gpu_suspend_resume_all_sms_args *)buf);
+		break;
+
 	default:
-		dev_dbg(dev_from_gk20a(g),
+		gk20a_err(dev_from_gk20a(g),
 			   "unrecognized dbg gpu ioctl cmd: 0x%x",
 			   cmd);
 		err = -ENOTTY;
@@ -688,6 +699,66 @@ static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	}
 
 	err = g->ops.regops.apply_smpc_war(dbg_s);
+
+ clean_up:
+	mutex_unlock(&g->dbg_sessions_lock);
+	return  err;
+}
+
+static int nvgpu_dbg_gpu_ioctl_suspend_resume_sm(
+		struct dbg_session_gk20a *dbg_s,
+		struct nvgpu_dbg_gpu_suspend_resume_all_sms_args *args)
+{
+	struct gk20a *g = get_gk20a(dbg_s->pdev);
+	struct channel_gk20a *ch = dbg_s->ch;
+	bool ch_is_curr_ctx;
+	int err = 0, action = args->mode;
+
+	mutex_lock(&g->dbg_sessions_lock);
+
+	/* Suspend GPU context switching */
+	/* Disable channel switching.
+	 * at that point the hardware state can be inspected to
+	 * determine if the context we're interested in is current.
+	 */
+	err = gr_gk20a_disable_ctxsw(g);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "unable to stop gr ctxsw");
+		/* this should probably be ctx-fatal... */
+		goto clean_up;
+	}
+
+	/* find out whether the current channel is resident */
+	ch_is_curr_ctx = gk20a_is_channel_ctx_resident(ch);
+
+	if (ch_is_curr_ctx) {
+		switch (action) {
+		case NVGPU_DBG_GPU_SUSPEND_ALL_SMS:
+			gk20a_suspend_all_sms(g);
+			break;
+
+		case NVGPU_DBG_GPU_RESUME_ALL_SMS:
+			gk20a_resume_all_sms(g);
+			break;
+		}
+	} else {
+		switch (action) {
+		case NVGPU_DBG_GPU_SUSPEND_ALL_SMS:
+			/* Disable the channel */
+			channel_gk20a_disable(ch);
+			break;
+
+		case NVGPU_DBG_GPU_RESUME_ALL_SMS:
+			/* Enable the channel */
+			channel_gk20a_enable(ch);
+			break;
+		}
+	}
+
+	/* Resume GPU context switching */
+	err = gr_gk20a_enable_ctxsw(g);
+	if (err)
+		gk20a_err(dev_from_gk20a(g), "unable to restart ctxsw!\n");
 
  clean_up:
 	mutex_unlock(&g->dbg_sessions_lock);

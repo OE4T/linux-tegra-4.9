@@ -79,6 +79,10 @@ static void gr_gk20a_free_channel_patch_ctx(struct channel_gk20a *c);
 static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 					  struct channel_gk20a *c);
 
+/* sm lock down */
+static int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
+		u32 global_esr_mask, bool check_errors);
+
 void gk20a_fecs_dump_falcon_stats(struct gk20a *g)
 {
 	int i;
@@ -5365,13 +5369,9 @@ unlock:
 	return chid;
 }
 
-static int gk20a_gr_lock_down_sm(struct gk20a *g,
+int gk20a_gr_lock_down_sm(struct gk20a *g,
 				 u32 gpc, u32 tpc, u32 global_esr_mask)
 {
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
-	u32 delay = GR_IDLE_CHECK_DEFAULT;
-	bool mmu_debug_mode_enabled = g->ops.mm.is_debug_mode_enabled(g);
 	u32 offset =
 		proj_gpc_stride_v() * gpc + proj_tpc_in_gpc_stride_v() * tpc;
 	u32 dbgr_control0;
@@ -5386,55 +5386,8 @@ static int gk20a_gr_lock_down_sm(struct gk20a *g,
 	gk20a_writel(g,
 		gr_gpc0_tpc0_sm_dbgr_control0_r() + offset, dbgr_control0);
 
-	/* wait for the sm to lock down */
-	do {
-		u32 global_esr = gk20a_readl(g,
-				gr_gpc0_tpc0_sm_hww_global_esr_r() + offset);
-		u32 warp_esr = gk20a_readl(g,
-				gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset);
-		u32 dbgr_status0 = gk20a_readl(g,
-				gr_gpc0_tpc0_sm_dbgr_status0_r() + offset);
-		bool locked_down =
-			(gr_gpc0_tpc0_sm_dbgr_status0_locked_down_v(dbgr_status0) ==
-			 gr_gpc0_tpc0_sm_dbgr_status0_locked_down_true_v());
-		bool error_pending =
-			(gr_gpc0_tpc0_sm_hww_warp_esr_error_v(warp_esr) !=
-			 gr_gpc0_tpc0_sm_hww_warp_esr_error_none_v()) ||
-			((global_esr & ~global_esr_mask) != 0);
-
-		if (locked_down || !error_pending) {
-			gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
-				  "GPC%d TPC%d: locked down SM", gpc, tpc);
-
-			/* de-assert stop trigger */
-			dbgr_control0 &= ~gr_gpc0_tpc0_sm_dbgr_control0_stop_trigger_enable_f();
-			gk20a_writel(g,
-				     gr_gpc0_tpc0_sm_dbgr_control0_r() + offset,
-				     dbgr_control0);
-
-			return 0;
-		}
-
-		/* if an mmu fault is pending and mmu debug mode is not
-		 * enabled, the sm will never lock down. */
-		if (!mmu_debug_mode_enabled && gk20a_fifo_mmu_fault_pending(g)) {
-			gk20a_err(dev_from_gk20a(g),
-					"GPC%d TPC%d: mmu fault pending,"
-					" sm will never lock down!", gpc, tpc);
-			return -EFAULT;
-		}
-
-		usleep_range(delay, delay * 2);
-		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-
-	} while (time_before(jiffies, end_jiffies)
-			|| !tegra_platform_is_silicon());
-
-	gk20a_err(dev_from_gk20a(g),
-		  "GPC%d TPC%d: timed out while trying to lock down SM",
-		  gpc, tpc);
-
-	return -EAGAIN;
+	return gk20a_gr_wait_for_sm_lock_down(g, gpc, tpc, global_esr_mask,
+			true);
 }
 
 bool gk20a_gr_sm_debugger_attached(struct gk20a *g)
@@ -7198,6 +7151,131 @@ static u32 gr_gk20a_get_tpc_num(u32 addr)
 	return 0;
 }
 
+static int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
+		u32 global_esr_mask, bool check_errors)
+{
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+	u32 delay = GR_IDLE_CHECK_DEFAULT;
+	bool mmu_debug_mode_enabled = g->ops.mm.is_debug_mode_enabled(g);
+	u32 offset =
+		proj_gpc_stride_v() * gpc + proj_tpc_in_gpc_stride_v() * tpc;
+
+	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+		"GPC%d TPC%d: locking down SM", gpc, tpc);
+
+	/* wait for the sm to lock down */
+	do {
+		u32 global_esr = gk20a_readl(g,
+				gr_gpc0_tpc0_sm_hww_global_esr_r() + offset);
+		u32 warp_esr = gk20a_readl(g,
+				gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset);
+		u32 dbgr_status0 = gk20a_readl(g,
+				gr_gpc0_tpc0_sm_dbgr_status0_r() + offset);
+		bool locked_down =
+		    (gr_gpc0_tpc0_sm_dbgr_status0_locked_down_v(dbgr_status0) ==
+		     gr_gpc0_tpc0_sm_dbgr_status0_locked_down_true_v());
+		bool no_error_pending =
+			check_errors &&
+			(gr_gpc0_tpc0_sm_hww_warp_esr_error_v(warp_esr) ==
+			 gr_gpc0_tpc0_sm_hww_warp_esr_error_none_v()) &&
+			((global_esr & ~global_esr_mask) == 0);
+
+		if (locked_down || no_error_pending) {
+			gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+				  "GPC%d TPC%d: locked down SM", gpc, tpc);
+			return 0;
+		}
+
+		/* if an mmu fault is pending and mmu debug mode is not
+		 * enabled, the sm will never lock down. */
+		if (!mmu_debug_mode_enabled &&
+		     gk20a_fifo_mmu_fault_pending(g)) {
+			gk20a_err(dev_from_gk20a(g),
+				"GPC%d TPC%d: mmu fault pending,"
+				" sm will never lock down!", gpc, tpc);
+			return -EFAULT;
+		}
+
+		usleep_range(delay, delay * 2);
+		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+
+	} while (time_before(jiffies, end_jiffies)
+			|| !tegra_platform_is_silicon());
+
+	gk20a_err(dev_from_gk20a(g),
+		  "GPC%d TPC%d: timed out while trying to lock down SM",
+		  gpc, tpc);
+
+	return -EAGAIN;
+}
+
+void gk20a_suspend_all_sms(struct gk20a *g)
+{
+	struct gr_gk20a *gr = &g->gr;
+	u32 gpc, tpc;
+	int err;
+	u32 dbgr_control0;
+
+	/* if an SM debugger isn't attached, skip suspend */
+	if (!gk20a_gr_sm_debugger_attached(g)) {
+		gk20a_err(dev_from_gk20a(g), "SM debugger not attached, "
+				"skipping suspend!\n");
+		return;
+	}
+
+	/* assert stop trigger. uniformity assumption: all SMs will have
+	 * the same state in dbg_control0. */
+	dbgr_control0 =
+		gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_control0_r());
+	dbgr_control0 |= gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_enable_f();
+
+	/* broadcast write */
+	gk20a_writel(g,
+		gr_gpcs_tpcs_sm_dbgr_control0_r(), dbgr_control0);
+
+	for (gpc = 0; gpc < gr->gpc_count; gpc++) {
+		for (tpc = 0; tpc < gr->tpc_count; tpc++) {
+			err =
+			 gk20a_gr_wait_for_sm_lock_down(g, gpc, tpc, 0, false);
+			if (err) {
+				gk20a_err(dev_from_gk20a(g),
+					"SuspendAllSms failed\n");
+				return;
+			}
+		}
+	}
+}
+
+void gk20a_resume_all_sms(struct gk20a *g)
+{
+	u32 dbgr_control0;
+	/*
+	 * The following requires some clarification. Despite the fact that both
+	 * RUN_TRIGGER and STOP_TRIGGER have the word "TRIGGER" in their
+	 *  names, only one is actually a trigger, and that is the STOP_TRIGGER.
+	 * Merely writing a 1(_TASK) to the RUN_TRIGGER is not sufficient to
+	 * resume the gpu - the _STOP_TRIGGER must explicitly be set to 0
+	 * (_DISABLE) as well.
+
+	* Advice from the arch group:  Disable the stop trigger first, as a
+	* separate operation, in order to ensure that the trigger has taken
+	* effect, before enabling the run trigger.
+	*/
+
+	/*De-assert stop trigger */
+	dbgr_control0 =
+		gk20a_readl(g, gr_gpcs_tpcs_sm_dbgr_control0_r());
+	dbgr_control0 &= ~gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_enable_f();
+	gk20a_writel(g,
+		gr_gpcs_tpcs_sm_dbgr_control0_r(), dbgr_control0);
+
+	/* Run trigger */
+	dbgr_control0 |= gr_gpcs_tpcs_sm_dbgr_control0_run_trigger_enable_f();
+	gk20a_writel(g,
+		gr_gpcs_tpcs_sm_dbgr_control0_r(), dbgr_control0);
+}
+
 void gk20a_init_gr_ops(struct gpu_ops *gops)
 {
 	gops->gr.access_smpc_reg = gr_gk20a_access_smpc_reg;
@@ -7232,3 +7310,4 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.is_tpc_addr = gr_gk20a_is_tpc_addr;
 	gops->gr.get_tpc_num = gr_gk20a_get_tpc_num;
 }
+

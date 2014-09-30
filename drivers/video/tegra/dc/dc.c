@@ -3884,7 +3884,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		if (IS_ERR(dc->adf)) {
 			tegra_dc_io_start(dc);
 			dc->fb = tegra_fb_register(ndev, dc, dc->pdata->fb,
-					fb_mem);
+				fb_mem, NULL);
 			tegra_dc_io_end(dc);
 			if (IS_ERR_OR_NULL(dc->fb)) {
 				dc->fb = NULL;
@@ -3898,7 +3898,8 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->fb = tegra_nvdisp_fb_register(ndev, dc, dc->pdata->fb,
 			fb_mem);
 #else
-		dc->fb = tegra_fb_register(ndev, dc, dc->pdata->fb, fb_mem);
+		dc->fb = tegra_fb_register(ndev, dc, dc->pdata->fb, fb_mem,
+			NULL);
 #endif
 		tegra_dc_io_end(dc);
 		if (IS_ERR_OR_NULL(dc->fb)) {

@@ -727,7 +727,8 @@ void tegra_fb_remove_sysfs(struct device *dev)
 struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 					struct tegra_dc *dc,
 					struct tegra_fb_data *fb_data,
-					struct resource *fb_mem)
+					struct resource *fb_mem,
+					void *virt_addr)
 {
 	struct fb_info *info;
 	struct tegra_fb_info *tegra_fb;
@@ -761,7 +762,11 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	if (fb_mem) {
 		fb_size = resource_size(fb_mem);
 		tegra_fb->phys_start = fb_mem->start;
-		fb_base = ioremap_wc(tegra_fb->phys_start, fb_size);
+
+		/* If the caller provided virtual address, meaning the buffer
+		 * is already mapped, just use that address */
+		fb_base = virt_addr ? virt_addr :
+			ioremap_wc(tegra_fb->phys_start, fb_size);
 		if (!fb_base) {
 			dev_err(&ndev->dev, "fb can't be mapped\n");
 			ret = -EBUSY;

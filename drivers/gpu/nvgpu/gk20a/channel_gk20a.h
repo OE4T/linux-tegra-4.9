@@ -157,6 +157,12 @@ struct channel_gk20a {
 
 	/* event support */
 	struct channel_gk20a_poll_events poll_events;
+
+	/* signal channel owner via a callback, if set, in gk20a_channel_update
+	 * via schedule_work */
+	void (*update_fn)(struct channel_gk20a *, void *);
+	void *update_fn_data;
+	struct work_struct update_fn_work;
 };
 
 static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)
@@ -196,6 +202,9 @@ void gk20a_init_channel(struct gpu_ops *gops);
 
 int gk20a_wait_channel_idle(struct channel_gk20a *ch);
 struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g);
+struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
+		void (*update_fn)(struct channel_gk20a *, void *),
+		void *update_fn_data);
 void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a);
 
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,

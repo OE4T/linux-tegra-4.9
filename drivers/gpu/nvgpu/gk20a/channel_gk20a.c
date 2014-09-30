@@ -674,6 +674,9 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 	else
 		gk20a_vm_put(ch_vm);
 
+	ch->update_fn = NULL;
+	ch->update_fn_data = NULL;
+
 unbind:
 	if (gk20a_is_channel_marked_as_tsg(ch))
 		gk20a_tsg_unbind_channel(ch);
@@ -730,6 +733,27 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
+static void gk20a_channel_update_runcb_fn(struct work_struct *work)
+{
+	struct channel_gk20a *ch =
+		container_of(work, struct channel_gk20a, update_fn_work);
+	ch->update_fn(ch, ch->update_fn_data);
+}
+
+struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
+		void (*update_fn)(struct channel_gk20a *, void *),
+		void *update_fn_data)
+{
+	struct channel_gk20a *ch = gk20a_open_new_channel(g);
+
+	if (ch) {
+		ch->update_fn = update_fn;
+		ch->update_fn_data = update_fn_data;
+	}
+
+	return ch;
+}
+
 struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
@@ -776,6 +800,11 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 	mutex_init(&ch->poll_events.lock);
 	ch->poll_events.events_enabled = false;
 	ch->poll_events.num_pending_events = 0;
+
+	ch->update_fn = NULL;
+	ch->update_fn_data = NULL;
+
+	INIT_WORK(&ch->update_fn_work, gk20a_channel_update_runcb_fn);
 
 	return ch;
 }
@@ -1473,6 +1502,9 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 	}
 	mutex_unlock(&c->jobs_lock);
 	mutex_unlock(&c->submit_lock);
+
+	if (c->update_fn)
+		schedule_work(&c->update_fn_work);
 }
 
 void add_wait_cmd(u32 *ptr, u32 id, u32 thresh)

@@ -589,6 +589,33 @@ static int gk20a_cde_execute_buffer(struct gk20a_cde_ctx *cde_ctx,
 					   num_entries, flags, fence, fence_out);
 }
 
+static struct gk20a_cde_ctx *gk20a_cde_get_context(struct gk20a_cde_app *cde_app)
+{
+	struct gk20a_cde_ctx *cde_ctx = cde_app->cde_ctx;
+	int i;
+
+	/* try to find a jobless context */
+
+	for (i = 0; i < ARRAY_SIZE(cde_app->cde_ctx); i++, cde_ctx++) {
+		struct channel_gk20a *ch = cde_ctx->ch;
+		bool empty;
+
+		mutex_lock(&ch->jobs_lock);
+		empty = list_empty(&ch->jobs);
+		mutex_unlock(&ch->jobs_lock);
+
+		if (empty)
+			return cde_ctx;
+	}
+
+	/* pick just the next cde context, hopefully somewhat in order */
+	cde_ctx = cde_app->cde_ctx + cde_app->cde_ctx_ptr;
+	cde_app->cde_ctx_ptr = (cde_app->cde_ctx_ptr + 1) %
+			ARRAY_SIZE(cde_app->cde_ctx);
+
+	return cde_ctx;
+}
+
 int gk20a_cde_convert(struct gk20a *g,
 		      struct dma_buf *dst,
 		      s32 dst_kind, u64 dst_byte_offset,
@@ -610,10 +637,7 @@ int gk20a_cde_convert(struct gk20a *g,
 
 	mutex_lock(&cde_app->mutex);
 
-	/* pick next free cde context */
-	cde_ctx = cde_app->cde_ctx + cde_app->cde_ctx_ptr;
-	cde_app->cde_ctx_ptr = (cde_app->cde_ctx_ptr + 1) %
-		ARRAY_SIZE(cde_app->cde_ctx);
+	cde_ctx = gk20a_cde_get_context(cde_app);
 
 	/* First, map the buffers to local va */
 

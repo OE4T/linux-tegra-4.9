@@ -98,13 +98,13 @@ static int __gk20a_sync_pt_compare_ref(
 		return 0;
 }
 
-struct gk20a_sync_pt *to_gk20a_sync_pt(struct sync_pt *pt)
+static struct gk20a_sync_pt *to_gk20a_sync_pt(struct sync_pt *pt)
 {
 	struct gk20a_sync_pt_inst *pti =
 			container_of(pt, struct gk20a_sync_pt_inst, pt);
 	return pti->shared;
 }
-struct gk20a_sync_timeline *to_gk20a_timeline(struct sync_timeline *obj)
+static struct gk20a_sync_timeline *to_gk20a_timeline(struct sync_timeline *obj)
 {
 	if (WARN_ON(obj->ops != &gk20a_sync_timeline_ops))
 		return NULL;

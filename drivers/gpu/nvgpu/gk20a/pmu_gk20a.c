@@ -2262,6 +2262,7 @@ void gk20a_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.prepare_ucode = gk20a_prepare_ucode;
 	gops->pmu.pmu_setup_hw_and_bootstrap = gk20a_init_pmu_setup_hw1;
 	gops->pmu.pmu_setup_elpg = NULL;
+	gops->pmu.init_wpr_region = NULL;
 }
 
 int gk20a_init_pmu_support(struct gk20a *g)
@@ -2749,7 +2750,7 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 	return 0;
 }
 
-static int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout,
+int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout,
 				 u32 *var, u32 val);
 
 static void pmu_handle_zbc_msg(struct gk20a *g, struct pmu_msg *msg,
@@ -2902,10 +2903,14 @@ static int pmu_process_message(struct pmu_gk20a *pmu)
 {
 	struct pmu_msg msg;
 	int status;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 
 	if (unlikely(!pmu->pmu_ready)) {
 		pmu_process_init_msg(pmu, &msg);
+		if (g->ops.pmu.init_wpr_region != NULL)
+			g->ops.pmu.init_wpr_region(g);
 		pmu_init_perfmon(pmu);
+
 		return 0;
 	}
 
@@ -2930,7 +2935,7 @@ static int pmu_process_message(struct pmu_gk20a *pmu)
 	return 0;
 }
 
-static int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout,
+int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout,
 				 u32 *var, u32 val)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -3166,10 +3171,11 @@ void gk20a_pmu_isr(struct gk20a *g)
 	mask = gk20a_readl(g, pwr_falcon_irqmask_r()) &
 		gk20a_readl(g, pwr_falcon_irqdest_r());
 
-	intr = gk20a_readl(g, pwr_falcon_irqstat_r()) & mask;
+	intr = gk20a_readl(g, pwr_falcon_irqstat_r());
 
 	gk20a_dbg_pmu("received falcon interrupt: 0x%08x", intr);
 
+	intr = gk20a_readl(g, pwr_falcon_irqstat_r()) & mask;
 	if (!intr || pmu->pmu_state == PMU_STATE_OFF) {
 		gk20a_writel(g, pwr_falcon_irqsclr_r(), intr);
 		mutex_unlock(&pmu->isr_mutex);
@@ -3631,6 +3637,10 @@ int gk20a_pmu_destroy(struct gk20a *g)
 	pmu->pmu_ready = false;
 	pmu->perfmon_ready = false;
 	pmu->zbc_ready = false;
+	g->ops.pmu.lspmuwprinitdone = false;
+	g->ops.pmu.fecsbootstrapdone = false;
+	g->ops.pmu.fecsrecoveryinprogress = 0;
+
 
 	gk20a_dbg_fn("done");
 	return 0;
@@ -3738,7 +3748,6 @@ int gk20a_pmu_ap_send_command(struct gk20a *g,
 		gk20a_dbg_pmu("cmd post PMU_AP_CMD_ID_INIT");
 		cmd.cmd.pg.ap_cmd.init.pg_sampling_period_us =
 			p_ap_cmd->init.pg_sampling_period_us;
-		p_callback = ap_callback_init_and_enable_ctrl;
 		break;
 
 	case PMU_AP_CMD_ID_INIT_AND_ENABLE_CTRL:
@@ -3782,7 +3791,7 @@ int gk20a_pmu_ap_send_command(struct gk20a *g,
 	status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			p_callback, pmu, &seq, ~0);
 
-	if (!status) {
+	if (status) {
 		gk20a_dbg_pmu(
 			"%s: Unable to submit Adaptive Power Command %d\n",
 			__func__, p_ap_cmd->cmn.cmd_id);

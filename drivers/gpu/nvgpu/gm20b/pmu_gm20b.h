@@ -17,5 +17,6 @@
 #define __PMU_GM20B_H_
 
 void gm20b_init_pmu_ops(struct gpu_ops *gops);
+void gm20b_pmu_load_lsf(struct gk20a *g, u8 falcon_id);
 
 #endif /*__PMU_GM20B_H_*/

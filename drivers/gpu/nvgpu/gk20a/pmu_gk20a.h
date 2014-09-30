@@ -291,7 +291,6 @@ struct pmu_ap {
 	struct ap_ctrl		ap_ctrl[PMU_AP_CTRL_ID_MAX];
 };
 
-
 enum {
 	GK20A_PMU_DMAIDX_UCODE		= 0,
 	GK20A_PMU_DMAIDX_VIRT		= 1,
@@ -390,7 +389,7 @@ struct pmu_ucode_desc {
 #define PMU_UNIT_INIT		(0x07)
 #define PMU_UNIT_FBBA		(0x08)
 #define PMU_UNIT_DIDLE		(0x09)
-#define PMU_UNIT_AVAILABLE3	(0x0A)
+#define PMU_UNIT_ACR		(0x0A)
 #define PMU_UNIT_AVAILABLE4	(0x0B)
 #define PMU_UNIT_HDCP_MAIN	(0x0C)
 #define PMU_UNIT_HDCP_V		(0x0D)
@@ -643,6 +642,89 @@ struct pmu_pg_cmd {
 	};
 };
 
+/* ACR Commands/Message structures */
+
+enum {
+	PMU_ACR_CMD_ID_INIT_WPR_REGION = 0x0          ,
+	PMU_ACR_CMD_ID_BOOTSTRAP_FALCON,
+};
+
+/*
+ * Initializes the WPR region details
+ */
+struct pmu_acr_cmd_init_wpr_details {
+	u8  cmd_type;
+	u32 regionid;
+	u32 wproffset;
+
+};
+
+/*
+ * falcon ID to bootstrap
+ */
+struct pmu_acr_cmd_bootstrap_falcon {
+	u8 cmd_type;
+	u32 flags;
+	u32 falconid;
+};
+
+#define PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_NO  1
+#define PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_YES 0
+
+struct pmu_acr_cmd {
+	union {
+		u8 cmd_type;
+		struct pmu_acr_cmd_bootstrap_falcon bootstrap_falcon;
+		struct pmu_acr_cmd_init_wpr_details init_wpr;
+	};
+};
+
+/* acr messages */
+
+/*
+ * returns the WPR region init information
+ */
+#define PMU_ACR_MSG_ID_INIT_WPR_REGION   0
+
+/*
+ * Returns the Bootstrapped falcon ID to RM
+ */
+#define PMU_ACR_MSG_ID_BOOTSTRAP_FALCON  1
+
+/*
+ * Returns the WPR init status
+ */
+#define PMU_ACR_SUCCESS                  0
+#define PMU_ACR_ERROR                    1
+
+/*
+ * PMU notifies about bootstrap status of falcon
+ */
+struct pmu_acr_msg_bootstrap_falcon {
+	u8 msg_type;
+	union {
+		u32 errorcode;
+		u32 falconid;
+	};
+};
+
+struct pmu_acr_msg {
+	union {
+		u8 msg_type;
+		struct pmu_acr_msg_bootstrap_falcon acrmsg;
+	};
+};
+
+/***************************** ACR ERROR CODES  ******************************/
+/*!
+ * Error codes used in PMU-ACR Task
+ *
+ * LSF_ACR_INVALID_TRANSCFG_SETUP : Indicates that TRANSCFG Setup is not valid
+ *  MAILBOX1 returns the CTXDMA ID of invalid setup
+ *
+ */
+#define ACR_ERROR_INVALID_TRANSCFG_SETUP        (0xAC120001)
+
 /* PERFMON */
 #define PMU_DOMAIN_GROUP_PSTATE		0
 #define PMU_DOMAIN_GROUP_GPC2CLK	1
@@ -770,6 +852,7 @@ struct pmu_cmd {
 		struct pmu_perfmon_cmd perfmon;
 		struct pmu_pg_cmd pg;
 		struct pmu_zbc_cmd zbc;
+		struct pmu_acr_cmd acr;
 	} cmd;
 };
 
@@ -780,6 +863,7 @@ struct pmu_msg {
 		struct pmu_perfmon_msg perfmon;
 		struct pmu_pg_msg pg;
 		struct pmu_rc_msg rc;
+		struct pmu_acr_msg acr;
 	} msg;
 };
 
@@ -1145,4 +1229,6 @@ int gk20a_pmu_ap_send_command(struct gk20a *g,
 int gk20a_aelpg_init(struct gk20a *g);
 int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id);
 void pmu_enable_irq(struct pmu_gk20a *pmu, bool enable);
+int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout,
+				 u32 *var, u32 val);
 #endif /*__PMU_GK20A_H__*/

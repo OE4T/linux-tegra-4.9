@@ -13,7 +13,9 @@
  * more details.
  */
 
+#include <linux/delay.h>	/* for udelay */
 #include "gk20a/gk20a.h"
+#include "gk20a/pmu_gk20a.h"
 #include "acr_gm20b.h"
 #include "pmu_gm20b.h"
 
@@ -25,6 +27,9 @@ struct pg_init_sequence_list {
 	u32 regaddr;
 	u32 writeval;
 };
+
+#define gm20b_dbg_pmu(fmt, arg...) \
+	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
 
 
 /* PROD settings for ELPG sequencing registers*/
@@ -148,11 +153,98 @@ int gm20b_pmu_setup_elpg(struct gk20a *g)
 	return ret;
 }
 
+void pmu_handle_acr_init_wpr_msg(struct gk20a *g, struct pmu_msg *msg,
+			void *param, u32 handle, u32 status)
+{
+	gk20a_dbg_fn("");
+
+	gm20b_dbg_pmu("reply PMU_ACR_CMD_ID_INIT_WPR_REGION");
+
+	if (msg->msg.acr.acrmsg.errorcode == PMU_ACR_SUCCESS)
+		g->ops.pmu.lspmuwprinitdone = true;
+	gk20a_dbg_fn("done");
+}
+
+
+int gm20b_pmu_init_acr(struct gk20a *g)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	struct pmu_cmd cmd;
+	u32 seq;
+
+	gk20a_dbg_fn("");
+
+	/* init ACR */
+	memset(&cmd, 0, sizeof(struct pmu_cmd));
+	cmd.hdr.unit_id = PMU_UNIT_ACR;
+	cmd.hdr.size = PMU_CMD_HDR_SIZE +
+	  sizeof(struct pmu_acr_cmd_init_wpr_details);
+	cmd.cmd.acr.init_wpr.cmd_type = PMU_ACR_CMD_ID_INIT_WPR_REGION;
+	cmd.cmd.acr.init_wpr.regionid = 0x01;
+	cmd.cmd.acr.init_wpr.wproffset = 0x00;
+	gm20b_dbg_pmu("cmd post PMU_ACR_CMD_ID_INIT_WPR_REGION");
+	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+			pmu_handle_acr_init_wpr_msg, pmu, &seq, ~0);
+
+	gk20a_dbg_fn("done");
+	return 0;
+}
+
+void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
+			void *param, u32 handle, u32 status)
+{
+
+	gk20a_dbg_fn("");
+
+
+	if (msg->msg.acr.acrmsg.falconid == LSF_FALCON_ID_FECS)
+		gm20b_dbg_pmu("reply PMU_ACR_CMD_ID_BOOTSTRAP_FALCON");
+
+	gm20b_dbg_pmu("response code = %x\n", msg->msg.acr.acrmsg.falconid);
+	gk20a_dbg_fn("done");
+}
+
+void gm20b_pmu_load_lsf(struct gk20a *g, u8 falcon_id)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	struct pmu_cmd cmd;
+	u32 seq;
+
+	gk20a_dbg_fn("");
+
+	gm20b_dbg_pmu("wprinit status = %x\n", g->ops.pmu.lspmuwprinitdone);
+	if (g->ops.pmu.lspmuwprinitdone && g->ops.pmu.fecsbootstrapdone) {
+		/* send message to load FECS falcon */
+		memset(&cmd, 0, sizeof(struct pmu_cmd));
+		cmd.hdr.unit_id = PMU_UNIT_ACR;
+		cmd.hdr.size = PMU_CMD_HDR_SIZE +
+		  sizeof(struct pmu_acr_cmd_bootstrap_falcon);
+		cmd.cmd.acr.bootstrap_falcon.cmd_type =
+		  PMU_ACR_CMD_ID_BOOTSTRAP_FALCON;
+		cmd.cmd.acr.bootstrap_falcon.flags =
+		  PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_YES;
+		cmd.cmd.acr.bootstrap_falcon.falconid = falcon_id;
+		gm20b_dbg_pmu("cmd post PMU_ACR_CMD_ID_BOOTSTRAP_FALCON");
+		g->ops.pmu.fecsrecoveryinprogress = 1;
+		gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+				pmu_handle_fecs_boot_acr_msg, pmu, &seq, ~0);
+	}
+
+	gk20a_dbg_fn("done");
+	return;
+}
+
 void gm20b_init_pmu_ops(struct gpu_ops *gops)
 {
-	if (gops->privsecurity)
+	if (gops->privsecurity) {
 		gm20b_init_secure_pmu(gops);
-	else
+		gops->pmu.init_wpr_region = gm20b_pmu_init_acr;
+	} else {
 		gk20a_init_pmu_ops(gops);
+		gops->pmu.init_wpr_region = NULL;
+	}
 	gops->pmu.pmu_setup_elpg = gm20b_pmu_setup_elpg;
+	gops->pmu.lspmuwprinitdone = false;
+	gops->pmu.fecsbootstrapdone = false;
+	gops->pmu.fecsrecoveryinprogress = 0;
 }

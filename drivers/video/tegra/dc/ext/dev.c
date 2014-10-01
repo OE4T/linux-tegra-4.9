@@ -885,6 +885,7 @@ static int tegra_dc_ext_pin_windows(struct tegra_dc_ext_user *user,
 			flip_win->phys_addr_cde = 0;
 		}
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 		if (syncpt_fd) {
 			if (flip_win->attr.pre_syncpt_fd >= 0) {
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
@@ -897,6 +898,7 @@ static int tegra_dc_ext_pin_windows(struct tegra_dc_ext_user *user,
 				flip_win->attr.pre_syncpt_id = NVSYNCPT_INVALID;
 			}
 		}
+#endif /* CONFIG_TEGRA_NVDISPLAY */
 	}
 
 	return 0;
@@ -999,6 +1001,7 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 		goto unlock;
 	}
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	if (syncpt_fd) {
 		if (post_sync_id != NVSYNCPT_INVALID) {
 			ret = nvhost_syncpt_create_fence_single_ext(
@@ -1015,6 +1018,7 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 		*syncpt_val = post_sync_val;
 		*syncpt_id = post_sync_id;
 	}
+#endif /* CONFIG_TEGRA_NVDISPLAY */
 
 	if (has_timestamp) {
 		mutex_lock(&ext->win[work_index].queue_lock);

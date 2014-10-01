@@ -36,6 +36,7 @@ struct tegra_spi_platform_data {
 	bool slave_ready_active_high;
 	int max_dma_buffer_size;
 	const char *clk_pin;
+	bool slave_ready_pol;
 };
 
 /*

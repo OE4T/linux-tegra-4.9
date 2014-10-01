@@ -90,6 +90,7 @@ obj-$(CONFIG_SPI_ST_SSC4)		+= spi-st-ssc4.o
 obj-$(CONFIG_SPI_SUN4I)			+= spi-sun4i.o
 obj-$(CONFIG_SPI_SUN6I)			+= spi-sun6i.o
 obj-$(CONFIG_SPI_TEGRA114)		+= spi-tegra114.o
+obj-$(CONFIG_SPI_TEGRA124_SLAVE)	+= spi-tegra124-slave.o
 obj-$(CONFIG_SPI_TEGRA20_SFLASH)	+= spi-tegra20-sflash.o
 obj-$(CONFIG_SPI_TEGRA20_SLINK)		+= spi-tegra20-slink.o
 obj-$(CONFIG_SPI_TLE62X0)		+= spi-tle62x0.o

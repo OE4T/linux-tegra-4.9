@@ -43,7 +43,7 @@
 #define BOOT_GPU_UV	1000000	/* gpu rail boot voltage 1.0V */
 #define ADC_SLOPE_UV	10000	/* default ADC detection slope 10mV */
 
-#define DVFS_SAFE_MARGIN	8	/* 8% */
+#define DVFS_SAFE_MARGIN	10	/* 10% */
 static unsigned long dvfs_safe_max_freq;
 
 static struct pll_parms gpc_pll_params = {
@@ -53,9 +53,9 @@ static struct pll_parms gpc_pll_params = {
 	1, 255,			/* M */
 	8, 255,			/* N */
 	1, 31,			/* PL */
-	-58700, 86789,		/* DFS_COEFF */
+	-165230, 214007,	/* DFS_COEFF */
 	0, 0,			/* ADC char coeff - to be read from fuses */
-	0,			/* FIXME: vco control data */
+	0x7 << 3,		/* vco control in NA mode */
 };
 
 #ifdef CONFIG_DEBUG_FS

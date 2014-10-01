@@ -1195,7 +1195,11 @@ static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
 	tegra_dc_get(dc);
 
 	reg_val = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_dc_writel(dc, reg_val | WRITE_MUX_ACTIVE, DC_CMD_STATE_ACCESS);
+#else
+	tegra_dc_writel(dc, reg_val | WRITE_MUX_ASSEMBLY, DC_CMD_STATE_ACCESS);
+#endif /* CONFIG_TEGRA_NVDISPLAY */
 
 	if (tegra_platform_is_fpga()) {
 		tegra_dc_writel(dc, 0, DC_DISP_DISP_CLOCK_CONTROL);
@@ -1344,8 +1348,11 @@ void tegra_sor_start_dc(struct tegra_dc_sor_data *sor)
 
 	tegra_dc_get(dc);
 	reg_val = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_dc_writel(dc, reg_val | WRITE_MUX_ACTIVE, DC_CMD_STATE_ACCESS);
-
+#else
+	tegra_dc_writel(dc, reg_val | WRITE_MUX_ASSEMBLY, DC_CMD_STATE_ACCESS);
+#endif /* CONFIG_TEGRA_NVDISPLAY */
 	tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY, DC_CMD_DISPLAY_COMMAND);
 	tegra_dc_sor_enable_sor(sor, true);
 
@@ -1361,7 +1368,11 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 	tegra_dc_get(dc);
 
 	reg_val = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_dc_writel(dc, reg_val | WRITE_MUX_ACTIVE, DC_CMD_STATE_ACCESS);
+#else
+	tegra_dc_writel(dc, reg_val | WRITE_MUX_ASSEMBLY, DC_CMD_STATE_ACCESS);
+#endif /* CONFIG_TEGRA_NVDISPLAY */
 
 	tegra_dc_sor_config_panel(sor, false);
 

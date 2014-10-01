@@ -302,10 +302,11 @@ static void clk_config_dvfs_ndiv(int mv, u32 n_eff, struct na_dvfs *d)
 	u32 rem, rem_range;
 	struct pll_parms *p = &gpc_pll_params;
 
-	det_delta = (mv * 1000 - d->uv_cal);
-	det_delta = min(det_delta, d->dfs_det_max * p->uvdet_slope);
+	det_delta = DIV_ROUND_CLOSEST(mv * 1000 - p->uvdet_offs,
+				      p->uvdet_slope);
+	det_delta -= d->dfs_ext_cal;
+	det_delta = min(det_delta, d->dfs_det_max);
 	det_delta = det_delta * d->dfs_coeff;
-	det_delta = DIV_ROUND_CLOSEST(det_delta, p->uvdet_slope);
 
 	n = (int)(n_eff << DFS_DET_RANGE) - det_delta;
 	BUG_ON((n < 0) || (n > (p->max_N << DFS_DET_RANGE)));

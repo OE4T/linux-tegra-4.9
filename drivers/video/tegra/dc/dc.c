@@ -2732,6 +2732,7 @@ static int tegra_dc_init(struct tegra_dc *dc)
 {
 	int i;
 	int int_enable;
+	char sysedp_name[50];
 	u32 val;
 
 	tegra_dc_io_start(dc);
@@ -2855,6 +2856,8 @@ static int tegra_dc_init(struct tegra_dc *dc)
 					"skipping tegra_dc_program_mode.\n");
 		}
 	}
+	sprintf(sysedp_name, "display_%d", dc->ndev->id);
+	dc->sysedpc = sysedp_create_consumer(sysedp_name, sysedp_name);
 
 	/* Initialize SD AFTER the modeset.
 	   nvsd_init handles the sd_settings = NULL case. */

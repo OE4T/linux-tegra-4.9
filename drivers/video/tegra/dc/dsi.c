@@ -4158,6 +4158,7 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 	int err = 0;
 
+	sysedp_set_state(dc->sysedpc, 1);
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
 
@@ -5065,6 +5066,7 @@ static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 	if (dsi->host_suspended)
 		tegra_dsi_host_resume(dc);
 
+	sysedp_set_state(dc->sysedpc, 0);
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
 

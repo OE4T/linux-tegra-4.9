@@ -35,6 +35,7 @@
 
 #include <mach/tegra_dc_ext.h>
 #include <linux/platform/tegra/isomgr.h>
+#include <linux/sysedp.h>
 
 #include "dc_reg.h"
 
@@ -284,5 +285,6 @@ struct tegra_dc {
 	bool	switchdev_registered;
 
 	struct notifier_block slgc_notifier;
+	struct sysedp_consumer *sysedpc;
 };
 #endif

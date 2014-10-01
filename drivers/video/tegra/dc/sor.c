@@ -1106,7 +1106,8 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 
 	if (out_type == TEGRA_DC_OUT_HDMI)
 		reg_val |= NV_SOR_STATE1_ASY_PROTOCOL_SINGLE_TMDS_A;
-	else if (out_type == TEGRA_DC_OUT_DP)
+	else if ((out_type == TEGRA_DC_OUT_DP) ||
+		out_type == TEGRA_DC_OUT_NVSR_DP)
 		reg_val |= NV_SOR_STATE1_ASY_PROTOCOL_DP_A;
 	else
 		reg_val |= NV_SOR_STATE1_ASY_PROTOCOL_LVDS_CUSTOM;

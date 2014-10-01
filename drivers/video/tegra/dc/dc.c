@@ -1446,7 +1446,11 @@ int tegra_dc_get_stride(struct tegra_dc *dc, unsigned win)
 	tegra_dc_get(dc);
 	tegra_dc_writel(dc, WINDOW_A_SELECT << win,
 		DC_CMD_DISPLAY_WINDOW_HEADER);
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	stride = tegra_nvdisp_get_linestride(dc, win);
+#else
 	stride = tegra_dc_readl(dc, DC_WIN_LINE_STRIDE);
+#endif
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
 	return GET_LINE_STRIDE(stride);

@@ -2336,7 +2336,7 @@ static bool tegra_dc_dp_detect(struct tegra_dc *dc)
 	u32 rd;
 
 	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
-		return  false;
+		return  true;
 
 	tegra_dc_io_start(dc);
 	tegra_dpaux_clk_enable(dp);

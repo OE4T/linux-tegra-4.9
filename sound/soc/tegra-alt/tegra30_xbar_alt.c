@@ -741,7 +741,6 @@ static int tegra30_xbar_probe(struct platform_device *pdev)
 	int ret;
 	const struct of_device_id *match;
 	struct tegra30_xbar_soc_data *soc_data;
-	struct clk *parent_clk;
 
 	match = of_match_device(tegra30_xbar_of_match, pdev->dev.parent);
 	if (!match) {
@@ -767,31 +766,11 @@ static int tegra30_xbar_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	xbar->clk_parent = clk_get_sys(NULL, "pll_a_out0");
-	if (IS_ERR(xbar->clk)) {
-		dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
-		ret = PTR_ERR(xbar->clk_parent);
-		goto err_clk_put;
-	}
-
-	parent_clk = clk_get_parent(xbar->clk);
-	if (IS_ERR(parent_clk)) {
-		dev_err(&pdev->dev, "Can't get parent clock fo xbar\n");
-		ret = PTR_ERR(parent_clk);
-		goto err_clk_put;
-	}
-
-	ret = clk_set_parent(xbar->clk, xbar->clk_parent);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to set parent clock with pll_a_out0\n");
-		goto err_clk_put;
-	}
-
 	regs = devm_request_and_ioremap(&pdev->dev, pdev->resource);
 	if (!regs) {
 		dev_err(&pdev->dev, "request/iomap region failed\n");
 		ret = -ENODEV;
-		goto err_clk_set_parent;
+		goto err_clk_put;
 	}
 
 	xbar->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
@@ -799,7 +778,7 @@ static int tegra30_xbar_probe(struct platform_device *pdev)
 	if (IS_ERR(xbar->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
 		ret = PTR_ERR(xbar->regmap);
-		goto err_clk_put_parent;
+		goto err_clk_put;
 	}
 	regcache_cache_only(xbar->regmap, true);
 
@@ -832,10 +811,6 @@ err_suspend:
 		tegra30_xbar_runtime_suspend(&pdev->dev);
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
-err_clk_put_parent:
-	clk_put(xbar->clk_parent);
-err_clk_set_parent:
-	clk_set_parent(xbar->clk, parent_clk);
 err_clk_put:
 	devm_clk_put(&pdev->dev, xbar->clk);
 err:
@@ -851,7 +826,6 @@ static int tegra30_xbar_remove(struct platform_device *pdev)
 		tegra30_xbar_runtime_suspend(&pdev->dev);
 
 	devm_clk_put(&pdev->dev, xbar->clk);
-	clk_put(xbar->clk_parent);
 
 	return 0;
 }

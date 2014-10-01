@@ -45,6 +45,16 @@ enum nvhost_syncpt_policy {
 	SYNCPT_PER_CHANNEL_INSTANCE,
 };
 
+/*
+ * Policy determines when to map HW channel to device,
+ * i.e. either on channel device node open time
+ * or on work submission time
+ */
+enum nvhost_channel_policy {
+	MAP_CHANNEL_ON_OPEN = 0,
+	MAP_CHANNEL_ON_SUBMIT,
+};
+
 struct host1x_device_info {
 	int		nb_channels;	/* host1x: num channels supported */
 	int		nb_pts; 	/* host1x: num syncpoints supported */
@@ -54,6 +64,7 @@ struct host1x_device_info {
 	int		pts_base;	/* host1x: syncpoint base */
 	int		pts_limit;	/* host1x: syncpoint limit */
 	enum nvhost_syncpt_policy syncpt_policy; /* host1x: syncpoint policy */
+	enum nvhost_channel_policy channel_policy; /* host1x: channel policy */
 };
 
 struct nvhost_master {

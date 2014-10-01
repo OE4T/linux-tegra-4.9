@@ -347,6 +347,9 @@ struct nvmap_debugfs_handles_entry {
 /* Actually allocates memory from IVM heaps */
 #define NVMAP_IOC_ALLOC_IVM _IOW(NVMAP_IOC_MAGIC, 101, struct nvmap_alloc_ivm_handle)
 
-#define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_ALLOC_IVM))
+/* Allocate seperate memory for VPR */
+#define NVMAP_IOC_VPR_FLOOR_SIZE _IOW(NVMAP_IOC_MAGIC, 102, __u32)
+
+#define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_VPR_FLOOR_SIZE))
 
 #endif /* _LINUX_NVMAP_H */

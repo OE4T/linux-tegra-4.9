@@ -42,6 +42,8 @@ int nvmap_ioctl_alloc_kind(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_alloc_ivm(struct file *filp, void __user *arg);
 
+int nvmap_ioctl_vpr_floor_size(struct file *filp, void __user *arg);
+
 int nvmap_ioctl_free(struct file *filp, unsigned long arg);
 
 int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg);

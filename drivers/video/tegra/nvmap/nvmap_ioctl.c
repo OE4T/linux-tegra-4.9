@@ -41,6 +41,7 @@
 #include "nvmap_priv.h"
 
 #include <linux/list.h>
+extern struct device tegra_vpr_dev;
 
 static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 			 int is_read, unsigned long h_offs,
@@ -321,7 +322,19 @@ int nvmap_ioctl_alloc_ivm(struct file *filp, void __user *arg)
 	return err;
 }
 
-static int nvmap_create_fd(struct nvmap_client *client, struct nvmap_handle *h)
+int nvmap_ioctl_vpr_floor_size(struct file *filp, void __user *arg)
+{
+	int err=0;
+	u32 floor_size;
+
+	if (copy_from_user(&floor_size, arg, sizeof(floor_size)))
+		return -EFAULT;
+
+	err = dma_set_resizable_heap_floor_size(&tegra_vpr_dev, floor_size);
+	return err;
+}
+
+int nvmap_create_fd(struct nvmap_client *client, struct nvmap_handle *h)
 {
 	int fd;
 

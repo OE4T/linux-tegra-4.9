@@ -4123,6 +4123,27 @@ static const struct file_operations perfmon_events_count_fops = {
 	.release	= single_release,
 };
 
+static int security_show(struct seq_file *s, void *data)
+{
+	struct gk20a *g = s->private;
+
+	seq_printf(s, "%d\n", g->pmu.pmu_mode);
+	return 0;
+
+}
+
+static int security_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, security_show, inode->i_private);
+}
+
+static const struct file_operations security_fops = {
+	.open		= security_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 int gk20a_pmu_debugfs_init(struct platform_device *dev)
 {
 	struct dentry *d;
@@ -4158,8 +4179,13 @@ int gk20a_pmu_debugfs_init(struct platform_device *dev)
 						&perfmon_events_count_fops);
 	if (!d)
 		goto err_out;
-	return 0;
 
+	d = debugfs_create_file(
+		"pmu_security", S_IRUGO, platform->debugfs, g,
+						&security_fops);
+	if (!d)
+		goto err_out;
+	return 0;
 err_out:
 	pr_err("%s: Failed to make debugfs node\n", __func__);
 	debugfs_remove_recursive(platform->debugfs);

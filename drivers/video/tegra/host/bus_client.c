@@ -177,6 +177,7 @@ struct nvhost_channel_userctx {
 	u32 priority;
 	int clientid;
 	bool timeout_debug_dump;
+	struct platform_device *pdev;
 	u32 syncpts[NVHOST_MODULE_MAX_SYNCPTS];
 
 	/* error notificatiers used channel submit timeout */
@@ -193,15 +194,15 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	int i = 0;
 
 	mutex_lock(&channel_lock);
-	if (!priv->ch || !priv->ch->dev) {
+	if (!priv->ch || !priv->pdev) {
 		mutex_unlock(&channel_lock);
 		return 0;
 	}
-	trace_nvhost_channel_release(dev_name(&priv->ch->dev->dev));
+	trace_nvhost_channel_release(dev_name(&priv->pdev->dev));
 
 	filp->private_data = NULL;
 
-	nvhost_module_remove_client(priv->ch->dev, priv);
+	nvhost_module_remove_client(priv->pdev, priv);
 
 	if (priv->job)
 		nvhost_job_put(priv->job);
@@ -232,6 +233,7 @@ static int __nvhost_channelopen(struct inode *inode,
 {
 	struct nvhost_channel_userctx *priv;
 	struct nvhost_device_data *pdata;
+	struct platform_device *pdev;
 	int ret;
 
 	if (inode) {
@@ -244,7 +246,7 @@ static int __nvhost_channelopen(struct inode *inode,
 			return ret;
 		}
 	} else {
-		if (!ch || !ch->dev) {
+		if (!ch) {
 			pr_err("%s: NULL channel request to get\n", __func__);
 			return -EINVAL;
 		}
@@ -255,12 +257,14 @@ static int __nvhost_channelopen(struct inode *inode,
 			return -EBUSY;
 	}
 
+	pdev = pdata->pdev;
+
 	mutex_lock(&channel_lock);
-	if (!ch || !ch->dev) {
+	if (!ch) {
 		mutex_unlock(&channel_lock);
 		return -EINVAL;
 	}
-	trace_nvhost_channel_open(dev_name(&ch->dev->dev));
+	trace_nvhost_channel_open(dev_name(&pdev->dev));
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
@@ -269,27 +273,27 @@ static int __nvhost_channelopen(struct inode *inode,
 	}
 	filp->private_data = priv;
 	priv->ch = ch;
-	if (nvhost_module_add_client(ch->dev, priv))
+	if (nvhost_module_add_client(pdev, priv))
 		goto fail_add_client;
 
 	/* Check that the device can be powered */
-	ret = nvhost_module_busy(ch->dev);
+	ret = nvhost_module_busy(pdev);
 	if (ret)
 		goto fail_power_on;
-	nvhost_module_idle(ch->dev);
+	nvhost_module_idle(pdev);
 
 	priv->priority = NVHOST_PRIORITY_MEDIUM;
 	priv->clientid = atomic_add_return(1,
-			&nvhost_get_host(ch->dev)->clientid);
+			&nvhost_get_host(pdev)->clientid);
 	/* If we wrapped around to 0, increment again */
 	if (!priv->clientid)
 		priv->clientid = atomic_add_return(1,
-				&nvhost_get_host(ch->dev)->clientid);
-	pdata = dev_get_drvdata(ch->dev->dev.parent);
+				&nvhost_get_host(pdev)->clientid);
+	pdata = dev_get_drvdata(pdev->dev.parent);
 	priv->timeout = pdata->nvhost_timeout_default;
 	priv->timeout_debug_dump = true;
 	mutex_init(&priv->ioctl_lock);
-	priv->pdev = pdata->pdev;
+	priv->pdev = pdev;
 	if (!tegra_platform_is_silicon())
 		priv->timeout = 0;
 	mutex_unlock(&channel_lock);
@@ -375,7 +379,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	u32 __user *fences = (u32 *)(uintptr_t)args->fences;
 	u32 __user *class_ids = (u32 *)(uintptr_t)args->class_ids;
 
-	struct nvhost_master *host = nvhost_get_host(ctx->ch->dev);
+	struct nvhost_master *host = nvhost_get_host(ctx->pdev);
 	u32 *local_class_ids = NULL;
 	int err, i, hwctx_syncpt_idx = -1;
 
@@ -494,17 +498,17 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 
 	job->hwctx_syncpt_idx = hwctx_syncpt_idx;
 
-	trace_nvhost_channel_submit(ctx->ch->dev->name,
+	trace_nvhost_channel_submit(ctx->pdev->name,
 		job->num_gathers, job->num_relocs, job->num_waitchk,
 		job->sp[job->hwctx_syncpt_idx].id,
 		job->sp[job->hwctx_syncpt_idx].incrs);
 
-	err = nvhost_module_busy(ctx->ch->dev);
+	err = nvhost_module_busy(ctx->pdev);
 	if (err)
 		goto fail;
 
-	err = nvhost_job_pin(job, &nvhost_get_host(ctx->ch->dev)->syncpt);
-	nvhost_module_idle(ctx->ch->dev);
+	err = nvhost_job_pin(job, &nvhost_get_host(ctx->pdev)->syncpt);
+	nvhost_module_idle(ctx->pdev);
 	if (err)
 		goto fail;
 
@@ -539,7 +543,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 			pts[i].thresh = job->sp[i].fence;
 		}
 
-		err = nvhost_sync_create_fence_fd(ctx->ch->dev,
+		err = nvhost_sync_create_fence_fd(ctx->pdev,
 				pts, num_syncpt_incrs, "fence", &args->fence);
 		if (err)
 			goto fail;
@@ -583,18 +587,18 @@ static int nvhost_ioctl_channel_set_rate(struct nvhost_channel_userctx *ctx,
 	u32 attr = (arg->moduleid >> NVHOST_CLOCK_ATTR_BIT_POS)
 			& ((1 << NVHOST_CLOCK_ATTR_BIT_WIDTH) - 1);
 	int index = moduleid ?
-			moduleid_to_index(ctx->ch->dev, moduleid) : 0;
+			moduleid_to_index(ctx->pdev, moduleid) : 0;
 
-	return nvhost_module_set_rate(ctx->ch->dev,
+	return nvhost_module_set_rate(ctx->pdev,
 			ctx, arg->rate, index, attr);
 }
 
 static int nvhost_ioctl_channel_get_rate(struct nvhost_channel_userctx *ctx,
 	u32 moduleid, u32 *rate)
 {
-	int index = moduleid ? moduleid_to_index(ctx->ch->dev, moduleid) : 0;
+	int index = moduleid ? moduleid_to_index(ctx->pdev, moduleid) : 0;
 
-	return nvhost_module_get_rate(ctx->ch->dev,
+	return nvhost_module_get_rate(ctx->pdev,
 			(unsigned long *)rate, index);
 }
 
@@ -616,7 +620,7 @@ static int nvhost_ioctl_channel_module_regrdwr(
 	if (num_offsets == 0 || args->block_size & 3)
 		return -EINVAL;
 
-	ndev = ctx->ch->dev;
+	ndev = ctx->pdev;
 
 	while (num_offsets--) {
 		int err;
@@ -754,14 +758,13 @@ static long nvhost_channelctl(struct file *filp,
 
 	/* serialize calls from this fd */
 	mutex_lock(&priv->ioctl_lock);
-
-	if (!priv->ch->dev) {
+	if (!priv->pdev) {
 		pr_warn("Channel already unmapped\n");
 		mutex_unlock(&priv->ioctl_lock);
 		return -EFAULT;
 	}
 
-	dev = &priv->ch->dev->dev;
+	dev = &priv->pdev->dev;
 	switch (cmd) {
 	case NVHOST_IOCTL_CHANNEL_OPEN:
 	{
@@ -810,7 +813,7 @@ static long nvhost_channelctl(struct file *filp,
 	case NVHOST_IOCTL_CHANNEL_GET_SYNCPOINT:
 	{
 		struct nvhost_device_data *pdata =
-			platform_get_drvdata(priv->ch->dev);
+			platform_get_drvdata(priv->pdev);
 		struct nvhost_get_param_arg *arg =
 			(struct nvhost_get_param_arg *)buf;
 
@@ -836,7 +839,7 @@ static long nvhost_channelctl(struct file *filp,
 		char name[32];
 		char set_name[32];
 		struct nvhost_device_data *pdata =
-			platform_get_drvdata(priv->ch->dev);
+			platform_get_drvdata(priv->pdev);
 		struct nvhost_get_client_managed_syncpt_arg *args =
 			(struct nvhost_get_client_managed_syncpt_arg *)buf;
 		const char __user *args_name =
@@ -874,7 +877,7 @@ static long nvhost_channelctl(struct file *filp,
 		struct nvhost_free_client_managed_syncpt_arg *args =
 			(struct nvhost_free_client_managed_syncpt_arg *)buf;
 		struct nvhost_device_data *pdata =
-			platform_get_drvdata(priv->ch->dev);
+			platform_get_drvdata(priv->pdev);
 		if (!args->value)
 			break;
 		if (args->value != pdata->client_managed_syncpt) {
@@ -898,7 +901,7 @@ static long nvhost_channelctl(struct file *filp,
 	case NVHOST_IOCTL_CHANNEL_GET_MODMUTEXES:
 	{
 		struct nvhost_device_data *pdata = \
-			platform_get_drvdata(priv->ch->dev);
+			platform_get_drvdata(priv->pdev);
 		((struct nvhost_get_param_args *)buf)->value =
 			create_mask(pdata->modulemutexes,
 					NVHOST_MODULE_MAX_MODMUTEXES);
@@ -907,7 +910,7 @@ static long nvhost_channelctl(struct file *filp,
 	case NVHOST_IOCTL_CHANNEL_GET_MODMUTEX:
 	{
 		struct nvhost_device_data *pdata = \
-			platform_get_drvdata(priv->ch->dev);
+			platform_get_drvdata(priv->pdev);
 		struct nvhost_get_param_arg *arg =
 			(struct nvhost_get_param_arg *)buf;
 
@@ -945,7 +948,7 @@ static long nvhost_channelctl(struct file *filp,
 			(u32)((struct nvhost_set_timeout_args *)buf)->timeout;
 
 		priv->timeout = timeout;
-		dev_dbg(&priv->ch->dev->dev,
+		dev_dbg(&priv->pdev->dev,
 			"%s: setting buffer timeout (%d ms) for userctx 0x%p\n",
 			__func__, priv->timeout, priv);
 		break;
@@ -1016,7 +1019,7 @@ static long nvhost_channelctl(struct file *filp,
 			(1 << NVHOST_TIMEOUT_FLAG_DISABLE_DUMP));
 		priv->timeout = timeout;
 		priv->timeout_debug_dump = timeout_debug_dump;
-		dev_dbg(&priv->ch->dev->dev,
+		dev_dbg(&priv->pdev->dev,
 			"%s: setting buffer timeout (%d ms) for userctx 0x%p\n",
 			__func__, priv->timeout, priv);
 		break;

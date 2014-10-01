@@ -352,104 +352,6 @@ static int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long end_jiffies,
 
 	return -EAGAIN;
 }
-static int gr_gk20a_ctx_reset(struct gk20a *g, u32 rst_mask)
-{
-	u32 delay = GR_IDLE_CHECK_DEFAULT;
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
-	u32 reg;
-
-	gk20a_dbg_fn("");
-
-	if (!tegra_platform_is_linsim()) {
-		/* Force clocks on */
-		gk20a_writel(g, gr_fe_pwr_mode_r(),
-			     gr_fe_pwr_mode_req_send_f() |
-			     gr_fe_pwr_mode_mode_force_on_f());
-
-		/* Wait for the clocks to indicate that they are on */
-		do {
-			reg = gk20a_readl(g, gr_fe_pwr_mode_r());
-
-			if (gr_fe_pwr_mode_req_v(reg) ==
-					gr_fe_pwr_mode_req_done_v())
-				break;
-
-			usleep_range(delay, delay * 2);
-			delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-
-		} while (time_before(jiffies, end_jiffies));
-
-		if (!time_before(jiffies, end_jiffies)) {
-			gk20a_err(dev_from_gk20a(g),
-				   "failed to force the clocks on\n");
-			WARN_ON(1);
-		}
-	}
-	if (rst_mask) {
-		gk20a_writel(g, gr_fecs_ctxsw_reset_ctl_r(), rst_mask);
-	} else {
-		gk20a_writel(g, gr_fecs_ctxsw_reset_ctl_r(),
-			     gr_fecs_ctxsw_reset_ctl_sys_halt_disabled_f() |
-			     gr_fecs_ctxsw_reset_ctl_gpc_halt_disabled_f() |
-			     gr_fecs_ctxsw_reset_ctl_be_halt_disabled_f()  |
-			     gr_fecs_ctxsw_reset_ctl_sys_engine_reset_disabled_f() |
-			     gr_fecs_ctxsw_reset_ctl_gpc_engine_reset_disabled_f() |
-			     gr_fecs_ctxsw_reset_ctl_be_engine_reset_disabled_f()  |
-			     gr_fecs_ctxsw_reset_ctl_sys_context_reset_enabled_f() |
-			     gr_fecs_ctxsw_reset_ctl_gpc_context_reset_enabled_f() |
-			     gr_fecs_ctxsw_reset_ctl_be_context_reset_enabled_f());
-	}
-
-	/* we need to read the reset register *and* wait for a moment to ensure
-	 * reset propagation */
-
-	gk20a_readl(g, gr_fecs_ctxsw_reset_ctl_r());
-	udelay(20);
-
-	gk20a_writel(g, gr_fecs_ctxsw_reset_ctl_r(),
-		     gr_fecs_ctxsw_reset_ctl_sys_halt_disabled_f() |
-		     gr_fecs_ctxsw_reset_ctl_gpc_halt_disabled_f() |
-		     gr_fecs_ctxsw_reset_ctl_be_halt_disabled_f()  |
-		     gr_fecs_ctxsw_reset_ctl_sys_engine_reset_disabled_f() |
-		     gr_fecs_ctxsw_reset_ctl_gpc_engine_reset_disabled_f() |
-		     gr_fecs_ctxsw_reset_ctl_be_engine_reset_disabled_f()  |
-		     gr_fecs_ctxsw_reset_ctl_sys_context_reset_disabled_f() |
-		     gr_fecs_ctxsw_reset_ctl_gpc_context_reset_disabled_f() |
-		     gr_fecs_ctxsw_reset_ctl_be_context_reset_disabled_f());
-
-	/* we need to readl the reset and then wait a small moment after that */
-	gk20a_readl(g, gr_fecs_ctxsw_reset_ctl_r());
-	udelay(20);
-
-	if (!tegra_platform_is_linsim()) {
-		/* Set power mode back to auto */
-		gk20a_writel(g, gr_fe_pwr_mode_r(),
-			     gr_fe_pwr_mode_req_send_f() |
-			     gr_fe_pwr_mode_mode_auto_f());
-
-		/* Wait for the request to complete */
-		end_jiffies = jiffies +
-			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
-		do {
-			reg = gk20a_readl(g, gr_fe_pwr_mode_r());
-
-			if (gr_fe_pwr_mode_req_v(reg) ==
-					gr_fe_pwr_mode_req_done_v())
-				break;
-
-			usleep_range(delay, delay * 2);
-			delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-
-		} while (time_before(jiffies, end_jiffies));
-
-		if (!time_before(jiffies, end_jiffies))
-			gk20a_warn(dev_from_gk20a(g),
-				   "failed to set power mode to auto\n");
-	}
-
-	return 0;
-}
 
 static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 				   u32 *mailbox_ret, u32 opc_success,
@@ -1499,8 +1401,6 @@ static u32 gk20a_init_sw_bundle(struct gk20a *g)
 
 	/* load bundle init */
 	for (i = 0; i < sw_bundle_init->count; i++) {
-		err |= gr_gk20a_wait_fe_idle(g, end_jiffies,
-					GR_IDLE_CHECK_DEFAULT);
 		if (i == 0 || last_bundle_data != sw_bundle_init->l[i].value) {
 			gk20a_writel(g, gr_pipe_bundle_data_r(),
 				sw_bundle_init->l[i].value);
@@ -1514,6 +1414,11 @@ static u32 gk20a_init_sw_bundle(struct gk20a *g)
 		    GR_GO_IDLE_BUNDLE)
 			err |= gr_gk20a_wait_idle(g, end_jiffies,
 					GR_IDLE_CHECK_DEFAULT);
+
+		err = gr_gk20a_wait_fe_idle(g, end_jiffies,
+					GR_IDLE_CHECK_DEFAULT);
+		if (err)
+			break;
 	}
 
 	/* disable pipe mode override */
@@ -4515,9 +4420,6 @@ int gk20a_init_gr_reset_enable_hw(struct gk20a *g)
 	/* enable interrupts */
 	gk20a_writel(g, gr_intr_r(), ~0);
 	gk20a_writel(g, gr_intr_en_r(), ~0);
-
-	/* reset ctx switch state */
-	gr_gk20a_ctx_reset(g, 0);
 
 	/* clear scc ram */
 	gk20a_writel(g, gr_scc_init_r(),

@@ -562,7 +562,7 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.has_syncpoints = true,
 
 	/* power management configuration */
-	.railgate_delay		= INT_MAX,
+	.railgate_delay		= 500,
 	.clockgate_delay	= 50,
 	/* Disable all power features for gm20b */
 	.can_railgate           = true,

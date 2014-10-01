@@ -172,7 +172,6 @@ int nvhost_write_module_regs(struct platform_device *ndev,
 
 struct nvhost_channel_userctx {
 	struct nvhost_channel *ch;
-	struct nvhost_job *job;
 	u32 timeout;
 	u32 priority;
 	int clientid;
@@ -191,27 +190,25 @@ struct nvhost_channel_userctx {
 static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 {
 	struct nvhost_channel_userctx *priv = filp->private_data;
+	struct nvhost_master *host = nvhost_get_host(priv->pdev);
 	int i = 0;
 
-	mutex_lock(&channel_lock);
-	if (!priv->ch || !priv->pdev) {
-		mutex_unlock(&channel_lock);
-		return 0;
-	}
 	trace_nvhost_channel_release(dev_name(&priv->pdev->dev));
 
-	filp->private_data = NULL;
+	mutex_lock(&channel_lock);
 
+	/* remove this client from acm */
 	nvhost_module_remove_client(priv->pdev, priv);
 
-	if (priv->job)
-		nvhost_job_put(priv->job);
-
+	/* drop error notifier reference */
 	if (priv->error_notifier_ref)
 		dma_buf_put(priv->error_notifier_ref);
 
 	mutex_unlock(&channel_lock);
-	nvhost_putchannel(priv->ch, 1);
+
+	/* drop channel reference if we took one at open time */
+	if (host->info.channel_policy == MAP_CHANNEL_ON_OPEN)
+		nvhost_putchannel(priv->ch, 1);
 
 	if (nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL_INSTANCE) {
 		/* Release instance syncpoints */
@@ -228,51 +225,49 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 }
 
 static int __nvhost_channelopen(struct inode *inode,
-		struct nvhost_channel *ch,
+		struct platform_device *pdev,
 		struct file *filp)
 {
+	struct nvhost_master *host;
 	struct nvhost_channel_userctx *priv;
-	struct nvhost_device_data *pdata;
-	struct platform_device *pdev;
+	struct nvhost_device_data *pdata, *host1x_pdata;
+	struct nvhost_channel *ch = NULL;
 	int ret;
 
-	if (inode) {
+	/* grab pdev and pdata based on inputs */
+	if (pdev) {
+		pdata = platform_get_drvdata(pdev);
+	} else if (inode) {
 		pdata = container_of(inode->i_cdev,
 				struct nvhost_device_data, cdev);
+		pdev = pdata->pdev;
+	} else
+		return -EINVAL;
+
+	/* ..and then host and host1x platform data */
+	host = nvhost_get_host(pdev);
+	host1x_pdata = dev_get_drvdata(pdev->dev.parent);
+
+	/* get a channel if we are in map-at-open -mode */
+	if (host->info.channel_policy == MAP_CHANNEL_ON_OPEN) {
 		ret = nvhost_channel_map(pdata, &ch, NULL);
-		if (ret) {
+		if (ret || !ch) {
 			pr_err("%s: failed to map channel, error: %d\n",
-					__func__, ret);
+			       __func__, ret);
 			return ret;
 		}
-	} else {
-		if (!ch) {
-			pr_err("%s: NULL channel request to get\n", __func__);
-			return -EINVAL;
-		}
-		pdata = platform_get_drvdata(ch->dev);
-		if (!pdata->exclusive)
-			nvhost_getchannel(ch);
-		else
-			return -EBUSY;
 	}
 
-	pdev = pdata->pdev;
-
-	mutex_lock(&channel_lock);
-	if (!ch) {
-		mutex_unlock(&channel_lock);
-		return -EINVAL;
-	}
 	trace_nvhost_channel_open(dev_name(&pdev->dev));
 
+	mutex_lock(&channel_lock);
+
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-	if (!priv) {
-		nvhost_putchannel(ch, 1);
+	if (!priv)
 		goto fail;
-	}
 	filp->private_data = priv;
-	priv->ch = ch;
+
+	/* Register this client to acm */
 	if (nvhost_module_add_client(pdev, priv))
 		goto fail_add_client;
 
@@ -282,29 +277,37 @@ static int __nvhost_channelopen(struct inode *inode,
 		goto fail_power_on;
 	nvhost_module_idle(pdev);
 
-	priv->priority = NVHOST_PRIORITY_MEDIUM;
+	/* Get client id */
 	priv->clientid = atomic_add_return(1,
 			&nvhost_get_host(pdev)->clientid);
-	/* If we wrapped around to 0, increment again */
 	if (!priv->clientid)
 		priv->clientid = atomic_add_return(1,
 				&nvhost_get_host(pdev)->clientid);
-	pdata = dev_get_drvdata(pdev->dev.parent);
-	priv->timeout = pdata->nvhost_timeout_default;
+
+	/* Initialize private structure */
+	priv->timeout = host1x_pdata->nvhost_timeout_default;
+	priv->priority = NVHOST_PRIORITY_MEDIUM;
 	priv->timeout_debug_dump = true;
 	mutex_init(&priv->ioctl_lock);
 	priv->pdev = pdev;
+	priv->ch = ch;
+
 	if (!tegra_platform_is_silicon())
 		priv->timeout = 0;
+
 	mutex_unlock(&channel_lock);
+
 	return 0;
 
 fail_power_on:
 fail_add_client:
 	kfree(priv);
+
 fail:
+	if (ch)
+		nvhost_putchannel(ch, 1);
 	mutex_unlock(&channel_lock);
-	nvhost_channelrelease(inode, filp);
+
 	return -ENOMEM;
 }
 
@@ -794,7 +797,7 @@ static long nvhost_channelctl(struct file *filp,
 		}
 		fd_install(fd, file);
 
-		err = __nvhost_channelopen(NULL, priv->ch, file);
+		err = __nvhost_channelopen(NULL, priv->pdev, file);
 		if (err) {
 			put_unused_fd(fd);
 			fput(file);
@@ -979,6 +982,9 @@ static long nvhost_channelctl(struct file *filp,
 		break;
 	case NVHOST32_IOCTL_CHANNEL_SUBMIT:
 	{
+		struct nvhost_device_data *pdata =
+			platform_get_drvdata(priv->pdev);
+		struct nvhost_master *host = nvhost_get_host(priv->pdev);
 		struct nvhost32_submit_args *args32 = (void *)buf;
 		struct nvhost_submit_args args;
 
@@ -999,13 +1005,37 @@ static long nvhost_channelctl(struct file *filp,
 		args.class_ids = args32->class_ids;
 		args.fences = args32->fences;
 
-		err = nvhost_ioctl_channel_submit(priv, &args);
+		if (host->info.channel_policy == MAP_CHANNEL_ON_SUBMIT) {
+			err = nvhost_channel_map(pdata, &priv->ch, priv);
+			if (err)
+				break;
+			err = nvhost_ioctl_channel_submit(priv, &args);
+			nvhost_putchannel(priv->ch, 1);
+		} else {
+			err = nvhost_ioctl_channel_submit(priv, &args);
+		}
 		args32->fence = args.fence;
+
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_SUBMIT:
-		err = nvhost_ioctl_channel_submit(priv, (void *)buf);
+	{
+		struct nvhost_device_data *pdata =
+			platform_get_drvdata(priv->pdev);
+		struct nvhost_master *host = nvhost_get_host(priv->pdev);
+
+		if (host->info.channel_policy == MAP_CHANNEL_ON_SUBMIT) {
+			err = nvhost_channel_map(pdata, &priv->ch, priv);
+			if (err)
+				break;
+			err = nvhost_ioctl_channel_submit(priv, (void *)buf);
+			nvhost_putchannel(priv->ch, 1);
+		} else {
+			err = nvhost_ioctl_channel_submit(priv, (void *)buf);
+		}
+
 		break;
+	}
 	case NVHOST_IOCTL_CHANNEL_SET_ERROR_NOTIFIER:
 		err = nvhost_init_error_notifier(priv,
 			(struct nvhost_set_error_notifier *)buf);

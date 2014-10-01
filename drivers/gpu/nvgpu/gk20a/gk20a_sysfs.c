@@ -607,8 +607,17 @@ static ssize_t tpc_fs_mask_store(struct device *device,
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
-	if (val)
+	if (val && val != g->gr.gpc_tpc_mask[0] && g->ops.gr.set_gpc_tpc_mask) {
 		g->gr.gpc_tpc_mask[0] = val;
+
+		g->ops.gr.set_gpc_tpc_mask(g, 0);
+
+		kfree(g->gr.ctx_vars.local_golden_image);
+		g->gr.ctx_vars.local_golden_image = NULL;
+		g->gr.ctx_vars.golden_image_initialized = false;
+		g->gr.ctx_vars.golden_image_size = 0;
+		g->gr.sw_ready = false;
+	}
 
 	return count;
 }
@@ -621,6 +630,11 @@ static ssize_t tpc_fs_mask_read(struct device *device,
 	struct gr_gk20a *gr = &g->gr;
 	u32 gpc_index;
 	u32 tpc_fs_mask = 0;
+	int err = 0;
+
+	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
 		if (g->ops.gr.get_gpc_tpc_mask)
@@ -628,6 +642,8 @@ static ssize_t tpc_fs_mask_read(struct device *device,
 				g->ops.gr.get_gpc_tpc_mask(g, gpc_index) <<
 				(gr->max_tpc_per_gpc_count * gpc_index);
 	}
+
+	gk20a_idle(g->dev);
 
 	return sprintf(buf, "0x%x\n", tpc_fs_mask);
 }

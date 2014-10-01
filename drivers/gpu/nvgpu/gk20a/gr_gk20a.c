@@ -3084,6 +3084,7 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 		goto clean_up;
 
 	gr->ppc_count = 0;
+	gr->tpc_count = 0;
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
 		tmp = gk20a_readl(g, gr_gpc0_fs_gpc_r());
 

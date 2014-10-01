@@ -15,6 +15,8 @@
 
 #include <linux/types.h>
 #include <linux/delay.h>	/* for mdelay */
+#include <linux/io.h>
+#include <linux/tegra-fuse.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
@@ -492,6 +494,26 @@ static u32 gr_gm20b_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 	return (~val) & ((0x1 << gr->max_tpc_per_gpc_count) - 1);
 }
 
+static void gr_gm20b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
+{
+	tegra_clk_writel(CLK_RST_CONTROLLER_MISC_CLK_ENB_0_ALL_VISIBLE,
+			CLK_RST_CONTROLLER_MISC_CLK_ENB_0);
+
+	tegra_fuse_writel(0x1, FUSE_FUSEBYPASS_0);
+	tegra_fuse_writel(0x0, FUSE_WRITE_ACCESS_SW_0);
+
+	if (g->gr.gpc_tpc_mask[gpc_index] == 0x1) {
+		tegra_fuse_writel(0x0, FUSE_OPT_GPU_TPC0_DISABLE_0);
+		tegra_fuse_writel(0x1, FUSE_OPT_GPU_TPC1_DISABLE_0);
+	} else if (g->gr.gpc_tpc_mask[gpc_index] == 0x2) {
+		tegra_fuse_writel(0x1, FUSE_OPT_GPU_TPC0_DISABLE_0);
+		tegra_fuse_writel(0x0, FUSE_OPT_GPU_TPC1_DISABLE_0);
+	} else {
+		tegra_fuse_writel(0x0, FUSE_OPT_GPU_TPC0_DISABLE_0);
+		tegra_fuse_writel(0x0, FUSE_OPT_GPU_TPC1_DISABLE_0);
+	}
+}
+
 static int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -785,6 +807,7 @@ void gm20b_init_gr(struct gpu_ops *gops)
 		gops->gr.load_ctxsw_ucode = gr_gm20b_load_ctxsw_ucode;
 	else
 		gops->gr.load_ctxsw_ucode = gr_gk20a_load_ctxsw_ucode;
+	gops->gr.set_gpc_tpc_mask = gr_gm20b_set_gpc_tpc_mask;
 	gops->gr.get_gpc_tpc_mask = gr_gm20b_get_gpc_tpc_mask;
 	gops->gr.free_channel_ctx = gk20a_free_channel_ctx;
 	gops->gr.alloc_obj_ctx = gk20a_alloc_obj_ctx;

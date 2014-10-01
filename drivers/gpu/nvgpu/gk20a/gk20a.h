@@ -125,6 +125,7 @@ struct gpu_ops {
 				u32 reg_offset);
 		int (*load_ctxsw_ucode)(struct gk20a *g);
 		u32 (*get_gpc_tpc_mask)(struct gk20a *g, u32 gpc_index);
+		void (*set_gpc_tpc_mask)(struct gk20a *g, u32 gpc_index);
 		void (*free_channel_ctx)(struct channel_gk20a *c);
 		int (*alloc_obj_ctx)(struct channel_gk20a  *c,
 				struct nvgpu_alloc_obj_ctx_args *args);

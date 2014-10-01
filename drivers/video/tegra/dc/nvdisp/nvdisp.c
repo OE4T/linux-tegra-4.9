@@ -67,10 +67,14 @@ static int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 	if (!dc->mode.pclk)
 		return 0;
 
-	if (!dc->initialized) {
+	/* Temporarily commenting . This variable is currently being
+	 * initialized  on dc_mode_override function which is not
+	 * set for fake panel. Recheck whether we need this checking
+	 */
+	/*if (!dc->initialized) {
 		dev_info(&dc->ndev->dev, "Skipping %s.\n", __func__);
 		return 0;
-	}
+	}*/
 
 	v_back_porch = mode->v_back_porch;
 	v_front_porch = mode->v_front_porch;
@@ -85,6 +89,8 @@ static int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 	}
 
 	/* print_mode(dc, mode, __func__); */
+
+	tegra_dc_get(dc);
 
 	/* IMP related updates */
 	dc->new_bw_kbps = tegra_dc_calc_min_bandwidth(dc);

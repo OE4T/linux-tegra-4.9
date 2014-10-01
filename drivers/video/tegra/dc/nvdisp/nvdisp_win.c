@@ -29,8 +29,8 @@ static int tegra_nvdisp_blend(struct tegra_dc_win *win)
 {
 	if (!(win->flags & TEGRA_WIN_BLEND_FLAGS_MASK)) {
 		/* Set Bypassing if no blending is required */
-		nvdisp_win_write(win, DC_WIN_BLEND_LAYER_CONTROL,
-			BLEND_BYPASS);
+		nvdisp_win_write(win, BLEND_BYPASS,
+			DC_WIN_BLEND_LAYER_CONTROL);
 		return 0;
 	}
 
@@ -53,14 +53,12 @@ static int tegra_nvdisp_enable_cde(struct tegra_dc_win *win)
 static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 {
 	u32 win_options;
+	unsigned bpp = tegra_dc_fmt_bpp(win->fmt) / 8;
 
 	nvdisp_win_write(win, tegra_dc_fmt(win->fmt), DC_WIN_COLOR_DEPTH);
 	nvdisp_win_write(win,
 		V_POSITION(win->out_y) | H_POSITION(win->out_x),
 		DC_WIN_POSITION);
-	nvdisp_win_write(win,
-		(win->h.full << PCALC_HEIGHT) | (win->w.full << PCALC_WIDTH),
-		WIN_PCALC_WINDOW_SET_CROPPED_SIZE_IN);
 
 	/* TODO: interlace size is different */
 	nvdisp_win_write(win, V_SIZE(win->out_h) | H_SIZE(win->out_w),
@@ -79,10 +77,18 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 		win_options |= CP_ENABLE;
 	nvdisp_win_write(win, win_options, DC_WIN_WIN_OPTIONS);
 
+	nvdisp_win_write(win,
+			V_PRESCALED_SIZE(dfixed_trunc(win->h)) |
+			H_PRESCALED_SIZE(dfixed_trunc(win->w) * bpp),
+			WIN_PCALC_WINDOW_SET_CROPPED_SIZE_IN);
+
 	nvdisp_win_write(win, tegra_dc_reg_l32(win->phys_addr),
 		DC_WINBUF_START_ADDR);
 	nvdisp_win_write(win, tegra_dc_reg_h32(win->phys_addr),
 		DC_WINBUF_START_ADDR_HI);
+	/* Change to WIN_SET_PLANAR_STORAGE later instead of  line_stride*/
+	/*nvdisp_win_write(win, (win->stride>>6), WIN_SET_PLANAR_STORAGE);*/
+
 	nvdisp_win_write(win, win->stride, DC_WIN_LINE_STRIDE);
 	/* TODO: program related YUV registers as well */
 
@@ -102,6 +108,14 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 	return 0;
 }
 
+int tegra_nvdisp_get_linestride(struct tegra_dc *dc, int win)
+{
+	/* Change to WIN_SET_PLANAR_STORAGE later instead of  line_stride*/
+	/*return nvdisp_win_read(tegra_dc_get_window(dc, win),
+					WIN_SET_PLANAR_STORAGE);*/
+	return nvdisp_win_read(tegra_dc_get_window(dc, win),
+					DC_WIN_LINE_STRIDE);
+}
 
 int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	struct tegra_dc_win *windows[], int n,
@@ -148,7 +162,7 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 
 		dc_win->dirty = 1;
 		win->dirty = 1;
-		update_mask |=  WIN_A_ACT_REQ << win->idx;
+
 		trace_window_update(dc, win);
 	}
 

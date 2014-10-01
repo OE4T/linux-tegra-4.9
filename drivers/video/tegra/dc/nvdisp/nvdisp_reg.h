@@ -30,4 +30,5 @@
 #define WIN_CORE_WINDOWGROUP_SET_CONTROL 0x702
 #define    SET_CONTROL_NONE        (0xf)
 
+#define WIN_SET_PLANAR_STORAGE 0x709
 #endif

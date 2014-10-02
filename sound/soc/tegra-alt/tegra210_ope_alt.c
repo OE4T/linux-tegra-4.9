@@ -283,7 +283,7 @@ static const struct regmap_config tegra210_ope_regmap_config = {
 	.writeable_reg = tegra210_ope_wr_reg,
 	.readable_reg = tegra210_ope_rd_reg,
 	.volatile_reg = tegra210_ope_volatile_reg,
-	.cache_type = REGCACHE_RBTREE,
+	.cache_type = REGCACHE_FLAT,
 };
 
 static const struct tegra210_ope_soc_data soc_data_tegra210 = {

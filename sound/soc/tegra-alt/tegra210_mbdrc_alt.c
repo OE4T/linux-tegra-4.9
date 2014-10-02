@@ -579,7 +579,7 @@ static const struct regmap_config tegra210_mbdrc_regmap_config = {
 	.readable_reg = tegra210_mbdrc_rd_reg,
 	.volatile_reg = tegra210_mbdrc_volatile_reg,
 	.precious_reg = tegra210_mbdrc_precious_reg,
-	.cache_type = REGCACHE_RBTREE,
+	.cache_type = REGCACHE_FLAT,
 };
 
 int tegra210_mbdrc_codec_init(struct snd_soc_codec *codec)

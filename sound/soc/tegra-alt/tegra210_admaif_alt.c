@@ -110,7 +110,7 @@ static const struct regmap_config tegra210_admaif_regmap_config = {
 	.writeable_reg = tegra210_admaif_wr_reg,
 	.readable_reg = tegra210_admaif_rd_reg,
 	.volatile_reg = tegra210_admaif_volatile_reg,
-	.cache_type = REGCACHE_RBTREE,
+	.cache_type = REGCACHE_FLAT,
 };
 
 static void tegra210_admaif_global_enable(struct tegra210_admaif *admaif,

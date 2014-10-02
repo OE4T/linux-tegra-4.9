@@ -1,7 +1,7 @@
 /*
  * tegra30_spdif_alt.c - Tegra30 SPDIF driver
  *
- * Copyright (c) 2013 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2014 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -324,7 +324,7 @@ static const struct regmap_config tegra30_spdif_regmap_config = {
 	.max_register = TEGRA30_SPDIF_LCOEF_2_4_2,
 	.writeable_reg = tegra30_spdif_wr_rd_reg,
 	.readable_reg = tegra30_spdif_wr_rd_reg,
-	.cache_type = REGCACHE_RBTREE,
+	.cache_type = REGCACHE_FLAT,
 };
 
 static const struct tegra30_spdif_soc_data soc_data_tegra30 = {

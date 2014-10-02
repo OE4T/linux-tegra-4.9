@@ -138,7 +138,7 @@ static const struct regmap_config tegra30_apbif_regmap_config = {
 	.readable_reg = tegra30_apbif_wr_rd_reg,
 	.volatile_reg = tegra30_apbif_volatile_reg,
 	.precious_reg = tegra30_apbif_precious_reg,
-	.cache_type = REGCACHE_RBTREE,
+	.cache_type = REGCACHE_FLAT,
 };
 
 static const struct regmap_config tegra30_apbif2_regmap_config = {
@@ -146,7 +146,7 @@ static const struct regmap_config tegra30_apbif2_regmap_config = {
 	.val_bits = 32,
 	.reg_stride = 4,
 	.max_register = TEGRA_AHUB_CIF_RX9_CTRL,
-	.cache_type = REGCACHE_RBTREE,
+	.cache_type = REGCACHE_FLAT,
 };
 
 static int tegra30_apbif_runtime_suspend(struct device *dev)

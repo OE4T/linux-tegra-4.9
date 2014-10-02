@@ -2041,9 +2041,6 @@ static void tegra_dp_dpcd_init(struct tegra_dc_dp_data *dp)
 		(NV_IEEE_OUI >> 8) & 0xff,
 		NV_IEEE_OUI & 0xff};
 
-	if (cfg->is_valid && (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP))
-		return;
-
 	/* Check DP version */
 	if (tegra_dc_dp_dpcd_read(dp, NV_DPCD_REV, &dp->revision))
 		dev_err(&dp->dc->ndev->dev,

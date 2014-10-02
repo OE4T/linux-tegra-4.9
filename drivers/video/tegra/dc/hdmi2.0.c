@@ -29,6 +29,7 @@
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif
+#include <linux/of_address.h>
 
 #include <mach/dc.h>
 #include <mach/hdmi-audio.h>
@@ -279,7 +280,7 @@ static int tegra_hdmi_ddc_i2c_xfer(struct tegra_dc *dc,
 	return ret;
 }
 
-static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi)
+static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi, bool use_virtual_edid)
 {
 	struct tegra_dc *dc = hdmi->dc;
 	struct i2c_adapter *i2c_adap;
@@ -289,7 +290,10 @@ static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi)
 		.addr = 0x50,
 	};
 
-	hdmi->edid = tegra_edid_create(dc, tegra_hdmi_ddc_i2c_xfer);
+	if (use_virtual_edid)
+		hdmi->edid = tegra_edid_create(dc, tegra_dc_edid_blob);
+	else
+		hdmi->edid = tegra_edid_create(dc, tegra_hdmi_ddc_i2c_xfer);
 	if (IS_ERR_OR_NULL(hdmi->edid)) {
 		dev_err(&dc->ndev->dev, "hdmi: can't create edid\n");
 		return PTR_ERR(hdmi->edid);
@@ -818,6 +822,14 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi;
 	int err;
+	struct device_node *np = dc->ndev->dev.of_node;
+	bool use_vedid = false;
+#ifdef CONFIG_OF
+	struct device_node *np_hdmi = of_find_node_by_path(HDMI_NODE);
+#else
+	struct device_node *np_hdmi = NULL;
+#endif
+	struct device_node *np_panel = NULL;
 
 	hdmi = devm_kzalloc(&dc->ndev->dev, sizeof(*hdmi), GFP_KERNEL);
 	if (!hdmi)
@@ -827,6 +839,19 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	if (IS_ERR_OR_NULL(hdmi->sor)) {
 		err = PTR_ERR(hdmi->sor);
 		goto fail;
+	}
+
+	if (np) {
+		if (np_hdmi && of_device_is_available(np_hdmi)) {
+			np_panel = tegra_get_panel_node_out_type_check(dc,
+				TEGRA_DC_OUT_HDMI);
+			if (np_panel && of_device_is_available(np_panel))
+				use_vedid = of_property_read_bool(np_panel,
+								"nvidia,edid");
+		} else {
+			err = -EINVAL;
+			goto fail;
+		}
 	}
 
 	hdmi->pdata = dc->pdata->default_out->hdmi_out;
@@ -854,7 +879,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	tegra_hdmi_hda_clk_get(hdmi);
 
-	tegra_hdmi_ddc_init(hdmi);
+	tegra_hdmi_ddc_init(hdmi, use_vedid);
 
 	tegra_hdmi_scdc_init(hdmi);
 

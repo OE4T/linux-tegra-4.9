@@ -161,9 +161,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	struct zbc_entry *zbc_val;
 	struct zbc_query_params *zbc_tbl;
 	int i, err = 0;
-#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	struct gk20a_platform *platform = platform_get_drvdata(dev);
-#endif
 
 	gk20a_dbg_fn("");
 
@@ -225,10 +223,8 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	case NVGPU_GPU_IOCTL_ZBC_SET_TABLE:
 		set_table_args = (struct nvgpu_gpu_zbc_set_table_args *)buf;
 
-#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 		if (platform->virtual_dev)
 			return -ENOMEM;
-#endif
 
 		zbc_val = kzalloc(sizeof(struct zbc_entry), GFP_KERNEL);
 		if (zbc_val == NULL)

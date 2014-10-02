@@ -152,8 +152,8 @@ struct gk20a_platform {
 	 */
 	void (*dump_platform_dependencies)(struct platform_device *dev);
 
-#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	bool virtual_dev;
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	u64 virt_handle;
 	struct task_struct *intr_handler;
 #endif

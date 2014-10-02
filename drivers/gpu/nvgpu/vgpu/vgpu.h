@@ -20,6 +20,7 @@
 #include <linux/tegra_vgpu.h>
 #include "gk20a/gk20a.h"
 
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 int vgpu_pm_prepare_poweroff(struct device *dev);
 int vgpu_pm_finalize_poweron(struct device *dev);
 int vgpu_probe(struct platform_device *dev);
@@ -37,5 +38,65 @@ int vgpu_init_fifo_support(struct gk20a *g);
 int vgpu_get_attribute(u64 handle, u32 attrib, u32 *value);
 int vgpu_comm_sendrecv(struct tegra_vgpu_cmd_msg *msg, size_t size_in,
 		size_t size_out);
+#else
+static inline int vgpu_pm_prepare_poweroff(struct device *dev)
+{
+	return -ENOSYS;
+}
+static inline int vgpu_pm_finalize_poweron(struct device *dev)
+{
+	return -ENOSYS;
+}
+static inline int vgpu_probe(struct platform_device *dev)
+{
+	return -ENOSYS;
+}
+static inline int vgpu_remove(struct platform_device *dev)
+{
+	return -ENOSYS;
+}
+static inline u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt, u64 size)
+{
+	return 0;
+}
+static inline int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
+{
+	return 0;
+}
+static inline void vgpu_init_fifo_ops(struct gpu_ops *gops)
+{
+}
+static inline void vgpu_init_gr_ops(struct gpu_ops *gops)
+{
+}
+static inline void vgpu_init_ltc_ops(struct gpu_ops *gops)
+{
+}
+static inline void vgpu_init_mm_ops(struct gpu_ops *gops)
+{
+}
+static inline int vgpu_init_mm_support(struct gk20a *g)
+{
+	return -ENOSYS;
+}
+static inline int vgpu_init_gr_support(struct gk20a *g)
+{
+	return -ENOSYS;
+}
+static inline int vgpu_init_fifo_support(struct gk20a *g)
+{
+	return -ENOSYS;
+}
+
+static inline int vgpu_get_attribute(u64 handle, u32 attrib, u32 *value)
+{
+	return -ENOSYS;
+}
+static inline int vgpu_comm_sendrecv(struct tegra_vgpu_cmd_msg *msg, size_t size_in,
+		size_t size_out)
+{
+	return -ENOSYS;
+}
+#endif
 
 #endif

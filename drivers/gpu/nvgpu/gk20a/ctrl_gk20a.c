@@ -25,7 +25,6 @@
 
 int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 {
-	int err;
 	struct gk20a *g;
 
 	gk20a_dbg_fn("");
@@ -35,22 +34,13 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 
 	filp->private_data = g->dev;
 
-	err = gk20a_get_client(g);
-	if (err) {
-		gk20a_dbg_fn("fail to get channel!");
-		return err;
-	}
-
 	return 0;
 }
 
 int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
 {
-	struct platform_device *dev = filp->private_data;
-
 	gk20a_dbg_fn("");
 
-	gk20a_put_client(get_gk20a(dev));
 	return 0;
 }
 
@@ -177,21 +167,15 @@ static int gk20a_ctrl_alloc_as(
 	}
 	fd_install(fd, file);
 
-	err = gk20a_get_client(g);
-	if (err)
-		goto clean_up;
-
 	err = gk20a_as_alloc_share(&g->as, args->big_page_size, &as_share);
 	if (err)
-		goto clean_up_client;
+		goto clean_up;
 
 	file->private_data = as_share;
 
 	args->as_fd = fd;
 	return 0;
 
-clean_up_client:
-	gk20a_put_client(g);
 clean_up:
 	put_unused_fd(fd);
 	return err;

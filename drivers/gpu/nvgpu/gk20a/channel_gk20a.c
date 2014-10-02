@@ -726,7 +726,6 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 	gk20a_free_channel(ch, true);
 	gk20a_idle(ch->g->dev);
 
-	gk20a_put_client(g);
 	filp->private_data = NULL;
 	return 0;
 }
@@ -788,23 +787,14 @@ static int __gk20a_channel_open(struct gk20a *g, struct file *filp)
 
 	trace_gk20a_channel_open(dev_name(&g->dev->dev));
 
-	err = gk20a_get_client(g);
-	if (err) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to get client ref");
-		return err;
-	}
-
 	err = gk20a_busy(g->dev);
 	if (err) {
-		gk20a_put_client(g);
 		gk20a_err(dev_from_gk20a(g), "failed to power on, %d", err);
 		return err;
 	}
 	ch = gk20a_open_new_channel(g);
 	gk20a_idle(g->dev);
 	if (!ch) {
-		gk20a_put_client(g);
 		gk20a_err(dev_from_gk20a(g),
 			"failed to get f");
 		return -ENOMEM;

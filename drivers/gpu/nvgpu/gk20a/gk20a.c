@@ -734,72 +734,6 @@ static int gk20a_init_support(struct platform_device *dev)
 	return err;
 }
 
-static int gk20a_init_client(struct platform_device *dev)
-{
-	struct gk20a *g = get_gk20a(dev);
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
-	int err;
-
-	gk20a_dbg_fn("");
-
-	if (platform->virtual_dev) {
-		err = vgpu_pm_finalize_poweron(&dev->dev);
-		if (err)
-			return err;
-	}
-
-#ifndef CONFIG_PM_RUNTIME
-	gk20a_pm_finalize_poweron(&dev->dev);
-#endif
-
-	err = gk20a_init_mm_setup_sw(g);
-	if (err)
-		return err;
-
-	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
-		gk20a_scale_hw_init(dev);
-	return 0;
-}
-
-static void gk20a_deinit_client(struct platform_device *dev)
-{
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
-
-	gk20a_dbg_fn("");
-
-	if (platform->virtual_dev) {
-		vgpu_pm_prepare_poweroff(&dev->dev);
-		return;
-	}
-
-#ifndef CONFIG_PM_RUNTIME
-	gk20a_pm_prepare_poweroff(&dev->dev);
-#endif
-}
-
-int gk20a_get_client(struct gk20a *g)
-{
-	int err = 0;
-
-	mutex_lock(&g->client_lock);
-	if (g->client_refcount == 0)
-		err = gk20a_init_client(g->dev);
-	if (!err)
-		g->client_refcount++;
-	mutex_unlock(&g->client_lock);
-	return err;
-}
-
-void gk20a_put_client(struct gk20a *g)
-{
-	mutex_lock(&g->client_lock);
-	if (g->client_refcount == 1)
-		gk20a_deinit_client(g->dev);
-	g->client_refcount--;
-	mutex_unlock(&g->client_lock);
-	WARN_ON(g->client_refcount < 0);
-}
-
 static int gk20a_pm_prepare_poweroff(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -1661,6 +1595,14 @@ int gk20a_busy(struct platform_device *pdev)
 		pm_runtime_put_noidle(&pdev->dev);
 		if (platform->idle)
 			platform->idle(pdev);
+	}
+#else
+	if (!g->power_on) {
+		ret = platform->virtual_dev ?
+			vgpu_pm_finalize_poweron(&dev->dev)
+			: gk20a_pm_finalize_poweron(&dev->dev);
+		if (ret)
+			goto fail;
 	}
 #endif
 	gk20a_scale_notify_busy(pdev);

@@ -56,14 +56,19 @@ int gk20a_as_alloc_share(struct gk20a_as *as,
 	as_share->ref_cnt.counter = 1;
 
 	/* this will set as_share->vm. */
+	err = gk20a_busy(g->dev);
+	if (err)
+		goto failed;
 	err = g->ops.mm.vm_alloc_share(as_share, flags);
+	gk20a_idle(g->dev);
+
 	if (err)
 		goto failed;
 
 	*out = as_share;
 	return 0;
 
- failed:
+failed:
 	kfree(as_share);
 	return err;
 }
@@ -180,16 +185,9 @@ int gk20a_as_dev_open(struct inode *inode, struct file *filp)
 
 	g = container_of(inode->i_cdev, struct gk20a, as.cdev);
 
-	err = gk20a_get_client(g);
-	if (err) {
-		gk20a_dbg_fn("fail to get channel!");
-		return err;
-	}
-
 	err = gk20a_as_alloc_share(&g->as, 0, &as_share);
 	if (err) {
 		gk20a_dbg_fn("failed to alloc share");
-		gk20a_put_client(g);
 		return err;
 	}
 
@@ -200,16 +198,10 @@ int gk20a_as_dev_open(struct inode *inode, struct file *filp)
 int gk20a_as_dev_release(struct inode *inode, struct file *filp)
 {
 	struct gk20a_as_share *as_share = filp->private_data;
-	int ret;
-	struct gk20a *g = gk20a_from_as(as_share->as);
 
 	gk20a_dbg_fn("");
 
-	ret = gk20a_as_release_share(as_share);
-
-	gk20a_put_client(g);
-
-	return ret;
+	return gk20a_as_release_share(as_share);
 }
 
 long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)

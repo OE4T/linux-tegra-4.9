@@ -1904,6 +1904,7 @@ struct tegra_dc_platform_data
 			goto fail_parse;
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_DSI ||
+		   pdata->default_out->type == TEGRA_DC_OUT_FAKE_DP ||
 			pdata->default_out->type == TEGRA_DC_OUT_LVDS) {
 		/* pdata->default_out->type == TEGRA_DC_OUT_DSI or
 		 * pdata->default_out->type == TEGRA_DC_OUT_LVDS

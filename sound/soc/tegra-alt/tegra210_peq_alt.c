@@ -225,7 +225,7 @@ static const struct regmap_config tegra210_peq_regmap_config = {
 	.readable_reg = tegra210_peq_rd_reg,
 	.volatile_reg = tegra210_peq_volatile_reg,
 	.precious_reg = tegra210_peq_precious_reg,
-	.cache_type = REGCACHE_RBTREE,
+	.cache_type = REGCACHE_FLAT,
 };
 
 int tegra210_peq_codec_init(struct snd_soc_codec *codec)

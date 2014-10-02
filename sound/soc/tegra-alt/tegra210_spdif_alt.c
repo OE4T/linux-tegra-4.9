@@ -315,7 +315,7 @@ static const struct regmap_config tegra210_spdif_regmap_config = {
 	.max_register = TEGRA210_SPDIF_LCOEF_2_4_2,
 	.writeable_reg = tegra210_spdif_wr_rd_reg,
 	.readable_reg = tegra210_spdif_wr_rd_reg,
-	.cache_type = REGCACHE_RBTREE,
+	.cache_type = REGCACHE_FLAT,
 };
 
 static const struct tegra210_spdif_soc_data soc_data_tegra210 = {

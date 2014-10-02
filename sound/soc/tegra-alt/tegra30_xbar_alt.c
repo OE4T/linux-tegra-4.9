@@ -39,7 +39,7 @@ static const struct regmap_config tegra30_xbar_regmap_config = {
 	.reg_stride = 4,
 	.max_register = TEGRA_AHUB_AUDIO_RX_STRIDE *
 			(TEGRA_AHUB_AUDIO_RX_COUNT - 1),
-	.cache_type = REGCACHE_RBTREE,
+	.cache_type = REGCACHE_FLAT,
 };
 
 static const struct regmap_config tegra124_xbar_regmap_config = {
@@ -48,7 +48,7 @@ static const struct regmap_config tegra124_xbar_regmap_config = {
 	.reg_stride = 4,
 	.max_register = TEGRA_AHUB_AUDIO_RX1 + (TEGRA_AHUB_AUDIO_RX_STRIDE *
 			(TEGRA_AHUB_AUDIO_RX_COUNT - 1)),
-	.cache_type = REGCACHE_RBTREE,
+	.cache_type = REGCACHE_FLAT,
 };
 
 static int tegra30_xbar_runtime_suspend(struct device *dev)

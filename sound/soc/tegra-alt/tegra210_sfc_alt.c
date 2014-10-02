@@ -427,7 +427,7 @@ static const struct regmap_config tegra210_sfc_regmap_config = {
 	.readable_reg = tegra210_sfc_rd_reg,
 	.volatile_reg = tegra210_sfc_volatile_reg,
 	.precious_reg = tegra210_sfc_precious_reg,
-	.cache_type = REGCACHE_RBTREE,
+	.cache_type = REGCACHE_FLAT,
 };
 
 static const struct tegra210_sfc_soc_data soc_data_tegra210 = {

@@ -411,7 +411,13 @@ static int isp_probe(struct platform_device *dev)
 	nvhost_module_init(dev);
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
-	pdata->pd.name = "ve";
+
+	/* In T210 power ISPB is placed to a separate power partition */
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA21 &&
+	    dev_id == ISPB_DEV_ID)
+		pdata->pd.name = "ve2";
+	else
+		pdata->pd.name = "ve";
 
 	/* add module power domain and also add its domain
 	 * as sub-domain of MC domain */

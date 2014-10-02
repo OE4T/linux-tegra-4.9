@@ -24,13 +24,13 @@
 #endif
 
 /*
- * /dev/nvhost-ctrl-gr3d devices
+ * /dev/nvhost-ctrl-gpu device
  *
- * Opening a '/dev/nvhost-ctrl-gr3d' device node creates a way to send
+ * Opening a '/dev/nvhost-ctrl-gpu' device node creates a way to send
  * ctrl ioctl to gpu driver.
  *
- * /dev/nvhost-gr3d is for channel (context specific) operations. We use
- * /dev/nvhost-ctrl-gr3d for global (context independent) operations on
+ * /dev/nvhost-gpu is for channel (context specific) operations. We use
+ * /dev/nvhost-ctrl-gpu for global (context independent) operations on
  * gpu device.
  */
 
@@ -197,7 +197,7 @@ struct nvgpu_gpu_mark_compressible_write_args {
 
 
 /*
- * /dev/nvhost-tsg-gpu devices
+ * /dev/nvhost-tsg-gpu device
  *
  * Opening a '/dev/nvhost-tsg-gpu' device node creates a way to
  * bind/unbind a channel to/from TSG group
@@ -221,9 +221,9 @@ struct nvgpu_gpu_mark_compressible_write_args {
 #define NVGPU_TSG_IOCTL_LAST		\
 	_IOC_NR(NVGPU_IOCTL_TSG_PREEMPT)
 /*
- * /dev/nvhost-dbg-* devices
+ * /dev/nvhost-dbg-gpu device
  *
- * Opening a '/dev/nvhost-dbg-<module_name>' device node creates a new debugger
+ * Opening a '/dev/nvhost-dbg-gpu' device node creates a new debugger
  * session.  nvgpu channels (for the same module) can then be bound to such a
  * session.
  *
@@ -407,16 +407,16 @@ struct nvgpu_fence {
 };
 
 /* insert a wait on the fence before submitting gpfifo */
-#define NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT	BIT(0)
+#define NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT	(1 << 0)
 /* insert a fence update after submitting gpfifo and
    return the new fence for others to wait on */
-#define NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET	BIT(1)
+#define NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET	(1 << 1)
 /* choose between different gpfifo entry formats */
-#define NVGPU_SUBMIT_GPFIFO_FLAGS_HW_FORMAT	BIT(2)
+#define NVGPU_SUBMIT_GPFIFO_FLAGS_HW_FORMAT	(1 << 2)
 /* interpret fence as a sync fence fd instead of raw syncpoint fence */
-#define NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE	BIT(3)
+#define NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE	(1 << 3)
 /* suppress WFI before fence trigger */
-#define NVGPU_SUBMIT_GPFIFO_FLAGS_SUPPRESS_WFI	BIT(4)
+#define NVGPU_SUBMIT_GPFIFO_FLAGS_SUPPRESS_WFI	(1 << 4)
 
 struct nvgpu_submit_gpfifo_args {
 	__u64 gpfifo;
@@ -428,11 +428,11 @@ struct nvgpu_submit_gpfifo_args {
 struct nvgpu_map_buffer_args {
 	__u32 flags;
 #define NVGPU_MAP_BUFFER_FLAGS_ALIGN		0x0
-#define NVGPU_MAP_BUFFER_FLAGS_OFFSET		BIT(0)
+#define NVGPU_MAP_BUFFER_FLAGS_OFFSET		(1 << 0)
 #define NVGPU_MAP_BUFFER_FLAGS_KIND_PITCH	0x0
-#define NVGPU_MAP_BUFFER_FLAGS_KIND_SPECIFIED	BIT(1)
+#define NVGPU_MAP_BUFFER_FLAGS_KIND_SPECIFIED	(1 << 1)
 #define NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_FALSE	0x0
-#define NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE	BIT(2)
+#define NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE	(1 << 2)
 	__u32 nvmap_handle;
 	union {
 		__u64 offset; /* valid if _offset flag given (in|out) */
@@ -578,9 +578,9 @@ struct nvgpu_channel_events_ctrl_args {
 #define NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvgpu_submit_gpfifo_args)
 
 /*
- * /dev/nvhost-as-* devices
+ * /dev/nvhost-as-gpu device
  *
- * Opening a '/dev/nvhost-as-<module_name>' device node creates a new address
+ * Opening a '/dev/nvhost-as-gpu' device node creates a new address
  * space.  nvgpu channels (for the same module) can then be bound to such an
  * address space to define the addresses it has access to.
  *
@@ -666,8 +666,8 @@ struct nvgpu_as_bind_channel_args {
  */
 struct nvgpu_as_map_buffer_args {
 	__u32 flags;		/* in/out */
-#define NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET	    BIT(0)
-#define NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE	    BIT(2)
+#define NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET	    (1 << 0)
+#define NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE	    (1 << 2)
 	__u32 reserved;		/* in */
 	__u32 dmabuf_fd;	/* in */
 	__u32 page_size;	/* inout, 0:= best fit to buffer */

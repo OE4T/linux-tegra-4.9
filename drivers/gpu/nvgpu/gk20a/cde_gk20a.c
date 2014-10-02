@@ -34,23 +34,6 @@
 #include "hw_ccsr_gk20a.h"
 #include "hw_pbdma_gk20a.h"
 
-void gk20a_cde_dump(struct gk20a_cde_ctx *cde_ctx)
-{
-	int i;
-	for (i = 0; i < cde_ctx->num_bufs; i++) {
-		struct gk20a_cde_mem_desc *target_mem = cde_ctx->mem + i;
-		u32 *target_mem_ptr = target_mem->cpuva;
-		int j = 0;
-
-		gk20a_dbg(gpu_dbg_cde, "cde: buffer=%d, size=%zu, gpuva=%llx\n",
-			  i, target_mem->num_bytes, target_mem->gpu_va);
-
-		for (j = 0; j < target_mem->num_bytes / sizeof(u32); j++)
-			gk20a_dbg(gpu_dbg_cde, "0x%08x ", target_mem_ptr[j]);
-		gk20a_dbg(gpu_dbg_cde, "\n\n");
-	}
-}
-
 static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 {
 	struct device *dev = &cde_ctx->pdev->dev;
@@ -60,7 +43,8 @@ static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 		struct gk20a_cde_mem_desc *mem = cde_ctx->mem + i;
 		gk20a_gmmu_unmap(cde_ctx->vm, mem->gpu_va, mem->num_bytes, 1);
 		gk20a_free_sgtable(&mem->sgt);
-		dma_free_coherent(dev, mem->num_bytes, mem->cpuva, mem->iova);
+		dma_free_writecombine(dev, mem->num_bytes, mem->cpuva,
+							  mem->iova);
 	}
 
 	for (i = 0; i < cde_ctx->num_obj_ids; i++)
@@ -140,7 +124,7 @@ static int gk20a_init_cde_buf(struct gk20a_cde_ctx *cde_ctx,
 	/* allocate buf */
 	mem = cde_ctx->mem + cde_ctx->num_bufs;
 	mem->num_bytes = buf->num_bytes;
-	mem->cpuva = dma_alloc_coherent(dev, mem->num_bytes, &mem->iova,
+	mem->cpuva = dma_alloc_writecombine(dev, mem->num_bytes, &mem->iova,
 					GFP_KERNEL);
 	if (!mem->cpuva) {
 		gk20a_warn(&cde_ctx->pdev->dev, "cde: could not allocate device memory. buffer idx = %d",
@@ -157,8 +141,9 @@ static int gk20a_init_cde_buf(struct gk20a_cde_ctx *cde_ctx,
 		goto err_get_sgtable;
 	}
 
-	mem->gpu_va = gk20a_gmmu_map(cde_ctx->vm, &mem->sgt, mem->num_bytes, 0,
-				     gk20a_mem_flag_none);
+	mem->gpu_va = gk20a_gmmu_map(cde_ctx->vm, &mem->sgt, mem->num_bytes,
+					0,
+					gk20a_mem_flag_none);
 	if (!mem->gpu_va) {
 		gk20a_warn(&cde_ctx->pdev->dev, "cde: could not map buffer to gpuva. buffer idx = %d",
 			   cde_ctx->num_bufs);
@@ -179,7 +164,7 @@ err_map_buffer:
 	gk20a_free_sgtable(&mem->sgt);
 	kfree(mem->sgt);
 err_get_sgtable:
-	dma_free_coherent(dev, mem->num_bytes, &mem->cpuva, mem->iova);
+	dma_free_writecombine(dev, mem->num_bytes, &mem->cpuva, mem->iova);
 	return err;
 }
 
@@ -194,11 +179,14 @@ static int gk20a_replace_data(struct gk20a_cde_ctx *cde_ctx, void *target,
 	value &= mask;
 
 	/* read current data from the location */
-	if (type == TYPE_PARAM_TYPE_U32)
-		current_value = *target_mem_ptr;
-	else if (type == TYPE_PARAM_TYPE_U64_LITTLE)
-		current_value = *target_mem_ptr_u64;
-	else if (type == TYPE_PARAM_TYPE_U64_BIG) {
+	current_value = 0;
+	if (type == TYPE_PARAM_TYPE_U32) {
+		if (mask != 0xfffffffful)
+			current_value = *target_mem_ptr;
+	} else if (type == TYPE_PARAM_TYPE_U64_LITTLE) {
+		if (mask != ~0ul)
+			current_value = *target_mem_ptr_u64;
+	} else if (type == TYPE_PARAM_TYPE_U64_BIG) {
 		current_value = *target_mem_ptr_u64;
 		current_value = (u64)(current_value >> 32) |
 			(u64)(current_value << 32);
@@ -601,7 +589,7 @@ static int gk20a_cde_execute_buffer(struct gk20a_cde_ctx *cde_ctx,
 					   num_entries, flags, fence, fence_out);
 }
 
-int gk20a_cde_convert(struct gk20a *g, struct dma_buf *src,
+int gk20a_cde_convert(struct gk20a *g,
 		      struct dma_buf *dst,
 		      s32 dst_kind, u64 dst_byte_offset,
 		      u32 dst_size, struct nvgpu_fence *fence,
@@ -611,7 +599,7 @@ int gk20a_cde_convert(struct gk20a *g, struct dma_buf *src,
 	struct gk20a_cde_app *cde_app = &g->cde_app;
 	struct gk20a_comptags comptags;
 	struct gk20a_cde_ctx *cde_ctx;
-	u64 dst_vaddr = 0, src_vaddr = 0;
+	u64 dst_vaddr = 0;
 	u32 flags;
 	int err, i;
 
@@ -647,30 +635,13 @@ int gk20a_cde_convert(struct gk20a *g, struct dma_buf *src,
 		goto exit_unlock;
 	}
 
-	/* ensure that the src buffer has drvdata */
-	err = gk20a_dmabuf_alloc_drvdata(src, &g->dev->dev);
-	if (err)
-		goto exit_unlock;
-
-	/* map the source buffer to prevent premature release */
-	get_dma_buf(src); /* a ref for gk20a_vm_map */
-	src_vaddr = gk20a_vm_map(g->cde_app.vm, src, 0,
-				 NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-				 dst_kind, NULL, true,
-				 gk20a_mem_flag_none,
-				 0, 0);
-	if (!src_vaddr) {
-		dma_buf_put(src);
-		err = -EINVAL;
-		goto exit_unlock;
-	}
-
 	if (!dst_size)
 		dst_size = dst->size - dst_byte_offset;
 
 	/* reload buffer converter if it has failed */
 	if (cde_ctx->ch->has_timedout) {
 		mutex_unlock(&cde_app->mutex);
+		gk20a_warn(&cde_ctx->pdev->dev, "cde: had timed out, reloading");
 		err = gk20a_cde_reload(g);
 		if (err)
 			return err;
@@ -685,8 +656,8 @@ int gk20a_cde_convert(struct gk20a *g, struct dma_buf *src,
 	}
 
 	/* store source buffer compression tags */
-	gk20a_get_comptags(&g->dev->dev, src, &comptags);
-	cde_ctx->src_vaddr = src_vaddr;
+	gk20a_get_comptags(&g->dev->dev, dst, &comptags);
+	cde_ctx->src_vaddr = dst_vaddr;
 	cde_ctx->src_param_offset = comptags.offset;
 	cde_ctx->src_param_lines = comptags.lines;
 
@@ -722,7 +693,6 @@ int gk20a_cde_convert(struct gk20a *g, struct dma_buf *src,
 		 g->gr.compbit_store.size, cde_ctx->backing_store_vaddr);
 	gk20a_dbg(gpu_dbg_cde, "cde: buffer=dst, size=%llu, gpuva=%llx\n",
 		 cde_ctx->dest_size, cde_ctx->dest_vaddr);
-	gk20a_cde_dump(cde_ctx);
 
 	/* execute the init push buffer */
 	if (!cde_ctx->init_cmd_executed) {
@@ -747,8 +717,6 @@ exit_unlock:
 	/* unmap the buffers - channel holds references to them now */
 	if (dst_vaddr)
 		gk20a_vm_unmap(g->cde_app.vm, dst_vaddr);
-	if (src_vaddr)
-		gk20a_vm_unmap(g->cde_app.vm, src_vaddr);
 
 	mutex_unlock(&cde_app->mutex);
 
@@ -1054,7 +1022,7 @@ static int gk20a_buffer_convert_gpu_to_cde(
 	err = gk20a_init_cde_support(g);
 	if (err)
 		goto out;
-	err = gk20a_cde_convert(g, dmabuf, dmabuf,
+	err = gk20a_cde_convert(g, dmabuf,
 				0, /* dst kind */
 				compbits_offset,
 				0, /* dst_size, 0 = auto */

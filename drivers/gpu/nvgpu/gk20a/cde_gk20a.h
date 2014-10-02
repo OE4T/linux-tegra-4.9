@@ -258,7 +258,7 @@ struct gk20a_cde_app {
 int gk20a_cde_destroy(struct gk20a *g);
 int gk20a_init_cde_support(struct gk20a *g);
 int gk20a_cde_reload(struct gk20a *g);
-int gk20a_cde_convert(struct gk20a *g, struct dma_buf *src, struct dma_buf *dst,
+int gk20a_cde_convert(struct gk20a *g, struct dma_buf *dst,
 		      s32 dst_kind, u64 dst_word_offset,
 		      u32 dst_size, struct nvgpu_fence *fence,
 		      u32 __flags, struct gk20a_cde_param *params,

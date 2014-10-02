@@ -84,6 +84,8 @@ struct nvhost_device_data t21_isp_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.powergate_delay	= 500,
+	.can_powergate		= true,
 	.clocks			= {{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP }},
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
@@ -108,6 +110,8 @@ struct nvhost_device_data t21_ispb_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.powergate_delay	= 500,
+	.can_powergate		= true,
 	.clocks			= {{ "isp", UINT_MAX, 0,
 					TEGRA_MC_CLIENT_ISPB } },
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
@@ -132,6 +136,8 @@ struct nvhost_device_data t21_vi_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.powergate_delay	= 500,
+	.can_powergate		= true,
 	.moduleid		= NVHOST_MODULE_VI,
 	.clocks = {
 		{"vi", UINT_MAX},
@@ -166,6 +172,8 @@ struct nvhost_device_data t21_vib_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.powergate_delay	= 500,
+	.can_powergate		= true,
 	.moduleid		= NVHOST_MODULE_VI,
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
 	.num_channels		= 1,
@@ -194,6 +202,8 @@ struct nvhost_device_data t21_vi_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.powergate_delay	= 500,
+	.can_powergate		= true,
 	.moduleid		= NVHOST_MODULE_VI,
 	.clocks = {
 		{"vi", UINT_MAX},
@@ -226,6 +236,8 @@ struct nvhost_device_data t21_vii2c_info = {
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.gather_filter_enabled	= true,
+	.powergate_delay	= 500,
+	.can_powergate		= true,
 	.moduleid		= NVHOST_MODULE_VII2C,
 	.clocks = {
 		{"vii2c", 86400000},

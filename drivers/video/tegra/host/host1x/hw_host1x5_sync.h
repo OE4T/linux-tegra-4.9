@@ -88,39 +88,39 @@ static inline u32 host1x_sync_ch_teardown_r(void)
 }
 static inline u32 host1x_sync_usec_clk_r(void)
 {
-	return 0x2524;
+	return 0x2244;
 }
 static inline u32 host1x_sync_ctxsw_timeout_cfg_r(void)
 {
-	return 0x2528;
+	return 0x2248;
 }
 static inline u32 host1x_sync_ip_busy_timeout_r(void)
 {
-	return 0x2530;
+	return 0x2250;
 }
 static inline u32 host1x_sync_ip_read_timeout_addr_r(void)
 {
-	return 0x2534;
+	return 0x2254;
 }
 static inline u32 host1x_sync_ip_write_timeout_addr_r(void)
 {
-	return 0x253c;
+	return 0x225c;
 }
 static inline u32 host1x_sync_mlock_0_r(void)
 {
-	return 0x2cc0;
+	return 0x0;
 }
 static inline u32 host1x_sync_mlock_owner_0_r(void)
 {
-	return 0x2d00;
+	return 0x0;
 }
 static inline u32 host1x_sync_mlock_owner_0_mlock_owner_chid_0_v(u32 r)
 {
-	return (r >> 8) & 0x3f;
+	return (r >> 0) & 0x1;
 }
 static inline u32 host1x_sync_mlock_owner_0_mlock_cpu_owns_0_v(u32 r)
 {
-	return (r >> 1) & 0x1;
+	return (r >> 0) & 0x1;
 }
 static inline u32 host1x_sync_mlock_owner_0_mlock_ch_owns_0_v(u32 r)
 {
@@ -132,7 +132,7 @@ static inline u32 host1x_sync_syncpt_base_0_r(void)
 }
 static inline u32 host1x_sync_cfpeek_ctrl_r(void)
 {
-	return 0x261c;
+	return 0x233c;
 }
 static inline u32 host1x_sync_cfpeek_ctrl_cfpeek_addr_f(u32 v)
 {
@@ -156,11 +156,11 @@ static inline u32 host1x_sync_cfpeek_ctrl_cfpeek_ena_f(u32 v)
 }
 static inline u32 host1x_sync_cfpeek_read_r(void)
 {
-	return 0x2620;
+	return 0x2340;
 }
 static inline u32 host1x_sync_cfpeek_ptrs_r(void)
 {
-	return 0x2624;
+	return 0x2344;
 }
 static inline u32 host1x_sync_cfpeek_ptrs_cf_rd_ptr_v(u32 r)
 {
@@ -172,7 +172,7 @@ static inline u32 host1x_sync_cfpeek_ptrs_cf_wr_ptr_v(u32 r)
 }
 static inline u32 host1x_sync_cf0_setup_r(void)
 {
-	return 0x2868;
+	return 0x2588;
 }
 static inline u32 host1x_sync_cf0_setup_cf0_base_v(u32 r)
 {
@@ -216,7 +216,7 @@ static inline u32 host1x_sync_syncpt_intgmask_r(void)
 }
 static inline u32 host1x_sync_syncpt_cpu_incr_r(void)
 {
-	return 0x310;
+	return 0x16400;
 }
 static inline u32 host1x_sync_syncpt_0_r(void)
 {

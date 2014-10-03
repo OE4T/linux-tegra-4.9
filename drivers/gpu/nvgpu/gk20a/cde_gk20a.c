@@ -337,8 +337,8 @@ static int gk20a_replace_data(struct gk20a_cde_ctx *cde_ctx, void *target,
 }
 
 static int gk20a_init_cde_replace(struct gk20a_cde_ctx *cde_ctx,
-				      const struct firmware *img,
-				      struct gk20a_cde_hdr_replace *replace)
+				  const struct firmware *img,
+				  struct gk20a_cde_hdr_replace *replace)
 {
 	struct gk20a_cde_mem_desc *source_mem;
 	struct gk20a_cde_mem_desc *target_mem;
@@ -410,26 +410,26 @@ static int gk20a_cde_patch_params(struct gk20a_cde_ctx *cde_ctx)
 				g->gr.cacheline_size;
 			break;
 		case TYPE_PARAM_FIRSTPAGEOFFSET:
-			new_data = cde_ctx->src_param_offset;
+			new_data = cde_ctx->surf_param_offset;
 			break;
 		case TYPE_PARAM_NUMPAGES:
-			new_data = cde_ctx->src_param_lines;
+			new_data = cde_ctx->surf_param_lines;
 			break;
 		case TYPE_PARAM_BACKINGSTORE:
 			new_data = cde_ctx->backing_store_vaddr;
 			break;
 		case TYPE_PARAM_DESTINATION:
-			new_data = cde_ctx->dest_vaddr;
+			new_data = cde_ctx->compbit_vaddr;
 			break;
 		case TYPE_PARAM_DESTINATION_SIZE:
-			new_data = cde_ctx->dest_size;
+			new_data = cde_ctx->compbit_size;
 			break;
 		case TYPE_PARAM_BACKINGSTORE_SIZE:
 			new_data = g->gr.compbit_store.size;
 			break;
 		case TYPE_PARAM_SOURCE_SMMU_ADDR:
-			new_data = gk20a_mm_gpuva_to_iova(cde_ctx->vm,
-							  cde_ctx->src_vaddr);
+			new_data = gk20a_mm_gpuva_to_iova_base(cde_ctx->vm,
+							cde_ctx->surf_vaddr);
 			if (new_data == 0)
 				err = -EINVAL;
 			break;
@@ -605,8 +605,9 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 static int gk20a_init_cde_img(struct gk20a_cde_ctx *cde_ctx,
 			      const struct firmware *img)
 {
+	struct gk20a_cde_app *cde_app = &cde_ctx->g->cde_app;
 	u32 *data = (u32 *)img->data;
-	u32 version, num_of_elems;
+	u32 num_of_elems;
 	struct gk20a_cde_hdr_elem *elem;
 	u32 min_size = 0;
 	int err = 0;
@@ -618,7 +619,7 @@ static int gk20a_init_cde_img(struct gk20a_cde_ctx *cde_ctx,
 		return -EINVAL;
 	}
 
-	version = data[0];
+	cde_app->firmware_version = data[0];
 	num_of_elems = data[1];
 
 	min_size += num_of_elems * sizeof(*elem);
@@ -654,6 +655,11 @@ static int gk20a_init_cde_img(struct gk20a_cde_ctx *cde_ctx,
 				elem->command.num_entries);
 			break;
 		}
+		case TYPE_ARRAY:
+			memcpy(&cde_app->arrays[elem->array.id][0],
+				elem->array.data,
+				MAX_CDE_ARRAY_ENTRIES*sizeof(u32));
+			break;
 		default:
 			gk20a_warn(&cde_ctx->pdev->dev, "cde: unknown header element");
 			err = -EINVAL;
@@ -853,27 +859,25 @@ static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct gk20a *g)
 }
 
 int gk20a_cde_convert(struct gk20a *g,
-		      struct dma_buf *dst,
-		      s32 dst_kind, u64 dst_byte_offset,
-		      u32 dst_size, struct nvgpu_fence *fence,
+		      struct dma_buf *compbits_buf,
+		      s32 compbits_kind, u64 compbits_byte_offset,
+		      u32 compbits_size, struct nvgpu_fence *fence,
 		      u32 __flags, struct gk20a_cde_param *params,
 		      int num_params, struct gk20a_fence **fence_out)
 __acquires(&cde_app->mutex)
 __releases(&cde_app->mutex)
 {
-	struct gk20a_cde_app *cde_app = &g->cde_app;
+	struct gk20a_cde_ctx *cde_ctx = NULL;
 	struct gk20a_comptags comptags;
-	struct gk20a_cde_ctx *cde_ctx;
-	u64 dst_vaddr = 0;
+	u64 compbits_offset = 0;
+	u64 map_vaddr = 0;
+	u64 map_offset = 0;
+	u32 map_size = 0;
+	u64 big_page_mask = 0;
 	u32 flags;
 	int err, i;
 
-	if (!cde_app->initialised) {
-		gk20a_warn(&g->dev->dev, "cde: conversion requrest but no image has been provided");
-		return -ENOSYS;
-	}
-
-	mutex_lock(&cde_app->mutex);
+	mutex_lock(&g->cde_app.mutex);
 
 	cde_ctx = gk20a_cde_get_context(g);
 	if (IS_ERR(cde_ctx)) {
@@ -881,38 +885,53 @@ __releases(&cde_app->mutex)
 		goto exit_unlock;
 	}
 
-	/* First, map the buffers to local va */
+	/* First, map the buffer to local va */
 
-	/* ensure that the dst buffer has drvdata */
-	err = gk20a_dmabuf_alloc_drvdata(dst, &g->dev->dev);
+	/* ensure that the compbits buffer has drvdata */
+	err = gk20a_dmabuf_alloc_drvdata(compbits_buf, &g->dev->dev);
 	if (err)
 		goto exit_unlock;
 
+	/* compbits don't start at page aligned offset, so we need to align
+	   the region to be mapped */
+	big_page_mask = cde_ctx->vm->big_page_size - 1;
+	map_offset = compbits_byte_offset & ~big_page_mask;
+
+	/* compute compbit start offset from the beginning of the mapped
+	   area */
+	compbits_offset = compbits_byte_offset & big_page_mask;
+
+	if (!compbits_size) {
+		compbits_size = compbits_buf->size - compbits_byte_offset;
+		map_size = compbits_buf->size - map_offset;
+	}
+
 	/* map the destination buffer */
-	get_dma_buf(dst); /* a ref for gk20a_vm_map */
-	dst_vaddr = gk20a_vm_map(cde_ctx->vm, dst, 0,
+	get_dma_buf(compbits_buf); /* a ref for gk20a_vm_map */
+	map_vaddr = gk20a_vm_map(cde_ctx->vm, compbits_buf, 0,
 				 NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-				 dst_kind, NULL, true,
+				 compbits_kind, NULL, true,
 				 gk20a_mem_flag_none,
-				 0, 0);
-	if (!dst_vaddr) {
-		dma_buf_put(dst);
+				 map_offset, map_size);
+	if (!map_vaddr) {
+		dma_buf_put(compbits_buf);
 		err = -EINVAL;
 		goto exit_unlock;
 	}
 
-	if (!dst_size)
-		dst_size = dst->size - dst_byte_offset;
-
 	/* store source buffer compression tags */
-	gk20a_get_comptags(&g->dev->dev, dst, &comptags);
-	cde_ctx->src_vaddr = dst_vaddr;
-	cde_ctx->src_param_offset = comptags.offset;
-	cde_ctx->src_param_lines = comptags.lines;
+	gk20a_get_comptags(&g->dev->dev, compbits_buf, &comptags);
+	cde_ctx->surf_param_offset = comptags.offset;
+	cde_ctx->surf_param_lines = comptags.lines;
+
+	/* store surface vaddr. This is actually compbit vaddr, but since
+	   compbits live in the same surface, and we can get the alloc base
+	   address by using gk20a_mm_gpuva_to_iova_base, this will do */
+	cde_ctx->surf_vaddr = map_vaddr;
 
 	/* store information about destination */
-	cde_ctx->dest_vaddr = dst_vaddr + dst_byte_offset;
-	cde_ctx->dest_size = dst_size;
+	cde_ctx->compbit_vaddr = map_vaddr + compbits_offset;
+	cde_ctx->compbit_size = compbits_size;
 
 	/* remove existing argument data */
 	memset(cde_ctx->user_param_values, 0,
@@ -940,8 +959,8 @@ __releases(&cde_app->mutex)
 
 	gk20a_dbg(gpu_dbg_cde, "cde: buffer=cbc, size=%zu, gpuva=%llx\n",
 		 g->gr.compbit_store.size, cde_ctx->backing_store_vaddr);
-	gk20a_dbg(gpu_dbg_cde, "cde: buffer=dst, size=%llu, gpuva=%llx\n",
-		 cde_ctx->dest_size, cde_ctx->dest_vaddr);
+	gk20a_dbg(gpu_dbg_cde, "cde: buffer=compbits, size=%llu, gpuva=%llx\n",
+		 cde_ctx->compbit_size, cde_ctx->compbit_vaddr);
 
 	/* execute the init push buffer */
 	if (!cde_ctx->init_cmd_executed) {
@@ -964,11 +983,10 @@ __releases(&cde_app->mutex)
 exit_unlock:
 
 	/* unmap the buffers - channel holds references to them now */
-	if (dst_vaddr)
-		gk20a_vm_unmap(cde_ctx->vm, dst_vaddr);
+	if (map_vaddr)
+		gk20a_vm_unmap(cde_ctx->vm, map_vaddr);
 
-	mutex_unlock(&cde_app->mutex);
-
+	mutex_unlock(&g->cde_app.mutex);
 	return err;
 }
 
@@ -1159,152 +1177,322 @@ __releases(&cde_app->mutex)
 	return err;
 }
 
-enum cde_launch_patch_offset {
-	/* dst buffer width in roptiles */
-	PATCH_USER_CONST_XTILES,
-	/* dst buffer height in roptiles */
-	PATCH_USER_CONST_YTILES,
-	/* dst buffer log2(block height) */
-	PATCH_USER_CONST_BLOCKHEIGHTLOG2,
-	/* dst buffer pitch in bytes */
-	PATCH_USER_CONST_DSTPITCH,
-	/* dst buffer write offset */
-	PATCH_USER_CONST_DSTOFFSET,
-	/* comp cache index of the first page of the surface,
-	 * kernel looks it up from PTE */
-	PATCH_USER_CONST_FIRSTPAGEOFFSET,
-	/* gmmu translated surface address, kernel fills */
-	PATCH_USER_CONST_SURFADDR,
-	/* dst buffer address >> 8, kernel fills */
-	PATCH_VPC_DSTIMAGE_ADDR,
-	/* dst buffer address >> 8, kernel fills */
-	PATCH_VPC_DSTIMAGE_ADDR2,
-	/* dst buffer size - 1, kernel fills */
-	PATCH_VPC_DSTIMAGE_SIZE_MINUS_ONE,
-	/* dst buffer size - 1, kernel fills */
-	PATCH_VPC_DSTIMAGE_SIZE_MINUS_ONE2,
-	/* dst buffer size, kernel fills */
-	PATCH_VPC_DSTIMAGE_SIZE,
-	/* dst buffer width in roptiles / work group width */
-	PATCH_VPC_CURRENT_GRID_SIZE_X,
-	/* dst buffer height in roptiles / work group height */
-	PATCH_VPC_CURRENT_GRID_SIZE_Y,
-	/* 1 */
-	PATCH_VPC_CURRENT_GRID_SIZE_Z,
-	/* work group width, 16 seems to be quite optimal */
-	PATCH_VPC_CURRENT_GROUP_SIZE_X,
-	/* work group height, 8 seems to be quite optimal */
-	PATCH_VPC_CURRENT_GROUP_SIZE_Y,
-	/* 1 */
-	PATCH_VPC_CURRENT_GROUP_SIZE_Z,
-	/* same as PATCH_VPC_CURRENT_GRID_SIZE_X */
-	PATCH_QMD_CTA_RASTER_WIDTH,
-	/* same as PATCH_VPC_CURRENT_GRID_SIZE_Y */
-	PATCH_QMD_CTA_RASTER_HEIGHT,
-	/* same as PATCH_VPC_CURRENT_GRID_SIZE_Z */
-	PATCH_QMD_CTA_RASTER_DEPTH,
-	/* same as PATCH_VPC_CURRENT_GROUP_SIZE_X */
-	PATCH_QMD_CTA_THREAD_DIMENSION0,
-	/* same as PATCH_VPC_CURRENT_GROUP_SIZE_Y */
-	PATCH_QMD_CTA_THREAD_DIMENSION1,
-	/* same as PATCH_VPC_CURRENT_GROUP_SIZE_Z */
-	PATCH_QMD_CTA_THREAD_DIMENSION2,
-
-	NUM_CDE_LAUNCH_PATCHES
-};
-
 enum cde_launch_patch_id {
-	PATCH_QMD_CTA_RASTER_WIDTH_ID = 1024,
-	PATCH_QMD_CTA_RASTER_HEIGHT_ID = 1025,
-	PATCH_QMD_CTA_RASTER_DEPTH_ID = 1026,
-	PATCH_QMD_CTA_THREAD_DIMENSION0_ID = 1027,
-	PATCH_QMD_CTA_THREAD_DIMENSION1_ID = 1028,
-	PATCH_QMD_CTA_THREAD_DIMENSION2_ID = 1029,
-	PATCH_USER_CONST_XTILES_ID = 1030,
-	PATCH_USER_CONST_YTILES_ID = 1031,
+	PATCH_H_QMD_CTA_RASTER_WIDTH_ID     = 1024,
+	PATCH_H_QMD_CTA_RASTER_HEIGHT_ID    = 1025,
+	PATCH_QMD_CTA_RASTER_DEPTH_ID       = 1026, /* for firmware v0 only */
+	PATCH_QMD_CTA_THREAD_DIMENSION0_ID  = 1027,
+	PATCH_QMD_CTA_THREAD_DIMENSION1_ID  = 1028,
+	PATCH_QMD_CTA_THREAD_DIMENSION2_ID  = 1029, /* for firmware v0 only */
+	PATCH_USER_CONST_XTILES_ID          = 1030, /* for firmware v0 only */
+	PATCH_USER_CONST_YTILES_ID          = 1031, /* for firmware v0 only */
 	PATCH_USER_CONST_BLOCKHEIGHTLOG2_ID = 1032,
-	PATCH_USER_CONST_DSTPITCH_ID = 1033,
-	PATCH_USER_CONST_DSTOFFSET_ID = 1034,
-	PATCH_VPC_CURRENT_GRID_SIZE_X_ID = 1035,
-	PATCH_VPC_CURRENT_GRID_SIZE_Y_ID = 1036,
-	PATCH_VPC_CURRENT_GRID_SIZE_Z_ID = 1037,
-	PATCH_VPC_CURRENT_GROUP_SIZE_X_ID = 1038,
-	PATCH_VPC_CURRENT_GROUP_SIZE_Y_ID = 1039,
-	PATCH_VPC_CURRENT_GROUP_SIZE_Z_ID = 1040,
+	PATCH_USER_CONST_DSTPITCH_ID        = 1033, /* for firmware v0 only */
+	PATCH_H_USER_CONST_FLAGS_ID         = 1034, /* for firmware v0 only */
+	PATCH_H_VPC_CURRENT_GRID_SIZE_X_ID  = 1035,
+	PATCH_H_VPC_CURRENT_GRID_SIZE_Y_ID  = 1036,
+	PATCH_H_VPC_CURRENT_GRID_SIZE_Z_ID  = 1037,
+	PATCH_VPC_CURRENT_GROUP_SIZE_X_ID   = 1038,
+	PATCH_VPC_CURRENT_GROUP_SIZE_Y_ID   = 1039,
+	PATCH_VPC_CURRENT_GROUP_SIZE_Z_ID   = 1040,
+	PATCH_USER_CONST_XBLOCKS_ID         = 1041,
+	PATCH_H_USER_CONST_DSTOFFSET_ID     = 1042,
+	PATCH_V_QMD_CTA_RASTER_WIDTH_ID     = 1043,
+	PATCH_V_QMD_CTA_RASTER_HEIGHT_ID    = 1044,
+	PATCH_V_USER_CONST_DSTOFFSET_ID     = 1045,
+	PATCH_V_VPC_CURRENT_GRID_SIZE_X_ID  = 1046,
+	PATCH_V_VPC_CURRENT_GRID_SIZE_Y_ID  = 1047,
+	PATCH_V_VPC_CURRENT_GRID_SIZE_Z_ID  = 1048,
+	PATCH_H_LAUNCH_WORD1_ID             = 1049,
+	PATCH_H_LAUNCH_WORD2_ID             = 1050,
+	PATCH_V_LAUNCH_WORD1_ID             = 1051,
+	PATCH_V_LAUNCH_WORD2_ID             = 1052,
+	PATCH_H_QMD_PROGRAM_OFFSET_ID       = 1053,
+	PATCH_H_QMD_REGISTER_COUNT_ID       = 1054,
+	PATCH_V_QMD_PROGRAM_OFFSET_ID       = 1055,
+	PATCH_V_QMD_REGISTER_COUNT_ID       = 1056,
 };
 
-static int gk20a_buffer_convert_gpu_to_cde(
-		struct gk20a *g, struct dma_buf *dmabuf, u32 consumer,
-		u64 offset, u64 compbits_offset,
+enum programs {
+	PROG_HPASS              = 0,
+	PROG_VPASS_LARGE        = 1,
+	PROG_VPASS_SMALL        = 2,
+	PROG_HPASS_DEBUG        = 3,
+	PROG_VPASS_LARGE_DEBUG  = 4,
+	PROG_VPASS_SMALL_DEBUG  = 5,
+	PROG_PASSTHROUGH        = 6,
+	NUM_PROGRAMS            = 7
+};
+
+/* maximum number of WRITE_PATCHes in the below function */
+#define MAX_CDE_LAUNCH_PATCHES		  32
+
+static int gk20a_buffer_convert_gpu_to_cde_v0(
+		struct gk20a *g,
+		struct dma_buf *dmabuf, u32 consumer,
+		u64 offset, u64 compbits_hoffset, u64 compbits_voffset,
 		u32 width, u32 height, u32 block_height_log2,
 		u32 submit_flags, struct nvgpu_fence *fence_in,
-		struct gk20a_fence **fence_out)
+		struct gk20a_buffer_state *state)
 {
-	struct gk20a_cde_param params[NUM_CDE_LAUNCH_PATCHES];
+	struct gk20a_cde_param params[MAX_CDE_LAUNCH_PATCHES];
 	int param = 0;
 	int err = 0;
-
-	/* Compute per launch parameters */
-	const bool transpose = (consumer == NVGPU_GPU_COMPBITS_CDEV);
-	const int transposed_width = transpose ? height : width;
-	const int transposed_height = transpose ? width : height;
-	const int xtiles = (transposed_width + 7) >> 3;
-	const int ytiles = (transposed_height + 7) >> 3;
+	struct gk20a_fence *new_fence = NULL;
 	const int wgx = 8;
 	const int wgy = 8;
 	const int compbits_per_byte = 4; /* one byte stores 4 compbit pairs */
-	const int dst_stride = 128; /* TODO chip constant */
 	const int xalign = compbits_per_byte * wgx;
 	const int yalign = wgy;
-	const int gridw = roundup(xtiles, xalign) / xalign;
-	const int gridh = roundup(ytiles, yalign) / yalign;
 
-	if (!g->cde_app.initialised)
-		return -ENOSYS;
+	/* firmware v0 needs to call swizzling twice */
+	int i;
+	for (i = 0; i < 2; i++) {
+		/* Compute per launch parameters */
+		const bool vpass = (i == 1);
+		const int transposed_width = vpass ? height : width;
+		const int transposed_height = vpass ? width : height;
+		const int xtiles = (transposed_width + 7) >> 3;
+		const int ytiles = (transposed_height + 7) >> 3;
+		const int gridw = roundup(xtiles, xalign) / xalign;
+		const int gridh = roundup(ytiles, yalign) / yalign;
+		const int flags = (vpass ? 4 : 0) |
+			g->cde_app.shader_parameter;
+		const int dst_stride = 128; /* chip constant */
+
+		if ((vpass && !(consumer & NVGPU_GPU_COMPBITS_CDEV)) ||
+		    (!vpass && !(consumer & NVGPU_GPU_COMPBITS_CDEH)))
+			continue;
+
+		if (xtiles > 4096 / 8 || ytiles > 4096 / 8)
+			gk20a_warn(&g->dev->dev, "cde: surface is exceptionally large (xtiles=%d, ytiles=%d)",
+				   xtiles, ytiles);
+
+		gk20a_dbg(gpu_dbg_cde, "pass=%c", vpass ? 'V' : 'H');
+		gk20a_dbg(gpu_dbg_cde, "w=%d, h=%d, bh_log2=%d, compbits_hoffset=0x%llx, compbits_voffset=0x%llx",
+			  width, height, block_height_log2,
+			  compbits_hoffset, compbits_voffset);
+		gk20a_dbg(gpu_dbg_cde, "resolution (%d, %d) tiles (%d, %d)",
+			  width, height, xtiles, ytiles);
+		gk20a_dbg(gpu_dbg_cde, "group (%d, %d) grid (%d, %d)",
+			  wgx, wgy, gridw, gridh);
+
+		/* Write parameters */
+#define WRITE_PATCH(NAME, VALUE) \
+	params[param++] = (struct gk20a_cde_param){NAME##_ID, 0, VALUE}
+		param = 0;
+		WRITE_PATCH(PATCH_USER_CONST_XTILES, xtiles);
+		WRITE_PATCH(PATCH_USER_CONST_YTILES, ytiles);
+		WRITE_PATCH(PATCH_USER_CONST_BLOCKHEIGHTLOG2,
+			block_height_log2);
+		WRITE_PATCH(PATCH_USER_CONST_DSTPITCH, dst_stride);
+		WRITE_PATCH(PATCH_H_USER_CONST_FLAGS, flags);
+		WRITE_PATCH(PATCH_H_VPC_CURRENT_GRID_SIZE_X, gridw);
+		WRITE_PATCH(PATCH_H_VPC_CURRENT_GRID_SIZE_Y, gridh);
+		WRITE_PATCH(PATCH_H_VPC_CURRENT_GRID_SIZE_Z, 1);
+		WRITE_PATCH(PATCH_VPC_CURRENT_GROUP_SIZE_X, wgx);
+		WRITE_PATCH(PATCH_VPC_CURRENT_GROUP_SIZE_Y, wgy);
+		WRITE_PATCH(PATCH_VPC_CURRENT_GROUP_SIZE_Z, 1);
+		WRITE_PATCH(PATCH_H_QMD_CTA_RASTER_WIDTH, gridw);
+		WRITE_PATCH(PATCH_H_QMD_CTA_RASTER_HEIGHT, gridh);
+		WRITE_PATCH(PATCH_QMD_CTA_RASTER_DEPTH, 1);
+		WRITE_PATCH(PATCH_QMD_CTA_THREAD_DIMENSION0, wgx);
+		WRITE_PATCH(PATCH_QMD_CTA_THREAD_DIMENSION1, wgy);
+		WRITE_PATCH(PATCH_QMD_CTA_THREAD_DIMENSION2, 1);
+#undef WRITE_PATCH
+
+		err = gk20a_cde_convert(g, dmabuf,
+					0, /* dst kind */
+					vpass ?
+					compbits_voffset :
+					compbits_hoffset,
+					0, /* dst_size, 0 = auto */
+					fence_in, submit_flags,
+					params, param,
+					&new_fence);
+		if (err)
+			goto out;
+
+		/* compbits generated, update state & fence */
+		gk20a_fence_put(state->fence);
+		state->fence = new_fence;
+		state->valid_compbits |= vpass ?
+			NVGPU_GPU_COMPBITS_CDEV :
+			NVGPU_GPU_COMPBITS_CDEH;
+	}
+out:
+	return err;
+}
+
+static int gk20a_buffer_convert_gpu_to_cde_v1(
+		struct gk20a *g,
+		struct dma_buf *dmabuf, u32 consumer,
+		u64 offset, u64 compbits_hoffset, u64 compbits_voffset,
+		u32 width, u32 height, u32 block_height_log2,
+		u32 submit_flags, struct nvgpu_fence *fence_in,
+		struct gk20a_buffer_state *state)
+{
+	struct gk20a_cde_param params[MAX_CDE_LAUNCH_PATCHES];
+	int param = 0;
+	int err = 0;
+	struct gk20a_fence *new_fence = NULL;
+	const int wgx = 8;
+	const int wgy = 8;
+	const int compbits_per_byte = 4; /* one byte stores 4 compbit pairs */
+	const int xalign = compbits_per_byte * wgx;
+	const int yalign = wgy;
+
+	/* Compute per launch parameters */
+	const int xtiles = (width + 7) >> 3;
+	const int ytiles = (height + 7) >> 3;
+	const int gridw_h = roundup(xtiles, xalign) / xalign;
+	const int gridh_h = roundup(ytiles, yalign) / yalign;
+	const int gridw_v = roundup(ytiles, xalign) / xalign;
+	const int gridh_v = roundup(xtiles, yalign) / yalign;
+	const int xblocks = (xtiles + 1) >> 1;
+	const int voffset = compbits_voffset - compbits_hoffset;
+
+	int hprog = PROG_HPASS;
+	int vprog = (block_height_log2 >= 2) ?
+		PROG_VPASS_LARGE : PROG_VPASS_SMALL;
+	if (g->cde_app.shader_parameter == 1) {
+		hprog = PROG_PASSTHROUGH;
+		vprog = PROG_PASSTHROUGH;
+	} else if (g->cde_app.shader_parameter == 2) {
+		hprog = PROG_HPASS_DEBUG;
+		vprog = (block_height_log2 >= 2) ?
+			PROG_VPASS_LARGE_DEBUG :
+			PROG_VPASS_SMALL_DEBUG;
+	}
 
 	if (xtiles > 4096 / 8 || ytiles > 4096 / 8)
 		gk20a_warn(&g->dev->dev, "cde: surface is exceptionally large (xtiles=%d, ytiles=%d)",
 			   xtiles, ytiles);
 
-	gk20a_dbg(gpu_dbg_cde, "w=%d, h=%d, bh_log2=%d, compbits_offset=0x%llx",
-		  width, height, block_height_log2, compbits_offset);
-	gk20a_dbg(gpu_dbg_cde, "resolution (%d, %d) tiles (%d, %d) invocations (%d, %d)",
-		  width, height, xtiles, ytiles, gridw*wgx, gridh*wgy);
-	gk20a_dbg(gpu_dbg_cde, "group (%d, %d) grid (%d, %d)",
-		  wgx, wgy, gridw, gridh);
+	gk20a_dbg(gpu_dbg_cde, "w=%d, h=%d, bh_log2=%d, compbits_hoffset=0x%llx, compbits_voffset=0x%llx",
+		  width, height, block_height_log2,
+		  compbits_hoffset, compbits_voffset);
+	gk20a_dbg(gpu_dbg_cde, "resolution (%d, %d) tiles (%d, %d)",
+		  width, height, xtiles, ytiles);
+	gk20a_dbg(gpu_dbg_cde, "group (%d, %d) gridH (%d, %d) gridV (%d, %d)",
+		  wgx, wgy, gridw_h, gridh_h, gridw_v, gridh_v);
+	gk20a_dbg(gpu_dbg_cde, "hprog=%d, offset=0x%x, regs=%d, vprog=%d, offset=0x%x, regs=%d",
+		  hprog,
+		  g->cde_app.arrays[ARRAY_PROGRAM_OFFSET][hprog],
+		  g->cde_app.arrays[ARRAY_REGISTER_COUNT][hprog],
+		  vprog,
+		  g->cde_app.arrays[ARRAY_PROGRAM_OFFSET][vprog],
+		  g->cde_app.arrays[ARRAY_REGISTER_COUNT][vprog]);
 
 	/* Write parameters */
 #define WRITE_PATCH(NAME, VALUE) \
-		params[param++] = (struct gk20a_cde_param){NAME##_ID, 0, VALUE}
-	WRITE_PATCH(PATCH_USER_CONST_XTILES, xtiles);
-	WRITE_PATCH(PATCH_USER_CONST_YTILES, ytiles);
-	WRITE_PATCH(PATCH_USER_CONST_BLOCKHEIGHTLOG2, block_height_log2);
-	WRITE_PATCH(PATCH_USER_CONST_DSTPITCH, dst_stride);
-	WRITE_PATCH(PATCH_USER_CONST_DSTOFFSET,
-		    (transpose ? 4 : 0) | g->cde_app.shader_parameter);
-	WRITE_PATCH(PATCH_VPC_CURRENT_GRID_SIZE_X, gridw);
-	WRITE_PATCH(PATCH_VPC_CURRENT_GRID_SIZE_Y, gridh);
-	WRITE_PATCH(PATCH_VPC_CURRENT_GRID_SIZE_Z, 1);
+	params[param++] = (struct gk20a_cde_param){NAME##_ID, 0, VALUE}
+	WRITE_PATCH(PATCH_USER_CONST_XBLOCKS, xblocks);
+	WRITE_PATCH(PATCH_USER_CONST_BLOCKHEIGHTLOG2,
+		block_height_log2);
+	WRITE_PATCH(PATCH_QMD_CTA_THREAD_DIMENSION0, wgx);
+	WRITE_PATCH(PATCH_QMD_CTA_THREAD_DIMENSION1, wgy);
 	WRITE_PATCH(PATCH_VPC_CURRENT_GROUP_SIZE_X, wgx);
 	WRITE_PATCH(PATCH_VPC_CURRENT_GROUP_SIZE_Y, wgy);
 	WRITE_PATCH(PATCH_VPC_CURRENT_GROUP_SIZE_Z, 1);
-	WRITE_PATCH(PATCH_QMD_CTA_RASTER_WIDTH, gridw);
-	WRITE_PATCH(PATCH_QMD_CTA_RASTER_HEIGHT, gridh);
-	WRITE_PATCH(PATCH_QMD_CTA_RASTER_DEPTH, 1);
-	WRITE_PATCH(PATCH_QMD_CTA_THREAD_DIMENSION0, wgx);
-	WRITE_PATCH(PATCH_QMD_CTA_THREAD_DIMENSION1, wgy);
-	WRITE_PATCH(PATCH_QMD_CTA_THREAD_DIMENSION2, 1);
+
+	WRITE_PATCH(PATCH_H_QMD_CTA_RASTER_WIDTH, gridw_h);
+	WRITE_PATCH(PATCH_H_QMD_CTA_RASTER_HEIGHT, gridh_h);
+	WRITE_PATCH(PATCH_H_USER_CONST_DSTOFFSET, 0);
+	WRITE_PATCH(PATCH_H_VPC_CURRENT_GRID_SIZE_X, gridw_h);
+	WRITE_PATCH(PATCH_H_VPC_CURRENT_GRID_SIZE_Y, gridh_h);
+	WRITE_PATCH(PATCH_H_VPC_CURRENT_GRID_SIZE_Z, 1);
+
+	WRITE_PATCH(PATCH_V_QMD_CTA_RASTER_WIDTH, gridw_v);
+	WRITE_PATCH(PATCH_V_QMD_CTA_RASTER_HEIGHT, gridh_v);
+	WRITE_PATCH(PATCH_V_USER_CONST_DSTOFFSET, voffset);
+	WRITE_PATCH(PATCH_V_VPC_CURRENT_GRID_SIZE_X, gridw_v);
+	WRITE_PATCH(PATCH_V_VPC_CURRENT_GRID_SIZE_Y, gridh_v);
+	WRITE_PATCH(PATCH_V_VPC_CURRENT_GRID_SIZE_Z, 1);
+
+	WRITE_PATCH(PATCH_H_QMD_PROGRAM_OFFSET,
+		g->cde_app.arrays[ARRAY_PROGRAM_OFFSET][hprog]);
+	WRITE_PATCH(PATCH_H_QMD_REGISTER_COUNT,
+		g->cde_app.arrays[ARRAY_REGISTER_COUNT][hprog]);
+	WRITE_PATCH(PATCH_V_QMD_PROGRAM_OFFSET,
+		g->cde_app.arrays[ARRAY_PROGRAM_OFFSET][vprog]);
+	WRITE_PATCH(PATCH_V_QMD_REGISTER_COUNT,
+		g->cde_app.arrays[ARRAY_REGISTER_COUNT][vprog]);
+
+	if (consumer & NVGPU_GPU_COMPBITS_CDEH) {
+		WRITE_PATCH(PATCH_H_LAUNCH_WORD1,
+			g->cde_app.arrays[ARRAY_LAUNCH_COMMAND][0]);
+		WRITE_PATCH(PATCH_H_LAUNCH_WORD2,
+			g->cde_app.arrays[ARRAY_LAUNCH_COMMAND][1]);
+	} else {
+		WRITE_PATCH(PATCH_H_LAUNCH_WORD1,
+			g->cde_app.arrays[ARRAY_LAUNCH_COMMAND][2]);
+		WRITE_PATCH(PATCH_H_LAUNCH_WORD2,
+			g->cde_app.arrays[ARRAY_LAUNCH_COMMAND][3]);
+	}
+
+	if (consumer & NVGPU_GPU_COMPBITS_CDEV) {
+		WRITE_PATCH(PATCH_V_LAUNCH_WORD1,
+			g->cde_app.arrays[ARRAY_LAUNCH_COMMAND][0]);
+		WRITE_PATCH(PATCH_V_LAUNCH_WORD2,
+			g->cde_app.arrays[ARRAY_LAUNCH_COMMAND][1]);
+	} else {
+		WRITE_PATCH(PATCH_V_LAUNCH_WORD1,
+			g->cde_app.arrays[ARRAY_LAUNCH_COMMAND][2]);
+		WRITE_PATCH(PATCH_V_LAUNCH_WORD2,
+			g->cde_app.arrays[ARRAY_LAUNCH_COMMAND][3]);
+	}
 #undef WRITE_PATCH
+
+	err = gk20a_cde_convert(g, dmabuf,
+				0, /* dst kind */
+				compbits_hoffset,
+				0, /* dst_size, 0 = auto */
+				fence_in, submit_flags,
+				params, param, &new_fence);
+	if (err)
+		goto out;
+
+	/* compbits generated, update state & fence */
+	gk20a_fence_put(state->fence);
+	state->fence = new_fence;
+	state->valid_compbits |= consumer &
+		(NVGPU_GPU_COMPBITS_CDEH | NVGPU_GPU_COMPBITS_CDEV);
+out:
+	return err;
+}
+
+static int gk20a_buffer_convert_gpu_to_cde(
+		struct gk20a *g, struct dma_buf *dmabuf, u32 consumer,
+		u64 offset, u64 compbits_hoffset, u64 compbits_voffset,
+		u32 width, u32 height, u32 block_height_log2,
+		u32 submit_flags, struct nvgpu_fence *fence_in,
+		struct gk20a_buffer_state *state)
+{
+	int err = 0;
+
+	if (!g->cde_app.initialised)
+		return -ENOSYS;
 
 	err = gk20a_busy(g->dev);
 	if (err)
 		return err;
-	err = gk20a_cde_convert(g, dmabuf,
-				0, /* dst kind */
-				compbits_offset,
-				0, /* dst_size, 0 = auto */
-				fence_in, submit_flags,
-				params, param, fence_out);
+
+	gk20a_dbg(gpu_dbg_cde, "firmware version = %d\n",
+		g->cde_app.firmware_version);
+
+	if (g->cde_app.firmware_version == 0) {
+		err = gk20a_buffer_convert_gpu_to_cde_v0(
+		    g, dmabuf, consumer, offset, compbits_hoffset,
+		    compbits_voffset, width, height, block_height_log2,
+		    submit_flags, fence_in, state);
+	} else {
+		err = gk20a_buffer_convert_gpu_to_cde_v1(
+		    g, dmabuf, consumer, offset, compbits_hoffset,
+		    compbits_voffset, width, height, block_height_log2,
+		    submit_flags, fence_in, state);
+	}
+
 	gk20a_idle(g->dev);
 	return err;
 }
@@ -1326,7 +1514,8 @@ int gk20a_prepare_compressible_read(
 	if (IS_ERR(dmabuf))
 		return -EINVAL;
 
-	err = gk20a_dmabuf_get_state(dmabuf, dev_from_gk20a(g), offset, &state);
+	err = gk20a_dmabuf_get_state(dmabuf, dev_from_gk20a(g),
+				     offset, &state);
 	if (err) {
 		dma_buf_put(dmabuf);
 		return err;
@@ -1345,40 +1534,20 @@ int gk20a_prepare_compressible_read(
 		err = -EINVAL;
 		goto out;
 	} else if (missing_bits) {
-		struct gk20a_fence *new_fence = NULL;
+		u32 missing_cde_bits = missing_bits &
+			 (NVGPU_GPU_COMPBITS_CDEH | NVGPU_GPU_COMPBITS_CDEV);
 		if ((state->valid_compbits & NVGPU_GPU_COMPBITS_GPU) &&
-			(missing_bits & NVGPU_GPU_COMPBITS_CDEH)) {
+		    missing_cde_bits) {
 			err = gk20a_buffer_convert_gpu_to_cde(
 					g, dmabuf,
-					NVGPU_GPU_COMPBITS_CDEH,
+					missing_cde_bits,
 					offset, compbits_hoffset,
+					compbits_voffset,
 					width, height, block_height_log2,
 					submit_flags, fence,
-					&new_fence);
+					state);
 			if (err)
 				goto out;
-
-			/* CDEH bits generated, update state & fence */
-			gk20a_fence_put(state->fence);
-			state->fence = new_fence;
-			state->valid_compbits |= NVGPU_GPU_COMPBITS_CDEH;
-		}
-		if ((state->valid_compbits & NVGPU_GPU_COMPBITS_GPU) &&
-			(missing_bits & NVGPU_GPU_COMPBITS_CDEV)) {
-			err = gk20a_buffer_convert_gpu_to_cde(
-					g, dmabuf,
-					NVGPU_GPU_COMPBITS_CDEV,
-					offset, compbits_voffset,
-					width, height, block_height_log2,
-					submit_flags, fence,
-					&new_fence);
-			if (err)
-				goto out;
-
-			/* CDEH bits generated, update state & fence */
-			gk20a_fence_put(state->fence);
-			state->fence = new_fence;
-			state->valid_compbits |= NVGPU_GPU_COMPBITS_CDEV;
 		}
 	}
 

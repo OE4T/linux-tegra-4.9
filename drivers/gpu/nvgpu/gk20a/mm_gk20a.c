@@ -1546,7 +1546,7 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 	return vaddr;
 }
 
-dma_addr_t gk20a_mm_gpuva_to_iova(struct vm_gk20a *vm, u64 gpu_vaddr)
+dma_addr_t gk20a_mm_gpuva_to_iova_base(struct vm_gk20a *vm, u64 gpu_vaddr)
 {
 	struct mapped_buffer_node *buffer;
 	dma_addr_t addr = 0;

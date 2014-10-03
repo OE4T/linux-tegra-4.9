@@ -23,8 +23,9 @@
 
 #define MAX_CDE_BUFS		10
 #define MAX_CDE_PARAMS		64
-#define MAX_CDE_USER_PARAMS	32
+#define MAX_CDE_USER_PARAMS	40
 #define MAX_CDE_OBJ_IDS		4
+#define MAX_CDE_ARRAY_ENTRIES	9
 
 /*
  * The size of the context ring buffer that is dedicated for handling cde
@@ -162,6 +163,22 @@ struct gk20a_cde_cmd_elem {
 };
 
 /*
+ * This element is used for storing a small array of data.
+ */
+
+enum {
+	ARRAY_PROGRAM_OFFSET = 0,
+	ARRAY_REGISTER_COUNT,
+	ARRAY_LAUNCH_COMMAND,
+	NUM_CDE_ARRAYS
+};
+
+struct gk20a_cde_hdr_array {
+	u32 id;
+	u32 data[MAX_CDE_ARRAY_ENTRIES];
+};
+
+/*
  * Following defines a single header element. Each element has a type and
  * some of the data structures.
  */
@@ -175,6 +192,7 @@ struct gk20a_cde_hdr_elem {
 		struct gk20a_cde_hdr_param param;
 		u32 required_class;
 		struct gk20a_cde_hdr_command command;
+		struct gk20a_cde_hdr_array array;
 	};
 };
 
@@ -183,7 +201,8 @@ enum {
 	TYPE_REPLACE,
 	TYPE_PARAM,
 	TYPE_REQUIRED_CLASS,
-	TYPE_COMMAND
+	TYPE_COMMAND,
+	TYPE_ARRAY
 };
 
 struct gk20a_cde_mem_desc {
@@ -219,14 +238,12 @@ struct gk20a_cde_ctx {
 	/* storage for user space parameter values */
 	u32 user_param_values[MAX_CDE_USER_PARAMS];
 
-	u64 src_smmu_addr;
-	u32 src_param_offset;
-	u32 src_param_lines;
+	u32 surf_param_offset;
+	u32 surf_param_lines;
+	u64 surf_vaddr;
 
-	u64 src_vaddr;
-
-	u64 dest_vaddr;
-	u64 dest_size;
+	u64 compbit_vaddr;
+	u64 compbit_size;
 
 	u32 obj_ids[MAX_CDE_OBJ_IDS];
 	int num_obj_ids;
@@ -259,6 +276,10 @@ struct gk20a_cde_app {
 	int ctx_usecount;
 	int ctx_count_top;
 
+	u32 firmware_version;
+
+	u32 arrays[NUM_CDE_ARRAYS][MAX_CDE_ARRAY_ENTRIES];
+
 	u32 shader_parameter;
 };
 
@@ -266,9 +287,9 @@ void gk20a_cde_destroy(struct gk20a *g);
 void gk20a_cde_suspend(struct gk20a *g);
 int gk20a_init_cde_support(struct gk20a *g);
 int gk20a_cde_reload(struct gk20a *g);
-int gk20a_cde_convert(struct gk20a *g, struct dma_buf *dst,
-		      s32 dst_kind, u64 dst_word_offset,
-		      u32 dst_size, struct nvgpu_fence *fence,
+int gk20a_cde_convert(struct gk20a *g, struct dma_buf *compbits_buf,
+		      s32 compbits_kind, u64 compbits_word_offset,
+		      u32 compbits_size, struct nvgpu_fence *fence,
 		      u32 __flags, struct gk20a_cde_param *params,
 		      int num_params, struct gk20a_fence **fence_out);
 void gk20a_cde_debugfs_init(struct platform_device *dev);

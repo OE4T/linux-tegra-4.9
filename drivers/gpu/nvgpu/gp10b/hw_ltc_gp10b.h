@@ -50,6 +50,30 @@
 #ifndef _hw_ltc_gp10b_h_
 #define _hw_ltc_gp10b_h_
 
+static inline u32 ltc_ltc0_ltss_tstg_cmgmt0_r(void)
+{
+	return 0xffffffff;
+}
+static inline u32 ltc_ltc0_ltss_tstg_cmgmt1_r(void)
+{
+	return 0xffffffff;
+}
+static inline u32 ltc_ltc1_ltss_tstg_cmgmt0_r(void)
+{
+	return 0xffffffff;
+}
+static inline u32 ltc_ltc1_ltss_tstg_cmgmt1_r(void)
+{
+	return 0xffffffff;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_r(void)
+{
+	return 0xffffffff;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_r(void)
+{
+	return 0xffffffff;
+}
 static inline u32 ltc_ltcs_lts0_cbc_ctrl1_r(void)
 {
 	return 0x0014046c;

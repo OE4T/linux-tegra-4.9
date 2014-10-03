@@ -525,6 +525,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 					GFP_KERNEL);
 	if (!f->userd.cpuva) {
 		dev_err(d, "memory allocation failed\n");
+		err = -ENOMEM;
 		goto clean_up;
 	}
 
@@ -545,6 +546,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 					gk20a_mem_flag_none);
 	if (!f->userd.gpu_va) {
 		dev_err(d, "gmmu mapping failed\n");
+		err = -ENOMEM;
 		goto clean_up;
 	}
 
@@ -1572,26 +1574,27 @@ void gk20a_fifo_isr(struct gk20a *g)
 	u32 fifo_intr = gk20a_readl(g, fifo_intr_0_r());
 	u32 clear_intr = 0;
 
-	/* note we're not actually in an "isr", but rather
-	 * in a threaded interrupt context... */
-	mutex_lock(&g->fifo.intr.isr.mutex);
+	if (g->fifo.sw_ready) {
+		/* note we're not actually in an "isr", but rather
+		 * in a threaded interrupt context... */
+		mutex_lock(&g->fifo.intr.isr.mutex);
 
-	gk20a_dbg(gpu_dbg_intr, "fifo isr %08x\n", fifo_intr);
+		gk20a_dbg(gpu_dbg_intr, "fifo isr %08x\n", fifo_intr);
 
-	/* handle runlist update */
-	if (fifo_intr & fifo_intr_0_runlist_event_pending_f()) {
-		gk20a_fifo_handle_runlist_event(g);
-		clear_intr |= fifo_intr_0_runlist_event_pending_f();
+		/* handle runlist update */
+		if (fifo_intr & fifo_intr_0_runlist_event_pending_f()) {
+			gk20a_fifo_handle_runlist_event(g);
+			clear_intr |= fifo_intr_0_runlist_event_pending_f();
+		}
+		if (fifo_intr & fifo_intr_0_pbdma_intr_pending_f())
+			clear_intr |= fifo_pbdma_isr(g, fifo_intr);
+
+		if (unlikely(fifo_intr & error_intr_mask))
+			clear_intr = fifo_error_isr(g, fifo_intr);
+
+		mutex_unlock(&g->fifo.intr.isr.mutex);
 	}
-	if (fifo_intr & fifo_intr_0_pbdma_intr_pending_f())
-		clear_intr |= fifo_pbdma_isr(g, fifo_intr);
-
-	if (unlikely(fifo_intr & error_intr_mask))
-		clear_intr = fifo_error_isr(g, fifo_intr);
-
 	gk20a_writel(g, fifo_intr_0_r(), clear_intr);
-
-	mutex_unlock(&g->fifo.intr.isr.mutex);
 
 	return;
 }

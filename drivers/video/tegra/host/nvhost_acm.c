@@ -224,6 +224,16 @@ int nvhost_module_busy(struct platform_device *dev)
 		nvhost_err(&dev->dev, "failed to power on, err %d", ret);
 		return ret;
 	}
+#else
+	if (!pdata->booted && pdata->finalize_poweron) {
+		ret = pdata->finalize_poweron(dev);
+		if (ret < 0) {
+			nvhost_err(&dev->dev, "failed to power on, err %d",
+				   ret);
+			return ret;
+		}
+		pdata->booted = true;
+	}
 #endif
 
 	if (pdata->busy)

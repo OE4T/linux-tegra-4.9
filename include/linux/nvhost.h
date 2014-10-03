@@ -231,6 +231,9 @@ struct nvhost_device_data {
 	/* Devfreq governor name */
 	const char			*devfreq_governor;
 
+	/* Marks if the device is booted when pm runtime is disabled */
+	bool				booted;
+
 	void *private_data;		/* private platform data */
 	struct platform_device *pdev;	/* owner platform_device */
 	void *virt_priv;		/* private data for virtualized dev */

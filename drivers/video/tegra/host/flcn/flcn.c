@@ -43,6 +43,10 @@
 #include "t124/t124.h"
 #include "t210/t210.h"
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#include "t186/t186.h"
+#endif
+
 static int nvhost_flcn_init_sw(struct platform_device *dev);
 
 static inline struct flcn *get_flcn(struct platform_device *dev)
@@ -464,6 +468,10 @@ static struct of_device_id tegra_flcn_of_match[] = {
 #ifdef TEGRA_21X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra210-nvjpg",
 		.data = (struct nvhost_device_data *)&t21_nvjpg_info },
+#endif
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	{ .compatible = "nvidia,tegra186-vic",
+		.data = (struct nvhost_device_data *)&t18_vic_info },
 #endif
 	{ },
 };

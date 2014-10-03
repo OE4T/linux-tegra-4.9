@@ -82,8 +82,8 @@
 			gpio-init-0 = <&max77620_gpio_default>;
 
 			max77620_default: pinmux@0 {
-				pin_gpio0 {
-					pins = "gpio0";
+				pin_gpio0_7 {
+					pins = "gpio0", "gpio7";
 					function = "gpio";
 				};
 
@@ -108,15 +108,15 @@
 					function = "32k-out1";
 				};
 
-				pin_gpio5_6_7 {
-					pins = "gpio5", "gpio6", "gpio7";
+				pin_gpio5_6 {
+					pins = "gpio5", "gpio6";
 					function = "gpio";
 					drive-push-pull = <1>;
 				};
 			};
 
 			max77620_gpio_default:gpio_default {
-				gpio-output-high = <2>;
+				gpio-output-high = <2 7>;
 			};
 
 			watchdog {

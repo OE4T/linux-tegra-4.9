@@ -1126,18 +1126,6 @@ static inline u32 gr_pd_ab_dist_cfg2_state_limit_min_gpm_fifo_depths_v(void)
 {
 	return 0x00000182;
 }
-static inline u32 gr_pd_pagepool_r(void)
-{
-	return 0x004064cc;
-}
-static inline u32 gr_pd_pagepool_total_pages_f(u32 v)
-{
-	return (v & 0xff) << 0;
-}
-static inline u32 gr_pd_pagepool_valid_true_f(void)
-{
-	return 0x80000000;
-}
 static inline u32 gr_pd_dist_skip_table_r(u32 i)
 {
 	return 0x004064d0 + i*4;
@@ -1301,6 +1289,18 @@ static inline u32 gr_ds_zbc_tbl_ld_action_write_f(void)
 static inline u32 gr_ds_zbc_tbl_ld_trigger_active_f(void)
 {
 	return 0x4;
+}
+static inline u32 gr_ds_tga_constraintlogic_r(void)
+{
+	return 0xffffffff;
+}
+static inline u32 gr_ds_tga_constraintlogic_beta_cbsize_f(u32 v)
+{
+	return (v & 0x1) << -1;
+}
+static inline u32 gr_ds_tga_constraintlogic_alpha_cbsize_f(u32 v)
+{
+	return (v & 0x1) << -1;
 }
 static inline u32 gr_ds_hww_esr_r(void)
 {
@@ -1536,7 +1536,7 @@ static inline u32 gr_scc_pagepool_r(void)
 }
 static inline u32 gr_scc_pagepool_total_pages_f(u32 v)
 {
-	return (v & 0xff) << 0;
+	return (v & 0x3ff) << 0;
 }
 static inline u32 gr_scc_pagepool_total_pages_hwmax_v(void)
 {
@@ -1544,7 +1544,7 @@ static inline u32 gr_scc_pagepool_total_pages_hwmax_v(void)
 }
 static inline u32 gr_scc_pagepool_total_pages_hwmax_value_v(void)
 {
-	return 0x00000080;
+	return 0x00000200;
 }
 static inline u32 gr_scc_pagepool_total_pages_byte_granularity_v(void)
 {
@@ -1552,19 +1552,19 @@ static inline u32 gr_scc_pagepool_total_pages_byte_granularity_v(void)
 }
 static inline u32 gr_scc_pagepool_max_valid_pages_s(void)
 {
-	return 8;
+	return 10;
 }
 static inline u32 gr_scc_pagepool_max_valid_pages_f(u32 v)
 {
-	return (v & 0xff) << 8;
+	return (v & 0x3ff) << 10;
 }
 static inline u32 gr_scc_pagepool_max_valid_pages_m(void)
 {
-	return 0xff << 8;
+	return 0x3ff << 10;
 }
 static inline u32 gr_scc_pagepool_max_valid_pages_v(u32 r)
 {
-	return (r >> 8) & 0xff;
+	return (r >> 10) & 0x3ff;
 }
 static inline u32 gr_scc_pagepool_valid_true_f(void)
 {
@@ -1788,7 +1788,7 @@ static inline u32 gr_gpc0_ppc0_cbm_beta_cb_size_v_m(void)
 }
 static inline u32 gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v(void)
 {
-	return 0x00100000;
+	return 0x00030000;
 }
 static inline u32 gr_gpc0_ppc0_cbm_beta_cb_size_v_granularity_v(void)
 {
@@ -2068,11 +2068,19 @@ static inline u32 gr_gpcs_swdx_tc_beta_cb_size_r(u32 i)
 }
 static inline u32 gr_gpcs_swdx_tc_beta_cb_size_v_f(u32 v)
 {
-	return (v & 0x3fffff) << 0;
+	return (v & 0xffffffff) << -1;
 }
 static inline u32 gr_gpcs_swdx_tc_beta_cb_size_v_m(void)
 {
-	return 0x3fffff << 0;
+	return 0xffffffff << -1;
+}
+static inline u32 gr_gpcs_swdx_tc_beta_cb_size_div3_f(u32 v)
+{
+	return (v & 0xffffffff) << -1;
+}
+static inline u32 gr_gpcs_swdx_tc_beta_cb_size_div3_m(void)
+{
+	return 0xffffffff << -1;
 }
 static inline u32 gr_gpcs_swdx_rm_pagepool_r(void)
 {
@@ -2080,7 +2088,7 @@ static inline u32 gr_gpcs_swdx_rm_pagepool_r(void)
 }
 static inline u32 gr_gpcs_swdx_rm_pagepool_total_pages_f(u32 v)
 {
-	return (v & 0xff) << 0;
+	return (v & 0x3ff) << 0;
 }
 static inline u32 gr_gpcs_swdx_rm_pagepool_valid_true_f(void)
 {
@@ -2464,7 +2472,7 @@ static inline u32 gr_gpcs_gcc_pagepool_r(void)
 }
 static inline u32 gr_gpcs_gcc_pagepool_total_pages_f(u32 v)
 {
-	return (v & 0xff) << 0;
+	return (v & 0x3ff) << 0;
 }
 static inline u32 gr_gpcs_tpcs_pe_vaf_r(void)
 {

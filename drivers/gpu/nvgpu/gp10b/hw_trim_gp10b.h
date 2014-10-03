@@ -200,11 +200,11 @@ static inline u32 trim_sys_gpc2clk_out_sdiv14_indiv4_mode_f(void)
 }
 static inline u32 trim_gpc_clk_cntr_ncgpcclk_cfg_r(u32 i)
 {
-	return 0x00134124 + i*512;
+	return 0x001e0124 + i*1024;
 }
 static inline u32 trim_gpc_clk_cntr_ncgpcclk_cfg_noofipclks_f(u32 v)
 {
-	return (v & 0x3fff) << 0;
+	return (v & 0xffff) << 0;
 }
 static inline u32 trim_gpc_clk_cntr_ncgpcclk_cfg_write_en_asserted_f(void)
 {
@@ -220,11 +220,11 @@ static inline u32 trim_gpc_clk_cntr_ncgpcclk_cfg_reset_asserted_f(void)
 }
 static inline u32 trim_gpc_clk_cntr_ncgpcclk_cnt_r(u32 i)
 {
-	return 0x00134128 + i*512;
+	return 0x001e0128 + i*1024;
 }
 static inline u32 trim_gpc_clk_cntr_ncgpcclk_cnt_value_v(u32 r)
 {
-	return (r >> 0) & 0xfffff;
+	return (r >> 0) & 0xfffffff;
 }
 static inline u32 trim_sys_gpcpll_cfg2_r(void)
 {

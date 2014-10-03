@@ -448,7 +448,7 @@ static inline u32 pbdma_syncpointb_r(u32 i)
 }
 static inline u32 pbdma_syncpointb_op_v(u32 r)
 {
-	return (r >> 0) & 0x3;
+	return (r >> 0) & 0x1;
 }
 static inline u32 pbdma_syncpointb_op_wait_v(void)
 {
@@ -464,6 +464,6 @@ static inline u32 pbdma_syncpointb_wait_switch_en_v(void)
 }
 static inline u32 pbdma_syncpointb_syncpt_index_v(u32 r)
 {
-	return (r >> 8) & 0xff;
+	return (r >> 8) & 0xfff;
 }
 #endif

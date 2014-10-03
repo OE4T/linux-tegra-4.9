@@ -116,10 +116,10 @@ static inline u32 host1x_uclass_wait_syncpt_r(void)
 }
 static inline u32 host1x_uclass_wait_syncpt_indx_f(u32 v)
 {
-	return (v & 0x3ff) << 22;
+	return (v & 0xff) << 24;
 }
 static inline u32 host1x_uclass_wait_syncpt_thresh_f(u32 v)
 {
-	return (v & 0x3fffff) << 0;
+	return (v & 0xffffff) << 0;
 }
 #endif

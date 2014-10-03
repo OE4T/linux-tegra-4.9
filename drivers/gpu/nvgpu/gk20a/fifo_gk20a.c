@@ -966,6 +966,7 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 	unsigned long engine_mmu_id;
 	bool verbose = true;
 	u32 grfifo_ctl;
+
 	gk20a_dbg_fn("");
 
 	g->fifo.deferred_reset_pending = false;
@@ -1002,6 +1003,15 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		struct fifo_mmu_fault_info_gk20a f;
 		struct channel_gk20a *ch = NULL;
 		struct tsg_gk20a *tsg = NULL;
+		/* read and parse engine status */
+		u32 status = gk20a_readl(g, fifo_engine_status_r(engine_id));
+		u32 ctx_status = fifo_engine_status_ctx_status_v(status);
+		bool ctxsw = (ctx_status ==
+				fifo_engine_status_ctx_status_ctxsw_switch_v()
+				|| ctx_status ==
+				fifo_engine_status_ctx_status_ctxsw_save_v()
+				|| ctx_status ==
+				fifo_engine_status_ctx_status_ctxsw_load_v());
 
 		get_exception_mmu_fault_info(g, engine_mmu_id, &f);
 		trace_gk20a_mmu_fault(f.fault_hi_v,
@@ -1023,14 +1033,14 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 			   f.fault_type_v, f.fault_type_desc,
 			   f.fault_info_v, f.inst_ptr);
 
+		if (ctxsw) {
+			gk20a_fecs_dump_falcon_stats(g);
+			gk20a_err(dev_from_gk20a(g), "gr_status_r : 0x%x",
+					gk20a_readl(g, gr_status_r()));
+		}
+
 		/* get the channel/TSG */
 		if (fake_fault) {
-			/* read and parse engine status */
-			u32 status = gk20a_readl(g,
-				fifo_engine_status_r(engine_id));
-			u32 ctx_status =
-				fifo_engine_status_ctx_status_v(status);
-
 			/* use next_id if context load is failing */
 			u32 id = (ctx_status ==
 				fifo_engine_status_ctx_status_ctxsw_load_v()) ?

@@ -22,9 +22,7 @@
 #define __PMU_GK20A_H__
 
 /* defined by pmu hw spec */
-#define GK20A_PMU_VA_START		((128 * 1024) << 10)
 #define GK20A_PMU_VA_SIZE		(512 * 1024 * 1024)
-#define GK20A_PMU_INST_SIZE		(4 * 1024)
 #define GK20A_PMU_UCODE_SIZE_MAX	(256 * 1024)
 #define GK20A_PMU_SEQ_BUF_SIZE		4096
 

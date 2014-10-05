@@ -4456,7 +4456,6 @@ out:
 static u32 wl_addr_gk20a[] = {
 	/* this list must be sorted (low to high) */
 	0x404468, /* gr_pri_mme_max_instructions       */
-	0x408944, /* gr_pri_bes_crop_hww_esr	       */
 	0x418800, /* gr_pri_gpcs_setup_debug           */
 	0x419a04, /* gr_pri_gpcs_tpcs_tex_lod_dbg      */
 	0x419a08, /* gr_pri_gpcs_tpcs_tex_samp_dbg     */

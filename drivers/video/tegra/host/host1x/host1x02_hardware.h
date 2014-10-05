@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/host1x/host1x01_hardware.h
- *
  * Tegra Graphics Host Register Offsets for T20/T30
  *
- * Copyright (c) 2010-2012 NVIDIA Corporation.
+ * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -141,6 +139,16 @@ static inline u32 nvhost_opcode_gather_insert(unsigned offset, unsigned incr,
 		unsigned count)
 {
 	return (6 << 28) | (offset << 16) | BIT(15) | (incr << 14) | count;
+}
+
+static inline u32 nvhost_opcode_acquire_mlock(unsigned id)
+{
+	return (14 << 28) | id;
+}
+
+static inline u32 nvhost_opcode_release_mlock(unsigned id)
+{
+	return (14 << 28) | (1 << 24) | id;
 }
 
 #define NVHOST_OPCODE_NOOP nvhost_opcode_nonincr(0, 0)

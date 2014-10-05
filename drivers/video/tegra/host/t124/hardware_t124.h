@@ -170,6 +170,16 @@ static inline u32 nvhost_opcode_gather_insert(unsigned offset, unsigned incr,
 	return (6 << 28) | (offset << 16) | BIT(15) | (incr << 14) | count;
 }
 
+static inline u32 nvhost_opcode_acquire_mlock(unsigned id)
+{
+	return (14 << 28) | id;
+}
+
+static inline u32 nvhost_opcode_release_mlock(unsigned id)
+{
+	return (14 << 28) | (1 << 24) | id;
+}
+
 #define NVHOST_OPCODE_NOOP nvhost_opcode_nonincr(0, 0)
 
 static inline u32 nvhost_mask2(unsigned x, unsigned y)

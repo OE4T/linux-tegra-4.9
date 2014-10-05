@@ -31,6 +31,21 @@
 #include "class_ids.h"
 #include "debug.h"
 
+static void lock_device(struct nvhost_job *job, bool lock)
+{
+	struct nvhost_channel *ch = job->ch;
+	struct nvhost_master *host = nvhost_get_host(job->ch->dev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
+	u32 opcode = lock ?
+		nvhost_opcode_acquire_mlock(pdata->modulemutexes[0]) :
+		nvhost_opcode_release_mlock(pdata->modulemutexes[0]);
+
+	if (host->info.channel_policy != MAP_CHANNEL_ON_SUBMIT)
+		return;
+
+	nvhost_cdma_push(&ch->cdma, opcode, NVHOST_OPCODE_NOOP);
+}
+
 static void serialize(struct nvhost_job *job)
 {
 	struct nvhost_channel *ch = job->ch;
@@ -115,6 +130,29 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 	sync_fence_put(fence);
 }
 
+static void push_waits(struct nvhost_job *job)
+{
+	struct nvhost_channel *ch = job->ch;
+	struct nvhost_master *host = nvhost_get_host(job->ch->dev);
+	int i;
+
+	if (host->info.channel_policy != MAP_CHANNEL_ON_SUBMIT)
+		return;
+
+	for (i = 0; i < job->num_gathers; i++) {
+		struct nvhost_job_gather *g = &job->gathers[i];
+		add_sync_waits(job->ch, g->pre_fence);
+	}
+
+	for (i = 0; i < job->num_waitchk; i++)
+		nvhost_cdma_push(&ch->cdma,
+			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
+				host1x_uclass_wait_syncpt_r(), 1),
+			nvhost_class_host_wait_syncpt(
+				job->waitchk[i].syncpt_id,
+				job->waitchk[i].thresh));
+}
+
 static void submit_nullkickoff(struct nvhost_job *job, u32 user_syncpt_incrs)
 {
 	struct nvhost_channel *ch = job->ch;
@@ -165,7 +203,8 @@ static void submit_gathers(struct nvhost_job *job)
 		u32 op1;
 		u32 op2;
 
-		add_sync_waits(job->ch, g->pre_fence);
+		if (nvhost->info.channel_policy == MAP_CHANNEL_ON_OPEN)
+			add_sync_waits(job->ch, g->pre_fence);
 
 		if (gather_filter_enabled && g->class_id)
 			nvhost_cdma_push(&job->ch->cdma,
@@ -257,6 +296,8 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	}
 
 	serialize(job);
+	push_waits(job);
+	lock_device(job, true);
 
 	/* submit_ctxsave() and submit_ctxrestore() use the channel syncpt */
 	user_syncpt_incrs = hwctx_sp->incrs;
@@ -286,6 +327,8 @@ static int host1x_channel_submit(struct nvhost_job *job)
 		submit_nullkickoff(job, user_syncpt_incrs);
 	else
 		submit_gathers(job);
+
+	lock_device(job, false);
 
 	/* end CDMA submit & stash pinned hMems into sync queue */
 	nvhost_cdma_end(&ch->cdma, job);

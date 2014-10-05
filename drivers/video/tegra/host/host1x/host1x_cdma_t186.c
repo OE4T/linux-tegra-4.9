@@ -483,12 +483,6 @@ static void cdma_timeout_handler(struct work_struct *work)
 		return;
 	}
 
-	/* set notifier to userspace about submit timeout */
-	if (ch->error_notifier) {
-		nvhost_set_notifier(ch,
-			NVHOST_CHANNEL_SUBMIT_TIMEOUT);
-	}
-
 	if (nvhost_debug_force_timeout_dump ||
 		cdma->timeout.timeout_debug_dump)
 		nvhost_debug_dump_locked(cdma_to_dev(cdma), ch->chid);

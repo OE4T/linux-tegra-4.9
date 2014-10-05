@@ -60,27 +60,17 @@ struct sync_pt;
 #define NVSYNCPT_VBLANK0		(26)	/* t20, t30, t114, t148 */
 #define NVSYNCPT_VBLANK1		(27)	/* t20, t30, t114, t148 */
 
-#define NVWAITBASE_2D_0			(1)	/* t20, t30, t114 */
-#define NVWAITBASE_2D_1			(2)	/* t20, t30, t114 */
-#define NVWAITBASE_3D			(3)	/* t20, t30, t114 */
-#define NVWAITBASE_MPE			(4)	/* t20, t30 */
-#define NVWAITBASE_MSENC		(4)	/* t114, t148 */
-#define NVWAITBASE_TSEC			(5)	/* t114, t148 */
-
-#define NVMODMUTEX_2D_FULL		(1)	/* t20, t30, t114, t148 */
-#define NVMODMUTEX_ISP_0		(1)	/* t124 */
-#define NVMODMUTEX_2D_SIMPLE		(2)	/* t20, t30, t114, t148 */
-#define NVMODMUTEX_ISP_1		(2)	/* t124 */
-#define NVMODMUTEX_2D_SB_A		(3)	/* t20, t30, t114, t148 */
-#define NVMODMUTEX_2D_SB_B		(4)	/* t20, t30, t114, t148 */
-#define NVMODMUTEX_3D			(5)	/* t20, t30, t114, t148 */
-#define NVMODMUTEX_DISPLAYA		(6)	/* t20, t30, t114, t148 */
-#define NVMODMUTEX_DISPLAYB		(7)	/* t20, t30, t114, t148 */
-#define NVMODMUTEX_VI			(8)	/* t20, t30, t114 */
+#define NVMODMUTEX_ISP_0		(1)	/* t124, t132, t210 */
+#define NVMODMUTEX_ISP_1		(2)	/* t124, t132, t210 */
+#define NVMODMUTEX_NVJPG		(3)	/* t210 */
+#define NVMODMUTEX_NVDEC		(4)	/* t210 */
+#define NVMODMUTEX_MSENC		(5)	/* t124, t132, t210 */
+#define NVMODMUTEX_TSECA		(6)	/* t124, t132, t210 */
+#define NVMODMUTEX_TSECB		(7)	/* t124, t132, t210 */
+#define NVMODMUTEX_VI			(8)	/* t124, t132, t210 */
 #define NVMODMUTEX_VI_0			(8)	/* t148 */
-#define NVMODMUTEX_DSI			(9)	/* t20, t30, t114, t148 */
-#define NVMODMUTEX_VIC			(10)	/* t124 */
-#define NVMODMUTEX_VI_1			(11)	/* t124 */
+#define NVMODMUTEX_VIC			(10)	/* t124, t132, t210 */
+#define NVMODMUTEX_VI_1			(11)	/* t124, t132, t210 */
 
 enum nvhost_power_sysfs_attributes {
 	NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY = 0,

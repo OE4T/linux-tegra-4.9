@@ -128,6 +128,7 @@ struct nvhost_device_data t21_ispb_info = {
 #if defined(CONFIG_TEGRA_GRHOST_VI) || defined(CONFIG_TEGRA_GRHOST_VI_MODULE)
 #ifdef CONFIG_VI_ONE_DEVICE
 struct nvhost_device_data t21_vi_info = {
+	.modulemutexes		= {NVMODMUTEX_VI_0},
 	.exclusive		= true,
 	.class			= NV_VIDEO_STREAMING_VI_CLASS_ID,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
@@ -249,6 +250,7 @@ struct nvhost_device_data t21_vii2c_info = {
 struct nvhost_device_data t21_msenc_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
 	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,
+	.modulemutexes		= {NVMODMUTEX_MSENC},
 #ifdef TEGRA_POWERGATE_NVENC
 	.powergate_ids		= { TEGRA_POWERGATE_NVENC, -1 },
 #else
@@ -281,6 +283,7 @@ struct nvhost_device_data t21_msenc_info = {
 struct nvhost_device_data t21_nvdec_info = {
 	.version		= NVHOST_ENCODE_NVDEC_VER(2, 0),
 	.class			= NV_NVDEC_CLASS_ID,
+	.modulemutexes		= {NVMODMUTEX_NVDEC},
 #ifdef TEGRA_POWERGATE_NVDEC
 	.powergate_ids		= { TEGRA_POWERGATE_NVDEC, -1 },
 #else
@@ -313,6 +316,7 @@ struct nvhost_device_data t21_nvdec_info = {
 struct nvhost_device_data t21_nvjpg_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(1, 0),
 	.class			= NV_NVJPG_CLASS_ID,
+	.modulemutexes		= {NVMODMUTEX_NVJPG},
 #ifdef TEGRA_POWERGATE_NVJPG
 	.powergate_ids		= { TEGRA_POWERGATE_NVJPG, -1 },
 #else
@@ -344,6 +348,7 @@ struct nvhost_device_data t21_nvjpg_info = {
 
 struct nvhost_device_data t21_tsec_info = {
 	.num_channels		= 1,
+	.modulemutexes		= {NVMODMUTEX_TSECA},
 	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
 	.class			= NV_TSEC_CLASS_ID,
 	.exclusive		= true,
@@ -364,6 +369,7 @@ struct nvhost_device_data t21_tsec_info = {
 
 struct nvhost_device_data t21_tsecb_info = {
 	.num_channels		= 1,
+	.modulemutexes		= {NVMODMUTEX_TSECB},
 	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
 	.class			= NV_TSECB_CLASS_ID,
 	.exclusive		= true,

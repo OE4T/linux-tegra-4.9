@@ -332,6 +332,7 @@ static struct resource msenc_resources[] = {
 struct nvhost_device_data t124_msenc_info = {
 	.num_channels	= 1,
 	.version	= NVHOST_ENCODE_FLCN_VER(3, 1),
+	.modulemutexes	= {NVMODMUTEX_MSENC},
 	.class		= NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.clocks		= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
 			  {"emc", HOST_EMC_FLOOR,
@@ -374,6 +375,7 @@ struct nvhost_device_data t124_tsec_info = {
 	.num_channels	= 1,
 	.version       = NVHOST_ENCODE_TSEC_VER(1, 0),
 	.class         = NV_TSEC_CLASS_ID,
+	.modulemutexes = {NVMODMUTEX_TSECA},
 	.exclusive     = true,
 	.clocks	       = {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
 			 {"emc", HOST_EMC_FLOOR} },
@@ -463,6 +465,7 @@ struct platform_device tegra_vic03_device = {
 struct nvhost_device_data t132_msenc_info = {
 	.num_channels	= 1,
 	.version	= NVHOST_ENCODE_FLCN_VER(3, 1),
+	.modulemutexes	= {NVMODMUTEX_MSENC},
 	.class		= NV_VIDEO_ENCODE_MSENC_CLASS_ID,
 	.clocks		= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
 			  {"emc", HOST_EMC_FLOOR,

@@ -135,7 +135,9 @@ static void job_free(struct kref *ref)
 		job->hwctxref->h->put(job->hwctxref);
 	if (job->hwctx)
 		job->hwctx->h->put(job->hwctx);
-	if(job->size <= PAGE_SIZE)
+	if (job->error_notifier_ref)
+		dma_buf_put(job->error_notifier_ref);
+	if (job->size <= PAGE_SIZE)
 		kfree(job);
 	else
 		vfree(job);
@@ -170,6 +172,40 @@ void nvhost_job_add_gather(struct nvhost_job *job,
 	cur_gather->class_id = class_id ? class_id : pdata->class;
 	cur_gather->pre_fence = pre_fence;
 	job->num_gathers += 1;
+}
+
+void nvhost_job_set_notifier(struct nvhost_job *job, u32 error)
+{
+	struct nvhost_notification *error_notifier;
+	struct timespec time_data;
+	void *va;
+	u64 nsec;
+
+	if (!job->error_notifier_ref)
+		return;
+
+	/* map handle and clear error notifier struct */
+	va = dma_buf_vmap(job->error_notifier_ref);
+	if (!va) {
+		dma_buf_put(job->error_notifier_ref);
+		dev_err(&job->ch->dev->dev, "Cannot map notifier handle\n");
+		return;
+	}
+
+	error_notifier = va + job->error_notifier_offset;
+
+	getnstimeofday(&time_data);
+	nsec = ((u64)time_data.tv_sec) * 1000000000u +
+		(u64)time_data.tv_nsec;
+	error_notifier->time_stamp.nanoseconds[0] =
+		(u32)nsec;
+	error_notifier->time_stamp.nanoseconds[1] =
+		(u32)(nsec >> 32);
+	error_notifier->info32 = error;
+	error_notifier->status = 0xffff;
+	dev_err(&job->ch->dev->dev, "error notifier set to %d\n", error);
+
+	dma_buf_vunmap(job->error_notifier_ref, va);
 }
 
 /*

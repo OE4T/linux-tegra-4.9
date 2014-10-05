@@ -61,11 +61,6 @@ struct nvhost_channel {
 	 * now just keep it here */
 	struct nvhost_as *as;
 
-	/* error notificatiers used channel submit timeout */
-	struct dma_buf *error_notifier_ref;
-	struct nvhost_notification *error_notifier;
-	void *error_notifier_va;
-
 	/* channel syncpoints */
 	u32 syncpts[NVHOST_MODULE_MAX_SYNCPTS];
 };
@@ -82,8 +77,6 @@ struct nvhost_channel *nvhost_check_channel(struct nvhost_device_data *pdata);
 int nvhost_channel_init(struct nvhost_channel *ch,
 	struct nvhost_master *dev);
 int nvhost_channel_submit(struct nvhost_job *job);
-void nvhost_set_notifier(struct nvhost_channel *ch, __u32 error);
-void nvhost_free_error_notifiers(struct nvhost_channel *ch);
 
 void nvhost_getchannel(struct nvhost_channel *ch);
 void nvhost_putchannel(struct nvhost_channel *ch, int cnt);

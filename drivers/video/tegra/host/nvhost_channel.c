@@ -151,8 +151,6 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 		dev_err(&host->dev->dev, "Freeing un-mapped channel\n");
 		return 0;
 	}
-	if (ch->error_notifier_ref)
-		nvhost_free_error_notifiers(ch);
 
 	dev_dbg(&ch->dev->dev, "channel %d un-mapped\n", ch->chid);
 

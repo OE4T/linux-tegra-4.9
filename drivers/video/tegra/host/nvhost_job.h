@@ -127,6 +127,10 @@ struct nvhost_job {
 
 	/* Set to true to force an added wait-for-idle before the job */
 	int serialize;
+
+	/* error notifiers used channel submit timeout */
+	struct dma_buf *error_notifier_ref;
+	u64 error_notifier_offset;
 };
 
 /*
@@ -178,5 +182,11 @@ void nvhost_job_unpin(struct nvhost_job *job);
  * Dump contents of job to debug output.
  */
 void nvhost_job_dump(struct device *dev, struct nvhost_job *job);
+
+/*
+ * Set error notifier for the job owner to informa userspace about
+ * an error.
+ */
+void nvhost_job_set_notifier(struct nvhost_job *job, u32 error);
 
 #endif

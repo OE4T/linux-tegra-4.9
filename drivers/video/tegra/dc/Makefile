@@ -8,6 +8,7 @@ obj-y += rgb.o
 obj-y += of_dc.o
 obj-$(CONFIG_TEGRA_HDMI) += hdmi.o
 obj-$(CONFIG_TEGRA_HDMI) += hdmi_state_machine.o
+obj-$(CONFIG_TEGRA_HDMI2FPD_DS90UH949) += hdmi2fpd_ds90uh949.o
 obj-y += dsi2lvds.o
 obj-$(CONFIG_TEGRA_DSI2EDP_TC358767) += tc358767_dsi2edp.o
 obj-$(CONFIG_TEGRA_DSI2EDP_SN65DSI86) += sn65dsi86_dsi2edp.o

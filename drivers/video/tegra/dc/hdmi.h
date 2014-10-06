@@ -263,6 +263,8 @@ struct tegra_dc_hdmi_data {
 	struct switch_dev		hpd_switch;
 	struct switch_dev		audio_switch;
 #endif
+	void				*out_data;
+
 	struct tegra_hdmi_out		info;
 	struct tegra_dc_hdmi_i2c_info	i2c_info;
 
@@ -287,4 +289,32 @@ struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_dc_hdmi_data *hdmi);
 bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 			       struct fb_videomode *mode);
 void tegra_dc_hdmi_setup_audio_and_infoframes(struct tegra_dc *dc);
+
+static inline void *tegra_hdmi_get_outdata(struct tegra_dc_hdmi_data *hdmi)
+{
+	return hdmi->out_data;
+}
+
+static inline void tegra_hdmi_set_outdata(struct tegra_dc_hdmi_data *hdmi,
+						void *data)
+{
+	hdmi->out_data = data;
+}
+
+#ifdef CONFIG_TEGRA_HDMI2FPD
+int hdmi2fpd_enable(struct tegra_dc_hdmi_data *hdmi);
+void hdmi2fpd_disable(struct tegra_dc_hdmi_data *hdmi);
+void hdmi2fpd_suspend(struct tegra_dc_hdmi_data *hdmi);
+int hdmi2fpd_resume(struct tegra_dc_hdmi_data *hdmi);
+int hdmi2fpd_init(struct tegra_dc_hdmi_data *hdmi);
+void hdmi2fpd_destroy(struct tegra_dc_hdmi_data *hdmi);
+#else
+#define hdmi2fpd_enable(hdmi)	do { } while (0)
+#define hdmi2fpd_disable(hdmi)	do { } while (0)
+#define hdmi2fpd_suspend(hdmi)	do { } while (0)
+#define hdmi2fpd_resume(hdmi)	do { } while (0)
+#define hdmi2fpd_init(hdmi)	do { } while (0)
+#define hdmi2fpd_destroy(hdmi)	do { } while (0)
+#endif
+
 #endif

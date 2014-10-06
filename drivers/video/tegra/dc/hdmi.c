@@ -99,6 +99,7 @@ static struct kobj_attribute hdmi_audio_channel_config =
 
 static struct kobject *hdmi_audio;
 
+
 #if defined(CONFIG_ARCH_TEGRA_3x_SOC)
 const struct tmds_config tmds_config[] = {
 	{ /* 480p modes */
@@ -916,6 +917,9 @@ static void tegra_dc_hdmi_suspend(struct tegra_dc *dc)
 
 	tegra_nvhdcp_suspend(hdmi->nvhdcp);
 
+	if (hdmi->info.hdmi2fpd_bridge_enable)
+		hdmi2fpd_suspend(hdmi);
+
 	if (dc->out->flags & TEGRA_DC_OUT_HOTPLUG_WAKE_LP0) {
 		int wake_irq = gpio_to_irq(dc->out->hotplug_gpio);
 		int ret;
@@ -945,6 +949,9 @@ static void tegra_dc_hdmi_resume(struct tegra_dc *dc)
 
 	if (dc->out->flags & TEGRA_DC_OUT_HOTPLUG_WAKE_LP0)
 		disable_irq_wake(gpio_to_irq(dc->out->hotplug_gpio));
+
+	if (hdmi->info.hdmi2fpd_bridge_enable)
+		hdmi2fpd_resume(hdmi);
 
 	tegra_nvhdcp_resume(hdmi->nvhdcp);
 }
@@ -1252,6 +1259,8 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			goto err_gpio_free;
 		}
 	}
+	if (hdmi->info.hdmi2fpd_bridge_enable)
+		hdmi2fpd_init(hdmi);
 
 	/*Add sysfs node to query hdmi audio channels on startup*/
 	hdmi_audio = kobject_create_and_add("hdmi_audio_channels", kernel_kobj);
@@ -1308,6 +1317,9 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	if (tegra_dc_hotplug_supported(dc))
 		free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);
 	hdmi_state_machine_shutdown();
+
+	if (hdmi->info.hdmi2fpd_bridge_enable)
+		hdmi2fpd_destroy(hdmi);
 
 	i2c_release_client(hdmi->i2c_info.client);
 #ifdef CONFIG_SWITCH
@@ -2214,6 +2226,9 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	 * does a disable followed by an enable) when it is.
 	 * don't just assume a connection but check hpd.
 	 */
+	if (hdmi->info.hdmi2fpd_bridge_enable)
+		hdmi2fpd_enable(hdmi);
+
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, tegra_dc_hpd(dc));
 	tegra_dc_io_end(dc);
 }
@@ -2221,6 +2236,9 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
+
+	if (hdmi->info.hdmi2fpd_bridge_enable)
+		hdmi2fpd_disable(hdmi);
 
 	/*
 	 * set DC to STOP mode

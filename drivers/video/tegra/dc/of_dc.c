@@ -463,8 +463,7 @@ int parse_tmds_config(struct platform_device *ndev,
 	struct device_node *tmds_np = NULL;
 	struct device_node *entry = NULL;
 
-	if (default_out->type == TEGRA_DC_OUT_HDMI)
-		tmds_np = of_get_child_by_name(np, "tmds-config");
+	tmds_np = of_get_child_by_name(np, "tmds-config");
 
 	if (!tmds_np) {
 		pr_info("%s: No tmds-config node\n",
@@ -477,12 +476,6 @@ int parse_tmds_config(struct platform_device *ndev,
 			goto success_tmds_config;
 		}
 
-		default_out->hdmi_out = devm_kzalloc(&ndev->dev,
-			sizeof(struct tegra_hdmi_out), GFP_KERNEL);
-		if (!default_out->hdmi_out) {
-			dev_err(&ndev->dev, "not enough memory\n");
-			return -ENOMEM;
-		}
 		default_out->hdmi_out->n_tmds_config =
 			tmds_set_count;
 
@@ -1854,6 +1847,24 @@ struct tegra_dc_platform_data
 			pr_err("/hdmi/hdmi-display node is NOT valid\n");
 			goto fail_parse;
 		}
+		pdata->default_out->hdmi_out = devm_kzalloc(&ndev->dev,
+				sizeof(struct tegra_hdmi_out), GFP_KERNEL);
+		if (!pdata->default_out->hdmi_out) {
+			dev_err(&ndev->dev, "not enough memory\n");
+			goto fail_parse;
+		}
+		err = parse_tmds_config(ndev, np_target_disp,
+				pdata->default_out);
+		if (err)
+			goto fail_parse;
+		if (!of_property_read_u32(np_target_disp,
+					"nvidia,hdmi-fpd-bridge", &temp)) {
+			pdata->default_out->hdmi_out->
+				hdmi2fpd_bridge_enable = (bool)temp;
+			OF_DC_LOG("hdmi2fpd_bridge_enabled %d\n",
+					pdata->default_out->hdmi_out->
+					hdmi2fpd_bridge_enable);
+		}
 		/* fixed panel ops is dominant. If fixed panel ops
 		 * is not defined, we set default hdmi panel ops */
 		if (!pdata->default_out->enable &&
@@ -1906,10 +1917,6 @@ struct tegra_dc_platform_data
 			goto fail_parse;
 	}
 
-	err = parse_tmds_config(ndev, np_target_disp,
-			pdata->default_out);
-		if (err)
-			goto fail_parse;
 
 	timings_np = of_get_child_by_name(np_target_disp,
 		"display-timings");

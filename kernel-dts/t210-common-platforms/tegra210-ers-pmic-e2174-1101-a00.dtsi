@@ -318,6 +318,7 @@
 				ti,ir-comp-voltage-millivolt = <112>;
 				ti,ir-comp-resister-ohm = <70>;
 				ti,pre-charge-current-limit-milliamp = <768>;
+				ti,thermal-regulation-threshold-degc = <120>;
 			};
 
 			usb0_vbus: vbus {

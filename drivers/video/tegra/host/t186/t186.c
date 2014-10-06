@@ -25,6 +25,7 @@
 #include "t186.h"
 #include "host1x/host1x.h"
 #include "flcn/flcn.h"
+#include "nvdec/nvdec.h"
 #include "hardware_t186.h"
 
 #include "chip_support.h"
@@ -42,6 +43,63 @@ struct nvhost_device_data t18_host1x_info = {
 	.clocks		= {{"host1x", UINT_MAX}, {"actmon", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	.private_data	= &host1x04_info,
+};
+
+struct nvhost_device_data t18_msenc_info = {
+	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
+	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,
+#ifdef TEGRA_POWERGATE_NVENC
+	.powergate_ids		= { TEGRA_POWERGATE_NVENC, -1 },
+#else
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+#endif
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.clocks			= {{"msenc", UINT_MAX, 0},
+				   {"emc", UINT_MAX} },
+	.poweron_reset		= true,
+	.finalize_poweron	= nvhost_flcn_finalize_poweron,
+	.moduleid		= NVHOST_MODULE_MSENC,
+	.num_channels		= 1,
+	.firmware_name		= "nvhost_nvenc050.fw",
+};
+
+struct nvhost_device_data t18_nvdec_info = {
+	.version		= NVHOST_ENCODE_NVDEC_VER(2, 0),
+	.class			= NV_NVDEC_CLASS_ID,
+#ifdef TEGRA_POWERGATE_NVDEC
+	.powergate_ids		= { TEGRA_POWERGATE_NVDEC, -1 },
+#else
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+#endif
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.clocks			= {{"nvdec", UINT_MAX, 0},
+				   {"emc", UINT_MAX} },
+	.poweron_reset		= true,
+	.finalize_poweron	= nvhost_nvdec_finalize_poweron,
+	.moduleid		= NVHOST_MODULE_NVDEC,
+	.ctrl_ops		= &tegra_nvdec_ctrl_ops,
+	.num_channels		= 1,
+	.actmon_enabled		= true,
+};
+
+struct nvhost_device_data t18_nvjpg_info = {
+	.version		= NVHOST_ENCODE_FLCN_VER(1, 0),
+	.class			= NV_NVJPG_CLASS_ID,
+#ifdef TEGRA_POWERGATE_NVJPG
+	.powergate_ids		= { TEGRA_POWERGATE_NVJPG, -1 },
+#else
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+#endif
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.powergate_delay	= 500,
+	.can_powergate		= true,
+	.clocks			= { {"nvjpg", UINT_MAX, 0},
+				    {"emc", UINT_MAX} },
+	.poweron_reset		= true,
+	.finalize_poweron	= nvhost_flcn_finalize_poweron,
+	.moduleid		= NVHOST_MODULE_NVJPG,
+	.num_channels		= 1,
+	.firmware_name		= "nvhost_nvjpg010.fw",
 };
 
 struct nvhost_device_data t18_vic_info = {

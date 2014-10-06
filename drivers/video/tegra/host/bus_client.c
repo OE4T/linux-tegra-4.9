@@ -1077,6 +1077,8 @@ static struct {
 	{ NV_GRAPHICS_VIC_CLASS_ID, "vic"},
 	{ NV_TSEC_CLASS_ID, "tsec" },
 	{ NV_TSECB_CLASS_ID, "tsecb" },
+	{ NV_NVDEC_CLASS_ID, "nvdec" },
+	{ NV_NVJPG_CLASS_ID, "nvjpg" },
 };
 
 static struct {
@@ -1086,6 +1088,8 @@ static struct {
 	{ NVHOST_MODULE_VI, "vi"},
 	{ NVHOST_MODULE_ISP, "isp"},
 	{ NVHOST_MODULE_MPE, "mpe"},
+	{ NVHOST_MODULE_NVJPG, "nvjpg"},
+	{ NVHOST_MODULE_NVDEC, "nvdec"},
 	{ NVHOST_MODULE_MSENC, "msenc"},
 	{ NVHOST_MODULE_TSEC, "tsec"},
 	{ NVHOST_MODULE_GPU, "gpu"},

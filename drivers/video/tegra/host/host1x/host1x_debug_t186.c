@@ -108,40 +108,7 @@ static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 static void debug_show_channel_cdma(struct nvhost_master *m,
 	struct nvhost_channel *ch, struct output *o, int chid)
 {
-	struct nvhost_channel *channel = ch;
-	struct nvhost_cdma *cdma = &channel->cdma;
-	u32 dmaput, dmaget, dmactrl;
-	u32 cbread, cbclass, cboffset;
-
-	dmaput = readl(channel->aperture + host1x_channel_dmaput_r());
-	dmaget = readl(channel->aperture + host1x_channel_dmaget_r());
-	dmactrl = readl(channel->aperture + host1x_channel_dmactrl_r());
-	cbread = readl(channel->aperture + host1x_sync_cbread_r());
-	cbclass = readl(channel->aperture + host1x_sync_cbclass_r());
-	cboffset = readl(channel->aperture + host1x_sync_cboffset_r());
-
-#ifdef CONFIG_PM_RUNTIME
-	nvhost_debug_output(o, "%d-%s (%d): ", chid,
-			    channel->dev->name,
-			    atomic_read(&channel->dev->dev.power.usage_count));
-#else
-	nvhost_debug_output(o, "%d-%s: ", chid, channel->dev->name);
-#endif
-
-	if (host1x_channel_dmactrl_dmastop_v(dmactrl)
-		|| !channel->cdma.push_buffer.mapped) {
-		nvhost_debug_output(o, "inactive\n\n");
-		return;
-	}
-
-	nvhost_debug_output(o,
-			"active class %02x, offset %04x, val %08x\n",
-			cbclass,
-			cboffset,
-			cbread);
-
-	nvhost_debug_output(o, "DMAPUT %08x, DMAGET %08x, DMACTL %08x\n",
-		dmaput, dmaget, dmactrl);
+	struct nvhost_cdma *cdma = &ch->cdma;
 
 	show_channel_gathers(o, cdma);
 	nvhost_debug_output(o, "\n");
@@ -150,56 +117,6 @@ static void debug_show_channel_cdma(struct nvhost_master *m,
 static void debug_show_channel_fifo(struct nvhost_master *m,
 	struct nvhost_channel *ch, struct output *o, int chid)
 {
-	u32 val, rd_ptr, wr_ptr, start, end, max = 64;
-	struct nvhost_channel *channel = ch;
-
-	nvhost_debug_output(o, "%d: fifo:\n", chid);
-
-	writel(host1x_sync_cfpeek_ctrl_cfpeek_ena_f(1)
-			| host1x_sync_cfpeek_ctrl_cfpeek_channr_f(chid),
-		m->sync_aperture + host1x_sync_cfpeek_ctrl_r());
-	wmb();
-
-	val = readl(channel->aperture + host1x_channel_fifostat_r());
-	if (host1x_channel_fifostat_cfempty_v(val)) {
-		writel(0x0, m->sync_aperture + host1x_sync_cfpeek_ctrl_r());
-		nvhost_debug_output(o, "FIFOSTAT %08x\n[empty]\n",
-				val);
-		return;
-	}
-
-	val = readl(m->sync_aperture + host1x_sync_cfpeek_ptrs_r());
-	rd_ptr = host1x_sync_cfpeek_ptrs_cf_rd_ptr_v(val);
-	wr_ptr = host1x_sync_cfpeek_ptrs_cf_wr_ptr_v(val);
-
-	val = readl(m->sync_aperture + host1x_sync_cf0_setup_r() + 4 * chid);
-	start = host1x_sync_cf0_setup_cf0_base_v(val);
-	end = host1x_sync_cf0_setup_cf0_limit_v(val);
-
-	nvhost_debug_output(o, "FIFOSTAT %08x, %03x - %03x, RD %03x, WR %03x\n",
-			val, start, end, rd_ptr, wr_ptr);
-	do {
-		writel(host1x_sync_cfpeek_ctrl_cfpeek_ena_f(1)
-				| host1x_sync_cfpeek_ctrl_cfpeek_channr_f(chid)
-				| host1x_sync_cfpeek_ctrl_cfpeek_addr_f(rd_ptr),
-			m->sync_aperture + host1x_sync_cfpeek_ctrl_r());
-		wmb();
-		val = readl(m->sync_aperture + host1x_sync_cfpeek_read_r());
-		rmb();
-
-		nvhost_debug_output(o, "%08x ", val);
-
-		if (rd_ptr == end)
-			rd_ptr = start;
-		else
-			rd_ptr++;
-
-		max--;
-	} while (max && rd_ptr != wr_ptr);
-
-	nvhost_debug_output(o, "\n");
-
-	writel(0x0, m->sync_aperture + host1x_sync_cfpeek_ctrl_r());
 }
 
 static void debug_show_mlocks(struct nvhost_master *m, struct output *o)

@@ -473,6 +473,14 @@ static struct of_device_id tegra_flcn_of_match[] = {
 	{ .compatible = "nvidia,tegra186-vic",
 		.data = (struct nvhost_device_data *)&t18_vic_info },
 #endif
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	{ .compatible = "nvidia,tegra186-nvjpg",
+		.data = (struct nvhost_device_data *)&t18_nvjpg_info },
+#endif
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	{ .compatible = "nvidia,tegra186-nvenc",
+		.data = (struct nvhost_device_data *)&t18_msenc_info },
+#endif
 	{ },
 };
 

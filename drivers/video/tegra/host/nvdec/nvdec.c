@@ -46,6 +46,10 @@
 #include "t210/t210.h"
 #include "iomap.h"
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#include "t186/t186.h"
+#endif
+
 #define NVDEC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define NVDEC_IDLE_CHECK_PERIOD		10	/* 10 usec */
 
@@ -601,6 +605,10 @@ static struct of_device_id tegra_nvdec_of_match[] = {
 #ifdef TEGRA_21X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra210-nvdec",
 		.data = (struct nvhost_device_data *)&t21_nvdec_info },
+#endif
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	{ .compatible = "nvidia,tegra186-nvdec",
+		.data = (struct nvhost_device_data *)&t18_nvdec_info },
 #endif
 	{ },
 };

@@ -2345,7 +2345,7 @@ int gk20a_init_pmu_support(struct gk20a *g)
 	if (err)
 		return err;
 
-	if (support_gk20a_pmu()) {
+	if (support_gk20a_pmu(g->dev)) {
 		err = gk20a_init_pmu_setup_sw(g);
 		if (err)
 			return err;
@@ -3665,7 +3665,7 @@ int gk20a_pmu_destroy(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	if (!support_gk20a_pmu())
+	if (!support_gk20a_pmu(g->dev))
 		return 0;
 
 	/* make sure the pending operations are finished before we continue */

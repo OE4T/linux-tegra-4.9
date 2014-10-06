@@ -2110,7 +2110,7 @@ static int gr_gk20a_wait_ctxsw_ready(struct gk20a *g)
 		return ret;
 	}
 
-	if (support_gk20a_pmu())
+	if (support_gk20a_pmu(g->dev))
 		gk20a_writel(g, gr_fecs_current_ctx_r(),
 			gr_fecs_current_ctx_valid_false_f());
 

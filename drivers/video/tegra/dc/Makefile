@@ -1,1 +1,1 @@
-obj-y += nvdisp/
+obj-$(CONFIG_TEGRA_NVDISPLAY) += nvdisp/

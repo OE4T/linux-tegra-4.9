@@ -45,7 +45,7 @@ struct gk20a_semaphore_pool *gk20a_semaphore_pool_alloc(struct device *d,
 		goto clean_up;
 
 	if (gk20a_allocator_init(&p->alloc, unique_name, 0,
-			     p->size, SEMAPHORE_SIZE))
+			     p->size))
 		goto clean_up;
 
 	gk20a_dbg_info("cpuva=%p iova=%llx phys=%llx", p->cpu_va,
@@ -163,7 +163,8 @@ struct gk20a_semaphore *gk20a_semaphore_alloc(struct gk20a_semaphore_pool *pool)
 	if (!s)
 		return NULL;
 
-	if (pool->alloc.alloc(&pool->alloc, &s->offset, SEMAPHORE_SIZE)) {
+	if (pool->alloc.alloc(&pool->alloc, &s->offset, SEMAPHORE_SIZE,
+				SEMAPHORE_SIZE)) {
 		gk20a_err(pool->dev, "failed to allocate semaphore");
 		kfree(s);
 		return NULL;
@@ -185,7 +186,8 @@ static void gk20a_semaphore_free(struct kref *ref)
 	struct gk20a_semaphore *s =
 		container_of(ref, struct gk20a_semaphore, ref);
 
-	s->pool->alloc.free(&s->pool->alloc, s->offset, SEMAPHORE_SIZE);
+	s->pool->alloc.free(&s->pool->alloc, s->offset, SEMAPHORE_SIZE,
+			SEMAPHORE_SIZE);
 	gk20a_semaphore_pool_put(s->pool);
 	kfree(s);
 }

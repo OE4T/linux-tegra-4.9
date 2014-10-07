@@ -2603,7 +2603,8 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 
 	if (!pmu->sample_buffer)
 		err = pmu->dmem.alloc(&pmu->dmem,
-				      &pmu->sample_buffer, 2 * sizeof(u16));
+				      &pmu->sample_buffer, 2 * sizeof(u16),
+				      PMU_DMEM_ALLOC_ALIGNMENT);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to allocate perfmon sample buffer");
@@ -2707,8 +2708,7 @@ static int pmu_process_init_msg(struct pmu_gk20a *pmu,
 	if (!pmu->dmem.alloc)
 		gk20a_allocator_init(&pmu->dmem, "gk20a_pmu_dmem",
 				pv->get_pmu_init_msg_pmu_sw_mg_off(init),
-				pv->get_pmu_init_msg_pmu_sw_mg_size(init),
-				PMU_DMEM_ALLOC_ALIGNMENT);
+				pv->get_pmu_init_msg_pmu_sw_mg_size(init));
 
 	pmu->pmu_ready = true;
 	pmu->pmu_state = PMU_STATE_INIT_RECEIVED;
@@ -2845,17 +2845,19 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 	if (pv->pmu_allocation_get_dmem_size(pmu,
 			pv->get_pmu_seq_in_a_ptr(seq)) != 0)
 		pmu->dmem.free(&pmu->dmem,
-		pv->pmu_allocation_get_dmem_offset(pmu,
-		pv->get_pmu_seq_in_a_ptr(seq)),
-		pv->pmu_allocation_get_dmem_size(pmu,
-		pv->get_pmu_seq_in_a_ptr(seq)));
+			pv->pmu_allocation_get_dmem_offset(pmu,
+			pv->get_pmu_seq_in_a_ptr(seq)),
+			pv->pmu_allocation_get_dmem_size(pmu,
+				pv->get_pmu_seq_in_a_ptr(seq)),
+			PMU_DMEM_ALLOC_ALIGNMENT);
 	if (pv->pmu_allocation_get_dmem_size(pmu,
 			pv->get_pmu_seq_out_a_ptr(seq)) != 0)
 		pmu->dmem.free(&pmu->dmem,
-		pv->pmu_allocation_get_dmem_offset(pmu,
-		pv->get_pmu_seq_out_a_ptr(seq)),
-		pv->pmu_allocation_get_dmem_size(pmu,
-		pv->get_pmu_seq_out_a_ptr(seq)));
+			pv->pmu_allocation_get_dmem_offset(pmu,
+			pv->get_pmu_seq_out_a_ptr(seq)),
+			pv->pmu_allocation_get_dmem_size(pmu,
+				pv->get_pmu_seq_out_a_ptr(seq)),
+			PMU_DMEM_ALLOC_ALIGNMENT);
 
 	if (seq->callback)
 		seq->callback(g, msg, seq->cb_params, seq->desc, ret);
@@ -3493,8 +3495,9 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 			(u16)max(payload->in.size, payload->out.size));
 
 		err = pmu->dmem.alloc(&pmu->dmem,
-		pv->pmu_allocation_get_dmem_offset_addr(pmu, in),
-		pv->pmu_allocation_get_dmem_size(pmu, in));
+			pv->pmu_allocation_get_dmem_offset_addr(pmu, in),
+			pv->pmu_allocation_get_dmem_size(pmu, in),
+			PMU_DMEM_ALLOC_ALIGNMENT);
 		if (err)
 			goto clean_up;
 
@@ -3517,8 +3520,9 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 
 		if (payload->out.buf != payload->in.buf) {
 			err = pmu->dmem.alloc(&pmu->dmem,
-			pv->pmu_allocation_get_dmem_offset_addr(pmu, out),
-			pv->pmu_allocation_get_dmem_size(pmu, out));
+				pv->pmu_allocation_get_dmem_offset_addr(pmu, out),
+				pv->pmu_allocation_get_dmem_size(pmu, out),
+				PMU_DMEM_ALLOC_ALIGNMENT);
 			if (err)
 				goto clean_up;
 		} else {
@@ -3548,12 +3552,14 @@ clean_up:
 	gk20a_dbg_fn("fail");
 	if (in)
 		pmu->dmem.free(&pmu->dmem,
-		pv->pmu_allocation_get_dmem_offset(pmu, in),
-		pv->pmu_allocation_get_dmem_size(pmu, in));
+			pv->pmu_allocation_get_dmem_offset(pmu, in),
+			pv->pmu_allocation_get_dmem_size(pmu, in),
+			PMU_DMEM_ALLOC_ALIGNMENT);
 	if (out)
 		pmu->dmem.free(&pmu->dmem,
-		pv->pmu_allocation_get_dmem_offset(pmu, out),
-		pv->pmu_allocation_get_dmem_size(pmu, out));
+			pv->pmu_allocation_get_dmem_offset(pmu, out),
+			pv->pmu_allocation_get_dmem_size(pmu, out),
+			PMU_DMEM_ALLOC_ALIGNMENT);
 
 	pmu_seq_release(pmu, seq);
 	return err;

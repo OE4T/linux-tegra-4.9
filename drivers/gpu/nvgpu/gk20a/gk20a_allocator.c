@@ -20,7 +20,7 @@
 
 /* init allocator struct */
 int gk20a_allocator_init(struct gk20a_allocator *allocator,
-		const char *name, u32 start, u32 len, u32 align)
+		const char *name, u32 start, u32 len)
 {
 	memset(allocator, 0, sizeof(struct gk20a_allocator));
 
@@ -28,16 +28,14 @@ int gk20a_allocator_init(struct gk20a_allocator *allocator,
 
 	allocator->base = start;
 	allocator->limit = start + len - 1;
-	allocator->align = align;
 
 	allocator->bitmap = kzalloc(BITS_TO_LONGS(len) * sizeof(long),
 			GFP_KERNEL);
 	if (!allocator->bitmap)
 		return -ENOMEM;
 
-	allocator_dbg(allocator, "%s : base %d, limit %d, align %d",
-		allocator->name, allocator->base,
-		allocator->limit, allocator->align);
+	allocator_dbg(allocator, "%s : base %d, limit %d",
+		allocator->name, allocator->base);
 
 	init_rwsem(&allocator->rw_sema);
 
@@ -65,7 +63,7 @@ void gk20a_allocator_destroy(struct gk20a_allocator *allocator)
  * contiguous address.
 */
 int gk20a_allocator_block_alloc(struct gk20a_allocator *allocator,
-		u32 *addr, u32 len)
+		u32 *addr, u32 len, u32 align)
 {
 	unsigned long _addr;
 
@@ -73,11 +71,11 @@ int gk20a_allocator_block_alloc(struct gk20a_allocator *allocator,
 
 	if ((*addr != 0 && *addr < allocator->base) || /* check addr range */
 	    *addr + len > allocator->limit || /* check addr range */
-	    *addr & (allocator->align - 1) || /* check addr alignment */
+	    *addr & (align - 1) || /* check addr alignment */
 	     len == 0)                        /* check len */
 		return -EINVAL;
 
-	len = ALIGN(len, allocator->align);
+	len = ALIGN(len, align);
 	if (!len)
 		return -ENOMEM;
 
@@ -87,7 +85,7 @@ int gk20a_allocator_block_alloc(struct gk20a_allocator *allocator,
 			allocator->limit - allocator->base + 1,
 			*addr ? (*addr - allocator->base) : 0,
 			len,
-			allocator->align - 1);
+			align - 1);
 	if ((_addr > allocator->limit - allocator->base + 1) ||
 	    (*addr && *addr != (_addr + allocator->base))) {
 		up_write(&allocator->rw_sema);
@@ -106,16 +104,16 @@ int gk20a_allocator_block_alloc(struct gk20a_allocator *allocator,
 
 /* free all blocks between start and end */
 int gk20a_allocator_block_free(struct gk20a_allocator *allocator,
-		u32 addr, u32 len)
+		u32 addr, u32 len, u32 align)
 {
 	allocator_dbg(allocator, "[in] addr %d, len %d", addr, len);
 
 	if (addr + len > allocator->limit || /* check addr range */
 	    addr < allocator->base ||
-	    addr & (allocator->align - 1))   /* check addr alignment */
+	    addr & (align - 1))   /* check addr alignment */
 		return -EINVAL;
 
-	len = ALIGN(len, allocator->align);
+	len = ALIGN(len, align);
 	if (!len)
 		return -EINVAL;
 

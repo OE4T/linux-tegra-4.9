@@ -43,8 +43,7 @@ static int vgpu_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	gk20a_allocator_init(&gr->comp_tags, "comptag",
 			      1, /* start */
-			      max_comptag_lines - 1, /* length*/
-			      1); /* align */
+			      max_comptag_lines - 1); /* length*/
 	return 0;
 }
 

@@ -31,7 +31,6 @@ struct gk20a_allocator {
 
 	u32 base;			/* min value of this linear space */
 	u32 limit;			/* max value = limit - 1 */
-	u32 align;			/* alignment size, power of 2 */
 
 	unsigned long *bitmap;		/* bitmap */
 
@@ -58,21 +57,21 @@ struct gk20a_allocator {
 	} constraint;
 
 	int (*alloc)(struct gk20a_allocator *allocator,
-		u32 *addr, u32 len);
+		u32 *addr, u32 len, u32 align);
 	int (*free)(struct gk20a_allocator *allocator,
-		u32 addr, u32 len);
+		u32 addr, u32 len, u32 align);
 
 };
 
 int gk20a_allocator_init(struct gk20a_allocator *allocator,
-			const char *name, u32 base, u32 size, u32 align);
+			const char *name, u32 base, u32 size);
 void gk20a_allocator_destroy(struct gk20a_allocator *allocator);
 
 int gk20a_allocator_block_alloc(struct gk20a_allocator *allocator,
-			u32 *addr, u32 len);
+			u32 *addr, u32 len, u32 align);
 
 int gk20a_allocator_block_free(struct gk20a_allocator *allocator,
-			u32 addr, u32 len);
+			u32 addr, u32 len, u32 align);
 
 #if defined(ALLOCATOR_DEBUG)
 

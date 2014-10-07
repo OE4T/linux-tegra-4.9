@@ -297,8 +297,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 
 	gk20a_allocator_init(&vm->vma[gmmu_page_size_small], name,
 	      low_hole_pages,             /* start */
-	      num_pages - low_hole_pages, /* length */
-	      1);                         /* align */
+	      num_pages - low_hole_pages); /* length */
 
 	snprintf(name, sizeof(name), "gk20a_as_%d-%dKB", as_share->id,
 		 gmmu_page_sizes[gmmu_page_size_big]>>10);
@@ -307,8 +306,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 		    ilog2(gmmu_page_sizes[gmmu_page_size_big]));
 	gk20a_allocator_init(&vm->vma[gmmu_page_size_big], name,
 			      num_pages, /* start */
-			      num_pages, /* length */
-			      1); /* align */
+			      num_pages); /* length */
 
 	vm->mapped_buffers = RB_ROOT;
 

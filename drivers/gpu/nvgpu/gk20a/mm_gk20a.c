@@ -129,7 +129,7 @@ static void gk20a_mm_delete_priv(void *_priv)
 		BUG_ON(!priv->comptag_allocator);
 		priv->comptag_allocator->free(priv->comptag_allocator,
 					      priv->comptags.offset,
-					      priv->comptags.lines);
+					      priv->comptags.lines, 1);
 	}
 
 	/* Free buffer states */
@@ -229,7 +229,7 @@ static int gk20a_alloc_comptags(struct device *dev,
 
 	/* store the allocator so we can use it when we free the ctags */
 	priv->comptag_allocator = allocator;
-	err = allocator->alloc(allocator, &offset, lines);
+	err = allocator->alloc(allocator, &offset, lines, 1);
 	if (!err) {
 		priv->comptags.lines = lines;
 		priv->comptags.offset = offset;
@@ -837,7 +837,7 @@ u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
 	/* The vma allocator represents page accounting. */
 	num_pages = size >> ilog2(vm->gmmu_page_sizes[gmmu_pgsz_idx]);
 
-	err = vma->alloc(vma, &start_page_nr, num_pages);
+	err = vma->alloc(vma, &start_page_nr, num_pages, 1);
 
 	if (err) {
 		gk20a_err(dev_from_vm(vm),
@@ -868,7 +868,7 @@ int gk20a_vm_free_va(struct vm_gk20a *vm,
 	start_page_nr = (u32)(offset >> page_shift);
 	num_pages = (u32)((size + page_size - 1) >> page_shift);
 
-	err = vma->free(vma, start_page_nr, num_pages);
+	err = vma->free(vma, start_page_nr, num_pages, 1);
 	if (err) {
 		gk20a_err(dev_from_vm(vm),
 			   "not found: offset=0x%llx, sz=0x%llx",
@@ -2290,9 +2290,8 @@ static int gk20a_init_vm(struct mm_gk20a *mm,
 		 vm->gmmu_page_sizes[gmmu_page_size_small]>>10);
 	err = gk20a_allocator_init(&vm->vma[gmmu_page_size_small],
 			     alloc_name,
-			     low_hole_pages,		/*start*/
-			     num_pages - low_hole_pages,/* length*/
-			     1);			/* align */
+			     low_hole_pages,		 /*start*/
+			     num_pages - low_hole_pages);/* length*/
 	if (err)
 		goto clean_up_map_pde;
 
@@ -2305,8 +2304,7 @@ static int gk20a_init_vm(struct mm_gk20a *mm,
 		err = gk20a_allocator_init(&vm->vma[gmmu_page_size_big],
 				      alloc_name,
 				      num_pages,		/* start */
-				      num_pages,		/* length */
-				      1);			/* align */
+				      num_pages);		/* length */
 		if (err)
 			goto clean_up_small_allocator;
 	}
@@ -2435,7 +2433,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 				ilog2(vm->gmmu_page_sizes[pgsz_idx]));
 
 	vma = &vm->vma[pgsz_idx];
-	err = vma->alloc(vma, &start_page_nr, args->pages);
+	err = vma->alloc(vma, &start_page_nr, args->pages, 1);
 	if (err) {
 		kfree(va_node);
 		goto clean_up;
@@ -2458,7 +2456,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 					 pgsz_idx, true);
 		if (err) {
 			mutex_unlock(&vm->update_gmmu_lock);
-			vma->free(vma, start_page_nr, args->pages);
+			vma->free(vma, start_page_nr, args->pages, 1);
 			kfree(va_node);
 			goto clean_up;
 		}
@@ -2506,7 +2504,7 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 			ilog2(vm->gmmu_page_sizes[pgsz_idx]));
 
 	vma = &vm->vma[pgsz_idx];
-	err = vma->free(vma, start_page_nr, args->pages);
+	err = vma->free(vma, start_page_nr, args->pages, 1);
 
 	if (err)
 		goto clean_up;

@@ -157,18 +157,13 @@
 				in-ldo7-8-supply = <&max77620_sd2>;
 
 				max77620_sd0: sd0 {
-					regulator-name = "vdd-core";
+					regulator-name = "vdd_core";
 					regulator-min-microvolt = <600000>;
 					regulator-max-microvolt = <1400000>;
 					regulator-boot-on;
 					regulator-always-on;
 					maxim,fps-source = <FPS_SRC_1>;
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
-					consumers {
-						c1 {
-							regulator-consumer-supply = "vdd_core";
-						};
-					};
 				};
 
 				max77620_sd1: sd1 {
@@ -195,18 +190,6 @@
 					maxim,fps-source = <FPS_SRC_0>;
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
 					consumers {
-						c1 {
-							regulator-consumer-supply = "avdd_hdmi_pll";
-							regulator-consumer-device = "tegradc.1";
-						};
-						c2 {
-							regulator-consumer-supply = "vddio_cam";
-							regulator-consumer-device = "tegra_camera";
-						};
-						c3 {
-							regulator-consumer-supply = "vddio_cam";
-							regulator-consumer-device = "vi";
-						};
 						c7 {
 							regulator-consumer-supply = "avdd_pll_utmip";
 							regulator-consumer-device = "tegra-ehci.0";
@@ -218,20 +201,6 @@
 						c9 {
 							regulator-consumer-supply = "avdd_pll_utmip";
 							regulator-consumer-device = "tegra-ehci.2";
-						};
-						c10 {
-							regulator-consumer-supply = "avdd_pll_utmip";
-							regulator-consumer-device = "tegra-xudc";
-						};
-						c11 {
-							regulator-consumer-supply = "vddio_audio";
-						};
-						c13 {
-							regulator-consumer-supply = "vddio_uart";
-						};
-						c17 {
-							regulator-consumer-supply = "dvdd_lcd";
-							regulator-consumer-device = "tegradc.0";
 						};
 						c18 {
 							regulator-consumer-supply = "vdd";
@@ -260,12 +229,6 @@
 							regulator-consumer-supply = "vddio_hsic";
 							regulator-consumer-device = "tegra-ehci.2";
 						};
-						c2 {
-							regulator-consumer-supply = "avdd_hsic_com";
-						};
-						c3 {
-							regulator-consumer-supply = "avdd_hsic_mdm";
-						};
 					};
 				};
 
@@ -274,12 +237,6 @@
 					regulator-min-microvolt = <1050000>;
 					regulator-max-microvolt = <1050000>;
 					maxim,fps-source = <FPS_SRC_NONE>;
-					consumers {
-						c0 {
-							regulator-consumer-supply = "avddio_usb";
-							regulator-consumer-device = "tegra-xudc";
-						};
-					};
 				};
 
 				max77620_ldo2: ldo2 {
@@ -303,11 +260,6 @@
 					regulator-always-on;
 					regulator-boot-on;
 					maxim,fps-source = <FPS_SRC_0>;
-					consumers {
-						c0 {
-							regulator-consumer-supply = "vdd_rtc";
-						};
-					};
 				};
 
 				max77620_ldo5: ldo5 {
@@ -340,12 +292,6 @@
 					regulator-min-microvolt = <1050000>;
 					regulator-max-microvolt = <1050000>;
 					maxim,fps-source = <FPS_SRC_NONE>;
-					consumers {
-						c0 {
-							regulator-consumer-supply = "avdd_hdmi";
-							regulator-consumer-device = "tegradc.1";
-						};
-					};
 				};
 			};
 		};

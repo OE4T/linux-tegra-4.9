@@ -56,10 +56,6 @@
 					regulator-consumer-supply = "avdd_usb";
 					regulator-consumer-device = "tegra-ehci.2";
 				};
-				c4 {
-					regulator-consumer-supply = "hvdd_usb";
-					regulator-consumer-device = "tegra-xudc";
-				};
 				c5 {
 					regulator-consumer-supply = "vdd";
 					regulator-consumer-device = "1-004d";
@@ -77,24 +73,6 @@
 			gpio = <&max77620 7 0>;
 			enable-active-high;
 			vin-supply = <&max77620_ldo0>;
-			consumers {
-				c0 {
-					regulator-consumer-supply = "avdd_lcd";
-					regulator-consumer-device = "tegradc.0";
-				};
-				c1 {
-					regulator-consumer-supply = "avdd_dsi_csi";
-					regulator-consumer-device = "tegradc.0";
-				};
-				c2 {
-					regulator-consumer-supply = "avdd_dsi_csi";
-					regulator-consumer-device = "tegradc.1";
-				};
-				c4 {
-					regulator-consumer-supply = "avdd_dsi_csi";
-					regulator-consumer-device = "vi.1";
-				};
-			};
 		};
 
 		lcd_bl_en: regulator@3 {
@@ -105,11 +83,6 @@
 			regulator-max-microvolt = <1800000>;
 			gpio = <&gpio TEGRA_GPIO(V, 1) 0>;
 			enable-active-high;
-			consumers {
-				c0 {
-					regulator-consumer-supply = "vdd_lcd_bl_en";
-				};
-			};
 		};
 
 		en_vdd_sd: regulator@4 {
@@ -153,12 +126,6 @@
 			gpio = <&gpio TEGRA_GPIO(CC, 7) 0>;
 			enable-active-high;
 			vin-supply = <&vdd_sys_boost>;
-			consumers {
-				c0 {
-					regulator-consumer-supply = "vdd_hdmi_5v0";
-					regulator-consumer-device = "tegradc.1";
-				};
-			};
 		};
 
 		en_vdd_cpu_fixed: regulator@8 {
@@ -167,11 +134,6 @@
 			regulator-name = "vdd-cpu-fixed";
 			regulator-min-microvolt = <1000000>;
 			regulator-max-microvolt = <1000000>;
-			consumers {
-				c0 {
-					regulator-consumer-supply = "vdd_cpu_fixed";
-				};
-			};
 		};
 
 		vdd_aux_3v3: regulator@9 {

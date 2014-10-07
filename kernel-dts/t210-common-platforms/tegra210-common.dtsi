@@ -1,0 +1,286 @@
+/*
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+#include "tegra210.dtsi"
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/gpio/tegra-gpio.h>
+#include "tegra210-platforms/tegra210-ers-touch-e1937-1000-a00.dtsi"
+
+/ {
+
+	serial@70006000 {
+		compatible = "nvidia,tegra210-uart", "nvidia,tegra114-hsuart";
+		console-port;
+		sqa-automation-port;
+		status = "okay";
+	};
+
+	serial@70006040 {
+		compatible = "nvidia,tegra210-uart";
+		status = "okay";
+	};
+
+	serial@70006200 {
+		compatible = "nvidia,tegra114-hsuart";
+		status = "okay";
+	};
+
+	serial@70006300 {
+		compatible = "nvidia,tegra114-hsuart";
+		status = "okay";
+	};
+
+	id_gpio_extcon: extcon@0 {
+		compatible = "extcon-gpio";
+		reg = <0x0 0x0>;
+		extcon-gpio,name = "ID";
+		gpio = <&max77620 0 0>;
+		extcon-gpio,connection-state-low;
+		extcon-gpio,cable-name = "USB-Host";
+		#extcon-cells = <1>;
+	};
+
+	modem {
+		compatible = "nvidia,icera-i500";
+		nvidia,boot-gpio = <&gpio TEGRA_GPIO(K, 6) GPIO_ACTIVE_LOW>;
+		nvidia,mdm-power-report-gpio = <&gpio TEGRA_GPIO(L, 1) GPIO_ACTIVE_LOW>;
+		nvidia,reset-gpio = <&gpio TEGRA_GPIO(L, 0) GPIO_ACTIVE_LOW>;
+		nvidia,mdm-en-gpio = <&gpio TEGRA_GPIO(K, 7) GPIO_ACTIVE_HIGH>;
+		status = "disabled";
+	};
+
+	ahub {
+		status = "okay";
+
+		admaif@0x702d0000 {
+			status = "okay";
+		};
+
+		ope@702d8000 {
+			status = "okay";
+
+			peq@702d8100 {
+				status = "okay";
+			};
+
+			mbdrc@702d8200 {
+				status = "okay";
+			};
+		};
+
+		ope@702d8400 {
+			status = "okay";
+
+			peq@702d8500 {
+				status = "okay";
+			};
+
+			mbdrc@702d8600 {
+				status = "okay";
+			};
+		};
+
+		sfc@702d2000 {
+			status = "okay";
+		};
+
+		sfc@702d2200 {
+			status = "okay";
+		};
+
+		sfc@702d2400 {
+			status = "okay";
+		};
+
+		sfc@702d2600 {
+			status = "okay";
+		};
+
+		spkprot@702d8c00 {
+			status = "okay";
+		};
+
+		mvc@702da000 {
+			status = "okay";
+		};
+
+		mvc@0x702da200 {
+			status = "okay";
+		};
+
+		amixer@702dbb00 {
+			status = "okay";
+		};
+
+		i2s@702d1000 {
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			status = "okay";
+		};
+
+		i2s@702d1100 {
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			status = "okay";
+		};
+
+		i2s@702d1200 {
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			status = "okay";
+		};
+
+		i2s@702d1300 {
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			status = "okay";
+		};
+
+		i2s@702d1400 {
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			status = "okay";
+		};
+
+		dmic@702d4000 {
+			status = "okay";
+		};
+
+		dmic@702d4100 {
+			status = "okay";
+		};
+
+		dmic@702d4200 {
+			status = "okay";
+		};
+
+		amx@702d3000 {
+			status = "okay";
+		};
+
+		amx@702d3100 {
+			status = "okay";
+		};
+
+		adx@702d3800 {
+			status = "okay";
+		};
+
+		adx@702d3900 {
+			status = "okay";
+		};
+
+		afc@702d7000 {
+			status = "okay";
+		};
+
+		afc@702d7100 {
+			status = "okay";
+		};
+
+		afc@702d7200 {
+			status = "okay";
+		};
+
+		afc@702d7300 {
+			status = "okay";
+		};
+
+		afc@702d7400 {
+			status = "okay";
+		};
+
+		afc@702d7500 {
+			status = "okay";
+		};
+
+		mvc@702da000 {
+			status = "okay";
+		};
+
+		mvc@702da200 {
+			status = "okay";
+		};
+
+		spdif@702d6000 {
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			status = "okay";
+		};
+	};
+
+
+	spdif_dit0: spdif-dit.0@0 {
+		compatible = "linux,spdif-dit";
+		reg = <0x0 0x0 0x0 0x0>;
+	};
+
+	spdif_dit1: spdif-dit.1@1 {
+		compatible = "linux,spdif-dit";
+		reg = <0x0 0x1 0x0 0x0>;
+	};
+
+	spdif_dit2: spdif-dit.2@2 {
+		compatible = "linux,spdif-dit";
+		reg = <0x0 0x2 0x0 0x0>;
+	};
+
+	spdif_dit3: spdif-dit.3@3 {
+		compatible = "linux,spdif-dit";
+		reg = <0x0 0x03 0x0 0x0>;
+	};
+
+	adsp_audio {
+		status = "okay";
+	};
+
+        psy_extcon {
+                compatible = "power-supply-extcon";
+                extcon-cables = <&udc 1 &udc 2 &udc 3
+                                &udc 4 &udc 5 &udc 6
+                                &udc 7 &udc 8 &udc 9
+                                &udc 10 &udc 11 &otg 0>;
+                extcon-cable-names = "usb-charger", "ta-charger", "maxim-charger",
+                                "qc2-charger", "downstream-charger","fast-charger",
+                                "slow-charger", "apple-500ma", "apple-1a",
+                                "apple-2a", "ACA NV-Charger", "y-cable";
+				status = "disabled";
+        };
+
+	ehci@7d004000 {
+		avdd_usb-supply = <&vdd_3v3>;
+		avdd_pll_utmip-supply = <&max77620_sd3>;
+		vddio_hsic-supply = <&max77620_ldo0>;
+		status = "disabled";
+	};
+
+	watchdog@60005100 {
+		dt-override-status-odm-data = <0x00010000 0x00010000>;
+	};
+
+	tegra-supply-tests {
+		compatible = "nvidia,tegra-supply-tests";
+		vdd-core-supply=<&max77620_sd0>;
+	};
+};

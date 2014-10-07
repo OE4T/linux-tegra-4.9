@@ -137,8 +137,10 @@ validate_mmap_addr(struct quadd_extabs_mmap *mmap,
 static inline long
 read_mmap_data(struct quadd_extabs_mmap *mmap, const u32 *addr, u32 *retval)
 {
-	if (!validate_mmap_addr(mmap, (unsigned long)addr, sizeof(u32)))
+	if (!validate_mmap_addr(mmap, (unsigned long)addr, sizeof(u32))) {
+		*retval = 0;
 		return -QUADD_URC_EACCESS;
+	}
 
 	*retval = *addr;
 	return 0;

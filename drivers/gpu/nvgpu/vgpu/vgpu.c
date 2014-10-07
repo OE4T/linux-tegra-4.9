@@ -209,7 +209,7 @@ int vgpu_pm_prepare_poweroff(struct device *dev)
 
 static void vgpu_detect_chip(struct gk20a *g)
 {
-	struct nvhost_gpu_characteristics *gpu = &g->gpu_characteristics;
+	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
 	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 
 	u32 mc_boot_0_value;
@@ -222,7 +222,7 @@ static void vgpu_detect_chip(struct gk20a *g)
 	}
 
 	gpu->arch = mc_boot_0_architecture_v(mc_boot_0_value) <<
-		NVHOST_GPU_ARCHITECTURE_SHIFT;
+		NVGPU_GPU_ARCHITECTURE_SHIFT;
 	gpu->impl = mc_boot_0_implementation_v(mc_boot_0_value);
 	gpu->rev =
 		(mc_boot_0_major_revision_v(mc_boot_0_value) << 4) |

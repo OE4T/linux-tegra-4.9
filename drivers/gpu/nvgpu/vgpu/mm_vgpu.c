@@ -15,6 +15,7 @@
 
 #include <linux/dma-mapping.h>
 #include "vgpu/vgpu.h"
+#include "gk20a/semaphore_gk20a.h"
 
 /* note: keep the page sizes sorted lowest to highest here */
 static const u32 gmmu_page_sizes[gmmu_nr_page_sizes] = { SZ_4K, SZ_128K };
@@ -107,7 +108,7 @@ static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 	p->iova = mapping ? 1 : 0;
 	p->kind = kind_v;
 	p->cacheable =
-		(flags & NVHOST_MAP_BUFFER_FLAGS_CACHEABLE_TRUE) ? 1 : 0;
+		(flags & NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE) ? 1 : 0;
 	p->prot = prot;
 	p->ctag_offset = ctag_offset;
 	p->clear_ctags = clear_ctags;

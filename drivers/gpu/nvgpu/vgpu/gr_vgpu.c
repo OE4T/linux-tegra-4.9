@@ -379,7 +379,7 @@ static void vgpu_gr_free_channel_ctx(struct channel_gk20a *c)
 }
 
 static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
-				struct nvhost_alloc_obj_ctx_args *args)
+				struct nvgpu_alloc_obj_ctx_args *args)
 {
 	struct gk20a *g = c->g;
 	struct fifo_gk20a *f = &g->fifo;
@@ -483,7 +483,7 @@ out:
 }
 
 static int vgpu_gr_free_obj_ctx(struct channel_gk20a  *c,
-				struct nvhost_free_obj_ctx_args *args)
+				struct nvgpu_free_obj_ctx_args *args)
 {
 	unsigned long timeout = gk20a_get_gr_idle_timeout(c->g);
 

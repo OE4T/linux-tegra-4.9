@@ -360,6 +360,7 @@ struct tegra_dfll {
 	unsigned long			out_rate_max;
 
 	enum dfll_ctrl_mode		mode;
+	enum dfll_ctrl_mode		resume_mode;
 	enum dfll_tune_range		tune_range;
 	struct dentry			*debugfs_dir;
 	struct clk_hw			dfll_clk_hw;
@@ -977,6 +978,7 @@ static void dfll_set_mode(struct tegra_dfll *td,
 	td->mode = mode;
 	dfll_writel(td, mode - 1, DFLL_CTRL);
 	dfll_wmb(td);
+	udelay(1);
 }
 
 
@@ -1931,13 +1933,6 @@ static int dfll_disable(struct tegra_dfll *td)
 	return 0;
 }
 
-/**
- * dfll_enable - switch a disabled DFLL to open-loop mode
- * @td: DFLL instance
- *
- * Switch from DISABLED state to OPEN_LOOP state. Returns 0 upon success
- * or -EPERM if the DFLL is not currently disabled.
- */
 static int dfll_enable(struct tegra_dfll *td)
 {
 	unsigned long flags;
@@ -1965,10 +1960,9 @@ static int dfll_enable(struct tegra_dfll *td)
  * -EINVAL if the DFLL's target rate hasn't been set yet, or -EPERM if the
  * DFLL is not currently in open-loop mode.
  */
-static int dfll_lock(struct tegra_dfll *td)
+static int _dfll_lock(struct tegra_dfll *td)
 {
 	struct dfll_rate_req *req = &td->last_req;
-	unsigned long flags;
 
 	switch (td->mode) {
 	case DFLL_CLOSED_LOOP:
@@ -1980,8 +1974,6 @@ static int dfll_lock(struct tegra_dfll *td)
 				__func__);
 			return -EINVAL;
 		}
-
-		spin_lock_irqsave(&td->lock, flags);
 
 		if (td->pmu_if == TEGRA_DFLL_PMU_PWM)
 			dfll_pwm_set_output_enabled(td, true);
@@ -1998,7 +1990,6 @@ static int dfll_lock(struct tegra_dfll *td)
 		dfll_set_force_output_enabled(td, false);
 		calibration_timer_update(td);
 
-		spin_unlock_irqrestore(&td->lock, flags);
 		return 0;
 
 	default:
@@ -2010,19 +2001,16 @@ static int dfll_lock(struct tegra_dfll *td)
 }
 
 /**
- * tegra_dfll_unlock - switch from closed-loop to open-loop mode
+ * dfll_enable - switch a disabled DFLL to open-loop mode
  * @td: DFLL instance
  *
- * Switch from CLOSED_LOOP state to OPEN_LOOP state. Returns 0 upon success,
- * or -EPERM if the DFLL is not currently in open-loop mode.
+ * Switch from DISABLED state to OPEN_LOOP state. Returns 0 upon success
+ * or -EPERM if the DFLL is not currently disabled.
  */
-static int dfll_unlock(struct tegra_dfll *td)
+static int _dfll_unlock(struct tegra_dfll *td)
 {
-	unsigned long flags;
-
 	switch (td->mode) {
 	case DFLL_CLOSED_LOOP:
-		spin_lock_irqsave(&td->lock, flags);
 		dfll_set_open_loop_config(td);
 		dfll_set_mode(td, DFLL_OPEN_LOOP);
 		if (td->pmu_if == TEGRA_DFLL_PMU_PWM)
@@ -2030,7 +2018,6 @@ static int dfll_unlock(struct tegra_dfll *td)
 		else
 			dfll_i2c_set_output_enabled(td, false);
 
-		spin_unlock_irqrestore(&td->lock, flags);
 		return 0;
 
 	case DFLL_OPEN_LOOP:
@@ -2042,6 +2029,41 @@ static int dfll_unlock(struct tegra_dfll *td)
 			__func__, mode_name[td->mode]);
 		return -EPERM;
 	}
+}
+
+static int dfll_lock(struct tegra_dfll *td)
+{
+	int ret;
+	unsigned long flags;
+
+	spin_lock_irqsave(&td->lock, flags);
+
+	ret = _dfll_lock(td);
+
+	spin_unlock_irqrestore(&td->lock, flags);
+
+	return ret;
+}
+
+/**
+ * tegra_dfll_unlock - switch from closed-loop to open-loop mode
+ * @td: DFLL instance
+ *
+ * Switch from CLOSED_LOOP state to OPEN_LOOP state. Returns 0 upon success,
+ * or -EPERM if the DFLL is not currently in open-loop mode.
+ */
+static int dfll_unlock(struct tegra_dfll *td)
+{
+	int ret;
+	unsigned long flags;
+
+	spin_lock_irqsave(&td->lock, flags);
+
+	ret = _dfll_unlock(td);
+
+	spin_unlock_irqrestore(&td->lock, flags);
+
+	return ret;
 }
 
 /*
@@ -3376,6 +3398,93 @@ static int dfll_fetch_common_params(struct tegra_dfll *td)
 	return ok ? 0 : -EINVAL;
 }
 
+
+/*
+ * tegra_dfll_suspend
+ * @pdev: DFLL instance
+ *
+ * dfll controls clock/voltage to other devices, including CPU. Therefore,
+ * dfll driver pm suspend callback does not stop cl-dvfs operations. It is
+ * only used to enforce cold voltage limit, since SoC may cool down during
+ * suspend without waking up. The correct temperature zone after suspend will
+ * be updated via dfll cooling device interface during resume of temperature
+ * sensor.
+ */
+void tegra_dfll_suspend(struct platform_device *pdev)
+{
+	struct tegra_dfll *td = dev_get_drvdata(&pdev->dev);
+
+	if (!td)
+		return;
+
+	if (td->mode <= DFLL_DISABLED)
+		return;
+
+	td->thermal_cap_index =
+		tegra_dfll_count_thermal_states(td, TEGRA_DFLL_THERMAL_CAP);
+	td->thermal_floor_index = 0;
+	set_dvco_rate_min(td, &td->last_req);
+
+	td->resume_mode = td->mode;
+	switch (td->mode) {
+	case DFLL_CLOSED_LOOP:
+		dfll_set_close_loop_config(td, &td->last_req);
+		dfll_set_frequency_request(td, &td->last_req);
+
+		_dfll_unlock(td);
+		break;
+	default:
+		break;
+	}
+}
+
+/**
+ * tegra_dfll_resume - reprogram the DFLL after context-loss
+ * @pdev: DFLL instance
+ *
+ * Re-initialize and enable target device clock in open loop mode. Called
+ * directly from SoC clock resume syscore operation. Closed loop will be
+ * re-entered in platform syscore ops as well after CPU clock source is
+ * switched to DFLL in open loop.
+ */
+void tegra_dfll_resume(struct platform_device *pdev, bool on_dfll)
+{
+	struct tegra_dfll *td = dev_get_drvdata(&pdev->dev);
+
+	if (!td)
+		return;
+
+	if (on_dfll) {
+		if (td->resume_mode == DFLL_CLOSED_LOOP)
+			_dfll_lock(td);
+		td->resume_mode = DFLL_DISABLED;
+		return;
+	}
+
+	reset_control_deassert(td->dvco_rst);
+
+	pm_runtime_get(td->dev);
+
+	/* Re-init DFLL */
+	dfll_init_out_if(td);
+	dfll_init_tuning_thresholds(td);
+	dfll_set_default_params(td);
+	dfll_set_open_loop_config(td);
+
+	pm_runtime_put(td->dev);
+
+	/* Restore last request and mode up to open loop */
+	switch (td->resume_mode) {
+	case DFLL_CLOSED_LOOP:
+	case DFLL_OPEN_LOOP:
+		dfll_set_mode(td, DFLL_OPEN_LOOP);
+		if (td->pmu_if == TEGRA_DFLL_PMU_I2C)
+			dfll_i2c_set_output_enabled(td, false);
+		break;
+	default:
+		break;
+	}
+}
 
 /*
  * API exported to per-SoC platform drivers

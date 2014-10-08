@@ -155,7 +155,7 @@ static void gk20a_channel_syncpt_update(void *priv, int nr_completed)
 }
 
 static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
-				       bool gfx_class, bool wfi_cmd,
+				       bool wfi_cmd,
 				       bool register_irq,
 				       struct priv_cmd_entry **entry,
 				       struct gk20a_fence **fence)
@@ -182,39 +182,24 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 
 	/* WAR for hw bug 1491360: syncpt needs to be incremented twice */
 
-	if (gfx_class) {
-		WARN_ON(wfi_cmd); /* No sense to use gfx class + wfi. */
-		/* setobject KEPLER_C */
-		incr_cmd->ptr[j++] = 0x20010000;
-		incr_cmd->ptr[j++] = KEPLER_C;
-		/* syncpt incr */
-		incr_cmd->ptr[j++] = 0x200100B2;
-		incr_cmd->ptr[j++] = sp->id |
-			(0x1 << 20) | (0x1 << 16);
-		/* syncpt incr */
-		incr_cmd->ptr[j++] = 0x200100B2;
-		incr_cmd->ptr[j++] = sp->id |
-			(0x1 << 20) | (0x1 << 16);
-	} else {
-		if (wfi_cmd) {
-			/* wfi */
-			incr_cmd->ptr[j++] = 0x2001001E;
-			/* handle, ignored */
-			incr_cmd->ptr[j++] = 0x00000000;
-		}
-		/* syncpoint_a */
-		incr_cmd->ptr[j++] = 0x2001001C;
-		/* payload, ignored */
-		incr_cmd->ptr[j++] = 0;
-		/* syncpoint_b */
-		incr_cmd->ptr[j++] = 0x2001001D;
-		/* syncpt_id, incr */
-		incr_cmd->ptr[j++] = (sp->id << 8) | 0x1;
-		/* syncpoint_b */
-		incr_cmd->ptr[j++] = 0x2001001D;
-		/* syncpt_id, incr */
-		incr_cmd->ptr[j++] = (sp->id << 8) | 0x1;
+	if (wfi_cmd) {
+		/* wfi */
+		incr_cmd->ptr[j++] = 0x2001001E;
+		/* handle, ignored */
+		incr_cmd->ptr[j++] = 0x00000000;
 	}
+	/* syncpoint_a */
+	incr_cmd->ptr[j++] = 0x2001001C;
+	/* payload, ignored */
+	incr_cmd->ptr[j++] = 0;
+	/* syncpoint_b */
+	incr_cmd->ptr[j++] = 0x2001001D;
+	/* syncpt_id, incr */
+	incr_cmd->ptr[j++] = (sp->id << 8) | 0x1;
+	/* syncpoint_b */
+	incr_cmd->ptr[j++] = 0x2001001D;
+	/* syncpt_id, incr */
+	incr_cmd->ptr[j++] = (sp->id << 8) | 0x1;
 	WARN_ON(j != incr_cmd_size);
 
 	thresh = nvhost_syncpt_incr_max_ext(sp->host1x_pdev, sp->id, 2);
@@ -241,7 +226,6 @@ int gk20a_channel_syncpt_incr_wfi(struct gk20a_channel_sync *s,
 				  struct gk20a_fence **fence)
 {
 	return __gk20a_channel_syncpt_incr(s,
-			false /* use host class */,
 			true /* wfi */,
 			false /* no irq handler */,
 			entry, fence);
@@ -251,12 +235,9 @@ int gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 			      struct priv_cmd_entry **entry,
 			      struct gk20a_fence **fence)
 {
-	struct gk20a_channel_syncpt *sp =
-		container_of(s, struct gk20a_channel_syncpt, ops);
 	/* Don't put wfi cmd to this one since we're not returning
 	 * a fence to user space. */
 	return __gk20a_channel_syncpt_incr(s,
-			sp->c->obj_class == KEPLER_C /* may use gfx class */,
 			false /* no wfi */,
 			true /* register irq */,
 			entry, fence);
@@ -268,15 +249,10 @@ int gk20a_channel_syncpt_incr_user(struct gk20a_channel_sync *s,
 				   struct gk20a_fence **fence,
 				   bool wfi)
 {
-	struct gk20a_channel_syncpt *sp =
-		container_of(s, struct gk20a_channel_syncpt, ops);
-	/* Need to do 'host incr + wfi' or 'gfx incr' since we return the fence
+	/* Need to do 'wfi + host incr' since we return the fence
 	 * to user space. */
 	return __gk20a_channel_syncpt_incr(s,
-			wfi &&
-			  sp->c->obj_class == KEPLER_C /* use gfx class? */,
-			wfi &&
-			  sp->c->obj_class != KEPLER_C /* wfi if host class */,
+			wfi,
 			true /* register irq */,
 			entry, fence);
 }

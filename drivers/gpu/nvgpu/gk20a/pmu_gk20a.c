@@ -1048,7 +1048,7 @@ static int pmu_idle(struct pmu_gk20a *pmu)
 	return 0;
 }
 
-static void pmu_enable_irq(struct pmu_gk20a *pmu, bool enable)
+void pmu_enable_irq(struct pmu_gk20a *pmu, bool enable)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 

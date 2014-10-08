@@ -1145,5 +1145,5 @@ int gk20a_pmu_ap_send_command(struct gk20a *g,
 		union pmu_ap_cmd *p_ap_cmd, bool b_block);
 int gk20a_aelpg_init(struct gk20a *g);
 int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id);
-
+void pmu_enable_irq(struct pmu_gk20a *pmu, bool enable);
 #endif /*__PMU_GK20A_H__*/

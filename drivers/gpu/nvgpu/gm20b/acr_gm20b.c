@@ -63,6 +63,11 @@ get_ucode_details pmu_acr_supp_ucode_list[] = {
 /*Once is LS mode, cpuctl_alias is only accessible*/
 void start_gm20b_pmu(struct gk20a *g)
 {
+	/*disable irqs for hs falcon booting as we will poll for halt*/
+	mutex_lock(&g->pmu.isr_mutex);
+	pmu_enable_irq(&g->pmu, true);
+	g->pmu.isr_enabled = true;
+	mutex_unlock(&g->pmu.isr_mutex);
 	gk20a_writel(g, pwr_falcon_cpuctl_alias_r(),
 		pwr_falcon_cpuctl_startcpu_f(1));
 }
@@ -1116,6 +1121,11 @@ int gm20b_init_pmu_setup_hw1(struct gk20a *g, struct flcn_bl_dmem_desc *desc,
 	pmu_copy_to_dmem(pmu, g->acr.pmu_args,
 			(u8 *)(g->ops.pmu_ver.get_pmu_cmdline_args_ptr(pmu)),
 			g->ops.pmu_ver.get_pmu_cmdline_args_size(pmu), 0);
+	/*disable irqs for hs falcon booting as we will poll for halt*/
+	mutex_lock(&pmu->isr_mutex);
+	pmu_enable_irq(pmu, false);
+	pmu->isr_enabled = false;
+	mutex_unlock(&pmu->isr_mutex);
 	err = bl_bootstrap(pmu, desc, bl_sz);
 	if (err)
 		return err;
@@ -1216,8 +1226,9 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 	 * to PMU halt
 	 */
 
-	gk20a_writel(g, pwr_falcon_irqsclr_r(),
-		gk20a_readl(g, pwr_falcon_irqsclr_r()) & (~(0x10)));
+	if (clear_halt_interrupt_status(g, GPU_TIMEOUT_DEFAULT))
+		goto err_unmap_bl;
+
 	gm20b_dbg_pmu("err reg :%x\n", readl(mc +
 		MC_ERR_GENERALIZED_CARVEOUT_STATUS_0));
 	gm20b_dbg_pmu("phys sec reg %x\n", gk20a_readl(g,
@@ -1228,10 +1239,11 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 	/* Poll for HALT */
 	if (b_wait_for_halt) {
 		err = pmu_wait_for_halt(g, GPU_TIMEOUT_DEFAULT);
-		if (err == 0)
+		if (err == 0) {
 			/* Clear the HALT interrupt */
-			gk20a_writel(g, pwr_falcon_irqsclr_r(),
-			gk20a_readl(g, pwr_falcon_irqsclr_r()) & (~(0x10)));
+		  if (clear_halt_interrupt_status(g, GPU_TIMEOUT_DEFAULT))
+			goto err_unmap_bl;
+		}
 		else
 			goto err_unmap_bl;
 	}
@@ -1273,6 +1285,31 @@ int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout)
 		data = gk20a_readl(g, pwr_falcon_cpuctl_r());
 		if (data & pwr_falcon_cpuctl_halt_intr_m())
 			/*CPU is halted break*/
+			break;
+		timeout--;
+		udelay(1);
+	}
+	if (timeout == 0)
+		return -EBUSY;
+	return 0;
+}
+
+/*!
+*	Wait for PMU halt interrupt status to be cleared
+*	@param[in]	g		GPU object pointer
+*	@param[in]	timeout_us	Timeout in Us for PMU to halt
+*	@return '0' if PMU halt irq status is clear
+*/
+int clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout)
+{
+	u32 data = 0;
+	while (timeout != 0) {
+		gk20a_writel(g, pwr_falcon_irqsclr_r(),
+			     gk20a_readl(g, pwr_falcon_irqsclr_r()) | (0x10));
+		data = gk20a_readl(g, (pwr_falcon_irqstat_r()));
+		if ((data & pwr_falcon_irqstat_halt_true_f()) !=
+			pwr_falcon_irqstat_halt_true_f())
+			/*halt irq is clear*/
 			break;
 		timeout--;
 		udelay(1);

@@ -202,6 +202,7 @@ struct tegra_spi_data {
 	unsigned				irq;
 	bool					clock_always_on;
 	u32					cur_speed;
+	unsigned				min_div;
 
 	struct spi_device			*cur_spi;
 	struct spi_device			*cs_control;
@@ -803,6 +804,94 @@ static void tegra_spi_set_cmd2(struct spi_device *spi, u32 speed)
 	tspi->last_used_cs = spi->chip_select;
 }
 
+static void set_best_clk_source(struct tegra_spi_data *tspi,
+				unsigned long rate)
+{
+	long new_rate;
+	unsigned long err_rate, crate, prate;
+	unsigned int cdiv, fin_err = rate;
+	int ret;
+	struct clk *pclk, *fpclk = NULL;
+	const char *pclk_name, *fpclk_name;
+	struct device_node *node;
+	struct property *prop;
+
+	node = tspi->master->dev.of_node;
+	if (!of_property_count_strings(node, "nvidia,clk-parents"))
+		return;
+
+	/* when parent of a clk changes divider is not changed
+	 * set a min div with which clk will not cross max rate
+	 */
+	if (!tspi->min_div) {
+		of_property_for_each_string(node, "nvidia,clk-parents",
+					    prop, pclk_name) {
+			pclk = clk_get(tspi->dev, pclk_name);
+			if (IS_ERR(pclk))
+				continue;
+			prate = clk_get_rate(pclk);
+			crate = tspi->master->max_speed_hz;
+			cdiv = DIV_ROUND_UP(prate, crate);
+			if (cdiv > tspi->min_div)
+				tspi->min_div = cdiv;
+		}
+	}
+
+	pclk = clk_get_parent(tspi->clk);
+	crate = clk_get_rate(tspi->clk);
+	prate = clk_get_rate(pclk);
+	cdiv = DIV_ROUND_UP(prate, crate);
+	if (cdiv < tspi->min_div) {
+		crate = DIV_ROUND_UP(prate, tspi->min_div);
+		clk_set_rate(tspi->clk, crate);
+	}
+
+	of_property_for_each_string(node, "nvidia,clk-parents",
+				    prop, pclk_name) {
+		pclk = clk_get(tspi->dev, pclk_name);
+		if (IS_ERR(pclk))
+			continue;
+
+		ret = clk_set_parent(tspi->clk, pclk);
+		if (ret < 0)
+			continue;
+
+		new_rate = clk_round_rate(tspi->clk, rate);
+		if (new_rate < 0)
+			continue;
+
+		err_rate = abs(new_rate - rate);
+		if (err_rate < fin_err) {
+			fpclk = pclk;
+			fin_err = err_rate;
+			fpclk_name = pclk_name;
+		}
+	}
+
+	if (fpclk) {
+		dev_dbg(tspi->dev, "Setting clk_src %s\n",
+			fpclk_name);
+		clk_set_parent(tspi->clk, fpclk);
+	}
+}
+
+static int tegra_spi_set_clock_rate(struct tegra_spi_data *tspi, u32 speed)
+{
+	int ret;
+
+	if (speed == tspi->cur_speed)
+		return 0;
+	set_best_clk_source(tspi, speed);
+	ret = clk_set_rate(tspi->clk, speed);
+	if (ret) {
+		dev_err(tspi->dev, "Failed to set clk freq %d\n", ret);
+		return -EINVAL;
+	}
+	tspi->cur_speed = speed;
+
+	return 0;
+}
+
 static u32 tegra_spi_setup_transfer_one(struct spi_device *spi,
 					struct spi_transfer *t,
 					bool is_first_of_msg,
@@ -814,11 +903,11 @@ static u32 tegra_spi_setup_transfer_one(struct spi_device *spi,
 	u8 bits_per_word = t->bits_per_word;
 	u32 command1;
 	int req_mode;
+	int ret;
 
-	if (speed != tspi->cur_speed) {
-		clk_set_rate(tspi->clk, speed);
-		tspi->cur_speed = speed;
-	}
+	ret = tegra_spi_set_clock_rate(tspi, speed);
+	if (ret < 0)
+		return ret;
 
 	tspi->cur_spi = spi;
 	tspi->cur_pos = 0;
@@ -1362,6 +1451,10 @@ static void tegra_spi_parse_dt(struct tegra_spi_data *tspi)
 	if (of_find_property(np, "nvidia,clock-always-on", NULL))
 		tspi->clock_always_on = true;
 
+	if (of_property_read_u32(np, "spi-max-frequency",
+				 &tspi->master->max_speed_hz))
+		tspi->master->max_speed_hz = 25000000; /* 25MHz */
+
 	/*
 	 * Last child node or first node which has property as default-cs will
 	 * become the default. When no client is defined, default chipselect
@@ -1439,10 +1532,6 @@ static int tegra_spi_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, master);
 	tspi = spi_master_get_devdata(master);
 
-	if (of_property_read_u32(pdev->dev.of_node, "spi-max-frequency",
-				 &master->max_speed_hz))
-		master->max_speed_hz = 25000000; /* 25MHz */
-
 	/* the spi->mode bits understood by this driver: */
 	master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH | SPI_LSB_FIRST |
 		SPI_TX_DUAL | SPI_RX_DUAL;
@@ -1495,6 +1584,7 @@ static int tegra_spi_probe(struct platform_device *pdev)
 
 	tspi->max_buf_size = SPI_FIFO_DEPTH << 2;
 	tspi->dma_buf_size = DEFAULT_SPI_DMA_BUF_LEN;
+	tspi->min_div = 0;
 
 	ret = tegra_spi_init_dma_param(tspi, true);
 	if (ret < 0)

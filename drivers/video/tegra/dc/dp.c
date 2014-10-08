@@ -1474,7 +1474,8 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		return -ENOMEM;
 
 	if (np) {
-		if (np_dp && of_device_is_available(np_dp)) {
+		if (np_dp && (of_device_is_available(np_dp) ||
+			(dc->out->type == TEGRA_DC_OUT_FAKE_DP))) {
 			irq = of_irq_to_resource(np_dp, 0, NULL);
 			if (!irq) {
 				err = -ENOENT;

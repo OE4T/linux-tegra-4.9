@@ -448,7 +448,8 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	}
 
 	if (np) {
-		if (np_sor && of_device_is_available(np_sor)) {
+		if (np_sor && (of_device_is_available(np_sor) ||
+			(dc->out->type == TEGRA_DC_OUT_FAKE_DP))) {
 			of_address_to_resource(np_sor, 0,
 				&of_sor_res);
 			res = &of_sor_res;

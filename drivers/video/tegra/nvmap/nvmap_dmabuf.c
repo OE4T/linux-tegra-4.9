@@ -32,6 +32,7 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/stringify.h>
+#include <linux/of.h>
 
 #include <trace/events/nvmap.h>
 
@@ -197,6 +198,20 @@ static void __nvmap_dmabuf_del_stash(struct nvmap_handle_sgt *nvmap_sgt)
 	stash_stat_sub_iova(nvmap_sgt->owner->handle);
 }
 
+static inline bool access_vpr_phys(struct device *dev) {
+	if (!to_dma_iommu_mapping(dev))
+		return true;
+
+	/*
+	 * Assumes gpu nodes always have DT entry, this is valid as device
+	 * specifying access-vpr-phys will do so through its DT entry.
+	 */
+	if (!dev->of_node)
+		return false;
+
+	return !!of_find_property(dev->of_node, "access-vpr-phys", NULL);
+}
+
 /*
  * Free an sgt completely. This will bypass the ref count. This also requires
  * the nvmap_sgt's owner's lock is already taken.
@@ -210,7 +225,8 @@ static void __nvmap_dmabuf_free_sgt_locked(struct nvmap_handle_sgt *nvmap_sgt)
 
 	if (info->handle->heap_type == NVMAP_HEAP_CARVEOUT_IRAM) {
 		sg_dma_address(nvmap_sgt->sgt->sgl) = 0;
-	} else if (info->handle->heap_type == NVMAP_HEAP_CARVEOUT_VPR) {
+	} else if (info->handle->heap_type == NVMAP_HEAP_CARVEOUT_VPR &&
+			access_vpr_phys(nvmap_sgt->dev)) {
 		sg_dma_address(nvmap_sgt->sgt->sgl) = 0;
 	} else {
 		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
@@ -380,7 +396,8 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 		goto err_map;
 	} else if (info->handle->heap_type == NVMAP_HEAP_CARVEOUT_IRAM) {
 		sg_dma_address(sgt->sgl) = info->handle->carveout->base;
-	} else if (info->handle->heap_type == NVMAP_HEAP_CARVEOUT_VPR) {
+	} else if (info->handle->heap_type == NVMAP_HEAP_CARVEOUT_VPR &&
+			access_vpr_phys(attach->dev)) {
 		sg_dma_address(sgt->sgl) = 0;
 	} else {
 		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);

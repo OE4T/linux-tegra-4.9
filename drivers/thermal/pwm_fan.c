@@ -750,15 +750,18 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	of_err |= of_property_read_u32(data_node, "state_cap", &value);
 	fan_data->fan_state_cap = (int)value;
 
-	of_err |= of_property_read_u32(data_node, "tach_gpio", &value);
-	fan_data->tach_gpio = (int)value;
-
 	fan_data->pwm_gpio = pwm_fan_gpio;
 
 	if (of_err) {
 		err = -ENXIO;
 		goto rpm_alloc_fail;
 	}
+
+	if (of_property_read_u32(data_node, "tach_gpio", &value)) {
+		fan_data->tach_gpio = -1;
+		pr_info("FAN: can't find tach_gpio\n");
+	} else
+		fan_data->tach_gpio = (int)value;
 
 	/* rpm array */
 	rpm_data = devm_kzalloc(&pdev->dev,

@@ -48,6 +48,7 @@
 					temperature = <43000>;
 					hysteresis = <0>;
 					type = "passive";
+					writable;
 				};
 			};
 			cooling-maps {

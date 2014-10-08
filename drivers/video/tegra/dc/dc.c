@@ -4144,7 +4144,7 @@ static void tegra_dc_shutdown(struct platform_device *ndev)
 	tegra_dc_disable(dc);
 }
 
-extern int suspend_set(const char *val, struct kernel_param *kp)
+int suspend_set(const char *val, struct kernel_param *kp)
 {
 	if (!strcmp(val, "dump"))
 		dump_regs(tegra_dcs[0]);
@@ -4158,7 +4158,7 @@ extern int suspend_set(const char *val, struct kernel_param *kp)
 	return 0;
 }
 
-extern int suspend_get(char *buffer, struct kernel_param *kp)
+int suspend_get(char *buffer, struct kernel_param *kp)
 {
 	return 0;
 }

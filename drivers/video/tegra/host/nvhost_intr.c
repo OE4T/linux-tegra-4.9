@@ -71,6 +71,8 @@ static inline bool nvhost_intr_is_virtual_dev(struct nvhost_intr_syncpt *sp)
 }
 
 static inline void nvhost_intr_syncpt_lock(struct nvhost_intr_syncpt *sp)
+__acquires(&sp->lock.m)
+__acquires(&sp->lock.s)
 {
 	if (nvhost_intr_is_virtual_dev(sp))
 		mutex_lock(&sp->lock.m);
@@ -79,6 +81,8 @@ static inline void nvhost_intr_syncpt_lock(struct nvhost_intr_syncpt *sp)
 }
 
 static inline void nvhost_intr_syncpt_unlock(struct nvhost_intr_syncpt *sp)
+__releases(&sp->lock.m)
+__releases(&sp->lock.s)
 {
 	if (nvhost_intr_is_virtual_dev(sp))
 		mutex_unlock(&sp->lock.m);

@@ -3381,7 +3381,7 @@ int tegra_dc_set_flip_callback(void (*callback)(void))
 }
 EXPORT_SYMBOL(tegra_dc_set_flip_callback);
 
-int tegra_dc_unset_flip_callback()
+int tegra_dc_unset_flip_callback(void)
 {
 	spin_lock(&flip_callback_lock);
 	flip_callback = NULL;
@@ -3391,7 +3391,7 @@ int tegra_dc_unset_flip_callback()
 }
 EXPORT_SYMBOL(tegra_dc_unset_flip_callback);
 
-void tegra_dc_call_flip_callback()
+void tegra_dc_call_flip_callback(void)
 {
 	spin_lock(&flip_callback_lock);
 	if (flip_callback)

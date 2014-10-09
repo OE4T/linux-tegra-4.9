@@ -1080,6 +1080,13 @@ static int validate_fixed_buffer(struct vm_gk20a *vm,
 	struct device *dev = dev_from_vm(vm);
 	struct vm_reserved_va_node *va_node;
 	struct mapped_buffer_node *buffer;
+	u64 map_end = map_offset + map_size;
+
+	/* can wrap around with insane map_size; zero is disallowed too */
+	if (map_end <= map_offset) {
+		gk20a_warn(dev, "fixed offset mapping with invalid map_size");
+		return -EINVAL;
+	}
 
 	if (map_offset & gmmu_page_offset_masks[bfr->pgsz_idx]) {
 		gk20a_err(dev, "map offset must be buffer page size aligned 0x%llx",
@@ -1091,6 +1098,12 @@ static int validate_fixed_buffer(struct vm_gk20a *vm,
 	va_node = addr_to_reservation(vm, map_offset);
 	if (!va_node) {
 		gk20a_warn(dev, "fixed offset mapping without space allocation");
+		return -EINVAL;
+	}
+
+	/* mapped area should fit inside va */
+	if (map_end > va_node->vaddr_start + va_node->size) {
+		gk20a_warn(dev, "fixed offset mapping size overflows va node");
 		return -EINVAL;
 	}
 

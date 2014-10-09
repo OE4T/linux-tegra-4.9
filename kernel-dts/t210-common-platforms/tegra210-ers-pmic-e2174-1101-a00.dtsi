@@ -323,7 +323,7 @@
 					regulator-max-microvolt = <1800000>;
 					regulator-always-on;
 					regulator-boot-on;
-					maxim,fps-source = <FPS_SRC_NONE>;
+					maxim,fps-source = <FPS_SRC_0>;
 				};
 
 				max77620_ldo7: ldo7 {

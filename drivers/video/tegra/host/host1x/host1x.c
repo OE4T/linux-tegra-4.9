@@ -524,7 +524,8 @@ int nvhost_gather_filter_enabled(struct nvhost_syncpt *sp)
 {
 	enum tegra_chipid cid = tegra_get_chipid();
 
-	if (cid == TEGRA_CHIPID_TEGRA12 || cid == TEGRA_CHIPID_TEGRA13)
+	if (cid == TEGRA_CHIPID_TEGRA12 || cid == TEGRA_CHIPID_TEGRA13 ||
+	    cid == TEGRA_CHIPID_TEGRA21)
 		return 1;
 	return 0;
 }

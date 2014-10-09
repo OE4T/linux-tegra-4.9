@@ -166,7 +166,6 @@ struct tegra210_adx_soc_data {
 };
 
 struct tegra210_adx {
-	struct clk *clk_adx;
 	struct regmap *regmap;
 	unsigned int map[16];
 	const struct tegra210_adx_soc_data *soc_data;

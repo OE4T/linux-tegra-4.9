@@ -86,7 +86,6 @@ struct tegra210_afc_soc_data {
 };
 
 struct tegra210_afc {
-	struct clk *clk_afc;
 	unsigned int destination_i2s;
 	struct regmap *regmap;
 	const struct tegra210_afc_soc_data *soc_data;

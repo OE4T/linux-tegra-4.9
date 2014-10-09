@@ -44,6 +44,7 @@ static int tegra210_spdif_runtime_suspend(struct device *dev)
 
 	clk_disable_unprepare(spdif->clk_spdif_out);
 	clk_disable_unprepare(spdif->clk_spdif_in);
+	pm_runtime_put_sync(dev->parent);
 
 	return 0;
 }
@@ -52,6 +53,12 @@ static int tegra210_spdif_runtime_resume(struct device *dev)
 {
 	struct tegra210_spdif *spdif = dev_get_drvdata(dev);
 	int ret = 0;
+
+	ret = pm_runtime_get_sync(dev->parent);
+	if (ret < 0) {
+		dev_err(dev, "parent get_sync failed: %d\n", ret);
+		return ret;
+	}
 
 	ret = clk_prepare_enable(spdif->clk_spdif_out);
 	if (ret) {

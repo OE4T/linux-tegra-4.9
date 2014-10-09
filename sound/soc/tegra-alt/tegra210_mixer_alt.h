@@ -124,7 +124,6 @@ struct tegra210_mixer_soc_data {
 };
 
 struct tegra210_mixer {
-	struct clk *clk_mixer;
 	struct regmap *regmap;
 	int gain_coeff[14];
 	const struct tegra210_mixer_soc_data *soc_data;

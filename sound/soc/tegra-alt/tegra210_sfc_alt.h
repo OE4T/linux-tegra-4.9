@@ -91,7 +91,6 @@ struct tegra210_sfc_soc_data {
 };
 
 struct tegra210_sfc {
-	struct clk *clk_sfc;
 	int srate_in;
 	int srate_out;
 	struct regmap *regmap;

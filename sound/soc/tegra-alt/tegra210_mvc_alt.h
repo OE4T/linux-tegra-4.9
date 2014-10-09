@@ -123,7 +123,6 @@ struct tegra210_mvc_soc_data {
 };
 
 struct tegra210_mvc {
-	struct clk *clk_mvc;
 	struct regmap *regmap;
 	int poly_coeff[9];
 	int poly_n1, poly_n2, duration, duration_inv;

@@ -176,7 +176,6 @@ struct tegra210_amx_soc_data {
 };
 
 struct tegra210_amx {
-	struct clk *clk_amx;
 	struct regmap *regmap;
 	unsigned int map[16];
 	const struct tegra210_amx_soc_data *soc_data;

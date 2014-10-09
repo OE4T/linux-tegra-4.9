@@ -42,7 +42,7 @@ static int tegra210_mvc_runtime_suspend(struct device *dev)
 
 	regcache_cache_only(mvc->regmap, true);
 
-	clk_disable_unprepare(mvc->clk_mvc);
+	pm_runtime_put_sync(dev->parent);
 
 	return 0;
 }
@@ -50,12 +50,11 @@ static int tegra210_mvc_runtime_suspend(struct device *dev)
 static int tegra210_mvc_runtime_resume(struct device *dev)
 {
 	struct tegra210_mvc *mvc = dev_get_drvdata(dev);
-
 	int ret;
 
-	ret = clk_prepare_enable(mvc->clk_mvc);
-	if (ret) {
-		dev_err(dev, "clk_enable failed: %d\n", ret);
+	ret = pm_runtime_get_sync(dev->parent);
+	if (ret < 0) {
+		dev_err(dev, "parent get_sync failed: %d\n", ret);
 		return ret;
 	}
 
@@ -422,18 +421,11 @@ static int tegra210_mvc_platform_probe(struct platform_device *pdev)
 	mvc->poly_coeff[7] = 5527252;
 	mvc->poly_coeff[8] = -785042;
 
-	mvc->clk_mvc = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(mvc->clk_mvc)) {
-		dev_err(&pdev->dev, "Can't retrieve mvc clock\n");
-		ret = PTR_ERR(mvc->clk_mvc);
-		goto err;
-	}
-
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
 		dev_err(&pdev->dev, "No memory resource\n");
 		ret = -ENODEV;
-		goto err_clk_put;
+		goto err;
 	}
 
 	memregion = devm_request_mem_region(&pdev->dev, mem->start,
@@ -441,14 +433,14 @@ static int tegra210_mvc_platform_probe(struct platform_device *pdev)
 	if (!memregion) {
 		dev_err(&pdev->dev, "Memory region already claimed\n");
 		ret = -EBUSY;
-		goto err_clk_put;
+		goto err;
 	}
 
 	regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
 	if (!regs) {
 		dev_err(&pdev->dev, "ioremap failed\n");
 		ret = -ENOMEM;
-		goto err_clk_put;
+		goto err;
 	}
 
 	mvc->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
@@ -456,7 +448,7 @@ static int tegra210_mvc_platform_probe(struct platform_device *pdev)
 	if (IS_ERR(mvc->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
 		ret = PTR_ERR(mvc->regmap);
-		goto err_clk_put;
+		goto err;
 	}
 	regcache_cache_only(mvc->regmap, true);
 
@@ -466,7 +458,7 @@ static int tegra210_mvc_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"Missing property nvidia,ahub-mvc-id\n");
 		ret = -ENODEV;
-		goto err_clk_put;
+		goto err;
 	}
 
 	pm_runtime_enable(&pdev->dev);
@@ -491,23 +483,17 @@ err_suspend:
 		tegra210_mvc_runtime_suspend(&pdev->dev);
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
-err_clk_put:
-	devm_clk_put(&pdev->dev, mvc->clk_mvc);
 err:
 	return ret;
 }
 
 static int tegra210_mvc_platform_remove(struct platform_device *pdev)
 {
-	struct tegra210_mvc *mvc = dev_get_drvdata(&pdev->dev);
-
 	snd_soc_unregister_codec(&pdev->dev);
 
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_mvc_runtime_suspend(&pdev->dev);
-
-	devm_clk_put(&pdev->dev, mvc->clk_mvc);
 
 	return 0;
 }

@@ -230,7 +230,7 @@ static int tegra210_amx_runtime_suspend(struct device *dev)
 
 	regcache_cache_only(amx->regmap, true);
 
-	clk_disable_unprepare(amx->clk_amx);
+	pm_runtime_put_sync(dev->parent);
 
 	return 0;
 }
@@ -271,9 +271,9 @@ static int tegra210_amx_runtime_resume(struct device *dev)
 	struct tegra210_amx *amx = dev_get_drvdata(dev);
 	int ret;
 
-	ret = clk_prepare_enable(amx->clk_amx);
-	if (ret) {
-		dev_err(dev, "clk_enable failed: %d\n", ret);
+	ret = pm_runtime_get_sync(dev->parent);
+	if (ret < 0) {
+		dev_err(dev, "parent get_sync failed: %d\n", ret);
 		return ret;
 	}
 
@@ -664,18 +664,11 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
 
 	amx->soc_data = soc_data;
 
-	amx->clk_amx = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(amx->clk_amx)) {
-		dev_err(&pdev->dev, "Can't retrieve tegra210_amx clock\n");
-		ret = PTR_ERR(amx->clk_amx);
-		goto err;
-	}
-
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
 		dev_err(&pdev->dev, "No memory resource\n");
 		ret = -ENODEV;
-		goto err_clk_put;
+		goto err;
 	}
 
 	memregion = devm_request_mem_region(&pdev->dev, mem->start,
@@ -683,14 +676,14 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
 	if (!memregion) {
 		dev_err(&pdev->dev, "Memory region already claimed\n");
 		ret = -EBUSY;
-		goto err_clk_put;
+		goto err;
 	}
 
 	regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
 	if (!regs) {
 		dev_err(&pdev->dev, "ioremap failed\n");
 		ret = -ENOMEM;
-		goto err_clk_put;
+		goto err;
 	}
 
 	amx->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
@@ -698,7 +691,7 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
 	if (IS_ERR(amx->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
 		ret = PTR_ERR(amx->regmap);
-		goto err_clk_put;
+		goto err;
 	}
 	regcache_cache_only(amx->regmap, true);
 
@@ -708,7 +701,7 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"Missing property nvidia,ahub-amx-id\n");
 		ret = -ENODEV;
-		goto err_clk_put;
+		goto err;
 	}
 
 	pm_runtime_enable(&pdev->dev);
@@ -733,23 +726,17 @@ err_suspend:
 		tegra210_amx_runtime_suspend(&pdev->dev);
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
-err_clk_put:
-	devm_clk_put(&pdev->dev, amx->clk_amx);
 err:
 	return ret;
 }
 
 static int tegra210_amx_platform_remove(struct platform_device *pdev)
 {
-	struct tegra210_amx *amx = dev_get_drvdata(&pdev->dev);
-
 	snd_soc_unregister_codec(&pdev->dev);
 
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_amx_runtime_suspend(&pdev->dev);
-
-	devm_clk_put(&pdev->dev, amx->clk_amx);
 
 	return 0;
 }

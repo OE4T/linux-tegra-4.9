@@ -45,16 +45,23 @@ static int tegra210_dmic_runtime_suspend(struct device *dev)
 #ifndef CONFIG_MACH_GRENADA
 	clk_disable_unprepare(dmic->clk_dmic);
 #endif
+	pm_runtime_put_sync(dev->parent);
+
 	return 0;
 }
 
 static int tegra210_dmic_runtime_resume(struct device *dev)
 {
 	struct tegra210_dmic *dmic = dev_get_drvdata(dev);
-
-#ifndef CONFIG_MACH_GRENADA
 	int ret;
 
+	ret = pm_runtime_get_sync(dev->parent);
+	if (ret < 0) {
+		dev_err(dev, "parent get_sync failed: %d\n", ret);
+		return ret;
+	}
+
+#ifndef CONFIG_MACH_GRENADA
 	ret = clk_prepare_enable(dmic->clk_dmic);
 	if (ret) {
 		dev_err(dev, "clk_enable failed: %d\n", ret);

@@ -43,9 +43,10 @@ static int tegra210_iqc_runtime_suspend(struct device *dev)
 
 	regcache_cache_only(iqc->regmap, true);
 
-	#ifndef CONFIG_MACH_GRENADA
+#ifndef CONFIG_MACH_GRENADA
 	clk_disable_unprepare(iqc->clk_iqc);
-	#endif
+#endif
+	pm_runtime_put_sync(dev->parent);
 
 	return 0;
 }
@@ -53,16 +54,21 @@ static int tegra210_iqc_runtime_suspend(struct device *dev)
 static int tegra210_iqc_runtime_resume(struct device *dev)
 {
 	struct tegra210_iqc *iqc = dev_get_drvdata(dev);
-
-	#ifndef CONFIG_MACH_GRENADA
 	int ret;
 
+	ret = pm_runtime_get_sync(dev->parent);
+	if (ret < 0) {
+		dev_err(dev, "parent get_sync failed: %d\n", ret);
+		return ret;
+	}
+
+#ifndef CONFIG_MACH_GRENADA
 	ret = clk_prepare_enable(iqc->clk_iqc);
 	if (ret) {
 		dev_err(dev, "clk_enable failed: %d\n", ret);
 		return ret;
 	}
-	#endif
+#endif
 
 	regcache_cache_only(iqc->regmap, false);
 

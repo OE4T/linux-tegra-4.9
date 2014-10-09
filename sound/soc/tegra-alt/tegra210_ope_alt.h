@@ -82,7 +82,6 @@ struct tegra210_ope_soc_data {
 };
 
 struct tegra210_ope {
-	struct clk *clk_ope;
 	struct regmap *regmap;
 	struct regmap *peq_regmap;
 	struct regmap *mbdrc_regmap;

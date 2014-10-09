@@ -44,7 +44,9 @@ static int tegra210_ope_runtime_suspend(struct device *dev)
 	regcache_cache_only(ope->mbdrc_regmap, true);
 	regcache_cache_only(ope->peq_regmap, true);
 	regcache_cache_only(ope->regmap, true);
-	clk_disable_unprepare(ope->clk_ope);
+
+	pm_runtime_put_sync(dev->parent);
+
 	return 0;
 }
 
@@ -53,11 +55,12 @@ static int tegra210_ope_runtime_resume(struct device *dev)
 	struct tegra210_ope *ope = dev_get_drvdata(dev);
 	int ret;
 
-	ret = clk_prepare_enable(ope->clk_ope);
-	if (ret) {
-		dev_err(dev, "clk_enable failed: %d\n", ret);
+	ret = pm_runtime_get_sync(dev->parent);
+	if (ret < 0) {
+		dev_err(dev, "parent get_sync failed: %d\n", ret);
 		return ret;
 	}
+
 	regcache_cache_only(ope->regmap, false);
 	regcache_cache_only(ope->peq_regmap, false);
 	regcache_cache_only(ope->mbdrc_regmap, false);
@@ -332,18 +335,11 @@ static int tegra210_ope_platform_probe(struct platform_device *pdev)
 
 	ope->soc_data = soc_data;
 
-	ope->clk_ope = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(ope->clk_ope)) {
-		dev_err(&pdev->dev, "Can't retrieve ope clock\n");
-		ret = PTR_ERR(ope->clk_ope);
-		goto err;
-	}
-
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
 		dev_err(&pdev->dev, "No memory resource\n");
 		ret = -ENODEV;
-		goto err_clk_put;
+		goto err;
 	}
 
 	memregion = devm_request_mem_region(&pdev->dev, mem->start,
@@ -351,14 +347,14 @@ static int tegra210_ope_platform_probe(struct platform_device *pdev)
 	if (!memregion) {
 		dev_err(&pdev->dev, "Memory region already claimed\n");
 		ret = -EBUSY;
-		goto err_clk_put;
+		goto err;
 	}
 
 	regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
 	if (!regs) {
 		dev_err(&pdev->dev, "ioremap failed\n");
 		ret = -ENOMEM;
-		goto err_clk_put;
+		goto err;
 	}
 
 	ope->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
@@ -366,7 +362,7 @@ static int tegra210_ope_platform_probe(struct platform_device *pdev)
 	if (IS_ERR(ope->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
 		ret = PTR_ERR(ope->regmap);
-		goto err_clk_put;
+		goto err;
 	}
 	regcache_cache_only(ope->regmap, true);
 
@@ -374,7 +370,7 @@ static int tegra210_ope_platform_probe(struct platform_device *pdev)
 				TEGRA210_PEQ_IORESOURCE_MEM);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "peq init failed\n");
-		goto err_clk_put;
+		goto err;
 	}
 	regcache_cache_only(ope->peq_regmap, true);
 
@@ -382,7 +378,7 @@ static int tegra210_ope_platform_probe(struct platform_device *pdev)
 				TEGRA210_MBDRC_IORESOURCE_MEM);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "mbdrc init failed\n");
-		goto err_clk_put;
+		goto err;
 	}
 	regcache_cache_only(ope->mbdrc_regmap, true);
 
@@ -392,7 +388,7 @@ static int tegra210_ope_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"Missing property nvidia,ahub-ope-id\n");
 		ret = -ENODEV;
-		goto err_clk_put;
+		goto err;
 	}
 
 	pm_runtime_enable(&pdev->dev);
@@ -419,22 +415,18 @@ err_suspend:
 		tegra210_ope_runtime_suspend(&pdev->dev);
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
-err_clk_put:
-	devm_clk_put(&pdev->dev, ope->clk_ope);
 err:
 	return ret;
 }
 
 static int tegra210_ope_platform_remove(struct platform_device *pdev)
 {
-	struct tegra210_ope *ope = dev_get_drvdata(&pdev->dev);
 	snd_soc_unregister_codec(&pdev->dev);
 
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_ope_runtime_suspend(&pdev->dev);
 
-	devm_clk_put(&pdev->dev, ope->clk_ope);
 	return 0;
 }
 

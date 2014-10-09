@@ -224,6 +224,7 @@ static int tegra210_i2s_runtime_suspend(struct device *dev)
 
 	regcache_cache_only(i2s->regmap, true);
 	clk_disable_unprepare(i2s->clk_i2s);
+	pm_runtime_put_sync(dev->parent);
 
 	return 0;
 }
@@ -232,6 +233,12 @@ static int tegra210_i2s_runtime_resume(struct device *dev)
 {
 	struct tegra210_i2s *i2s = dev_get_drvdata(dev);
 	int ret;
+
+	ret = pm_runtime_get_sync(dev->parent);
+	if (ret < 0) {
+		dev_err(dev, "parent get_sync failed: %d\n", ret);
+		return ret;
+	}
 
 	if (!IS_ERR(i2s->pin_default_state)) {
 		ret = pinctrl_select_state(i2s->pinctrl,

@@ -235,7 +235,7 @@ static int tegra210_adx_runtime_suspend(struct device *dev)
 
 	regcache_cache_only(adx->regmap, true);
 
-	clk_disable_unprepare(adx->clk_adx);
+	pm_runtime_put_sync(dev->parent);
 
 	return 0;
 }
@@ -245,9 +245,9 @@ static int tegra210_adx_runtime_resume(struct device *dev)
 	struct tegra210_adx *adx = dev_get_drvdata(dev);
 	int ret;
 
-	ret = clk_prepare_enable(adx->clk_adx);
-	if (ret) {
-		dev_err(dev, "clk_enable failed: %d\n", ret);
+	ret = pm_runtime_get_sync(dev->parent);
+	if (ret < 0) {
+		dev_err(dev, "parent get_sync failed: %d\n", ret);
 		return ret;
 	}
 
@@ -631,13 +631,6 @@ static int tegra210_adx_platform_probe(struct platform_device *pdev)
 
 	adx->soc_data = soc_data;
 
-	adx->clk_adx = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(adx->clk_adx)) {
-		dev_err(&pdev->dev, "Can't retrieve adx clock\n");
-		ret = PTR_ERR(adx->clk_adx);
-		goto err;
-	}
-
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
 		dev_err(&pdev->dev, "No memory resource\n");
@@ -650,14 +643,14 @@ static int tegra210_adx_platform_probe(struct platform_device *pdev)
 	if (!memregion) {
 		dev_err(&pdev->dev, "Memory region already claimed\n");
 		ret = -EBUSY;
-		goto err_clk_put;
+		goto err;
 	}
 
 	regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
 	if (!regs) {
 		dev_err(&pdev->dev, "ioremap failed\n");
 		ret = -ENOMEM;
-		goto err_clk_put;
+		goto err;
 	}
 
 	adx->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
@@ -665,7 +658,7 @@ static int tegra210_adx_platform_probe(struct platform_device *pdev)
 	if (IS_ERR(adx->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
 		ret = PTR_ERR(adx->regmap);
-		goto err_clk_put;
+		goto err;
 	}
 	regcache_cache_only(adx->regmap, true);
 
@@ -675,7 +668,7 @@ static int tegra210_adx_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"Missing property nvidia,ahub-adx-id\n");
 		ret = -ENODEV;
-		goto err_clk_put;
+		goto err;
 	}
 
 	pm_runtime_enable(&pdev->dev);
@@ -700,22 +693,17 @@ err_suspend:
 		tegra210_adx_runtime_suspend(&pdev->dev);
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
-err_clk_put:
-	devm_clk_put(&pdev->dev, adx->clk_adx);
 err:
 	return ret;
 }
 
 static int tegra210_adx_platform_remove(struct platform_device *pdev)
 {
-	struct tegra210_adx *adx = dev_get_drvdata(&pdev->dev);
 	snd_soc_unregister_codec(&pdev->dev);
 
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_adx_runtime_suspend(&pdev->dev);
-
-	devm_clk_put(&pdev->dev, adx->clk_adx);
 
 	return 0;
 }

@@ -46,7 +46,7 @@ static int tegra210_mixer_runtime_suspend(struct device *dev)
 
 	regcache_cache_only(mixer->regmap, true);
 
-	clk_disable_unprepare(mixer->clk_mixer);
+	pm_runtime_put_sync(dev->parent);
 
 	return 0;
 }
@@ -56,9 +56,9 @@ static int tegra210_mixer_runtime_resume(struct device *dev)
 	struct tegra210_mixer *mixer = dev_get_drvdata(dev);
 	int ret;
 
-	ret = clk_prepare_enable(mixer->clk_mixer);
-	if (ret) {
-		dev_err(dev, "clk_enable failed: %d\n", ret);
+	ret = pm_runtime_get_sync(dev->parent);
+	if (ret < 0) {
+		dev_err(dev, "parent get_sync failed: %d\n", ret);
 		return ret;
 	}
 
@@ -578,18 +578,11 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 	mixer->gain_coeff[12] = 0x3e80;
 	mixer->gain_coeff[13] = 0x83126E;
 
-	mixer->clk_mixer = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(mixer->clk_mixer)) {
-		dev_err(&pdev->dev, "Can't retrieve tegra210_mixer clock\n");
-		ret = PTR_ERR(mixer->clk_mixer);
-		goto err;
-	}
-
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
 		dev_err(&pdev->dev, "No memory resource\n");
 		ret = -ENODEV;
-		goto err_clk_put;
+		goto err;
 	}
 
 	memregion = devm_request_mem_region(&pdev->dev, mem->start,
@@ -597,14 +590,14 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 	if (!memregion) {
 		dev_err(&pdev->dev, "Memory region already claimed\n");
 		ret = -EBUSY;
-		goto err_clk_put;
+		goto err;
 	}
 
 	regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
 	if (!regs) {
 		dev_err(&pdev->dev, "ioremap failed\n");
 		ret = -ENOMEM;
-		goto err_clk_put;
+		goto err;
 	}
 
 	mixer->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
@@ -612,7 +605,7 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 	if (IS_ERR(mixer->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
 		ret = PTR_ERR(mixer->regmap);
-		goto err_clk_put;
+		goto err;
 	}
 	regcache_cache_only(mixer->regmap, true);
 
@@ -622,7 +615,7 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"Missing property nvidia,ahub-amixer-id\n");
 		ret = -ENODEV;
-		goto err_clk_put;
+		goto err;
 	}
 
 	pm_runtime_enable(&pdev->dev);
@@ -647,23 +640,17 @@ err_suspend:
 		tegra210_mixer_runtime_suspend(&pdev->dev);
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
-err_clk_put:
-	devm_clk_put(&pdev->dev, mixer->clk_mixer);
 err:
 	return ret;
 }
 
 static int tegra210_mixer_platform_remove(struct platform_device *pdev)
 {
-	struct tegra210_mixer *mixer = dev_get_drvdata(&pdev->dev);
-
 	snd_soc_unregister_codec(&pdev->dev);
 
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_mixer_runtime_suspend(&pdev->dev);
-
-	devm_clk_put(&pdev->dev, mixer->clk_mixer);
 
 	return 0;
 }

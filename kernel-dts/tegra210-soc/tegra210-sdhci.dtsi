@@ -26,6 +26,8 @@
 		bus-width = <8>;
 		id = <3>;
 		built-in;
+		calib-3v3-offsets = <0x0505>;
+		calib-1v8-offsets = <0x0505>;
 		compad-vref-3v3 = <0x7>;
 		compad-vref-1v8 = <0x7>;
 		vddio_sdmmc-supply = <&max77620_sd3>;
@@ -64,6 +66,8 @@
 		max-clk-limit = <204000000>;
 		ddr-clk-limit = <41000000>;
 		id = <1>;
+		calib-3v3-offsets = <0x0505>;
+		calib-1v8-offsets = <0x0505>;
 		compad-vref-3v3 = <0x7>;
 		compad-vref-1v8 = <0x7>;
 		vddio_sdmmc-supply = <&max77620_sd3>;

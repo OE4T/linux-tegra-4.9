@@ -2108,11 +2108,16 @@ static void _tegra_dc_vsync_enable(struct tegra_dc *dc)
 	tegra_dc_unmask_interrupt(dc, vsync_irq);
 }
 
-void tegra_dc_vsync_enable(struct tegra_dc *dc)
+int tegra_dc_vsync_enable(struct tegra_dc *dc)
 {
 	mutex_lock(&dc->lock);
-	_tegra_dc_vsync_enable(dc);
+	if (dc->enabled) {
+		_tegra_dc_vsync_enable(dc);
+		mutex_unlock(&dc->lock);
+		return 0;
+	}
 	mutex_unlock(&dc->lock);
+	return 1;
 }
 
 /* assumes dc->lock is already taken. */

@@ -38,6 +38,7 @@
 		nvidia,en-io-trim-volt;
 		nvidia,is-emmc;
 		pll_source = "pll_p";
+		nvidia,disable-auto-cal;
 	};
 
 	sdhci@700b0400 {
@@ -63,6 +64,7 @@
 		nvidia,limit-vddio-max-volt;
 		pll_source = "pll_p";
 		nvidia,en-io-trim-volt;
+		nvidia,enable-ext-loopback;
 	};
 
 	sdhci@700b0200 {

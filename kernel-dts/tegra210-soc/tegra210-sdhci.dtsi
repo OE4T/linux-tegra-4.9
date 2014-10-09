@@ -26,7 +26,6 @@
 		dqs-trim-delay = <17>;
 		max-clk-limit = <200000000>;
 		bus-width = <8>;
-		id = <3>;
 		built-in;
 		calib-3v3-offsets = <0x0505>;
 		calib-1v8-offsets = <0x0505>;
@@ -48,7 +47,6 @@
 		max-clk-limit = <204000000>;
 		ddr-clk-limit = <48000000>;
 		bus-width = <4>;
-		id = <2>;
 		calib-3v3-offsets = <0x007D>;
 		calib-1v8-offsets = <0x7B7B>;
 		compad-vref-3v3 = <0x1>;
@@ -73,7 +71,6 @@
 		mmc-ocr-mask = <0>;
 		max-clk-limit = <204000000>;
 		ddr-clk-limit = <41000000>;
-		id = <1>;
 		calib-3v3-offsets = <0x0505>;
 		calib-1v8-offsets = <0x0505>;
 		compad-vref-3v3 = <0x7>;
@@ -91,7 +88,6 @@
 		max-clk-limit = <204000000>;
 		ddr-clk-limit = <48000000>;
 		bus-width = <4>;
-		id = <0>;
 		default-drive-type = <1>;
 		mmc-ocr-mask = <3>;
 		calib-3v3-offsets = <0x007D>;

@@ -837,10 +837,6 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 {
 	unsigned i;
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-	return;
-#endif
-
 	if (!dc->enabled)
 		return;
 

@@ -178,15 +178,13 @@ static struct tegra_dc_mode dsi_fake_panel_modes[] = {
 	},
 };
 
-static bool dp_fake_init = false;
-
 int tegra_dc_init_fake_panel_link_cfg(struct tegra_dc_dp_link_config *cfg)
 {
 	/*
 	 * Currently fake the values for testing - same as eDp
 	 * will need to add a method to update as needed
 	 */
-	if (!dp_fake_init) {
+	if (!cfg->is_valid) {
 		cfg->max_lane_count = 4;
 		cfg->tps3_supported = false;
 		cfg->support_enhanced_framing = true;
@@ -199,7 +197,6 @@ int tegra_dc_init_fake_panel_link_cfg(struct tegra_dc_dp_link_config *cfg)
 		cfg->max_link_bw = 20;
 		cfg->scramble_ena = 0;
 		cfg->lt_data_valid = 0;
-		dp_fake_init = true;
 	}
 	return 0;
 }

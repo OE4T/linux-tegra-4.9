@@ -3496,18 +3496,23 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dev_info(&ndev->dev, "Display dc.%08x registered with id=%d\n",
 				(unsigned int)dt_res.start, ndev->id);
 
+		res = &dt_res;
+
+		dt_pdata = of_dc_parse_platform_data(ndev);
+		if (dt_pdata == NULL)
+			goto err_free;
+
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		dc->ctrl_num = dt_pdata->ctrl_num;
+#else
 		if (dt_res.start == TEGRA_DISPLAY_BASE)
 			dc->ctrl_num = 0;
 		else if (dt_res.start == TEGRA_DISPLAY2_BASE)
 			dc->ctrl_num = 1;
 		else
 			goto err_free;
+#endif
 
-		res = &dt_res;
-
-		dt_pdata = of_dc_parse_platform_data(ndev);
-		if (dt_pdata == NULL)
-			goto err_free;
 	} else {
 
 		dc->ctrl_num = ndev->id;

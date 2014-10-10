@@ -2052,6 +2052,16 @@ struct tegra_dc_platform_data
 		OF_DC_LOG("dc flag %lu\n", pdata->flags);
 	}
 
+	if (!of_property_read_u32(np, "nvidia,dc-ctrlnum", &temp)) {
+		pdata->ctrl_num = (unsigned long)temp;
+		OF_DC_LOG("dc controller index %lu\n", pdata->ctrl_num);
+	}
+
+	if (!of_property_read_u32(np, "nvidia,fb-win", &temp)) {
+		pdata->fb->win = (int)temp;
+		OF_DC_LOG("fb window Index %d\n", pdata->fb->win);
+	}
+
 	if (!of_property_read_u32(np, "nvidia,emc-clk-rate", &temp)) {
 		pdata->emc_clk_rate = (unsigned long)temp;
 		OF_DC_LOG("emc clk rate %lu\n", pdata->emc_clk_rate);

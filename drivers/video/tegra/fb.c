@@ -777,7 +777,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 
 	info->fix.line_length = fb_data->xres * fb_data->bits_per_pixel / 8;
 
-	stride = tegra_dc_get_stride(dc, 0);
+	stride = tegra_dc_get_stride(dc, fb_data->win);
 	if (!stride) /* default to pad the stride */
 		stride = round_up(info->fix.line_length,
 			TEGRA_LINEAR_PITCH_ALIGNMENT);

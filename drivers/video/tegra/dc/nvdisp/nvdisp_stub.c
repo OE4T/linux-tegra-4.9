@@ -21,6 +21,7 @@
 #include <linux/ioport.h>
 #include <linux/clk/tegra.h>
 #include <linux/of.h>
+#include <linux/tegra-soc.h>
 
 #include "mach/latency_allowance.h"
 #include "mach/io_dpd.h"
@@ -160,15 +161,27 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 			struct tegra_dc_platform_data *pdata)
 {
 	struct device_node *np_panel = NULL;
-	struct device_node *np_hdmi =
-		of_find_node_by_path(HDMI_NODE);
 	struct tegra_dc_out *dc_out = NULL;
 
 	if (pdata)
 		dc_out = pdata->default_out;
 
-	np_panel =
-		of_get_child_by_name(np_hdmi, "hdmi-display");
+	if (tegra_platform_is_linsim()) {
+
+		if (pdata && dc_out)
+			tegra_panel_register_ops(dc_out, &panel_sim_ops);
+		np_panel = of_find_compatible_node(NULL, NULL, "nvidia,sim-panel");
+
+	} else {
+		struct device_node *np_hdmi =
+			of_find_node_by_path(HDMI_NODE);
+
+		np_panel =
+			of_get_child_by_name(np_hdmi, "hdmi-display");
+	}
+
+	if (!np_panel)
+		pr_err("Could not find right panel\n");
 
 	return of_device_is_available(np_panel) ? np_panel : NULL;
 }

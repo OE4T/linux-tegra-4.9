@@ -79,10 +79,8 @@ static u32 BASE_ADDRESS_DC_WIN_WINBUF[] = {
 		BASE_ADDRESS_DC_F_WINBUF,
 };
 
-#define NVDISP_WIN_ADDR(head, win, word_offset) (((head)*DISP_HEAD_OFFSET + \
-		nvdisp_win_offset(win, word_offset)) << 2)
-
-#define DISP_HEAD_OFFSET 0x4000
+#define NVDISP_WIN_ADDR(head, win, word_offset) \
+		nvdisp_win_offset(win, word_offset) << 2
 
 /* convert window indirect to window direct offsets within a head */
 static u32 nvdisp_win_offset(const u32 win, const u32 word_offset)

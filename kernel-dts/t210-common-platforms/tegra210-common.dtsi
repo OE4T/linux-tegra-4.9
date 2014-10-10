@@ -59,6 +59,7 @@
 		nvidia,mdm-power-report-gpio = <&gpio TEGRA_GPIO(L, 1) GPIO_ACTIVE_LOW>;
 		nvidia,reset-gpio = <&gpio TEGRA_GPIO(L, 0) GPIO_ACTIVE_LOW>;
 		nvidia,mdm-en-gpio = <&gpio TEGRA_GPIO(K, 7) GPIO_ACTIVE_HIGH>;
+		nvidia,num-temp-sensors = <3>;
 		status = "disabled";
 	};
 

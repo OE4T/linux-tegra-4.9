@@ -76,4 +76,39 @@
 		smsc,irq-active-high;
 		smsc,irq-push-pull;
 	};
+
+	host1x {
+
+		nvdisplay@0x54200000 {
+			status = "okay";
+			nvidia,fb-bpp = <32>; /* bits per pixel */
+			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
+			nvidia,fb-win = <0>;
+			nvidia,dc-ctrlnum = <0>;
+		};
+
+		nvdisplay@0x54210000 {
+			status = "okay";
+			nvidia,fb-bpp = <32>; /* bits per pixel */
+			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
+			nvidia,fb-win = <1>;
+			nvidia,dc-ctrlnum = <1>;
+		};
+
+		sor {
+			status = "okay";
+		};
+
+		sor1 {
+			status = "okay";
+		};
+
+		dpaux {
+			status = "okay";
+		};
+
+		dpaux1 {
+			status = "okay";
+		};
+	};
 };

@@ -61,13 +61,25 @@
 			reg = <0x0 0x546c0000 0x0 0x00040000>;
 		};
 
-		nvdisplay {
+		nvdisplay@0x54200000 {
 			compatible = "nvidia,tegra186-dc";
-			reg = <0x0 0x54200000 0x0 0x00080000>;
-			interrupts = <0 73 0x04
-				      0 74 0x04>;
-			nvidia,fb-bpp = <32>; /* bits per pixel */
-			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
+			reg = <0x0 0x54200000 0x0 0x00010000>;
+			interrupts = <0 153 0x04>;
+			status = "disabled";
+		};
+
+		nvdisplay@0x54210000 {
+			compatible = "nvidia,tegra186-dc";
+			reg = <0x0 0x54210000 0x0 0x00010000>;
+			interrupts = <0 154 0x04>;
+			status = "disabled";
+		};
+
+		nvdisplay@0x54220000 {
+			compatible = "nvidia,tegra186-dc";
+			reg = <0x0 0x54220000 0x0 0x00010000>;
+			interrupts = <0 155 0x04>;
+			status = "disabled";
 		};
 
 		dsi {
@@ -109,6 +121,7 @@
 		sor {
 			compatible = "nvidia,tegra186-sor";
 			reg = <0x0 0x54540000 0x0 0x00040000>;
+			status = "disabled";
 		};
 
 		sor1 {
@@ -122,6 +135,7 @@
 			compatible = "nvidia,tegra186-dpaux";
 			reg = <0x0 0x545c0000 0x0 0x00040000>;
 			interrupts = <0 159 0x4>; /* INT_DPAUX */
+			status = "disabled";
 		};
 
 		dpaux1 {

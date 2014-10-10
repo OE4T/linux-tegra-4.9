@@ -366,16 +366,9 @@
 				status = "disabled";
 				regulator-name = "batt_regulator";
 				regulator-max-microamp = <3000000>;
-				ti,watchdog-timeout = <40>;
-				ti,rtc-alarm-time = <3600>;
-				ti,auto-recharge-time = <1800>;
 				ti,disbale-suspend-during-charging;
 				ti,charge-voltage-limit-millivolt = <4200>;
 				ti,charge-term-current-limit-milliamp = <384>;
-				ti,temp-range = <10 15 60>;
-				ti,charge-current-limit = <1024 2048 5200>;
-				ti,thermal-zone = "battery";
-				ti,temp-polling-time-sec = <5>;
 				ti,ir-comp-voltage-millivolt = <112>;
 				ti,ir-comp-resister-ohm = <70>;
 				ti,pre-charge-current-limit-milliamp = <768>;

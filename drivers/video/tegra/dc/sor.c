@@ -22,7 +22,6 @@
 #include <linux/delay.h>
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
-#include <linux/clk/tegra.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
 

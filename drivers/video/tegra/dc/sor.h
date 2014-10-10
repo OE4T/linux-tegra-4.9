@@ -18,6 +18,9 @@
 #ifndef __DRIVERS_VIDEO_TEGRA_DC_SOR_H__
 #define __DRIVERS_VIDEO_TEGRA_DC_SOR_H__
 
+#include <linux/tegra-soc.h>
+#include <linux/clk/tegra.h>
+
 enum {
 	TRAINING_PATTERN_DISABLE = 0,
 	TRAINING_PATTERN_1 = 1,
@@ -157,13 +160,24 @@ void tegra_dc_sor_termination_cal(struct tegra_dc_sor_data *sor);
 
 static inline u32 tegra_sor_readl(struct tegra_dc_sor_data *sor, u32 reg)
 {
-	u32 reg_val = readl(sor->base + reg * 4);
+	u32 reg_val;
+	if (likely(tegra_platform_is_silicon())) {
+		if (WARN(!tegra_is_clk_enabled(sor->sor_clk),
+		"SOR is clock gated!"))
+			return 0;
+	}
+	reg_val = readl(sor->base + reg * 4);
 	return reg_val;
 }
 
 static inline void tegra_sor_writel(struct tegra_dc_sor_data *sor,
 	u32 reg, u32 val)
 {
+	if (likely(tegra_platform_is_silicon())) {
+		if (WARN(!tegra_is_clk_enabled(sor->sor_clk),
+		"SOR is clock gated!"))
+			return;
+	}
 	writel(val, sor->base + reg * 4);
 }
 

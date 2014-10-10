@@ -351,6 +351,11 @@ unsigned long tegra_dsi_controller_readl(struct tegra_dc_dsi_data *dsi,
 	unsigned long ret;
 
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
+	if (likely(tegra_platform_is_silicon())) {
+		if (WARN(!tegra_is_clk_enabled(dsi->dsi_clk[index]),
+		"DSI is clock gated!"))
+			return 0;
+	}
 	ret = readl(dsi->base[index] + reg * 4);
 	trace_display_readl(dsi->dc, ret, dsi->base[index] + reg * 4);
 	return ret;
@@ -361,6 +366,11 @@ void tegra_dsi_controller_writel(struct tegra_dc_dsi_data *dsi,
 						u32 val, u32 reg, int index)
 {
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
+	if (likely(tegra_platform_is_silicon())) {
+		if (WARN(!tegra_is_clk_enabled(dsi->dsi_clk[index]),
+		"DSI is clock gated!"))
+			return;
+	}
 	trace_display_writel(dsi->dc, val, dsi->base[index] + reg * 4);
 	writel(val, dsi->base[index] + reg * 4);
 }

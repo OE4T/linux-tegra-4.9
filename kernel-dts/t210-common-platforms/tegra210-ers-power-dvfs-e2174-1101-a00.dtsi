@@ -87,7 +87,7 @@
 			regulator-init-microvolt = <1000000>;
 			regulator-ramp-delay = <500>;
 			regulator-n-voltages = <62>;
-			regulator-enable-ramp-delay = <500>;
+			regulator-enable-ramp-delay = <1000>;
 			regulator-boot-on;
 			enable-gpio = <&max77620 6 0>;
 		};

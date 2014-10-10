@@ -30,6 +30,8 @@
 #include <linux/uaccess.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
+#include <linux/pm_runtime.h>
+#include <linux/tegra_pm_domains.h>
 #include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <linux/firmware.h>
@@ -1909,6 +1911,7 @@ static int tegra210_adsp_codec_probe(struct snd_soc_codec *codec)
 
 static struct snd_soc_codec_driver tegra210_adsp_codec = {
 	.probe = tegra210_adsp_codec_probe,
+	.idle_bias_off = 1,
 };
 
 static struct snd_soc_platform_driver tegra210_adsp_platform = {
@@ -1947,6 +1950,15 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	pdev->dev.dma_mask = &tegra_dma_mask;
 	pdev->dev.coherent_dma_mask = tegra_dma_mask;
 
+	tegra_ape_pd_add_device(&pdev->dev);
+	pm_genpd_dev_need_save(&pdev->dev, true);
+	pm_genpd_dev_need_restore(&pdev->dev, true);
+
+	pm_runtime_enable(&pdev->dev);
+	if (!pm_runtime_enabled(&pdev->dev))
+		goto err_pm_disable;
+
+	pm_runtime_get_sync(&pdev->dev);
 	/* HACK : Should be handled through dma-engine */
 	for (i = 0; i < TEGRA210_ADSP_ADMA_CHANNEL_COUNT; i++) {
 		ret = tegra_agic_route_interrupt(
@@ -1954,10 +1966,11 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 			TEGRA_AGIC_ADSP);
 		if (ret < 0) {
 			dev_err(&pdev->dev, "Failed to route INT to ADSP");
-			return ret;
+			goto err_pm_disable;
 		}
 	}
 	/* HACK end */
+	pm_runtime_put(&pdev->dev);
 
 	for (i = 0; i < TEGRA210_ADSP_VIRT_REG_MAX; i++)
 		adsp->apps[i].reg = i;
@@ -1971,7 +1984,7 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	ret = snd_soc_register_platform(&pdev->dev, &tegra210_adsp_platform);
 	if (ret) {
 		dev_err(&pdev->dev, "Could not register platform: %d\n", ret);
-		goto err;
+		goto err_pm_disable;
 	}
 
 	ret = snd_soc_register_component(&pdev->dev, &tegra210_adsp_component,
@@ -1994,12 +2007,16 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 
 err_unregister_platform:
 	snd_soc_unregister_platform(&pdev->dev);
-err:
+err_pm_disable:
+	pm_runtime_disable(&pdev->dev);
+	tegra_ape_pd_remove_device(&pdev->dev);
 	return ret;
 }
 
 static int tegra210_adsp_audio_platform_remove(struct platform_device *pdev)
 {
+	pm_runtime_disable(&pdev->dev);
+	tegra_ape_pd_remove_device(&pdev->dev);
 	snd_soc_unregister_platform(&pdev->dev);
 	return 0;
 }

@@ -115,6 +115,100 @@
 				};
 			};
 		};
+
+		sor1 {
+			panel-nvidia-sim {
+				compatible = "nvidia,sim-panel";
+				nvidia,tx-pu-disable = <1>;
+				disp-default-out {
+					nvidia,out-type = <TEGRA_DC_OUT_FAKE_DP>;
+					nvidia,out-align = <TEGRA_DC_ALIGN_MSB>;
+					nvidia,out-order = <TEGRA_DC_ORDER_RED_BLUE>;
+					nvidia,out-flags = <TEGRA_DC_OUT_CONTINUOUS_MODE>;
+					nvidia,out-pins = <TEGRA_DC_OUT_PIN_H_SYNC TEGRA_DC_OUT_PIN_POL_LOW
+							   TEGRA_DC_OUT_PIN_V_SYNC TEGRA_DC_OUT_PIN_POL_LOW
+							   TEGRA_DC_OUT_PIN_PIXEL_CLOCK TEGRA_DC_OUT_PIN_POL_LOW
+							   TEGRA_DC_OUT_PIN_DATA_ENABLE TEGRA_DC_OUT_PIN_POL_HIGH>;
+					nvidia,out-depth = <18>;
+					nvidia,out-parent-clk = "pll_d_out0";
+					nvidia,out-xres = <640>;
+					nvidia,out-yres = <480>;
+				};
+				display-timings {
+					640x480-32 {
+						clock-frequency = <27000000>;
+						hactive = <640>;
+						vactive = <480>;
+						hfront-porch = <16>;
+						hback-porch = <152>;
+						hsync-len = <16>;
+						vfront-porch = <3>;
+						vback-porch = <19>;
+						vsync-len = <14>;
+						nvidia,h-ref-to-sync = <11>;
+						nvidia,v-ref-to-sync = <1>;
+					};
+				};
+				dp-lt-settings {
+					lt-setting@0 {
+						nvidia,drive-current = <DRIVE_CURRENT_L0 DRIVE_CURRENT_L0 DRIVE_CURRENT_L0 DRIVE_CURRENT_L0>;
+						nvidia,lane-preemphasis = <PRE_EMPHASIS_L0 PRE_EMPHASIS_L0 PRE_EMPHASIS_L0 PRE_EMPHASIS_L0>;
+						nvidia,post-cursor = <POST_CURSOR2_L0 POST_CURSOR2_L0 POST_CURSOR2_L0 POST_CURSOR2_L0>;
+						nvidia,tx-pu = <0>;
+						nvidia,load-adj = <0x3>;
+					};
+					lt-setting@1 {
+						nvidia,drive-current = <DRIVE_CURRENT_L0 DRIVE_CURRENT_L0 DRIVE_CURRENT_L0 DRIVE_CURRENT_L0>;
+						nvidia,lane-preemphasis = <PRE_EMPHASIS_L0 PRE_EMPHASIS_L0 PRE_EMPHASIS_L0 PRE_EMPHASIS_L0>;
+						nvidia,post-cursor = <POST_CURSOR2_L0 POST_CURSOR2_L0 POST_CURSOR2_L0 POST_CURSOR2_L0>;
+						nvidia,tx-pu = <0>;
+						nvidia,load-adj = <0x4>;
+					};
+					lt-setting@2 {
+						nvidia,drive-current = <DRIVE_CURRENT_L0 DRIVE_CURRENT_L0 DRIVE_CURRENT_L0 DRIVE_CURRENT_L0>;
+						nvidia,lane-preemphasis = <PRE_EMPHASIS_L1 PRE_EMPHASIS_L1 PRE_EMPHASIS_L1 PRE_EMPHASIS_L1>;
+						nvidia,post-cursor = <POST_CURSOR2_L0 POST_CURSOR2_L0 POST_CURSOR2_L0 POST_CURSOR2_L0>;
+						nvidia,tx-pu = <0>;
+						nvidia,load-adj = <0x6>;
+					};
+				};
+				smartdimmer {
+					status = "okay";
+					nvidia,use-auto-pwm = <0>;
+					nvidia,hw-update-delay = <0>;
+					nvidia,bin-width = <0xffffffff>;
+					nvidia,aggressiveness = <5>;
+					nvidia,use-vid-luma = <0>;
+					nvidia,phase-in-settings = <0>;
+					nvidia,phase-in-adjustments = <0>;
+					nvidia,k-limit-enable = <1>;
+					nvidia,k-limit = <200>;
+					nvidia,sd-window-enable = <0>;
+					nvidia,soft-clipping-enable= <1>;
+					nvidia,soft-clipping-threshold = <128>;
+					nvidia,smooth-k-enable = <0>;
+					nvidia,smooth-k-incr = <64>;
+					nvidia,coeff = <5 9 2>;
+					nvidia,fc = <0 0>;
+					nvidia,blp = <1024 255>;
+					nvidia,bltf = <57 65 73 82
+						       92 103 114 125
+						       138 150 164 178
+						       193 208 224 241>;
+					nvidia,lut = <255 255 255
+						      199 199 199
+						      153 153 153
+						      116 116 116
+						      85 85 85
+						      59 59 59
+						      36 36 36
+						      17 17 17
+						      0 0 0>;
+					nvidia,use-vpulse2 = <1>;
+					nvidia,bl-device-name = "pwm-backlight";
+				};
+			};
+		};
 	};
 	backlight {
 		panel-a-edp-1080p-14-0-bl {

@@ -624,6 +624,7 @@ int nvmap_page_pool_init(struct nvmap_device *dev)
 {
 	struct sysinfo info;
 	struct nvmap_page_pool *pool = &dev->pool;
+	struct sched_param param = {};
 
 	memset(pool, 0x0, sizeof(*pool));
 	mutex_init(&pool->lock);
@@ -656,6 +657,12 @@ int nvmap_page_pool_init(struct nvmap_device *dev)
 
 	register_shrinker(&nvmap_page_pool_shrinker);
 	nvmap_pp_wake_up_allocator();
+
+	/* set nvmap-bz to very low priority */
+	param.sched_priority = background_allocator->rt_priority;
+	if (sched_setscheduler(background_allocator, SCHED_IDLE, &param))
+		goto fail;
+
 	return 0;
 fail:
 	nvmap_page_pool_fini(dev);

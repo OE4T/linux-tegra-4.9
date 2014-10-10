@@ -180,7 +180,6 @@ static int tegra210_admaif_runtime_suspend(struct device *dev)
 	struct tegra210_admaif *admaif = dev_get_drvdata(dev);
 
 	regcache_cache_only(admaif->regmap, true);
-	clk_disable(admaif->clk);
 	pm_runtime_put_sync(dev->parent);
 
 	return 0;
@@ -194,12 +193,6 @@ static int tegra210_admaif_runtime_resume(struct device *dev)
 	ret = pm_runtime_get_sync(dev->parent);
 	if (ret < 0) {
 		dev_err(dev, "parent get_sync failed: %d\n", ret);
-		return ret;
-	}
-
-	ret = clk_enable(admaif->clk);
-	if (ret) {
-		dev_err(dev, "clk_enable failed: %d\n", ret);
 		return ret;
 	}
 
@@ -672,25 +665,18 @@ static int tegra210_admaif_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	admaif->clk = devm_clk_get(&pdev->dev, "admaif");
-	if (IS_ERR(admaif->clk)) {
-		dev_err(&pdev->dev, "Can't retrieve clock\n");
-		ret = PTR_ERR(admaif->clk);
-		goto err;
-	}
-
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(&pdev->dev, "No memory resource for admaif\n");
 		ret = -ENODEV;
-		goto err_clk_put;
+		goto err;
 	}
 
 	regs = devm_request_and_ioremap(&pdev->dev, res);
 	if (!regs) {
 		dev_err(&pdev->dev, "request/iomap region failed\n");
 		ret = -ENODEV;
-		goto err_clk_put;
+		goto err;
 	}
 
 	admaif->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
@@ -698,7 +684,7 @@ static int tegra210_admaif_probe(struct platform_device *pdev)
 	if (IS_ERR(admaif->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
 		ret = PTR_ERR(admaif->regmap);
-		goto err_clk_put;
+		goto err;
 	}
 	regcache_cache_only(admaif->regmap, true);
 
@@ -781,16 +767,12 @@ err_suspend:
 		tegra210_admaif_runtime_suspend(&pdev->dev);
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
-err_clk_put:
-	devm_clk_put(&pdev->dev, admaif->clk);
 err:
 	return ret;
 }
 
 static int tegra210_admaif_remove(struct platform_device *pdev)
 {
-	struct tegra210_admaif *admaif = dev_get_drvdata(&pdev->dev);
-
 	snd_soc_unregister_component(&pdev->dev);
 
 	snd_soc_unregister_codec(&pdev->dev);
@@ -800,8 +782,6 @@ static int tegra210_admaif_remove(struct platform_device *pdev)
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_admaif_runtime_suspend(&pdev->dev);
-
-	devm_clk_put(&pdev->dev, admaif->clk);
 
 	return 0;
 }

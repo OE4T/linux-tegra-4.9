@@ -96,7 +96,6 @@ struct tegra210_admaif_soc_data {
 };
 
 struct tegra210_admaif {
-	struct clk *clk;
 	/* regmap for admaif */
 	struct regmap *regmap;
 	int refcnt;

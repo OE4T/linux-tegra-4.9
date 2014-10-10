@@ -3,6 +3,8 @@
  *
  * Copyright (C) 2008 Atmel Corporation
  *
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
@@ -18,6 +20,7 @@
 
 #include <linux/mmc/card.h>
 #include <linux/mmc/host.h>
+#include <linux/mmc/mmc.h>
 
 #include "core.h"
 #include "mmc_ops.h"
@@ -298,38 +301,117 @@ static int mmc_dbg_card_status_get(void *data, u64 *val)
 DEFINE_SIMPLE_ATTRIBUTE(mmc_dbg_card_status_fops, mmc_dbg_card_status_get,
 		NULL, "%08llx\n");
 
+static int mmc_get_ext_csd_byte_val(struct mmc_card *card, u64 *val,
+		unsigned int ext_csd_byte)
+{
+	u8 *ext_csd;
+	int err = 0;
+
+	ext_csd = kmalloc(512, GFP_KERNEL);
+	if (!ext_csd) {
+		err = -ENOMEM;
+		return err;
+	}
+
+	mmc_claim_host(card->host);
+	err = mmc_get_ext_csd(card, &ext_csd);
+	mmc_release_host(card->host);
+
+	if (!err)
+		*val = ext_csd[ext_csd_byte];
+
+	kfree(ext_csd);
+	return err;
+}
+
 #define EXT_CSD_STR_LEN 1025
 
-static int mmc_ext_csd_open(struct inode *inode, struct file *filp)
+/* Here index starts with zero*/
+static char *mmc_ext_csd_read_by_index(int start, int end,
+		int strlen, struct inode *inode)
 {
 	struct mmc_card *card = inode->i_private;
 	char *buf;
 	ssize_t n = 0;
 	u8 *ext_csd;
-	int err, i;
+	int err = 0, i = 0;
 
-	buf = kmalloc(EXT_CSD_STR_LEN + 1, GFP_KERNEL);
+	buf = kmalloc(strlen + 1, GFP_KERNEL);
 	if (!buf)
-		return -ENOMEM;
+		return ERR_PTR(-ENOMEM);
 
-	mmc_get_card(card);
+
+	ext_csd = kmalloc(512, GFP_KERNEL);
+	if (!ext_csd) {
+		kfree(buf);
+		return ERR_PTR(-ENOMEM);
+	}
+
+	mmc_claim_host(card->host);
 	err = mmc_get_ext_csd(card, &ext_csd);
-	mmc_put_card(card);
+	mmc_release_host(card->host);
 	if (err)
 		goto out_free;
 
-	for (i = 0; i < 512; i++)
+	for (i = start; i <= end; i++)
 		n += sprintf(buf + n, "%02x", ext_csd[i]);
 	n += sprintf(buf + n, "\n");
-	BUG_ON(n != EXT_CSD_STR_LEN);
 
-	filp->private_data = buf;
 	kfree(ext_csd);
-	return 0;
+	return buf;
 
 out_free:
+	kfree(ext_csd);
 	kfree(buf);
-	return err;
+	return NULL;
+}
+
+static int mmc_dbg_ext_csd_eol_get(void *data, u64 *val)
+{
+	struct mmc_card *card = data;
+
+	return mmc_get_ext_csd_byte_val(card, val, EXT_CSD_PRE_EOL_INFO);
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(mmc_dbg_ext_csd_eol_fops,
+			mmc_dbg_ext_csd_eol_get, NULL, "%llu\n");
+
+#define EXT_CSD_FW_V_STR_LEN 17
+static int mmc_ext_csd_fw_v_open(struct inode *inode, struct file *filp)
+{
+	/*Firmware Version ext_csd 254:261 */
+	filp->private_data = mmc_ext_csd_read_by_index(254, 261,
+				EXT_CSD_FW_V_STR_LEN, inode);
+	return 0;
+}
+
+static ssize_t mmc_ext_csd_fw_v_read(struct file *filp, char __user *ubuf,
+				size_t cnt, loff_t *ppos)
+{
+	char *buf = filp->private_data;
+
+	return simple_read_from_buffer(ubuf, cnt, ppos,
+				       buf, EXT_CSD_FW_V_STR_LEN);
+}
+
+static int mmc_ext_csd_fw_v_release(struct inode *inode, struct file *file)
+{
+	kfree(file->private_data);
+	return 0;
+}
+
+static const struct file_operations mmc_dbg_ext_csd_fw_v_fops = {
+	.open		= mmc_ext_csd_fw_v_open,
+	.read		= mmc_ext_csd_fw_v_read,
+	.release	= mmc_ext_csd_fw_v_release,
+	.llseek		= default_llseek,
+};
+
+static int mmc_ext_csd_open(struct inode *inode, struct file *filp)
+{
+	filp->private_data = mmc_ext_csd_read_by_index(0, 511,
+				EXT_CSD_STR_LEN, inode);
+	return 0;
 }
 
 static ssize_t mmc_ext_csd_read(struct file *filp, char __user *ubuf,
@@ -381,10 +463,17 @@ void mmc_add_card_debugfs(struct mmc_card *card)
 					&mmc_dbg_card_status_fops))
 			goto err;
 
-	if (mmc_card_mmc(card))
+	if (mmc_card_mmc(card)) {
 		if (!debugfs_create_file("ext_csd", S_IRUSR, root, card,
 					&mmc_dbg_ext_csd_fops))
 			goto err;
+		if (!debugfs_create_file("eol_status", S_IRUSR, root, card,
+					&mmc_dbg_ext_csd_eol_fops))
+			goto err;
+		if (!debugfs_create_file("firmware_version", S_IRUSR, root,
+					card, &mmc_dbg_ext_csd_fw_v_fops))
+			goto err;
+	}
 
 	return;
 

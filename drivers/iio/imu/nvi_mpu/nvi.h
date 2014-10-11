@@ -521,7 +521,6 @@ struct nvi_state {
 	struct iio_trigger *trig;
 	struct regulator_bulk_data vreg[2];
 	struct notifier_block nb_vreg[2];
-	struct mutex srlock;
 	struct mpu_platform_data pdata;
 	const struct nvi_hal *hal;	/* Hardware Abstraction Layer */
 	struct nvi_rc rc;

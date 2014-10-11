@@ -1552,7 +1552,9 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 			goto err_get_clk;
 		}
 	}
-	tegra_dp_disable_irq(irq);
+
+	if (dc->out->type != TEGRA_DC_OUT_FAKE_DP)
+		tegra_dp_disable_irq(irq);
 
 	dp->dc = dc;
 	dp->aux_base = base;
@@ -2195,6 +2197,9 @@ static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp)
 static inline void tegra_dp_default_int(struct tegra_dc_dp_data *dp,
 					bool enable)
 {
+	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+		return;
+
 	if (enable)
 		tegra_dp_int_en(dp, DPAUX_INTR_EN_AUX_IRQ_EVENT);
 	else
@@ -2290,10 +2295,10 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 
 	tegra_dc_io_start(dc);
 
-	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
-		tegra_dp_default_int(dp, false);
+	tegra_dp_default_int(dp, false);
+
+	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP)
 		tegra_dp_disable_irq(dp->irq);
-	}
 
 	tegra_dpaux_pad_power(dp->dc, TEGRA_DPAUX_INSTANCE_0, false);
 
@@ -2303,7 +2308,6 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 
 	tegra_dpaux_clk_disable(dp);
 	tegra_dp_clk_disable(dp);
-
 	tegra_dc_io_end(dc);
 	dp->enabled = false;
 }

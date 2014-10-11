@@ -119,6 +119,10 @@ struct tegra_dc_out_ops {
 	 */
 	int (*partial_update) (struct tegra_dc *dc, unsigned int *xoff,
 		unsigned int *yoff, unsigned int *width, unsigned int *height);
+	/* refcounted enable of pads and clocks before performing DDC/I2C. */
+	int (*ddc_enable)(struct tegra_dc *dc);
+	/* refcounted disable of pads and clocks after performing DDC/I2C. */
+	int (*ddc_disable)(struct tegra_dc *dc);
 };
 
 struct tegra_dc_shift_clk_div {

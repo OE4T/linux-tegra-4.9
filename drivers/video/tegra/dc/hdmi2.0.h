@@ -242,6 +242,7 @@ struct tegra_hdmi {
 	struct tegra_dc_sor_data *sor;
 	struct hdmi_avi_infoframe avi;
 	bool enabled;
+	int clock_refcount;
 
 	u32 clk_type;
 
@@ -275,6 +276,7 @@ struct tegra_hdmi {
 
 	int irq;
 	struct tegra_prod_list *prod_list;
+	int ddc_refcount;
 };
 
 #define HDMI_ELD_BUF 96

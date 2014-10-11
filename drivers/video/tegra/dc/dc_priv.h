@@ -463,6 +463,9 @@ void tegra_dc_set_out_pin_polars(struct tegra_dc *dc,
 /* defined in dc.c, used in bandwidth.c and ext/dev.c */
 unsigned int tegra_dc_has_multiple_dc(void);
 
+/* defined in dc.c, used in hdmihdcp.c */
+int tegra_dc_ddc_enable(struct tegra_dc *dc, bool enabled);
+
 /* defined in dc.c, used in dsi.c */
 void tegra_dc_clk_enable(struct tegra_dc *dc);
 void tegra_dc_clk_disable(struct tegra_dc *dc);

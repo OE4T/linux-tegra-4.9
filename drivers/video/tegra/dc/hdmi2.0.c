@@ -88,6 +88,8 @@ static void tegra_clk_writel(u32 val, u32 mask, u32 offset)
 static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi);
 static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type);
 static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk);
+static void tegra_hdmi_get(struct tegra_dc *dc);
+static void tegra_hdmi_put(struct tegra_dc *dc);
 static void tegra_hdmi_scdc_worker(struct work_struct *work);
 static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi);
 
@@ -215,6 +217,7 @@ int tegra_hdmi_setup_hda_presence(void)
 
 	if (hdmi->enabled && hdmi->eld_valid) {
 		tegra_dc_unpowergate_locked(dc);
+		tegra_hdmi_get(hdmi->dc);
 		tegra_dc_io_start(dc);
 
 		/* remove hda presence while setting up eld */
@@ -225,6 +228,7 @@ int tegra_hdmi_setup_hda_presence(void)
 				NV_SOR_AUDIO_HDA_PRESENCE_ELDV(1) |
 				NV_SOR_AUDIO_HDA_PRESENCE_PD(1));
 
+		tegra_hdmi_put(hdmi->dc);
 		tegra_dc_io_end(dc);
 		tegra_dc_powergate_locked(dc);
 
@@ -234,12 +238,43 @@ int tegra_hdmi_setup_hda_presence(void)
 	return -ENODEV;
 }
 
+static inline void _tegra_hdmi_ddc_enable(struct tegra_hdmi *hdmi)
+{
+	if (hdmi->ddc_refcount++)
+		return;
+	tegra_hdmi_get(hdmi->dc);
+	/*
+	 * hdmi uses i2c lane muxed on dpaux1 pad.
+	 * Enable dpaux1 pads and configure the mux.
+	 */
+	tegra_dpaux_config_pad_mode(hdmi->dc, TEGRA_DPAUX_INSTANCE_1,
+					TEGRA_DPAUX_PAD_MODE_I2C);
+}
+
+static inline void _tegra_hdmi_ddc_disable(struct tegra_hdmi *hdmi)
+{
+	if (WARN_ONCE(hdmi->ddc_refcount <= 0, "ddc refcount imbalance"))
+		return;
+	if (--hdmi->ddc_refcount != 0)
+		return;
+	/*
+	 * hdmi uses i2c lane muxed on dpaux1 pad.
+	 * Disable dpaux1 pads.
+	 */
+	tegra_dpaux_pad_power(hdmi->dc, TEGRA_DPAUX_INSTANCE_1, false);
+	tegra_hdmi_put(hdmi->dc);
+}
+
 static int tegra_hdmi_ddc_i2c_xfer(struct tegra_dc *dc,
 					struct i2c_msg *msgs, int num)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+	int ret;
 
-	return i2c_transfer(hdmi->ddc_i2c_client->adapter, msgs, num);
+	_tegra_hdmi_ddc_enable(hdmi);
+	ret = i2c_transfer(hdmi->ddc_i2c_client->adapter, msgs, num);
+	_tegra_hdmi_ddc_disable(hdmi);
+	return ret;
 }
 
 static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi)
@@ -406,25 +441,6 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 	return true;
 }
 
-static inline void tegra_hdmi_ddc_enable(struct tegra_hdmi *hdmi)
-{
-	/*
-	 * hdmi uses i2c lane muxed on dpaux1 pad.
-	 * Enable dpaux1 pads and configure the mux.
-	 */
-	tegra_dpaux_config_pad_mode(hdmi->dc, TEGRA_DPAUX_INSTANCE_1,
-					TEGRA_DPAUX_PAD_MODE_I2C);
-}
-
-static inline void tegra_hdmi_ddc_disable(struct tegra_hdmi *hdmi)
-{
-	/*
-	 * hdmi uses i2c lane muxed on dpaux1 pad.
-	 * Disable dpaux1 pads.
-	 */
-	tegra_dpaux_pad_power(hdmi->dc, TEGRA_DPAUX_INSTANCE_1, false);
-}
-
 static int tegra_hdmi_get_mon_spec(struct tegra_hdmi *hdmi)
 {
 #define MAX_RETRY 5
@@ -546,7 +562,7 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 
 	tegra_dc_unpowergate_locked(hdmi->dc); /* BUG! this is a race */
 
-	tegra_hdmi_ddc_enable(hdmi);
+	_tegra_hdmi_ddc_enable(hdmi);
 
 	err = tegra_hdmi_edid_read(hdmi);
 	if (err < 0)
@@ -555,6 +571,8 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 	err = tegra_hdmi_eld_read(hdmi);
 	if (err < 0)
 		goto fail;
+
+	_tegra_hdmi_ddc_disable(hdmi);
 
 	tegra_dc_unpowergate_locked(hdmi->dc); /* BUG! this is a race */
 
@@ -612,7 +630,7 @@ static int tegra_hdmi_controller_disable(struct tegra_hdmi *hdmi)
 	tegra_hdmi_hda_clk_disable(hdmi);
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, 0);
 	tegra_hdmi_reset(hdmi);
-	tegra_sor_clk_disable(sor);
+	tegra_hdmi_put(dc);
 
 	tegra_dc_put(dc);
 
@@ -812,10 +830,16 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi->pdata = dc->pdata->default_out->hdmi_out;
 	hdmi->dc = dc;
 	dc_hdmi = hdmi;
+	hdmi->ddc_refcount = 0; /* assumes this is disabled when starting */
 	hdmi->nvhdcp = NULL;
 	hdmi->mon_spec_valid = false;
 	hdmi->eld_valid = false;
-	hdmi->enabled = false;
+	if (0) {
+		/* TODO: seamless boot mode needs initialize the state */
+	} else {
+		hdmi->enabled = false;
+		hdmi->clock_refcount = 0;
+	}
 
 #ifdef CONFIG_TEGRA_HDMIHDCP
 	hdmi->nvhdcp = tegra_nvhdcp_create(hdmi, dc->ndev->id,
@@ -1245,7 +1269,7 @@ static int tegra_hdmi_scdc_read(struct tegra_hdmi *hdmi,
 		},
 	};
 
-	tegra_hdmi_ddc_enable(hdmi);
+	_tegra_hdmi_ddc_enable(hdmi);
 
 	for (i = 0; i < n_entries; i++) {
 		msg[0].buf = offset_data[i];
@@ -1253,7 +1277,7 @@ static int tegra_hdmi_scdc_read(struct tegra_hdmi *hdmi,
 		tegra_hdmi_scdc_i2c_xfer(hdmi->dc, msg, ARRAY_SIZE(msg));
 	}
 
-	tegra_hdmi_ddc_disable(hdmi);
+	_tegra_hdmi_ddc_disable(hdmi);
 
 	return 0;
 }
@@ -1270,14 +1294,14 @@ static int tegra_hdmi_scdc_write(struct tegra_hdmi *hdmi,
 		},
 	};
 
-	tegra_hdmi_ddc_enable(hdmi);
+	_tegra_hdmi_ddc_enable(hdmi);
 
 	for (i = 0; i < n_entries; i++) {
 		msg[0].buf = offset_data[i];
 		tegra_hdmi_scdc_i2c_xfer(hdmi->dc, msg, ARRAY_SIZE(msg));
 	}
 
-	tegra_hdmi_ddc_disable(hdmi);
+	_tegra_hdmi_ddc_disable(hdmi);
 
 	return 0;
 }
@@ -1366,15 +1390,51 @@ static void tegra_hdmi_scdc_worker(struct work_struct *work)
 	schedule_delayed_work(&hdmi->scdc_work,
 			msecs_to_jiffies(HDMI_SCDC_MONITOR_TIMEOUT_MS));
 }
+
+static void _tegra_hdmi_clock_enable(struct tegra_hdmi *hdmi)
+{
+	struct tegra_dc_sor_data *sor = hdmi->sor;
+	clk_prepare_enable(sor->safe_clk);
+	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_SAFE_CLK);
+	tegra_sor_clk_enable(sor);
+}
+
+static void _tegra_hdmi_clock_disable(struct tegra_hdmi *hdmi)
+{
+	struct tegra_dc_sor_data *sor = hdmi->sor;
+	tegra_sor_clk_disable(sor);
+}
+
+static void tegra_hdmi_get(struct tegra_dc *dc)
+{
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+
+	if (hdmi->clock_refcount++)
+		return;
+	_tegra_hdmi_clock_enable(hdmi);
+}
+
+static void tegra_hdmi_put(struct tegra_dc *dc)
+{
+
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+
+	if (WARN_ONCE(hdmi->clock_refcount <= 0,
+		"hdmi: clock refcount imbalance"))
+		return;
+	if (--hdmi->clock_refcount != 0)
+		return;
+
+	_tegra_hdmi_clock_disable(hdmi);
+}
+
 static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 {
 	struct tegra_dc *dc = hdmi->dc;
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 
 	tegra_dc_get(dc);
-	clk_prepare_enable(sor->safe_clk);
-	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_SAFE_CLK);
-	tegra_sor_clk_enable(sor);
+	tegra_hdmi_get(dc);
 
 	tegra_hdmi_hda_clk_enable(hdmi);
 
@@ -1520,6 +1580,20 @@ static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 	return tegra_dc_hpd(dc);
 }
 
+static int tegra_dc_hdmi_ddc_enable(struct tegra_dc *dc)
+{
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+	_tegra_hdmi_ddc_enable(hdmi);
+	return 0;
+}
+
+static int tegra_dc_hdmi_ddc_disable(struct tegra_dc *dc)
+{
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+	_tegra_hdmi_ddc_disable(hdmi);
+	return 0;
+}
+
 #ifdef CONFIG_DEBUG_FS
 /* show current hpd state */
 static int tegra_hdmi_hotplug_dbg_show(struct seq_file *m, void *unused)
@@ -1627,4 +1701,6 @@ struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.disable = tegra_dc_hdmi_disable,
 	.setup_clk = tegra_dc_hdmi_setup_clk,
 	.detect = tegra_dc_hdmi_detect,
+	.ddc_enable = tegra_dc_hdmi_ddc_enable,
+	.ddc_disable = tegra_dc_hdmi_ddc_disable,
 };

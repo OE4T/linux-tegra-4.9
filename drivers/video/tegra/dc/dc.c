@@ -3413,6 +3413,19 @@ static ssize_t switch_modeset_print_mode(struct switch_dev *sdev, char *buf)
 }
 #endif
 
+/* enables pads and clocks to perform DDC/I2C */
+int tegra_dc_ddc_enable(struct tegra_dc *dc, bool enabled)
+{
+	int ret = -ENOSYS;
+	if (dc->out_ops) {
+		if (enabled && dc->out_ops->ddc_enable)
+			ret = dc->out_ops->ddc_enable(dc);
+		else if (!enabled && dc->out_ops->ddc_disable)
+			ret = dc->out_ops->ddc_disable(dc);
+	}
+	return ret;
+}
+
 int tegra_dc_slgc_disp0(struct notifier_block *nb,
 	unsigned long unused0, void *unused1)
 {

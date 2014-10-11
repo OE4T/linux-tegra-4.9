@@ -131,10 +131,13 @@ static int nvhdcp_i2c_read(struct tegra_nvhdcp *nvhdcp, u8 reg,
 			.buf = data,
 		},
 	};
+	struct tegra_dc *dc = tegra_dc_hdmi_get_dc(nvhdcp->hdmi);
 
+	tegra_dc_ddc_enable(dc, true);
 	do {
 		if (!nvhdcp_is_plugged(nvhdcp)) {
 			nvhdcp_err("disconnect during i2c xfer\n");
+			tegra_dc_ddc_enable(dc, false);
 			return -EIO;
 		}
 		status = i2c_transfer(nvhdcp->client->adapter,
@@ -142,6 +145,7 @@ static int nvhdcp_i2c_read(struct tegra_nvhdcp *nvhdcp, u8 reg,
 		if ((status < 0) && (retries > 1))
 			msleep(250);
 	} while ((status < 0) && retries--);
+	tegra_dc_ddc_enable(dc, false);
 
 	if (status < 0) {
 		nvhdcp_err("i2c xfer error %d\n", status);
@@ -165,13 +169,16 @@ static int nvhdcp_i2c_write(struct tegra_nvhdcp *nvhdcp, u8 reg,
 		},
 	};
 	int retries = 15;
+	struct tegra_dc *dc = tegra_dc_hdmi_get_dc(nvhdcp->hdmi);
 
 	buf[0] = reg;
 	memcpy(buf + 1, data, len);
 
+	tegra_dc_ddc_enable(dc, true);
 	do {
 		if (!nvhdcp_is_plugged(nvhdcp)) {
 			nvhdcp_err("disconnect during i2c xfer\n");
+			tegra_dc_ddc_enable(dc, false);
 			return -EIO;
 		}
 		status = i2c_transfer(nvhdcp->client->adapter,
@@ -179,6 +186,7 @@ static int nvhdcp_i2c_write(struct tegra_nvhdcp *nvhdcp, u8 reg,
 		if ((status < 0) && (retries > 1))
 			msleep(250);
 	} while ((status < 0) && retries--);
+	tegra_dc_ddc_enable(dc, false);
 
 	if (status < 0) {
 		nvhdcp_err("i2c xfer error %d\n", status);

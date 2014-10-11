@@ -2863,8 +2863,10 @@ static irqreturn_t nvi_irq_thread(int irq, void *dev_id)
 	unsigned int i;
 	int ret;
 
-	mutex_lock(&st->srlock);
 	mutex_lock(&indio_dev->mlock);
+	if (st->suspend)
+		goto nvi_irq_thread_exit;
+
 	ts = nvi_get_time_ns(st);
 	/* if only accelermeter data */
 	if (st->rc.pwr_mgmt_1 & BIT_CYCLE) {
@@ -3060,7 +3062,6 @@ nvi_irq_thread_exit:
 		st->irq_dis = false;
 	}
 	mutex_unlock(&indio_dev->mlock);
-	mutex_unlock(&st->srlock);
 	return IRQ_HANDLED;
 
 nvi_irq_thread_exit_reset:
@@ -3070,7 +3071,6 @@ nvi_irq_thread_exit_reset:
 			 __func__, fifo_count, fifo_sample_size);
 	nvi_reset(st, true, false);
 	mutex_unlock(&indio_dev->mlock);
-	mutex_unlock(&st->srlock);
 	return IRQ_HANDLED;
 }
 
@@ -5265,7 +5265,6 @@ static int nvi_suspend(struct device *dev)
 	struct nvi_state *st = iio_priv(indio_dev);
 	int ret;
 
-	mutex_lock(&st->srlock);
 	mutex_lock(&indio_dev->mlock);
 	ret = nvi_pm(st, NVI_PM_OFF);
 	st->suspend = true;
@@ -5289,7 +5288,6 @@ static int nvi_resume(struct device *dev)
 	nvi_aux_bypass_enable(st, false);
 	nvi_enable(indio_dev);
 	mutex_unlock(&indio_dev->mlock);
-	mutex_unlock(&st->srlock);
 	if (st->dbg & NVI_DBG_SPEW_MSG)
 		dev_info(dev, "%s done\n", __func__);
 	return 0;
@@ -5438,7 +5436,6 @@ static int nvi_probe(struct i2c_client *client,
 		}
 	}
 
-	mutex_init(&st->srlock);
 	spin_lock_init(&st->time_stamp_lock);
 	nvi_pm_init(st);
 	ret = nvi_id_i2c(indio_dev, id);

@@ -231,8 +231,6 @@ static void update_cdma_locked(struct nvhost_cdma *cdma)
 			break;
 		}
 
-		/* set notifier to userspace about submit timeout */
-		nvhost_job_set_notifier(job, NVHOST_CHANNEL_SUBMIT_TIMEOUT);
 		nvhost_job_put(job);
 	}
 
@@ -345,6 +343,9 @@ out:
 		/* cleanup push buffer */
 		cdma_op().timeout_pb_cleanup(cdma, job->first_get,
 			job->num_slots);
+
+		/* set notifier to userspace about submit timeout */
+		nvhost_job_set_notifier(job, NVHOST_CHANNEL_SUBMIT_TIMEOUT);
 	}
 
 	list_for_each_entry_from(job, &cdma->sync_queue, list)

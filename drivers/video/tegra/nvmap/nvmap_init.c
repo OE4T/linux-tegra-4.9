@@ -21,6 +21,7 @@
 #include <linux/kernel.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
+#include <linux/memblock.h>
 
 #include <linux/nvmap.h>
 
@@ -163,6 +164,18 @@ static int __nvmap_init_legacy(void)
 	nvmap_carveouts[0].size = TEGRA_IRAM_SIZE - TEGRA_RESET_HANDLER_SIZE;
 
 	/* Carveout. */
+	if (!tegra_vpr_resize && !tegra_carveout_size) {
+		phys_addr_t addr, size = SZ_128M;
+
+		addr = memblock_find_in_range(size, 0, size, SZ_128K);
+		if (addr) {
+			memblock_reserve(addr, size);
+			tegra_carveout_size = size;
+			tegra_carveout_start = addr;
+			pr_info("allocate carveout=%pa@0%pa\n", &size, &addr);
+		}
+	}
+
 	nvmap_carveouts[1].base = tegra_carveout_start;
 	nvmap_carveouts[1].size = tegra_carveout_size;
 

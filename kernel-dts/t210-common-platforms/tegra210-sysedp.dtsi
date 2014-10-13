@@ -1,0 +1,58 @@
+/*
+ * arch/arm/boot/dts/tegra210-platforms/tegra210-sysedp.dtsi
+ *
+ * Copyright (c) 2014, NVIDIA CORPORATION. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/ {
+	sysedp-dynamic-capping {
+		compatible = "nvidia,tegra124-sysedp-dynamic-capping";
+		nvidia,gpu_cap_as_mw;
+		nvidia,corecap = <
+			6000     1000  2000 1600000   1000   2000 1600000       0
+			7000     1000  3000 1600000   1000   3000 1600000     496
+			8000     3000  3000 1600000   3000   3000 1600000    1654
+			9000     3000  3000 1600000   3000   3000 1600000    1654
+			10000    3000  4000 1600000   3000   4000 1600000    2150
+			11000    5000  4000 1600000   3000   5000 1600000    2645
+			12000    5000  4000 1600000   3000   6000 1600000    3042
+			13000    6000  5000 1600000   3000   7000 1600000    3637
+			14000    7000  5000 1600000   3000   8000 1600000    4133
+			15000    7000  6000 1600000   4000   8000 1600000    4519
+			16000    7000  7000 1600000   4000   9000 1600000    5014
+			17000    8000  5000 1600000   4000  10000 1600000    4627
+			18000    9000  6000 1600000   4000  11000 1600000    5582
+			19000    9000  6000 1600000   4000  12000 1600000    5582
+			20000    9000  7000 1600000   4000  13000 1600000    6077
+			21000    9000  7000 1600000   4000  14000 1600000    6077
+			22000    9000  8000 1600000   4000  15000 1600000    6573
+			23000    9000  8000 1600000   4000  17000 1600000    6573
+			24000    9000 11000 1600000   5000  17000 1600000    8060
+			25000    9000 11000 1600000   5000  17000 1600000    8060
+			26000    9000 12000 1600000   5000  18000 1600000    8591
+			27000   10000 13000 1600000   5000  19000 1600000    8924
+			28000   12000 14000 1600000   6000  20000 1600000    9634
+			29000   12000 14000 1600000   6000  21000 1600000    9634
+			30000   12000 16000 1600000   6000  21000 1600000    9634
+			31000   13000 16000 1600000   7000  22000 1600000    9993
+			32000   13000 20000 1600000   8000  22000 1600000   10403
+			33000   13000 20000 1600000   8000  22000 1600000   10403
+			34000   13000 20000 1600000   8000  22000 1600000   10403
+			35000   13000 21000 1600000   11000 22000 1600000   11196
+		>;
+		nvidia,core_gain = <120>;
+		nvidia,init_req_watts = <20000>;
+	};
+};

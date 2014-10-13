@@ -62,6 +62,7 @@ struct nvhost_channel {
 	struct nvhost_as *as;
 
 	/* channel syncpoints */
+	struct mutex syncpts_lock;
 	u32 syncpts[NVHOST_MODULE_MAX_SYNCPTS];
 };
 

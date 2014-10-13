@@ -258,6 +258,7 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 	nvhost_channel_assign(pdata, ch);
 	nvhost_set_chanops(ch);
 	set_bit(ch->chid, &host->allocated_channels);
+	mutex_init(&ch->syncpts_lock);
 	ch->refcount = 1;
 
 	/* Initialize channel */

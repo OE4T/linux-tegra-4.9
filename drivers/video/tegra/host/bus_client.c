@@ -710,20 +710,23 @@ static u32 nvhost_ioctl_channel_get_syncpt_channel(struct nvhost_channel *ch,
 {
 	u32 id;
 
+	mutex_lock(&ch->syncpts_lock);
+
 	/* if we already have required syncpt then return it ... */
-	if (ch->syncpts[index]) {
-		id = ch->syncpts[index];
-		return id;
-	}
+	id = ch->syncpts[index];
+	if (id)
+		goto exit_unlock;
 
 	/* ... otherwise get a new syncpt dynamically */
 	id = nvhost_get_syncpt_host_managed(pdata->pdev, index);
 	if (!id)
-		return 0;
+		goto exit_unlock;
 
 	/* ... and store it for further references */
 	ch->syncpts[index] = id;
 
+exit_unlock:
+	mutex_unlock(&ch->syncpts_lock);
 	return id;
 }
 

@@ -3,7 +3,7 @@
  *
  * GPU memory management driver for Tegra
  *
- * Copyright (c) 2009-2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2015, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -242,9 +242,11 @@ struct nvmap_device {
 	struct nvmap_page_pool pool;
 #endif
 	struct list_head clients;
+	struct rb_root pids;
 	struct mutex	clients_lock;
 	struct list_head lru_handles;
 	spinlock_t	lru_lock;
+	struct dentry *handles_by_pid;
 };
 
 enum nvmap_stats_t {

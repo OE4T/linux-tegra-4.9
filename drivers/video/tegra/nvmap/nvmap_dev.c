@@ -321,6 +321,95 @@ struct nvmap_handle *nvmap_validate_get(struct nvmap_handle *id)
 	return NULL;
 }
 
+static const struct file_operations debug_handles_by_pid_fops;
+
+static inline pid_t nvmap_client_pid(struct nvmap_client *client)
+{
+	return client->task ? client->task->pid : 0;
+}
+
+struct nvmap_pid_data {
+	struct rb_node node;
+	pid_t pid;
+	struct kref refcount;
+	struct dentry *handles_file;
+};
+
+static void nvmap_pid_release_locked(struct kref *kref)
+{
+	struct nvmap_pid_data *p = container_of(kref, struct nvmap_pid_data,
+			refcount);
+	debugfs_remove(p->handles_file);
+	rb_erase(&p->node, &nvmap_dev->pids);
+	kfree(p);
+}
+
+static void nvmap_pid_get_locked(struct nvmap_device *dev, pid_t pid)
+{
+	struct rb_root *root = &dev->pids;
+	struct rb_node **new = &(root->rb_node), *parent = NULL;
+	struct nvmap_pid_data *p;
+	char name[16];
+
+	while (*new) {
+		p = container_of(*new, struct nvmap_pid_data, node);
+		parent = *new;
+
+		if (p->pid > pid) {
+			new = &((*new)->rb_left);
+		} else if (p->pid < pid) {
+			new = &((*new)->rb_right);
+		} else {
+			kref_get(&p->refcount);
+			return;
+		}
+	}
+
+	p = kzalloc(sizeof(*p), GFP_KERNEL);
+	if (!p)
+		return;
+
+	snprintf(name, sizeof(name), "%d", pid);
+	p->pid = pid;
+	kref_init(&p->refcount);
+	p->handles_file = debugfs_create_file(name, S_IRUGO,
+			dev->handles_by_pid, p,
+			&debug_handles_by_pid_fops);
+
+	if (IS_ERR_OR_NULL(p->handles_file)) {
+		kfree(p);
+	} else {
+		rb_link_node(&p->node, parent, new);
+		rb_insert_color(&p->node, root);
+	}
+}
+
+static struct nvmap_pid_data *nvmap_pid_find_locked(struct nvmap_device *dev,
+		pid_t pid)
+{
+	struct rb_node *node = dev->pids.rb_node;
+
+	while (node) {
+		struct nvmap_pid_data *p = container_of(node,
+				struct nvmap_pid_data, node);
+
+		if (p->pid > pid)
+			node = node->rb_left;
+		else if (p->pid < pid)
+			node = node->rb_right;
+		else
+			return p;
+	}
+	return NULL;
+}
+
+static void nvmap_pid_put_locked(struct nvmap_device *dev, pid_t pid)
+{
+	struct nvmap_pid_data *p = nvmap_pid_find_locked(dev, pid);
+	if (p)
+		kref_put(&p->refcount, nvmap_pid_release_locked);
+}
+
 struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 					   const char *name)
 {
@@ -356,6 +445,10 @@ struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 
 	mutex_lock(&dev->clients_lock);
 	list_add(&client->list, &dev->clients);
+	if (!IS_ERR_OR_NULL(dev->handles_by_pid)) {
+		pid_t pid = nvmap_client_pid(client);
+		nvmap_pid_get_locked(dev, pid);
+	}
 	mutex_unlock(&dev->clients_lock);
 	return client;
 }
@@ -368,6 +461,10 @@ static void destroy_client(struct nvmap_client *client)
 		return;
 
 	mutex_lock(&nvmap_dev->clients_lock);
+	if (!IS_ERR_OR_NULL(nvmap_dev->handles_by_pid)) {
+		pid_t pid = nvmap_client_pid(client);
+		nvmap_pid_put_locked(nvmap_dev, pid);
+	}
 	list_del(&client->list);
 	mutex_unlock(&nvmap_dev->clients_lock);
 
@@ -1026,6 +1123,70 @@ static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
 
 DEBUGFS_OPEN_FOPS(clients);
 
+static int nvmap_debug_handles_by_pid_show_client(struct seq_file *s,
+		struct nvmap_client *client)
+{
+	struct rb_node *n;
+	int ret = 0;
+
+	nvmap_ref_lock(client);
+	n = rb_first(&client->handle_refs);
+	for (; n != NULL; n = rb_next(n)) {
+		struct nvmap_handle_ref *ref = rb_entry(n,
+				struct nvmap_handle_ref, node);
+		struct nvmap_handle *handle = ref->handle;
+		struct nvmap_debugfs_handles_entry entry;
+		u64 total_mapped_size;
+
+		mutex_lock(&handle->lock);
+		nvmap_get_client_handle_mss(client, handle, &total_mapped_size);
+		mutex_unlock(&handle->lock);
+
+		entry.base = handle->heap_type == NVMAP_HEAP_IOVMM ?
+				0 : (handle->carveout->base);
+		entry.size = handle->size;
+		entry.flags = handle->userflags;
+		entry.share_count = atomic_read(&handle->share_count);
+		entry.mapped_size = total_mapped_size;
+
+		ret = seq_write(s, &entry, sizeof(entry));
+		if (ret < 0)
+			break;
+	}
+	nvmap_ref_unlock(client);
+
+	return ret;
+}
+
+static int nvmap_debug_handles_by_pid_show(struct seq_file *s, void *unused)
+{
+	struct nvmap_pid_data *p = s->private;
+	struct nvmap_client *client;
+	struct nvmap_debugfs_handles_header header;
+	int ret;
+
+	header.version = 1;
+	ret = seq_write(s, &header, sizeof(header));
+	if (ret < 0)
+		return ret;
+
+	mutex_lock(&nvmap_dev->clients_lock);
+
+	list_for_each_entry(client, &nvmap_dev->clients, list) {
+		if (nvmap_client_pid(client) != p->pid)
+			continue;
+
+		ret = nvmap_debug_handles_by_pid_show_client(s, client);
+		if (ret < 0)
+			break;
+	}
+
+	mutex_unlock(&nvmap_dev->clients_lock);
+	return ret;
+}
+
+DEBUGFS_OPEN_FOPS(handles_by_pid);
+
 #define PRINT_MEM_STATS_NOTE(x) \
 do { \
 	seq_printf(s, "Note: total memory is precise account of pages " \
@@ -1467,6 +1628,7 @@ int nvmap_probe(struct platform_device *pdev)
 
 	spin_lock_init(&dev->handle_lock);
 	INIT_LIST_HEAD(&dev->clients);
+	dev->pids = RB_ROOT;
 	mutex_init(&dev->clients_lock);
 	INIT_LIST_HEAD(&dev->lru_handles);
 	spin_lock_init(&dev->lru_lock);
@@ -1573,6 +1735,8 @@ int nvmap_probe(struct platform_device *pdev)
 		pr_info("nvmap:outer cache maint threshold=%zd",
 			cache_maint_outer_threshold);
 #endif
+		dev->handles_by_pid = debugfs_create_dir("handles_by_pid",
+				nvmap_debug_root);
 	}
 
 	nvmap_stats_init(nvmap_debug_root);

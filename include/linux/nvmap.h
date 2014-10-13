@@ -3,7 +3,7 @@
  *
  * structure declarations for nvmem and nvmap user-space ioctls
  *
- * Copyright (c) 2009-2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2015, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -233,6 +233,18 @@ struct nvmap_cache_op_list {
 				 * regions within each handle */
 	__u32 nr;		/* Number of handles */
 	__s32 op;		/* wb/wb_inv/inv */
+};
+
+struct nvmap_debugfs_handles_header {
+	__u8 version;
+};
+
+struct nvmap_debugfs_handles_entry {
+	__u64 base;
+	__u64 size;
+	__u32 flags;
+	__u32 share_count;
+	__u64 mapped_size;
 };
 
 #define NVMAP_IOC_MAGIC 'N'

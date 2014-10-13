@@ -318,9 +318,41 @@ static inline u32 win_win_set_params_degamma_range_none_f(void)
 {
 	return 0x0;
 }
+static inline u32 win_scaler_input_r(void)
+{
+	return 0x0000070e;
+}
+static inline u32 win_scaler_input_h_taps_2_f(void)
+{
+	return 0x8;
+}
+static inline u32 win_scaler_input_h_taps_5_f(void)
+{
+	return 0x20;
+}
+static inline u32 win_scaler_input_v_taps_2_f(void)
+{
+	return 0x1;
+}
+static inline u32 win_scaler_input_v_taps_5_f(void)
+{
+	return 0x4;
+}
 static inline u32 win_scaler_set_coeff_r(void)
 {
 	return 0x0000070f;
+}
+static inline u32 win_scaler_set_coeff_read_index_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 win_scaler_set_coeff_index_f(u32 v)
+{
+	return (v & 0xff) << 15;
+}
+static inline u32 win_scaler_set_coeff_data_f(u32 v)
+{
+	return (v & 0x3ff) << 0;
 }
 static inline u32 win_scaler_usage_r(void)
 {
@@ -341,6 +373,18 @@ static inline u32 win_scaler_usage_use422_disable_f(void)
 static inline u32 win_scaler_usage_use422_enable_f(void)
 {
 	return 0x4;
+}
+static inline u32 win_scaler_point_in_r(void)
+{
+	return 0x00000712;
+}
+static inline u32 win_scaler_point_in_y_f(u32 v)
+{
+	return (v & 0xffff) << 16;
+}
+static inline u32 win_scaler_point_in_x_f(u32 v)
+{
+	return (v & 0xffff) << 0;
 }
 static inline u32 win_blend_layer_control_r(void)
 {

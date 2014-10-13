@@ -25,6 +25,70 @@
 #include "dc_config.h"
 #include "dc_priv.h"
 
+/* Num Fractional Bits in 8.24 fixed point phase and phase increment values */
+#define NFB 24
+
+static bool is_scaler_coeff_set = false;
+
+/*
+ * Generated from gen_vic_filter.py and taking only
+ * the data needed for 3 scaling ratios - 1x,2x,4x for 5 taps.
+ * 192 entries are needed to generate the 1x,2x and 4x coeffs
+ * For supporting the normal scaler will use only the last
+ * 10 bits
+ */
+unsigned int vic_filter_coeffs[192] = {
+	0x00000000,    0x3c70e400,    0x3bb037e4,    0x0c51cc9c,
+	0x00100001,    0x3bf0dbfa,    0x3d00f406,    0x3fe003ff,
+	0x00300002,    0x3b80cbf5,    0x3da1040d,    0x3fb003fe,
+	0x00400002,    0x3b20bff1,    0x3e511015,    0x3f9003fc,
+	0x00500002,    0x3ad0b3ed,    0x3f21201d,    0x3f5003fb,
+	0x00500003,    0x3aa0a3e9,    0x3ff13026,    0x3f2007f9,
+	0x00500403,    0x3a7097e6,    0x00e1402f,    0x3ee007f7,
+	0x00500403,    0x3a608be4,    0x01d14c38,    0x3ea00bf6,
+	0x00500403,    0x3a507fe2,    0x02e15c42,    0x3e500ff4,
+	0x00500402,    0x3a6073e1,    0x03f16c4d,    0x3e000ff2,
+	0x00400402,    0x3a706be0,    0x05117858,    0x3db013f0,
+	0x00300402,    0x3a905fe0,    0x06318863,    0x3d6017ee,
+	0x00300402,    0x3ab057e0,    0x0771986e,    0x3d001beb,
+	0x00200001,    0x3af04fe1,    0x08a1a47a,    0x3cb023e9,
+	0x00100001,    0x3b2047e2,    0x09e1b485,    0x3c6027e7,
+	0x00100000,    0x3b703fe2,    0x0b11c091,    0x3c002fe6,
+	0x3f203800,    0x0391103f,    0x3ff0a014,    0x0811606c,
+	0x3f2037ff,    0x0351083c,    0x03e11842,    0x3f203c00,
+	0x3f302fff,    0x03010439,    0x04311c45,    0x3f104401,
+	0x3f302fff,    0x02c0fc35,    0x04812448,    0x3f104802,
+	0x3f4027ff,    0x0270f832,    0x04c1284b,    0x3f205003,
+	0x3f4023ff,    0x0230f030,    0x0511304e,    0x3f205403,
+	0x3f601fff,    0x01f0e82d,    0x05613451,    0x3f205c04,
+	0x3f701bfe,    0x01b0e02a,    0x05a13c54,    0x3f306006,
+	0x3f7017fe,    0x0170d827,    0x05f14057,    0x3f406807,
+	0x3f8017ff,    0x0140d424,    0x0641445a,    0x3f406c08,
+	0x3fa013ff,    0x0100cc22,    0x0681485d,    0x3f507409,
+	0x3fa00fff,    0x00d0c41f,    0x06d14c60,    0x3f607c0b,
+	0x3fc00fff,    0x0090bc1c,    0x07115063,    0x3f80840c,
+	0x3fd00bff,    0x0070b41a,    0x07515465,    0x3f908c0e,
+	0x3fe007ff,    0x0040b018,    0x07915868,    0x3fb0900f,
+	0x3ff00400,    0x0010a816,    0x07d15c6a,    0x3fd09811,
+	0x00a04c0e,    0x0460f442,    0x0240a827,    0x05c15859,
+	0x0090440d,    0x0440f040,    0x0480fc43,    0x00b05010,
+	0x0080400c,    0x0410ec3e,    0x04910044,    0x00d05411,
+	0x0070380b,    0x03f0e83d,    0x04b10846,    0x00e05812,
+	0x0060340a,    0x03d0e43b,    0x04d10c48,    0x00f06013,
+	0x00503009,    0x03b0e039,    0x04e11449,    0x01106415,
+	0x00402c08,    0x0390d838,    0x05011c4b,    0x01206c16,
+	0x00302807,    0x0370d436,    0x0511204c,    0x01407018,
+	0x00302406,    0x0340d034,    0x0531244e,    0x01507419,
+	0x00202005,    0x0320cc32,    0x05412c50,    0x01707c1b,
+	0x00101c04,    0x0300c431,    0x05613451,    0x0180801d,
+	0x00101803,    0x02e0c02f,    0x05713853,    0x01a0881e,
+	0x00101002,    0x02b0bc2d,    0x05814054,    0x01c08c20,
+	0x00000c02,    0x02a0b82c,    0x05914455,    0x01e09421,
+	0x00000801,    0x0280b02a,    0x05a14c57,    0x02009c23,
+	0x00000400,    0x0260ac28,    0x05b15458,    0x0220a025,
+};
+
+
 static int tegra_nvdisp_blend(struct tegra_dc_win *win)
 {
 	bool update_blend_seq = false;
@@ -109,15 +173,121 @@ static int tegra_nvdisp_blend(struct tegra_dc_win *win)
 		}
 
 		nvdisp_win_write(win, blend_ctrl,
-				win_blend_layer_control_r());
+			win_blend_layer_control_r());
 	}
-
 	return 0;
+}
+
+static void tegra_nvdisp_set_scaler_coeff(struct tegra_dc_win *win)
+{
+	unsigned int ratio, row, col, index, coeff;
+	index = 0;
+
+	for (ratio = 0; ratio <= 2; ratio++) {
+		for (row = 0; row <= 15; row++) {
+			for (col = 0; col <= 3; col++) {
+
+				index = (ratio << 6) + (row << 2) + (col);
+
+				/* coeff value is bit 9:0 of each entry in
+					vic_filer_coeffs array */
+				/* index field is from 22:15 */
+				coeff = win_scaler_set_coeff_index_f(index) |
+					win_scaler_set_coeff_data_f(
+						vic_filter_coeffs[index]);
+				nvdisp_win_write(win, coeff,
+					 win_scaler_set_coeff_r());
+			}
+		}
+	}
+}
+
+/* Returns phase_incr in fixed20.12 format */
+static inline u32 compute_phase_incr(fixed20_12 in, unsigned out_int)
+{
+	u32 phase_incr = 0;
+	u64 tmp  = (u64) dfixed_trunc(in);
+	u64 tmp2 = (u64) out_int;
+	u64 tmp1 = (tmp << NFB) + (tmp2 >> 1);
+	tmp1 = tmp1 / tmp2;
+
+	phase_incr =  lower_32_bits(tmp1);
+	return phase_incr;
 }
 
 static int tegra_nvdisp_scaling(struct tegra_dc_win *win)
 {
-	/* TODO */
+	u32 hbypass, vbypass, hphase_incr, h_init_phase;
+	u32 vphase_incr, v_init_phase;
+	bool is_scalar_column = win->flags & TEGRA_WIN_FLAG_SCAN_COLUMN;
+	fixed20_12 hscalar = win->w;
+	fixed20_12 vscalar = win->h;
+
+	if (is_scalar_column) {
+		hscalar = win->h;
+		vscalar = win->w;
+	}
+
+	hbypass = (dfixed_trunc(hscalar) == win->out_w);
+	vbypass = (dfixed_trunc(vscalar) == win->out_h);
+
+	/* set coefficients only once	*/
+	if (!is_scaler_coeff_set){
+		tegra_nvdisp_set_scaler_coeff(win);
+		is_scaler_coeff_set = true;
+	}
+
+	/* default set to 5-taps coeff - have to check
+         * whether this should be changed based on use case
+	 */
+	nvdisp_win_write(win, win_scaler_input_h_taps_5_f() |
+				win_scaler_input_h_taps_5_f(),
+				win_scaler_input_r());
+
+	nvdisp_win_write(win, win_scaler_usage_hbypass_f(hbypass) |
+		win_scaler_usage_vbypass_f(vbypass) |
+		win_scaler_usage_use422_disable_f(), win_scaler_usage_r());
+
+	/* scaling is needed in horizontal direction  */
+	if (!hbypass) {
+		/* Convert phase_incr from fixed20.12 to fixed 8.24 */
+		hphase_incr = compute_phase_incr(hscalar, win->out_w) & ~0x1;
+		dev_info(&win->dc->ndev->dev,
+			"hphase_incr: 0x%x.\n", hphase_incr);
+
+		h_init_phase = (1 << (NFB - 1)) + (hphase_incr >> 1);
+		dev_info(&win->dc->ndev->dev,
+			"h_init_phase: 0x%x.\n", h_init_phase);
+
+		nvdisp_win_write(win,
+			win_scaler_hphase_incr_incr_f(hphase_incr),
+			win_scaler_hphase_incr_r());
+
+		nvdisp_win_write(win,
+			win_scaler_hstart_phase_phase_f(h_init_phase),
+			win_scaler_hstart_phase_r());
+	}
+
+	/* scaling is needed in vertical direction */
+	if (!vbypass) {
+		/* Convert phase_incr from fixed20.12 to fixed8.24 */
+		vphase_incr = compute_phase_incr(vscalar, win->out_h)& ~0x1;
+		dev_info(&win->dc->ndev->dev,
+			"vphase_incr: 0x%x.\n", vphase_incr);
+
+		v_init_phase = (1 << (NFB - 1)) + (vphase_incr >> 1);
+		dev_info(&win->dc->ndev->dev,
+			"v_init_phase: 0x%x.\n", v_init_phase);
+
+		nvdisp_win_write(win,
+			win_scaler_vphase_incr_incr_f(vphase_incr),
+			win_scaler_vphase_incr_r());
+
+		nvdisp_win_write(win,
+			win_scaler_vstart_phase_phase_f(v_init_phase),
+			win_scaler_vstart_phase_r());
+	}
+
 	return 0;
 }
 

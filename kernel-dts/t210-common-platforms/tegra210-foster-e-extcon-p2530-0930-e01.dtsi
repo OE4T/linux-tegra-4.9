@@ -12,17 +12,19 @@
  */
 
 / {
-	vbus_gpio_extcon: extcon@1 {
-		compatible = "extcon-gpio-states";
-		reg = <0x0 0x1>;
-		extcon-gpio,name = "VBUS";
-		extcon-gpio,cable-states = <0x3 0x0
-					    0x0 0x2
-					    0x1 0x2
-					    0x2 0x1>;
-		gpios = <&gpio TEGRA_GPIO(Z, 0) 0 &max77620 0 0>;
-		extcon-gpio,out-cable-names = "USB", "USB-Host";
-		#extcon-cells = <1>;
+	extcon {
+		vbus_gpio_extcon: extcon@1 {
+			compatible = "extcon-gpio-states";
+			reg = <0x1>;
+			extcon-gpio,name = "VBUS";
+			extcon-gpio,cable-states = <0x3 0x0
+						    0x0 0x2
+						    0x1 0x2
+						    0x2 0x1>;
+			gpios = <&gpio TEGRA_GPIO(Z, 0) 0 &max77620 0 0>;
+			extcon-gpio,out-cable-names = "USB", "USB-Host";
+			#extcon-cells = <1>;
+		};
 	};
 
 	udc@7d000000 {

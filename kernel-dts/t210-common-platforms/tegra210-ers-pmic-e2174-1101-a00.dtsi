@@ -451,4 +451,11 @@
 			};
 		};
 	};
+
+	extcon {
+		compatible = "simple-bus";
+		device_type = "external-connection";
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
 };

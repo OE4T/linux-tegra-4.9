@@ -46,7 +46,7 @@ struct nvhost_device_data t18_host1x_info = {
 };
 
 struct nvhost_device_data t18_msenc_info = {
-	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
+	.version		= NVHOST_ENCODE_FLCN_VER(6, 1),
 	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,
 #ifdef TEGRA_POWERGATE_NVENC
 	.powergate_ids		= { TEGRA_POWERGATE_NVENC, -1 },
@@ -60,11 +60,11 @@ struct nvhost_device_data t18_msenc_info = {
 	.finalize_poweron	= nvhost_flcn_finalize_poweron,
 	.moduleid		= NVHOST_MODULE_MSENC,
 	.num_channels		= 1,
-	.firmware_name		= "nvhost_nvenc050.fw",
+	.firmware_name		= "nvhost_nvenc061.fw",
 };
 
 struct nvhost_device_data t18_nvdec_info = {
-	.version		= NVHOST_ENCODE_NVDEC_VER(2, 0),
+	.version		= NVHOST_ENCODE_NVDEC_VER(3, 0),
 	.class			= NV_NVDEC_CLASS_ID,
 #ifdef TEGRA_POWERGATE_NVDEC
 	.powergate_ids		= { TEGRA_POWERGATE_NVDEC, -1 },
@@ -83,7 +83,7 @@ struct nvhost_device_data t18_nvdec_info = {
 };
 
 struct nvhost_device_data t18_nvjpg_info = {
-	.version		= NVHOST_ENCODE_FLCN_VER(1, 0),
+	.version		= NVHOST_ENCODE_FLCN_VER(1, 1),
 	.class			= NV_NVJPG_CLASS_ID,
 #ifdef TEGRA_POWERGATE_NVJPG
 	.powergate_ids		= { TEGRA_POWERGATE_NVJPG, -1 },
@@ -99,7 +99,7 @@ struct nvhost_device_data t18_nvjpg_info = {
 	.finalize_poweron	= nvhost_flcn_finalize_poweron,
 	.moduleid		= NVHOST_MODULE_NVJPG,
 	.num_channels		= 1,
-	.firmware_name		= "nvhost_nvjpg010.fw",
+	.firmware_name		= "nvhost_nvjpg011.fw",
 };
 
 struct nvhost_device_data t18_vic_info = {

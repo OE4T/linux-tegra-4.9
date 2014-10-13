@@ -231,7 +231,10 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 	u32 fb_data_offset = 0;
 	u32 initial_dmem_offset = 0;
 	struct nvdec_bl_shared_data shared_data;
-	u32 wpr_addr_lo, wpr_addr_hi;
+	u32 debug_mode = host1x_readl(dev, nvdec_scp_ctl_stat_r()) &
+					nvdec_scp_ctl_stat_debug_mode_m();
+	bool skip_wpr_settings = debug_mode &&
+		(tegra_platform_is_qt() || tegra_platform_is_linsim());
 
 	dev_dbg(&dev->dev, "nvdec_boot: start\n");
 	err = nvhost_nvdec_init_sw(dev);
@@ -249,19 +252,23 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 
 	shared_data.ls_fw_start_addr = m[1]->phys >> 8;
 	shared_data.ls_fw_size = m[1]->size;
-	wpr_addr_lo = readl((u32 *)IO_TO_VIRT((
-				MC_BASE_ADDR +
-				MC_SECURITY_CARVEOUT1_BOM_0)));
-	wpr_addr_hi = readl((u32 *)IO_TO_VIRT((
-				MC_BASE_ADDR +
-				MC_SECURITY_CARVEOUT1_BOM_HI_0)));
-	/* Put the 40-bit addr formed by wpr_addr_hi and wpr_addr_lo
-	   divided by 256 into 32-bit wpr_addr */
-	shared_data.wpr_addr = (wpr_addr_hi << 24) + (wpr_addr_lo >> 8);
-	shared_data.wpr_size = readl((u32 *)IO_TO_VIRT((
+
+	/* no wpr firmware does not need these */
+	if (!skip_wpr_settings) {
+		u32 wpr_addr_lo = readl((u32 *)IO_TO_VIRT((
 					MC_BASE_ADDR +
-					MC_SECURITY_CARVEOUT1_SIZE_128KB_0)));
-	shared_data.wpr_size *= 128*1024; /* multiply 128k */
+					MC_SECURITY_CARVEOUT1_BOM_0)));
+		u32 wpr_addr_hi = readl((u32 *)IO_TO_VIRT((
+					MC_BASE_ADDR +
+					MC_SECURITY_CARVEOUT1_BOM_HI_0)));
+
+		/* Put the 40-bit addr formed by wpr_addr_hi and wpr_addr_lo
+		   divided by 256 into 32-bit wpr_addr */
+		shared_data.wpr_addr = (wpr_addr_hi << 24) + (wpr_addr_lo >> 8);
+		shared_data.wpr_size = readl((u32 *)IO_TO_VIRT((
+			MC_BASE_ADDR + MC_SECURITY_CARVEOUT1_SIZE_128KB_0)));
+		shared_data.wpr_size *= 128*1024; /* multiply 128k */
+	}
 
 	memcpy(&(m[0]->mapped[fb_data_offset + initial_dmem_offset]),
 		&shared_data, sizeof(shared_data));

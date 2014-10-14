@@ -55,6 +55,7 @@
 
 #define BLK_SIZE (256)
 
+static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g);
 static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va);
 
 /* global ctx buffer */
@@ -4560,6 +4561,91 @@ clean_up:
 	return err;
 }
 
+static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	struct mm_gk20a *mm = &g->mm;
+	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct device *d = dev_from_gk20a(g);
+	int err = 0;
+
+	u32 size;
+	struct sg_table *sgt_pg_buf;
+	dma_addr_t iova;
+
+	gk20a_dbg_fn("");
+
+	size = 0;
+
+	err = gr_gk20a_fecs_get_reglist_img_size(g, &size);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g),
+			"fail to query fecs pg buffer size");
+		return err;
+	}
+
+	if (!pmu->pg_buf.cpuva) {
+		pmu->pg_buf.cpuva = dma_alloc_coherent(d, size,
+						&iova,
+						GFP_KERNEL);
+		if (!pmu->pg_buf.cpuva) {
+			gk20a_err(d, "failed to allocate memory\n");
+			return -ENOMEM;
+		}
+
+		pmu->pg_buf.iova = iova;
+		pmu->pg_buf.size = size;
+
+		err = gk20a_get_sgtable(d, &sgt_pg_buf,
+					pmu->pg_buf.cpuva,
+					pmu->pg_buf.iova,
+					size);
+		if (err) {
+			gk20a_err(d, "failed to create sg table\n");
+			goto err_free_pg_buf;
+		}
+
+		pmu->pg_buf.pmu_va = gk20a_gmmu_map(vm,
+					&sgt_pg_buf,
+					size,
+					0, /* flags */
+					gk20a_mem_flag_none);
+		if (!pmu->pg_buf.pmu_va) {
+			gk20a_err(d, "failed to map fecs pg buffer");
+			err = -ENOMEM;
+			goto err_free_sgtable;
+		}
+
+		gk20a_free_sgtable(&sgt_pg_buf);
+	}
+
+
+	err = gr_gk20a_fecs_set_reglist_bind_inst(g, mm->pmu.inst_block.cpu_pa);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g),
+			"fail to bind pmu inst to gr");
+		return err;
+	}
+
+	err = gr_gk20a_fecs_set_reglist_virtual_addr(g, pmu->pg_buf.pmu_va);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g),
+			"fail to set pg buffer pmu va");
+		return err;
+	}
+
+	return err;
+
+err_free_sgtable:
+	gk20a_free_sgtable(&sgt_pg_buf);
+err_free_pg_buf:
+	dma_free_coherent(d, size,
+		pmu->pg_buf.cpuva, pmu->pg_buf.iova);
+	pmu->pg_buf.cpuva = NULL;
+	pmu->pg_buf.iova = 0;
+	return err;
+}
+
 int gk20a_init_gr_support(struct gk20a *g)
 {
 	u32 err;
@@ -4578,6 +4664,10 @@ int gk20a_init_gr_support(struct gk20a *g)
 		return err;
 
 	err = gk20a_init_gr_setup_hw(g);
+	if (err)
+		return err;
+
+	err = gk20a_init_gr_bind_fecs_elpg(g);
 	if (err)
 		return err;
 

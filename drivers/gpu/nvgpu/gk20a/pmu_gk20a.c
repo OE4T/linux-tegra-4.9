@@ -2174,92 +2174,10 @@ void pmu_setup_hw(struct work_struct *work)
 int gk20a_init_pmu_bind_fecs(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
-	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->pmu.vm;
-	struct device *d = dev_from_gk20a(g);
 	struct pmu_cmd cmd;
 	u32 desc;
-	int err;
-	u32 size;
-	struct sg_table *sgt_pg_buf;
-	dma_addr_t iova;
-
+	int err = 0;
 	gk20a_dbg_fn("");
-
-	size = 0;
-	err = gr_gk20a_fecs_get_reglist_img_size(g, &size);
-	if (err && (pmu->pmu_state == PMU_STATE_ELPG_BOOTED)) {
-		gk20a_err(dev_from_gk20a(g),
-			"fail to query fecs pg buffer size");
-		return err;
-	}
-
-	if (err) {
-		gk20a_err(dev_from_gk20a(g),
-			"fail to query fecs pg buffer size invalid boot state");
-		return err;
-	}
-
-	if (!pmu->pg_buf.cpuva) {
-		pmu->pg_buf.cpuva = dma_alloc_coherent(d, size,
-						&iova,
-						GFP_KERNEL);
-		if (!pmu->pg_buf.cpuva) {
-			gk20a_err(d, "failed to allocate memory\n");
-			return -ENOMEM;
-		}
-
-		pmu->pg_buf.iova = iova;
-		pmu->pg_buf.size = size;
-
-		err = gk20a_get_sgtable(d, &sgt_pg_buf,
-					pmu->pg_buf.cpuva,
-					pmu->pg_buf.iova,
-					size);
-		if (err) {
-			gk20a_err(d, "failed to create sg table\n");
-			goto err_free_pg_buf;
-		}
-
-		pmu->pg_buf.pmu_va = gk20a_gmmu_map(vm,
-					&sgt_pg_buf,
-					size,
-					0, /* flags */
-					gk20a_mem_flag_none);
-		if (!pmu->pg_buf.pmu_va) {
-			gk20a_err(d, "failed to map fecs pg buffer");
-			err = -ENOMEM;
-			goto err_free_sgtable;
-		}
-
-		gk20a_free_sgtable(&sgt_pg_buf);
-	}
-
-	err = gr_gk20a_fecs_set_reglist_bind_inst(g, mm->pmu.inst_block.cpu_pa);
-	if (err && (pmu->pmu_state == PMU_STATE_ELPG_BOOTED)) {
-		gk20a_err(dev_from_gk20a(g),
-			"fail to bind pmu inst to gr");
-		return err;
-	}
-
-	if (err) {
-		gk20a_err(dev_from_gk20a(g),
-			"fail to bind pmu inst to gr invalid boot state");
-		return err;
-	}
-
-	err = gr_gk20a_fecs_set_reglist_virtual_addr(g, pmu->pg_buf.pmu_va);
-	if (err && (pmu->pmu_state == PMU_STATE_ELPG_BOOTED)) {
-		gk20a_err(dev_from_gk20a(g),
-			"fail to set pg buffer pmu va");
-		return err;
-	}
-
-	if (err) {
-		gk20a_err(dev_from_gk20a(g),
-			"fail to set pg buffer pmu va invalid boot state");
-		return err;
-	}
 
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
@@ -2277,15 +2195,6 @@ int gk20a_init_pmu_bind_fecs(struct gk20a *g)
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
 			pmu_handle_pg_buf_config_msg, pmu, &desc, ~0);
 	pmu->pmu_state = PMU_STATE_LOADING_PG_BUF;
-	return err;
-
-err_free_sgtable:
-	gk20a_free_sgtable(&sgt_pg_buf);
-err_free_pg_buf:
-	dma_free_coherent(d, size,
-		pmu->pg_buf.cpuva, pmu->pg_buf.iova);
-	pmu->pg_buf.cpuva = NULL;
-	pmu->pg_buf.iova = 0;
 	return err;
 }
 

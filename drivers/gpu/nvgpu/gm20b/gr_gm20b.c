@@ -595,76 +595,12 @@ static int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 static int gr_gm20b_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,
 	struct gk20a_ctxsw_ucode_segments *segments, u32 reg_offset)
 {
-	u32 addr_code32;
-	u32 addr_data32;
-	u32 addr_load32;
-	u32 dst = 0;
-	u32 blocks;
-	u32 b;
-
-	addr_code32 = u64_lo32((addr_base + segments->code.offset) >> 8);
-	addr_data32 = u64_lo32((addr_base + segments->data.offset) >> 8);
-	addr_load32 = u64_lo32((addr_base + segments->boot.offset) >> 8);
-
 	gk20a_writel(g, reg_offset + gr_fecs_dmactl_r(),
 			gr_fecs_dmactl_require_ctx_f(0));
 
-	/*
-	 * Copy falcon bootloader header into dmem at offset 0.
-	 * Configure dmem port 0 for auto-incrementing writes starting at dmem
-	 * offset 0.
-	 */
-	gk20a_writel(g, reg_offset + gr_fecs_dmemc_r(0),
-			gr_fecs_dmemc_offs_f(0) |
-			gr_fecs_dmemc_blk_f(0) |
-			gr_fecs_dmemc_aincw_f(1));
-
-	/* Write out the actual data */
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 4);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), addr_code32);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), segments->code.size);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), addr_data32);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), segments->data.size);
-
-	blocks = ((segments->boot.size + 0xFF) & ~0xFF) >> 8;
-
-	/*
-	 * Set the base FB address for the DMA transfer. Subtract off the 256
-	 * byte IMEM block offset such that the relative FB and IMEM offsets
-	 * match, allowing the IMEM tags to be properly created.
-	 */
-
-	dst = segments->boot_imem_offset;
-	gk20a_writel(g, reg_offset + gr_fecs_dmatrfbase_r(),
-			(addr_load32 - (dst >> 8)));
-
-	for (b = 0; b < blocks; b++) {
-		/* Setup destination IMEM offset */
-		gk20a_writel(g, reg_offset + gr_fecs_dmatrfmoffs_r(),
-				dst + (b << 8));
-
-		/* Setup source offset (relative to BASE) */
-		gk20a_writel(g, reg_offset + gr_fecs_dmatrffboffs_r(),
-				dst + (b << 8));
-
-		gk20a_writel(g, reg_offset + gr_fecs_dmatrfcmd_r(),
-				gr_fecs_dmatrfcmd_imem_f(0x01) |
-				gr_fecs_dmatrfcmd_write_f(0x00) |
-				gr_fecs_dmatrfcmd_size_f(0x06) |
-				gr_fecs_dmatrfcmd_ctxdma_f(0));
-	}
-
-	/* Specify the falcon boot vector */
-	gk20a_writel(g, reg_offset + gr_fecs_bootvec_r(),
-			gr_fecs_bootvec_vec_f(segments->boot_entry));
+	/* Copy falcon bootloader into dmem */
+	gr_gk20a_load_ctxsw_ucode_header(g, addr_base, segments, reg_offset);
+	gr_gk20a_load_ctxsw_ucode_boot(g, addr_base, segments, reg_offset);
 
 	/* start the falcon immediately if PRIV security is disabled*/
 	if (!g->ops.privsecurity) {

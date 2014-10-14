@@ -1776,9 +1776,17 @@ static int gr_gk20a_copy_ctxsw_ucode_segments(
 	u32 *bootimage,
 	u32 *code, u32 *data)
 {
+	int i;
+
 	memcpy(buf + segments->boot.offset, bootimage, segments->boot.size);
 	memcpy(buf + segments->code.offset, code,      segments->code.size);
 	memcpy(buf + segments->data.offset, data,      segments->data.size);
+
+	/* compute a "checksum" for the boot binary to detect its version */
+	segments->boot_signature = 0;
+	for (i = 0; i < segments->boot.size / sizeof(u32); i++)
+		segments->boot_signature += bootimage[i];
+
 	return 0;
 }
 
@@ -1968,22 +1976,14 @@ void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 		gk20a_err(dev_from_gk20a(g), "arbiter complete timeout");
 }
 
-static int gr_gk20a_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,
+void gr_gk20a_load_ctxsw_ucode_header(struct gk20a *g, u64 addr_base,
 	struct gk20a_ctxsw_ucode_segments *segments, u32 reg_offset)
 {
 	u32 addr_code32;
 	u32 addr_data32;
-	u32 addr_load32;
-	u32 dst = 0;
-	u32 blocks;
-	u32 b;
 
 	addr_code32 = u64_lo32((addr_base + segments->code.offset) >> 8);
 	addr_data32 = u64_lo32((addr_base + segments->data.offset) >> 8);
-	addr_load32 = u64_lo32((addr_base + segments->boot.offset) >> 8);
-
-	gk20a_writel(g, reg_offset + gr_fecs_dmactl_r(),
-			gr_fecs_dmactl_require_ctx_f(0));
 
 	/*
 	 * Copy falcon bootloader header into dmem at offset 0.
@@ -1996,17 +1996,73 @@ static int gr_gk20a_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,
 			gr_fecs_dmemc_aincw_f(1));
 
 	/* Write out the actual data */
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), addr_code32);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), segments->code.size);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), addr_data32);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), segments->data.size);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), addr_code32);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
-	gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+	switch (segments->boot_signature) {
+	case FALCON_UCODE_SIG_T12X_FECS_WITH_RESERVED:
+	case FALCON_UCODE_SIG_T12X_GPCCS_WITH_RESERVED:
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+		/* fallthrough */
+	case FALCON_UCODE_SIG_T12X_FECS_WITHOUT_RESERVED:
+	case FALCON_UCODE_SIG_T12X_GPCCS_WITHOUT_RESERVED:
+	case FALCON_UCODE_SIG_T21X_FECS_WITHOUT_RESERVED:
+	case FALCON_UCODE_SIG_T21X_FECS_WITHOUT_RESERVED2:
+	case FALCON_UCODE_SIG_T21X_GPCCS_WITHOUT_RESERVED:
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 4);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0),
+				addr_code32);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0),
+				segments->code.size);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0),
+				addr_data32);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0),
+				segments->data.size);
+		break;
+	case FALCON_UCODE_SIG_T12X_FECS_OLDER:
+	case FALCON_UCODE_SIG_T12X_GPCCS_OLDER:
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0),
+				addr_code32);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0),
+				segments->code.size);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0),
+				addr_data32);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0),
+				segments->data.size);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0),
+				addr_code32);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);
+		break;
+	default:
+		gk20a_err(dev_from_gk20a(g),
+				"unknown falcon ucode boot signature 0x%08x"
+				" with reg_offset 0x%08x",
+				segments->boot_signature, reg_offset);
+		BUG();
+	}
+}
 
+void gr_gk20a_load_ctxsw_ucode_boot(struct gk20a *g, u64 addr_base,
+	struct gk20a_ctxsw_ucode_segments *segments, u32 reg_offset)
+{
+	u32 addr_load32;
+	u32 blocks;
+	u32 b;
+	u32 dst;
+
+	addr_load32 = u64_lo32((addr_base + segments->boot.offset) >> 8);
 	blocks = ((segments->boot.size + 0xFF) & ~0xFF) >> 8;
 
 	/*
@@ -2038,6 +2094,17 @@ static int gr_gk20a_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,
 	/* Specify the falcon boot vector */
 	gk20a_writel(g, reg_offset + gr_fecs_bootvec_r(),
 			gr_fecs_bootvec_vec_f(segments->boot_entry));
+}
+
+int gr_gk20a_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,
+	struct gk20a_ctxsw_ucode_segments *segments, u32 reg_offset)
+{
+	gk20a_writel(g, reg_offset + gr_fecs_dmactl_r(),
+			gr_fecs_dmactl_require_ctx_f(0));
+
+	/* Copy falcon bootloader into dmem */
+	gr_gk20a_load_ctxsw_ucode_header(g, addr_base, segments, reg_offset);
+	gr_gk20a_load_ctxsw_ucode_boot(g, addr_base, segments, reg_offset);
 
 	/* Write to CPUCTL to start the falcon */
 	gk20a_writel(g, reg_offset + gr_fecs_cpuctl_r(),

@@ -295,10 +295,27 @@ struct gk20a_ctxsw_ucode_segment {
 struct gk20a_ctxsw_ucode_segments {
 	u32 boot_entry;
 	u32 boot_imem_offset;
+	u32 boot_signature;
 	struct gk20a_ctxsw_ucode_segment boot;
 	struct gk20a_ctxsw_ucode_segment code;
 	struct gk20a_ctxsw_ucode_segment data;
 };
+
+/* sums over the ucode files as sequences of u32, computed to the
+ * boot_signature field in the structure above */
+
+#define FALCON_UCODE_SIG_T12X_FECS_WITH_RESERVED	0x8a621f78
+#define FALCON_UCODE_SIG_T12X_FECS_WITHOUT_RESERVED	0x67e5344b
+#define FALCON_UCODE_SIG_T12X_FECS_OLDER		0x56da09f
+
+#define FALCON_UCODE_SIG_T12X_GPCCS_WITH_RESERVED	0x303465d5
+#define FALCON_UCODE_SIG_T12X_GPCCS_WITHOUT_RESERVED	0x3fdd33d3
+#define FALCON_UCODE_SIG_T12X_GPCCS_OLDER		0x53d7877
+
+#define FALCON_UCODE_SIG_T21X_FECS_WITHOUT_RESERVED	0x93671b7d
+#define FALCON_UCODE_SIG_T21X_FECS_WITHOUT_RESERVED2	0x4d6cbc10
+
+#define FALCON_UCODE_SIG_T21X_GPCCS_WITHOUT_RESERVED	0x393161da
 
 struct gk20a_ctxsw_ucode_info {
 	u64 *p_va;
@@ -422,6 +439,11 @@ int gr_gk20a_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr);
 int gr_gk20a_init_ctxsw_ucode(struct gk20a *g);
 int gr_gk20a_load_ctxsw_ucode(struct gk20a *g);
 void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g);
+void gr_gk20a_load_ctxsw_ucode_header(struct gk20a *g, u64 addr_base,
+	struct gk20a_ctxsw_ucode_segments *segments, u32 reg_offset);
+void gr_gk20a_load_ctxsw_ucode_boot(struct gk20a *g, u64 addr_base,
+	struct gk20a_ctxsw_ucode_segments *segments, u32 reg_offset);
+
 
 void gr_gk20a_free_tsg_gr_ctx(struct tsg_gk20a *c);
 #endif /* GR_GK20A_H */

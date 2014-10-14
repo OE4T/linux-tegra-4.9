@@ -53,7 +53,6 @@ static int tegra_nvdisp_enable_cde(struct tegra_dc_win *win)
 static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 {
 	u32 win_options;
-	unsigned bpp = tegra_dc_fmt_bpp(win->fmt) / 8;
 
 	nvdisp_win_write(win, tegra_dc_fmt(win->fmt), DC_WIN_COLOR_DEPTH);
 	nvdisp_win_write(win,
@@ -79,17 +78,15 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 
 	nvdisp_win_write(win,
 			V_PRESCALED_SIZE(dfixed_trunc(win->h)) |
-			H_PRESCALED_SIZE(dfixed_trunc(win->w) * bpp),
+			H_PRESCALED_SIZE(dfixed_trunc(win->w)),
 			WIN_PCALC_WINDOW_SET_CROPPED_SIZE_IN);
 
 	nvdisp_win_write(win, tegra_dc_reg_l32(win->phys_addr),
 		DC_WINBUF_START_ADDR);
 	nvdisp_win_write(win, tegra_dc_reg_h32(win->phys_addr),
 		DC_WINBUF_START_ADDR_HI);
-	/* Change to WIN_SET_PLANAR_STORAGE later instead of  line_stride*/
-	/*nvdisp_win_write(win, (win->stride>>6), WIN_SET_PLANAR_STORAGE);*/
+	nvdisp_win_write(win, (win->stride>>6), WIN_SET_PLANAR_STORAGE);
 
-	nvdisp_win_write(win, win->stride, DC_WIN_LINE_STRIDE);
 	/* TODO: program related YUV registers as well */
 
 	/* TODO: confirm ADDR_H/V_OFFSET programming not needed anymore */
@@ -110,11 +107,8 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 
 int tegra_nvdisp_get_linestride(struct tegra_dc *dc, int win)
 {
-	/* Change to WIN_SET_PLANAR_STORAGE later instead of  line_stride*/
-	/*return nvdisp_win_read(tegra_dc_get_window(dc, win),
-					WIN_SET_PLANAR_STORAGE);*/
 	return nvdisp_win_read(tegra_dc_get_window(dc, win),
-					DC_WIN_LINE_STRIDE);
+					WIN_SET_PLANAR_STORAGE) << 6;
 }
 
 int tegra_nvdisp_update_windows(struct tegra_dc *dc,

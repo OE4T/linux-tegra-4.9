@@ -96,6 +96,7 @@
 		calib-1v8-offsets = <0x7B7B>;
 		compad-vref-3v3 = <0x1>;
 		compad-vref-1v8 = <0x2>;
+		cd-gpios = <&gpio TEGRA_GPIO_PZ1 0>;
 		vddio_sdmmc-supply = <&max77620_ldo2>;
 		vddio_sd_slot-supply = <&en_vdd_sd>;
 		nvidia,update-pinctrl-settings;

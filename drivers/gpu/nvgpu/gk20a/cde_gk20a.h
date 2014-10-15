@@ -250,7 +250,6 @@ struct gk20a_cde_app {
 	struct vm_gk20a *vm;
 
 	struct gk20a_cde_ctx cde_ctx[NUM_CDE_CONTEXTS];
-	int cde_ctx_ptr;
 
 	u32 shader_parameter;
 };

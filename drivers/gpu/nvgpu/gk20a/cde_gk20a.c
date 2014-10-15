@@ -34,6 +34,8 @@
 #include "hw_ccsr_gk20a.h"
 #include "hw_pbdma_gk20a.h"
 
+static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx, bool free_after_use);
+
 static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 {
 	struct device *dev = &cde_ctx->pdev->dev;
@@ -589,10 +591,11 @@ static int gk20a_cde_execute_buffer(struct gk20a_cde_ctx *cde_ctx,
 					   num_entries, flags, fence, fence_out);
 }
 
-static struct gk20a_cde_ctx *gk20a_cde_get_context(struct gk20a_cde_app *cde_app)
+static struct gk20a_cde_ctx *gk20a_cde_get_context(struct gk20a *g)
 {
+	struct gk20a_cde_app *cde_app = &g->cde_app;
 	struct gk20a_cde_ctx *cde_ctx = cde_app->cde_ctx;
-	int i;
+	int i, ret;
 
 	/* try to find a jobless context */
 
@@ -608,10 +611,22 @@ static struct gk20a_cde_ctx *gk20a_cde_get_context(struct gk20a_cde_app *cde_app
 			return cde_ctx;
 	}
 
-	/* pick just the next cde context, hopefully somewhat in order */
-	cde_ctx = cde_app->cde_ctx + cde_app->cde_ctx_ptr;
-	cde_app->cde_ctx_ptr = (cde_app->cde_ctx_ptr + 1) %
-			ARRAY_SIZE(cde_app->cde_ctx);
+	/* could not find a free one, so allocate dynamically */
+
+	gk20a_warn(&g->dev->dev, "cde: no free contexts, allocating temporary");
+
+	cde_ctx = kzalloc(sizeof(*cde_ctx), GFP_KERNEL);
+	if (!cde_ctx)
+		return ERR_PTR(-ENOMEM);
+
+	cde_ctx->g = g;
+	cde_ctx->pdev = g->dev;
+
+	ret = gk20a_cde_load(cde_ctx, true);
+	if (ret) {
+		gk20a_err(&g->dev->dev, "cde: cde load failed on temporary");
+		return ERR_PTR(ret);
+	}
 
 	return cde_ctx;
 }
@@ -637,7 +652,9 @@ int gk20a_cde_convert(struct gk20a *g,
 
 	mutex_lock(&cde_app->mutex);
 
-	cde_ctx = gk20a_cde_get_context(cde_app);
+	cde_ctx = gk20a_cde_get_context(g);
+	if (IS_ERR(cde_ctx))
+		return PTR_ERR(cde_ctx);
 
 	/* First, map the buffers to local va */
 
@@ -747,7 +764,32 @@ exit_unlock:
 	return err;
 }
 
-int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
+static void gk20a_free_ctx_cb(struct channel_gk20a *ch, void *data)
+{
+	struct gk20a_cde_ctx *cde_ctx = data;
+	bool empty;
+	int err;
+
+	mutex_lock(&ch->jobs_lock);
+	empty = list_empty(&ch->jobs);
+	mutex_unlock(&ch->jobs_lock);
+
+	if (!empty)
+		return;
+
+	/* this should fail only when shutting down the whole device */
+	err = gk20a_busy(cde_ctx->pdev);
+	if (WARN(err, "gk20a cde: cannot set gk20a on, not freeing channel"
+				", leaking memory"))
+		return;
+
+	gk20a_cde_remove(cde_ctx);
+	gk20a_idle(cde_ctx->pdev);
+
+	kfree(cde_ctx);
+}
+
+static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx, bool free_after_use)
 {
 	struct gk20a *g = cde_ctx->g;
 	const struct firmware *img;
@@ -762,7 +804,10 @@ int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 		return -ENOSYS;
 	}
 
-	ch = gk20a_open_new_channel(g);
+	if (free_after_use)
+		ch = gk20a_open_new_channel_with_cb(g, gk20a_free_ctx_cb, cde_ctx);
+	else
+		ch = gk20a_open_new_channel(g);
 	if (!ch) {
 		gk20a_warn(&cde_ctx->pdev->dev, "cde: gk20a channel not available");
 		err = -ENOMEM;
@@ -852,10 +897,9 @@ int gk20a_cde_reload(struct gk20a *g)
 	mutex_lock(&cde_app->mutex);
 	for (i = 0; i < ARRAY_SIZE(cde_app->cde_ctx); i++, cde_ctx++) {
 		gk20a_cde_remove(cde_ctx);
-		err = gk20a_cde_load(cde_ctx);
+		err = gk20a_cde_load(cde_ctx, false);
 	}
 
-	cde_app->cde_ctx_ptr = 0;
 	mutex_unlock(&cde_app->mutex);
 
 	gk20a_idle(g->dev);
@@ -877,7 +921,7 @@ int gk20a_init_cde_support(struct gk20a *g)
 	for (i = 0; i < ARRAY_SIZE(cde_app->cde_ctx); i++, cde_ctx++) {
 		cde_ctx->g = g;
 		cde_ctx->pdev = g->dev;
-		ret = gk20a_cde_load(cde_ctx);
+		ret = gk20a_cde_load(cde_ctx, false);
 		if (ret)
 			goto err_init_instance;
 	}
@@ -885,7 +929,6 @@ int gk20a_init_cde_support(struct gk20a *g)
 	/* take shadow to the vm for general usage */
 	cde_app->vm = cde_app->cde_ctx->vm;
 
-	cde_app->cde_ctx_ptr = 0;
 	cde_app->initialised = true;
 	mutex_unlock(&cde_app->mutex);
 

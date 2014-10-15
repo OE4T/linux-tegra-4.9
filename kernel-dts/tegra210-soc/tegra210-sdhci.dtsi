@@ -20,6 +20,8 @@
 	sdhci@700b0600 {
 		tap-delay = <4>;
 		trim-delay = <8>;
+		nvidia,is-ddr-tap-delay;
+		nvidia,ddr-tap-delay = <0>;
 		mmc-ocr-mask = <0>;
 		dqs-trim-delay = <17>;
 		max-clk-limit = <200000000>;

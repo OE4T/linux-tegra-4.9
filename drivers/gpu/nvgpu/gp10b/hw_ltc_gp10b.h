@@ -148,7 +148,7 @@ static inline u32 ltc_ltcs_ltss_cbc_ctrl2_r(void)
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl2_clear_lower_bound_f(u32 v)
 {
-	return (v & 0x1ffff) << 0;
+	return (v & 0x3ffff) << 0;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl3_r(void)
 {
@@ -156,7 +156,7 @@ static inline u32 ltc_ltcs_ltss_cbc_ctrl3_r(void)
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl3_clear_upper_bound_f(u32 v)
 {
-	return (v & 0x1ffff) << 0;
+	return (v & 0x3ffff) << 0;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl3_clear_upper_bound_init_v(void)
 {

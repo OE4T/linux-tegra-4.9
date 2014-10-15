@@ -30,6 +30,9 @@
 
 #define DRV_NAME	"tegra124-virt-ahub-slave"
 
+static unsigned int amx_ch_ref[AMX_MAX_INSTANCE][AMX_MAX_CHANNEL] = { {0} };
+static unsigned int dam_ch_ref[DAM_MAX_INSTANCE][DAM_MAX_CHANNEL] = { {0} };
+
 static int tegra124_virt_apbif_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
@@ -45,7 +48,7 @@ static int tegra124_virt_apbif_hw_params(struct snd_pcm_substream *substream,
 	data->apbif_id = dai->id;
 
 	/* find amx channel for latest amixer settings */
-	tegra_find_amx_info((unsigned long)data);
+	tegra_find_dam_amx_info((unsigned long)data);
 
 	/* initialize the audio cif */
 	cif_conf->audio_channels = params_channels(params);
@@ -110,14 +113,33 @@ static void tegra124_virt_apbif_start_playback(struct snd_soc_dai *dai)
 	struct tegra124_virt_apbif_slave_data *data = &apbif_slave->slave_data;
 	struct slave_remap_add *phandle = &(data->phandle);
 	int value;
+	int amx_in_channel = data->amx_in_channel[dai->id];
+	int amx_id = data->amx_id[dai->id];
+	int dam_in_channel = data->dam_in_channel[dai->id];
+	int dam_id = data->dam_id[dai->id];
+
+	/* enable the dam in channel */
+	if ((dam_id < DAM_MAX_INSTANCE) &&
+		 (dam_in_channel < DAM_MAX_CHANNEL)) {
+		value = reg_read(phandle->dam_base[dam_id],
+			TEGRA_DAM_CH_CTRL_REG(dam_in_channel));
+		value |= TEGRA_DAM_IN_CH_ENABLE;
+		reg_write(phandle->dam_base[dam_id],
+			TEGRA_DAM_CH_CTRL_REG(dam_in_channel), value);
+		dam_ch_ref[dam_id][dam_in_channel]++;
+	}
 
 	/* enable the amx in channel */
-	if (data->amx_id < AMX_MAX_INSTANCE) {
-		value = reg_read(phandle->amx_base[data->amx_id],
+	if ((amx_id < AMX_MAX_INSTANCE) &&
+		 (amx_in_channel < AMX_MAX_CHANNEL)) {
+		value = reg_read(phandle->amx_base[amx_id],
 						TEGRA_AMX_IN_CH_CTRL);
-		value |= (TEGRA_AMX_IN_CH_ENABLE << data->amx_in_channel);
-		reg_write(phandle->amx_base[data->amx_id],
+		value |= (TEGRA_AMX_IN_CH_ENABLE << amx_in_channel);
+		reg_write(phandle->amx_base[amx_id],
 						TEGRA_AMX_IN_CH_CTRL,	value);
+		amx_ch_ref[amx_id][amx_in_channel]++;
+	} else {
+		pr_err("No valid AMX channel found in path\n");
 	}
 
 	/* enable APBIF TX bit */
@@ -139,14 +161,45 @@ static void tegra124_virt_apbif_stop_playback(struct snd_soc_dai *dai)
 	struct tegra124_virt_apbif_slave_data *data = &apbif_slave->slave_data;
 	struct slave_remap_add *phandle = &(data->phandle);
 	int value;
+	int amx_in_channel = data->amx_in_channel[dai->id];
+	int amx_id = data->amx_id[dai->id];
+	int dam_in_channel = data->dam_in_channel[dai->id];
+	int dam_id = data->dam_id[dai->id];
+
+	data->apbif_id = dai->id;
+
+	/* disable the dam in channel */
+	if ((dam_id < DAM_MAX_INSTANCE) &&
+		 (dam_in_channel < DAM_MAX_CHANNEL)) {
+
+		if ((dam_ch_ref[dam_id][dam_in_channel]) &&
+		(--dam_ch_ref[dam_id][dam_in_channel] == 0)) {
+
+			value = reg_read(phandle->dam_base[dam_id],
+				TEGRA_DAM_CH_CTRL_REG(dam_in_channel));
+			value = ~(TEGRA_DAM_IN_CH_ENABLE);
+			reg_write(phandle->dam_base[dam_id],
+				TEGRA_DAM_CH_CTRL_REG(dam_in_channel),
+				value);
+		}
+	}
 
 	/* disable the amx in channel */
-	if (data->amx_id < AMX_MAX_INSTANCE) {
-		value = reg_read(phandle->amx_base[data->amx_id],
-						TEGRA_AMX_IN_CH_CTRL);
-		value &= ~(TEGRA_AMX_IN_CH_ENABLE << data->amx_in_channel);
-		reg_write(phandle->amx_base[data->amx_id],
-						TEGRA_AMX_IN_CH_CTRL,	value);
+	if ((amx_id < AMX_MAX_INSTANCE) &&
+		 (amx_in_channel < AMX_MAX_CHANNEL)) {
+
+		if ((amx_ch_ref[amx_id][amx_in_channel]) &&
+		(--amx_ch_ref[amx_id][amx_in_channel] == 0)) {
+
+			value = reg_read(phandle->amx_base[amx_id],
+							TEGRA_AMX_IN_CH_CTRL);
+			value &= ~(TEGRA_AMX_IN_CH_ENABLE <<
+						amx_in_channel);
+			reg_write(phandle->amx_base[amx_id],
+						TEGRA_AMX_IN_CH_CTRL, value);
+		}
+	} else {
+		pr_err("No valid AMX channel to be disabled\n");
 	}
 
 	/* disable APBIF TX bit */

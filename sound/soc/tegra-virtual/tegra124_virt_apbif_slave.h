@@ -87,6 +87,8 @@
 #define TEGRA_AMX_IN_CH_CTRL		0x04
 #define TEGRA_AMX_IN_CH_ENABLE		1
 
+/* DAM regs */
+#define TEGRA_DAM_IN_CH_ENABLE		0x01
 /* Audio bit width */
 enum {
 	AUDIO_BITS_4 = 0,
@@ -117,8 +119,10 @@ struct tegra124_virt_audio_cif {
 /* slave data */
 struct tegra124_virt_apbif_slave_data {
 	unsigned int apbif_id;
-	unsigned int amx_id;
-	unsigned int amx_in_channel;
+	unsigned int amx_id[MAX_APBIF_IDS];
+	unsigned int amx_in_channel[MAX_APBIF_IDS];
+	unsigned int dam_id[MAX_APBIF_IDS];
+	unsigned int dam_in_channel[MAX_APBIF_IDS];
 	struct tegra124_virt_audio_cif cif;
 	struct slave_remap_add phandle;
 };

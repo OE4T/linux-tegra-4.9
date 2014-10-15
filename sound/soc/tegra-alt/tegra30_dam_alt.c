@@ -552,14 +552,44 @@ static int tegra30_dam_set_audio_cif(struct tegra30_dam *dam,
 	return 0;
 }
 
+static int tegra30_dam_set_in0_hw_params(struct tegra30_dam *dam)
+{
+	unsigned int filt_stages;
+	int farrow_param;
+	/* program coeff ram */
+	tegra30_dam_write_coeff_ram(dam);
+
+	if (dam->srate_in < 0) {
+		pr_err("DAM input rate not set: %d\n",
+			-EINVAL);
+		return -EINVAL;
+	}
+
+	/* set input rate */
+	regmap_update_bits(dam->regmap, TEGRA_DAM_CH0_CTRL,
+		TEGRA_DAM_CH0_CTRL_FSIN_MASK,
+		dam->srate_in << TEGRA_DAM_CH0_CTRL_FSIN_SHIFT);
+
+	/* set IIR filter stages */
+	filt_stages = tegra30_dam_get_filter_stages(dam);
+	regmap_update_bits(dam->regmap, TEGRA_DAM_CH0_CTRL,
+		TEGRA_DAM_CH0_CTRL_FILT_STAGES_MASK,
+		filt_stages << TEGRA_DAM_CH0_CTRL_FILT_STAGES_SHIFT);
+
+	/* set farrow param */
+	farrow_param = tegra30_dam_get_farrow_param(dam);
+	regmap_write(dam->regmap, TEGRA_DAM_FARROW_PARAM, farrow_param);
+
+	return 0;
+
+}
 static int tegra30_dam_in0_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
 {
 	struct device *dev = dai->dev;
 	struct tegra30_dam *dam = snd_soc_dai_get_drvdata(dai);
-	unsigned int filt_stages;
-	int farrow_param, ret = 0;
+	int ret = 0;
 
 	/* set rx cif */
 	ret = tegra30_dam_set_audio_cif(dam, params,
@@ -570,29 +600,11 @@ static int tegra30_dam_in0_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	/* program coeff ram */
-	tegra30_dam_write_coeff_ram(dam);
-
-	if (dam->srate_in < 0) {
-		dev_err(dev, "DAM%d input rate not set: %d\n",
-			dev->id, -EINVAL);
+	ret = tegra30_dam_set_in0_hw_params(dam);
+	if (ret) {
+		dev_err(dev, "Error in DAM%d in0_hw_params\n", dev->id);
 		return -EINVAL;
 	}
-
-	/* set input rate */
-	regmap_update_bits(dam->regmap, TEGRA_DAM_CH0_CTRL,
-			TEGRA_DAM_CH0_CTRL_FSIN_MASK,
-			dam->srate_in << TEGRA_DAM_CH0_CTRL_FSIN_SHIFT);
-
-	/* set IIR filter stages */
-	filt_stages = tegra30_dam_get_filter_stages(dam);
-	regmap_update_bits(dam->regmap, TEGRA_DAM_CH0_CTRL,
-			TEGRA_DAM_CH0_CTRL_FILT_STAGES_MASK,
-			filt_stages << TEGRA_DAM_CH0_CTRL_FILT_STAGES_SHIFT);
-
-	/* set farrow param */
-	farrow_param = tegra30_dam_get_farrow_param(dam);
-	regmap_write(dam->regmap, TEGRA_DAM_FARROW_PARAM, farrow_param);
 
 	return ret;
 }
@@ -615,6 +627,39 @@ static int tegra30_dam_in1_hw_params(struct snd_pcm_substream *substream,
 	return ret;
 }
 
+static int tegra30_dam_set_out_hw_params(struct tegra30_dam *dam)
+{
+	if (dam->srate_out < 0) {
+		pr_err("DAM output rate not set: %d\n",
+			-EINVAL);
+		return -EINVAL;
+	}
+
+	/* set output rate */
+	regmap_update_bits(dam->regmap, TEGRA_DAM_CTRL,
+		TEGRA_DAM_CTRL_FSOUT_MASK,
+		dam->srate_out << TEGRA_DAM_CTRL_FSOUT_SHIFT);
+
+	/* clear previous SRC/MIX settings if any */
+	regmap_update_bits(dam->regmap, TEGRA_DAM_CTRL,
+		TEGRA_DAM_CTRL_STEREO_MIX_EN_MASK, 0);
+	regmap_update_bits(dam->regmap, TEGRA_DAM_CTRL,
+		TEGRA_DAM_CTRL_STEREO_SRC_EN_MASK, 0);
+
+	if (dam->srate_out == dam->srate_in)
+		/* enable stereo MIX in bypass mode */
+		regmap_update_bits(dam->regmap, TEGRA_DAM_CTRL,
+			TEGRA_DAM_CTRL_STEREO_MIX_EN_MASK,
+			TEGRA_DAM_CTRL_STEREO_MIX_EN);
+	else
+		/* enable stereo SRC */
+		regmap_update_bits(dam->regmap, TEGRA_DAM_CTRL,
+			TEGRA_DAM_CTRL_STEREO_SRC_EN_MASK,
+			TEGRA_DAM_CTRL_STEREO_SRC_EN);
+
+	return 0;
+
+}
 static int tegra30_dam_out_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
@@ -632,33 +677,11 @@ static int tegra30_dam_out_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	if (dam->srate_out < 0) {
-		dev_err(dev, "DAM%d output rate not set: %d\n",
-			dev->id, -EINVAL);
+	ret = tegra30_dam_set_out_hw_params(dam);
+	if (ret) {
+		dev_err(dev, "error in DAM%d out_hw_params\n", dev->id);
 		return -EINVAL;
 	}
-
-	/* set output rate */
-	regmap_update_bits(dam->regmap, TEGRA_DAM_CTRL,
-			TEGRA_DAM_CTRL_FSOUT_MASK,
-			dam->srate_out << TEGRA_DAM_CTRL_FSOUT_SHIFT);
-
-	/* clear previous SRC/MIX settings if any */
-	regmap_update_bits(dam->regmap, TEGRA_DAM_CTRL,
-			TEGRA_DAM_CTRL_STEREO_MIX_EN_MASK, 0);
-	regmap_update_bits(dam->regmap, TEGRA_DAM_CTRL,
-			TEGRA_DAM_CTRL_STEREO_SRC_EN_MASK, 0);
-
-	if (dam->srate_out == dam->srate_in)
-		/* enable stereo MIX in bypass mode */
-		regmap_update_bits(dam->regmap, TEGRA_DAM_CTRL,
-				TEGRA_DAM_CTRL_STEREO_MIX_EN_MASK,
-				TEGRA_DAM_CTRL_STEREO_MIX_EN);
-	else
-		/* enable stereo SRC */
-		regmap_update_bits(dam->regmap, TEGRA_DAM_CTRL,
-				TEGRA_DAM_CTRL_STEREO_SRC_EN_MASK,
-				TEGRA_DAM_CTRL_STEREO_SRC_EN);
 
 	return ret;
 }
@@ -707,6 +730,56 @@ static int tegra30_dam_put_in_srate(struct snd_kcontrol *kcontrol,
 
 	/* update the dam input rate */
 	dam->srate_in = ucontrol->value.integer.value[0] - 1;
+
+	return 0;
+}
+
+static int tegra124_virt_dam_get_out_srate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	return tegra30_dam_get_out_srate(kcontrol, ucontrol);
+}
+
+static int tegra124_virt_dam_put_out_srate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra30_dam *dam = snd_soc_codec_get_drvdata(codec);
+	int ret;
+
+	/* update the dam output rate */
+	dam->srate_out = ucontrol->value.integer.value[0] - 1;
+
+	ret = tegra30_dam_set_out_hw_params(dam);
+	if (ret) {
+		pr_err("Error in set_out_hw_params\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int tegra124_virt_dam_get_in_srate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	return tegra30_dam_get_in_srate(kcontrol, ucontrol);
+}
+
+static int tegra124_virt_dam_put_in_srate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra30_dam *dam = snd_soc_codec_get_drvdata(codec);
+	int ret;
+
+	/* update the dam input rate */
+	dam->srate_in = ucontrol->value.integer.value[0] - 1;
+
+	ret = tegra30_dam_set_in0_hw_params(dam);
+	if (ret) {
+			pr_err("Error in setting tegra30 in0_hw_params\n");
+			return -EINVAL;
+	}
 
 	return 0;
 }
@@ -783,6 +856,12 @@ static const struct snd_soc_dapm_widget tegra30_dam_widgets[] = {
 	SND_SOC_DAPM_AIF_OUT("OUT", NULL, 0, TEGRA_DAM_CTRL, 0, 0),
 };
 
+static const struct snd_soc_dapm_widget tegra124_virt_dam_widgets[] = {
+	SND_SOC_DAPM_AIF_IN("IN0", NULL, 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_IN("IN1", NULL, 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_OUT("OUT", NULL, 0, TEGRA_DAM_CTRL, 0, 0),
+};
+
 static const struct snd_soc_dapm_route tegra30_dam_routes[] = {
 	{ "IN0",       NULL, "IN0 Receive" },
 	{ "IN1",       NULL, "IN1 Receive" },
@@ -815,6 +894,15 @@ static const struct snd_kcontrol_new tegra30_dam_controls[] = {
 		tegra30_dam_get_out_srate, tegra30_dam_put_out_srate),
 	SOC_ENUM_EXT("input rate", tegra30_dam_srate,
 		tegra30_dam_get_in_srate, tegra30_dam_put_in_srate),
+};
+
+static const struct snd_kcontrol_new tegra124_virt_dam_controls[] = {
+	SOC_ENUM_EXT("output rate", tegra30_dam_srate,
+		tegra124_virt_dam_get_out_srate,
+		tegra124_virt_dam_put_out_srate),
+	SOC_ENUM_EXT("input rate", tegra30_dam_srate,
+		tegra124_virt_dam_get_in_srate,
+		tegra124_virt_dam_put_in_srate),
 };
 
 static struct snd_soc_codec_driver tegra30_dam_codec = {
@@ -892,6 +980,8 @@ static const struct of_device_id tegra30_dam_of_match[] = {
 	{ .compatible = "nvidia,tegra30-dam", .data = &soc_data_tegra30 },
 	{ .compatible = "nvidia,tegra114-dam", .data = &soc_data_tegra114 },
 	{ .compatible = "nvidia,tegra124-dam", .data = &soc_data_tegra124 },
+	{ .compatible = "nvidia,tegra124-virt-dam",
+					.data = &soc_data_tegra124 },
 	{},
 };
 
@@ -978,6 +1068,17 @@ static int tegra30_dam_platform_probe(struct platform_device *pdev)
 			goto err_pm_disable;
 	}
 
+	if (of_device_is_compatible(pdev->dev.of_node,
+					"nvidia,tegra124-virt-dam")) {
+		tegra30_dam_codec.dapm_widgets =
+				tegra124_virt_dam_widgets;
+		tegra30_dam_codec.num_dapm_widgets =
+				ARRAY_SIZE(tegra124_virt_dam_widgets);
+		tegra30_dam_codec.controls =
+				tegra124_virt_dam_controls;
+		tegra30_dam_codec.num_controls =
+				ARRAY_SIZE(tegra124_virt_dam_controls);
+	}
 	ret = snd_soc_register_codec(&pdev->dev, &tegra30_dam_codec,
 				     tegra30_dam_dais,
 				     ARRAY_SIZE(tegra30_dam_dais));

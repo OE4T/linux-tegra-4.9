@@ -18,6 +18,7 @@
 #include <linux/cdev.h>
 #include <linux/file.h>
 #include <linux/anon_inodes.h>
+#include <linux/nvgpu.h>
 #include <uapi/linux/nvgpu.h>
 
 #include "gk20a.h"
@@ -176,6 +177,45 @@ static int gk20a_ctrl_alloc_as(
 	args->as_fd = fd;
 	return 0;
 
+clean_up:
+	put_unused_fd(fd);
+	return err;
+}
+
+static int gk20a_ctrl_open_tsg(struct gk20a *g,
+			       struct nvgpu_gpu_open_tsg_args *args)
+{
+	struct platform_device *dev = g->dev;
+	int err;
+	int fd;
+	struct file *file;
+	char *name;
+
+	err = get_unused_fd_flags(O_RDWR);
+	if (err < 0)
+		return err;
+	fd = err;
+
+	name = kasprintf(GFP_KERNEL, "nvgpu-%s-tsg%d",
+			 dev_name(&dev->dev), fd);
+
+	file = anon_inode_getfile(name, g->tsg.cdev.ops, NULL, O_RDWR);
+	kfree(name);
+	if (IS_ERR(file)) {
+		err = PTR_ERR(file);
+		goto clean_up;
+	}
+	fd_install(fd, file);
+
+	err = gk20a_tsg_open(g, file);
+	if (err)
+		goto clean_up_file;
+
+	args->tsg_fd = fd;
+	return 0;
+
+clean_up_file:
+	fput(file);
 clean_up:
 	put_unused_fd(fd);
 	return err;
@@ -345,6 +385,10 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	case NVGPU_GPU_IOCTL_ALLOC_AS:
 		err = gk20a_ctrl_alloc_as(g,
 			(struct nvgpu_alloc_as_args *)buf);
+		break;
+	case NVGPU_GPU_IOCTL_OPEN_TSG:
+		err = gk20a_ctrl_open_tsg(g,
+			(struct nvgpu_gpu_open_tsg_args *)buf);
 		break;
 	default:
 		dev_dbg(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x", cmd);

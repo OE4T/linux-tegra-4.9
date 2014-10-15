@@ -22,6 +22,7 @@ bool gk20a_is_channel_marked_as_tsg(struct channel_gk20a *ch);
 
 int gk20a_tsg_dev_release(struct inode *inode, struct file *filp);
 int gk20a_tsg_dev_open(struct inode *inode, struct file *filp);
+int gk20a_tsg_open(struct gk20a *g, struct file *filp);
 long gk20a_tsg_dev_ioctl(struct file *filp,
 			 unsigned int cmd, unsigned long arg);
 

@@ -181,6 +181,11 @@ struct nvgpu_alloc_as_args {
 	__u64 reserved;			/* must be zero */
 };
 
+struct nvgpu_gpu_open_tsg_args {
+	__u32 tsg_fd;			/* out, tsg fd */
+	__u32 reserved;			/* must be zero */
+};
+
 #define NVGPU_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
 	_IOR(NVGPU_GPU_IOCTL_MAGIC, 1, struct nvgpu_gpu_zcull_get_ctx_size_args)
 #define NVGPU_GPU_IOCTL_ZCULL_GET_INFO \
@@ -197,9 +202,11 @@ struct nvgpu_alloc_as_args {
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 7, struct nvgpu_gpu_mark_compressible_write_args)
 #define NVGPU_GPU_IOCTL_ALLOC_AS \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 8, struct nvgpu_alloc_as_args)
+#define NVGPU_GPU_IOCTL_OPEN_TSG \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 9, struct nvgpu_gpu_open_tsg_args)
 
 #define NVGPU_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_GPU_IOCTL_ALLOC_AS)
+	_IOC_NR(NVGPU_GPU_IOCTL_OPEN_TSG)
 #define NVGPU_GPU_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_gpu_prepare_compressible_read_args)
 

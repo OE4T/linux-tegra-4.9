@@ -55,7 +55,13 @@ static bool gk20a_is_channel_active(struct gk20a *g, struct channel_gk20a *ch)
 static int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg, int ch_fd)
 {
 	struct file *f = fget(ch_fd);
-	struct channel_gk20a *ch = f->private_data;
+	struct channel_gk20a *ch;
+
+	gk20a_dbg_fn("");
+
+	ch = gk20a_get_channel_from_file(ch_fd);
+	if (!ch)
+		return -EINVAL;
 
 	/* check if channel is already bound to some TSG */
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
@@ -82,6 +88,7 @@ static int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg, int ch_fd)
 
 	fput(f);
 
+	gk20a_dbg_fn("done");
 	return 0;
 }
 
@@ -144,14 +151,11 @@ static struct tsg_gk20a *acquire_unused_tsg(struct fifo_gk20a *f)
 	return tsg;
 }
 
-int gk20a_tsg_dev_open(struct inode *inode, struct file *filp)
+int gk20a_tsg_open(struct gk20a *g, struct file *filp)
 {
 	struct tsg_gk20a *tsg;
-	struct gk20a *g;
 	struct device *dev;
 
-	g = container_of(inode->i_cdev,
-			 struct gk20a, tsg.cdev);
 	dev  = dev_from_gk20a(g);
 
 	gk20a_dbg(gpu_dbg_fn, "tsg: %s", dev_name(dev));
@@ -172,6 +176,19 @@ int gk20a_tsg_dev_open(struct inode *inode, struct file *filp)
 	gk20a_dbg(gpu_dbg_fn, "tsg opened %d\n", tsg->tsgid);
 
 	return 0;
+}
+
+int gk20a_tsg_dev_open(struct inode *inode, struct file *filp)
+{
+	struct gk20a *g;
+	int ret;
+
+	g = container_of(inode->i_cdev,
+			 struct gk20a, tsg.cdev);
+	gk20a_dbg_fn("");
+	ret = gk20a_tsg_open(g, filp);
+	gk20a_dbg_fn("done");
+	return ret;
 }
 
 static void gk20a_tsg_release(struct kref *ref)

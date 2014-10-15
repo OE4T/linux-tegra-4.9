@@ -395,13 +395,13 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 
 void nvmap_free_handle(struct nvmap_client *c, struct nvmap_handle *h);
 
-void nvmap_free_handle_user_id(struct nvmap_client *c, unsigned long user_id);
+void nvmap_free_handle_fd(struct nvmap_client *c, int fd);
 
-int nvmap_pin_ids(struct nvmap_client *client,
-		  unsigned int nr, struct nvmap_handle * const *ids);
+int nvmap_pin_handles(struct nvmap_client *client, unsigned int nr,
+		      struct nvmap_handle * const *handles);
 
-void nvmap_unpin_ids(struct nvmap_client *priv,
-		     unsigned int nr, struct nvmap_handle * const *ids);
+void nvmap_unpin_handles(struct nvmap_client *priv, unsigned int nr,
+			 struct nvmap_handle * const *handles);
 
 int nvmap_handle_remove(struct nvmap_device *dev, struct nvmap_handle *h);
 
@@ -410,8 +410,8 @@ void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h);
 int is_nvmap_vma(struct vm_area_struct *vma);
 
 int nvmap_get_dmabuf_fd(struct nvmap_client *client, struct nvmap_handle *h);
-struct nvmap_handle *nvmap_get_id_from_dmabuf_fd(struct nvmap_client *client,
-						 int fd);
+struct nvmap_handle *nvmap_handle_get_from_dmabuf_fd(
+				struct nvmap_client *client, int fd);
 
 int nvmap_get_handle_param(struct nvmap_client *client,
 		struct nvmap_handle_ref *ref, u32 param, u64 *result);
@@ -420,7 +420,7 @@ struct nvmap_client *nvmap_client_get(struct nvmap_client *client);
 
 void nvmap_client_put(struct nvmap_client *c);
 
-struct nvmap_handle *nvmap_fd_to_handle(int handle);
+struct nvmap_handle *nvmap_handle_get_from_fd(int fd);
 
 /* MM definitions. */
 extern size_t cache_maint_inner_threshold;
@@ -461,7 +461,7 @@ int __nvmap_do_cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
 struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 					   const char *name);
 struct dma_buf *__nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref);
-struct nvmap_handle *__nvmap_ref_to_id(struct nvmap_handle_ref *ref);
+struct nvmap_handle *__nvmap_ref_to_handle(struct nvmap_handle_ref *ref);
 int __nvmap_pin(struct nvmap_handle_ref *ref, phys_addr_t *phys);
 void __nvmap_unpin(struct nvmap_handle_ref *ref);
 int __nvmap_dmabuf_fd(struct nvmap_client *client,

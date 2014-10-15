@@ -744,8 +744,8 @@ struct dma_buf *__nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref)
  * returned by this function is freed concurrently while the caller is still
  * using it.
  */
-struct nvmap_handle *nvmap_get_id_from_dmabuf_fd(struct nvmap_client *client,
-						 int fd)
+struct nvmap_handle *nvmap_handle_get_from_dmabuf_fd(
+					struct nvmap_client *client, int fd)
 {
 	struct nvmap_handle *handle = ERR_PTR(-EINVAL);
 	struct dma_buf *dmabuf;
@@ -775,7 +775,7 @@ int nvmap_ioctl_share_dmabuf(struct file *filp, void __user *arg)
 	if (copy_from_user(&op, (void __user *)arg, sizeof(op)))
 		return -EFAULT;
 
-	handle = nvmap_fd_to_handle(op.id);
+	handle = nvmap_handle_get_from_fd(op.id);
 	if (!handle)
 		return -EINVAL;
 

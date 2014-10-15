@@ -104,8 +104,8 @@ done:
 			atomic_read(&h->pin));
 }
 
-int nvmap_pin_ids(struct nvmap_client *client, unsigned int nr,
-		  struct nvmap_handle * const *ids)
+int nvmap_pin_handles(struct nvmap_client *client, unsigned int nr,
+		      struct nvmap_handle * const *handles)
 {
 	int i, err = 0;
 	phys_addr_t phys;
@@ -116,10 +116,10 @@ int nvmap_pin_ids(struct nvmap_client *client, unsigned int nr,
 	 */
 	nvmap_ref_lock(client);
 	for (i = 0; i < nr; i++) {
-		if (!ids[i] || !virt_addr_valid(ids[i]))
+		if (!handles[i] || !virt_addr_valid(handles[i]))
 			continue;
 
-		ref = __nvmap_validate_locked(client, ids[i]);
+		ref = __nvmap_validate_locked(client, handles[i]);
 		if (!ref) {
 			err = -EPERM;
 			goto err_cleanup;
@@ -138,14 +138,14 @@ int nvmap_pin_ids(struct nvmap_client *client, unsigned int nr,
 
 err_cleanup:
 	for (--i; i >= 0; i--) {
-		if (!ids[i] || !virt_addr_valid(ids[i]))
+		if (!handles[i] || !virt_addr_valid(handles[i]))
 			continue;
 
 		/*
 		 * We will get the ref again - the ref lock has yet to be given
 		 * up so if this worked the first time it will work again.
 		 */
-		ref = __nvmap_validate_locked(client, ids[i]);
+		ref = __nvmap_validate_locked(client, handles[i]);
 		__nvmap_unpin(ref);
 	}
 	nvmap_ref_unlock(client);
@@ -156,18 +156,18 @@ err_cleanup:
  * This will unpin every handle. If an error occurs on a handle later handles
  * will still be unpinned.
  */
-void nvmap_unpin_ids(struct nvmap_client *client, unsigned int nr,
-		     struct nvmap_handle * const *ids)
+void nvmap_unpin_handles(struct nvmap_client *client, unsigned int nr,
+			 struct nvmap_handle * const *handles)
 {
 	int i;
 	struct nvmap_handle_ref *ref;
 
 	nvmap_ref_lock(client);
 	for (i = 0; i < nr; i++) {
-		if (!ids[i] || !virt_addr_valid(ids[i]))
+		if (!handles[i] || !virt_addr_valid(handles[i]))
 			continue;
 
-		ref = __nvmap_validate_locked(client, ids[i]);
+		ref = __nvmap_validate_locked(client, handles[i]);
 		if (!ref) {
 			pr_info("ref is null during unpin.\n");
 			continue;

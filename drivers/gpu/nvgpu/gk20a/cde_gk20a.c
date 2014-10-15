@@ -770,6 +770,7 @@ int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 
 	if (!vaddr) {
 		gk20a_warn(&cde_ctx->pdev->dev, "cde: cannot map compression bit backing store");
+		err = ENOMEM;
 		goto err_map_backingstore;
 	}
 

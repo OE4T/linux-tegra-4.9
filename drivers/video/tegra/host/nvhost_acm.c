@@ -434,6 +434,48 @@ void nvhost_module_remove_client(struct platform_device *dev, void *priv)
 	mutex_unlock(&client_list_lock);
 }
 
+static ssize_t force_on_store(struct kobject *kobj,
+	struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int force_on = 0, ret = 0;
+	struct nvhost_device_power_attr *power_attribute =
+		container_of(attr, struct nvhost_device_power_attr,
+			     power_attr[NVHOST_POWER_SYSFS_ATTRIB_FORCE_ON]);
+	struct platform_device *dev = power_attribute->ndev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	ret = sscanf(buf, "%d", &force_on);
+	if (ret != 1)
+		return -EINVAL;
+
+	/* should we force the power on or off? */
+	if (force_on && !pdata->forced_on) {
+		/* force on */
+		ret = nvhost_module_busy(dev);
+		if (!ret)
+			pdata->forced_on = true;
+	} else if (!force_on && pdata->forced_on) {
+		/* force off */
+		nvhost_module_idle(dev);
+		pdata->forced_on = false;
+	}
+
+	return count;
+}
+
+static ssize_t force_on_show(struct kobject *kobj,
+	struct kobj_attribute *attr, char *buf)
+{
+	struct nvhost_device_power_attr *power_attribute =
+		container_of(attr, struct nvhost_device_power_attr,
+			     power_attr[NVHOST_POWER_SYSFS_ATTRIB_FORCE_ON]);
+	struct platform_device *dev = power_attribute->ndev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	return sprintf(buf, "%d\n", pdata->forced_on);
+
+}
+
 static ssize_t powergate_delay_store(struct kobject *kobj,
 	struct kobj_attribute *attr, const char *buf, size_t count)
 {
@@ -705,7 +747,23 @@ int nvhost_module_init(struct platform_device *dev)
 		goto fail_powergatedelay;
 	}
 
+	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_FORCE_ON];
+	attr->attr.name = "force_on";
+	attr->attr.mode = S_IWUSR | S_IRUGO;
+	attr->show = force_on_show;
+	attr->store = force_on_store;
+	sysfs_attr_init(&attr->attr);
+	if (sysfs_create_file(pdata->power_kobj, &attr->attr)) {
+		dev_err(&dev->dev, "Could not create sysfs attribute force_on\n");
+		err = -EIO;
+		goto fail_forceon;
+	}
+
 	return 0;
+
+fail_forceon:
+	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_POWERGATE_DELAY];
+	sysfs_remove_file(pdata->power_kobj, &attr->attr);
 
 fail_powergatedelay:
 	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY];

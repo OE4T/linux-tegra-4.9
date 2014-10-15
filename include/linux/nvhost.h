@@ -85,6 +85,7 @@ struct sync_pt;
 enum nvhost_power_sysfs_attributes {
 	NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY = 0,
 	NVHOST_POWER_SYSFS_ATTRIB_POWERGATE_DELAY,
+	NVHOST_POWER_SYSFS_ATTRIB_FORCE_ON,
 	NVHOST_POWER_SYSFS_ATTRIB_MAX
 };
 
@@ -301,6 +302,9 @@ struct nvhost_device_data {
 
 	/* Actmon IRQ from hintstatus_r */
 	unsigned int actmon_irq;
+
+	/* Is the device already forced on? */
+	bool forced_on;
 };
 
 

@@ -134,4 +134,168 @@ static inline u32 win_base_addr_dc_f_winbuf_r(void)
 {
 	return 0x00001ac0;
 }
+static inline u32 win_blend_layer_control_r(void)
+{
+	return 0x00000716;
+}
+static inline u32 win_blend_layer_control_blend_enable_bypass_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 win_blend_layer_control_blend_enable_enable_f(void)
+{
+	return 0x0;
+}
+static inline u32 win_blend_layer_control_blend_enable_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 win_set_cropped_size_in_r(void)
+{
+	return 0x00000706;
+}
+static inline u32 win_set_cropped_size_in_height_f(u32 v)
+{
+	return (v & 0x7fff) << 16;
+}
+static inline u32 win_set_cropped_size_in_width_f(u32 v)
+{
+	return (v & 0x7fff) << 0;
+}
+static inline u32 win_options_r(void)
+{
+	return 0x00000700;
+}
+static inline u32 win_options_v_direction_increment_f(void)
+{
+	return 0x0;
+}
+static inline u32 win_options_v_direction_decrement_f(void)
+{
+	return 0x4;
+}
+static inline u32 win_options_h_direction_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 win_options_h_direction_increment_f(void)
+{
+	return 0x0;
+}
+static inline u32 win_options_h_direction_decrement_f(void)
+{
+	return 0x1;
+}
+static inline u32 win_options_scan_column_f(u32 v)
+{
+	return (v & 0x1) << 4;
+}
+static inline u32 win_options_scan_column_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 win_options_scan_column_enable_f(void)
+{
+	return 0x10;
+}
+static inline u32 win_options_win_enable_enable_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 win_options_win_enable_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 win_options_color_expand_enable_f(void)
+{
+	return 0x40;
+}
+static inline u32 win_options_cp_enable_enable_f(void)
+{
+	return 0x10000;
+}
+static inline u32 win_set_control_r(void)
+{
+	return 0x00000702;
+}
+static inline u32 win_set_control_owner_f(u32 v)
+{
+	return (v & 0xf) << 0;
+}
+static inline u32 win_set_control_owner_none_f(void)
+{
+	return 0xf;
+}
+static inline u32 win_set_planar_storage_r(void)
+{
+	return 0x00000709;
+}
+static inline u32 win_color_depth_r(void)
+{
+	return 0x00000703;
+}
+static inline u32 win_position_r(void)
+{
+	return 0x00000704;
+}
+static inline u32 win_position_h_position_f(u32 v)
+{
+	return (v & 0x7fff) << 0;
+}
+static inline u32 win_position_v_position_f(u32 v)
+{
+	return (v & 0x7fff) << 16;
+}
+static inline u32 win_size_r(void)
+{
+	return 0x00000705;
+}
+static inline u32 win_size_h_size_f(u32 v)
+{
+	return (v & 0x7fff) << 0;
+}
+static inline u32 win_size_v_size_f(u32 v)
+{
+	return (v & 0x7fff) << 16;
+}
+static inline u32 win_start_addr_r(void)
+{
+	return 0x00000800;
+}
+static inline u32 win_start_addr_hi_r(void)
+{
+	return 0x0000080d;
+}
+static inline u32 win_surface_kind_r(void)
+{
+	return 0x0000080b;
+}
+static inline u32 win_surface_kind_kind_pitch_f(void)
+{
+	return 0x0;
+}
+static inline u32 win_surface_kind_kind_tiled_f(void)
+{
+	return 0x1;
+}
+static inline u32 win_surface_kind_kind_bl_f(void)
+{
+	return 0x2;
+}
+static inline u32 win_surface_kind_block_height_f(u32 v)
+{
+	return (v & 0x7) << 4;
+}
+static inline u32 win_act_control_r(void)
+{
+	return 0x0000050e;
+}
+static inline u32 win_act_control_ctrl_sel_vcounter_f(void)
+{
+	return 0x0;
+}
+static inline u32 win_act_control_ctrl_sel_hcounter_f(void)
+{
+	return 0x1;
+}
 #endif

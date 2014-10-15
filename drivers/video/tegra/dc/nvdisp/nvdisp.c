@@ -24,11 +24,12 @@
 #include <mach/fb.h>
 
 #include "nvdisp.h"
-#include "dc_reg.h"
 #include "dc_config.h"
 #include "dc_priv.h"
 #include "dp.h"
 #include "dpaux.h"
+#include "hw_nvdisp_nvdisp.h"
+#include "hw_win_nvdisp.h"
 
 /* static struct tegra_dc_nvdisp	tegra_nvdisp; */
 DEFINE_MUTEX(tegra_nvdisp_lock);

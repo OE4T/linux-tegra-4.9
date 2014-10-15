@@ -19,18 +19,29 @@
 
 #include "nvdisp.h"
 #include "nvdisp_priv.h"
-#include "nvdisp_reg.h"
+#include "hw_nvdisp_nvdisp.h"
+#include "hw_win_nvdisp.h"
 
-#include "dc_reg.h"
 #include "dc_config.h"
 #include "dc_priv.h"
+
+#define DSC_TO_UF_INT	29
+#define DSC_BBUF_UF_INT	28
+#define DSC_RBUF_UF_INT	27
+#define DSC_OBUF_UF_INT	26
+#define SD3_INT		24
+#define HEAD_UF_INT	23
+#define REG_TMOUT_INT	7
+#define REGION_CRC_INT	6
+
 
 static int tegra_nvdisp_blend(struct tegra_dc_win *win)
 {
 	if (!(win->flags & TEGRA_WIN_BLEND_FLAGS_MASK)) {
 		/* Set Bypassing if no blending is required */
-		nvdisp_win_write(win, BLEND_BYPASS,
-			DC_WIN_BLEND_LAYER_CONTROL);
+		nvdisp_win_write(win,
+			win_blend_layer_control_blend_enable_bypass_f(),
+			win_blend_layer_control_r());
 		return 0;
 	}
 
@@ -54,52 +65,54 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 {
 	u32 win_options;
 
-	nvdisp_win_write(win, tegra_dc_fmt(win->fmt), DC_WIN_COLOR_DEPTH);
+	nvdisp_win_write(win, tegra_dc_fmt(win->fmt), win_color_depth_r());
 	nvdisp_win_write(win,
-		V_POSITION(win->out_y) | H_POSITION(win->out_x),
-		DC_WIN_POSITION);
+		win_position_v_position_f(win->out_y) |
+		win_position_h_position_f(win->out_x),
+		win_position_r());
 
 	/* TODO: interlace size is different */
-	nvdisp_win_write(win, V_SIZE(win->out_h) | H_SIZE(win->out_w),
-		DC_WIN_SIZE);
+	nvdisp_win_write(win, win_size_v_size_f(win->out_h) |
+		win_size_h_size_f(win->out_w),
+		win_size_r());
 
-	win_options = WIN_ENABLE;
+	win_options = win_options_win_enable_enable_f();
 	if (win->flags & TEGRA_WIN_FLAG_SCAN_COLUMN)
-		win_options |= WIN_SCAN_COLUMN;
+		win_options |= win_options_scan_column_enable_f();
 	if (win->flags & TEGRA_WIN_FLAG_INVERT_H)
-		win_options |= WIN_INVERT_H;
+		win_options |= win_options_h_direction_decrement_f();
 	if (win->flags & TEGRA_WIN_FLAG_INVERT_V)
-		win_options |= WIN_INVERT_V;
+		win_options |= win_options_v_direction_decrement_f();
 	if (tegra_dc_fmt_bpp(win->fmt) < 24)
-		win_options |= COLOR_EXPAND;
+		win_options |= win_options_color_expand_enable_f();
 	if (win->ppflags & TEGRA_WIN_PPFLAG_CP_ENABLE)
-		win_options |= CP_ENABLE;
-	nvdisp_win_write(win, win_options, DC_WIN_WIN_OPTIONS);
+		win_options |= win_options_cp_enable_enable_f();
+	nvdisp_win_write(win, win_options, win_options_r());
 
 	nvdisp_win_write(win,
-			V_PRESCALED_SIZE(dfixed_trunc(win->h)) |
-			H_PRESCALED_SIZE(dfixed_trunc(win->w)),
-			WIN_PCALC_WINDOW_SET_CROPPED_SIZE_IN);
+		win_set_cropped_size_in_height_f(dfixed_trunc(win->h)) |
+		win_set_cropped_size_in_width_f(dfixed_trunc(win->w)),
+		win_set_cropped_size_in_r());
 
 	nvdisp_win_write(win, tegra_dc_reg_l32(win->phys_addr),
-		DC_WINBUF_START_ADDR);
+		win_start_addr_r());
 	nvdisp_win_write(win, tegra_dc_reg_h32(win->phys_addr),
-		DC_WINBUF_START_ADDR_HI);
-	nvdisp_win_write(win, (win->stride>>6), WIN_SET_PLANAR_STORAGE);
+		win_start_addr_hi_r());
+	nvdisp_win_write(win, (win->stride>>6), win_set_planar_storage_r());
 
 	/* TODO: program related YUV registers as well */
 
 	/* TODO: confirm ADDR_H/V_OFFSET programming not needed anymore */
 	if (WIN_IS_BLOCKLINEAR(win)) {
-		nvdisp_win_write(win, DC_WIN_BUFFER_SURFACE_BL_16B2 |
-			(win->block_height_log2 << BLOCK_HEIGHT_SHIFT),
-			DC_WIN_BUFFER_SURFACE_KIND);
+		nvdisp_win_write(win, win_surface_kind_kind_bl_f() |
+			win_surface_kind_block_height_f(win->block_height_log2),
+			win_surface_kind_r());
 	} else if (WIN_IS_TILED(win)) {
-		nvdisp_win_write(win, DC_WIN_BUFFER_SURFACE_TILED,
-			DC_WIN_BUFFER_SURFACE_KIND);
+		nvdisp_win_write(win, win_surface_kind_kind_tiled_f(),
+			win_surface_kind_r());
 	} else {
-		nvdisp_win_write(win, DC_WIN_BUFFER_SURFACE_PITCH,
-			DC_WIN_BUFFER_SURFACE_KIND);
+		nvdisp_win_write(win, win_surface_kind_kind_pitch_f(),
+			win_surface_kind_r());
 	}
 
 	return 0;
@@ -108,7 +121,7 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 int tegra_nvdisp_get_linestride(struct tegra_dc *dc, int win)
 {
 	return nvdisp_win_read(tegra_dc_get_window(dc, win),
-					WIN_SET_PLANAR_STORAGE) << 6;
+		win_set_planar_storage_r()) << 6;
 }
 
 int tegra_nvdisp_update_windows(struct tegra_dc *dc,
@@ -116,7 +129,7 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	u16 *dirty_rect, bool wait_for_vblank)
 {
 	int i;
-	u32 update_mask = GENERAL_ACT_REQ;
+	u32 update_mask = nvdisp_cmd_state_ctrl_general_act_req_enable_f();
 	u32 act_control = 0;
 
 	for (i = 0; i < n; i++) {
@@ -134,12 +147,15 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 			continue;
 		}
 
-		update_mask |= WIN_A_ACT_REQ << win->idx;
+		update_mask |=
+			nvdisp_cmd_state_ctrl_a_act_req_enable_f() << win->idx;
 
 		if (wait_for_vblank)
-			act_control &= ~WIN_ACT_CNTR_SEL_HCOUNTER(win->idx);
+			act_control = win_act_control_ctrl_sel_vcounter_f();
 		else
-			act_control |= WIN_ACT_CNTR_SEL_HCOUNTER(win->idx);
+			act_control = win_act_control_ctrl_sel_hcounter_f();
+
+		nvdisp_win_write(win, act_control, win_act_control_r());
 
 		tegra_nvdisp_blend(win);
 		tegra_nvdisp_scaling(win);
@@ -162,17 +178,18 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 
 	if (tegra_cpu_is_asim())
 		tegra_dc_writel(dc, FRAME_END_INT | V_BLANK_INT,
-			DC_CMD_INT_STATUS);
+			nvdisp_cmd_int_status_r());
 
-	tegra_dc_writel(dc, update_mask << 8, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(dc, act_control, DC_CMD_REG_ACT_CONTROL);
+	tegra_dc_writel(dc, update_mask << 8 |
+		nvdisp_cmd_state_ctrl_common_act_update_enable_f(),
+		nvdisp_cmd_state_ctrl_r());
 
 	if (wait_for_vblank) {
 		/* Use the interrupt handler.  ISR will clear the dirty flags
 		   when the flip is completed */
 		set_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
 		tegra_dc_unmask_interrupt(dc,
-			FRAME_END_INT | V_BLANK_INT | ALL_UF_INT());
+			FRAME_END_INT | V_BLANK_INT | HEAD_UF_INT);
 	}
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
@@ -182,9 +199,10 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	dc->crc_pending = true;
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
-		update_mask |= NC_HOST_TRIG;
+		update_mask |= (nvdisp_cmd_state_ctrl_host_trig_enable_f() |
+			nvdisp_cmd_state_ctrl_common_act_req_enable_f());
 
-	tegra_dc_writel(dc, update_mask, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, update_mask, nvdisp_cmd_state_ctrl_r());
 
 	return 0;
 }
@@ -206,9 +224,7 @@ int tegra_nvdisp_detach_win(struct tegra_dc *dc, unsigned idx)
 
 	/* detach window idx */
 	nvdisp_win_write(win,
-		SET_CONTROL_NONE,
-		WIN_CORE_WINDOWGROUP_SET_CONTROL);
-
+		win_set_control_owner_none_f(), win_set_control_r());
 
 	dc->valid_windows &= ~(0x1 << idx);
 	win->dc = NULL;
@@ -242,7 +258,7 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 	win->dc = dc;
 
 	/* attach window idx */
-	nvdisp_win_write(win, dc->ctrl_num, WIN_CORE_WINDOWGROUP_SET_CONTROL);
+	nvdisp_win_write(win, dc->ctrl_num, win_set_control_r());
 
 	mutex_unlock(&tegra_nvdisp_lock);
 	return 0;

@@ -50,28 +50,152 @@
 #ifndef _hw_nvdisp_nvdisp_h_
 #define _hw_nvdisp_nvdisp_h_
 
-static inline u32 nvdisp_cmd_state_ctrl_0_r(void)
+static inline u32 nvdisp_cmd_state_ctrl_r(void)
 {
 	return 0x00000041;
 }
-static inline u32 nvdisp_cmd_state_ctrl_0_secure_v(void)
-{
-	return 0x00000000;
-}
-static inline u32 nvdisp_cmd_state_ctrl_0_gen_act_req_enable_f(void)
+static inline u32 nvdisp_cmd_state_ctrl_general_act_req_enable_f(void)
 {
 	return 0x1;
 }
-static inline u32 nvdisp_cmd_state_ctrl_0_win_a_act_req_range_f(u32 v)
+static inline u32 nvdisp_cmd_state_ctrl_a_act_req_enable_f(void)
+{
+	return 0x2;
+}
+static inline u32 nvdisp_cmd_state_ctrl_b_act_req_enable_f(void)
+{
+	return 0x4;
+}
+static inline u32 nvdisp_cmd_state_ctrl_c_act_req_enable_f(void)
+{
+	return 0x8;
+}
+static inline u32 nvdisp_cmd_state_ctrl_d_act_req_enable_f(void)
+{
+	return 0x10;
+}
+static inline u32 nvdisp_cmd_state_ctrl_e_act_req_enable_f(void)
+{
+	return 0x20;
+}
+static inline u32 nvdisp_cmd_state_ctrl_f_act_req_enable_f(void)
+{
+	return 0x40;
+}
+static inline u32 nvdisp_cmd_state_ctrl_cursor_act_req_enable_f(void)
+{
+	return 0x80;
+}
+static inline u32 nvdisp_cmd_state_ctrl_general_update_enable_f(void)
+{
+	return 0x100;
+}
+static inline u32 nvdisp_cmd_state_ctrl_win_a_update_enable_f(void)
+{
+	return 0x200;
+}
+static inline u32 nvdisp_cmd_state_ctrl_win_b_update_enable_f(void)
+{
+	return 0x400;
+}
+static inline u32 nvdisp_cmd_state_ctrl_win_c_update_enable_f(void)
+{
+	return 0x800;
+}
+static inline u32 nvdisp_cmd_state_ctrl_win_d_update_enable_f(void)
+{
+	return 0x1000;
+}
+static inline u32 nvdisp_cmd_state_ctrl_win_e_update_enable_f(void)
+{
+	return 0x2000;
+}
+static inline u32 nvdisp_cmd_state_ctrl_win_f_update_enable_f(void)
+{
+	return 0x4000;
+}
+static inline u32 nvdisp_cmd_state_ctrl_cursor_update_enable_f(void)
+{
+	return 0x8000;
+}
+static inline u32 nvdisp_cmd_state_ctrl_common_act_req_enable_f(void)
+{
+	return 0x10000;
+}
+static inline u32 nvdisp_cmd_state_ctrl_common_act_update_enable_f(void)
+{
+	return 0x20000;
+}
+static inline u32 nvdisp_cmd_state_ctrl_host_trig_enable_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 nvdisp_cmd_state_ctrl_host_trig_secure_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 nvdisp_cmd_state_ctrl_gen_act_req_enable_f(void)
+{
+	return 0x1;
+}
+static inline u32 nvdisp_cmd_state_ctrl_win_act_req_range_f(u32 v)
 {
 	return (v & 0x1) << 1;
 }
-static inline u32 nvdisp_cmd_state_ctrl_0_win_a_act_req_range_v(u32 r)
+static inline u32 nvdisp_cmd_state_ctrl_win_act_req_range_v(u32 r)
 {
 	return (r >> 1) & 0x1;
 }
 static inline u32 nvdisp_cmd_disp_win_hdr_r(void)
 {
 	return 0x00000042;
+}
+static inline u32 nvdisp_cmd_int_status_r(void)
+{
+	return 0x00000037;
+}
+static inline u32 nvdisp_cmd_int_status_frame_end_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 nvdisp_cmd_int_status_v_blank_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 nvdisp_cmd_int_status_region_crc_f(u32 v)
+{
+	return (v & 0x1) << 6;
+}
+static inline u32 nvdisp_cmd_int_status_msf_f(u32 v)
+{
+	return (v & 0x1) << 12;
+}
+static inline u32 nvdisp_cmd_int_status_uf_f(u32 v)
+{
+	return (v & 0x1) << 23;
+}
+static inline u32 nvdisp_cmd_int_status_sd3_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 nvdisp_cmd_int_status_obuf_uf_f(u32 v)
+{
+	return (v & 0x1) << 26;
+}
+static inline u32 nvdisp_cmd_int_status_rbuf_uf_f(u32 v)
+{
+	return (v & 0x1) << 27;
+}
+static inline u32 nvdisp_cmd_int_status_bbuf_uf_f(u32 v)
+{
+	return (v & 0x1) << 28;
+}
+static inline u32 nvdisp_cmd_int_status_dsc_uf_f(u32 v)
+{
+	return (v & 0x1) << 29;
+}
+static inline u32 nvdisp_state_access_r(void)
+{
+	return 0x00000040;
 }
 #endif

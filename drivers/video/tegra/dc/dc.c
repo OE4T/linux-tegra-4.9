@@ -1973,6 +1973,13 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 	return err;
 }
 
+int tegra_dc_get_head(const struct tegra_dc *dc)
+{
+	if (dc)
+		return dc->ctrl_num;
+	return -EINVAL;
+}
+
 /* returns on error: -EINVAL
  * on success: TEGRA_DC_OUT_RGB, TEGRA_DC_OUT_HDMI, ... */
 int tegra_dc_get_out(const struct tegra_dc *dc)

@@ -61,10 +61,13 @@ get_output_properties(struct tegra_dc_ext_control_output_properties *properties)
 	if (properties->handle > 2)
 		return -EINVAL;
 
-	properties->associated_head = properties->handle;
+	dc = tegra_dc_get_dc(properties->handle);
+	if (dc == NULL)
+		return -EINVAL;
+
+	properties->associated_head = tegra_dc_get_head(dc);
 	properties->head_mask = (1 << properties->associated_head);
 
-	dc = tegra_dc_get_dc(properties->associated_head);
 	switch (tegra_dc_get_out(dc)) {
 	case TEGRA_DC_OUT_DSI:
 		properties->type = TEGRA_DC_EXT_DSI;

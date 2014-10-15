@@ -60,6 +60,7 @@
 		pinctrl-1 = <&sdmmc3_schmitt_disable_state>;
 		pinctrl-2 = <&sdmmc3_clk_schmitt_enable_state>;
 		pinctrl-3 = <&sdmmc3_clk_schmitt_disable_state>;
+		nvidia,limit-vddio-max-volt;
 		pll_source = "pll_p";
 		nvidia,en-io-trim-volt;
 	};
@@ -103,6 +104,7 @@
 		pinctrl-1 = <&sdmmc1_schmitt_disable_state>;
 		pinctrl-2 = <&sdmmc1_clk_schmitt_enable_state>;
 		pinctrl-3 = <&sdmmc1_clk_schmitt_disable_state>;
+		nvidia,limit-vddio-max-volt;
 		pll_source = "pll_p";
 		nvidia,en-io-trim-volt;
 	};

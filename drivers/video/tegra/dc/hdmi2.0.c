@@ -1527,10 +1527,24 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 	}
 }
 
+/* returns exact pixel clock in Hz */
+static long tegra_hdmi_get_pclk(struct tegra_dc_mode *mode)
+{
+	long h_total, v_total;
+
+	h_total = mode->h_active + mode->h_front_porch + mode->h_back_porch +
+		mode->h_sync_width;
+	v_total = mode->v_active + mode->v_front_porch + mode->v_back_porch +
+		mode->v_sync_width;
+
+	return h_total * v_total * (tegra_dc_calc_refresh(mode) / 1000);
+}
+
 static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	struct clk *parent_clk = clk_get_sys(NULL,
 				dc->out->parent_clk ? : "pll_d2");
+	dc->mode.pclk = tegra_hdmi_get_pclk(&dc->mode);
 
 	if (IS_ERR_OR_NULL(parent_clk)) {
 		dev_err(&dc->ndev->dev, "hdmi: parent clk get failed\n");

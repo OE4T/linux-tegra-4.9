@@ -22,7 +22,7 @@
 #include "nvsr_regs.h"
 #include "dpaux_regs.h"
 
-#define HIMAX 1
+#define HIMAX_HX8880_A 1
 
 #define NVSR_ERR(...) dev_err(&nvsr->dc->ndev->dev, "NVSR: " __VA_ARGS__);
 #define NVSR_WARN(...) dev_warn(&nvsr->dc->ndev->dev, "NVSR: " __VA_ARGS__);
@@ -51,27 +51,111 @@
 static void tegra_dc_nvsr_get(struct tegra_dc_nvsr_data *nvsr)
 {
 	tegra_dc_get(nvsr->dc);
-	clk_prepare_enable(nvsr->out_clk);
+	clk_prepare_enable(nvsr->aux_clk);
 }
 
 static void tegra_dc_nvsr_put(struct tegra_dc_nvsr_data *nvsr)
 {
-	clk_disable_unprepare(nvsr->out_clk);
+	clk_disable_unprepare(nvsr->aux_clk);
 	tegra_dc_put(nvsr->dc);
+}
+
+static unsigned long
+tegra_dc_nvsr_poll_register(struct tegra_dc_nvsr_data *nvsr,
+	u32 reg, u32 mask, u32 bytes, u32 exp_val,
+	u32 poll_interval_us, u32 timeout_ms)
+{
+	unsigned long timeout_jf = jiffies + msecs_to_jiffies(timeout_ms);
+	u32 reg_val;
+	u32 ret;
+
+	do {
+		ret = nvsr->reg_ops.read(nvsr, reg, bytes, &reg_val);
+		NVSR_RETV(ret, "Failed to read status register.\n");
+
+		if ((reg_val & mask) == exp_val)
+			return 0;	/* success */
+
+		usleep_range(poll_interval_us, poll_interval_us << 1);
+	} while (time_after(timeout_jf, jiffies));
+
+	NVSR_ERR("Timed out while polling register 0x%x\n", reg);
+	return jiffies - timeout_jf + 1;
+}
+
+
+static inline unsigned long
+tegra_dc_nvsr_wait_until_status(struct tegra_dc_nvsr_data *nvsr, u32 status)
+{
+	/* Poll every quarter frame for 3 frames */
+	u32 interval_us = nvsr->sr_timing_frame_time_us / 4;
+	u32 timeout_ms = nvsr->sr_timing_frame_time_us / 1000 * 3;
+
+	if (tegra_dc_nvsr_poll_register(nvsr, NVSR_STATUS,
+		NVSR_STATUS_SR_STATE_MASK, 1, status,
+		interval_us, timeout_ms))
+		return -ETIMEDOUT;
+
+	return 0;
+}
+
+static int tegra_dc_nvsr_pre_disable_link(struct tegra_dc_nvsr_data *nvsr)
+{
+	if (nvsr->link_status != LINK_ENABLED)
+		return 0;
+
+	if (nvsr->dc->out->type == TEGRA_DC_OUT_NVSR_DP) {
+		/* Unlocked in tegra_dc_nvsr_disable_link() */
+		mutex_lock(&nvsr->link_lock);
+		tegra_dc_dp_pre_disable_link(nvsr->out_data.dp);
+		nvsr->link_status = LINK_DISABLING;
+		return 0;
+	}
+
+	return -ENODEV;
+}
+
+static int
+tegra_dc_nvsr_disable_link(struct tegra_dc_nvsr_data *nvsr, bool powerdown)
+{
+	if (nvsr->dc->out->type == TEGRA_DC_OUT_NVSR_DP) {
+		tegra_dc_nvsr_pre_disable_link(nvsr);
+		tegra_dc_dp_disable_link(nvsr->out_data.dp, powerdown);
+		if (nvsr->link_status == LINK_DISABLING)
+			/* Locked in tegra_dc_nvsr_pre_disable_link() */
+			mutex_unlock(&nvsr->link_lock);
+		nvsr->link_status = LINK_DISABLED;
+		return 0;
+	}
+
+	return -ENODEV;
+}
+
+static int tegra_dc_nvsr_enable_link(struct tegra_dc_nvsr_data *nvsr)
+{
+	int ret = -ENODEV;
+
+	if (nvsr->dc->out->type == TEGRA_DC_OUT_NVSR_DP) {
+		mutex_lock(&nvsr->link_lock);
+		if (nvsr->link_status == LINK_ENABLED) {
+			trace_printk("Enabled link (noop)\n");
+			mutex_unlock(&nvsr->link_lock);
+			return 0;
+		}
+		tegra_dc_dp_enable_link(nvsr->out_data.dp);
+		nvsr->link_status = LINK_ENABLED;
+		mutex_unlock(&nvsr->link_lock);
+		ret = 0;
+	}
+
+	return ret;
 }
 
 static int tegra_dc_nvsr_enter_sr(struct tegra_dc_nvsr_data *nvsr)
 {
 	u32 val;
 	int ret;
-	u8 tries = 0;
-	u32 delay = nvsr->sr_timing_frame_time_us / 1000;
 
-	/* Set entry via sideband */
-	val = NVSR_SRC_CTL1_SIDEBAND_ENTRY_SEL_YES;
-	val |= NVSR_SRC_CTL1_SIDEBAND_ENTRY_MASK_ENABLE;
-	ret = nvsr->reg_ops.write(nvsr, NVSR_SRC_CTL1, 1, val);
-	NVSR_RETV(ret, "Failed to enter SR via sideband\n");
 	/* Enable SR */
 	val = NVSR_SRC_CTL0_SR_ENABLE_CTL_ENABLED;
 	val |= NVSR_SRC_CTL0_SR_ENABLE_MASK_ENABLE;
@@ -81,32 +165,18 @@ static int tegra_dc_nvsr_enter_sr(struct tegra_dc_nvsr_data *nvsr)
 	ret = nvsr->reg_ops.write(nvsr, NVSR_SRC_CTL0, 1, val);
 	NVSR_RETV(ret, "Failed to request SR entry\n");
 
-	/* TODO: Polling is for NVSR bringup only.
-	 * Need to implement IRQ */
-	do {
-		ret = nvsr->reg_ops.read(nvsr, NVSR_STATUS, 1, &val);
-		NVSR_RETV(ret, "Failed to read status register.\n");
+	nvsr->sr_active = true;
 
-		if ((val & NVSR_STATUS_SR_STATE_MASK)
-			== NVSR_STATUS_SR_STATE_SR_ACTIVE) {
-			nvsr->sr_active = true;
-			return 0;
-		}
-
-		msleep(delay);
-	} while (++tries < SR_ENTRY_MAX_TRIES);
-
-	NVSR_ERR("Timed out while waiting for SR entry\n");
-	return -ETIMEDOUT;
+	return 0;
 }
 
 static int tegra_dc_nvsr_exit_sr(struct tegra_dc_nvsr_data *nvsr)
 {
 	u32 val;
 	int ret;
-	u8 tries = 0;
-	/* Poll every quarter frame in ms */
-	u32 delay = nvsr->sr_timing_frame_time_us / 1000;
+
+	if (!nvsr->sr_active)
+		return 0;
 
 	switch (nvsr->resync_method) {
 	case NVSR_RESYNC_CTL_METHOD_FL:
@@ -138,29 +208,19 @@ static int tegra_dc_nvsr_exit_sr(struct tegra_dc_nvsr_data *nvsr)
 	ret = nvsr->reg_ops.write(nvsr, NVSR_SRC_CTL0, 1, val);
 	NVSR_RETV(ret, "Couldn't request SR exit, aborting SR exit\n");
 
-	/* TODO: Polling is for NVSR bringup only.
-	 * Need to implement IRQ */
-	do {
-		ret = nvsr->reg_ops.read(nvsr, NVSR_STATUS, 1, &val);
-		NVSR_RETV(ret, "Failed to read status register.\n");
+	ret = tegra_dc_nvsr_wait_until_status(nvsr,
+		NVSR_STATUS_SR_STATE_IDLE);
+	NVSR_RETV(ret, "Timed out while waiting for SR exit\n");
 
-		if ((val & NVSR_STATUS_SR_STATE_MASK)
-			== NVSR_STATUS_SR_STATE_IDLE) {
-			nvsr->sr_active = false;
-			return 0;
-		}
+	nvsr->sr_active = false;
 
-		msleep(delay);
-	} while (++tries < SR_EXIT_MAX_TRIES);
-
-	return -ETIMEDOUT;
+	return 0;
 }
 
 static int tegra_dc_nvsr_src_power_on(struct tegra_dc_nvsr_data *nvsr)
 {
 	int ret;
 	u32 reg_val = 0;
-	u8 tries = 0;
 
 	ret = nvsr->reg_ops.read(nvsr, NVSR_STATUS, 1, &reg_val);
 	if (ret) {
@@ -178,30 +238,18 @@ static int tegra_dc_nvsr_src_power_on(struct tegra_dc_nvsr_data *nvsr)
 	ret = nvsr->reg_ops.write(nvsr, NVSR_SRC_CTL0, 1, reg_val);
 	NVSR_RETV(ret, "Failed to write to control register.\n");
 
-	/* TODO: Polling is for NVSR bringup only.
-	 * Need to implement IRQ */
-	do {
-		ret = nvsr->reg_ops.read(nvsr, NVSR_STATUS, 1, &reg_val);
-		NVSR_RETV(ret, "Failed to read status register.\n");
+	ret = tegra_dc_nvsr_wait_until_status(nvsr,
+		NVSR_STATUS_SR_STATE_IDLE);
+	NVSR_RETV(ret, "Failed to power on the SRC.\n");
 
-		if ((reg_val & NVSR_STATUS_SR_STATE_MASK)
-				== NVSR_STATUS_SR_STATE_IDLE) {
-			nvsr->src_on = true;
-			return 0;
-		}
-
-		msleep(nvsr->sr_timing_frame_time_us/1000);
-	} while (tries++ < 3);
-
-	NVSR_ERR("Failed to power on the SRC.\n");
-	return -ETIMEDOUT;
+	nvsr->src_on = true;
+	return 0;
 }
 
 static int tegra_dc_nvsr_src_power_off(struct tegra_dc_nvsr_data *nvsr)
 {
 	int ret;
 	u32 reg_val = 0;
-	u8 tries = 0;
 
 	ret = nvsr->reg_ops.read(nvsr, NVSR_STATUS, 1, &reg_val);
 	if (ret) {
@@ -218,27 +266,15 @@ static int tegra_dc_nvsr_src_power_off(struct tegra_dc_nvsr_data *nvsr)
 	ret = nvsr->reg_ops.write(nvsr, NVSR_SRC_CTL0, 1, reg_val);
 	NVSR_RETV(ret, "Failed to write to control register.\n");
 
-	/* TODO: Polling is for NVSR bringup only.
-	 * Need to implement IRQ */
-	do {
-		ret = nvsr->reg_ops.read(nvsr, NVSR_STATUS, 1, &reg_val);
-		NVSR_RETV(ret, "Failed to read status register.\n");
+	ret = tegra_dc_nvsr_wait_until_status(nvsr,
+		NVSR_STATUS_SR_STATE_OFFLINE);
+	NVSR_RETV(ret, "Failed to power off the SRC.\n");
 
-		if ((reg_val & NVSR_STATUS_SR_STATE_MASK)
-			== NVSR_STATUS_SR_STATE_OFFLINE) {
-			nvsr->src_on = false;
-			/* Will need to re-init SRC on next power-on */
-			nvsr->is_init = false;
-			nvsr->sr_active = false;
-			nvsr->idle_active = false;
-			return 0;
-		}
+	nvsr->src_on = false;
+	nvsr->sr_active = false;
+	nvsr->is_init = false;
 
-		msleep(nvsr->sr_timing_frame_time_us/1000);
-	} while (tries++ < 3);
-
-	NVSR_ERR("Failed to power off the SRC.\n");
-	return -ETIMEDOUT;
+	return 0;
 }
 
 /* Read SRC capabilities and assess possible refresh modes. */
@@ -272,12 +308,12 @@ static int tegra_dc_nvsr_query_capabilities(struct tegra_dc_nvsr_data *nvsr)
 
 	nvsr->cap.sparse_mode_support = true;
 
-	/* Parse device/vendor ID */
-
-	ret = nvsr->reg_ops.read(nvsr, NVSR_SRC_ID0, 4, &reg_val);
-	NVSR_RETV(ret, "Failed to read device ID.\n");
-	nvsr->src_id.device_id = reg_val & 0xffff;
-	nvsr->src_id.vendor_id = reg_val >> 16;
+	if (!nvsr->src_id.device) {
+		ret = nvsr->reg_ops.read(nvsr, NVSR_SRC_ID0, 4, &reg_val);
+		NVSR_RETV(ret, "Failed to read device ID.\n");
+		nvsr->src_id.device = reg_val & 0xffff;
+		nvsr->src_id.vendor = reg_val >> 16;
+	}
 
 	ret = nvsr->reg_ops.read(nvsr, NVSR_SR_CAPS2, 1, &reg_val);
 	NVSR_RETV(ret, "Failed to read capabilities register 2.\n");
@@ -298,7 +334,7 @@ static int tegra_dc_nvsr_query_capabilities(struct tegra_dc_nvsr_data *nvsr)
 				NVSR_SR_CAPS2_FRAME_LOCK_SHIFT;
 
 			nvsr->cap.burst_mode_support =
-				nvsr->cap.resync == NVSR_SR_CAPS0_RESYNC_CAP_FL;
+				nvsr->cap.resync & NVSR_SR_CAPS0_RESYNC_CAP_FL;
 		} else
 			NVSR_WARN("SRC input max pclk is 0.\n");
 	}
@@ -566,64 +602,44 @@ static int tegra_nvsr_write_dpaux(struct tegra_dc_nvsr_data *nvsr,
 		val = val >> 8;
 	}
 
-	/* HACK: Himax tcon always reports failure when writing;
-	 * write 1 byte at a time to avoid breaking out of DP
-	 * write code too early */
 	ret = tegra_dc_dpaux_write(nvsr->out_data.dp, DPAUX_DP_AUXCTL_CMD_AUXWR,
 		reg, data, &size, &aux_stat);
 
-/* Current HIMAX silicon always NACKs dpaux writes */
-#if !HIMAX
-	if (ret)
+	if (ret && (nvsr->src_id.device != HX8880_A))
 		return ret;
-#endif
 
 	return 0;
 }
 
-/* Enter Sparse and turn off link, or single frame update */
-static int tegra_dc_nvsr_enter_idle(struct tegra_dc_nvsr_data *nvsr)
+/* Enter Sparse and turn off link */
+static int tegra_dc_nvsr_sparse_enable(struct tegra_dc_nvsr_data *nvsr,
+	bool powerdown_link)
 {
 	int ret = 0;
 	struct tegra_dc *dc = nvsr->dc;
 
-	if (!nvsr->is_init || !nvsr->src_on ||
-		!nvsr->enable || !nvsr->cap.sparse_mode_support)
+	if (!nvsr->cap.sparse_mode_support)
 		return -ENODEV;
 
-	if (!nvsr->idle_active) {
-		/* Start a new self-refresh state */
+	if (nvsr->sr_active)
+		return 0;
 
-		ret = tegra_dc_nvsr_enter_sr(nvsr);
-		NVSR_RETV(ret, "Entering SR failed\n");
+	mutex_lock(&nvsr->dc->lock);
 
-		/* TODO: Turn off link here */
+	/* Start a new self-refresh state */
+	ret = tegra_dc_nvsr_enter_sr(nvsr);
+	NVSR_RETV(ret, "Entering SR failed\n");
+	ret = tegra_dc_nvsr_wait_until_status(nvsr,
+		NVSR_STATUS_SR_STATE_SR_ACTIVE);
+	NVSR_RETV(ret, "Timed out while waiting for SR entry\n");
 
-		/* set non-continuous mode */
-		tegra_dc_writel(dc, DISP_CTRL_MODE_NC_DISPLAY,
-				DC_CMD_DISPLAY_COMMAND);
-		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	tegra_dc_nvsr_disable_link(nvsr, powerdown_link);
 
-		dc->out->flags |= TEGRA_DC_OUT_ONE_SHOT_MODE;
+	dc->out->flags |= TEGRA_DC_OUT_NVSR_MODE;
 
-		nvsr->idle_active = true;
-	} else {
-		tegra_dc_nvsr_get(nvsr);
+	nvsr->sparse_active = true;
 
-		/* Update cached frame */
-		switch (nvsr->sr_mode) {
-		case SR_MODE_BURST:
-			/* TODO: Implement Burst Refresh update */
-			NVSR_ERR("Burst mode unimplemented\n");
-			break;
-		default:
-			NVSR_ERR("SR re-entry not supported for current refresh mode.\n");
-			ret = -ENOSYS;
-		}
-
-		tegra_dc_nvsr_put(nvsr);
-	}
-
+	mutex_unlock(&nvsr->dc->lock);
 	return ret;
 }
 
@@ -649,10 +665,10 @@ static inline int tegra_dc_nvsr_reset_src(struct tegra_dc_nvsr_data *nvsr)
 	return 0;
 }
 
-static inline void tegra_dc_nvsr_config_resync_method
+static inline int tegra_dc_nvsr_config_resync_method
 	(struct tegra_dc_nvsr_data *nvsr)
 {
-	u32 val;
+	u32 val, ret;
 	struct tegra_dc *dc = nvsr->dc;
 
 	if (nvsr->cap.resync & NVSR_SR_CAPS0_RESYNC_CAP_FL) {
@@ -667,6 +683,12 @@ static inline void tegra_dc_nvsr_config_resync_method
 		val = tegra_dc_readl(dc, DC_CMD_INT_ENABLE);
 		val |= MSF_INT;
 		tegra_dc_writel(dc, val, DC_CMD_INT_ENABLE);
+
+		/* Set entry via sideband */
+		val = NVSR_SRC_CTL1_SIDEBAND_ENTRY_SEL_YES;
+		val |= NVSR_SRC_CTL1_SIDEBAND_ENTRY_MASK_ENABLE;
+		ret = nvsr->reg_ops.write(nvsr, NVSR_SRC_CTL1, 1, val);
+		NVSR_RETV(ret, "Failed to enter SR via sideband\n");
 	} else if ((nvsr->cap.resync & NVSR_SR_CAPS0_RESYNC_CAP_BS) ||
 			(nvsr->cap.resync & NVSR_SR_CAPS0_RESYNC_CAP_SS)) {
 		NVSR_WARN("Sliding Sync and Blank Stretching resync methods not supported; defaulting to Immediate\n");
@@ -675,12 +697,18 @@ static inline void tegra_dc_nvsr_config_resync_method
 		nvsr->resync_method = NVSR_RESYNC_CTL_METHOD_IMM;
 
 	nvsr->resync_delay = 0;
+	return 0;
 }
 
 static int tegra_dc_nvsr_init_src(struct tegra_dc_nvsr_data *nvsr)
 {
 	int ret;
 	u32 val;
+
+#if HIMAX_HX8880_A
+	/* This WAR is needed before performing any DPAUX transactions */
+	nvsr->src_id.device = HX8880_A;
+#endif
 
 	/* Reset SRC if it's not in idle */
 	ret = nvsr->reg_ops.read(nvsr, NVSR_STATUS, 1, &val);
@@ -691,14 +719,6 @@ static int tegra_dc_nvsr_init_src(struct tegra_dc_nvsr_data *nvsr)
 		ret = tegra_dc_nvsr_reset_src(nvsr);
 		NVSR_RETV(ret, "Failed to reset SRC\n");
 	}
-
-	/* Unmask and enable interrupts from SRC */
-	ret = nvsr->reg_ops.write(nvsr, NVSR_INTR0, 1, 0xff);
-	NVSR_RETV(ret, "Failed to write to interrupt mask regiser.\n");
-	val = NVSR_INTR1_EN_YES;
-	val |= NVSR_INTR1_EN_MASK_ENABLE;
-	ret = nvsr->reg_ops.write(nvsr, NVSR_INTR1, 1, val);
-	NVSR_RETV(ret, "Failed to write to interrupt enable regiser.\n");
 
 	/* Can't populate capabilities during init since DP interface
 	 * isn't enabled yet at that point. Read capabilities here instead,
@@ -714,115 +734,62 @@ static int tegra_dc_nvsr_init_src(struct tegra_dc_nvsr_data *nvsr)
 	ret = tegra_dc_nvsr_update_timings(nvsr);
 	NVSR_RETV(ret, "Failed to write SRC timings\n");
 
-	tegra_dc_nvsr_config_resync_method(nvsr);
+	ret = tegra_dc_nvsr_config_resync_method(nvsr);
+	NVSR_RETV(ret, "Failed to configure resync method\n");
 
 	nvsr->is_init = true;
 
 	return 0;
 }
 
-static int tegra_dc_nvsr_exit_idle(struct tegra_dc_nvsr_data *nvsr)
+static int tegra_dc_nvsr_sparse_disable(struct tegra_dc_nvsr_data *nvsr)
 {
 	int ret;
 	struct tegra_dc *dc = nvsr->dc;
-	u32 exit_timeout = nvsr->sr_timing_frame_time_us / 1000 *
-		SR_EXIT_MAX_TRIES;
 
-	if (!nvsr->is_init || !nvsr->src_on ||
-		!nvsr->enable)
-		return -ENODEV;
-
-	if (!nvsr->idle_active)
+	if (!nvsr->sr_active)
 		return 0;
 
+	mutex_lock(&nvsr->dc->lock);
+
 	tegra_dc_get(dc);
+
+	tegra_dc_nvsr_enable_link(nvsr);
 
 	/* Program current frame as NC, to be triggered in MSF/FL interrupt */
 	tegra_dc_writel(dc, GENERAL_ACT_REQ | NC_HOST_TRIG,
 					DC_CMD_STATE_CONTROL);
 
-	/* Set up for FL IRQ, request SR-exit from SRC, and wait */
-	nvsr->waiting_on_framelock = true;
-	tegra_dc_unmask_interrupt(dc, MSF_INT);
+	/* Request SR-exit from SRC, and wait */
 	ret = tegra_dc_nvsr_exit_sr(nvsr);
 	if (ret) {
 		NVSR_ERR("Exiting SR failed\n");
-		nvsr->waiting_on_framelock = false;
-		tegra_dc_mask_interrupt(dc, MSF_INT);
 
 		/* Attempt to reset and re-initialize SRC. */
 		BUG_ON(tegra_dc_nvsr_init_src(nvsr));
-
-		tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY,
-						DC_CMD_DISPLAY_COMMAND);
-		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
-
-		dc->out->flags &= ~TEGRA_DC_OUT_ONE_SHOT_MODE;
-
-		return ret;
 	}
-
-	wait_for_completion_interruptible_timeout(&nvsr->framelock_comp,
-		msecs_to_jiffies(exit_timeout));
 
 	/* Switch DC NC-->C during the single NC frame */
 	tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY,
 					DC_CMD_DISPLAY_COMMAND);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
-	dc->out->flags &= ~TEGRA_DC_OUT_ONE_SHOT_MODE;
+	dc->out->flags &= ~TEGRA_DC_OUT_NVSR_MODE;
 
-	init_completion(&nvsr->framelock_comp);
 	tegra_dc_put(dc);
 
-	nvsr->idle_active = false;
-
+	nvsr->sparse_active = false;
+	mutex_unlock(&nvsr->dc->lock);
 	return 0;
 }
-
-static int tegra_dc_nvsr_enable_nvsr(struct tegra_dc_nvsr_data *nvsr)
-{
-	int ret;
-
-	if (nvsr->enable)
-		return 0;
-
-	/* tegra_dc_nvsr_init_src will turn
-	 * on SRC and do initial config */
-	ret = tegra_dc_nvsr_init_src(nvsr);
-	NVSR_RETV(ret, "Failed to init SRC\n");
-
-	nvsr->enable = true;
-
-	return 0;
-}
-
-static int tegra_dc_nvsr_disable_nvsr(struct tegra_dc_nvsr_data *nvsr)
-{
-	int ret;
-
-	if (!nvsr->enable)
-		return 0;
-
-	if (nvsr->idle_active) {
-		ret = tegra_dc_nvsr_exit_idle(nvsr);
-		NVSR_RETV(ret, "Can't exit idle, leaving NVSR enabled\n");
-	}
-
-	ret = tegra_dc_nvsr_src_power_off(nvsr);
-	NVSR_RETV(ret, "Failed to shut off SRC\n");
-
-	nvsr->enable = false;
-
-	return 0;
-}
-
 
 static void tegra_dc_nvsr_destroy(struct tegra_dc *dc)
 {
 	struct tegra_dc_nvsr_data *nvsr = dc->nvsr;
 	if (nvsr->out_ops.destroy)
 		nvsr->out_ops.destroy(dc);
+
+	kfree(nvsr);
 }
 
 static bool tegra_dc_nvsr_detect(struct tegra_dc *dc)
@@ -838,8 +805,10 @@ static void tegra_dc_nvsr_enable(struct tegra_dc *dc)
 {
 	struct tegra_dc_nvsr_data *nvsr = dc->nvsr;
 
-	if (nvsr->out_ops.enable)
+	if (nvsr->out_ops.enable) {
 		nvsr->out_ops.enable(dc);
+		nvsr->link_status = LINK_ENABLED;
+	}
 
 	tegra_dc_nvsr_init_src(nvsr);
 }
@@ -852,6 +821,8 @@ static void tegra_dc_nvsr_disable(struct tegra_dc *dc)
 
 	if (nvsr->out_ops.disable)
 		nvsr->out_ops.disable(dc);
+
+	nvsr->link_status = LINK_DISABLED;
 }
 
 static void tegra_dc_nvsr_hold(struct tegra_dc *dc)
@@ -908,6 +879,13 @@ static long tegra_dc_nvsr_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	return -EINVAL;
 }
 
+static void tegra_dc_nvsr_modeset_notifier(struct tegra_dc *dc)
+{
+	struct tegra_dc_nvsr_data *nvsr = dc->nvsr;
+	if (nvsr->out_ops.modeset_notifier)
+		return nvsr->out_ops.modeset_notifier(dc);
+}
+
 static void tegra_dc_nvsr_init_out_ops(struct tegra_dc_nvsr_data *nvsr,
 	struct tegra_dc_out_ops *out_ops)
 {
@@ -962,6 +940,11 @@ static void tegra_dc_nvsr_init_out_ops(struct tegra_dc_nvsr_data *nvsr,
 	if (out_ops->setup_clk) {
 		tegra_dc_nvsr_ops.setup_clk = tegra_dc_nvsr_setup_clk;
 		nvsr->out_ops.setup_clk = out_ops->setup_clk;
+	}
+	if (out_ops->modeset_notifier) {
+		tegra_dc_nvsr_ops.modeset_notifier =
+			tegra_dc_nvsr_modeset_notifier;
+		nvsr->out_ops.modeset_notifier = out_ops->modeset_notifier;
 	}
 }
 
@@ -1024,8 +1007,8 @@ static int nvsr_dbg_status_show(struct seq_file *s, void *unused)
 
 	seq_puts(s, "SRC Info\n");
 	seq_puts(s, "--------\n");
-	seq_printf(s, "Device ID: \t\t\t\t%d\n", nvsr->src_id.device_id);
-	seq_printf(s, "Vendor ID: \t\t\t\t%d\n", nvsr->src_id.vendor_id);
+	seq_printf(s, "Device ID: \t\t\t\t%d\n", nvsr->src_id.device);
+	seq_printf(s, "Vendor ID: \t\t\t\t%d\n", nvsr->src_id.vendor);
 	seq_printf(s, "Sparse Refresh mode supported: \t\t%d\n",
 		nvsr->cap.sparse_mode_support);
 	seq_printf(s, "\tEntry request band capability: \t%d\n",
@@ -1055,8 +1038,8 @@ static int nvsr_dbg_status_show(struct seq_file *s, void *unused)
 	seq_puts(s, "\n");
 	seq_puts(s, "SRC status\n");
 	seq_puts(s, "----------\n");
-	seq_printf(s, "NVSR functionality enabled: \t%d\n", nvsr->enable);
-	seq_printf(s, "In Sparse Refresh: \t\t%d\n", nvsr->sr_active);
+	seq_printf(s, "In Sparse Refresh (mode %d): \t\t%d\n",
+		nvsr->sr_active, nvsr->sparse_active);
 	seq_printf(s, "Resync method: \t\t\t%s\n",
 		!nvsr->resync_method ?
 		"Immediate" :
@@ -1381,7 +1364,7 @@ static int tegra_dc_nvsr_init(struct tegra_dc *dc)
 			NVSR_RETV(ret, "Out ops init failed.\n");
 		}
 		nvsr->out_data.dp = tegra_dc_get_outdata(dc);
-		nvsr->out_clk = nvsr->out_data.dp->dpaux_clk;
+		nvsr->aux_clk = nvsr->out_data.dp->dpaux_clk;
 		nvsr->reg_ops.read = tegra_nvsr_read_dpaux;
 		nvsr->reg_ops.write = tegra_nvsr_write_dpaux;
 		break;
@@ -1393,8 +1376,7 @@ static int tegra_dc_nvsr_init(struct tegra_dc *dc)
 
 	tegra_dc_nvsr_debug_create(nvsr);
 	init_completion(&nvsr->framelock_comp);
-
-	nvsr->enable = true;
+	mutex_init(&nvsr->link_lock);
 
 	return ret;
 
@@ -1410,17 +1392,17 @@ struct tegra_dc_out_ops tegra_dc_nvsr_ops = {
 
 static struct kobject *nvsr_kobj;
 
-static ssize_t enable_show(struct kobject *kobj,
+static ssize_t sparse_show(struct kobject *kobj,
 	struct kobj_attribute *attr, char *buf)
 {
 	struct device *dev = container_of((kobj->parent), struct device, kobj);
 	struct platform_device *ndev = to_platform_device(dev);
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 
-	return snprintf(buf, PAGE_SIZE, "%d\n", dc->nvsr->enable);
+	return snprintf(buf, PAGE_SIZE, "%d\n", dc->nvsr->sparse_active);
 }
 
-static ssize_t enable_store(struct kobject *kobj,
+static ssize_t sparse_store(struct kobject *kobj,
 	struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	struct device *dev = container_of((kobj->parent), struct device, kobj);
@@ -1430,67 +1412,28 @@ static ssize_t enable_store(struct kobject *kobj,
 	u32 val;
 
 	if (kstrtou32(buf, 10, &val) < 0) {
-		dev_err(dev, "NVSR: bad enable input: \"%s\"\n", buf);
+		dev_err(dev, "NVSR: bad sparse input: \"%s\"\n", buf);
 		return -EINVAL;
 	}
 
-	tegra_dc_nvsr_get(nvsr);
-
-	if (val)
-		NVSR_RETV(tegra_dc_nvsr_enable_nvsr(nvsr),
-			"Failed to enable NVSR\n")
-	else
-		NVSR_RETV(tegra_dc_nvsr_disable_nvsr(nvsr),
-			"Failed to disable NVSR\n")
-
-	tegra_dc_nvsr_put(nvsr);
-
-	return count;
-}
-
-static struct kobj_attribute nvsr_attr_enable =
-	__ATTR(enable, S_IRUGO|S_IWUSR, enable_show, enable_store);
-
-static ssize_t idle_show(struct kobject *kobj,
-	struct kobj_attribute *attr, char *buf)
-{
-	struct device *dev = container_of((kobj->parent), struct device, kobj);
-	struct platform_device *ndev = to_platform_device(dev);
-	struct tegra_dc *dc = platform_get_drvdata(ndev);
-
-	return snprintf(buf, PAGE_SIZE, "%d\n", dc->nvsr->idle_active);
-}
-
-static ssize_t idle_store(struct kobject *kobj,
-	struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	struct device *dev = container_of((kobj->parent), struct device, kobj);
-	struct platform_device *ndev = to_platform_device(dev);
-	struct tegra_dc *dc = platform_get_drvdata(ndev);
-	struct tegra_dc_nvsr_data *nvsr = dc->nvsr;
-	u32 val;
-
-	if (kstrtou32(buf, 10, &val) < 0) {
-		dev_err(dev, "NVSR: bad enable input: \"%s\"\n", buf);
-		return -EINVAL;
-	}
-
-	if (val)
-		NVSR_RETV(tegra_dc_nvsr_enter_idle(nvsr),
-			"Failed to enter idle\n")
-	else
-		NVSR_RETV(tegra_dc_nvsr_exit_idle(nvsr),
+	if (val == 1)
+		NVSR_RETV(tegra_dc_nvsr_sparse_enable(nvsr, false),
+			"Failed to enter sparse\n")
+	else if (val == 2)
+		NVSR_RETV(tegra_dc_nvsr_sparse_enable(nvsr, true),
+			"Failed to enter sparse\n")
+	else if (!val)
+		NVSR_RETV(tegra_dc_nvsr_sparse_disable(nvsr),
 			"Failed to exit SR\n")
 
 	return count;
 }
 
-static struct kobj_attribute nvsr_attr_idle =
-	__ATTR(idle, S_IRUGO|S_IWUSR, idle_show, idle_store);
+static struct kobj_attribute nvsr_attr_sparse =
+	__ATTR(sparse, S_IRUGO|S_IWUSR, sparse_show, sparse_store);
 
 static struct attribute *nvsr_attrs[] = {
-	&nvsr_attr_enable.attr,
-	&nvsr_attr_idle.attr,
+	&nvsr_attr_sparse.attr,
 	NULL,
 };
 

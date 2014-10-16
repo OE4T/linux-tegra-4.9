@@ -57,8 +57,8 @@ struct tegra_dc_nvsr_data {
 	} cap;
 
 	struct {
-		u16 device_id;
-		u16 vendor_id;
+		u16 device;
+		u16 vendor;
 	} src_id;
 
 	bool is_init;
@@ -69,23 +69,35 @@ struct tegra_dc_nvsr_data {
 		SR_MODE_BURST
 	} sr_mode;
 
-	bool enable;
 	bool sr_active;
-	bool idle_active;
-	bool resync_delay;
+	bool sparse_active;
+	u16 resync_delay;
 	u8 resync_method;
 
 	bool waiting_on_framelock;
 	struct completion framelock_comp;
 
-	struct clk	*out_clk;
+	struct clk	*aux_clk;
 	struct tegra_dc_out_ops out_ops;
-	bool is_nvsr_init;
 
 	struct tegra_dc_mode pt_timing; /* DC to SRC */
 	u32 pt_timing_frame_time_us;
 	struct tegra_dc_mode sr_timing; /* SRC to panel */
 	u32 sr_timing_frame_time_us;
+
+	bool burst_active;
+	enum {
+		LINK_ENABLED = 1,
+		LINK_DISABLING,
+		LINK_DISABLED,
+	} link_status;
+
+	struct mutex link_lock;
+};
+
+/* TODO: Replace with real IDs when available */
+enum device_id_t {
+	HX8880_A = 1,
 };
 
 #ifdef CONFIG_TEGRA_NVSR

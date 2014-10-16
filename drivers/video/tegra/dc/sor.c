@@ -1249,7 +1249,13 @@ static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
 #endif
 
 	/* Enable DC */
-	tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY, DC_CMD_DISPLAY_COMMAND);
+	if (dc->out->flags & TEGRA_DC_OUT_NVSR_MODE)
+		tegra_dc_writel(dc, DISP_CTRL_MODE_NC_DISPLAY,
+			DC_CMD_DISPLAY_COMMAND);
+	else
+		tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY,
+			DC_CMD_DISPLAY_COMMAND);
+
 	tegra_dc_writel(dc, reg_val, DC_CMD_STATE_ACCESS);
 
 	tegra_dc_put(dc);
@@ -1455,12 +1461,14 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 
 	tegra_dc_sor_enable_sor(sor, true);
 
-	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
-		NV_SOR_TEST_ACT_HEAD_OPMODE_DEFAULT_MASK,
-		NV_SOR_TEST_ACT_HEAD_OPMODE_AWAKE,
-		100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
-		dev_err(&dc->ndev->dev,
-			"dc timeout waiting for OPMOD = AWAKE\n");
+	if (!(dc->out->flags & TEGRA_DC_OUT_NVSR_MODE)) {
+		if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
+			NV_SOR_TEST_ACT_HEAD_OPMODE_DEFAULT_MASK,
+			NV_SOR_TEST_ACT_HEAD_OPMODE_AWAKE,
+			100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
+			dev_err(&dc->ndev->dev,
+				"dc timeout waiting for OPMOD = AWAKE\n");
+		}
 	}
 #else
 	tegra_dc_sor_update(sor);

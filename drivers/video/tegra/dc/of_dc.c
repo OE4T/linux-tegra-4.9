@@ -249,6 +249,7 @@ static bool is_dc_default_out_flag(u32 flag)
 		(flag == TEGRA_DC_OUT_NVHDCP_POLICY_ON_DEMAND) |
 		(flag == TEGRA_DC_OUT_CONTINUOUS_MODE) |
 		(flag == TEGRA_DC_OUT_ONE_SHOT_MODE) |
+		(flag == TEGRA_DC_OUT_NVSR_MODE) |
 		(flag == TEGRA_DC_OUT_N_SHOT_MODE) |
 		(flag == TEGRA_DC_OUT_ONE_SHOT_LP_MODE) |
 		(flag == TEGRA_DC_OUT_INITIALIZED_MODE) |

@@ -3059,7 +3059,7 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status,
 		if (!completion_done(&dc->crc_complete))
 			complete(&dc->crc_complete);
 
-		if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE && !dc->nvsr)
+		if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 			tegra_dc_put(dc);
 
 		queue_work(system_freezable_wq, &dc->frame_end_work);
@@ -3175,7 +3175,8 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 			msecs_to_jiffies(1));
 	}
 
-	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE ||
+		dc->out->flags & TEGRA_DC_OUT_NVSR_MODE)
 		tegra_dc_one_shot_irq(dc, status, timestamp);
 	else
 		tegra_dc_continuous_irq(dc, status, timestamp);

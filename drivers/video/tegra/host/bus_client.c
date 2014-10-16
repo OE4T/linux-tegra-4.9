@@ -47,6 +47,7 @@
 #include "class_ids.h"
 #include "chip_support.h"
 #include "nvhost_acm.h"
+#include "nvhost_vm.h"
 
 #include "nvhost_syncpt.h"
 #include "nvhost_channel.h"
@@ -185,6 +186,9 @@ struct nvhost_channel_userctx {
 
 	/* lock to protect this structure from concurrent ioctl usage */
 	struct mutex ioctl_lock;
+
+	/* context address space */
+	struct nvhost_vm *vm;
 };
 
 static int nvhost_channelrelease(struct inode *inode, struct file *filp)
@@ -202,6 +206,8 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	/* drop error notifier reference */
 	if (priv->error_notifier_ref)
 		dma_buf_put(priv->error_notifier_ref);
+
+	nvhost_vm_put(priv->vm);
 
 	mutex_unlock(&channel_lock);
 
@@ -291,6 +297,8 @@ static int __nvhost_channelopen(struct inode *inode,
 
 	if (!tegra_platform_is_silicon())
 		priv->timeout = 0;
+
+	priv->vm = nvhost_vm_allocate(ch->dev);
 
 	mutex_unlock(&channel_lock);
 
@@ -401,6 +409,8 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	job->num_syncpts = args->num_syncpt_incrs;
 	job->priority = ctx->priority;
 	job->clientid = ctx->clientid;
+	job->vm = ctx->vm;
+	nvhost_vm_get(job->vm);
 
 	/* copy error notifier settings for this job */
 	if (ctx->error_notifier_ref) {

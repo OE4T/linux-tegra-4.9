@@ -80,14 +80,13 @@ static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 
 	nvhost_debug_output(o, "\n%p: JOB, syncpt_id=%d, syncpt_val=%d,"
 			" first_get=%08x, timeout=%d,"
-			" num_slots=%d, num_handles=%d\n",
+			" num_slots=%d\n",
 			job,
 			job->sp ? job->sp->id : -1,
 			job->sp ? job->sp->fence : -1,
 			job->first_get,
 			job->timeout,
-			job->num_slots,
-			job->num_unpins);
+			job->num_slots);
 
 	for (i = 0; i < job->num_gathers; i++) {
 		struct nvhost_job_gather *g = &job->gathers[i];

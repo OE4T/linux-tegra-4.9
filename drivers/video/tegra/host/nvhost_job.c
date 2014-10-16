@@ -30,6 +30,7 @@
 #include "nvhost_syncpt.h"
 #include "dev.h"
 #include "chip_support.h"
+#include "nvhost_vm.h"
 
 /* Magic to use to fill freed handle slots */
 #define BAD_MAGIC 0xdeadbeef
@@ -43,7 +44,6 @@ static size_t job_size(u32 num_cmdbufs, u32 num_relocs, u32 num_waitchks,
 	total = sizeof(struct nvhost_job)
 			+ num_relocs * sizeof(struct nvhost_reloc)
 			+ num_relocs * sizeof(struct nvhost_reloc_shift)
-			+ num_unpins * sizeof(struct nvhost_job_unpin)
 			+ num_waitchks * sizeof(struct nvhost_waitchk)
 			+ num_cmdbufs * sizeof(struct nvhost_job_gather)
 			+ num_unpins * sizeof(dma_addr_t)
@@ -75,8 +75,6 @@ static void init_fields(struct nvhost_job *job,
 	mem += num_relocs * sizeof(struct nvhost_reloc);
 	job->relocshiftarray = num_relocs ? mem : NULL;
 	mem += num_relocs * sizeof(struct nvhost_reloc_shift);
-	job->unpins = num_unpins ? mem : NULL;
-	mem += num_unpins * sizeof(struct nvhost_job_unpin);
 	job->waitchk = num_waitchks ? mem : NULL;
 	mem += num_waitchks * sizeof(struct nvhost_waitchk);
 	job->gathers = num_cmdbufs ? mem : NULL;
@@ -125,6 +123,11 @@ void nvhost_job_get(struct nvhost_job *job)
 static void job_free(struct kref *ref)
 {
 	struct nvhost_job *job = container_of(ref, struct nvhost_job, ref);
+
+	if (job->vm) {
+		nvhost_vm_put(job->vm);
+		job->vm = NULL;
+	}
 
 	if (job->error_notifier_ref)
 		dma_buf_put(job->error_notifier_ref);
@@ -253,97 +256,60 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 	return 0;
 }
 
-static int id_cmp(const void *_id1, const void *_id2)
-{
-	u32 id1 = ((struct nvhost_pinid *)_id1)->id;
-	u32 id2 = ((struct nvhost_pinid *)_id2)->id;
-
-	if (id1 < id2)
-		return -1;
-	if (id1 > id2)
-		return 1;
-
-	return 0;
-}
-
-static int pin_array_ids(struct platform_device *dev,
-		struct nvhost_pinid *ids,
-		dma_addr_t *phys_addr,
-		u32 count,
-		struct nvhost_job_unpin *unpin_data)
-{
-	int i, pin_count = 0;
-	struct sg_table *sgt;
-	struct dma_buf *buf;
-	struct dma_buf_attachment *attach;
-	u32 prev_id = 0;
-	dma_addr_t prev_addr = 0;
-
-	for (i = 0; i < count; i++)
-		ids[i].index = i;
-
-	sort(ids, count, sizeof(*ids), id_cmp, NULL);
-
-	for (i = 0; i < count; i++) {
-		if (ids[i].id == prev_id) {
-			phys_addr[ids[i].index] = prev_addr;
-			continue;
-		}
-
-		buf = dma_buf_get(ids[i].id);
-		if (IS_ERR(buf))
-			return -EINVAL;
-
-		attach = dma_buf_attach(buf, &dev->dev);
-		if (IS_ERR(attach))
-			return PTR_ERR(attach);
-
-		sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
-		if (IS_ERR(sgt))
-			return PTR_ERR(sgt);
-
-		if (!sg_dma_address(sgt->sgl))
-			sg_dma_address(sgt->sgl) = sg_phys(sgt->sgl);
-
-		phys_addr[ids[i].index] = sg_dma_address(sgt->sgl);
-		unpin_data[pin_count].buf = buf;
-		unpin_data[pin_count].attach = attach;
-		unpin_data[pin_count++].sgt = sgt;
-
-		prev_id = ids[i].id;
-		prev_addr = phys_addr[ids[i].index];
-	}
-	return pin_count;
-}
-
 static int pin_job_mem(struct nvhost_job *job)
 {
+	int pin_count = 0;
+	struct dma_buf *dmabufs[job->num_relocs + job->num_gathers];
+	int err = 0;
 	int i;
-	int count = 0;
-	int result;
 
 	for (i = 0; i < job->num_relocs; i++) {
 		struct nvhost_reloc *reloc = &job->relocarray[i];
-		job->pin_ids[count].id = reloc->target;
-		count++;
+		struct dma_buf *dmabuf = dma_buf_get(reloc->target);
+		if (IS_ERR(dmabuf)) {
+			err = PTR_ERR(dmabuf);
+			goto err_map;
+		}
+
+		err = nvhost_vm_map_dmabuf(job->vm, dmabuf,
+					   &job->addr_phys[pin_count]);
+		dma_buf_put(dmabuf);
+		if (err)
+			goto err_map;
+
+		dmabufs[pin_count] = dmabuf;
+
+		pin_count++;
 	}
 
 	for (i = 0; i < job->num_gathers; i++) {
 		struct nvhost_job_gather *g = &job->gathers[i];
-		job->pin_ids[count].id = g->mem_id;
-		count++;
+		struct dma_buf *dmabuf = dma_buf_get(g->mem_id);
+		if (IS_ERR(dmabuf)) {
+			err = PTR_ERR(dmabuf);
+			goto err_map;
+		}
+
+		err = nvhost_vm_map_dmabuf(job->vm, dmabuf,
+					   &job->addr_phys[pin_count]);
+		dma_buf_put(dmabuf);
+		if (err)
+			goto err_map;
+
+		dmabufs[pin_count] = dmabuf;
+
+		pin_count++;
 	}
 
-	/* validate array and pin unique ids, get refs for unpinning */
-	result = pin_array_ids(job->ch->dev,
-		job->pin_ids, job->addr_phys,
-		count,
-		job->unpins);
+	/* pin the buffers to the hardware */
+	job->pin = nvhost_vm_pin_buffers(job->vm);
 
-	if (result > 0)
-		job->num_unpins = result;
+err_map:
+	i = pin_count;
+	while (i--)
+		nvhost_vm_unmap_dmabuf(job->vm, dmabufs[i]);
 
-	return result;
+	return err ? err : pin_count;
 }
 
 static int do_relocs(struct nvhost_job *job,
@@ -470,16 +436,8 @@ fail:
 
 void nvhost_job_unpin(struct nvhost_job *job)
 {
-	int i;
-
-	for (i = 0; i < job->num_unpins; i++) {
-		struct nvhost_job_unpin *unpin = &job->unpins[i];
-		dma_buf_unmap_attachment(unpin->attach, unpin->sgt,
-						DMA_BIDIRECTIONAL);
-		dma_buf_detach(unpin->buf, unpin->attach);
-		dma_buf_put(unpin->buf);
-	}
-	job->num_unpins = 0;
+	if (job->vm)
+		nvhost_vm_unpin_buffers(job->vm, job->pin);
 }
 
 /**
@@ -497,6 +455,4 @@ void nvhost_job_dump(struct device *dev, struct nvhost_job *job)
 		job->timeout);
 	dev_info(dev, "    NUM_SLOTS   %d\n",
 		job->num_slots);
-	dev_info(dev, "    NUM_HANDLES %d\n",
-		job->num_unpins);
 }

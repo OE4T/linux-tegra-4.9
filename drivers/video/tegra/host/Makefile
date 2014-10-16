@@ -18,6 +18,7 @@ nvhost-objs = \
 	chip_support.o \
 	nvhost_scale.o \
 	pod_scaling.o \
+	nvhost_vm.o \
 	scale3d.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost.o

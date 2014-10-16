@@ -47,10 +47,6 @@ struct acr_gm20b;
 #include "gm20b/acr_gm20b.h"
 #include "cde_gk20a.h"
 
-extern struct platform_device tegra_gk20a_device;
-
-bool is_gk20a_module(struct platform_device *dev);
-
 struct cooling_device_gk20a {
 	struct thermal_cooling_device *gk20a_cooling_dev;
 	unsigned int gk20a_freq_state;

@@ -1642,11 +1642,6 @@ static void __exit gk20a_exit(void)
 	platform_driver_unregister(&gk20a_driver);
 }
 
-bool is_gk20a_module(struct platform_device *dev)
-{
-	return &gk20a_driver.driver == dev->dev.driver;
-}
-
 void gk20a_busy_noresume(struct platform_device *pdev)
 {
 	pm_runtime_get_noresume(&pdev->dev);

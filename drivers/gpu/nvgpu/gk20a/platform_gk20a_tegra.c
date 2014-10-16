@@ -25,20 +25,10 @@
 #include <linux/nvmap.h>
 #include <linux/tegra_pm_domains.h>
 
-#include <mach/irqs.h>
-
-#include "../../../arch/arm/mach-tegra/iomap.h"
-
 #include "gk20a.h"
 #include "hal_gk20a.h"
 #include "platform_gk20a.h"
 #include "gk20a_scale.h"
-
-#define TEGRA_GK20A_INTR		INT_GPU
-#define TEGRA_GK20A_INTR_NONSTALL	INT_GPU_NONSTALL
-
-#define TEGRA_GK20A_SIM_BASE 0x538F0000 /*tbd: get from iomap.h */
-#define TEGRA_GK20A_SIM_SIZE 0x1000     /*tbd: this is a high-side guess */
 
 #define TEGRA_GK20A_BW_PER_FREQ 32
 #define TEGRA_GM20B_BW_PER_FREQ 64
@@ -52,47 +42,8 @@ struct gk20a_emc_params {
 	long bw_ratio;
 };
 
-/*
- * 20.12 fixed point arithmetic
- */
-
-static const int FXFRAC = 12;
-static const int FX_HALF = (1 << 12) / 2;
-
-#define INT_TO_FX(x) ((x) << FXFRAC)
-#define FX_TO_INT(x) ((x) >> FXFRAC)
-
 #define MHZ_TO_HZ(x) ((x) * 1000000)
 #define HZ_TO_MHZ(x) ((x) / 1000000)
-
-int FXMUL(int x, int y)
-{
-	return ((long long) x * (long long) y) >> FXFRAC;
-}
-
-int FXDIV(int x, int y)
-{
-	/* long long div operation not supported, must shift manually. This
-	 * would have been
-	 *
-	 *    return (((long long) x) << FXFRAC) / (long long) y;
-	 */
-	int pos, t;
-	if (x == 0)
-		return 0;
-
-	/* find largest allowable right shift to numerator, limit to FXFRAC */
-	t = x < 0 ? -x : x;
-	pos = 31 - fls(t); /* fls can't be 32 if x != 0 */
-	if (pos > FXFRAC)
-		pos = FXFRAC;
-
-	y >>= FXFRAC - pos;
-	if (y == 0)
-		return 0x7FFFFFFF; /* overflow, return MAX_FIXED */
-
-	return (x << pos) / y;
-}
 
 static void gk20a_tegra_secure_page_destroy(struct platform_device *pdev,
 				       struct secure_page_buffer *secure_buffer)
@@ -479,34 +430,6 @@ static int gk20a_tegra_suspend(struct device *dev)
 	return 0;
 }
 
-static struct resource gk20a_tegra_resources[] = {
-	{
-	.start = TEGRA_GK20A_BAR0_BASE,
-	.end   = TEGRA_GK20A_BAR0_BASE + TEGRA_GK20A_BAR0_SIZE - 1,
-	.flags = IORESOURCE_MEM,
-	},
-	{
-	.start = TEGRA_GK20A_BAR1_BASE,
-	.end   = TEGRA_GK20A_BAR1_BASE + TEGRA_GK20A_BAR1_SIZE - 1,
-	.flags = IORESOURCE_MEM,
-	},
-	{ /* Used on ASIM only */
-	.start = TEGRA_GK20A_SIM_BASE,
-	.end   = TEGRA_GK20A_SIM_BASE + TEGRA_GK20A_SIM_SIZE - 1,
-	.flags = IORESOURCE_MEM,
-	},
-	{
-	.start = TEGRA_GK20A_INTR,
-	.end   = TEGRA_GK20A_INTR,
-	.flags = IORESOURCE_IRQ,
-	},
-	{
-	.start = TEGRA_GK20A_INTR_NONSTALL,
-	.end   = TEGRA_GK20A_INTR_NONSTALL,
-	.flags = IORESOURCE_IRQ,
-	},
-};
-
 struct gk20a_platform t132_gk20a_tegra_platform = {
 	.has_syncpoints = true,
 
@@ -615,13 +538,4 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.secure_alloc = gk20a_tegra_secure_alloc,
 	.secure_page_alloc = gk20a_tegra_secure_page_alloc,
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
-};
-
-struct platform_device tegra_gk20a_device = {
-	.name		= "gk20a",
-	.resource	= gk20a_tegra_resources,
-	.num_resources	= ARRAY_SIZE(gk20a_tegra_resources),
-	.dev		= {
-		.platform_data = &gk20a_tegra_platform,
-	},
 };

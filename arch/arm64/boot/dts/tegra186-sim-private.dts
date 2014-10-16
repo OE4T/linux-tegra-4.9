@@ -68,10 +68,10 @@
 		calib_1v8_offsets = <0x0202>;
 		status = "okay";
 	};
-	ethernet@0x4e000000 {
+	ethernet@0x7ffff000 {
 		compatible = "smsc,lan9115";
-		reg = < 0x0 0x4e000000 0x0 0x00010000 >;
-		interrupts = <0 48 0x4>;
+		reg = < 0x0 0x7ffff000 0x0 0x00000100 >;
+		interrupts = <0 218 0x4>;
 		reg-io-width = <4>;
 		smsc,irq-active-high;
 		smsc,irq-push-pull;

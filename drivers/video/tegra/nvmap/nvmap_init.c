@@ -164,7 +164,10 @@ static int __nvmap_init_legacy(void)
 	nvmap_carveouts[0].size = TEGRA_IRAM_SIZE - TEGRA_RESET_HANDLER_SIZE;
 
 	/* Carveout. */
-	if (!tegra_vpr_resize && !tegra_carveout_size) {
+	if (config_enabled(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM) ||
+	    tegra_vpr_resize || tegra_carveout_size) {
+		/* Do nothing */
+	} else {
 		phys_addr_t addr, size = SZ_128M;
 
 		addr = memblock_find_in_range(size, 0, size, SZ_128K);

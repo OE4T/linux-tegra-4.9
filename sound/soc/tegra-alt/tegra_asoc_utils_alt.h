@@ -51,14 +51,11 @@ struct tegra_asoc_audio_clock_info {
 	struct snd_soc_card *card;
 	enum tegra_asoc_utils_soc soc;
 	struct clk *clk_pll_a;
-	int clk_pll_a_state;
 	struct clk *clk_pll_a_out0;
-	int clk_pll_a_out0_state;
 	struct clk *clk_cdev1;
 	int clk_cdev1_state;
 	struct clk *clk_out1;
 	struct clk *clk_m;
-	int clk_m_state;
 	struct clk *clk_pll_p_out1;
 	int set_mclk;
 	int lock_count;

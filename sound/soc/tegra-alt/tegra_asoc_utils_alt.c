@@ -178,21 +178,6 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 	data->set_baseclock = 0;
 	data->set_mclk = 0;
 
-	if (data->clk_pll_a_state) {
-		clk_disable_unprepare(data->clk_pll_a);
-		data->clk_pll_a_state = 0;
-	}
-
-	if (data->clk_pll_a_out0_state) {
-		clk_disable_unprepare(data->clk_pll_a_out0);
-		data->clk_pll_a_out0_state = 0;
-	}
-
-	if (data->clk_cdev1_state) {
-		clk_disable_unprepare(data->clk_cdev1);
-		data->clk_cdev1_state = 0;
-	}
-
 	err = clk_set_rate(data->clk_pll_a, new_baseclock);
 	if (err) {
 		dev_err(data->dev, "Can't set pll_a rate: %d\n", err);
@@ -210,27 +195,6 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 		dev_err(data->dev, "Can't set clk_cdev1 rate: %d\n", err);
 		return err;
 	}
-
-	err = clk_prepare_enable(data->clk_pll_a);
-	if (err) {
-		dev_err(data->dev, "Can't enable pll_a: %d\n", err);
-		return err;
-	}
-	data->clk_pll_a_state = 1;
-
-	err = clk_prepare_enable(data->clk_pll_a_out0);
-	if (err) {
-		dev_err(data->dev, "Can't enable pll_a_out0: %d\n", err);
-		return err;
-	}
-	data->clk_pll_a_out0_state = 1;
-
-	err = clk_prepare_enable(data->clk_cdev1);
-	if (err) {
-		dev_err(data->dev, "Can't enable cdev1: %d\n", err);
-		return err;
-	}
-	data->clk_cdev1_state = 1;
 
 	data->set_baseclock = new_baseclock;
 	data->set_mclk = mclk;

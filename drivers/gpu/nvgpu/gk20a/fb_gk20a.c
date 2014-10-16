@@ -18,6 +18,7 @@
 #include "gk20a.h"
 #include "kind_gk20a.h"
 #include "hw_mc_gk20a.h"
+#include "hw_fb_gk20a.h"
 
 static void fb_gk20a_reset(struct gk20a *g)
 {
@@ -29,9 +30,22 @@ static void fb_gk20a_reset(struct gk20a *g)
 			| mc_enable_hub_enabled_f());
 }
 
+static void gk20a_fb_set_mmu_page_size(struct gk20a *g)
+{
+	/* set large page size in fb */
+	u32 fb_mmu_ctrl = gk20a_readl(g, fb_mmu_ctrl_r());
+
+	fb_mmu_ctrl = (fb_mmu_ctrl &
+		       ~fb_mmu_ctrl_vm_pg_size_f(~0x0)) |
+		fb_mmu_ctrl_vm_pg_size_128kb_f();
+
+	gk20a_writel(g, fb_mmu_ctrl_r(), fb_mmu_ctrl);
+}
+
 void gk20a_init_fb(struct gpu_ops *gops)
 {
 	gops->fb.reset = fb_gk20a_reset;
+	gops->fb.set_mmu_page_size = gk20a_fb_set_mmu_page_size;
 	gk20a_init_uncompressed_kind_map();
 	gk20a_init_kind_attr();
 }

@@ -76,6 +76,9 @@ struct gk20a_platform {
 	/* Adaptative ELPG: true = enable flase = disable */
 	bool enable_aelpg;
 
+	/* Default big page size 64K or 128K */
+	u32 default_big_page_size;
+
 	/* Initialize the platform interface of the gk20a driver.
 	 *
 	 * The platform implementation of this function must

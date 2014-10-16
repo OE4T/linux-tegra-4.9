@@ -19,6 +19,7 @@
 #include "hw_gmmu_gm20b.h"
 #include "hw_fb_gm20b.h"
 #include "hw_gr_gm20b.h"
+#include "hw_ram_gm20b.h"
 
 static int allocate_gmmu_ptes_sparse(struct vm_gk20a *vm,
 				enum gmmu_pgsz_gk20a pgsz_idx,
@@ -259,6 +260,25 @@ bool gm20b_mm_mmu_debug_mode_enabled(struct gk20a *g)
 		gr_gpcs_pri_mmu_debug_ctrl_debug_enabled_v();
 }
 
+void gm20b_mm_set_big_page_size(struct gk20a *g, void *inst_ptr, int size)
+{
+	u32 val;
+
+	gk20a_dbg_fn("");
+
+	gk20a_dbg_info("big page size %d\n", size);
+	val = gk20a_mem_rd32(inst_ptr, ram_in_big_page_size_w());
+	val &= ~ram_in_big_page_size_m();
+
+	if (size == SZ_64K)
+		val |= ram_in_big_page_size_64kb_f();
+	else
+		val |= ram_in_big_page_size_128kb_f();
+
+	gk20a_mem_wr32(inst_ptr, ram_in_big_page_size_w(), val);
+	gk20a_dbg_fn("done");
+}
+
 void gm20b_init_mm(struct gpu_ops *gops)
 {
 	gops->mm.set_sparse = gm20b_vm_put_sparse;
@@ -273,4 +293,5 @@ void gm20b_init_mm(struct gpu_ops *gops)
 	gops->mm.l2_invalidate = gk20a_mm_l2_invalidate;
 	gops->mm.l2_flush = gk20a_mm_l2_flush;
 	gops->mm.tlb_invalidate = gk20a_mm_tlb_invalidate;
+	gops->mm.set_big_page_size = gm20b_mm_set_big_page_size;
 }

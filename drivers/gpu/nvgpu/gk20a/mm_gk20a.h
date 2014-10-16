@@ -512,7 +512,7 @@ int gk20a_vm_free_va(struct vm_gk20a *vm,
 /* vm-as interface */
 struct nvgpu_as_alloc_space_args;
 struct nvgpu_as_free_space_args;
-int gk20a_vm_alloc_share(struct gk20a_as_share *as_share);
+int gk20a_vm_alloc_share(struct gk20a_as_share *as_share, u32 flags);
 int gk20a_vm_release_share(struct gk20a_as_share *as_share);
 int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 			 struct nvgpu_as_alloc_space_args *args);

@@ -141,6 +141,7 @@ struct gpu_ops {
 		void (*reset)(struct gk20a *g);
 		void (*init_uncompressed_kind_map)(struct gk20a *g);
 		void (*init_kind_attr)(struct gk20a *g);
+		void (*set_mmu_page_size)(struct gk20a *g);
 	} fb;
 	struct {
 		void (*slcg_bus_load_gating_prod)(struct gk20a *g, bool prod);
@@ -291,13 +292,16 @@ struct gpu_ops {
 				bool va_allocated,
 				int rw_flag);
 		void (*vm_remove)(struct vm_gk20a *vm);
-		int (*vm_alloc_share)(struct gk20a_as_share *as_share);
+		int (*vm_alloc_share)(struct gk20a_as_share *as_share,
+				      u32 flags);
 		int (*vm_bind_channel)(struct gk20a_as_share *as_share,
 				struct channel_gk20a *ch);
 		int (*fb_flush)(struct gk20a *g);
 		void (*l2_invalidate)(struct gk20a *g);
 		void (*l2_flush)(struct gk20a *g, bool invalidate);
 		void (*tlb_invalidate)(struct vm_gk20a *vm);
+		void (*set_big_page_size)(struct gk20a *g,
+					 void *inst_ptr, int size);
 	} mm;
 	struct {
 		int (*prepare_ucode)(struct gk20a *g);

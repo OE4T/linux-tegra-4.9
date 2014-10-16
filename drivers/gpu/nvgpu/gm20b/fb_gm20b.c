@@ -82,9 +82,18 @@ void gm20b_init_kind_attr(void)
 	}
 }
 
+static void gm20b_fb_set_mmu_page_size(struct gk20a *g)
+{
+	/* set large page size in fb */
+	u32 fb_mmu_ctrl = gk20a_readl(g, fb_mmu_ctrl_r());
+	fb_mmu_ctrl |= fb_mmu_ctrl_use_pdb_big_page_size_true_f();
+	gk20a_writel(g, fb_mmu_ctrl_r(), fb_mmu_ctrl);
+}
+
 void gm20b_init_fb(struct gpu_ops *gops)
 {
 	gops->fb.init_fs_state = fb_gm20b_init_fs_state;
+	gops->fb.set_mmu_page_size = gm20b_fb_set_mmu_page_size;
 	gm20b_init_uncompressed_kind_map();
 	gm20b_init_kind_attr();
 }

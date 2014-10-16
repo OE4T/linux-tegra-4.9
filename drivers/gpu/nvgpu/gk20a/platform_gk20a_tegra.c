@@ -443,6 +443,7 @@ struct gk20a_platform t132_gk20a_tegra_platform = {
 	.enable_elpg            = true,
 	.enable_aelpg           = true,
 
+	.default_big_page_size	= SZ_128K,
 
 	.probe = gk20a_tegra_probe,
 	.late_probe = gk20a_tegra_late_probe,
@@ -480,6 +481,8 @@ struct gk20a_platform gk20a_tegra_platform = {
 	.enable_elpg            = true,
 	.enable_aelpg           = true,
 
+	.default_big_page_size	= SZ_128K,
+
 	.probe = gk20a_tegra_probe,
 	.late_probe = gk20a_tegra_late_probe,
 
@@ -516,6 +519,8 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.enable_elcg            = true,
 	.enable_elpg            = true,
 	.enable_aelpg           = true,
+
+	.default_big_page_size	= SZ_128K,
 
 	.probe = gk20a_tegra_probe,
 	.late_probe = gk20a_tegra_late_probe,

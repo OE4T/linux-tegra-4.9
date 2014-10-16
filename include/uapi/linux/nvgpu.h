@@ -175,6 +175,12 @@ struct nvgpu_gpu_mark_compressible_write_args {
 	__u32 reserved[3];		/* must be zero */
 };
 
+struct nvgpu_alloc_as_args {
+	__u32 big_page_size;
+	__s32 as_fd;
+	__u64 reserved;			/* must be zero */
+};
+
 #define NVGPU_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
 	_IOR(NVGPU_GPU_IOCTL_MAGIC, 1, struct nvgpu_gpu_zcull_get_ctx_size_args)
 #define NVGPU_GPU_IOCTL_ZCULL_GET_INFO \
@@ -189,9 +195,11 @@ struct nvgpu_gpu_mark_compressible_write_args {
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 6, struct nvgpu_gpu_prepare_compressible_read_args)
 #define NVGPU_GPU_IOCTL_MARK_COMPRESSIBLE_WRITE \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 7, struct nvgpu_gpu_mark_compressible_write_args)
+#define NVGPU_GPU_IOCTL_ALLOC_AS \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 8, struct nvgpu_alloc_as_args)
 
 #define NVGPU_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_GPU_IOCTL_MARK_COMPRESSIBLE_WRITE)
+	_IOC_NR(NVGPU_GPU_IOCTL_ALLOC_AS)
 #define NVGPU_GPU_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_gpu_prepare_compressible_read_args)
 

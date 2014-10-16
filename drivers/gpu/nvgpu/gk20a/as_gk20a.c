@@ -37,8 +37,8 @@ static void release_as_share_id(struct gk20a_as *as, int id)
 	return;
 }
 
-static int gk20a_as_alloc_share(struct gk20a_as *as,
-				struct gk20a_as_share **out)
+int gk20a_as_alloc_share(struct gk20a_as *as,
+			 u32 flags, struct gk20a_as_share **out)
 {
 	struct gk20a *g = gk20a_from_as(as);
 	struct gk20a_as_share *as_share;
@@ -56,7 +56,7 @@ static int gk20a_as_alloc_share(struct gk20a_as *as,
 	as_share->ref_cnt.counter = 1;
 
 	/* this will set as_share->vm. */
-	err = g->ops.mm.vm_alloc_share(as_share);
+	err = g->ops.mm.vm_alloc_share(as_share, flags);
 	if (err)
 		goto failed;
 
@@ -186,7 +186,7 @@ int gk20a_as_dev_open(struct inode *inode, struct file *filp)
 		return err;
 	}
 
-	err = gk20a_as_alloc_share(&g->as, &as_share);
+	err = gk20a_as_alloc_share(&g->as, 0, &as_share);
 	if (err) {
 		gk20a_dbg_fn("failed to alloc share");
 		gk20a_put_client(g);

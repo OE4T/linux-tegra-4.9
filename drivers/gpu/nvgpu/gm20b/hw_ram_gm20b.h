@@ -78,6 +78,26 @@ static inline u32 ram_in_page_dir_base_vol_true_f(void)
 {
 	return 0x4;
 }
+static inline u32 ram_in_big_page_size_f(u32 v)
+{
+	return (v & 0x1) << 11;
+}
+static inline u32 ram_in_big_page_size_m(void)
+{
+	return 0x1 << 11;
+}
+static inline u32 ram_in_big_page_size_w(void)
+{
+	return 128;
+}
+static inline u32 ram_in_big_page_size_128kb_f(void)
+{
+	return 0x0;
+}
+static inline u32 ram_in_big_page_size_64kb_f(void)
+{
+	return 0x800;
+}
 static inline u32 ram_in_page_dir_base_lo_f(u32 v)
 {
 	return (v & 0xfffff) << 12;

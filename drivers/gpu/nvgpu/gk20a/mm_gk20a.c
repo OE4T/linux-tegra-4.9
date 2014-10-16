@@ -327,17 +327,7 @@ static int gk20a_init_mm_setup_hw(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	/* set large page size in fb
-	 * note this is very early on, can we defer it ? */
-	{
-		u32 fb_mmu_ctrl = gk20a_readl(g, fb_mmu_ctrl_r());
-
-		fb_mmu_ctrl = (fb_mmu_ctrl &
-			       ~fb_mmu_ctrl_vm_pg_size_f(~0x0)) |
-			fb_mmu_ctrl_vm_pg_size_128kb_f();
-
-		gk20a_writel(g, fb_mmu_ctrl_r(), fb_mmu_ctrl);
-	}
+	g->ops.fb.set_mmu_page_size(g);
 
 	inst_pa = (u32)(inst_pa >> bar1_instance_block_shift_gk20a());
 	gk20a_dbg_info("bar1 inst block ptr: 0x%08x",  (u32)inst_pa);
@@ -2173,6 +2163,7 @@ void gk20a_vm_put(struct vm_gk20a *vm)
 
 static int gk20a_init_vm(struct mm_gk20a *mm,
 		struct vm_gk20a *vm,
+		u32 big_page_size,
 		u64 low_hole,
 		u64 aperture_size,
 		bool big_pages,
@@ -2184,7 +2175,7 @@ static int gk20a_init_vm(struct mm_gk20a *mm,
 	size_t vma_size;
 
 	/* note: keep the page sizes sorted lowest to highest here */
-	u32 gmmu_page_sizes[gmmu_nr_page_sizes] = { SZ_4K, SZ_128K };
+	u32 gmmu_page_sizes[gmmu_nr_page_sizes] = { SZ_4K, big_page_size };
 
 	vm->mm = mm;
 
@@ -2331,7 +2322,7 @@ clean_up_pdes:
 }
 
 /* address space interfaces for the gk20a module */
-int gk20a_vm_alloc_share(struct gk20a_as_share *as_share)
+int gk20a_vm_alloc_share(struct gk20a_as_share *as_share, u32 big_page_size)
 {
 	struct gk20a_as *as = as_share->as;
 	struct gk20a *g = gk20a_from_as(as);
@@ -2351,8 +2342,15 @@ int gk20a_vm_alloc_share(struct gk20a_as_share *as_share)
 	vm->enable_ctag = true;
 
 	snprintf(name, sizeof(name), "gk20a_as_%d", as_share->id);
-	err = gk20a_init_vm(mm, vm,
-			    SZ_128K << 10, mm->channel.size, true, name);
+
+	if (big_page_size && !g->ops.mm.set_big_page_size)
+		return -EINVAL;
+	if (big_page_size == 0)
+		big_page_size =
+			gk20a_get_platform(g->dev)->default_big_page_size;
+
+	err = gk20a_init_vm(mm, vm, big_page_size, big_page_size << 10,
+			    mm->channel.size, true, name);
 
 	return 0;
 }
@@ -2709,10 +2707,12 @@ static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	struct device *d = dev_from_gk20a(g);
 	struct inst_desc *inst_block = &mm->bar1.inst_block;
 	dma_addr_t iova;
+	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
 	mm->bar1.aperture_size = bar1_aperture_size_mb_gk20a() << 20;
 	gk20a_dbg_info("bar1 vm size = 0x%x", mm->bar1.aperture_size);
-	gk20a_init_vm(mm, vm, SZ_4K, mm->bar1.aperture_size, false, "bar1");
+	gk20a_init_vm(mm, vm, big_page_size, SZ_4K,
+		      mm->bar1.aperture_size, false, "bar1");
 
 	gk20a_dbg_info("pde pa=0x%llx",
 		       (u64)gk20a_mm_iova_addr(vm->pdes.sgt->sgl));
@@ -2761,6 +2761,9 @@ static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	gk20a_mem_wr32(inst_ptr, ram_in_adr_limit_hi_w(),
 		ram_in_adr_limit_hi_f(u64_hi32(vm->va_limit)));
 
+	if (g->ops.mm.set_big_page_size)
+		g->ops.mm.set_big_page_size(g, inst_ptr, big_page_size);
+
 	gk20a_dbg_info("bar1 inst block ptr: %08llx",  (u64)inst_pa);
 	return 0;
 
@@ -2789,11 +2792,12 @@ static int gk20a_init_system_vm(struct mm_gk20a *mm)
 	struct device *d = dev_from_gk20a(g);
 	struct inst_desc *inst_block = &mm->pmu.inst_block;
 	dma_addr_t iova;
+	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
 	mm->pmu.aperture_size = GK20A_PMU_VA_SIZE;
 	gk20a_dbg_info("pmu vm size = 0x%x", mm->pmu.aperture_size);
 
-	gk20a_init_vm(mm, vm,
+	gk20a_init_vm(mm, vm, big_page_size,
 		      SZ_128K << 10, GK20A_PMU_VA_SIZE, false, "system");
 
 	gk20a_dbg_info("pde pa=0x%llx",
@@ -2841,6 +2845,9 @@ static int gk20a_init_system_vm(struct mm_gk20a *mm)
 
 	gk20a_mem_wr32(inst_ptr, ram_in_adr_limit_hi_w(),
 		ram_in_adr_limit_hi_f(u64_hi32(vm->va_limit)));
+
+	if (g->ops.mm.set_big_page_size)
+		g->ops.mm.set_big_page_size(g, inst_ptr, big_page_size);
 
 	return 0;
 

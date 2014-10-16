@@ -119,6 +119,10 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 	gk20a_mem_wr32(inst_ptr, ram_in_adr_limit_hi_w(),
 		ram_in_adr_limit_hi_f(u64_hi32(c->vm->va_limit)));
 
+	if (c->g->ops.mm.set_big_page_size)
+		c->g->ops.mm.set_big_page_size(c->g, inst_ptr,
+					       c->vm->gmmu_page_sizes[gmmu_page_size_big]);
+
 	return 0;
 }
 

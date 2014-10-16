@@ -66,6 +66,10 @@ static inline u32 fb_mmu_ctrl_vm_pg_size_128kb_f(void)
 {
 	return 0x0;
 }
+static inline u32 fb_mmu_ctrl_vm_pg_size_64kb_f(void)
+{
+	return 0x1;
+}
 static inline u32 fb_mmu_ctrl_pri_fifo_empty_v(u32 r)
 {
 	return (r >> 15) & 0x1;
@@ -77,6 +81,18 @@ static inline u32 fb_mmu_ctrl_pri_fifo_empty_false_f(void)
 static inline u32 fb_mmu_ctrl_pri_fifo_space_v(u32 r)
 {
 	return (r >> 16) & 0xff;
+}
+static inline u32 fb_mmu_ctrl_use_pdb_big_page_size_v(u32 r)
+{
+	return (r >> 11) & 0x1;
+}
+static inline u32 fb_mmu_ctrl_use_pdb_big_page_size_true_f(void)
+{
+	return 0x800;
+}
+static inline u32 fb_mmu_ctrl_use_pdb_big_page_size_false_f(void)
+{
+	return 0x0;
 }
 static inline u32 fb_priv_mmu_phy_secure_r(void)
 {

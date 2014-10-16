@@ -42,5 +42,7 @@ int gk20a_as_release_share(struct gk20a_as_share *as_share);
 int gk20a_as_dev_open(struct inode *inode, struct file *filp);
 int gk20a_as_dev_release(struct inode *inode, struct file *filp);
 long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
+int gk20a_as_alloc_share(struct gk20a_as *as,
+			 u32 flags, struct gk20a_as_share **out);
 
 #endif

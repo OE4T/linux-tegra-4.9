@@ -324,7 +324,7 @@ static void tegra210_adsp_deinit(struct tegra210_adsp *adsp)
 /* ADSP-CPU message send-receive utility functions */
 static int tegra210_adsp_get_msg(apm_shared_state_t *apm, apm_msg_t *apm_msg)
 {
-	apm_msg->msgq_msg.size = MSGQ_MSG_SIZE(apm_msg_t) -
+	apm_msg->msgq_msg.size = MSGQ_MSG_WSIZE(apm_msg_t) -
 		MSGQ_MESSAGE_HEADER_WSIZE;
 	return msgq_dequeue_message(&apm->msgq_send.msgq,
 		&apm_msg->msgq_msg);
@@ -353,7 +353,7 @@ static int tegra210_adsp_send_connect_msg(struct tegra210_adsp_app *src,
 {
 	apm_msg_t apm_msg;
 
-	apm_msg.msgq_msg.size = MSGQ_MSG_SIZE(apm_fx_connect_params_t);
+	apm_msg.msgq_msg.size = MSGQ_MSG_WSIZE(apm_fx_connect_params_t);
 	apm_msg.msg.call_params.size = sizeof(apm_fx_connect_params_t);
 	apm_msg.msg.call_params.method = nvfx_apm_method_fx_connect;
 	apm_msg.msg.fx_connect_params.plugin_src.pvoid = IS_APM_IN(src->reg) ?
@@ -372,7 +372,7 @@ static int tegra210_adsp_send_io_buffer_msg(struct tegra210_adsp_app *app,
 {
 	apm_msg_t apm_msg;
 
-	apm_msg.msgq_msg.size = MSGQ_MSG_SIZE(apm_io_buffer_params_t);
+	apm_msg.msgq_msg.size = MSGQ_MSG_WSIZE(apm_io_buffer_params_t);
 	apm_msg.msg.call_params.size = sizeof(apm_io_buffer_params_t);
 	apm_msg.msg.call_params.method = nvfx_apm_method_set_io_buffer;
 	apm_msg.msg.io_buffer_params.pin_type = IS_APM_IN(app->reg) ?
@@ -390,7 +390,7 @@ static int tegra210_adsp_send_period_size_msg(struct tegra210_adsp_app *app,
 	apm_msg_t apm_msg;
 
 	apm_msg.msgq_msg.size =
-		MSGQ_MSG_SIZE(apm_notification_params_t);
+		MSGQ_MSG_WSIZE(apm_notification_params_t);
 	apm_msg.msg.call_params.size =
 		sizeof(apm_notification_params_t);
 	apm_msg.msg.call_params.method = nvfx_apm_method_set_notification_size;
@@ -408,7 +408,7 @@ static int tegra210_adsp_adma_params_msg(struct tegra210_adsp_app *app,
 {
 	apm_msg_t apm_msg;
 
-	apm_msg.msgq_msg.size = MSGQ_MSG_SIZE(apm_fx_set_param_params_t);
+	apm_msg.msgq_msg.size = MSGQ_MSG_WSIZE(apm_fx_set_param_params_t);
 	apm_msg.msg.call_params.size = sizeof(apm_fx_set_param_params_t);
 	apm_msg.msg.call_params.method = nvfx_apm_method_fx_set_param;
 	apm_msg.msg.fx_set_param_params.plugin.pvoid =
@@ -427,7 +427,7 @@ static int tegra210_adsp_send_state_msg(struct tegra210_adsp_app *app,
 {
 	apm_msg_t apm_msg;
 
-	apm_msg.msgq_msg.size = MSGQ_MSG_SIZE(nvfx_set_state_params_t);
+	apm_msg.msgq_msg.size = MSGQ_MSG_WSIZE(nvfx_set_state_params_t);
 	apm_msg.msg.call_params.size = sizeof(nvfx_set_state_params_t);
 	apm_msg.msg.call_params.method = nvfx_method_set_state;
 	apm_msg.msg.state_params.state = state;
@@ -440,7 +440,7 @@ static int tegra210_adsp_send_reset_msg(struct tegra210_adsp_app *app,
 {
 	apm_msg_t apm_msg;
 
-	apm_msg.msgq_msg.size = MSGQ_MSG_SIZE(nvfx_reset_params_t);
+	apm_msg.msgq_msg.size = MSGQ_MSG_WSIZE(nvfx_reset_params_t);
 	apm_msg.msg.call_params.size = sizeof(nvfx_reset_params_t);
 	apm_msg.msg.call_params.method = nvfx_method_reset;
 
@@ -452,7 +452,7 @@ static int tegra210_adsp_send_eos_msg(struct tegra210_adsp_app *app,
 {
 	apm_msg_t apm_msg;
 
-	apm_msg.msgq_msg.size = MSGQ_MSG_SIZE(apm_eos_params_t);
+	apm_msg.msgq_msg.size = MSGQ_MSG_WSIZE(apm_eos_params_t);
 	apm_msg.msg.call_params.size = sizeof(apm_eos_params_t);
 	apm_msg.msg.call_params.method = nvfx_apm_method_set_eos;
 
@@ -464,7 +464,7 @@ static int tegra210_adsp_send_pos_msg(struct tegra210_adsp_app *app,
 {
 	apm_msg_t apm_msg;
 
-	apm_msg.msgq_msg.size = MSGQ_MSG_SIZE(apm_position_params_t);
+	apm_msg.msgq_msg.size = MSGQ_MSG_WSIZE(apm_position_params_t);
 	apm_msg.msg.call_params.size = sizeof(apm_position_params_t);
 	apm_msg.msg.call_params.method = nvfx_apm_method_set_position;
 	apm_msg.msg.position_params.pin_type = IS_APM_IN(app->reg) ?

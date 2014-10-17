@@ -666,9 +666,11 @@ static int gr_gm20b_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,
 	gk20a_writel(g, reg_offset + gr_fecs_bootvec_r(),
 			gr_fecs_bootvec_vec_f(segments->boot_entry));
 
-	/* Write to CPUCTL to start the falcon */
-	gk20a_writel(g, reg_offset + gr_fecs_cpuctl_r(),
-			gr_fecs_cpuctl_startcpu_f(0x01));
+	/* start the falcon immediately if PRIV security is disabled*/
+	if (!g->ops.privsecurity) {
+		gk20a_writel(g, reg_offset + gr_fecs_cpuctl_r(),
+				gr_fecs_cpuctl_startcpu_f(0x01));
+	}
 
 	return 0;
 }

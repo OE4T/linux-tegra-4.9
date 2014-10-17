@@ -154,17 +154,33 @@
 #define MIPI_CAL_HSCLKPDOSDSIB(x)		(((x) & 0x1f) << 8)
 #define MIPI_CAL_HSCLKPUOSDSIB(x)		(((x) & 0x1f) << 0)
 
+#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
 #define MIPI_CAL_CILC_MIPI_CAL_CONFIG_2_0	0x6c
 #define MIPI_CAL_CLKOVERIDEC(x)		(((x) & 0x1) << 30)
 #define MIPI_CAL_CLKSELC(x)		(((x) & 0x1) << 21)
 #define MIPI_CAL_HSCLKPDOSC(x)		(((x) & 0x1f) << 8)
 #define MIPI_CAL_HSCLKPUOSC(x)		(((x) & 0x1f) << 0)
+#else
+#define MIPI_CAL_DSIC_MIPI_CAL_CONFIG_2_0	0x70
+#define MIPI_CAL_CLKOVERIDEDSIC(x)		(((x) & 0x1) << 30)
+#define MIPI_CAL_CLKSELDSIC(x)		(((x) & 0x1) << 21)
+#define MIPI_CAL_HSCLKPDOSDSIC(x)		(((x) & 0x1f) << 8)
+#define MIPI_CAL_HSCLKPUOSDSIC(x)		(((x) & 0x1f) << 0)
+#endif
 
+#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
 #define MIPI_CAL_CILD_MIPI_CAL_CONFIG_2_0	0x70
 #define MIPI_CAL_CLKOVERIDED(x)		(((x) & 0x1) << 30)
 #define MIPI_CAL_CLKSELD(x)		(((x) & 0x1) << 21)
 #define MIPI_CAL_HSCLKPDOSD(x)		(((x) & 0x1f) << 8)
 #define MIPI_CAL_HSCLKPUOSD(x)		(((x) & 0x1f) << 0)
+#else
+#define MIPI_CAL_DSID_MIPI_CAL_CONFIG_2_0	0x74
+#define MIPI_CAL_CLKOVERIDEDSID(x)		(((x) & 0x1) << 30)
+#define MIPI_CAL_CLKSELDSID(x)		(((x) & 0x1) << 21)
+#define MIPI_CAL_HSCLKPDOSDSID(x)		(((x) & 0x1f) << 8)
+#define MIPI_CAL_HSCLKPUOSDSID(x)		(((x) & 0x1f) << 0)
+#endif
 
 #define MIPI_CAL_CSIE_MIPI_CAL_CONFIG_2_0	0x74
 #define MIPI_CAL_CLKOVERIDEE(x)		(((x) & 0x1) << 30)

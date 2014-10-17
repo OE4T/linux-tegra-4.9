@@ -733,7 +733,9 @@ void tegra_dc_remove_sysfs(struct device *dev)
 	}
 
 	if (sd_settings)
+#ifdef CONFIG_TEGRA_NVSD
 		nvsd_remove_sysfs(dev);
+#endif
 
 	if (nvsr)
 		nvsr_remove_sysfs(dev);
@@ -780,7 +782,9 @@ void tegra_dc_create_sysfs(struct device *dev)
 	}
 
 	if (sd_settings)
+#ifdef CONFIG_TEGRA_NVSD
 		error |= nvsd_create_sysfs(dev);
+#endif
 
 	if (nvsr)
 		error |= nvsr_create_sysfs(dev);

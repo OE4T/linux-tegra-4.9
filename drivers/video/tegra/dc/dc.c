@@ -2254,6 +2254,7 @@ static void tegra_dc_vblank(struct work_struct *work)
 	if (!tegra_dc_windows_are_dirty(dc, WIN_ALL_ACT_REQ))
 		clear_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
 
+#ifdef CONFIG_TEGRA_NVSD
 	/* Update the SD brightness */
 	if (dc->out->sd_settings && !dc->out->sd_settings->use_vpulse2) {
 		nvsd_updated = nvsd_update_brightness(dc);
@@ -2270,6 +2271,7 @@ static void tegra_dc_vblank(struct work_struct *work)
 	/* Mask vblank interrupt if ref-count is zero. */
 	if (!dc->vblank_ref_count)
 		tegra_dc_mask_interrupt(dc, V_BLANK_INT);
+#endif /* CONFIG_TEGRA_NVSD */
 
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
@@ -2412,9 +2414,11 @@ static void tegra_dc_vpulse2(struct work_struct *work)
 	if (!tegra_dc_windows_are_dirty(dc, WIN_ALL_ACT_REQ))
 		clear_bit(V_PULSE2_FLIP, &dc->vpulse2_ref_count);
 
+#ifdef CONFIG_TEGRA_NVSD
 	/* Update the SD brightness */
 	if (dc->out->sd_settings && dc->out->sd_settings->use_vpulse2) {
 		nvsd_updated = nvsd_update_brightness(dc);
+
 		if (nvsd_updated) {
 			set_bit(V_PULSE2_NVSD, &dc->vpulse2_ref_count);
 			tegra_dc_unmask_interrupt(dc, V_PULSE2_INT);
@@ -2426,6 +2430,7 @@ static void tegra_dc_vpulse2(struct work_struct *work)
 	/* Mask vpulse2 interrupt if ref-count is zero. */
 	if (!dc->vpulse2_ref_count)
 		tegra_dc_mask_interrupt(dc, V_PULSE2_INT);
+#endif /* CONFIG_TEGRA_NVSD */
 
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);

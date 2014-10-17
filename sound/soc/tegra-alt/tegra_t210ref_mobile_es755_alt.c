@@ -58,6 +58,7 @@ struct tegra_t210ref {
 	struct snd_soc_card *pcard;
 	struct tegra_asoc_platform_data *pdata;
 	struct tegra_asoc_audio_clock_info audio_clock;
+	struct sysedp_consumer *sysedpc;
 	struct regulator *codec_reg;
 	struct regulator *digital_reg;
 	struct regulator *analog_reg;
@@ -70,6 +71,7 @@ struct tegra_t210ref {
 #endif
 	int clock_enabled;
 	enum snd_soc_bias_level bias_level;
+	const char *edp_name;
 };
 
 static struct snd_soc_jack tegra_t210ref_hp_jack;
@@ -414,11 +416,15 @@ static int tegra_t210ref_event_int_spk(struct snd_soc_dapm_widget *w,
 
 	if (machine->spk_reg) {
 		if (SND_SOC_DAPM_EVENT_ON(event)) {
+			if (machine->sysedpc)
+				sysedp_set_state(machine->sysedpc, 1);
 			err = regulator_enable(machine->spk_reg);
 			if (err < 0)
 				dev_err(card->dev, "Failed to enable spk regulator\n");
 		} else {
 			regulator_disable(machine->spk_reg);
+			if (machine->sysedpc)
+				sysedp_set_state(machine->sysedpc, 0);
 		}
 	}
 
@@ -708,6 +714,19 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		goto err_fini_utils;
 	}
 
+	if (!of_device_is_compatible(np,
+	  "nvidia,tegra-audio-t210ref-mobile-foster")) {
+		if (of_property_read_string(np, "edp-consumer-name",
+			&machine->edp_name)) {
+			machine->sysedpc = NULL;
+			dev_err(&pdev->dev, "property 'edp-consumer-name' missing or invalid\n");
+		} else {
+			machine->sysedpc =
+				sysedp_create_consumer("codec+speaker",
+					machine->edp_name);
+		}
+	}
+
 	return 0;
 
 err_fini_utils:
@@ -784,6 +803,8 @@ static int tegra_t210ref_driver_remove(struct platform_device *pdev)
 #ifdef CONFIG_SWITCH
 	tegra_alt_asoc_switch_unregister(&tegra_t210ref_headset_switch);
 #endif
+	if (machine->sysedpc)
+		sysedp_free_consumer(machine->sysedpc);
 
 	return 0;
 }

@@ -1105,7 +1105,7 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	clk->gpc_pll.id = GK20A_GPC_PLL;
 	clk->gpc_pll.clk_in = clk_get_rate(ref) / KHZ;
 
-	safe_rate = tegra_dvfs_get_therm_safe_fmax(
+	safe_rate = tegra_dvfs_get_fmax_at_vmin_safe_t(
 		clk_get_parent(clk->tegra_clk));
 	safe_rate = safe_rate * (100 - DVFS_SAFE_MARGIN) / 100;
 	dvfs_safe_max_freq = rate_gpu_to_gpc2clk(safe_rate);

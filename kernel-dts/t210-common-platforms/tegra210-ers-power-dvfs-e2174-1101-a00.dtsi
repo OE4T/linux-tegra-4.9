@@ -126,5 +126,12 @@
 			compatible = "nvidia,tegra210-dvfs-rail";
 			vdd_gpu-supply = <&gpu_max77621_reg>;
 		};
+
+		vdd-core-rail-max77620@4 {
+			status = "okay";
+			reg = <4>;
+			compatible = "nvidia,tegra210-dvfs-rail";
+			vdd_core-supply = <&max77620_sd0>;
+		};
 	};
 };

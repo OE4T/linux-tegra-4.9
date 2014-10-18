@@ -518,7 +518,7 @@ static int nvhost_nvdec_init_sw(struct platform_device *dev)
 	if (!fw_name[0]) {
 		dev_err(&dev->dev, "couldn't determine BL firmware name");
 		err = -EINVAL;
-		goto error;
+		goto error_fw_name;
 	}
 	fw_name[1] = nvdec_get_fw_name(dev, host_nvdec_fw_ls);
 	if (!fw_name[1]) {
@@ -554,6 +554,7 @@ err_ucode:
 	kfree(fw_name[1]);
 err_fw:
 	kfree(fw_name[0]);
+error_fw_name:
 	kfree(fw_name);
 error:
 	kfree(m);

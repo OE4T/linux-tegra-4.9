@@ -78,6 +78,8 @@ static void gr_gk20a_free_channel_patch_ctx(struct channel_gk20a *c);
 /* golden ctx image */
 static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 					  struct channel_gk20a *c);
+/*elcg init */
+static void gr_gk20a_enable_elcg(struct gk20a *g);
 
 /* sm lock down */
 static int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
@@ -4256,14 +4258,6 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	gr_gk20a_zcull_init_hw(g, gr);
 
-	if (g->elcg_enabled) {
-		gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
-		gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_CE2_GK20A);
-	} else {
-		gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
-		gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
-	}
-
 	/* Bug 1340570: increase the clock timeout to avoid potential
 	 * operation failure at high gpcclk rate. Default values are 0x400.
 	 */
@@ -4380,6 +4374,22 @@ out:
 	return 0;
 }
 
+static void gr_gk20a_load_gating_prod(struct gk20a *g)
+{
+	/* slcg prod values */
+	g->ops.clock_gating.slcg_gr_load_gating_prod(g, g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_ctxsw_firmware_load_gating_prod)
+		g->ops.clock_gating.slcg_ctxsw_firmware_load_gating_prod(g,
+				g->slcg_enabled);
+	g->ops.clock_gating.slcg_perf_load_gating_prod(g, g->slcg_enabled);
+
+	g->ops.clock_gating.blcg_gr_load_gating_prod(g, g->blcg_enabled);
+	if (g->ops.clock_gating.blcg_ctxsw_firmware_load_gating_prod)
+		g->ops.clock_gating.blcg_ctxsw_firmware_load_gating_prod(g,
+				g->blcg_enabled);
+	g->ops.clock_gating.pg_gr_load_gating_prod(g, true);
+}
+
 static int gk20a_init_gr_prepare(struct gk20a *g)
 {
 	u32 gpfifo_ctrl, pmc_en;
@@ -4398,18 +4408,7 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 			| mc_enable_blg_enabled_f()
 			| mc_enable_perfmon_enabled_f());
 
-	/* slcg prod values */
-	g->ops.clock_gating.slcg_gr_load_gating_prod(g, g->slcg_enabled);
-	if (g->ops.clock_gating.slcg_ctxsw_firmware_load_gating_prod)
-		g->ops.clock_gating.slcg_ctxsw_firmware_load_gating_prod(g,
-				g->slcg_enabled);
-	g->ops.clock_gating.slcg_perf_load_gating_prod(g, g->slcg_enabled);
-
-	g->ops.clock_gating.blcg_gr_load_gating_prod(g, g->blcg_enabled);
-	if (g->ops.clock_gating.blcg_ctxsw_firmware_load_gating_prod)
-		g->ops.clock_gating.blcg_ctxsw_firmware_load_gating_prod(g,
-				g->blcg_enabled);
-	g->ops.clock_gating.pg_gr_load_gating_prod(g, true);
+	gr_gk20a_load_gating_prod(g);
 
 	/* enable fifo access */
 	gk20a_writel(g, gr_gpfifo_ctl_r(),
@@ -4742,6 +4741,7 @@ int gk20a_init_gr_support(struct gk20a *g)
 	if (err)
 		return err;
 
+	gr_gk20a_enable_elcg(g);
 	/* GR is inialized, signal possible waiters */
 	g->gr.initialized = true;
 	wake_up(&g->gr.init_wq);
@@ -4935,6 +4935,17 @@ int gk20a_enable_gr_hw(struct gk20a *g)
 	return 0;
 }
 
+static void gr_gk20a_enable_elcg(struct gk20a *g)
+{
+	if (g->elcg_enabled) {
+		gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
+		gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_CE2_GK20A);
+	} else {
+		gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
+		gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
+	}
+}
+
 int gk20a_gr_reset(struct gk20a *g)
 {
 	int err;
@@ -4975,7 +4986,10 @@ int gk20a_gr_reset(struct gk20a *g)
 		return err;
 	}
 
-	return 0;
+	gr_gk20a_load_gating_prod(g);
+	gr_gk20a_enable_elcg(g);
+
+	return err;
 }
 
 static int gr_gk20a_handle_sw_method(struct gk20a *g, u32 addr,

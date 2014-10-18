@@ -973,8 +973,16 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 
 	g->fifo.deferred_reset_pending = false;
 
-	/* Disable ELPG */
+	/* Disable power management */
 	gk20a_pmu_disable_elpg(g);
+	g->ops.clock_gating.slcg_gr_load_gating_prod(g,
+			false);
+	g->ops.clock_gating.slcg_perf_load_gating_prod(g,
+			false);
+	g->ops.clock_gating.slcg_ltc_load_gating_prod(g,
+			false);
+	gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
+	gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
 
 	/* Disable fifo access */
 	grfifo_ctl = gk20a_readl(g, gr_gpfifo_ctl_r());

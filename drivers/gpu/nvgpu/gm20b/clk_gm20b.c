@@ -1109,10 +1109,10 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 		clk_get_parent(clk->tegra_clk));
 	safe_rate = safe_rate * (100 - DVFS_SAFE_MARGIN) / 100;
 	dvfs_safe_max_freq = rate_gpu_to_gpc2clk(safe_rate);
-	clk->gpc_pll.PL = DIV_ROUND_UP(gpc_pll_params.min_vco,
-				       dvfs_safe_max_freq);
+	clk->gpc_pll.PL = (dvfs_safe_max_freq == 0) ? 0 :
+		DIV_ROUND_UP(gpc_pll_params.min_vco, dvfs_safe_max_freq);
 
-	/* Initial frequency: 1/3 VCO min (low enough to be safe at Vmin) */
+	/* Initial freq: low enough to be safe at Vmin (default 1/3 VCO min) */
 	clk->gpc_pll.M = 1;
 	clk->gpc_pll.N = DIV_ROUND_UP(gpc_pll_params.min_vco,
 				clk->gpc_pll.clk_in);

@@ -202,12 +202,10 @@
 		compatible = "arm,smmu-v2";
 		reg = <0x0 0x32000000 0x0 0xffffff>; /* 16MB */
 		#global-interrupts = <2>;
-		interrupts = <0 32 4>,
-			     <0 33 4>,
-			     <0 34 4>, /* This is the first context interrupt */
-			     <0 35 4>,
-			     <0 36 4>,
-			     <0 37 4>;
+		interrupts = <0 172 4>,
+			     <0 173 4>,
+			     <0 170 4>, /* This is the first context interrupt */
+			     <0 171 4>;
 
 		mmu-masters = <&{/sdhci@700b0600} TEGRA_SWGROUP_SDMMC4A>,
 			      <&{/sdhci@700b0400} TEGRA_SWGROUP_SDMMC3A>,

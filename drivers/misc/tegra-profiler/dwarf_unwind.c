@@ -193,7 +193,7 @@ validate_addr(struct ex_region_info *ri,
 	      int st)
 {
 	struct extab_info *ei;
-	struct quadd_extabs_mmap *mmap;
+	struct quadd_mmap_area *mmap;
 	unsigned long start, end;
 
 	mmap = ri->mmap;

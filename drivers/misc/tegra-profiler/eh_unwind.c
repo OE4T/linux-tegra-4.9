@@ -93,7 +93,7 @@ struct pin_pages_work {
 static struct quadd_unwind_ctx ctx;
 
 static inline int
-validate_mmap_addr(struct quadd_extabs_mmap *mmap,
+validate_mmap_addr(struct quadd_mmap_area *mmap,
 		   unsigned long addr, unsigned long nbytes)
 {
 	struct vm_area_struct *vma = mmap->mmap_vma;
@@ -135,7 +135,7 @@ validate_mmap_addr(struct quadd_extabs_mmap *mmap,
 })
 
 static inline long
-read_mmap_data(struct quadd_extabs_mmap *mmap, const u32 *addr, u32 *retval)
+read_mmap_data(struct quadd_mmap_area *mmap, const u32 *addr, u32 *retval)
 {
 	if (!validate_mmap_addr(mmap, (unsigned long)addr, sizeof(u32))) {
 		*retval = 0;
@@ -395,7 +395,7 @@ static void rd_free_rcu(struct rcu_head *rh)
 }
 
 int quadd_unwind_set_extab(struct quadd_extables *extabs,
-			   struct quadd_extabs_mmap *mmap)
+			   struct quadd_mmap_area *mmap)
 {
 	int err = 0;
 	unsigned long nr_entries, nr_added, new_size;
@@ -403,6 +403,9 @@ int quadd_unwind_set_extab(struct quadd_extables *extabs,
 	struct extab_info *ti;
 	struct regions_data *rd, *rd_new;
 	struct ex_region_info *ex_entry;
+
+	if (mmap->type != QUADD_MMAP_TYPE_EXTABS)
+		return -EIO;
 
 	spin_lock(&ctx.lock);
 
@@ -536,7 +539,7 @@ error_out:
 }
 
 static int
-clean_mmap(struct regions_data *rd, struct quadd_extabs_mmap *mmap, int rm_ext)
+clean_mmap(struct regions_data *rd, struct quadd_mmap_area *mmap, int rm_ext)
 {
 	int nr_removed = 0;
 	struct ex_region_info *entry, *next;
@@ -555,7 +558,7 @@ clean_mmap(struct regions_data *rd, struct quadd_extabs_mmap *mmap, int rm_ext)
 	return nr_removed;
 }
 
-void quadd_unwind_delete_mmap(struct quadd_extabs_mmap *mmap)
+void quadd_unwind_delete_mmap(struct quadd_mmap_area *mmap)
 {
 	unsigned long nr_entries, nr_removed, new_size;
 	struct regions_data *rd, *rd_new;
@@ -634,7 +637,7 @@ unwind_find_idx(struct ex_region_info *ri, u32 addr)
 }
 
 static unsigned long
-unwind_get_byte(struct quadd_extabs_mmap *mmap,
+unwind_get_byte(struct quadd_mmap_area *mmap,
 		struct unwind_ctrl_block *ctrl, long *err)
 {
 	unsigned long ret;
@@ -668,7 +671,7 @@ unwind_get_byte(struct quadd_extabs_mmap *mmap,
  * Execute the current unwind instruction.
  */
 static long
-unwind_exec_insn(struct quadd_extabs_mmap *mmap,
+unwind_exec_insn(struct quadd_mmap_area *mmap,
 		 struct unwind_ctrl_block *ctrl)
 {
 	long err;

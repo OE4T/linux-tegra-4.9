@@ -434,6 +434,7 @@ static void get_capabilities(struct quadd_comm_cap *cap)
 	extra |= QUADD_COMM_CAP_EXTRA_SPECIAL_ARCH_MMAP;
 	extra |= QUADD_COMM_CAP_EXTRA_UNWIND_MIXED;
 	extra |= QUADD_COMM_CAP_EXTRA_UNW_ENTRY_TYPE;
+	extra |= QUADD_COMM_CAP_EXTRA_RB_MMAP_OP;
 
 	if (ctx.hrt->tc)
 		extra |= QUADD_COMM_CAP_EXTRA_ARCH_TIMER;
@@ -458,13 +459,13 @@ void quadd_get_state(struct quadd_module_state *state)
 
 static int
 set_extab(struct quadd_extables *extabs,
-	  struct quadd_extabs_mmap *mmap)
+	  struct quadd_mmap_area *mmap)
 {
 	return quadd_unwind_set_extab(extabs, mmap);
 }
 
 static void
-delete_mmap(struct quadd_extabs_mmap *mmap)
+delete_mmap(struct quadd_mmap_area *mmap)
 {
 	quadd_unwind_delete_mmap(mmap);
 }

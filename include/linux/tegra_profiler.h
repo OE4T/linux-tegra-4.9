@@ -20,7 +20,7 @@
 #include <linux/ioctl.h>
 
 #define QUADD_SAMPLES_VERSION	30
-#define QUADD_IO_VERSION	13
+#define QUADD_IO_VERSION	14
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
 #define QUADD_IO_VERSION_RB_MAX_FILL_COUNT	6
@@ -31,6 +31,7 @@
 #define QUADD_IO_VERSION_UNWIND_MIXED		11
 #define QUADD_IO_VERSION_EXTABLES_MMAP		12
 #define QUADD_IO_VERSION_ARCH_TIMER_OPT		13
+#define QUADD_IO_VERSION_DATA_MMAP		14
 
 #define QUADD_SAMPLE_VERSION_THUMB_MODE_FLAG	17
 #define QUADD_SAMPLE_VERSION_GROUP_SAMPLES	18
@@ -44,6 +45,8 @@
 #define QUADD_SAMPLE_VERSION_SCHED_SAMPLES	28
 #define QUADD_SAMPLE_VERSION_HDR_UNW_METHOD	29
 #define QUADD_SAMPLE_VERSION_HDR_ARCH_TIMER	30
+
+#define QUADD_MMAP_HEADER_VERSION		1
 
 #define QUADD_MAX_COUNTERS	32
 #define QUADD_MAX_PROCESS	64
@@ -90,6 +93,11 @@
  * Send exception-handling tables info
  */
 #define IOCTL_SET_EXTAB _IOW(QUADD_IOCTL, 6, struct quadd_extables)
+
+/*
+ * Send ring buffer mmap info
+ */
+#define IOCTL_SET_MMAP_RB _IOW(QUADD_IOCTL, 7, struct quadd_mmap_rb_info)
 
 #define QUADD_CPUMODE_TEGRA_POWER_CLUSTER_LP	(1 << 29)	/* LP CPU */
 #define QUADD_CPUMODE_THUMB			(1 << 30)	/* thumb mode */
@@ -395,6 +403,7 @@ enum {
 #define QUADD_COMM_CAP_EXTRA_UNWIND_MIXED	(1 << 6)
 #define QUADD_COMM_CAP_EXTRA_UNW_ENTRY_TYPE	(1 << 7)
 #define QUADD_COMM_CAP_EXTRA_ARCH_TIMER		(1 << 8)
+#define QUADD_COMM_CAP_EXTRA_RB_MMAP_OP		(1 << 9)
 
 struct quadd_comm_cap {
 	u32	pmu:1,
@@ -457,6 +466,46 @@ struct quadd_extables {
 
 	u32 reserved[4];	/* reserved fields for future extensions */
 };
+
+struct quadd_mmap_rb_info {
+	u32 cpu_id;
+
+	u64 vm_start;
+	u64 vm_end;
+
+	u32 reserved[4];	/* reserved fields for future extensions */
+};
+
+#define QUADD_MMAP_HEADER_MAGIC		0x33445566
+
+struct quadd_mmap_header {
+	u32 magic;
+	u32 version;
+
+	u32 cpu_id;
+	u32 samples_version;
+
+	u32 reserved[4];	/* reserved fields for future extensions */
+} __aligned(8);
+
+enum {
+	QUADD_RB_STATE_NONE = 0,
+	QUADD_RB_STATE_ACTIVE,
+	QUADD_RB_STATE_STOPPED,
+};
+
+struct quadd_ring_buffer_hdr {
+	u32 state;
+	u32 size;
+
+	u32 pos_read;
+	u32 pos_write;
+
+	u32 max_fill_count;
+	u32 skipped_samples;
+
+	u32 reserved[4];	/* reserved fields for future extensions */
+} __aligned(8);
 
 #pragma pack(pop)
 

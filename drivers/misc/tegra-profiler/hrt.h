@@ -48,8 +48,10 @@ struct quadd_hrt_ctx {
 	struct quadd_ctx *quadd_ctx;
 
 	int active;
-	atomic64_t counter_samples;
 	atomic_t nr_active_all_core;
+
+	atomic64_t counter_samples;
+	atomic64_t skipped_samples;
 
 	struct timer_list ma_timer;
 	unsigned int ma_period;

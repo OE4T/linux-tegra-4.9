@@ -22,7 +22,7 @@ struct quadd_callchain;
 struct quadd_ctx;
 struct quadd_extables;
 struct task_struct;
-struct quadd_extabs_mmap;
+struct quadd_mmap_area;
 
 unsigned int
 quadd_aarch32_get_user_callchain_ut(struct pt_regs *regs,
@@ -36,8 +36,8 @@ int quadd_unwind_start(struct task_struct *task);
 void quadd_unwind_stop(void);
 
 int quadd_unwind_set_extab(struct quadd_extables *extabs,
-			   struct quadd_extabs_mmap *mmap);
-void quadd_unwind_delete_mmap(struct quadd_extabs_mmap *mmap);
+			   struct quadd_mmap_area *mmap);
+void quadd_unwind_delete_mmap(struct quadd_mmap_area *mmap);
 
 int
 quadd_aarch32_is_ex_entry_exist(struct pt_regs *regs,
@@ -48,8 +48,6 @@ void
 quadd_unwind_set_tail_info(unsigned long vm_start,
 			   unsigned long tf_start,
 			   unsigned long tf_end);
-
-struct quadd_extabs_mmap;
 
 struct extab_info {
 	unsigned long addr;
@@ -68,7 +66,7 @@ struct ex_region_info {
 	unsigned long vm_end;
 
 	struct extables tabs;
-	struct quadd_extabs_mmap *mmap;
+	struct quadd_mmap_area *mmap;
 
 	struct list_head list;
 

@@ -98,6 +98,8 @@ static int show_capabilities(struct seq_file *f, void *offset)
 		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_UNW_ENTRY_TYPE));
 	seq_printf(f, "arch timer is available:               %s\n",
 		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_ARCH_TIMER));
+	seq_printf(f, "ring buffer mmap operation:            %s\n",
+		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_RB_MMAP_OP));
 
 	seq_puts(f, "\n");
 

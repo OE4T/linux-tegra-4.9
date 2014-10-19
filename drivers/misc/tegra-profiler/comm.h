@@ -26,29 +26,29 @@ struct miscdevice;
 struct quadd_parameters;
 struct quadd_extables;
 struct quadd_unwind_ctx;
-
-struct quadd_ring_buffer {
-	char *buf;
-	spinlock_t lock;
-
-	size_t size;
-	size_t pos_read;
-	size_t pos_write;
-	size_t fill_count;
-	size_t max_fill_count;
-};
+struct quadd_ring_buffer;
 
 struct quadd_iovec {
 	void *base;
 	size_t len;
 };
 
-struct quadd_extabs_mmap {
+enum {
+	QUADD_MMAP_TYPE_NONE = 1,
+	QUADD_MMAP_TYPE_EXTABS,
+	QUADD_MMAP_TYPE_RB,
+};
+
+struct quadd_mmap_area {
+	int type;
+
 	struct vm_area_struct *mmap_vma;
 	void *data;
 
 	struct list_head list;
 	struct list_head ex_entries;
+
+	struct quadd_ring_buffer *rb;
 };
 
 struct quadd_comm_control_interface {
@@ -58,41 +58,18 @@ struct quadd_comm_control_interface {
 			      uid_t *debug_app_uid);
 	void (*get_capabilities)(struct quadd_comm_cap *cap);
 	void (*get_state)(struct quadd_module_state *state);
+
 	int (*set_extab)(struct quadd_extables *extabs,
-			 struct quadd_extabs_mmap *mmap);
-	void (*delete_mmap)(struct quadd_extabs_mmap *mmap);
+			 struct quadd_mmap_area *mmap);
+	void (*delete_mmap)(struct quadd_mmap_area *mmap);
 };
 
 struct quadd_comm_data_interface {
-	void (*put_sample)(struct quadd_record_data *data,
-			   struct quadd_iovec *vec, int vec_count);
+	ssize_t (*put_sample)(struct quadd_record_data *data,
+			      struct quadd_iovec *vec,
+			      int vec_count, int cpu_id);
 	void (*reset)(void);
 	int (*is_active)(void);
-};
-
-struct quadd_comm_ctx {
-	struct quadd_comm_control_interface *control;
-
-	struct quadd_ring_buffer rb;
-	size_t rb_size;
-
-	atomic_t active;
-
-	struct mutex io_mutex;
-	int nr_users;
-
-	int params_ok;
-	pid_t process_pid;
-	uid_t debug_app_uid;
-
-	wait_queue_head_t read_wait;
-
-	struct miscdevice *misc_dev;
-
-	struct list_head ext_mmaps;
-	spinlock_t mmaps_lock;
-
-	char *tmp_buf;
 };
 
 struct quadd_comm_data_interface *

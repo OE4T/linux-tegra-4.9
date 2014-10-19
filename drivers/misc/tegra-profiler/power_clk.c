@@ -160,7 +160,6 @@ static void make_sample(void)
 
 	struct quadd_record_data record;
 	struct quadd_power_rate_data *power_rate = &record.power_rate;
-	struct quadd_comm_data_interface *comm = power_ctx.quadd_ctx->comm;
 
 	record.record_type = QUADD_RECORD_TYPE_POWER_RATE;
 
@@ -202,7 +201,7 @@ static void make_sample(void)
 	vec.base = extra_cpus;
 	vec.len = power_rate->nr_cpus * sizeof(extra_cpus[0]);
 
-	comm->put_sample(&record, &vec, 1);
+	quadd_put_sample(&record, &vec, 1);
 }
 
 static inline int is_data_changed(struct power_clk_source *s)

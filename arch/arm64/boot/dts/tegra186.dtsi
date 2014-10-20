@@ -198,7 +198,7 @@
 		#clock-cells = <1>;
 	};
 
-	smmu {
+	smmu: iommu {
 		compatible = "arm,smmu-v2";
 		reg = <0x0 0x32000000 0x0 0xffffff>; /* 16MB */
 		#global-interrupts = <2>;
@@ -230,6 +230,7 @@
 		interrupts = < 0 31 0x04 >;
 		status = "disabled";
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SWGROUP_SDMMC4A>;
 	};
 
 	sdhci@700b0400 {
@@ -238,6 +239,7 @@
 		interrupts = < 0 19 0x04 >;
 		status = "disabled";
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SWGROUP_SDMMC3A>;
 	};
 
 	sdhci@700b0200 {
@@ -246,6 +248,7 @@
 		interrupts = < 0 15 0x04 >;
 		status = "disabled";
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SWGROUP_SDMMC2A>;
 	};
 
 	sdhci@700b0000 {
@@ -254,5 +257,6 @@
 		interrupts = < 0 14 0x04 >;
 		status = "disabled";
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SWGROUP_SDMMC1A>;
 	};
 };

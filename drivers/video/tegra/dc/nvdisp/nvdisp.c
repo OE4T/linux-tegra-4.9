@@ -24,6 +24,7 @@
 #include <mach/fb.h>
 
 #include "nvdisp.h"
+#include "nvdisp_priv.h"
 #include "dc_config.h"
 #include "dc_priv.h"
 #include "dp.h"
@@ -51,6 +52,7 @@ int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 	dc->valid_windows = 0;
 
 	/* Clock init */
+	nvdisp_clock_init(dc);
 
 	mutex_unlock(&tegra_nvdisp_lock);
 	return 0;

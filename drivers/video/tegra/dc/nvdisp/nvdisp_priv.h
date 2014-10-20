@@ -150,4 +150,8 @@ static inline void nvdisp_win_write(struct tegra_dc_win *win, u32 val, u32 off)
 	writel(val, dc->base + reg);
 }
 
+
+void nvdisp_clock_init(struct tegra_dc *dc);
+
 #endif
+

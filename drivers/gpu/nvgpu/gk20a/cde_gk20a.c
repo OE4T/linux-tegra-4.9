@@ -244,7 +244,7 @@ static int gk20a_init_cde_buf(struct gk20a_cde_ctx *cde_ctx,
 	}
 
 	/* check that we have enough buf elems available */
-	if (cde_ctx->num_bufs > MAX_CDE_BUFS) {
+	if (cde_ctx->num_bufs >= MAX_CDE_BUFS) {
 		gk20a_warn(&cde_ctx->pdev->dev, "cde: invalid data section. buffer idx = %d",
 			   cde_ctx->num_bufs);
 		return -ENOMEM;

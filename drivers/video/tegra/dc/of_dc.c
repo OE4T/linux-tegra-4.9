@@ -921,6 +921,11 @@ struct tegra_dsi_cmd *tegra_dsi_parse_cmd_dt(struct platform_device *ndev,
 		} else if (temp->cmd_type == TEGRA_DSI_SEND_FRAME) {
 			temp->sp_len_dly.frame_cnt =
 				be32_to_cpu(*prop_val_ptr++);
+		} else if (temp->cmd_type == TEGRA_DSI_GPIO_SET) {
+			temp->sp_len_dly.gpio =
+				be32_to_cpu(*prop_val_ptr++);
+			temp->data_id =
+				be32_to_cpu(*prop_val_ptr++);
 		}
 	}
 

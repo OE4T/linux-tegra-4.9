@@ -514,6 +514,22 @@ void tegra_dc_put(struct tegra_dc *dc)
 }
 EXPORT_SYMBOL(tegra_dc_put);
 
+unsigned tegra_dc_out_flags_from_dev(struct device *dev)
+{
+	struct platform_device *ndev = NULL;
+	struct tegra_dc *dc = NULL;
+
+	if (dev)
+		ndev = to_platform_device(dev);
+	if (ndev)
+		dc = platform_get_drvdata(ndev);
+	if (dc)
+		return dc->out->flags;
+	else
+		return 0;
+}
+EXPORT_SYMBOL(tegra_dc_out_flags_from_dev);
+
 void tegra_dc_hold_dc_out(struct tegra_dc *dc)
 {
 	if (1 == atomic_inc_return(&dc->holding)) {

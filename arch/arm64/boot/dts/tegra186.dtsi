@@ -211,6 +211,51 @@
 			      <&{/sdhci@700b0400} TEGRA_SWGROUP_SDMMC3A>,
 			      <&{/sdhci@700b0200} TEGRA_SWGROUP_SDMMC2A>,
 			      <&{/sdhci@700b0000} TEGRA_SWGROUP_SDMMC1A>;
+
+		domains = <&ppcs_as TEGRA_SWGROUP_CELLS5(PPCS, PPCS1, PPCS2, SE, SE1)
+			   &gpu_as TEGRA_SWGROUP_CELLS(GPUB)
+			   &ape_as TEGRA_SWGROUP_CELLS(APE)
+			   &dc_as TEGRA_SWGROUP_CELLS3(DC, DC12, DCB)
+			   &common_as TEGRA_SWGROUP_CELLS(AFI)
+			   &common_as 0xFFFFFFFF 0xFFFFFFFF>;
+
+		address-space-prop {
+			common_as: common {
+				iova-start = <0x0 0x80000000>;
+				iova-size = <0x0 0x7FF00000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			ppcs_as: ppcs {
+				iova-start = <0x0 0x80000000>;
+				iova-size = <0x0 0x7FF00000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <1>;
+				gap-page = <1>;
+			};
+			dc_as: dc {
+				iova-start = <0x0 0x00010000>;
+				iova-size = <0x0 0xFFFEFFFF>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <0>;
+			};
+			gpu_as: gpu {
+				iova-start = <0x0 0x00100000>;
+				iova-size = <0x0 0xFFEFFFFF>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <0>;
+			};
+			ape_as: ape {
+				iova-start = <0x0 0x70300000>;
+				iova-size = <0x0 0x8FC00000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+		};
 	};
 
 	uarta: serial@70006000 {

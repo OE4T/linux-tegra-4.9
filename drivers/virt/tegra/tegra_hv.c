@@ -1569,7 +1569,7 @@ static void __exit tegra_hv_mod_exit(void)
 	platform_driver_unregister(&tegra_hv_driver);
 }
 
-subsys_initcall(tegra_hv_mod_init);
+core_initcall(tegra_hv_mod_init);
 module_exit(tegra_hv_mod_exit);
 
 MODULE_LICENSE("GPL");

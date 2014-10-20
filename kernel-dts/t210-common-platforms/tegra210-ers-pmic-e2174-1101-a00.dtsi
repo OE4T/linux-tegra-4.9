@@ -236,8 +236,8 @@
 
 				max77620_ldo1: ldo1 {
 					regulator-name = "vdd-pex";
-					regulator-min-microvolt = <1050000>;
-					regulator-max-microvolt = <1050000>;
+					regulator-min-microvolt = <1075000>;
+					regulator-max-microvolt = <1075000>;
 					maxim,fps-source = <FPS_SRC_NONE>;
 				};
 

@@ -2,7 +2,7 @@
  * arch/arm/mach-tegra/gpio.c
  *
  * Copyright (c) 2010 Google, Inc
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Erik Gilling <konkers@google.com>
@@ -25,6 +25,7 @@
 #include <linux/io.h>
 #include <linux/gpio.h>
 #include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/module.h>
 #include <linux/irqdomain.h>
@@ -474,6 +475,7 @@ static int tegra_gpio_suspend(void)
 		}
 	}
 
+	of_gpiochip_suspend(&tgi->gc);
 	return 0;
 }
 

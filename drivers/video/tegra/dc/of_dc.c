@@ -1661,8 +1661,6 @@ static int dc_hdmi_postsuspend(void)
 	return 0;
 }
 
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC) ||	\
-	defined(CONFIG_ARCH_TEGRA_12x_SOC)
 static void dc_hdmi_hotplug_report(bool state)
 {
 	static struct pinctrl_dev *pctl_dev = NULL;
@@ -1672,7 +1670,8 @@ static void dc_hdmi_hotplug_report(bool state)
 
 	if (!pctl_dev)
 		pctl_dev = pinctrl_get_dev_from_of_compatible(
-				"nvidia,tegra124-pinmux");
+			"nvidia,tegra124-pinmux");
+
 	if (!pctl_dev) {
 		pr_err("%s(): tegra pincontrol does not found\n", __func__);
 		return;
@@ -1690,7 +1689,6 @@ static void dc_hdmi_hotplug_report(bool state)
 		pr_err("%s(): ddc_scl_pv4 pinconfig failed: %d\n",
 			__func__, ret);
 }
-#endif
 
 struct device_node *tegra_get_panel_node_out_type_check
 	(struct tegra_dc *dc, u32 out_type)
@@ -1887,12 +1885,9 @@ struct tegra_dc_platform_data
 			pdata->default_out->disable = dc_hdmi_out_disable;
 			pdata->default_out->hotplug_init = dc_hdmi_hotplug_init;
 			pdata->default_out->postsuspend = dc_hdmi_postsuspend;
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC) ||	\
-	defined(CONFIG_ARCH_TEGRA_12x_SOC)
 			if (hotplug_report)
 				pdata->default_out->hotplug_report =
 				dc_hdmi_hotplug_report;
-#endif
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_LVDS) {
 		np_sor = of_find_node_by_path(SOR_NODE);

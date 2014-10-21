@@ -79,6 +79,7 @@
 #define TEGRA_DAM_FARROW_PARAM_1			0
 #define TEGRA_DAM_FARROW_PARAM_2			0xdee993a0
 #define TEGRA_DAM_FARROW_PARAM_3			0xcccda093
+#define TEGRA_DAM_DEFAULT_GAIN				0x1000
 
 struct tegra30_dam_soc_data {
 	void (*set_audio_cif)(struct regmap *map,
@@ -91,6 +92,8 @@ struct tegra30_dam {
 	struct regmap *regmap;
 	int srate_in;
 	int srate_out;
+	int in_ch0_gain;
+	int in_ch1_gain;
 	const struct tegra30_dam_soc_data *soc_data;
 };
 

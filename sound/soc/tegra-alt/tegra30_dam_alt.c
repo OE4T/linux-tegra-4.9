@@ -36,6 +36,8 @@
 
 #define DRV_NAME "tegra30_dam"
 
+#define TEGRA_DAM_CH_REG(id)	TEGRA_DAM_CH##id##_CONV
+
 static int tegra30_dam_farrow_param_lookup[10][3] = {
 	/* fs_in, fs_out, farrow_param */
 	{TEGRA_DAM_FS8, TEGRA_DAM_FS48, TEGRA_DAM_FARROW_PARAM_1},
@@ -581,8 +583,8 @@ static int tegra30_dam_set_in0_hw_params(struct tegra30_dam *dam)
 	regmap_write(dam->regmap, TEGRA_DAM_FARROW_PARAM, farrow_param);
 
 	return 0;
-
 }
+
 static int tegra30_dam_in0_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
@@ -784,6 +786,32 @@ static int tegra124_virt_dam_put_in_srate(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int tegra124_virt_dam_get_ch_gain(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra30_dam *dam = snd_soc_codec_get_drvdata(codec);
+
+	ucontrol->value.integer.value[0] = dam->in_ch0_gain;
+
+	return 0;
+}
+
+static int tegra124_virt_dam_put_ch_gain(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra30_dam *dam = snd_soc_codec_get_drvdata(codec);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	dam->in_ch0_gain = ucontrol->value.integer.value[0];
+
+	regmap_write(dam->regmap, reg, dam->in_ch0_gain);
+
+	return 0;
+}
+
 static int tegra30_dam_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra30_dam *dam = snd_soc_codec_get_drvdata(codec);
@@ -903,6 +931,10 @@ static const struct snd_kcontrol_new tegra124_virt_dam_controls[] = {
 	SOC_ENUM_EXT("input rate", tegra30_dam_srate,
 		tegra124_virt_dam_get_in_srate,
 		tegra124_virt_dam_put_in_srate),
+	SOC_SINGLE_EXT("ch0 gain", TEGRA_DAM_CH_REG(0), 0, 0xFFFF, 0,
+		tegra124_virt_dam_get_ch_gain, tegra124_virt_dam_put_ch_gain),
+	SOC_SINGLE_EXT("ch1 gain", TEGRA_DAM_CH_REG(1), 0, 0xFFFF, 0,
+		tegra124_virt_dam_get_ch_gain, tegra124_virt_dam_put_ch_gain),
 };
 
 static struct snd_soc_codec_driver tegra30_dam_codec = {
@@ -1067,6 +1099,9 @@ static int tegra30_dam_platform_probe(struct platform_device *pdev)
 		if (ret)
 			goto err_pm_disable;
 	}
+
+	/* Set default dam in ch gain value */
+	dam->in_ch0_gain = dam->in_ch1_gain = TEGRA_DAM_DEFAULT_GAIN;
 
 	if (of_device_is_compatible(pdev->dev.of_node,
 					"nvidia,tegra124-virt-dam")) {

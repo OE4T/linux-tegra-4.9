@@ -33,11 +33,6 @@ static int vgpu_init_mm_setup_sw(struct gk20a *g)
 	}
 
 	mm->g = g;
-	mm->big_page_size = gmmu_page_sizes[gmmu_page_size_big];
-	mm->compression_page_size = gmmu_page_sizes[gmmu_page_size_big];
-	mm->pde_stride    = mm->big_page_size << 10;
-	mm->pde_stride_shift = ilog2(mm->pde_stride);
-	BUG_ON(mm->pde_stride_shift > 31); /* we have assumptions about this */
 
 	/*TBD: make channel vm size configurable */
 	mm->channel.size = 1ULL << NV_GMMU_VA_RANGE;
@@ -202,11 +197,6 @@ static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 
 	mutex_unlock(&vm->update_gmmu_lock);
 
-	/* release zero page if used */
-	if (vm->zero_page_cpuva)
-		dma_free_coherent(&g->dev->dev, vm->mm->big_page_size,
-				  vm->zero_page_cpuva, vm->zero_page_iova);
-
 	/* vm is not used anymore. release it. */
 	kfree(vm);
 }
@@ -236,7 +226,8 @@ u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt, u64 size)
 }
 
 /* address space interfaces for the gk20a module */
-static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share)
+static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
+		u32 big_page_size)
 {
 	struct gk20a_as *as = as_share->as;
 	struct gk20a *g = gk20a_from_as(as);
@@ -263,7 +254,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share)
 
 	vm->big_pages = true;
 
-	vm->va_start  = mm->pde_stride;   /* create a one pde hole */
+	vm->va_start  = big_page_size << 10;   /* create a one pde hole */
 	vm->va_limit  = mm->channel.size; /* note this means channel.size is
 					     really just the max */
 

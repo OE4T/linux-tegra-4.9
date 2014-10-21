@@ -34,13 +34,12 @@
 static void lock_device(struct nvhost_job *job, bool lock)
 {
 	struct nvhost_channel *ch = job->ch;
-	struct nvhost_master *host = nvhost_get_host(job->ch->dev);
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 	u32 opcode = lock ?
 		nvhost_opcode_acquire_mlock(pdata->modulemutexes[0]) :
 		nvhost_opcode_release_mlock(pdata->modulemutexes[0]);
 
-	if (host->info.channel_policy != MAP_CHANNEL_ON_SUBMIT)
+	if (nvhost_get_channel_policy() != MAP_CHANNEL_ON_SUBMIT)
 		return;
 
 	nvhost_cdma_push(&ch->cdma, opcode, NVHOST_OPCODE_NOOP);
@@ -133,10 +132,9 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 static void push_waits(struct nvhost_job *job)
 {
 	struct nvhost_channel *ch = job->ch;
-	struct nvhost_master *host = nvhost_get_host(job->ch->dev);
 	int i;
 
-	if (host->info.channel_policy != MAP_CHANNEL_ON_SUBMIT)
+	if (nvhost_get_channel_policy() != MAP_CHANNEL_ON_SUBMIT)
 		return;
 
 	for (i = 0; i < job->num_gathers; i++) {
@@ -203,7 +201,7 @@ static void submit_gathers(struct nvhost_job *job)
 		u32 op1;
 		u32 op2;
 
-		if (nvhost->info.channel_policy == MAP_CHANNEL_ON_OPEN)
+		if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
 			add_sync_waits(job->ch, g->pre_fence);
 
 		if (gather_filter_enabled && g->class_id)

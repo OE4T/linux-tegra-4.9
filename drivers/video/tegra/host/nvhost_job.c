@@ -215,8 +215,7 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 				nvhost_syncpt_read(sp, wait->syncpt_id));
 		if (nvhost_syncpt_is_expired(sp,
 		    wait->syncpt_id, wait->thresh) ||
-		    nvhost_get_host(job->ch->dev)->info.channel_policy ==
-		    MAP_CHANNEL_ON_SUBMIT) {
+		    nvhost_get_channel_policy() == MAP_CHANNEL_ON_SUBMIT) {
 			void *patch_addr = NULL;
 
 			/*

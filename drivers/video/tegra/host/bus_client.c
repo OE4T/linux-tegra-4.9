@@ -190,7 +190,6 @@ struct nvhost_channel_userctx {
 static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 {
 	struct nvhost_channel_userctx *priv = filp->private_data;
-	struct nvhost_master *host = nvhost_get_host(priv->pdev);
 	int i = 0;
 
 	trace_nvhost_channel_release(dev_name(&priv->pdev->dev));
@@ -207,7 +206,7 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	mutex_unlock(&channel_lock);
 
 	/* drop channel reference if we took one at open time */
-	if (host->info.channel_policy == MAP_CHANNEL_ON_OPEN)
+	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
 		nvhost_putchannel(priv->ch, 1);
 
 	if (nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL_INSTANCE) {
@@ -228,7 +227,6 @@ static int __nvhost_channelopen(struct inode *inode,
 		struct platform_device *pdev,
 		struct file *filp)
 {
-	struct nvhost_master *host;
 	struct nvhost_channel_userctx *priv;
 	struct nvhost_device_data *pdata, *host1x_pdata;
 	struct nvhost_channel *ch = NULL;
@@ -244,12 +242,11 @@ static int __nvhost_channelopen(struct inode *inode,
 	} else
 		return -EINVAL;
 
-	/* ..and then host and host1x platform data */
-	host = nvhost_get_host(pdev);
+	/* ..and host1x platform data */
 	host1x_pdata = dev_get_drvdata(pdev->dev.parent);
 
 	/* get a channel if we are in map-at-open -mode */
-	if (host->info.channel_policy == MAP_CHANNEL_ON_OPEN) {
+	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN) {
 		ret = nvhost_channel_map(pdata, &ch, NULL);
 		if (ret || !ch) {
 			pr_err("%s: failed to map channel, error: %d\n",
@@ -984,7 +981,6 @@ static long nvhost_channelctl(struct file *filp,
 	{
 		struct nvhost_device_data *pdata =
 			platform_get_drvdata(priv->pdev);
-		struct nvhost_master *host = nvhost_get_host(priv->pdev);
 		struct nvhost32_submit_args *args32 = (void *)buf;
 		struct nvhost_submit_args args;
 
@@ -1005,7 +1001,7 @@ static long nvhost_channelctl(struct file *filp,
 		args.class_ids = args32->class_ids;
 		args.fences = args32->fences;
 
-		if (host->info.channel_policy == MAP_CHANNEL_ON_SUBMIT) {
+		if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_SUBMIT) {
 			err = nvhost_channel_map(pdata, &priv->ch, priv);
 			if (err)
 				break;
@@ -1022,9 +1018,8 @@ static long nvhost_channelctl(struct file *filp,
 	{
 		struct nvhost_device_data *pdata =
 			platform_get_drvdata(priv->pdev);
-		struct nvhost_master *host = nvhost_get_host(priv->pdev);
 
-		if (host->info.channel_policy == MAP_CHANNEL_ON_SUBMIT) {
+		if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_SUBMIT) {
 			err = nvhost_channel_map(pdata, &priv->ch, priv);
 			if (err)
 				break;

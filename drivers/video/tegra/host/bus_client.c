@@ -237,7 +237,7 @@ static int __nvhost_channelopen(struct inode *inode,
 	if (inode) {
 		pdata = container_of(inode->i_cdev,
 				struct nvhost_device_data, cdev);
-		ret = nvhost_channel_map(pdata, &ch);
+		ret = nvhost_channel_map(pdata, &ch, NULL);
 		if (ret) {
 			pr_err("%s: failed to map channel, error: %d\n",
 					__func__, ret);
@@ -289,6 +289,7 @@ static int __nvhost_channelopen(struct inode *inode,
 	priv->timeout = pdata->nvhost_timeout_default;
 	priv->timeout_debug_dump = true;
 	mutex_init(&priv->ioctl_lock);
+	priv->pdev = pdata->pdev;
 	if (!tegra_platform_is_silicon())
 		priv->timeout = 0;
 	mutex_unlock(&channel_lock);

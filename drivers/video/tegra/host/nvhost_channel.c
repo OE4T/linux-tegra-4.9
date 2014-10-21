@@ -26,6 +26,7 @@
 
 #include <trace/events/nvhost.h>
 #include <linux/nvhost_ioctl.h>
+#include <linux/delay.h>
 #include <linux/nvhost.h>
 #include <linux/slab.h>
 
@@ -186,6 +187,7 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 	ch->dev = NULL;
 	ch->aperture = NULL;
 	ch->refcount = 0;
+	ch->identifier = NULL;
 	pdata->channels[ch->dev_chid] = NULL;
 
 	return 0;
@@ -193,7 +195,8 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 
 /* Maps free channel with device */
 int nvhost_channel_map(struct nvhost_device_data *pdata,
-			struct nvhost_channel **channel)
+			struct nvhost_channel **channel,
+			void *identifier)
 {
 	struct nvhost_master *host = NULL;
 	struct nvhost_channel *ch = NULL;
@@ -211,8 +214,16 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 	mutex_lock(&host->chlist_mutex);
 	max_channels = host->info.nb_channels;
 
-	/* Check if already channel(s) assigned for device */
-	if (pdata->num_channels == pdata->num_mapped_chs) {
+	if (host->info.channel_policy == MAP_CHANNEL_ON_SUBMIT) {
+		/* check if the channel is still in use */
+		ch = *channel;
+		if (ch && ch->refcount && ch->identifier == identifier) {
+			/* yes, client can continue using it */
+			ch->refcount++;
+			mutex_unlock(&host->chlist_mutex);
+			return 0;
+		}
+	} else if (pdata->num_channels == pdata->num_mapped_chs) {
 		if (pdata->exclusive) {
 			mutex_unlock(&host->chlist_mutex);
 			return -EBUSY;
@@ -225,21 +236,24 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 		return 0;
 	}
 
-	index = find_next_zero_bit(&host->allocated_channels,
-					max_channels, host->next_free_ch);
-
-	if (index >= max_channels) {
-		/* Reset next pointer and try */
-		host->next_free_ch = 0;
+	do {
 		index = find_next_zero_bit(&host->allocated_channels,
 					max_channels, host->next_free_ch);
+
 		if (index >= max_channels) {
-			pr_err("All host1x channels are mapped, BITMAP: %lu\n",
-					host->allocated_channels);
-			mutex_unlock(&host->chlist_mutex);
-			return -ENOMEM;
+			/* Reset next pointer and try */
+			host->next_free_ch = 0;
+			index = find_next_zero_bit(&host->allocated_channels,
+					max_channels, host->next_free_ch);
 		}
-	}
+		if (index >= max_channels) {
+			mutex_unlock(&host->chlist_mutex);
+			if (host->info.channel_policy != MAP_CHANNEL_ON_SUBMIT)
+				return -ENOMEM;
+			mdelay(1);
+			mutex_lock(&host->chlist_mutex);
+		}
+	} while (index >= max_channels);
 
 	/* Get channel from list and map to device */
 	ch = host->chlist[index];
@@ -251,7 +265,9 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 
 	ch->dev = pdata->pdev;
 	ch->chid = index;
-	nvhost_channel_assign(pdata, ch);
+	ch->identifier = identifier;
+	if (host->info.channel_policy == MAP_CHANNEL_ON_OPEN)
+		nvhost_channel_assign(pdata, ch);
 	nvhost_set_chanops(ch);
 	set_bit(ch->chid, &host->allocated_channels);
 	mutex_init(&ch->syncpts_lock);

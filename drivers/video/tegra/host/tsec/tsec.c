@@ -307,7 +307,7 @@ void tsec_execute_method(dma_addr_t dma_handle,
 	struct nvhost_master *host = nvhost_get_host(tsec);
 	channel = pdata->channels[0];
 	if (!channel) {
-		err = nvhost_channel_map(pdata, &channel);
+		err = nvhost_channel_map(pdata, &channel, pdata);
 		if (err)
 			nvhost_err(&tsec->dev, "Channel map failed\n");
 		}

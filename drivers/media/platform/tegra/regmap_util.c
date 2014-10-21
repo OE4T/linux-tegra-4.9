@@ -32,7 +32,9 @@ regmap_util_write_table_8(struct regmap *regmap,
 
 	int range_start = -1;
 	int range_count = 0;
-	u8 range_vals[256];
+	/* bug 200048392 -
+	   the vi i2c cannot take a FIFO buffer bigger than 16 bytes */
+	u8 range_vals[16];
 	int max_range_vals = ARRAY_SIZE(range_vals);
 
 	for (next = table;; next++) {

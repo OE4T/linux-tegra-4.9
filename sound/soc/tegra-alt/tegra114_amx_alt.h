@@ -1,7 +1,7 @@
 /*
  * tegra114_amx_alt.h - Definitions for Tegra114 AMX driver
  *
- * Copyright (c) 2013-2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,6 +35,12 @@
 #define TEGRA_AMX_AUDIOCIF_CH3_CTRL		0x28
 
 /* Fields in TEGRA_AMX_CTRL */
+#define TEGRA_AMX_CH0_EN			0x01
+#define TEGRA_AMX_CH1_EN			0x02
+#define TEGRA_AMX_CH2_EN			0x04
+#define TEGRA_AMX_CH3_EN			0x08
+#define TEGRA_AMX_CH_MASK			0x0F
+
 #define TEGRA_AMX_CTRL_SOFT_RESET_SHIFT	31
 #define TEGRA_AMX_CTRL_SOFT_RESET		(1 << TEGRA_AMX_CTRL_SOFT_RESET_SHIFT)
 #define TEGRA_AMX_CTRL_CG_EN_SHIFT		30

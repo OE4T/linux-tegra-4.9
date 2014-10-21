@@ -1,7 +1,7 @@
 /*
  * tegra114_amx_alt.c - Tegra114 AMX driver
  *
- * Copyright (c) 2013-2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -48,6 +48,8 @@ static const struct reg_default tegra114_amx_reg_defaults[] = {
 	{TEGRA_AMX_AUDIOCIF_CH2_CTRL, 0x00001100},
 	{TEGRA_AMX_AUDIOCIF_CH3_CTRL, 0x00001100},
 };
+
+#define TEGRA_AMX_CH_EN_MASK(id) TEGRA_AMX_CH##id##_EN
 
 /**
  * tegra114_amx_set_master_stream - set master stream and dependency
@@ -462,6 +464,54 @@ static const struct snd_soc_dapm_route tegra114_amx_routes[] = {
 	{ "OUT Transmit", NULL, "OUT" },
 };
 
+static int tegra124_virt_amx_chan_en_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra114_amx *amx = snd_soc_codec_get_drvdata(codec);
+	unsigned int channel_mask = (unsigned int)kcontrol->private_value;
+	unsigned int val;
+
+	regmap_read(amx->regmap, TEGRA_AMX_IN_CH_CTRL, &val);
+
+	if (val & channel_mask)
+		ucontrol->value.enumerated.item[0] = true;
+	else
+		ucontrol->value.enumerated.item[0] = false;
+	return 0;
+}
+
+static int tegra124_virt_amx_chan_en_set(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra114_amx *amx = snd_soc_codec_get_drvdata(codec);
+	unsigned int enable_mask = (unsigned int)kcontrol->private_value;
+	unsigned int val;
+
+	regmap_read(amx->regmap, TEGRA_AMX_IN_CH_CTRL, &val);
+
+	if (ucontrol->value.enumerated.item[0])
+		val |= enable_mask;
+	else
+		val &= (~enable_mask);
+
+	regmap_update_bits(amx->regmap, TEGRA_AMX_IN_CH_CTRL,
+					TEGRA_AMX_CH_MASK, val);
+	return 0;
+}
+
+static const struct snd_kcontrol_new tegra124_virt_amx_controls[] = {
+	SOC_SINGLE_BOOL_EXT("CH0 enable", TEGRA_AMX_CH_EN_MASK(0),
+		tegra124_virt_amx_chan_en_get, tegra124_virt_amx_chan_en_set),
+	SOC_SINGLE_BOOL_EXT("CH1 enable", TEGRA_AMX_CH_EN_MASK(1),
+		tegra124_virt_amx_chan_en_get, tegra124_virt_amx_chan_en_set),
+	SOC_SINGLE_BOOL_EXT("CH2 enable", TEGRA_AMX_CH_EN_MASK(2),
+		tegra124_virt_amx_chan_en_get, tegra124_virt_amx_chan_en_set),
+	SOC_SINGLE_BOOL_EXT("CH3 enable", TEGRA_AMX_CH_EN_MASK(3),
+		tegra124_virt_amx_chan_en_get, tegra124_virt_amx_chan_en_set),
+};
+
 static struct snd_soc_codec_driver tegra114_amx_codec = {
 	.probe = tegra114_amx_codec_probe,
 	.dapm_widgets = tegra114_amx_widgets,
@@ -469,6 +519,17 @@ static struct snd_soc_codec_driver tegra114_amx_codec = {
 	.dapm_routes = tegra114_amx_routes,
 	.num_dapm_routes = ARRAY_SIZE(tegra114_amx_routes),
 	.idle_bias_off = 1,
+};
+
+static struct snd_soc_codec_driver tegra124_virt_amx_codec = {
+	.probe = tegra114_amx_codec_probe,
+	.dapm_widgets = tegra114_amx_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(tegra114_amx_widgets),
+	.dapm_routes = tegra114_amx_routes,
+	.num_dapm_routes = ARRAY_SIZE(tegra114_amx_routes),
+	.idle_bias_off = 1,
+	.controls = tegra124_virt_amx_controls,
+	.num_controls = ARRAY_SIZE(tegra124_virt_amx_controls),
 };
 
 static bool tegra114_amx_wr_rd_reg(struct device *dev,
@@ -542,6 +603,8 @@ static int tegra114_amx_platform_probe(struct platform_device *pdev)
 	int ret;
 	const struct of_device_id *match;
 	struct tegra114_amx_soc_data *soc_data;
+	struct snd_soc_codec_driver *codec;
+	codec = &tegra114_amx_codec;
 
 	match = of_match_device(tegra114_amx_of_match, &pdev->dev);
 	if (!match) {
@@ -608,13 +671,14 @@ static int tegra114_amx_platform_probe(struct platform_device *pdev)
 
 	if (of_device_is_compatible(pdev->dev.of_node,
 				"nvidia,tegra124-virt-amx")) {
-			tegra114_amx_codec.dapm_widgets =
-					tegra124_virt_amx_widgets;
-			tegra114_amx_codec.num_dapm_widgets =
-					ARRAY_SIZE(tegra124_virt_amx_widgets);
+		codec = &tegra124_virt_amx_codec;
+		codec->dapm_widgets =
+				tegra124_virt_amx_widgets;
+		codec->num_dapm_widgets =
+				ARRAY_SIZE(tegra124_virt_amx_widgets);
 	}
 
-	ret = snd_soc_register_codec(&pdev->dev, &tegra114_amx_codec,
+	ret = snd_soc_register_codec(&pdev->dev, codec,
 				     tegra114_amx_dais,
 				     ARRAY_SIZE(tegra114_amx_dais));
 	if (ret != 0) {

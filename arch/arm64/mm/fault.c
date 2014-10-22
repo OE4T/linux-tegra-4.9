@@ -218,10 +218,10 @@ static void show_map(struct task_struct *tsk, u64 addr)
 	file = vma->vm_file;
 	if (!file)
 		return;
-	p = d_path(&file->f_path, &path, 64);
+	p = d_path(&file->f_path, &path[0], 64);
 	if (IS_ERR(p))
 		return;
-	pr_alert("Library at 0x%llx: 0x%llx %s\n", addr, vma->vm_start, p);
+	pr_alert("Library at 0x%llx: 0x%lx %s\n", addr, vma->vm_start, p);
 }
 /*
  * Something tried to access memory that isn't in our memory map. User mode
@@ -246,7 +246,7 @@ static void __do_user_fault(struct task_struct *tsk, unsigned long addr,
 			show_map(tsk, regs->compat_lr);
 		else
 			show_map(tsk, regs->regs[30]);
-		pr_alert("vdso base = 0x%llx\n", tsk->mm->context.vdso);
+		pr_alert("vdso base = 0x%lx\n", (unsigned long)tsk->mm->context.vdso);
 	}
 
 	tsk->thread.fault_address = addr;

@@ -1,0 +1,290 @@
+/*
+ * arch/arm64/boot/dts/tegra210-jetson-e-p2530-0930-e00-00.dts
+ *
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ */
+
+/dts-v1/;
+
+/memreserve/ 0x80000000 0x00020000;
+
+#include "tegra210-common.dtsi"
+#include "tegra210-platforms/tegra210-power-tree-p2595-0000-a00.dtsi"
+#include "tegra210-platforms/tegra210-jetson-e-gpio-p2595-0000-a00.dtsi"
+#include "tegra210-platforms/tegra210-jetson-e-pinmux-p2595-0000-a00.dtsi"
+#include "tegra210-platforms/tegra210-comms-p2530-0930.dtsi"
+#include "tegra210-platforms/tegra210-pwm-fan-p2530-0930.dtsi"
+#include "tegra210-platforms/tegra210-sdhci-p2530-0930.dtsi"
+#include "tegra210-platforms/tegra210-hdmi-p2530-0930.dtsi"
+#include "tegra210-platforms/tegra210-thermal-fan-est-p2530-0930.dtsi"
+#include "tegra210-platforms/tegra210-keys-p2530-0930.dtsi"
+#include "tegra210-platforms/tegra210-powermon-p2530-0930.dtsi"
+#include <dt-bindings/gpio/tegra-gpio.h>
+#include <dt-bindings/iio/meter/ina3221x.h>
+#include "tegra210-platforms/tegra210-extcon-p2530-0930.dtsi"
+
+/ {
+	model = "jetson_e";
+	compatible = "nvidia,jetson-e", "nvidia,tegra210";
+	nvidia,dtsfilename = __FILE__;
+
+	nvidia,boardids = "2595:0000:A0";
+	nvidia,proc-boardid = "2595:0000:A0";
+	nvidia,pmu-boardid = "2595:0000:A0";
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	chosen {
+        };
+
+	pmc@7000e400 {
+		nvidia,invert-interrupt;
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = < 0x0 0x80000000 0x0 0x80000000 >;
+	};
+
+	sdhci@700b0600 { /* SDMMC4 for EMMC */
+		uhs-mask = <0x0>;
+		built-in;
+		pll_source = "pll_p", "pll_c4_out2";
+		power-off-rail;
+		status = "okay";
+	};
+
+	sdhci@700b0400 { /* SDMMC3 for 2nd Wifi */
+		uhs-mask = <0x8>;
+		power-off-rail;
+		status = "okay";
+	};
+
+	sdhci@700b0200 { /* SDMMC2 for Wifi */
+		uhs-mask = <0x8>;
+		power-off-rail;
+		status = "okay";
+	};
+
+	sdhci@700b0000 { /* SDMMC1 for uSD card */
+		uhs-mask = <0xc>;
+		power-off-rail;
+		status = "okay";
+	};
+
+	adma@702e2000  {
+		interrupts = <0 24 0x04
+			      0 25 0x04
+			      0 26 0x04
+			      0 27 0x04
+			      0 28 0x04
+			      0 29 0x04
+			      0 30 0x04
+			      0 31 0x04
+			      0 32 0x04
+			      0 33 0x04>;
+		dma-channels = <10>;
+		status = "okay";
+	};
+
+	ahub {
+		i2s@702d1000 {
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			regulator-supplies = "vdd-1v8-audio-hv", "vdd-1v8-audio-hv-bias";
+			vdd-1v8-audio-hv-supply = <&max77620_sd3>;
+			vdd-1v8-audio-hv-bias-supply = <&max77620_sd3>;
+		};
+
+		i2s@702d1300 {
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			regulator-supplies = "vddio-dmic";
+			vddio-dmic-supply = <&max77620_sd3>;
+		};
+
+		i2s@702d1100 {
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			regulator-supplies = "vdd-1v8-spi-hv", "vdd-1v8-spi-hv-bias";
+			vdd-1v8-spi-hv-supply = <&max77620_sd3>;
+			vdd-1v8-spi-hv-bias-supply = <&max77620_sd3>;
+			fsync-width = <0>;
+		};
+	};
+
+	host1x {
+		/* tegradc.0 */
+		dc@54200000 {
+			status = "okay";
+			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
+			nvidia,emc-clk-rate = <300000000>;
+			nvidia,fb-bpp = <32>; /* bits per pixel */
+			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
+		};
+	};
+
+	spi@7000da00 {
+		status = "disabled";
+	};
+
+	sound {
+		compatible = "realtek,rt5639";
+		nvidia,model = "rt5639";
+		nvidia,num-codec-link = <1>;
+
+		nvidia,audio-routing =
+			"y Headphone", 	"y OUT",
+			"y IN",		"y Mic";
+
+		nvidia,xbar = <&tegra_axbar>;
+
+		nvidia,dai-link-1 {
+			link-name = "spdif-dit-1";
+			cpu-dai = <&tegra_i2s2>;
+			codec-dai = <&spdif_dit1>;
+			cpu-dai-name = "I2S2";
+			codec-dai-name = "dit-hifi";
+			format = "dsp_a";
+			bitclock-slave;
+			frame-slave;
+			bitclock-inversion;
+			frame-inversion;
+			bit-format = "s16_le";
+			bclk_ratio = <4>;
+			srate = <8000>;
+			num-channel = <1>;
+			name-prefix = "y";
+		};
+	};
+
+	extcon {
+		extcon@0 {
+			status = "disabled";
+		};
+	};
+
+	udc@7d000000 {
+		nvidia,port-otg;
+		nvidia,charging-supported;
+		#extcon-cells = <1>;
+		status = "okay";
+	};
+
+        otg@7d000000 {
+		#extcon-cells = <1>;
+		status = "okay";
+	};
+
+	xusb_pad_ctl: padctl@0 { /* Put common control config here */
+		nvidia,ss_portmap = <0x0321>;
+		nvidia,lane_owner = <0xF056>; /* Use 0xF to disable lane assign */
+		status = "okay";
+	};
+
+	xusb@70090000 {
+		/* nvidia,uses_external_pmic;
+		/* nvidia,gpio_controls_muxed_ss_lanes; */
+		nvidia,gpio_ss1_sata = <0>;
+		nvidia,ulpicap = <0>; /* No ulpi support. can we remove */
+		nvidia,portmap = <0x0e07>;
+		nvidia,common_padctl = <&xusb_pad_ctl>;
+		status = "okay";
+	};
+
+	xudc@700d0000 {
+		nvidia,common_padctl = <&xusb_pad_ctl>;
+		nvidia,portmap = <0x0108>;
+		#extcon-cells = <1>;
+		status = "okay";
+	};
+
+	gpio-keys {
+		power {
+			gpios = <&gpio TEGRA_GPIO(X, 7) GPIO_ACTIVE_LOW>;
+		};
+
+		sw_lid {
+			status="disabled";
+		};
+	};
+
+	gpu-dvfs-rework {
+		status = "disabled";
+	};
+
+	pwm-leds {
+		compatible = "pwm-leds";
+		lightbar {
+			label = "led_lightbar";
+			pwms = <&tegra_pwm 0 10000000>;
+			gpios = <&gpio TEGRA_GPIO(V, 0) GPIO_ACTIVE_LOW>;
+			max-brightness = <255>;
+			default-brightness = <255>;
+			linux,default-trigger = "default-on";
+		};
+	};
+
+	thermal-fan-est {
+		compatible = "jetson-thermal-est";
+		active_trip_temps = <0 63000 74000 85000 120000
+				140000 150000 160000 170000 180000>;
+		active_hysteresis = <0 15000 11000 6000 4000
+				0 0 0 0 0>;
+	};
+
+	pwm-fan {
+		compatible = "jetson-pwm-fan";
+		shared_data = <&pwm_fan_shared_data>;
+		active_pwm = <0 70 115 135 135 240 245 250 252 255>;
+	};
+
+        i2c@7000c000 {
+		rt5639: rt5639.0-001c@1c {
+			compatible = "realtek,rt5639";
+			reg = <0x1c>;
+		};
+
+                icm20628@68 { /* Accelerometer and Gyroscope */
+                        compatible = "invensense,mpu6xxx";
+                        reg = <0x68>;
+                        interrupt-parent = <&gpio>;
+                        interrupts = <TEGRA_GPIO(X, 2) 0x00>;
+                        invensense,orientation = [ff 00 00 00 01 00 00 00 ff];
+                };
+
+                ak8963c@0c { /* Compass */
+                        compatible = "ak,ak89xx";
+                        reg = <0x0c>;
+                        orientation = [01 00 00 00 ff 00 00 00 ff];
+                };
+
+                jsa1127@39 { /* Ambient Light Sensor */
+                        compatible = "solteam-opto,jsa1127";
+                        reg = <0x39>;
+                        solteam-opto,rint = <100>;
+                        solteam-opto,integration-time = <2000>;
+                        solteam-opto,use-internal-integration-timing = <1>;
+                        solteam-opto,tint-coeff = <22>;
+                        solteam-opto,noisy = <1>;
+                };
+
+        };
+};

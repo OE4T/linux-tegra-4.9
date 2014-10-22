@@ -658,7 +658,7 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_tpc_fs_mask);
 
 	if (g->host1x_dev && (dev->parent != &g->host1x_dev->dev))
-		sysfs_remove_link(&dev->kobj, dev_name(dev));
+		sysfs_remove_link(&g->host1x_dev->dev.kobj, dev_name(dev));
 }
 
 void gk20a_create_sysfs(struct platform_device *dev)

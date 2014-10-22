@@ -30,8 +30,11 @@
 #include "board.h"
 #include <linux/platform/tegra/common.h>
 
-phys_addr_t __weak tegra_carveout_start;
-phys_addr_t __weak  tegra_carveout_size;
+/* FIXME: Statically allocated from DT carveout */
+phys_addr_t __weak tegra_carveout_start = 0xc0f00000;
+phys_addr_t __weak tegra_carveout_size =
+	config_enabled(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM) ? 0 : SZ_128M;
+
 phys_addr_t __weak tegra_vpr_start;
 phys_addr_t __weak tegra_vpr_size;
 bool __weak tegra_vpr_resize;

@@ -116,6 +116,8 @@ struct gk20a_dmabuf_priv {
 	struct list_head states;
 };
 
+static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm);
+
 static void gk20a_mm_delete_priv(void *_priv)
 {
 	struct gk20a_buffer_state *s, *s_tmp;
@@ -278,7 +280,7 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 	inst_block->cpuva = NULL;
 	inst_block->iova = 0;
 
-	gk20a_vm_remove_support(vm);
+	gk20a_vm_remove_support_nofree(vm);
 }
 
 int gk20a_init_mm_setup_sw(struct gk20a *g)
@@ -2076,7 +2078,7 @@ void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset)
 	mutex_unlock(&vm->update_gmmu_lock);
 }
 
-void gk20a_vm_remove_support(struct vm_gk20a *vm)
+static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 {
 	struct gk20a *g = vm->mm->g;
 	struct mapped_buffer_node *mapped_buffer;
@@ -2140,7 +2142,11 @@ void gk20a_vm_remove_support(struct vm_gk20a *vm)
 	if (vm->zero_page_cpuva)
 		dma_free_coherent(&g->dev->dev, vm->big_page_size,
 				  vm->zero_page_cpuva, vm->zero_page_iova);
+}
 
+void gk20a_vm_remove_support(struct vm_gk20a *vm)
+{
+	gk20a_vm_remove_support_nofree(vm);
 	/* vm is not used anymore. release it. */
 	kfree(vm);
 }

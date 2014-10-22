@@ -322,7 +322,7 @@ static void clk_config_dvfs(struct gk20a *g, struct pll *gpll)
 {
 	struct na_dvfs *d = &gpll->dvfs;
 
-	d->mv = tegra_dvfs_predict_millivolts_t(
+	d->mv = tegra_dvfs_predict_mv_at_hz_cur_tfloor(
 			clk_get_parent(g->clk.tegra_clk),
 			rate_gpc2clk_to_gpu(gpll->freq));
 	clk_config_dvfs_detection(d->mv, d);

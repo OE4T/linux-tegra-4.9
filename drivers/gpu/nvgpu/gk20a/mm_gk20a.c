@@ -265,12 +265,10 @@ static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-static void gk20a_remove_mm_support(struct mm_gk20a *mm)
+static void gk20a_remove_vm(struct vm_gk20a *vm, struct inst_desc *inst_block)
 {
-	struct gk20a *g = mm->g;
+	struct gk20a *g = vm->mm->g;
 	struct device *d = dev_from_gk20a(g);
-	struct vm_gk20a *vm = &mm->bar1.vm;
-	struct inst_desc *inst_block = &mm->bar1.inst_block;
 
 	gk20a_dbg_fn("");
 
@@ -281,6 +279,12 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 	inst_block->iova = 0;
 
 	gk20a_vm_remove_support_nofree(vm);
+}
+
+static void gk20a_remove_mm_support(struct mm_gk20a *mm)
+{
+	gk20a_remove_vm(&mm->bar1.vm, &mm->bar1.inst_block);
+	gk20a_remove_vm(&mm->pmu.vm, &mm->pmu.inst_block);
 }
 
 int gk20a_init_mm_setup_sw(struct gk20a *g)

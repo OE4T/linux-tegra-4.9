@@ -2450,8 +2450,10 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 	tegra_dc_sor_detach(dp->sor);
 	tegra_dc_sor_disable(dp->sor, false);
 
-	tegra_dpaux_clk_disable(dp);
-	tegra_dp_clk_disable(dp);
+	if (!tegra_platform_is_linsim()) {
+		tegra_dpaux_clk_disable(dp);
+		tegra_dp_clk_disable(dp);
+	}
 	tegra_dc_io_end(dc);
 	dp->enabled = false;
 }

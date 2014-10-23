@@ -49,7 +49,7 @@
 #define HDCP_MTHD_FLAGS_OUTPUT_BUFFER        0x00000040
 
 #define MAX_DEVS                             127
-#define MAX_STREAMS                          2
+#define MAX_STREAMS                          1
 
 /* Message ID */
 #define    ID_NULL_MESSAGE             1
@@ -175,7 +175,7 @@ struct nvhdcp_msg {
 	u8	  v[HDCP_SIZE_VPRIME_2X_8/2];
 	/* REPEATER_AUTH_STREAM_MANAGE */
 	u8        rptr_auth_stream_manage_msg_id;
-	u8	  seq_num_m[HDCP_SIZE_SEQ_NUM_V_8];
+	u8	  seq_num_m[HDCP_SIZE_SEQ_NUM_M_8];
 	u16       k;
 	u16       streamid_type[MAX_STREAMS];
 	/* REPEATER_AUTH_STREAM_READY */

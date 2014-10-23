@@ -44,6 +44,7 @@ config GK20A_PERFMON
 	  decrease frequency if idle).
 
 config GK20A_DEVFREQ
+	depends on TEGRA_CLK_FRAMEWORK
 	bool "Use Devfreq"
 	help
 	  Select this to use devfreq based scaling.

@@ -37,6 +37,7 @@ struct gk20a_scale_profile {
 void gk20a_scale_init(struct platform_device *);
 void gk20a_scale_hw_init(struct platform_device *pdev);
 
+#ifdef CONFIG_GK20A_DEVFREQ
 /*
  * call when performing submit to notify scaling mechanism that the module is
  * in use
@@ -46,5 +47,11 @@ void gk20a_scale_notify_idle(struct platform_device *);
 
 void gk20a_scale_suspend(struct platform_device *);
 void gk20a_scale_resume(struct platform_device *);
+#else
+static inline void gk20a_scale_notify_busy(struct platform_device *pdev) {}
+static inline void gk20a_scale_notify_idle(struct platform_device *pdev) {}
+static inline void gk20a_scale_suspend(struct platform_device *pdev) {}
+static inline void gk20a_scale_resume(struct platform_device *pdev) {}
+#endif
 
 #endif

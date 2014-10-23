@@ -122,8 +122,6 @@ struct nvhost_device_data t18_vic_info = {
 	.moduleid		= NVHOST_MODULE_VIC,
 	.poweron_reset		= true,
 	.class			= NV_GRAPHICS_VIC_CLASS_ID,
-	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
-	.prepare_poweroff	= nvhost_vic_prepare_poweroff,
 	.finalize_poweron	= nvhost_vic_finalize_poweron,
 	.firmware_name		= "vic04_ucode.bin",
 };

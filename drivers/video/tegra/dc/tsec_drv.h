@@ -877,6 +877,7 @@ struct hdcp_stream_manage_param {
 	unsigned char  reserved1[7];
 	unsigned int stream_ctr[HDCP_MAX_STREAMS_PER_RCVR];     /* <<out */
 	unsigned int ret_code;                                  /* <<out */
+	unsigned short streamid_type;
 };
 #define HDCP_STREAM_MANAGE_ERROR_NONE                    HDCP_ERROR_NONE
 #define HDCP_STREAM_MANAGE_ERROR_INVALID_SESSION HDCP_ERROR_INVALID_SESSION

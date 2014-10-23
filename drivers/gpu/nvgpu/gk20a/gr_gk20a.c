@@ -5164,13 +5164,8 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 	void *virtual_address;
 	u32 buffer_size;
 	u32 offset;
-	u32 new_offset;
 	bool exit;
-	struct share_buffer_head *sh_hdr;
-	u32 raw_reg;
-	u64 mask_orig;
-	u64 v = 0;
-	struct gk20a_cyclestate_buffer_elem *op_elem;
+
 	/* GL will never use payload 0 for cycle state */
 	if ((ch->cyclestate.cyclestate_buffer == NULL) || (isr_data->data_lo == 0))
 		return 0;
@@ -5182,19 +5177,36 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 	offset = isr_data->data_lo;
 	exit = false;
 	while (!exit) {
-		if (offset >= buffer_size) {
-			WARN_ON(1);
+		struct share_buffer_head *sh_hdr;
+		u32 min_element_size;
+
+		/* validate offset */
+		if (offset + sizeof(struct share_buffer_head) > buffer_size ||
+		    offset + sizeof(struct share_buffer_head) < offset) {
+			gk20a_err(dev_from_gk20a(g),
+				  "cyclestats buffer overrun at offset 0x%x\n",
+				  offset);
 			break;
 		}
 
 		sh_hdr = (struct share_buffer_head *)
 			((char *)virtual_address + offset);
 
-		if (sh_hdr->size < sizeof(struct share_buffer_head)) {
-			WARN_ON(1);
+		min_element_size =
+			(sh_hdr->operation == OP_END ?
+			 sizeof(struct share_buffer_head) :
+			 sizeof(struct gk20a_cyclestate_buffer_elem));
+
+		/* validate sh_hdr->size */
+		if (sh_hdr->size < min_element_size ||
+		    offset + sh_hdr->size > buffer_size ||
+		    offset + sh_hdr->size < offset) {
+			gk20a_err(dev_from_gk20a(g),
+				  "bad cyclestate buffer header size at offset 0x%x\n",
+				  offset);
+			sh_hdr->failed = true;
 			break;
 		}
-		new_offset = offset + sh_hdr->size;
 
 		switch (sh_hdr->operation) {
 		case OP_END:
@@ -5204,12 +5216,14 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 		case BAR0_READ32:
 		case BAR0_WRITE32:
 		{
-			bool valid;
-			op_elem =
-				(struct gk20a_cyclestate_buffer_elem *)
-					sh_hdr;
-			valid = is_valid_cyclestats_bar0_offset_gk20a(g,
-							op_elem->offset_bar0);
+			struct gk20a_cyclestate_buffer_elem *op_elem =
+				(struct gk20a_cyclestate_buffer_elem *)sh_hdr;
+			bool valid = is_valid_cyclestats_bar0_offset_gk20a(
+				g, op_elem->offset_bar0);
+			u32 raw_reg;
+			u64 mask_orig;
+			u64 v;
+
 			if (!valid) {
 				gk20a_err(dev_from_gk20a(g),
 					   "invalid cycletstats op offset: 0x%x\n",
@@ -5266,7 +5280,7 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 			break;
 		}
 		sh_hdr->completed = true;
-		offset = new_offset;
+		offset += sh_hdr->size;
 	}
 	mutex_unlock(&ch->cyclestate.cyclestate_buffer_mutex);
 #endif

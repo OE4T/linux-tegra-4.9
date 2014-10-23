@@ -2172,7 +2172,7 @@ static int gk20a_init_vm(struct mm_gk20a *mm,
 	int err, i;
 	u32 num_pages, low_hole_pages;
 	char alloc_name[32];
-	size_t vma_size;
+	u64 vma_size;
 
 	/* note: keep the page sizes sorted lowest to highest here */
 	u32 gmmu_page_sizes[gmmu_nr_page_sizes] = { SZ_4K, big_page_size };

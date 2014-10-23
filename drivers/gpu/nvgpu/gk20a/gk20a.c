@@ -1599,8 +1599,8 @@ int gk20a_busy(struct platform_device *pdev)
 #else
 	if (!g->power_on) {
 		ret = platform->virtual_dev ?
-			vgpu_pm_finalize_poweron(&dev->dev)
-			: gk20a_pm_finalize_poweron(&dev->dev);
+			vgpu_pm_finalize_poweron(&pdev->dev)
+			: gk20a_pm_finalize_poweron(&pdev->dev);
 		if (ret)
 			goto fail;
 	}
@@ -1615,8 +1615,8 @@ fail:
 
 void gk20a_idle(struct platform_device *pdev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(pdev);
 #ifdef CONFIG_PM_RUNTIME
+	struct gk20a_platform *platform = gk20a_get_platform(pdev);
 	if (atomic_read(&pdev->dev.power.usage_count) == 1)
 		gk20a_scale_notify_idle(pdev);
 	pm_runtime_mark_last_busy(&pdev->dev);

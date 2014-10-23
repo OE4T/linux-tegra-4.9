@@ -123,4 +123,5 @@ struct gk20a_platform gk20a_generic_platform = {
 
 	.probe = gk20a_generic_probe,
 	.late_probe = gk20a_generic_late_probe,
+	.default_big_page_size	= SZ_128K,
 };

@@ -194,8 +194,264 @@ static inline u32 nvdisp_cmd_int_status_dsc_uf_f(u32 v)
 {
 	return (v & 0x1) << 29;
 }
+static inline u32 nvdisp_cmd_int_mask_r(void)
+{
+	return 0x00000038;
+}
+static inline u32 nvdisp_cmd_int_enable_r(void)
+{
+	return 0x00000039;
+}
 static inline u32 nvdisp_state_access_r(void)
 {
 	return 0x00000040;
+}
+static inline u32 nvdisp_state_access_read_mux_assembly_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_state_access_read_mux_active_f(void)
+{
+	return 0x1;
+}
+static inline u32 nvdisp_state_access_write_mux_assembly_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_state_access_write_mux_active_f(void)
+{
+	return 0x4;
+}
+static inline u32 nvdisp_sd_hist_ctrl_r(void)
+{
+	return 0x000004c2;
+}
+static inline u32 nvdisp_sd_hist_ctrl_is_enable_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 nvdisp_sd_hist_ctrl_set_enable_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 nvdisp_sd_hist_ctrl_is_reset_busy_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 nvdisp_sd_hist_ctrl_reset_start_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 nvdisp_sd_hist_ctrl_is_ram_busy_v(u32 r)
+{
+	return (r >> 29) & 0x1;
+}
+static inline u32 nvdisp_sd_hist_ctrl_is_vid_luma_enable_v(u32 r)
+{
+	return (r >> 28) & 0x1;
+}
+static inline u32 nvdisp_sd_hist_ctrl_set_vid_luma_enable_f(void)
+{
+	return 0x10000000;
+}
+static inline u32 nvdisp_sd_hist_ctrl_is_win_enable_v(u32 r)
+{
+	return (r >> 27) & 0x1;
+}
+static inline u32 nvdisp_sd_hist_ctrl_set_window_enable_f(void)
+{
+	return 0x8000000;
+}
+static inline u32 nvdisp_sd_hist_ctrl_max_pixel_f(u32 v)
+{
+	return (v & 0xffffff) << 0;
+}
+static inline u32 nvdisp_sd_hist_luma_r(void)
+{
+	return 0x000004c3;
+}
+static inline u32 nvdisp_sd_hist_luma_is_valid_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 nvdisp_sd_hist_luma_num_pixels_v(u32 r)
+{
+	return (r >> 0) & 0x3ffffff;
+}
+static inline u32 nvdisp_sd_hist_over_sat_r(void)
+{
+	return 0x000004c4;
+}
+static inline u32 nvdisp_sd_hist_over_sat_bin_num_v(u32 r)
+{
+	return (r >> 0) & 0xff;
+}
+static inline u32 nvdisp_sd_hist_int_bounds_r(void)
+{
+	return 0x000004c5;
+}
+static inline u32 nvdisp_sd_hist_int_bounds_is_enable_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 nvdisp_sd_hist_int_bounds_set_enable_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 nvdisp_sd_hist_int_bounds_upper_f(u32 v)
+{
+	return (v & 0xff) << 16;
+}
+static inline u32 nvdisp_sd_hist_int_bounds_lower_f(u32 v)
+{
+	return (v & 0xff) << 0;
+}
+static inline u32 nvdisp_sd_hist_vid_luma_r(void)
+{
+	return 0x000004c6;
+}
+static inline u32 nvdisp_sd_hist_vid_luma_b_coeff_f(u32 v)
+{
+	return (v & 0xf) << 8;
+}
+static inline u32 nvdisp_sd_hist_vid_luma_g_coeff_f(u32 v)
+{
+	return (v & 0xf) << 4;
+}
+static inline u32 nvdisp_sd_hist_vid_luma_r_coeff_f(u32 v)
+{
+	return (v & 0xf) << 0;
+}
+static inline u32 nvdisp_sd_gain_ctrl_r(void)
+{
+	return 0x000004c7;
+}
+static inline u32 nvdisp_sd_gain_ctrl_is_enable_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 nvdisp_sd_gain_ctrl_set_enable_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 nvdisp_sd_gain_ctrl_update_busy_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 nvdisp_sd_gain_ctrl_update_start_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 nvdisp_sd_gain_ctrl_timing_f(u32 v)
+{
+	return (v & 0x1) << 29;
+}
+static inline u32 nvdisp_sd_gain_ctrl_reset_busy_v(u32 r)
+{
+	return (r >> 28) & 0x1;
+}
+static inline u32 nvdisp_sd_gain_ctrl_reset_start_f(void)
+{
+	return 0x10000000;
+}
+static inline u32 nvdisp_sd_gain_rg_r(void)
+{
+	return 0x000004c8;
+}
+static inline u32 nvdisp_sd_gain_rg_gint_f(u32 v)
+{
+	return (v & 0x3) << 30;
+}
+static inline u32 nvdisp_sd_gain_rg_gfrac_f(u32 v)
+{
+	return (v & 0xfff) << 18;
+}
+static inline u32 nvdisp_sd_gain_rg_gval_f(u32 v)
+{
+	return (v & 0xffff) << 16;
+}
+static inline u32 nvdisp_sd_gain_rg_rint_f(u32 v)
+{
+	return (v & 0x3) << 14;
+}
+static inline u32 nvdisp_sd_gain_rg_rfrac_f(u32 v)
+{
+	return (v & 0xfff) << 2;
+}
+static inline u32 nvdisp_sd_gain_rg_rval_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
+static inline u32 nvdisp_sd_gain_b_r(void)
+{
+	return 0x000004c9;
+}
+static inline u32 nvdisp_sd_gain_b_int_f(u32 v)
+{
+	return (v & 0x3) << 14;
+}
+static inline u32 nvdisp_sd_gain_b_frac_f(u32 v)
+{
+	return (v & 0xfff) << 2;
+}
+static inline u32 nvdisp_sd_gain_b_val_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
+static inline u32 nvdisp_sd_hist_win_pos_r(void)
+{
+	return 0x000004cb;
+}
+static inline u32 nvdisp_sd_hist_win_pos_v_f(u32 v)
+{
+	return (v & 0xffff) << 16;
+}
+static inline u32 nvdisp_sd_hist_win_pos_h_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
+static inline u32 nvdisp_sd_hist_win_size_r(void)
+{
+	return 0x000004cc;
+}
+static inline u32 nvdisp_sd_hist_win_size_height_f(u32 v)
+{
+	return (v & 0xffff) << 16;
+}
+static inline u32 nvdisp_sd_hist_win_size_width_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
+static inline u32 nvdisp_incr_syncpt_cntrl_r(void)
+{
+	return 0x00000001;
+}
+static inline u32 nvdisp_incr_syncpt_cntrl_no_stall_f(u32 v)
+{
+	return (v & 0x1) << 8;
+}
+static inline u32 nvdisp_cont_syncpt_vsync_r(void)
+{
+	return 0x00000028;
+}
+static inline u32 nvdisp_cont_syncpt_vsync_indx_f(u32 v)
+{
+	return (v & 0x3ff) << 0;
+}
+static inline u32 nvdisp_cont_syncpt_vsync_en_enable_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 nvdisp_int_type_r(void)
+{
+	return 0x0000003a;
+}
+static inline u32 nvdisp_int_polarity_r(void)
+{
+	return 0x0000003b;
+}
+static inline u32 nvdisp_background_color_r(void)
+{
+	return 0x000004e4;
 }
 #endif

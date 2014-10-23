@@ -79,6 +79,15 @@ static u32 BASE_ADDRESS_DC_WIN_WINBUF[] = {
 		BASE_ADDRESS_DC_F_WINBUF,
 };
 
+#define DSC_TO_UF_INT	29
+#define DSC_BBUF_UF_INT	28
+#define DSC_RBUF_UF_INT	27
+#define DSC_OBUF_UF_INT	26
+#define SD3_INT		24
+#define HEAD_UF_INT	23
+#define REG_TMOUT_INT	7
+#define REGION_CRC_INT	6
+
 #define NVDISP_WIN_ADDR(head, win, word_offset) \
 		nvdisp_win_offset(win, word_offset) << 2
 

@@ -25,16 +25,6 @@
 #include "dc_config.h"
 #include "dc_priv.h"
 
-#define DSC_TO_UF_INT	29
-#define DSC_BBUF_UF_INT	28
-#define DSC_RBUF_UF_INT	27
-#define DSC_OBUF_UF_INT	26
-#define SD3_INT		24
-#define HEAD_UF_INT	23
-#define REG_TMOUT_INT	7
-#define REGION_CRC_INT	6
-
-
 static int tegra_nvdisp_blend(struct tegra_dc_win *win)
 {
 	if (!(win->flags & TEGRA_WIN_BLEND_FLAGS_MASK)) {

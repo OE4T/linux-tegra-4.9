@@ -203,8 +203,6 @@ static int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 
 int tegra_nvdisp_init(struct tegra_dc *dc)
 {
-	dc->vblank_syncpt = NVSYNCPT_VBLANK0;
-
 	/* Only need init once no matter how many dc objects */
 	if (dc->ctrl_num)
 		return 0;
@@ -216,41 +214,31 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 	u32 int_enable;
 
 	/* Init syncpt */
-	tegra_dc_writel(dc, 0x00000100, DC_CMD_GENERAL_INCR_SYNCPT_CNTRL);
-	/* TODO: confirm this is still required */
-	/* Init MC controls */
-	tegra_dc_writel(dc, 0x00000100 | dc->vblank_syncpt,
-			DC_CMD_CONT_SYNCPT_VSYNC);
+	tegra_dc_writel(dc, nvdisp_incr_syncpt_cntrl_no_stall_f(1),
+		nvdisp_incr_syncpt_cntrl_r());
+	tegra_dc_writel(dc, nvdisp_cont_syncpt_vsync_en_enable_f() |
+		(NVSYNCPT_VBLANK0 + dc->ctrl_num),
+		nvdisp_cont_syncpt_vsync_r());
 
 	/* Init interrupts */
-	tegra_dc_writel(dc, 0x00004700, DC_CMD_INT_TYPE);
-	tegra_dc_writel(dc, WIN_A_OF_INT | WIN_B_OF_INT | WIN_C_OF_INT |
-		WIN_T_UF_INT | WIN_D_UF_INT | HC_UF_INT |
-		WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT,
-		DC_CMD_INT_POLARITY);
-	tegra_dc_writel(dc, 0x00202020, DC_DISP_MEM_HIGH_PRIORITY);
-	tegra_dc_writel(dc, 0x00010101, DC_DISP_MEM_HIGH_PRIORITY_TIMER);
-#ifdef CONFIG_ARCH_TEGRA_3x_SOC
-	tegra_dc_writel(dc, 0x00000000, DC_DISP_DISP_MISC_CONTROL);
-#endif
+	/* All interrupts are edge trigger, and polarity is high */
+	tegra_dc_writel(dc, 0xffffffff, nvdisp_int_type_r());
+
 	/* enable interrupts for vblank, frame_end and underflows */
-	int_enable = (FRAME_END_INT | V_BLANK_INT | ALL_UF_INT());
+	int_enable = (FRAME_END_INT | V_BLANK_INT | HEAD_UF_INT);
 	/* for panels with one-shot mode enable tearing effect interrupt */
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		int_enable |= MSF_INT;
+	/* Todo: also need to enable interrupts for SD3, DSC etc */
 
-	tegra_dc_writel(dc, int_enable, DC_CMD_INT_ENABLE);
-	tegra_dc_writel(dc, ALL_UF_INT(), DC_CMD_INT_MASK);
-	/* tegra_dc_init_vpulse2_int(dc); */
+	tegra_dc_writel(dc, int_enable, nvdisp_cmd_int_enable_r());
+	tegra_dc_writel(dc, HEAD_UF_INT, nvdisp_cmd_int_mask_r());
 
-	tegra_dc_writel(dc, WRITE_MUX_ASSEMBLY | READ_MUX_ASSEMBLY,
-		DC_CMD_STATE_ACCESS);
+	tegra_dc_writel(dc, nvdisp_state_access_write_mux_assembly_f() |
+		nvdisp_state_access_read_mux_assembly_f(),
+		nvdisp_state_access_r());
 
-#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
-	tegra_dc_writel(dc, 0x00000000, DC_DISP_BORDER_COLOR);
-#else
-	tegra_dc_writel(dc, 0x00000000, DC_DISP_BLEND_BACKGROUND_COLOR);
-#endif
+	tegra_dc_writel(dc, 0x00000000, nvdisp_background_color_r());
 
 	dc->crc_pending = false;
 	/* set mode */

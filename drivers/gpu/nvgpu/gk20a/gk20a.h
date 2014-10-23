@@ -535,6 +535,7 @@ enum gk20a_dbg_categories {
 	gpu_dbg_map     = BIT(8),  /* mem mappings */
 	gpu_dbg_gpu_dbg = BIT(9),  /* gpu debugger/profiler */
 	gpu_dbg_cde     = BIT(10), /* cde info messages */
+	gpu_dbg_cde_ctx = BIT(11), /* cde context usage messages */
 	gpu_dbg_mem     = BIT(31), /* memory accesses, very verbose */
 };
 

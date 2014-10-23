@@ -242,19 +242,26 @@ struct gk20a_cde_ctx {
 	struct kobj_attribute attr;
 
 	bool init_cmd_executed;
+
+	struct list_head list;
+	bool is_temporary;
+	bool in_use;
+	struct delayed_work ctx_deleter_work;
 };
 
 struct gk20a_cde_app {
 	bool initialised;
 	struct mutex mutex;
-	struct vm_gk20a *vm;
 
-	struct gk20a_cde_ctx cde_ctx[NUM_CDE_CONTEXTS];
+	struct list_head cde_ctx_lru;
+	int lru_len;
+	int lru_max_len;
+	int lru_used;
 
 	u32 shader_parameter;
 };
 
-int gk20a_cde_destroy(struct gk20a *g);
+void gk20a_cde_destroy(struct gk20a *g);
 int gk20a_init_cde_support(struct gk20a *g);
 int gk20a_cde_reload(struct gk20a *g);
 int gk20a_cde_convert(struct gk20a *g, struct dma_buf *dst,

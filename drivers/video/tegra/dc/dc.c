@@ -3212,8 +3212,11 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 		dcwins[nr_win++]->flags &= ~TEGRA_WIN_FLAG_ENABLED;
 	}
 
-	tegra_dc_update_windows(dcwins, nr_win, NULL, true);
-	tegra_dc_sync_windows(dcwins, nr_win);
+	/* Skip update for linsim */
+	if (!tegra_platform_is_linsim()) {
+		tegra_dc_update_windows(dcwins, nr_win, NULL, true);
+		tegra_dc_sync_windows(dcwins, nr_win);
+	}
 	tegra_dc_program_bandwidth(dc, true);
 }
 

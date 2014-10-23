@@ -347,10 +347,51 @@ void gm20b_flush_ltc(struct gk20a *g)
 		 ltc_ltc1_ltss_tstg_cmgmt0_invalidate_pending_f());
 }
 
+static int gm20b_determine_L2_size_bytes(struct gk20a *g)
+{
+	u32 lts_per_ltc;
+	u32 ways;
+	u32 sets;
+	u32 bytes_per_line;
+	u32 active_ltcs;
+	u32 cache_size;
+
+	u32 tmp;
+	u32 active_sets_value;
+
+	tmp = gk20a_readl(g, ltc_ltc0_lts0_tstg_cfg1_r());
+	ways = hweight32(ltc_ltc0_lts0_tstg_cfg1_active_ways_v(tmp));
+
+	active_sets_value = ltc_ltc0_lts0_tstg_cfg1_active_sets_v(tmp);
+	if (active_sets_value == ltc_ltc0_lts0_tstg_cfg1_active_sets_all_v()) {
+		sets = 64;
+	} else if (active_sets_value ==
+		 ltc_ltc0_lts0_tstg_cfg1_active_sets_half_v()) {
+		sets = 32;
+	} else if (active_sets_value ==
+		 ltc_ltc0_lts0_tstg_cfg1_active_sets_quarter_v()) {
+		sets = 16;
+	} else {
+		dev_err(dev_from_gk20a(g),
+			"Unknown constant %u for active sets",
+		       (unsigned)active_sets_value);
+		sets = 0;
+	}
+
+	active_ltcs = g->gr.num_fbps;
+
+	/* chip-specific values */
+	lts_per_ltc = 2;
+	bytes_per_line = 128;
+	cache_size = active_ltcs * lts_per_ltc * ways * sets * bytes_per_line;
+
+	return cache_size;
+}
+
 void gm20b_init_ltc(struct gpu_ops *gops)
 {
 	/* Gk20a reused ops. */
-	gops->ltc.determine_L2_size_bytes = gk20a_determine_L2_size_bytes;
+	gops->ltc.determine_L2_size_bytes = gm20b_determine_L2_size_bytes;
 	gops->ltc.set_max_ways_evict_last = gk20a_ltc_set_max_ways_evict_last;
 	gops->ltc.set_zbc_color_entry = gk20a_ltc_set_zbc_color_entry;
 	gops->ltc.set_zbc_depth_entry = gk20a_ltc_set_zbc_depth_entry;

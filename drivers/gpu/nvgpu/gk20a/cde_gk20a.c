@@ -879,16 +879,8 @@ int gk20a_cde_reload(struct gk20a *g)
 	struct gk20a_cde_ctx *cde_ctx = cde_app->cde_ctx;
 	int err, i;
 
-	if (!cde_app->initialised) {
-		err = gk20a_busy(g->dev);
-		if (err)
-			return err;
-		gk20a_init_cde_support(g);
-		gk20a_idle(g->dev);
-		if (!cde_app->initialised)
-			return -ENOSYS;
-		return 0;
-	}
+	if (!cde_app->initialised)
+		return -ENOSYS;
 
 	err = gk20a_busy(g->dev);
 	if (err)
@@ -1044,11 +1036,8 @@ static int gk20a_buffer_convert_gpu_to_cde(
 	const int gridw = roundup(xtiles, xalign) / xalign;
 	const int gridh = roundup(ytiles, yalign) / yalign;
 
-	if (!g->cde_app.initialised) {
-		err = gk20a_cde_reload(g);
-		if (err)
-			return err;
-	}
+	if (!g->cde_app.initialised)
+		return -ENOSYS;
 
 	if (xtiles > 4096 / 8 || ytiles > 4096 / 8)
 		gk20a_warn(&g->dev->dev, "cde: surface is exceptionally large (xtiles=%d, ytiles=%d)",
@@ -1087,16 +1076,12 @@ static int gk20a_buffer_convert_gpu_to_cde(
 	err = gk20a_busy(g->dev);
 	if (err)
 		return err;
-	err = gk20a_init_cde_support(g);
-	if (err)
-		goto out;
 	err = gk20a_cde_convert(g, dmabuf,
 				0, /* dst kind */
 				compbits_offset,
 				0, /* dst_size, 0 = auto */
 				fence_in, submit_flags,
 				params, param, fence_out);
-out:
 	gk20a_idle(g->dev);
 	return err;
 }

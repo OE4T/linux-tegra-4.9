@@ -12,14 +12,6 @@ config GK20A_DEFAULT_TIMEOUT
 	help
 	  Default timeout for jobs in milliseconds. Set to zero for no timeout.
 
-config GK20A_CDE
-	depends on GK20A
-	bool "Support compression bit switzzling through CDE"
-	default n
-	help
-	  Say Y to allow compression bit swizzling
-	  using pre-compiled shader.
-
 config GK20A_PMU
 	bool "Support GK20A PMU"
 	depends on GK20A

@@ -543,4 +543,6 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.secure_alloc = gk20a_tegra_secure_alloc,
 	.secure_page_alloc = gk20a_tegra_secure_page_alloc,
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
+
+	.has_cde = true,
 };

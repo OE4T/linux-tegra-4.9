@@ -798,6 +798,7 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct gk20a *g = get_gk20a(pdev);
+	struct gk20a_platform *platform = gk20a_get_platform(pdev);
 	int err, nice_value;
 
 	gk20a_dbg_fn("");
@@ -939,7 +940,7 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 
 	trace_gk20a_finalize_poweron_done(dev_name(dev));
 
-	if (IS_ENABLED(CONFIG_GK20A_CDE))
+	if (platform->has_cde)
 		gk20a_init_cde_support(g);
 
 #ifdef CONFIG_INPUT_CFBOOST

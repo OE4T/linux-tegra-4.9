@@ -160,6 +160,8 @@ struct gk20a_platform {
 	u64 virt_handle;
 	struct task_struct *intr_handler;
 #endif
+
+	bool has_cde;
 };
 
 static inline struct gk20a_platform *gk20a_get_platform(

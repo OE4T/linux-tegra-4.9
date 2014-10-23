@@ -304,6 +304,7 @@ void tsec_execute_method(dma_addr_t dma_handle,
 	u32 id = 0;
 	void *ref;
 	struct nvhost_device_data *pdata = platform_get_drvdata(tsec);
+	struct nvhost_master *host = nvhost_get_host(tsec);
 	channel = pdata->channels[0];
 	if (!channel) {
 		err = nvhost_channel_map(pdata, &channel);
@@ -347,6 +348,11 @@ void tsec_execute_method(dma_addr_t dma_handle,
 	/* begin a CDMA submit */
 	nvhost_cdma_begin(&channel->cdma, job);
 
+	if (host->info.channel_policy == MAP_CHANNEL_ON_SUBMIT)
+		nvhost_cdma_push(&channel->cdma,
+			nvhost_opcode_acquire_mlock(pdata->modulemutexes[0]),
+			NVHOST_OPCODE_NOOP);
+
 	/* Wait for idle first */
 	nvhost_cdma_push(&channel->cdma,
 		nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
@@ -367,6 +373,11 @@ void tsec_execute_method(dma_addr_t dma_handle,
 		nvhost_opcode_imm_incr_syncpt(
 		host1x_uclass_incr_syncpt_cond_op_done_v(), id),
 		NVHOST_OPCODE_NOOP);
+
+	if (host->info.channel_policy == MAP_CHANNEL_ON_SUBMIT)
+		nvhost_cdma_push(&channel->cdma,
+			nvhost_opcode_release_mlock(pdata->modulemutexes[0]),
+			NVHOST_OPCODE_NOOP);
 
 	nvhost_cdma_end(&channel->cdma, job);
 

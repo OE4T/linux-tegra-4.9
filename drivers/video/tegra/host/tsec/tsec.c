@@ -47,7 +47,6 @@
 #include "nvhost_cdma.h"
 #include "host1x/host1x01_hardware.h"
 #include "class_ids.h"
-#include "host1x/host1x_hwctx.h"
 #include "tsec_methods.h"
 #include "tsec_drv.h"
 
@@ -318,7 +317,7 @@ void tsec_execute_method(dma_addr_t dma_handle,
 		goto exit;
 	}
 
-	job = nvhost_job_alloc(channel, NULL, 0, 0, 0, syncpt_incrs);
+	job = nvhost_job_alloc(channel, 0, 0, 0, syncpt_incrs);
 	if (!job) {
 		err = -ENOMEM;
 		goto exit;

@@ -34,7 +34,6 @@
 struct nvhost_master;
 struct platform_device;
 struct nvhost_channel;
-struct nvhost_hwctx;
 
 struct nvhost_channel_ops {
 	const char *soc_name;
@@ -51,9 +50,7 @@ struct nvhost_channel {
 	int dev_chid;
 	struct mutex submitlock;
 	void __iomem *aperture;
-	struct nvhost_hwctx *cur_ctx;
 	struct platform_device *dev;
-	struct nvhost_hwctx_handler *ctxhandler;
 	struct nvhost_cdma cdma;
 
 	/* the address space block here
@@ -84,17 +81,11 @@ void nvhost_putchannel(struct nvhost_channel *ch, int cnt);
 int nvhost_channel_suspend(struct nvhost_channel *ch);
 
 int nvhost_channel_read_reg(struct nvhost_channel *channel,
-	struct nvhost_hwctx *hwctx,
 	u32 offset, u32 *value);
 
 struct nvhost_channel *nvhost_alloc_channel_internal(int chindex,
 	int max_channels);
 
 void nvhost_channel_init_gather_filter(struct nvhost_channel *ch);
-
-struct nvhost_hwctx *nvhost_channel_get_file_hwctx(int fd);
-
-struct nvhost_hwctx_handler *nvhost_alloc_hwctx_handler(u32 syncpt,
-	struct nvhost_channel *ch);
 
 #endif

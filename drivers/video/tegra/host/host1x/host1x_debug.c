@@ -79,14 +79,13 @@ static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 	job = list_first_entry(&cdma->sync_queue, struct nvhost_job, list);
 
 	nvhost_debug_output(o, "\n%p: JOB, syncpt_id=%d, syncpt_val=%d,"
-			" first_get=%08x, timeout=%d, ctx=%p,"
+			" first_get=%08x, timeout=%d,"
 			" num_slots=%d, num_handles=%d\n",
 			job,
 			job->sp ? job->sp->id : -1,
 			job->sp ? job->sp->fence : -1,
 			job->first_get,
 			job->timeout,
-			job->hwctx,
 			job->num_slots,
 			job->num_unpins);
 

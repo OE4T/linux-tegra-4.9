@@ -95,7 +95,6 @@ struct nvhost_device_data t21_isp_info = {
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
 	.moduleid		= NVHOST_MODULE_ISP,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
-	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
 	.gather_filter_enabled	= true,
 	.bond_out_id		= BOND_OUT_ISP,
 };
@@ -121,7 +120,6 @@ struct nvhost_device_data t21_ispb_info = {
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
-	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
 	.gather_filter_enabled	= true,
 	.bond_out_id		= BOND_OUT_ISP,
 };
@@ -154,7 +152,6 @@ struct nvhost_device_data t21_vi_info = {
 		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
 	.num_channels		= 6,
-	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
 	.slcg_notifier_enable	= true,
 	.gather_filter_enabled	= true,
 	.bond_out_id		= BOND_OUT_VI,
@@ -181,7 +178,6 @@ struct nvhost_device_data t21_vib_info = {
 	.moduleid		= NVHOST_MODULE_VI,
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
 	.num_channels		= 1,
-	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
 	.gather_filter_enabled	= true,
 	.bond_out_id		= BOND_OUT_VI,
 };
@@ -217,7 +213,6 @@ struct nvhost_device_data t21_vi_info = {
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
 	.slave			= &tegra_vi01b_device,
 	.num_channels		= 1,
-	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
 	.gather_filter_enabled	= true,
 	.bond_out_id		= BOND_OUT_VI,
 };
@@ -410,8 +405,6 @@ struct nvhost_device_data t21_vic_info = {
 	.powergate_delay	= 500,
 	.moduleid		= NVHOST_MODULE_VIC,
 	.class			= NV_GRAPHICS_VIC_CLASS_ID,
-	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
-	.prepare_poweroff	= nvhost_vic_prepare_poweroff,
 	.engine_cg_regs		= t21x_vic_gating_registers,
 	.engine_can_cg		= true,
 	.poweron_toggle_slcg	= true,

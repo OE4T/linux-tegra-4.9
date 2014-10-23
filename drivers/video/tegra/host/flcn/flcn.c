@@ -409,22 +409,6 @@ int nvhost_vic_finalize_poweron(struct platform_device *pdev)
 	return 0;
 }
 
-int nvhost_vic_prepare_poweroff(struct platform_device *dev)
-{
-	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
-	struct nvhost_channel *ch = pdata->channels[0];
-
-	nvhost_dbg_fn("");
-
-	if (ch && ch->dev) {
-		mutex_lock(&ch->submitlock);
-		ch->cur_ctx = NULL;
-		mutex_unlock(&ch->submitlock);
-	}
-
-	return 0;
-}
-
 int nvhost_vic_aggregate_constraints(struct platform_device *dev,
 				     int clk_index,
 				     unsigned long floor_rate,

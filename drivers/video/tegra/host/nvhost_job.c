@@ -27,7 +27,6 @@
 #include <trace/events/nvhost.h>
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
-#include "nvhost_hwctx.h"
 #include "nvhost_syncpt.h"
 #include "dev.h"
 #include "chip_support.h"
@@ -93,7 +92,6 @@ static void init_fields(struct nvhost_job *job,
 }
 
 struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
-		struct nvhost_hwctx *hwctx,
 		int num_cmdbufs, int num_relocs, int num_waitchks,
 		int num_syncpts)
 {
@@ -112,10 +110,7 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 
 	kref_init(&job->ref);
 	job->ch = ch;
-	job->hwctx = hwctx;
 	job->size = size;
-	if (hwctx)
-		hwctx->h->get(hwctx);
 
 	init_fields(job, num_cmdbufs, num_relocs, num_waitchks, num_syncpts);
 
@@ -131,27 +126,12 @@ static void job_free(struct kref *ref)
 {
 	struct nvhost_job *job = container_of(ref, struct nvhost_job, ref);
 
-	if (job->hwctxref)
-		job->hwctxref->h->put(job->hwctxref);
-	if (job->hwctx)
-		job->hwctx->h->put(job->hwctx);
 	if (job->error_notifier_ref)
 		dma_buf_put(job->error_notifier_ref);
 	if (job->size <= PAGE_SIZE)
 		kfree(job);
 	else
 		vfree(job);
-}
-
-/* Acquire reference to a hardware context. Used for keeping saved contexts in
- * memory. */
-void nvhost_job_get_hwctx(struct nvhost_job *job, struct nvhost_hwctx *hwctx)
-{
-	if (job->hwctxref)
-		job->hwctxref->h->put(job->hwctxref);
-
-	job->hwctxref = hwctx;
-	hwctx->h->get(hwctx);
 }
 
 void nvhost_job_put(struct nvhost_job *job)
@@ -514,8 +494,6 @@ void nvhost_job_dump(struct device *dev, struct nvhost_job *job)
 		job->first_get);
 	dev_info(dev, "    TIMEOUT     %d\n",
 		job->timeout);
-	dev_info(dev, "    CTX 0x%p\n",
-		job->hwctx);
 	dev_info(dev, "    NUM_SLOTS   %d\n",
 		job->num_slots);
 	dev_info(dev, "    NUM_HANDLES %d\n",

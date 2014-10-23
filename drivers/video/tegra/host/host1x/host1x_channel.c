@@ -23,12 +23,10 @@
 #include "class_ids.h"
 #include "nvhost_acm.h"
 #include "nvhost_job.h"
-#include "nvhost_hwctx.h"
 #include <trace/events/nvhost.h>
 #include <linux/slab.h>
 #include "nvhost_sync.h"
 
-#include "nvhost_hwctx.h"
 #include "nvhost_intr.h"
 #include "class_ids.h"
 #include "debug.h"
@@ -61,43 +59,6 @@ static void serialize(struct nvhost_job *job)
 				host1x_uclass_wait_syncpt_r(), 1),
 			nvhost_class_host_wait_syncpt(id, max));
 	}
-}
-
-static bool ctxsave_needed(struct nvhost_job *job, struct nvhost_hwctx *cur_ctx)
-{
-	struct nvhost_channel *ch = job->ch;
-
-	if (!cur_ctx || ch->cur_ctx == job->hwctx ||
-			ch->cur_ctx->has_timedout ||
-			!ch->cur_ctx->h->save_push)
-		return false;
-	else
-		return true;
-}
-
-static void submit_ctxsave(struct nvhost_job *job, struct nvhost_hwctx *cur_ctx)
-{
-	struct nvhost_master *host = nvhost_get_host(job->ch->dev);
-	struct nvhost_channel *ch = job->ch;
-	u32 syncval;
-
-	/* Is a save needed? */
-	if (!ctxsave_needed(job, cur_ctx))
-		return;
-
-	/* Adjust the syncpoint max */
-	job->sp[job->hwctx_syncpt_idx].incrs +=
-		cur_ctx->save_incrs;
-	syncval = nvhost_syncpt_incr_max(&host->syncpt,
-			job->sp[job->hwctx_syncpt_idx].id,
-			cur_ctx->save_incrs);
-
-	/* Send the save to channel */
-	cur_ctx->valid = true;
-	cur_ctx->h->save_push(cur_ctx, &ch->cdma);
-	nvhost_job_get_hwctx(job, cur_ctx);
-
-	trace_nvhost_channel_context_save(ch->dev->name, cur_ctx);
 }
 
 static void add_sync_waits(struct nvhost_channel *ch, int fd)
@@ -152,31 +113,6 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 			nvhost_class_host_wait_syncpt(id, thresh));
 	}
 	sync_fence_put(fence);
-}
-
-static void submit_ctxrestore(struct nvhost_job *job)
-{
-	struct nvhost_master *host = nvhost_get_host(job->ch->dev);
-	struct nvhost_channel *ch = job->ch;
-	u32 syncval;
-	struct nvhost_hwctx *ctx = job->hwctx;
-
-	/* First check if we have a valid context to restore */
-	if (ch->cur_ctx == job->hwctx || !job->hwctx ||
-		!job->hwctx->valid ||
-		!ctx->h->restore_push)
-		return;
-
-	/* Increment syncpt max */
-	job->sp[job->hwctx_syncpt_idx].incrs += ctx->restore_incrs;
-	syncval = nvhost_syncpt_incr_max(&host->syncpt,
-			job->sp[job->hwctx_syncpt_idx].id,
-			ctx->restore_incrs);
-
-	/* Send restore buffer to channel */
-	ctx->h->restore_push(ctx, &ch->cdma);
-
-	trace_nvhost_channel_context_restore(ch->dev->name, ctx);
 }
 
 static void submit_nullkickoff(struct nvhost_job *job, u32 user_syncpt_incrs)
@@ -272,10 +208,6 @@ static int host1x_channel_submit(struct nvhost_job *job)
 
 	memset(completed_waiters, 0, sizeof(void *) * job->num_syncpts);
 
-	/* Bail out on timed out contexts */
-	if (job->hwctx && job->hwctx->has_timedout)
-		return -ETIMEDOUT;
-
 	/* Turn on the client module and host1x */
 	for (i = 0; i < job->num_syncpts; ++i) {
 		err = nvhost_module_busy(ch->dev);
@@ -329,10 +261,6 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	/* submit_ctxsave() and submit_ctxrestore() use the channel syncpt */
 	user_syncpt_incrs = hwctx_sp->incrs;
 
-	submit_ctxsave(job, ch->cur_ctx);
-	submit_ctxrestore(job);
-	ch->cur_ctx = job->hwctx;
-
 	/* determine fences for all syncpoints */
 	for (i = 0; i < job->num_syncpts; ++i) {
 		u32 incrs = (i == job->hwctx_syncpt_idx) ?
@@ -385,22 +313,6 @@ error:
 	return err;
 }
 
-static inline int hwctx_handler_init(struct nvhost_channel *ch)
-{
-	int err = 0;
-
-	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
-	u32 syncpt = NVSYNCPT_INVALID;
-
-	if (pdata->alloc_hwctx_handler) {
-		ch->ctxhandler = pdata->alloc_hwctx_handler(syncpt, ch);
-		if (!ch->ctxhandler)
-			err = -ENOMEM;
-	}
-
-	return err;
-}
-
 #ifdef _hw_host1x04_channel_h_
 static int t124_channel_init_gather_filter(struct nvhost_channel *ch)
 {
@@ -434,7 +346,7 @@ static int host1x_channel_init(struct nvhost_channel *ch,
 
 	ch->aperture = host1x_channel_aperture(dev->aperture, ch->chid);
 
-	return hwctx_handler_init(ch);
+	return 0;
 }
 
 static const struct nvhost_channel_ops host1x_channel_ops = {

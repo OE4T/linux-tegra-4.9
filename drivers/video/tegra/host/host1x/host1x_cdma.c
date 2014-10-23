@@ -546,10 +546,10 @@ static void cdma_timeout_handler(struct work_struct *work)
 		syncpt_val = nvhost_syncpt_read_min(&dev->syncpt,
 				cdma->timeout.sp[i].id);
 		dev_warn(&dev->dev->dev,
-			"%s: timeout: %d (%s) ctx 0x%p, HW thresh %d, done %d\n",
+			"%s: timeout: %d (%s) client %d, HW thresh %d, done %d\n",
 			__func__, cdma->timeout.sp[i].id,
 			syncpt_op().name(sp, cdma->timeout.sp[i].id),
-			cdma->timeout.ctx, syncpt_val,
+			cdma->timeout.clientid, syncpt_val,
 			cdma->timeout.sp[i].fence);
 	}
 

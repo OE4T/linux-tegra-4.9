@@ -137,7 +137,6 @@ struct nvhost_device_data t124_isp_info = {
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 	.prepare_poweroff = nvhost_isp_t124_prepare_poweroff,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
-	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
 	.gather_filter_enabled = true,
 };
 static struct platform_device tegra_isp01_device = {
@@ -178,7 +177,6 @@ struct nvhost_device_data t124_ispb_info = {
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 	.prepare_poweroff = nvhost_isp_t124_prepare_poweroff,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
-	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
 	.gather_filter_enabled = true,
 };
 
@@ -231,7 +229,6 @@ struct nvhost_device_data t124_vi_info = {
 	.finalize_poweron = nvhost_vi_finalize_poweron,
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
 	.reset            = nvhost_vi_reset_all,
-	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
 	.gather_filter_enabled = true,
 };
 EXPORT_SYMBOL(t124_vi_info);
@@ -271,7 +268,6 @@ struct nvhost_device_data t124_vi_info = {
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
 	.reset            = nvhost_vi_reset,
 	.slave         = &tegra_vi01b_device,
-	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
 	.gather_filter_enabled = true,
 };
 EXPORT_SYMBOL(t124_vi_info);
@@ -310,7 +306,6 @@ struct nvhost_device_data t124_vib_info = {
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
 	.master           = &tegra_vi01_device,
 	.reset            = nvhost_vi_reset,
-	.alloc_hwctx_handler = nvhost_alloc_hwctx_handler,
 	.gather_filter_enabled = true,
 };
 
@@ -429,7 +424,6 @@ struct nvhost_device_data t124_vic_info = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_VIC,
 	.class                  = NV_GRAPHICS_VIC_CLASS_ID,
-	.alloc_hwctx_handler	= nvhost_alloc_hwctx_handler,
 	.can_powergate		= true,
 	.engine_can_cg		= true,
 	.engine_cg_regs		= t12x_vic_gating_registers,
@@ -437,7 +431,6 @@ struct nvhost_device_data t124_vic_info = {
 	.powergate_delay	= 500,
 	.powergate_ids		= { TEGRA_POWERGATE_VIC, -1 },
 	.finalize_poweron	= nvhost_vic_finalize_poweron,
-	.prepare_poweroff	= nvhost_vic_prepare_poweroff,
 	.scaling_init		= nvhost_scale3d_init,
 	.scaling_deinit		= nvhost_scale3d_deinit,
 	.busy			= nvhost_scale_notify_busy,

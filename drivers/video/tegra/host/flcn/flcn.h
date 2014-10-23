@@ -81,10 +81,6 @@ struct flcn {
 	u32 *mapped;
 };
 
-struct nvhost_hwctx_handler *nvhost_vic03_alloc_hwctx_handler(
-		u32 syncpt, struct nvhost_channel *ch);
-
-
 int nvhost_vic_prepare_poweroff(struct platform_device *);
 int nvhost_flcn_finalize_poweron(struct platform_device *);
 int nvhost_vic_finalize_poweron(struct platform_device *);

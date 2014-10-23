@@ -60,7 +60,6 @@ struct buffer_timeout {
 	struct nvhost_job_syncpt *sp;	/* buffer syncpoint information */
 	ktime_t start_ktime;		/* starting time */
 	/* context timeout information */
-	struct nvhost_hwctx *ctx;
 	int clientid;
 	bool timeout_debug_dump;
 	int num_syncpts;

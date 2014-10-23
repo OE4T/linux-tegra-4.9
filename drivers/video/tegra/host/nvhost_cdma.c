@@ -21,7 +21,6 @@
 #include "nvhost_cdma.h"
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
-#include "nvhost_hwctx.h"
 #include "dev.h"
 #include "debug.h"
 #include "chip_support.h"
@@ -134,7 +133,6 @@ static void cdma_start_timer_locked(struct nvhost_cdma *cdma,
 		return;
 	}
 
-	cdma->timeout.ctx = job->hwctx;
 	cdma->timeout.clientid = job->clientid;
 	cdma->timeout.sp = job->sp;
 	cdma->timeout.num_syncpts = job->num_syncpts;
@@ -157,7 +155,6 @@ static void stop_cdma_timer_locked(struct nvhost_cdma *cdma)
 	while (ret)
 		ret = cancel_delayed_work_sync(&cdma->timeout.wq);
 
-	cdma->timeout.ctx = NULL;
 	cdma->timeout.clientid = 0;
 }
 
@@ -357,9 +354,6 @@ out:
 
 	/* roll back DMAGET and start up channel again */
 	cdma_op().timeout_teardown_end(cdma, get_restart);
-
-	if (cdma->timeout.ctx)
-		cdma->timeout.ctx->has_timedout = true;
 }
 
 /**

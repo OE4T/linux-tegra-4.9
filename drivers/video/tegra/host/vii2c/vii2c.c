@@ -39,8 +39,6 @@
 #include "nvhost_cdma.h"
 #include "host1x/host1x01_hardware.h"
 #include "class_ids.h"
-#include "host1x/host1x_hwctx.h"
-#include "class_ids.h"
 #include "nvhost_cdma.h"
 #include "t210/t210.h"
 

@@ -26,7 +26,6 @@
 #include <linux/dma-buf.h>
 
 struct nvhost_channel;
-struct nvhost_hwctx;
 struct nvhost_waitchk;
 struct nvhost_syncpt;
 struct sg_table;
@@ -76,7 +75,6 @@ struct nvhost_job {
 	struct nvhost_channel *ch;
 
 	/* Hardware context valid for this client */
-	struct nvhost_hwctx *hwctx;
 	int clientid;
 
 	/* Gathers and their memory */
@@ -122,9 +120,6 @@ struct nvhost_job {
 	int first_get;
 	int num_slots;
 
-	/* Context to be freed */
-	struct nvhost_hwctx *hwctxref;
-
 	/* Set to true to force an added wait-for-idle before the job */
 	int serialize;
 
@@ -138,7 +133,6 @@ struct nvhost_job {
  * accomodate the submit announced in submit header.
  */
 struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
-		struct nvhost_hwctx *hwctx,
 		int num_cmdbufs, int num_relocs, int num_waitchks,
 		int num_syncpts);
 
@@ -152,11 +146,6 @@ void nvhost_job_add_gather(struct nvhost_job *job,
  * Increment reference going to nvhost_job.
  */
 void nvhost_job_get(struct nvhost_job *job);
-
-/*
- * Increment reference for a hardware context.
- */
-void nvhost_job_get_hwctx(struct nvhost_job *job, struct nvhost_hwctx *hwctx);
 
 /*
  * Decrement reference job, free if goes to zero.

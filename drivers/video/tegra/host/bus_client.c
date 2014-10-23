@@ -51,7 +51,6 @@
 #include "nvhost_syncpt.h"
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
-#include "nvhost_hwctx.h"
 #include "nvhost_sync.h"
 
 DEFINE_MUTEX(channel_lock);
@@ -173,7 +172,6 @@ int nvhost_write_module_regs(struct platform_device *ndev,
 
 struct nvhost_channel_userctx {
 	struct nvhost_channel *ch;
-	struct nvhost_hwctx *hwctx;
 	struct nvhost_job *job;
 	u32 timeout;
 	u32 priority;
@@ -204,18 +202,6 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	filp->private_data = NULL;
 
 	nvhost_module_remove_client(priv->ch->dev, priv);
-
-	if (priv->hwctx) {
-		struct nvhost_channel *ch = priv->ch;
-		struct nvhost_hwctx *ctx = priv->hwctx;
-
-		mutex_lock(&ch->submitlock);
-		if (ch->cur_ctx == ctx)
-			ch->cur_ctx = NULL;
-		mutex_unlock(&ch->submitlock);
-
-		priv->hwctx->h->put(priv->hwctx);
-	}
 
 	if (priv->job)
 		nvhost_job_put(priv->job);
@@ -286,16 +272,12 @@ static int __nvhost_channelopen(struct inode *inode,
 	if (nvhost_module_add_client(ch->dev, priv))
 		goto fail_add_client;
 
-	if (ch->ctxhandler && ch->ctxhandler->alloc) {
-		ret = nvhost_module_busy(ch->dev);
-		if (ret)
-			goto fail_priv;
+	/* Check that the device can be powered */
+	ret = nvhost_module_busy(ch->dev);
+	if (ret)
+		goto fail_power_on;
+	nvhost_module_idle(ch->dev);
 
-		priv->hwctx = ch->ctxhandler->alloc(ch->ctxhandler, ch);
-		nvhost_module_idle(ch->dev);
-		if (!priv->hwctx)
-			goto fail_priv;
-	}
 	priv->priority = NVHOST_PRIORITY_MEDIUM;
 	priv->clientid = atomic_add_return(1,
 			&nvhost_get_host(ch->dev)->clientid);
@@ -311,8 +293,8 @@ static int __nvhost_channelopen(struct inode *inode,
 		priv->timeout = 0;
 	mutex_unlock(&channel_lock);
 	return 0;
-fail_priv:
-	nvhost_module_remove_client(ch->dev, priv);
+
+fail_power_on:
 fail_add_client:
 	kfree(priv);
 fail:
@@ -400,7 +382,6 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		return -EINVAL;
 
 	job = nvhost_job_alloc(ctx->ch,
-			ctx->hwctx,
 			num_cmdbufs,
 			num_relocs,
 			num_waitchks,
@@ -476,9 +457,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	if (err)
 		goto fail;
 
-	/* set valid id for hwctx_syncpt_idx if hwctx does not provide one */
-	if (!ctx->hwctx || ctx->hwctx->h->syncpt == NVSYNCPT_INVALID)
-		hwctx_syncpt_idx = 0;
+	hwctx_syncpt_idx = 0;
 
 	/*
 	 * Go through each syncpoint from userspace. Here we:
@@ -504,10 +483,6 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		/* Store */
 		job->sp[i].id = sp.syncpt_id;
 		job->sp[i].incrs = sp.syncpt_incrs;
-
-		/* Find hwctx syncpoint */
-		if (ctx->hwctx && (job->sp[i].id == ctx->hwctx->h->syncpt))
-			hwctx_syncpt_idx = i;
 	}
 
 	/* Is hwctx_syncpt_idx valid? */
@@ -972,13 +947,10 @@ static long nvhost_channelctl(struct file *filp,
 		dev_dbg(&priv->ch->dev->dev,
 			"%s: setting buffer timeout (%d ms) for userctx 0x%p\n",
 			__func__, priv->timeout, priv);
-		if (priv->hwctx)
-			priv->hwctx->timeout_ms_max = timeout;
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_GET_TIMEDOUT:
-		((struct nvhost_get_param_args *)buf)->value =
-				priv->hwctx->has_timedout;
+		((struct nvhost_get_param_args *)buf)->value = false;
 		break;
 	case NVHOST_IOCTL_CHANNEL_SET_PRIORITY:
 		priv->priority =
@@ -1046,10 +1018,6 @@ static long nvhost_channelctl(struct file *filp,
 		dev_dbg(&priv->ch->dev->dev,
 			"%s: setting buffer timeout (%d ms) for userctx 0x%p\n",
 			__func__, priv->timeout, priv);
-		if (priv->hwctx) {
-			priv->hwctx->timeout_ms_max = timeout;
-			priv->hwctx->timeout_debug_dump = timeout_debug_dump;
-		}
 		break;
 	}
 	default:
@@ -1075,23 +1043,6 @@ static const struct file_operations nvhost_channelops = {
 #endif
 	.unlocked_ioctl = nvhost_channelctl
 };
-
-struct nvhost_hwctx *nvhost_channel_get_file_hwctx(int fd)
-{
-	struct nvhost_channel_userctx *userctx;
-	struct file *f = fget(fd);
-	if (!f)
-		return 0;
-
-	if (f->f_op != &nvhost_channelops) {
-		fput(f);
-		return 0;
-	}
-
-	userctx = (struct nvhost_channel_userctx *)f->private_data;
-	fput(f);
-	return userctx->hwctx;
-}
 
 static struct {
 	int class_id;

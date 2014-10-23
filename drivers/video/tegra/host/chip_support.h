@@ -31,7 +31,6 @@ struct nvhost_intr;
 struct nvhost_syncpt;
 struct nvhost_userctx_timeout;
 struct nvhost_channel;
-struct nvhost_hwctx;
 struct nvhost_cdma;
 struct nvhost_job;
 struct push_buffer;

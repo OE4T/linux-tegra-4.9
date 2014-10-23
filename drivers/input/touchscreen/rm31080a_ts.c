@@ -3698,6 +3698,7 @@ static long dev_ioctl(struct file *file,
 {
 	long ret = RETURN_OK;
 	unsigned int index;
+	struct rm_tch_ts *ts = input_get_drvdata(g_input_dev);
 
 	index = (u8_cmd >> 16) & 0xFFFF;
 
@@ -3826,6 +3827,17 @@ static long dev_ioctl(struct file *file,
 		break;
 	case RM_IOCTL_INIT_SERVICE:
 		g_st_ts.b_init_service = true;
+		break;
+	case RM_IOCTL_SET_CLK:
+		rm_printk("Raydium - Clock set to %d\n", (u32)arg);
+		if (ts && ts->clk) {
+			if ((u32)arg)
+				ret = clk_enable(ts->clk);
+			else
+				clk_disable(ts->clk);
+		} else
+			dev_err(&g_spi->dev, "Raydium - %s : No clk handler!\n",
+				__func__);
 		break;
 	default:
 		return -EINVAL;

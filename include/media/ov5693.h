@@ -141,6 +141,7 @@ struct ov5693_platform_data {
 	struct nvc_imager_cap *cap;
 	struct ov5693_regulators regulators;
 	bool has_eeprom;
+	bool use_cam_gpio;
 };
 
 #endif  /* __OV5693_H__ */

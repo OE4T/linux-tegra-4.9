@@ -27,7 +27,7 @@
 	#address-cells = <2>;
 	#size-cells = <2>;
 
-	host1x {
+	host1x: host1x {
 		compatible = "nvidia,tegra186-host1x", "simple-bus";
 		reg = <0x0 0x3de00000 0x0 0x00040000>;
 		interrupts = <0 65 0x04   /* mpcore syncpt */
@@ -144,6 +144,16 @@
 			interrupts = <0 11 0x4>; /* INT_DPAUX_1 */
 			status = "disabled";
 		};
+	};
+
+	gp10b {
+		compatible = "nvidia,tegra186-gp10b";
+		reg = <0x0 0x57000000 0x0 0x01000000>,
+		      <0x0 0x58000000 0x0 0x01000000>,
+		      <0x0 0x538F0000 0x0 0x00001000>;
+		interrupts = <0 157 0x04
+			      0 158 0x04>;
+		nvidia,host1x = <&host1x>;
 	};
 
 	psci {

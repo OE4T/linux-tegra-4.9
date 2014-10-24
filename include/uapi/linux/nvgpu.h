@@ -100,6 +100,10 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS	(1 << 1)
 /* MAP_BUFFER_EX with sparse allocations */
 #define NVGPU_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS		(1 << 2)
+/* sync fence FDs are available in, e.g., submit_gpfifo */
+#define NVGPU_GPU_FLAGS_SUPPORT_SYNC_FENCE_FDS		(1 << 3)
+/* NVGPU_IOCTL_CHANNEL_CYCLE_STATS is available */
+#define NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS		(1 << 4)
 
 struct nvgpu_gpu_characteristics {
 	__u32 arch;
@@ -111,14 +115,18 @@ struct nvgpu_gpu_characteristics {
 	__u64 L2_cache_size;               /* bytes */
 	__u64 on_board_video_memory_size;  /* bytes */
 
-	__u32 num_tpc_per_gpc;
+	__u32 num_tpc_per_gpc; /* the architectural maximum */
 	__u32 bus_type;
 
-	__u32 big_page_size;
+	__u32 big_page_size; /* the default big page size */
 	__u32 compression_page_size;
 
 	__u32 pde_coverage_bit_count;
-	__u32 reserved;
+
+	/* bit N set ==> big page size 2^N is available in
+	   NVGPU_GPU_IOCTL_ALLOC_AS. The default big page size is
+	   always available regardless of this field. */
+	__u32 available_big_page_sizes;
 
 	__u64 flags;
 
@@ -128,6 +136,23 @@ struct nvgpu_gpu_characteristics {
 	__u32 gpfifo_class;
 	__u32 inline_to_memory_class;
 	__u32 dma_copy_class;
+
+	__u32 gpc_mask; /* enabled GPCs */
+
+	__u32 sm_arch_sm_version; /* sm version */
+	__u32 sm_arch_spa_version; /* sm instruction set */
+	__u32 sm_arch_warp_count;
+
+	/* IOCTL interface levels by service. -1 if not supported */
+	__s16 gpu_ioctl_nr_last;
+	__s16 tsg_ioctl_nr_last;
+	__s16 dbg_gpu_ioctl_nr_last;
+	__s16 ioctl_channel_nr_last;
+	__s16 as_ioctl_nr_last;
+
+	__u8 gpu_va_bit_count;
+
+	__u8 reserved;
 
 	/* Notes:
 	   - This struct can be safely appended with new fields. However, always
@@ -197,6 +222,22 @@ struct nvgpu_gpu_open_tsg_args {
 	__u32 reserved;			/* must be zero */
 };
 
+struct nvgpu_gpu_get_tpc_masks_args {
+	/* [in]  TPC mask buffer size reserved by userspace. Should be
+		 at least sizeof(__u32) * fls(gpc_mask) to receive TPC
+		 mask for each GPC.
+	   [out] full kernel buffer size
+	*/
+	__u32 mask_buf_size;
+	__u32 reserved;
+
+	/* [in]  pointer to TPC mask buffer. It will receive one
+		 32-bit TPC mask per GPC or 0 if GPC is not enabled or
+		 not present. This parameter is ignored if
+		 mask_buf_size is 0. */
+	__u64 mask_buf_addr;
+};
+
 #define NVGPU_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
 	_IOR(NVGPU_GPU_IOCTL_MAGIC, 1, struct nvgpu_gpu_zcull_get_ctx_size_args)
 #define NVGPU_GPU_IOCTL_ZCULL_GET_INFO \
@@ -215,9 +256,11 @@ struct nvgpu_gpu_open_tsg_args {
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 8, struct nvgpu_alloc_as_args)
 #define NVGPU_GPU_IOCTL_OPEN_TSG \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 9, struct nvgpu_gpu_open_tsg_args)
+#define NVGPU_GPU_IOCTL_GET_TPC_MASKS \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 10, struct nvgpu_gpu_get_tpc_masks_args)
 
 #define NVGPU_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_GPU_IOCTL_OPEN_TSG)
+	_IOC_NR(NVGPU_GPU_IOCTL_GET_TPC_MASKS)
 #define NVGPU_GPU_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_gpu_prepare_compressible_read_args)
 

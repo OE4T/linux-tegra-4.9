@@ -137,6 +137,7 @@ struct gpu_ops {
 				struct gr_zcull_info *zcull_params);
 		bool (*is_tpc_addr)(u32 addr);
 		u32 (*get_tpc_num)(u32 addr);
+		void (*detect_sm_arch)(struct gk20a *g);
 	} gr;
 	const char *name;
 	struct {
@@ -304,7 +305,8 @@ struct gpu_ops {
 		void (*l2_flush)(struct gk20a *g, bool invalidate);
 		void (*tlb_invalidate)(struct vm_gk20a *vm);
 		void (*set_big_page_size)(struct gk20a *g,
-					 void *inst_ptr, int size);
+					  void *inst_ptr, int size);
+		u32 (*get_big_page_sizes)(void);
 	} mm;
 	struct {
 		int (*prepare_ucode)(struct gk20a *g);

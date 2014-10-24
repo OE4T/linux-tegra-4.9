@@ -280,6 +280,11 @@ static void gm20b_mm_set_big_page_size(struct gk20a *g,
 	gk20a_dbg_fn("done");
 }
 
+u32 gm20b_mm_get_big_page_sizes(void)
+{
+	return SZ_64K | SZ_128K;
+}
+
 void gm20b_init_mm(struct gpu_ops *gops)
 {
 	gops->mm.set_sparse = gm20b_vm_put_sparse;
@@ -295,4 +300,5 @@ void gm20b_init_mm(struct gpu_ops *gops)
 	gops->mm.l2_flush = gk20a_mm_l2_flush;
 	gops->mm.tlb_invalidate = gk20a_mm_tlb_invalidate;
 	gops->mm.set_big_page_size = gm20b_mm_set_big_page_size;
+	gops->mm.get_big_page_sizes = gm20b_mm_get_big_page_sizes;
 }

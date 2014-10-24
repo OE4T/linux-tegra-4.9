@@ -748,6 +748,18 @@ static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 
 #endif
 
+static void gr_gm20b_detect_sm_arch(struct gk20a *g)
+{
+	u32 v = gk20a_readl(g, gr_gpc0_tpc0_sm_arch_r());
+
+	g->gpu_characteristics.sm_arch_spa_version =
+		gr_gpc0_tpc0_sm_arch_spa_version_v(v);
+	g->gpu_characteristics.sm_arch_sm_version =
+		gr_gpc0_tpc0_sm_arch_sm_version_v(v);
+	g->gpu_characteristics.sm_arch_warp_count =
+		gr_gpc0_tpc0_sm_arch_warp_count_v(v);
+}
+
 void gm20b_init_gr(struct gpu_ops *gops)
 {
 	gops->gr.init_gpc_mmu = gr_gm20b_init_gpc_mmu;
@@ -781,4 +793,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.get_zcull_info = gr_gk20a_get_zcull_info;
 	gops->gr.is_tpc_addr = gr_gm20b_is_tpc_addr;
 	gops->gr.get_tpc_num = gr_gm20b_get_tpc_num;
+	gops->gr.detect_sm_arch = gr_gm20b_detect_sm_arch;
 }

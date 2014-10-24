@@ -1774,12 +1774,32 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->compression_page_size = g->mm.pmu.vm.compression_page_size;
 	gpu->pde_coverage_bit_count = g->mm.pmu.vm.pde_stride_shift;
 
+	gpu->available_big_page_sizes = gpu->big_page_size;
+	if (g->ops.mm.get_big_page_sizes)
+		gpu->available_big_page_sizes |= g->ops.mm.get_big_page_sizes();
+
 	gpu->flags = NVGPU_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS
-		| NVGPU_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS;
+		| NVGPU_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS
+		| NVGPU_GPU_FLAGS_SUPPORT_SYNC_FENCE_FDS;
 
 	if (IS_ENABLED(CONFIG_TEGRA_GK20A) &&
 	    gk20a_platform_has_syncpoints(g->dev))
 		gpu->flags |= NVGPU_GPU_FLAGS_HAS_SYNCPOINTS;
+
+	if (IS_ENABLED(CONFIG_GK20A_CYCLE_STATS))
+		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS;
+
+	gpu->gpc_mask = 1;
+
+	g->ops.gr.detect_sm_arch(g);
+
+	gpu->gpu_ioctl_nr_last = NVGPU_GPU_IOCTL_LAST;
+	gpu->tsg_ioctl_nr_last = NVGPU_TSG_IOCTL_LAST;
+	gpu->dbg_gpu_ioctl_nr_last = NVGPU_DBG_GPU_IOCTL_LAST;
+	gpu->ioctl_channel_nr_last = NVGPU_IOCTL_CHANNEL_LAST;
+	gpu->as_ioctl_nr_last = NVGPU_AS_IOCTL_LAST;
+
+	gpu->gpu_va_bit_count = 40;
 
 	gpu->reserved = 0;
 

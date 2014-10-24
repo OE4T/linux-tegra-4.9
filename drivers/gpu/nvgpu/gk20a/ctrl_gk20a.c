@@ -221,6 +221,30 @@ clean_up:
 	return err;
 }
 
+static int gk20a_ctrl_get_tpc_masks(struct gk20a *g,
+				    struct nvgpu_gpu_get_tpc_masks_args *args)
+{
+	struct gr_gk20a *gr = &g->gr;
+	int err = 0;
+	const u32 gpc_tpc_mask_size = sizeof(u32) * gr->gpc_count;
+
+	if (args->mask_buf_size > 0) {
+		size_t write_size = gpc_tpc_mask_size;
+
+		if (write_size > args->mask_buf_size)
+			write_size = args->mask_buf_size;
+
+		err = copy_to_user((void __user *)(uintptr_t)
+				   args->mask_buf_addr,
+				   gr->gpc_tpc_mask, write_size);
+	}
+
+	if (err == 0)
+		args->mask_buf_size = gpc_tpc_mask_size;
+
+	return err;
+}
+
 long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct platform_device *dev = filp->private_data;
@@ -389,6 +413,10 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	case NVGPU_GPU_IOCTL_OPEN_TSG:
 		err = gk20a_ctrl_open_tsg(g,
 			(struct nvgpu_gpu_open_tsg_args *)buf);
+		break;
+	case NVGPU_GPU_IOCTL_GET_TPC_MASKS:
+		err = gk20a_ctrl_get_tpc_masks(g,
+			(struct nvgpu_gpu_get_tpc_masks_args *)buf);
 		break;
 	default:
 		dev_dbg(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x", cmd);

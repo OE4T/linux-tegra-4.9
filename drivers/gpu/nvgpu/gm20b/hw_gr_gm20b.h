@@ -1878,6 +1878,22 @@ static inline u32 gr_gpc0_tpc0_sm_cfg_sm_id_f(u32 v)
 {
 	return (v & 0xffff) << 0;
 }
+static inline u32 gr_gpc0_tpc0_sm_arch_r(void)
+{
+	return 0x0050469c;
+}
+static inline u32 gr_gpc0_tpc0_sm_arch_warp_count_v(u32 r)
+{
+	return (r >> 0) & 0xff;
+}
+static inline u32 gr_gpc0_tpc0_sm_arch_spa_version_v(u32 r)
+{
+	return (r >> 8) & 0xfff;
+}
+static inline u32 gr_gpc0_tpc0_sm_arch_sm_version_v(u32 r)
+{
+	return (r >> 20) & 0xfff;
+}
 static inline u32 gr_gpc0_ppc0_pes_vsc_strem_r(void)
 {
 	return 0x00503018;

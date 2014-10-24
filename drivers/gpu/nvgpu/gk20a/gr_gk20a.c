@@ -3490,6 +3490,27 @@ int gr_gk20a_get_zcull_info(struct gk20a *g, struct gr_gk20a *gr,
 	return 0;
 }
 
+static void gr_gk20a_detect_sm_arch(struct gk20a *g)
+{
+	u32 v = gk20a_readl(g, gr_gpc0_tpc0_sm_arch_r());
+
+	u32 raw_version = gr_gpc0_tpc0_sm_arch_spa_version_v(v);
+	u32 version = 0;
+
+	if (raw_version == gr_gpc0_tpc0_sm_arch_spa_version_smkepler_lp_v())
+		version = 0x320; /* SM 3.2 */
+	else
+		gk20a_err(dev_from_gk20a(g), "Unknown SM version 0x%x\n",
+			  raw_version);
+
+	/* on Kepler, SM version == SPA version */
+	g->gpu_characteristics.sm_arch_spa_version = version;
+	g->gpu_characteristics.sm_arch_sm_version = version;
+
+	g->gpu_characteristics.sm_arch_warp_count =
+		gr_gpc0_tpc0_sm_arch_warp_count_v(v);
+}
+
 static int gr_gk20a_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 				  struct zbc_entry *color_val, u32 index)
 {
@@ -7328,5 +7349,6 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.get_zcull_info = gr_gk20a_get_zcull_info;
 	gops->gr.is_tpc_addr = gr_gk20a_is_tpc_addr;
 	gops->gr.get_tpc_num = gr_gk20a_get_tpc_num;
+	gops->gr.detect_sm_arch = gr_gk20a_detect_sm_arch;
 }
 

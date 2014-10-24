@@ -3433,6 +3433,8 @@ int tegra_dc_slgc_disp0(struct notifier_block *nb,
 	struct tegra_dc *dc = container_of(nb, struct tegra_dc, slgc_notifier);
 	u32 val;
 
+	tegra_dc_get(dc);
+
 	val = tegra_dc_readl(dc, DC_COM_DSC_TOP_CTL);
 	val |= DSC_SLCG_OVERRIDE;
 	tegra_dc_writel(dc, val, DC_COM_DSC_TOP_CTL); /* set */
@@ -3440,6 +3442,8 @@ int tegra_dc_slgc_disp0(struct notifier_block *nb,
 	(void)tegra_dc_readl(dc, DC_CMD_DISPLAY_COMMAND);
 	val &= ~DSC_SLCG_OVERRIDE;
 	tegra_dc_writel(dc, val, DC_COM_DSC_TOP_CTL); /* restore */
+
+	tegra_dc_put(dc);
 #endif
 	return NOTIFY_OK;
 }

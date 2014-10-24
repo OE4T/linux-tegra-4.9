@@ -560,7 +560,7 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 {
 	int err;
 
-	tegra_dc_unpowergate_locked(hdmi->dc); /* BUG! this is a race */
+	tegra_dc_unpowergate_locked(hdmi->dc);
 
 	_tegra_hdmi_ddc_enable(hdmi);
 
@@ -574,7 +574,7 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 
 	_tegra_hdmi_ddc_disable(hdmi);
 
-	tegra_dc_unpowergate_locked(hdmi->dc); /* BUG! this is a race */
+	tegra_dc_unpowergate_locked(hdmi->dc);
 
 	tegra_hdmi_edid_config(hdmi);
 

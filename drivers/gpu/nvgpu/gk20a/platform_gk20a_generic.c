@@ -96,6 +96,10 @@ err_get_clock:
 		clk_put(platform->clk[1]);
 	if (!IS_ERR_OR_NULL(platform->clk[2]))
 		clk_put(platform->clk[2]);
+
+	platform->clk[0] = NULL;
+	platform->clk[1] = NULL;
+	platform->clk[2] = NULL;
 	return -ENODEV;
 }
 

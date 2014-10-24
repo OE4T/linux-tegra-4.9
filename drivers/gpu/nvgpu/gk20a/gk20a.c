@@ -1146,7 +1146,9 @@ static int gk20a_pm_enable_clk(struct device *dev)
 		return -EINVAL;
 
 	for (index = 0; index < platform->num_clks; index++) {
-		int err = clk_prepare_enable(platform->clk[index]);
+		int err = 0;
+		if (platform->clk[index])
+			clk_prepare_enable(platform->clk[index]);
 		if (err)
 			return -EINVAL;
 	}
@@ -1163,8 +1165,10 @@ static int gk20a_pm_disable_clk(struct device *dev)
 	if (!platform)
 		return -EINVAL;
 
-	for (index = 0; index < platform->num_clks; index++)
-		clk_disable_unprepare(platform->clk[index]);
+	for (index = 0; index < platform->num_clks; index++) {
+		if (platform->clk[index])
+			clk_disable_unprepare(platform->clk[index]);
+	}
 
 	return 0;
 }

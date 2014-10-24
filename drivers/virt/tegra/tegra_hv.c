@@ -1,7 +1,7 @@
 /*
  * Tegra Hypervisor manager
  *
- * Instanciates virtualization-related resources.
+ * Instantiates virtualization-related resources.
  *
  * Copyright (C) 2014, NVIDIA CORPORATION. All rights reserved.
  *
@@ -324,7 +324,7 @@ static int tegra_hv_dt_parse(struct tegra_hv_data *hvd,
 	}
 	givci->valid = 1;	/* valid guest */
 
-	cfgsize = tegra_hv_server_data_size(count);
+	cfgsize = tegra_ivc_align(tegra_hv_server_data_size(count));
 	if (cfgsize >= givci->res.size) {
 		dev_err(dev, "guest #%d, size %d too large (> %lu)\n",
 				target_guestid, cfgsize, givci->res.size);
@@ -349,6 +349,12 @@ static int tegra_hv_dt_parse(struct tegra_hv_data *hvd,
 
 		/* make sure you don't overwrite the shared data */
 		queue_size = tegra_ivc_total_queue_size(pqd.size);
+		if (queue_size == 0) {
+			dev_err(dev, "guest %d, queue %u: bad size: %u\n",
+					target_guestid, pqd.reg, pqd.size);
+			ret = -ENOMEM;
+			goto out;
+		}
 		if (p + queue_size * 2 >= (uintptr_t)givci->shd +
 				givci->res.size) {
 			dev_err(dev, "guest #%d, overflow of shared memory\n",
@@ -386,8 +392,8 @@ static int tegra_hv_dt_parse(struct tegra_hv_data *hvd,
 			i++;
 		}
 
-		if (tegra_ivc_init_shared_memory(p, pqd.nframes,
-				pqd.frame_size, queue_size) != 0) {
+		if (tegra_ivc_init_shared_memory(p, p + queue_size, pqd.nframes,
+				pqd.frame_size) != 0) {
 			dev_err(dev, "guest %d, Q#%d: failed shmem init\n",
 					target_guestid, qd->id);
 			ret = -EINVAL;
@@ -887,6 +893,7 @@ static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 	struct ivc_dev *ivc;
 	int ret;
 	int rx_first;
+	uintptr_t rx_base, tx_base;
 
 	ivc = kzalloc(sizeof(*ivc), GFP_KERNEL);
 	if (ivc == NULL) {
@@ -943,11 +950,18 @@ static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 		rx_first = hvd->guestid == qd->peers[0];
 	}
 
-	dev_info(dev, "adding ivc%u: base=%lx size=%x\n", qd->id,
-			(uintptr_t)givci->shd + qd->offset, qd->size);
-	tegra_ivc_init(&ivc->ivc, (uintptr_t)givci->shd + qd->offset,
-			qd->nframes, qd->frame_size, qd->size, rx_first, NULL,
-			ivc_raise_irq);
+	if (rx_first) {
+		rx_base = (uintptr_t)givci->shd + qd->offset;
+		tx_base = (uintptr_t)givci->shd + qd->offset + qd->size;
+	} else {
+		tx_base = (uintptr_t)givci->shd + qd->offset;
+		rx_base = (uintptr_t)givci->shd + qd->offset + qd->size;
+	}
+
+	dev_info(dev, "adding ivc%u: rx_base=%lx tx_base = %lx size=%x\n",
+			qd->id, rx_base, tx_base, qd->size);
+	tegra_ivc_init(&ivc->ivc, rx_base, tx_base, qd->nframes, qd->frame_size,
+			NULL, ivc_raise_irq);
 
 	/* IRQ# of this IVC channel */
 	ivc->irq = givci->res.virq_base + qd->id;

@@ -463,4 +463,10 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 	};
+
+	soft_watchdog {
+		compatible = "softdog-platform";
+		status = "disabled";
+		dt-override-status-odm-data = <0x00030000 0x00000000>;
+	};
 };

@@ -34,6 +34,7 @@
 #include <linux/of.h>
 #include <linux/slab.h>
 #include <linux/sysfs.h>
+#include <linux/suspend.h>
 
 #define SUPPORTED_CABLE_MAX	32
 #define CABLE_NAME_MAX		30
@@ -479,6 +480,35 @@ static ssize_t cable_state_show(struct device *dev,
 		extcon_get_state(cable->edev, cable->edev->supported_cable[i]));
 }
 
+static ssize_t uevent_in_suspend_show(struct device *dev,
+				      struct device_attribute *attr, char *buf)
+{
+	struct extcon_dev *edev = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%c\n", edev->uevent_in_suspend ? 'Y' : 'N');
+}
+
+static ssize_t uevent_in_suspend_store(struct device *dev,
+				       struct device_attribute *attr,
+				       const char *buf, size_t count)
+{
+	struct extcon_dev *edev = dev_get_drvdata(dev);
+	bool uevent_in_suspend;
+	int ret;
+	unsigned long flags;
+
+	ret = strtobool(buf, &uevent_in_suspend);
+	if (ret)
+		return ret;
+
+	spin_lock_irqsave(&edev->lock, flags);
+	edev->uevent_in_suspend = uevent_in_suspend;
+	spin_unlock_irqrestore(&edev->lock, flags);
+
+	return count;
+}
+DEVICE_ATTR_RW(uevent_in_suspend);
+
 /**
  * extcon_sync()	- Synchronize the states for both the attached/detached
  * @edev:		the extcon device that has the cable.
@@ -506,6 +536,15 @@ int extcon_sync(struct extcon_dev *edev, unsigned int id)
 		return index;
 
 	spin_lock_irqsave(&edev->lock, flags);
+
+	/* The cable state will be synced after resume. */
+	if (edev->is_suspend && !edev->uevent_in_suspend) {
+		spin_unlock_irqrestore(&edev->lock, flags);
+		dev_info(&edev->dev,
+			"%s: didn't sync cable state (0x%08x 0x%08x) due to suspending\n",
+			__func__, edev->last_state_in_suspend, edev->state);
+		return 0;
+	}
 
 	state = !!(edev->state & BIT(index));
 	raw_notifier_call_chain(&edev->nh[index], state, edev);
@@ -1036,6 +1075,7 @@ EXPORT_SYMBOL_GPL(extcon_unregister_notifier);
 static struct attribute *extcon_attrs[] = {
 	&dev_attr_state.attr,
 	&dev_attr_name.attr,
+	&dev_attr_uevent_in_suspend.attr,
 	NULL,
 };
 ATTRIBUTE_GROUPS(extcon);
@@ -1105,6 +1145,41 @@ void extcon_dev_free(struct extcon_dev *edev)
 	kfree(edev);
 }
 EXPORT_SYMBOL_GPL(extcon_dev_free);
+
+static int extcon_pm_notify(struct notifier_block *nb,
+			    unsigned long event, void *data)
+{
+	struct extcon_dev *edev = container_of(nb, struct extcon_dev, pm_nb);
+	unsigned long flags;
+	int i;
+
+	if (event == PM_SUSPEND_PREPARE) {
+		spin_lock_irqsave(&edev->lock, flags);
+		edev->is_suspend = true;
+		if (!edev->uevent_in_suspend)
+			edev->last_state_in_suspend = edev->state;
+		spin_unlock_irqrestore(&edev->lock, flags);
+	} else if (event == PM_POST_SUSPEND) {
+		spin_lock_irqsave(&edev->lock, flags);
+		edev->is_suspend = false;
+		if (edev->uevent_in_suspend) {
+			spin_unlock_irqrestore(&edev->lock, flags);
+			return NOTIFY_OK;
+		}
+		spin_unlock_irqrestore(&edev->lock, flags);
+
+		/* Sync state of cables. */
+		for (i = 0; i < edev->max_supported; i++)
+			extcon_sync(edev, edev->supported_cable[i]);
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block extcon_pm_nb = {
+	.notifier_call = extcon_pm_notify,
+	.priority = -1,
+};
 
 /**
  * extcon_dev_register() - Register a new extcon device
@@ -1299,6 +1374,11 @@ int extcon_dev_register(struct extcon_dev *edev)
 	dev_set_drvdata(&edev->dev, edev);
 	edev->state = 0;
 
+	edev->uevent_in_suspend = true;
+	edev->is_suspend = false;
+	edev->pm_nb = extcon_pm_nb;
+	register_pm_notifier(&edev->pm_nb);
+
 	mutex_lock(&extcon_dev_list_lock);
 	list_add(&edev->entry, &extcon_dev_list);
 	mutex_unlock(&extcon_dev_list_lock);
@@ -1351,6 +1431,7 @@ void extcon_dev_unregister(struct extcon_dev *edev)
 	}
 
 	device_unregister(&edev->dev);
+	unregister_pm_notifier(&edev->pm_nb);
 
 	if (edev->mutually_exclusive && edev->max_supported) {
 		for (index = 0; edev->mutually_exclusive[index];

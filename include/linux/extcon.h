@@ -218,6 +218,10 @@ struct extcon_dev {
 	int max_supported;
 	spinlock_t lock;	/* could be called by irq handler */
 	u32 state;
+	u32 last_state_in_suspend;
+	bool uevent_in_suspend;
+	bool is_suspend;
+	struct notifier_block pm_nb;
 
 	/* /sys/class/extcon/.../cable.n/... */
 	struct device_type extcon_dev_type;

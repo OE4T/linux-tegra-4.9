@@ -129,7 +129,7 @@ static int out_type_from_pn(struct device_node *panel_node)
 	struct device_node *default_out_np = NULL;
 	u32 temp;
 
-	if (panel_node && of_device_is_available(panel_node))
+	if (panel_node)
 		default_out_np = of_get_child_by_name(panel_node,
 			"disp-default-out");
 	if (default_out_np && !of_property_read_u32(default_out_np,

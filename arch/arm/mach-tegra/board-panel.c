@@ -109,7 +109,6 @@ int tegra_panel_gpio_get_dt(const char *comp_str,
 {
 	int cnt = 0;
 	char *label = NULL;
-	const char *node_status;
 	int err = 0;
 	struct device_node *node =
 		of_find_compatible_node(NULL, NULL, comp_str);
@@ -122,13 +121,6 @@ int tegra_panel_gpio_get_dt(const char *comp_str,
 
 	if (!node) {
 		pr_info("%s panel dt support not available\n", comp_str);
-		err = -ENOENT;
-		goto fail;
-	}
-
-	of_property_read_string(node, "status", &node_status);
-	if (strcmp(node_status, "okay")) {
-		pr_info("%s panel dt support disabled\n", comp_str);
 		err = -ENOENT;
 		goto fail;
 	}

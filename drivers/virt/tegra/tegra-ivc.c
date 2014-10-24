@@ -11,29 +11,80 @@
 
 #include <linux/tegra-ivc.h>
 #include "tegra-ivc-internal.h"
-#include "cbuf.h"
 #include <linux/module.h>
 #include <linux/uaccess.h>
 #include <linux/err.h>
+#include <asm/compiler.h>
 
-static inline void ivc_invalidate_cbuf(struct ivc *ivc, dma_addr_t cbuf_handle)
+#define IVC_ALIGN 64
+
+struct ivc_channel_header {
+	union {
+		struct {
+			uint32_t w_count;
+			uint32_t state;
+		};
+		uint8_t w_align[IVC_ALIGN];
+	};
+	union {
+		uint32_t r_count;
+		uint8_t r_align[IVC_ALIGN];
+	};
+};
+
+static inline void ivc_invalidate_counter(struct ivc *ivc,
+		dma_addr_t handle)
 {
 	if (!ivc->peer_device)
 		return;
-	dma_sync_single_for_cpu(ivc->peer_device, cbuf_handle,
-			sizeof(struct cbuf), DMA_FROM_DEVICE);
-	/* Order synchronization before subsequent loads. */
-	cbuf_rmb();
+	dma_sync_single_for_cpu(ivc->peer_device, handle, IVC_ALIGN,
+			DMA_FROM_DEVICE);
 }
 
-static inline void ivc_flush_cbuf(struct ivc *ivc, dma_addr_t cbuf_handle)
+static inline void ivc_flush_counter(struct ivc *ivc, dma_addr_t handle)
 {
 	if (!ivc->peer_device)
 		return;
-	/* Order cbuf updates before synchronization. */
-	cbuf_wmb();
-	dma_sync_single_for_device(ivc->peer_device, cbuf_handle,
-			sizeof(struct cbuf), DMA_TO_DEVICE);
+	dma_sync_single_for_device(ivc->peer_device, handle, IVC_ALIGN,
+			DMA_TO_DEVICE);
+}
+
+static inline int ivc_channel_empty(struct ivc_channel_header *ch)
+{
+	return ACCESS_ONCE(ch->w_count) == ACCESS_ONCE(ch->r_count);
+}
+
+static inline int ivc_channel_full(struct ivc *ivc,
+		struct ivc_channel_header *ch)
+{
+	/*
+	 * Invalid cases where the counters indicate that the queue is over
+	 * capacity also appear full.
+	 */
+	return ACCESS_ONCE(ch->w_count) - ACCESS_ONCE(ch->r_count)
+		>= ivc->nframes;
+}
+
+static inline void ivc_advance_tx(struct ivc *ivc)
+{
+	ACCESS_ONCE(ivc->tx_channel->w_count) =
+		ACCESS_ONCE(ivc->tx_channel->w_count) + 1;
+
+	if (ivc->w_pos == ivc->nframes - 1)
+		ivc->w_pos = 0;
+	else
+		ivc->w_pos++;
+}
+
+static inline void ivc_advance_rx(struct ivc *ivc)
+{
+	ACCESS_ONCE(ivc->rx_channel->r_count) =
+		ACCESS_ONCE(ivc->rx_channel->r_count) + 1;
+
+	if (ivc->r_pos == ivc->nframes - 1)
+		ivc->r_pos = 0;
+	else
+		ivc->r_pos++;
 }
 
 /*
@@ -43,9 +94,10 @@ static inline void ivc_flush_cbuf(struct ivc *ivc, dma_addr_t cbuf_handle)
  */
 static inline int ivc_rx_empty(struct ivc *ivc)
 {
-	if (cbuf_is_empty(ivc->rx_cbuf)) {
-		ivc_invalidate_cbuf(ivc, ivc->rx_handle);
-		return cbuf_is_empty(ivc->rx_cbuf);
+	if (ivc_channel_empty(ivc->rx_channel)) {
+		ivc_invalidate_counter(ivc, ivc->rx_handle +
+				offsetof(struct ivc_channel_header, r_count));
+		return ivc_channel_empty(ivc->rx_channel);
 	}
 
 	return 0;
@@ -53,9 +105,10 @@ static inline int ivc_rx_empty(struct ivc *ivc)
 
 static inline int ivc_tx_full(struct ivc *ivc)
 {
-	if (cbuf_is_full(ivc->tx_cbuf)) {
-		ivc_invalidate_cbuf(ivc, ivc->tx_handle);
-		return cbuf_is_full(ivc->tx_cbuf);
+	if (ivc_channel_full(ivc, ivc->tx_channel)) {
+		ivc_invalidate_counter(ivc, ivc->tx_handle +
+				offsetof(struct ivc_channel_header, w_count));
+		return ivc_channel_full(ivc, ivc->tx_channel);
 	}
 
 	return 0;
@@ -75,55 +128,56 @@ EXPORT_SYMBOL(tegra_ivc_can_write);
 
 int tegra_ivc_tx_empty(struct ivc *ivc)
 {
-	ivc_invalidate_cbuf(ivc, ivc->tx_handle);
-	return cbuf_is_empty(ivc->tx_cbuf);
+	ivc_invalidate_counter(ivc, ivc->tx_handle +
+			offsetof(struct ivc_channel_header, w_count));
+	return ivc_channel_empty(ivc->tx_channel);
 }
 EXPORT_SYMBOL(tegra_ivc_tx_empty);
 
-static void *ivc_frame_pointer(struct ivc *ivc, struct cbuf *cb, unsigned frame)
+static void *ivc_frame_pointer(struct ivc *ivc, struct ivc_channel_header *ch,
+		uint32_t frame)
 {
-	return &cb->buf[ivc->frame_size * frame];
+	BUG_ON(frame >= ivc->nframes);
+	return (void *)((uintptr_t)(ch + 1) + ivc->frame_size * frame);
 }
 
 static inline dma_addr_t ivc_frame_handle(struct ivc *ivc,
-		dma_addr_t cbuf_handle, unsigned frame)
+		dma_addr_t channel_handle, uint32_t frame)
 {
 	BUG_ON(!ivc->peer_device);
 	BUG_ON(frame >= ivc->nframes);
-	return cbuf_handle + ivc->frame_size * frame;
+	return channel_handle + ivc->frame_size * frame;
 }
 
-static inline void ivc_invalidate_frame(struct ivc *ivc, dma_addr_t cbuf_handle,
-		unsigned frame, int offset, int len)
+static inline void ivc_invalidate_frame(struct ivc *ivc,
+		dma_addr_t channel_handle, unsigned frame, int offset, int len)
 {
 	if (!ivc->peer_device)
 		return;
 	dma_sync_single_for_cpu(ivc->peer_device,
-			ivc_frame_handle(ivc, cbuf_handle, frame) + offset,
+			ivc_frame_handle(ivc, channel_handle, frame) + offset,
 			len, DMA_FROM_DEVICE);
 }
 
-static inline void ivc_flush_frame(struct ivc *ivc, dma_addr_t cbuf_handle,
+static inline void ivc_flush_frame(struct ivc *ivc, dma_addr_t channel_handle,
 		unsigned frame, int offset, int len)
 {
 	if (!ivc->peer_device)
 		return;
 	dma_sync_single_for_device(ivc->peer_device,
-			ivc_frame_handle(ivc, cbuf_handle, frame) + offset,
+			ivc_frame_handle(ivc, channel_handle, frame) + offset,
 			len, DMA_TO_DEVICE);
 }
 
 static int ivc_read_frame(struct ivc *ivc, void *buf, void __user *user_buf,
-		int max_read)
+		size_t max_read)
 {
-	struct cbuf *cb = ivc->rx_cbuf;
-	int ret, chunk, left;
 	const void *src;
-	unsigned frame;
-	/* Use the frame_size value that was previously validated. */
-	size_t struct_size = ivc->frame_size;
 
 	BUG_ON(buf && user_buf);
+
+	if (max_read > ivc->frame_size)
+		return -E2BIG;
 
 	if (ivc_rx_empty(ivc))
 		return -ENOMEM;
@@ -132,22 +186,10 @@ static int ivc_read_frame(struct ivc *ivc, void *buf, void __user *user_buf,
 	 * Order observation of w_pos potentially indicating new data before
 	 * data read.
 	 */
-	cbuf_rmb();
+	ivc_rmb();
 
-	if (max_read > struct_size) {
-		chunk = struct_size;
-		left = max_read - chunk;
-	} else {
-		chunk = max_read;
-		left = 0;
-	}
-
-	frame = ACCESS_ONCE(cb->r_pos);
-	if (frame >= ivc->nframes)
-		return -EINVAL;
-
-	ivc_invalidate_frame(ivc, ivc->rx_handle, frame, 0, max_read);
-	src = ivc_frame_pointer(ivc, cb, frame);
+	ivc_invalidate_frame(ivc, ivc->rx_handle, ivc->r_pos, 0, max_read);
+	src = ivc_frame_pointer(ivc, ivc->rx_channel, ivc->r_pos);
 
 	/*
 	 * When compiled with optimizations, different versions of this
@@ -156,49 +198,39 @@ static int ivc_read_frame(struct ivc *ivc, void *buf, void __user *user_buf,
 	 * version does not add overhead to the kernel version.
 	 */
 	if (buf) {
-		memcpy(buf, src, chunk);
-		memset(buf + chunk, 0, left);
+		memcpy(buf, src, max_read);
 	} else if (user_buf) {
-		if (copy_to_user(user_buf, src, chunk))
-			return -EFAULT;
-		if (left > 0 && clear_user(user_buf + chunk, left))
+		if (copy_to_user(user_buf, src, max_read))
 			return -EFAULT;
 	} else
 		BUG();
 
-	cbuf_advance_r_pos(cb);
-	ivc_flush_cbuf(ivc, ivc->rx_handle);
+	ivc_advance_rx(ivc);
+	ivc_flush_counter(ivc, ivc->rx_handle);
 	ivc->notify(ivc);
 
-	ret = chunk;
-
-	return ret;
+	return (int)max_read;
 }
 
-int tegra_ivc_read(struct ivc *ivc, void *buf, int max_read)
+int tegra_ivc_read(struct ivc *ivc, void *buf, size_t max_read)
 {
 	return ivc_read_frame(ivc, buf, NULL, max_read);
 }
 EXPORT_SYMBOL(tegra_ivc_read);
 
-int tegra_ivc_read_user(struct ivc *ivc, void __user *buf, int max_read)
+int tegra_ivc_read_user(struct ivc *ivc, void __user *buf, size_t max_read)
 {
 	return ivc_read_frame(ivc, NULL, buf, max_read);
 }
 EXPORT_SYMBOL(tegra_ivc_read_user);
 
 /* peek in the next rx buffer at offset off, the count bytes */
-int tegra_ivc_read_peek(struct ivc *ivc, void *buf, int off, int count)
+int tegra_ivc_read_peek(struct ivc *ivc, void *buf, size_t off, size_t count)
 {
-	struct cbuf *cb = ivc->rx_cbuf;
-	int chunk, rem;
 	const void *src;
-	unsigned frame;
-	/* Use the frame_size value that was previously validated. */
-	size_t struct_size = ivc->frame_size;
 
 	if (off > ivc->frame_size || off + count > ivc->frame_size)
-		return -EINVAL;
+		return -E2BIG;
 
 	if (ivc_rx_empty(ivc))
 		return -ENOMEM;
@@ -207,37 +239,22 @@ int tegra_ivc_read_peek(struct ivc *ivc, void *buf, int off, int count)
 	 * Order observation of w_pos potentially indicating new data before
 	 * data read.
 	 */
-	cbuf_rmb();
+	ivc_rmb();
 
-	/* get maximum available number of bytes */
-	rem = struct_size - off;
-	chunk = count;
+	ivc_invalidate_frame(ivc, ivc->rx_handle, ivc->r_pos, off, count);
+	src = ivc_frame_pointer(ivc, ivc->rx_channel, ivc->r_pos);
 
-	/* if request is for more than rem, return only rem */
-	if (chunk > rem)
-		chunk = rem;
-
-	frame = ACCESS_ONCE(cb->r_pos);
-	if (frame >= ivc->nframes)
-		return -EINVAL;
-
-	ivc_invalidate_frame(ivc, ivc->rx_handle, frame, off, count);
-	src = ivc_frame_pointer(ivc, cb, frame);
-
-	memcpy(buf, src + off, chunk);
+	memcpy(buf, (void *)((uintptr_t)src + off), count);
 
 	/* note, no interrupt is generated */
 
-	return chunk;
+	return (int)count;
 }
 EXPORT_SYMBOL(tegra_ivc_read_peek);
 
 /* directly peek at the next frame rx'ed */
 void *tegra_ivc_read_get_next_frame(struct ivc *ivc)
 {
-	struct cbuf *cb = ivc->rx_cbuf;
-	unsigned frame;
-
 	if (ivc_rx_empty(ivc))
 		return ERR_PTR(-ENOMEM);
 
@@ -245,31 +262,26 @@ void *tegra_ivc_read_get_next_frame(struct ivc *ivc)
 	 * Order observation of w_pos potentially indicating new data before
 	 * data read.
 	 */
-	cbuf_rmb();
+	ivc_rmb();
 
-	frame = ACCESS_ONCE(cb->r_pos);
-	if (frame >= ivc->nframes)
-		return ERR_PTR(-EINVAL);
-
-	ivc_invalidate_frame(ivc, ivc->rx_handle, frame, 0, ivc->frame_size);
-	return ivc_frame_pointer(ivc, cb, frame);
+	ivc_invalidate_frame(ivc, ivc->rx_handle, ivc->r_pos, 0,
+			ivc->frame_size);
+	return ivc_frame_pointer(ivc, ivc->rx_channel, ivc->r_pos);
 }
 EXPORT_SYMBOL(tegra_ivc_read_get_next_frame);
 
 int tegra_ivc_read_advance(struct ivc *ivc)
 {
-	struct cbuf *cb = ivc->rx_cbuf;
-
 	/*
 	 * No read barriers or synchronization here: the caller is expected to
-	 * have already observed the cbuf non-empty. This check is just to
+	 * have already observed the channel non-empty. This check is just to
 	 * catch programming errors.
 	 */
-	if (cbuf_is_empty(cb))
+	if (ivc_channel_empty(ivc->rx_channel))
 		return -ENOMEM;
 
-	cbuf_advance_r_pos(cb);
-	ivc_flush_cbuf(ivc, ivc->rx_handle);
+	ivc_advance_rx(ivc);
+	ivc_flush_counter(ivc, ivc->rx_handle);
 	ivc->notify(ivc);
 
 	return 0;
@@ -277,32 +289,19 @@ int tegra_ivc_read_advance(struct ivc *ivc)
 EXPORT_SYMBOL(tegra_ivc_read_advance);
 
 static int ivc_write_frame(struct ivc *ivc, const void *buf,
-		const void __user *user_buf, int size)
+		const void __user *user_buf, size_t size)
 {
-	struct cbuf *cb = ivc->tx_cbuf;
 	void *p;
-	int ret, left, chunk;
-	unsigned frame;
-	/* Use the frame_size value that was previously validated. */
-	size_t struct_size = ivc->frame_size;
 
 	BUG_ON(buf && user_buf);
+
+	if (size > ivc->frame_size)
+		return -E2BIG;
 
 	if (ivc_tx_full(ivc))
 		return -ENOMEM;
 
-	if (size > struct_size) {
-		chunk = struct_size;
-		left = size - struct_size;
-	} else {
-		chunk = size;
-		left = struct_size - chunk;
-	}
-
-	frame = ACCESS_ONCE(cb->w_pos);
-	if (frame >= ivc->nframes)
-		return -EINVAL;
-	p = ivc_frame_pointer(ivc, cb, frame);
+	p = ivc_frame_pointer(ivc, ivc->tx_channel, ivc->w_pos);
 
 	/*
 	 * When compiled with optimizations, different versions of this
@@ -311,178 +310,185 @@ static int ivc_write_frame(struct ivc *ivc, const void *buf,
 	 * version does not add overhead to the kernel version.
 	 */
 	if (buf) {
-		memcpy(p, buf, chunk);
+		memcpy(p, buf, size);
 	} else if (user_buf) {
-		if (copy_from_user(p, user_buf, chunk))
+		if (copy_from_user(p, user_buf, size))
 			return -EFAULT;
 	} else
 		BUG();
 
-	memset(p + chunk, 0, left);
-	ivc_flush_frame(ivc, ivc->tx_handle, frame, 0, size);
+	memset(p + size, 0, ivc->frame_size - size);
+	ivc_flush_frame(ivc, ivc->tx_handle, ivc->w_pos, 0, size);
 
 	/*
 	 * Ensure that updated data is visible before the w_pos counter
 	 * indicates that it is ready.
 	 */
-	cbuf_wmb();
+	ivc_wmb();
 
-	cbuf_advance_w_pos(cb);
-	ivc_flush_cbuf(ivc, ivc->tx_handle);
+	ivc_advance_tx(ivc);
+	ivc_flush_counter(ivc, ivc->tx_handle);
 	ivc->notify(ivc);
 
-	ret = chunk;
-
-	return size;
+	return (int)size;
 }
 
-int tegra_ivc_write(struct ivc *ivc, const void *buf, int size)
+int tegra_ivc_write(struct ivc *ivc, const void *buf, size_t size)
 {
 	return ivc_write_frame(ivc, buf, NULL, size);
 }
 EXPORT_SYMBOL(tegra_ivc_write);
 
-int tegra_ivc_write_user(struct ivc *ivc, const void __user *user_buf, int size)
+int tegra_ivc_write_user(struct ivc *ivc, const void __user *user_buf,
+		size_t size)
 {
 	return ivc_write_frame(ivc, NULL, user_buf, size);
 }
 EXPORT_SYMBOL(tegra_ivc_write_user);
 
 /* poke in the next tx buffer at offset off, the count bytes */
-int tegra_ivc_write_poke(struct ivc *ivc, const void *buf, int off, int count)
+int tegra_ivc_write_poke(struct ivc *ivc, const void *buf, size_t off,
+		size_t count)
 {
-	struct cbuf *cb = ivc->tx_cbuf;
-	int rem, chunk;
 	void *dest;
-	unsigned frame;
 
-	if (cbuf_is_full(cb))
+	if (off > ivc->frame_size || off + count > ivc->frame_size)
+		return -E2BIG;
+
+	if (ivc_channel_full(ivc, ivc->tx_channel))
 		return -ENOMEM;
 
-	rem = ivc->frame_size + off;
-	chunk = count;
-	if (chunk > rem)
-		chunk = rem;
+	dest = ivc_frame_pointer(ivc, ivc->tx_channel, ivc->w_pos);
+	memcpy(dest + off, buf, count);
 
-	frame = ACCESS_ONCE(cb->w_pos);
-	if (frame >= ivc->nframes)
-		return -EINVAL;
-	dest = ivc_frame_pointer(ivc, cb, frame);
-	memcpy(dest + off, buf, chunk);
-
-	return chunk;
+	return (int)count;
 }
 EXPORT_SYMBOL(tegra_ivc_write_poke);
 
 /* directly poke at the next frame to be tx'ed */
 void *tegra_ivc_write_get_next_frame(struct ivc *ivc)
 {
-	struct cbuf *cb = ivc->tx_cbuf;
-	unsigned frame;
-
 	if (ivc_tx_full(ivc))
 		return ERR_PTR(-ENOMEM);
 
-	frame = ACCESS_ONCE(cb->w_pos);
-	if (frame >= ivc->nframes)
-		return ERR_PTR(-EINVAL);
-
-	return ivc_frame_pointer(ivc, cb, frame);
+	return ivc_frame_pointer(ivc, ivc->tx_channel, ivc->w_pos);
 }
 EXPORT_SYMBOL(tegra_ivc_write_get_next_frame);
 
 /* advance the tx buffer */
 int tegra_ivc_write_advance(struct ivc *ivc)
 {
-	struct cbuf *cb = ivc->tx_cbuf;
-	unsigned frame;
-
-	if (cbuf_is_full(cb))
+	if (ivc_channel_full(ivc, ivc->tx_channel))
 		return -ENOMEM;
 
-	frame = ACCESS_ONCE(cb->w_pos);
-	if (frame >= ivc->nframes)
-		return -EINVAL;
-
-	ivc_flush_frame(ivc, ivc->tx_handle, frame, 0, ivc->frame_size);
+	ivc_flush_frame(ivc, ivc->tx_handle, ivc->w_pos, 0, ivc->frame_size);
 
 	/*
 	 * Order any possible stores to the frame before update of w_pos.
 	 */
-	cbuf_wmb();
+	ivc_wmb();
 
-	cbuf_advance_w_pos(cb);
-	ivc_flush_cbuf(ivc, ivc->tx_handle);
+	ivc_advance_tx(ivc);
+	ivc_flush_counter(ivc, ivc->tx_handle);
 	ivc->notify(ivc);
 
 	return 0;
 }
 EXPORT_SYMBOL(tegra_ivc_write_advance);
 
+size_t tegra_ivc_align(size_t size)
+{
+	return (size + (IVC_ALIGN - 1)) & ~(IVC_ALIGN - 1);
+}
+EXPORT_SYMBOL(tegra_ivc_align);
+
 unsigned tegra_ivc_total_queue_size(unsigned queue_size)
 {
-	return queue_size + sizeof(struct cbuf);
+	if (queue_size & (IVC_ALIGN - 1)) {
+		pr_err("%s: queue_size (%u) must be %u-byte aligned\n",
+				__func__, queue_size, IVC_ALIGN);
+		return 0;
+	}
+	return queue_size + sizeof(struct ivc_channel_header);
 }
 EXPORT_SYMBOL(tegra_ivc_total_queue_size);
 
-int tegra_ivc_init_shared_memory(uintptr_t queue_base, unsigned nframes,
-		unsigned frame_size, unsigned queue_size)
+int tegra_ivc_init_shared_memory(uintptr_t queue_base1, uintptr_t queue_base2,
+		unsigned nframes, unsigned frame_size)
 {
-	/*
-	 * The first cbuf is guaranteed to be adequately aligned given
-	 * that it follows a struct placed at the start of a page.
-	 */
-	BUG_ON(queue_base & (sizeof(int) - 1));
-	cbuf_init((void *)queue_base, frame_size, nframes);
-	BUG_ON(queue_base + queue_size < queue_base);
-	queue_base += queue_size;
+	BUG_ON(offsetof(struct ivc_channel_header, w_count) & (IVC_ALIGN - 1));
+	BUG_ON(offsetof(struct ivc_channel_header, r_count) & (IVC_ALIGN - 1));
+	BUG_ON(sizeof(struct ivc_channel_header) & (IVC_ALIGN - 1));
 
 	/*
-	 * The cbuf must at least be aligned enough for its counters
+	 * The headers must at least be aligned enough for counters
 	 * to be accessed atomically.
 	 */
-	if (queue_base & (sizeof(int) - 1)) {
-		pr_err("rx_cbuf start not aligned: %lx\n", queue_base);
+	if (queue_base1 & (IVC_ALIGN - 1)) {
+		pr_err("ivc channel start not aligned: %lx\n", queue_base1);
 		return -EINVAL;
 	}
-	cbuf_init((void *)queue_base, frame_size, nframes);
+	if (queue_base2 & (IVC_ALIGN - 1)) {
+		pr_err("ivc channel start not aligned: %lx\n", queue_base2);
+		return -EINVAL;
+	}
+
+	if (frame_size & (IVC_ALIGN - 1)) {
+		pr_err("frame size not adequately aligned: %u\n", frame_size);
+		return -EINVAL;
+	}
+
+	if (queue_base1 < queue_base2) {
+		if (queue_base1 + frame_size * nframes > queue_base2) {
+			pr_err("queue regions overlap: %lx + %x, %x\n",
+					queue_base1, frame_size,
+					frame_size * nframes);
+			return -EINVAL;
+		}
+	} else {
+		if (queue_base2 + frame_size * nframes > queue_base1) {
+			pr_err("queue regions overlap: %lx + %x, %x\n",
+					queue_base2, frame_size,
+					frame_size * nframes);
+			return -EINVAL;
+		}
+	}
+
+	memset((void *)queue_base1, 0, sizeof(struct ivc_channel_header) +
+			frame_size * nframes);
+	memset((void *)queue_base2, 0, sizeof(struct ivc_channel_header) +
+			frame_size * nframes);
 
 	return 0;
 }
 EXPORT_SYMBOL(tegra_ivc_init_shared_memory);
 
-int tegra_ivc_init(struct ivc *ivc, uintptr_t queue_base, unsigned nframes,
-		unsigned frame_size, unsigned queue_size, int rx_first,
+int tegra_ivc_init(struct ivc *ivc, uintptr_t rx_base, uintptr_t tx_base,
+		unsigned nframes, unsigned frame_size,
 		struct device *peer_device, void (*notify)(struct ivc *))
 {
 	BUG_ON(!ivc);
 	BUG_ON((uint64_t)nframes * (uint64_t)frame_size >= 0x100000000);
-	BUG_ON(nframes * frame_size > queue_size);
 	BUG_ON(!notify);
 
 	/*
-	 * cbufs are already initialized
-	 * we only have to assign rx/tx
-	 * peer[0] it's rx, tx
-	 * peer[1] it's tx, rx
-	 * both queues are of the same size
+	 * All sizes that can be returned by communication functions should
+	 * fit in an int.
 	 */
-	if (rx_first) {
-		ivc->rx_cbuf = (struct cbuf *)queue_base;
-		ivc->tx_cbuf = (struct cbuf *)(queue_base + queue_size);
-	} else {
-		ivc->tx_cbuf = (struct cbuf *)queue_base;
-		ivc->rx_cbuf = (struct cbuf *)(queue_base + queue_size);
-	}
+	if (frame_size > INT_MAX)
+		return -E2BIG;
+
+	ivc->rx_channel = (struct ivc_channel_header *)rx_base;
+	ivc->tx_channel = (struct ivc_channel_header *)tx_base;
 
 	if (peer_device) {
-		ivc->rx_handle = dma_map_single(peer_device, ivc->rx_cbuf,
-				queue_size, DMA_BIDIRECTIONAL);
+		ivc->rx_handle = dma_map_single(peer_device, ivc->rx_channel,
+				nframes * frame_size, DMA_BIDIRECTIONAL);
 		if (ivc->rx_handle == DMA_ERROR_CODE)
 			return -ENOMEM;
 
-		ivc->tx_handle = dma_map_single(peer_device, ivc->tx_cbuf,
-				queue_size, DMA_BIDIRECTIONAL);
+		ivc->tx_handle = dma_map_single(peer_device, ivc->tx_channel,
+				nframes * frame_size, DMA_BIDIRECTIONAL);
 		if (ivc->tx_handle == DMA_ERROR_CODE)
 			return -ENOMEM;
 	}

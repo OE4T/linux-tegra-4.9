@@ -783,9 +783,9 @@ static int tsec_setup_ucode_image(struct platform_device *dev,
 	tsec_carveout_addr_off = reserved_offset + TSEC_CARVEOUT_ADDR_OFFSET;
 	tsec_carveout_size_off = reserved_offset + TSEC_CARVEOUT_SIZE_OFFSET;
 
-	*((phys_addr_t *)(((void *)ucode_ptr) + tsec_carveout_addr_off)) =
+	*((dma_addr_t *)(((void *)ucode_ptr) + tsec_carveout_addr_off)) =
 		pdata->carveout_addr;
-	*((phys_addr_t *)(((void *)ucode_ptr) + tsec_carveout_size_off)) =
+	*((dma_addr_t *)(((void *)ucode_ptr) + tsec_carveout_size_off)) =
 		pdata->carveout_size;
 
 	m->os.size = ucode.bin_header->os_bin_size;
@@ -922,7 +922,6 @@ static int tsec_probe(struct platform_device *dev)
 	int err;
 	struct device_node *node;
 	struct nvhost_device_data *pdata = NULL;
-	DEFINE_DMA_ATTRS(attrs);
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
@@ -951,18 +950,31 @@ static int tsec_probe(struct platform_device *dev)
 
 	node = of_find_node_by_name(dev->dev.of_node, "carveout");
 	if (node) {
+		DEFINE_DMA_ATTRS(attrs);
 		err = of_property_read_u32(node, "carveout_addr",
 					(u32 *)&pdata->carveout_addr);
-		if (!err)
-			err = of_property_read_u32(node, "carveout_size",
-				(u32 *)&pdata->carveout_size);
-		if (!err) {
-			dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
-			dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
-			dma_map_linear_attrs(&dev->dev,
-				pdata->carveout_addr,
-				pdata->carveout_size, DMA_TO_DEVICE,
-				&attrs);
+		if (err) {
+			dev_err(&dev->dev, "invalid carveout_addr\n");
+			return -EINVAL;
+		}
+
+		err = of_property_read_u32(node, "carveout_size",
+					(u32 *)&pdata->carveout_size);
+		if (err) {
+			dev_err(&dev->dev, "invalid carveout_size\n");
+			return -EINVAL;
+		}
+
+		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+		pdata->carveout_addr = dma_map_single_attrs(&dev->dev,
+					       __va(pdata->carveout_addr),
+					       pdata->carveout_size,
+					       DMA_TO_DEVICE,
+					       &attrs);
+		if (dma_mapping_error(&dev->dev, pdata->carveout_addr)) {
+			dev_err(&dev->dev, "mapping to iova failed\n");
+			return -EINVAL;
 		}
 	}
 

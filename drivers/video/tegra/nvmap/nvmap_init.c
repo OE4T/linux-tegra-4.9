@@ -168,15 +168,28 @@ static int __nvmap_init_legacy(void)
 	    tegra_vpr_resize || tegra_carveout_size) {
 		/* Do nothing */
 	} else {
+		int err;
 		phys_addr_t addr, size = SZ_128M;
 
 		addr = memblock_find_in_range(size, 0, size, SZ_128K);
-		if (addr) {
-			memblock_reserve(addr, size);
-			tegra_carveout_size = size;
-			tegra_carveout_start = addr;
-			pr_info("allocate carveout=%pa@0%pa\n", &size, &addr);
+		if (!addr) {
+			pr_err("%s() Failed to allocate %pa\n",
+			       __func__, &size);
+			return -ENOMEM;
 		}
+
+		err = memblock_reserve(addr, size);
+		if (err) {
+			pr_err("%s() Failed to reserve %pa\n",
+			       __func__, &size);
+			return -ENOMEM;
+		}
+
+		tegra_carveout_size = size;
+		tegra_carveout_start = addr;
+
+		pr_info("%s() allocate carveout=%pa@0%pa\n",
+			__func__, &size, &addr);
 	}
 
 	nvmap_carveouts[1].base = tegra_carveout_start;

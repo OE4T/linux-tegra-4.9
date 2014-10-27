@@ -278,6 +278,19 @@ static struct pm_qos_object max_cpu_pwr_qos = {
 	.name = "max_cpu_power",
 };
 
+static BLOCKING_NOTIFIER_HEAD(max_gpu_pwr_notifier);
+static struct pm_qos_constraints max_gpu_pwr_constraints = {
+	.list = PLIST_HEAD_INIT(max_gpu_pwr_constraints.list),
+	.target_value = PM_QOS_GPU_POWER_MAX_DEFAULT_VALUE,
+	.default_value = PM_QOS_GPU_POWER_MAX_DEFAULT_VALUE,
+	.type = PM_QOS_MIN,
+	.notifiers = &max_gpu_pwr_notifier,
+};
+static struct pm_qos_object max_gpu_pwr_qos = {
+	.constraints = &max_gpu_pwr_constraints,
+	.name = "max_gpu_power",
+};
+
 static struct pm_qos_object *pm_qos_array[] = {
 	&null_pm_qos,
 	&cpu_dma_pm_qos,
@@ -292,6 +305,7 @@ static struct pm_qos_object *pm_qos_array[] = {
 	&cpu_freq_max_pm_qos,
 	&emc_freq_min_pm_qos,
 	&max_cpu_pwr_qos,
+	&max_gpu_pwr_qos,
 };
 
 static struct pm_qos_bounded_object * const pm_qos_bounded_obj_array[] = {

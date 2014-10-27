@@ -2341,6 +2341,7 @@ int gk20a_vm_alloc_share(struct gk20a_as_share *as_share, u32 big_page_size)
 	struct vm_gk20a *vm;
 	char name[32];
 	int err;
+	u32 default_big_page_size;
 
 	gk20a_dbg_fn("");
 
@@ -2354,11 +2355,15 @@ int gk20a_vm_alloc_share(struct gk20a_as_share *as_share, u32 big_page_size)
 
 	snprintf(name, sizeof(name), "gk20a_as_%d", as_share->id);
 
-	if (big_page_size && !g->ops.mm.set_big_page_size)
-		return -EINVAL;
+	default_big_page_size =
+		gk20a_get_platform(g->dev)->default_big_page_size;
+
 	if (big_page_size == 0)
-		big_page_size =
-			gk20a_get_platform(g->dev)->default_big_page_size;
+		big_page_size = default_big_page_size;
+
+	if (big_page_size != default_big_page_size &&
+	    !g->ops.mm.set_big_page_size)
+		return -EINVAL;
 
 	err = gk20a_init_vm(mm, vm, big_page_size, big_page_size << 10,
 			    mm->channel.size, true, name);

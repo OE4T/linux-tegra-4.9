@@ -1007,7 +1007,7 @@ static int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
 	}
 	/* comptags only supported for suitable kinds, 128KB pagesize */
 	if (unlikely(kind_compressible &&
-		     (vm->gmmu_page_sizes[pgsz_idx] != 128*1024))) {
+		     (vm->gmmu_page_sizes[pgsz_idx] != vm->big_page_size))) {
 		/*
 		gk20a_warn(d, "comptags specified"
 		" but pagesize being used doesn't support it");*/

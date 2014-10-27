@@ -17,10 +17,6 @@
 #include "vgpu/vgpu.h"
 #include "gk20a/semaphore_gk20a.h"
 
-/* note: keep the page sizes sorted lowest to highest here */
-static const u32 gmmu_page_sizes[gmmu_nr_page_sizes] = { SZ_4K, SZ_128K };
-static const u32 gmmu_page_shifts[gmmu_nr_page_sizes] = { 12, 17 };
-
 static int vgpu_init_mm_setup_sw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
@@ -239,9 +235,17 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 	u64 vma_size;
 	u32 num_pages, low_hole_pages;
 	char name[32];
-	int err;
+	int err, i;
+
+	/* note: keep the page sizes sorted lowest to highest here */
+	u32 gmmu_page_sizes[gmmu_nr_page_sizes] = {
+		SZ_4K,
+		big_page_size ? big_page_size : platform->default_big_page_size
+	};
 
 	gk20a_dbg_fn("");
+
+	big_page_size = gmmu_page_sizes[gmmu_page_size_big];
 
 	vm = kzalloc(sizeof(*vm), GFP_KERNEL);
 	if (!vm)
@@ -251,6 +255,9 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 
 	vm->mm = mm;
 	vm->as_share = as_share;
+
+	for (i = 0; i < gmmu_nr_page_sizes; i++)
+		vm->gmmu_page_sizes[i] = gmmu_page_sizes[i];
 
 	vm->big_pages = true;
 
@@ -273,11 +280,12 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 
 	snprintf(name, sizeof(name), "gk20a_as_%d-%dKB", as_share->id,
 		 gmmu_page_sizes[gmmu_page_size_small]>>10);
-	num_pages = (u32)(vma_size >> gmmu_page_shifts[gmmu_page_size_small]);
+	num_pages = (u32)(vma_size >>
+		    ilog2(gmmu_page_sizes[gmmu_page_size_small]));
 
 	/* num_pages above is without regard to the low-side hole. */
 	low_hole_pages = (vm->va_start >>
-			  gmmu_page_shifts[gmmu_page_size_small]);
+			  ilog2(gmmu_page_sizes[gmmu_page_size_small]));
 
 	gk20a_allocator_init(&vm->vma[gmmu_page_size_small], name,
 	      low_hole_pages,             /* start */
@@ -287,7 +295,8 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 	snprintf(name, sizeof(name), "gk20a_as_%d-%dKB", as_share->id,
 		 gmmu_page_sizes[gmmu_page_size_big]>>10);
 
-	num_pages = (u32)(vma_size >> gmmu_page_shifts[gmmu_page_size_big]);
+	num_pages = (u32)(vma_size >>
+		    ilog2(gmmu_page_sizes[gmmu_page_size_big]));
 	gk20a_allocator_init(&vm->vma[gmmu_page_size_big], name,
 			      num_pages, /* start */
 			      num_pages, /* length */

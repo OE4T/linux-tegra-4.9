@@ -59,6 +59,7 @@ struct gk20a_platform vgpu_tegra_platform = {
 	.enable_aelpg           = false,
 
 	.probe = gk20a_tegra_probe,
+	.default_big_page_size	= SZ_128K,
 
 	.virtual_dev = true,
 };

@@ -21,6 +21,7 @@
 #include "gk20a/gk20a.h"
 
 #include "gp10b/gr_gp10b.h"
+#include "gp10b/mc_gp10b.h"
 
 #include "gm20b/ltc_gm20b.h"
 #include "gm20b/fb_gm20b.h"
@@ -83,6 +84,7 @@ struct gpu_ops gp10b_ops = {
 int gp10b_init_hal(struct gpu_ops *gops)
 {
 	*gops = gp10b_ops;
+	gp10b_init_mc(gops);
 	gm20b_init_ltc(gops);
 	gp10b_init_gr(gops);
 	gm20b_init_ltc(gops);

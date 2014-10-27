@@ -378,6 +378,18 @@ static inline u32 pwr_falcon_bootvec_vec_f(u32 v)
 {
 	return (v & 0xffffffff) << 0;
 }
+static inline u32 pwr_falcon_dmactl_r(void)
+{
+	return 0x0010a10c;
+}
+static inline u32 pwr_falcon_dmactl_dmem_scrubbing_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 pwr_falcon_dmactl_imem_scrubbing_m(void)
+{
+	return 0x1 << 2;
+}
 static inline u32 pwr_falcon_hwcfg_r(void)
 {
 	return 0x0010a108;

@@ -200,7 +200,7 @@ static inline u32 gmmu_pte_read_disable_true_f(void)
 }
 static inline u32 gmmu_pte_comptagline_f(u32 v)
 {
-	return (v & 0x3ffff) << 12;
+	return (v & 0x1ffff) << 12;
 }
 static inline u32 gmmu_pte_comptagline_w(void)
 {

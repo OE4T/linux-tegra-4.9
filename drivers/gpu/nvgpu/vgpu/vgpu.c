@@ -304,6 +304,27 @@ done:
 	return err;
 }
 
+static int vgpu_pm_initialise_domain(struct platform_device *pdev)
+{
+	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct dev_power_governor *pm_domain_gov = NULL;
+	struct generic_pm_domain *domain = &platform->g->pd;
+
+	domain->name = "gpu";
+
+#ifdef CONFIG_PM_RUNTIME
+	pm_domain_gov = &pm_domain_always_on_gov;
+#endif
+
+	pm_genpd_init(domain, pm_domain_gov, true);
+
+	domain->dev_ops.save_state = vgpu_pm_prepare_poweroff;
+	domain->dev_ops.restore_state = vgpu_pm_finalize_poweron;
+
+	device_set_wakeup_capable(&pdev->dev, 0);
+	return pm_genpd_add_device(domain, &pdev->dev);
+}
+
 static int vgpu_pm_init(struct platform_device *dev)
 {
 	int err = 0;
@@ -311,6 +332,11 @@ static int vgpu_pm_init(struct platform_device *dev)
 	gk20a_dbg_fn("");
 
 	pm_runtime_enable(&dev->dev);
+
+	/* genpd will take care of runtime power management if it is enabled */
+	if (IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
+		err = vgpu_pm_initialise_domain(dev);
+
 	return err;
 }
 

@@ -1998,6 +1998,8 @@ void gr_gk20a_load_ctxsw_ucode_header(struct gk20a *g, u64 addr_base,
 
 	/* Write out the actual data */
 	switch (segments->boot_signature) {
+	case FALCON_UCODE_SIG_T21X_FECS_WITH_RESERVED:
+	case FALCON_UCODE_SIG_T21X_GPCCS_WITH_RESERVED:
 	case FALCON_UCODE_SIG_T12X_FECS_WITH_RESERVED:
 	case FALCON_UCODE_SIG_T12X_GPCCS_WITH_RESERVED:
 		gk20a_writel(g, reg_offset + gr_fecs_dmemd_r(0), 0);

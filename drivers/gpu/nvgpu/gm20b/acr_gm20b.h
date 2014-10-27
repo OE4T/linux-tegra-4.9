@@ -28,6 +28,8 @@
 #define GM20B_PMU_UCODE_DESC "gpmu_ucode_desc.bin"
 #define GM20B_HSBIN_PMU_UCODE_IMAGE "acr_ucode.bin"
 #define GM20B_HSBIN_PMU_BL_UCODE_IMAGE "pmu_bl.bin"
+#define GM20B_PMU_UCODE_SIG "pmu_sig.bin"
+#define GM20B_FECS_UCODE_SIG "fecs_sig.bin"
 
 #define LSFM_DISABLE_MASK_NONE (0x00000000) /*Disable all LS falcons*/
 #define LSFM_DISABLE_MASK_ALL (0xFFFFFFFF) /*Enable all LS falcons*/
@@ -60,10 +62,13 @@
 /*!
  * Image Status Defines
  */
-#define LSF_IMAGE_STATUS_NONE               (0)
-#define LSF_IMAGE_STATUS_COPY               (1)
-#define LSF_IMAGE_STATUS_VALIDATION         (2)
-#define LSF_IMAGE_STATUS_BOOTSTRAP_READY    (3)
+#define LSF_IMAGE_STATUS_NONE                           (0)
+#define LSF_IMAGE_STATUS_COPY                           (1)
+#define LSF_IMAGE_STATUS_VALIDATION_CODE_FAILED         (2)
+#define LSF_IMAGE_STATUS_VALIDATION_DATA_FAILED         (3)
+#define LSF_IMAGE_STATUS_VALIDATION_DONE                (4)
+#define LSF_IMAGE_STATUS_VALIDATION_SKIPPED             (5)
+#define LSF_IMAGE_STATUS_BOOTSTRAP_READY                (6)
 
 /*LSB header related defines*/
 #define NV_FLCN_ACR_LSF_FLAG_LOAD_CODE_AT_0_FALSE       0
@@ -156,6 +161,10 @@ struct lsf_lsb_header {
 	u32 bl_imem_off;
 	u32 bl_data_off;
 	u32 bl_data_size;
+	u32 app_code_off;
+	u32 app_code_size;
+	u32 app_data_off;
+	u32 app_data_size;
 	u32 flags;
 };
 
@@ -178,6 +187,7 @@ struct lsf_lsb_header {
  * data_size         - Size of data block. Should be multiple of 256B
  */
 struct flcn_bl_dmem_desc {
+	u32    reserved[4];        /*Should be the first element..*/
 	u32    signature[4];        /*Should be the first element..*/
 	u32    ctx_dma;
 	u32    code_dma_base;
@@ -297,10 +307,14 @@ struct flcn_acr_regions {
  * nonwpr_ucode_blob_end   -stores non-WPR end where kernel stores ucode blob
  */
 struct flcn_acr_desc {
-	u32 reserved_dmem[(LSF_BOOTSTRAP_OWNER_RESERVED_DMEM_SIZE/4)];
+	union {
+		u32 reserved_dmem[(LSF_BOOTSTRAP_OWNER_RESERVED_DMEM_SIZE/4)];
+		u32 signatures[4];
+	} ucode_reserved_space;
 	/*Always 1st*/
 	u32 wpr_region_id;
 	u32 wpr_offset;
+	u32 mmu_mem_range;
 	struct flcn_acr_regions regions;
 	u32 nonwpr_ucode_blob_size;
 	u64 nonwpr_ucode_blob_start;

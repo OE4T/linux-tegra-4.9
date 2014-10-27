@@ -81,7 +81,7 @@ void gm20b_init_secure_pmu(struct gpu_ops *gops)
 
 int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 {
-	const struct firmware *pmu_fw, *pmu_desc;
+	const struct firmware *pmu_fw, *pmu_desc, *pmu_sig;
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct lsf_ucode_desc *lsf_desc;
 	int err;
@@ -89,7 +89,6 @@ int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	pmu_fw = gk20a_request_firmware(g, GM20B_PMU_UCODE_IMAGE);
 	if (!pmu_fw) {
 		gk20a_err(dev_from_gk20a(g), "failed to load pmu ucode!!");
-		gm20b_dbg_pmu("requesting PMU ucode in GM20B failed\n");
 		return -ENOENT;
 	}
 	g->acr.pmu_fw = pmu_fw;
@@ -99,9 +98,14 @@ int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	pmu_desc = gk20a_request_firmware(g, GM20B_PMU_UCODE_DESC);
 	if (!pmu_desc) {
 		gk20a_err(dev_from_gk20a(g), "failed to load pmu ucode desc!!");
-		gm20b_dbg_pmu("requesting PMU ucode in GM20B failed\n");
 		err = -ENOENT;
 		goto release_img_fw;
+	}
+	pmu_sig = gk20a_request_firmware(g, GM20B_PMU_UCODE_SIG);
+	if (!pmu_sig) {
+		gk20a_err(dev_from_gk20a(g), "failed to load pmu sig!!");
+		err = -ENOENT;
+		goto release_desc;
 	}
 	pmu->desc = (struct pmu_ucode_desc *)pmu_desc->data;
 	pmu->ucode_image = (u32 *)pmu_fw->data;
@@ -116,8 +120,9 @@ int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	lsf_desc = kzalloc(sizeof(struct lsf_ucode_desc), GFP_KERNEL);
 	if (!lsf_desc) {
 		err = -ENOMEM;
-		goto release_desc;
+		goto release_sig;
 	}
+	memcpy(lsf_desc, (void *)pmu_sig->data, sizeof(struct lsf_ucode_desc));
 	lsf_desc->falcon_id = LSF_FALCON_ID_PMU;
 
 	p_img->desc = pmu->desc;
@@ -127,7 +132,10 @@ int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	p_img->header = NULL;
 	p_img->lsf_desc = (struct lsf_ucode_desc *)lsf_desc;
 	gm20b_dbg_pmu("requesting PMU ucode in GM20B exit\n");
+	release_firmware(pmu_sig);
 	return 0;
+release_sig:
+	release_firmware(pmu_sig);
 release_desc:
 	release_firmware(pmu_desc);
 release_img_fw:
@@ -138,41 +146,54 @@ release_img_fw:
 int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 {
 	struct lsf_ucode_desc *lsf_desc;
+	const struct firmware *fecs_sig;
+	int err;
 
+	fecs_sig = gk20a_request_firmware(g, GM20B_FECS_UCODE_SIG);
+	if (!fecs_sig) {
+		gk20a_err(dev_from_gk20a(g), "failed to load fecs sig");
+		return -ENOENT;
+	}
 	lsf_desc = kzalloc(sizeof(struct lsf_ucode_desc), GFP_KERNEL);
-	if (!lsf_desc)
-		return -ENOMEM;
+	if (!lsf_desc) {
+		err = -ENOMEM;
+		goto rel_sig;
+	}
+	memcpy(lsf_desc, (void *)fecs_sig->data, sizeof(struct lsf_ucode_desc));
 	lsf_desc->falcon_id = LSF_FALCON_ID_FECS;
 
 	p_img->desc = kzalloc(sizeof(struct pmu_ucode_desc), GFP_KERNEL);
 	if (p_img->desc == NULL) {
 		kfree(lsf_desc);
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto free_lsf_desc;
 	}
 
 	p_img->desc->bootloader_start_offset =
 		g->ctxsw_ucode_info.fecs.boot.offset;
 	p_img->desc->bootloader_size =
-		g->ctxsw_ucode_info.fecs.boot.size;
+		ALIGN(g->ctxsw_ucode_info.fecs.boot.size, 256);
 	p_img->desc->bootloader_imem_offset =
 		g->ctxsw_ucode_info.fecs.boot_imem_offset;
 	p_img->desc->bootloader_entry_point =
 		g->ctxsw_ucode_info.fecs.boot_entry;
 
-	p_img->desc->image_size = g->ctxsw_ucode_info.fecs.boot.size +
-		g->ctxsw_ucode_info.fecs.code.size +
-		g->ctxsw_ucode_info.fecs.data.size;
-	p_img->desc->app_size = 0;
-	p_img->desc->app_start_offset = 0;
+	p_img->desc->image_size =
+		ALIGN(g->ctxsw_ucode_info.fecs.boot.size, 256) +
+		ALIGN(g->ctxsw_ucode_info.fecs.code.size, 256) +
+		ALIGN(g->ctxsw_ucode_info.fecs.data.size, 256);
+	p_img->desc->app_size = ALIGN(g->ctxsw_ucode_info.fecs.code.size, 256) +
+		ALIGN(g->ctxsw_ucode_info.fecs.data.size, 256);
+	p_img->desc->app_start_offset = g->ctxsw_ucode_info.fecs.code.offset;
 	p_img->desc->app_imem_offset = 0;
 	p_img->desc->app_imem_entry = 0;
 	p_img->desc->app_dmem_offset = 0;
-	p_img->desc->app_resident_code_offset =
-		g->ctxsw_ucode_info.fecs.code.offset;
+	p_img->desc->app_resident_code_offset = 0;
 	p_img->desc->app_resident_code_size =
 		g->ctxsw_ucode_info.fecs.code.size;
 	p_img->desc->app_resident_data_offset =
-		g->ctxsw_ucode_info.fecs.data.offset;
+		g->ctxsw_ucode_info.fecs.data.offset -
+		g->ctxsw_ucode_info.fecs.code.offset;
 	p_img->desc->app_resident_data_size =
 		g->ctxsw_ucode_info.fecs.data.size;
 	p_img->data = g->ctxsw_ucode_info.surface_desc.cpuva;
@@ -181,8 +202,14 @@ int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	p_img->fw_ver = NULL;
 	p_img->header = NULL;
 	p_img->lsf_desc = (struct lsf_ucode_desc *)lsf_desc;
-	gm20b_dbg_pmu("fecs fw loaded 2\n");
+	gm20b_dbg_pmu("fecs fw loaded\n");
+	release_firmware(fecs_sig);
 	return 0;
+free_lsf_desc:
+	kfree(lsf_desc);
+rel_sig:
+	release_firmware(fecs_sig);
+	return err;
 }
 
 int prepare_ucode_blob(struct gk20a *g)
@@ -411,7 +438,7 @@ int flcn_populate_bl_dmem_desc(struct gk20a *g,
 
 	struct flcn_ucode_img *p_img = &(lsfm->ucode_img);
 	struct flcn_bl_dmem_desc *ldr_cfg =
-		(struct flcn_bl_dmem_desc *)(&p_bl_gen_desc->loader_cfg);
+		(struct flcn_bl_dmem_desc *)(&p_bl_gen_desc->bl_dmem_desc);
 	u64 addr_base;
 	struct pmu_ucode_desc *desc;
 	u64 addr_code, addr_data;
@@ -580,7 +607,7 @@ static int lsfm_init_wpr_contents(struct gk20a *g, struct ls_flcn_mgr *plsfm,
 
 		/* Tag the terminator WPR header with an invalid falcon ID. */
 		gk20a_mem_wr32(&wpr_hdr[plsfm->managed_flcn_cnt].falcon_id,
-			1, LSF_FALCON_ID_INVALID);
+			0, LSF_FALCON_ID_INVALID);
 	}
 	return status;
 }
@@ -635,6 +662,7 @@ static void lsfm_fill_static_lsb_hdr_info(struct gk20a *g,
 {
 
 	struct pmu_gk20a *pmu = &g->pmu;
+	u32 full_app_size = 0;
 	u32 data = 0;
 
 	if (pnode->ucode_img.lsf_desc)
@@ -669,11 +697,30 @@ static void lsfm_fill_static_lsb_hdr_info(struct gk20a *g,
 		pnode->lsb_header.bl_code_size = ALIGN(
 			pnode->ucode_img.desc->bootloader_size,
 			LSF_BL_CODE_SIZE_ALIGNMENT);
+		full_app_size = ALIGN(pnode->ucode_img.desc->app_size,
+			LSF_BL_CODE_SIZE_ALIGNMENT) +
+			pnode->lsb_header.bl_code_size;
+		pnode->lsb_header.ucode_size = ALIGN(
+			pnode->ucode_img.desc->app_resident_data_offset,
+			LSF_BL_CODE_SIZE_ALIGNMENT) +
+			pnode->lsb_header.bl_code_size;
+		pnode->lsb_header.data_size = full_app_size -
+			pnode->lsb_header.ucode_size;
 		/* Though the BL is located at 0th offset of the image, the VA
 		is different to make sure that it doesnt collide the actual OS
 		VA range */
 		pnode->lsb_header.bl_imem_off =
 			pnode->ucode_img.desc->bootloader_imem_offset;
+		pnode->lsb_header.app_code_off =
+			pnode->ucode_img.desc->app_start_offset +
+			pnode->ucode_img.desc->app_resident_code_offset;
+		pnode->lsb_header.app_code_size =
+			pnode->ucode_img.desc->app_resident_code_size;
+		pnode->lsb_header.app_data_off =
+			pnode->ucode_img.desc->app_start_offset +
+			pnode->ucode_img.desc->app_resident_data_offset;
+		pnode->lsb_header.app_data_size =
+			pnode->ucode_img.desc->app_resident_data_size;
 
 		/* TODO: OBJFLCN should export properties using which the below
 			flags should be populated.*/
@@ -974,7 +1021,8 @@ err_release_acr_fw:
 
 u8 pmu_is_debug_mode_en(struct gk20a *g)
 {
-	return 1;
+	u32 ctl_stat =  gk20a_readl(g, pwr_pmu_scpctl_stat_r());
+	return pwr_pmu_scpctl_stat_debug_mode_v(ctl_stat);
 }
 
 /*

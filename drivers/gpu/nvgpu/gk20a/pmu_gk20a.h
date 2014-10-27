@@ -49,6 +49,7 @@
 /* Mapping between AP_CTRLs and Idle counters */
 #define PMU_AP_IDLE_MASK_GRAPHICS	(PMU_AP_IDLE_MASK_HIST_IDX_1)
 
+#define APP_VERSION_GM20B_4 19008461
 #define APP_VERSION_GM20B_3 18935575
 #define APP_VERSION_GM20B_2 18694072
 #define APP_VERSION_GM20B_1 18547257
@@ -339,6 +340,18 @@ struct pmu_cmdline_args_v1 {
 };
 
 struct pmu_cmdline_args_v2 {
+	u32 cpu_freq_hz;		/* Frequency of the clock driving PMU */
+	u32 falc_trace_size;		/* falctrace buffer size (bytes) */
+	u32 falc_trace_dma_base;	/* 256-byte block address */
+	u32 falc_trace_dma_idx;		/* dmaIdx for DMA operations */
+	u8 secure_mode;
+	u8 raise_priv_sec;     /*Raise priv level required for desired
+					registers*/
+	struct pmu_mem_v1 gc6_ctx;		/* dmem offset of gc6 context */
+};
+
+struct pmu_cmdline_args_v3 {
+	u32 reserved;
 	u32 cpu_freq_hz;		/* Frequency of the clock driving PMU */
 	u32 falc_trace_size;		/* falctrace buffer size (bytes) */
 	u32 falc_trace_dma_base;	/* 256-byte block address */
@@ -1174,6 +1187,7 @@ struct pmu_gk20a {
 		struct pmu_cmdline_args_v0 args_v0;
 		struct pmu_cmdline_args_v1 args_v1;
 		struct pmu_cmdline_args_v2 args_v2;
+		struct pmu_cmdline_args_v3 args_v3;
 	};
 	unsigned long perfmon_events_cnt;
 	bool perfmon_sampling_enabled;

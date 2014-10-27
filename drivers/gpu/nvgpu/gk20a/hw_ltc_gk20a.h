@@ -54,6 +54,14 @@ static inline u32 ltc_ltcs_lts0_cbc_ctrl1_r(void)
 {
 	return 0x001410c8;
 }
+static inline u32 ltc_ltc0_lts0_dstg_cfg0_r(void)
+{
+	return 0x00141200;
+}
+static inline u32 ltc_ltcs_ltss_dstg_cfg0_r(void)
+{
+	return 0x0017ea00;
+}
 static inline u32 ltc_ltc0_lts0_tstg_cfg1_r(void)
 {
 	return 0x00141104;
@@ -104,7 +112,7 @@ static inline u32 ltc_ltcs_ltss_cbc_ctrl1_clear_active_f(void)
 }
 static inline u32 ltc_ltc0_lts0_cbc_ctrl1_r(void)
 {
-	return 0x0017e8c8;
+	return 0x001410c8;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl2_r(void)
 {
@@ -241,5 +249,189 @@ static inline u32 ltc_ltc0_ltss_g_elpg_flush_pending_f(void)
 static inline u32 ltc_ltc0_ltss_intr_r(void)
 {
 	return 0x00140820;
+}
+static inline u32 ltc_ltcs_ltss_intr_r(void)
+{
+	return 0x0017e820;
+}
+static inline u32 ltc_ltcs_ltss_intr_en_evicted_cb_m(void)
+{
+	return 0x1 << 20;
+}
+static inline u32 ltc_ltc0_lts0_intr_r(void)
+{
+	return 0x00141020;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_r(void)
+{
+	return 0x0017e910;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_pending_f(void)
+{
+	return 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_max_cycles_between_invalidates_v(u32 r)
+{
+	return (r >> 8) & 0xf;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_max_cycles_between_invalidates_3_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_max_cycles_between_invalidates_3_f(void)
+{
+	return 0x300;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_last_class_v(u32 r)
+{
+	return (r >> 28) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_last_class_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_last_class_true_f(void)
+{
+	return 0x10000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_normal_class_v(u32 r)
+{
+	return (r >> 29) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_normal_class_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_normal_class_true_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_first_class_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_first_class_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_first_class_true_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_r(void)
+{
+	return 0x0017e914;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_pending_f(void)
+{
+	return 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_max_cycles_between_cleans_v(u32 r)
+{
+	return (r >> 8) & 0xf;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_max_cycles_between_cleans_3_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_max_cycles_between_cleans_3_f(void)
+{
+	return 0x300;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_wait_for_fb_to_pull_v(u32 r)
+{
+	return (r >> 16) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_wait_for_fb_to_pull_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_wait_for_fb_to_pull_true_f(void)
+{
+	return 0x10000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_last_class_v(u32 r)
+{
+	return (r >> 28) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_last_class_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_last_class_true_f(void)
+{
+	return 0x10000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_normal_class_v(u32 r)
+{
+	return (r >> 29) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_normal_class_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_normal_class_true_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_first_class_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_first_class_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_first_class_true_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 ltc_ltc0_ltss_tstg_cmgmt0_r(void)
+{
+	return 0x00140910;
+}
+static inline u32 ltc_ltc0_ltss_tstg_cmgmt0_invalidate_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_tstg_cmgmt0_invalidate_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_tstg_cmgmt0_invalidate_pending_f(void)
+{
+	return 0x1;
+}
+static inline u32 ltc_ltc0_ltss_tstg_cmgmt1_r(void)
+{
+	return 0x00140914;
+}
+static inline u32 ltc_ltc0_ltss_tstg_cmgmt1_clean_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 ltc_ltc0_ltss_tstg_cmgmt1_clean_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ltc_ltc0_ltss_tstg_cmgmt1_clean_pending_f(void)
+{
+	return 0x1;
 }
 #endif

@@ -318,7 +318,7 @@ static inline u32 ram_fc_chid_id_w(void)
 {
 	return 0;
 }
-static inline u32 ram_fc_eng_timeslice_w(void)
+static inline u32 ram_fc_runlist_timeslice_w(void)
 {
 	return 62;
 }

@@ -186,9 +186,9 @@ static int channel_gk20a_set_schedule_params(struct channel_gk20a *c,
 	}
 
 	/* set new timeslice */
-	gk20a_mem_wr32(inst_ptr, ram_fc_eng_timeslice_w(),
+	gk20a_mem_wr32(inst_ptr, ram_fc_runlist_timeslice_w(),
 		value | (shift << 12) |
-		fifo_eng_timeslice_enable_true_f());
+		fifo_runlist_timeslice_enable_true_f());
 
 	/* enable channel */
 	gk20a_writel(c->g, ccsr_channel_r(c->hw_chid),
@@ -249,10 +249,10 @@ int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 		pbdma_acquire_timeout_man_max_f() |
 		pbdma_acquire_timeout_en_disable_f());
 
-	gk20a_mem_wr32(inst_ptr, ram_fc_eng_timeslice_w(),
-		fifo_eng_timeslice_timeout_128_f() |
-		fifo_eng_timeslice_timescale_3_f() |
-		fifo_eng_timeslice_enable_true_f());
+	gk20a_mem_wr32(inst_ptr, ram_fc_runlist_timeslice_w(),
+		fifo_runlist_timeslice_timeout_128_f() |
+		fifo_runlist_timeslice_timescale_3_f() |
+		fifo_runlist_timeslice_enable_true_f());
 
 	gk20a_mem_wr32(inst_ptr, ram_fc_pb_timeslice_w(),
 		fifo_pb_timeslice_timeout_16_f() |

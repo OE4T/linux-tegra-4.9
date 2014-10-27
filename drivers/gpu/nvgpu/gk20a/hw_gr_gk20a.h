@@ -2618,30 +2618,6 @@ static inline u32 gr_gpcs_tpcs_pe_pin_cb_global_base_addr_valid_true_f(void)
 {
 	return 0x10000000;
 }
-static inline u32 gr_gpcs_tpcs_l1c_pm_r(void)
-{
-	return 0x00419ca8;
-}
-static inline u32 gr_gpcs_tpcs_l1c_pm_enable_m(void)
-{
-	return 0x1 << 31;
-}
-static inline u32 gr_gpcs_tpcs_l1c_pm_enable_enable_f(void)
-{
-	return 0x80000000;
-}
-static inline u32 gr_gpcs_tpcs_l1c_cfg_r(void)
-{
-	return 0x00419cb8;
-}
-static inline u32 gr_gpcs_tpcs_l1c_cfg_blkactivity_enable_m(void)
-{
-	return 0x1 << 31;
-}
-static inline u32 gr_gpcs_tpcs_l1c_cfg_blkactivity_enable_enable_f(void)
-{
-	return 0x80000000;
-}
 static inline u32 gr_gpcs_tpcs_mpc_vtg_debug_r(void)
 {
 	return 0x00419c00;
@@ -2653,26 +2629,6 @@ static inline u32 gr_gpcs_tpcs_mpc_vtg_debug_timeslice_mode_disabled_f(void)
 static inline u32 gr_gpcs_tpcs_mpc_vtg_debug_timeslice_mode_enabled_f(void)
 {
 	return 0x8;
-}
-static inline u32 gr_gpcs_tpcs_sm_pm_ctrl_r(void)
-{
-	return 0x00419e00;
-}
-static inline u32 gr_gpcs_tpcs_sm_pm_ctrl_core_enable_m(void)
-{
-	return 0x1 << 7;
-}
-static inline u32 gr_gpcs_tpcs_sm_pm_ctrl_core_enable_enable_f(void)
-{
-	return 0x80;
-}
-static inline u32 gr_gpcs_tpcs_sm_pm_ctrl_qctl_enable_m(void)
-{
-	return 0x1 << 15;
-}
-static inline u32 gr_gpcs_tpcs_sm_pm_ctrl_qctl_enable_enable_f(void)
-{
-	return 0x8000;
 }
 static inline u32 gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_r(void)
 {
@@ -2906,14 +2862,6 @@ static inline u32 gr_gpcs_tpcs_sm_halfctl_ctrl_r(void)
 {
 	return 0x00419f70;
 }
-static inline u32 gr_gpcs_tpcs_sm_halfctl_ctrl_sctl_blkactivity_enable_m(void)
-{
-	return 0x1 << 1;
-}
-static inline u32 gr_gpcs_tpcs_sm_halfctl_ctrl_sctl_blkactivity_enable_enable_f(void)
-{
-	return 0x2;
-}
 static inline u32 gr_gpcs_tpcs_sm_halfctl_ctrl_sctl_read_quad_ctl_m(void)
 {
 	return 0x1 << 4;
@@ -2937,18 +2885,6 @@ static inline u32 gr_gpcs_tpcs_sm_debug_sfe_control_read_half_ctl_m(void)
 static inline u32 gr_gpcs_tpcs_sm_debug_sfe_control_read_half_ctl_f(u32 v)
 {
 	return (v & 0x1) << 0;
-}
-static inline u32 gr_gpcs_tpcs_sm_debug_sfe_control_blkactivity_enable_m(void)
-{
-	return 0x1 << 16;
-}
-static inline u32 gr_gpcs_tpcs_sm_debug_sfe_control_blkactivity_enable_enable_f(void)
-{
-	return 0x10000;
-}
-static inline u32 gr_gpcs_tpcs_sm_power_throttle_r(void)
-{
-	return 0x00419ed0;
 }
 static inline u32 gr_gpcs_tpcs_pes_vsc_vpc_r(void)
 {

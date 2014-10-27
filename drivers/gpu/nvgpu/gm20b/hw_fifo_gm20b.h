@@ -206,6 +206,10 @@ static inline u32 fifo_intr_en_0_r(void)
 {
 	return 0x00002140;
 }
+static inline u32 fifo_intr_en_0_sched_error_m(void)
+{
+	return 0x1 << 8;
+}
 static inline u32 fifo_intr_en_1_r(void)
 {
 	return 0x00002528;

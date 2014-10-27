@@ -174,6 +174,10 @@ static inline u32 pbdma_pb_header_type_inc_f(void)
 {
 	return 0x20000000;
 }
+static inline u32 pbdma_hdr_shadow_r(u32 i)
+{
+	return 0x00040118 + i*8192;
+}
 static inline u32 pbdma_subdevice_r(u32 i)
 {
 	return 0x00040094 + i*8192;
@@ -465,5 +469,21 @@ static inline u32 pbdma_syncpointb_wait_switch_en_v(void)
 static inline u32 pbdma_syncpointb_syncpt_index_v(u32 r)
 {
 	return (r >> 8) & 0xff;
+}
+static inline u32 pbdma_runlist_timeslice_r(u32 i)
+{
+	return 0x000400f8 + i*8192;
+}
+static inline u32 pbdma_runlist_timeslice_timeout_128_f(void)
+{
+	return 0x80;
+}
+static inline u32 pbdma_runlist_timeslice_timescale_3_f(void)
+{
+	return 0x3000;
+}
+static inline u32 pbdma_runlist_timeslice_enable_true_f(void)
+{
+	return 0x10000000;
 }
 #endif

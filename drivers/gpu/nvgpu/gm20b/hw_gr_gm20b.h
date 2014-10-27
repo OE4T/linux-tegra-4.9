@@ -78,6 +78,26 @@ static inline u32 gr_intr_illegal_method_reset_f(void)
 {
 	return 0x10;
 }
+static inline u32 gr_intr_illegal_notify_pending_f(void)
+{
+	return 0x40;
+}
+static inline u32 gr_intr_illegal_notify_reset_f(void)
+{
+	return 0x40;
+}
+static inline u32 gr_intr_firmware_method_f(u32 v)
+{
+	return (v & 0x1) << 8;
+}
+static inline u32 gr_intr_firmware_method_pending_f(void)
+{
+	return 0x100;
+}
+static inline u32 gr_intr_firmware_method_reset_f(void)
+{
+	return 0x100;
+}
 static inline u32 gr_intr_illegal_class_pending_f(void)
 {
 	return 0x20;
@@ -85,6 +105,14 @@ static inline u32 gr_intr_illegal_class_pending_f(void)
 static inline u32 gr_intr_illegal_class_reset_f(void)
 {
 	return 0x20;
+}
+static inline u32 gr_intr_fecs_error_pending_f(void)
+{
+	return 0x80000;
+}
+static inline u32 gr_intr_fecs_error_reset_f(void)
+{
+	return 0x80000;
 }
 static inline u32 gr_intr_class_error_pending_f(void)
 {
@@ -101,6 +129,26 @@ static inline u32 gr_intr_exception_pending_f(void)
 static inline u32 gr_intr_exception_reset_f(void)
 {
 	return 0x200000;
+}
+static inline u32 gr_fecs_intr_r(void)
+{
+	return 0x00400144;
+}
+static inline u32 gr_class_error_r(void)
+{
+	return 0x00400110;
+}
+static inline u32 gr_class_error_code_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 gr_intr_nonstall_r(void)
+{
+	return 0x00400120;
+}
+static inline u32 gr_intr_nonstall_trap_pending_f(void)
+{
+	return 0x2;
 }
 static inline u32 gr_intr_en_r(void)
 {
@@ -198,6 +246,10 @@ static inline u32 gr_status_r(void)
 {
 	return 0x00400700;
 }
+static inline u32 gr_status_fe_method_upper_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
 static inline u32 gr_status_fe_method_lower_v(u32 r)
 {
 	return (r >> 2) & 0x1;
@@ -205,6 +257,10 @@ static inline u32 gr_status_fe_method_lower_v(u32 r)
 static inline u32 gr_status_fe_method_lower_idle_v(void)
 {
 	return 0x00000000;
+}
+static inline u32 gr_status_fe_gi_v(u32 r)
+{
+	return (r >> 21) & 0x1;
 }
 static inline u32 gr_status_mask_r(void)
 {
@@ -661,6 +717,22 @@ static inline u32 gr_fecs_method_push_adr_start_ctxsw_v(void)
 static inline u32 gr_fecs_method_push_adr_set_watchdog_timeout_f(void)
 {
 	return 0x21;
+}
+static inline u32 gr_fecs_host_int_status_r(void)
+{
+	return 0x00409c18;
+}
+static inline u32 gr_fecs_host_int_status_umimp_firmware_method_f(u32 v)
+{
+	return (v & 0x1) << 17;
+}
+static inline u32 gr_fecs_host_int_status_umimp_illegal_method_f(u32 v)
+{
+	return (v & 0x1) << 18;
+}
+static inline u32 gr_fecs_host_int_clear_r(void)
+{
+	return 0x00409c20;
 }
 static inline u32 gr_fecs_host_int_enable_r(void)
 {
@@ -2570,26 +2642,6 @@ static inline u32 gr_gpcs_tpcs_mpc_vtg_cb_global_base_addr_valid_true_f(void)
 {
 	return 0x10000000;
 }
-static inline u32 gr_gpcs_tpcs_sm_pm_ctrl_r(void)
-{
-	return 0x00419e00;
-}
-static inline u32 gr_gpcs_tpcs_sm_pm_ctrl_core_enable_m(void)
-{
-	return 0x1 << 7;
-}
-static inline u32 gr_gpcs_tpcs_sm_pm_ctrl_core_enable_enable_f(void)
-{
-	return 0x80;
-}
-static inline u32 gr_gpcs_tpcs_sm_pm_ctrl_qctl_enable_m(void)
-{
-	return 0x1 << 15;
-}
-static inline u32 gr_gpcs_tpcs_sm_pm_ctrl_qctl_enable_enable_f(void)
-{
-	return 0x8000;
-}
 static inline u32 gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_r(void)
 {
 	return 0x00419e44;
@@ -2714,6 +2766,14 @@ static inline u32 gr_gpcs_tpcs_sm_hww_global_esr_report_mask_single_step_complet
 {
 	return 0x40;
 }
+static inline u32 gr_gpcs_tpcs_tpccs_tpc_exception_en_r(void)
+{
+	return 0x00419d0c;
+}
+static inline u32 gr_gpcs_tpcs_tpccs_tpc_exception_en_sm_enabled_f(void)
+{
+	return 0x2;
+}
 static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_en_r(void)
 {
 	return 0x0050450c;
@@ -2722,43 +2782,35 @@ static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_enabled_f(void)
 {
 	return 0x2;
 }
-static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_disabled_f(void)
+static inline u32 gr_gpcs_gpccs_gpc_exception_en_r(void)
 {
-	return 0x0;
+	return 0x0041ac94;
 }
-static inline u32 gr_gpc0_gpccs_gpc_exception_en_r(void)
+static inline u32 gr_gpcs_gpccs_gpc_exception_en_tpc_f(u32 v)
 {
-	return 0x00502c94;
+	return (v & 0xff) << 16;
 }
-static inline u32 gr_gpc0_gpccs_gpc_exception_en_tpc_0_enabled_f(void)
+static inline u32 gr_gpc0_gpccs_gpc_exception_r(void)
 {
-	return 0x10000;
+	return 0x00502c90;
 }
-static inline u32 gr_gpc0_gpccs_gpc_exception_en_tpc_0_disabled_f(void)
-{
-	return 0x0;
-}
-static inline u32 gr_gpcs_gpccs_gpc_exception_r(void)
-{
-	return 0x0041ac90;
-}
-static inline u32 gr_gpcs_gpccs_gpc_exception_tpc_v(u32 r)
+static inline u32 gr_gpc0_gpccs_gpc_exception_tpc_v(u32 r)
 {
 	return (r >> 16) & 0xff;
 }
-static inline u32 gr_gpcs_gpccs_gpc_exception_tpc_0_pending_v(void)
+static inline u32 gr_gpc0_gpccs_gpc_exception_tpc_0_pending_v(void)
 {
 	return 0x00000001;
 }
-static inline u32 gr_gpcs_tpcs_tpccs_tpc_exception_r(void)
+static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_r(void)
 {
-	return 0x00419d08;
+	return 0x00504508;
 }
-static inline u32 gr_gpcs_tpcs_tpccs_tpc_exception_sm_v(u32 r)
+static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_sm_v(u32 r)
 {
 	return (r >> 1) & 0x1;
 }
-static inline u32 gr_gpcs_tpcs_tpccs_tpc_exception_sm_pending_v(void)
+static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_sm_pending_v(void)
 {
 	return 0x00000001;
 }
@@ -2853,10 +2905,6 @@ static inline u32 gr_gpcs_tpcs_sm_debug_sfe_control_read_half_ctl_m(void)
 static inline u32 gr_gpcs_tpcs_sm_debug_sfe_control_read_half_ctl_f(u32 v)
 {
 	return (v & 0x1) << 0;
-}
-static inline u32 gr_gpcs_tpcs_sm_power_throttle_r(void)
-{
-	return 0x00419ed8;
 }
 static inline u32 gr_gpcs_tpcs_pes_vsc_vpc_r(void)
 {
@@ -3121,42 +3169,6 @@ static inline u32 gr_fe_pwr_mode_req_send_f(void)
 static inline u32 gr_fe_pwr_mode_req_done_v(void)
 {
 	return 0x00000000;
-}
-static inline u32 gr_gpcs_tpcs_sm_sfe_ba_control_r(void)
-{
-	return 0x00419f88;
-}
-static inline u32 gr_gpcs_tpcs_sm_sfe_ba_control_blkactivity_enable_f(u32 v)
-{
-	return (v & 0x1) << 31;
-}
-static inline u32 gr_gpcs_tpcs_sm_sfe_ba_control_blkactivity_enable_m(void)
-{
-	return 0x1 << 31;
-}
-static inline u32 gr_gpcs_tpcs_sm_quad_ba_control_r(void)
-{
-	return 0x00419f80;
-}
-static inline u32 gr_gpcs_tpcs_sm_quad_ba_control_blkactivity_enable_f(u32 v)
-{
-	return (v & 0x1) << 31;
-}
-static inline u32 gr_gpcs_tpcs_sm_quad_ba_control_blkactivity_enable_m(void)
-{
-	return 0x1 << 31;
-}
-static inline u32 gr_gpcs_tpcs_sm_mio_ba_control_r(void)
-{
-	return 0x00419ccc;
-}
-static inline u32 gr_gpcs_tpcs_sm_mio_ba_control_blkactivity_enable_f(u32 v)
-{
-	return (v & 0x1) << 31;
-}
-static inline u32 gr_gpcs_tpcs_sm_mio_ba_control_blkactivity_enable_m(void)
-{
-	return 0x1 << 31;
 }
 static inline u32 gr_gpcs_pri_mmu_ctrl_r(void)
 {

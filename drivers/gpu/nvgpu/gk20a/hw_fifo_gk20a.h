@@ -114,19 +114,19 @@ static inline u32 fifo_eng_runlist_pending_true_f(void)
 {
 	return 0x100000;
 }
-static inline u32 fifo_eng_timeslice_r(u32 i)
+static inline u32 fifo_runlist_timeslice_r(u32 i)
 {
 	return 0x00002310 + i*4;
 }
-static inline u32 fifo_eng_timeslice_timeout_128_f(void)
+static inline u32 fifo_runlist_timeslice_timeout_128_f(void)
 {
 	return 0x80;
 }
-static inline u32 fifo_eng_timeslice_timescale_3_f(void)
+static inline u32 fifo_runlist_timeslice_timescale_3_f(void)
 {
 	return 0x3000;
 }
-static inline u32 fifo_eng_timeslice_enable_true_f(void)
+static inline u32 fifo_runlist_timeslice_enable_true_f(void)
 {
 	return 0x10000000;
 }

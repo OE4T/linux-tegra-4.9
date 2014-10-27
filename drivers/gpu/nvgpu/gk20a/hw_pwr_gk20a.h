@@ -290,6 +290,42 @@ static inline u32 pwr_falcon_cpuctl_startcpu_f(u32 v)
 {
 	return (v & 0x1) << 1;
 }
+static inline u32 pwr_falcon_cpuctl_halt_intr_f(u32 v)
+{
+	return (v & 0x1) << 4;
+}
+static inline u32 pwr_falcon_cpuctl_halt_intr_m(void)
+{
+	return 0x1 << 4;
+}
+static inline u32 pwr_falcon_cpuctl_halt_intr_v(u32 r)
+{
+	return (r >> 4) & 0x1;
+}
+static inline u32 pwr_falcon_imemc_r(u32 i)
+{
+	return 0x0010a180 + i*16;
+}
+static inline u32 pwr_falcon_imemc_offs_f(u32 v)
+{
+	return (v & 0x3f) << 2;
+}
+static inline u32 pwr_falcon_imemc_blk_f(u32 v)
+{
+	return (v & 0xff) << 8;
+}
+static inline u32 pwr_falcon_imemc_aincw_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 pwr_falcon_imemd_r(u32 i)
+{
+	return 0x0010a184 + i*16;
+}
+static inline u32 pwr_falcon_imemt_r(u32 i)
+{
+	return 0x0010a188 + i*16;
+}
 static inline u32 pwr_falcon_bootvec_r(void)
 {
 	return 0x0010a104;

@@ -338,7 +338,7 @@ static inline u32 ram_fc_chid_id_w(void)
 {
 	return 0;
 }
-static inline u32 ram_fc_pb_timeslice_w(void)
+static inline u32 ram_fc_runlist_timeslice_w(void)
 {
 	return 62;
 }
@@ -401,5 +401,45 @@ static inline u32 ram_userd_gp_top_level_get_hi_w(void)
 static inline u32 ram_rl_entry_size_v(void)
 {
 	return 0x00000008;
+}
+static inline u32 ram_rl_entry_chid_f(u32 v)
+{
+	return (v & 0xfff) << 0;
+}
+static inline u32 ram_rl_entry_id_f(u32 v)
+{
+	return (v & 0xfff) << 0;
+}
+static inline u32 ram_rl_entry_type_f(u32 v)
+{
+	return (v & 0x1) << 13;
+}
+static inline u32 ram_rl_entry_type_chid_f(void)
+{
+	return 0x0;
+}
+static inline u32 ram_rl_entry_type_tsg_f(void)
+{
+	return 0x2000;
+}
+static inline u32 ram_rl_entry_timeslice_scale_f(u32 v)
+{
+	return (v & 0xf) << 14;
+}
+static inline u32 ram_rl_entry_timeslice_scale_3_f(void)
+{
+	return 0xc000;
+}
+static inline u32 ram_rl_entry_timeslice_timeout_f(u32 v)
+{
+	return (v & 0xff) << 18;
+}
+static inline u32 ram_rl_entry_timeslice_timeout_128_f(void)
+{
+	return 0x2000000;
+}
+static inline u32 ram_rl_entry_tsg_length_f(u32 v)
+{
+	return (v & 0x3f) << 26;
 }
 #endif

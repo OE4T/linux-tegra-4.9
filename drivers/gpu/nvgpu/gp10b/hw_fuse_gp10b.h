@@ -54,4 +54,48 @@ static inline u32 fuse_status_opt_tpc_gpc_r(u32 i)
 {
 	return 0x00021c38 + i*4;
 }
+static inline u32 fuse_ctrl_opt_tpc_gpc_r(u32 i)
+{
+	return 0x00021838 + i*4;
+}
+static inline u32 fuse_ctrl_opt_ram_svop_pdp_r(void)
+{
+	return 0x00021944;
+}
+static inline u32 fuse_ctrl_opt_ram_svop_pdp_data_f(u32 v)
+{
+	return (v & 0x3) << 0;
+}
+static inline u32 fuse_ctrl_opt_ram_svop_pdp_data_m(void)
+{
+	return 0x3 << 0;
+}
+static inline u32 fuse_ctrl_opt_ram_svop_pdp_data_v(u32 r)
+{
+	return (r >> 0) & 0x3;
+}
+static inline u32 fuse_ctrl_opt_ram_svop_pdp_override_r(void)
+{
+	return 0x00021948;
+}
+static inline u32 fuse_ctrl_opt_ram_svop_pdp_override_data_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 fuse_ctrl_opt_ram_svop_pdp_override_data_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 fuse_ctrl_opt_ram_svop_pdp_override_data_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 fuse_ctrl_opt_ram_svop_pdp_override_data_yes_f(void)
+{
+	return 0x1;
+}
+static inline u32 fuse_ctrl_opt_ram_svop_pdp_override_data_no_f(void)
+{
+	return 0x0;
+}
 #endif

@@ -50,37 +50,61 @@
 #ifndef _hw_mc_gp10b_h_
 #define _hw_mc_gp10b_h_
 
-static inline u32 mc_intr_0_r(u32 i)
+static inline u32 mc_boot_0_r(void)
+{
+	return 0x00000000;
+}
+static inline u32 mc_boot_0_architecture_v(u32 r)
+{
+	return (r >> 24) & 0x1f;
+}
+static inline u32 mc_boot_0_implementation_v(u32 r)
+{
+	return (r >> 20) & 0xf;
+}
+static inline u32 mc_boot_0_major_revision_v(u32 r)
+{
+	return (r >> 4) & 0xf;
+}
+static inline u32 mc_boot_0_minor_revision_v(u32 r)
+{
+	return (r >> 0) & 0xf;
+}
+static inline u32 mc_intr_r(u32 i)
 {
 	return 0x00000100 + i*4;
 }
-static inline u32 mc_intr_0_pfifo_pending_f(void)
+static inline u32 mc_intr_pfifo_pending_f(void)
 {
 	return 0x100;
 }
-static inline u32 mc_intr_0_pgraph_pending_f(void)
-{
-	return 0x1000;
-}
-static inline u32 mc_intr_0_pmu_pending_f(void)
+static inline u32 mc_intr_pmu_pending_f(void)
 {
 	return 0x1000000;
 }
-static inline u32 mc_intr_0_ltc_pending_f(void)
+static inline u32 mc_intr_ltc_pending_f(void)
 {
 	return 0x2000000;
 }
-static inline u32 mc_intr_0_priv_ring_pending_f(void)
+static inline u32 mc_intr_priv_ring_pending_f(void)
 {
 	return 0x40000000;
 }
-static inline u32 mc_intr_0_pbus_pending_f(void)
+static inline u32 mc_intr_pbus_pending_f(void)
 {
 	return 0x10000000;
 }
-static inline u32 mc_intr_en_0_r(u32 i)
+static inline u32 mc_intr_en_r(u32 i)
 {
 	return 0x00000140 + i*4;
+}
+static inline u32 mc_intr_en_set_r(u32 i)
+{
+	return 0x00000160 + i*4;
+}
+static inline u32 mc_intr_en_clear_r(u32 i)
+{
+	return 0x00000180 + i*4;
 }
 static inline u32 mc_enable_r(void)
 {
@@ -161,6 +185,10 @@ static inline u32 mc_enable_perfmon_enabled_f(void)
 static inline u32 mc_enable_hub_enabled_f(void)
 {
 	return 0x20000000;
+}
+static inline u32 mc_intr_ltc_r(void)
+{
+	return 0x000001c0;
 }
 static inline u32 mc_enable_pb_r(void)
 {

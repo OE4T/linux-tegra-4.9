@@ -90,13 +90,25 @@ static inline u32 ctxsw_prog_main_image_pm_o(void)
 {
 	return 0x00000028;
 }
-static inline u32 ctxsw_prog_main_image_pm_mode_v(u32 r)
+static inline u32 ctxsw_prog_main_image_pm_mode_m(void)
 {
-	return (r >> 0) & 0x7;
+	return 0x7 << 0;
 }
-static inline u32 ctxsw_prog_main_image_pm_mode_no_ctxsw_v(void)
+static inline u32 ctxsw_prog_main_image_pm_mode_no_ctxsw_f(void)
 {
-	return 0x00000000;
+	return 0x0;
+}
+static inline u32 ctxsw_prog_main_image_pm_smpc_mode_m(void)
+{
+	return 0x7 << 3;
+}
+static inline u32 ctxsw_prog_main_image_pm_smpc_mode_ctxsw_f(void)
+{
+	return 0x8;
+}
+static inline u32 ctxsw_prog_main_image_pm_smpc_mode_no_ctxsw_f(void)
+{
+	return 0x0;
 }
 static inline u32 ctxsw_prog_main_image_pm_ptr_o(void)
 {
@@ -177,5 +189,53 @@ static inline u32 ctxsw_prog_extended_sm_dsm_perf_counter_register_stride_v(void
 static inline u32 ctxsw_prog_extended_sm_dsm_perf_counter_control_register_stride_v(void)
 {
 	return 0x00000002;
+}
+static inline u32 ctxsw_prog_main_image_priv_access_map_config_o(void)
+{
+	return 0x000000a0;
+}
+static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_s(void)
+{
+	return 2;
+}
+static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_f(u32 v)
+{
+	return (v & 0x3) << 0;
+}
+static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_m(void)
+{
+	return 0x3 << 0;
+}
+static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_v(u32 r)
+{
+	return (r >> 0) & 0x3;
+}
+static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_allow_all_f(void)
+{
+	return 0x0;
+}
+static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_use_map_f(void)
+{
+	return 0x2;
+}
+static inline u32 ctxsw_prog_main_image_priv_access_map_addr_lo_o(void)
+{
+	return 0x000000a4;
+}
+static inline u32 ctxsw_prog_main_image_priv_access_map_addr_hi_o(void)
+{
+	return 0x000000a8;
+}
+static inline u32 ctxsw_prog_main_image_misc_options_o(void)
+{
+	return 0x0000003c;
+}
+static inline u32 ctxsw_prog_main_image_misc_options_verif_features_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 ctxsw_prog_main_image_misc_options_verif_features_disabled_f(void)
+{
+	return 0x0;
 }
 #endif

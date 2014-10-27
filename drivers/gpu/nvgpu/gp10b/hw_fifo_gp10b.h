@@ -206,6 +206,10 @@ static inline u32 fifo_intr_en_0_r(void)
 {
 	return 0x00002140;
 }
+static inline u32 fifo_intr_en_0_sched_error_m(void)
+{
+	return 0x1 << 8;
+}
 static inline u32 fifo_intr_en_1_r(void)
 {
 	return 0x00002528;
@@ -346,7 +350,15 @@ static inline u32 fifo_preempt_type_channel_f(void)
 {
 	return 0x0;
 }
+static inline u32 fifo_preempt_type_tsg_f(void)
+{
+	return 0x1000000;
+}
 static inline u32 fifo_preempt_chid_f(u32 v)
+{
+	return (v & 0xfff) << 0;
+}
+static inline u32 fifo_preempt_id_f(u32 v)
 {
 	return (v & 0xfff) << 0;
 }
@@ -381,6 +393,10 @@ static inline u32 fifo_engine_status_id_type_v(u32 r)
 static inline u32 fifo_engine_status_id_type_chid_v(void)
 {
 	return 0x00000000;
+}
+static inline u32 fifo_engine_status_id_type_tsgid_v(void)
+{
+	return 0x00000001;
 }
 static inline u32 fifo_engine_status_ctx_status_v(u32 r)
 {
@@ -465,6 +481,10 @@ static inline u32 fifo_pbdma_status_id_type_v(u32 r)
 static inline u32 fifo_pbdma_status_id_type_chid_v(void)
 {
 	return 0x00000000;
+}
+static inline u32 fifo_pbdma_status_id_type_tsgid_v(void)
+{
+	return 0x00000001;
 }
 static inline u32 fifo_pbdma_status_chan_status_v(u32 r)
 {

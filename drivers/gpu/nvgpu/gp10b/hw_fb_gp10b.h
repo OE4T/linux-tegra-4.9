@@ -66,6 +66,10 @@ static inline u32 fb_mmu_ctrl_vm_pg_size_128kb_f(void)
 {
 	return 0x0;
 }
+static inline u32 fb_mmu_ctrl_vm_pg_size_64kb_f(void)
+{
+	return 0x1;
+}
 static inline u32 fb_mmu_ctrl_pri_fifo_empty_v(u32 r)
 {
 	return (r >> 15) & 0x1;
@@ -77,6 +81,22 @@ static inline u32 fb_mmu_ctrl_pri_fifo_empty_false_f(void)
 static inline u32 fb_mmu_ctrl_pri_fifo_space_v(u32 r)
 {
 	return (r >> 16) & 0xff;
+}
+static inline u32 fb_mmu_ctrl_use_pdb_big_page_size_v(u32 r)
+{
+	return (r >> 11) & 0x1;
+}
+static inline u32 fb_mmu_ctrl_use_pdb_big_page_size_true_f(void)
+{
+	return 0x800;
+}
+static inline u32 fb_mmu_ctrl_use_pdb_big_page_size_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 fb_priv_mmu_phy_secure_r(void)
+{
+	return 0x00100ce4;
 }
 static inline u32 fb_mmu_invalidate_pdb_r(void)
 {
@@ -158,9 +178,9 @@ static inline u32 fb_mmu_debug_wr_vol_true_f(void)
 {
 	return 0x4;
 }
-static inline u32 fb_mmu_debug_wr_addr_v(u32 r)
+static inline u32 fb_mmu_debug_wr_addr_f(u32 v)
 {
-	return (r >> 4) & 0xfffffff;
+	return (v & 0xfffffff) << 4;
 }
 static inline u32 fb_mmu_debug_wr_addr_alignment_v(void)
 {
@@ -178,9 +198,9 @@ static inline u32 fb_mmu_debug_rd_vol_false_f(void)
 {
 	return 0x0;
 }
-static inline u32 fb_mmu_debug_rd_addr_v(u32 r)
+static inline u32 fb_mmu_debug_rd_addr_f(u32 v)
 {
-	return (r >> 4) & 0xfffffff;
+	return (v & 0xfffffff) << 4;
 }
 static inline u32 fb_mmu_debug_rd_addr_alignment_v(void)
 {
@@ -201,10 +221,6 @@ static inline u32 fb_mmu_debug_ctrl_debug_enabled_v(void)
 static inline u32 fb_mmu_vpr_info_r(void)
 {
 	return 0x00100cd0;
-}
-static inline u32 fb_mmu_vpr_info_fetch_f(u32 v)
-{
-	return (v & 0x1) << 2;
 }
 static inline u32 fb_mmu_vpr_info_fetch_v(u32 r)
 {

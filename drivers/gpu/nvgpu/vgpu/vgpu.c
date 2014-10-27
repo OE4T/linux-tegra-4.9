@@ -21,6 +21,7 @@
 #include "gk20a/debug_gk20a.h"
 #include "gk20a/hal_gk20a.h"
 #include "gk20a/hw_mc_gk20a.h"
+#include "nvgpu_gpuid.h"
 
 static inline int vgpu_comm_init(struct platform_device *pdev)
 {
@@ -239,7 +240,7 @@ static int vgpu_init_hal(struct gk20a *g)
 	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
 
 	switch (ver) {
-	case GK20A_GPUID_GK20A:
+	case NVGPU_GPUID_GK20A:
 		gk20a_dbg_info("gk20a detected");
 		/* init gk20a ops then override with virt extensions */
 		gk20a_init_hal(&g->ops);

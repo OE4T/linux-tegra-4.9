@@ -21,6 +21,7 @@
 #include <linux/nvgpu.h>
 #include <uapi/linux/nvgpu.h>
 
+#include "gr_ops.h"
 #include "gk20a.h"
 #include "fence_gk20a.h"
 
@@ -274,7 +275,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		if (zcull_info == NULL)
 			return -ENOMEM;
 
-		err = g->ops.gr.get_zcull_info(g, &g->gr, zcull_info);
+		err = g->ops.gr->get_zcull_info(g, &g->gr, zcull_info);
 		if (err) {
 			kfree(zcull_info);
 			break;

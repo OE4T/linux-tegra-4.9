@@ -1,5 +1,5 @@
 /*
- * GM20B GPC MMU
+ * GM20B GPU GR
  *
  * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -16,6 +16,7 @@
 #include <linux/types.h>
 #include <linux/delay.h>	/* for mdelay */
 
+#include "gr_ops.h"
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
 
@@ -28,7 +29,7 @@
 #include "pmu_gm20b.h"
 #include "acr_gm20b.h"
 
-static void gr_gm20b_init_gpc_mmu(struct gk20a *g)
+void gr_gm20b_init_gpc_mmu(struct gk20a *g)
 {
 	u32 temp;
 
@@ -64,7 +65,7 @@ static void gr_gm20b_init_gpc_mmu(struct gk20a *g)
 		gk20a_readl(g, fb_fbhub_num_active_ltcs_r()));
 }
 
-static void gr_gm20b_bundle_cb_defaults(struct gk20a *g)
+void gr_gm20b_bundle_cb_defaults(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 
@@ -76,7 +77,7 @@ static void gr_gm20b_bundle_cb_defaults(struct gk20a *g)
 		gr_pd_ab_dist_cfg2_token_limit_init_v();
 }
 
-static void gr_gm20b_cb_size_default(struct gk20a *g)
+void gr_gm20b_cb_size_default(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 
@@ -86,7 +87,7 @@ static void gr_gm20b_cb_size_default(struct gk20a *g)
 		gr_gpc0_ppc0_cbm_alpha_cb_size_v_default_v();
 }
 
-static int gr_gm20b_calc_global_ctx_buffer_size(struct gk20a *g)
+int gr_gm20b_calc_global_ctx_buffer_size(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	int size;
@@ -107,7 +108,7 @@ static int gr_gm20b_calc_global_ctx_buffer_size(struct gk20a *g)
 	return size;
 }
 
-static void gr_gk20a_commit_global_attrib_cb(struct gk20a *g,
+void gr_gm20b_commit_global_attrib_cb(struct gk20a *g,
 					    struct channel_ctx_gk20a *ch_ctx,
 					    u64 addr, bool patch)
 {
@@ -124,7 +125,7 @@ static void gr_gk20a_commit_global_attrib_cb(struct gk20a *g,
 		gr_gpcs_tpcs_mpc_vtg_cb_global_base_addr_valid_true_f(), patch);
 }
 
-static void gr_gm20b_commit_global_bundle_cb(struct gk20a *g,
+void gr_gm20b_commit_global_bundle_cb(struct gk20a *g,
 					    struct channel_ctx_gk20a *ch_ctx,
 					    u64 addr, u64 size, bool patch)
 {
@@ -160,7 +161,7 @@ static void gr_gm20b_commit_global_bundle_cb(struct gk20a *g,
 
 }
 
-static int gr_gm20b_commit_global_cb_manager(struct gk20a *g,
+int gr_gm20b_commit_global_cb_manager(struct gk20a *g,
 			struct channel_gk20a *c, bool patch)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -247,7 +248,7 @@ static int gr_gm20b_commit_global_cb_manager(struct gk20a *g,
 	return 0;
 }
 
-static void gr_gm20b_commit_global_pagepool(struct gk20a *g,
+void gr_gm20b_commit_global_pagepool(struct gk20a *g,
 					    struct channel_ctx_gk20a *ch_ctx,
 					    u64 addr, u32 size, bool patch)
 {
@@ -259,7 +260,7 @@ static void gr_gm20b_commit_global_pagepool(struct gk20a *g,
 
 }
 
-static int gr_gm20b_handle_sw_method(struct gk20a *g, u32 addr,
+int gr_gm20b_handle_sw_method(struct gk20a *g, u32 addr,
 					  u32 class_num, u32 offset, u32 data)
 {
 	gk20a_dbg_fn("");
@@ -280,10 +281,10 @@ static int gr_gm20b_handle_sw_method(struct gk20a *g, u32 addr,
 			gk20a_gr_set_shader_exceptions(g, data);
 			break;
 		case NVB197_SET_CIRCULAR_BUFFER_SIZE:
-			g->ops.gr.set_circular_buffer_size(g, data);
+			g->ops.gr->set_circular_buffer_size(g, data);
 			break;
 		case NVB197_SET_ALPHA_CIRCULAR_BUFFER_SIZE:
-			g->ops.gr.set_alpha_circular_buffer_size(g, data);
+			g->ops.gr->set_alpha_circular_buffer_size(g, data);
 			break;
 		default:
 			goto fail;
@@ -295,7 +296,7 @@ fail:
 	return -EINVAL;
 }
 
-static void gr_gm20b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
+void gr_gm20b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 gpc_index, ppc_index, stride, val;
@@ -395,7 +396,7 @@ void gr_gm20b_set_circular_buffer_size(struct gk20a *g, u32 data)
 	}
 }
 
-static void gr_gm20b_enable_hww_exceptions(struct gk20a *g)
+void gr_gm20b_enable_hww_exceptions(struct gk20a *g)
 {
 	gr_gk20a_enable_hww_exceptions(g);
 
@@ -406,7 +407,7 @@ static void gr_gm20b_enable_hww_exceptions(struct gk20a *g)
 			gr_ds_hww_report_mask_2_sph24_err_report_f());
 }
 
-static void gr_gm20b_set_hww_esr_report_mask(struct gk20a *g)
+void gr_gm20b_set_hww_esr_report_mask(struct gk20a *g)
 {
 	/* setup sm warp esr report masks */
 	gk20a_writel(g, gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_r(),
@@ -439,7 +440,7 @@ static void gr_gm20b_set_hww_esr_report_mask(struct gk20a *g)
 		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_multiple_warp_errors_report_f());
 }
 
-static bool gr_gm20b_is_valid_class(struct gk20a *g, u32 class_num)
+bool gr_gm20b_is_valid_class(struct gk20a *g, u32 class_num)
 {
 	bool valid = false;
 
@@ -459,7 +460,7 @@ static bool gr_gm20b_is_valid_class(struct gk20a *g, u32 class_num)
 	return valid;
 }
 
-static void gr_gm20b_get_sm_dsm_perf_regs(struct gk20a *g,
+void gr_gm20b_get_sm_dsm_perf_regs(struct gk20a *g,
 					       u32 *num_sm_dsm_perf_regs,
 					       u32 **sm_dsm_perf_regs,
 					       u32 *perf_register_stride)
@@ -470,7 +471,7 @@ static void gr_gm20b_get_sm_dsm_perf_regs(struct gk20a *g,
 	*perf_register_stride = ctxsw_prog_extended_sm_dsm_perf_counter_register_stride_v();
 }
 
-static void gr_gm20b_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
+void gr_gm20b_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
 					       u32 *num_sm_dsm_perf_regs,
 					       u32 **sm_dsm_perf_regs,
 					       u32 *ctrl_register_stride)
@@ -481,7 +482,7 @@ static void gr_gm20b_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
 	*ctrl_register_stride = ctxsw_prog_extended_sm_dsm_perf_counter_control_register_stride_v();
 }
 
-static u32 gr_gm20b_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
+u32 gr_gm20b_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
 	u32 val;
 	struct gr_gk20a *gr = &g->gr;
@@ -492,7 +493,7 @@ static u32 gr_gm20b_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 	return (~val) & ((0x1 << gr->max_tpc_per_gpc_count) - 1);
 }
 
-static int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
+int gr_gm20b_init_fs_state(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 tpc_index, gpc_index;
@@ -595,7 +596,7 @@ static int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 	return 0;
 }
 
-static int gr_gm20b_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,
+int gr_gm20b_falcon_load_ucode(struct gk20a *g, u64 addr_base,
 	struct gk20a_ctxsw_ucode_segments *segments, u32 reg_offset)
 {
 	gk20a_writel(g, reg_offset + gr_fecs_dmactl_r(),
@@ -622,7 +623,7 @@ static void gr_gm20b_load_gpccs_with_bootloader(struct gk20a *g)
 
 	gr_gk20a_load_falcon_bind_instblk(g);
 
-	g->ops.gr.falcon_load_ucode(g, addr_base,
+	g->ops.gr->falcon_load_ucode(g, addr_base,
 		&g->ctxsw_ucode_info.gpccs,
 		gr_gpcs_gpccs_falcon_hwcfg_r() -
 		gr_fecs_falcon_hwcfg_r());
@@ -648,7 +649,7 @@ static int gr_gm20b_ctx_wait_lsf_ready(struct gk20a *g, u32 timeout, u32 val)
 	return -ETIMEDOUT;
 }
 
-static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
+int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 {
 	u32 err;
 	gk20a_dbg_fn("");
@@ -710,42 +711,30 @@ static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 }
 #else
 
-static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
+int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 {
 	return -EPERM;
 }
 
 #endif
 
+#include "gk20a/gr_ops_gk20a.h"
+#include "gr_ops_gm20b.h"
+
+static struct gpu_gr_ops gm20b_gr_ops = {
+	__set_gr_gm20b_ops(),
+	__set_gr_gk20a_op(load_ctxsw_ucode)
+};
+
+static struct gpu_gr_ops gm20b_gr_privsecurity_ops = {
+	__set_gr_gm20b_ops(),
+	__set_gr_gm20b_op(load_ctxsw_ucode)
+};
+
 void gm20b_init_gr(struct gpu_ops *gops)
 {
-	gops->gr.init_gpc_mmu = gr_gm20b_init_gpc_mmu;
-	gops->gr.bundle_cb_defaults = gr_gm20b_bundle_cb_defaults;
-	gops->gr.cb_size_default = gr_gm20b_cb_size_default;
-	gops->gr.calc_global_ctx_buffer_size =
-		gr_gm20b_calc_global_ctx_buffer_size;
-	gops->gr.commit_global_attrib_cb = gr_gk20a_commit_global_attrib_cb;
-	gops->gr.commit_global_bundle_cb = gr_gm20b_commit_global_bundle_cb;
-	gops->gr.commit_global_cb_manager = gr_gm20b_commit_global_cb_manager;
-	gops->gr.commit_global_pagepool = gr_gm20b_commit_global_pagepool;
-	gops->gr.handle_sw_method = gr_gm20b_handle_sw_method;
-	gops->gr.set_alpha_circular_buffer_size = gr_gm20b_set_alpha_circular_buffer_size;
-	gops->gr.set_circular_buffer_size = gr_gm20b_set_circular_buffer_size;
-	gops->gr.enable_hww_exceptions = gr_gm20b_enable_hww_exceptions;
-	gops->gr.is_valid_class = gr_gm20b_is_valid_class;
-	gops->gr.get_sm_dsm_perf_regs = gr_gm20b_get_sm_dsm_perf_regs;
-	gops->gr.get_sm_dsm_perf_ctrl_regs = gr_gm20b_get_sm_dsm_perf_ctrl_regs;
-	gops->gr.init_fs_state = gr_gm20b_ctx_state_floorsweep;
-	gops->gr.set_hww_esr_report_mask = gr_gm20b_set_hww_esr_report_mask;
-	gops->gr.falcon_load_ucode = gr_gm20b_load_ctxsw_ucode_segments;
 	if (gops->privsecurity)
-		gops->gr.load_ctxsw_ucode = gr_gm20b_load_ctxsw_ucode;
+		gops->gr = &gm20b_gr_privsecurity_ops;
 	else
-		gops->gr.load_ctxsw_ucode = gr_gk20a_load_ctxsw_ucode;
-	gops->gr.get_gpc_tpc_mask = gr_gm20b_get_gpc_tpc_mask;
-	gops->gr.free_channel_ctx = gk20a_free_channel_ctx;
-	gops->gr.alloc_obj_ctx = gk20a_alloc_obj_ctx;
-	gops->gr.free_obj_ctx = gk20a_free_obj_ctx;
-	gops->gr.bind_ctxsw_zcull = gr_gk20a_bind_ctxsw_zcull;
-	gops->gr.get_zcull_info = gr_gk20a_get_zcull_info;
+		gops->gr = &gm20b_gr_ops;
 }

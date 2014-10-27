@@ -350,11 +350,11 @@ int gr_gk20a_init_ctx_vars(struct gk20a *g, struct gr_gk20a *gr);
 struct nvgpu_alloc_obj_ctx_args;
 struct nvgpu_free_obj_ctx_args;
 
-int gk20a_alloc_obj_ctx(struct channel_gk20a *c,
+int gr_gk20a_alloc_obj_ctx(struct channel_gk20a *c,
 			struct nvgpu_alloc_obj_ctx_args *args);
-int gk20a_free_obj_ctx(struct channel_gk20a *c,
+int gr_gk20a_free_obj_ctx(struct channel_gk20a *c,
 			struct nvgpu_free_obj_ctx_args *args);
-void gk20a_free_channel_ctx(struct channel_gk20a *c);
+void gr_gk20a_free_channel_ctx(struct channel_gk20a *c);
 
 int gk20a_gr_isr(struct gk20a *g);
 int gk20a_gr_nonstall_isr(struct gk20a *g);

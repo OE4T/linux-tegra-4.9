@@ -1,5 +1,5 @@
 /*
- * GM20B GPC MMU
+ * GM20B GPU GR
  *
  * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,8 +13,8 @@
  * more details.
  */
 
-#ifndef _NVHOST_GM20B_GR_MMU_H
-#define _NVHOST_GM20B_GR_MMU_H
+#ifndef _NVGPU_GR_GM20B_H_
+#define _NVGPU_GR_GM20B_H_
 struct gk20a;
 
 enum {
@@ -29,5 +29,7 @@ enum {
 #define NVB1C0_SET_SHADER_EXCEPTIONS		0x1528
 
 #define NVA297_SET_SHADER_EXCEPTIONS_ENABLE_FALSE 0
+
+struct gpu_ops;
 void gm20b_init_gr(struct gpu_ops *gops);
 #endif

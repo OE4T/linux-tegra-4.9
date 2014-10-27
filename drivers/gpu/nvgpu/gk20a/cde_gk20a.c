@@ -50,7 +50,7 @@ static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 	}
 
 	for (i = 0; i < cde_ctx->num_obj_ids; i++)
-		gk20a_free_obj_ctx(cde_ctx->ch,
+		gr_gk20a_free_obj_ctx(cde_ctx->ch,
 			&(struct nvgpu_free_obj_ctx_args)
 			{ cde_ctx->obj_ids[i] });
 
@@ -401,7 +401,7 @@ static int gk20a_init_cde_required_class(struct gk20a_cde_ctx *cde_ctx,
 	alloc_obj_ctx.class_num = required_class;
 	alloc_obj_ctx.padding = 0;
 
-	err = gk20a_alloc_obj_ctx(cde_ctx->ch, &alloc_obj_ctx);
+	err = gr_gk20a_alloc_obj_ctx(cde_ctx->ch, &alloc_obj_ctx);
 	if (err) {
 		gk20a_warn(&cde_ctx->pdev->dev, "cde: failed to allocate ctx. err=%d",
 			   err);

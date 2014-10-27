@@ -524,48 +524,18 @@ int gk20a_sim_esc_read(struct gk20a *g, char *path, u32 index, u32 count, u32 *d
 static irqreturn_t gk20a_intr_isr_stall(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
-	u32 mc_intr_0;
 
-	if (!g->power_on)
-		return IRQ_NONE;
-
-	/* not from gpu when sharing irq with others */
-	mc_intr_0 = gk20a_readl(g, mc_intr_0_r());
-	if (unlikely(!mc_intr_0))
-		return IRQ_NONE;
-
-	gk20a_writel(g, mc_intr_en_0_r(),
-		mc_intr_en_0_inta_disabled_f());
-
-	/* flush previous write */
-	gk20a_readl(g, mc_intr_en_0_r());
-
-	return IRQ_WAKE_THREAD;
+	return g->ops.mc.isr_stall(g);
 }
 
 static irqreturn_t gk20a_intr_isr_nonstall(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
-	u32 mc_intr_1;
 
-	if (!g->power_on)
-		return IRQ_NONE;
-
-	/* not from gpu when sharing irq with others */
-	mc_intr_1 = gk20a_readl(g, mc_intr_1_r());
-	if (unlikely(!mc_intr_1))
-		return IRQ_NONE;
-
-	gk20a_writel(g, mc_intr_en_1_r(),
-		mc_intr_en_1_inta_disabled_f());
-
-	/* flush previous write */
-	gk20a_readl(g, mc_intr_en_1_r());
-
-	return IRQ_WAKE_THREAD;
+	return g->ops.mc.isr_nonstall(g);
 }
 
-static void gk20a_pbus_isr(struct gk20a *g)
+void gk20a_pbus_isr(struct gk20a *g)
 {
 	u32 val;
 	val = gk20a_readl(g, bus_intr_0_r());
@@ -595,59 +565,13 @@ static void gk20a_pbus_isr(struct gk20a *g)
 static irqreturn_t gk20a_intr_thread_stall(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
-	u32 mc_intr_0;
-
-	gk20a_dbg(gpu_dbg_intr, "interrupt thread launched");
-
-	mc_intr_0 = gk20a_readl(g, mc_intr_0_r());
-
-	gk20a_dbg(gpu_dbg_intr, "stall intr %08x\n", mc_intr_0);
-
-	if (mc_intr_0 & mc_intr_0_pgraph_pending_f())
-		gr_gk20a_elpg_protected_call(g, gk20a_gr_isr(g));
-	if (mc_intr_0 & mc_intr_0_pfifo_pending_f())
-		gk20a_fifo_isr(g);
-	if (mc_intr_0 & mc_intr_0_pmu_pending_f())
-		gk20a_pmu_isr(g);
-	if (mc_intr_0 & mc_intr_0_priv_ring_pending_f())
-		gk20a_priv_ring_isr(g);
-	if (mc_intr_0 & mc_intr_0_ltc_pending_f())
-		g->ops.ltc.isr(g);
-	if (mc_intr_0 & mc_intr_0_pbus_pending_f())
-		gk20a_pbus_isr(g);
-
-	gk20a_writel(g, mc_intr_en_0_r(),
-		mc_intr_en_0_inta_hardware_f());
-
-	/* flush previous write */
-	gk20a_readl(g, mc_intr_en_0_r());
-
-	return IRQ_HANDLED;
+	return g->ops.mc.isr_thread_stall(g);
 }
 
 static irqreturn_t gk20a_intr_thread_nonstall(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
-	u32 mc_intr_1;
-
-	gk20a_dbg(gpu_dbg_intr, "interrupt thread launched");
-
-	mc_intr_1 = gk20a_readl(g, mc_intr_1_r());
-
-	gk20a_dbg(gpu_dbg_intr, "non-stall intr %08x\n", mc_intr_1);
-
-	if (mc_intr_1 & mc_intr_0_pfifo_pending_f())
-		gk20a_fifo_nonstall_isr(g);
-	if (mc_intr_1 & mc_intr_0_pgraph_pending_f())
-		gk20a_gr_nonstall_isr(g);
-
-	gk20a_writel(g, mc_intr_en_1_r(),
-		mc_intr_en_1_inta_hardware_f());
-
-	/* flush previous write */
-	gk20a_readl(g, mc_intr_en_1_r());
-
-	return IRQ_HANDLED;
+	return g->ops.mc.isr_thread_nonstall(g);
 }
 
 static void gk20a_remove_support(struct platform_device *dev)
@@ -776,11 +700,15 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	return ret;
 }
 
-static void gk20a_detect_chip(struct gk20a *g)
+static int gk20a_detect_chip(struct gk20a *g)
 {
 	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
+	u32 mc_boot_0_value;
 
-	u32 mc_boot_0_value = gk20a_readl(g, mc_boot_0_r());
+	if (gpu->arch)
+		return 0;
+
+	mc_boot_0_value = gk20a_readl(g, mc_boot_0_r());
 	gpu->arch = mc_boot_0_architecture_v(mc_boot_0_value) <<
 		NVGPU_GPU_ARCHITECTURE_SHIFT;
 	gpu->impl = mc_boot_0_implementation_v(mc_boot_0_value);
@@ -792,6 +720,8 @@ static void gk20a_detect_chip(struct gk20a *g)
 			g->gpu_characteristics.arch,
 			g->gpu_characteristics.impl,
 			g->gpu_characteristics.rev);
+
+	return gpu_init_hal(g);
 }
 
 static int gk20a_pm_finalize_poweron(struct device *dev)
@@ -815,23 +745,16 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 	nice_value = task_nice(current);
 	set_user_nice(current, -20);
 
+	g->power_on = true;
+
+	err = gk20a_detect_chip(g);
+	if (err)
+		goto done;
+
 	enable_irq(g->irq_stall);
 	enable_irq(g->irq_nonstall);
 
-	g->power_on = true;
-
-	gk20a_writel(g, mc_intr_en_1_r(),
-		mc_intr_en_1_inta_hardware_f());
-
-	gk20a_writel(g, mc_intr_en_0_r(),
-		mc_intr_en_0_inta_hardware_f());
-
-	if (g->ops.clock_gating.slcg_bus_load_gating_prod)
-		g->ops.clock_gating.slcg_bus_load_gating_prod(g,
-				g->slcg_enabled);
-	if (g->ops.clock_gating.blcg_bus_load_gating_prod)
-		g->ops.clock_gating.blcg_bus_load_gating_prod(g,
-				g->blcg_enabled);
+	g->ops.mc.intr_enable(g);
 
 	if (!tegra_platform_is_silicon())
 		gk20a_writel(g, bus_intr_en_0_r(), 0x0);
@@ -842,11 +765,6 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 			        bus_intr_en_0_pri_timeout_m());
 
 	gk20a_reset_priv_ring(g);
-
-	gk20a_detect_chip(g);
-	err = gpu_init_hal(g);
-	if (err)
-		goto done;
 
 	/* TBD: move this after graphics init in which blcg/slcg is enabled.
 	   This function removes SlowdownOnBoot which applies 32x divider

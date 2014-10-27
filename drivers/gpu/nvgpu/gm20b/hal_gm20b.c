@@ -27,6 +27,7 @@
 #include "mm_gm20b.h"
 #include "pmu_gm20b.h"
 #include "clk_gm20b.h"
+#include "mc_gm20b.h"
 #include <linux/tegra-fuse.h>
 #include "regops_gm20b.h"
 
@@ -113,6 +114,7 @@ int gm20b_init_hal(struct gpu_ops *gops)
 	}
 #endif
 
+	gm20b_init_mc(gops);
 	gm20b_init_ltc(gops);
 	gm20b_init_gr(gops);
 	gm20b_init_ltc(gops);

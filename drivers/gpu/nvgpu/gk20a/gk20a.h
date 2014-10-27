@@ -29,7 +29,8 @@ struct acr_gm20b;
 
 #include <linux/sched.h>
 #include <linux/spinlock.h>
-#include <uapi/linux/nvgpu.h>
+#include <linux/nvgpu.h>
+#include <linux/irqreturn.h>
 #include <linux/tegra-soc.h>
 
 #include "../../../arch/arm/mach-tegra/iomap.h"
@@ -335,6 +336,13 @@ struct gpu_ops {
 				*get_qctl_whitelist_ranges)(void);
 		int (*get_qctl_whitelist_ranges_count)(void);
 	} regops;
+	struct {
+		void (*intr_enable)(struct gk20a *g);
+		irqreturn_t (*isr_stall)(struct gk20a *g);
+		irqreturn_t (*isr_nonstall)(struct gk20a *g);
+		irqreturn_t (*isr_thread_stall)(struct gk20a *g);
+		irqreturn_t (*isr_thread_nonstall)(struct gk20a *g);
+	} mc;
 };
 
 struct gk20a {
@@ -733,6 +741,8 @@ gk20a_request_firmware(struct gk20a *g, const char *fw_name);
 	GK20A_GPUID(NVGPU_GPU_ARCH_GM200, NVGPU_GPU_IMPL_GM20B)
 
 int gk20a_init_gpu_characteristics(struct gk20a *g);
+
+void gk20a_pbus_isr(struct gk20a *g);
 
 int gk20a_user_init(struct platform_device *dev);
 void gk20a_user_deinit(struct platform_device *dev);

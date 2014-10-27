@@ -38,6 +38,7 @@ nvgpu-y := \
 	gk20a/cde_gk20a.o \
 	gk20a/platform_gk20a_generic.o \
 	gk20a/tsg_gk20a.o \
+	gk20a/mc_gk20a.o \
 	gm20b/hal_gm20b.o \
 	gm20b/ltc_gm20b.o \
 	gm20b/gr_gm20b.o \
@@ -49,7 +50,8 @@ nvgpu-y := \
 	gm20b/acr_gm20b.o \
 	gm20b/pmu_gm20b.o \
 	gm20b/mm_gm20b.o \
-	gm20b/regops_gm20b.o
+	gm20b/regops_gm20b.o \
+	gm20b/mc_gm20b.o
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += gk20a/platform_gk20a_tegra.o
 nvgpu-$(CONFIG_SYNC) += gk20a/sync_gk20a.o

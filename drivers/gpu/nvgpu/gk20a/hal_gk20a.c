@@ -23,6 +23,7 @@
 #include "channel_gk20a.h"
 #include "gr_ctx_gk20a.h"
 #include "mm_gk20a.h"
+#include "mc_gk20a.h"
 #include "pmu_gk20a.h"
 #include "clk_gk20a.h"
 #include "regops_gk20a.h"
@@ -48,6 +49,7 @@ int gk20a_init_hal(struct gpu_ops *gops)
 {
 	*gops = gk20a_ops;
 	gops->privsecurity = 0;
+	gk20a_init_mc(gops);
 	gk20a_init_ltc(gops);
 	gk20a_init_gr_ops(gops);
 	gk20a_init_fb(gops);

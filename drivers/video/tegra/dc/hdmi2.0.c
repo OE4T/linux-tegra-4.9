@@ -1163,10 +1163,12 @@ int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq,
 					unsigned audio_source)
 {
 	struct tegra_hdmi *hdmi = dc_hdmi;
+	struct tegra_dc *dc;
 	bool valid_freq;
 
 	if (!hdmi)
 		return -ENODEV;
+	dc = hdmi->dc;
 
 	valid_freq = AUDIO_FREQ_32K == audio_freq ||
 			AUDIO_FREQ_44_1K == audio_freq ||
@@ -1176,10 +1178,14 @@ int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq,
 			AUDIO_FREQ_176_4K == audio_freq ||
 			AUDIO_FREQ_192K == audio_freq;
 	if (valid_freq) {
-		tegra_dc_io_start(hdmi->dc);
+		tegra_dc_io_start(dc);
+		tegra_hdmi_get(dc);
+
 		tegra_hdmi_audio_config(hdmi, audio_freq, audio_source);
-		tegra_dc_io_end(hdmi->dc);
 		hdmi->audio_freq = audio_freq;
+
+		tegra_hdmi_put(dc);
+		tegra_dc_io_end(dc);
 	} else {
 		return -EINVAL;
 	}

@@ -3033,17 +3033,11 @@ static int _tegra_dc_set_default_videomode(struct tegra_dc *dc)
 	if (dc->mode.pclk == 0) {
 		switch (dc->out->type) {
 		case TEGRA_DC_OUT_HDMI:
-		/* If DC is enable called, and HDMI is connected,
-		 * but DC is not initialized by bootloader and no
-		 * mode is set up, then set a fallback mode.
-		 */
-		if (tegra_dc_hpd(dc) && (!dc->initialized)) {
-			return tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, 0);
-		} else
-			return false;
-
-		break;
-
+			/* No fallback mode. If no mode info available
+			 * from bootloader or device tree,
+			 * mode will be set by userspace during unblank.
+			 */
+			break;
 		case TEGRA_DC_OUT_DP:
 		case TEGRA_DC_OUT_NVSR_DP:
 		case TEGRA_DC_OUT_FAKE_DP:

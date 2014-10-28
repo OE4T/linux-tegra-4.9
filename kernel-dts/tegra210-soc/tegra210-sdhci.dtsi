@@ -37,7 +37,6 @@
 		nvidia,en-io-trim-volt;
 		nvidia,is-emmc;
 		pll_source = "pll_p";
-		nvidia,disable-auto-cal;
 	};
 
 	sdhci@700b0400 {

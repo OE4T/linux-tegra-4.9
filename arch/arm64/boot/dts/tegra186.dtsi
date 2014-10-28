@@ -106,6 +106,7 @@
 		reg = <0x0 0x3de00000 0x0 0x00040000>;
 		interrupts = <0 65 0x04   /* mpcore syncpt */
 			      0 67 0x04>; /* mpcore general */
+		#stream-id-cells = <1>;
 
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -116,18 +117,21 @@
 			compatible = "nvidia,tegra186-vi";
 			reg = <0x0 0x54700000 0x0 0x00100000>;
 			interrupts = <0 69 0x04>;
+			#stream-id-cells = <1>;
 		};
 
 		isp@54600000 {
 			compatible = "nvidia,tegra186-isp";
 			reg = <0x0 0x54600000 0x0 0x00040000>;
 			interrupts = <0 71 0x04>;
+			#stream-id-cells = <1>;
 		};
 
 		isp@54680000 {
 			compatible = "nvidia,tegra186-isp";
 			reg = <0x0 0x54680000 0x0 0x00040000>;
 			interrupts = <0 72 0x04>;
+			#stream-id-cells = <1>;
 		};
 
 		vii2c {
@@ -139,6 +143,7 @@
 			compatible = "nvidia,tegra186-dc";
 			reg = <0x0 0x54200000 0x0 0x00010000>;
 			interrupts = <0 153 0x04>;
+			#stream-id-cells = <3>;
 			status = "disabled";
 		};
 
@@ -146,6 +151,7 @@
 			compatible = "nvidia,tegra186-dc";
 			reg = <0x0 0x54210000 0x0 0x00010000>;
 			interrupts = <0 154 0x04>;
+			#stream-id-cells = <3>;
 			status = "disabled";
 		};
 
@@ -153,6 +159,7 @@
 			compatible = "nvidia,tegra186-dc";
 			reg = <0x0 0x54220000 0x0 0x00010000>;
 			interrupts = <0 155 0x04>;
+			#stream-id-cells = <3>;
 			status = "disabled";
 		};
 
@@ -165,31 +172,37 @@
 		vic {
 			compatible = "nvidia,tegra186-vic";
 			reg = <0x0 0x54340000 0x0 0x00040000>;
+			#stream-id-cells = <1>;
 		};
 
 		nvenc {
 			compatible = "nvidia,tegra186-nvenc";
 			reg = <0x0 0x544c0000 0x0 0x00040000>;
+			#stream-id-cells = <1>;
 		};
 
 		nvdec {
 			compatible = "nvidia,tegra186-nvdec";
 			reg = <0x0 0x54480000 0x0 0x00040000>;
+			#stream-id-cells = <1>;
 		};
 
 		nvjpg {
 			compatible = "nvidia,tegra186-nvjpg";
 			reg = <0x0 0x54380000 0x0 0x00040000>;
+			#stream-id-cells = <1>;
 		};
 
 		tsec {
 			compatible = "nvidia,tegra186-tsec";
 			reg = <0x0 0x54500000 0x0 0x00040000>;
+			#stream-id-cells = <1>;
 		};
 
 		tsecb {
 			compatible = "nvidia,tegra186-tsec";
 			reg = <0x0 0x54100000 0x0 0x00040000>;
+			#stream-id-cells = <1>;
 		};
 
 		sor {

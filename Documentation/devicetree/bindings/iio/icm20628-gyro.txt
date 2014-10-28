@@ -1,0 +1,21 @@
+* Invensense ICM-20628 Gyro/Accelerometer sensor
+
+Required properties:
+- compatible: must be "invensense,mpu6xxx"
+- reg: i2c address of the device. It should be 0x68 or 0x69.
+
+Optional propertied:
+- interrupt-parent:  GPIO number
+- interrupts:  GPIO macro
+- invensense,orientation:  Orientation matrix for this device.
+
+Example:
+
+	icm20628@69 {
+		compatible = "invensense,mpu6xxx";
+                reg = <0x69>;
+                interrupt-parent = <&gpio>;
+                interrupts = <TEGRA_GPIO(X, 2) 0x01>;
+                invensense,orientation = [ff 00 00 00 ff 00 00 00 01];
+	};
+

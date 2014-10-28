@@ -1,0 +1,9 @@
+#
+# NVidiaSensor IIO common
+#
+config NVS_IIO
+	tristate "Common module for NVSensor IIO drivers"
+	depends on SYSFS && IIO && IIO_KFIFO_BUF && IIO_TRIGGER
+	default n
+	help
+	  Support for IIO NVSensor framework.

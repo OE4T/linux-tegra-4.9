@@ -284,7 +284,8 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	gk20a_idle(g->dev);
 
 	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ))
-		err = copy_to_user((void __user *)arg, buf, _IOC_SIZE(cmd));
+		if (copy_to_user((void __user *)arg, buf, _IOC_SIZE(cmd)))
+			err = -EFAULT;
 
 	return err;
 }

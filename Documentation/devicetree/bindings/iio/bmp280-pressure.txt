@@ -1,0 +1,16 @@
+* Bosch BMP-280 pressure sensor
+
+Required properties:
+- compatible: must be "bmp,bmpX80"
+- reg: i2c address of the device. It should be 0x76 or 0x77.
+
+Optional propertied:
+
+Example:
+
+	bmp280@77 {
+                compatible = "bmp,bmpX80";
+                reg = <0x77>;
+        };
+
+

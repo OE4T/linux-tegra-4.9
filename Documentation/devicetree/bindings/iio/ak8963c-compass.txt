@@ -1,0 +1,17 @@
+* AKM 8963C Compass sensor
+
+Required properties:
+- compatible: must be "ak,ak89xx"
+- reg: i2c address of the device. It should be 0x0C or 0x0D.
+
+Optional propertied:
+- orientation:  Orientation matrix for this device.
+
+Example:
+
+	ak8963c@0d {
+		compatible = "ak,ak89xx";
+                reg = <0x0d>;
+                orientation = [ff 00 00 00 ff 00 00 00 01];
+        };
+

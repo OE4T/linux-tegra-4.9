@@ -260,10 +260,7 @@ void tegra_pwm_bl_ops_register(struct device *dev)
 				dsi_l_720p_5_loki_ops.pwm_bl_ops);
 		break;
 	case BOARD_E1937:
-		if (display_board.sku == 1100)
-			is_dsi_a_1200_800_8_0 = true;
-		else
-			is_dsi_a_1200_1920_8_0 = true;
+		is_dsi_a_1200_1920_8_0 = true;
 		break;
 	case BOARD_E1807:
 		is_dsi_a_1200_800_8_0 = true;
@@ -403,10 +400,7 @@ struct device_node *tegra_primary_panel_get_dt_node(
 		}
 		break;
 	case BOARD_E1937:
-		if (display_board.sku == 1100)
-			is_dsi_a_1200_800_8_0 = true;
-		else
-			is_dsi_a_1200_1920_8_0 = true;
+		is_dsi_a_1200_1920_8_0 = true;
 		break;
 	case BOARD_E1807:
 		is_dsi_a_1200_800_8_0 = true;

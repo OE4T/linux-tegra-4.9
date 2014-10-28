@@ -785,4 +785,5 @@ bool fb_console_mapped(void);
 
 irqreturn_t tegra_dc_irq(int irq, void *ptr);
 
+int tegra_fb_release_fbmem(struct tegra_fb_info *);
 #endif

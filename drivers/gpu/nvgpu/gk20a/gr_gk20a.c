@@ -337,7 +337,8 @@ static int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long end_jiffies,
 		val = gk20a_readl(g, gr_status_r());
 
 		if (!gr_status_fe_method_upper_v(val) &&
-			!gr_status_fe_method_lower_v(val)) {
+			!gr_status_fe_method_lower_v(val) &&
+			!gr_status_fe_gi_v(val)) {
 			gk20a_dbg_fn("done");
 			return 0;
 		}

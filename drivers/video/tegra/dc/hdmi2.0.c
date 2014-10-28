@@ -47,9 +47,9 @@
 #include <linux/tegra_prod.h>
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+
 #define TMDS_NODE	"/host1x/sor1"
-#endif
+
 
 struct tmds_prod_pair {
 	int clk;

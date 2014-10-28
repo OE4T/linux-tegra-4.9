@@ -593,7 +593,7 @@ int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
 					  struct channel_ctx_gk20a *ch_ctx)
 {
 	/* being defensive still... */
-	if (ch_ctx->patch_ctx.cpu_va) {
+	if (WARN_ON(ch_ctx->patch_ctx.cpu_va)) {
 		gk20a_err(dev_from_gk20a(g), "nested ctx patch begin?");
 		return -EBUSY;
 	}

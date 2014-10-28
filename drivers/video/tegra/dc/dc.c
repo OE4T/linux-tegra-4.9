@@ -3197,6 +3197,8 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 
 	tegra_dc_put(dc);
 
+	clk_prepare_enable(dc->emc_la_clk);
+
 	return true;
 }
 #endif
@@ -3414,6 +3416,8 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 		tegra_dc_clk_disable(dc);
 	else
 		tegra_dvfs_set_rate(dc->clk, 0);
+
+	clk_disable_unprepare(dc->emc_la_clk);
 }
 
 void tegra_dc_stats_enable(struct tegra_dc *dc, bool enable)
@@ -3733,6 +3737,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #else
 	int isomgr_client_id = -1;
 #endif
+	struct clk *emc_la_clk;
 	struct device_node *np = ndev->dev.of_node;
 	struct resource *res;
 	struct resource dt_res;
@@ -4065,6 +4070,18 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		}
 		dc->emc_clk = emc_clk;
 #endif
+		/*
+		 * The emc_la clock is being added to set the floor value
+		 * for emc depending on the LA calculaions for each window
+		 */
+		emc_la_clk = clk_get(&ndev->dev, "emc.la");
+		if (IS_ERR_OR_NULL(emc_la_clk)) {
+			dev_err(&ndev->dev, "can't get emc.la clock\n");
+			ret = -ENOENT;
+			goto err_put_clk;
+		}
+		dc->emc_la_clk = emc_la_clk;
+		clk_set_rate(dc->emc_la_clk, 0);
 
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	dc->ext = tegra_dc_ext_register(ndev, dc);
@@ -4243,6 +4260,7 @@ err_disable_dc:
 #else
 	clk_put(emc_clk);
 #endif
+	clk_put(dc->emc_la_clk);
 err_put_clk:
 #ifdef CONFIG_SWITCH
 	if (dc->switchdev_registered)
@@ -4320,6 +4338,8 @@ static int tegra_dc_remove(struct platform_device *ndev)
 #else
 	clk_put(dc->emc_clk);
 #endif
+	clk_put(dc->emc_la_clk);
+
 	clk_put(dc->clk);
 	iounmap(dc->base);
 	if (dc->fb_mem)

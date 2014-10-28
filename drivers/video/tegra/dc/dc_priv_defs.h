@@ -161,6 +161,7 @@ struct tegra_dc {
 #else
 	struct clk			*emc_clk;
 #endif
+	struct clk			*emc_la_clk;
 	long				bw_kbps; /* bandwidth in KBps */
 	long				new_bw_kbps;
 	struct tegra_dc_shift_clk_div	shift_clk_div;

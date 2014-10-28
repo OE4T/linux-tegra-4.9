@@ -601,8 +601,7 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 				bw,
 				disp_params);
 		if (!err) {
-			struct clk *emc_la_clk = clk_get(&dc->ndev->dev, "emc.la");
-			clk_set_rate(emc_la_clk, emc_freq_hz);
+			clk_set_rate(dc->emc_la_clk, emc_freq_hz);
 			break;
 		}
 

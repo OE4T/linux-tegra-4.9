@@ -175,6 +175,52 @@ static int gk20a_as_ioctl_unmap_buffer(
 	return gk20a_vm_unmap_buffer(as_share, args->offset);
 }
 
+static int gk20a_as_ioctl_get_va_regions(
+		struct gk20a_as_share *as_share,
+		struct nvgpu_as_get_va_regions_args *args)
+{
+	unsigned int i;
+	unsigned int write_entries;
+	struct nvgpu_as_va_region __user *user_region_ptr;
+	struct vm_gk20a *vm = as_share->vm;
+
+	gk20a_dbg_fn("");
+
+	write_entries = args->buf_size / sizeof(struct nvgpu_as_va_region);
+	if (write_entries > gmmu_nr_page_sizes)
+		write_entries = gmmu_nr_page_sizes;
+
+	user_region_ptr =
+		(struct nvgpu_as_va_region __user *)(uintptr_t)args->buf_addr;
+
+	for (i = 0; i < write_entries; ++i) {
+		struct nvgpu_as_va_region region;
+		u32 base, limit;
+
+		memset(&region, 0, sizeof(struct nvgpu_as_va_region));
+
+		if (!vm->vma[i].constraint.enable) {
+			base = vm->vma[i].base;
+			limit = vm->vma[i].limit;
+		} else {
+			base = vm->vma[i].constraint.base;
+			limit = vm->vma[i].constraint.limit;
+		}
+
+		region.page_size = vm->gmmu_page_sizes[i];
+		region.offset = (u64)base * region.page_size;
+		region.pages = limit - base; /* NOTE: limit is exclusive */
+
+		if (copy_to_user(user_region_ptr + i, &region, sizeof(region)))
+			return -EFAULT;
+	}
+
+	args->buf_size =
+		gmmu_nr_page_sizes * sizeof(struct nvgpu_as_va_region);
+
+	return 0;
+}
+
 int gk20a_as_dev_open(struct inode *inode, struct file *filp)
 {
 	struct gk20a_as_share *as_share;
@@ -274,6 +320,11 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		trace_gk20a_as_ioctl_unmap_buffer(dev_name(dev_from_gk20a(g)));
 		err = gk20a_as_ioctl_unmap_buffer(as_share,
 				(struct nvgpu_as_unmap_buffer_args *)buf);
+		break;
+	case NVGPU_AS_IOCTL_GET_VA_REGIONS:
+		trace_gk20a_as_ioctl_get_va_regions(dev_name(dev_from_gk20a(g)));
+		err = gk20a_as_ioctl_get_va_regions(as_share,
+				(struct nvgpu_as_get_va_regions_args *)buf);
 		break;
 	default:
 		dev_dbg(dev_from_gk20a(g), "unrecognized as ioctl: 0x%x", cmd);

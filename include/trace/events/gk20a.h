@@ -237,6 +237,18 @@ TRACE_EVENT(gk20a_as_ioctl_unmap_buffer,
 	TP_printk("name=%s ",  __entry->name)
 );
 
+TRACE_EVENT(gk20a_as_ioctl_get_va_regions,
+	TP_PROTO(const char *name),
+	TP_ARGS(name),
+	TP_STRUCT__entry(
+			 __field(const char *, name)
+			 ),
+	TP_fast_assign(
+		       __entry->name = name;
+		       ),
+	TP_printk("name=%s ",  __entry->name)
+);
+
 TRACE_EVENT(gk20a_mmu_fault,
 	    TP_PROTO(u32 fault_hi, u32 fault_lo,
 		     u32 fault_info,

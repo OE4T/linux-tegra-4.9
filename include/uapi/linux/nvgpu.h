@@ -793,6 +793,22 @@ struct nvgpu_as_unmap_buffer_args {
 	__u64 offset; /* in, byte address */
 };
 
+
+struct nvgpu_as_va_region {
+	__u64 offset;
+	__u32 page_size;
+	__u32 reserved;
+	__u64 pages;
+};
+
+struct nvgpu_as_get_va_regions_args {
+	__u64 buf_addr; /* Pointer to array of nvgpu_as_va_region:s.
+			 * Ignored if buf_size is 0 */
+	__u32 buf_size; /* in:  userspace buf size (in bytes)
+			   out: kernel buf size    (in bytes) */
+	__u32 reserved;
+};
+
 #define NVGPU_AS_IOCTL_BIND_CHANNEL \
 	_IOWR(NVGPU_AS_IOCTL_MAGIC, 1, struct nvgpu_as_bind_channel_args)
 #define NVGPU32_AS_IOCTL_ALLOC_SPACE \
@@ -807,9 +823,11 @@ struct nvgpu_as_unmap_buffer_args {
 	_IOWR(NVGPU_AS_IOCTL_MAGIC, 6, struct nvgpu_as_alloc_space_args)
 #define NVGPU_AS_IOCTL_MAP_BUFFER_EX \
 	_IOWR(NVGPU_AS_IOCTL_MAGIC, 7, struct nvgpu_as_map_buffer_ex_args)
+#define NVGPU_AS_IOCTL_GET_VA_REGIONS \
+	_IOWR(NVGPU_AS_IOCTL_MAGIC, 8, struct nvgpu_as_get_va_regions_args)
 
 #define NVGPU_AS_IOCTL_LAST		\
-	_IOC_NR(NVGPU_AS_IOCTL_MAP_BUFFER_EX)
+	_IOC_NR(NVGPU_AS_IOCTL_GET_VA_REGIONS)
 #define NVGPU_AS_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_as_map_buffer_ex_args)
 

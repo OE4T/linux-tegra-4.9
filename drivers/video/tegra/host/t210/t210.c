@@ -351,7 +351,7 @@ struct nvhost_device_data t21_tsec_info = {
 	.modulemutexes		= {NVMODMUTEX_TSECA},
 	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
 	.class			= NV_TSEC_CLASS_ID,
-	.exclusive		= true,
+	.exclusive		= false,
 	.clocks			= {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
 				   {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,

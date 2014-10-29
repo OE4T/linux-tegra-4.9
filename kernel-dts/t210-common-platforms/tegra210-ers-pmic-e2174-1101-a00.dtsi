@@ -296,6 +296,7 @@
 					regulator-name = "vdd-hdmi-dp";
 					regulator-min-microvolt = <1050000>;
 					regulator-max-microvolt = <1050000>;
+					regulator-boot-on;
 					maxim,fps-source = <FPS_SRC_NONE>;
 				};
 			};

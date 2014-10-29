@@ -206,7 +206,7 @@ static int lvds_c_1366_14_check_fb(struct device *dev, struct fb_info *info)
 	return info->device == &pdev->dev;
 }
 
-struct pwm_bl_data_dt_ops lvds_c_1366_14_pwm_bl_ops = {
+static struct pwm_bl_data_dt_ops lvds_c_1366_14_pwm_bl_ops = {
 	.notify = lvds_c_1366_14_bl_notify,
 	.check_fb = lvds_c_1366_14_check_fb,
 	.blnode_compatible = "c,wxga-14-0-bl",

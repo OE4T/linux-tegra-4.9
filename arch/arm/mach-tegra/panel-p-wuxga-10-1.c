@@ -210,7 +210,7 @@ static int dsi_p_wuxga_10_1_check_fb(struct device *dev, struct fb_info *info)
 	return info->device == &pdev->dev;
 }
 
-struct pwm_bl_data_dt_ops dsi_p_wuxga_10_1_pwm_bl_ops = {
+static struct pwm_bl_data_dt_ops dsi_p_wuxga_10_1_pwm_bl_ops = {
 	.notify = dsi_p_wuxga_10_1_bl_notify,
 	.check_fb = dsi_p_wuxga_10_1_check_fb,
 	.blnode_compatible = "p,wuxga-10-1-bl",

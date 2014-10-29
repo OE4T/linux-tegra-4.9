@@ -251,7 +251,7 @@ static int edp_i_1080p_11_6_check_fb(struct device *dev, struct fb_info *info)
 	return info->device == &pdev->dev;
 }
 
-struct pwm_bl_data_dt_ops edp_i_1080p_11_6_pwm_bl_ops = {
+static struct pwm_bl_data_dt_ops edp_i_1080p_11_6_pwm_bl_ops = {
 	.notify = edp_i_1080p_11_6_bl_notify,
 	.check_fb = edp_i_1080p_11_6_check_fb,
 	.blnode_compatible = "i-edp,1080p-11-6-bl",

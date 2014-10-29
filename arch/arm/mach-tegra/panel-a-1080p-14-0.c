@@ -251,7 +251,7 @@ static int dsi_a_1080p_14_0_check_fb(struct device *dev, struct fb_info *info)
 	return info->device == &pdev->dev;
 }
 
-struct pwm_bl_data_dt_ops dsi_a_1080p_14_0_pwm_bl_ops = {
+static struct pwm_bl_data_dt_ops dsi_a_1080p_14_0_pwm_bl_ops = {
 	.notify = dsi_a_1080p_14_0_bl_notify,
 	.check_fb = dsi_a_1080p_14_0_check_fb,
 	.blnode_compatible = "a,1080p-14-0-bl",

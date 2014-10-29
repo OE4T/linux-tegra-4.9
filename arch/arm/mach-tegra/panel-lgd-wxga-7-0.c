@@ -171,7 +171,7 @@ static int dsi_lgd_wxga_7_0_check_fb(struct device *dev, struct fb_info *info)
 	return info->device == &pdev->dev;
 }
 
-struct pwm_bl_data_dt_ops dsi_lgd_wxga_7_0_pwm_bl_ops = {
+static struct pwm_bl_data_dt_ops dsi_lgd_wxga_7_0_pwm_bl_ops = {
 	.notify = dsi_lgd_wxga_7_0_bl_notify,
 	.check_fb = dsi_lgd_wxga_7_0_check_fb,
 	.blnode_compatible = "lg,wxga-7-bl",

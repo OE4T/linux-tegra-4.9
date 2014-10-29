@@ -184,7 +184,7 @@ static int dsi_a_1200_1920_8_0_check_fb(struct device *dev,
 	return info->device == &pdev->dev;
 }
 
-struct pwm_bl_data_dt_ops dsi_a_1200_1920_8_0_pwm_bl_ops = {
+static struct pwm_bl_data_dt_ops dsi_a_1200_1920_8_0_pwm_bl_ops = {
 	.notify = dsi_a_1200_1920_8_0_bl_notify,
 	.check_fb = dsi_a_1200_1920_8_0_check_fb,
 	.blnode_compatible = "a,wuxga-8-0-bl",

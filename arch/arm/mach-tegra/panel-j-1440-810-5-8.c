@@ -666,7 +666,7 @@ static void dsi_j_1440_810_5_8_cmu_init(struct tegra_dc_platform_data *pdata)
 }
 #endif
 
-struct pwm_bl_data_dt_ops dsi_j_1440_810_5_8_pwm_bl_ops = {
+static struct pwm_bl_data_dt_ops dsi_j_1440_810_5_8_pwm_bl_ops = {
 	.notify = dsi_j_1440_810_5_8_bl_notify,
 	.check_fb = dsi_j_1440_810_5_8_check_fb,
 	.blnode_compatible = "j,1440-810-5-8-bl",

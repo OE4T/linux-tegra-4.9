@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-panel.h
  *
- * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -77,6 +77,7 @@ extern struct tegra_panel_ops dsi_a_1080p_14_0_ops;
 extern struct tegra_panel_ops dsi_j_1440_810_5_8_ops;
 extern struct tegra_panel_ops dsi_j_720p_5_ops;
 extern struct tegra_panel_ops dsi_l_720p_5_loki_ops;
+extern struct tegra_panel_ops edp_s_uhdtv_15_6_ops;
 
 extern struct tegra_panel_ops *fixed_primary_panel_ops;
 extern struct tegra_panel_ops *fixed_secondary_panel_ops;

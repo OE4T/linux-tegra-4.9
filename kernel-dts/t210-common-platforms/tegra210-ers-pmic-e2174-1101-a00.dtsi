@@ -258,8 +258,8 @@
 
 				max77620_ldo4: ldo4 {
 					regulator-name = "vdd-rtc";
-					regulator-min-microvolt = <1250000>;
-					regulator-max-microvolt = <1250000>;
+					regulator-min-microvolt = <850000>;
+					regulator-max-microvolt = <850000>;
 					regulator-always-on;
 					regulator-boot-on;
 					maxim,fps-source = <FPS_SRC_0>;

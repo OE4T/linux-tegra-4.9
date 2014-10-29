@@ -71,6 +71,7 @@ static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 }
 
 static void gk20a_cde_remove_ctx(struct gk20a_cde_ctx *cde_ctx)
+__must_hold(&cde_app->mutex)
 {
 	struct gk20a *g = cde_ctx->g;
 	struct channel_gk20a *ch = cde_ctx->ch;
@@ -86,11 +87,13 @@ static void gk20a_cde_remove_ctx(struct gk20a_cde_ctx *cde_ctx)
 
 	/* housekeeping on app */
 	list_del(&cde_ctx->list);
-	cde_ctx->g->cde_app.lru_len--;
+	cde_ctx->g->cde_app.ctx_count--;
 	kfree(cde_ctx);
 }
 
 static void gk20a_cde_prepare_ctx_remove(struct gk20a_cde_ctx *cde_ctx)
+__releases(&cde_app->mutex)
+__acquires(&cde_app->mutex)
 {
 	struct gk20a_cde_app *cde_app = &cde_ctx->g->cde_app;
 
@@ -110,29 +113,39 @@ static void gk20a_cde_prepare_ctx_remove(struct gk20a_cde_ctx *cde_ctx)
 	mutex_lock(&cde_app->mutex);
 }
 
-static void gk20a_cde_deallocate_contexts(struct gk20a *g)
+static void gk20a_cde_remove_contexts(struct gk20a *g)
+__must_hold(&cde_app->mutex)
 {
 	struct gk20a_cde_app *cde_app = &g->cde_app;
 	struct gk20a_cde_ctx *cde_ctx, *cde_ctx_save;
 
 	list_for_each_entry_safe(cde_ctx, cde_ctx_save,
-			&cde_app->cde_ctx_lru, list) {
+			&cde_app->free_contexts, list) {
+		gk20a_cde_prepare_ctx_remove(cde_ctx);
+		gk20a_cde_remove_ctx(cde_ctx);
+	}
+
+	list_for_each_entry_safe(cde_ctx, cde_ctx_save,
+			&cde_app->used_contexts, list) {
 		gk20a_cde_prepare_ctx_remove(cde_ctx);
 		gk20a_cde_remove_ctx(cde_ctx);
 	}
 }
 
 static void gk20a_cde_stop(struct gk20a *g)
+__must_hold(&cde_app->mutex)
 {
 	struct gk20a_cde_app *cde_app = &g->cde_app;
 
 	/* prevent further conversions and delayed works from working */
 	cde_app->initialised = false;
 	/* free all data, empty the list */
-	gk20a_cde_deallocate_contexts(g);
+	gk20a_cde_remove_contexts(g);
 }
 
 void gk20a_cde_destroy(struct gk20a *g)
+__acquires(&cde_app->mutex)
+__releases(&cde_app->mutex)
 {
 	struct gk20a_cde_app *cde_app = &g->cde_app;
 
@@ -145,48 +158,66 @@ void gk20a_cde_destroy(struct gk20a *g)
 }
 
 void gk20a_cde_suspend(struct gk20a *g)
+__acquires(&cde_app->mutex)
+__releases(&cde_app->mutex)
 {
-
 	struct gk20a_cde_app *cde_app = &g->cde_app;
 	struct gk20a_cde_ctx *cde_ctx, *cde_ctx_save;
 
 	if (!cde_app->initialised)
 		return;
 
+	mutex_lock(&cde_app->mutex);
+
 	list_for_each_entry_safe(cde_ctx, cde_ctx_save,
-			&cde_app->cde_ctx_lru, list) {
-		if (cde_ctx->is_temporary) {
-			mutex_lock(&cde_app->mutex);
+			&cde_app->free_contexts, list) {
+		if (cde_ctx->is_temporary)
 			cancel_delayed_work(&cde_ctx->ctx_deleter_work);
-			mutex_unlock(&cde_app->mutex);
-		}
 	}
+
+	list_for_each_entry_safe(cde_ctx, cde_ctx_save,
+			&cde_app->used_contexts, list) {
+		if (cde_ctx->is_temporary)
+			cancel_delayed_work(&cde_ctx->ctx_deleter_work);
+	}
+
+	mutex_unlock(&cde_app->mutex);
 
 }
 
-static int gk20a_cde_allocate_contexts(struct gk20a *g)
+static int gk20a_cde_create_context(struct gk20a *g)
+__must_hold(&cde_app->mutex)
 {
 	struct gk20a_cde_app *cde_app = &g->cde_app;
 	struct gk20a_cde_ctx *cde_ctx;
-	int err = 0;
+
+	cde_ctx = gk20a_cde_allocate_context(g);
+	if (IS_ERR(cde_ctx))
+		return PTR_ERR(cde_ctx);
+
+	list_add(&cde_ctx->list, &cde_app->free_contexts);
+	cde_app->ctx_count++;
+	if (cde_app->ctx_count > cde_app->ctx_count_top)
+		cde_app->ctx_count_top = cde_app->ctx_count;
+
+	return 0;
+}
+
+static int gk20a_cde_create_contexts(struct gk20a *g)
+__must_hold(&g->cde_app->mutex)
+{
+	int err;
 	int i;
 
 	for (i = 0; i < NUM_CDE_CONTEXTS; i++) {
-		cde_ctx = gk20a_cde_allocate_context(g);
-		if (IS_ERR(cde_ctx)) {
-			err = PTR_ERR(cde_ctx);
+		err = gk20a_cde_create_context(g);
+		if (err)
 			goto out;
-		}
-
-		list_add(&cde_ctx->list, &cde_app->cde_ctx_lru);
-		cde_app->lru_len++;
-		if (cde_app->lru_len > cde_app->lru_max_len)
-			cde_app->lru_max_len = cde_app->lru_len;
 	}
 
 	return 0;
 out:
-	gk20a_cde_deallocate_contexts(g);
+	gk20a_cde_remove_contexts(g);
 	return err;
 }
 
@@ -682,6 +713,8 @@ static int gk20a_cde_execute_buffer(struct gk20a_cde_ctx *cde_ctx,
 }
 
 static void gk20a_ctx_release(struct gk20a_cde_ctx *cde_ctx)
+__acquires(&cde_app->mutex)
+__releases(&cde_app->mutex)
 {
 	struct gk20a_cde_app *cde_app = &cde_ctx->g->cde_app;
 
@@ -690,13 +723,15 @@ static void gk20a_ctx_release(struct gk20a_cde_ctx *cde_ctx)
 	mutex_lock(&cde_app->mutex);
 
 	cde_ctx->in_use = false;
-	list_move(&cde_ctx->list, &cde_app->cde_ctx_lru);
-	cde_app->lru_used--;
+	list_move(&cde_ctx->list, &cde_app->free_contexts);
+	cde_app->ctx_usecount--;
 
 	mutex_unlock(&cde_app->mutex);
 }
 
 static void gk20a_cde_ctx_deleter_fn(struct work_struct *work)
+__acquires(&cde_app->mutex)
+__releases(&cde_app->mutex)
 {
 	struct delayed_work *delay_work = to_delayed_work(work);
 	struct gk20a_cde_ctx *cde_ctx = container_of(delay_work,
@@ -733,9 +768,9 @@ static void gk20a_cde_ctx_deleter_fn(struct work_struct *work)
 
 	gk20a_cde_remove_ctx(cde_ctx);
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx,
-			"cde: destroyed %p len=%d use=%d max=%d",
-			cde_ctx, cde_app->lru_len, cde_app->lru_used,
-			cde_app->lru_max_len);
+			"cde: destroyed %p count=%d use=%d max=%d",
+			cde_ctx, cde_app->ctx_count, cde_app->ctx_usecount,
+			cde_app->ctx_count_top);
 
 out:
 	mutex_unlock(&cde_app->mutex);
@@ -743,32 +778,33 @@ out:
 }
 
 static struct gk20a_cde_ctx *gk20a_cde_get_context(struct gk20a *g)
+__must_hold(&cde_app->mutex)
 {
 	struct gk20a_cde_app *cde_app = &g->cde_app;
 	struct gk20a_cde_ctx *cde_ctx;
 
-	/* try to get a jobless context. list is in lru order */
+	/* idle context available? */
 
-	cde_ctx = list_first_entry(&cde_app->cde_ctx_lru,
-			struct gk20a_cde_ctx, list);
-
-	if (!cde_ctx->in_use) {
+	if (!list_empty(&cde_app->free_contexts)) {
+		cde_ctx = list_first_entry(&cde_app->free_contexts,
+				struct gk20a_cde_ctx, list);
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx,
-				"cde: got free %p len=%d use=%d max=%d",
-				cde_ctx, cde_app->lru_len, cde_app->lru_used,
-				cde_app->lru_max_len);
+				"cde: got free %p count=%d use=%d max=%d",
+				cde_ctx, cde_app->ctx_count,
+				cde_app->ctx_usecount,
+				cde_app->ctx_count_top);
 		/* deleter work may be scheduled, but in_use prevents it */
 		cde_ctx->in_use = true;
-		list_move_tail(&cde_ctx->list, &cde_app->cde_ctx_lru);
-		cde_app->lru_used++;
+		list_move(&cde_ctx->list, &cde_app->used_contexts);
+		cde_app->ctx_usecount++;
 		return cde_ctx;
 	}
 
 	/* no free contexts, get a temporary one */
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx,
-			"cde: no free contexts, list len=%d",
-			cde_app->lru_len);
+			"cde: no free contexts, count=%d",
+			cde_app->ctx_count);
 
 	cde_ctx = gk20a_cde_allocate_context(g);
 	if (IS_ERR(cde_ctx)) {
@@ -779,11 +815,11 @@ static struct gk20a_cde_ctx *gk20a_cde_get_context(struct gk20a *g)
 
 	cde_ctx->in_use = true;
 	cde_ctx->is_temporary = true;
-	list_add_tail(&cde_ctx->list, &cde_app->cde_ctx_lru);
-	cde_app->lru_used++;
-	cde_app->lru_len++;
-	if (cde_app->lru_len > cde_app->lru_max_len)
-		cde_app->lru_max_len = cde_app->lru_len;
+	cde_app->ctx_usecount++;
+	cde_app->ctx_count++;
+	if (cde_app->ctx_count > cde_app->ctx_count_top)
+		cde_app->ctx_count_top = cde_app->ctx_count;
+	list_add(&cde_ctx->list, &cde_app->used_contexts);
 
 	return cde_ctx;
 }
@@ -822,6 +858,8 @@ int gk20a_cde_convert(struct gk20a *g,
 		      u32 dst_size, struct nvgpu_fence *fence,
 		      u32 __flags, struct gk20a_cde_param *params,
 		      int num_params, struct gk20a_fence **fence_out)
+__acquires(&cde_app->mutex)
+__releases(&cde_app->mutex)
 {
 	struct gk20a_cde_app *cde_app = &g->cde_app;
 	struct gk20a_comptags comptags;
@@ -865,23 +903,6 @@ int gk20a_cde_convert(struct gk20a *g,
 
 	if (!dst_size)
 		dst_size = dst->size - dst_byte_offset;
-
-	/* reload buffer converter if it has failed */
-	if (cde_ctx->ch->has_timedout) {
-		mutex_unlock(&cde_app->mutex);
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: had timed out, reloading");
-		err = gk20a_cde_reload(g);
-		if (err)
-			return err;
-		mutex_lock(&cde_app->mutex);
-	}
-
-	/* wait for channel idle */
-	err = gk20a_channel_finish(cde_ctx->ch, 2000);
-	if (err) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: old work could not be finished");
-		goto exit_unlock;
-	}
 
 	/* store source buffer compression tags */
 	gk20a_get_comptags(&g->dev->dev, dst, &comptags);
@@ -952,25 +973,50 @@ exit_unlock:
 }
 
 static void gk20a_cde_finished_ctx_cb(struct channel_gk20a *ch, void *data)
+__acquires(&cde_app->mutex)
+__releases(&cde_app->mutex)
 {
 	struct gk20a_cde_ctx *cde_ctx = data;
-	bool empty;
+	struct gk20a *g = cde_ctx->g;
+	struct gk20a_cde_app *cde_app = &g->cde_app;
+	bool channel_idle;
 
 	mutex_lock(&ch->jobs_lock);
-	empty = list_empty(&ch->jobs);
+	channel_idle = list_empty(&ch->jobs);
 	mutex_unlock(&ch->jobs_lock);
 
-	if (!empty)
+	if (!channel_idle)
 		return;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx, "cde: finished %p", cde_ctx);
+
+	if (ch->has_timedout) {
+		if (cde_ctx->is_temporary) {
+			gk20a_warn(&cde_ctx->pdev->dev,
+					"cde: channel had timed out"
+					" (temporary channel)");
+			/* going to be deleted anyway */
+		} else {
+			gk20a_warn(&cde_ctx->pdev->dev,
+					"cde: channel had timed out"
+					", reloading");
+			/* mark it to be deleted, replace with a new one */
+			mutex_lock(&cde_app->mutex);
+			cde_ctx->is_temporary = true;
+			if (gk20a_cde_create_context(g)) {
+				gk20a_err(&cde_ctx->pdev->dev,
+						"cde: can't replace context");
+			}
+			mutex_unlock(&cde_app->mutex);
+		}
+	} else {
+		gk20a_ctx_release(cde_ctx);
+	}
 
 	/* delete temporary contexts later */
 	if (cde_ctx->is_temporary)
 		schedule_delayed_work(&cde_ctx->ctx_deleter_work,
 			msecs_to_jiffies(CTX_DELETE_TIME));
-
-	gk20a_ctx_release(cde_ctx);
 }
 
 static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
@@ -1056,6 +1102,8 @@ err_get_gk20a_channel:
 }
 
 int gk20a_cde_reload(struct gk20a *g)
+__acquires(&cde_app->mutex)
+__releases(&cde_app->mutex)
 {
 	struct gk20a_cde_app *cde_app = &g->cde_app;
 	int err;
@@ -1071,7 +1119,7 @@ int gk20a_cde_reload(struct gk20a *g)
 
 	gk20a_cde_stop(g);
 
-	err = gk20a_cde_allocate_contexts(g);
+	err = gk20a_cde_create_contexts(g);
 	if (!err)
 		cde_app->initialised = true;
 
@@ -1082,6 +1130,8 @@ int gk20a_cde_reload(struct gk20a *g)
 }
 
 int gk20a_init_cde_support(struct gk20a *g)
+__acquires(&cde_app->mutex)
+__releases(&cde_app->mutex)
 {
 	struct gk20a_cde_app *cde_app = &g->cde_app;
 	int err;
@@ -1094,12 +1144,13 @@ int gk20a_init_cde_support(struct gk20a *g)
 	mutex_init(&cde_app->mutex);
 	mutex_lock(&cde_app->mutex);
 
-	INIT_LIST_HEAD(&cde_app->cde_ctx_lru);
-	cde_app->lru_len = 0;
-	cde_app->lru_max_len = 0;
-	cde_app->lru_used = 0;
+	INIT_LIST_HEAD(&cde_app->free_contexts);
+	INIT_LIST_HEAD(&cde_app->used_contexts);
+	cde_app->ctx_count = 0;
+	cde_app->ctx_count_top = 0;
+	cde_app->ctx_usecount = 0;
 
-	err = gk20a_cde_allocate_contexts(g);
+	err = gk20a_cde_create_contexts(g);
 	if (!err)
 		cde_app->initialised = true;
 

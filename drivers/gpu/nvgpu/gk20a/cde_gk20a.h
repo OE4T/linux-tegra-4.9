@@ -253,10 +253,11 @@ struct gk20a_cde_app {
 	bool initialised;
 	struct mutex mutex;
 
-	struct list_head cde_ctx_lru;
-	int lru_len;
-	int lru_max_len;
-	int lru_used;
+	struct list_head free_contexts;
+	struct list_head used_contexts;
+	int ctx_count;
+	int ctx_usecount;
+	int ctx_count_top;
 
 	u32 shader_parameter;
 };

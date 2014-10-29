@@ -6,6 +6,12 @@ ccflags-y += -Idrivers/devfreq
 ccflags-y += -Wno-multichar
 ccflags-y += -Werror
 
+ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
+ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/drivers/gpu/nvgpu
+ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/include
+ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/include/uapi
+endif
+
 obj-$(CONFIG_GK20A) := nvgpu.o
 
 nvgpu-y := \
@@ -70,3 +76,9 @@ nvgpu-$(CONFIG_TEGRA_CLK_FRAMEWORK) += \
 
 nvgpu-$(CONFIG_GK20A_DEVFREQ) += \
 	gk20a/gk20a_scale.o
+
+ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
+ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/drivers/gpu/nvgpu
+ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/include
+obj-$(CONFIG_GK20A)     += ../../../../kernel-t18x/drivers/gpu/nvgpu/
+endif

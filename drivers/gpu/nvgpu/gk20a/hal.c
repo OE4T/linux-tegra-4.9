@@ -17,6 +17,10 @@
 #include "hal_gk20a.h"
 #include "gm20b/hal_gm20b.h"
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#include "nvgpu_gpuid_t18x.h"
+#endif
+
 int gpu_init_hal(struct gk20a *g)
 {
 	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
@@ -30,6 +34,12 @@ int gpu_init_hal(struct gk20a *g)
 		if (gm20b_init_hal(&g->ops))
 			return -ENODEV;
 		break;
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	case TEGRA_18x_GPUID:
+		if (TEGRA_18x_GPUID_HAL(&g->ops))
+			return -ENODEV;
+		break;
+#endif
 	default:
 		gk20a_err(&g->dev->dev, "no support for %x", ver);
 		return -ENODEV;

@@ -339,14 +339,14 @@ static void gk20a_tegra_scale_init(struct platform_device *pdev)
 	profile->private_data = emc_params;
 }
 
-static void gk20a_tegra_debug_dump(struct platform_device *pdev)
+void gk20a_tegra_debug_dump(struct platform_device *pdev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(pdev);
 	struct gk20a *g = platform->g;
 	nvhost_debug_dump_device(g->host1x_dev);
 }
 
-static int gk20a_tegra_busy(struct platform_device *dev)
+int gk20a_tegra_busy(struct platform_device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
@@ -356,7 +356,7 @@ static int gk20a_tegra_busy(struct platform_device *dev)
 	return 0;
 }
 
-static void gk20a_tegra_idle(struct platform_device *dev)
+void gk20a_tegra_idle(struct platform_device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;

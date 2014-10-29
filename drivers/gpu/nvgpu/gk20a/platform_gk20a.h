@@ -185,4 +185,8 @@ static inline bool gk20a_platform_has_syncpoints(struct platform_device *dev)
 	return p->has_syncpoints;
 }
 
+int gk20a_tegra_busy(struct platform_device *dev);
+void gk20a_tegra_idle(struct platform_device *dev);
+void gk20a_tegra_debug_dump(struct platform_device *pdev);
+
 #endif

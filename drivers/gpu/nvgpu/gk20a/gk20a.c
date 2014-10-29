@@ -64,6 +64,10 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/gk20a.h>
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#include "nvgpu_gpuid_t18x.h"
+#endif
+
 #ifdef CONFIG_ARM64
 #define __cpuc_flush_dcache_area __flush_dcache_area
 #endif
@@ -878,6 +882,10 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 		.data = &gk20a_tegra_platform },
 	{ .compatible = "nvidia,tegra210-gm20b",
 		.data = &gm20b_tegra_platform },
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	{ .compatible = TEGRA_18x_GPU_COMPAT_TEGRA,
+		.data = &gk20a_tegra_platform },
+#endif
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	{ .compatible = "nvidia,tegra124-gk20a-vgpu",
 		.data = &vgpu_tegra_platform },
@@ -887,11 +895,20 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 		.data = &gk20a_generic_platform },
 	{ .compatible = "nvidia,tegra210-gm20b",
 		.data = &gk20a_generic_platform },
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	{ .compatible = TEGRA_18x_GPU_COMPAT_TEGRA,
+		.data = &gk20a_generic_platform },
+#endif
+
 #endif
 	{ .compatible = "nvidia,generic-gk20a",
 		.data = &gk20a_generic_platform },
 	{ .compatible = "nvidia,generic-gm20b",
 		.data = &gk20a_generic_platform },
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	{ .compatible = TEGRA_18x_GPU_COMPAT_GENERIC,
+		.data = &gk20a_generic_platform },
+#endif
 	{ },
 };
 

@@ -342,6 +342,25 @@ static int tegra30_dam_runtime_resume(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int tegra30_dam_suspend(struct device *dev)
+{
+	struct tegra30_dam *dam = dev_get_drvdata(dev);
+
+	regcache_mark_dirty(dam->regmap);
+
+	return 0;
+}
+static int tegra30_dam_resume(struct device *dev)
+{
+	struct tegra30_dam *dam = dev_get_drvdata(dev);
+
+	regcache_sync(dam->regmap);
+
+	return 0;
+}
+#endif
+
 static int tegra30_dam_set_dai_sysclk(struct snd_soc_dai *dai,
 		int clk_id, unsigned int freq, int dir)
 {
@@ -806,6 +825,7 @@ static struct snd_soc_codec_driver tegra30_dam_codec = {
 	.num_dapm_routes = ARRAY_SIZE(tegra30_dam_routes),
 	.controls = tegra30_dam_controls,
 	.num_controls = ARRAY_SIZE(tegra30_dam_controls),
+	.idle_bias_off = 1,
 };
 
 static bool tegra30_dam_wr_rd_reg(struct device *dev,
@@ -997,6 +1017,8 @@ static int tegra30_dam_platform_remove(struct platform_device *pdev)
 static const struct dev_pm_ops tegra30_dam_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra30_dam_runtime_suspend,
 			   tegra30_dam_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(tegra30_dam_suspend,
+			   tegra30_dam_resume)
 };
 
 static struct platform_driver tegra30_dam_driver = {

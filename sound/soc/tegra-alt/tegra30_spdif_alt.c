@@ -70,6 +70,25 @@ static int tegra30_spdif_runtime_resume(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int tegra30_spdif_suspend(struct device *dev)
+{
+	struct tegra30_spdif *spdif = dev_get_drvdata(dev);
+
+	regcache_mark_dirty(spdif->regmap);
+
+	return 0;
+}
+static int tegra30_spdif_resume(struct device *dev)
+{
+	struct tegra30_spdif *spdif = dev_get_drvdata(dev);
+
+	regcache_sync(spdif->regmap);
+
+	return 0;
+}
+#endif
+
 static int tegra30_spdif_set_dai_sysclk(struct snd_soc_dai *dai,
 		int clk_id, unsigned int freq, int dir)
 {
@@ -112,14 +131,18 @@ static int tegra30_spdif_set_dai_sysclk(struct snd_soc_dai *dai,
 	}
 
 	if (dir == SND_SOC_CLOCK_OUT) {
+		pm_runtime_get_sync(dai->dev);
 		ret = clk_set_rate(spdif->clk_spdif_out, spdif_out_clock_rate);
+		pm_runtime_put(dai->dev);
 		if (ret) {
 			dev_err(dev, "Can't set SPDIF Out clock rate: %d\n",
 				ret);
 			return ret;
 		}
 	} else {
+		pm_runtime_get_sync(dai->dev);
 		ret = clk_set_rate(spdif->clk_spdif_in, spdif_in_clock_rate);
+		pm_runtime_put(dai->dev);
 		if (ret) {
 			dev_err(dev, "Can't set SPDIF In clock rate: %d\n",
 				ret);
@@ -129,7 +152,6 @@ static int tegra30_spdif_set_dai_sysclk(struct snd_soc_dai *dai,
 
 	return 0;
 }
-
 
 static int tegra30_spdif_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
@@ -273,6 +295,7 @@ static struct snd_soc_codec_driver tegra30_spdif_codec = {
 	.num_dapm_widgets = ARRAY_SIZE(tegra30_spdif_widgets),
 	.dapm_routes = tegra30_spdif_routes,
 	.num_dapm_routes = ARRAY_SIZE(tegra30_spdif_routes),
+	.idle_bias_off = 1,
 };
 
 static bool tegra30_spdif_wr_rd_reg(struct device *dev, unsigned int reg)
@@ -463,6 +486,8 @@ static int tegra30_spdif_platform_remove(struct platform_device *pdev)
 static const struct dev_pm_ops tegra30_spdif_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra30_spdif_runtime_suspend,
 			   tegra30_spdif_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(tegra30_spdif_suspend,
+			   tegra30_spdif_resume)
 };
 
 static struct platform_driver tegra30_spdif_driver = {

@@ -192,6 +192,30 @@ static int tegra114_adx_runtime_resume(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int tegra114_adx_suspend(struct device *dev)
+{
+	struct tegra114_adx *adx = dev_get_drvdata(dev);
+
+	regcache_mark_dirty(adx->regmap);
+
+	return 0;
+}
+static int tegra114_adx_resume(struct device *dev)
+{
+	struct tegra114_adx *adx = dev_get_drvdata(dev);
+
+	regcache_sync(adx->regmap);
+
+	/* update map ram if needed */
+	pm_runtime_get_sync(dev);
+	tegra114_adx_update_map_ram(adx);
+	pm_runtime_put(dev);
+
+	return 0;
+}
+#endif
+
 static int tegra114_adx_set_audio_cif(struct tegra114_adx *adx,
 				struct snd_pcm_hw_params *params,
 				unsigned int reg)
@@ -310,7 +334,9 @@ int tegra114_adx_set_channel_map(struct snd_soc_dai *dai,
 	}
 
 	/* soft reset ADX */
+	pm_runtime_get_sync(dai->dev);
 	ret = tegra114_adx_soft_reset(adx);
+	pm_runtime_put(dai->dev);
 	if (ret) {
 		dev_err(dev, "Failed at ADX sw reset\n");
 		return ret;
@@ -340,9 +366,11 @@ int tegra114_adx_set_channel_map(struct snd_soc_dai *dai,
 		}
 	}
 
+	/* update the map ram */
+	pm_runtime_get_sync(dai->dev);
 	tegra114_adx_update_map_ram(adx);
-
 	tegra114_adx_set_in_byte_mask(adx, byte_mask1, byte_mask2);
+	pm_runtime_put(dai->dev);
 
 	return 0;
 }
@@ -438,6 +466,7 @@ static struct snd_soc_codec_driver tegra114_adx_codec = {
 	.num_dapm_widgets = ARRAY_SIZE(tegra114_adx_widgets),
 	.dapm_routes = tegra114_adx_routes,
 	.num_dapm_routes = ARRAY_SIZE(tegra114_adx_routes),
+	.idle_bias_off = 1,
 };
 
 static bool tegra114_adx_wr_rd_reg(struct device *dev,
@@ -461,6 +490,19 @@ static bool tegra114_adx_wr_rd_reg(struct device *dev,
 	};
 }
 
+static bool tegra114_adx_volatile_reg(struct device *dev,
+				unsigned int reg)
+{
+	switch (reg) {
+	case TEGRA_ADX_CTRL:
+	case TEGRA_ADX_AUDIORAMCTL_ADX_CTRL:
+	case TEGRA_ADX_AUDIORAMCTL_ADX_DATA:
+		return true;
+	default:
+		return false;
+	};
+}
+
 static const struct regmap_config tegra114_adx_regmap_config = {
 	.reg_bits = 32,
 	.reg_stride = 4,
@@ -468,7 +510,7 @@ static const struct regmap_config tegra114_adx_regmap_config = {
 	.max_register = TEGRA_ADX_AUDIOCIF_CH3_CTRL,
 	.writeable_reg = tegra114_adx_wr_rd_reg,
 	.readable_reg = tegra114_adx_wr_rd_reg,
-	.volatile_reg = tegra114_adx_wr_rd_reg,
+	.volatile_reg = tegra114_adx_volatile_reg,
 	.cache_type = REGCACHE_FLAT,
 };
 
@@ -597,6 +639,8 @@ static int tegra114_adx_platform_remove(struct platform_device *pdev)
 static const struct dev_pm_ops tegra114_adx_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra114_adx_runtime_suspend,
 			   tegra114_adx_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(tegra114_adx_suspend,
+			   tegra114_adx_resume)
 };
 
 static struct platform_driver tegra114_adx_driver = {

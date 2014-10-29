@@ -62,6 +62,25 @@ static int tegra124_afc_runtime_resume(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int tegra124_afc_suspend(struct device *dev)
+{
+	struct tegra124_afc *afc = dev_get_drvdata(dev);
+
+	regcache_mark_dirty(afc->regmap);
+
+	return 0;
+}
+static int tegra124_afc_resume(struct device *dev)
+{
+	struct tegra124_afc *afc = dev_get_drvdata(dev);
+
+	regcache_sync(afc->regmap);
+
+	return 0;
+}
+#endif
+
 /* returns the destination I2S id connected along the AFC path */
 static unsigned int tegra124_afc_get_i2s_id(unsigned int afc_id)
 {
@@ -272,6 +291,7 @@ static struct snd_soc_codec_driver tegra124_afc_codec = {
 	.num_dapm_widgets = ARRAY_SIZE(tegra124_afc_widgets),
 	.dapm_routes = tegra124_afc_routes,
 	.num_dapm_routes = ARRAY_SIZE(tegra124_afc_routes),
+	.idle_bias_off = 1,
 };
 
 static bool tegra124_afc_wr_reg(struct device *dev, unsigned int reg)
@@ -483,6 +503,8 @@ static int tegra124_afc_platform_remove(struct platform_device *pdev)
 static const struct dev_pm_ops tegra124_afc_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra124_afc_runtime_suspend,
 			   tegra124_afc_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(tegra124_afc_suspend,
+			   tegra124_afc_resume)
 };
 
 static struct platform_driver tegra124_afc_driver = {

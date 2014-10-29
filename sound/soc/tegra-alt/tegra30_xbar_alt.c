@@ -33,6 +33,12 @@
 
 struct tegra30_xbar *xbar;
 
+static bool tegra30_xbar_volatile_reg(struct device *dev,
+				unsigned int reg)
+{
+	return false;
+}
+
 static const struct regmap_config tegra30_xbar_regmap_config = {
 	.reg_bits = 32,
 	.val_bits = 32,
@@ -48,6 +54,7 @@ static const struct regmap_config tegra124_xbar_regmap_config = {
 	.reg_stride = 4,
 	.max_register = TEGRA_AHUB_AUDIO_RX1 + (TEGRA_AHUB_AUDIO_RX_STRIDE *
 			(TEGRA_AHUB_AUDIO_RX_COUNT - 1)),
+	.volatile_reg = tegra30_xbar_volatile_reg,
 	.cache_type = REGCACHE_FLAT,
 };
 
@@ -74,6 +81,20 @@ static int tegra30_xbar_runtime_resume(struct device *dev)
 
 	return 0;
 }
+
+#ifdef CONFIG_PM_SLEEP
+static int tegra30_xbar_suspend(struct device *dev)
+{
+	regcache_mark_dirty(xbar->regmap);
+	return 0;
+}
+
+static int tegra30_xbar_resume(struct device *dev)
+{
+	regcache_sync(xbar->regmap);
+	return 0;
+}
+#endif
 
 static int tegra30_xbar_codec_probe(struct snd_soc_codec *codec)
 {
@@ -833,6 +854,8 @@ static int tegra30_xbar_remove(struct platform_device *pdev)
 static const struct dev_pm_ops tegra30_xbar_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra30_xbar_runtime_suspend,
 			   tegra30_xbar_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(tegra30_xbar_suspend,
+			   tegra30_xbar_resume)
 };
 
 static struct platform_driver tegra30_xbar_driver = {

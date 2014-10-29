@@ -214,6 +214,32 @@ static int tegra114_amx_runtime_resume(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int tegra114_amx_suspend(struct device *dev)
+{
+	struct tegra114_amx *amx = dev_get_drvdata(dev);
+
+	regcache_mark_dirty(amx->regmap);
+
+	return 0;
+}
+static int tegra114_amx_resume(struct device *dev)
+{
+	struct tegra114_amx *amx = dev_get_drvdata(dev);
+
+	regcache_sync(amx->regmap);
+
+	/* update map ram if needed */
+	pm_runtime_get_sync(dev);
+	tegra114_amx_set_master_stream(amx, 0,
+				TEGRA_AMX_WAIT_ON_ANY);
+	tegra114_amx_update_map_ram(amx);
+	pm_runtime_put(dev);
+
+	return 0;
+}
+#endif
+
 static int tegra114_amx_set_audio_cif(struct tegra114_amx *amx,
 				struct snd_pcm_hw_params *params,
 				unsigned int reg)
@@ -333,7 +359,9 @@ int tegra114_amx_set_channel_map(struct snd_soc_dai *dai,
 	}
 
 	/* soft reset AMX */
+	pm_runtime_get_sync(dai->dev);
 	ret = tegra114_amx_soft_reset(amx);
+	pm_runtime_put(dai->dev);
 	if (ret) {
 		dev_err(dev, "Failed at AMX sw reset\n");
 		return ret;
@@ -341,9 +369,6 @@ int tegra114_amx_set_channel_map(struct snd_soc_dai *dai,
 
 	/* flush the mapping values if any */
 	memset(amx->map, 0, sizeof(amx->map));
-
-	tegra114_amx_set_master_stream(amx, 0,
-				TEGRA_AMX_WAIT_ON_ANY);
 
 	for (i = 0; i < tx_num; i++) {
 		if (tx_slot[i] != 0) {
@@ -366,9 +391,12 @@ int tegra114_amx_set_channel_map(struct snd_soc_dai *dai,
 		}
 	}
 
+	pm_runtime_get_sync(dai->dev);
+	tegra114_amx_set_master_stream(amx, 0,
+				TEGRA_AMX_WAIT_ON_ANY);
 	tegra114_amx_update_map_ram(amx);
-
 	tegra114_amx_set_out_byte_mask(amx, byte_mask1, byte_mask2);
+	pm_runtime_put(dai->dev);
 
 	return 0;
 }
@@ -472,6 +500,7 @@ static struct snd_soc_codec_driver tegra114_amx_codec = {
 	.num_dapm_widgets = ARRAY_SIZE(tegra114_amx_widgets),
 	.dapm_routes = tegra114_amx_routes,
 	.num_dapm_routes = ARRAY_SIZE(tegra114_amx_routes),
+	.idle_bias_off = 1,
 };
 
 static bool tegra114_amx_wr_rd_reg(struct device *dev,
@@ -495,6 +524,19 @@ static bool tegra114_amx_wr_rd_reg(struct device *dev,
 	};
 }
 
+static bool tegra114_amx_volatile_reg(struct device *dev,
+				unsigned int reg)
+{
+	switch (reg) {
+	case TEGRA_AMX_CTRL:
+	case TEGRA_AMX_AUDIORAMCTL_AMX_CTRL:
+	case TEGRA_AMX_AUDIORAMCTL_AMX_DATA:
+		return true;
+	default:
+		return false;
+	};
+}
+
 static const struct regmap_config tegra114_amx_regmap_config = {
 	.reg_bits = 32,
 	.reg_stride = 4,
@@ -502,7 +544,7 @@ static const struct regmap_config tegra114_amx_regmap_config = {
 	.max_register = TEGRA_AMX_AUDIOCIF_CH3_CTRL,
 	.writeable_reg = tegra114_amx_wr_rd_reg,
 	.readable_reg = tegra114_amx_wr_rd_reg,
-	.volatile_reg = tegra114_amx_wr_rd_reg,
+	.volatile_reg = tegra114_amx_volatile_reg,
 	.cache_type = REGCACHE_FLAT,
 };
 
@@ -641,6 +683,8 @@ static int tegra114_amx_platform_remove(struct platform_device *pdev)
 static const struct dev_pm_ops tegra114_amx_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra114_amx_runtime_suspend,
 			   tegra114_amx_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(tegra114_amx_suspend,
+			   tegra114_amx_resume)
 };
 
 static struct platform_driver tegra114_amx_driver = {

@@ -122,63 +122,13 @@ static int tegra30_i2s_set_clock_rate(struct device *dev, int clock_rate)
 	return ret;
 }
 
-static int tegra30_i2s_runtime_suspend(struct device *dev)
+static int tegra30_i2s_set_format(struct device *dev)
 {
 	struct tegra30_i2s *i2s = dev_get_drvdata(dev);
-
-	regcache_cache_only(i2s->regmap, true);
-
-	clk_disable_unprepare(i2s->clk_i2s);
-
-	return 0;
-}
-
-static int tegra30_i2s_runtime_resume(struct device *dev)
-{
-	struct tegra30_i2s *i2s = dev_get_drvdata(dev);
-	int ret;
-
-	ret = clk_prepare_enable(i2s->clk_i2s);
-	if (ret) {
-		dev_err(dev, "clk_enable failed: %d\n", ret);
-		return ret;
-	}
-
-	regcache_cache_only(i2s->regmap, false);
-
-	return 0;
-}
-
-static int tegra30_i2s_set_tdm_slot(struct snd_soc_dai *dai,
-		unsigned int tx_mask, unsigned int rx_mask,
-		int slots, int slot_width)
-{
-	struct tegra30_i2s *i2s = snd_soc_dai_get_drvdata(dai);
-
-	/* copy the required tx and rx mask */
-	i2s->tx_mask = (tx_mask > 0xFFFF) ? 0xFFFF : tx_mask;
-	i2s->rx_mask = (rx_mask > 0xFFFF) ? 0xFFFF : rx_mask;
-
-	return 0;
-}
-static int tegra30_i2s_set_dai_bclk_ratio(struct snd_soc_dai *dai,
-		unsigned int ratio)
-{
-	struct tegra30_i2s *i2s = snd_soc_dai_get_drvdata(dai);
-
-	i2s->bclk_ratio = ratio;
-
-	return 0;
-}
-
-static int tegra30_i2s_set_fmt(struct snd_soc_dai *dai,
-				unsigned int fmt)
-{
-	struct tegra30_i2s *i2s = snd_soc_dai_get_drvdata(dai);
 	unsigned int mask, val, i2s_ctrl, edge_ctrl, data_offset;
 
 	mask = TEGRA30_I2S_CH_CTRL_EGDE_CTRL_MASK;
-	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
+	switch (i2s->dai_fmt & SND_SOC_DAIFMT_INV_MASK) {
 	case SND_SOC_DAIFMT_NB_NF:
 		edge_ctrl = TEGRA30_I2S_CH_CTRL_EGDE_CTRL_POS_EDGE;
 		i2s_ctrl = TEGRA30_I2S_CTRL_LRCK_L_LOW;
@@ -199,13 +149,13 @@ static int tegra30_i2s_set_fmt(struct snd_soc_dai *dai,
 		return -EINVAL;
 	}
 
-	pm_runtime_get_sync(dai->dev);
+	pm_runtime_get_sync(dev);
 	regmap_update_bits(i2s->regmap, TEGRA30_I2S_CH_CTRL,
 		mask, edge_ctrl);
-	pm_runtime_put(dai->dev);
+	pm_runtime_put(dev);
 
 	mask = TEGRA30_I2S_CTRL_MASTER_MASK;
-	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
+	switch (i2s->dai_fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBS_CFS:
 		i2s_ctrl |= TEGRA30_I2S_CTRL_SLAVE_ENABLE;
 		break;
@@ -218,7 +168,7 @@ static int tegra30_i2s_set_fmt(struct snd_soc_dai *dai,
 
 	mask |= TEGRA30_I2S_CTRL_FRAME_FORMAT_MASK |
 		TEGRA30_I2S_CTRL_LRCK_MASK;
-	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
+	switch (i2s->dai_fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_DSP_A:
 		i2s_ctrl |= TEGRA30_I2S_CTRL_FRAME_FORMAT_FSYNC;
 		data_offset = 1;
@@ -248,14 +198,96 @@ static int tegra30_i2s_set_fmt(struct snd_soc_dai *dai,
 	val = (data_offset << TEGRA30_I2S_OFFSET_RX_DATA_OFFSET_SHIFT) |
 	      (data_offset << TEGRA30_I2S_OFFSET_TX_DATA_OFFSET_SHIFT);
 
-	pm_runtime_get_sync(dai->dev);
+	pm_runtime_get_sync(dev);
 	regmap_update_bits(i2s->regmap, TEGRA30_I2S_CTRL,
 		mask, i2s_ctrl);
 	regmap_write(i2s->regmap, TEGRA30_I2S_OFFSET, val);
 	regmap_update_bits(i2s->regmap, TEGRA30_I2S_CH_CTRL,
 		TEGRA30_I2S_CH_CTRL_FSYNC_WIDTH_MASK,
 		i2s->fsync_width << TEGRA30_I2S_CH_CTRL_FSYNC_WIDTH_SHIFT);
-	pm_runtime_put(dai->dev);
+	pm_runtime_put(dev);
+
+	return 0;
+}
+
+static int tegra30_i2s_runtime_suspend(struct device *dev)
+{
+	struct tegra30_i2s *i2s = dev_get_drvdata(dev);
+
+	regcache_cache_only(i2s->regmap, true);
+
+	clk_disable_unprepare(i2s->clk_i2s);
+
+	return 0;
+}
+
+static int tegra30_i2s_runtime_resume(struct device *dev)
+{
+	struct tegra30_i2s *i2s = dev_get_drvdata(dev);
+	int ret;
+
+	ret = clk_prepare_enable(i2s->clk_i2s);
+	if (ret) {
+		dev_err(dev, "clk_enable failed: %d\n", ret);
+		return ret;
+	}
+	regcache_cache_only(i2s->regmap, false);
+	regcache_sync(i2s->regmap);
+
+	return 0;
+}
+
+#ifdef CONFIG_PM_SLEEP
+static int tegra30_i2s_suspend(struct device *dev)
+{
+	struct tegra30_i2s *i2s = dev_get_drvdata(dev);
+
+	regcache_mark_dirty(i2s->regmap);
+
+	return 0;
+}
+static int tegra30_i2s_resume(struct device *dev)
+{
+	struct tegra30_i2s *i2s = dev_get_drvdata(dev);
+
+	regcache_sync(i2s->regmap);
+
+	/* restore the format */
+	tegra30_i2s_set_format(dev);
+
+	return 0;
+}
+#endif
+
+static int tegra30_i2s_set_tdm_slot(struct snd_soc_dai *dai,
+		unsigned int tx_mask, unsigned int rx_mask,
+		int slots, int slot_width)
+{
+	struct tegra30_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+
+	/* copy the required tx and rx mask */
+	i2s->tx_mask = (tx_mask > 0xFFFF) ? 0xFFFF : tx_mask;
+	i2s->rx_mask = (rx_mask > 0xFFFF) ? 0xFFFF : rx_mask;
+
+	return 0;
+}
+static int tegra30_i2s_set_dai_bclk_ratio(struct snd_soc_dai *dai,
+		unsigned int ratio)
+{
+	struct tegra30_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+
+	i2s->bclk_ratio = ratio;
+
+	return 0;
+}
+
+static int tegra30_i2s_set_dai_fmt(struct snd_soc_dai *dai,
+				unsigned int fmt)
+{
+	struct tegra30_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+
+	i2s->dai_fmt = fmt;
+	tegra30_i2s_set_format(dai->dev);
 
 	return 0;
 }
@@ -476,7 +508,7 @@ static int tegra30_i2s_codec_probe(struct snd_soc_codec *codec)
 }
 
 static struct snd_soc_dai_ops tegra30_i2s_dai_ops = {
-	.set_fmt	= tegra30_i2s_set_fmt,
+	.set_fmt	= tegra30_i2s_set_dai_fmt,
 	.hw_params	= tegra30_i2s_hw_params,
 	.set_bclk_ratio	= tegra30_i2s_set_dai_bclk_ratio,
 	.set_tdm_slot	= tegra30_i2s_set_tdm_slot,
@@ -568,6 +600,7 @@ static struct snd_soc_codec_driver tegra30_i2s_codec = {
 	.num_dapm_routes = ARRAY_SIZE(tegra30_i2s_routes),
 	.controls = tegra30_i2s_controls,
 	.num_controls = ARRAY_SIZE(tegra30_i2s_controls),
+	.idle_bias_off = 1,
 };
 
 static bool tegra30_i2s_wr_rd_reg(struct device *dev, unsigned int reg)
@@ -840,7 +873,9 @@ static int tegra30_i2s_platform_remove(struct platform_device *pdev)
 
 static const struct dev_pm_ops tegra30_i2s_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra30_i2s_runtime_suspend,
-			   tegra30_i2s_runtime_resume, NULL)
+			tegra30_i2s_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(tegra30_i2s_suspend,
+			tegra30_i2s_resume)
 };
 
 static struct platform_driver tegra30_i2s_driver = {

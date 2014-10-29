@@ -263,6 +263,7 @@ struct tegra30_i2s {
 	unsigned int fsync_width;
 	unsigned int tx_mask;
 	unsigned int rx_mask;
+	unsigned int dai_fmt;
 	const struct tegra30_i2s_soc_data *soc_data;
 	unsigned int irq;
 	spinlock_t int_lock;

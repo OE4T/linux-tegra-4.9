@@ -103,6 +103,7 @@
 			reg = <0>;
 			compatible = "nvidia,tegra210-dvfs-rail";
 			vdd_cpu-supply = <&cpu_ovr_reg>;
+			vmin-cdev = <&cpu_vmin_cdev>;
 		};
 
 		vdd-gpu-rail-ovr@1 {
@@ -110,6 +111,7 @@
 			reg = <1>;
 			compatible = "nvidia,tegra210-dvfs-rail";
 			vdd_gpu-supply = <&gpu_ovr_reg>;
+			scaling-cdev = <&gpu_scaling_cdev>;
 		};
 
 
@@ -118,6 +120,7 @@
 			reg = <2>;
 			compatible = "nvidia,tegra210-dvfs-rail";
 			vdd_cpu-supply = <&cpu_max77621_reg>;
+			vmin-cdev = <&cpu_vmin_cdev>;
 		};
 
 		vdd-gpu-rail-max77621@3 {
@@ -125,6 +128,7 @@
 			reg = <3>;
 			compatible = "nvidia,tegra210-dvfs-rail";
 			vdd_gpu-supply = <&gpu_max77621_reg>;
+			scaling-cdev = <&gpu_scaling_cdev>;
 		};
 
 		vdd-core-rail-max77620@4 {
@@ -132,6 +136,98 @@
 			reg = <4>;
 			compatible = "nvidia,tegra210-dvfs-rail";
 			vdd_core-supply = <&max77620_sd0>;
+			vmin-cdev = <&core_vmin_cdev>;
+		};
+
+		cpu_vmin_cdev: vdd-cpu-vmin-cdev@5 {
+			reg = <5>;
+			cooling-min-state = <0>;
+			cooling-max-state = <1>;
+			#cooling-cells = <2>;
+			compatible = "nvidia,tegra210-rail-vmin-cdev";
+			cdev-type = "cpu_cold";
+			nvidia,constraint;
+			nvidia,trips = <&cpu_vmin1 950>;
+		};
+
+		core_vmin_cdev: vdd-core-vmin-cdev@6 {
+			reg = <6>;
+			cooling-min-state = <0>;
+			cooling-max-state = <1>;
+			#cooling-cells = <2>;
+			compatible = "nvidia,tegra210-rail-vmin-cdev";
+			cdev-type = "core_cold";
+			nvidia,constraint;
+			nvidia,trips = <&core_vmin1 950>;
+		};
+
+		gpu_scaling_cdev: vdd-gpu-scaling-cdev@7 {
+			reg = <7>;
+			cooling-min-state = <0>;
+			cooling-max-state = <1>;
+			#cooling-cells = <2>;
+			compatible = "nvidia,tegra210-rail-scaling-cdev";
+			cdev-type = "gpu_scaling";
+			nvidia,constraint;
+			nvidia,trips = <&gpu_scaling0 950 &gpu_scaling1 0>;
+		};
+	};
+
+	thermal-zones {
+		CPU_therm {
+			trips {
+				cpu_vmin1: cpu-vmin1 {
+					temperature = <20000>;
+					hysteresis = <1000>;
+					type = "active";
+					writable;
+				};
+			};
+			cooling-maps {
+				vdd-cpu-map1 {
+					trip = <&cpu_vmin1>;
+					cooling-device = <&cpu_vmin_cdev 1 1>;
+				};
+			};
+		};
+		GPU_therm {
+			trips {
+				/* Reference only trip, not mapped */
+				gpu_scaling0: gpu-scaling0 {
+					temperature = <(-10000)>;
+					hysteresis = <0>;
+					type = "active";
+				};
+
+				gpu_scaling1: gpu-scaling1 {
+					temperature = <20000>;
+					hysteresis = <1000>;
+					type = "active";
+					writable;
+				};
+			};
+			cooling-maps {
+				vdd-gpu-map1 {
+					trip = <&gpu_scaling1>;
+					cooling-device = <&gpu_scaling_cdev 1 1>;
+				};
+			};
+		};
+		PLL_therm {
+			trips {
+				core_vmin1: core-vmin1 {
+					temperature = <20000>;
+					hysteresis = <1000>;
+					type = "active";
+					writable;
+				};
+			};
+			cooling-maps {
+				vdd-core-map1 {
+					trip = <&core_vmin1>;
+					cooling-device = <&core_vmin_cdev 1 1>;
+				};
+			};
 		};
 	};
 };

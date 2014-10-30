@@ -222,7 +222,7 @@ static int nvmap_share_mmap(struct file *file, struct vm_area_struct *vma)
 	return -EPERM;
 }
 
-const struct file_operations nvmap_fd_fops = {
+static const struct file_operations nvmap_fd_fops = {
 	.owner		= THIS_MODULE,
 	.release	= nvmap_share_release,
 	.mmap		= nvmap_share_mmap,
@@ -311,7 +311,7 @@ int nvmap_ioctl_alloc_kind(struct file *filp, void __user *arg)
 	return err;
 }
 
-int nvmap_create_fd(struct nvmap_client *client, struct nvmap_handle *h)
+static int nvmap_create_fd(struct nvmap_client *client, struct nvmap_handle *h)
 {
 	int fd;
 

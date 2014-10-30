@@ -246,7 +246,8 @@ static void __nvmap_dmabuf_free_sgt_locked(struct nvmap_handle_sgt *nvmap_sgt)
  * mapping itself - this merely takes the passed nvmap_sgt out of the stash
  * and decrements the necessary cache stats.
  */
-void __nvmap_dmabuf_evict_stash_locked(struct nvmap_handle_sgt *nvmap_sgt)
+static void __nvmap_dmabuf_evict_stash_locked(
+			struct nvmap_handle_sgt *nvmap_sgt)
 {
 	if (!list_empty(&nvmap_sgt->stash_entry))
 		list_del_init(&nvmap_sgt->stash_entry);
@@ -258,7 +259,7 @@ void __nvmap_dmabuf_evict_stash_locked(struct nvmap_handle_sgt *nvmap_sgt)
 /*
  * Locks the stash before doing the eviction.
  */
-void __nvmap_dmabuf_evict_stash(struct nvmap_handle_sgt *nvmap_sgt)
+static void __nvmap_dmabuf_evict_stash(struct nvmap_handle_sgt *nvmap_sgt)
 {
 	mutex_lock(&nvmap_stashed_maps_lock);
 	__nvmap_dmabuf_evict_stash_locked(nvmap_sgt);

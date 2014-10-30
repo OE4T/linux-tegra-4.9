@@ -92,7 +92,7 @@ static struct nvmap_platform_data nvmap_data = {
 /*
  * In case there is no DT entry.
  */
-struct platform_device nvmap_platform_device  = {
+static struct platform_device nvmap_platform_device  = {
 	.name	= "tegra-carveouts",
 	.id	= -1,
 	.dev	= {

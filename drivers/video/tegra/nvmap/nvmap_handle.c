@@ -626,8 +626,9 @@ struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 	return ref;
 }
 
-struct nvmap_handle *nvmap_duplicate_handle_id_ex(struct nvmap_client *client,
-							struct nvmap_handle *h)
+static struct nvmap_handle *nvmap_duplicate_handle_id_ex(
+			struct nvmap_client *client,
+			struct nvmap_handle *h)
 {
 	struct nvmap_handle_ref *ref = nvmap_duplicate_handle(client, h, 0);
 
@@ -638,9 +639,10 @@ struct nvmap_handle *nvmap_duplicate_handle_id_ex(struct nvmap_client *client,
 }
 EXPORT_SYMBOL(nvmap_duplicate_handle_id_ex);
 
-int nvmap_get_page_list_info(struct nvmap_client *client,
-				struct nvmap_handle *handle, u32 *size,
-				u32 *flags, u32 *nr_page, bool *contig)
+static int nvmap_get_page_list_info(
+			struct nvmap_client *client,
+			struct nvmap_handle *handle, u32 *size,
+			u32 *flags, u32 *nr_page, bool *contig)
 {
 	struct nvmap_handle *h;
 
@@ -676,7 +678,8 @@ int nvmap_get_page_list_info(struct nvmap_client *client,
 }
 EXPORT_SYMBOL(nvmap_get_page_list_info);
 
-int nvmap_acquire_page_list(struct nvmap_client *client,
+static int nvmap_acquire_page_list(
+			struct nvmap_client *client,
 			struct nvmap_handle *handle, struct page **pages,
 			u32 nr_page)
 {
@@ -717,8 +720,8 @@ int nvmap_acquire_page_list(struct nvmap_client *client,
 }
 EXPORT_SYMBOL(nvmap_acquire_page_list);
 
-int nvmap_release_page_list(struct nvmap_client *client,
-				struct nvmap_handle *handle)
+static int nvmap_release_page_list(struct nvmap_client *client,
+				   struct nvmap_handle *handle)
 {
 	struct nvmap_handle_ref *ref;
 	struct nvmap_handle *h = NULL;

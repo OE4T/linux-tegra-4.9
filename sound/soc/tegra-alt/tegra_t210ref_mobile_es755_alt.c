@@ -627,7 +627,7 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	*/
 	machine->digital_reg = regulator_get(&pdev->dev, "dbvdd");
 	if (IS_ERR(machine->digital_reg))
-		machine->digital_reg = 0;
+		machine->digital_reg = NULL;
 	else
 		ret = regulator_enable(machine->digital_reg);
 
@@ -637,7 +637,7 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	*/
 	machine->analog_reg = regulator_get(&pdev->dev, "avdd");
 	if (IS_ERR(machine->analog_reg))
-		machine->analog_reg = 0;
+		machine->analog_reg = NULL;
 	else
 		ret = regulator_enable(machine->analog_reg);
 
@@ -647,7 +647,7 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	*/
 	machine->spk_reg = regulator_get(&pdev->dev, "spkvdd");
 	if (IS_ERR(machine->spk_reg))
-		machine->spk_reg = 0;
+		machine->spk_reg = NULL;
 
 	/*
 	*dmic_reg - provided the DMIC power and can be turned ON
@@ -655,7 +655,7 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	*/
 	machine->dmic_reg = regulator_get(&pdev->dev, "dmicvdd");
 	if (IS_ERR(machine->dmic_reg))
-		machine->dmic_reg = 0;
+		machine->dmic_reg = NULL;
 
 	machine->pdata = pdata;
 	machine->pcard = card;

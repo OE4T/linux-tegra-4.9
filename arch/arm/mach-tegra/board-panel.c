@@ -248,17 +248,6 @@ void tegra_pwm_bl_ops_register(struct device *dev)
 	case BOARD_E2129:
 		dev_set_drvdata(dev, dsi_j_1440_810_5_8_ops.pwm_bl_ops);
 		break;
-	case BOARD_E2534:
-		if (display_board.fab == 0x2)
-			dev_set_drvdata(dev,
-				dsi_j_720p_5_ops.pwm_bl_ops);
-		else if (display_board.fab == 0x1)
-			dev_set_drvdata(dev,
-				dsi_j_1440_810_5_8_ops.pwm_bl_ops);
-		else
-			dev_set_drvdata(dev,
-				dsi_l_720p_5_loki_ops.pwm_bl_ops);
-		break;
 	case BOARD_E1937:
 		is_dsi_a_1200_1920_8_0 = true;
 		break;
@@ -332,8 +321,6 @@ struct device_node *tegra_primary_panel_get_dt_node(
 	bool is_edp_a_1080p_14_0 = false;
 
 	tegra_get_display_board_info(&display_board);
-	pr_info("display board info: id 0x%x, fab 0x%x\n",
-		display_board.board_id, display_board.fab);
 
 	if (pdata)
 		dc_out = pdata->default_out;
@@ -377,27 +364,6 @@ struct device_node *tegra_primary_panel_get_dt_node(
 		if (np_panel && pdata && dc_out)
 			tegra_panel_register_ops(dc_out,
 				&dsi_j_1440_810_5_8_ops);
-		break;
-	case BOARD_E2534:
-		if (display_board.fab == 0x2) {
-			np_panel = of_find_compatible_node(NULL, NULL,
-				"j,720p-5-0");
-			if (np_panel && pdata && dc_out)
-				tegra_panel_register_ops(dc_out,
-					&dsi_j_720p_5_ops);
-		} else if (display_board.fab == 0x1) {
-			np_panel = of_find_compatible_node(NULL, NULL,
-				"j,1440-810-5-8");
-			if (np_panel && pdata && dc_out)
-				tegra_panel_register_ops(dc_out,
-					&dsi_j_1440_810_5_8_ops);
-		} else {
-			np_panel = of_find_compatible_node(NULL, NULL,
-				"l,720p-5-0");
-			if (np_panel && pdata && dc_out)
-				tegra_panel_register_ops(dc_out,
-					&dsi_l_720p_5_loki_ops);
-		}
 		break;
 	case BOARD_E1937:
 		is_dsi_a_1200_1920_8_0 = true;

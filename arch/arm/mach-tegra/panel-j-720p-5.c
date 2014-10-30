@@ -33,13 +33,11 @@
 
 #include "gpio-names.h"
 #define DSI_PANEL_EN_GPIO	TEGRA_GPIO_PQ2
+#define DSI_PANEL_RST_GPIO      TEGRA_GPIO_PH3
 
 #define DSI_PANEL_RESET		1
 
 #define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE
-
-static u16 en_panel_rst;
-static u16 en_panel;
 
 static struct tegra_dsi_out dsi_j_720p_5_pdata;
 static struct tegra_dc_out *j_720p_5_dc_out;
@@ -398,14 +396,6 @@ static int dsi_j_720p_5_gpio_get(void)
 		goto fail;
 	}
 
-	err = gpio_request(dsi_j_720p_5_pdata.dsi_panel_bl_pwm_gpio,
-		"panel pwm");
-	if (err < 0) {
-		pr_err("panel backlight pwm gpio request failed\n");
-		return err;
-	}
-	gpio_free(dsi_j_720p_5_pdata.dsi_panel_bl_pwm_gpio);
-
 	gpio_requested = true;
 	return 0;
 fail:
@@ -444,33 +434,16 @@ static int dsi_j_720p_5_enable(struct device *dev)
 		pr_err("dsi regulator get failed\n");
 		goto fail;
 	}
-	err = tegra_panel_gpio_get_dt("j,720p-5-0", &panel_of);
+	err = dsi_j_720p_5_gpio_get();
 	if (err < 0) {
-		err = dsi_j_720p_5_gpio_get();
-		if (err < 0) {
-			pr_err("dsi gpio request failed\n");
-			goto fail;
-		}
+		pr_err("dsi gpio request failed\n");
+		goto fail;
 	}
 
-	/* If panel rst gpio is specified in device tree,
-	 * use that.
-	 */
-	if (gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_RESET]))
-		en_panel_rst = panel_of.panel_gpio[TEGRA_GPIO_RESET];
-	else
-		en_panel_rst =
-			dsi_j_720p_5_pdata.dsi_panel_rst_gpio;
-
-	if (gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_PANEL_EN]))
-		en_panel = panel_of.panel_gpio[TEGRA_GPIO_PANEL_EN];
-	else
-		en_panel = DSI_PANEL_EN_GPIO;
-
-
 	if (!(j_720p_5_dc_out->flags & TEGRA_DC_OUT_INITIALIZED_MODE)) {
-		gpio_direction_output(en_panel_rst, 0);
-		gpio_direction_output(en_panel, 0);
+		gpio_direction_output(
+			dsi_j_720p_5_pdata.dsi_panel_rst_gpio, 0);
+		gpio_direction_output(DSI_PANEL_EN_GPIO, 0);
 	}
 
 	if (vdd_lcd_s_1v8) {
@@ -510,7 +483,7 @@ static int dsi_j_720p_5_enable(struct device *dev)
 	usleep_range(3000, 5000);
 
 	if (!(j_720p_5_dc_out->flags & TEGRA_DC_OUT_INITIALIZED_MODE)) {
-		gpio_set_value(en_panel, 1);
+		gpio_set_value(DSI_PANEL_EN_GPIO, 1);
 		msleep(20);
 	}
 
@@ -521,13 +494,22 @@ fail:
 
 static int dsi_j_720p_5_postpoweron(struct device *dev)
 {
+	int err = 0;
+	err = dsi_j_720p_5_gpio_get();
+
 	msleep(80);
 
+	if (err < 0) {
+		pr_err("dsi gpio request failed\n");
+		goto fail;
+	}
 	if (!(j_720p_5_dc_out->flags & TEGRA_DC_OUT_INITIALIZED_MODE)) {
-		gpio_set_value(en_panel_rst, 1);
+		gpio_set_value(dsi_j_720p_5_pdata.dsi_panel_rst_gpio, 1);
 		msleep(20);
 	}
 	return 0;
+fail:
+	return err;
 }
 
 static struct tegra_dsi_out dsi_j_720p_5_pdata = {
@@ -551,8 +533,8 @@ static struct tegra_dsi_out dsi_j_720p_5_pdata = {
 
 static int dsi_j_720p_5_disable(void)
 {
-	gpio_direction_output(en_panel_rst, 0);
-	gpio_direction_output(en_panel, 0);
+	gpio_direction_output(dsi_j_720p_5_pdata.dsi_panel_rst_gpio, 0);
+	gpio_direction_output(DSI_PANEL_EN_GPIO, 0);
 	usleep_range(5000, 8000);
 
 	if (vdd_lcd_bl)
@@ -579,25 +561,21 @@ static int dsi_j_720p_5_postsuspend(void)
 static int dsi_j_720p_5_register_bl_dev(void)
 {
 	int err = 0;
-	struct device_node *dc1_node = NULL;
-	struct device_node *dc2_node = NULL;
-	struct device_node *pwm_bl_node = NULL;
 
-	find_dc_node(&dc1_node, &dc2_node);
-	pwm_bl_node = of_find_compatible_node(NULL, NULL,
-		"pwm-backlight");
-
-	if (!of_have_populated_dt() || !dc1_node ||
-		!of_device_is_available(dc1_node) ||
-		!pwm_bl_node ||
-		!of_device_is_available(pwm_bl_node)) {
-		err = platform_add_devices(dsi_j_720p_5_bl_devices,
+	err = platform_add_devices(dsi_j_720p_5_bl_devices,
 				ARRAY_SIZE(dsi_j_720p_5_bl_devices));
-		if (err) {
-			pr_err("disp1 bl device registration failed");
-			return err;
-		}
+	if (err) {
+		pr_err("disp1 bl device registration failed");
+		return err;
 	}
+
+	err = gpio_request(dsi_j_720p_5_pdata.dsi_panel_bl_pwm_gpio,
+		"panel pwm");
+	if (err < 0) {
+		pr_err("panel backlight pwm gpio request failed\n");
+		return err;
+	}
+	gpio_free(dsi_j_720p_5_pdata.dsi_panel_bl_pwm_gpio);
 	return err;
 }
 
@@ -642,20 +620,6 @@ static void dsi_j_720p_5_cmu_init(struct tegra_dc_platform_data *pdata)
 	pdata->cmu = &dsi_j_720p_5_cmu;
 }
 #endif
-
-struct pwm_bl_data_dt_ops dsi_j_720p_5_pwm_bl_ops = {
-	.notify = dsi_j_720p_5_bl_notify,
-	.check_fb = dsi_j_720p_5_check_fb,
-	.blnode_compatible = "j,720p-5-0-bl",
-};
-
-struct tegra_panel_ops dsi_j_720p_5_ops = {
-	.enable = dsi_j_720p_5_enable,
-	.disable = dsi_j_720p_5_disable,
-	.postsuspend = dsi_j_720p_5_postsuspend,
-	.postpoweron = dsi_j_720p_5_postpoweron,
-	.pwm_bl_ops = &dsi_j_720p_5_pwm_bl_ops,
-};
 
 struct tegra_panel __initdata dsi_j_720p_5 = {
 	.init_sd_settings = dsi_j_720p_5_sd_settings_init,

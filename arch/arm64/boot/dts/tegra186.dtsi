@@ -228,6 +228,7 @@
 		interrupts = <0 157 0x04
 			      0 158 0x04>;
 		nvidia,host1x = <&host1x>;
+		status = "disabled";
 	};
 
 	psci {

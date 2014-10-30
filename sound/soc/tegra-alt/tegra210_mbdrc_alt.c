@@ -158,7 +158,7 @@ static int tegra210_mbdrc_put(struct snd_kcontrol *kcontrol,
 				(mask << mc->shift), val);
 }
 
-int tegra210_mbdrc_get_enum(struct snd_kcontrol *kcontrol,
+static int tegra210_mbdrc_get_enum(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
@@ -172,7 +172,7 @@ int tegra210_mbdrc_get_enum(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-int tegra210_mbdrc_put_enum(struct snd_kcontrol *kcontrol,
+static int tegra210_mbdrc_put_enum(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);

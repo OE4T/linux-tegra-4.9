@@ -102,7 +102,7 @@ static int tegra_alt_pcm_close(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-int tegra_alt_pcm_hw_params(struct snd_pcm_substream *substream,
+static int tegra_alt_pcm_hw_params(struct snd_pcm_substream *substream,
 				struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -148,7 +148,7 @@ int tegra_alt_pcm_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-int tegra_alt_pcm_hw_free(struct snd_pcm_substream *substream)
+static int tegra_alt_pcm_hw_free(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 
@@ -202,7 +202,7 @@ static int tegra_alt_pcm_preallocate_dma_buffer(struct snd_pcm *pcm,
 	return 0;
 }
 
-void tegra_alt_pcm_deallocate_dma_buffer(struct snd_pcm *pcm, int stream)
+static void tegra_alt_pcm_deallocate_dma_buffer(struct snd_pcm *pcm, int stream)
 {
 	struct snd_pcm_substream *substream;
 	struct snd_dma_buffer *buf;
@@ -226,7 +226,8 @@ static u64 tegra_dma_mask = DMA_BIT_MASK(64);
 static u64 tegra_dma_mask = DMA_BIT_MASK(32);
 #endif
 
-int tegra_alt_pcm_dma_allocate(struct snd_soc_pcm_runtime *rtd, size_t size)
+static int tegra_alt_pcm_dma_allocate(struct snd_soc_pcm_runtime *rtd,
+	size_t size)
 {
 	struct snd_card *card = rtd->card->snd_card;
 	struct snd_pcm *pcm = rtd->pcm;
@@ -261,13 +262,13 @@ err:
 	return ret;
 }
 
-int tegra_alt_pcm_new(struct snd_soc_pcm_runtime *rtd)
+static int tegra_alt_pcm_new(struct snd_soc_pcm_runtime *rtd)
 {
 	return tegra_alt_pcm_dma_allocate(rtd,
 				tegra_alt_pcm_hardware.buffer_bytes_max);
 }
 
-void tegra_alt_pcm_free(struct snd_pcm *pcm)
+static void tegra_alt_pcm_free(struct snd_pcm *pcm)
 {
 	tegra_alt_pcm_deallocate_dma_buffer(pcm, SNDRV_PCM_STREAM_CAPTURE);
 	tegra_alt_pcm_deallocate_dma_buffer(pcm, SNDRV_PCM_STREAM_PLAYBACK);

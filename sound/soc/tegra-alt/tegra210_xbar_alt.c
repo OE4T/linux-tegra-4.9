@@ -32,7 +32,7 @@
 
 #define DRV_NAME "tegra210-axbar"
 
-struct tegra210_xbar *xbar;
+static struct tegra210_xbar *xbar;
 
 static bool tegra210_xbar_volatile_reg(struct device *dev, unsigned int reg)
 {
@@ -318,7 +318,7 @@ static const int tegra210_xbar_mux_values[] = {
 	/* index 35..53 above are inputs of PART2 Mux */
 };
 
-int tegra210_xbar_get_value_enum(struct snd_kcontrol *kcontrol,
+static int tegra210_xbar_get_value_enum(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
@@ -354,7 +354,7 @@ int tegra210_xbar_get_value_enum(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-int tegra210_xbar_put_value_enum(struct snd_kcontrol *kcontrol,
+static int tegra210_xbar_put_value_enum(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
@@ -433,7 +433,7 @@ int tegra210_xbar_put_value_enum(struct snd_kcontrol *kcontrol,
 
 #define SOC_VALUE_ENUM_WIDE_DECL(name, xreg, shift, \
 		xtexts, xvalues) \
-	struct soc_enum name = SOC_VALUE_ENUM_WIDE(xreg, shift, \
+	static struct soc_enum name = SOC_VALUE_ENUM_WIDE(xreg, shift, \
 					ARRAY_SIZE(xtexts), xtexts, xvalues)
 
 #define MUX_ENUM_CTRL_DECL(ename, id) \
@@ -762,7 +762,7 @@ static const struct {
 };
 
 /* FIXME: base address for T210 */
-struct of_dev_auxdata tegra210_xbar_auxdata[] = {
+static struct of_dev_auxdata tegra210_xbar_auxdata[] = {
 	OF_DEV_AUXDATA("nvidia,tegra210-admaif", 0x702d0000, "tegra210-admaif", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-i2s", 0x702d1000, "tegra210-i2s.0", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-i2s", 0x702d1100, "tegra210-i2s.1", NULL),

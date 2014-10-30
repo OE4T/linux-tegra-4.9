@@ -389,7 +389,7 @@ static int tegra210_amx_out_hw_params(struct snd_pcm_substream *substream,
 	return ret;
 }
 
-int tegra210_amx_set_channel_map(struct snd_soc_dai *dai,
+static int tegra210_amx_set_channel_map(struct snd_soc_dai *dai,
 				unsigned int tx_num, unsigned int *tx_slot,
 				unsigned int rx_num, unsigned int *rx_slot)
 {

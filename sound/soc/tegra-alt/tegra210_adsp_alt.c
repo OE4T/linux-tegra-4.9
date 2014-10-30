@@ -128,7 +128,8 @@ static const struct snd_pcm_hardware adsp_pcm_hardware = {
 };
 
 /* Following structure is ALSA-Compress specific */
-struct snd_compr_caps tegra210_adsp_compr_caps[SND_COMPRESS_CAPTURE + 1] = {
+static struct snd_compr_caps
+	tegra210_adsp_compr_caps[SND_COMPRESS_CAPTURE + 1] = {
 	[SND_COMPRESS_PLAYBACK] = {
 		.num_codecs = 2,
 		.direction = SND_COMPRESS_PLAYBACK,
@@ -148,7 +149,7 @@ struct snd_compr_caps tegra210_adsp_compr_caps[SND_COMPRESS_CAPTURE + 1] = {
 };
 
 /* Following structure is ALSA-Compress specific */
-struct snd_compr_codec_caps adsp_compr_codec_caps[] = {
+static struct snd_compr_codec_caps adsp_compr_codec_caps[] = {
 	[SND_AUDIOCODEC_MP3] = {
 		.codec = SND_AUDIOCODEC_MP3,
 		.num_descriptors = 1,
@@ -378,7 +379,7 @@ static int tegra210_adsp_send_io_buffer_msg(struct tegra210_adsp_app *app,
 	apm_msg.msg.io_buffer_params.pin_type = IS_APM_IN(app->reg) ?
 		NVFX_PIN_TYPE_INPUT : NVFX_PIN_TYPE_OUTPUT;
 	apm_msg.msg.io_buffer_params.pin_id = 0;
-	apm_msg.msg.io_buffer_params.addr = (variant_t)addr;
+	apm_msg.msg.io_buffer_params.addr.ptr = (uint64_t)addr;
 	apm_msg.msg.io_buffer_params.size = size;
 
 	return tegra210_adsp_send_msg(app->apm, &apm_msg, flags);
@@ -1356,7 +1357,7 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 }
 
 /* ADSP platform driver read/write call-back */
-unsigned int tegra210_adsp_read(struct snd_soc_platform *platform,
+static unsigned int tegra210_adsp_read(struct snd_soc_platform *platform,
 		unsigned int reg)
 {
 	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
@@ -1367,7 +1368,8 @@ unsigned int tegra210_adsp_read(struct snd_soc_platform *platform,
 	return tegra210_adsp_reg_read(adsp, reg);
 }
 
-int tegra210_adsp_write(struct snd_soc_platform *platform, unsigned int reg,
+static int tegra210_adsp_write(struct snd_soc_platform *platform,
+		unsigned int reg,
 		unsigned int val)
 {
 	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
@@ -1656,10 +1658,11 @@ static const char * const tegra210_adsp_mux_texts[] = {
 	"SPKPROT-SW",
 };
 
-#define ADSP_MUX_ENUM_CTRL_DECL(ename, reg)				\
-	SOC_ENUM_SINGLE_DECL(ename##_enum, reg,				\
-		TEGRA210_ADSP_WIDGET_SOURCE_SHIFT, tegra210_adsp_mux_texts); \
-	const struct snd_kcontrol_new ename##_ctrl =			\
+#define ADSP_MUX_ENUM_CTRL_DECL(ename, reg)		\
+	SOC_ENUM_SINGLE_DECL(ename##_enum, reg,		\
+		TEGRA210_ADSP_WIDGET_SOURCE_SHIFT,		\
+		tegra210_adsp_mux_texts);				\
+	static const struct snd_kcontrol_new ename##_ctrl =		\
 		SOC_DAPM_ENUM_EXT("ADSP Route", ename##_enum,		\
 			tegra210_adsp_mux_get, tegra210_adsp_mux_put)
 

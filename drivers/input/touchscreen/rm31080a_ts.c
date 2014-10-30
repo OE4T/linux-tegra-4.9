@@ -2378,7 +2378,7 @@ static ssize_t rm_tch_touchfile_check_show(struct device *dev,
 	struct device_attribute *attr,
 	char *buf)
 {
-	return sprintf(buf, "Touch calibration file check status: 0x%x\n",
+	return sprintf(buf, "0x%x\n",
 		g_st_ts.u8_touchfile_check);
 }
 

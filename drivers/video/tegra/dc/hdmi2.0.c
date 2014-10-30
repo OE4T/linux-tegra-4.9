@@ -576,7 +576,7 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 
 	_tegra_hdmi_ddc_disable(hdmi);
 
-	tegra_dc_unpowergate_locked(hdmi->dc);
+	tegra_dc_powergate_locked(hdmi->dc);
 
 	tegra_hdmi_edid_config(hdmi);
 
@@ -588,7 +588,7 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 	tegra_hdmi_hotplug_notify(hdmi, true);
 	return 0;
 fail:
-	tegra_dc_unpowergate_locked(hdmi->dc); /* BUG! this is a race */
+	tegra_dc_powergate_locked(hdmi->dc);
 	return err;
 }
 

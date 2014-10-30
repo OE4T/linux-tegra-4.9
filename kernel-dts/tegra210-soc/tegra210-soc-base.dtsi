@@ -607,6 +607,7 @@
 			compatible = "nvidia,tegra210-sor";
 			reg = <0x0 0x54540000 0x0 0x00040000>;
 			status = "disabled";
+			nvidia,xbar-ctrl = <2 1 0 3 4>;
 		};
 
 		sor1 {
@@ -614,6 +615,7 @@
 			reg = <0x0 0x54580000 0x0 0x00040000>;
 			interrupts = <0 76 0x4>; /* INT_SOR_1 */
 			status = "disabled";
+			nvidia,xbar-ctrl = <2 1 0 3 4>;
 		};
 
 		dpaux {

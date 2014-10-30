@@ -1375,12 +1375,6 @@ int tegra_hdmi_audio_null_sample_inject(bool on)
 }
 EXPORT_SYMBOL(tegra_hdmi_audio_null_sample_inject);
 
-static void tegra_hdmi_config_xbar(struct tegra_hdmi *hdmi)
-{
-	/* TODO: confirm with HW */
-	tegra_sor_writel(hdmi->sor, NV_SOR_XBAR_CTRL, 0x8d111828);
-}
-
 __maybe_unused
 static int tegra_hdmi_scdc_read(struct tegra_hdmi *hdmi,
 					u8 offset_data[][2], u32 n_entries)
@@ -1655,7 +1649,7 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	tegra_dc_hdmi_setup_clk(dc, hdmi->sor->sor_clk);
 	tegra_hdmi_config(hdmi);
 
-	tegra_hdmi_config_xbar(hdmi);
+	tegra_sor_config_xbar(hdmi->sor);
 
 	/* TODO: Confirm sequence with HW */
 	tegra_sor_writel(sor,  NV_SOR_SEQ_INST(0), 0x8080);

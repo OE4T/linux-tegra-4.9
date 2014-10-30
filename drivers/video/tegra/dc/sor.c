@@ -185,6 +185,7 @@ static int dbg_sor_show(struct seq_file *s, void *unused)
 	DUMP_REG(NV_SOR_PWM_CTL);
 	DUMP_REG(NV_SOR_MSCHECK);
 	DUMP_REG(NV_SOR_XBAR_CTRL);
+	DUMP_REG(NV_SOR_XBAR_POL);
 	DUMP_REG(NV_SOR_DP_LINKCTL(0));
 	DUMP_REG(NV_SOR_DP_LINKCTL(1));
 	DUMP_REG(NV_SOR_DC(0));
@@ -427,7 +428,7 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	struct resource of_sor_res;
 	void __iomem *base;
 	struct clk *clk;
-	int err;
+	int err, i;
 	__maybe_unused struct clk *safe_clk = NULL;
 	struct device_node *np = dc->ndev->dev.of_node;
 	struct device_node *np_sor =
@@ -508,6 +509,12 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		goto err_iounmap_reg;
 	}
 #endif
+
+	for (i = 0; i < sizeof(sor->xbar_ctrl)/sizeof(u32); i++)
+		sor->xbar_ctrl[i] = i;
+	if (np_sor && of_device_is_available(np_sor))
+		of_property_read_u32_array(np_sor, "nvidia,xbar-ctrl",
+			sor->xbar_ctrl, sizeof(sor->xbar_ctrl)/sizeof(u32));
 
 	sor->dc = dc;
 	sor->base = base;
@@ -1319,6 +1326,22 @@ static inline void tegra_sor_reset(struct tegra_dc_sor_data *sor)
 	mdelay(2);
 	tegra_periph_reset_deassert(sor->sor_clk);
 	mdelay(1);
+}
+
+void tegra_sor_config_xbar(struct tegra_dc_sor_data *sor)
+{
+	u32 val = 0, mask = 0, shift = 0;
+	u32 i = 0;
+
+	mask = (NV_SOR_XBAR_BYPASS_MASK | NV_SOR_XBAR_LINK_SWAP_MASK);
+	for (i = 0, shift = 2; i < sizeof(sor->xbar_ctrl)/sizeof(u32);
+		shift += 3, i++) {
+		mask |= NV_SOR_XBAR_LINK_SWAP_MASK << shift;
+		val |= sor->xbar_ctrl[i] << shift;
+	}
+
+	tegra_sor_write_field(sor, NV_SOR_XBAR_CTRL, mask, val);
+	tegra_sor_writel(sor, NV_SOR_XBAR_POL, 0);
 }
 
 void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)

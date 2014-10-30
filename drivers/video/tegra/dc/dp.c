@@ -2399,7 +2399,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	tegra_dc_sor_enable_dp(dp->sor);
 
 	tegra_dp_link_config(dp);
-
+	tegra_sor_config_xbar(dp->sor);
 	tegra_dp_lt(dp);
 
 	tegra_dc_sor_attach(dp->sor);

@@ -97,6 +97,7 @@ struct tegra_dc_sor_data {
 	bool   power_is_up;
 
 	u8	clk_type;
+	u32  xbar_ctrl[5];
 };
 
 #define TEGRA_SOR_TIMEOUT_MS		1000
@@ -114,6 +115,7 @@ struct tegra_dc_sor_data {
 
 struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	const struct tegra_dc_dp_link_config *cfg);
+void tegra_sor_config_xbar(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor);

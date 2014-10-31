@@ -884,7 +884,7 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 		.data = &gm20b_tegra_platform },
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	{ .compatible = TEGRA_18x_GPU_COMPAT_TEGRA,
-		.data = &gk20a_tegra_platform },
+		.data = &t18x_gpu_tegra_platform },
 #endif
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	{ .compatible = "nvidia,tegra124-gk20a-vgpu",

@@ -131,6 +131,7 @@
 			reg = <0x0 0x54200000 0x0 0x00010000>;
 			interrupts = <0 153 0x04>;
 			#stream-id-cells = <3>;
+			win-mask = <0x7>;
 			status = "disabled";
 		};
 
@@ -139,6 +140,7 @@
 			reg = <0x0 0x54210000 0x0 0x00010000>;
 			interrupts = <0 154 0x04>;
 			#stream-id-cells = <3>;
+			win-mask = <0x38>;
 			status = "disabled";
 		};
 
@@ -147,6 +149,7 @@
 			reg = <0x0 0x54220000 0x0 0x00010000>;
 			interrupts = <0 155 0x04>;
 			#stream-id-cells = <3>;
+			win-mask = <0x0>;
 			status = "disabled";
 		};
 

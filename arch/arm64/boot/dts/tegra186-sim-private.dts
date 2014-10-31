@@ -102,7 +102,7 @@
 			status = "okay";
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
-			nvidia,fb-win = <1>;
+			nvidia,fb-win = <3>;
 			nvidia,dc-ctrlnum = <1>;
 		};
 

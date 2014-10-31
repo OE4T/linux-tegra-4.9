@@ -376,7 +376,7 @@ int tegra_gr_comm_init(struct platform_device *pdev, u32 virt_ctx, u32 elems,
 	return 0;
 
 fail:
-	while (i >= 0) {
+	for (i = queue_start; i < queue_end; ++i) {
 		struct gr_comm_element *tmp, *next;
 		struct gr_comm_queue *queue = &ctx->queue[i];
 
@@ -386,9 +386,8 @@ fail:
 				list_del(&tmp->list);
 				kmem_cache_free(queue->element_cache, tmp);
 			}
+			kmem_cache_destroy(queue->element_cache);
 		}
-		kmem_cache_destroy(queue->element_cache);
-		--i;
 	}
 
 	free_ivc(virt_ctx, queue_start, queue_end);

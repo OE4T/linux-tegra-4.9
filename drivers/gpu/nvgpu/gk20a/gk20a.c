@@ -612,7 +612,7 @@ static irqreturn_t gk20a_intr_thread_stall(int irq, void *dev_id)
 	if (mc_intr_0 & mc_intr_0_priv_ring_pending_f())
 		gk20a_priv_ring_isr(g);
 	if (mc_intr_0 & mc_intr_0_ltc_pending_f())
-		g->ops.ltc->isr(g);
+		g->ops.ltc.isr(g);
 	if (mc_intr_0 & mc_intr_0_pbus_pending_f())
 		gk20a_pbus_isr(g);
 
@@ -881,8 +881,8 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 		goto done;
 	}
 
-	if (g->ops.ltc->init_fs_state)
-		g->ops.ltc->init_fs_state(g);
+	if (g->ops.ltc.init_fs_state)
+		g->ops.ltc.init_fs_state(g);
 
 	err = gk20a_init_mm_support(g);
 	if (err) {
@@ -1818,7 +1818,7 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 {
 	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
 
-	gpu->L2_cache_size = g->ops.ltc->determine_L2_size_bytes(g);
+	gpu->L2_cache_size = g->ops.ltc.determine_L2_size_bytes(g);
 	gpu->on_board_video_memory_size = 0; /* integrated GPU */
 
 	gpu->num_gpc = g->gr.gpc_count;

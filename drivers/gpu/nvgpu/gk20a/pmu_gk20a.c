@@ -1818,7 +1818,7 @@ int gk20a_init_pmu_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-static int gk20a_prepare_pmu_ucode(struct gk20a *g)
+static int gk20a_prepare_ucode(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	int i, err = 0;
@@ -2259,7 +2259,7 @@ static void pmu_setup_hw_enable_elpg(struct gk20a *g)
 
 void gk20a_init_pmu_ops(struct gpu_ops *gops)
 {
-	gops->pmu.prepare_ucode = gk20a_prepare_pmu_ucode;
+	gops->pmu.prepare_ucode = gk20a_prepare_ucode;
 	gops->pmu.pmu_setup_hw_and_bootstrap = gk20a_init_pmu_setup_hw1;
 	gops->pmu.pmu_setup_elpg = NULL;
 	gops->pmu.init_wpr_region = NULL;

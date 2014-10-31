@@ -28,7 +28,6 @@
 
 #include "debug_gk20a.h"
 
-#include "gr_ops.h"
 #include "gk20a.h"
 #include "dbg_gpu_gk20a.h"
 #include "fence_gk20a.h"
@@ -639,7 +638,7 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 	gk20a_free_error_notifiers(ch);
 
 	/* release channel ctx */
-	g->ops.gr->free_channel_ctx(ch);
+	g->ops.gr.free_channel_ctx(ch);
 
 	gk20a_gr_flush_channel_tlb(gr);
 
@@ -1559,8 +1558,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 #ifdef CONFIG_DEBUG_FS
 	/* update debug settings */
-	if (g->ops.ltc->sync_debugfs)
-		g->ops.ltc->sync_debugfs(g);
+	if (g->ops.ltc.sync_debugfs)
+		g->ops.ltc.sync_debugfs(g);
 #endif
 
 	gk20a_dbg_info("channel %d", c->hw_chid);
@@ -2081,7 +2080,7 @@ static int gk20a_channel_zcull_bind(struct channel_gk20a *ch,
 
 	gk20a_dbg_fn("");
 
-	return g->ops.gr->bind_ctxsw_zcull(g, gr, ch,
+	return g->ops.gr.bind_ctxsw_zcull(g, gr, ch,
 				args->gpu_va, args->mode);
 }
 
@@ -2301,7 +2300,7 @@ long gk20a_channel_ioctl(struct file *filp,
 				__func__, cmd);
 			return err;
 		}
-		err = ch->g->ops.gr->alloc_obj_ctx(ch,
+		err = ch->g->ops.gr.alloc_obj_ctx(ch,
 				(struct nvgpu_alloc_obj_ctx_args *)buf);
 		gk20a_idle(dev);
 		break;
@@ -2313,7 +2312,7 @@ long gk20a_channel_ioctl(struct file *filp,
 				__func__, cmd);
 			return err;
 		}
-		err = ch->g->ops.gr->free_obj_ctx(ch,
+		err = ch->g->ops.gr.free_obj_ctx(ch,
 				(struct nvgpu_free_obj_ctx_args *)buf);
 		gk20a_idle(dev);
 		break;

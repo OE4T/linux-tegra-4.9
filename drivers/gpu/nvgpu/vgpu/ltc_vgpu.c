@@ -48,12 +48,8 @@ static int vgpu_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 }
 
-static const struct gpu_ltc_ops vgpu_ltc_ops = {
-	.determine_L2_size_bytes = vgpu_determine_L2_size_bytes,
-	.init_comptags = vgpu_ltc_init_comptags,
-};
-
 void vgpu_init_ltc_ops(struct gpu_ops *gops)
 {
-	gops->ltc = &vgpu_ltc_ops;
+	gops->ltc.determine_L2_size_bytes = vgpu_determine_L2_size_bytes;
+	gops->ltc.init_comptags = vgpu_ltc_init_comptags;
 }

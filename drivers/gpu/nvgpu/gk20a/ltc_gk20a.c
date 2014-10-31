@@ -265,24 +265,19 @@ static int gk20a_determine_L2_size_bytes(struct gk20a *g)
 	return cache_size;
 }
 
-static const struct gpu_ltc_ops gk20a_ltc_ops = {
-	.determine_L2_size_bytes = gk20a_determine_L2_size_bytes,
-	.set_max_ways_evict_last = gk20a_ltc_set_max_ways_evict_last,
-	.init_comptags = gk20a_ltc_init_comptags,
-	.cbc_ctrl = gk20a_ltc_cbc_ctrl,
-	.set_zbc_color_entry = gk20a_ltc_set_zbc_color_entry,
-	.set_zbc_depth_entry = gk20a_ltc_set_zbc_depth_entry,
-	.init_cbc = gk20a_ltc_init_cbc,
-#ifdef CONFIG_DEBUG_FS
-	.sync_debugfs = gk20a_ltc_sync_debugfs,
-#endif
-	.elpg_flush = gk20a_mm_g_elpg_flush_locked,
-	.init_fs_state = gk20a_ltc_init_fs_state,
-	.isr = gk20a_ltc_isr
-
-};
-
 void gk20a_init_ltc(struct gpu_ops *gops)
 {
-	gops->ltc = &gk20a_ltc_ops;
+	gops->ltc.determine_L2_size_bytes = gk20a_determine_L2_size_bytes;
+	gops->ltc.set_max_ways_evict_last = gk20a_ltc_set_max_ways_evict_last;
+	gops->ltc.init_comptags = gk20a_ltc_init_comptags;
+	gops->ltc.cbc_ctrl = gk20a_ltc_cbc_ctrl;
+	gops->ltc.set_zbc_color_entry = gk20a_ltc_set_zbc_color_entry;
+	gops->ltc.set_zbc_depth_entry = gk20a_ltc_set_zbc_depth_entry;
+	gops->ltc.init_cbc = gk20a_ltc_init_cbc;
+#ifdef CONFIG_DEBUG_FS
+	gops->ltc.sync_debugfs = gk20a_ltc_sync_debugfs;
+#endif
+	gops->ltc.elpg_flush = gk20a_mm_g_elpg_flush_locked;
+	gops->ltc.init_fs_state = gk20a_ltc_init_fs_state;
+	gops->ltc.isr = gk20a_ltc_isr;
 }

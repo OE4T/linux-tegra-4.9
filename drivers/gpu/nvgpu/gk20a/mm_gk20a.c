@@ -1100,7 +1100,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 					COMP_TAG_LINE_SIZE_SHIFT;
 
 		/* init/clear the ctag buffer */
-		g->ops.ltc->cbc_ctrl(g, gk20a_cbc_op_clear,
+		g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_clear,
 				ctag_offset, ctag_offset + ctag_lines - 1);
 	}
 
@@ -3079,7 +3079,7 @@ int gk20a_mm_suspend(struct gk20a *g)
 {
 	gk20a_dbg_fn("");
 
-	g->ops.ltc->elpg_flush(g);
+	g->ops.ltc.elpg_flush(g);
 
 	gk20a_dbg_fn("done");
 	return 0;

@@ -33,7 +33,7 @@ struct acr_gm20b;
 #include <linux/tegra-soc.h>
 
 #include "../../../arch/arm/mach-tegra/iomap.h"
-#include "nvgpu_gpuid.h"
+
 #include "as_gk20a.h"
 #include "clk_gk20a.h"
 #include "fifo_gk20a.h"
@@ -60,33 +60,81 @@ enum gk20a_cbc_op {
 	gk20a_cbc_op_invalidate,
 };
 
-struct gpu_ltc_ops {
-	int (*determine_L2_size_bytes)(struct gk20a *gk20a);
-	void (*set_max_ways_evict_last)(struct gk20a *g, u32 max_ways);
-	int (*init_comptags)(struct gk20a *g, struct gr_gk20a *gr);
-	int (*cbc_ctrl)(struct gk20a *g, enum gk20a_cbc_op op,
-			u32 min, u32 max);
-	void (*set_zbc_color_entry)(struct gk20a *g,
-				    struct zbc_entry *color_val,
-				    u32 index);
-	void (*set_zbc_depth_entry)(struct gk20a *g,
-				    struct zbc_entry *depth_val,
-				    u32 index);
-	void (*init_cbc)(struct gk20a *g, struct gr_gk20a *gr);
-	void (*sync_debugfs)(struct gk20a *g);
-	void (*init_fs_state)(struct gk20a *g);
-	void (*elpg_flush)(struct gk20a *g);
-	void (*isr)(struct gk20a *g);
-	u32 (*cbc_fix_config)(struct gk20a *g, int base);
-	void (*flush)(struct gk20a *g);
-};
-
-struct gpu_ltc_ops;
-struct gpu_gr_ops;
-
 struct gpu_ops {
-	const struct gpu_ltc_ops *ltc;
-	const struct gpu_gr_ops *gr;
+	struct {
+		int (*determine_L2_size_bytes)(struct gk20a *gk20a);
+		void (*set_max_ways_evict_last)(struct gk20a *g, u32 max_ways);
+		int (*init_comptags)(struct gk20a *g, struct gr_gk20a *gr);
+		int (*cbc_ctrl)(struct gk20a *g, enum gk20a_cbc_op op,
+				u32 min, u32 max);
+		void (*set_zbc_color_entry)(struct gk20a *g,
+					    struct zbc_entry *color_val,
+					    u32 index);
+		void (*set_zbc_depth_entry)(struct gk20a *g,
+					    struct zbc_entry *depth_val,
+					    u32 index);
+		void (*init_cbc)(struct gk20a *g, struct gr_gk20a *gr);
+		void (*sync_debugfs)(struct gk20a *g);
+		void (*init_fs_state)(struct gk20a *g);
+		void (*elpg_flush)(struct gk20a *g);
+		void (*isr)(struct gk20a *g);
+		u32 (*cbc_fix_config)(struct gk20a *g, int base);
+		void (*flush)(struct gk20a *g);
+	} ltc;
+	struct {
+		int (*init_fs_state)(struct gk20a *g);
+		void (*access_smpc_reg)(struct gk20a *g, u32 quad, u32 offset);
+		void (*bundle_cb_defaults)(struct gk20a *g);
+		void (*cb_size_default)(struct gk20a *g);
+		int (*calc_global_ctx_buffer_size)(struct gk20a *g);
+		void (*commit_global_attrib_cb)(struct gk20a *g,
+						struct channel_ctx_gk20a *ch_ctx,
+						u64 addr, bool patch);
+		void (*commit_global_bundle_cb)(struct gk20a *g,
+						struct channel_ctx_gk20a *ch_ctx,
+						u64 addr, u64 size, bool patch);
+		int (*commit_global_cb_manager)(struct gk20a *g,
+						struct channel_gk20a *ch,
+						bool patch);
+		void (*commit_global_pagepool)(struct gk20a *g,
+					       struct channel_ctx_gk20a *ch_ctx,
+					       u64 addr, u32 size, bool patch);
+		void (*init_gpc_mmu)(struct gk20a *g);
+		int (*handle_sw_method)(struct gk20a *g, u32 addr,
+					 u32 class_num, u32 offset, u32 data);
+		void (*set_alpha_circular_buffer_size)(struct gk20a *g,
+					               u32 data);
+		void (*set_circular_buffer_size)(struct gk20a *g, u32 data);
+		void (*enable_hww_exceptions)(struct gk20a *g);
+		bool (*is_valid_class)(struct gk20a *g, u32 class_num);
+		void (*get_sm_dsm_perf_regs)(struct gk20a *g,
+						  u32 *num_sm_dsm_perf_regs,
+						  u32 **sm_dsm_perf_regs,
+						  u32 *perf_register_stride);
+		void (*get_sm_dsm_perf_ctrl_regs)(struct gk20a *g,
+						  u32 *num_sm_dsm_perf_regs,
+						  u32 **sm_dsm_perf_regs,
+						  u32 *perf_register_stride);
+		void (*set_hww_esr_report_mask)(struct gk20a *g);
+		int (*setup_alpha_beta_tables)(struct gk20a *g,
+					      struct gr_gk20a *gr);
+		int (*falcon_load_ucode)(struct gk20a *g,
+				u64 addr_base,
+				struct gk20a_ctxsw_ucode_segments *segments,
+				u32 reg_offset);
+		int (*load_ctxsw_ucode)(struct gk20a *g);
+		u32 (*get_gpc_tpc_mask)(struct gk20a *g, u32 gpc_index);
+		void (*free_channel_ctx)(struct channel_gk20a *c);
+		int (*alloc_obj_ctx)(struct channel_gk20a  *c,
+				struct nvgpu_alloc_obj_ctx_args *args);
+		int (*free_obj_ctx)(struct channel_gk20a  *c,
+				struct nvgpu_free_obj_ctx_args *args);
+		int (*bind_ctxsw_zcull)(struct gk20a *g, struct gr_gk20a *gr,
+				struct channel_gk20a *c, u64 zcull_va,
+				u32 mode);
+		int (*get_zcull_info)(struct gk20a *g, struct gr_gk20a *gr,
+				struct gr_zcull_info *zcull_params);
+	} gr;
 	const char *name;
 	struct {
 		void (*init_fs_state)(struct gk20a *g);
@@ -671,6 +719,18 @@ int __gk20a_do_unidle(struct platform_device *pdev);
 
 const struct firmware *
 gk20a_request_firmware(struct gk20a *g, const char *fw_name);
+
+#define NVGPU_GPU_ARCHITECTURE_SHIFT 4
+
+/* constructs unique and compact GPUID from nvgpu_gpu_characteristics
+ * arch/impl fields */
+#define GK20A_GPUID(arch, impl) ((u32) ((arch) | (impl)))
+
+#define GK20A_GPUID_GK20A \
+	GK20A_GPUID(NVGPU_GPU_ARCH_GK100, NVGPU_GPU_IMPL_GK20A)
+
+#define GK20A_GPUID_GM20B \
+	GK20A_GPUID(NVGPU_GPU_ARCH_GM200, NVGPU_GPU_IMPL_GM20B)
 
 int gk20a_init_gpu_characteristics(struct gk20a *g);
 

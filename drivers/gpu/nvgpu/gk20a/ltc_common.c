@@ -189,9 +189,9 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 		compbit_base_post_divide++;
 
 	/* Bug 1477079 indicates sw adjustment on the posted divided base. */
-	if (g->ops.ltc->cbc_fix_config)
+	if (g->ops.ltc.cbc_fix_config)
 		compbit_base_post_divide =
-			g->ops.ltc->cbc_fix_config(g, compbit_base_post_divide);
+			g->ops.ltc.cbc_fix_config(g, compbit_base_post_divide);
 
 	gk20a_writel(g, ltc_ltcs_ltss_cbc_base_r(),
 		compbit_base_post_divide);
@@ -204,7 +204,7 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 
 	gr->compbit_store.base_hw = compbit_base_post_divide;
 
-	g->ops.ltc->cbc_ctrl(g, gk20a_cbc_op_invalidate,
+	g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_invalidate,
 			    0, max_comptag_lines - 1);
 
 }

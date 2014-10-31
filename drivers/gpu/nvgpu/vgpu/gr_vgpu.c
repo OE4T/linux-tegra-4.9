@@ -15,7 +15,6 @@
 
 #include "vgpu/vgpu.h"
 #include "gk20a/hw_gr_gk20a.h"
-#include "gr_ops.h"
 
 static int vgpu_gr_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 {
@@ -105,7 +104,7 @@ static int vgpu_gr_alloc_global_ctx_buffers(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	attr_buffer_size = g->ops.gr->calc_global_ctx_buffer_size(g);
+	attr_buffer_size = g->ops.gr.calc_global_ctx_buffer_size(g);
 
 	gk20a_dbg_info("cb_buffer_size : %d", cb_buffer_size);
 	gr->global_ctx_buffer[CIRCULAR].size = cb_buffer_size;
@@ -398,7 +397,7 @@ static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 		return -EINVAL;
 	}
 
-	if (!g->ops.gr->is_valid_class(g, args->class_num)) {
+	if (!g->ops.gr.is_valid_class(g, args->class_num)) {
 		gk20a_err(dev_from_gk20a(g),
 			   "invalid obj class 0x%x", args->class_num);
 		err = -EINVAL;
@@ -525,9 +524,9 @@ static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 			&gr->max_tpc_count))
 		return -ENOMEM;
 
-	g->ops.gr->bundle_cb_defaults(g);
-	g->ops.gr->cb_size_default(g);
-	g->ops.gr->calc_global_ctx_buffer_size(g);
+	g->ops.gr.bundle_cb_defaults(g);
+	g->ops.gr.cb_size_default(g);
+	g->ops.gr.calc_global_ctx_buffer_size(g);
 	return 0;
 }
 
@@ -613,7 +612,7 @@ static int vgpu_gr_init_gr_setup_sw(struct gk20a *g)
 	if (err)
 		goto clean_up;
 
-	err = g->ops.ltc->init_comptags(g, gr);
+	err = g->ops.ltc.init_comptags(g, gr);
 	if (err)
 		goto clean_up;
 
@@ -678,15 +677,11 @@ int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
 	return 0;
 }
 
-static struct gpu_gr_ops vgpu_gr_ops = {
-	.free_channel_ctx = vgpu_gr_free_channel_ctx,
-	.alloc_obj_ctx = vgpu_gr_alloc_obj_ctx,
-	.free_obj_ctx = vgpu_gr_free_obj_ctx,
-	.bind_ctxsw_zcull = vgpu_gr_bind_ctxsw_zcull,
-	.get_zcull_info = vgpu_gr_get_zcull_info,
-};
-
 void vgpu_init_gr_ops(struct gpu_ops *gops)
 {
-	gops->gr = &vgpu_gr_ops;
+	gops->gr.free_channel_ctx = vgpu_gr_free_channel_ctx;
+	gops->gr.alloc_obj_ctx = vgpu_gr_alloc_obj_ctx;
+	gops->gr.free_obj_ctx = vgpu_gr_free_obj_ctx;
+	gops->gr.bind_ctxsw_zcull = vgpu_gr_bind_ctxsw_zcull;
+	gops->gr.get_zcull_info = vgpu_gr_get_zcull_info;
 }

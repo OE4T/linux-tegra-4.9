@@ -20,13 +20,13 @@
 int gpu_init_hal(struct gk20a *g)
 {
 	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
-	gk20a_dbg_fn("ver=0x%x", ver);
 	switch (ver) {
-	case NVGPU_GPUID_GK20A:
-		if (gk20a_init_hal(&g->ops))
-			return -ENODEV;
+	case GK20A_GPUID_GK20A:
+		gk20a_dbg_info("gk20a detected");
+		gk20a_init_hal(&g->ops);
 		break;
-	case NVGPU_GPUID_GM20B:
+	case GK20A_GPUID_GM20B:
+		gk20a_dbg_info("gm20b detected");
 		if (gm20b_init_hal(&g->ops))
 			return -ENODEV;
 		break;

@@ -26,7 +26,6 @@
 
 #include <mach/clk.h>
 
-#include "gr_ops.h"
 #include "gk20a.h"
 #include "gr_gk20a.h"
 #include "fifo_gk20a.h"
@@ -624,9 +623,9 @@ static ssize_t tpc_fs_mask_read(struct device *device,
 	u32 tpc_fs_mask = 0;
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
-		if (g->ops.gr->get_gpc_tpc_mask)
+		if (g->ops.gr.get_gpc_tpc_mask)
 			tpc_fs_mask |=
-				g->ops.gr->get_gpc_tpc_mask(g, gpc_index) <<
+				g->ops.gr.get_gpc_tpc_mask(g, gpc_index) <<
 				(gr->max_tpc_per_gpc_count * gpc_index);
 	}
 

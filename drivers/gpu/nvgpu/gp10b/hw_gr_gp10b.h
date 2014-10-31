@@ -1362,7 +1362,7 @@ static inline u32 gr_ds_zbc_tbl_ld_trigger_active_f(void)
 {
 	return 0x4;
 }
-static inline u32 gr_ds_tga_constraintlogic_r(void)
+static inline u32 gr_ds_tga_constraintlogic_beta_r(void)
 {
 	return 0x00405830;
 }
@@ -1370,7 +1370,7 @@ static inline u32 gr_ds_tga_constraintlogic_beta_cbsize_f(u32 v)
 {
 	return (v & 0x3fffff) << 0;
 }
-static inline u32 gr_ds_tga_constraintlogic_r(void)
+static inline u32 gr_ds_tga_constraintlogic_alpha_r(void)
 {
 	return 0x0040585c;
 }
@@ -1925,6 +1925,10 @@ static inline u32 gr_gpc0_ppc0_cbm_alpha_cb_size_v_granularity_v(void)
 static inline u32 gr_gpc0_ppc0_cbm_alpha_cb_offset_r(void)
 {
 	return 0x005030f8;
+}
+static inline u32 gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_r(void)
+{
+	return 0x005030f0;
 }
 static inline u32 gr_gpccs_falcon_addr_r(void)
 {

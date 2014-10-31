@@ -128,11 +128,7 @@ struct ov5693_platform_data {
 	const char *dev_name;
 	unsigned gpio_count; /* see nvc.h GPIO notes */
 	struct nvc_gpio_pdata *gpio; /* see nvc.h GPIO notes */
-	unsigned lens_focal_length; /* / _INT2FLOAT_DIVISOR */
-	unsigned lens_max_aperture; /* / _INT2FLOAT_DIVISOR */
-	unsigned lens_fnumber; /* / _INT2FLOAT_DIVISOR */
-	unsigned lens_view_angle_h; /* / _INT2FLOAT_DIVISOR */
-	unsigned lens_view_angle_v; /* / _INT2FLOAT_DIVISOR */
+	struct nvc_imager_static_nvc *static_info;
 	bool use_vcm_vdd;
 	int (*probe_clock)(unsigned long);
 	int (*power_on)(struct ov5693_power_rail *);

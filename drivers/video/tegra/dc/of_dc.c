@@ -2057,6 +2057,11 @@ struct tegra_dc_platform_data
 		pdata->emc_clk_rate = (unsigned long)temp;
 		OF_DC_LOG("emc clk rate %lu\n", pdata->emc_clk_rate);
 	}
+
+	if (!of_property_read_u32(np, "win-mask", &temp)) {
+		pdata->win_mask = (u32)temp;
+		OF_DC_LOG("win mask 0x%x\n", temp);
+	}
 #ifdef CONFIG_TEGRA_DC_CMU
 	if (!of_property_read_u32(np, "nvidia,cmu-enable", &temp)) {
 		pdata->cmu_enable = (bool)temp;

@@ -24,6 +24,7 @@
 #include <linux/mutex.h>
 #include <uapi/linux/nvgpu.h>
 #include <linux/poll.h>
+#include <linux/spinlock.h>
 
 struct gk20a;
 struct gr_gk20a;
@@ -162,6 +163,7 @@ struct channel_gk20a {
 	 * via schedule_work */
 	void (*update_fn)(struct channel_gk20a *, void *);
 	void *update_fn_data;
+	spinlock_t update_fn_lock; /* make access to the two above atomic */
 	struct work_struct update_fn_work;
 };
 

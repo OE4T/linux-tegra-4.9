@@ -682,8 +682,11 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 	else
 		gk20a_vm_put(ch_vm);
 
+	spin_lock(&ch->update_fn_lock);
 	ch->update_fn = NULL;
 	ch->update_fn_data = NULL;
+	spin_unlock(&ch->update_fn_lock);
+	cancel_work_sync(&ch->update_fn_work);
 
 unbind:
 	if (gk20a_is_channel_marked_as_tsg(ch))
@@ -745,7 +748,16 @@ static void gk20a_channel_update_runcb_fn(struct work_struct *work)
 {
 	struct channel_gk20a *ch =
 		container_of(work, struct channel_gk20a, update_fn_work);
-	ch->update_fn(ch, ch->update_fn_data);
+	void (*update_fn)(struct channel_gk20a *, void *);
+	void *update_fn_data;
+
+	spin_lock(&ch->update_fn_lock);
+	update_fn = ch->update_fn;
+	update_fn_data = ch->update_fn_data;
+	spin_unlock(&ch->update_fn_lock);
+
+	if (update_fn)
+		update_fn(ch, update_fn_data);
 }
 
 struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
@@ -755,8 +767,10 @@ struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
 	struct channel_gk20a *ch = gk20a_open_new_channel(g);
 
 	if (ch) {
+		spin_lock(&ch->update_fn_lock);
 		ch->update_fn = update_fn;
 		ch->update_fn_data = update_fn_data;
+		spin_unlock(&ch->update_fn_lock);
 	}
 
 	return ch;
@@ -811,7 +825,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 
 	ch->update_fn = NULL;
 	ch->update_fn_data = NULL;
-
+	spin_lock_init(&ch->update_fn_lock);
 	INIT_WORK(&ch->update_fn_work, gk20a_channel_update_runcb_fn);
 
 	return ch;

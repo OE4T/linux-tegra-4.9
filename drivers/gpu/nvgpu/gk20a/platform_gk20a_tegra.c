@@ -170,7 +170,7 @@ static void gk20a_tegra_postscale(struct platform_device *pdev,
 	struct gk20a_emc_params *emc_params = profile->private_data;
 	struct gk20a *g = get_gk20a(pdev);
 
-	long after = gk20a_clk_get_rate(g);
+	long after = clk_get_rate(g->clk.tegra_clk);
 	long emc_target = gk20a_tegra_get_emc_rate(g, emc_params, after);
 
 	clk_set_rate(platform->clk[2], emc_target);
@@ -188,7 +188,7 @@ static void gk20a_tegra_prescale(struct platform_device *pdev)
 	u32 avg = 0;
 
 	gk20a_pmu_load_norm(g, &avg);
-	tegra_edp_notify_gpu_load(avg, gk20a_clk_get_rate(g));
+	tegra_edp_notify_gpu_load(avg, clk_get_rate(g->clk.tegra_clk));
 }
 
 /*

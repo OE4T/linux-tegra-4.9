@@ -2131,7 +2131,8 @@ void gk20a_vm_remove_support(struct vm_gk20a *vm)
 	kfree(vm->pdes.ptes[gmmu_page_size_small]);
 	kfree(vm->pdes.ptes[gmmu_page_size_big]);
 	gk20a_allocator_destroy(&vm->vma[gmmu_page_size_small]);
-	gk20a_allocator_destroy(&vm->vma[gmmu_page_size_big]);
+	if (vm->big_pages)
+		gk20a_allocator_destroy(&vm->vma[gmmu_page_size_big]);
 
 	mutex_unlock(&vm->update_gmmu_lock);
 

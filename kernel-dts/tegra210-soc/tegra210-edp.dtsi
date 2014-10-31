@@ -30,6 +30,12 @@
 		trip = <&cpu_edp_##temp>; \
 		cooling-device = <&cpu_edp (C_TO_K(temp)) (C_TO_K(temp))>; \
 	}
+
+#define MAP_GPU_EDP(temp) \
+	map_gpu_edp_##temp { \
+		trip = <&gpu_edp_##temp>; \
+		cooling-device = <&gpu_edp (C_TO_K(temp)) (C_TO_K(temp))>; \
+	}
 / {
 	cpu_edp: cpu_edp {
 		compatible = "nvidia,tegra124-cpu-edp-capping";
@@ -55,6 +61,35 @@
 			(2973598) (-2042153) (434622) (-27022)
 			(-3565514) (2408959) (-504033) (31003)
 			(1398871) (-931712) (191840) (-11679)
+		>;
+		#cooling-cells = <2>;
+	};
+
+	gpu_edp: gpu_edp {
+		compatible = "nvidia,tegra124-gpu-edp-capping";
+		nvidia,freq_step = <38400000>;
+		nvidia,edp_clk = "gbus";
+		nvidia,edp_cap_clk = "edp.gbus";
+		nvidia,tegra-ppm-cdyn = <15280000>;
+		nvidia,tegra-ppm-min_leakage = <30>;
+		nvidia,tegra-ppm-coeff_scale = <10000>;
+		nvidia,tegra-ppm-leakage_coeffs = <
+			(-17243455) (25069722) (-4350965) (47111)
+			(0) (-49318981) (8802223) (126501)
+			(65925639) (14146024) (-3028302) (-469651)
+			(-48391329) (9992903) (-1393390) (292526)
+			(24525724) (-26734720) (3602635) (4879)
+			(-43919111) (66581891) (-8303207) (-191584)
+			(0) (-43894936) (4294143) (448220)
+			(18479207) (4812968) (241159) (-244282)
+			(-38575764) (23590651) (-3370486) (104656)
+			(117185142) (-71852031) (10137058) (-295590)
+			(-113678383) (69920301) (-9681838) (253400)
+			(35052444) (-21660992) (2928184) (-64038)
+			(5857748) (-3401697) (511587) (-20776)
+			(-18454930) (10714029) (-1605108) (64415)
+			(18839983) (-10931791) (1629343) (-64265)
+			(-6226455) (3611786) (-535417) (20666)
 		>;
 		#cooling-cells = <2>;
 	};
@@ -90,6 +125,28 @@
 				MAP_CPU_EDP(94);
 				MAP_CPU_EDP(98);
 				MAP_CPU_EDP(102);
+			};
+		};
+		GPU_therm {
+			trips {
+				MAKE_EDP_TRIP(gpu, 20);
+				MAKE_EDP_TRIP(gpu, 50);
+				MAKE_EDP_TRIP(gpu, 70);
+				MAKE_EDP_TRIP(gpu, 80);
+				MAKE_EDP_TRIP(gpu, 90);
+				MAKE_EDP_TRIP(gpu, 95);
+				MAKE_EDP_TRIP(gpu, 100);
+				MAKE_EDP_TRIP(gpu, 105);
+			};
+			cooling-maps {
+				MAP_GPU_EDP(20);
+				MAP_GPU_EDP(50);
+				MAP_GPU_EDP(70);
+				MAP_GPU_EDP(80);
+				MAP_GPU_EDP(90);
+				MAP_GPU_EDP(95);
+				MAP_GPU_EDP(100);
+				MAP_GPU_EDP(105);
 			};
 		};
 	};

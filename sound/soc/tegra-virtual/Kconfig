@@ -1,13 +1,3 @@
-config SND_SOC_TEGRA_VIRT_MASTER
-	tristate "Virtual DAPM-based SoC audio support for the Tegra System-on-Chip"
-	depends on ARCH_TEGRA
-	select REGMAP_MMIO
-	help
-		Say Y or M here if you want support for SoC audio on Tegra, using the
-		virtual driver that exposes to user-space the full routing capabilities
-		of the AHUB (Audio HUB) hardware module. Audio routing is modified with
-		the help of amixer utility, provided by ALSA, from user-space.
-
 config SND_SOC_TEGRA_124_OR_LATER
   def_bool y
 	depends on ARCH_TEGRA
@@ -28,22 +18,11 @@ config SND_SOC_TEGRA124_VIRT_APBIF_SLAVE
 		can be build independent of APBIF_MASTER module. This module provides
 		a pcm interface to slave card in audio virtualization use case.
 
-config SND_SOC_TEGRA_VIRT_VCM30T124_MASTER
-	tristate "SoC Audio master for VCM30_T124"
-	depends on SND_SOC_TEGRA_VIRT_MASTER
-	depends on MACH_P1859
-	select SND_SOC_TEGRA_VCM30T124_ALT
-	help
-		Say Y or M here if you want to add master support for SoC audio on the
-		TEGRA VCM30_T124 using wm8731 and ad1937 codecs. This Kconfig automatically
-		selects dependancies. All the AHUB codec drivers are selected from tegra-alt
-		driver. Only APBIF driver is different.
-
 config SND_SOC_TEGRA_VIRT_VCM30T124_SLAVE
 	tristate "SoC Audio Slave for VCM30_T124"
 	depends on TEGRA20_APB_DMA
 	depends on MACH_P1859
-	select SND_SOC_TEGRA_ALT
+	depends on SND_SOC_TEGRA_ALT
 	select SND_SOC_TEGRA124_VIRT_APBIF_SLAVE
 	select SND_SOC_SPDIF
 	help

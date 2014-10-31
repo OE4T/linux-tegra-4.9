@@ -267,6 +267,7 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	int i;
 	int res;
 	struct device_node *np_dpaux;
+	int idx;
 
 	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
 		return false;
@@ -328,6 +329,17 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	 */
 	dc->out->flags &= ~TEGRA_DC_OUT_INITIALIZED_MODE;
 
+	/* Assign windows to this head */
+	for_each_set_bit(idx, &dc->pdata->win_mask, DC_N_WINDOWS) {
+		if (tegra_nvdisp_assign_win(dc, idx))
+			dev_err(&dc->ndev->dev,
+				"failed to assign window %d\n", idx);
+		else
+			dev_dbg(&dc->ndev->dev,
+				"Window %d assigned to head %d\n", idx,
+				dc->ctrl_num);
+	}
+
 	tegra_dc_put(dc);
 	return 0;
 
@@ -350,10 +362,9 @@ struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
 	void *virt_addr = NULL;
 
 	/* Assign the given window to current dc */
-	if (!tegra_dc_get_window(dc, fb_data->win) &&
-		tegra_nvdisp_assign_win(dc, fb_data->win)) {
-		dev_err(&ndev->dev, "Cannot assign window %d to head %d\n",
-			fb_data->win, dc->ctrl_num);
+	if (!tegra_dc_get_window(dc, fb_data->win)) {
+		dev_err(&ndev->dev, "%s, failed to get window %d for head %d\n",
+			__func__, fb_data->win, dc->ctrl_num);
 		return ERR_PTR(-ENOENT);
 	}
 

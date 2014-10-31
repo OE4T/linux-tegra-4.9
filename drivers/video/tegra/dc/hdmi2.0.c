@@ -210,10 +210,12 @@ static int tegra_hdmi_eld_config(struct tegra_hdmi *hdmi)
 int tegra_hdmi_setup_hda_presence(void)
 {
 	struct tegra_hdmi *hdmi = dc_hdmi;
-	struct tegra_dc *dc = hdmi->dc;
+	struct tegra_dc *dc;
 
 	if (!hdmi)
 		return -EAGAIN;
+
+	dc = hdmi->dc;
 
 	if (hdmi->enabled && hdmi->eld_valid) {
 		tegra_dc_unpowergate_locked(dc);

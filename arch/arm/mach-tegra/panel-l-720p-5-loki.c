@@ -46,6 +46,8 @@ static struct regulator *vdd_lcd_bl;
 static struct regulator *vdd_lcd_bl_en;
 static struct regulator *avdd_lcd_3v0_2v8;
 
+static u16 en_panel_rst;
+
 static struct tegra_dc_sd_settings dsi_l_720p_5_loki_sd_settings = {
 	.enable = 0, /* disabled by default. */
 	.use_auto_pwm = false,
@@ -467,6 +469,13 @@ static int dsi_l_720p_5_loki_gpio_get(void)
 		pr_err("panel reset gpio request failed\n");
 		goto fail;
 	}
+	err = gpio_request(dsi_l_720p_5_loki_pdata.dsi_panel_bl_pwm_gpio,
+		"panel pwm");
+	if (err) {
+		pr_err("panel backlight pwm gpio request failed\n");
+		return err;
+	}
+	gpio_free(dsi_l_720p_5_loki_pdata.dsi_panel_bl_pwm_gpio);
 
 	gpio_requested = true;
 	return 0;
@@ -474,27 +483,38 @@ fail:
 	return err;
 }
 
-static struct tegra_dc_out *loki_disp1_out;
-
 static int dsi_l_720p_5_loki_enable(struct device *dev)
 {
 	int err = 0;
+	unsigned out_flags = tegra_dc_out_flags_from_dev(dev);
 
 	err = dsi_l_720p_5_loki_regulator_get(dev);
 	if (err < 0) {
 		pr_err("dsi regulator get failed\n");
 		goto fail;
 	}
-	err = dsi_l_720p_5_loki_gpio_get();
+	err = tegra_panel_gpio_get_dt("l,720p-5-0", &panel_of);
 	if (err < 0) {
-		pr_err("dsi gpio request failed\n");
-		goto fail;
+		err = dsi_l_720p_5_loki_gpio_get();
+		if (err < 0) {
+			pr_err("dsi gpio request failed\n");
+			goto fail;
+		}
 	}
 
+	/* If panel rst gpio is specified in device tree,
+	 * use that.
+	 */
+	if (gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_RESET]))
+		en_panel_rst = panel_of.panel_gpio[TEGRA_GPIO_RESET];
+	else
+		en_panel_rst =
+			dsi_l_720p_5_loki_pdata.dsi_panel_rst_gpio;
+
 	/* Skip panel programming if in initialized mode */
-	if (!(loki_disp1_out->flags & TEGRA_DC_OUT_INITIALIZED_MODE)) {
+	if (!(out_flags & TEGRA_DC_OUT_INITIALIZED_MODE)) {
 		dsi_l_720p_5_loki_pdata.dsi_init_cmd = dsi_init_cmd;
-		gpio_set_value(dsi_l_720p_5_loki_pdata.dsi_panel_rst_gpio, 0);
+		gpio_set_value(en_panel_rst, 0);
 	} else {
 		dsi_l_720p_5_loki_pdata.dsi_init_cmd = dsi_init_cmd + 2;
 	}
@@ -547,7 +567,7 @@ static int dsi_l_720p_5_loki_disable(struct device *dev)
 	if (vdd_lcd_bl_en)
 		regulator_disable(vdd_lcd_bl_en);
 
-	gpio_set_value(dsi_l_720p_5_loki_pdata.dsi_panel_rst_gpio, 0);
+	gpio_set_value(en_panel_rst, 0);
 	mdelay(20);
 
 	if (vdd_lcd_s_1v8)
@@ -603,7 +623,10 @@ static int dsi_l_720p_5_loki_bl_notify(struct device *dev, int brightness)
 
 static int dsi_l_720p_5_loki_check_fb(struct device *dev, struct fb_info *info)
 {
-	return info->device == &disp_device->dev;
+	struct platform_device *pdev = NULL;
+	pdev = to_platform_device(bus_find_device_by_name(
+		&platform_bus_type, NULL, "tegradc.0"));
+	return info->device == &pdev->dev;
 }
 
 static struct platform_pwm_backlight_data dsi_l_720p_5_loki_bl_data = {
@@ -633,20 +656,24 @@ static struct platform_device __maybe_unused
 static int dsi_l_720p_5_loki_register_bl_dev(void)
 {
 	int err = 0;
+	struct device_node *dc1_node = NULL;
+	struct device_node *dc2_node = NULL;
+	struct device_node *pwm_bl_node = NULL;
 
-	err = platform_device_register(&dsi_l_720p_5_loki_bl_device);
-	if (err) {
-		pr_err("disp1 bl device registration failed");
-		return err;
-	}
+	find_dc_node(&dc1_node, &dc2_node);
+	pwm_bl_node = of_find_compatible_node(NULL, NULL,
+		"pwm-backlight");
 
-	err = gpio_request(dsi_l_720p_5_loki_pdata.dsi_panel_bl_pwm_gpio,
-		"panel pwm");
-	if (err) {
-		pr_err("panel backlight pwm gpio request failed\n");
-		return err;
+	if (!of_have_populated_dt() || !dc1_node ||
+		!of_device_is_available(dc1_node) ||
+		!pwm_bl_node ||
+		!of_device_is_available(pwm_bl_node)) {
+		err = platform_device_register(&dsi_l_720p_5_loki_bl_device);
+		if (err) {
+			pr_err("disp1 bl device registration failed");
+			return err;
+		}
 	}
-	gpio_free(dsi_l_720p_5_loki_pdata.dsi_panel_bl_pwm_gpio);
 
 	return err;
 }
@@ -672,8 +699,6 @@ static void dsi_l_720p_5_loki_dc_out_init(struct tegra_dc_out *dc)
 	 * only thor panel supports initialized mode
 	 */
 	dc->flags = DC_CTRL_MODE | TEGRA_DC_OUT_INITIALIZED_MODE;
-
-	loki_disp1_out = dc;
 }
 
 static void dsi_l_720p_5_loki_fb_data_init(struct tegra_fb_data *fb)
@@ -695,6 +720,19 @@ static void dsi_l_720p_5_loki_cmu_init(struct tegra_dc_platform_data *pdata)
 	pdata->cmu = &dsi_l_720p_5_loki_cmu;
 }
 #endif
+
+struct pwm_bl_data_dt_ops dsi_l_720p_5_loki_pwm_bl_ops = {
+	.notify = dsi_l_720p_5_loki_bl_notify,
+	.check_fb = dsi_l_720p_5_loki_check_fb,
+	.blnode_compatible = "l,720p-5-0-bl",
+};
+
+struct tegra_panel_ops dsi_l_720p_5_loki_ops = {
+	.enable = dsi_l_720p_5_loki_enable,
+	.disable = dsi_l_720p_5_loki_disable,
+	.postsuspend = dsi_l_720p_5_loki_postsuspend,
+	.pwm_bl_ops = &dsi_l_720p_5_loki_pwm_bl_ops,
+};
 
 struct tegra_panel __initdata dsi_l_720p_5_loki = {
 	.init_sd_settings = dsi_l_720p_5_loki_sd_settings_init,

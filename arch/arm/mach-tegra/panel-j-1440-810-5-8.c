@@ -330,7 +330,10 @@ static int dsi_j_1440_810_5_8_bl_notify(struct device *dev, int brightness)
 
 static int dsi_j_1440_810_5_8_check_fb(struct device *dev, struct fb_info *info)
 {
-	return info->device == &disp_device->dev;
+	struct platform_device *pdev = NULL;
+	pdev = to_platform_device(bus_find_device_by_name(
+		&platform_bus_type, NULL, "tegradc.0"));
+	return info->device == &pdev->dev;
 }
 
 static struct platform_pwm_backlight_data dsi_j_1440_810_5_8_bl_data = {

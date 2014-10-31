@@ -438,6 +438,11 @@ int __init loki_panel_init(int board_id)
 	struct platform_device *phost1x = NULL;
 	struct board_info bi;
 
+	struct device_node *dc1_node = NULL;
+	struct device_node *dc2_node = NULL;
+
+	find_dc_node(&dc1_node, &dc2_node);
+
 	tegra_get_board_info(&bi);
 	if ((bi.sku == BOARD_SKU_FOSTER) && (bi.board_id == BOARD_P2530)) {
 		res = platform_get_resource_byname(&loki_disp2_device,
@@ -493,21 +498,42 @@ int __init loki_panel_init(int board_id)
 	res->end = tegra_fb2_start + tegra_fb2_size - 1;
 
 	loki_disp1_device.dev.parent = &phost1x->dev;
-
-	if ((bi.sku != BOARD_SKU_FOSTER) || (bi.board_id != BOARD_P2530)) {
-		err = platform_device_register(&loki_disp1_device);
-		if (err) {
-			pr_err("disp1 device registration failed\n");
-			return err;
-		}
-	}
-
 	loki_disp2_device.dev.parent = &phost1x->dev;
 	loki_disp2_out.hdmi_out = &loki_hdmi_out;
-	err = platform_device_register(&loki_disp2_device);
-	if (err) {
-		pr_err("disp2 device registration failed\n");
-		return err;
+
+	if ((bi.sku != BOARD_SKU_FOSTER) || (bi.board_id != BOARD_P2530)) {
+		if (!of_have_populated_dt() || !dc1_node ||
+			!of_device_is_available(dc1_node)) {
+			err = platform_device_register(&loki_disp1_device);
+			if (err) {
+				pr_err("disp1 device registration failed\n");
+				return err;
+			}
+		}
+		if (!of_have_populated_dt() || !dc2_node ||
+			!of_device_is_available(dc2_node)) {
+			err = platform_device_register(&loki_disp2_device);
+			if (err) {
+				pr_err("disp2 device registration failed\n");
+				return err;
+			}
+		}
+	} else {
+		if (!of_have_populated_dt() || !dc1_node ||
+			!of_device_is_available(dc1_node)) {
+			/*
+			 * TODO
+			 * For non-DT, Why foster uses res tegra_fb2,
+			 * whereas it is connected to dc0?
+			 * If DT is used, driver uses res tegra_fb,
+			 * in case dc0 is connected.
+			 */
+			err = platform_device_register(&loki_disp2_device);
+			if (err) {
+				pr_err("disp2 device registration failed\n");
+				return err;
+			}
+		}
 	}
 
 	return err;

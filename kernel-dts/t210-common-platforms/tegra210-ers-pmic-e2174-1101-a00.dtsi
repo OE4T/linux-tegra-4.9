@@ -180,7 +180,9 @@
 					regulator-name = "vdd-pre-reg";
 					regulator-min-microvolt = <1350000>;
 					regulator-max-microvolt = <1350000>;
-					maxim,fps-source = <FPS_SRC_1>;
+					regulator-always-on;
+					regulator-boot-on;
+					maxim,fps-source = <FPS_SRC_NONE>;
 				};
 
 				max77620_sd3: sd3 {
@@ -219,7 +221,6 @@
 					regulator-name = "avdd-sys";
 					regulator-min-microvolt = <1200000>;
 					regulator-max-microvolt = <1200000>;
-					regulator-always-on;
 					regulator-boot-on;
 					maxim,fps-source = <FPS_SRC_NONE>;
 					consumers {

@@ -21,19 +21,17 @@
 
 void mc_gp10b_intr_enable(struct gk20a *g)
 {
-	if (!tegra_platform_is_linsim()) {
-		gk20a_writel(g, mc_intr_en_clear_r(0), 0xffffffff);
-		gk20a_writel(g, mc_intr_en_set_r(0),
-			     mc_intr_pfifo_pending_f()
-			     | mc_intr_pgraph_pending_f());
-		gk20a_writel(g, mc_intr_en_clear_r(1), 0xffffffff);
-		gk20a_writel(g, mc_intr_en_set_r(1),
-			     mc_intr_pfifo_pending_f()
-			     | mc_intr_pgraph_pending_f()
-			     | mc_intr_priv_ring_pending_f()
-			     | mc_intr_ltc_pending_f()
-			     | mc_intr_pbus_pending_f());
-	}
+	gk20a_writel(g, mc_intr_en_clear_r(0), 0xffffffff);
+	gk20a_writel(g, mc_intr_en_set_r(0),
+		     mc_intr_pfifo_pending_f()
+		     | mc_intr_pgraph_pending_f());
+	gk20a_writel(g, mc_intr_en_clear_r(1), 0xffffffff);
+	gk20a_writel(g, mc_intr_en_set_r(1),
+		     mc_intr_pfifo_pending_f()
+		     | mc_intr_pgraph_pending_f()
+		     | mc_intr_priv_ring_pending_f()
+		     | mc_intr_ltc_pending_f()
+		     | mc_intr_pbus_pending_f());
 }
 
 irqreturn_t mc_gp10b_isr_stall(struct gk20a *g)

@@ -48,7 +48,7 @@ static ssize_t cec_logical_addr_show(struct device *dev,
 static DEVICE_ATTR(cec_logical_addr_config, S_IWUSR | S_IRUGO,
 		cec_logical_addr_show, cec_logical_addr_store);
 
-int tegra_cec_open(struct inode *inode, struct file *file)
+static int tegra_cec_open(struct inode *inode, struct file *file)
 {
 	struct miscdevice *miscdev = file->private_data;
 	struct tegra_cec *cec = container_of(miscdev,
@@ -66,7 +66,7 @@ int tegra_cec_open(struct inode *inode, struct file *file)
 	return ret;
 }
 
-int tegra_cec_release(struct inode *inode, struct file *file)
+static int tegra_cec_release(struct inode *inode, struct file *file)
 {
 	struct tegra_cec *cec = file->private_data;
 
@@ -124,7 +124,7 @@ int tegra_cec_native_write_l(struct tegra_cec *cec, const u8 *buf, size_t cnt)
 	return ret;
 }
 
-ssize_t tegra_cec_write(struct file *file, const char __user *buf,
+static ssize_t tegra_cec_write(struct file *file, const char __user *buf,
 	size_t count, loff_t *ppos)
 {
 	u8 tx_buf[TEGRA_CEC_FRAME_MAX_LENGTH];
@@ -151,7 +151,7 @@ ssize_t tegra_cec_write(struct file *file, const char __user *buf,
 		return count;
 }
 
-ssize_t tegra_cec_read(struct file *file, char  __user *buffer,
+static ssize_t tegra_cec_read(struct file *file, char  __user *buffer,
 	size_t count, loff_t *ppos)
 {
 	struct tegra_cec *cec = file->private_data;

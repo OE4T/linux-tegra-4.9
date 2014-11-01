@@ -365,19 +365,21 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	int num_waitchks = args->num_waitchks;
 	int num_syncpt_incrs = args->num_syncpt_incrs;
 	struct nvhost_cmdbuf __user *cmdbufs =
-		(struct nvhost_cmdbuf *)(uintptr_t)args->cmdbufs;
+		(struct nvhost_cmdbuf __user *)(uintptr_t)args->cmdbufs;
 	struct nvhost_cmdbuf __user *cmdbuf_exts =
-		(struct nvhost_cmdbuf *)(uintptr_t)args->cmdbuf_exts;
+		(struct nvhost_cmdbuf __user *)(uintptr_t)args->cmdbuf_exts;
 	struct nvhost_reloc __user *relocs =
-		(struct nvhost_reloc *)(uintptr_t)args->relocs;
+		(struct nvhost_reloc __user *)(uintptr_t)args->relocs;
 	struct nvhost_reloc_shift __user *reloc_shifts =
-		(struct nvhost_reloc_shift *)(uintptr_t)args->reloc_shifts;
+		(struct nvhost_reloc_shift __user *)
+				(uintptr_t)args->reloc_shifts;
 	struct nvhost_waitchk __user *waitchks =
-		(struct nvhost_waitchk *)(uintptr_t)args->waitchks;
+		(struct nvhost_waitchk __user *)(uintptr_t)args->waitchks;
 	struct nvhost_syncpt_incr __user *syncpt_incrs =
-		(struct nvhost_syncpt_incr *)(uintptr_t)args->syncpt_incrs;
-	u32 __user *fences = (u32 *)(uintptr_t)args->fences;
-	u32 __user *class_ids = (u32 *)(uintptr_t)args->class_ids;
+		(struct nvhost_syncpt_incr __user *)
+				(uintptr_t)args->syncpt_incrs;
+	u32 __user *fences = (u32 __user *)(uintptr_t)args->fences;
+	u32 __user *class_ids = (u32 __user *)(uintptr_t)args->class_ids;
 
 	struct nvhost_master *host = nvhost_get_host(ctx->pdev);
 	u32 *local_class_ids = NULL;

@@ -296,8 +296,8 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 	struct nvhost_ctrl_module_regrdwr_args *args)
 {
 	u32 num_offsets = args->num_offsets;
-	u32 __user *offsets = (u32 *)(uintptr_t)args->offsets;
-	u32 __user *values = (u32 *)(uintptr_t)args->values;
+	u32 __user *offsets = (u32 __user *)(uintptr_t)args->offsets;
+	u32 __user *values = (u32 __user *)(uintptr_t)args->values;
 	u32 *vals;
 	u32 *p1;
 	int remaining;

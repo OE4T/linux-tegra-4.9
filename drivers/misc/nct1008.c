@@ -657,7 +657,7 @@ static const struct attribute_group nct1008_attr_group = {
 
 static const unsigned long THERM_WARN_RANGE_HIGH_OFFSET = 3000;
 static unsigned long nct1008_shutdown_warning_cur_state;
-static long nct1008_shutdown_warning_saved_temp;
+static long shutdown_warn_saved_temp;
 
 static int nct1008_shutdown_warning_get_max_state(
 					struct thermal_cooling_device *cdev,
@@ -701,14 +701,14 @@ static int nct1008_shutdown_warning_set_cur_state(
 		goto ret;
 
 	if ((temp >= (limit - THERM_WARN_RANGE_HIGH_OFFSET)) &&
-		(temp != nct1008_shutdown_warning_saved_temp)) {
+		(temp != shutdown_warn_saved_temp)) {
 		pr_warn("NCT%s: Warning: chip temperature (%ld.%02ldC) is %s SHUTDOWN limit (%c%ldC).\n",
 			(data->chip == NCT72) ? "72" : "1008",
 			temp / 1000, (temp % 1000) / 10,
 			temp > limit ? "above" :
 			temp == limit ? "at" : "near",
 			temp > limit ? '>' : '<', limit / 1000);
-		nct1008_shutdown_warning_saved_temp = temp;
+		shutdown_warn_saved_temp = temp;
 	}
 
  ret:
@@ -1601,13 +1601,6 @@ static int nct1008_probe(struct i2c_client *client,
 	bool ext_err;
 	struct nct1008_sensor_platform_data *sensor_data;
 
-	data = kzalloc(sizeof(struct nct1008_data), GFP_KERNEL);
-	if (!data)
-		return -ENOMEM;
-
-	data->client = client;
-	data->chip = id->driver_data;
-
 	if (client->dev.of_node) {
 		dev_info(&client->dev, "find device tree node, parsing dt\n");
 		pdata = nct1008_dt_parse(client);
@@ -1618,6 +1611,13 @@ static int nct1008_probe(struct i2c_client *client,
 			return err;
 		}
 	}
+
+	data = kzalloc(sizeof(struct nct1008_data), GFP_KERNEL);
+	if (!data)
+		return -ENOMEM;
+
+	data->client = client;
+	data->chip = id->driver_data;
 
 	memcpy(&data->plat_data, client->dev.platform_data,
 		sizeof(struct nct1008_platform_data));
@@ -1679,86 +1679,62 @@ static int nct1008_probe(struct i2c_client *client,
 
 	if (client->dev.of_node) {
 		/* Config for the Local sensor. */
-		data->sensors[LOC].thz = thermal_zone_of_sensor_register
-			(&(client->dev), LOC, data, &loc_sops);
+		data->sensors[LOC].thz =
+			thermal_zone_of_sensor_register(&client->dev, LOC, data,
+				&loc_sops);
 
-		if (IS_ERR_OR_NULL(data->sensors[LOC].thz))
-			goto error;
-
-		/* check ext sensor connection before registering zone */
-		if (ext_err)
-			/* skip registering unconneted sensor as zone */
-			return 0;
-
-		/* Config for the External sensor. */
-		data->sensors[EXT].thz = thermal_zone_of_sensor_register
-			(&(client->dev), EXT, data, &ext_sops);
-
-		if (IS_ERR_OR_NULL(data->sensors[EXT].thz)) {
-			thermal_zone_of_sensor_unregister(&(client->dev),
-				data->sensors[LOC].thz);
-			data->sensors[LOC].thz = NULL;
-			goto error;
-		}
-
-		nct1008_get_trip(LOC, data);
-		nct1008_get_trip(EXT, data);
+		/* register External sensor if connection is good  */
+		data->sensors[EXT].thz = ext_err ? NULL :
+			thermal_zone_of_sensor_register(&client->dev, EXT, data,
+					&ext_sops);
 	} else {
 		sensor_data = &data->plat_data.sensors[LOC];
 
 		/* Config for the Local sensor. */
 		mask = 0;
 		for (i = 0; i < sensor_data->num_trips; i++)
-			mask |=
-			(((u64)(data->plat_data.sensors[LOC]
-			.trips[i].mask > 0)) << i);
+			if (data->plat_data.sensors[LOC].trips[i].mask)
+				mask |= 1ULL << i;
 
-		data->sensors[LOC].thz = thermal_zone_device_register(
-			nct_loc_name,
-			sensor_data->num_trips,
-			mask,
-			data,
-			&nct_loc_ops,
-			sensor_data->tzp,
-			2000,
-			0);
-
-		if (IS_ERR_OR_NULL(data->sensors[LOC].thz))
-			goto error;
-
-		/* check ext sensor connection before registering zone */
-		if (ext_err)
-			/* skip registering unconneted sensor as zone */
-			return 0;
+		data->sensors[LOC].thz =
+			thermal_zone_device_register(nct_loc_name,
+						sensor_data->num_trips,
+						mask,
+						data,
+						&nct_loc_ops,
+						sensor_data->tzp,
+						2000,
+						0);
 
 		/* Config for the External sensor. */
 		mask = 0;
 		for (i = 0; i < data->plat_data.sensors[EXT].num_trips; i++)
-			mask |=
-			(((u64)(data->plat_data.sensors[EXT]
-			.trips[i].mask > 0)) << i);
+			if (data->plat_data.sensors[EXT].trips[i].mask > 0)
+				mask |= 1ULL << i;
 
-		data->sensors[EXT].thz =
+		/* register External sensor if connection is good  */
+		data->sensors[EXT].thz = ext_err ? NULL :
 			thermal_zone_device_register(nct_ext_name,
-			data->plat_data.sensors[EXT].num_trips,
-			mask,
-			data,
-			&nct_ext_ops,
-			data->plat_data.sensors[EXT].tzp,
-			data->plat_data.sensors[EXT].passive_delay,
-			data->plat_data.sensors[EXT].polling_delay);
-
-		if (IS_ERR_OR_NULL(data->sensors[EXT].thz)) {
-			thermal_zone_device_unregister(data->sensors[LOC].thz);
-			data->sensors[LOC].thz = NULL;
-			goto error;
-		}
+				data->plat_data.sensors[EXT].num_trips,
+				mask,
+				data,
+				&nct_ext_ops,
+				data->plat_data.sensors[EXT].tzp,
+				data->plat_data.sensors[EXT].passive_delay,
+				data->plat_data.sensors[EXT].polling_delay);
 	}
-	nct1008_update(EXT, data);
-	nct1008_update(LOC, data);
 
-	nct1008_shutdown_warning_saved_temp =
-				data->sensors[EXT].thz->temperature;
+	if (!IS_ERR_OR_NULL(data->sensors[LOC].thz)) {
+		nct1008_get_trip(LOC, data);
+		nct1008_update(LOC, data);
+	}
+
+	if (!IS_ERR_OR_NULL(data->sensors[EXT].thz)) {
+		nct1008_get_trip(EXT, data);
+		nct1008_update(EXT, data);
+		shutdown_warn_saved_temp = data->sensors[EXT].thz->temperature;
+	}
+
 #endif
 	return 0;
 

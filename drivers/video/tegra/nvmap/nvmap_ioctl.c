@@ -169,7 +169,7 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg,
 			output = op.addr;
 		else {
 			struct nvmap_pin_handle __user *tmp = arg;
-			output = (unsigned long *)&tmp->addr;
+			output = (unsigned long __user *)&tmp->addr;
 		}
 
 		if (!output)

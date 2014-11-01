@@ -325,7 +325,7 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 	p1 = vals;
 
 	if (args->write) {
-		if (copy_from_user((char *)vals, (char *)values,
+		if (copy_from_user((char *)vals, (char __user *)values,
 				num_offsets * args->block_size)) {
 			kfree(vals);
 			return -EFAULT;
@@ -363,7 +363,7 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 			p1 += remaining;
 		}
 
-		if (copy_to_user((char *)values, (char *)vals,
+		if (copy_to_user((char *)values, (char __user *)vals,
 				args->num_offsets * args->block_size)) {
 			kfree(vals);
 			return -EFAULT;

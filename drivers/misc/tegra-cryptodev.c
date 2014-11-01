@@ -664,10 +664,10 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 			crypt_req.iv[i] = crypt_req_32.iv[i];
 		crypt_req.ivlen = crypt_req_32.ivlen;
 		crypt_req.plaintext =
-			(u8 *)(void __user *)(__u64)(crypt_req_32.plaintext);
+			(u8 __user *)(void *)(__u64)(crypt_req_32.plaintext);
 		crypt_req.plaintext_sz = crypt_req_32.plaintext_sz;
 		crypt_req.result =
-			(u8 *)(void __user *)(__u64)(crypt_req_32.result);
+			(u8 __user *)(void *)(__u64)(crypt_req_32.result);
 
 		ret = process_crypt_req(ctx, &crypt_req);
 		break;
@@ -732,7 +732,7 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 
 		rng_req.nbytes = rng_req_32.nbytes;
 		rng_req.type = rng_req_32.type;
-		rng_req.rdata = (u8 *)(void __user *)(__u64)rng_req_32.rdata;
+		rng_req.rdata = (u8 __user *)(void *)(__u64)rng_req_32.rdata;
 		/* fall through */
 #endif
 
@@ -796,12 +796,12 @@ rng_out:
 			sha_req.key[i] = sha_req_32.key[i];
 		sha_req.keylen = sha_req_32.keylen;
 		sha_req.algo =
-		(unsigned char *)(void __user *)(__u64)(sha_req_32.algo);
+		(unsigned char __user *)(void *)(__u64)(sha_req_32.algo);
 		sha_req.plaintext =
-		(unsigned char *)(void __user *)(__u64)(sha_req_32.plaintext);
+		(unsigned char __user *)(void *)(__u64)(sha_req_32.plaintext);
 		sha_req.plaintext_sz = sha_req_32.plaintext_sz;
 		sha_req.result =
-		(unsigned char *)(void __user *)(__u64)(sha_req_32.result);
+		(unsigned char __user *)(void *)(__u64)(sha_req_32.result);
 
 		ret = tegra_crypto_sha(&sha_req);
 		break;
@@ -837,12 +837,12 @@ rng_out:
 		rsa_req.modlen = rsa_req_32.modlen;
 		rsa_req.pub_explen = rsa_req_32.pub_explen;
 		rsa_req.prv_explen = rsa_req_32.prv_explen;
-		rsa_req.key = (char *)(void __user *)(__u64)(rsa_req_32.key);
+		rsa_req.key = (char __user *)(void *)(__u64)(rsa_req_32.key);
 		rsa_req.message =
-			(char *)(void __user *)(__u64)(rsa_req_32.message);
+			(char __user *)(void *)(__u64)(rsa_req_32.message);
 		rsa_req.msg_len = rsa_req_32.msg_len;
 		rsa_req.result =
-			(char *)(void __user *)(__u64)(rsa_req_32.result);
+			(char __user *)(void *)(__u64)(rsa_req_32.result);
 		rsa_req.skip_key = rsa_req_32.skip_key;
 
 		ret = tegra_crypt_rsa(ctx, &rsa_req);

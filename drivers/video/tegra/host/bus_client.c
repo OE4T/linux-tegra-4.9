@@ -568,6 +568,156 @@ fail:
 	return err;
 }
 
+static int nvhost_ioctl_channel_map_buffer(struct nvhost_channel_userctx *ctx,
+				struct nvhost_channel_map_buffer_args *args)
+{
+	struct nvhost_channel_buffer __user *__buffers =
+		(struct nvhost_channel_buffer *)(uintptr_t)args->table_address;
+	struct nvhost_channel_buffer *buffers;
+	int err = 0, i = 0, num_handled_buffers = 0;
+	dma_addr_t addr = 0;
+
+	/* ensure that reserved fields are kept clear */
+	if (args->reserved)
+		return -EINVAL;
+
+	/* allocate room for buffers */
+	buffers = kzalloc(args->num_buffers * sizeof(*buffers), GFP_KERNEL);
+	if (!buffers) {
+		err = -ENOMEM;
+		goto err_alloc_buffers;
+	}
+
+	/* copy the buffers from user space */
+	err = copy_from_user(buffers, __buffers,
+			     sizeof(*__buffers) * args->num_buffers);
+	if (err)
+		goto err_copy_from_user;
+
+	/* go through all the buffers */
+	for (i = 0, num_handled_buffers = 0;
+	     i < args->num_buffers;
+	     i++, num_handled_buffers++) {
+		struct dma_buf *dmabuf;
+
+		/* ensure that reserved fields are kept clear */
+		if (buffers[i].reserved0 ||
+		    buffers[i].reserved1[0] ||
+		    buffers[i].reserved1[1]) {
+			err = -EINVAL;
+			goto err_map_buffers;
+		}
+
+		/* validate dmabuf fd */
+		dmabuf = dma_buf_get(buffers[i].dmabuf_fd);
+		if (IS_ERR(dmabuf))
+			goto err_map_buffers;
+
+		/* map it into context vm */
+		err = nvhost_vm_map_dmabuf(ctx->vm, dmabuf,
+					   &addr);
+		buffers[i].address = (u64)addr;
+
+		/* not needed anymore, vm keeps reference now */
+		dma_buf_put(dmabuf);
+
+		if (err)
+			goto err_map_buffers;
+	}
+
+	/* finally, copy the addresses back to userspace */
+	err = copy_to_user(__buffers, buffers,
+			   args->num_buffers * sizeof(*buffers));
+	if (err)
+		goto err_copy_buffers_to_user;
+
+	kfree(buffers);
+	return err;
+
+err_copy_buffers_to_user:
+err_map_buffers:
+	for (i = 0; i < num_handled_buffers; i++) {
+		struct dma_buf *dmabuf;
+
+		dmabuf = dma_buf_get(buffers[i].dmabuf_fd);
+		if (IS_ERR(dmabuf))
+			continue;
+		nvhost_vm_unmap_dmabuf(ctx->vm, dmabuf);
+		dma_buf_put(dmabuf);
+	}
+err_copy_from_user:
+	kfree(buffers);
+err_alloc_buffers:
+	return err;
+}
+
+static int nvhost_ioctl_channel_unmap_buffer(struct nvhost_channel_userctx *ctx,
+				struct nvhost_channel_unmap_buffer_args *args)
+{
+	struct nvhost_channel_buffer __user *__buffers =
+		(struct nvhost_channel_buffer *)(uintptr_t)args->table_address;
+	struct nvhost_channel_buffer *buffers;
+	int err = 0, i = 0, num_handled_buffers = 0;
+	struct dma_buf **dmabufs;
+
+	/* ensure that reserved fields are kept clear */
+	if (args->reserved)
+		return -EINVAL;
+
+	/* allocate room for buffers */
+	buffers = kzalloc(args->num_buffers * sizeof(*buffers), GFP_KERNEL);
+	if (!buffers) {
+		err = -ENOMEM;
+		goto err_alloc_buffers;
+	}
+
+	/* allocate room for buffers */
+	dmabufs = kzalloc(args->num_buffers * sizeof(*dmabufs), GFP_KERNEL);
+	if (!buffers) {
+		err = -ENOMEM;
+		goto err_alloc_dmabufs;
+	}
+
+	/* copy the buffers from user space */
+	err = copy_from_user(buffers, __buffers,
+			     sizeof(*__buffers) * args->num_buffers);
+	if (err)
+		goto err_copy_from_user;
+
+	/* first get all dmabufs... */
+	for (i = 0, num_handled_buffers = 0;
+	     i < args->num_buffers;
+	     i++, num_handled_buffers++) {
+		/* ensure that reserved fields are kept clear */
+		if (buffers[i].reserved0 ||
+		    buffers[i].reserved1[0] ||
+		    buffers[i].reserved1[1]) {
+			err = -EINVAL;
+			goto err_get_dmabufs;
+		}
+
+		dmabufs[i] = dma_buf_get(buffers[i].dmabuf_fd);
+		if (IS_ERR(dmabufs[i])) {
+			err = PTR_ERR(dmabufs[i]);
+			goto err_get_dmabufs;
+		}
+	}
+
+	/* ..then unmap */
+	for (i = 0; i < args->num_buffers; i++)
+		nvhost_vm_unmap_dmabuf(ctx->vm, dmabufs[i]);
+
+err_get_dmabufs:
+	for (i = 0; i < num_handled_buffers; i++)
+		dma_buf_put(dmabufs[i]);
+err_copy_from_user:
+	kfree(dmabufs);
+err_alloc_dmabufs:
+	kfree(buffers);
+err_alloc_buffers:
+	return err;
+}
+
 static int moduleid_to_index(struct platform_device *dev, u32 moduleid)
 {
 	int i;
@@ -1038,6 +1188,12 @@ static long nvhost_channelctl(struct file *filp,
 	case NVHOST_IOCTL_CHANNEL_SET_ERROR_NOTIFIER:
 		err = nvhost_init_error_notifier(priv,
 			(struct nvhost_set_error_notifier *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_MAP_BUFFER:
+		err = nvhost_ioctl_channel_map_buffer(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CHANNEL_UNMAP_BUFFER:
+		err = nvhost_ioctl_channel_unmap_buffer(priv, (void *)buf);
 		break;
 	case NVHOST_IOCTL_CHANNEL_SET_TIMEOUT_EX:
 	{

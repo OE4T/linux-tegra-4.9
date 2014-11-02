@@ -1244,3 +1244,24 @@ void nvsd_remove_sysfs(struct device *dev)
 	}
 }
 EXPORT_SYMBOL(nvsd_remove_sysfs);
+
+/*wrapper function used for disabling/enabling prism*/
+void nvsd_enbl_dsbl_prism(struct device *dev, bool status)
+{
+	bool last_status;
+	struct tegra_dc_sd_settings *settings;
+	struct platform_device *ndev = to_platform_device(dev);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	if (!dc)
+		return;
+
+	last_status = dc->out->sd_settings->enable;
+	if (status == last_status)
+		return;
+
+	settings = dc->out->sd_settings;
+	settings->enable = status;
+	nvsd_init(dc, settings);
+	return;
+}
+EXPORT_SYMBOL(nvsd_enbl_dsbl_prism);

@@ -801,7 +801,7 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 		tmds_config_modes[i].clk < hdmi->dc->mode.pclk; i++)
 		;
 
-	err = tegra_prod_set_by_name(hdmi->sor->base,
+	err = tegra_prod_set_by_name(&hdmi->sor->base,
 				tmds_config_modes[i].name, hdmi->prod_list);
 	if (err) {
 		dev_warn(&hdmi->dc->ndev->dev,

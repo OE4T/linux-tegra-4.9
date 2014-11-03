@@ -4411,6 +4411,9 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 			| mc_enable_perfmon_enabled_f());
 
 	gr_gk20a_load_gating_prod(g);
+	/* Disable elcg until it gets enabled later in the init*/
+	gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
+	gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
 
 	/* enable fifo access */
 	gk20a_writel(g, gr_gpfifo_ctl_r(),

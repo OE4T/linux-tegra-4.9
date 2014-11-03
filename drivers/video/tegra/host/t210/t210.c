@@ -46,7 +46,7 @@
 
 #include "cg_regs.c"
 
-#define HOST_EMC_FLOOR 300000000
+#define HOST_EMC_FLOOR 204000000
 #define TSEC_POWERGATE_DELAY 500
 
 #define BIT64(nr) (1ULL << (nr))

@@ -110,7 +110,8 @@ u32 nvhost_syncpt_update_min(struct nvhost_syncpt *sp, u32 id)
 u32 nvhost_syncpt_set_min_cached(struct nvhost_syncpt *sp, u32 id, u32 val)
 {
 	u32 old = nvhost_syncpt_read_min(sp, id);
-	if ((u32)atomic_cmpxchg(&sp->min_val[id], old, val) != old)
+	if (nvhost_syncpt_is_expired(sp, id, val) ||
+		((u32)atomic_cmpxchg(&sp->min_val[id], old, val) != old))
 		return nvhost_syncpt_update_min(sp, id);
 
 	return val;

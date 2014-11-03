@@ -868,7 +868,7 @@ rng_out:
 	return ret;
 }
 
-const struct file_operations tegra_crypto_fops = {
+static const struct file_operations tegra_crypto_fops = {
 	.owner = THIS_MODULE,
 	.open = tegra_crypto_dev_open,
 	.release = tegra_crypto_dev_release,
@@ -878,7 +878,7 @@ const struct file_operations tegra_crypto_fops = {
 #endif
 };
 
-struct miscdevice tegra_crypto_device = {
+static struct miscdevice tegra_crypto_device = {
 	.minor = MISC_DYNAMIC_MINOR,
 	.name = "tegra-crypto",
 	.fops = &tegra_crypto_fops,

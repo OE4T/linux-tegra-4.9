@@ -7285,7 +7285,7 @@ void gk20a_resume_all_sms(struct gk20a *g)
 		gr_gpcs_tpcs_sm_dbgr_control0_r(), dbgr_control0);
 
 	/* Run trigger */
-	dbgr_control0 |= gr_gpcs_tpcs_sm_dbgr_control0_run_trigger_enable_f();
+	dbgr_control0 |= gr_gpcs_tpcs_sm_dbgr_control0_run_trigger_task_f();
 	gk20a_writel(g,
 		gr_gpcs_tpcs_sm_dbgr_control0_r(), dbgr_control0);
 }

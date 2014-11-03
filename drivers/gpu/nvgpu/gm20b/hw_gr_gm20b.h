@@ -2830,6 +2830,14 @@ static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_trigger_enable_f(void)
 {
 	return 0x80000000;
 }
+static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_trigger_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_run_trigger_task_f(void)
+{
+	return 0x40000000;
+}
 static inline u32 gr_gpc0_tpc0_sm_dbgr_status0_r(void)
 {
 	return 0x0050460c;
@@ -2841,6 +2849,22 @@ static inline u32 gr_gpc0_tpc0_sm_dbgr_status0_locked_down_v(u32 r)
 static inline u32 gr_gpc0_tpc0_sm_dbgr_status0_locked_down_true_v(void)
 {
 	return 0x00000001;
+}
+static inline u32 gr_gpcs_tpcs_sm_hww_global_esr_r(void)
+{
+	return 0x00419e50;
+}
+static inline u32 gr_gpcs_tpcs_sm_hww_global_esr_bpt_int_pending_f(void)
+{
+	return 0x10;
+}
+static inline u32 gr_gpcs_tpcs_sm_hww_global_esr_bpt_pause_pending_f(void)
+{
+	return 0x20;
+}
+static inline u32 gr_gpcs_tpcs_sm_hww_global_esr_single_step_complete_pending_f(void)
+{
+	return 0x40;
 }
 static inline u32 gr_gpc0_tpc0_sm_hww_global_esr_r(void)
 {
@@ -3241,5 +3265,45 @@ static inline u32 gr_gpcs_pri_mmu_debug_rd_r(void)
 static inline u32 gr_gpcs_mmu_num_active_ltcs_r(void)
 {
 	return 0x004188ac;
+}
+static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_r(void)
+{
+	return 0x00419e10;
+}
+static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_debugger_mode_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_debugger_mode_on_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_enable_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_run_trigger_m(void)
+{
+	return 0x1 << 30;
+}
+static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_run_trigger_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_run_trigger_task_f(void)
+{
+	return 0x40000000;
 }
 #endif

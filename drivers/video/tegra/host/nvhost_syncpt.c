@@ -200,6 +200,11 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	void *waiter;
 	int err = 0, check_count = 0, low_timeout = 0;
 	u32 val, old_val, new_val;
+	struct nvhost_master *host = syncpt_to_dev(sp);
+	struct nvhost_device_data *data = platform_get_drvdata(host->dev);
+	bool (*syncpt_is_expired)(struct nvhost_syncpt *sp,
+			u32 id,
+			u32 thresh);
 
 	if (!id || id >= nvhost_syncpt_nb_pts(sp))
 		return -EINVAL;
@@ -260,19 +265,25 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	if (timeout < SYNCPT_CHECK_PERIOD)
 		low_timeout = timeout;
 
+	if (data->virtual_dev)
+		syncpt_is_expired = nvhost_syncpt_is_expired;
+	else
+		syncpt_is_expired = syncpt_update_min_is_expired;
+
 	/* wait for the syncpoint, or timeout, or signal */
 	while (timeout) {
 		u32 check = min_t(u32, SYNCPT_CHECK_PERIOD, timeout);
 		int remain;
 		if (interruptible)
 			remain = wait_event_interruptible_timeout(wq,
-				syncpt_update_min_is_expired(sp, id, thresh),
+				syncpt_is_expired(sp, id, thresh),
 				check);
 		else
 			remain = wait_event_timeout(wq,
-				syncpt_update_min_is_expired(sp, id, thresh),
+				syncpt_is_expired(sp, id, thresh),
 				check);
-		if (remain > 0 || nvhost_syncpt_is_expired(sp, id, thresh)) {
+		if (remain > 0 ||
+			syncpt_update_min_is_expired(sp, id, thresh)) {
 			if (value)
 				*value = nvhost_syncpt_read_min(sp, id);
 			if (ts) {

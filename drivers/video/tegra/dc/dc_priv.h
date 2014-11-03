@@ -575,6 +575,7 @@ struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
 	struct resource *fb_mem);
 
 void nvdisp_dc_feature_register(struct tegra_dc *dc);
+int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y);
 #endif
 
 #endif

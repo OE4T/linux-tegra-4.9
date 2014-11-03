@@ -65,13 +65,18 @@ static inline u32 cursor_format_value(enum tegra_dc_cursor_format format,
 		val = &scratch;
 	switch (format) {
 	case TEGRA_DC_CURSOR_FORMAT_2BIT_LEGACY:
+		/* MODE_SELECT_LEGACY */
 		*val |= CURSOR_MODE_SELECT(0);
 		return 0;
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
 	!defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	case TEGRA_DC_CURSOR_FORMAT_RGBA_NON_PREMULT_ALPHA:
+# if !defined(CONFIG_TEGRA_NVDISPLAY)
+		/* MODE_SELECT_NORMAL */
 		*val |= CURSOR_MODE_SELECT(1);
+#endif
 # if !defined(CONFIG_ARCH_TEGRA_11x_SOC)
+		/* CURSOR_ALPHA, K1_TIMES_SRC, NEG_K1_TIMES_SRC */
 		*val |= CURSOR_ALPHA(255) | CURSOR_DST_BLEND_FACTOR_SELECT(2);
 		*val |= CURSOR_SRC_BLEND_FACTOR_SELECT(1);
 # endif
@@ -86,6 +91,18 @@ static inline u32 cursor_format_value(enum tegra_dc_cursor_format format,
 		*val |= CURSOR_SRC_BLEND_FACTOR_SELECT(0);
 		return 0;
 #endif
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	case TEGRA_DC_CURSOR_FORMAT_RGBA_XOR:
+		/* MODE_SELECT_NORMAL */
+		*val |= CURSOR_COMP_MODE(1);
+		/* CURSOR_ALPHA, K1, NEG_K1_TIMES_SRC */
+		*val |= CURSOR_ALPHA(255) | CURSOR_DST_BLEND_FACTOR_SELECT(1);
+		*val |= CURSOR_SRC_BLEND_FACTOR_SELECT(1);
+		return 0;
+#endif
+	default:
+		pr_err("%s: invalid format 0x%x\n", __func__, format);
+		break;
 	}
 	*val = 0;
 	return -EINVAL;
@@ -110,13 +127,17 @@ static unsigned int set_cursor_start_addr(struct tegra_dc *dc,
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
 	defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	tegra_dc_writel(dc, val | CURSOR_START_ADDR(((unsigned long)phys_addr)),
-		DC_DISP_CURSOR_START_ADDR);
+			DC_DISP_CURSOR_START_ADDR);
 #else
 	/* TODO: check calculation with HW */
 	tegra_dc_writel(dc, (u32)(CURSOR_START_ADDR_HI(phys_addr)),
-		DC_DISP_CURSOR_START_ADDR_HI);
+			DC_DISP_CURSOR_START_ADDR_HI);
 	tegra_dc_writel(dc, (u32)(val | CURSOR_START_ADDR_LOW(phys_addr)),
-		DC_DISP_CURSOR_START_ADDR);
+			DC_DISP_CURSOR_START_ADDR);
+#endif
+
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	WARN_ON((phys_addr & 0x3FF) != 0);
 #endif
 
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
@@ -133,7 +154,11 @@ static unsigned int set_cursor_start_addr(struct tegra_dc *dc,
 
 static int set_cursor_position(struct tegra_dc *dc, s16 x, s16 y)
 {
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	nvdisp_set_cursor_position(dc, x, y);
+#else
 	tegra_dc_writel(dc, CURSOR_POSITION(x, y), DC_DISP_CURSOR_POSITION);
+#endif
 
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
 	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
@@ -152,7 +177,8 @@ static int set_cursor_activation_control(struct tegra_dc *dc)
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
 	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
 	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	!defined(CONFIG_ARCH_TEGRA_14x_SOC) && \
+	!defined(CONFIG_TEGRA_NVDISPLAY)
 	u32 reg = tegra_dc_readl(dc, DC_CMD_REG_ACT_CONTROL);
 
 	if ((reg & (1 << CURSOR_ACT_CNTR_SEL)) ==
@@ -202,6 +228,8 @@ static int set_cursor_blend(struct tegra_dc *dc, u32 format)
 static int set_cursor_fg_bg(struct tegra_dc *dc, u32 fg, u32 bg)
 {
 	int general_update_needed = 0;
+
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 	/* TODO: check fg/bg against data structure, don't read the HW */
 	if (fg != tegra_dc_readl(dc, DC_DISP_CURSOR_FOREGROUND)) {
 		tegra_dc_writel(dc, fg, DC_DISP_CURSOR_FOREGROUND);
@@ -214,6 +242,7 @@ static int set_cursor_fg_bg(struct tegra_dc *dc, u32 fg, u32 bg)
 	}
 	dc->cursor.fg = fg;
 	dc->cursor.bg = bg;
+#endif
 
 	return general_update_needed;
 }

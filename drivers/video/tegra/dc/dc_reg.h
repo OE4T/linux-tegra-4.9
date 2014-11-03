@@ -417,9 +417,15 @@
 #define   CURSOR_SIZE_256		(0x3 << 24)
 
 #define DC_DISP_CURSOR_POSITION			0x440
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+#define   CURSOR_POSITION(_x, _y)		\
+	(((_x) & ((1 << 16) - 1)) |		\
+	(((_y) & ((1 << 16) - 1)) << 16))
+#else
 #define   CURSOR_POSITION(_x, _y)		\
 	(((_x) & ((1 << 14) - 1)) |		\
 	(((_y) & ((1 << 14) - 1)) << 16))
+#endif
 
 #define DC_DISP_CURSOR_POSITION_NS		0x441
 #define DC_DISP_INIT_SEQ_CONTROL		0x442
@@ -427,6 +433,7 @@
 #define DC_DISP_SPI_INIT_SEQ_DATA_B		0x444
 #define DC_DISP_SPI_INIT_SEQ_DATA_C		0x445
 #define DC_DISP_SPI_INIT_SEQ_DATA_D		0x446
+
 #define DC_DISP_DC_MCCIF_FIFOCTRL		0x480
 #define DC_DISP_MCCIF_DISPLAY0A_HYST		0x481
 #define DC_DISP_MCCIF_DISPLAY0B_HYST		0x482
@@ -438,6 +445,7 @@
 
 #define	DC_DISP_BLEND_CURSOR_CONTROL		0x4f1
 #define  WINH_CURS_SELECT(x)		(((x) & 0x1) << 28)
+#define  CURSOR_COMP_MODE(x)		(((x) & 0x1) << 25)
 #define  CURSOR_MODE_SELECT(x)		(((x) & 0x1) << 24)
 #define  CURSOR_DST_BLEND_FACTOR_SELECT(x) ((x) << 16)
 #define  CURSOR_SRC_BLEND_FACTOR_SELECT(x) ((x) << 8)

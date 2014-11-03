@@ -20,7 +20,8 @@
 	host1x {
 		sor1 {
 			prod-settings {
-				prod = <
+				prod {
+				    prod = <
 					0x000003a0 0xfffffffe 0x00000001	// SOR_NV_PDISP_INPUT_CONTROL  	00:00=HDMI_SRC_SELECT	0x1
 					0x0000005c 0xf0fff8ff 0x01000000	// SOR_NV_PDISP_SOR_PLL0_0	11:08=VCOCAP		0x0
 										//				27:24=ICHPMP		0x1
@@ -41,8 +42,10 @@
 					0x00000170 0xffbf00ff 0x00401000	// SOR_NV_PDISP_SOR_DP_PADCTL0_0
 										//				22:22=TX_PU		0x1
 										//				15:08=TX_PU_VALUE	0x10
-				>;
-				prod_c_54M = <
+				   >;
+				};
+				prod_c_54M {
+				    prod = <
 					0x000003a0 0xfffffffd 0x00000002	// SOR_NV_PDISP_INPUT_CONTROL  	01:01=ARM_VIDEO_RANGE	0x1
 					0x0000005c 0xf0fff8ff 0x01000000	// SOR_NV_PDISP_SOR_PLL0_0	11:08=VCOCAP		0x0
 										//				27:24=ICHPMP		0x1
@@ -63,8 +66,10 @@
 					0x00000170 0xffbf00ff 0x00401000	// SOR_NV_PDISP_SOR_DP_PADCTL0_0
 										//				22:22=TX_PU		0x1
 										//				15:08=TX_PU_VALUE	0x10
-				>;
-				prod_c_75M = <
+				   >;
+				};
+				prod_c_75M {
+				    prod = <
 					0x000003a0 0xfffffffd 0x00000002	// SOR_NV_PDISP_INPUT_CONTROL  	01:01=ARM_VIDEO_RANGE	0x1
 					0x0000005c 0xf0fff8ff 0x01000100	// SOR_NV_PDISP_SOR_PLL0_0	11:08=VCOCAP		0x1
 										//				27:24=ICHPMP		0x1
@@ -86,8 +91,10 @@
 										//				22:22=TX_PU		0x1
 										//				15:08=TX_PU_VALUE	0x40
 
-				>;
-				prod_c_150M = <
+				    >;
+				};
+				prod_c_150M {
+				    prod = <
 					0x000003a0 0xfffffffd 0x00000000	// SOR_NV_PDISP_INPUT_CONTROL  	01:01=ARM_VIDEO_RANGE	0x0
 					0x0000005c 0xf0fff8ff 0x01000300	// SOR_NV_PDISP_SOR_PLL0_0	11:08=VCOCAP		0x3
 										//				27:24=ICHPMP		0x1
@@ -108,8 +115,10 @@
 					0x00000170 0xffbf00ff 0x00406600	// SOR_NV_PDISP_SOR_DP_PADCTL0_0
 										//				22:22=TX_PU		0x1
 										//				15:08=TX_PU_VALUE	0x66
-				>;
-				prod_c_300M = <
+				    >;
+				};
+				prod_c_300M {
+				    prod = <
 					0x000003a0 0xfffffffd 0x00000000	// SOR_NV_PDISP_INPUT_CONTROL  	01:01=ARM_VIDEO_RANGE	0x0
 					0x0000005c 0xf0fff8ff 0x01000300	// SOR_NV_PDISP_SOR_PLL0_0	11:08=VCOCAP		0x3
 										//				27:24=ICHPMP		0x1
@@ -130,8 +139,10 @@
 					0x00000170 0xffbf00ff 0x00406600	// SOR_NV_PDISP_SOR_DP_PADCTL0_0
 										//				22:22=TX_PU		0x1
 										//				15:08=TX_PU_VALUE	0x66
-				>;
-				prod_c_600M = <
+				    >;
+				};
+				prod_c_600M {
+				    prod = <
 					0x000003a0 0xfffffffd 0x00000002	// SOR_NV_PDISP_INPUT_CONTROL  	01:01=ARM_VIDEO_RANGE	0x1
 					0x0000005c 0xf0fff8ff 0x01000300	// SOR_NV_PDISP_SOR_PLL0_0	11:08=VCOCAP		0x3
 										//				27:24=ICHPMP		0x1
@@ -152,7 +163,8 @@
 					0x00000170 0xffbf00ff 0x00406600	// SOR_NV_PDISP_SOR_DP_PADCTL0_0
 										//				22:22=TX_PU		0x1
 										//				15:08=TX_PU_VALUE	0x66
-				>;
+				   >;
+				};
 			};
 		};
 	};

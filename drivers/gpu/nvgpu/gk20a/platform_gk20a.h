@@ -155,6 +155,11 @@ struct gk20a_platform {
 	 */
 	void (*dump_platform_dependencies)(struct platform_device *dev);
 
+	/* Callbacks to assert/deassert GPU reset */
+	int (*reset_assert)(struct platform_device *pdev);
+	int (*reset_deassert)(struct platform_device *pdev);
+	struct clk *clk_reset;
+
 	bool virtual_dev;
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	u64 virt_handle;

@@ -1671,10 +1671,14 @@ int __gk20a_do_idle(struct platform_device *pdev)
 		else
 			goto fail_timeout;
 	} else {
+		if (!platform->reset_assert || !platform->reset_deassert)
+			goto fail_timeout;
+
 		pm_runtime_get_sync(&pdev->dev);
 		gk20a_pm_prepare_poweroff(&pdev->dev);
 
-		tegra_periph_reset_assert(platform->clk[0]);
+		platform->reset_assert(pdev);
+
 		udelay(10);
 
 		g->forced_reset = true;
@@ -1717,7 +1721,7 @@ int __gk20a_do_unidle(struct platform_device *pdev)
 	struct gk20a_platform *platform = dev_get_drvdata(&pdev->dev);
 
 	if (g->forced_reset) {
-		tegra_periph_reset_deassert(platform->clk[0]);
+		platform->reset_deassert(pdev);
 
 		gk20a_pm_finalize_poweron(&pdev->dev);
 		pm_runtime_put_sync(&pdev->dev);

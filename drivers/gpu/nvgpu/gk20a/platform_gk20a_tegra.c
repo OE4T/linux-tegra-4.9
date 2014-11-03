@@ -24,6 +24,7 @@
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
 #include <linux/tegra_pm_domains.h>
+#include <linux/platform/tegra/clock.h>
 
 #include "gk20a.h"
 #include "hal_gk20a.h"
@@ -321,6 +322,47 @@ err_get_clock:
 	return ret;
 }
 
+static int gk20a_tegra_reset_assert(struct platform_device *dev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+
+	if (!platform->clk_reset)
+		platform->clk_reset = platform->clk[0];
+
+	tegra_periph_reset_assert(platform->clk_reset);
+
+	return 0;
+}
+
+static int gk20a_tegra_reset_deassert(struct platform_device *dev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+
+	if (!platform->clk_reset)
+		return -EINVAL;
+
+	tegra_periph_reset_deassert(platform->clk_reset);
+
+	return 0;
+}
+
+static int gm20b_tegra_reset_assert(struct platform_device *dev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+
+	if (!platform->clk_reset) {
+		platform->clk_reset = clk_get(&dev->dev, "gpu_gate");
+		if (IS_ERR(platform->clk_reset)) {
+			gk20a_err(&dev->dev, "fail to get gpu reset clk\n");
+			return PTR_ERR(platform->clk_reset);
+		}
+	}
+
+	tegra_periph_reset_assert(platform->clk_reset);
+
+	return 0;
+}
+
 static void gk20a_tegra_scale_init(struct platform_device *pdev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(pdev);
@@ -457,6 +499,9 @@ struct gk20a_platform t132_gk20a_tegra_platform = {
 	.busy = gk20a_tegra_busy,
 	.idle = gk20a_tegra_idle,
 
+	.reset_assert = gk20a_tegra_reset_assert,
+	.reset_deassert = gk20a_tegra_reset_deassert,
+
 	/* frequency scaling configuration */
 	.prescale = gk20a_tegra_prescale,
 	.postscale = gk20a_tegra_postscale,
@@ -494,6 +539,9 @@ struct gk20a_platform gk20a_tegra_platform = {
 
 	.busy = gk20a_tegra_busy,
 	.idle = gk20a_tegra_idle,
+
+	.reset_assert = gk20a_tegra_reset_assert,
+	.reset_deassert = gk20a_tegra_reset_deassert,
 
 	/* frequency scaling configuration */
 	.prescale = gk20a_tegra_prescale,
@@ -533,6 +581,9 @@ struct gk20a_platform gm20b_tegra_platform = {
 
 	.busy = gk20a_tegra_busy,
 	.idle = gk20a_tegra_idle,
+
+	.reset_assert = gm20b_tegra_reset_assert,
+	.reset_deassert = gk20a_tegra_reset_deassert,
 
 	/* frequency scaling configuration */
 	.prescale = gk20a_tegra_prescale,

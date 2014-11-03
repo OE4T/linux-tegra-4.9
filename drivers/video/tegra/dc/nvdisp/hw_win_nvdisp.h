@@ -298,4 +298,40 @@ static inline u32 win_act_control_ctrl_sel_hcounter_f(void)
 {
 	return 0x1;
 }
+static inline u32 win_start_addr_u_r(void)
+{
+	return 0x00000802;
+}
+static inline u32 win_start_addr_hi_u_r(void)
+{
+	return 0x0000080f;
+}
+static inline u32 win_start_addr_v_r(void)
+{
+	return 0x00000804;
+}
+static inline u32 win_start_addr_hi_v_r(void)
+{
+	return 0x00000811;
+}
+static inline u32 win_window_set_control_r(void)
+{
+	return 0x00000730;
+}
+static inline u32 win_window_set_control_csc_enable_f(void)
+{
+	return 0x20;
+}
+static inline u32 win_set_planar_storage_uv_r(void)
+{
+	return 0x0000070a;
+}
+static inline u32 win_set_planar_storage_uv_uv0_f(u32 v)
+{
+	return (v & 0x1fff) << 0;
+}
+static inline u32 win_set_planar_storage_uv_uv1_f(u32 v)
+{
+	return (v & 0x1fff) << 16;
+}
 #endif

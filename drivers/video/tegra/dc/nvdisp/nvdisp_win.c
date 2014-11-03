@@ -54,6 +54,8 @@ static int tegra_nvdisp_enable_cde(struct tegra_dc_win *win)
 static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 {
 	u32 win_options;
+	bool yuvp = tegra_dc_is_yuv_planar(win->fmt);
+	bool yuvsp = tegra_dc_is_yuv_semi_planar(win->fmt);
 
 	nvdisp_win_write(win, tegra_dc_fmt(win->fmt), win_color_depth_r());
 	nvdisp_win_write(win,
@@ -88,11 +90,36 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 		win_start_addr_r());
 	nvdisp_win_write(win, tegra_dc_reg_h32(win->phys_addr),
 		win_start_addr_hi_r());
-	nvdisp_win_write(win, (win->stride>>6), win_set_planar_storage_r());
 
-	/* TODO: program related YUV registers as well */
+	/*	pitch is in 64B chunks	*/
+	nvdisp_win_write(win, (win->stride>>6),
+		win_set_planar_storage_r());
 
-	/* TODO: confirm ADDR_H/V_OFFSET programming not needed anymore */
+	if (yuvp) {
+		nvdisp_win_write(win, tegra_dc_reg_l32(win->phys_addr_u),
+			win_start_addr_u_r());
+		nvdisp_win_write(win, tegra_dc_reg_h32(win->phys_addr_u),
+			win_start_addr_hi_u_r());
+		nvdisp_win_write(win, tegra_dc_reg_l32(win->phys_addr_v),
+			win_start_addr_v_r());
+		nvdisp_win_write(win, tegra_dc_reg_h32(win->phys_addr_v),
+			win_start_addr_hi_v_r());
+
+		nvdisp_win_write(win,
+			win_set_planar_storage_uv_uv0_f(win->stride_uv>>6) |
+			win_set_planar_storage_uv_uv1_f(win->stride_uv>>6),
+			win_set_planar_storage_uv_r());
+	} else if (yuvsp) {
+		nvdisp_win_write(win, tegra_dc_reg_l32(win->phys_addr_u),
+			win_start_addr_u_r());
+		nvdisp_win_write(win, tegra_dc_reg_h32(win->phys_addr_u),
+			win_start_addr_hi_u_r());
+
+		nvdisp_win_write(win,
+			win_set_planar_storage_uv_uv0_f(win->stride_uv>>6),
+			win_set_planar_storage_uv_r());
+	}
+
 	if (WIN_IS_BLOCKLINEAR(win)) {
 		nvdisp_win_write(win, win_surface_kind_kind_bl_f() |
 			win_surface_kind_block_height_f(win->block_height_log2),

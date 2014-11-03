@@ -90,6 +90,11 @@ static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 	dbg_session->g     = g;
 	dbg_session->is_profiler = is_profiler;
 	dbg_session->is_pg_disabled = false;
+	/* For vgpu, all power-gating features are currently disabled
+	 * in the server. Set is_pg_disable to true to reflect this
+	 * on the client side. */
+	if (gk20a_gpu_is_virtual(pdev))
+		dbg_session->is_pg_disabled = true;
 
 	INIT_LIST_HEAD(&dbg_session->dbg_s_list_node);
 	init_waitqueue_head(&dbg_session->dbg_events.wait_queue);
@@ -492,7 +497,8 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 	}
 
 	/* be sure that ctx info is in place */
-	if (!gr_context_info_available(dbg_s, &g->gr)) {
+	if (!gk20a_gpu_is_virtual(dbg_s->pdev) &&
+		!gr_context_info_available(dbg_s, &g->gr)) {
 		gk20a_err(dev, "gr context data not available\n");
 		return -ENODEV;
 	}

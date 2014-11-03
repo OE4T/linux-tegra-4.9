@@ -713,15 +713,21 @@ enum {
 	KEPLER_CHANNEL_GPFIFO_C   = 0xA26F,
 };
 
+static inline bool gk20a_gpu_is_virtual(struct platform_device *dev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+
+	return platform->virtual_dev;
+}
+
 static inline int support_gk20a_pmu(struct platform_device *dev)
 {
 	if (IS_ENABLED(CONFIG_GK20A_PMU)) {
-		struct gk20a_platform *platform = gk20a_get_platform(dev);
+		/* gPMU is not supported for vgpu */
+		return !gk20a_gpu_is_virtual(dev);
+	}
 
-		/* we have not supported GPU PMU for virtualization now */
-		return !platform->virtual_dev;
-	} else
-		return 0;
+	return 0;
 }
 
 void gk20a_create_sysfs(struct platform_device *dev);

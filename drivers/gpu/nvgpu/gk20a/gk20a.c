@@ -1299,7 +1299,7 @@ static int gk20a_probe(struct platform_device *dev)
 
 	platform_set_drvdata(dev, platform);
 
-	if (platform->virtual_dev)
+	if (gk20a_gpu_is_virtual(dev))
 		return vgpu_probe(dev);
 
 	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
@@ -1449,7 +1449,7 @@ static int __exit gk20a_remove(struct platform_device *dev)
 
 	gk20a_dbg_fn("");
 
-	if (platform->virtual_dev)
+	if (gk20a_gpu_is_virtual(dev))
 		return vgpu_remove(dev);
 
 	if (platform->has_cde)
@@ -1527,7 +1527,9 @@ int gk20a_busy(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct gk20a *g = get_gk20a(pdev);
+#ifdef CONFIG_PM_RUNTIME
 	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+#endif
 
 	down_read(&g->busy_lock);
 
@@ -1549,7 +1551,7 @@ int gk20a_busy(struct platform_device *pdev)
 	}
 #else
 	if (!g->power_on) {
-		ret = platform->virtual_dev ?
+		ret = gk20a_gpu_is_virtual(pdev) ?
 			vgpu_pm_finalize_poweron(&pdev->dev)
 			: gk20a_pm_finalize_poweron(&pdev->dev);
 		if (ret)

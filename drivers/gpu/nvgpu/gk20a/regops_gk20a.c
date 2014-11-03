@@ -392,6 +392,17 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 
 	ch = dbg_s->ch;
 
+	/* For vgpu, the regops routines need to be handled in the
+	 * context of the server and support for that does not exist.
+	 *
+	 * The two users of the regops interface are the compute driver
+	 * and tools. The compute driver will work without a functional
+	 * regops implementation, so we return -ENOSYS. This will allow
+	 * compute apps to run with vgpu. Tools will not work in this
+	 * configuration and are not required to work at this time. */
+	if (gk20a_gpu_is_virtual(dbg_s->pdev))
+		return -ENOSYS;
+
 	ok = g->allow_all || validate_reg_ops(dbg_s,
 			      &ctx_rd_count, &ctx_wr_count,
 			      ops, num_ops);

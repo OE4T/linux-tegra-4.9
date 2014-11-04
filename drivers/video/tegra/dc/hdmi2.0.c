@@ -450,6 +450,15 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 		mode->pixclock > tegra_dc_get_out_max_pixclock(dc))
 		return false;
 
+	/*
+	 * Work around for modes that fail the constraint:
+	 * V_FRONT_PORCH >= V_REF_TO_SYNC + 1
+	 */
+	if (mode->lower_margin == 1) {
+		mode->lower_margin++;
+		mode->upper_margin--;
+	}
+
 	if (!tegra_hdmi_check_dc_constraint(mode))
 		return false;
 

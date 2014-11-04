@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,11 +21,12 @@
 #include <linux/i2c.h>
 
 enum tegra_camera_port {
-	TEGRA_CAMERA_PORT_CSI_A = 1,
+	TEGRA_CAMERA_PORT_CSI_A = 0,
 	TEGRA_CAMERA_PORT_CSI_B,
 	TEGRA_CAMERA_PORT_CSI_C,
 	TEGRA_CAMERA_PORT_CSI_D,
 	TEGRA_CAMERA_PORT_CSI_E,
+	TEGRA_CAMERA_PORT_CSI_F,
 	TEGRA_CAMERA_PORT_VIP,
 };
 

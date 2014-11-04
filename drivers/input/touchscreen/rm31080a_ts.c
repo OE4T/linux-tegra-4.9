@@ -340,7 +340,7 @@ static int rm_tch_spi_read(u8 u8addr, u8 *rxbuf, size_t len)
 	if (g_st_ts.u8_spi_locked) {
 		memset(rxbuf, 0, len);
 		if (g_st_ctrl.u8_kernel_msg & DEBUG_REGISTER)
-			rm_printk("Raydium - SPI Read Locked!! 0x%x:%d\n",
+			rm_printk("Raydium - SPI Read Locked!! 0x%x:%zu\n",
 				u8addr, len);
 		/*return RETURN_FAIL;*/
 		return RETURN_OK;
@@ -660,7 +660,7 @@ void raydium_report_pointer(void *p)
 #else
 	missing = copy_from_user(sp_tp, p, sizeof(struct rm_touch_event));
 	if (missing) {
-		dev_err(&g_spi->dev, "Raydium - %s : copy failed - len:%d, miss:%d\n",
+		dev_err(&g_spi->dev, "Raydium - %s : copy failed - len:%zd, miss:%zu\n",
 			__func__, sizeof(struct rm_touch_event), missing);
 		kfree(sp_tp);
 		return;
@@ -1651,7 +1651,7 @@ int rm_set_kernel_tbl(int i_func_idx, u8 *p_u8_src)
 	missing = copy_from_user(p_u8_len, p_u8_src,
 		KRL_TBL_FIELD_POS_CASE_NUM);
 	if (missing) {
-		dev_err(&g_spi->dev, "Raydium - %s : copy failed - len:%d, miss:%d\n",
+		dev_err(&g_spi->dev, "Raydium - %s : copy failed - len:%d, miss:%zu\n",
 			__func__, KRL_TBL_FIELD_POS_CASE_NUM, missing);
 		kfree(p_u8_len);
 		return missing;
@@ -1663,7 +1663,7 @@ int rm_set_kernel_tbl(int i_func_idx, u8 *p_u8_src)
 
 	missing = copy_from_user(p_u8_dst, p_u8_src, u16_len);
 	if (missing) {
-		dev_err(&g_spi->dev, "Raydium - %s : copy failed - len:%d, miss:%d\n",
+		dev_err(&g_spi->dev, "Raydium - %s : copy failed - len:%d, miss:%zu\n",
 			__func__, u16_len, missing);
 		kfree(p_u8_len);
 		return missing;
@@ -3043,7 +3043,7 @@ void rm_tch_set_variable(unsigned int index, unsigned int arg)
 	case RM_VARIABLE_DPW:
 		mutex_lock(&g_st_ts.mutex_ns_mode);
 		missing = copy_from_user(&g_st_ts.u8_ns_para[0],
-			((u8 *)arg), 9);
+			((u8 *)(uintptr_t)arg), 9);
 		/*missing = copy_from_user(&g_st_ts.bDP[0],
 			((u8 *)arg), 3);*/
 		/*missing += copy_from_user(&g_st_ts.bSWCPW[0],
@@ -3052,7 +3052,7 @@ void rm_tch_set_variable(unsigned int index, unsigned int arg)
 			(((u8 *)arg) + 6), 3);*/
 		mutex_unlock(&g_st_ts.mutex_ns_mode);
 		if (missing)
-			dev_err(&g_spi->dev, "Raydium - %s RM_VARIABLE_DPW : copy failed - miss:%d\n",
+			dev_err(&g_spi->dev, "Raydium - %s RM_VARIABLE_DPW : copy failed - miss:%zu\n",
 				__func__, missing);
 		/*memcpy(&g_st_ts.bDP[0], ((u8 *)arg), 3);*/
 		/*memcpy(&g_st_ts.bSWCPW[0], (((u8 *)arg) + 3), 3);*/
@@ -3439,7 +3439,7 @@ static struct rm_spi_ts_platform_data *rm_ts_parse_dt(struct device *dev,
 	ret = of_property_read_u32(np, "config", &val);
 	if (ret < 0)
 		goto exit_release_all_gpio;
-	pdata->config = (unsigned char *)val;
+	pdata->config = (unsigned char *)(uintptr_t)val;
 
 	ret = of_property_read_u32(np, "platform-id", &val);
 	if (ret < 0)

@@ -86,7 +86,7 @@ struct therm_est_data {
 
 struct therm_fan_est_subdevice {
 	const char *dev_data;
-	int (*get_temp)(void *, long *);
+	int (*get_temp)(const char *, long *);
 	int coeffs[HIST_LEN];
 	int hist[HIST_LEN];
 };

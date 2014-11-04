@@ -3877,7 +3877,10 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			udelay(10);
 			clk_disable_unprepare(dc->clk);
 		}
+
+#ifndef CONFIG_FRAMEBUFFER_CONSOLE
 		_tegra_dc_set_default_videomode(dc);
+#endif
 		dc->enabled = _tegra_dc_enable(dc);
 
 #if !defined(CONFIG_ARCH_TEGRA_11x_SOC) && !defined(CONFIG_ARCH_TEGRA_14x_SOC)

@@ -48,7 +48,7 @@ struct therm_fan_estimator {
 	struct therm_fan_est_subdevice *devs;
 	struct thermal_zone_device *thz;
 	int current_trip_index;
-	char *cdev_type;
+	const char *cdev_type;
 	int active_trip_temps[MAX_ACTIVE_STATES];
 	int active_hysteresis[MAX_ACTIVE_STATES];
 	int active_trip_temps_hyst[(MAX_ACTIVE_STATES << 1) + 1];
@@ -237,7 +237,7 @@ static ssize_t show_coeff(struct device *dev,
 		len = snprintf(buf + total_len, PAGE_SIZE, "[%d]", i);
 		total_len += len;
 		for (j = 0; j < HIST_LEN; j++) {
-			len = snprintf(buf + total_len, PAGE_SIZE, " %ld",
+			len = snprintf(buf + total_len, PAGE_SIZE, " %d",
 					est->devs[i].coeffs[j]);
 			total_len += len;
 		}
@@ -319,7 +319,7 @@ static ssize_t show_temps(struct device *dev,
 			index = (est->ntemp - j + HIST_LEN) % HIST_LEN;
 			total_len += snprintf(buf + total_len,
 						PAGE_SIZE,
-						" %ld",
+						" %d",
 						est->devs[i].hist[index]);
 		}
 		total_len += snprintf(buf + total_len, PAGE_SIZE, "\n");
@@ -360,11 +360,11 @@ static int fan_est_match(struct thermal_zone_device *thz, void *data)
 	return (strcmp((char *)data, thz->type) == 0);
 }
 
-static int fan_est_get_temp_func(void *data, long *temp)
+static int fan_est_get_temp_func(const char *data, long *temp)
 {
 	struct thermal_zone_device *thz;
 
-	thz = thermal_zone_device_find(data, fan_est_match);
+	thz = thermal_zone_device_find((void *)data, fan_est_match);
 
 	if (!thz || thz->ops->get_temp(thz, temp))
 		*temp = 25000;

@@ -434,67 +434,68 @@ static const struct regop_offset_range gm20b_qctl_whitelist_ranges[] = {
 static const u32 gm20b_qctl_whitelist_ranges_count =
 	ARRAY_SIZE(gm20b_qctl_whitelist_ranges);
 
-const struct regop_offset_range *gm20b_get_global_whitelist_ranges(void)
+static const struct regop_offset_range *gm20b_get_global_whitelist_ranges(void)
 {
 	return gm20b_global_whitelist_ranges;
 }
 
-int gm20b_get_global_whitelist_ranges_count(void)
+static int gm20b_get_global_whitelist_ranges_count(void)
 {
 	return gm20b_global_whitelist_ranges_count;
 }
 
-const struct regop_offset_range *gm20b_get_context_whitelist_ranges(void)
+static const struct regop_offset_range *gm20b_get_context_whitelist_ranges(void)
 {
 	return gm20b_context_whitelist_ranges;
 }
 
-int gm20b_get_context_whitelist_ranges_count(void)
+static int gm20b_get_context_whitelist_ranges_count(void)
 {
 	return gm20b_context_whitelist_ranges_count;
 }
 
-const u32 *gm20b_get_runcontrol_whitelist(void)
+static const u32 *gm20b_get_runcontrol_whitelist(void)
 {
 	return gm20b_runcontrol_whitelist;
 }
 
-int gm20b_get_runcontrol_whitelist_count(void)
+static int gm20b_get_runcontrol_whitelist_count(void)
 {
 	return gm20b_runcontrol_whitelist_count;
 }
 
-const struct regop_offset_range *gm20b_get_runcontrol_whitelist_ranges(void)
+static const
+struct regop_offset_range *gm20b_get_runcontrol_whitelist_ranges(void)
 {
 	return gm20b_runcontrol_whitelist_ranges;
 }
 
-int gm20b_get_runcontrol_whitelist_ranges_count(void)
+static int gm20b_get_runcontrol_whitelist_ranges_count(void)
 {
 	return gm20b_runcontrol_whitelist_ranges_count;
 }
 
-const u32 *gm20b_get_qctl_whitelist(void)
+static const u32 *gm20b_get_qctl_whitelist(void)
 {
 	return gm20b_qctl_whitelist;
 }
 
-int gm20b_get_qctl_whitelist_count(void)
+static int gm20b_get_qctl_whitelist_count(void)
 {
 	return gm20b_qctl_whitelist_count;
 }
 
-const struct regop_offset_range *gm20b_get_qctl_whitelist_ranges(void)
+static const struct regop_offset_range *gm20b_get_qctl_whitelist_ranges(void)
 {
 	return gm20b_qctl_whitelist_ranges;
 }
 
-int gm20b_get_qctl_whitelist_ranges_count(void)
+static int gm20b_get_qctl_whitelist_ranges_count(void)
 {
 	return gm20b_qctl_whitelist_ranges_count;
 }
 
-int gm20b_apply_smpc_war(struct dbg_session_gk20a *dbg_s)
+static int gm20b_apply_smpc_war(struct dbg_session_gk20a *dbg_s)
 {
 	/* Not needed on gm20b */
 	return 0;

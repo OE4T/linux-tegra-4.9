@@ -32,7 +32,7 @@
 #include "hw_pbdma_gk20a.h"
 
 unsigned int gk20a_debug_trace_cmdbuf;
-struct platform_device *gk20a_device;
+static struct platform_device *gk20a_device;
 
 struct gk20a_debug_output {
 	void (*fn)(void *ctx, const char *str, size_t len);
@@ -89,7 +89,8 @@ static inline void gk20a_debug_write_to_seqfile(void *ctx, const char *str,
 	seq_write((struct seq_file *)ctx, str, len);
 }
 
-void gk20a_debug_output(struct gk20a_debug_output *o, const char *fmt, ...)
+static void gk20a_debug_output(struct gk20a_debug_output *o,
+					const char *fmt, ...)
 {
 	va_list args;
 	int len;
@@ -159,7 +160,7 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 	gk20a_debug_output(o, "\n");
 }
 
-void gk20a_debug_show_dump(struct platform_device *pdev,
+static void gk20a_debug_show_dump(struct platform_device *pdev,
 			   struct gk20a_debug_output *o)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(pdev);

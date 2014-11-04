@@ -55,13 +55,13 @@ static void free_acr_resources(struct gk20a *g, struct ls_flcn_mgr *plsfm);
 
 /*Globals*/
 static void __iomem *mc = IO_ADDRESS(TEGRA_MC_BASE);
-get_ucode_details pmu_acr_supp_ucode_list[] = {
+static get_ucode_details pmu_acr_supp_ucode_list[] = {
 	pmu_ucode_details,
 	fecs_ucode_details,
 };
 
 /*Once is LS mode, cpuctl_alias is only accessible*/
-void start_gm20b_pmu(struct gk20a *g)
+static void start_gm20b_pmu(struct gk20a *g)
 {
 	/*disable irqs for hs falcon booting as we will poll for halt*/
 	mutex_lock(&g->pmu.isr_mutex);
@@ -272,7 +272,7 @@ int prepare_ucode_blob(struct gk20a *g)
 	return 0;
 }
 
-u8 lsfm_falcon_disabled(struct gk20a *g, struct ls_flcn_mgr *plsfm,
+static u8 lsfm_falcon_disabled(struct gk20a *g, struct ls_flcn_mgr *plsfm,
 	u32 falcon_id)
 {
 	return (plsfm->disable_mask >> falcon_id) & 0x1;
@@ -364,7 +364,7 @@ static int lsfm_discover_ucode_images(struct gk20a *g,
 }
 
 
-int pmu_populate_loader_cfg(struct gk20a *g,
+static int pmu_populate_loader_cfg(struct gk20a *g,
 	struct lsfm_managed_ucode_img *lsfm,
 	union flcn_bl_generic_desc *p_bl_gen_desc, u32 *p_bl_gen_desc_size)
 {
@@ -431,7 +431,7 @@ int pmu_populate_loader_cfg(struct gk20a *g,
 	return 0;
 }
 
-int flcn_populate_bl_dmem_desc(struct gk20a *g,
+static int flcn_populate_bl_dmem_desc(struct gk20a *g,
 	struct lsfm_managed_ucode_img *lsfm,
 	union flcn_bl_generic_desc *p_bl_gen_desc, u32 *p_bl_gen_desc_size)
 {
@@ -1019,7 +1019,7 @@ err_release_acr_fw:
 	return err;
 }
 
-u8 pmu_is_debug_mode_en(struct gk20a *g)
+static u8 pmu_is_debug_mode_en(struct gk20a *g)
 {
 	u32 ctl_stat =  gk20a_readl(g, pwr_pmu_scpctl_stat_r());
 	return pwr_pmu_scpctl_stat_debug_mode_v(ctl_stat);
@@ -1125,8 +1125,8 @@ static int bl_bootstrap(struct pmu_gk20a *pmu,
 	return 0;
 }
 
-int gm20b_init_pmu_setup_hw1(struct gk20a *g, struct flcn_bl_dmem_desc *desc,
-		u32 bl_sz)
+static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
+		struct flcn_bl_dmem_desc *desc, u32 bl_sz)
 {
 
 	struct pmu_gk20a *pmu = &g->pmu;

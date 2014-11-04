@@ -152,7 +152,7 @@ static int init_engine_info(struct fifo_gk20a *f)
 	return 0;
 }
 
-void gk20a_remove_fifo_support(struct fifo_gk20a *f)
+static void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 {
 	struct gk20a *g = f->g;
 	struct device *d = dev_from_gk20a(g);

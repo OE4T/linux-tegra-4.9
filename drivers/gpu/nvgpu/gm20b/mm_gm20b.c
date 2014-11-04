@@ -220,7 +220,7 @@ fail:
 	return ret;
 }
 
-void gm20b_vm_clear_sparse(struct vm_gk20a *vm, u64 vaddr,
+static void gm20b_vm_clear_sparse(struct vm_gk20a *vm, u64 vaddr,
 			       u64 size, u32 pgsz_idx) {
 	u64 vaddr_hi;
 	u32 pde_lo, pde_hi, pde_i;
@@ -253,14 +253,15 @@ void gm20b_vm_clear_sparse(struct vm_gk20a *vm, u64 vaddr,
 	return;
 }
 
-bool gm20b_mm_mmu_debug_mode_enabled(struct gk20a *g)
+static bool gm20b_mm_mmu_debug_mode_enabled(struct gk20a *g)
 {
 	u32 debug_ctrl = gk20a_readl(g, gr_gpcs_pri_mmu_debug_ctrl_r());
 	return gr_gpcs_pri_mmu_debug_ctrl_debug_v(debug_ctrl) ==
 		gr_gpcs_pri_mmu_debug_ctrl_debug_enabled_v();
 }
 
-void gm20b_mm_set_big_page_size(struct gk20a *g, void *inst_ptr, int size)
+static void gm20b_mm_set_big_page_size(struct gk20a *g,
+				void *inst_ptr, int size)
 {
 	u32 val;
 

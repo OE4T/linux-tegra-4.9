@@ -29,7 +29,7 @@ struct gating_desc {
 	u32 disable;
 };
 /* slcg gr */
-const struct gating_desc gk20a_slcg_gr[] = {
+static const struct gating_desc gk20a_slcg_gr[] = {
 	{.addr = 0x004041f4, .prod = 0x00000000, .disable = 0x03fffffe},
 	{.addr = 0x00409894, .prod = 0x00000040, .disable = 0x0003fffe},
 	{.addr = 0x004078c4, .prod = 0x00000000, .disable = 0x000001fe},
@@ -97,7 +97,7 @@ const struct gating_desc gk20a_slcg_gr[] = {
 };
 
 /* slcg perf */
-const struct gating_desc gk20a_slcg_perf[] = {
+static const struct gating_desc gk20a_slcg_perf[] = {
 	{.addr = 0x001be018, .prod = 0x000001ff, .disable = 0x00000000},
 	{.addr = 0x001bc018, .prod = 0x000001ff, .disable = 0x00000000},
 	{.addr = 0x001b8018, .prod = 0x000001ff, .disable = 0x00000000},
@@ -105,7 +105,7 @@ const struct gating_desc gk20a_slcg_perf[] = {
 };
 
 /* blcg gr */
-const struct gating_desc gk20a_blcg_gr[] = {
+static const struct gating_desc gk20a_blcg_gr[] = {
 	{.addr = 0x004041f0, .prod = 0x00004046, .disable = 0x00000000},
 	{.addr = 0x00409890, .prod = 0x0000007f, .disable = 0x00000000},
 	{.addr = 0x004098b0, .prod = 0x0000007f, .disable = 0x00000000},
@@ -185,7 +185,7 @@ const struct gating_desc gk20a_blcg_gr[] = {
 };
 
 /* pg gr */
-const struct gating_desc gk20a_pg_gr[] = {
+static const struct gating_desc gk20a_pg_gr[] = {
 	{.addr = 0x004041f8, .prod = 0x10940000, .disable = 0x00000000},
 	{.addr = 0x004041fc, .prod = 0xff00a725, .disable = 0x00000000},
 	{.addr = 0x00409898, .prod = 0x10140000, .disable = 0x00000000},
@@ -291,7 +291,7 @@ const struct gating_desc gk20a_pg_gr[] = {
 };
 
 /* therm gr */
-const struct gating_desc gk20a_slcg_therm[] = {
+static const struct gating_desc gk20a_slcg_therm[] = {
 	{.addr = 0x000206b8, .prod = 0x00000000, .disable = 0x0000000f},
 };
 

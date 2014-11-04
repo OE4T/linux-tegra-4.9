@@ -96,7 +96,7 @@ static int gr_gk20a_get_netlist_name(int index, char *name)
 	return -1;
 }
 
-bool gr_gk20a_is_firmware_defined(void)
+static bool gr_gk20a_is_firmware_defined(void)
 {
 #ifdef GK20A_NETLIST_IMAGE_FW_NAME
 	return true;

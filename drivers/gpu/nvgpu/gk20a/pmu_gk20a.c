@@ -201,7 +201,7 @@ static void set_pmu_cmdline_args_falctracesize_v1(
 	pmu->args_v1.falc_trace_size = size;
 }
 
-int find_hex_in_string(char *strings, struct gk20a *g)
+static int find_hex_in_string(char *strings, struct gk20a *g)
 {
 	u32 i = 0, j = strlen(strings);
 	for (; i < j; i++) {
@@ -212,7 +212,7 @@ int find_hex_in_string(char *strings, struct gk20a *g)
 	return 0xFF;
 }
 
-void printtrace(struct pmu_gk20a *pmu)
+static void printtrace(struct pmu_gk20a *pmu)
 {
 	u32 i = 0, j = 0, k, l, m, count;
 	char *trace = pmu->trace_buf.cpuva;
@@ -1926,7 +1926,7 @@ void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
 	gk20a_allocator_destroy(&pmu->dmem);
 }
 
-int gk20a_init_pmu_reset_enable_hw(struct gk20a *g)
+static int gk20a_init_pmu_reset_enable_hw(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 
@@ -2022,7 +2022,7 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 	return err;
 }
 
-int gk20a_init_pmu_setup_sw(struct gk20a *g)
+static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct mm_gk20a *mm = &g->mm;
@@ -2219,7 +2219,7 @@ static void pmu_handle_pg_buf_config_msg(struct gk20a *g, struct pmu_msg *msg,
 	}
 }
 
-int gk20a_init_pmu_setup_hw1(struct gk20a *g)
+static int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	int err;

@@ -57,7 +57,7 @@ static int gr_gm20b_get_netlist_name(int index, char *name)
 	return -1;
 }
 
-bool gr_gm20b_is_firmware_defined(void)
+static bool gr_gm20b_is_firmware_defined(void)
 {
 #ifdef GM20B_NETLIST_IMAGE_FW_NAME
 	return true;

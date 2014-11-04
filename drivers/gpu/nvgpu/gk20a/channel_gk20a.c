@@ -603,9 +603,9 @@ static void gk20a_free_error_notifiers(struct channel_gk20a *ch)
 	if (ch->error_notifier_ref) {
 		dma_buf_vunmap(ch->error_notifier_ref, ch->error_notifier_va);
 		dma_buf_put(ch->error_notifier_ref);
-		ch->error_notifier_ref = 0;
-		ch->error_notifier = 0;
-		ch->error_notifier_va = 0;
+		ch->error_notifier_ref = NULL;
+		ch->error_notifier = NULL;
+		ch->error_notifier_va = NULL;
 	}
 }
 
@@ -785,7 +785,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 	if (ch == NULL) {
 		/* TBD: we want to make this virtualizable */
 		gk20a_err(dev_from_gk20a(g), "out of hw chids");
-		return 0;
+		return NULL;
 	}
 
 	ch->g = g;
@@ -795,7 +795,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 		gk20a_err(dev_from_gk20a(g),
 			   "failed to open gk20a channel, out of inst mem");
 
-		return 0;
+		return NULL;
 	}
 	g->ops.fifo.bind_channel(ch);
 	ch->pid = current->pid;
@@ -1265,18 +1265,6 @@ clean_up:
 	return err;
 }
 
-static inline int wfi_cmd_size(void)
-{
-	return 2;
-}
-void add_wfi_cmd(struct priv_cmd_entry *cmd, int *i)
-{
-	/* wfi */
-	cmd->ptr[(*i)++] = 0x2001001E;
-	/* handle, ignored */
-	cmd->ptr[(*i)++] = 0x00000000;
-}
-
 static inline bool check_gp_put(struct gk20a *g,
 				struct channel_gk20a *c)
 {
@@ -1529,18 +1517,6 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 		schedule_work(&c->update_fn_work);
 }
 
-void add_wait_cmd(u32 *ptr, u32 id, u32 thresh)
-{
-	/* syncpoint_a */
-	ptr[0] = 0x2001001C;
-	/* payload */
-	ptr[1] = thresh;
-	/* syncpoint_b */
-	ptr[2] = 0x2001001D;
-	/* syncpt_id, switch_en, wait */
-	ptr[3] = (id << 8) | 0x10;
-}
-
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvgpu_gpfifo *gpfifo,
 				u32 num_entries,
@@ -1760,11 +1736,6 @@ clean_up:
 	return err;
 }
 
-void gk20a_remove_channel_support(struct channel_gk20a *c)
-{
-
-}
-
 int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 {
 	struct channel_gk20a *c = g->fifo.channel+chid;
@@ -1772,7 +1743,6 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	c->in_use = false;
 	c->hw_chid = chid;
 	c->bound = false;
-	c->remove_support = gk20a_remove_channel_support;
 	mutex_init(&c->jobs_lock);
 	mutex_init(&c->submit_lock);
 	INIT_LIST_HEAD(&c->jobs);

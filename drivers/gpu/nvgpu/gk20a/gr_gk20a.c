@@ -491,7 +491,7 @@ struct fecs_method_op_gk20a {
 
 };
 
-int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
+static int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
 				   struct fecs_method_op_gk20a op)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -524,7 +524,7 @@ int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
 	return ret;
 }
 
-int gr_gk20a_ctrl_ctxsw(struct gk20a *g, u32 fecs_method, u32 *ret)
+static int gr_gk20a_ctrl_ctxsw(struct gk20a *g, u32 fecs_method, u32 *ret)
 {
 	return gr_gk20a_submit_fecs_method_op(g,
 	      (struct fecs_method_op_gk20a) {
@@ -544,14 +544,16 @@ int gr_gk20a_ctrl_ctxsw(struct gk20a *g, u32 fecs_method, u32 *ret)
 int gr_gk20a_disable_ctxsw(struct gk20a *g)
 {
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
-	return gr_gk20a_ctrl_ctxsw(g, gr_fecs_method_push_adr_stop_ctxsw_v(), 0);
+	return gr_gk20a_ctrl_ctxsw(g,
+			gr_fecs_method_push_adr_stop_ctxsw_v(), NULL);
 }
 
 /* Start processing (continue) context switches at FECS */
 int gr_gk20a_enable_ctxsw(struct gk20a *g)
 {
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
-	return gr_gk20a_ctrl_ctxsw(g, gr_fecs_method_push_adr_start_ctxsw_v(), 0);
+	return gr_gk20a_ctrl_ctxsw(g,
+			gr_fecs_method_push_adr_start_ctxsw_v(), NULL);
 }
 
 
@@ -2105,7 +2107,7 @@ void gr_gk20a_load_ctxsw_ucode_boot(struct gk20a *g, u64 addr_base,
 			gr_fecs_bootvec_vec_f(segments->boot_entry));
 }
 
-int gr_gk20a_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,
+static int gr_gk20a_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,
 	struct gk20a_ctxsw_ucode_segments *segments, u32 reg_offset)
 {
 	gk20a_writel(g, reg_offset + gr_fecs_dmactl_r(),
@@ -2176,7 +2178,7 @@ static int gr_gk20a_wait_ctxsw_ready(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	ret = gr_gk20a_ctx_wait_ucode(g, 0, 0,
+	ret = gr_gk20a_ctx_wait_ucode(g, 0, NULL,
 				      GR_IS_UCODE_OP_EQUAL,
 				      eUcodeHandshakeInitComplete,
 				      GR_IS_UCODE_OP_SKIP, 0);
@@ -3794,7 +3796,7 @@ int gr_gk20a_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
 	return 0;
 }
 
-int gr_gk20a_load_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
+static int gr_gk20a_load_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
 {
 	int i, ret;
 
@@ -4453,7 +4455,7 @@ static int gr_gk20a_wait_mem_scrubbing(struct gk20a *g)
 	return -ETIMEDOUT;
 }
 
-int gr_gk20a_init_ctxsw(struct gk20a *g)
+static int gr_gk20a_init_ctxsw(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 err = 0;
@@ -4481,7 +4483,7 @@ out:
 	return 0;
 }
 
-int gk20a_init_gr_reset_enable_hw(struct gk20a *g)
+static int gk20a_init_gr_reset_enable_hw(struct gk20a *g)
 {
 	struct av_list_gk20a *sw_non_ctx_load = &g->gr.ctx_vars.sw_non_ctx_load;
 	unsigned long end_jiffies = jiffies +
@@ -5859,7 +5861,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 					       u32 *priv_offset);
 
 /* This function will decode a priv address and return the partition type and numbers. */
-int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
+static int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
 			      int  *addr_type, /* enum ctxsw_addr_type */
 			      u32 *gpc_num, u32 *tpc_num, u32 *ppc_num, u32 *be_num,
 			      u32 *broadcast_flags)
@@ -6154,7 +6156,7 @@ static void init_sm_dsm_reg_info(void)
  * which makes it impossible to know externally whether a ctx
  * write will actually occur. so later we should put a lazy,
  *  map-and-hold system in the patch write state */
-int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
+static int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
 			    struct channel_ctx_gk20a *ch_ctx,
 			    u32 addr, u32 data,
 			    u8 *context)

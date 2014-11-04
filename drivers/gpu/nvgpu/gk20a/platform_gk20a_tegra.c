@@ -37,7 +37,7 @@
 #define TEGRA_DDR4_BW_PER_FREQ 16
 
 extern struct device tegra_vpr_dev;
-struct gk20a_platform t132_gk20a_tegra_platform;
+static struct gk20a_platform t132_gk20a_tegra_platform;
 
 struct gk20a_emc_params {
 	long bw_ratio;
@@ -142,7 +142,7 @@ fail:
  * This function returns the minimum emc clock based on gpu frequency
  */
 
-long gk20a_tegra_get_emc_rate(struct gk20a *g,
+static long gk20a_tegra_get_emc_rate(struct gk20a *g,
 			      struct gk20a_emc_params *emc_params, long freq)
 {
 	long hz;
@@ -197,7 +197,7 @@ static void gk20a_tegra_prescale(struct platform_device *pdev)
  *
  */
 
-void gk20a_tegra_calibrate_emc(struct platform_device *pdev,
+static void gk20a_tegra_calibrate_emc(struct platform_device *pdev,
 			       struct gk20a_emc_params *emc_params)
 {
 	enum tegra_chipid cid = tegra_get_chipid();
@@ -271,7 +271,7 @@ static int gk20a_tegra_unrailgate(struct platform_device *pdev)
 	return ret;
 }
 
-struct {
+static struct {
 	char *name;
 	unsigned long default_rate;
 } tegra_gk20a_clocks[] = {
@@ -472,7 +472,7 @@ static int gk20a_tegra_suspend(struct device *dev)
 	return 0;
 }
 
-struct gk20a_platform t132_gk20a_tegra_platform = {
+static struct gk20a_platform t132_gk20a_tegra_platform = {
 	.has_syncpoints = true,
 
 	/* power management configuration */

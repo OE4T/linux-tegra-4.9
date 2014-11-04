@@ -28,7 +28,7 @@
 #include "clk_gk20a.h"
 #include "regops_gk20a.h"
 
-struct gpu_ops gk20a_ops = {
+static struct gpu_ops gk20a_ops = {
 	.clock_gating = {
 		.slcg_gr_load_gating_prod =
 			gr_gk20a_slcg_gr_load_gating_prod,

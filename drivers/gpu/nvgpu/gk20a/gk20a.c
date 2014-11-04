@@ -150,7 +150,6 @@ static const struct file_operations gk20a_prof_ops = {
 	.unlocked_ioctl = gk20a_dbg_gpu_dev_ioctl,
 	/* .mmap           = gk20a_prof_gpu_dev_mmap,*/
 	/*int (*mmap) (struct file *, struct vm_area_struct *);*/
-	.compat_ioctl = gk20a_dbg_gpu_dev_ioctl,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl = gk20a_dbg_gpu_dev_ioctl,
 #endif
@@ -206,11 +205,11 @@ static void kunmap_and_free_iopage(void **kvaddr, struct page **page)
 {
 	if (*kvaddr) {
 		kunmap(*kvaddr);
-		*kvaddr = 0;
+		*kvaddr = NULL;
 	}
 	if (*page) {
 		__free_page(*page);
-		*page = 0;
+		*page = NULL;
 	}
 }
 
@@ -606,11 +605,11 @@ static void gk20a_remove_support(struct platform_device *dev)
 
 	if (g->regs) {
 		iounmap(g->regs);
-		g->regs = 0;
+		g->regs = NULL;
 	}
 	if (g->bar1) {
 		iounmap(g->bar1);
-		g->bar1 = 0;
+		g->bar1 = NULL;
 	}
 }
 
@@ -1063,11 +1062,11 @@ struct channel_gk20a *gk20a_get_channel_from_file(int fd)
 	struct channel_gk20a *ch;
 	struct file *f = fget(fd);
 	if (!f)
-		return 0;
+		return NULL;
 
 	if (f->f_op != &gk20a_channel_ops) {
 		fput(f);
-		return 0;
+		return NULL;
 	}
 
 	ch = (struct channel_gk20a *)f->private_data;
@@ -1119,7 +1118,7 @@ static void gk20a_pm_shutdown(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-const struct dev_pm_ops gk20a_pm_ops = {
+static const struct dev_pm_ops gk20a_pm_ops = {
 #if defined(CONFIG_PM_RUNTIME) && !defined(CONFIG_PM_GENERIC_DOMAINS)
 	.runtime_resume = gk20a_pm_enable_clk,
 	.runtime_suspend = gk20a_pm_disable_clk,
@@ -1261,7 +1260,7 @@ static int gk20a_pm_init(struct platform_device *dev)
 	return err;
 }
 
-int gk20a_secure_page_alloc(struct platform_device *pdev)
+static int gk20a_secure_page_alloc(struct platform_device *pdev)
 {
 	struct gk20a_platform *platform = platform_get_drvdata(pdev);
 	int err = 0;
@@ -1466,12 +1465,14 @@ static int __exit gk20a_remove(struct platform_device *dev)
 
 	gk20a_user_deinit(dev);
 
-	set_gk20a(dev, 0);
+	set_gk20a(dev, NULL);
 #ifdef CONFIG_DEBUG_FS
 	debugfs_remove(g->debugfs_ltc_enabled);
 	debugfs_remove(g->debugfs_gr_idle_timeout_default);
 	debugfs_remove(g->debugfs_timeouts_enabled);
 #endif
+
+	gk20a_remove_sysfs(&dev->dev);
 
 	kfree(g);
 

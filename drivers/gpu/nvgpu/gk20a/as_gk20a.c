@@ -46,7 +46,7 @@ int gk20a_as_alloc_share(struct gk20a_as *as,
 
 	gk20a_dbg_fn("");
 
-	*out = 0;
+	*out = NULL;
 	as_share = kzalloc(sizeof(*as_share), GFP_KERNEL);
 	if (!as_share)
 		return -ENOMEM;

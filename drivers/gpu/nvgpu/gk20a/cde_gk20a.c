@@ -122,7 +122,7 @@ static void gk20a_cde_deallocate_contexts(struct gk20a *g)
 	}
 }
 
-void gk20a_cde_stop(struct gk20a *g)
+static void gk20a_cde_stop(struct gk20a *g)
 {
 	struct gk20a_cde_app *cde_app = &g->cde_app;
 

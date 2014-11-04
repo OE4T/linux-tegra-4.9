@@ -64,7 +64,7 @@ static bool gm20b_kind_zbc(u8 k)
 		 k <= gmmu_pte_kind_s8_2s_v());
 }
 
-void gm20b_init_kind_attr(void)
+static void gm20b_init_kind_attr(void)
 {
 	u16 k;
 

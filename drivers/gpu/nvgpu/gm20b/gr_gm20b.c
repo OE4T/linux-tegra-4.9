@@ -342,7 +342,7 @@ static void gr_gm20b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 	}
 }
 
-void gr_gm20b_set_circular_buffer_size(struct gk20a *g, u32 data)
+static void gr_gm20b_set_circular_buffer_size(struct gk20a *g, u32 data)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 gpc_index, ppc_index, stride, val;

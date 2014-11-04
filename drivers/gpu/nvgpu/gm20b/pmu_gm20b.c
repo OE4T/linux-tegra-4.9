@@ -131,7 +131,7 @@ static struct pg_init_sequence_list _pginitseq_gm20b[] = {
 		{ 0x0010e040, 0x00000000},
 };
 
-int gm20b_pmu_setup_elpg(struct gk20a *g)
+static int gm20b_pmu_setup_elpg(struct gk20a *g)
 {
 	int ret = 0;
 	u32 reg_writes;
@@ -153,7 +153,7 @@ int gm20b_pmu_setup_elpg(struct gk20a *g)
 	return ret;
 }
 
-void pmu_handle_acr_init_wpr_msg(struct gk20a *g, struct pmu_msg *msg,
+static void pmu_handle_acr_init_wpr_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
 	gk20a_dbg_fn("");
@@ -166,7 +166,7 @@ void pmu_handle_acr_init_wpr_msg(struct gk20a *g, struct pmu_msg *msg,
 }
 
 
-int gm20b_pmu_init_acr(struct gk20a *g)
+static int gm20b_pmu_init_acr(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_cmd cmd;
@@ -190,7 +190,7 @@ int gm20b_pmu_init_acr(struct gk20a *g)
 	return 0;
 }
 
-void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
+static void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
 

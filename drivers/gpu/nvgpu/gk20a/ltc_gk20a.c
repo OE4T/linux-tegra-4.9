@@ -181,7 +181,7 @@ static void gk20a_ltc_init_fs_state(struct gk20a *g)
 	g->max_ltc_count = g->ltc_count = 1;
 }
 
-void gk20a_ltc_isr(struct gk20a *g)
+static void gk20a_ltc_isr(struct gk20a *g)
 {
 	u32 intr;
 

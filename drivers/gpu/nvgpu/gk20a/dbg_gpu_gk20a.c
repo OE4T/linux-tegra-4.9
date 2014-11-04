@@ -58,7 +58,8 @@ static int alloc_session(struct dbg_session_gk20a **_dbg_s)
 	return 0;
 }
 
-int gk20a_dbg_gpu_do_dev_open(struct inode *inode, struct file *filp, bool is_profiler)
+static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
+		struct file *filp, bool is_profiler)
 {
 	struct dbg_session_gk20a *dbg_session;
 	struct gk20a *g;
@@ -504,7 +505,8 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 
 	gk20a_dbg_fn("Copying regops from userspace");
 
-	if (copy_from_user(ops, (void *)(uintptr_t)args->ops, ops_size)) {
+	if (copy_from_user(ops, (void __user *)(uintptr_t)args->ops,
+							ops_size)) {
 		dev_err(dev, "copy_from_user failed!");
 		err = -EFAULT;
 		goto clean_up;
@@ -542,7 +544,7 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 
 	gk20a_dbg_fn("Copying result to userspace");
 
-	if (copy_to_user((void *)(uintptr_t)args->ops, ops, ops_size)) {
+	if (copy_to_user((void __user *)(uintptr_t)args->ops, ops, ops_size)) {
 		dev_err(dev, "copy_to_user failed!");
 		err = -EFAULT;
 		goto clean_up;

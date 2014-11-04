@@ -263,7 +263,7 @@ static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-void gk20a_remove_mm_support(struct mm_gk20a *mm)
+static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 {
 	struct gk20a *g = mm->g;
 	struct device *d = dev_from_gk20a(g);
@@ -405,7 +405,7 @@ err_out:
 	return -ENOMEM;
 }
 
-void free_gmmu_phys_pages(struct vm_gk20a *vm, void *handle,
+static void free_gmmu_phys_pages(struct vm_gk20a *vm, void *handle,
 			    struct sg_table *sgt, u32 order,
 			    size_t size)
 {
@@ -415,7 +415,7 @@ void free_gmmu_phys_pages(struct vm_gk20a *vm, void *handle,
 	kfree(sgt);
 }
 
-int map_gmmu_phys_pages(void *handle, struct sg_table *sgt,
+static int map_gmmu_phys_pages(void *handle, struct sg_table *sgt,
 			  void **va, size_t size)
 {
 	FLUSH_CPU_DCACHE(handle, sg_phys(sgt->sgl), sgt->sgl->length);
@@ -423,7 +423,7 @@ int map_gmmu_phys_pages(void *handle, struct sg_table *sgt,
 	return 0;
 }
 
-void unmap_gmmu_phys_pages(void *handle, struct sg_table *sgt, void *va)
+static void unmap_gmmu_phys_pages(void *handle, struct sg_table *sgt, void *va)
 {
 	FLUSH_CPU_DCACHE(handle, sg_phys(sgt->sgl), sgt->sgl->length);
 }
@@ -913,7 +913,7 @@ static struct mapped_buffer_node *find_mapped_buffer_reverse_locked(
 			return mapped_buffer;
 		node = rb_next(&mapped_buffer->node);
 	}
-	return 0;
+	return NULL;
 }
 
 static struct mapped_buffer_node *find_mapped_buffer_locked(
@@ -931,7 +931,7 @@ static struct mapped_buffer_node *find_mapped_buffer_locked(
 		else
 			return mapped_buffer;
 	}
-	return 0;
+	return NULL;
 }
 
 static struct mapped_buffer_node *find_mapped_buffer_range_locked(
@@ -948,7 +948,7 @@ static struct mapped_buffer_node *find_mapped_buffer_range_locked(
 		else
 			node = node->rb_right;
 	}
-	return 0;
+	return NULL;
 }
 
 #define BFR_ATTRS (sizeof(nvmap_bfr_param)/sizeof(nvmap_bfr_param[0]))
@@ -1177,7 +1177,7 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 	/* unmap here needs to know the page size we assigned at mapping */
 	err = update_gmmu_ptes_locked(vm,
 				pgsz_idx,
-				0, /* n/a for unmap */
+				NULL, /* n/a for unmap */
 				0,
 				vaddr,
 				vaddr + size - 1,
@@ -1209,7 +1209,7 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 					 bool user_mapped,
 					 int rw_flag)
 {
-	struct mapped_buffer_node *mapped_buffer = 0;
+	struct mapped_buffer_node *mapped_buffer = NULL;
 
 	mapped_buffer =
 		find_mapped_buffer_reverse_locked(&vm->mapped_buffers,
@@ -1278,7 +1278,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct gk20a_allocator *ctag_allocator = &g->gr.comp_tags;
 	struct device *d = dev_from_vm(vm);
-	struct mapped_buffer_node *mapped_buffer = 0;
+	struct mapped_buffer_node *mapped_buffer = NULL;
 	bool inserted = false, va_allocated = false;
 	u32 gmmu_page_size = 0;
 	u64 map_offset = 0;
@@ -1991,7 +1991,7 @@ static int gk20a_vm_put_sparse(struct vm_gk20a *vm, u64 vaddr,
 	return gk20a_vm_put_empty(vm, vaddr, num_pages, pgsz_idx);
 }
 
-void gk20a_vm_clear_sparse(struct vm_gk20a *vm, u64 vaddr,
+static void gk20a_vm_clear_sparse(struct vm_gk20a *vm, u64 vaddr,
 			       u64 size, u32 pgsz_idx) {
 	struct gk20a *g = vm->mm->g;
 
@@ -2536,7 +2536,7 @@ int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
 	ch->vm = vm;
 	err = channel_gk20a_commit_va(ch);
 	if (err)
-		ch->vm = 0;
+		ch->vm = NULL;
 
 	return err;
 }

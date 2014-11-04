@@ -577,7 +577,7 @@ static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
 		if (!dbg_s->ch) {
 			gk20a_err(dbg_s->dev, "can't perform ctx regop unless bound");
 			op->status = REGOP(STATUS_UNSUPPORTED_OP);
-			return -ENODEV;
+			return valid;
 		}
 
 		/* binary search context list */
@@ -697,67 +697,68 @@ bool is_bar0_global_offset_whitelisted_gk20a(struct gk20a *g, u32 offset)
 	return valid;
 }
 
-const struct regop_offset_range *gk20a_get_global_whitelist_ranges(void)
+static const struct regop_offset_range *gk20a_get_global_whitelist_ranges(void)
 {
 	return gk20a_global_whitelist_ranges;
 }
 
-int gk20a_get_global_whitelist_ranges_count(void)
+static int gk20a_get_global_whitelist_ranges_count(void)
 {
 	return gk20a_global_whitelist_ranges_count;
 }
 
-const struct regop_offset_range *gk20a_get_context_whitelist_ranges(void)
+static const struct regop_offset_range *gk20a_get_context_whitelist_ranges(void)
 {
 	return gk20a_context_whitelist_ranges;
 }
 
-int gk20a_get_context_whitelist_ranges_count(void)
+static int gk20a_get_context_whitelist_ranges_count(void)
 {
 	return gk20a_context_whitelist_ranges_count;
 }
 
-const u32 *gk20a_get_runcontrol_whitelist(void)
+static const u32 *gk20a_get_runcontrol_whitelist(void)
 {
 	return gk20a_runcontrol_whitelist;
 }
 
-int gk20a_get_runcontrol_whitelist_count(void)
+static int gk20a_get_runcontrol_whitelist_count(void)
 {
 	return gk20a_runcontrol_whitelist_count;
 }
 
-const struct regop_offset_range *gk20a_get_runcontrol_whitelist_ranges(void)
+static const
+struct regop_offset_range *gk20a_get_runcontrol_whitelist_ranges(void)
 {
 	return gk20a_runcontrol_whitelist_ranges;
 }
 
-int gk20a_get_runcontrol_whitelist_ranges_count(void)
+static int gk20a_get_runcontrol_whitelist_ranges_count(void)
 {
 	return gk20a_runcontrol_whitelist_ranges_count;
 }
 
-const u32 *gk20a_get_qctl_whitelist(void)
+static const u32 *gk20a_get_qctl_whitelist(void)
 {
 	return gk20a_qctl_whitelist;
 }
 
-int gk20a_get_qctl_whitelist_count(void)
+static int gk20a_get_qctl_whitelist_count(void)
 {
 	return gk20a_qctl_whitelist_count;
 }
 
-const struct regop_offset_range *gk20a_get_qctl_whitelist_ranges(void)
+static const struct regop_offset_range *gk20a_get_qctl_whitelist_ranges(void)
 {
 	return gk20a_qctl_whitelist_ranges;
 }
 
-int gk20a_get_qctl_whitelist_ranges_count(void)
+static int gk20a_get_qctl_whitelist_ranges_count(void)
 {
 	return gk20a_qctl_whitelist_ranges_count;
 }
 
-int gk20a_apply_smpc_war(struct dbg_session_gk20a *dbg_s)
+static int gk20a_apply_smpc_war(struct dbg_session_gk20a *dbg_s)
 {
 	/* The following regops are a hack/war to make up for the fact that we
 	 * just scribbled into the ctxsw image w/o really knowing whether

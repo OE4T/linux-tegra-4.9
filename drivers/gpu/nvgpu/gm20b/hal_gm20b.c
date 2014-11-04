@@ -34,7 +34,7 @@
 #define FUSE_OPT_PRIV_SEC_DIS_0 0x264
 #define PRIV_SECURITY_DISABLE 0x01
 
-struct gpu_ops gm20b_ops = {
+static struct gpu_ops gm20b_ops = {
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =
 			gm20b_slcg_bus_load_gating_prod,

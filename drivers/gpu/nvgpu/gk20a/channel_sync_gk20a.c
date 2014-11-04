@@ -53,8 +53,8 @@ static void add_wait_cmd(u32 *ptr, u32 id, u32 thresh)
 	ptr[3] = (id << 8) | 0x10;
 }
 
-int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s, u32 id,
-		u32 thresh, struct priv_cmd_entry **entry,
+static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
+		u32 id, u32 thresh, struct priv_cmd_entry **entry,
 		struct gk20a_fence **fence)
 {
 	struct gk20a_channel_syncpt *sp =
@@ -84,7 +84,7 @@ int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s, u32 id,
 	return 0;
 }
 
-int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
+static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 		       struct priv_cmd_entry **entry,
 		       struct gk20a_fence **fence)
 {
@@ -221,7 +221,7 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 	return 0;
 }
 
-int gk20a_channel_syncpt_incr_wfi(struct gk20a_channel_sync *s,
+static int gk20a_channel_syncpt_incr_wfi(struct gk20a_channel_sync *s,
 				  struct priv_cmd_entry **entry,
 				  struct gk20a_fence **fence)
 {
@@ -231,7 +231,7 @@ int gk20a_channel_syncpt_incr_wfi(struct gk20a_channel_sync *s,
 			entry, fence);
 }
 
-int gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
+static int gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 			      struct priv_cmd_entry **entry,
 			      struct gk20a_fence **fence)
 {
@@ -243,7 +243,7 @@ int gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 			entry, fence);
 }
 
-int gk20a_channel_syncpt_incr_user(struct gk20a_channel_sync *s,
+static int gk20a_channel_syncpt_incr_user(struct gk20a_channel_sync *s,
 				   int wait_fence_fd,
 				   struct priv_cmd_entry **entry,
 				   struct gk20a_fence **fence,
@@ -257,7 +257,7 @@ int gk20a_channel_syncpt_incr_user(struct gk20a_channel_sync *s,
 			entry, fence);
 }
 
-void gk20a_channel_syncpt_set_min_eq_max(struct gk20a_channel_sync *s)
+static void gk20a_channel_syncpt_set_min_eq_max(struct gk20a_channel_sync *s)
 {
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);

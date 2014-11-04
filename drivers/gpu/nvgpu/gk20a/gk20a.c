@@ -820,7 +820,8 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 		goto done;
 	}
 
-	err = g->ops.pmu.prepare_ucode(g);
+	if (g->ops.pmu.prepare_ucode)
+		err = g->ops.pmu.prepare_ucode(g);
 	if (err) {
 		gk20a_err(dev, "failed to init pmu ucode");
 		goto done;

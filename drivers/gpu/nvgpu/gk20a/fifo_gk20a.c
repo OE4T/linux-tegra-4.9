@@ -900,7 +900,8 @@ void fifo_gk20a_finish_mmu_fault_handling(struct gk20a *g,
 		     gr_gpfifo_ctl_semaphore_access_enabled_f());
 
 	/* It is safe to enable ELPG again. */
-	gk20a_pmu_enable_elpg(g);
+	if (support_gk20a_pmu(g->dev) && g->elpg_enabled)
+		gk20a_pmu_enable_elpg(g);
 }
 
 static bool gk20a_fifo_set_ctx_mmu_error(struct gk20a *g,
@@ -974,7 +975,8 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 	g->fifo.deferred_reset_pending = false;
 
 	/* Disable power management */
-	gk20a_pmu_disable_elpg(g);
+	if (support_gk20a_pmu(g->dev) && g->elpg_enabled)
+		gk20a_pmu_disable_elpg(g);
 	g->ops.clock_gating.slcg_gr_load_gating_prod(g,
 			false);
 	g->ops.clock_gating.slcg_perf_load_gating_prod(g,

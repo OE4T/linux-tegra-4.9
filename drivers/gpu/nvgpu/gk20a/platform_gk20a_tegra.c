@@ -381,6 +381,15 @@ static void gk20a_tegra_scale_init(struct platform_device *pdev)
 	profile->private_data = emc_params;
 }
 
+static void gk20a_tegra_scale_exit(struct platform_device *pdev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a_scale_profile *profile = platform->g->scale_profile;
+
+	if (profile)
+		kfree(profile->private_data);
+}
+
 void gk20a_tegra_debug_dump(struct platform_device *pdev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(pdev);
@@ -466,6 +475,19 @@ static int gk20a_tegra_late_probe(struct platform_device *dev)
 	return 0;
 }
 
+static int gk20a_tegra_remove(struct platform_device *dev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+
+	/* remove gk20a power subdomain from host1x */
+	nvhost_unregister_client_domain(&platform->g->pd);
+
+	/* deinitialise tegra specific scaling quirks */
+	gk20a_tegra_scale_exit(dev);
+
+	return 0;
+}
+
 static int gk20a_tegra_suspend(struct device *dev)
 {
 	tegra_edp_notify_gpu_load(0, 0);
@@ -491,6 +513,7 @@ static struct gk20a_platform t132_gk20a_tegra_platform = {
 
 	.probe = gk20a_tegra_probe,
 	.late_probe = gk20a_tegra_late_probe,
+	.remove = gk20a_tegra_remove,
 
 	/* power management callbacks */
 	.suspend = gk20a_tegra_suspend,
@@ -534,6 +557,7 @@ struct gk20a_platform gk20a_tegra_platform = {
 
 	.probe = gk20a_tegra_probe,
 	.late_probe = gk20a_tegra_late_probe,
+	.remove = gk20a_tegra_remove,
 
 	/* power management callbacks */
 	.suspend = gk20a_tegra_suspend,
@@ -578,6 +602,7 @@ struct gk20a_platform gm20b_tegra_platform = {
 
 	.probe = gk20a_tegra_probe,
 	.late_probe = gk20a_tegra_late_probe,
+	.remove = gk20a_tegra_remove,
 
 	/* power management callbacks */
 	.suspend = gk20a_tegra_suspend,

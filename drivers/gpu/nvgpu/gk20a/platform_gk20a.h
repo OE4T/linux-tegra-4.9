@@ -103,6 +103,10 @@ struct gk20a_platform {
 	 */
 	int (*late_probe)(struct platform_device *dev);
 
+	/* Remove device after power management has been done
+	 */
+	int (*remove)(struct platform_device *dev);
+
 	/* Poweron platform dependencies */
 	int (*busy)(struct platform_device *dev);
 

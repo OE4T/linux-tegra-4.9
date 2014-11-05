@@ -1478,6 +1478,9 @@ static int __exit gk20a_remove(struct platform_device *dev)
 	else
 		gk20a_pm_disable_clk(&dev->dev);
 
+	if (platform->remove)
+		platform->remove(dev);
+
 	set_gk20a(dev, NULL);
 	kfree(g);
 

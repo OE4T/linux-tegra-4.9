@@ -120,6 +120,15 @@ static int gk20a_generic_late_probe(struct platform_device *dev)
 	return 0;
 }
 
+static int gk20a_generic_remove(struct platform_device *dev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+
+	tegra_pd_remove_sd(&platform->g->pd);
+
+	return 0;
+}
+
 struct gk20a_platform gk20a_generic_platform = {
 	.railgate = gk20a_generic_railgate,
 	.unrailgate = gk20a_generic_unrailgate,
@@ -127,5 +136,6 @@ struct gk20a_platform gk20a_generic_platform = {
 
 	.probe = gk20a_generic_probe,
 	.late_probe = gk20a_generic_late_probe,
+	.remove = gk20a_generic_remove,
 	.default_big_page_size	= SZ_128K,
 };

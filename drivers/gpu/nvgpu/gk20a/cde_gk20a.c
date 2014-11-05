@@ -144,6 +144,26 @@ void gk20a_cde_destroy(struct gk20a *g)
 	mutex_unlock(&cde_app->mutex);
 }
 
+void gk20a_cde_suspend(struct gk20a *g)
+{
+
+	struct gk20a_cde_app *cde_app = &g->cde_app;
+	struct gk20a_cde_ctx *cde_ctx, *cde_ctx_save;
+
+	if (!cde_app->initialised)
+		return;
+
+	list_for_each_entry_safe(cde_ctx, cde_ctx_save,
+			&cde_app->cde_ctx_lru, list) {
+		if (cde_ctx->is_temporary) {
+			mutex_lock(&cde_app->mutex);
+			cancel_delayed_work(&cde_ctx->ctx_deleter_work);
+			mutex_unlock(&cde_app->mutex);
+		}
+	}
+
+}
+
 static int gk20a_cde_allocate_contexts(struct gk20a *g)
 {
 	struct gk20a_cde_app *cde_app = &g->cde_app;

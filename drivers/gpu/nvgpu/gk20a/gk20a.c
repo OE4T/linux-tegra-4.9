@@ -679,6 +679,9 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	if (ret)
 		return ret;
 
+	/* cancel any pending cde work */
+	gk20a_cde_suspend(g);
+
 	/*
 	 * After this point, gk20a interrupts should not get
 	 * serviced.

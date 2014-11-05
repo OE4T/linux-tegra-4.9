@@ -262,6 +262,7 @@ struct gk20a_cde_app {
 };
 
 void gk20a_cde_destroy(struct gk20a *g);
+void gk20a_cde_suspend(struct gk20a *g);
 int gk20a_init_cde_support(struct gk20a *g);
 int gk20a_cde_reload(struct gk20a *g);
 int gk20a_cde_convert(struct gk20a *g, struct dma_buf *dst,

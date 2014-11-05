@@ -1483,22 +1483,22 @@ static void tegra_se_rng_drbg_exit(struct crypto_tfm *tfm)
 	rng_ctx->se_dev = NULL;
 }
 
-int tegra_se_sha_init(struct ahash_request *req)
+static int tegra_se_sha_init(struct ahash_request *req)
 {
 	return 0;
 }
 
-int tegra_se_sha_update(struct ahash_request *req)
+static int tegra_se_sha_update(struct ahash_request *req)
 {
 	return 0;
 }
 
-int tegra_se_sha_finup(struct ahash_request *req)
+static int tegra_se_sha_finup(struct ahash_request *req)
 {
 	return 0;
 }
 
-int tegra_se_sha_final(struct ahash_request *req)
+static int tegra_se_sha_final(struct ahash_request *req)
 {
 	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
 	struct tegra_se_sha_context *sha_ctx = crypto_ahash_ctx(tfm);
@@ -1595,30 +1595,30 @@ static int tegra_se_sha_digest(struct ahash_request *req)
 	return tegra_se_sha_init(req) ?: tegra_se_sha_final(req);
 }
 
-int tegra_se_sha_cra_init(struct crypto_tfm *tfm)
+static int tegra_se_sha_cra_init(struct crypto_tfm *tfm)
 {
 	crypto_ahash_set_reqsize(__crypto_ahash_cast(tfm),
 				 sizeof(struct tegra_se_sha_context));
 	return 0;
 }
 
-void tegra_se_sha_cra_exit(struct crypto_tfm *tfm)
+static void tegra_se_sha_cra_exit(struct crypto_tfm *tfm)
 {
 	/* do nothing */
 }
 
-int tegra_se_aes_cmac_init(struct ahash_request *req)
+static int tegra_se_aes_cmac_init(struct ahash_request *req)
 {
 
 	return 0;
 }
 
-int tegra_se_aes_cmac_update(struct ahash_request *req)
+static int tegra_se_aes_cmac_update(struct ahash_request *req)
 {
 	return 0;
 }
 
-int tegra_se_aes_cmac_final(struct ahash_request *req)
+static int tegra_se_aes_cmac_final(struct ahash_request *req)
 {
 	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
 	struct tegra_se_aes_cmac_context *cmac_ctx = crypto_ahash_ctx(tfm);
@@ -1795,7 +1795,7 @@ out:
 	return 0;
 }
 
-int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
+static int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 		unsigned int keylen)
 {
 	struct tegra_se_aes_cmac_context *ctx = crypto_ahash_ctx(tfm);
@@ -1918,24 +1918,24 @@ out:
 	return 0;
 }
 
-int tegra_se_aes_cmac_digest(struct ahash_request *req)
+static int tegra_se_aes_cmac_digest(struct ahash_request *req)
 {
 	return tegra_se_aes_cmac_init(req) ?: tegra_se_aes_cmac_final(req);
 }
 
-int tegra_se_aes_cmac_finup(struct ahash_request *req)
+static int tegra_se_aes_cmac_finup(struct ahash_request *req)
 {
 	return 0;
 }
 
-int tegra_se_aes_cmac_cra_init(struct crypto_tfm *tfm)
+static int tegra_se_aes_cmac_cra_init(struct crypto_tfm *tfm)
 {
 	crypto_ahash_set_reqsize(__crypto_ahash_cast(tfm),
 				 sizeof(struct tegra_se_aes_cmac_context));
 
 	return 0;
 }
-void tegra_se_aes_cmac_cra_exit(struct crypto_tfm *tfm)
+static void tegra_se_aes_cmac_cra_exit(struct crypto_tfm *tfm)
 {
 	struct tegra_se_aes_cmac_context *ctx = crypto_tfm_ctx(tfm);
 
@@ -2008,22 +2008,22 @@ static int tegra_init_rsa_key_slot(struct tegra_se_dev *se_dev)
 	return 0;
 }
 
-int tegra_se_rsa_init(struct ahash_request *req)
+static int tegra_se_rsa_init(struct ahash_request *req)
 {
 	return 0;
 }
 
-int tegra_se_rsa_update(struct ahash_request *req)
+static int tegra_se_rsa_update(struct ahash_request *req)
 {
 	return 0;
 }
 
-int tegra_se_rsa_final(struct ahash_request *req)
+static int tegra_se_rsa_final(struct ahash_request *req)
 {
 	return 0;
 }
 
-int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
+static int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 		unsigned int keylen)
 {
 	struct tegra_se_aes_rsa_context *ctx = crypto_ahash_ctx(tfm);
@@ -2152,7 +2152,7 @@ static void tegra_se_read_rsa_result(struct tegra_se_dev *se_dev,
 				(i * sizeof(u32)));
 }
 
-int tegra_se_rsa_digest(struct ahash_request *req)
+static int tegra_se_rsa_digest(struct ahash_request *req)
 {
 	struct crypto_ahash *tfm = NULL;
 	struct tegra_se_aes_rsa_context *rsa_ctx = NULL;
@@ -2253,17 +2253,17 @@ out:
 	return ret;
 }
 
-int tegra_se_rsa_finup(struct ahash_request *req)
+static int tegra_se_rsa_finup(struct ahash_request *req)
 {
 	return 0;
 }
 
-int tegra_se_rsa_cra_init(struct crypto_tfm *tfm)
+static int tegra_se_rsa_cra_init(struct crypto_tfm *tfm)
 {
 	return 0;
 }
 
-void tegra_se_rsa_cra_exit(struct crypto_tfm *tfm)
+static void tegra_se_rsa_cra_exit(struct crypto_tfm *tfm)
 {
 	struct tegra_se_aes_rsa_context *ctx = crypto_tfm_ctx(tfm);
 	tegra_se_rsa_free_key_slot(ctx->slot);
@@ -2593,7 +2593,7 @@ static struct ahash_alg hash_algs[] = {
 	}
 };
 
-bool isAlgoSupported(struct tegra_se_dev *se_dev, const char *algo)
+static bool is_algo_supported(struct tegra_se_dev *se_dev, const char *algo)
 {
 	if (!strcmp(algo, "ansi_cprng")) {
 		if (se_dev->chipdata->cprng_supported)
@@ -2813,7 +2813,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 	for (i = 0; i < ARRAY_SIZE(aes_algs); i++) {
-		if (isAlgoSupported(se_dev, aes_algs[i].cra_name)) {
+		if (is_algo_supported(se_dev, aes_algs[i].cra_name)) {
 			INIT_LIST_HEAD(&aes_algs[i].cra_list);
 			err = crypto_register_alg(&aes_algs[i]);
 			if (err) {
@@ -2825,7 +2825,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 	for (j = 0; j < ARRAY_SIZE(hash_algs); j++) {
-		if (isAlgoSupported(se_dev, hash_algs[j].halg.base.cra_name)) {
+		if (is_algo_supported(se_dev, hash_algs[j].halg.base.cra_name)) {
 			err = crypto_register_ahash(&hash_algs[j]);
 			if (err) {
 				dev_err(se_dev->dev,

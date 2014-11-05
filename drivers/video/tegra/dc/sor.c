@@ -1346,6 +1346,8 @@ void tegra_sor_start_dc(struct tegra_dc_sor_data *sor)
 	struct tegra_dc *dc = sor->dc;
 	u32 reg_val;
 
+	if (tegra_platform_is_linsim())
+		return;
 	tegra_dc_get(dc);
 	reg_val = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
 #ifndef CONFIG_TEGRA_NVDISPLAY
@@ -1422,6 +1424,8 @@ tegra_dc_sor_disable_win_short_raster(struct tegra_dc *dc, int *dc_reg_ctx)
 {
 	int selected_windows, i;
 
+	if (tegra_platform_is_linsim())
+		return;
 	selected_windows = tegra_dc_readl(dc, DC_CMD_DISPLAY_WINDOW_HEADER);
 
 	/* Store and clear window options */
@@ -1491,6 +1495,8 @@ void tegra_sor_stop_dc(struct tegra_dc_sor_data *sor)
 {
 	struct tegra_dc *dc = sor->dc;
 
+	if (tegra_platform_is_linsim())
+		return;
 	tegra_dc_get(dc);
 
 	/* Stop DC->SOR path */

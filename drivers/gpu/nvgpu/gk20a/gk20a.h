@@ -700,7 +700,8 @@ enum {
 	FERMI_TWOD_A              = 0x902D,
 	KEPLER_COMPUTE_A          = 0xA0C0,
 	KEPLER_INLINE_TO_MEMORY_A = 0xA040,
-	KEPLER_DMA_COPY_A         = 0xA0B5, /*not sure about this one*/
+	KEPLER_DMA_COPY_A         = 0xA0B5,
+	KEPLER_CHANNEL_GPFIFO_C   = 0xA26F,
 };
 
 static inline int support_gk20a_pmu(struct platform_device *dev)

@@ -27,16 +27,16 @@ int gpu_init_hal(struct gk20a *g)
 	switch (ver) {
 	case GK20A_GPUID_GK20A:
 		gk20a_dbg_info("gk20a detected");
-		gk20a_init_hal(&g->ops);
+		gk20a_init_hal(g);
 		break;
 	case GK20A_GPUID_GM20B:
 		gk20a_dbg_info("gm20b detected");
-		if (gm20b_init_hal(&g->ops))
+		if (gm20b_init_hal(g))
 			return -ENODEV;
 		break;
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	case TEGRA_18x_GPUID:
-		if (TEGRA_18x_GPUID_HAL(&g->ops))
+		if (TEGRA_18x_GPUID_HAL(g))
 			return -ENODEV;
 		break;
 #endif

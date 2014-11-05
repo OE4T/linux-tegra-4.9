@@ -122,6 +122,13 @@ struct nvgpu_gpu_characteristics {
 
 	__u64 flags;
 
+	__u32 twod_class;
+	__u32 threed_class;
+	__u32 compute_class;
+	__u32 gpfifo_class;
+	__u32 inline_to_memory_class;
+	__u32 dma_copy_class;
+
 	/* Notes:
 	   - This struct can be safely appended with new fields. However, always
 	     keep the structure size multiple of 8 and make sure that the binary

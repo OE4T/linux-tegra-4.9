@@ -83,8 +83,11 @@ static struct gpu_ops gm20b_ops = {
 	}
 };
 
-int gm20b_init_hal(struct gpu_ops *gops)
+int gm20b_init_hal(struct gk20a *g)
 {
+	struct gpu_ops *gops = &g->ops;
+	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
+
 	*gops = gm20b_ops;
 #ifdef CONFIG_TEGRA_ACR
 	if (tegra_platform_is_linsim()) {
@@ -126,6 +129,13 @@ int gm20b_init_hal(struct gpu_ops *gops)
 	gm20b_init_clk_ops(gops);
 	gm20b_init_regops(gops);
 	gops->name = "gm20b";
+
+	c->twod_class = FERMI_TWOD_A;
+	c->threed_class = MAXWELL_B;
+	c->compute_class = MAXWELL_COMPUTE_B;
+	c->gpfifo_class = MAXWELL_CHANNEL_GPFIFO_A;
+	c->inline_to_memory_class = KEPLER_INLINE_TO_MEMORY_B;
+	c->dma_copy_class = MAXWELL_DMA_COPY_A;
 
 	return 0;
 }

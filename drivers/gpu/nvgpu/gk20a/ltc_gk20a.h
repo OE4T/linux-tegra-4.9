@@ -15,7 +15,7 @@
 
 #ifndef LTC_GK20A_H
 #define LTC_GK20A_H
-struct gk20a;
+struct gpu_ops;
 
 void gk20a_init_ltc(struct gpu_ops *gops);
 #endif

@@ -242,7 +242,7 @@ static int vgpu_init_hal(struct gk20a *g)
 	case GK20A_GPUID_GK20A:
 		gk20a_dbg_info("gk20a detected");
 		/* init gk20a ops then override with virt extensions */
-		gk20a_init_hal(&g->ops);
+		gk20a_init_hal(g);
 		vgpu_init_fifo_ops(&g->ops);
 		vgpu_init_gr_ops(&g->ops);
 		vgpu_init_ltc_ops(&g->ops);

@@ -15,7 +15,7 @@
 
 #ifndef _NVHOST_HAL_GM20B_H
 #define _NVHOST_HAL_GM20B_H
-struct gpu_ops;
+struct gk20a;
 
-int gm20b_init_hal(struct gpu_ops *gops);
+int gm20b_init_hal(struct gk20a *g);
 #endif

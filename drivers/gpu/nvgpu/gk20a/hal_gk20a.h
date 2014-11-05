@@ -20,9 +20,8 @@
 
 #include <linux/kernel.h>
 
-struct gpu_ops;
 struct gk20a;
 
-int gk20a_init_hal(struct gpu_ops *gops);
+int gk20a_init_hal(struct gk20a *g);
 
 #endif /* __HAL_GK20A__ */

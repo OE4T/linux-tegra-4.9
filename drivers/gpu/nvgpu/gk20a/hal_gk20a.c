@@ -45,8 +45,11 @@ static struct gpu_ops gk20a_ops = {
 	}
 };
 
-int gk20a_init_hal(struct gpu_ops *gops)
+int gk20a_init_hal(struct gk20a *g)
 {
+	struct gpu_ops *gops = &g->ops;
+	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
+
 	*gops = gk20a_ops;
 	gops->privsecurity = 0;
 	gk20a_init_mc(gops);
@@ -60,6 +63,13 @@ int gk20a_init_hal(struct gpu_ops *gops)
 	gk20a_init_clk_ops(gops);
 	gk20a_init_regops(gops);
 	gops->name = "gk20a";
+
+	c->twod_class = FERMI_TWOD_A;
+	c->threed_class = KEPLER_C;
+	c->compute_class = KEPLER_COMPUTE_A;
+	c->gpfifo_class = KEPLER_CHANNEL_GPFIFO_C;
+	c->inline_to_memory_class = KEPLER_INLINE_TO_MEMORY_A;
+	c->dma_copy_class = KEPLER_DMA_COPY_A;
 
 	return 0;
 }

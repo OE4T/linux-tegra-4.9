@@ -26,6 +26,6 @@
 #define TEGRA_18x_GPU_COMPAT_TEGRA NVGPU_COMPAT_TEGRA_GP10B
 #define TEGRA_18x_GPU_COMPAT_GENERIC NVGPU_COMPAT_GENERIC_GP10B
 struct gpu_ops;
-extern int gp10b_init_hal(struct gpu_ops *);
+extern int gp10b_init_hal(struct gk20a *);
 extern struct gk20a_platform t18x_gpu_tegra_platform;
 #endif

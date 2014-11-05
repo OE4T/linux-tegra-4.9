@@ -15,7 +15,7 @@
 
 #ifndef _NVGPU_HAL_GP10B_H
 #define _NVGPU_HAL_GP10B_H
-struct gpu_ops;
+struct gk20a;
 
-int gp10b_init_hal(struct gpu_ops *gops);
+int gp10b_init_hal(struct gk20a *gops);
 #endif

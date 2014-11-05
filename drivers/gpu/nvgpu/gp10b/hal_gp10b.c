@@ -23,6 +23,7 @@
 #include "gp10b/gr_gp10b.h"
 #include "gp10b/mc_gp10b.h"
 
+#include "gm20b/gr_gm20b.h"
 #include "gm20b/ltc_gm20b.h"
 #include "gm20b/fb_gm20b.h"
 #include "gm20b/gm20b_gating_reglist.h"
@@ -81,8 +82,11 @@ struct gpu_ops gp10b_ops = {
 	}
 };
 
-int gp10b_init_hal(struct gpu_ops *gops)
+int gp10b_init_hal(struct gk20a *g)
 {
+	struct gpu_ops *gops = &g->ops;
+	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
+
 	*gops = gp10b_ops;
 	gp10b_init_mc(gops);
 	gm20b_init_ltc(gops);
@@ -95,6 +99,13 @@ int gp10b_init_hal(struct gpu_ops *gops)
 	gm20b_init_pmu_ops(gops);
 	gm20b_init_clk_ops(gops);
 	gops->name = "gp10b";
+
+	c->twod_class = FERMI_TWOD_A;
+	c->threed_class = PASCAL_A;
+	c->compute_class = PASCAL_COMPUTE_A;
+	c->gpfifo_class = MAXWELL_CHANNEL_GPFIFO_A;
+	c->inline_to_memory_class = KEPLER_INLINE_TO_MEMORY_B;
+	c->dma_copy_class = MAXWELL_DMA_COPY_A;
 
 	return 0;
 }

@@ -25,6 +25,8 @@
 #define QUADD_UNW_TYPES_SIZE \
 	DIV_ROUND_UP(QUADD_MAX_STACK_DEPTH * 4, sizeof(u32) * BITS_PER_BYTE)
 
+struct quadd_hrt_ctx;
+
 struct quadd_callchain {
 	int nr;
 
@@ -43,6 +45,8 @@ struct quadd_callchain {
 	unsigned long curr_sp;
 	unsigned long curr_fp;
 	unsigned long curr_pc;
+
+	struct quadd_hrt_ctx *hrt;
 };
 
 struct quadd_ctx;

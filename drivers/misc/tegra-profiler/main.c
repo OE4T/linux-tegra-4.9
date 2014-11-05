@@ -167,13 +167,13 @@ validate_freq(unsigned int freq)
 static int
 set_parameters(struct quadd_parameters *p, uid_t *debug_app_uid)
 {
-	int i, err;
+	int i, err, uid = 0;
 	int pmu_events_id[QUADD_MAX_COUNTERS];
 	int pl310_events_id;
 	int nr_pmu = 0, nr_pl310 = 0;
-	int uid = 0;
 	struct task_struct *task;
 	unsigned int extra;
+	u64 *low_addr_p;
 
 	if (!validate_freq(p->freq)) {
 		pr_err("%s: incorrect frequency: %u\n", __func__, p->freq);
@@ -298,6 +298,10 @@ set_parameters(struct quadd_parameters *p, uid_t *debug_app_uid)
 
 	if (extra & QUADD_PARAM_EXTRA_BT_MIXED)
 		pr_info("unwinding: mixed mode\n");
+
+	low_addr_p = (u64 *)&p->reserved[QUADD_PARAM_IDX_BT_LOWER_BOUND];
+	ctx.hrt->low_addr = (unsigned long)*low_addr_p;
+	pr_info("bt lower bound: %#lx\n", ctx.hrt->low_addr);
 
 	err = quadd_unwind_start(task);
 	if (err)

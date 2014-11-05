@@ -43,7 +43,9 @@ struct timecounter;
 
 struct quadd_hrt_ctx {
 	struct quadd_cpu_context * __percpu cpu_ctx;
+
 	u64 sample_period;
+	unsigned long low_addr;
 
 	struct quadd_ctx *quadd_ctx;
 

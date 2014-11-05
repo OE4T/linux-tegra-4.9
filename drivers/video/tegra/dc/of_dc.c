@@ -526,10 +526,13 @@ static int parse_sd_settings(struct device_node *np,
 	int sd_index = 0;
 	u32 temp;
 
-	if (of_device_is_available(np))
+	if (of_device_is_available(np)) {
 		sd_settings->enable = (unsigned) 1;
-	else
+		sd_settings->enable_int = (unsigned) 1;
+	} else {
 		sd_settings->enable = (unsigned) 0;
+		sd_settings->enable_int = (unsigned) 0;
+	}
 
 	OF_DC_LOG("nvidia,sd-enable %d\n", sd_settings->enable);
 

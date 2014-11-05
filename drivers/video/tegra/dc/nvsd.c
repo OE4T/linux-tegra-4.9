@@ -41,6 +41,8 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 static ssize_t nvsd_registers_show(struct kobject *kobj,
 	struct kobj_attribute *attr, char *buf);
 
+static int nvsd_is_enabled(struct tegra_dc_sd_settings *settings);
+
 NVSD_ATTR(enable);
 NVSD_ATTR(aggressiveness);
 NVSD_ATTR(phase_in_settings);
@@ -308,31 +310,6 @@ static void nvsd_cmd_handler(struct tegra_dc_sd_settings *settings,
 	}
 }
 
-static bool nvsd_update_enable(struct tegra_dc_sd_settings *settings,
-	int enable_val)
-{
-
-	if (enable_val != 1 && enable_val != 0)
-		return false;
-
-	if (!settings->cmd && settings->enable != enable_val) {
-		settings->num_phase_in_steps =
-			STEPS_PER_AGG_LVL*settings->aggressiveness;
-		settings->phase_settings_step = enable_val ?
-			0 : settings->num_phase_in_steps;
-	}
-
-	if (settings->enable != enable_val || settings->cmd & DISABLE) {
-		settings->cmd &= ~(ENABLE | DISABLE);
-		if (!settings->enable && enable_val)
-			settings->cmd |= PHASE_IN;
-		settings->cmd |= enable_val ? ENABLE : DISABLE;
-		return true;
-	}
-
-	return false;
-}
-
 static bool nvsd_update_agg(struct tegra_dc_sd_settings *settings, int agg_val)
 {
 	int i;
@@ -358,7 +335,7 @@ static bool nvsd_update_agg(struct tegra_dc_sd_settings *settings, int agg_val)
 	pri_lvl = i;
 	agg_lvl = sd_agg_priorities->agg[i];
 
-	if (settings->phase_in_settings && settings->enable &&
+	if (settings->phase_in_settings && nvsd_is_enabled(settings) &&
 		settings->aggressiveness != agg_lvl) {
 
 		settings->final_agg = agg_lvl;
@@ -384,7 +361,7 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 
 	tegra_dc_io_start(dc);
 	/* If SD's not present or disabled, clear the register and return. */
-	if (!settings || settings->enable == 0) {
+	if (!settings || nvsd_is_enabled(settings) == 0) {
 		/* clear the brightness val, too. */
 		if (_sd_brightness)
 			atomic_set(_sd_brightness, 255);
@@ -480,7 +457,7 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 	if (!settings->cmd && settings->phase_in_settings) {
 		settings->num_phase_in_steps = STEPS_PER_AGG_LVL *
 			settings->aggressiveness;
-		settings->phase_settings_step = settings->enable ?
+		settings->phase_settings_step = nvsd_is_enabled(settings) ?
 			settings->num_phase_in_steps : 0;
 	}
 
@@ -745,7 +722,7 @@ bool nvsd_update_brightness(struct tegra_dc *dc)
 			nvsd_cmd_handler(settings, dc);
 
 		/* nvsd_cmd_handler may turn off didim */
-		if (!settings->enable)
+		if (!nvsd_is_enabled(settings))
 			return true;
 
 		cur_sd_brightness = atomic_read(_sd_brightness);
@@ -1026,17 +1003,7 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 
 	if (sd_settings) {
 		if (IS_NVSD_ATTR(enable)) {
-			if (sd_settings->phase_in_settings) {
-				err = strict_strtol(buf, 10, &result);
-				if (err)
-					return err;
-
-				if (nvsd_update_enable(sd_settings, result))
-					nvsd_check_and_update(1, 1, enable);
-
-			} else {
 				nvsd_check_and_update(0, 1, enable);
-			}
 		} else if (IS_NVSD_ATTR(aggressiveness)) {
 			err = strict_strtol(buf, 10, &result);
 			if (err)
@@ -1138,7 +1105,7 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 			mutex_unlock(&dc->lock);
 
 			/* Update backlight state IFF we're disabling! */
-			if (!sd_settings->enable && sd_settings->bl_device) {
+			if (!nvsd_is_enabled(sd_settings) && sd_settings->bl_device) {
 				/* Do the actual brightness update outside of
 				 * the mutex */
 				struct backlight_device *bl =
@@ -1245,6 +1212,11 @@ void nvsd_remove_sysfs(struct device *dev)
 }
 EXPORT_SYMBOL(nvsd_remove_sysfs);
 
+static int nvsd_is_enabled(struct tegra_dc_sd_settings *settings)
+{
+	return (settings->enable && settings->enable_int);
+}
+
 /*wrapper function used for disabling/enabling prism*/
 void nvsd_enbl_dsbl_prism(struct device *dev, bool status)
 {
@@ -1255,13 +1227,17 @@ void nvsd_enbl_dsbl_prism(struct device *dev, bool status)
 	if (!dc)
 		return;
 
-	last_status = dc->out->sd_settings->enable;
-	if (status == last_status)
+	settings = dc->out->sd_settings;
+	if (!settings)
 		return;
 
-	settings = dc->out->sd_settings;
-	settings->enable = status;
+	last_status = nvsd_is_enabled(settings);
+	settings->enable_int = status;
+	if (nvsd_is_enabled(settings) == last_status)
+		return;
+
 	nvsd_init(dc, settings);
+
 	return;
 }
 EXPORT_SYMBOL(nvsd_enbl_dsbl_prism);

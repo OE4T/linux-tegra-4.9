@@ -93,6 +93,11 @@
 		};
 	};
 
+	cpu_edp {
+		status = "okay";
+		nvidia,edp_limit = <25000>;
+	};
+
 	dvfs_rails {
 		compatible = "simple-bus";
 		#address-cells = <1>;

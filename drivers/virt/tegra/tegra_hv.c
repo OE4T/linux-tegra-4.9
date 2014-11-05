@@ -41,7 +41,7 @@
 #include <linux/tegra-ivc-config.h>
 
 #include "syscalls.h"
-#include "tegra-ivc-internal.h"
+#include <linux/tegra-ivc-instance.h>
 
 /* very simple checksum over the shared data */
 static u32 tegra_hv_server_data_sum(const struct tegra_hv_shared_data *shd)
@@ -1520,6 +1520,14 @@ int tegra_hv_ivc_tx_empty(struct tegra_hv_ivc_cookie *ivck)
 	return tegra_ivc_tx_empty(ivc);
 }
 EXPORT_SYMBOL(tegra_hv_ivc_tx_empty);
+
+uint32_t tegra_hv_ivc_tx_frames_available(struct tegra_hv_ivc_cookie *ivck)
+{
+	struct ivc *ivc = &cookie_to_ivc_dev(ivck)->ivc;
+
+	return tegra_ivc_tx_frames_available(ivc);
+}
+EXPORT_SYMBOL(tegra_hv_ivc_tx_frames_available);
 
 int tegra_hv_ivc_set_loopback(struct tegra_hv_ivc_cookie *ivck, int mode)
 {

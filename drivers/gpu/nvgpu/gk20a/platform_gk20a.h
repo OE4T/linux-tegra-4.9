@@ -76,6 +76,12 @@ struct gk20a_platform {
 	/* Adaptative ELPG: true = enable flase = disable */
 	bool enable_aelpg;
 
+	/*
+	 * gk20a_do_idle() API can take GPU either into rail gate or CAR reset
+	 * This flag can be used to force CAR reset case instead of rail gate
+	 */
+	bool force_reset_in_do_idle;
+
 	/* Default big page size 64K or 128K */
 	u32 default_big_page_size;
 

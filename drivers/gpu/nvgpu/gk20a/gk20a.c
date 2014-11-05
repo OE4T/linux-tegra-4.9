@@ -598,10 +598,7 @@ static void gk20a_remove_support(struct platform_device *dev)
 
 	release_firmware(g->pmu_fw);
 
-	free_irq(g->irq_stall, g);
-	free_irq(g->irq_nonstall, g);
-
-	/* free mappings to registers, etc*/
+	/* free mappings to registers, etc */
 
 	if (g->regs) {
 		iounmap(g->regs);
@@ -1455,6 +1452,9 @@ static int __exit gk20a_remove(struct platform_device *dev)
 	if (platform->virtual_dev)
 		return vgpu_remove(dev);
 
+	if (platform->has_cde)
+		gk20a_cde_destroy(g);
+
 #ifdef CONFIG_INPUT_CFBOOST
 	if (g->boost_added)
 		cfb_remove_device(&dev->dev);
@@ -1465,23 +1465,23 @@ static int __exit gk20a_remove(struct platform_device *dev)
 
 	gk20a_user_deinit(dev);
 
-	set_gk20a(dev, NULL);
-#ifdef CONFIG_DEBUG_FS
-	debugfs_remove(g->debugfs_ltc_enabled);
-	debugfs_remove(g->debugfs_gr_idle_timeout_default);
-	debugfs_remove(g->debugfs_timeouts_enabled);
-#endif
+	debugfs_remove_recursive(platform->debugfs);
 
 	gk20a_remove_sysfs(&dev->dev);
 
+	if (platform->secure_buffer.destroy)
+		platform->secure_buffer.destroy(dev,
+				&platform->secure_buffer);
+
+	if (pm_runtime_enabled(&dev->dev))
+		pm_runtime_disable(&dev->dev);
+	else
+		gk20a_pm_disable_clk(&dev->dev);
+
+	set_gk20a(dev, NULL);
 	kfree(g);
 
-#ifdef CONFIG_PM_RUNTIME
-	pm_runtime_put(&dev->dev);
-	pm_runtime_disable(&dev->dev);
-#else
-	gk20a_pm_disable_clk(&dev->dev);
-#endif
+	gk20a_dbg_fn("removed");
 
 	return 0;
 }

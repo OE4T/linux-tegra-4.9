@@ -1460,6 +1460,9 @@ static int __exit gk20a_remove(struct platform_device *dev)
 		cfb_remove_device(&dev->dev);
 #endif
 
+	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
+		gk20a_scale_exit(dev);
+
 	if (g->remove_support)
 		g->remove_support(dev);
 

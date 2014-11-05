@@ -35,6 +35,7 @@ struct gk20a_scale_profile {
 
 /* Initialization and de-initialization for module */
 void gk20a_scale_init(struct platform_device *);
+void gk20a_scale_exit(struct platform_device *);
 void gk20a_scale_hw_init(struct platform_device *pdev);
 
 #ifdef CONFIG_GK20A_DEVFREQ

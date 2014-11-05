@@ -312,6 +312,28 @@ err_get_freqs:
 	g->scale_profile = NULL;
 }
 
+void gk20a_scale_exit(struct platform_device *pdev)
+{
+	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a *g = platform->g;
+	int err;
+
+	if (platform->qos_id < PM_QOS_NUM_CLASSES &&
+	    platform->qos_id != PM_QOS_RESERVED &&
+	    platform->postscale) {
+		pm_qos_remove_notifier(platform->qos_id,
+				&g->scale_profile->qos_notify_block);
+	}
+
+	if (platform->devfreq_governor) {
+		err = devfreq_remove_device(g->devfreq);
+		g->devfreq = NULL;
+	}
+
+	kfree(g->scale_profile);
+	g->scale_profile = NULL;
+}
+
 /*
  * gk20a_scale_hw_init(dev)
  *

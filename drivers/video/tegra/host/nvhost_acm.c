@@ -883,6 +883,12 @@ void nvhost_register_client_domain(struct generic_pm_domain *domain)
 }
 EXPORT_SYMBOL(nvhost_register_client_domain);
 
+void nvhost_unregister_client_domain(struct generic_pm_domain *domain)
+{
+	pm_genpd_remove_subdomain(host1x_domain, domain);
+}
+EXPORT_SYMBOL(nvhost_unregister_client_domain);
+
 /* common runtime pm and power domain APIs */
 int nvhost_module_add_domain(struct generic_pm_domain *domain,
 	struct platform_device *pdev)

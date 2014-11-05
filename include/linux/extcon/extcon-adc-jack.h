@@ -67,6 +67,7 @@ struct adc_jack_pdata {
 	unsigned long irq_flags;
 	unsigned long handling_delay_ms; /* in ms */
 	bool wakeup_source;
+	int debounce_ms;
 };
 
 #endif /* _EXTCON_ADC_JACK_H */

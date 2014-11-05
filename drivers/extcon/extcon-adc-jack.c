@@ -52,7 +52,9 @@ struct adc_jack_data {
 
 	int irq;
 	unsigned long handling_delay; /* in jiffies */
+	int debounce_jiffies;
 	struct delayed_work handler;
+	struct timer_list timer;
 
 	struct iio_channel *chan;
 	bool wakeup_source;
@@ -97,12 +99,23 @@ static void adc_jack_handler(struct work_struct *work)
 			 adc_val, state);
 }
 
+static void ecx_extcon_notifier_timer(unsigned long _data)
+{
+	struct adc_jack_data *data = (struct adc_jack_data *)_data;
+
+	schedule_delayed_work(&data->handler, data->handling_delay);
+}
+
 static irqreturn_t adc_jack_irq_thread(int irq, void *_data)
 {
 	struct adc_jack_data *data = _data;
 
-	queue_delayed_work(system_power_efficient_wq,
-			   &data->handler, data->handling_delay);
+	if (data->debounce_jiffies)
+		mod_timer(&data->timer, jiffies + data->debounce_jiffies);
+	else
+		queue_delayed_work(system_power_efficient_wq,
+				   &data->handler, data->handling_delay);
+
 	return IRQ_HANDLED;
 }
 
@@ -137,6 +150,10 @@ static struct adc_jack_pdata *of_get_platform_data(
 	ret = of_property_read_u32(np, "extcon-adc-jack,handling-delay", &pval);
 	if (!ret)
 		pdata->handling_delay_ms = pval;
+
+	ret = of_property_read_u32(np, "extcon-adc-jack,debounce-ms", &pval);
+	if (!ret)
+		pdata->debounce_ms = pval;
 
 	nstates = of_property_count_u32_elems(np, "extcon-adc-jack,states");
 	if (nstates < 0)
@@ -231,8 +248,11 @@ static int adc_jack_probe(struct platform_device *pdev)
 
 	data->handling_delay = msecs_to_jiffies(pdata->handling_delay_ms);
 	data->wakeup_source = pdata->wakeup_source;
+	data->debounce_jiffies = msecs_to_jiffies(pdata->debounce_ms);
 
 	INIT_DEFERRABLE_WORK(&data->handler, adc_jack_handler);
+	setup_timer(&data->timer,
+		ecx_extcon_notifier_timer, (unsigned long)data);
 
 	platform_set_drvdata(pdev, data);
 

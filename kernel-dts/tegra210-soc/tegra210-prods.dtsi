@@ -168,4 +168,18 @@
 			};
 		};
 	};
+
+	pinmux@700008d4 {
+		prod-settings {
+			#prod-cells = <4>;
+			spi1_prod {
+				nvidia,prod-boot-init;
+				prod = <0 0x200 0x0FFFFFFF 0x50000000
+					0 0x204 0x0FFFFFFF 0x50000000
+					0 0x208 0x0FFFFFFF 0x50000000
+					0 0x20c 0x0FFFFFFF 0x50000000
+					0 0x210 0x0FFFFFFF 0x50000000>;
+				};
+		};
+	};
 };

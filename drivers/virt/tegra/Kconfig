@@ -14,7 +14,9 @@ config	TEGRA_VIRTUALIZATION
 config TEGRA_HV_MANAGER
 	tristate "Nvidia Tegra hypervisor management & IVC"
 	depends on TEGRA_VIRTUALIZATION
+	select TEGRA_IVC
 	help
-	  The NVIDIA hypervisor management driver provides IVC services (for now)
+	  The NVIDIA hypervisor management driver provides IVC channels
+	  configured by the hypervisor.
 
 	  Select Y to enable

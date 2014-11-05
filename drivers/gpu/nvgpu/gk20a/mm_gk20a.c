@@ -1685,7 +1685,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 	struct scatterlist *cur_chunk;
 	unsigned int cur_offset;
 	u32 pte_w[2] = {0, 0}; /* invalid pte */
-	u32 ctag = ctag_offset;
+	u32 ctag = ctag_offset * SZ_128K;
 	u32 ctag_incr;
 	u32 page_size  = vm->gmmu_page_sizes[pgsz_idx];
 	u64 addr = 0;
@@ -1700,7 +1700,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 	/* If ctag_offset !=0 add 1 else add 0.  The idea is to avoid a branch
 	 * below (per-pte). Note: this doesn't work unless page size (when
 	 * comptags are active) is 128KB. We have checks elsewhere for that. */
-	ctag_incr = !!ctag_offset;
+	ctag_incr = ctag_offset ? page_size : 0;
 
 	cur_offset = 0;
 	if (sgt) {
@@ -1769,7 +1769,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 						>> gmmu_pte_address_shift_v());
 				pte_w[1] = gmmu_pte_aperture_video_memory_f() |
 					gmmu_pte_kind_f(kind_v) |
-					gmmu_pte_comptagline_f(ctag);
+					gmmu_pte_comptagline_f(ctag / SZ_128K);
 
 				if (rw_flag == gk20a_mem_flag_read_only) {
 					pte_w[0] |= gmmu_pte_read_only_true_f();

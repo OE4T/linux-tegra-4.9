@@ -2950,9 +2950,13 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 void gk20a_mm_l2_invalidate(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
-	mutex_lock(&mm->l2_op_lock);
-	gk20a_mm_l2_invalidate_locked(g);
-	mutex_unlock(&mm->l2_op_lock);
+	gk20a_busy_noresume(g->dev);
+	if (g->power_on) {
+		mutex_lock(&mm->l2_op_lock);
+		gk20a_mm_l2_invalidate_locked(g);
+		mutex_unlock(&mm->l2_op_lock);
+	}
+	pm_runtime_put_noidle(&g->dev->dev);
 }
 
 void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
@@ -2962,6 +2966,10 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 	s32 retry = 200;
 
 	gk20a_dbg_fn("");
+
+	gk20a_busy_noresume(g->dev);
+	if (!g->power_on)
+		goto hw_was_off;
 
 	mutex_lock(&mm->l2_op_lock);
 
@@ -2992,6 +3000,9 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 		gk20a_mm_l2_invalidate_locked(g);
 
 	mutex_unlock(&mm->l2_op_lock);
+
+hw_was_off:
+	pm_runtime_put_noidle(&g->dev->dev);
 }
 
 

@@ -457,7 +457,7 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 
 static int tegra_hdmi_get_mon_spec(struct tegra_hdmi *hdmi)
 {
-#define MAX_RETRY 5
+#define MAX_RETRY 20
 #define MIN_RETRY_DELAY_US 200
 #define MAX_RETRY_DELAY_US (MIN_RETRY_DELAY_US + 200)
 

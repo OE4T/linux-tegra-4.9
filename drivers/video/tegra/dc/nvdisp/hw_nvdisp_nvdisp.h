@@ -514,6 +514,118 @@ static inline u32 nvdisp_rg_crcb_r(void)
 {
 	return 0x0000032d;
 }
+static inline u32 nvdisp_win_options_r(void)
+{
+	return 0x00000402;
+}
+static inline u32 nvdisp_win_options_cursor_is_enable_v(u32 r)
+{
+	return (r >> 16) & 0x1;
+}
+static inline u32 nvdisp_win_options_cursor_set_cursor_enable_f(void)
+{
+	return 0x10000;
+}
+static inline u32 nvdisp_win_options_sor_is_enable_v(u32 r)
+{
+	return (r >> 25) & 0x1;
+}
+static inline u32 nvdisp_win_options_sor_set_sor_enable_f(void)
+{
+	return 0x2000000;
+}
+static inline u32 nvdisp_win_options_sor1_is_enable_v(u32 r)
+{
+	return (r >> 26) & 0x1;
+}
+static inline u32 nvdisp_win_options_sor1_set_sor1_enable_f(void)
+{
+	return 0x4000000;
+}
+static inline u32 nvdisp_win_options_dsi_is_enable_v(u32 r)
+{
+	return (r >> 29) & 0x1;
+}
+static inline u32 nvdisp_win_options_dsi_set_dsi_enable_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 nvdisp_cursor_startaddr_r(void)
+{
+	return 0x0000043e;
+}
+static inline u32 nvdisp_cursor_startaddr_range_v(u32 r)
+{
+	return (r >> 0) & 0x3fffff;
+}
+static inline u32 nvdisp_cursor_startaddr_get_size_v(u32 r)
+{
+	return (r >> 24) & 0x3;
+}
+static inline u32 nvdisp_cursor_startaddr_get_size_size_32x32_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_cursor_startaddr_get_size_size_64x64_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 nvdisp_cursor_startaddr_get_size_size_128x128_f(void)
+{
+	return 0x2000000;
+}
+static inline u32 nvdisp_cursor_startaddr_get_size_size_256x256_f(void)
+{
+	return 0x3000000;
+}
+static inline u32 nvdisp_cursor_position_r(void)
+{
+	return 0x00000440;
+}
+static inline u32 nvdisp_cursor_position_h_range_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 nvdisp_cursor_position_v_range_v(u32 r)
+{
+	return (r >> 16) & 0xffff;
+}
+static inline u32 nvdisp_cursor_cropped_point_in_r(void)
+{
+	return 0x00000442;
+}
+static inline u32 nvdisp_cursor_cropped_point_in_x_range_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 nvdisp_cursor_cropped_point_in_y_range_v(u32 r)
+{
+	return (r >> 16) & 0xffff;
+}
+static inline u32 nvdisp_cursor_cropped_size_in_r(void)
+{
+	return 0x00000446;
+}
+static inline u32 nvdisp_cursor_cropped_size_in_width_range_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 nvdisp_cursor_cropped_size_in_height_range_v(u32 r)
+{
+	return (r >> 16) & 0xffff;
+}
+static inline u32 nvdisp_cursor_startaddr_hi_r(void)
+{
+	return 0x000004ec;
+}
+static inline u32 nvdisp_cursor_startaddr_hi_range_sw_default_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_blend_cursor_ctrl_r(void)
+{
+	return 0x000004f1;
+}
 static inline u32 nvdisp_sor_control_r(void)
 {
 	return 0x00000403;

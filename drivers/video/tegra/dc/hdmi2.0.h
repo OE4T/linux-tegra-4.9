@@ -244,6 +244,8 @@ struct tegra_hdmi {
 	bool enabled;
 	int clock_refcount;
 
+	bool dvi;
+
 	u32 clk_type;
 
 	struct tegra_edid_hdmi_eld eld;

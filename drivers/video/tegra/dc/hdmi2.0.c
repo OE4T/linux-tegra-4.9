@@ -94,6 +94,11 @@ static void tegra_hdmi_put(struct tegra_dc *dc);
 static void tegra_hdmi_scdc_worker(struct work_struct *work);
 static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi);
 
+static inline bool tegra_hdmi_is_connected(struct tegra_hdmi *hdmi)
+{
+	return !(hdmi->mon_spec.misc & FB_MISC_HDMI);
+}
+
 static inline void tegra_hdmi_irq_enable(struct tegra_hdmi *hdmi)
 {
 	if (tegra_platform_is_fpga())
@@ -215,6 +220,9 @@ int tegra_hdmi_setup_hda_presence(void)
 
 	if (!hdmi)
 		return -EAGAIN;
+
+	if (hdmi->dvi)
+		return -ENODEV;
 
 	dc = hdmi->dc;
 
@@ -530,6 +538,8 @@ static void tegra_hdmi_edid_config(struct tegra_hdmi *hdmi)
 
 	dc->out->h_size = CM_TO_MM(hdmi->mon_spec.max_x);
 	dc->out->v_size = CM_TO_MM(hdmi->mon_spec.max_y);
+
+	hdmi->dvi = tegra_hdmi_is_connected(hdmi);
 
 #undef CM_TO_MM
 }
@@ -942,7 +952,10 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 	tegra_sor_writel(sor, NV_SOR_REFCLK,
 			NV_SOR_REFCLK_DIV_INT(dispclk_div_8_2 >> 2) |
 			NV_SOR_REFCLK_DIV_FRAC(dispclk_div_8_2));
-	tegra_sor_writel(sor, NV_SOR_HDMI_CTRL, 0x40020038);
+
+	hdmi->dvi ?
+		({tegra_sor_writel(sor, NV_SOR_HDMI_CTRL, 0x00020038); }) :
+		({tegra_sor_writel(sor, NV_SOR_HDMI_CTRL, 0x40020038); });
 
 	tegra_dc_writel(dc, 0x180, DC_DISP_H_PULSE2_CONTROL);
 	h_pulse_start = dc->mode.h_ref_to_sync +
@@ -1068,6 +1081,9 @@ static void tegra_hdmi_avi_infoframe(struct tegra_hdmi *hdmi)
 {
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 
+	if (hdmi->dvi)
+		return;
+
 	/* disable avi infoframe before configuring */
 	tegra_sor_writel(sor, NV_SOR_HDMI_AVI_INFOFRAME_CTRL, 0);
 
@@ -1095,6 +1111,9 @@ static void tegra_hdmi_audio_infoframe_update(struct tegra_hdmi *hdmi)
 static void tegra_hdmi_audio_infoframe(struct tegra_hdmi *hdmi)
 {
 	struct tegra_dc_sor_data *sor = hdmi->sor;
+
+	if (hdmi->dvi)
+		return;
 
 	/* disable audio infoframe before configuring */
 	tegra_sor_writel(sor, NV_SOR_HDMI_AUDIO_INFOFRAME_CTRL, 0);
@@ -1195,6 +1214,10 @@ int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq,
 
 	if (!hdmi)
 		return -ENODEV;
+
+	if (hdmi->dvi)
+		return -ENODEV;
+
 	dc = hdmi->dc;
 
 	valid_freq = AUDIO_FREQ_32K == audio_freq ||
@@ -1225,6 +1248,9 @@ int tegra_hdmi_audio_null_sample_inject(bool on)
 	struct tegra_hdmi *hdmi = dc_hdmi;
 
 	if (!hdmi)
+		return -ENODEV;
+
+	if (hdmi->dvi)
 		return -ENODEV;
 
 	if (on && !hdmi->null_sample_inject)

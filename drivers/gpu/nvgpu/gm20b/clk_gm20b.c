@@ -1603,6 +1603,26 @@ static int monitor_get(void *data, u64 *val)
 }
 DEFINE_SIMPLE_ATTRIBUTE(monitor_fops, monitor_get, NULL, "%llu\n");
 
+static int pll_param_show(struct seq_file *s, void *data)
+{
+	seq_printf(s, "ADC offs = %d uV, ADC slope = %d uV, VCO ctrl = 0x%x\n",
+		   gpc_pll_params.uvdet_offs, gpc_pll_params.uvdet_slope,
+		   gpc_pll_params.vco_ctrl);
+	return 0;
+}
+
+static int pll_param_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, pll_param_show, inode->i_private);
+}
+
+static const struct file_operations pll_param_fops = {
+	.open		= pll_param_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static int clk_gm20b_debugfs_init(struct gk20a *g)
 {
 	struct dentry *d;
@@ -1625,6 +1645,16 @@ static int clk_gm20b_debugfs_init(struct gk20a *g)
 
 	d = debugfs_create_file(
 		"monitor", S_IRUGO, platform->debugfs, g, &monitor_fops);
+	if (!d)
+		goto err_out;
+
+	d = debugfs_create_file(
+		"pll_param", S_IRUGO, platform->debugfs, g, &pll_param_fops);
+	if (!d)
+		goto err_out;
+
+	d = debugfs_create_u32("pll_na_mode", S_IRUGO, platform->debugfs,
+			       (u32 *)&g->clk.gpc_pll.mode);
 	if (!d)
 		goto err_out;
 

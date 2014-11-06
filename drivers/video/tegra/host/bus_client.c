@@ -383,7 +383,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 
 	struct nvhost_master *host = nvhost_get_host(ctx->pdev);
 	u32 *local_class_ids = NULL;
-	int err, i, hwctx_syncpt_idx = -1;
+	int err, i;
 
 	if (num_syncpt_incrs > host->info.nb_pts)
 		return -EINVAL;
@@ -464,8 +464,6 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	if (err)
 		goto fail;
 
-	hwctx_syncpt_idx = 0;
-
 	/*
 	 * Go through each syncpoint from userspace. Here we:
 	 * - Copy syncpoint information
@@ -492,13 +490,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		job->sp[i].incrs = sp.syncpt_incrs;
 	}
 
-	/* Is hwctx_syncpt_idx valid? */
-	if (hwctx_syncpt_idx == -1) {
-		err = -EINVAL;
-		goto fail;
-	}
-
-	job->hwctx_syncpt_idx = hwctx_syncpt_idx;
+	job->hwctx_syncpt_idx = 0;
 
 	trace_nvhost_channel_submit(ctx->pdev->name,
 		job->num_gathers, job->num_relocs, job->num_waitchk,

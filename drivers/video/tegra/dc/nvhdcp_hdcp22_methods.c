@@ -76,6 +76,7 @@ int tsec_hdcp_readcaps(struct hdcp_context_t *hdcp_context)
 {
 	int err = 0;
 	struct hdcp_read_caps_param read_caps_param;
+	memset(&read_caps_param, 0, sizeof(struct hdcp_read_caps_param));
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
 	memcpy(hdcp_context->cpuvaddr_mthd_buf_aligned,
@@ -98,6 +99,8 @@ int tsec_hdcp_create_session(struct hdcp_context_t *hdcp_context)
 	int err = 0;
 	struct hdcp_create_session_param create_session_param;
 
+	memset(&create_session_param, 0,
+			sizeof(struct hdcp_create_session_param));
 	create_session_param.no_of_streams = 1;
 	create_session_param.session_type = 0;
 	create_session_param.display_type = 1;
@@ -126,6 +129,8 @@ int tsec_hdcp_init(struct hdcp_context_t *hdcp_context)
 {
 	int err = 0;
 	struct hdcp_init_param init_param;
+
+	memset(&init_param, 0, sizeof(struct hdcp_init_param));
 
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
@@ -186,6 +191,7 @@ int tsec_hdcp_generate_ekm(struct hdcp_context_t *hdcp_context)
 {
 	int err = 0;
 	struct hdcp_generate_ekm_param generate_ekm_param;
+	memset(&generate_ekm_param, 0, sizeof(struct hdcp_generate_ekm_param));
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
 	generate_ekm_param.session_id = hdcp_context->session_id;
@@ -211,6 +217,8 @@ int tsec_hdcp_verify_hprime(struct hdcp_context_t *hdcp_context)
 {
 	int err = 0;
 	struct hdcp_verify_hprime_param verify_hprime_param;
+	memset(&verify_hprime_param, 0,
+			sizeof(struct hdcp_verify_hprime_param));
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
 	verify_hprime_param.session_id = hdcp_context->session_id;
@@ -236,6 +244,8 @@ int tsec_hdcp_encrypt_pairing_info(struct hdcp_context_t *hdcp_context)
 {
 	int err = 0;
 	struct hdcp_encrypt_pairing_info_param encrypt_pairing_info_param;
+	memset(&encrypt_pairing_info_param, 0,
+			sizeof(struct hdcp_encrypt_pairing_info_param));
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
 	encrypt_pairing_info_param.session_id = hdcp_context->session_id;
@@ -263,6 +273,8 @@ int tsec_hdcp_generate_lc_init(struct hdcp_context_t *hdcp_context)
 {
 	int err = 0;
 	struct hdcp_generate_lc_init_param generate_lc_init_param;
+	memset(&generate_lc_init_param, 0,
+			sizeof(struct hdcp_generate_lc_init_param));
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
 	generate_lc_init_param.session_id = hdcp_context->session_id;
@@ -292,6 +304,8 @@ int tsec_hdcp_verify_lprime(struct hdcp_context_t *hdcp_context)
 {
 	int err = 0;
 	struct hdcp_verify_lprime_param verify_lprime_param;
+	memset(&verify_lprime_param, 0,
+			sizeof(struct hdcp_verify_lprime_param));
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
 	verify_lprime_param.session_id = hdcp_context->session_id;
@@ -317,6 +331,8 @@ int tsec_hdcp_ske_init(struct hdcp_context_t *hdcp_context)
 {
 	int err = 0;
 	struct hdcp_generate_ske_init_param generate_ske_init_param;
+	memset(&generate_ske_init_param, 0,
+			sizeof(struct hdcp_generate_ske_init_param));
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
 	generate_ske_init_param.session_id = hdcp_context->session_id;
@@ -349,6 +365,7 @@ int tsec_hdcp_session_ctrl(struct hdcp_context_t *hdcp_context, int flag)
 {
 	int err = 0;
 	struct hdcp_session_ctrl_param session_ctrl_param;
+	memset(&session_ctrl_param, 0, sizeof(struct hdcp_session_ctrl_param));
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
 	session_ctrl_param.session_id = hdcp_context->session_id;
@@ -378,6 +395,8 @@ int tsec_hdcp_revocation_check(struct hdcp_context_t *hdcp_context)
 	struct file *fp = NULL;
 	mm_segment_t seg;
 	struct hdcp_revocation_check_param revocation_check_param;
+	memset(&revocation_check_param, 0,
+			sizeof(struct hdcp_revocation_check_param));
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
 	revocation_check_param.trans_id.session_id = hdcp_context->session_id;
@@ -418,6 +437,8 @@ int tsec_hdcp_verify_vprime(struct hdcp_context_t *hdcp_context)
 	int err = 0;
 	u16 rxinfo;
 	struct hdcp_verify_vprime_param verify_vprime_param;
+	memset(&verify_vprime_param, 0,
+			sizeof(struct hdcp_verify_vprime_param));
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
 	/* SRM is already copied into the buffer during revocation check */
@@ -470,6 +491,7 @@ int tsec_hdcp_exchange_info(struct hdcp_context_t *hdcp_context,
 {
 	int err = 0;
 	struct hdcp_exchange_info_param exchange_info;
+	memset(&exchange_info, 0, sizeof(struct hdcp_exchange_info_param));
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
 	exchange_info.session_id = hdcp_context->session_id;
@@ -509,6 +531,8 @@ int tsec_hdcp_update_rrx(struct hdcp_context_t *hdcp_context)
 {
 	int err = 0;
 	struct hdcp_update_session_param update_session_param;
+	memset(&update_session_param, 0,
+			sizeof(struct hdcp_update_session_param));
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
 	update_session_param.session_id = hdcp_context->session_id;
@@ -538,6 +562,8 @@ int tsec_hdcp_rptr_stream_ready(struct hdcp_context_t *hdcp_context)
 {
 	int err = 0;
 	struct hdcp_stream_manage_param    stream_manage_param;
+	memset(&stream_manage_param, 0,
+			sizeof(struct hdcp_stream_manage_param));
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
 	stream_manage_param.session_id = hdcp_context->session_id;

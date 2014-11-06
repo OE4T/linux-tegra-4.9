@@ -51,7 +51,7 @@ struct vii2c {
 	u32 sync_fence;
 };
 
-struct platform_device *vii2c_pdev;
+static struct platform_device *vii2c_pdev;
 
 static struct of_device_id vii2c_of_match[] = {
 #if defined(CONFIG_TEGRA_GRHOST_VII2C)

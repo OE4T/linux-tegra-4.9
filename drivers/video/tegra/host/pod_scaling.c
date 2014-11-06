@@ -394,7 +394,8 @@ static unsigned long scaling_state_check(struct devfreq *df, ktime_t time)
  * higher compared to the target frequency.
  ******************************************************************************/
 
-int freqlist_up(struct podgov_info_rec *podgov, unsigned long target, int steps)
+static int freqlist_up(struct podgov_info_rec *podgov, unsigned long target,
+			int steps)
 {
 	int i, pos;
 
@@ -403,26 +404,6 @@ int freqlist_up(struct podgov_info_rec *podgov, unsigned long target, int steps)
 			break;
 
 	pos = min(podgov->freq_count - 1, i + steps);
-	return podgov->freqlist[pos];
-}
-
-/*******************************************************************************
- * freqlist_down(podgov, target, steps)
- *
- * This function determines the frequency that is "steps" frequency steps
- * lower compared to the target frequency.
- ******************************************************************************/
-
-int freqlist_down(struct podgov_info_rec *podgov, unsigned long target,
-		  int steps)
-{
-	int i, pos;
-
-	for (i = podgov->freq_count - 1; i >= 0; i--)
-		if (podgov->freqlist[i] <= target)
-			break;
-
-	pos = max(0, i - steps);
 	return podgov->freqlist[pos];
 }
 
@@ -457,6 +438,26 @@ static void podgov_idle_handler(struct work_struct *work)
 }
 
 #ifdef CONFIG_TEGRA_THROUGHPUT
+/*******************************************************************************
+ * freqlist_down(podgov, target, steps)
+ *
+ * This function determines the frequency that is "steps" frequency steps
+ * lower compared to the target frequency.
+ ******************************************************************************/
+
+static int freqlist_down(struct podgov_info_rec *podgov, unsigned long target,
+		  int steps)
+{
+	int i, pos;
+
+	for (i = podgov->freq_count - 1; i >= 0; i--)
+		if (podgov->freqlist[i] <= target)
+			break;
+
+	pos = max(0, i - steps);
+	return podgov->freqlist[pos];
+}
+
 /*******************************************************************************
  * nvhost_scale3d_set_throughput_hint(hint)
  *

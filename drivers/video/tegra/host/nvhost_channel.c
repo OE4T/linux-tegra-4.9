@@ -33,7 +33,7 @@
 #define NVHOST_CHANNEL_LOW_PRIO_MAX_WAIT 50
 
 /* Constructor for the host1x device list */
-int nvhost_channel_list_init(struct nvhost_master *host)
+static int nvhost_channel_list_init(struct nvhost_master *host)
 {
 	if (host->info.nb_channels > BITS_PER_LONG) {
 		WARN(1, "host1x hardware has more channels than supported\n");
@@ -98,7 +98,7 @@ struct nvhost_channel *nvhost_check_channel(struct nvhost_device_data *pdata)
 }
 
 /* Check if more than channel needed for device and assign */
-int nvhost_channel_assign(struct nvhost_device_data *pdata,
+static int nvhost_channel_assign(struct nvhost_device_data *pdata,
 			  struct nvhost_channel *ch)
 {
 	int i;

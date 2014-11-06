@@ -76,7 +76,7 @@ static int nvhost_tsec_init_sw(struct platform_device *dev);
 static u8 otf_key[TSEC_KEY_LENGTH];
 
 /* Pointer to this device */
-struct platform_device *tsec;
+static struct platform_device *tsec;
 
 int tsec_hdcp_create_context(struct hdcp_context_t *hdcp_context)
 {
@@ -289,7 +289,7 @@ exit:
 
 }
 
-void tsec_execute_method(dma_addr_t dma_handle,
+static void tsec_execute_method(dma_addr_t dma_handle,
 	u32 *cpuvaddr,
 	u32 opcode_len)
 {
@@ -416,7 +416,7 @@ exit:
 	return;
 }
 
-void tsec_write_mthd(u32 *buf, u32 mid, u32 data, u32 *offset)
+static void tsec_write_mthd(u32 *buf, u32 mid, u32 data, u32 *offset)
 {
 	int i = 0;
 	buf[i++] = nvhost_opcode_incr(NV_PSEC_THI_METHOD0>>2, 1);
@@ -807,7 +807,7 @@ static int tsec_setup_ucode_image(struct platform_device *dev,
 	return 0;
 }
 
-int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
+static int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 {
 	struct tsec *m = get_tsec(dev);
 	const struct firmware *ucode_fw;

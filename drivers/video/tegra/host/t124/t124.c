@@ -94,7 +94,7 @@ struct nvhost_device_data t124_host1x_info = {
 };
 
 
-static struct platform_device tegra_host1x04_device = {
+struct platform_device tegra_host1x04_device = {
 	.name		= "host1x",
 	.id		= -1,
 #ifdef CONFIG_ARCH_TEGRA
@@ -352,7 +352,7 @@ struct nvhost_device_data t124_msenc_info = {
 	.gather_filter_enabled = true,
 };
 
-struct platform_device tegra_msenc03_device = {
+static struct platform_device tegra_msenc03_device = {
 	.name	       = "msenc",
 	.id	       = -1,
 	.resource      = msenc_resources,
@@ -448,7 +448,7 @@ struct nvhost_device_data t124_vic_info = {
 	.num_ppc		= 2,
 };
 
-struct platform_device tegra_vic03_device = {
+static struct platform_device tegra_vic03_device = {
 	.name	       = "vic03",
 	.num_resources = 1,
 	.resource      = vic03_resources,
@@ -462,7 +462,7 @@ struct platform_device tegra_vic03_device = {
  * T132 overrides for platform data.
  */
 
-struct nvhost_device_data t132_msenc_info = {
+static struct nvhost_device_data t132_msenc_info = {
 	.num_channels	= 1,
 	.version	= NVHOST_ENCODE_FLCN_VER(3, 1),
 	.modulemutexes	= {NVMODMUTEX_MSENC},

@@ -160,7 +160,7 @@ static void remove_completed_waiters(struct list_head *head, u32 sync,
 	}
 }
 
-void reset_threshold_interrupt(struct nvhost_intr *intr,
+static void reset_threshold_interrupt(struct nvhost_intr *intr,
 			       struct list_head *head,
 			       unsigned int id)
 {

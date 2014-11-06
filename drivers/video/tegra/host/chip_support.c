@@ -27,7 +27,7 @@
 #include "t124/t124.h"
 #include "t210/t210.h"
 
-struct nvhost_chip_support *nvhost_chip_ops;
+static struct nvhost_chip_support *nvhost_chip_ops;
 
 struct nvhost_chip_support *nvhost_get_chip_ops(void)
 {

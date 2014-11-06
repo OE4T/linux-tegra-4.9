@@ -61,7 +61,7 @@ static int nvhost_module_prepare_poweroff(struct device *dev);
 static int nvhost_module_finalize_poweron(struct device *dev);
 #endif
 
-DEFINE_MUTEX(client_list_lock);
+static DEFINE_MUTEX(client_list_lock);
 
 struct nvhost_module_client {
 	struct list_head node;
@@ -817,9 +817,9 @@ const struct dev_pm_ops nvhost_module_pm_ops = {
 EXPORT_SYMBOL(nvhost_module_pm_ops);
 
 /*FIXME Use API to get host1x domain */
-struct generic_pm_domain *host1x_domain;
+static struct generic_pm_domain *host1x_domain;
 
-int _nvhost_module_add_domain(struct generic_pm_domain *domain,
+static int _nvhost_module_add_domain(struct generic_pm_domain *domain,
 	struct platform_device *pdev, bool client)
 {
 	int ret = 0;

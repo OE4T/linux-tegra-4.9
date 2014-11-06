@@ -272,12 +272,12 @@ void nvhost_scale3d_deinit(struct platform_device *pdev)
  * int FXDIV(int x, int y)
  */
 
-int FXMUL(int x, int y)
+static int FXMUL(int x, int y)
 {
 	return ((long long) x * (long long) y) >> FXFRAC;
 }
 
-int FXDIV(int x, int y)
+static int FXDIV(int x, int y)
 {
 	/* long long div operation not supported, must shift manually. This
 	 * would have been

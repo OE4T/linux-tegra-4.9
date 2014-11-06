@@ -53,7 +53,7 @@
 #include "nvhost_job.h"
 #include "nvhost_sync.h"
 
-DEFINE_MUTEX(channel_lock);
+static DEFINE_MUTEX(channel_lock);
 
 int nvhost_check_bondout(unsigned int id)
 {

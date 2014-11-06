@@ -243,7 +243,7 @@ static int vi_set_la(struct vi *tegra_vi1, uint vi_bw)
 }
 
 
-long vi_ioctl(struct file *file,
+static long vi_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)
 {
 	struct vi *tegra_vi = file->private_data;

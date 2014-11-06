@@ -3250,6 +3250,18 @@ static inline u32 gr_gpcs_tpcs_sm_sch_texlock_dot_t_unlock_disable_f(void)
 {
 	return 0x0;
 }
+static inline u32 gr_gpcs_tpcs_sm_sch_macro_sched_r(void)
+{
+	return 0x00419eac;
+}
+static inline u32 gr_gpcs_tpcs_sm_sch_macro_sched_lockboost_size_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 gr_gpcs_tpcs_sm_sch_macro_sched_lockboost_size_m(void)
+{
+	return 0x1 << 2;
+}
 static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_r(void)
 {
 	return 0x00419e10;

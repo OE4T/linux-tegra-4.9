@@ -459,9 +459,11 @@ struct nvgpu_set_nvmap_fd_args {
 	__u32 fd;
 } __packed;
 
+#define NVGPU_ALLOC_OBJ_FLAGS_LOCKBOOST_ZERO	(1 << 0)
+
 struct nvgpu_alloc_obj_ctx_args {
 	__u32 class_num; /* kepler3d, 2d, compute, etc       */
-	__u32 padding;
+	__u32 flags;     /* input, output */
 	__u64 obj_id;    /* output, used to free later       */
 };
 

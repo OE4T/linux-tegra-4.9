@@ -2771,7 +2771,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		if (!ch_ctx->gr_ctx) {
 			err = gr_gk20a_alloc_channel_gr_ctx(g, c,
 							    args->class_num,
-							    args->padding);
+							    args->flags);
 			if (err) {
 				gk20a_err(dev_from_gk20a(g),
 					"fail to allocate gr ctx buffer");
@@ -2792,7 +2792,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 			gk20a_vm_get(tsg->vm);
 			err = gr_gk20a_alloc_tsg_gr_ctx(g, tsg,
 							args->class_num,
-							args->padding);
+							args->flags);
 			if (err) {
 				gk20a_err(dev_from_gk20a(g),
 					"fail to allocate TSG gr ctx buffer");
@@ -2837,7 +2837,12 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 	/* tweak any perf parameters per-context here */
 	if (args->class_num == KEPLER_COMPUTE_A) {
 		int begin_err;
-		u32 tex_lock_disable_mask =
+		u32 tex_lock_disable_mask;
+		u32 texlock;
+		u32 lockboost_mask;
+		u32 lockboost;
+
+		tex_lock_disable_mask =
 			gr_gpcs_tpcs_sm_sch_texlock_tex_hash_m()         |
 			gr_gpcs_tpcs_sm_sch_texlock_tex_hash_tile_m()    |
 			gr_gpcs_tpcs_sm_sch_texlock_tex_hash_phase_m()   |
@@ -2845,7 +2850,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 			gr_gpcs_tpcs_sm_sch_texlock_tex_hash_timeout_m() |
 			gr_gpcs_tpcs_sm_sch_texlock_dot_t_unlock_m();
 
-		u32 texlock = gk20a_readl(g, gr_gpcs_tpcs_sm_sch_texlock_r());
+		texlock = gk20a_readl(g, gr_gpcs_tpcs_sm_sch_texlock_r());
 
 		texlock = (texlock & ~tex_lock_disable_mask) |
 		(gr_gpcs_tpcs_sm_sch_texlock_tex_hash_disable_f()         |
@@ -2855,12 +2860,24 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		 gr_gpcs_tpcs_sm_sch_texlock_tex_hash_timeout_disable_f() |
 		 gr_gpcs_tpcs_sm_sch_texlock_dot_t_unlock_disable_f());
 
+		lockboost_mask =
+			gr_gpcs_tpcs_sm_sch_macro_sched_lockboost_size_m();
+
+		lockboost = gk20a_readl(g, gr_gpcs_tpcs_sm_sch_macro_sched_r());
+		lockboost = (lockboost & ~lockboost_mask) |
+			gr_gpcs_tpcs_sm_sch_macro_sched_lockboost_size_f(0);
+
 		begin_err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
 
 		if (!begin_err) {
 			err = gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpcs_tpcs_sm_sch_texlock_r(),
 				texlock, true);
+
+			if (!err)
+				err = gr_gk20a_ctx_patch_write(g, ch_ctx,
+					gr_gpcs_tpcs_sm_sch_macro_sched_r(),
+					lockboost, true);
 		}
 		if ((begin_err || err)) {
 			gk20a_err(dev_from_gk20a(g),
@@ -2868,6 +2885,8 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		}
 		if (!begin_err)
 			gr_gk20a_ctx_patch_write_end(g, ch_ctx);
+
+		args->flags |= NVGPU_ALLOC_OBJ_FLAGS_LOCKBOOST_ZERO;
 	}
 
 	/* init golden image, ELPG enabled after this is done */

@@ -515,7 +515,7 @@ static int gk20a_init_cde_required_class(struct gk20a_cde_ctx *cde_ctx,
 	int err;
 
 	alloc_obj_ctx.class_num = required_class;
-	alloc_obj_ctx.padding = 0;
+	alloc_obj_ctx.flags = 0;
 
 	err = gk20a_alloc_obj_ctx(cde_ctx->ch, &alloc_obj_ctx);
 	if (err) {

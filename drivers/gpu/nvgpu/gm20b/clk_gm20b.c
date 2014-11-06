@@ -31,8 +31,6 @@
 #include "hw_fuse_gm20b.h"
 #include "clk_gm20b.h"
 
-#define ALLOW_NON_CALIBRATED_NA_MODE	1
-
 #define gk20a_dbg_clk(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_clk, fmt, ##arg)
 
@@ -1069,7 +1067,6 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	struct clk_gk20a *clk = &g->clk;
 	unsigned long safe_rate;
 	struct clk *ref;
-	bool calibrated;
 
 	gk20a_dbg_fn("");
 
@@ -1120,14 +1117,20 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	clk->gpc_pll.freq = clk->gpc_pll.clk_in * clk->gpc_pll.N;
 	clk->gpc_pll.freq /= pl_to_div(clk->gpc_pll.PL);
 
-	calibrated = !clk_config_calibration_params(g);
+	 /*
+	  * All production parts should have ADC fuses burnt. Therefore, check
+	  * ADC fuses always, regardless of whether NA mode is selected; and if
+	  * NA mode is indeed selected, and part can support it, switch to NA
+	  * mode even when ADC calibration is not fused; less accurate s/w
+	  * self-calibration will be used for those parts.
+	  */
+	clk_config_calibration_params(g);
 #ifdef CONFIG_TEGRA_USE_NA_GPCPLL
-	if (ALLOW_NON_CALIBRATED_NA_MODE || calibrated) {
+	if (tegra_fuse_can_use_na_gpcpll()) {
 		/* NA mode is supported only at max update rate 38.4 MHz */
-		if (clk->gpc_pll.clk_in == gpc_pll_params.max_u) {
-			clk->gpc_pll.mode = GPC_PLL_MODE_DVFS;
-			gpc_pll_params.min_u = gpc_pll_params.max_u;
-		}
+		BUG_ON(clk->gpc_pll.clk_in != gpc_pll_params.max_u);
+		clk->gpc_pll.mode = GPC_PLL_MODE_DVFS;
+		gpc_pll_params.min_u = gpc_pll_params.max_u;
 	}
 #endif
 
@@ -1136,7 +1139,7 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	clk->sw_ready = true;
 
 	gk20a_dbg_fn("done");
-	pr_info("GM20b GPCPLL initial settings:%s M=%u, N=%u, P=%u\n",
+	pr_info("gm20b gpu.0 GPCPLL initial settings:%s M=%u, N=%u, P=%u\n",
 		clk->gpc_pll.mode == GPC_PLL_MODE_DVFS ? " NA mode," : "",
 		clk->gpc_pll.M, clk->gpc_pll.N, clk->gpc_pll.PL);
 	return 0;

@@ -569,6 +569,7 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 	tegra_dc_ext_process_hotplug(dc->ndev->id);
 
 #ifdef CONFIG_SWITCH
+	switch_set_state(&hdmi->hpd_switch, is_asserted ? 1 : 0);
 	switch_set_state(&hdmi->audio_switch, is_asserted ? 1 : 0);
 #endif
 }
@@ -903,6 +904,12 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	tegra_dc_set_outdata(dc, hdmi);
 
 #ifdef CONFIG_SWITCH
+	hdmi->hpd_switch.name = "hdmi";
+	err = switch_dev_register(&hdmi->hpd_switch);
+	if (err)
+		dev_err(&dc->ndev->dev,
+			"hdmi: failed to register hpd switch %d\n", err);
+
 	hdmi->audio_switch.name = "hdmi_audio";
 	err = switch_dev_register(&hdmi->audio_switch);
 	if (err)
@@ -929,6 +936,7 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	tegra_prod_release(&hdmi->prod_list);
 
 #ifdef CONFIG_SWITCH
+	switch_dev_unregister(&hdmi->hpd_switch);
 	switch_dev_unregister(&hdmi->audio_switch);
 #endif
 	clk_put(hdmi->hda_clk);

@@ -2182,18 +2182,6 @@ static inline u32 gr_gpcs_swdx_tc_beta_cb_size_v_m(void)
 {
 	return 0x3fffff << 0;
 }
-static inline u32 gr_gpcs_swdx_rm_pagepool_r(void)
-{
-	return 0x00418e30;
-}
-static inline u32 gr_gpcs_swdx_rm_pagepool_total_pages_f(u32 v)
-{
-	return (v & 0x3ff) << 0;
-}
-static inline u32 gr_gpcs_swdx_rm_pagepool_valid_true_f(void)
-{
-	return 0x80000000;
-}
 static inline u32 gr_gpcs_setup_attrib_cb_base_r(void)
 {
 	return 0x00418810;

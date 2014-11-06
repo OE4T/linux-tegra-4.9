@@ -136,7 +136,7 @@ static inline u32 ltc_ltcs_ltss_cbc_ctrl3_clear_upper_bound_f(u32 v)
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl3_clear_upper_bound_init_v(void)
 {
-	return 0x0001ffff;
+	return 0x0003ffff;
 }
 static inline u32 ltc_ltcs_ltss_cbc_base_r(void)
 {

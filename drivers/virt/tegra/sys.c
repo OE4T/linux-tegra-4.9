@@ -60,13 +60,13 @@ int hyp_read_nguests(unsigned int *nguests)
 	return ret;
 }
 
-int hyp_read_ivc_info(struct hyp_ivc_info *data, int guestid)
+int hyp_read_ivc_info(uint64_t *ivc_info_page_pa)
 {
 	int sysregs[12];
 	int ret;
 
-	ret = hvc_read_ivc_info(sysregs, guestid);
-	*data = *((struct hyp_ivc_info *)&sysregs[0]);
+	ret = hvc_read_ivc_info(sysregs);
+	*ivc_info_page_pa = *((uint64_t *)&sysregs[0]);
 	return ret;
 }
 

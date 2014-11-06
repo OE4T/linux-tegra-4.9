@@ -50,16 +50,46 @@
 #include <linux/types.h>
 #endif
 
-/*
- * IVC communication information for each unique guest pair.
- */
-struct hyp_ivc_info {
-	unsigned long base;	/* Base of private shared memory segments */
-	unsigned long size;	/* Size of shared memory segments */
-	unsigned long virq_base;	/* Base of virtual interrupts */
-	unsigned int  virq_total;	/* Number of irqs allocated per guest */
+struct tegra_hv_queue_data {
+	uint32_t	id;	/* IVC id */
+	uint32_t	peers[2];
+	uint32_t	size;
+	uint32_t	nframes;
+	uint32_t	frame_size;
+	uint32_t	offset;
+	uint16_t	irq, raise_irq;
 };
 
+struct ivc_shared_area {
+	uint64_t pa;
+	uint64_t size;
+	uint32_t guest;
+	uint16_t free_irq_start;
+	uint16_t free_irq_count;
+};
+
+struct ivc_info_page {
+	uint32_t nr_queues;
+	uint32_t nr_areas;
+	uint32_t nr_mempools;
+
+	/* The actual length of this array is nr_areas. */
+	struct ivc_shared_area areas[];
+
+	/*
+	 * Following this array is an array of queue data structures with an
+	 * entry per queue that is accessible in the current guest. This array
+	 * is terminated by an entry with no frames.
+	 *
+	 * struct tegra_hv_queue_data queue_data[nr_queues];
+	 */
+};
+
+static inline const struct tegra_hv_queue_data *ivc_info_queue_array(
+		const struct ivc_info_page *info)
+{
+	return (struct tegra_hv_queue_data *)&info->areas[info->nr_areas];
+}
 
 struct hyp_ipa_pa_info {
 	uint64_t base;       /* base of contiguous pa region */
@@ -69,13 +99,13 @@ struct hyp_ipa_pa_info {
 
 int hyp_read_gid(unsigned int *gid);
 int hyp_read_nguests(unsigned int *nguests);
-int hyp_read_ivc_info(struct hyp_ivc_info *info, int guestid);
+int hyp_read_ivc_info(uint64_t *ivc_info_page_pa);
 int hyp_read_ipa_pa_info(struct hyp_ipa_pa_info *info, int guestid, u64 ipa);
 int hyp_raise_irq(unsigned int irq, unsigned int vmid);
 
 /* ASM prototypes */
 extern int hvc_read_gid(void *);
-extern int hvc_read_ivc_info(void *, int guestid);
+extern int hvc_read_ivc_info(int *);
 extern int hvc_read_ipa_pa_info(void *, int guestid, uint64_t ipa);
 extern int hvc_read_nguests(void *);
 extern int hvc_raise_irq(unsigned int irq, unsigned int vmid);

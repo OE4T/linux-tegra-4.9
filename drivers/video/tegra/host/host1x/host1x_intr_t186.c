@@ -153,7 +153,7 @@ static void intr_disable_syncpt_intr(struct nvhost_intr *intr, u32 id)
 
 	writel(bit_mask(id), sync_regs +
 			host1x_sync_syncpt_thresh_int_disable_r() +
-			bit_word(id * 16) * REGISTER_STRIDE);
+			bit_word(id) * REGISTER_STRIDE);
 
 	/* clear status for both cpu's */
 	writel(bit_mask(id), sync_regs +

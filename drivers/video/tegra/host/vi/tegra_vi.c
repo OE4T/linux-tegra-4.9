@@ -49,6 +49,10 @@ static DEFINE_MUTEX(la_lock);
 #define T12_CSI_CSICIL_SW_SENSOR_B_RESET 0x980
 #define T12_VI_CSI_1_CSI_IMAGE_DT 0x220
 
+#define T21_CSI_CILA_PAD_CONFIG0 0x92c
+#define T21_CSI1_CILA_PAD_CONFIG0 0x112c
+#define T21_CSI2_CILA_PAD_CONFIG0 0x192c
+
 #define VI_MAX_BPP 2
 
 #ifdef TEGRA_12X_OR_HIGHER_CONFIG
@@ -70,9 +74,29 @@ int nvhost_vi_finalize_poweron(struct platform_device *dev)
 		}
 	}
 
+#ifdef CONFIG_ARCH_TEGRA_12x_SOC
 	/* Only do this for vi.0 not for slave device vi.1 */
 	if (dev->id == 0)
 		host1x_writel(dev, T12_VI_CFG_CG_CTRL, T12_CG_2ND_LEVEL_EN);
+#endif
+
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+	{
+		void __iomem *reset_reg[3];
+		struct nvhost_device_data *pdata = dev->dev.platform_data;
+
+		reset_reg[0] = pdata->aperture[0] +
+			       T21_CSI_CILA_PAD_CONFIG0;
+		reset_reg[1] = pdata->aperture[0] +
+			       T21_CSI1_CILA_PAD_CONFIG0;
+		reset_reg[2] = pdata->aperture[0] +
+			       T21_CSI2_CILA_PAD_CONFIG0;
+
+		writel(readl(reset_reg[0]) & 0xfffcffff, reset_reg[0]);
+		writel(readl(reset_reg[1]) & 0xfffcffff, reset_reg[1]);
+		writel(readl(reset_reg[2]) & 0xfffcffff, reset_reg[2]);
+	}
+#endif
 
 fail:
 	return ret;

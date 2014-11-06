@@ -1713,16 +1713,15 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 	src_sg = req->src;
 	num_sgs = tegra_se_count_sgs(req->src, req->nbytes, &chained);
 	sg_flags |= SG_MITER_FROM_SG;
-	sg_miter_start(&miter, req->src, num_sgs, sg_flags);
-	local_irq_save(flags);
-	total = 0;
 	cmac_ctx->buffer = dma_alloc_coherent(se_dev->dev,
 				TEGRA_SE_AES_BLOCK_SIZE,
 				&cmac_ctx->dma_addr, GFP_KERNEL);
-
 	if (!cmac_ctx->buffer)
 		goto out;
 
+	local_irq_save(flags);
+	sg_miter_start(&miter, req->src, num_sgs, sg_flags);
+	total = 0;
 	temp_buffer = cmac_ctx->buffer;
 	while (sg_miter_next(&miter) && total < req->nbytes) {
 		unsigned int len;

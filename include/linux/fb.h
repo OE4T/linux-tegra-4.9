@@ -48,6 +48,8 @@ struct device_node;
 #define FB_MISC_PRIM_COLOR	1
 #define FB_MISC_1ST_DETAIL	2	/* First Detailed Timing is preferred */
 #define FB_MISC_HDMI		4
+#define FB_MISC_HDMI_FORUM	8	/* hdmi2.0 and beyond */
+
 struct fb_chroma {
 	__u32 redx;	/* in fraction of 1024 */
 	__u32 greenx;
@@ -747,7 +749,9 @@ extern int fb_videomode_from_videomode(const struct videomode *vm,
 
 /* drivers/video/modedb.c */
 #define VESA_MODEDB_SIZE 43
-#define CEA_MODEDB_SIZE 98
+#define CEA_861_D_MODEDB_SIZE 65
+#define CEA_861_F_MODEDB_SIZE 108
+#define CEA_MODEDB_SIZE (CEA_861_F_MODEDB_SIZE)
 #define DMT_SIZE 0x50
 #define HDMI_EXT_MODEDB_SIZE 5
 

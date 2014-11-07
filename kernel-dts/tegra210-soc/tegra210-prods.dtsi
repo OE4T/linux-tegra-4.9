@@ -244,6 +244,21 @@
 			};
 		};
 	};
+
+	udc@7d000000 {
+		prod-settings {
+				#prod-cells = <3>;
+				prod {
+					prod = <0x0000080c 0xfefffff3 0x0100000c// UTMIP_BIAS_CFG0
+										//				24:24=HS_DISCON_LEVEL_MSB	0x03
+										//				3:2=HS_DISCON_LEVEL_LSB		0x01
+						0x00000850 0xfffffffe 0x00000002// UTMIP_BIAS_CFG2_0
+										//				2:0=HSSQUELCH_LEVEL_NEW		0x02
+					>;
+				};
+		};
+	};
+
 	xusb@70090000 {
 		prod-settings {
 			#prod-cells = <4>;

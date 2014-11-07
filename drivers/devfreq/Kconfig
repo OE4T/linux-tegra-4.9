@@ -82,8 +82,8 @@ config DEVFREQ_GOV_PASSIVE
 	  through sysfs entries. The passive governor recommends that
 	  devfreq device uses the OPP table to get the frequency/voltage.
 
-config DEVFREQ_GOV_WATERMARK
-	tristate "Watermark"
+config DEVFREQ_GOV_WMARK_SIMPLE
+	tristate "Simple Watermark"
 	help
 	  Sets the frequency based on monitor watermark events.
 	  This governor returns the next frequency from frequency table

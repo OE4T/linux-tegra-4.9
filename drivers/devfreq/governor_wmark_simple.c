@@ -182,7 +182,7 @@ static int devfreq_watermark_event_handler(struct devfreq *df,
 }
 
 static struct devfreq_governor devfreq_watermark = {
-	.name = "watermark",
+	.name = "wmark_simple",
 	.get_target_freq = devfreq_watermark_target_freq,
 	.event_handler = devfreq_watermark_event_handler,
 };

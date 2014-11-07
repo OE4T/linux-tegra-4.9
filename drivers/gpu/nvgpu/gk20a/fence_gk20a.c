@@ -31,7 +31,7 @@
 #endif
 
 struct gk20a_fence_ops {
-	int (*wait)(struct gk20a_fence *, int timeout);
+	int (*wait)(struct gk20a_fence *, long timeout);
 	bool (*is_expired)(struct gk20a_fence *);
 	void *(*free)(struct kref *);
 };
@@ -108,9 +108,9 @@ static struct gk20a_fence *alloc_fence(const struct gk20a_fence_ops *ops,
 
 /* Fences that are backed by GPU semaphores: */
 
-static int gk20a_semaphore_fence_wait(struct gk20a_fence *f, int timeout)
+static int gk20a_semaphore_fence_wait(struct gk20a_fence *f, long timeout)
 {
-	int remain;
+	long remain;
 
 	if (!gk20a_semaphore_is_acquired(f->semaphore))
 		return 0;
@@ -170,11 +170,11 @@ struct gk20a_fence *gk20a_fence_from_semaphore(
 #ifdef CONFIG_TEGRA_GK20A
 /* Fences that are backed by host1x syncpoints: */
 
-static int gk20a_syncpt_fence_wait(struct gk20a_fence *f, int timeout)
+static int gk20a_syncpt_fence_wait(struct gk20a_fence *f, long timeout)
 {
 	return nvhost_syncpt_wait_timeout_ext(
 			f->host1x_pdev, f->syncpt_id, f->syncpt_value,
-			timeout, NULL, NULL);
+			(u32)timeout, NULL, NULL);
 }
 
 static bool gk20a_syncpt_fence_is_expired(struct gk20a_fence *f)

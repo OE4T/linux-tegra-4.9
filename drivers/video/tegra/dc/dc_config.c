@@ -20,6 +20,7 @@
 
 #include "dc_config.h"
 
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC)
 static struct tegra_dc_feature_entry t20_feature_entries_a[] = {
 	{ 0, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_A,} },
 	{ 0, TEGRA_DC_FEATURE_BLEND_TYPE, {1,} },
@@ -80,13 +81,15 @@ static struct tegra_dc_feature_entry t20_feature_entries_b[] = {
 	{ 2, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 };
 
-struct tegra_dc_feature t20_feature_table_a = {
+static struct tegra_dc_feature t20_feature_table_a = {
 	ARRAY_SIZE(t20_feature_entries_a), t20_feature_entries_a,
 };
 
-struct tegra_dc_feature t20_feature_table_b = {
+static struct tegra_dc_feature t20_feature_table_b = {
 	ARRAY_SIZE(t20_feature_entries_b), t20_feature_entries_b,
 };
+
+#elif defined(CONFIG_ARCH_TEGRA_3x_SOC)
 
 static struct tegra_dc_feature_entry t30_feature_entries_a[] = {
 	{ 0, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_WIN_A,} },
@@ -148,13 +151,15 @@ static struct tegra_dc_feature_entry t30_feature_entries_b[] = {
 	{ 2, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 };
 
-struct tegra_dc_feature t30_feature_table_a = {
+static struct tegra_dc_feature t30_feature_table_a = {
 	ARRAY_SIZE(t30_feature_entries_a), t30_feature_entries_a,
 };
 
-struct tegra_dc_feature t30_feature_table_b = {
+static struct tegra_dc_feature t30_feature_table_b = {
 	ARRAY_SIZE(t30_feature_entries_b), t30_feature_entries_b,
 };
+
+#elif defined(CONFIG_ARCH_TEGRA_11x_SOC)
 
 static struct tegra_dc_feature_entry t114_feature_entries_a[] = {
 	{ 0, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
@@ -214,13 +219,15 @@ static struct tegra_dc_feature_entry t114_feature_entries_b[] = {
 	{ 2, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 };
 
-struct tegra_dc_feature t114_feature_table_a = {
+static struct tegra_dc_feature t114_feature_table_a = {
 	ARRAY_SIZE(t114_feature_entries_a), t114_feature_entries_a,
 };
 
-struct tegra_dc_feature t114_feature_table_b = {
+static struct tegra_dc_feature t114_feature_table_b = {
 	ARRAY_SIZE(t114_feature_entries_b), t114_feature_entries_b,
 };
+
+#elif defined(CONFIG_ARCH_TEGRA_12x_SOC)
 
 static struct tegra_dc_feature_entry t124_feature_entries_a[] = {
 	{ 0, TEGRA_DC_FEATURE_FORMATS,
@@ -295,13 +302,15 @@ static struct tegra_dc_feature_entry t124_feature_entries_b[] = {
 	{ 2, TEGRA_DC_FEATURE_FIELD_TYPE, {1,} },
 };
 
-struct tegra_dc_feature t124_feature_table_a = {
+static struct tegra_dc_feature t124_feature_table_a = {
 	ARRAY_SIZE(t124_feature_entries_a), t124_feature_entries_a,
 };
 
-struct tegra_dc_feature t124_feature_table_b = {
+static struct tegra_dc_feature t124_feature_table_b = {
 	ARRAY_SIZE(t124_feature_entries_b), t124_feature_entries_b,
 };
+
+#elif defined(CONFIG_ARCH_TEGRA_14x_SOC)
 
 static struct tegra_dc_feature_entry t148_feature_entries_a[] = {
 	{ 0, TEGRA_DC_FEATURE_FORMATS, {TEGRA_WIN_FMT_BASE,} },
@@ -388,13 +397,15 @@ static struct tegra_dc_feature_entry t148_feature_entries_b[] = {
 	{ 4, TEGRA_DC_FEATURE_FIELD_TYPE, {0,} },
 };
 
-struct tegra_dc_feature t148_feature_table_a = {
+static struct tegra_dc_feature t148_feature_table_a = {
 	ARRAY_SIZE(t148_feature_entries_a), t148_feature_entries_a,
 };
 
-struct tegra_dc_feature t148_feature_table_b = {
+static struct tegra_dc_feature t148_feature_table_b = {
 	ARRAY_SIZE(t148_feature_entries_b), t148_feature_entries_b,
 };
+
+#elif defined(CONFIG_ARCH_TEGRA_21x_SOC)
 
 static struct tegra_dc_feature_entry t210_feature_entries_a[] = {
 	{ 0, TEGRA_DC_FEATURE_FORMATS,
@@ -523,15 +534,16 @@ static struct tegra_dc_feature_entry t210_feature_entries_b[] = {
 		{4096, 1, 4096, 1} },
 };
 
-struct tegra_dc_feature t210_feature_table_a = {
+static struct tegra_dc_feature t210_feature_table_a = {
 	ARRAY_SIZE(t210_feature_entries_a), t210_feature_entries_a,
 };
 
-struct tegra_dc_feature t210_feature_table_b = {
+static struct tegra_dc_feature t210_feature_table_b = {
 	ARRAY_SIZE(t210_feature_entries_b), t210_feature_entries_b,
 };
+#endif
 
-int tegra_dc_get_feature(struct tegra_dc_feature *feature, int win_idx,
+static int tegra_dc_get_feature(struct tegra_dc_feature *feature, int win_idx,
 					enum tegra_dc_feature_option option)
 {
 	int i;

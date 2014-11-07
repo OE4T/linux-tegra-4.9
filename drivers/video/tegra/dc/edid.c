@@ -85,7 +85,7 @@ static const struct file_operations tegra_edid_debug_fops = {
 	.release	= single_release,
 };
 
-void tegra_edid_debug_add(struct tegra_edid *edid)
+static void tegra_edid_debug_add(struct tegra_edid *edid)
 {
 	char name[] = "edidX";
 
@@ -189,7 +189,7 @@ int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data)
 	return 0;
 }
 
-int tegra_edid_parse_ext_block(const u8 *raw, int idx,
+static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 			       struct tegra_edid_pvt *edid)
 {
 	const u8 *ptr;
@@ -333,7 +333,7 @@ int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 	return 0;
 }
 
-int tegra_edid_mode_support_stereo(struct fb_videomode *mode)
+static int tegra_edid_mode_support_stereo(struct fb_videomode *mode)
 {
 	if (!mode)
 		return 0;

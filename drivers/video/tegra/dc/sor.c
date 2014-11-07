@@ -1255,7 +1255,7 @@ static void tegra_dc_sor_attach_lvds(struct tegra_dc_sor_data *sor)
 
 }
 
-void tegra_sor_dp_cal(struct tegra_dc_sor_data *sor)
+static void tegra_sor_dp_cal(struct tegra_dc_sor_data *sor)
 {
 	tegra_sor_pad_cal_power(sor, true);
 
@@ -1692,15 +1692,6 @@ void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds)
 	/* Reset SOR clk */
 	tegra_periph_reset_assert(sor->sor_clk);
 }
-
-int tegra_dc_sor_set_dp_packet(struct tegra_dc_sor_data *sor,
-	u8 *packet)
-{
-	/* No need to set the infoframe yet as there is no audio or
-	   stereo support. This is a placeholder for now */
-	return 0;
-}
-
 
 void tegra_dc_sor_set_internal_panel(struct tegra_dc_sor_data *sor, bool is_int)
 {

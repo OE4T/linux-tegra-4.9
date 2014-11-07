@@ -148,7 +148,7 @@ enum {
 	TEGRA_DSI_DRIVEN_BY_HOST,
 };
 
-const u32 dsi_pkt_seq_reg[NUMOF_PKT_SEQ] = {
+static const u32 dsi_pkt_seq_reg[NUMOF_PKT_SEQ] = {
 	DSI_PKT_SEQ_0_LO,
 	DSI_PKT_SEQ_0_HI,
 	DSI_PKT_SEQ_1_LO,
@@ -163,7 +163,7 @@ const u32 dsi_pkt_seq_reg[NUMOF_PKT_SEQ] = {
 	DSI_PKT_SEQ_5_HI,
 };
 
-const u32 dsi_pkt_seq_video_non_burst_syne[NUMOF_PKT_SEQ] = {
+static const u32 dsi_pkt_seq_video_non_burst_syne[NUMOF_PKT_SEQ] = {
 	PKT_ID0(CMD_VS) | PKT_LEN0(0) | PKT_ID1(CMD_EOT) | PKT_LEN1(7) | PKT_LP,
 	0,
 	PKT_ID0(CMD_VE) | PKT_LEN0(0) | PKT_ID1(CMD_EOT) | PKT_LEN1(7) | PKT_LP,
@@ -182,7 +182,7 @@ const u32 dsi_pkt_seq_video_non_burst_syne[NUMOF_PKT_SEQ] = {
 	PKT_ID5(CMD_BLNK) | PKT_LEN5(4),
 };
 
-const u32 dsi_pkt_seq_video_non_burst[NUMOF_PKT_SEQ] = {
+static const u32 dsi_pkt_seq_video_non_burst[NUMOF_PKT_SEQ] = {
 	PKT_ID0(CMD_VS) | PKT_LEN0(0) | PKT_ID1(CMD_EOT) | PKT_LEN1(7) | PKT_LP,
 	0,
 	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_EOT) | PKT_LEN1(7) | PKT_LP,
@@ -199,7 +199,7 @@ const u32 dsi_pkt_seq_video_non_burst[NUMOF_PKT_SEQ] = {
 	PKT_ID3(CMD_BLNK) | PKT_LEN3(4),
 };
 
-const u32 dsi_pkt_seq_video_non_burst_no_eot_no_lp_no_hbp[NUMOF_PKT_SEQ] = {
+static const u32 dsi_pkt_seq_video_non_burst_no_eot_no_lp_no_hbp[NUMOF_PKT_SEQ] = {
 	PKT_ID0(CMD_VS) | PKT_LEN0(0),
 	0,
 	PKT_ID0(CMD_HS) | PKT_LEN0(0),
@@ -250,7 +250,7 @@ static const u32 dsi_pkt_seq_video_burst_no_eot[NUMOF_PKT_SEQ] = {
 	0,
 };
 
-const u32 dsi_pkt_seq_video_non_burst_no_eot[NUMOF_PKT_SEQ] = {
+static const u32 dsi_pkt_seq_video_non_burst_no_eot[NUMOF_PKT_SEQ] = {
 	PKT_ID0(CMD_VS) | PKT_LEN0(0) | PKT_LP,
 	0,
 	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_LP,
@@ -267,7 +267,7 @@ const u32 dsi_pkt_seq_video_non_burst_no_eot[NUMOF_PKT_SEQ] = {
 	PKT_ID3(CMD_BLNK) | PKT_LEN3(4),
 };
 
-const u32 dsi_pkt_seq_cmd_mode[NUMOF_PKT_SEQ] = {
+static const u32 dsi_pkt_seq_cmd_mode[NUMOF_PKT_SEQ] = {
 	0,
 	0,
 	0,
@@ -284,7 +284,7 @@ const u32 dsi_pkt_seq_cmd_mode[NUMOF_PKT_SEQ] = {
 	0,
 };
 
-const u32 init_reg[] = {
+static const u32 init_reg[] = {
 	DSI_INT_ENABLE,
 	DSI_INT_STATUS,
 	DSI_INT_MASK,
@@ -325,7 +325,7 @@ const u32 init_reg[] = {
 	DSI_PKT_LEN_6_7,
 };
 
-const u32 init_reg_vs1_ext[] = {
+static const u32 init_reg_vs1_ext[] = {
 	DSI_PAD_CONTROL_0_VS1,
 	DSI_PAD_CONTROL_CD_VS1,
 	DSI_PAD_CD_STATUS_VS1,
@@ -2251,7 +2251,7 @@ void tegra_dsi_mipi_calibration_13x(struct tegra_dc_dsi_data *dsi)
 #endif
 
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
+static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val = 0;
 	struct clk *clk72mhz = NULL;

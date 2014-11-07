@@ -34,7 +34,7 @@ static unsigned long dpaux_base_addr[TEGRA_DPAUX_INSTANCE_N] = {
 	TEGRA_DPAUX1_BASE,
 };
 
-DEFINE_MUTEX(dpaux_lock);
+static DEFINE_MUTEX(dpaux_lock);
 
 static inline struct clk *tegra_dpaux_clk_get(enum tegra_dpaux_instance id)
 {

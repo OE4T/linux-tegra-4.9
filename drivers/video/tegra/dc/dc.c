@@ -118,15 +118,15 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state);
 static int tegra_dc_resume(struct platform_device *ndev);
 #endif
 
-struct tegra_dc *tegra_dcs[TEGRA_MAX_DC];
+static struct tegra_dc *tegra_dcs[TEGRA_MAX_DC];
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 static struct tegra_dc_win	tegra_dc_windows[DC_N_WINDOWS];
 #endif
 
 
-DEFINE_MUTEX(tegra_dc_lock);
-DEFINE_MUTEX(shared_lock);
+static DEFINE_MUTEX(tegra_dc_lock);
+static DEFINE_MUTEX(shared_lock);
 
 static struct device_dma_parameters tegra_dc_dma_parameters = {
 	.max_segment_size = UINT_MAX,
@@ -4327,7 +4327,7 @@ static void tegra_dc_shutdown(struct platform_device *ndev)
 	tegra_dc_disable(dc);
 }
 
-int suspend_set(const char *val, struct kernel_param *kp)
+static int suspend_set(const char *val, struct kernel_param *kp)
 {
 	if (!strcmp(val, "dump"))
 		dump_regs(tegra_dcs[0]);
@@ -4341,12 +4341,12 @@ int suspend_set(const char *val, struct kernel_param *kp)
 	return 0;
 }
 
-int suspend_get(char *buffer, struct kernel_param *kp)
+static int suspend_get(char *buffer, struct kernel_param *kp)
 {
 	return 0;
 }
 
-int suspend;
+static int suspend;
 
 module_param_call(suspend, suspend_set, suspend_get, &suspend, 0644);
 

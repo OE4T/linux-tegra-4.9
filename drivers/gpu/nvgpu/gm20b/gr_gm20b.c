@@ -519,52 +519,38 @@ static int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 	struct gr_gk20a *gr = &g->gr;
 	u32 tpc_index, gpc_index;
 	u32 tpc_offset, gpc_offset;
-	u32 sm_id = 0, gpc_id = 0;
-	u32 sm_id_to_gpc_id[proj_scal_max_gpcs_v() * proj_scal_max_tpc_per_gpc_v()];
-	u32 tpc_per_gpc;
-	u32 tpc_fs_mask = 0, tpc_sm_id = 0, gpc_tpc_id = 0;
+	u32 sm_id = 0;
+	u32 tpc_per_gpc = 0;
+	u32 tpc_sm_id = 0, gpc_tpc_id = 0;
+	u32 pes_tpc_mask = 0, pes_index;
 
 	gk20a_dbg_fn("");
 
-	for (tpc_index = 0; tpc_index < gr->max_tpc_per_gpc_count; tpc_index++) {
-		for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
-			gpc_offset = proj_gpc_stride_v() * gpc_index;
-			if (tpc_index < gr->gpc_tpc_count[gpc_index]) {
-				tpc_offset = proj_tpc_in_gpc_stride_v() * tpc_index;
+	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
+		gpc_offset = proj_gpc_stride_v() * gpc_index;
+		for (tpc_index = 0; tpc_index < gr->gpc_tpc_count[gpc_index];
+								tpc_index++) {
+			tpc_offset = proj_tpc_in_gpc_stride_v() * tpc_index;
 
-				gk20a_writel(g, gr_gpc0_tpc0_sm_cfg_r() + gpc_offset + tpc_offset,
-					     gr_gpc0_tpc0_sm_cfg_sm_id_f(sm_id));
-				gk20a_writel(g, gr_gpc0_gpm_pd_sm_id_r(tpc_index) + gpc_offset,
-					     gr_gpc0_gpm_pd_sm_id_id_f(sm_id));
-				gk20a_writel(g, gr_gpc0_tpc0_pe_cfg_smid_r() + gpc_offset + tpc_offset,
-					     gr_gpc0_tpc0_pe_cfg_smid_value_f(sm_id));
+			gk20a_writel(g, gr_gpc0_tpc0_sm_cfg_r()
+					+ gpc_offset + tpc_offset,
+				gr_gpc0_tpc0_sm_cfg_sm_id_f(sm_id));
+			gk20a_writel(g, gr_gpc0_gpm_pd_sm_id_r(tpc_index)
+					+ gpc_offset,
+				gr_gpc0_gpm_pd_sm_id_id_f(sm_id));
+			gk20a_writel(g, gr_gpc0_tpc0_pe_cfg_smid_r()
+					+ gpc_offset + tpc_offset,
+				gr_gpc0_tpc0_pe_cfg_smid_value_f(sm_id));
 
-				sm_id_to_gpc_id[sm_id] = gpc_index;
-				sm_id++;
-			}
+			sm_id++;
 		}
 	}
 
-	for (tpc_index = 0, gpc_id = 0;
-	     tpc_index < gr_pd_num_tpc_per_gpc__size_1_v();
-	     tpc_index++, gpc_id += 8) {
-
-		if (gpc_id >= gr->gpc_count)
-			gpc_id = 0;
-
-		tpc_per_gpc =
-			gr_pd_num_tpc_per_gpc_count0_f(gr->gpc_tpc_count[gpc_id + 0]) |
-			gr_pd_num_tpc_per_gpc_count1_f(gr->gpc_tpc_count[gpc_id + 1]) |
-			gr_pd_num_tpc_per_gpc_count2_f(gr->gpc_tpc_count[gpc_id + 2]) |
-			gr_pd_num_tpc_per_gpc_count3_f(gr->gpc_tpc_count[gpc_id + 3]) |
-			gr_pd_num_tpc_per_gpc_count4_f(gr->gpc_tpc_count[gpc_id + 4]) |
-			gr_pd_num_tpc_per_gpc_count5_f(gr->gpc_tpc_count[gpc_id + 5]) |
-			gr_pd_num_tpc_per_gpc_count6_f(gr->gpc_tpc_count[gpc_id + 6]) |
-			gr_pd_num_tpc_per_gpc_count7_f(gr->gpc_tpc_count[gpc_id + 7]);
-
-		gk20a_writel(g, gr_pd_num_tpc_per_gpc_r(tpc_index), tpc_per_gpc);
-		gk20a_writel(g, gr_ds_num_tpc_per_gpc_r(tpc_index), tpc_per_gpc);
-	}
+	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++)
+		tpc_per_gpc |= gr->gpc_tpc_count[gpc_index]
+			     << (gr_pd_num_tpc_per_gpc__size_1_v() * gpc_index);
+	gk20a_writel(g, gr_pd_num_tpc_per_gpc_r(0), tpc_per_gpc);
+	gk20a_writel(g, gr_ds_num_tpc_per_gpc_r(0), tpc_per_gpc);
 
 	/* gr__setup_pd_mapping stubbed for gk20a */
 	gr_gk20a_setup_rop_mapping(g, gr);
@@ -593,20 +579,22 @@ static int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 		     gk20a_readl(g, gr_be0_crop_debug3_r()) |
 		     gr_bes_crop_debug3_comp_vdc_4to2_disable_m());
 
-	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
-		tpc_fs_mask |= gr->gpc_tpc_mask[gpc_index] <<
-				(gr->max_tpc_per_gpc_count * gpc_index);
-	}
-	gk20a_writel(g, gr_fe_tpc_fs_r(), tpc_fs_mask);
+	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++)
+		for (pes_index = 0; pes_index < gr->pe_count_per_gpc;
+								pes_index++)
+			pes_tpc_mask |= gr->pes_tpc_mask[pes_index][gpc_index];
+	gk20a_writel(g, gr_fe_tpc_fs_r(), pes_tpc_mask);
 
-	if (tpc_fs_mask & (0x1 << 0)) {
-		tpc_sm_id |= gr_cwd_sm_id_tpc0_f(0);
-		gpc_tpc_id |= gr_cwd_gpc_tpc_id_tpc0_f(0);
+	for (tpc_index = 0; tpc_index < gr->tpc_count; tpc_index++) {
+		if (tpc_index == 0) {
+			gpc_tpc_id |= gr_cwd_gpc_tpc_id_tpc0_f(tpc_index);
+			tpc_sm_id |= gr_cwd_sm_id_tpc0_f(tpc_index);
+		} else if (tpc_index == 1) {
+			gpc_tpc_id |= gr_cwd_gpc_tpc_id_tpc1_f(tpc_index);
+			tpc_sm_id |= gr_cwd_sm_id_tpc1_f(tpc_index);
+		}
 	}
-	if (tpc_fs_mask & (0x1 << 1)) {
-		gpc_tpc_id |= gr_cwd_gpc_tpc_id_tpc1_f(1);
-		tpc_sm_id |= gr_cwd_sm_id_tpc1_f(1);
-	}
+
 	/* Each NV_PGRAPH_PRI_CWD_GPC_TPC_ID can store 4 TPCs.
 	 * Since we know TPC number is less than 5. We select
 	 * index 0 directly. */

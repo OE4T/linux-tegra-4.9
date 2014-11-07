@@ -231,6 +231,38 @@ struct hdmi_audio_infoframe {
 	u32 reg_hole1:16;
 } __packed;
 
+#define HDMI_LICENSING_LLC_OUI	(0x000c03)
+
+enum {
+	HDMI_VENDOR_VIDEO_FORMAT_NONE,
+	HDMI_VENDOR_VIDEO_FORMAT_EXTENDED,
+	HDMI_VENDOR_VIDEO_FORMAT_3D,
+};
+
+/* all fields little endian */
+struct hdmi_vendor_infoframe {
+	/* PB0 */
+	u32 csum:8;
+
+	/* PB1, PB2, PB3 */
+	u32 oui:24;	/* organizationally unique identifier */
+
+	/* PB4 */
+	u32 res1:5;
+	u32 video_format:3;
+
+	/* PB5 */
+	union {
+		u32 extended_vic:8;
+		u32 res2:4;
+		u32 format_3d:4;
+	} __packed;
+
+	/* PB6 */
+	u32 res3:4;
+	u32 ext_data_3d:4;
+} __packed;
+
 enum {
 	TEGRA_HDMI_SAFE_CLK = 1,
 	TEGRA_HDMI_BRICK_CLK = 2,
@@ -270,6 +302,8 @@ struct tegra_hdmi {
 #ifdef CONFIG_SWITCH
 	struct switch_dev audio_switch;
 #endif
+
+	struct hdmi_vendor_infoframe vsi;
 
 	struct tegra_nvhdcp *nvhdcp;
 

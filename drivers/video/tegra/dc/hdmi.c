@@ -1726,7 +1726,7 @@ static int tegra_dc_find_cea_vic(const struct tegra_dc_mode *mode)
 
 	m.vmode &= ~FB_VMODE_STEREO_MASK; /* stereo modes have the same VICs */
 
-	for (i = 1; i < CEA_MODEDB_SIZE; i++) {
+	for (i = 1; i < CEA_861_D_MODEDB_SIZE; i++) {
 		const struct fb_videomode *curr = &cea_modes[i];
 
 		if (!fb_mode_is_equal(&m, curr))

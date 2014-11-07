@@ -96,7 +96,8 @@ static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi);
 
 static inline bool tegra_hdmi_is_connected(struct tegra_hdmi *hdmi)
 {
-	return !(hdmi->mon_spec.misc & FB_MISC_HDMI);
+	return (hdmi->mon_spec.misc & FB_MISC_HDMI) ||
+		(hdmi->mon_spec.misc & FB_MISC_HDMI_FORUM);
 }
 
 static inline void tegra_hdmi_irq_enable(struct tegra_hdmi *hdmi)
@@ -539,7 +540,7 @@ static void tegra_hdmi_edid_config(struct tegra_hdmi *hdmi)
 	dc->out->h_size = CM_TO_MM(hdmi->mon_spec.max_x);
 	dc->out->v_size = CM_TO_MM(hdmi->mon_spec.max_y);
 
-	hdmi->dvi = tegra_hdmi_is_connected(hdmi);
+	hdmi->dvi = !tegra_hdmi_is_connected(hdmi);
 
 #undef CM_TO_MM
 }
@@ -987,18 +988,29 @@ static void tegra_hdmi_infoframe_pkt_write(struct tegra_hdmi *hdmi,
 		tegra_sor_writel(sor, data_reg, *data);
 }
 
+static u32 tegra_hdmi_get_cea_modedb_size(struct tegra_hdmi *hdmi)
+{
+	if (!tegra_hdmi_is_connected(hdmi) || !hdmi->mon_spec_valid)
+		return 0;
+
+	return (hdmi->mon_spec.misc & FB_MISC_HDMI_FORUM) ?
+		CEA_861_F_MODEDB_SIZE : CEA_861_D_MODEDB_SIZE;
+}
+
 __maybe_unused
-static int tegra_hdmi_find_cea_vic(const struct tegra_dc_mode *mode)
+static int tegra_hdmi_find_cea_vic(struct tegra_hdmi *hdmi)
 {
 	struct fb_videomode m;
 	unsigned i;
 	unsigned best = 0;
+	u32 modedb_size = tegra_hdmi_get_cea_modedb_size(hdmi);
+	const struct tegra_dc_mode *mode = &hdmi->dc->mode;
 
 	tegra_dc_to_fb_videomode(&m, mode);
 
 	m.vmode &= ~FB_VMODE_STEREO_MASK; /* stereo modes have the same VICs */
 
-	for (i = 1; i < CEA_MODEDB_SIZE; i++) {
+	for (i = 1; i < modedb_size; i++) {
 		const struct fb_videomode *curr = &cea_modes[i];
 
 		if (!fb_mode_is_equal(&m, curr))
@@ -1058,7 +1070,7 @@ static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 	avi->it_content = HDMI_AVI_IT_CONTENT_FALSE;
 
 	/* set correct vic if video format is cea defined else set 0 */
-	avi->video_format = tegra_hdmi_find_cea_vic(&hdmi->dc->mode);
+	avi->video_format = tegra_hdmi_find_cea_vic(hdmi);
 
 	avi->pix_rep = HDMI_AVI_NO_PIX_REPEAT;
 	avi->it_content_type = HDMI_AVI_IT_CONTENT_NONE;
@@ -1101,6 +1113,70 @@ static void tegra_hdmi_avi_infoframe(struct tegra_hdmi *hdmi)
 		NV_SOR_HDMI_AVI_INFOFRAME_CTRL_OTHER_DISABLE |
 		NV_SOR_HDMI_AVI_INFOFRAME_CTRL_SINGLE_DISABLE |
 		NV_SOR_HDMI_AVI_INFOFRAME_CTRL_CHECKSUM_ENABLE);
+}
+
+static int tegra_hdmi_get_extended_vic(const struct tegra_dc_mode *mode)
+{
+	struct fb_videomode m;
+	unsigned i;
+
+	tegra_dc_to_fb_videomode(&m, mode);
+
+	for (i = 1; i < HDMI_EXT_MODEDB_SIZE; i++) {
+		const struct fb_videomode *curr = &hdmi_ext_modes[i];
+
+		if (fb_mode_is_equal(&m, curr))
+			return i;
+	}
+	return 0;
+}
+
+static void tegra_hdmi_vendor_infoframe_update(struct tegra_hdmi *hdmi)
+{
+	struct hdmi_vendor_infoframe *vsi = &hdmi->vsi;
+	u8 extended_vic;
+
+	memset(&hdmi->vsi, 0, sizeof(hdmi->vsi));
+
+	vsi->oui = HDMI_LICENSING_LLC_OUI;
+
+	extended_vic = tegra_hdmi_get_extended_vic(&hdmi->dc->mode);
+	if (extended_vic) {
+		vsi->video_format =
+			HDMI_VENDOR_VIDEO_FORMAT_EXTENDED;
+		vsi->extended_vic = extended_vic;
+	}
+}
+
+static void tegra_hdmi_vendor_infoframe(struct tegra_hdmi *hdmi)
+{
+/* hdmi licensing, LLC vsi playload len as per hdmi1.4b  */
+#define HDMI_INFOFRAME_LEN_VENDOR_LLC	(6)
+
+	struct tegra_dc_sor_data *sor = hdmi->sor;
+
+	if (hdmi->dvi)
+		return;
+
+	/* disable vsi infoframe before configuring */
+	tegra_sor_writel(sor, NV_SOR_HDMI_VSI_INFOFRAME_CTRL, 0);
+
+	tegra_hdmi_vendor_infoframe_update(hdmi);
+
+	tegra_hdmi_infoframe_pkt_write(hdmi, NV_SOR_HDMI_VSI_INFOFRAME_HEADER,
+					HDMI_INFOFRAME_TYPE_VENDOR,
+					HDMI_INFOFRAME_VS_VENDOR,
+					HDMI_INFOFRAME_LEN_VENDOR_LLC,
+					&hdmi->vsi, sizeof(hdmi->vsi));
+
+	/* Send infoframe every frame, checksum hw generated */
+	tegra_sor_writel(sor, NV_SOR_HDMI_VSI_INFOFRAME_CTRL,
+		NV_SOR_HDMI_VSI_INFOFRAME_CTRL_ENABLE_YES |
+		NV_SOR_HDMI_VSI_INFOFRAME_CTRL_OTHER_DISABLE |
+		NV_SOR_HDMI_VSI_INFOFRAME_CTRL_SINGLE_DISABLE |
+		NV_SOR_HDMI_VSI_INFOFRAME_CTRL_CHECKSUM_ENABLE);
+
+#undef HDMI_INFOFRAME_LEN_VENDOR_LLC
 }
 
 static void tegra_hdmi_audio_infoframe_update(struct tegra_hdmi *hdmi)
@@ -1504,6 +1580,7 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	tegra_dc_sor_set_internal_panel(sor, false);
 	tegra_hdmi_config(hdmi);
 	tegra_hdmi_avi_infoframe(hdmi);
+	tegra_hdmi_vendor_infoframe(hdmi);
 	tegra_hdmi_audio_config(hdmi, AUDIO_FREQ_32K, HDA);
 
 	tegra_hdmi_config_tmds(hdmi);

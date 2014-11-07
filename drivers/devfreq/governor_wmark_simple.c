@@ -31,14 +31,22 @@ enum watermark_type {
 };
 
 struct wmark_gov_info {
+	/* probed from the devfreq */
 	unsigned long		*freqlist;
 	int			freq_count;
+
+	/* algorithm parameters */
+	unsigned int		p_high_wmark;
+	unsigned int		p_low_wmark;
+
+	/* dynamically changing data */
+	enum watermark_type	event;
 	unsigned long		last_request;
 
-	enum watermark_type event;
-
-	struct devfreq *df;
-	struct platform_device *pdev;
+	/* common data */
+	struct devfreq		*df;
+	struct platform_device	*pdev;
+	struct dentry		*debugdir;
 };
 
 static unsigned long freqlist_up(struct wmark_gov_info *wmarkinfo,
@@ -84,7 +92,8 @@ static int devfreq_watermark_target_freq(struct devfreq *df,
 		*freq = freqlist_up(wmarkinfo, dev_stat.current_frequency);
 
 		/* always enable low watermark */
-		df->profile->set_low_wmark(df->dev.parent, 100);
+		df->profile->set_low_wmark(df->dev.parent,
+					   wmarkinfo->p_low_wmark);
 
 		/* disable high watermark if no change */
 		if (*freq == wmarkinfo->last_request)
@@ -94,7 +103,8 @@ static int devfreq_watermark_target_freq(struct devfreq *df,
 		*freq = freqlist_down(wmarkinfo, dev_stat.current_frequency);
 
 		/* always enable high watermark */
-		df->profile->set_high_wmark(df->dev.parent, 600);
+		df->profile->set_high_wmark(df->dev.parent,
+					    wmarkinfo->p_high_wmark);
 
 		/* disable low watermark if no change */
 		if (*freq == wmarkinfo->last_request)
@@ -109,6 +119,46 @@ static int devfreq_watermark_target_freq(struct devfreq *df,
 	wmarkinfo->last_request = *freq;
 
 	return 0;
+}
+
+static void devfreq_watermark_debug_start(struct devfreq *df)
+{
+	struct wmark_gov_info *wmarkinfo = df->data;
+	struct dentry *f;
+	char dirname[128];
+
+	snprintf(dirname, sizeof(dirname), "%s_scaling",
+		to_platform_device(df->dev.parent)->name);
+
+	if (!wmarkinfo)
+		return;
+
+	wmarkinfo->debugdir = debugfs_create_dir(dirname, NULL);
+	if (!wmarkinfo->debugdir) {
+		pr_warn("cannot create debugfs directory\n");
+		return;
+	}
+
+#define CREATE_DBG_FILE(fname) \
+	do {\
+		f = debugfs_create_u32(#fname, S_IRUGO | S_IWUSR, \
+			wmarkinfo->debugdir, &wmarkinfo->p_##fname); \
+		if (NULL == f) { \
+			pr_warn("cannot create debug entry " #fname "\n"); \
+			return; \
+		} \
+	} while (0)
+
+	CREATE_DBG_FILE(low_wmark);
+	CREATE_DBG_FILE(high_wmark);
+#undef CREATE_DBG_FILE
+
+}
+
+static void devfreq_watermark_debug_stop(struct devfreq *df)
+{
+	struct wmark_gov_info *wmarkinfo = df->data;
+	debugfs_remove_recursive(wmarkinfo->debugdir);
 }
 
 static int devfreq_watermark_start(struct devfreq *df)
@@ -131,6 +181,10 @@ static int devfreq_watermark_start(struct devfreq *df)
 	wmarkinfo->event = NO_WATERMARK_EVENT;
 	wmarkinfo->df = df;
 	wmarkinfo->pdev = pdev;
+	wmarkinfo->p_low_wmark = 100;
+	wmarkinfo->p_high_wmark = 600;
+
+	devfreq_watermark_debug_start(df);
 
 	return 0;
 }
@@ -145,12 +199,16 @@ static int devfreq_watermark_event_handler(struct devfreq *df,
 	switch (event) {
 	case DEVFREQ_GOV_START:
 		devfreq_watermark_start(df);
+		wmarkinfo = df->data;
 		if (df->profile->set_low_wmark)
-			df->profile->set_low_wmark(df->dev.parent, 100);
+			df->profile->set_low_wmark(df->dev.parent,
+						   wmarkinfo->p_low_wmark);
 		if (df->profile->set_high_wmark)
-			df->profile->set_high_wmark(df->dev.parent, 600);
+			df->profile->set_high_wmark(df->dev.parent,
+						    wmarkinfo->p_high_wmark);
 		break;
 	case DEVFREQ_GOV_STOP:
+		devfreq_watermark_debug_stop(df);
 		break;
 	case DEVFREQ_GOV_SUSPEND:
 		devfreq_monitor_suspend(df);
@@ -158,9 +216,11 @@ static int devfreq_watermark_event_handler(struct devfreq *df,
 
 	case DEVFREQ_GOV_RESUME:
 		if (df->profile->set_low_wmark)
-			df->profile->set_low_wmark(df->dev.parent, 100);
+			df->profile->set_low_wmark(df->dev.parent,
+						   wmarkinfo->p_low_wmark);
 		if (df->profile->set_high_wmark)
-			df->profile->set_high_wmark(df->dev.parent, 600);
+			df->profile->set_high_wmark(df->dev.parent,
+						    wmarkinfo->p_high_wmark);
 		devfreq_monitor_resume(df);
 		break;
 

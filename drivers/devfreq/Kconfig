@@ -89,6 +89,17 @@ config DEVFREQ_GOV_WMARK_SIMPLE
 	  This governor returns the next frequency from frequency table
 	  based on type watermark event.
 
+config DEVFREQ_GOV_WMARK_ACTIVE
+	tristate "Active Watermark"
+	help
+	  Sets the frequency based on monitor watermark events.
+	  This governor calculates relation between current load and
+	  target load. The next frequency is calculated by multiplying
+	  this relation with the current frequency.
+
+	  The watermark values are updated so that the watermarks are
+	  triggered when the above algorithm would change the frequency.
+
 comment "DEVFREQ Drivers"
 
 config ARM_EXYNOS_BUS_DEVFREQ

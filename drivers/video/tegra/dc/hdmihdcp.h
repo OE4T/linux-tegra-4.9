@@ -80,6 +80,7 @@ void tegra_nvhdcp_shutdown(struct tegra_nvhdcp *nvhdcp);
 struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_hdmi *hdmi,
 					int id, int bus);
 void tegra_nvhdcp_destroy(struct tegra_nvhdcp *nvhdcp);
+void tegra_nvhdcp_debugfs_init(struct tegra_nvhdcp *nvhdcp);
 #else
 static inline void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd)
 {

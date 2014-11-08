@@ -66,6 +66,8 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 #define HDCP_MSG_SIZE_MASK		0x03FF
 #define HDCP22_PROTOCOL			1
 #define HDCP1X_PROTOCOL			0
+#define HDCP_MAX_RETRIES		5
+#define HDCP_MIN_RETRIES		0
 #define HDCP_DEBUG                      0
 #define SEQ_NUM_M_MAX_RETRIES		1
 
@@ -1411,7 +1413,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 
 failure:
 	nvhdcp->fail_count++;
-	if (nvhdcp->fail_count > 5) {
+	if (nvhdcp->fail_count > nvhdcp->max_retries) {
 		nvhdcp_err("nvhdcp failure - too many failures, giving up!\n");
 	} else {
 		nvhdcp_err("nvhdcp failure - renegotiating in 1 second\n");
@@ -1555,7 +1557,7 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 failure:
 
 	nvhdcp->fail_count++;
-	if (nvhdcp->fail_count > 5) {
+	if (nvhdcp->fail_count > nvhdcp->max_retries) {
 		nvhdcp_err("nvhdcp failure - too many failures, giving up!\n");
 	} else {
 		nvhdcp_err("nvhdcp failure - renegotiating in 1 second\n");
@@ -1815,6 +1817,7 @@ struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_hdmi *hdmi,
 	nvhdcp->info.addr = 0x74 >> 1;
 	nvhdcp->info.platform_data = nvhdcp;
 	nvhdcp->fail_count = 0;
+	nvhdcp->max_retries = HDCP_MAX_RETRIES;
 
 	adapter = i2c_get_adapter(bus);
 	if (!adapter) {
@@ -1864,3 +1867,87 @@ void tegra_nvhdcp_destroy(struct tegra_nvhdcp *nvhdcp)
 	i2c_release_client(nvhdcp->client);
 	kfree(nvhdcp);
 }
+
+#ifdef CONFIG_TEGRA_DEBUG_HDCP
+/* show current maximum number of retries for HDCP authentication */
+static int tegra_nvhdcp_max_retries_dbg_show(struct seq_file *m, void *unused)
+{
+	struct tegra_nvhdcp *hdcp = m->private;
+
+	if (WARN_ON(!hdcp))
+		return -EINVAL;
+
+	seq_printf(m, "hdcp max_retries value: %d\n", hdcp->max_retries);
+
+	return 0;
+}
+
+/*
+ * sw control for hdcp max retries.
+ * 5 is the normal number of max retries.
+ * 1 is the minimum number of retries.
+ * 5 is the maximum number of retries.
+ * sw should keep the number of retries to 5 until unless a change is required
+ */
+static ssize_t tegra_nvhdcp_max_retries_dbg_write(struct file *file,
+						const char __user *addr,
+						size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data;
+	struct tegra_nvhdcp *hdcp = m->private;
+	u8 new_max_retries;
+	int ret;
+
+	if (WARN_ON(!hdcp))
+		return -EINVAL;
+
+	ret = kstrtou8_from_user(addr, len, 6, &new_max_retries);
+	if (ret < 0)
+		return ret;
+
+	if (new_max_retries >= HDCP_MIN_RETRIES &&
+		new_max_retries <= HDCP_MAX_RETRIES)
+		hdcp->max_retries = new_max_retries;
+
+	return len;
+}
+
+static int tegra_nvhdcp_max_retries_dbg_open(struct inode *inode,
+		struct file *file)
+{
+	return single_open(file, tegra_nvhdcp_max_retries_dbg_show,
+			inode->i_private);
+}
+
+static const struct file_operations tegra_nvhdcp_max_retries_dbg_ops = {
+	.open = tegra_nvhdcp_max_retries_dbg_open,
+	.read = seq_read,
+	.write = tegra_nvhdcp_max_retries_dbg_write,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+void tegra_nvhdcp_debugfs_init(struct tegra_nvhdcp *nvhdcp)
+{
+	struct dentry *dir, *ret;
+
+	dir = debugfs_create_dir("tegra_nvhdcp",  NULL);
+	if (IS_ERR_OR_NULL(dir))
+		return;
+
+	ret = debugfs_create_file("max_retries", S_IRUGO, dir,
+				nvhdcp, &tegra_nvhdcp_max_retries_dbg_ops);
+	if (IS_ERR_OR_NULL(ret))
+		goto fail;
+
+	return;
+fail:
+	debugfs_remove_recursive(dir);
+	return;
+}
+#else
+void tegra_nvhdcp_debugfs_init(struct tegra_nvhdcp *nvhdcp)
+{
+	return;
+}
+#endif

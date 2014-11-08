@@ -916,6 +916,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		err = PTR_ERR(hdmi->nvhdcp);
 		goto fail;
 	}
+	tegra_nvhdcp_debugfs_init(hdmi->nvhdcp);
 #endif
 
 	tegra_hdmi_hda_clk_get(hdmi);

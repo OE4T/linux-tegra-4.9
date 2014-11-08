@@ -919,8 +919,9 @@ static void clk_config_pll_safe_dvfs(struct gk20a *g, struct pll *gpll)
 	gpll->N = nsafe;
 	clk_config_dvfs_ndiv(gpll->dvfs.mv, gpll->N, &gpll->dvfs);
 
-	gk20a_dbg_clk("safe freq %d kHz, M %d, N %d, PL %d(div%d)",
-		gpll->freq, gpll->M, gpll->N, gpll->PL, pl_to_div(gpll->PL));
+	gk20a_dbg_clk("safe freq %d kHz, M %d, N %d, PL %d(div%d), mV(cal) %d(%d), DC %d",
+		gpll->freq, gpll->M, gpll->N, gpll->PL, pl_to_div(gpll->PL),
+		gpll->dvfs.mv, gpll->dvfs.uv_cal / 1000, gpll->dvfs.dfs_coeff);
 }
 
 /* Change GPCPLL frequency and DVFS detection settings in DVFS mode */
@@ -992,6 +993,12 @@ static int clk_program_na_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 	clk_set_dfs_coeff(g, 0);
 	clk_set_dfs_ext_cal(g, gpll_new->dvfs.dfs_ext_cal);
 	clk_set_dfs_coeff(g, gpll_new->dvfs.dfs_coeff);
+
+	gk20a_dbg_clk("config_pll  %d kHz, M %d, N %d, PL %d(div%d), mV(cal) %d(%d), DC %d",
+		gpll_new->freq, gpll_new->M, gpll_new->N, gpll_new->PL,
+		pl_to_div(gpll_new->PL),
+		max(gpll_new->dvfs.mv, gpll_old->dvfs.mv),
+		gpll_new->dvfs.uv_cal / 1000, gpll_new->dvfs.dfs_coeff);
 
 	/* Finally set target rate (with DVFS detection settings already new) */
 	return clk_program_gpc_pll(g, gpll_new, 1);

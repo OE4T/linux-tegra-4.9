@@ -96,4 +96,6 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 	.idle = gk20a_tegra_idle,
 
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
+
+	.default_big_page_size	= SZ_128K,
 };

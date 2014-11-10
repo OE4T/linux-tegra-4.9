@@ -955,8 +955,8 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 			NV_SOR_REFCLK_DIV_FRAC(dispclk_div_8_2));
 
 	hdmi->dvi ?
-		({tegra_sor_writel(sor, NV_SOR_HDMI_CTRL, 0x00020038); }) :
-		({tegra_sor_writel(sor, NV_SOR_HDMI_CTRL, 0x40020038); });
+		({tegra_sor_writel(sor, NV_SOR_HDMI_CTRL, 0x00020438); }) :
+		({tegra_sor_writel(sor, NV_SOR_HDMI_CTRL, 0x40020438); });
 
 	tegra_dc_writel(dc, 0x180, DC_DISP_H_PULSE2_CONTROL);
 	h_pulse_start = dc->mode.h_ref_to_sync +

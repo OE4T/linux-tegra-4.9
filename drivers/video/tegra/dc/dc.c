@@ -3353,6 +3353,10 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 		tegra_dc_sync_windows(dcwins, nr_win);
 	}
 	tegra_dc_program_bandwidth(dc, true);
+	for_each_set_bit(i, &blank_windows, DC_N_WINDOWS) {
+		/* Advance pending syncpoints */
+		tegra_dc_disable_window(dc, i);
+	}
 }
 
 int tegra_dc_restore(struct tegra_dc *dc)

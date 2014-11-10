@@ -25,13 +25,20 @@
 
 struct nvhost_vm {
 	struct platform_device *pdev;
-	struct kref kref;
-	struct list_head buffer_list;
+
+	struct kref kref;	/* reference to this VM */
 	struct mutex mutex;
+
+	/* list of buffers mapped into this VM */
+	struct list_head buffer_list;
+
+	/* count of application viewed buffers mapped into this VM */
 	unsigned int num_user_mapped_buffers;
 };
 
 struct nvhost_vm_buffer {
+	struct nvhost_vm *vm;
+
 	/* buffer attachment */
 	struct dma_buf *dmabuf;
 	struct dma_buf_attachment *attach;
@@ -41,6 +48,8 @@ struct nvhost_vm_buffer {
 	dma_addr_t addr;
 	size_t size;
 
+	struct kref kref;	/* reference to this buffer */
+
 	/* bookkeeping */
 	unsigned int user_map_count;	/* application view to the buffer */
 	unsigned int submit_map_count;	/* hw view to this buffer */
@@ -48,8 +57,9 @@ struct nvhost_vm_buffer {
 };
 
 struct nvhost_vm_pin {
-	unsigned int num_buffers;
+	/* list of pinned buffers */
 	struct nvhost_vm_buffer **buffers;
+	unsigned int num_buffers;
 };
 
 static struct nvhost_vm_buffer *nvhost_vm_find_buffer(struct nvhost_vm *vm,
@@ -72,12 +82,29 @@ static void nvhost_vm_destroy_buffer_locked(struct nvhost_vm_buffer *buffer)
 	list_del(&buffer->list);
 
 	kfree(buffer);
+	buffer = NULL;
+}
+
+static void nvhost_vm_buffer_deinit_locked(struct kref *kref)
+{
+	struct nvhost_vm_buffer *buffer =
+			container_of(kref, struct nvhost_vm_buffer, kref);
+	nvhost_vm_destroy_buffer_locked(buffer);
+}
+
+void nvhost_vm_buffer_put_locked(struct nvhost_vm_buffer *buffer)
+{
+	kref_put(&buffer->kref, nvhost_vm_buffer_deinit_locked);
+}
+
+void nvhost_vm_buffer_get(struct nvhost_vm_buffer *buffer)
+{
+	kref_get(&buffer->kref);
 }
 
 void nvhost_vm_unmap_dmabuf(struct nvhost_vm *vm, struct dma_buf *dmabuf)
 {
 	struct nvhost_vm_buffer *buffer;
-	bool drop_vm_reference = false;
 
 	mutex_lock(&vm->mutex);
 
@@ -95,17 +122,9 @@ void nvhost_vm_unmap_dmabuf(struct nvhost_vm *vm, struct dma_buf *dmabuf)
 	if (!buffer->user_map_count)
 		vm->num_user_mapped_buffers--;
 
-	/* should we unmap? */
-	if (!buffer->user_map_count && !buffer->submit_map_count) {
-		nvhost_vm_destroy_buffer_locked(buffer);
-		drop_vm_reference = true;
-	}
+	nvhost_vm_buffer_put_locked(buffer);
 
 	mutex_unlock(&vm->mutex);
-
-	/* drop vm reference that the buffer held */
-	if (drop_vm_reference)
-		nvhost_vm_put(vm);
 
 	return;
 
@@ -129,6 +148,7 @@ int nvhost_vm_map_dmabuf(struct nvhost_vm *vm, struct dma_buf *dmabuf,
 		buffer->user_map_count++;
 		if (buffer->user_map_count == 1)
 			vm->num_user_mapped_buffers++;
+		nvhost_vm_buffer_get(buffer);
 		mutex_unlock(&vm->mutex);
 		*addr = buffer->addr;
 		return 0;
@@ -143,6 +163,7 @@ int nvhost_vm_map_dmabuf(struct nvhost_vm *vm, struct dma_buf *dmabuf,
 	buffer->dmabuf = dmabuf;
 	buffer->size = dmabuf->size;
 	buffer->user_map_count = 1;
+	kref_init(&buffer->kref);
 	INIT_LIST_HEAD(&buffer->list);
 
 	/* attach buffer to host1x device */
@@ -173,9 +194,6 @@ int nvhost_vm_map_dmabuf(struct nvhost_vm *vm, struct dma_buf *dmabuf,
 
 	mutex_unlock(&vm->mutex);
 
-	/* each mapped buffer takes reference on vm */
-	nvhost_vm_get(vm);
-
 	*addr = buffer->addr;
 	return 0;
 
@@ -191,7 +209,6 @@ err_alloc_buffer:
 
 void nvhost_vm_unpin_buffers(struct nvhost_vm *vm, struct nvhost_vm_pin *pin)
 {
-	int num_dropped_vm_references = 0;
 	int i;
 
 	mutex_lock(&vm->mutex);
@@ -210,18 +227,10 @@ void nvhost_vm_unpin_buffers(struct nvhost_vm *vm, struct nvhost_vm_pin *pin)
 		/* reduce number of submit maps */
 		buffer->submit_map_count--;
 
-		/* check if the buffer can be removed */
-		if (!buffer->user_map_count && !buffer->submit_map_count) {
-			nvhost_vm_destroy_buffer_locked(buffer);
-			num_dropped_vm_references++;
-		}
+		nvhost_vm_buffer_put_locked(buffer);
 	}
 
 	mutex_unlock(&vm->mutex);
-
-	/* drop vm references */
-	for (i = 0; i < num_dropped_vm_references; i++)
-		nvhost_vm_put(vm);
 
 	kfree(pin->buffers);
 	kfree(pin);
@@ -254,6 +263,7 @@ struct nvhost_vm_pin *nvhost_vm_pin_buffers(struct nvhost_vm *vm)
 
 		/* and add them to the list of submit buffers */
 		buffer->submit_map_count++;
+		nvhost_vm_buffer_get(buffer);
 		buffers[i] = buffer;
 		i++;
 	}
@@ -275,7 +285,18 @@ err_alloc_pin:
 static void nvhost_vm_deinit(struct kref *kref)
 {
 	struct nvhost_vm *vm = container_of(kref, struct nvhost_vm, kref);
+	struct nvhost_vm_buffer *buffer, *buffer_tmp;
+
+	mutex_lock(&vm->mutex);
+
+	/* go through all remaining buffers (if any) and free them here */
+	list_for_each_entry_safe(buffer, buffer_tmp, &vm->buffer_list, list)
+		nvhost_vm_destroy_buffer_locked(buffer);
+
+	mutex_unlock(&vm->mutex);
+
 	kfree(vm);
+	vm = NULL;
 }
 
 void nvhost_vm_put(struct nvhost_vm *vm)

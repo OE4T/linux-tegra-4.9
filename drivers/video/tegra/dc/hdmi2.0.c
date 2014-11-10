@@ -883,6 +883,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi->nvhdcp = NULL;
 	hdmi->mon_spec_valid = false;
 	hdmi->eld_valid = false;
+	hdmi->device_shutdown = false;
 	if (0) {
 		/* TODO: seamless boot mode needs initialize the state */
 	} else {
@@ -1723,6 +1724,15 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 }
 
+static void tegra_dc_hdmi_shutdown(struct tegra_dc *dc)
+{
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+
+	hdmi->device_shutdown = false;
+
+	return;
+}
+
 static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
@@ -1868,6 +1878,7 @@ struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.disable = tegra_dc_hdmi_disable,
 	.setup_clk = tegra_dc_hdmi_setup_clk,
 	.detect = tegra_dc_hdmi_detect,
+	.shutdown = tegra_dc_hdmi_shutdown,
 	.ddc_enable = tegra_dc_hdmi_ddc_enable,
 	.ddc_disable = tegra_dc_hdmi_ddc_disable,
 };

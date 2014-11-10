@@ -56,6 +56,8 @@
 #include "dev.h"
 #include "nvsd.h"
 #include "dsi.h"
+#include "edid.h"
+#include "hdmi2.0.h"
 
 #ifdef CONFIG_OF
 /* #define OF_DC_DEBUG	1 */
@@ -1590,8 +1592,25 @@ static int dc_hdmi_out_enable(struct device *dev)
 	return 0;
 }
 
-static int dc_hdmi_out_disable(void)
+static int dc_hdmi_out_disable(struct device *dev)
 {
+	struct platform_device *ndev = NULL;
+	struct tegra_hdmi *hdmi = NULL;
+	struct tegra_dc *dc = NULL;
+
+	if (!dev)
+		return -EINVAL;
+	ndev = to_platform_device(dev);
+	if (!ndev)
+		return -EINVAL;
+
+	dc = platform_get_drvdata(ndev);
+	hdmi = tegra_dc_get_outdata(dc);
+
+	/* Do not disable regulator when device is shutting down */
+	if (hdmi->device_shutdown)
+		return 0;
+
 	if (of_hdmi_reg) {
 		regulator_disable(of_hdmi_reg);
 		regulator_put(of_hdmi_reg);

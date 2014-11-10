@@ -314,6 +314,7 @@ struct tegra_hdmi {
 	int irq;
 	struct tegra_prod_list *prod_list;
 	int ddc_refcount;
+	bool device_shutdown;
 };
 
 #define HDMI_ELD_BUF 96

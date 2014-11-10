@@ -3017,7 +3017,7 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 		disable_irq_nosync(dc->irq);
 		tegra_dc_clear_bandwidth(dc);
 		if (dc->out && dc->out->disable)
-			dc->out->disable();
+			dc->out->disable(&dc->ndev->dev);
 		tegra_dc_put(dc);
 		if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE))
 			tegra_dc_clk_disable(dc);
@@ -3275,7 +3275,7 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 	tegra_dc_clear_bandwidth(dc);
 
 	if (dc->out && dc->out->disable)
-		dc->out->disable();
+		dc->out->disable(&dc->ndev->dev);
 
 	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
 		tegra_dc_disable_window(dc, i);

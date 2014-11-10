@@ -47,6 +47,7 @@ struct nvhost_device_data t18_host1x_info = {
 
 struct nvhost_device_data t18_msenc_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(6, 1),
+	.modulemutexes		= {NV_VIDEO_ENCODE_NVENC_CLASS_ID},
 	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,
 #ifdef TEGRA_POWERGATE_NVENC
 	.powergate_ids		= { TEGRA_POWERGATE_NVENC, -1 },
@@ -65,6 +66,7 @@ struct nvhost_device_data t18_msenc_info = {
 
 struct nvhost_device_data t18_nvdec_info = {
 	.version		= NVHOST_ENCODE_NVDEC_VER(3, 0),
+	.modulemutexes		= {NV_NVDEC_CLASS_ID},
 	.class			= NV_NVDEC_CLASS_ID,
 #ifdef TEGRA_POWERGATE_NVDEC
 	.powergate_ids		= { TEGRA_POWERGATE_NVDEC, -1 },
@@ -84,6 +86,7 @@ struct nvhost_device_data t18_nvdec_info = {
 
 struct nvhost_device_data t18_nvjpg_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(1, 1),
+	.modulemutexes		= {NV_NVJPG_CLASS_ID},
 	.class			= NV_NVJPG_CLASS_ID,
 #ifdef TEGRA_POWERGATE_NVJPG
 	.powergate_ids		= { TEGRA_POWERGATE_NVJPG, -1 },
@@ -104,7 +107,7 @@ struct nvhost_device_data t18_nvjpg_info = {
 
 struct nvhost_device_data t18_vic_info = {
 	.num_channels		= 1,
-	.modulemutexes		= {NVMODMUTEX_VIC},
+	.modulemutexes		= {NV_GRAPHICS_VIC_CLASS_ID},
 	.clocks			= {{"vic03", UINT_MAX, 0},
 				   {"emc", UINT_MAX,
 				   NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},

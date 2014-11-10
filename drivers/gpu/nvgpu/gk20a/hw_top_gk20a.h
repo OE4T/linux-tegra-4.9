@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -97,6 +97,14 @@ static inline u32 top_device_info_engine_enum_v(u32 r)
 static inline u32 top_device_info_runlist_enum_v(u32 r)
 {
 	return (r >> 21) & 0xf;
+}
+static inline u32 top_device_info_intr_enum_v(u32 r)
+{
+	return (r >> 15) & 0x1f;
+}
+static inline u32 top_device_info_reset_enum_v(u32 r)
+{
+	return (r >> 9) & 0x1f;
 }
 static inline u32 top_device_info_type_enum_v(u32 r)
 {

@@ -72,8 +72,6 @@ static int init_engine_info(struct fifo_gk20a *f)
 {
 	struct gk20a *g = f->g;
 	struct device *d = dev_from_gk20a(g);
-	struct fifo_engine_info_gk20a *gr_info;
-	const u32 gr_sw_id = ENGINE_GR_GK20A;
 	u32 i;
 	u32 max_info_entries = top_device_info__size_1_v();
 
@@ -81,75 +79,78 @@ static int init_engine_info(struct fifo_gk20a *f)
 
 	/* all we really care about finding is the graphics entry    */
 	/* especially early on in sim it probably thinks it has more */
-	f->num_engines = 1;
-
-	gr_info = f->engine_info + gr_sw_id;
-
-	gr_info->sw_id = gr_sw_id;
-	gr_info->name = "gr";
-	gr_info->dev_info_id = top_device_info_type_enum_graphics_v();
-	gr_info->mmu_fault_id = fifo_intr_mmu_fault_eng_id_graphics_v();
-	gr_info->runlist_id = ~0;
-	gr_info->pbdma_id   = ~0;
-	gr_info->engine_id  = ~0;
+	f->num_engines = 2;
 
 	for (i = 0; i < max_info_entries; i++) {
+		struct fifo_engine_info_gk20a *info = NULL;
 		u32 table_entry = gk20a_readl(f->g, top_device_info_r(i));
 		u32 entry = top_device_info_entry_v(table_entry);
-		u32 engine_enum = top_device_info_type_enum_v(table_entry);
-		u32 table_entry2 = 0;
+		u32 engine_enum;
+		int pbdma_id;
+		u32 runlist_bit;
 
-		if (entry == top_device_info_entry_not_valid_v())
+		if (entry != top_device_info_entry_enum_v())
 			continue;
 
-		if (top_device_info_chain_v(table_entry) ==
-		    top_device_info_chain_enable_v()) {
-
-			table_entry2 = gk20a_readl(f->g,
-						   top_device_info_r(++i));
-
-			engine_enum = top_device_info_type_enum_v(table_entry2);
-		}
-
 		/* we only care about GR engine here */
-		if (entry == top_device_info_entry_enum_v() &&
-		    engine_enum == gr_info->dev_info_id) {
-			int pbdma_id;
-			u32 runlist_bit;
+		engine_enum = top_device_info_engine_enum_v(table_entry);
+		if (engine_enum >= ENGINE_INVAL_GK20A)
+			continue;
 
-			gr_info->runlist_id =
-				top_device_info_runlist_enum_v(table_entry);
-			gk20a_dbg_info("gr info: runlist_id %d", gr_info->runlist_id);
+		gk20a_dbg_info("info: engine_id %d",
+				top_device_info_engine_enum_v(table_entry));
+		info = &g->fifo.engine_info[engine_enum];
 
-			gr_info->engine_id =
-				top_device_info_engine_enum_v(table_entry);
-			gk20a_dbg_info("gr info: engine_id %d", gr_info->engine_id);
+		info->runlist_id =
+			top_device_info_runlist_enum_v(table_entry);
+		gk20a_dbg_info("gr info: runlist_id %d", info->runlist_id);
 
-			runlist_bit = 1 << gr_info->runlist_id;
+		info->engine_id =
+			top_device_info_engine_enum_v(table_entry);
+		gk20a_dbg_info("gr info: engine_id %d", info->engine_id);
 
-			for (pbdma_id = 0; pbdma_id < f->num_pbdma; pbdma_id++) {
-				gk20a_dbg_info("gr info: pbdma_map[%d]=%d",
-					pbdma_id, f->pbdma_map[pbdma_id]);
-				if (f->pbdma_map[pbdma_id] & runlist_bit)
-					break;
-			}
+		runlist_bit = 1 << info->runlist_id;
 
-			if (pbdma_id == f->num_pbdma) {
-				gk20a_err(d, "busted pbmda map");
-				return -EINVAL;
-			}
-			gr_info->pbdma_id = pbdma_id;
-
-			break;
+		for (pbdma_id = 0; pbdma_id < f->num_pbdma; pbdma_id++) {
+			gk20a_dbg_info("gr info: pbdma_map[%d]=%d",
+				pbdma_id, f->pbdma_map[pbdma_id]);
+			if (f->pbdma_map[pbdma_id] & runlist_bit)
+				break;
 		}
-	}
 
-	if (gr_info->runlist_id == ~0) {
-		gk20a_err(d, "busted device info");
-		return -EINVAL;
+		if (pbdma_id == f->num_pbdma) {
+			gk20a_err(d, "busted pbmda map");
+			return -EINVAL;
+		}
+		info->pbdma_id = pbdma_id;
+
+		info->intr_id =
+			top_device_info_intr_enum_v(table_entry);
+		gk20a_dbg_info("gr info: intr_id %d", info->intr_id);
+
+		info->reset_id =
+			top_device_info_reset_enum_v(table_entry);
+		gk20a_dbg_info("gr info: reset_id %d",
+				info->reset_id);
+
 	}
 
 	return 0;
+}
+
+u32 gk20a_fifo_engine_interrupt_mask(struct gk20a *g)
+{
+	u32 eng_intr_mask = 0;
+	int i = 0;
+
+	for (i = 0; i < g->fifo.max_engines; i++) {
+		u32 intr_id = g->fifo.engine_info[i].intr_id;
+
+		if (intr_id)
+			eng_intr_mask |= BIT(intr_id);
+	}
+
+	return eng_intr_mask;
 }
 
 static void gk20a_remove_fifo_support(struct fifo_gk20a *f)

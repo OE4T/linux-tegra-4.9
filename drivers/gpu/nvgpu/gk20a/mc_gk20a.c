@@ -71,7 +71,7 @@ irqreturn_t mc_gk20a_intr_thread_stall(struct gk20a *g)
 
 	gk20a_dbg(gpu_dbg_intr, "stall intr %08x\n", mc_intr_0);
 
-	if (mc_intr_0 & mc_intr_0_pgraph_pending_f())
+	if (mc_intr_0 & BIT(g->fifo.engine_info[ENGINE_GR_GK20A].intr_id))
 		gr_gk20a_elpg_protected_call(g, gk20a_gr_isr(g));
 	if (mc_intr_0 & mc_intr_0_pfifo_pending_f())
 		gk20a_fifo_isr(g);
@@ -105,7 +105,7 @@ irqreturn_t mc_gk20a_intr_thread_nonstall(struct gk20a *g)
 
 	if (mc_intr_1 & mc_intr_0_pfifo_pending_f())
 		gk20a_fifo_nonstall_isr(g);
-	if (mc_intr_1 & mc_intr_0_pgraph_pending_f())
+	if (mc_intr_1 & BIT(g->fifo.engine_info[ENGINE_GR_GK20A].intr_id))
 		gk20a_gr_nonstall_isr(g);
 
 	gk20a_writel(g, mc_intr_en_1_r(),
@@ -119,9 +119,20 @@ irqreturn_t mc_gk20a_intr_thread_nonstall(struct gk20a *g)
 
 void mc_gk20a_intr_enable(struct gk20a *g)
 {
+	u32 eng_intr_mask = gk20a_fifo_engine_interrupt_mask(g);
+
+	gk20a_writel(g, mc_intr_mask_1_r(),
+		     mc_intr_0_pfifo_pending_f()
+		     | eng_intr_mask);
 	gk20a_writel(g, mc_intr_en_1_r(),
 		mc_intr_en_1_inta_hardware_f());
 
+	gk20a_writel(g, mc_intr_mask_0_r(),
+		     mc_intr_0_pfifo_pending_f()
+		     | mc_intr_0_priv_ring_pending_f()
+		     | mc_intr_0_ltc_pending_f()
+		     | mc_intr_0_pbus_pending_f()
+		     | eng_intr_mask);
 	gk20a_writel(g, mc_intr_en_0_r(),
 		mc_intr_en_0_inta_hardware_f());
 }

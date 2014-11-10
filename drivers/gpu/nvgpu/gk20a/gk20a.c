@@ -757,11 +757,6 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 	if (err)
 		goto done;
 
-	enable_irq(g->irq_stall);
-	enable_irq(g->irq_nonstall);
-
-	g->ops.mc.intr_enable(g);
-
 	if (!tegra_platform_is_silicon())
 		gk20a_writel(g, bus_intr_en_0_r(), 0x0);
 	else
@@ -814,6 +809,14 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 		goto done;
 	}
 
+	err = gk20a_init_fifo_support(g);
+	if (err) {
+		gk20a_err(dev, "failed to init gk20a fifo");
+		goto done;
+	}
+
+	g->ops.mc.intr_enable(g);
+
 	err = gk20a_enable_gr_hw(g);
 	if (err) {
 		gk20a_err(dev, "failed to enable gr");
@@ -830,12 +833,6 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 	err = gk20a_init_pmu_support(g);
 	if (err) {
 		gk20a_err(dev, "failed to init gk20a pmu");
-		goto done;
-	}
-
-	err = gk20a_init_fifo_support(g);
-	if (err) {
-		gk20a_err(dev, "failed to init gk20a fifo");
 		goto done;
 	}
 
@@ -857,7 +854,6 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 		goto done;
 	}
 
-
 	gk20a_channel_resume(g);
 	set_user_nice(current, nice_value);
 
@@ -867,6 +863,9 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 
 	if (platform->has_cde)
 		gk20a_init_cde_support(g);
+
+	enable_irq(g->irq_stall);
+	enable_irq(g->irq_nonstall);
 
 #ifdef CONFIG_INPUT_CFBOOST
 	if (!g->boost_added) {

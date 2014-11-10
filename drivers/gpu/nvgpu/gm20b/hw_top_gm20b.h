@@ -102,6 +102,14 @@ static inline u32 top_device_info_runlist_enum_v(u32 r)
 {
 	return (r >> 21) & 0xf;
 }
+static inline u32 top_device_info_intr_enum_v(u32 r)
+{
+	return (r >> 15) & 0x1f;
+}
+static inline u32 top_device_info_reset_enum_v(u32 r)
+{
+	return (r >> 9) & 0x1f;
+}
 static inline u32 top_device_info_type_enum_v(u32 r)
 {
 	return (r >> 2) & 0x1fffffff;

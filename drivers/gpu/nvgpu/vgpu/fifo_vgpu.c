@@ -162,8 +162,6 @@ static int init_engine_info(struct fifo_gk20a *f)
 
 	gr_info = f->engine_info + gr_sw_id;
 
-	gr_info->sw_id = gr_sw_id;
-	gr_info->name = "gr";
 	/* FIXME: retrieve this from server */
 	gr_info->runlist_id = 0;
 	return 0;

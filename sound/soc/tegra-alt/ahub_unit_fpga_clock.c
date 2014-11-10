@@ -55,7 +55,7 @@ static unsigned int i2s_source_clock[5] = {
 	CLK_RST_CONTROLLER_CLK_SOURCE_I2S5_0,
 };
 
-unsigned char cdce906_setting[27] = {
+static unsigned char cdce906_setting[27] = {
 	0,
 	0x77,
 	0x20,

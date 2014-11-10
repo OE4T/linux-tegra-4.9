@@ -252,8 +252,12 @@ void gk20a_debug_dump_device(struct platform_device *pdev)
 	};
 
 	/* Dump the first device if no info is provided */
-	if (!pdev && gk20a_device)
+	if (!pdev) {
+		if (!gk20a_device)
+			return;
+
 		pdev = gk20a_device;
+	}
 
 	gk20a_debug_show_dump(pdev, &o);
 }

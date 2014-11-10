@@ -3401,7 +3401,7 @@ static int tegra_se_save_SRK(struct tegra_se_dev *se_dev)
 	return 0;
 }
 
-int se_suspend(struct device *dev, bool polling)
+static int se_suspend(struct device *dev, bool polling)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct tegra_se_dev *se_dev = platform_get_drvdata(pdev);

@@ -454,4 +454,64 @@ static inline u32 nvdisp_background_color_r(void)
 {
 	return 0x000004e4;
 }
+static inline u32 nvdisp_crc_control_r(void)
+{
+	return 0x00000300;
+}
+static inline u32 nvdisp_crc_control_enable_enable_f(void)
+{
+	return 0x1;
+}
+static inline u32 nvdisp_crc_control_enable_diasble_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_crc_control_input_data_full_frame_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_crc_control_input_data_active_data_f(void)
+{
+	return 0x4;
+}
+static inline u32 nvdisp_display_command_r(void)
+{
+	return 0x00000032;
+}
+static inline u32 nvdisp_display_command_control_mode_stop_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_display_command_control_mode_c_display_f(void)
+{
+	return 0x20;
+}
+static inline u32 nvdisp_display_command_control_mode_nc_display_f(void)
+{
+	return 0x40;
+}
+static inline u32 nvdisp_rg_crca_r(void)
+{
+	return 0x0000032c;
+}
+static inline u32 nvdisp_rg_crca_valid_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_rg_crca_valid_true_f(void)
+{
+	return 0x1;
+}
+static inline u32 nvdisp_rg_crca_error_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_rg_crca_error_true_f(void)
+{
+	return 0x2;
+}
+static inline u32 nvdisp_rg_crcb_r(void)
+{
+	return 0x0000032d;
+}
 #endif

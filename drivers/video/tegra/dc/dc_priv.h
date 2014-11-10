@@ -483,6 +483,8 @@ void tegra_dc_call_flip_callback(void);
 unsigned long tegra_dc_poll_register(struct tegra_dc *dc,
 u32 reg, u32 mask, u32 exp_val, u32 poll_interval_us,
 u32 timeout_ms);
+void tegra_dc_enable_general_act(struct tegra_dc *dc);
+
 /* defined in dc.c, used by ext/dev.c */
 extern int no_vsync;
 

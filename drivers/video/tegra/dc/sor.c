@@ -1188,17 +1188,6 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 	tegra_dc_sor_update(sor);
 }
 
-static void tegra_dc_sor_general_act(struct tegra_dc *dc)
-{
-	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
-
-	if (tegra_dc_poll_register(dc, DC_CMD_STATE_CONTROL,
-		GENERAL_ACT_REQ, 0, 100,
-		TEGRA_DC_POLL_TIMEOUT_MS))
-		dev_err(&dc->ndev->dev,
-			"dc timeout waiting for DC to stop\n");
-}
-
 static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
 {
 	struct tegra_dc *dc = sor->dc;
@@ -1565,11 +1554,11 @@ void tegra_sor_stop_dc(struct tegra_dc_sor_data *sor)
 
 	/* Stop DC->SOR path */
 	tegra_dc_sor_enable_sor(sor, false);
-	tegra_dc_sor_general_act(dc);
+	tegra_dc_enable_general_act(dc);
 
 	/* Stop DC */
 	tegra_dc_writel(dc, DISP_CTRL_MODE_STOP, DC_CMD_DISPLAY_COMMAND);
-	tegra_dc_sor_general_act(dc);
+	tegra_dc_enable_general_act(dc);
 
 	tegra_dc_put(dc);
 }

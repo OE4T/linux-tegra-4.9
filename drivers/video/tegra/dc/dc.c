@@ -1457,6 +1457,19 @@ unsigned long tegra_dc_poll_register(struct tegra_dc *dc, u32 reg, u32 mask,
 	return jiffies - timeout_jf + 1;
 }
 
+
+void tegra_dc_enable_general_act(struct tegra_dc *dc)
+{
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+
+	if (tegra_dc_poll_register(dc, DC_CMD_STATE_CONTROL,
+		GENERAL_ACT_REQ, 0, 100,
+		TEGRA_DC_POLL_TIMEOUT_MS))
+		dev_err(&dc->ndev->dev,
+			"dc timeout waiting for DC to stop\n");
+}
+
+
 static int tegra_dc_set_next(struct tegra_dc *dc)
 {
 	int i;

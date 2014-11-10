@@ -91,7 +91,7 @@ __must_hold(&cde_app->mutex)
 	kfree(cde_ctx);
 }
 
-static void gk20a_cde_prepare_ctx_remove(struct gk20a_cde_ctx *cde_ctx)
+static void gk20a_cde_cancel_deleter(struct gk20a_cde_ctx *cde_ctx)
 __releases(&cde_app->mutex)
 __acquires(&cde_app->mutex)
 {
@@ -101,14 +101,12 @@ __acquires(&cde_app->mutex)
 	if (!cde_ctx->is_temporary)
 		return;
 
-	/* safe to go off the mutex since app is deinitialised. deleter works
-	 * may be only at waiting for the mutex or before, going to abort */
 	mutex_unlock(&cde_app->mutex);
 
 	/* the deleter can rearm itself */
-	do {
+	while (delayed_work_pending(&cde_ctx->ctx_deleter_work)) {
 		cancel_delayed_work_sync(&cde_ctx->ctx_deleter_work);
-	} while (delayed_work_pending(&cde_ctx->ctx_deleter_work));
+	}
 
 	mutex_lock(&cde_app->mutex);
 }
@@ -119,15 +117,19 @@ __must_hold(&cde_app->mutex)
 	struct gk20a_cde_app *cde_app = &g->cde_app;
 	struct gk20a_cde_ctx *cde_ctx, *cde_ctx_save;
 
+	/* safe to go off the mutex in cancel_deleter since app is
+	 * deinitialised; no new jobs are started. deleter works may be only at
+	 * waiting for the mutex or before, going to abort */
+
 	list_for_each_entry_safe(cde_ctx, cde_ctx_save,
 			&cde_app->free_contexts, list) {
-		gk20a_cde_prepare_ctx_remove(cde_ctx);
+		gk20a_cde_cancel_deleter(cde_ctx);
 		gk20a_cde_remove_ctx(cde_ctx);
 	}
 
 	list_for_each_entry_safe(cde_ctx, cde_ctx_save,
 			&cde_app->used_contexts, list) {
-		gk20a_cde_prepare_ctx_remove(cde_ctx);
+		gk20a_cde_cancel_deleter(cde_ctx);
 		gk20a_cde_remove_ctx(cde_ctx);
 	}
 }
@@ -799,10 +801,15 @@ __must_hold(&cde_app->mutex)
 				cde_ctx, cde_app->ctx_count,
 				cde_app->ctx_usecount,
 				cde_app->ctx_count_top);
+
 		/* deleter work may be scheduled, but in_use prevents it */
 		cde_ctx->in_use = true;
 		list_move(&cde_ctx->list, &cde_app->used_contexts);
 		cde_app->ctx_usecount++;
+
+		/* cancel any deletions now that ctx is in use */
+		if (delayed_work_pending(&cde_ctx->ctx_deleter_work))
+			gk20a_cde_cancel_deleter(cde_ctx);
 		return cde_ctx;
 	}
 

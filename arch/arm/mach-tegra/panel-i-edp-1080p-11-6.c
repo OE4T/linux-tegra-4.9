@@ -192,7 +192,7 @@ fail:
 	return err;
 }
 
-static int edp_i_1080p_11_6_disable(void)
+static int edp_i_1080p_11_6_disable(struct device *dev)
 {
 	if (vdd_lcd_bl_en)
 		regulator_disable(vdd_lcd_bl_en);

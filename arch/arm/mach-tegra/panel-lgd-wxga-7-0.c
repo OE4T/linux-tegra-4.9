@@ -122,7 +122,7 @@ fail:
 	return err;
 }
 
-static int dsi_lgd_wxga_7_0_disable(void)
+static int dsi_lgd_wxga_7_0_disable(struct device *dev)
 {
 	if (vdd_lcd_bl_en)
 		regulator_disable(vdd_lcd_bl_en);

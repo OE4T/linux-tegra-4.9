@@ -150,7 +150,7 @@ fail:
 	return err;
 }
 
-static int lvds_c_1366_14_disable(void)
+static int lvds_c_1366_14_disable(struct device *dev)
 {
 	if (vdd_lcd_bl_en)
 		regulator_disable(vdd_lcd_bl_en);

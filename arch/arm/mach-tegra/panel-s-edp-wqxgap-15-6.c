@@ -206,7 +206,7 @@ fail:
 	return err;
 }
 
-static int edp_s_wqxgap_15_6_disable(void)
+static int edp_s_wqxgap_15_6_disable(struct device *dev)
 {
 	if (vdd_lcd_bl_en)
 		regulator_disable(vdd_lcd_bl_en);

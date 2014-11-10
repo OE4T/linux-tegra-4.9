@@ -155,7 +155,7 @@ static int dsi_s_wqxga_10_1_enable(struct device *dev)
 	return 0;
 }
 
-static int dsi_s_wqxga_10_1_disable(void)
+static int dsi_s_wqxga_10_1_disable(struct device *dev)
 {
 	if (vdd_lcd_bl)
 		regulator_disable(vdd_lcd_bl);

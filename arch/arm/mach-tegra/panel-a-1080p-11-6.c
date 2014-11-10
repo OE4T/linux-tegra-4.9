@@ -355,7 +355,7 @@ fail:
 	return err;
 }
 
-static int dsi_a_1080p_11_6_disable(void)
+static int dsi_a_1080p_11_6_disable(struct device *dev)
 {
 	gpio_set_value(lvds_en, 0);
 	gpio_set_value(en_vdd_bl, 0);

@@ -582,7 +582,7 @@ static struct tegra_dsi_out dsi_j_1440_810_5_8_pdata = {
 	.ulpm_not_supported = true,
 };
 
-static int dsi_j_1440_810_5_8_disable(void)
+static int dsi_j_1440_810_5_8_disable(struct device *dev)
 {
 	/* Delay b/w DSI data/clk disable and panel reset */
 	usleep_range(3000, 5000);

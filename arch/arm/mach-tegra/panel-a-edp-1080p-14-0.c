@@ -191,7 +191,7 @@ fail:
 	return err;
 }
 
-static int edp_a_1080p_14_0_disable(void)
+static int edp_a_1080p_14_0_disable(struct device *dev)
 {
 	if (vdd_lcd_bl_en)
 		regulator_disable(vdd_lcd_bl_en);

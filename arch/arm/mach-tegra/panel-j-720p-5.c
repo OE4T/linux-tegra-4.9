@@ -531,7 +531,7 @@ static struct tegra_dsi_out dsi_j_720p_5_pdata = {
 	.ulpm_not_supported = true,
 };
 
-static int dsi_j_720p_5_disable(void)
+static int dsi_j_720p_5_disable(struct device *dev)
 {
 	gpio_direction_output(dsi_j_720p_5_pdata.dsi_panel_rst_gpio, 0);
 	gpio_direction_output(DSI_PANEL_EN_GPIO, 0);

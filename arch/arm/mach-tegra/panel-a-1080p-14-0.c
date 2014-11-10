@@ -192,7 +192,7 @@ fail:
 
 }
 
-static int dsi_a_1080p_14_0_disable(void)
+static int dsi_a_1080p_14_0_disable(struct device *dev)
 {
 	gpio_set_value(en_bridge_0, 0);
 	gpio_set_value(en_bridge_refclk, 0);

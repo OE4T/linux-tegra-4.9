@@ -59,7 +59,7 @@ struct tegra_panel_ops {
 	int (*enable)(struct device *);
 	int (*postpoweron)(struct device *);
 	int (*prepoweroff)(void);
-	int (*disable)(void);
+	int (*disable)(struct device *);
 	int (*hotplug_init)(struct device *);
 	int (*postsuspend)(void);
 	void (*hotplug_report)(bool);

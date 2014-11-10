@@ -539,7 +539,7 @@ fail:
 	return err;
 }
 
-static int dsi_l_720p_5_loki_disable(void)
+static int dsi_l_720p_5_loki_disable(struct device *dev)
 {
 	if (vdd_lcd_bl)
 		regulator_disable(vdd_lcd_bl);

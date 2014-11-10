@@ -175,7 +175,7 @@ static int loki_hdmi_enable(struct device *dev)
 	return 0;
 }
 
-static int loki_hdmi_disable(void)
+static int loki_hdmi_disable(struct device *dev)
 {
 	if (loki_hdmi_reg) {
 		regulator_disable(loki_hdmi_reg);

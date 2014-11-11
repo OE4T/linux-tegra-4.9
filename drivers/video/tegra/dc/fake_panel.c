@@ -388,6 +388,8 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 		goto err_release_regs;
 	}
 
+	/* Need to always reinitialize clocks to ensure proper functionality */
+	tegra_dsi_init_clock_param(dc);
 	return 0;
 
 err_release_regs:

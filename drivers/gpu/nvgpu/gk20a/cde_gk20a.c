@@ -91,7 +91,8 @@ __must_hold(&cde_app->mutex)
 	kfree(cde_ctx);
 }
 
-static void gk20a_cde_cancel_deleter(struct gk20a_cde_ctx *cde_ctx)
+static void gk20a_cde_cancel_deleter(struct gk20a_cde_ctx *cde_ctx,
+		bool wait_finish)
 __releases(&cde_app->mutex)
 __acquires(&cde_app->mutex)
 {
@@ -101,14 +102,13 @@ __acquires(&cde_app->mutex)
 	if (!cde_ctx->is_temporary)
 		return;
 
-	mutex_unlock(&cde_app->mutex);
-
-	/* the deleter can rearm itself */
-	while (delayed_work_pending(&cde_ctx->ctx_deleter_work)) {
+	if (wait_finish) {
+		mutex_unlock(&cde_app->mutex);
 		cancel_delayed_work_sync(&cde_ctx->ctx_deleter_work);
+		mutex_lock(&cde_app->mutex);
+	} else {
+		cancel_delayed_work(&cde_ctx->ctx_deleter_work);
 	}
-
-	mutex_lock(&cde_app->mutex);
 }
 
 static void gk20a_cde_remove_contexts(struct gk20a *g)
@@ -123,13 +123,13 @@ __must_hold(&cde_app->mutex)
 
 	list_for_each_entry_safe(cde_ctx, cde_ctx_save,
 			&cde_app->free_contexts, list) {
-		gk20a_cde_cancel_deleter(cde_ctx);
+		gk20a_cde_cancel_deleter(cde_ctx, true);
 		gk20a_cde_remove_ctx(cde_ctx);
 	}
 
 	list_for_each_entry_safe(cde_ctx, cde_ctx_save,
 			&cde_app->used_contexts, list) {
-		gk20a_cde_cancel_deleter(cde_ctx);
+		gk20a_cde_cancel_deleter(cde_ctx, true);
 		gk20a_cde_remove_ctx(cde_ctx);
 	}
 }
@@ -173,14 +173,12 @@ __releases(&cde_app->mutex)
 
 	list_for_each_entry_safe(cde_ctx, cde_ctx_save,
 			&cde_app->free_contexts, list) {
-		if (cde_ctx->is_temporary)
-			cancel_delayed_work(&cde_ctx->ctx_deleter_work);
+		gk20a_cde_cancel_deleter(cde_ctx, false);
 	}
 
 	list_for_each_entry_safe(cde_ctx, cde_ctx_save,
 			&cde_app->used_contexts, list) {
-		if (cde_ctx->is_temporary)
-			cancel_delayed_work(&cde_ctx->ctx_deleter_work);
+		gk20a_cde_cancel_deleter(cde_ctx, false);
 	}
 
 	mutex_unlock(&cde_app->mutex);
@@ -720,7 +718,7 @@ static int gk20a_cde_execute_buffer(struct gk20a_cde_ctx *cde_ctx,
 					   num_entries, flags, fence, fence_out);
 }
 
-static void gk20a_ctx_release(struct gk20a_cde_ctx *cde_ctx)
+static void gk20a_cde_ctx_release(struct gk20a_cde_ctx *cde_ctx)
 __acquires(&cde_app->mutex)
 __releases(&cde_app->mutex)
 {
@@ -755,16 +753,15 @@ __releases(&cde_app->mutex)
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx,
 			"cde: attempting to delete temporary %p", cde_ctx);
 
-	/* this should fail only when shutting down the whole device */
 	err = gk20a_busy(pdev);
-	if (WARN(err, "gk20a cde: cannot set gk20a on, not freeing channel yet."
-				" rescheduling...")) {
-		schedule_delayed_work(&cde_ctx->ctx_deleter_work,
-			msecs_to_jiffies(CTX_DELETE_TIME));
+	if (err) {
+		/* this context would find new use anyway later, so not freeing
+		 * here does not leak anything */
+		gk20a_warn(&pdev->dev, "cde: cannot set gk20a on, postponing"
+				" temp ctx deletion");
 		return;
 	}
 
-	/* mark so that nobody else assumes it's free to take */
 	mutex_lock(&cde_app->mutex);
 	if (cde_ctx->in_use || !cde_app->initialised) {
 		gk20a_dbg(gpu_dbg_cde_ctx,
@@ -809,7 +806,7 @@ __must_hold(&cde_app->mutex)
 
 		/* cancel any deletions now that ctx is in use */
 		if (delayed_work_pending(&cde_ctx->ctx_deleter_work))
-			gk20a_cde_cancel_deleter(cde_ctx);
+			gk20a_cde_cancel_deleter(cde_ctx, false);
 		return cde_ctx;
 	}
 
@@ -1035,7 +1032,7 @@ __releases(&cde_app->mutex)
 			mutex_unlock(&cde_app->mutex);
 		}
 	} else {
-		gk20a_ctx_release(cde_ctx);
+		gk20a_cde_ctx_release(cde_ctx);
 	}
 
 	/* delete temporary contexts later */

@@ -158,10 +158,151 @@ void gr_gp10b_commit_global_pagepool(struct gk20a *g,
 		gr_gpcs_gcc_pagepool_total_pages_f(size), patch);
 }
 
+static int gr_gp10b_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
+				  struct zbc_entry *color_val, u32 index)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
+	u32 i;
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+	u32 ret;
+	u32 zbc_c;
+
+	ret = gk20a_fifo_disable_engine_activity(g, gr_info, true);
+	if (ret) {
+		gk20a_err(dev_from_gk20a(g),
+			"failed to disable gr engine activity\n");
+		return ret;
+	}
+
+	ret = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
+	if (ret) {
+		gk20a_err(dev_from_gk20a(g),
+			"failed to idle graphics\n");
+		goto clean_up;
+	}
+
+	/* update l2 table */
+	g->ops.ltc.set_zbc_color_entry(g, color_val, index);
+
+	/* update ds table */
+	gk20a_writel(g, gr_ds_zbc_color_r_r(),
+		gr_ds_zbc_color_r_val_f(color_val->color_ds[0]));
+	gk20a_writel(g, gr_ds_zbc_color_g_r(),
+		gr_ds_zbc_color_g_val_f(color_val->color_ds[1]));
+	gk20a_writel(g, gr_ds_zbc_color_b_r(),
+		gr_ds_zbc_color_b_val_f(color_val->color_ds[2]));
+	gk20a_writel(g, gr_ds_zbc_color_a_r(),
+		gr_ds_zbc_color_a_val_f(color_val->color_ds[3]));
+
+	gk20a_writel(g, gr_ds_zbc_color_fmt_r(),
+		gr_ds_zbc_color_fmt_val_f(color_val->format));
+
+	gk20a_writel(g, gr_ds_zbc_tbl_index_r(),
+		gr_ds_zbc_tbl_index_val_f(index + GK20A_STARTOF_ZBC_TABLE));
+
+	/* trigger the write */
+	gk20a_writel(g, gr_ds_zbc_tbl_ld_r(),
+		gr_ds_zbc_tbl_ld_select_c_f() |
+		gr_ds_zbc_tbl_ld_action_write_f() |
+		gr_ds_zbc_tbl_ld_trigger_active_f());
+
+	/* update local copy */
+	for (i = 0; i < GK20A_ZBC_COLOR_VALUE_SIZE; i++) {
+		gr->zbc_col_tbl[index].color_l2[i] = color_val->color_l2[i];
+		gr->zbc_col_tbl[index].color_ds[i] = color_val->color_ds[i];
+	}
+	gr->zbc_col_tbl[index].format = color_val->format;
+	gr->zbc_col_tbl[index].ref_cnt++;
+
+	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_color_r_r(index), color_val->color_ds[0]);
+	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_color_g_r(index), color_val->color_ds[1]);
+	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_color_b_r(index), color_val->color_ds[2]);
+	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_color_a_r(index), color_val->color_ds[3]);
+	zbc_c = gk20a_readl(g, gr_gpcs_swdx_dss_zbc_c_01_to_04_format_r() + ALIGN(index, 4));
+	zbc_c |= color_val->format << (index % 4) * 6;
+	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_c_01_to_04_format_r() + ALIGN(index, 4), zbc_c);
+
+clean_up:
+	ret = gk20a_fifo_enable_engine_activity(g, gr_info);
+	if (ret) {
+		gk20a_err(dev_from_gk20a(g),
+			"failed to enable gr engine activity\n");
+	}
+
+	return ret;
+}
+
+static int gr_gp10b_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
+				struct zbc_entry *depth_val, u32 index)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+	u32 ret;
+	u32 zbc_z;
+
+	ret = gk20a_fifo_disable_engine_activity(g, gr_info, true);
+	if (ret) {
+		gk20a_err(dev_from_gk20a(g),
+			"failed to disable gr engine activity\n");
+		return ret;
+	}
+
+	ret = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
+	if (ret) {
+		gk20a_err(dev_from_gk20a(g),
+			"failed to idle graphics\n");
+		goto clean_up;
+	}
+
+	/* update l2 table */
+	g->ops.ltc.set_zbc_depth_entry(g, depth_val, index);
+
+	/* update ds table */
+	gk20a_writel(g, gr_ds_zbc_z_r(),
+		gr_ds_zbc_z_val_f(depth_val->depth));
+
+	gk20a_writel(g, gr_ds_zbc_z_fmt_r(),
+		gr_ds_zbc_z_fmt_val_f(depth_val->format));
+
+	gk20a_writel(g, gr_ds_zbc_tbl_index_r(),
+		gr_ds_zbc_tbl_index_val_f(index + GK20A_STARTOF_ZBC_TABLE));
+
+	/* trigger the write */
+	gk20a_writel(g, gr_ds_zbc_tbl_ld_r(),
+		gr_ds_zbc_tbl_ld_select_z_f() |
+		gr_ds_zbc_tbl_ld_action_write_f() |
+		gr_ds_zbc_tbl_ld_trigger_active_f());
+
+	/* update local copy */
+	gr->zbc_dep_tbl[index].depth = depth_val->depth;
+	gr->zbc_dep_tbl[index].format = depth_val->format;
+	gr->zbc_dep_tbl[index].ref_cnt++;
+
+	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_z_r(index), depth_val->depth);
+	zbc_z = gk20a_readl(g, gr_gpcs_swdx_dss_zbc_z_01_to_04_format_r() + ALIGN(index, 4));
+	zbc_z |= depth_val->format << (index % 4) * 6;
+	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_z_01_to_04_format_r() + ALIGN(index, 4), zbc_z);
+
+clean_up:
+	ret = gk20a_fifo_enable_engine_activity(g, gr_info);
+	if (ret) {
+		gk20a_err(dev_from_gk20a(g),
+			"failed to enable gr engine activity\n");
+	}
+
+	return ret;
+}
+
 void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
 	gops->gr.is_valid_class = gr_gp10b_is_valid_class;
 	gops->gr.commit_global_cb_manager = gr_gp10b_commit_global_cb_manager;
 	gops->gr.commit_global_pagepool = gr_gp10b_commit_global_pagepool;
+	gops->gr.add_zbc_color = gr_gp10b_add_zbc_color;
+	gops->gr.add_zbc_depth = gr_gp10b_add_zbc_depth;
 }

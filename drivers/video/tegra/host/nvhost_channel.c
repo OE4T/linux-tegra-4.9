@@ -165,7 +165,6 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 	 */
 	if (!pdata->num_mapped_chs) {
 		channel_cdma_op().stop(&ch->cdma);
-		nvhost_cdma_deinit(&ch->cdma);
 
 		if (pdata->keepalive)
 			nvhost_module_enable_poweroff(pdata->pdev);
@@ -319,7 +318,7 @@ int nvhost_channel_list_free(struct nvhost_master *host)
 int nvhost_channel_init(struct nvhost_channel *ch,
 		struct nvhost_master *dev)
 {
-	int err;
+	int err = 0;
 
 	/* Link platform_device to nvhost_channel */
 	err = channel_op(ch).init(ch, dev);
@@ -329,7 +328,13 @@ int nvhost_channel_init(struct nvhost_channel *ch,
 		return err;
 	}
 
-	return nvhost_cdma_init(&ch->cdma);
+	if (!ch->cdma_initialized) {
+		err = nvhost_cdma_init(&ch->cdma);
+		if (!err)
+			ch->cdma_initialized = true;
+	}
+
+	return err;
 }
 
 void nvhost_channel_init_gather_filter(struct nvhost_channel *ch)

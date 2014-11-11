@@ -62,6 +62,7 @@ struct nvhost_channel {
 	struct mutex syncpts_lock;
 	u32 syncpts[NVHOST_MODULE_MAX_SYNCPTS];
 
+	bool cdma_initialized;
 	/* owner identifier */
 	void *identifier;
 };

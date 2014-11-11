@@ -1381,7 +1381,10 @@ static int _tegra_dp_fast_lt(struct tegra_dc_dp_data *dp,
 	tegra_dp_tpg(dp, TRAINING_PATTERN_1, n_lanes);
 	tegra_dp_wait_aux_training(dp, true);
 	cr_done = tegra_dp_clock_recovery_status(dp);
-	cr_done ? : ({ret = -EINVAL; goto fail; });
+	if (!cr_done) {
+		ret = -EINVAL;
+		goto fail;
+	}
 
 	if (cfg->tps3_supported)
 		tegra_dp_tpg(dp, TRAINING_PATTERN_3, n_lanes);
@@ -1389,7 +1392,10 @@ static int _tegra_dp_fast_lt(struct tegra_dc_dp_data *dp,
 		tegra_dp_tpg(dp, TRAINING_PATTERN_2, n_lanes);
 	tegra_dp_wait_aux_training(dp, false);
 	lt_done = tegra_dp_lt_status(dp);
-	lt_done ? : ({ret = -EINVAL; goto fail; });
+	if (!lt_done) {
+		ret = -EINVAL;
+		goto fail;
+	}
 
 	cfg->lt_data_valid = true;
 

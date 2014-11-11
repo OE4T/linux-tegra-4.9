@@ -445,7 +445,7 @@ static int tegra_vcm30t124_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 	const char *identifier = (const char *)rtd->dai_link->name;
 	unsigned int idx = tegra_vcm30t124_get_dai_link_idx(identifier);
 	unsigned int fmt = rtd->dai_link->dai_fmt;
-	unsigned int mclk, val;
+	unsigned int mclk;
 	int err;
 
 	mclk = dai_params->rate_min * 512;
@@ -462,15 +462,6 @@ static int tegra_vcm30t124_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 
 		snd_soc_write(ad1937_dai->codec, AD193X_PLL_CLK_CTRL1, 0x03);
 
-		/*
-		 * AD193X driver enables both DAC and ADC as MASTER
-		 * so both ADC and DAC drive LRCLK and BCLK and it causes
-		 * noise. To solve this, we need to disable one of them.
-		 */
-		val = snd_soc_read(ad1937_dai->codec, AD193X_DAC_CTRL1);
-		val &= ~AD193X_DAC_LCR_MASTER;
-		val &= ~AD193X_DAC_BCLK_MASTER;
-		snd_soc_write(ad1937_dai->codec, AD193X_DAC_CTRL1, val);
 	} else {
 		/* set PLL_SRC with LRCLK for AD1937 slave mode */
 		snd_soc_write(ad1937_dai->codec, AD193X_PLL_CLK_CTRL0, 0xb9);
@@ -493,6 +484,27 @@ static int tegra_vcm30t124_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 				pdata->dai_config[idx].tx_mask,
 				pdata->dai_config[idx].rx_mask,
 				0, 0);
+	}
+
+	return 0;
+}
+
+static int tegra_vcm30t124_ad1937_late_init(struct snd_soc_pcm_runtime *rtd)
+{
+	struct snd_soc_dai *ad1937_dai = rtd->codec_dai;
+	unsigned int fmt = rtd->dai_link->dai_fmt;
+	unsigned int val;
+
+	if ((fmt & SND_SOC_DAIFMT_MASTER_MASK) == SND_SOC_DAIFMT_CBM_CFM) {
+		/*
+		 * AD193X driver enables both DAC and ADC as MASTER
+		 * so both ADC and DAC drive LRCLK and BCLK and it causes
+		 * noise. To solve this, we need to disable one of them.
+		 */
+		val = snd_soc_read(ad1937_dai->codec, AD193X_DAC_CTRL1);
+		val &= ~AD193X_DAC_LCR_MASTER;
+		val &= ~AD193X_DAC_BCLK_MASTER;
+		snd_soc_write(ad1937_dai->codec, AD193X_DAC_CTRL1, val);
 	}
 
 	return 0;
@@ -1128,6 +1140,21 @@ static int tegra_vcm30t124_ak4618_put_rate(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int tegra_vcm30t124_late_probe(struct snd_soc_card *card)
+{
+	unsigned int idx = tegra_vcm30t124_get_dai_link_idx("ad-playback");
+	/*
+	 * AD193X driver enables both DAC and ADC as MASTER in
+	 * ad193x_set_dai_fmt function which is called during the
+	 * card registration. If both ADC and DAC drive LRCLK and
+	 * BCLK, it causes noise. To solve this, one of them is
+	 * disabled in tegra_vcm30t124_ad1937_late_init function.
+	 * This late_init function needs to be called from the card
+	 * late_probe so that it is executed after ad193x_set_dai_fmt.
+	 */
+	return tegra_vcm30t124_ad1937_late_init(card->rtd + idx);
+}
+
 static int tegra_vcm30t124_remove(struct snd_soc_card *card)
 {
 	return 0;
@@ -1151,6 +1178,7 @@ static const struct snd_kcontrol_new tegra_vcm30t124_controls[] = {
 static struct snd_soc_card snd_soc_tegra_vcm30t124 = {
 	.name = "tegra-generic",
 	.owner = THIS_MODULE,
+	.late_probe = tegra_vcm30t124_late_probe,
 	.remove = tegra_vcm30t124_remove,
 	.suspend_pre = tegra_vcm30t124_suspend_pre,
 	.dapm_widgets = tegra_vcm30t124_dapm_widgets,

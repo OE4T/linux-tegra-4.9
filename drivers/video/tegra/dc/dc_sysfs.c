@@ -209,7 +209,11 @@ static ssize_t crc_checksum_latched_show(struct device *device,
 		return -EFAULT;
 	}
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	crc = tegra_nvdisp_read_rg_crc(dc);
+#else
 	crc = tegra_dc_read_checksum_latched(dc);
+#endif
 
 	return snprintf(buf, PAGE_SIZE, "%u\n", crc);
 }
@@ -230,10 +234,18 @@ static ssize_t crc_checksum_latched_store(struct device *dev,
 		return -EINVAL;
 
 	if (val == 1) {
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		tegra_nvdisp_enable_crc(dc);
+#else
 		tegra_dc_enable_crc(dc);
+#endif
 		dev_dbg(&dc->ndev->dev, "crc is enabled.\n");
 	} else if (val == 0) {
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		tegra_nvdisp_disable_crc(dc);
+#else
 		tegra_dc_disable_crc(dc);
+#endif
 		dev_dbg(&dc->ndev->dev, "crc is disabled.\n");
 	} else
 		dev_err(&dc->ndev->dev, "Invalid input.\n");

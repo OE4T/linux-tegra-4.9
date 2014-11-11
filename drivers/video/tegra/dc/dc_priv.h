@@ -566,6 +566,9 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	u16 *dirty_rect, bool wait_for_vblank);
 int tegra_nvdisp_head_enable(struct tegra_dc *dc);
 int tegra_nvdisp_get_linestride(struct tegra_dc *dc, int win);
+void tegra_nvdisp_enable_crc(struct tegra_dc *dc);
+void tegra_nvdisp_disable_crc(struct tegra_dc *dc);
+u32 tegra_nvdisp_read_rg_crc(struct tegra_dc *dc);
 
 struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
 	struct tegra_dc *dc, struct tegra_fb_data *fb_data,

@@ -1381,8 +1381,10 @@ static void tegra_dc_remove_debugfs(struct tegra_dc *dc)
 static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 {
 	struct dentry *retval;
+	char   devname[50];
 
-	dc->debugdir = debugfs_create_dir(dev_name(&dc->ndev->dev), NULL);
+	snprintf(devname, sizeof(devname), "tegradc.%d", dc->ctrl_num);
+	dc->debugdir = debugfs_create_dir(devname, NULL);
 	if (!dc->debugdir)
 		goto remove_out;
 

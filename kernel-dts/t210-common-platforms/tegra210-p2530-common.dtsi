@@ -33,7 +33,7 @@
 	};
 
 	sdhci@700b0600 {
-		uhs-mask = <0x60>;
+		uhs-mask = <0x0>;
 		built-in;
 		power-off-rail;
 		status = "okay";

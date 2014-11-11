@@ -356,3 +356,70 @@ struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
 
 	return tegra_fb_register(ndev, dc, fb_data, fb_mem, virt_addr);
 }
+
+void tegra_nvdisp_enable_crc(struct tegra_dc *dc)
+{
+	mutex_lock(&dc->lock);
+	tegra_dc_get(dc);
+
+	tegra_dc_writel(dc, nvdisp_crc_control_enable_enable_f() |
+		nvdisp_crc_control_input_data_active_data_f(),
+		nvdisp_crc_control_r());
+
+	tegra_dc_enable_general_act(dc);
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
+
+	/* Register a client of frame_end interrupt */
+	tegra_dc_config_frame_end_intr(dc, true);
+}
+
+void tegra_nvdisp_disable_crc(struct tegra_dc *dc)
+{
+	/* Unregister a client of frame_end interrupt */
+	tegra_dc_config_frame_end_intr(dc, false);
+
+	mutex_lock(&dc->lock);
+	tegra_dc_get(dc);
+	tegra_dc_writel(dc, 0x0, nvdisp_crc_control_r());
+	tegra_dc_enable_general_act(dc);
+
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
+}
+
+u32 tegra_nvdisp_read_rg_crc(struct tegra_dc *dc)
+{
+	int crc = 0;
+	int val = 0;
+
+	if (!dc) {
+		pr_err("Failed to get dc: NULL parameter.\n");
+		goto crc_error;
+	}
+
+	/* If gated quitely return */
+	if (!tegra_dc_is_powered(dc))
+		return 0;
+
+	INIT_COMPLETION(dc->crc_complete);
+	if (dc->crc_pending &&
+	    wait_for_completion_interruptible(&dc->crc_complete)) {
+		pr_err("CRC read interrupted.\n");
+		goto crc_error;
+	}
+
+	mutex_lock(&dc->lock);
+	tegra_dc_get(dc);
+	val = tegra_dc_readl(dc, nvdisp_rg_crca_r());
+	if (val & nvdisp_rg_crca_valid_true_f())
+		crc = tegra_dc_readl(dc, nvdisp_rg_crcb_r());
+	/* clear the error bit if set */
+	if (val & nvdisp_rg_crca_error_true_f())
+		tegra_dc_writel(dc, nvdisp_rg_crca_error_true_f(),
+			nvdisp_rg_crca_r());
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
+crc_error:
+	return crc;
+}

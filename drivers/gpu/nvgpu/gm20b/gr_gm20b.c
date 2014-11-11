@@ -805,4 +805,6 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.is_tpc_addr = gr_gm20b_is_tpc_addr;
 	gops->gr.get_tpc_num = gr_gm20b_get_tpc_num;
 	gops->gr.detect_sm_arch = gr_gm20b_detect_sm_arch;
+	gops->gr.add_zbc_color = gr_gk20a_add_zbc_color;
+	gops->gr.add_zbc_depth = gr_gk20a_add_zbc_depth;
 }

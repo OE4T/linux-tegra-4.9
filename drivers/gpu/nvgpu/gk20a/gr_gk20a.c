@@ -285,8 +285,8 @@ static void gr_gk20a_load_falcon_imem(struct gk20a *g)
 	}
 }
 
-static int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
-		u32 expect_delay)
+int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
+		       u32 expect_delay)
 {
 	u32 delay = expect_delay;
 	bool gr_enabled;
@@ -3512,8 +3512,8 @@ static void gr_gk20a_detect_sm_arch(struct gk20a *g)
 		gr_gpc0_tpc0_sm_arch_warp_count_v(v);
 }
 
-static int gr_gk20a_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
-				  struct zbc_entry *color_val, u32 index)
+int gr_gk20a_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
+			   struct zbc_entry *color_val, u32 index)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
@@ -3579,8 +3579,8 @@ clean_up:
 	return ret;
 }
 
-static int gr_gk20a_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
-				struct zbc_entry *depth_val, u32 index)
+int gr_gk20a_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
+			   struct zbc_entry *depth_val, u32 index)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
@@ -3716,7 +3716,7 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 			    &gr->zbc_col_tbl[gr->max_used_color_index];
 			WARN_ON(c_tbl->ref_cnt != 0);
 
-			ret = gr_gk20a_add_zbc_color(g, gr,
+			ret = g->ops.gr.add_zbc_color(g, gr,
 				zbc_val, gr->max_used_color_index);
 
 			if (!ret)
@@ -3746,7 +3746,7 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 			    &gr->zbc_dep_tbl[gr->max_used_depth_index];
 			WARN_ON(d_tbl->ref_cnt != 0);
 
-			ret = gr_gk20a_add_zbc_depth(g, gr,
+			ret = g->ops.gr.add_zbc_depth(g, gr,
 				zbc_val, gr->max_used_depth_index);
 
 			if (!ret)
@@ -3834,7 +3834,7 @@ static int gr_gk20a_load_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
 		       c_tbl->color_l2, sizeof(zbc_val.color_l2));
 		zbc_val.format = c_tbl->format;
 
-		ret = gr_gk20a_add_zbc_color(g, gr, &zbc_val, i);
+		ret = g->ops.gr.add_zbc_color(g, gr, &zbc_val, i);
 
 		if (ret)
 			return ret;
@@ -3847,7 +3847,7 @@ static int gr_gk20a_load_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
 		zbc_val.depth = d_tbl->depth;
 		zbc_val.format = d_tbl->format;
 
-		ret = gr_gk20a_add_zbc_depth(g, gr, &zbc_val, i);
+		ret = g->ops.gr.add_zbc_depth(g, gr, &zbc_val, i);
 		if (ret)
 			return ret;
 	}
@@ -7351,5 +7351,7 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.is_tpc_addr = gr_gk20a_is_tpc_addr;
 	gops->gr.get_tpc_num = gr_gk20a_get_tpc_num;
 	gops->gr.detect_sm_arch = gr_gk20a_detect_sm_arch;
+	gops->gr.add_zbc_color = gr_gk20a_add_zbc_color;
+	gops->gr.add_zbc_depth = gr_gk20a_add_zbc_depth;
 }
 

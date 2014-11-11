@@ -139,6 +139,10 @@ struct gpu_ops {
 		bool (*is_tpc_addr)(u32 addr);
 		u32 (*get_tpc_num)(u32 addr);
 		void (*detect_sm_arch)(struct gk20a *g);
+		int (*add_zbc_color)(struct gk20a *g, struct gr_gk20a *gr,
+				  struct zbc_entry *color_val, u32 index);
+		int (*add_zbc_depth)(struct gk20a *g, struct gr_gk20a *gr,
+				  struct zbc_entry *depth_val, u32 index);
 	} gr;
 	const char *name;
 	struct {

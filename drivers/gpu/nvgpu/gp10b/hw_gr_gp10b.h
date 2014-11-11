@@ -2198,6 +2198,54 @@ static inline u32 gr_gpcs_swdx_tc_beta_cb_size_v_m(void)
 {
 	return 0x3fffff << 0;
 }
+static inline u32 gr_gpcs_swdx_dss_zbc_color_r_r(u32 i)
+{
+	return 0x00418010 + i*4;
+}
+static inline u32 gr_gpcs_swdx_dss_zbc_color_r_val_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 gr_gpcs_swdx_dss_zbc_color_g_r(u32 i)
+{
+	return 0x0041804c + i*4;
+}
+static inline u32 gr_gpcs_swdx_dss_zbc_color_g_val_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 gr_gpcs_swdx_dss_zbc_color_b_r(u32 i)
+{
+	return 0x00418088 + i*4;
+}
+static inline u32 gr_gpcs_swdx_dss_zbc_color_b_val_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 gr_gpcs_swdx_dss_zbc_color_a_r(u32 i)
+{
+	return 0x004180c4 + i*4;
+}
+static inline u32 gr_gpcs_swdx_dss_zbc_color_a_val_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 gr_gpcs_swdx_dss_zbc_c_01_to_04_format_r(void)
+{
+	return 0x00500100;
+}
+static inline u32 gr_gpcs_swdx_dss_zbc_z_r(u32 i)
+{
+	return 0x00418110 + i*4;
+}
+static inline u32 gr_gpcs_swdx_dss_zbc_z_val_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 gr_gpcs_swdx_dss_zbc_z_01_to_04_format_r(void)
+{
+	return 0x0050014c;
+}
 static inline u32 gr_gpcs_setup_attrib_cb_base_r(void)
 {
 	return 0x00418810;

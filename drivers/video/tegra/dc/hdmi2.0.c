@@ -979,12 +979,12 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 static void tegra_hdmi_infoframe_pkt_write(struct tegra_hdmi *hdmi,
 						u32 header_reg, u8 pkt_type,
 						u8 pkt_vs, u8 pkt_len,
-						const void *reg_payload,
+						void *reg_payload,
 						u32 reg_payload_len)
 {
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 	u32 val;
-	const u32 *data = reg_payload;
+	u32 *data = reg_payload;
 	u32 data_reg = header_reg + 1;
 
 	val = NV_SOR_HDMI_INFOFRAME_HEADER_TYPE(pkt_type) |
@@ -994,35 +994,6 @@ static void tegra_hdmi_infoframe_pkt_write(struct tegra_hdmi *hdmi,
 
 	for (val = 0; val < reg_payload_len; val += 4, data_reg++, data++)
 		tegra_sor_writel(sor, data_reg, *data);
-}
-
-static int tegra_hdmi_infoframe_pkt_read(struct tegra_hdmi *hdmi,
-						u32 header_reg, u8 *pkt_type,
-						u8 *pkt_vs, u8 *pkt_len,
-						void *reg_payload,
-						u32 reg_payload_len)
-{
-	struct tegra_dc_sor_data *sor = hdmi->sor;
-	u32 val;
-	u32 *data = reg_payload;
-	u32 data_reg = header_reg + 1;
-
-	/* limited to 28 byte payload in NV_SOR_HDMI_AVI_INFOFRAME_HEADER */
-	if (reg_payload_len > 28)
-		return -EINVAL;
-
-	val = tegra_sor_readl(sor, header_reg);
-	if (pkt_vs)
-		*pkt_vs = NV_SOR_HDMI_INFOFRAME_HEADER_VERSION_GET(val);
-	if (pkt_len)
-		*pkt_len = NV_SOR_HDMI_INFOFRAME_HEADER_LEN_GET(val);
-	if (pkt_type)
-		*pkt_type = NV_SOR_HDMI_INFOFRAME_HEADER_TYPE_GET(val);
-
-	for (val = 0; val < reg_payload_len; val += 4, data_reg++, data++)
-		*data = tegra_sor_readl(sor, data_reg);
-
-	return 0;
 }
 
 static u32 tegra_hdmi_get_cea_modedb_size(struct tegra_hdmi *hdmi)
@@ -1855,89 +1826,6 @@ static const struct file_operations tegra_hdmi_hotplug_dbg_ops = {
 	.release = single_release,
 };
 
-/* decode AVI data */
-static int tegra_hdmi_avi_dbg_show(struct seq_file *m, void *unused)
-{
-	struct tegra_hdmi *hdmi = m->private;
-	struct tegra_dc *dc;
-	u8 pkt_vs;
-	u8 pkt_type;
-	u8 pkt_len;
-	struct hdmi_avi_infoframe avi;
-
-	if (WARN_ON(!hdmi || !hdmi->dc || !hdmi->dc->out))
-		return -EINVAL;
-	dc = hdmi->dc;
-	if (WARN_ON(!dc || !dc->out))
-		return -EINVAL;
-
-
-	tegra_dc_unpowergate_locked(dc);
-	tegra_hdmi_get(hdmi->dc);
-	tegra_dc_io_start(dc);
-	tegra_hdmi_infoframe_pkt_read(hdmi, NV_SOR_HDMI_AVI_INFOFRAME_HEADER,
-					&pkt_type, &pkt_vs, &pkt_len,
-					&avi, sizeof(avi));
-	tegra_hdmi_put(hdmi->dc);
-	tegra_dc_io_end(dc);
-	tegra_dc_powergate_locked(dc);
-
-	if (pkt_type != HDMI_INFOFRAME_TYPE_AVI)
-		seq_printf(m, "ERROR: unknown type: %#x\n", pkt_type);
-	if (pkt_vs != HDMI_INFOFRAME_VS_AVI)
-		seq_printf(m, "ERROR: unknown version: %#x\n", pkt_type);
-	if (pkt_type == HDMI_INFOFRAME_TYPE_AVI &&
-		pkt_len != HDMI_INFOFRAME_LEN_AVI)
-		seq_printf(m, "ERROR: mismatched length: %#x\n", pkt_len);
-
-	seq_printf(m, "csum:\t%d\n", avi.csum);
-	seq_printf(m, "scan:\t%d\n", avi.scan);
-	seq_printf(m, "bar_valid:\t%d\n", avi.bar_valid);
-	seq_printf(m, "act_fmt_valid:\t%d\n", avi.act_fmt_valid);
-	seq_printf(m, "rgb_ycc:\t%d\n", avi.rgb_ycc);
-	seq_printf(m, "act_format:\t%d\n", avi.act_format);
-	seq_printf(m, "aspect_ratio:\t%d\n", avi.aspect_ratio);
-	seq_printf(m, "colorimetry:\t%d\n", avi.colorimetry);
-	seq_printf(m, "scaling:\t%d\n", avi.scaling);
-	seq_printf(m, "rgb_quant:\t%d\n", avi.rgb_quant);
-	seq_printf(m, "ext_colorimetry:\t%d\n", avi.ext_colorimetry);
-	seq_printf(m, "it_content:\t%d\n", avi.it_content);
-	seq_printf(m, "video_format:\t%d\n", avi.video_format);
-	seq_printf(m, "pix_rep:\t%d\n", avi.pix_rep);
-	seq_printf(m, "it_content_type:\t%d\n", avi.it_content_type);
-	seq_printf(m, "ycc_quant:\t%d\n", avi.ycc_quant);
-
-	seq_printf(m, "top_bar_end_line:\t%d\n",
-		avi.top_bar_end_line_low_byte |
-		(int)avi.top_bar_end_line_high_byte << 8);
-
-	seq_printf(m, "bot_bar_start_line:\t%d\n",
-		avi.bot_bar_start_line_low_byte |
-		(int)avi.bot_bar_start_line_high_byte << 8);
-
-	seq_printf(m, "left_bar_end_pixel:\t%d\n",
-		avi.left_bar_end_pixel_low_byte |
-		(int)avi.left_bar_end_pixel_high_byte << 8);
-
-	seq_printf(m, "right_bar_start_pixel:\t%d\n",
-		avi.right_bar_start_pixel_low_byte |
-		(int)avi.right_bar_start_pixel_high_byte << 8);
-
-	return 0;
-}
-
-static int tegra_hdmi_avi_dbg_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, tegra_hdmi_avi_dbg_show, inode->i_private);
-}
-
-static const struct file_operations tegra_hdmi_avi_dbg_ops = {
-	.open = tegra_hdmi_avi_dbg_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
-
 static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi)
 {
 	struct dentry *dir, *ret;
@@ -1948,11 +1836,6 @@ static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi)
 
 	ret = debugfs_create_file("hotplug", S_IRUGO, dir,
 				hdmi, &tegra_hdmi_hotplug_dbg_ops);
-	if (IS_ERR_OR_NULL(ret))
-		goto fail;
-
-	ret = debugfs_create_file("avi", S_IRUGO, dir,
-				hdmi, &tegra_hdmi_avi_dbg_ops);
 	if (IS_ERR_OR_NULL(ret))
 		goto fail;
 
@@ -1968,21 +1851,6 @@ static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi)
 }
 #endif
 
-static void tegra_dc_hdmi_modeset_notifier(struct tegra_dc *dc)
-{
-	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
-
-	dev_info(&dc->ndev->dev, "%s():Enter\n", __func__);
-
-	tegra_dc_io_start(dc);
-	tegra_hdmi_get(dc);
-
-	tegra_hdmi_avi_infoframe(hdmi);
-
-	tegra_hdmi_put(dc);
-	tegra_dc_io_end(dc);
-}
-
 struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.init = tegra_dc_hdmi_init,
 	.destroy = tegra_dc_hdmi_destroy,
@@ -1992,5 +1860,4 @@ struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.detect = tegra_dc_hdmi_detect,
 	.ddc_enable = tegra_dc_hdmi_ddc_enable,
 	.ddc_disable = tegra_dc_hdmi_ddc_disable,
-	.modeset_notifier = tegra_dc_hdmi_modeset_notifier,
 };

@@ -21,10 +21,6 @@
 #define NV_SOR_HDMI_INFOFRAME_HEADER_VERSION(x)		(((x) & 0xff) << 8)
 #define NV_SOR_HDMI_INFOFRAME_HEADER_LEN(x)		(((x) & 0xf) << 16)
 
-#define NV_SOR_HDMI_INFOFRAME_HEADER_TYPE_GET(x)	((x) & 0xff)
-#define NV_SOR_HDMI_INFOFRAME_HEADER_VERSION_GET(x)	(((x) >> 8) & 0xff)
-#define NV_SOR_HDMI_INFOFRAME_HEADER_LEN_GET(x)		(((x) >> 16) & 0xf)
-
 #define NV_SOR_SUPER_STATE0					(0x1)
 #define NV_SOR_SUPER_STATE0_UPDATE_SHIFT			(0)
 #define NV_SOR_SUPER_STATE0_UPDATE_DEFAULT_MASK			(0x1)

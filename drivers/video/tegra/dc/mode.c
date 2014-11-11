@@ -248,11 +248,7 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 	unsigned long v_front_porch;
 	unsigned long v_sync_width;
 	unsigned long v_active;
-	int refresh = tegra_dc_calc_refresh(mode);
 
-	dev_info(&dc->ndev->dev, "programming mode %ux%u@%u.%03u\n",
-		(int)mode->h_active, (int)mode->v_active,
-		refresh / 1000, refresh % 1000);
 	v_back_porch = mode->v_back_porch;
 	v_front_porch = mode->v_front_porch;
 	v_sync_width = mode->v_sync_width;
@@ -372,8 +368,6 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 		if (!pclk || pclk < (mode->pclk / 100 * 99) ||
 			pclk > (mode->pclk / 100 * 109)) {
 			dev_err(&dc->ndev->dev, "pclk out of range!\n");
-			dc->mode_dirty = false;
-			tegra_dc_put(dc);
 			return -EINVAL;
 		}
 	}
@@ -436,10 +430,10 @@ static int _tegra_dc_set_mode(struct tegra_dc *dc,
 	memcpy(&dc->mode, mode, sizeof(dc->mode));
 	dc->mode_dirty = true;
 
-	if (dc->out->type == TEGRA_DC_OUT_DSI && (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE))
-		panel_sync_rate = dc->out->dsi->rated_refresh_rate * 1000;
-	else
+	if (dc->out->type == TEGRA_DC_OUT_RGB)
 		panel_sync_rate = tegra_dc_calc_refresh(mode);
+	else if (dc->out->type == TEGRA_DC_OUT_DSI)
+		panel_sync_rate = dc->out->dsi->rated_refresh_rate * 1000;
 
 	if (dc->out->type == TEGRA_DC_OUT_FAKE_DSIA ||
 		dc->out->type == TEGRA_DC_OUT_FAKE_DSIB ||
@@ -448,9 +442,6 @@ static int _tegra_dc_set_mode(struct tegra_dc *dc,
 	}
 
 	print_mode(dc, mode, __func__);
-	dev_info(&dc->ndev->dev, "requested mode %ux%u@%u.%03u\n",
-		(int)mode->h_active, (int)mode->v_active,
-		panel_sync_rate / 1000, panel_sync_rate % 1000);
 	dc->frametime_ns = calc_frametime_ns(mode);
 	return 0;
 }

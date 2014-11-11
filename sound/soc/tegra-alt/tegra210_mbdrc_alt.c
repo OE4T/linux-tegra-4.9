@@ -29,6 +29,37 @@
 #include "tegra210_ope_alt.h"
 #include "tegra210_mbdrc_alt.h"
 
+#define MBDRC_FILTER_REG(reg, id) \
+	(reg + (id * TEGRA210_MBDRC_FILTER_PARAM_STRIDE))
+#define MBDRC_FILTER_REG_DEFAULTS(id) \
+	{ MBDRC_FILTER_REG(TEGRA210_MBDRC_IIR_CONFIG, id), 0x00000005}, \
+	{ MBDRC_FILTER_REG(TEGRA210_MBDRC_IN_ATTACK, id), 0x3e48590c}, \
+	{ MBDRC_FILTER_REG(TEGRA210_MBDRC_IN_RELEASE, id), 0x08414e9f}, \
+	{ MBDRC_FILTER_REG(TEGRA210_MBDRC_FAST_ATTACK, id), 0x7fffffff}, \
+	{ MBDRC_FILTER_REG(TEGRA210_MBDRC_IN_THRESHOLD, id), 0x06145082}, \
+	{ MBDRC_FILTER_REG(TEGRA210_MBDRC_OUT_THRESHOLD, id), 0x060d379b}, \
+	{ MBDRC_FILTER_REG(TEGRA210_MBDRC_RATIO_1ST, id), 0x0000a000}, \
+	{ MBDRC_FILTER_REG(TEGRA210_MBDRC_RATIO_2ND, id), 0x00002000}, \
+	{ MBDRC_FILTER_REG(TEGRA210_MBDRC_RATIO_3RD, id), 0x00000b33}, \
+	{ MBDRC_FILTER_REG(TEGRA210_MBDRC_RATIO_4TH, id), 0x00000800}, \
+	{ MBDRC_FILTER_REG(TEGRA210_MBDRC_RATIO_5TH, id), 0x0000019a}, \
+	{ MBDRC_FILTER_REG(TEGRA210_MBDRC_MAKEUP_GAIN, id), 0x00000002}, \
+	{ MBDRC_FILTER_REG(TEGRA210_MBDRC_INIT_GAIN, id), 0x00066666}, \
+	{ MBDRC_FILTER_REG(TEGRA210_MBDRC_GAIN_ATTACK, id), 0x00d9ba0e}, \
+	{ MBDRC_FILTER_REG(TEGRA210_MBDRC_GAIN_RELEASE, id), 0x3e48590c}, \
+	{ MBDRC_FILTER_REG(TEGRA210_MBDRC_FAST_RELEASE, id), 0x7ffff26a}, \
+	{ MBDRC_FILTER_REG(TEGRA210_MBDRC_AHUBRAMCTL_CONFIG_RAM_CTRL, id), 0x4000}
+
+static const struct reg_default tegra210_mbdrc_reg_defaults[] = {
+	{ TEGRA210_MBDRC_CONFIG, 0x0030de51},
+	{ TEGRA210_MBDRC_CHANNEL_MASK, 0x00000003},
+	{ TEGRA210_MBDRC_FAST_FACTOR, 0x30000800},
+
+	MBDRC_FILTER_REG_DEFAULTS(0),
+	MBDRC_FILTER_REG_DEFAULTS(1),
+	MBDRC_FILTER_REG_DEFAULTS(2)
+};
+
 /* Default MBDRC parameters */
 static const struct tegra210_mbdrc_config mbdrc_init_config = {
 	.mode = 0, /* bypass */
@@ -579,6 +610,8 @@ static const struct regmap_config tegra210_mbdrc_regmap_config = {
 	.readable_reg = tegra210_mbdrc_rd_reg,
 	.volatile_reg = tegra210_mbdrc_volatile_reg,
 	.precious_reg = tegra210_mbdrc_precious_reg,
+	.reg_defaults = tegra210_mbdrc_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra210_mbdrc_reg_defaults),
 	.cache_type = REGCACHE_FLAT,
 };
 

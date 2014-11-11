@@ -37,6 +37,27 @@
 
 #define DRV_NAME "tegra210-afc"
 
+static const struct reg_default tegra210_afc_reg_defaults[] = {
+	{ TEGRA210_AFC_AXBAR_RX_CIF_CTRL, 0x00007700},
+	{ TEGRA210_AFC_AXBAR_TX_INT_MASK, 0x00000001},
+	{ TEGRA210_AFC_AXBAR_TX_CIF_CTRL, 0x00007000},
+	{ TEGRA210_AFC_CG, 0x1},
+	{ TEGRA210_AFC_INT_MASK, 0x1},
+	{ TEGRA210_AFC_DEST_I2S_PARAMS, 0x01190e0c },
+	{ TEGRA210_AFC_TXCIF_FIFO_PARAMS, 0x00190e0c },
+	{ TEGRA210_AFC_CLK_PPM_DIFF, 0x0000001e},
+	{ TEGRA210_AFC_LCOEF_1_4_0, 0x0000002e},
+	{ TEGRA210_AFC_LCOEF_1_4_1, 0x0000f9e6},
+	{ TEGRA210_AFC_LCOEF_1_4_2, 0x000020ca},
+	{ TEGRA210_AFC_LCOEF_1_4_3, 0x00007147},
+	{ TEGRA210_AFC_LCOEF_1_4_4, 0x0000f17e},
+	{ TEGRA210_AFC_LCOEF_1_4_5, 0x000001e0},
+	{ TEGRA210_AFC_LCOEF_2_4_0, 0x00000117},
+	{ TEGRA210_AFC_LCOEF_2_4_1, 0x0000f26b},
+	{ TEGRA210_AFC_LCOEF_2_4_2, 0x00004c07},
+};
+
+
 static int tegra210_afc_runtime_suspend(struct device *dev)
 {
 	struct tegra210_afc *afc = dev_get_drvdata(dev);
@@ -337,6 +358,8 @@ static const struct regmap_config tegra210_afc_regmap_config = {
 	.writeable_reg = tegra210_afc_wr_rd_reg,
 	.readable_reg = tegra210_afc_wr_rd_reg,
 	.volatile_reg = tegra210_afc_volatile_reg,
+	.reg_defaults = tegra210_afc_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra210_afc_reg_defaults),
 	.cache_type = REGCACHE_FLAT,
 };
 

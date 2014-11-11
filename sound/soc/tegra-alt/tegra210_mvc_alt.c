@@ -36,6 +36,23 @@
 
 #define DRV_NAME "tegra210-mvc"
 
+static const struct reg_default tegra210_mvc_reg_defaults[] = {
+	{ TEGRA210_MVC_AXBAR_RX_INT_MASK, 0x00000001},
+	{ TEGRA210_MVC_AXBAR_RX_CIF_CTRL, 0x00007700},
+	{ TEGRA210_MVC_AXBAR_TX_INT_MASK, 0x00000001},
+	{ TEGRA210_MVC_AXBAR_TX_CIF_CTRL, 0x00007700},
+	{ TEGRA210_MVC_CG, 0x1},
+	{ TEGRA210_MVC_CTRL, 0x40000001},
+	{ TEGRA210_MVC_INIT_VOL, 0x00800000},
+	{ TEGRA210_MVC_TARGET_VOL, 0x00800000},
+	{ TEGRA210_MVC_DURATION, 0x000012c0},
+	{ TEGRA210_MVC_DURATION_INV, 0x0006d3a0},
+	{ TEGRA210_MVC_POLY_N1, 0x0000007d},
+	{ TEGRA210_MVC_POLY_N2, 0x00000271},
+	{ TEGRA210_MVC_PEAK_CTRL, 0x000012c0},
+	{ TEGRA210_MVC_AHUBRAMCTL_CONFIG_RAM_CTRL, 0x00004000},
+};
+
 static int tegra210_mvc_runtime_suspend(struct device *dev)
 {
 	struct tegra210_mvc *mvc = dev_get_drvdata(dev);
@@ -380,6 +397,8 @@ static const struct regmap_config tegra210_mvc_regmap_config = {
 	.writeable_reg = tegra210_mvc_wr_rd_reg,
 	.readable_reg = tegra210_mvc_wr_rd_reg,
 	.volatile_reg = tegra210_mvc_volatile_reg,
+	.reg_defaults = tegra210_mvc_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra210_mvc_reg_defaults),
 	.cache_type = REGCACHE_FLAT,
 };
 

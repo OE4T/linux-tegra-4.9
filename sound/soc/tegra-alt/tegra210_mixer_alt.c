@@ -36,9 +36,44 @@
 
 #define DRV_NAME "tegra210_mixer"
 
+#define MIXER_RX_REG(reg, id) (reg + (id * TEGRA210_MIXER_AXBAR_RX_STRIDE))
+#define MIXER_TX_REG(reg, id) (reg + (id * TEGRA210_MIXER_AXBAR_TX_STRIDE))
+
 #define MIXER_GAIN_CONFIG_RAM_ADDR(id)	\
 	(TEGRA210_MIXER_AHUBRAMCTL_GAIN_CONFIG_RAM_ADDR_0 +	\
 		id*TEGRA210_MIXER_AHUBRAMCTL_GAIN_CONFIG_RAM_ADDR_STRIDE)
+
+#define MIXER_RX_REG_DEFAULTS(id) \
+	{ MIXER_RX_REG(TEGRA210_MIXER_AXBAR_RX1_CIF_CTRL, id), 0x00007700}, \
+	{ MIXER_RX_REG(TEGRA210_MIXER_AXBAR_RX1_CTRL, id), 0x00010823}, \
+	{ MIXER_RX_REG(TEGRA210_MIXER_AXBAR_RX1_PEAK_CTRL, id), 0x000012c0}
+
+#define MIXER_TX_REG_DEFAULTS(id) \
+	{ MIXER_TX_REG(TEGRA210_MIXER_AXBAR_TX1_INT_MASK, id), 0x00000001}, \
+	{ MIXER_TX_REG(TEGRA210_MIXER_AXBAR_TX1_CIF_CTRL, id), 0x00007700}
+
+static const struct reg_default tegra210_mixer_reg_defaults[] = {
+	MIXER_RX_REG_DEFAULTS(0),
+	MIXER_RX_REG_DEFAULTS(1),
+	MIXER_RX_REG_DEFAULTS(2),
+	MIXER_RX_REG_DEFAULTS(3),
+	MIXER_RX_REG_DEFAULTS(4),
+	MIXER_RX_REG_DEFAULTS(5),
+	MIXER_RX_REG_DEFAULTS(6),
+	MIXER_RX_REG_DEFAULTS(7),
+	MIXER_RX_REG_DEFAULTS(8),
+	MIXER_RX_REG_DEFAULTS(9),
+
+	MIXER_TX_REG_DEFAULTS(0),
+	MIXER_TX_REG_DEFAULTS(1),
+	MIXER_TX_REG_DEFAULTS(2),
+	MIXER_TX_REG_DEFAULTS(3),
+	MIXER_TX_REG_DEFAULTS(4),
+
+	{ TEGRA210_MIXER_CG, 0x00000001},
+	{ TEGRA210_MIXER_AHUBRAMCTL_GAIN_CONFIG_RAM_CTRL, 0x00004000},
+	{ TEGRA210_MIXER_AHUBRAMCTL_PEAKM_RAM_CTRL, 0x00004000},
+};
 
 static int tegra210_mixer_runtime_suspend(struct device *dev)
 {
@@ -536,6 +571,8 @@ static const struct regmap_config tegra210_mixer_regmap_config = {
 	.readable_reg = tegra210_mixer_rd_reg,
 	.volatile_reg = tegra210_mixer_volatile_reg,
 	.precious_reg = tegra210_mixer_precious_reg,
+	.reg_defaults = tegra210_mixer_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra210_mixer_reg_defaults),
 	.cache_type = REGCACHE_FLAT,
 };
 

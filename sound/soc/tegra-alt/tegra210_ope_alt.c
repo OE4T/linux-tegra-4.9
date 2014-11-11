@@ -37,6 +37,14 @@
 
 #define DRV_NAME "tegra210-ope"
 
+static const struct reg_default tegra210_ope_reg_defaults[] = {
+	{ TEGRA210_OPE_AXBAR_RX_INT_MASK, 0x00000001},
+	{ TEGRA210_OPE_AXBAR_RX_CIF_CTRL, 0x00007700},
+	{ TEGRA210_OPE_AXBAR_TX_INT_MASK, 0x00000001},
+	{ TEGRA210_OPE_AXBAR_TX_CIF_CTRL, 0x00007700},
+	{ TEGRA210_OPE_CG, 0x1},
+};
+
 static int tegra210_ope_runtime_suspend(struct device *dev)
 {
 	struct tegra210_ope *ope = dev_get_drvdata(dev);
@@ -302,6 +310,8 @@ static const struct regmap_config tegra210_ope_regmap_config = {
 	.writeable_reg = tegra210_ope_wr_reg,
 	.readable_reg = tegra210_ope_rd_reg,
 	.volatile_reg = tegra210_ope_volatile_reg,
+	.reg_defaults = tegra210_ope_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra210_ope_reg_defaults),
 	.cache_type = REGCACHE_FLAT,
 };
 

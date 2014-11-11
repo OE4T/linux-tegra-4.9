@@ -37,6 +37,13 @@
 
 #define DRV_NAME "tegra210-iqc"
 
+static const struct reg_default tegra210_iqc_reg_defaultss[] = {
+	{ TEGRA210_IQC_AXBAR_TX_INT_MASK, 0x0000000f},
+	{ TEGRA210_IQC_AXBAR_TX_CIF_CTRL, 0x00007700},
+	{ TEGRA210_IQC_CG, 0x1},
+	{ TEGRA210_IQC_CTRL, 0x80000020},
+};
+
 static int tegra210_iqc_runtime_suspend(struct device *dev)
 {
 	struct tegra210_iqc *iqc = dev_get_drvdata(dev);
@@ -307,6 +314,8 @@ static const struct regmap_config tegra210_iqc_regmap_config = {
 	.writeable_reg = tegra210_iqc_wr_reg,
 	.readable_reg = tegra210_iqc_rd_reg,
 	.volatile_reg = tegra210_iqc_volatile_reg,
+	.reg_defaults = tegra210_iqc_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra210_iqc_reg_defaults),
 	.cache_type = REGCACHE_FLAT,
 };
 

@@ -225,6 +225,8 @@ struct fb_bitfield {
 #define FB_VMODE_YWRAP		256	/* ywrap instead of panning     */
 #define FB_VMODE_SMOOTH_XPAN	512	/* smooth xpan possible (internally used) */
 #define FB_VMODE_CONUPDATE	512	/* don't update x/yoffset	*/
+#define FB_VMODE_Y420		1024	/* YCrCb 4:2:0 also supported */
+#define FB_VMODE_Y420_ONLY	2048	/* YCrCb 4:2:0 only supported */
 
 #define FB_FLAG_RATIO_4_3	64
 #define FB_FLAG_RATIO_16_9	128

@@ -1095,8 +1095,10 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 	struct fb_videomode *m;
 	struct hdmi_vendor_block hvd = {0};
 	int num = 0, i, j, hdmi_num = 0;
-	u8 svd[64], edt[(128 - 4) / DETAILED_TIMING_DESCRIPTION_SIZE];
-	u8 pos = 4, svd_n = 0;
+	u8 svd[64], y420_svd[31], y420_support_bitmap[31];
+	u8 edt[(128 - 4) / DETAILED_TIMING_DESCRIPTION_SIZE];
+	u8 pos = 4, svd_n = 0, y420_svd_n = 0, y420_support_bitmap_n = 0;
+	bool y420_support_full = false;
 
 	if (!edid)
 		return;
@@ -1115,14 +1117,14 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 		pr_debug("Data block %u of %u bytes\n", type, len);
 
 		pos++;
-		if (type == 2) {
+		if (type == CEA_DATA_BLOCK_VIDEO) {
 			for (i = pos; i < pos + len; i++) {
 				u8 idx = edid[i] & 0x7f;
 				svd[svd_n++] = idx;
 				pr_debug("N%sative mode #%d\n",
 					 edid[i] & 0x80 ? "" : "on-n", idx);
 			}
-		} else if (type == 3 && len >= 3) {
+		} else if (type == CEA_DATA_BLOCK_VENDOR && len >= 3) {
 			/* Check Vendor Specific Data Block.  For HDMI,
 			   it is always 00-0C-03 for HDMI Licensing, LLC. */
 			if (edid[pos] == 3 && edid[pos + 1] == 0xc &&
@@ -1139,6 +1141,23 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 				fb_hvd_parse(edid, &hvd, pos + 3);
 				hdmi_num = hvd.hdmi_vic_len;
 			}
+		} else if (type == CEA_DATA_BLOCK_EXT) {
+			u32 ext_type = edid[pos];
+
+			if (ext_type == CEA_DATA_BLOCK_EXT_Y420VDB) {
+				for (i = pos + 1; i < pos + len; i++)
+					y420_svd[y420_svd_n++] =
+							edid[i] & 0x7f;
+			} else if (ext_type == CEA_DATA_BLOCK_EXT_Y420CMDB) {
+				if (len == 1)
+					y420_support_full = true;
+				else {
+					for (i = pos + 1; i < pos + len; i++)
+						y420_support_bitmap[
+						y420_support_bitmap_n++] =
+						edid[i];
+				}
+			}
 		}
 		pos += len + 1;
 	}
@@ -1153,10 +1172,10 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 			edt[num++] = block - edid;
 
 	/* Yikes, EDID data is totally useless */
-	if (!(num + svd_n))
+	if (!(num + svd_n + y420_svd_n))
 		return;
 
-	m = kzalloc((specs->modedb_len + num + svd_n + hdmi_num) *
+	m = kzalloc((specs->modedb_len + num + svd_n + hdmi_num + y420_svd_n) *
 		       sizeof(struct fb_videomode), GFP_KERNEL);
 
 	if (!m)
@@ -1173,12 +1192,22 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 
 	for (i = specs->modedb_len + num; i < specs->modedb_len + num + svd_n; i++) {
 		int idx = svd[i - specs->modedb_len - num];
+		int row, col;
 		if (!idx || idx >= CEA_MODEDB_SIZE) {
 			pr_warning("Reserved SVD code %d\n", idx);
 		} else if (!cea_modes[idx].xres) {
 			pr_warning("Unimplemented SVD code %d\n", idx);
 		} else {
 			memcpy(&m[i], cea_modes + idx, sizeof(m[i]));
+			if (y420_support_full)
+				m[i].vmode |= FB_VMODE_Y420;
+			else {
+				row = (i - specs->modedb_len - num) / 8;
+				col = (i - specs->modedb_len - num) % 8;
+				if ((row < y420_support_bitmap_n) &&
+					(y420_support_bitmap[row] >> col & 0x1))
+					m[i].vmode |= FB_VMODE_Y420;
+			}
 			pr_debug("Adding SVD #%d: %ux%u@%u\n", idx,
 				 m[i].xres, m[i].yres, m[i].refresh);
 		}
@@ -1196,9 +1225,26 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 		i++;
 	}
 
+	for (i = specs->modedb_len + num + svd_n + hdmi_num;
+		i < specs->modedb_len + num + svd_n + hdmi_num + y420_svd_n;
+		i++) {
+		int idx =
+		y420_svd[i - specs->modedb_len - num - svd_n - hdmi_num];
+
+		if (!idx || idx > (CEA_MODEDB_SIZE - 1)) {
+			pr_warn("Reserved SVD code %d\n", idx);
+		} else {
+			memcpy(&m[i], cea_modes + idx, sizeof(m[i]));
+			m[i].vmode |= FB_VMODE_Y420_ONLY;
+			pr_debug("Adding SVD #%d: %ux%u@%u\n", idx,
+				 m[i].xres, m[i].yres, m[i].refresh);
+		}
+	}
+
 	kfree(specs->modedb);
 	specs->modedb = m;
-	specs->modedb_len = specs->modedb_len + num + svd_n + j;
+	specs->modedb_len = specs->modedb_len +
+				num + svd_n + hdmi_num + y420_svd_n;
 }
 
 /*

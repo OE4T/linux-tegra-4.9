@@ -477,9 +477,10 @@ static int tegra_hdmi_get_mon_spec(struct tegra_hdmi *hdmi)
 
 	do {
 		err = tegra_edid_get_monspecs(hdmi->edid, &hdmi->mon_spec);
-		(err < 0) ?
-		({usleep_range(MIN_RETRY_DELAY_US, MAX_RETRY_DELAY_US); }) :
-		({break; });
+		if (err < 0)
+			usleep_range(MIN_RETRY_DELAY_US, MAX_RETRY_DELAY_US);
+		else
+			break;
 	} while (++attempt_cnt < MAX_RETRY);
 
 	if (err < 0) {

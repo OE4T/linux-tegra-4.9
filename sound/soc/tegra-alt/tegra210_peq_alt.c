@@ -36,6 +36,12 @@
 #include "tegra210_ope_alt.h"
 #include "tegra210_peq_alt.h"
 
+static const struct reg_default tegra210_peq_reg_defaults[] = {
+	{ TEGRA210_PEQ_CONFIG, 0x00000013},
+	{ TEGRA210_PEQ_AHUBRAMCTL_CONFIG_RAM_CTRL, 0x00004000},
+	{ TEGRA210_PEQ_AHUBRAMCTL_CONFIG_RAM_SHIFT_CTRL, 0x00004000},
+};
+
 /* Default PEQ filter parameters for a 5-stage biquad*/
 static const int biquad_init_stage = 5;
 static const u32 biquad_init_gains[TEGRA210_PEQ_GAIN_PARAM_SIZE_PER_CH] = {
@@ -225,6 +231,8 @@ static const struct regmap_config tegra210_peq_regmap_config = {
 	.readable_reg = tegra210_peq_rd_reg,
 	.volatile_reg = tegra210_peq_volatile_reg,
 	.precious_reg = tegra210_peq_precious_reg,
+	.reg_defaults = tegra210_peq_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra210_peq_reg_defaults),
 	.cache_type = REGCACHE_FLAT,
 };
 

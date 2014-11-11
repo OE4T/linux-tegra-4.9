@@ -36,6 +36,24 @@
 
 #define DRV_NAME "tegra210-spdif"
 
+static const struct reg_default tegra210_spdif_reg_defaults[] = {
+	{ TEGRA210_SPDIF_CIF_TXD_CTRL, 0x00001100},
+	{ TEGRA210_SPDIF_CIF_RXD_CTRL, 0x00001100},
+	{ TEGRA210_SPDIF_CIF_TXU_CTRL, 0x00001100},
+	{ TEGRA210_SPDIF_CIF_RXU_CTRL, 0x00001100},
+	{ TEGRA210_SPDIF_FLOWCTL_CTRL, 0x80000000},
+	{ TEGRA210_SPDIF_TX_STEP, 0x00008000},
+	{ TEGRA210_SPDIF_LCOEF_1_4_0, 0x0000002e},
+	{ TEGRA210_SPDIF_LCOEF_1_4_1, 0x0000f9e6},
+	{ TEGRA210_SPDIF_LCOEF_1_4_2, 0x000020ca},
+	{ TEGRA210_SPDIF_LCOEF_1_4_3, 0x00007147},
+	{ TEGRA210_SPDIF_LCOEF_1_4_4, 0x0000f17e},
+	{ TEGRA210_SPDIF_LCOEF_1_4_5, 0x000001e0},
+	{ TEGRA210_SPDIF_LCOEF_2_4_0, 0x00000117},
+	{ TEGRA210_SPDIF_LCOEF_2_4_1, 0x0000f26b},
+	{ TEGRA210_SPDIF_LCOEF_2_4_2, 0x00004c07},
+};
+
 static int tegra210_spdif_runtime_suspend(struct device *dev)
 {
 	struct tegra210_spdif *spdif = dev_get_drvdata(dev);
@@ -334,6 +352,8 @@ static const struct regmap_config tegra210_spdif_regmap_config = {
 	.max_register = TEGRA210_SPDIF_LCOEF_2_4_2,
 	.writeable_reg = tegra210_spdif_wr_rd_reg,
 	.readable_reg = tegra210_spdif_wr_rd_reg,
+	.reg_defaults = tegra210_spdif_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra210_spdif_reg_defaults),
 	.cache_type = REGCACHE_FLAT,
 };
 

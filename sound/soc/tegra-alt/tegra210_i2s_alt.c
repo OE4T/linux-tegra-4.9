@@ -42,6 +42,15 @@
 
 #define DRV_NAME "tegra210-i2s"
 
+static const struct reg_default tegra210_i2s_reg_defaults[] = {
+	{ TEGRA210_I2S_AXBAR_RX_INT_MASK, 0x00000003},
+	{ TEGRA210_I2S_AXBAR_RX_CIF_CTRL, 0x00007700},
+	{ TEGRA210_I2S_AXBAR_TX_INT_MASK, 0x00000003},
+	{ TEGRA210_I2S_AXBAR_TX_CIF_CTRL, 0x00007700},
+	{ TEGRA210_I2S_CG, 0x1},
+	{ TEGRA210_I2S_TIMING, 0x0000001f},
+};
+
 static void tegra210_i2s_set_slot_ctrl(struct regmap *regmap,
 				unsigned int total_slots,
 				unsigned int tx_slot_mask,
@@ -741,6 +750,8 @@ static const struct regmap_config tegra210_i2s_regmap_config = {
 	.writeable_reg = tegra210_i2s_wr_reg,
 	.readable_reg = tegra210_i2s_rd_reg,
 	.volatile_reg = tegra210_i2s_volatile_reg,
+	.reg_defaults = tegra210_i2s_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra210_i2s_reg_defaults),
 	.cache_type = REGCACHE_FLAT,
 };
 

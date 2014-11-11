@@ -37,6 +37,18 @@
 
 #define DRV_NAME "tegra210-adx"
 
+static const struct reg_default tegra210_adx_reg_defaults[] = {
+	{ TEGRA210_ADX_AXBAR_RX_INT_MASK, 0x00000001},
+	{ TEGRA210_ADX_AXBAR_RX_CIF_CTRL, 0x00007000},
+	{ TEGRA210_ADX_AXBAR_TX_INT_MASK, 0x0000000f },
+	{ TEGRA210_ADX_AXBAR_TX1_CIF_CTRL, 0x00007000},
+	{ TEGRA210_ADX_AXBAR_TX2_CIF_CTRL, 0x00007000},
+	{ TEGRA210_ADX_AXBAR_TX3_CIF_CTRL, 0x00007000},
+	{ TEGRA210_ADX_AXBAR_TX4_CIF_CTRL, 0x00007000},
+	{ TEGRA210_ADX_CG, 0x1},
+	{ TEGRA210_ADX_AHUBRAMCTL_ADX_CTRL, 0x00004000},
+};
+
 /**
  * tegra210_adx_enable_outstream - enable output stream
  * @adx: struct of tegra210_adx
@@ -604,6 +616,8 @@ static const struct regmap_config tegra210_adx_regmap_config = {
 	.writeable_reg = tegra210_adx_wr_reg,
 	.readable_reg = tegra210_adx_rd_reg,
 	.volatile_reg = tegra210_adx_volatile_reg,
+	.reg_defaults = tegra210_adx_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra210_adx_reg_defaults),
 	.cache_type = REGCACHE_FLAT,
 };
 

@@ -36,6 +36,29 @@
 
 #define DRV_NAME "tegra210-ape-admaif"
 
+#define ADMAIF_CH_REG(reg, id) (reg + (TEGRA210_ADMAIF_CHANNEL_REG_STRIDE * id))
+#define ADMAIF_REG_DEFAULTS(id, rx_fifo_ctrl, tx_fifo_ctrl) \
+	{ ADMAIF_CH_REG(TEGRA210_ADMAIF_XBAR_RX_INT_MASK, id), 0x00000001}, \
+	{ ADMAIF_CH_REG(TEGRA210_ADMAIF_CHAN_ACIF_RX_CTRL, id), 0x00007700}, \
+	{ ADMAIF_CH_REG(TEGRA210_ADMAIF_XBAR_RX_FIFO_CTRL, id), rx_fifo_ctrl}, \
+	{ ADMAIF_CH_REG(TEGRA210_ADMAIF_XBAR_TX_INT_MASK, id), 0x00000001}, \
+	{ ADMAIF_CH_REG(TEGRA210_ADMAIF_CHAN_ACIF_TX_CTRL, id), 0x00007700}, \
+	{ ADMAIF_CH_REG(TEGRA210_ADMAIF_XBAR_TX_FIFO_CTRL, id), tx_fifo_ctrl}
+
+static const struct reg_default tegra210_admaif_reg_defaults[] = {
+	ADMAIF_REG_DEFAULTS(0, 0x00000300, 0x02000300),
+	ADMAIF_REG_DEFAULTS(1, 0x00000304, 0x02000304),
+	ADMAIF_REG_DEFAULTS(2, 0x00000208, 0x01800208),
+	ADMAIF_REG_DEFAULTS(3, 0x0000020b, 0x0180020b),
+	ADMAIF_REG_DEFAULTS(4, 0x0000020e, 0x0180020e),
+	ADMAIF_REG_DEFAULTS(5, 0x00000211, 0x01800211),
+	ADMAIF_REG_DEFAULTS(6, 0x00000214, 0x01800214),
+	ADMAIF_REG_DEFAULTS(7, 0x00000217, 0x01800217),
+	ADMAIF_REG_DEFAULTS(8, 0x0000021a, 0x0180021a),
+	ADMAIF_REG_DEFAULTS(9, 0x0000021d, 0x0180021d),
+	{ TEGRA210_ADMAIF_GLOBAL_CG_0, 0x00000003}
+};
+
 static bool tegra210_admaif_wr_reg(struct device *dev, unsigned int reg)
 {
 	reg = reg % TEGRA210_ADMAIF_CHANNEL_REG_STRIDE;
@@ -110,6 +133,8 @@ static const struct regmap_config tegra210_admaif_regmap_config = {
 	.writeable_reg = tegra210_admaif_wr_reg,
 	.readable_reg = tegra210_admaif_rd_reg,
 	.volatile_reg = tegra210_admaif_volatile_reg,
+	.reg_defaults = tegra210_admaif_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra210_admaif_reg_defaults),
 	.cache_type = REGCACHE_FLAT,
 };
 

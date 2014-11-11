@@ -36,6 +36,15 @@
 
 #define DRV_NAME "tegra210-sfc"
 
+static const struct reg_default tegra210_sfc_reg_defaults[] = {
+	{ TEGRA210_SFC_AXBAR_RX_INT_MASK, 0x00000001},
+	{ TEGRA210_SFC_AXBAR_RX_CIF_CTRL, 0x00007700},
+	{ TEGRA210_SFC_AXBAR_TX_INT_MASK, 0x00000001},
+	{ TEGRA210_SFC_AXBAR_TX_CIF_CTRL, 0x00007700},
+	{ TEGRA210_SFC_CG, 0x1},
+	{ TEGRA210_SFC_AHUBRAMCTL_SFC_CTRL, 0x00004000},
+};
+
 static int tegra210_sfc_runtime_suspend(struct device *dev)
 {
 	struct tegra210_sfc *sfc = dev_get_drvdata(dev);
@@ -438,6 +447,8 @@ static const struct regmap_config tegra210_sfc_regmap_config = {
 	.readable_reg = tegra210_sfc_rd_reg,
 	.volatile_reg = tegra210_sfc_volatile_reg,
 	.precious_reg = tegra210_sfc_precious_reg,
+	.reg_defaults = tegra210_sfc_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra210_sfc_reg_defaults),
 	.cache_type = REGCACHE_FLAT,
 };
 

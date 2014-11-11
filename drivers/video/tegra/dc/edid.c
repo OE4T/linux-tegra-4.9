@@ -242,7 +242,7 @@ int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 		 */
 		code = (tmp >> 5) & 0x7;
 		switch (code) {
-		case 1:
+		case CEA_DATA_BLOCK_AUDIO:
 		{
 			int sad_n = edid->eld.sad_count * 3;
 			edid->eld.sad_count += len / 3;
@@ -261,7 +261,7 @@ int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 			break;
 		}
 		/* case 2 is commented out for now */
-		case 3:
+		case CEA_DATA_BLOCK_VENDOR:
 		{
 			int j = 0;
 
@@ -316,7 +316,7 @@ int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 			ptr += len; /* adding the header */
 			break;
 		}
-		case 4:
+		case CEA_DATA_BLOCK_SPEAKER_ALLOC:
 		{
 			edid->eld.spk_alloc = ptr[1];
 			len++;

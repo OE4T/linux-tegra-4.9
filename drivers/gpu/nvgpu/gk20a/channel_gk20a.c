@@ -2093,13 +2093,18 @@ int gk20a_channel_suspend(struct gk20a *g)
 		return err;
 
 	for (chid = 0; chid < f->num_channels; chid++) {
-		if (f->channel[chid].in_use) {
+		struct channel_gk20a *ch = &f->channel[chid];
+		if (ch->in_use) {
 
 			gk20a_dbg_info("suspend channel %d", chid);
 			/* disable channel */
-			g->ops.fifo.disable_channel(&f->channel[chid]);
+			g->ops.fifo.disable_channel(ch);
 			/* preempt the channel */
 			g->ops.fifo.preempt_channel(g, chid);
+			/* wait for channel update notifiers */
+			if (ch->update_fn &&
+					work_pending(&ch->update_fn_work))
+				flush_work(&ch->update_fn_work);
 
 			channels_in_use = true;
 		}

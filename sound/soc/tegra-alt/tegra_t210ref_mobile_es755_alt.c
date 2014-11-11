@@ -55,21 +55,21 @@
 #define GPIO_HP_DET     BIT(4)
 
 struct tegra_t210ref {
+	struct snd_soc_card *pcard;
 	struct tegra_asoc_platform_data *pdata;
 	struct tegra_asoc_audio_clock_info audio_clock;
-	unsigned int num_codec_links;
-	int gpio_requested;
-#ifdef CONFIG_SWITCH
-	int jack_status;
-#endif
-	enum snd_soc_bias_level bias_level;
-	int clock_enabled;
 	struct regulator *codec_reg;
 	struct regulator *digital_reg;
 	struct regulator *analog_reg;
 	struct regulator *spk_reg;
 	struct regulator *dmic_reg;
-	struct snd_soc_card *pcard;
+	unsigned int num_codec_links;
+	int gpio_requested;
+#ifdef CONFIG_SWITCH
+	int jack_status;
+#endif
+	int clock_enabled;
+	enum snd_soc_bias_level bias_level;
 };
 
 static struct snd_soc_jack tegra_t210ref_hp_jack;
@@ -403,9 +403,43 @@ static struct snd_soc_compr_ops tegra_t210ref_compr_ops = {
 	.shutdown = tegra_es755_shutdown_compr,
 };
 
+static int tegra_t210ref_event_int_spk(struct snd_soc_dapm_widget *w,
+					struct snd_kcontrol *k, int event)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct snd_soc_card *card = dapm->card;
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
+	struct tegra_asoc_platform_data *pdata = machine->pdata;
+	int err;
+
+	if (machine->spk_reg) {
+		if (SND_SOC_DAPM_EVENT_ON(event)) {
+			err = regulator_enable(machine->spk_reg);
+			if (err < 0)
+				dev_err(card->dev, "Failed to enable spk regulator\n");
+		} else {
+			regulator_disable(machine->spk_reg);
+		}
+	}
+
+	if (!(machine->gpio_requested & GPIO_SPKR_EN))
+		return 0;
+
+	gpio_set_value_cansleep(pdata->gpio_spkr_en,
+				!!SND_SOC_DAPM_EVENT_ON(event));
+
+	return 0;
+}
+
+
 static const struct snd_soc_dapm_widget tegra_t210ref_dapm_widgets[] = {
+	SND_SOC_DAPM_SPK("Int Spk", tegra_t210ref_event_int_spk),
 	SND_SOC_DAPM_HP("y Headphone", NULL),
 	SND_SOC_DAPM_MIC("y Mic", NULL),
+};
+
+static const struct snd_kcontrol_new tegra_t210ref_controls[] = {
+	SOC_DAPM_PIN_SWITCH("Int Spk"),
 };
 
 static int tegra_t210ref_suspend_pre(struct snd_soc_card *card)
@@ -434,14 +468,20 @@ static int tegra_t210ref_suspend_post(struct snd_soc_card *card)
 		tegra_alt_asoc_utils_clk_disable(&machine->audio_clock);
 	}
 
+	if (machine->digital_reg)
+		regulator_disable(machine->digital_reg);
+
 	return 0;
 }
 
 static int tegra_t210ref_resume_pre(struct snd_soc_card *card)
 {
-	int val;
-	struct snd_soc_jack_gpio *gpio = &tegra_t210ref_hp_jack_gpio;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
+	struct snd_soc_jack_gpio *gpio = &tegra_t210ref_hp_jack_gpio;
+	int ret, val;
+
+	if (machine->digital_reg)
+		ret = regulator_enable(machine->digital_reg);
 
 	if (gpio_is_valid(gpio->gpio)) {
 		val = gpio_get_value(gpio->gpio);
@@ -473,6 +513,8 @@ static struct snd_soc_card snd_soc_tegra_t210ref = {
 	.suspend_post = tegra_t210ref_suspend_post,
 	.suspend_pre = tegra_t210ref_suspend_pre,
 	.resume_pre = tegra_t210ref_resume_pre,
+	.controls = tegra_t210ref_controls,
+	.num_controls = ARRAY_SIZE(tegra_t210ref_controls),
 	.dapm_widgets = tegra_t210ref_dapm_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(tegra_t210ref_dapm_widgets),
 	.fully_routed = true,
@@ -630,16 +672,6 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		machine->digital_reg = NULL;
 	else
 		ret = regulator_enable(machine->digital_reg);
-
-	/*
-	*analog_reg - provided the analog power for the codec and must be
-	*ON always
-	*/
-	machine->analog_reg = regulator_get(&pdev->dev, "avdd");
-	if (IS_ERR(machine->analog_reg))
-		machine->analog_reg = NULL;
-	else
-		ret = regulator_enable(machine->analog_reg);
 
 	/*
 	*spk_reg - provided the speaker power and can be turned ON

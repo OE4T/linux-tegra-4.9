@@ -61,7 +61,6 @@ int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 static int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 				     *mode)
 {
-	unsigned long val;
 	unsigned long v_back_porch;
 	unsigned long v_front_porch;
 	unsigned long v_sync_width;
@@ -69,15 +68,6 @@ static int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 
 	if (!dc->mode.pclk)
 		return 0;
-
-	/* Temporarily commenting . This variable is currently being
-	 * initialized  on dc_mode_override function which is not
-	 * set for fake panel. Recheck whether we need this checking
-	 */
-	/*if (!dc->initialized) {
-		dev_info(&dc->ndev->dev, "Skipping %s.\n", __func__);
-		return 0;
-	}*/
 
 	v_back_porch = mode->v_back_porch;
 	v_front_porch = mode->v_front_porch;
@@ -99,9 +89,6 @@ static int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 	dc->new_bw_kbps = tegra_dc_calc_min_bandwidth(dc);
 	tegra_dc_program_bandwidth(dc, true);
 
-	tegra_dc_writel(dc, 0x0, DC_DISP_DISP_TIMING_OPTIONS);
-	/* tegra_dc_writel(dc, mode->h_ref_to_sync | (mode->v_ref_to_sync << 16), */
-	/* 		DC_DISP_REF_TO_SYNC); */
 	tegra_dc_writel(dc, mode->h_sync_width | (v_sync_width << 16),
 			DC_DISP_SYNC_WIDTH);
 	if ((dc->out->type == TEGRA_DC_OUT_DP) ||
@@ -156,30 +143,7 @@ static int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 	}
 #endif
 
-	tegra_dc_writel(dc, DE_SELECT_ACTIVE | DE_CONTROL_NORMAL,
-			DC_DISP_DATA_ENABLE_OPTIONS);
-
 	/* TODO: MIPI/CRT/HDMI clock cals */
-	val = 0;
-	if (!(dc->out->type == TEGRA_DC_OUT_DSI ||
-		dc->out->type == TEGRA_DC_OUT_FAKE_DSIA ||
-		dc->out->type == TEGRA_DC_OUT_FAKE_DSIB ||
-		dc->out->type == TEGRA_DC_OUT_FAKE_DSI_GANGED ||
-		dc->out->type == TEGRA_DC_OUT_HDMI)) {
-		val = DISP_DATA_FORMAT_DF1P1C;
-
-		if (dc->out->align == TEGRA_DC_ALIGN_MSB)
-			val |= DISP_DATA_ALIGNMENT_MSB;
-		else
-			val |= DISP_DATA_ALIGNMENT_LSB;
-
-		if (dc->out->order == TEGRA_DC_ORDER_RED_BLUE)
-			val |= DISP_DATA_ORDER_RED_BLUE;
-		else
-			val |= DISP_DATA_ORDER_BLUE_RED;
-	}
-	tegra_dc_writel(dc, val, DC_DISP_DISP_INTERFACE_CONTROL);
-
 	/* TODO: confirm shift clock still exists in Parker */
 
 #ifdef CONFIG_SWITCH

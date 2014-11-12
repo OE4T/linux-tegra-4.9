@@ -516,7 +516,7 @@
 		GPU-therm {
 			status = "okay";
 		};
-		MEM-therm {
+		LCPU-therm {
 			status = "okay";
 		};
 		PLL-therm {

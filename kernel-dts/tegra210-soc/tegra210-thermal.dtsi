@@ -49,7 +49,7 @@
 			thermal-sensors		= <&{/soctherm@0x700E2000} 1>;
 			status = "disabled";
 		};
-		MEM-therm {
+		LCPU-therm {
 			polling-delay		= <0>;
 			polling-delay-passive	= <1000>;
 			thermal-sensors		= <&{/soctherm@0x700E2000} 2>;

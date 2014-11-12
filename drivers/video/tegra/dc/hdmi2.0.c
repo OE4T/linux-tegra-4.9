@@ -52,6 +52,17 @@
 
 #define TMDS_NODE	"/host1x/sor1"
 
+static ssize_t hdmi_ddc_power_toggle(struct kobject *kobj,
+	struct kobj_attribute *attr, const char *buf, size_t count);
+
+static ssize_t hdmi_ddc_power_show(struct kobject *kobj,
+	struct kobj_attribute *attr, char *buf);
+
+static struct kobj_attribute hdmi_ddc_power_config =
+	__ATTR(config, 0640, hdmi_ddc_power_show, hdmi_ddc_power_toggle);
+
+static struct kobject *hdmi_ddc;
+
 struct tmds_prod_pair {
 	int clk;
 	const char *name;
@@ -472,6 +483,19 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 		return false;
 
 	return true;
+}
+
+static void tegra_hdmi_ddc_power_toggle(int value)
+{
+	if (dc_hdmi == NULL)
+		return;
+
+	if (value == 0)
+		_tegra_hdmi_ddc_disable(dc_hdmi);
+	else if (value == 1)
+		_tegra_hdmi_ddc_enable(dc_hdmi);
+
+	return;
 }
 
 static int tegra_hdmi_get_mon_spec(struct tegra_hdmi *hdmi)
@@ -946,6 +970,17 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		dev_err(&dc->ndev->dev,
 			"hdmi: failed to register audio switch %d\n", err);
 #endif
+
+	hdmi_ddc = kobject_create_and_add("hdmi_ddc_power_toggle", kernel_kobj);
+	if (!hdmi_ddc) {
+		pr_warn("kobject create_and_add hdmi_ddc_power_toggle failed\n");
+		return 0;
+	}
+	err = sysfs_create_file(hdmi_ddc, &hdmi_ddc_power_config.attr);
+	if (err) {
+		pr_warn("sysfs create file hdmi_ddc_power_toggle failed\n");
+		return 0;
+	}
 
 	of_node_put(np_hdmi);
 	return 0;
@@ -1980,6 +2015,21 @@ static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi)
 	return;
 }
 #endif
+
+static ssize_t hdmi_ddc_power_toggle(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int value;
+	sscanf(buf, "%du", &value);
+	tegra_hdmi_ddc_power_toggle(value);
+	return count;
+}
+
+static ssize_t hdmi_ddc_power_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", dc_hdmi->ddc_refcount);
+}
 
 struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.init = tegra_dc_hdmi_init,

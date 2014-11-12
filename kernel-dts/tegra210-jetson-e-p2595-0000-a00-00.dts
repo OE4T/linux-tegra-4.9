@@ -29,11 +29,11 @@
 #include "tegra210-platforms/tegra210-comms-p2530-0930.dtsi"
 #include "tegra210-platforms/tegra210-pwm-fan-p2530-0930.dtsi"
 #include "tegra210-platforms/tegra210-sdhci-p2530-0930.dtsi"
+#include "panel-s-wqxga-10-1.dtsi"
 #include "tegra210-platforms/tegra210-hdmi-p2530-0930.dtsi"
 #include "tegra210-platforms/tegra210-thermal-fan-est-p2530-0930.dtsi"
 #include "tegra210-platforms/tegra210-keys-p2530-0930.dtsi"
 #include "tegra210-platforms/tegra210-powermon-p2530-0930.dtsi"
-#include <dt-bindings/gpio/tegra-gpio.h>
 #include <dt-bindings/iio/meter/ina3221x.h>
 #include "tegra210-platforms/tegra210-extcon-p2530-0930.dtsi"
 
@@ -138,6 +138,15 @@
 			nvidia,emc-clk-rate = <300000000>;
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
+		};
+		dsi {
+			nvidia,dsi-controller-vs = <DSI_VS_1>;
+			status = "okay";
+			panel-s-wqxga-10-1 {
+				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
+				nvidia,panel-bl-pwm-gpio = <&gpio TEGRA_GPIO(V, 0) 0>; /* PV0 */
+				nvidia,panel-en-gpio = <&gpio TEGRA_GPIO(V, 1) 0>; /* PV1 */
+			};
 		};
 	};
 

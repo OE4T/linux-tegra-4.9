@@ -26,10 +26,14 @@
 
 #define DSI_PANEL_RESET		1
 
+#define PRISM_THRESHOLD		50
+#define HYST_VAL		25
+
 static bool reg_requested;
 static struct regulator *avdd_lcd_3v3;
 static struct regulator *vdd_lcd_bl_en;
 static struct regulator *dvdd_lcd_1v8;
+static struct device *dc_dev;
 static u16 en_panel_rst;
 
 static int dsi_a_1200_1920_8_0_regulator_get(struct device *dev)
@@ -124,7 +128,7 @@ static int dsi_a_1200_1920_8_0_enable(struct device *dev)
 	gpio_set_value(en_panel_rst, 1);
 	msleep(20);
 #endif
-
+	dc_dev = dev;
 	return 0;
 fail:
 	return err;
@@ -147,6 +151,7 @@ static int dsi_a_1200_1920_8_0_disable(struct device *dev)
 	if (dvdd_lcd_1v8)
 		regulator_disable(dvdd_lcd_1v8);
 
+	dc_dev = NULL;
 	return 0;
 }
 
@@ -157,12 +162,20 @@ static int dsi_a_1200_1920_8_0_postsuspend(void)
 
 static int dsi_a_1200_1920_8_0_bl_notify(struct device *dev, int brightness)
 {
+	int cur_sd_brightness;
 	struct backlight_device *bl = NULL;
 	struct pwm_bl_data *pb = NULL;
-	int cur_sd_brightness = atomic_read(&sd_brightness);
 	bl = (struct backlight_device *)dev_get_drvdata(dev);
 	pb = (struct pwm_bl_data *)dev_get_drvdata(&bl->dev);
 
+	if (dc_dev) {
+		if (brightness <= PRISM_THRESHOLD)
+			nvsd_enbl_dsbl_prism(dc_dev, false);
+		else if (brightness > PRISM_THRESHOLD + HYST_VAL)
+			nvsd_enbl_dsbl_prism(dc_dev, true);
+	}
+
+	cur_sd_brightness = atomic_read(&sd_brightness);
 	/* SD brightness is a percentage */
 	brightness = (brightness * cur_sd_brightness) / 255;
 

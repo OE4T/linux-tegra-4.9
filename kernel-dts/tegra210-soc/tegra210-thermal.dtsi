@@ -20,25 +20,47 @@
 
 / {
 	thermal-zones {
+		AO-therm {
+			status = "disabled";
+			polling-delay = <0>;
+			polling-delay-passive = <1000>;
+			thermal-sensors = <&{/tegra-aotag}>;
+			/* in case of multiple sensors -
+			 * <&{/tegra-aotag/sensor} [0|1|..]>
+			 */
+			trips {
+				trip_shutdown {
+					temperature = <102000>;
+					hysteresis = <0>;
+					type = "critical";
+					writable;
+				};
+			};
+		};
+
 		CPU_therm {
 			polling-delay		= <0>;
 			polling-delay-passive	= <1000>;
 			thermal-sensors		= <&{/soctherm@0x700E2000} 0>;
+			status = "disabled";
 		};
 		GPU_therm {
 			polling-delay		= <0>;
 			polling-delay-passive	= <1000>;
 			thermal-sensors		= <&{/soctherm@0x700E2000} 1>;
+			status = "disabled";
 		};
 		MEM_therm {
 			polling-delay		= <0>;
 			polling-delay-passive	= <1000>;
 			thermal-sensors		= <&{/soctherm@0x700E2000} 2>;
+			status = "disabled";
 		};
 		PLL_therm {
 			polling-delay		= <0>;
 			polling-delay-passive	= <1000>;
 			thermal-sensors		= <&{/soctherm@0x700E2000} 3>;
+			status = "disabled";
 		};
 	};
 };

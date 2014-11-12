@@ -259,6 +259,70 @@
 		};
 	};
 
+	spi@7000d400 {
+		prod-settings {
+			prod {
+			    prod = <0x04 0xfffff000 0x0>;
+			};
+			prod_c_flash {
+			    status = "disabled";
+			    /* enabled for spi flash rom */
+			    prod = <0x04 0xffffffc0 0x00000007>;
+			};
+			prod_c_loop {
+			    status = "disabled";
+			    /* enabled for spi loopback mode */
+			    prod = <0x04 0xfffff000 0x0000044b>;
+			};
+		};
+	};
+	spi@7000d600 {
+		prod-settings {
+			prod {
+			    prod = <0x04 0xfffff000 0x0>;
+			};
+			prod_c_flash {
+			    status = "disabled";
+			    /* enabled for spi flash rom */
+			    prod = <0x04 0xffffffc0 0x00000006>;
+			};
+			prod_c_loop {
+			    status = "disabled";
+			    /* enabled for spi loopback mode */
+			    prod = <0x04 0xfffff000 0x0000044b>;
+			};
+		};
+	};
+	spi@7000d800 {
+		prod-settings {
+			prod {
+			    prod = <0x04 0xfffff000 0x0>;
+			};
+			prod_c_flash {
+			    status = "disabled";
+			    /* enabled for spi flash rom */
+			    prod = <0x04 0xffffffc0 0x00000008>;
+			};
+			prod_c_loop {
+			    status = "disabled";
+			    /* enabled for spi loopback mode */
+			    prod = <0x04 0xfffff000 0x0000044b>;
+			};
+		};
+	};
+	spi@7000da00 {
+		prod-settings {
+			prod {
+			    prod = <0x04 0xfffff000 0x0>;
+			};
+			prod_c_flash {
+			    status = "disabled";
+			    /* enabled for spi loopback mode */
+			    prod = <0x04 0xfffff000 0x0000044b>;
+			};
+		};
+	};
+
 	xusb@70090000 {
 		prod-settings {
 			#prod-cells = <4>;

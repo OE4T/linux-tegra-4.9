@@ -20,6 +20,8 @@
 static int vgpu_init_mm_setup_sw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
+	struct vm_gk20a *vm = &mm->pmu.vm;
+	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
 	gk20a_dbg_fn("");
 
@@ -34,6 +36,12 @@ static int vgpu_init_mm_setup_sw(struct gk20a *g)
 	mm->channel.size = 1ULL << NV_GMMU_VA_RANGE;
 
 	gk20a_dbg_info("channel vm size: %dMB", (int)(mm->channel.size >> 20));
+
+	/* gk20a_init_gpu_characteristics expects this to be populated */
+	vm->big_page_size = big_page_size;
+	vm->compression_page_size = big_page_size;
+	vm->pde_stride    = vm->big_page_size << 10;
+	vm->pde_stride_shift = ilog2(vm->pde_stride);
 
 	mm->sw_ready = true;
 

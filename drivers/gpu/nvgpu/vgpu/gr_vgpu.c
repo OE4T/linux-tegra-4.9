@@ -583,6 +583,32 @@ static int vgpu_gr_get_zcull_info(struct gk20a *g, struct gr_gk20a *gr,
 	return 0;
 }
 
+static void vgpu_gr_detect_sm_arch(struct gk20a *g)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	u32 v = 0, raw_version, version = 0;
+
+	gk20a_dbg_fn("");
+
+	if (vgpu_get_attribute(platform->virt_handle,
+			TEGRA_VGPU_ATTRIB_GPC0_TPC0_SM_ARCH, &v))
+		gk20a_err(dev_from_gk20a(g), "failed to retrieve SM arch");
+
+	raw_version = gr_gpc0_tpc0_sm_arch_spa_version_v(v);
+	if (raw_version == gr_gpc0_tpc0_sm_arch_spa_version_smkepler_lp_v())
+		version = 0x320; /* SM 3.2 */
+	else
+		gk20a_err(dev_from_gk20a(g), "Unknown SM version 0x%x",
+			  raw_version);
+
+	/* on Kepler, SM version == SPA version */
+	g->gpu_characteristics.sm_arch_spa_version = version;
+	g->gpu_characteristics.sm_arch_sm_version = version;
+
+	g->gpu_characteristics.sm_arch_warp_count =
+		gr_gpc0_tpc0_sm_arch_warp_count_v(v);
+}
+
 static void vgpu_remove_gr_support(struct gr_gk20a *gr)
 {
 	gk20a_dbg_fn("");
@@ -684,4 +710,5 @@ void vgpu_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.free_obj_ctx = vgpu_gr_free_obj_ctx;
 	gops->gr.bind_ctxsw_zcull = vgpu_gr_bind_ctxsw_zcull;
 	gops->gr.get_zcull_info = vgpu_gr_get_zcull_info;
+	gops->gr.detect_sm_arch = vgpu_gr_detect_sm_arch;
 }

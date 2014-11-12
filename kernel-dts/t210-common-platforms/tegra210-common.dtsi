@@ -277,11 +277,11 @@
                 extcon-cables = <&udc 1 &udc 2 &udc 3
                                 &udc 4 &udc 5 &udc 6
                                 &udc 7 &udc 8 &udc 9
-                                &udc 10 &udc 11 &otg 0>;
+                                &udc 10 &udc 11 &udc 12 &udc 13 &otg 0 &otg 1>;
                 extcon-cable-names = "usb-charger", "ta-charger", "maxim-charger",
                                 "qc2-charger", "downstream-charger","fast-charger",
                                 "slow-charger", "apple-500ma", "apple-1a",
-                                "apple-2a", "ACA NV-Charger", "y-cable";
+                                "apple-2a", "ACA NV-Charger", "ACA RID-B", "ACA RID-C", "y-cable", "ACA RID-A";
 				status = "disabled";
         };
 

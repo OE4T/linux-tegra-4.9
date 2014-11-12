@@ -1,5 +1,22 @@
 #include <dt-bindings/gpio/tegra-gpio.h>
 
+#define SET_MAP_TRIP(domain, vtype, num, temp)				\
+	trips {								\
+		domain##_##vtype##num: domain-vtype##num {		\
+			temperature = <temp>;				\
+			hysteresis = <1000>;				\
+			type = "active";				\
+			writable;					\
+		};							\
+	};								\
+	cooling-maps {							\
+		domain-vtype-map##num {					\
+			trip = <&domain##_##vtype##num>;		\
+			cooling-device = <&domain##_##vtype##_cdev num num>; \
+		};							\
+	}
+
+
 / {
 	dfll-ovr@70110000 {
 		status = "okay";
@@ -179,65 +196,32 @@
 			compatible = "nvidia,tegra210-rail-scaling-cdev";
 			cdev-type = "gpu_scaling";
 			nvidia,constraint;
-			nvidia,trips = <&gpu_scaling0 950 &gpu_scaling1 0>;
+			nvidia,trips = <&gpu_scaling0 950 &gpu_scaling1 0
+					&gpu_scaling2 0 &gpu_scaling3 0
+					&gpu_scaling4 0>;
 		};
 	};
 
 	thermal-zones {
 		CPU_therm {
-			trips {
-				cpu_vmin1: cpu-vmin1 {
-					temperature = <20000>;
-					hysteresis = <1000>;
-					type = "active";
-					writable;
-				};
-			};
-			cooling-maps {
-				vdd-cpu-map1 {
-					trip = <&cpu_vmin1>;
-					cooling-device = <&cpu_vmin_cdev 1 1>;
-				};
-			};
+			SET_MAP_TRIP(cpu, vmin, 1, 15000);
 		};
 		GPU_therm {
 			trips {
 				/* Reference only trip, not mapped */
 				gpu_scaling0: gpu-scaling0 {
-					temperature = <(-10000)>;
+					temperature = <(-40000)>;
 					hysteresis = <0>;
 					type = "active";
 				};
-
-				gpu_scaling1: gpu-scaling1 {
-					temperature = <20000>;
-					hysteresis = <1000>;
-					type = "active";
-					writable;
-				};
 			};
-			cooling-maps {
-				vdd-gpu-map1 {
-					trip = <&gpu_scaling1>;
-					cooling-device = <&gpu_scaling_cdev 1 1>;
-				};
-			};
+			SET_MAP_TRIP(gpu, scaling, 1, 15000);
+			SET_MAP_TRIP(gpu, scaling, 2, 30000);
+			SET_MAP_TRIP(gpu, scaling, 3, 50000);
+			SET_MAP_TRIP(gpu, scaling, 4, 70000);
 		};
 		PLL_therm {
-			trips {
-				core_vmin1: core-vmin1 {
-					temperature = <20000>;
-					hysteresis = <1000>;
-					type = "active";
-					writable;
-				};
-			};
-			cooling-maps {
-				vdd-core-map1 {
-					trip = <&core_vmin1>;
-					cooling-device = <&core_vmin_cdev 1 1>;
-				};
-			};
+			SET_MAP_TRIP(core, vmin, 1, 20000);
 		};
 	};
 };

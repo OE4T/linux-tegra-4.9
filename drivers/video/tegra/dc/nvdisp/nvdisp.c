@@ -348,7 +348,7 @@ failed_enable:
 	disable_irq_nosync(dc->irq);
 	tegra_dc_clear_bandwidth(dc);
 	if (dc->out && dc->out->disable)
-		dc->out->disable();
+		dc->out->disable(&dc->ndev->dev);
 	tegra_dc_put(dc);
 
 	/* TODO: disable DC clock */

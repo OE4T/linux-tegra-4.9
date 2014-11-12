@@ -39,6 +39,9 @@ static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct gk20a *g);
 
 #define CTX_DELETE_TIME 1000
 
+#define MAX_CTX_USE_COUNT 42
+#define MAX_CTX_RETRY_TIME 2000
+
 static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 {
 	struct device *dev = &cde_ctx->pdev->dev;
@@ -782,11 +785,16 @@ out:
 	gk20a_idle(pdev);
 }
 
-static struct gk20a_cde_ctx *gk20a_cde_get_context(struct gk20a *g)
+static struct gk20a_cde_ctx *gk20a_cde_do_get_context(struct gk20a *g)
 __must_hold(&cde_app->mutex)
 {
 	struct gk20a_cde_app *cde_app = &g->cde_app;
 	struct gk20a_cde_ctx *cde_ctx;
+
+	/* exhausted? */
+
+	if (cde_app->ctx_usecount >= MAX_CTX_USE_COUNT)
+		return ERR_PTR(-EAGAIN);
 
 	/* idle context available? */
 
@@ -830,6 +838,28 @@ __must_hold(&cde_app->mutex)
 	if (cde_app->ctx_count > cde_app->ctx_count_top)
 		cde_app->ctx_count_top = cde_app->ctx_count;
 	list_add(&cde_ctx->list, &cde_app->used_contexts);
+
+	return cde_ctx;
+}
+
+static struct gk20a_cde_ctx *gk20a_cde_get_context(struct gk20a *g)
+__releases(&cde_app->mutex)
+__acquires(&cde_app->mutex)
+{
+	struct gk20a_cde_app *cde_app = &g->cde_app;
+	struct gk20a_cde_ctx *cde_ctx = NULL;
+	unsigned long end = jiffies + msecs_to_jiffies(MAX_CTX_RETRY_TIME);
+
+	do {
+		cde_ctx = gk20a_cde_do_get_context(g);
+		if (PTR_ERR(cde_ctx) != -EAGAIN)
+			break;
+
+		/* exhausted, retry */
+		mutex_unlock(&cde_app->mutex);
+		cond_resched();
+		mutex_lock(&cde_app->mutex);
+	} while (time_before(jiffies, end));
 
 	return cde_ctx;
 }

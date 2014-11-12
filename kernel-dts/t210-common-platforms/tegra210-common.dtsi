@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "tegra210.dtsi"
+#include "tegra210-soc-shield.dtsi"
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/tegra-gpio.h>
 #include "tegra210-platforms/tegra210-prods.dtsi"

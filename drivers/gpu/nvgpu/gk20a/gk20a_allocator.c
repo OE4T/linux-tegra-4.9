@@ -89,8 +89,10 @@ int gk20a_allocator_block_alloc(struct gk20a_allocator *allocator,
 			len,
 			allocator->align - 1);
 	if ((_addr > allocator->limit - allocator->base + 1) ||
-	    (*addr && *addr != (_addr + allocator->base)))
+	    (*addr && *addr != (_addr + allocator->base))) {
+		up_write(&allocator->rw_sema);
 		return -ENOMEM;
+	}
 
 	bitmap_set(allocator->bitmap, _addr, len);
 	*addr = allocator->base + _addr;

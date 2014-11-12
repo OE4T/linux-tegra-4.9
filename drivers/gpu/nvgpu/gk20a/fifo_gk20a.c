@@ -581,7 +581,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 		f->channel[chid].userd_cpu_va =
 			f->userd.cpuva + chid * f->userd_entry_size;
 		f->channel[chid].userd_iova =
-			NV_MC_SMMU_VADDR_TRANSLATE(f->userd.iova)
+			gk20a_mm_smmu_vaddr_translate(g, f->userd.iova)
 				+ chid * f->userd_entry_size;
 		f->channel[chid].userd_gpu_va =
 			f->userd.gpu_va + chid * f->userd_entry_size;

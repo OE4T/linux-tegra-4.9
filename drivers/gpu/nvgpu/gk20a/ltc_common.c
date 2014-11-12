@@ -173,7 +173,7 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 	if (tegra_platform_is_linsim())
 		compbit_store_base_iova = gr->compbit_store.base_iova;
 	else
-		compbit_store_base_iova = NV_MC_SMMU_VADDR_TRANSLATE(
+		compbit_store_base_iova = gk20a_mm_smmu_vaddr_translate(g,
 			gr->compbit_store.base_iova);
 
 	compbit_base_post_divide64 = compbit_store_base_iova >>

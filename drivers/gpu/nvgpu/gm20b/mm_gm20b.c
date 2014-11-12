@@ -301,4 +301,5 @@ void gm20b_init_mm(struct gpu_ops *gops)
 	gops->mm.tlb_invalidate = gk20a_mm_tlb_invalidate;
 	gops->mm.set_big_page_size = gm20b_mm_set_big_page_size;
 	gops->mm.get_big_page_sizes = gm20b_mm_get_big_page_sizes;
+	gops->mm.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits;
 }

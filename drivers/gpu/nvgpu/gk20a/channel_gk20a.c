@@ -98,7 +98,7 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 	if (!inst_ptr)
 		return -ENOMEM;
 
-	addr = gk20a_mm_iova_addr(c->vm->pdes.sgt->sgl);
+	addr = gk20a_mm_iova_addr(c->g, c->vm->pdes.sgt->sgl);
 	addr_lo = u64_lo32(addr >> 12);
 	addr_hi = u64_hi32(addr);
 

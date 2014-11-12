@@ -258,7 +258,8 @@ int prepare_ucode_blob(struct gk20a *g)
 		gm20b_dbg_pmu("managed LS falcon %d, WPR size %d bytes.\n",
 			plsfm->managed_flcn_cnt, plsfm->wpr_size);
 		lsfm_init_wpr_contents(g, plsfm, nonwpr_addr);
-		g->acr.ucode_blob_start = NV_MC_SMMU_VADDR_TRANSLATE(iova);
+		g->acr.ucode_blob_start =
+			gk20a_mm_smmu_vaddr_translate(g, iova);
 		g->acr.ucode_blob_size = plsfm->wpr_size;
 		gm20b_dbg_pmu("base reg carveout 2:%x\n",
 		readl(mc + MC_SECURITY_CARVEOUT2_BOM_0));

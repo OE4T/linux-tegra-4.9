@@ -25,15 +25,6 @@
 #include <asm/cacheflush.h>
 #include "gk20a_allocator.h"
 
-/* This "address bit" in the gmmu ptes (and other gk20a accesses)
- * signals the address as presented should be translated by the SMMU.
- * Without this bit present gk20a accesses are *not* translated.
- */
-/* Hack, get this from manuals somehow... */
-#define NV_MC_SMMU_VADDR_TRANSLATION_BIT     34
-#define NV_MC_SMMU_VADDR_TRANSLATE(x) (x | \
-				(1ULL << NV_MC_SMMU_VADDR_TRANSLATION_BIT))
-
 /* For now keep the size relatively small-ish compared to the full
  * 40b va.  32GB for now. It consists of two 16GB spaces. */
 #define NV_GMMU_VA_RANGE	35ULL
@@ -360,6 +351,7 @@ struct mm_gk20a {
 
 	void (*remove_support)(struct mm_gk20a *mm);
 	bool sw_ready;
+	int physical_bits;
 #ifdef CONFIG_DEBUG_FS
 	u32 ltc_enabled;
 	u32 ltc_enabled_debug;
@@ -420,7 +412,8 @@ int gk20a_get_sgtable_from_pages(struct device *d, struct sg_table **sgt,
 
 void gk20a_free_sgtable(struct sg_table **sgt);
 
-u64 gk20a_mm_iova_addr(struct scatterlist *sgl);
+u64 gk20a_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl);
+u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova);
 
 void gk20a_mm_ltc_isr(struct gk20a *g);
 
@@ -556,6 +549,8 @@ void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
 			    struct sg_table *sgt, u32 order,
 			    size_t size);
 void update_gmmu_pde_locked(struct vm_gk20a *vm, u32 i);
+
+u32 gk20a_mm_get_physical_addr_bits(struct gk20a *g);
 
 struct gpu_ops;
 void gk20a_init_mm(struct gpu_ops *gops);

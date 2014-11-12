@@ -1734,7 +1734,7 @@ static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
 	gk20a_mem_wr32(inst_ptr, ram_in_adr_limit_hi_w(),
 		ram_in_adr_limit_hi_f(u64_hi32(vm->va_limit)));
 
-	pde_addr = gk20a_mm_iova_addr(vm->pdes.sgt->sgl);
+	pde_addr = gk20a_mm_iova_addr(g, vm->pdes.sgt->sgl);
 	pde_addr_lo = u64_lo32(pde_addr >> 12);
 	pde_addr_hi = u64_hi32(pde_addr);
 	gk20a_mem_wr32(inst_ptr, ram_in_page_dir_base_lo_w(),
@@ -4255,7 +4255,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	/* init mmu debug buffer */
-	addr = NV_MC_SMMU_VADDR_TRANSLATE(gr->mmu_wr_mem.iova);
+	addr = gk20a_mm_smmu_vaddr_translate(g, gr->mmu_wr_mem.iova);
 	addr >>= fb_mmu_debug_wr_addr_alignment_v();
 
 	gk20a_writel(g, fb_mmu_debug_wr_r(),
@@ -4263,7 +4263,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 		     fb_mmu_debug_wr_vol_false_f() |
 		     fb_mmu_debug_wr_addr_f(addr));
 
-	addr = NV_MC_SMMU_VADDR_TRANSLATE(gr->mmu_rd_mem.iova);
+	addr = gk20a_mm_smmu_vaddr_translate(g, gr->mmu_rd_mem.iova);
 	addr >>= fb_mmu_debug_rd_addr_alignment_v();
 
 	gk20a_writel(g, fb_mmu_debug_rd_r(),

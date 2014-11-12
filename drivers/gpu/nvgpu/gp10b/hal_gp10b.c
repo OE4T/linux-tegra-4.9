@@ -23,13 +23,13 @@
 #include "gp10b/gr_gp10b.h"
 #include "gp10b/mc_gp10b.h"
 #include "gp10b/ltc_gp10b.h"
+#include "gp10b/mm_gp10b.h"
 
 #include "gm20b/gr_gm20b.h"
 #include "gm20b/fb_gm20b.h"
 #include "gm20b/gm20b_gating_reglist.h"
 #include "gm20b/fifo_gm20b.h"
 #include "gm20b/gr_ctx_gm20b.h"
-#include "gm20b/mm_gm20b.h"
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/clk_gm20b.h"
 
@@ -94,7 +94,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gm20b_init_fb(gops);
 	gm20b_init_fifo(gops);
 	gm20b_init_gr_ctx(gops);
-	gm20b_init_mm(gops);
+	gp10b_init_mm(gops);
 	gm20b_init_pmu_ops(gops);
 	gm20b_init_clk_ops(gops);
 	gops->name = "gp10b";

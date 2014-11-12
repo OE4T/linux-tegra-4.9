@@ -72,13 +72,10 @@ static int show_channels(struct platform_device *pdev, void *data,
 		return 0;
 	}
 
-	for (index = 0; index < pdata->num_channels; index++) {
-		ch = pdata->channels[index];
-		if (!ch || !ch->dev) {
-			nvhost_debug_output(o, "%d channel of %s unmapped\n",
-					index + 1, pdev->name);
+	for (index = 0; index < m->info.nb_channels; index++) {
+		ch = m->chlist[index];
+		if (!ch || ch->dev != pdev)
 			continue;
-		}
 
 		/* ensure that we get a lock */
 		locked = mutex_trylock(&ch->cdma.lock);

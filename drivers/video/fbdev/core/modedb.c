@@ -1797,7 +1797,7 @@ int fb_mode_is_equal(const struct fb_videomode *mode1,
 {
 	return (mode1->xres         == mode2->xres &&
 		mode1->yres         == mode2->yres &&
-		mode1->pixclock     == mode2->pixclock &&
+		mode1->refresh         == mode2->refresh &&
 		mode1->hsync_len    == mode2->hsync_len &&
 		mode1->vsync_len    == mode2->vsync_len &&
 		mode1->left_margin  == mode2->left_margin &&

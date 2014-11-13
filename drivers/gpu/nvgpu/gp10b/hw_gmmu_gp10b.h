@@ -270,6 +270,26 @@ static inline u32 gmmu_pte_kind_z16_ms16_2z_v(void)
 {
 	return 0x0000000b;
 }
+static inline u32 gmmu_pte_kind_z16_2cz_v(void)
+{
+	return 0x00000036;
+}
+static inline u32 gmmu_pte_kind_z16_ms2_2cz_v(void)
+{
+	return 0x00000037;
+}
+static inline u32 gmmu_pte_kind_z16_ms4_2cz_v(void)
+{
+	return 0x00000038;
+}
+static inline u32 gmmu_pte_kind_z16_ms8_2cz_v(void)
+{
+	return 0x00000039;
+}
+static inline u32 gmmu_pte_kind_z16_ms16_2cz_v(void)
+{
+	return 0x0000005f;
+}
 static inline u32 gmmu_pte_kind_z16_4cz_v(void)
 {
 	return 0x0000000c;
@@ -1026,6 +1046,10 @@ static inline u32 gmmu_pte_kind_c32_ms4_2bra_v(void)
 {
 	return 0x000000e3;
 }
+static inline u32 gmmu_pte_kind_c32_ms4_4cbra_v(void)
+{
+	return 0x0000002c;
+}
 static inline u32 gmmu_pte_kind_c32_ms8_ms16_2c_v(void)
 {
 	return 0x000000e4;
@@ -1085,6 +1109,10 @@ static inline u32 gmmu_pte_kind_c64_ms4_2cra_v(void)
 static inline u32 gmmu_pte_kind_c64_ms4_2bra_v(void)
 {
 	return 0x000000f1;
+}
+static inline u32 gmmu_pte_kind_c64_ms4_4cbra_v(void)
+{
+	return 0x0000002d;
 }
 static inline u32 gmmu_pte_kind_c64_ms8_ms16_2c_v(void)
 {

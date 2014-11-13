@@ -250,7 +250,7 @@ struct gk20a_cde_ctx {
 
 	u64 backing_store_vaddr;
 
-	struct nvgpu_gpfifo *init_cmd;
+	struct nvgpu_gpfifo *init_convert_cmd;
 	int init_cmd_num_entries;
 
 	struct nvgpu_gpfifo *convert_cmd;

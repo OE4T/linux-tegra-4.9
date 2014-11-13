@@ -62,11 +62,10 @@ static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 			&(struct nvgpu_free_obj_ctx_args)
 			{ cde_ctx->obj_ids[i] });
 
-	kfree(cde_ctx->init_cmd);
-	kfree(cde_ctx->convert_cmd);
+	kfree(cde_ctx->init_convert_cmd);
 
 	cde_ctx->convert_cmd = NULL;
-	cde_ctx->init_cmd = NULL;
+	cde_ctx->init_convert_cmd = NULL;
 	cde_ctx->num_bufs = 0;
 	cde_ctx->num_obj_ids = 0;
 	cde_ctx->num_params = 0;
@@ -554,7 +553,7 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 
 	/* check command type */
 	if (op == TYPE_BUF_COMMAND_INIT) {
-		gpfifo = &cde_ctx->init_cmd;
+		gpfifo = &cde_ctx->init_convert_cmd;
 		num_entries = &cde_ctx->init_cmd_num_entries;
 	} else if (op == TYPE_BUF_COMMAND_CONVERT) {
 		gpfifo = &cde_ctx->convert_cmd;
@@ -606,6 +605,38 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 	}
 
 	*num_entries = num_elems;
+	return 0;
+}
+
+static int gk20a_cde_pack_cmdbufs(struct gk20a_cde_ctx *cde_ctx)
+{
+	unsigned long init_bytes = cde_ctx->init_cmd_num_entries *
+		sizeof(struct nvgpu_gpfifo);
+	unsigned long conv_bytes = cde_ctx->convert_cmd_num_entries *
+		sizeof(struct nvgpu_gpfifo);
+	unsigned long total_bytes = init_bytes + conv_bytes;
+	struct nvgpu_gpfifo *combined_cmd;
+
+	/* allocate buffer that has space for both */
+	combined_cmd = kzalloc(total_bytes, GFP_KERNEL);
+	if (!combined_cmd) {
+		gk20a_warn(&cde_ctx->pdev->dev,
+				"cde: could not allocate memory for gpfifo entries");
+		return -ENOMEM;
+	}
+
+	/* move the original init here and append convert */
+	memcpy(combined_cmd, cde_ctx->init_convert_cmd, init_bytes);
+	memcpy(combined_cmd + cde_ctx->init_cmd_num_entries,
+			cde_ctx->convert_cmd, conv_bytes);
+
+	kfree(cde_ctx->init_convert_cmd);
+	kfree(cde_ctx->convert_cmd);
+
+	cde_ctx->init_convert_cmd = combined_cmd;
+	cde_ctx->convert_cmd = combined_cmd
+		+ cde_ctx->init_cmd_num_entries;
+
 	return 0;
 }
 
@@ -678,7 +709,7 @@ static int gk20a_init_cde_img(struct gk20a_cde_ctx *cde_ctx,
 		elem++;
 	}
 
-	if (!cde_ctx->init_cmd || !cde_ctx->init_cmd_num_entries) {
+	if (!cde_ctx->init_convert_cmd || !cde_ctx->init_cmd_num_entries) {
 		gk20a_warn(&cde_ctx->pdev->dev, "cde: convert command not defined");
 		err = -EINVAL;
 		goto deinit_image;
@@ -689,6 +720,10 @@ static int gk20a_init_cde_img(struct gk20a_cde_ctx *cde_ctx,
 		err = -EINVAL;
 		goto deinit_image;
 	}
+
+	err = gk20a_cde_pack_cmdbufs(cde_ctx);
+	if (err)
+		goto deinit_image;
 
 	return 0;
 
@@ -706,8 +741,10 @@ static int gk20a_cde_execute_buffer(struct gk20a_cde_ctx *cde_ctx,
 
 	/* check command type */
 	if (op == TYPE_BUF_COMMAND_INIT) {
-		gpfifo = cde_ctx->init_cmd;
-		num_entries = cde_ctx->init_cmd_num_entries;
+		/* both init and convert combined */
+		gpfifo = cde_ctx->init_convert_cmd;
+		num_entries = cde_ctx->init_cmd_num_entries
+			+ cde_ctx->convert_cmd_num_entries;
 	} else if (op == TYPE_BUF_COMMAND_CONVERT) {
 		gpfifo = cde_ctx->convert_cmd;
 		num_entries = cde_ctx->convert_cmd_num_entries;
@@ -1006,23 +1043,20 @@ __releases(&cde_app->mutex)
 	gk20a_dbg(gpu_dbg_cde, "cde: buffer=compbits, size=%llu, gpuva=%llx\n",
 		 cde_ctx->compbit_size, cde_ctx->compbit_vaddr);
 
-	/* execute the init push buffer */
-	if (!cde_ctx->init_cmd_executed) {
-		err = gk20a_cde_execute_buffer(cde_ctx, TYPE_BUF_COMMAND_INIT,
-					       NULL, 0, NULL);
-		if (err)
-			goto exit_unlock;
-
-		cde_ctx->init_cmd_executed = true;
-	}
 
 	/* take always the postfence as it is needed for protecting the
 	 * cde context */
 	flags = __flags | NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET;
 
-	/* execute the conversion buffer */
-	err = gk20a_cde_execute_buffer(cde_ctx, TYPE_BUF_COMMAND_CONVERT,
-				       fence, flags, fence_out);
+	/* execute the conversion buffer, combined with init first if it's the
+	 * first time */
+	err = gk20a_cde_execute_buffer(cde_ctx,
+			cde_ctx->init_cmd_executed
+				? TYPE_BUF_COMMAND_CONVERT
+				: TYPE_BUF_COMMAND_INIT,
+			fence, flags, fence_out);
+
+	cde_ctx->init_cmd_executed = true;
 
 exit_unlock:
 

@@ -293,6 +293,39 @@ TRACE_EVENT(gk20a_mmu_fault,
 		      __entry->engine, __entry->client, __entry->fault_type)
 );
 
+DECLARE_EVENT_CLASS(gk20a_cde,
+	TP_PROTO(const void *ctx),
+	TP_ARGS(ctx),
+	TP_STRUCT__entry(__field(const void *, ctx)),
+	TP_fast_assign(__entry->ctx = ctx;),
+	TP_printk("ctx=%p", __entry->ctx)
+);
+
+DEFINE_EVENT(gk20a_cde, gk20a_cde_remove_ctx,
+	TP_PROTO(const void *ctx),
+	TP_ARGS(ctx)
+);
+
+DEFINE_EVENT(gk20a_cde, gk20a_cde_release,
+	TP_PROTO(const void *ctx),
+	TP_ARGS(ctx)
+);
+
+DEFINE_EVENT(gk20a_cde, gk20a_cde_get_context,
+	TP_PROTO(const void *ctx),
+	TP_ARGS(ctx)
+);
+
+DEFINE_EVENT(gk20a_cde, gk20a_cde_allocate_context,
+	TP_PROTO(const void *ctx),
+	TP_ARGS(ctx)
+);
+
+DEFINE_EVENT(gk20a_cde, gk20a_cde_finished_ctx_cb,
+	TP_PROTO(const void *ctx),
+	TP_ARGS(ctx)
+);
+
 #endif /*  _TRACE_GK20A_H */
 
 /* This part must be outside protection */

@@ -22,6 +22,8 @@
 #include <linux/debugfs.h>
 #include <linux/dma-buf.h>
 
+#include <trace/events/gk20a.h>
+
 #include "gk20a.h"
 #include "channel_gk20a.h"
 #include "mm_gk20a.h"
@@ -79,6 +81,8 @@ __must_hold(&cde_app->mutex)
 	struct gk20a *g = cde_ctx->g;
 	struct channel_gk20a *ch = cde_ctx->ch;
 	struct vm_gk20a *vm = ch->vm;
+
+	trace_gk20a_cde_remove_ctx(cde_ctx);
 
 	/* free the channel */
 	gk20a_free_channel(cde_ctx->ch, true);
@@ -728,6 +732,7 @@ __releases(&cde_app->mutex)
 	struct gk20a_cde_app *cde_app = &cde_ctx->g->cde_app;
 
 	gk20a_dbg(gpu_dbg_cde_ctx, "releasing use on %p", cde_ctx);
+	trace_gk20a_cde_release(cde_ctx);
 
 	mutex_lock(&cde_app->mutex);
 
@@ -808,6 +813,7 @@ __must_hold(&cde_app->mutex)
 				cde_ctx, cde_app->ctx_count,
 				cde_app->ctx_usecount,
 				cde_app->ctx_count_top);
+		trace_gk20a_cde_get_context(cde_ctx);
 
 		/* deleter work may be scheduled, but in_use prevents it */
 		cde_ctx->in_use = true;
@@ -833,6 +839,7 @@ __must_hold(&cde_app->mutex)
 		return cde_ctx;
 	}
 
+	trace_gk20a_cde_get_context(cde_ctx);
 	cde_ctx->in_use = true;
 	cde_ctx->is_temporary = true;
 	cde_app->ctx_usecount++;
@@ -891,6 +898,7 @@ static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct gk20a *g)
 			gk20a_cde_ctx_deleter_fn);
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx, "cde: allocated %p", cde_ctx);
+	trace_gk20a_cde_allocate_context(cde_ctx);
 	return cde_ctx;
 }
 
@@ -1042,6 +1050,7 @@ __releases(&cde_app->mutex)
 	if (!channel_idle)
 		return;
 
+	trace_gk20a_cde_finished_ctx_cb(cde_ctx);
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx, "cde: finished %p", cde_ctx);
 	WARN(!cde_ctx->in_use, "double finish cde context %p on channel %p",
 			cde_ctx, ch);

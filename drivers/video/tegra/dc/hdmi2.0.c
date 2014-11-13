@@ -1371,39 +1371,6 @@ static void tegra_hdmi_config_xbar(struct tegra_hdmi *hdmi)
 	tegra_sor_writel(hdmi->sor, NV_SOR_XBAR_CTRL, 0x8d111828);
 }
 
-static void tegra_hdmi_calib(struct tegra_hdmi *hdmi)
-{
-#define MAX_TX_PU 0x60
-#define LOAD_ADJUST_DEFAULT 0x5
-
-	struct tegra_dc_sor_data *sor = hdmi->sor;
-	u32 tx_pu = MAX_TX_PU;
-	u32 load_adjust = LOAD_ADJUST_DEFAULT;
-
-	tegra_sor_pad_cal_power(sor, true);
-
-	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(0),
-			NV_SOR_DP_PADCTL_TX_PU_VALUE_DEFAULT_MASK |
-			NV_SOR_DP_PADCTL_TX_PU_ENABLE,
-			tx_pu << NV_SOR_DP_PADCTL_TX_PU_VALUE_SHIFT |
-			NV_SOR_DP_PADCTL_TX_PU_ENABLE);
-
-	tegra_dc_sor_termination_cal(sor);
-
-	tegra_sor_write_field(sor, NV_SOR_PLL1,
-			NV_SOR_PLL1_LOADADJ_DEFAULT_MASK,
-			load_adjust << NV_SOR_PLL1_LOADADJ_SHIFT);
-
-	tegra_sor_writel(sor, NV_SOR_LANE_DRIVE_CURRENT(sor->portnum),
-			0x37373737);
-	tegra_sor_writel(sor, NV_SOR_PR(sor->portnum), 0x14141414);
-
-	tegra_sor_pad_cal_power(sor, false);
-
-#undef MAX_TX_PU
-#undef LOAD_ADJUST_DEFAULT
-}
-
 __maybe_unused
 static int tegra_hdmi_scdc_read(struct tegra_hdmi *hdmi,
 					u8 offset_data[][2], u32 n_entries)
@@ -1602,8 +1569,6 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	tegra_hdmi_vendor_infoframe(hdmi);
 	tegra_hdmi_audio_config(hdmi, AUDIO_FREQ_32K, HDA);
 
-	tegra_hdmi_config_tmds(hdmi);
-
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_BRICK_CLK);
 	tegra_dc_sor_attach(sor);
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, tegra_dc_hpd(dc));
@@ -1619,7 +1584,9 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	tegra_sor_writel(sor,  NV_SOR_PWR, 0x80000000);
 	tegra_sor_writel(sor,  NV_SOR_PWR, 0x80000001);
 
-	tegra_hdmi_calib(hdmi);
+	tegra_sor_pad_cal_power(sor, true);
+	tegra_hdmi_config_tmds(hdmi);
+	tegra_sor_pad_cal_power(sor, false);
 
 	if (hdmi->dc->mode.pclk > 340000000) {
 		tegra_hdmi_v2_x_config(hdmi);

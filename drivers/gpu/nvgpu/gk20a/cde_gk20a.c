@@ -731,6 +731,8 @@ __releases(&cde_app->mutex)
 
 	mutex_lock(&cde_app->mutex);
 
+	WARN(!cde_ctx->in_use, "double release cde context %p", cde_ctx);
+
 	cde_ctx->in_use = false;
 	list_move(&cde_ctx->list, &cde_app->free_contexts);
 	cde_app->ctx_usecount--;
@@ -1041,6 +1043,8 @@ __releases(&cde_app->mutex)
 		return;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx, "cde: finished %p", cde_ctx);
+	WARN(!cde_ctx->in_use, "double finish cde context %p on channel %p",
+			cde_ctx, ch);
 
 	if (ch->has_timedout) {
 		if (cde_ctx->is_temporary) {

@@ -1470,6 +1470,8 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 	struct vm_gk20a *vm = c->vm;
 	struct channel_gk20a_job *job, *n;
 
+	trace_gk20a_channel_update(c);
+
 	wake_up(&c->submit_wq);
 
 	mutex_lock(&c->submit_lock);

@@ -55,6 +55,14 @@ DEFINE_EVENT(gk20a, gk20a_finalize_poweron_done,
 	TP_ARGS(name)
 );
 
+TRACE_EVENT(gk20a_channel_update,
+	TP_PROTO(const void *channel),
+	TP_ARGS(channel),
+	TP_STRUCT__entry(__field(const void *, channel)),
+	TP_fast_assign(__entry->channel = channel;),
+	TP_printk("channel=%p", __entry->channel)
+);
+
 TRACE_EVENT(gk20a_push_cmdbuf,
 	TP_PROTO(const char *name, u32 mem_id,
 			u32 words, u32 offset, void *cmdbuf),

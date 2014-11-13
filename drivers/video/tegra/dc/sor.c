@@ -848,8 +848,6 @@ static inline void tegra_dc_sor_update(struct tegra_dc_sor_data *sor)
 	tegra_sor_writel(sor, NV_SOR_STATE0, 0);
 }
 
-
-
 static void tegra_dc_sor_io_set_dpd(struct tegra_dc_sor_data *sor, bool up)
 {
 	u32 reg_val;
@@ -1414,6 +1412,7 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 	tegra_dc_sor_enable_sor(sor, true);
 	tegra_dc_sor_enable_sor(sor, false);
 
+#if defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_13x_SOC)
 	/* Awake request */
 	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
 		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
@@ -1432,6 +1431,39 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 		dev_err(&dc->ndev->dev,
 			"dc timeout waiting for OPMOD = AWAKE\n");
 	}
+#else
+	tegra_dc_sor_update(sor);
+
+	/* Sleep request */
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
+		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
+		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
+		NV_SOR_SUPER_STATE1_ATTACHED_YES);
+	tegra_dc_sor_super_update(sor);
+
+	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
+		NV_SOR_TEST_ATTACHED_DEFAULT_MASK,
+		NV_SOR_TEST_ATTACHED_TRUE,
+		100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
+		dev_err(&dc->ndev->dev,
+			"dc timeout waiting for ATTACH = TRUE\n");
+	}
+
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
+		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
+		NV_SOR_SUPER_STATE1_ASY_ORMODE_NORMAL |
+		NV_SOR_SUPER_STATE1_ATTACHED_YES);
+	tegra_dc_sor_super_update(sor);
+
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
+		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
+		NV_SOR_SUPER_STATE1_ASY_ORMODE_NORMAL |
+		NV_SOR_SUPER_STATE1_ATTACHED_YES);
+
+	tegra_dc_sor_enable_dc(sor);
+
+	tegra_dc_sor_enable_sor(sor, true);
+#endif
 
 	tegra_dc_writel(dc, reg_val, DC_CMD_STATE_ACCESS);
 	tegra_dc_put(dc);
@@ -1550,6 +1582,7 @@ void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
 
 	tegra_dc_get(dc);
 
+#if defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_13x_SOC)
 	/* Sleep mode */
 	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
 		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
@@ -1571,6 +1604,40 @@ void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
 		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
 		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
 		NV_SOR_SUPER_STATE1_ATTACHED_NO);
+
+#else
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
+		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
+		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
+		NV_SOR_SUPER_STATE1_ATTACHED_YES);
+	tegra_dc_sor_super_update(sor);
+
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
+		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
+		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
+		NV_SOR_SUPER_STATE1_ATTACHED_YES);
+
+	tegra_dc_sor_disable_win_short_raster(dc, dc_reg_ctx);
+
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
+		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
+		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
+		NV_SOR_SUPER_STATE1_ATTACHED_NO);
+
+	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
+		NV_SOR_TEST_ATTACHED_DEFAULT_MASK,
+		NV_SOR_TEST_ATTACHED_FALSE,
+		100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
+		dev_err(&dc->ndev->dev,
+			"dc timeout waiting for ATTACH = FALSE\n");
+	}
+
+	tegra_sor_writel(sor, NV_SOR_STATE1,
+		NV_SOR_STATE1_ASY_OWNER_NONE |
+		NV_SOR_STATE1_ASY_SUBOWNER_NONE |
+		NV_SOR_STATE1_ASY_PROTOCOL_LVDS_CUSTOM);
+	tegra_dc_sor_update(sor);
+#endif
 
 	/* Mask DC interrupts during the 2 dummy frames required for detach */
 	dc_int_mask = tegra_dc_readl(dc, DC_CMD_INT_MASK);

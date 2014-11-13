@@ -22,9 +22,9 @@
 
 #include "gp10b/gr_gp10b.h"
 #include "gp10b/mc_gp10b.h"
+#include "gp10b/ltc_gp10b.h"
 
 #include "gm20b/gr_gm20b.h"
-#include "gm20b/ltc_gm20b.h"
 #include "gm20b/fb_gm20b.h"
 #include "gm20b/gm20b_gating_reglist.h"
 #include "gm20b/fifo_gm20b.h"
@@ -89,9 +89,8 @@ int gp10b_init_hal(struct gk20a *g)
 
 	*gops = gp10b_ops;
 	gp10b_init_mc(gops);
-	gm20b_init_ltc(gops);
 	gp10b_init_gr(gops);
-	gm20b_init_ltc(gops);
+	gp10b_init_ltc(gops);
 	gm20b_init_fb(gops);
 	gm20b_init_fifo(gops);
 	gm20b_init_gr_ctx(gops);

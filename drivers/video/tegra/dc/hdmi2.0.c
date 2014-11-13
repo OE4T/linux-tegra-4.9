@@ -43,6 +43,9 @@
 #include "hdmi2.0.h"
 #include "hdmihdcp.h"
 #include "dpaux.h"
+#ifdef CONFIG_ADF_TEGRA
+#include "tegra_adf.h"
+#endif
 
 #include <linux/tegra_prod.h>
 #include "../../../../arch/arm/mach-tegra/iomap.h"

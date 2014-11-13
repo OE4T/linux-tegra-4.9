@@ -272,9 +272,9 @@ struct gk20a_cde_app {
 
 	struct list_head free_contexts;
 	struct list_head used_contexts;
-	int ctx_count;
-	int ctx_usecount;
-	int ctx_count_top;
+	unsigned int ctx_count;
+	unsigned int ctx_usecount;
+	unsigned int ctx_count_top;
 
 	u32 firmware_version;
 

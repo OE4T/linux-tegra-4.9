@@ -494,4 +494,16 @@ static inline u32 ltc_ltc1_ltss_tstg_cmgmt1_clean_pending_f(void)
 {
 	return 0x1;
 }
+static inline u32 ltc_ltc0_lts0_tstg_info_1_r(void)
+{
+	return 0x0014058c;
+}
+static inline u32 ltc_ltc0_lts0_tstg_info_1_slice_size_in_kb_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 ltc_ltc0_lts0_tstg_info_1_slices_per_l2_v(u32 r)
+{
+	return (r >> 16) & 0x1f;
+}
 #endif

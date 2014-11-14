@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2010 Google, Inc.
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -502,6 +502,9 @@ static int _tegra_dc_set_mode(struct tegra_dc *dc,
 
 	print_mode(dc, mode, __func__);
 	dc->frametime_ns = calc_frametime_ns(mode);
+
+	tegra_dc_setup_vrr(dc);
+
 	return 0;
 }
 

@@ -495,6 +495,9 @@ int tegra_dc_config_frame_end_intr(struct tegra_dc *dc, bool enable);
 int _tegra_dc_wait_for_frame_end(struct tegra_dc *dc,
 	u32 timeout_ms);
 
+/* defined in dc.c, used in mode.c */
+void tegra_dc_setup_vrr(struct tegra_dc *dc);
+
 /* defined in bandwidth.c, used in dc.c */
 void tegra_dc_clear_bandwidth(struct tegra_dc *dc);
 void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new);
@@ -541,6 +544,9 @@ struct device_node *tegra_get_panel_node_out_type_check
 
 struct tegra_dc_platform_data
 	*of_dc_parse_platform_data(struct platform_device *ndev);
+
+/* defined in dc.c, used in dc.c and dev.c */
+void tegra_dc_set_act_vfp(struct tegra_dc *dc, int vfp);
 
 /* defined in dc.c, used in dc.c and window.c */
 bool tegra_dc_windows_are_dirty(struct tegra_dc *dc, u32 win_act_req_mask);

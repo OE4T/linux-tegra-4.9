@@ -481,6 +481,25 @@ parse_disp_defout_fail:
 	return err;
 }
 
+static int parse_vrr_settings(struct platform_device *ndev,
+		struct device_node *np,
+		struct tegra_vrr *vrr)
+{
+	u32 temp;
+
+	if (!of_property_read_u32(np, "nvidia,vrr_min_fps", &temp)) {
+		vrr->vrr_min_fps = (unsigned) temp;
+		OF_DC_LOG("vrr_min_fps %d\n", vrr_min_fps);
+	}
+
+	if (!of_property_read_u32(np, "nvidia,vrr_max_fps", &temp)) {
+		vrr->vrr_max_fps = (unsigned) temp;
+		OF_DC_LOG("vrr_max_fps %d\n", vrr_max_fps);
+	}
+
+	return 0;
+}
+
 static int parse_tmds_config(struct platform_device *ndev,
 	struct device_node *np, struct tegra_dc_out *default_out)
 {
@@ -1825,6 +1844,7 @@ struct tegra_dc_platform_data
 	struct device_node *np_hdmi = NULL;
 	struct device_node *np_dp_panel = NULL;
 	struct device_node *timings_np = NULL;
+	struct device_node *vrr_np = NULL;
 	struct device_node *np_target_disp = NULL;
 	struct device_node *sd_np = NULL;
 	struct device_node *default_out_np = NULL;
@@ -2031,9 +2051,24 @@ struct tegra_dc_platform_data
 			goto fail_parse;
 	}
 
+	vrr_np = of_get_child_by_name(np_target_disp, "vrr-settings");
+	if (!vrr_np) {
+		pr_info("%s: could not find vrr-settings node\n", __func__);
+	} else {
+		pdata->default_out->vrr = devm_kzalloc(&ndev->dev,
+				sizeof(struct tegra_vrr), GFP_KERNEL);
+		if (!pdata->default_out->vrr) {
+			dev_err(&ndev->dev, "not enough memory\n");
+			goto fail_parse;
+		}
 
-	timings_np = of_get_child_by_name(np_target_disp,
-		"display-timings");
+		err = parse_vrr_settings(ndev, vrr_np,
+					   pdata->default_out->vrr);
+		if (err)
+			goto fail_parse;
+	}
+
+	timings_np = of_get_child_by_name(np_target_disp, "display-timings");
 	if (!timings_np) {
 		if (pdata->default_out->type == TEGRA_DC_OUT_DSI) {
 			pr_err("%s: could not find display-timings node\n",
@@ -2042,7 +2077,7 @@ struct tegra_dc_platform_data
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_DSI ||
 		   pdata->default_out->type == TEGRA_DC_OUT_FAKE_DP ||
-			pdata->default_out->type == TEGRA_DC_OUT_LVDS) {
+		   pdata->default_out->type == TEGRA_DC_OUT_LVDS) {
 		/* pdata->default_out->type == TEGRA_DC_OUT_DSI or
 		 * pdata->default_out->type == TEGRA_DC_OUT_LVDS
 		 */

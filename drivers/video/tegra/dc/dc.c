@@ -1400,6 +1400,29 @@ static const struct file_operations dbg_hotplug_fops = {
 	.release	= single_release,
 };
 
+static int tegra_vrr_dbg_show(struct seq_file *m, void *unused)
+{
+	struct tegra_vrr *vrr = m->private;
+
+	if (!vrr) return -EINVAL;
+
+	seq_printf(m, "vrr enable state: %d\n", vrr->enable);
+
+	return 0;
+}
+
+static int tegra_vrr_dbg_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, tegra_vrr_dbg_show, inode->i_private);
+}
+
+static const struct file_operations tegra_vrr_dbg_ops = {
+	.open = tegra_vrr_dbg_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static void tegra_dc_remove_debugfs(struct tegra_dc *dc)
 {
 	if (dc->debugdir)
@@ -1409,7 +1432,7 @@ static void tegra_dc_remove_debugfs(struct tegra_dc *dc)
 
 static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 {
-	struct dentry *retval;
+	struct dentry *retval, *vrrdir;
 	char   devname[50];
 
 	snprintf(devname, sizeof(devname), "tegradc.%d", dc->ctrl_num);
@@ -1455,6 +1478,15 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 			goto remove_out;
 	}
 
+	vrrdir = debugfs_create_dir("vrr",  dc->debugdir);
+	if (!vrrdir)
+		goto remove_out;
+
+	retval = debugfs_create_file("enable", S_IRUGO, vrrdir,
+				dc->out->vrr, &tegra_vrr_dbg_ops);
+	if (!retval)
+		goto remove_out;
+
 	return;
 remove_out:
 	dev_err(&dc->ndev->dev, "could not create debugfs\n");
@@ -1466,6 +1498,68 @@ static inline void tegra_dc_create_debugfs(struct tegra_dc *dc) { };
 static inline void tegra_dc_remove_debugfs(struct tegra_dc *dc) { };
 #endif /* CONFIG_DEBUGFS */
 
+static s32 tegra_dc_calc_v_front_porch(struct tegra_dc_mode *mode,
+				int desired_fps)
+{
+	int vfp = 0;
+
+	if (desired_fps > 0) {
+		int line = mode->h_sync_width + mode->h_back_porch +
+			mode->h_active + mode->h_front_porch;
+		int lines_per_frame = mode->pclk / line / desired_fps;
+		vfp = lines_per_frame - mode->v_sync_width -
+			mode->v_active - mode->v_back_porch;
+	}
+
+	return vfp;
+}
+
+void tegra_dc_setup_vrr(struct tegra_dc *dc)
+{
+	int lines_per_frame_max, lines_per_frame_min;
+
+	struct tegra_dc_mode *m = &dc->mode;
+	struct tegra_vrr *vrr  = dc->out->vrr;
+
+	if (!vrr) return;
+
+	vrr->v_front_porch = m->v_front_porch;
+	vrr->v_back_porch = m->v_back_porch;
+
+	if (vrr->vrr_min_fps > 0)
+		vrr->v_front_porch_max = tegra_dc_calc_v_front_porch(m,
+				vrr->vrr_min_fps);
+
+	if (vrr->vrr_max_fps > 0)
+		vrr->v_front_porch_min = tegra_dc_calc_v_front_porch(m,
+				vrr->vrr_max_fps);
+
+	vrr->line_width = m->h_sync_width + m->h_back_porch +
+			m->h_active + m->h_front_porch;
+	vrr->lines_per_frame_common = m->v_sync_width +
+			m->v_back_porch + m->v_active;
+	lines_per_frame_max = vrr->lines_per_frame_common +
+			vrr->v_front_porch_max;
+	lines_per_frame_min = vrr->lines_per_frame_common +
+			vrr->v_front_porch_min;
+
+	if (lines_per_frame_max < 2*lines_per_frame_min) {
+		pr_err("max fps is less than 2 times min fps.\n");
+		return;
+	}
+
+	vrr->frame_len_max = vrr->line_width * lines_per_frame_max /
+					(m->pclk / 1000000);
+	vrr->frame_len_min = vrr->line_width * lines_per_frame_min /
+					(m->pclk / 1000000);
+	if(vrr->v_front_porch_min < vrr->v_front_porch)
+		vrr->v_front_porch_min = vrr->v_front_porch;
+	vrr->vfp_extend = vrr->v_front_porch_max;
+	vrr->vfp_shrink = vrr->v_front_porch_min;
+	vrr->frame_len_fluct = 2000;
+	vrr->frame_type = 0;
+	vrr->frame_time_delta_us = 0;
+}
 unsigned long tegra_dc_poll_register(struct tegra_dc *dc, u32 reg, u32 mask,
 		u32 exp_val, u32 poll_interval_us, u32 timeout_ms)
 {
@@ -2459,6 +2553,18 @@ static void tegra_dc_prism_update_backlight(struct tegra_dc *dc)
 		struct backlight_device *bl = dc->out->sd_settings->bl_device;
 		backlight_update_status(bl);
 	}
+}
+
+void tegra_dc_set_act_vfp(struct tegra_dc *dc, int vfp)
+{
+	WARN_ON(!mutex_is_locked(&dc->lock));
+
+	tegra_dc_writel(dc, WRITE_MUX_ACTIVE | READ_MUX_ACTIVE,
+			DC_CMD_STATE_ACCESS);
+	tegra_dc_writel(dc, dc->mode.h_front_porch |
+			(vfp << 16), DC_DISP_FRONT_PORCH);
+	tegra_dc_writel(dc, WRITE_MUX_ASSEMBLY | READ_MUX_ASSEMBLY,
+			DC_CMD_STATE_ACCESS);
 }
 
 static void tegra_dc_vblank(struct work_struct *work)

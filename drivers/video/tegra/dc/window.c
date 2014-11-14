@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2010 Google, Inc.
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -499,6 +499,46 @@ void tegra_dc_win_partial_update(struct tegra_dc *dc, struct tegra_dc_win *win,
 		/* Update shadow registers */
 		memcpy(&dc->shadow_windows[win->idx], win,
 			sizeof(struct tegra_dc_win));
+	}
+}
+
+void tegra_dc_vrr_frame_time(struct tegra_dc *dc)
+{
+	struct timespec time_now;
+	struct tegra_vrr *vrr  = dc->out->vrr;
+
+	if (!vrr) return;
+
+	if (vrr->enable) {
+		vrr->lastenable = 1;
+		getnstimeofday(&time_now);
+		vrr->curr_flip_us = (s64)time_now.tv_sec * 1000000 +
+				time_now.tv_nsec / 1000;
+
+		vrr->flip = 1;
+	}
+	else {
+		vrr->curr_flip_us = 0;
+		vrr->last_flip_us = 0;
+	}
+}
+
+static void tegra_dc_vrr_cancel_vfp(struct tegra_dc *dc)
+{
+	struct tegra_vrr *vrr  = dc->out->vrr;
+
+	if (!vrr) return;
+
+	if (vrr->enable) {
+		tegra_dc_set_act_vfp(dc, vrr->vfp_shrink);
+	}
+	else {
+ 		if(vrr->lastenable) {
+			tegra_dc_set_act_vfp(dc, vrr->v_front_porch);
+			vrr->lastenable = 0;
+			vrr->frame_type = 0;
+			vrr->last_frame_us = 0;
+		}
 	}
 }
 
@@ -1038,6 +1078,8 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 			tegra_dc_get_window(dc, windows[i]->idx)->dirty = 0;
 	}
 
+	tegra_dc_vrr_frame_time(dc);
+	tegra_dc_vrr_cancel_vfp(dc);
 	mutex_unlock(&dc->lock);
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		mutex_unlock(&dc->one_shot_lock);

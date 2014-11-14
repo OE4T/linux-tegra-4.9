@@ -3456,6 +3456,9 @@ static struct rm_spi_ts_platform_data *rm_ts_parse_dt(struct device *dev,
 		goto exit_release_all_gpio;
 	pdata->name_of_clock_con = (char *)str;
 
+	pdata->gpio_sensor_select0 = of_property_read_bool(np, "gpio-sensor-select0");
+	pdata->gpio_sensor_select1 = of_property_read_bool(np, "gpio-sensor-select1");
+
 	return pdata;
 
 exit_release_all_gpio:

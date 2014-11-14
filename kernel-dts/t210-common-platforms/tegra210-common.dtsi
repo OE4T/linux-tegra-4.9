@@ -23,6 +23,7 @@
 #include "tegra210-platforms/tegra210-ers-touch-e1937-1000-a00.dtsi"
 
 / {
+	nvidia,dtbbuildtime = __DATE__, __TIME__;
 
 	serial@70006000 {
 		compatible = "nvidia,tegra210-uart", "nvidia,tegra114-hsuart";

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Driver Entrypoint
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -128,16 +128,6 @@ void nvhost_device_list_remove(struct platform_device *pdev)
 		}
 	}
 }
-
-static unsigned int register_sets = 2;
-
-void nvhost_set_register_sets(unsigned int r)
-{
-	register_sets = r;
-}
-
-module_param_call(register_sets, NULL, param_get_uint, &register_sets, 0444);
-MODULE_PARM_DESC(register_sets, "Number of register sets");
 
 MODULE_AUTHOR("NVIDIA");
 MODULE_DESCRIPTION("Graphics host driver for Tegra products");

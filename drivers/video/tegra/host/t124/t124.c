@@ -94,7 +94,7 @@ struct nvhost_device_data t124_host1x_info = {
 };
 
 
-struct platform_device tegra_host1x04_device = {
+static struct platform_device tegra_host1x04_device = {
 	.name		= "host1x",
 	.id		= -1,
 #ifdef CONFIG_ARCH_TEGRA

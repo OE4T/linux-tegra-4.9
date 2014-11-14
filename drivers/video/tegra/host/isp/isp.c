@@ -519,7 +519,7 @@ static int isp_set_la(struct isp *tegra_isp, uint isp_bw, uint la_client)
 	return ret;
 }
 
-long isp_ioctl(struct file *file,
+static long isp_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)
 {
 	struct isp *tegra_isp;

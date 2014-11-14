@@ -41,6 +41,7 @@
 #include "class_ids.h"
 #include "nvhost_cdma.h"
 #include "t210/t210.h"
+#include "vii2c.h"
 
 #define POWERGATE_DELAY		10
 

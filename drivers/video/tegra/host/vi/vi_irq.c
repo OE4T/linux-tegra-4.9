@@ -20,6 +20,7 @@
 
 #include "nvhost_acm.h"
 #include "vi.h"
+#include "vi_irq.h"
 
 int vi_enable_irq(struct vi *tegra_vi)
 {

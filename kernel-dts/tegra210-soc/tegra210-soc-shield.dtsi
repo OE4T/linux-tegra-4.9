@@ -17,8 +17,6 @@
 #include "tegra210-platforms/tegra210-bthrot-cdev.dtsi"
 
 / {
-	nvidia,dtbbuildtime = __DATE__, __TIME__;
-
 	aliases {
 		i2c0 = &i2c1;
 		i2c1 = &i2c2;

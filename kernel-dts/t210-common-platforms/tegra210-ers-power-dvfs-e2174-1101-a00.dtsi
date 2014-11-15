@@ -34,9 +34,9 @@
 		};
 
 		dfll_ovr_params: dfll-ovr-board-params {
-			sample-rate = <50000>;
+			sample-rate = <25000>;
 			fixed-output-forcing;
-			cf = <10>;
+			cf = <6>;
 			ci = <0>;
 			cg = <2>;
 			droop-cut-value = <0xf>;

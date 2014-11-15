@@ -130,6 +130,12 @@
 		};
 	};
 
+	backlight {
+		compatible = "pwm-backlight";
+		status = "okay";
+		pwms = <&tegra_pwm 0 29334>;
+	};
+
 	host1x {
 		/* tegradc.0 */
 		dc@54200000 {

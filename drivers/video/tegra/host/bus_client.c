@@ -298,7 +298,7 @@ static int __nvhost_channelopen(struct inode *inode,
 	if (!tegra_platform_is_silicon())
 		priv->timeout = 0;
 
-	priv->vm = nvhost_vm_allocate(ch->dev);
+	priv->vm = nvhost_vm_allocate(pdev);
 
 	mutex_unlock(&channel_lock);
 

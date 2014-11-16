@@ -502,6 +502,7 @@ static int power_off_host(struct platform_device *dev)
 {
 	struct nvhost_master *host = nvhost_get_private_data(dev);
 
+	nvhost_channel_suspend(host);
 	nvhost_syncpt_save(&host->syncpt);
 	return 0;
 }

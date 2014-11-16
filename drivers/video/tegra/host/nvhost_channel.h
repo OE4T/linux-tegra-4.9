@@ -82,7 +82,7 @@ int nvhost_channel_submit(struct nvhost_job *job);
 
 void nvhost_getchannel(struct nvhost_channel *ch);
 void nvhost_putchannel(struct nvhost_channel *ch, int cnt);
-int nvhost_channel_suspend(struct nvhost_channel *ch);
+int nvhost_channel_suspend(struct nvhost_master *host);
 
 int nvhost_channel_read_reg(struct nvhost_channel *channel,
 	u32 offset, u32 *value);

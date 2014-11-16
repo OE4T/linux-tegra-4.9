@@ -340,12 +340,15 @@ void nvhost_putchannel(struct nvhost_channel *ch, int cnt)
 	mutex_unlock(&host->chlist_mutex);
 }
 
-int nvhost_channel_suspend(struct nvhost_channel *ch)
+int nvhost_channel_suspend(struct nvhost_master *host)
 {
-	int ret = 0;
+	int i;
 
-	if (channel_cdma_op().stop && ch->dev)
-		channel_cdma_op().stop(&ch->cdma);
+	for (i = 0; i < host->info.nb_channels; i++) {
+		struct nvhost_channel *ch = host->chlist[i];
+		if (channel_cdma_op().stop && ch->dev)
+			channel_cdma_op().stop(&ch->cdma);
+	}
 
-	return ret;
+	return 0;
 }

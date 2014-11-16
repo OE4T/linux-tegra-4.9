@@ -941,10 +941,6 @@ int nvhost_module_disable_clk(struct device *dev)
 	trace_nvhost_module_disable_clk(pdata->pdev->name,
 					pdata->num_clks);
 
-	for (index = 0; index < pdata->num_channels; index++)
-		if (pdata->channels && pdata->channels[index])
-			nvhost_channel_suspend(pdata->channels[index]);
-
 	for (index = 0; index < pdata->num_clks; index++)
 		clk_disable_unprepare(pdata->clk[index]);
 

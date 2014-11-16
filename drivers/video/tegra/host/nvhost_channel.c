@@ -155,7 +155,9 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 	/* turn off channel cdma */
 	channel_cdma_op().stop(&ch->cdma);
 
-	pdata->num_mapped_chs--;
+	/* this is used only if we map channel on open */
+	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
+		pdata->num_mapped_chs--;
 
 	/* log this event */
 	dev_dbg(&ch->dev->dev, "channel %d un-mapped\n", ch->chid);
@@ -179,7 +181,9 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 	ch->aperture = NULL;
 	ch->refcount = 0;
 	ch->identifier = NULL;
-	pdata->channels[ch->dev_chid] = NULL;
+
+	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
+		pdata->channels[ch->dev_chid] = NULL;
 
 	return 0;
 }

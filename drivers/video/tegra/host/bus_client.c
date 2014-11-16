@@ -210,6 +210,11 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 
 	nvhost_vm_put(priv->vm);
 
+	/* If the device is in exclusive mode, drop the reference */
+	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_SUBMIT &&
+	    pdata->exclusive)
+		pdata->num_mapped_chs--;
+
 	mutex_unlock(&channel_lock);
 
 	/* drop channel reference if we took one at open time */
@@ -268,6 +273,14 @@ static int __nvhost_channelopen(struct inode *inode,
 	trace_nvhost_channel_open(dev_name(&pdev->dev));
 
 	mutex_lock(&channel_lock);
+
+	/* If the device is in exclusive mode, make channel reservation here */
+	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_SUBMIT &&
+	    pdata->exclusive) {
+		if (pdata->num_mapped_chs == pdata->num_channels)
+			goto fail;
+		pdata->num_mapped_chs++;
+	}
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv)

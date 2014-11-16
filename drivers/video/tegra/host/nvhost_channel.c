@@ -152,23 +152,15 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 		return 0;
 	}
 
-	dev_dbg(&ch->dev->dev, "channel %d un-mapped\n", ch->chid);
+	/* turn off channel cdma */
+	channel_cdma_op().stop(&ch->cdma);
 
 	pdata->num_mapped_chs--;
 
+	/* log this event */
+	dev_dbg(&ch->dev->dev, "channel %d un-mapped\n", ch->chid);
 	trace_nvhost_channel_unmap_locked(pdata->pdev->name, ch->chid,
 		pdata->num_mapped_chs);
-
-	/* Allow keep-alive'd module to be turned off
-	 * make sure that all channels are unmapped before calling
-	 * nvhost_module_enable_poweroff
-	 */
-	if (!pdata->num_mapped_chs) {
-		channel_cdma_op().stop(&ch->cdma);
-
-		if (pdata->keepalive)
-			nvhost_module_enable_poweroff(pdata->pdev);
-	}
 
 	if (nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL) {
 		/* Release channel syncpoints */
@@ -287,10 +279,6 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 		host->next_free_ch = 0;
 	else
 		host->next_free_ch = index + 1;
-
-	/* Keep alive modules that needs to be when a channel is open */
-	if (pdata->keepalive && pdata->num_mapped_chs)
-		nvhost_module_disable_poweroff(pdata->pdev);
 
 	 trace_nvhost_channel_map(pdata->pdev->name, ch->chid,
 		pdata->num_mapped_chs);

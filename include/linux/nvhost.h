@@ -232,7 +232,9 @@ struct nvhost_device_data {
 	/* flag to enable gather filter for device */
 	bool gather_filter_enabled;
 
+	struct mutex no_poweroff_req_mutex;
 	struct dev_pm_qos_request no_poweroff_req;
+	int no_poweroff_req_count;
 
 	struct notifier_block		toggle_slcg_notifier;
 

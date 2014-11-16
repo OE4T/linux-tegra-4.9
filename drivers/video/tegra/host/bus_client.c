@@ -194,6 +194,7 @@ struct nvhost_channel_userctx {
 static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 {
 	struct nvhost_channel_userctx *priv = filp->private_data;
+	struct nvhost_device_data *pdata = platform_get_drvdata(priv->pdev);
 	int i = 0;
 
 	trace_nvhost_channel_release(dev_name(&priv->pdev->dev));
@@ -224,6 +225,9 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 			}
 		}
 	}
+
+	if (pdata->keepalive)
+		nvhost_module_enable_poweroff(priv->pdev);
 
 	kfree(priv);
 	return 0;
@@ -273,6 +277,10 @@ static int __nvhost_channelopen(struct inode *inode,
 	/* Register this client to acm */
 	if (nvhost_module_add_client(pdev, priv))
 		goto fail_add_client;
+
+	/* Keep devices with keepalive flag powered */
+	if (pdata->keepalive)
+		nvhost_module_disable_poweroff(pdev);
 
 	/* Check that the device can be powered */
 	ret = nvhost_module_busy(pdev);

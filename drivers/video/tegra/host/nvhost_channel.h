@@ -29,7 +29,6 @@
 #define NVHOST_MAX_GATHERS		512
 #define NVHOST_MAX_HANDLES		1280
 #define NVHOST_MAX_POWERGATE_IDS	2
-#define NVHOST_INVALID_CHANNEL		-1
 
 struct nvhost_master;
 struct platform_device;

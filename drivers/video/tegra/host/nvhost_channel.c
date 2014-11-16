@@ -32,50 +32,56 @@
 
 #define NVHOST_CHANNEL_LOW_PRIO_MAX_WAIT 50
 
-/* Constructor for the host1x device list */
-static int nvhost_channel_list_init(struct nvhost_master *host)
+/* Memory allocation for all supported channels */
+int nvhost_alloc_channels(struct nvhost_master *host)
 {
+	int max_channels = host->info.nb_channels;
+	struct nvhost_channel *ch;
+	int i, err;
+
 	if (host->info.nb_channels > BITS_PER_LONG) {
 		WARN(1, "host1x hardware has more channels than supported\n");
 		return -ENOSYS;
 	}
 
 	host->chlist = kzalloc(host->info.nb_channels *
-				sizeof(struct nvhost_channel *), GFP_KERNEL);
+			       sizeof(struct nvhost_channel *), GFP_KERNEL);
 	if (host->chlist == NULL)
-			return -ENOMEM;
+		return -ENOMEM;
 
 	mutex_init(&host->chlist_mutex);
 
-	return 0;
-}
-
-/* Memory allocation for all supported channels */
-int nvhost_alloc_channels(struct nvhost_master *host)
-{
-	int max_channels = host->info.nb_channels;
-	int i, err = 0;
-	struct nvhost_channel *ch;
-
-	err = nvhost_channel_list_init(host);
-	if (err) {
-		dev_err(&host->dev->dev, "failed to init channel list\n");
-		return err;
-	}
-
-	mutex_lock(&host->chlist_mutex);
 	for (i = 0; i < max_channels; i++) {
-		ch = nvhost_alloc_channel_internal(i, max_channels);
+		ch = kzalloc(sizeof(*ch), GFP_KERNEL);
 		if (!ch) {
 			dev_err(&host->dev->dev, "failed to alloc channels\n");
-			mutex_unlock(&host->chlist_mutex);
 			return -ENOMEM;
 		}
+
+		/* initialize data structures */
+		nvhost_set_chanops(ch);
+		mutex_init(&ch->submitlock);
+		mutex_init(&ch->syncpts_lock);
+		ch->chid = i;
+
+		/* initialize channel cdma */
+		err = nvhost_cdma_init(host->dev, &ch->cdma);
+		if (err) {
+			dev_err(&host->dev->dev, "failed to initialize cdma\n");
+			return err;
+		}
+
+		/* initialize hw specifics */
+		err = channel_op(ch).init(ch, host);
+		if (err < 0) {
+			dev_err(&host->dev->dev, "failed to init channel %d\n",
+				ch->chid);
+			return err;
+		}
+
+		/* store the channel */
 		host->chlist[i] = ch;
-		ch->dev = NULL;
-		ch->chid = NVHOST_INVALID_CHANNEL;
 	}
-	mutex_unlock(&host->chlist_mutex);
 
 	return 0;
 }
@@ -90,7 +96,7 @@ struct nvhost_channel *nvhost_check_channel(struct nvhost_device_data *pdata)
 
 	for (i = 0; i < pdata->num_channels; i++) {
 		ch = pdata->channels[i];
-		if (ch && ch->chid != NVHOST_INVALID_CHANNEL)
+		if (ch)
 			return ch;
 	}
 
@@ -147,11 +153,6 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 
 	max_channels = host->info.nb_channels;
 
-	if (ch->chid == NVHOST_INVALID_CHANNEL) {
-		dev_err(&host->dev->dev, "Freeing un-mapped channel\n");
-		return 0;
-	}
-
 	/* turn off channel cdma */
 	channel_cdma_op().stop(&ch->cdma);
 
@@ -176,9 +177,7 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 
 	clear_bit(ch->chid, &host->allocated_channels);
 
-	ch->chid = NVHOST_INVALID_CHANNEL;
 	ch->dev = NULL;
-	ch->aperture = NULL;
 	ch->refcount = 0;
 	ch->identifier = NULL;
 
@@ -197,7 +196,6 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 	struct nvhost_channel *ch = NULL;
 	int max_channels = 0;
 	int index = 0;
-	int err = 0;
 
 	if (!pdata) {
 		pr_err("%s: NULL device data\n", __func__);
@@ -232,15 +230,8 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 	}
 
 	do {
-		index = find_next_zero_bit(&host->allocated_channels,
-					max_channels, host->next_free_ch);
-
-		if (index >= max_channels) {
-			/* Reset next pointer and try */
-			host->next_free_ch = 0;
-			index = find_next_zero_bit(&host->allocated_channels,
-					max_channels, host->next_free_ch);
-		}
+		index = find_first_zero_bit(&host->allocated_channels,
+					    max_channels);
 		if (index >= max_channels) {
 			mutex_unlock(&host->chlist_mutex);
 			if (nvhost_get_channel_policy() !=
@@ -251,43 +242,22 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 		}
 	} while (index >= max_channels);
 
-	/* Get channel from list and map to device */
+	/* Reserve the channel */
+	set_bit(index, &host->allocated_channels);
 	ch = host->chlist[index];
-	if (!ch || (ch->chid != NVHOST_INVALID_CHANNEL)) {
-		dev_err(&host->dev->dev, "%s: wrong channel map\n", __func__);
-		mutex_unlock(&host->chlist_mutex);
-		return -EINVAL;
-	}
 
+	/* Bind the reserved channel to the device */
 	ch->dev = pdata->pdev;
-	ch->chid = index;
 	ch->identifier = identifier;
 	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
 		nvhost_channel_assign(pdata, ch);
-	nvhost_set_chanops(ch);
-	set_bit(ch->chid, &host->allocated_channels);
-	mutex_init(&ch->syncpts_lock);
 	ch->refcount = 1;
 
-	/* Initialize channel */
-	err = nvhost_channel_init(ch, host);
-	if (err) {
-		dev_err(&ch->dev->dev, "%s: channel init failed\n", __func__);
-		nvhost_channel_unmap_locked(ch);
-		mutex_unlock(&host->chlist_mutex);
-		return err;
-	}
-
-	/* set next free channel */
-	if (index >= (max_channels - 1))
-		host->next_free_ch = 0;
-	else
-		host->next_free_ch = index + 1;
-
-	 trace_nvhost_channel_map(pdata->pdev->name, ch->chid,
-		pdata->num_mapped_chs);
-
+	/* Handle logging */
+	trace_nvhost_channel_map(pdata->pdev->name, ch->chid,
+				 pdata->num_mapped_chs);
 	dev_dbg(&ch->dev->dev, "channel %d mapped\n", ch->chid);
+
 	mutex_unlock(&host->chlist_mutex);
 
 	*channel = ch;
@@ -305,28 +275,6 @@ int nvhost_channel_list_free(struct nvhost_master *host)
 	dev_info(&host->dev->dev, "channel list free'd\n");
 
 	return 0;
-}
-
-int nvhost_channel_init(struct nvhost_channel *ch,
-		struct nvhost_master *dev)
-{
-	int err = 0;
-
-	/* Link platform_device to nvhost_channel */
-	err = channel_op(ch).init(ch, dev);
-	if (err < 0) {
-		dev_err(&dev->dev->dev, "failed to init channel %d\n",
-				ch->chid);
-		return err;
-	}
-
-	if (!ch->cdma_initialized) {
-		err = nvhost_cdma_init(&ch->cdma);
-		if (!err)
-			ch->cdma_initialized = true;
-	}
-
-	return err;
 }
 
 void nvhost_channel_init_gather_filter(struct nvhost_channel *ch)
@@ -400,16 +348,4 @@ int nvhost_channel_suspend(struct nvhost_channel *ch)
 		channel_cdma_op().stop(&ch->cdma);
 
 	return ret;
-}
-
-struct nvhost_channel *nvhost_alloc_channel_internal(int chindex,
-			int max_channels)
-{
-	struct nvhost_channel *ch = NULL;
-
-	ch = kzalloc(sizeof(*ch), GFP_KERNEL);
-	if (ch)
-		ch->chid = chindex;
-
-	return ch;
 }

@@ -344,11 +344,6 @@ static void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
 	u32 cmdproc_stop;
 
-	if (ch->chid == NVHOST_INVALID_CHANNEL) {
-		pr_warn("%s: un-mapped channel\n", __func__);
-		return;
-	}
-
 	dev = cdma_to_dev(cdma);
 	if (cdma->torndown && !cdma->running) {
 		dev_warn(&dev->dev->dev, "Already torn down\n");
@@ -405,11 +400,6 @@ static void cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 	struct nvhost_master *dev;
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
 	u32 cmdproc_stop;
-
-	if (ch->chid == NVHOST_INVALID_CHANNEL) {
-		pr_warn("%s: Channel un-mapped\n", __func__);
-		return;
-	}
 
 	dev = cdma_to_dev(cdma);
 	dev_dbg(&dev->dev->dev,

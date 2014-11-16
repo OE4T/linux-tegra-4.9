@@ -359,7 +359,8 @@ out:
 /**
  * Create a cdma
  */
-int nvhost_cdma_init(struct nvhost_cdma *cdma)
+int nvhost_cdma_init(struct platform_device *pdev,
+		     struct nvhost_cdma *cdma)
 {
 	int err;
 	struct push_buffer *pb = &cdma->push_buffer;
@@ -371,6 +372,7 @@ int nvhost_cdma_init(struct nvhost_cdma *cdma)
 	cdma->event = CDMA_EVENT_NONE;
 	cdma->running = false;
 	cdma->torndown = false;
+	cdma->pdev = pdev;
 
 	err = cdma_pb_op().init(pb);
 	if (err)

@@ -2042,19 +2042,31 @@ int tegra_dc_get_out(const struct tegra_dc *dc)
 
 unsigned tegra_dc_get_out_height(const struct tegra_dc *dc)
 {
-	if (dc->out)
-		return dc->out->height;
-	else
-		return 0;
+	unsigned height = 0;
+
+	if (dc->out) {
+		if (dc->out->height)
+			height = dc->out->height;
+		else if (dc->out->h_size && dc->out->v_size)
+			height = dc->out->v_size;
+	}
+
+	return height;
 }
 EXPORT_SYMBOL(tegra_dc_get_out_height);
 
 unsigned tegra_dc_get_out_width(const struct tegra_dc *dc)
 {
-	if (dc->out)
-		return dc->out->width;
-	else
-		return 0;
+	unsigned width = 0;
+
+	if (dc->out) {
+		if (dc->out->width)
+			width = dc->out->width;
+		else if (dc->out->h_size && dc->out->v_size)
+			width = dc->out->h_size;
+	}
+
+	return width;
 }
 EXPORT_SYMBOL(tegra_dc_get_out_width);
 

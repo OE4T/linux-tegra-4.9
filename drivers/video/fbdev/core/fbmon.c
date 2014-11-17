@@ -1128,19 +1128,20 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 			/* Check Vendor Specific Data Block.  For HDMI,
 			   it is always 00-0C-03 for HDMI Licensing, LLC. */
 			if (edid[pos] == 3 && edid[pos + 1] == 0xc &&
-			    edid[pos + 2] == 0)
+			    edid[pos + 2] == 0) {
 				specs->misc |= FB_MISC_HDMI;
+				/* HDMI_Video_Format @HDMI 1.4 ch8.2.3*/
+				if (edid[pos + 2] >> 5 != 0) {
+					fb_hvd_parse(edid, &hvd, pos + 3);
+					hdmi_num = hvd.hdmi_vic_len;
+				}
+			}
 
 			/* OUI for hdmi forum: C4-5D-D8 */
 			if (edid[pos] == 0xc4 && edid[pos + 1] == 0x5d &&
 			    edid[pos + 2] == 0xd8)
 				specs->misc |= FB_MISC_HDMI_FORUM;
 
-			/* HDMI_Video_Format @HDMI 1.4 ch8.2.3*/
-			if (edid[pos + 2] >> 5 != 0) {
-				fb_hvd_parse(edid, &hvd, pos + 3);
-				hdmi_num = hvd.hdmi_vic_len;
-			}
 		} else if (type == CEA_DATA_BLOCK_EXT) {
 			u32 ext_type = edid[pos];
 

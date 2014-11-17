@@ -230,6 +230,8 @@ struct fb_bitfield {
 
 #define FB_FLAG_RATIO_4_3	64
 #define FB_FLAG_RATIO_16_9	128
+#define FB_FLAG_RATIO_64_27	512
+#define FB_FLAG_RATIO_256_135	1024
 #define FB_FLAG_PIXEL_REPEAT	256
 
 /*

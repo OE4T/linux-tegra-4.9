@@ -70,6 +70,12 @@
 		cpu_suspend = <0xC4000001>;
 	};
 
+	tlk {
+		compatible = "nvidia,trusted-little-kernel";
+		logger = "enabled";
+		storage = "enabled";
+	};
+
 	arm-pmu {
 		compatible = "arm,armv8-pmuv3";
 		status = "disabled";

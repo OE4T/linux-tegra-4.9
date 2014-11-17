@@ -159,9 +159,6 @@ static u32 push_buffer_putptr(struct push_buffer *pb)
 static int cdma_timeout_init(struct nvhost_cdma *cdma,
 				 u32 syncpt_id)
 {
-	if (syncpt_id == NVSYNCPT_INVALID)
-		return -EINVAL;
-
 	INIT_DELAYED_WORK(&cdma->timeout.wq, cdma_timeout_handler);
 	cdma->timeout.initialized = true;
 
@@ -343,11 +340,6 @@ static void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
 	u32 cmdproc_stop;
 
-	if (ch->chid == NVHOST_INVALID_CHANNEL) {
-		pr_warn("%s: un-mapped channel\n", __func__);
-		return;
-	}
-
 	dev = cdma_to_dev(cdma);
 	if (cdma->torndown && !cdma->running) {
 		dev_warn(&dev->dev->dev, "Already torn down\n");
@@ -404,11 +396,6 @@ static void cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 	struct nvhost_master *dev;
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
 	u32 cmdproc_stop;
-
-	if (ch->chid == NVHOST_INVALID_CHANNEL) {
-		pr_warn("%s: Channel un-mapped\n", __func__);
-		return;
-	}
 
 	dev = cdma_to_dev(cdma);
 	dev_dbg(&dev->dev->dev,

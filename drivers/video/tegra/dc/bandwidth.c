@@ -606,7 +606,7 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 			break;
 		}
 
-		next_freq = clk_round_rate(emc_clk, emc_freq_hz + 1);
+		next_freq = clk_round_rate(emc_clk, emc_freq_hz + 1000000);
 
 		if (emc_freq_hz != next_freq)
 			emc_freq_hz = next_freq;

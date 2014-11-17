@@ -22,6 +22,7 @@
 #include <linux/dma-buf.h>
 
 #include "nvhost_vm.h"
+#include "dev.h"
 
 struct nvhost_vm {
 	struct platform_device *pdev;
@@ -29,8 +30,8 @@ struct nvhost_vm {
 	struct kref kref;	/* reference to this VM */
 	struct mutex mutex;
 
-	/* list of buffers mapped into this VM */
-	struct list_head buffer_list;
+	/* rb-tree of buffers mapped into this VM */
+	struct rb_root buffer_list;
 
 	/* count of application viewed buffers mapped into this VM */
 	unsigned int num_user_mapped_buffers;
@@ -53,7 +54,7 @@ struct nvhost_vm_buffer {
 	/* bookkeeping */
 	unsigned int user_map_count;	/* application view to the buffer */
 	unsigned int submit_map_count;	/* hw view to this buffer */
-	struct list_head list;
+	struct rb_node node;
 };
 
 struct nvhost_vm_pin {
@@ -62,24 +63,64 @@ struct nvhost_vm_pin {
 	unsigned int num_buffers;
 };
 
-static struct nvhost_vm_buffer *nvhost_vm_find_buffer(struct nvhost_vm *vm,
+static struct nvhost_vm_buffer *nvhost_vm_find_buffer(struct rb_root *root,
 						      struct dma_buf *dmabuf)
 {
-	struct nvhost_vm_buffer *buffer;
-	list_for_each_entry(buffer, &vm->buffer_list, list)
+	struct rb_node *node = root->rb_node;
+
+	while (node) {
+		struct nvhost_vm_buffer *buffer =
+			container_of(node, struct nvhost_vm_buffer, node);
+
 		if (buffer->dmabuf == dmabuf)
 			return buffer;
+		else if (buffer->dmabuf > dmabuf)
+			node = node->rb_left;
+		else
+			node = node->rb_right;
+	}
 
 	return NULL;
 }
 
+static int insert_mapped_buffer(struct rb_root *root,
+				struct nvhost_vm_buffer *buffer)
+{
+	struct rb_node **new_node = &(root->rb_node), *parent = NULL;
+
+	/* Figure out where to put new node */
+	while (*new_node) {
+		struct nvhost_vm_buffer *cmp_with =
+			container_of(*new_node, struct nvhost_vm_buffer,
+			node);
+
+		parent = *new_node;
+
+		if (cmp_with->dmabuf > buffer->dmabuf)
+			new_node = &((*new_node)->rb_left);
+		else if (cmp_with->dmabuf != buffer->dmabuf)
+			new_node = &((*new_node)->rb_right);
+		else
+			return -EINVAL; /* duplicate buffer not allowed */
+	}
+
+	/* Add new node and rebalance tree. */
+	rb_link_node(&buffer->node, parent, new_node);
+	rb_insert_color(&buffer->node, root);
+
+	return 0;
+}
+
 static void nvhost_vm_destroy_buffer_locked(struct nvhost_vm_buffer *buffer)
 {
+	struct nvhost_vm *vm = buffer->vm;
+
 	dma_buf_unmap_attachment(buffer->attach, buffer->sgt,
 				 DMA_BIDIRECTIONAL);
 	dma_buf_detach(buffer->dmabuf, buffer->attach);
 	dma_buf_put(buffer->dmabuf);
-	list_del(&buffer->list);
+
+	rb_erase(&buffer->node, &vm->buffer_list);
 
 	kfree(buffer);
 	buffer = NULL;
@@ -109,7 +150,7 @@ void nvhost_vm_unmap_dmabuf(struct nvhost_vm *vm, struct dma_buf *dmabuf)
 	mutex_lock(&vm->mutex);
 
 	/* find the buffer */
-	buffer = nvhost_vm_find_buffer(vm, dmabuf);
+	buffer = nvhost_vm_find_buffer(&vm->buffer_list, dmabuf);
 	if (!buffer)
 		goto err_find_buffer;
 
@@ -143,7 +184,7 @@ int nvhost_vm_map_dmabuf(struct nvhost_vm *vm, struct dma_buf *dmabuf,
 	mutex_lock(&vm->mutex);
 
 	/* avoid duplicate mappings */
-	buffer = nvhost_vm_find_buffer(vm, dmabuf);
+	buffer = nvhost_vm_find_buffer(&vm->buffer_list, dmabuf);
 	if (buffer) {
 		buffer->user_map_count++;
 		if (buffer->user_map_count == 1)
@@ -161,10 +202,10 @@ int nvhost_vm_map_dmabuf(struct nvhost_vm *vm, struct dma_buf *dmabuf,
 
 	get_dma_buf(dmabuf);
 	buffer->dmabuf = dmabuf;
+	buffer->vm = vm;
 	buffer->size = dmabuf->size;
 	buffer->user_map_count = 1;
 	kref_init(&buffer->kref);
-	INIT_LIST_HEAD(&buffer->list);
 
 	/* attach buffer to host1x device */
 	buffer->attach = dma_buf_attach(dmabuf, &vm->pdev->dev);
@@ -189,7 +230,11 @@ int nvhost_vm_map_dmabuf(struct nvhost_vm *vm, struct dma_buf *dmabuf,
 		buffer->addr = sg_phys(buffer->sgt->sgl);
 
 	/* add buffer to the buffer list to avoid duplicate mappings */
-	list_add_tail(&buffer->list, &vm->buffer_list);
+	err = insert_mapped_buffer(&vm->buffer_list, buffer);
+	if (err) {
+		nvhost_err(&vm->pdev->dev, "failed to insert mapped buffer\n");
+		goto err_insert_buffer;
+	}
 	vm->num_user_mapped_buffers++;
 
 	mutex_unlock(&vm->mutex);
@@ -197,6 +242,9 @@ int nvhost_vm_map_dmabuf(struct nvhost_vm *vm, struct dma_buf *dmabuf,
 	*addr = buffer->addr;
 	return 0;
 
+err_insert_buffer:
+	dma_buf_unmap_attachment(buffer->attach,
+			buffer->sgt, DMA_BIDIRECTIONAL);
 err_map_attachment:
 	dma_buf_detach(dmabuf, buffer->attach);
 err_attach:
@@ -240,6 +288,7 @@ struct nvhost_vm_pin *nvhost_vm_pin_buffers(struct nvhost_vm *vm)
 {
 	struct nvhost_vm_pin *pin;
 	struct nvhost_vm_buffer **buffers, *buffer;
+	struct rb_node *node;
 	int i = 0;
 
 	/* allocate space for pin.. */
@@ -256,16 +305,23 @@ struct nvhost_vm_pin *nvhost_vm_pin_buffers(struct nvhost_vm *vm)
 	mutex_lock(&vm->mutex);
 
 	/* go through all mapped buffers */
-	list_for_each_entry(buffer, &vm->buffer_list, list) {
+	node = rb_first(&vm->buffer_list);
+	while (node) {
+		buffer = container_of(node, struct nvhost_vm_buffer, node);
+
 		/* ...that are visible in application view */
-		if (!buffer->user_map_count)
+		if (!buffer->user_map_count) {
+			node = rb_next(&buffer->node);
 			continue;
+		}
 
 		/* and add them to the list of submit buffers */
 		buffer->submit_map_count++;
 		nvhost_vm_buffer_get(buffer);
 		buffers[i] = buffer;
 		i++;
+
+		node = rb_next(&buffer->node);
 	}
 
 	/* store this data into pin */
@@ -285,13 +341,20 @@ err_alloc_pin:
 static void nvhost_vm_deinit(struct kref *kref)
 {
 	struct nvhost_vm *vm = container_of(kref, struct nvhost_vm, kref);
-	struct nvhost_vm_buffer *buffer, *buffer_tmp;
+	struct nvhost_vm_buffer *buffer;
+	struct rb_node *node;
 
 	mutex_lock(&vm->mutex);
 
 	/* go through all remaining buffers (if any) and free them here */
-	list_for_each_entry_safe(buffer, buffer_tmp, &vm->buffer_list, list)
+	node = rb_first(&vm->buffer_list);
+	while (node) {
+		buffer = container_of(node, struct nvhost_vm_buffer, node);
+
 		nvhost_vm_destroy_buffer_locked(buffer);
+
+		node = rb_first(&vm->buffer_list);
+	}
 
 	mutex_unlock(&vm->mutex);
 
@@ -318,7 +381,7 @@ struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev)
 	if (!vm)
 		goto err_alloc_vm;
 
-	INIT_LIST_HEAD(&vm->buffer_list);
+	vm->buffer_list = RB_ROOT;
 	mutex_init(&vm->mutex);
 	kref_init(&vm->kref);
 	vm->pdev = pdev;

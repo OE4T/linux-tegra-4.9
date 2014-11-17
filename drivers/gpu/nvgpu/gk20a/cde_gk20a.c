@@ -816,7 +816,9 @@ __releases(&cde_app->mutex)
 				cde_ctx);
 		goto out;
 	}
-	cde_ctx->in_use = true;
+
+	WARN(delayed_work_pending(&cde_ctx->ctx_deleter_work),
+			"double pending %p", cde_ctx);
 
 	gk20a_cde_remove_ctx(cde_ctx);
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx,
@@ -858,8 +860,7 @@ __must_hold(&cde_app->mutex)
 		cde_app->ctx_usecount++;
 
 		/* cancel any deletions now that ctx is in use */
-		if (delayed_work_pending(&cde_ctx->ctx_deleter_work))
-			gk20a_cde_cancel_deleter(cde_ctx, false);
+		gk20a_cde_cancel_deleter(cde_ctx, true);
 		return cde_ctx;
 	}
 
@@ -1108,14 +1109,17 @@ __releases(&cde_app->mutex)
 			}
 			mutex_unlock(&cde_app->mutex);
 		}
-	} else {
-		gk20a_cde_ctx_release(cde_ctx);
 	}
 
 	/* delete temporary contexts later */
-	if (cde_ctx->is_temporary)
+	if (cde_ctx->is_temporary) {
+		WARN_ON(delayed_work_pending(&cde_ctx->ctx_deleter_work));
 		schedule_delayed_work(&cde_ctx->ctx_deleter_work,
 			msecs_to_jiffies(CTX_DELETE_TIME));
+	}
+
+	if (!ch->has_timedout)
+		gk20a_cde_ctx_release(cde_ctx);
 }
 
 static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)

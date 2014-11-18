@@ -146,19 +146,19 @@
 			};
 			trips {
 				cpu_critical {
-					temperature = <99000>;
+					temperature = <102500>;
 					hysteresis = <0>;
 					type = "critical";
 					writable;
 				};
 				cpu_heavy {
-					temperature = <95000>;
+					temperature = <98500>;
 					hysteresis = <0>;
 					type = "hot";
 					writable;
 				};
 				cpu_throttle {
-					temperature = <85500>;
+					temperature = <89000>;
 					hysteresis = <0>;
 					type = "passive";
 					writable;
@@ -197,19 +197,19 @@
 			};
 			trips {
 				gpu_critical {
-					temperature = <97500>;
+					temperature = <103000>;
 					hysteresis = <0>;
 					type = "critical";
 					writable;
 				};
 				gpu_heavy {
-					temperature = <94500>;
+					temperature = <100000>;
 					hysteresis = <0>;
 					type = "hot";
 					writable;
 				};
 				gpu_throttle {
-					temperature = <85000>;
+					temperature = <90500>;
 					hysteresis = <0>;
 					type = "passive";
 					writable;

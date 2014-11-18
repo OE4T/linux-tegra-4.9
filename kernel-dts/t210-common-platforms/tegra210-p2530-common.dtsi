@@ -36,24 +36,28 @@
 		uhs-mask = <0x0>;
 		built-in;
 		power-off-rail;
+		disable-clock-gate;
 		status = "okay";
 	};
 
 	sdhci@700b0400 {
 		uhs-mask = <0x1c>;
 		power-off-rail;
+		disable-clock-gate;
 		status = "okay";
 	};
 
 	sdhci@700b0200 {
 		uhs-mask = <0x8>;
 		power-off-rail;
+		disable-clock-gate;
 		status = "okay";
 	};
 
 	sdhci@700b0000 {
 		uhs-mask = <0xc>;
 		power-off-rail;
+		disable-clock-gate;
 		status = "okay";
 	};
 

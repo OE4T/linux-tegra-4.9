@@ -477,6 +477,10 @@
 		status = "disable";
 	};
 
+	xotg {
+		status = "disable";
+	};
+
 	soctherm@0x700E2000 {
 		status = "okay";
 	};

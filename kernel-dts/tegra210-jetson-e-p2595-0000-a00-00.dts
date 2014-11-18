@@ -216,6 +216,13 @@
 		status = "okay";
 	};
 
+	xotg {
+		#extcon-cells = <1>;
+		nvidia,common_padctl = <&xusb_pad_ctl>;
+		status = "disabled";
+		dt-override-status-odm-data = <0x01000000 0x01000000>;
+	};
+
 	gpio-keys {
 		power {
 			gpios = <&gpio TEGRA_GPIO(X, 7) GPIO_ACTIVE_LOW>;

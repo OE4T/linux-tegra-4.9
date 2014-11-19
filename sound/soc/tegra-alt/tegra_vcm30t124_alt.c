@@ -1192,7 +1192,7 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &snd_soc_tegra_vcm30t124;
 	struct tegra_vcm30t124 *machine;
-	int ret = 0, i, j;
+	int ret = 0, i, j, length;
 
 	machine = devm_kzalloc(&pdev->dev, sizeof(struct tegra_vcm30t124),
 			       GFP_KERNEL);
@@ -1201,7 +1201,13 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
-	machine->pdata = pdev->dev.platform_data;
+
+	machine->pdata = (struct tegra_vcm30t124_platform_data *)
+		of_get_property(pdev->dev.of_node, "platform_data", &length);
+	if (NULL == machine->pdata) {
+		dev_err(&pdev->dev, "platform data could not be retrieved from dt\n");
+		return -ENODEV;
+	}
 
 	card->dev = &pdev->dev;
 	platform_set_drvdata(pdev, card);

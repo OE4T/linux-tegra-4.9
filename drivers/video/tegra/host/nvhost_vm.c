@@ -92,12 +92,12 @@ static void nvhost_vm_buffer_deinit_locked(struct kref *kref)
 	nvhost_vm_destroy_buffer_locked(buffer);
 }
 
-void nvhost_vm_buffer_put_locked(struct nvhost_vm_buffer *buffer)
+static void nvhost_vm_buffer_put_locked(struct nvhost_vm_buffer *buffer)
 {
 	kref_put(&buffer->kref, nvhost_vm_buffer_deinit_locked);
 }
 
-void nvhost_vm_buffer_get(struct nvhost_vm_buffer *buffer)
+static void nvhost_vm_buffer_get(struct nvhost_vm_buffer *buffer)
 {
 	kref_get(&buffer->kref);
 }

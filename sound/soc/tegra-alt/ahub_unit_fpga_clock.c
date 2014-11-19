@@ -1002,10 +1002,12 @@ void OnAD1937CaptureAndPlayback(int mode,
 	case AUDIO_INTERFACE_TDM_FORMAT:
 		ad1937_enable[codec_idx][AD1937_DAC_CTRL_0]  |= AD1937_DAC_CTRL_0_FMT_TDM_SINGLE_LINE;
 		ad1937_enable[codec_idx][AD1937_DAC_CTRL_0]  |= AD1937_DAC_CTRL_0_DSDATA_DELAY_1;
+		break;
 	case AUDIO_INTERFACE_I2S_FORMAT:
 	default:
 		ad1937_enable[codec_idx][AD1937_DAC_CTRL_0]  |= AD1937_DAC_CTRL_0_FMT_STEREO;
 		ad1937_enable[codec_idx][AD1937_DAC_CTRL_0]  |= AD1937_DAC_CTRL_0_DSDATA_DELAY_1;
+		break;
 	break;
 	}
 

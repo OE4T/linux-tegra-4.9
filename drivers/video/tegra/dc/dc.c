@@ -2004,9 +2004,47 @@ void tegra_dc_set_out_pin_polars(struct tegra_dc *dc,
 
 static struct tegra_dc_mode *tegra_dc_get_override_mode(struct tegra_dc *dc)
 {
-	if (dc->out->type == TEGRA_DC_OUT_RGB ||
+	if (dc->out->type == TEGRA_DC_OUT_HDMI &&
+			tegra_is_hdmi_initialised()) {
+
+		/* For seamless HDMI, read mode parameters from bootloader
+		 * set DC configuration
+		 */
+		u32 val = 0;
+		struct tegra_dc_mode *mode = &override_disp_mode[dc->out->type];
+		struct clk *parent_clk = clk_get_sys(NULL,
+				dc->out->parent_clk ? : "pll_d2");
+
+		memset(mode, 0, sizeof(struct tegra_dc_mode));
+		mode->pclk = clk_get_rate(parent_clk);
+		mode->rated_pclk = 0;
+
+		tegra_dc_get(dc);
+		val = tegra_dc_readl(dc, DC_DISP_REF_TO_SYNC);
+		mode->h_ref_to_sync = val & 0xffff;
+		mode->v_ref_to_sync = (val >> 16) & 0xffff;
+
+		val = tegra_dc_readl(dc, DC_DISP_SYNC_WIDTH);
+		mode->h_sync_width = val & 0xffff;
+		mode->v_sync_width = (val >> 16) & 0xffff;
+
+		val = tegra_dc_readl(dc, DC_DISP_BACK_PORCH);
+		mode->h_back_porch = val & 0xffff;
+		mode->v_back_porch = (val >> 16) & 0xffff;
+
+		val = tegra_dc_readl(dc, DC_DISP_FRONT_PORCH);
+		mode->h_front_porch = val & 0xffff;
+		mode->v_front_porch = (val >> 16) & 0xffff;
+
+		val = tegra_dc_readl(dc, DC_DISP_DISP_ACTIVE);
+		mode->h_active = val & 0xffff;
+		mode->v_active = (val >> 16) & 0xffff;
+		tegra_dc_put(dc);
+	}
+
+	if (dc->out->type == TEGRA_DC_OUT_RGB  ||
 		dc->out->type == TEGRA_DC_OUT_HDMI ||
-		dc->out->type == TEGRA_DC_OUT_DSI ||
+		dc->out->type == TEGRA_DC_OUT_DSI  ||
 		dc->out->type == TEGRA_DC_OUT_NULL)
 		return override_disp_mode[dc->out->type].pclk ?
 			&override_disp_mode[dc->out->type] : NULL;

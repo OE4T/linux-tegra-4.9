@@ -372,7 +372,7 @@ static int tegra210_adx_set_channel_map(struct snd_soc_dai *dai,
 	int i, ret = 0;
 
 	/* HW needs sw reset to make sure previous transaction be clean */
-	tegra210_adx_sw_reset(adx, 0xffff);
+	ret = tegra210_adx_sw_reset(adx, 0xffff);
 	if (ret) {
 		dev_err(dev, "Failed at ADX sw reset\n");
 		return ret;

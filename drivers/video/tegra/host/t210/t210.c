@@ -451,7 +451,7 @@ int nvhost_init_t210_channel_support(struct nvhost_master *host,
 static void t210_remove_support(struct nvhost_chip_support *op)
 {
 	kfree(op->priv);
-	op->priv = 0;
+	op->priv = NULL;
 }
 
 #include "host1x/host1x_cdma.c"
@@ -465,7 +465,7 @@ int nvhost_init_t210_support(struct nvhost_master *host,
        struct nvhost_chip_support *op)
 {
 	int err;
-	struct t124 *t210 = 0;
+	struct t124 *t210 = NULL;
 
 	op->soc_name = "tegra21x";
 
@@ -497,7 +497,7 @@ int nvhost_init_t210_support(struct nvhost_master *host,
 err:
 	kfree(t210);
 
-	op->priv = 0;
-	op->remove_support = 0;
+	op->priv = NULL;
+	op->remove_support = NULL;
 	return err;
 }

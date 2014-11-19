@@ -544,7 +544,7 @@ int nvhost_init_t124_channel_support(struct nvhost_master *host,
 static void t124_remove_support(struct nvhost_chip_support *op)
 {
 	kfree(op->priv);
-	op->priv = 0;
+	op->priv = NULL;
 }
 
 #include "host1x/host1x_cdma.c"
@@ -558,7 +558,7 @@ int nvhost_init_t124_support(struct nvhost_master *host,
 {
 	int i = 0;
 	int err;
-	struct t124 *t124 = 0;
+	struct t124 *t124 = NULL;
 	struct nvhost_device_data *data = platform_get_drvdata(host->dev);
 
 	/* Select the soc name */
@@ -612,7 +612,7 @@ int nvhost_init_t124_support(struct nvhost_master *host,
 err:
 	kfree(t124);
 
-	op->priv = 0;
-	op->remove_support = 0;
+	op->priv = NULL;
+	op->remove_support = NULL;
 	return err;
 }

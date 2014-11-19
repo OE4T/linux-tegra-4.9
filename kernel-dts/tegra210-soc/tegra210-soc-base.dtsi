@@ -1166,6 +1166,30 @@
 		compatible = "nvidia,tegra132-otg";
 		reg = <0x0 0x7d000000 0x0 0x4000>;
 		interrupts = <0 20 0x04>;
+		nvidia,hc-device = <&ehci1>;
+		status = "disabled";
+	};
+
+	ehci1: ehci@7d000000 {
+		compatible = "nvidia,tegra132-ehci";
+		reg = <0x0 0x7d000000 0x0 0x4000>;
+		interrupts = <0 20 0x04>;
+		nvidia,port-otg;
+		nvidia,has-hostpc;
+		nvidia,unaligned-dma-buf-supported;
+		nvidia,power-off-on-suspend;
+		nvidia,is-intf-utmi;
+		nvidia,remote-wakeup-supported;
+		nvidia,hssync-start-delay = <0>;
+		nvidia,idle-wait-delay = <17>;
+		nvidia,elastic-limit = <16>;
+		nvidia,term-range-adj = <6>;
+		nvidia,xcvr-setup = <8>;
+		nvidia,xcvr-lsfslew = <2>;
+		nvidia,xcvr-lsrslew = <2>;
+		nvidia,xcvr-use-fuses;
+		nvidia,vbus-oc-map = <5>;
+		nvidia,xcvr-setup-offset = <0>;
 		status = "disabled";
 	};
 

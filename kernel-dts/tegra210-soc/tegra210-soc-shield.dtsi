@@ -35,6 +35,7 @@
 		serial2 = &uartc;
 		serial3 = &uartd;
 		udc0 = &udc;
+		ehci0 = &ehci1;
 		ehci1 = &ehci2;
 	};
 

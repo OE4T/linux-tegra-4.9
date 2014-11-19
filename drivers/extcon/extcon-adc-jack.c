@@ -63,12 +63,14 @@ static void adc_jack_handler(struct work_struct *work)
 			struct adc_jack_data,
 			handler);
 	struct adc_jack_cond *def;
+	u32 state = 0;
 	int ret, adc_val;
 	int i;
+	int cindex = 0;
 
 	ret = iio_read_channel_raw(data->chan, &adc_val);
 	if (ret < 0) {
-		dev_err(&data->edev->dev, "read channel() error: %d\n", ret);
+		dev_err(data->dev, "read channel() error: %d\n", ret);
 		return;
 	}
 
@@ -77,6 +79,8 @@ static void adc_jack_handler(struct work_struct *work)
 		def = &data->adc_conditions[i];
 		if (def->min_adc <= adc_val && def->max_adc >= adc_val) {
 			extcon_set_state_sync(data->edev, def->id, true);
+			state = def->state;
+			cindex = ffs(state) - 1;
 			return;
 		}
 	}
@@ -86,6 +90,9 @@ static void adc_jack_handler(struct work_struct *work)
 		def = &data->adc_conditions[i];
 		extcon_set_state_sync(data->edev, def->id, false);
 	}
+	
+	dev_info(data->dev, "ADC read %d Cable State 0x%02X\n",
+			 adc_val, state);
 }
 
 static irqreturn_t adc_jack_irq_thread(int irq, void *_data)
@@ -132,10 +139,12 @@ static struct adc_jack_pdata *of_get_platform_data(
 	nstates = of_property_count_u32_elems(np, "extcon-adc-jack,states");
 	if (nstates < 0)
 		return ERR_PTR(nstates);
-	if (!nstates)
+	if (!nstates || (nstates % 3))
 		return ERR_PTR(-EINVAL);
 
-	pdata->adc_conditions = devm_kzalloc(&pdev->dev, nstates *
+	nstates = nstates/3;
+
+	pdata->adc_conditions = devm_kzalloc(&pdev->dev, (nstates + 1) *
 				sizeof(*pdata->adc_conditions), GFP_KERNEL);
 	if (!pdata->adc_conditions)
 		return ERR_PTR(-ENOMEM);

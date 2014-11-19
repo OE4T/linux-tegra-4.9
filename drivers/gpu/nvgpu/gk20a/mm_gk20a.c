@@ -1664,14 +1664,16 @@ u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova)
 
 u64 gk20a_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl)
 {
-	u64 result = sg_phys(sgl);
-#ifdef CONFIG_TEGRA_IOMMU_SMMU
+	if (!device_is_iommuable(dev_from_gk20a(g)))
+		return sg_phys(sgl);
+
+	if (sg_dma_address(sgl) == 0)
+		return sg_phys(sgl);
+
 	if (sg_dma_address(sgl) == DMA_ERROR_CODE)
-		result = 0;
-	else if (sg_dma_address(sgl))
-		result = gk20a_mm_smmu_vaddr_translate(g, sg_dma_address(sgl));
-#endif
-	return result;
+		return 0;
+
+	return gk20a_mm_smmu_vaddr_translate(g, sg_dma_address(sgl));
 }
 
 static int update_gmmu_ptes_locked(struct vm_gk20a *vm,

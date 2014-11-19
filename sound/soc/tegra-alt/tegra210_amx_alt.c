@@ -400,7 +400,7 @@ static int tegra210_amx_set_channel_map(struct snd_soc_dai *dai,
 	int i, ret = 0;
 
 	/* HW needs sw reset to make sure previous transaction be clean */
-	tegra210_amx_sw_reset(amx, 0xffff);
+	ret = tegra210_amx_sw_reset(amx, 0xffff);
 	if (ret) {
 		dev_err(dev, "Failed at AMX sw reset\n");
 		return ret;

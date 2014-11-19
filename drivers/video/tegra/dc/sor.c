@@ -1207,7 +1207,9 @@ static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
 		tegra_dc_writel(dc, 0xe, DC_DISP_DC_MCCIF_FIFOCTRL);
 	}
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_dc_writel(dc, VSYNC_H_POSITION(1), DC_DISP_DISP_TIMING_OPTIONS);
+#endif
 
 	/* Enable DC */
 	tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY, DC_CMD_DISPLAY_COMMAND);
@@ -1590,10 +1592,6 @@ void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
 	tegra_dc_sor_config_panel(sor, true);
 	tegra_dc_writel(sor->dc, 0x9f00, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(sor->dc, 0x9f, DC_CMD_STATE_CONTROL);
-
-	tegra_dc_writel(sor->dc, PW0_ENABLE | PW1_ENABLE | PW2_ENABLE |
-		PW3_ENABLE | PW4_ENABLE | PM0_ENABLE | PM1_ENABLE,
-		DC_CMD_DISPLAY_POWER_CONTROL);
 
 	tegra_dc_writel(sor->dc, SOR_ENABLE, DC_DISP_DISP_WIN_OPTIONS);
 

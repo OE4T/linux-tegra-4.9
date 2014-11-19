@@ -69,6 +69,9 @@ get_output_properties(struct tegra_dc_ext_control_output_properties *properties)
 	properties->head_mask = (1 << properties->associated_head);
 
 	switch (tegra_dc_get_out(dc)) {
+	case TEGRA_DC_OUT_FAKE_DSIA:
+	case TEGRA_DC_OUT_FAKE_DSIB:
+	case TEGRA_DC_OUT_FAKE_DSI_GANGED:
 	case TEGRA_DC_OUT_DSI:
 		properties->type = TEGRA_DC_EXT_DSI;
 		break;

@@ -29,7 +29,6 @@
 /*Defines*/
 #define gm20b_dbg_pmu(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
-#define GPU_TIMEOUT_DEFAULT 10000
 
 typedef int (*get_ucode_details)(struct gk20a *g, struct flcn_ucode_img *udata);
 
@@ -1275,7 +1274,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 	 * to PMU halt
 	 */
 
-	if (clear_halt_interrupt_status(g, GPU_TIMEOUT_DEFAULT))
+	if (clear_halt_interrupt_status(g, gk20a_get_gr_idle_timeout(g)))
 		goto err_unmap_bl;
 
 	gm20b_dbg_pmu("err reg :%x\n", readl(mc +
@@ -1287,10 +1286,10 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 	gm20b_init_pmu_setup_hw1(g, desc, acr->hsbl_ucode.size);
 	/* Poll for HALT */
 	if (b_wait_for_halt) {
-		err = pmu_wait_for_halt(g, GPU_TIMEOUT_DEFAULT);
+		err = pmu_wait_for_halt(g, gk20a_get_gr_idle_timeout(g));
 		if (err == 0) {
 			/* Clear the HALT interrupt */
-		  if (clear_halt_interrupt_status(g, GPU_TIMEOUT_DEFAULT))
+		  if (clear_halt_interrupt_status(g, gk20a_get_gr_idle_timeout(g)))
 			goto err_unmap_bl;
 		}
 		else

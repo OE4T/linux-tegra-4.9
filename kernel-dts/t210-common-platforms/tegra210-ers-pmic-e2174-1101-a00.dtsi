@@ -195,10 +195,6 @@
 					maxim,fps-source = <FPS_SRC_0>;
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
 					consumers {
-						c7 {
-							regulator-consumer-supply = "avdd_pll_utmip";
-							regulator-consumer-device = "tegra-ehci.0";
-						};
 						c8 {
 							regulator-consumer-supply = "avdd_pll_utmip";
 							regulator-consumer-device = "tegra-ehci.1";
@@ -331,12 +327,6 @@
 			usb0_vbus: vbus {
 				regulator-name = "vbus_regulator";
 				ti,otg-iusb-gpio = <&gpio TEGRA_GPIO(CC, 5) 0>;
-				consumers {
-					c1 {
-						regulator-consumer-supply = "usb_vbus";
-						regulator-consumer-device = "tegra-ehci.0";
-					};
-				};
 			};
 		};
 

@@ -18,4 +18,6 @@
 struct gk20a;
 
 void gm20b_init_fb(struct gpu_ops *gops);
+void gm20b_init_uncompressed_kind_map(void);
+void gm20b_init_kind_attr(void);
 #endif

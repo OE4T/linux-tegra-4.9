@@ -30,7 +30,7 @@ static void fb_gm20b_init_fs_state(struct gk20a *g)
 			g->ltc_count);
 }
 
-static void gm20b_init_uncompressed_kind_map(void)
+void gm20b_init_uncompressed_kind_map(void)
 {
 	gk20a_init_uncompressed_kind_map();
 
@@ -64,7 +64,7 @@ static bool gm20b_kind_zbc(u8 k)
 		 k <= gmmu_pte_kind_s8_2s_v());
 }
 
-static void gm20b_init_kind_attr(void)
+void gm20b_init_kind_attr(void)
 {
 	u16 k;
 

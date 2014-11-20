@@ -39,6 +39,7 @@
 #include <linux/gfp.h>
 #include <linux/of_device.h>
 #include <linux/of.h>
+#include <linux/regulator/consumer.h>
 
 struct fan_dev_data {
 	int next_state;
@@ -69,6 +70,7 @@ struct fan_dev_data {
 	int pwm_gpio;
 	int pwm_id;
 	const char *name;
+	struct regulator *fan_reg;
 };
 
 #ifdef CONFIG_DEBUG_FS
@@ -717,6 +719,13 @@ static int pwm_fan_probe(struct platform_device *pdev)
 
 	fan_data->dev = &pdev->dev;
 
+	fan_data->fan_reg = regulator_get(fan_data->dev, "vdd-fan");
+	if (IS_ERR_OR_NULL(fan_data->fan_reg)) {
+		pr_err("FAN: coudln't get the regulator\n");
+		devm_kfree(&pdev->dev, (void *)fan_data);
+		return -ENODEV;
+	}
+
 	of_err |= of_property_read_string(node, "name", &fan_data->name);
 	pr_info("FAN dev name: %s\n", fan_data->name);
 
@@ -919,6 +928,13 @@ static int pwm_fan_probe(struct platform_device *pdev)
 			fan_data->fan_rrd[i],
 			fan_data->fan_state_cap_lookup[i]);
 	}
+
+	err = regulator_enable(fan_data->fan_reg);
+	if (err < 0)
+		dev_err(&pdev->dev, " Coudn't enable regulator\n");
+	else
+		dev_info(&pdev->dev, " Enabled regulator\n");
+
 	return err;
 
 sysfs_fail:
@@ -966,6 +982,9 @@ static int pwm_fan_remove(struct platform_device *pdev)
 	pwm_free(fan_data->pwm_dev);
 	thermal_cooling_device_unregister(fan_data->cdev);
 	remove_sysfs_entry(&pdev->dev);
+
+	if (fan_data->fan_reg)
+		regulator_put(fan_data->fan_reg);
 	return 0;
 }
 
@@ -993,6 +1012,9 @@ static int pwm_fan_suspend(struct platform_device *pdev, pm_message_t state)
 
 	gpio_direction_output(fan_data->pwm_gpio, 1);
 
+	err = regulator_disable(fan_data->fan_reg);
+	if (err < 0)
+		dev_err(&pdev->dev, "Not able to disable Fan regulator\n");
 	/*Stop thermal control*/
 	fan_data->fan_temp_control_flag = 0;
 	mutex_unlock(&fan_data->fan_state_lock);
@@ -1002,6 +1024,7 @@ static int pwm_fan_suspend(struct platform_device *pdev, pm_message_t state)
 static int pwm_fan_resume(struct platform_device *pdev)
 {
 	struct fan_dev_data *fan_data = platform_get_drvdata(pdev);
+	int err;
 
 	/*Sanity check, want to make sure fan is off when the driver resumes*/
 	mutex_lock(&fan_data->fan_state_lock);
@@ -1020,6 +1043,10 @@ static int pwm_fan_resume(struct platform_device *pdev)
 	set_pwm_duty_cycle(0, fan_data);
 	/*Start thermal control*/
 	fan_data->fan_temp_control_flag = 1;
+
+	err = regulator_enable(fan_data->fan_reg);
+	if (err < 0)
+		dev_err(&pdev->dev, "Not able to enable Fan regulator\n");
 
 	mutex_unlock(&fan_data->fan_state_lock);
 	return 0;

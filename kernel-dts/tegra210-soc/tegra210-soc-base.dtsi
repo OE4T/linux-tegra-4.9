@@ -1328,7 +1328,6 @@
 		reg = <0x0 0x7d004000 0x0 0x4000>;
 		interrupts = <0 21 0x04>;
 		nvidia,has-hostpc;
-		nvidia,unaligned-dma-buf-supported;
 		nvidia,power-off-on-suspend;
 		nvidia,remote-wakeup-supported;
 		status = "disabled";

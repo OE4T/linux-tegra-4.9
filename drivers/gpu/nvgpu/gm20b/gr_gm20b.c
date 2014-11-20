@@ -770,6 +770,14 @@ static void gr_gm20b_detect_sm_arch(struct gk20a *g)
 		gr_gpc0_tpc0_sm_arch_warp_count_v(v);
 }
 
+static void gr_gm20b_buffer_size_defaults(struct gk20a *g)
+{
+	g->gr.pagepool_default_size =
+		gr_scc_pagepool_total_pages_hwmax_value_v();
+	g->gr.pagepool_max_size =
+		gr_scc_pagepool_total_pages_hwmax_value_v();
+}
+
 void gm20b_init_gr(struct gpu_ops *gops)
 {
 	gops->gr.init_gpc_mmu = gr_gm20b_init_gpc_mmu;
@@ -807,4 +815,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.detect_sm_arch = gr_gm20b_detect_sm_arch;
 	gops->gr.add_zbc_color = gr_gk20a_add_zbc_color;
 	gops->gr.add_zbc_depth = gr_gk20a_add_zbc_depth;
+	gops->gr.buffer_size_defaults = gr_gm20b_buffer_size_defaults;
 }

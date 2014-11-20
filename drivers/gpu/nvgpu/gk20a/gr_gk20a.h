@@ -243,6 +243,8 @@ struct gr_gk20a {
 	u32 alpha_cb_default_size;
 	u32 alpha_cb_size;
 	u32 timeslice_mode;
+	u32 pagepool_default_size;
+	u32 pagepool_max_size;
 
 	struct gr_ctx_buffer_desc global_ctx_buffer[NR_GLOBAL_CTX_BUF];
 

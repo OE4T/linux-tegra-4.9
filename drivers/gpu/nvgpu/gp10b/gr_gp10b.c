@@ -297,6 +297,14 @@ clean_up:
 	return ret;
 }
 
+static void gr_gp10b_buffer_size_defaults(struct gk20a *g)
+{
+	g->gr.pagepool_default_size =
+		gr_scc_pagepool_total_pages_hwmax_value_v();
+	g->gr.pagepool_max_size =
+		gr_scc_pagepool_total_pages_hwmax_value_v();
+}
+
 void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
@@ -305,4 +313,5 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.commit_global_pagepool = gr_gp10b_commit_global_pagepool;
 	gops->gr.add_zbc_color = gr_gp10b_add_zbc_color;
 	gops->gr.add_zbc_depth = gr_gp10b_add_zbc_depth;
+	gops->gr.buffer_size_defaults = gr_gp10b_buffer_size_defaults;
 }

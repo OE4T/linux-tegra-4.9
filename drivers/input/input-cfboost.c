@@ -202,6 +202,10 @@ static const struct input_device_id cfb_ids[] = {
 		.evbit = { BIT_MASK(EV_REL) },
 		.keybit = {[BIT_WORD(BTN_MOUSE)] = BIT_MASK(BTN_MOUSE) },
 	},
+	{ /* any keyboard events */
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT,
+		.evbit = { BIT_MASK(EV_KEY) },
+	},
 	/* keypad */
 	{
 		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |

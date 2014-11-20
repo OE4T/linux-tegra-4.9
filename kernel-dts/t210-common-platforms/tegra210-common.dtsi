@@ -301,4 +301,14 @@
 		compatible = "nvidia,tegra-supply-tests";
 		vdd-core-supply=<&max77620_sd0>;
 	};
+
+	pmc@7000e400 {
+		prod-settings {
+			#prod-cells = <4>;
+			prod_c_platform_pad_rail {
+				prod = <0 0x48 0xFF5BFFFF 0x00A40000
+					0 0xE4 0xFF5BFFFF 0x00000000>;
+			};
+		};
+	};
 };

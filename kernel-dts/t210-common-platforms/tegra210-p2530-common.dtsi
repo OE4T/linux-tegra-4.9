@@ -134,7 +134,7 @@
 	};
 
 	thermal-zones {
-		CPU_therm {
+		CPU-therm {
 			thermal-zone-params {
 				governor-name = "pid_thermal_gov";
 				max_err_temp = <9000>;
@@ -166,26 +166,26 @@
 			};
 			cooling-maps {
 				map0 {
-					trip = <&{/thermal-zones/CPU_therm/trips/cpu_critical}>;
+					trip = <&{/thermal-zones/CPU-therm/trips/cpu_critical}>;
 					cdev-type = "tegra-shutdown";
 					cooling-device = <&{/soctherm@0x700E2000/throttle@critical}
 						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
 				map1 {
-					trip = <&{/thermal-zones/CPU_therm/trips/cpu_heavy}>;
+					trip = <&{/thermal-zones/CPU-therm/trips/cpu_heavy}>;
 					cdev-type = "tegra-heavy";
 					cooling-device = <&{/soctherm@0x700E2000/throttle@heavy}
 						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
 				map2 {
-					trip = <&{/thermal-zones/CPU_therm/trips/cpu_throttle}>;
+					trip = <&{/thermal-zones/CPU-therm/trips/cpu_throttle}>;
 					cdev-type = "cpu-balanced";
 					cooling-device = <&{/bthrot_cdev/cpu_balanced}
 						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
 			};
 		};
-		GPU_therm {
+		GPU-therm {
 			thermal-zone-params {
 				governor-name = "pid_thermal_gov";
 				max_err_temp = <9000>;
@@ -217,19 +217,19 @@
 			};
 			cooling-maps {
 				map0 {
-					trip = <&{/thermal-zones/GPU_therm/trips/gpu_critical}>;
+					trip = <&{/thermal-zones/GPU-therm/trips/gpu_critical}>;
 					cdev-type = "tegra-shutdown";
 					cooling-device = <&{/soctherm@0x700E2000/throttle@critical}
 						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
 				map1 {
-					trip = <&{/thermal-zones/GPU_therm/trips/gpu_heavy}>;
+					trip = <&{/thermal-zones/GPU-therm/trips/gpu_heavy}>;
 					cdev-type = "tegra-heavy";
 					cooling-device = <&{/soctherm@0x700E2000/throttle@heavy}
 						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
 				map2 {
-					trip = <&{/thermal-zones/GPU_therm/trips/gpu_throttle}>;
+					trip = <&{/thermal-zones/GPU-therm/trips/gpu_throttle}>;
 					cdev-type = "gpu-balanced";
 					cooling-device = <&{/bthrot_cdev/gpu_balanced}
 						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;

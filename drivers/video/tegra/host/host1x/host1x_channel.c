@@ -293,6 +293,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 		goto error;
 	}
 
+	serialize(job);
 	push_waits(job);
 	lock_device(job, true);
 
@@ -325,18 +326,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	else
 		submit_gathers(job);
 
-	/* wait this job to complete (if serialization is enabled) before
-	 * releasing mlock. This is compatible both with map-at-submit
-	 * policy and map-at-open */
-	serialize(job);
 	lock_device(job, false);
-
-	/* make the last increment at job boundary. this will ensure
-	 * that the user command buffer is no longer in use */
-	job->sp[0].fence = nvhost_syncpt_incr_max(sp, job->sp[0].id, 1);
-	nvhost_cdma_push(&ch->cdma, nvhost_opcode_imm_incr_syncpt(
-			host1x_uclass_incr_syncpt_cond_op_done_v(),
-			job->sp[0].id), NVHOST_OPCODE_NOOP);
 
 	/* end CDMA submit & stash pinned hMems into sync queue */
 	nvhost_cdma_end(&ch->cdma, job);

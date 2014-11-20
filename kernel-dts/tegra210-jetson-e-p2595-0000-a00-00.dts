@@ -37,6 +37,7 @@
 #include "tegra210-platforms/tegra210-powermon-p2530-0930.dtsi"
 #include <dt-bindings/iio/meter/ina3221x.h>
 #include "tegra210-platforms/tegra210-extcon-p2530-0930.dtsi"
+#include "tegra210-platforms/tegra210-loki-e-emc-e01.dtsi"
 
 / {
 	model = "jetson_e";

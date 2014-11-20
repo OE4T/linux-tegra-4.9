@@ -95,7 +95,7 @@
 	};
 
 	thermal-zones {
-		CPU_therm {
+		CPU-therm {
 			trips {
 				MAKE_EDP_TRIP(cpu, 23);
 				MAKE_EDP_TRIP(cpu, 40);
@@ -127,7 +127,7 @@
 				MAP_CPU_EDP(102);
 			};
 		};
-		GPU_therm {
+		GPU-therm {
 			trips {
 				MAKE_EDP_TRIP(gpu, 20);
 				MAKE_EDP_TRIP(gpu, 50);

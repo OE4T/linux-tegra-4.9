@@ -37,14 +37,13 @@
 				};
 			};
 		};
-
-		CPU_therm {
+		CPU-therm {
 			polling-delay		= <0>;
 			polling-delay-passive	= <1000>;
 			thermal-sensors		= <&{/soctherm@0x700E2000} 0>;
 			status = "disabled";
 		};
-		GPU_therm {
+		GPU-therm {
 			polling-delay		= <0>;
 			polling-delay-passive	= <1000>;
 			thermal-sensors		= <&{/soctherm@0x700E2000} 1>;

@@ -237,6 +237,7 @@ void tegra_pwm_bl_ops_register(struct device *dev)
 		break;
 	case BOARD_E1639:
 	case BOARD_E1813:
+	case BOARD_E2145:
 		dev_set_drvdata(dev, dsi_s_wqxga_10_1_ops.pwm_bl_ops);
 		break;
 	case BOARD_PM366:
@@ -354,6 +355,7 @@ struct device_node *tegra_primary_panel_get_dt_node(
 		break;
 	case BOARD_E1639:
 	case BOARD_E1813:
+	case BOARD_E2145:
 		np_panel = of_find_compatible_node(NULL, NULL, "s,wqxga-10-1");
 		if (np_panel && pdata && dc_out)
 			tegra_panel_register_ops(dc_out,

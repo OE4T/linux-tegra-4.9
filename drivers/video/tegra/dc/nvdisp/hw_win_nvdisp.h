@@ -334,4 +334,24 @@ static inline u32 win_set_planar_storage_uv_uv1_f(u32 v)
 {
 	return (v & 0x1fff) << 16;
 }
+static inline u32 win_win_set_params_r(void)
+{
+	return 0x0000070d;
+}
+static inline u32 win_win_set_params_cs_range_yuv_709_f(void)
+{
+	return 0x200;
+}
+static inline u32 win_win_set_params_cs_range_rgb_f(void)
+{
+	return 0x0;
+}
+static inline u32 win_win_set_params_in_range_bypass_f(void)
+{
+	return 0x0;
+}
+static inline u32 win_win_set_params_degamma_range_none_f(void)
+{
+	return 0x0;
+}
 #endif

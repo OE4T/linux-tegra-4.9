@@ -54,6 +54,7 @@ static int tegra_nvdisp_enable_cde(struct tegra_dc_win *win)
 static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 {
 	u32 win_options;
+	bool yuv = tegra_dc_is_yuv(win->fmt);
 	bool yuvp = tegra_dc_is_yuv_planar(win->fmt);
 	bool yuvsp = tegra_dc_is_yuv_semi_planar(win->fmt);
 
@@ -118,6 +119,18 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 		nvdisp_win_write(win,
 			win_set_planar_storage_uv_uv0_f(win->stride_uv>>6),
 			win_set_planar_storage_uv_r());
+	}
+
+	if (yuv) {
+		nvdisp_win_write(win, win_win_set_params_cs_range_yuv_709_f() |
+			win_win_set_params_in_range_bypass_f() |
+			win_win_set_params_degamma_range_none_f(),
+			win_win_set_params_r());
+	} else {
+		nvdisp_win_write(win, win_win_set_params_cs_range_rgb_f() |
+			win_win_set_params_in_range_bypass_f() |
+			win_win_set_params_degamma_range_none_f(),
+			win_win_set_params_r());
 	}
 
 	if (WIN_IS_BLOCKLINEAR(win)) {

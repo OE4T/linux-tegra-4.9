@@ -132,6 +132,7 @@
 			regulator-max-microvolt = <5000000>;
 			gpio = <&gpio TEGRA_GPIO(CC, 7) 0>;
 			enable-active-high;
+			regulator-boot-on;
 			vin-supply = <&vdd_sys_boost>;
 		};
 

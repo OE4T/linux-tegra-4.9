@@ -25,6 +25,8 @@
 #include "t186.h"
 #include "host1x/host1x.h"
 #include "flcn/flcn.h"
+#include "isp/isp.h"
+#include "vi/vi.h"
 #include "nvdec/nvdec.h"
 #include "hardware_t186.h"
 
@@ -44,6 +46,62 @@ struct nvhost_device_data t18_host1x_info = {
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	.private_data	= &host1x04_info,
 };
+
+#ifdef CONFIG_TEGRA_GRHOST_ISP
+struct nvhost_device_data t18_isp_info = {
+	.num_channels		= 1,
+	.moduleid		= NVHOST_MODULE_ISP,
+	.class			= NV_VIDEO_STREAMING_ISP_CLASS_ID,
+	.modulemutexes		= {NV_VIDEO_STREAMING_ISP_CLASS_ID},
+	.exclusive		= true,
+	/* HACK: Mark as keepalive until 1188795 is fixed */
+	.keepalive		= true,
+#ifdef TEGRA_POWERGATE_VE
+	.powergate_ids		= {TEGRA_POWERGATE_VE, -1},
+#else
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+#endif
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.powergate_delay	= 500,
+	.can_powergate		= true,
+	.clocks			= {{ "isp", UINT_MAX, 0 }},
+	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
+	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
+	.moduleid		= NVHOST_MODULE_ISP,
+	.ctrl_ops		= &tegra_isp_ctrl_ops,
+};
+#endif
+
+#if defined(CONFIG_TEGRA_GRHOST_VI) || defined(CONFIG_TEGRA_GRHOST_VI_MODULE)
+struct nvhost_device_data t18_vi_info = {
+	.modulemutexes		= {NV_VIDEO_STREAMING_VI_CLASS_ID},
+	.exclusive		= true,
+	.class			= NV_VIDEO_STREAMING_VI_CLASS_ID,
+	/* HACK: Mark as keepalive until 1188795 is fixed */
+	.keepalive		= true,
+#ifdef TEGRA_POWERGATE_VE
+	.powergate_ids		= {TEGRA_POWERGATE_VE, -1},
+#else
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+#endif
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.powergate_delay	= 500,
+	.moduleid		= NVHOST_MODULE_VI,
+	.clocks = {
+		{"vi", UINT_MAX},
+		{"csi", 0},
+		{"cilab", 102000000},
+		{"cilcd", 102000000},
+		{"cile", 102000000},
+		{"vii2c", 86400000},
+		{"i2cslow", 1000000},
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
+	.ctrl_ops		= &tegra_vi_ctrl_ops,
+	.num_channels		= 6,
+	.prepare_poweroff = nvhost_vi_prepare_poweroff,
+	.finalize_poweron = nvhost_vi_finalize_poweron,
+};
+#endif
 
 struct nvhost_device_data t18_msenc_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(6, 1),

@@ -39,6 +39,10 @@
 #include "vi_irq.h"
 #include "camera_priv_defs.h"
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#include "t186/t186.h"
+#endif
+
 #define MAX_DEVID_LENGTH	16
 #define TEGRA_VI_NAME		"tegra_vi"
 
@@ -50,6 +54,10 @@ static struct of_device_id tegra_vi_of_match[] = {
 #ifdef TEGRA_21X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra210-vi",
 		.data = (struct nvhost_device_data *)&t21_vi_info },
+#endif
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	{ .compatible = "nvidia,tegra186-vi",
+		.data = (struct nvhost_device_data *)&t18_vi_info },
 #endif
 	{ },
 };

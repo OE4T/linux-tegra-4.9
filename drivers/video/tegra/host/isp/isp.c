@@ -35,6 +35,10 @@
 #include "t124/t124.h"
 #include "t210/t210.h"
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#include "t186/t186.h"
+#endif
+
 #include <linux/uaccess.h>
 #include <linux/fs.h>
 #include <linux/nvhost_isp_ioctl.h>
@@ -58,10 +62,13 @@ static struct of_device_id tegra_isp_of_match[] = {
 	{ .compatible = "nvidia,tegra210-isp",
 		.data = (struct nvhost_device_data *)&t21_isp_info },
 #endif
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	{ .compatible = "nvidia,tegra186-isp",
+		.data = (struct nvhost_device_data *)&t18_isp_info },
+#endif
 	{ },
 };
 
-#ifdef TEGRA_12X_OR_HIGHER_CONFIG
 static void (*mfi_callback)(void *);
 static void *mfi_callback_arg;
 static DEFINE_MUTEX(isp_isr_lock);
@@ -73,7 +80,6 @@ static int __init init_tegra_isp_isr_callback(void)
 }
 
 pure_initcall(init_tegra_isp_isr_callback);
-#endif
 
 int nvhost_isp_t124_prepare_poweroff(struct platform_device *pdev)
 {
@@ -202,7 +208,6 @@ static int isp_isomgr_release(struct isp *tegra_isp)
 }
 #endif
 
-#ifdef TEGRA_12X_OR_HIGHER_CONFIG
 static inline u32 tegra_isp_read(struct isp *tegra_isp, u32 offset)
 {
 	return readl(tegra_isp->base + offset);
@@ -284,7 +289,6 @@ static irqreturn_t isp_isr(int irq, void *dev_id)
 	spin_unlock_irqrestore(&dev->lock, flags);
 	return IRQ_HANDLED;
 }
-#endif
 
 static int isp_probe(struct platform_device *dev)
 {
@@ -300,27 +304,28 @@ static int isp_probe(struct platform_device *dev)
 		match = of_match_device(tegra_isp_of_match, &dev->dev);
 		if (match)
 			pdata = (struct nvhost_device_data *)match->data;
-#ifdef TEGRA_12X_OR_HIGHER_CONFIG
-		if (sscanf(dev->name, "isp.%1d", &dev_id) != 1)
-			return -EINVAL;
-		switch (tegra_get_chipid()) {
-		case TEGRA_CHIPID_TEGRA12:
-		case TEGRA_CHIPID_TEGRA13:
-			if (dev_id == ISPB_DEV_ID)
-				pdata = &t124_ispb_info;
-			if (dev_id == ISPA_DEV_ID)
-				pdata = &t124_isp_info;
-			break;
-		case TEGRA_CHIPID_TEGRA21:
-			if (dev_id == ISPB_DEV_ID)
-				pdata = &t21_ispb_info;
-			if (dev_id == ISPA_DEV_ID)
-				pdata = &t21_isp_info;
-			break;
-		default:
-			return -EINVAL;
+
+		if (!IS_ENABLED(CONFIG_ARCH_TEGRA_18x_SOC)) {
+			if (sscanf(dev->name, "isp.%1d", &dev_id) != 1)
+				return -EINVAL;
+			switch (tegra_get_chipid()) {
+			case TEGRA_CHIPID_TEGRA12:
+			case TEGRA_CHIPID_TEGRA13:
+				if (dev_id == ISPB_DEV_ID)
+					pdata = &t124_ispb_info;
+				if (dev_id == ISPA_DEV_ID)
+					pdata = &t124_isp_info;
+				break;
+			case TEGRA_CHIPID_TEGRA21:
+				if (dev_id == ISPB_DEV_ID)
+					pdata = &t21_ispb_info;
+				if (dev_id == ISPA_DEV_ID)
+					pdata = &t21_isp_info;
+				break;
+			default:
+				return -EINVAL;
+			}
 		}
-#endif
 
 	} else
 		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
@@ -356,7 +361,6 @@ static int isp_probe(struct platform_device *dev)
 
 	pdata->private_data = tegra_isp;
 
-#ifdef TEGRA_12X_OR_HIGHER_CONFIG
 	/* init ispa isr */
 	tegra_isp->base = pdata->aperture[0];
 	if (!tegra_isp->base) {
@@ -406,8 +410,6 @@ static int isp_probe(struct platform_device *dev)
 
 	disable_irq(tegra_isp->irq);
 
-#endif
-
 	nvhost_module_init(dev);
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
@@ -455,13 +457,11 @@ static int __exit isp_remove(struct platform_device *dev)
 	nvhost_module_disable_clk(&dev->dev);
 #endif
 	nvhost_client_device_release(dev);
-#ifdef TEGRA_12X_OR_HIGHER_CONFIG
 	disable_irq(tegra_isp->irq);
 	kfree(tegra_isp->my_isr_work);
 	flush_workqueue(tegra_isp->isp_workqueue);
 	destroy_workqueue(tegra_isp->isp_workqueue);
 	tegra_isp = NULL;
-#endif
 	return 0;
 }
 
@@ -479,6 +479,8 @@ static struct platform_driver isp_driver = {
 #endif
 	}
 };
+
+#ifdef CONFIG_TEGRA_MC
 
 static int isp_set_la(struct isp *tegra_isp, uint isp_bw, uint la_client)
 {
@@ -518,6 +520,13 @@ static int isp_set_la(struct isp *tegra_isp, uint isp_bw, uint la_client)
 
 	return ret;
 }
+
+#else
+static int isp_set_la(struct isp *tegra_isp, uint isp_bw, uint la_client)
+{
+	return 0;
+}
+#endif
 
 static long isp_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)

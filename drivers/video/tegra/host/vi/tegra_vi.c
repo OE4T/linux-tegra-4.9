@@ -55,8 +55,6 @@ static DEFINE_MUTEX(la_lock);
 
 #define VI_MAX_BPP 2
 
-#ifdef TEGRA_12X_OR_HIGHER_CONFIG
-
 int nvhost_vi_finalize_poweron(struct platform_device *dev)
 {
 	int ret = 0;
@@ -211,7 +209,7 @@ static int vi_set_la(struct vi *tegra_vi1, uint vi_bw)
 	struct nvhost_device_data *pdata_vi1, *pdata_vi2;
 	struct vi *tegra_vi2;
 	struct clk *clk_vi;
-	int ret;
+	int ret = 0;
 	uint total_vi_bw;
 
 	pdata_vi1 =
@@ -250,6 +248,7 @@ static int vi_set_la(struct vi *tegra_vi1, uint vi_bw)
 
 	mutex_unlock(&la_lock);
 
+#ifdef CONFIG_TEGRA_MC
 	ret = tegra_set_camera_ptsa(TEGRA_LA_VI_W, total_vi_bw, 1);
 
 	if (!ret) {
@@ -262,6 +261,7 @@ static int vi_set_la(struct vi *tegra_vi1, uint vi_bw)
 	} else {
 		pr_err("%s: set ptsa failed: %d\n", __func__, ret);
 	}
+#endif
 
 	return ret;
 }
@@ -422,7 +422,6 @@ const struct file_operations tegra_vi_ctrl_ops = {
 #endif
 	.release = vi_release,
 };
-#endif
 
 /* Reset sensor data if respective clk is ON */
 void nvhost_vi_reset_all(struct platform_device *pdev)

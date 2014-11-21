@@ -694,7 +694,7 @@ static int nvhost_ioctl_channel_unmap_buffer(struct nvhost_channel_userctx *ctx,
 
 	/* allocate room for buffers */
 	dmabufs = kzalloc(args->num_buffers * sizeof(*dmabufs), GFP_KERNEL);
-	if (!buffers) {
+	if (!dmabufs) {
 		err = -ENOMEM;
 		goto err_alloc_dmabufs;
 	}

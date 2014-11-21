@@ -56,14 +56,12 @@ static int show_channels(struct platform_device *pdev, void *data,
 	struct nvhost_channel *ch;
 	struct output *o = data;
 	struct nvhost_master *m;
-	struct nvhost_device_data *pdata;
 	int index, locked;
 
 	if (pdev == NULL)
 		return 0;
 
 	m = nvhost_get_host(pdev);
-	pdata = platform_get_drvdata(pdev);
 
 	/* acquire lock to prevent channel modifications */
 	locked = mutex_trylock(&m->chlist_mutex);

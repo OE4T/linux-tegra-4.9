@@ -963,6 +963,11 @@ static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 	tegra_ivc_init(&ivc->ivc, rx_base, tx_base, qd->nframes, qd->frame_size,
 			NULL, ivc_raise_irq);
 
+	/* We may have rebooted, so the channel could be active. */
+	ret = tegra_ivc_channel_sync(&ivc->ivc);
+	if (ret != 0)
+		return  ret;
+
 	/* IRQ# of this IVC channel */
 	ivc->irq = givci->res.virq_base + qd->id;
 

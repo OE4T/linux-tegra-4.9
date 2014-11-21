@@ -1138,6 +1138,9 @@ static int nvmap_debug_handles_by_pid_show_client(struct seq_file *s,
 		struct nvmap_debugfs_handles_entry entry;
 		u64 total_mapped_size;
 
+		if (!handle->alloc)
+			continue;
+
 		mutex_lock(&handle->lock);
 		nvmap_get_client_handle_mss(client, handle, &total_mapped_size);
 		mutex_unlock(&handle->lock);

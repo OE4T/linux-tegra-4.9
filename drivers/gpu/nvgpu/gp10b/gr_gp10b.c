@@ -369,6 +369,110 @@ fail:
 	return -EINVAL;
 }
 
+static void gr_gp10b_cb_size_default(struct gk20a *g)
+{
+	struct gr_gk20a *gr = &g->gr;
+
+	gr->attrib_cb_default_size =
+		gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v();
+	gr->alpha_cb_default_size =
+		gr_gpc0_ppc0_cbm_alpha_cb_size_v_default_v();
+}
+
+static void gr_gp10b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
+{
+	struct gr_gk20a *gr = &g->gr;
+	u32 gpc_index, ppc_index, stride, val;
+	u32 pd_ab_max_output;
+	u32 alpha_cb_size = data * 4;
+
+	gk20a_dbg_fn("");
+
+	if (alpha_cb_size > gr->alpha_cb_size)
+		alpha_cb_size = gr->alpha_cb_size;
+
+	gk20a_writel(g, gr_ds_tga_constraintlogic_alpha_r(),
+		(gk20a_readl(g, gr_ds_tga_constraintlogic_alpha_r()) &
+		 ~gr_ds_tga_constraintlogic_alpha_cbsize_f(~0)) |
+		 gr_ds_tga_constraintlogic_alpha_cbsize_f(alpha_cb_size));
+
+	pd_ab_max_output = alpha_cb_size *
+		gr_gpc0_ppc0_cbm_alpha_cb_size_v_granularity_v() /
+		gr_pd_ab_dist_cfg1_max_output_granularity_v();
+
+	gk20a_writel(g, gr_pd_ab_dist_cfg1_r(),
+		gr_pd_ab_dist_cfg1_max_output_f(pd_ab_max_output));
+
+	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
+		stride = proj_gpc_stride_v() * gpc_index;
+
+		for (ppc_index = 0; ppc_index < gr->gpc_ppc_count[gpc_index];
+			ppc_index++) {
+
+			val = gk20a_readl(g, gr_gpc0_ppc0_cbm_alpha_cb_size_r() +
+				stride +
+				proj_ppc_in_gpc_stride_v() * ppc_index);
+
+			val = set_field(val, gr_gpc0_ppc0_cbm_alpha_cb_size_v_m(),
+					gr_gpc0_ppc0_cbm_alpha_cb_size_v_f(alpha_cb_size *
+						gr->pes_tpc_count[ppc_index][gpc_index]));
+
+			gk20a_writel(g, gr_gpc0_ppc0_cbm_alpha_cb_size_r() +
+				stride +
+				proj_ppc_in_gpc_stride_v() * ppc_index, val);
+		}
+	}
+}
+
+static void gr_gp10b_set_circular_buffer_size(struct gk20a *g, u32 data)
+{
+	struct gr_gk20a *gr = &g->gr;
+	u32 gpc_index, ppc_index, stride, val;
+	u32 cb_size = data * 4;
+
+	gk20a_dbg_fn("");
+
+	if (cb_size > gr->attrib_cb_size)
+		cb_size = gr->attrib_cb_size;
+
+	gk20a_writel(g, gr_ds_tga_constraintlogic_beta_r(),
+		(gk20a_readl(g, gr_ds_tga_constraintlogic_beta_r()) &
+		 ~gr_ds_tga_constraintlogic_beta_cbsize_f(~0)) |
+		 gr_ds_tga_constraintlogic_beta_cbsize_f(cb_size));
+
+	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
+		stride = proj_gpc_stride_v() * gpc_index;
+
+		for (ppc_index = 0; ppc_index < gr->gpc_ppc_count[gpc_index];
+			ppc_index++) {
+
+			val = gk20a_readl(g, gr_gpc0_ppc0_cbm_beta_cb_size_r() +
+				stride +
+				proj_ppc_in_gpc_stride_v() * ppc_index);
+
+			val = set_field(val,
+				gr_gpc0_ppc0_cbm_beta_cb_size_v_m(),
+				gr_gpc0_ppc0_cbm_beta_cb_size_v_f(cb_size *
+					gr->pes_tpc_count[ppc_index][gpc_index]));
+
+			gk20a_writel(g, gr_gpc0_ppc0_cbm_beta_cb_size_r() +
+				stride +
+				proj_ppc_in_gpc_stride_v() * ppc_index, val);
+
+			val = gk20a_readl(g, gr_gpcs_swdx_tc_beta_cb_size_r(
+						ppc_index + gpc_index));
+
+			val = set_field(val,
+				gr_gpcs_swdx_tc_beta_cb_size_v_m(),
+				gr_gpcs_swdx_tc_beta_cb_size_v_f(cb_size *
+					gr->gpc_ppc_count[gpc_index]));
+
+			gk20a_writel(g, gr_gpcs_swdx_tc_beta_cb_size_r(
+						ppc_index + gpc_index), val);
+		}
+	}
+}
+
 void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
@@ -381,4 +485,9 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.calc_global_ctx_buffer_size =
 		gr_gp10b_calc_global_ctx_buffer_size;
 	gops->gr.handle_sw_method = gr_gp10b_handle_sw_method;
+	gops->gr.cb_size_default = gr_gp10b_cb_size_default;
+	gops->gr.set_alpha_circular_buffer_size =
+		gr_gp10b_set_alpha_circular_buffer_size;
+	gops->gr.set_circular_buffer_size =
+		gr_gp10b_set_circular_buffer_size;
 }

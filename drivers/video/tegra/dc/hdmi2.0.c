@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/hdmi2.0.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -1026,6 +1026,7 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	struct tegra_dc *dc = hdmi->dc;
 	u32 h_pulse_start, h_pulse_end;
+	unsigned long val = 0;
 #endif
 	u32 dispclk_div_8_2;
 
@@ -1055,7 +1056,10 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 	h_pulse_end = h_pulse_start + 8;
 	tegra_dc_writel(dc, PULSE_START(h_pulse_start) | PULSE_END(h_pulse_end),
 		  DC_DISP_H_PULSE2_POSITION_A);
-	tegra_dc_writel(dc, 0x1000, DC_DISP_DISP_SIGNAL_OPTIONS0);
+
+	val = tegra_dc_readl(dc, DC_DISP_DISP_SIGNAL_OPTIONS0);
+	val |= H_PULSE_2_ENABLE;
+	tegra_dc_writel(dc, val, DC_DISP_DISP_SIGNAL_OPTIONS0);
 #endif
 }
 
@@ -1736,7 +1740,6 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 
 	/* TODO: Confirm sequence with HW */
 	tegra_sor_writel(sor,  NV_SOR_SEQ_INST(0), 0x8080);
-	tegra_sor_writel(sor,  NV_SOR_PWR, 0x80000000);
 	tegra_sor_writel(sor,  NV_SOR_PWR, 0x80000001);
 
 	tegra_sor_pad_cal_power(sor, true);
@@ -1812,10 +1815,12 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 
 		hdmi->clk_type = TEGRA_HDMI_BRICK_CLK;
 	} else if (clk_type == TEGRA_HDMI_SAFE_CLK) {
-		/* Select sor clock muxes */
-		tegra_clk_cfg_ex(hdmi->sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 0);
-
-		hdmi->clk_type = TEGRA_HDMI_SAFE_CLK;
+		if (!hdmi->dc->initialized) {
+			/* Select sor clock muxes */
+			tegra_clk_cfg_ex(hdmi->sor->sor_clk,
+				TEGRA_CLK_SOR_CLK_SEL, 0);
+			hdmi->clk_type = TEGRA_HDMI_SAFE_CLK;
+		}
 	} else {
 		dev_err(&hdmi->dc->ndev->dev, "hdmi: incorrect clk type configured\n");
 	}
@@ -1861,9 +1866,11 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		tegra_clk_writel((5 << 29), (0x7 << 29), 0x410);
 #endif
 
+	if (dc->initialized)
+		goto skip_setup;
 	if (clk_get_rate(parent_clk) != dc->mode.pclk)
 		clk_set_rate(parent_clk, dc->mode.pclk);
-
+skip_setup:
 	tegra_dvfs_set_rate(parent_clk, dc->mode.pclk);
 	tegra_dvfs_set_rate(clk, dc->mode.pclk);
 

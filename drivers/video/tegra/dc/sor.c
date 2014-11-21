@@ -906,7 +906,9 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 		.io_dpd_reg_index = 0,
 		.io_dpd_bit = 28,
 	};
-
+	/* seamless */
+	if (sor->dc->initialized)
+		return;
 	tegra_io_dpd_disable(&hdmi_dpd);
 	mdelay(50);
 
@@ -1355,6 +1357,10 @@ static void tegra_dc_sor_enable_sor(struct tegra_dc_sor_data *sor, bool enable)
 	struct tegra_dc *dc = sor->dc;
 	u32 reg_val = tegra_dc_readl(sor->dc, DC_DISP_DISP_WIN_OPTIONS);
 	u32 enb = dc->ndev->id ? SOR1_ENABLE : SOR_ENABLE;
+
+	/* Do not disable SOR during seamless boot */
+	if (sor->dc->initialized && !enable)
+		return;
 
 	if (sor->dc->out->type == TEGRA_DC_OUT_HDMI)
 		enb = SOR1_ENABLE;

@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2010 Google, Inc.
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -40,6 +40,11 @@ unsigned long tegra_dc_pclk_round_rate(struct tegra_dc *dc, int pclk)
 		div = DIV_ROUND_CLOSEST(rate * 2, pclk);
 	else  /* round-up for divider for other display types */
 		div = DIV_ROUND_UP(rate * 2, pclk);
+
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+	if (dc->out->type == TEGRA_DC_OUT_HDMI)
+		return rate;
+#endif
 
 	if (div < 2)
 		return 0;

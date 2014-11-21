@@ -25,7 +25,11 @@ enum {
 	PASCAL_DMA_COPY_A        = 0xC0B5,
 };
 
-void gp10b_init_gr(struct gpu_ops *ops);
+#define NVC097_SET_ALPHA_CIRCULAR_BUFFER_SIZE	0x02dc
+#define NVC097_SET_CIRCULAR_BUFFER_SIZE		0x1280
+#define NVC097_SET_SHADER_EXCEPTIONS		0x1528
+#define NVC0C0_SET_SHADER_EXCEPTIONS		0x1528
 
+void gp10b_init_gr(struct gpu_ops *ops);
 
 #endif

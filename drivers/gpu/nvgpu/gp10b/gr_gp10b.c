@@ -333,6 +333,42 @@ static int gr_gp10b_calc_global_ctx_buffer_size(struct gk20a *g)
 	return size;
 }
 
+static int gr_gp10b_handle_sw_method(struct gk20a *g, u32 addr,
+				     u32 class_num, u32 offset, u32 data)
+{
+	gk20a_dbg_fn("");
+
+	if (class_num == PASCAL_COMPUTE_A) {
+		switch (offset << 2) {
+		case NVC0C0_SET_SHADER_EXCEPTIONS:
+			gk20a_gr_set_shader_exceptions(g, data);
+			break;
+		default:
+			goto fail;
+		}
+	}
+
+	if (class_num == PASCAL_A) {
+		switch (offset << 2) {
+		case NVC097_SET_SHADER_EXCEPTIONS:
+			gk20a_gr_set_shader_exceptions(g, data);
+			break;
+		case NVC097_SET_CIRCULAR_BUFFER_SIZE:
+			g->ops.gr.set_circular_buffer_size(g, data);
+			break;
+		case NVC097_SET_ALPHA_CIRCULAR_BUFFER_SIZE:
+			g->ops.gr.set_alpha_circular_buffer_size(g, data);
+			break;
+		default:
+			goto fail;
+		}
+	}
+	return 0;
+
+fail:
+	return -EINVAL;
+}
+
 void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
@@ -344,4 +380,5 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.buffer_size_defaults = gr_gp10b_buffer_size_defaults;
 	gops->gr.calc_global_ctx_buffer_size =
 		gr_gp10b_calc_global_ctx_buffer_size;
+	gops->gr.handle_sw_method = gr_gp10b_handle_sw_method;
 }

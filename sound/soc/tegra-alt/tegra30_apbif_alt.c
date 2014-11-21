@@ -38,6 +38,49 @@ struct tegra30_apbif *apbif;
 
 #define FIFOS_IN_FIRST_REG_BLOCK 4
 
+#define APBIF_CH_REG(name, id) \
+	((id < FIFOS_IN_FIRST_REG_BLOCK) ? \
+	(TEGRA_AHUB_##name + (TEGRA_AHUB_##name##_STRIDE * id)) : \
+	(TEGRA_AHUB_##name + (TEGRA_AHUB_##name##_STRIDE * (id - FIFOS_IN_FIRST_REG_BLOCK))))
+
+#define APBIF_REG_DEFAULTS(id) \
+	{APBIF_CH_REG(CHANNEL_CTRL, id), 0x00000000}, \
+	{APBIF_CH_REG(CHANNEL_CLEAR, id), 0x00000000}, \
+	{APBIF_CH_REG(CHANNEL_TXFIFO, id), 0x00000000}, \
+	{APBIF_CH_REG(CHANNEL_RXFIFO, id), 0x00000000}, \
+	{APBIF_CH_REG(CIF_TX_CTRL, id), 0x00001100}, \
+	{APBIF_CH_REG(CIF_RX_CTRL, id), 0x00001100}
+
+static const struct reg_default tegra30_apbif_reg_defaults[] = {
+	APBIF_REG_DEFAULTS(0),
+	APBIF_REG_DEFAULTS(1),
+	APBIF_REG_DEFAULTS(2),
+	APBIF_REG_DEFAULTS(3),
+	{TEGRA_AHUB_CONFIG_LINK_CTRL, 0x08008000},
+	{TEGRA_AHUB_MISC_CTRL, 0x00000000},
+	{TEGRA_AHUB_I2S_INT_MASK, 0x7fff03ff},
+	{TEGRA_AHUB_DAM_INT_MASK, 0x00939393},
+	{TEGRA_AHUB_SPDIF_INT_MASK, 0x00008fff},
+	{TEGRA_AHUB_APBIF_INT_MASK, 0x0001ffff},
+	{TEGRA_AHUB_I2S_INT_STATUS, 0x00000000},
+	{TEGRA_AHUB_DAM_INT_STATUS, 0x00000000},
+	{TEGRA_AHUB_SPDIF_INT_STATUS, 0x00000000},
+	{TEGRA_AHUB_APBIF_INT_STATUS, 0x00000000},
+	{TEGRA_AHUB_I2S_INT_SET, 0x00000000},
+	{TEGRA_AHUB_DAM_INT_SET, 0x00000000},
+	{TEGRA_AHUB_SPDIF_INT_SET, 0x00000000},
+	{TEGRA_AHUB_APBIF_INT_SET, 0x00000000},
+};
+
+static const struct reg_default tegra30_apbif2_reg_defaults[] = {
+	APBIF_REG_DEFAULTS(4),
+	APBIF_REG_DEFAULTS(5),
+	APBIF_REG_DEFAULTS(6),
+	APBIF_REG_DEFAULTS(7),
+	APBIF_REG_DEFAULTS(8),
+	APBIF_REG_DEFAULTS(9),
+};
+
 #define LAST_REG(name) \
 	(TEGRA_AHUB_##name + \
 	 (TEGRA_AHUB_##name##_STRIDE * TEGRA_AHUB_##name##_COUNT) - 4)
@@ -47,7 +90,40 @@ struct tegra30_apbif *apbif;
 	 (reg <= LAST_REG(name) && \
 	 (!((reg - TEGRA_AHUB_##name) % TEGRA_AHUB_##name##_STRIDE))))
 
-static bool tegra30_apbif_wr_rd_reg(struct device *dev, unsigned int reg)
+static bool tegra30_apbif_wr_reg(struct device *dev, unsigned int reg)
+{
+	switch (reg) {
+	case TEGRA_AHUB_CONFIG_LINK_CTRL:
+	case TEGRA_AHUB_MISC_CTRL:
+	case TEGRA_AHUB_I2S_INT_MASK:
+	case TEGRA_AHUB_DAM_INT_MASK:
+	case TEGRA_AHUB_SPDIF_INT_MASK:
+	case TEGRA_AHUB_APBIF_INT_MASK:
+	case TEGRA_AHUB_I2S_INT_STATUS:
+	case TEGRA_AHUB_DAM_INT_STATUS:
+	case TEGRA_AHUB_SPDIF_INT_STATUS:
+	case TEGRA_AHUB_APBIF_INT_STATUS:
+	case TEGRA_AHUB_I2S_INT_SET:
+	case TEGRA_AHUB_DAM_INT_SET:
+	case TEGRA_AHUB_SPDIF_INT_SET:
+	case TEGRA_AHUB_APBIF_INT_SET:
+		return true;
+	default:
+		break;
+	};
+
+	if (REG_IN_ARRAY(reg, CHANNEL_CTRL) ||
+	    REG_IN_ARRAY(reg, CHANNEL_CLEAR) ||
+	    REG_IN_ARRAY(reg, CHANNEL_TXFIFO) ||
+	    REG_IN_ARRAY(reg, CHANNEL_RXFIFO) ||
+	    REG_IN_ARRAY(reg, CIF_TX_CTRL) ||
+	    REG_IN_ARRAY(reg, CIF_RX_CTRL))
+		return true;
+
+	return false;
+}
+
+static bool tegra30_apbif_rd_reg(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
 	case TEGRA_AHUB_CONFIG_LINK_CTRL:
@@ -134,11 +210,13 @@ static const struct regmap_config tegra30_apbif_regmap_config = {
 	.val_bits = 32,
 	.reg_stride = 4,
 	.max_register = TEGRA_AHUB_APBIF_INT_SET,
-	.writeable_reg = tegra30_apbif_wr_rd_reg,
-	.readable_reg = tegra30_apbif_wr_rd_reg,
+	.writeable_reg = tegra30_apbif_wr_reg,
+	.readable_reg = tegra30_apbif_rd_reg,
 	.volatile_reg = tegra30_apbif_volatile_reg,
 	.precious_reg = tegra30_apbif_precious_reg,
 	.cache_type = REGCACHE_FLAT,
+	.reg_defaults = tegra30_apbif_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra30_apbif_reg_defaults),
 };
 
 static const struct regmap_config tegra30_apbif2_regmap_config = {
@@ -147,6 +225,8 @@ static const struct regmap_config tegra30_apbif2_regmap_config = {
 	.reg_stride = 4,
 	.max_register = TEGRA_AHUB_CIF_RX9_CTRL,
 	.cache_type = REGCACHE_FLAT,
+	.reg_defaults = tegra30_apbif2_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra30_apbif2_reg_defaults),
 };
 
 static int tegra30_apbif_runtime_suspend(struct device *dev)

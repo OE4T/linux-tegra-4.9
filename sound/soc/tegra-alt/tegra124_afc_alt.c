@@ -36,6 +36,25 @@
 
 #define DRV_NAME "tegra124-afc"
 
+static const struct reg_default tegra124_afc_reg_defaults[] = {
+	{TEGRA_AFC_CTRL, 0x80000000},
+	{TEGRA_AFC_THRESHOLDS_I2S, 0x00000000},
+	{TEGRA_AFC_THRESHOLDS_AFC, 0x00000000},
+	{TEGRA_AFC_FLOW_STEP_SIZE, 0x00000004},
+	{TEGRA_AFC_AUDIOCIF_AFCTX_CTRL, 0x00001100},
+	{TEGRA_AFC_AUDIOCIF_AFCRX_CTRL, 0x00001100},
+	{TEGRA_AFC_FLOW_STATUS, 0x00000000},
+	{TEGRA_AFC_LCOEF_1_4_0, 0x0000002e},
+	{TEGRA_AFC_LCOEF_1_4_1, 0x0000f9e6},
+	{TEGRA_AFC_LCOEF_1_4_2, 0x000020ca},
+	{TEGRA_AFC_LCOEF_1_4_3, 0x00007147},
+	{TEGRA_AFC_LCOEF_1_4_4, 0x0000f17e},
+	{TEGRA_AFC_LCOEF_1_4_5, 0x000001e0},
+	{TEGRA_AFC_LCOEF_2_4_0, 0x00000117},
+	{TEGRA_AFC_LCOEF_2_4_1, 0x0000f26b},
+	{TEGRA_AFC_LCOEF_2_4_2, 0x00004c07},
+};
+
 static int tegra124_afc_runtime_suspend(struct device *dev)
 {
 	struct tegra124_afc *afc = dev_get_drvdata(dev);
@@ -370,6 +389,8 @@ static const struct regmap_config tegra124_afc_regmap_config = {
 	.readable_reg = tegra124_afc_rd_reg,
 	.volatile_reg = tegra124_afc_volatile_reg,
 	.cache_type = REGCACHE_FLAT,
+	.reg_defaults = tegra124_afc_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra124_afc_reg_defaults),
 };
 
 static const struct tegra124_afc_soc_data soc_data_tegra124 = {

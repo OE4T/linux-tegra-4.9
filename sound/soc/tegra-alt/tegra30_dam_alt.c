@@ -38,6 +38,19 @@
 
 #define TEGRA_DAM_CH_REG(id)	TEGRA_DAM_CH##id##_CONV
 
+static const struct reg_default tegra30_dam_reg_defaults[] = {
+	{TEGRA_DAM_CTRL, 0x00000000},
+	{TEGRA_DAM_CLIP, 0x00000000},
+	{TEGRA_DAM_CLIP_THRESHOLD, 0x007fffff},
+	{TEGRA_DAM_AUDIOCIF_OUT_CTRL, 0x00001100},
+	{TEGRA_DAM_CH0_CTRL, 0x00000000},
+	{TEGRA_DAM_CH0_CONV, 0x00001000},
+	{TEGRA_DAM_AUDIOCIF_CH0_CTRL, 0x00001100},
+	{TEGRA_DAM_CH1_CTRL, 0x00000010},
+	{TEGRA_DAM_CH1_CONV, 0x00001000},
+	{TEGRA_DAM_AUDIOCIF_CH1_CTRL, 0x00001100},
+};
+
 static int tegra30_dam_farrow_param_lookup[10][3] = {
 	/* fs_in, fs_out, farrow_param */
 	{TEGRA_DAM_FS8, TEGRA_DAM_FS48, TEGRA_DAM_FARROW_PARAM_1},
@@ -994,6 +1007,8 @@ static const struct regmap_config tegra30_dam_regmap_config = {
 	.readable_reg = tegra30_dam_wr_rd_reg,
 	.volatile_reg = tegra30_dam_volatile_reg,
 	.cache_type = REGCACHE_FLAT,
+	.reg_defaults = tegra30_dam_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra30_dam_reg_defaults),
 };
 
 static const struct tegra30_dam_soc_data soc_data_tegra30 = {

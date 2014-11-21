@@ -176,6 +176,7 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 {
 	u32 int_enable;
+	u32 int_mask;
 
 	/* Init syncpt */
 	tegra_dc_writel(dc, nvdisp_incr_syncpt_cntrl_no_stall_f(1),
@@ -189,14 +190,18 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 	tegra_dc_writel(dc, 0xffffffff, nvdisp_int_type_r());
 
 	/* enable interrupts for vblank, frame_end and underflows */
-	int_enable = (FRAME_END_INT | V_BLANK_INT | HEAD_UF_INT);
+	int_enable = nvdisp_cmd_int_status_frame_end_f(1) |
+			nvdisp_cmd_int_status_v_blank_f(1) |
+			nvdisp_cmd_int_status_uf_f(1);
 	/* for panels with one-shot mode enable tearing effect interrupt */
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		int_enable |= MSF_INT;
 	/* Todo: also need to enable interrupts for SD3, DSC etc */
 
 	tegra_dc_writel(dc, int_enable, nvdisp_cmd_int_enable_r());
-	tegra_dc_writel(dc, HEAD_UF_INT, nvdisp_cmd_int_mask_r());
+
+	int_mask = nvdisp_cmd_int_status_uf_f(1);
+	tegra_dc_writel(dc, int_mask, nvdisp_cmd_int_mask_r());
 
 	tegra_dc_writel(dc, nvdisp_state_access_write_mux_assembly_f() |
 		nvdisp_state_access_read_mux_assembly_f(),
@@ -246,8 +251,7 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 		dc->out->enable(&dc->ndev->dev);
 
 	/* TODO: clock setup */
-
-	tegra_dc_power_on(dc);
+	/*tegra_dc_power_on(dc);*/
 
 	/* Mask interrupts duirng init */
 	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);

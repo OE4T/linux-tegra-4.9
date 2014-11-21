@@ -207,7 +207,9 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	}
 
 	if (tegra_cpu_is_asim())
-		tegra_dc_writel(dc, FRAME_END_INT | V_BLANK_INT,
+		tegra_dc_writel(dc,
+			(nvdisp_cmd_int_status_frame_end_f(1) |
+			nvdisp_cmd_int_status_v_blank_f(1)),
 			nvdisp_cmd_int_status_r());
 
 	tegra_dc_writel(dc, update_mask << 8 |
@@ -219,7 +221,9 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 		   when the flip is completed */
 		set_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
 		tegra_dc_unmask_interrupt(dc,
-			FRAME_END_INT | V_BLANK_INT | HEAD_UF_INT);
+			(nvdisp_cmd_int_status_frame_end_f(1) |
+			nvdisp_cmd_int_status_v_blank_f(1) |
+			nvdisp_cmd_int_status_uf_f(1)));
 	}
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {

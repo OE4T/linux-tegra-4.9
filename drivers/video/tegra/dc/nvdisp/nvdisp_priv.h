@@ -22,11 +22,9 @@
 #include <dc_priv_defs.h>
 #include <trace/events/display.h>
 #include <linux/tegra-powergate.h>
+#include <hw_win_nvdisp.h>
 
 /* TODO: move to device tree */
-#define BASE_ADDRESS_DC_WINC		0x00000500
-#define BASE_ADDRESS_DC_WIN		0x00000700
-#define BASE_ADDRESS_DC_WINBUF		0x00000800
 
 #define BASE_ADDRESS_DC_A_WINC		0x00000a00
 #define BASE_ADDRESS_DC_A_WIN		0x00000b80
@@ -79,15 +77,6 @@ static u32 BASE_ADDRESS_DC_WIN_WINBUF[] = {
 		BASE_ADDRESS_DC_F_WINBUF,
 };
 
-#define DSC_TO_UF_INT	29
-#define DSC_BBUF_UF_INT	28
-#define DSC_RBUF_UF_INT	27
-#define DSC_OBUF_UF_INT	26
-#define SD3_INT		24
-#define HEAD_UF_INT	23
-#define REG_TMOUT_INT	7
-#define REGION_CRC_INT	6
-
 #define NVDISP_WIN_ADDR(head, win, word_offset) \
 		nvdisp_win_offset(win, word_offset) << 2
 
@@ -95,16 +84,16 @@ static u32 BASE_ADDRESS_DC_WIN_WINBUF[] = {
 static u32 nvdisp_win_offset(const u32 win, const u32 word_offset)
 {
 
-	if (word_offset >= BASE_ADDRESS_DC_WINBUF) /* WINBUF */
-		return (word_offset - BASE_ADDRESS_DC_WINBUF) +
+	if (word_offset >= win_base_addr_dc_winbuf_r()) /* WINBUF */
+		return (word_offset - win_base_addr_dc_winbuf_r()) +
 			BASE_ADDRESS_DC_WIN_WINBUF[win];
 
-	else if (word_offset >= BASE_ADDRESS_DC_WIN) /* WIN */
-		return (word_offset - BASE_ADDRESS_DC_WIN) +
+	else if (word_offset >= win_base_addr_dc_win_r()) /* WIN */
+		return (word_offset - win_base_addr_dc_win_r()) +
 			BASE_ADDRESS_DC_WIN_WIN[win];
 
-	else if (word_offset >= BASE_ADDRESS_DC_WINC) /* WINC */
-		return (word_offset - BASE_ADDRESS_DC_WINC) +
+	else if (word_offset >= win_base_addr_dc_winc_r()) /* WINC */
+		return (word_offset - win_base_addr_dc_winc_r()) +
 			 BASE_ADDRESS_DC_WIN_WINC[win];
 
 	else

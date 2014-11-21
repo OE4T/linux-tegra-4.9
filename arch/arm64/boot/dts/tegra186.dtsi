@@ -116,13 +116,6 @@
 			#stream-id-cells = <1>;
 		};
 
-		isp@54680000 {
-			compatible = "nvidia,tegra186-isp";
-			reg = <0x0 0x54680000 0x0 0x00040000>;
-			interrupts = <0 72 0x04>;
-			#stream-id-cells = <1>;
-		};
-
 		vii2c {
 			compatible = "nvidia,tegra186-vii2c";
 			reg = <0x0 0x546c0000 0x0 0x00040000>;

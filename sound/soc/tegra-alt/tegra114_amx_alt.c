@@ -37,6 +37,18 @@
 
 #define DRV_NAME "tegra114_amx"
 
+static const struct reg_default tegra114_amx_reg_defaults[] = {
+	{TEGRA_AMX_CTRL, 0x00000000},
+	{TEGRA_AMX_IN_CH_CTRL, 0x00000000},
+	{TEGRA_AMX_OUT_BYTE_EN0, 0x00000000},
+	{TEGRA_AMX_OUT_BYTE_EN1, 0x00000000},
+	{TEGRA_AMX_AUDIOCIF_OUT_CTRL, 0x00001100},
+	{TEGRA_AMX_AUDIOCIF_CH0_CTRL, 0x00001100},
+	{TEGRA_AMX_AUDIOCIF_CH1_CTRL, 0x00001100},
+	{TEGRA_AMX_AUDIOCIF_CH2_CTRL, 0x00001100},
+	{TEGRA_AMX_AUDIOCIF_CH3_CTRL, 0x00001100},
+};
+
 /**
  * tegra114_amx_set_master_stream - set master stream and dependency
  * @amx: struct of tegra114_amx
@@ -546,6 +558,8 @@ static const struct regmap_config tegra114_amx_regmap_config = {
 	.readable_reg = tegra114_amx_wr_rd_reg,
 	.volatile_reg = tegra114_amx_volatile_reg,
 	.cache_type = REGCACHE_FLAT,
+	.reg_defaults = tegra114_amx_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra114_amx_reg_defaults),
 };
 
 static const struct tegra114_amx_soc_data soc_data_tegra114 = {

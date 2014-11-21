@@ -37,6 +37,18 @@
 
 #define DRV_NAME "tegra114-adx"
 
+static const struct reg_default tegra114_adx_reg_defaults[] = {
+	{TEGRA_ADX_CTRL, 0x00000000},
+	{TEGRA_ADX_OUT_CH_CTRL, 0x00000000},
+	{TEGRA_ADX_IN_BYTE_EN0, 0x00000000},
+	{TEGRA_ADX_IN_BYTE_EN1, 0x00000000},
+	{TEGRA_ADX_AUDIOCIF_IN_CTRL, 0x00001100},
+	{TEGRA_ADX_AUDIOCIF_CH0_CTRL, 0x00001100},
+	{TEGRA_ADX_AUDIOCIF_CH1_CTRL, 0x00001100},
+	{TEGRA_ADX_AUDIOCIF_CH2_CTRL, 0x00001100},
+	{TEGRA_ADX_AUDIOCIF_CH3_CTRL, 0x00001100},
+};
+
 /**
  * tegra114_adx_enable_outstream - enable output stream
  * @adx: struct of tegra114_adx
@@ -512,6 +524,8 @@ static const struct regmap_config tegra114_adx_regmap_config = {
 	.readable_reg = tegra114_adx_wr_rd_reg,
 	.volatile_reg = tegra114_adx_volatile_reg,
 	.cache_type = REGCACHE_FLAT,
+	.reg_defaults = tegra114_adx_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra114_adx_reg_defaults),
 };
 
 static const struct tegra114_adx_soc_data soc_data_tegra114 = {

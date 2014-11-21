@@ -48,6 +48,29 @@
 
 #define DRV_NAME "tegra30-i2s"
 
+static const struct reg_default tegra30_i2s_reg_defaults[] = {
+	{TEGRA30_I2S_CTRL, 0x00000000},
+	{TEGRA30_I2S_TIMING, 0x0000001f},
+	{TEGRA30_I2S_OFFSET, 0x00000000},
+	{TEGRA30_I2S_CH_CTRL, 0x00000000},
+	{TEGRA30_I2S_SLOT_CTRL, 0x00000000},
+	{TEGRA30_I2S_AUDIOCIF_I2STX_CTRL, 0x00001100},
+	{TEGRA30_I2S_AUDIOCIF_I2SRX_CTRL, 0x00001100},
+	{TEGRA30_I2S_FLOWCTL, 0x80000000},
+	{TEGRA30_I2S_TX_STEP, 0x00008000},
+	{TEGRA30_I2S_FLOW_STATUS, 0x00000000},
+	{TEGRA30_I2S_LCOEF_1_4_0, 0x0000002e},
+	{TEGRA30_I2S_LCOEF_1_4_1, 0x0000f9e6},
+	{TEGRA30_I2S_LCOEF_1_4_2, 0x000020ca},
+	{TEGRA30_I2S_LCOEF_1_4_3, 0x00007147},
+	{TEGRA30_I2S_LCOEF_1_4_4, 0x0000f17e},
+	{TEGRA30_I2S_LCOEF_1_4_5, 0x000001e0},
+	{TEGRA30_I2S_LCOEF_2_4_0, 0x00000117},
+	{TEGRA30_I2S_LCOEF_2_4_1, 0x0000f26b},
+	{TEGRA30_I2S_LCOEF_2_4_2, 0x00004c07},
+	{TEGRA114_I2S_SLOT_CTRL2, 0x00000000},
+};
+
 static void tegra30_i2s_set_slot_ctrl(struct regmap *regmap,
 				unsigned int total_slots,
 				unsigned int tx_slot_mask,
@@ -603,7 +626,36 @@ static struct snd_soc_codec_driver tegra30_i2s_codec = {
 	.idle_bias_off = 1,
 };
 
-static bool tegra30_i2s_wr_rd_reg(struct device *dev, unsigned int reg)
+static bool tegra30_i2s_wr_reg(struct device *dev, unsigned int reg)
+{
+	switch (reg) {
+	case TEGRA30_I2S_CTRL:
+	case TEGRA30_I2S_TIMING:
+	case TEGRA30_I2S_OFFSET:
+	case TEGRA30_I2S_CH_CTRL:
+	case TEGRA30_I2S_SLOT_CTRL:
+	case TEGRA30_I2S_AUDIOCIF_I2STX_CTRL:
+	case TEGRA30_I2S_AUDIOCIF_I2SRX_CTRL:
+	case TEGRA30_I2S_FLOWCTL:
+	case TEGRA30_I2S_TX_STEP:
+	case TEGRA30_I2S_FLOW_STATUS:
+	case TEGRA30_I2S_LCOEF_1_4_0:
+	case TEGRA30_I2S_LCOEF_1_4_1:
+	case TEGRA30_I2S_LCOEF_1_4_2:
+	case TEGRA30_I2S_LCOEF_1_4_3:
+	case TEGRA30_I2S_LCOEF_1_4_4:
+	case TEGRA30_I2S_LCOEF_1_4_5:
+	case TEGRA30_I2S_LCOEF_2_4_0:
+	case TEGRA30_I2S_LCOEF_2_4_1:
+	case TEGRA30_I2S_LCOEF_2_4_2:
+	case TEGRA114_I2S_SLOT_CTRL2:
+		return true;
+	default:
+		return false;
+	};
+}
+
+static bool tegra30_i2s_rd_reg(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
 	case TEGRA30_I2S_CTRL:
@@ -654,10 +706,12 @@ static const struct regmap_config tegra30_i2s_regmap_config = {
 	.reg_stride = 4,
 	.val_bits = 32,
 	.max_register = TEGRA114_I2S_SLOT_CTRL2,
-	.writeable_reg = tegra30_i2s_wr_rd_reg,
-	.readable_reg = tegra30_i2s_wr_rd_reg,
+	.writeable_reg = tegra30_i2s_wr_reg,
+	.readable_reg = tegra30_i2s_rd_reg,
 	.volatile_reg = tegra30_i2s_volatile_reg,
 	.cache_type = REGCACHE_FLAT,
+	.reg_defaults = tegra30_i2s_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra30_i2s_reg_defaults),
 };
 
 static const struct tegra30_i2s_soc_data soc_data_tegra30 = {

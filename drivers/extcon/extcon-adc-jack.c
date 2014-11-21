@@ -65,11 +65,9 @@ static void adc_jack_handler(struct work_struct *work)
 	struct adc_jack_data *data = container_of(to_delayed_work(work),
 			struct adc_jack_data,
 			handler);
-	struct adc_jack_cond *def;
-	u32 state = 0;
+	struct adc_jack_cond *def = NULL;
 	int ret, adc_val;
 	int i;
-	int cindex = 0;
 
 	ret = iio_read_channel_raw(data->chan, &adc_val);
 	if (ret < 0) {
@@ -77,14 +75,11 @@ static void adc_jack_handler(struct work_struct *work)
 		return;
 	}
 
-	adc_val = abs(adc_val);
 	/* Get state from adc value with adc_conditions */
 	for (i = 0; i < data->num_conditions; i++) {
 		def = &data->adc_conditions[i];
 		if (def->min_adc <= adc_val && def->max_adc >= adc_val) {
 			extcon_set_state_sync(data->edev, def->id, true);
-			state = def->state;
-			cindex = ffs(state) - 1;
 			return;
 		}
 	}
@@ -95,8 +90,10 @@ static void adc_jack_handler(struct work_struct *work)
 		extcon_set_state_sync(data->edev, def->id, false);
 	}
 	
-	dev_info(data->dev, "ADC read %d Cable State 0x%02X\n",
-			 adc_val, state);
+	dev_info(data->dev,
+		"ADC Lower:Value:Upper = %d:%d:%d, Cable:%d\n",
+		def->min_adc, adc_val, def->max_adc, dev->id);
+
 }
 
 static void ecx_extcon_notifier_timer(unsigned long _data)
@@ -180,8 +177,8 @@ static struct adc_jack_pdata *of_get_platform_data(
 					i * 3 + 2, &max_adc);
 
 		pdata->adc_conditions[i].state = state;
-		pdata->adc_conditions[i].min_adc = min_adc;
-		pdata->adc_conditions[i].max_adc = max_adc;
+		pdata->adc_conditions[i].min_adc = (int) min_adc;
+		pdata->adc_conditions[i].max_adc = (int) max_adc;
 	};
 
 	ncables = of_property_count_u32_elems(np, "extcon-adc-jack,cable-names");

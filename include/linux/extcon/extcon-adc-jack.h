@@ -34,8 +34,8 @@
  */
 struct adc_jack_cond {
 	unsigned int id;
-	u32 min_adc;
-	u32 max_adc;
+	int min_adc;
+	int max_adc;
 };
 
 /**

@@ -145,6 +145,7 @@ static const char *tegra_clk_name[] = {
 	"hdmi",
 	"pll_dp",
 	"sor_safe",
+	"pll_d2"
 	/* Get complete list from BPMP */
 };
 

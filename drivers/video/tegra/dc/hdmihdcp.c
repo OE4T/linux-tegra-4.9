@@ -1279,6 +1279,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		goto failure;
 	}
 
+	usleep_range(20000, 25000);
 	hdcp_ctrl_run(hdmi, 1);
 
 	nvhdcp_vdbg("wait AN_VALID ...\n");

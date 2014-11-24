@@ -289,7 +289,7 @@ static int tegra_hdmi_ddc_i2c_xfer(struct tegra_dc *dc,
 	return ret;
 }
 
-static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi, bool use_virtual_edid)
+static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi, int edid_src)
 {
 	struct tegra_dc *dc = hdmi->dc;
 	struct i2c_adapter *i2c_adap;
@@ -298,11 +298,10 @@ static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi, bool use_virtual_edid)
 		.type = "tegra_hdmi2.0",
 		.addr = 0x50,
 	};
-
-	if (use_virtual_edid)
-		hdmi->edid = tegra_edid_create(dc, tegra_dc_edid_blob);
-	else
+	if (edid_src == 0)
 		hdmi->edid = tegra_edid_create(dc, tegra_hdmi_ddc_i2c_xfer);
+	else if (edid_src == 1)
+		hdmi->edid = tegra_edid_create(dc, tegra_dc_edid_blob);
 	if (IS_ERR_OR_NULL(hdmi->edid)) {
 		dev_err(&dc->ndev->dev, "hdmi: can't create edid\n");
 		return PTR_ERR(hdmi->edid);
@@ -485,7 +484,8 @@ static int tegra_hdmi_get_mon_spec(struct tegra_hdmi *hdmi)
 	memset(&hdmi->mon_spec, 0, sizeof(hdmi->mon_spec));
 
 	do {
-		err = tegra_edid_get_monspecs(hdmi->edid, &hdmi->mon_spec);
+		err = tegra_edid_get_monspecs(hdmi->edid,
+						&hdmi->mon_spec, NULL);
 		if (err < 0)
 			usleep_range(MIN_RETRY_DELAY_US, MAX_RETRY_DELAY_US);
 		else
@@ -848,13 +848,13 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	struct tegra_hdmi *hdmi;
 	int err;
 	struct device_node *np = dc->ndev->dev.of_node;
-	bool use_vedid = false;
 #ifdef CONFIG_OF
 	struct device_node *np_hdmi = of_find_node_by_path(HDMI_NODE);
 #else
 	struct device_node *np_hdmi = NULL;
 #endif
 	struct device_node *np_panel = NULL;
+	int edid_src = 0;
 
 	hdmi = devm_kzalloc(&dc->ndev->dev, sizeof(*hdmi), GFP_KERNEL);
 	if (!hdmi) {
@@ -873,8 +873,9 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			np_panel = tegra_get_panel_node_out_type_check(dc,
 				TEGRA_DC_OUT_HDMI);
 			if (np_panel && of_device_is_available(np_panel))
-				use_vedid = of_property_read_bool(np_panel,
-								"nvidia,edid");
+				if (of_property_read_bool(np_panel,
+							"nvidia,edid"))
+					edid_src = 1;
 		} else {
 			err = -EINVAL;
 			goto fail;
@@ -907,7 +908,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	tegra_hdmi_hda_clk_get(hdmi);
 
-	tegra_hdmi_ddc_init(hdmi, use_vedid);
+	tegra_hdmi_ddc_init(hdmi, edid_src);
 
 	tegra_hdmi_scdc_init(hdmi);
 

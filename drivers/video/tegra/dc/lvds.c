@@ -97,7 +97,7 @@ static int tegra_lvds_edid(struct tegra_dc_lvds_data *lvds)
 
 	memset(&specs, 0 , sizeof(specs));
 
-	err = tegra_edid_get_monspecs(lvds->edid, &specs);
+	err = tegra_edid_get_monspecs(lvds->edid, &specs, NULL);
 	if (err < 0) {
 		dev_err(&dc->ndev->dev,
 			"lvds: Failed to get EDID data\n");

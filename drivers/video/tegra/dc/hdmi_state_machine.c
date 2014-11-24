@@ -248,7 +248,7 @@ static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 		goto end_disabled;
 	}
 
-	if (tegra_edid_get_monspecs(hdmi->edid, &specs)) {
+	if (tegra_edid_get_monspecs(hdmi->edid, &specs, NULL)) {
 		/* Failed to read EDID.  If we still have retry attempts left,
 		 * schedule another attempt.  Otherwise give up and just go to
 		 * the disabled state.

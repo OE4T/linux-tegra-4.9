@@ -50,7 +50,60 @@ static DEFINE_PER_CPU(struct quadd_pmu_info, cpu_pmu_info);
 
 static struct quadd_pmu_ctx pmu_ctx;
 
-static unsigned quadd_armv8_pmuv3_events_map[QUADD_EVENT_TYPE_MAX] = {
+static unsigned
+quadd_armv8_pmuv3_arm_events_map[QUADD_EVENT_TYPE_MAX] = {
+	[QUADD_EVENT_TYPE_INSTRUCTIONS] =
+		QUADD_ARMV8_HW_EVENT_INSTR_EXECUTED,
+	[QUADD_EVENT_TYPE_BRANCH_INSTRUCTIONS] =
+		QUADD_ARMV8_UNSUPPORTED_EVENT,
+	[QUADD_EVENT_TYPE_BRANCH_MISSES] =
+		QUADD_ARMV8_HW_EVENT_PC_BRANCH_MIS_PRED,
+	[QUADD_EVENT_TYPE_BUS_CYCLES] =
+		QUADD_ARMV8_UNSUPPORTED_EVENT,
+
+	[QUADD_EVENT_TYPE_L1_DCACHE_READ_MISSES] =
+		QUADD_ARMV8_HW_EVENT_L1_DCACHE_REFILL,
+	[QUADD_EVENT_TYPE_L1_DCACHE_WRITE_MISSES] =
+		QUADD_ARMV8_HW_EVENT_L1_DCACHE_REFILL,
+	[QUADD_EVENT_TYPE_L1_ICACHE_MISSES] =
+		QUADD_ARMV8_HW_EVENT_L1_ICACHE_REFILL,
+
+	[QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES] =
+		QUADD_ARMV8_HW_EVENT_L2_CACHE_REFILL,
+	[QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES] =
+		QUADD_ARMV8_HW_EVENT_L2_CACHE_REFILL,
+	[QUADD_EVENT_TYPE_L2_ICACHE_MISSES] =
+		QUADD_ARMV8_UNSUPPORTED_EVENT,
+};
+
+static unsigned
+quadd_armv8_pmuv3_a57_events_map[QUADD_EVENT_TYPE_MAX] = {
+	[QUADD_EVENT_TYPE_INSTRUCTIONS] =
+		QUADD_ARMV8_HW_EVENT_INSTR_EXECUTED,
+	[QUADD_EVENT_TYPE_BRANCH_INSTRUCTIONS] =
+		QUADD_ARMV8_UNSUPPORTED_EVENT,
+	[QUADD_EVENT_TYPE_BRANCH_MISSES] =
+		QUADD_ARMV8_HW_EVENT_PC_BRANCH_MIS_PRED,
+	[QUADD_EVENT_TYPE_BUS_CYCLES] =
+		QUADD_ARMV8_UNSUPPORTED_EVENT,
+
+	[QUADD_EVENT_TYPE_L1_DCACHE_READ_MISSES] =
+		QUADD_ARMV8_A57_HW_EVENT_L1D_CACHE_REFILL_LD,
+	[QUADD_EVENT_TYPE_L1_DCACHE_WRITE_MISSES] =
+		QUADD_ARMV8_A57_HW_EVENT_L1D_CACHE_REFILL_ST,
+	[QUADD_EVENT_TYPE_L1_ICACHE_MISSES] =
+		QUADD_ARMV8_HW_EVENT_L1_ICACHE_REFILL,
+
+	[QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES] =
+		QUADD_ARMV8_A57_HW_EVENT_L2D_CACHE_REFILL_LD,
+	[QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES] =
+		QUADD_ARMV8_A57_HW_EVENT_L2D_CACHE_REFILL_ST,
+	[QUADD_EVENT_TYPE_L2_ICACHE_MISSES] =
+		QUADD_ARMV8_UNSUPPORTED_EVENT,
+};
+
+static unsigned
+quadd_armv8_pmuv3_denver_events_map[QUADD_EVENT_TYPE_MAX] = {
 	[QUADD_EVENT_TYPE_INSTRUCTIONS] =
 		QUADD_ARMV8_HW_EVENT_INSTR_EXECUTED,
 	[QUADD_EVENT_TYPE_BRANCH_INSTRUCTIONS] =
@@ -750,6 +803,7 @@ struct quadd_event_source_interface *quadd_armv8_pmu_init(void)
 	strncpy(pmu_ctx.arch.name, "Unknown", sizeof(pmu_ctx.arch.name));
 	pmu_ctx.arch.type = QUADD_AA64_CPU_TYPE_UNKNOWN;
 	pmu_ctx.arch.ver = 0;
+	pmu_ctx.current_map = NULL;
 
 	switch (aa64_dfr) {
 	case QUADD_AA64_PMUVER_PMUV3:
@@ -759,7 +813,8 @@ struct quadd_event_source_interface *quadd_armv8_pmu_init(void)
 
 		pmu_ctx.counters_mask =
 			QUADD_ARMV8_COUNTERS_MASK_PMUV3;
-		pmu_ctx.current_map = quadd_armv8_pmuv3_events_map;
+		pmu_ctx.current_map =
+			quadd_armv8_pmuv3_arm_events_map;
 
 		pmcr = armv8_pmu_pmcr_read();
 
@@ -775,10 +830,20 @@ struct quadd_event_source_interface *quadd_armv8_pmu_init(void)
 				strlen(pmu_ctx.arch.name));
 			pmu_ctx.arch.name[sizeof(pmu_ctx.arch.name) - 1] = '\0';
 
-			if (idcode == QUADD_AA64_CPU_IDCODE_CORTEX_A57) {
+			if (idcode == QUADD_AA64_CPU_IDCODE_CORTEX_A53) {
+				pmu_ctx.arch.type =
+					QUADD_AA64_CPU_TYPE_CORTEX_A53;
+
+				strncat(pmu_ctx.arch.name, " CORTEX-A53",
+					sizeof(pmu_ctx.arch.name) -
+					strlen(pmu_ctx.arch.name));
+			} else if (idcode == QUADD_AA64_CPU_IDCODE_CORTEX_A57) {
 				pmu_ctx.arch.type =
 					QUADD_AA64_CPU_TYPE_CORTEX_A57;
-				strncat(pmu_ctx.arch.name, " CORTEX_A57",
+				pmu_ctx.current_map =
+					quadd_armv8_pmuv3_a57_events_map;
+
+				strncat(pmu_ctx.arch.name, " CORTEX-A57",
 					sizeof(pmu_ctx.arch.name) -
 					strlen(pmu_ctx.arch.name));
 			} else {
@@ -792,8 +857,11 @@ struct quadd_event_source_interface *quadd_armv8_pmu_init(void)
 			strncat(pmu_ctx.arch.name, " NVIDIA (Denver)",
 				sizeof(pmu_ctx.arch.name) -
 				strlen(pmu_ctx.arch.name));
+
 			pmu_ctx.arch.type = QUADD_AA64_CPU_TYPE_DENVER;
 			pmu_ctx.arch.ver = ext_ver;
+			pmu_ctx.current_map =
+				quadd_armv8_pmuv3_denver_events_map;
 		} else {
 			strncat(pmu_ctx.arch.name, " Unknown implementor code",
 				sizeof(pmu_ctx.arch.name) -

@@ -47,9 +47,7 @@
 #include <linux/tegra_prod.h>
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
-
 #define TMDS_NODE	"/host1x/sor1"
-
 
 struct tmds_prod_pair {
 	int clk;
@@ -378,6 +376,9 @@ fail:
 
 static void tegra_hdmi_hda_clk_enable(struct tegra_hdmi *hdmi)
 {
+	if (tegra_platform_is_linsim())
+		return;
+
 	clk_prepare_enable(hdmi->hda_clk);
 	clk_prepare_enable(hdmi->hda2codec_clk);
 	clk_prepare_enable(hdmi->hda2hdmi_clk);
@@ -385,6 +386,9 @@ static void tegra_hdmi_hda_clk_enable(struct tegra_hdmi *hdmi)
 
 static void tegra_hdmi_hda_clk_disable(struct tegra_hdmi *hdmi)
 {
+	if (tegra_platform_is_linsim())
+		return;
+
 	clk_disable_unprepare(hdmi->hda2hdmi_clk);
 	clk_disable_unprepare(hdmi->hda2codec_clk);
 	clk_disable_unprepare(hdmi->hda_clk);
@@ -394,6 +398,9 @@ static int tegra_hdmi_hda_clk_get(struct tegra_hdmi *hdmi)
 {
 	int err;
 	struct tegra_dc *dc = hdmi->dc;
+
+	if (tegra_platform_is_linsim())
+		return 0;
 
 	hdmi->hda_clk = clk_get_sys("tegra30-hda", "hda");
 	if (IS_ERR_OR_NULL(hdmi->hda_clk)) {
@@ -831,6 +838,9 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 		tmds_config_modes[i].clk < hdmi->dc->mode.pclk; i++)
 		;
 
+	if (tegra_platform_is_linsim())
+		return 0;
+
 	err = tegra_prod_set_by_name(&hdmi->sor->base,
 				tmds_config_modes[i].name, hdmi->prod_list);
 	if (err) {
@@ -965,9 +975,14 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 {
 	struct tegra_dc_sor_data *sor = hdmi->sor;
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	struct tegra_dc *dc = hdmi->dc;
 	u32 h_pulse_start, h_pulse_end;
+#endif
 	u32 dispclk_div_8_2;
+
+	if (tegra_platform_is_linsim())
+		return;
 
 	tegra_sor_write_field(sor, NV_SOR_INPUT_CONTROL,
 			NV_SOR_INPUT_CONTROL_ARM_VIDEO_RANGE_LIMITED |
@@ -984,6 +999,7 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 		({tegra_sor_writel(sor, NV_SOR_HDMI_CTRL, 0x00020438); }) :
 		({tegra_sor_writel(sor, NV_SOR_HDMI_CTRL, 0x40020438); });
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_dc_writel(dc, 0x180, DC_DISP_H_PULSE2_CONTROL);
 	h_pulse_start = dc->mode.h_ref_to_sync +
 					dc->mode.h_sync_width +
@@ -992,6 +1008,7 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 	tegra_dc_writel(dc, PULSE_START(h_pulse_start) | PULSE_END(h_pulse_end),
 		  DC_DISP_H_PULSE2_POSITION_A);
 	tegra_dc_writel(dc, 0x1000, DC_DISP_DISP_SIGNAL_OPTIONS0);
+#endif
 }
 
 static void tegra_hdmi_infoframe_pkt_write(struct tegra_hdmi *hdmi,
@@ -1081,6 +1098,9 @@ static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 
 	memset(&hdmi->avi, 0, sizeof(hdmi->avi));
 
+	if (tegra_platform_is_linsim())
+		return;
+
 	avi->scan = HDMI_AVI_UNDERSCAN;
 	avi->bar_valid = HDMI_AVI_BAR_INVALID;
 	avi->act_fmt_valid = HDMI_AVI_ACTIVE_FORMAT_VALID;
@@ -1123,6 +1143,9 @@ static void tegra_hdmi_avi_infoframe(struct tegra_hdmi *hdmi)
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 
 	if (hdmi->dvi)
+		return;
+
+	if (tegra_platform_is_linsim())
 		return;
 
 	/* disable avi infoframe before configuring */
@@ -1699,6 +1722,9 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 	if (clk_type == hdmi->clk_type)
 		return;
 
+	if (tegra_platform_is_linsim())
+		return;
+
 	if (clk_type == TEGRA_HDMI_BRICK_CLK) {
 		u32 val;
 
@@ -1750,8 +1776,13 @@ static long tegra_hdmi_get_pclk(struct tegra_dc_mode *mode)
 
 static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	struct clk *parent_clk = clk_get_sys(NULL,
 				dc->out->parent_clk ? : "pll_d2");
+#else
+	struct clk *parent_clk = clk_get(NULL,
+				dc->out->parent_clk ? : "pll_d2");
+#endif
 	dc->mode.pclk = tegra_hdmi_get_pclk(&dc->mode);
 
 	if (IS_ERR_OR_NULL(parent_clk)) {
@@ -1762,11 +1793,13 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	if (clk_get_parent(clk) != parent_clk)
 		clk_set_parent(clk, parent_clk);
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	/* TODO: Set parent manually */
 	if (clk == dc->clk)
 		tegra_clk_writel(5 << 29, (0x7 << 29), 0x13c);
 	else
 		tegra_clk_writel((5 << 29), (0x7 << 29), 0x410);
+#endif
 
 	if (clk_get_rate(parent_clk) != dc->mode.pclk)
 		clk_set_rate(parent_clk, dc->mode.pclk);
@@ -1804,6 +1837,9 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+
+	if (tegra_platform_is_linsim())
+		return true;
 
 	if (tegra_dc_hpd(dc)) {
 		cancel_delayed_work(&hdmi->hpd_worker);

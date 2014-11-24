@@ -236,7 +236,7 @@
 				};
 			};
 		};
-		MEM_therm {
+		MEM-therm {
 			trips {
 				mem_critical {
 					temperature = <97500>;
@@ -247,14 +247,14 @@
 			};
 			cooling-maps {
 				map0 {
-					trip = <&{/thermal-zones/MEM_therm/trips/mem_critical}>;
+					trip = <&{/thermal-zones/MEM-therm/trips/mem_critical}>;
 					cdev-type = "tegra-shutdown";
 					cooling-device = <&{/soctherm@0x700E2000/throttle@critical}
 						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
 			};
 		};
-		PLL_therm {
+		PLL-therm {
 			thermal-zone-params {
 				governor-name = "pid_thermal_gov";
 				max_err_temp = <9000>;
@@ -274,7 +274,7 @@
 			};
 			cooling-maps {
 				map0 {
-					trip = <&{/thermal-zones/PLL_therm/trips/pll_critical}>;
+					trip = <&{/thermal-zones/PLL-therm/trips/pll_critical}>;
 					cdev-type = "tegra-shutdown";
 					cooling-device = <&{/soctherm@0x700E2000/throttle@critical}
 						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;

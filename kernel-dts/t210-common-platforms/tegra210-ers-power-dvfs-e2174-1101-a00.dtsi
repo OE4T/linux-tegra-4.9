@@ -220,7 +220,7 @@
 			SET_MAP_TRIP(gpu, scaling, 3, 50000);
 			SET_MAP_TRIP(gpu, scaling, 4, 70000);
 		};
-		PLL_therm {
+		PLL-therm {
 			SET_MAP_TRIP(core, vmin, 1, 20000);
 		};
 	};

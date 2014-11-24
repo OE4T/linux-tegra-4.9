@@ -49,13 +49,13 @@
 			thermal-sensors		= <&{/soctherm@0x700E2000} 1>;
 			status = "disabled";
 		};
-		MEM_therm {
+		MEM-therm {
 			polling-delay		= <0>;
 			polling-delay-passive	= <1000>;
 			thermal-sensors		= <&{/soctherm@0x700E2000} 2>;
 			status = "disabled";
 		};
-		PLL_therm {
+		PLL-therm {
 			polling-delay		= <0>;
 			polling-delay-passive	= <1000>;
 			thermal-sensors		= <&{/soctherm@0x700E2000} 3>;

@@ -510,16 +510,16 @@
 			status = "okay";
 		};
 
-		CPU_therm {
+		CPU-therm {
 			status = "okay";
 		};
-		GPU_therm {
+		GPU-therm {
 			status = "okay";
 		};
-		MEM_therm {
+		MEM-therm {
 			status = "okay";
 		};
-		PLL_therm {
+		PLL-therm {
 			status = "okay";
 		};
 	};

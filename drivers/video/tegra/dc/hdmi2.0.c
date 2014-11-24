@@ -34,6 +34,7 @@
 #include <mach/dc.h>
 #include <mach/hdmi-audio.h>
 #include <mach/fb.h>
+#include <mach/powergate.h>
 
 #include "dc_reg.h"
 #include "dc_priv.h"
@@ -490,10 +491,13 @@ static void tegra_hdmi_ddc_power_toggle(int value)
 	if (dc_hdmi == NULL)
 		return;
 
-	if (value == 0)
+	if (value == 0) {
 		_tegra_hdmi_ddc_disable(dc_hdmi);
-	else if (value == 1)
+		tegra_powergate_partition(TEGRA_POWERGATE_SOR);
+	} else if (value == 1) {
+		tegra_unpowergate_partition(TEGRA_POWERGATE_SOR);
 		_tegra_hdmi_ddc_enable(dc_hdmi);
+	}
 
 	return;
 }

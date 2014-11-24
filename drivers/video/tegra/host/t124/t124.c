@@ -422,7 +422,6 @@ struct nvhost_device_data t124_vic_info = {
 			{"emc_shared", 0,
 				NVHOST_MODULE_ID_EMC_SHARED} },
 	.version = NVHOST_ENCODE_FLCN_VER(3, 0),
-	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_VIC,
 	.class                  = NV_GRAPHICS_VIC_CLASS_ID,

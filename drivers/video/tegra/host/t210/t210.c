@@ -93,7 +93,6 @@ struct nvhost_device_data t21_isp_info = {
 	.clocks			= {{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP }},
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
-	.moduleid		= NVHOST_MODULE_ISP,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
 	.gather_filter_enabled	= true,
 	.bond_out_id		= BOND_OUT_ISP,
@@ -440,7 +439,7 @@ static void t210_set_nvhost_chanops(struct nvhost_channel *ch)
 		ch->ops = host1x_channel_ops;
 }
 
-int nvhost_init_t210_channel_support(struct nvhost_master *host,
+static int nvhost_init_t210_channel_support(struct nvhost_master *host,
        struct nvhost_chip_support *op)
 {
 	op->nvhost_dev.set_nvhost_chanops = t210_set_nvhost_chanops;

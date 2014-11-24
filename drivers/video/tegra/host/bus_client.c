@@ -593,7 +593,8 @@ static int nvhost_ioctl_channel_map_buffer(struct nvhost_channel_userctx *ctx,
 				struct nvhost_channel_map_buffer_args *args)
 {
 	struct nvhost_channel_buffer __user *__buffers =
-		(struct nvhost_channel_buffer *)(uintptr_t)args->table_address;
+		(struct nvhost_channel_buffer __user *)
+		(uintptr_t)args->table_address;
 	struct nvhost_channel_buffer *buffers;
 	int err = 0, i = 0, num_handled_buffers = 0;
 	dma_addr_t addr = 0;
@@ -676,7 +677,8 @@ static int nvhost_ioctl_channel_unmap_buffer(struct nvhost_channel_userctx *ctx,
 				struct nvhost_channel_unmap_buffer_args *args)
 {
 	struct nvhost_channel_buffer __user *__buffers =
-		(struct nvhost_channel_buffer *)(uintptr_t)args->table_address;
+		(struct nvhost_channel_buffer __user *)
+		(uintptr_t)args->table_address;
 	struct nvhost_channel_buffer *buffers;
 	int err = 0, i = 0, num_handled_buffers = 0;
 	struct dma_buf **dmabufs;
@@ -782,8 +784,8 @@ static int nvhost_ioctl_channel_module_regrdwr(
 	struct nvhost_ctrl_module_regrdwr_args *args)
 {
 	u32 num_offsets = args->num_offsets;
-	u32 __user *offsets = (u32 *)(uintptr_t)args->offsets;
-	u32 __user *values = (u32 *)(uintptr_t)args->values;
+	u32 __user *offsets = (u32 __user *)(uintptr_t)args->offsets;
+	u32 __user *values = (u32 __user *)(uintptr_t)args->values;
 	u32 vals[64];
 	struct platform_device *ndev;
 
@@ -1385,7 +1387,7 @@ fail:
 	return err;
 }
 
-void nvhost_client_user_deinit(struct platform_device *dev)
+static void nvhost_client_user_deinit(struct platform_device *dev)
 {
 	struct nvhost_master *nvhost_master = nvhost_get_host(dev);
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);

@@ -532,13 +532,13 @@ int nvhost_gather_filter_enabled(struct nvhost_syncpt *sp)
 	return 0;
 }
 
-int alloc_syncpts_per_apps(struct nvhost_syncpt *sp)
+static int alloc_syncpts_per_apps(struct nvhost_syncpt *sp)
 {
 	struct nvhost_master *host = syncpt_to_dev(sp);
 	return host->info.syncpt_policy == SYNCPT_PER_CHANNEL_INSTANCE;
 }
 
-int alloc_chs_per_submits(struct nvhost_syncpt *sp)
+static int alloc_chs_per_submits(struct nvhost_syncpt *sp)
 {
 	struct nvhost_master *host = syncpt_to_dev(sp);
 	return host->info.channel_policy == MAP_CHANNEL_ON_SUBMIT;

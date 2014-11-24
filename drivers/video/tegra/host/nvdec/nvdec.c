@@ -67,7 +67,7 @@ static int nvhost_nvdec_init_sw(struct platform_device *dev);
 enum {
 	host_nvdec_fw_bl = 0,
 	host_nvdec_fw_ls
-} host_nvdec_fw;
+};
 
 static char *nvdec_get_fw_name(struct platform_device *dev, int fw)
 {
@@ -422,11 +422,11 @@ static int nvdec_setup_ucode_image(struct platform_device *dev,
 }
 
 #if USE_NVDEC_BOOTLOADER
-int nvdec_read_ucode(struct platform_device *dev, const char *fw_name,
+static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name,
 			struct nvdec *m)
 {
 #else
-int nvdec_read_ucode(struct platform_device *dev, const char *fw_name)
+static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name)
 {
 	struct nvdec *m = get_nvdec(dev);
 #endif
@@ -651,7 +651,7 @@ static int nvdec_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-long nvdec_ioctl(struct file *file,
+static long nvdec_ioctl(struct file *file,
 	unsigned int cmd, unsigned long arg)
 {
 	struct nvdec_private *priv = file->private_data;

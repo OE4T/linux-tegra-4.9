@@ -671,10 +671,12 @@ static int dsi_l_720p_5_loki_register_bl_dev(void)
 		err = platform_device_register(&dsi_l_720p_5_loki_bl_device);
 		if (err) {
 			pr_err("disp1 bl device registration failed");
+			of_node_put(pwm_bl_node);
 			return err;
 		}
 	}
 
+	of_node_put(pwm_bl_node);
 	return err;
 }
 

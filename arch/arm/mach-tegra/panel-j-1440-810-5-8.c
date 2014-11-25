@@ -631,9 +631,11 @@ static int dsi_j_1440_810_5_8_register_bl_dev(void)
 		err = platform_device_register(&dsi_j_1440_810_5_8_bl_device);
 		if (err) {
 			pr_err("disp1 bl device registration failed");
+			of_node_put(pwm_bl_node);
 			return err;
 		}
 	}
+	of_node_put(pwm_bl_node);
 	return err;
 }
 

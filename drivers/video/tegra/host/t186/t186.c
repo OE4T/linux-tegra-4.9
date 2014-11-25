@@ -24,6 +24,7 @@
 
 #include "t186.h"
 #include "host1x/host1x.h"
+#include "tsec/tsec.h"
 #include "flcn/flcn.h"
 #include "isp/isp.h"
 #include "vi/vi.h"
@@ -161,6 +162,37 @@ struct nvhost_device_data t18_nvjpg_info = {
 	.moduleid		= NVHOST_MODULE_NVJPG,
 	.num_channels		= 1,
 	.firmware_name		= "nvhost_nvjpg011.fw",
+};
+
+struct nvhost_device_data t18_tsec_info = {
+	.num_channels		= 1,
+	.modulemutexes		= {NV_TSEC_CLASS_ID},
+	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
+	.class			= NV_TSEC_CLASS_ID,
+	.clocks			= {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
+				   {"emc"} },
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.keepalive		= true,
+	.moduleid		= NVHOST_MODULE_TSEC,
+	.poweron_reset		= true,
+	.finalize_poweron	= nvhost_tsec_finalize_poweron,
+	.prepare_poweroff	= nvhost_tsec_prepare_poweroff,
+};
+
+struct nvhost_device_data t18_tsecb_info = {
+	.num_channels		= 1,
+	.modulemutexes		= {NV_TSECB_CLASS_ID},
+	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
+	.class			= NV_TSECB_CLASS_ID,
+	.clocks			= {{"tsecb", UINT_MAX, 0, TEGRA_MC_CLIENT_TSECB},
+				   {"emc"} },
+	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.keepalive		= true,
+	.poweron_reset		= true,
+	.finalize_poweron	= nvhost_tsec_finalize_poweron,
+	.prepare_poweroff	= nvhost_tsec_prepare_poweroff,
 };
 
 struct nvhost_device_data t18_vic_info = {

@@ -30,6 +30,8 @@ extern struct nvhost_device_data t18_nvjpg_info;
 extern struct nvhost_device_data t18_msenc_info;
 extern struct nvhost_device_data t18_isp_info;
 extern struct nvhost_device_data t18_vi_info;
+extern struct nvhost_device_data t18_tsec_info;
+extern struct nvhost_device_data t18_tsecb_info;
 
 int nvhost_init_t186_support(struct nvhost_master *host,
 			     struct nvhost_chip_support *op);

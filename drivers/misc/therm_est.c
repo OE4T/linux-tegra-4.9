@@ -44,14 +44,11 @@ struct therm_estimator {
 	long cur_temp;
 	long low_limit;
 	long high_limit;
-	int ntemp;
-	long toffset;
 	long polling_period;
 	int polling_enabled;
 	int tc1;
 	int tc2;
-	int ndevs;
-	struct therm_est_subdevice *devs;
+	struct therm_est_subdevice *subdevice;
 	bool *tripped_info;
 
 	int use_activator;
@@ -123,30 +120,37 @@ static void therm_est_update_limits(struct therm_estimator *est)
 
 static void therm_est_work_func(struct work_struct *work)
 {
-	int i, j, index, sum = 0;
-	long temp;
 	struct delayed_work *dwork = container_of(work,
 					struct delayed_work, work);
 	struct therm_estimator *est = container_of(dwork,
 					struct therm_estimator,
 					therm_est_work);
+	struct therm_est_subdevice *subdevice;
+	struct therm_est_coeffs *coeffs_set;
+	long *thz_coeffs, *hist;
+	long temp;
+	int i, j, index, sum = 0;
 
-	for (i = 0; i < est->ndevs; i++) {
-		if (therm_est_subdev_get_temp(est->devs[i].sub_thz, &temp))
+	subdevice = est->subdevice;
+	coeffs_set = &subdevice->coeffs_set[subdevice->active_coeffs];
+
+	subdevice->ntemp = (subdevice->ntemp + 1) % HIST_LEN;
+	for (i = 0; i < subdevice->num_devs; i++) {
+		if (therm_est_subdev_get_temp(subdevice->sub_thz[i].thz, &temp))
 			continue;
-		est->devs[i].hist[(est->ntemp % HIST_LEN)] = temp;
+		subdevice->sub_thz[i].hist[subdevice->ntemp] = temp;
 	}
 
-	for (i = 0; i < est->ndevs; i++) {
+	for (i = 0; i < subdevice->num_devs; i++) {
+		hist = subdevice->sub_thz[i].hist;
+		thz_coeffs = coeffs_set->coeffs[i];
 		for (j = 0; j < HIST_LEN; j++) {
-			index = (est->ntemp - j + HIST_LEN) % HIST_LEN;
-			sum += est->devs[i].hist[index] *
-				est->devs[i].coeffs[j];
+			index = (subdevice->ntemp - j + HIST_LEN) % HIST_LEN;
+			sum += hist[index] * thz_coeffs[j];
 		}
 	}
 
-	est->cur_temp = sum / 100 + est->toffset;
-	est->ntemp++;
+	est->cur_temp = sum / 100 + coeffs_set->toffset;
 
 	if (est->thz && ((est->cur_temp < est->low_limit) ||
 			(est->cur_temp >= est->high_limit))) {
@@ -194,18 +198,17 @@ static int therm_est_trip_update(void *of_data, int trip)
 
 static int therm_est_init_history(struct therm_estimator *est)
 {
-	int i, j;
-	struct therm_est_subdevice *dev;
+	struct therm_est_sub_thz *sub_thz;
 	long temp;
+	int i, j;
 
-	for (i = 0; i < est->ndevs; i++) {
-		dev = &est->devs[i];
-
-		if (therm_est_subdev_get_temp(dev->sub_thz, &temp))
+	sub_thz = est->subdevice->sub_thz;
+	for (i = 0; i < est->subdevice->num_devs; i++) {
+		if (therm_est_subdev_get_temp(sub_thz[i].thz, &temp))
 			return -EINVAL;
 
 		for (j = 0; j < HIST_LEN; j++)
-			dev->hist[j] = temp;
+			sub_thz[i].hist[j] = temp;
 	}
 
 	return 0;
@@ -230,25 +233,57 @@ static int therm_est_polling(struct therm_estimator *est,
 	return 0;
 }
 
+static int switch_active_coeffs(struct therm_estimator *est, int active_coeffs)
+{
+	struct therm_est_subdevice *subdevice = est->subdevice;
+
+	if (active_coeffs < 0 || active_coeffs >= subdevice->num_coeffs)
+		return -EINVAL;
+
+	subdevice->active_coeffs = active_coeffs;
+
+	return 0;
+}
+
 static ssize_t show_coeff(struct device *dev,
 				struct device_attribute *da,
 				char *buf)
 {
 	struct therm_estimator *est = dev_get_drvdata(dev);
-	ssize_t len, total_len = 0;
-	int i, j;
-	for (i = 0; i < est->ndevs; i++) {
-		len = snprintf(buf + total_len,
-				PAGE_SIZE - total_len, "[%d]", i);
-		total_len += len;
-		for (j = 0; j < HIST_LEN; j++) {
-			len = snprintf(buf + total_len,
-					PAGE_SIZE - total_len, " %ld",
-					est->devs[i].coeffs[j]);
-			total_len += len;
+	struct therm_est_subdevice *subdevice = est->subdevice;
+	struct therm_est_coeffs *coeffs_set;
+	long *coeffs;
+	ssize_t total_len = 0;
+	int i, j, k;
+
+	total_len += snprintf(buf + total_len, PAGE_SIZE - total_len,
+				"Total %02d set(s) are available\n\n",
+				subdevice->num_coeffs);
+
+	for (i = 0; i < subdevice->num_coeffs; i++) {
+		total_len += snprintf(buf + total_len, PAGE_SIZE - total_len,
+				"- SET %02d - %s\n", i,
+				(i == subdevice->active_coeffs)?"active":"");
+
+		coeffs_set = subdevice->coeffs_set + i;
+		for (j = 0; j < subdevice->num_devs; j++) {
+			total_len += snprintf(buf + total_len,
+					PAGE_SIZE - total_len,
+					"%s : ",
+					subdevice->sub_thz[j].thz->type);
+			coeffs = coeffs_set->coeffs[j];
+			for (k = 0; k < HIST_LEN; k++) {
+				total_len += snprintf(buf + total_len,
+						PAGE_SIZE - total_len, " %ld",
+						coeffs[k]);
+			}
+			total_len += snprintf(buf + total_len,
+						PAGE_SIZE - total_len, "\n");
 		}
-		len = snprintf(buf + total_len, PAGE_SIZE - total_len, "\n");
-		total_len += len;
+		total_len += snprintf(buf + total_len,
+						PAGE_SIZE - total_len,
+						"toffset : %ld\n\n",
+						coeffs_set->toffset);
 	}
 	return strlen(buf);
 }
@@ -258,15 +293,15 @@ static ssize_t set_coeff(struct device *dev,
 				const char *buf, size_t count)
 {
 	struct therm_estimator *est = dev_get_drvdata(dev);
-	int devid, scount;
+	int coeffs_index, dev_index, scount;
 	long coeff[20];
 
 	if (HIST_LEN > 20)
 		return -EINVAL;
 
-	scount = sscanf(buf, "[%d] %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld " \
-			"%ld %ld %ld %ld %ld %ld %ld %ld %ld %ld",
-			&devid,
+	scount = sscanf(buf, "[%d][%d] %ld %ld %ld %ld %ld %ld %ld %ld %ld " \
+			"%ld %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld",
+			&coeffs_index, &dev_index,
 			&coeff[0],
 			&coeff[1],
 			&coeff[2],
@@ -288,14 +323,19 @@ static ssize_t set_coeff(struct device *dev,
 			&coeff[18],
 			&coeff[19]);
 
-	if (scount != HIST_LEN + 1)
+	if (scount != HIST_LEN + 2)
 		return -1;
 
-	if (devid < 0 || devid >= est->ndevs)
+	if (dev_index < 0 || dev_index >= est->subdevice->num_devs)
+		return -EINVAL;
+
+	if (coeffs_index < 0 || coeffs_index >= est->subdevice->num_coeffs)
 		return -EINVAL;
 
 	/* This has obvious locking issues but don't worry about it */
-	memcpy(est->devs[devid].coeffs, coeff, sizeof(coeff[0]) * HIST_LEN);
+	memcpy(est->subdevice->coeffs_set[coeffs_index].coeffs[dev_index],
+						coeff,
+						sizeof(coeff[0]) * HIST_LEN);
 
 	return count;
 }
@@ -304,9 +344,7 @@ static ssize_t show_offset(struct device *dev,
 				struct device_attribute *da,
 				char *buf)
 {
-	struct therm_estimator *est = dev_get_drvdata(dev);
-	snprintf(buf, PAGE_SIZE, "%ld\n", est->toffset);
-	return strlen(buf);
+	return show_coeff(dev, da, buf);
 }
 
 static ssize_t set_offset(struct device *dev,
@@ -314,12 +352,68 @@ static ssize_t set_offset(struct device *dev,
 				const char *buf, size_t count)
 {
 	struct therm_estimator *est = dev_get_drvdata(dev);
-	int offset;
+	int offset, scount, coeffs_index;
 
-	if (kstrtoint(buf, 0, &offset))
+	scount = sscanf(buf, "[%d] %d", &coeffs_index, &offset);
+	if (scount != 2)
 		return -EINVAL;
 
-	est->toffset = offset;
+	if (coeffs_index < 0 || coeffs_index >= est->subdevice->num_coeffs)
+		return -EINVAL;
+
+	est->subdevice->coeffs_set[coeffs_index].toffset = offset;
+
+	return count;
+}
+
+static ssize_t show_active_coeffs(struct device *dev,
+			struct device_attribute *da,
+			char *buf)
+{
+	struct therm_estimator *est = dev_get_drvdata(dev);
+	struct therm_est_subdevice *subdevice = est->subdevice;
+	struct therm_est_coeffs *coeffs_set;
+	long *coeffs;
+	ssize_t total_len = 0;
+	int i, j;
+
+	total_len += snprintf(buf + total_len, PAGE_SIZE - total_len,
+			"There are %d set(s) and the active set is [%02d]\n\n",
+			subdevice->num_coeffs, subdevice->active_coeffs);
+
+	coeffs_set = subdevice->coeffs_set + subdevice->active_coeffs;
+	for (i = 0; i < subdevice->num_devs; i++) {
+		total_len += snprintf(buf + total_len, PAGE_SIZE - total_len,
+				"%s : ", subdevice->sub_thz[i].thz->type);
+		coeffs = coeffs_set->coeffs[i];
+		for (j = 0; j < HIST_LEN; j++) {
+			total_len += snprintf(buf + total_len,
+						PAGE_SIZE - total_len, " %ld",
+						coeffs[j]);
+		}
+		total_len += snprintf(buf + total_len,
+						PAGE_SIZE - total_len, "\n");
+	}
+	total_len += snprintf(buf + total_len, PAGE_SIZE - total_len,
+						"toffset : %ld\n",
+						coeffs_set->toffset);
+
+	return strlen(buf);
+}
+
+static ssize_t set_active_coeffs(struct device *dev,
+			struct device_attribute *da,
+			const char *buf, size_t count)
+{
+	struct therm_estimator *est = dev_get_drvdata(dev);
+	int active_coeffs, ret;
+
+	if (kstrtoint(buf, 0, &active_coeffs))
+		return -EINVAL;
+
+	ret = switch_active_coeffs(est, active_coeffs);
+	if (ret)
+		return ret;
 
 	return count;
 }
@@ -329,19 +423,22 @@ static ssize_t show_temps(struct device *dev,
 				char *buf)
 {
 	struct therm_estimator *est = dev_get_drvdata(dev);
+	struct therm_est_subdevice *subdevice = est->subdevice;
+	long *hist;
 	ssize_t total_len = 0;
 	int i, j;
 	int index;
 
 	/* This has obvious locking issues but don't worry about it */
-	for (i = 0; i < est->ndevs; i++) {
+	for (i = 0; i < subdevice->num_devs; i++) {
 		total_len += snprintf(buf + total_len,
 					PAGE_SIZE - total_len, "[%d]", i);
+		hist = subdevice->sub_thz[i].hist;
 		for (j = 0; j < HIST_LEN; j++) {
-			index = (est->ntemp - j + HIST_LEN) % HIST_LEN;
+			index = (subdevice->ntemp - j + HIST_LEN) % HIST_LEN;
 			total_len += snprintf(buf + total_len,
 						PAGE_SIZE - total_len, " %ld",
-						est->devs[i].hist[index]);
+						hist[index]);
 		}
 		total_len += snprintf(buf + total_len,
 					PAGE_SIZE - total_len, "\n");
@@ -400,6 +497,8 @@ static ssize_t set_tc2(struct device *dev,
 static struct sensor_device_attribute therm_est_nodes[] = {
 	SENSOR_ATTR(coeff, S_IRUGO | S_IWUSR, show_coeff, set_coeff, 0),
 	SENSOR_ATTR(offset, S_IRUGO | S_IWUSR, show_offset, set_offset, 0),
+	SENSOR_ATTR(active_coeffs, S_IRUGO | S_IWUSR, show_active_coeffs,
+							set_active_coeffs, 0),
 	SENSOR_ATTR(tc1, S_IRUGO | S_IWUSR, show_tc1, set_tc1, 0),
 	SENSOR_ATTR(tc2, S_IRUGO | S_IWUSR, show_tc2, set_tc2, 0),
 	SENSOR_ATTR(temps, S_IRUGO, show_temps, 0, 0),
@@ -485,56 +584,109 @@ struct thermal_cooling_device *thermal_est_activation_device_register(
 	return cdev;
 }
 
-static int __parse_dt_subdev(struct device_node *np,
-			     struct therm_est_subdevice *subdev)
+static int therm_est_get_subdev(struct device *dev,
+				struct device_node *subdev_np,
+				struct therm_est_subdevice *subdevice)
 {
-	const char *str;
-	char *sbegin;
-	int i = 0;
-	int ret;
+	struct thermal_zone_device *thz;
+	struct device_node *coeffs_np;
+	char *thz_name;
+	u32 *values;
+	long *coeffs;
+	int num_subdevs;
+	int num_coeffs;
+	int i, j, ret = 0;
+	s32 val;
 
-	subdev->dev_data = (void *)of_get_property(np, "dev-data", NULL);
-	if (!subdev->dev_data)
-		return -ENODATA;
+	num_subdevs = of_property_count_strings(subdev_np, "subdev_names");
+	if (num_subdevs == 0)
+		return -ENOENT;
 
-	ret = of_property_read_string(np, "coeffs", &str);
-	if (ret < 0)
-		return ret;
+	num_coeffs = of_get_child_count(subdev_np);
+	if (num_coeffs == 0)
+		return -ENOENT;
 
-	while (str && (i < HIST_LEN)) {
-		str = skip_spaces(str);
-		sbegin = strsep((char **)&str, " ");
-		if (!sbegin || (kstrtol((const char *)sbegin, 10,
-				&subdev->coeffs[i++]) < 0))
-			break;
+	subdevice->sub_thz = devm_kzalloc(dev,
+			sizeof(*subdevice->sub_thz) * num_subdevs, GFP_KERNEL);
+	if (!subdevice->sub_thz)
+		return -ENOMEM;
+
+	subdevice->coeffs_set = devm_kzalloc(dev,
+				sizeof(*subdevice->coeffs_set) * num_coeffs,
+				GFP_KERNEL);
+	if (!subdevice->coeffs_set)
+		return -ENOMEM;
+
+	for (i = 0; i < num_coeffs; i++) {
+		subdevice->coeffs_set[i].coeffs = devm_kzalloc(dev,
+			sizeof(*subdevice->coeffs_set->coeffs) * num_subdevs,
+			GFP_KERNEL);
+		if (!subdevice->coeffs_set[i].coeffs)
+			return -ENOMEM;
 	}
-	if (i != HIST_LEN)
-		return -EINVAL;
 
-	return 0;
+	for (i = 0; i < num_subdevs; i++) {
+		ret = of_property_read_string_index(subdev_np,
+						"subdev_names",
+						i, (const char**)&thz_name);
+		if (ret)
+			return -EINVAL;
+
+		thz = thermal_zone_device_find(thz_name,
+							therm_est_subdev_match);
+		if (!thz)
+			return -EINVAL;
+		subdevice->sub_thz[i].thz = thz;
+	}
+
+	values = kzalloc(sizeof(u32) * num_subdevs * HIST_LEN, GFP_KERNEL);
+	if (!values)
+		return -ENOMEM;
+	i = 0;
+	for_each_child_of_node(subdev_np, coeffs_np) {
+		ret = of_property_read_s32(coeffs_np, "toffset", &val);
+		if (ret)
+			goto err;
+
+		subdevice->coeffs_set[i].toffset = val;
+		ret = of_property_read_u32_array(coeffs_np, "coeffs", values,
+							num_subdevs * HIST_LEN);
+		if (ret)
+			goto err;
+
+		coeffs = (long*)subdevice->coeffs_set[i].coeffs;
+		for (j = 0; j < num_subdevs * HIST_LEN; j++) {
+			val = values[j];
+			coeffs[j] = (s32)((val & 0x80000000U) ?
+					-((val ^ 0xFFFFFFFFU) + 1) : val);
+		}
+
+		i++;
+	}
+	of_node_put(coeffs_np);
+
+	subdevice->num_coeffs = num_coeffs;
+	subdevice->num_devs = num_subdevs;
+
+err:
+	kfree(values);
+	return ret;
 }
 
 static struct therm_est_data *therm_est_get_pdata(struct device *dev)
 {
+	struct device_node *np, *subdev_np;
 	struct therm_est_data *data;
-	struct device_node *np;
-	struct device_node *ch;
 	u32 val;
-	int num_subdev;
 	int ret;
 
 	np = dev->of_node;
 	if (!np)
-		return dev->platform_data;
+		return ERR_PTR(-ENOENT);
 
 	data = devm_kzalloc(dev, sizeof(struct therm_est_data), GFP_KERNEL);
 	if (!data)
 		return ERR_PTR(-ENOMEM);
-
-	ret = of_property_read_u32(np, "toffset", &val);
-	if (ret < 0)
-		return ERR_PTR(ret);
-	data->toffset = val;
 
 	ret = of_property_read_u32(np, "polling-period", &val);
 	if (ret < 0)
@@ -556,30 +708,15 @@ static struct therm_est_data *therm_est_get_pdata(struct device *dev)
 		return ERR_PTR(ret);
 	data->use_activator = val;
 
-	num_subdev = 0;
-	ch = np;
-	while ((ch = of_find_node_by_type(ch, "therm-est-subdev")))
-		num_subdev++;
-
-	/* subdevices are must required data. */
-	if (num_subdev == 0)
+	subdev_np = of_get_child_by_name(np, "subdev");
+	if (!subdev_np)
 		return ERR_PTR(-ENOENT);
 
-	data->devs = devm_kzalloc(dev,
-			sizeof(struct therm_est_subdevice) * num_subdev,
-			GFP_KERNEL);
-	if (!data->devs)
-		return ERR_PTR(-ENOMEM);
+	ret = therm_est_get_subdev(dev, subdev_np, &data->subdevice);
+	if (ret)
+		return ERR_PTR(ret);
 
-	num_subdev = 0;
-	ch = np;
-	while ((ch = of_find_node_by_type(ch, "therm-est-subdev"))) {
-		ret = __parse_dt_subdev(ch, &data->devs[num_subdev++]);
-		if (ret < 0)
-			return ERR_PTR(ret);
-		}
-
-	data->ndevs = num_subdev;
+	of_node_put(subdev_np);
 
 	return data;
 }
@@ -595,7 +732,6 @@ static int therm_est_probe(struct platform_device *pdev)
 	int i, ret;
 	struct therm_estimator *est;
 	struct therm_est_data *data;
-	struct thermal_zone_device *thz;
 
 	est = kzalloc(sizeof(struct therm_estimator), GFP_KERNEL);
 	if (IS_ERR_OR_NULL(est))
@@ -604,22 +740,14 @@ static int therm_est_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, est);
 
 	data = pdev->dev.platform_data;
-	if (!data)
+	if (!data) {
 		data = therm_est_get_pdata(&pdev->dev);
-
-	for (i = 0; i < data->ndevs; i++) {
-		thz = thermal_zone_device_find(data->devs[i].dev_data,
-							therm_est_subdev_match);
-		if (!thz)
+		if (!data)
 			goto err;
-		data->devs[i].sub_thz = thz;
 	}
 
-	est->devs = data->devs;
-	est->ndevs = data->ndevs;
-	est->toffset = data->toffset;
+	est->subdevice = &data->subdevice;
 	est->polling_period = data->polling_period;
-	est->polling_enabled = 0; /* By default polling is switched off */
 	est->tc1 = data->tc1;
 	est->tc2 = data->tc2;
 	est->cur_temp = DEFAULT_TSKIN;

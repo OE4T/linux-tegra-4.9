@@ -26,11 +26,23 @@
 #define MAX_ACTIVE_STATES	10
 #define MAX_TIMER_TRIPS		10
 
-struct therm_est_subdevice {
-	void *dev_data;
-	struct thermal_zone_device *sub_thz;
-	long coeffs[HIST_LEN];
+struct therm_est_sub_thz {
+	struct thermal_zone_device *thz;
 	long hist[HIST_LEN];
+};
+
+struct therm_est_coeffs {
+	long toffset;
+	long (*coeffs)[HIST_LEN];
+};
+
+struct therm_est_subdevice {
+	struct therm_est_sub_thz *sub_thz;
+	struct therm_est_coeffs *coeffs_set;
+	int num_devs;
+	int num_coeffs;
+	int active_coeffs;
+	int ntemp;
 };
 
 /*
@@ -74,13 +86,11 @@ struct therm_est_data {
 
 	/* zone parameters */
 	struct thermal_zone_params *tzp;
-	long toffset;
 	long polling_period;
 	int passive_delay;
 	int tc1;
 	int tc2;
-	int ndevs;
-	struct therm_est_subdevice *devs;
+	struct therm_est_subdevice subdevice;
 	int use_activator;
 };
 

@@ -234,6 +234,7 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 
 	BUG_ON(_IOC_SIZE(cmd) > NVGPU_TSG_IOCTL_MAX_ARG_SIZE);
 
+	memset(buf, 0, sizeof(buf));
 	if (_IOC_DIR(cmd) & _IOC_WRITE) {
 		if (copy_from_user(buf, (void __user *)arg, _IOC_SIZE(cmd)))
 			return -EFAULT;

@@ -163,7 +163,6 @@ int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 
 	p_img->desc = kzalloc(sizeof(struct pmu_ucode_desc), GFP_KERNEL);
 	if (p_img->desc == NULL) {
-		kfree(lsf_desc);
 		err = -ENOMEM;
 		goto free_lsf_desc;
 	}

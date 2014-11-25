@@ -20,6 +20,7 @@
 /{
 	therm_est_sensor {
 		compatible = "nvidia,therm-est";
+		#thermal-sensor-cells = <0>;
 		toffset = <9793>;
 		polling-period = <1100>;
 		tc1 = <10>;

@@ -130,7 +130,6 @@ enum RM_TEST_MODE {
 #define MAX_SLOT_AMOUNT MAX_REPORT_TOUCHED_POINTS
 #endif
 
-/*#define CS_SUPPORT*/
 #define MASK_USER_SPACE_POINTER 0x00000000FFFFFFFF	/* 64-bit support */
 
 /* do not use printk in kernel files */
@@ -2001,11 +2000,13 @@ static void rm_work_handler(struct work_struct *work)
 
 	i_ret = rm_tch_ctrl_clear_int();
 
+#ifdef ENABLE_SLOW_SCAN
 	if (g_st_ts.b_slow_scan_flg == true) {
 		rm_tch_cmd_process((u8)(g_st_ts.u32_slow_scan_level - 1),
 		g_st_rm_slow_scan_cmd, NULL);
 		g_st_ts.b_slow_scan_flg = false;
 	}
+#endif
 
 	u32_flag = rm_tch_ctrl_configure();
 
@@ -2051,12 +2052,14 @@ static int rm_work_thread_function(void *data)
 
 		i_ret = rm_tch_ctrl_clear_int();
 
+#ifdef ENABLE_SLOW_SCAN
 		if (g_st_ts.b_slow_scan_flg == true) {
 			rm_tch_cmd_process(
 				(u8)(g_st_ts.u32_slow_scan_level - 1),
 				g_st_rm_slow_scan_cmd, NULL);
 			g_st_ts.b_slow_scan_flg = false;
 		}
+#endif
 
 		u32_flag = rm_tch_ctrl_configure();
 
@@ -2271,16 +2274,8 @@ static void rm_tch_disable_irq(struct rm_tch_ts *ts)
  * Description:
  *		Context dependent touch system.
  *		Change scan speed for slowscan function.
- *		Change scan speed flow: (by CY,20120305)
- *		1.Disable auto scan ([0x09]bit4=0,[0x09]bit6=1)
- *		2.Clear Scan start bit ([0x11]bit0=0)
- *		3.Read Scan start bit until it equals 0
- *		4.Set LACTIVE and YACTIVE configuration
- *		5.Enable autoscan ([0x09]bit4=1,[0x09]bit6=1)
- *		6.Sleep 1 minisecond.
- *		7.Set Scan start bit ([0x11]bit0=1)
  * Input:
- *		N/A
+ *		slowscan level
  * Output:
  *		N/A
  *===========================================================================*/
@@ -2293,13 +2288,6 @@ static void rm_tch_ctrl_slowscan(u32 level)
 
 	g_st_ts.u32_slow_scan_level = level;
 	g_st_ts.b_slow_scan_flg = true;
-
-	mutex_lock(&g_st_ts.mutex_scan_mode);
-	if (g_st_ts.u8_scan_mode_state == RM_SCAN_IDLE_MODE) {
-		g_st_ts.u8_scan_mode_state = RM_SCAN_PRE_IDLE_MODE;
-		rm_tch_ctrl_leave_auto_mode();
-	}
-	mutex_unlock(&g_st_ts.mutex_scan_mode);
 }
 
 static u32 rm_tch_slowscan_round(u32 val)
@@ -2378,8 +2366,7 @@ static ssize_t rm_tch_touchfile_check_show(struct device *dev,
 	struct device_attribute *attr,
 	char *buf)
 {
-	return sprintf(buf, "0x%x\n",
-		g_st_ts.u8_touchfile_check);
+	return sprintf(buf, "0x%x\n", g_st_ts.u8_touchfile_check);
 }
 
 static ssize_t rm_tch_touchfile_check_store(struct device *dev,
@@ -3937,10 +3924,6 @@ static int rm_tch_spi_remove(struct spi_device *spi)
 		regulator_disable(ts->regulator_3v3);
 		regulator_disable(ts->regulator_1v8);
 	}
-
-	if (ts->clk)
-		clk_disable(ts->clk);
-
 	kfree(ts);
 	spi_set_drvdata(spi, NULL);
 
@@ -4054,10 +4037,6 @@ static int rm_tch_spi_probe(struct spi_device *spi)
 	}
 	pdata = g_input_dev->dev.parent->platform_data;
 	usleep_range(5000, 6000);
-/*
-	if (ts->clk)
-		clk_enable(ts->clk);
-*/
 
 	gpio_set_value(pdata->gpio_reset, 0);
 	msleep(120);
@@ -4103,10 +4082,6 @@ err_misc_reg:
 		regulator_disable(ts->regulator_3v3);
 		regulator_disable(ts->regulator_1v8);
 	}
-
-	if (ts->clk)
-		clk_disable(ts->clk);
-
 err_regulator_init:
 	spi_set_drvdata(spi, NULL);
 	input_unregister_device(ts->input);

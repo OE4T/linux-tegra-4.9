@@ -335,5 +335,13 @@ enum {
 	HDMI_ELD_CEA_SAD, /* SAD_CNT * 3 bytes, index depends on MNL */
 };
 
+/* bpp without alpha */
+enum {
+	TEGRA_HDMI_BPP_UNKNOWN = 0,
+	TEGRA_HDMI_BPP_24 = 4,
+	TEGRA_HDMI_BPP_30 = 5,
+	TEGRA_HDMI_BPP_36 = 6,
+	TEGRA_HDMI_BPP_48 = 7,
+};
 
 #endif

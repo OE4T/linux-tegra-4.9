@@ -1552,6 +1552,74 @@ static void tegra_hdmi_put(struct tegra_dc *dc)
 	_tegra_hdmi_clock_disable(hdmi);
 }
 
+/* TODO: add support for other deep colors */
+static inline u32 tegra_hdmi_bpp(struct tegra_hdmi *hdmi)
+{
+	if (hdmi->dc->yuv_bypass)
+		return 30;
+	else
+		return 24;
+}
+
+static u32 tegra_hdmi_gcp_color_depth(struct tegra_hdmi *hdmi)
+{
+	u32 gcp_cd = 0;
+
+	switch (tegra_hdmi_bpp(hdmi)) {
+	case 0: /* fall through */
+	case 24:
+		gcp_cd = TEGRA_HDMI_BPP_UNKNOWN;
+		break;
+	case 30:
+		gcp_cd = TEGRA_HDMI_BPP_30;
+		break;
+	case 36:
+		gcp_cd = TEGRA_HDMI_BPP_36;
+		break;
+	case 48:
+		gcp_cd = TEGRA_HDMI_BPP_48;
+		break;
+	default:
+		dev_WARN(&hdmi->dc->ndev->dev,
+			"hdmi: unknown gcp color depth\n");
+	};
+
+	return gcp_cd;
+}
+
+/* return packing phase of last pixel in preceding video data period */
+static u32 tegra_hdmi_gcp_packing_phase(struct tegra_hdmi *hdmi)
+{
+	return tegra_sor_readl(hdmi->sor, NV_SOR_HDMI_GCP_STATUS) >>
+		NV_SOR_HDMI_GCP_STATUS_ACTIVE_END_PP_SHIFT &
+		NV_SOR_HDMI_GCP_STATUS_ACTIVE_END_PP_MASK;
+}
+
+/* general control packet */
+static void tegra_hdmi_gcp(struct tegra_hdmi *hdmi)
+{
+#define GCP_SB1_PP_SHIFT 4
+
+	struct tegra_dc_sor_data *sor = hdmi->sor;
+	u8 sb1;
+
+	/* disable gcp before configuring */
+	tegra_sor_writel(sor, NV_SOR_HDMI_GCP_CTRL, 0);
+
+	sb1 = tegra_hdmi_gcp_packing_phase(hdmi) << GCP_SB1_PP_SHIFT |
+		tegra_hdmi_gcp_color_depth(hdmi);
+	tegra_sor_writel(sor, NV_SOR_HDMI_GCP_SUBPACK(0),
+			sb1 << NV_SOR_HDMI_GCP_SUBPACK_SB1_SHIFT);
+
+	/* Send gcp every frame */
+	tegra_sor_writel(sor, NV_SOR_HDMI_GCP_CTRL,
+			NV_SOR_HDMI_GCP_CTRL_ENABLE |
+			NV_SOR_HDMI_GCP_CTRL_OTHER_DIS |
+			NV_SOR_HDMI_GCP_CTRL_SINGLE_DIS);
+
+#undef GCP_SB1_PP_SHIFT
+}
+
 static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 {
 	struct tegra_dc *dc = hdmi->dc;
@@ -1741,6 +1809,19 @@ static int tegra_dc_hdmi_ddc_disable(struct tegra_dc *dc)
 	return 0;
 }
 
+static void tegra_dc_hdmi_modeset_notifier(struct tegra_dc *dc)
+{
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+
+	tegra_hdmi_get(dc);
+	tegra_dc_io_start(dc);
+
+	tegra_hdmi_gcp(hdmi);
+
+	tegra_dc_io_end(dc);
+	tegra_hdmi_put(dc);
+}
+
 #ifdef CONFIG_DEBUG_FS
 /* show current hpd state */
 static int tegra_hdmi_hotplug_dbg_show(struct seq_file *m, void *unused)
@@ -1851,4 +1932,5 @@ struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.shutdown = tegra_dc_hdmi_shutdown,
 	.ddc_enable = tegra_dc_hdmi_ddc_enable,
 	.ddc_disable = tegra_dc_hdmi_ddc_disable,
+	.modeset_notifier = tegra_dc_hdmi_modeset_notifier,
 };

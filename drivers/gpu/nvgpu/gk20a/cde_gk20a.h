@@ -24,7 +24,6 @@
 #define MAX_CDE_BUFS		10
 #define MAX_CDE_PARAMS		64
 #define MAX_CDE_USER_PARAMS	40
-#define MAX_CDE_OBJ_IDS		4
 #define MAX_CDE_ARRAY_ENTRIES	9
 
 /*
@@ -244,9 +243,6 @@ struct gk20a_cde_ctx {
 
 	u64 compbit_vaddr;
 	u64 compbit_size;
-
-	u32 obj_ids[MAX_CDE_OBJ_IDS];
-	int num_obj_ids;
 
 	u64 backing_store_vaddr;
 

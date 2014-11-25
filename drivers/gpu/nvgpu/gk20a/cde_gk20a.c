@@ -57,17 +57,11 @@ static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 							  mem->iova);
 	}
 
-	for (i = 0; i < cde_ctx->num_obj_ids; i++)
-		gk20a_free_obj_ctx(cde_ctx->ch,
-			&(struct nvgpu_free_obj_ctx_args)
-			{ cde_ctx->obj_ids[i] });
-
 	kfree(cde_ctx->init_convert_cmd);
 
 	cde_ctx->convert_cmd = NULL;
 	cde_ctx->init_convert_cmd = NULL;
 	cde_ctx->num_bufs = 0;
-	cde_ctx->num_obj_ids = 0;
 	cde_ctx->num_params = 0;
 	cde_ctx->init_cmd_num_entries = 0;
 	cde_ctx->convert_cmd_num_entries = 0;
@@ -520,11 +514,6 @@ static int gk20a_init_cde_required_class(struct gk20a_cde_ctx *cde_ctx,
 	struct nvgpu_alloc_obj_ctx_args alloc_obj_ctx;
 	int err;
 
-	if (cde_ctx->num_obj_ids >= MAX_CDE_OBJ_IDS) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: running out of class ids");
-		return -ENOMEM;
-	}
-
 	alloc_obj_ctx.class_num = required_class;
 	alloc_obj_ctx.padding = 0;
 
@@ -534,9 +523,6 @@ static int gk20a_init_cde_required_class(struct gk20a_cde_ctx *cde_ctx,
 			   err);
 		return err;
 	}
-
-	cde_ctx->obj_ids[cde_ctx->num_obj_ids] = alloc_obj_ctx.obj_id;
-	cde_ctx->num_obj_ids++;
 
 	return 0;
 }

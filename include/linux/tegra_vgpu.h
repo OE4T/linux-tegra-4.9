@@ -24,7 +24,10 @@ enum {
 };
 
 enum {
-	TEGRA_VGPU_QUEUE_CMD = 2,
+	/* Needs to follow last entry in TEGRA_VHOST_QUEUE_* list,
+	 * in tegra_vhost.h
+	 */
+	TEGRA_VGPU_QUEUE_CMD = 3,
 	TEGRA_VGPU_QUEUE_INTR
 };
 

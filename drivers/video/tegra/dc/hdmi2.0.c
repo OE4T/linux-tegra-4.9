@@ -1553,7 +1553,7 @@ static void tegra_hdmi_put(struct tegra_dc *dc)
 }
 
 /* TODO: add support for other deep colors */
-static inline u32 tegra_hdmi_bpp(struct tegra_hdmi *hdmi)
+static inline u32 tegra_hdmi_get_bpp(struct tegra_hdmi *hdmi)
 {
 	if (hdmi->dc->yuv_bypass)
 		return 30;
@@ -1565,7 +1565,7 @@ static u32 tegra_hdmi_gcp_color_depth(struct tegra_hdmi *hdmi)
 {
 	u32 gcp_cd = 0;
 
-	switch (tegra_hdmi_bpp(hdmi)) {
+	switch (tegra_hdmi_get_bpp(hdmi)) {
 	case 0: /* fall through */
 	case 24:
 		gcp_cd = TEGRA_HDMI_BPP_UNKNOWN;
@@ -1681,6 +1681,15 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	hdmi->enabled = true;
 }
 
+static inline u32 tegra_hdmi_get_shift_clk_div(struct tegra_hdmi *hdmi)
+{
+	u32 n = tegra_hdmi_get_bpp(hdmi);
+	u32 d = 24;
+
+	/* real shift clk div is n/d. Reg value is ((n/d - 1) * 2) */
+	return ((n - d) * 2) / d;
+}
+
 static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 {
 	if (clk_type == hdmi->clk_type)
@@ -1707,7 +1716,9 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 		/* TODO: Select sor clock muxes */
 		tegra_clk_writel((3 << 14), (0x3 << 14), 0x410);
 
-		tegra_dc_writel(hdmi->dc, 0x0, DC_DISP_DISP_CLOCK_CONTROL);
+		tegra_dc_writel(hdmi->dc, PIXEL_CLK_DIVIDER_PCD1 |
+			SHIFT_CLK_DIVIDER(tegra_hdmi_get_shift_clk_div(hdmi)),
+			DC_DISP_DISP_CLOCK_CONTROL);
 
 		hdmi->clk_type = TEGRA_HDMI_BRICK_CLK;
 	} else if (clk_type == TEGRA_HDMI_SAFE_CLK) {

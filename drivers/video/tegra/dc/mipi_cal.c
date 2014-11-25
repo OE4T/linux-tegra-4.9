@@ -216,6 +216,7 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 	mipi_cal->clk = clk;
 	mipi_cal->fixed_clk = fixed_clk;
 	dbg_dsi_mipi_dir_create(mipi_cal);
+	of_node_put(np_mipi_cal);
 	return mipi_cal;
 
 fail_free_map:
@@ -230,6 +231,7 @@ fail_free_mipi_cal:
 	if (np_mipi_cal)
 		kfree(mipi_res);
 fail:
+	of_node_put(np_mipi_cal);
 	return ERR_PTR(err);
 }
 EXPORT_SYMBOL(tegra_mipi_cal_init_sw);
@@ -265,6 +267,7 @@ void tegra_mipi_cal_destroy(struct tegra_dc *dc)
 
 	mutex_destroy(&mipi_cal->lock);
 	devm_kfree(&dc->ndev->dev, mipi_cal);
+	of_node_put(np_mipi_cal);
 #ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(mipidir);
 #endif

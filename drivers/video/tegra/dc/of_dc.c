@@ -272,6 +272,7 @@ static int parse_disp_default_out(struct platform_device *ndev,
 	const char *temp_str0;
 	u32 n_outpins = 0;
 	u8 *addr;
+	int err = 0;
 
 	/*
 	 * construct default_out
@@ -295,16 +296,20 @@ static int parse_disp_default_out(struct platform_device *ndev,
 
 		if (!ddc) {
 			pr_err("No ddc device node\n");
-			return -EINVAL;
+			err = -EINVAL;
+			goto parse_disp_defout_fail;
 		} else
 			id = of_alias_get_id(ddc, "i2c");
+
+		of_node_put(ddc);
 
 		if (id >= 0) {
 			default_out->dcc_bus = id;
 			OF_DC_LOG("out_dcc bus %d\n", id);
 		} else {
 			pr_err("Invalid i2c id\n");
-			return -EINVAL;
+			err = -EINVAL;
+			goto parse_disp_defout_fail;
 		}
 
 		hotplug_gpio = of_get_named_gpio_flags(np_hdmi,
@@ -335,7 +340,8 @@ static int parse_disp_default_out(struct platform_device *ndev,
 	of_property_for_each_u32(np, "nvidia,out-flags", prop, p, u) {
 		if (!is_dc_default_out_flag(u)) {
 			pr_err("invalid out flags\n");
-			return -EINVAL;
+			err = -EINVAL;
+			goto parse_disp_defout_fail;
 		}
 		default_out->flags |= (unsigned) u;
 	}
@@ -352,7 +358,8 @@ static int parse_disp_default_out(struct platform_device *ndev,
 			OF_DC_LOG("tegra dc align lsb\n");
 		else {
 			pr_err("invalid out align\n");
-			return -EINVAL;
+			err = -EINVAL;
+			goto parse_disp_defout_fail;
 		}
 		default_out->align = (unsigned)temp;
 	}
@@ -364,7 +371,8 @@ static int parse_disp_default_out(struct platform_device *ndev,
 			OF_DC_LOG("tegra order blue to red\n");
 		else {
 			pr_err("invalid out order\n");
-			return -EINVAL;
+			err = -EINVAL;
+			goto parse_disp_defout_fail;
 		}
 		default_out->order = (unsigned)temp;
 	}
@@ -374,7 +382,8 @@ static int parse_disp_default_out(struct platform_device *ndev,
 
 	if ((n_outpins & 0x1) != 0) {
 		pr_err("should have name, polarity pair!\n");
-		return -EINVAL;
+		err = -EINVAL;
+		goto parse_disp_defout_fail;
 	}
 	n_outpins = n_outpins/2;
 	default_out->n_out_pins = (unsigned)n_outpins;
@@ -385,7 +394,8 @@ static int parse_disp_default_out(struct platform_device *ndev,
 
 	if (n_outpins && !default_out->out_pins) {
 		dev_err(&ndev->dev, "not enough memory\n");
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto parse_disp_defout_fail;
 	}
 	n_outpins = 0;
 	addr = (u8 *)default_out->out_pins;
@@ -453,8 +463,11 @@ static int parse_disp_default_out(struct platform_device *ndev,
 		fb->yres = (int)temp;
 		OF_DC_LOG("framebuffer yres %d\n", fb->yres);
 	}
+parse_disp_defout_fail:
+	of_node_put(np_hdmi);
+	of_node_put(np_sor);
 
-	return 0;
+	return err;
 }
 
 static int parse_tmds_config(struct platform_device *ndev,
@@ -1554,14 +1567,14 @@ static struct device_node *parse_lvds_settings(struct platform_device *ndev,
 
 static int dc_hdmi_out_enable(struct device *dev)
 {
-	int ret;
+	int err = 0;
 
 	struct device_node *np_hdmi =
 		of_find_node_by_path(HDMI_NODE);
 
 	if (!np_hdmi || !of_device_is_available(np_hdmi)) {
 		pr_info("%s: no valid hdmi node\n", __func__);
-		return 0;
+		goto dc_hdmi_out_en_fail;
 	}
 
 	if (!of_hdmi_reg) {
@@ -1569,13 +1582,14 @@ static int dc_hdmi_out_enable(struct device *dev)
 		if (IS_ERR_OR_NULL(of_hdmi_reg)) {
 			pr_err("hdmi: couldn't get regulator avdd_hdmi\n");
 			of_hdmi_reg = NULL;
-			return PTR_ERR(of_hdmi_reg);
+			err = PTR_ERR(of_hdmi_reg);
+			goto dc_hdmi_out_en_fail;
 		}
 	}
-	ret = regulator_enable(of_hdmi_reg);
-	if (ret < 0) {
+	err = regulator_enable(of_hdmi_reg);
+	if (err < 0) {
 		pr_err("hdmi: couldn't enable regulator avdd_hdmi\n");
-		return ret;
+		goto dc_hdmi_out_en_fail;
 	}
 	if (!of_hdmi_pll) {
 		of_hdmi_pll = regulator_get(dev, "avdd_hdmi_pll");
@@ -1584,15 +1598,18 @@ static int dc_hdmi_out_enable(struct device *dev)
 			of_hdmi_pll = NULL;
 			regulator_put(of_hdmi_reg);
 			of_hdmi_reg = NULL;
-			return PTR_ERR(of_hdmi_pll);
+			err = PTR_ERR(of_hdmi_pll);
+			goto dc_hdmi_out_en_fail;
 		}
 	}
-	ret = regulator_enable(of_hdmi_pll);
-	if (ret < 0) {
+	err = regulator_enable(of_hdmi_pll);
+	if (err < 0) {
 		pr_err("hdmi: couldn't enable regulator avdd_hdmi_pll\n");
-		return ret;
+		goto dc_hdmi_out_en_fail;
 	}
-	return 0;
+dc_hdmi_out_en_fail:
+	of_node_put(np_hdmi);
+	return err;
 }
 
 static int dc_hdmi_out_disable(struct device *dev)
@@ -1631,33 +1648,36 @@ static int dc_hdmi_out_disable(struct device *dev)
 
 static int dc_hdmi_hotplug_init(struct device *dev)
 {
-	int ret = 0;
+	int err = 0;
 
 	struct device_node *np_hdmi =
 		of_find_node_by_path(HDMI_NODE);
 
 	if (!np_hdmi || !of_device_is_available(np_hdmi)) {
 		pr_info("%s: no valid hdmi node\n", __func__);
-		return 0;
+		goto dc_hdmi_hotplug_init_fail;
 	}
 
 	if (!of_hdmi_vddio) {
 		of_hdmi_vddio = regulator_get(dev, "vdd_hdmi_5v0");
 		if (IS_ERR_OR_NULL(of_hdmi_vddio)) {
-			ret = PTR_ERR(of_hdmi_vddio);
+			err = PTR_ERR(of_hdmi_vddio);
 			pr_err("hdmi: couldn't get regulator vdd_hdmi_5v0\n");
 			of_hdmi_vddio = NULL;
-			return ret;
+			goto dc_hdmi_hotplug_init_fail;
+
 		}
 	}
-	ret = regulator_enable(of_hdmi_vddio);
-	if (ret < 0) {
+	err = regulator_enable(of_hdmi_vddio);
+	if (err < 0) {
 		pr_err("hdmi: couldn't enable regulator vdd_hdmi_5v0\n");
 		regulator_put(of_hdmi_vddio);
 		of_hdmi_vddio = NULL;
-		return ret;
+		goto dc_hdmi_hotplug_init_fail;
 	}
-	return ret;
+dc_hdmi_hotplug_init_fail:
+	of_node_put(np_hdmi);
+	return err;
 }
 
 static int dc_hdmi_postsuspend(void)
@@ -1739,6 +1759,7 @@ struct tegra_dc_platform_data
 	struct device_node *np_dsi = NULL;
 	struct device_node *np_dsi_panel = NULL;
 	struct device_node *np_sor = NULL;
+	struct device_node *np_hdmi = NULL;
 	struct device_node *np_dp_panel = NULL;
 	struct device_node *timings_np = NULL;
 	struct device_node *np_target_disp = NULL;
@@ -1854,8 +1875,7 @@ struct tegra_dc_platform_data
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_HDMI) {
 		bool hotplug_report = false;
-		struct device_node *np_hdmi =
-			of_find_node_by_path(HDMI_NODE);
+		np_hdmi = of_find_node_by_path(HDMI_NODE);
 
 		if (ndev->id == 0)
 			np_target_disp
@@ -2094,9 +2114,15 @@ struct tegra_dc_platform_data
 #endif
 
 	dev_info(&ndev->dev, "DT parsed successfully\n");
+	of_node_put(np_dsi);
+	of_node_put(np_sor);
+	of_node_put(np_hdmi);
 	return pdata;
 
 fail_parse:
+	of_node_put(np_dsi);
+	of_node_put(np_sor);
+	of_node_put(np_hdmi);
 	return NULL;
 }
 #else

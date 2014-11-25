@@ -1053,8 +1053,10 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	bool virtual_edid = false;
 	hdmi = kzalloc(sizeof(*hdmi), GFP_KERNEL);
-	if (!hdmi)
+	if (!hdmi) {
+		of_node_put(np_hdmi);
 		return -ENOMEM;
+	}
 	if (np) {
 		if (np_hdmi && of_device_is_available(np_hdmi)) {
 			of_address_to_resource(np_hdmi, 0, &hdmi_res);
@@ -1266,14 +1268,16 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi_audio = kobject_create_and_add("hdmi_audio_channels", kernel_kobj);
 	if (!hdmi_audio) {
 		pr_warn("kobject create_and_add hdmi_audio_channels failed\n");
+		of_node_put(np_hdmi);
 		return 0;
 	}
 	ret = sysfs_create_file(hdmi_audio, &hdmi_audio_channel_config.attr);
 	if (ret) {
 		pr_warn("sysfs create file hdmi_audio_channels failed\n");
+		of_node_put(np_hdmi);
 		return 0;
 	}
-
+	of_node_put(np_hdmi);
 	return 0;
 
 err_gpio_free:
@@ -1307,6 +1311,7 @@ err_release_resource_reg:
 	release_resource(base_res);
 err_free_hdmi:
 	kfree(hdmi);
+	of_node_put(np_hdmi);
 	return err;
 }
 

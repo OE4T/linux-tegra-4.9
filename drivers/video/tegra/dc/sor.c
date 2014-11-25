@@ -436,6 +436,7 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	const char *res_name = dc->ndev->id ? "sor1" : "sor0";
 
 	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
+		of_node_put(np_sor);
 		np_sor = of_find_node_by_path(SOR1_NODE);
 		res_name = "sor1";
 	}
@@ -518,6 +519,7 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	sor->portnum = 0;
 
 	tegra_dc_sor_debug_create(sor, res_name);
+	of_node_put(np_sor);
 
 	return sor;
 err_iounmap_reg:
@@ -530,6 +532,7 @@ err_release_resource_reg:
 err_free_sor:
 	devm_kfree(&dc->ndev->dev, sor);
 err_allocate:
+	of_node_put(np_sor);
 	return ERR_PTR(err);
 }
 
@@ -568,8 +571,10 @@ void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 		of_find_node_by_path(SOR1_NODE) :
 		of_find_node_by_path(SOR_NODE);
 
-	if (sor->dc->out->type == TEGRA_DC_OUT_HDMI)
+	if (sor->dc->out->type == TEGRA_DC_OUT_HDMI) {
+		of_node_put(np_sor);
 		np_sor = of_find_node_by_path(SOR1_NODE);
+	}
 
 	clk_put(sor->sor_clk);
 	if (sor->safe_clk)
@@ -581,6 +586,7 @@ void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 	if (!np_sor || !of_device_is_available(np_sor))
 		release_resource(sor->res);
 	devm_kfree(&sor->dc->ndev->dev, sor);
+	of_node_put(np_sor);
 }
 
 void tegra_sor_tpg(struct tegra_dc_sor_data *sor, u32 tp, u32 n_lanes)

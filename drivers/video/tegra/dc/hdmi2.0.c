@@ -797,7 +797,7 @@ fail:
 
 static int tegra_hdmi_tmds_init(struct tegra_hdmi *hdmi)
 {
-	const struct device_node *np_prod = of_find_node_by_path(TMDS_NODE);
+	struct device_node *np_prod = of_find_node_by_path(TMDS_NODE);
 
 	if (!np_prod) {
 		dev_warn(&hdmi->dc->ndev->dev,
@@ -806,14 +806,17 @@ static int tegra_hdmi_tmds_init(struct tegra_hdmi *hdmi)
 	}
 
 
-	hdmi->prod_list = tegra_prod_init(np_prod);
+	hdmi->prod_list =
+		tegra_prod_init((const struct device_node *)np_prod);
 	if (IS_ERR(hdmi->prod_list)) {
 		dev_warn(&hdmi->dc->ndev->dev,
 			"hdmi: prod list init failed with error %ld\n",
 			PTR_ERR(hdmi->prod_list));
+		of_node_put(np_prod);
 		return -EINVAL;
 	}
 
+	of_node_put(np_prod);
 	return 0;
 }
 
@@ -854,8 +857,10 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	struct device_node *np_panel = NULL;
 
 	hdmi = devm_kzalloc(&dc->ndev->dev, sizeof(*hdmi), GFP_KERNEL);
-	if (!hdmi)
+	if (!hdmi) {
+		of_node_put(np_hdmi);
 		return -ENOMEM;
+	}
 
 	hdmi->sor = tegra_dc_sor_init(dc, NULL);
 	if (IS_ERR_OR_NULL(hdmi->sor)) {
@@ -928,9 +933,11 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			"hdmi: failed to register audio switch %d\n", err);
 #endif
 
+	of_node_put(np_hdmi);
 	return 0;
 fail:
 	devm_kfree(&dc->ndev->dev, hdmi);
+	of_node_put(np_hdmi);
 	return err;
 }
 

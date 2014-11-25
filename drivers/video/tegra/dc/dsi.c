@@ -4503,6 +4503,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	dsi = kzalloc(sizeof(*dsi), GFP_KERNEL);
 	if (!dsi) {
 		dev_err(&dc->ndev->dev, "dsi: memory allocation failed\n");
+		of_node_put(np_dsi);
 		return -ENOMEM;
 	}
 
@@ -4621,6 +4622,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 			tegra_io_dpd_enable(&dsid_io);
 	}
 
+	of_node_put(np_dsi);
 	return 0;
 
 err_dc_clk_put:
@@ -4638,6 +4640,7 @@ err_release_regs:
 err_free_dsi:
 	kfree(dsi);
 
+	of_node_put(np_dsi);
 	return err;
 }
 

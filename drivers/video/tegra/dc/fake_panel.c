@@ -318,6 +318,7 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 
 	if (!dsi) {
 		dev_err(&dc->ndev->dev, " dsi: allocation deleted\n");
+		of_node_put(np_dsi);
 		return -ENOMEM;
 	}
 
@@ -390,6 +391,7 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 
 	/* Need to always reinitialize clocks to ensure proper functionality */
 	tegra_dsi_init_clock_param(dc);
+	of_node_put(np_dsi);
 	return 0;
 
 err_release_regs:
@@ -400,7 +402,7 @@ err_release_regs:
 		if (dsi->base_res[i])
 			release_resource(dsi->base_res[i]);
 	}
-
+	of_node_put(np_dsi);
 	return err;
 }
 

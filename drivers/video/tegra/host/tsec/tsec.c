@@ -50,6 +50,10 @@
 #include "tsec_methods.h"
 #include "tsec_drv.h"
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#include "t186/t186.h"
+#endif
+
 #define TSEC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define TSEC_IDLE_CHECK_PERIOD		10	/* 10 usec */
 #define TSEC_KEY_LENGTH			16
@@ -922,6 +926,14 @@ static struct of_device_id tegra_tsec_of_match[] = {
 	{ .name = "tsecb",
 		.compatible = "nvidia,tegra210-tsec",
 		.data = (struct nvhost_device_data *)&t21_tsecb_info },
+#endif
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	{ .name = "tsec",
+		.compatible = "nvidia,tegra186-tsec",
+		.data = (struct nvhost_device_data *)&t18_tsec_info },
+	{ .name = "tsecb",
+		.compatible = "nvidia,tegra186-tsec",
+		.data = (struct nvhost_device_data *)&t18_tsecb_info },
 #endif
 	{ },
 };

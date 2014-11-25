@@ -33,7 +33,7 @@
 #include <linux/tegra-ivc.h>
 #include <linux/tegra_gr_comm.h>
 
-#define NUM_QUEUES   4
+#define NUM_QUEUES   5
 #define NUM_CONTEXTS 2
 
 #define ID_PEER_ID_SHIFT 4

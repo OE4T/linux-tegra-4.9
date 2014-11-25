@@ -88,6 +88,11 @@
 		smsc,irq-push-pull;
 	};
 
+	asim {
+		compatible = "nvidia,tegra210-asim";
+		reg = < 0x0 0x7e101000 0x0 0x00001000 >;
+	};
+
 	host1x {
 
 		nvdisplay@0x54200000 {

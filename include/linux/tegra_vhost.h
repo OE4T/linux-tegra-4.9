@@ -1,7 +1,7 @@
 /*
  * Tegra Host Virtualization Interfaces to Server
  *
- * Copyright (c) 2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,12 +20,19 @@
 #define __TEGRA_VHOST_H
 
 enum {
+	/* Must start at 1, 0 is used for VGPU */
 	TEGRA_VHOST_MODULE_HOST = 1,
+	TEGRA_VHOST_MODULE_VIC,
+	TEGRA_VHOST_MODULE_VI,
+	TEGRA_VHOST_MODULE_ISP,
+	TEGRA_VHOST_MODULE_MSENC,
 };
 
 enum {
 	TEGRA_VHOST_QUEUE_CMD = 0,
-	TEGRA_VHOST_QUEUE_INTR
+	TEGRA_VHOST_QUEUE_PB,
+	TEGRA_VHOST_QUEUE_INTR,
+	/* See also TEGRA_VGPU_QUEUE_* in tegra_vgpu.h */
 };
 
 enum {
@@ -42,7 +49,9 @@ enum {
 	TEGRA_VHOST_CMD_SYNCPT_ENABLE_INTR,
 	TEGRA_VHOST_CMD_SYNCPT_DISABLE_INTR,
 	TEGRA_VHOST_CMD_SYNCPT_DISABLE_INTR_ALL,
-	TEGRA_VHOST_CMD_SYNCPT_GET_RANGE
+	TEGRA_VHOST_CMD_SYNCPT_GET_RANGE,
+	TEGRA_VHOST_CMD_CHANNEL_ALLOC_CLIENTID,
+	TEGRA_VHOST_CMD_HOST1X_CDMA_SUBMIT,
 };
 
 struct tegra_vhost_connect_params {
@@ -76,6 +85,17 @@ struct tegra_vhost_syncpt_intr_params {
 	u32 thresh;
 };
 
+struct tegra_vhost_channel_clientid_params {
+	u32 moduleid;
+	u32 clientid;
+};
+
+struct tegra_vhost_channel_submit_params {
+	u32 clientid;
+	u32 num_entries;
+	u32 timeout;
+};
+
 struct tegra_vhost_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -87,6 +107,8 @@ struct tegra_vhost_cmd_msg {
 		struct tegra_vhost_waitbase_params waitbase;
 		struct tegra_vhost_mutex_params mutex;
 		struct tegra_vhost_syncpt_intr_params syncpt_intr;
+		struct tegra_vhost_channel_clientid_params clientid;
+		struct tegra_vhost_channel_submit_params cdma_submit;
 	} params;
 };
 
@@ -103,6 +125,7 @@ struct tegra_vhost_syncpt_intr_msg {
 
 #define TEGRA_VHOST_QUEUE_SIZES			\
 	sizeof(struct tegra_vhost_cmd_msg),	\
+	4096,					\
 	sizeof(struct tegra_vhost_syncpt_intr_msg)
 
 #endif

@@ -584,10 +584,11 @@ int nvhost_init_t124_support(struct nvhost_master *host,
 	op->actmon = host1x_actmon_ops;
 
 
-	if (data->virtual_dev) {
+	if (nvhost_dev_is_virtual(host->dev)) {
 		data->can_powergate = false;
 		vhost_init_host1x_syncpt_ops(&op->syncpt);
 		vhost_init_host1x_intr_ops(&op->intr);
+		vhost_init_host1x_cdma_ops(&op->cdma);
 	}
 
 	t124 = kzalloc(sizeof(struct t124), GFP_KERNEL);

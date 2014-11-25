@@ -23,6 +23,7 @@
 #include "nvhost_acm.h"
 #include "nvhost_job.h"
 #include "chip_support.h"
+#include "vhost/vhost.h"
 
 #include <trace/events/nvhost.h>
 #include <linux/nvhost_ioctl.h>
@@ -265,6 +266,32 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 	/* Reserve the channel */
 	set_bit(index, &host->allocated_channels);
 	ch = host->chlist[index];
+
+	/* If virtual, allocate a client id on the server side. This is needed
+	 * for channel recovery, to distinguish which clients own which gathers.
+	 */
+	if (nvhost_dev_is_virtual(pdata->pdev)) {
+		int virt_moduleid = vhost_virt_moduleid(pdata->moduleid);
+		struct nvhost_virt_ctx *virt_ctx =
+					nvhost_get_virt_data(pdata->pdev);
+
+		if (virt_moduleid < 0) {
+			clear_bit(index, &host->allocated_channels);
+			mutex_unlock(&host->chlist_mutex);
+			return -EINVAL;
+		}
+
+		ch->virt_clientid =
+			vhost_channel_alloc_clientid(virt_ctx->handle,
+							virt_moduleid);
+		if (ch->virt_clientid == 0) {
+			dev_err(&pdata->pdev->dev,
+				"vhost_channel_alloc_clientid failed\n");
+			clear_bit(index, &host->allocated_channels);
+			mutex_unlock(&host->chlist_mutex);
+			return -ENOMEM;
+		}
+	}
 
 	/* Bind the reserved channel to the device */
 	ch->dev = pdata->pdev;

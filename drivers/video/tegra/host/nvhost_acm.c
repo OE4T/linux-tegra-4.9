@@ -645,7 +645,7 @@ int nvhost_module_init(struct platform_device *dev)
 	pdata->num_clks = 0;
 	INIT_LIST_HEAD(&pdata->client_list);
 
-	if (pdata->virtual_dev) {
+	if (nvhost_dev_is_virtual(dev)) {
 		pm_runtime_enable(&dev->dev);
 		return err;
 	}

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -65,9 +65,8 @@ static inline bool nvhost_intr_is_virtual_dev(struct nvhost_intr_syncpt *sp)
 {
 	struct nvhost_intr *intr = intr_syncpt_to_intr(sp);
 	struct nvhost_master *host = intr_to_dev(intr);
-	struct nvhost_device_data *data = platform_get_drvdata(host->dev);
 
-	return data->virtual_dev;
+	return nvhost_dev_is_virtual(host->dev);
 }
 
 static inline void nvhost_intr_syncpt_lock(struct nvhost_intr_syncpt *sp)
@@ -313,9 +312,8 @@ irqreturn_t nvhost_syncpt_thresh_fn(void *dev_id)
 	unsigned int id = syncpt->id;
 	struct nvhost_intr *intr = intr_syncpt_to_intr(syncpt);
 	struct nvhost_master *dev = intr_to_dev(intr);
-	struct nvhost_device_data *data = platform_get_drvdata(dev->dev);
 
-	if (data->virtual_dev)
+	if (nvhost_dev_is_virtual(dev->dev))
 		(void)process_wait_list(intr, syncpt,
 				nvhost_syncpt_read_min(&dev->syncpt, id));
 	else

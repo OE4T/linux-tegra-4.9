@@ -65,6 +65,9 @@ struct nvhost_channel {
 	bool cdma_initialized;
 	/* owner identifier */
 	void *identifier;
+
+	/* For virtualized host1x */
+	u32 virt_clientid;
 };
 
 #define channel_op(ch)		(ch->ops)

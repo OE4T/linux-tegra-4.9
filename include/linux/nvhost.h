@@ -314,6 +314,13 @@ struct nvhost_device_data *nvhost_get_devdata(struct platform_device *pdev)
 	return (struct nvhost_device_data *)platform_get_drvdata(pdev);
 }
 
+static inline bool nvhost_dev_is_virtual(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+
+	return pdata->virtual_dev;
+}
+
 struct nvhost_device_power_attr {
 	struct platform_device *ndev;
 	struct kobj_attribute power_attr[NVHOST_POWER_SYSFS_ATTRIB_MAX];

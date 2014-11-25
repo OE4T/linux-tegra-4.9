@@ -203,7 +203,6 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	int err = 0, check_count = 0, low_timeout = 0;
 	u32 val, old_val, new_val;
 	struct nvhost_master *host = syncpt_to_dev(sp);
-	struct nvhost_device_data *data = platform_get_drvdata(host->dev);
 	bool (*syncpt_is_expired)(struct nvhost_syncpt *sp,
 			u32 id,
 			u32 thresh);
@@ -267,7 +266,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	if (timeout < SYNCPT_CHECK_PERIOD)
 		low_timeout = timeout;
 
-	if (data->virtual_dev)
+	if (nvhost_dev_is_virtual(host->dev))
 		syncpt_is_expired = nvhost_syncpt_is_expired;
 	else
 		syncpt_is_expired = syncpt_update_min_is_expired;
@@ -963,7 +962,6 @@ int nvhost_syncpt_init(struct platform_device *dev,
 {
 	int i;
 	struct nvhost_master *host = syncpt_to_dev(sp);
-	struct nvhost_device_data *data = platform_get_drvdata(dev);
 	int nb_pts = nvhost_syncpt_nb_pts(sp);
 	int err = 0;
 
@@ -986,7 +984,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 	}
 #endif
 
-	if (data->virtual_dev) {
+	if (nvhost_dev_is_virtual(dev)) {
 		struct nvhost_virt_ctx *ctx = nvhost_get_virt_data(dev);
 		u32 size;
 

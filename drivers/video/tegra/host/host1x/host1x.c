@@ -753,99 +753,6 @@ static void of_nvhost_parse_platform_data(struct platform_device *dev,
 	}
 }
 
-static inline int vhost_comm_init(struct platform_device *pdev)
-{
-	size_t queue_sizes[] = { TEGRA_VHOST_QUEUE_SIZES };
-
-	return tegra_gr_comm_init(pdev, TEGRA_GR_COMM_CTX_CLIENT, 3,
-				queue_sizes, TEGRA_VHOST_QUEUE_CMD,
-				ARRAY_SIZE(queue_sizes));
-}
-
-static inline void vhost_comm_deinit(void)
-{
-	size_t queue_sizes[] = { TEGRA_VHOST_QUEUE_SIZES };
-
-	tegra_gr_comm_deinit(TEGRA_GR_COMM_CTX_CLIENT, TEGRA_VHOST_QUEUE_CMD,
-			ARRAY_SIZE(queue_sizes));
-}
-
-static u64 vhost_virt_connect(void)
-{
-	struct tegra_vhost_cmd_msg msg;
-	struct tegra_vhost_connect_params *p = &msg.params.connect;
-	int err;
-
-	msg.cmd = TEGRA_VHOST_CMD_CONNECT;
-	p->module = TEGRA_VHOST_MODULE_HOST;
-	err = vhost_sendrecv(&msg);
-
-	return (err || msg.ret) ? 0 : p->handle;
-}
-
-int vhost_sendrecv(struct tegra_vhost_cmd_msg *msg)
-{
-	void *handle;
-	size_t size = sizeof(*msg);
-	size_t size_out = size;
-	void *data = msg;
-	int err;
-
-	err = tegra_gr_comm_sendrecv(TEGRA_GR_COMM_CTX_CLIENT,
-				tegra_gr_comm_get_server_vmid(),
-				TEGRA_VHOST_QUEUE_CMD, &handle, &data, &size);
-	if (!err) {
-		WARN_ON(size < size_out);
-		memcpy(msg, data, size_out);
-		tegra_gr_comm_release(handle);
-	}
-
-	return err;
-}
-
-static int nvhost_virt_init(struct platform_device *dev)
-{
-	struct nvhost_virt_ctx *virt_ctx =
-				kzalloc(sizeof(*virt_ctx), GFP_KERNEL);
-	int err;
-
-	if (!virt_ctx)
-		return -ENOMEM;
-
-	err = vhost_comm_init(dev);
-	if (err) {
-		dev_err(&dev->dev, "failed to init comm interface\n");
-		goto fail;
-	}
-
-	virt_ctx->handle = vhost_virt_connect();
-	if (!virt_ctx->handle) {
-		dev_err(&dev->dev,
-			"failed to connect to server node\n");
-		vhost_comm_deinit();
-		err = -ENOMEM;
-		goto fail;
-	}
-
-	nvhost_set_virt_data(dev, virt_ctx);
-	return 0;
-
-fail:
-	kfree(virt_ctx);
-	return err;
-}
-
-static void nvhost_virt_deinit(struct platform_device *dev)
-{
-	struct nvhost_virt_ctx *virt_ctx = nvhost_get_virt_data(dev);
-
-	if (virt_ctx) {
-		/* FIXME: add virt disconnect */
-		vhost_comm_deinit();
-		kfree(virt_ctx);
-	}
-}
-
 static int nvhost_check_valid_config(void)
 {
 	if ((nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN &&
@@ -858,6 +765,7 @@ static int nvhost_check_valid_config(void)
 }
 
 long linsim_cl = 0;
+
 static int nvhost_probe(struct platform_device *dev)
 {
 	struct nvhost_master *host;
@@ -945,17 +853,17 @@ static int nvhost_probe(struct platform_device *dev)
 	/* set private host1x device data */
 	nvhost_set_private_data(dev, host);
 
-	host->aperture = devm_ioremap_resource(&dev->dev, regs);
-	if (IS_ERR(host->aperture)) {
-		err = PTR_ERR(host->aperture);
-		goto fail;
-	}
-
 	of_nvhost_parse_platform_data(dev, pdata);
 	if (pdata->virtual_dev) {
-		err = nvhost_virt_init(dev);
+		err = nvhost_virt_init(dev, NVHOST_MODULE_NONE);
 		if (err) {
 			dev_err(&dev->dev, "failed to init virt support\n");
+			goto fail;
+		}
+	} else {
+		host->aperture = devm_ioremap_resource(&dev->dev, regs);
+		if (IS_ERR(host->aperture)) {
+			err = PTR_ERR(host->aperture);
 			goto fail;
 		}
 	}

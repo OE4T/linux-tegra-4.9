@@ -53,6 +53,7 @@
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
 #include "nvhost_sync.h"
+#include "vhost/vhost.h"
 
 static DEFINE_MUTEX(channel_lock);
 
@@ -592,7 +593,10 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	if (err)
 		goto fail;
 
-	if (args->timeout)
+	/* For now, no timeout support if virtualized */
+	if (nvhost_dev_is_virtual(ctx->pdev))
+		job->timeout = 0;
+	else if (args->timeout)
 		job->timeout = min(ctx->timeout, args->timeout);
 	else
 		job->timeout = ctx->timeout;

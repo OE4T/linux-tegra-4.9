@@ -137,8 +137,13 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 		return 0;
 
 	if (actmon->init == ACTMON_OFF) {
-		actmon->usecs_per_sample = 10;
-		actmon->k = 1;
+		if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA21) {
+			actmon->usecs_per_sample = 20;
+			actmon->k = 3;
+		} else {
+			actmon->usecs_per_sample = 10;
+			actmon->k = 1;
+		}
 	}
 
 	actmon->clk = host_pdata->clk[1];

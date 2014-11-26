@@ -31,9 +31,6 @@
 		calib-1v8-offsets = <0x0505>;
 		compad-vref-3v3 = <0x7>;
 		compad-vref-1v8 = <0x7>;
-		vddio_sdmmc-supply = <&max77620_sd3>;
-		vddio_sd_slot-supply = <&vdd_3v3>;
-		nvidia,dll-calib-needed;
 		nvidia,en-io-trim-volt;
 		nvidia,is-emmc;
 		pll_source = "pll_p";
@@ -42,7 +39,6 @@
 	sdhci@700b0400 {
 		tap-delay = <1>;
 		trim-delay = <3>;
-		mmc-ocr-mask = <3>;
 		max-clk-limit = <204000000>;
 		ddr-clk-limit = <48000000>;
 		bus-width = <4>;
@@ -50,33 +46,21 @@
 		calib-1v8-offsets = <0x7B7B>;
 		compad-vref-3v3 = <0x1>;
 		compad-vref-1v8 = <0x2>;
-		cd-gpios = <&gpio TEGRA_GPIO_PZ2 0>;
-		vddio_sdmmc-supply = <&max77620_ldo2>;
-		nvidia,update-pinctrl-settings;
-		pinctrl-names = "sdmmc_schmitt_enable", "sdmmc_schmitt_disable", "sdmmc_clk_schmitt_enable", "sdmmc_clk_schmitt_disable";
-		pinctrl-0 = <&sdmmc3_schmitt_enable_state>;
-		pinctrl-1 = <&sdmmc3_schmitt_disable_state>;
-		pinctrl-2 = <&sdmmc3_clk_schmitt_enable_state>;
-		pinctrl-3 = <&sdmmc3_clk_schmitt_disable_state>;
 		pll_source = "pll_p";
 		nvidia,en-io-trim-volt;
-		nvidia,enable-ext-loopback;
 	};
 
 	sdhci@700b0200 {
 		tap-delay = <4>;
 		trim-delay = <8>;
-		nvidia,is-ddr-tap-delay;
-		nvidia,ddr-tap-delay = <0>;
 		mmc-ocr-mask = <0>;
 		max-clk-limit = <204000000>;
 		ddr-clk-limit = <41000000>;
+		bus-width = <4>;
 		calib-3v3-offsets = <0x0505>;
 		calib-1v8-offsets = <0x0505>;
 		compad-vref-3v3 = <0x7>;
 		compad-vref-1v8 = <0x7>;
-		vddio_sdmmc-supply = <&max77620_sd3>;
-		vddio_sd_slot-supply = <&vdd_3v3>;
 		default-drive-type = <1>;
 		pll_source = "pll_p";
 		nvidia,en-io-trim-volt;
@@ -88,21 +72,12 @@
 		max-clk-limit = <204000000>;
 		ddr-clk-limit = <48000000>;
 		bus-width = <4>;
-		default-drive-type = <1>;
 		mmc-ocr-mask = <3>;
 		calib-3v3-offsets = <0x007D>;
 		calib-1v8-offsets = <0x7B7B>;
 		compad-vref-3v3 = <0x1>;
 		compad-vref-1v8 = <0x2>;
 		cd-gpios = <&gpio TEGRA_GPIO_PZ1 0>;
-		vddio_sdmmc-supply = <&max77620_ldo2>;
-		vddio_sd_slot-supply = <&en_vdd_sd>;
-		nvidia,update-pinctrl-settings;
-		pinctrl-names = "sdmmc_schmitt_enable", "sdmmc_schmitt_disable", "sdmmc_clk_schmitt_enable", "sdmmc_clk_schmitt_disable";
-		pinctrl-0 = <&sdmmc1_schmitt_enable_state>;
-		pinctrl-1 = <&sdmmc1_schmitt_disable_state>;
-		pinctrl-2 = <&sdmmc1_clk_schmitt_enable_state>;
-		pinctrl-3 = <&sdmmc1_clk_schmitt_disable_state>;
 		pll_source = "pll_p";
 		nvidia,en-io-trim-volt;
 		nvidia,sd-device;

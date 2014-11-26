@@ -1086,7 +1086,7 @@ static int nvi_wr_pwr_mgmt_1_war(struct nvi_state *st)
 			val = -1;
 			ret = nvi_i2c_rd(st, st->hal->reg->pwr_mgmt_1.bank,
 					st->hal->reg->pwr_mgmt_1.reg, 1, &val);
-			if ((!ret) && (!val))
+			if ((!ret) && (val == st->hal->reg->pwr_mgmt_1.dflt))
 				break;
 		}
 		st->rc.pwr_mgmt_1 = val;

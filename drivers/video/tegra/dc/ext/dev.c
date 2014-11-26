@@ -969,9 +969,10 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 
 	BUG_ON(win_num > DC_N_WINDOWS);
 
-	if (tegra_dc_ext_pin_windows(user, win, win_num,
+	ret = tegra_dc_ext_pin_windows(user, win, win_num,
 				     data->win, &has_timestamp,
-				     syncpt_fd != NULL))
+				     syncpt_fd != NULL);
+	if (ret)
 		goto fail_pin;
 
 	ret = lock_windows_for_flip(user, win, win_num);

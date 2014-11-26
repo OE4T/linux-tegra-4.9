@@ -1830,13 +1830,14 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 static long tegra_hdmi_get_pclk(struct tegra_dc_mode *mode)
 {
 	long h_total, v_total;
-
+	long refresh;
 	h_total = mode->h_active + mode->h_front_porch + mode->h_back_porch +
 		mode->h_sync_width;
 	v_total = mode->v_active + mode->v_front_porch + mode->v_back_porch +
 		mode->v_sync_width;
-
-	return h_total * v_total * (tegra_dc_calc_refresh(mode) / 1000);
+	refresh = tegra_dc_calc_refresh(mode);
+	refresh = DIV_ROUND_CLOSEST(refresh, 1000);
+	return h_total * v_total * refresh;
 }
 
 static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)

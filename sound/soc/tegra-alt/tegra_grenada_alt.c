@@ -583,7 +583,6 @@ static int tegra_grenada_driver_probe(struct platform_device *pdev)
 err_fini_utils:
 	tegra_alt_asoc_utils_fini(&machine->audio_clock);
 err_alloc_dai_link:
-	tegra_machine_remove_extra_mem_alloc(machine->num_codec_links);
 	tegra_machine_remove_dai_link();
 	tegra_machine_remove_codec_conf();
 err:
@@ -597,7 +596,6 @@ static int tegra_grenada_driver_remove(struct platform_device *pdev)
 
 	snd_soc_unregister_card(card);
 
-	tegra_machine_remove_extra_mem_alloc(machine->num_codec_links);
 	tegra_machine_remove_dai_link();
 	tegra_alt_asoc_utils_fini(&machine->audio_clock);
 

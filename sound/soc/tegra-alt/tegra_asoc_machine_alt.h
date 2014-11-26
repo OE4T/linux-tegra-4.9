@@ -270,7 +270,4 @@ unsigned int tegra_machine_get_bclk_ratio(
 
 unsigned int tegra_machine_get_num_dai_links(void);
 
-void tegra_machine_remove_extra_mem_alloc(unsigned int num_codec_links);
-
-
 #endif

@@ -664,7 +664,6 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	return 0;
 
 err_alloc_dai_link:
-	tegra_machine_remove_extra_mem_alloc(machine->num_codec_links);
 	tegra_machine_remove_dai_link();
 	tegra_machine_remove_codec_conf();
 err:
@@ -678,7 +677,6 @@ static int tegra_t210ref_driver_remove(struct platform_device *pdev)
 
 	snd_soc_unregister_card(card);
 
-	tegra_machine_remove_extra_mem_alloc(machine->num_codec_links);
 	tegra_machine_remove_dai_link();
 	tegra_machine_remove_codec_conf();
 	tegra_alt_asoc_utils_fini(&machine->audio_clock);

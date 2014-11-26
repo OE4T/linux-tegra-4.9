@@ -1901,8 +1901,8 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 			tegra_codec_links[i].dai_fmt =
 				snd_soc_of_parse_daifmt(subnp, NULL);
 
-			params = kzalloc(sizeof(struct snd_soc_pcm_stream),
-				GFP_KERNEL);
+			params = devm_kzalloc(&pdev->dev,
+				sizeof(struct snd_soc_pcm_stream), GFP_KERNEL);
 
 			if (of_property_read_string(subnp,
 				"bit-format", (const char **)&str)) {
@@ -1956,7 +1956,7 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 				goto err;
 			}
 
-			str = kzalloc(
+			str = devm_kzalloc(&pdev->dev,
 				sizeof(tegra_codec_links[j].cpu_dai_name) +
 				1 + sizeof(tegra_codec_links[j].cpu_dai_name),
 				GFP_KERNEL);
@@ -2085,23 +2085,6 @@ unsigned int tegra_machine_get_num_dai_links(void)
 	return num_dai_links;
 }
 EXPORT_SYMBOL_GPL(tegra_machine_get_num_dai_links);
-
-void tegra_machine_remove_extra_mem_alloc(unsigned int num_codec_links)
-{
-	int i, j;
-
-	if (num_dai_links > TEGRA210_XBAR_DAI_LINKS)
-		for (i = TEGRA210_XBAR_DAI_LINKS,
-			j = TEGRA210_XBAR_DAI_LINKS+num_codec_links;
-			j < num_dai_links; i++, j++) {
-			kfree(tegra_asoc_machine_links[i].params);
-			kfree(tegra_asoc_machine_links[j].name);
-
-			tegra_asoc_machine_links[i].params = NULL;
-			tegra_asoc_machine_links[j].name = NULL;
-		}
-}
-EXPORT_SYMBOL_GPL(tegra_machine_remove_extra_mem_alloc);
 
 MODULE_AUTHOR("Arun Shamanna Lakshmi <aruns@nvidia.com>");
 MODULE_AUTHOR("Junghyun Kim <juskim@nvidia.com>");

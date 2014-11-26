@@ -305,6 +305,34 @@ static void gr_gp10b_buffer_size_defaults(struct gk20a *g)
 		gr_scc_pagepool_total_pages_hwmax_value_v();
 }
 
+static int gr_gp10b_calc_global_ctx_buffer_size(struct gk20a *g)
+{
+	struct gr_gk20a *gr = &g->gr;
+	int size;
+
+	gr->attrib_cb_size = gr->attrib_cb_default_size
+		+ (gr->attrib_cb_default_size >> 1);
+	gr->alpha_cb_size = gr->alpha_cb_default_size
+		+ (gr->alpha_cb_default_size >> 1);
+
+	gr->attrib_cb_size = min(gr->attrib_cb_size,
+				 gr_gpc0_ppc0_cbm_beta_cb_size_v_f(0xffffffff));
+	gr->alpha_cb_size = min(gr->attrib_cb_size,
+				 gr_gpc0_ppc0_cbm_alpha_cb_size_v_f(0xffffffff));
+
+	size = gr->attrib_cb_size *
+		gr_gpc0_ppc0_cbm_beta_cb_size_v_granularity_v() *
+		gr->max_tpc_count;
+
+	size += gr->alpha_cb_size *
+		gr_gpc0_ppc0_cbm_alpha_cb_size_v_granularity_v() *
+		gr->max_tpc_count;
+
+	size = ALIGN(size, 128);
+
+	return size;
+}
+
 void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
@@ -314,4 +342,6 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.add_zbc_color = gr_gp10b_add_zbc_color;
 	gops->gr.add_zbc_depth = gr_gp10b_add_zbc_depth;
 	gops->gr.buffer_size_defaults = gr_gp10b_buffer_size_defaults;
+	gops->gr.calc_global_ctx_buffer_size =
+		gr_gp10b_calc_global_ctx_buffer_size;
 }

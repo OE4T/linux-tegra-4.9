@@ -25,6 +25,7 @@
 #include "tegra186.dtsi"
 #include "tegra186-cpus-2D4A.dtsi"
 #include "panel-sim.dtsi"
+#include "tegra186-sim-hdmi.dtsi"
 
 / {
 	model = "t186ref";

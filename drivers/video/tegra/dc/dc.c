@@ -1059,6 +1059,36 @@ static int is_valid_fake_support(struct tegra_dc *dc, long dc_outtype)
 	return 0;
 }
 
+static int set_avdd(struct tegra_dc *dc, long cur_out, long new_out)
+{
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+	/* T210 macro_clk is failing SOR access
+	 * if avdd_lcd is not enabled
+	 */
+	bool is_enable = false;
+	struct tegra_dc_out *dc_out =
+		&dbg_dc_out_info[boot_out_type[dc->ndev->id]].out;
+
+	/* cur is fake and new is fake - skip */
+	if (is_valid_fake_support(dc, cur_out) &&
+		is_valid_fake_support(dc, new_out))
+		return 0;
+
+	/* cur is valid and new is fake - enable */
+	if (!is_valid_fake_support(dc, cur_out) &&
+		is_valid_fake_support(dc, new_out))
+		is_enable = true;
+
+	if (is_enable) {
+		if (dc_out && dc_out->enable)
+			dc_out->enable(&dc->ndev->dev);
+	} else {
+		if (dc_out && dc_out->disable)
+			dc_out->disable(&dc->ndev->dev);
+	}
+#endif
+	return 0;
+}
 static ssize_t dbg_dc_out_type_set(struct file *file,
 	const char __user *addr, size_t len, loff_t *pos)
 {
@@ -1117,6 +1147,7 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 			dbg_dc_out_info[cur_dc_out].fblistindex =
 						tegra_fb_update_modelist(dc, 0);
 
+		set_avdd(dc, cur_dc_out, out_type);
 	}
 
 	/* If output already created - reuse it */

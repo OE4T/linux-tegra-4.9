@@ -102,6 +102,13 @@
 
 		ranges;
 
+		nvcsi {
+			compatible = "nvidia,tegra186-nvcsi";
+			reg = <0x0 0x540c0000 0x0 0x00040000>;
+			interrupts = <0 119 0x04>;
+			#stream-id-cells = <1>;
+		};
+
 		vi {
 			compatible = "nvidia,tegra186-vi";
 			reg = <0x0 0x54700000 0x0 0x00100000>;

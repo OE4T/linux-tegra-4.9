@@ -33,21 +33,34 @@
 	};
 
 	sdhci@700b0600 {
+		max-clk-limit = <266000000>;
 		uhs-mask = <0x0>;
 		built-in;
 		power-off-rail;
 		disable-clock-gate;
+		nvidia,enable-hs533-mode;
+		pll_source = "pll_p", "pll_c4_out1";
 		status = "okay";
 	};
 
 	sdhci@700b0400 {
+		mmc-ocr-mask = <0>;
+		default-drv-type = <1>;
 		uhs-mask = <0x1c>;
 		power-off-rail;
 		disable-clock-gate;
+		nvidia,update-pinctrl-settings;
+		pinctrl-names = "sdmmc_schmitt_enable", "sdmmc_schmitt_disable", "sdmmc_clk_schmitt_enable", "sdmmc_clk_schmitt_disable";
+		pinctrl-0 = <&sdmmc3_schmitt_enable_state>;
+		pinctrl-1 = <&sdmmc3_schmitt_disable_state>;
+		pinctrl-2 = <&sdmmc3_clk_schmitt_enable_state>;
+		pinctrl-3 = <&sdmmc3_clk_schmitt_disable_state>;
 		status = "disabled";
 	};
 
 	sdhci@700b0200 {
+		nvidia,is-ddr-tap-delay;
+		nvidia,ddr-tap-delay = <0>;
 		uhs-mask = <0x8>;
 		power-off-rail;
 		disable-clock-gate;
@@ -58,6 +71,12 @@
 		uhs-mask = <0xc>;
 		power-off-rail;
 		disable-clock-gate;
+		nvidia,update-pinctrl-settings;
+		pinctrl-names = "sdmmc_schmitt_enable", "sdmmc_schmitt_disable", "sdmmc_clk_schmitt_enable", "sdmmc_clk_schmitt_disable";
+		pinctrl-0 = <&sdmmc1_schmitt_enable_state>;
+		pinctrl-1 = <&sdmmc1_schmitt_disable_state>;
+		pinctrl-2 = <&sdmmc1_clk_schmitt_enable_state>;
+		pinctrl-3 = <&sdmmc1_clk_schmitt_disable_state>;
 		status = "okay";
 	};
 

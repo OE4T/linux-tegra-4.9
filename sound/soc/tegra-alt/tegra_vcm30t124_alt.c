@@ -398,6 +398,7 @@ static int tegra_vcm30t124_wm8731_init(struct snd_soc_pcm_runtime *rtd)
 	unsigned int clk_out, mclk;
 	int err;
 
+	idx = idx - TEGRA124_XBAR_DAI_LINKS;
 	clk_out = dai_params->rate_min * 256;
 	mclk = clk_out * 2;
 
@@ -419,7 +420,6 @@ static int tegra_vcm30t124_wm8731_init(struct snd_soc_pcm_runtime *rtd)
 	}
 
 	if (i2s_dai->driver->ops->set_bclk_ratio) {
-		idx = idx - TEGRA124_XBAR_DAI_LINKS;
 		err = snd_soc_dai_set_bclk_ratio(i2s_dai,
 				pdata->dai_config[idx].bclk_ratio);
 		if (err < 0) {
@@ -448,6 +448,7 @@ static int tegra_vcm30t124_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 	unsigned int mclk;
 	int err;
 
+	idx = idx - TEGRA124_XBAR_DAI_LINKS;
 	mclk = dai_params->rate_min * 512;
 
 	if ((fmt & SND_SOC_DAIFMT_MASTER_MASK) == SND_SOC_DAIFMT_CBM_CFM) {
@@ -468,7 +469,6 @@ static int tegra_vcm30t124_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 	}
 
 	if (i2s_dai->driver->ops->set_bclk_ratio) {
-		idx = idx - TEGRA124_XBAR_DAI_LINKS;
 		err = snd_soc_dai_set_bclk_ratio(i2s_dai,
 				pdata->dai_config[idx].bclk_ratio);
 		if (err < 0) {
@@ -528,6 +528,7 @@ static int tegra_vcm30t124_ak4618_init(struct snd_soc_pcm_runtime *rtd)
 	int err;
 
 	/* Default sampling rate*/
+	idx = idx - TEGRA124_XBAR_DAI_LINKS;
 	srate = dai_params->rate_min;
 	clk_out = srate * 512;
 	mclk = clk_out;
@@ -550,7 +551,6 @@ static int tegra_vcm30t124_ak4618_init(struct snd_soc_pcm_runtime *rtd)
 	}
 
 	if (cpu_dai->driver->ops->set_bclk_ratio) {
-		idx = idx - TEGRA124_XBAR_DAI_LINKS;
 		err = snd_soc_dai_set_bclk_ratio(cpu_dai,
 				pdata->dai_config[idx].bclk_ratio);
 		if (err < 0) {
@@ -590,6 +590,7 @@ static int tegra_vcm30t124_spdif_init(struct snd_soc_pcm_runtime *rtd)
 	int err = 0;
 
 	/* Default sampling rate*/
+	idx = idx - TEGRA124_XBAR_DAI_LINKS;
 	srate = dai_params->rate_min;
 	clk_out_rate = srate * 256;
 	mclk = clk_out_rate * 2;
@@ -616,7 +617,6 @@ static int tegra_vcm30t124_spdif_init(struct snd_soc_pcm_runtime *rtd)
 
 	/* set bclk ratio */
 	if (cpu_dai->driver->ops->set_bclk_ratio) {
-		idx = idx - TEGRA124_XBAR_DAI_LINKS;
 		err = snd_soc_dai_set_bclk_ratio(cpu_dai,
 				pdata->dai_config[idx].bclk_ratio);
 		if (err < 0) {
@@ -658,8 +658,9 @@ static int tegra_vcm30t124_bt_sco_init(struct snd_soc_pcm_runtime *rtd)
 	unsigned int fmt = rtd->dai_link->dai_fmt;
 	int err = 0;
 
+	idx = idx - TEGRA124_XBAR_DAI_LINKS;
+
 	if (cpu_dai->driver->ops->set_bclk_ratio) {
-		idx = idx - TEGRA124_XBAR_DAI_LINKS;
 		err = snd_soc_dai_set_bclk_ratio(cpu_dai,
 				pdata->dai_config[idx].bclk_ratio);
 		if (err < 0) {

@@ -277,8 +277,8 @@ static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 	/* monitors like to lie about these but they are still useful for
 	 * detecting aspect ratios
 	 */
-	hdmi->dc->out->h_size = specs.max_x * 1000;
-	hdmi->dc->out->v_size = specs.max_y * 1000;
+	hdmi->dc->out->h_size = specs.max_x * 10;
+	hdmi->dc->out->v_size = specs.max_y * 10;
 
 	hdmi->dvi = !(specs.misc & FB_MISC_HDMI);
 

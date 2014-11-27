@@ -201,15 +201,18 @@ static void set_pmu_cmdline_args_falctracesize_v1(
 	pmu->args_v1.falc_trace_size = size;
 }
 
-static int find_hex_in_string(char *strings, struct gk20a *g)
+static bool find_hex_in_string(char *strings, struct gk20a *g, u32 *hex_pos)
 {
 	u32 i = 0, j = strlen(strings);
 	for (; i < j; i++) {
 		if (strings[i] == '%')
-			if (strings[i + 1] == 'x' || strings[i + 1] == 'X')
-				return i;
+			if (strings[i + 1] == 'x' || strings[i + 1] == 'X') {
+				*hex_pos = i;
+				return true;
+			}
 	}
-	return 0xFF;
+	*hex_pos = -1;
+	return false;
 }
 
 static void printtrace(struct pmu_gk20a *pmu)
@@ -227,17 +230,17 @@ static void printtrace(struct pmu_gk20a *pmu)
 		if (j == 0x40)
 			return;
 		count = scnprintf(buf, 0x40, "Index %x: ", trace1[(i / 4)]);
-		k = find_hex_in_string((trace+i+20), g);
 		l = 0;
 		m = 0;
-		while (k < 0xFF) {
+		while (find_hex_in_string((trace+i+20+m), g, &k)) {
+			if (k >= 40)
+				break;
 			strncpy(part_str, (trace+i+20+m), k);
 			part_str[k] = 0;
 			count += scnprintf((buf + count), 0x40, "%s0x%x",
 					part_str, trace1[(i / 4) + 1 + l]);
 			l++;
 			m += k + 2;
-			k = find_hex_in_string((trace+i+20+m), g);
 		}
 		count += scnprintf((buf + count), 0x40, "%s", (trace+i+20+m));
 		gk20a_err(dev_from_gk20a(g), "%s", buf);
@@ -4096,17 +4099,17 @@ static int falc_trace_show(struct seq_file *s, void *data)
 		if (j == 0x40)
 			return 0;
 		seq_printf(s, "Index %x: ", trace1[(i / 4)]);
-		k = find_hex_in_string((trace+i+20), g);
 		l = 0;
 		m = 0;
-		while (k < 0xFF) {
+		while (find_hex_in_string((trace+i+20+m), g, &k)) {
+			if (k >= 40)
+				break;
 			strncpy(part_str, (trace+i+20+m), k);
 			part_str[k] = 0;
 			seq_printf(s, "%s0x%x", part_str,
 					trace1[(i / 4) + 1 + l]);
 			l++;
 			m += k + 2;
-			k = find_hex_in_string((trace+i+20+m), g);
 		}
 		seq_printf(s, "%s", (trace+i+20+m));
 	}

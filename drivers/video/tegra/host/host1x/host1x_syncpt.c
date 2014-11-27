@@ -77,7 +77,7 @@ static void t20_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id)
 
 /* remove a wait pointed to by patch_addr */
 static int host1x_syncpt_patch_wait(struct nvhost_syncpt *sp,
-		void *patch_addr)
+		void __iomem *patch_addr)
 {
 	u32 override = nvhost_class_host_wait_syncpt(
 				nvhost_syncpt_graphics_host_sp(sp), 0);

@@ -348,7 +348,7 @@ static int do_relocs(struct nvhost_job *job,
 		__raw_writel(
 			(job->reloc_addr_phys[i] +
 				reloc->target_offset) >> shift->shift,
-			(cmdbuf_page_addr +
+			(void __iomem *)(cmdbuf_page_addr +
 				(reloc->cmdbuf_offset & ~PAGE_MASK)));
 
 		/* remove completed reloc from the job */

@@ -1760,6 +1760,10 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	tegra_hdmi_vendor_infoframe(hdmi);
 	tegra_hdmi_audio_config(hdmi, AUDIO_FREQ_32K, HDA);
 
+	tegra_sor_pad_cal_power(sor, true);
+	tegra_hdmi_config_tmds(hdmi);
+	tegra_sor_pad_cal_power(sor, false);
+
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_BRICK_CLK);
 	tegra_dc_sor_attach(sor);
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, tegra_dc_hpd(dc));
@@ -1773,10 +1777,6 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	/* TODO: Confirm sequence with HW */
 	tegra_sor_writel(sor,  NV_SOR_SEQ_INST(0), 0x8080);
 	tegra_sor_writel(sor,  NV_SOR_PWR, 0x80000001);
-
-	tegra_sor_pad_cal_power(sor, true);
-	tegra_hdmi_config_tmds(hdmi);
-	tegra_sor_pad_cal_power(sor, false);
 
 	if (hdmi->dc->mode.pclk > 340000000) {
 		tegra_hdmi_v2_x_config(hdmi);

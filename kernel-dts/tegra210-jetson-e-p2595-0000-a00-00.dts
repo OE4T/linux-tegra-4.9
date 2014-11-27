@@ -36,7 +36,7 @@
 #include "tegra210-platforms/tegra210-keys-p2530-0930.dtsi"
 #include "tegra210-platforms/tegra210-powermon-p2530-0930.dtsi"
 #include <dt-bindings/iio/meter/ina3221x.h>
-#include "tegra210-platforms/tegra210-extcon-p2530-0930.dtsi"
+#include "tegra210-platforms/tegra210-foster-e-extcon-p2530-0930-e01.dtsi"
 #include "tegra210-platforms/tegra210-loki-e-emc-e01.dtsi"
 
 / {
@@ -209,6 +209,12 @@
 	extcon {
 		extcon@0 {
 			status = "disabled";
+		};
+		vbus_gpio_extcon: extcon@1 {
+			extcon-gpio,cable-states = <0x3 0x1
+						    0x0 0x2
+						    0x1 0x2
+						    0x2 0x0>;
 		};
 	};
 

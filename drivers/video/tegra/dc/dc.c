@@ -2013,7 +2013,7 @@ void tegra_dc_set_out_pin_polars(struct tegra_dc *dc,
 static struct tegra_dc_mode *tegra_dc_get_override_mode(struct tegra_dc *dc)
 {
 	if (dc->out->type == TEGRA_DC_OUT_HDMI &&
-			tegra_is_hdmi_initialised()) {
+			tegra_is_bl_display_initialized(dc->ndev->id)) {
 
 		/* For seamless HDMI, read mode parameters from bootloader
 		 * set DC configuration
@@ -2068,12 +2068,21 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 	dc->out = out;
 
 	if (dc->out->type == TEGRA_DC_OUT_HDMI &&
-			tegra_is_hdmi_initialised()) {
+			tegra_is_bl_display_initialized(dc->ndev->id)) {
 		/*
 		 * Bootloader enables clk and host1x in seamless
 		 * usecase. Below extra reference accounts for it
 		 */
 		tegra_dc_get(dc);
+	}
+	/*
+	 * Seamless supporting panels can work in seamless mode
+	 * only if BL initializes DC/DSI. If not, panel should
+	 * go with complete initialization.
+	 */
+	if (dc->out->type == TEGRA_DC_OUT_DSI &&
+			!tegra_is_bl_display_initialized(dc->ndev->id)) {
+		dc->out->flags &= ~TEGRA_DC_OUT_INITIALIZED_MODE;
 	}
 
 	mode = tegra_dc_get_override_mode(dc);

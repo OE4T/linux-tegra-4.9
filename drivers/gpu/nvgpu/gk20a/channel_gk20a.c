@@ -318,6 +318,7 @@ static void channel_gk20a_bind(struct channel_gk20a *ch_gk20a)
 void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a)
 {
 	struct gk20a *g = ch_gk20a->g;
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 
 	gk20a_dbg_fn("");
 
@@ -333,7 +334,7 @@ void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a)
 	 * resource at this point
 	 * if not, then it will be destroyed at channel_free()
 	 */
-	if (ch_gk20a->sync && ch_gk20a->sync->aggressive_destroy) {
+	if (ch_gk20a->sync && platform->sync_aggressive_destroy) {
 		ch_gk20a->sync->destroy(ch_gk20a->sync);
 		ch_gk20a->sync = NULL;
 	}
@@ -1469,6 +1470,7 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 {
 	struct vm_gk20a *vm = c->vm;
 	struct channel_gk20a_job *job, *n;
+	struct gk20a_platform *platform = gk20a_get_platform(c->g->dev);
 
 	trace_gk20a_channel_update(c);
 
@@ -1506,7 +1508,7 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 	 * the sync resource
 	 */
 	if (list_empty(&c->jobs)) {
-		if (c->sync && c->sync->aggressive_destroy &&
+		if (c->sync && platform->sync_aggressive_destroy &&
 			  gk20a_fence_is_expired(c->last_submit.post_fence)) {
 			c->sync->destroy(c->sync);
 			c->sync = NULL;

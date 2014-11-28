@@ -584,6 +584,11 @@ struct gk20a_platform gk20a_tegra_platform = {
 
 struct gk20a_platform gm20b_tegra_platform = {
 	.has_syncpoints = true,
+	/*
+	 * Enable aggressive reclaiming of sync point, becuase we have
+	 * fewer sync points than channels
+	 */
+	.sync_aggressive_destroy = true,
 
 	/* power management configuration */
 	.railgate_delay		= 500,

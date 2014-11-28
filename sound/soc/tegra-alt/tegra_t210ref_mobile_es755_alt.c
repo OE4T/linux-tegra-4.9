@@ -666,8 +666,6 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto err_alloc_dai_link;
 #endif
-	/* 1.8V VDDIO_AUDIO_HV_BIAS/HV DAP regulator enable */
-	pwr_detect_bit_write(AUDIO_HV_PWR_DET, false);
 
 	/*
 	*digital_reg - provided the digital power for the codec and must be

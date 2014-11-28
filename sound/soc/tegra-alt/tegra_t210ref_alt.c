@@ -1055,9 +1055,6 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		}
 	}
 
-	pwr_detect_bit_write(AUDIO_HV_PWR_DET, false);
-	pwr_detect_bit_write(SPI_HV_PWR_DET, false);
-
 	ret = tegra_alt_asoc_utils_init(&machine->audio_clock,
 					&pdev->dev,
 					card);

@@ -64,7 +64,7 @@ obj-$(CONFIG_SND_SOC_TEGRA210_ADSP_ALT) += snd-soc-tegra210-alt-adsp.o
 # Tegra machine Support
 snd-soc-tegra-alt-vcm30t124-objs := tegra_vcm30t124_alt.o tegra_asoc_machine_alt.o
 snd-soc-tegra-alt-grenada-objs := tegra_grenada_alt.o tegra_asoc_machine_alt.o
-snd-soc-tegra-alt-t210ref-mobile-objs := tegra_t210ref_mobile_alt.o tegra_asoc_machine_alt.o
+snd-soc-tegra-alt-t210ref-mobile-objs := tegra_t210ref_mobile_alt.o
 snd-soc-tegra-alt-t210ref-mobile-es755-objs := tegra_t210ref_mobile_es755_alt.o tegra_asoc_machine_alt.o
 snd-soc-tegra-alt-t210ref-objs := tegra_t210ref_alt.o tegra_asoc_machine_alt.o
 

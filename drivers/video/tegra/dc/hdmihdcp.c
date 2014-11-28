@@ -1591,6 +1591,13 @@ void tegra_nvhdcp_resume(struct tegra_nvhdcp *nvhdcp)
 	tegra_nvhdcp_renegotiate(nvhdcp);
 }
 
+void tegra_nvhdcp_shutdown(struct tegra_nvhdcp *nvhdcp)
+{
+	if (!nvhdcp)
+		return;
+	tegra_nvhdcp_off(nvhdcp);
+}
+
 static int tegra_nvhdcp_recv_capable(struct tegra_nvhdcp *nvhdcp)
 {
 	if (!nvhdcp)

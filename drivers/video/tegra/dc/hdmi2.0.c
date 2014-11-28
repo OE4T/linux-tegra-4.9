@@ -1782,6 +1782,7 @@ static void tegra_dc_hdmi_shutdown(struct tegra_dc *dc)
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 
 	hdmi->device_shutdown = true;
+	tegra_nvhdcp_shutdown(hdmi->nvhdcp);
 
 	return;
 }

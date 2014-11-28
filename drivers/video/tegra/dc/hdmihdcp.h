@@ -74,6 +74,7 @@ void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd);
 int tegra_nvhdcp_set_policy(struct tegra_nvhdcp *nvhdcp, int pol);
 void tegra_nvhdcp_suspend(struct tegra_nvhdcp *nvhdcp);
 void tegra_nvhdcp_resume(struct tegra_nvhdcp *nvhdcp);
+void tegra_nvhdcp_shutdown(struct tegra_nvhdcp *nvhdcp);
 struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_hdmi *hdmi,
 					int id, int bus);
 void tegra_nvhdcp_destroy(struct tegra_nvhdcp *nvhdcp);
@@ -87,6 +88,7 @@ static inline int tegra_nvhdcp_set_policy(struct tegra_nvhdcp *nvhdcp, int pol)
 }
 static inline void tegra_nvhdcp_suspend(struct tegra_nvhdcp *nvhdcp) { }
 static inline void tegra_nvhdcp_resume(struct tegra_nvhdcp *nvhdcp) { }
+static inline void tegra_nvhdcp_shutdown(struct tegra_nvhdcp *nvhdcp) { }
 static inline struct tegra_nvhdcp *tegra_nvhdcp_create(
 	struct tegra_hdmi *hdmi, int id, int bus)
 {

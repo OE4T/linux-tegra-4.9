@@ -17,6 +17,8 @@
 #include <linux/device.h>
 #include <linux/regulator/consumer.h>
 
+#define NVS_SCALE_SIGNIFICANCE		(1000000) /* IIO_VAL_INT_PLUS_MICRO*/
+
 #define NVS_STS_SHUTDOWN		(1 << 0)
 #define NVS_STS_SUSPEND			(1 << 1)
 #define NVS_STS_SYS_N			(2)
@@ -80,7 +82,8 @@ struct nvs_fn_dev {
  *
  * Returns device enable state or a negative error code.
  *
- * Note that the enable value may be a bitmap of the channels.
+ * Note that the enable value may be a bitmap of the enabled
+ * channel.
  */
 	int (*enable)(void *client, int snsr_id, int enable);
 /**
@@ -212,7 +215,7 @@ struct nvs_fn_dev {
  */
 	int (*reset)(void *client, int snsr_id);
 /**
- * selftest - device self-test
+ * self_test - device self-test
  * @client: clients private data
  * @snsr_id: sensor ID
  * @buf: character buffer to write to
@@ -220,7 +223,7 @@ struct nvs_fn_dev {
  * Returns 0 on success or a negative error code if buf == NULL.
  * if buf != NULL, return number of characters.
  */
-	int (*selftest)(void *client, int snsr_id, char *buf);
+	int (*self_test)(void *client, int snsr_id, char *buf);
 /**
  * regs - device register dump
  * @client: clients private data

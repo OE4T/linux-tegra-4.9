@@ -47,6 +47,15 @@
  * The feature is disabled whenever the device is disabled.  It remains
  * disabled until the IIO raw sysfs attribute is written to again.
  */
+/* The NVS HAL will use the IIO scale and offset sysfs attributes to modify the
+ * data using the following formula: (data * scale) + offset
+ * A scale value of 0 disables scale.
+ * A scale value of 1 puts the NVS HAL into calibration mode where the scale
+ * and offset are read everytime the data is read to allow realtime calibration
+ * of the scale and offset values to be used in the device tree parameters.
+ * Keep in mind the data is buffered but the NVS HAL will display the data and
+ * scale/offset parameters in the log.  See calibration steps below.
+ */
 
 
 #include <linux/init.h>
@@ -68,7 +77,7 @@
 
 #define NVS_IIO_DRIVER_VERSION		(200)
 #define NVS_IIO_SENSOR_TYPE_ERR		(0xFF)
-#define NVS_ATTRS_ARRAY_SIZE		(11)
+#define NVS_ATTRS_ARRAY_SIZE		(12)
 
 enum NVS_ATTR {
 	NVS_ATTR_ENABLE,
@@ -80,6 +89,7 @@ enum NVS_ATTR {
 	NVS_ATTR_FIFO_MAX_EVNT_CNT,
 	NVS_ATTR_FLAGS,
 	NVS_ATTR_MATRIX,
+	NVS_ATTR_SELF_TEST,
 };
 
 enum NVS_DBG {
@@ -105,6 +115,8 @@ struct nvs_state {
 	struct attribute *attrs[NVS_ATTRS_ARRAY_SIZE];
 	struct attribute_group attr_group;
 	struct iio_info info;
+	bool shutdown;
+	bool suspend;
 	bool flush;
 	int batch_flags;
 	unsigned int batch_period_us;
@@ -201,7 +213,7 @@ static ssize_t nvs_dbg_data(struct iio_dev *indio_dev, char *buf)
 	unsigned int i;
 	u64 data;
 
-	t = sprintf(buf, "data: ");
+	t = sprintf(buf, "%s: ", st->cfg->name);
 	n = 0;
 	for (i = 0; i < indio_dev->num_channels - 1; i++) {
 		ch = &indio_dev->channels[i];
@@ -327,7 +339,8 @@ static ssize_t nvs_attr_store(struct device *dev,
 		return -EINVAL;
 
 	mutex_lock(&indio_dev->mlock);
-	if (*st->fn_dev->sts & (NVS_STS_SHUTDOWN | NVS_STS_SUSPEND)) {
+	if (st->shutdown || st->suspend || (*st->fn_dev->sts &
+				       (NVS_STS_SHUTDOWN | NVS_STS_SUSPEND))) {
 		mutex_unlock(&indio_dev->mlock);
 		return -EPERM;
 	}
@@ -375,7 +388,7 @@ static ssize_t nvs_attr_show(struct device *dev,
 						  st->cfg->snsr_id, -1));
 
 	case NVS_ATTR_PART:
-		return sprintf(buf, "%s\n", st->cfg->part);
+		return sprintf(buf, "%s %s\n", st->cfg->part, st->cfg->name);
 
 	case NVS_ATTR_VENDOR:
 		return sprintf(buf, "%s\n", st->cfg->vendor);
@@ -408,6 +421,12 @@ static ssize_t nvs_attr_show(struct device *dev,
 			       st->cfg->matrix[6],
 			       st->cfg->matrix[7],
 			       st->cfg->matrix[8]);
+
+	case NVS_ATTR_SELF_TEST:
+		if (st->fn_dev->self_test)
+			return st->fn_dev->self_test(st->client,
+						     st->cfg->snsr_id, buf);
+		break;
 
 	default:
 		return -EINVAL;
@@ -543,6 +562,8 @@ static IIO_DEVICE_ATTR(flags, S_IRUGO,
 		       nvs_attr_show, NULL, NVS_ATTR_FLAGS);
 static IIO_DEVICE_ATTR(matrix, S_IRUGO,
 		       nvs_attr_show, NULL, NVS_ATTR_MATRIX);
+static IIO_DEVICE_ATTR(self_test, S_IRUGO,
+		       nvs_attr_show, NULL, NVS_ATTR_SELF_TEST);
 
 static struct attribute *nvs_attrs[] = {
 	&dev_attr_nvs.attr,
@@ -555,13 +576,32 @@ static struct attribute *nvs_attrs[] = {
 	&iio_dev_attr_fifo_max_event_count.dev_attr.attr,
 	&iio_dev_attr_flags.dev_attr.attr,
 	&iio_dev_attr_matrix.dev_attr.attr,
+	&iio_dev_attr_self_test.dev_attr.attr,
 	NULL
 };
+
+static int nvs_attr_rm(struct nvs_state *st, struct attribute *rm_attr)
+{
+	unsigned int n;
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(st->attrs); i++) {
+		if (st->attrs[i] == rm_attr) {
+			do {
+				n = i + 1;
+				st->attrs[i] = st->attrs[n];
+				i++;
+			} while (st->attrs[i] != NULL);
+			return 0;
+		}
+	}
+
+	return -EINVAL;
+}
 
 static int nvs_attr(struct iio_dev *indio_dev)
 {
 	struct nvs_state *st = iio_priv(indio_dev);
-	unsigned int n;
 	unsigned int i;
 
 	BUG_ON(NVS_ATTRS_ARRAY_SIZE < ARRAY_SIZE(nvs_attrs));
@@ -571,20 +611,12 @@ static int nvs_attr(struct iio_dev *indio_dev)
 		if (st->cfg->matrix[i])
 			break;
 	}
-	if (i >= ARRAY_SIZE(st->cfg->matrix)) {
+	if (i >= ARRAY_SIZE(st->cfg->matrix))
 		/* remove matrix attribute */
-		for (i = 0; i < ARRAY_SIZE(st->attrs); i++) {
-			if (st->attrs[i] == &iio_dev_attr_matrix.
-					    dev_attr.attr) {
-				do {
-					n = i + 1;
-					st->attrs[i] = st->attrs[n];
-					i++;
-				} while (st->attrs[i] != NULL);
-				break;
-			}
-		}
-	}
+		nvs_attr_rm(st, &iio_dev_attr_matrix.dev_attr.attr);
+
+	if (st->fn_dev->self_test == NULL)
+		nvs_attr_rm(st, &iio_dev_attr_self_test.dev_attr.attr);
 
 	st->attr_group.attrs = st->attrs;
 	return 0;
@@ -679,7 +711,8 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 	int ret = 0;
 
 	mutex_lock(&indio_dev->mlock);
-	if (*st->fn_dev->sts & (NVS_STS_SHUTDOWN | NVS_STS_SUSPEND)) {
+	if (st->shutdown || st->suspend || (*st->fn_dev->sts &
+				       (NVS_STS_SHUTDOWN | NVS_STS_SUSPEND))) {
 		mutex_unlock(&indio_dev->mlock);
 		return -EPERM;
 	}
@@ -841,7 +874,8 @@ static int nvs_buffer_preenable(struct iio_dev *indio_dev)
 {
 	struct nvs_state *st = iio_priv(indio_dev);
 
-	if (*st->fn_dev->sts & (NVS_STS_SHUTDOWN | NVS_STS_SUSPEND))
+	if (st->shutdown || st->suspend || (*st->fn_dev->sts &
+					 (NVS_STS_SHUTDOWN | NVS_STS_SUSPEND)))
 		return -EINVAL;
 
 	return iio_sw_buffer_preenable(indio_dev);
@@ -997,16 +1031,47 @@ static const struct iio_trigger_ops nvs_trigger_ops = {
 
 static int nvs_suspend(void *handle)
 {
-	return 0;
+	struct iio_dev *indio_dev = (struct iio_dev *)handle;
+	struct nvs_state *st = iio_priv(indio_dev);
+	int ret = 0;
+
+	mutex_lock(&indio_dev->mlock);
+	st->suspend = true;
+	if (!st->cfg->no_suspend) {
+		ret = st->fn_dev->enable(st->client, st->cfg->snsr_id, -1);
+		if (ret > 0)
+			ret = st->fn_dev->enable(st->client,
+						 st->cfg->snsr_id, 0);
+		else
+			ret = 0;
+	}
+	mutex_unlock(&indio_dev->mlock);
+	return ret;
 }
 
 static int nvs_resume(void *handle)
 {
+	struct iio_dev *indio_dev = (struct iio_dev *)handle;
+	struct nvs_state *st = iio_priv(indio_dev);
+
+	mutex_lock(&indio_dev->mlock);
+	st->suspend = false;
+	mutex_unlock(&indio_dev->mlock);
 	return 0;
 }
 
 static void nvs_shutdown(void *handle)
 {
+	struct iio_dev *indio_dev = (struct iio_dev *)handle;
+	struct nvs_state *st = iio_priv(indio_dev);
+	int ret;
+
+	mutex_lock(&indio_dev->mlock);
+	st->shutdown = true;
+	ret = st->fn_dev->enable(st->client, st->cfg->snsr_id, -1);
+	if (ret > 0)
+		st->fn_dev->enable(st->client, st->cfg->snsr_id, 0);
+	mutex_unlock(&indio_dev->mlock);
 }
 
 static int nvs_remove(void *handle)

@@ -44,6 +44,7 @@
 #include <linux/termios.h>
 #include <linux/tty.h>
 #include <linux/tty_flip.h>
+#include <linux/timer.h>
 
 #define TEGRA_UART_TYPE				"TEGRA_UART"
 #define TX_EMPTY_STATUS				(UART_LSR_TEMT | UART_LSR_THRE)
@@ -146,6 +147,9 @@ struct tegra_uart_port {
 	struct tegra_baud_tolerance		*baud_tolerance;
 	int					n_adjustable_baud_rates;
 	bool					use_rx_pio;
+	struct timer_list			timer;
+	int					timer_timeout_jiffies;
+	bool					enable_rx_buffer_throttle;
 };
 
 static void tegra_uart_start_next_tx(struct tegra_uart_port *tup);
@@ -602,6 +606,7 @@ static void tegra_uart_handle_rx_pio(struct tegra_uart_port *tup,
 		char flag = TTY_NORMAL;
 		unsigned long lsr = 0;
 		unsigned char ch;
+		int copied;
 
 		lsr = tegra_uart_read(tup, UART_LSR);
 		if (!(lsr & UART_LSR_DR))
@@ -614,9 +619,37 @@ static void tegra_uart_handle_rx_pio(struct tegra_uart_port *tup,
 		if (tup->uport.ignore_status_mask & UART_LSR_DR)
 			continue;
 
-		if (!uart_handle_sysrq_char(&tup->uport, ch) && tty)
-			tty_insert_flip_char(tty, ch, flag);
+		if (!uart_handle_sysrq_char(&tup->uport, ch) && tty) {
+			copied  = tty_insert_flip_char(tty, ch, flag);
+			if (copied != 1)
+				dev_err(tup->uport.dev, "RxData PIO to tty layer failed\n");
+		}
 	} while (1);
+}
+
+static void tegra_uart_rx_buffer_throttle_timer(unsigned long _data)
+{
+	struct tegra_uart_port *tup = (struct tegra_uart_port *)_data;
+	struct uart_port *u = &tup->uport;
+	struct tty_struct *tty = tty_port_tty_get(&tup->uport.state->port);
+	struct tty_port *port = &tup->uport.state->port;
+	int rx_level;
+	unsigned long flags;
+
+	spin_lock_irqsave(&u->lock, flags);
+
+	rx_level = tty_buffer_get_level(port);
+	if (rx_level < 30) {
+		if (tup->rts_active)
+			set_rts(tup, true);
+	} else {
+		mod_timer(&tup->timer, jiffies + tup->timer_timeout_jiffies);
+	}
+
+	if (tty)
+		tty_kref_put(tty);
+
+	spin_unlock_irqrestore(&u->lock, flags);
 }
 
 static void tegra_uart_copy_rx_to_tty(struct tegra_uart_port *tup,
@@ -674,10 +707,12 @@ static void tegra_uart_rx_dma_complete(void *args)
 {
 	struct tegra_uart_port *tup = args;
 	struct uart_port *u = &tup->uport;
+	struct tty_port *port = &u->state->port;
 	unsigned long flags;
 	struct dma_tx_state state;
 	enum dma_status status;
 	struct dma_async_tx_descriptor *prev_rx_dma_desc;
+	int rx_level = 0;
 
 	spin_lock_irqsave(&u->lock, flags);
 
@@ -694,11 +729,22 @@ static void tegra_uart_rx_dma_complete(void *args)
 		set_rts(tup, false);
 
 	tegra_uart_rx_buffer_push(tup, 0);
+
+	if (tup->enable_rx_buffer_throttle) {
+		rx_level = tty_buffer_get_level(port);
+		if (rx_level > 70)
+			mod_timer(&tup->timer,
+				  jiffies + tup->timer_timeout_jiffies);
+	}
+
 	tegra_uart_start_rx_dma(tup);
 	async_tx_ack(prev_rx_dma_desc);
 
 	/* Activate flow control to start transfer */
-	if (tup->rts_active)
+	if (tup->enable_rx_buffer_throttle) {
+		if ((rx_level <= 70) && tup->rts_active)
+			set_rts(tup, true);
+	} else if (tup->rts_active)
 		set_rts(tup, true);
 
 done:
@@ -707,8 +753,10 @@ done:
 
 static void tegra_uart_handle_rx_dma(struct tegra_uart_port *tup)
 {
+	struct tty_port *port = &tup->uport.state->port;
 	struct dma_tx_state state;
 	struct dma_async_tx_descriptor *prev_rx_dma_desc;
+	int rx_level = 0;
 
 	/* Deactivate flow control to stop sender */
 	if (tup->rts_active)
@@ -718,10 +766,21 @@ static void tegra_uart_handle_rx_dma(struct tegra_uart_port *tup)
 	dmaengine_tx_status(tup->rx_dma_chan, tup->rx_cookie, &state);
 	prev_rx_dma_desc = tup->rx_dma_desc;
 	tegra_uart_rx_buffer_push(tup, state.residue);
+
+	if (tup->enable_rx_buffer_throttle) {
+		rx_level = tty_buffer_get_level(port);
+		if (rx_level > 70)
+			mod_timer(&tup->timer,
+				  jiffies + tup->timer_timeout_jiffies);
+	}
+
 	tegra_uart_start_rx_dma(tup);
 	async_tx_ack(prev_rx_dma_desc);
 
-	if (tup->rts_active)
+	if (tup->enable_rx_buffer_throttle) {
+		if ((rx_level <= 70) && tup->rts_active)
+			set_rts(tup, true);
+	} else if (tup->rts_active)
 		set_rts(tup, true);
 }
 
@@ -1391,6 +1450,11 @@ static int tegra_uart_parse_dt(struct platform_device *pdev,
 		dev_info(&pdev->dev, "RX in PIO mode\n");
 	}
 
+	tup->enable_rx_buffer_throttle = of_property_read_bool(np,
+			"nvidia,enable-rx-buffer-throttling");
+	if (tup->enable_rx_buffer_throttle)
+		dev_info(&pdev->dev, "Rx buffer throttling enabled\n");
+
 	n_entries = of_property_count_u32_elems(np, "nvidia,adjust-baud-rates");
 	if (n_entries > 0) {
 		tup->n_adjustable_baud_rates = n_entries/3;
@@ -1550,6 +1614,13 @@ static int tegra_uart_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Failed to add uart port, err %d\n", ret);
 		return ret;
 	}
+
+	if (tup->enable_rx_buffer_throttle) {
+		setup_timer(&tup->timer, tegra_uart_rx_buffer_throttle_timer,
+				(unsigned long)tup);
+		tup->timer_timeout_jiffies = msecs_to_jiffies(10);
+	}
+
 	return ret;
 }
 

@@ -83,8 +83,8 @@ int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 		gr_pd_ab_dist_cfg1_max_output_f(pd_ab_max_output) |
 		gr_pd_ab_dist_cfg1_max_batches_init_f(), patch);
 
-	alpha_offset_in_chunk = attrib_offset_in_chunk +
-		gr->tpc_count * gr->attrib_cb_size;
+	attrib_offset_in_chunk = alpha_offset_in_chunk +
+		gr->tpc_count * gr->alpha_cb_size;
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
 		temp = proj_gpc_stride_v() * gpc_index;
@@ -105,6 +105,12 @@ int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 				proj_ppc_in_gpc_stride_v() * ppc_index,
 				attrib_offset_in_chunk, patch);
 
+			gr_gk20a_ctx_patch_write(g, ch_ctx,
+				gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_r() + temp +
+				proj_ppc_in_gpc_stride_v() * ppc_index,
+				gr->alpha_cb_default_size * gr->pes_tpc_count[ppc_index][gpc_index],
+				patch);
+
 			attrib_offset_in_chunk += gr->attrib_cb_size *
 				gr->pes_tpc_count[ppc_index][gpc_index];
 
@@ -120,12 +126,6 @@ int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 
 			alpha_offset_in_chunk += gr->alpha_cb_size *
 				gr->pes_tpc_count[ppc_index][gpc_index];
-
-			gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_r() + temp +
-				proj_ppc_in_gpc_stride_v() * ppc_index,
-				gr->alpha_cb_default_size * gr->pes_tpc_count[ppc_index][gpc_index],
-				patch);
 
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpcs_swdx_tc_beta_cb_size_r(ppc_index + gpc_index),

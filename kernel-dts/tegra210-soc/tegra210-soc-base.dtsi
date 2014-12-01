@@ -1299,6 +1299,7 @@
 
 	tegra-aotag {
 		compatible = "nvidia,tegra21x-aotag";
+		parent-block = <&{/pmc@7000e400}>;
 		/*
 		 * interrupts =
 		 * #interrupt-names =

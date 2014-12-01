@@ -45,10 +45,10 @@ static bool reg_requested;
 static bool gpio_requested;
 static struct platform_device *disp_device;
 
-static struct regulator *vdd_lcd_s_1v8;
 static struct regulator *vdd_lcd_bl;
 static struct regulator *vdd_lcd_bl_en;
-static struct regulator *avdd_lcd_3v0_2v8;
+static struct regulator *avdd_lcd_3v0;
+static struct regulator *dvdd_lcd_3v3;
 
 static u16 en_panel_rst;
 static u16 en_panel;
@@ -382,18 +382,18 @@ static int dsi_j_1440_810_5_8_reg_get(struct device *dev)
 	if (reg_requested)
 		return 0;
 
-	avdd_lcd_3v0_2v8 = regulator_get(dev, "avdd_lcd");
-	if (IS_ERR(avdd_lcd_3v0_2v8)) {
+	avdd_lcd_3v0 = regulator_get(dev, "avdd_lcd");
+	if (IS_ERR(avdd_lcd_3v0)) {
 		pr_err("avdd_lcd regulator get failed\n");
-		err = PTR_ERR(avdd_lcd_3v0_2v8);
-		avdd_lcd_3v0_2v8 = NULL;
+		err = PTR_ERR(avdd_lcd_3v0);
+		avdd_lcd_3v0 = NULL;
 		goto fail;
 	}
-	vdd_lcd_s_1v8 = regulator_get(dev, "dvdd_lcd");
-	if (IS_ERR(vdd_lcd_s_1v8)) {
+	dvdd_lcd_3v3 = regulator_get(dev, "dvdd_lcd");
+	if (IS_ERR(dvdd_lcd_3v3)) {
 		pr_err("vdd_lcd_1v8_s regulator get failed\n");
-		err = PTR_ERR(vdd_lcd_s_1v8);
-		vdd_lcd_s_1v8 = NULL;
+		err = PTR_ERR(dvdd_lcd_3v3);
+		dvdd_lcd_3v3 = NULL;
 		goto fail;
 	}
 
@@ -512,24 +512,25 @@ static int dsi_j_1440_810_5_8_enable(struct device *dev)
 		gpio_direction_output(en_panel, 0);
 	}
 
-	if (vdd_lcd_s_1v8) {
-		err = regulator_enable(vdd_lcd_s_1v8);
+	if (avdd_lcd_3v0) {
+		err = regulator_enable(avdd_lcd_3v0);
 		if (err < 0) {
-			pr_err("vdd_lcd_1v8_s regulator enable failed\n");
+			pr_err("avdd_lcd_3v0 regulator enable failed\n");
+			goto fail;
+		}
+		regulator_set_voltage(avdd_lcd_3v0, 3100000, 3100000);
+	}
+	usleep_range(3000, 5000);
+
+	if (dvdd_lcd_3v3) {
+		err = regulator_enable(dvdd_lcd_3v3);
+		if (err < 0) {
+			pr_err("dvdd_lcd_3v3 regulator enable failed\n");
 			goto fail;
 		}
 	}
 	usleep_range(3000, 5000);
 
-	if (avdd_lcd_3v0_2v8) {
-		err = regulator_enable(avdd_lcd_3v0_2v8);
-		if (err < 0) {
-			pr_err("avdd_lcd_3v0_2v8 regulator enable failed\n");
-			goto fail;
-		}
-		regulator_set_voltage(avdd_lcd_3v0_2v8, 3100000, 3100000);
-	}
-	usleep_range(3000, 5000);
 
 	if (vdd_lcd_bl) {
 		err = regulator_enable(vdd_lcd_bl);
@@ -598,11 +599,11 @@ static int dsi_j_1440_810_5_8_disable(struct device *dev)
 	if (vdd_lcd_bl_en)
 		regulator_disable(vdd_lcd_bl_en);
 
-	if (vdd_lcd_s_1v8)
-		regulator_disable(vdd_lcd_s_1v8);
+	if (dvdd_lcd_3v3)
+		regulator_disable(dvdd_lcd_3v3);
 
-	if (avdd_lcd_3v0_2v8)
-		regulator_disable(avdd_lcd_3v0_2v8);
+	if (avdd_lcd_3v0)
+		regulator_disable(avdd_lcd_3v0);
 
 	return 0;
 }

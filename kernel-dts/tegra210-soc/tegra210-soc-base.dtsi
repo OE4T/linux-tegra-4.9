@@ -1299,7 +1299,6 @@
 
 	tegra-aotag {
 		compatible = "nvidia,tegra21x-aotag";
-		reg = <0x0 0x7000e333 0x0 0x666>;
 		/*
 		 * interrupts =
 		 * #interrupt-names =

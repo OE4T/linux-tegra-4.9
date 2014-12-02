@@ -41,6 +41,8 @@ static struct host1x_device_info host1x04_info = {
 	.initialize_chip_support = nvhost_init_t186_support,
 	.pts_base	= 0,
 	.pts_limit	= NV_HOST1X_SYNCPT_NB_PTS,
+	.syncpt_policy	= SYNCPT_PER_CHANNEL_INSTANCE,
+	.channel_policy	= MAP_CHANNEL_ON_SUBMIT,
 };
 
 struct nvhost_device_data t18_host1x_info = {
@@ -54,7 +56,6 @@ struct nvhost_device_data t18_isp_info = {
 	.num_channels		= 1,
 	.moduleid		= NVHOST_MODULE_ISP,
 	.class			= NV_VIDEO_STREAMING_ISP_CLASS_ID,
-	.modulemutexes		= {NV_VIDEO_STREAMING_ISP_CLASS_ID},
 	.devfs_name		= "isp",
 	.exclusive		= true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
@@ -72,12 +73,13 @@ struct nvhost_device_data t18_isp_info = {
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
 	.moduleid		= NVHOST_MODULE_ISP,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
+	.serialize		= 1,
+	.push_work_done		= 1,
 };
 #endif
 
 #if defined(CONFIG_TEGRA_GRHOST_VI) || defined(CONFIG_TEGRA_GRHOST_VI_MODULE)
 struct nvhost_device_data t18_vi_info = {
-	.modulemutexes		= {NV_VIDEO_STREAMING_VI_CLASS_ID},
 	.devfs_name		= "vi",
 	.exclusive		= true,
 	.class			= NV_VIDEO_STREAMING_VI_CLASS_ID,
@@ -104,12 +106,13 @@ struct nvhost_device_data t18_vi_info = {
 	.num_channels		= 6,
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,
 	.finalize_poweron = nvhost_vi_finalize_poweron,
+	.serialize		= 1,
+	.push_work_done		= 1,
 };
 #endif
 
 struct nvhost_device_data t18_msenc_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(6, 1),
-	.modulemutexes		= {NV_VIDEO_ENCODE_NVENC_CLASS_ID},
 	.devfs_name		= "msenc",
 	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,
 #ifdef TEGRA_POWERGATE_NVENC
@@ -125,11 +128,12 @@ struct nvhost_device_data t18_msenc_info = {
 	.moduleid		= NVHOST_MODULE_MSENC,
 	.num_channels		= 1,
 	.firmware_name		= "nvhost_nvenc061.fw",
+	.serialize		= 1,
+	.push_work_done		= 1,
 };
 
 struct nvhost_device_data t18_nvdec_info = {
 	.version		= NVHOST_ENCODE_NVDEC_VER(3, 0),
-	.modulemutexes		= {NV_NVDEC_CLASS_ID},
 	.devfs_name		= "nvdec",
 	.class			= NV_NVDEC_CLASS_ID,
 #ifdef TEGRA_POWERGATE_NVDEC
@@ -145,12 +149,12 @@ struct nvhost_device_data t18_nvdec_info = {
 	.moduleid		= NVHOST_MODULE_NVDEC,
 	.ctrl_ops		= &tegra_nvdec_ctrl_ops,
 	.num_channels		= 1,
-	.actmon_enabled		= true,
+	.serialize		= 1,
+	.push_work_done		= 1,
 };
 
 struct nvhost_device_data t18_nvjpg_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(1, 1),
-	.modulemutexes		= {NV_NVJPG_CLASS_ID},
 	.devfs_name		= "nvjpg",
 	.class			= NV_NVJPG_CLASS_ID,
 #ifdef TEGRA_POWERGATE_NVJPG
@@ -168,11 +172,12 @@ struct nvhost_device_data t18_nvjpg_info = {
 	.moduleid		= NVHOST_MODULE_NVJPG,
 	.num_channels		= 1,
 	.firmware_name		= "nvhost_nvjpg011.fw",
+	.serialize		= 1,
+	.push_work_done		= 1,
 };
 
 struct nvhost_device_data t18_tsec_info = {
 	.num_channels		= 1,
-	.modulemutexes		= {NV_TSEC_CLASS_ID},
 	.devfs_name		= "tsec",
 	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
 	.class			= NV_TSEC_CLASS_ID,
@@ -185,11 +190,12 @@ struct nvhost_device_data t18_tsec_info = {
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_tsec_finalize_poweron,
 	.prepare_poweroff	= nvhost_tsec_prepare_poweroff,
+	.serialize		= 1,
+	.push_work_done		= 1,
 };
 
 struct nvhost_device_data t18_tsecb_info = {
 	.num_channels		= 1,
-	.modulemutexes		= {NV_TSECB_CLASS_ID},
 	.devfs_name		= "tsecb",
 	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
 	.class			= NV_TSECB_CLASS_ID,
@@ -201,11 +207,12 @@ struct nvhost_device_data t18_tsecb_info = {
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_tsec_finalize_poweron,
 	.prepare_poweroff	= nvhost_tsec_prepare_poweroff,
+	.serialize		= 1,
+	.push_work_done		= 1,
 };
 
 struct nvhost_device_data t18_vic_info = {
 	.num_channels		= 1,
-	.modulemutexes		= {NV_GRAPHICS_VIC_CLASS_ID},
 	.devfs_name		= "vic",
 	.clocks			= {{"vic03", UINT_MAX, 0},
 				   {"emc", UINT_MAX,
@@ -226,16 +233,19 @@ struct nvhost_device_data t18_vic_info = {
 	.class			= NV_GRAPHICS_VIC_CLASS_ID,
 	.finalize_poweron	= nvhost_vic_finalize_poweron,
 	.firmware_name		= "vic04_ucode.bin",
+	.serialize		= 1,
+	.push_work_done		= 1,
 };
 
 struct nvhost_device_data t18_nvcsi_info = {
 	.num_channels		= 1,
 	.clocks			= {{"nvcsi", UINT_MAX, 0}},
-	.modulemutexes		= {NV_VIDEO_STREAMING_NVCSI_CLASS_ID},
 	.devfs_name		= "nvcsi",
 	.class			= NV_VIDEO_STREAMING_NVCSI_CLASS_ID,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.serialize		= 1,
+	.push_work_done		= 1,
 };
 
 #include "host1x/host1x_channel.c"

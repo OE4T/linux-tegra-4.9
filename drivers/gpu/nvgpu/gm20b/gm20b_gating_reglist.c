@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
 #define __gm20b_gating_reglist_h__
 
 #include <linux/types.h>
-
 #include "gm20b_gating_reglist.h"
 
 struct gating_desc {
@@ -30,44 +29,39 @@ struct gating_desc {
 	u32 disable;
 };
 /* slcg bus */
-static const struct gating_desc gm20b_slcg_bus[] = {
+const struct gating_desc gm20b_slcg_bus[] = {
 	{.addr = 0x00001c04, .prod = 0x00000000, .disable = 0x000003fe},
 };
 
 /* slcg ce2 */
-static const struct gating_desc gm20b_slcg_ce2[] = {
+const struct gating_desc gm20b_slcg_ce2[] = {
 	{.addr = 0x00106f28, .prod = 0x00000000, .disable = 0x000007fe},
 };
 
 /* slcg chiplet */
-static const struct gating_desc gm20b_slcg_chiplet[] = {
+const struct gating_desc gm20b_slcg_chiplet[] = {
 	{.addr = 0x0010c07c, .prod = 0x00000000, .disable = 0x00000007},
 	{.addr = 0x0010e07c, .prod = 0x00000000, .disable = 0x00000007},
 	{.addr = 0x0010d07c, .prod = 0x00000000, .disable = 0x00000007},
 	{.addr = 0x0010e17c, .prod = 0x00000000, .disable = 0x00000007},
 };
 
-/* slcg ctxsw firmware */
-static const struct gating_desc gm20b_slcg_ctxsw_firmware[] = {
-	{.addr = 0x00005f00, .prod = 0x00020008, .disable = 0x0003fffe},
-};
-
 /* slcg fb */
-static const struct gating_desc gm20b_slcg_fb[] = {
-	{.addr = 0x00100d14, .prod = 0xfffffffe, .disable = 0xfffffffe},
-	{.addr = 0x00100c9c, .prod = 0x000001fe, .disable = 0x000001fe},
+const struct gating_desc gm20b_slcg_fb[] = {
+	{.addr = 0x00100d14, .prod = 0x00000020, .disable = 0xfffffffe},
+	{.addr = 0x00100c9c, .prod = 0x00000000, .disable = 0x000001fe},
 };
 
 /* slcg fifo */
-static const struct gating_desc gm20b_slcg_fifo[] = {
+const struct gating_desc gm20b_slcg_fifo[] = {
 	{.addr = 0x000026ac, .prod = 0x00000100, .disable = 0x0001fffe},
 };
 
 /* slcg gr */
-static const struct gating_desc gm20b_slcg_gr[] = {
+const struct gating_desc gm20b_slcg_gr[] = {
 	{.addr = 0x004041f4, .prod = 0x00000000, .disable = 0x03fffffe},
 	{.addr = 0x0040917c, .prod = 0x00020008, .disable = 0x0003fffe},
-	{.addr = 0x00409894, .prod = 0x00000000, .disable = 0x0003fffe},
+	{.addr = 0x00409894, .prod = 0x00000040, .disable = 0x0003fffe},
 	{.addr = 0x004078c4, .prod = 0x00000000, .disable = 0x000001fe},
 	{.addr = 0x00406004, .prod = 0x00000000, .disable = 0x0001fffe},
 	{.addr = 0x00405864, .prod = 0x00000000, .disable = 0x000001fe},
@@ -75,7 +69,7 @@ static const struct gating_desc gm20b_slcg_gr[] = {
 	{.addr = 0x00408044, .prod = 0x00000000, .disable = 0x000007fe},
 	{.addr = 0x00407004, .prod = 0x00000000, .disable = 0x0000007e},
 	{.addr = 0x0041a17c, .prod = 0x00020008, .disable = 0x0003fffe},
-	{.addr = 0x0041a894, .prod = 0x00000000, .disable = 0x0003fffe},
+	{.addr = 0x0041a894, .prod = 0x00000040, .disable = 0x0003fffe},
 	{.addr = 0x00418504, .prod = 0x00000000, .disable = 0x0007fffe},
 	{.addr = 0x0041860c, .prod = 0x00000000, .disable = 0x000001fe},
 	{.addr = 0x0041868c, .prod = 0x00000000, .disable = 0x0000001e},
@@ -126,13 +120,13 @@ static const struct gating_desc gm20b_slcg_gr[] = {
 };
 
 /* slcg ltc */
-static const struct gating_desc gm20b_slcg_ltc[] = {
+const struct gating_desc gm20b_slcg_ltc[] = {
 	{.addr = 0x0017e050, .prod = 0x00000000, .disable = 0xfffffffe},
 	{.addr = 0x0017e35c, .prod = 0x00000000, .disable = 0xfffffffe},
 };
 
 /* slcg perf */
-static const struct gating_desc gm20b_slcg_perf[] = {
+const struct gating_desc gm20b_slcg_perf[] = {
 	{.addr = 0x001be018, .prod = 0x000001ff, .disable = 0x00000000},
 	{.addr = 0x001bc018, .prod = 0x000001ff, .disable = 0x00000000},
 	{.addr = 0x001b8018, .prod = 0x000001ff, .disable = 0x00000000},
@@ -140,12 +134,12 @@ static const struct gating_desc gm20b_slcg_perf[] = {
 };
 
 /* slcg PriRing */
-static const struct gating_desc gm20b_slcg_priring[] = {
+const struct gating_desc gm20b_slcg_priring[] = {
 	{.addr = 0x001200a8, .prod = 0x00000000, .disable = 0x00000001},
 };
 
 /* slcg pwr_csb */
-static const struct gating_desc gm20b_slcg_pwr_csb[] = {
+const struct gating_desc gm20b_slcg_pwr_csb[] = {
 	{.addr = 0x0000017c, .prod = 0x00020008, .disable = 0x0003fffe},
 	{.addr = 0x00000e74, .prod = 0x00000000, .disable = 0x0000000f},
 	{.addr = 0x00000a74, .prod = 0x00000000, .disable = 0x00007ffe},
@@ -153,34 +147,34 @@ static const struct gating_desc gm20b_slcg_pwr_csb[] = {
 };
 
 /* slcg pmu */
-static const struct gating_desc gm20b_slcg_pmu[] = {
+const struct gating_desc gm20b_slcg_pmu[] = {
 	{.addr = 0x0010a17c, .prod = 0x00020008, .disable = 0x0003fffe},
 	{.addr = 0x0010aa74, .prod = 0x00000000, .disable = 0x00007ffe},
 	{.addr = 0x0010ae74, .prod = 0x00000000, .disable = 0x0000000f},
 };
 
 /* therm gr */
-static const struct gating_desc gm20b_slcg_therm[] = {
+const struct gating_desc gm20b_slcg_therm[] = {
 	{.addr = 0x000206b8, .prod = 0x00000000, .disable = 0x0000000f},
 };
 
 /* slcg Xbar */
-static const struct gating_desc gm20b_slcg_xbar[] = {
+const struct gating_desc gm20b_slcg_xbar[] = {
 	{.addr = 0x0013cbe4, .prod = 0x00000000, .disable = 0x1ffffffe},
 	{.addr = 0x0013cc04, .prod = 0x00000000, .disable = 0x1ffffffe},
 };
 
 /* blcg bus */
-static const struct gating_desc gm20b_blcg_bus[] = {
+const struct gating_desc gm20b_blcg_bus[] = {
 	{.addr = 0x00001c00, .prod = 0x00000042, .disable = 0x00000000},
 };
 
-/* blcg ctxsw firmware */
-static const struct gating_desc gm20b_blcg_ctxsw_firmware[] = {
+/* blcg ctxsw prog */
+const struct gating_desc gm20b_blcg_ctxsw_prog[] = {
 };
 
 /* blcg fb */
-static const struct gating_desc gm20b_blcg_fb[] = {
+const struct gating_desc gm20b_blcg_fb[] = {
 	{.addr = 0x00100d10, .prod = 0x0000c242, .disable = 0x00000000},
 	{.addr = 0x00100d30, .prod = 0x0000c242, .disable = 0x00000000},
 	{.addr = 0x00100d3c, .prod = 0x00000242, .disable = 0x00000000},
@@ -190,12 +184,12 @@ static const struct gating_desc gm20b_blcg_fb[] = {
 };
 
 /* blcg fifo */
-static const struct gating_desc gm20b_blcg_fifo[] = {
+const struct gating_desc gm20b_blcg_fifo[] = {
 	{.addr = 0x000026a4, .prod = 0x0000c242, .disable = 0x00000000},
 };
 
 /* blcg gr */
-static const struct gating_desc gm20b_blcg_gr[] = {
+const struct gating_desc gm20b_blcg_gr[] = {
 	{.addr = 0x004041f0, .prod = 0x00004046, .disable = 0x00000000},
 	{.addr = 0x00409890, .prod = 0x0000007f, .disable = 0x00000000},
 	{.addr = 0x004098b0, .prod = 0x0000007f, .disable = 0x00000000},
@@ -223,7 +217,7 @@ static const struct gating_desc gm20b_blcg_gr[] = {
 	{.addr = 0x00419020, .prod = 0x00004042, .disable = 0x00000000},
 	{.addr = 0x00419038, .prod = 0x00000042, .disable = 0x00000000},
 	{.addr = 0x00418898, .prod = 0x00000042, .disable = 0x00000000},
-	{.addr = 0x00419a40, .prod = 0x00004042, .disable = 0x00000000},
+	{.addr = 0x00419a40, .prod = 0x00000042, .disable = 0x00000000},
 	{.addr = 0x00419a48, .prod = 0x00004042, .disable = 0x00000000},
 	{.addr = 0x00419a50, .prod = 0x00004042, .disable = 0x00000000},
 	{.addr = 0x00419a58, .prod = 0x00004042, .disable = 0x00000000},
@@ -260,7 +254,7 @@ static const struct gating_desc gm20b_blcg_gr[] = {
 };
 
 /* blcg ltc */
-static const struct gating_desc gm20b_blcg_ltc[] = {
+const struct gating_desc gm20b_blcg_ltc[] = {
 	{.addr = 0x0017e030, .prod = 0x00000044, .disable = 0x00000000},
 	{.addr = 0x0017e040, .prod = 0x00000044, .disable = 0x00000000},
 	{.addr = 0x0017e3e0, .prod = 0x00000044, .disable = 0x00000000},
@@ -268,23 +262,23 @@ static const struct gating_desc gm20b_blcg_ltc[] = {
 };
 
 /* blcg pwr_csb  */
-static const struct gating_desc gm20b_blcg_pwr_csb[] = {
+const struct gating_desc gm20b_blcg_pwr_csb[] = {
 	{.addr = 0x00000a70, .prod = 0x00000045, .disable = 0x00000000},
 };
 
 /* blcg pmu */
-static const struct gating_desc gm20b_blcg_pmu[] = {
+const struct gating_desc gm20b_blcg_pmu[] = {
 	{.addr = 0x0010aa70, .prod = 0x00000045, .disable = 0x00000000},
 };
 
 /* blcg Xbar */
-static const struct gating_desc gm20b_blcg_xbar[] = {
+const struct gating_desc gm20b_blcg_xbar[] = {
 	{.addr = 0x0013cbe0, .prod = 0x00000042, .disable = 0x00000000},
 	{.addr = 0x0013cc00, .prod = 0x00000042, .disable = 0x00000000},
 };
 
 /* pg gr */
-static const struct gating_desc gm20b_pg_gr[] = {
+const struct gating_desc gm20b_pg_gr[] = {
 };
 
 /* static inline functions */
@@ -337,16 +331,6 @@ void gm20b_slcg_chiplet_load_gating_prod(struct gk20a *g,
 void gm20b_slcg_ctxsw_firmware_load_gating_prod(struct gk20a *g,
 	bool prod)
 {
-	u32 i;
-	u32 size = sizeof(gm20b_slcg_ctxsw_firmware) / sizeof(struct gating_desc);
-	for (i = 0; i < size; i++) {
-		if (prod)
-			gk20a_writel(g, gm20b_slcg_ctxsw_firmware[i].addr,
-				gm20b_slcg_ctxsw_firmware[i].prod);
-		else
-			gk20a_writel(g, gm20b_slcg_ctxsw_firmware[i].addr,
-				 gm20b_slcg_ctxsw_firmware[i].disable);
-	}
 }
 
 void gm20b_slcg_fb_load_gating_prod(struct gk20a *g,
@@ -439,6 +423,21 @@ void gm20b_slcg_priring_load_gating_prod(struct gk20a *g,
 	}
 }
 
+void gm20b_slcg_pwr_csb_load_gating_prod(struct gk20a *g,
+	bool prod)
+{
+	u32 i;
+	u32 size = sizeof(gm20b_slcg_pwr_csb) / sizeof(struct gating_desc);
+	for (i = 0; i < size; i++) {
+		if (prod)
+			gk20a_writel(g, gm20b_slcg_pwr_csb[i].addr,
+				gm20b_slcg_pwr_csb[i].prod);
+		else
+			gk20a_writel(g, gm20b_slcg_pwr_csb[i].addr,
+				gm20b_slcg_pwr_csb[i].disable);
+	}
+}
+
 void gm20b_slcg_pmu_load_gating_prod(struct gk20a *g,
 	bool prod)
 {
@@ -503,14 +502,14 @@ void gm20b_blcg_ctxsw_firmware_load_gating_prod(struct gk20a *g,
 	bool prod)
 {
 	u32 i;
-	u32 size = sizeof(gm20b_blcg_ctxsw_firmware) / sizeof(struct gating_desc);
+	u32 size = sizeof(gm20b_blcg_ctxsw_prog) / sizeof(struct gating_desc);
 	for (i = 0; i < size; i++) {
 		if (prod)
-			gk20a_writel(g, gm20b_blcg_ctxsw_firmware[i].addr,
-				gm20b_blcg_ctxsw_firmware[i].prod);
+			gk20a_writel(g, gm20b_blcg_ctxsw_prog[i].addr,
+				gm20b_blcg_ctxsw_prog[i].prod);
 		else
-			gk20a_writel(g, gm20b_blcg_ctxsw_firmware[i].addr,
-				gm20b_blcg_ctxsw_firmware[i].disable);
+			gk20a_writel(g, gm20b_blcg_ctxsw_prog[i].addr,
+				gm20b_blcg_ctxsw_prog[i].disable);
 	}
 }
 
@@ -601,6 +600,21 @@ void gm20b_blcg_pmu_load_gating_prod(struct gk20a *g,
 		else
 			gk20a_writel(g, gm20b_blcg_pmu[i].addr,
 				gm20b_blcg_pmu[i].disable);
+	}
+}
+
+void gm20b_blcg_xbar_load_gating_prod(struct gk20a *g,
+	bool prod)
+{
+	u32 i;
+	u32 size = sizeof(gm20b_blcg_xbar) / sizeof(struct gating_desc);
+	for (i = 0; i < size; i++) {
+		if (prod)
+			gk20a_writel(g, gm20b_blcg_xbar[i].addr,
+				gm20b_blcg_xbar[i].prod);
+		else
+			gk20a_writel(g, gm20b_blcg_xbar[i].addr,
+				gm20b_blcg_xbar[i].disable);
 	}
 }
 

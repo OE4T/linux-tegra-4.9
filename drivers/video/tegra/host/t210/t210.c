@@ -434,6 +434,7 @@ struct nvhost_device_data t21_vic_info = {
 	.actmon_regs            = HOST1X_CHANNEL_ACTMON2_REG_BASE,
 	.actmon_enabled         = true,
 	.serialize		= true,
+	.push_work_done		= true,
 	.firmware_name		= "vic04_ucode.bin",
 	.gather_filter_enabled	= true,
 	.bond_out_id		= BOND_OUT_VIC,

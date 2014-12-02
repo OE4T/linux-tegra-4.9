@@ -326,7 +326,6 @@ static int host1x_channel_submit(struct nvhost_job *job)
 		goto error;
 	}
 
-	serialize(job);
 	push_waits(job);
 	lock_device(job, true);
 
@@ -359,6 +358,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	else
 		submit_gathers(job);
 
+	serialize(job);
 	lock_device(job, false);
 	submit_work_done_increment(job);
 

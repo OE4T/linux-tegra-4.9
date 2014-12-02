@@ -65,6 +65,7 @@ struct quadd_hrt_ctx {
 	int use_arch_timer;
 
 	unsigned int unw_method;
+	int get_stack_offset;
 };
 
 #define QUADD_HRT_MIN_FREQ	100

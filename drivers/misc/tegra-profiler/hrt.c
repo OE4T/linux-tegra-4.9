@@ -186,6 +186,9 @@ static void put_header(void)
 	if (hrt.use_arch_timer)
 		hdr->reserved |= QUADD_HDR_USE_ARCH_TIMER;
 
+	if (hrt.get_stack_offset)
+		hdr->reserved |= QUADD_HDR_STACK_OFFSET;
+
 	if (pmu)
 		nr_events += pmu->get_current_events(events, max_events);
 
@@ -295,6 +298,28 @@ static int read_source(struct quadd_event_source_interface *source,
 	return nr_events;
 }
 
+static long
+get_stack_offset(struct task_struct *task,
+		 struct pt_regs *regs,
+		 struct quadd_callchain *cc)
+{
+	unsigned long sp;
+	struct vm_area_struct *vma;
+	struct mm_struct *mm = task->mm;
+
+	if (!regs || !mm)
+		return -ENOMEM;
+
+	sp = cc->nr > 0 ? cc->curr_sp :
+		quadd_user_stack_pointer(regs);
+
+	vma = find_vma(mm, sp);
+	if (!vma)
+		return -ENOMEM;
+
+	return vma->vm_end - sp;
+}
+
 static void
 read_all_sources(struct pt_regs *regs, struct task_struct *task)
 {
@@ -355,6 +380,11 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 
 	s->reserved = 0;
 
+	cc->nr = 0;
+	cc->curr_sp = 0;
+	cc->curr_fp = 0;
+	cc->curr_pc = 0;
+
 	if (ctx->param.backtrace) {
 		cc->unw_method = hrt.unw_method;
 		bt_size = quadd_get_user_callchain(user_regs, cc, ctx, task);
@@ -393,6 +423,15 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 		s->reserved |= cc->unw_rc << QUADD_SAMPLE_URC_SHIFT;
 	}
 	s->callchain_nr = bt_size;
+
+	if (hrt.get_stack_offset) {
+		long offset = get_stack_offset(task, user_regs, cc);
+		if (offset > 0) {
+			u32 off = offset >> 2;
+			off = min_t(u32, off, 0xffff);
+			extra_data |= off << QUADD_SED_STACK_OFFSET_SHIFT;
+		}
+	}
 
 	record_data.record_type = QUADD_RECORD_TYPE_SAMPLE;
 
@@ -626,6 +665,9 @@ int quadd_hrt_start(void)
 		hrt.use_arch_timer = 0;
 
 	pr_info("timer: %s\n", hrt.use_arch_timer ? "arch" : "monotonic clock");
+
+	hrt.get_stack_offset =
+		(extra & QUADD_PARAM_EXTRA_STACK_OFFSET) ? 1 : 0;
 
 	put_header();
 

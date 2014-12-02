@@ -520,11 +520,11 @@ static int __init quadd_module_init(void)
 							  QUADD_MAX_COUNTERS);
 		ctx.pmu_info.nr_supported_events = nr_events;
 
-		pr_info("PMU: amount of events: %d\n", nr_events);
+		pr_debug("PMU: amount of events: %d\n", nr_events);
 
 		for (i = 0; i < nr_events; i++)
-			pr_info("PMU event: %s\n",
-				quadd_get_event_str(events[i]));
+			pr_debug("PMU event: %s\n",
+				 quadd_get_event_str(events[i]));
 	}
 
 #ifdef CONFIG_CACHE_L2X0
@@ -545,7 +545,7 @@ static int __init quadd_module_init(void)
 			pr_info("pl310 event: %s\n",
 				quadd_get_event_str(events[i]));
 	} else {
-		pr_info("PL310 not found\n");
+		pr_debug("PL310 not found\n");
 	}
 
 	ctx.hrt = quadd_hrt_init(&ctx);

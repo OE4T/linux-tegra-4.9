@@ -298,10 +298,10 @@ static int tegra210_adsp_init(struct tegra210_adsp *adsp)
 
 	/* Load ADSP audio apps */
 	for (i = 0; i < ARRAY_SIZE(adsp_app_desc); i++) {
-		 adsp_app_desc[i].handle = nvadsp_app_load(
+		adsp_app_desc[i].handle = nvadsp_app_load(
 				adsp_app_desc[i].name,
 				adsp_app_desc[i].fw_name);
-		if (ret < 0) {
+		if (!adsp_app_desc[i].handle) {
 			dev_err(adsp->dev, "Failed to load app %s",
 						adsp_app_desc[i].name);
 			goto exit;

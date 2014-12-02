@@ -148,6 +148,10 @@ struct nvhost_device_data {
 	/* Flag to set SLCG notifier (for the modules other than VIC) */
 	bool slcg_notifier_enable;
 
+	/* Used to serialize channel when map-at-submit is used w/o mlocks */
+	u32		last_submit_syncpt_id;
+	u32		last_submit_syncpt_value;
+
 	u32		class;		/* Device class */
 	bool		exclusive;	/* True if only one user at a time */
 	bool		keepalive;	/* Do not power gate when opened */

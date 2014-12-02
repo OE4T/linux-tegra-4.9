@@ -55,10 +55,27 @@ static void lock_device(struct nvhost_job *job, bool lock)
 		nvhost_opcode_acquire_mlock(pdata->modulemutexes[0]) :
 		nvhost_opcode_release_mlock(pdata->modulemutexes[0]);
 
-	if (nvhost_get_channel_policy() != MAP_CHANNEL_ON_SUBMIT)
+	/* No need to do anything if we have a channel/engine */
+	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
 		return;
 
-	nvhost_cdma_push(&ch->cdma, opcode, NVHOST_OPCODE_NOOP);
+	/* If we have a hardware mlock, use it. */
+	if (pdata->modulemutexes[0]) {
+		nvhost_cdma_push(&ch->cdma, opcode, NVHOST_OPCODE_NOOP);
+		return;
+	}
+
+	if (lock) {
+		nvhost_cdma_push(&ch->cdma,
+			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
+				host1x_uclass_wait_syncpt_r(), 1),
+			nvhost_class_host_wait_syncpt(
+				pdata->last_submit_syncpt_id,
+				pdata->last_submit_syncpt_value));
+	} else {
+		pdata->last_submit_syncpt_id = job->sp[0].id;
+		pdata->last_submit_syncpt_value = job->sp[0].fence;
+	}
 }
 
 static void serialize(struct nvhost_job *job)
@@ -150,7 +167,7 @@ static void push_waits(struct nvhost_job *job)
 	struct nvhost_channel *ch = job->ch;
 	int i;
 
-	if (nvhost_get_channel_policy() != MAP_CHANNEL_ON_SUBMIT)
+	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
 		return;
 
 	for (i = 0; i < job->num_gathers; i++) {

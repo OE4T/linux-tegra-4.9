@@ -31,6 +31,22 @@
 #include "class_ids.h"
 #include "debug.h"
 
+static void submit_work_done_increment(struct nvhost_job *job)
+{
+	struct nvhost_channel *ch = job->ch;
+	struct nvhost_syncpt *sp = &nvhost_get_host(ch->dev)->syncpt;
+	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
+
+	if (!pdata->push_work_done)
+		return;
+
+	/* make the last increment at job boundary. this will ensure
+	 * that the user command buffer is no longer in use */
+	job->sp[0].fence = nvhost_syncpt_incr_max(sp, job->sp[0].id, 1);
+	nvhost_cdma_push(&ch->cdma, nvhost_opcode_imm_incr_syncpt(0,
+			job->sp[0].id), NVHOST_OPCODE_NOOP);
+}
+
 static void lock_device(struct nvhost_job *job, bool lock)
 {
 	struct nvhost_channel *ch = job->ch;
@@ -327,6 +343,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 		submit_gathers(job);
 
 	lock_device(job, false);
+	submit_work_done_increment(job);
 
 	/* end CDMA submit & stash pinned hMems into sync queue */
 	nvhost_cdma_end(&ch->cdma, job);

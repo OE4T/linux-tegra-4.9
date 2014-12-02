@@ -389,6 +389,20 @@ static int nvhost_init_error_notifier(struct nvhost_channel_userctx *ctx,
 	return 0;
 }
 
+static inline u32 get_job_fence(struct nvhost_job *job, u32 id)
+{
+	struct nvhost_channel *ch = job->ch;
+	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
+	u32 fence = job->sp[id].fence;
+
+	/* take into account work done increment */
+	if (pdata->push_work_done && id == 0)
+		return fence - 1;
+
+	/* otherwise the fence is valid "as is" */
+	return fence;
+}
+
 static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		struct nvhost_submit_args *args)
 {
@@ -554,7 +568,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	/* Deliver multiple fences back to the userspace */
 	if (fences)
 		for (i = 0; i < num_syncpt_incrs; ++i) {
-			u32 fence = job->sp[i].fence;
+			u32 fence = get_job_fence(job, i);
 			err = copy_to_user(fences, &fence, sizeof(u32));
 			if (err)
 				break;
@@ -569,7 +583,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 
 		for (i = 0; i < num_syncpt_incrs; i++) {
 			pts[i].id = job->sp[i].id;
-			pts[i].thresh = job->sp[i].fence;
+			pts[i].thresh = get_job_fence(job, i);
 		}
 
 		err = nvhost_sync_create_fence_fd(ctx->pdev,
@@ -577,7 +591,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		if (err)
 			goto fail;
 	} else if (num_syncpt_incrs == 1)
-		args->fence = job->sp[job->hwctx_syncpt_idx].fence;
+		args->fence =  get_job_fence(job, job->hwctx_syncpt_idx);
 	else
 		args->fence = 0;
 

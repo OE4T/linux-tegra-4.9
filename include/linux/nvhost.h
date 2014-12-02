@@ -152,6 +152,7 @@ struct nvhost_device_data {
 	bool		exclusive;	/* True if only one user at a time */
 	bool		keepalive;	/* Do not power gate when opened */
 	bool		serialize;	/* Serialize submits in the channel */
+	bool		push_work_done;	/* Push_op done into push buffer */
 	bool		poweron_reset;	/* Reset the engine before powerup */
 	bool		virtual_dev;	/* True if virtualized device */
 

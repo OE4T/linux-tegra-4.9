@@ -2084,16 +2084,6 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 				dc->out->h_size, dc->out->v_size,
 				dc->mode.pclk);
 		dc->initialized = true;
-
-#ifdef CONFIG_TEGRA_DC_CMU
-		/*
-		 * If the bootloader already set the mode, assume the CMU
-		 * parameters are also correctly set. It would be better to
-		 * read them, but unfortunately there is no reliable and
-		 * flicker-free way to do this!
-		 */
-		tegra_dc_cache_cmu(dc, tegra_dc_get_cmu(dc));
-#endif
 	} else if (out->n_modes > 0)
 		tegra_dc_set_mode(dc, &dc->out->modes[0]);
 
@@ -2160,6 +2150,11 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		dc->out_ops = NULL;
 		break;
 	}
+
+#ifdef CONFIG_TEGRA_DC_CMU
+	tegra_dc_cache_cmu(dc, tegra_dc_get_cmu(dc));
+#endif
+
 	if (dc->out_ops && dc->out_ops->init) {
 		err = dc->out_ops->init(dc);
 		if (err < 0) {
@@ -3096,7 +3091,7 @@ static int tegra_dc_init(struct tegra_dc *dc)
 #endif
 
 #ifdef CONFIG_TEGRA_DC_CMU
-	_tegra_dc_update_cmu_aligned(dc, tegra_dc_get_cmu(dc), true);
+	_tegra_dc_update_cmu_aligned(dc, &dc->cmu, true);
 #endif
 	tegra_dc_set_color_control(dc);
 	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {

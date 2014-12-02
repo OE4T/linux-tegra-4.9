@@ -667,6 +667,39 @@ unwind_get_byte(struct quadd_mmap_area *mmap,
 	return ret;
 }
 
+static long
+read_uleb128(struct quadd_mmap_area *mmap,
+	     struct unwind_ctrl_block *ctrl,
+	     unsigned long *ret)
+{
+	long err = 0;
+	unsigned long result;
+	unsigned char byte;
+	int shift, count;
+
+	result = 0;
+	shift = 0;
+	count = 0;
+
+	while (1) {
+		byte = unwind_get_byte(mmap, ctrl, &err);
+		if (err < 0)
+			return err;
+
+		count++;
+
+		result |= (byte & 0x7f) << shift;
+		shift += 7;
+
+		if (!(byte & 0x80))
+			break;
+	}
+
+	*ret = result;
+
+	return count;
+}
+
 /*
  * Execute the current unwind instruction.
  */
@@ -790,14 +823,21 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 		ctrl->vrs[SP] = (u32)(unsigned long)vsp;
 		pr_debug("new vsp: %#x\n", ctrl->vrs[SP]);
 	} else if (insn == 0xb2) {
-		unsigned long uleb128 = unwind_get_byte(mmap, ctrl, &err);
-		if (err < 0)
-			return err;
+		long count;
+		unsigned long uleb128 = 0;
+
+		count = read_uleb128(mmap, ctrl, &uleb128);
+		if (count < 0)
+			return count;
+
+		if (count == 0)
+			return -QUADD_URC_TBL_IS_CORRUPT;
 
 		ctrl->vrs[SP] += 0x204 + (uleb128 << 2);
 
-		pr_debug("CMD_DATA_POP: vsp = vsp + %lu, new vsp: %#x\n",
-			 0x204 + (uleb128 << 2), ctrl->vrs[SP]);
+		pr_debug("CMD_DATA_POP: vsp = vsp + %lu (%#lx), new vsp: %#x\n",
+			 0x204 + (uleb128 << 2), 0x204 + (uleb128 << 2),
+			 ctrl->vrs[SP]);
 	} else if (insn == 0xb3 || insn == 0xc8 || insn == 0xc9) {
 		unsigned long data, reg_from, reg_to;
 		u32 *vsp = (u32 *)(unsigned long)ctrl->vrs[SP];

@@ -361,14 +361,12 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 
 	dmic->soc_data = soc_data;
 
-#ifndef CONFIG_MACH_GRENADA
 	dmic->clk_dmic = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(dmic->clk_dmic)) {
 		dev_err(&pdev->dev, "Can't retrieve dmic clock\n");
 		ret = PTR_ERR(dmic->clk_dmic);
 		goto err;
 	}
-#endif
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
@@ -433,9 +431,7 @@ err_suspend:
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 err_clk_put:
-#ifndef CONFIG_MACH_GRENADA
 	devm_clk_put(&pdev->dev, dmic->clk_dmic);
-#endif
 err:
 	return ret;
 }
@@ -451,9 +447,7 @@ static int tegra210_dmic_platform_remove(struct platform_device *pdev)
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_dmic_runtime_suspend(&pdev->dev);
 
-#ifndef CONFIG_MACH_GRENADA
 	devm_clk_put(&pdev->dev, dmic->clk_dmic);
-#endif
 	return 0;
 }
 

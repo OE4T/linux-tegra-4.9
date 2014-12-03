@@ -18,7 +18,7 @@
 
 u32 gp10b_mm_get_physical_addr_bits(struct gk20a *g)
 {
-	return 37;
+	return 36;
 }
 
 void gp10b_init_mm(struct gpu_ops *gops)

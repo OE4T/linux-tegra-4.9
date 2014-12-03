@@ -16,7 +16,7 @@
 #ifndef _NVGPU_GR_GP10B_H_
 #define _NVGPU_GR_GP10B_H_
 
-struct gk20a;
+struct gpu_ops;
 
 enum {
 	PASCAL_CHANNEL_GPFIFO_A  = 0xC06F,
@@ -31,5 +31,22 @@ enum {
 #define NVC0C0_SET_SHADER_EXCEPTIONS		0x1528
 
 void gp10b_init_gr(struct gpu_ops *ops);
+
+struct gr_t18x {
+	struct {
+		u32 preempt_image_size;
+	} ctx_vars;
+};
+
+struct gr_ctx_desc_t18x {
+	int preempt_mode;
+	struct mem_desc preempt_ctxsw_buffer;
+	struct mem_desc spill_ctxsw_buffer;
+	struct mem_desc betacb_ctxsw_buffer;
+	struct mem_desc pagepool_ctxsw_buffer;
+};
+
+#define NVGPU_GR_PREEMPTION_MODE_WFI		0
+#define NVGPU_GR_PREEMPTION_MODE_GFXP		1
 
 #endif

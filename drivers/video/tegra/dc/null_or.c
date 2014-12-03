@@ -189,9 +189,11 @@ static bool tegra_dc_null_mode_filter(const struct tegra_dc *dc,
 /* setup pixel clock for the current mode, return mode's adjusted pclk. */
 static long tegra_dc_null_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
+	static char *plld = "pll_d_out0";
+	static char *plld2 = "pll_d2";
 	const char *clock_name = dc->out &&
 		dc->out->parent_clk ? dc->out->parent_clk :
-		dc->ndev->id == 0 ? "pll_d_out0" : "pll_d2_out0";
+		dc->ndev->id == 0 ? plld : plld2;
 	struct clk *parent_clk = clk_get_sys(NULL, clock_name);
 	struct clk *base_clk;
 	long rate;
@@ -200,9 +202,9 @@ static long tegra_dc_null_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		return 0;
 
 	if (dc->ndev->id == 0)
-		clock_name = "pll_d_out0";
+		clock_name = plld;
 	else
-		clock_name = "pll_d2_out0";
+		clock_name = plld2;
 
 	parent_clk = clk_get_sys(NULL, clock_name);
 	dc->out->parent_clk = clock_name;
@@ -317,7 +319,7 @@ int tegra_dc_init_null_or(struct tegra_dc *dc)
 	dc_out->hotplug_gpio = -1;
 	dc_out->postpoweron = NULL;
 	dc_out->parent_clk =
-		(dc->ndev->id == 0) ? "pll_d_out0" : "pll_d2_out0";
+		(dc->ndev->id == 0) ? "pll_d_out0" : "pll_d2";
 	return 0;
 }
 

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dsi.c
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -654,8 +654,7 @@ static void tegra_dsi_pix_correction(struct tegra_dc *dc,
 		if (temp) {
 			hfp_corr += dsi->info.n_data_lanes;
 			h_width_pixels += dsi->info.n_data_lanes;
-		}
-		else
+		} else
 			break;
 	}
 
@@ -3484,13 +3483,13 @@ static u16 tegra_dsi_cs(char *pdata, u16 data_len)
 		for (byte_cnt = 0; byte_cnt < data_len; byte_cnt++) {
 			curr_byte = pdata[byte_cnt];
 			for (bit_cnt = 0; bit_cnt < 8; bit_cnt++) {
-				if (((crc & 0x0001 ) ^
+				if (((crc & 0x0001) ^
 					(curr_byte & 0x0001)) > 0)
 					crc = ((crc >> 1) & 0x7FFF) ^ poly;
 				else
 					crc = (crc >> 1) & 0x7FFF;
 
-				curr_byte = (curr_byte >> 1 ) & 0x7F;
+				curr_byte = (curr_byte >> 1) & 0x7F;
 			}
 		}
 	}
@@ -5239,7 +5238,7 @@ static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	} else {
 		if (dc->pdata->default_out->dsi->dsi_instance) {
 			parent_clk = clk_get_sys(NULL,
-				dc->out->parent_clk ? : "pll_d2_out0");
+				dc->out->parent_clk ? : "pll_d2");
 			base_clk = clk_get_parent(parent_clk);
 		} else {
 			parent_clk = clk_get_sys(NULL,

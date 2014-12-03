@@ -19,6 +19,9 @@
 #define GR_GK20A_H
 
 #include <linux/slab.h>
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#include "gr_t18x.h"
+#endif
 
 #include "tsg_gk20a.h"
 #include "gr_ctx_gk20a.h"
@@ -284,6 +287,10 @@ struct gr_gk20a {
 	void (*remove_support)(struct gr_gk20a *gr);
 	bool sw_ready;
 	bool skip_ucode_init;
+
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	struct gr_t18x t18x;
+#endif
 };
 
 void gk20a_fecs_dump_falcon_stats(struct gk20a *g);
@@ -334,6 +341,28 @@ struct gk20a_ctxsw_bootloader_desc {
 	u32 size;
 	u32 imem_offset;
 	u32 entry_point;
+};
+
+struct fecs_method_op_gk20a {
+	struct {
+		u32 addr;
+		u32 data;
+	} method;
+
+	struct {
+		u32 id;
+		u32 data;
+		u32 clr;
+		u32 *ret;
+		u32 ok;
+		u32 fail;
+	} mailbox;
+
+	struct {
+		u32 ok;
+		u32 fail;
+	} cond;
+
 };
 
 struct gpu_ops;
@@ -462,4 +491,12 @@ int gr_gk20a_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 			   struct zbc_entry *depth_val, u32 index);
 int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
 		       u32 expect_delay);
+int gr_gk20a_init_ctx_state(struct gk20a *g);
+int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
+				   struct fecs_method_op_gk20a op);
+int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
+			  struct gr_ctx_desc **__gr_ctx, struct vm_gk20a *vm,
+			  u32 padding);
+void gr_gk20a_free_gr_ctx(struct gk20a *g,
+			  struct vm_gk20a *vm, struct gr_ctx_desc *gr_ctx);
 #endif /*__GR_GK20A_H__*/

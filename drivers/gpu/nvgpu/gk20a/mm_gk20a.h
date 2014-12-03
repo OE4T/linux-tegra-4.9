@@ -141,11 +141,18 @@ struct gr_ctx_buffer_desc {
 	void *priv;
 };
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#include "gr_t18x.h"
+#endif
+
 struct gr_ctx_desc {
 	struct page **pages;
 	u64 iova;
 	size_t size;
 	u64 gpu_va;
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	struct gr_ctx_desc_t18x t18x;
+#endif
 };
 
 struct compbit_store_desc {

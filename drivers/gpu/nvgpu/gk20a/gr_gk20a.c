@@ -67,7 +67,7 @@ static void gr_gk20a_unmap_global_ctx_buffers(struct channel_gk20a *c);
 
 /* channel gr ctx buffer */
 static int  gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
-					struct channel_gk20a *c);
+					struct channel_gk20a *c, u32 padding);
 static void gr_gk20a_free_channel_gr_ctx(struct channel_gk20a *c);
 
 /* channel patch ctx buffer */
@@ -469,29 +469,7 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 
 /* The following is a less brittle way to call gr_gk20a_submit_fecs_method(...)
  * We should replace most, if not all, fecs method calls to this instead. */
-struct fecs_method_op_gk20a {
-	struct {
-		u32 addr;
-		u32 data;
-	} method;
-
-	struct {
-		u32 id;
-		u32 data;
-		u32 clr;
-		u32 *ret;
-		u32 ok;
-		u32 fail;
-	} mailbox;
-
-	struct {
-		u32 ok;
-		u32 fail;
-	} cond;
-
-};
-
-static int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
+int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
 				   struct fecs_method_op_gk20a op)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -1649,6 +1627,8 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	v = v | ctxsw_prog_main_image_misc_options_verif_features_disabled_f();
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_misc_options_o(), 0, v);
 
+	if (g->ops.gr.update_ctxsw_preemption_mode)
+		g->ops.gr.update_ctxsw_preemption_mode(g, ch_ctx, ctx_ptr);
 
 	vunmap(ctx_ptr);
 
@@ -2198,7 +2178,7 @@ static int gr_gk20a_wait_ctxsw_ready(struct gk20a *g)
 	return 0;
 }
 
-static int gr_gk20a_init_ctx_state(struct gk20a *g, struct gr_gk20a *gr)
+int gr_gk20a_init_ctx_state(struct gk20a *g)
 {
 	u32 pm_ctx_image_size;
 	u32 ret;
@@ -2515,8 +2495,9 @@ static void gr_gk20a_unmap_global_ctx_buffers(struct channel_gk20a *c)
 	c->ch_ctx.global_ctx_buffer_mapped = false;
 }
 
-static int __gr_gk20a_alloc_gr_ctx(struct gk20a *g,
-		struct gr_ctx_desc **__gr_ctx, struct vm_gk20a *vm)
+int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
+			  struct gr_ctx_desc **__gr_ctx, struct vm_gk20a *vm,
+			  u32 padding)
 {
 	struct gr_ctx_desc *gr_ctx = NULL;
 	struct gr_gk20a *gr = &g->gr;
@@ -2581,7 +2562,7 @@ static int __gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 }
 
 static int gr_gk20a_alloc_tsg_gr_ctx(struct gk20a *g,
-			struct tsg_gk20a *tsg)
+			struct tsg_gk20a *tsg, u32 padding)
 {
 	struct gr_ctx_desc **gr_ctx = &tsg->tsg_gr_ctx;
 	int err;
@@ -2591,7 +2572,7 @@ static int gr_gk20a_alloc_tsg_gr_ctx(struct gk20a *g,
 		return -ENOMEM;
 	}
 
-	err = __gr_gk20a_alloc_gr_ctx(g, gr_ctx, tsg->vm);
+	err = g->ops.gr.alloc_gr_ctx(g, gr_ctx, tsg->vm, padding);
 	if (err)
 		return err;
 
@@ -2599,18 +2580,19 @@ static int gr_gk20a_alloc_tsg_gr_ctx(struct gk20a *g,
 }
 
 static int gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
-				struct channel_gk20a *c)
+				struct channel_gk20a *c,
+				u32 padding)
 {
 	struct gr_ctx_desc **gr_ctx = &c->ch_ctx.gr_ctx;
-	int err = __gr_gk20a_alloc_gr_ctx(g, gr_ctx, c->vm);
+	int err = g->ops.gr.alloc_gr_ctx(g, gr_ctx, c->vm, padding);
 	if (err)
 		return err;
 
 	return 0;
 }
 
-static void __gr_gk20a_free_gr_ctx(struct gk20a *g,
-	struct vm_gk20a *vm, struct gr_ctx_desc *gr_ctx)
+void gr_gk20a_free_gr_ctx(struct gk20a *g,
+			  struct vm_gk20a *vm, struct gr_ctx_desc *gr_ctx)
 {
 	struct device *d = dev_from_gk20a(g);
 	DEFINE_DMA_ATTRS(attrs);
@@ -2636,12 +2618,14 @@ void gr_gk20a_free_tsg_gr_ctx(struct tsg_gk20a *tsg)
 		gk20a_err(dev_from_gk20a(tsg->g), "No address space bound\n");
 		return;
 	}
-	__gr_gk20a_free_gr_ctx(tsg->g, tsg->vm, tsg->tsg_gr_ctx);
+	tsg->g->ops.gr.free_gr_ctx(tsg->g, tsg->vm, tsg->tsg_gr_ctx);
+	tsg->tsg_gr_ctx = NULL;
 }
 
 static void gr_gk20a_free_channel_gr_ctx(struct channel_gk20a *c)
 {
-	__gr_gk20a_free_gr_ctx(c->g, c->vm, c->ch_ctx.gr_ctx);
+	c->g->ops.gr.free_gr_ctx(c->g, c->vm, c->ch_ctx.gr_ctx);
+	c->ch_ctx.gr_ctx = NULL;
 }
 
 static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
@@ -2793,7 +2777,8 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 	/* allocate gr ctx buffer */
 	if (!tsg) {
 		if (!ch_ctx->gr_ctx) {
-			err = gr_gk20a_alloc_channel_gr_ctx(g, c);
+			err = gr_gk20a_alloc_channel_gr_ctx(g, c,
+							    args->padding);
 			if (err) {
 				gk20a_err(dev_from_gk20a(g),
 					"fail to allocate gr ctx buffer");
@@ -2812,7 +2797,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		if (!tsg->tsg_gr_ctx) {
 			tsg->vm = c->vm;
 			gk20a_vm_get(tsg->vm);
-			err = gr_gk20a_alloc_tsg_gr_ctx(g, tsg);
+			err = gr_gk20a_alloc_tsg_gr_ctx(g, tsg, args->padding);
 			if (err) {
 				gk20a_err(dev_from_gk20a(g),
 					"fail to allocate TSG gr ctx buffer");
@@ -4480,7 +4465,6 @@ static int gr_gk20a_wait_mem_scrubbing(struct gk20a *g)
 
 static int gr_gk20a_init_ctxsw(struct gk20a *g)
 {
-	struct gr_gk20a *gr = &g->gr;
 	u32 err = 0;
 
 	err = g->ops.gr.load_ctxsw_ucode(g);
@@ -4493,7 +4477,7 @@ static int gr_gk20a_init_ctxsw(struct gk20a *g)
 
 	/* this appears query for sw states but fecs actually init
 	   ramchain, etc so this is hw init */
-	err = gr_gk20a_init_ctx_state(g, gr);
+	err = g->ops.gr.init_ctx_state(g);
 	if (err)
 		goto out;
 
@@ -7357,5 +7341,8 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.add_zbc_color = gr_gk20a_add_zbc_color;
 	gops->gr.add_zbc_depth = gr_gk20a_add_zbc_depth;
 	gops->gr.pagepool_default_size = gr_gk20a_pagepool_default_size;
+	gops->gr.init_ctx_state = gr_gk20a_init_ctx_state;
+	gops->gr.alloc_gr_ctx = gr_gk20a_alloc_gr_ctx;
+	gops->gr.free_gr_ctx = gr_gk20a_free_gr_ctx;
 }
 

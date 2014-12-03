@@ -144,6 +144,16 @@ struct gpu_ops {
 		int (*add_zbc_depth)(struct gk20a *g, struct gr_gk20a *gr,
 				  struct zbc_entry *depth_val, u32 index);
 		u32 (*pagepool_default_size)(struct gk20a *g);
+		int (*init_ctx_state)(struct gk20a *g);
+		int (*alloc_gr_ctx)(struct gk20a *g,
+			  struct gr_ctx_desc **__gr_ctx, struct vm_gk20a *vm,
+			  u32 padding);
+		void (*free_gr_ctx)(struct gk20a *g,
+			  struct vm_gk20a *vm,
+			  struct gr_ctx_desc *gr_ctx);
+		void (*update_ctxsw_preemption_mode)(struct gk20a *g,
+				struct channel_ctx_gk20a *ch_ctx,
+				void *ctx_ptr);
 	} gr;
 	const char *name;
 	struct {

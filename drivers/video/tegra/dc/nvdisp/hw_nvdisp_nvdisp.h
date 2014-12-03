@@ -514,4 +514,64 @@ static inline u32 nvdisp_rg_crcb_r(void)
 {
 	return 0x0000032d;
 }
+static inline u32 nvdisp_sor_control_r(void)
+{
+	return 0x00000403;
+}
+static inline u32 nvdisp_sor_control_protocol_dpa_f(void)
+{
+	return 0x600;
+}
+static inline u32 nvdisp_sor_control_protocol_dpb_f(void)
+{
+	return 0x700;
+}
+static inline u32 nvdisp_sor_control_protocol_custom_f(void)
+{
+	return 0xf00;
+}
+static inline u32 nvdisp_sor1_control_r(void)
+{
+	return 0x00000404;
+}
+static inline u32 nvdisp_sor1_control_protocol_dpa_f(void)
+{
+	return 0x600;
+}
+static inline u32 nvdisp_sor1_control_protocol_tmdsa_f(void)
+{
+	return 0x100;
+}
+static inline u32 nvdisp_dsi_control_r(void)
+{
+	return 0x00000405;
+}
+static inline u32 nvdisp_dsi_control_protocol_dsia_f(void)
+{
+	return 0x800;
+}
+static inline u32 nvdisp_dsi_control_protocol_dsib_f(void)
+{
+	return 0x900;
+}
+static inline u32 nvdisp_interlace_control_r(void)
+{
+	return 0x000004e5;
+}
+static inline u32 nvdisp_interlace_fld2_width_r(void)
+{
+	return 0x000004e7;
+}
+static inline u32 nvdisp_interlace_fld2_bporch_r(void)
+{
+	return 0x000004e8;
+}
+static inline u32 nvdisp_interlace_fld2_fporch_r(void)
+{
+	return 0x000004e9;
+}
+static inline u32 nvdisp_interlace_fld2_active_r(void)
+{
+	return 0x000004ea;
+}
 #endif

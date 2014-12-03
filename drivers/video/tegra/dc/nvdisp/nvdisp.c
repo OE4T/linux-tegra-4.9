@@ -173,6 +173,35 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 	return _tegra_nvdisp_init_once(dc);
 }
 
+static int tegra_nvdisp_set_control(struct tegra_dc *dc)
+{
+	u32 protocol = nvdisp_sor_control_protocol_custom_f();
+	u32 reg      = nvdisp_sor_control_r();
+
+	/* Set the protocol type in DT and use from there
+	 * Current setting are default ones.
+	 */
+
+	if (dc->out->type == TEGRA_DC_OUT_HDMI)	{
+		protocol = nvdisp_sor1_control_protocol_tmdsa_f();
+		reg = nvdisp_sor1_control_r();
+	} else if ((dc->out->type == TEGRA_DC_OUT_DP) ||
+		(dc->out->type == TEGRA_DC_OUT_NVSR_DP) ||
+		(dc->out->type == TEGRA_DC_OUT_FAKE_DP)) {
+		protocol = nvdisp_sor_control_protocol_dpa_f();
+		reg = nvdisp_sor_control_r();
+	} else if ((dc->out->type == TEGRA_DC_OUT_DSI) ||
+		(dc->out->type == TEGRA_DC_OUT_FAKE_DSIA) ||
+		(dc->out->type == TEGRA_DC_OUT_FAKE_DSIB) ||
+		(dc->out->type == TEGRA_DC_OUT_FAKE_DSI_GANGED)) {
+		protocol = nvdisp_dsi_control_protocol_dsia_f();
+		reg = nvdisp_dsi_control_r();
+	}
+
+	tegra_dc_writel(dc, protocol, reg);
+	return 0;
+}
+
 static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 {
 	u32 int_enable;
@@ -210,8 +239,12 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 	tegra_dc_writel(dc, 0x00000000, nvdisp_background_color_r());
 
 	dc->crc_pending = false;
+
 	/* set mode */
 	tegra_nvdisp_program_mode(dc, &dc->mode);
+
+	/*set display control */
+	tegra_nvdisp_set_control(dc);
 
 	return 0;
 }

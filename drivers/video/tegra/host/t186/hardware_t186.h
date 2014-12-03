@@ -40,7 +40,7 @@
 static inline u32 nvhost_class_host_wait_syncpt(
 	unsigned indx, unsigned threshold)
 {
-	return (indx << 22) | (threshold & 0xffffff);
+	return (indx << 24) | (threshold & 0xffffff);
 }
 
 static inline u32 nvhost_class_host_load_syncpt_base(

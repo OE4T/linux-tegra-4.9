@@ -718,6 +718,10 @@ static inline u32 gr_fecs_method_push_adr_set_watchdog_timeout_f(void)
 {
 	return 0x21;
 }
+static inline u32 gr_fecs_method_push_adr_discover_preemption_image_size_v(void)
+{
+	return 0x0000001a;
+}
 static inline u32 gr_fecs_host_int_status_r(void)
 {
 	return 0x00409c18;
@@ -1910,6 +1914,10 @@ static inline u32 gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v(void)
 {
 	return 0x00030000;
 }
+static inline u32 gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v(void)
+{
+	return 0x00030a00;
+}
 static inline u32 gr_gpc0_ppc0_cbm_beta_cb_size_v_granularity_v(void)
 {
 	return 0x00000020;
@@ -2185,6 +2193,50 @@ static inline u32 gr_gpcs_swdx_bundle_cb_size_valid_true_v(void)
 static inline u32 gr_gpcs_swdx_bundle_cb_size_valid_true_f(void)
 {
 	return 0x80000000;
+}
+static inline u32 gr_gpc0_swdx_rm_spill_buffer_size_r(void)
+{
+	return 0x00500ee4;
+}
+static inline u32 gr_gpc0_swdx_rm_spill_buffer_size_256b_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
+static inline u32 gr_gpc0_swdx_rm_spill_buffer_size_256b_default_v(void)
+{
+	return 0x00000250;
+}
+static inline u32 gr_gpc0_swdx_rm_spill_buffer_addr_r(void)
+{
+	return 0x00500ee0;
+}
+static inline u32 gr_gpc0_swdx_rm_spill_buffer_addr_39_8_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 gr_gpc0_swdx_rm_spill_buffer_addr_39_8_align_bits_v(void)
+{
+	return 0x00000008;
+}
+static inline u32 gr_gpcs_swdx_beta_cb_ctrl_r(void)
+{
+	return 0x00418eec;
+}
+static inline u32 gr_gpcs_swdx_beta_cb_ctrl_cbes_reserve_f(u32 v)
+{
+	return (v & 0xfff) << 0;
+}
+static inline u32 gr_gpcs_swdx_beta_cb_ctrl_cbes_reserve_gfxp_v(void)
+{
+	return 0x00000100;
+}
+static inline u32 gr_gpcs_ppcs_cbm_beta_cb_ctrl_r(void)
+{
+	return 0x0041befc;
+}
+static inline u32 gr_gpcs_ppcs_cbm_beta_cb_ctrl_cbes_reserve_f(u32 v)
+{
+	return (v & 0xfff) << 0;
 }
 static inline u32 gr_gpcs_swdx_tc_beta_cb_size_r(u32 i)
 {
@@ -3341,5 +3393,17 @@ static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_run_trigger_v(u32 r)
 static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_run_trigger_task_f(void)
 {
 	return 0x40000000;
+}
+static inline u32 gr_fe_gfxp_wfi_timeout_r(void)
+{
+	return 0x004041c0;
+}
+static inline u32 gr_fe_gfxp_wfi_timeout_count_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 gr_fe_gfxp_wfi_timeout_count_disabled_f(void)
+{
+	return 0x0;
 }
 #endif

@@ -742,7 +742,7 @@ static int therm_est_probe(struct platform_device *pdev)
 	data = pdev->dev.platform_data;
 	if (!data) {
 		data = therm_est_get_pdata(&pdev->dev);
-		if (!data)
+		if (IS_ERR_OR_NULL(data))
 			goto err;
 	}
 

@@ -1,7 +1,7 @@
 /*
  * GP20B master
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,6 +27,7 @@ void mc_gp10b_intr_enable(struct gk20a *g)
 				0xffffffff);
 	g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_STALLING] =
 				mc_intr_pfifo_pending_f()
+				| mc_intr_replayable_fault_pending_f()
 				| eng_intr_mask;
 	gk20a_writel(g, mc_intr_en_set_r(NVGPU_MC_INTR_STALLING),
 			g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_STALLING]);

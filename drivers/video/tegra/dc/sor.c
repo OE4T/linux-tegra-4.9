@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/sor.c
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -283,7 +283,8 @@ static int sor_crc_show(struct seq_file *s, void *unused)
 	reg_val &= NV_SOR_CRC_CNTRL_ARM_CRC_ENABLE_DEFAULT_MASK;
 	if (reg_val == NV_SOR_CRC_CNTRL_ARM_CRC_ENABLE_NO) {
 		pr_err("SOR CRC is DISABLED, aborting with CRC=0\n");
-		seq_printf(s, "NV_SOR[%d]_CRCB = 0x%08x\n",	i, reg_val);
+		seq_printf(s, "NV_SOR[%d]_CRCB = 0x%08x\n",
+			sor->dc->ctrl_num, reg_val);
 		goto exit;
 	}
 
@@ -299,7 +300,8 @@ static int sor_crc_show(struct seq_file *s, void *unused)
 		mutex_lock(&dc->lock);
 		reg_val = tegra_sor_readl(sor, NV_SOR_CRCB);
 		mutex_unlock(&dc->lock);
-		seq_printf(s, "NV_SOR[%d]_CRCB = 0x%08x\n", i, reg_val);
+		seq_printf(s, "NV_SOR[%x]_CRCB = 0x%08x\n",
+			sor->dc->ctrl_num, reg_val);
 		i++;
 	} while (i < sor->portnum);
 

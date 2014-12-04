@@ -218,12 +218,6 @@
 		extcon@0 {
 			status = "disabled";
 		};
-		vbus_gpio_extcon: extcon@1 {
-			extcon-gpio,cable-states = <0x3 0x1
-						    0x0 0x2
-						    0x1 0x2
-						    0x2 0x0>;
-		};
 	};
 
 	udc@7d000000 {

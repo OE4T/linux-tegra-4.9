@@ -347,6 +347,12 @@ struct mm_gk20a {
 		u32 aperture_size;
 		struct vm_gk20a vm;
 		struct inst_desc inst_block;
+	} bar2;
+
+	struct {
+		u32 aperture_size;
+		struct vm_gk20a vm;
+		struct inst_desc inst_block;
 	} pmu;
 
 	struct mutex l2_op_lock;
@@ -534,6 +540,15 @@ int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
 			int kind,
 			u64 buffer_offset,
 			u64 mapping_size);
+
+int gk20a_init_vm(struct mm_gk20a *mm,
+		struct vm_gk20a *vm,
+		u32 big_page_size,
+		u64 low_hole,
+		u64 aperture_size,
+		bool big_pages,
+		char *name);
+void gk20a_deinit_vm(struct vm_gk20a *vm);
 int gk20a_vm_unmap_buffer(struct gk20a_as_share *, u64 offset);
 void gk20a_get_comptags(struct device *dev, struct dma_buf *dmabuf,
 			struct gk20a_comptags *comptags);

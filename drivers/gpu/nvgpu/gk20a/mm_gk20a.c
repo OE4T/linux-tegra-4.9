@@ -311,6 +311,11 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 	if (err)
 		return err;
 
+	if (g->ops.mm.init_bar2_vm) {
+		err = g->ops.mm.init_bar2_vm(g);
+		if (err)
+			return err;
+	}
 	err = gk20a_init_system_vm(mm);
 	if (err)
 		return err;
@@ -330,6 +335,7 @@ static int gk20a_init_mm_setup_hw(struct gk20a *g)
 	struct mm_gk20a *mm = &g->mm;
 	struct inst_desc *inst_block = &mm->bar1.inst_block;
 	phys_addr_t inst_pa = inst_block->cpu_pa;
+	int err;
 
 	gk20a_dbg_fn("");
 
@@ -342,6 +348,13 @@ static int gk20a_init_mm_setup_hw(struct gk20a *g)
 		     bus_bar1_block_target_vid_mem_f() |
 		     bus_bar1_block_mode_virtual_f() |
 		     bus_bar1_block_ptr_f(inst_pa));
+
+	if (g->ops.mm.init_bar2_mm_hw_setup) {
+		err = g->ops.mm.init_bar2_mm_hw_setup(g);
+		if (err)
+			return err;
+	}
+
 	if (gk20a_mm_fb_flush(g) || gk20a_mm_fb_flush(g))
 		return -EBUSY;
 
@@ -2124,7 +2137,7 @@ void gk20a_vm_put(struct vm_gk20a *vm)
 	kref_put(&vm->ref, gk20a_vm_remove_support_kref);
 }
 
-static int gk20a_init_vm(struct mm_gk20a *mm,
+int gk20a_init_vm(struct mm_gk20a *mm,
 		struct vm_gk20a *vm,
 		u32 big_page_size,
 		u64 low_hole,
@@ -2659,7 +2672,7 @@ int gk20a_vm_unmap_buffer(struct gk20a_as_share *as_share, u64 offset)
 	return 0;
 }
 
-static void gk20a_deinit_vm(struct vm_gk20a *vm)
+void gk20a_deinit_vm(struct vm_gk20a *vm)
 {
 	u32 pde_pages;
 

@@ -340,4 +340,10 @@
 			};
 		};
 	};
+
+	rollback-protection {
+		device-name = "sdmmc";
+		device-method = <0x1 0x00000002>;  /* type (0x1 = ioctl), argument */
+		status = "disabled";
+	};
 };

@@ -63,7 +63,7 @@ static void vgpu_channel_unbind(struct channel_gk20a *ch)
 	 * resource at this point
 	 * if not, then it will be destroyed at channel_free()
 	 */
-	if (ch->sync && platform->sync_aggressive_destroy) {
+	if (ch->sync && ch->sync->aggressive_destroy) {
 		ch->sync->destroy(ch->sync);
 		ch->sync = NULL;
 	}

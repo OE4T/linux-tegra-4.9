@@ -30,6 +30,7 @@
 #include "tegra210-platforms/tegra210-pwm-fan-p2530-0930.dtsi"
 #include "tegra210-platforms/tegra210-sdhci-p2530-0930.dtsi"
 #include "panel-s-wqxga-10-1.dtsi"
+#include "panel-a-wuxga-8-0.dtsi"
 #include "tegra210-platforms/tegra210-hdmi-p2530-0930.dtsi"
 #include "tegra210-platforms/tegra210-loki-e-sensor-p2530-0032-e00.dtsi"
 #include "tegra210-platforms/tegra210-thermal-fan-est-p2530-0930.dtsi"
@@ -144,6 +145,9 @@
 		panel-s-wqxga-10-1-bl {
 			pwms = <&tegra_pwm 0 1000000>;
 		};
+		panel-a-wuxga-8-0-bl {
+			pwms = <&tegra_pwm 0 40161>;
+		};
 	};
 
 	host1x {
@@ -169,6 +173,11 @@
 			nvidia,dsi-controller-vs = <DSI_VS_1>;
 			status = "okay";
 			panel-s-wqxga-10-1 {
+				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
+				nvidia,panel-bl-pwm-gpio = <&gpio TEGRA_GPIO(V, 0) 0>; /* PV0 */
+			};
+			panel-a-wuxga-8-0 {
+				nvidia,dsi-dpd-pads = <DSIC_DPD_EN DSID_DPD_EN>;
 				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
 				nvidia,panel-bl-pwm-gpio = <&gpio TEGRA_GPIO(V, 0) 0>; /* PV0 */
 			};

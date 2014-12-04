@@ -107,8 +107,12 @@ EXPORT_SYMBOL_GPL(host1x_writel);
 u32 host1x_readl(struct platform_device *pdev, u32 r)
 {
 	void __iomem *addr = get_aperture(pdev) + r;
-	u32 v = readl(addr);
+	u32 v;
+
+	nvhost_dbg(dbg_reg, " d=%s r=0x%x", pdev->name, r);
+	v = readl(addr);
 	nvhost_dbg(dbg_reg, " d=%s r=0x%x v=0x%x", pdev->name, r, v);
+
 	return v;
 }
 EXPORT_SYMBOL_GPL(host1x_readl);

@@ -152,6 +152,11 @@
 #define FB_ACCEL_PUV3_UNIGFX	0xa0	/* PKUnity-v3 Unigfx		*/
 
 #define FB_CAP_FOURCC		1	/* Device supports FOURCC-based formats */
+#define FB_CAP_Y420_DC_30	2	/* YCbCr 4:2:0 deep color 30bpp */
+#define FB_CAP_Y420_DC_36	4	/* YCbCr 4:2:0 deep color 36bpp */
+#define FB_CAP_Y420_DC_48	8	/* YCbCr 4:2:0 deep color 48bpp */
+#define FB_CAP_DC_MASK		(FB_CAP_Y420_DC_30 | \
+				FB_CAP_Y420_DC_36 | FB_CAP_Y420_DC_48)
 
 struct fb_fix_screeninfo {
 	char id[16];			/* identification string eg "TT Builtin" */
@@ -171,7 +176,8 @@ struct fb_fix_screeninfo {
 	__u32 accel;			/* Indicate to driver which	*/
 					/*  specific chip/card we have	*/
 	__u16 capabilities;		/* see FB_CAP_*			*/
-	__u16 reserved[2];		/* Reserved for future compatibility */
+	__u16 max_clk_rate;	/* max supported clock rate on link in Mhz */
+	__u16 reserved[1];		/* Reserved for future compatibility */
 };
 
 /* Interpretation of offset for color fields: All offsets are from the right,

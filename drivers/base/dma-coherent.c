@@ -353,7 +353,8 @@ static phys_addr_t alloc_from_contiguous_heap(
 		&base, len);
 	order = get_order(len);
 	count = PAGE_ALIGN(len) >> PAGE_SHIFT;
-	page = dma_alloc_at_from_contiguous(h->cma_dev, count, order, base);
+	page = dma_alloc_at_from_contiguous(h->cma_dev, count,
+		order, base, true);
 	if (!page) {
 		dev_err(h->cma_dev, "dma_alloc_at_from_contiguous failed\n");
 		goto dma_alloc_err;

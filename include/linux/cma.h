@@ -30,5 +30,6 @@ extern struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 extern bool cma_release(struct cma *cma, const struct page *pages, unsigned int count);
 extern struct page *cma_alloc_at(struct cma *cma, size_t count,
 					unsigned int align,
-					phys_addr_t at_addr);
+					phys_addr_t at_addr,
+					bool map_non_cached);
 #endif

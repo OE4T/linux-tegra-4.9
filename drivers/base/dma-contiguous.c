@@ -177,12 +177,14 @@ int __init dma_contiguous_reserve_area(phys_addr_t size, phys_addr_t base,
 }
 
 struct page *dma_alloc_at_from_contiguous(struct device *dev, int count,
-				       unsigned int align, phys_addr_t at_addr)
+				       unsigned int align, phys_addr_t at_addr,
+				       bool map_non_cached)
 {
 	if (align > CONFIG_CMA_ALIGNMENT)
 		align = CONFIG_CMA_ALIGNMENT;
 
-	return cma_alloc_at(dev_get_cma_area(dev), count, align, at_addr);
+	return cma_alloc_at(dev_get_cma_area(dev), count, align, at_addr,
+			    map_non_cached);
 }
 
 /**

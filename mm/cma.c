@@ -400,7 +400,7 @@ static void __dma_clear_buffer(struct page *page, size_t size)
 }
 
 struct page *cma_alloc_at(struct cma *cma, size_t count,
-				unsigned int align, phys_addr_t at_addr)
+				unsigned int align, phys_addr_t at_addr, bool map_non_cached)
 {
 	unsigned long mask, offset;
 	unsigned long pfn = -1;
@@ -474,6 +474,9 @@ struct page *cma_alloc_at(struct cma *cma, size_t count,
 		__dma_remap(page, count << PAGE_SHIFT,
 			pgprot_writecombine(PAGE_KERNEL));
 		__dma_clear_buffer(page, count << PAGE_SHIFT);
+		if(map_non_cached)
+			__dma_remap(page, count << PAGE_SHIFT,
+				pgprot_noncached(PAGE_KERNEL));
 	}
 	return page;
 }
@@ -489,7 +492,7 @@ struct page *cma_alloc_at(struct cma *cma, size_t count,
  */
 struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 {
-	return cma_alloc_at(cma, count, align, 0);
+	return cma_alloc_at(cma, count, align, 0, false);
 }
 
 /**

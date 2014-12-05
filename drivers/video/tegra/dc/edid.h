@@ -24,6 +24,12 @@
 #include <linux/wait.h>
 #include <mach/dc.h>
 
+#define TEGRA_DC_Y420_30	1	/* YCbCr 4:2:0 deep color 30bpp */
+#define TEGRA_DC_Y420_36	2	/* YCbCr 4:2:0 deep color 36bpp */
+#define TEGRA_DC_Y420_48	4	/* YCbCr 4:2:0 deep color 48bpp */
+#define TEGRA_DC_Y420_MASK	(TEGRA_DC_Y420_30 | \
+				TEGRA_DC_Y420_36 | TEGRA_DC_Y420_48)
+
 enum {
 	CEA_DATA_BLOCK_RSVD0,
 	CEA_DATA_BLOCK_AUDIO,
@@ -104,8 +110,12 @@ struct tegra_edid_hdmi_eld {
 struct tegra_edid *tegra_edid_create(struct tegra_dc *dc,
 	i2c_transfer_func_t func);
 void tegra_edid_destroy(struct tegra_edid *edid);
-int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs,
-	u8 *vedid);
+int tegra_edid_get_monspecs(struct tegra_edid *edid,
+				struct fb_monspecs *specs, u8 *vedid);
+int tegra_edid_get_monspecs_test(struct tegra_edid *edid,
+				struct fb_monspecs *specs, u8 *edid_ptr);
+u16 tegra_edid_get_cd_flag(struct tegra_edid *edid);
+u16 tegra_edid_get_max_clk_rate(struct tegra_edid *edid);
 int tegra_edid_get_eld(struct tegra_edid *edid, struct tegra_edid_hdmi_eld *elddata);
 
 struct tegra_dc_edid *tegra_edid_get_data(struct tegra_edid *edid);

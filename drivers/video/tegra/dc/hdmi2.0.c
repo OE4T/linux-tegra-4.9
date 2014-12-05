@@ -608,9 +608,11 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 	if (dc->adf)
 		tegra_adf_process_hotplug_connected(hdmi->dc->adf, mon_spec);
 #else
-	if (dc->fb)
+	if (dc->fb) {
 		tegra_fb_update_monspecs(hdmi->dc->fb, mon_spec,
 					tegra_hdmi_fb_mode_filter);
+		tegra_fb_update_fix(hdmi->dc->fb, mon_spec);
+	}
 #endif
 
 	dc->connected = is_asserted;

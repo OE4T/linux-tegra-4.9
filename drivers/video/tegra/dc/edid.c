@@ -36,6 +36,9 @@ struct tegra_edid_pvt {
 	bool				support_audio;
 	int			        hdmi_vic_len;
 	u8			        hdmi_vic[7];
+	u16			color_depth_flag;
+	u16			max_tmds_char_rate_hf_mhz;
+	u16			max_tmds_char_rate_hllc_mhz;
 	/* Note: dc_edid must remain the last member */
 	struct tegra_dc_edid		dc_edid;
 };
@@ -265,12 +268,24 @@ static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 		{
 			int j = 0;
 
+			/* OUI for hdmi licensing, LLC */
 			if ((ptr[1] == 0x03) &&
 				(ptr[2] == 0x0c) &&
 				(ptr[3] == 0)) {
 				edid->eld.port_id[0] = ptr[4];
 				edid->eld.port_id[1] = ptr[5];
+				edid->max_tmds_char_rate_hllc_mhz = ptr[7] * 5;
 			}
+
+			/* OUI for hdmi forum */
+			if ((ptr[1] == 0xd8) &&
+				(ptr[2] == 0x5d) &&
+				(ptr[3] == 0xc4)) {
+				edid->color_depth_flag = ptr[7] &
+							TEGRA_DC_Y420_MASK;
+				edid->max_tmds_char_rate_hf_mhz = ptr[5] * 5;
+			}
+
 			if ((len >= 8) &&
 				(ptr[1] == 0x03) &&
 				(ptr[2] == 0x0c) &&
@@ -356,6 +371,110 @@ static void data_release(struct kref *ref)
 	vfree(data);
 }
 
+int tegra_edid_get_monspecs_test(struct tegra_edid *edid,
+			struct fb_monspecs *specs, unsigned char *edid_ptr)
+{
+	int i, j, ret;
+	int extension_blocks;
+	struct tegra_edid_pvt *new_data, *old_data;
+	u8 *data;
+
+	new_data = vmalloc(SZ_32K + sizeof(struct tegra_edid_pvt));
+	if (!new_data)
+		return -ENOMEM;
+
+	kref_init(&new_data->refcnt);
+
+	new_data->support_stereo = 0;
+	new_data->support_underscan = 0;
+
+	data = new_data->dc_edid.buf;
+	memcpy(data, edid_ptr, 128);
+
+	memset(specs, 0x0, sizeof(struct fb_monspecs));
+	memset(&new_data->eld, 0x0, sizeof(new_data->eld));
+	fb_edid_to_monspecs(data, specs);
+	if (specs->modedb == NULL) {
+		ret = -EINVAL;
+		goto fail;
+	}
+
+	memcpy(new_data->eld.monitor_name, specs->monitor,
+					sizeof(specs->monitor));
+
+	new_data->eld.mnl = strlen(new_data->eld.monitor_name) + 1;
+	new_data->eld.product_id[0] = data[0x8];
+	new_data->eld.product_id[1] = data[0x9];
+	new_data->eld.manufacture_id[0] = data[0xA];
+	new_data->eld.manufacture_id[1] = data[0xB];
+
+	extension_blocks = data[0x7e];
+	for (i = 1; i <= extension_blocks; i++) {
+		memcpy(data+128, edid_ptr+128, 128);
+
+		if (data[i * 128] == 0x2) {
+			fb_edid_add_monspecs(data + i * 128, specs);
+
+			tegra_edid_parse_ext_block(data + i * 128,
+					data[i * 128 + 2], new_data);
+
+			if (new_data->support_stereo) {
+				for (j = 0; j < specs->modedb_len; j++) {
+					if (tegra_edid_mode_support_stereo(
+						&specs->modedb[j]))
+						specs->modedb[j].vmode |=
+#ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
+						FB_VMODE_STEREO_FRAME_PACK;
+#else
+						FB_VMODE_STEREO_LEFT_RIGHT;
+#endif
+				}
+			}
+		}
+	}
+
+	new_data->dc_edid.len = i * 128;
+
+	mutex_lock(&edid->lock);
+	old_data = edid->data;
+	edid->data = new_data;
+	mutex_unlock(&edid->lock);
+
+	if (old_data)
+		kref_put(&old_data->refcnt, data_release);
+
+	tegra_edid_dump(edid);
+	return 0;
+fail:
+	vfree(new_data);
+	return ret;
+}
+
+u16 tegra_edid_get_cd_flag(struct tegra_edid *edid)
+{
+	if (!edid || !edid->data)
+		pr_warn("edid invalid\n");
+
+	return edid->data->color_depth_flag;
+}
+
+/* hdmi spec mandates sink to specify correct max_tmds_clk only for >165MHz */
+u16 tegra_edid_get_max_clk_rate(struct tegra_edid *edid)
+{
+	u16 tmds_hf, tmds_llc;
+
+	if (!edid || !edid->data)
+		pr_warn("edid invalid\n");
+
+	tmds_hf = edid->data->max_tmds_char_rate_hf_mhz;
+	tmds_llc = edid->data->max_tmds_char_rate_hllc_mhz;
+
+	if (tmds_hf || tmds_llc)
+		return tmds_hf ? : tmds_llc;
+
+	return 0;
+}
+
 int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs,
 u8 *vedid)
 {
@@ -379,6 +498,9 @@ u8 *vedid)
 	kref_init(&new_data->refcnt);
 
 	new_data->support_stereo = 0;
+	new_data->color_depth_flag = 0;
+	new_data->max_tmds_char_rate_hf_mhz = 0;
+	new_data->max_tmds_char_rate_hllc_mhz = 0;
 
 	data = new_data->dc_edid.buf;
 

@@ -42,6 +42,7 @@
 
 #include "host/dev.h"
 #include "dc/dc_priv.h"
+#include "dc/edid.h"
 
 /* Pad pitch to 256-byte boundary. */
 #define TEGRA_LINEAR_PITCH_ALIGNMENT 256
@@ -685,6 +686,23 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 #else
 	fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
 #endif
+	mutex_unlock(&fb_info->info->lock);
+}
+
+void tegra_fb_update_fix(struct tegra_fb_info *fb_info,
+				struct fb_monspecs *specs)
+{
+	struct tegra_dc *dc = fb_info->win.dc;
+	struct tegra_edid *dc_edid = dc->edid;
+	struct fb_fix_screeninfo *fix = &fb_info->info->fix;
+
+	mutex_lock(&fb_info->info->lock);
+
+	fix->capabilities |= (tegra_edid_get_cd_flag(dc_edid) <<
+			FB_CAP_FOURCC) & FB_CAP_DC_MASK;
+
+	fix->max_clk_rate = tegra_edid_get_max_clk_rate(dc_edid);
+
 	mutex_unlock(&fb_info->info->lock);
 }
 

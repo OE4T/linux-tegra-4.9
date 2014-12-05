@@ -255,17 +255,17 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 
 	/* no wpr firmware does not need these */
 	if (!skip_wpr_settings) {
-		u32 wpr_addr_lo = readl((u32 *)IO_TO_VIRT((
+		u32 wpr_addr_lo = readl(IO_TO_VIRT((
 					MC_BASE_ADDR +
 					MC_SECURITY_CARVEOUT1_BOM_0)));
-		u32 wpr_addr_hi = readl((u32 *)IO_TO_VIRT((
+		u32 wpr_addr_hi = readl(IO_TO_VIRT((
 					MC_BASE_ADDR +
 					MC_SECURITY_CARVEOUT1_BOM_HI_0)));
 
 		/* Put the 40-bit addr formed by wpr_addr_hi and wpr_addr_lo
 		   divided by 256 into 32-bit wpr_addr */
 		shared_data.wpr_addr = (wpr_addr_hi << 24) + (wpr_addr_lo >> 8);
-		shared_data.wpr_size = readl((u32 *)IO_TO_VIRT((
+		shared_data.wpr_size = readl(IO_TO_VIRT((
 			MC_BASE_ADDR + MC_SECURITY_CARVEOUT1_SIZE_128KB_0)));
 		shared_data.wpr_size *= 128*1024; /* multiply 128k */
 	}

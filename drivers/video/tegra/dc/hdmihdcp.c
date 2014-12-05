@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/hdmihdcp.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1449,6 +1449,11 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 	nvhdcp_i2c_read16(nvhdcp, HDCP_RX_STATUS, &rx_status);
 	mutex_unlock(&nvhdcp->lock);
 	if (nvhdcp->repeater && (rx_status & HDCP_RX_STATUS_MSG_READY_YES)) {
+		err = nvhdcp_poll_ready(nvhdcp, 1000);
+		if (err) {
+			nvhdcp_err("Failed to get RX list\n");
+			goto exit;
+		}
 		err = nvhdcp_receiverid_list_receive(nvhdcp,
 				&hdcp_context->msg.send_receiverid_list_msg_id);
 		if (err)
@@ -1547,8 +1552,16 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 			goto failure;
 		}
 		tegra_dc_io_end(dc);
-		wait_event_interruptible_timeout(wq_worker,
-			!nvhdcp_is_plugged(nvhdcp), msecs_to_jiffies(500));
+		/* HDCP 2.2 Analyzer expects to check rx status more */
+		/* frequently for repeaters */
+		if (nvhdcp->repeater)
+			wait_event_interruptible_timeout(wq_worker,
+				!nvhdcp_is_plugged(nvhdcp),
+				msecs_to_jiffies(300));
+		else
+			wait_event_interruptible_timeout(wq_worker,
+				!nvhdcp_is_plugged(nvhdcp),
+				msecs_to_jiffies(500));
 		tegra_dc_io_start(dc);
 		mutex_lock(&nvhdcp->lock);
 

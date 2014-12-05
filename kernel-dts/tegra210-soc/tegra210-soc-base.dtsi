@@ -337,7 +337,8 @@
 
 	xotg {
 		compatible = "nvidia,tegra210-xotg";
-		interrupts = <0 49 0x04>;
+		interrupts = <0 49 0x04
+			      0 20 0x04>;
 		status = "disabled";
 	};
 

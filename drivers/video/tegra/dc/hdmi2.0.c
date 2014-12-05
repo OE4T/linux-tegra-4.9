@@ -1413,6 +1413,9 @@ static void tegra_hdmi_audio_config(struct tegra_hdmi *hdmi,
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 	u32 val;
 
+	if (hdmi->dvi)
+		return;
+
 	/* hda is the only audio source */
 	val = NV_SOR_AUDIO_CTRL_AFIFO_FLUSH |
 		NV_SOR_AUDIO_CTRL_SRC_HDA;

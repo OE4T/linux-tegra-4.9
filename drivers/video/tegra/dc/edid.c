@@ -367,8 +367,10 @@ u8 *vedid)
 	u8 checksum = 0;
 	u8 *data;
 
-	if (edid->dc->vedid)
+	if (edid->dc->vedid && !vedid) {
+		pr_debug("%s: using virtual edid\n", __func__);
 		return 0;
+	}
 
 	new_data = vmalloc(SZ_32K + sizeof(struct tegra_edid_pvt));
 	if (!new_data)
@@ -413,7 +415,7 @@ u8 *vedid)
 
 	for (i = 1; i <= extension_blocks; i++) {
 		if (vedid) {
-			memcpy(data + i * 128, vedid, 128);
+			memcpy(data + i * 128, vedid + i * 128, 128);
 			for (j = 0; j < 128; j++)
 				checksum += data[i * 128 + j];
 			if (checksum != 0) {

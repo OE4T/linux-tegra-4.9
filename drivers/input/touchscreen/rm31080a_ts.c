@@ -3890,6 +3890,18 @@ static int rm_tch_spi_setting(u32 speed)
 }
 #endif
 
+static void rm_tch_spi_shutdown(struct spi_device *spi)
+{
+	struct rm_tch_ts *ts = spi_get_drvdata(spi);
+
+	free_irq(ts->irq, ts);
+
+	if (ts->regulator_3v3 && ts->regulator_1v8) {
+		regulator_disable(ts->regulator_3v3);
+		regulator_disable(ts->regulator_1v8);
+	}
+}
+
 static int rm_tch_spi_remove(struct spi_device *spi)
 {
 	struct rm_tch_ts *ts = spi_get_drvdata(spi);
@@ -4122,6 +4134,7 @@ static struct spi_driver rm_tch_spi_driver = {
 	},
 	.probe = rm_tch_spi_probe,
 	.remove = rm_tch_spi_remove,
+	.shutdown = rm_tch_spi_shutdown,
 };
 
 static int __init rm_tch_spi_init(void)

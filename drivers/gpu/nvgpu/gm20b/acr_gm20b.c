@@ -1338,6 +1338,11 @@ int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout)
 	}
 	if (timeout == 0)
 		return -EBUSY;
+	data = gk20a_readl(g, pwr_falcon_mailbox0_r());
+	if (data) {
+		gk20a_err(dev_from_gk20a(g), "ACR boot failed, err %x", data);
+		return -EAGAIN;
+	}
 	return 0;
 }
 

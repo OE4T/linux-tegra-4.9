@@ -1255,6 +1255,9 @@ static int tegra_dc_ext_set_cmu_aligned(struct tegra_dc_ext_user *user,
 	if (!cmu)
 		return -ENOMEM;
 
+	for (i = 0; i < 256; i++)
+		cmu->lut1[i] = args->lut1[i];
+
 	cmu->csc.krr = args->csc[0];
 	cmu->csc.kgr = args->csc[1];
 	cmu->csc.kbr = args->csc[2];

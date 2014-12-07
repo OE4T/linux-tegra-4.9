@@ -1,7 +1,7 @@
 /*
  * Tegra TSEC Module Support
  *
- * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -49,6 +49,7 @@
 #include "class_ids.h"
 #include "tsec_methods.h"
 #include "tsec_drv.h"
+#include "nvhost_vm.h"
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "t186/t186.h"
@@ -847,6 +848,8 @@ static int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 	}
 
 	m->valid = true;
+
+	nvhost_vm_map_static(dev, m->mapped, m->dma_addr, m->size);
 
 	release_firmware(ucode_fw);
 

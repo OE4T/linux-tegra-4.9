@@ -37,6 +37,7 @@
 
 #include "dev.h"
 #include "nvdec.h"
+#include "nvhost_vm.h"
 #include "hw_nvdec.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
@@ -469,6 +470,8 @@ static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name)
 	}
 
 	m->valid = true;
+
+	nvhost_vm_map_static(dev, m->mapped, m->phys, m->size);
 
 	release_firmware(ucode_fw);
 

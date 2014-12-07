@@ -1,7 +1,7 @@
 /*
 * Tegra flcn common driver
 *
-* Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify it
 * under the terms and conditions of the GNU General Public License,
@@ -33,6 +33,7 @@
 #include "class_ids.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
+#include "nvhost_vm.h"
 #include "nvhost_scale.h"
 #include "nvhost_channel.h"
 
@@ -251,6 +252,8 @@ static int flcn_read_ucode(struct platform_device *dev, const char *fw_name)
 	}
 
 	v->valid = true;
+
+	nvhost_vm_map_static(dev, v->mapped, v->dma_addr, v->size);
 
 	release_firmware(ucode_fw);
 

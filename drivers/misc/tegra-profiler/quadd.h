@@ -67,4 +67,7 @@ struct quadd_ctx {
 
 void quadd_get_state(struct quadd_module_state *state);
 
+int tegra_profiler_try_lock(void);
+void tegra_profiler_unlock(void);
+
 #endif	/* __QUADD_H */

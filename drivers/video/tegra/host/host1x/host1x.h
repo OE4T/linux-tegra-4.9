@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Driver Entrypoint
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -85,7 +85,11 @@ struct nvhost_master {
 	struct nvhost_channel **chlist;	/* channel list */
 	struct mutex chlist_mutex;	/* mutex for channel list */
 	unsigned long allocated_channels;
-	unsigned long next_free_ch;
+
+	/* nvhost vm specific structures */
+	struct list_head static_mappings_list;
+	struct list_head vm_list;
+	struct mutex vm_mutex;
 };
 
 extern struct nvhost_master *nvhost;

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Driver Entrypoint
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -883,6 +883,9 @@ static int nvhost_probe(struct platform_device *dev)
 	nvhost = host;
 
 	host->dev = dev;
+	INIT_LIST_HEAD(&host->static_mappings_list);
+	INIT_LIST_HEAD(&host->vm_list);
+	mutex_init(&host->vm_mutex);
 	mutex_init(&pdata->lock);
 
 	/* Copy host1x parameters. The private_data gets replaced

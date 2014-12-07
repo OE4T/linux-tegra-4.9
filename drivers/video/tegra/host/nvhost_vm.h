@@ -41,6 +41,9 @@ struct nvhost_vm {
 
 	/* used by hardware layer */
 	void *private_data;
+
+	/* to track all vms in the system */
+	struct list_head vm_list;
 };
 
 struct nvhost_vm_buffer {
@@ -65,6 +68,37 @@ struct nvhost_vm_buffer {
 	/* used by hardware layer */
 	void *private_data;
 };
+
+struct nvhost_vm_static_buffer {
+	struct sg_table *sgt;
+
+	void *vaddr;
+	dma_addr_t paddr;
+	size_t size;
+
+	/* list of all statically mapped buffers */
+	struct list_head list;
+};
+
+/**
+ * nvhost_vm_map_static - map allocated area to iova
+ *	@pdev: pointer to host1x or host1x client device
+ *	@vaddr: kernel virtual address
+ *	@paddr: desired physical address for this buffer
+ *	@size: size of the buffer (in bytes)
+ *
+ * This call maps given area to all existing (and future) address spaces.
+ * The mapping is permanent and cannot be removed. User of this API is
+ * responsible to ensure that the backing memory is not released at any
+ * point.
+ *
+ * Return 0 on succcess, error otherwise. Base address is returned
+ * in address pointer.
+ *
+ */
+int nvhost_vm_map_static(struct platform_device *pdev,
+			 void *vaddr, dma_addr_t paddr,
+			 size_t size);
 
 /**
  * nvhost_vm_pin_buffers - Pin mapped buffers to the hardware

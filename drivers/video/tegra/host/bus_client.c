@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Client Module
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -324,11 +324,14 @@ static int __nvhost_channelopen(struct inode *inode,
 		priv->timeout = 0;
 
 	priv->vm = nvhost_vm_allocate(pdev);
+	if (!priv->vm)
+		goto fail_alloc_vm;
 
 	mutex_unlock(&channel_lock);
 
 	return 0;
 
+fail_alloc_vm:
 fail_power_on:
 fail_add_client:
 	kfree(priv);

@@ -46,6 +46,7 @@ struct platform_device;
 struct host1x_actmon;
 struct nvhost_vm;
 struct nvhost_vm_buffer;
+struct nvhost_vm_static_buffer;
 
 struct nvhost_cdma_ops {
 	void (*start)(struct nvhost_cdma *);
@@ -68,6 +69,8 @@ struct nvhost_vm_ops {
 			  struct nvhost_vm_buffer *buffer);
 	void (*unpin_buffer)(struct nvhost_vm *vm,
 			     struct nvhost_vm_buffer *buffer);
+	int (*pin_static_buffer)(struct nvhost_vm *vm,
+				 struct nvhost_vm_static_buffer *sbuffer);
 };
 
 struct nvhost_pushbuffer_ops {

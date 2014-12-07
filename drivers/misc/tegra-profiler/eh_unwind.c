@@ -119,7 +119,7 @@ validate_mmap_addr(struct quadd_mmap_area *mmap,
 
 #define read_user_data(addr, retval)				\
 ({								\
-	int ret;						\
+	long ret;						\
 								\
 	pagefault_disable();					\
 	ret = __get_user(retval, addr);				\
@@ -728,7 +728,7 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 			((insn & 0x3f) << 2) + 4, ctrl->vrs[SP]);
 	} else if ((insn & 0xf0) == 0x80) {
 		unsigned long mask;
-		u32 *vsp = (u32 *)(unsigned long)ctrl->vrs[SP];
+		u32 __user *vsp = (u32 __user *)(unsigned long)ctrl->vrs[SP];
 		int load_sp, reg = 4;
 
 		insn = (insn << 8) | unwind_get_byte(mmap, ctrl, &err);
@@ -764,7 +764,7 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 		ctrl->vrs[SP] = ctrl->vrs[insn & 0x0f];
 		pr_debug("CMD_REG_TO_SP: vsp = {r%lu}\n", insn & 0x0f);
 	} else if ((insn & 0xf0) == 0xa0) {
-		u32 *vsp = (u32 *)(unsigned long)ctrl->vrs[SP];
+		u32 __user *vsp = (u32 __user *)(unsigned long)ctrl->vrs[SP];
 		unsigned int reg;
 
 		/* pop R4-R[4+bbb] */
@@ -795,7 +795,7 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 		pr_debug("CMD_FINISH\n");
 	} else if (insn == 0xb1) {
 		unsigned long mask = unwind_get_byte(mmap, ctrl, &err);
-		u32 *vsp = (u32 *)(unsigned long)ctrl->vrs[SP];
+		u32 __user *vsp = (u32 __user *)(unsigned long)ctrl->vrs[SP];
 		int reg = 0;
 
 		if (err < 0)
@@ -840,7 +840,7 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 			 ctrl->vrs[SP]);
 	} else if (insn == 0xb3 || insn == 0xc8 || insn == 0xc9) {
 		unsigned long data, reg_from, reg_to;
-		u32 *vsp = (u32 *)(unsigned long)ctrl->vrs[SP];
+		u32 __user *vsp = (u32 __user *)(unsigned long)ctrl->vrs[SP];
 
 		data = unwind_get_byte(mmap, ctrl, &err);
 		if (err < 0)
@@ -869,7 +869,7 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 	} else if ((insn & 0xf8) == 0xb8 || (insn & 0xf8) == 0xd0) {
 		unsigned long reg_to;
 		unsigned long data = insn & 0x07;
-		u32 *vsp = (u32 *)(unsigned long)ctrl->vrs[SP];
+		u32 __user *vsp = (u32 __user *)(unsigned long)ctrl->vrs[SP];
 
 		reg_to = 8 + data;
 

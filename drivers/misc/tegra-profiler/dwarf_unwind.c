@@ -70,7 +70,7 @@ enum {
 	DW_CFA_UNSET,
 	DW_CFA_REG_OFFSET,
 	DW_CFA_EXP,
-} cfa_how;
+};
 
 struct dw_eh_frame_hdr {
 	unsigned char version;
@@ -104,7 +104,7 @@ struct dwarf_cpu_context {
 };
 
 struct quadd_dwarf_context {
-	struct dwarf_cpu_context * __percpu cpu_ctx;
+	struct dwarf_cpu_context __percpu *cpu_ctx;
 	atomic_t started;
 };
 
@@ -1634,7 +1634,7 @@ unwind_frame(struct ex_region_info *ri,
 		if (!validate_stack_addr(addr, vma_sp, sizeof(unsigned long)))
 			return -QUADD_URC_SP_INCORRECT;
 
-		err = read_user_data((unsigned long *)addr, return_addr);
+		err = read_user_data((unsigned long __user *)addr, return_addr);
 		if (err < 0)
 			return err;
 
@@ -1656,7 +1656,7 @@ unwind_frame(struct ex_region_info *ri,
 		if (!validate_stack_addr(addr, vma_sp, sizeof(unsigned long)))
 			return -QUADD_URC_SP_INCORRECT;
 
-		err = read_user_data((unsigned long *)addr, fp);
+		err = read_user_data((unsigned long __user *)addr, fp);
 		if (err < 0)
 			return err;
 

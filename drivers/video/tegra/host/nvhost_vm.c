@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Virtual Memory
  *
- * Copyright (c) 2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,41 +21,9 @@
 #include <linux/slab.h>
 #include <linux/dma-buf.h>
 
+#include "chip_support.h"
 #include "nvhost_vm.h"
 #include "dev.h"
-
-struct nvhost_vm {
-	struct platform_device *pdev;
-
-	struct kref kref;	/* reference to this VM */
-	struct mutex mutex;
-
-	/* rb-tree of buffers mapped into this VM */
-	struct rb_root buffer_list;
-
-	/* count of application viewed buffers mapped into this VM */
-	unsigned int num_user_mapped_buffers;
-};
-
-struct nvhost_vm_buffer {
-	struct nvhost_vm *vm;
-
-	/* buffer attachment */
-	struct dma_buf *dmabuf;
-	struct dma_buf_attachment *attach;
-	struct sg_table *sgt;
-
-	/* context specific view to the buffer */
-	dma_addr_t addr;
-	size_t size;
-
-	struct kref kref;	/* reference to this buffer */
-
-	/* bookkeeping */
-	unsigned int user_map_count;	/* application view to the buffer */
-	unsigned int submit_map_count;	/* hw view to this buffer */
-	struct rb_node node;
-};
 
 struct nvhost_vm_pin {
 	/* list of pinned buffers */
@@ -114,6 +82,9 @@ static int insert_mapped_buffer(struct rb_root *root,
 static void nvhost_vm_destroy_buffer_locked(struct nvhost_vm_buffer *buffer)
 {
 	struct nvhost_vm *vm = buffer->vm;
+
+	if (vm_op().unpin_buffer)
+		vm_op().unpin_buffer(vm, buffer);
 
 	dma_buf_unmap_attachment(buffer->attach, buffer->sgt,
 				 DMA_BIDIRECTIONAL);
@@ -222,12 +193,21 @@ int nvhost_vm_map_dmabuf(struct nvhost_vm *vm, struct dma_buf *dmabuf,
 		goto err_map_attachment;
 	}
 
-	/* get dma address */
-	buffer->addr = sg_dma_address(buffer->sgt->sgl);
+	/* if pin function is defined.. */
+	if (vm_op().pin_buffer) {
+		/* .. use it to determine the device view on this buffer */
+		err = vm_op().pin_buffer(vm, buffer);
+		if (err)
+			goto err_pin;
+	} else {
+		/* otherwise assume that dma_buf mapped it into the correct
+		 * iova. just get the dma address */
+		buffer->addr = sg_dma_address(buffer->sgt->sgl);
 
-	/* handle physical addresses */
-	if (!buffer->addr)
-		buffer->addr = sg_phys(buffer->sgt->sgl);
+		/* handle physical addresses */
+		if (!buffer->addr)
+			buffer->addr = sg_phys(buffer->sgt->sgl);
+	}
 
 	/* add buffer to the buffer list to avoid duplicate mappings */
 	err = insert_mapped_buffer(&vm->buffer_list, buffer);
@@ -245,6 +225,7 @@ int nvhost_vm_map_dmabuf(struct nvhost_vm *vm, struct dma_buf *dmabuf,
 err_insert_buffer:
 	dma_buf_unmap_attachment(buffer->attach,
 			buffer->sgt, DMA_BIDIRECTIONAL);
+err_pin:
 err_map_attachment:
 	dma_buf_detach(dmabuf, buffer->attach);
 err_attach:
@@ -358,6 +339,9 @@ static void nvhost_vm_deinit(struct kref *kref)
 
 	mutex_unlock(&vm->mutex);
 
+	if (vm_op().deinit)
+		vm_op().deinit(vm);
+
 	kfree(vm);
 	vm = NULL;
 }
@@ -386,8 +370,16 @@ struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev)
 	kref_init(&vm->kref);
 	vm->pdev = pdev;
 
+	if (vm_op().init) {
+		int err = vm_op().init(vm);
+		if (err)
+			goto err_init_vm;
+	}
+
 	return vm;
 
+err_init_vm:
+	kfree(vm);
 err_alloc_vm:
 	return NULL;
 }

@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Virtual Memory
  *
- * Copyright (c) 2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,10 +19,52 @@
 #ifndef NVHOST_VM_H
 #define NVHOST_VM_H
 
+#include <linux/kref.h>
+
 struct platform_device;
-struct nvhost_vm;
 struct nvhost_vm_pin;
 struct dma_buf;
+struct dma_buf_attachment;
+struct sg_table;
+
+struct nvhost_vm {
+	struct platform_device *pdev;
+
+	struct kref kref;	/* reference to this VM */
+	struct mutex mutex;
+
+	/* rb-tree of buffers mapped into this VM */
+	struct rb_root buffer_list;
+
+	/* count of application viewed buffers mapped into this VM */
+	unsigned int num_user_mapped_buffers;
+
+	/* used by hardware layer */
+	void *private_data;
+};
+
+struct nvhost_vm_buffer {
+	struct nvhost_vm *vm;
+
+	/* buffer attachment */
+	struct dma_buf *dmabuf;
+	struct dma_buf_attachment *attach;
+	struct sg_table *sgt;
+
+	/* context specific view to the buffer */
+	dma_addr_t addr;
+	size_t size;
+
+	struct kref kref;	/* reference to this buffer */
+
+	/* bookkeeping */
+	unsigned int user_map_count;	/* application view to the buffer */
+	unsigned int submit_map_count;	/* hw view to this buffer */
+	struct rb_node node;
+
+	/* used by hardware layer */
+	void *private_data;
+};
 
 /**
  * nvhost_vm_pin_buffers - Pin mapped buffers to the hardware

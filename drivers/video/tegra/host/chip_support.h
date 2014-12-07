@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Chip Support
  *
- * Copyright (c) 2011-2014, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -44,6 +44,8 @@ struct mem_handle;
 struct mem_mgr;
 struct platform_device;
 struct host1x_actmon;
+struct nvhost_vm;
+struct nvhost_vm_buffer;
 
 struct nvhost_cdma_ops {
 	void (*start)(struct nvhost_cdma *);
@@ -57,6 +59,15 @@ struct nvhost_cdma_ops {
 				     u32 getptr);
 	void (*timeout_pb_cleanup)(struct nvhost_cdma *,
 				 u32 getptr, u32 nr_slots);
+};
+
+struct nvhost_vm_ops {
+	int (*init)(struct nvhost_vm *vm);
+	void (*deinit)(struct nvhost_vm *vm);
+	int (*pin_buffer)(struct nvhost_vm *vm,
+			  struct nvhost_vm_buffer *buffer);
+	void (*unpin_buffer)(struct nvhost_vm *vm,
+			     struct nvhost_vm_buffer *buffer);
 };
 
 struct nvhost_pushbuffer_ops {
@@ -155,6 +166,7 @@ struct nvhost_chip_support {
 	struct nvhost_intr_ops intr;
 	struct nvhost_dev_ops nvhost_dev;
 	struct nvhost_actmon_ops actmon;
+	struct nvhost_vm_ops vm;
 	void (*remove_support)(struct nvhost_chip_support *op);
 	void *priv;
 };
@@ -209,6 +221,7 @@ struct nvhost_chip_support *nvhost_get_chip_ops(void);
 #define intr_op()		(nvhost_get_chip_ops()->intr)
 #define cdma_op()		(nvhost_get_chip_ops()->cdma)
 #define cdma_pb_op()		(nvhost_get_chip_ops()->push_buffer)
+#define vm_op()			(nvhost_get_chip_ops()->vm)
 
 #define actmon_op()		(nvhost_get_chip_ops()->actmon)
 #define tickctrl_op()		(nvhost_get_chip_ops()->tickctrl)

@@ -177,7 +177,6 @@ static const struct gating_desc gm20b_blcg_bus[] = {
 
 /* blcg ctxsw firmware */
 static const struct gating_desc gm20b_blcg_ctxsw_firmware[] = {
-	{.addr = 0x00022400, .prod = 0x00000000, .disable = 0x00000000},
 };
 
 /* blcg fb */

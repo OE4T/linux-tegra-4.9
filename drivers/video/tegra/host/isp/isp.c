@@ -676,5 +676,5 @@ static void __exit isp_exit(void)
 	platform_driver_unregister(&isp_driver);
 }
 
-module_init(isp_init);
+late_initcall(isp_init);
 module_exit(isp_exit);

@@ -759,7 +759,8 @@ __releases(&cde_app->mutex)
 
 	mutex_lock(&cde_app->mutex);
 
-	WARN(!cde_ctx->in_use, "double release cde context %p", cde_ctx);
+	if (!cde_ctx->in_use)
+		gk20a_dbg_info("double release cde context %p", cde_ctx);
 
 	cde_ctx->in_use = false;
 	list_move(&cde_ctx->list, &cde_app->free_contexts);
@@ -1073,8 +1074,9 @@ __releases(&cde_app->mutex)
 
 	trace_gk20a_cde_finished_ctx_cb(cde_ctx);
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx, "cde: finished %p", cde_ctx);
-	WARN(!cde_ctx->in_use, "double finish cde context %p on channel %p",
-			cde_ctx, ch);
+	if (!cde_ctx->in_use)
+		gk20a_dbg_info("double finish cde context %p on channel %p",
+				cde_ctx, ch);
 
 	if (ch->has_timedout) {
 		if (cde_ctx->is_temporary) {
@@ -1097,8 +1099,8 @@ __releases(&cde_app->mutex)
 		}
 	}
 
-	/* delete temporary contexts later */
-	if (cde_ctx->is_temporary) {
+	/* delete temporary contexts later (watch for doubles) */
+	if (cde_ctx->is_temporary && cde_ctx->in_use) {
 		WARN_ON(delayed_work_pending(&cde_ctx->ctx_deleter_work));
 		schedule_delayed_work(&cde_ctx->ctx_deleter_work,
 			msecs_to_jiffies(CTX_DELETE_TIME));

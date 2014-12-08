@@ -545,13 +545,15 @@ int tegra_fb_update_modelist(struct tegra_dc *dc, int fblistindex)
 	return index;
 }
 
-int tegra_fb_get_mode(struct tegra_dc *dc) {
+static int tegra_fb_get_mode(struct tegra_dc *dc)
+{
 	if (!dc->fb->info->mode)
 		return -1;
 	return dc->fb->info->mode->refresh;
 }
 
-int tegra_fb_set_mode(struct tegra_dc *dc, int fps) {
+static int tegra_fb_set_mode(struct tegra_dc *dc, int fps)
+{
 	size_t stereo;
 	struct list_head *pos;
 	struct fb_videomode *best_mode = NULL;

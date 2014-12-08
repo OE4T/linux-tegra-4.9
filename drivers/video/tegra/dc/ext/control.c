@@ -28,7 +28,7 @@
 #endif
 
 #include "tegra_dc_ext_priv.h"
-
+#include "tegra_dc_ext.h"
 #ifdef CONFIG_COMPAT
 struct tegra_dc_ext_control_output_edid32 {
 	__u32 handle;

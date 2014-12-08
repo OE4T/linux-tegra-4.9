@@ -858,7 +858,7 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 	size = gr->global_ctx_buffer[PAGEPOOL].size /
 		gr_scc_pagepool_total_pages_byte_granularity_v();
 
-	if (size == gr->pagepool_default_size)
+	if (size == g->ops.gr.pagepool_default_size(g))
 		size = gr_scc_pagepool_total_pages_hwmax_v();
 
 	gk20a_dbg_info("pagepool buffer addr : 0x%016llx, size : %d",
@@ -2301,7 +2301,7 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	u32 cb_buffer_size = gr->bundle_cb_default_size *
 		gr_scc_bundle_cb_size_div_256b_byte_granularity_v();
 
-	u32 pagepool_buffer_size = gr->pagepool_default_size *
+	u32 pagepool_buffer_size = g->ops.gr.pagepool_default_size(g) *
 		gr_scc_pagepool_total_pages_byte_granularity_v();
 
 	gk20a_dbg_fn("");
@@ -3187,7 +3187,6 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	g->ops.gr.bundle_cb_defaults(g);
 	g->ops.gr.cb_size_default(g);
 	g->ops.gr.calc_global_ctx_buffer_size(g);
-	g->ops.gr.buffer_size_defaults(g);
 	gr->timeslice_mode = gr_gpcs_ppcs_cbm_cfg_timeslice_mode_enable_v();
 
 	gk20a_dbg_info("bundle_cb_default_size: %d",
@@ -7318,12 +7317,9 @@ void gk20a_resume_all_sms(struct gk20a *g)
 		gr_gpcs_tpcs_sm_dbgr_control0_r(), dbgr_control0);
 }
 
-static void gr_gk20a_buffer_size_defaults(struct gk20a *g)
+static u32 gr_gk20a_pagepool_default_size(struct gk20a *g)
 {
-	g->gr.pagepool_default_size =
-		gr_scc_pagepool_total_pages_hwmax_value_v();
-	g->gr.pagepool_max_size =
-		gr_scc_pagepool_total_pages_hwmax_value_v();
+	return gr_scc_pagepool_total_pages_hwmax_value_v();
 }
 
 void gk20a_init_gr_ops(struct gpu_ops *gops)
@@ -7362,6 +7358,6 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.detect_sm_arch = gr_gk20a_detect_sm_arch;
 	gops->gr.add_zbc_color = gr_gk20a_add_zbc_color;
 	gops->gr.add_zbc_depth = gr_gk20a_add_zbc_depth;
-	gops->gr.buffer_size_defaults = gr_gk20a_buffer_size_defaults;
+	gops->gr.pagepool_default_size = gr_gk20a_pagepool_default_size;
 }
 

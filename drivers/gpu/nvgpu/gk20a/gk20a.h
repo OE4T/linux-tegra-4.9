@@ -143,7 +143,7 @@ struct gpu_ops {
 				  struct zbc_entry *color_val, u32 index);
 		int (*add_zbc_depth)(struct gk20a *g, struct gr_gk20a *gr,
 				  struct zbc_entry *depth_val, u32 index);
-		void (*buffer_size_defaults)(struct gk20a *g);
+		u32 (*pagepool_default_size)(struct gk20a *g);
 	} gr;
 	const char *name;
 	struct {

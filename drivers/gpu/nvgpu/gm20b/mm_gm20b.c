@@ -280,7 +280,7 @@ static void gm20b_mm_set_big_page_size(struct gk20a *g,
 	gk20a_dbg_fn("done");
 }
 
-u32 gm20b_mm_get_big_page_sizes(void)
+static u32 gm20b_mm_get_big_page_sizes(void)
 {
 	return SZ_64K | SZ_128K;
 }

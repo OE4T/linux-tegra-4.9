@@ -1052,23 +1052,6 @@ static int gm20b_init_clk_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-struct clk *gm20b_clk_get(struct gk20a *g)
-{
-	if (!g->clk.tegra_clk) {
-		struct clk *clk;
-
-		clk = clk_get_sys("tegra_gk20a", "gpu");
-		if (IS_ERR(clk)) {
-			gk20a_err(dev_from_gk20a(g),
-				"fail to get tegra gpu clk tegra_gk20a/gpu");
-			return NULL;
-		}
-		g->clk.tegra_clk = clk;
-	}
-
-	return g->clk.tegra_clk;
-}
-
 static int gm20b_init_clk_setup_sw(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;

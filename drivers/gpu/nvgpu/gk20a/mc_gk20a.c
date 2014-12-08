@@ -117,6 +117,8 @@ irqreturn_t mc_gk20a_intr_thread_nonstall(struct gk20a *g)
 
 	if (mc_intr_1 & mc_intr_0_pfifo_pending_f())
 		gk20a_fifo_nonstall_isr(g);
+	if (mc_intr_1 & mc_intr_0_priv_ring_pending_f())
+		gk20a_priv_ring_isr(g);
 	if (mc_intr_1 & BIT(g->fifo.engine_info[ENGINE_GR_GK20A].intr_id))
 		gk20a_gr_nonstall_isr(g);
 	if (mc_intr_1 & BIT(g->fifo.engine_info[ENGINE_CE2_GK20A].intr_id)

@@ -66,11 +66,23 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	status0 = gk20a_readl(g, pri_ringmaster_intr_status0_r());
 	status1 = gk20a_readl(g, pri_ringmaster_intr_status1_r());
 
-	gk20a_dbg_info("ringmaster intr status0: 0x%08x,"
+	gk20a_dbg(gpu_dbg_intr, "ringmaster intr status0: 0x%08x,"
 		"status1: 0x%08x", status0, status1);
 
 	if (status0 & (0x1 | 0x2 | 0x4)) {
 		gk20a_reset_priv_ring(g);
+	}
+
+	if (status0 & 0x100) {
+		gk20a_dbg(gpu_dbg_intr, "SYS write error. ADR %08x WRDAT %08x INFO %08x, CODE %08x",
+			gk20a_readl(g, 0x122120), gk20a_readl(g, 0x122124), gk20a_readl(g, 0x122128),
+			gk20a_readl(g, 0x12212c));
+	}
+
+	if (status1 & 0x1) {
+		gk20a_dbg(gpu_dbg_intr, "GPC write error. ADR %08x WRDAT %08x INFO %08x, CODE %08x",
+			gk20a_readl(g, 0x128120), gk20a_readl(g, 0x128124), gk20a_readl(g, 0x128128),
+			gk20a_readl(g, 0x12812c));
 	}
 
 	cmd = gk20a_readl(g, pri_ringmaster_command_r());

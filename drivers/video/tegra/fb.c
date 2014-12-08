@@ -743,7 +743,6 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	int mode_idx;
 	unsigned stride;
 	struct fb_videomode m;
-	DEFINE_DMA_ATTRS(attrs);
 
 	if (!tegra_dc_get_window(dc, fb_data->win)) {
 		dev_err(&ndev->dev, "dc does not have a window at index %d\n",
@@ -766,16 +765,15 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	tegra_fb->win.idx = fb_data->win;
 
 	if (fb_mem) {
-		dma_set_attr(DMA_ATTR_WRITE_COMBINE, &attrs);
 		fb_size = resource_size(fb_mem);
+		tegra_fb->phys_start = fb_mem->start;
 
-		fb_base = dma_alloc_attrs(&ndev->dev,
-					  fb_size,
-					  &tegra_fb->phys_start,
-					  GFP_KERNEL,
-					  &attrs);
+		/* If the caller provided virtual address, meaning the buffer
+		 * is already mapped, just use that address */
+		fb_base = virt_addr ? virt_addr :
+			ioremap_wc(tegra_fb->phys_start, fb_size);
 		if (!fb_base) {
-			dev_err(&ndev->dev, "failed to allocate framebuffer\n");
+			dev_err(&ndev->dev, "fb can't be mapped\n");
 			ret = -EBUSY;
 			goto err_free;
 		}
@@ -879,8 +877,8 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	return tegra_fb;
 
 err_iounmap_fb:
-	dma_free_attrs(&ndev->dev, fb_size, fb_base, tegra_fb->phys_start,
-		       &attrs);
+	if (fb_base)
+		iounmap(fb_base);
 err_free:
 	framebuffer_release(info);
 err:
@@ -890,15 +888,6 @@ err:
 void tegra_fb_unregister(struct tegra_fb_info *fb_info)
 {
 	struct fb_info *info = fb_info->info;
-	phys_addr_t fb_size = resource_size(fb_info->fb_mem);
-	phys_addr_t fb_phys_start = fb_info->phys_start;
-	void *fb_base = fb_info->win.virt_addr;
-	struct device *dev = &fb_info->ndev->dev;
-	DEFINE_DMA_ATTRS(attrs);
-
-	dma_set_attr(DMA_ATTR_WRITE_COMBINE, &attrs);
-
-	dma_free_attrs(dev, fb_size, fb_base, fb_phys_start, &attrs);
 
 	unregister_framebuffer(info);
 

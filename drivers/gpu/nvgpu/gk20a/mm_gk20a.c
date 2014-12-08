@@ -1546,6 +1546,56 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 	return vaddr;
 }
 
+int gk20a_gmmu_alloc_map(struct vm_gk20a *vm,
+			 size_t size, struct mem_desc *mem)
+{
+	struct gk20a *g = vm->mm->g;
+	struct device *d = dev_from_gk20a(g);
+	int err;
+	struct sg_table *sgt;
+
+	mem->cpu_va = dma_alloc_coherent(d, size, &mem->iova, GFP_KERNEL);
+	if (!mem->cpu_va)
+		return -ENOMEM;
+
+	err = gk20a_get_sgtable(d, &sgt, mem->cpu_va, mem->iova, size);
+	if (err)
+		goto fail_free;
+
+	mem->gpu_va = gk20a_gmmu_map(vm, &sgt, size, 0, gk20a_mem_flag_none);
+	gk20a_free_sgtable(&sgt);
+	if (!mem->gpu_va) {
+		err = -ENOMEM;
+		goto fail_free;
+	}
+
+	mem->size = size;
+
+	return 0;
+
+fail_free:
+	dma_free_coherent(d, size, mem->cpu_va, mem->iova);
+	mem->cpu_va = NULL;
+	mem->iova = 0;
+
+	return err;
+}
+
+void gk20a_gmmu_unmap_free(struct vm_gk20a *vm, struct mem_desc *mem)
+{
+	struct gk20a *g = vm->mm->g;
+	struct device *d = dev_from_gk20a(g);
+
+	if (mem->gpu_va)
+		gk20a_gmmu_unmap(vm, mem->gpu_va, mem->size, gk20a_mem_flag_none);
+	mem->gpu_va = 0;
+
+	if (mem->cpu_va)
+		dma_free_coherent(d, mem->size, mem->cpu_va, mem->iova);
+	mem->cpu_va = NULL;
+	mem->iova = 0;
+}
+
 dma_addr_t gk20a_mm_gpuva_to_iova_base(struct vm_gk20a *vm, u64 gpu_vaddr)
 {
 	struct mapped_buffer_node *buffer;

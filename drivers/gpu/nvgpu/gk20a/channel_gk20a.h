@@ -59,7 +59,6 @@ struct fence {
 /* contexts associated with a channel */
 struct channel_ctx_gk20a {
 	struct gr_ctx_desc	*gr_ctx;
-	struct pm_ctx_desc	pm_ctx;
 	struct patch_desc	patch_ctx;
 	struct zcull_ctx_desc	zcull_ctx;
 	u64	global_ctx_buffer_va[NR_GLOBAL_CTX_BUF_VA];

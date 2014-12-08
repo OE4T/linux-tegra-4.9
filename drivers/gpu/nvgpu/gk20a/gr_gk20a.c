@@ -1618,11 +1618,9 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 		 virt_addr_hi);
 
 	/* no user for client managed performance counter ctx */
-	ch_ctx->pm_ctx.ctx_sw_mode =
-		ctxsw_prog_main_image_pm_mode_no_ctxsw_f();
 	data = gk20a_mem_rd32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0);
 	data = data & ~ctxsw_prog_main_image_pm_mode_m();
-	data |= ch_ctx->pm_ctx.ctx_sw_mode;
+	data |= ctxsw_prog_main_image_pm_mode_no_ctxsw_f();
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0,
 		 data);
 

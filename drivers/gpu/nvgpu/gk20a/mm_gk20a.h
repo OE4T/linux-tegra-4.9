@@ -42,9 +42,10 @@
 	} while (0)
 
 struct mem_desc {
-	struct dma_buf *ref;
-	struct sg_table *sgt;
-	u32 size;
+	void *cpu_va;
+	dma_addr_t iova;
+	size_t size;
+	u64 gpu_va;
 };
 
 struct mem_desc_sub {
@@ -123,14 +124,6 @@ struct priv_cmd_queue_mem_desc {
 };
 
 struct zcull_ctx_desc {
-	struct mem_desc mem;
-	u64 gpu_va;
-	u32 ctx_attr;
-	u32 ctx_sw_mode;
-};
-
-struct pm_ctx_desc {
-	struct mem_desc mem;
 	u64 gpu_va;
 	u32 ctx_attr;
 	u32 ctx_sw_mode;
@@ -426,6 +419,13 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 		u64 size,
 		u32 flags,
 		int rw_flag);
+
+int gk20a_gmmu_alloc_map(struct vm_gk20a *vm,
+		size_t size,
+		struct mem_desc *mem);
+
+void gk20a_gmmu_unmap_free(struct vm_gk20a *vm,
+		struct mem_desc *mem);
 
 u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			u64 map_offset,

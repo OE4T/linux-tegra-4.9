@@ -61,6 +61,9 @@ enum gk20a_cbc_op {
 	gk20a_cbc_op_invalidate,
 };
 
+#define MC_INTR_UNIT_DISABLE	false
+#define MC_INTR_UNIT_ENABLE		true
+
 struct gpu_ops {
 	struct {
 		int (*determine_L2_size_bytes)(struct gk20a *gk20a);
@@ -360,10 +363,13 @@ struct gpu_ops {
 	} regops;
 	struct {
 		void (*intr_enable)(struct gk20a *g);
+		void (*intr_unit_config)(struct gk20a *g,
+				bool enable, bool is_stalling, u32 unit);
 		irqreturn_t (*isr_stall)(struct gk20a *g);
 		irqreturn_t (*isr_nonstall)(struct gk20a *g);
 		irqreturn_t (*isr_thread_stall)(struct gk20a *g);
 		irqreturn_t (*isr_thread_nonstall)(struct gk20a *g);
+		u32 intr_mask_restore[4];
 	} mc;
 };
 

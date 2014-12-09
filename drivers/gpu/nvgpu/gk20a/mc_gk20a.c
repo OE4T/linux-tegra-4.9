@@ -137,9 +137,27 @@ void mc_gk20a_intr_enable(struct gk20a *g)
 		mc_intr_en_0_inta_hardware_f());
 }
 
+void mc_gk20a_intr_unit_config(struct gk20a *g, bool enable,
+		bool is_stalling, u32 mask)
+{
+	u32 mask_reg = (is_stalling ? mc_intr_mask_0_r() :
+					mc_intr_mask_1_r());
+
+	if (enable) {
+		gk20a_writel(g, mask_reg,
+			gk20a_readl(g, mask_reg) |
+			mask);
+	} else {
+		gk20a_writel(g, mask_reg,
+			gk20a_readl(g, mask_reg) &
+			~mask);
+	}
+}
+
 void gk20a_init_mc(struct gpu_ops *gops)
 {
 	gops->mc.intr_enable = mc_gk20a_intr_enable;
+	gops->mc.intr_unit_config = mc_gk20a_intr_unit_config;
 	gops->mc.isr_stall = mc_gk20a_isr_stall;
 	gops->mc.isr_nonstall = mc_gk20a_isr_nonstall;
 	gops->mc.isr_thread_stall = mc_gk20a_intr_thread_stall;

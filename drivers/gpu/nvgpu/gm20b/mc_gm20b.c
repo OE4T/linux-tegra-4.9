@@ -22,6 +22,7 @@
 void gm20b_init_mc(struct gpu_ops *gops)
 {
 	gops->mc.intr_enable = mc_gk20a_intr_enable;
+	gops->mc.intr_unit_config = mc_gk20a_intr_unit_config;
 	gops->mc.isr_stall = mc_gk20a_isr_stall;
 	gops->mc.isr_nonstall = mc_gk20a_isr_nonstall;
 	gops->mc.isr_thread_stall = mc_gk20a_intr_thread_stall;

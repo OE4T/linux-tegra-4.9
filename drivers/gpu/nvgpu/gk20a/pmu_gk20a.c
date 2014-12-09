@@ -1178,12 +1178,10 @@ void pmu_enable_irq(struct pmu_gk20a *pmu, bool enable)
 
 	gk20a_dbg_fn("");
 
-	gk20a_writel(g, mc_intr_mask_0_r(),
-		gk20a_readl(g, mc_intr_mask_0_r()) &
-		~mc_intr_mask_0_pmu_enabled_f());
-	gk20a_writel(g, mc_intr_mask_1_r(),
-		gk20a_readl(g, mc_intr_mask_1_r()) &
-		~mc_intr_mask_1_pmu_enabled_f());
+	g->ops.mc.intr_unit_config(g, MC_INTR_UNIT_DISABLE, true,
+			mc_intr_mask_0_pmu_enabled_f());
+	g->ops.mc.intr_unit_config(g, MC_INTR_UNIT_DISABLE, false,
+			mc_intr_mask_1_pmu_enabled_f());
 
 	gk20a_writel(g, pwr_falcon_irqmclr_r(),
 		pwr_falcon_irqmclr_gptmr_f(1)  |
@@ -1229,9 +1227,8 @@ void pmu_enable_irq(struct pmu_gk20a *pmu, bool enable)
 			pwr_falcon_irqmset_swgen0_f(1) |
 			pwr_falcon_irqmset_swgen1_f(1));
 
-		gk20a_writel(g, mc_intr_mask_0_r(),
-			gk20a_readl(g, mc_intr_mask_0_r()) |
-			mc_intr_mask_0_pmu_enabled_f());
+		g->ops.mc.intr_unit_config(g, MC_INTR_UNIT_ENABLE, true,
+				mc_intr_mask_0_pmu_enabled_f());
 	}
 
 	gk20a_dbg_fn("done");

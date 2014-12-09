@@ -23,17 +23,44 @@ void mc_gp10b_intr_enable(struct gk20a *g)
 {
 	u32 eng_intr_mask = gk20a_fifo_engine_interrupt_mask(g);
 
-	gk20a_writel(g, mc_intr_en_clear_r(0), 0xffffffff);
-	gk20a_writel(g, mc_intr_en_set_r(0),
-		     mc_intr_pfifo_pending_f()
-		     | eng_intr_mask);
-	gk20a_writel(g, mc_intr_en_clear_r(1), 0xffffffff);
-	gk20a_writel(g, mc_intr_en_set_r(1),
-		     mc_intr_pfifo_pending_f()
-		     | mc_intr_priv_ring_pending_f()
-		     | mc_intr_ltc_pending_f()
-		     | mc_intr_pbus_pending_f()
-		     | eng_intr_mask);
+	gk20a_writel(g, mc_intr_en_clear_r(NVGPU_MC_INTR_STALLING),
+				0xffffffff);
+	g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_STALLING] =
+				mc_intr_pfifo_pending_f()
+				| eng_intr_mask;
+	gk20a_writel(g, mc_intr_en_set_r(NVGPU_MC_INTR_STALLING),
+			g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_STALLING]);
+
+	gk20a_writel(g, mc_intr_en_clear_r(NVGPU_MC_INTR_NONSTALLING),
+				0xffffffff);
+	g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_NONSTALLING] =
+				mc_intr_pfifo_pending_f()
+			     | mc_intr_priv_ring_pending_f()
+			     | mc_intr_ltc_pending_f()
+			     | mc_intr_pbus_pending_f()
+			     | eng_intr_mask;
+	gk20a_writel(g, mc_intr_en_set_r(NVGPU_MC_INTR_NONSTALLING),
+			g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_NONSTALLING]);
+}
+
+void mc_gp10b_intr_unit_config(struct gk20a *g, bool enable,
+		bool is_stalling, u32 mask)
+{
+	u32 intr_index = 0;
+	u32 reg = 0;
+
+	intr_index = (is_stalling ? NVGPU_MC_INTR_STALLING :
+			NVGPU_MC_INTR_NONSTALLING);
+	if (enable) {
+		reg = mc_intr_en_set_r(intr_index);
+		g->ops.mc.intr_mask_restore[intr_index] |= mask;
+
+	} else {
+		reg = mc_intr_en_clear_r(intr_index);
+		g->ops.mc.intr_mask_restore[intr_index] &= ~mask;
+	}
+
+	gk20a_writel(g, reg, mask);
 }
 
 irqreturn_t mc_gp10b_isr_stall(struct gk20a *g)
@@ -73,7 +100,6 @@ irqreturn_t mc_gp10b_isr_nonstall(struct gk20a *g)
 irqreturn_t mc_gp10b_intr_thread_stall(struct gk20a *g)
 {
 	u32 mc_intr_0;
-	u32 eng_intr_mask = gk20a_fifo_engine_interrupt_mask(g);
 
 	gk20a_dbg(gpu_dbg_intr, "interrupt thread launched");
 
@@ -94,9 +120,8 @@ irqreturn_t mc_gp10b_intr_thread_stall(struct gk20a *g)
 	if (mc_intr_0 & mc_intr_pbus_pending_f())
 		gk20a_pbus_isr(g);
 
-	gk20a_writel(g, mc_intr_en_set_r(0),
-		     mc_intr_pfifo_pending_f()
-		     | eng_intr_mask);
+	gk20a_writel(g, mc_intr_en_set_r(NVGPU_MC_INTR_STALLING),
+			g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_STALLING]);
 
 	return IRQ_HANDLED;
 }
@@ -104,7 +129,6 @@ irqreturn_t mc_gp10b_intr_thread_stall(struct gk20a *g)
 irqreturn_t mc_gp10b_intr_thread_nonstall(struct gk20a *g)
 {
 	u32 mc_intr_1;
-	u32 eng_intr_mask = gk20a_fifo_engine_interrupt_mask(g);
 
 	gk20a_dbg(gpu_dbg_intr, "interrupt thread launched");
 
@@ -117,12 +141,8 @@ irqreturn_t mc_gp10b_intr_thread_nonstall(struct gk20a *g)
 	if (mc_intr_1 & BIT(g->fifo.engine_info[ENGINE_GR_GK20A].intr_id))
 		gk20a_gr_nonstall_isr(g);
 
-	gk20a_writel(g, mc_intr_en_set_r(1),
-		     mc_intr_pfifo_pending_f()
-		     | mc_intr_priv_ring_pending_f()
-		     | mc_intr_ltc_pending_f()
-		     | mc_intr_pbus_pending_f()
-		     | eng_intr_mask);
+	gk20a_writel(g, mc_intr_en_set_r(NVGPU_MC_INTR_NONSTALLING),
+			g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_NONSTALLING]);
 
 	return IRQ_HANDLED;
 }
@@ -130,6 +150,7 @@ irqreturn_t mc_gp10b_intr_thread_nonstall(struct gk20a *g)
 void gp10b_init_mc(struct gpu_ops *gops)
 {
 	gops->mc.intr_enable = mc_gp10b_intr_enable;
+	gops->mc.intr_unit_config = mc_gp10b_intr_unit_config;
 	gops->mc.isr_stall = mc_gp10b_isr_stall;
 	gops->mc.isr_nonstall = mc_gp10b_isr_nonstall;
 	gops->mc.isr_thread_stall = mc_gp10b_intr_thread_stall;

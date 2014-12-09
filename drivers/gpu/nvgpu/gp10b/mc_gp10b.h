@@ -15,8 +15,15 @@
 #define MC_GP20B_H
 struct gk20a;
 
+enum MC_INTERRUPT_REGLIST {
+	NVGPU_MC_INTR_STALLING = 0,
+	NVGPU_MC_INTR_NONSTALLING,
+};
+
 void gp10b_init_mc(struct gpu_ops *gops);
 void mc_gp10b_intr_enable(struct gk20a *g);
+void mc_gp10b_intr_unit_config(struct gk20a *g, bool enable,
+		bool is_stalling, u32 mask);
 irqreturn_t mc_gp10b_isr_stall(struct gk20a *g);
 irqreturn_t mc_gp10b_isr_nonstall(struct gk20a *g);
 irqreturn_t mc_gp10b_intr_thread_stall(struct gk20a *g);

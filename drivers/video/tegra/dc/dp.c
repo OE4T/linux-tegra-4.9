@@ -1620,6 +1620,8 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	struct device_node *np_dp =
 		(dc->ndev->id) ? of_find_node_by_path(DPAUX1_NODE)
 		: of_find_node_by_path(DPAUX_NODE);
+	struct device_node *np_panel = NULL;
+	bool virtual_edid = false;
 
 	dp = devm_kzalloc(&dc->ndev->dev, sizeof(*dp), GFP_KERNEL);
 	if (!dp) {
@@ -1637,6 +1639,11 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 			}
 			of_address_to_resource(np_dp, 0, &of_dp_res);
 			res = &of_dp_res;
+			np_panel = tegra_get_panel_node_out_type_check(dc,
+				TEGRA_DC_OUT_DP);
+			if (np_panel && of_device_is_available(np_panel))
+				virtual_edid = of_property_read_bool(np_panel,
+					"nvidia,edid");
 		} else {
 			err = -EINVAL;
 			goto err_free_dp;
@@ -1728,7 +1735,12 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	}
 
 	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
-		dp->dp_edid = tegra_edid_create(dc, tegra_dc_dp_i2c_xfer);
+		if (virtual_edid)
+			dp->dp_edid = tegra_edid_create(dc,
+							tegra_dc_edid_blob);
+		else
+			dp->dp_edid = tegra_edid_create(dc,
+							tegra_dc_dp_i2c_xfer);
 		if (IS_ERR_OR_NULL(dp->dp_edid)) {
 			dev_err(&dc->ndev->dev,
 				"dp: failed to create edid obj\n");

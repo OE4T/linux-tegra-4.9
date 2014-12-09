@@ -254,4 +254,20 @@ static inline u32 ctxsw_prog_main_image_full_preemption_ptr_o(void)
 {
 	return 0x00000068;
 }
+static inline u32 ctxsw_prog_main_image_compute_preemption_options_o(void)
+{
+	return 0x00000084;
+}
+static inline u32 ctxsw_prog_main_image_compute_preemption_options_control_f(u32 v)
+{
+	return (v & 0x3) << 0;
+}
+static inline u32 ctxsw_prog_main_image_compute_preemption_options_control_cta_f(void)
+{
+	return 0x1;
+}
+static inline u32 ctxsw_prog_main_image_compute_preemption_options_control_cilp_f(void)
+{
+	return 0x2;
+}
 #endif

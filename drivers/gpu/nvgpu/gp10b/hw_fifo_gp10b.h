@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -177,6 +177,10 @@ static inline u32 fifo_intr_0_lb_error_pending_f(void)
 static inline u32 fifo_intr_0_lb_error_reset_f(void)
 {
 	return 0x1000000;
+}
+static inline u32 fifo_intr_0_replayable_fault_error_pending_f(void)
+{
+	return 0x2000000;
 }
 static inline u32 fifo_intr_0_dropped_mmu_fault_pending_f(void)
 {
@@ -523,6 +527,130 @@ static inline u32 fifo_pbdma_status_chsw_v(u32 r)
 	return (r >> 15) & 0x1;
 }
 static inline u32 fifo_pbdma_status_chsw_in_progress_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_replay_fault_buffer_lo_r(void)
+{
+	return 0x00002a70;
+}
+static inline u32 fifo_replay_fault_buffer_lo_enable_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 fifo_replay_fault_buffer_lo_enable_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_replay_fault_buffer_lo_enable_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_replay_fault_buffer_lo_base_f(u32 v)
+{
+	return (v & 0xfffff) << 12;
+}
+static inline u32 fifo_replay_fault_buffer_lo_base_reset_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_replay_fault_buffer_hi_r(void)
+{
+	return 0x00002a74;
+}
+static inline u32 fifo_replay_fault_buffer_hi_base_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
+static inline u32 fifo_replay_fault_buffer_hi_base_reset_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_replay_fault_buffer_size_r(void)
+{
+	return 0x00002a78;
+}
+static inline u32 fifo_replay_fault_buffer_size_hw_f(u32 v)
+{
+	return (v & 0x1ff) << 0;
+}
+static inline u32 fifo_replay_fault_buffer_size_hw_entries_v(void)
+{
+	return 0x000000c0;
+}
+static inline u32 fifo_replay_fault_buffer_get_r(void)
+{
+	return 0x00002a7c;
+}
+static inline u32 fifo_replay_fault_buffer_get_offset_hw_f(u32 v)
+{
+	return (v & 0x1ff) << 0;
+}
+static inline u32 fifo_replay_fault_buffer_get_offset_hw_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_replay_fault_buffer_put_r(void)
+{
+	return 0x00002a80;
+}
+static inline u32 fifo_replay_fault_buffer_put_offset_hw_f(u32 v)
+{
+	return (v & 0x1ff) << 0;
+}
+static inline u32 fifo_replay_fault_buffer_put_offset_hw_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_replay_fault_buffer_info_r(void)
+{
+	return 0x00002a84;
+}
+static inline u32 fifo_replay_fault_buffer_info_overflow_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 fifo_replay_fault_buffer_info_overflow_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_replay_fault_buffer_info_overflow_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_replay_fault_buffer_info_overflow_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_replay_fault_buffer_info_write_nack_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 fifo_replay_fault_buffer_info_write_nack_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_replay_fault_buffer_info_write_nack_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_replay_fault_buffer_info_write_nack_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_replay_fault_buffer_info_fault_while_buffer_disabled_f(u32 v)
+{
+	return (v & 0x1) << 28;
+}
+static inline u32 fifo_replay_fault_buffer_info_fault_while_buffer_disabled_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_replay_fault_buffer_info_fault_while_buffer_disabled_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_replay_fault_buffer_info_fault_while_buffer_disabled_clear_v(void)
 {
 	return 0x00000001;
 }

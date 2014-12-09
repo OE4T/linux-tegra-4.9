@@ -632,8 +632,10 @@ static int nvhost_ioctl_channel_map_buffer(struct nvhost_channel_userctx *ctx,
 
 		/* validate dmabuf fd */
 		dmabuf = dma_buf_get(buffers[i].dmabuf_fd);
-		if (IS_ERR(dmabuf))
+		if (IS_ERR(dmabuf)) {
+			err = PTR_ERR(dmabuf);
 			goto err_map_buffers;
+		}
 
 		/* map it into context vm */
 		err = nvhost_vm_map_dmabuf(ctx->vm, dmabuf,

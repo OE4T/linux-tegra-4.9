@@ -275,9 +275,12 @@ static struct snd_soc_dai_ops tegra210_mixer_in_dai_ops = {
 		.playback = {					\
 			.stream_name = #sname #id " Receive",	\
 			.channels_min = 1,			\
-			.channels_max = 2, 		\
-			.rates = SNDRV_PCM_RATE_8000_96000, \
-			.formats = SNDRV_PCM_FMTBIT_S16_LE, \
+			.channels_max = 8,		\
+			.rates = SNDRV_PCM_RATE_8000_192000,		\
+			.formats = SNDRV_PCM_FMTBIT_S8 |		\
+				SNDRV_PCM_FMTBIT_S16_LE |		\
+				SNDRV_PCM_FMTBIT_S24_LE |		\
+				SNDRV_PCM_FMTBIT_S32_LE,		\
 		},						\
 		.ops = dai_ops,		\
 	}
@@ -288,9 +291,12 @@ static struct snd_soc_dai_ops tegra210_mixer_in_dai_ops = {
 		.capture = {					\
 			.stream_name = #sname #id " Transmit",	\
 			.channels_min = 1,			\
-			.channels_max = 2,			\
-			.rates = SNDRV_PCM_RATE_8000_96000,	\
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,	\
+			.channels_max = 8,			\
+			.rates = SNDRV_PCM_RATE_8000_192000,		\
+			.formats = SNDRV_PCM_FMTBIT_S8 |		\
+				SNDRV_PCM_FMTBIT_S16_LE |		\
+				SNDRV_PCM_FMTBIT_S24_LE |		\
+				SNDRV_PCM_FMTBIT_S32_LE,		\
 		},						\
 		.ops = dai_ops,		\
 	}

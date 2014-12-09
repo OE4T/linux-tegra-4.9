@@ -150,10 +150,14 @@ struct gr_ctx_desc {
 	u64 iova;
 	size_t size;
 	u64 gpu_va;
+	int preempt_mode;
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct gr_ctx_desc_t18x t18x;
 #endif
 };
+
+#define NVGPU_GR_PREEMPTION_MODE_WFI		0
+#define NVGPU_GR_PREEMPTION_MODE_CTA		2
 
 struct compbit_store_desc {
 	struct page **pages;

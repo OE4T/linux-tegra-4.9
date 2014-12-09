@@ -151,7 +151,7 @@ struct gpu_ops {
 		int (*init_ctx_state)(struct gk20a *g);
 		int (*alloc_gr_ctx)(struct gk20a *g,
 			  struct gr_ctx_desc **__gr_ctx, struct vm_gk20a *vm,
-			  u32 padding);
+			  u32 class, u32 padding);
 		void (*free_gr_ctx)(struct gk20a *g,
 			  struct vm_gk20a *vm,
 			  struct gr_ctx_desc *gr_ctx);

@@ -67,7 +67,8 @@ static void gr_gk20a_unmap_global_ctx_buffers(struct channel_gk20a *c);
 
 /* channel gr ctx buffer */
 static int  gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
-					struct channel_gk20a *c, u32 padding);
+					struct channel_gk20a *c,
+					u32 class, u32 padding);
 static void gr_gk20a_free_channel_gr_ctx(struct channel_gk20a *c);
 
 /* channel patch ctx buffer */
@@ -2486,6 +2487,7 @@ static void gr_gk20a_unmap_global_ctx_buffers(struct channel_gk20a *c)
 
 int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 			  struct gr_ctx_desc **__gr_ctx, struct vm_gk20a *vm,
+			  u32 class,
 			  u32 padding)
 {
 	struct gr_ctx_desc *gr_ctx = NULL;
@@ -2551,7 +2553,7 @@ int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 }
 
 static int gr_gk20a_alloc_tsg_gr_ctx(struct gk20a *g,
-			struct tsg_gk20a *tsg, u32 padding)
+			struct tsg_gk20a *tsg, u32 class, u32 padding)
 {
 	struct gr_ctx_desc **gr_ctx = &tsg->tsg_gr_ctx;
 	int err;
@@ -2561,7 +2563,7 @@ static int gr_gk20a_alloc_tsg_gr_ctx(struct gk20a *g,
 		return -ENOMEM;
 	}
 
-	err = g->ops.gr.alloc_gr_ctx(g, gr_ctx, tsg->vm, padding);
+	err = g->ops.gr.alloc_gr_ctx(g, gr_ctx, tsg->vm, class, padding);
 	if (err)
 		return err;
 
@@ -2570,10 +2572,11 @@ static int gr_gk20a_alloc_tsg_gr_ctx(struct gk20a *g,
 
 static int gr_gk20a_alloc_channel_gr_ctx(struct gk20a *g,
 				struct channel_gk20a *c,
+				u32 class,
 				u32 padding)
 {
 	struct gr_ctx_desc **gr_ctx = &c->ch_ctx.gr_ctx;
-	int err = g->ops.gr.alloc_gr_ctx(g, gr_ctx, c->vm, padding);
+	int err = g->ops.gr.alloc_gr_ctx(g, gr_ctx, c->vm, class, padding);
 	if (err)
 		return err;
 
@@ -2767,6 +2770,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 	if (!tsg) {
 		if (!ch_ctx->gr_ctx) {
 			err = gr_gk20a_alloc_channel_gr_ctx(g, c,
+							    args->class_num,
 							    args->padding);
 			if (err) {
 				gk20a_err(dev_from_gk20a(g),
@@ -2786,7 +2790,9 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		if (!tsg->tsg_gr_ctx) {
 			tsg->vm = c->vm;
 			gk20a_vm_get(tsg->vm);
-			err = gr_gk20a_alloc_tsg_gr_ctx(g, tsg, args->padding);
+			err = gr_gk20a_alloc_tsg_gr_ctx(g, tsg,
+							args->class_num,
+							args->padding);
 			if (err) {
 				gk20a_err(dev_from_gk20a(g),
 					"fail to allocate TSG gr ctx buffer");

@@ -775,6 +775,46 @@ static u32 gr_gm20b_pagepool_default_size(struct gk20a *g)
 	return gr_scc_pagepool_total_pages_hwmax_value_v();
 }
 
+int gr_gm20b_alloc_gr_ctx(struct gk20a *g,
+			  struct gr_ctx_desc **gr_ctx, struct vm_gk20a *vm,
+			  u32 class,
+			  u32 flags)
+{
+	int err;
+
+	gk20a_dbg_fn("");
+
+	err = gr_gk20a_alloc_gr_ctx(g, gr_ctx, vm, class, flags);
+	if (err)
+		return err;
+
+	if (class == MAXWELL_COMPUTE_B)
+		(*gr_ctx)->preempt_mode = NVGPU_GR_PREEMPTION_MODE_CTA;
+
+	gk20a_dbg_fn("done");
+
+	return 0;
+}
+
+static void gr_gm20b_update_ctxsw_preemption_mode(struct gk20a *g,
+		struct channel_ctx_gk20a *ch_ctx,
+		void *ctx_ptr)
+{
+	struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
+	u32 cta_preempt_option =
+		ctxsw_prog_main_image_preemption_options_control_cta_enabled_f();
+
+	gk20a_dbg_fn("");
+
+	if (gr_ctx->preempt_mode == NVGPU_GR_PREEMPTION_MODE_CTA) {
+		gk20a_dbg_info("CTA: %x", cta_preempt_option);
+		gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_preemption_options_o(), 0,
+				cta_preempt_option);
+	}
+
+	gk20a_dbg_fn("done");
+}
+
 void gm20b_init_gr(struct gpu_ops *gops)
 {
 	gops->gr.init_gpc_mmu = gr_gm20b_init_gpc_mmu;
@@ -814,6 +854,8 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.add_zbc_depth = gr_gk20a_add_zbc_depth;
 	gops->gr.pagepool_default_size = gr_gm20b_pagepool_default_size;
 	gops->gr.init_ctx_state = gr_gk20a_init_ctx_state;
-	gops->gr.alloc_gr_ctx = gr_gk20a_alloc_gr_ctx;
+	gops->gr.alloc_gr_ctx = gr_gm20b_alloc_gr_ctx;
 	gops->gr.free_gr_ctx = gr_gk20a_free_gr_ctx;
+	gops->gr.update_ctxsw_preemption_mode =
+		gr_gm20b_update_ctxsw_preemption_mode;
 }

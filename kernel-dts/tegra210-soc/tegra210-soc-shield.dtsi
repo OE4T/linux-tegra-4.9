@@ -523,4 +523,8 @@
 			status = "okay";
 		};
 	};
+
+	mselect {
+		status = "okay";
+	};
 };

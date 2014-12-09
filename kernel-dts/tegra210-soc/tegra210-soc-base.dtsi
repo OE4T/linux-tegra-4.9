@@ -1360,4 +1360,11 @@
 		      <0x0 0x72820000 0x0 0x1000>, /* funnel_minor */
 		      <0x0 0x72a1c000 0x0 0x1000>; /* ape */
 	};
+
+	mselect {
+		compatible = "nvidia,tegra-mselect";
+		interrupts = < 0 175 0x4 >;
+		reg = < 0x0 0x50060000 0x0 0x1000 >;
+		status = "disabled";
+	};
 };

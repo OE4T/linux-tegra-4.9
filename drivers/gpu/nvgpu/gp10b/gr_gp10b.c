@@ -510,13 +510,14 @@ static int gr_gp10b_init_ctx_state(struct gk20a *g)
 
 int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 			  struct gr_ctx_desc **gr_ctx, struct vm_gk20a *vm,
+			  u32 class,
 			  u32 flags)
 {
 	int err;
 
 	gk20a_dbg_fn("");
 
-	err = gr_gk20a_alloc_gr_ctx(g, gr_ctx, vm, flags);
+	err = gr_gk20a_alloc_gr_ctx(g, gr_ctx, vm, class, flags);
 	if (err)
 		return err;
 
@@ -566,8 +567,14 @@ int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 			goto fail_free_betacb;
 		}
 
-		(*gr_ctx)->t18x.preempt_mode = flags;
+		(*gr_ctx)->preempt_mode = flags;
 	}
+
+	if (class == PASCAL_COMPUTE_A)
+		if (flags == NVGPU_GR_PREEMPTION_MODE_CILP)
+			(*gr_ctx)->preempt_mode = NVGPU_GR_PREEMPTION_MODE_CILP;
+		else
+			(*gr_ctx)->preempt_mode = NVGPU_GR_PREEMPTION_MODE_CTA;
 
 	gk20a_dbg_fn("done");
 
@@ -610,14 +617,22 @@ static void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 	struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
 	u32 gfxp_preempt_option =
 		ctxsw_prog_main_image_graphics_preemption_options_control_gfxp_f();
+	u32 cilp_preempt_option =
+		ctxsw_prog_main_image_compute_preemption_options_control_cilp_f();
 	int err;
 
 	gk20a_dbg_fn("");
 
-	if (gr_ctx->t18x.preempt_mode == NVGPU_GR_PREEMPTION_MODE_GFXP) {
+	if (gr_ctx->preempt_mode == NVGPU_GR_PREEMPTION_MODE_GFXP) {
 		gk20a_dbg_info("GfxP: %x", gfxp_preempt_option);
 		gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_graphics_preemption_options_o(), 0,
 				gfxp_preempt_option);
+	}
+
+	if (gr_ctx->preempt_mode == NVGPU_GR_PREEMPTION_MODE_CILP) {
+		gk20a_dbg_info("CILP: %x", cilp_preempt_option);
+		gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_compute_preemption_options_o(), 0,
+				cilp_preempt_option);
 	}
 
 	if (gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va) {

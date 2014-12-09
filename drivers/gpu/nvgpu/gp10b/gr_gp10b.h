@@ -39,14 +39,13 @@ struct gr_t18x {
 };
 
 struct gr_ctx_desc_t18x {
-	int preempt_mode;
 	struct mem_desc preempt_ctxsw_buffer;
 	struct mem_desc spill_ctxsw_buffer;
 	struct mem_desc betacb_ctxsw_buffer;
 	struct mem_desc pagepool_ctxsw_buffer;
 };
 
-#define NVGPU_GR_PREEMPTION_MODE_WFI		0
 #define NVGPU_GR_PREEMPTION_MODE_GFXP		1
+#define NVGPU_GR_PREEMPTION_MODE_CILP		3
 
 #endif

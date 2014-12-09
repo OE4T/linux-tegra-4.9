@@ -260,6 +260,7 @@
 		reg = <0x0 0x7009f000 0x0 0x1000>;
 		#extcon-cells = <1>;
 		status = "disabled";
+		dt-override-status-odm-data = <0x1000000 0x1000000>;
 	};
 
 	psy_extcon_xudc {
@@ -271,6 +272,7 @@
 				"qc2-charger", "downstream-charger", "slow-charger",
 				"apple-500ma", "apple-1a", "apple-2a";
 		status = "disabled";
+		dt-override-status-odm-data = <0x1000000 0x1000000>;
 	};
 
         psy_extcon {

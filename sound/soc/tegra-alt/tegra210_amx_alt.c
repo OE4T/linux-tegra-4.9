@@ -114,12 +114,12 @@ static void tegra210_amx_disable_instream(struct tegra210_amx *amx,
  * @mask1: enable for bytes 31 ~ 0
  * @mask2: enable for bytes 63 ~ 32
  */
-static void tegra210_amx_set_out_byte_mask(struct tegra210_amx *amx,
-					unsigned int mask1,
-					unsigned int mask2)
+static void tegra210_amx_set_out_byte_mask(struct tegra210_amx *amx)
 {
-	regmap_write(amx->regmap, TEGRA210_AMX_OUT_BYTE_EN0, mask1);
-	regmap_write(amx->regmap, TEGRA210_AMX_OUT_BYTE_EN1, mask2);
+	regmap_write(amx->regmap,
+		TEGRA210_AMX_OUT_BYTE_EN0, amx->byte_mask[0]);
+	regmap_write(amx->regmap,
+		TEGRA210_AMX_OUT_BYTE_EN1, amx->byte_mask[1]);
 }
 
 /**
@@ -292,6 +292,12 @@ static int tegra210_amx_runtime_resume(struct device *dev)
 	regcache_cache_only(amx->regmap, false);
 	regcache_sync(amx->regmap);
 
+	/* update map ram */
+	tegra210_amx_set_master_stream(amx, 0,
+			TEGRA210_AMX_WAIT_ON_ANY);
+	tegra210_amx_update_map_ram(amx);
+	tegra210_amx_set_out_byte_mask(amx);
+
 	return 0;
 }
 
@@ -407,16 +413,8 @@ static int tegra210_amx_set_channel_map(struct snd_soc_dai *dai,
 {
 	struct device *dev = dai->dev;
 	struct tegra210_amx *amx = snd_soc_dai_get_drvdata(dai);
-	unsigned int byte_mask1 = 0, byte_mask2 = 0;
 	unsigned int in_stream_idx, in_ch_idx, in_byte_idx;
-	int i, ret = 0;
-
-	/* HW needs sw reset to make sure previous transaction be clean */
-	ret = tegra210_amx_sw_reset(amx, 0xffff);
-	if (ret) {
-		dev_err(dev, "Failed at AMX sw reset\n");
-		return ret;
-	}
+	int i;
 
 	if ((tx_num < 1) || (tx_num > 64)) {
 		dev_err(dev, "Doesn't support %d tx_num, need to be 1 to 64\n",
@@ -429,10 +427,8 @@ static int tegra210_amx_set_channel_map(struct snd_soc_dai *dai,
 		return -EINVAL;
 	}
 
-	tegra210_amx_set_master_stream(amx, 0,
-				TEGRA210_AMX_WAIT_ON_ANY);
-
 	memset(amx->map, 0, sizeof(amx->map));
+	memset(amx->byte_mask, 0, sizeof(amx->byte_mask));
 
 	for (i = 0; i < tx_num; i++) {
 		if (tx_slot[i] != 0) {
@@ -449,14 +445,11 @@ static int tegra210_amx_set_channel_map(struct snd_soc_dai *dai,
 
 			/* making byte_mask */
 			if (i > 32)
-				byte_mask2 |= (1 << (i - 32));
+				amx->byte_mask[1] |= (1 << (i - 32));
 			else
-				byte_mask1 |= (1 << i);
+				amx->byte_mask[0] |= (1 << i);
 		}
 	}
-
-	tegra210_amx_update_map_ram(amx);
-	tegra210_amx_set_out_byte_mask(amx, byte_mask1, byte_mask2);
 
 	return 0;
 }

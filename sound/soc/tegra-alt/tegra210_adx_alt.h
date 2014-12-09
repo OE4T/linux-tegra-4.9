@@ -168,6 +168,7 @@ struct tegra210_adx_soc_data {
 struct tegra210_adx {
 	struct regmap *regmap;
 	unsigned int map[16];
+	unsigned int byte_mask[2];
 	const struct tegra210_adx_soc_data *soc_data;
 };
 

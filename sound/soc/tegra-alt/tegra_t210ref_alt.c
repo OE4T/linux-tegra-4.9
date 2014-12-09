@@ -659,6 +659,13 @@ static int tegra_t210ref_ad1937_y_hw_params(struct snd_pcm_substream *substream,
 		tegra_machine_get_codec_dai_link_idx("ad-playback-y"), "y");
 }
 
+static int tegra_t210ref_ad1937_z_hw_params(struct snd_pcm_substream *substream,
+					struct snd_pcm_hw_params *params)
+{
+	return tegra_t210ref_ad1937_hw_params(substream, params,
+		tegra_machine_get_codec_dai_link_idx("ad-playback-z"), "z");
+}
+
 static int tegra_t210ref_spdif_hw_params(struct snd_pcm_substream *substream,
 					struct snd_pcm_hw_params *params)
 {
@@ -675,6 +682,10 @@ static struct snd_soc_ops tegra_t210ref_ad1937_y_ops = {
 	.hw_params = tegra_t210ref_ad1937_y_hw_params,
 };
 
+static struct snd_soc_ops tegra_t210ref_ad1937_z_ops = {
+	.hw_params = tegra_t210ref_ad1937_z_hw_params,
+};
+
 static struct snd_soc_ops tegra_t210ref_spdif_ops = {
 	.hw_params = tegra_t210ref_spdif_hw_params,
 };
@@ -687,10 +698,7 @@ static const struct snd_soc_dapm_widget tegra_t210ref_dapm_widgets[] = {
 	SND_SOC_DAPM_LINE("LineIn-x", NULL),
 	SND_SOC_DAPM_LINE("LineIn-y", NULL),
 	SND_SOC_DAPM_LINE("LineIn-z", NULL),
-	SND_SOC_DAPM_MIC("Mic-x", NULL),
-	SND_SOC_DAPM_MIC("Mic-y", NULL),
-	SND_SOC_DAPM_MIC("Mic-z", NULL),
-	SND_SOC_DAPM_MIC("Mic-s", NULL),
+	SND_SOC_DAPM_LINE("LineIn-s", NULL),
 };
 
 static const struct snd_soc_dapm_route tegra_t210ref_audio_map[] = {
@@ -896,6 +904,10 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 				tegra_t210ref_codec_links[i].init =
 					tegra_t210ref_ad1937_init;
 			else if (strstr(tegra_t210ref_codec_links[i].name,
+				"ad-playback-z"))
+				tegra_t210ref_codec_links[i].init =
+					tegra_t210ref_ad1937_init;
+			else if (strstr(tegra_t210ref_codec_links[i].name,
 				"spdif-playback"))
 				tegra_t210ref_codec_links[i].init =
 					tegra_t210ref_spdif_init;
@@ -1007,14 +1019,20 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	for (i = 0; i < machine->num_codec_links; i++) {
 		if (tegra_t210ref_codec_links[i].name) {
 			if (strstr(tegra_t210ref_codec_links[i].name,
-				"ad-playback-x")) {
+				"ad-playback-z")) {
 				for (j = TEGRA210_DAI_LINK_ADMAIF1;
 					j <= TEGRA210_DAI_LINK_ADMAIF4; j++)
+					tegra_machine_set_dai_ops(j,
+						&tegra_t210ref_ad1937_z_ops);
+			} else if (strstr(tegra_t210ref_codec_links[i].name,
+				"ad-playback-x")) {
+				for (j = TEGRA210_DAI_LINK_ADMAIF5;
+					j <= TEGRA210_DAI_LINK_ADMAIF6; j++)
 					tegra_machine_set_dai_ops(j,
 						&tegra_t210ref_ad1937_x_ops);
 			} else if (strstr(tegra_t210ref_codec_links[i].name,
 				"ad-playback-y")) {
-				for (j = TEGRA210_DAI_LINK_ADMAIF5;
+				for (j = TEGRA210_DAI_LINK_ADMAIF7;
 					j <= TEGRA210_DAI_LINK_ADMAIF8; j++)
 					tegra_machine_set_dai_ops(j,
 						&tegra_t210ref_ad1937_y_ops);
@@ -1044,10 +1062,10 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	machine->ad_rate_via_kcontrol = 0;
 
 	ret = of_property_read_u32(np,
-		"nvidia,addr_max9485", (u32 *)&max9485_info.addr);
+		"nvidia,addr-max9485", (u32 *)&max9485_info.addr);
 
 	if (max9485_info.addr && !ret) {
-		machine->max9485_client = i2c_new_device(i2c_get_adapter(0),
+		machine->max9485_client = i2c_new_device(i2c_get_adapter(1),
 							&max9485_info);
 		if (!machine->max9485_client) {
 			dev_err(&pdev->dev, "cannot get i2c device for max9485\n");

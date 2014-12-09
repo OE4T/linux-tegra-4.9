@@ -476,16 +476,22 @@ static int tegra210_admaif_dai_probe(struct snd_soc_dai *dai)
 		.playback = {					\
 			.stream_name = "Playback " #id,		\
 			.channels_min = 1,			\
-			.channels_max = 2,			\
-			.rates = SNDRV_PCM_RATE_8000_96000,	\
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,	\
+			.channels_max = 16,			\
+			.rates = SNDRV_PCM_RATE_8000_192000,	\
+			.formats = SNDRV_PCM_FMTBIT_S8 |	\
+				SNDRV_PCM_FMTBIT_S16_LE |	\
+				SNDRV_PCM_FMTBIT_S24_LE |	\
+				SNDRV_PCM_FMTBIT_S32_LE,	\
 		},						\
 		.capture = {					\
 			.stream_name = "Capture " #id,		\
 			.channels_min = 1,			\
-			.channels_max = 2,			\
-			.rates = SNDRV_PCM_RATE_8000_96000,	\
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,	\
+			.channels_max = 16,			\
+			.rates = SNDRV_PCM_RATE_8000_192000,		\
+			.formats = SNDRV_PCM_FMTBIT_S8 |		\
+				SNDRV_PCM_FMTBIT_S16_LE |		\
+				SNDRV_PCM_FMTBIT_S24_LE |		\
+				SNDRV_PCM_FMTBIT_S32_LE,		\
 		},						\
 		.ops = &tegra210_admaif_dai_ops,			\
 	}
@@ -508,17 +514,23 @@ static struct snd_soc_dai_driver tegra210_admaif_dais[10] = {
 		.name = "ADMAIF" #id " FIFO",				\
 		.playback = {						\
 			.stream_name = "ADMAIF" #id " FIFO Transmit",	\
-			.channels_min = 2,				\
-			.channels_max = 2,				\
-			.rates = SNDRV_PCM_RATE_8000_96000,		\
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,		\
+			.channels_min = 1,				\
+			.channels_max = 16,				\
+			.rates = SNDRV_PCM_RATE_8000_192000,		\
+			.formats = SNDRV_PCM_FMTBIT_S8 |		\
+				SNDRV_PCM_FMTBIT_S16_LE |		\
+				SNDRV_PCM_FMTBIT_S24_LE |		\
+				SNDRV_PCM_FMTBIT_S32_LE,		\
 		},							\
 		.capture = {						\
 			.stream_name = "ADMAIF" #id " FIFO Receive",	\
-			.channels_min = 2,				\
-			.channels_max = 2,				\
-			.rates = SNDRV_PCM_RATE_8000_96000,		\
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,		\
+			.channels_min = 1,				\
+			.channels_max = 16,				\
+			.rates = SNDRV_PCM_RATE_8000_192000,		\
+			.formats = SNDRV_PCM_FMTBIT_S8 |		\
+				SNDRV_PCM_FMTBIT_S16_LE |		\
+				SNDRV_PCM_FMTBIT_S24_LE |		\
+				SNDRV_PCM_FMTBIT_S32_LE,		\
 		},							\
 		.ops = &tegra210_admaif_dai_ops,			\
 	}
@@ -528,17 +540,23 @@ static struct snd_soc_dai_driver tegra210_admaif_dais[10] = {
 		.name = "ADMAIF" #id " CIF",				\
 		.playback = {						\
 			.stream_name = "ADMAIF" #id " CIF Transmit",	\
-			.channels_min = 2,				\
-			.channels_max = 2,				\
-			.rates = SNDRV_PCM_RATE_8000_96000,		\
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,		\
+			.channels_min = 1,				\
+			.channels_max = 16,				\
+			.rates = SNDRV_PCM_RATE_8000_192000,		\
+			.formats = SNDRV_PCM_FMTBIT_S8 |		\
+				SNDRV_PCM_FMTBIT_S16_LE |		\
+				SNDRV_PCM_FMTBIT_S24_LE |		\
+				SNDRV_PCM_FMTBIT_S32_LE,		\
 		},							\
 		.capture = {						\
 			.stream_name = "ADMAIF" #id " CIF Receive",	\
-			.channels_min = 2,				\
-			.channels_max = 2,				\
-			.rates = SNDRV_PCM_RATE_8000_96000,		\
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,		\
+			.channels_min = 1,				\
+			.channels_max = 16,				\
+			.rates = SNDRV_PCM_RATE_8000_192000,		\
+			.formats = SNDRV_PCM_FMTBIT_S8 |		\
+				SNDRV_PCM_FMTBIT_S16_LE |		\
+				SNDRV_PCM_FMTBIT_S24_LE |		\
+				SNDRV_PCM_FMTBIT_S32_LE,		\
 		},							\
 	}
 

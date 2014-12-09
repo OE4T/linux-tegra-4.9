@@ -572,7 +572,7 @@ static struct snd_soc_dai_driver tegra210_i2s_dais[] = {
 			.stream_name = "CIF Receive",
 			.channels_min = 1,
 			.channels_max = 16,
-			.rates = SNDRV_PCM_RATE_8000_96000,
+			.rates = SNDRV_PCM_RATE_8000_192000,
 			.formats = SNDRV_PCM_FMTBIT_S8 |
 				SNDRV_PCM_FMTBIT_S16_LE |
 				SNDRV_PCM_FMTBIT_S24_LE |
@@ -582,7 +582,7 @@ static struct snd_soc_dai_driver tegra210_i2s_dais[] = {
 			.stream_name = "CIF Transmit",
 			.channels_min = 1,
 			.channels_max = 16,
-			.rates = SNDRV_PCM_RATE_8000_96000,
+			.rates = SNDRV_PCM_RATE_8000_192000,
 			.formats = SNDRV_PCM_FMTBIT_S8 |
 				SNDRV_PCM_FMTBIT_S16_LE |
 				SNDRV_PCM_FMTBIT_S24_LE |
@@ -595,7 +595,7 @@ static struct snd_soc_dai_driver tegra210_i2s_dais[] = {
 			.stream_name = "DAP Receive",
 			.channels_min = 1,
 			.channels_max = 16,
-			.rates = SNDRV_PCM_RATE_8000_96000,
+			.rates = SNDRV_PCM_RATE_8000_192000,
 			.formats = SNDRV_PCM_FMTBIT_S8 |
 				SNDRV_PCM_FMTBIT_S16_LE |
 				SNDRV_PCM_FMTBIT_S24_LE |
@@ -605,7 +605,7 @@ static struct snd_soc_dai_driver tegra210_i2s_dais[] = {
 			.stream_name = "DAP Transmit",
 			.channels_min = 1,
 			.channels_max = 16,
-			.rates = SNDRV_PCM_RATE_8000_96000,
+			.rates = SNDRV_PCM_RATE_8000_192000,
 			.formats = SNDRV_PCM_FMTBIT_S8 |
 				SNDRV_PCM_FMTBIT_S16_LE |
 				SNDRV_PCM_FMTBIT_S24_LE |

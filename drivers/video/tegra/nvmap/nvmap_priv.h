@@ -339,6 +339,14 @@ static inline struct nvmap_handle *nvmap_handle_get(struct nvmap_handle *h)
 
 static inline pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot)
 {
+	if (h->heap_type == NVMAP_HEAP_CARVEOUT_VPR) {
+#ifdef pgprot_device_writecombine
+		return pgprot_device_writecombine(prot);
+#else
+		return pgprot_noncached(prot);
+#endif
+	}
+
 	if (h->flags == NVMAP_HANDLE_UNCACHEABLE) {
 #ifdef CONFIG_ARM64
 		if (h->owner && !h->owner->warned) {

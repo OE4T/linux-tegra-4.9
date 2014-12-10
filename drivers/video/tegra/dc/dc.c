@@ -597,7 +597,8 @@ void tegra_dc_release_dc_out(struct tegra_dc *dc)
 	print(data, buff);				      \
 	} while (0)
 
-static void _dump_regs(struct tegra_dc *dc, void *data,
+#ifndef CONFIG_TEGRA_NVDISPLAY
+void reg_dump(struct tegra_dc *dc, void *data,
 		       void (* print)(void *data, const char *str))
 {
 	int i;
@@ -829,6 +830,7 @@ static void _dump_regs(struct tegra_dc *dc, void *data,
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
 }
+#endif	/* !CONFIG_TEGRA_NVDISPLAY */
 
 #undef DUMP_REG
 
@@ -839,13 +841,13 @@ static void dump_regs_print(void *data, const char *str)
 	dev_dbg(&dc->ndev->dev, "%s", str);
 }
 
-static void dump_regs(struct tegra_dc *dc)
+void dump_regs(struct tegra_dc *dc)
 {
-	_dump_regs(dc, dc, dump_regs_print);
+	reg_dump(dc, dc, dump_regs_print);
 }
 #else /* !DEBUG */
 
-static void dump_regs(struct tegra_dc *dc) {}
+void dump_regs(struct tegra_dc *dc) {}
 
 #endif /* DEBUG */
 
@@ -864,7 +866,7 @@ static int dbg_dc_show(struct seq_file *s, void *unused)
 {
 	struct tegra_dc *dc = s->private;
 
-	_dump_regs(dc, s, dbg_regs_print);
+	reg_dump(dc, s, dbg_regs_print);
 
 	return 0;
 }

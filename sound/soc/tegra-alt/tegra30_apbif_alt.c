@@ -736,7 +736,7 @@ static int tegra30_apbif_probe(struct platform_device *pdev)
 {
 	int i;
 	struct clk *clk;
-	int ret;
+	int ret = 0;
 	void __iomem *regs;
 	struct resource *res[2];
 	u32 of_dma[20][2];

@@ -44,7 +44,7 @@
 		uhs-mask = <0x1c>;
 		power-off-rail;
 		disable-clock-gate;
-		status = "okay";
+		status = "disabled";
 	};
 
 	sdhci@700b0200 {

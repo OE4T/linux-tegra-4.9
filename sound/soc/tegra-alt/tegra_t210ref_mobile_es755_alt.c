@@ -492,7 +492,8 @@ static int tegra_t210ref_resume_pre(struct snd_soc_card *card)
 	if (gpio_is_valid(gpio->gpio)) {
 		val = gpio_get_value(gpio->gpio);
 		val = gpio->invert ? !val : val;
-		snd_soc_jack_report(gpio->jack, val, gpio->report);
+		if (gpio->jack)
+			snd_soc_jack_report(gpio->jack, val, gpio->report);
 		enable_irq(gpio_to_irq(gpio->gpio));
 	}
 

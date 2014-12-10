@@ -321,4 +321,15 @@
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SWGROUP_SDMMC1A>;
 	};
+
+	hsp_top {
+		compatible = "nvidia,tegra186-hsp";
+		reg = <0x0 0x23c00000 0x0 0x100000>;
+		interrupts = <0 176 4>; /* doorbell IRQ for CCPLEX */
+		num-SM = <0x8>;
+		num-AS = <0x2>;
+		num-SS = <0x2>;
+		num-DB = <0x7>;
+		num-SI = <0x8>;
+	};
 };

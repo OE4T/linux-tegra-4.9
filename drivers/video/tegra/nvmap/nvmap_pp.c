@@ -119,6 +119,7 @@ no_mem:
 static void nvmap_pp_do_background_fill(struct nvmap_page_pool *pool)
 {
 	int err;
+	struct sysinfo info;
 	u32 pages = 0, nr, i;
 	gfp_t gfp = GFP_NVMAP | __GFP_NOMEMALLOC |
 		    __GFP_NORETRY | __GFP_NO_KSWAPD;
@@ -133,6 +134,9 @@ static void nvmap_pp_do_background_fill(struct nvmap_page_pool *pool)
 		gfp |= __GFP_ZERO;
 
 	do {
+		si_meminfo(&info);
+		if (info.freeram <= (min_available_mb << (20 - PAGE_SHIFT)))
+			return;
 		nr = min_t(u32, PENDING_PAGES_SIZE, pages);
 		err = __nvmap_pp_alloc_n_pages(pending_pages, nr, gfp);
 		if (err) {

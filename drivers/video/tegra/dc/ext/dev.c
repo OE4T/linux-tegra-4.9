@@ -505,13 +505,10 @@ static int tegra_dc_ext_set_vblank(struct tegra_dc_ext *ext, bool enable)
 
 	dc = ext->dc;
 
-	if (enable) {
-		tegra_dc_hold_dc_out(dc);
+	if (enable)
 		ret = tegra_dc_vsync_enable(dc);
-	} else if (ext->vblank_enabled) {
+	else if (ext->vblank_enabled)
 		tegra_dc_vsync_disable(dc);
-		tegra_dc_release_dc_out(dc);
-	}
 
 	if (!ret) {
 		ext->vblank_enabled = enable;

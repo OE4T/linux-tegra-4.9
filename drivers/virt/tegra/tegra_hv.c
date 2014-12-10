@@ -101,6 +101,13 @@ struct guest_ivc_info {
 	size_t length;		/* length of shmem */
 };
 
+struct hv_mempool {
+	struct tegra_hv_ivm_cookie ivmk;
+	const struct ivc_mempool *mpd;
+	struct mutex lock;
+	int reserved;
+};
+
 struct tegra_hv_data {
 	const struct ivc_info_page *info;
 	struct platform_device *pdev;
@@ -111,6 +118,9 @@ struct tegra_hv_data {
 	/* ivc_devs is indexed by queue id */
 	struct ivc_dev *ivc_devs;
 	uint32_t max_qid;
+
+	/* array with length info->nr_mempools */
+	struct hv_mempool *mempools;
 
 	struct class *ivc_class;
 	int ivc_major;
@@ -695,6 +705,9 @@ static void tegra_hv_cleanup(struct tegra_hv_data *hvd)
 	 */
 	BUG_ON(tegra_hv_data != NULL);
 
+	kfree(hvd->mempools);
+	hvd->mempools = NULL;
+
 	tegra_hv_ivc_cleanup(hvd);
 
 	if (hvd->ivc_dev) {
@@ -820,6 +833,30 @@ static int tegra_hv_setup(struct tegra_hv_data *hvd)
 			dev_err(dev, "failed to add queue #%u\n", qd->id);
 			return ret;
 		}
+	}
+
+	hvd->mempools = kzalloc(hvd->info->nr_mempools, sizeof(*hvd->mempools));
+	if (hvd->mempools == NULL) {
+		dev_err(dev, "failed to allocate %u-entry mempools array\n",
+				hvd->info->nr_mempools);
+		return -ENOMEM;
+	}
+
+	/* Initialize mempools. */
+	for (i = 0; i < hvd->info->nr_mempools; i++) {
+		const struct ivc_mempool *mpd =
+				&ivc_info_mempool_array(hvd->info)[i];
+		struct tegra_hv_ivm_cookie *ivmk = &hvd->mempools[i].ivmk;
+
+		hvd->mempools[i].mpd = mpd;
+		mutex_init(&hvd->mempools[i].lock);
+
+		ivmk->ipa = mpd->pa;
+		ivmk->size = mpd->size;
+		ivmk->peer_vmid = mpd->peer_vmid;
+
+		dev_info(dev, "added mempool %u: ipa=%llx size=%llx peer=%u\n",
+				mpd->id, mpd->pa, mpd->size, mpd->peer_vmid);
 	}
 
 	return 0;
@@ -1075,6 +1112,51 @@ int tegra_hv_ivc_read_advance(struct tegra_hv_ivc_cookie *ivck)
 	return tegra_ivc_read_advance(ivc);
 }
 EXPORT_SYMBOL(tegra_hv_ivc_read_advance);
+
+struct tegra_hv_ivm_cookie *tegra_hv_mempool_reserve(struct device_node *dn,
+		unsigned id)
+{
+	uint32_t i;
+	struct hv_mempool *mempool;
+	int reserved;
+
+	if (!tegra_hv_data)
+		return ERR_PTR(-EPROBE_DEFER);
+
+	/* Locate a mempool with matching id. */
+	for (i = 0; i < tegra_hv_data->info->nr_mempools; i++) {
+		if (tegra_hv_data->mempools->mpd->id == id) {
+			mempool = &tegra_hv_data->mempools[i];
+			break;
+		}
+	}
+
+	if (i == tegra_hv_data->info->nr_mempools)
+		return ERR_PTR(-ENODEV);
+
+	mutex_lock(&mempool->lock);
+	reserved = mempool->reserved;
+	mempool->reserved = 1;
+	mutex_unlock(&mempool->lock);
+
+	return reserved ? ERR_PTR(-EBUSY) : &mempool->ivmk;
+}
+EXPORT_SYMBOL(tegra_hv_mempool_reserve);
+
+int tegra_hv_mempool_unreserve(struct tegra_hv_ivm_cookie *ivmk)
+{
+	int reserved;
+	struct hv_mempool *mempool = container_of(ivmk, struct hv_mempool,
+			ivmk);
+
+	mutex_lock(&mempool->lock);
+	reserved = mempool->reserved;
+	mempool->reserved = 0;
+	mutex_unlock(&mempool->lock);
+
+	return reserved ? 0 : -EINVAL;
+}
+EXPORT_SYMBOL(tegra_hv_mempool_unreserve);
 
 static int __init tegra_hv_mod_init(void)
 {

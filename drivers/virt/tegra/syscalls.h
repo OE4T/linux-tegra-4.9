@@ -60,6 +60,13 @@ struct tegra_hv_queue_data {
 	uint16_t	irq, raise_irq;
 };
 
+struct ivc_mempool {
+	uint64_t pa;
+	uint64_t size;
+	uint32_t id;
+	uint32_t peer_vmid;
+};
+
 struct ivc_shared_area {
 	uint64_t pa;
 	uint64_t size;
@@ -89,6 +96,13 @@ static inline const struct tegra_hv_queue_data *ivc_info_queue_array(
 		const struct ivc_info_page *info)
 {
 	return (struct tegra_hv_queue_data *)&info->areas[info->nr_areas];
+}
+
+static inline const struct ivc_mempool *ivc_info_mempool_array(
+		const struct ivc_info_page *info)
+{
+	return (struct ivc_mempool *)
+			&ivc_info_queue_array(info)[info->nr_queues];
 }
 
 struct hyp_ipa_pa_info {

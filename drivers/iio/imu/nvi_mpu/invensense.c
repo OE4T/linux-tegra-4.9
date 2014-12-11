@@ -1985,8 +1985,8 @@ static ssize_t inv_dmp_firmware_write(struct file *fp, struct kobject *kobj,
 		return -EBUSY;
 
 	if (DMP_IMAGE_SIZE != size) {
-		pr_err("wrong DMP image size - expected %d, actual %d\n",
-			DMP_IMAGE_SIZE, size);
+		pr_err("wrong DMP image size - expected %d, actual %u\n",
+			DMP_IMAGE_SIZE, (unsigned int)size);
 		return -EINVAL;
 	}
 
@@ -2110,8 +2110,6 @@ static ssize_t inv_six_q_write(struct file *fp, struct kobject *kobj,
 		return -EBUSY;
 	}
 	if (QUATERNION_BYTES != size) {
-		pr_err("wrong quaternion size=%d, should=%d\n", size,
-							QUATERNION_BYTES);
 		mutex_unlock(&indio_dev->mlock);
 		return -EINVAL;
 	}

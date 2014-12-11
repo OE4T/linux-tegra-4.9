@@ -374,7 +374,7 @@ int nvi_mpu_data_out(int port, u8 data_out);
  * @param port
  * @param flags
  * @param period_us
- * @param timeout_ms
+ * @param timeout_us
  * @return int error
  *            if return >= 0 then this is the supported batch
  *            flags.  If batch is not supported then 0 is
@@ -387,7 +387,7 @@ int nvi_mpu_data_out(int port, u8 data_out);
  *            - -EINVAL: Problem with input parameters.
  */
 int nvi_mpu_batch(int port, unsigned int flags,
-		  unsigned int period_us, unsigned int timeout_ms);
+		  unsigned int period_us, unsigned int timeout_us);
 
 /**
  * batch flush.

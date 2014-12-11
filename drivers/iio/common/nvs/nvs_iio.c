@@ -938,7 +938,7 @@ static const struct iio_chan_spec nvs_ch_ts[] = {
 static int nvs_chan(struct iio_dev *indio_dev)
 {
 	struct nvs_state *st = iio_priv(indio_dev);
-	size_t buf_sz = 0;
+	unsigned int buf_sz = 0;
 	unsigned int n;
 	unsigned int i;
 	int scan_index;
@@ -1016,7 +1016,7 @@ static int nvs_chan(struct iio_dev *indio_dev)
 	if (scan_index <= 1)
 		return -ENODEV;
 
-	st->buf = devm_kzalloc(st->dev, buf_sz, GFP_KERNEL);
+	st->buf = devm_kzalloc(st->dev, (size_t)buf_sz, GFP_KERNEL);
 	if (st->buf == NULL)
 		return -ENOMEM;
 

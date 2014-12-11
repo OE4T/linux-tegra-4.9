@@ -27,15 +27,91 @@
 
 static int tegra_nvdisp_blend(struct tegra_dc_win *win)
 {
-	if (!(win->flags & TEGRA_WIN_BLEND_FLAGS_MASK)) {
-		/* Set Bypassing if no blending is required */
-		nvdisp_win_write(win,
-			win_blend_layer_control_blend_enable_bypass_f(),
-			win_blend_layer_control_r());
-		return 0;
+	bool update_blend_seq = false;
+	int idx = win->idx;
+	u32 blend_ctrl = 0;
+	struct tegra_dc *dc = win->dc;
+	struct tegra_dc_blend *blend = &dc->blend;
+
+	/* Update blender */
+	if ((win->z != blend->z[idx]) ||
+			((win->flags & TEGRA_WIN_BLEND_FLAGS_MASK) !=
+					blend->flags[idx])) {
+		blend->z[win->idx] = win->z;
+		blend->flags[win->idx] =
+			win->flags & TEGRA_WIN_BLEND_FLAGS_MASK;
+		if (tegra_dc_feature_is_gen2_blender(dc, idx))
+			update_blend_seq = true;
 	}
 
-	/* TODO: to support different blending mode */
+	/*
+	* For gen2 blending, change in the global alpha needs rewrite
+	* to blending regs.
+	*/
+	if ((blend->alpha[idx] != win->global_alpha) &&
+		(tegra_dc_feature_is_gen2_blender(dc, idx)))
+		update_blend_seq = true;
+
+	/* Cache the global alpha of each window here. It is necessary
+	 * for in-order blending settings. */
+	dc->blend.alpha[win->idx] = win->global_alpha;
+
+#if defined(CONFIG_TEGRA_DC_BLENDER_DEPTH)
+	blend_ctrl = win_blend_layer_control_depth_f(blend->z[idx]);
+#endif
+
+	if (update_blend_seq) {
+		if (blend->flags[idx] & TEGRA_WIN_FLAG_BLEND_COVERAGE) {
+
+			blend_ctrl |=
+			(win_blend_layer_control_k2_f(0xff) |
+			win_blend_layer_control_k1_f(blend->alpha[idx]) |
+			win_blend_layer_control_blend_enable_enable_f());
+
+			nvdisp_win_write(win,
+			WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_K1_TIMES_SRC |
+			WIN_BLEND_FACT_DST_COLOR_MATCH_SEL_NEG_K1_TIMES_SRC |
+			WIN_BLEND_FACT_SRC_ALPHA_MATCH_SEL_K2 |
+			WIN_BLEND_FACT_DST_ALPHA_MATCH_SEL_ZERO,
+			win_blend_match_select_r());
+
+			nvdisp_win_write(win,
+			WIN_BLEND_FACT_SRC_COLOR_NOMATCH_SEL_K1_TIMES_SRC |
+			WIN_BLEND_FACT_DST_COLOR_NOMATCH_SEL_NEG_K1_TIMES_SRC |
+			WIN_BLEND_FACT_SRC_ALPHA_NOMATCH_SEL_K2 |
+			WIN_BLEND_FACT_DST_ALPHA_NOMATCH_SEL_ZERO,
+			win_blend_nomatch_select_r());
+
+		} else if (blend->flags[idx] & TEGRA_WIN_FLAG_BLEND_PREMULT) {
+
+			blend_ctrl |=
+			(win_blend_layer_control_k2_f(0xff) |
+			win_blend_layer_control_k1_f(blend->alpha[idx]) |
+			win_blend_layer_control_blend_enable_enable_f());
+
+			nvdisp_win_write(win,
+			WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_K1 |
+			WIN_BLEND_FACT_DST_COLOR_MATCH_SEL_NEG_K1_TIMES_SRC |
+			WIN_BLEND_FACT_SRC_ALPHA_MATCH_SEL_K2 |
+			WIN_BLEND_FACT_DST_ALPHA_MATCH_SEL_ZERO,
+			win_blend_match_select_r());
+
+			nvdisp_win_write(win,
+			WIN_BLEND_FACT_SRC_COLOR_NOMATCH_SEL_NEG_K1_TIMES_DST |
+			WIN_BLEND_FACT_DST_COLOR_NOMATCH_SEL_K1 |
+			WIN_BLEND_FACT_SRC_ALPHA_NOMATCH_SEL_K2 |
+			WIN_BLEND_FACT_DST_ALPHA_NOMATCH_SEL_ZERO,
+			win_blend_nomatch_select_r());
+
+		} else {
+			blend_ctrl |=
+			win_blend_layer_control_blend_enable_bypass_f();
+		}
+
+		nvdisp_win_write(win, blend_ctrl,
+				win_blend_layer_control_r());
+	}
+
 	return 0;
 }
 

@@ -50,6 +50,106 @@
 #ifndef _hw_nvdisp_nvdisp_h_
 #define _hw_nvdisp_nvdisp_h_
 
+static inline u32 nvdisp_display_cmd_option_r(void)
+{
+	return 0x00000031;
+}
+static inline u32 nvdisp_display_command_r(void)
+{
+	return 0x00000032;
+}
+static inline u32 nvdisp_display_command_control_mode_stop_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_display_command_control_mode_c_display_f(void)
+{
+	return 0x20;
+}
+static inline u32 nvdisp_display_command_control_mode_nc_display_f(void)
+{
+	return 0x40;
+}
+static inline u32 nvdisp_cmd_int_status_r(void)
+{
+	return 0x00000037;
+}
+static inline u32 nvdisp_cmd_int_status_frame_end_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 nvdisp_cmd_int_status_v_blank_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 nvdisp_cmd_int_status_region_crc_f(u32 v)
+{
+	return (v & 0x1) << 6;
+}
+static inline u32 nvdisp_cmd_int_status_msf_f(u32 v)
+{
+	return (v & 0x1) << 12;
+}
+static inline u32 nvdisp_cmd_int_status_uf_f(u32 v)
+{
+	return (v & 0x1) << 23;
+}
+static inline u32 nvdisp_cmd_int_status_sd3_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 nvdisp_cmd_int_status_obuf_uf_f(u32 v)
+{
+	return (v & 0x1) << 26;
+}
+static inline u32 nvdisp_cmd_int_status_rbuf_uf_f(u32 v)
+{
+	return (v & 0x1) << 27;
+}
+static inline u32 nvdisp_cmd_int_status_bbuf_uf_f(u32 v)
+{
+	return (v & 0x1) << 28;
+}
+static inline u32 nvdisp_cmd_int_status_dsc_uf_f(u32 v)
+{
+	return (v & 0x1) << 29;
+}
+static inline u32 nvdisp_cmd_int_mask_r(void)
+{
+	return 0x00000038;
+}
+static inline u32 nvdisp_cmd_int_enable_r(void)
+{
+	return 0x00000039;
+}
+static inline u32 nvdisp_int_type_r(void)
+{
+	return 0x0000003a;
+}
+static inline u32 nvdisp_int_polarity_r(void)
+{
+	return 0x0000003b;
+}
+static inline u32 nvdisp_state_access_r(void)
+{
+	return 0x00000040;
+}
+static inline u32 nvdisp_state_access_read_mux_assembly_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_state_access_read_mux_active_f(void)
+{
+	return 0x1;
+}
+static inline u32 nvdisp_state_access_write_mux_assembly_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_state_access_write_mux_active_f(void)
+{
+	return 0x4;
+}
 static inline u32 nvdisp_cmd_state_ctrl_r(void)
 {
 	return 0x00000041;
@@ -150,77 +250,305 @@ static inline u32 nvdisp_cmd_disp_win_hdr_r(void)
 {
 	return 0x00000042;
 }
-static inline u32 nvdisp_cmd_int_status_r(void)
+static inline u32 nvdisp_win_t_state_ctrl_r(void)
 {
-	return 0x00000037;
+	return 0x00000044;
 }
-static inline u32 nvdisp_cmd_int_status_frame_end_f(u32 v)
+static inline u32 nvdisp_secure_ctrl_r(void)
 {
-	return (v & 0x1) << 1;
+	return 0x00000045;
 }
-static inline u32 nvdisp_cmd_int_status_v_blank_f(u32 v)
+static inline u32 nvdisp_reg_access_ctrl_r(void)
 {
-	return (v & 0x1) << 2;
+	return 0x00000046;
 }
-static inline u32 nvdisp_cmd_int_status_region_crc_f(u32 v)
+static inline u32 nvdisp_ihub_config_r(void)
 {
-	return (v & 0x1) << 6;
+	return 0x00000067;
 }
-static inline u32 nvdisp_cmd_int_status_msf_f(u32 v)
+static inline u32 nvdisp_ihub_misc_ctl_r(void)
 {
-	return (v & 0x1) << 12;
+	return 0x00000068;
 }
-static inline u32 nvdisp_cmd_int_status_uf_f(u32 v)
+static inline u32 nvdisp_ihub_misc_emergency_r(void)
 {
-	return (v & 0x1) << 23;
+	return 0x00000069;
 }
-static inline u32 nvdisp_cmd_int_status_sd3_f(u32 v)
+static inline u32 nvdisp_streamid_r(void)
 {
-	return (v & 0x1) << 24;
+	return 0x000000a0;
 }
-static inline u32 nvdisp_cmd_int_status_obuf_uf_f(u32 v)
+static inline u32 nvdisp_crc_control_r(void)
 {
-	return (v & 0x1) << 26;
+	return 0x00000300;
 }
-static inline u32 nvdisp_cmd_int_status_rbuf_uf_f(u32 v)
-{
-	return (v & 0x1) << 27;
-}
-static inline u32 nvdisp_cmd_int_status_bbuf_uf_f(u32 v)
-{
-	return (v & 0x1) << 28;
-}
-static inline u32 nvdisp_cmd_int_status_dsc_uf_f(u32 v)
-{
-	return (v & 0x1) << 29;
-}
-static inline u32 nvdisp_cmd_int_mask_r(void)
-{
-	return 0x00000038;
-}
-static inline u32 nvdisp_cmd_int_enable_r(void)
-{
-	return 0x00000039;
-}
-static inline u32 nvdisp_state_access_r(void)
-{
-	return 0x00000040;
-}
-static inline u32 nvdisp_state_access_read_mux_assembly_f(void)
-{
-	return 0x0;
-}
-static inline u32 nvdisp_state_access_read_mux_active_f(void)
+static inline u32 nvdisp_crc_control_enable_enable_f(void)
 {
 	return 0x1;
 }
-static inline u32 nvdisp_state_access_write_mux_assembly_f(void)
+static inline u32 nvdisp_crc_control_enable_diasble_f(void)
 {
 	return 0x0;
 }
-static inline u32 nvdisp_state_access_write_mux_active_f(void)
+static inline u32 nvdisp_crc_control_input_data_full_frame_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_crc_control_input_data_active_data_f(void)
 {
 	return 0x4;
+}
+static inline u32 nvdisp_head_crc_control_r(void)
+{
+	return 0x00000301;
+}
+static inline u32 nvdisp_comp_crca_r(void)
+{
+	return 0x0000032a;
+}
+static inline u32 nvdisp_comp_crcb_r(void)
+{
+	return 0x0000032b;
+}
+static inline u32 nvdisp_rg_crca_r(void)
+{
+	return 0x0000032c;
+}
+static inline u32 nvdisp_rg_crca_valid_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_rg_crca_valid_true_f(void)
+{
+	return 0x1;
+}
+static inline u32 nvdisp_rg_crca_error_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_rg_crca_error_true_f(void)
+{
+	return 0x2;
+}
+static inline u32 nvdisp_rg_crcb_r(void)
+{
+	return 0x0000032d;
+}
+static inline u32 nvdisp_head_loadv_cntr_r(void)
+{
+	return 0x0000035f;
+}
+static inline u32 nvdisp_rg_status_r(void)
+{
+	return 0x00000362;
+}
+static inline u32 nvdisp_rg_dclk_r(void)
+{
+	return 0x00000364;
+}
+static inline u32 nvdisp_rg_underflow_r(void)
+{
+	return 0x00000365;
+}
+static inline u32 nvdisp_rg_region_crc_r(void)
+{
+	return 0x000003a2;
+}
+static inline u32 nvdisp_rg_region_crc_ctl_r(void)
+{
+	return 0x000003a3;
+}
+static inline u32 nvdisp_disp_signal_option_r(void)
+{
+	return 0x00000400;
+}
+static inline u32 nvdisp_win_options_r(void)
+{
+	return 0x00000402;
+}
+static inline u32 nvdisp_win_options_cursor_is_enable_v(u32 r)
+{
+	return (r >> 16) & 0x1;
+}
+static inline u32 nvdisp_win_options_cursor_set_cursor_enable_f(void)
+{
+	return 0x10000;
+}
+static inline u32 nvdisp_win_options_sor_is_enable_v(u32 r)
+{
+	return (r >> 25) & 0x1;
+}
+static inline u32 nvdisp_win_options_sor_set_sor_enable_f(void)
+{
+	return 0x2000000;
+}
+static inline u32 nvdisp_win_options_sor1_is_enable_v(u32 r)
+{
+	return (r >> 26) & 0x1;
+}
+static inline u32 nvdisp_win_options_sor1_set_sor1_enable_f(void)
+{
+	return 0x4000000;
+}
+static inline u32 nvdisp_win_options_dsi_is_enable_v(u32 r)
+{
+	return (r >> 29) & 0x1;
+}
+static inline u32 nvdisp_win_options_dsi_set_dsi_enable_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 nvdisp_sor_control_r(void)
+{
+	return 0x00000403;
+}
+static inline u32 nvdisp_sor_control_protocol_dpa_f(void)
+{
+	return 0x600;
+}
+static inline u32 nvdisp_sor_control_protocol_dpb_f(void)
+{
+	return 0x700;
+}
+static inline u32 nvdisp_sor_control_protocol_custom_f(void)
+{
+	return 0xf00;
+}
+static inline u32 nvdisp_sor1_control_r(void)
+{
+	return 0x00000404;
+}
+static inline u32 nvdisp_sor1_control_protocol_dpa_f(void)
+{
+	return 0x600;
+}
+static inline u32 nvdisp_sor1_control_protocol_tmdsa_f(void)
+{
+	return 0x100;
+}
+static inline u32 nvdisp_dsi_control_r(void)
+{
+	return 0x00000405;
+}
+static inline u32 nvdisp_dsi_control_protocol_dsia_f(void)
+{
+	return 0x800;
+}
+static inline u32 nvdisp_dsi_control_protocol_dsib_f(void)
+{
+	return 0x900;
+}
+static inline u32 nvdisp_sync_width_r(void)
+{
+	return 0x00000407;
+}
+static inline u32 nvdisp_back_porch_r(void)
+{
+	return 0x00000408;
+}
+static inline u32 nvdisp_active_r(void)
+{
+	return 0x00000409;
+}
+static inline u32 nvdisp_front_porch_r(void)
+{
+	return 0x0000040a;
+}
+static inline u32 nvdisp_rg_ext_back_porch_r(void)
+{
+	return 0x00000410;
+}
+static inline u32 nvdisp_rg_ext_front_porch_r(void)
+{
+	return 0x00000411;
+}
+static inline u32 nvdisp_rg_ext_r(void)
+{
+	return 0x00000412;
+}
+static inline u32 nvdisp_color_ctl_r(void)
+{
+	return 0x00000430;
+}
+static inline u32 nvdisp_output_lut_ctl_r(void)
+{
+	return 0x00000431;
+}
+static inline u32 nvdisp_output_lut_base_r(void)
+{
+	return 0x00000432;
+}
+static inline u32 nvdisp_output_lut_base_hi_r(void)
+{
+	return 0x00000433;
+}
+static inline u32 nvdisp_cursor_ctrl_r(void)
+{
+	return 0x0000043b;
+}
+static inline u32 nvdisp_cursor_startaddr_r(void)
+{
+	return 0x0000043e;
+}
+static inline u32 nvdisp_cursor_startaddr_range_v(u32 r)
+{
+	return (r >> 0) & 0x3fffff;
+}
+static inline u32 nvdisp_cursor_startaddr_get_size_v(u32 r)
+{
+	return (r >> 24) & 0x3;
+}
+static inline u32 nvdisp_cursor_startaddr_get_size_size_32x32_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_cursor_startaddr_get_size_size_64x64_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 nvdisp_cursor_startaddr_get_size_size_128x128_f(void)
+{
+	return 0x2000000;
+}
+static inline u32 nvdisp_cursor_startaddr_get_size_size_256x256_f(void)
+{
+	return 0x3000000;
+}
+static inline u32 nvdisp_cursor_position_r(void)
+{
+	return 0x00000440;
+}
+static inline u32 nvdisp_cursor_position_h_range_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 nvdisp_cursor_position_v_range_v(u32 r)
+{
+	return (r >> 16) & 0xffff;
+}
+static inline u32 nvdisp_cursor_cropped_point_in_r(void)
+{
+	return 0x00000442;
+}
+static inline u32 nvdisp_cursor_cropped_point_in_x_range_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 nvdisp_cursor_cropped_point_in_y_range_v(u32 r)
+{
+	return (r >> 16) & 0xffff;
+}
+static inline u32 nvdisp_cursor_cropped_size_in_r(void)
+{
+	return 0x00000446;
+}
+static inline u32 nvdisp_cursor_cropped_size_in_width_range_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 nvdisp_cursor_cropped_size_in_height_range_v(u32 r)
+{
+	return (r >> 16) & 0xffff;
 }
 static inline u32 nvdisp_sd_hist_ctrl_r(void)
 {
@@ -442,177 +770,29 @@ static inline u32 nvdisp_cont_syncpt_vsync_en_enable_f(void)
 {
 	return 0x80000000;
 }
-static inline u32 nvdisp_int_type_r(void)
-{
-	return 0x0000003a;
-}
-static inline u32 nvdisp_int_polarity_r(void)
-{
-	return 0x0000003b;
-}
 static inline u32 nvdisp_background_color_r(void)
 {
 	return 0x000004e4;
 }
-static inline u32 nvdisp_crc_control_r(void)
+static inline u32 nvdisp_interlace_ctl_r(void)
 {
-	return 0x00000300;
+	return 0x000004e5;
 }
-static inline u32 nvdisp_crc_control_enable_enable_f(void)
+static inline u32 nvdisp_interlace_f2_width_r(void)
 {
-	return 0x1;
+	return 0x000004e7;
 }
-static inline u32 nvdisp_crc_control_enable_diasble_f(void)
+static inline u32 nvdisp_interlace_f2_bporch_r(void)
 {
-	return 0x0;
+	return 0x000004e8;
 }
-static inline u32 nvdisp_crc_control_input_data_full_frame_f(void)
+static inline u32 nvdisp_interlace_f2_fporch_r(void)
 {
-	return 0x0;
+	return 0x000004e9;
 }
-static inline u32 nvdisp_crc_control_input_data_active_data_f(void)
+static inline u32 nvdisp_interlace_f2_active_r(void)
 {
-	return 0x4;
-}
-static inline u32 nvdisp_display_command_r(void)
-{
-	return 0x00000032;
-}
-static inline u32 nvdisp_display_command_control_mode_stop_f(void)
-{
-	return 0x0;
-}
-static inline u32 nvdisp_display_command_control_mode_c_display_f(void)
-{
-	return 0x20;
-}
-static inline u32 nvdisp_display_command_control_mode_nc_display_f(void)
-{
-	return 0x40;
-}
-static inline u32 nvdisp_rg_crca_r(void)
-{
-	return 0x0000032c;
-}
-static inline u32 nvdisp_rg_crca_valid_false_f(void)
-{
-	return 0x0;
-}
-static inline u32 nvdisp_rg_crca_valid_true_f(void)
-{
-	return 0x1;
-}
-static inline u32 nvdisp_rg_crca_error_false_f(void)
-{
-	return 0x0;
-}
-static inline u32 nvdisp_rg_crca_error_true_f(void)
-{
-	return 0x2;
-}
-static inline u32 nvdisp_rg_crcb_r(void)
-{
-	return 0x0000032d;
-}
-static inline u32 nvdisp_win_options_r(void)
-{
-	return 0x00000402;
-}
-static inline u32 nvdisp_win_options_cursor_is_enable_v(u32 r)
-{
-	return (r >> 16) & 0x1;
-}
-static inline u32 nvdisp_win_options_cursor_set_cursor_enable_f(void)
-{
-	return 0x10000;
-}
-static inline u32 nvdisp_win_options_sor_is_enable_v(u32 r)
-{
-	return (r >> 25) & 0x1;
-}
-static inline u32 nvdisp_win_options_sor_set_sor_enable_f(void)
-{
-	return 0x2000000;
-}
-static inline u32 nvdisp_win_options_sor1_is_enable_v(u32 r)
-{
-	return (r >> 26) & 0x1;
-}
-static inline u32 nvdisp_win_options_sor1_set_sor1_enable_f(void)
-{
-	return 0x4000000;
-}
-static inline u32 nvdisp_win_options_dsi_is_enable_v(u32 r)
-{
-	return (r >> 29) & 0x1;
-}
-static inline u32 nvdisp_win_options_dsi_set_dsi_enable_f(void)
-{
-	return 0x20000000;
-}
-static inline u32 nvdisp_cursor_startaddr_r(void)
-{
-	return 0x0000043e;
-}
-static inline u32 nvdisp_cursor_startaddr_range_v(u32 r)
-{
-	return (r >> 0) & 0x3fffff;
-}
-static inline u32 nvdisp_cursor_startaddr_get_size_v(u32 r)
-{
-	return (r >> 24) & 0x3;
-}
-static inline u32 nvdisp_cursor_startaddr_get_size_size_32x32_f(void)
-{
-	return 0x0;
-}
-static inline u32 nvdisp_cursor_startaddr_get_size_size_64x64_f(void)
-{
-	return 0x1000000;
-}
-static inline u32 nvdisp_cursor_startaddr_get_size_size_128x128_f(void)
-{
-	return 0x2000000;
-}
-static inline u32 nvdisp_cursor_startaddr_get_size_size_256x256_f(void)
-{
-	return 0x3000000;
-}
-static inline u32 nvdisp_cursor_position_r(void)
-{
-	return 0x00000440;
-}
-static inline u32 nvdisp_cursor_position_h_range_v(u32 r)
-{
-	return (r >> 0) & 0xffff;
-}
-static inline u32 nvdisp_cursor_position_v_range_v(u32 r)
-{
-	return (r >> 16) & 0xffff;
-}
-static inline u32 nvdisp_cursor_cropped_point_in_r(void)
-{
-	return 0x00000442;
-}
-static inline u32 nvdisp_cursor_cropped_point_in_x_range_v(u32 r)
-{
-	return (r >> 0) & 0xffff;
-}
-static inline u32 nvdisp_cursor_cropped_point_in_y_range_v(u32 r)
-{
-	return (r >> 16) & 0xffff;
-}
-static inline u32 nvdisp_cursor_cropped_size_in_r(void)
-{
-	return 0x00000446;
-}
-static inline u32 nvdisp_cursor_cropped_size_in_width_range_v(u32 r)
-{
-	return (r >> 0) & 0xffff;
-}
-static inline u32 nvdisp_cursor_cropped_size_in_height_range_v(u32 r)
-{
-	return (r >> 16) & 0xffff;
+	return 0x000004ea;
 }
 static inline u32 nvdisp_cursor_startaddr_hi_r(void)
 {
@@ -625,65 +805,5 @@ static inline u32 nvdisp_cursor_startaddr_hi_range_sw_default_f(void)
 static inline u32 nvdisp_blend_cursor_ctrl_r(void)
 {
 	return 0x000004f1;
-}
-static inline u32 nvdisp_sor_control_r(void)
-{
-	return 0x00000403;
-}
-static inline u32 nvdisp_sor_control_protocol_dpa_f(void)
-{
-	return 0x600;
-}
-static inline u32 nvdisp_sor_control_protocol_dpb_f(void)
-{
-	return 0x700;
-}
-static inline u32 nvdisp_sor_control_protocol_custom_f(void)
-{
-	return 0xf00;
-}
-static inline u32 nvdisp_sor1_control_r(void)
-{
-	return 0x00000404;
-}
-static inline u32 nvdisp_sor1_control_protocol_dpa_f(void)
-{
-	return 0x600;
-}
-static inline u32 nvdisp_sor1_control_protocol_tmdsa_f(void)
-{
-	return 0x100;
-}
-static inline u32 nvdisp_dsi_control_r(void)
-{
-	return 0x00000405;
-}
-static inline u32 nvdisp_dsi_control_protocol_dsia_f(void)
-{
-	return 0x800;
-}
-static inline u32 nvdisp_dsi_control_protocol_dsib_f(void)
-{
-	return 0x900;
-}
-static inline u32 nvdisp_interlace_control_r(void)
-{
-	return 0x000004e5;
-}
-static inline u32 nvdisp_interlace_fld2_width_r(void)
-{
-	return 0x000004e7;
-}
-static inline u32 nvdisp_interlace_fld2_bporch_r(void)
-{
-	return 0x000004e8;
-}
-static inline u32 nvdisp_interlace_fld2_fporch_r(void)
-{
-	return 0x000004e9;
-}
-static inline u32 nvdisp_interlace_fld2_active_r(void)
-{
-	return 0x000004ea;
 }
 #endif

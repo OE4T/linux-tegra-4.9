@@ -1040,24 +1040,43 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_device_data *pdata;
-	int ret = 0;
+	int retry_count, ret = 0;
 
 	pdata = dev_get_drvdata(dev);
 	if (!pdata)
 		return -EINVAL;
 
-	/* If poweron_toggle_slcg is set, following is already executed.
-	 * Skip to avoid doing it twice. */
-	if (!pdata->poweron_toggle_slcg) {
-		if (pdata->poweron_reset)
-			nvhost_module_reset(pdev, false);
+	/* WAR to bug 1588951: Retry booting 3 times */
 
-		/* Load clockgating registers */
-		nvhost_module_load_regs(pdev, pdata->engine_can_cg);
+	for (retry_count = 0; retry_count < 3; retry_count++) {
+		if (!pdata->poweron_toggle_slcg) {
+			if (pdata->poweron_reset)
+				nvhost_module_reset(pdev, false);
+
+			/* Load clockgating registers */
+			nvhost_module_load_regs(pdev, pdata->engine_can_cg);
+		} else {
+			/* If poweron_toggle_slcg is set, following is already
+			 * executed once. Skip to avoid doing it twice. */
+			if (retry_count > 0) {
+				/* First, reset module */
+				nvhost_module_reset(pdev, false);
+
+				/* Disable SLCG, wait and re-enable it */
+				nvhost_module_load_regs(pdev, false);
+				udelay(1);
+				if (pdata->engine_can_cg)
+					nvhost_module_load_regs(pdev, true);
+			}
+		}
+
+		if (pdata->finalize_poweron)
+			ret = pdata->finalize_poweron(to_platform_device(dev));
+
+		/* Exit loop if we pass module specific initialization */
+		if (!ret)
+			break;
 	}
-
-	if (pdata->finalize_poweron)
-		ret = pdata->finalize_poweron(to_platform_device(dev));
 
 	nvhost_scale_hw_init(to_platform_device(dev));
 	devfreq_resume_device(pdata->power_manager);

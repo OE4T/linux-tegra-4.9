@@ -56,15 +56,9 @@ enum NVI_ATTR {
 	NVI_ATTR_ACCEL_PART,
 	NVI_ATTR_ACCEL_VERSION,
 	NVI_ATTR_ACCEL_MILLIAMP,
-	NVI_ATTR_ACCEL_BATCH_FLAGS,
-	NVI_ATTR_ACCEL_BATCH_PERIOD,
-	NVI_ATTR_ACCEL_BATCH_TIMEOUT,
 	NVI_ATTR_ANGLVEL_PART,
 	NVI_ATTR_ANGLVEL_VERSION,
 	NVI_ATTR_ANGLVEL_MILLIAMP,
-	NVI_ATTR_ANGLVEL_BATCH_FLAGS,
-	NVI_ATTR_ANGLVEL_BATCH_PERIOD,
-	NVI_ATTR_ANGLVEL_BATCH_TIMEOUT,
 	NVI_ATTR_TEMP_PART,
 	NVI_ATTR_TEMP_VERSION,
 	NVI_ATTR_TEMP_MILLIAMP,
@@ -441,7 +435,7 @@ int nvi_wr_gyro_config(struct nvi_state *st, u8 test, u8 fsr, u8 lpf)
 		if (test > 7)
 			return ret;
 
-		val = test << 3;
+		val = test;
 	}
 	if (((val != st->rc.gyro_config2) || st->rc_dis) && !ret) {
 		ret = nvi_wr_reg_bank_sel(st, st->hal->reg->gyro_config2.bank);
@@ -467,7 +461,7 @@ int nvi_wr_gyro_config(struct nvi_state *st, u8 test, u8 fsr, u8 lpf)
 }
 
 /* Register ACCEL_CONFIG2 */
-int nvi_wr_accel_config2(struct nvi_state *st, u8 val)
+static int nvi_wr_accel_config2(struct nvi_state *st, u8 val)
 {
 	int ret = 0;
 
@@ -559,7 +553,7 @@ int nvi_wr_accel_config(struct nvi_state *st, u8 test, u8 fsr, u8 lpf)
 }
 
 /* Register LP_CONFIG */
-static int nvi_wr_lp_config(struct nvi_state *st, u8 val)
+int nvi_wr_lp_config(struct nvi_state *st, u8 val)
 {
 	int ret = 0;
 
@@ -1022,11 +1016,13 @@ int nvi_wr_user_ctrl(struct nvi_state *st, u8 user_ctrl)
 	bool i2c_enable = true;
 	int i;
 	int ret;
-	int ret_t;
+	int ret_t = 0;
 
 	if (!(user_ctrl & BITS_USER_CTRL_RST))
 		return nvi_wr_user_ctrl_rc(st, user_ctrl);
 
+	if (user_ctrl & BIT_I2C_MST_RST)
+		i2c_enable = false;
 	if (user_ctrl & BIT_SIG_COND_RST)
 		user_ctrl = BITS_USER_CTRL_RST;
 	if (user_ctrl & BIT_DMP_RST)
@@ -1034,12 +1030,22 @@ int nvi_wr_user_ctrl(struct nvi_state *st, u8 user_ctrl)
 	if (user_ctrl & BIT_FIFO_RST) {
 		st->flush = true;
 		fifo_enable = false;
+		/* must make sure FIFO is off or IRQ storm will occur */
+		nvi_user_ctrl_en(st, fifo_enable, i2c_enable);
+		if (st->hal->part >= ICM20628) {
+			ret_t = nvi_wr_reg_bank_sel(st, REG_FIFO_RST_BANK);
+			if (!ret_t) {
+				ret_t =  nvi_i2c_wr(st, REG_FIFO_RST, 0x1F);
+				ret_t |=  nvi_i2c_wr(st, REG_FIFO_RST, 0x1E);
+			}
+			if (user_ctrl == BIT_FIFO_RST)
+				/* then done */
+				return ret_t;
+		}
 	}
-	if (user_ctrl & BIT_I2C_MST_RST)
-		i2c_enable = false;
-	/* must make sure FIFO is off or IRQ storm will occur */
+
 	nvi_user_ctrl_en(st, fifo_enable, i2c_enable);
-	ret_t = nvi_wr_reg_bank_sel(st, st->hal->reg->user_ctrl.bank);
+	ret_t |= nvi_wr_reg_bank_sel(st, st->hal->reg->user_ctrl.bank);
 	if (!ret_t) {
 		ret_t =  nvi_i2c_wr(st, st->hal->reg->user_ctrl.reg,
 				    user_ctrl);
@@ -1177,112 +1183,6 @@ static int nvi_wr_pwr_mgmt_2(struct nvi_state *st, u8 pwr_mgmt_2)
 	return ret;
 }
 
-static int nvi_vreg_dis(struct nvi_state *st, unsigned int i)
-{
-	int ret = 0;
-
-	if (st->vreg[i].ret && (st->vreg[i].consumer != NULL)) {
-		ret = regulator_disable(st->vreg[i].consumer);
-		if (ret) {
-			dev_err(&st->i2c->dev, "%s %s ERR\n",
-				__func__, st->vreg[i].supply);
-		} else {
-			st->vreg[i].ret = 0;
-			dev_dbg(&st->i2c->dev, "%s %s\n",
-				__func__, st->vreg[i].supply);
-		}
-	}
-	return ret;
-}
-
-static int nvi_vreg_dis_all(struct nvi_state *st)
-{
-	unsigned int i;
-	int ret = 0;
-
-	for (i = ARRAY_SIZE(nvi_vregs); i > 0; i--)
-		ret |= nvi_vreg_dis(st, (i - 1));
-	return ret;
-}
-
-static int nvi_vreg_en(struct nvi_state *st, unsigned int i)
-{
-	int ret = 0;
-
-	if ((!st->vreg[i].ret) && (st->vreg[i].consumer != NULL)) {
-		ret = regulator_enable(st->vreg[i].consumer);
-		if (ret) {
-			dev_err(&st->i2c->dev, "%s %s ERR\n",
-				__func__, st->vreg[i].supply);
-		} else {
-			st->vreg[i].ret = 1;
-			dev_dbg(&st->i2c->dev, "%s %s\n",
-				__func__, st->vreg[i].supply);
-			ret = 1; /* flag regulator state change */
-		}
-	}
-	return ret;
-}
-
-static int nvi_vreg_en_all(struct nvi_state *st)
-{
-	unsigned i;
-	int ret = 0;
-
-	for (i = 0; i < ARRAY_SIZE(nvi_vregs); i++)
-		ret |= nvi_vreg_en(st, i);
-	return ret;
-}
-
-static void nvi_vreg_exit(struct nvi_state *st)
-{
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(nvi_vregs); i++) {
-		if (st->vreg[i].consumer != NULL) {
-			regulator_unregister_notifier(st->vreg[i].consumer,
-						      &st->nb_vreg[i]);
-			devm_regulator_put(st->vreg[i].consumer);
-			st->vreg[i].consumer = NULL;
-			dev_dbg(&st->i2c->dev, "%s %s\n",
-				__func__, st->vreg[i].supply);
-		}
-	}
-}
-
-static int nvi_vreg_init(struct nvi_state *st)
-{
-	unsigned int i;
-	int ret = 0;
-
-	for (i = 0; i < ARRAY_SIZE(nvi_vregs); i++) {
-		st->vreg[i].supply = nvi_vregs[i];
-		st->vreg[i].ret = 0;
-		st->vreg[i].consumer = devm_regulator_get(&st->i2c->dev,
-							  st->vreg[i].supply);
-		if (IS_ERR(st->vreg[i].consumer)) {
-			ret = PTR_ERR(st->vreg[i].consumer);
-			dev_err(&st->i2c->dev, "%s ERR %d for %s\n",
-				__func__, ret, st->vreg[i].supply);
-			st->vreg_en_ts[i] = nvi_get_time_ns(st);
-			st->vreg[i].consumer = NULL;
-		} else {
-			ret = regulator_is_enabled(st->vreg[i].consumer);
-			if (ret > 0)
-				st->vreg_en_ts[i] = nvi_get_time_ns(st);
-			else
-				st->vreg_en_ts[i] = 0;
-			st->nb_vreg[i].notifier_call = nvi_nb_vreg_pf[i];
-			ret = regulator_register_notifier(st->vreg[i].consumer,
-							  &st->nb_vreg[i]);
-			dev_dbg(&st->i2c->dev, "%s %s enable_ts=%lld\n",
-				__func__, st->vreg[i].supply,
-				st->vreg_en_ts[i]);
-		}
-	}
-	return ret;
-}
-
 static int nvi_nb_vreg(struct nvi_state *st,
 		       unsigned long event, unsigned int i)
 {
@@ -1307,7 +1207,7 @@ int nvi_pm_wr(struct nvi_state *st, u8 pwr_mgmt_1, u8 pwr_mgmt_2, u8 lp)
 	int ret;
 	int ret_t = 0;
 
-	ret = nvi_vreg_en_all(st);
+	ret = nvs_vregs_enable(&st->i2c->dev, st->vreg, ARRAY_SIZE(nvi_vregs));
 	if (ret) {
 		rc_dis = st->rc_dis;
 		st->rc_dis = true;
@@ -1511,7 +1411,8 @@ int nvi_pm(struct nvi_state *st, int pm_req)
 				ret |= nvi_wr_pwr_mgmt_1(st, BIT_H_RESET);
 			}
 			ret |= nvi_pm_wr(st, pwr_mgmt_1, pwr_mgmt_2, lp);
-			ret |= nvi_vreg_dis_all(st);
+			ret |= nvs_vregs_disable(&st->i2c->dev, st->vreg,
+						 ARRAY_SIZE(nvi_vregs));
 		} else {
 			ret |= nvi_pm_wr(st, pwr_mgmt_1, pwr_mgmt_2, lp);
 			if (pm > NVI_PM_STDBY)
@@ -1551,14 +1452,15 @@ static void nvi_pm_exit(struct nvi_state *st)
 {
 	if (st->hal)
 		nvi_pm(st, NVI_PM_OFF_FORCE);
-	nvi_vreg_exit(st);
+	nvs_vregs_exit(&st->i2c->dev, st->vreg, ARRAY_SIZE(nvi_vregs));
 }
 
 static int nvi_pm_init(struct nvi_state *st)
 {
 	int ret;
 
-	ret = nvi_vreg_init(st);
+	ret = nvs_vregs_init(&st->i2c->dev,
+			     st->vreg, ARRAY_SIZE(nvi_vregs), nvi_vregs);
 	st->pm = NVI_PM_ERR;
 	return ret;
 }
@@ -1777,7 +1679,7 @@ static int nvi_batch(struct nvi_state *st)
 	int ret = 0;
 
 	if (st->hal->dmp)
-		ret = 1;
+		ret = 0;
 	return ret;
 }
 
@@ -2446,9 +2348,11 @@ int nvi_mpu_delay_us(int port, unsigned long delay_us)
 	mutex_lock(&indio_dev->mlock);
 	ret = nvi_aux_mpu_call_pre(st, port);
 	if (!ret) {
-		st->aux.port[port].nmp.delay_us = delay_us;
-		if (st->rc.i2c_slv_ctrl[port] & BIT_SLV_EN)
-			ret = nvi_dev_delay(st, DEV_AUX);
+		if (st->aux.port[port].nmp.delay_us != delay_us) {
+			st->aux.port[port].nmp.delay_us = delay_us;
+			if (st->rc.i2c_slv_ctrl[port] & BIT_SLV_EN)
+				ret = nvi_dev_delay(st, DEV_AUX);
+		}
 		ret |= nvi_aux_mpu_call_post(st, "nvi_mpu_delay_us ret=", ret);
 	}
 	mutex_unlock(&indio_dev->mlock);
@@ -2482,7 +2386,7 @@ int nvi_mpu_data_out(int port, u8 data_out)
 EXPORT_SYMBOL(nvi_mpu_data_out);
 
 int nvi_mpu_batch(int port, unsigned int flags,
-		  unsigned int period_us, unsigned int timeout_ms)
+		  unsigned int period_us, unsigned int timeout_us)
 {
 	struct iio_dev *indio_dev = indio_dev_local;
 	struct nvi_state *st;
@@ -2492,10 +2396,10 @@ int nvi_mpu_batch(int port, unsigned int flags,
 		st = iio_priv(indio_dev);
 		if (st->dbg & NVI_DBG_SPEW_AUX)
 			pr_info("%s port %d: f=%x p=%u t=%u\n",
-				__func__, port, flags, period_us, timeout_ms);
+				__func__, port, flags, period_us, timeout_us);
 	} else {
 		pr_debug("%s port %d: f=%x p=%u t=%u ERR -EAGAIN\n",
-			__func__, port, flags, period_us, timeout_ms);
+			__func__, port, flags, period_us, timeout_us);
 		return -EAGAIN;
 	}
 
@@ -2506,7 +2410,12 @@ int nvi_mpu_batch(int port, unsigned int flags,
 				(st->aux.port[port].nmp.id < ID_INVALID_END)) {
 			st->aux.port[port].batch_flags = flags;
 			st->aux.port[port].batch_period_us = period_us;
-			st->aux.port[port].batch_timeout_ms = timeout_ms;
+			st->aux.port[port].batch_timeout_us = timeout_us;
+			if (st->aux.port[port].nmp.delay_us != period_us) {
+				st->aux.port[port].nmp.delay_us = period_us;
+				if (st->rc.i2c_slv_ctrl[port] & BIT_SLV_EN)
+					ret = nvi_dev_delay(st, DEV_AUX);
+			}
 			ret = nvi_batch(st);
 			ret = nvi_aux_mpu_call_post(st,
 					      "nvi_mpu_batch ret/flags=", ret);
@@ -3126,52 +3035,6 @@ static ssize_t nvi_attr_store(struct device *dev,
 		ret = nvi_enable(indio_dev);
 		break;
 
-	case NVI_ATTR_ACCEL_BATCH_FLAGS:
-		msg = "ATTR_ACCEL_BATCH_FLAGS";
-		old = st->batch_flags[DEV_ACCEL];
-		st->batch_flags[DEV_ACCEL] = new;
-		break;
-
-	case NVI_ATTR_ACCEL_BATCH_PERIOD:
-		msg = "ATTR_ACCEL_BATCH_PERIOD";
-		old = st->batch_period_us[DEV_ACCEL];
-		if (new < st->hal->smplrt[DEV_ACCEL]->delay_us_min)
-			new = st->hal->smplrt[DEV_ACCEL]->delay_us_min;
-		st->batch_period_us[DEV_ACCEL] = new;
-		break;
-
-	case NVI_ATTR_ACCEL_BATCH_TIMEOUT:
-		msg = "ATTR_ACCEL_BATCH_TIMEOUT";
-		old = st->batch_timeout_ms[DEV_ACCEL];
-		st->batch_timeout_ms[DEV_ACCEL] = new;
-		ret = nvi_batch(st);
-		break;
-
-	case NVI_ATTR_ANGLVEL_BATCH_FLAGS:
-		msg = "ATTR_ANGLVEL_BATCH_FLAGS";
-		old = st->batch_flags[DEV_ANGLVEL];
-		st->batch_flags[DEV_ANGLVEL] = new;
-		break;
-
-	case NVI_ATTR_ANGLVEL_BATCH_PERIOD:
-		msg = "ATTR_ANGLVEL_BATCH_PERIOD";
-		old = st->batch_period_us[DEV_ANGLVEL];
-		if (new < st->hal->smplrt[DEV_ANGLVEL]->delay_us_min)
-			new = st->hal->smplrt[DEV_ANGLVEL]->delay_us_min;
-		st->batch_period_us[DEV_ANGLVEL] = new;
-		break;
-
-	case NVI_ATTR_ANGLVEL_BATCH_TIMEOUT:
-		msg = "ATTR_ANGLVEL_BATCH_TIMEOUT";
-		old = st->batch_timeout_ms[DEV_ANGLVEL];
-		st->batch_timeout_ms[DEV_ANGLVEL] = new;
-		ret = nvi_batch(st);
-		break;
-
-	case NVI_ATTR_FLUSH:
-		ret = nvi_enable(indio_dev);
-		break;
-
 	case NVI_ATTR_FIFO_RSRV_EVNT_CNT:
 		msg = "ATTR_FIFO_RSRV_EVNT_CNT";
 		old = st->chip_config.fifo_reserve;
@@ -3231,10 +3094,6 @@ static ssize_t nvi_attr_show(struct device *dev,
 	case NVI_ATTR_VENDOR:
 		return sprintf(buf, "%s\n", NVI_VENDOR);
 
-	case NVI_ATTR_FLUSH:
-		/* returns batch capability */
-		return sprintf(buf, "%x\n", st->hal->dmp);
-
 	case NVI_ATTR_FIFO_RSRV_EVNT_CNT:
 		return sprintf(buf, "%u\n", st->chip_config.fifo_reserve);
 
@@ -3248,7 +3107,9 @@ static ssize_t nvi_attr_show(struct device *dev,
 		return sprintf(buf, "%d\n", st->hal->dev[DEV_ACCEL]->version);
 
 	case NVI_ATTR_ACCEL_MILLIAMP:
-		return sprintf(buf, "%s\n", st->hal->dev[DEV_ACCEL]->power_ma);
+		return sprintf(buf, "%d.%06u\n",
+			       st->hal->dev[DEV_ACCEL]->milliamp.ival,
+			       st->hal->dev[DEV_ACCEL]->milliamp.fval);
 
 	case NVI_ATTR_ANGLVEL_PART:
 		return sprintf(buf, "%s gyro\n", st->hal->part_name);
@@ -3258,8 +3119,9 @@ static ssize_t nvi_attr_show(struct device *dev,
 			       st->hal->dev[DEV_ANGLVEL]->version);
 
 	case NVI_ATTR_ANGLVEL_MILLIAMP:
-		return sprintf(buf, "%s\n",
-			       st->hal->dev[DEV_ANGLVEL]->power_ma);
+		return sprintf(buf, "%d.%06u\n",
+			       st->hal->dev[DEV_ANGLVEL]->milliamp.ival,
+			       st->hal->dev[DEV_ANGLVEL]->milliamp.fval);
 
 	case NVI_ATTR_TEMP_PART:
 		return sprintf(buf, "%s temperature\n", st->hal->part_name);
@@ -3268,7 +3130,9 @@ static ssize_t nvi_attr_show(struct device *dev,
 		return sprintf(buf, "%d\n", st->hal->dev[DEV_TEMP]->version);
 
 	case NVI_ATTR_TEMP_MILLIAMP:
-		return sprintf(buf, "%s\n", st->hal->dev[DEV_TEMP]->power_ma);
+		return sprintf(buf, "%d.%06u\n",
+			       st->hal->dev[DEV_TEMP]->milliamp.ival,
+			       st->hal->dev[DEV_TEMP]->milliamp.fval);
 
 	case INV_ATTR_SELF_TEST:
 		mutex_lock(&indio_dev->mlock);
@@ -3621,17 +3485,6 @@ static IIO_DEVICE_ATTR(accel_version, S_IRUGO,
 		       nvi_attr_show, NULL, NVI_ATTR_ACCEL_VERSION);
 static IIO_DEVICE_ATTR(accel_milliamp, S_IRUGO,
 		       nvi_attr_show, NULL, NVI_ATTR_ACCEL_MILLIAMP);
-static IIO_DEVICE_ATTR(accel_batch_flags, S_IRUGO | S_IWUSR | S_IWGRP,
-		       nvi_attr_show, nvi_attr_store,
-		       NVI_ATTR_ACCEL_BATCH_FLAGS);
-static IIO_DEVICE_ATTR(accel_batch_period, S_IRUGO | S_IWUSR | S_IWGRP,
-		       nvi_attr_show, nvi_attr_store,
-		       NVI_ATTR_ACCEL_BATCH_PERIOD);
-static IIO_DEVICE_ATTR(accel_batch_timeout, S_IRUGO | S_IWUSR | S_IWGRP,
-		       nvi_attr_show, nvi_attr_store,
-		       NVI_ATTR_ACCEL_BATCH_TIMEOUT);
-static IIO_DEVICE_ATTR(accel_flush, S_IRUGO | S_IWUSR | S_IWGRP,
-		       nvi_attr_show, nvi_attr_store, NVI_ATTR_FLUSH);
 static IIO_DEVICE_ATTR(accel_fifo_reserved_event_count,
 		       S_IRUGO | S_IWUSR | S_IWGRP,
 		       nvi_attr_show, nvi_attr_store,
@@ -3650,17 +3503,6 @@ static IIO_DEVICE_ATTR(anglvel_version, S_IRUGO,
 		       nvi_attr_show, NULL, NVI_ATTR_ANGLVEL_VERSION);
 static IIO_DEVICE_ATTR(anglvel_milliamp, S_IRUGO,
 		       nvi_attr_show, NULL, NVI_ATTR_ANGLVEL_MILLIAMP);
-static IIO_DEVICE_ATTR(anglvel_batch_flags, S_IRUGO | S_IWUSR | S_IWGRP,
-		       nvi_attr_show, nvi_attr_store,
-		       NVI_ATTR_ANGLVEL_BATCH_FLAGS);
-static IIO_DEVICE_ATTR(anglvel_batch_period, S_IRUGO | S_IWUSR | S_IWGRP,
-		       nvi_attr_show, nvi_attr_store,
-		       NVI_ATTR_ANGLVEL_BATCH_PERIOD);
-static IIO_DEVICE_ATTR(anglvel_batch_timeout, S_IRUGO | S_IWUSR | S_IWGRP,
-		       nvi_attr_show, nvi_attr_store,
-		       NVI_ATTR_ANGLVEL_BATCH_TIMEOUT);
-static IIO_DEVICE_ATTR(anglvel_flush, S_IRUGO | S_IWUSR | S_IWGRP,
-		       nvi_attr_show, nvi_attr_store, NVI_ATTR_FLUSH);
 static IIO_DEVICE_ATTR(anglvel_fifo_reserved_event_count,
 		       S_IRUGO | S_IWUSR | S_IWGRP,
 		       nvi_attr_show, nvi_attr_store,
@@ -3695,10 +3537,6 @@ static struct attribute *nvi_attrs[] = {
 	&iio_dev_attr_accel_vendor.dev_attr.attr,
 	&iio_dev_attr_accel_version.dev_attr.attr,
 	&iio_dev_attr_accel_milliamp.dev_attr.attr,
-	&iio_dev_attr_accel_batch_flags.dev_attr.attr,
-	&iio_dev_attr_accel_batch_period.dev_attr.attr,
-	&iio_dev_attr_accel_batch_timeout.dev_attr.attr,
-	&iio_dev_attr_accel_flush.dev_attr.attr,
 	&iio_dev_attr_accel_fifo_reserved_event_count.dev_attr.attr,
 	&iio_dev_attr_accel_fifo_max_event_count.dev_attr.attr,
 	&dev_attr_accel_matrix.attr,
@@ -3707,10 +3545,6 @@ static struct attribute *nvi_attrs[] = {
 	&iio_dev_attr_anglvel_vendor.dev_attr.attr,
 	&iio_dev_attr_anglvel_version.dev_attr.attr,
 	&iio_dev_attr_anglvel_milliamp.dev_attr.attr,
-	&iio_dev_attr_anglvel_batch_flags.dev_attr.attr,
-	&iio_dev_attr_anglvel_batch_period.dev_attr.attr,
-	&iio_dev_attr_anglvel_batch_timeout.dev_attr.attr,
-	&iio_dev_attr_anglvel_flush.dev_attr.attr,
 	&iio_dev_attr_anglvel_fifo_reserved_event_count.dev_attr.attr,
 	&iio_dev_attr_anglvel_fifo_max_event_count.dev_attr.attr,
 	&dev_attr_anglvel_matrix.attr,
@@ -3767,7 +3601,11 @@ static int nvi_read_raw(struct iio_dev *indio_dev,
 			return -EINVAL;
 		}
 
-	case IIO_CHAN_INFO_SAMP_FREQ:
+	case IIO_CHAN_INFO_BATCH_FLUSH:
+		*val = (int)st->flush;
+		return IIO_VAL_INT;
+
+	case IIO_CHAN_INFO_BATCH_PERIOD:
 		switch (chan->type) {
 		case IIO_ACCEL:
 			i = DEV_ACCEL;
@@ -3790,21 +3628,65 @@ static int nvi_read_raw(struct iio_dev *indio_dev,
 			*val = st->hal->smplrt[i]->delay_us_min;
 		return IIO_VAL_INT;
 
+	case IIO_CHAN_INFO_BATCH_TIMEOUT:
+		switch (chan->type) {
+		case IIO_ACCEL:
+			i = DEV_ACCEL;
+			break;
+
+		case IIO_ANGL_VEL:
+			i = DEV_ANGLVEL;
+			break;
+
+		case IIO_TEMP:
+			i = DEV_TEMP;
+			break;
+
+		default:
+			return -EINVAL;
+		}
+		*val = st->batch_timeout_us[i];
+		if (st->master_enable & (1 << i))
+			*val = st->batch_timeout_us[i];
+		else
+			*val = st->hal->smplrt[i]->delay_us_max;
+		return IIO_VAL_INT;
+
+	case IIO_CHAN_INFO_BATCH_FLAGS:
+		switch (chan->type) {
+		case IIO_ACCEL:
+			i = DEV_ACCEL;
+			break;
+
+		case IIO_ANGL_VEL:
+			i = DEV_ANGLVEL;
+			break;
+
+		case IIO_TEMP:
+			i = DEV_TEMP;
+			break;
+
+		default:
+			return -EINVAL;
+		}
+		*val = st->batch_flags[i];
+		return IIO_VAL_INT;
+
 	case IIO_CHAN_INFO_SCALE:
 		switch (chan->type) {
 		case IIO_ACCEL:
 			*val = st->hal->dev[DEV_ACCEL]->scale.ival;
-			*val2 = st->hal->dev[DEV_ACCEL]->scale.micro;
+			*val2 = st->hal->dev[DEV_ACCEL]->scale.fval;
 			return IIO_VAL_INT_PLUS_MICRO;
 
 		case IIO_ANGL_VEL:
 			*val = st->hal->dev[DEV_ANGLVEL]->scale.ival;
-			*val2 = st->hal->dev[DEV_ANGLVEL]->scale.micro;
+			*val2 = st->hal->dev[DEV_ANGLVEL]->scale.fval;
 			return IIO_VAL_INT_PLUS_MICRO;
 
 		case IIO_TEMP:
 			*val = st->hal->dev[DEV_TEMP]->scale.ival;
-			*val2 = st->hal->dev[DEV_TEMP]->scale.micro;
+			*val2 = st->hal->dev[DEV_TEMP]->scale.fval;
 			return IIO_VAL_INT_PLUS_MICRO;
 
 		default:
@@ -3827,7 +3709,7 @@ static int nvi_read_raw(struct iio_dev *indio_dev,
 
 		case IIO_TEMP:
 			*val = st->hal->dev[DEV_TEMP]->offset.ival;
-			*val2 = st->hal->dev[DEV_TEMP]->offset.micro;
+			*val2 = st->hal->dev[DEV_TEMP]->offset.fval;
 			return IIO_VAL_INT_PLUS_MICRO;
 
 		default:
@@ -3845,7 +3727,7 @@ static int nvi_read_raw(struct iio_dev *indio_dev,
 				*val = st->hal->dev[DEV_ACCEL]->
 							  rr[i].max_range.ival;
 				*val2 = st->hal->dev[DEV_ACCEL]->
-							 rr[i].max_range.micro;
+							 rr[i].max_range.fval;
 				return IIO_VAL_INT_PLUS_MICRO;
 			}
 
@@ -3859,13 +3741,13 @@ static int nvi_read_raw(struct iio_dev *indio_dev,
 				*val = st->hal->dev[DEV_ANGLVEL]->
 							  rr[i].max_range.ival;
 				*val2 = st->hal->dev[DEV_ANGLVEL]->
-							 rr[i].max_range.micro;
+							 rr[i].max_range.fval;
 				return IIO_VAL_INT_PLUS_MICRO;
 			}
 
 		case IIO_TEMP:
 			*val = st->hal->dev[DEV_TEMP]->rr->max_range.ival;
-			*val2 = st->hal->dev[DEV_TEMP]->rr->max_range.micro;
+			*val2 = st->hal->dev[DEV_TEMP]->rr->max_range.fval;
 			return IIO_VAL_INT_PLUS_MICRO;
 
 		default:
@@ -3878,7 +3760,7 @@ static int nvi_read_raw(struct iio_dev *indio_dev,
 			i = st->chip_config.accel_fs;
 			*val = st->hal->dev[DEV_ACCEL]->rr[i].resolution.ival;
 			*val2 = st->hal->dev[DEV_ACCEL]->
-							rr[i].resolution.micro;
+							rr[i].resolution.fval;
 			return IIO_VAL_INT_PLUS_MICRO;
 
 		case IIO_ANGL_VEL:
@@ -3886,12 +3768,12 @@ static int nvi_read_raw(struct iio_dev *indio_dev,
 			*val = st->hal->dev[DEV_ANGLVEL]->
 							 rr[i].resolution.ival;
 			*val2 = st->hal->dev[DEV_ANGLVEL]->
-							rr[i].resolution.micro;
+							rr[i].resolution.fval;
 			return IIO_VAL_INT_PLUS_MICRO;
 
 		case IIO_TEMP:
 			*val = st->hal->dev[DEV_TEMP]->rr->resolution.ival;
-			*val2 = st->hal->dev[DEV_TEMP]->rr->resolution.micro;
+			*val2 = st->hal->dev[DEV_TEMP]->rr->resolution.fval;
 			return IIO_VAL_INT_PLUS_MICRO;
 
 		default:
@@ -3940,8 +3822,32 @@ static int nvi_write_raw(struct iio_dev *indio_dev,
 	}
 
 	switch (mask) {
-	case IIO_CHAN_INFO_SAMP_FREQ:
-		msg = "IIO_CHAN_INFO_SAMP_FREQ";
+	case IIO_CHAN_INFO_BATCH_FLUSH:
+		msg = "IIO_CHAN_INFO_BATCH_FLUSH";
+		switch (chan->type) {
+		case IIO_ACCEL:
+			dev = DEV_ACCEL;
+			break;
+
+		case IIO_ANGL_VEL:
+			dev = DEV_ANGLVEL;
+			break;
+
+		case IIO_TEMP:
+			dev = DEV_TEMP;
+			break;
+
+		default:
+			ret = -EINVAL;
+		}
+		if (!ret) {
+			if (st->enable[dev])
+				ret = nvi_enable(indio_dev);
+		}
+		break;
+
+	case IIO_CHAN_INFO_BATCH_PERIOD:
+		msg = "IIO_CHAN_INFO_BATCH_PERIOD";
 		switch (chan->type) {
 		case IIO_ACCEL:
 			dev = DEV_ACCEL;
@@ -3970,6 +3876,54 @@ static int nvi_write_raw(struct iio_dev *indio_dev,
 				if (ret)
 					st->delay_us[dev] = old;
 			}
+		}
+		break;
+
+	case IIO_CHAN_INFO_BATCH_TIMEOUT:
+		msg = "IIO_CHAN_INFO_BATCH_TIMEOUT";
+		switch (chan->type) {
+		case IIO_ACCEL:
+			dev = DEV_ACCEL;
+			break;
+
+		case IIO_ANGL_VEL:
+			dev = DEV_ANGLVEL;
+			break;
+
+		case IIO_TEMP:
+			dev = DEV_TEMP;
+			break;
+
+		default:
+			ret = -EINVAL;
+		}
+		if (!ret) {
+			old = st->batch_timeout_us[dev];
+			st->batch_timeout_us[dev] = val;
+		}
+		break;
+
+	case IIO_CHAN_INFO_BATCH_FLAGS:
+		msg = "IIO_CHAN_INFO_BATCH_FLAGS";
+		switch (chan->type) {
+		case IIO_ACCEL:
+			dev = DEV_ACCEL;
+			break;
+
+		case IIO_ANGL_VEL:
+			dev = DEV_ANGLVEL;
+			break;
+
+		case IIO_TEMP:
+			dev = DEV_TEMP;
+			break;
+
+		default:
+			ret = -EINVAL;
+		}
+		if (!ret) {
+			old = st->batch_flags[dev];
+			st->batch_flags[dev] = val;
 		}
 		break;
 
@@ -4102,7 +4056,10 @@ static const struct iio_chan_spec nvi_channels[] = {
 					  BIT(IIO_CHAN_INFO_CALIBBIAS) |
 					  BIT(IIO_CHAN_INFO_SCALE) |
 					  BIT(IIO_CHAN_INFO_OFFSET),
-		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SAMP_FREQ) |
+		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
+					    BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
+					    BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
+					    BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
 					    BIT(IIO_CHAN_INFO_PEAK) |
 					    BIT(IIO_CHAN_INFO_PEAK_SCALE),
 		.modified		= 1,
@@ -4116,7 +4073,10 @@ static const struct iio_chan_spec nvi_channels[] = {
 					  BIT(IIO_CHAN_INFO_CALIBBIAS) |
 					  BIT(IIO_CHAN_INFO_SCALE) |
 					  BIT(IIO_CHAN_INFO_OFFSET),
-		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SAMP_FREQ) |
+		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
+					    BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
+					    BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
+					    BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
 					    BIT(IIO_CHAN_INFO_PEAK) |
 					    BIT(IIO_CHAN_INFO_PEAK_SCALE),
 		.modified		= 1,
@@ -4130,7 +4090,10 @@ static const struct iio_chan_spec nvi_channels[] = {
 					  BIT(IIO_CHAN_INFO_CALIBBIAS) |
 					  BIT(IIO_CHAN_INFO_SCALE) |
 					  BIT(IIO_CHAN_INFO_OFFSET),
-		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SAMP_FREQ) |
+		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
+					    BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
+					    BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
+					    BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
 					    BIT(IIO_CHAN_INFO_PEAK) |
 					    BIT(IIO_CHAN_INFO_PEAK_SCALE),
 		.modified		= 1,
@@ -4144,7 +4107,10 @@ static const struct iio_chan_spec nvi_channels[] = {
 					  BIT(IIO_CHAN_INFO_CALIBBIAS) |
 					  BIT(IIO_CHAN_INFO_SCALE) |
 					  BIT(IIO_CHAN_INFO_OFFSET),
-		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SAMP_FREQ) |
+		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
+					    BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
+					    BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
+					    BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
 					    BIT(IIO_CHAN_INFO_PEAK) |
 					    BIT(IIO_CHAN_INFO_PEAK_SCALE),
 		.modified		= 1,
@@ -4158,7 +4124,10 @@ static const struct iio_chan_spec nvi_channels[] = {
 					  BIT(IIO_CHAN_INFO_CALIBBIAS) |
 					  BIT(IIO_CHAN_INFO_SCALE) |
 					  BIT(IIO_CHAN_INFO_OFFSET),
-		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SAMP_FREQ) |
+		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
+					    BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
+					    BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
+					    BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
 					    BIT(IIO_CHAN_INFO_PEAK) |
 					    BIT(IIO_CHAN_INFO_PEAK_SCALE),
 		.modified		= 1,
@@ -4172,7 +4141,10 @@ static const struct iio_chan_spec nvi_channels[] = {
 					  BIT(IIO_CHAN_INFO_CALIBBIAS) |
 					  BIT(IIO_CHAN_INFO_SCALE) |
 					  BIT(IIO_CHAN_INFO_OFFSET),
-		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SAMP_FREQ) |
+		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
+					    BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
+					    BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
+					    BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
 					    BIT(IIO_CHAN_INFO_PEAK) |
 					    BIT(IIO_CHAN_INFO_PEAK_SCALE),
 		.modified		= 1,
@@ -4182,7 +4154,10 @@ static const struct iio_chan_spec nvi_channels[] = {
 		.scan_index		= NVI_SCAN_TEMP,
 		.scan_type		= IIO_ST('s', 16, 16, 0),
 		.info_mask_separate	= BIT(IIO_CHAN_INFO_RAW),
-		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SAMP_FREQ) |
+		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
+					    BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
+					    BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
+					    BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
 					    BIT(IIO_CHAN_INFO_PEAK) |
 					    BIT(IIO_CHAN_INFO_PEAK_SCALE) |
 					    BIT(IIO_CHAN_INFO_SCALE) |
@@ -4279,41 +4254,41 @@ static struct nvi_rr nvi_rr_accel[] = {
 	{
 		.max_range		= {
 			.ival		= 19,
-			.micro		= 613300,
+			.fval		= 613300,
 		},
 		.resolution		= {
 			.ival		= 0,
-			.micro		= 61,
+			.fval		= 61,
 		},
 	},
 	{
 		.max_range		= {
 			.ival		= 39,
-			.micro		= 226600,
+			.fval		= 226600,
 		},
 		.resolution		= {
 			.ival		= 0,
-			.micro		= 122,
+			.fval		= 122,
 		},
 	},
 	{
 		.max_range		= {
 			.ival		= 78,
-			.micro		= 453200,
+			.fval		= 453200,
 		},
 		.resolution		= {
 			.ival		= 0,
-			.micro		= 244,
+			.fval		= 244,
 		},
 	},
 	{
 		.max_range		= {
 			.ival		= 156,
-			.micro		= 906400,
+			.fval		= 906400,
 		},
 		.resolution		= {
 			.ival		= 0,
-			.micro		= 488,
+			.fval		= 488,
 		},
 	},
 };
@@ -4323,41 +4298,41 @@ static struct nvi_rr nvi_rr_anglvel[] = {
 	{
 		.max_range		= {
 			.ival		= 4,
-			.micro		= 363323,
+			.fval		= 363323,
 		},
 		.resolution		= {
 			.ival		= 0,
-			.micro		= 133,
+			.fval		= 133,
 		},
 	},
 	{
 		.max_range		= {
 			.ival		= 8,
-			.micro		= 726646,
+			.fval		= 726646,
 		},
 		.resolution		= {
 			.ival		= 0,
-			.micro		= 266,
+			.fval		= 266,
 		},
 	},
 	{
 		.max_range		= {
 			.ival		= 17,
-			.micro		= 453292,
+			.fval		= 453292,
 		},
 		.resolution		= {
 			.ival		= 0,
-			.micro		= 533,
+			.fval		= 533,
 		},
 	},
 	{
 		.max_range		= {
 			.ival		= 34,
-			.micro		= 906585,
+			.fval		= 906585,
 		},
 		.resolution		= {
 			.ival		= 0,
-			.micro		= 1065,
+			.fval		= 1065,
 		},
 	},
 };
@@ -4366,11 +4341,11 @@ static struct nvi_rr nvi_rr_temp[] = {
 	{
 		.max_range		= {
 			.ival		= 125,
-			.micro		= 0,
+			.fval		= 0,
 		},
 		.resolution		= {
 			.ival		= 1,
-			.micro		= 0,
+			.fval		= 0,
 		},
 	},
 };
@@ -4381,13 +4356,16 @@ static const struct nvi_hal_dev nvi_hal_6050_accel = {
 	.rr				= nvi_rr_accel,
 	.scale				= {
 		.ival			= 0,
-		.micro			= 0,
+		.fval			= 0,
 	},
 	.offset				= {
 		.ival			= 0,
-		.micro			= 0,
+		.fval			= 0,
 	},
-	.power_ma			= "0.5",
+	.milliamp			= {
+		.ival			= 0,
+		.fval			= 500000,
+	},
 };
 
 static const struct nvi_hal_dev nvi_hal_6050_anglvel = {
@@ -4396,13 +4374,16 @@ static const struct nvi_hal_dev nvi_hal_6050_anglvel = {
 	.rr				= nvi_rr_anglvel,
 	.scale				= {
 		.ival			= 0,
-		.micro			= 0,
+		.fval			= 0,
 	},
 	.offset				= {
 		.ival			= 0,
-		.micro			= 0,
+		.fval			= 0,
 	},
-	.power_ma			= "3.7",
+	.milliamp			= {
+		.ival			= 3,
+		.fval			= 700000,
+	},
 };
 
 static const struct nvi_hal_dev nvi_hal_6050_temp = {
@@ -4410,13 +4391,16 @@ static const struct nvi_hal_dev nvi_hal_6050_temp = {
 	.rr				= nvi_rr_temp,
 	.scale				= {
 		.ival			= 3158064,
-		.micro			= 0,
+		.fval			= 0,
 	},
 	.offset				= {
 		.ival			= 2394184,
-		.micro			= 0,
+		.fval			= 0,
 	},
-	.power_ma			= "3.7",
+	.milliamp			= {
+		.ival			= 3,
+		.fval			= 700000,
+	},
 };
 
 static const struct nvi_hal_reg nvi_hal_reg_6050 = {
@@ -4611,13 +4595,16 @@ static const struct nvi_hal_dev nvi_hal_6500_accel = {
 	.rr				= nvi_rr_accel,
 	.scale				= {
 		.ival			= 0,
-		.micro			= 0,
+		.fval			= 0,
 	},
 	.offset				= {
 		.ival			= 0,
-		.micro			= 0,
+		.fval			= 0,
 	},
-	.power_ma			= "0.5",
+	.milliamp			= {
+		.ival			= 0,
+		.fval			= 500000,
+	},
 };
 
 static const struct nvi_hal_dev nvi_hal_6500_temp = {
@@ -4625,13 +4612,16 @@ static const struct nvi_hal_dev nvi_hal_6500_temp = {
 	.rr				= nvi_rr_temp,
 	.scale				= {
 		.ival			= 3340827,
-		.micro			= 0,
+		.fval			= 0,
 	},
 	.offset				= {
 		.ival			= 1376256,
-		.micro			= 0,
+		.fval			= 0,
 	},
-	.power_ma			= "3.7",
+	.milliamp			= {
+		.ival			= 3,
+		.fval			= 700000,
+	},
 };
 
 static const struct nvi_hal_reg nvi_hal_reg_6500 = {
@@ -5193,7 +5183,8 @@ static int nvi_id_dev(struct iio_dev *indio_dev, const char *name)
 
 		ret = nvi_id_hal(st, dev_id);
 		if (ret) {
-			nvi_vreg_dis_all(st);
+			nvs_vregs_disable(&st->i2c->dev, st->vreg,
+					  ARRAY_SIZE(nvi_vregs));
 			st->hal = &nvi_hal_20628;
 			ret = nvi_pm_wr(st, 0, 0, 0);
 			ret = nvi_i2c_read(st, st->i2c_addr,
@@ -5281,12 +5272,18 @@ static int nvi_resume(struct device *dev)
 	struct i2c_client *client = to_i2c_client(dev);
 	struct iio_dev *indio_dev = i2c_get_clientdata(client);
 	struct nvi_state *st = iio_priv(indio_dev);
+	unsigned int i;
 
 	mutex_lock(&indio_dev->mlock);
 	st->suspend = false;
-	nvi_pm(st, NVI_PM_ON);
-	nvi_aux_bypass_enable(st, false);
-	nvi_enable(indio_dev);
+	for (i = 0; i < AUX_PORT_MAX; i++) {
+		if (st->aux.port[i].nmp.shutdown_bypass)
+			break;
+	}
+	if (i < AUX_PORT_MAX) {
+		nvi_pm(st, NVI_PM_ON);
+		nvi_aux_bypass_enable(st, false);
+	}
 	mutex_unlock(&indio_dev->mlock);
 	if (st->dbg & NVI_DBG_SPEW_MSG)
 		dev_info(dev, "%s done\n", __func__);
@@ -5468,6 +5465,8 @@ static int nvi_probe(struct i2c_client *client,
 		goto nvi_probe_err;
 	}
 
+	indio_dev->buffer->access->set_length(indio_dev->buffer, KBUF_SZ);
+	indio_dev->buffer->access->request_update(indio_dev->buffer);
 	if (!st->i2c->irq) {
 		dev_err(&client->dev, "%s ERR: no interrupt\n", __func__);
 		ret = -EINVAL;

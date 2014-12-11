@@ -5,6 +5,7 @@
 config NVI_MPU
 	tristate "Invensense MPU devices"
 	depends on I2C && SYSFS && IIO && IIO_KFIFO_BUF && IIO_TRIGGER && !INV_MPU
+	select NVS_IIO
 	default n
 	help
 	  This driver supports the Invensense MPU devices.

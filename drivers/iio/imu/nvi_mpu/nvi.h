@@ -20,8 +20,10 @@
 #include <linux/kfifo.h>
 #include <linux/miscdevice.h>
 #include <linux/spinlock.h>
-#include <linux/mpu_iio.h>
 #include <linux/regulator/consumer.h>
+#include <linux/iio/iio.h>
+#include <linux/mpu_iio.h>
+#include <linux/nvs.h>
 
 #define MPU6050_ID			(0x68)
 #define MPU6500_ID			(0x70)
@@ -39,8 +41,9 @@
 #define NVI_FIFO_SAMPLE_SIZE_MAX	(38)
 #define TIMESTAMP_FIFO_SIZE		(64)
 #define FIFO_THRESHOLD			(800)
-#define FIFO_RESERVED_EVENT_COUNT	(64)
-#define FIFO_MAX_EVENT_COUNT		(1024)
+#define FIFO_RESERVED_EVENT_COUNT	(0)
+#define FIFO_MAX_EVENT_COUNT		(0)
+#define KBUF_SZ				(64)
 
 #define AXIS_X				(0)
 #define AXIS_Y				(1)
@@ -96,6 +99,11 @@
 #define NVI_DBG_ANGLVEL_AXIS_Y		(1 << 13)
 #define NVI_DBG_ANGLVEL_AXIS_Z		(1 << 14)
 #define NVI_DBG_TEMP_VAL		(1 << 15)
+/* registers */
+#define REG_FIFO_RST_BANK		(0)
+#define REG_FIFO_RST			(0x68)
+#define REG_FIFO_CFG_BANK		(0)
+#define REG_FIFO_CFG			(0x76)
 /* register bits */
 #define BITS_SELF_TEST_EN		(0xE0)
 #define BIT_ACCEL_FCHOCIE_B		(0x08)
@@ -141,6 +149,7 @@
 #define BIT_STBY_XA			(0x20)
 #define BIT_PWR_GYRO_STBY		(0x07)
 #define BIT_PWR_ACCEL_STBY		(0x38)
+#define BIT_PWR_PRESSURE_STBY		(0x40)
 #define BIT_LPA_FREQ			(0xC0)
 
 #define AUX_PORT_MAX			(5)
@@ -175,23 +184,18 @@ enum inv_fsr_e {
 	NUM_FSR
 };
 
-struct nvi_iio_float {
-	int ival;
-	int micro;
-};
-
 struct nvi_rr {
-	struct nvi_iio_float max_range;
-	struct nvi_iio_float resolution;
+	struct nvs_float max_range;
+	struct nvs_float resolution;
 };
 
 struct nvi_hal_dev {
 	int version;
 	int selftest_scale;
 	struct nvi_rr *rr;
-	struct nvi_iio_float scale;
-	struct nvi_iio_float offset;
-	const char *power_ma;
+	struct nvs_float scale;
+	struct nvs_float offset;
+	struct nvs_float milliamp;
 };
 
 struct nvi_smplrt {
@@ -342,7 +346,7 @@ struct aux_port {
 	bool fifo_en;
 	unsigned int batch_flags;
 	unsigned int batch_period_us;
-	unsigned int batch_timeout_ms;
+	unsigned int batch_timeout_us;
 };
 
 struct aux_ports {
@@ -534,8 +538,7 @@ struct nvi_state {
 	unsigned int delay_us[DEV_N_AUX]; /* device sampling delay */
 	unsigned int smplrt_delay_us[DEV_N_AUX]; /* source sampling delay */
 	unsigned int batch_flags[DEV_N]; /* batch flags */
-	unsigned int batch_period_us[DEV_N]; /* batch period us */
-	unsigned int batch_timeout_ms[DEV_N]; /* batch timeout ms */
+	unsigned int batch_timeout_us[DEV_N]; /* batch timeout us */
 	unsigned short i2c_addr;	/* I2C address */
 	bool iio_ts_en;			/* use IIO timestamps */
 	bool shutdown;
@@ -559,6 +562,8 @@ struct nvi_state {
 	int input_gyro_dmp_bias[AXIS_N];
 	s16 rom_accel_offset[AXIS_N];
 	s16 rom_gyro_offset[AXIS_N];
+	u8 st_data_accel[AXIS_N];
+	u8 st_data_gyro[AXIS_N];
 
 	DECLARE_KFIFO(timestamps, s64, TIMESTAMP_FIFO_SIZE);
 	spinlock_t time_stamp_lock;
@@ -588,6 +593,7 @@ int nvi_wr_gyro_offset(struct nvi_state *st, unsigned int axis, u16 offset);
 int nvi_wr_gyro_config(struct nvi_state *st, u8 test, u8 fsr, u8 lpf);
 int nvi_wr_accel_config(struct nvi_state *st, u8 test, u8 fsr, u8 lpf);
 int nvi_wr_smplrt_div(struct nvi_state *st, unsigned int dev, u16 val);
+int nvi_wr_lp_config(struct nvi_state *st, u8 val);
 int nvi_wr_fifo_en(struct nvi_state *st, u16 fifo_en);
 int nvi_int_able(struct nvi_state *st, bool enable);
 int nvi_wr_user_ctrl(struct nvi_state *st, u8 user_ctrl);

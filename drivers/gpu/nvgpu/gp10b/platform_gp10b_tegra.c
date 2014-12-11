@@ -81,6 +81,9 @@ static int gp10b_tegra_suspend(struct device *dev)
 struct gk20a_platform t18x_gpu_tegra_platform = {
 	.has_syncpoints = true,
 
+	/* power management configuration */
+	.enable_elpg            = false,
+
 	.default_big_page_size	= SZ_128K,
 
 	.probe = gp10b_tegra_probe,

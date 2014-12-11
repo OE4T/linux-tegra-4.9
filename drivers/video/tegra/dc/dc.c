@@ -4012,9 +4012,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->switchdev_registered = true;
 #endif
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_dc_feature_register(dc);
-#endif
 
 	if (dc->pdata->default_out) {
 		if (dc->pdata->default_out->hotplug_init)

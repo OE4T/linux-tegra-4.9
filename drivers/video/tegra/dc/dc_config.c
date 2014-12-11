@@ -734,6 +734,8 @@ void tegra_dc_feature_register(struct tegra_dc *dc)
 		dc->feature = &t210_feature_table_a;
 	else
 		dc->feature = &t210_feature_table_b;
+#elif defined(CONFIG_TEGRA_NVDISPLAY)
+	nvdisp_dc_feature_register(dc);
 #endif
 	/* Count the number of windows using gen1 blender. */
 	dc->gen1_blend_num = 0;

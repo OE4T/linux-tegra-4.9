@@ -573,6 +573,8 @@ u32 tegra_nvdisp_read_rg_crc(struct tegra_dc *dc);
 struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
 	struct tegra_dc *dc, struct tegra_fb_data *fb_data,
 	struct resource *fb_mem);
+
+void nvdisp_dc_feature_register(struct tegra_dc *dc);
 #endif
 
 #endif

@@ -5,3 +5,4 @@ obj-y += nvdisp.o
 obj-y += nvdisp_win.o
 obj-y += nvdisp_stub.o
 obj-y += nvdisp_cursor.o
+obj-y += nvdisp_config.o

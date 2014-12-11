@@ -3,7 +3,7 @@
  *
  * GK20A Tegra HAL interface.
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -62,6 +62,7 @@ int gk20a_init_hal(struct gk20a *g)
 	gk20a_init_pmu_ops(gops);
 	gk20a_init_clk_ops(gops);
 	gk20a_init_regops(gops);
+	gk20a_init_debug_ops(gops);
 	gops->name = "gk20a";
 
 	c->twod_class = FERMI_TWOD_A;

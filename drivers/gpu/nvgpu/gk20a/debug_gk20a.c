@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/t20/debug_gk20a.c
  *
- * Copyright (C) 2011-2014 NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2011-2015 NVIDIA Corporation.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -33,12 +33,6 @@
 
 unsigned int gk20a_debug_trace_cmdbuf;
 static struct platform_device *gk20a_device;
-
-struct gk20a_debug_output {
-	void (*fn)(void *ctx, const char *str, size_t len);
-	void *ctx;
-	char buf[256];
-};
 
 static const char * const ccsr_chan_status_str[] = {
 	"idle",
@@ -160,11 +154,8 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 	gk20a_debug_output(o, "\n");
 }
 
-static void gk20a_debug_show_dump(struct platform_device *pdev,
-			   struct gk20a_debug_output *o)
+void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(pdev);
-	struct gk20a *g = platform->g;
 	struct fifo_gk20a *f = &g->fifo;
 	u32 chid;
 	int i, err;
@@ -235,6 +226,7 @@ static void gk20a_debug_show_dump(struct platform_device *pdev,
 void gk20a_debug_dump(struct platform_device *pdev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a *g = platform->g;
 	struct gk20a_debug_output o = {
 		.fn = gk20a_debug_write_printk
 	};
@@ -242,7 +234,9 @@ void gk20a_debug_dump(struct platform_device *pdev)
 	if (platform->dump_platform_dependencies)
 		platform->dump_platform_dependencies(pdev);
 
-	gk20a_debug_show_dump(pdev, &o);
+	/* HAL only initialized after 1st power-on */
+	if (g->ops.debug.show_dump)
+		g->ops.debug.show_dump(g, &o);
 }
 
 void gk20a_debug_dump_device(struct platform_device *pdev)
@@ -250,6 +244,7 @@ void gk20a_debug_dump_device(struct platform_device *pdev)
 	struct gk20a_debug_output o = {
 		.fn = gk20a_debug_write_printk
 	};
+	struct gk20a *g;
 
 	/* Dump the first device if no info is provided */
 	if (!pdev) {
@@ -259,7 +254,10 @@ void gk20a_debug_dump_device(struct platform_device *pdev)
 		pdev = gk20a_device;
 	}
 
-	gk20a_debug_show_dump(pdev, &o);
+	g = gk20a_get_platform(pdev)->g;
+	/* HAL only initialized after 1st power-on */
+	if (g->ops.debug.show_dump)
+		g->ops.debug.show_dump(g, &o);
 }
 EXPORT_SYMBOL(gk20a_debug_dump_device);
 
@@ -270,7 +268,12 @@ static int gk20a_debug_show(struct seq_file *s, void *unused)
 		.fn = gk20a_debug_write_to_seqfile,
 		.ctx = s,
 	};
-	gk20a_debug_show_dump(pdev, &o);
+	struct gk20a *g;
+
+	g = gk20a_get_platform(pdev)->g;
+	/* HAL only initialized after 1st power-on */
+	if (g->ops.debug.show_dump)
+		g->ops.debug.show_dump(g, &o);
 	return 0;
 }
 
@@ -285,6 +288,11 @@ static const struct file_operations gk20a_debug_fops = {
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
+
+void gk20a_init_debug_ops(struct gpu_ops *gops)
+{
+	gops->debug.show_dump = gk20a_debug_show_dump;
+}
 
 void gk20a_debug_init(struct platform_device *pdev)
 {

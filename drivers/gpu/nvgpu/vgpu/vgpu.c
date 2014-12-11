@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -247,6 +247,7 @@ static int vgpu_init_hal(struct gk20a *g)
 		vgpu_init_gr_ops(&g->ops);
 		vgpu_init_ltc_ops(&g->ops);
 		vgpu_init_mm_ops(&g->ops);
+		vgpu_init_debug_ops(&g->ops);
 		break;
 	default:
 		gk20a_err(&g->dev->dev, "no support for %x", ver);

@@ -1,7 +1,7 @@
 /*
  * GM20B Graphics
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -30,6 +30,7 @@
 #include "mc_gm20b.h"
 #include <linux/tegra-fuse.h>
 #include "regops_gm20b.h"
+#include "debug_gm20b.h"
 
 #define FUSE_OPT_PRIV_SEC_DIS_0 0x264
 #define PRIV_SECURITY_DISABLE 0x01
@@ -128,6 +129,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gm20b_init_pmu_ops(gops);
 	gm20b_init_clk_ops(gops);
 	gm20b_init_regops(gops);
+	gm20b_init_debug_ops(gops);
 	gops->name = "gm20b";
 
 	c->twod_class = FERMI_TWOD_A;

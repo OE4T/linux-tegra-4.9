@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -47,6 +47,7 @@ struct acr_gm20b;
 #include "platform_gk20a.h"
 #include "gm20b/acr_gm20b.h"
 #include "cde_gk20a.h"
+#include "debug_gk20a.h"
 
 struct cooling_device_gk20a {
 	struct thermal_cooling_device *gk20a_cooling_dev;
@@ -367,6 +368,10 @@ struct gpu_ops {
 		irqreturn_t (*isr_thread_nonstall)(struct gk20a *g);
 		u32 intr_mask_restore[4];
 	} mc;
+	struct {
+		void (*show_dump)(struct gk20a *g,
+				struct gk20a_debug_output *o);
+	} debug;
 };
 
 struct gk20a {

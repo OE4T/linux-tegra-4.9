@@ -58,7 +58,8 @@ nvgpu-y := \
 	gm20b/pmu_gm20b.o \
 	gm20b/mm_gm20b.o \
 	gm20b/regops_gm20b.o \
-	gm20b/mc_gm20b.o
+	gm20b/mc_gm20b.o \
+	gm20b/debug_gm20b.o
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += gk20a/platform_gk20a_tegra.o
 nvgpu-$(CONFIG_SYNC) += gk20a/sync_gk20a.o
@@ -69,6 +70,7 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/gr_vgpu.o \
 	vgpu/fifo_vgpu.o \
 	vgpu/mm_vgpu.o \
+	vgpu/debug_vgpu.o \
 	vgpu/vgpu.o
 
 nvgpu-$(CONFIG_TEGRA_CLK_FRAMEWORK) += \

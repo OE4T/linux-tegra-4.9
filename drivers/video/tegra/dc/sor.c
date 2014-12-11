@@ -65,13 +65,13 @@ tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 	if (tegra_platform_is_linsim())
 		return 0;
 	do {
-		usleep_range(poll_interval_us, poll_interval_us << 1);
 		reg_val = tegra_sor_readl(sor, reg);
-	} while (((reg_val & mask) != exp_val) &&
-		time_after(timeout_jf, jiffies));
+		if ((reg_val & mask) == exp_val)
+			return 0;       /* success */
 
-	if ((reg_val & mask) == exp_val)
-		return 0;	/* success */
+		udelay(poll_interval_us);
+	} while (time_after(timeout_jf, jiffies));
+
 	dev_err(&sor->dc->ndev->dev,
 		"sor_poll_register 0x%x: timeout\n", reg);
 	return jiffies - timeout_jf + 1;
@@ -524,6 +524,7 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	sor->safe_clk = safe_clk;
 	sor->link_cfg = cfg;
 	sor->portnum = 0;
+	sor->sor_state = SOR_DETACHED;
 
 	tegra_dc_sor_debug_create(sor, res_name);
 	of_node_put(np_sor);
@@ -1367,6 +1368,10 @@ void tegra_sor_start_dc(struct tegra_dc_sor_data *sor)
 
 	if (tegra_platform_is_linsim())
 		return;
+
+	if (sor->sor_state == SOR_ATTACHED)
+		return;
+
 	tegra_dc_get(dc);
 	reg_val = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
 #ifndef CONFIG_TEGRA_NVDISPLAY
@@ -1456,6 +1461,8 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 
 	tegra_dc_writel(dc, reg_val, DC_CMD_STATE_ACCESS);
 	tegra_dc_put(dc);
+
+	sor->sor_state = SOR_ATTACHED;
 }
 
 static struct tegra_dc_mode min_mode = {
@@ -1563,11 +1570,12 @@ void tegra_sor_stop_dc(struct tegra_dc_sor_data *sor)
 	tegra_dc_put(dc);
 }
 
-void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
+void tegra_dc_sor_pre_detach(struct tegra_dc_sor_data *sor)
 {
 	struct tegra_dc *dc = sor->dc;
-	int dc_reg_ctx[DC_N_WINDOWS + 5];
-	unsigned long dc_int_mask;
+
+	if (sor->sor_state != SOR_ATTACHED)
+		return;
 
 	tegra_dc_get(dc);
 
@@ -1579,21 +1587,7 @@ void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
 		NV_SOR_SUPER_STATE1_ATTACHED_YES);
 	tegra_dc_sor_super_update(sor);
 
-	tegra_dc_sor_disable_win_short_raster(dc, dc_reg_ctx);
-
-	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
-		NV_SOR_TEST_ACT_HEAD_OPMODE_DEFAULT_MASK,
-		NV_SOR_TEST_ACT_HEAD_OPMODE_SLEEP,
-		100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
-		dev_err(&dc->ndev->dev,
-			"dc timeout waiting for OPMOD = SLEEP\n");
-	}
-
-	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
-		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
-		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
-		NV_SOR_SUPER_STATE1_ATTACHED_NO);
-
+	tegra_dc_sor_disable_win_short_raster(dc, sor->dc_reg_ctx);
 #else
 	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
 		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
@@ -1606,8 +1600,41 @@ void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
 		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
 		NV_SOR_SUPER_STATE1_ATTACHED_YES);
 
-	tegra_dc_sor_disable_win_short_raster(dc, dc_reg_ctx);
+	tegra_dc_sor_disable_win_short_raster(dc, sor->dc_reg_ctx);
+#endif
+	sor->sor_state = SOR_DETACHING;
+	/* TODO: This is new, check it doesn't break anything */
+	tegra_dc_put(dc);
+}
 
+void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
+{
+	struct tegra_dc *dc = sor->dc;
+	unsigned long dc_int_mask;
+
+	tegra_dc_get(dc);
+
+	/* Mask DC interrupts during the 2 dummy frames required for detach */
+	dc_int_mask = tegra_dc_readl(dc, DC_CMD_INT_MASK);
+	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
+
+	if (sor->sor_state != SOR_DETACHING)
+		tegra_dc_sor_pre_detach(sor);
+
+#if defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_13x_SOC)
+	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
+		NV_SOR_TEST_ACT_HEAD_OPMODE_DEFAULT_MASK,
+		NV_SOR_TEST_ACT_HEAD_OPMODE_SLEEP,
+		100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
+		dev_err(&dc->ndev->dev,
+			"dc timeout waiting for OPMOD = SLEEP\n");
+	}
+
+	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
+		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
+		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
+		NV_SOR_SUPER_STATE1_ATTACHED_NO);
+#else
 	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
 		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
 		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
@@ -1627,14 +1654,9 @@ void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
 		NV_SOR_STATE1_ASY_PROTOCOL_LVDS_CUSTOM);
 	tegra_dc_sor_update(sor);
 #endif
-
-	/* Mask DC interrupts during the 2 dummy frames required for detach */
-	dc_int_mask = tegra_dc_readl(dc, DC_CMD_INT_MASK);
-	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
-
 	tegra_sor_stop_dc(sor);
 
-	tegra_dc_sor_restore_win_and_raster(dc, dc_reg_ctx);
+	tegra_dc_sor_restore_win_and_raster(dc, sor->dc_reg_ctx);
 
 	tegra_dc_writel(dc, dc_int_mask, DC_CMD_INT_MASK);
 	tegra_dc_put(dc);

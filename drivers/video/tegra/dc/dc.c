@@ -1497,7 +1497,7 @@ void tegra_dc_enable_general_act(struct tegra_dc *dc)
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
 	if (tegra_dc_poll_register(dc, DC_CMD_STATE_CONTROL,
-		GENERAL_ACT_REQ, 0, 100,
+		GENERAL_ACT_REQ, 0, 1,
 		TEGRA_DC_POLL_TIMEOUT_MS))
 		dev_err(&dc->ndev->dev,
 			"dc timeout waiting for DC to stop\n");

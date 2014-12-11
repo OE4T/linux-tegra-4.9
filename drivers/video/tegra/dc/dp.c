@@ -2416,6 +2416,14 @@ error_enable:
 	return;
 }
 
+void tegra_dc_dp_enable_link(struct tegra_dc_dp_data *dp)
+{
+	if (!dp->enabled)
+		tegra_dc_dp_enable(dp->dc);
+	else
+		tegra_dc_sor_attach(dp->sor);
+}
+
 static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 {
 	struct device_node *np_dp =
@@ -2469,6 +2477,19 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 	dp->enabled = false;
 }
 
+void tegra_dc_dp_pre_disable_link(struct tegra_dc_dp_data *dp)
+{
+	tegra_dc_sor_pre_detach(dp->sor);
+}
+
+void tegra_dc_dp_disable_link(struct tegra_dc_dp_data *dp, bool powerdown)
+{
+	tegra_dc_sor_detach(dp->sor);
+
+	if (powerdown)
+		tegra_dc_dp_disable(dp->dc);
+}
+
 static long tegra_dc_dp_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
@@ -2520,6 +2541,10 @@ static void tegra_dc_dp_modeset_notifier(struct tegra_dc *dc)
 	tegra_dpaux_clk_enable(dp);
 
 	tegra_dc_sor_modeset_notifier(dp->sor, false);
+	/* Pixel clock may be changed in new mode,
+	 * recalculate link config */
+	tegra_dc_dp_calc_config(dp, dp->mode, &dp->link_cfg);
+
 
 	tegra_dpaux_clk_disable(dp);
 	tegra_dc_io_end(dc);

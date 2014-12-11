@@ -96,6 +96,13 @@ struct tegra_dc_sor_data {
 
 	bool   power_is_up;
 
+	int dc_reg_ctx[DC_N_WINDOWS + 5];
+	enum {
+		SOR_ATTACHED = 1,
+		SOR_DETACHING,
+		SOR_DETACHED,
+	} sor_state;
+
 	u8	clk_type;
 	u32  xbar_ctrl[5];
 };
@@ -120,6 +127,7 @@ void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor);
+void tegra_dc_sor_pre_detach(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
 	bool balanced, bool conforming);
 void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds);

@@ -288,6 +288,10 @@ int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 	u8 *data, u32 *size, u32 *aux_stat);
 int tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 	u8 *data, u32 *size, u32 *aux_stat);
+void tegra_dc_dp_pre_disable_link(struct tegra_dc_dp_data *dp);
+void tegra_dc_dp_disable_link(struct tegra_dc_dp_data *dp, bool powerdown);
+void tegra_dc_dp_enable_link(struct tegra_dc_dp_data *dp);
+
 
 /* DPCD definitions */
 #define NV_DPCD_REV					(0x00000000)

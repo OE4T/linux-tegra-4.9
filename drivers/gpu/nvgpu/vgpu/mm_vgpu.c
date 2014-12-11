@@ -268,6 +268,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 		vm->gmmu_page_sizes[i] = gmmu_page_sizes[i];
 
 	vm->big_pages = true;
+	vm->big_page_size = big_page_size;
 
 	vm->va_start  = big_page_size << 10;   /* create a one pde hole */
 	vm->va_limit  = mm->channel.size; /* note this means channel.size is

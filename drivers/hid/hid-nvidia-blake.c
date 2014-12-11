@@ -526,12 +526,17 @@ static int nvidia_probe(struct hid_device *hdev, const struct hid_device_id *id)
 	nvidia_find_tp_len(hdev, loc);
 
 	ret = device_create_file(&hdev->dev, &dev_attr_speed);
-	if (ret)
-		hid_warn(hdev, "cannot create sysfs for speed\n");
-	ret = device_create_file(&hdev->dev, &dev_attr_mode);
+	if (ret) {
+		hid_warn(hdev,
+			"cannot create sysfs speed attribute err: %d\n", ret);
+	}
 
+	ret = device_create_file(&hdev->dev, &dev_attr_mode);
 	if (ret)
-		hid_warn(hdev, "cannot create sysfs for mode\n");
+		hid_warn(hdev,
+			"cannot create sysfs mode attribute err: %d\n", ret);
+
+	kobject_uevent(&hdev->dev.kobj, KOBJ_CHANGE);
 
 	return 0;
 

@@ -1811,6 +1811,8 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 			goto clean_up;
 		}
 
+		BUG_ON(!pte_kv_cur);
+
 		gk20a_dbg(gpu_dbg_pte, "pte_lo=%d, pte_hi=%d", pte_lo, pte_hi);
 		for (pte_cur = pte_lo; pte_cur <= pte_hi; pte_cur++) {
 			if (likely(sgt)) {
@@ -2128,9 +2130,10 @@ static int gk20a_init_vm(struct mm_gk20a *mm,
 		char *name)
 {
 	int err, i;
-	u32 num_pages, low_hole_pages;
+	u32 num_small_pages, num_large_pages, low_hole_pages;
 	char alloc_name[32];
-	u64 vma_size;
+	u64 small_vma_size, large_vma_size;
+	u32 pde_pages;
 
 	/* note: keep the page sizes sorted lowest to highest here */
 	u32 gmmu_page_sizes[gmmu_nr_page_sizes] = { SZ_4K, big_page_size };
@@ -2206,7 +2209,10 @@ static int gk20a_init_vm(struct mm_gk20a *mm,
 		   name, vm->va_limit, vm->pdes.num_pdes);
 
 	/* allocate the page table directory */
-	err = alloc_gmmu_pages(vm, 0, &vm->pdes.ref,
+	pde_pages = ilog2((vm->pdes.num_pdes + 511) / 512);
+
+	gk20a_dbg(gpu_dbg_pte, "Allocating %d ** 2 PDE pages\n", pde_pages);
+	err = alloc_gmmu_pages(vm, pde_pages, &vm->pdes.ref,
 			       &vm->pdes.sgt, &vm->pdes.size);
 	if (err)
 		goto clean_up_pdes;
@@ -2220,13 +2226,15 @@ static int gk20a_init_vm(struct mm_gk20a *mm,
 		  vm->pdes.kv, gk20a_mm_iova_addr(vm->mm->g, vm->pdes.sgt->sgl));
 	/* we could release vm->pdes.kv but it's only one page... */
 
-	/* low-half: alloc small pages */
-	/* high-half: alloc big pages */
-	vma_size = vm->va_limit;
-	if (big_pages)
-		vma_size /= 2;
+	/* First 16GB of the address space goes towards small pages. What ever
+	 * remains is allocated to large pages. */
+	small_vma_size = vm->va_limit;
+	if (big_pages) {
+		small_vma_size = (u64)16 << 30;
+		large_vma_size = vm->va_limit - small_vma_size;
+	}
 
-	num_pages = (u32)(vma_size >>
+	num_small_pages = (u32)(small_vma_size >>
 		    ilog2(vm->gmmu_page_sizes[gmmu_page_size_small]));
 
 	/* num_pages above is without regard to the low-side hole. */
@@ -2238,20 +2246,22 @@ static int gk20a_init_vm(struct mm_gk20a *mm,
 	err = gk20a_allocator_init(&vm->vma[gmmu_page_size_small],
 			     alloc_name,
 			     low_hole_pages,		 /*start*/
-			     num_pages - low_hole_pages);/* length*/
+			     num_small_pages - low_hole_pages);/* length*/
 	if (err)
 		goto clean_up_map_pde;
 
 	if (big_pages) {
-		num_pages = (u32)((vm->va_limit / 2) >>
+		u32 start = (u32)(small_vma_size >>
+			    ilog2(vm->gmmu_page_sizes[gmmu_page_size_big]));
+		num_large_pages = (u32)(large_vma_size >>
 			    ilog2(vm->gmmu_page_sizes[gmmu_page_size_big]));
 
 		snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s-%dKB",
 			 name, vm->gmmu_page_sizes[gmmu_page_size_big]>>10);
 		err = gk20a_allocator_init(&vm->vma[gmmu_page_size_big],
 				      alloc_name,
-				      num_pages,		/* start */
-				      num_pages);		/* length */
+				      start,			/* start */
+				      num_large_pages);		/* length */
 		if (err)
 			goto clean_up_small_allocator;
 	}
@@ -2269,7 +2279,7 @@ clean_up_small_allocator:
 clean_up_map_pde:
 	unmap_gmmu_pages(vm->pdes.ref, vm->pdes.sgt, vm->pdes.kv);
 clean_up_ptes:
-	free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, 0,
+	free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, pde_pages,
 			vm->pdes.size);
 clean_up_pdes:
 	kfree(vm->pdes.ptes[gmmu_page_size_small]);
@@ -2647,10 +2657,15 @@ int gk20a_vm_unmap_buffer(struct gk20a_as_share *as_share, u64 offset)
 
 static void gk20a_deinit_vm(struct vm_gk20a *vm)
 {
+	u32 pde_pages;
+
 	gk20a_allocator_destroy(&vm->vma[gmmu_page_size_big]);
 	gk20a_allocator_destroy(&vm->vma[gmmu_page_size_small]);
+
 	unmap_gmmu_pages(vm->pdes.ref, vm->pdes.sgt, vm->pdes.kv);
-	free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, 0,
+
+	pde_pages = ilog2((vm->pdes.num_pdes + 511) / 512);
+	free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, pde_pages,
 			vm->pdes.size);
 	kfree(vm->pdes.ptes[gmmu_page_size_small]);
 	kfree(vm->pdes.ptes[gmmu_page_size_big]);

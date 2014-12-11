@@ -111,7 +111,7 @@ static int gm20b_vm_put_sparse(struct vm_gk20a *vm, u64 vaddr,
 
 	gk20a_dbg_fn("");
 
-	vaddr_hi = vaddr + pgsz * num_pages - 1;
+	vaddr_hi = vaddr + pgsz * (u64)num_pages - 1;
 	pde_range_from_vaddr_range(vm,
 				   vaddr,
 				   vaddr_hi,

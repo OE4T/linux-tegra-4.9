@@ -25,10 +25,13 @@
 #include <asm/cacheflush.h>
 #include "gk20a_allocator.h"
 
-/* For now keep the size relatively small-ish compared to the full
- * 40b va.  32GB for now. It consists of two 16GB spaces. */
-#define NV_GMMU_VA_RANGE	35ULL
-#define NV_GMMU_VA_IS_UPPER(x)	((x) >= ((u64)0x1 << (NV_GMMU_VA_RANGE-1)))
+/*
+ * Amount of the GVA space we actually use is smaller than the available space.
+ * The bottom 16GB of the space are used for small pages, the remaining high
+ * memory is for large pages.
+ */
+#define NV_GMMU_VA_RANGE	37ULL
+#define NV_GMMU_VA_IS_UPPER(x)	((x) >= ((u64)SZ_1G * 16))
 
 #ifdef CONFIG_ARM64
 #define outer_flush_range(a, b)

@@ -700,6 +700,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 	pmu->remove_support = gk20a_remove_pmu_support;
 
 	switch (pmu->desc->app_version) {
+	case APP_VERSION:
 	case APP_VERSION_GM20B_4:
 		g->ops.pmu_ver.get_perfmon_cntr_ptr = get_perfmon_cntr_ptr_v2;
 		g->ops.pmu_ver.set_perfmon_cntr_ut = set_perfmon_cntr_ut_v2;

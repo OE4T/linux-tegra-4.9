@@ -38,7 +38,7 @@
 
 #define HDCP22_SRM_PATH "etc/hdcpsrm/hdcp2x.srm"
 
-u8 g_seq_num_init;
+static u8 g_seq_num_init;
 
 int tsec_hdcp_readcaps(struct hdcp_context_t *hdcp_context)
 {

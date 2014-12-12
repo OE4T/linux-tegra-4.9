@@ -4481,7 +4481,7 @@ static struct of_device_id tegra_display_of_match[] = {
 };
 #endif
 
-struct platform_driver tegra_dc_driver = {
+static struct platform_driver tegra_dc_driver = {
 	.driver = {
 		.name = "tegradc",
 		.owner = THIS_MODULE,

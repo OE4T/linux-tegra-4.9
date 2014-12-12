@@ -87,9 +87,9 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 #define nvhdcp_info(...)	\
 		pr_info("nvhdcp: " __VA_ARGS__)
 
-u8 g_seq_num_m_retries;
+static u8 g_seq_num_m_retries;
 
-struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_hdmi *hdmi)
+static struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_hdmi *hdmi)
 {
 	return hdmi ? hdmi->dc : NULL;
 }

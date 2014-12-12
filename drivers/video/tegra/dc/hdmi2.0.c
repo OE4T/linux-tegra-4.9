@@ -1110,10 +1110,16 @@ static int tegra_hdmi_find_cea_vic(struct tegra_hdmi *hdmi)
 		if (!best)
 			best = i;
 		/* if either flag is set, then match is required */
-		if (curr->flag & (FB_FLAG_RATIO_4_3 | FB_FLAG_RATIO_16_9)) {
+		if (curr->flag &
+			(FB_FLAG_RATIO_4_3 | FB_FLAG_RATIO_16_9 |
+			FB_FLAG_RATIO_64_27 | FB_FLAG_RATIO_256_135)) {
 			if (m.flag & curr->flag & FB_FLAG_RATIO_4_3)
 				best = i;
 			else if (m.flag & curr->flag & FB_FLAG_RATIO_16_9)
+				best = i;
+			else if (m.flag & curr->flag & FB_FLAG_RATIO_64_27)
+				best = i;
+			else if (m.flag & curr->flag & FB_FLAG_RATIO_256_135)
 				best = i;
 		} else {
 			best = i;
@@ -1127,12 +1133,18 @@ static u32 tegra_hdmi_get_aspect_ratio(struct tegra_hdmi *hdmi)
 	u32 aspect_ratio;
 
 	switch (hdmi->dc->mode.avi_m) {
-	case HDMI_AVI_ASPECT_RATIO_4_3:
+	case TEGRA_DC_MODE_AVI_M_4_3:
 		aspect_ratio = HDMI_AVI_ASPECT_RATIO_4_3;
 		break;
-	case HDMI_AVI_ASPECT_RATIO_16_9:
+	case TEGRA_DC_MODE_AVI_M_16_9:
 		aspect_ratio = HDMI_AVI_ASPECT_RATIO_16_9;
 		break;
+	/*
+	 * no avi_m field for picture aspect ratio 64:27 and 256:135.
+	 * sink detects via VIC, avi_m is 0.
+	 */
+	case TEGRA_DC_MODE_AVI_M_64_27: /* fall through */
+	case TEGRA_DC_MODE_AVI_M_256_135: /* fall through */
 	default:
 		aspect_ratio = HDMI_AVI_ASPECT_RATIO_NO_DATA;
 	}

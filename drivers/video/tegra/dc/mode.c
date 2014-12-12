@@ -181,20 +181,79 @@ int tegra_dc_calc_refresh(const struct tegra_dc_mode *m)
 	return refresh;
 }
 
+static u8 _calc_default_avi_m(unsigned h_size, unsigned v_size)
+{
+#define is_avi_m( \
+	h_size, v_size, \
+	h_avi_m, v_avi_m) \
+	(((h_size) * (v_avi_m)) > ((v_size) * ((h_avi_m) - 1)) &&  \
+	((h_size) * (v_avi_m)) < ((v_size) * ((h_avi_m) + 1))) \
+
+	if (!h_size || !v_size)
+		pr_warn("invalid h_size %u or v_size %u\n", h_size, v_size);
+
+	if (is_avi_m(h_size, v_size, 256, 135))
+		return TEGRA_DC_MODE_AVI_M_256_135;
+	else if (is_avi_m(h_size, v_size, 64, 27))
+		return TEGRA_DC_MODE_AVI_M_64_27;
+	else if (is_avi_m(h_size, v_size, 16, 9))
+		return TEGRA_DC_MODE_AVI_M_16_9;
+	else if (is_avi_m(h_size, v_size, 4, 3))
+		return TEGRA_DC_MODE_AVI_M_4_3;
+
+	return TEGRA_DC_MODE_AVI_M_NO_DATA;
+
+#undef is_avi_m
+}
+
 static u8 calc_default_avi_m(struct tegra_dc *dc)
 {
-	if (dc->out) { /* if ratio is unspecified, detect a default */
-		unsigned h_size = dc->out->h_size;
-		unsigned v_size = dc->out->v_size;
+#define EDID_AVI_M_256_135 91
+#define EDID_AVI_M_64_27 138
+#define EDID_AVI_M_16_9 79
+#define EDID_AVI_M_4_3 34
 
-		/* get aspect ratio */
-		if (h_size * 18 > v_size * 31 && h_size * 18 < v_size * 33)
-			return TEGRA_DC_MODE_AVI_M_16_9;
-		if (h_size * 18 > v_size * 23 && h_size * 18 < v_size * 25)
-			return TEGRA_DC_MODE_AVI_M_4_3;
+	if (dc->out) {
+		unsigned h_size = tegra_dc_get_out_width(dc);
+		unsigned v_size = tegra_dc_get_out_height(dc);
+
+		/* extract picture aspect ratio from real screen sizes */
+		if (h_size && v_size)
+			return _calc_default_avi_m(h_size, v_size);
+
+		/* assign edid data */
+		h_size = dc->out->h_size;
+		v_size = dc->out->v_size;
+
+		if (!h_size && !v_size)
+			return TEGRA_DC_MODE_AVI_M_NO_DATA;
+
+		/* edid has picture aspect ratio stored */
+		if (!h_size || !v_size) {
+			unsigned temp = h_size ? : v_size;
+
+			switch (temp) {
+			case EDID_AVI_M_256_135:
+				return TEGRA_DC_MODE_AVI_M_256_135;
+			case EDID_AVI_M_64_27:
+				return TEGRA_DC_MODE_AVI_M_64_27;
+			case EDID_AVI_M_16_9:
+				return TEGRA_DC_MODE_AVI_M_16_9;
+			case EDID_AVI_M_4_3:
+				return TEGRA_DC_MODE_AVI_M_4_3;
+			default:
+				/* unsupported picture aspect ratio */
+				return TEGRA_DC_MODE_AVI_M_NO_DATA;
+			};
+		}
 	}
 
 	return 0;
+
+#undef EDID_AVI_M_4_3
+#undef EDID_AVI_M_16_9
+#undef EDID_AVI_M_64_27
+#undef EDID_AVI_M_256_135
 }
 
 static bool check_mode_timings(struct tegra_dc *dc, struct tegra_dc_mode *mode)
@@ -500,7 +559,12 @@ int tegra_dc_to_fb_videomode(struct fb_videomode *fbmode,
 		fbmode->sync |=  FB_SYNC_HOR_HIGH_ACT;
 	if (!(mode->flags & TEGRA_DC_MODE_FLAG_NEG_V_SYNC))
 		fbmode->sync |= FB_SYNC_VERT_HIGH_ACT;
-	if (mode->avi_m == TEGRA_DC_MODE_AVI_M_16_9)
+
+	if (mode->avi_m == TEGRA_DC_MODE_AVI_M_256_135)
+		fbmode->flag |= FB_FLAG_RATIO_256_135;
+	else if (mode->avi_m == TEGRA_DC_MODE_AVI_M_64_27)
+		fbmode->flag |= FB_FLAG_RATIO_64_27;
+	else if (mode->avi_m == TEGRA_DC_MODE_AVI_M_16_9)
 		fbmode->flag |= FB_FLAG_RATIO_16_9;
 	else if (mode->avi_m == TEGRA_DC_MODE_AVI_M_4_3)
 		fbmode->flag |= FB_FLAG_RATIO_4_3;
@@ -587,7 +651,12 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 	mode.v_front_porch = fbmode->lower_margin;
 	mode.stereo_mode = stereo_mode;
 	mode.vmode = fbmode->vmode;
-	if (fbmode->flag & FB_FLAG_RATIO_16_9)
+
+	if (fbmode->flag & FB_FLAG_RATIO_256_135)
+		mode.avi_m = TEGRA_DC_MODE_AVI_M_256_135;
+	else if (fbmode->flag & FB_FLAG_RATIO_64_27)
+		mode.avi_m = TEGRA_DC_MODE_AVI_M_64_27;
+	else if (fbmode->flag & FB_FLAG_RATIO_16_9)
 		mode.avi_m = TEGRA_DC_MODE_AVI_M_16_9;
 	else if (fbmode->flag & FB_FLAG_RATIO_4_3)
 		mode.avi_m = TEGRA_DC_MODE_AVI_M_4_3;

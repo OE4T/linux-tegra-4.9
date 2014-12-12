@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/null_or.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION, All rights reserved.
  * Author: Aron Wong <awong@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -131,6 +131,7 @@ static void tegra_dc_null_enable(struct tegra_dc *dc)
 	tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY, DC_CMD_DISPLAY_COMMAND);
 	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	dc->connected = true;
 }
 
 static void tegra_dc_null_disable(struct tegra_dc *dc)
@@ -139,6 +140,14 @@ static void tegra_dc_null_disable(struct tegra_dc *dc)
 	tegra_dc_writel(dc, DISP_CTRL_MODE_STOP, DC_CMD_DISPLAY_COMMAND);
 	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+}
+
+/* used by tegra_dc_probe() to detect connection(HPD) status at boot */
+/* always return true as null output equivalent to internal panel    */
+static bool tegra_dc_null_detect(struct tegra_dc *dc)
+{
+	dev_dbg(&dc->ndev->dev, ":" DRIVER_NAME ":%s()\n", __func__);
+	return true;
 }
 
 static void tegra_dc_null_hold_host(struct tegra_dc *dc)
@@ -248,6 +257,7 @@ struct tegra_dc_out_ops tegra_dc_null_ops = {
 	.destroy   = tegra_dc_null_destroy,
 	.enable	   = tegra_dc_null_enable,
 	.disable   = tegra_dc_null_disable,
+	.detect    = tegra_dc_null_detect,
 	.hold = tegra_dc_null_hold_host,
 	.release = tegra_dc_null_release_host,
 	.idle = tegra_dc_null_idle,

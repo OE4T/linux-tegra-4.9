@@ -27,26 +27,28 @@
 #include <linux/i2c.h>
 #include <linux/regmap.h>
 #include <linux/leds.h>
+#include <linux/debugfs.h>
 
 /* register definitions */
-#define P1961_REG_CMD               0x00
-#define P1961_REG_CMD_DAT           0x01
-#define P1961_REG_CMD_STATUS        0x02
-#define P1961_REG_APP_MINOR_REV     0x03
-#define P1961_REG_APP_MAJOR_REV     0x04
-#define P1961_REG_LED_STATE         0x05
-#define P1961_REG_LED_ON_TIME       0x06
-#define P1961_REG_LED_OFF_TIME      0x07
-#define P1961_REG_MAX_BRIGHT        0x08
-#define P1961_REG_NOM_BRIGHT        0x09
-#define P1961_REG_LED_RAMP_UP       0x0A
-#define P1961_REG_LED_RAMP_DOWN     0x0B
-#define P1961_REG_HAPTIC_EN         0x0C
-#define P1961_REG_HAPTIC_DRIVE_TIME 0x0D
-#define P1961_REG_HAPTIC_BRAKE_DLY  0x0E
-#define P1961_REG_HAPTIC_BRAKE_T    0x0F
-#define P1961_REG_SOUND_PULSE_LEN   0x10
-#define P1961_REG_MAX               0x11
+#define P1961_REG_CMD			0x00
+#define P1961_REG_CMD_DAT		0x01
+#define P1961_REG_CMD_STATUS		0x02
+#define P1961_REG_APP_MINOR_REV		0x03
+#define P1961_REG_APP_MAJOR_REV		0x04
+#define P1961_REG_LED_STATE		0x05
+#define P1961_REG_LED_ON_TIME		0x06
+#define P1961_REG_LED_OFF_TIME		0x07
+#define P1961_REG_MAX_BRIGHT		0x08
+#define P1961_REG_NOM_BRIGHT		0x09
+#define P1961_REG_LED_RAMP_UP		0x0A
+#define P1961_REG_LED_RAMP_DOWN		0x0B
+#define P1961_REG_HAPTIC_EN		0x0C
+#define P1961_REG_HAPTIC_DRIVE_TIME	0x0D
+#define P1961_REG_HAPTIC_BRAKE_DLY	0x0E
+#define P1961_REG_HAPTIC_BRAKE_T	0x0F
+#define P1961_REG_SOUND_PULSE_LEN	0x10
+#define P1961_REG_MAX			0x11
+#define P1961_CMD_ENTER_BL		0x01
 
 #define P1961_LED_STATE_SOLID       0x03
 
@@ -71,12 +73,27 @@ static int of_led_parse_pdata(struct i2c_client *client, struct cy8c_data *data)
 	return 0;
 }
 
+static int cy8c_debug_set(void *data, u64 val)
+{
+	struct cy8c_data *cy_data = data;
+
+	val = val & 0xff;
+	if (val > P1961_CMD_ENTER_BL)
+		return -EINVAL;
+
+	pr_info("%s: send reset cmd %lld\n", __func__, val);
+	regmap_write(cy_data->regmap, P1961_REG_CMD, val & 0xff);
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(cy8c_debug_fops, NULL, cy8c_debug_set, "%lld\n");
+
 static int cy8c_led_probe(struct i2c_client *client,
 					const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = client->adapter;
 	struct cy8c_data *data;
 	struct regmap_config rconfig;
+	struct dentry *d;
 	int ret, reg;
 
 	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE_DATA)) {
@@ -141,6 +158,12 @@ static int cy8c_led_probe(struct i2c_client *client,
 		dev_err(&client->dev, "Failed to register foster led\n");
 	else
 		dev_info(&client->dev, "LED registered (%s)\n", data->led.name);
+
+	/* create debugfs for f/w loading purpose */
+	d = debugfs_create_file("cy8c_led", S_IRUGO, NULL, data,
+							&cy8c_debug_fops);
+	if (!d)
+		pr_err("Failed to create suspend_mode debug file\n");
 
 	return ret;
 }

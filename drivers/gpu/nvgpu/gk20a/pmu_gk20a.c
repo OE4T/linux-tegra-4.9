@@ -2706,10 +2706,16 @@ static int pmu_process_init_msg(struct pmu_gk20a *pmu,
 	for (i = 0; i < PMU_QUEUE_COUNT; i++)
 		pmu_queue_init(pmu, i, init);
 
-	if (!pmu->dmem.alloc)
-		gk20a_allocator_init(&pmu->dmem, "gk20a_pmu_dmem",
-				pv->get_pmu_init_msg_pmu_sw_mg_off(init),
-				pv->get_pmu_init_msg_pmu_sw_mg_size(init));
+	if (!pmu->dmem.alloc) {
+		/*Align start and end addresses*/
+		u32 start = ALIGN(pv->get_pmu_init_msg_pmu_sw_mg_off(init),
+					PMU_DMEM_ALLOC_ALIGNMENT);
+		u32 end = (pv->get_pmu_init_msg_pmu_sw_mg_off(init) +
+			pv->get_pmu_init_msg_pmu_sw_mg_size(init)) &
+			~(PMU_DMEM_ALLOC_ALIGNMENT - 1);
+		u32 size = end - start;
+		gk20a_allocator_init(&pmu->dmem, "gk20a_pmu_dmem", start, size);
+	}
 
 	pmu->pmu_ready = true;
 	pmu->pmu_state = PMU_STATE_INIT_RECEIVED;

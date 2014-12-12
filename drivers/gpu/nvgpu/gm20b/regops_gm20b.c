@@ -32,7 +32,6 @@ static const struct regop_offset_range gm20b_global_whitelist_ranges[] = {
 	{ 0x0000280c,   1 },
 	{ 0x00009400,   1 },
 	{ 0x00009410,   1 },
-	{ 0x00020200,   1 },
 	{ 0x00021970,   1 },
 	{ 0x00021c00,   4 },
 	{ 0x00021c14,   3 },
@@ -267,7 +266,6 @@ static const u32 gm20b_global_whitelist_ranges_count =
 static const struct regop_offset_range gm20b_context_whitelist_ranges[] = {
 	{ 0x0000259c,   1 },
 	{ 0x0000280c,   1 },
-	{ 0x00020200,   1 },
 	{ 0x00400500,   1 },
 	{ 0x00405b40,   1 },
 	{ 0x00418e00,   1 },

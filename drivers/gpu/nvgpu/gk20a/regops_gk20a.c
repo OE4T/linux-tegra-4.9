@@ -56,7 +56,6 @@ static const struct regop_offset_range gk20a_global_whitelist_ranges[] = {
 	{ 0x0000280c,   1 },
 	{ 0x00009400,   1 },
 	{ 0x00009410,   1 },
-	{ 0x00020200,   1 },
 	{ 0x00022430,   7 },
 	{ 0x00022548,   1 },
 	{ 0x00100c18,   3 },

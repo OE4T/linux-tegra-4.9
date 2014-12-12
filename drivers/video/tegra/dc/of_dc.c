@@ -70,7 +70,7 @@
 #endif
 
 static struct regulator *of_hdmi_vddio;
-static struct regulator *of_hdmi_reg;
+static struct regulator *of_hdmi_dp_reg;
 static struct regulator *of_hdmi_pll;
 
 #ifdef CONFIG_TEGRA_DC_CMU
@@ -1569,6 +1569,34 @@ static struct device_node *parse_lvds_settings(struct platform_device *ndev,
 
 	return np_lvds_panel;
 }
+static int dc_dp_out_enable(struct device *dev)
+{
+	int ret;
+	if (!of_hdmi_dp_reg) {
+		of_hdmi_dp_reg = regulator_get(dev, "avdd_hdmi");
+		if (IS_ERR_OR_NULL(of_hdmi_dp_reg)) {
+			pr_err("dp: couldn't get regulator avdd_hdmi\n");
+			of_hdmi_dp_reg = NULL;
+			return PTR_ERR(of_hdmi_dp_reg);
+		}
+	}
+	ret = regulator_enable(of_hdmi_dp_reg);
+	if (ret < 0) {
+		pr_err("dp: couldn't enable regulator avdd_hdmi\n");
+		return ret;
+	}
+	return 0;
+}
+
+static int dc_dp_out_disable(struct device *dev)
+{
+	if (of_hdmi_dp_reg) {
+		regulator_disable(of_hdmi_dp_reg);
+		regulator_put(of_hdmi_dp_reg);
+		of_hdmi_dp_reg = NULL;
+	}
+	return 0;
+}
 
 static int dc_hdmi_out_enable(struct device *dev)
 {
@@ -1582,16 +1610,16 @@ static int dc_hdmi_out_enable(struct device *dev)
 		goto dc_hdmi_out_en_fail;
 	}
 
-	if (!of_hdmi_reg) {
-		of_hdmi_reg = regulator_get(dev, "avdd_hdmi");
-		if (IS_ERR_OR_NULL(of_hdmi_reg)) {
+	if (!of_hdmi_dp_reg) {
+		of_hdmi_dp_reg = regulator_get(dev, "avdd_hdmi");
+		if (IS_ERR_OR_NULL(of_hdmi_dp_reg)) {
 			pr_err("hdmi: couldn't get regulator avdd_hdmi\n");
-			of_hdmi_reg = NULL;
-			err = PTR_ERR(of_hdmi_reg);
+			of_hdmi_dp_reg = NULL;
+			err = PTR_ERR(of_hdmi_dp_reg);
 			goto dc_hdmi_out_en_fail;
 		}
 	}
-	err = regulator_enable(of_hdmi_reg);
+	err = regulator_enable(of_hdmi_dp_reg);
 	if (err < 0) {
 		pr_err("hdmi: couldn't enable regulator avdd_hdmi\n");
 		goto dc_hdmi_out_en_fail;
@@ -1601,8 +1629,8 @@ static int dc_hdmi_out_enable(struct device *dev)
 		if (IS_ERR_OR_NULL(of_hdmi_pll)) {
 			pr_err("hdmi: couldn't get regulator avdd_hdmi_pll\n");
 			of_hdmi_pll = NULL;
-			regulator_put(of_hdmi_reg);
-			of_hdmi_reg = NULL;
+			regulator_put(of_hdmi_dp_reg);
+			of_hdmi_dp_reg = NULL;
 			err = PTR_ERR(of_hdmi_pll);
 			goto dc_hdmi_out_en_fail;
 		}
@@ -1636,10 +1664,10 @@ static int dc_hdmi_out_disable(struct device *dev)
 	if (hdmi->device_shutdown)
 		return 0;
 
-	if (of_hdmi_reg) {
-		regulator_disable(of_hdmi_reg);
-		regulator_put(of_hdmi_reg);
-		of_hdmi_reg = NULL;
+	if (of_hdmi_dp_reg) {
+		regulator_disable(of_hdmi_dp_reg);
+		regulator_put(of_hdmi_dp_reg);
+		of_hdmi_dp_reg = NULL;
 	}
 
 	if (of_hdmi_pll) {
@@ -1877,6 +1905,13 @@ struct tegra_dc_platform_data
 				goto fail_parse;
 			else
 				np_target_disp = np_dp_panel;
+
+			/* enable/disable ops for DP monitors */
+			if (!pdata->default_out->enable &&
+				!pdata->default_out->disable) {
+				pdata->default_out->enable = dc_dp_out_enable;
+				pdata->default_out->disable = dc_dp_out_disable;
+			}
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_HDMI) {
 		bool hotplug_report = false;

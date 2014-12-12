@@ -72,7 +72,9 @@ static const u32 tegra_dp_vs_regs[][4][4] = {
 };
 
 /* Both 12x and 13x config enabled for 13x */
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC) && !defined(CONFIG_ARCH_TEGRA_13x_SOC)
+#if (defined(CONFIG_ARCH_TEGRA_12x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_13x_SOC)) || \
+	defined(CONFIG_ARCH_TEGRA_21x_SOC)
 static const u32 tegra_dp_pe_regs[][4][4] = {
 	/* postcursor2 L0 */
 	{

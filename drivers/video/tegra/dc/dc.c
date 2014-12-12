@@ -3147,9 +3147,12 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 		return false;
 	}
 
-	np_dpaux = of_find_node_by_path(DPAUX_NODE);
+	np_dpaux = of_find_node_by_path(
+				dc->ndev->id ? DPAUX1_NODE : DPAUX_NODE);
 	if (np_dpaux || !dc->ndev->dev.of_node)
-		tegra_dpaux_pad_power(dc, TEGRA_DPAUX_INSTANCE_0, false);
+		tegra_dpaux_pad_power(dc,
+		dc->ndev->id ? TEGRA_DPAUX_INSTANCE_1 : TEGRA_DPAUX_INSTANCE_0,
+		false);
 	of_node_put(np_dpaux);
 
 	if (dc->out_ops && dc->out_ops->enable)

@@ -936,7 +936,9 @@ static void tegra_dpaux_enable(struct tegra_dc_dp_data *dp)
 		0x18 << DPAUX_HYBRID_PADCTL_AUX_DRVI_SHIFT |
 		DPAUX_HYBRID_PADCTL_AUX_INPUT_RCV_ENABLE);
 
-	tegra_dpaux_pad_power(dp->dc, TEGRA_DPAUX_INSTANCE_0, true);
+	tegra_dpaux_pad_power(dp->dc,
+		dp->dc->ndev->id == 0 ? TEGRA_DPAUX_INSTANCE_0
+		: TEGRA_DPAUX_INSTANCE_1, true);
 }
 
 static int tegra_dp_panel_power_state(struct tegra_dc_dp_data *dp, u8 state)
@@ -1673,9 +1675,9 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	clk = clk_get(NULL, "dpaux");
+	clk = clk_get(NULL, dc->ndev->id ? "dpaux1" : "dpaux");
 #else
-	clk = clk_get_sys("dpaux", NULL);
+	clk = clk_get_sys(dc->ndev->id ? "dpaux1" : "dpaux", NULL);
 #endif
 	if (IS_ERR_OR_NULL(clk)) {
 		dev_err(&dc->ndev->dev, "dp: dc clock %s.edp unavailable\n",
@@ -1865,6 +1867,11 @@ static void tegra_dp_lt_config(struct tegra_dc_dp_data *dp,
 		case 0:
 			mask = NV_SOR_PR_LANE2_DP_LANE0_MASK;
 			shift = NV_SOR_PR_LANE2_DP_LANE0_SHIFT;
+			/* TODO: Fix lane config */
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+			mask = NV_SOR_PR_LANE0_DP_LANE2_MASK;
+			shift = NV_SOR_PR_LANE0_DP_LANE2_SHIFT;
+#endif
 			break;
 		case 1:
 			mask = NV_SOR_PR_LANE1_DP_LANE1_MASK;
@@ -1873,6 +1880,11 @@ static void tegra_dp_lt_config(struct tegra_dc_dp_data *dp,
 		case 2:
 			mask = NV_SOR_PR_LANE0_DP_LANE2_MASK;
 			shift = NV_SOR_PR_LANE0_DP_LANE2_SHIFT;
+			/* TODO: Fix lane config */
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+			mask = NV_SOR_PR_LANE2_DP_LANE0_MASK;
+			shift = NV_SOR_PR_LANE2_DP_LANE0_SHIFT;
+#endif
 			break;
 		case 3:
 			mask = NV_SOR_PR_LANE3_DP_LANE3_MASK;
@@ -2366,6 +2378,8 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	int ret;
 
 	tegra_dp_reset(dp);
+	if (dp->sor->safe_clk)
+		clk_prepare_enable(dp->sor->safe_clk);
 	tegra_dpaux_clk_enable(dp);
 
 	tegra_dc_io_start(dc);
@@ -2410,7 +2424,10 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 error_enable:
 	tegra_dp_default_int(dp, false);
-	tegra_dpaux_pad_power(dp->dc, TEGRA_DPAUX_INSTANCE_0, false);
+	tegra_dpaux_pad_power(dp->dc,
+		dp->dc->ndev->id == 0 ? TEGRA_DPAUX_INSTANCE_0
+		: TEGRA_DPAUX_INSTANCE_1, false);
+
 	tegra_dpaux_clk_disable(dp);
 	tegra_dc_io_end(dc);
 	return;
@@ -2463,8 +2480,9 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP)
 		tegra_dp_disable_irq(dp->irq);
 
-	tegra_dpaux_pad_power(dp->dc, TEGRA_DPAUX_INSTANCE_0, false);
-
+	tegra_dpaux_pad_power(dp->dc,
+	dp->dc->ndev->id == 0 ? TEGRA_DPAUX_INSTANCE_0 : TEGRA_DPAUX_INSTANCE_1
+		, false);
 	/* Power down SOR */
 	tegra_dc_sor_detach(dp->sor);
 	tegra_dc_sor_disable(dp->sor, false);
@@ -2472,6 +2490,8 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 	if (!tegra_platform_is_linsim()) {
 		tegra_dpaux_clk_disable(dp);
 		tegra_dp_clk_disable(dp);
+		if (dp->sor->safe_clk)
+			clk_disable_unprepare(dp->sor->safe_clk);
 	}
 	tegra_dc_io_end(dc);
 	dp->enabled = false;

@@ -47,8 +47,6 @@ static int allocate_gmmu_ptes_sparse(struct vm_gk20a *vm,
 	BUG_ON(pde_lo != pde_hi);
 
 	pte = vm->pdes.ptes[pgsz_idx] + pde_lo;
-	if (refplus)
-		pte->ref_cnt++;
 
 	pte_lo = pte_index_from_vaddr(vm, first_vaddr, pgsz_idx);
 	pte_hi = pte_index_from_vaddr(vm, last_vaddr, pgsz_idx);
@@ -64,10 +62,10 @@ static int allocate_gmmu_ptes_sparse(struct vm_gk20a *vm,
 		pte_w[1] = clear ? 0 : gmmu_pte_vol_true_f();
 
 		gk20a_dbg(gpu_dbg_pte,
-			   "pte_cur=%d addr=%llx refs=%d"
+			   "pte_cur=%d addr=%llx"
 			   " [0x%08x,0x%08x]",
 			   pte_cur, addr,
-			   pte->ref_cnt, pte_w[1], pte_w[0]);
+			   pte_w[1], pte_w[0]);
 
 		gk20a_mem_wr32(pte_kv_cur + pte_cur*8, 0, pte_w[0]);
 		gk20a_mem_wr32(pte_kv_cur + pte_cur*8, 1, pte_w[1]);
@@ -220,39 +218,6 @@ fail:
 	return ret;
 }
 
-static void gm20b_vm_clear_sparse(struct vm_gk20a *vm, u64 vaddr,
-			       u64 size, u32 pgsz_idx) {
-	u64 vaddr_hi;
-	u32 pde_lo, pde_hi, pde_i;
-
-	gk20a_dbg_fn("");
-	vaddr_hi = vaddr + size - 1;
-	pde_range_from_vaddr_range(vm,
-				   vaddr,
-				   vaddr_hi,
-				   &pde_lo, &pde_hi);
-
-	gk20a_dbg_info("vaddr: 0x%llx, vaddr_hi: 0x%llx, pde_lo: 0x%x, "
-			"pde_hi: 0x%x, pgsz_idx: %d, pde_stride_shift: %d",
-			vaddr, vaddr_hi, pde_lo, pde_hi, pgsz_idx,
-			vm->pde_stride_shift);
-
-	for (pde_i = pde_lo; pde_i <= pde_hi; pde_i++) {
-		struct page_table_gk20a *pte = vm->pdes.ptes[pgsz_idx] + pde_i;
-		pte->ref_cnt--;
-
-		if (pte->ref_cnt == 0) {
-			free_gmmu_pages(vm, pte->ref, pte->sgt,
-				vm->page_table_sizing[pgsz_idx].order,
-				pte->size);
-			pte->ref = NULL;
-			update_gmmu_pde_locked(vm, pde_i);
-		}
-	}
-
-	return;
-}
-
 static bool gm20b_mm_mmu_debug_mode_enabled(struct gk20a *g)
 {
 	u32 debug_ctrl = gk20a_readl(g, gr_gpcs_pri_mmu_debug_ctrl_r());
@@ -288,7 +253,6 @@ static u32 gm20b_mm_get_big_page_sizes(void)
 void gm20b_init_mm(struct gpu_ops *gops)
 {
 	gops->mm.set_sparse = gm20b_vm_put_sparse;
-	gops->mm.clear_sparse = gm20b_vm_clear_sparse;
 	gops->mm.is_debug_mode_enabled = gm20b_mm_mmu_debug_mode_enabled;
 	gops->mm.gmmu_map = gk20a_locked_gmmu_map;
 	gops->mm.gmmu_unmap = gk20a_locked_gmmu_unmap;

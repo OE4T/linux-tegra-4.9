@@ -1806,8 +1806,8 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				     pte->size);
 		if (err) {
 			gk20a_err(dev_from_vm(vm),
-				   "couldn't map ptes for update as=%d pte_ref_cnt=%d",
-				   vm_aspace_id(vm), pte->ref_cnt);
+				   "couldn't map ptes for update as=%d",
+				   vm_aspace_id(vm));
 			goto clean_up;
 		}
 
@@ -1839,13 +1839,12 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				if (!cacheable)
 					pte_w[1] |= gmmu_pte_vol_true_f();
 
-				pte->ref_cnt++;
 				gk20a_dbg(gpu_dbg_pte, "pte_cur=%d addr=0x%x,%08x kind=%d"
-					   " ctag=%d vol=%d refs=%d"
+					   " ctag=%d vol=%d"
 					   " [0x%08x,0x%08x]",
 					   pte_cur, hi32(addr), lo32(addr),
 					   kind_v, ctag, !cacheable,
-					   pte->ref_cnt, pte_w[1], pte_w[0]);
+					   pte_w[1], pte_w[0]);
 				ctag += ctag_incr;
 				cur_offset += page_size;
 				addr += page_size;
@@ -1856,10 +1855,9 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				}
 
 			} else {
-				pte->ref_cnt--;
 				gk20a_dbg(gpu_dbg_pte,
-					   "pte_cur=%d ref=%d [0x0,0x0]",
-					   pte_cur, pte->ref_cnt);
+					   "pte_cur=%d [0x0,0x0]",
+					   pte_cur);
 			}
 
 			gk20a_mem_wr32(pte_kv_cur + pte_cur*8, 0, pte_w[0]);
@@ -1867,24 +1865,6 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 		}
 
 		unmap_gmmu_pages(pte->ref, pte->sgt, pte_kv_cur);
-
-		if (pte->ref_cnt == 0) {
-			/* It can make sense to keep around one page table for
-			 * each flavor (empty)... in case a new map is coming
-			 * right back to alloc (and fill it in) again.
-			 * But: deferring unmapping should help with pathologic
-			 * unmap/map/unmap/map cases where we'd trigger pte
-			 * free/alloc/free/alloc.
-			 */
-			free_gmmu_pages(vm, pte->ref, pte->sgt,
-				vm->page_table_sizing[pgsz_idx].order,
-				pte->size);
-			pte->ref = NULL;
-
-			/* rewrite pde */
-			update_gmmu_pde_locked(vm, pde_i);
-		}
-
 	}
 
 	smp_mb();
@@ -1982,85 +1962,6 @@ void update_gmmu_pde_locked(struct vm_gk20a *vm, u32 i)
 	vm->tlb_dirty  = true;
 }
 
-static int gk20a_vm_put_empty(struct vm_gk20a *vm, u64 vaddr,
-			       u32 num_pages, u32 pgsz_idx)
-{
-	struct mm_gk20a *mm = vm->mm;
-	struct gk20a *g = mm->g;
-	u32 pgsz = vm->gmmu_page_sizes[pgsz_idx];
-	u32 i;
-	dma_addr_t iova;
-
-	/* allocate the zero page if the va does not already have one */
-	if (!vm->zero_page_cpuva) {
-		int err = 0;
-		vm->zero_page_cpuva = dma_alloc_coherent(&g->dev->dev,
-							 vm->big_page_size,
-							 &iova,
-							 GFP_KERNEL);
-		if (!vm->zero_page_cpuva) {
-			dev_err(&g->dev->dev, "failed to allocate zero page\n");
-			return -ENOMEM;
-		}
-
-		vm->zero_page_iova = iova;
-		err = gk20a_get_sgtable(&g->dev->dev, &vm->zero_page_sgt,
-					vm->zero_page_cpuva, vm->zero_page_iova,
-					vm->big_page_size);
-		if (err) {
-			dma_free_coherent(&g->dev->dev, vm->big_page_size,
-					  vm->zero_page_cpuva,
-					  vm->zero_page_iova);
-			vm->zero_page_iova = 0;
-			vm->zero_page_cpuva = NULL;
-
-			dev_err(&g->dev->dev, "failed to create sg table for zero page\n");
-			return -ENOMEM;
-		}
-	}
-
-	for (i = 0; i < num_pages; i++) {
-		u64 page_vaddr = g->ops.mm.gmmu_map(vm, vaddr,
-			vm->zero_page_sgt, 0, pgsz, pgsz_idx, 0, 0,
-			NVGPU_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET,
-			gk20a_mem_flag_none, false);
-
-		if (!page_vaddr) {
-			gk20a_err(dev_from_vm(vm), "failed to remap clean buffers!");
-			goto err_unmap;
-		}
-		vaddr += pgsz;
-	}
-
-	return 0;
-
-err_unmap:
-
-	WARN_ON(1);
-	/* something went wrong. unmap pages */
-	while (i--) {
-		vaddr -= pgsz;
-		g->ops.mm.gmmu_unmap(vm, vaddr, pgsz, pgsz_idx, 0,
-				    gk20a_mem_flag_none);
-	}
-
-	return -EINVAL;
-}
-
-static int gk20a_vm_put_sparse(struct vm_gk20a *vm, u64 vaddr,
-			       u32 num_pages, u32 pgsz_idx, bool refplus)
-{
-	return gk20a_vm_put_empty(vm, vaddr, num_pages, pgsz_idx);
-}
-
-static void gk20a_vm_clear_sparse(struct vm_gk20a *vm, u64 vaddr,
-			       u64 size, u32 pgsz_idx) {
-	struct gk20a *g = vm->mm->g;
-
-	g->ops.mm.gmmu_unmap(vm, vaddr, size, pgsz_idx,
-			false, gk20a_mem_flag_none);
-}
-
 /* NOTE! mapped_buffers lock must be held */
 void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 {
@@ -2075,18 +1976,14 @@ void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 			ilog2(vm->gmmu_page_sizes[pgsz_idx]);
 
 		/* there is little we can do if this fails... */
-		if (g->ops.mm.put_empty) {
-			g->ops.mm.put_empty(vm, vaddr, num_pages, pgsz_idx);
-		} else {
-			g->ops.mm.gmmu_unmap(vm,
-				mapped_buffer->addr,
-				mapped_buffer->size,
-				mapped_buffer->pgsz_idx,
-				mapped_buffer->va_allocated,
-				gk20a_mem_flag_none);
-			g->ops.mm.set_sparse(vm, vaddr,
-					num_pages, pgsz_idx, false);
-		}
+		g->ops.mm.gmmu_unmap(vm,
+			mapped_buffer->addr,
+			mapped_buffer->size,
+			mapped_buffer->pgsz_idx,
+			mapped_buffer->va_allocated,
+			gk20a_mem_flag_none);
+		g->ops.mm.set_sparse(vm, vaddr,
+				num_pages, pgsz_idx, false);
 	} else
 		g->ops.mm.gmmu_unmap(vm,
 				mapped_buffer->addr,
@@ -2140,7 +2037,6 @@ void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset)
 
 static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 {
-	struct gk20a *g = vm->mm->g;
 	struct mapped_buffer_node *mapped_buffer;
 	struct vm_reserved_va_node *va_node, *va_node_tmp;
 	struct rb_node *node;
@@ -2197,11 +2093,6 @@ static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 		gk20a_allocator_destroy(&vm->vma[gmmu_page_size_big]);
 
 	mutex_unlock(&vm->update_gmmu_lock);
-
-	/* release zero page if used */
-	if (vm->zero_page_cpuva)
-		dma_free_coherent(&g->dev->dev, vm->big_page_size,
-				  vm->zero_page_cpuva, vm->zero_page_iova);
 }
 
 void gk20a_vm_remove_support(struct vm_gk20a *vm)
@@ -2582,10 +2473,12 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 
 		/* if this was a sparse mapping, free the va */
 		if (va_node->sparse)
-			g->ops.mm.clear_sparse(vm,
+			g->ops.mm.gmmu_unmap(vm,
 					va_node->vaddr_start,
 					va_node->size,
-					va_node->pgsz_idx);
+					va_node->pgsz_idx,
+					true,
+					gk20a_mem_flag_none);
 		kfree(va_node);
 	}
 	mutex_unlock(&vm->update_gmmu_lock);
@@ -3180,12 +3073,6 @@ u32 gk20a_mm_get_physical_addr_bits(struct gk20a *g)
 
 void gk20a_init_mm(struct gpu_ops *gops)
 {
-	/* remember to remove NVGPU_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS in
-	 * characteristics flags if sparse support is removed */
-	gops->mm.set_sparse = gk20a_vm_put_sparse;
-	gops->mm.put_empty = gk20a_vm_put_empty;
-	gops->mm.clear_sparse = gk20a_vm_clear_sparse;
-
 	gops->mm.is_debug_mode_enabled = gk20a_mm_mmu_debug_mode_enabled;
 	gops->mm.gmmu_map = gk20a_locked_gmmu_map;
 	gops->mm.gmmu_unmap = gk20a_locked_gmmu_unmap;

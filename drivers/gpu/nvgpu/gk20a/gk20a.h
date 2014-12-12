@@ -292,10 +292,6 @@ struct gpu_ops {
 	struct {
 		int (*set_sparse)(struct vm_gk20a *vm, u64 vaddr,
 			       u32 num_pages, u32 pgsz_idx, bool refplus);
-		int (*put_empty)(struct vm_gk20a *vm, u64 vaddr,
-			       u32 num_pages, u32 pgsz_idx);
-		void (*clear_sparse)(struct vm_gk20a *vm, u64 vaddr,
-			       u64 size, u32 pgsz_idx);
 		bool (*is_debug_mode_enabled)(struct gk20a *g);
 		u64 (*gmmu_map)(struct vm_gk20a *vm,
 				u64 map_offset,

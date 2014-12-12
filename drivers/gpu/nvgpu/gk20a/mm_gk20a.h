@@ -193,7 +193,6 @@ struct page_table_gk20a {
 	/* Either a *page or a *mem_handle */
 	void *ref;
 	/* track mapping cnt on this page table */
-	u32 ref_cnt;
 	struct sg_table *sgt;
 	size_t size;
 };
@@ -307,10 +306,6 @@ struct vm_gk20a {
 	struct rb_root mapped_buffers;
 
 	struct list_head reserved_va_list;
-
-	dma_addr_t zero_page_iova;
-	void *zero_page_cpuva;
-	struct sg_table *zero_page_sgt;
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	u64 handle;

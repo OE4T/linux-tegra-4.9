@@ -1786,8 +1786,10 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 		gpu->available_big_page_sizes |= g->ops.mm.get_big_page_sizes();
 
 	gpu->flags = NVGPU_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS
-		| NVGPU_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS
 		| NVGPU_GPU_FLAGS_SUPPORT_SYNC_FENCE_FDS;
+
+	if (g->ops.mm.set_sparse)
+		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS;
 
 	if (IS_ENABLED(CONFIG_TEGRA_GK20A) &&
 	    gk20a_platform_has_syncpoints(g->dev))

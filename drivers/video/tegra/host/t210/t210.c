@@ -161,6 +161,7 @@ struct nvhost_device_data t21_vi_info = {
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,
 	.finalize_poweron = nvhost_vi_finalize_poweron,
 };
+EXPORT_SYMBOL(t21_vi_info);
 #else
 struct nvhost_device_data t21_vib_info = {
 	.modulemutexes		= {NVMODMUTEX_VI_1},
@@ -225,6 +226,7 @@ struct nvhost_device_data t21_vi_info = {
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,
 	.finalize_poweron = nvhost_vi_finalize_poweron,
 };
+EXPORT_SYMBOL(t21_vi_info);
 #endif
 
 #endif

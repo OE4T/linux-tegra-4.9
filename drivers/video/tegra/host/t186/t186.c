@@ -54,6 +54,7 @@ struct nvhost_device_data t18_isp_info = {
 	.moduleid		= NVHOST_MODULE_ISP,
 	.class			= NV_VIDEO_STREAMING_ISP_CLASS_ID,
 	.modulemutexes		= {NV_VIDEO_STREAMING_ISP_CLASS_ID},
+	.devfs_name		= "isp",
 	.exclusive		= true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive		= true,
@@ -76,6 +77,7 @@ struct nvhost_device_data t18_isp_info = {
 #if defined(CONFIG_TEGRA_GRHOST_VI) || defined(CONFIG_TEGRA_GRHOST_VI_MODULE)
 struct nvhost_device_data t18_vi_info = {
 	.modulemutexes		= {NV_VIDEO_STREAMING_VI_CLASS_ID},
+	.devfs_name		= "vi",
 	.exclusive		= true,
 	.class			= NV_VIDEO_STREAMING_VI_CLASS_ID,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
@@ -107,6 +109,7 @@ struct nvhost_device_data t18_vi_info = {
 struct nvhost_device_data t18_msenc_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(6, 1),
 	.modulemutexes		= {NV_VIDEO_ENCODE_NVENC_CLASS_ID},
+	.devfs_name		= "msenc",
 	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,
 #ifdef TEGRA_POWERGATE_NVENC
 	.powergate_ids		= { TEGRA_POWERGATE_NVENC, -1 },
@@ -126,6 +129,7 @@ struct nvhost_device_data t18_msenc_info = {
 struct nvhost_device_data t18_nvdec_info = {
 	.version		= NVHOST_ENCODE_NVDEC_VER(3, 0),
 	.modulemutexes		= {NV_NVDEC_CLASS_ID},
+	.devfs_name		= "nvdec",
 	.class			= NV_NVDEC_CLASS_ID,
 #ifdef TEGRA_POWERGATE_NVDEC
 	.powergate_ids		= { TEGRA_POWERGATE_NVDEC, -1 },
@@ -146,6 +150,7 @@ struct nvhost_device_data t18_nvdec_info = {
 struct nvhost_device_data t18_nvjpg_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(1, 1),
 	.modulemutexes		= {NV_NVJPG_CLASS_ID},
+	.devfs_name		= "nvjpg",
 	.class			= NV_NVJPG_CLASS_ID,
 #ifdef TEGRA_POWERGATE_NVJPG
 	.powergate_ids		= { TEGRA_POWERGATE_NVJPG, -1 },
@@ -167,6 +172,7 @@ struct nvhost_device_data t18_nvjpg_info = {
 struct nvhost_device_data t18_tsec_info = {
 	.num_channels		= 1,
 	.modulemutexes		= {NV_TSEC_CLASS_ID},
+	.devfs_name		= "tsec",
 	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
 	.class			= NV_TSEC_CLASS_ID,
 	.clocks			= {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
@@ -183,6 +189,7 @@ struct nvhost_device_data t18_tsec_info = {
 struct nvhost_device_data t18_tsecb_info = {
 	.num_channels		= 1,
 	.modulemutexes		= {NV_TSECB_CLASS_ID},
+	.devfs_name		= "tsecb",
 	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
 	.class			= NV_TSECB_CLASS_ID,
 	.clocks			= {{"tsecb", UINT_MAX, 0, TEGRA_MC_CLIENT_TSECB},
@@ -198,6 +205,7 @@ struct nvhost_device_data t18_tsecb_info = {
 struct nvhost_device_data t18_vic_info = {
 	.num_channels		= 1,
 	.modulemutexes		= {NV_GRAPHICS_VIC_CLASS_ID},
+	.devfs_name		= "vic",
 	.clocks			= {{"vic03", UINT_MAX, 0},
 				   {"emc", UINT_MAX,
 				   NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},

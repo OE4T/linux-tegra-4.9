@@ -163,7 +163,6 @@ struct prod_rev_map_t {
 #define MPU6500_REV              2
 #define MPU_DMP_LOAD_START       0x20
 
-#define THREE_AXIS               3
 #define GYRO_CONFIG_FSR_SHIFT    3
 #define ACCEL_CONFIG_FSR_SHIFT    3
 #define GYRO_DPS_SCALE           250
@@ -287,7 +286,6 @@ struct prod_rev_map_t {
 #define DEF_ST_ACCEL_FS_MG              8000UL
 #define DEF_ST_SCALE                    (1L << 15)
 #define DEF_ST_TRY_TIMES                2
-#define DEF_ST_COMPASS_RESULT_SHIFT     2
 #define DEF_ST_ACCEL_RESULT_SHIFT       1
 #define DEF_ST_OTP0_THRESH              60
 #define DEF_ST_ABS_THRESH               20
@@ -737,6 +735,44 @@ int inv_get_silicon_rev_mpu6050(struct nvi_state *st)
 	return result;
 }
 
+static int inv_reset_offset_reg(struct nvi_state *st, bool en)
+{
+	int i, result;
+	s16 gyro[3], accel[3];
+
+	if (en) {
+		for (i = 0; i < 3; i++) {
+			gyro[i] = st->rom_gyro_offset[i];
+			accel[i] = st->rom_accel_offset[i];
+		}
+	} else {
+		for (i = 0; i < 3; i++) {
+			gyro[i] = st->rom_gyro_offset[i] +
+						st->input_gyro_offset[i];
+			accel[i] = st->rom_accel_offset[i] +
+					(st->input_accel_offset[i] << 1);
+		}
+	}
+	for (i = 0; i < 3; i++) {
+		result = nvi_wr_gyro_offset(st, i, (u16)gyro[i]);
+		if (result)
+			return result;
+		result = nvi_wr_accel_offset(st, i, (u16)accel[i]);
+		if (result)
+			return result;
+	}
+
+	return 0;
+}
+
+/**
+ *  inv_mpu_recover_setting() recover the old settings after everything is done
+ */
+static void inv_mpu_recover_setting(struct nvi_state *st)
+{
+	inv_reset_offset_reg(st, false);
+}
+
 /**
  *  read_accel_hw_self_test_prod_shift()- read the accelerometer hardware
  *                                         self-test bias shift calculated
@@ -787,9 +823,9 @@ static int inv_check_accel_self_test(struct nvi_state *st,
 						int *reg_avg, int *st_avg){
 	int gravity, j, ret_val;
 	int tmp;
-	int st_shift_prod[THREE_AXIS], st_shift_cust[THREE_AXIS];
-	int st_shift_ratio[THREE_AXIS];
-	int accel_sens[THREE_AXIS];
+	int st_shift_prod[AXIS_N], st_shift_cust[AXIS_N];
+	int st_shift_ratio[AXIS_N];
+	int accel_sens[AXIS_N];
 
 	if (st->chip_info.software_revision < DEF_OLDEST_SUPP_SW_REV &&
 	    st->chip_info.product_revision < DEF_OLDEST_SUPP_PROD_REV)
@@ -1029,9 +1065,9 @@ static int inv_check_6500_accel_self_test(struct nvi_state *st,
 }
 
 /*
- *  inv_do_test() - do the actual test of self testing
+ *  inv_mpu_do_test() - do the actual test of self testing
  */
-static int inv_do_test(struct nvi_state *st, int self_test_flag,
+static int inv_mpu_do_test(struct nvi_state *st, int self_test_flag,
 		int *gyro_result, int *accel_result)
 {
 	int result, i, j, packet_size;
@@ -1053,7 +1089,7 @@ static int inv_do_test(struct nvi_state *st, int self_test_flag,
 	if (result)
 		return result;
 	/* setup parameters */
-	result = nvi_wr_gyro_config(st, (self_test_flag >> 5),
+	result = nvi_wr_gyro_config(st, (self_test_flag >> 5), 0,
 				    DEF_SELFTEST_GYRO_FS, INV_FILTER_98HZ);
 	if (result < 0)
 		return result;
@@ -1070,7 +1106,7 @@ static int inv_do_test(struct nvi_state *st, int self_test_flag,
 		d = DEF_SELFTEST_ACCEL_FS;
 		lpf = 0;
 	}
-	result = nvi_wr_accel_config(st, (self_test_flag >> 5),
+	result = nvi_wr_accel_config(st, (self_test_flag >> 5), 0,
 				     (d >> 3), lpf);
 	if (result < 0)
 		return result;
@@ -1092,7 +1128,7 @@ static int inv_do_test(struct nvi_state *st, int self_test_flag,
 		   (1 << st->hal->bit->gyro_z_fifo_en) |
 		   (1 << st->hal->bit->gyro_y_fifo_en) |
 		   (1 << st->hal->bit->gyro_x_fifo_en));
-	for (i = 0; i < THREE_AXIS; i++) {
+	for (i = 0; i < AXIS_N; i++) {
 		gyro_result[i] = 0;
 		accel_result[i] = 0;
 	}
@@ -1125,7 +1161,7 @@ static int inv_do_test(struct nvi_state *st, int self_test_flag,
 			if (result)
 				return result;
 			ind = 0;
-			for (j = 0; j < THREE_AXIS; j++) {
+			for (j = 0; j < AXIS_N; j++) {
 				vals[j] = (short)be16_to_cpup(
 				    (__be16 *)(&data[ind + 2 * j]));
 				accel_result[j] += vals[j];
@@ -1136,7 +1172,7 @@ static int inv_do_test(struct nvi_state *st, int self_test_flag,
 				 st->hal->part_name,
 				 s, vals[0], vals[1], vals[2]);
 
-			for (j = 0; j < THREE_AXIS; j++) {
+			for (j = 0; j < AXIS_N; j++) {
 				vals[j] = (short)be16_to_cpup(
 					(__be16 *)(&data[ind + 2 * j]));
 				gyro_result[j] += vals[j];
@@ -1150,11 +1186,11 @@ static int inv_do_test(struct nvi_state *st, int self_test_flag,
 		}
 	}
 
-	for (j = 0; j < THREE_AXIS; j++) {
+	for (j = 0; j < AXIS_N; j++) {
 		accel_result[j] = accel_result[j] / s;
 		accel_result[j] *= DEF_ST_PRECISION;
 	}
-	for (j = 0; j < THREE_AXIS; j++) {
+	for (j = 0; j < AXIS_N; j++) {
 		gyro_result[j] = gyro_result[j] / s;
 		gyro_result[j] *= DEF_ST_PRECISION;
 	}
@@ -1162,58 +1198,19 @@ static int inv_do_test(struct nvi_state *st, int self_test_flag,
 	return 0;
 }
 
-static int inv_reset_offset_reg(struct nvi_state *st, bool en)
-{
-	int i, result;
-	s16 gyro[3], accel[3];
-
-	if (en) {
-		for (i = 0; i < 3; i++) {
-			gyro[i] = st->rom_gyro_offset[i];
-			accel[i] = st->rom_accel_offset[i];
-		}
-	} else {
-		for (i = 0; i < 3; i++) {
-			gyro[i] = st->rom_gyro_offset[i] +
-						st->input_gyro_offset[i];
-			accel[i] = st->rom_accel_offset[i] +
-					(st->input_accel_offset[i] << 1);
-		}
-	}
-	for (i = 0; i < 3; i++) {
-		result = nvi_wr_gyro_offset(st, i, (u16)gyro[i]);
-		if (result)
-			return result;
-		result = nvi_wr_accel_offset(st, i, (u16)accel[i]);
-		if (result)
-			return result;
-	}
-
-	return 0;
-}
-
-/**
- *  inv_recover_setting() recover the old settings after everything is done
- */
-static void inv_recover_setting(struct iio_dev *indio_dev)
-{
-	struct nvi_state *st = iio_priv(indio_dev);
-
-	inv_reset_offset_reg(st, false);
-	nvi_enable(indio_dev);
-}
-
 /*
- *  inv_hw_self_test() - main function to do hardware self test
+ *  inv_mpu_self_test() - main function to do hardware self test
  */
-int inv_hw_self_test(struct iio_dev *indio_dev)
+int inv_mpu_self_test(struct nvi_state *st)
 {
-	struct nvi_state *st = iio_priv(indio_dev);
 	int result;
-	int gyro_bias_st[THREE_AXIS], gyro_bias_regular[THREE_AXIS];
-	int accel_bias_st[THREE_AXIS], accel_bias_regular[THREE_AXIS];
-	int test_times, i;
-	char compass_result, accel_result, gyro_result;
+	int gyro_bias_st[AXIS_N];
+	int gyro_bias_regular[AXIS_N];
+	int accel_bias_st[AXIS_N], accel_bias_regular[AXIS_N];
+	int test_times;
+	int i;
+	char accel_result;
+	char gyro_result;
 
 	result = nvi_pm_wr(st, INV_CLK_PLL, 0, 0);
 	if (result)
@@ -1221,13 +1218,12 @@ int inv_hw_self_test(struct iio_dev *indio_dev)
 	result = inv_reset_offset_reg(st, true);
 	if (result)
 		return result;
-	compass_result = 0;
 	accel_result = 0;
 	gyro_result = 0;
 	test_times = DEF_ST_TRY_TIMES;
 	while (test_times > 0) {
-		result = inv_do_test(st, 0, gyro_bias_regular,
-			accel_bias_regular);
+		result = inv_mpu_do_test(st, 0, gyro_bias_regular,
+					 accel_bias_regular);
 		if (result == -EAGAIN)
 			test_times--;
 		else
@@ -1249,8 +1245,8 @@ int inv_hw_self_test(struct iio_dev *indio_dev)
 
 	test_times = DEF_ST_TRY_TIMES;
 	while (test_times > 0) {
-		result = inv_do_test(st, BITS_SELF_TEST_EN, gyro_bias_st,
-					accel_bias_st);
+		result = inv_mpu_do_test(st, BITS_SELF_TEST_EN, gyro_bias_st,
+					 accel_bias_st);
 		if (result == -EAGAIN)
 			test_times--;
 		else
@@ -1278,10 +1274,554 @@ int inv_hw_self_test(struct iio_dev *indio_dev)
 	}
 
 test_fail:
-	inv_recover_setting(indio_dev);
+	inv_mpu_recover_setting(st);
+	return (accel_result << DEF_ST_ACCEL_RESULT_SHIFT) | gyro_result;
+}
 
-	return (compass_result << DEF_ST_COMPASS_RESULT_SHIFT) |
-		(accel_result << DEF_ST_ACCEL_RESULT_SHIFT) | gyro_result;
+#define ICM_DEV_NAME_ACCEL		"accel"
+#define ICM_DEV_NAME_GYRO		"gyro"
+/* full scale and LPF setting */
+#define ICM_SELFTEST_GYRO_FS		0
+#define ICM_SELFTEST_ACCEL_FS		7
+/* register settings */
+#define ICM_SELFTEST_GYRO_SMPLRT_DIV	10
+#define ICM_SELFTEST_GYRO_AVGCFG	3
+#define ICM_SELFTEST_ACCEL_SMPLRT_DIV	10
+#define ICM_SELFTEST_ACCEL_DEC3_CFG	2
+#define ICM_SELFTEST_GYRO_SENS		(32768 / 250)
+/* wait time before collecting data */
+#define ICM_MAX_PACKETS			20
+#define ICM_SELFTEST_WAIT_TIME		(ICM_MAX_PACKETS * 10)
+#define ICM_GYRO_ENGINE_UP_TIME		50
+#define ICM_ST_STABLE_TIME		20
+#define ICM_GYRO_SCALE			131
+#define ICM_ST_PRECISION		1000
+#define ICM_ST_ACCEL_FS_MG		2000UL
+#define ICM_ST_SCALE			32768
+#define ICM_ST_TRY_TIMES		2
+#define ICM_ST_SAMPLES			200
+#define ICM_ACCEL_ST_SHIFT_DELTA_MIN	500
+#define ICM_ACCEL_ST_SHIFT_DELTA_MAX	1500
+#define ICM_GYRO_CT_SHIFT_DELTA		500
+/* Gyro Offset Max Value (dps) */
+#define ICM_GYRO_OFFSET_MAX		20
+/* Gyro Self Test Absolute Limits ST_AL (dps) */
+#define ICM_GYRO_ST_AL			60
+/* Accel Self Test Absolute Limits ST_AL (mg) */
+#define ICM_ACCEL_ST_AL_MIN ((225 * ICM_ST_SCALE \
+			      / ICM_ST_ACCEL_FS_MG) * ICM_ST_PRECISION)
+#define ICM_ACCEL_ST_AL_MAX ((675 * ICM_ST_SCALE \
+			      / ICM_ST_ACCEL_FS_MG) * ICM_ST_PRECISION)
+
+
+static const u16 icm_st_tb[256] = {
+	2620, 2646, 2672, 2699, 2726, 2753, 2781, 2808,
+	2837, 2865, 2894, 2923, 2952, 2981, 3011, 3041,
+	3072, 3102, 3133, 3165, 3196, 3228, 3261, 3293,
+	3326, 3359, 3393, 3427, 3461, 3496, 3531, 3566,
+	3602, 3638, 3674, 3711, 3748, 3786, 3823, 3862,
+	3900, 3939, 3979, 4019, 4059, 4099, 4140, 4182,
+	4224, 4266, 4308, 4352, 4395, 4439, 4483, 4528,
+	4574, 4619, 4665, 4712, 4759, 4807, 4855, 4903,
+	4953, 5002, 5052, 5103, 5154, 5205, 5257, 5310,
+	5363, 5417, 5471, 5525, 5581, 5636, 5693, 5750,
+	5807, 5865, 5924, 5983, 6043, 6104, 6165, 6226,
+	6289, 6351, 6415, 6479, 6544, 6609, 6675, 6742,
+	6810, 6878, 6946, 7016, 7086, 7157, 7229, 7301,
+	7374, 7448, 7522, 7597, 7673, 7750, 7828, 7906,
+	7985, 8065, 8145, 8227, 8309, 8392, 8476, 8561,
+	8647, 8733, 8820, 8909, 8998, 9088, 9178, 9270,
+	9363, 9457, 9551, 9647, 9743, 9841, 9939, 10038,
+	10139, 10240, 10343, 10446, 10550, 10656, 10763, 10870,
+	10979, 11089, 11200, 11312, 11425, 11539, 11654, 11771,
+	11889, 12008, 12128, 12249, 12371, 12495, 12620, 12746,
+	12874, 13002, 13132, 13264, 13396, 13530, 13666, 13802,
+	13940, 14080, 14221, 14363, 14506, 14652, 14798, 14946,
+	15096, 15247, 15399, 15553, 15709, 15866, 16024, 16184,
+	16346, 16510, 16675, 16842, 17010, 17180, 17352, 17526,
+	17701, 17878, 18057, 18237, 18420, 18604, 18790, 18978,
+	19167, 19359, 19553, 19748, 19946, 20145, 20347, 20550,
+	20756, 20963, 21173, 21385, 21598, 21814, 22033, 22253,
+	22475, 22700, 22927, 23156, 23388, 23622, 23858, 24097,
+	24338, 24581, 24827, 25075, 25326, 25579, 25835, 26093,
+	26354, 26618, 26884, 27153, 27424, 27699, 27976, 28255,
+	28538, 28823, 29112, 29403, 29697, 29994, 30294, 30597,
+	30903, 31212, 31524, 31839, 32157, 32479, 32804
+};
+
+/**
+* inv_icm_check_gyro_self_test() - check gyro self test.
+*  this function returns zero as success. A non-zero return
+*  value indicates failure in self test.
+*  @*st: main data structure.
+*  @*reg_avg: average value of normal test.
+*  @*st_avg: average value of self test
+*/
+static int inv_icm_check_gyro_self_test(struct nvi_state *st,
+					int *reg_avg, int *st_avg)
+{
+	u8 *regs;
+	int ret_val;
+	int otp_value_zero = 0;
+	int st_shift_prod[AXIS_N];
+	int st_shift_cust[AXIS_N];
+	int i;
+
+	ret_val = 0;
+	regs = st->st_data_gyro;
+	pr_debug("%s data: %02x %02x %02x\n", __func__,
+		 regs[0], regs[1], regs[2]);
+	for (i = 0; i < AXIS_N; i++) {
+		if (regs[i] != 0) {
+			st_shift_prod[i] = icm_st_tb[regs[i] - 1];
+		} else {
+			st_shift_prod[i] = 0;
+			otp_value_zero = 1;
+		}
+	}
+	pr_debug("%s st_shift_prod: %+d %+d %+d\n", __func__,
+		 st_shift_prod[0], st_shift_prod[1], st_shift_prod[2]);
+	for (i = 0; i < AXIS_N; i++) {
+		st_shift_cust[i] = st_avg[i] - reg_avg[i];
+		if (!otp_value_zero) {
+			/* Self Test Pass/Fail Criteria A */
+			if (st_shift_cust[i] < (ICM_GYRO_CT_SHIFT_DELTA *
+						st_shift_prod[i])) {
+				ret_val = 1;
+				pr_debug("%s criteria A axis %d FAIL\n",
+					 __func__, i);
+			}
+		} else {
+			/* Self Test Pass/Fail Criteria B */
+			if (st_shift_cust[i] < (ICM_GYRO_ST_AL *
+						ICM_SELFTEST_GYRO_SENS *
+						ICM_ST_PRECISION)) {
+				ret_val = 1;
+				pr_debug("%s criteria B axis %d FAIL\n",
+					 __func__, i);
+			}
+		}
+	}
+	pr_debug("%s st_shift_cust: %+d %+d %+d\n", __func__,
+		 st_shift_cust[0], st_shift_cust[1], st_shift_cust[2]);
+	if (ret_val == 0) {
+		/* Self Test Pass/Fail Criteria C */
+		for (i = 0; i < AXIS_N; i++) {
+			if (abs(reg_avg[i]) > (ICM_GYRO_OFFSET_MAX *
+					       ICM_SELFTEST_GYRO_SENS *
+					       ICM_ST_PRECISION)) {
+				ret_val = 1;
+				pr_debug("%s criteria C axis %d FAIL\n",
+					 __func__, i);
+			}
+		}
+	}
+	return ret_val;
+}
+
+/**
+* inv_icm_check_accel_self_test() - check accel self test.
+*  this function returns zero as success. A non-zero return
+*  value indicates failure in self test.
+*  @*st: main data structure.
+*  @*reg_avg: average value of normal test.
+*  @*st_avg: average value of self test
+*/
+static int inv_icm_check_accel_self_test(struct nvi_state *st,
+					 int *reg_avg, int *st_avg)
+{
+	int ret_val;
+	int st_shift_prod[AXIS_N];
+	int st_shift_cust[AXIS_N];
+	int i;
+	u8 *regs;
+	int otp_value_zero = 0;
+
+	ret_val = 0;
+	regs = st->st_data_accel;
+	pr_debug("%s data: %02x %02x %02x\n", __func__,
+		 regs[0], regs[1], regs[2]);
+	for (i = 0; i < AXIS_N; i++) {
+		if (regs[i] != 0) {
+			st_shift_prod[i] = icm_st_tb[regs[i] - 1];
+		} else {
+			st_shift_prod[i] = 0;
+			otp_value_zero = 1;
+		}
+	}
+	pr_debug("%s st_shift_prod: %+d %+d %+d\n", __func__,
+		 st_shift_prod[0], st_shift_prod[1], st_shift_prod[2]);
+	if (!otp_value_zero) {
+		/* Self Test Pass/Fail Criteria A */
+		for (i = 0; i < AXIS_N; i++) {
+			st_shift_cust[i] = st_avg[i] - reg_avg[i];
+			if (st_shift_cust[i] < (ICM_ACCEL_ST_SHIFT_DELTA_MIN *
+						st_shift_prod[i])) {
+				ret_val = 1;
+				pr_debug("%s criteria A (min) axis %d FAIL\n",
+					 __func__, i);
+			}
+			if (st_shift_cust[i] > (ICM_ACCEL_ST_SHIFT_DELTA_MAX *
+						st_shift_prod[i])) {
+				ret_val = 1;
+				pr_debug("%s criteria A (max) axis %d FAIL\n",
+					 __func__, i);
+			}
+		}
+	} else {
+		/* Self Test Pass/Fail Criteria B */
+		for (i = 0; i < AXIS_N; i++) {
+			st_shift_cust[i] = abs(st_avg[i] - reg_avg[i]);
+			if ((st_shift_cust[i] < ICM_ACCEL_ST_AL_MIN) ||
+				    (st_shift_cust[i] > ICM_ACCEL_ST_AL_MAX)) {
+				ret_val = 1;
+				pr_debug("%s criteria B axis %d FAIL\n",
+					 __func__, i);
+			}
+		}
+	}
+	pr_debug("%s st_shift_cust: %+d %+d %+d\n", __func__,
+		 st_shift_cust[0], st_shift_cust[1], st_shift_cust[2]);
+	return ret_val;
+}
+
+static int inv_icm_setup_selftest(struct nvi_state *st)
+{
+	int result;
+
+	/* Wake up and stop sensors */
+	result = nvi_pm_wr(st, INV_CLK_PLL, BIT_PWR_PRESSURE_STBY |
+			   BIT_PWR_ACCEL_STBY | BIT_PWR_GYRO_STBY, 0);
+	if (result)
+		return result;
+
+	/* Perform a soft-reset of the chip
+	 * This will clear any prior states in the chip
+	 */
+	result = nvi_wr_pwr_mgmt_1(st, BIT_H_RESET);
+	if (result)
+		return result;
+
+	msleep(POWER_UP_TIME);
+	/* Wake up */
+	result = nvi_wr_pwr_mgmt_1(st, INV_CLK_PLL);
+	if (result)
+		return result;
+
+	result = nvi_wr_user_ctrl(st, BIT_FIFO_EN);
+	if (result)
+		return result;
+
+	/* Configure FIFO */
+	result = nvi_i2c_wr(st, REG_FIFO_CFG, 0);
+	if (result)
+		return result;
+
+	/* Set cycle mode */
+	result = nvi_wr_lp_config(st, 0); /* this will default to 0x70 */
+	if (result)
+		return result;
+
+	/* Configure FSR and DLPF */
+	result = nvi_wr_smplrt_div(st, DEV_ANGLVEL,
+				   ICM_SELFTEST_GYRO_SMPLRT_DIV);
+	if (result)
+		return result;
+
+	result = nvi_wr_gyro_config(st, 0, ICM_SELFTEST_GYRO_AVGCFG,
+				    ICM_SELFTEST_GYRO_FS, 0);
+	if (result)
+		return result;
+
+	result = nvi_wr_smplrt_div(st, DEV_ACCEL,
+				   ICM_SELFTEST_ACCEL_SMPLRT_DIV);
+	if (result)
+		return result;
+
+	result = nvi_wr_accel_config(st, 0, ICM_SELFTEST_ACCEL_DEC3_CFG,
+				     0, ICM_SELFTEST_ACCEL_FS + 1);
+	if (result)
+		return result;
+
+	/* Read selftest values */
+	result = nvi_i2c_rd(st, st->hal->reg->self_test_x_gyro.bank,
+			    st->hal->reg->self_test_x_gyro.reg, AXIS_N,
+			    &st->st_data_gyro[0]);
+	if (result)
+		return result;
+
+	result = nvi_i2c_rd(st, st->hal->reg->self_test_x_accel.bank,
+			    st->hal->reg->self_test_x_accel.reg, AXIS_N,
+			    &st->st_data_accel[0]);
+	if (result)
+		return result;
+
+	result = nvi_pm_wr(st, INV_CLK_PLL, BIT_PWR_PRESSURE_STBY, 0);
+	if (result)
+		return result;
+
+	msleep(ICM_GYRO_ENGINE_UP_TIME);
+	return result;
+}
+
+static int inv_icm_selftest_read_samples(struct nvi_state *st, int dev,
+				     int *sum_result, int *s)
+{
+	u16 w;
+	u16 fifo_count;
+	s16 vals[AXIS_N];
+	u8 d[ICM_MAX_PACKETS * BYTES_PER_SENSOR];
+	char *dev_name;
+	int r;
+	int i;
+	int j;
+	int t;
+	int packet_count;
+
+	r = nvi_wr_fifo_en(st, 0);
+	if (r)
+		return r;
+
+	/* Reset FIFO */
+	r = nvi_wr_user_ctrl(st, BIT_FIFO_RST);
+	if (r)
+		return r;
+
+	if (DEV_ANGLVEL == dev) {
+		dev_name = ICM_DEV_NAME_GYRO;
+		w = 1 << st->hal->bit->gyro_x_fifo_en;
+		w |= 1 << st->hal->bit->gyro_y_fifo_en;
+		w |= 1 << st->hal->bit->gyro_z_fifo_en;
+	} else {
+		dev_name = ICM_DEV_NAME_ACCEL;
+		w = 1 << st->hal->bit->accel_fifo_en;
+	}
+	while (*s < ICM_ST_SAMPLES) {
+		r = nvi_wr_fifo_en(st, w);
+		if (r)
+			return r;
+
+		msleep(ICM_SELFTEST_WAIT_TIME);
+		r = nvi_wr_fifo_en(st, 0);
+		if (r)
+			return r;
+
+		r = nvi_i2c_rd(st, st->hal->reg->fifo_count_h.bank,
+			       st->hal->reg->fifo_count_h.reg,
+			       FIFO_COUNT_BYTE, d);
+		if (r)
+			return r;
+
+		fifo_count = be16_to_cpup((__be16 *)(&d[0]));
+		pr_debug("%s fifo_count=%d\n", __func__, fifo_count);
+		if (ICM_MAX_PACKETS * BYTES_PER_SENSOR < fifo_count) {
+			r = nvi_i2c_rd(st, st->hal->reg->fifo_r_w.bank,
+				       st->hal->reg->fifo_r_w.reg,
+				       ICM_MAX_PACKETS * BYTES_PER_SENSOR, d);
+			packet_count = ICM_MAX_PACKETS;
+		} else {
+			r = nvi_i2c_rd(st, st->hal->reg->fifo_r_w.bank,
+				       st->hal->reg->fifo_r_w.reg,
+				       fifo_count, d);
+			packet_count = fifo_count / BYTES_PER_SENSOR;
+		}
+		if (r)
+			return r;
+
+		i = 0;
+		while (i < packet_count) {
+			for (j = 0; j < AXIS_N; j++) {
+				t = 2 * j + i * BYTES_PER_SENSOR;
+				vals[j] = (s16)be16_to_cpup((__be16 *)(&d[t]));
+				sum_result[j] += vals[j];
+			}
+			pr_debug("%s %s %d: %+d %+d %+d\n", __func__,
+				 dev_name, *s, vals[0], vals[1], vals[2]);
+			(*s)++;
+			i++;
+		}
+	}
+
+	return 0;
+}
+
+/*
+ *  inv_icm_do_test_accel() - do the actual test of self testing
+ */
+static int inv_icm_do_test_accel(struct nvi_state *st,
+				 int *accel_result, int *accel_st_result)
+{
+	int result;
+	int i;
+	int j;
+	int accel_s;
+
+	for (i = 0; i < AXIS_N; i++) {
+		accel_result[i] = 0;
+		accel_st_result[i] = 0;
+	}
+	accel_s = 0;
+	result = inv_icm_selftest_read_samples(st, DEV_ACCEL,
+					       accel_result, &accel_s);
+	if (result)
+		return result;
+
+	for (j = 0; j < AXIS_N; j++) {
+		accel_result[j] = accel_result[j] / accel_s;
+		accel_result[j] *= ICM_ST_PRECISION;
+	}
+	/* Set Self-Test Bit */
+	result = nvi_wr_accel_config(st, 7, ICM_SELFTEST_ACCEL_DEC3_CFG,
+				     0, ICM_SELFTEST_ACCEL_FS + 1);
+	if (result)
+		return result;
+
+	msleep(ICM_ST_STABLE_TIME);
+	accel_s = 0;
+	result = inv_icm_selftest_read_samples(st, DEV_ACCEL,
+					       accel_st_result, &accel_s);
+	if (result)
+		return result;
+
+	for (j = 0; j < AXIS_N; j++) {
+		accel_st_result[j] = accel_st_result[j] / accel_s;
+		accel_st_result[j] *= ICM_ST_PRECISION;
+	}
+	pr_debug("%s %d, %d, %d\n", __func__,
+		 accel_result[0], accel_result[1], accel_result[2]);
+
+	return 0;
+}
+
+/*
+ *  inv_icm_do_test_gyro() - do the actual test of self testing
+ */
+static int inv_icm_do_test_gyro(struct nvi_state *st, int *gyro_result,
+				int *gyro_st_result)
+{
+	int result;
+	int i;
+	int j;
+	int gyro_s;
+
+	for (i = 0; i < AXIS_N; i++) {
+		gyro_result[i] = 0;
+		gyro_st_result[i] = 0;
+	}
+	gyro_s = 0;
+	result = inv_icm_selftest_read_samples(st, DEV_ANGLVEL,
+					       gyro_result, &gyro_s);
+	if (result)
+		return result;
+
+	for (j = 0; j < AXIS_N; j++) {
+		gyro_result[j] = gyro_result[j] / gyro_s;
+		gyro_result[j] *= ICM_ST_PRECISION;
+	}
+	/* Set Self-Test Bit */
+	result = nvi_wr_gyro_config(st, 7, ICM_SELFTEST_GYRO_AVGCFG, -1, -1);
+	if (result)
+		return result;
+
+	msleep(ICM_ST_STABLE_TIME);
+	gyro_s = 0;
+	result = inv_icm_selftest_read_samples(st, DEV_ANGLVEL,
+					       gyro_st_result, &gyro_s);
+	if (result)
+		return result;
+
+	for (j = 0; j < AXIS_N; j++) {
+		gyro_st_result[j] = gyro_st_result[j] / gyro_s;
+		gyro_st_result[j] *= ICM_ST_PRECISION;
+	}
+	pr_debug("%s %d, %d, %d\n", __func__,
+		 gyro_result[0], gyro_result[1], gyro_result[2]);
+	return 0;
+}
+
+/*
+ *  inv_icm_self_test() - main function to do hardware self test
+ */
+int inv_icm_self_test(struct nvi_state *st)
+{
+	int result;
+	int gyro_bias_st[AXIS_N];
+	int gyro_bias_regular[AXIS_N];
+	int accel_bias_st[AXIS_N];
+	int accel_bias_regular[AXIS_N];
+	int test_times;
+	int i;
+	char accel_result;
+	char gyro_result;
+
+	result = inv_icm_setup_selftest(st);
+	if (result)
+		return result;
+
+	test_times = ICM_ST_TRY_TIMES;
+	while (test_times > 0) {
+		result = inv_icm_do_test_gyro(st, gyro_bias_regular,
+					      gyro_bias_st);
+		if (result == -EAGAIN)
+			test_times--;
+		else
+			test_times = 0;
+	}
+	if (result)
+		return result;
+
+	pr_debug("%s gyro bias_regular: %+d %+d %+d\n", __func__,
+		 gyro_bias_regular[0], gyro_bias_regular[1],
+		 gyro_bias_regular[2]);
+	pr_debug("%s gyro bias_st: %+d %+d %+d\n", __func__,
+		 gyro_bias_st[0], gyro_bias_st[1], gyro_bias_st[2]);
+	gyro_result = inv_icm_check_gyro_self_test(st, gyro_bias_regular,
+						   gyro_bias_st);
+	pr_debug("%s gyro_result %hhd\n", __func__, gyro_result);
+
+	test_times = ICM_ST_TRY_TIMES;
+	while (test_times > 0) {
+		result = inv_icm_do_test_accel(st, accel_bias_regular,
+					       accel_bias_st);
+		if (result == -EAGAIN)
+			test_times--;
+		else
+			break;
+	}
+	if (result)
+		return result;
+
+	pr_debug("%s accel bias_regular: %+d %+d %+d\n", __func__,
+		 accel_bias_regular[0], accel_bias_regular[1],
+		 accel_bias_regular[2]);
+	pr_debug("%s accel bias_st: %+d %+d %+d\n", __func__,
+		 accel_bias_st[0], accel_bias_st[1], accel_bias_st[2]);
+
+	for (i = 0; i < AXIS_N; i++) {
+		st->gyro_bias[i] = gyro_bias_regular[i] / ICM_ST_PRECISION;
+		st->accel_bias[i] = accel_bias_regular[i] / ICM_ST_PRECISION;
+	}
+	accel_result = inv_icm_check_accel_self_test(st, accel_bias_regular,
+						     accel_bias_st);
+	pr_debug("%s accel_result %hhd\n", __func__, accel_result);
+
+	return (accel_result << DEF_ST_ACCEL_RESULT_SHIFT) | gyro_result;
+}
+
+/*
+ *  inv_hw_self_test() - main function to do hardware self test
+ */
+int inv_hw_self_test(struct iio_dev *indio_dev)
+{
+	struct nvi_state *st = iio_priv(indio_dev);
+	int ret;
+
+	if (st->hal->part < ICM20628)
+		ret = inv_mpu_self_test(st);
+	else
+		ret = inv_icm_self_test(st);
+	nvi_enable(indio_dev);
+	return ret;
 }
 
 static int inv_load_firmware(struct nvi_state *st,

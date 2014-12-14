@@ -208,7 +208,7 @@ struct nvi_smplrt {
 	unsigned int lpf_us_tbl_n;
 	const unsigned int *lpf_us_tbl;
 	unsigned int base_hz;
-	int (*lpf_wr)(struct nvi_state *st, u8 test, u8 fsr, u8 lpf);
+	int (*lpf_wr)(struct nvi_state *st, u8 test, u8 avg, u8 fsr, u8 lpf);
 };
 
 struct nvi_br {
@@ -590,8 +590,8 @@ int nvi_i2c_write(struct nvi_state *st, u16 addr, u16 len, u8 *buf);
 int nvi_i2c_wr(struct nvi_state *st, u8 reg, u8 val);
 int nvi_wr_accel_offset(struct nvi_state *st, unsigned int axis, u16 offset);
 int nvi_wr_gyro_offset(struct nvi_state *st, unsigned int axis, u16 offset);
-int nvi_wr_gyro_config(struct nvi_state *st, u8 test, u8 fsr, u8 lpf);
-int nvi_wr_accel_config(struct nvi_state *st, u8 test, u8 fsr, u8 lpf);
+int nvi_wr_gyro_config(struct nvi_state *st, u8 test, u8 avg, u8 fsr, u8 lpf);
+int nvi_wr_accel_config(struct nvi_state *st, u8 test, u8 avg, u8 fsr, u8 lpf);
 int nvi_wr_smplrt_div(struct nvi_state *st, unsigned int dev, u16 val);
 int nvi_wr_lp_config(struct nvi_state *st, u8 val);
 int nvi_wr_fifo_en(struct nvi_state *st, u16 fifo_en);

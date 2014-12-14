@@ -77,6 +77,7 @@ struct nvhost_device_data t21_host1x_info = {
 struct nvhost_device_data t21_isp_info = {
 	.num_channels		= 1,
 	.moduleid		= NVHOST_MODULE_ISP,
+	.devfs_name		= "isp",
 	.class			= NV_VIDEO_STREAMING_ISP_CLASS_ID,
 	.modulemutexes		= {NVMODMUTEX_ISP_0},
 	.exclusive		= true,
@@ -101,6 +102,7 @@ struct nvhost_device_data t21_isp_info = {
 struct nvhost_device_data t21_ispb_info = {
 	.num_channels		= 1,
 	.moduleid		= (1 << 16) | NVHOST_MODULE_ISP,
+	.devfs_name		= "isp.1",
 	.class			= NV_VIDEO_STREAMING_ISPB_CLASS_ID,
 	.modulemutexes		= {NVMODMUTEX_ISP_1},
 	.exclusive		= true,
@@ -128,6 +130,7 @@ struct nvhost_device_data t21_ispb_info = {
 #ifdef CONFIG_VI_ONE_DEVICE
 struct nvhost_device_data t21_vi_info = {
 	.modulemutexes		= {NVMODMUTEX_VI_0},
+	.devfs_name		= "vi",
 	.exclusive		= true,
 	.class			= NV_VIDEO_STREAMING_VI_CLASS_ID,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
@@ -161,6 +164,7 @@ struct nvhost_device_data t21_vi_info = {
 #else
 struct nvhost_device_data t21_vib_info = {
 	.modulemutexes		= {NVMODMUTEX_VI_1},
+	.devfs_name		= "vi",
 	.class			= NV_VIDEO_STREAMING_VI_CLASS_ID,
 	.exclusive		= true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
@@ -194,6 +198,7 @@ static struct platform_device tegra_vi01b_device = {
 
 struct nvhost_device_data t21_vi_info = {
 	.modulemutexes		= {NVMODMUTEX_VI_0},
+	.devfs_name		= "vi",
 	.class			= NV_VIDEO_STREAMING_VI_CLASS_ID,
 	.exclusive		= true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
@@ -254,6 +259,7 @@ struct nvhost_device_data t21_msenc_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
 	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,
 	.modulemutexes		= {NVMODMUTEX_MSENC},
+	.devfs_name		= "msenc",
 #ifdef TEGRA_POWERGATE_NVENC
 	.powergate_ids		= { TEGRA_POWERGATE_NVENC, -1 },
 #else
@@ -287,6 +293,7 @@ struct nvhost_device_data t21_nvdec_info = {
 	.version		= NVHOST_ENCODE_NVDEC_VER(2, 0),
 	.class			= NV_NVDEC_CLASS_ID,
 	.modulemutexes		= {NVMODMUTEX_NVDEC},
+	.devfs_name		= "nvdec",
 #ifdef TEGRA_POWERGATE_NVDEC
 	.powergate_ids		= { TEGRA_POWERGATE_NVDEC, -1 },
 #else
@@ -320,6 +327,7 @@ struct nvhost_device_data t21_nvjpg_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(1, 0),
 	.class			= NV_NVJPG_CLASS_ID,
 	.modulemutexes		= {NVMODMUTEX_NVJPG},
+	.devfs_name		= "nvjpg",
 #ifdef TEGRA_POWERGATE_NVJPG
 	.powergate_ids		= { TEGRA_POWERGATE_NVJPG, -1 },
 #else
@@ -352,6 +360,7 @@ struct nvhost_device_data t21_nvjpg_info = {
 struct nvhost_device_data t21_tsec_info = {
 	.num_channels		= 1,
 	.modulemutexes		= {NVMODMUTEX_TSECA},
+	.devfs_name		= "tsec",
 	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
 	.class			= NV_TSEC_CLASS_ID,
 	.exclusive		= false,
@@ -373,6 +382,7 @@ struct nvhost_device_data t21_tsec_info = {
 struct nvhost_device_data t21_tsecb_info = {
 	.num_channels		= 1,
 	.modulemutexes		= {NVMODMUTEX_TSECB},
+	.devfs_name		= "tsecb",
 	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
 	.class			= NV_TSECB_CLASS_ID,
 	.exclusive		= true,
@@ -396,6 +406,7 @@ struct nvhost_device_data t21_tsecb_info = {
 struct nvhost_device_data t21_vic_info = {
 	.num_channels		= 1,
 	.modulemutexes		= {NVMODMUTEX_VIC},
+	.devfs_name		= "vic",
 	.clocks			= {{"vic03", UINT_MAX, 0, TEGRA_MC_CLIENT_VIC},
 				   {"emc", UINT_MAX,
 				   NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},

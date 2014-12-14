@@ -1276,55 +1276,13 @@ static const struct file_operations nvhost_channelops = {
 	.unlocked_ioctl = nvhost_channelctl
 };
 
-static struct {
-	int class_id;
-	const char *dev_name;
-} class_id_dev_name_map[] = {
-	/*	{ NV_HOST1X_CLASS_ID, ""}, */
-	{ NV_VIDEO_ENCODE_MPEG_CLASS_ID, "mpe" },
-	{ NV_VIDEO_ENCODE_MSENC_CLASS_ID, "msenc" },
-	{ NV_GRAPHICS_3D_CLASS_ID, "gr3d" },
-	{ NV_GRAPHICS_GPU_CLASS_ID, "gpu"},
-	{ NV_GRAPHICS_VIC_CLASS_ID, "vic"},
-	{ NV_TSEC_CLASS_ID, "tsec" },
-	{ NV_TSECB_CLASS_ID, "tsecb" },
-	{ NV_NVDEC_CLASS_ID, "nvdec" },
-	{ NV_NVJPG_CLASS_ID, "nvjpg" },
-};
-
-static struct {
-	int module_id;
-	const char *dev_name;
-} module_id_dev_name_map[] = {
-	{ NVHOST_MODULE_VI, "vi"},
-	{ NVHOST_MODULE_ISP, "isp"},
-	{ NVHOST_MODULE_MPE, "mpe"},
-	{ NVHOST_MODULE_NVJPG, "nvjpg"},
-	{ NVHOST_MODULE_NVDEC, "nvdec"},
-	{ NVHOST_MODULE_MSENC, "msenc"},
-	{ NVHOST_MODULE_TSEC, "tsec"},
-	{ NVHOST_MODULE_GPU, "gpu"},
-	{ NVHOST_MODULE_VIC, "vic"},
-};
-
 static const char *get_device_name_for_dev(struct platform_device *dev)
 {
-	int i;
-	/* first choice is to use the class id if specified */
-	for (i = 0; i < ARRAY_SIZE(class_id_dev_name_map); i++) {
-		struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
-		if (pdata->class == class_id_dev_name_map[i].class_id)
-			return class_id_dev_name_map[i].dev_name;
-	}
+	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
 
-	/* second choice is module name if specified */
-	for (i = 0; i < ARRAY_SIZE(module_id_dev_name_map); i++) {
-		struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
-		if (pdata->moduleid == module_id_dev_name_map[i].module_id)
-			return module_id_dev_name_map[i].dev_name;
-	}
+	if (pdata->devfs_name)
+		return pdata->devfs_name;
 
-	/* last choice is to just use the given dev name */
 	return dev->name;
 }
 

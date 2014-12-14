@@ -159,6 +159,7 @@ struct nvhost_device_data {
 	bool		push_work_done;	/* Push_op done into push buffer */
 	bool		poweron_reset;	/* Reset the engine before powerup */
 	bool		virtual_dev;	/* True if virtualized device */
+	char		*devfs_name;	/* Name in devfs */
 
 	char		*firmware_name;	/* Name of firmware */
 

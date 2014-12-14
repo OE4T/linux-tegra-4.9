@@ -399,7 +399,7 @@ static int nvi_wr_gyro_config1(struct nvi_state *st, u8 val)
 }
 
 /* Register GYRO_CONFIG2 */
-int nvi_wr_gyro_config(struct nvi_state *st, u8 test, u8 fsr, u8 lpf)
+int nvi_wr_gyro_config(struct nvi_state *st, u8 test, u8 avg, u8 fsr, u8 lpf)
 {
 	u8 val = 0;
 	int ret = 0;
@@ -424,7 +424,7 @@ int nvi_wr_gyro_config(struct nvi_state *st, u8 test, u8 fsr, u8 lpf)
 			val |= fsr << 3;
 	} else {
 		if (lpf > 7)
-			val |= st->rc.gyro_config1 & 0x38;
+			val |= st->rc.gyro_config1 & 0x39;
 		else
 			val |= lpf << 3;
 		if (fsr > 3)
@@ -432,10 +432,15 @@ int nvi_wr_gyro_config(struct nvi_state *st, u8 test, u8 fsr, u8 lpf)
 		else
 			val |= fsr << 1;
 		ret = nvi_wr_gyro_config1(st, val);
+		val = 0;
 		if (test > 7)
-			return ret;
-
-		val = test;
+			val |= st->rc.gyro_config2 & 0x38;
+		else
+			val |= test << 3;
+		if (avg > 7)
+			val |= st->rc.gyro_config2 & 0x07;
+		else
+			val |= avg;
 	}
 	if (((val != st->rc.gyro_config2) || st->rc_dis) && !ret) {
 		ret = nvi_wr_reg_bank_sel(st, st->hal->reg->gyro_config2.bank);
@@ -489,7 +494,7 @@ static int nvi_wr_accel_config2(struct nvi_state *st, u8 val)
 }
 
 /* Register ACCEL_CONFIG */
-int nvi_wr_accel_config(struct nvi_state *st, u8 test, u8 fsr, u8 lpf)
+int nvi_wr_accel_config(struct nvi_state *st, u8 test, u8 avg, u8 fsr, u8 lpf)
 {
 	u8 val = 0;
 	int ret = 0;
@@ -519,12 +524,29 @@ int nvi_wr_accel_config(struct nvi_state *st, u8 test, u8 fsr, u8 lpf)
 		else
 			val |= fsr << 3;
 	} else {
-		if (test < 8)
-			ret = nvi_wr_accel_config2(st, test << 2);
-		if (lpf > 7)
-			val |= st->rc.accel_config & 0x38;
+		if (test > 7)
+			val |= st->rc.accel_config2 & 0x1C;
 		else
-			val |= lpf << 3;
+			val |= test << 2;
+		if (avg > 3)
+			val |= st->rc.accel_config2 & 0x03;
+		else
+			val |= avg;
+		ret = nvi_wr_accel_config2(st, val);
+		val = 0;
+		/* lpf > 8: preserve
+		 * lpf = 0: disable
+		 * lpf 1 - 8: enable lpf - 1
+		 */
+		if (lpf) {
+			if (lpf > 8) {
+				val |= st->rc.accel_config & 0x39;
+			} else {
+				lpf--;
+				val |= lpf << 3;
+				val |= 0x01;
+			}
+		}
 		if (fsr > 3)
 			val |= st->rc.accel_config & 0x06;
 		else
@@ -1573,14 +1595,14 @@ static int nvi_dev_delay(struct nvi_state *st, unsigned int dev)
 	if (st->smplrt_delay_us[dev] < delay_us_old) {
 		/* go faster */
 		nvi_aux_delay(st);
-		ret = st->hal->smplrt[dev]->lpf_wr(st, -1, -1, lpf);
+		ret = st->hal->smplrt[dev]->lpf_wr(st, -1, -1, -1, lpf);
 		if (ret < 0)
 			ret_t |= ret;
 		ret_t |= nvi_wr_smplrt_div(st, dev, smplrt_div);
 	} else {
 		/* go slower */
 		ret_t |= nvi_wr_smplrt_div(st, dev, smplrt_div);
-		ret = st->hal->smplrt[dev]->lpf_wr(st, -1, -1, lpf);
+		ret = st->hal->smplrt[dev]->lpf_wr(st, -1, -1, -1, lpf);
 		nvi_aux_delay(st);
 		if (ret < 0)
 			ret_t |= ret;
@@ -1652,7 +1674,8 @@ int nvi_enable(struct iio_dev *indio_dev)
 			ret_t |= nvi_wr_accel_offset(st, i,
 						(u16)(st->rom_accel_offset[i] +
 					    (st->input_accel_offset[i] << 1)));
-		ret = nvi_wr_accel_config(st, 0, st->chip_config.accel_fs, 0);
+		ret = nvi_wr_accel_config(st, 0, 0,
+					  st->chip_config.accel_fs, 0);
 		if (ret < 0)
 			ret_t |= ret;
 		ret_t |= nvi_dev_delay(st, DEV_ACCEL);
@@ -1662,7 +1685,7 @@ int nvi_enable(struct iio_dev *indio_dev)
 			ret_t |= nvi_wr_gyro_offset(st, i,
 						 (u16)(st->rom_gyro_offset[i] +
 						    st->input_gyro_offset[i]));
-		ret = nvi_wr_gyro_config(st, 0, st->chip_config.fsr, 0);
+		ret = nvi_wr_gyro_config(st, 0, 0, st->chip_config.fsr, 0);
 		if (ret < 0)
 			ret_t |= ret;
 		ret_t |= nvi_dev_delay(st, DEV_ANGLVEL);

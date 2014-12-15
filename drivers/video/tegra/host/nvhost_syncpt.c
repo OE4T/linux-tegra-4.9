@@ -296,6 +296,13 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 			err = 0;
 			break;
 		}
+
+		/* short-circuit if we are turning off the system */
+		if (atomic_read(&host->shutdown)) {
+			err = -ETIMEDOUT;
+			break;
+		}
+
 		if (remain < 0) {
 			err = remain;
 			break;

@@ -528,4 +528,19 @@
 	mselect {
 		status = "okay";
 	};
+
+	bthrot_cdev {
+		skin_balanced {
+			status = "okay";
+		};
+		gpu_balanced {
+			status = "okay";
+		};
+		cpu_balanced {
+			status = "okay";
+		};
+		emergency_balanced {
+			status = "okay";
+		};
+	};
 };

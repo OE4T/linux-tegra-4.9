@@ -179,7 +179,7 @@ struct tegra_dc_ext_flip {
 };
 
 struct tegra_dc_ext_flip_2 {
-	struct tegra_dc_ext_flip_windowattr *win;
+	struct tegra_dc_ext_flip_windowattr __user *win;
 	__u8 win_num;
 	__u8 reserved1; /* unused - must be 0 */
 	__u16 reserved2; /* unused - must be 0 */
@@ -189,7 +189,7 @@ struct tegra_dc_ext_flip_2 {
 };
 
 struct tegra_dc_ext_flip_3 {
-	__u64 win; /* pointer: struct tegra_dc_ext_flip_windowattr* */
+	__u64 __user win; /* pointer: struct tegra_dc_ext_flip_windowattr* */
 	__u8 win_num;
 	__u8 flags;
 	__u16 reserved2; /* unused - must be 0 */
@@ -363,9 +363,9 @@ struct tegra_dc_ext_lut {
 	__u32  flags;     /* Flag bitmask, see TEGRA_DC_EXT_LUT_FLAGS_* */
 	__u32  start;     /* start index to update lut from */
 	__u32  len;       /* number of valid lut entries */
-	__u16 *r;         /* array of 16-bit red values, 0 to reset */
-	__u16 *g;         /* array of 16-bit green values, 0 to reset */
-	__u16 *b;         /* array of 16-bit blue values, 0 to reset */
+	__u16 __user *r;         /* array of 16-bit red values, 0 to reset */
+	__u16 __user *g;         /* array of 16-bit green values, 0 to reset */
+	__u16 __user *b;         /* array of 16-bit blue values, 0 to reset */
 };
 
 /* tegra_dc_ext_lut.flags - override global fb device lookup table.
@@ -382,7 +382,7 @@ struct tegra_dc_ext_status {
 
 struct tegra_dc_ext_feature {
 	__u32 length;
-	__u32 *entries;
+	__u32 __user *entries;
 };
 
 #define TEGRA_DC_EXT_SET_NVMAP_FD \
@@ -501,7 +501,7 @@ struct tegra_dc_ext_control_output_properties {
 struct tegra_dc_ext_control_output_edid {
 	__u32 handle;
 	__u32 size;
-	void *data;
+	void __user *data;
 };
 
 struct tegra_dc_ext_event {

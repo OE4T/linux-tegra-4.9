@@ -67,7 +67,7 @@ struct tegra_dc_ext_feature32 {
 		_IOW('D', 0x0B, struct tegra_dc_ext_feature32)
 
 struct tegra_dc_ext_flip_2_32 {
-	__u32 win;		/* struct tegra_dc_ext_flip_windowattr* */
+	__u32 __user win;	/* struct tegra_dc_ext_flip_windowattr* */
 	__u8 win_num;
 	__u8 reserved1;		/* unused - must be 0 */
 	__u16 reserved2;	/* unused - must be 0 */
@@ -1106,7 +1106,7 @@ static int tegra_dc_ext_set_csc(struct tegra_dc_ext_user *user,
 	return 0;
 }
 
-static int set_lut_channel(u16 *channel_from_user,
+static int set_lut_channel(u16 __user *channel_from_user,
 			   u8 *channel_to,
 			   u32 start,
 			   u32 len)
@@ -1464,7 +1464,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 				TEGRA_DC_EXT_FLIP_HEAD_FLAG_YUVBYPASS);
 		win = kzalloc(sizeof(*win) * win_num, GFP_KERNEL);
 
-		if (copy_from_user(win, (void *)(uintptr_t)args.win,
+		if (copy_from_user(win,  (void __user *) (uintptr_t)args.win,
 				   sizeof(*win) * win_num)) {
 			kfree(win);
 			return -EFAULT;
@@ -1473,7 +1473,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		ret = tegra_dc_ext_flip(user, win, win_num,
 			NULL, NULL, &args.post_syncpt_fd, args.dirty_rect);
 
-		if (copy_to_user((void *)(uintptr_t)args.win, win,
+		if (copy_to_user((void __user *)(uintptr_t)args.win, win,
 				 sizeof(*win) * win_num) ||
 			copy_to_user(user_arg, &args, sizeof(args))) {
 			kfree(win);

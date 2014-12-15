@@ -334,13 +334,15 @@
 			status = "disabled";
 			compatible = "ti,bq27441";
 			reg = <0x55>;
-			ti,design-capacity = <7700>;
-			ti,design-energy = <27720>;
-			ti,taper-rate = <167>;
-			ti,terminate-voltage = <3150>;
+			ti,design-capacity = <7800>;
+			ti,design-energy = <28080>;
+			ti,taper-rate = <190>;
+			ti,terminate-voltage = <2800>;
 			ti,v-at-chg-term = <4190>;
-			ti,cc-gain = <0x7F738FE1>;
-			ti,cc-delta = <0x940A8F4A>;
+			ti,cc-gain = <0x7F7806C9>;
+			ti,cc-delta = <0x940D197A>;
+			ti,qmax-cell = <16384>;
+			ti,reserve-cap-mah = <100>;
 		};
 	};
 

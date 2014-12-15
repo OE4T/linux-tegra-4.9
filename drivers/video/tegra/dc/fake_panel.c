@@ -263,6 +263,12 @@ int tegra_dc_init_fakedsi_panel(struct tegra_dc *dc, long dc_outtype)
 	dc_out->height = 135;
 	dc_out->flags = DC_CTRL_MODE;
 	tegra_dc_reset_fakedsi_panel(dc, dc_outtype);
+
+	if (!dc->out->sd_settings)
+		return -EINVAL;
+	dc->out->sd_settings->enable = 1;
+	dc->out->sd_settings->enable_int = 1;
+
 	return 0;
 }
 

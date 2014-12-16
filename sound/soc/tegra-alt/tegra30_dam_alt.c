@@ -366,14 +366,6 @@ static int tegra30_dam_suspend(struct device *dev)
 
 	return 0;
 }
-static int tegra30_dam_resume(struct device *dev)
-{
-	struct tegra30_dam *dam = dev_get_drvdata(dev);
-
-	regcache_sync(dam->regmap);
-
-	return 0;
-}
 #endif
 
 static int tegra30_dam_set_dai_sysclk(struct snd_soc_dai *dai,
@@ -1169,7 +1161,7 @@ static const struct dev_pm_ops tegra30_dam_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra30_dam_runtime_suspend,
 			   tegra30_dam_runtime_resume, NULL)
 	SET_SYSTEM_SLEEP_PM_OPS(tegra30_dam_suspend,
-			   tegra30_dam_resume)
+			   NULL)
 };
 
 static struct platform_driver tegra30_dam_driver = {

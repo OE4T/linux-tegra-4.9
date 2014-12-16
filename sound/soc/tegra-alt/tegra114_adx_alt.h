@@ -107,6 +107,7 @@ struct tegra114_adx {
 	struct clk *clk_adx;
 	struct regmap *regmap;
 	unsigned int map[16];
+	unsigned int byte_mask[2];
 	const struct tegra114_adx_soc_data *soc_data;
 };
 

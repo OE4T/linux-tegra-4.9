@@ -114,12 +114,12 @@ static void tegra114_amx_disable_instream(struct tegra114_amx *amx,
  * @mask1: enable for bytes 31 ~ 0
  * @mask2: enable for bytes 63 ~ 32
  */
-static void tegra114_amx_set_out_byte_mask(struct tegra114_amx *amx,
-					unsigned int mask1,
-					unsigned int mask2)
+static void tegra114_amx_set_out_byte_mask(struct tegra114_amx *amx)
 {
-	regmap_write(amx->regmap, TEGRA_AMX_OUT_BYTE_EN0, mask1);
-	regmap_write(amx->regmap, TEGRA_AMX_OUT_BYTE_EN1, mask2);
+	regmap_write(amx->regmap,
+		TEGRA_AMX_OUT_BYTE_EN0, amx->byte_mask[0]);
+	regmap_write(amx->regmap,
+		TEGRA_AMX_OUT_BYTE_EN1, amx->byte_mask[1]);
 }
 
 /**
@@ -180,25 +180,6 @@ static void tegra114_amx_update_map_ram(struct tegra114_amx *amx)
 		tegra114_amx_write_map_ram(amx, i, amx->map[i]);
 }
 
-static int tegra114_amx_soft_reset(struct tegra114_amx *amx)
-{
-	unsigned int val;
-	int dcnt = 10;
-
-	regmap_update_bits(amx->regmap, TEGRA_AMX_CTRL,
-		TEGRA_AMX_CTRL_SOFT_RESET, TEGRA_AMX_CTRL_SOFT_RESET);
-
-	do {
-		udelay(100);
-		regmap_read(amx->regmap, TEGRA_AMX_CTRL, &val);
-	} while ((val & TEGRA_AMX_CTRL_SOFT_RESET) && dcnt--);
-
-	regmap_update_bits(amx->regmap, TEGRA_AMX_CTRL,
-		TEGRA_AMX_CTRL_SOFT_RESET, 0);
-
-	return (dcnt < 0) ? -ETIMEDOUT : 0;
-}
-
 static int tegra114_amx_runtime_suspend(struct device *dev)
 {
 	struct tegra114_amx *amx = dev_get_drvdata(dev);
@@ -223,6 +204,12 @@ static int tegra114_amx_runtime_resume(struct device *dev)
 
 	regcache_cache_only(amx->regmap, false);
 
+	/* set AMX mapping table */
+	tegra114_amx_set_master_stream(amx, 0,
+			TEGRA_AMX_WAIT_ON_ANY);
+	tegra114_amx_update_map_ram(amx);
+	tegra114_amx_set_out_byte_mask(amx);
+
 	return 0;
 }
 
@@ -232,21 +219,6 @@ static int tegra114_amx_suspend(struct device *dev)
 	struct tegra114_amx *amx = dev_get_drvdata(dev);
 
 	regcache_mark_dirty(amx->regmap);
-
-	return 0;
-}
-static int tegra114_amx_resume(struct device *dev)
-{
-	struct tegra114_amx *amx = dev_get_drvdata(dev);
-
-	regcache_sync(amx->regmap);
-
-	/* update map ram if needed */
-	pm_runtime_get_sync(dev);
-	tegra114_amx_set_master_stream(amx, 0,
-				TEGRA_AMX_WAIT_ON_ANY);
-	tegra114_amx_update_map_ram(amx);
-	pm_runtime_put(dev);
 
 	return 0;
 }
@@ -355,9 +327,8 @@ int tegra114_amx_set_channel_map(struct snd_soc_dai *dai,
 {
 	struct device *dev = dai->dev;
 	struct tegra114_amx *amx = snd_soc_dai_get_drvdata(dai);
-	unsigned int byte_mask1 = 0, byte_mask2 = 0;
 	unsigned int in_stream_idx, in_ch_idx, in_byte_idx;
-	int i, ret = 0;
+	int i;
 
 	if ((tx_num < 1) || (tx_num > 64)) {
 		dev_err(dev, "Doesn't support %d tx_num, need to be 1 to 64\n",
@@ -370,17 +341,9 @@ int tegra114_amx_set_channel_map(struct snd_soc_dai *dai,
 		return -EINVAL;
 	}
 
-	/* soft reset AMX */
-	pm_runtime_get_sync(dai->dev);
-	ret = tegra114_amx_soft_reset(amx);
-	pm_runtime_put(dai->dev);
-	if (ret) {
-		dev_err(dev, "Failed at AMX sw reset\n");
-		return ret;
-	}
-
 	/* flush the mapping values if any */
 	memset(amx->map, 0, sizeof(amx->map));
+	memset(amx->byte_mask, 0, sizeof(amx->byte_mask));
 
 	for (i = 0; i < tx_num; i++) {
 		if (tx_slot[i] != 0) {
@@ -397,18 +360,11 @@ int tegra114_amx_set_channel_map(struct snd_soc_dai *dai,
 
 			/* making byte_mask */
 			if (i > 32)
-				byte_mask2 |= (1 << (i - 32));
+				amx->byte_mask[1] |= (1 << (i - 32));
 			else
-				byte_mask1 |= (1 << i);
+				amx->byte_mask[0] |= (1 << i);
 		}
 	}
-
-	pm_runtime_get_sync(dai->dev);
-	tegra114_amx_set_master_stream(amx, 0,
-				TEGRA_AMX_WAIT_ON_ANY);
-	tegra114_amx_update_map_ram(amx);
-	tegra114_amx_set_out_byte_mask(amx, byte_mask1, byte_mask2);
-	pm_runtime_put(dai->dev);
 
 	return 0;
 }
@@ -698,7 +654,7 @@ static const struct dev_pm_ops tegra114_amx_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra114_amx_runtime_suspend,
 			   tegra114_amx_runtime_resume, NULL)
 	SET_SYSTEM_SLEEP_PM_OPS(tegra114_amx_suspend,
-			   tegra114_amx_resume)
+			   NULL)
 };
 
 static struct platform_driver tegra114_amx_driver = {

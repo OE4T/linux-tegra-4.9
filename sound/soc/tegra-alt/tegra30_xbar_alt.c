@@ -78,6 +78,7 @@ static int tegra30_xbar_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(xbar->regmap, false);
+	regcache_sync(xbar->regmap);
 
 	return 0;
 }
@@ -86,12 +87,7 @@ static int tegra30_xbar_runtime_resume(struct device *dev)
 static int tegra30_xbar_suspend(struct device *dev)
 {
 	regcache_mark_dirty(xbar->regmap);
-	return 0;
-}
 
-static int tegra30_xbar_resume(struct device *dev)
-{
-	regcache_sync(xbar->regmap);
 	return 0;
 }
 #endif
@@ -709,6 +705,9 @@ static struct snd_soc_codec_driver tegra30_xbar_codec = {
 	.probe = tegra30_xbar_codec_probe,
 	.dapm_widgets = tegra30_xbar_widgets,
 	.dapm_routes = tegra30_xbar_routes,
+	.num_dapm_widgets = ARRAY_SIZE(tegra30_xbar_widgets),
+	.num_dapm_routes = ARRAY_SIZE(tegra30_xbar_routes),
+	.idle_bias_off = 1,
 };
 
 static const struct tegra30_xbar_soc_data soc_data_tegra30 = {
@@ -855,7 +854,7 @@ static const struct dev_pm_ops tegra30_xbar_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra30_xbar_runtime_suspend,
 			   tegra30_xbar_runtime_resume, NULL)
 	SET_SYSTEM_SLEEP_PM_OPS(tegra30_xbar_suspend,
-			   tegra30_xbar_resume)
+			   NULL)
 };
 
 static struct platform_driver tegra30_xbar_driver = {

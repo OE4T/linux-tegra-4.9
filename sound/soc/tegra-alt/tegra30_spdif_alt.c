@@ -100,14 +100,6 @@ static int tegra30_spdif_suspend(struct device *dev)
 
 	return 0;
 }
-static int tegra30_spdif_resume(struct device *dev)
-{
-	struct tegra30_spdif *spdif = dev_get_drvdata(dev);
-
-	regcache_sync(spdif->regmap);
-
-	return 0;
-}
 #endif
 
 static int tegra30_spdif_set_dai_sysclk(struct snd_soc_dai *dai,
@@ -552,7 +544,7 @@ static const struct dev_pm_ops tegra30_spdif_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra30_spdif_runtime_suspend,
 			   tegra30_spdif_runtime_resume, NULL)
 	SET_SYSTEM_SLEEP_PM_OPS(tegra30_spdif_suspend,
-			   tegra30_spdif_resume)
+			   NULL)
 };
 
 static struct platform_driver tegra30_spdif_driver = {

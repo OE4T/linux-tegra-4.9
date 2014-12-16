@@ -90,14 +90,6 @@ static int tegra124_afc_suspend(struct device *dev)
 
 	return 0;
 }
-static int tegra124_afc_resume(struct device *dev)
-{
-	struct tegra124_afc *afc = dev_get_drvdata(dev);
-
-	regcache_sync(afc->regmap);
-
-	return 0;
-}
 #endif
 
 /* returns the destination I2S id connected along the AFC path */
@@ -525,7 +517,7 @@ static const struct dev_pm_ops tegra124_afc_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra124_afc_runtime_suspend,
 			   tegra124_afc_runtime_resume, NULL)
 	SET_SYSTEM_SLEEP_PM_OPS(tegra124_afc_suspend,
-			   tegra124_afc_resume)
+			   NULL)
 };
 
 static struct platform_driver tegra124_afc_driver = {

@@ -254,11 +254,27 @@ static int tegra30_apbif_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(apbif->regmap[0], false);
-	if (apbif->regmap[1])
+	regcache_sync(apbif->regmap[0]);
+	if (apbif->regmap[1]) {
 		regcache_cache_only(apbif->regmap[1], false);
+		regcache_sync(apbif->regmap[1]);
+	}
 
 	return 0;
 }
+
+#ifdef CONFIG_PM_SLEEP
+static int tegra30_apbif_suspend(struct device *dev)
+{
+	struct tegra30_apbif *apbif = dev_get_drvdata(dev);
+
+	regcache_mark_dirty(apbif->regmap[0]);
+	if (apbif->regmap[1])
+		regcache_mark_dirty(apbif->regmap[1]);
+
+	return 0;
+}
+#endif
 
 int tegra30_apbif_i2s_underrun_interrupt_status_clear(int i2s_id)
 {
@@ -995,6 +1011,8 @@ static int tegra30_apbif_remove(struct platform_device *pdev)
 static const struct dev_pm_ops tegra30_apbif_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra30_apbif_runtime_suspend,
 			   tegra30_apbif_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(tegra30_apbif_suspend,
+			   NULL)
 };
 
 static struct platform_driver tegra30_apbif_driver = {

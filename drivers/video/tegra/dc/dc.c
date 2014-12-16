@@ -906,6 +906,11 @@ static int dbg_dc_stats_show(struct seq_file *s, void *unused)
 		dc->stats.underflows_h,
 		dc->stats.underflows_t);
 #endif
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	seq_printf(s,
+		"underflow_frames: %llu\n",
+		dc->stats.underflow_frames);
+#endif
 	mutex_unlock(&dc->lock);
 
 	return 0;
@@ -2854,6 +2859,7 @@ static void tegra_dc_one_shot_worker(struct work_struct *work)
 	mutex_unlock(&dc->lock);
 }
 
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 /* return an arbitrarily large number if count overflow occurs.
  * make it a nice base-10 number to show up in stats output */
 static u64 tegra_dc_underflow_count(struct tegra_dc *dc, unsigned reg)
@@ -2863,9 +2869,12 @@ static u64 tegra_dc_underflow_count(struct tegra_dc *dc, unsigned reg)
 	tegra_dc_writel(dc, 0, reg);
 	return ((count & 0x80000000) == 0) ? count : 10000000000ll;
 }
+#endif
 
 static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 {
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
+
 	const u32 masks[] = {
 		WIN_A_UF_INT,
 		WIN_B_UF_INT,
@@ -2942,6 +2951,10 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 			win->underflows = 0;
 		}
 	}
+
+#else
+	tegra_nvdisp_underflow_handler(dc);
+#endif /* CONFIG_TEGRA_NVDISPLAY */
 
 	/* Clear the underflow mask now that we've checked it. */
 	tegra_dc_writel(dc, dc->underflow_mask, DC_CMD_INT_STATUS);
@@ -3973,9 +3986,9 @@ static void tegra_dc_underflow_worker(struct work_struct *work)
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
 
-	if (dc->enabled) {
+	if (dc->enabled)
 		tegra_dc_underflow_handler(dc);
-	}
+
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
 }

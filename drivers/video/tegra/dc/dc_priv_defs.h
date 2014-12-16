@@ -55,6 +55,8 @@ static inline u32 ALL_UF_INT(void)
 	defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
 	defined(CONFIG_ARCH_TEGRA_11x_SOC)
 	return WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT;
+#elif defined(CONFIG_TEGRA_NVDISPLAY)
+	return NVDISP_UF_INT;
 #else
 	return WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT | HC_UF_INT |
 		WIN_D_UF_INT | WIN_T_UF_INT;
@@ -248,6 +250,7 @@ struct tegra_dc {
 		u64			underflows_d;
 		u64			underflows_h;
 		u64			underflows_t;
+		u64			underflow_frames;
 	} stats;
 
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS

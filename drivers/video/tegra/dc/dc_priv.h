@@ -579,6 +579,7 @@ void tegra_nvdisp_disable_crc(struct tegra_dc *dc);
 u32 tegra_nvdisp_read_rg_crc(struct tegra_dc *dc);
 int tegra_nvdisp_program_mode(struct tegra_dc *dc,
 			struct tegra_dc_mode *mode);
+void tegra_nvdisp_underflow_handler(struct tegra_dc *dc);
 
 struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
 	struct tegra_dc *dc, struct tegra_fb_data *fb_data,

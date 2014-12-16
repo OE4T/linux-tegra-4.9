@@ -77,9 +77,6 @@
 #define  WIN_A_UF_INT		(1 << 8)
 #define  WIN_B_UF_INT		(1 << 9)
 #define  WIN_C_UF_INT		(1 << 10)
-#define  HC_UF_INT		(1 << 23) /* Cursor or WinH */
-#define  WIN_D_UF_INT		(1 << 24)
-#define  WIN_T_UF_INT		(1 << 25)
 #define  MSF_INT		(1 << 12)
 #define  SSF_INT		(1 << 13)
 #define  WIN_A_OF_INT		(1 << 14)
@@ -88,6 +85,10 @@
 #define  GPIO_0_INT		(1 << 18)
 #define  GPIO_1_INT		(1 << 19)
 #define  GPIO_2_INT		(1 << 20)
+#define  NVDISP_UF_INT		(1 << 23)
+#define  HC_UF_INT		(1 << 23) /* Cursor or WinH */
+#define  WIN_D_UF_INT		(1 << 24)
+#define  WIN_T_UF_INT		(1 << 25)
 
 #define DC_CMD_SIGNAL_RAISE1			0x03c
 #define DC_CMD_SIGNAL_RAISE2			0x03d

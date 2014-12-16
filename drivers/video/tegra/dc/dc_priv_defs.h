@@ -124,6 +124,8 @@ struct tegra_dc_out_ops {
 	int (*ddc_enable)(struct tegra_dc *dc);
 	/* refcounted disable of pads and clocks after performing DDC/I2C. */
 	int (*ddc_disable)(struct tegra_dc *dc);
+	/* Enable/disable GSYNC */
+	void (*gsync_enable)(struct tegra_dc *dc, bool enable);
 };
 
 struct tegra_dc_shift_clk_div {

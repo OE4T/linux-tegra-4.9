@@ -172,10 +172,8 @@ static int tegra30_i2s_set_format(struct device *dev)
 		return -EINVAL;
 	}
 
-	pm_runtime_get_sync(dev);
 	regmap_update_bits(i2s->regmap, TEGRA30_I2S_CH_CTRL,
 		mask, edge_ctrl);
-	pm_runtime_put(dev);
 
 	mask = TEGRA30_I2S_CTRL_MASTER_MASK;
 	switch (i2s->dai_fmt & SND_SOC_DAIFMT_MASTER_MASK) {
@@ -221,14 +219,12 @@ static int tegra30_i2s_set_format(struct device *dev)
 	val = (data_offset << TEGRA30_I2S_OFFSET_RX_DATA_OFFSET_SHIFT) |
 	      (data_offset << TEGRA30_I2S_OFFSET_TX_DATA_OFFSET_SHIFT);
 
-	pm_runtime_get_sync(dev);
 	regmap_update_bits(i2s->regmap, TEGRA30_I2S_CTRL,
 		mask, i2s_ctrl);
 	regmap_write(i2s->regmap, TEGRA30_I2S_OFFSET, val);
 	regmap_update_bits(i2s->regmap, TEGRA30_I2S_CH_CTRL,
 		TEGRA30_I2S_CH_CTRL_FSYNC_WIDTH_MASK,
 		i2s->fsync_width << TEGRA30_I2S_CH_CTRL_FSYNC_WIDTH_SHIFT);
-	pm_runtime_put(dev);
 
 	return 0;
 }
@@ -257,6 +253,9 @@ static int tegra30_i2s_runtime_resume(struct device *dev)
 	regcache_cache_only(i2s->regmap, false);
 	regcache_sync(i2s->regmap);
 
+	/* set the format */
+	tegra30_i2s_set_format(dev);
+
 	return 0;
 }
 
@@ -266,17 +265,6 @@ static int tegra30_i2s_suspend(struct device *dev)
 	struct tegra30_i2s *i2s = dev_get_drvdata(dev);
 
 	regcache_mark_dirty(i2s->regmap);
-
-	return 0;
-}
-static int tegra30_i2s_resume(struct device *dev)
-{
-	struct tegra30_i2s *i2s = dev_get_drvdata(dev);
-
-	regcache_sync(i2s->regmap);
-
-	/* restore the format */
-	tegra30_i2s_set_format(dev);
 
 	return 0;
 }
@@ -310,7 +298,6 @@ static int tegra30_i2s_set_dai_fmt(struct snd_soc_dai *dai,
 	struct tegra30_i2s *i2s = snd_soc_dai_get_drvdata(dai);
 
 	i2s->dai_fmt = fmt;
-	tegra30_i2s_set_format(dai->dev);
 
 	return 0;
 }
@@ -588,8 +575,37 @@ static struct snd_soc_dai_driver tegra30_i2s_dais[] = {
 	}
 };
 
+static int tegra30_i2s_loopback_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra30_i2s *i2s = snd_soc_codec_get_drvdata(codec);
+
+	ucontrol->value.integer.value[0] = i2s->loopback;
+
+	return 0;
+}
+
+static int tegra30_i2s_loopback_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra30_i2s *i2s = snd_soc_codec_get_drvdata(codec);
+
+	i2s->loopback =	ucontrol->value.integer.value[0];
+
+	pm_runtime_get_sync(codec->dev);
+	regmap_update_bits(i2s->regmap, TEGRA30_I2S_CTRL,
+		TEGRA30_I2S_CTRL_LPBK_MASK,
+		i2s->loopback << TEGRA30_I2S_CTRL_LPBK_SHIFT);
+	pm_runtime_put(codec->dev);
+
+	return 0;
+}
+
 static const struct snd_kcontrol_new tegra30_i2s_controls[] = {
-	SOC_SINGLE("Loopback", TEGRA30_I2S_CTRL, 8, 1, 0),
+	SOC_SINGLE_EXT("Loopback", SND_SOC_NOPM, 0, 1, 0,
+		tegra30_i2s_loopback_get, tegra30_i2s_loopback_put),
 };
 
 static const struct snd_soc_dapm_widget tegra30_i2s_widgets[] = {
@@ -786,6 +802,7 @@ static int tegra30_i2s_platform_probe(struct platform_device *pdev)
 	i2s->soc_data = soc_data;
 	i2s->tx_mask = i2s->rx_mask = 0xFFFF;
 	i2s->bclk_ratio = 2;
+	i2s->loopback = 0;
 
 	i2s->clk_i2s = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(i2s->clk_i2s)) {
@@ -929,7 +946,7 @@ static const struct dev_pm_ops tegra30_i2s_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra30_i2s_runtime_suspend,
 			tegra30_i2s_runtime_resume, NULL)
 	SET_SYSTEM_SLEEP_PM_OPS(tegra30_i2s_suspend,
-			tegra30_i2s_resume)
+			NULL)
 };
 
 static struct platform_driver tegra30_i2s_driver = {

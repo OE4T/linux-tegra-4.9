@@ -77,7 +77,8 @@
 #define TEGRA30_I2S_CTRL_LRCK_L_LOW			(TEGRA30_I2S_LRCK_LEFT_LOW  << TEGRA30_I2S_CTRL_LRCK_SHIFT)
 #define TEGRA30_I2S_CTRL_LRCK_R_LOW			(TEGRA30_I2S_LRCK_RIGHT_LOW << TEGRA30_I2S_CTRL_LRCK_SHIFT)
 
-#define TEGRA30_I2S_CTRL_LPBK_ENABLE			(1 << 8)
+#define TEGRA30_I2S_CTRL_LPBK_SHIFT			8
+#define TEGRA30_I2S_CTRL_LPBK_MASK			(1 << TEGRA30_I2S_CTRL_LPBK_SHIFT)
 
 #define TEGRA30_I2S_BIT_CODE_LINEAR			0
 #define TEGRA30_I2S_BIT_CODE_ULAW			1
@@ -264,6 +265,7 @@ struct tegra30_i2s {
 	unsigned int tx_mask;
 	unsigned int rx_mask;
 	unsigned int dai_fmt;
+	unsigned int loopback;
 	const struct tegra30_i2s_soc_data *soc_data;
 	unsigned int irq;
 	spinlock_t int_lock;

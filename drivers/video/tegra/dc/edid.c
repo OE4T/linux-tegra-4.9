@@ -389,7 +389,8 @@ u8 *vedid)
 			checksum += data[i];
 		if (checksum != 0) {
 			pr_err("%s: checksum failed\n", __func__);
-			return -EINVAL;
+			ret = -EINVAL;
+			goto fail;
 		}
 	} else {
 		ret = tegra_edid_read_block(edid, 0, data);
@@ -420,6 +421,7 @@ u8 *vedid)
 				checksum += data[i * 128 + j];
 			if (checksum != 0) {
 				pr_err("%s: checksum failed\n", __func__);
+				ret = -EINVAL;
 				goto fail;
 			}
 		} else {

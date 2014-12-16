@@ -428,6 +428,11 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 				dc->ctrl_num);
 	}
 
+	/* Enable RG underflow logging */
+	tegra_dc_writel(dc, nvdisp_rg_underflow_enable_enable_f() |
+		nvdisp_rg_underflow_mode_red_f(),
+		nvdisp_rg_underflow_r());
+
 	tegra_dc_put(dc);
 	return 0;
 
@@ -554,4 +559,23 @@ u32 tegra_nvdisp_read_rg_crc(struct tegra_dc *dc)
 	mutex_unlock(&dc->lock);
 crc_error:
 	return crc;
+}
+
+
+void tegra_nvdisp_underflow_handler(struct tegra_dc *dc)
+{
+	u32 reg = tegra_dc_readl(dc, nvdisp_rg_underflow_r());
+	dc->stats.underflows++;
+
+	if (dc->underflow_mask & NVDISP_UF_INT)
+		dc->stats.underflow_frames +=
+				nvdisp_rg_underflow_frames_uflowed_v(reg);
+
+	/* Clear the sticky bit and counter */
+	tegra_dc_writel(dc,
+		nvdisp_rg_underflow_frames_uflowed_rst_trigger_f() |
+		nvdisp_rg_underflow_uflowed_clr_f(),
+		nvdisp_rg_underflow_r());
+
+	/* Do we need to see whether the reset is done */
 }

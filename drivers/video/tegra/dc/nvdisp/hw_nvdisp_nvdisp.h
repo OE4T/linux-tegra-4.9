@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -349,6 +349,58 @@ static inline u32 nvdisp_rg_dclk_r(void)
 static inline u32 nvdisp_rg_underflow_r(void)
 {
 	return 0x00000365;
+}
+static inline u32 nvdisp_rg_underflow_enable_enable_f(void)
+{
+	return 0x1;
+}
+static inline u32 nvdisp_rg_underflow_enable_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_rg_underflow_uflowed_no_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_rg_underflow_uflowed_yes_f(void)
+{
+	return 0x10;
+}
+static inline u32 nvdisp_rg_underflow_uflowed_clr_f(void)
+{
+	return 0x10;
+}
+static inline u32 nvdisp_rg_underflow_mode_repeat_f(void)
+{
+	return 0x100;
+}
+static inline u32 nvdisp_rg_underflow_mode_red_f(void)
+{
+	return 0x100;
+}
+static inline u32 nvdisp_rg_underflow_frames_uflowed_v(u32 r)
+{
+	return (r >> 16) & 0xff;
+}
+static inline u32 nvdisp_rg_underflow_is_frames_uflowed_rst_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 nvdisp_rg_underflow_frames_uflowed_rst_done_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_rg_underflow_frames_uflowed_rst_pending_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 nvdisp_rg_underflow_frames_uflowed_rst_trigger_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 nvdisp_rg_underflow_pixel_r(void)
+{
+	return 0x0000036d;
 }
 static inline u32 nvdisp_rg_region_crc_r(void)
 {

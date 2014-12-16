@@ -146,6 +146,102 @@ static inline u32 win_act_control_ctrl_sel_hcounter_f(void)
 {
 	return 0x1;
 }
+static inline u32 win_ihub_pool_config_r(void)
+{
+	return 0x00000561;
+}
+static inline u32 win_ihub_pool_config_status_pending_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 win_ihub_pool_config_status_pending_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 win_ihub_pool_config_entries_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
+static inline u32 win_ihub_fetch_meter_r(void)
+{
+	return 0x00000562;
+}
+static inline u32 win_ihub_fetch_meter_slots_f(u32 v)
+{
+	return (v & 0xf) << 0;
+}
+static inline u32 win_ihub_linebuf_config_r(void)
+{
+	return 0x00000563;
+}
+static inline u32 win_ihub_linebuf_config_mode_f(u32 v)
+{
+	return (v & 0x1) << 14;
+}
+static inline u32 win_ihub_req_r(void)
+{
+	return 0x00000564;
+}
+static inline u32 win_ihub_req_limit_f(u32 v)
+{
+	return (v & 0xfff) << 0;
+}
+static inline u32 win_ihub_debug_req_r(void)
+{
+	return 0x00000565;
+}
+static inline u32 win_ihub_debug_req_status_f(u32 v)
+{
+	return (v & 0xfff) << 0;
+}
+static inline u32 win_ihub_status_r(void)
+{
+	return 0x00000566;
+}
+static inline u32 win_ihub_status_state_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 win_ihub_status_compression_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 win_ihub_status_entires_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
+static inline u32 win_ihub_config_r(void)
+{
+	return 0x00000567;
+}
+static inline u32 win_ihub_config_pitch_size_f(u32 v)
+{
+	return (v & 0x3) << 0;
+}
+static inline u32 win_ihub_thread_group_r(void)
+{
+	return 0x00000568;
+}
+static inline u32 win_ihub_thread_group_num_f(u32 v)
+{
+	return (v & 0x1f) << 1;
+}
+static inline u32 win_ihub_thread_group_enable_yes_f(void)
+{
+	return 0x1;
+}
+static inline u32 win_ihub_thread_group_enable_no_f(void)
+{
+	return 0x0;
+}
+static inline u32 win_streamid_r(void)
+{
+	return 0x00000580;
+}
+static inline u32 win_streamid_id_f(u32 v)
+{
+	return (v & 0x3ff) << 0;
+}
 static inline u32 win_options_r(void)
 {
 	return 0x00000700;

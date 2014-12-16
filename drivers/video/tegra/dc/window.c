@@ -671,7 +671,8 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 			tegra_dc_writel(dc, win->cde.ctb_entry,
 				DC_WINBUF_CDE_CTB_ENTRY_0);
 			if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA21
-				&& tegra_revision == TEGRA_REVISION_A01)
+				&& ((tegra_revision == TEGRA_REVISION_A01) ||
+					(tegra_revision == TEGRA_REVISION_A01q)))
 				tegra_dc_writel(dc, 0, DC_WINBUF_CDE_CG_SW_OVR);
 		} else {
 			tegra_dc_writel(dc, 0, DC_WINBUF_CDE_CONTROL);

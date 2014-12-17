@@ -1545,6 +1545,12 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	if (c->has_timedout)
 		return -ETIMEDOUT;
 
+	/* fifo not large enough for request. Return error immediately */
+	if (c->gpfifo.entry_num < num_entries) {
+		gk20a_err(d, "not enough gpfifo space allocated");
+		return -ENOMEM;
+	}
+
 	if ((flags & (NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT |
 		      NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET)) &&
 	    !fence)
@@ -1606,7 +1612,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	}
 
 	if (err) {
-		gk20a_err(d, "not enough gpfifo space");
+		gk20a_err(d, "timeout waiting for gpfifo space");
 		err = -EAGAIN;
 		goto clean_up;
 	}

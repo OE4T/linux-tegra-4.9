@@ -71,12 +71,6 @@
 		status = "okay";
 	};
 
-	sdhci@700b0400 { /* SDMMC3 for 2nd Wifi */
-		uhs-mask = <0x8>;
-		power-off-rail;
-		status = "okay";
-	};
-
 	sdhci@700b0200 { /* SDMMC2 for Wifi */
 		uhs-mask = <0x8>;
 		power-off-rail;

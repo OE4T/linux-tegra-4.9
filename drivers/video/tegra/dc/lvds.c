@@ -42,8 +42,10 @@ static int tegra_dc_lvds_init(struct tegra_dc *dc)
 		if (np_panel && of_device_is_available(np_panel)) {
 			virtual_edid = of_property_read_bool(np_panel,
 					"nvidia,edid");
+			of_node_put(np_panel);
 		} else {
 			err = -EINVAL;
+			of_node_put(np_panel);
 			goto err_init;
 		}
 	}
@@ -69,7 +71,6 @@ static int tegra_dc_lvds_init(struct tegra_dc *dc)
 		goto err_init;
 }
 	tegra_dc_set_outdata(dc, lvds);
-
 	return 0;
 err_init:
 	devm_kfree(&dc->ndev->dev, lvds);

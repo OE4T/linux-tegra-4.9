@@ -603,6 +603,7 @@ int tegra_dc_edid_blob(struct tegra_dc *dc, struct i2c_msg *msgs, int num)
 			}
 		}
 	}
+	of_node_put(np_panel);
 	return i;
 }
 

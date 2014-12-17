@@ -260,13 +260,17 @@ static int sn65dsi86_i2c_probe(struct i2c_client *client,
 			tegra_primary_panel_get_dt_node(NULL);
 		sec_pn =
 			tegra_secondary_panel_get_dt_node(NULL);
-		if (pri_pn)
+		if (pri_pn) {
 			pri_bridge =
 				of_property_read_bool(pri_pn,
 				"nvidia,dsi-edp-bridge");
-		if (sec_pn)
+			of_node_put(pri_pn);
+		}
+		if (sec_pn) {
 			sec_bridge = of_property_read_bool(sec_pn,
 				"nvidia,dsi-edp-bridge");
+			of_node_put(sec_pn);
+		};
 
 		if (!pri_bridge && !sec_bridge)
 			return 0;

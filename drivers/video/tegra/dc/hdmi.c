@@ -1063,11 +1063,14 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			res = &hdmi_res;
 			np_panel = tegra_get_panel_node_out_type_check(dc,
 				TEGRA_DC_OUT_HDMI);
-			if (np_panel && of_device_is_available(np_panel))
+			if (np_panel && of_device_is_available(np_panel)) {
 				virtual_edid = of_property_read_bool(np_panel,
 					"nvidia,edid");
+				of_node_put(np_panel);
+			}
 		} else {
 			err = -EINVAL;
+			of_node_put(np_panel);
 			goto err_free_hdmi;
 		}
 	} else {

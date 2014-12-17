@@ -1224,6 +1224,62 @@ __nodev:
 	return err;
 }
 
+#define JAR_BUTTON_REPORT_ID	0x01
+#define JAR_BUTTON_REPORT_SIZE	0x04
+
+#define JAR_AUDIO_REPORT_ID	0xFD
+#define JAR_AUDIO_REPORT_SIZE	233
+#define JAR_AUDIO_FRAME_SIZE	0x3A
+
+static int atvr_jarvis_break_events(struct hid_device *hdev,
+				    struct hid_report *report,
+				    u8 *data, int size)
+{
+	/* breaks events apart if they are not proper */
+
+	pr_info("%s: packet 0x%02x#%i\n",
+		__func__, data[0], size);
+
+	if (!((report->id == JAR_BUTTON_REPORT_ID &&
+	       size >= JAR_BUTTON_REPORT_SIZE) ||
+	      (report->id == JAR_AUDIO_REPORT_ID &&
+	       size >= JAR_AUDIO_REPORT_SIZE)))
+		return 0;
+
+	/*
+	 * This is a WAR for a CSR issue at the moment
+	 * (packets get put together)
+	 */
+	while (size > 0) {
+		int amount = 0;
+		if ((data[0] == JAR_BUTTON_REPORT_ID) &&
+		    (size >= JAR_BUTTON_REPORT_SIZE)) {
+			amount = JAR_BUTTON_REPORT_SIZE;
+			hid_report_raw_event(hdev, 0, data,
+					     sizeof(amount), 0);
+		} else if ((data[0] == JAR_AUDIO_REPORT_ID) &&
+			   (size >= JAR_AUDIO_REPORT_SIZE)) {
+			u8 *frame = &data[1];
+			amount = JAR_AUDIO_REPORT_SIZE;
+			while (frame < &data[JAR_AUDIO_REPORT_SIZE]) {
+				audio_dec(&frame[0], PACKET_TYPE_MSBC,
+					  JAR_AUDIO_FRAME_SIZE);
+				frame = &frame[JAR_AUDIO_FRAME_SIZE];
+			}
+		} else {
+			pr_info("%s: unknown id or broken packet 0x%02x#%i\n",
+				__func__, data[0], size);
+			break;
+		}
+		/* skip over the HID_DATP indicator */
+		if (size > amount)
+			amount++;
+		data += amount;
+		size -= amount;
+	}
+	return 1;
+}
+
 static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 	u8 *data, int size)
 {
@@ -1236,6 +1292,11 @@ static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 			pr_info("data[%d] = 0x%02x\n", i, data[i]);
 	}
 #endif
+
+	/* WAR for CSR issue */
+	if (atvr_jarvis_break_events(hdev, report, data, size))
+		return 1;
+
 	if (report->id == ADPCM_AUDIO_REPORT_ID) {
 		/* send the data, minus the report-id in data[0], to the
 		 * alsa audio decoder driver for ADPCM

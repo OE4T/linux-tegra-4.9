@@ -2128,7 +2128,7 @@ tegra_dsi_mipi_calibration_status(struct tegra_dc_dsi_data *dsi)
 #if defined(CONFIG_ARCH_TEGRA_13x_SOC)
 void tegra_dsi_mipi_calibration_13x(struct tegra_dc_dsi_data *dsi)
 {
-	u32 val;
+	u32 val, reg;
 	struct clk *clk72mhz = NULL;
 
 	clk72mhz = clk_get_sys("clk72mhz", NULL);
@@ -2155,6 +2155,15 @@ void tegra_dsi_mipi_calibration_13x(struct tegra_dc_dsi_data *dsi)
 	val |= (DSI_PAD_PREEMP_PD_CLK(0x3) | DSI_PAD_PREEMP_PU_CLK(0x3) |
 		   DSI_PAD_PREEMP_PD(0x3) | DSI_PAD_PREEMP_PU(0x3));
 	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_3_VS1);
+
+	/* Deselect shared clk lane with DSI pads */
+	for (reg = MIPI_CAL_CILC_MIPI_CAL_CONFIG_2_0;
+		reg <= MIPI_CAL_CSIE_MIPI_CAL_CONFIG_2_0;
+		reg += 4) {
+		val = tegra_mipi_cal_read(dsi->mipi_cal, reg);
+		val &= ~(MIPI_CAL_SELA(0x1));
+		tegra_mipi_cal_write(dsi->mipi_cal, val, reg);
+	}
 
 	/* Calibrate DSI 0 */
 	if (dsi->info.ganged_type ||
@@ -2355,7 +2364,7 @@ static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 static void __maybe_unused
 tegra_dsi_mipi_calibration_12x(struct tegra_dc_dsi_data *dsi)
 {
-	u32 val;
+	u32 val, reg;
 	struct clk *clk72mhz = NULL;
 
 	clk72mhz = clk_get_sys("clk72mhz", NULL);
@@ -2389,6 +2398,15 @@ tegra_dsi_mipi_calibration_12x(struct tegra_dc_dsi_data *dsi)
 	val |= (DSI_PAD_PREEMP_PD_CLK(0x3) | DSI_PAD_PREEMP_PU_CLK(0x3) |
 		   DSI_PAD_PREEMP_PD(0x3) | DSI_PAD_PREEMP_PU(0x3));
 	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_3_VS1);
+
+	/* Deselect shared clk lane with DSI pads */
+	for (reg = MIPI_CAL_CILC_MIPI_CAL_CONFIG_2_0;
+		reg <= MIPI_CAL_CSIE_MIPI_CAL_CONFIG_2_0;
+		reg += 4) {
+		val = tegra_mipi_cal_read(dsi->mipi_cal, reg);
+		val &= ~(MIPI_CAL_SELA(0x1));
+		tegra_mipi_cal_write(dsi->mipi_cal, val, reg);
+	}
 
 	/* Calibrate DSI 0 */
 	if (dsi->info.ganged_type ||
@@ -2632,7 +2650,7 @@ static void tegra_dsi_mipi_calibration_11x(struct tegra_dc_dsi_data *dsi)
 #endif
 static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 {
-	u32 val = 0;
+	u32 val = 0, reg;
 
 	if (!dsi->ulpm)
 		tegra_dsi_pad_enable(dsi);
@@ -2644,6 +2662,15 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 		tegra_mipi_cal_init_hw(dsi->mipi_cal);
 
 		tegra_mipi_cal_clk_enable(dsi->mipi_cal);
+
+		/* Deselect CSI pads */
+		for (reg = MIPI_CAL_CILA_MIPI_CAL_CONFIG_0;
+			reg <= MIPI_CAL_CILF_MIPI_CAL_CONFIG_0;
+			reg += 4) {
+			val = tegra_mipi_cal_read(dsi->mipi_cal, reg);
+			val &= ~(MIPI_CAL_SELA(0x1));
+			tegra_mipi_cal_write(dsi->mipi_cal, val, reg);
+		}
 
 		/* enable mipi bias pad */
 		val = tegra_mipi_cal_read(dsi->mipi_cal,

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/mipi_cal.c
  *
- * Copyright (c) 2012-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2012-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -98,16 +98,11 @@ static inline void dbg_dsi_mipi_dir_create(struct tegra_mipi_cal *mipi_cal)
 
 int tegra_mipi_cal_init_hw(struct tegra_mipi_cal *mipi_cal)
 {
-	unsigned cnt = MIPI_CAL_MIPI_CAL_CTRL_0;
-
 	BUG_ON(IS_ERR_OR_NULL(mipi_cal));
 
 	mutex_lock(&mipi_cal->lock);
 
 	tegra_mipi_cal_clk_enable(mipi_cal);
-
-	for (; cnt <= MIPI_VALID_REG_LIMIT; cnt += 4)
-		tegra_mipi_cal_write(mipi_cal, 0, cnt);
 
 	/* Clear MIPI cal status register */
 	tegra_mipi_cal_write(mipi_cal,

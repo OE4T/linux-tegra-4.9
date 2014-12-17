@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/mipi_cal_regs.h
  *
- * Copyright (c) 2012-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2012-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -70,6 +70,13 @@
 #define MIPI_CAL_HSPDOSE(x)		(((x) & 0x1f) << 16)
 #define MIPI_CAL_HSPUOSE(x)		(((x) & 0x1f) << 8)
 #define MIPI_CAL_TERMOSE(x)		(((x) & 0x1f) << 0)
+
+#define MIPI_CAL_CILF_MIPI_CAL_CONFIG_0	0x28
+#define MIPI_CAL_OVERIDEF(x)		(((x) & 0x1) << 30)
+#define MIPI_CAL_SELF(x)		(((x) & 0x1) << 21)
+#define MIPI_CAL_HSPDOSF(x)		(((x) & 0x1f) << 16)
+#define MIPI_CAL_HSPUOSF(x)		(((x) & 0x1f) << 8)
+#define MIPI_CAL_TERMOSF(x)		(((x) & 0x1f) << 0)
 
 #define MIPI_CAL_MIPI_BIAS_PAD_CFG0_0	0x58
 #define MIPI_BIAS_PAD_PDVCLAMP(x)	(((x) & 0x1) << 1)

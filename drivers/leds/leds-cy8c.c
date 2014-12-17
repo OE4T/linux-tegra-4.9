@@ -28,6 +28,7 @@
 #include <linux/regmap.h>
 #include <linux/leds.h>
 #include <linux/debugfs.h>
+#include <linux/mutex.h>
 
 /* register definitions */
 #define P1961_REG_CMD			0x00
@@ -49,21 +50,84 @@
 #define P1961_REG_SOUND_PULSE_LEN	0x10
 #define P1961_REG_MAX			0x11
 #define P1961_CMD_ENTER_BL		0x01
+#define P1961_CMD_WRITE_EEPROM		0x05
 
+#define P1961_LED_STATE_BLINK       0x01
+#define P1961_LED_STATE_BREATH		0x02
 #define P1961_LED_STATE_SOLID       0x03
+
+
+
+enum modes {
+	MODE_BLINK = 0,
+	MODE_BREATH,
+	MODE_NORMAL,
+};
+
+struct mode_control {
+	enum modes mode;
+	char *mode_name;
+	unsigned char reg_mode;
+	unsigned char reg_mode_val;
+	unsigned char reg_on_reg;
+	unsigned char reg_off_reg;
+};
+
+static struct mode_control mode_controls[] = {
+	{MODE_BLINK, "blink",
+		P1961_REG_LED_STATE, P1961_LED_STATE_BLINK,
+		P1961_REG_LED_ON_TIME, P1961_REG_LED_OFF_TIME},
+	{MODE_BREATH, "breath",
+		P1961_REG_LED_STATE, P1961_LED_STATE_BREATH,
+		P1961_REG_LED_RAMP_UP, P1961_REG_LED_RAMP_DOWN},
+	{MODE_NORMAL, "normal",
+		P1961_REG_LED_STATE, P1961_LED_STATE_SOLID,
+		P1961_REG_NOM_BRIGHT, P1961_REG_NOM_BRIGHT},
+};
+static int mode_controls_size =
+	sizeof(mode_controls) / sizeof(mode_controls[0]);
 
 struct cy8c_data {
 	struct i2c_client *client;
 	struct regmap *regmap;
 	struct led_classdev led;
+	int mode_index; /* mode index to mode_controls */
+	struct mutex lock;
 };
+
+static int cy8c_get_mode_index(
+	struct cy8c_data *data)
+{
+	int mode_index = 0;
+	mutex_lock(&data->lock);
+	mode_index = data->mode_index;
+	mutex_unlock(&data->lock);
+	return mode_index;
+}
+
+static void cy8c_set_mode_index(
+	struct cy8c_data *data,
+	int mode_index)
+{
+	mutex_lock(&data->lock);
+	data->mode_index = mode_index;
+	mutex_unlock(&data->lock);
+}
 
 static void set_led_brightness(struct led_classdev *led_cdev,
 					enum led_brightness value)
 {
 	struct cy8c_data *data = container_of(led_cdev, struct cy8c_data, led);
+	int ret;
 
-	regmap_write(data->regmap, P1961_REG_NOM_BRIGHT, value & 0xff);
+	ret = regmap_write(data->regmap,
+		P1961_REG_NOM_BRIGHT, value & 0xff);
+	ret |= regmap_write(data->regmap,
+		P1961_REG_CMD_DAT, P1961_REG_NOM_BRIGHT);
+	ret |= regmap_write(data->regmap,
+		P1961_REG_CMD, P1961_CMD_WRITE_EEPROM);
+	if (ret)
+		dev_err(&data->client->dev, "cannot write %d\n", value);
 }
 
 static int of_led_parse_pdata(struct i2c_client *client, struct cy8c_data *data)
@@ -86,6 +150,162 @@ static int cy8c_debug_set(void *data, u64 val)
 	return 0;
 }
 DEFINE_SIMPLE_ATTRIBUTE(cy8c_debug_fops, NULL, cy8c_debug_set, "%lld\n");
+
+static ssize_t cy8c_effects_set(struct device *dev,
+			      struct device_attribute *attr,
+			      const char *buf, size_t size)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct cy8c_data *data = NULL;
+	ssize_t ret = -EINVAL;
+	struct regmap *regmap = NULL;
+	int i = 0;
+	int len = 0;
+
+	data = container_of(led_cdev, struct cy8c_data, led);
+	regmap = data->regmap;
+
+	if (buf == NULL || buf[0] == 0) {
+		dev_err(&data->client->dev, "input buf invalid.\n");
+		return -EINVAL;
+	}
+
+	for (i = 0; i < mode_controls_size; i++) {
+		/* use strncmp instead of strcmp
+		   strcmp always returns incorrect value
+		*/
+		len = min(strlen(buf),
+			strlen(mode_controls[i].mode_name));
+		if (!strncmp(buf, mode_controls[i].mode_name, len))
+			break;
+	}
+
+	if (i == mode_controls_size) {
+		dev_err(&data->client->dev, "cannot find %s\n", buf);
+		return -EINVAL;
+	}
+
+	ret = regmap_write(regmap, mode_controls[i].reg_mode,
+		mode_controls[i].reg_mode_val);
+
+	if (ret == 0)
+		cy8c_set_mode_index(data, i);
+
+	return ret == 0 ? size : -ENODEV;
+}
+
+static ssize_t cy8c_effects_show(struct device *dev,
+	struct device_attribute *attr,
+	char *buf)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct cy8c_data *data = NULL;
+	int mode_index = 0;
+	data = container_of(led_cdev, struct cy8c_data, led);
+	mode_index = cy8c_get_mode_index(data);
+	if (mode_index >= mode_controls_size) {
+		dev_err(&data->client->dev, "mode error\n");
+		return -EINVAL;
+	} else
+		return sprintf(buf, "%s\n",
+			mode_controls[mode_index].mode_name);
+}
+
+static ssize_t cy8c_params_set(struct device *dev,
+			      struct device_attribute *attr,
+			      const char *buf, size_t size)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct cy8c_data *data = NULL;
+	ssize_t ret = -EINVAL;
+	struct regmap *regmap = NULL;
+	int on_time, off_time;
+	enum modes mode = 0;
+
+	on_time = 0;
+	off_time = 0;
+	data = container_of(led_cdev, struct cy8c_data, led);
+	regmap = data->regmap;
+
+	if (buf == NULL || buf[0] == 0) {
+		dev_err(&data->client->dev, "input buf invalid\n");
+		return -EINVAL;
+	}
+
+	if (sscanf(buf, "%d %d", &on_time, &off_time) != 2) {
+		dev_err(&data->client->dev, "input data format invalid\n");
+		return -EINVAL;
+	}
+
+	if (on_time < 0 || on_time > 255) {
+		dev_err(&data->client->dev, "input on time out of range\n");
+		return -EINVAL;
+	}
+
+	if (off_time < 0 || off_time > 255) {
+		dev_err(&data->client->dev, "input off time out of range\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&data->lock);
+	mode = mode_controls[data->mode_index].mode;
+	if (mode != MODE_NORMAL) {
+		ret = regmap_write(regmap,
+			mode_controls[data->mode_index].reg_on_reg,
+			on_time);
+		ret |= regmap_write(regmap,
+			mode_controls[data->mode_index].reg_off_reg,
+			off_time);
+	} else {
+		dev_err(&data->client->dev, "mode in normal\n");
+	}
+	mutex_unlock(&data->lock);
+
+	return ret == 0 ? size : ret;
+}
+
+static ssize_t cy8c_params_show(struct device *dev,
+	struct device_attribute *attr,
+	char *buf)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct cy8c_data *data = NULL;
+	int on_time, off_time;
+	enum modes mode = 0;
+	ssize_t ret = -EINVAL;
+	data = container_of(led_cdev, struct cy8c_data, led);
+	on_time = off_time = 0;
+
+	mutex_lock(&data->lock);
+	if (data->mode_index >= mode_controls_size) {
+		mutex_unlock(&data->lock);
+		return -EINVAL;
+	}
+
+	mode = mode_controls[data->mode_index].mode;
+
+	if (mode != MODE_NORMAL) {
+		ret = regmap_read(data->regmap,
+			mode_controls[data->mode_index].reg_on_reg,
+			&on_time);
+		ret |= regmap_read(data->regmap,
+			mode_controls[data->mode_index].reg_off_reg,
+			&off_time);
+	} else {
+		dev_err(&data->client->dev, "mode in normal\n");
+	}
+	mutex_unlock(&data->lock);
+
+	if (ret)
+		return ret;
+	else
+		return sprintf(buf, "%d %d\n", on_time, off_time);
+}
+
+static DEVICE_ATTR(effects, S_IRUGO|S_IWUSR,
+		cy8c_effects_show, cy8c_effects_set);
+static DEVICE_ATTR(params, S_IRUGO|S_IWUSR,
+		cy8c_params_show, cy8c_params_set);
 
 static int cy8c_led_probe(struct i2c_client *client,
 					const struct i2c_device_id *id)
@@ -153,11 +373,23 @@ static int cy8c_led_probe(struct i2c_client *client,
 		return ret;
 	}
 
+	mutex_init(&data->lock);
+
+	/* enable print in show/get */
+	data->client = client;
+
 	ret = led_classdev_register(&client->dev, &data->led);
 	if (ret < 0)
 		dev_err(&client->dev, "Failed to register foster led\n");
 	else
 		dev_info(&client->dev, "LED registered (%s)\n", data->led.name);
+
+	ret = device_create_file(data->led.dev, &dev_attr_effects);
+	if (ret)
+		dev_err(&client->dev, "Failed to register effects sys node\n");
+	ret = device_create_file(data->led.dev, &dev_attr_params);
+	if (ret)
+		dev_err(&client->dev, "Failed to register params sys node\n");
 
 	/* create debugfs for f/w loading purpose */
 	d = debugfs_create_file("cy8c_led", S_IRUGO, NULL, data,
@@ -172,6 +404,8 @@ static int cy8c_led_remove(struct i2c_client *client)
 {
 	struct cy8c_data *data = i2c_get_clientdata(client);
 
+	device_remove_file(data->led.dev, &dev_attr_effects);
+	device_remove_file(data->led.dev, &dev_attr_params);
 	led_classdev_unregister(&data->led);
 
 	return 0;

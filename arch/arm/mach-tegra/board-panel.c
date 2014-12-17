@@ -466,7 +466,6 @@ struct device_node *tegra_primary_panel_get_dt_node(
 				&edp_a_1080p_14_0_ops);
 	}
 	if (np_panel && of_device_is_available(np_panel)) {
-		of_node_put(np_panel);
 		of_node_put(np_hdmi);
 		return np_panel;
 	} else {
@@ -478,7 +477,6 @@ struct device_node *tegra_primary_panel_get_dt_node(
 			of_get_child_by_name(np_hdmi, "hdmi-display");
 	}
 
-	of_node_put(np_panel);
 	of_node_put(np_hdmi);
 	return of_device_is_available(np_panel) ? np_panel : NULL;
 }
@@ -518,8 +516,8 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 		np_panel = of_get_child_by_name(np_display, "hdmi-display");
 #endif
 	}
-	of_node_put(np_panel);
 	of_node_put(np_display);
+
 	return of_device_is_available(np_panel) ? np_panel : NULL;
 }
 

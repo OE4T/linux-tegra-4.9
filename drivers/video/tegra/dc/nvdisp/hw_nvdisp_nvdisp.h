@@ -442,17 +442,49 @@ static inline u32 nvdisp_sync_width_r(void)
 {
 	return 0x00000407;
 }
+static inline u32 nvdisp_sync_width_h_f(u32 v)
+{
+	return (v & 0x7fff) << 0;
+}
+static inline u32 nvdisp_sync_width_v_f(u32 v)
+{
+	return (v & 0x7fff) << 16;
+}
 static inline u32 nvdisp_back_porch_r(void)
 {
 	return 0x00000408;
+}
+static inline u32 nvdisp_back_porch_h_f(u32 v)
+{
+	return (v & 0x7fff) << 0;
+}
+static inline u32 nvdisp_back_porch_v_f(u32 v)
+{
+	return (v & 0x7fff) << 16;
 }
 static inline u32 nvdisp_active_r(void)
 {
 	return 0x00000409;
 }
+static inline u32 nvdisp_active_h_f(u32 v)
+{
+	return (v & 0x7fff) << 0;
+}
+static inline u32 nvdisp_active_v_f(u32 v)
+{
+	return (v & 0x7fff) << 16;
+}
 static inline u32 nvdisp_front_porch_r(void)
 {
 	return 0x0000040a;
+}
+static inline u32 nvdisp_front_porch_h_f(u32 v)
+{
+	return (v & 0x7fff) << 0;
+}
+static inline u32 nvdisp_front_porch_v_f(u32 v)
+{
+	return (v & 0x7fff) << 16;
 }
 static inline u32 nvdisp_rg_ext_back_porch_r(void)
 {
@@ -778,21 +810,37 @@ static inline u32 nvdisp_interlace_ctl_r(void)
 {
 	return 0x000004e5;
 }
-static inline u32 nvdisp_interlace_f2_width_r(void)
+static inline u32 nvdisp_interlace_fld2_width_r(void)
 {
 	return 0x000004e7;
 }
-static inline u32 nvdisp_interlace_f2_bporch_r(void)
+static inline u32 nvdisp_interlace_fld2_width_v_f(u32 v)
+{
+	return (v & 0x7fff) << 16;
+}
+static inline u32 nvdisp_interlace_fld2_bporch_r(void)
 {
 	return 0x000004e8;
 }
-static inline u32 nvdisp_interlace_f2_fporch_r(void)
+static inline u32 nvdisp_interlace_fld2_bporch_v_f(u32 v)
+{
+	return (v & 0x7fff) << 16;
+}
+static inline u32 nvdisp_interlace_fld2_fporch_r(void)
 {
 	return 0x000004e9;
 }
-static inline u32 nvdisp_interlace_f2_active_r(void)
+static inline u32 nvdisp_interlace_fld2_fporch_v_f(u32 v)
+{
+	return (v & 0x7fff) << 16;
+}
+static inline u32 nvdisp_interlace_fld2_active_r(void)
 {
 	return 0x000004ea;
+}
+static inline u32 nvdisp_interlace_fld2_active_v_f(u32 v)
+{
+	return (v & 0x7fff) << 16;
 }
 static inline u32 nvdisp_cursor_startaddr_hi_r(void)
 {

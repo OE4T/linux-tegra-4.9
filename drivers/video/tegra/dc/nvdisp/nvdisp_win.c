@@ -130,9 +130,16 @@ static int tegra_nvdisp_enable_cde(struct tegra_dc_win *win)
 static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 {
 	u32 win_options;
+	fixed20_12 h_offset, v_offset;
+
 	bool yuv = tegra_dc_is_yuv(win->fmt);
 	bool yuvp = tegra_dc_is_yuv_planar(win->fmt);
 	bool yuvsp = tegra_dc_is_yuv_semi_planar(win->fmt);
+	bool invert_h = (win->flags & TEGRA_WIN_FLAG_INVERT_H) != 0;
+	bool invert_v = (win->flags & TEGRA_WIN_FLAG_INVERT_V) != 0;
+
+	struct tegra_dc *dc = win->dc;
+
 
 	nvdisp_win_write(win, tegra_dc_fmt(win->fmt), win_color_depth_r());
 	nvdisp_win_write(win,
@@ -140,10 +147,17 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 		win_position_h_position_f(win->out_x),
 		win_position_r());
 
-	/* TODO: interlace size is different */
-	nvdisp_win_write(win, win_size_v_size_f(win->out_h) |
-		win_size_h_size_f(win->out_w),
-		win_size_r());
+	if (tegra_dc_feature_has_interlace(dc, win->idx) &&
+		(dc->mode.vmode == FB_VMODE_INTERLACED)) {
+		nvdisp_win_write(win,
+			win_size_v_size_f((win->out_h) >> 1) |
+			win_size_h_size_f(win->out_w),
+			win_size_r());
+	} else {
+		nvdisp_win_write(win, win_size_v_size_f(win->out_h) |
+			win_size_h_size_f(win->out_w),
+			win_size_r());
+	}
 
 	win_options = win_options_win_enable_enable_f();
 	if (win->flags & TEGRA_WIN_FLAG_SCAN_COLUMN)
@@ -208,6 +222,78 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 			win_win_set_params_degamma_range_none_f(),
 			win_win_set_params_r());
 	}
+
+	if (invert_h) {
+		h_offset.full = win->x.full + win->w.full;
+		h_offset.full -= dfixed_const(1);
+	} else {
+		h_offset.full = dfixed_floor(win->x);
+	}
+
+	v_offset = win->y;
+	if (invert_v)
+		v_offset.full += win->h.full - dfixed_const(1);
+
+	nvdisp_win_write(win,
+			win_cropped_point_h_offset_f(dfixed_trunc(h_offset)),
+			win_cropped_point_r());
+	nvdisp_win_write(win,
+			win_cropped_point_v_offset_f(dfixed_trunc(v_offset)),
+			win_cropped_point_r());
+
+#if defined(CONFIG_TEGRA_DC_INTERLACE)
+	if ((dc->mode.vmode == FB_VMODE_INTERLACED) && WIN_IS_FB(win)) {
+		if (!WIN_IS_INTERLACE(win))
+			win->phys_addr2 = win->phys_addr;
+	}
+
+	if (tegra_dc_feature_has_interlace(dc, win->idx) &&
+		(dc->mode.vmode == FB_VMODE_INTERLACED)) {
+			nvdisp_win_write(win,
+				tegra_dc_reg_l32(win->phys_addr2),
+				win_start_addr_fld2_r());
+			nvdisp_win_write(win,
+				tegra_dc_reg_h32(win->phys_addr2),
+				win_start_addr_fld2_hi_r());
+		if (yuvp) {
+			nvdisp_win_write(win,
+				tegra_dc_reg_l32(win->phys_addr_u2),
+				win_start_addr_fld2_u_r());
+			nvdisp_win_write(win,
+				tegra_dc_reg_h32(win->phys_addr_u2),
+				win_start_addr_fld2_hi_u_r());
+			nvdisp_win_write(win,
+				tegra_dc_reg_l32(win->phys_addr_v2),
+				win_start_addr_fld2_v_r());
+			nvdisp_win_write(win,
+				tegra_dc_reg_h32(win->phys_addr_v2),
+				win_start_addr_fld2_hi_v_r());
+		} else if (yuvsp) {
+			nvdisp_win_write(win,
+				tegra_dc_reg_l32(win->phys_addr_u2),
+				win_start_addr_fld2_u_r());
+			nvdisp_win_write(win,
+				tegra_dc_reg_h32(win->phys_addr_u2),
+				win_start_addr_fld2_hi_u_r());
+		}
+		nvdisp_win_write(win,
+			win_cropped_point_fld2_h_f(dfixed_trunc(h_offset)),
+			win_cropped_point_fld2_r());
+
+		if (WIN_IS_INTERLACE(win)) {
+			nvdisp_win_write(win,
+				win_cropped_point_fld2_v_f(
+						dfixed_trunc(v_offset)),
+				win_cropped_point_fld2_r());
+		} else {
+			v_offset.full += dfixed_const(1);
+			nvdisp_win_write(win,
+				win_cropped_point_fld2_v_f(
+						dfixed_trunc(v_offset)),
+				win_cropped_point_fld2_r());
+		}
+	}
+#endif
 
 	if (WIN_IS_BLOCKLINEAR(win)) {
 		nvdisp_win_write(win, win_surface_kind_kind_bl_f() |

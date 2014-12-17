@@ -366,6 +366,18 @@ static inline u32 win_start_addr_v_r(void)
 {
 	return 0x00000804;
 }
+static inline u32 win_cropped_point_r(void)
+{
+	return 0x00000806;
+}
+static inline u32 win_cropped_point_v_offset_f(u32 v)
+{
+	return (v & 0xffff) << 16;
+}
+static inline u32 win_cropped_point_h_offset_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
 static inline u32 win_surface_kind_r(void)
 {
 	return 0x0000080b;
@@ -397,5 +409,41 @@ static inline u32 win_start_addr_hi_u_r(void)
 static inline u32 win_start_addr_hi_v_r(void)
 {
 	return 0x00000811;
+}
+static inline u32 win_start_addr_fld2_r(void)
+{
+	return 0x00000813;
+}
+static inline u32 win_start_addr_fld2_u_r(void)
+{
+	return 0x00000815;
+}
+static inline u32 win_start_addr_fld2_v_r(void)
+{
+	return 0x00000817;
+}
+static inline u32 win_start_addr_fld2_hi_r(void)
+{
+	return 0x00000819;
+}
+static inline u32 win_start_addr_fld2_hi_u_r(void)
+{
+	return 0x0000081b;
+}
+static inline u32 win_start_addr_fld2_hi_v_r(void)
+{
+	return 0x0000081d;
+}
+static inline u32 win_cropped_point_fld2_r(void)
+{
+	return 0x0000081f;
+}
+static inline u32 win_cropped_point_fld2_v_f(u32 v)
+{
+	return (v & 0xffff) << 16;
+}
+static inline u32 win_cropped_point_fld2_h_f(u32 v)
+{
+	return (v & 0xffff) << 0;
 }
 #endif

@@ -1767,6 +1767,7 @@ int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 
 	_tegra_dc_update_cmu(dc, cmu);
 	tegra_dc_set_color_control(dc);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);

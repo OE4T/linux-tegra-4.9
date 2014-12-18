@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics channel
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -419,8 +419,10 @@ void gk20a_channel_abort(struct channel_gk20a *ch)
 	bool released_job_semaphore = false;
 
 	/* ensure no fences are pending */
+	mutex_lock(&ch->submit_lock);
 	if (ch->sync)
 		ch->sync->set_min_eq_max(ch->sync);
+	mutex_unlock(&ch->submit_lock);
 
 	/* release all job semaphores (applies only to jobs that use
 	   semaphore synchronization) */

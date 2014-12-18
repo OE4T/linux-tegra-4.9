@@ -1657,10 +1657,12 @@ static void nvi_en(struct iio_dev *indio_dev)
 int nvi_enable(struct iio_dev *indio_dev)
 {
 	struct nvi_state *st = iio_priv(indio_dev);
+	unsigned int master_enable;
 	int i;
 	int ret;
 	int ret_t;
 
+	master_enable = st->master_enable;
 	nvi_en(indio_dev);
 	if (st->master_enable & (1 << DEV_ANGLVEL))
 		ret_t = nvi_pm(st, NVI_PM_ON_FULL);
@@ -1694,6 +1696,9 @@ int nvi_enable(struct iio_dev *indio_dev)
 						(st->master_enable & DEV_AUX)))
 		ret_t |= nvi_reset(st, true, false);
 	ret_t |= nvi_pm(st, NVI_PM_AUTO);
+	if (st->dbg & NVI_DBG_SPEW_MSG)
+		dev_info(&st->i2c->dev, "%s master_enable=%x=>%x ret=%d\n",
+			 __func__, master_enable, st->master_enable, ret_t);
 	return ret_t;
 }
 
@@ -2603,6 +2608,9 @@ static void nvi_buf_push(struct iio_dev *indio_dev, s64 ts)
 	unsigned int bytes = 0;
 	unsigned int axis;
 
+	if ((ts - st->ts) < 0)
+		return;
+
 	for (axis = 0; axis < AXIS_N; axis++) {
 		if (iio_scan_mask_query(indio_dev, indio_dev->buffer,
 					axis + NVI_SCAN_ACCEL_X)) {
@@ -2627,7 +2635,7 @@ static void nvi_buf_push(struct iio_dev *indio_dev, s64 ts)
 	st->ts = ts;
 	if (indio_dev->buffer->scan_timestamp) {
 		if (st->flush || (ts < st->push_ts))
-			ts = 0;
+			ts = 0LL;
 		n = sizeof(ts);
 		i = nvi_buf_index(n, &bytes);
 		memcpy(&buf[i], &ts, n);
@@ -2786,6 +2794,9 @@ static irqreturn_t nvi_irq_thread(int irq, void *dev_id)
 	s64 ts;
 	s64 ts_irq;
 	s64 delay;
+	s64 delay_lo;
+	s64 delay_hi;
+	s64 delay_add;
 	bool push;
 	unsigned int mask;
 	unsigned int buf_index;
@@ -2893,8 +2904,16 @@ static irqreturn_t nvi_irq_thread(int irq, void *dev_id)
 		/* consider resetting FIFO if doesn't divide cleanly */
 		goto nvi_irq_thread_exit;
 
-	ts = st->fifo_ts;
 	delay = st->smplrt_delay_us[DEV_ACCEL] * 1000;
+	delay_lo = delay >> 1;
+	delay_hi = delay + delay_lo;
+	if (st->fifo_ts < st->ts) {
+		ts = st->ts + delay_lo;
+		delay_add = delay_lo;
+	} else {
+		ts = st->fifo_ts;
+		delay_add = delay;
+	}
 	samples = (fifo_count / fifo_sample_size);
 	if (st->dbg & NVI_DBG_SPEW_FIFO)
 		dev_info(&st->i2c->dev,
@@ -2931,8 +2950,9 @@ static irqreturn_t nvi_irq_thread(int irq, void *dev_id)
 				if (ts < (ts_irq - delay))
 					break;
 
-				ret = kfifo_out(&st->timestamps,
-						&ts_irq, 1);
+				ret = kfifo_out_spinlocked(&st->timestamps,
+							   &ts_irq, 1,
+							 &st->time_stamp_lock);
 				if (ret != 1)
 					goto nvi_irq_thread_exit_reset;
 
@@ -2942,10 +2962,25 @@ static irqreturn_t nvi_irq_thread(int irq, void *dev_id)
 					break;
 				}
 			}
-			if ((st->dbg & NVI_DBG_SPEW_FIFO) && (ts != ts_irq))
-				dev_info(&st->i2c->dev,
-					 "%s TS=%lld != IRQ=%lld s=%u i=%u\n",
+			if (ts != ts_irq) {
+				if (ts_len) {
+					/* ts < ts_irq: speed until lock */
+					if (st->irq_dis)
+						/* kfifo full */
+						delay_add = delay_hi;
+					else
+						delay_add = delay;
+				} else {
+					/* ts > last ts_irq: slower to lock */
+					delay_add = delay_lo;
+				}
+				if (st->dbg & NVI_DBG_SPEW_FIFO)
+					dev_info(&st->i2c->dev,
+					  "%s TS=%lld != IRQ=%lld s=%u n=%u\n",
 					__func__, ts, ts_irq, samples, ts_len);
+			} else {
+				delay_add = delay;
+			}
 		} else {
 			if (st->dbg & NVI_DBG_SPEW_FIFO)
 				dev_info(&st->i2c->dev,
@@ -2973,15 +3008,16 @@ static irqreturn_t nvi_irq_thread(int irq, void *dev_id)
 			}
 		}
 		st->flush = false;
-		ts += delay;
 		samples--;
+		ts += delay_add;
 	}
 	if (ts_len) {
 		if (st->dbg & NVI_DBG_SPEW_FIFO)
 			dev_info(&st->i2c->dev, "%s SYNC TO IRQ_TS %lld\n",
 				 __func__, ts);
 		for (i = 0; i < ts_len; i++) {
-			ret = kfifo_out(&st->timestamps, &ts, 1);
+			ret = kfifo_out_spinlocked(&st->timestamps, &ts_irq, 1,
+						    &st->time_stamp_lock);
 			if (ret != 1)
 				goto nvi_irq_thread_exit_reset;
 		}
@@ -3018,6 +3054,9 @@ static irqreturn_t nvi_irq_handler(int irq, void *dev_id)
 		if (kfifo_is_full(&st->timestamps)) {
 			disable_irq_nosync(st->i2c->irq);
 			st->irq_dis = true;
+			if (st->dbg & NVI_DBG_SPEW_IRQ)
+				dev_info(&st->i2c->dev, "%s kfifo_is_full\n",
+					 __func__);
 		}
 	}
 	if (st->dbg & NVI_DBG_SPEW_IRQ)
@@ -3922,7 +3961,10 @@ static int nvi_write_raw(struct iio_dev *indio_dev,
 		}
 		if (!ret) {
 			old = st->batch_timeout_us[dev];
-			st->batch_timeout_us[dev] = val;
+			if (val && !st->dmp_en)
+				ret = -EINVAL;
+			else
+				st->batch_timeout_us[dev] = val;
 		}
 		break;
 
@@ -5457,6 +5499,7 @@ static int nvi_probe(struct i2c_client *client,
 	}
 
 	spin_lock_init(&st->time_stamp_lock);
+	INIT_KFIFO(st->timestamps);
 	nvi_pm_init(st);
 	ret = nvi_id_i2c(indio_dev, id);
 	if (ret) {
@@ -5496,7 +5539,6 @@ static int nvi_probe(struct i2c_client *client,
 		goto nvi_probe_err;
 	}
 
-	INIT_KFIFO(st->timestamps);
 	ret = request_threaded_irq(st->i2c->irq,
 				   nvi_irq_handler, nvi_irq_thread,
 				   IRQF_TRIGGER_RISING, NVI_NAME, st);

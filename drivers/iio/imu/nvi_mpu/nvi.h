@@ -546,6 +546,7 @@ struct nvi_state {
 	bool flush;
 	bool rc_dis;
 	bool irq_dis;
+	bool dmp_en;
 	int pm;
 
 	struct inv_chip_config_s chip_config;

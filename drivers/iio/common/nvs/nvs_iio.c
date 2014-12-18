@@ -75,7 +75,7 @@
 #include <linux/nvs.h>
 
 
-#define NVS_IIO_DRIVER_VERSION		(200)
+#define NVS_IIO_DRIVER_VERSION		(201)
 #define NVS_IIO_SENSOR_TYPE_ERR		(0xFF)
 #define NVS_ATTRS_ARRAY_SIZE		(12)
 
@@ -123,6 +123,7 @@ struct nvs_state {
 	unsigned int batch_timeout_us;
 	unsigned int dbg;
 	long dbg_data_lock;
+	s64 ts_diff;
 	s64 ts;
 	u8 *buf;
 };
@@ -239,7 +240,7 @@ static ssize_t nvs_dbg_data(struct iio_dev *indio_dev, char *buf)
 			t += sprintf(buf + t, "ERR ");
 		}
 	}
-	t += sprintf(buf + t, "ts=%lld\n", st->ts);
+	t += sprintf(buf + t, "ts=%lld  ts_diff=%lld\n", st->ts, st->ts_diff);
 	return t;
 }
 
@@ -254,23 +255,23 @@ static int nvs_buf_push(struct iio_dev *indio_dev, unsigned char *data, s64 ts)
 	unsigned int bytes = 0;
 	int ret = 0;
 
-	if (data) {
-		for (i = 0; i < indio_dev->num_channels - 1; i++) {
-			if (iio_scan_mask_query(indio_dev,
-						indio_dev->buffer, i)) {
-				n = indio_dev->
-					 channels[i].scan_type.storagebits / 8;
-				dst_i = nvs_buf_index(n, &bytes);
-				if (!(st->dbg_data_lock & (1 << i)))
-					memcpy(&st->buf[dst_i],
-					       &data[src_i], n);
-				src_i += n;
-			}
+	for (i = 0; i < indio_dev->num_channels - 1; i++) {
+		if (iio_scan_mask_query(indio_dev, indio_dev->buffer, i)) {
+			n = indio_dev->channels[i].scan_type.storagebits / 8;
+			dst_i = nvs_buf_index(n, &bytes);
+			if (data && !(st->dbg_data_lock & (1 << i)))
+				memcpy(&st->buf[dst_i], &data[src_i], n);
+			src_i += n;
 		}
 	}
-	if (!ts)
+	if (ts) {
+		st->ts_diff = ts - st->ts;
+		st->ts = ts;
+	} else {
 		st->flush = false;
-	st->ts = ts;
+		if (*st->fn_dev->sts & (NVS_STS_SPEW_MSG | NVS_STS_SPEW_DATA))
+			dev_info(st->dev, "%s FLUSH\n", __func__);
+	}
 	if (indio_dev->buffer->scan_timestamp) {
 		n = sizeof(ts);
 		dst_i = nvs_buf_index(n, &bytes);
@@ -282,10 +283,10 @@ static int nvs_buf_push(struct iio_dev *indio_dev, unsigned char *data, s64 ts)
 			for (i = 0; i < bytes; i++)
 				dev_info(st->dev, "buf[%u]=%x\n",
 					 i, st->buf[i]);
-			dev_info(st->dev, "ts=%lld\n", ts);
+			dev_info(st->dev, "ts=%lld  diff=%lld\n", ts, st->ts_diff);
 		}
 	}
-	if (*st->fn_dev->sts & NVS_STS_SPEW_DATA) {
+	if ((*st->fn_dev->sts & NVS_STS_SPEW_DATA) && ts) {
 		nvs_dbg_data(indio_dev, char_buf);
 		dev_info(st->dev, "%s", char_buf);
 	}
@@ -306,6 +307,7 @@ static int nvs_enable(struct iio_dev *indio_dev, bool en)
 	struct nvs_state *st = iio_priv(indio_dev);
 	unsigned int i;
 	int enable = 0;
+	int ret;
 
 	if (en) {
 		for (i = 0; i < indio_dev->num_channels - 1; i++) {
@@ -319,7 +321,11 @@ static int nvs_enable(struct iio_dev *indio_dev, bool en)
 	} else {
 		st->dbg_data_lock = 0;
 	}
-	return st->fn_dev->enable(st->client, st->cfg->snsr_id, enable);
+
+	ret = st->fn_dev->enable(st->client, st->cfg->snsr_id, enable);
+	if (*st->fn_dev->sts & NVS_STS_SPEW_MSG)
+		dev_info(st->dev, "%s %d ret=%d", __func__, enable, ret);
+	return ret;
 }
 
 static ssize_t nvs_attr_store(struct device *dev,
@@ -859,8 +865,8 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 	mutex_unlock(&indio_dev->mlock);
 	if (*st->fn_dev->sts & NVS_STS_SPEW_MSG) {
 		if (ret)
-			dev_err(st->dev, "%s c=%d %d:%d->%d:%d ERR=%d\n",
-				msg, chan->scan_index,
+			dev_err(st->dev, "%s %s c=%d %d:%d->%d:%d ERR=%d\n",
+				__func__, msg, chan->scan_index,
 				old, old2, val, val2, ret);
 		else
 			dev_info(st->dev, "%s %s chan=%d %d:%d->%d:%d\n",

@@ -3,7 +3,7 @@
  *
  * Instantiates virtualization-related resources.
  *
- * Copyright (C) 2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2015, NVIDIA CORPORATION. All rights reserved.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -44,12 +44,6 @@
 
 struct tegra_hv_data;
 
-enum ivc_user {
-	ivc_user_none,
-	ivc_user_kernel,
-	ivc_user_loopback
-};
-
 struct ivc_dev {
 	struct tegra_hv_data	*hvd;
 	int			minor;
@@ -70,26 +64,20 @@ struct ivc_dev {
 	const struct guest_ivc_info *givci;
 	int			other_guestid;
 
-	/*
-	 * Use of the channels is controlled by the user enum and synchronized
-	 * by the lock. The rules are as follows:
-	 *
-	 * 1. Only the owner of the device can transition to unused.
-	 * 2. Only the owner of the device can modify the cookie and irq
-	 *    handler.
-	 * 3. No transitions between non-unused users.
-	 * 4. The kernel user indicates that whoever in the kernel took
-	 *    ownership of the channel must return it to unused.
-	 * 5. This sysfs loopback attribute can only transition between unused
-	 *    and loopback.
-	 */
+	/* This lock synchronizes the reserved flag. */
 	struct mutex		lock;
-	enum ivc_user		user;
+	int			reserved;
 
 	const struct tegra_hv_ivc_ops *cookie_ops;
 	struct tegra_hv_ivc_cookie cookie;
 
-	wait_queue_head_t	wq;		/* wait queue for file mode */
+	/* File mode */
+	wait_queue_head_t	wq;
+	/*
+	 * Lock for synchronizing access to the IVC channel between the threaded
+	 * IRQ handler's notification processing and file ops.
+	 */
+	struct mutex		file_lock;
 };
 
 #define cookie_to_ivc_dev(_cookie) \
@@ -141,30 +129,6 @@ static void ivc_raise_irq(struct ivc *ivc_channel)
 	hyp_raise_irq(ivc->qd->raise_irq, ivc->other_guestid);
 }
 
-static void loopback_handler(struct tegra_hv_ivc_cookie *cookie)
-{
-	struct ivc_dev *ivcd = container_of(cookie, struct ivc_dev, cookie);
-	struct ivc *ivc = &ivcd->ivc;
-
-	/* got input and space is available */
-	while (tegra_ivc_can_read(ivc) && tegra_ivc_can_write(ivc)) {
-
-		void *src = tegra_ivc_read_get_next_frame(ivc);
-		/*
-		 * We can't trust the other end not to cause the channel to
-		 * become empty, resulting in src being an invalid pointer.
-		 */
-		if (IS_ERR(src)) {
-			dev_err(ivcd->device, "channel unexpectedly empty\n");
-			break;
-		}
-
-		tegra_ivc_write_poke(ivc, src, 0, ivcd->qd->frame_size);
-		tegra_ivc_read_advance(ivc);
-		tegra_ivc_write_advance(ivc);
-	}
-}
-
 static const struct tegra_hv_data *get_hvd(void)
 {
 	if (!tegra_hv_data) {
@@ -197,9 +161,22 @@ static irqreturn_t ivc_dev_cookie_irq_handler(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static irqreturn_t ivc_dev_irq_handler(int irq, void *data)
+static irqreturn_t ivc_threaded_irq_handler(int irq, void *dev_id)
+{
+	/*
+	 * Virtual IRQs are known to be edge-triggered, so no action is needed
+	 * to acknowledge them.
+	 */
+	return IRQ_WAKE_THREAD;
+}
+
+static irqreturn_t ivc_dev_handler(int irq, void *data)
 {
 	struct ivc_dev *ivc = data;
+
+	mutex_lock(&ivc->file_lock);
+	tegra_ivc_channel_notified(&ivc->ivc);
+	mutex_unlock(&ivc->file_lock);
 
 	/* simple implementation, just kick all waiters */
 	wake_up_interruptible_all(&ivc->wq);
@@ -221,54 +198,6 @@ static int ivc_request_cookie_irq(struct ivc_dev *ivcd)
 			ivcd);
 }
 
-static const struct tegra_hv_ivc_ops loopback_ops = {
-	.rx_rdy = loopback_handler,
-	.tx_rdy = loopback_handler,
-};
-
-static int ivc_enable_loopback(struct ivc_dev *ivc)
-{
-	int ret;
-	const struct tegra_hv_data *hvd = get_hvd();
-	if (IS_ERR(hvd))
-		return -EINVAL;
-
-	mutex_lock(&ivc->lock);
-
-	if (ivc->user == ivc_user_loopback) {
-		ret = 0;
-	} else if (ivc->user != ivc_user_none) {
-		ret = -EBUSY;
-	} else {
-		ivc->user = ivc_user_loopback;
-		ivc->cookie_ops = &loopback_ops;
-		ret = ivc_request_cookie_irq(ivc);
-	}
-
-	mutex_unlock(&ivc->lock);
-
-	return ret;
-}
-
-static int ivc_disable_loopback(struct ivc_dev *ivc)
-{
-	int ret;
-
-	mutex_lock(&ivc->lock);
-
-	if (ivc->user == ivc_user_loopback) {
-		ivc_release_irq(ivc);
-		ivc->cookie_ops = NULL;
-		ivc->user = ivc_user_none;
-		ret = 0;
-	} else
-		ret = -EINVAL;
-
-	mutex_unlock(&ivc->lock);
-
-	return ret;
-}
-
 static int ivc_dev_open(struct inode *inode, struct file *filp)
 {
 	struct cdev *cdev = inode->i_cdev;
@@ -276,33 +205,32 @@ static int ivc_dev_open(struct inode *inode, struct file *filp)
 	int ret;
 
 	mutex_lock(&ivc->lock);
-	if (ivc->user != ivc_user_none) {
+	if (ivc->reserved) {
 		ret = -EBUSY;
 	} else {
-		/*
-		 * The user is listed as kernel because in the file case, we
-		 * can still depend on the kernel to release the device when
-		 * appropriate.
-		 */
-		ivc->user = ivc_user_kernel;
+		ivc->reserved = 1;
 		ret = 0;
 	}
 	mutex_unlock(&ivc->lock);
 
-	ivc->cookie_ops = NULL;
-
 	if (ret)
 		return ret;
 
+	ivc->cookie_ops = NULL;
+	mutex_lock(&ivc->file_lock);
+	tegra_ivc_channel_reset(&ivc->ivc);
+	mutex_unlock(&ivc->file_lock);
+
 	/* request our irq */
-	ret = devm_request_irq(ivc->device, ivc->qd->irq, ivc_dev_irq_handler,
-			0, dev_name(ivc->device), ivc);
+	ret = devm_request_threaded_irq(ivc->device, ivc->qd->irq,
+			ivc_threaded_irq_handler, ivc_dev_handler, 0,
+			dev_name(ivc->device), ivc);
 	if (ret < 0) {
 		dev_err(ivc->device, "Failed to request irq %d\n",
 				ivc->qd->irq);
 		mutex_lock(&ivc->lock);
-		BUG_ON(ivc->user != ivc_user_kernel);
-		ivc->user = ivc_user_none;
+		BUG_ON(!ivc->reserved);
+		ivc->reserved = 0;
 		mutex_unlock(&ivc->lock);
 		return ret;
 	}
@@ -324,8 +252,8 @@ static int ivc_dev_release(struct inode *inode, struct file *filp)
 	ivc_release_irq(ivc);
 
 	mutex_lock(&ivc->lock);
-	BUG_ON(ivc->user != ivc_user_kernel);
-	ivc->user = ivc_user_none;
+	BUG_ON(!ivc->reserved);
+	ivc->reserved = 0;
 	mutex_unlock(&ivc->lock);
 
 	return 0;
@@ -366,7 +294,9 @@ static ssize_t ivc_dev_read(struct file *filp, char __user *buf,
 		chunk = ivcd->qd->frame_size;
 		if (chunk > left)
 			chunk = left;
+		mutex_lock(&ivcd->file_lock);
 		ret = tegra_ivc_read_user(ivc, buf, chunk);
+		mutex_unlock(&ivcd->file_lock);
 		if (ret < 0)
 			break;
 
@@ -417,7 +347,9 @@ static ssize_t ivc_dev_write(struct file *filp, const char __user *buf,
 				break;
 		}
 
+		mutex_lock(&ivcd->file_lock);
 		ret = tegra_ivc_write_user(ivc, buf, chunk);
+		mutex_unlock(&ivcd->file_lock);
 		if (ret < 0)
 			break;
 
@@ -490,20 +422,6 @@ static ssize_t nframes_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", ivc->qd->nframes);
 }
 
-static ssize_t opened_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	struct ivc_dev *ivc = dev_get_drvdata(dev);
-	int opened;
-
-	mutex_lock(&ivc->lock);
-	/* We can't distinguish between file and kernel users. */
-	opened = ivc->user == ivc_user_kernel;
-	mutex_unlock(&ivc->lock);
-
-	return snprintf(buf, PAGE_SIZE, "%d\n", opened);
-}
-
 static ssize_t reserved_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -511,7 +429,7 @@ static ssize_t reserved_show(struct device *dev,
 	int reserved;
 
 	mutex_lock(&ivc->lock);
-	reserved = ivc->user != ivc_user_none;
+	reserved = ivc->reserved;
 	mutex_unlock(&ivc->lock);
 
 	return snprintf(buf, PAGE_SIZE, "%d\n", reserved);
@@ -525,51 +443,12 @@ static ssize_t peer_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", ivc->other_guestid);
 }
 
-static ssize_t loopback_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	struct ivc_dev *ivc = dev_get_drvdata(dev);
-	int loopback;
-
-	mutex_lock(&ivc->lock);
-	loopback = ivc->user == ivc_user_loopback;
-	mutex_unlock(&ivc->lock);
-
-	return snprintf(buf, PAGE_SIZE, "%d\n", loopback);
-}
-
-ssize_t loopback_store(struct device *dev, struct device_attribute *attr,
-		       const char *buf, size_t len)
-{
-	struct ivc_dev *ivc = dev_get_drvdata(dev);
-	long int mode;
-	int ret;
-
-	ret = kstrtol(buf, 10, &mode);
-	if (ret)
-		return -EINVAL;
-
-	if (mode == 0)
-		ret = ivc_disable_loopback(ivc);
-	else if (mode == 1)
-		ret = ivc_enable_loopback(ivc);
-	else
-		ret = -EINVAL;
-
-	if (ret != 0)
-		return ret;
-	else
-		return len;
-}
-
 struct device_attribute ivc_dev_attrs[] = {
 	__ATTR_RO(id),
 	__ATTR_RO(frame_size),
 	__ATTR_RO(nframes),
-	__ATTR_RO(opened),
 	__ATTR_RO(reserved),
 	__ATTR_RO(peer),
-	__ATTR(loopback, 0644, loopback_show, loopback_store),
 	__ATTR_NULL
 };
 
@@ -613,6 +492,7 @@ static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 
 	mutex_init(&ivc->lock);
 	init_waitqueue_head(&ivc->wq);
+	mutex_init(&ivc->file_lock);
 
 	ivc->minor = qd->id;
 	ivc->dev = MKDEV(hvd->ivc_major, ivc->minor);
@@ -949,10 +829,10 @@ struct tegra_hv_ivc_cookie *tegra_hv_ivc_reserve(struct device_node *dn,
 		return ERR_PTR(-ENODEV);
 
 	mutex_lock(&ivc->lock);
-	if (ivc->user != ivc_user_none) {
+	if (ivc->reserved) {
 		ret = -EBUSY;
 	} else {
-		ivc->user = ivc_user_kernel;
+		ivc->reserved = 1;
 		ret = 0;
 	}
 	mutex_unlock(&ivc->lock);
@@ -974,8 +854,8 @@ struct tegra_hv_ivc_cookie *tegra_hv_ivc_reserve(struct device_node *dn,
 		ret = ivc_request_cookie_irq(ivc);
 		if (ret) {
 			mutex_lock(&ivc->lock);
-			BUG_ON(ivc->user != ivc_user_kernel);
-			ivc->user = ivc_user_none;
+			BUG_ON(!ivc->reserved);
+			ivc->reserved = 0;
 			mutex_unlock(&ivc->lock);
 			return ERR_PTR(ret);
 		}
@@ -997,11 +877,11 @@ int tegra_hv_ivc_unreserve(struct tegra_hv_ivc_cookie *ivck)
 	ivc = cookie_to_ivc_dev(ivck);
 
 	mutex_lock(&ivc->lock);
-	if (ivc->user == ivc_user_kernel) {
+	if (ivc->reserved) {
 		if (ivc->cookie_ops)
 			ivc_release_irq(ivc);
 		ivc->cookie_ops = NULL;
-		ivc->user = ivc_user_none;
+		ivc->reserved = 0;
 		ret = 0;
 	} else {
 		ret = -EINVAL;
@@ -1060,19 +940,6 @@ uint32_t tegra_hv_ivc_tx_frames_available(struct tegra_hv_ivc_cookie *ivck)
 	return tegra_ivc_tx_frames_available(ivc);
 }
 EXPORT_SYMBOL(tegra_hv_ivc_tx_frames_available);
-
-int tegra_hv_ivc_set_loopback(struct tegra_hv_ivc_cookie *ivck, int mode)
-{
-	struct ivc_dev *ivc = cookie_to_ivc_dev(ivck);
-
-	if (mode == 0)
-		return ivc_disable_loopback(ivc);
-	else if (mode == 1)
-		return ivc_enable_loopback(ivc);
-	else
-		return -EINVAL;
-}
-EXPORT_SYMBOL(tegra_hv_ivc_set_loopback);
 
 int tegra_hv_ivc_dump(struct tegra_hv_ivc_cookie *ivck)
 {
@@ -1157,6 +1024,27 @@ int tegra_hv_mempool_unreserve(struct tegra_hv_ivm_cookie *ivmk)
 	return reserved ? 0 : -EINVAL;
 }
 EXPORT_SYMBOL(tegra_hv_mempool_unreserve);
+
+int tegra_hv_ivc_channel_notified(struct tegra_hv_ivc_cookie *ivck)
+{
+	struct ivc *ivc = &cookie_to_ivc_dev(ivck)->ivc;
+
+	return tegra_ivc_channel_notified(ivc);
+}
+EXPORT_SYMBOL(tegra_hv_ivc_channel_notified);
+
+void tegra_hv_ivc_channel_reset(struct tegra_hv_ivc_cookie *ivck)
+{
+	struct ivc_dev *ivc = cookie_to_ivc_dev(ivck);
+
+	if (ivc->cookie_ops) {
+		dev_err(ivc->device, "reset unsupported with callbacks");
+		BUG();
+	}
+
+	tegra_ivc_channel_reset(&ivc->ivc);
+}
+EXPORT_SYMBOL(tegra_hv_ivc_channel_reset);
 
 static int __init tegra_hv_mod_init(void)
 {

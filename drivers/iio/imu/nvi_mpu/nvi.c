@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1051,9 +1051,8 @@ int nvi_wr_user_ctrl(struct nvi_state *st, u8 user_ctrl)
 		user_ctrl |= BIT_FIFO_RST;
 	if (user_ctrl & BIT_FIFO_RST) {
 		st->flush = true;
-		fifo_enable = false;
 		/* must make sure FIFO is off or IRQ storm will occur */
-		nvi_user_ctrl_en(st, fifo_enable, i2c_enable);
+		nvi_user_ctrl_en(st, false, i2c_enable);
 		if (st->hal->part >= ICM20628) {
 			ret_t = nvi_wr_reg_bank_sel(st, REG_FIFO_RST_BANK);
 			if (!ret_t) {
@@ -1063,7 +1062,10 @@ int nvi_wr_user_ctrl(struct nvi_state *st, u8 user_ctrl)
 			if (user_ctrl == BIT_FIFO_RST)
 				/* then done */
 				return ret_t;
+
+			user_ctrl &= ~BIT_FIFO_RST;
 		}
+		fifo_enable = false;
 	}
 
 	nvi_user_ctrl_en(st, fifo_enable, i2c_enable);
@@ -3272,6 +3274,33 @@ static ssize_t nvi_data_store(struct device *dev,
 	return count;
 }
 
+ssize_t nvi_dbg_reg(struct nvi_state *st, char *buf)
+{
+	ssize_t t;
+	u8 data;
+	unsigned int i;
+	unsigned int j;
+	int ret;
+
+	t = sprintf(buf, "registers: (only data != 0 shown)\n");
+	for (j = 0; j < st->hal->reg_bank_n; j++) {
+		t += sprintf(buf + t, "bank %u:\n", j);
+		for (i = 0; i < st->hal->regs_n; i++) {
+			if ((j == st->hal->reg->fifo_r_w.bank) &&
+					     (i == st->hal->reg->fifo_r_w.reg))
+				continue;
+
+			ret = nvi_i2c_rd(st, j, i, 1, &data);
+			if (ret)
+				t += sprintf(buf + t, "%#2x=ERR\n", i);
+			else if (data)
+				t += sprintf(buf + t,
+					     "%#2x=%#2x\n", i, data);
+		}
+	}
+	return t;
+}
+
 static ssize_t nvi_data_show(struct device *dev,
 			     struct device_attribute *attr,
 			     char *buf)
@@ -3280,9 +3309,7 @@ static ssize_t nvi_data_show(struct device *dev,
 	struct nvi_state *st = iio_priv(indio_dev);
 	enum NVI_INFO info;
 	ssize_t t;
-	u8 data;
 	unsigned int i;
-	unsigned int j;
 	int ret;
 
 	info = st->info;
@@ -3325,23 +3352,8 @@ static ssize_t nvi_data_show(struct device *dev,
 			return sprintf(buf, "reset done\n");
 
 	case NVI_INFO_REGS:
-		t = sprintf(buf, "mutex_lock=%d (< 1 locked)\n",
-			    indio_dev->mlock.count.counter);
 		mutex_lock(&indio_dev->mlock);
-		t += sprintf(buf + t, "registers: (only data != 0 shown)\n");
-		for (j = 0; j < st->hal->reg_bank_n; j++) {
-			t += sprintf(buf + t, "bank %u:\n", j);
-			for (i = 0; i < st->hal->regs_n; i++) {
-				if ((j == st->hal->reg->fifo_r_w.bank) &&
-					     (i == st->hal->reg->fifo_r_w.reg))
-					data = 0;
-				else
-					nvi_i2c_rd(st, j, i, 1, &data);
-				if (data)
-					t += sprintf(buf + t,
-						     "%#2x=%#2x\n", i, data);
-			}
-		}
+		t = nvi_dbg_reg(st, buf);
 		mutex_unlock(&indio_dev->mlock);
 		return t;
 

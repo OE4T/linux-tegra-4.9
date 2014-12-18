@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -283,7 +283,8 @@ static int nvs_buf_push(struct iio_dev *indio_dev, unsigned char *data, s64 ts)
 			for (i = 0; i < bytes; i++)
 				dev_info(st->dev, "buf[%u]=%x\n",
 					 i, st->buf[i]);
-			dev_info(st->dev, "ts=%lld  diff=%lld\n", ts, st->ts_diff);
+			dev_info(st->dev,
+				 "ts=%lld  diff=%lld\n", ts, st->ts_diff);
 		}
 	}
 	if ((*st->fn_dev->sts & NVS_STS_SPEW_DATA) && ts) {

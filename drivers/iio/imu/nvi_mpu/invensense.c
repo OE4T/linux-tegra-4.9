@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
 * Copyright (C) 2012 Invensense, Inc.
 *
 * This software is licensed under the terms of the GNU General Public
@@ -1584,6 +1584,11 @@ static int inv_icm_selftest_read_samples(struct nvi_state *st, int dev,
 
 	/* Reset FIFO */
 	r = nvi_wr_user_ctrl(st, BIT_FIFO_RST);
+	if (r)
+		return r;
+
+	/* enable FIFO reading */
+	r = nvi_wr_user_ctrl(st, BIT_FIFO_EN);
 	if (r)
 		return r;
 

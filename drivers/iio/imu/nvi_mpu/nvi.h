@@ -1,6 +1,6 @@
 /*
 * Copyright (C) 2012 Invensense, Inc.
-* Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
 *
 * This software is licensed under the terms of the GNU General Public
 * License version 2, as published by the Free Software Foundation, and
@@ -585,6 +585,7 @@ struct nvi_state {
 };
 
 s64 nvi_get_time_ns(struct nvi_state *st);
+ssize_t nvi_dbg_reg(struct nvi_state *st, char *buf);
 int nvi_i2c_read(struct nvi_state *st, u16 addr, u8 reg, u16 len, u8 *buf);
 int nvi_i2c_rd(struct nvi_state *st, u8 bank, u8 reg, u16 len, u8 *buf);
 int nvi_i2c_write(struct nvi_state *st, u16 addr, u16 len, u8 *buf);

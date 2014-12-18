@@ -241,7 +241,7 @@
 	};
 
 	xusb_pad_ctl: padctl@0 { /* Put common control config here */
-		nvidia,ss_portmap = <0x2130>;
+		nvidia,ss_portmap = <0x21>;
 		nvidia,lane_owner = <0xff56>; /* Use 0xF to disable lane assign */
 		status = "okay";
 	};
@@ -251,7 +251,7 @@
 		/* nvidia,gpio_controls_muxed_ss_lanes; */
 		nvidia,gpio_ss1_sata = <0>;
 		nvidia,ulpicap = <0>; /* No ulpi support. can we remove */
-		nvidia,portmap = <0x0e0e>;
+		nvidia,portmap = <0x0e02>;
 		nvidia,common_padctl = <&xusb_pad_ctl>;
 		status = "okay";
 	};

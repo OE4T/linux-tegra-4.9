@@ -146,7 +146,7 @@ struct fifo_packet {
 
 static int packet_counter;
 static int num_remotes;
-static bool card_created;	/* default to 0 */
+struct snd_card *atvr_card;
 static int dev;
 static int index[SNDRV_CARDS] = SNDRV_DEFAULT_IDX;  /* Index 0-MAX */
 static char *id[SNDRV_CARDS] = SNDRV_DEFAULT_STR;   /* ID for this card */
@@ -341,7 +341,33 @@ struct snd_atvr {
 	uint32_t frames_in_period;
 	int16_t *pcm_buffer;
 
+	/* pointer to hid device */
+	struct hid_device *hdev;
+	atomic_t occupied;
 };
+
+static int atvr_mic_ctrl(struct hid_device *hdev, bool enable)
+{
+	unsigned char report[] = {
+		0x04, 0x0e, 0x00, 0x01,
+		0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		};
+	int ret;
+
+	report[3] = enable ? 0x01 : 0x00;
+	hid_info(hdev, "%s remote mic\n", enable ? "enable" : "disable");
+	ret =  hdev->hid_output_raw_report(hdev, report, sizeof(report),
+					HID_OUTPUT_REPORT);
+	if (ret < 0)
+		hid_info(hdev, "failed to send mic ctrl report, err=%d\n", ret);
+	else
+		ret = 0;
+
+	return ret;
+}
 
 /***************************************************************************/
 /************* Atomic FIFO *************************************************/
@@ -1006,11 +1032,30 @@ static int snd_atvr_pcm_open(struct snd_pcm_substream *substream)
 {
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
 	struct snd_pcm_runtime *runtime = substream->runtime;
+	int ret;
 
-	int ret = atomic_fifo_init(&atvr_snd->fifo_controller,
-				   MAX_PACKETS_PER_BUFFER);
-	if (ret)
+	if (unlikely(atomic_xchg(&atvr_snd->occupied, 1) == 1))
+		return -EBUSY;
+
+	if (atvr_snd->hdev == NULL) {
+		pr_warn("%s: remote is not ready\n", __func__);
+		atomic_xchg(&atvr_snd->occupied, 0);
+		return -EAGAIN;
+	}
+
+	ret = atvr_mic_ctrl(atvr_snd->hdev, true);
+
+	if (ret) {
+		atomic_xchg(&atvr_snd->occupied, 0);
 		return ret;
+	}
+
+	ret = atomic_fifo_init(&atvr_snd->fifo_controller,
+				   MAX_PACKETS_PER_BUFFER);
+	if (ret) {
+		atomic_xchg(&atvr_snd->occupied, 0);
+		return ret;
+	}
 
 	runtime->hw = atvr_snd->pcm_hw;
 	if (substream->pcm->device & 1) {
@@ -1034,6 +1079,7 @@ static int snd_atvr_pcm_open(struct snd_pcm_substream *substream)
 	if (atvr_snd->pcm_buffer == NULL) {
 		pr_err("%s:%d - ERROR PCM buffer allocation failed\n",
 			__func__, __LINE__);
+		atomic_xchg(&atvr_snd->occupied, 0);
 		return -ENOMEM;
 	}
 
@@ -1046,6 +1092,7 @@ static int snd_atvr_pcm_open(struct snd_pcm_substream *substream)
 			__func__, __LINE__);
 		vfree(atvr_snd->pcm_buffer);
 		atvr_snd->pcm_buffer = NULL;
+		atomic_xchg(&atvr_snd->occupied, 0);
 		return -ENOMEM;
 	}
 
@@ -1080,6 +1127,14 @@ static int snd_atvr_pcm_close(struct snd_pcm_substream *substream)
 		atvr_snd->fifo_packet_buffer = NULL;
 	}
 	spin_unlock(&s_substream_lock);
+
+	atomic_xchg(&atvr_snd->occupied, 0);
+
+	if (atvr_snd->hdev)
+		atvr_mic_ctrl(atvr_snd->hdev, false);
+	else
+		pr_warn("%s: unexpected remote connection lost\n", __func__);
+
 	return 0;
 }
 
@@ -1172,7 +1227,6 @@ static int snd_card_atvr_pcm(struct snd_atvr *atvr_snd,
 
 static int atvr_snd_initialize(struct hid_device *hdev)
 {
-	struct snd_card *card;
 	struct snd_atvr *atvr_snd;
 	int err;
 	int i;
@@ -1184,15 +1238,16 @@ static int atvr_snd_initialize(struct hid_device *hdev)
 		return -ENOENT;
 	}
 	err = snd_card_create(index[dev], id[dev], THIS_MODULE,
-			      sizeof(struct snd_atvr), &card);
+			      sizeof(struct snd_atvr), &atvr_card);
 	if (err < 0) {
 		pr_err("%s: snd_card_create() returned err %d\n",
 		       __func__, err);
 		return err;
 	}
-	hid_set_drvdata(hdev, card);
-	atvr_snd = card->private_data;
-	atvr_snd->card = card;
+	atvr_snd = atvr_card->private_data;
+	atvr_snd->card = atvr_card;
+	atomic_set(&atvr_snd->occupied, 0);
+
 	for (i = 0; i < MAX_PCM_DEVICES && i < pcm_devs[dev]; i++) {
 		if (pcm_substreams[dev] < 1)
 			pcm_substreams[dev] = 1;
@@ -1209,18 +1264,17 @@ static int atvr_snd_initialize(struct hid_device *hdev)
 
 	atvr_snd->pcm_hw = atvr_pcm_hardware;
 
-	strcpy(card->driver, "SHIELD Remote Audio");
-	strcpy(card->shortname, "SHDRAudio");
-	sprintf(card->longname, "SHIELD Remote %i audio", dev + 1);
+	strcpy(atvr_card->driver, "SHIELD Remote Audio");
+	strcpy(atvr_card->shortname, "SHDRAudio");
+	sprintf(atvr_card->longname, "SHIELD Remote %i audio", dev + 1);
 
-	snd_card_set_dev(card, &hdev->dev);
-
-	err = snd_card_register(card);
+	err = snd_card_register(atvr_card);
 	if (!err)
 		return 0;
 
 __nodev:
-	snd_card_free(card);
+	snd_card_free(atvr_card);
+	atvr_card = NULL;
 	return err;
 }
 
@@ -1350,6 +1404,7 @@ static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 
 static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 {
+	struct snd_atvr *atvr_snd;
 	int ret;
 
 	/* since vendor/product id filter doesn't work yet, because
@@ -1378,12 +1433,20 @@ static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 	 * only then to avoid race conditions on subsequent connections.
 	 * AudioService.java delays enabling the output
 	 */
-	if (!card_created) {
+	if (!atvr_card) {
 		ret = atvr_snd_initialize(hdev);
 		if (ret)
 			goto err_stop;
-		card_created = true;
 	}
+	/*
+	 * hdev pointer is not guaranteed to be the same thus following
+	 * stuff has to be updated every time.
+	 */
+	hid_set_drvdata(hdev, atvr_card);
+	atvr_snd = atvr_card->private_data;
+	atvr_snd->hdev = hdev;
+	snd_card_set_dev(atvr_card, &hdev->dev);
+
 	switch_set_state(&shdr_mic_switch, true);
 
 	pr_info("%s: remotes count %d->%d\n", __func__,
@@ -1400,11 +1463,16 @@ err_parse:
 
 static void atvr_remove(struct hid_device *hdev)
 {
+	struct snd_atvr *atvr_snd = hid_get_drvdata(hdev);
+
+	atvr_snd->hdev = NULL;
+
+	switch_set_state(&shdr_mic_switch, false);
+	hid_set_drvdata(hdev, NULL);
+	hid_hw_stop(hdev);
 	pr_info("%s: hdev->name = %s removed, num %d->%d\n",
 		__func__, hdev->name, num_remotes, num_remotes - 1);
 	num_remotes--;
-	switch_set_state(&shdr_mic_switch, false);
-	hid_hw_stop(hdev);
 }
 
 static const struct hid_device_id atvr_devices[] = {

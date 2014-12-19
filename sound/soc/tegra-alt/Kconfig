@@ -216,7 +216,7 @@ config SND_SOC_TEGRA_GRENADA_ALT
 config SND_SOC_TEGRA_T210REF_MOBILE_ALT
 	tristate "SoC Audio support for T210Ref mobile"
 	depends on SND_SOC_TEGRA_ALT && I2C
-	depends on MACH_GRENADA
+	depends on ARCH_TEGRA_21x_SOC
 	select SND_SOC_TEGRA210_XBAR_ALT
 	select SND_SOC_TEGRA210_PCM_ALT
 	select SND_SOC_TEGRA210_ADMA_ALT
@@ -240,7 +240,7 @@ config SND_SOC_TEGRA_T210REF_MOBILE_ALT
 config SND_SOC_TEGRA_T210REF_MOBILE_ES755_ALT
 	tristate "SoC Audio support for T210Ref mobile"
 	depends on SND_SOC_TEGRA_ALT && I2C
-	depends on MACH_GRENADA
+	depends on ARCH_TEGRA_21x_SOC
 	select SND_SOC_TEGRA210_XBAR_ALT
 	select SND_SOC_TEGRA210_PCM_ALT
 	select SND_SOC_TEGRA210_ADMA_ALT
@@ -265,7 +265,7 @@ config SND_SOC_TEGRA_T210REF_MOBILE_ES755_ALT
 config SND_SOC_TEGRA_T210REF_ALT
 	tristate "SoC Audio support for T210Ref"
 	depends on SND_SOC_TEGRA_ALT
-	depends on MACH_GRENADA
+	depends on ARCH_TEGRA_21x_SOC
 	select SND_SOC_TEGRA210_XBAR_ALT
 	select SND_SOC_TEGRA210_PCM_ALT
 	select SND_SOC_TEGRA210_ADMA_ALT

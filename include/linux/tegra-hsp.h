@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,47 +17,59 @@
 #ifndef _LINUX_TEGRA_HSP_H
 #define _LINUX_TEGRA_HSP_H
 
-enum tegra_hsp_db_master {
-	HSP_DB_MASTER_CCPLEX,
-	HSP_DB_MASTER_DPMU,
-	HSP_DB_MASTER_BPMP,
-	HSP_DB_MASTER_SPE,
-	HSP_DB_MASTER_SCE = 9,
-	HSP_DB_MASTER_APE,
-	HSP_DB_NR_MASTERS,
+#define	HSP_FIRST_MASTER	1
+#define	HSP_FIRST_DB		0
+
+enum tegra_hsp_master {
+	HSP_MASTER_CCPLEX = HSP_FIRST_MASTER,
+	HSP_MASTER_DPMU,
+	HSP_MASTER_BPMP,
+	HSP_MASTER_SPE,
+	HSP_MASTER_SCE,
+	HSP_MASTER_DMA,
+	HSP_MASTER_TSECA,
+	HSP_MASTER_TSECB,
+	HSP_MASTER_JTAGM,
+	HSP_MASTER_CSITE,
+	HSP_MASTER_APE,
+	HSP_MASTER_PEATRANS,
+	HSP_LAST_MASTER = HSP_MASTER_PEATRANS,
 };
 
 enum tegra_hsp_doorbell {
-	HSP_DB_DPMU,
+	HSP_DB_DPMU = HSP_FIRST_DB,
 	HSP_DB_CCPLEX,
 	HSP_DB_CCPLEX_TZ,
 	HSP_DB_BPMP,
 	HSP_DB_SPE,
 	HSP_DB_SCE,
 	HSP_DB_APE,
+	HSP_LAST_DB = HSP_DB_APE,
 	HSP_NR_DBS,
 };
 
-enum tegra_hsp_init_status {
-	HSP_INIT_PENDING,
-	HSP_INIT_FAILED,
-	HSP_INIT_OKAY,
-};
+typedef void (*db_handler_t)(int master, void *data);
 
-int tegra_hsp_db_enable_master(enum tegra_hsp_db_master master);
+int tegra_hsp_db_enable_master(enum tegra_hsp_master master);
+
+int tegra_hsp_db_get_enabled_masters(void);
 
 int tegra_hsp_db_ring(enum tegra_hsp_doorbell dbell);
 
-int tegra_hsp_db_enabled(enum tegra_hsp_doorbell dbell);
+int tegra_hsp_db_can_ring(enum tegra_hsp_doorbell dbell);
 
-int tegra_hsp_db_listen(irq_handler_t callback);
+int tegra_hsp_db_add_handler(int master, db_handler_t handler, void *data);
 
-u32 tegra_hsp_db_get_pending(void);
+int tegra_hsp_db_del_handler(int master);
 
-void tegra_hsp_db_clr_pending(u32 mask);
+int tegra_hsp_db_get_pending(void);
 
-enum tegra_hsp_init_status tegra_hsp_get_init_status(void);
+int tegra_hsp_db_clr_pending(u32 mask);
 
-#define tegra_hsp_db_pending(mask, master)	((mask) & (1 << (master)))
+int tegra_hsp_db_get_raw(void);
+
+int tegra_hsp_db_clr_raw(u32 mask);
+
+#define tegra_hsp_find_master(mask, master)	((mask) & (1 << (master)))
 
 #endif

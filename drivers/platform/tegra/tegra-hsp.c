@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,11 +14,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/kernel.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
+#include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <linux/device.h>
 #include <linux/spinlock.h>
@@ -28,6 +30,12 @@
 #define HSP_DB_REG_ENABLE		0x4
 #define HSP_DB_REG_RAW			0x8
 #define HSP_DB_REG_PENDING		0xc
+
+enum tegra_hsp_init_status {
+	HSP_INIT_PENDING,
+	HSP_INIT_FAILED,
+	HSP_INIT_OKAY,
+};
 
 struct hsp_top {
 	int nr_sm;
@@ -40,12 +48,27 @@ struct hsp_top {
 	spinlock_t lock;
 };
 
+struct db_handler_info {
+	db_handler_t	handler;
+	void			*data;
+};
+
 static struct hsp_top hsp_top;
 static void __iomem *db_bases[HSP_NR_DBS];
-static irq_handler_t db_irq_cb;
 
-#define HSP_DB_OFF(i, d) \
+static DEFINE_SPINLOCK(db_handlers_lock);
+static struct db_handler_info db_handlers[HSP_LAST_MASTER + 1];
+
+#define hsp_db_offset(i, d) \
 	(d.base + ((1 + (d.nr_sm>>1) + d.nr_ss + d.nr_as)<<16) + (i) * 0x100)
+
+#define MASTER_NS_SHIFT	16
+#define MASTER_NS_LIMIT	((1 << MASTER_NS_SHIFT) - 1)
+
+#define ns_masters(m)	(m >> MASTER_NS_SHIFT)
+#define master_bit(m)	(1 << (m + MASTER_NS_SHIFT))
+#define bad_master(m)	(m < HSP_FIRST_MASTER || m > HSP_LAST_MASTER)
+#define hsp_ready() (hsp_top.status == HSP_INIT_OKAY)
 
 static inline u32 hsp_readl(void __iomem *base, int reg)
 {
@@ -60,29 +83,51 @@ static inline void hsp_writel(void __iomem *base, int reg, u32 val)
 
 static irqreturn_t dbell_irq(int irq, void *data)
 {
-	u32 reg;
-	reg = hsp_readl(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_PENDING);
+	ulong reg;
+	int master;
+	struct db_handler_info *info;
+	reg = (ulong)hsp_readl(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_PENDING);
 	hsp_writel(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_PENDING, reg);
-	return likely(db_irq_cb) ?
-		db_irq_cb(irq, (void *)((uintptr_t)reg)) : IRQ_HANDLED;
+	reg = ns_masters(reg);
+	spin_lock(&db_handlers_lock);
+	for_each_set_bit(master, &reg, HSP_LAST_MASTER + 1) {
+		info = &db_handlers[master];
+		if (info)
+			info->handler(master, info->data);
+	}
+	spin_unlock(&db_handlers_lock);
+	return IRQ_HANDLED;
 }
 
 /**
- * tegra_hsp_db_enable_master: turn on the interrupt from <master>
+ * tegra_hsp_db_get_enabled_masters: get masters that can ring CCPLEX
+ * @master:	 HSP master
+ *
+ * Returns the mask of enabled masters of CCPLEX.
+ */
+int tegra_hsp_db_get_enabled_masters(void)
+{
+	if (!hsp_ready())
+		return -EINVAL;
+	return hsp_readl(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_ENABLE);
+}
+EXPORT_SYMBOL(tegra_hsp_db_get_enabled_masters);
+
+/**
+ * tegra_hsp_db_enable_master: allow <master> to ring CCPLEX
  * @master:	 HSP master
  *
  * Returns 0 if successful.
  */
-int tegra_hsp_db_enable_master(enum tegra_hsp_db_master master)
+int tegra_hsp_db_enable_master(enum tegra_hsp_master master)
 {
 	u32 reg;
 	unsigned long flags;
-	BUG_ON(hsp_top.status != HSP_INIT_OKAY);
-	if (master >= HSP_DB_NR_MASTERS)
+	if (!hsp_ready() || master > HSP_LAST_MASTER)
 		return -EINVAL;
 	spin_lock_irqsave(&hsp_top.lock, flags);
 	reg = hsp_readl(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_ENABLE);
-	reg |= (1 << master);
+	reg |= master_bit(master);
 	hsp_writel(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_ENABLE, reg);
 	spin_unlock_irqrestore(&hsp_top.lock, flags);
 	return 0;
@@ -97,8 +142,7 @@ EXPORT_SYMBOL(tegra_hsp_db_enable_master);
  */
 int tegra_hsp_db_ring(enum tegra_hsp_doorbell dbell)
 {
-	BUG_ON(hsp_top.status != HSP_INIT_OKAY);
-	if (dbell >= HSP_NR_DBS)
+	if (!hsp_ready() || dbell >= HSP_NR_DBS)
 		return -EINVAL;
 	hsp_writel(db_bases[dbell], HSP_DB_REG_TRIGGER, 1);
 	return 0;
@@ -106,67 +150,119 @@ int tegra_hsp_db_ring(enum tegra_hsp_doorbell dbell)
 EXPORT_SYMBOL(tegra_hsp_db_ring);
 
 /**
- * tegra_hsp_db_enabled: check if CPU can ring the dbell
+ * tegra_hsp_db_can_ring: check if CCPLEX can ring the <dbell>
  * @dbell:	 HSP dbell to be checked
  *
- * Returns 0 if successful.
+ * Returns 1 if CCPLEX can ring <dbell> otherwise 0.
  */
-int tegra_hsp_db_enabled(enum tegra_hsp_doorbell dbell)
+int tegra_hsp_db_can_ring(enum tegra_hsp_doorbell dbell)
 {
 	int reg;
-	BUG_ON(hsp_top.status != HSP_INIT_OKAY);
-	if (dbell >= HSP_NR_DBS)
-		return -EINVAL;
+	if (!hsp_ready() || dbell >= HSP_NR_DBS)
+		return 0;
 	reg = hsp_readl(db_bases[dbell], HSP_DB_REG_ENABLE);
-	return reg & (1 << (16 + HSP_DB_MASTER_CCPLEX));
+	return !!(reg & master_bit(HSP_MASTER_CCPLEX));
 }
-EXPORT_SYMBOL(tegra_hsp_db_enabled);
+EXPORT_SYMBOL(tegra_hsp_db_can_ring);
 
-/**
- * tegra_hsp_db_listen: provide a callback for CPU doorbell ISR
- * @callback:	doorbell ISR callback
- *
- * Returns 0 if successful.
- */
-int tegra_hsp_db_listen(irq_handler_t callback)
+static int tegra_hsp_db_get_signals(u32 reg)
 {
-	if (!callback)
+	u32 val;
+	if (!hsp_ready())
 		return -EINVAL;
-	db_irq_cb = callback;
+	val = hsp_readl(db_bases[HSP_DB_CCPLEX], reg);
+	return val >> MASTER_NS_SHIFT;
+}
+
+static int tegra_hsp_db_clr_signals(u32 reg, u32 mask)
+{
+	if (!hsp_ready() || mask > MASTER_NS_LIMIT)
+		return -EINVAL;
+	hsp_writel(db_bases[HSP_DB_CCPLEX], reg, mask);
 	return 0;
 }
-EXPORT_SYMBOL(tegra_hsp_db_listen);
 
 /**
- * tegra_hsp_db_get_pending: get pending signals to ccplex
+ * tegra_hsp_db_get_pending: get pending rings to CCPLEX
  *
  * Returns a mask of pending signals.
  */
-u32 tegra_hsp_db_get_pending(void)
+int tegra_hsp_db_get_pending(void)
 {
-	BUG_ON(hsp_top.status != HSP_INIT_OKAY);
-	return hsp_readl(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_PENDING);
+	return tegra_hsp_db_get_signals(HSP_DB_REG_PENDING);
 }
 EXPORT_SYMBOL(tegra_hsp_db_get_pending);
 
 /**
- * tegra_hsp_db_clr_pending: clear all pending signals of ccplex
+ * tegra_hsp_db_clr_pending: clear rings of ccplex based on <mask>
+ * @mask:	mask of masters to be cleared
  */
-void tegra_hsp_db_clr_pending(u32 mask)
+int tegra_hsp_db_clr_pending(u32 mask)
 {
-	BUG_ON(hsp_top.status != HSP_INIT_OKAY);
-	hsp_writel(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_PENDING, mask);
+	return tegra_hsp_db_clr_signals(HSP_DB_REG_PENDING, mask);
 }
 EXPORT_SYMBOL(tegra_hsp_db_clr_pending);
 
 /**
- * tegra_hsp_get_init_status: get the result of tegra_hsp_probe
+ * tegra_hsp_db_get_raw: get unmasked rings to CCPLEX
+ *
+ * Returns a mask of unmasked pending signals.
  */
-enum tegra_hsp_init_status tegra_hsp_get_init_status(void)
+int tegra_hsp_db_get_raw(void)
 {
-	return hsp_top.status;
+	return tegra_hsp_db_get_signals(HSP_DB_REG_RAW);
 }
-EXPORT_SYMBOL(tegra_hsp_get_init_status);
+EXPORT_SYMBOL(tegra_hsp_db_get_raw);
+
+/**
+ * tegra_hsp_db_clr_raw: clear unmasked rings of ccplex based on <mask>
+ * @mask:	mask of masters to be cleared
+ */
+int tegra_hsp_db_clr_raw(u32 mask)
+{
+	return tegra_hsp_db_clr_signals(HSP_DB_REG_RAW, mask);
+}
+EXPORT_SYMBOL(tegra_hsp_db_clr_raw);
+
+/**
+ * tegra_hsp_db_add_handler: register an CCPLEX doorbell IRQ handler
+ * @ master:	master id
+ * @ handler:	IRQ handler
+ * @ data:		custom data
+ *
+ * Returns 0 if successful.
+ */
+int tegra_hsp_db_add_handler(int master, db_handler_t handler, void *data)
+{
+	ulong flags;
+	if (!handler || bad_master(master))
+		return -EINVAL;
+	spin_lock_irqsave(&db_handlers_lock, flags);
+	db_handlers[master].handler = handler;
+	db_handlers[master].data = data;
+	spin_unlock_irqrestore(&db_handlers_lock, flags);
+	return 0;
+}
+EXPORT_SYMBOL(tegra_hsp_db_add_handler);
+
+/**
+ * tegra_hsp_db_del_handler: unregister an CCPLEX doorbell IRQ handler
+ * @handler:	IRQ handler
+ *
+ * Returns 0 if successful.
+ */
+int tegra_hsp_db_del_handler(int master)
+{
+	ulong flags;
+	if (bad_master(master))
+		return -EINVAL;
+	spin_lock_irqsave(&db_handlers_lock, flags);
+	db_handlers[master].handler = NULL;
+	db_handlers[master].data = NULL;
+	spin_unlock_irqrestore(&db_handlers_lock, flags);
+	return 0;
+}
+EXPORT_SYMBOL(tegra_hsp_db_del_handler);
 
 static int tegra_hsp_probe(struct platform_device *pdev)
 {
@@ -200,8 +296,8 @@ static int tegra_hsp_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	for (i = HSP_DB_DPMU; i < HSP_NR_DBS; i++) {
-		db_bases[i] = HSP_DB_OFF(i, hsp_top);
+	for (i = HSP_FIRST_DB; i <= HSP_LAST_DB; i++) {
+		db_bases[i] = hsp_db_offset(i, hsp_top);
 		dev_dbg(dev, "db[%d]: %p\n", i, db_bases[i]);
 	}
 
@@ -216,11 +312,9 @@ static int tegra_hsp_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	spin_lock_init(&hsp_top.lock);
-
 	hsp_top.status = HSP_INIT_OKAY;
 
-	return 0;
+	return ret;
 }
 
 static const struct of_device_id tegra_hsp_of_match[] = {

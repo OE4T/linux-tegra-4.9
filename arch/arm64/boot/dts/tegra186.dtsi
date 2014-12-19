@@ -1,7 +1,7 @@
 /*
  * arch/arm64/boot/dts/tegra186.dtsi
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -332,7 +332,7 @@
 
 	hsp_top {
 		compatible = "nvidia,tegra186-hsp";
-		reg = <0x0 0x23c00000 0x0 0x100000>;
+		reg = <0x0 0x3c00000 0x0 0xa0000>;
 		interrupts = <0 176 4>; /* doorbell IRQ for CCPLEX */
 		num-SM = <0x8>;
 		num-AS = <0x2>;

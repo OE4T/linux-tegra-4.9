@@ -113,12 +113,16 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 	dc->valid_windows = 0x3f; /* Assign all windows to this head */
 	for (i = 0; i < DC_N_WINDOWS; ++i, ++syncpt_name[5]) {
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
+
 		win->syncpt.id = nvhost_get_syncpt_client_managed(dc->ndev,
 								syncpt_name);
 
 		/* allocate input LUT memory and assign to HW */
 		if (nvdisp_alloc_input_lut(dc, win, true))
 			goto INIT_ERR;
+
+		/* init default CSC */
+		tegra_nvdisp_init_csc_defaults(&win->csc);
 	}
 
 	dc->valid_windows = 0;

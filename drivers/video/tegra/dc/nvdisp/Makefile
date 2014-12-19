@@ -7,3 +7,5 @@ obj-y += nvdisp_stub.o
 obj-y += nvdisp_cursor.o
 obj-y += nvdisp_config.o
 obj-$(CONFIG_TEGRA_LUT_V2) += nvdisp_lut.o
+obj-$(CONFIG_TEGRA_CSC_V2) += nvdisp_csc.o
+

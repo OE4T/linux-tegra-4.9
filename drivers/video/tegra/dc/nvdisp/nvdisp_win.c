@@ -564,6 +564,11 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 
 		tegra_nvdisp_win_attribute(win);
 
+		if (dc_win->csc_dirty) {
+			tegra_nvdisp_set_csc(win, &dc_win->csc);
+			dc_win->csc_dirty = false;
+		}
+
 		dc_win->dirty = 1;
 		win->dirty = 1;
 

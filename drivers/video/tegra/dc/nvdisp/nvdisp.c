@@ -215,8 +215,8 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 		nvdisp_cont_syncpt_vsync_r());
 
 	/* Init interrupts */
-	/* All interrupts are edge trigger, and polarity is high */
-	tegra_dc_writel(dc, 0xffffffff, nvdisp_int_type_r());
+	/* Setting Int type, polarity is left as default now */
+	tegra_dc_writel(dc, 0x3C001004, nvdisp_int_type_r());
 
 	/* enable interrupts for vblank, frame_end and underflows */
 	int_enable = nvdisp_cmd_int_status_frame_end_f(1) |

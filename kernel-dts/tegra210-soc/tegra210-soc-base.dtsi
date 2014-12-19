@@ -17,6 +17,7 @@
 #include "tegra210-platforms/tegra210-thermal.dtsi"
 #include <dt-bindings/gpio/tegra-gpio.h>
 #include <dt-bindings/padctrl/tegra210-pads.h>
+#include <dt-bindings/ata/ahci-tegra.h>
 
 / {
 	compatible = "nvidia,tegra210";

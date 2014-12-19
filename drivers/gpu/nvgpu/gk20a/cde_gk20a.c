@@ -759,12 +759,13 @@ __releases(&cde_app->mutex)
 
 	mutex_lock(&cde_app->mutex);
 
-	if (!cde_ctx->in_use)
+	if (cde_ctx->in_use) {
+		cde_ctx->in_use = false;
+		list_move(&cde_ctx->list, &cde_app->free_contexts);
+		cde_app->ctx_usecount--;
+	} else {
 		gk20a_dbg_info("double release cde context %p", cde_ctx);
-
-	cde_ctx->in_use = false;
-	list_move(&cde_ctx->list, &cde_app->free_contexts);
-	cde_app->ctx_usecount--;
+	}
 
 	mutex_unlock(&cde_app->mutex);
 }

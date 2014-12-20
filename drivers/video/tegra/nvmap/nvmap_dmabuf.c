@@ -1,7 +1,7 @@
 /*
  * dma_buf exporter for nvmap
  *
- * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -409,7 +409,9 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 			err = -ENOMEM;
 			goto err_map;
 		}
+#ifndef CONFIG_MODS
 		BUG_ON(ents != 1);
+#endif
 	}
 
 	if (__nvmap_dmabuf_prep_sgt_locked(attach, dir, sgt)) {

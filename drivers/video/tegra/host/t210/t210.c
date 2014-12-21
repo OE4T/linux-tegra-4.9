@@ -410,7 +410,7 @@ struct nvhost_device_data t21_vic_info = {
 	.modulemutexes		= {NVMODMUTEX_VIC},
 	.devfs_name		= "vic",
 	.clocks			= {{"vic03", UINT_MAX, 0, TEGRA_MC_CLIENT_VIC},
-				   {"emc", HOST_EMC_FLOOR,
+				   {"emc", UINT_MAX,
 				   NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},
 				   {"vic_floor", 0,
 				   NVHOST_MODULE_ID_CBUS_FLOOR},

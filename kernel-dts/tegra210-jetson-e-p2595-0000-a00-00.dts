@@ -39,6 +39,7 @@
 #include <dt-bindings/iio/meter/ina3221x.h>
 #include "tegra210-platforms/tegra210-foster-e-extcon-p2530-0930-e01.dtsi"
 #include "tegra210-platforms/tegra210-loki-e-emc-e01.dtsi"
+#include "tegra210-platforms/tegra210-edp.dtsi"
 
 / {
 	model = "jetson_e";
@@ -304,4 +305,15 @@
 			reg = <0x1c>;
 		};
         };
+
+	cpu_edp {
+		status = "okay";
+		nvidia,edp_limit = <25000>;
+	};
+
+	gpu_edp {
+		status = "okay";
+		nvidia,edp_limit = <25000>;
+	};
+
 };

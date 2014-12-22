@@ -47,6 +47,7 @@
 #include "cg_regs.c"
 
 #define HOST_EMC_FLOOR 204000000
+#define HOST_NVDEC_EMC_FLOOR 102000000
 #define TSEC_POWERGATE_DELAY 500
 
 #define BIT64(nr) (1ULL << (nr))
@@ -306,7 +307,7 @@ struct nvhost_device_data t21_nvdec_info = {
 	.powergate_delay	= 500,
 	.can_powergate		= true,
 	.clocks			= {{"nvdec", UINT_MAX, 0, TEGRA_MC_CLIENT_NVDEC},
-				   {"emc", HOST_EMC_FLOOR,
+				   {"emc", HOST_NVDEC_EMC_FLOOR,
 				NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
 	.engine_cg_regs		= t21x_nvdec_gating_registers,
 	.engine_can_cg		= true,

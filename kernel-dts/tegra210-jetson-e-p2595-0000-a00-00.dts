@@ -40,6 +40,7 @@
 #include "tegra210-platforms/tegra210-foster-e-extcon-p2530-0930-e01.dtsi"
 #include "tegra210-platforms/tegra210-loki-e-emc-e01.dtsi"
 #include "tegra210-platforms/tegra210-edp.dtsi"
+#include "tegra210-platforms/tegra210-sysedp.dtsi"
 
 / {
 	model = "jetson_e";
@@ -326,6 +327,54 @@
 			reg = <0x1c>;
 		};
         };
+
+	sysedp {
+		compatible = "nvidia,tegra124-sysedp";
+		nvidia,margin = <0>;
+		nvidia,min_budget = <0>;
+		nvidia,initial_budget = <25000>;
+
+		consumers {
+			consumer1 {
+				nvidia,consumer_name = "ov7695";
+				nvidia,states = <0 124>;
+			};
+			consumer2 {
+				nvidia,consumer_name = "primary-wifi";
+				nvidia,states = <0 2345>;
+			};
+			consumer3 {
+				nvidia,consumer_name = "secondary-wifi";
+				nvidia,states = <0 1170>;
+			};
+			/*eMMC*/
+			consumer4 {
+				nvidia,consumer_name = "sdhci-tegra.3";
+				nvidia,states = <0 1785>;
+			};
+			consumer5 {
+				nvidia,consumer_name = "display_0";
+				nvidia,states = <0 616>;
+			};
+			consumer6 {
+				nvidia,consumer_name = "display_1";
+				nvidia,states = <0 616>;
+			};
+			consumer7 {
+				nvidia,consumer_name = "codec+speaker";
+				nvidia,states = <0 1270>;
+			};
+			consumer8 {
+				nvidia,consumer_name = "pwm-backlight";
+				nvidia,states = <0 127 255 382 510 638 765 893 1020 1148 1276>;
+			};
+			/*SD Card */
+			consumer9 {
+				nvidia,consumer_name = "sdhci-tegra.0";
+				nvidia,states = <0 1785>;
+			};
+		};
+	};
 
 	cpu_edp {
 		status = "okay";

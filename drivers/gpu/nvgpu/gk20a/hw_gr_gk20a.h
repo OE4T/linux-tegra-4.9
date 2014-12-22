@@ -1350,6 +1350,10 @@ static inline u32 gr_ds_zbc_color_fmt_val_rf32_gf32_bf32_af32_v(void)
 {
 	return 0x00000004;
 }
+static inline u32 gr_ds_zbc_color_fmt_val_a8_b8_g8_r8_v(void)
+{
+	return 0x00000028;
+}
 static inline u32 gr_ds_zbc_z_r(void)
 {
 	return 0x00405818;

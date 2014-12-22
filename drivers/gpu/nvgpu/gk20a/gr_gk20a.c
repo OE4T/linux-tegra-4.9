@@ -3805,7 +3805,6 @@ static int gr_gk20a_load_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
 {
 	int i, ret;
 
-	mutex_init(&gr->zbc_lock);
 	for (i = 0; i < gr->max_used_color_index; i++) {
 		struct zbc_color_table *c_tbl = &gr->zbc_col_tbl[i];
 		struct zbc_entry zbc_val;
@@ -3842,9 +3841,22 @@ int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 	struct zbc_entry zbc_val;
 	u32 i, err;
 
+	mutex_init(&gr->zbc_lock);
+
 	/* load default color table */
 	zbc_val.type = GK20A_ZBC_TYPE_COLOR;
 
+	/* Opaque black (i.e. solid black, fmt 0x28 = A8B8G8R8) */
+	zbc_val.format = gr_ds_zbc_color_fmt_val_a8_b8_g8_r8_v();
+	for (i = 0; i < GK20A_ZBC_COLOR_VALUE_SIZE; i++) {
+		zbc_val.color_ds[i] = 0;
+		zbc_val.color_l2[i] = 0;
+	}
+	zbc_val.color_l2[0] = 0xff000000;
+	zbc_val.color_ds[3] = 0x3f800000;
+	err = gr_gk20a_add_zbc(g, gr, &zbc_val);
+
+	/* Transparent black = (fmt 1 = zero) */
 	zbc_val.format = gr_ds_zbc_color_fmt_val_zero_v();
 	for (i = 0; i < GK20A_ZBC_COLOR_VALUE_SIZE; i++) {
 		zbc_val.color_ds[i] = 0;
@@ -3852,29 +3864,16 @@ int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 	}
 	err = gr_gk20a_add_zbc(g, gr, &zbc_val);
 
+	/* Opaque white (i.e. solid white) = (fmt 2 = uniform 1) */
 	zbc_val.format = gr_ds_zbc_color_fmt_val_unorm_one_v();
 	for (i = 0; i < GK20A_ZBC_COLOR_VALUE_SIZE; i++) {
-		zbc_val.color_ds[i] = 0xffffffff;
-		zbc_val.color_l2[i] = 0x3f800000;
-	}
-	err |= gr_gk20a_add_zbc(g, gr, &zbc_val);
-
-	zbc_val.format = gr_ds_zbc_color_fmt_val_rf32_gf32_bf32_af32_v();
-	for (i = 0; i < GK20A_ZBC_COLOR_VALUE_SIZE; i++) {
-		zbc_val.color_ds[i] = 0;
-		zbc_val.color_l2[i] = 0;
-	}
-	err |= gr_gk20a_add_zbc(g, gr, &zbc_val);
-
-	zbc_val.format = gr_ds_zbc_color_fmt_val_rf32_gf32_bf32_af32_v();
-	for (i = 0; i < GK20A_ZBC_COLOR_VALUE_SIZE; i++) {
 		zbc_val.color_ds[i] = 0x3f800000;
-		zbc_val.color_l2[i] = 0x3f800000;
+		zbc_val.color_l2[i] = 0xffffffff;
 	}
 	err |= gr_gk20a_add_zbc(g, gr, &zbc_val);
 
 	if (!err)
-		gr->max_default_color_index = 4;
+		gr->max_default_color_index = 3;
 	else {
 		gk20a_err(dev_from_gk20a(g),
 			   "fail to load default zbc color table\n");
@@ -3885,12 +3884,12 @@ int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 	zbc_val.type = GK20A_ZBC_TYPE_DEPTH;
 
 	zbc_val.format = gr_ds_zbc_z_fmt_val_fp32_v();
-	zbc_val.depth = 0;
-	err = gr_gk20a_add_zbc(g, gr, &zbc_val);
-
-	zbc_val.format = gr_ds_zbc_z_fmt_val_fp32_v();
 	zbc_val.depth = 0x3f800000;
 	err |= gr_gk20a_add_zbc(g, gr, &zbc_val);
+
+	zbc_val.format = gr_ds_zbc_z_fmt_val_fp32_v();
+	zbc_val.depth = 0;
+	err = gr_gk20a_add_zbc(g, gr, &zbc_val);
 
 	if (!err)
 		gr->max_default_depth_index = 2;
@@ -4311,10 +4310,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	data = gk20a_readl(g, gr_status_mask_r());
 	gk20a_writel(g, gr_status_mask_r(), data & gr->status_disable_mask);
 
-	if (gr->sw_ready)
-		gr_gk20a_load_zbc_table(g, gr);
-	else
-		gr_gk20a_load_zbc_default_table(g, gr);
+	gr_gk20a_load_zbc_table(g, gr);
 
 	g->ops.ltc.init_cbc(g, gr);
 
@@ -4624,6 +4620,8 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 	err = gr_gk20a_init_access_map(g);
 	if (err)
 		goto clean_up;
+
+	gr_gk20a_load_zbc_default_table(g, gr);
 
 	mutex_init(&gr->ctx_mutex);
 	spin_lock_init(&gr->ch_tlb_lock);

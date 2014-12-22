@@ -238,4 +238,16 @@ static inline u32 ctxsw_prog_main_image_misc_options_verif_features_disabled_f(v
 {
 	return 0x0;
 }
+static inline u32 ctxsw_prog_main_image_preemption_options_o(void)
+{
+	return 0x00000060;
+}
+static inline u32 ctxsw_prog_main_image_preemption_options_control_f(u32 v)
+{
+	return (v & 0x3) << 0;
+}
+static inline u32 ctxsw_prog_main_image_preemption_options_control_cta_enabled_f(void)
+{
+	return 0x1;
+}
 #endif

@@ -223,9 +223,9 @@ struct page_directory_gk20a {
 struct priv_cmd_queue {
 	struct priv_cmd_queue_mem_desc mem;
 	u64 base_gpuva;	/* gpu_va base */
-	u16 size;	/* num of entries in words */
-	u16 put;	/* put for priv cmd queue */
-	u16 get;	/* get for priv cmd queue */
+	u32 size;	/* num of entries in words */
+	u32 put;	/* put for priv cmd queue */
+	u32 get;	/* get for priv cmd queue */
 	struct list_head free;	/* list of pre-allocated free entries */
 	struct list_head head;	/* list of used entries */
 };
@@ -233,8 +233,8 @@ struct priv_cmd_queue {
 struct priv_cmd_entry {
 	u32 *ptr;
 	u64 gva;
-	u16 get;	/* start of entry in queue */
-	u16 size;	/* in words */
+	u32 get;	/* start of entry in queue */
+	u32 size;	/* in words */
 	u32 gp_get;	/* gp_get when submitting last priv cmd */
 	u32 gp_put;	/* gp_put when submitting last priv cmd */
 	u32 gp_wrap;	/* wrap when submitting last priv cmd */

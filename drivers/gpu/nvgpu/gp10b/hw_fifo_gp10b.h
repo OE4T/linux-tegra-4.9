@@ -276,23 +276,23 @@ static inline u32 fifo_intr_mmu_fault_info_r(u32 i)
 }
 static inline u32 fifo_intr_mmu_fault_info_type_v(u32 r)
 {
-	return (r >> 0) & 0xf;
+	return (r >> 0) & 0x1f;
 }
-static inline u32 fifo_intr_mmu_fault_info_engine_subid_v(u32 r)
+static inline u32 fifo_intr_mmu_fault_info_client_type_v(u32 r)
 {
-	return (r >> 6) & 0x1;
+	return (r >> 20) & 0x1;
 }
-static inline u32 fifo_intr_mmu_fault_info_engine_subid_gpc_v(void)
+static inline u32 fifo_intr_mmu_fault_info_client_type_gpc_v(void)
 {
 	return 0x00000000;
 }
-static inline u32 fifo_intr_mmu_fault_info_engine_subid_hub_v(void)
+static inline u32 fifo_intr_mmu_fault_info_client_type_hub_v(void)
 {
 	return 0x00000001;
 }
 static inline u32 fifo_intr_mmu_fault_info_client_v(u32 r)
 {
-	return (r >> 8) & 0x3f;
+	return (r >> 8) & 0x7f;
 }
 static inline u32 fifo_intr_pbdma_id_r(void)
 {

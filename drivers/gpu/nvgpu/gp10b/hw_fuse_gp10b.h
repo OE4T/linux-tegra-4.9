@@ -64,15 +64,15 @@ static inline u32 fuse_ctrl_opt_ram_svop_pdp_r(void)
 }
 static inline u32 fuse_ctrl_opt_ram_svop_pdp_data_f(u32 v)
 {
-	return (v & 0x3) << 0;
+	return (v & 0xff) << 0;
 }
 static inline u32 fuse_ctrl_opt_ram_svop_pdp_data_m(void)
 {
-	return 0x3 << 0;
+	return 0xff << 0;
 }
 static inline u32 fuse_ctrl_opt_ram_svop_pdp_data_v(u32 r)
 {
-	return (r >> 0) & 0x3;
+	return (r >> 0) & 0xff;
 }
 static inline u32 fuse_ctrl_opt_ram_svop_pdp_override_r(void)
 {

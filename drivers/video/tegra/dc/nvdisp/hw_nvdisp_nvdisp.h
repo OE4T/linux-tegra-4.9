@@ -434,10 +434,6 @@ static inline u32 nvdisp_dsi_control_protocol_dsia_f(void)
 {
 	return 0x800;
 }
-static inline u32 nvdisp_dsi_control_protocol_dsib_f(void)
-{
-	return 0x900;
-}
 static inline u32 nvdisp_sync_width_r(void)
 {
 	return 0x00000407;

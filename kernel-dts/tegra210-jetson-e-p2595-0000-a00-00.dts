@@ -42,6 +42,8 @@
 #include "tegra210-platforms/tegra210-edp.dtsi"
 #include "tegra210-platforms/tegra210-sysedp.dtsi"
 #include "tegra210-platforms/tegra210-audio.dtsi"
+#include "tegra210-platforms/tegra210-thermal-nct72-p2530.dtsi"
+#include "tegra210-platforms/tegra210-thermal-Tboard-Tdiode.dtsi"
 
 
 / {
@@ -414,4 +416,12 @@
 		nvidia,phy-type = <2>;
 	};
 
+	thermal-zones {
+		Tboard_tegra {
+			status = "okay";
+		};
+		Tdiode_tegra {
+			status = "okay";
+		};
+	};
 };

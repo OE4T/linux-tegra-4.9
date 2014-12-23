@@ -50,6 +50,8 @@
 #ifndef _hw_host1x5_sync_h_
 #define _hw_host1x5_sync_h_
 
+#include "host1x.h"
+
 static inline u32 host1x_sync_intstatus_r(void)
 {
 	return 0x1c;
@@ -200,15 +202,24 @@ static inline u32 host1x_sync_syncpt_thresh_cpu0_int_status_r(void)
 }
 static inline u32 host1x_sync_syncpt_thresh_cpu1_int_status_r(void)
 {
-	return 0xb8;
+	if (linsim_cl == 34000094)
+		return 0x1e4;
+	else
+		return 0xb8;
 }
 static inline u32 host1x_sync_syncpt_thresh_int_disable_r(void)
 {
-	return 0x1e4;
+	if (linsim_cl == 34000094)
+		return 0x11c;
+	else
+		return 0x1e4;
 }
 static inline u32 host1x_sync_syncpt_thresh_int_enable_cpu0_r(void)
 {
-	return 0x248;
+	if (linsim_cl == 34000094)
+		return 0x180;
+	else
+		return 0x248;
 }
 static inline u32 host1x_sync_syncpt_intgmask_r(void)
 {

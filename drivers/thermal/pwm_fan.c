@@ -1031,7 +1031,7 @@ static const struct of_device_id of_pwm_fan_match[] = {
 	{ .compatible = "loki-pwm-fan", },
 	{ .compatible = "ers-pwm-fan", },
 	{ .compatible = "foster-pwm-fan", },
-	{ .compatible = "jetson-pwm-fan", },
+	{ .compatible = "pwm-fan", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, of_pwm_fan_match);

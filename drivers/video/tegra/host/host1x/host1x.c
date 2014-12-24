@@ -894,7 +894,6 @@ static int nvhost_probe(struct platform_device *dev)
 			sizeof(struct host1x_device_info));
 
 	pdata->pdev = dev;
-	atomic_set(&host->shutdown, 0);
 
 	/* set common host1x device data */
 	platform_set_drvdata(dev, pdata);
@@ -1049,15 +1048,6 @@ static int nvhost_resume(struct device *dev)
 	return 0;
 }
 
-static void nvhost_shutdown(struct platform_device *pdev)
-{
-	struct nvhost_master *host = nvhost_get_host(pdev);
-
-	dev_info(&pdev->dev, "shutting down");
-	atomic_set(&host->shutdown, 1);
-	__pm_runtime_disable(&pdev->dev, false);
-}
-
 static const struct dev_pm_ops host1x_pm_ops = {
 	.prepare = nvhost_suspend_prepare,
 	.complete = nvhost_suspend_complete,
@@ -1069,9 +1059,6 @@ static const struct dev_pm_ops host1x_pm_ops = {
 static struct platform_driver platform_driver = {
 	.probe = nvhost_probe,
 	.remove = __exit_p(nvhost_remove),
-#ifdef CONFIG_PM
-	.shutdown = nvhost_shutdown,
-#endif
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = DRIVER_NAME,

@@ -86,7 +86,6 @@ struct nvhost_master {
 	struct mutex chlist_mutex;	/* mutex for channel list */
 	unsigned long allocated_channels;
 	unsigned long next_free_ch;
-	atomic_t shutdown;
 };
 
 extern struct nvhost_master *nvhost;

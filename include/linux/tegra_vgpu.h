@@ -1,7 +1,7 @@
 /*
  * Tegra GPU Virtualization Interfaces to Server
  *
- * Copyright (c) 2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -210,7 +210,18 @@ struct tegra_vgpu_cmd_msg {
 };
 
 enum {
-	TEGRA_VGPU_GR_INTR_NOTIFY = 0
+	TEGRA_VGPU_GR_INTR_NOTIFY = 0,
+	TEGRA_VGPU_GR_INTR_SEMAPHORE_TIMEOUT,
+	TEGRA_VGPU_GR_INTR_ILLEGAL_NOTIFY,
+	TEGRA_VGPU_GR_INTR_ILLEGAL_METHOD,
+	TEGRA_VGPU_GR_INTR_ILLEGAL_CLASS,
+	TEGRA_VGPU_GR_INTR_FECS_ERROR,
+	TEGRA_VGPU_GR_INTR_CLASS_ERROR,
+	TEGRA_VGPU_GR_INTR_FIRMWARE_METHOD,
+	TEGRA_VGPU_GR_INTR_EXCEPTION,
+	TEGRA_VGPU_FIFO_INTR_PBDMA,
+	TEGRA_VGPU_FIFO_INTR_CTXSW_TIMEOUT,
+	TEGRA_VGPU_FIFO_INTR_MMU_FAULT
 };
 
 struct tegra_vgpu_gr_intr_info {
@@ -218,8 +229,14 @@ struct tegra_vgpu_gr_intr_info {
 	u32 chid;
 };
 
+struct tegra_vgpu_fifo_intr_info {
+	u32 type;
+	u32 chid;
+};
+
 enum {
-	TEGRA_VGPU_INTR_GR = 0
+	TEGRA_VGPU_INTR_GR = 0,
+	TEGRA_VGPU_INTR_FIFO
 };
 
 enum {
@@ -232,6 +249,7 @@ struct tegra_vgpu_intr_msg {
 	u32 unit;
 	union {
 		struct tegra_vgpu_gr_intr_info gr_intr;
+		struct tegra_vgpu_fifo_intr_info fifo_intr;
 	} info;
 };
 

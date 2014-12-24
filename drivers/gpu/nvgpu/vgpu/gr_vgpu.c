@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU Graphics
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -668,38 +668,51 @@ int vgpu_init_gr_support(struct gk20a *g)
 	return vgpu_gr_init_gr_setup_sw(g);
 }
 
-struct gr_isr_data {
-	u32 addr;
-	u32 data_lo;
-	u32 data_hi;
-	u32 curr_ctx;
-	u32 chid;
-	u32 offset;
-	u32 sub_chan;
-	u32 class_num;
-};
-
-static int vgpu_gr_handle_notify_pending(struct gk20a *g,
-					struct gr_isr_data *isr_data)
-{
-	struct fifo_gk20a *f = &g->fifo;
-	struct channel_gk20a *ch = &f->channel[isr_data->chid];
-
-	gk20a_dbg_fn("");
-	wake_up(&ch->notifier_wq);
-	return 0;
-}
-
 int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
 {
-	struct gr_isr_data isr_data;
+	struct fifo_gk20a *f = &g->fifo;
+	struct channel_gk20a *ch = &f->channel[info->chid];
 
 	gk20a_dbg_fn("");
+	if (info->type != TEGRA_VGPU_GR_INTR_NOTIFY)
+		gk20a_err(dev_from_gk20a(g), "gr intr (%d) on ch %u",
+			info->type, info->chid);
 
-	isr_data.chid = info->chid;
-
-	if (info->type == TEGRA_VGPU_GR_INTR_NOTIFY)
-		vgpu_gr_handle_notify_pending(g, &isr_data);
+	switch (info->type) {
+	case TEGRA_VGPU_GR_INTR_NOTIFY:
+		wake_up(&ch->notifier_wq);
+		break;
+	case TEGRA_VGPU_GR_INTR_SEMAPHORE_TIMEOUT:
+		gk20a_set_error_notifier(ch,
+				NVGPU_CHANNEL_GR_SEMAPHORE_TIMEOUT);
+		break;
+	case TEGRA_VGPU_GR_INTR_ILLEGAL_NOTIFY:
+		gk20a_set_error_notifier(ch,
+					NVGPU_CHANNEL_GR_ILLEGAL_NOTIFY);
+	case TEGRA_VGPU_GR_INTR_ILLEGAL_METHOD:
+		break;
+	case TEGRA_VGPU_GR_INTR_ILLEGAL_CLASS:
+		gk20a_set_error_notifier(ch,
+					NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
+		break;
+	case TEGRA_VGPU_GR_INTR_FECS_ERROR:
+		break;
+	case TEGRA_VGPU_GR_INTR_CLASS_ERROR:
+		gk20a_set_error_notifier(ch,
+					NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
+		break;
+	case TEGRA_VGPU_GR_INTR_FIRMWARE_METHOD:
+		gk20a_set_error_notifier(ch,
+				NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
+		break;
+	case TEGRA_VGPU_GR_INTR_EXCEPTION:
+		gk20a_set_error_notifier(ch,
+				NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
+		break;
+	default:
+		WARN_ON(1);
+		break;
+	}
 
 	return 0;
 }

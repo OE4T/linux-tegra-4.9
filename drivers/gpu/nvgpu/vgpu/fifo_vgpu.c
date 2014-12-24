@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU Fifo
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -547,6 +547,57 @@ static int vgpu_fifo_update_runlist(struct gk20a *g, u32 runlist_id,
 static int vgpu_fifo_wait_engine_idle(struct gk20a *g)
 {
 	gk20a_dbg_fn("");
+
+	return 0;
+}
+
+static void vgpu_fifo_set_ctx_mmu_error(struct gk20a *g,
+		struct channel_gk20a *ch)
+{
+	if (ch->error_notifier) {
+		if (ch->error_notifier->status == 0xffff) {
+			/* If error code is already set, this mmu fault
+			 * was triggered as part of recovery from other
+			 * error condition.
+			 * Don't overwrite error flag. */
+		} else {
+			gk20a_set_error_notifier(ch,
+				NVGPU_CHANNEL_FIFO_ERROR_MMU_ERR_FLT);
+		}
+	}
+	/* mark channel as faulted */
+	ch->has_timedout = true;
+	wmb();
+	/* unblock pending waits */
+	wake_up(&ch->semaphore_wq);
+	wake_up(&ch->notifier_wq);
+	wake_up(&ch->submit_wq);
+}
+
+int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	struct channel_gk20a *ch = &f->channel[info->chid];
+
+	gk20a_err(dev_from_gk20a(g), "fifo intr (%d) on ch %u",
+		info->type, info->chid);
+
+	switch (info->type) {
+	case TEGRA_VGPU_FIFO_INTR_PBDMA:
+		gk20a_set_error_notifier(ch, NVGPU_CHANNEL_PBDMA_ERROR);
+		break;
+	case TEGRA_VGPU_FIFO_INTR_CTXSW_TIMEOUT:
+		gk20a_set_error_notifier(ch,
+					NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
+		break;
+	case TEGRA_VGPU_FIFO_INTR_MMU_FAULT:
+		gk20a_channel_abort(ch);
+		vgpu_fifo_set_ctx_mmu_error(g, ch);
+		break;
+	default:
+		WARN_ON(1);
+		break;
+	}
 
 	return 0;
 }

@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -114,6 +114,8 @@ static int vgpu_intr_thread(void *dev_id)
 
 		if (msg->unit == TEGRA_VGPU_INTR_GR)
 			vgpu_gr_isr(g, &msg->info.gr_intr);
+		else if (msg->unit == TEGRA_VGPU_INTR_FIFO)
+			vgpu_fifo_isr(g, &msg->info.fifo_intr);
 
 		tegra_gr_comm_release(handle);
 	}

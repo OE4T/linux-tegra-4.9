@@ -27,6 +27,7 @@ int vgpu_probe(struct platform_device *dev);
 int vgpu_remove(struct platform_device *dev);
 u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt, u64 size);
 int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info);
+int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info);
 void vgpu_init_fifo_ops(struct gpu_ops *gops);
 void vgpu_init_gr_ops(struct gpu_ops *gops);
 void vgpu_init_ltc_ops(struct gpu_ops *gops);
@@ -56,11 +57,18 @@ static inline int vgpu_remove(struct platform_device *dev)
 {
 	return -ENOSYS;
 }
-static inline u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt, u64 size)
+static inline u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt,
+				u64 size)
 {
 	return 0;
 }
-static inline int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
+static inline int vgpu_gr_isr(struct gk20a *g,
+			struct tegra_vgpu_gr_intr_info *info)
+{
+	return 0;
+}
+static inline int vgpu_fifo_isr(struct gk20a *g,
+			struct tegra_vgpu_fifo_intr_info *info)
 {
 	return 0;
 }

@@ -661,6 +661,7 @@ static int therm_fan_est_resume(struct platform_device *pdev)
 static const struct of_device_id of_thermal_est_match[] = {
 	{ .compatible = "loki-thermal-est", },
 	{ .compatible = "foster-thermal-est", },
+	{ .compatible = "thermal-fan-est", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, of_thermal_est_match);

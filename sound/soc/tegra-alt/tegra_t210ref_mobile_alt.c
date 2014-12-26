@@ -1,7 +1,7 @@
 /*
  * tegra_t210ref_mobile.c - Tegra T210 Machine driver for mobile
  *
- * Copyright (c) 2013-2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -25,6 +25,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/delay.h>
 #include <linux/sysedp.h>
+#include <linux/tegra-pmc.h>
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif
@@ -43,7 +44,7 @@
 #include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"
 
-#define DRV_NAME "tegra-snd-t210ref-mobile"
+#define DRV_NAME "tegra-snd-t210ref-mobile-rt5639"
 
 #define GPIO_SPKR_EN    BIT(0)
 #define GPIO_HP_MUTE    BIT(1)
@@ -120,7 +121,7 @@ static int tegra_t210ref_jack_notifier(struct notifier_block *self,
 				gpio_direction_output(
 				pdata->gpio_ext_mic_en, 1);
 
-			rt5639_headset_detect(codec, 0);
+			rt5639_headset_detect(codec, 1);
 
 			machine->jack_status &= ~SND_JACK_HEADPHONE;
 			machine->jack_status &= ~SND_JACK_MICROPHONE;
@@ -157,37 +158,20 @@ static struct snd_soc_jack_pin tegra_t210ref_hp_jack_pins[] = {
 };
 #endif
 
-static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
-					struct snd_pcm_hw_params *params)
+static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
+					int rate,
+					int channels,
+					u64 formats)
 {
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->card;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
-	unsigned int idx =  tegra_machine_get_codec_dai_link_idx("rt-playback");
 	struct snd_soc_pcm_stream *dai_params;
-	unsigned int fmt;
-	int srate;
-	int mclk, clk_out_rate;
+	unsigned int idx, mclk, clk_out_rate;
 	int err;
 
-	/* check if idx has valid number */
-	if (idx == -EINVAL)
-		return idx;
-
-	dai_params =
-		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
-	fmt = card->rtd[idx].dai_link->dai_fmt;
-
-	srate = params_rate(params);
-
-	/* update link_param to update hw_param for DAPM */
-	dai_params->rate_min = srate;
-	dai_params->channels_min = params_channels(params);
-	dai_params->formats = (1ULL << (params_format(params)));
-
-	switch (dai_params->rate_min) {
+	switch (rate) {
 	case 11025:
 	case 22050:
 	case 44100:
@@ -209,38 +193,59 @@ static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 		break;
 	}
 
-	pr_info("Setting pll_a = %d Hz clk_out = %d Hz\n", mclk, clk_out_rate);
+	pr_info("Setting pll_a = %d Hz clk_out = %d Hz\n",
+			mclk, clk_out_rate);
 	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
-				dai_params->rate_min, mclk, clk_out_rate);
+				rate, mclk, clk_out_rate);
 	if (err < 0) {
 		dev_err(card->dev, "Can't configure clocks\n");
 		return err;
 	}
 
+
+	idx = tegra_machine_get_codec_dai_link_idx("earSmart-playback");
+	/* check if idx has valid number */
+	if (idx == -EINVAL)
+		return idx;
+	dai_params =
+		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 	err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
-			RT5639_SCLK_S_MCLK, clk_out_rate, SND_SOC_CLOCK_IN);
+		RT5639_SCLK_S_MCLK, clk_out_rate, SND_SOC_CLOCK_IN);
 	if (err < 0) {
 		dev_err(card->dev, "codec_dai clock not set\n");
 		return err;
 	}
 
-	err = snd_soc_dai_set_sysclk(card->rtd[idx].cpu_dai, 0,
-			dai_params->rate_min, SND_SOC_CLOCK_IN);
-	if (err < 0) {
-		dev_err(card->dev, "cpu_dai clock not set\n");
-		return err;
-	}
 
-	err = snd_soc_dai_set_fmt(card->rtd[idx].codec_dai, fmt);
-	if (err < 0) {
-		dev_err(card->dev, "codec_dai fmt not set\n");
-		return err;
-	}
+	/* update link_param to update hw_param for DAPM */
+	dai_params->rate_min = rate;
+	dai_params->channels_min = channels;
+	dai_params->formats = formats;
 
 	err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
 		tegra_machine_get_bclk_ratio(&card->rtd[idx]));
 	if (err < 0) {
-		dev_err(card->dev, "Failed to set cpu dai bclk ratio\n");
+		dev_err(card->dev, "Can't set cpu dai bclk ratio\n");
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
+					struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->card;
+	int err;
+
+	err = tegra_t210ref_dai_init(rtd, params_rate(params),
+			params_channels(params),
+			(1ULL << (params_format(params))));
+	if (err < 0) {
+		dev_err(card->dev, "Failed dai init\n");
 		return err;
 	}
 
@@ -264,18 +269,12 @@ static int tegra_t210ref_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_card *card = codec->card;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct tegra_asoc_platform_data *pdata = machine->pdata;
-	struct snd_soc_dai *i2s_dai = rtd->cpu_dai;
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	unsigned int srate;
 	int err;
 
 	srate = dai_params->rate_min;
-	err = snd_soc_dai_set_sysclk(i2s_dai, 0, srate, SND_SOC_CLOCK_IN);
-	if (err < 0) {
-		dev_err(card->dev, "i2s clock not set %d\n", srate);
-		return err;
-	}
 
 	err = tegra_alt_asoc_utils_set_extern_parent(&machine->audio_clock,
 							"pll_a_out0");
@@ -596,6 +595,9 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		}
 		msleep(200);
 	}
+
+	/* 1.8V VDDIO_AUDIO_HV_BIAS/HV DAP regulator enable */
+	pwr_detect_bit_write(AUDIO_HV_PWR_DET, false);
 
 	/*
 	*codec_reg - its a GPIO (in the form of a fixed regulator) that enables

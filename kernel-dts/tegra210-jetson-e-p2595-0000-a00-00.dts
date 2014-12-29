@@ -81,6 +81,7 @@
 	sdhci@700b0000 { /* SDMMC1 for uSD card */
 		uhs-mask = <0xc>;
 		power-off-rail;
+		nvidia,sd-device;
 		status = "okay";
 	};
 

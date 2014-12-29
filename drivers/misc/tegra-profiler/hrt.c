@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/hrt.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -120,9 +120,9 @@ u64 quadd_get_time(void)
 }
 
 static void
-put_sample_cpu(struct quadd_record_data *data,
-	       struct quadd_iovec *vec,
-	       int vec_count, int cpu_id)
+__put_sample(struct quadd_record_data *data,
+	     struct quadd_iovec *vec,
+	     int vec_count, int cpu_id)
 {
 	ssize_t err;
 	struct quadd_comm_data_interface *comm = hrt.quadd_ctx->comm;
@@ -135,10 +135,17 @@ put_sample_cpu(struct quadd_record_data *data,
 }
 
 void
+quadd_put_sample_this_cpu(struct quadd_record_data *data,
+			 struct quadd_iovec *vec, int vec_count)
+{
+	__put_sample(data, vec, vec_count, -1);
+}
+
+void
 quadd_put_sample(struct quadd_record_data *data,
 		 struct quadd_iovec *vec, int vec_count)
 {
-	put_sample_cpu(data, vec, vec_count, -1);
+	__put_sample(data, vec, vec_count, 0);
 }
 
 static void put_header(void)
@@ -202,7 +209,7 @@ static void put_header(void)
 	vec.len = nr_events * sizeof(events[0]);
 
 	for_each_possible_cpu(cpu_id)
-		put_sample_cpu(&record, &vec, 1, cpu_id);
+		__put_sample(&record, &vec, 1, cpu_id);
 }
 
 static void
@@ -227,7 +234,7 @@ put_sched_sample(struct task_struct *task, int is_sched_in)
 	s->data[0] = 0;
 	s->data[1] = 0;
 
-	quadd_put_sample(&record, NULL, 0);
+	quadd_put_sample_this_cpu(&record, NULL, 0);
 }
 
 static int get_sample_data(struct quadd_sample_data *sample,
@@ -461,7 +468,7 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 		s->state = 0;
 	}
 
-	quadd_put_sample(&record_data, vec, vec_idx);
+	quadd_put_sample_this_cpu(&record_data, vec, vec_idx);
 }
 
 static inline int

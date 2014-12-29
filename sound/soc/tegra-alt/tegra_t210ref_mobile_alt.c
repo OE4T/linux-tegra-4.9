@@ -434,6 +434,63 @@ static const struct snd_soc_dapm_widget tegra_t210ref_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Int Mic", NULL),
 };
 
+static int tegra_t210ref_suspend_pre(struct snd_soc_card *card)
+{
+	struct snd_soc_jack_gpio *gpio = &tegra_t210ref_hp_jack_gpio;
+	unsigned int idx;
+
+	/* DAPM dai link stream work for non pcm links */
+	for (idx = 0; idx < card->num_rtd; idx++) {
+		if (card->rtd[idx].dai_link->params)
+			INIT_DELAYED_WORK(&card->rtd[idx].delayed_work, NULL);
+	}
+
+	if (gpio_is_valid(gpio->gpio))
+		disable_irq(gpio_to_irq(gpio->gpio));
+
+	return 0;
+}
+
+static int tegra_t210ref_suspend_post(struct snd_soc_card *card)
+{
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
+
+	if (machine->clock_enabled) {
+		machine->clock_enabled = 0;
+		tegra_alt_asoc_utils_clk_disable(&machine->audio_clock);
+	}
+
+	if (machine->digital_reg)
+		regulator_disable(machine->digital_reg);
+
+	return 0;
+}
+
+static int tegra_t210ref_resume_pre(struct snd_soc_card *card)
+{
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
+	struct snd_soc_jack_gpio *gpio = &tegra_t210ref_hp_jack_gpio;
+	int ret, val;
+
+	if (machine->digital_reg)
+		ret = regulator_enable(machine->digital_reg);
+
+	if (gpio_is_valid(gpio->gpio)) {
+		val = gpio_get_value(gpio->gpio);
+		val = gpio->invert ? !val : val;
+		if (gpio->jack)
+			snd_soc_jack_report(gpio->jack, val, gpio->report);
+		enable_irq(gpio_to_irq(gpio->gpio));
+	}
+
+	if (!machine->clock_enabled) {
+		machine->clock_enabled = 1;
+		tegra_alt_asoc_utils_clk_enable(&machine->audio_clock);
+	}
+
+	return 0;
+}
+
 static const struct snd_soc_dapm_route tegra_t210ref_audio_map[] = {
 };
 
@@ -453,6 +510,9 @@ static struct snd_soc_card snd_soc_tegra_t210ref = {
 	.name = "tegra-t210ref",
 	.owner = THIS_MODULE,
 	.remove = tegra_t210ref_remove,
+	.suspend_post = tegra_t210ref_suspend_post,
+	.suspend_pre = tegra_t210ref_suspend_pre,
+	.resume_pre = tegra_t210ref_resume_pre,
 	.controls = tegra_t210ref_controls,
 	.num_controls = ARRAY_SIZE(tegra_t210ref_controls),
 	.dapm_widgets = tegra_t210ref_dapm_widgets,

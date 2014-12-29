@@ -3,7 +3,7 @@
  *
  * Very loosely based on virtio_net.c
  *
- * Copyright (C) 2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2015, NVIDIA CORPORATION. All rights reserved.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -137,6 +137,13 @@ static int tegra_hv_net_open(struct net_device *ndev)
 
 	napi_enable(&hvn->napi);
 	netif_start_queue(ndev);
+
+	/*
+	 * check if there are already packets in our queue,
+	 * and if so, we need to schedule a call to handle them
+	 */
+	if (tegra_hv_ivc_can_read(hvn->ivck))
+		napi_schedule(&hvn->napi);
 
 	return 0;
 }
@@ -544,8 +551,16 @@ static int tegra_hv_net_poll(struct napi_struct *napi, int budget)
 
 	work_done = tegra_hv_net_rx(hvn, budget);
 
-	if (work_done < budget)
+	if (work_done < budget) {
 		napi_complete(napi);
+
+		/*
+		 * if an interrupt occurs after tegra_hv_net_rx() but before
+		 * napi_complete(), we lose the call to napi_schedule().
+		 */
+		if (tegra_hv_ivc_can_read(hvn->ivck))
+			napi_reschedule(napi);
+	}
 
 	return work_done;
 }

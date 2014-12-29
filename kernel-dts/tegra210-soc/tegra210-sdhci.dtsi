@@ -80,6 +80,5 @@
 		cd-gpios = <&gpio TEGRA_GPIO_PZ1 0>;
 		pll_source = "pll_p";
 		nvidia,en-io-trim-volt;
-		nvidia,sd-device;
 	};
 };

@@ -1607,7 +1607,6 @@ void tegra_dc_sor_pre_detach(struct tegra_dc_sor_data *sor)
 	tegra_dc_sor_disable_win_short_raster(dc, sor->dc_reg_ctx);
 #endif
 	sor->sor_state = SOR_DETACHING;
-	/* TODO: This is new, check it doesn't break anything */
 	tegra_dc_put(dc);
 }
 
@@ -1663,6 +1662,7 @@ void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
 	tegra_dc_sor_restore_win_and_raster(dc, sor->dc_reg_ctx);
 
 	tegra_dc_writel(dc, dc_int_mask, DC_CMD_INT_MASK);
+	sor->sor_state = SOR_DETACHED;
 	tegra_dc_put(dc);
 }
 

@@ -770,7 +770,7 @@ static int lane_count_show(struct seq_file *s, void *unused)
 	return 0;
 }
 
-static ssize_t lane_count_set(struct file *file, const char  *buf,
+static ssize_t lane_count_set(struct file *file, const char __user *buf,
 						size_t count, loff_t *off)
 {
 	struct seq_file *s = file->private_data;
@@ -836,7 +836,7 @@ static int link_speed_show(struct seq_file *s, void *unused)
 	return 0;
 }
 
-static ssize_t link_speed_set(struct file *file, const char  *buf,
+static ssize_t link_speed_set(struct file *file, const char __user *buf,
 						size_t count, loff_t *off)
 {
 	struct seq_file *s = file->private_data;

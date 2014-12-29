@@ -81,6 +81,7 @@
 		pinctrl-3 = <&sdmmc1_clk_schmitt_disable_state>;
 		pinctrl-4 = <&sdmmc1_drv_code_1_8V>;
 		pinctrl-5 = <&sdmmc1_default_drv_code_3_3V>;
+		nvidia,sd-device;
 		status = "okay";
 	};
 

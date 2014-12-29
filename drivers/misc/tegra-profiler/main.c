@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/main.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -85,6 +85,8 @@ static int start(void)
 		return -EBUSY;
 	}
 
+	preempt_disable();
+
 	if (!atomic_cmpxchg(&ctx.started, 0, 1)) {
 		if (ctx.pmu) {
 			err = ctx.pmu->enable();
@@ -117,16 +119,21 @@ static int start(void)
 		}
 	}
 
+	preempt_enable();
 	return 0;
 
 errout:
 	atomic_set(&ctx.started, 0);
 	tegra_profiler_unlock();
+	preempt_enable();
+
 	return err;
 }
 
 static void stop(void)
 {
+	preempt_disable();
+
 	if (atomic_cmpxchg(&ctx.started, 1, 0)) {
 		quadd_hrt_stop();
 
@@ -143,6 +150,8 @@ static void stop(void)
 
 		tegra_profiler_unlock();
 	}
+
+	preempt_enable();
 }
 
 static inline int is_event_supported(struct source_info *si, int event)
@@ -180,13 +189,7 @@ set_parameters(struct quadd_parameters *p, uid_t *debug_app_uid)
 		return -EINVAL;
 	}
 
-	ctx.param.freq = p->freq;
-	ctx.param.ma_freq = p->ma_freq;
-	ctx.param.backtrace = p->backtrace;
-	ctx.param.use_freq = p->use_freq;
-	ctx.param.system_wide = p->system_wide;
-	ctx.param.power_rate_freq = p->power_rate_freq;
-	ctx.param.debug_samples = p->debug_samples;
+	ctx.param = *p;
 
 	for (i = 0; i < ARRAY_SIZE(p->reserved); i++)
 		ctx.param.reserved[i] = p->reserved[i];

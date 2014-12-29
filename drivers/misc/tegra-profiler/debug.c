@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/debug.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -68,7 +68,7 @@ void qm_debug_handler_sample(struct pt_regs *regs)
 
 	s->type = QM_DEBUG_SAMPLE_TYPE_TIMER_HANDLE;
 
-	quadd_put_sample(&record, NULL, 0);
+	quadd_put_sample_this_cpu(&record, NULL, 0);
 }
 
 void qm_debug_timer_forward(struct pt_regs *regs, u64 period)
@@ -80,7 +80,7 @@ void qm_debug_timer_forward(struct pt_regs *regs, u64 period)
 
 	s->type = QM_DEBUG_SAMPLE_TYPE_TIMER_FORWARD;
 
-	quadd_put_sample(&record, NULL, 0);
+	quadd_put_sample_this_cpu(&record, NULL, 0);
 }
 
 void qm_debug_timer_start(struct pt_regs *regs, u64 period)
@@ -92,7 +92,7 @@ void qm_debug_timer_start(struct pt_regs *regs, u64 period)
 
 	s->type = QM_DEBUG_SAMPLE_TYPE_TIMER_START;
 
-	quadd_put_sample(&record, NULL, 0);
+	quadd_put_sample_this_cpu(&record, NULL, 0);
 }
 
 void qm_debug_timer_cancel(void)
@@ -104,7 +104,7 @@ void qm_debug_timer_cancel(void)
 
 	s->type = QM_DEBUG_SAMPLE_TYPE_TIMER_CANCEL;
 
-	quadd_put_sample(&record, NULL, 0);
+	quadd_put_sample_this_cpu(&record, NULL, 0);
 }
 
 void
@@ -124,7 +124,7 @@ qm_debug_task_sched_in(pid_t prev_pid, pid_t current_pid, int prev_nr_active)
 	vec.base = &prev_nr_active;
 	vec.len = s->extra_length = sizeof(prev_nr_active);
 
-	quadd_put_sample(&record, &vec, 1);
+	quadd_put_sample_this_cpu(&record, &vec, 1);
 }
 
 void qm_debug_read_counter(int event_id, u32 prev_val, u32 val)
@@ -143,7 +143,7 @@ void qm_debug_read_counter(int event_id, u32 prev_val, u32 val)
 	vec.base = &val;
 	vec.len = s->extra_length = sizeof(val);
 
-	quadd_put_sample(&record, &vec, 1);
+	quadd_put_sample_this_cpu(&record, &vec, 1);
 }
 
 void qm_debug_start_source(int source_type)
@@ -156,7 +156,7 @@ void qm_debug_start_source(int source_type)
 	s->type = QM_DEBUG_SAMPLE_TYPE_SOURCE_START;
 	s->extra_value[0] = source_type;
 
-	quadd_put_sample(&record, NULL, 0);
+	quadd_put_sample_this_cpu(&record, NULL, 0);
 }
 
 void qm_debug_stop_source(int source_type)
@@ -169,7 +169,7 @@ void qm_debug_stop_source(int source_type)
 	s->type = QM_DEBUG_SAMPLE_TYPE_SOURCE_STOP;
 	s->extra_value[0] = source_type;
 
-	quadd_put_sample(&record, NULL, 0);
+	quadd_put_sample_this_cpu(&record, NULL, 0);
 }
 
 #endif	/* QM_DEBUG_SAMPLES_ENABLE */

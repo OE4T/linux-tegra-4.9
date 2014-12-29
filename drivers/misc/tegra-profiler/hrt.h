@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/hrt.h
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -83,8 +83,12 @@ void quadd_hrt_deinit(void);
 int quadd_hrt_start(void);
 void quadd_hrt_stop(void);
 
-void quadd_put_sample(struct quadd_record_data *data,
-		      struct quadd_iovec *vec, int vec_count);
+void
+quadd_put_sample_cur_cpu(struct quadd_record_data *data,
+			 struct quadd_iovec *vec, int vec_count);
+void
+quadd_put_sample(struct quadd_record_data *data,
+		 struct quadd_iovec *vec, int vec_count);
 
 void quadd_hrt_get_state(struct quadd_module_state *state);
 u64 quadd_get_time(void);

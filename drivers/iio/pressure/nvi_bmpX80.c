@@ -232,7 +232,8 @@ static const struct iio_chan_spec bmp_chan_pres[] = {
 	{
 		.type			= IIO_PRESSURE,
 		.scan_type		= IIO_ST('s', 32, 32, 0),
-		.info_mask		= BIT(IIO_CHAN_INFO_RAW) |
+		.info_mask_shared_by_all
+					= BIT(IIO_CHAN_INFO_RAW) |
 					  BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
 					  BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
 					  BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
@@ -258,7 +259,8 @@ static const struct iio_chan_spec bmp_chan_temp[] = {
 	{
 		.type			= IIO_TEMP,
 		.scan_type		= IIO_ST('s', 32, 32, 0),
-		.info_mask		= BIT(IIO_CHAN_INFO_RAW) |
+		.info_mask_shared_by_all
+					= BIT(IIO_CHAN_INFO_RAW) |
 					  BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
 					  BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
 					  BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |

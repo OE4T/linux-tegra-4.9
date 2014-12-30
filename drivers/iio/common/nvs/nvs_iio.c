@@ -884,7 +884,7 @@ static int nvs_buffer_preenable(struct iio_dev *indio_dev)
 					 (NVS_STS_SHUTDOWN | NVS_STS_SUSPEND)))
 		return -EINVAL;
 
-	return iio_sw_buffer_preenable(indio_dev);
+	return 0;
 }
 
 static int nvs_buffer_postenable(struct iio_dev *indio_dev)
@@ -999,7 +999,7 @@ static int nvs_chan(struct iio_dev *indio_dev)
 			}
 			st->ch[i].scan_type.realbits =
 					       st->ch[i].scan_type.storagebits;
-			st->ch[i].info_mask = nvs_info_mask_dflt;
+			st->ch[i].info_mask_shared_by_all = nvs_info_mask_dflt;
 			if (n - 1) {
 				/* multiple channels */
 				st->ch[i].channel2 = i + 1;
@@ -1008,11 +1008,11 @@ static int nvs_chan(struct iio_dev *indio_dev)
 					     nvs_info_mask_shared_by_type_dflt;
 				st->ch[i].info_mask_separate =
 					  ~st->ch[i].info_mask_shared_by_type &
-							   st->ch[i].info_mask;
+							   st->ch[i].info_mask_shared_by_all;
 			} else {
 				/* single channel */
 				st->ch[i].info_mask_separate =
-							   st->ch[i].info_mask;
+							   st->ch[i].info_mask_shared_by_all;
 			}
 		}
 		st->ch[i].scan_index = scan_index;

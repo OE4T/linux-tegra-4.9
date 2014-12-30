@@ -747,7 +747,7 @@ static int tegra_t210ref_driver_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id tegra_t210ref_of_match[] = {
-	{ .compatible = "nvidia,tegra-audio-t210ref-mobile", },
+	{ .compatible = "nvidia,tegra-audio-t210ref-mobile-rt5639", },
 	{},
 };
 

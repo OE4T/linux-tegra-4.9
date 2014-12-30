@@ -193,8 +193,8 @@
 	};
 
 	sound {
-		compatible = "nvidia,tegra-audio-t210ref-mobile";
-		nvidia,model = "tegra-snd-t210ref-mobile";
+		compatible = "nvidia,tegra-audio-t210ref-mobile-rt5639";
+		nvidia,model = "tegra-snd-t210ref-mobile-rt5639";
 		nvidia,ldo-gpios = <&gpio TEGRA_GPIO(BB, 3) GPIO_ACTIVE_HIGH>;
 		nvidia,hp-det-gpios = <&gpio TEGRA_GPIO(BB, 4) GPIO_ACTIVE_HIGH>;
 
@@ -213,14 +213,7 @@
 			"x DMIC L1",	"x Int Mic",
 			"x DMIC L2",	"x Int Mic",
 			"x DMIC R1",	"x Int Mic",
-			"x DMIC R2",	"x Int Mic",
-
-			"y Headphone", 	"y OUT",
-			"z Headphone", 	"z OUT",
-			"s Headphone", 	"s OUT",
-			"y IN",		"y Mic",
-			"z IN",		"z Mic",
-			"s IN",		"s Mic";
+			"x DMIC R2",	"x Int Mic";
 		nvidia,xbar = <&tegra_axbar>;
 
 		nvidia,dai-link-1 {

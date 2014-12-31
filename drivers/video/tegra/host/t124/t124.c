@@ -90,7 +90,7 @@ struct nvhost_device_data t124_host1x_info = {
 	.private_data	= &host1x04_info,
 	.finalize_poweron = nvhost_host1x_finalize_poweron,
 	.prepare_poweroff = nvhost_host1x_prepare_poweroff,
-	.gather_filter_enabled = false,
+	.gather_filter_enabled = true,
 };
 
 

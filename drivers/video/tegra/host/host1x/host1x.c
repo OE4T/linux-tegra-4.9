@@ -525,12 +525,9 @@ static int disable_irq_host(struct platform_device *dev)
 
 int nvhost_gather_filter_enabled(struct nvhost_syncpt *sp)
 {
-	enum tegra_chipid cid = tegra_get_chipid();
-
-	if (cid == TEGRA_CHIPID_TEGRA12 || cid == TEGRA_CHIPID_TEGRA13 ||
-	    cid == TEGRA_CHIPID_TEGRA21)
-		return 1;
-	return 0;
+	struct nvhost_master *host = syncpt_to_dev(sp);
+	struct nvhost_device_data *pdata = platform_get_drvdata(host->dev);
+	return pdata->gather_filter_enabled;
 }
 
 static int alloc_syncpts_per_apps(struct nvhost_syncpt *sp)

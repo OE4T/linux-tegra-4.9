@@ -71,6 +71,7 @@ struct nvhost_device_data t21_host1x_info = {
 	.finalize_poweron = nvhost_host1x_finalize_poweron,
 	.prepare_poweroff = nvhost_host1x_prepare_poweroff,
 	.bond_out_id		= BOND_OUT_HOST1X,
+	.gather_filter_enabled	= true,
 };
 
 #ifdef CONFIG_TEGRA_GRHOST_ISP

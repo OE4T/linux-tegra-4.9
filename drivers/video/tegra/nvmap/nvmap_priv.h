@@ -323,11 +323,12 @@ static inline pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot)
 			char task_comm[TASK_COMM_LEN];
 			h->owner->warned = 1;
 			get_task_comm(task_comm, h->owner->task);
-			pr_err("PID %d: %s: WARNING: "
+			pr_err("PID %d: %s: TAG: 0x%04x WARNING: "
 				"NVMAP_HANDLE_WRITE_COMBINE "
 				"should be used in place of "
 				"NVMAP_HANDLE_UNCACHEABLE on ARM64\n",
-				h->owner->task->pid, task_comm);
+				h->owner->task->pid, task_comm,
+				h->userflags >> 16);
 		}
 #endif
 		return pgprot_noncached(prot);

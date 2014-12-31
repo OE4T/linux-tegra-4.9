@@ -2566,7 +2566,7 @@ int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct device *dev,
 	s->offset = offset;
 	INIT_LIST_HEAD(&s->list);
 	mutex_init(&s->lock);
-	list_add_tail(&priv->states, &s->list);
+	list_add_tail(&s->list, &priv->states);
 
 out:
 	mutex_unlock(&priv->lock);

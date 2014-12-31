@@ -326,7 +326,6 @@
 
 			usb0_vbus: vbus {
 				regulator-name = "vbus_regulator";
-				ti,otg-iusb-gpio = <&gpio TEGRA_GPIO(CC, 5) 0>;
 			};
 		};
 

@@ -389,6 +389,9 @@ static inline int max_vaddr_bits_gk20a(void)
 #define bar1_instance_block_shift_gk20a() bus_bar1_block_ptr_shift_v()
 #endif
 
+int gk20a_alloc_inst_block(struct gk20a *g, struct inst_desc *inst_block);
+void gk20a_free_inst_block(struct gk20a *g, struct inst_desc *inst_block);
+
 void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 		u64 va_begin, u64 va_end, char *label);
 

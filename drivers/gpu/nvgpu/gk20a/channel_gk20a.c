@@ -341,54 +341,24 @@ void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a)
 
 int channel_gk20a_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 {
-	struct device *d = dev_from_gk20a(g);
-	int err = 0;
-	dma_addr_t iova;
+	int err;
 
 	gk20a_dbg_fn("");
 
-	ch->inst_block.size = ram_in_alloc_size_v();
-	ch->inst_block.cpuva = dma_alloc_coherent(d,
-					ch->inst_block.size,
-					&iova,
-					GFP_KERNEL);
-	if (!ch->inst_block.cpuva) {
-		gk20a_err(d, "%s: memory allocation failed\n", __func__);
-		err = -ENOMEM;
-		goto clean_up;
-	}
-
-	ch->inst_block.iova = iova;
-	ch->inst_block.cpu_pa = gk20a_get_phys_from_iova(d,
-							ch->inst_block.iova);
-	if (!ch->inst_block.cpu_pa) {
-		gk20a_err(d, "%s: failed to get physical address\n", __func__);
-		err = -ENOMEM;
-		goto clean_up;
-	}
+	err = gk20a_alloc_inst_block(g, &ch->inst_block);
+	if (err)
+		return err;
 
 	gk20a_dbg_info("channel %d inst block physical addr: 0x%16llx",
 		ch->hw_chid, (u64)ch->inst_block.cpu_pa);
 
 	gk20a_dbg_fn("done");
 	return 0;
-
-clean_up:
-	gk20a_err(d, "fail");
-	g->ops.fifo.free_inst(g, ch);
-	return err;
 }
 
 void channel_gk20a_free_inst(struct gk20a *g, struct channel_gk20a *ch)
 {
-	struct device *d = dev_from_gk20a(g);
-
-	if (ch->inst_block.cpuva)
-		dma_free_coherent(d, ch->inst_block.size,
-				ch->inst_block.cpuva, ch->inst_block.iova);
-	ch->inst_block.cpuva = NULL;
-	ch->inst_block.iova = 0;
-	memset(&ch->inst_block, 0, sizeof(struct inst_desc));
+	gk20a_free_inst_block(g, &ch->inst_block);
 }
 
 static int channel_gk20a_update_runlist(struct channel_gk20a *c, bool add)

@@ -2656,6 +2656,44 @@ static void gk20a_deinit_vm(struct vm_gk20a *vm)
 	kfree(vm->pdes.ptes[gmmu_page_size_big]);
 }
 
+int gk20a_alloc_inst_block(struct gk20a *g, struct inst_desc *inst_block)
+{
+	struct device *dev = dev_from_gk20a(g);
+	dma_addr_t iova;
+
+	inst_block->size = ram_in_alloc_size_v();
+	inst_block->cpuva = dma_alloc_coherent(dev, inst_block->size,
+				&iova, GFP_KERNEL);
+	if (!inst_block->cpuva) {
+		gk20a_err(dev, "%s: memory allocation failed\n", __func__);
+		return -ENOMEM;
+	}
+
+	inst_block->iova = iova;
+	inst_block->cpu_pa = gk20a_get_phys_from_iova(dev, inst_block->iova);
+	if (!inst_block->cpu_pa) {
+		gk20a_err(dev, "%s: failed to get phys address\n", __func__);
+		gk20a_free_inst_block(g, inst_block);
+		return -ENOMEM;
+	}
+
+	memset(inst_block->cpuva, 0, inst_block->size);
+
+	return 0;
+}
+
+void gk20a_free_inst_block(struct gk20a *g, struct inst_desc *inst_block)
+{
+	struct device *dev = dev_from_gk20a(g);
+
+	if (inst_block->cpuva) {
+		dma_free_coherent(dev, inst_block->size,
+				inst_block->cpuva, inst_block->iova);
+	}
+
+	memset(inst_block, 0, sizeof(*inst_block));
+}
+
 static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 {
 	int err;
@@ -2666,9 +2704,7 @@ static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	u64 pde_addr;
 	u32 pde_addr_lo;
 	u32 pde_addr_hi;
-	struct device *d = dev_from_gk20a(g);
 	struct inst_desc *inst_block = &mm->bar1.inst_block;
-	dma_addr_t iova;
 	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
 	mm->bar1.aperture_size = bar1_aperture_size_mb_gk20a() << 20;
@@ -2683,31 +2719,15 @@ static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	pde_addr_lo = u64_lo32(pde_addr >> ram_in_base_shift_v());
 	pde_addr_hi = u64_hi32(pde_addr);
 
-	/* allocate instance mem for bar1 */
-	inst_block->size = ram_in_alloc_size_v();
-	inst_block->cpuva = dma_alloc_coherent(d, inst_block->size,
-				&iova, GFP_KERNEL);
-	if (!inst_block->cpuva) {
-		gk20a_err(d, "%s: memory allocation failed\n", __func__);
-		err = -ENOMEM;
+	err = gk20a_alloc_inst_block(g, inst_block);
+	if (err)
 		goto clean_up_va;
-	}
-
-	inst_block->iova = iova;
-	inst_block->cpu_pa = gk20a_get_phys_from_iova(d, inst_block->iova);
-	if (!inst_block->cpu_pa) {
-		gk20a_err(d, "%s: failed to get phys address\n", __func__);
-		err = -ENOMEM;
-		goto clean_up_inst_block;
-	}
 
 	inst_pa = inst_block->cpu_pa;
 	inst_ptr = inst_block->cpuva;
 
 	gk20a_dbg_info("bar1 inst block physical phys = 0x%llx, kv = 0x%p",
 		(u64)inst_pa, inst_ptr);
-
-	memset(inst_ptr, 0, inst_block->size);
 
 	gk20a_mem_wr32(inst_ptr, ram_in_page_dir_base_lo_w(),
 		ram_in_page_dir_base_target_vid_mem_f() |
@@ -2729,12 +2749,6 @@ static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	gk20a_dbg_info("bar1 inst block ptr: %08llx",  (u64)inst_pa);
 	return 0;
 
-clean_up_inst_block:
-	if (inst_block->cpuva)
-		dma_free_coherent(d, inst_block->size,
-			inst_block->cpuva, inst_block->iova);
-	inst_block->cpuva = NULL;
-	inst_block->iova = 0;
 clean_up_va:
 	gk20a_deinit_vm(vm);
 	return err;
@@ -2751,9 +2765,7 @@ static int gk20a_init_system_vm(struct mm_gk20a *mm)
 	u64 pde_addr;
 	u32 pde_addr_lo;
 	u32 pde_addr_hi;
-	struct device *d = dev_from_gk20a(g);
 	struct inst_desc *inst_block = &mm->pmu.inst_block;
-	dma_addr_t iova;
 	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
 	mm->pmu.aperture_size = GK20A_PMU_VA_SIZE;
@@ -2769,30 +2781,14 @@ static int gk20a_init_system_vm(struct mm_gk20a *mm)
 	pde_addr_lo = u64_lo32(pde_addr >> ram_in_base_shift_v());
 	pde_addr_hi = u64_hi32(pde_addr);
 
-	/* allocate instance mem for pmu */
-	inst_block->size = ram_in_alloc_size_v();
-	inst_block->cpuva = dma_alloc_coherent(d, inst_block->size,
-				&iova, GFP_KERNEL);
-	if (!inst_block->cpuva) {
-		gk20a_err(d, "%s: memory allocation failed\n", __func__);
-		err = -ENOMEM;
+	err = gk20a_alloc_inst_block(g, inst_block);
+	if (err)
 		goto clean_up_va;
-	}
-
-	inst_block->iova = iova;
-	inst_block->cpu_pa = gk20a_get_phys_from_iova(d, inst_block->iova);
-	if (!inst_block->cpu_pa) {
-		gk20a_err(d, "%s: failed to get phys address\n", __func__);
-		err = -ENOMEM;
-		goto clean_up_inst_block;
-	}
 
 	inst_pa = inst_block->cpu_pa;
 	inst_ptr = inst_block->cpuva;
 
 	gk20a_dbg_info("pmu inst block physical addr: 0x%llx", (u64)inst_pa);
-
-	memset(inst_ptr, 0, inst_block->size);
 
 	gk20a_mem_wr32(inst_ptr, ram_in_page_dir_base_lo_w(),
 		ram_in_page_dir_base_target_vid_mem_f() |
@@ -2813,12 +2809,6 @@ static int gk20a_init_system_vm(struct mm_gk20a *mm)
 
 	return 0;
 
-clean_up_inst_block:
-	if (inst_block->cpuva)
-		dma_free_coherent(d, inst_block->size,
-			inst_block->cpuva, inst_block->iova);
-	inst_block->cpuva = NULL;
-	inst_block->iova = 0;
 clean_up_va:
 	gk20a_deinit_vm(vm);
 	return err;

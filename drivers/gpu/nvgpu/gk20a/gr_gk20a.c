@@ -1687,22 +1687,11 @@ static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
 	u32 pde_addr_lo;
 	u32 pde_addr_hi;
 	u64 pde_addr;
-	dma_addr_t iova;
+	int err;
 
-	/* Alloc mem of inst block */
-	ucode_info->inst_blk_desc.size = ram_in_alloc_size_v();
-	ucode_info->inst_blk_desc.cpuva = dma_alloc_coherent(d,
-					ucode_info->inst_blk_desc.size,
-					&iova,
-					GFP_KERNEL);
-	if (!ucode_info->inst_blk_desc.cpuva) {
-		gk20a_err(d, "failed to allocate memory\n");
-		return -ENOMEM;
-	}
-
-	ucode_info->inst_blk_desc.iova = iova;
-	ucode_info->inst_blk_desc.cpu_pa = gk20a_get_phys_from_iova(d,
-					ucode_info->inst_blk_desc.iova);
+	err = gk20a_alloc_inst_block(g, &ucode_info->inst_blk_desc);
+	if (err)
+		return err;
 
 	inst_ptr = ucode_info->inst_blk_desc.cpuva;
 

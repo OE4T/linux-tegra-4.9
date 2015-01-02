@@ -526,7 +526,7 @@
 	};
 
 	mselect {
-		status = "okay";
+		status = "disable";
 	};
 
 	bthrot_cdev {

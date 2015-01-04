@@ -112,19 +112,19 @@ static int gk20a_generic_probe(struct platform_device *dev)
 
 static int gk20a_generic_late_probe(struct platform_device *dev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct generic_pm_domain *gpd = dev_to_genpd(&dev->dev);
 
-	/* Make gk20a power domain a subdomain of mc */
-	tegra_pd_add_sd(&platform->g->pd);
+	/* Make gk20a power domain a subdomain of host1x */
+	tegra_pd_add_sd(gpd);
 
 	return 0;
 }
 
 static int gk20a_generic_remove(struct platform_device *dev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct generic_pm_domain *gpd = dev_to_genpd(&dev->dev);
 
-	tegra_pd_remove_sd(&platform->g->pd);
+	tegra_pd_remove_sd(gpd);
 
 	return 0;
 }

@@ -504,8 +504,6 @@ struct gk20a {
 	u32 max_ltc_count;
 	u32 ltc_count;
 
-	struct generic_pm_domain pd;
-
 	struct devfreq *devfreq;
 
 	struct gk20a_scale_profile *scale_profile;
@@ -554,6 +552,11 @@ struct gk20a_cyclestate_buffer_elem {
 /* out */
 /* keep 64 bits to be consistent */
 	u64 data;
+};
+
+struct gk20a_domain_data {
+	struct generic_pm_domain gpd;
+	struct gk20a *gk20a;
 };
 
 /* debug accessories */

@@ -1134,10 +1134,11 @@ static int _gk20a_pm_railgate(struct platform_device *pdev)
 
 static int gk20a_pm_railgate(struct generic_pm_domain *domain)
 {
-	struct gk20a *g = container_of(domain, struct gk20a, pd);
-	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
+	struct gk20a_domain_data *gk20a_domain = container_of(domain,
+			   struct gk20a_domain_data, gpd);
+	struct gk20a *g = gk20a_domain->gk20a;
 
-	return _gk20a_pm_railgate(platform->g->dev);
+	return _gk20a_pm_railgate(g->dev);
 }
 
 static int _gk20a_pm_unrailgate(struct platform_device *pdev)
@@ -1156,12 +1157,12 @@ static int _gk20a_pm_unrailgate(struct platform_device *pdev)
 
 static int gk20a_pm_unrailgate(struct generic_pm_domain *domain)
 {
-	struct gk20a *g = container_of(domain, struct gk20a, pd);
-	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
-
+	struct gk20a_domain_data *gk20a_domain = container_of(domain,
+				     struct gk20a_domain_data, gpd);
+	struct gk20a *g = gk20a_domain->gk20a;
 	trace_gk20a_pm_unrailgate(dev_name(&g->dev->dev));
 
-	return _gk20a_pm_unrailgate(platform->g->dev);
+	return _gk20a_pm_unrailgate(g->dev);
 }
 
 #if 0
@@ -1191,12 +1192,41 @@ static int gk20a_pm_resume(struct device *dev)
 }
 #endif
 
+#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
 static int gk20a_pm_initialise_domain(struct platform_device *pdev)
 {
 	struct gk20a_platform *platform = platform_get_drvdata(pdev);
 	struct dev_power_governor *pm_domain_gov = NULL;
-	struct generic_pm_domain *domain = &platform->g->pd;
+	struct generic_pm_domain *domain = dev_to_genpd(&pdev->dev);
+
+#ifdef CONFIG_PM_RUNTIME
+	if (!platform->can_railgate)
+		pm_domain_gov = &pm_domain_always_on_gov;
+#endif
+	domain->gov = pm_domain_gov;
+
+	if (platform->railgate_delay)
+		pm_genpd_set_poweroff_delay(domain, platform->railgate_delay);
+
+	device_set_wakeup_capable(&pdev->dev, 0);
+	return 0;
+}
+
+#else
+static int gk20a_pm_initialise_domain(struct platform_device *pdev)
+{
+	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct dev_power_governor *pm_domain_gov = NULL;
+	struct generic_pm_domain *domain = NULL;
 	int ret = 0;
+	struct gk20a_domain_data *gpu_gpd_data = (struct gk20a_domain_data *)
+			kzalloc(sizeof(struct gk20a_domain_data), GFP_KERNEL);
+
+	if (!gpu_gpd_data)
+		return -ENOMEM;
+
+	gpu_gpd_data->gk20a = platform->g;
+	domain = &gpu_gpd_data->gpd;
 
 	domain->name = "gpu";
 
@@ -1227,6 +1257,7 @@ static int gk20a_pm_initialise_domain(struct platform_device *pdev)
 
 	return ret;
 }
+#endif
 
 static int gk20a_pm_init(struct platform_device *dev)
 {
@@ -1280,11 +1311,20 @@ static int gk20a_secure_page_alloc(struct platform_device *pdev)
 	return err;
 }
 
+static struct of_device_id tegra_gpu_domain_match[] = {
+	{.compatible = "nvidia,tegra210-gpu-pd"},
+	{},
+};
+
 static int gk20a_probe(struct platform_device *dev)
 {
 	struct gk20a *gk20a;
 	int err;
 	struct gk20a_platform *platform = NULL;
+
+#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
+	struct gk20a_domain_data *gk20a_domain;
+#endif
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
@@ -1312,6 +1352,12 @@ static int gk20a_probe(struct platform_device *dev)
 		dev_err(&dev->dev, "couldn't allocate gk20a support");
 		return -ENOMEM;
 	}
+
+#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
+	gk20a_domain = container_of(dev_to_genpd(&dev->dev),
+			     struct gk20a_domain_data, gpd);
+	gk20a_domain->gk20a = gk20a;
+#endif
 
 	set_gk20a(dev, gk20a);
 	gk20a->dev = dev;
@@ -1451,6 +1497,7 @@ static int __exit gk20a_remove(struct platform_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a_domain_data *gk20a_gpd;
 
 	gk20a_dbg_fn("");
 
@@ -1480,6 +1527,10 @@ static int __exit gk20a_remove(struct platform_device *dev)
 	if (platform->secure_buffer.destroy)
 		platform->secure_buffer.destroy(dev,
 				&platform->secure_buffer);
+
+	gk20a_gpd = container_of(&g, struct gk20a_domain_data, gk20a);
+	gk20a_gpd->gk20a = NULL;
+	kfree(gk20a_gpd);
 
 	if (pm_runtime_enabled(&dev->dev))
 		pm_runtime_disable(&dev->dev);
@@ -1513,8 +1564,78 @@ static struct platform_driver gk20a_driver = {
 	}
 };
 
+#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
+
+
+static int _gk20a_init_domain(struct device_node *np,
+			      struct generic_pm_domain *gpd)
+{
+	bool is_off = false;
+
+	gpd->name = (char *)np->name;
+
+	if (of_property_read_bool(np, "is_off"))
+		is_off = true;
+
+	pm_genpd_init(gpd, NULL, is_off);
+
+	gpd->power_on = gk20a_pm_unrailgate;
+	gpd->power_off = gk20a_pm_railgate;
+	gpd->dev_ops.start = gk20a_pm_enable_clk;
+	gpd->dev_ops.stop = gk20a_pm_disable_clk;
+	gpd->dev_ops.save_state = gk20a_pm_prepare_poweroff;
+	gpd->dev_ops.restore_state = gk20a_pm_finalize_poweron;
+#warning domain suspend/resume ops have been removed upstream
+#if 0
+	gpd->dev_ops.suspend = gk20a_pm_suspend;
+	gpd->dev_ops.resume = gk20a_pm_resume;
+#endif
+
+	of_genpd_add_provider_simple(np, gpd);
+	gpd->of_node = of_node_get(np);
+
+	genpd_pm_subdomain_attach(gpd);
+	return 0;
+}
+
+static int gk20a_domain_init(struct of_device_id *matches)
+{
+	int ret = 0;
+	struct device_node *np;
+	const struct of_device_id *match;
+	struct gk20a_domain_data *gk20a_domain;
+
+	np = of_find_matching_node(NULL, matches);
+	if (!np)
+		return -ENOENT;
+
+	match = of_match_node(matches, np);
+	gk20a_domain = (struct gk20a_domain_data *)kzalloc
+		       (sizeof(struct gk20a_domain_data), GFP_KERNEL);
+	if (!gk20a_domain)
+		return -ENOMEM;
+
+	ret = _gk20a_init_domain(np, &gk20a_domain->gpd);
+
+	return ret;
+}
+#else
+static int gk20a_domain_init(struct of_device_id *matches)
+{
+	return 0;
+}
+#endif
+
+
 static int __init gk20a_init(void)
 {
+
+	int ret;
+
+	ret = gk20a_domain_init(tegra_gpu_domain_match);
+	if (ret)
+		return ret;
+
 	return platform_driver_register(&gk20a_driver);
 }
 

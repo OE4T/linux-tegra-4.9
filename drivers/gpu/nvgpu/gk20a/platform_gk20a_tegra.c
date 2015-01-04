@@ -472,10 +472,8 @@ static int gk20a_tegra_probe(struct platform_device *dev)
 
 static int gk20a_tegra_late_probe(struct platform_device *dev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
-
 	/* Make gk20a power domain a subdomain of host1x */
-	nvhost_register_client_domain(&platform->g->pd);
+	nvhost_register_client_domain(dev_to_genpd(&dev->dev));
 
 	/* Initialise tegra specific scaling quirks */
 	gk20a_tegra_scale_init(dev);
@@ -485,10 +483,8 @@ static int gk20a_tegra_late_probe(struct platform_device *dev)
 
 static int gk20a_tegra_remove(struct platform_device *dev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
-
 	/* remove gk20a power subdomain from host1x */
-	nvhost_unregister_client_domain(&platform->g->pd);
+	nvhost_unregister_client_domain(dev_to_genpd(&dev->dev));
 
 	/* deinitialise tegra specific scaling quirks */
 	gk20a_tegra_scale_exit(dev);

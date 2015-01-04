@@ -895,7 +895,9 @@ static int nvhost_probe(struct platform_device *dev)
 		goto fail;
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
+#ifndef CONFIG_PM_GENERIC_DOMAINS_OF
 	pdata->pd.name = "tegra-host1x";
+#endif
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
 
@@ -1023,8 +1025,20 @@ static struct platform_driver platform_driver = {
 	},
 };
 
+static struct of_device_id tegra21x_host1x_domain_match[] = {
+	{.compatible = "nvidia,tegra210-host1x-pd",
+	 .data = (struct nvhost_device_data *)&t21_host1x_info},
+	{},
+};
+
 static int __init nvhost_mod_init(void)
 {
+	int ret;
+
+	ret = nvhost_domain_init(tegra21x_host1x_domain_match);
+	if (ret)
+		return ret;
+
 	return platform_driver_register(&platform_driver);
 }
 

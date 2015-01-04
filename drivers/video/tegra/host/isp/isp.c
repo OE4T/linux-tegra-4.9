@@ -367,11 +367,13 @@ static int isp_probe(struct platform_device *dev)
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 
 	/* In T210 power ISPB is placed to a separate power partition */
+#ifndef CONFIG_PM_GENERIC_DOMAINS_OF
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA21 &&
 	    dev_id == ISPB_DEV_ID)
 		pdata->pd.name = "ve2";
 	else
 		pdata->pd.name = "ve";
+#endif
 
 	/* add module power domain and also add its domain
 	 * as sub-domain of MC domain */
@@ -611,9 +613,22 @@ const struct file_operations tegra_isp_ctrl_ops = {
 	.release = isp_release,
 };
 
+static struct of_device_id tegra21x_isp_domain_match[] = {
+	{.compatible = "nvidia,tegra210-ve-pd",
+	 .data = (struct nvhost_device_data *)&t21_isp_info},
+	{.compatible = "nvidia,tegra210-ve2-pd",
+	 .data = (struct nvhost_device_data *)&t21_ispb_info},
+	{},
+};
 
 static int __init isp_init(void)
 {
+	int ret;
+
+	ret = nvhost_domain_init(tegra21x_isp_domain_match);
+	if (ret)
+		return ret;
+
 	return platform_driver_register(&isp_driver);
 }
 

@@ -960,7 +960,9 @@ static int tsec_probe(struct platform_device *dev)
 	nvhost_module_init(dev);
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
+#ifndef CONFIG_PM_GENERIC_DOMAINS_OF
 	pdata->pd.name = "tsec";
+#endif
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 	if (err)
 		return err;
@@ -1016,8 +1018,20 @@ static int __init tsec_key_setup(char *line)
 }
 __setup("otf_key=", tsec_key_setup);
 
+static struct of_device_id tegra21x_tsec_domain_match[] = {
+	{.compatible = "nvidia,tegra210-tsec-pd",
+	 .data = (struct nvhost_device_data *)&t21_tsec_info},
+	{},
+};
+
 static int __init tsec_init(void)
 {
+	int ret;
+
+	ret = nvhost_domain_init(tegra21x_tsec_domain_match);
+	if (ret)
+		return ret;
+
 	return platform_driver_register(&tsec_driver);
 }
 

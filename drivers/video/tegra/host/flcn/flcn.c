@@ -511,10 +511,11 @@ static int flcn_probe(struct platform_device *dev)
 	nvhost_module_init(dev);
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
+#ifndef CONFIG_PM_GENERIC_DOMAINS_OF
 	pdata->pd.name = kstrdup(dev->name, GFP_KERNEL);
 	if (!pdata->pd.name)
 		return -ENOMEM;
-
+#endif
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
 
@@ -558,8 +559,24 @@ static struct platform_driver flcn_driver = {
 	.id_table = flcn_id_table,
 };
 
+static struct of_device_id tegra21x_flcn_domain_match[] = {
+	{.compatible = "nvidia,tegra210-vic03-pd",
+	 .data = (struct nvhost_device_data *)&t21_vic_info},
+	{.compatible = "nvidia,tegra210-msenc-pd",
+	 .data = (struct nvhost_device_data *)&t21_msenc_info},
+	{.compatible = "nvidia,tegra210-nvjpg-pd",
+	 .data = (struct nvhost_device_data *)&t21_nvjpg_info},
+	{},
+};
+
 static int __init flcn_init(void)
 {
+	int ret;
+
+	ret = nvhost_domain_init(tegra21x_flcn_domain_match);
+	if (ret)
+		return ret;
+
 	return platform_driver_register(&flcn_driver);
 }
 

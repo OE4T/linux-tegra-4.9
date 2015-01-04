@@ -288,7 +288,9 @@ static int vi_probe(struct platform_device *dev)
 	nvhost_module_init(dev);
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
+#ifndef CONFIG_PM_GENERIC_DOMAINS_OF
 	pdata->pd.name = "ve";
+#endif
 
 	/* add module power domain and also add its domain
 	 * as sub-domain of MC domain */
@@ -382,8 +384,20 @@ static struct platform_driver vi_driver = {
 	}
 };
 
+static struct of_device_id tegra21x_vi_domain_match[] = {
+	{.compatible = "nvidia,tegra210-ve-pd",
+	.data = (struct nvhost_device_data *)&t21_vi_info},
+	{},
+};
+
 static int __init vi_init(void)
 {
+	int ret;
+
+	ret = nvhost_domain_init(tegra21x_vi_domain_match);
+	if (ret)
+		return ret;
+
 	return platform_driver_register(&vi_driver);
 }
 

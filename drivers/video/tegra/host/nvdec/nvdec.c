@@ -644,7 +644,9 @@ static int nvdec_probe(struct platform_device *dev)
 	nvhost_module_init(dev);
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
+#ifndef CONFIG_PM_GENERIC_DOMAINS_OF
 	pdata->pd.name = "nvdec";
+#endif
 
 	/* add module power domain and also add its domain
 	 * as sub-domain of MC domain */
@@ -687,8 +689,20 @@ const struct file_operations tegra_nvdec_ctrl_ops = {
 	.release = nvdec_release,
 };
 
+static struct of_device_id tegra21x_nvdec_domain_match[] = {
+	{ .compatible = "nvidia,tegra210-nvdec-pd",
+	.data = (struct nvhost_device_data *)&t21_nvdec_info},
+	{},
+};
+
 static int __init nvdec_init(void)
 {
+	int ret;
+
+	ret = nvhost_domain_init(tegra21x_nvdec_domain_match);
+	if (ret)
+		return ret;
+
 	return platform_driver_register(&nvdec_driver);
 }
 

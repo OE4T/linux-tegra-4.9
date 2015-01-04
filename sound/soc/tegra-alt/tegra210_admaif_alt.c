@@ -1,7 +1,7 @@
 /*
  * tegra210_admaif_alt.c - Tegra ADMAIF driver
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -137,22 +137,6 @@ static const struct regmap_config tegra210_admaif_regmap_config = {
 	.num_reg_defaults = ARRAY_SIZE(tegra210_admaif_reg_defaults),
 	.cache_type = REGCACHE_FLAT,
 };
-
-static void tegra210_admaif_global_enable(struct tegra210_admaif *admaif,
-					int enable)
-{
-	if (enable) {
-		regmap_update_bits(admaif->regmap,
-				TEGRA210_ADMAIF_GLOBAL_ENABLE, 1, 1);
-		admaif->refcnt++;
-	} else {
-		admaif->refcnt--;
-
-		if (!admaif->refcnt)
-			regmap_update_bits(admaif->regmap,
-				TEGRA210_ADMAIF_GLOBAL_ENABLE, 1, 0);
-	}
-}
 
 static int tegra210_admaif_sw_reset(struct snd_soc_dai *dai,
 				int direction, int timeout)
@@ -342,8 +326,6 @@ static void tegra210_admaif_start_playback(struct snd_soc_dai *dai)
 	struct tegra210_admaif *admaif = snd_soc_dai_get_drvdata(dai);
 	unsigned int reg;
 
-	tegra210_admaif_global_enable(admaif, 1);
-
 	reg = TEGRA210_ADMAIF_XBAR_TX_ENABLE +
 		(dai->id * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
 	regmap_update_bits(admaif->regmap, reg,
@@ -358,7 +340,6 @@ static void tegra210_admaif_stop_playback(struct snd_soc_dai *dai)
 	unsigned int reg;
 	int dcnt = 10, ret;
 
-	tegra210_admaif_global_enable(admaif, 0);
 	reg = TEGRA210_ADMAIF_XBAR_TX_ENABLE +
 		(dai->id * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
 	regmap_update_bits(admaif->regmap, reg,
@@ -381,7 +362,6 @@ static void tegra210_admaif_start_capture(struct snd_soc_dai *dai)
 	struct tegra210_admaif *admaif = snd_soc_dai_get_drvdata(dai);
 	unsigned int reg;
 
-	tegra210_admaif_global_enable(admaif, 1);
 	reg = TEGRA210_ADMAIF_XBAR_RX_ENABLE +
 		(dai->id * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
 	regmap_update_bits(admaif->regmap, reg,
@@ -396,7 +376,6 @@ static void tegra210_admaif_stop_capture(struct snd_soc_dai *dai)
 	unsigned int reg;
 	int dcnt = 10, ret;
 
-	tegra210_admaif_global_enable(admaif, 0);
 	reg = TEGRA210_ADMAIF_XBAR_RX_ENABLE +
 		(dai->id * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
 	regmap_update_bits(admaif->regmap, reg,
@@ -445,19 +424,6 @@ static struct snd_soc_dai_ops tegra210_admaif_dai_ops = {
 	.hw_params	= tegra210_admaif_hw_params,
 	.trigger	= tegra210_admaif_trigger,
 };
-
-static int tegra210_admaif_enable(struct snd_soc_dapm_widget *w,
-				struct snd_kcontrol *kcontrol, int event)
-{
-	struct snd_soc_codec *codec = w->codec;
-	struct device *dev = codec->dev;
-	struct tegra210_admaif *admaif = dev_get_drvdata(dev);
-
-	/* Note: ADMAIF channel is enabled/disabled by ADSP */
-	tegra210_admaif_global_enable(admaif, !!SND_SOC_DAPM_EVENT_ON(event));
-
-	return 0;
-}
 
 static int tegra210_admaif_dai_probe(struct snd_soc_dai *dai)
 {
@@ -584,14 +550,10 @@ static struct snd_soc_dai_driver tegra210_admaif_codec_dais[] = {
 };
 
 #define ADMAIF_WIDGETS(id)					\
-	SND_SOC_DAPM_AIF_IN_E("ADMAIF" #id " FIFO RX", NULL, 0,	\
-		SND_SOC_NOPM, 0, 0,				\
-		tegra210_admaif_enable,				\
-		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),	\
-	SND_SOC_DAPM_AIF_OUT_E("ADMAIF" #id " FIFO TX", NULL, 0,\
-		SND_SOC_NOPM, 0, 0,				\
-		tegra210_admaif_enable,				\
-		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),	\
+	SND_SOC_DAPM_AIF_IN("ADMAIF" #id " FIFO RX", NULL, 0,	\
+		SND_SOC_NOPM, 0, 0),				\
+	SND_SOC_DAPM_AIF_OUT("ADMAIF" #id " FIFO TX", NULL, 0,	\
+		SND_SOC_NOPM, 0, 0),				\
 	SND_SOC_DAPM_AIF_IN("ADMAIF" #id " CIF RX", NULL, 0,	\
 		SND_SOC_NOPM, 0, 0),				\
 	SND_SOC_DAPM_AIF_OUT("ADMAIF" #id " CIF TX", NULL, 0,	\
@@ -810,6 +772,9 @@ static int tegra210_admaif_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Could not register PCM: %d\n", ret);
 		goto err_unregister_codec;
 	}
+
+	regmap_update_bits(admaif->regmap,
+				TEGRA210_ADMAIF_GLOBAL_ENABLE, 1, 1);
 
 	return 0;
 

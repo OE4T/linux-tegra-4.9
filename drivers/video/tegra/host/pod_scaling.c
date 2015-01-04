@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host 3D clock scaling
  *
- * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -742,6 +742,11 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 
 	if (podgov->p_user) {
 		*freq = podgov->p_freq_request;
+		return 0;
+	}
+
+	if (dev_stat.total_time == 0) {
+		*freq = dev_stat.current_frequency;
 		return 0;
 	}
 

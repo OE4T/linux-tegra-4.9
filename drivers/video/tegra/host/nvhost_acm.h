@@ -64,4 +64,13 @@ static inline void nvhost_module_idle(struct platform_device *dev)
 /* common runtime pm and power domain APIs */
 int nvhost_module_enable_clk(struct device *dev);
 int nvhost_module_disable_clk(struct device *dev);
+
+#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
+int nvhost_domain_init(struct of_device_id *matches);
+#else
+static inline int nvhost_domain_init(struct of_device_id *matches)
+{
+	return 0;
+}
+#endif
 #endif

@@ -854,6 +854,102 @@ const struct dev_pm_ops nvhost_module_pm_ops = {
 };
 EXPORT_SYMBOL(nvhost_module_pm_ops);
 
+#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
+static int _nvhost_init_domain(struct device_node *np,
+			       struct generic_pm_domain *gpd)
+{
+	bool is_off = false;
+
+	gpd->name = (char *)np->name;
+
+	if (pm_genpd_lookup_name(gpd->name))
+		return 0;
+
+	if (of_property_read_bool(np, "is_off"))
+		is_off = true;
+
+	pm_genpd_init(gpd, NULL, is_off);
+
+	gpd->power_off = nvhost_module_power_off;
+	gpd->power_on = nvhost_module_power_on;
+	gpd->dev_ops.start = nvhost_module_enable_clk;
+	gpd->dev_ops.stop = nvhost_module_disable_clk;
+	gpd->dev_ops.save_state = nvhost_module_prepare_poweroff;
+	gpd->dev_ops.restore_state = nvhost_module_finalize_poweron;
+	if (!of_property_read_bool(np, "host1x")) {
+#warning TODO: pm domain suspend ops removed
+#if 0
+		gpd->dev_ops.suspend = nvhost_module_suspend;
+		gpd->dev_ops.resume = nvhost_module_finalize_poweron;
+#endif
+	}
+
+	of_genpd_add_provider_simple(np, gpd);
+	gpd->of_node = of_node_get(np);
+
+	genpd_pm_subdomain_attach(gpd);
+	return 0;
+}
+
+int nvhost_domain_init(struct of_device_id *matches)
+{
+	struct device_node *np;
+	int ret = 0;
+	struct nvhost_device_data *dev_data;
+	struct generic_pm_domain *gpd;
+	for_each_matching_node(np, matches) {
+		const struct of_device_id *match = of_match_node(matches, np);
+		dev_data = (struct nvhost_device_data *)match->data;
+		gpd = &dev_data->pd;
+		ret = _nvhost_init_domain(np, gpd);
+		if (ret)
+			break;
+	}
+	return ret;
+
+}
+EXPORT_SYMBOL(nvhost_domain_init);
+
+void nvhost_register_client_domain(struct generic_pm_domain *domain)
+{
+}
+EXPORT_SYMBOL(nvhost_register_client_domain);
+
+void nvhost_unregister_client_domain(struct generic_pm_domain *domain)
+{
+}
+EXPORT_SYMBOL(nvhost_unregister_client_domain);
+
+int nvhost_module_add_domain(struct generic_pm_domain *domain,
+	struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata;
+	struct device_node *dn = of_node_get(pdev->dev.of_node);
+	bool wakeup_capable = false;
+	struct dev_power_governor *pm_domain_gov = NULL;
+
+	pdata = platform_get_drvdata(pdev);
+	if (!pdata)
+		return -EINVAL;
+
+	if (!pdata->can_powergate)
+		pm_domain_gov = &pm_domain_always_on_gov;
+	domain->gov = pm_domain_gov;
+
+	if (pdata->powergate_delay)
+		pm_genpd_set_poweroff_delay(domain,
+				pdata->powergate_delay);
+
+	if (of_property_read_bool(dn, "wakeup_capable"))
+		wakeup_capable = true;
+
+	device_set_wakeup_capable(&pdev->dev, wakeup_capable);
+
+	return 0;
+}
+EXPORT_SYMBOL(nvhost_module_add_domain);
+
+#else
 /*FIXME Use API to get host1x domain */
 static struct generic_pm_domain *host1x_domain;
 
@@ -930,6 +1026,7 @@ int nvhost_module_add_domain(struct generic_pm_domain *domain,
 		return _nvhost_module_add_domain(domain, pdev, 1);
 }
 EXPORT_SYMBOL(nvhost_module_add_domain);
+#endif
 
 int nvhost_module_enable_clk(struct device *dev)
 {

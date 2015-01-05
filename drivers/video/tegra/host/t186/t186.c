@@ -82,6 +82,7 @@ struct nvhost_device_data t18_isp_info = {
 	.serialize		= 1,
 	.push_work_done		= 1,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.vm_regs		= {{0x50, true} },
 };
 #endif
 
@@ -116,6 +117,18 @@ struct nvhost_device_data t18_vi_info = {
 	.serialize		= 1,
 	.push_work_done		= 1,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.vm_regs		= {{0x4000 * 4, true},
+				   {0x8000 * 4, true},
+				   {0xc000 * 4, true},
+				   {0x10000 * 4, true},
+				   {0x14000 * 4, true},
+				   {0x18000 * 4, true},
+				   {0x1c000 * 4, true},
+				   {0x20000 * 4, true},
+				   {0x24000 * 4, true},
+				   {0x28000 * 4, true},
+				   {0x2c000 * 4, true},
+				   {0x30000 * 4, true} },
 };
 #endif
 
@@ -139,6 +152,7 @@ struct nvhost_device_data t18_msenc_info = {
 	.serialize		= 1,
 	.push_work_done		= 1,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.vm_regs		= {{0x30, true}, {0x34, false} },
 };
 
 struct nvhost_device_data t18_nvdec_info = {
@@ -161,6 +175,7 @@ struct nvhost_device_data t18_nvdec_info = {
 	.serialize		= 1,
 	.push_work_done		= 1,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.vm_regs		= {{0x30, true}, {0x34, false} },
 };
 
 struct nvhost_device_data t18_nvjpg_info = {
@@ -185,6 +200,7 @@ struct nvhost_device_data t18_nvjpg_info = {
 	.serialize		= 1,
 	.push_work_done		= 1,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.vm_regs		= {{0x30, true}, {0x34, false} },
 };
 
 struct nvhost_device_data t18_tsec_info = {
@@ -204,6 +220,7 @@ struct nvhost_device_data t18_tsec_info = {
 	.serialize		= 1,
 	.push_work_done		= 1,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.vm_regs		= {{0x30, true}, {0x34, false} },
 };
 
 struct nvhost_device_data t18_tsecb_info = {
@@ -222,6 +239,7 @@ struct nvhost_device_data t18_tsecb_info = {
 	.serialize		= 1,
 	.push_work_done		= 1,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.vm_regs		= {{0x30, true}, {0x34, false} },
 };
 
 struct nvhost_device_data t18_vic_info = {
@@ -249,11 +267,12 @@ struct nvhost_device_data t18_vic_info = {
 	.serialize		= 1,
 	.push_work_done		= 1,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.vm_regs		= {{0x30, true}, {0x34, false} },
 };
 
 struct nvhost_device_data t18_nvcsi_info = {
 	.num_channels		= 1,
-	.clocks			= {{"nvcsi", UINT_MAX, 0}},
+	.clocks			= {{"nvcsi", UINT_MAX, 0} },
 	.devfs_name		= "nvcsi",
 	.class			= NV_VIDEO_STREAMING_NVCSI_CLASS_ID,
 	NVHOST_MODULE_NO_POWERGATE_ID,

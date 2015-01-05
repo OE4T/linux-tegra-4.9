@@ -3995,7 +3995,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		win->idx = i;
 		tmp_win->idx = i;
 		tmp_win->dc = dc;
+#if defined(CONFIG_TEGRA_CSC)
 		tegra_dc_init_csc_defaults(&win->csc);
+#endif
 		tegra_dc_init_lut_defaults(&win->lut);
 	}
 

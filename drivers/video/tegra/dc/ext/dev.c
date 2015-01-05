@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dev.c
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  * Some code based on fbdev extensions written by:
@@ -616,6 +616,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			}
 		}
 
+#ifdef CONFIG_TEGRA_CSC
 		if ((data->win[i].attr.flags & TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC)
 				&& !ext->dc->yuv_bypass) {
 			win->csc.yof = data->win[i].attr.csc.yof;
@@ -628,6 +629,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			win->csc.kvb = data->win[i].attr.csc.kvb;
 			win->csc_dirty = true;
 		}
+#endif
 
 		if (!skip_flip)
 			tegra_dc_ext_set_windowattr(ext, win, &data->win[i]);
@@ -1065,6 +1067,7 @@ fail_pin:
 	return ret;
 }
 
+#if defined(CONFIG_TEGRA_CSC)
 static int tegra_dc_ext_set_csc(struct tegra_dc_ext_user *user,
 				struct tegra_dc_ext_csc *new_csc)
 {
@@ -1102,6 +1105,7 @@ static int tegra_dc_ext_set_csc(struct tegra_dc_ext_user *user,
 
 	return 0;
 }
+#endif
 
 static int set_lut_channel(u16 __user *channel_from_user,
 			   u8 *channel_to,
@@ -1557,7 +1561,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 		return tegra_dc_ext_set_cursor(user, &args);
 	}
-
+#ifdef CONFIG_TEGRA_CSC
 	case TEGRA_DC_EXT_SET_CSC:
 	{
 		struct tegra_dc_ext_csc args;
@@ -1567,7 +1571,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 		return tegra_dc_ext_set_csc(user, &args);
 	}
-
+#endif
 	case TEGRA_DC_EXT_GET_VBLANK_SYNCPT:
 	{
 		u32 syncpt = tegra_dc_ext_get_vblank_syncpt(user);

@@ -602,7 +602,7 @@ static int tegra_hv_net_probe(struct platform_device *pdev)
 	if (ret != 0)
 		highmark = DEFAULT_HIGH_WATERMARK_MULT;
 
-	ret = of_property_read_u32(dn, "high-watermark-mult", &lowmark);
+	ret = of_property_read_u32(dn, "low-watermark-mult", &lowmark);
 	if (ret != 0)
 		lowmark = DEFAULT_LOW_WATERMARK_MULT;
 
@@ -632,15 +632,15 @@ static int tegra_hv_net_probe(struct platform_device *pdev)
 	of_node_put(hv_dn);
 	hv_dn = NULL;
 
-	hvn->high_watermark = highmark * hvn->ivck->nframes;
-	hvn->low_watermark = lowmark * hvn->ivck->nframes;
-
 	if (IS_ERR_OR_NULL(hvn->ivck)) {
 		dev_err(dev, "Failed to reserve IVC channel %d\n", id);
 		ret = PTR_ERR(hvn->ivck);
 		hvn->ivck = NULL;
 		goto out_free_stats;
 	}
+
+	hvn->high_watermark = highmark * hvn->ivck->nframes;
+	hvn->low_watermark = lowmark * hvn->ivck->nframes;
 
 	/* make sure the frame size is sufficient */
 	if (hvn->ivck->frame_size <= HDR_SIZE + 4) {

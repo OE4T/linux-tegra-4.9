@@ -18,6 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/iommu.h>
+
 #include "bus_client_t186.h"
 #include "nvhost_channel.h"
 #include "dev.h"
@@ -30,6 +32,7 @@
 #include "nvhost_sync.h"
 
 #include "nvhost_intr.h"
+#include "nvhost_vm.h"
 #include "class_ids.h"
 #include "debug.h"
 
@@ -191,6 +194,49 @@ static inline u32 gather_count(u32 word)
 	return word & 0x3fff;
 }
 
+static inline int get_streamid(struct nvhost_job *job)
+{
+	struct platform_device *pdev = platform_get_drvdata(job->ch->dev);
+	int streamid;
+
+	/* set channel streamid */
+	if (job->vm) {
+		/* if vm is defined, take vm specific */
+		streamid = nvhost_vm_get_id(job->vm);
+	} else {
+		/* ..otherwise assume that the buffers are mapped to device
+		 * own address space */
+		streamid = iommu_get_hwid(pdev->dev.archdata.iommu,
+					  &pdev->dev, 0);
+		if (streamid < 0)
+			streamid = 0x7f;
+	}
+
+	return streamid;
+}
+
+static void submit_setstreamid(struct nvhost_job *job)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
+	int streamid = get_streamid(job);
+	int i;
+
+	if (!pdata->vm_regs || !pdata->isolate_contexts)
+		return;
+
+	for (i = 0; i < ARRAY_SIZE(pdata->vm_regs); i++) {
+		if (!pdata->vm_regs[i].addr)
+			return;
+		if (!pdata->vm_regs[i].dynamic)
+			continue;
+
+		nvhost_cdma_push(&job->ch->cdma,
+			nvhost_opcode_setpayload(streamid),
+			nvhost_opcode_setstreamid(
+			pdata->vm_regs[i].addr >> 2));
+	}
+}
+
 static void submit_work(struct nvhost_job *job)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
@@ -237,6 +283,9 @@ static void submit_work(struct nvhost_job *job)
 			/* update current class */
 			cur_class = g->class_id;
 		}
+
+		if (g->class_id != NV_HOST1X_CLASS_ID)
+			submit_setstreamid(job);
 
 		/* If register is specified, add a gather with incr/nonincr.
 		 * This allows writing large amounts of data directly from
@@ -322,6 +371,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	int err, i;
 	void *completed_waiters[job->num_syncpts];
 	struct nvhost_job_syncpt *hwctx_sp = job->sp + job->hwctx_syncpt_idx;
+	int streamid;
 
 	host1x_channel_update_priority(job);
 
@@ -365,6 +415,10 @@ static int host1x_channel_submit(struct nvhost_job *job)
 				"%s: cross-channel dependencies on syncpt %d\n",
 				__func__, job->sp[i].id);
 	}
+
+	/* set channel streamid */
+	streamid = get_streamid(job);
+	host1x_channel_writel(ch, host1x_channel_smmu_streamid_r(), streamid);
 
 	/* begin a CDMA submit */
 	err = nvhost_cdma_begin(&ch->cdma, job);

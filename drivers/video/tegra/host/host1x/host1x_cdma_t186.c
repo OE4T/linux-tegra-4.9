@@ -26,6 +26,7 @@
 #include "class_ids.h"
 #include "chip_support.h"
 #include "nvhost_job.h"
+#include "nvhost_vm.h"
 
 #include "host1x_cdma.h"
 
@@ -79,6 +80,10 @@ static int push_buffer_init(struct push_buffer *pb)
 		pb->mapped = NULL;
 		goto fail;
 	}
+
+	/* for now, map pushbuffer to all address spaces */
+	nvhost_vm_map_static(cdma_to_dev(cdma)->dev, pb->mapped,
+			     pb->dma_addr, PUSH_BUFFER_SIZE + 4);
 
 	/* put the restart at the end of pushbuffer memory */
 	*(pb->mapped + (PUSH_BUFFER_SIZE >> 2)) =

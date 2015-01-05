@@ -3,7 +3,7 @@
  *
  * Tegra T186 HOST1X Register Definitions
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -142,6 +142,16 @@ static inline u32 nvhost_opcode_gather_insert(unsigned offset, unsigned incr,
 		unsigned count)
 {
 	return (6 << 28) | (offset << 16) | BIT(15) | (incr << 14) | count;
+}
+
+static inline u32 nvhost_opcode_setstreamid(unsigned streamid)
+{
+	return (7 << 28) | streamid;
+}
+
+static inline u32 nvhost_opcode_setpayload(unsigned payload)
+{
+	return (9 << 28) | payload;
 }
 
 static inline u32 nvhost_opcode_acquire_mlock(unsigned id)

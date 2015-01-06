@@ -47,6 +47,10 @@
 #include "t210/t210.h"
 #include "iomap.h"
 
+#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
+#include <linux/ote_protocol.h>
+#endif
+
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "t186/t186.h"
 #endif
@@ -310,6 +314,10 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 		return err;
 	}
 	dev_info(&dev->dev, "nvdec_boot: success\n");
+
+#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
+	te_restore_keyslots();
+#endif
 
 	return 0;
 }

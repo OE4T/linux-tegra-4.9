@@ -73,7 +73,7 @@ void inner_clean_cache_all(void)
  *   __clean_dcache_page() is only available on ARM64 (well, we haven't
  *   implemented it on ARMv7).
  */
-#ifdef ARM64
+#if defined(CONFIG_ARM64)
 void nvmap_clean_cache(struct page **pages, int numpages)
 {
 	int i;
@@ -89,6 +89,15 @@ void nvmap_clean_cache(struct page **pages, int numpages)
 		__clean_dcache_page(pages[i]);
 }
 #endif
+
+void nvmap_clean_cache_page(struct page *page)
+{
+#if defined(CONFIG_ARM64)
+	__clean_dcache_page(page);
+#else
+	__flush_dcache_page(page_mapping(page), page);
+#endif
+}
 
 void nvmap_flush_cache(struct page **pages, int numpages)
 {

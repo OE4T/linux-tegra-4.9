@@ -192,7 +192,7 @@ struct nvmap_page_pool {
 	int to_zero; /* Number of pages on the zero list */
 	struct list_head page_list;
 	struct list_head zero_list;
-	bool contains_dirty_pages;
+	u32 dirty_pages;
 
 #ifdef CONFIG_NVMAP_PAGE_POOL_DEBUG
 	u64 allocs;
@@ -413,6 +413,7 @@ extern void __clean_dcache_all(void *arg);
 void inner_flush_cache_all(void);
 void inner_clean_cache_all(void);
 void nvmap_clean_cache(struct page **pages, int numpages);
+void nvmap_clean_cache_page(struct page *page);
 void nvmap_flush_cache(struct page **pages, int numpages);
 
 int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,

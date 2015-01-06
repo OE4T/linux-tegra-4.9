@@ -351,4 +351,10 @@
 		compatible = "nvidia,tegra186-chipid";
 		reg = <0x0 0x00100000 0x0 0x10000>;
 	};
+
+	bpmp {
+		compatible = "nvidia,tegra186-bpmp";
+		reg = <0x0 0x0d000000 0x0 0x00800000>,
+		      <0x0 0x30000000 0x0 0x00050000>;
+	};
 };

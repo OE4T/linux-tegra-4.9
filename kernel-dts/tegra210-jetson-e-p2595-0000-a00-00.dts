@@ -217,7 +217,6 @@
 
 	spi@7000da00 {
 		status = "ok";
-		spi-max-frequency = <25000000>;
 		spi-touch@0 {
 			platform-id = <RM_PLATFORM_A010>;
 		};

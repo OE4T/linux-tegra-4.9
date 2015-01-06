@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Virtualization Communication Framework
  *
- * Copyright (c) 2013-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -29,46 +29,33 @@
 #include <linux/kthread.h>
 #include <linux/list.h>
 #include <linux/idr.h>
+#include <linux/interrupt.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra_gr_comm.h>
 
 #define NUM_QUEUES   4
 #define NUM_CONTEXTS 2
 
-#define ID_SHIFT 11
-#define ID_MASK 1
-#define ID0_PEER_ID_SHIFT 4
-#define ID0_QUEUE_ID_SHIFT 1
-#define ID0_QUEUE_ID_MASK 7
-#define ID0_VCTX_SHIFT 0
-#define ID0_VCTX_MASK 1
-#define ID1_IRQ_SHIFT 0
+#define ID_PEER_ID_SHIFT 4
+#define ID_QUEUE_ID_SHIFT 1
+#define ID_QUEUE_ID_MASK 7
+#define ID_VCTX_SHIFT 0
+#define ID_VCTX_MASK 1
 
-#define GEN_ID0(vctx, queue_id, peer_id)	\
-	((peer_id << ID0_PEER_ID_SHIFT) |	\
-	(queue_id << ID0_QUEUE_ID_SHIFT) |	\
-	(vctx << ID0_VCTX_SHIFT) |		\
-	(0 << ID_SHIFT))
-#define GEN_ID1(irq)				\
-	((irq << ID1_IRQ_SHIFT) |		\
-	(1 << ID_SHIFT))
-#define IS_ID1(id) ((id >> ID_SHIFT) & ID_MASK)
-#define VCTX_FROM_ID0(id) ((id >> ID0_VCTX_SHIFT) & ID0_VCTX_MASK)
-#define QUEUE_ID_FROM_ID0(id) ((id >> ID0_QUEUE_ID_SHIFT) & ID0_QUEUE_ID_MASK)
-
-enum {
-	IVC_DIR_TX = 0,
-	IVC_DIR_RX,
-	NUM_IVC_DIR
-};
+#define GEN_ID(vctx, queue_id, peer_id)		\
+	((peer_id << ID_PEER_ID_SHIFT) |	\
+	(queue_id << ID_QUEUE_ID_SHIFT) |	\
+	(vctx << ID_VCTX_SHIFT))
+#define VCTX_FROM_ID(id) ((id >> ID_VCTX_SHIFT) & ID_VCTX_MASK)
+#define QUEUE_ID_FROM_ID(id) ((id >> ID_QUEUE_ID_SHIFT) & ID_QUEUE_ID_MASK)
 
 struct gr_comm_ivc_context {
 	u32 peer;
-	wait_queue_head_t wq[NUM_IVC_DIR];
+	wait_queue_head_t wq;
 	struct tegra_hv_ivc_cookie *cookie;
 	struct gr_comm_queue *queue;
-	struct task_struct *rx_thread;
 	struct platform_device *pdev;
+	bool irq_requested;
 };
 
 struct gr_comm_element {
@@ -115,46 +102,19 @@ static void free_ivc(u32 virt_ctx, u32 queue_start, u32 queue_end)
 	int id;
 
 	idr_for_each_entry(&ivc_ctx_idr, tmp, id) {
-		if (VCTX_FROM_ID0(id) == virt_ctx &&
-			QUEUE_ID_FROM_ID0(id) >= queue_start &&
-			QUEUE_ID_FROM_ID0(id) < queue_end) {
+		if (VCTX_FROM_ID(id) == virt_ctx &&
+			QUEUE_ID_FROM_ID(id) >= queue_start &&
+			QUEUE_ID_FROM_ID(id) < queue_end) {
 			idr_remove(&ivc_ctx_idr, id);
-			if (tmp->rx_thread)
-				kthread_stop(tmp->rx_thread);
+			if (tmp->irq_requested)
+				free_irq(tmp->cookie->irq, tmp);
 
-			if (tmp->cookie) {
-				idr_remove(&ivc_ctx_idr,
-					GEN_ID1(tmp->cookie->irq));
+			if (tmp->cookie)
 				tegra_hv_ivc_unreserve(tmp->cookie);
-			}
 			kfree(tmp);
 		}
 	}
 }
-
-static void ivc_rx(struct tegra_hv_ivc_cookie *ivck)
-{
-	struct gr_comm_ivc_context *ctx =
-			idr_find(&ivc_ctx_idr, GEN_ID1(ivck->irq));
-
-	if (!ctx)
-		return;
-
-	wake_up(&ctx->wq[IVC_DIR_RX]);
-}
-
-static void ivc_tx(struct tegra_hv_ivc_cookie *ivck)
-{
-	struct gr_comm_ivc_context *ctx =
-			idr_find(&ivc_ctx_idr, GEN_ID1(ivck->irq));
-
-	if (!ctx)
-		return;
-
-	wake_up(&ctx->wq[IVC_DIR_TX]);
-}
-
-static const struct tegra_hv_ivc_ops ivc_ops = { ivc_rx, ivc_tx };
 
 static int queue_add(struct gr_comm_queue *queue, const char *data,
 		u32 peer, struct tegra_hv_ivc_cookie *ivck)
@@ -194,32 +154,27 @@ static int queue_add(struct gr_comm_queue *queue, const char *data,
 	return 0;
 }
 
-static int ivc_rx_thread(void *arg)
+static irqreturn_t ivc_intr_isr(int irq, void *dev_id)
 {
-	struct gr_comm_ivc_context *ctx = (struct gr_comm_ivc_context *)arg;
+	return IRQ_WAKE_THREAD;
+}
+
+static irqreturn_t ivc_intr_thread(int irq, void *dev_id)
+{
+	struct gr_comm_ivc_context *ctx = dev_id;
 	struct device *dev = &ctx->pdev->dev;
-	int ret;
 
-	while (!kthread_should_stop()) {
-		if (!tegra_hv_ivc_can_read(ctx->cookie)) {
-				ret = wait_event_timeout(ctx->wq[IVC_DIR_RX],
-					tegra_hv_ivc_can_read(ctx->cookie) ||
-					kthread_should_stop(),
-					msecs_to_jiffies(250));
-
-				if (kthread_should_stop())
-					break;
-				else if (!ret)
-					continue;
-		}
-
+	while (tegra_hv_ivc_can_read(ctx->cookie)) {
 		if (queue_add(ctx->queue, NULL, ctx->peer, ctx->cookie)) {
 			dev_err(dev, "%s cannot add to queue\n", __func__);
-			continue;
+			break;
 		}
 	}
 
-	return 0;
+	if (tegra_hv_ivc_can_write(ctx->cookie))
+		wake_up(&ctx->wq);
+
+	return IRQ_HANDLED;
 }
 
 static int setup_ivc(u32 virt_ctx, struct platform_device *pdev,
@@ -241,7 +196,6 @@ static int setup_ivc(u32 virt_ctx, struct platform_device *pdev,
 			struct gr_comm_ivc_context *ctx;
 			struct gr_comm_queue *queue =
 					&contexts[virt_ctx].queue[i];
-			char thread_name[30];
 			int id, err;
 
 			hv_dn = of_parse_phandle(dev->of_node, name,
@@ -257,11 +211,10 @@ static int setup_ivc(u32 virt_ctx, struct platform_device *pdev,
 
 			ctx->pdev = pdev;
 			ctx->queue = queue;
-			init_waitqueue_head(&ctx->wq[IVC_DIR_TX]);
-			init_waitqueue_head(&ctx->wq[IVC_DIR_RX]);
+			init_waitqueue_head(&ctx->wq);
 
 			ctx->cookie =
-				tegra_hv_ivc_reserve(hv_dn, inst, &ivc_ops);
+				tegra_hv_ivc_reserve(hv_dn, inst, NULL);
 			if (IS_ERR_OR_NULL(ctx->cookie)) {
 				ret = PTR_ERR(ctx->cookie);
 				kfree(ctx);
@@ -277,7 +230,7 @@ static int setup_ivc(u32 virt_ctx, struct platform_device *pdev,
 
 			ctx->peer = ctx->cookie->peer_vmid;
 
-			id = GEN_ID0(virt_ctx, i, ctx->peer);
+			id = GEN_ID(virt_ctx, i, ctx->peer);
 			err = idr_alloc(&ivc_ctx_idr, ctx, id, id + 1,
 					GFP_KERNEL);
 			if (err != id) {
@@ -286,19 +239,16 @@ static int setup_ivc(u32 virt_ctx, struct platform_device *pdev,
 				goto fail;
 			}
 
-			id = GEN_ID1(ctx->cookie->irq);
-			err = idr_alloc(&ivc_ctx_idr, ctx, id, id + 1,
-					GFP_KERNEL);
-			if (err != id)
-				goto fail;
-
 			server_vmid = ctx->peer;
-			snprintf(thread_name, sizeof(thread_name),
-				"gr-virt-thr-%d-%d-%d", virt_ctx, i, ctx->peer);
-			ctx->rx_thread =
-				kthread_run(ivc_rx_thread, ctx, thread_name);
-			if (IS_ERR(ctx->rx_thread))
+			err = request_threaded_irq(ctx->cookie->irq,
+						ivc_intr_isr,
+						ivc_intr_thread,
+						0, "gr-virt", ctx);
+			if (err) {
+				ret = -ENOMEM;
 				goto fail;
+			}
+			ctx->irq_requested = true;
 		}
 		if (j == 0)
 			goto fail;
@@ -445,12 +395,12 @@ int tegra_gr_comm_send(u32 virt_ctx, u32 peer, u32 index, void *data,
 	if (peer == TEGRA_GR_COMM_ID_SELF)
 		return queue_add(&ctx->queue[index], data, peer, NULL);
 
-	ivc_ctx = idr_find(&ivc_ctx_idr, GEN_ID0(virt_ctx, index, peer));
+	ivc_ctx = idr_find(&ivc_ctx_idr, GEN_ID(virt_ctx, index, peer));
 	if (!ivc_ctx)
 		return -EINVAL;
 
 	if (!tegra_hv_ivc_can_write(ivc_ctx->cookie)) {
-		ret = wait_event_timeout(ivc_ctx->wq[IVC_DIR_TX],
+		ret = wait_event_timeout(ivc_ctx->wq,
 				tegra_hv_ivc_can_write(ivc_ctx->cookie),
 				msecs_to_jiffies(250));
 		if (!ret) {

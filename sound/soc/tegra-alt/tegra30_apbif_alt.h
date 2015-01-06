@@ -1,7 +1,7 @@
 /*
  * tegra30_apbif_alt.h - Tegra30 APBIF registers
  *
- * Copyright (c) 2011-2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -238,8 +238,8 @@
 /* TEGRA_AHUB_I2S_INT_MASK */
 
 #define TEGRA_AHUB_I2S_INT_MASK				0xb0
-#define TEGRA_AHUB_I2S_INT_MASK_I2S_RXCIF_UNDERRUN	((1 << 16)|(1 << 18)|(1 << 20)|(1 << 22)|(1 << 24))
-#define TEGRA_AHUB_I2S_INT_MASK_I2S_TXCIF_OVERRUN	((1 << 17)|(1 << 19)|(1 << 21)|(1 << 23)|(1 << 25))
+#define TEGRA_AHUB_I2S0_INT_MASK_I2S_RXCIF_UNDERRUN	(1 << 16)
+#define TEGRA_AHUB_I2S0_INT_MASK_I2S_TXCIF_OVERRUN	(1 << 17)
 /* TEGRA_AHUB_DAM_INT_MASK */
 
 #define TEGRA_AHUB_DAM_INT_MASK				0xb4
@@ -304,6 +304,10 @@
 /* TEGRA_AHUB_CIF_RX9_CTRL */
 #define TEGRA_AHUB_CIF_RX9_CTRL				0xb8
 
+int tegra30_apbif_i2s_underrun_interrupt_mask_set(int i2s_id);
+int tegra30_apbif_i2s_overrun_interrupt_mask_set(int i2s_id);
+int tegra30_apbif_i2s_underrun_interrupt_mask_clear(int i2s_id);
+int tegra30_apbif_i2s_overrun_interrupt_mask_clear(int i2s_id);
 int tegra30_apbif_i2s_rx_fifo_is_enabled(int i2s_id);
 int tegra30_apbif_i2s_tx_fifo_is_enabled(int i2s_id);
 int tegra30_apbif_i2s_rx_fifo_is_empty(int i2s_id);

@@ -2,7 +2,7 @@
  * tegra30_i2s_alt.c - Tegra30 I2S driver
  *
  * Author: Stephen Warren <swarren@nvidia.com>
- * Copyright (c) 2010-2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * Based on code copyright/by:
  *
@@ -904,6 +904,9 @@ static int tegra30_i2s_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Could not register INTERRUPT\n");
 	 spin_lock_init(&i2s->int_lock);
 
+	/* enable the underrun and overrun innterupts */
+	tegra30_apbif_i2s_underrun_interrupt_mask_clear(pdev->dev.id);
+	tegra30_apbif_i2s_overrun_interrupt_mask_clear(pdev->dev.id);
 	return 0;
 
 err_suspend:
@@ -926,6 +929,9 @@ err:
 static int tegra30_i2s_platform_remove(struct platform_device *pdev)
 {
 	struct tegra30_i2s *i2s = dev_get_drvdata(&pdev->dev);
+
+	tegra30_apbif_i2s_underrun_interrupt_mask_set(pdev->dev.id);
+	tegra30_apbif_i2s_overrun_interrupt_mask_set(pdev->dev.id);
 
 	snd_soc_unregister_codec(&pdev->dev);
 

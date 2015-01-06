@@ -1,7 +1,7 @@
 /*
  * tegra210-soc-base.dtsi: SOC specific DTSI file with all node disabled.
  *
- * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1364,12 +1364,26 @@
 		status = "disabled";
 	};
 
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		ptm_reserved: ptm_carveout {
+			compatible = "nvidia,ptm-carveout";
+			size = <0 0x1000000>;
+			alignment = <0 0x1000>;
+		};
+	};
+
 	ptm {
 		compatible = "nvidia,ptm";
+		memory-region = <&ptm_reserved>;
 		reg = <0x0 0x72010000 0x0 0x1000>, /* funnel_major */
 		      <0x0 0x72030000 0x0 0x1000>, /* etf */
 		      <0x0 0x72040000 0x0 0x1000>, /* replicator */
 		      <0x0 0x72050000 0x0 0x1000>, /* etr */
+		      <0x0 0x72060000 0x0 0x1000>, /* tpiu */
 		      <0x0 0x73010000 0x0 0x1000>, /* funnel_bccplex */
 		      <0x0 0x73440000 0x0 0x1000>, /* ptm0 */
 		      <0x0 0x73540000 0x0 0x1000>, /* ptm1 */

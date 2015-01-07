@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -101,6 +101,11 @@
 			regulator-max-microvolt = <1800000>;
 			gpio = <&gpio TEGRA_GPIO(S, 4) 0>;
 			enable-active-high;
+			consumers {
+				c1 {
+					regulator-consumer-supply = "vif";
+				};
+			};
 		};
 
 		vdd_sys_boost: regulator@6 {
@@ -112,6 +117,11 @@
 			regulator-always-on;
 			gpio = <&max77620 1 0>;
 			enable-active-high;
+			consumers {
+				c1 {
+					regulator-consumer-supply = "vdig";
+				};
+			};
 		};
 
 		vdd_hdmi: regulator@7 {

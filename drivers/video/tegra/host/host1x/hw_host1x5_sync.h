@@ -226,4 +226,36 @@ static inline u32 host1x_sync_syncpt_int_thresh_0_r(void)
 {
 	return 0x18a00;
 }
+static inline u32 host1x_sync_syncpt_prot_en_0_r(void)
+{
+	return 0x1ac4;
+}
+static inline u32 host1x_sync_syncpt_prot_en_0_app_en_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 host1x_sync_syncpt_prot_en_0_ch_en_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 host1x_sync_syncpt_prot_en_0_vm_en_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 host1x_sync_syncpt_ch_app_0_r(void)
+{
+	return 0x19384;
+}
+static inline u32 host1x_sync_syncpt_ch_app_0_syncpt_ch_f(u32 v)
+{
+	return (v & 0x3f) << 8;
+}
+static inline u32 host1x_sync_syncpt_ch_app_0_syncpt_app_f(u32 v)
+{
+	return (v & 0xff) << 0;
+}
+static inline u32 host1x_sync_syncpt_vm_0_r(void)
+{
+	return 0x844;
+}
 #endif

@@ -276,6 +276,7 @@ static void t186_remove_support(struct nvhost_chip_support *op)
 
 #include "host1x/host1x_cdma_t186.c"
 #include "host1x/host1x_syncpt.c"
+#include "host1x/host1x_syncpt_prot_t186.c"
 #include "host1x/host1x_intr_t186.c"
 #include "host1x/host1x_debug_t186.c"
 
@@ -309,6 +310,9 @@ int nvhost_init_t186_support(struct nvhost_master *host,
 
 	host->sync_aperture = host->aperture;
 	op->syncpt = host1x_syncpt_ops;
+	op->syncpt.reset = t186_syncpt_reset;
+	op->syncpt.mark_used = t186_syncpt_mark_used;
+	op->syncpt.mark_unused = t186_syncpt_mark_unused;
 	op->intr = host1x_intr_ops;
 
 	op->remove_support = t186_remove_support;

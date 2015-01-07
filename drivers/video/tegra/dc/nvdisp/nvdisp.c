@@ -51,9 +51,6 @@ int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 	}
 	dc->valid_windows = 0;
 
-	/* Clock init */
-	nvdisp_clock_init(dc);
-
 	mutex_unlock(&tegra_nvdisp_lock);
 	return 0;
 }

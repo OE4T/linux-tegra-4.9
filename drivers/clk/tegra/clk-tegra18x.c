@@ -23,6 +23,9 @@
 #include <linux/delay.h>
 #include <linux/export.h>
 #include <linux/clk/tegra.h>
+#include <linux/platform_device.h>
+#include <linux/of_device.h>
+#include <linux/tegra-soc.h>
 
 static int tegra_clk_prepare(struct clk_hw *hw)
 {
@@ -153,7 +156,59 @@ static const char *tegra_clk_name[] = {
 
 static struct clk *tegra_clks[MAXCLK];
 
-static void __init tegra18x_clock_init(struct device_node *np)
+
+static struct of_device_id tegra18x_clock_of_match[] = {
+	{ .compatible = "nvidia,tegra18x-car", },
+	{ },
+};
+
+/* Needed for a nvdisp linsim clock hack */
+#define CLK_RST_CONTROLLER_RST_DEV_NVDISPLAY0_CLR_0 0x800008
+#define CLK_RST_CONTROLLER_CLK_OUT_ENB_NVDISPLAY0_SET_0 0x80100
+
+static int tegra18x_clock_probe(struct platform_device *pdev)
+{
+	int ret = 0;
+	struct resource *res;
+	void __iomem *base = NULL;
+
+	if (pdev->dev.of_node) {
+		const struct of_device_id *match;
+
+		match = of_match_device(tegra18x_clock_of_match, &pdev->dev);
+
+		if (match) {
+			res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+		} else {
+			ret = -1;
+		}
+	} else {
+		ret = -1;
+	}
+
+	/* Nvdisp linsim clock hack */
+	if (tegra_platform_is_linsim() && !ret) {
+		base = ioremap(res->start,
+				res->end - res->start + 1);
+		writel(0x3ff, base + CLK_RST_CONTROLLER_RST_DEV_NVDISPLAY0_CLR_0);
+		writel(0xf, base + CLK_RST_CONTROLLER_CLK_OUT_ENB_NVDISPLAY0_SET_0);
+	}
+
+	return ret;
+}
+
+static struct platform_driver platform_driver = {
+	.probe = tegra18x_clock_probe,
+	.driver = {
+		.owner = THIS_MODULE,
+		.name = "tegra18x_clock",
+#ifdef CONFIG_OF
+		.of_match_table = tegra18x_clock_of_match,
+#endif
+	},
+};
+
+static int __init tegra18x_clock_init(struct device_node *np)
 {
 	int i;
 
@@ -162,6 +217,14 @@ static void __init tegra18x_clock_init(struct device_node *np)
 				NULL, 0);
 		BUG_ON(IS_ERR(tegra_clks[i]));
 	}
+
+	return platform_driver_register(&platform_driver);
+}
+
+static void __exit tegra18x_clock_exit(void)
+{
+	platform_driver_unregister(&platform_driver);
 }
 
 CLK_OF_DECLARE(tegra18x, "nvidia,tegra18x-car", tegra18x_clock_init);
+module_exit(tegra18x_clock_exit);

@@ -185,19 +185,3 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 
 	return of_device_is_available(np_panel) ? np_panel : NULL;
 }
-
-
-#define NV_ADDRESS_MAP_CAR_BASE 0x25000000
-#define NV_ADDRESS_MAP_CAR_SIZE 0x01000000
-#define CLK_RST_CONTROLLER_RST_DEV_NVDISPLAY0_CLR_0 0x800008
-#define CLK_RST_CONTROLLER_CLK_OUT_ENB_NVDISPLAY0_SET_0 0x801008
-
-/* Hack: Directly program CAR registers before the real API is ready */
-void nvdisp_clock_init(struct tegra_dc *dc)
-{
-	void __iomem *base = ioremap(NV_ADDRESS_MAP_CAR_BASE,
-		NV_ADDRESS_MAP_CAR_SIZE);
-
-	writel(0x3ff, base + CLK_RST_CONTROLLER_RST_DEV_NVDISPLAY0_CLR_0);
-	writel(0xf, base + CLK_RST_CONTROLLER_CLK_OUT_ENB_NVDISPLAY0_SET_0);
-}

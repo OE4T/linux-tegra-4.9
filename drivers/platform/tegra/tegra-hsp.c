@@ -24,6 +24,8 @@
 #include <linux/platform_device.h>
 #include <linux/device.h>
 #include <linux/spinlock.h>
+#include <linux/debugfs.h>
+
 #include <linux/tegra-hsp.h>
 
 #define HSP_DB_REG_TRIGGER		0x0
@@ -263,6 +265,285 @@ int tegra_hsp_db_del_handler(int master)
 	return 0;
 }
 EXPORT_SYMBOL(tegra_hsp_db_del_handler);
+
+#ifdef CONFIG_DEBUG_FS
+
+static const char *db_name(int db)
+{
+	const char *name = NULL;
+	switch (db)	{
+	case HSP_DB_DPMU:
+		name = "DPMU";
+		break;
+	case HSP_DB_CCPLEX:
+		name = "CCPLEX";
+		break;
+	case HSP_DB_CCPLEX_TZ:
+		name = "CCPLEX_TZ";
+		break;
+	case HSP_DB_BPMP:
+		name = "BPMP";
+		break;
+	case HSP_DB_SPE:
+		name = "SPE";
+		break;
+	case HSP_DB_SCE:
+		name = "SCE";
+		break;
+	case HSP_DB_APE:
+		name = "APE";
+		break;
+	}
+	return name;
+}
+
+static const char *master_name(int m)
+{
+	const char *name = NULL;
+	switch (m)	{
+	case HSP_MASTER_CCPLEX:
+		name = "CCPLEX";
+		break;
+	case HSP_MASTER_DPMU:
+		name = "DPMU";
+		break;
+	case HSP_MASTER_BPMP:
+		name = "BPMP";
+		break;
+	case HSP_MASTER_SPE:
+		name = "SPE";
+		break;
+	case HSP_MASTER_SCE:
+		name = "SCE";
+		break;
+	case HSP_MASTER_DMA:
+		name = "DMA(*)";
+		break;
+	case HSP_MASTER_TSECA:
+		name = "TSECA(*)";
+		break;
+	case HSP_MASTER_TSECB:
+		name = "TSECB(*)";
+		break;
+	case HSP_MASTER_JTAGM:
+		name = "JTAGM(*)";
+		break;
+	case HSP_MASTER_CSITE:
+		name = "CSITE(*)";
+		break;
+	case HSP_MASTER_APE:
+		name = "APE";
+		break;
+	case HSP_MASTER_PEATRANS:
+		name = "PEATRANS(*)";
+		break;
+	}
+	return name;
+}
+
+static int hsp_dbg_enable_master_show(void *data, u64 *val)
+{
+	*val = tegra_hsp_db_get_enabled_masters();
+	return 0;
+}
+
+static int hsp_dbg_enable_master_store(void *data, u64 val)
+{
+	if (val > HSP_LAST_MASTER)
+		return -EINVAL;
+	return tegra_hsp_db_enable_master((enum tegra_hsp_master)val);
+}
+
+static int hsp_dbg_ring_store(void *data, u64 val)
+{
+	if (val >= HSP_NR_DBS)
+		return -EINVAL;
+	return tegra_hsp_db_ring((enum tegra_hsp_doorbell)val);
+}
+
+static int hsp_dbg_can_ring_show(void *data, u64 *val)
+{
+	enum tegra_hsp_doorbell db;
+	*val = 0ull;
+	for (db = HSP_FIRST_DB; db <= HSP_LAST_DB; db++)
+		if (tegra_hsp_db_can_ring(db))
+			*val |= (1 << db);
+	return 0;
+}
+
+/* By convention, CPU shouldn't touch other processors' DBs.
+ * So this interface is created for debugging purpose.
+ */
+static int hsp_dbg_can_ring_store(void *data, u64 val)
+{
+	int reg;
+	enum tegra_hsp_doorbell dbell = (int)val;
+	unsigned long flags;
+	if (!hsp_ready() || dbell >= HSP_NR_DBS)
+		return -EINVAL;
+	spin_lock_irqsave(&hsp_top.lock, flags);
+	reg = hsp_readl(db_bases[dbell], HSP_DB_REG_ENABLE);
+	reg |= master_bit(HSP_MASTER_CCPLEX);
+	hsp_writel(db_bases[dbell], HSP_DB_REG_ENABLE, reg);
+	spin_unlock_irqrestore(&hsp_top.lock, flags);
+	return 0;
+}
+
+static int hsp_dbg_pending_show(void *data, u64 *val)
+{
+	*val = tegra_hsp_db_get_pending();
+	return 0;
+}
+
+static int hsp_dbg_pending_store(void *data, u64 val)
+{
+	tegra_hsp_db_clr_pending((u32)val);
+	return 0;
+}
+
+static int hsp_dbg_raw_show(void *data, u64 *val)
+{
+	*val = tegra_hsp_db_get_raw();
+	return 0;
+}
+
+static int hsp_dbg_raw_store(void *data, u64 val)
+{
+	tegra_hsp_db_clr_raw((u32)val);
+	return 0;
+}
+
+static u32 ccplex_intr_count;
+
+static void hsp_dbg_db_handler(int master, void *data)
+{
+	ccplex_intr_count++;
+}
+
+static int hsp_dbg_intr_count_show(void *data, u64 *val)
+{
+	*val = ccplex_intr_count;
+	return 0;
+}
+
+static int hsp_dbg_intr_count_store(void *data, u64 val)
+{
+	ccplex_intr_count = val;
+	return 0;
+}
+
+static int hsp_dbg_doorbells_show(struct seq_file *s, void *data)
+{
+	int db;
+	seq_printf(s, "%-20s%-10s%-10s\n", "name", "id", "offset");
+	seq_printf(s, "--------------------------------------------------\n");
+	for (db = HSP_FIRST_DB; db <= HSP_LAST_DB; db++)
+		seq_printf(s, "%-20s%-10d%-10lx\n", db_name(db), db,
+			(uintptr_t)(db_bases[db] - hsp_top.base));
+	return 0;
+}
+
+static int hsp_dbg_masters_show(struct seq_file *s, void *data)
+{
+	int m;
+	seq_printf(s, "%-20s%-10s\n", "name", "id");
+	seq_printf(s, "----------------------------------------\n");
+	for (m = HSP_FIRST_MASTER; m <= HSP_LAST_MASTER; m++)
+		seq_printf(s, "%-20s%-10d\n", master_name(m), m);
+	return 0;
+}
+
+static int hsp_dbg_handlers_show(struct seq_file *s, void *data)
+{
+	int m;
+	seq_printf(s, "%-20s%-30s\n", "master", "handler");
+	seq_printf(s, "--------------------------------------------------\n");
+	for (m = HSP_FIRST_MASTER; m <= HSP_LAST_MASTER; m++)
+		seq_printf(s, "%-20s%-30pS\n", master_name(m), db_handlers[m].handler);
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(enable_master_fops,
+	hsp_dbg_enable_master_show, hsp_dbg_enable_master_store, "%llx\n");
+DEFINE_SIMPLE_ATTRIBUTE(ring_fops,
+	NULL, hsp_dbg_ring_store, "%lld\n");
+DEFINE_SIMPLE_ATTRIBUTE(can_ring_fops,
+	hsp_dbg_can_ring_show, hsp_dbg_can_ring_store, "%llx\n");
+DEFINE_SIMPLE_ATTRIBUTE(pending_fops,
+	hsp_dbg_pending_show, hsp_dbg_pending_store, "%llx\n");
+DEFINE_SIMPLE_ATTRIBUTE(raw_fops,
+	hsp_dbg_raw_show, hsp_dbg_raw_store, "%llx\n");
+DEFINE_SIMPLE_ATTRIBUTE(intr_count_fops,
+	hsp_dbg_intr_count_show, hsp_dbg_intr_count_store, "%lld\n");
+
+#define DEFINE_DBG_OPEN(name) \
+static int hsp_dbg_##name##_open(struct inode *inode, struct file *file) \
+{ \
+	return single_open(file, hsp_dbg_##name##_show, inode->i_private); \
+} \
+static const struct file_operations name##_fops = { \
+	.open = hsp_dbg_##name##_open, \
+	.read = seq_read, \
+	.llseek = seq_lseek, \
+	.release = single_release, \
+};
+
+DEFINE_DBG_OPEN(doorbells);
+DEFINE_DBG_OPEN(masters);
+DEFINE_DBG_OPEN(handlers);
+
+struct debugfs_entry {
+	const char *name;
+	const struct file_operations *fops;
+	mode_t mode;
+};
+
+static struct debugfs_entry hsp_dbg_attrs[] = {
+	{ "enable_master", &enable_master_fops, S_IRUGO | S_IWUSR },
+	{ "ring", &ring_fops, S_IWUSR },
+	{ "can_ring", &can_ring_fops, S_IRUGO | S_IWUSR },
+	{ "pending", &pending_fops, S_IRUGO | S_IWUSR },
+	{ "raw", &raw_fops, S_IRUGO | S_IWUSR },
+	{ "doorbells", &doorbells_fops, S_IRUGO },
+	{ "masters", &masters_fops, S_IRUGO },
+	{ "handlers", &handlers_fops, S_IRUGO },
+	{ "intr_count", &intr_count_fops, S_IRUGO },
+	{ NULL, NULL, 0 }
+};
+
+static struct dentry *hsp_debugfs_root;
+
+static int debugfs_init(void)
+{
+	struct dentry *dent;
+	struct debugfs_entry *fent;
+
+	if (!hsp_ready())
+		return 0;
+
+	hsp_debugfs_root = debugfs_create_dir("tegra_hsp", NULL);
+	if (IS_ERR_OR_NULL(hsp_debugfs_root))
+		return -EFAULT;
+
+	fent = hsp_dbg_attrs;
+	while (fent->name) {
+		dent = debugfs_create_file(fent->name, fent->mode,
+			hsp_debugfs_root, NULL, fent->fops);
+		if (IS_ERR_OR_NULL(dent))
+			goto abort;
+		fent++;
+	}
+
+	tegra_hsp_db_add_handler(HSP_MASTER_CCPLEX, hsp_dbg_db_handler, NULL);
+
+	return 0;
+
+abort:
+	debugfs_remove_recursive(hsp_debugfs_root);
+	return -EFAULT;
+}
+late_initcall(debugfs_init);
+#endif
 
 static int tegra_hsp_probe(struct platform_device *pdev)
 {

@@ -436,8 +436,13 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 				(uintptr_t)args->syncpt_incrs;
 	u32 __user *fences = (u32 __user *)(uintptr_t)args->fences;
 	u32 __user *class_ids = (u32 __user *)(uintptr_t)args->class_ids;
+	struct nvhost_device_data *pdata = platform_get_drvdata(ctx->pdev);
 
 	struct nvhost_master *host = nvhost_get_host(ctx->pdev);
+	const u32 *syncpt_array =
+		(nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL_INSTANCE) ?
+		ctx->syncpts :
+		ctx->ch->syncpts;
 	u32 *local_class_ids = NULL;
 	int err, i;
 
@@ -499,6 +504,14 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		if (err)
 			cmdbuf_ext.pre_fence = -1;
 
+		/* verify that the given class id is valid for this engine */
+		if (class_id &&
+		    class_id != pdata->class &&
+		    class_id != NV_HOST1X_CLASS_ID) {
+			err = -EINVAL;
+			goto fail;
+		}
+
 		nvhost_job_add_gather(job, cmdbuf.mem, cmdbuf.words,
 				      cmdbuf.offset, class_id,
 				      cmdbuf_ext.pre_fence);
@@ -531,14 +544,30 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 
 	for (i = 0; i < num_syncpt_incrs; ++i) {
 		struct nvhost_syncpt_incr sp;
+		bool found = false;
+		int j;
 
 		/* Copy */
 		err = copy_from_user(&sp, syncpt_incrs + i, sizeof(sp));
 		if (err)
 			goto fail;
 
-		/* Validate */
-		if (sp.syncpt_id >= host->info.nb_pts) {
+		/* Validate the trivial case */
+		if (sp.syncpt_id == 0) {
+			err = -EINVAL;
+			goto fail;
+		}
+
+		/* ..and then ensure that the syncpoints have been reserved
+		 * for this client */
+		for (j = 0; j < NVHOST_MODULE_MAX_SYNCPTS; j++) {
+			if (syncpt_array[j] == sp.syncpt_id) {
+				found = true;
+				break;
+			}
+		}
+
+		if (!found) {
 			err = -EINVAL;
 			goto fail;
 		}

@@ -1234,10 +1234,33 @@ static long nvhost_channelctl(struct file *filp,
 		args.fences = args32->fences;
 
 		if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_SUBMIT) {
+			/* first, get a channel */
 			err = nvhost_channel_map(pdata, &priv->ch, priv);
 			if (err)
 				break;
+
+			/* ..then, synchronize syncpoint information.
+			 *
+			 * This information is updated only in this ioctl and
+			 * channel destruction. We already hold channel
+			 * reference and this ioctl is serialized => no-one is
+			 * modifying the syncpoint field concurrently.
+			 *
+			 * Synchronization is not destructing anything
+			 * in the structure; We can only allocate new
+			 * syncpoints, and hence old ones cannot be released
+			 * by following operation. If some syncpoint is stored
+			 * into the channel structure, it remains there. */
+
+			memcpy(priv->ch->syncpts, priv->syncpts,
+			       sizeof(priv->syncpts));
+			priv->ch->client_managed_syncpt =
+				priv->client_managed_syncpt;
+
+			/* submit work */
 			err = nvhost_ioctl_channel_submit(priv, &args);
+
+			/* ..and drop the local reference */
 			nvhost_putchannel(priv->ch, 1);
 		} else {
 			err = nvhost_ioctl_channel_submit(priv, &args);
@@ -1252,10 +1275,33 @@ static long nvhost_channelctl(struct file *filp,
 			platform_get_drvdata(priv->pdev);
 
 		if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_SUBMIT) {
+			/* first, get a channel */
 			err = nvhost_channel_map(pdata, &priv->ch, priv);
 			if (err)
 				break;
+
+			/* ..then, synchronize syncpoint information.
+			 *
+			 * This information is updated only in this ioctl and
+			 * channel destruction. We already hold channel
+			 * reference and this ioctl is serialized => no-one is
+			 * modifying the syncpoint field concurrently.
+			 *
+			 * Synchronization is not destructing anything
+			 * in the structure; We can only allocate new
+			 * syncpoints, and hence old ones cannot be released
+			 * by following operation. If some syncpoint is stored
+			 * into the channel structure, it remains there. */
+
+			memcpy(priv->ch->syncpts, priv->syncpts,
+			       sizeof(priv->syncpts));
+			priv->ch->client_managed_syncpt =
+				priv->client_managed_syncpt;
+
+			/* submit work */
 			err = nvhost_ioctl_channel_submit(priv, (void *)buf);
+
+			/* ..and drop the local reference */
 			nvhost_putchannel(priv->ch, 1);
 		} else {
 			err = nvhost_ioctl_channel_submit(priv, (void *)buf);

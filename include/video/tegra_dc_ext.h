@@ -98,12 +98,19 @@
 /*Passthrough condition for running 4K HDMI*/
 #define TEGRA_DC_EXT_FLIP_HEAD_FLAG_YUVBYPASS	(1 << 0)
 #define TEGRA_DC_EXT_FLIP_HEAD_FLAG_VRR_MODE	(1 << 1)
+/* Flag to notify attr v2 struct is being used */
+#define TEGRA_DC_EXT_FLIP_HEAD_FLAG_V2_ATTR	(1 << 2)
+
 
 struct tegra_timespec {
 	__s32	tv_sec; /* seconds */
 	__s32	tv_nsec; /* nanoseconds */
 };
 
+/*
+ * Keeping the old struct to maintain the app compatibility.
+ *
+ */
 struct tegra_dc_ext_flip_windowattr {
 	__s32	index;
 	__u32	buff_id;
@@ -172,6 +179,96 @@ struct tegra_dc_ext_flip_windowattr {
 	};
 };
 
+/*
+ * New struct added for CSC changes, CSC is using
+ * 4X3 matrix instead of 3X3 one.
+ * Existing struct is modified to add csc_v2 support
+ * This is done to minimize the code change for struct change.
+ */
+struct tegra_dc_ext_flip_windowattr_v2 {
+	__s32	index;
+	__u32	buff_id;
+	__u32	blend;
+	__u32	offset;
+	__u32	offset_u;
+	__u32	offset_v;
+	__u32	stride;
+	__u32	stride_uv;
+	__u32	pixformat;
+	/*
+	 * x, y, w, h are fixed-point: 20 bits of integer (MSB) and 12 bits of
+	 * fractional (LSB)
+	 */
+	__u32	x;
+	__u32	y;
+	__u32	w;
+	__u32	h;
+	__u32	out_x;
+	__u32	out_y;
+	__u32	out_w;
+	__u32	out_h;
+	__u32	z;
+	__u32	swap_interval;
+	struct tegra_timespec timestamp;
+	union {
+		struct {
+			__u32 pre_syncpt_id;
+			__u32 pre_syncpt_val;
+		};
+		__s32 pre_syncpt_fd;
+	};
+	/* These two are optional; if zero, U and V are taken from buff_id */
+	__u32	buff_id_u;
+	__u32	buff_id_v;
+	__u32	flags;
+	__u8	global_alpha; /* requires TEGRA_DC_EXT_FLIP_FLAG_GLOBAL_ALPHA */
+	/* log2(blockheight) for blocklinear format */
+	__u8	block_height_log2;
+	__u8	pad1[2];
+	union { /* fields for mutually exclusive options */
+		struct { /* used if TEGRA_DC_EXT_FLIP_FLAG_INTERLACE set */
+			__u32	offset2;
+			__u32	offset_u2;
+			__u32	offset_v2;
+			/* Leave some wiggle room for future expansion */
+			__u32   pad2[9];
+		};
+		struct { /* used if TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED set */
+			__u32	buff_id; /* take from buff_id if zero */
+			__u32	offset; /* added to base */
+			__u16	offset_x;
+			__u16	offset_y;
+			__u32	zbc_color;
+			__u32   reserved[8];
+		} cde;
+		struct { /* TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC */
+			__u16 yof;	/* s.7.0 */
+			__u16 kyrgb;	/*   2.8 */
+			__u16 kur;	/* s.2.8 */
+			__u16 kvr;	/* s.2.8 */
+			__u16 kug;	/* s.1.8 */
+			__u16 kvg;	/* s.1.8 */
+			__u16 kub;	/* s.2.8 */
+			__u16 kvb;	/* s.2.8 */
+			__u32   reserved[8];
+		} csc;
+		struct { /* TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC_V2 */
+			__u32 r2r;	/* s.3.16 */
+			__u32 g2r;	/* s.3.16 */
+			__u32 b2r;	/* s.3.16 */
+			__u32 const2r;	/* s.3.16 */
+			__u32 r2g;	/* s.3.16 */
+			__u32 g2g;	/* s.3.16 */
+			__u32 b2g;	/* s.3.16 */
+			__u32 const2g;	/* s.3.16 */
+			__u32 r2b;	/* s.3.16 */
+			__u32 g2b;	/* s.3.16 */
+			__u32 b2b;	/* s.3.16 */
+			__u32 const2b;	/* s.3.16 */
+		} csc2;
+	};
+};
+
 #define TEGRA_DC_EXT_FLIP_N_WINDOWS	3
 
 struct tegra_dc_ext_flip {
@@ -179,6 +276,15 @@ struct tegra_dc_ext_flip {
 	__u32 post_syncpt_id;
 	__u32 post_syncpt_val;
 };
+
+/*
+ * Variable win is the pointer to struct tegra_dc_ext_flip_windowattr.
+ * Using the modified struct to avoid code conflict in user mode,
+ * To avoid any issue for a precompiled application to use with kernel update,
+ * kernel code will copy only sizeof(tegra_dc_ext_flip_windowattr)
+ * for flip2 use case.
+ *
+ */
 
 struct tegra_dc_ext_flip_2 {
 	struct tegra_dc_ext_flip_windowattr __user *win;
@@ -190,8 +296,15 @@ struct tegra_dc_ext_flip_2 {
 	__u16 dirty_rect[4]; /* x,y,w,h for partial screen update. 0 ignores */
 };
 
+/*
+ * Variable win is the pointer to struct tegra_dc_ext_flip_windowattr_v2.
+ * Flags has set to use TEGRA_DC_EXT_FLIP_HEAD_FLAG_V2_ATTR,
+ * then use struct tegra_dc_ext_flip_windowattr_v2. If flag is not set
+ * to use V2_ATTR, then code will use old struct tegra_dc_ext_flip_windowattr
+ *
+*/
 struct tegra_dc_ext_flip_3 {
-	__u64 __user win; /* pointer: struct tegra_dc_ext_flip_windowattr* */
+	__u64 __user win;
 	__u8 win_num;
 	__u8 flags;
 	__u16 reserved2; /* unused - must be 0 */

@@ -1685,7 +1685,7 @@ static void tegra_hdmi_put(struct tegra_dc *dc)
 static inline u32 tegra_hdmi_get_bpp(struct tegra_hdmi *hdmi)
 {
 	if (hdmi->dc->yuv_bypass)
-		return 30;
+		return 24;
 	else
 		return 24;
 }

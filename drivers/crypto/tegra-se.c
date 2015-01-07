@@ -89,6 +89,7 @@ struct tegra_se_chipdata {
 	bool drbg_supported;
 	bool rsa_supported;
 	bool drbg_src_entropy_clk_enable;
+	bool const_freq;
 	unsigned long aes_freq;
 	unsigned long rng_freq;
 	unsigned long sha1_freq;
@@ -619,7 +620,7 @@ static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
 			SE_CRYPTO_IV_SEL(IV_UPDATED));
 	}
 
-	if (se_dev->pclk) {
+	if (se_dev->pclk && !se_dev->chipdata->const_freq) {
 		err = clk_set_rate(se_dev->pclk, freq);
 		if (err) {
 			dev_err(se_dev->dev, "clock set_rate failed.\n");
@@ -678,7 +679,7 @@ static void tegra_se_config_sha(struct tegra_se_dev *se_dev, u32 count,
 		se_writel(se_dev, 0, SE_SHA_MSG_LEFT_REG_OFFSET + (4 * i));
 	}
 
-	if (se_dev->pclk) {
+	if (se_dev->pclk && !se_dev->chipdata->const_freq) {
 		err = clk_set_rate(se_dev->pclk, freq);
 		if (err) {
 			dev_err(se_dev->dev, "clock set_rate failed.\n");
@@ -2133,7 +2134,7 @@ static int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 
 	freq = se_dev->chipdata->rsa_freq;
 
-	if (se_dev->pclk) {
+	if (se_dev->pclk && !se_dev->chipdata->const_freq) {
 		err = clk_set_rate(se_dev->pclk, freq);
 		if (err) {
 			dev_err(se_dev->dev, "clock set_rate failed.\n");
@@ -2713,6 +2714,7 @@ static struct tegra_se_chipdata tegra11_se_chipdata = {
 	.rsa_supported = true,
 	.cprng_supported = false,
 	.drbg_supported = true,
+	.const_freq = false,
 	.aes_freq = 150000000,
 	.rng_freq = 150000000,
 	.sha1_freq = 200000000,
@@ -2730,6 +2732,7 @@ static struct tegra_se_chipdata tegra21_se_chipdata = {
 	.rsa_supported = true,
 	.cprng_supported = false,
 	.drbg_supported = true,
+	.const_freq = true,
 	.aes_freq = 510000000,
 	.rng_freq = 510000000,
 	.sha1_freq = 510000000,
@@ -2836,7 +2839,10 @@ static int tegra_se_probe(struct platform_device *pdev)
 		goto free_res;
 	}
 
-	err = clk_set_rate(se_dev->pclk, ULONG_MAX);
+	if (se_dev->chipdata->const_freq)
+		err = clk_set_rate(se_dev->pclk, 510000000);
+	else
+		err = clk_set_rate(se_dev->pclk, ULONG_MAX);
 	if (err) {
 		dev_err(se_dev->dev, "clock set_rate failed.\n");
 		goto free_res;

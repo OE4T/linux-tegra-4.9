@@ -274,6 +274,7 @@
 
 	tegra_car: clock {
 		compatible = "nvidia,tegra18x-car";
+		reg = <0x0 0x25000000 0x0 0x01000000>;
 		#clock-cells = <1>;
 	};
 

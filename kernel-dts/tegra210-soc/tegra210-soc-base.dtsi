@@ -1126,7 +1126,8 @@
 		interrupts = < 0 19 0x04 >;
 		iommus = <&smmu TEGRA_SWGROUP_SDMMC3A>;
 		pwrdet-support;
-		pwrdet-bit = <13>;
+		pad-controllers = <&tegra_pmc TEGRA210_PAD_SDMMC3>;
+		pad-names = "sdmmc";
 		status = "disabled";
 	};
 
@@ -1143,7 +1144,8 @@
 		interrupts = < 0 14 0x04 >;
 		iommus = <&smmu TEGRA_SWGROUP_SDMMC1A>;
 		pwrdet-support;
-		pwrdet-bit = <12>;
+		pad-controllers = <&tegra_pmc TEGRA210_PAD_SDMMC1>;
+		pad-names = "sdmmc";
 		status = "disabled";
 	};
 

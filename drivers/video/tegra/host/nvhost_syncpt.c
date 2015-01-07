@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoints
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -940,6 +940,21 @@ static void nvhost_reserve_syncpts(struct nvhost_syncpt *sp)
 	sp->syncpt_names[NVSYNCPT_AVP_0] = "avp";
 
 	mutex_unlock(&sp->syncpt_mutex);
+}
+
+int nvhost_syncpt_mark_used(struct nvhost_syncpt *sp,
+			    u32 chid, u32 syncptid)
+{
+	if (syncpt_op().mark_used)
+		return syncpt_op().mark_used(sp, chid, syncptid);
+	return 0;
+}
+
+int nvhost_syncpt_mark_unused(struct nvhost_syncpt *sp, u32 syncptid)
+{
+	if (syncpt_op().mark_unused)
+		return syncpt_op().mark_unused(sp, syncptid);
+	return 0;
 }
 
 int nvhost_syncpt_init(struct platform_device *dev,

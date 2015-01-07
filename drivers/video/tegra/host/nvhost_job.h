@@ -92,6 +92,7 @@ struct nvhost_job {
 	dma_addr_t *reloc_addr_phys;
 
 	/* Sync point id, number of increments and end related to the submit */
+	u32 client_managed_syncpt;
 	struct nvhost_job_syncpt *sp;
 	int num_syncpts;
 

@@ -115,6 +115,8 @@ struct nvhost_syncpt_ops {
 			    unsigned int idx,
 			    bool *cpu, bool *ch,
 			    unsigned int *chid);
+	int (*mark_used)(struct nvhost_syncpt *, u32 chid, u32 syncptid);
+	int (*mark_unused)(struct nvhost_syncpt *, u32 syncptid);
 };
 
 struct nvhost_intr_ops {

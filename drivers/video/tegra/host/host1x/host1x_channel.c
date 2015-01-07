@@ -330,7 +330,15 @@ static int host1x_channel_submit(struct nvhost_job *job)
 
 		job->sp[i].fence =
 			nvhost_syncpt_incr_max(sp, job->sp[i].id, incrs);
+
+		/* mark syncpoint used by this channel */
+		nvhost_syncpt_mark_used(sp, ch->chid, job->sp[i].id);
 	}
+
+	/* mark also client managed syncpoint used by this channel */
+	if (job->client_managed_syncpt)
+		nvhost_syncpt_mark_used(sp, ch->chid,
+					job->client_managed_syncpt);
 
 	submit_gathers(job);
 	serialize(job);

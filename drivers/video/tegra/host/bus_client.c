@@ -463,6 +463,9 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	job->priority = ctx->priority;
 	job->clientid = ctx->clientid;
 	job->vm = ctx->vm;
+	job->client_managed_syncpt =
+		(nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL_INSTANCE) ?
+		ctx->client_managed_syncpt : ctx->ch->client_managed_syncpt;
 	nvhost_vm_get(job->vm);
 
 	/* copy error notifier settings for this job */

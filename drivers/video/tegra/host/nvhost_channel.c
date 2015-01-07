@@ -165,19 +165,34 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 	trace_nvhost_channel_unmap_locked(pdata->pdev->name, ch->chid,
 		pdata->num_mapped_chs);
 
-	if (nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL) {
-		/* Release channel syncpoints */
-		for (i = 0; i < NVHOST_MODULE_MAX_SYNCPTS; ++i) {
-			if (ch->syncpts[i]) {
-				nvhost_free_syncpt(ch->syncpts[i]);
-				ch->syncpts[i] = 0;
-			}
-		}
+	/* Release channel syncpoints */
+	for (i = 0; i < NVHOST_MODULE_MAX_SYNCPTS; ++i) {
+		/* skip over unused syncpoints */
+		if (!ch->syncpts[i])
+			continue;
 
-		if (ch->client_managed_syncpt) {
+		/* first, mark syncpoint as unused by hardware */
+		nvhost_syncpt_mark_unused(&host->syncpt, ch->syncpts[i]);
+
+		/* release syncpoint if we allocate syncpoints per channels */
+		if (nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL)
+			nvhost_free_syncpt(ch->syncpts[i]);
+
+		/* finally, clear information from channel bookkeeping */
+		ch->syncpts[i] = 0;
+	}
+
+	if (ch->client_managed_syncpt) {
+		/* mark syncpoint as unused */
+		nvhost_syncpt_mark_unused(&host->syncpt,
+					  ch->client_managed_syncpt);
+
+		/* release it */
+		if (nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL)
 			nvhost_free_syncpt(ch->client_managed_syncpt);
-			ch->client_managed_syncpt = 0;
-		}
+
+		/* ..and handle bookkeeping */
+		ch->client_managed_syncpt = 0;
 	}
 
 	clear_bit(ch->chid, &host->allocated_channels);

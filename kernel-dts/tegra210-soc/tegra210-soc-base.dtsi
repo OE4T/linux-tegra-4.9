@@ -1399,4 +1399,8 @@
 		reg = < 0x0 0x50060000 0x0 0x1000 >;
 		status = "disabled";
 	};
+
+	cpuidle {
+		compatible = "nvidia,tegra210-cpuidle";
+	};
 };

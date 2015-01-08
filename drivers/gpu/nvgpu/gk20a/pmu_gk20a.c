@@ -1,7 +1,7 @@
 /*
  * GK20A PMU (aka. gPMU outside gk20a context)
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -3610,6 +3610,10 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
+
+	if (!support_gk20a_pmu(g->dev))
+		return ret;
+
 	mutex_lock(&pmu->elpg_mutex);
 
 	pmu->elpg_refcnt++;
@@ -3649,6 +3653,9 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 	int ret = 0;
 
 	gk20a_dbg_fn("");
+
+	if (!support_gk20a_pmu(g->dev))
+		return ret;
 
 	mutex_lock(&pmu->elpg_mutex);
 

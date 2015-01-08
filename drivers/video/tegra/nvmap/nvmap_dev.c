@@ -3,7 +3,7 @@
  *
  * User-space interface to nvmap
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,6 +42,8 @@
 #include <linux/kthread.h>
 #include <linux/highmem.h>
 #include <linux/lzo.h>
+#include <linux/swap.h>
+#include <linux/swapops.h>
 
 #include <asm/cputype.h>
 
@@ -901,8 +903,8 @@ static void nvmap_get_client_mss(struct nvmap_client *client,
 	nvmap_ref_unlock(client);
 }
 
-static void nvmap_get_total_mss(u64 *pss, u64 *non_pss,
-				      u64 *total, u32 heap_type)
+#define PSS_SHIFT 12
+static void nvmap_get_total_mss(u64 *pss, u64 *total, u32 heap_type)
 {
 	int i;
 	struct rb_node *n;
@@ -911,8 +913,6 @@ static void nvmap_get_total_mss(u64 *pss, u64 *non_pss,
 	*total = 0;
 	if (pss)
 		*pss = 0;
-	if (non_pss)
-		*non_pss = 0;
 	if (!dev)
 		return;
 	spin_lock(&dev->handle_lock);
@@ -923,21 +923,25 @@ static void nvmap_get_total_mss(u64 *pss, u64 *non_pss,
 
 		if (!h || !h->alloc || h->heap_type != heap_type)
 			continue;
-		if (!non_pss) {
-			*total += h->size;
+
+		*total += h->size;
+		if (!pss)
 			continue;
-		}
 
 		for (i = 0; i < h->size >> PAGE_SHIFT; i++) {
 			struct page *page = nvmap_to_page(h->pgalloc.pages[i]);
 			int mapcount = page_mapcount(page);
-			if (!mapcount)
-				*non_pss += PAGE_SIZE;
-			*total += PAGE_SIZE;
+			if (mapcount > 0) {
+				if (mapcount >= 2)
+					*pss += (PAGE_SIZE << PSS_SHIFT) /
+						mapcount;
+				else
+					*pss += (PAGE_SIZE << PSS_SHIFT);
+			}
 		}
 	}
-	if (pss && non_pss)
-		*pss = *total - *non_pss;
+	if (pss)
+		*pss = (*pss >> PSS_SHIFT);
 	spin_unlock(&dev->handle_lock);
 }
 
@@ -962,7 +966,7 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 		seq_printf(s, "\n");
 	}
 	mutex_unlock(&nvmap_dev->clients_lock);
-	nvmap_get_total_mss(NULL, NULL, &total, heap_type);
+	nvmap_get_total_mss(NULL, &total, heap_type);
 	seq_printf(s, "%-18s %-18s %8s %10lluK\n", "total", "", "", K(total));
 	return 0;
 }
@@ -992,7 +996,7 @@ static int nvmap_debug_maps_show(struct seq_file *s, void *unused)
 	}
 	mutex_unlock(&nvmap_dev->clients_lock);
 
-	nvmap_get_total_mss(NULL, NULL, &total, heap_type);
+	nvmap_get_total_mss(NULL, &total, heap_type);
 	seq_printf(s, "%-18s %-18s %8s %10lluK\n", "total", "", "", K(total));
 	return 0;
 }
@@ -1015,7 +1019,7 @@ static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
 		seq_printf(s, " %10lluK\n", K(client_total));
 	}
 	mutex_unlock(&nvmap_dev->clients_lock);
-	nvmap_get_total_mss(NULL, NULL, &total, heap_type);
+	nvmap_get_total_mss(NULL, &total, heap_type);
 	seq_printf(s, "%-18s %18s %8s %10lluK\n", "total", "", "", K(total));
 	return 0;
 }
@@ -1065,13 +1069,56 @@ static int nvmap_debug_lru_allocations_show(struct seq_file *s, void *unused)
 
 DEBUGFS_OPEN_FOPS(lru_allocations);
 
-static void nvmap_iovmm_get_client_mss(struct nvmap_client *client, u64 *pss,
-				   u64 *non_pss, u64 *total)
-{
-	int i;
-	struct rb_node *n;
+struct procrank_stats {
+	struct vm_area_struct *vma;
+	u64 pss;
+};
 
-	*pss = *non_pss = *total = 0;
+static int procrank_pte_entry(pte_t *pte, unsigned long addr, unsigned long end,
+		struct mm_walk *walk)
+{
+	struct procrank_stats *mss = walk->private;
+	struct vm_area_struct *vma = mss->vma;
+	struct page *page = NULL;
+	int mapcount;
+
+	if (pte_present(*pte))
+		page = vm_normal_page(vma, addr, *pte);
+	else if (is_swap_pte(*pte)) {
+		swp_entry_t swpent = pte_to_swp_entry(*pte);
+
+		if (is_migration_entry(swpent))
+			page = migration_entry_to_page(swpent);
+	}
+
+	if (!page)
+		return 0;
+
+	mapcount = page_mapcount(page);
+	if (mapcount >= 2)
+		mss->pss += (PAGE_SIZE << PSS_SHIFT) / mapcount;
+	else
+		mss->pss += (PAGE_SIZE << PSS_SHIFT);
+
+	return 0;
+}
+
+static void nvmap_iovmm_get_client_mss(struct nvmap_client *client, u64 *pss,
+				   u64 *total)
+{
+	struct rb_node *n;
+	struct nvmap_vma_list *tmp;
+	struct procrank_stats mss;
+	struct mm_walk procrank_walk = {
+		.pte_entry = procrank_pte_entry,
+		.private = &mss,
+	};
+	struct mm_struct *mm;
+	bool is_mm_accessed = false;
+
+	memset(&mss, 0, sizeof(mss));
+	*pss = *total = 0;
+
 	nvmap_ref_lock(client);
 	n = rb_first(&client->handle_refs);
 	for (; n != NULL; n = rb_next(n)) {
@@ -1082,41 +1129,59 @@ static void nvmap_iovmm_get_client_mss(struct nvmap_client *client, u64 *pss,
 		if (!h || !h->alloc || !h->heap_pgalloc)
 			continue;
 
-		for (i = 0; i < h->size >> PAGE_SHIFT; i++) {
-			struct page *page = nvmap_to_page(h->pgalloc.pages[i]);
-			int mapcount = page_mapcount(page);
-			if (!mapcount)
-				*non_pss += PAGE_SIZE;
-			*total += PAGE_SIZE;
+		list_for_each_entry(tmp, &h->vmas, list) {
+			if (client->task->pid == tmp->pid) {
+
+				if (!is_mm_accessed) {
+					is_mm_accessed = true;
+					mm = mm_access(client->task,
+							PTRACE_MODE_READ);
+					if (!mm || IS_ERR(mm)) {
+						nvmap_ref_unlock(client);
+						return;
+					}
+					down_read(&mm->mmap_sem);
+					procrank_walk.mm = tmp->vma->vm_mm;
+				}
+
+				mss.vma = tmp->vma;
+				walk_page_range(tmp->vma->vm_start,
+						tmp->vma->vm_end,
+						&procrank_walk);
+			}
 		}
-		*pss = *total - *non_pss;
+
+		*total += h->size / atomic_read(&h->share_count);
+	}
+
+	if (is_mm_accessed) {
+		up_read(&mm->mmap_sem);
+		mmput(mm);
+		*pss = (mss.pss >> PSS_SHIFT);
 	}
 	nvmap_ref_unlock(client);
 }
 
 static int nvmap_debug_iovmm_procrank_show(struct seq_file *s, void *unused)
 {
-	u64 pss, non_pss, total;
+	u64 pss, total;
 	struct nvmap_client *client;
 	struct nvmap_device *dev = s->private;
-	u64 total_memory, total_pss, total_non_pss;
+	u64 total_memory, total_pss;
 
 	mutex_lock(&dev->clients_lock);
-	seq_printf(s, "%-18s %18s %8s %11s %11s %11s\n",
-		"CLIENT", "PROCESS", "PID", "PSS", "NON-PSS", "TOTAL");
+	seq_printf(s, "%-18s %18s %8s %11s %11s\n",
+		"CLIENT", "PROCESS", "PID", "PSS", "SIZE");
 	list_for_each_entry(client, &dev->clients, list) {
 		client_stringify(client, s);
-		nvmap_iovmm_get_client_mss(client, &pss, &non_pss, &total);
-		seq_printf(s, " %10lluK %10lluK %10lluK\n", K(pss),
-			K(non_pss), K(total));
+		nvmap_iovmm_get_client_mss(client, &pss, &total);
+		seq_printf(s, " %10lluK %10lluK\n", K(pss), K(total));
 	}
 	mutex_unlock(&dev->clients_lock);
 
-	nvmap_get_total_mss(&total_pss, &total_non_pss, &total_memory, NVMAP_HEAP_IOVMM);
-	seq_printf(s, "%-18s %18s %8s %10lluK %10lluK %10lluK\n",
-		"total", "", "", K(total_pss),
-		K(total_non_pss), K(total_memory));
-	PRINT_MEM_STATS_NOTE(TOTAL);
+	nvmap_get_total_mss(&total_pss, &total_memory, NVMAP_HEAP_IOVMM);
+	seq_printf(s, "%-18s %18s %8s %10lluK %10lluK\n",
+		"total", "", "", K(total_pss), K(total_memory));
 	return 0;
 }
 
@@ -1126,7 +1191,7 @@ ulong nvmap_iovmm_get_used_pages(void)
 {
 	u64 total;
 
-	nvmap_get_total_mss(NULL, NULL, &total, NVMAP_HEAP_IOVMM);
+	nvmap_get_total_mss(NULL, &total, NVMAP_HEAP_IOVMM);
 	return total >> PAGE_SHIFT;
 }
 

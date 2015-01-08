@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Automatic Clock Management
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -91,9 +91,27 @@ static void do_unpowergate_locked(int id)
 	}
 }
 
+static void dump_clock_status(struct platform_device *dev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	int i;
+
+	pr_info("\n%s: %s status:\n", __func__, dev_name(&dev->dev));
+
+	for (i = 0; i < NVHOST_MODULE_MAX_CLOCKS; i++) {
+		if (!pdata->clocks[i].name)
+			break;
+		pr_info("%s: clock %s: enabled=%d, rate = %lu\n",
+			__func__, pdata->clocks[i].name,
+			!!tegra_is_clk_enabled(pdata->clk[i]),
+			clk_get_rate(pdata->clk[i]));
+	}
+}
+
 static void do_module_reset_locked(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	int ret;
 
 	if (pdata->reset) {
 		pdata->reset(dev);
@@ -102,12 +120,20 @@ static void do_module_reset_locked(struct platform_device *dev)
 
 	/* assert module and mc client reset */
 	if (pdata->clocks[0].reset) {
-		tegra_mc_flush(pdata->clocks[0].reset);
+		ret = tegra_mc_flush(pdata->clocks[0].reset);
+		if (ret) {
+			dump_clock_status(nvhost_get_host(dev)->dev);
+			dump_clock_status(dev);
+		}
 		tegra_periph_reset_assert(pdata->clk[0]);
 	}
 
 	if (pdata->clocks[1].reset) {
-		tegra_mc_flush(pdata->clocks[1].reset);
+		ret = tegra_mc_flush(pdata->clocks[1].reset);
+		if (ret) {
+			dump_clock_status(nvhost_get_host(dev)->dev);
+			dump_clock_status(dev);
+		}
 		tegra_periph_reset_assert(pdata->clk[1]);
 	}
 

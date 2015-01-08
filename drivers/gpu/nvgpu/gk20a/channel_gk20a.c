@@ -769,7 +769,6 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 
 		return NULL;
 	}
-	g->ops.fifo.bind_channel(ch);
 	ch->pid = current->pid;
 
 	/* By default, channel is regular (non-TSG) channel */
@@ -1216,6 +1215,8 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	err = channel_gk20a_update_runlist(c, true);
 	if (err)
 		goto clean_up_unmap;
+
+	g->ops.fifo.bind_channel(c);
 
 	gk20a_free_sgtable(&sgt);
 

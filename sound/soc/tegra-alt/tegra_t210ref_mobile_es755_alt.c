@@ -41,6 +41,7 @@
 
 #include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"
+#include "tegra210_xbar_alt.h"
 
 #include "../codecs/audience/es755.h"
 #include "../codecs/tas2552.h"
@@ -71,6 +72,7 @@ struct tegra_t210ref {
 	int clock_enabled;
 	enum snd_soc_bias_level bias_level;
 	const char *edp_name;
+	int rate_via_kcontrol;
 };
 
 static struct snd_soc_jack tegra_t210ref_hp_jack;
@@ -162,7 +164,7 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	case 88200:
 	case 176000:
 		clk_out_rate = 19200000; /* Codec rate */
-		mclk = 11289600 * 2; /* PLL_A rate */
+		mclk = 11289600 * 4; /* PLL_A rate */
 		break;
 	case 8000:
 	case 16000:
@@ -173,7 +175,7 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	case 192000:
 	default:
 		clk_out_rate = 19200000;
-		mclk = 12288000 * 2;
+		mclk = 12288000 * 3;
 		break;
 	}
 
@@ -182,6 +184,13 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 				rate, mclk, clk_out_rate);
 	if (err < 0) {
 		dev_err(card->dev, "Can't configure clocks\n");
+		return err;
+	}
+
+	err = tegra210_xbar_set_clock(mclk);
+	if (err < 0) {
+		dev_err(card->dev,
+		"Can't configure clocks pll_a = %d Hz\n", mclk);
 		return err;
 	}
 
@@ -195,7 +204,12 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 			  card->rtd[idx].dai_link->params;
 
 			/* update link_param to update hw_param for DAPM */
-			dai_params->rate_min = rate;
+			if (!machine->rate_via_kcontrol)
+				dai_params->rate_min = rate;
+			else
+				dai_params->rate_min =
+					machine->rate_via_kcontrol;
+
 			dai_params->channels_min = channels;
 			dai_params->formats = formats;
 
@@ -433,6 +447,64 @@ static int tegra_t210ref_event_int_spk(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
+static const int tegra_t210ref_srate_values[] = {
+	0,
+	8000,
+	16000,
+	44100,
+	48000,
+	11025,
+	22050,
+	24000,
+	32000,
+	88200,
+	96000,
+	176000,
+	192000,
+};
+
+static const char * const tegra_t210ref_srate_text[] = {
+	"None",
+	"8kHz",
+	"16kHz",
+	"44kHz",
+	"48kHz",
+	"11kHz",
+	"22kHz",
+	"24kHz",
+	"32kHz",
+	"88kHz",
+	"96kHz",
+	"176kHz",
+	"192kHz",
+};
+
+static int tegra_t210ref_codec_get_rate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
+
+	ucontrol->value.integer.value[0] = machine->rate_via_kcontrol;
+
+	return 0;
+}
+
+static int tegra_t210ref_codec_put_rate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
+
+	/* set the rate control flag */
+	machine->rate_via_kcontrol = ucontrol->value.integer.value[0];
+
+	return 0;
+}
+
+static const struct soc_enum tegra_t210ref_codec_rate =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_t210ref_srate_text),
+		tegra_t210ref_srate_text);
 
 static const struct snd_soc_dapm_widget tegra_t210ref_dapm_widgets[] = {
 	SND_SOC_DAPM_SPK("Int Spk", tegra_t210ref_event_int_spk),
@@ -444,6 +516,8 @@ static const struct snd_soc_dapm_widget tegra_t210ref_dapm_widgets[] = {
 
 static const struct snd_kcontrol_new tegra_t210ref_controls[] = {
 	SOC_DAPM_PIN_SWITCH("Int Spk"),
+	SOC_ENUM_EXT("codec-x rate", tegra_t210ref_codec_rate,
+		tegra_t210ref_codec_get_rate, tegra_t210ref_codec_put_rate),
 };
 
 static int tegra_t210ref_suspend_pre(struct snd_soc_card *card)

@@ -801,6 +801,23 @@ static struct of_dev_auxdata tegra210_xbar_auxdata[] = {
 	{}
 };
 
+
+int tegra210_xbar_set_clock(unsigned long rate)
+{
+	int ret = 0;
+
+	ret = clk_set_rate(xbar->clk_parent, rate);
+	if (ret)
+		pr_info("Failed to set clock rate of pll_a_out0\n");
+
+	ret = clk_set_rate(xbar->clk, rate);
+	if (ret)
+		pr_info("Failed to set clock rate of ahub\n");
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra210_xbar_set_clock);
+
 static int tegra210_xbar_registration(struct platform_device *pdev)
 {
 	int ret;

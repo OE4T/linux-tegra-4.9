@@ -418,6 +418,7 @@ struct regulator_dev {
 	struct regulator *supply;	/* for tree */
 	const char *supply_name;
 	struct regmap *regmap;
+	int machine_constraints;
 
 	struct delayed_work disable_work;
 	int deferred_disables;
@@ -425,6 +426,7 @@ struct regulator_dev {
 	void *reg_data;		/* regulator_dev data */
 
 	struct dentry *debugfs;
+	struct dentry *pdebugfs;
 
 	struct regulator_enable_gpio *ena_pin;
 	unsigned int ena_gpio_state:1;

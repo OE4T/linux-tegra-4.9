@@ -35,6 +35,8 @@ struct nvhost_chip_support;
 struct nvhost_channel;
 struct mem_mgr;
 
+extern long linsim_cl;
+
 /*
  * Policy determines how do we store the syncpts,
  * i.e. either per channel (in struct nvhost_channel)

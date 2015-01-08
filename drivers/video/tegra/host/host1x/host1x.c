@@ -710,6 +710,8 @@ static struct of_device_id tegra_host1x_of_match[] = {
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	{ .compatible = "nvidia,tegra186-host1x",
 		.data = (struct nvhost_device_data *)&t18_host1x_info },
+	{ .compatible = "nvidia,tegra186-host1x-cl34000094",
+		.data = (struct nvhost_device_data *)&t18_host1x_info },
 #endif
 	{ },
 };
@@ -829,6 +831,7 @@ static void nvhost_virt_deinit(struct platform_device *dev)
 	}
 }
 
+long linsim_cl = 0;
 static int nvhost_probe(struct platform_device *dev)
 {
 	struct nvhost_master *host;
@@ -841,8 +844,17 @@ static int nvhost_probe(struct platform_device *dev)
 		const struct of_device_id *match;
 
 		match = of_match_device(tegra_host1x_of_match, &dev->dev);
-		if (match)
+		if (match) {
+			char *substr = strstr(match->compatible, "cl");
+
 			pdata = (struct nvhost_device_data *)match->data;
+
+			if (substr) {
+				substr += 2;
+				if (kstrtol(substr, 0, &linsim_cl))
+					WARN(1, "Unable to decode linsim cl\n");
+			}
+		}
 	} else
 		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
 

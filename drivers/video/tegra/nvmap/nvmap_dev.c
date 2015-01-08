@@ -622,7 +622,7 @@ void nvmap_vma_open(struct vm_area_struct *vma)
 	struct nvmap_handle *h;
 	struct nvmap_vma_list *vma_list, *tmp;
 	struct list_head *tmp_head = NULL;
-	pid_t current_pid = current->pid;
+	pid_t current_pid = task_tgid_nr(current);
 	bool vma_pos_found = false;
 
 	priv = vma->vm_private_data;

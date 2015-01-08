@@ -37,7 +37,6 @@
 		uhs-mask = <0x0>;
 		built-in;
 		power-off-rail;
-		disable-clock-gate;
 		nvidia,enable-hs533-mode;
 		pll_source = "pll_p", "pll_c4_out1";
 		status = "okay";
@@ -48,7 +47,6 @@
 		default-drv-type = <1>;
 		uhs-mask = <0x1c>;
 		power-off-rail;
-		disable-clock-gate;
 		nvidia,update-pinctrl-settings;
 		pinctrl-names = "sdmmc_schmitt_enable", "sdmmc_schmitt_disable", "sdmmc_clk_schmitt_enable", "sdmmc_clk_schmitt_disable", "sdmmc_drv_code", "sdmmc_default_drv_code";
 		pinctrl-0 = <&sdmmc3_schmitt_enable_state>;
@@ -65,14 +63,12 @@
 		nvidia,ddr-tap-delay = <0>;
 		uhs-mask = <0x8>;
 		power-off-rail;
-		disable-clock-gate;
 		status = "okay";
 	};
 
 	sdhci@700b0000 {
 		uhs-mask = <0xc>;
 		power-off-rail;
-		disable-clock-gate;
 		nvidia,update-pinctrl-settings;
 		pinctrl-names = "sdmmc_schmitt_enable", "sdmmc_schmitt_disable", "sdmmc_clk_schmitt_enable", "sdmmc_clk_schmitt_disable", "sdmmc_drv_code", "admmc_default_drv_code";
 		pinctrl-0 = <&sdmmc1_schmitt_enable_state>;

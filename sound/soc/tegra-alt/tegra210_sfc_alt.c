@@ -83,6 +83,99 @@ static int tegra210_sfc_suspend(struct device *dev)
 }
 #endif
 
+u32 coef_44to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+	0x000c6102, /*header*/
+	0x0001d727, /* input gain */
+	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
+	0x00e55557, 0xffcadd5b, 0x003d80ba,
+	0x00d13397, 0xfff232f8, 0x00683337,
+	0x00000002, /* output gain */
+	0x00186102, /* header */
+	0x000013d9, /* input gain */
+	0x00ebd477, 0xff4ce383, 0x0042049d,
+	0x0089c278, 0xff54414d, 0x00531ded,
+	0x004a5e07, 0xff53cf41, 0x006efbdc,
+	0x00000002, /* output gain */
+	0x00235204, /* farrow */
+	0x000aaaab,
+	0xffaaaaab,
+	0xfffaaaab,
+	0x00555555,
+	0xff600000,
+	0xfff55555,
+	0x00155555,
+	0x00055555,
+	0xffeaaaab,
+	0x00200000,
+	0x00005102, /* header */
+	0x0001d029, /* input gain */
+	0x00f2a98b, 0xff92aa71, 0x001fcd16,
+	0x00ae9004, 0xffb85140, 0x0041813a,
+	0x007f8ed1, 0xffd585fc, 0x006a69e6,
+	0x00000001 /* output gain */
+};
+
+u32 coef_16to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+	0x0000a105, /* interpolation + IIR Filter */
+	0x00000784, /*input gain */
+	0x00cc516e, 0xff2c9639, 0x005ad5b3,
+	0x0013ad0d, 0xff3d4799, 0x0063ce75,
+	0xffb6f398, 0xff5138d1, 0x006e9e1f,
+	0xff9186e5, 0xff5f96a4, 0x0076a86e,
+	0xff82089c, 0xff676b81, 0x007b9f8a,
+	0xff7c48a5, 0xff6a31e7, 0x007ebb7b,
+	0x00000003 /* output gain */
+};
+
+u32 coef_96to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+	0x00005102,/* header */
+	0x0001d727,/* input gain */
+	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
+	0x00e55557, 0xffcadd5b, 0x003d80ba,
+	0x00d13397, 0xfff232f8, 0x00683337,
+	0x00000001 /* output gain */
+};
+
+u32 coef_48to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+	0x000c6102,/* header */
+	0x0001d029, /* input gain */
+	0x00f2a98b, 0xff92aa71, 0x001fcd16,
+	0x00ae9004, 0xffb85140, 0x0041813a,
+	0x007f8ed1, 0xffd585fc, 0x006a69e6,
+	0x00000002, /* output gain */
+	0x001b6103, /* header */
+	0x000001e0, /* input gain */
+	0x00de44c0, 0xff380b7f, 0x004ffc73,
+	0x00494b44, 0xff3d493a, 0x005908bf,
+	0xffe9a3c8, 0xff425647, 0x006745f7,
+	0xffc42d61, 0xff40a6c7, 0x00776709,
+	0x00000002, /* output gain */
+	0x00265204, /* farrow */
+	0x000aaaab,
+	0xffaaaaab,
+	0xfffaaaab,
+	0x00555555,
+	0xff600000,
+	0xfff55555,
+	0x00155555,
+	0x00055555,
+	0xffeaaaab,
+	0x00200000,
+	0x00005102, /* header */
+	0x0001d727, /* input gain */
+	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
+	0x00e55557, 0xffcadd5b, 0x003d80ba,
+	0x00d13397, 0xfff232f8, 0x00683337,
+	0x00000001 /* output gain */
+};
+
+/**
+ *  tegra210_sfc_enable_coef_ram - enables coefficient ram params for a sfc
+ *  @cif : sfc cif
+ *  @coef : ptr to coefficients (pass NULL while disabling, i.e. when en = 0)
+ *  @en : enable/disable flag
+ */
+
 static int tegra210_sfc_set_dai_sysclk(struct snd_soc_dai *dai,
 		int clk_id, unsigned int freq, int dir)
 {
@@ -169,7 +262,7 @@ static int tegra210_sfc_set_audio_cif(struct tegra210_sfc *sfc,
 	cif_conf.audio_channels = channels;
 	cif_conf.client_channels = channels;
 	cif_conf.audio_bits = audio_bits;
-	cif_conf.client_bits = audio_bits;
+	cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_32;
 
 	sfc->soc_data->set_audio_cif(sfc->regmap, reg, &cif_conf);
 
@@ -184,6 +277,7 @@ static int tegra210_sfc_in_hw_params(struct snd_pcm_substream *substream,
 	struct tegra210_sfc *sfc = snd_soc_dai_get_drvdata(dai);
 	int ret;
 
+	sfc->srate_in = params_rate(params);
 	ret = tegra210_sfc_set_audio_cif(sfc, params,
 				TEGRA210_SFC_AXBAR_RX_CIF_CTRL);
 	if (ret) {
@@ -192,6 +286,17 @@ static int tegra210_sfc_in_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	regmap_write(sfc->regmap, TEGRA210_SFC_AXBAR_RX_FREQ, sfc->srate_in);
+
+	tegra210_xbar_write_ahubram(sfc->regmap,
+			TEGRA210_SFC_AHUBRAMCTL_SFC_CTRL,
+			TEGRA210_SFC_AHUBRAMCTL_SFC_DATA,
+			0, coef_44to48, TEGRA210_SFC_COEF_RAM_DEPTH);
+
+	regmap_update_bits(sfc->regmap,
+			TEGRA210_SFC_COEF_RAM,
+			TEGRA210_SFC_COEF_RAM_COEF_RAM_EN,
+			TEGRA210_SFC_COEF_RAM_COEF_RAM_EN);
+
 	return ret;
 }
 
@@ -317,11 +422,13 @@ static const char * const tegra210_sfc_srate_text[] = {
 	"192kHz",
 };
 
-static const struct soc_enum tegra210_sfc_srate =
-	SOC_ENUM_SINGLE_EXT(14, tegra210_sfc_srate_text);
+static const struct soc_enum tegra210_sfc_srate_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
+		ARRAY_SIZE(tegra210_sfc_srate_text),
+		tegra210_sfc_srate_text);
 
 static const struct snd_kcontrol_new tegra210_sfc_controls[] = {
-	SOC_ENUM_EXT("output rate", tegra210_sfc_srate,
+	SOC_ENUM_EXT("output rate", tegra210_sfc_srate_enum,
 		tegra210_sfc_get_srate, tegra210_sfc_put_srate),
 };
 

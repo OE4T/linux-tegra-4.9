@@ -1050,7 +1050,7 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 		elem_size > sys_stride ||
 		elem_size > h_stride ||
 		sys_stride > (h->size - h_offs) / count ||
-		h_stride > (h->size - h_offs) / count)
+		h_offs + h_stride * (count - 1) + elem_size > h->size)
 		return -EINVAL;
 
 	area = alloc_vm_area(PAGE_SIZE, NULL);

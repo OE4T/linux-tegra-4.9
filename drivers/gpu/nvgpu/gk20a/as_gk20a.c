@@ -247,6 +247,9 @@ int gk20a_as_dev_release(struct inode *inode, struct file *filp)
 
 	gk20a_dbg_fn("");
 
+	if (!as_share)
+		return 0;
+
 	return gk20a_as_release_share(as_share);
 }
 

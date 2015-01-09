@@ -170,13 +170,15 @@ static int gk20a_ctrl_alloc_as(
 
 	err = gk20a_as_alloc_share(&g->as, args->big_page_size, &as_share);
 	if (err)
-		goto clean_up;
+		goto clean_up_file;
 
 	file->private_data = as_share;
 
 	args->as_fd = fd;
 	return 0;
 
+clean_up_file:
+	fput(file);
 clean_up:
 	put_unused_fd(fd);
 	return err;

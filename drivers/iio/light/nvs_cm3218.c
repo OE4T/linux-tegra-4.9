@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -31,27 +31,21 @@
 #define CM_VENDOR			"Capella Microsystems, Inc."
 #define CM_NAME				"cm3218x"
 #define CM_NAME_CM3218			"cm3218"
+#define CM_NAME_CM32180			"cm32180"
 #define CM_NAME_CM32181			"cm32181"
 #define CM_DEVID_CM3218			(0x01)
-#define CM_DEVID_CM32181		(0x02)
+#define CM_DEVID_CM32180		(0x02)
+#define CM_DEVID_CM32181		(0x03)
 #define CM_HW_DELAY_MS			(10)
 #define CM_ALS_SM_DFLT			(0x01)
 #define CM_ALS_PERS_DFLT		(0x00)
 #define CM_ALS_PSM_DFLT			(0x07)
+#define CM_R_SET_DFLT			(604)
 #define CM_LIGHT_VERSION		(1)
-#define CM_LIGHT_MAX_RANGE_IVAL		(119156)
-#define CM_LIGHT_MAX_RANGE_MICRO	(0)
-#define CM_LIGHT_RESOLUTION_IVAL	(0)
-#define CM_LIGHT_RESOLUTION_MICRO	(167000)
-#define CM_LIGHT_MILLIAMP_IVAL		(0)
-#define CM_LIGHT_MILLIAMP_MICRO		(3000)
 #define CM_LIGHT_SCALE_IVAL		(0)
 #define CM_LIGHT_SCALE_MICRO		(10000)
-#define CM_LIGHT_OFFSET_IVAL		(0)
-#define CM_LIGHT_OFFSET_MICRO		(0)
 #define CM_LIGHT_THRESHOLD_LO		(100)
 #define CM_LIGHT_THRESHOLD_HI		(100)
-#define CM_POLL_DLY_MS_MIN		(800)
 #define CM_POLL_DLY_MS_MAX		(4000)
 /* HW registers */
 #define CM_REG_CFG			(0x00)
@@ -83,20 +77,39 @@ static unsigned short cm_i2c_addrs[] = {
 	0x48,
 };
 
-static struct nvs_light_dynamic cm_nld_tbl[] = {
-	{{0, 5000},   {327,   675000}, {0, 3000}, 800, 0x00C0},
-	{{0, 10000},  {655,   350000}, {0, 3000}, 400, 0x0080},
-	{{0, 21000},  {13762, 350000}, {0, 3000}, 200, 0x0040},
-	{{0, 42000},  {27524, 700000}, {0, 3000}, 100, 0x0000},
-	{{0, 84000},  {55049, 400000}, {0, 3000}, 50,  0x0200},
-	{{0, 167000}, {10944, 345000}, {0, 3000}, 25,  0x0300}
+static struct nvs_light_dynamic cm3218_nld_tbl[] = {
+	{ {0, 3570},  {233,  959950}, {0, 130000}, 1000, 0x00C0 },
+	{ {0, 7140},  {467,  919900}, {0, 130000}, 500,  0x0080 },
+	{ {0, 14280}, {935,  839800}, {0, 130000}, 250,  0x0040 },
+	{ {0, 28560}, {1871, 679600}, {0, 130000}, 125,  0x0000 }
 };
 
-static unsigned int cm_psm_ms_tbl[] = {
-	500,
-	1000,
-	2000,
-	4000
+static struct nvs_light_dynamic cm32180_nld_tbl[] = {
+	{ {0, 890},  {58,  326150}, {0, 130000}, 1000, 0x00C0 },
+	{ {0, 1780}, {116, 652300}, {0, 130000}, 500,  0x0080 },
+	{ {0, 3560}, {233, 304600}, {0, 130000}, 250,  0x0040 },
+	{ {0, 7120}, {466, 609200}, {0, 130000}, 125,  0x0000 }
+};
+
+static struct nvs_light_dynamic cm32181_nld_tbl[] = {
+	{ {0, 5000},   {327,   675000}, {0, 35000}, 800, 0x00C0 },
+	{ {0, 10000},  {655,   350000}, {0, 35000}, 400, 0x0080 },
+	{ {0, 21000},  {13762, 350000}, {0, 35000}, 200, 0x0040 },
+	{ {0, 42000},  {27524, 700000}, {0, 35000}, 100, 0x0000 },
+	{ {0, 84000},  {55049, 400000}, {0, 35000}, 50,  0x0200 },
+	{ {0, 167000}, {10944, 345000}, {0, 35000}, 25,  0x0300 }
+};
+
+struct cm_psm {
+	unsigned int ms;
+	struct nvs_float milliamp;
+};
+
+static struct cm_psm cm_psm_tbl[] = {
+	{ 500,  {0, 21000} },
+	{ 1000, {0, 15000} },
+	{ 2000, {0, 10000} },
+	{ 4000, {0, 6000} }
 };
 
 struct cm_state {
@@ -107,7 +120,7 @@ struct cm_state {
 	struct delayed_work dw;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(cm_vregs)];
 	struct nvs_light light;
-	struct nvs_light_dynamic nld_tbl[ARRAY_SIZE(cm_nld_tbl)];
+	struct nvs_light_dynamic nld_tbl[ARRAY_SIZE(cm32181_nld_tbl)];
 	unsigned int sts;		/* debug flags */
 	unsigned int errs;		/* error count */
 	unsigned int enabled;		/* enable status */
@@ -117,6 +130,7 @@ struct cm_state {
 	u8 dev_id;			/* device ID */
 	u16 als_cfg;			/* ALS register 0 defaults */
 	u16 als_psm;			/* ALS Power Save Mode */
+	u32 r_set;			/* Rset resistor value */
 };
 
 
@@ -245,7 +259,7 @@ static int cm_cmd_wr(struct cm_state *st, bool irq_en)
 	int ret = 0;
 
 	als_cfg = st->als_cfg;
-	als_cfg |= cm_nld_tbl[st->light.nld_i].driver_data;
+	als_cfg |= st->nld_tbl[st->light.nld_i].driver_data;
 	if (irq_en && st->i2c->irq) {
 		ret = cm_i2c_wr(st, CM_REG_WL, st->light.hw_thresh_lo);
 		ret |= cm_i2c_wr(st, CM_REG_WH, st->light.hw_thresh_hi);
@@ -482,53 +496,85 @@ static int cm_id_dev(struct cm_state *st, const char *name)
 {
 	u16 val = 0;
 	unsigned int i;
-	int ret = 0;
+	unsigned int j;
+	int ret = 1;
 
-	if (!strcmp(name, CM_NAME_CM3218)) {
+	if (!strcmp(name, CM_NAME_CM3218))
 		st->dev_id = CM_DEVID_CM3218;
-		st->cfg.part = CM_NAME_CM3218;
-	} else if (!strcmp(name, CM_NAME_CM32181)) {
+	else if (!strcmp(name, CM_NAME_CM32180))
+		st->dev_id = CM_DEVID_CM32180;
+	else if (!strcmp(name, CM_NAME_CM32181))
 		st->dev_id = CM_DEVID_CM32181;
-		st->cfg.part = CM_NAME_CM32181;
-	}
 	if (!st->dev_id) {
 		ret = cm_i2c_rd(st, CM_REG_CFG, &val);
-		if (!ret) {
+		if (ret) {
+			return ret;
+		} else {
 			val &= (1 << CM_REG_CFG_RSRV_ID);
 			st->als_cfg |= val;
 			if (val) {
-				st->dev_id = CM_DEVID_CM3218;
-				st->cfg.part = CM_NAME_CM3218;
+				if (st->i2c_addr == 0x10)
+					st->dev_id = CM_DEVID_CM3218;
+				else
+					/* st->i2c_addr == 0x48 */
+					st->dev_id = CM_DEVID_CM32180;
 			} else {
 				st->dev_id = CM_DEVID_CM32181;
-				st->cfg.part = CM_NAME_CM32181;
-				cm_i2c_wr(st, CM_REG_PSM, st->als_psm);
 			}
-			dev_info(&st->i2c->dev, "%s found %s\n",
-				__func__, st->cfg.part);
 		}
 	}
-	memcpy(&st->nld_tbl, &cm_nld_tbl, sizeof(st->nld_tbl));
-	if (st->dev_id == CM_DEVID_CM32181) {
+	switch (st->dev_id) {
+	case CM_DEVID_CM3218:
+		st->cfg.part = CM_NAME_CM3218;
+		memcpy(&st->nld_tbl, &cm3218_nld_tbl, sizeof(cm3218_nld_tbl));
+		i = ARRAY_SIZE(cm3218_nld_tbl) - 1;
+		if (st->light.nld_i_hi > i)
+			st->light.nld_i_hi = i;
+		if (st->light.nld_i_lo > i)
+			st->light.nld_i_lo = i;
+		break;
+
+	case CM_DEVID_CM32180:
+		st->cfg.part = CM_NAME_CM32180;
+		memcpy(&st->nld_tbl, &cm32180_nld_tbl,
+		       sizeof(cm32180_nld_tbl));
+		i = ARRAY_SIZE(cm32180_nld_tbl) - 1;
+		if (st->light.nld_i_hi > i)
+			st->light.nld_i_hi = i;
+		if (st->light.nld_i_lo > i)
+			st->light.nld_i_lo = i;
+		break;
+
+	case CM_DEVID_CM32181:
+		st->cfg.part = CM_NAME_CM32181;
+		memcpy(&st->nld_tbl, &cm32181_nld_tbl, sizeof(st->nld_tbl));
 		if (st->als_psm & (1 << CM_REG_PSM_EN)) {
-			for (i = 0; i < ARRAY_SIZE(cm_nld_tbl); i++)
+			j = st->als_psm >> 1;
+			for (i = 0; i < ARRAY_SIZE(cm32181_nld_tbl); i++) {
 				st->nld_tbl[i].delay_min_ms +=
-					       cm_psm_ms_tbl[st->als_psm >> 1];
+							      cm_psm_tbl[j].ms;
+				st->nld_tbl[i].milliamp.ival =
+						   cm_psm_tbl[j].milliamp.ival;
+				st->nld_tbl[i].milliamp.fval =
+						   cm_psm_tbl[j].milliamp.fval;
+			}
 		}
-	} else {
-		if (st->light.nld_i_hi > 4)
-			st->light.nld_i_hi = 4;
-		if (st->light.nld_i_lo > 4)
-			st->light.nld_i_lo = 4;
+		break;
 	}
+
+	if (!ret)
+		dev_info(&st->i2c->dev, "%s found %s\n",
+			 __func__, st->cfg.part);
 	i = st->light.nld_i_lo;
-	st->cfg.resolution.ival = cm_nld_tbl[i].resolution.ival;
-	st->cfg.resolution.fval = cm_nld_tbl[i].resolution.fval;
+	st->cfg.resolution.ival = st->nld_tbl[i].resolution.ival;
+	st->cfg.resolution.fval = st->nld_tbl[i].resolution.fval;
 	i = st->light.nld_i_hi;
-	st->cfg.max_range.ival = cm_nld_tbl[i].max_range.ival;
-	st->cfg.max_range.fval = cm_nld_tbl[i].max_range.fval;
-	st->cfg.delay_us_min = cm_nld_tbl[i].delay_min_ms * 1000;
-	return ret;
+	st->cfg.max_range.ival = st->nld_tbl[i].max_range.ival;
+	st->cfg.max_range.fval = st->nld_tbl[i].max_range.fval;
+	st->cfg.milliamp.ival = st->nld_tbl[i].milliamp.ival;
+	st->cfg.milliamp.fval = st->nld_tbl[i].milliamp.fval;
+	st->cfg.delay_us_min = st->nld_tbl[i].delay_min_ms * 1000;
+	return 0;
 }
 
 static int cm_id_i2c(struct cm_state *st, const char *name)
@@ -565,19 +611,6 @@ static struct sensor_cfg cm_cfg_dflt = {
 	.part			= CM_NAME,
 	.vendor			= CM_VENDOR,
 	.version		= CM_LIGHT_VERSION,
-	.max_range		= {
-		.ival		= CM_LIGHT_MAX_RANGE_IVAL,
-		.fval		= CM_LIGHT_MAX_RANGE_MICRO,
-	},
-	.resolution		= {
-		.ival		= CM_LIGHT_RESOLUTION_IVAL,
-		.fval		= CM_LIGHT_RESOLUTION_MICRO,
-	},
-	.milliamp		= {
-		.ival		= CM_LIGHT_MILLIAMP_IVAL,
-		.fval		= CM_LIGHT_MILLIAMP_MICRO,
-	},
-	.delay_us_min		= CM_POLL_DLY_MS_MIN * 1000,
 	.delay_us_max		= CM_POLL_DLY_MS_MAX * 1000,
 	.scale			= {
 		.ival		= CM_LIGHT_SCALE_IVAL,
@@ -596,11 +629,12 @@ static int cm_of_dt(struct cm_state *st, struct device_node *dn)
 	als_sm = CM_ALS_SM_DFLT;
 	als_pers = CM_ALS_PERS_DFLT;
 	st->als_psm = CM_ALS_PSM_DFLT;
+	st->r_set = CM_R_SET_DFLT;
 	/* default NVS ALS programmable parameters */
 	memcpy(&st->cfg, &cm_cfg_dflt, sizeof(st->cfg));
 	st->light.cfg = &st->cfg;
 	st->light.hw_mask = 0xFFFF;
-	st->light.nld_tbl = cm_nld_tbl;
+	st->light.nld_tbl = st->nld_tbl;
 	/* device tree parameters */
 	if (dn) {
 		/* common NVS IIO programmable parameters */
@@ -609,13 +643,14 @@ static int cm_of_dt(struct cm_state *st, struct device_node *dn)
 		of_property_read_u16(dn, "als_sm", &als_sm);
 		of_property_read_u16(dn, "als_pers", &als_pers);
 		of_property_read_u16(dn, "als_psm", &st->als_psm);
+		of_property_read_u32(dn, "Rset", &st->r_set);
 	}
 	/* common NVS parameters */
 	nvs_of_dt(dn, &st->cfg, NULL);
 	/* this device supports these programmable parameters */
 	if (nvs_light_of_dt(&st->light, dn, NULL)) {
 		st->light.nld_i_lo = 0;
-		st->light.nld_i_hi = ARRAY_SIZE(cm_nld_tbl) - 1;
+		st->light.nld_i_hi = ARRAY_SIZE(cm32181_nld_tbl) - 1;
 	}
 	st->als_psm &= CM_REG_PSM_MASK;
 	st->als_cfg = als_pers << CM_REG_CFG_ALS_PERS;
@@ -697,6 +732,7 @@ cm_probe_exit:
 static const struct i2c_device_id cm_i2c_device_id[] = {
 	{ CM_NAME, 0 },
 	{ CM_NAME_CM3218, 0 },
+	{ CM_NAME_CM32180, 0 },
 	{ CM_NAME_CM32181, 0 },
 	{}
 };
@@ -706,6 +742,7 @@ MODULE_DEVICE_TABLE(i2c, cm_i2c_device_id);
 static const struct of_device_id cm_of_match[] = {
 	{ .compatible = "capella,cm3218x", },
 	{ .compatible = "capella,cm3218", },
+	{ .compatible = "capella,cm32180", },
 	{ .compatible = "capella,cm32181", },
 	{},
 };

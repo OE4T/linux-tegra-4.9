@@ -513,6 +513,7 @@ long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc);
 /* defined in mode.c, used in dc.c and window.c */
 int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode);
 int tegra_dc_calc_refresh(const struct tegra_dc_mode *m);
+int tegra_dc_calc_fb_refresh(const struct fb_videomode *fbmode);
 int tegra_dc_update_mode(struct tegra_dc *dc);
 
 /* defined in clock.c, used in dc.c, rgb.c, dsi.c and hdmi.c */

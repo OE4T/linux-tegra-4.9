@@ -158,10 +158,28 @@ static s64 calc_frametime_ns(const struct tegra_dc_mode *m)
 					1000000000ULL), m->pclk));
 }
 
+/*
+ * return in 1000ths of a Hertz
+ * TODO: Extend to handle other refresh rates and pclk
+ */
+static inline int _tegra_dc_calc_refresh(long pclk, long h_total, long v_total)
+{
+	long refresh;
+
+	if (!pclk || !h_total || !v_total || pclk < h_total)
+		return 0;
+
+	refresh = pclk / h_total;
+	refresh *= 1000;
+	refresh /= v_total;
+
+	return refresh;
+}
+
 /* return in 1000ths of a Hertz */
 int tegra_dc_calc_refresh(const struct tegra_dc_mode *m)
 {
-	long h_total, v_total, refresh;
+	long h_total, v_total;
 	long pclk;
 
 	if (m->rated_pclk > 0)
@@ -173,12 +191,22 @@ int tegra_dc_calc_refresh(const struct tegra_dc_mode *m)
 		m->h_sync_width;
 	v_total = m->v_active + m->v_front_porch + m->v_back_porch +
 		m->v_sync_width;
-	if (!pclk || !h_total || !v_total || pclk < h_total)
-		return 0;
-	refresh = pclk / h_total;
-	refresh *= 1000;
-	refresh /= v_total;
-	return refresh;
+
+	return _tegra_dc_calc_refresh(pclk, h_total, v_total);
+}
+
+/* return in 1000ths of a Hertz */
+int tegra_dc_calc_fb_refresh(const struct fb_videomode *fbmode)
+{
+	long h_total, v_total;
+
+	h_total = fbmode->xres + fbmode->right_margin +
+		fbmode->left_margin + fbmode->hsync_len;
+	v_total = fbmode->yres + fbmode->upper_margin +
+		fbmode->lower_margin + fbmode->vsync_len;
+
+	return _tegra_dc_calc_refresh(PICOS2KHZ(fbmode->pixclock) * 1000,
+					h_total, v_total);
 }
 
 static u8 _calc_default_avi_m(unsigned h_size, unsigned v_size)
@@ -642,12 +670,22 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 		const struct fb_videomode *fbmode, bool stereo_mode)
 {
 	struct tegra_dc_mode mode;
+	long h_total, v_total;
 
 	if (!fbmode->pixclock)
 		return -EINVAL;
 
 	memset(&mode, 0, sizeof(mode));
-	mode.pclk = PICOS2KHZ(fbmode->pixclock) * 1000;
+
+	h_total = fbmode->xres + fbmode->right_margin +
+		fbmode->left_margin + fbmode->hsync_len;
+	v_total = fbmode->yres + fbmode->upper_margin +
+		fbmode->lower_margin + fbmode->vsync_len;
+	mode.pclk = h_total * v_total *
+		(_tegra_dc_calc_refresh(
+		PICOS2KHZ(fbmode->pixclock) * 1000,
+				h_total, v_total) / 1000);
+
 	mode.h_sync_width = fbmode->hsync_len;
 	mode.v_sync_width = fbmode->vsync_len;
 	mode.h_back_porch = fbmode->left_margin;

@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -412,25 +412,6 @@ static void cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 	cdma_timeout_restart(cdma, getptr);
 }
 
-static bool cdma_check_dependencies(struct nvhost_cdma *cdma)
-{
-	struct nvhost_channel *ch = cdma_to_channel(cdma);
-	u32 cbread = readl(ch->aperture + host1x_sync_cbread_r());
-	u32 cboffset = readl(ch->aperture + host1x_sync_cboffset_r());
-	u32 waiting = cboffset == 0x00000008;
-	u32 syncpt_id = cbread >> 24;
-	int i;
-
-	if (!waiting)
-		return false;
-
-	for (i = 0; i < cdma->timeout.num_syncpts; ++i)
-		if (cdma->timeout.sp[i].id == syncpt_id)
-			return false;
-
-	return true;
-}
-
 /**
  * If this timeout fires, it indicates the current sync_queue entry has
  * exceeded its TTL and the userctx should be timed out and remaining
@@ -473,18 +454,6 @@ static void cdma_timeout_handler(struct work_struct *work)
 	if (nvhost_debug_force_timeout_dump ||
 		cdma->timeout.timeout_debug_dump)
 		nvhost_debug_dump_locked(cdma_to_dev(cdma), ch->chid);
-
-	/* is this submit dependent with submits on other channels? */
-	if (cdma->timeout.allow_dependency && cdma_check_dependencies(cdma)) {
-		dev_dbg(&dev->dev->dev,
-			"cdma_timeout: timeout handler rescheduled\n");
-		cdma->timeout.allow_dependency = false;
-		schedule_delayed_work(&cdma->timeout.wq,
-				      msecs_to_jiffies(cdma->timeout.timeout));
-		mutex_unlock(&cdma->lock);
-		mutex_unlock(&dev->timeout_mutex);
-		return;
-	}
 
 	if (!cdma->timeout.clientid) {
 		dev_dbg(&dev->dev->dev,

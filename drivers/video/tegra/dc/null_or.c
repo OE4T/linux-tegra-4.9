@@ -21,6 +21,7 @@
 
 #include "dc_reg.h"
 #include "dc_priv.h"
+#include "null_or.h"
 
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 

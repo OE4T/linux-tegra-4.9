@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (C) 2011-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2011-2015, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -30,7 +30,6 @@
 #include "nvhost_channel.h"
 #include "chip_support.h"
 
-pid_t nvhost_debug_null_kickoff_pid;
 unsigned int nvhost_debug_trace_cmdbuf;
 unsigned int nvhost_debug_trace_actmon;
 
@@ -248,8 +247,6 @@ void nvhost_debug_init(struct nvhost_master *master)
 	debugfs_create_file("status_all", S_IRUGO, de,
 			master, &nvhost_debug_all_fops);
 
-	debugfs_create_u32("null_kickoff_pid", S_IRUGO|S_IWUSR, de,
-			&nvhost_debug_null_kickoff_pid);
 	debugfs_create_u32("trace_cmdbuf", S_IRUGO|S_IWUSR, de,
 			&nvhost_debug_trace_cmdbuf);
 

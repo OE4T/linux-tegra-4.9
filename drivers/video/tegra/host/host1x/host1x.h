@@ -106,8 +106,6 @@ void nvhost_set_chanops(struct nvhost_channel *ch);
 
 int nvhost_gather_filter_enabled(struct nvhost_syncpt *sp);
 
-extern pid_t nvhost_debug_null_kickoff_pid;
-
 static inline enum nvhost_syncpt_policy nvhost_get_syncpt_policy(void)
 {
 	struct nvhost_master *host = nvhost;

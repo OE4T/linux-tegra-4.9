@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -184,27 +184,6 @@ static void push_waits(struct nvhost_job *job)
 				job->waitchk[i].thresh));
 }
 
-static void submit_nullkickoff(struct nvhost_job *job, u32 user_syncpt_incrs)
-{
-	struct nvhost_channel *ch = job->ch;
-	int incr, i;
-	u32 op_incr;
-
-	/* push increments that correspond to nulled out commands */
-	for (i = 0; i < job->num_syncpts; ++i) {
-		u32 incrs = (i == job->hwctx_syncpt_idx) ?
-			user_syncpt_incrs : job->sp[i].incrs;
-		op_incr = nvhost_opcode_imm_incr_syncpt(
-			host1x_uclass_incr_syncpt_cond_op_done_v(),
-			job->sp[i].id);
-		for (incr = 0; incr < (incrs >> 1); incr++)
-			nvhost_cdma_push(&ch->cdma, op_incr, op_incr);
-		if (incrs & 1)
-			nvhost_cdma_push(&ch->cdma, op_incr,
-				NVHOST_OPCODE_NOOP);
-	}
-}
-
 static inline u32 gather_regnum(u32 word)
 {
 	return (word >> 16) & 0xfff;
@@ -353,11 +332,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 			nvhost_syncpt_incr_max(sp, job->sp[i].id, incrs);
 	}
 
-	if (job->null_kickoff)
-		submit_nullkickoff(job, user_syncpt_incrs);
-	else
-		submit_gathers(job);
-
+	submit_gathers(job);
 	serialize(job);
 	lock_device(job, false);
 	submit_work_done_increment(job);

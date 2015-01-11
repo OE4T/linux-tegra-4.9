@@ -251,7 +251,7 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	}
 
 	if (co->cma_dev) {
-#ifdef CONFIG_CMA
+#ifdef CONFIG_DMA_CMA
 		struct dma_contiguous_stats stats;
 
 		if (dma_get_contiguous_stats(co->cma_dev, &stats))

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -60,6 +60,7 @@ struct nvhost_channel {
 	/* channel syncpoints */
 	struct mutex syncpts_lock;
 	u32 syncpts[NVHOST_MODULE_MAX_SYNCPTS];
+	u32 client_managed_syncpt;
 
 	bool cdma_initialized;
 	/* owner identifier */

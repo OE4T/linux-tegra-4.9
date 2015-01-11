@@ -183,6 +183,7 @@ struct nvhost_channel_userctx {
 	bool timeout_debug_dump;
 	struct platform_device *pdev;
 	u32 syncpts[NVHOST_MODULE_MAX_SYNCPTS];
+	u32 client_managed_syncpt;
 
 	/* error notificatiers used channel submit timeout */
 	struct dma_buf *error_notifier_ref;
@@ -232,6 +233,11 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 				nvhost_free_syncpt(priv->syncpts[i]);
 				priv->syncpts[i] = 0;
 			}
+		}
+
+		if (priv->client_managed_syncpt) {
+			nvhost_free_syncpt(priv->client_managed_syncpt);
+			priv->client_managed_syncpt = 0;
 		}
 	}
 
@@ -937,6 +943,48 @@ static u32 nvhost_ioctl_channel_get_syncpt_instance(
 	return id;
 }
 
+static int nvhost_ioctl_channel_get_client_syncpt(
+		struct nvhost_channel_userctx *ctx,
+		struct nvhost_get_client_managed_syncpt_arg *args)
+{
+	const char __user *args_name =
+		(const char __user *)(uintptr_t)args->name;
+	char name[32];
+	char set_name[32];
+
+	/* prepare syncpoint name (in case it is needed) */
+	if (args_name) {
+		if (strncpy_from_user(name, args_name, sizeof(name)) < 0)
+			return -EFAULT;
+		name[sizeof(name) - 1] = '\0';
+	} else {
+		name[0] = '\0';
+	}
+
+	snprintf(set_name, sizeof(set_name),
+		"%s_%s", dev_name(&ctx->pdev->dev), name);
+
+	if (nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL_INSTANCE) {
+		if (!ctx->client_managed_syncpt)
+			ctx->client_managed_syncpt =
+				nvhost_get_syncpt_client_managed(set_name);
+		args->value = ctx->client_managed_syncpt;
+	} else {
+		struct nvhost_channel *ch = ctx->ch;
+		mutex_lock(&ch->syncpts_lock);
+		if (!ch->client_managed_syncpt)
+			ch->client_managed_syncpt =
+				nvhost_get_syncpt_client_managed(set_name);
+		mutex_unlock(&ch->syncpts_lock);
+		args->value = ch->client_managed_syncpt;
+	}
+
+	if (!args->value)
+		return -EAGAIN;
+
+	return 0;
+}
+
 static long nvhost_channelctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
@@ -1036,58 +1084,12 @@ static long nvhost_channelctl(struct file *filp,
 	}
 	case NVHOST_IOCTL_CHANNEL_GET_CLIENT_MANAGED_SYNCPOINT:
 	{
-		char name[32];
-		char set_name[32];
-		struct nvhost_device_data *pdata =
-			platform_get_drvdata(priv->pdev);
-		struct nvhost_get_client_managed_syncpt_arg *args =
-			(struct nvhost_get_client_managed_syncpt_arg *)buf;
-		const char __user *args_name =
-			(const char __user *)(uintptr_t)args->name;
-
-		if (args_name) {
-			if (strncpy_from_user(name, args_name,
-			    sizeof(name)) < 0) {
-				err = -EFAULT;
-				break;
-			}
-			name[sizeof(name) - 1] = '\0';
-		} else {
-			name[0] = '\0';
-		}
-		/* if we already have required syncpt then return it ... */
-		if (pdata->client_managed_syncpt) {
-			args->value = pdata->client_managed_syncpt;
-			break;
-		}
-		/* ... otherwise get a new syncpt dynamically */
-		snprintf(set_name, sizeof(set_name),
-				"%s_%s", dev_name(&pdata->pdev->dev), name);
-		args->value = nvhost_get_syncpt_client_managed(set_name);
-		if (!args->value) {
-			err = -EAGAIN;
-			break;
-		}
-		/* ... and store it for further references */
-		pdata->client_managed_syncpt = args->value;
+		err = nvhost_ioctl_channel_get_client_syncpt(priv,
+			(struct nvhost_get_client_managed_syncpt_arg *)buf);
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_FREE_CLIENT_MANAGED_SYNCPOINT:
-	{
-		struct nvhost_free_client_managed_syncpt_arg *args =
-			(struct nvhost_free_client_managed_syncpt_arg *)buf;
-		struct nvhost_device_data *pdata =
-			platform_get_drvdata(priv->pdev);
-		if (!args->value)
-			break;
-		if (args->value != pdata->client_managed_syncpt) {
-			err = -EINVAL;
-			break;
-		}
-		nvhost_free_syncpt(args->value);
-		pdata->client_managed_syncpt = 0;
 		break;
-	}
 	case NVHOST_IOCTL_CHANNEL_GET_WAITBASES:
 	{
 		((struct nvhost_get_param_args *)buf)->value = 0;

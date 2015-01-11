@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -172,6 +172,11 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 				nvhost_free_syncpt(ch->syncpts[i]);
 				ch->syncpts[i] = 0;
 			}
+		}
+
+		if (ch->client_managed_syncpt) {
+			nvhost_free_syncpt(ch->client_managed_syncpt);
+			ch->client_managed_syncpt = 0;
 		}
 	}
 

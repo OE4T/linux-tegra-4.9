@@ -3,7 +3,7 @@
  *
  * Tegra graphics host driver
  *
- * Copyright (c) 2009-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2009-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -139,7 +139,6 @@ struct nvhost_device_data {
 	void __iomem	*aperture[NVHOST_MODULE_MAX_IORESOURCE_MEM];
 	struct device_dma_parameters dma_parms;
 
-	u32		client_managed_syncpt;
 	u32		modulemutexes[NVHOST_MODULE_MAX_MODMUTEXES];
 	u32		moduleid;	/* Module id for user space API */
 

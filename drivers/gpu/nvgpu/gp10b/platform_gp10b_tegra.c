@@ -84,8 +84,6 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 	/* power management configuration */
 	.enable_elpg            = false,
 
-	.default_big_page_size	= SZ_128K,
-
 	.probe = gp10b_tegra_probe,
 	.late_probe = gp10b_tegra_late_probe,
 
@@ -100,5 +98,5 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 
-	.default_big_page_size	= SZ_128K,
+	.default_big_page_size	= SZ_64K,
 };

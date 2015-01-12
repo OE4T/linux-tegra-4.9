@@ -656,9 +656,6 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		msleep(200);
 	}
 
-	/* 1.8V VDDIO_AUDIO_HV_BIAS/HV DAP regulator enable */
-	pwr_detect_bit_write(AUDIO_HV_PWR_DET, false);
-
 	/*
 	*codec_reg - its a GPIO (in the form of a fixed regulator) that enables
 	*the basic(I2C) power for the codec and must be ON always

@@ -398,6 +398,14 @@ static const struct file_operations ivc_fops = {
 	.poll		= ivc_dev_poll,
 };
 
+static ssize_t vmid_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	const struct tegra_hv_data *hvd = get_hvd();
+	BUG_ON(!hvd);
+	return snprintf(buf, PAGE_SIZE, "%d\n", hvd->guestid);
+}
+
 static ssize_t id_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -442,6 +450,8 @@ static ssize_t peer_show(struct device *dev,
 
 	return snprintf(buf, PAGE_SIZE, "%d\n", ivc->other_guestid);
 }
+
+static const struct device_attribute hv_vmid_attr = __ATTR_RO(vmid);
 
 struct device_attribute ivc_dev_attrs[] = {
 	__ATTR_RO(id),
@@ -593,6 +603,7 @@ static void tegra_hv_cleanup(struct tegra_hv_data *hvd)
 	kfree(hvd->mempools);
 	hvd->mempools = NULL;
 
+	device_remove_file(&hvd->pdev->dev, &hv_vmid_attr);
 	tegra_hv_ivc_cleanup(hvd);
 
 	if (hvd->ivc_dev) {
@@ -718,6 +729,13 @@ static int tegra_hv_setup(struct tegra_hv_data *hvd)
 			dev_err(dev, "failed to add queue #%u\n", qd->id);
 			return ret;
 		}
+	}
+
+	ret = device_create_file(dev, &hv_vmid_attr);
+	if (ret != 0) {
+		dev_err(dev, "failed to create vmid sysfs attribute: %d\n",
+			ret);
+		return ret;
 	}
 
 	hvd->mempools =

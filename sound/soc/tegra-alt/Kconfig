@@ -286,3 +286,20 @@ config SND_SOC_TEGRA_T210REF_ALT
 	select SND_SOC_AD193X
 	help
 	  Say Y or M here.
+
+config SND_SOC_TEGRA_P1889REF_ALT
+	tristate "SoC Audio support for P1889Ref T124"
+	depends on SND_SOC_TEGRA_ALT
+	depends on MACH_P1889
+	select SND_SOC_TEGRA30_XBAR_ALT
+	select SND_SOC_TEGRA30_APBIF_ALT
+	select SND_SOC_TEGRA30_I2S_ALT
+	select SND_SOC_TEGRA30_DAM_ALT
+	select SND_SOC_TEGRA30_SPDIF_ALT
+	select SND_SOC_TEGRA114_AMX_ALT
+	select SND_SOC_TEGRA114_ADX_ALT
+	select SND_SOC_TEGRA124_AFC_ALT
+	select SND_SOC_SPDIF
+	select SND_SOC_TEGRA_ASOC_HWDEP_ALT
+	help
+	  Say Y or M here

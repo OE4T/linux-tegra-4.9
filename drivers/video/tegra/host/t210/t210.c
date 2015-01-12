@@ -373,6 +373,8 @@ struct nvhost_device_data t21_tsec_info = {
 				   {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.can_powergate		= true,
+	.powergate_delay	= TSEC_POWERGATE_DELAY,
 	.keepalive		= true,
 	.moduleid		= NVHOST_MODULE_TSEC,
 	.engine_can_cg		= true,

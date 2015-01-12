@@ -1387,7 +1387,7 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 			gk20a_fifo_recover(g, BIT(engine_id),
 				ch->timeout_debug_dump);
 		} else {
-			gk20a_warn(dev_from_gk20a(g),
+			gk20a_dbg_info(
 				"fifo is waiting for ctx switch for %d ms,"
 				"ch = %d\n",
 				ch->timeout_accumulated_ms,

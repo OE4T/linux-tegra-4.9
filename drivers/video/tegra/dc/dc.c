@@ -2332,7 +2332,7 @@ static void _tegra_dc_vsync_enable(struct tegra_dc *dc)
 {
 	int vsync_irq;
 
-	if (dc->out->type == TEGRA_DC_OUT_DSI)
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		vsync_irq = MSF_INT;
 	else
 		vsync_irq = V_BLANK_INT;
@@ -2389,7 +2389,8 @@ static void _tegra_dc_user_vsync_enable(struct tegra_dc *dc, bool enable)
 		_tegra_dc_vsync_enable(dc);
 	} else {
 		_tegra_dc_vsync_disable(dc);
-		dc->out->user_needs_vblank--;
+		if (dc->out->user_needs_vblank > 0)
+			dc->out->user_needs_vblank--;
 	}
 }
 
@@ -2805,8 +2806,13 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status,
 	if (status & V_BLANK_INT)
 		queue_work(system_freezable_wq, &dc->vblank_work);
 
-	if (status & V_BLANK_INT)
+	if (status & (V_BLANK_INT | MSF_INT)) {
+		if (dc->out->user_needs_vblank) {
+			dc->out->user_needs_vblank = false;
+			complete(&dc->out->user_vblank_comp);
+		}
 		tegra_dc_process_vblank(dc, timestamp);
+	}
 
 	if (status & FRAME_END_INT) {
 		struct timespec tm = CURRENT_TIME;

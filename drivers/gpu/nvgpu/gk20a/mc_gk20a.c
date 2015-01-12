@@ -1,7 +1,7 @@
 /*
  * GK20A memory interface
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -73,6 +73,8 @@ irqreturn_t mc_gk20a_intr_thread_stall(struct gk20a *g)
 
 	if (mc_intr_0 & BIT(g->fifo.engine_info[ENGINE_GR_GK20A].intr_id))
 		gr_gk20a_elpg_protected_call(g, gk20a_gr_isr(g));
+	if (mc_intr_0 & BIT(g->fifo.engine_info[ENGINE_CE2_GK20A].intr_id))
+		gk20a_ce2_isr(g);
 	if (mc_intr_0 & mc_intr_0_pfifo_pending_f())
 		gk20a_fifo_isr(g);
 	if (mc_intr_0 & mc_intr_0_pmu_pending_f())
@@ -107,6 +109,8 @@ irqreturn_t mc_gk20a_intr_thread_nonstall(struct gk20a *g)
 		gk20a_fifo_nonstall_isr(g);
 	if (mc_intr_1 & BIT(g->fifo.engine_info[ENGINE_GR_GK20A].intr_id))
 		gk20a_gr_nonstall_isr(g);
+	if (mc_intr_1 & BIT(g->fifo.engine_info[ENGINE_CE2_GK20A].intr_id))
+		gk20a_ce2_nonstall_isr(g);
 
 	gk20a_writel(g, mc_intr_en_1_r(),
 		mc_intr_en_1_inta_hardware_f());

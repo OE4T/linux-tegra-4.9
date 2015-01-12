@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1301,10 +1301,6 @@ static inline u32 gr_ds_zbc_color_fmt_val_unorm_one_v(void)
 static inline u32 gr_ds_zbc_color_fmt_val_rf32_gf32_bf32_af32_v(void)
 {
 	return 0x00000004;
-}
-static inline u32 gr_ds_zbc_color_fmt_val_a8_b8_g8_r8_v(void)
-{
-	return 0x00000028;
 }
 static inline u32 gr_ds_zbc_z_r(void)
 {

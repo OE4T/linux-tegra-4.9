@@ -37,6 +37,7 @@ struct acr_gm20b;
 
 #include "as_gk20a.h"
 #include "clk_gk20a.h"
+#include "ce2_gk20a.h"
 #include "fifo_gk20a.h"
 #include "tsg_gk20a.h"
 #include "gr_gk20a.h"

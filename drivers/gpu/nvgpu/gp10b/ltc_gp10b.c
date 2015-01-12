@@ -29,7 +29,7 @@ static int gp10b_determine_L2_size_bytes(struct gk20a *g)
 	tmp = gk20a_readl(g, ltc_ltc0_lts0_tstg_info_1_r());
 
 	ret = g->ltc_count *
-		ltc_ltc0_lts0_tstg_info_1_slice_size_in_kb_v(tmp) *
+		ltc_ltc0_lts0_tstg_info_1_slice_size_in_kb_v(tmp)*1024 *
 		ltc_ltc0_lts0_tstg_info_1_slices_per_l2_v(tmp);
 
 	gk20a_dbg(gpu_dbg_info, "L2 size: %d\n", ret);

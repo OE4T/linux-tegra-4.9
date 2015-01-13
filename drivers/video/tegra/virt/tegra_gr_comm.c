@@ -42,6 +42,7 @@
 #define ID_VCTX_SHIFT 0
 #define ID_VCTX_MASK 1
 
+/* used to generate an id for id -> ivc-context lookups */
 #define GEN_ID(vctx, queue_id, peer_id)		\
 	((peer_id << ID_PEER_ID_SHIFT) |	\
 	(queue_id << ID_QUEUE_ID_SHIFT) |	\
@@ -146,8 +147,10 @@ static int queue_add(struct gr_comm_queue *queue, const char *data,
 			mutex_unlock(&queue->lock);
 			return -ENOMEM;
 		}
-	} else
+	} else {
+		/* local msg */
 		memcpy(element->data, data, element->size);
+	}
 	list_add_tail(&element->list, &queue->pending);
 	mutex_unlock(&queue->lock);
 	up(&queue->sem);
@@ -163,6 +166,10 @@ static irqreturn_t ivc_intr_thread(int irq, void *dev_id)
 {
 	struct gr_comm_ivc_context *ctx = dev_id;
 	struct device *dev = &ctx->pdev->dev;
+
+	/* handle ivc state changes -- MUST BE FIRST */
+	if (tegra_hv_ivc_channel_notified(ctx->cookie))
+		return IRQ_HANDLED;
 
 	while (tegra_hv_ivc_can_read(ctx->cookie)) {
 		if (queue_add(ctx->queue, NULL, ctx->peer, ctx->cookie)) {
@@ -239,17 +246,25 @@ static int setup_ivc(u32 virt_ctx, struct platform_device *pdev,
 				goto fail;
 			}
 
+			/* ctx->peer will have same value for all queues */
 			server_vmid = ctx->peer;
+
+			/* set ivc channel to invalid state */
+			tegra_hv_ivc_channel_reset(ctx->cookie);
+
 			err = request_threaded_irq(ctx->cookie->irq,
 						ivc_intr_isr,
 						ivc_intr_thread,
 						0, "gr-virt", ctx);
 			if (err) {
 				ret = -ENOMEM;
+				/* ivc context is on list, so free_ivc()
+				 * will take care of clean-up */
 				goto fail;
 			}
 			ctx->irq_requested = true;
 		}
+		/* no entries in DT? */
 		if (j == 0)
 			goto fail;
 	}
@@ -309,6 +324,7 @@ int tegra_gr_comm_init(struct platform_device *pdev, u32 virt_ctx, u32 elems,
 				ret = -ENOMEM;
 				goto fail;
 			}
+			/* data is placed at end of element */
 			element->data = (char *)element + sizeof(*element);
 			element->queue = queue;
 			list_add(&element->list, &queue->free);
@@ -392,6 +408,7 @@ int tegra_gr_comm_send(u32 virt_ctx, u32 peer, u32 index, void *data,
 	if (!ctx->queue[index].valid)
 		return -EINVAL;
 
+	/* local msg is enqueued directly */
 	if (peer == TEGRA_GR_COMM_ID_SELF)
 		return queue_add(&ctx->queue[index], data, peer, NULL);
 
@@ -443,6 +460,7 @@ int tegra_gr_comm_recv(u32 virt_ctx, u32 index, void **handle, void **data,
 	return 0;
 }
 
+/* NOTE: tegra_gr_comm_recv() should not be running concurrently */
 int tegra_gr_comm_sendrecv(u32 virt_ctx, u32 peer, u32 index, void **handle,
 			void **data, size_t *size)
 {
@@ -467,7 +485,6 @@ fail:
 	mutex_unlock(&queue->resp_lock);
 	return err;
 }
-
 
 void tegra_gr_comm_release(void *handle)
 {

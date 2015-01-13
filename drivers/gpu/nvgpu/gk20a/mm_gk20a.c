@@ -268,16 +268,10 @@ static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 static void gk20a_remove_vm(struct vm_gk20a *vm, struct inst_desc *inst_block)
 {
 	struct gk20a *g = vm->mm->g;
-	struct device *d = dev_from_gk20a(g);
 
 	gk20a_dbg_fn("");
 
-	if (inst_block->cpuva)
-		dma_free_coherent(d, inst_block->size,
-			inst_block->cpuva, inst_block->iova);
-	inst_block->cpuva = NULL;
-	inst_block->iova = 0;
-
+	gk20a_free_inst_block(g, inst_block);
 	gk20a_vm_remove_support_nofree(vm);
 }
 

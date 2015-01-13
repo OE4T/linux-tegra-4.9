@@ -178,7 +178,6 @@
 
 	smmu: iommu {
 		reg = <0x0 0x12000000 0x0 0x01000000>;
-		status = "disabled";
 	};
 
 	tegra_car: clock {

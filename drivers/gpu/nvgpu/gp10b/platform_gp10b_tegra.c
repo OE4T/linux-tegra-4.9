@@ -3,7 +3,7 @@
  *
  * GK20A Tegra Platform Interface
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -99,4 +99,6 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 
 	.default_big_page_size	= SZ_64K,
+
+	.has_cde = true,
 };

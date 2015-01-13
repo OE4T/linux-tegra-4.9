@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -66,7 +66,27 @@ static inline u32 bus_bar1_block_mode_virtual_f(void)
 {
 	return 0x80000000;
 }
+static inline u32 bus_bar2_block_r(void)
+{
+	return 0x00001714;
+}
+static inline u32 bus_bar2_block_ptr_f(u32 v)
+{
+	return (v & 0xfffffff) << 0;
+}
+static inline u32 bus_bar2_block_target_vid_mem_f(void)
+{
+	return 0x0;
+}
+static inline u32 bus_bar2_block_mode_virtual_f(void)
+{
+	return 0x80000000;
+}
 static inline u32 bus_bar1_block_ptr_shift_v(void)
+{
+	return 0x0000000c;
+}
+static inline u32 bus_bar2_block_ptr_shift_v(void)
 {
 	return 0x0000000c;
 }

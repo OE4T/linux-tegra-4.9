@@ -1540,26 +1540,29 @@ void nct1008_get_trip(int sensor, struct nct1008_data *data)
 	data->plat_data.sensors[sensor].num_trips = thz->trips;
 
 	for (count = 0; count < thz->trips; count++) {
-		if (thz->ops && thz->ops->get_trip_temp)
-			thz->ops->get_trip_temp(thz, 0, &proc);
+		if (thz->ops && thz->ops->get_trip_temp &&
+		    (!thz->ops->get_trip_temp(thz, count, &proc)))
+			data->plat_data.sensors[sensor].trips[count].trip_temp
+				= proc;
 		else
-			dev_err(&data->client->dev,
-				"Cannot found the get_trip_temp");
-		data->plat_data.sensors[sensor].trips[count].trip_temp = proc;
-		if (thz->ops && thz->ops->get_trip_hyst)
-			thz->ops->get_trip_hyst(thz, 0, &proc);
-		else
-			dev_err(&data->client->dev,
-				"Cannot found the get_trip_hyst");
-		data->plat_data.sensors[sensor].trips[count].hysteresis = proc;
+			dev_err(&data->client->dev, "Not found %s trip %d temp",
+				sensor == LOC ? "LOC" : "EXT", count);
 
-		if (thz->ops && thz->ops->get_trip_type)
-			thz->ops->get_trip_type(thz, 0, &trip_type);
+		if (thz->ops && thz->ops->get_trip_hyst &&
+		    (!thz->ops->get_trip_hyst(thz, count, &proc)))
+			data->plat_data.sensors[sensor].trips[count].hysteresis
+				= proc;
 		else
-			dev_err(&data->client->dev,
-				"Cannot found the get_trip_type");
-		data->plat_data.sensors[sensor]
-			.trips[count].trip_type = trip_type;
+			dev_err(&data->client->dev, "Not found %s trip %d hyst",
+				sensor == LOC ? "LOC" : "EXT", count);
+
+		if (thz->ops && thz->ops->get_trip_type &&
+		    (!thz->ops->get_trip_type(thz, count, &trip_type)))
+			data->plat_data.sensors[sensor].trips[count].trip_type
+				= trip_type;
+		else
+			dev_err(&data->client->dev, "Not found %s trip %d type",
+				sensor == LOC ? "LOC" : "EXT", count);
 	}
 }
 

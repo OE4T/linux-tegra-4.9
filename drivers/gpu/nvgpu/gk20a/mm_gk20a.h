@@ -268,6 +268,18 @@ struct vm_reserved_va_node {
 	bool sparse;
 };
 
+struct gk20a_mmu_level {
+	int hi_bit[2];
+	int lo_bit[2];
+	int (*update_entry)(struct vm_gk20a *vm,
+			   struct gk20a_mm_entry *pte,
+			   u32 i, u32 gmmu_pgsz_idx,
+			   u64 iova,
+			   u32 kind_v, u32 *ctag,
+			   bool cacheable, int rw_flag, bool sparse);
+	size_t entry_size;
+};
+
 struct vm_gk20a {
 	struct mm_gk20a *mm;
 	struct gk20a_as_share *as_share; /* as_share this represents */
@@ -282,13 +294,8 @@ struct vm_gk20a {
 	bool mapped;
 
 	u32 big_page_size;
-	u32 pde_stride;
-	u32 pde_stride_shift;
 
-	struct {
-		u32 order;
-		u32 num_ptes;
-	} page_table_sizing[gmmu_nr_page_sizes];
+	const struct gk20a_mmu_level *mmu_levels;
 
 	struct kref ref;
 
@@ -450,7 +457,8 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			u32 ctag_offset,
 			u32 flags,
 			int rw_flag,
-			bool clear_ctags);
+			bool clear_ctags,
+			bool sparse);
 
 void gk20a_gmmu_unmap(struct vm_gk20a *vm,
 		u64 vaddr,
@@ -462,7 +470,8 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 			u64 size,
 			int pgsz_idx,
 			bool va_allocated,
-			int rw_flag);
+			int rw_flag,
+			bool sparse);
 
 struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf);
 void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
@@ -557,13 +566,10 @@ void unmap_gmmu_pages(struct gk20a_mm_entry *entry);
 void pde_range_from_vaddr_range(struct vm_gk20a *vm,
 					      u64 addr_lo, u64 addr_hi,
 					      u32 *pde_lo, u32 *pde_hi);
+int gk20a_mm_pde_coverage_bit_count(struct vm_gk20a *vm);
 u32 *pde_from_index(struct vm_gk20a *vm, u32 i);
 u32 pte_index_from_vaddr(struct vm_gk20a *vm,
 			       u64 addr, enum gmmu_pgsz_gk20a pgsz_idx);
-int validate_gmmu_page_table_gk20a_locked(struct vm_gk20a *vm,
-				u32 i, enum gmmu_pgsz_gk20a gmmu_pgsz_idx);
-
-void update_gmmu_pde_locked(struct vm_gk20a *vm, u32 i);
 void free_gmmu_pages(struct vm_gk20a *vm,
 		     struct gk20a_mm_entry *entry);
 
@@ -571,4 +577,11 @@ u32 gk20a_mm_get_physical_addr_bits(struct gk20a *g);
 
 struct gpu_ops;
 void gk20a_init_mm(struct gpu_ops *gops);
+const struct gk20a_mmu_level *gk20a_mm_get_mmu_levels(struct gk20a *g,
+						      u32 big_page_size);
+void gk20a_mm_init_pdb(struct gk20a *g, void *inst_ptr, u64 pdb_addr);
+
+extern const struct gk20a_mmu_level gk20a_mm_levels_64k[];
+extern const struct gk20a_mmu_level gk20a_mm_levels_128k[];
+
 #endif /* MM_GK20A_H */

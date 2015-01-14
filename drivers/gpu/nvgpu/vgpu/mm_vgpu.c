@@ -40,8 +40,8 @@ static int vgpu_init_mm_setup_sw(struct gk20a *g)
 
 	/* gk20a_init_gpu_characteristics expects this to be populated */
 	vm->big_page_size = big_page_size;
-	vm->pde_stride    = vm->big_page_size << 10;
-	vm->pde_stride_shift = ilog2(vm->pde_stride);
+	vm->mmu_levels = (vm->big_page_size == SZ_64K) ?
+			 gk20a_mm_levels_64k : gk20a_mm_levels_128k;
 
 	mm->sw_ready = true;
 
@@ -65,7 +65,8 @@ static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 				u32 ctag_offset,
 				u32 flags,
 				int rw_flag,
-				bool clear_ctags)
+				bool clear_ctags,
+				bool sparse)
 {
 	int err = 0;
 	struct device *d = dev_from_vm(vm);
@@ -128,7 +129,8 @@ static void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 				u64 size,
 				int pgsz_idx,
 				bool va_allocated,
-				int rw_flag)
+				int rw_flag,
+				bool sparse)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct gk20a_platform *platform = gk20a_get_platform(g->dev);

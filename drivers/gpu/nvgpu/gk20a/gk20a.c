@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1789,7 +1789,8 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 
 	gpu->big_page_size = g->mm.pmu.vm.big_page_size;
 	gpu->compression_page_size = g->ops.fb.compression_page_size(g);
-	gpu->pde_coverage_bit_count = g->mm.pmu.vm.pde_stride_shift;
+	gpu->pde_coverage_bit_count =
+		gk20a_mm_pde_coverage_bit_count(&g->mm.pmu.vm);
 
 	gpu->available_big_page_sizes = gpu->big_page_size;
 	if (g->ops.mm.get_big_page_sizes)
@@ -1798,7 +1799,7 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->flags = NVGPU_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS
 		| NVGPU_GPU_FLAGS_SUPPORT_SYNC_FENCE_FDS;
 
-	if (g->ops.mm.set_sparse)
+	if (g->ops.mm.support_sparse && g->ops.mm.support_sparse(g))
 		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS;
 
 	if (IS_ENABLED(CONFIG_TEGRA_GK20A) &&

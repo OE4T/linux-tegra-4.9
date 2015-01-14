@@ -21,152 +21,6 @@
 #include "hw_gr_gm20b.h"
 #include "hw_ram_gm20b.h"
 
-static int allocate_gmmu_ptes_sparse(struct vm_gk20a *vm,
-				enum gmmu_pgsz_gk20a pgsz_idx,
-				u64 first_vaddr, u64 last_vaddr,
-				bool clear, bool refplus)
-{
-	int err;
-	u32 pte_lo, pte_hi;
-	u32 pde_lo, pde_hi;
-	u32 pte_w[2] = {0, 0}; /* invalid pte */
-	u64 addr = 0;
-	u32 pte_cur;
-	struct gk20a_mm_entry *entry;
-	struct gk20a *g = gk20a_from_vm(vm);
-
-	gk20a_dbg_fn("");
-
-	pde_range_from_vaddr_range(vm, first_vaddr, last_vaddr,
-					&pde_lo, &pde_hi);
-
-	gk20a_dbg(gpu_dbg_pte, "size_idx=%d, pde_lo=%d, pde_hi=%d",
-			pgsz_idx, pde_lo, pde_hi);
-
-	/* Expect ptes of the same pde */
-	BUG_ON(pde_lo != pde_hi);
-
-	entry = vm->pdb.entries + pde_lo;
-
-	pte_lo = pte_index_from_vaddr(vm, first_vaddr, pgsz_idx);
-	pte_hi = pte_index_from_vaddr(vm, last_vaddr, pgsz_idx);
-
-	/* get cpu access to the ptes */
-	err = map_gmmu_pages(entry);
-	if (err)
-		goto fail;
-
-	gk20a_dbg(gpu_dbg_pte, "pte_lo=%d, pte_hi=%d", pte_lo, pte_hi);
-	for (pte_cur = pte_lo; pte_cur <= pte_hi; pte_cur++) {
-		pte_w[0] = gmmu_pte_valid_false_f();
-		pte_w[1] = clear ? 0 : gmmu_pte_vol_true_f();
-
-		gk20a_dbg(gpu_dbg_pte,
-			   "pte_cur=%d addr=%llx"
-			   " [0x%08x,0x%08x]",
-			   pte_cur, addr,
-			   pte_w[1], pte_w[0]);
-
-		gk20a_mem_wr32(entry->cpu_va + pte_cur*8, 0, pte_w[0]);
-		gk20a_mem_wr32(entry->cpu_va + pte_cur*8, 1, pte_w[1]);
-	}
-
-	unmap_gmmu_pages(entry);
-
-	smp_mb();
-	g->ops.mm.tlb_invalidate(vm);
-
-	return 0;
-fail:
-	return err;
-
-}
-
-static bool gm20b_vm_is_pde_in_range(struct vm_gk20a *vm, u64 vaddr_lo,
-					u64 vaddr_hi, u32 pde)
-{
-	u64 pde_vaddr_lo, pde_vaddr_hi;
-
-	gk20a_dbg_fn("");
-
-	pde_vaddr_lo = (u64)pde << vm->pde_stride_shift;
-	pde_vaddr_hi = pde_vaddr_lo |
-			((0x1UL << (vm->pde_stride_shift)) - 1);
-
-	return ((vaddr_lo <= pde_vaddr_lo) && (vaddr_hi) >= pde_vaddr_hi);
-}
-
-static int gm20b_vm_put_sparse(struct vm_gk20a *vm, u64 vaddr,
-			       u32 num_pages, u32 pgsz_idx, bool refplus)
-{
-	struct mm_gk20a *mm = vm->mm;
-	u32 pgsz = vm->gmmu_page_sizes[pgsz_idx];
-	u32 pde_shift = vm->pde_stride_shift;
-	u64 vaddr_hi;
-	u64 vaddr_pde_start;
-	u32 i;
-	u32 pde_lo, pde_hi;
-	int err;
-
-	gk20a_dbg_fn("");
-
-	vaddr_hi = vaddr + pgsz * (u64)num_pages - 1;
-	pde_range_from_vaddr_range(vm,
-				   vaddr,
-				   vaddr_hi,
-				   &pde_lo, &pde_hi);
-
-	gk20a_dbg_info("vaddr: 0x%llx, vaddr_hi: 0x%llx, pde_lo: 0x%x, "
-			"pde_hi: 0x%x, pgsz: %d, pde_stride_shift: %d",
-			vaddr, vaddr_hi, pde_lo, pde_hi, pgsz,
-			vm->pde_stride_shift);
-
-	for (i = pde_lo; i <= pde_hi; i++) {
-		/* Mark all ptes as sparse. */
-		err = validate_gmmu_page_table_gk20a_locked(vm, i,
-						    pgsz_idx);
-		if (err) {
-			gk20a_err(dev_from_vm(vm),
-				"failed to validate page table %d: %d",
-				i, err);
-			goto fail;
-		}
-
-		if (gm20b_vm_is_pde_in_range(vm, vaddr, vaddr_hi, i)) {
-			/* entire pde is marked as sparse */
-			vaddr_pde_start = (u64)i << pde_shift;
-			allocate_gmmu_ptes_sparse(vm, pgsz_idx,
-				vaddr_pde_start,
-				PDE_ADDR_END(vaddr_pde_start,
-				pde_shift), false, refplus);
-		} else {
-			/* Check leading and trailing spaces which doesn't fit
-			 * into entire pde. */
-			if (pde_lo == pde_hi)
-				allocate_gmmu_ptes_sparse(vm, pgsz_idx, vaddr,
-						vaddr_hi, false, refplus);
-			else if (i == pde_lo)
-				allocate_gmmu_ptes_sparse(vm, pgsz_idx, vaddr,
-					PDE_ADDR_END(vaddr, pde_shift), false,
-					refplus);
-			else
-				allocate_gmmu_ptes_sparse(vm, pgsz_idx,
-					PDE_ADDR_START(vaddr_hi, pde_shift),
-							vaddr_hi, false,
-							refplus);
-		}
-	}
-
-	gk20a_mm_l2_flush(mm->g, true);
-
-	return 0;
-
-fail:
-	WARN_ON(1);
-
-	return err;
-}
-
 static int gm20b_mm_mmu_vpr_info_fetch_wait(struct gk20a *g,
 		const unsigned int msec)
 {
@@ -249,9 +103,14 @@ static u32 gm20b_mm_get_big_page_sizes(void)
 	return SZ_64K | SZ_128K;
 }
 
+static bool gm20b_mm_support_sparse(struct gk20a *g)
+{
+	return true;
+}
+
 void gm20b_init_mm(struct gpu_ops *gops)
 {
-	gops->mm.set_sparse = gm20b_vm_put_sparse;
+	gops->mm.support_sparse = gm20b_mm_support_sparse;
 	gops->mm.is_debug_mode_enabled = gm20b_mm_mmu_debug_mode_enabled;
 	gops->mm.gmmu_map = gk20a_locked_gmmu_map;
 	gops->mm.gmmu_unmap = gk20a_locked_gmmu_unmap;
@@ -265,4 +124,6 @@ void gm20b_init_mm(struct gpu_ops *gops)
 	gops->mm.set_big_page_size = gm20b_mm_set_big_page_size;
 	gops->mm.get_big_page_sizes = gm20b_mm_get_big_page_sizes;
 	gops->mm.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits;
+	gops->mm.get_mmu_levels = gk20a_mm_get_mmu_levels;
+	gops->mm.init_pdb = gk20a_mm_init_pdb;
 }

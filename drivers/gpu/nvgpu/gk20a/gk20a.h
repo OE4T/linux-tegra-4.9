@@ -296,8 +296,7 @@ struct gpu_ops {
 		bool (*is_fw_defined)(void);
 	} gr_ctx;
 	struct {
-		int (*set_sparse)(struct vm_gk20a *vm, u64 vaddr,
-			       u32 num_pages, u32 pgsz_idx, bool refplus);
+		bool (*support_sparse)(struct gk20a *g);
 		bool (*is_debug_mode_enabled)(struct gk20a *g);
 		u64 (*gmmu_map)(struct vm_gk20a *vm,
 				u64 map_offset,
@@ -309,13 +308,15 @@ struct gpu_ops {
 				u32 ctag_offset,
 				u32 flags,
 				int rw_flag,
-				bool clear_ctags);
+				bool clear_ctags,
+				bool sparse);
 		void (*gmmu_unmap)(struct vm_gk20a *vm,
 				u64 vaddr,
 				u64 size,
 				int pgsz_idx,
 				bool va_allocated,
-				int rw_flag);
+				int rw_flag,
+				bool sparse);
 		void (*vm_remove)(struct vm_gk20a *vm);
 		int (*vm_alloc_share)(struct gk20a_as_share *as_share,
 				      u32 flags);
@@ -331,6 +332,9 @@ struct gpu_ops {
 		u32 (*get_physical_addr_bits)(struct gk20a *g);
 		int (*init_bar2_vm)(struct gk20a *g);
 		int (*init_bar2_mm_hw_setup)(struct gk20a *g);
+		const struct gk20a_mmu_level *
+			(*get_mmu_levels)(struct gk20a *g, u32 big_page_size);
+		void (*init_pdb)(struct gk20a *g, void *inst_ptr, u64 pdb_addr);
 	} mm;
 	struct {
 		int (*prepare_ucode)(struct gk20a *g);

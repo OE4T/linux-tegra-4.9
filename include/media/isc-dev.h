@@ -1,0 +1,41 @@
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#ifndef __ISC_DEV_H__
+#define __ISC_DEV_H__
+
+#define ISC_DEV_IOCTL_READ	_IOW('o', 1, struct isc_dev_package)
+#define ISC_DEV_IOCTL_WRITE	_IOR('o', 2, struct isc_dev_package)
+
+#define MAX_ISC_DEV_PAK_SIZE	32
+
+struct isc_dev_package {
+	__u32 offset;
+	__u8 buf[MAX_ISC_DEV_PAK_SIZE];
+	int size;
+};
+
+#ifdef __KERNEL__
+#include <linux/ioctl.h>  /* For IOCTL macros */
+#include <linux/regmap.h>
+
+#define MAX_ISC_NAME_LENGTH	32
+
+struct isc_dev_platform_data {
+	void *isc_mgr;
+	struct regmap_config regmap_cfg;
+	char drv_name[MAX_ISC_NAME_LENGTH];
+};
+#endif /* __KERNEL__ */
+
+#endif  /* __ISC_DEV_H__ */

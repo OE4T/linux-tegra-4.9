@@ -409,4 +409,9 @@
 		nvidia,edp_limit = <25000>;
 	};
 
+	modem {
+		/* using XHCI UTMI */
+		nvidia,phy-type = <2>;
+	};
+
 };

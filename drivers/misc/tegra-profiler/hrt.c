@@ -136,7 +136,7 @@ __put_sample(struct quadd_record_data *data,
 
 void
 quadd_put_sample_this_cpu(struct quadd_record_data *data,
-			 struct quadd_iovec *vec, int vec_count)
+			  struct quadd_iovec *vec, int vec_count)
 {
 	__put_sample(data, vec, vec_count, -1);
 }

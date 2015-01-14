@@ -31,6 +31,14 @@ struct nvhost_vm_pin {
 	unsigned int num_buffers;
 };
 
+int nvhost_vm_get_id(struct nvhost_vm *vm)
+{
+	if (!vm_op().get_id)
+		return -ENOSYS;
+
+	return vm_op().get_id(vm);
+}
+
 int nvhost_vm_map_static(struct platform_device *pdev,
 			 void *vaddr, dma_addr_t paddr,
 			 size_t size)

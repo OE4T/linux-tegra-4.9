@@ -81,6 +81,14 @@ struct nvhost_vm_static_buffer {
 };
 
 /**
+ * nvhost_vm_get_id - get hw identifier of this vm
+ *	@vm: Pointer to nvhost_vm structure
+ *
+ * This function returns hardware identifier of the given vm.
+ */
+int nvhost_vm_get_id(struct nvhost_vm *vm);
+
+/**
  * nvhost_vm_map_static - map allocated area to iova
  *	@pdev: pointer to host1x or host1x client device
  *	@vaddr: kernel virtual address

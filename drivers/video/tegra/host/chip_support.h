@@ -71,6 +71,7 @@ struct nvhost_vm_ops {
 			     struct nvhost_vm_buffer *buffer);
 	int (*pin_static_buffer)(struct nvhost_vm *vm,
 				 struct nvhost_vm_static_buffer *sbuffer);
+	int (*get_id)(struct nvhost_vm *vm);
 };
 
 struct nvhost_pushbuffer_ops {

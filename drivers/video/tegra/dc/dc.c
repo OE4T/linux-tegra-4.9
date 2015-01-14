@@ -1784,7 +1784,7 @@ static int _tegra_dc_update_cmu_aligned(struct tegra_dc *dc,
 
 	memcpy(&dc->cmu_shadow, cmu, sizeof(dc->cmu));
 	dc->cmu_shadow_dirty = true;
-	dc->cmu_shadow_force_update = force;
+	dc->cmu_shadow_force_update = dc->cmu_shadow_force_update || force;
 	_tegra_dc_config_frame_end_intr(dc, true);
 
 	return 0;

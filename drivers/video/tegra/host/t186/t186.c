@@ -251,7 +251,7 @@ struct nvhost_device_data t18_nvcsi_info = {
 	.push_work_done		= 1,
 };
 
-#include "host1x/host1x_channel.c"
+#include "host1x/host1x_channel_t186.c"
 
 static void t186_set_nvhost_chanops(struct nvhost_channel *ch)
 {

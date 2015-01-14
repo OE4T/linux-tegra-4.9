@@ -541,13 +541,6 @@ static int get_std_timing(unsigned char *block, struct fb_videomode *mode,
 		calc_mode_timings(xres, yres, refresh, mode);
 	}
 
-	/* Check the mode we got is within valid spec of the monitor */
-	if (specs && specs->dclkmax
-	    && PICOS2KHZ(mode->pixclock) * 1000 > specs->dclkmax) {
-		DPRINTK("        mode exceed max DCLK\n");
-		return 0;
-	}
-
 	return 1;
 }
 

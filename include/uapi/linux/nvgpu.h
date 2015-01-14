@@ -432,10 +432,26 @@ struct nvgpu_dbg_gpu_suspend_resume_all_sms_args {
 #define NVGPU_DBG_GPU_IOCTL_SUSPEND_RESUME_ALL_SMS			\
 	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 6, struct nvgpu_dbg_gpu_suspend_resume_all_sms_args)
 
+struct nvgpu_dbg_gpu_perfbuf_map_args {
+	__u32 dmabuf_fd;	/* in */
+	__u32 reserved;
+	__u64 mapping_size;	/* in, size of mapped buffer region */
+	__u64 offset;		/* out, virtual address of the mapping */
+};
+
+struct nvgpu_dbg_gpu_perfbuf_unmap_args {
+	__u64 offset;
+};
+
+#define NVGPU_DBG_GPU_IOCTL_PERFBUF_MAP \
+	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 7, struct nvgpu_dbg_gpu_perfbuf_map_args)
+#define NVGPU_DBG_GPU_IOCTL_PERFBUF_UNMAP \
+	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 8, struct nvgpu_dbg_gpu_perfbuf_unmap_args)
+
 #define NVGPU_DBG_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_DBG_GPU_IOCTL_SUSPEND_RESUME_ALL_SMS)
+	_IOC_NR(NVGPU_DBG_GPU_IOCTL_PERFBUF_UNMAP)
 #define NVGPU_DBG_GPU_IOCTL_MAX_ARG_SIZE		\
-	sizeof(struct nvgpu_dbg_gpu_exec_reg_ops_args)
+	sizeof(struct nvgpu_dbg_gpu_perfbuf_map_args)
 
 /*
  * /dev/nvhost-gpu device

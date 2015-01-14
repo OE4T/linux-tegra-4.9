@@ -342,6 +342,12 @@ struct mm_gk20a {
 		struct inst_desc inst_block;
 	} pmu;
 
+	struct {
+		/* using pmu vm currently */
+		struct inst_desc inst_block;
+	} hwpm;
+
+
 	struct mutex l2_op_lock;
 
 	void (*remove_support)(struct mm_gk20a *mm);

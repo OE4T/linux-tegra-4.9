@@ -101,6 +101,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   int rw_flag);
 static int __must_check gk20a_init_system_vm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_bar1_vm(struct mm_gk20a *mm);
+static int __must_check gk20a_init_hwpm(struct mm_gk20a *mm);
 
 
 struct gk20a_dmabuf_priv {
@@ -280,6 +281,7 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 {
 	gk20a_remove_vm(&mm->bar1.vm, &mm->bar1.inst_block);
 	gk20a_remove_vm(&mm->pmu.vm, &mm->pmu.inst_block);
+	gk20a_free_inst_block(gk20a_from_mm(mm), &mm->hwpm.inst_block);
 }
 
 int gk20a_init_mm_setup_sw(struct gk20a *g)
@@ -312,6 +314,10 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 			return err;
 	}
 	err = gk20a_init_system_vm(mm);
+	if (err)
+		return err;
+
+	err = gk20a_init_hwpm(mm);
 	if (err)
 		return err;
 
@@ -2718,6 +2724,21 @@ static int gk20a_init_system_vm(struct mm_gk20a *mm)
 clean_up_va:
 	gk20a_deinit_vm(vm);
 	return err;
+}
+
+static int gk20a_init_hwpm(struct mm_gk20a *mm)
+{
+	int err;
+	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct gk20a *g = gk20a_from_mm(mm);
+	struct inst_desc *inst_block = &mm->hwpm.inst_block;
+
+	err = gk20a_alloc_inst_block(g, inst_block);
+	if (err)
+		return err;
+	gk20a_init_inst_block(inst_block, vm, 0);
+
+	return 0;
 }
 
 void gk20a_init_inst_block(struct inst_desc *inst_block, struct vm_gk20a *vm,

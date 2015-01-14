@@ -1,7 +1,7 @@
 /*
  * Tegra GK20A GPU Debugger/Profiler Driver
  *
- * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -29,6 +29,7 @@
 #include "regops_gk20a.h"
 #include "hw_therm_gk20a.h"
 #include "hw_gr_gk20a.h"
+#include "hw_perf_gk20a.h"
 
 struct dbg_gpu_session_ops dbg_gpu_session_ops_gk20a = {
 	.exec_reg_ops = exec_regops_gk20a,
@@ -370,6 +371,11 @@ static int nvgpu_dbg_gpu_ioctl_suspend_resume_sm(
 		struct dbg_session_gk20a *dbg_s,
 		struct nvgpu_dbg_gpu_suspend_resume_all_sms_args *args);
 
+static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
+		struct nvgpu_dbg_gpu_perfbuf_map_args *args);
+
+static int gk20a_perfbuf_unmap(struct dbg_session_gk20a *dbg_s,
+		struct nvgpu_dbg_gpu_perfbuf_unmap_args *args);
 
 long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
@@ -434,6 +440,16 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 	case NVGPU_DBG_GPU_IOCTL_SUSPEND_RESUME_ALL_SMS:
 		err = nvgpu_dbg_gpu_ioctl_suspend_resume_sm(dbg_s,
 		       (struct nvgpu_dbg_gpu_suspend_resume_all_sms_args *)buf);
+		break;
+
+	case NVGPU_DBG_GPU_IOCTL_PERFBUF_MAP:
+		err = gk20a_perfbuf_map(dbg_s,
+		       (struct nvgpu_dbg_gpu_perfbuf_map_args *)buf);
+		break;
+
+	case NVGPU_DBG_GPU_IOCTL_PERFBUF_UNMAP:
+		err = gk20a_perfbuf_unmap(dbg_s,
+		       (struct nvgpu_dbg_gpu_perfbuf_unmap_args *)buf);
 		break;
 
 	default:
@@ -774,4 +790,81 @@ static int nvgpu_dbg_gpu_ioctl_suspend_resume_sm(
  clean_up:
 	mutex_unlock(&g->dbg_sessions_lock);
 	return  err;
+}
+
+static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
+		struct nvgpu_dbg_gpu_perfbuf_map_args *args)
+{
+	struct gk20a *g = dbg_s->g;
+	int err;
+	u32 virt_size;
+	u32 virt_addr_lo;
+	u32 virt_addr_hi;
+	u32 inst_pa_page;
+
+	if (!g->allow_all)
+		return -EACCES;
+
+	err = gk20a_vm_map_buffer(&g->mm.pmu.vm,
+			args->dmabuf_fd,
+			&args->offset,
+			0,
+			0,
+			0,
+			args->mapping_size);
+	if (err)
+		return err;
+
+	/* perf output buffer may not cross a 4GB boundary - with a separate va
+	 * smaller than that, it won't */
+	virt_size = u64_lo32(args->mapping_size);
+	virt_addr_lo = u64_lo32(args->offset);
+	virt_addr_hi = u64_hi32(args->offset);
+	/* but check anyway */
+	if (args->offset + virt_size > SZ_4G) {
+		gk20a_vm_unmap_buffer(&g->mm.pmu.vm, args->offset);
+		return -EINVAL;
+	}
+
+	/* address and size are aligned to 32 bytes, the lowest bits read back
+	 * as zeros */
+	gk20a_writel(g, perf_pmasys_outbase_r(), virt_addr_lo);
+	gk20a_writel(g, perf_pmasys_outbaseupper_r(),
+			perf_pmasys_outbaseupper_ptr_f(virt_addr_hi));
+	gk20a_writel(g, perf_pmasys_outsize_r(), virt_size);
+
+	/* this field is aligned to 4K */
+	inst_pa_page = g->mm.hwpm.inst_block.cpu_pa >> 12;
+
+	/* A write to MEM_BLOCK triggers the block bind operation. MEM_BLOCK
+	 * should be written last */
+	gk20a_writel(g, perf_pmasys_mem_block_r(),
+			perf_pmasys_mem_block_base_f(inst_pa_page) |
+			perf_pmasys_mem_block_valid_true_f() |
+			perf_pmasys_mem_block_target_lfb_f());
+
+	return 0;
+}
+
+static int gk20a_perfbuf_unmap(struct dbg_session_gk20a *dbg_s,
+		struct nvgpu_dbg_gpu_perfbuf_unmap_args *args)
+{
+	struct gk20a *g = dbg_s->g;
+
+	if (!g->allow_all)
+		return -EACCES;
+
+	gk20a_writel(g, perf_pmasys_outbase_r(), 0);
+	gk20a_writel(g, perf_pmasys_outbaseupper_r(),
+			perf_pmasys_outbaseupper_ptr_f(0));
+	gk20a_writel(g, perf_pmasys_outsize_r(), 0);
+
+	gk20a_writel(g, perf_pmasys_mem_block_r(),
+			perf_pmasys_mem_block_base_f(0) |
+			perf_pmasys_mem_block_valid_false_f() |
+			perf_pmasys_mem_block_target_f(0));
+
+	gk20a_vm_unmap_buffer(&g->mm.pmu.vm, args->offset);
+
+	return 0;
 }

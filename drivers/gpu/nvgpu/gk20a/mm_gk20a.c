@@ -2716,13 +2716,8 @@ void gk20a_free_inst_block(struct gk20a *g, struct inst_desc *inst_block)
 static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 {
 	int err;
-	phys_addr_t inst_pa;
-	void *inst_ptr;
 	struct vm_gk20a *vm = &mm->bar1.vm;
 	struct gk20a *g = gk20a_from_mm(mm);
-	u64 pde_addr;
-	u32 pde_addr_lo;
-	u32 pde_addr_hi;
 	struct inst_desc *inst_block = &mm->bar1.inst_block;
 	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
@@ -2731,41 +2726,11 @@ static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	gk20a_init_vm(mm, vm, big_page_size, SZ_4K,
 		      mm->bar1.aperture_size, false, "bar1");
 
-	gk20a_dbg_info("pde pa=0x%llx",
-		       (u64)gk20a_mm_iova_addr(g, vm->pdes.sgt->sgl));
-
-	pde_addr = gk20a_mm_iova_addr(g, vm->pdes.sgt->sgl);
-	pde_addr_lo = u64_lo32(pde_addr >> ram_in_base_shift_v());
-	pde_addr_hi = u64_hi32(pde_addr);
-
 	err = gk20a_alloc_inst_block(g, inst_block);
 	if (err)
 		goto clean_up_va;
+	gk20a_init_inst_block(inst_block, vm, big_page_size);
 
-	inst_pa = inst_block->cpu_pa;
-	inst_ptr = inst_block->cpuva;
-
-	gk20a_dbg_info("bar1 inst block physical phys = 0x%llx, kv = 0x%p",
-		(u64)inst_pa, inst_ptr);
-
-	gk20a_mem_wr32(inst_ptr, ram_in_page_dir_base_lo_w(),
-		ram_in_page_dir_base_target_vid_mem_f() |
-		ram_in_page_dir_base_vol_true_f() |
-		ram_in_page_dir_base_lo_f(pde_addr_lo));
-
-	gk20a_mem_wr32(inst_ptr, ram_in_page_dir_base_hi_w(),
-		ram_in_page_dir_base_hi_f(pde_addr_hi));
-
-	gk20a_mem_wr32(inst_ptr, ram_in_adr_limit_lo_w(),
-		 u64_lo32(vm->va_limit) | 0xFFF);
-
-	gk20a_mem_wr32(inst_ptr, ram_in_adr_limit_hi_w(),
-		ram_in_adr_limit_hi_f(u64_hi32(vm->va_limit)));
-
-	if (g->ops.mm.set_big_page_size)
-		g->ops.mm.set_big_page_size(g, inst_ptr, big_page_size);
-
-	gk20a_dbg_info("bar1 inst block ptr: %08llx",  (u64)inst_pa);
 	return 0;
 
 clean_up_va:
@@ -2777,13 +2742,8 @@ clean_up_va:
 static int gk20a_init_system_vm(struct mm_gk20a *mm)
 {
 	int err;
-	phys_addr_t inst_pa;
-	void *inst_ptr;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct gk20a *g = gk20a_from_mm(mm);
-	u64 pde_addr;
-	u32 pde_addr_lo;
-	u32 pde_addr_hi;
 	struct inst_desc *inst_block = &mm->pmu.inst_block;
 	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
@@ -2793,21 +2753,32 @@ static int gk20a_init_system_vm(struct mm_gk20a *mm)
 	gk20a_init_vm(mm, vm, big_page_size,
 		      SZ_128K << 10, GK20A_PMU_VA_SIZE, false, "system");
 
-	gk20a_dbg_info("pde pa=0x%llx",
-		       (u64)gk20a_mm_iova_addr(g, vm->pdes.sgt->sgl));
-
-	pde_addr = gk20a_mm_iova_addr(g, vm->pdes.sgt->sgl);
-	pde_addr_lo = u64_lo32(pde_addr >> ram_in_base_shift_v());
-	pde_addr_hi = u64_hi32(pde_addr);
-
 	err = gk20a_alloc_inst_block(g, inst_block);
 	if (err)
 		goto clean_up_va;
+	gk20a_init_inst_block(inst_block, vm, big_page_size);
 
-	inst_pa = inst_block->cpu_pa;
-	inst_ptr = inst_block->cpuva;
+	return 0;
 
-	gk20a_dbg_info("pmu inst block physical addr: 0x%llx", (u64)inst_pa);
+clean_up_va:
+	gk20a_deinit_vm(vm);
+	return err;
+}
+
+void gk20a_init_inst_block(struct inst_desc *inst_block, struct vm_gk20a *vm,
+		u32 big_page_size)
+{
+	struct gk20a *g = gk20a_from_vm(vm);
+	u64 pde_addr = gk20a_mm_iova_addr(g, vm->pdes.sgt->sgl);
+	u32 pde_addr_lo = u64_lo32(pde_addr >> ram_in_base_shift_v());
+	u32 pde_addr_hi = u64_hi32(pde_addr);
+	phys_addr_t inst_pa = inst_block->cpu_pa;
+	void *inst_ptr = inst_block->cpuva;
+
+	gk20a_dbg_info("inst block phys = 0x%llx, kv = 0x%p",
+		(u64)inst_pa, inst_ptr);
+
+	gk20a_dbg_info("pde pa=0x%llx", (u64)pde_addr);
 
 	gk20a_mem_wr32(inst_ptr, ram_in_page_dir_base_lo_w(),
 		ram_in_page_dir_base_target_vid_mem_f() |
@@ -2823,14 +2794,8 @@ static int gk20a_init_system_vm(struct mm_gk20a *mm)
 	gk20a_mem_wr32(inst_ptr, ram_in_adr_limit_hi_w(),
 		ram_in_adr_limit_hi_f(u64_hi32(vm->va_limit)));
 
-	if (g->ops.mm.set_big_page_size)
+	if (big_page_size && g->ops.mm.set_big_page_size)
 		g->ops.mm.set_big_page_size(g, inst_ptr, big_page_size);
-
-	return 0;
-
-clean_up_va:
-	gk20a_deinit_vm(vm);
-	return err;
 }
 
 int gk20a_mm_fb_flush(struct gk20a *g)

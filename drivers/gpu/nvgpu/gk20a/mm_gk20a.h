@@ -1,7 +1,7 @@
 /*
  * GK20A memory management
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -398,6 +398,8 @@ static inline int max_vaddr_bits_gk20a(void)
 
 int gk20a_alloc_inst_block(struct gk20a *g, struct inst_desc *inst_block);
 void gk20a_free_inst_block(struct gk20a *g, struct inst_desc *inst_block);
+void gk20a_init_inst_block(struct inst_desc *inst_block, struct vm_gk20a *vm,
+		u32 big_page_size);
 
 void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 		u64 va_begin, u64 va_end, char *label);

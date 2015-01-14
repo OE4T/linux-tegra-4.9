@@ -87,41 +87,13 @@ static void release_used_channel(struct fifo_gk20a *f, struct channel_gk20a *c)
 
 int channel_gk20a_commit_va(struct channel_gk20a *c)
 {
-	u64 addr;
-	u32 addr_lo;
-	u32 addr_hi;
-	void *inst_ptr;
-
 	gk20a_dbg_fn("");
 
-	inst_ptr = c->inst_block.cpuva;
-	if (!inst_ptr)
+	if (!c->inst_block.cpuva)
 		return -ENOMEM;
 
-	addr = gk20a_mm_iova_addr(c->g, c->vm->pdes.sgt->sgl);
-	addr_lo = u64_lo32(addr >> 12);
-	addr_hi = u64_hi32(addr);
-
-	gk20a_dbg_info("pde pa=0x%llx addr_lo=0x%x addr_hi=0x%x",
-		   (u64)addr, addr_lo, addr_hi);
-
-	gk20a_mem_wr32(inst_ptr, ram_in_page_dir_base_lo_w(),
-		ram_in_page_dir_base_target_vid_mem_f() |
-		ram_in_page_dir_base_vol_true_f() |
-		ram_in_page_dir_base_lo_f(addr_lo));
-
-	gk20a_mem_wr32(inst_ptr, ram_in_page_dir_base_hi_w(),
-		ram_in_page_dir_base_hi_f(addr_hi));
-
-	gk20a_mem_wr32(inst_ptr, ram_in_adr_limit_lo_w(),
-		 u64_lo32(c->vm->va_limit) | 0xFFF);
-
-	gk20a_mem_wr32(inst_ptr, ram_in_adr_limit_hi_w(),
-		ram_in_adr_limit_hi_f(u64_hi32(c->vm->va_limit)));
-
-	if (c->g->ops.mm.set_big_page_size)
-		c->g->ops.mm.set_big_page_size(c->g, inst_ptr,
-					       c->vm->gmmu_page_sizes[gmmu_page_size_big]);
+	gk20a_init_inst_block(&c->inst_block, c->vm,
+			c->vm->gmmu_page_sizes[gmmu_page_size_big]);
 
 	return 0;
 }

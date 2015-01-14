@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1684,33 +1684,13 @@ static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct device *d = dev_from_gk20a(g);
 	struct gk20a_ctxsw_ucode_info *ucode_info = &g->ctxsw_ucode_info;
-	void *inst_ptr;
-	u32 pde_addr_lo;
-	u32 pde_addr_hi;
-	u64 pde_addr;
 	int err;
 
 	err = gk20a_alloc_inst_block(g, &ucode_info->inst_blk_desc);
 	if (err)
 		return err;
 
-	inst_ptr = ucode_info->inst_blk_desc.cpuva;
-
-	/* Set inst block */
-	gk20a_mem_wr32(inst_ptr, ram_in_adr_limit_lo_w(),
-		 u64_lo32(vm->va_limit) | 0xFFF);
-	gk20a_mem_wr32(inst_ptr, ram_in_adr_limit_hi_w(),
-		ram_in_adr_limit_hi_f(u64_hi32(vm->va_limit)));
-
-	pde_addr = gk20a_mm_iova_addr(g, vm->pdes.sgt->sgl);
-	pde_addr_lo = u64_lo32(pde_addr >> 12);
-	pde_addr_hi = u64_hi32(pde_addr);
-	gk20a_mem_wr32(inst_ptr, ram_in_page_dir_base_lo_w(),
-		ram_in_page_dir_base_target_vid_mem_f() |
-		ram_in_page_dir_base_vol_true_f() |
-		ram_in_page_dir_base_lo_f(pde_addr_lo));
-	gk20a_mem_wr32(inst_ptr, ram_in_page_dir_base_hi_w(),
-		ram_in_page_dir_base_hi_f(pde_addr_hi));
+	gk20a_init_inst_block(&ucode_info->inst_blk_desc, vm, 0);
 
 	/* Map ucode surface to GMMU */
 	ucode_info->ucode_gpuva = gk20a_gmmu_map(vm,

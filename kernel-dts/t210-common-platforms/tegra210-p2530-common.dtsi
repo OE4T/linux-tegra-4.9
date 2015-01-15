@@ -121,6 +121,10 @@
 		};
 	};
 
+	wifi-antenna-tuning {
+		status = "disabled";
+	};
+
 	soctherm@0x700E2000 {
 		throttle@oc1 {
 			device_type = "throttlectl";

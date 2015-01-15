@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Unit clock scaling
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -453,15 +453,11 @@ void nvhost_scale_deinit(struct platform_device *pdev)
 
 void nvhost_scale_actmon_irq(struct platform_device *pdev, int type)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	struct device *host_dev = &nvhost_get_host(pdev)->dev->dev;
-	struct devfreq *df = pdata->power_manager;
+	struct nvhost_device_data *engine_pdata =
+		platform_get_drvdata(pdev);
+	struct devfreq *df = engine_pdata->power_manager;
 
-	/* no need to scale if host is disabled */
-	nvhost_module_busy_noresume(pdev);
-	if (pm_runtime_active(host_dev))
-		devfreq_watermark_event(df, type);
-	nvhost_module_idle(pdev);
+	devfreq_watermark_event(df, type);
 }
 
 /*

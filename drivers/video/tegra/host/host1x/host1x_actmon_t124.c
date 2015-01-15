@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Actmon support for T124 and T210
  *
- * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,6 +26,7 @@
 #include "chip_support.h"
 #include "host1x/host1x_actmon.h"
 
+static void host1x_actmon_process_isr(u32 hintstat, void *priv);
 
 void static actmon_writel(struct host1x_actmon *actmon, u32 val, u32 reg)
 {
@@ -44,14 +45,36 @@ static void host1x_actmon_event_fn(struct work_struct *work)
 {
 	struct host1x_actmon_worker *worker =
 		container_of(work, struct host1x_actmon_worker, work);
+	struct host1x_actmon *actmon = worker->actmon;
+	struct platform_device *pdev = actmon->pdev;
+	struct nvhost_device_data *engine_pdata = platform_get_drvdata(pdev);
 
-	nvhost_scale_actmon_irq(worker->actmon->pdev, worker->type);
+	/* ensure that the device remains powered */
+	nvhost_module_busy_noresume(pdev);
+	if (pm_runtime_active(&pdev->dev)) {
+		/* first, handle scaling */
+		nvhost_scale_actmon_irq(pdev, worker->type);
+
+		/* then, rewire the actmon IRQ */
+		nvhost_intr_enable_host_irq(&nvhost_get_host(pdev)->intr,
+					    engine_pdata->actmon_irq,
+					    host1x_actmon_process_isr,
+					    worker->actmon);
+	}
+	nvhost_module_idle(pdev);
 }
 
 static void host1x_actmon_process_isr(u32 hintstat, void *priv)
 {
 	struct host1x_actmon *actmon = priv;
+	struct platform_device *host_pdev = actmon->host->dev;
+	struct nvhost_device_data *engine_pdata =
+		platform_get_drvdata(actmon->pdev);
 	long val;
+
+	/* first, disable the interrupt */
+	nvhost_intr_disable_host_irq(&nvhost_get_host(host_pdev)->intr,
+				     engine_pdata->actmon_irq);
 
 	/* get the event type */
 	val = actmon_readl(actmon, actmon_intr_status_r());
@@ -294,14 +317,9 @@ static int host1x_actmon_count_norm(struct host1x_actmon *actmon, u32 *avg)
 
 static int host1x_set_high_wmark(struct host1x_actmon *actmon, u32 val_scaled)
 {
-	/* Scale the value (note the numerical limitations):
-	 *   val  = val_scaled / (1000 / 255)
-	 *       ~= val_scaled / 3.92
-	 *        = (val_scaled * 1000) / 3920 */
 	u32 val = (val_scaled < 1000) ?
-		(val_scaled * 1000) / 3920 :
-		255;
-
+		((val_scaled * actmon->clks_per_sample * actmon->divider) /
+		1000) : actmon->clks_per_sample * actmon->divider;
 	if (actmon->init != ACTMON_READY)
 		return 0;
 
@@ -321,13 +339,9 @@ static int host1x_set_high_wmark(struct host1x_actmon *actmon, u32 val_scaled)
 
 static int host1x_set_low_wmark(struct host1x_actmon *actmon, u32 val_scaled)
 {
-	/* Scale the value (note the numerical limitations):
-	 *   val  = val_scaled / (1000 / 255)
-	 *       ~= val_scaled / 3.92
-	 *        = (val_scaled * 1000) / 3920 */
 	u32 val = (val_scaled < 1000) ?
-		(val_scaled * 1000) / 3920 :
-		255;
+		((val_scaled * actmon->clks_per_sample * actmon->divider) /
+		1000) : actmon->clks_per_sample * actmon->divider;
 
 	if (actmon->init != ACTMON_READY)
 		return 0;

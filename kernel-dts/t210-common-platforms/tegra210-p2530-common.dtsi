@@ -277,46 +277,6 @@
 				up_compensation = <20>;
 				down_compensation = <20>;
 			};
-			trips {
-				lcpu_critical {
-					temperature = <103000>; /* must be same as GPU's critical temp */
-					hysteresis = <0>;
-					type = "critical";
-					writable;
-				};
-				lcpu_heavy {
-					temperature = <101500>;
-					hysteresis = <0>;
-					type = "hot";
-					writable;
-				};
-				lcpu_throttle {
-					temperature = <92000>;
-					hysteresis = <0>;
-					type = "passive";
-					writable;
-				};
-			};
-			cooling-maps {
-				map0 {
-					trip = <&{/thermal-zones/LCPU-therm/trips/lcpu_critical}>;
-					cdev-type = "tegra-shutdown";
-					cooling-device = <&{/soctherm@0x700E2000/throttle@critical}
-						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
-				};
-				map1 {
-					trip = <&{/thermal-zones/LCPU-therm/trips/lcpu_heavy}>;
-					cdev-type = "tegra-heavy";
-					cooling-device = <&{/soctherm@0x700E2000/throttle@heavy}
-						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
-				};
-				map2 {
-					trip = <&{/thermal-zones/LCPU-therm/trips/lcpu_throttle}>;
-					cdev-type = "cpu-balanced";
-					cooling-device = <&{/bthrot_cdev/cpu_balanced}
-						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
-				};
-			};
 		};
 		PLL-therm {
 			thermal-zone-params {

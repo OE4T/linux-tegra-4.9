@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -112,8 +112,6 @@ struct tegra_edid *tegra_edid_create(struct tegra_dc *dc,
 void tegra_edid_destroy(struct tegra_edid *edid);
 int tegra_edid_get_monspecs(struct tegra_edid *edid,
 				struct fb_monspecs *specs, u8 *vedid);
-int tegra_edid_get_monspecs_test(struct tegra_edid *edid,
-				struct fb_monspecs *specs, u8 *edid_ptr);
 u16 tegra_edid_get_cd_flag(struct tegra_edid *edid);
 u16 tegra_edid_get_max_clk_rate(struct tegra_edid *edid);
 int tegra_edid_get_eld(struct tegra_edid *edid, struct tegra_edid_hdmi_eld *elddata);

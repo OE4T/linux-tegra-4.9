@@ -38,6 +38,7 @@
 #define NVMAP_HEAP_CARVEOUT_IRAM    (1ul<<29)
 #define NVMAP_HEAP_CARVEOUT_VPR     (1ul<<28)
 #define NVMAP_HEAP_CARVEOUT_TSEC    (1ul<<27)
+#define NVMAP_HEAP_CARVEOUT_IVM     (1ul<<1)
 #define NVMAP_HEAP_CARVEOUT_GENERIC (1ul<<0)
 
 #define NVMAP_HEAP_CARVEOUT_MASK    (NVMAP_HEAP_IOVMM - 1)
@@ -79,6 +80,10 @@ struct nvmap_platform_carveout {
 	struct device *cma_dev;
 	bool resize;
 	struct device *dma_dev;
+	bool is_ivm;
+	int peer;
+	int vmid;
+	int can_alloc;
 };
 
 struct nvmap_platform_data {
@@ -131,6 +136,15 @@ struct nvmap_alloc_handle {
 	__u32 align;		/* min alignment necessary */
 };
 
+struct nvmap_alloc_ivm_handle {
+	__u32 handle;		/* nvmap handle */
+	__u32 heap_mask;	/* heaps to allocate from */
+	__u32 flags;		/* wb/wc/uc/iwb etc. */
+	__u32 align;		/* min alignment necessary */
+	__u32 peer;		/* peer with whom handle must be shared. Used
+				 *  only for NVMAP_HEAP_CARVEOUT_IVM
+				 */
+};
 
 struct nvmap_alloc_kind_handle {
 	__u32 handle;		/* nvmap handle */
@@ -319,10 +333,18 @@ struct nvmap_debugfs_handles_entry {
 /* Perform reserve operation on a list of handles. */
 #define NVMAP_IOC_RESERVE _IOW(NVMAP_IOC_MAGIC, 18,	\
 				  struct nvmap_cache_op_list)
+
+#define NVMAP_IOC_FROM_IVC_ID _IOWR(NVMAP_IOC_MAGIC, 19, struct nvmap_create_handle)
+#define NVMAP_IOC_GET_IVC_ID _IOWR(NVMAP_IOC_MAGIC, 20, struct nvmap_create_handle)
+#define NVMAP_IOC_GET_IVM_HEAPS _IOR(NVMAP_IOC_MAGIC, 21, unsigned int)
+
 /* START of T124 IOCTLS */
 /* Actually allocates memory for the specified handle, with kind */
 #define NVMAP_IOC_ALLOC_KIND _IOW(NVMAP_IOC_MAGIC, 100, struct nvmap_alloc_kind_handle)
 
-#define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_ALLOC_KIND))
+/* Actually allocates memory from IVM heaps */
+#define NVMAP_IOC_ALLOC_IVM _IOW(NVMAP_IOC_MAGIC, 101, struct nvmap_alloc_ivm_handle)
+
+#define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_ALLOC_IVM))
 
 #endif /* _LINUX_NVMAP_H */

@@ -4040,13 +4040,13 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	if ((config_enabled(CONFIG_FRAMEBUFFER_CONSOLE) ||
 			((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
 			(dc->pdata->flags & TEGRA_DC_FLAG_SET_EARLY_MODE))) &&
-			dc->out && (dc->out->type == TEGRA_DC_OUT_HDMI)) {
+			dc->out && (dc->out->type == TEGRA_DC_OUT_HDMI) &&
+			(!dc->initialized) && tegra_dc_hpd(dc)) {
 		struct fb_monspecs specs;
 		struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
-		if (!tegra_edid_get_monspecs(hdmi->edid, &specs, NULL))
-			if (tegra_dc_hpd(dc) && (!dc->initialized)) {
-				tegra_dc_set_fb_mode(dc, specs.modedb, false);
-			}
+		if (!tegra_edid_get_monspecs(hdmi->edid, &specs, NULL)) {
+			tegra_dc_set_fb_mode(dc, specs.modedb, false);
+		}
 	}
 
 	if ((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&

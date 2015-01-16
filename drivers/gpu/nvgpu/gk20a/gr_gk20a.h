@@ -217,6 +217,7 @@ struct gr_gk20a {
 	u32 comptags_per_cacheline;
 	u32 slices_per_ltc;
 	u32 cacheline_size;
+	u32 gobs_per_comptagline_per_slice;
 
 	u32 max_gpc_count;
 	u32 max_fbps_count;

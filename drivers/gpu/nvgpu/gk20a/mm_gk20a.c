@@ -1709,7 +1709,10 @@ void gk20a_free_sgtable(struct sg_table **sgt)
 
 u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova)
 {
-	return iova | 1ULL << g->ops.mm.get_physical_addr_bits(g);
+	if (!device_is_iommuable(dev_from_gk20a(g)))
+		return iova;
+	else
+		return iova | 1ULL << g->ops.mm.get_physical_addr_bits(g);
 }
 
 u64 gk20a_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl)

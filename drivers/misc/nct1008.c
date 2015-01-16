@@ -944,6 +944,38 @@ static inline int nct1008_ext_set_trip_temp(struct thermal_zone_device *thz,
 	return nct1008_set_trip_temp(EXT, thz, trip, temp);
 }
 
+/*
+ * Update trip point temperature from the device tree binded thermal zone for
+ * the sensor specified.
+ */
+static int nct1008_of_trip_update(int sensor, void *of_data, int trip)
+{
+	int ret;
+	long temp;
+	struct nct1008_data *data = of_data;
+	struct thermal_zone_device *thz = data->sensors[sensor].thz;
+
+	if (thz->ops && thz->ops->get_trip_temp) {
+		ret = thz->ops->get_trip_temp(thz, trip, &temp);
+		if (ret)
+			return ret;
+
+		data->plat_data.sensors[sensor].trips[trip].trip_temp = temp;
+		nct1008_update(sensor, data);
+	}
+	return 0;
+}
+
+static int nct1008_of_loc_trip_update(void *of_data, int trip)
+{
+	return nct1008_of_trip_update(LOC, of_data, trip);
+}
+
+static int nct1008_of_ext_trip_update(void *of_data, int trip)
+{
+	return nct1008_of_trip_update(EXT, of_data, trip);
+}
+
 /* This function return the trip point type for the sensor specified. */
 static int nct1008_get_trip_type(int sensor,
 					struct thermal_zone_device *thz,
@@ -1568,12 +1600,13 @@ void nct1008_get_trip(int sensor, struct nct1008_data *data)
 
 static struct thermal_zone_of_device_ops loc_sops = {
 	.get_temp = nct1008_loc_get_temp_as_sensor,
+	.trip_update = nct1008_of_loc_trip_update,
 };
 
 static struct thermal_zone_of_device_ops ext_sops = {
 	.get_temp = nct1008_ext_get_temp_as_sensor,
+	.trip_update = nct1008_of_ext_trip_update,
 };
-
 
 /*
  * Manufacturer(OnSemi) recommended sequence for
@@ -1689,7 +1722,7 @@ static int nct1008_probe(struct i2c_client *client,
 		/* register External sensor if connection is good  */
 		data->sensors[EXT].thz = ext_err ? NULL :
 			thermal_zone_of_sensor_register(&client->dev, EXT, data,
-					&ext_sops);
+				&ext_sops);
 	} else {
 		sensor_data = &data->plat_data.sensors[LOC];
 

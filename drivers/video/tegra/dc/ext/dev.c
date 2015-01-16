@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/dev.c
+ * drivers/video/tegra/dc/ext/dev.c
  *
  * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
  *
@@ -1119,6 +1119,7 @@ static int tegra_dc_ext_set_csc(struct tegra_dc_ext_user *user,
 }
 #endif
 
+#if defined(CONFIG_TEGRA_LUT)
 static int set_lut_channel(u16 __user *channel_from_user,
 			   u8 *channel_to,
 			   u32 start,
@@ -1140,6 +1141,47 @@ static int set_lut_channel(u16 __user *channel_from_user,
 
 	return 0;
 }
+#elif defined(CONFIG_TEGRA_LUT_V2)
+static int set_lut_channel(struct tegra_dc_ext_lut *new_lut,
+			   u64 *channel_to)
+{
+	int i, j;
+	u16 lut16bpp[256];
+	u64 inlut = 0;
+	u16 __user *channel_from_user;
+	u32 start = new_lut->start;
+	u32 len = new_lut->len;
+
+	for (j = 0; j < 3; j++) {
+
+		if (j == 0)
+			channel_from_user = new_lut->r;
+		else if (j == 1)
+			channel_from_user = new_lut->g;
+		else if (j == 2)
+			channel_from_user = new_lut->b;
+
+		if (channel_from_user) {
+			if (copy_from_user(lut16bpp,
+					channel_from_user, len<<1))
+				return 1;
+
+			for (i = 0; i < len; i++) {
+				inlut = (u64)lut16bpp[i];
+				/*16bit data in MSB format*/
+				channel_to[start+i] |=
+					((inlut && 0xFF00) << (j * 16));
+			}
+		} else {
+			for (i = 0; i < len; i++) {
+				inlut = (u64)(start+i);
+				channel_to[start+i] |= (inlut << (j * 16));
+			}
+		}
+	}
+	return 0;
+}
+#endif
 
 static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
 				struct tegra_dc_ext_lut *new_lut)
@@ -1170,10 +1212,17 @@ static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
 		return -EACCES;
 	}
 
+#if defined(CONFIG_TEGRA_LUT)
+
 	err = set_lut_channel(new_lut->r, lut->r, start, len) |
 	      set_lut_channel(new_lut->g, lut->g, start, len) |
 	      set_lut_channel(new_lut->b, lut->b, start, len);
 
+#elif defined(CONFIG_TEGRA_LUT_V2)
+	memset(lut->rgb, 0, sizeof(u64)* len);
+	err = set_lut_channel(new_lut, lut->rgb);
+
+#endif
 	if (err) {
 		mutex_unlock(&ext_win->lock);
 		return -EFAULT;

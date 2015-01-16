@@ -6,7 +6,7 @@
  *         Colin Cross <ccross@android.com>
  *         Travis Geiselbrecht <travis@palm.com>
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -249,9 +249,15 @@ static int tegra_fb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 	struct tegra_fb_info *tegra_fb = info->par;
 	struct tegra_dc *dc = tegra_fb->win.dc;
 	int i;
+#if defined(CONFIG_TEGRA_LUT)
 	u16 *red = cmap->red;
 	u16 *green = cmap->green;
 	u16 *blue = cmap->blue;
+#elif defined(CONFIG_TEGRA_LUT_V2)
+	u64 *red = (u64 *)cmap->red;
+	u64 *green = (u64 *)cmap->green;
+	u64 *blue = (u64 *)cmap->blue;
+#endif
 	int start = cmap->start;
 
 	if (((unsigned)start > 255) || ((start + cmap->len) > 256))
@@ -286,9 +292,15 @@ static int tegra_fb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 		} else {
 			/* High-color schemes*/
 			for (i = 0; i < cmap->len; i++) {
+#if defined(CONFIG_TEGRA_LUT)
 				dc->fb_lut.r[start+i] = *red++ >> 8;
 				dc->fb_lut.g[start+i] = *green++ >> 8;
 				dc->fb_lut.b[start+i] = *blue++ >> 8;
+#elif defined(CONFIG_TEGRA_LUT_V2)
+				dc->fb_lut.rgb[start+i] = ((*red++ >> 8) |
+						((*green++ >> 8) << 16) |
+						((*blue++ >> 8) << 32));
+#endif
 			}
 			tegra_dc_update_lut(dc, -1, -1);
 		}

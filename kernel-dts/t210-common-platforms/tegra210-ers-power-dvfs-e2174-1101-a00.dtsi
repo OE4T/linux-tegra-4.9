@@ -1,3 +1,17 @@
+/*
+ * Copyright (c) 2014-2015 NVIDIA CORPORATION. All rights reserved.
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
+
 #include <dt-bindings/gpio/tegra-gpio.h>
 #include <dt-bindings/clk/tegra210-clk.h>
 
@@ -215,10 +229,10 @@
 	};
 
 	thermal-zones {
-		CPU-therm {
+		Tdiode_tegra {
 			SET_MAP_TRIP(cpu, vmin, 1, 15000);
 		};
-		GPU-therm {
+		Tdiode_tegra {
 			trips {
 				/* Reference only trip, not mapped */
 				gpu_scaling0: gpu-scaling0 {
@@ -232,7 +246,7 @@
 			SET_MAP_TRIP(gpu, scaling, 3, 50000);
 			SET_MAP_TRIP(gpu, scaling, 4, 70000);
 		};
-		PLL-therm {
+		Tdiode_tegra {
 			SET_MAP_TRIP(core, vmin, 1, 20000);
 		};
 	};

@@ -203,6 +203,7 @@
 			panel-s-wqxga-10-1 {
 				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
 				nvidia,panel-bl-pwm-gpio = <&gpio TEGRA_GPIO(V, 0) 0>; /* PV0 */
+				nvidia,dsi-te-gpio = <&gpio TEGRA_GPIO(Y, 2) 0>;
 			};
 			panel-a-wuxga-8-0 {
 				nvidia,dsi-dpd-pads = <DSIC_DPD_EN DSID_DPD_EN>;

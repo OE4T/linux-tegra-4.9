@@ -1,7 +1,7 @@
 /*
  * FPDLink Serializer driver
  *
- * Copyright (C) 2014 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2015 NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -34,16 +34,6 @@
 static struct tegra_dc_hdmi2fpd_data *hdmi2fpd;
 static struct i2c_client *ds90uh949_i2c_client;
 
-static int hdmi2fpd_ser_config(struct tegra_dc_hdmi2fpd_data *hdmi2fpd)
-{
-	int err = 0;
-
-	err = regmap_update_bits(hdmi2fpd->regmap, DS90UH949_SER_REG_RESET,
-			DS90UH949_SER_REG_RESET_DIGRESET0,
-			DS90UH949_SER_REG_RESET_DIGRESET0);
-	return (err < 0 ? err : 0);
-}
-
 int hdmi2fpd_enable(struct tegra_dc_hdmi_data *hdmi)
 {
 	struct tegra_dc_hdmi2fpd_data *hdmi2fpd = tegra_hdmi_get_outdata(hdmi);
@@ -60,10 +50,6 @@ int hdmi2fpd_enable(struct tegra_dc_hdmi_data *hdmi)
 
 	mdelay(hdmi2fpd->power_on_delay);
 
-	err = hdmi2fpd_ser_config(hdmi2fpd);
-	if (err)
-		pr_err("%s: failed\n", __func__);
-
 	hdmi2fpd->hdmi2fpd_enabled = true;
 	mutex_unlock(&hdmi2fpd->lock);
 	return err;
@@ -77,6 +63,8 @@ void hdmi2fpd_disable(struct tegra_dc_hdmi_data *hdmi)
 	/* Turn off serializer chip */
 	if (hdmi2fpd->en_gpio > 0)
 		gpio_set_value(hdmi2fpd->en_gpio, 0);
+
+	mdelay(hdmi2fpd->power_off_delay);
 
 	hdmi2fpd->hdmi2fpd_enabled = false;
 	mutex_unlock(&hdmi2fpd->lock);
@@ -128,6 +116,8 @@ static int of_hdmi2fpd_parse_platform_data(struct tegra_dc_hdmi_data *hdmi,
 	if (!of_property_read_u32(np, "ti,power-on-delay", &temp))
 		hdmi2fpd->power_on_delay = temp;
 
+	if (!of_property_read_u32(np, "ti,power-off-delay", &temp))
+		hdmi2fpd->power_off_delay = temp;
 err:
 	return err;
 }

@@ -1,7 +1,7 @@
 /*
  * FPDLink Serializer driver
  *
- * Copyright (C) 2014 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2015 NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -26,6 +26,7 @@ struct tegra_dc_hdmi2fpd_data {
 	int en_gpio; /* GPIO */
 	int en_gpio_flags;
 	int power_on_delay;
+	int power_off_delay;
 	bool hdmi2fpd_enabled;
 	struct tegra_dc_hdmi_data *hdmi;
 	struct regmap *regmap;

@@ -775,7 +775,7 @@ static u32 gr_gm20b_pagepool_default_size(struct gk20a *g)
 	return gr_scc_pagepool_total_pages_hwmax_value_v();
 }
 
-int gr_gm20b_alloc_gr_ctx(struct gk20a *g,
+static int gr_gm20b_alloc_gr_ctx(struct gk20a *g,
 			  struct gr_ctx_desc **gr_ctx, struct vm_gk20a *vm,
 			  u32 class,
 			  u32 flags)

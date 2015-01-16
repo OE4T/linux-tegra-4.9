@@ -1,7 +1,7 @@
 /*
  * GP10B L2
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -59,6 +59,10 @@ static int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 		512 << ltc_ltcs_ltss_cbc_param_cache_line_size_v(cbc_param);
 	u32 slices_per_ltc =
 		ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(cbc_param);
+	u32 cbc_param2 =
+		gk20a_readl(g, ltc_ltcs_ltss_cbc_param2_r());
+	u32 gobs_per_comptagline_per_slice =
+		ltc_ltcs_ltss_cbc_param2_gobs_per_comptagline_per_slice_v(cbc_param2);
 
 	u32 compbit_backing_size;
 
@@ -96,6 +100,8 @@ static int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 		compbit_backing_size);
 	gk20a_dbg_info("max comptag lines : %d",
 		max_comptag_lines);
+	gk20a_dbg_info("gobs_per_comptagline_per_slice: %d",
+		gobs_per_comptagline_per_slice);
 
 	if (tegra_platform_is_linsim())
 		err = gk20a_ltc_alloc_phys_cbc(g, compbit_backing_size);
@@ -112,6 +118,7 @@ static int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	gr->comptags_per_cacheline = comptags_per_cacheline;
 	gr->slices_per_ltc = slices_per_ltc;
 	gr->cacheline_size = cacheline_size;
+	gr->gobs_per_comptagline_per_slice = gobs_per_comptagline_per_slice;
 
 	return 0;
 }
@@ -136,3 +143,4 @@ void gp10b_init_ltc(struct gpu_ops *gops)
 	gops->ltc.sync_debugfs = gk20a_ltc_sync_debugfs;
 #endif
 }
+

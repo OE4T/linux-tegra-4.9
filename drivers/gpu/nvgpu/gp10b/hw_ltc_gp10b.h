@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -173,6 +173,14 @@ static inline u32 ltc_ltcs_ltss_cbc_param_cache_line_size_v(u32 r)
 static inline u32 ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(u32 r)
 {
 	return (r >> 28) & 0xf;
+}
+static inline u32 ltc_ltcs_ltss_cbc_param2_r(void)
+{
+	return 0x0017e3f4;
+}
+static inline u32 ltc_ltcs_ltss_cbc_param2_gobs_per_comptagline_per_slice_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
 }
 static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_r(void)
 {

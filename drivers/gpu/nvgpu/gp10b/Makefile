@@ -17,6 +17,7 @@ obj-$(CONFIG_GK20A)  += \
 	mm_gp10b.o \
 	fb_gp10b.o \
 	pmu_gp10b.o \
+	fifo_gp10b.o \
 	hal_gp10b.o
 
 obj-$(CONFIG_TEGRA_GK20A) += platform_gp10b_tegra.o

@@ -333,6 +333,10 @@
 										//				2:0=HSSQUELCH_LEVEL_NEW		0x02
 					>;
 				};
+				prod_c_bias {
+					prod = <0x00000284 0xffffffc0 0x0000003a
+					>;
+				};
 		};
 	};
 
@@ -345,6 +349,10 @@
 										//				3:2=HS_DISCON_LEVEL_LSB		0x03
 						0x00000850 0xfffffffe 0x00000002// UTMIP_BIAS_CFG2_0
 										//				2:0=HSSQUELCH_LEVEL_NEW		0x02
+					>;
+				};
+				prod_c_bias {
+					prod = <0x00000284 0xffffffc0 0x0000003a
 					>;
 				};
 		};
@@ -417,6 +425,11 @@
 	xusb@70090000 {
 		prod-settings {
 			#prod-cells = <4>;
+			prod_c_bias {
+			    prod = <
+				0 0x00000284 0xffffffc0 0x0000003a
+			    >;
+			};
 			prod_c_utmi0 {
 			    prod = <
 				3 0x00000084 0xffffffbf 0x00000040
@@ -519,6 +532,11 @@
 					3 0x00000b28 0x00000000 0xc0077f1f	//UPHY_USB3_PAD_ECTL_3	31:0=RX_DFE		0xc0077f1f
 					3 0x00000b2c 0x0000ffff 0x01c70000	//UPHY_USB3_PAD_ECTL_4	31:16=RX_CDR_CTRL	0x1c7
 					3 0x00000b34 0x00000000 0xfcf01368	//UPHY_USB3_PAD_ECTL_6	31:0=RX_EQ_CTRL_H	0xfcf01368
+				>;
+			};
+			prod_c_bias {
+				prod = <
+					0 0x00000284 0xffffffc0 0x0000003a
 				>;
 			};
 

@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/nvdisplay/nvdis.c
+ * drivers/video/tegra/dc/nvdisplay/nvdisp.c
  *
  * Copyright (c) 2014-2015, NVIDIA CORPORATION, All rights reserved.
  *
@@ -34,9 +34,55 @@
 /* static struct tegra_dc_nvdisp	tegra_nvdisp; */
 DEFINE_MUTEX(tegra_nvdisp_lock);
 
+#define NVDISP_INPUT_LUT_SIZE  256
+
+static int nvdisp_set_input_lut(struct tegra_dc_win *win,
+					struct tegra_dc_lut *lut)
+{
+#if 0
+	nvdisp_win_write(win,
+			tegra_dc_reg_l32(lut->phy_addr),
+			win_input_lut_base_r());
+	nvdisp_win_write(win,
+			tegra_dc_reg_h32(lut->phy_addr),
+			win_input_lut_base_hi_r());
+	nvdisp_win_write(win, 0,
+			win_input_lut_ctl_r());
+#endif
+	return 0;
+}
+
+static int tegra_nvdisp_set_input_lut(struct tegra_dc *dc,
+					struct tegra_dc_win *win,
+					bool winlut)
+{
+	struct tegra_dc_lut *lut;
+
+	if (winlut)
+		lut = &win->lut;
+	else
+		lut = &dc->fb_lut;
+
+	if (!lut)
+		return -ENOMEM;
+
+	/* Allocate the memory for LUT */
+	lut->size = NVDISP_INPUT_LUT_SIZE * sizeof(u64);
+	lut->rgb = (u64 *)dma_zalloc_coherent(&dc->ndev->dev, lut->size,
+			&lut->phy_addr, GFP_KERNEL);
+	if (!lut->rgb)
+		return -ENOMEM;
+
+	/* Set the LUT address in HW register */
+	if (winlut)
+		nvdisp_set_input_lut(win, lut);
+
+	return 0;
+}
 
 int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 {
+	int ret = 0;
 	int i;
 	char syncpt_name[] = "disp_a";
 
@@ -47,11 +93,32 @@ int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 	for (i = 0; i < DC_N_WINDOWS; ++i, ++syncpt_name[5]) {
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 		win->syncpt.id = nvhost_get_syncpt_client_managed(syncpt_name);
+
+		/* allocate input LUT memory and assign to HW */
+		if (tegra_nvdisp_set_input_lut(dc, win, true))
+			goto INIT_ERR;
 	}
+
 	dc->valid_windows = 0;
 
+	goto INIT_EXIT;
+
+INIT_ERR:
+	for (i = 0; i < DC_N_WINDOWS; ++i) {
+		struct tegra_dc_lut *lut;
+		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
+
+		/* Allocate the memory for Input LUT & fb LUT*/
+		lut = &win->lut;
+		if (lut->rgb)
+			dma_free_coherent(&dc->ndev->dev, lut->size,
+				(void *)lut->rgb, lut->phy_addr);
+	}
+
+INIT_EXIT:
 	mutex_unlock(&tegra_nvdisp_lock);
-	return 0;
+	return ret;
+
 }
 
 int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
@@ -167,6 +234,12 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 
 int tegra_nvdisp_init(struct tegra_dc *dc)
 {
+	/*Lut alloc is needed per dc */
+	if (!dc->fb_lut.rgb) {
+		if (tegra_nvdisp_set_input_lut(dc, NULL, false))
+			return -ENOMEM;
+	}
+
 	/* Only need init once no matter how many dc objects */
 	if (dc->ctrl_num)
 		return 0;

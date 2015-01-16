@@ -44,8 +44,8 @@
 		bus-width = <4>;
 		calib-3v3-offsets = <0x007D>;
 		calib-1v8-offsets = <0x7B7B>;
-		compad-vref-3v3 = <0x1>;
-		compad-vref-1v8 = <0x2>;
+		compad-vref-3v3 = <0x7>;
+		compad-vref-1v8 = <0x7>;
 		pll_source = "pll_p";
 		nvidia,en-io-trim-volt;
 	};
@@ -75,8 +75,8 @@
 		mmc-ocr-mask = <3>;
 		calib-3v3-offsets = <0x007D>;
 		calib-1v8-offsets = <0x7B7B>;
-		compad-vref-3v3 = <0x1>;
-		compad-vref-1v8 = <0x2>;
+		compad-vref-3v3 = <0x7>;
+		compad-vref-1v8 = <0x7>;
 		cd-gpios = <&gpio TEGRA_GPIO_PZ1 0>;
 		pll_source = "pll_p";
 		nvidia,en-io-trim-volt;

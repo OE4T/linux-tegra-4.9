@@ -170,4 +170,6 @@ void fifo_gk20a_finish_mmu_fault_handling(struct gk20a *g,
 		unsigned long fault_id);
 int gk20a_fifo_wait_engine_idle(struct gk20a *g);
 u32 gk20a_fifo_engine_interrupt_mask(struct gk20a *g);
+u32 gk20a_fifo_get_pbdma_signature(struct gk20a *g);
+
 #endif /*__GR_GK20A_H__*/

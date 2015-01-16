@@ -192,7 +192,7 @@ int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 		pbdma_gp_base_hi_limit2_f(ilog2(gpfifo_entries)));
 
 	gk20a_mem_wr32(inst_ptr, ram_fc_signature_w(),
-		 pbdma_signature_hw_valid_f() | pbdma_signature_sw_zero_f());
+		 c->g->ops.fifo.get_pbdma_signature(c->g));
 
 	gk20a_mem_wr32(inst_ptr, ram_fc_formats_w(),
 		pbdma_formats_gp_fermi0_f() |

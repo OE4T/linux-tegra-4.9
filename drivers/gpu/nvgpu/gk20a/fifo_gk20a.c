@@ -2154,6 +2154,11 @@ static u32 gk20a_fifo_get_num_fifos(struct gk20a *g)
 	return ccsr_channel__size_1_v();
 }
 
+u32 gk20a_fifo_get_pbdma_signature(struct gk20a *g)
+{
+	return pbdma_signature_hw_valid_f() | pbdma_signature_sw_zero_f();
+}
+
 void gk20a_init_fifo(struct gpu_ops *gops)
 {
 	gk20a_init_channel(gops);
@@ -2163,4 +2168,5 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.apply_pb_timeout = gk20a_fifo_apply_pb_timeout;
 	gops->fifo.wait_engine_idle = gk20a_fifo_wait_engine_idle;
 	gops->fifo.get_num_fifos = gk20a_fifo_get_num_fifos;
+	gops->fifo.get_pbdma_signature = gk20a_fifo_get_pbdma_signature;
 }

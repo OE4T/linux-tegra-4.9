@@ -84,6 +84,13 @@ struct tegra_se_req_context {
 	bool encrypt;	/* Operation type */
 };
 
+struct tegra_se_prev_req_config {
+	enum tegra_se_aes_op_mode mode; /* Security Engine operation mode */
+	bool encrypt;	/* Operation type */
+	bool called; /* To Know if cofiguration is set for atleast once */
+};
+static struct tegra_se_prev_req_config *prev_cfg;
+
 struct tegra_se_chipdata {
 	bool cprng_supported;
 	bool drbg_supported;
@@ -338,6 +345,10 @@ static void tegra_se_config_algo(struct tegra_se_dev *se_dev,
 	enum tegra_se_aes_op_mode mode, bool encrypt, u32 key_len)
 {
 	u32 val = 0;
+
+	prev_cfg->mode = mode;
+	prev_cfg->encrypt = encrypt;
+	prev_cfg->called = true;
 
 	switch (mode) {
 	case SE_AES_OP_MODE_CBC:
@@ -1000,10 +1011,16 @@ static void tegra_se_process_new_req(struct crypto_async_request *async_req)
 		}
 	}
 	tegra_se_setup_ablk_req(se_dev, req);
-	tegra_se_config_algo(se_dev, req_ctx->op_mode, req_ctx->encrypt,
-		aes_ctx->keylen);
-	tegra_se_config_crypto(se_dev, req_ctx->op_mode, req_ctx->encrypt,
-			aes_ctx->slot->slot_num, req->info ? true : false);
+
+	if (prev_cfg->mode != req_ctx->op_mode ||
+		prev_cfg->encrypt != req_ctx->encrypt || !prev_cfg->called) {
+		tegra_se_config_algo(se_dev, req_ctx->op_mode,
+				req_ctx->encrypt, aes_ctx->keylen);
+		tegra_se_config_crypto(se_dev, req_ctx->op_mode,
+			req_ctx->encrypt, aes_ctx->slot->slot_num,
+			req->info ? true : false);
+	}
+
 	ret = tegra_se_start_operation(se_dev, req->nbytes, false);
 	if (req->nbytes == DISK_ENCR_BUF_SZ)
 		tegra_se_get_dst_sg(req->dst, 1, req->nbytes,
@@ -2874,12 +2891,18 @@ static int tegra_se_probe(struct platform_device *pdev)
 	pm_runtime_enable(se_dev->dev);
 	tegra_se_key_read_disable_all();
 
+	prev_cfg = kzalloc(sizeof(struct tegra_se_prev_req_config), GFP_KERNEL);
+	if (!prev_cfg) {
+		dev_err(&pdev->dev, "memory allocation for prev_cfg failed\n");
+		goto free_res;
+	}
+
 	err = request_irq(se_dev->irq, tegra_se_irq, IRQF_DISABLED,
 			DRIVER_NAME, se_dev);
 	if (err) {
 		dev_err(se_dev->dev, "request_irq failed - irq[%d] err[%d]\n",
 			se_dev->irq, err);
-		goto free_res;
+		goto irq_fail;
 	}
 
 	se_dev->dev->coherent_dma_mask = DMA_BIT_MASK(64);
@@ -2971,7 +2994,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 
 clean:
 	free_irq(se_dev->irq, &pdev->dev);
-
+irq_fail:
+	kfree(prev_cfg);
 free_res:
 	pm_runtime_disable(se_dev->dev);
 	for (k = 0; k < i; k++)
@@ -3052,6 +3076,7 @@ static int tegra_se_remove(struct platform_device *pdev)
 	kfree(se_dev);
 	sg_tegra_se_dev = NULL;
 
+	kfree(prev_cfg);
 	return 0;
 }
 

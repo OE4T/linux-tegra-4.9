@@ -3,7 +3,7 @@
  *
  * GPU heap allocator.
  *
- * Copyright (c) 2011-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@
 #include <linux/err.h>
 #include <linux/bug.h>
 #include <linux/stat.h>
+#include <linux/sizes.h>
 
 #include <linux/nvmap.h>
 #include <linux/dma-mapping.h>
@@ -74,7 +75,19 @@ struct nvmap_heap {
 	struct device *cma_dev;
 	struct device *dma_dev;
 	struct device dev;
+	bool is_ivm;
+	bool can_alloc; /* Used only if is_ivm == true */
+	int peer; /* Used only if is_ivm == true */
+	int vm_id; /* Used only if is_ivm == true */
 };
+
+int nvmap_query_heap_peer(struct nvmap_heap *heap)
+{
+	if (!heap || !heap->is_ivm)
+		return -EINVAL;
+
+	return heap->peer;
+}
 
 void nvmap_heap_debugfs_init(struct dentry *heap_root, struct nvmap_heap *heap)
 {
@@ -92,7 +105,8 @@ void nvmap_heap_debugfs_init(struct dentry *heap_root, struct nvmap_heap *heap)
 			heap_root, (u32 *)&heap->len);
 }
 
-static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len)
+static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
+				   phys_addr_t *start)
 {
 	phys_addr_t pa;
 	DEFINE_DMA_ATTRS(attrs);
@@ -100,11 +114,21 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len)
 
 	dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
 
-	(void)dma_alloc_attrs(dev, len, &pa,
-		DMA_MEMORY_NOMAP, &attrs);
-	if (!dma_mapping_error(dev, pa))
-		dev_dbg(dev, "Allocated addr (%pa) len(%zu)\n",
-			&pa, len);
+	if (start && h->is_ivm) {
+		void *ret;
+		pa = h->base + (*start);
+		ret = dma_mark_declared_memory_occupied(dev, pa, len);
+		if (IS_ERR(ret)) {
+			dev_err(dev, "Failed to reserve (%pa) len(%zu)\n",
+					&pa, len);
+		}
+	} else {
+		(void)dma_alloc_attrs(dev, len, &pa,
+				DMA_MEMORY_NOMAP, &attrs);
+		if (!dma_mapping_error(dev, pa))
+			dev_dbg(dev, "Allocated addr (%pa) len(%zu)\n",
+					&pa, len);
+	}
 
 	return pa;
 }
@@ -129,7 +153,8 @@ static void nvmap_free_mem(struct nvmap_heap *h, phys_addr_t base,
 static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 					      size_t len, size_t align,
 					      unsigned int mem_prot,
-					      phys_addr_t base_max)
+					      phys_addr_t base_max,
+					      phys_addr_t *start)
 {
 	struct list_block *heap_block = NULL;
 	dma_addr_t dev_base;
@@ -146,6 +171,10 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 		len = PAGE_ALIGN(len);
 	}
 
+	/* Force alignment of 1M for IV mempool */
+	if (heap->is_ivm)
+		align = max_t(size_t, align, SZ_1M);
+
 	heap_block = kmem_cache_zalloc(heap_block_cache, GFP_KERNEL);
 	if (!heap_block) {
 		dev_err(dev, "%s: failed to alloc heap block %s\n",
@@ -153,7 +182,7 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 		goto fail_heap_block_alloc;
 	}
 
-	dev_base = nvmap_alloc_mem(heap, len);
+	dev_base = nvmap_alloc_mem(heap, len, start);
 	if (dma_mapping_error(dev, dev_base)) {
 		dev_err(dev, "failed to alloc mem of size (%zu)\n",
 			len);
@@ -192,7 +221,8 @@ static struct list_block *do_heap_free(struct nvmap_heap_block *block)
 /* nvmap_heap_alloc: allocates a block of memory of len bytes, aligned to
  * align bytes. */
 struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *h,
-					  struct nvmap_handle *handle)
+					  struct nvmap_handle *handle,
+					  phys_addr_t *start)
 {
 	struct nvmap_heap_block *b;
 	size_t len        = handle->size;
@@ -201,12 +231,56 @@ struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *h,
 
 	mutex_lock(&h->lock);
 
+	if (h->is_ivm) { /* Is IVM carveout? */
+		/* Check if this correct IVM heap */
+		if (handle->peer != h->peer) {
+			mutex_unlock(&h->lock);
+			return NULL;
+		} else {
+			if (h->can_alloc && start) {
+				/* If this partition does actual allocation, it
+				 * should not specify start_offset.
+				 */
+				mutex_unlock(&h->lock);
+				return NULL;
+			} else if (!h->can_alloc && !start) {
+				/* If this partition does not do actual
+				 * allocation, it should specify start_offset.
+				 */
+				mutex_unlock(&h->lock);
+				return NULL;
+			}
+		}
+	}
+
 	align = max_t(size_t, align, L1_CACHE_BYTES);
-	b = do_heap_alloc(h, len, align, prot, 0);
+	b = do_heap_alloc(h, len, align, prot, 0, start);
 
 	if (b) {
 		b->handle = handle;
 		handle->carveout = b;
+		/* Generate IVM for partition that can alloc */
+		if (h->is_ivm && h->can_alloc) {
+			unsigned int offs = (b->base - h->base);
+			/* offset should be 1M aligned => 7 bits for offset
+			 * since we allow 128 MB
+			 */
+			BUG_ON(offs & (SZ_1M - 1));
+			/* 3 bits reserved for VM_ID */
+			BUG_ON(h->vm_id & ~(0x7));
+			/* We have 22 bits for the length.
+			 * So, page alignment is sufficient check.
+			 */
+			BUG_ON(len & ~(PAGE_MASK));
+			/* bit 31-29: IVM peer.
+			 * bit 28-21: Offset (aligned to SZ_1M)
+			 * bit 00-20: Length (Aligned to PAGE_SIZE)
+			 */
+			handle->ivm_id = (h->vm_id << 29);
+			handle->ivm_id |= (((offs >> 20)
+					     & ((1 << 7) - 1)) << 21);
+			handle->ivm_id |= (len >> PAGE_SHIFT);
+		}
 	}
 	mutex_unlock(&h->lock);
 	return b;
@@ -297,7 +371,11 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	h->name = co->name;
 	h->arg = arg;
 	h->base = base;
+	h->can_alloc = !!co->can_alloc;
+	h->is_ivm = co->is_ivm;
 	h->len = len;
+	h->peer = co->peer;
+	h->vm_id = co->vmid;
 	INIT_LIST_HEAD(&h->all_list);
 	mutex_init(&h->lock);
 	inner_flush_cache_all();
@@ -307,10 +385,6 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
 	dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
 
-#ifdef CONFIG_PLATFORM_ENABLE_IOMMU
-	dma_map_linear_attrs(parent->parent, base, len, DMA_TO_DEVICE,
-				&attrs);
-#endif
 	dev_info(parent, "created heap %s base 0x%p size (%zuKiB)\n",
 		co->name, (void *)(uintptr_t)base, len/1024);
 	return h;

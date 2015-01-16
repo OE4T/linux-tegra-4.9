@@ -220,7 +220,8 @@ out:
 static
 struct nvmap_heap_block *do_nvmap_carveout_alloc(struct nvmap_client *client,
 					      struct nvmap_handle *handle,
-					      unsigned long type)
+					      unsigned long type,
+					      phys_addr_t *start)
 {
 	struct nvmap_carveout_node *co_heap;
 	struct nvmap_device *dev = nvmap_dev;
@@ -233,7 +234,7 @@ struct nvmap_heap_block *do_nvmap_carveout_alloc(struct nvmap_client *client,
 		if (!(co_heap->heap_bit & type))
 			continue;
 
-		block = nvmap_heap_alloc(co_heap->carveout, handle);
+		block = nvmap_heap_alloc(co_heap->carveout, handle, start);
 		if (block)
 			return block;
 	}
@@ -242,9 +243,10 @@ struct nvmap_heap_block *do_nvmap_carveout_alloc(struct nvmap_client *client,
 
 struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *client,
 					      struct nvmap_handle *handle,
-					      unsigned long type)
+					      unsigned long type,
+					      phys_addr_t *start)
 {
-	return do_nvmap_carveout_alloc(client, handle, type);
+	return do_nvmap_carveout_alloc(client, handle, type, start);
 }
 
 /* remove a handle from the device's tree of all handles; called
@@ -622,6 +624,18 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		err = nvmap_ioctl_getfd(filp, uarg);
 		break;
 
+	case NVMAP_IOC_GET_IVM_HEAPS:
+		err = nvmap_ioctl_get_ivc_heap(filp, uarg);
+		break;
+
+	case NVMAP_IOC_FROM_IVC_ID:
+		err = nvmap_ioctl_create_from_ivc(filp, uarg);
+		break;
+
+	case NVMAP_IOC_GET_IVC_ID:
+		err = nvmap_ioctl_get_ivcid(filp, uarg);
+		break;
+
 #ifdef CONFIG_COMPAT
 	case NVMAP_IOC_PARAM_32:
 		err = nvmap_ioctl_get_param(filp, uarg, true);
@@ -652,6 +666,10 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	case NVMAP_IOC_ALLOC_KIND:
 		err = nvmap_ioctl_alloc_kind(filp, uarg);
+		break;
+
+	case NVMAP_IOC_ALLOC_IVM:
+		err = nvmap_ioctl_alloc_ivm(filp, uarg);
 		break;
 
 	case NVMAP_IOC_FREE:

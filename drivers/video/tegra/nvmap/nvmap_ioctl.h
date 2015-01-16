@@ -3,7 +3,7 @@
  *
  * ioctl declarations for nvmap
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,15 +30,25 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg,
 
 int nvmap_ioctl_get_param(struct file *filp, void __user *arg, bool is32);
 
+int nvmap_ioctl_getid(struct file *filp, void __user *arg);
+
+int nvmap_ioctl_get_ivcid(struct file *filp, void __user *arg);
+
 int nvmap_ioctl_getfd(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_alloc(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_alloc_kind(struct file *filp, void __user *arg);
 
+int nvmap_ioctl_alloc_ivm(struct file *filp, void __user *arg);
+
 int nvmap_ioctl_free(struct file *filp, unsigned long arg);
 
 int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg);
+
+int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg);
+
+int nvmap_ioctl_get_ivc_heap(struct file *filp, void __user *arg);
 
 int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg, bool is32);
 

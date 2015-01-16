@@ -3,7 +3,7 @@
  *
  * User-space interface to nvmap
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -276,7 +276,8 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 
 	err = nvmap_alloc_handle(client, handle, op.heap_mask, op.align,
 				  0, /* no kind */
-				  op.flags & (~NVMAP_HANDLE_KIND_SPECIFIED));
+				  op.flags & (~NVMAP_HANDLE_KIND_SPECIFIED),
+				  NVMAP_IVM_INVALID_PEER);
 	nvmap_handle_put(handle);
 	return err;
 }
@@ -306,7 +307,37 @@ int nvmap_ioctl_alloc_kind(struct file *filp, void __user *arg)
 				  op.heap_mask,
 				  op.align,
 				  op.kind,
-				  op.flags);
+				  op.flags,
+				  NVMAP_IVM_INVALID_PEER);
+	nvmap_handle_put(handle);
+	return err;
+}
+
+int nvmap_ioctl_alloc_ivm(struct file *filp, void __user *arg)
+{
+	struct nvmap_alloc_ivm_handle op;
+	struct nvmap_client *client = filp->private_data;
+	struct nvmap_handle *handle;
+	int err;
+
+	if (copy_from_user(&op, arg, sizeof(op)))
+		return -EFAULT;
+
+	if (op.align & (op.align - 1))
+		return -EINVAL;
+
+	handle = nvmap_handle_get_from_fd(op.handle);
+	if (!handle)
+		return -EINVAL;
+
+	/* user-space handles are aligned to page boundaries, to prevent
+	 * data leakage. */
+	op.align = max_t(size_t, op.align, PAGE_SIZE);
+
+	err = nvmap_alloc_handle(client, handle, op.heap_mask, op.align,
+				  0, /* no kind */
+				  op.flags & (~NVMAP_HANDLE_KIND_SPECIFIED),
+				  op.peer);
 	nvmap_handle_put(handle);
 	return err;
 }
@@ -1086,6 +1117,119 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 
 	free_vm_area(area);
 	return ret ?: copied;
+}
+
+int nvmap_ioctl_get_ivcid(struct file *filp, void __user *arg)
+{
+	struct nvmap_create_handle op;
+	struct nvmap_handle *h = NULL;
+
+	if (copy_from_user(&op, arg, sizeof(op)))
+		return -EFAULT;
+
+	h = nvmap_handle_get_from_fd(op.handle);
+	if (!h)
+		return -EINVAL;
+
+	if (!h->alloc) { /* || !h->ivm_id) { */
+		nvmap_handle_put(h);
+		return -EFAULT;
+	}
+
+	op.id = h->ivm_id;
+
+	nvmap_handle_put(h);
+
+	return copy_to_user(arg, &op, sizeof(op)) ? -EFAULT : 0;
+}
+
+int nvmap_ioctl_get_ivc_heap(struct file *filp, void __user *arg)
+{
+	struct nvmap_device *dev = nvmap_dev;
+	int i;
+	unsigned int heap_mask = 0;
+
+	for (i = 0; i < dev->nr_carveouts; i++) {
+		struct nvmap_carveout_node *co_heap = &dev->heaps[i];
+		int peer;
+
+		if (!(co_heap->heap_bit & NVMAP_HEAP_CARVEOUT_IVM))
+			continue;
+
+		peer = nvmap_query_heap_peer(co_heap->carveout);
+		if (peer < 0)
+			return -EINVAL;
+
+		heap_mask |= BIT(peer);
+	}
+
+	if (copy_to_user(arg, &heap_mask, sizeof(heap_mask)))
+		return -EFAULT;
+
+	return 0;
+}
+
+int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
+{
+	struct nvmap_create_handle op;
+	struct nvmap_handle_ref *ref = NULL;
+	struct nvmap_client *client = filp->private_data;
+	int err = 0;
+	int fd = 0;
+	phys_addr_t offs;
+	size_t size = 0;
+	int peer;
+	struct nvmap_heap_block *block = NULL;
+
+	/* First create a new handle and then fake carveout allocation */
+	if (copy_from_user(&op, arg, sizeof(op)))
+		return -EFAULT;
+
+	if (!client)
+		return -ENODEV;
+
+	/*
+	 * offset is SZ_1M aligned.
+	 * See nvmap_heap_alloc() for encoding details.
+	 */
+	offs = ((op.id & ~(0x7 << 29)) >> 21) << 20;
+	size = (op.id & ((1 << 21) - 1)) << PAGE_SHIFT;
+	peer = (op.id >> 29);
+
+	ref = nvmap_create_handle(client, PAGE_ALIGN(size));
+	if (!IS_ERR(ref))
+		ref->handle->orig_size = size;
+	else
+		return PTR_ERR(ref);
+
+	fd = nvmap_create_fd(client, ref->handle);
+	if (fd < 0)
+		err = fd;
+
+	op.handle = fd;
+
+	if (copy_to_user(arg, &op, sizeof(op))) {
+		nvmap_free_handle_fd(client, fd);
+		return -EFAULT;
+	}
+
+	if (err && fd > 0)
+		sys_close(fd);
+
+	ref->handle->peer = peer;
+
+	block = nvmap_carveout_alloc(client, ref->handle,
+			NVMAP_HEAP_CARVEOUT_IVM, &offs);
+	if (!block) {
+		nvmap_free_handle_fd(client, fd);
+		return -ENOMEM;
+	}
+
+	ref->handle->heap_type = NVMAP_HEAP_CARVEOUT_IVM;
+	ref->handle->heap_pgalloc = false;
+	mb();
+	ref->handle->alloc = true;
+	return err;
 }
 
 int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,

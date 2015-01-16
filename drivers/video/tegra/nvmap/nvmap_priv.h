@@ -143,6 +143,8 @@ struct nvmap_handle {
 	struct mutex lock;
 	void *nvhost_priv;	/* nvhost private data */
 	void (*nvhost_priv_delete)(void *priv);
+	unsigned int ivm_id;
+	int peer;		/* Peer VM number */
 };
 
 /* handle_ref objects are client-local references to an nvmap_handle;
@@ -212,6 +214,8 @@ int nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
 int nvmap_page_pool_clear(void);
 int nvmap_page_pool_debugfs_init(struct dentry *nvmap_root);
 #endif
+
+#define NVMAP_IVM_INVALID_PEER		(-1)
 
 struct nvmap_client {
 	const char			*name;
@@ -346,7 +350,8 @@ int nvmap_init(struct platform_device *pdev);
 
 struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *dev,
 					      struct nvmap_handle *handle,
-					      unsigned long type);
+					      unsigned long type,
+					      phys_addr_t *start);
 
 unsigned long nvmap_carveout_usage(struct nvmap_client *c,
 				   struct nvmap_heap_block *b);
@@ -372,7 +377,7 @@ struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 int nvmap_alloc_handle(struct nvmap_client *client,
 		       struct nvmap_handle *h, unsigned int heap_mask,
 		       size_t align, u8 kind,
-		       unsigned int flags);
+		       unsigned int flags, int peer);
 
 void nvmap_free_handle(struct nvmap_client *c, struct nvmap_handle *h);
 

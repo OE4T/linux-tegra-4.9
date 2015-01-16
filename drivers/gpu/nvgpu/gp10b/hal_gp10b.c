@@ -31,6 +31,7 @@
 #include "gm20b/gr_gm20b.h"
 #include "gm20b/gm20b_gating_reglist.h"
 #include "gm20b/fifo_gm20b.h"
+#include "gp10b/fifo_gp10b.h"
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/clk_gm20b.h"
 
@@ -93,7 +94,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_gr(gops);
 	gp10b_init_ltc(gops);
 	gp10b_init_fb(gops);
-	gm20b_init_fifo(gops);
+	gp10b_init_fifo(gops);
 	gp10b_init_gr_ctx(gops);
 	gp10b_init_mm(gops);
 	gp10b_init_pmu_ops(gops);
@@ -104,7 +105,7 @@ int gp10b_init_hal(struct gk20a *g)
 	c->twod_class = FERMI_TWOD_A;
 	c->threed_class = PASCAL_A;
 	c->compute_class = PASCAL_COMPUTE_A;
-	c->gpfifo_class = MAXWELL_CHANNEL_GPFIFO_A;
+	c->gpfifo_class = PASCAL_CHANNEL_GPFIFO_A;
 	c->inline_to_memory_class = KEPLER_INLINE_TO_MEMORY_B;
 	c->dma_copy_class = MAXWELL_DMA_COPY_A;
 

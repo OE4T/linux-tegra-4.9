@@ -283,6 +283,11 @@ struct nvhost_device_data {
 				     unsigned long pixel_rate,
 				     unsigned long bw_rate);
 
+	/* Called after successful client device init. This can
+	 * be used in cases where the hardware specifics differ
+	 * between hardware revisions */
+	int (*hw_init)(struct platform_device *dev);
+
 	/* Allocates a context handler for the device */
 	struct nvhost_hwctx_handler *(*alloc_hwctx_handler)(u32 syncpt,
 			struct nvhost_channel *ch);

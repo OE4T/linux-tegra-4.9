@@ -1469,6 +1469,9 @@ int nvhost_client_device_init(struct platform_device *dev)
 		pdata->slave_initialized = 1;
 	}
 
+	if (pdata->hw_init)
+		return pdata->hw_init(dev);
+
 	return 0;
 
 fail_busy:

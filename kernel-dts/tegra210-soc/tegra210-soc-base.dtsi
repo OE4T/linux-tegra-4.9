@@ -102,7 +102,6 @@
 		swgid-mask = <0x00000fff 0xfffccdcf>;
 		#num-translation-enable = <5>;
 		#num-asid-security = <8>;
-		ptc-cache-size = <0x00008000>; /* 32 KB */
 
 		domains = <&ppcs_as TEGRA_SWGROUP_CELLS5(PPCS, PPCS1, PPCS2, SE, SE1)
 			   &gpu_as TEGRA_SWGROUP_CELLS(GPUB)

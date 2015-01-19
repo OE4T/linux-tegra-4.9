@@ -1,7 +1,7 @@
 /*
  * tegra30_dam_alt.h - Definitions for Tegra114 DAM driver
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -59,6 +59,7 @@
 
 #define TEGRA_DAM_CH0_CTRL_COEF_RAM_SHIFT	15
 #define TEGRA_DAM_CH0_CTRL_COEF_RAM_EN		(1 << TEGRA_DAM_CH0_CTRL_COEF_RAM_SHIFT)
+#define TEGRA_DAM_CH0_CTRL_COEF_RAM_MASK	(1 << TEGRA_DAM_CH0_CTRL_COEF_RAM_SHIFT)
 
 #define TEGRA_DAM_CH0_CTRL_FILT_STAGES_SHIFT	16
 #define TEGRA_DAM_CH0_CTRL_FILT_STAGES_MASK		(0xf << TEGRA_DAM_CH0_CTRL_FILT_STAGES_SHIFT)

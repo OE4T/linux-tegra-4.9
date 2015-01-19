@@ -1,7 +1,7 @@
 /*
  * tegra30_dam_alt.c - Tegra30 DAM driver
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -507,7 +507,7 @@ static void tegra30_dam_write_coeff_ram(struct tegra30_dam *dam)
 		}
 		/* enable coeff ram */
 		regmap_update_bits(dam->regmap, TEGRA_DAM_CH0_CTRL,
-				TEGRA_DAM_CH0_CTRL_COEF_RAM_SHIFT,
+				TEGRA_DAM_CH0_CTRL_COEF_RAM_MASK,
 				TEGRA_DAM_CH0_CTRL_COEF_RAM_EN);
 	}
 }

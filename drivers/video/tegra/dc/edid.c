@@ -373,8 +373,10 @@ static void data_release(struct kref *ref)
 
 u16 tegra_edid_get_cd_flag(struct tegra_edid *edid)
 {
-	if (!edid || !edid->data)
+	if (!edid || !edid->data) {
 		pr_warn("edid invalid\n");
+		return -EFAULT;
+	}
 
 	return edid->data->color_depth_flag;
 }
@@ -384,8 +386,10 @@ u16 tegra_edid_get_max_clk_rate(struct tegra_edid *edid)
 {
 	u16 tmds_hf, tmds_llc;
 
-	if (!edid || !edid->data)
+	if (!edid || !edid->data) {
 		pr_warn("edid invalid\n");
+		return -EFAULT;
+	}
 
 	tmds_hf = edid->data->max_tmds_char_rate_hf_mhz;
 	tmds_llc = edid->data->max_tmds_char_rate_hllc_mhz;

@@ -37,6 +37,7 @@
 #include "tsec/tsec.h"
 #include "vi/vi.h"
 #include "isp/isp.h"
+#include "isp/isp_isr_v1.h"
 
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
@@ -95,6 +96,7 @@ struct nvhost_device_data t21_isp_info = {
 	.clocks			= {{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP }},
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
+	.hw_init		= nvhost_isp_register_isr_v1,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
 	.gather_filter_enabled	= true,
 	.bond_out_id		= BOND_OUT_ISP,
@@ -121,6 +123,7 @@ struct nvhost_device_data t21_ispb_info = {
 					TEGRA_MC_CLIENT_ISPB } },
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
+	.hw_init		= nvhost_isp_register_isr_v1,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
 	.gather_filter_enabled	= true,
 	.bond_out_id		= BOND_OUT_ISP,

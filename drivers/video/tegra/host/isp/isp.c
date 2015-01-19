@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/isp/isp.c
- *
  * Tegra Graphics ISP
  *
- * Copyright (c) 2012-2014, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2012-2015, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -258,36 +256,9 @@ static void isp_isr_work(struct work_struct *isp_work)
 	return;
 }
 
-static irqreturn_t isp_isr(int irq, void *dev_id)
+void nvhost_isp_queue_isr_work(struct isp *tegra_isp)
 {
-	struct isp *dev = dev_id;
-	unsigned long flags;
-	u32 reg, enable_reg;
-
-	spin_lock_irqsave(&dev->lock, flags);
-
-	reg = tegra_isp_read(dev, 0xf8);
-
-	if (reg & (1 << 5)) {
-		/* Disable */
-		enable_reg = tegra_isp_read(dev, 0x14c);
-		enable_reg &= ~1;
-		tegra_isp_write(dev, 0x14c, enable_reg);
-
-		/* Clear */
-		reg &= (1 << 5);
-		tegra_isp_write(dev, 0xf8, reg);
-
-		/* put work into queue */
-		queue_work(dev->isp_workqueue,
-			(struct work_struct *)dev->my_isr_work);
-
-	} else {
-		pr_err("Unkown interrupt - ISR status %x\n", reg);
-	}
-
-	spin_unlock_irqrestore(&dev->lock, flags);
-	return IRQ_HANDLED;
+	queue_work(tegra_isp->isp_workqueue, &tegra_isp->my_isr_work->work);
 }
 
 static int isp_probe(struct platform_device *dev)
@@ -368,23 +339,6 @@ static int isp_probe(struct platform_device *dev)
 		err = -ENOMEM;
 	}
 
-	tegra_isp->irq = platform_get_irq(dev, 0);
-	if (tegra_isp->irq <= 0) {
-		dev_err(&dev->dev, "no irq\n");
-		err = -ENOENT;
-		goto camera_isp_unregister;
-	}
-
-	err = request_irq(tegra_isp->irq,
-		isp_isr, 0, "tegra-isp-isr", tegra_isp);
-	if (err) {
-		pr_err("%s: request_irq(%d) failed(%d)\n", __func__,
-		tegra_isp->irq, err);
-		goto camera_isp_unregister;
-	}
-
-	spin_lock_init(&tegra_isp->lock);
-
 	/* creating workqueue */
 	if (dev_id == 0)
 		tegra_isp->isp_workqueue = alloc_workqueue("ispa_workqueue",
@@ -407,8 +361,6 @@ static int isp_probe(struct platform_device *dev)
 	}
 
 	INIT_WORK((struct work_struct *)tegra_isp->my_isr_work, isp_isr_work);
-
-	disable_irq(tegra_isp->irq);
 
 	nvhost_module_init(dev);
 

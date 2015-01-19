@@ -8,6 +8,7 @@ ccflags-y += -I../kernel-t18x/drivers/video/tegra/host/
 endif
 
 nvhost-isp-objs  = \
+		isp_isr_v1.o \
 		isp.o
 
 obj-$(CONFIG_TEGRA_GRHOST_ISP) += nvhost-isp.o

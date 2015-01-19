@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Init for T124 Architecture Chips
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,6 +35,7 @@
 #include "flcn/flcn.h"
 #include "vi/vi.h"
 #include "isp/isp.h"
+#include "isp/isp_isr_v1.h"
 #include "scale3d.h"
 #include "chip_support.h"
 #include "nvhost_scale.h"
@@ -137,6 +138,7 @@ struct nvhost_device_data t124_isp_info = {
 		{"sclk", 80000000} },
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 	.prepare_poweroff = nvhost_isp_t124_prepare_poweroff,
+	.hw_init          = nvhost_isp_register_isr_v1,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
 	.gather_filter_enabled = true,
 };
@@ -178,6 +180,7 @@ struct nvhost_device_data t124_ispb_info = {
 		{"sclk", 80000000} },
 	.finalize_poweron = nvhost_isp_t124_finalize_poweron,
 	.prepare_poweroff = nvhost_isp_t124_prepare_poweroff,
+	.hw_init          = nvhost_isp_register_isr_v1,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
 	.gather_filter_enabled = true,
 };

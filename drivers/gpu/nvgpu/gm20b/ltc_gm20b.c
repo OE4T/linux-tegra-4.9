@@ -101,8 +101,8 @@ static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 }
 
-static int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
-			      u32 min, u32 max)
+int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
+		       u32 min, u32 max)
 {
 	int err = 0;
 	struct gr_gk20a *gr = &g->gr;
@@ -170,7 +170,7 @@ out:
 	return 0;
 }
 
-static void gm20b_ltc_init_fs_state(struct gk20a *g)
+void gm20b_ltc_init_fs_state(struct gk20a *g)
 {
 	u32 reg;
 
@@ -196,7 +196,7 @@ static void gm20b_ltc_init_fs_state(struct gk20a *g)
 	gk20a_writel(g, ltc_ltcs_ltss_intr_r(), reg);
 }
 
-static void gm20b_ltc_isr(struct gk20a *g)
+void gm20b_ltc_isr(struct gk20a *g)
 {
 	u32 mc_intr, ltc_intr;
 	int ltc, slice;
@@ -221,7 +221,7 @@ static void gm20b_ltc_isr(struct gk20a *g)
 	}
 }
 
-static void gm20b_ltc_g_elpg_flush_locked(struct gk20a *g)
+void gm20b_ltc_g_elpg_flush_locked(struct gk20a *g)
 {
 	u32 data;
 	bool done[g->ltc_count];
@@ -265,7 +265,7 @@ static void gm20b_ltc_g_elpg_flush_locked(struct gk20a *g)
 			    "g_elpg_flush too many retries");
 }
 
-static u32 gm20b_ltc_cbc_fix_config(struct gk20a *g, int base)
+u32 gm20b_ltc_cbc_fix_config(struct gk20a *g, int base)
 {
 	u32 val = gk20a_readl(g, ltc_ltcs_ltss_cbc_num_active_ltcs_r());
 	if (val == 2) {
@@ -281,7 +281,7 @@ static u32 gm20b_ltc_cbc_fix_config(struct gk20a *g, int base)
 /*
  * Performs a full flush of the L2 cache.
  */
-static void gm20b_flush_ltc(struct gk20a *g)
+void gm20b_flush_ltc(struct gk20a *g)
 {
 	u32 op_pending;
 	unsigned long now, timeout;

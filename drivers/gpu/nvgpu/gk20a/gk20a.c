@@ -1788,7 +1788,7 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->bus_type = NVGPU_GPU_BUS_TYPE_AXI; /* always AXI for now */
 
 	gpu->big_page_size = g->mm.pmu.vm.big_page_size;
-	gpu->compression_page_size = g->mm.pmu.vm.compression_page_size;
+	gpu->compression_page_size = g->ops.fb.compression_page_size(g);
 	gpu->pde_coverage_bit_count = g->mm.pmu.vm.pde_stride_shift;
 
 	gpu->available_big_page_sizes = gpu->big_page_size;

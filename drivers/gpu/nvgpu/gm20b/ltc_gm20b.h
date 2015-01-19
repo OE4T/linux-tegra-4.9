@@ -18,4 +18,11 @@
 struct gpu_ops;
 
 void gm20b_init_ltc(struct gpu_ops *gops);
+void gm20b_ltc_init_fs_state(struct gk20a *g);
+int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
+		       u32 min, u32 max);
+void gm20b_ltc_g_elpg_flush_locked(struct gk20a *g);
+void gm20b_ltc_isr(struct gk20a *g);
+u32 gm20b_ltc_cbc_fix_config(struct gk20a *g, int base);
+void gm20b_flush_ltc(struct gk20a *g);
 #endif

@@ -258,9 +258,6 @@ struct gr_gk20a {
 	u32 map_tile_count;
 	u32 map_row_offset;
 
-#define COMP_TAG_LINE_SIZE_SHIFT	(17)	/* one tag covers 128K */
-#define COMP_TAG_LINE_SIZE		(1 << COMP_TAG_LINE_SIZE_SHIFT)
-
 	u32 max_comptag_mem; /* max memory size (MB) for comptag */
 	struct compbit_store_desc compbit_store;
 	struct gk20a_allocator comp_tags;

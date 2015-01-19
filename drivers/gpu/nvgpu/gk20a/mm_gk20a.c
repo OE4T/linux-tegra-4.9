@@ -1001,7 +1001,9 @@ static int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
 					     enum gmmu_pgsz_gk20a pgsz_idx)
 {
 	bool kind_compressible;
-	struct device *d = dev_from_gk20a(vm->mm->g);
+	struct gk20a *g = gk20a_from_vm(vm);
+	struct device *d = dev_from_gk20a(g);
+	int ctag_granularity = g->ops.fb.compression_page_size(g);
 
 	if (unlikely(bfr->kind_v == gmmu_pte_kind_invalid_v()))
 		bfr->kind_v = gmmu_pte_kind_pitch_v();
@@ -1036,8 +1038,7 @@ static int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
 		kind_compressible = false;
 	}
 	if (kind_compressible)
-		bfr->ctag_lines = ALIGN(bfr->size, COMP_TAG_LINE_SIZE) >>
-			COMP_TAG_LINE_SIZE_SHIFT;
+		bfr->ctag_lines = DIV_ROUND_UP_ULL(bfr->size, ctag_granularity);
 	else
 		bfr->ctag_lines = 0;
 
@@ -1113,10 +1114,10 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 	u32 pde_lo, pde_hi;
 	struct device *d = dev_from_vm(vm);
 	struct gk20a *g = gk20a_from_vm(vm);
+	int ctag_granularity = g->ops.fb.compression_page_size(g);
 
 	if (clear_ctags && ctag_offset) {
-		u32 ctag_lines = ALIGN(size, COMP_TAG_LINE_SIZE) >>
-					COMP_TAG_LINE_SIZE_SHIFT;
+		u32 ctag_lines = DIV_ROUND_UP_ULL(size, ctag_granularity);
 
 		/* init/clear the ctag buffer */
 		g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_clear,
@@ -1756,7 +1757,9 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 	struct scatterlist *cur_chunk;
 	unsigned int cur_offset;
 	u32 pte_w[2] = {0, 0}; /* invalid pte */
-	u32 ctag = ctag_offset * SZ_128K;
+	struct gk20a *g = gk20a_from_vm(vm);
+	u32 ctag_granularity = g->ops.fb.compression_page_size(g);
+	u32 ctag = ctag_offset * ctag_granularity;
 	u32 ctag_incr;
 	u32 page_size  = vm->gmmu_page_sizes[pgsz_idx];
 	u64 addr = 0;
@@ -1768,9 +1771,6 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 	gk20a_dbg(gpu_dbg_pte, "size_idx=%d, pde_lo=%d, pde_hi=%d",
 		   pgsz_idx, pde_lo, pde_hi);
 
-	/* If ctag_offset !=0 add 1 else add 0.  The idea is to avoid a branch
-	 * below (per-pte). Note: this doesn't work unless page size (when
-	 * comptags are active) is 128KB. We have checks elsewhere for that. */
 	ctag_incr = ctag_offset ? page_size : 0;
 
 	cur_offset = 0;
@@ -1843,7 +1843,8 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 						>> gmmu_pte_address_shift_v());
 				pte_w[1] = gmmu_pte_aperture_video_memory_f() |
 					gmmu_pte_kind_f(kind_v) |
-					gmmu_pte_comptagline_f(ctag / SZ_128K);
+					gmmu_pte_comptagline_f(ctag
+							/ ctag_granularity);
 
 				if (rw_flag == gk20a_mem_flag_read_only) {
 					pte_w[0] |= gmmu_pte_read_only_true_f();
@@ -2161,7 +2162,6 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	vm->big_pages = big_pages;
 
 	vm->big_page_size = gmmu_page_sizes[gmmu_page_size_big];
-	vm->compression_page_size = gmmu_page_sizes[gmmu_page_size_big];
 	vm->pde_stride    = vm->big_page_size << 10;
 	vm->pde_stride_shift = ilog2(vm->pde_stride);
 

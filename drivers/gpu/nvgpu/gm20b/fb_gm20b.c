@@ -90,10 +90,16 @@ static void gm20b_fb_set_mmu_page_size(struct gk20a *g)
 	gk20a_writel(g, fb_mmu_ctrl_r(), fb_mmu_ctrl);
 }
 
+static int gm20b_fb_compression_page_size(struct gk20a *g)
+{
+	return SZ_128K;
+}
+
 void gm20b_init_fb(struct gpu_ops *gops)
 {
 	gops->fb.init_fs_state = fb_gm20b_init_fs_state;
 	gops->fb.set_mmu_page_size = gm20b_fb_set_mmu_page_size;
+	gops->fb.compression_page_size = gm20b_fb_compression_page_size;
 	gm20b_init_uncompressed_kind_map();
 	gm20b_init_kind_attr();
 }

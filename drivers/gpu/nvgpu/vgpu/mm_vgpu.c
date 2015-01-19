@@ -39,7 +39,6 @@ static int vgpu_init_mm_setup_sw(struct gk20a *g)
 
 	/* gk20a_init_gpu_characteristics expects this to be populated */
 	vm->big_page_size = big_page_size;
-	vm->compression_page_size = big_page_size;
 	vm->pde_stride    = vm->big_page_size << 10;
 	vm->pde_stride_shift = ilog2(vm->pde_stride);
 

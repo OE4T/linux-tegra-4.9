@@ -293,7 +293,6 @@ struct vm_gk20a {
 	bool tlb_dirty;
 	bool mapped;
 
-	u32 compression_page_size;
 	u32 big_page_size;
 	u32 pde_stride;
 	u32 pde_stride_shift;

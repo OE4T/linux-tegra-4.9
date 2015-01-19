@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Init for T186 Architecture Chips
  *
- * Copyright (c) 2014, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -28,6 +28,7 @@
 #include "tsec/tsec.h"
 #include "flcn/flcn.h"
 #include "isp/isp.h"
+#include "isp/isp_isr_v2.h"
 #include "vi/vi.h"
 #include "nvdec/nvdec.h"
 #include "hardware_t186.h"
@@ -73,6 +74,7 @@ struct nvhost_device_data t18_isp_info = {
 	.clocks			= {{ "isp", UINT_MAX, 0 }},
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
+	.hw_init		= nvhost_isp_register_isr_v2,
 	.moduleid		= NVHOST_MODULE_ISP,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
 	.serialize		= 1,

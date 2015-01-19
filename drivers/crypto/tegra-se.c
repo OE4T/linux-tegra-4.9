@@ -4,7 +4,7 @@
  *
  * Support for Tegra Security Engine hardware crypto algorithms.
  *
- * Copyright (c) 2011-2014, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2011-2015, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,6 +37,7 @@
 #include <linux/types.h>
 #include <linux/errno.h>
 #include <linux/tegra-soc.h>
+#include <linux/tegra-fuse.h>
 #include <crypto/scatterwalk.h>
 #include <crypto/algapi.h>
 #include <crypto/aes.h>
@@ -2610,10 +2611,15 @@ static bool is_algo_supported(struct tegra_se_dev *se_dev, const char *algo)
 
 	if (!strcmp(algo, "rsa512") || !strcmp(algo, "rsa1024") ||
 		!strcmp(algo, "rsa1536") || !strcmp(algo, "rsa2048")) {
-		if (se_dev->chipdata->rsa_supported)
-			return true;
-		else
+		if (se_dev->chipdata->rsa_supported) {
+			if ((tegra_get_chipid() == TEGRA_CHIPID_TEGRA21) &&
+			(tegra_chip_get_revision() == TEGRA_REVISION_A01))
+				return false;
+			else
+				return true;
+		} else {
 			return false;
+		}
 	}
 
 	return true;

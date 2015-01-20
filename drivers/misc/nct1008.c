@@ -3,7 +3,7 @@
  *
  * Driver for NCT1008, temperature monitoring device from ON Semiconductors
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2011,6 +2011,21 @@ static struct i2c_driver nct1008_driver = {
 	.id_table	= nct1008_id,
 	.shutdown	= nct1008_shutdown,
 };
+
+static int __init nct1008_sync_thz(struct device *dev, void *unused)
+{
+	struct nct1008_data *data = dev_get_drvdata(dev);
+	thermal_zone_device_update(data->sensors[LOC].thz);
+	thermal_zone_device_update(data->sensors[EXT].thz);
+	return 0;
+}
+
+static int __init nct1008_sync(void)
+{
+	return driver_for_each_device(
+		&nct1008_driver.driver, NULL, NULL, nct1008_sync_thz);
+}
+late_initcall_sync(nct1008_sync);
 
 static int __init nct1008_init(void)
 {

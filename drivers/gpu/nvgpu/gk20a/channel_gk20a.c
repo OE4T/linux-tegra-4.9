@@ -1572,9 +1572,11 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	/* Make sure we have enough space for gpfifo entries. If not,
 	 * wait for signals from completed submits */
 	if (gp_free_count(c) < num_entries + extra_entries) {
+		trace_gk20a_gpfifo_submit_wait_for_space(c->g->dev->name);
 		err = wait_event_interruptible(c->submit_wq,
 			get_gp_free_count(c) >= num_entries + extra_entries ||
 			c->has_timedout);
+		trace_gk20a_gpfifo_submit_wait_for_space_done(c->g->dev->name);
 	}
 
 	if (c->has_timedout) {

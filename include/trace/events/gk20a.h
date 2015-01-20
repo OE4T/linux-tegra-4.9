@@ -55,6 +55,16 @@ DEFINE_EVENT(gk20a, gk20a_finalize_poweron_done,
 	TP_ARGS(name)
 );
 
+DEFINE_EVENT(gk20a, gk20a_gpfifo_submit_wait_for_space,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
+DEFINE_EVENT(gk20a, gk20a_gpfifo_submit_wait_for_space_done,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
 TRACE_EVENT(gk20a_channel_update,
 	TP_PROTO(const void *channel),
 	TP_ARGS(channel),

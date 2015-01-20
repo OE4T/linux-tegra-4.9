@@ -2612,7 +2612,7 @@ static int gk20a_dmabuf_get_kind(struct dma_buf *dmabuf)
 	return kind;
 }
 
-int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
+int gk20a_vm_map_buffer(struct vm_gk20a *vm,
 			int dmabuf_fd,
 			u64 *offset_align,
 			u32 flags, /*NVGPU_AS_MAP_BUFFER_FLAGS_*/
@@ -2621,7 +2621,6 @@ int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
 			u64 mapping_size)
 {
 	int err = 0;
-	struct vm_gk20a *vm = as_share->vm;
 	struct dma_buf *dmabuf;
 	u64 ret_va;
 
@@ -2656,10 +2655,8 @@ int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
 	return err;
 }
 
-int gk20a_vm_unmap_buffer(struct gk20a_as_share *as_share, u64 offset)
+int gk20a_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset)
 {
-	struct vm_gk20a *vm = as_share->vm;
-
 	gk20a_dbg_fn("");
 
 	gk20a_vm_unmap_user(vm, offset);

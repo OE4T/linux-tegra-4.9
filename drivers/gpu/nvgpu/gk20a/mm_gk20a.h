@@ -532,7 +532,7 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 			struct nvgpu_as_free_space_args *args);
 int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
 			  struct channel_gk20a *ch);
-int gk20a_vm_map_buffer(struct gk20a_as_share *as_share,
+int gk20a_vm_map_buffer(struct vm_gk20a *vm,
 			int dmabuf_fd,
 			u64 *offset_align,
 			u32 flags, /* NVGPU_AS_MAP_BUFFER_FLAGS_ */
@@ -548,7 +548,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 		bool big_pages,
 		char *name);
 void gk20a_deinit_vm(struct vm_gk20a *vm);
-int gk20a_vm_unmap_buffer(struct gk20a_as_share *, u64 offset);
+int gk20a_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset);
 void gk20a_get_comptags(struct device *dev, struct dma_buf *dmabuf,
 			struct gk20a_comptags *comptags);
 dma_addr_t gk20a_mm_gpuva_to_iova_base(struct vm_gk20a *vm, u64 gpu_vaddr);

@@ -147,7 +147,7 @@ static int gk20a_as_ioctl_map_buffer_ex(
 {
 	gk20a_dbg_fn("");
 
-	return gk20a_vm_map_buffer(as_share, args->dmabuf_fd,
+	return gk20a_vm_map_buffer(as_share->vm, args->dmabuf_fd,
 				   &args->offset, args->flags,
 				   args->kind,
 				   args->buffer_offset,
@@ -160,7 +160,7 @@ static int gk20a_as_ioctl_map_buffer(
 		struct nvgpu_as_map_buffer_args *args)
 {
 	gk20a_dbg_fn("");
-	return gk20a_vm_map_buffer(as_share, args->dmabuf_fd,
+	return gk20a_vm_map_buffer(as_share->vm, args->dmabuf_fd,
 				   &args->o_a.offset,
 				   args->flags, NV_KIND_DEFAULT,
 				   0, 0);
@@ -172,7 +172,7 @@ static int gk20a_as_ioctl_unmap_buffer(
 		struct nvgpu_as_unmap_buffer_args *args)
 {
 	gk20a_dbg_fn("");
-	return gk20a_vm_unmap_buffer(as_share, args->offset);
+	return gk20a_vm_unmap_buffer(as_share->vm, args->offset);
 }
 
 static int gk20a_as_ioctl_get_va_regions(

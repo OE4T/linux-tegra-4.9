@@ -1291,8 +1291,7 @@ static int atvr_jarvis_break_events(struct hid_device *hdev,
 {
 	/* breaks events apart if they are not proper */
 
-	pr_info("%s: packet 0x%02x#%i\n",
-		__func__, data[0], size);
+	pr_debug("%s: packet 0x%02x#%i\n", __func__, data[0], size);
 
 	if (!((report->id == JAR_BUTTON_REPORT_ID &&
 	       size >= JAR_BUTTON_REPORT_SIZE) ||

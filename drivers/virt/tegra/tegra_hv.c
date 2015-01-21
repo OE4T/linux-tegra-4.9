@@ -553,8 +553,13 @@ struct ivc_dev *ivc_device_by_id(const struct tegra_hv_data *hvd, uint32_t id)
 {
 	if (id > hvd->max_qid)
 		return NULL;
-	else
-		return &hvd->ivc_devs[id];
+	else {
+		struct ivc_dev *ivc = &hvd->ivc_devs[id];
+		if (ivc->valid)
+			return ivc;
+		else
+			return NULL;
+	}
 }
 
 static void tegra_hv_ivc_cleanup(struct tegra_hv_data *hvd)
@@ -824,7 +829,7 @@ struct tegra_hv_ivc_cookie *tegra_hv_ivc_reserve(struct device_node *dn,
 	int ret;
 
 	if (IS_ERR(hvd))
-		return ERR_PTR(-ENODEV);
+		return hvd;
 
 	ivc = ivc_device_by_id(hvd, id);
 	if (ivc == NULL)

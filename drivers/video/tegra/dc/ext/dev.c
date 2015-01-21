@@ -1520,13 +1520,19 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		int win_num;
 		struct tegra_dc_ext_flip_3 args;
 		struct tegra_dc_ext_flip_windowattr *win;
+		bool bypass;
 
 		if (copy_from_user(&args, user_arg, sizeof(args)))
 			return -EFAULT;
 
+		bypass = !!(args.flags & TEGRA_DC_EXT_FLIP_HEAD_FLAG_YUVBYPASS);
+
+		if (!!(user->ext->dc->mode.vmode & FB_VMODE_SET_YUV_MASK) !=
+		    bypass)
+			return -EINVAL;
+
+		user->ext->dc->yuv_bypass = bypass;
 		win_num = args.win_num;
-		user->ext->dc->yuv_bypass = !!(args.flags &
-				TEGRA_DC_EXT_FLIP_HEAD_FLAG_YUVBYPASS);
 		win = kzalloc(sizeof(*win) * win_num, GFP_KERNEL);
 
 		if (copy_from_user(win,  (void __user *) (uintptr_t)args.win,

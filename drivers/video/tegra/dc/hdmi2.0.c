@@ -1189,6 +1189,18 @@ static u32 tegra_hdmi_get_aspect_ratio(struct tegra_hdmi *hdmi)
 	return aspect_ratio;
 }
 
+static u32 tegra_hdmi_get_rgb_ycc(struct tegra_hdmi *hdmi)
+{
+	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_SET_YUV_MASK;
+
+	if (yuv_flag & FB_VMODE_Y420)
+		return HDMI_AVI_YCC_420;
+	else if (yuv_flag & FB_VMODE_Y422)
+		return HDMI_AVI_YCC_422;
+
+	return HDMI_AVI_RGB;
+}
+
 static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 {
 	struct hdmi_avi_infoframe *avi = &hdmi->avi;
@@ -1201,10 +1213,7 @@ static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 	avi->scan = HDMI_AVI_UNDERSCAN;
 	avi->bar_valid = HDMI_AVI_BAR_INVALID;
 	avi->act_fmt_valid = HDMI_AVI_ACTIVE_FORMAT_VALID;
-	if (hdmi->dc->yuv_bypass)
-		avi->rgb_ycc = HDMI_AVI_YCC_420;
-	else
-		avi->rgb_ycc = HDMI_AVI_RGB;
+	avi->rgb_ycc = tegra_hdmi_get_rgb_ycc(hdmi);
 
 	avi->act_format = HDMI_AVI_ACTIVE_FORMAT_SAME;
 	avi->aspect_ratio = tegra_hdmi_get_aspect_ratio(hdmi);
@@ -1684,10 +1693,12 @@ static void tegra_hdmi_put(struct tegra_dc *dc)
 /* TODO: add support for other deep colors */
 static inline u32 tegra_hdmi_get_bpp(struct tegra_hdmi *hdmi)
 {
-	if (hdmi->dc->yuv_bypass)
-		return 24;
-	else
-		return 24;
+	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_SET_YUV_MASK;
+
+	if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30))
+		return 30;
+
+	return 24;
 }
 
 static u32 tegra_hdmi_gcp_color_depth(struct tegra_hdmi *hdmi)

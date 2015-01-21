@@ -510,10 +510,9 @@ static int _tegra_dc_set_mode(struct tegra_dc *dc,
 				const struct tegra_dc_mode *mode)
 {
 	struct tegra_dc_mode new_mode = *mode;
+	int yuv_flag = new_mode.vmode & FB_VMODE_SET_YUV_MASK;
 
-	if (dc->yuv_bypass &&
-		((new_mode.vmode & FB_VMODE_Y420) ||
-		 (new_mode.vmode & FB_VMODE_Y420_ONLY))) {
+	if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y24)) {
 		new_mode.h_back_porch /= 2;
 		new_mode.h_front_porch /= 2;
 		new_mode.h_sync_width /= 2;

@@ -165,7 +165,7 @@ struct fb_fix_screeninfo {
 	__u32 smem_len;			/* Length of frame buffer mem */
 	__u32 type;			/* see FB_TYPE_*		*/
 	__u32 type_aux;			/* Interleave for interleaved Planes */
-	__u32 visual;			/* see FB_VISUAL_*		*/ 
+	__u32 visual;			/* see FB_VISUAL_*		*/
 	__u16 xpanstep;			/* zero if no hardware panning  */
 	__u16 ypanstep;			/* zero if no hardware panning  */
 	__u16 ywrapstep;		/* zero if no hardware ywrap    */
@@ -193,8 +193,8 @@ struct fb_fix_screeninfo {
 struct fb_bitfield {
 	__u32 offset;			/* beginning of bitfield	*/
 	__u32 length;			/* length of bitfield		*/
-	__u32 msb_right;		/* != 0 : Most significant bit is */ 
-					/* right */ 
+	__u32 msb_right;		/* != 0 : Most significant bit is */
+					/* right */
 };
 
 #define FB_NONSTD_HAM		1	/* Hold-And-Modify (HAM)        */
@@ -222,17 +222,26 @@ struct fb_bitfield {
 					/* vtotal = 121d/242n/484i => NTSC */
 #define FB_SYNC_ON_GREEN	32	/* sync on green */
 
-#define FB_VMODE_NONINTERLACED  0	/* non interlaced */
-#define FB_VMODE_INTERLACED	1	/* interlaced	*/
-#define FB_VMODE_DOUBLE		2	/* double scan */
-#define FB_VMODE_ODD_FLD_FIRST	4	/* interlaced: top line first */
-#define FB_VMODE_Y420		8	/* YCrCb 4:2:0 also supported */
-#define FB_VMODE_Y420_ONLY	16	/* YCrCb 4:2:0 only supported */
-#define FB_VMODE_MASK		255
+#define FB_VMODE_NONINTERLACED  0x0000	/* non interlaced */
+#define FB_VMODE_INTERLACED	0x0001	/* interlaced	*/
+#define FB_VMODE_DOUBLE		0x0002	/* double scan */
+#define FB_VMODE_ODD_FLD_FIRST	0x0004	/* interlaced: top line first */
+#define FB_VMODE_Y420		0x0008	/* YCrCb 4:2:0 also supported or
+					 * select YCrCb 4:2:0 if setting mode
+					 */
+#define FB_VMODE_Y420_ONLY	0x0010	/* YCrCb 4:2:0 only supported */
+#define FB_VMODE_Y422		0x0020	/* select YCrCb 4:2:2 if setting mode */
 
-#define FB_VMODE_YWRAP		256	/* ywrap instead of panning     */
-#define FB_VMODE_SMOOTH_XPAN	512	/* smooth xpan possible (internally used) */
-#define FB_VMODE_CONUPDATE	512	/* don't update x/yoffset	*/
+#define FB_VMODE_Y24		0x0100	/* select 8 bits per component YCrCb */
+#define FB_VMODE_Y30		0x0200	/* select 10 bits per component YCrCb */
+
+#define FB_VMODE_SET_YUV_MASK	(FB_VMODE_Y420 | FB_VMODE_Y422 | \
+				 FB_VMODE_Y24 | FB_VMODE_Y30)
+#define FB_VMODE_MASK		0x03ff
+
+#define FB_VMODE_YWRAP		0x10000	/* ywrap instead of panning     */
+#define FB_VMODE_SMOOTH_XPAN	0x20000	/* smooth xpan possible (internally used) */
+#define FB_VMODE_CONUPDATE	0x40000	/* don't update x/yoffset	*/
 
 #define FB_FLAG_RATIO_4_3	64
 #define FB_FLAG_RATIO_16_9	128
@@ -274,7 +283,7 @@ struct fb_var_screeninfo {
 	struct fb_bitfield red;		/* bitfield in fb mem if true color, */
 	struct fb_bitfield green;	/* else only length is significant */
 	struct fb_bitfield blue;
-	struct fb_bitfield transp;	/* transparency			*/	
+	struct fb_bitfield transp;	/* transparency			*/
 
 	__u32 nonstd;			/* != 0 Non standard pixel format */
 

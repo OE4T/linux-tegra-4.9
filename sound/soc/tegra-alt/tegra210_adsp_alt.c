@@ -61,13 +61,14 @@ static struct tegra210_adsp_app_desc {
 	const char *name;
 	const char *fw_name;
 	const char *wt_name;
+	uint32_t param_type;
 	uint32_t reg_start;
 	uint32_t reg_end;
 	nvadsp_app_handle_t handle;
 } adsp_app_minimal[] = {
-	{"apm", "nvapm.elf", NULL,
+	{"apm", "nvapm.elf", NULL, SNDRV_CTL_ELEM_TYPE_NONE,
 		TEGRA210_ADSP_APM_IN1, TEGRA210_ADSP_APM_IN8},
-	{"adma", "nvadma.elf", NULL,
+	{"adma", "nvadma.elf", NULL, SNDRV_CTL_ELEM_TYPE_NONE,
 		TEGRA210_ADSP_PLUGIN_ADMA1, TEGRA210_ADSP_PLUGIN_ADMA4},
 };
 
@@ -1964,9 +1965,139 @@ static void tegra210_adsp_route_modify(const char *wt_default,
 	}
 }
 
+int tegra210_adsp_param_info(struct snd_kcontrol *kcontrol,
+		       struct snd_ctl_elem_info *uinfo)
+{
+	struct soc_bytes *params = (void *)kcontrol->private_value;
+
+	if (params->mask == SNDRV_CTL_ELEM_TYPE_INTEGER) {
+		params->num_regs = 128;
+		uinfo->value.integer.min = 0;
+		uinfo->value.integer.max = 0x7fffffff;
+	}
+	uinfo->type = params->mask;
+	uinfo->count = params->num_regs;
+
+	return 0;
+}
+
+static int tegra210_adsp_get_param(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_bytes *params = (void *)kcontrol->private_value;
+
+	if (params->mask == SNDRV_CTL_ELEM_TYPE_INTEGER)
+		memset(ucontrol->value.integer.value, 0,
+			params->num_regs * sizeof(long));
+	else
+		memset(ucontrol->value.bytes.data, 0,
+			params->num_regs);
+
+	return 0;
+}
+
+/* tegra210_adsp_set_param - sets plugin parameters
+ * @default: byte_format
+ * @byte_format: <param1>,<param2>,....
+ * @int_format: <plugin_method>,<#params>,<param1>,<param2>,....
+ */
+static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_bytes *params = (void *)kcontrol->private_value;
+	struct snd_soc_platform *platform = snd_kcontrol_chip(kcontrol);
+	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
+	struct tegra210_adsp_app *app = &adsp->apps[params->base];
+	apm_msg_t apm_msg;
+
+	if (!app->plugin) {
+		dev_warn(adsp->dev, "Plugin not yet initialized\n");
+		return 0;
+	}
+
+	apm_msg.msgq_msg.size = MSGQ_MSG_WSIZE(apm_fx_set_param_params_t);
+	apm_msg.msg.call_params.size = sizeof(apm_fx_set_param_params_t);
+	apm_msg.msg.call_params.method = nvfx_apm_method_fx_set_param;
+	apm_msg.msg.fx_set_param_params.plugin.pvoid =
+		app->plugin->plugin.pvoid;
+
+	switch (params->mask) {
+	case SNDRV_CTL_ELEM_TYPE_INTEGER:
+		{
+			int32_t num_params, i;
+			/* check number of params to pass */
+			num_params = (int32_t)ucontrol->value.integer.value[1];
+			if (num_params < 1) {
+				dev_warn(adsp->dev, "No params to pass to the plugin\n");
+				return 0;
+			}
+			apm_msg.msg.fx_set_param_params.params[0] =
+				(sizeof(nvfx_call_params_t) +
+				num_params * sizeof(int32_t));
+
+			/* initialize the method */
+			apm_msg.msg.fx_set_param_params.params[1] =
+				(int32_t)ucontrol->value.integer.value[0];
+
+			/* copy parameters */
+			for (i = 0; i < num_params; i++)
+				apm_msg.msg.fx_set_param_params.params[i + 2] =
+					(int32_t)ucontrol->value.integer.value[i + 2];
+		}
+		break;
+	case SNDRV_CTL_ELEM_TYPE_BYTES:
+	default:
+		{
+			uint16_t *size = (uint16_t *)ucontrol->value.bytes.data;
+			uint8_t *data = (uint8_t *)(size + 1);
+
+			/* copy parameters */
+			memcpy(&apm_msg.msg.fx_set_param_params.params,
+				data, *size);
+		}
+		break;
+	}
+
+	tegra210_adsp_send_msg(app->apm, &apm_msg, 0);
+
+	return 0;
+}
+
+/* Maximum 128 integers or 512 bytes allowed */
+#define SND_SOC_PARAM_EXT(xname, xbase)		\
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,	\
+	.name = xname,		\
+	.info = tegra210_adsp_param_info,		\
+	.get = tegra210_adsp_get_param,		\
+	.put = tegra210_adsp_set_param,		\
+	.private_value =		\
+		((unsigned long)&(struct soc_bytes)		\
+		{.base = xbase, .num_regs = 512,		\
+		.mask = SNDRV_CTL_ELEM_TYPE_BYTES}) }
+
 static const struct snd_kcontrol_new tegra210_adsp_controls[] = {
 	SOC_SINGLE_BOOL_EXT("ADSP init", 0,
 		tegra210_adsp_init_get, tegra210_adsp_init_put),
+	SND_SOC_PARAM_EXT("PLUGIN1 set params",
+		TEGRA210_ADSP_PLUGIN1),
+	SND_SOC_PARAM_EXT("PLUGIN2 set params",
+		TEGRA210_ADSP_PLUGIN2),
+	SND_SOC_PARAM_EXT("PLUGIN3 set params",
+		TEGRA210_ADSP_PLUGIN3),
+	SND_SOC_PARAM_EXT("PLUGIN4 set params",
+		TEGRA210_ADSP_PLUGIN4),
+	SND_SOC_PARAM_EXT("PLUGIN5 set params",
+		TEGRA210_ADSP_PLUGIN5),
+	SND_SOC_PARAM_EXT("PLUGIN6 set params",
+		TEGRA210_ADSP_PLUGIN6),
+	SND_SOC_PARAM_EXT("PLUGIN7 set params",
+		TEGRA210_ADSP_PLUGIN7),
+	SND_SOC_PARAM_EXT("PLUGIN8 set params",
+		TEGRA210_ADSP_PLUGIN8),
+	SND_SOC_PARAM_EXT("PLUGIN9 set params",
+		TEGRA210_ADSP_PLUGIN9),
+	SND_SOC_PARAM_EXT("PLUGIN10 set params",
+		TEGRA210_ADSP_PLUGIN10),
 };
 
 static const struct snd_soc_component_driver tegra210_adsp_component = {
@@ -2008,12 +2139,13 @@ static const struct of_device_id tegra210_adsp_audio_of_match[] = {
 
 static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 {
-	struct tegra210_adsp *adsp;
-	const struct of_device_id *match;
-	unsigned int compr_ops = 1;
 	struct device_node *np = pdev->dev.of_node, *subnp;
-	char plugin_info[20];
+	const struct of_device_id *match;
+	struct soc_bytes *controls;
+	struct tegra210_adsp *adsp;
 	int i, j, wt_idx, mux_idx, ret = 0;
+	unsigned int compr_ops = 1;
+	char plugin_info[20];
 
 	pr_info("tegra210_adsp_audio_platform_probe: platform probe started\n");
 
@@ -2116,13 +2248,30 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 						adsp_app_desc[i].wt_name);
 					strcpy((char *)tegra210_adsp_widgets[wt_idx+1].name,
 						adsp_app_desc[i].wt_name);
+					strcpy((char *)tegra210_adsp_controls[i+1].name,
+						adsp_app_desc[i].wt_name);
 					strcat((char *)tegra210_adsp_widgets[wt_idx].name,
 						" TX");
 					strcat((char *)tegra210_adsp_widgets[wt_idx+1].name,
 						" MUX");
+					strcat((char *)tegra210_adsp_controls[i+1].name,
+						" set params");
 					strcpy((char *)tegra210_adsp_mux_texts[mux_idx],
 						adsp_app_desc[i].wt_name);
 				}
+			}
+			if (of_property_read_u32(subnp, "param-type",
+				&adsp_app_desc[i].param_type)) {
+				dev_warn(&pdev->dev,
+					"Default param-type to BYTE for %s\n",
+					adsp_app_desc[i].name);
+				adsp_app_desc[i].param_type =
+					SNDRV_CTL_ELEM_TYPE_BYTES;
+			} else {
+				/* override the param-type from DT if any */
+				controls =
+					(void *)tegra210_adsp_controls[i+1].private_value;
+				controls->mask = adsp_app_desc[i].param_type;
 			}
 			adsp_app_desc[i].reg_start = TEGRA210_ADSP_PLUGIN1 + i;
 			adsp_app_desc[i].reg_end = TEGRA210_ADSP_PLUGIN1 + i;

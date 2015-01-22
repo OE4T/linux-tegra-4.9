@@ -1,7 +1,7 @@
 /*
  * GK20A memory management
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2474,12 +2474,13 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 	if (va_node) {
 		struct mapped_buffer_node *buffer, *n;
 
-		/* there is no need to unallocate the buffers in va. Just
-		 * convert them into normal buffers */
-
+		/* Decrement the ref count on all buffers in this va_node. This
+		 * allows userspace to let the kernel free mappings that are
+		 * only used by this va_node. */
 		list_for_each_entry_safe(buffer, n,
 			&va_node->va_buffers_list, va_buffers_list) {
 			list_del_init(&buffer->va_buffers_list);
+			kref_put(&buffer->ref, gk20a_vm_unmap_locked_kref);
 		}
 
 		list_del(&va_node->reserved_va_list);

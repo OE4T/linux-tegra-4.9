@@ -2,7 +2,7 @@
  * tegra210_adsp_alt.c - Tegra ADSP audio driver
  *
  * Author: Sumit Bhattacharya <sumitb@nvidia.com>
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -38,6 +38,7 @@
 #include <linux/kthread.h>
 #include <linux/tegra_nvadsp.h>
 #include <linux/irqchip/tegra-agic.h>
+#include <linux/of_device.h>
 
 #include <sound/pcm.h>
 #include <sound/core.h>
@@ -57,21 +58,21 @@
 #define ENABLE_ADSP 1
 
 static struct tegra210_adsp_app_desc {
-	const char name[NVADSP_NAME_SZ];
-	const char fw_name[NVADSP_NAME_SZ];
-	const uint32_t reg_start;
-	const uint32_t reg_end;
+	const char *name;
+	const char *fw_name;
+	const char *wt_name;
+	uint32_t reg_start;
+	uint32_t reg_end;
 	nvadsp_app_handle_t handle;
-} adsp_app_desc[] = {
-	{"apm", "nvapm.elf",
+} adsp_app_minimal[] = {
+	{"apm", "nvapm.elf", NULL,
 		TEGRA210_ADSP_APM_IN1, TEGRA210_ADSP_APM_IN8},
-	{"mp3dec", "nvmp3dec.elf",
-		TEGRA210_ADSP_PLUGIN_MP3_DEC1, TEGRA210_ADSP_PLUGIN_MP3_DEC2},
-	{"adma", "nvadma.elf",
+	{"adma", "nvadma.elf", NULL,
 		TEGRA210_ADSP_PLUGIN_ADMA1, TEGRA210_ADSP_PLUGIN_ADMA4},
-	{"spkprot", "nvspkprot.elf",
-		TEGRA210_ADSP_PLUGIN_SPKPROT, TEGRA210_ADSP_PLUGIN_SPKPROT},
 };
+
+static struct tegra210_adsp_app_desc *adsp_app_desc;
+static unsigned int adsp_app_count; /* total number of apps initialized */
 
 /* ADSP APP specific structure */
 struct tegra210_adsp_app {
@@ -297,7 +298,7 @@ static int tegra210_adsp_init(struct tegra210_adsp *adsp)
 	}
 
 	/* Load ADSP audio apps */
-	for (i = 0; i < ARRAY_SIZE(adsp_app_desc); i++) {
+	for (i = 0; i < adsp_app_count; i++) {
 		adsp_app_desc[i].handle = nvadsp_app_load(
 				adsp_app_desc[i].name,
 				adsp_app_desc[i].fw_name);
@@ -1653,11 +1654,16 @@ static const char * const tegra210_adsp_mux_texts[] = {
 	"ADMA2",
 	"ADMA3",
 	"ADMA4",
-	"MP3-DEC1",
-	"MP3-DEC2",
-	"AAC-DEC1",
-	"AAC-DEC2",
-	"SPKPROT-SW",
+	"PLUGIN1",
+	"PLUGIN2",
+	"PLUGIN3",
+	"PLUGIN4",
+	"PLUGIN5",
+	"PLUGIN6",
+	"PLUGIN7",
+	"PLUGIN8",
+	"PLUGIN9",
+	"PLUGIN10",
 };
 
 #define ADSP_MUX_ENUM_CTRL_DECL(ename, reg)		\
@@ -1703,11 +1709,16 @@ static ADSP_MUX_ENUM_CTRL_DECL(adma1, TEGRA210_ADSP_PLUGIN_ADMA1);
 static ADSP_MUX_ENUM_CTRL_DECL(adma2, TEGRA210_ADSP_PLUGIN_ADMA2);
 static ADSP_MUX_ENUM_CTRL_DECL(adma3, TEGRA210_ADSP_PLUGIN_ADMA3);
 static ADSP_MUX_ENUM_CTRL_DECL(adma4, TEGRA210_ADSP_PLUGIN_ADMA4);
-static ADSP_MUX_ENUM_CTRL_DECL(mp3_dec1, TEGRA210_ADSP_PLUGIN_MP3_DEC1);
-static ADSP_MUX_ENUM_CTRL_DECL(mp3_dec2, TEGRA210_ADSP_PLUGIN_MP3_DEC2);
-static ADSP_MUX_ENUM_CTRL_DECL(aac_dec1, TEGRA210_ADSP_PLUGIN_AAC_DEC1);
-static ADSP_MUX_ENUM_CTRL_DECL(aac_dec2, TEGRA210_ADSP_PLUGIN_AAC_DEC2);
-static ADSP_MUX_ENUM_CTRL_DECL(spkprot, TEGRA210_ADSP_PLUGIN_SPKPROT);
+static ADSP_MUX_ENUM_CTRL_DECL(plugin1, TEGRA210_ADSP_PLUGIN1);
+static ADSP_MUX_ENUM_CTRL_DECL(plugin2, TEGRA210_ADSP_PLUGIN2);
+static ADSP_MUX_ENUM_CTRL_DECL(plugin3, TEGRA210_ADSP_PLUGIN3);
+static ADSP_MUX_ENUM_CTRL_DECL(plugin4, TEGRA210_ADSP_PLUGIN4);
+static ADSP_MUX_ENUM_CTRL_DECL(plugin5, TEGRA210_ADSP_PLUGIN5);
+static ADSP_MUX_ENUM_CTRL_DECL(plugin6, TEGRA210_ADSP_PLUGIN6);
+static ADSP_MUX_ENUM_CTRL_DECL(plugin7, TEGRA210_ADSP_PLUGIN7);
+static ADSP_MUX_ENUM_CTRL_DECL(plugin8, TEGRA210_ADSP_PLUGIN8);
+static ADSP_MUX_ENUM_CTRL_DECL(plugin9, TEGRA210_ADSP_PLUGIN9);
+static ADSP_MUX_ENUM_CTRL_DECL(plugin10, TEGRA210_ADSP_PLUGIN10);
 
 #define ADSP_EP_WIDGETS(sname, ename)					\
 	SND_SOC_DAPM_AIF_IN(sname " RX", NULL, 0, SND_SOC_NOPM, 0, 0),	\
@@ -1756,11 +1767,16 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	ADSP_WIDGETS("ADMA2", adma2, TEGRA210_ADSP_PLUGIN_ADMA2),
 	ADSP_WIDGETS("ADMA3", adma3, TEGRA210_ADSP_PLUGIN_ADMA3),
 	ADSP_WIDGETS("ADMA4", adma4, TEGRA210_ADSP_PLUGIN_ADMA4),
-	ADSP_WIDGETS("MP3-DEC1", mp3_dec1, TEGRA210_ADSP_PLUGIN_MP3_DEC1),
-	ADSP_WIDGETS("MP3-DEC2", mp3_dec2, TEGRA210_ADSP_PLUGIN_MP3_DEC2),
-	ADSP_WIDGETS("AAC-DEC1", aac_dec1, TEGRA210_ADSP_PLUGIN_AAC_DEC1),
-	ADSP_WIDGETS("AAC-DEC2", aac_dec2, TEGRA210_ADSP_PLUGIN_AAC_DEC2),
-	ADSP_WIDGETS("SPKPROT-SW", spkprot, TEGRA210_ADSP_PLUGIN_SPKPROT),
+	ADSP_WIDGETS("PLUGIN1", plugin1, TEGRA210_ADSP_PLUGIN1),
+	ADSP_WIDGETS("PLUGIN2", plugin2, TEGRA210_ADSP_PLUGIN2),
+	ADSP_WIDGETS("PLUGIN3", plugin3, TEGRA210_ADSP_PLUGIN3),
+	ADSP_WIDGETS("PLUGIN4", plugin4, TEGRA210_ADSP_PLUGIN4),
+	ADSP_WIDGETS("PLUGIN5", plugin5, TEGRA210_ADSP_PLUGIN5),
+	ADSP_WIDGETS("PLUGIN6", plugin6, TEGRA210_ADSP_PLUGIN6),
+	ADSP_WIDGETS("PLUGIN7", plugin7, TEGRA210_ADSP_PLUGIN7),
+	ADSP_WIDGETS("PLUGIN8", plugin8, TEGRA210_ADSP_PLUGIN8),
+	ADSP_WIDGETS("PLUGIN9", plugin9, TEGRA210_ADSP_PLUGIN9),
+	ADSP_WIDGETS("PLUGIN10", plugin10, TEGRA210_ADSP_PLUGIN10),
 };
 
 #define ADSP_EP_ROUTES(name)					\
@@ -1806,14 +1822,17 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	{ name " MUX",	"ADMA3",	"ADMA3 TX"},		\
 	{ name " MUX",	"ADMA4",	"ADMA4 TX"}
 
-#define ADSP_DEC_ROUTES(name)					\
-	{ name " MUX",	"MP3-DEC1",	"MP3-DEC1 TX"},		\
-	{ name " MUX",	"MP3-DEC2",	"MP3-DEC2 TX"},		\
-	{ name " MUX",	"AAC-DEC1",	"AAC-DEC1 TX"},		\
-	{ name " MUX",	"AAC-DEC2",	"AAC-DEC2 TX"}
-
-#define ADSP_SPKPROT_ROUTES(name)				\
-	{ name " MUX",	"SPKPROT-SW",	"SPKPROT-SW TX"}
+#define ADSP_PLUGIN_ROUTES(name)					\
+	{ name " MUX",	"PLUGIN1",	"PLUGIN1 TX"},		\
+	{ name " MUX",	"PLUGIN2",	"PLUGIN2 TX"},		\
+	{ name " MUX",	"PLUGIN3",	"PLUGIN3 TX"},		\
+	{ name " MUX",	"PLUGIN4",	"PLUGIN4 TX"},		\
+	{ name " MUX",	"PLUGIN5",	"PLUGIN5 TX"},		\
+	{ name " MUX",	"PLUGIN6",	"PLUGIN6 TX"},		\
+	{ name " MUX",	"PLUGIN7",	"PLUGIN7 TX"},		\
+	{ name " MUX",	"PLUGIN8",	"PLUGIN8 TX"},		\
+	{ name " MUX",	"PLUGIN9",	"PLUGIN9 TX"},		\
+	{ name " MUX",	"PLUGIN10",	"PLUGIN10 TX"}
 
 #define ADSP_EP_MUX_ROUTES(name)				\
 	{ name " RX",		NULL, name " Receive"},		\
@@ -1829,23 +1848,18 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 #define ADSP_APM_OUT_MUX_ROUTES(name)				\
 	{ name " TX",		NULL, name " MUX"},		\
 	ADSP_ADMA_ROUTES(name),					\
-	ADSP_DEC_ROUTES(name)
+	ADSP_PLUGIN_ROUTES(name)
 
-#define ADSP_DEC_MUX_ROUTES(name)				\
+#define ADSP_PLUGIN_MUX_ROUTES(name)				\
 	{ name " TX",		NULL, name " MUX"},		\
-	ADSP_APM_IN_ROUTES(name)
+	ADSP_APM_IN_ROUTES(name),					\
+	ADSP_PLUGIN_ROUTES(name),					\
+	ADSP_ADMA_ROUTES(name)
 
 #define ADSP_ADMA_MUX_ROUTES(name)				\
 	{ name " TX",		NULL, name " MUX"},		\
 	ADSP_APM_IN_ROUTES(name),				\
-	ADSP_DEC_ROUTES(name),					\
-	ADSP_SPKPROT_ROUTES(name)
-
-#define ADSP_SPKPROT_MUX_ROUTES(name)				\
-	{ name " TX",		NULL, name " MUX"},		\
-	ADSP_APM_IN_ROUTES(name),				\
-	ADSP_DEC_ROUTES(name),					\
-	ADSP_ADMA_ROUTES(name)
+	ADSP_PLUGIN_ROUTES(name)
 
 static const struct snd_soc_dapm_route tegra210_adsp_routes[] = {
 	ADSP_EP_MUX_ROUTES("ADSP-FE1"),
@@ -1887,13 +1901,68 @@ static const struct snd_soc_dapm_route tegra210_adsp_routes[] = {
 	ADSP_ADMA_MUX_ROUTES("ADMA3"),
 	ADSP_ADMA_MUX_ROUTES("ADMA4"),
 
-	ADSP_DEC_MUX_ROUTES("MP3-DEC1"),
-	ADSP_DEC_MUX_ROUTES("MP3-DEC2"),
-	ADSP_DEC_MUX_ROUTES("AAC-DEC1"),
-	ADSP_DEC_MUX_ROUTES("AAC-DEC2"),
-
-	ADSP_SPKPROT_MUX_ROUTES("SPKPROT-SW"),
+	ADSP_PLUGIN_MUX_ROUTES("PLUGIN1"),
+	ADSP_PLUGIN_MUX_ROUTES("PLUGIN2"),
+	ADSP_PLUGIN_MUX_ROUTES("PLUGIN3"),
+	ADSP_PLUGIN_MUX_ROUTES("PLUGIN4"),
+	ADSP_PLUGIN_MUX_ROUTES("PLUGIN5"),
+	ADSP_PLUGIN_MUX_ROUTES("PLUGIN6"),
+	ADSP_PLUGIN_MUX_ROUTES("PLUGIN7"),
+	ADSP_PLUGIN_MUX_ROUTES("PLUGIN8"),
+	ADSP_PLUGIN_MUX_ROUTES("PLUGIN9"),
+	ADSP_PLUGIN_MUX_ROUTES("PLUGIN10"),
 };
+
+static void tegra210_adsp_wt_replace(char *dest, const char *src)
+{
+	if (!dest || !src)
+		return;
+
+	if (strstr(dest, " TX")) {
+		strcpy(dest, src);
+		strcat(dest, " TX");
+	} else if (strstr(dest, " RX")) {
+		strcpy(dest, src);
+		strcat(dest, " RX");
+	} else if (strstr(dest, " MUX")) {
+		strcpy(dest, src);
+		strcat(dest, " MUX");
+	} else {
+		strcpy(dest, src);
+	}
+}
+
+static void tegra210_adsp_route_modify(const char *wt_default,
+				const char *wt_from_dt)
+{
+	int i;
+
+	if (!wt_default || !wt_from_dt)
+		return;
+
+	/* Modify dapm routing table */
+	for (i = TEGRA210_ADSP_ROUTE_BASE;
+		i < ARRAY_SIZE(tegra210_adsp_routes); i++) {
+		/* replace sink name */
+		if (tegra210_adsp_routes[i].sink)
+			if (strstr(tegra210_adsp_routes[i].sink, wt_default))
+				tegra210_adsp_wt_replace(
+					(char *)tegra210_adsp_routes[i].sink,
+					wt_from_dt);
+		/* replace control name */
+		if (tegra210_adsp_routes[i].control)
+			if (strstr(tegra210_adsp_routes[i].control, wt_default))
+				tegra210_adsp_wt_replace(
+					(char *)tegra210_adsp_routes[i].control,
+					wt_from_dt);
+		/* replace source name */
+		if (tegra210_adsp_routes[i].source)
+			if (strstr(tegra210_adsp_routes[i].source, wt_default))
+				tegra210_adsp_wt_replace(
+					(char *)tegra210_adsp_routes[i].source,
+					wt_from_dt);
+	}
+}
 
 static const struct snd_kcontrol_new tegra210_adsp_controls[] = {
 	SOC_SINGLE_BOOL_EXT("ADSP init", 0,
@@ -1931,12 +2000,28 @@ static struct snd_soc_platform_driver tegra210_adsp_platform = {
 };
 
 static u64 tegra_dma_mask = DMA_BIT_MASK(32);
+
+static const struct of_device_id tegra210_adsp_audio_of_match[] = {
+	{ .compatible = "nvidia,tegra210-adsp-audio", },
+	{},
+};
+
 static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 {
 	struct tegra210_adsp *adsp;
-	int i, j, ret = 0;
+	const struct of_device_id *match;
+	unsigned int compr_ops = 1;
+	struct device_node *np = pdev->dev.of_node, *subnp;
+	char plugin_info[20];
+	int i, j, wt_idx, mux_idx, ret = 0;
 
 	pr_info("tegra210_adsp_audio_platform_probe: platform probe started\n");
+
+	match = of_match_device(tegra210_adsp_audio_of_match, &pdev->dev);
+	if (!match) {
+		dev_err(&pdev->dev, "Error: No device match found\n");
+		return -ENODEV;
+	}
 
 	adsp = devm_kzalloc(&pdev->dev, sizeof(*adsp), GFP_KERNEL);
 	if (!adsp) {
@@ -1975,11 +2060,96 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	for (i = 0; i < TEGRA210_ADSP_VIRT_REG_MAX; i++)
 		adsp->apps[i].reg = i;
 
-	for (i = 0; i < ARRAY_SIZE(adsp_app_desc); i++) {
+	/* get the plugin count */
+	if (of_property_read_u32(pdev->dev.of_node,
+				"num-plugin",
+				&adsp_app_count) < 0) {
+		dev_warn(&pdev->dev, "Missing ADSP plugin count\n");
+		adsp_app_count = 0;
+	}
+
+	/* allocate memory for app descritors */
+	adsp_app_desc = devm_kzalloc(&pdev->dev,
+				(adsp_app_count + ARRAY_SIZE(adsp_app_minimal))
+				* sizeof(*adsp_app_desc), GFP_KERNEL);
+	if (!adsp_app_desc) {
+		dev_err(&pdev->dev, "Can't allocate tegra210_adsp_app descriptor\n");
+		ret = -ENOMEM;
+		goto err_pm_disable;
+	}
+
+	/* parse the plugin, firmware, widget names and params */
+	for (i = 0; i < adsp_app_count; i++) {
+		memset((void *)plugin_info, '\0', 20);
+		sprintf(plugin_info, "plugin-info-%d", i+1);
+		subnp = of_get_child_by_name(np, plugin_info);
+		if (subnp) {
+			if (of_property_read_string(subnp, "plugin-name",
+				&adsp_app_desc[i].name)) {
+				dev_err(&pdev->dev,
+					"Missing property plugin-name\n");
+				ret = -EINVAL;
+				goto err_pm_disable;
+			}
+			if (of_property_read_string(subnp, "firmware-name",
+				&adsp_app_desc[i].fw_name)) {
+				dev_err(&pdev->dev,
+					"Missing property firmware-name\n");
+				ret = -EINVAL;
+				goto err_pm_disable;
+			}
+			if (of_property_read_string(subnp, "widget-name",
+				&adsp_app_desc[i].wt_name)) {
+				dev_warn(&pdev->dev,
+					"Missing property widget-name for %s\n",
+					adsp_app_desc[i].name);
+				adsp_app_desc[i].wt_name = NULL;
+			} else {
+				if (adsp_app_desc[i].wt_name) {
+					/* override the widget names from DT if any */
+					mux_idx = TEGRA210_ADSP_PLUGIN1 + i;
+					wt_idx = TEGRA210_ADSP_WIDGET_BASE + (2*i);
+					tegra210_adsp_route_modify(
+						tegra210_adsp_mux_texts[mux_idx],
+						adsp_app_desc[i].wt_name);
+					strcpy((char *)tegra210_adsp_widgets[wt_idx].name,
+						adsp_app_desc[i].wt_name);
+					strcpy((char *)tegra210_adsp_widgets[wt_idx+1].name,
+						adsp_app_desc[i].wt_name);
+					strcat((char *)tegra210_adsp_widgets[wt_idx].name,
+						" TX");
+					strcat((char *)tegra210_adsp_widgets[wt_idx+1].name,
+						" MUX");
+					strcpy((char *)tegra210_adsp_mux_texts[mux_idx],
+						adsp_app_desc[i].wt_name);
+				}
+			}
+			adsp_app_desc[i].reg_start = TEGRA210_ADSP_PLUGIN1 + i;
+			adsp_app_desc[i].reg_end = TEGRA210_ADSP_PLUGIN1 + i;
+		} else {
+			dev_err(&pdev->dev,
+				"Property '%s' missing or invalid\n",
+				plugin_info);
+			ret = -EINVAL;
+			goto err_pm_disable;
+		}
+	}
+
+	/* copy basic apps needed */
+	memcpy(&adsp_app_desc[adsp_app_count],
+			&adsp_app_minimal[0], sizeof(adsp_app_minimal));
+	adsp_app_count += ARRAY_SIZE(adsp_app_minimal);
+
+	for (i = 0; i < adsp_app_count; i++) {
 		for (j = adsp_app_desc[i].reg_start;
 			j <= adsp_app_desc[i].reg_end; j++)
 			adsp->apps[j].desc = &adsp_app_desc[i];
 	}
+
+	/* enable/disable compr-ops from DT */
+	of_property_read_u32(pdev->dev.of_node, "compr-ops", &compr_ops);
+	if (!compr_ops)
+		tegra210_adsp_platform.compr_ops = NULL;
 
 	ret = snd_soc_register_platform(&pdev->dev, &tegra210_adsp_platform);
 	if (ret) {
@@ -2020,11 +2190,6 @@ static int tegra210_adsp_audio_platform_remove(struct platform_device *pdev)
 	snd_soc_unregister_platform(&pdev->dev);
 	return 0;
 }
-
-static const struct of_device_id tegra210_adsp_audio_of_match[] = {
-	{ .compatible = "nvidia,tegra210-adsp-audio", },
-	{},
-};
 
 static struct platform_driver tegra210_adsp_audio_driver = {
 	.driver = {

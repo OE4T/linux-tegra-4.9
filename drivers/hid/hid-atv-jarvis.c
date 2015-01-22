@@ -884,6 +884,12 @@ static void snd_atvr_timer_callback(unsigned long data)
 static void snd_atvr_timer_start(struct snd_pcm_substream *substream)
 {
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
+
+	/*
+	 * Wait previous timer callback to finish to ensure clean state.
+	 */
+	del_timer_sync(&atvr_snd->decoding_timer);
+
 	atvr_snd->timer_enabled = true;
 	atvr_snd->previous_jiffies = jiffies;
 	atvr_snd->timeout_jiffies =
@@ -906,8 +912,20 @@ static void snd_atvr_timer_stop(struct snd_pcm_substream *substream)
 	atvr_snd->timer_enabled = false;
 	smp_wmb();
 	if (!in_interrupt()) {
-		/* del_timer_sync will hang if called in the timer callback. */
-		ret = del_timer_sync(&atvr_snd->decoding_timer);
+		/*
+		 * The timer callback could call snd_pcm_period_elapsed()
+		 * which need snd_pcm_stream_lock_irqsave() on the substream,
+		 * while a snd_pcm_suspend() who already holds the same lock
+		 * eventually comes here and wait the timer to finish, forming
+		 * a deadlock.
+		 *
+		 * We could temporarily give up the lock and relock later.
+		 * However, that could break the original purpose of the lock.
+		 * Thus we just try delete the timer but do not block.
+		 * Instead, we ensure previous timer is finished in
+		 * snd_atvr_timer_start() where the lock concerned is not held.
+		 */
+		ret = try_to_del_timer_sync(&atvr_snd->decoding_timer);
 		if (ret < 0)
 			pr_err("%s:%d - ERROR del_timer_sync failed, %d\n",
 				__func__, __LINE__, ret);
@@ -1247,6 +1265,10 @@ static int atvr_snd_initialize(struct hid_device *hdev)
 	atvr_snd = atvr_card->private_data;
 	atvr_snd->card = atvr_card;
 	atomic_set(&atvr_snd->occupied, 0);
+
+	/* dummy initialization */
+	setup_timer(&atvr_snd->decoding_timer,
+		snd_atvr_timer_callback, 0);
 
 	for (i = 0; i < MAX_PCM_DEVICES && i < pcm_devs[dev]; i++) {
 		if (pcm_substreams[dev] < 1)

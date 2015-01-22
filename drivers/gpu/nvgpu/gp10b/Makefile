@@ -10,6 +10,7 @@ ccflags-$(CONFIG_GK20A) += -Wno-multichar
 
 obj-$(CONFIG_GK20A)  += \
 	gr_gp10b.o  \
+	gr_ctx_gp10b.o  \
 	mc_gp10b.o  \
 	ltc_gp10b.o \
 	mm_gp10b.o \

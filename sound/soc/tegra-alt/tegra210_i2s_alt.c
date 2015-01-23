@@ -1,7 +1,7 @@
 /*
  * tegra210_i2s.c - Tegra210 I2S driver
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -511,6 +511,9 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 
 	i2s->soc_data->set_audio_cif(i2s->regmap, reg, &cif_conf);
 
+	if (i2s->enable_cya)
+		regmap_write(i2s->regmap, TEGRA210_I2S_CYA, 1);
+
 	return 0;
 }
 
@@ -680,6 +683,7 @@ static bool tegra210_i2s_wr_reg(struct device *dev, unsigned int reg)
 	case TEGRA210_I2S_TIMING:
 	case TEGRA210_I2S_SLOT_CTRL:
 	case TEGRA210_I2S_CLK_TRIM:
+	case TEGRA210_I2S_CYA:
 		return true;
 	default:
 		return false;
@@ -722,6 +726,7 @@ static bool tegra210_i2s_rd_reg(struct device *dev, unsigned int reg)
 	case TEGRA210_I2S_SLOT_CTRL:
 	case TEGRA210_I2S_CLK_TRIM:
 	case TEGRA210_I2S_INT_STATUS:
+	case TEGRA210_I2S_CYA:
 		return true;
 	default:
 		return false;
@@ -746,7 +751,7 @@ static const struct regmap_config tegra210_i2s_regmap_config = {
 	.reg_bits = 32,
 	.reg_stride = 4,
 	.val_bits = 32,
-	.max_register = TEGRA210_I2S_CLK_TRIM,
+	.max_register = TEGRA210_I2S_CYA,
 	.writeable_reg = tegra210_i2s_wr_reg,
 	.readable_reg = tegra210_i2s_rd_reg,
 	.volatile_reg = tegra210_i2s_volatile_reg,
@@ -796,6 +801,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	i2s->soc_data = soc_data;
 	i2s->tx_mask = i2s->rx_mask = 0xFFFF;
 	i2s->bclk_ratio = 2;
+	i2s->enable_cya = false;
 
 	i2s->clk_i2s = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(i2s->clk_i2s)) {
@@ -881,6 +887,10 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 			pdev->dev.id);
 		i2s->fsync_width = 31;
 	}
+
+	i2s->enable_cya =
+		of_property_read_bool(pdev->dev.of_node,
+			"enable-cya");
 
 	num_supplies = of_property_count_strings(np, "regulator-supplies");
 	if (num_supplies > 0) {

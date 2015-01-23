@@ -1365,7 +1365,8 @@ static u32 get_gp_free_count(struct channel_gk20a *c)
 	return gp_free_count(c);
 }
 
-static void trace_write_pushbuffer(struct channel_gk20a *c, struct gpfifo *g)
+static void trace_write_pushbuffer(struct channel_gk20a *c,
+				   struct nvgpu_gpfifo *g)
 {
 	void *mem = NULL;
 	unsigned int words;
@@ -1398,6 +1399,18 @@ static void trace_write_pushbuffer(struct channel_gk20a *c, struct gpfifo *g)
 				mem);
 		}
 		dma_buf_vunmap(dmabuf, mem);
+	}
+}
+
+static void trace_write_pushbuffer_range(struct channel_gk20a *c,
+					 struct nvgpu_gpfifo *g,
+					 int count)
+{
+	if (gk20a_debug_trace_cmdbuf) {
+		int i;
+		struct nvgpu_gpfifo *gp = g;
+		for (i = 0; i < count; i++, gp++)
+			trace_write_pushbuffer(c, gp);
 	}
 }
 
@@ -1502,7 +1515,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	struct gk20a *g = c->g;
 	struct device *d = dev_from_gk20a(g);
 	int err = 0;
-	int i;
+	int start, end;
 	int wait_fence_fd = -1;
 	struct priv_cmd_entry *wait_cmd = NULL;
 	struct priv_cmd_entry *incr_cmd = NULL;
@@ -1653,15 +1666,34 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		wait_cmd->gp_put = c->gpfifo.put;
 	}
 
-	for (i = 0; i < num_entries; i++) {
-		c->gpfifo.cpu_va[c->gpfifo.put].entry0 =
-			gpfifo[i].entry0; /* cmd buf va low 32 */
-		c->gpfifo.cpu_va[c->gpfifo.put].entry1 =
-			gpfifo[i].entry1; /* cmd buf va high 32 | words << 10 */
-		trace_write_pushbuffer(c, &c->gpfifo.cpu_va[c->gpfifo.put]);
-		c->gpfifo.put = (c->gpfifo.put + 1) &
-			(c->gpfifo.entry_num - 1);
+	/*
+	 * Copy source gpfifo entries into the gpfifo ring buffer,
+	 * potentially splitting into two memcpies to handle the
+	 * ring buffer wrap-around case.
+	 */
+	start = c->gpfifo.put;
+	end = start + num_entries;
+
+	if (end > c->gpfifo.entry_num) {
+		int length0 = c->gpfifo.entry_num - start;
+		int length1 = num_entries - length0;
+
+		memcpy(c->gpfifo.cpu_va + start, gpfifo,
+		       length0 * sizeof(*gpfifo));
+
+		memcpy(c->gpfifo.cpu_va, gpfifo + length0,
+		       length1 * sizeof(*gpfifo));
+
+		trace_write_pushbuffer_range(c, gpfifo, length0);
+		trace_write_pushbuffer_range(c, gpfifo + length0, length1);
+	} else {
+		memcpy(c->gpfifo.cpu_va + start, gpfifo,
+		       num_entries * sizeof(*gpfifo));
+
+		trace_write_pushbuffer_range(c, gpfifo, num_entries);
 	}
+	c->gpfifo.put = (c->gpfifo.put + num_entries) &
+		(c->gpfifo.entry_num - 1);
 
 	if (incr_cmd) {
 		c->gpfifo.cpu_va[c->gpfifo.put].entry0 =

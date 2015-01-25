@@ -1,7 +1,7 @@
 /*
  * GM20B GPU GR
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,6 +36,12 @@ void gp10b_init_gr(struct gpu_ops *ops);
 struct gr_t18x {
 	struct {
 		u32 preempt_image_size;
+		u32 force_preemption_gfxp;
+		u32 force_preemption_cilp;
+		u32 dump_ctxsw_stats_on_channel_close;
+		struct dentry *debugfs_force_preemption_cilp;
+		struct dentry *debugfs_force_preemption_gfxp;
+		struct dentry *debugfs_dump_ctxsw_stats;
 	} ctx_vars;
 };
 

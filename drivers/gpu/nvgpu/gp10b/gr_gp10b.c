@@ -25,6 +25,7 @@
 #include "hw_proj_gp10b.h"
 #include "hw_ctxsw_prog_gp10b.h"
 #include "hw_mc_gp10b.h"
+#include <linux/vmalloc.h>
 
 static bool gr_gp10b_is_valid_class(struct gk20a *g, u32 class_num)
 {
@@ -482,6 +483,13 @@ static int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 	if (err)
 		return err;
 
+	if (class == PASCAL_A && g->gr.t18x.ctx_vars.force_preemption_gfxp)
+		flags |= NVGPU_ALLOC_OBJ_FLAGS_GFXP;
+
+	if (class == PASCAL_COMPUTE_A &&
+			g->gr.t18x.ctx_vars.force_preemption_cilp)
+		flags |= NVGPU_ALLOC_OBJ_FLAGS_CILP;
+
 	if (flags & NVGPU_ALLOC_OBJ_FLAGS_GFXP) {
 		u32 spill_size =
 			gr_gpc0_swdx_rm_spill_buffer_size_256b_default_v();
@@ -531,7 +539,7 @@ static int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 			goto fail_free_betacb;
 		}
 
-		(*gr_ctx)->preempt_mode = flags;
+		(*gr_ctx)->preempt_mode = NVGPU_GR_PREEMPTION_MODE_GFXP;
 	}
 
 	if (class == PASCAL_COMPUTE_A) {
@@ -558,6 +566,38 @@ fail_free_gk20a_ctx:
 	return err;
 }
 
+static void dump_ctx_switch_stats(struct gk20a *g, struct vm_gk20a *vm,
+		  struct gr_ctx_desc *gr_ctx) {
+	void *ctx_ptr = vmap(gr_ctx->mem.pages,
+		PAGE_ALIGN(gr_ctx->mem.size) >> PAGE_SHIFT,
+		0, pgprot_writecombine(PAGE_KERNEL));
+	if (!ctx_ptr) {
+		WARN_ON("Cannot map context");
+		return;
+	}
+	gk20a_err(dev_from_gk20a(g), "NUM_SAVE_OPERATIONS : %d\n",
+		gk20a_mem_rd32(ctx_ptr +
+			ctxsw_prog_main_image_num_save_ops_o(), 0));
+	gk20a_err(dev_from_gk20a(g), "WFI_SAVE_OPERATIONS : %d\n",
+		gk20a_mem_rd32(ctx_ptr +
+			ctxsw_prog_main_image_num_wfi_save_ops_o(), 0));
+	gk20a_err(dev_from_gk20a(g), "CTA_SAVE_OPERATIONS : %d\n",
+		gk20a_mem_rd32(ctx_ptr +
+			ctxsw_prog_main_image_num_cta_save_ops_o(), 0));
+	gk20a_err(dev_from_gk20a(g), "GFXP_SAVE_OPERATIONS : %d\n",
+		gk20a_mem_rd32(ctx_ptr +
+			ctxsw_prog_main_image_num_gfxp_save_ops_o(), 0));
+	gk20a_err(dev_from_gk20a(g), "CILP_SAVE_OPERATIONS : %d\n",
+		gk20a_mem_rd32(ctx_ptr +
+			ctxsw_prog_main_image_num_cilp_save_ops_o(), 0));
+	gk20a_err(dev_from_gk20a(g),
+		"image gfx preemption option (GFXP is 1) %x\n",
+		gk20a_mem_rd32(ctx_ptr +
+			ctxsw_prog_main_image_graphics_preemption_options_o(),
+			0));
+	vunmap(ctx_ptr);
+}
+
 static void gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 			  struct gr_ctx_desc *gr_ctx)
 {
@@ -566,14 +606,17 @@ static void gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 	if (!gr_ctx)
 		return;
 
+	if (g->gr.t18x.ctx_vars.dump_ctxsw_stats_on_channel_close)
+		dump_ctx_switch_stats(g, vm, gr_ctx);
+
 	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.pagepool_ctxsw_buffer);
 	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.betacb_ctxsw_buffer);
 	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.spill_ctxsw_buffer);
 	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.preempt_ctxsw_buffer);
 	gr_gk20a_free_gr_ctx(g, vm, gr_ctx);
-
 	gk20a_dbg_fn("done");
 }
+
 
 static void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 		struct channel_ctx_gk20a *ch_ctx,

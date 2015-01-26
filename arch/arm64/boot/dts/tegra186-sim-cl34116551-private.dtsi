@@ -1,0 +1,192 @@
+/*
+ * arch/arm64/boot/dts/tegra186-sim-cl34116551-private.dtsi
+ *
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ */
+
+/*
+ * DISCLAIMER: THIS FILE IS AUTO GENERATED. DO NOT MANUALLY EDIT THIS FILE!!!
+ */
+
+
+/ {
+
+	asim {
+		compatible = "nvidia,tegra210-asim";
+		reg = < 0x0 0x03b41000 0x0 0x00001000 >;
+	};
+
+	chipid {
+		reg = <0x0 0x00100000 0x0 0x00010000>;
+	};
+
+	ethernet@0x7ffff000 {
+		reg = <0x0 0x03b40000 0x0 0x00000100>;
+		interrupts = <0 218 0x04>;
+	};
+
+	gp10b {
+		reg = <0x0 0x17000000 0x0 0x1000000
+		       0x0 0x18000000 0x0 0x1000000
+		       0x0 0x03b41000 0x0 0x00001000>;
+		interrupts = <0 70 0x04
+			      0 71 0x04>;
+	};
+
+	host1x: host1x {
+		reg = <0x0 0x13e00000 0x0 0x00110000>;
+		interrupts = <0 264 0x04
+			      0 263 0x04>;
+
+		vi {
+			reg = <0x0 0x15700000 0x0 0x00100000>;
+			interrupts = <0 201 0x04
+				      0 202 0x04
+				      0 203 0x04>;
+		};
+
+		isp@54600000 {
+			reg = <0x0 0x15600000 0x0 0x00040000>;
+			interrupts = <0 205 0x04>;
+		};
+
+		vii2c {
+			reg = <0x0 0x156c0000 0x0 0x00040000>;
+		};
+
+		nvdisplay@0x54200000 {
+			reg = <0x0 0x15200000 0x0 0x10000>;
+			interrupts = <0 153 0x04>;
+		};
+
+		nvdisplay@0x54210000 {
+			reg = <0x0 0x15210000 0x0 0x10000>;
+			interrupts = <0 154 0x04>;
+		};
+
+		nvdisplay@0x54220000 {
+			reg = <0x0 0x15220000 0x0 0x10000>;
+			interrupts = <0 155 0x04>;
+		};
+
+		dsi {
+			reg = <0x0 0x15300000 0x0 0x00040000
+			       0x0 0x15400000 0x0 0x00040000>;
+		};
+
+		vic {
+			reg = <0x0 0x15340000 0x0 0x00040000>;
+		};
+
+		nvenc {
+			reg = <0x0 0x154c0000 0x0 0x00040000>;
+		};
+
+		nvdec {
+			reg = <0x0 0x15480000 0x0 0x00040000>;
+		};
+
+		nvjpg {
+			reg = <0x0 0x15380000 0x0 0x00040000>;
+		};
+
+		tsec {
+			reg = <0x0 0x15500000 0x0 0x00040000>;
+		};
+
+		tsecb {
+			reg = <0x0 0x15100000 0x0 0x00040000>;
+		};
+
+		sor {
+			reg = <0x0 0x15540000 0x0 0x00040000>;
+		};
+
+		sor1 {
+			reg = <0x0 0x15580000 0x0 0x00040000>;
+			interrupts = <0 158 0x04>;
+		};
+
+		dpaux {
+			reg = <0x0 0x155c0000 0x0 0x00040000>;
+			interrupts = <0 159 0x04>;
+		};
+
+		dpaux1 {
+			reg = <0x0 0x15040000 0x0 0x00040000>;
+			interrupts = <0 160 0x04>;
+		};
+
+	};
+
+	hsp_top {
+		reg = <0x0 0x03c00000 0x0 0x000a0000>;
+		interrupts = <0 176 0x04>;
+	};
+
+	intc: interrupt-controller {
+		reg = <0x0 0x03881000 0x0 0x00001000
+		       0x0 0x03882000 0x0 0x00002000>;
+	};
+
+	lic: interrupt-controller@60004000 {
+		reg = <0x0 0x03000000 0x0 0x00000800
+		       0x0 0x03000800 0x0 0x00000800
+		       0x0 0x03001000 0x0 0x00000800
+		       0x0 0x03001800 0x0 0x00000800
+		       0x0 0x03002000 0x0 0x00000800
+		       0x0 0x03002800 0x0 0x00000800
+		       0x0 0x03003000 0x0 0x00000800
+		       0x0 0x03003800 0x0 0x00000800
+		       0x0 0x0300f800 0x0 0x00000800>;
+	};
+
+	sdhci@700b0000 {
+		reg = <0x0 0x03400000 0x0 0x00020000>;
+		interrupts = <0 62 0x04>;
+	};
+
+	sdhci@700b0200 {
+		reg = <0x0 0x03420000 0x0 0x00020000>;
+		interrupts = <0 63 0x04>;
+	};
+
+	sdhci@700b0400 {
+		reg = <0x0 0x03440000 0x0 0x00020000>;
+		interrupts = <0 64 0x04>;
+	};
+
+	sdhci@700b0600 {
+		reg = <0x0 0x03460000 0x0 0x00020000>;
+		interrupts = <0 65 0x04>;
+	};
+
+	smmu: iommu {
+		reg = <0x0 0x12000000 0x0 0x01000000>;
+		status = "disabled";
+	};
+
+	tegra_car: clock {
+		reg = <0x0 0x05000000 0x0 0x01000000>;
+	};
+
+	uarta: serial@70006000 {
+		reg = <0x0 0x03100000 0x0 0x00010000>;
+		interrupts = <0 112 0x04>;
+	};
+
+};

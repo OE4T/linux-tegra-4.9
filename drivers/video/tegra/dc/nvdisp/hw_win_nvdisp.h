@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -250,6 +250,22 @@ static inline u32 win_set_cropped_size_in_width_f(u32 v)
 {
 	return (v & 0x7fff) << 0;
 }
+static inline u32 win_scaler_hstart_phase_r(void)
+{
+	return 0x00000707;
+}
+static inline u32 win_scaler_hstart_phase_phase_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 win_scaler_vstart_phase_r(void)
+{
+	return 0x00000708;
+}
+static inline u32 win_scaler_vstart_phase_phase_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
 static inline u32 win_set_planar_storage_r(void)
 {
 	return 0x00000709;
@@ -265,6 +281,22 @@ static inline u32 win_set_planar_storage_uv_uv0_f(u32 v)
 static inline u32 win_set_planar_storage_uv_uv1_f(u32 v)
 {
 	return (v & 0x1fff) << 16;
+}
+static inline u32 win_scaler_hphase_incr_r(void)
+{
+	return 0x0000070b;
+}
+static inline u32 win_scaler_hphase_incr_incr_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 win_scaler_vphase_incr_r(void)
+{
+	return 0x0000070c;
+}
+static inline u32 win_scaler_vphase_incr_incr_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
 }
 static inline u32 win_win_set_params_r(void)
 {
@@ -285,6 +317,30 @@ static inline u32 win_win_set_params_in_range_bypass_f(void)
 static inline u32 win_win_set_params_degamma_range_none_f(void)
 {
 	return 0x0;
+}
+static inline u32 win_scaler_set_coeff_r(void)
+{
+	return 0x0000070f;
+}
+static inline u32 win_scaler_usage_r(void)
+{
+	return 0x00000711;
+}
+static inline u32 win_scaler_usage_hbypass_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 win_scaler_usage_vbypass_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 win_scaler_usage_use422_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 win_scaler_usage_use422_enable_f(void)
+{
+	return 0x4;
 }
 static inline u32 win_blend_layer_control_r(void)
 {
@@ -353,6 +409,106 @@ static inline u32 win_window_set_control_r(void)
 static inline u32 win_window_set_control_csc_enable_f(void)
 {
 	return 0x20;
+}
+static inline u32 win_window_set_control_csc_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 win_r2r_r(void)
+{
+	return 0x00000731;
+}
+static inline u32 win_r2r_coeff_f(u32 v)
+{
+	return (v & 0x7ffff) << 0;
+}
+static inline u32 win_g2r_r(void)
+{
+	return 0x00000732;
+}
+static inline u32 win_g2r_coeff_f(u32 v)
+{
+	return (v & 0x7ffff) << 0;
+}
+static inline u32 win_b2r_r(void)
+{
+	return 0x00000733;
+}
+static inline u32 win_b2r_coeff_f(u32 v)
+{
+	return (v & 0x7ffff) << 0;
+}
+static inline u32 win_const2r_r(void)
+{
+	return 0x00000734;
+}
+static inline u32 win_const2r_coeff_f(u32 v)
+{
+	return (v & 0x7ffff) << 0;
+}
+static inline u32 win_r2g_r(void)
+{
+	return 0x00000735;
+}
+static inline u32 win_r2g_coeff_f(u32 v)
+{
+	return (v & 0x7ffff) << 0;
+}
+static inline u32 win_g2g_r(void)
+{
+	return 0x00000736;
+}
+static inline u32 win_g2g_coeff_f(u32 v)
+{
+	return (v & 0x7ffff) << 0;
+}
+static inline u32 win_b2g_r(void)
+{
+	return 0x00000737;
+}
+static inline u32 win_b2g_coeff_f(u32 v)
+{
+	return (v & 0x7ffff) << 0;
+}
+static inline u32 win_const2g_r(void)
+{
+	return 0x00000738;
+}
+static inline u32 win_const2g_coeff_f(u32 v)
+{
+	return (v & 0x7ffff) << 0;
+}
+static inline u32 win_r2b_r(void)
+{
+	return 0x00000739;
+}
+static inline u32 win_r2b_coeff_f(u32 v)
+{
+	return (v & 0x7ffff) << 0;
+}
+static inline u32 win_g2b_r(void)
+{
+	return 0x0000073a;
+}
+static inline u32 win_g2b_coeff_f(u32 v)
+{
+	return (v & 0x7ffff) << 0;
+}
+static inline u32 win_b2b_r(void)
+{
+	return 0x0000073b;
+}
+static inline u32 win_b2b_coeff_f(u32 v)
+{
+	return (v & 0x7ffff) << 0;
+}
+static inline u32 win_const2b_r(void)
+{
+	return 0x0000073c;
+}
+static inline u32 win_const2b_coeff_f(u32 v)
+{
+	return (v & 0x7ffff) << 0;
 }
 static inline u32 win_start_addr_r(void)
 {

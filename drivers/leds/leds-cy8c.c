@@ -29,6 +29,9 @@
 #include <linux/leds.h>
 #include <linux/debugfs.h>
 #include <linux/mutex.h>
+#include <linux/miscdevice.h>
+#include <asm/uaccess.h>
+#include <linux/delay.h>
 
 /* register definitions */
 #define P1961_REG_CMD			0x00
@@ -57,7 +60,21 @@
 #define P1961_LED_STATE_SOLID		0x03
 #define P1961_LED_STATE_OFF		0x04
 
+#define P1961_CMD_GOTO_BOOT			0x01
+#define P1961_CMD_GOTO_APP			0x3B
 
+/* boot device mode address */
+#define P1961_BOOT_DEV_ADDR			0x08
+
+#define MAX_COMMAND_SIZE			512
+#define BASE_CMD_SIZE				0x07
+#define CMD_START					0x01
+#define CMD_ENTER_BOOTLOADER		0x38
+#define CMD_EXIT_BOOTLOADER			0x3B
+#define CMD_STOP					0x17
+#define COMMAND_DATA_SIZE			0x01
+#define RESET						0x00
+#define COMMAND_SIZE (BASE_CMD_SIZE + COMMAND_DATA_SIZE)
 
 enum modes {
 	MODE_BLINK = 0,
@@ -88,7 +105,12 @@ static struct mode_control mode_controls[] = {
 static int mode_controls_size =
 	sizeof(mode_controls) / sizeof(mode_controls[0]);
 
+#define DEVICE_MODE_INVALID		0
+#define DEVICE_MODE_APP			1
+#define DEVICE_MODE_BOOT		2
+
 struct cy8c_data {
+	/* app device */
 	struct i2c_client *client;
 	struct regmap *regmap;
 	struct led_classdev led;
@@ -96,7 +118,19 @@ struct cy8c_data {
 	bool led_on_plugin;
 	u8 default_brightness;
 	struct mutex lock;
+	struct miscdevice miscdev;
+
+	/* boot device */
+	struct i2c_client *client_boot;
+	struct i2c_adapter *adap;
+	struct i2c_board_info brd_boot;
+	atomic_t in_use;
+
+	atomic_t device_mode;
 };
+
+typedef unsigned short (*cy8c_crc_algo_t)(
+	unsigned char *buf, unsigned long size);
 
 static int cy8c_get_mode_index(
 	struct cy8c_data *data)
@@ -123,13 +157,22 @@ static void set_led_brightness(struct led_classdev *led_cdev,
 	struct cy8c_data *data = container_of(led_cdev, struct cy8c_data, led);
 	int ret;
 
+	if (atomic_read(&data->device_mode) != DEVICE_MODE_APP) {
+		dev_err(&data->client->dev, "device not in app mode %s\n",
+			__func__);
+		return;
+	}
+
 	ret = regmap_write(data->regmap,
 		P1961_REG_NOM_BRIGHT, value & 0xff);
+/* not to write data to eeprom */
+#if 0
 	ret |= regmap_write(data->regmap,
 		P1961_REG_CMD_DAT, P1961_REG_NOM_BRIGHT);
 	ret |= regmap_write(data->regmap,
 		P1961_REG_CMD, P1961_CMD_WRITE_EEPROM);
-	if (ret)
+#endif
+	if (unlikely(ret))
 		dev_err(&data->client->dev, "cannot write %d\n", value);
 }
 
@@ -146,7 +189,8 @@ static enum led_brightness get_led_brightness(struct led_classdev *led_cdev)
 	return val;
 }
 
-static int of_led_parse_pdata(struct i2c_client *client, struct cy8c_data *data)
+static int of_led_parse_pdata(struct i2c_client *client,
+	struct cy8c_data *data)
 {
 	struct device_node *np = client->dev.of_node;
 	u32 value;
@@ -156,7 +200,8 @@ static int of_led_parse_pdata(struct i2c_client *client, struct cy8c_data *data)
 
 	if (of_property_read_u32(np, "default-brightness", &value))
 		data->default_brightness = 0xff;
-	data->default_brightness = value & 0xff;
+	else
+		data->default_brightness = value & 0xff;
 
 	return 0;
 }
@@ -176,8 +221,8 @@ static int cy8c_debug_set(void *data, u64 val)
 DEFINE_SIMPLE_ATTRIBUTE(cy8c_debug_fops, NULL, cy8c_debug_set, "%lld\n");
 
 static ssize_t cy8c_effects_set(struct device *dev,
-			      struct device_attribute *attr,
-			      const char *buf, size_t size)
+				struct device_attribute *attr,
+				const char *buf, size_t size)
 {
 	struct led_classdev *led_cdev = dev_get_drvdata(dev);
 	struct cy8c_data *data = NULL;
@@ -188,6 +233,12 @@ static ssize_t cy8c_effects_set(struct device *dev,
 
 	data = container_of(led_cdev, struct cy8c_data, led);
 	regmap = data->regmap;
+
+	if (atomic_read(&data->device_mode) != DEVICE_MODE_APP) {
+		dev_err(&data->client->dev, "device not in app mode %s\n",
+			__func__);
+		return -EAGAIN;
+	}
 
 	if (buf == NULL || buf[0] == 0) {
 		dev_err(&data->client->dev, "input buf invalid.\n");
@@ -226,6 +277,13 @@ static ssize_t cy8c_effects_show(struct device *dev,
 	struct cy8c_data *data = NULL;
 	int mode_index = 0;
 	data = container_of(led_cdev, struct cy8c_data, led);
+
+	if (atomic_read(&data->device_mode) != DEVICE_MODE_APP) {
+		dev_err(&data->client->dev, "device not in app mode %s\n",
+			__func__);
+		return -EAGAIN;
+	}
+
 	mode_index = cy8c_get_mode_index(data);
 	if (mode_index >= mode_controls_size) {
 		dev_err(&data->client->dev, "mode error\n");
@@ -236,8 +294,8 @@ static ssize_t cy8c_effects_show(struct device *dev,
 }
 
 static ssize_t cy8c_params_set(struct device *dev,
-			      struct device_attribute *attr,
-			      const char *buf, size_t size)
+				  struct device_attribute *attr,
+				  const char *buf, size_t size)
 {
 	struct led_classdev *led_cdev = dev_get_drvdata(dev);
 	struct cy8c_data *data = NULL;
@@ -250,6 +308,12 @@ static ssize_t cy8c_params_set(struct device *dev,
 	off_time = 0;
 	data = container_of(led_cdev, struct cy8c_data, led);
 	regmap = data->regmap;
+
+	if (atomic_read(&data->device_mode) != DEVICE_MODE_APP) {
+		dev_err(&data->client->dev, "device not in app mode %s\n",
+			__func__);
+		return -EAGAIN;
+	}
 
 	if (buf == NULL || buf[0] == 0) {
 		dev_err(&data->client->dev, "input buf invalid\n");
@@ -300,6 +364,12 @@ static ssize_t cy8c_params_show(struct device *dev,
 	data = container_of(led_cdev, struct cy8c_data, led);
 	on_time = off_time = 0;
 
+	if (atomic_read(&data->device_mode) != DEVICE_MODE_APP) {
+		dev_err(&data->client->dev, "device not in app mode %s\n",
+			__func__);
+		return -EAGAIN;
+	}
+
 	mutex_lock(&data->lock);
 	if (data->mode_index >= mode_controls_size) {
 		mutex_unlock(&data->lock);
@@ -326,10 +396,463 @@ static ssize_t cy8c_params_show(struct device *dev,
 		return sprintf(buf, "%d %d\n", on_time, off_time);
 }
 
+static unsigned short cy8c_crc_algo_sum(
+	unsigned char *buf, unsigned long size)
+{
+	unsigned short sum = 0;
+	while (size-- > 0)
+		sum += *buf++;
+
+	return 1 + ~sum;
+}
+
+static unsigned short cy8c_crc_algo_crc(
+	unsigned char *buf, unsigned long size)
+{
+	unsigned short crc = 0xffff;
+	unsigned short tmp;
+	int i;
+
+	if (size == 0)
+		return ~crc;
+
+	do {
+		for (i = 0, tmp = 0x00ff & *buf++;
+			i < 8;
+			i++, tmp >>= 1) {
+			if ((crc & 0x0001) ^ (tmp & 0x0001))
+				crc = (crc >> 1) ^ 0x8408;
+			else
+				crc >>= 1;
+		}
+	} while (--size);
+
+	crc = ~crc;
+	tmp = crc;
+	crc = (crc << 8) | (tmp >> 8 & 0xFF);
+
+	return crc;
+}
+
+static cy8c_crc_algo_t crc_algos[] = {
+	&cy8c_crc_algo_sum,
+	&cy8c_crc_algo_crc,
+};
+
+static int cy8c_send_app_mode(struct cy8c_data *data,
+		cy8c_crc_algo_t crc_func)
+{
+	unsigned char cmd_buf[COMMAND_SIZE] = {0, };
+	unsigned short checksum;
+	unsigned long res_size;
+	unsigned long cmd_size;
+	int ret;
+
+	if (COMMAND_SIZE < 3)
+		return -EINVAL;
+
+	res_size = BASE_CMD_SIZE;
+	cmd_size = COMMAND_SIZE;
+	cmd_buf[0] = CMD_START;
+	cmd_buf[1] = CMD_EXIT_BOOTLOADER;
+	cmd_buf[2] = (unsigned char)COMMAND_DATA_SIZE;
+	cmd_buf[3] = (unsigned char)(COMMAND_DATA_SIZE >> 8);
+	cmd_buf[4] = RESET;
+	checksum = (*crc_func)(cmd_buf, COMMAND_SIZE - 3);
+	cmd_buf[5] = (unsigned char)checksum;
+	cmd_buf[6] = (unsigned char)(checksum >> 8);
+	cmd_buf[7] = CMD_STOP;
+
+	ret = i2c_master_send(data->client_boot, cmd_buf, cmd_size);
+
+	return ret;
+}
+
+static int cy8c_boot_mode_enter(struct cy8c_data *data,
+		cy8c_crc_algo_t crc_func)
+{
+	const unsigned long RESULT_DATA_SIZE = 8;
+	unsigned short checksum;
+	unsigned char cmd_buf[BASE_CMD_SIZE];
+	unsigned char res_buf[BASE_CMD_SIZE + RESULT_DATA_SIZE];
+	int res_size, cmd_size;
+	int ret;
+
+	if (COMMAND_SIZE < 3)
+		return -EINVAL;
+
+	res_size = BASE_CMD_SIZE + RESULT_DATA_SIZE;
+	cmd_size = BASE_CMD_SIZE;
+	cmd_buf[0] = CMD_START;
+	cmd_buf[1] = CMD_ENTER_BOOTLOADER;
+	cmd_buf[2] = 0;
+	cmd_buf[3] = 0;
+	checksum = (*crc_func)(cmd_buf, BASE_CMD_SIZE - 3);
+	cmd_buf[4] = (unsigned char)checksum;
+	cmd_buf[5] = (unsigned char)(checksum >> 8);
+	cmd_buf[6] = CMD_STOP;
+
+	ret = i2c_master_send(data->client_boot, cmd_buf, cmd_size);
+	if (ret < 0)
+		return ret;
+
+	ret = i2c_master_recv(data->client_boot, res_buf, res_size);
+
+	return ret;
+}
+
+static int cy8c_boot_mode_test(struct cy8c_data *data)
+{
+	int i, ret;
+	for (i = 0; i < sizeof(crc_algos)/sizeof(crc_algos[0]); i++) {
+		ret = cy8c_boot_mode_enter(data, crc_algos[i]);
+		if (ret > 0)
+			ret = 0;
+		else
+			dev_err(&data->client->dev,
+				"device not in boot mode\n");
+
+		if (ret == 0)
+			break;
+	}
+
+	return ret;
+}
+
+static int cy8c_app_mode_test(struct cy8c_data *data)
+{
+	int ret, reg;
+	ret = regmap_read(data->regmap, P1961_REG_APP_MINOR_REV, &reg);
+	return ret;
+}
+
+/*
+	app mode
+	called from user space
+
+	The packet sent to device in boot mode needs a crc value
+	as parameter. There are 2 algorithms to compute the crc
+	according to the content of the fw file in user space code
+	implementation at vendor/bin/vendor/nvidia/loki/utils/cyload.
+
+	In the current design the 'sum' algo is used to compute
+	crc, but we will support both of the ALGOes just in case.
+*/
+static int cy8c_boot_to_app(struct cy8c_data *data)
+{
+	int i, ret;
+
+	for (i = 0; i < sizeof(crc_algos)/sizeof(crc_algos[0]); i++) {
+		ret = cy8c_send_app_mode(data, crc_algos[i]);
+		if (ret > 0)
+			ret = 0;
+		else
+			dev_err(&data->client->dev,
+				"cannot put device to app mode\n");
+
+		if (ret == 0) {
+
+			/* 100 ms is enough in test */
+			msleep(100);
+
+			ret = cy8c_app_mode_test(data);
+			if (unlikely(ret))
+				dev_err(&data->client->dev,
+					"device not in app mode %d\n", i);
+			else
+				atomic_set(&data->device_mode, DEVICE_MODE_APP);
+		}
+
+		if (ret == 0)
+			break;
+	}
+
+	return ret;
+}
+
+static ssize_t cy8c_boot_mode_show(struct device *dev,
+	struct device_attribute *attr,
+	char *buf)
+{
+	int device_mode = -1;
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct cy8c_data *data = NULL;
+	char *name = "unknown";
+
+	data = container_of(led_cdev, struct cy8c_data, led);
+
+	device_mode = atomic_read(&data->device_mode);
+
+	if (device_mode == DEVICE_MODE_APP)
+		name = "app";
+	else if (device_mode == DEVICE_MODE_BOOT)
+		name = "boot";
+
+	return sprintf(buf, "%s\n", name);
+}
+
+/*
+	0 -> APP mode
+	1 -> Boot mode
+*/
+static ssize_t cy8c_boot_mode_set(struct device *dev,
+	struct device_attribute *attr,
+	const char *buf, size_t size)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct cy8c_data *data = NULL;
+	ssize_t ret = -EINVAL;
+	struct regmap *regmap = NULL;
+	int action = -1;
+
+	data = container_of(led_cdev, struct cy8c_data, led);
+	regmap = data->regmap;
+
+	if (buf == NULL || buf[0] == 0) {
+		dev_err(&data->client->dev, "input buf invalid\n");
+		return -EINVAL;
+	}
+
+	if (sscanf(buf, "%d", &action) != 1) {
+		dev_err(&data->client->dev, "input data format invalid\n");
+		return -EINVAL;
+	}
+
+	if (action != 0 && action != 1) {
+		dev_err(&data->client->dev, "input data format value\n");
+		return -EINVAL;
+	}
+
+	/* boot mode */
+	if (action) {
+		ret = regmap_write(regmap,
+			P1961_REG_CMD,
+			P1961_CMD_GOTO_BOOT);
+
+		if (unlikely(ret))
+			dev_err(&data->client->dev, "cannot put dev to boot mode\n");
+		else
+			atomic_set(&data->device_mode, DEVICE_MODE_BOOT);
+	} else if (!action && attr == NULL) {
+		/*
+			app mode
+			called from boot device close
+		*/
+		ret = cy8c_app_mode_test(data);
+
+		if (unlikely(ret)) {
+			dev_err(&data->client->dev, "device not in app mode %s\n",
+				__func__);
+			dev_err(&data->client->dev, "try to jump to app %s\n",
+				__func__);
+			ret = cy8c_boot_to_app(data);
+			if (ret == 0)
+				atomic_set(&data->device_mode, DEVICE_MODE_APP);
+		} else
+			atomic_set(&data->device_mode, DEVICE_MODE_APP);
+	} else if (!action && attr != NULL)
+		ret = cy8c_boot_to_app(data);
+
+	return ret == 0 ? size : ret;
+}
+
+static ssize_t cy8c_version_show(struct device *dev,
+	struct device_attribute *attr,
+	char *buf)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct cy8c_data *data = NULL;
+	ssize_t ret = 0;
+	ssize_t count = 0;
+	int version = -1;
+	data = container_of(led_cdev, struct cy8c_data, led);
+
+	if (atomic_read(&data->device_mode) != DEVICE_MODE_APP) {
+		dev_err(&data->client->dev, "device not in app mode %s\n",
+			__func__);
+		return -EAGAIN;
+	}
+
+	ret = regmap_read(data->regmap,
+		P1961_REG_APP_MINOR_REV,
+		&version);
+	if (unlikely(ret)) {
+		dev_err(&data->client->dev, "device in boot mode?\n");
+		return ret;
+	}
+	count += sprintf(buf, "%02x: %02x\n", P1961_REG_APP_MINOR_REV, version);
+
+	ret = regmap_read(data->regmap,
+		P1961_REG_APP_MAJOR_REV,
+		&version);
+	if (unlikely(ret)) {
+		dev_err(&data->client->dev, "device in boot mode?\n");
+		return ret;
+	}
+	count += sprintf(buf + count, "%02x: %02x\n",
+		P1961_REG_APP_MAJOR_REV, version);
+
+	return count;
+}
+
+static ssize_t cy8c_version_set(struct device *dev,
+				  struct device_attribute *attr,
+				  const char *buf, size_t size)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct cy8c_data *data = NULL;
+	data = container_of(led_cdev, struct cy8c_data, led);
+	dev_err(&data->client->dev, "not implemented\n");
+	return -1;
+}
+
 static DEVICE_ATTR(effects, S_IRUGO|S_IWUSR,
 		cy8c_effects_show, cy8c_effects_set);
 static DEVICE_ATTR(params, S_IRUGO|S_IWUSR,
 		cy8c_params_show, cy8c_params_set);
+static DEVICE_ATTR(boot_mode, S_IRUGO|S_IWUSR,
+		cy8c_boot_mode_show, cy8c_boot_mode_set);
+static DEVICE_ATTR(version, S_IRUGO|S_IWUSR,
+		cy8c_version_show, cy8c_version_set);
+
+static int led_boot_open(struct inode *inode, struct file *file)
+{
+	struct miscdevice *miscdev = (struct miscdevice *)file->private_data;
+	struct cy8c_data *data = NULL;
+	data = (struct cy8c_data *)container_of(miscdev,
+		struct cy8c_data, miscdev);
+
+	if (atomic_read(&data->device_mode) != DEVICE_MODE_BOOT) {
+		dev_err(&data->client->dev,
+			"wait for device in boot mode\n");
+		return -EIO;
+	}
+
+	if (atomic_xchg(&data->in_use, 1)) {
+		dev_err(&data->client->dev, "already opened\n");
+		return -EBUSY;
+	}
+	file->private_data = data;
+	dev_err(&data->client->dev, "opened\n");
+	return 0;
+}
+
+static int led_boot_release(struct inode *inode, struct file *file)
+{
+	struct cy8c_data *data = NULL;
+	int ret;
+	data = file->private_data;
+	file->private_data = NULL;
+	WARN_ON(!atomic_xchg(&data->in_use, 0));
+
+	ret = cy8c_boot_mode_set(data->led.dev, NULL, "0", 1);
+	if (ret > 0)
+		ret = 0;
+
+	dev_err(&data->client->dev, "released\n");
+
+	return ret;
+}
+
+static ssize_t led_boot_read(struct file *filp, char __user *buf,
+				  size_t count, loff_t *offset)
+{
+	struct cy8c_data *data = filp->private_data;
+	unsigned char *p = NULL;
+	int ret;
+
+	if (atomic_read(&data->device_mode) != DEVICE_MODE_BOOT) {
+		dev_err(&data->client->dev, "device not in boot mode\n");
+		return -EINVAL;
+	}
+
+	if (count == 0) {
+		dev_err(&data->client->dev, "no data\n");
+		return -EINVAL;
+	}
+
+	p = kzalloc(count, GFP_KERNEL);
+
+	if (p == NULL) {
+		dev_err(&data->client->dev, "no memory\n");
+		return -ENOMEM;
+	}
+
+	/* Read data */
+	ret = i2c_master_recv(data->client_boot, p, count);
+	if (ret != count) {
+		dev_err(&data->client->dev,
+			"failed to read %d\n", ret);
+		ret = -EIO;
+		goto end;
+	}
+
+	ret = copy_to_user(buf, p, count);
+	if (ret) {
+		dev_err(&data->client->dev,
+			"failed to copy from user space\n");
+	}
+
+end:
+	if (p)
+		kfree(p);
+
+	return ret == 0 ? count : ret;
+}
+
+static ssize_t led_boot_write(struct file *filp, const char __user *buf,
+				   size_t count, loff_t *offset)
+{
+	struct cy8c_data *data = filp->private_data;
+	unsigned char *p = NULL;
+	int ret;
+
+	if (atomic_read(&data->device_mode) != DEVICE_MODE_BOOT) {
+		dev_err(&data->client->dev, "device not in boot mode\n");
+		return -EINVAL;
+	}
+
+	if (count == 0) {
+		dev_err(&data->client->dev, "no data\n");
+		return -EINVAL;
+	}
+
+	p = kzalloc(count, GFP_KERNEL);
+
+	if (p == NULL) {
+		dev_err(&data->client->dev, "no memory\n");
+		return -ENOMEM;
+	}
+
+	if (copy_from_user(p, buf, count)) {
+		dev_err(&data->client->dev,
+			"failed to copy from user space\n");
+		ret = -EFAULT;
+		goto end;
+	}
+
+	/* Write data */
+	ret = i2c_master_send(data->client_boot, p, count);
+	if (ret != count) {
+		dev_err(&data->client->dev,
+			"failed to write %d\n", ret);
+		ret = -EIO;
+	}
+
+end:
+	if (p)
+		kfree(p);
+
+	return ret;
+}
+
+static const struct file_operations led_boot_fileops = {
+	.owner = THIS_MODULE,
+	.open = led_boot_open,
+	.release = led_boot_release,
+	.read = led_boot_read,
+	.write = led_boot_write,
+};
 
 static int cy8c_apply_default_settings(struct cy8c_data *data)
 {
@@ -371,8 +894,9 @@ static int cy8c_led_probe(struct i2c_client *client,
 	struct i2c_adapter *adapter = client->adapter;
 	struct cy8c_data *data;
 	struct regmap_config rconfig;
-	struct dentry *d;
 	int ret, reg;
+	struct dentry *d;
+	char dname[16] = "cy8c-led-boot";
 
 	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE_DATA)) {
 		dev_err(&client->dev, "i2c functionality check fail.\n");
@@ -382,12 +906,6 @@ static int cy8c_led_probe(struct i2c_client *client,
 	data = devm_kzalloc(&client->dev, sizeof(*data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
-
-	/* create debugfs for f/w loading purpose */
-	d = debugfs_create_file("cy8c_led", S_IRUGO, NULL, data,
-							&cy8c_debug_fops);
-	if (!d)
-		pr_err("Failed to create suspend_mode debug file\n");
 
 	of_led_parse_pdata(client, data);
 
@@ -403,29 +921,67 @@ static int cy8c_led_probe(struct i2c_client *client,
 	/*This should happen before set clientdata*/
 	data->regmap = regmap_init_i2c(client, &rconfig);
 	if (!data->regmap) {
+		devm_kfree(&client->dev, data);
 		dev_err(&client->dev, "Failed to allocate register map\n");
 		return -ENOMEM;
 	}
 
+	/* enable print in show/get */
+	data->client = client;
+
+	/* boot device client */
+	data->adap = i2c_get_adapter(client->adapter->nr);
+	memset(&data->brd_boot, 0, sizeof(data->brd_boot));
+	strncpy(data->brd_boot.type, dname, sizeof(data->brd_boot.type));
+	data->brd_boot.addr = P1961_BOOT_DEV_ADDR;
+	data->client_boot = i2c_new_device(data->adap, &data->brd_boot);
+
 	i2c_set_clientdata(client, data);
 
+	/*
+		Sometimes the app fw is broken or out of integration,
+		so we will detect app mode first then boot mode
+	*/
 	ret = regmap_read(data->regmap, P1961_REG_APP_MAJOR_REV, &reg);
-	if (ret) {
-		dev_err(&client->dev, "Failed to read revision-major\n");
-		return ret;
+	if (ret == 0) {
+		dev_dbg(&client->dev, "[nv-foster] rev: 0x%02x ", reg);
+
+		ret = regmap_read(data->regmap, P1961_REG_APP_MINOR_REV, &reg);
+		if (ret) {
+			dev_err(&client->dev, "Failed to read revision-minor\n");
+			goto err1;
+		}
+
+		dev_dbg(&client->dev, "0x%02x\n", reg);
+
+		ret = cy8c_apply_default_settings(data);
+		if (ret) {
+			dev_err(&client->dev, "Failed to read revision-minor\n");
+			goto err1;
+		}
+		atomic_set(&data->device_mode, DEVICE_MODE_APP);
+	} else {
+
+		dev_dbg(&client->dev,
+			"[nv-foster] not detect app device\n");
+		dev_dbg(&client->dev,
+			"[nv-foster] continue to detect boot device\n");
+
+		/* Detect whether boot device is available */
+		ret = cy8c_boot_mode_test(data);
+		if (ret == 0) {
+			dev_dbg(&client->dev,
+				"[nv-foster] boot device detected\n");
+			atomic_set(&data->device_mode, DEVICE_MODE_BOOT);
+		} else {
+			dev_dbg(&client->dev,
+				"[nv-foster] boot device not detected\n");
+			goto err1;
+		}
 	}
 
-	dev_dbg(&client->dev, "[nv-foster] rev: 0x%02x ", reg);
-
-	ret = regmap_read(data->regmap, P1961_REG_APP_MINOR_REV, &reg);
-	if (ret) {
-		dev_err(&client->dev, "Failed to read revision-minor\n");
-		return ret;
-	}
-
-	dev_dbg(&client->dev, "0x%02x\n", reg);
-
-	cy8c_apply_default_settings(data);
+	/* initially mode index */
+	data->mode_index = 2;
 
 	mutex_init(&data->lock);
 
@@ -433,17 +989,74 @@ static int cy8c_led_probe(struct i2c_client *client,
 	data->client = client;
 
 	ret = led_classdev_register(&client->dev, &data->led);
-	if (ret < 0)
+	if (ret < 0) {
 		dev_err(&client->dev, "Failed to register foster led\n");
+		goto err1;
+	}
 	else
 		dev_info(&client->dev, "LED registered (%s)\n", data->led.name);
 
 	ret = device_create_file(data->led.dev, &dev_attr_effects);
-	if (ret)
+	if (ret) {
 		dev_err(&client->dev, "Failed to register effects sys node\n");
+		goto err2;
+	}
 	ret = device_create_file(data->led.dev, &dev_attr_params);
-	if (ret)
+	if (ret) {
 		dev_err(&client->dev, "Failed to register params sys node\n");
+		goto err3;
+	}
+	ret = device_create_file(data->led.dev, &dev_attr_boot_mode);
+	if (ret) {
+		dev_err(&client->dev, "Failed to register boot sys node\n");
+		goto err4;
+	}
+	ret = device_create_file(data->led.dev, &dev_attr_version);
+	if (ret) {
+		dev_err(&client->dev, "Failed to register version sys node\n");
+		goto err5;
+	}
+
+	data->miscdev.name = dname;
+	data->miscdev.fops = &led_boot_fileops;
+	data->miscdev.minor = MISC_DYNAMIC_MINOR;
+	ret = misc_register(&data->miscdev);
+	if (ret) {
+		dev_err(&client->dev, "%s unable to register misc device %s\n",
+			__func__, dname);
+		goto err6;
+	}
+
+	/* create debugfs for f/w loading purpose */
+	d = debugfs_create_file("cy8c_led", S_IRUGO, NULL, data,
+							&cy8c_debug_fops);
+	if (!d)
+		pr_err("Failed to create suspend_mode debug file\n");
+
+	return ret;
+
+err6:
+	device_remove_file(data->led.dev, &dev_attr_version);
+
+err5:
+	device_remove_file(data->led.dev, &dev_attr_boot_mode);
+
+err4:
+	device_remove_file(data->led.dev, &dev_attr_params);
+
+err3:
+	device_remove_file(data->led.dev, &dev_attr_effects);
+
+err2:
+	led_classdev_unregister(&data->led);
+
+err1:
+	if (data->client_boot)
+		i2c_unregister_device(data->client_boot);
+	if (data->adap)
+		i2c_put_adapter(data->adap);
+
+	devm_kfree(&client->dev, data);
 
 	return ret;
 }
@@ -452,9 +1065,18 @@ static int cy8c_led_remove(struct i2c_client *client)
 {
 	struct cy8c_data *data = i2c_get_clientdata(client);
 
+	if (data->client_boot)
+		i2c_unregister_device(data->client_boot);
+	if (data->adap)
+		i2c_put_adapter(data->adap);
+	if (data->miscdev.this_device)
+		misc_deregister(&data->miscdev);
 	device_remove_file(data->led.dev, &dev_attr_effects);
 	device_remove_file(data->led.dev, &dev_attr_params);
+	device_remove_file(data->led.dev, &dev_attr_boot_mode);
+	device_remove_file(data->led.dev, &dev_attr_version);
 	led_classdev_unregister(&data->led);
+	mutex_destroy(&data->lock);
 
 	return 0;
 }
@@ -481,8 +1103,8 @@ static struct i2c_driver cy8c_led_driver = {
 			of_match_ptr(cy8c_of_match),
 #endif
 	},
-	.probe      = cy8c_led_probe,
-	.remove     = cy8c_led_remove,
+	.probe	  = cy8c_led_probe,
+	.remove	 = cy8c_led_remove,
 	.id_table   = cy8c_led_id,
 };
 

@@ -48,22 +48,6 @@ static void submit_work_done_increment(struct nvhost_job *job)
 			 job->sp[0].id);
 }
 
-static void lock_device(struct nvhost_job *job, bool lock)
-{
-	struct nvhost_channel *ch = job->ch;
-	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
-	u32 opcode = lock ?
-		nvhost_opcode_acquire_mlock(pdata->class) :
-		nvhost_opcode_release_mlock(pdata->class);
-
-	/* No need to do anything if we have a channel/engine */
-	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN ||
-	    pdata->forced_map_on_open)
-		return;
-
-	nvhost_cdma_push(&ch->cdma, opcode, NVHOST_OPCODE_NOOP);
-}
-
 static void serialize(struct nvhost_job *job)
 {
 	struct nvhost_channel *ch = job->ch;
@@ -177,10 +161,6 @@ static void push_waits(struct nvhost_job *job)
 				wait->syncpt_id, wait->thresh));
 	}
 
-	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN ||
-	    pdata->forced_map_on_open)
-		return;
-
 	for (i = 0; i < job->num_gathers; i++) {
 		struct nvhost_job_gather *g = &job->gathers[i];
 		add_sync_waits(job->ch, g->pre_fence);
@@ -202,25 +182,50 @@ static inline u32 gather_count(u32 word)
 	return word & 0x3fff;
 }
 
-static void submit_gathers(struct nvhost_job *job)
+static void submit_work(struct nvhost_job *job)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
+	bool use_locking =
+		!pdata->forced_map_on_open &&
+		nvhost_get_channel_policy() == MAP_CHANNEL_ON_SUBMIT;
 	void *cpuva = NULL;
+	u32 cur_class = 0;
 	int i;
+
+	/* make all waits in the beginning */
+	push_waits(job);
 
 	/* push user gathers */
 	for (i = 0; i < job->num_gathers; i++) {
 		struct nvhost_job_gather *g = &job->gathers[i];
-		u32 op1;
-		u32 op2;
+		u32 op1 = NVHOST_OPCODE_NOOP;
+		u32 op2 = NVHOST_OPCODE_NOOP;
 
-		if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN ||
-		    pdata->forced_map_on_open)
-			add_sync_waits(job->ch, g->pre_fence);
+		/* handle class changing */
+		if (!cur_class || cur_class != g->class_id) {
+			/* first, release current class */
+			if (use_locking &&
+			    cur_class && cur_class != NV_HOST1X_CLASS_ID) {
+				nvhost_cdma_push(&job->ch->cdma,
+					nvhost_opcode_release_mlock(cur_class),
+					NVHOST_OPCODE_NOOP);
+				dev_warn(&job->ch->dev->dev, "%s changes out from engine class",
+					 current->comm);
+			}
 
-		nvhost_cdma_push(&job->ch->cdma,
-			nvhost_opcode_setclass(g->class_id, 0, 0),
-			NVHOST_OPCODE_NOOP);
+			/* acquire lock of the new class */
+			if (use_locking && g->class_id != NV_HOST1X_CLASS_ID)
+				op1 = nvhost_opcode_acquire_mlock(g->class_id);
+
+			/* change the class */
+			op2 = nvhost_opcode_setclass(g->class_id, 0, 0);
+
+			/* ..and finally, push opcode pair to hardware */
+			nvhost_cdma_push(&job->ch->cdma, op1, op2);
+
+			/* update current class */
+			cur_class = g->class_id;
+		}
 
 		/* If register is specified, add a gather with incr/nonincr.
 		 * This allows writing large amounts of data directly from
@@ -232,6 +237,7 @@ static void submit_gathers(struct nvhost_job *job)
 					gather_count(g->words));
 		else
 			op1 = nvhost_opcode_gather(g->words);
+
 		op2 = job->gathers[i].mem_base + g->offset;
 
 		if (nvhost_debug_trace_cmdbuf)
@@ -244,6 +250,18 @@ static void submit_gathers(struct nvhost_job *job)
 		if (cpuva)
 			dma_buf_vunmap(g->buf, cpuva);
 	}
+
+	/* wait all work to complete */
+	serialize(job);
+
+	/* make final increment */
+	submit_work_done_increment(job);
+
+	/* release the engine */
+	if (use_locking && cur_class && cur_class != NV_HOST1X_CLASS_ID)
+		nvhost_cdma_push(&job->ch->cdma,
+			nvhost_opcode_release_mlock(cur_class),
+			NVHOST_OPCODE_NOOP);
 }
 
 int host1x_channel_set_low_priority(struct nvhost_channel *ch)
@@ -342,9 +360,6 @@ static int host1x_channel_submit(struct nvhost_job *job)
 		goto error;
 	}
 
-	push_waits(job);
-	lock_device(job, true);
-
 	/* submit_ctxsave() and submit_ctxrestore() use the channel syncpt */
 	user_syncpt_incrs = hwctx_sp->incrs;
 
@@ -377,10 +392,8 @@ static int host1x_channel_submit(struct nvhost_job *job)
 		nvhost_syncpt_mark_used(sp, ch->chid,
 					job->client_managed_syncpt);
 
-	submit_gathers(job);
-	serialize(job);
-	lock_device(job, false);
-	submit_work_done_increment(job);
+	/* push work to hardware */
+	submit_work(job);
 
 	/* end CDMA submit & stash pinned hMems into sync queue */
 	nvhost_cdma_end(&ch->cdma, job);

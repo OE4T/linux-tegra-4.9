@@ -563,6 +563,7 @@ struct nvgpu_dbg_gpu_pc_sampling_args {
 #define NVGPU_PRIORITY_HIGH 150
 #define NVGPU_TIMEOUT_FLAG_DISABLE_DUMP		0
 
+/* this is also the hardware memory format */
 struct nvgpu_gpfifo {
 	__u32 entry0; /* first word of gpfifo entry */
 	__u32 entry1; /* second word of gpfifo entry */

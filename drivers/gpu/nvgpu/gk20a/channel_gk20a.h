@@ -38,11 +38,6 @@ struct gk20a_fence;
 #include "gr_gk20a.h"
 #include "fence_gk20a.h"
 
-struct gpfifo {
-	u32 entry0;
-	u32 entry1;
-};
-
 struct notification {
 	struct {
 		u32 nanoseconds[2];

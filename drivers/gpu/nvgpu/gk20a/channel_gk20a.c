@@ -1381,7 +1381,8 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 		return -EEXIST;
 	}
 
-	err = gk20a_gmmu_alloc_map(ch_vm, gpfifo_size * sizeof(struct gpfifo),
+	err = gk20a_gmmu_alloc_map(ch_vm,
+			gpfifo_size * sizeof(struct nvgpu_gpfifo),
 			&c->gpfifo.mem);
 	if (err) {
 		gk20a_err(d, "%s: memory allocation failed\n", __func__);
@@ -1812,6 +1813,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	 * and one for post fence. */
 	const int extra_entries = 2;
 	bool need_wfi = !(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SUPPRESS_WFI);
+	struct nvgpu_gpfifo *gpfifo_mem = c->gpfifo.mem.cpu_va;
 
 	if (c->has_timedout)
 		return -ETIMEDOUT;
@@ -1948,10 +1950,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	}
 
 	if (wait_cmd) {
-		((struct gpfifo *)(c->gpfifo.mem.cpu_va))[c->gpfifo.put].entry0 =
-			u64_lo32(wait_cmd->gva);
-		((struct gpfifo *)(c->gpfifo.mem.cpu_va))[c->gpfifo.put].entry1 =
-			u64_hi32(wait_cmd->gva) |
+		gpfifo_mem[c->gpfifo.put].entry0 = u64_lo32(wait_cmd->gva);
+		gpfifo_mem[c->gpfifo.put].entry1 = u64_hi32(wait_cmd->gva) |
 			pbdma_gp_entry1_length_f(wait_cmd->size);
 		trace_gk20a_push_cmdbuf(c->g->dev->name,
 			0, wait_cmd->size, 0, wait_cmd->ptr);
@@ -1975,16 +1975,16 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		int length0 = c->gpfifo.entry_num - start;
 		int length1 = num_entries - length0;
 
-		memcpy((struct gpfifo *)c->gpfifo.mem.cpu_va + start, gpfifo,
+		memcpy(gpfifo_mem + start, gpfifo,
 		       length0 * sizeof(*gpfifo));
 
-		memcpy((struct gpfifo *)c->gpfifo.mem.cpu_va, gpfifo + length0,
+		memcpy(gpfifo_mem, gpfifo + length0,
 		       length1 * sizeof(*gpfifo));
 
 		trace_write_pushbuffer_range(c, gpfifo, length0);
 		trace_write_pushbuffer_range(c, gpfifo + length0, length1);
 	} else {
-		memcpy((struct gpfifo *)c->gpfifo.mem.cpu_va + start, gpfifo,
+		memcpy(gpfifo_mem + start, gpfifo,
 		       num_entries * sizeof(*gpfifo));
 
 		trace_write_pushbuffer_range(c, gpfifo, num_entries);
@@ -1993,10 +1993,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		(c->gpfifo.entry_num - 1);
 
 	if (incr_cmd) {
-		((struct gpfifo *)(c->gpfifo.mem.cpu_va))[c->gpfifo.put].entry0 =
-			u64_lo32(incr_cmd->gva);
-		((struct gpfifo *)(c->gpfifo.mem.cpu_va))[c->gpfifo.put].entry1 =
-			u64_hi32(incr_cmd->gva) |
+		gpfifo_mem[c->gpfifo.put].entry0 = u64_lo32(incr_cmd->gva);
+		gpfifo_mem[c->gpfifo.put].entry1 = u64_hi32(incr_cmd->gva) |
 			pbdma_gp_entry1_length_f(incr_cmd->size);
 		trace_gk20a_push_cmdbuf(c->g->dev->name,
 			0, incr_cmd->size, 0, incr_cmd->ptr);

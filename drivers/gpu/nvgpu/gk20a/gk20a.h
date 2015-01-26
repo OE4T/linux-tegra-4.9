@@ -88,6 +88,10 @@ struct gpu_ops {
 		void (*flush)(struct gk20a *g);
 	} ltc;
 	struct {
+		void (*isr_stall)(struct gk20a *g);
+		void (*isr_nonstall)(struct gk20a *g);
+	} ce2;
+	struct {
 		int (*init_fs_state)(struct gk20a *g);
 		void (*access_smpc_reg)(struct gk20a *g, u32 quad, u32 offset);
 		void (*bundle_cb_defaults)(struct gk20a *g);

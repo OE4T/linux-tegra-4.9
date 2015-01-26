@@ -42,7 +42,7 @@ static struct gpu_ops gk20a_ops = {
 			gr_gk20a_pg_gr_load_gating_prod,
 		.slcg_therm_load_gating_prod =
 			gr_gk20a_slcg_therm_load_gating_prod,
-	}
+	},
 };
 
 int gk20a_init_hal(struct gk20a *g)
@@ -57,6 +57,7 @@ int gk20a_init_hal(struct gk20a *g)
 	gk20a_init_gr_ops(gops);
 	gk20a_init_fb(gops);
 	gk20a_init_fifo(gops);
+	gk20a_init_ce2(gops);
 	gk20a_init_gr_ctx(gops);
 	gk20a_init_mm(gops);
 	gk20a_init_pmu_ops(gops);

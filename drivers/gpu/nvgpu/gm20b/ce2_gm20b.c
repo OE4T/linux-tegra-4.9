@@ -1,7 +1,5 @@
 /*
- * drivers/video/tegra/host/gk20a/fifo_gk20a.h
- *
- * GK20A graphics copy engine (gr host)
+ * GK20A Graphics Copy Engine  (gr host)
  *
  * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -18,14 +16,13 @@
  * this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  */
-#ifndef __CE2_GK20A_H__
-#define __CE2_GK20A_H__
 
-#include "channel_gk20a.h"
-#include "tsg_gk20a.h"
+/*TODO: remove uncecessary */
+#include "gk20a/gk20a.h"
+#include "ce2_gm20b.h"
 
-void gk20a_init_ce2(struct gpu_ops *gops);
-void gk20a_ce2_isr(struct gk20a *g);
-void gk20a_ce2_nonstall_isr(struct gk20a *g);
-
-#endif /*__CE2_GK20A_H__*/
+void gm20b_init_ce2(struct gpu_ops *gops)
+{
+	gops->ce2.isr_stall = gk20a_ce2_isr;
+	gops->ce2.isr_nonstall = gk20a_ce2_nonstall_isr;
+}

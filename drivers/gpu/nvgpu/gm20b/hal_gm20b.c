@@ -18,6 +18,7 @@
 #include "gk20a/gk20a.h"
 
 #include "ltc_gm20b.h"
+#include "ce2_gm20b.h"
 #include "gr_gm20b.h"
 #include "ltc_gm20b.h"
 #include "fb_gm20b.h"
@@ -81,7 +82,7 @@ static struct gpu_ops gm20b_ops = {
 			gm20b_blcg_pmu_load_gating_prod,
 		.pg_gr_load_gating_prod =
 			gr_gm20b_pg_gr_load_gating_prod,
-	}
+	},
 };
 
 int gm20b_init_hal(struct gk20a *g)
@@ -124,6 +125,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gm20b_init_ltc(gops);
 	gm20b_init_fb(gops);
 	gm20b_init_fifo(gops);
+	gm20b_init_ce2(gops);
 	gm20b_init_gr_ctx(gops);
 	gm20b_init_mm(gops);
 	gm20b_init_pmu_ops(gops);

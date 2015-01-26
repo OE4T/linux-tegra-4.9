@@ -18,14 +18,12 @@
  * this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  */
-#ifndef __CE2_GK20A_H__
-#define __CE2_GK20A_H__
+#ifndef __CE2_GM20B_H__
+#define __CE2_GM20B_H__
 
-#include "channel_gk20a.h"
-#include "tsg_gk20a.h"
+#include "gk20a/channel_gk20a.h"
+#include "gk20a/tsg_gk20a.h"
 
-void gk20a_init_ce2(struct gpu_ops *gops);
-void gk20a_ce2_isr(struct gk20a *g);
-void gk20a_ce2_nonstall_isr(struct gk20a *g);
+void gm20b_init_ce2(struct gpu_ops *gops);
 
-#endif /*__CE2_GK20A_H__*/
+#endif /*__CE2_GM20B_H__*/

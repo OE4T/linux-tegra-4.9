@@ -145,6 +145,9 @@ u32 gk20a_fifo_engine_interrupt_mask(struct gk20a *g)
 
 	for (i = 0; i < g->fifo.max_engines; i++) {
 		u32 intr_id = g->fifo.engine_info[i].intr_id;
+		if (i == ENGINE_CE2_GK20A &&
+			(!g->ops.ce2.isr_stall || !g->ops.ce2.isr_nonstall))
+			continue;
 
 		if (intr_id)
 			eng_intr_mask |= BIT(intr_id);

@@ -560,7 +560,7 @@ static inline u32 fifo_replay_fault_buffer_hi_r(void)
 }
 static inline u32 fifo_replay_fault_buffer_hi_base_f(u32 v)
 {
-	return (v & 0xffff) << 0;
+	return (v & 0xff) << 0;
 }
 static inline u32 fifo_replay_fault_buffer_hi_base_reset_v(void)
 {

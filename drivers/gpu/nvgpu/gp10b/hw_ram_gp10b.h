@@ -78,14 +78,6 @@ static inline u32 ram_in_page_dir_base_vol_true_f(void)
 {
 	return 0x4;
 }
-static inline u32 ram_in_page_dir_base_fault_replay_tex_f(u32 v)
-{
-	return (v & 0x1) << 4;
-}
-static inline u32 ram_in_page_dir_base_fault_replay_tex_m(void)
-{
-	return 0x1 << 4;
-}
 static inline u32 ram_in_page_dir_base_fault_replay_tex_w(void)
 {
 	return 128;
@@ -93,14 +85,6 @@ static inline u32 ram_in_page_dir_base_fault_replay_tex_w(void)
 static inline u32 ram_in_page_dir_base_fault_replay_tex_true_f(void)
 {
 	return 0x10;
-}
-static inline u32 ram_in_page_dir_base_fault_replay_gcc_f(u32 v)
-{
-	return (v & 0x1) << 5;
-}
-static inline u32 ram_in_page_dir_base_fault_replay_gcc_m(void)
-{
-	return 0x1 << 5;
 }
 static inline u32 ram_in_page_dir_base_fault_replay_gcc_w(void)
 {

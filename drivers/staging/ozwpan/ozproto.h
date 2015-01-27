@@ -1,6 +1,7 @@
 /* -----------------------------------------------------------------------------
  * Copyright (c) 2011 Ozmo Inc
  * Released under the GNU General Public License Version 2 (GPLv2).
+ * Copyright (c) 2015, NVIDIA CORPORATION. All rights reserved.
  * -----------------------------------------------------------------------------
  */
 #ifndef _OZPROTO_H
@@ -67,4 +68,5 @@ enum hrtimer_restart oz_pd_heartbeat_event(struct hrtimer *timer);
 enum hrtimer_restart oz_pd_timeout_event(struct hrtimer *timer);
 int oz_get_pd_status_list(u8 *pd_list, int max_count);
 int oz_get_binding_list(char *buf, int max_if);
+int oz_get_latency(void);
 #endif /* _OZPROTO_H */

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/gm20b/gm20b_gating_reglist.h
  *
- * Copyright (c) 2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,6 +51,9 @@ void gm20b_slcg_perf_load_gating_prod(struct gk20a *g,
 void gm20b_slcg_priring_load_gating_prod(struct gk20a *g,
 	bool prod);
 
+void gm20b_slcg_pwr_csb_load_gating_prod(struct gk20a *g,
+	bool prod);
+
 void gm20b_slcg_pmu_load_gating_prod(struct gk20a *g,
 	bool prod);
 
@@ -82,6 +85,9 @@ void gm20b_blcg_pwr_csb_load_gating_prod(struct gk20a *g,
 	bool prod);
 
 void gm20b_blcg_pmu_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gm20b_blcg_xbar_load_gating_prod(struct gk20a *g,
 	bool prod);
 
 void gr_gm20b_pg_gr_load_gating_prod(struct gk20a *g,

@@ -251,6 +251,7 @@ static void __mc_override_sid(int sid, int cgid)
 	volatile void __iomem *addr;
 	u32 val;
 
+#if 0	/* FIXME: wait for linsim update */
 	addr = mc_sid_base + sid_override_offset[cgid];
 	addr += sizeof(u32); /* MC_SID_STREAMID_SECURITY_CONFIG_* */
 	val = SCEW_STREAMID_WRITE_ACCESS | SCEW_STREAMID_OVERRIDE | SCEW_NS;
@@ -258,7 +259,11 @@ static void __mc_override_sid(int sid, int cgid)
 
 	addr = mc_sid_base + sid_override_offset[cgid];
 	writel_relaxed(sid, addr);
-
+#else
+	addr = mc_sid_base + sid_override_offset[cgid];
+	val = 0x80010000 | sid;
+	writel_relaxed(val, addr);
+#endif
 	pr_debug("override sid=%d cgid=%d at offset=%x\n",
 		 sid, cgid, sid_override_offset[cgid]);
 }

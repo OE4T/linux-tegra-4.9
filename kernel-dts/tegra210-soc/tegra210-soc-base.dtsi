@@ -1366,21 +1366,8 @@
 		status = "disabled";
 	};
 
-	reserved-memory {
-		#address-cells = <2>;
-		#size-cells = <2>;
-		ranges;
-
-		ptm_reserved: ptm_carveout {
-			compatible = "nvidia,ptm-carveout";
-			size = <0 0x1000000>;
-			alignment = <0 0x1000>;
-		};
-	};
-
 	ptm {
 		compatible = "nvidia,ptm";
-		memory-region = <&ptm_reserved>;
 		reg = <0x0 0x72010000 0x0 0x1000>, /* funnel_major */
 		      <0x0 0x72030000 0x0 0x1000>, /* etf */
 		      <0x0 0x72040000 0x0 0x1000>, /* replicator */

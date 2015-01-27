@@ -279,7 +279,7 @@ struct nvhost_device_data t21_nvdec_info = {
 #else
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 #endif
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.clockgate_delay	= 10,
 	.powergate_delay	= 500,
 	.can_powergate		= true,
 	.clocks			= {{"nvdec", UINT_MAX, 0, TEGRA_MC_CLIENT_NVDEC},

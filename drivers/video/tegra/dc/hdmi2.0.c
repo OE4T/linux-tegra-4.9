@@ -448,7 +448,6 @@ static bool tegra_hdmi_check_dc_constraint(const struct fb_videomode *mode)
 		(mode->xres >= 16) && (mode->yres >= 16);
 }
 
-__maybe_unused
 static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 					struct fb_videomode *mode)
 {
@@ -2172,4 +2171,5 @@ struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.ddc_enable = tegra_dc_hdmi_ddc_enable,
 	.ddc_disable = tegra_dc_hdmi_ddc_disable,
 	.modeset_notifier = tegra_dc_hdmi_modeset_notifier,
+	.mode_filter = tegra_hdmi_fb_mode_filter,
 };

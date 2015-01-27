@@ -30,6 +30,9 @@
 #define SCEW_STREAMID_OVERRIDE		BIT(8)
 #define SCEW_NS				BIT(0)
 
+#define MC_SMMU_BYPASS_CONFIG_0		0x1820
+#define TBU_BYPASS_SID			2
+
 enum {
 	PTCR,
 	AFIR,
@@ -296,6 +299,13 @@ static int mc_sid_probe(struct platform_device *pdev)
 	for (i = 0; i < ARRAY_SIZE(sid_override_offset); i++)
 		__mc_override_sid(0x7f, i);
 
+	/* FIXME: wait for MC driver */
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	addr = devm_ioremap_resource(&pdev->dev, res);
+	if (IS_ERR(addr))
+		return PTR_ERR(addr);
+
+	writel_relaxed(TBU_BYPASS_SID, addr + MC_SMMU_BYPASS_CONFIG_0);
 	return 0;
 }
 

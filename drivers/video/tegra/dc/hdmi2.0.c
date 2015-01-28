@@ -2024,10 +2024,12 @@ static void tegra_dc_hdmi_modeset_notifier(struct tegra_dc *dc)
 
 	/* disable hdmi2.x config on host and monitor */
 	if (dc->mode.pclk > 340000000) {
-		tegra_hdmi_v2_x_mon_config(hdmi, true);
+		if (tegra_edid_is_scdc_present(dc->edid))
+			tegra_hdmi_v2_x_mon_config(hdmi, true);
 		tegra_hdmi_v2_x_host_config(hdmi, true);
 	} else {
-		tegra_hdmi_v2_x_mon_config(hdmi, false);
+		if (tegra_edid_is_scdc_present(dc->edid))
+			tegra_hdmi_v2_x_mon_config(hdmi, false);
 		tegra_hdmi_v2_x_host_config(hdmi, false);
 	}
 

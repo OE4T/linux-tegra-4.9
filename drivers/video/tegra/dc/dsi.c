@@ -5287,6 +5287,14 @@ skip_setup:
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 }
 
+void tegra_dc_dsi_vrr_enable(struct tegra_dc *dc, bool enable)
+{
+	struct tegra_vrr *vrr  = dc->out->vrr;
+
+	if (vrr)
+		vrr->enable = enable;
+}
+
 struct tegra_dc_out_ops tegra_dc_dsi_ops = {
 	.init = tegra_dc_dsi_init,
 	.destroy = tegra_dc_dsi_destroy,
@@ -5303,4 +5311,5 @@ struct tegra_dc_out_ops tegra_dc_dsi_ops = {
 #endif
 	.setup_clk = tegra_dc_dsi_setup_clk,
 	.osidle = tegra_dc_dsi_osidle,
+	.vrr_enable = tegra_dc_dsi_vrr_enable,
 };

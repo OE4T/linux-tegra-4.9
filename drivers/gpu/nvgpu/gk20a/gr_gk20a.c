@@ -52,6 +52,7 @@
 #include "gr_pri_gk20a.h"
 #include "regops_gk20a.h"
 #include "dbg_gpu_gk20a.h"
+#include "debug_gk20a.h"
 #include "semaphore_gk20a.h"
 
 #define BLK_SIZE (256)
@@ -7322,6 +7323,110 @@ static u32 gr_gk20a_pagepool_default_size(struct gk20a *g)
 	return gr_scc_pagepool_total_pages_hwmax_value_v();
 }
 
+static int gr_gk20a_dump_gr_status_regs(struct gk20a *g,
+			   struct gk20a_debug_output *o)
+{
+	gk20a_debug_output(o, "NV_PGRAPH_STATUS: 0x%x\n",
+		gk20a_readl(g, gr_status_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_STATUS1: 0x%x\n",
+		gk20a_readl(g, gr_status_1_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_STATUS2: 0x%x\n",
+		gk20a_readl(g, gr_status_2_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_ENGINE_STATUS: 0x%x\n",
+		gk20a_readl(g, gr_engine_status_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_GRFIFO_STATUS : 0x%x\n",
+		gk20a_readl(g, gr_gpfifo_status_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_GRFIFO_CONTROL : 0x%x\n",
+		gk20a_readl(g, gr_gpfifo_ctl_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_FECS_HOST_INT_STATUS : 0x%x\n",
+		gk20a_readl(g, gr_fecs_host_int_status_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_EXCEPTION  : 0x%x\n",
+		gk20a_readl(g, gr_exception_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_FECS_INTR  : 0x%x\n",
+		gk20a_readl(g, gr_fecs_intr_r()));
+	gk20a_debug_output(o, "NV_PFIFO_ENGINE_STATUS(GR) : 0x%x\n",
+		gk20a_readl(g, fifo_engine_status_r(ENGINE_GR_GK20A)));
+	gk20a_debug_output(o, "NV_PGRAPH_ACTIVITY0: 0x%x\n",
+		gk20a_readl(g, gr_activity_0_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_ACTIVITY1: 0x%x\n",
+		gk20a_readl(g, gr_activity_1_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_ACTIVITY2: 0x%x\n",
+		gk20a_readl(g, gr_activity_2_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_ACTIVITY4: 0x%x\n",
+		gk20a_readl(g, gr_activity_4_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_SKED_ACTIVITY: 0x%x\n",
+		gk20a_readl(g, gr_pri_sked_activity_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPC0_GPCCS_GPC_ACTIVITY0: 0x%x\n",
+		gk20a_readl(g, gr_pri_gpc0_gpccs_gpc_activity0_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPC0_GPCCS_GPC_ACTIVITY1: 0x%x\n",
+		gk20a_readl(g, gr_pri_gpc0_gpccs_gpc_activity1_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPC0_GPCCS_GPC_ACTIVITY2: 0x%x\n",
+		gk20a_readl(g, gr_pri_gpc0_gpccs_gpc_activity2_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPC0_GPCCS_GPC_ACTIVITY3: 0x%x\n",
+		gk20a_readl(g, gr_pri_gpc0_gpccs_gpc_activity3_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPC0_TPC0_TPCCS_TPC_ACTIVITY0: 0x%x\n",
+		gk20a_readl(g, gr_pri_gpc0_tpc0_tpccs_tpc_activity_0_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPC0_TPCS_TPCCS_TPC_ACTIVITY0: 0x%x\n",
+		gk20a_readl(g, gr_pri_gpc0_tpcs_tpccs_tpc_activity_0_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPCS_GPCCS_GPC_ACTIVITY0: 0x%x\n",
+		gk20a_readl(g, gr_pri_gpcs_gpccs_gpc_activity_0_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPCS_GPCCS_GPC_ACTIVITY1: 0x%x\n",
+		gk20a_readl(g, gr_pri_gpcs_gpccs_gpc_activity_1_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPCS_GPCCS_GPC_ACTIVITY2: 0x%x\n",
+		gk20a_readl(g, gr_pri_gpcs_gpccs_gpc_activity_2_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPCS_GPCCS_GPC_ACTIVITY3: 0x%x\n",
+		gk20a_readl(g, gr_pri_gpcs_gpccs_gpc_activity_3_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPCS_TPC0_TPCCS_TPC_ACTIVITY0: 0x%x\n",
+		gk20a_readl(g, gr_pri_gpcs_tpc0_tpccs_tpc_activity_0_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPCS_TPCS_TPCCS_TPC_ACTIVITY0: 0x%x\n",
+		gk20a_readl(g, gr_pri_gpcs_tpcs_tpccs_tpc_activity_0_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_BE0_BECS_BE_ACTIVITY0: 0x%x\n",
+		gk20a_readl(g, gr_pri_be0_becs_be_activity0_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_BES_BECS_BE_ACTIVITY0: 0x%x\n",
+		gk20a_readl(g, gr_pri_bes_becs_be_activity0_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_DS_MPIPE_STATUS: 0x%x\n",
+		gk20a_readl(g, gr_pri_ds_mpipe_status_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_FE_GO_IDLE_ON_STATUS: 0x%x\n",
+		gk20a_readl(g, gr_pri_fe_go_idle_on_status_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_FE_GO_IDLE_TIMEOUT : 0x%x\n",
+		gk20a_readl(g, gr_fe_go_idle_timeout_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_FE_GO_IDLE_CHECK : 0x%x\n",
+		gk20a_readl(g, gr_pri_fe_go_idle_check_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_FE_GO_IDLE_INFO : 0x%x\n",
+		gk20a_readl(g, gr_pri_fe_go_idle_info_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPC0_TPC0_TEX_M_TEX_SUBUNITS_STATUS: 0x%x\n",
+		gk20a_readl(g, gr_pri_gpc0_tpc0_tex_m_tex_subunits_status_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_FECS_CTXSW_STATUS_FE_0: 0x%x\n",
+		gk20a_readl(g, gr_fecs_ctxsw_status_fe_0_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_FECS_CTXSW_STATUS_1: 0x%x\n",
+		gk20a_readl(g, gr_fecs_ctxsw_status_1_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPC0_GPCCS_CTXSW_STATUS_GPC_0: 0x%x\n",
+		gk20a_readl(g, gr_gpc0_gpccs_ctxsw_status_gpc_0_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPC0_GPCCS_CTXSW_STATUS_1: 0x%x\n",
+		gk20a_readl(g, gr_gpc0_gpccs_ctxsw_status_1_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_FECS_CTXSW_IDLESTATE : 0x%x\n",
+		gk20a_readl(g, gr_fecs_ctxsw_idlestate_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPC0_GPCCS_CTXSW_IDLESTATE : 0x%x\n",
+		gk20a_readl(g, gr_gpc0_gpccs_ctxsw_idlestate_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_FECS_CURRENT_CTX : 0x%x\n",
+		gk20a_readl(g, gr_fecs_current_ctx_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_FECS_NEW_CTX : 0x%x\n",
+		gk20a_readl(g, gr_fecs_new_ctx_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_BE0_CROP_STATUS1 : 0x%x\n",
+		gk20a_readl(g, gr_pri_be0_crop_status1_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_BES_CROP_STATUS1 : 0x%x\n",
+		gk20a_readl(g, gr_pri_bes_crop_status1_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_BE0_ZROP_STATUS : 0x%x\n",
+		gk20a_readl(g, gr_pri_be0_zrop_status_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_BE0_ZROP_STATUS2 : 0x%x\n",
+		gk20a_readl(g, gr_pri_be0_zrop_status2_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_BES_ZROP_STATUS : 0x%x\n",
+		gk20a_readl(g, gr_pri_bes_zrop_status_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_BES_ZROP_STATUS2 : 0x%x\n",
+		gk20a_readl(g, gr_pri_bes_zrop_status2_r()));
+	return 0;
+}
+
 void gk20a_init_gr_ops(struct gpu_ops *gops)
 {
 	gops->gr.access_smpc_reg = gr_gk20a_access_smpc_reg;
@@ -7362,5 +7467,6 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.init_ctx_state = gr_gk20a_init_ctx_state;
 	gops->gr.alloc_gr_ctx = gr_gk20a_alloc_gr_ctx;
 	gops->gr.free_gr_ctx = gr_gk20a_free_gr_ctx;
+	gops->gr.dump_gr_regs = gr_gk20a_dump_gr_status_regs;
 }
 

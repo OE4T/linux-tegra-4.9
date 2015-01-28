@@ -29,8 +29,12 @@ struct gk20a_debug_output {
 	char buf[256];
 };
 
+void gk20a_debug_output(struct gk20a_debug_output *o,
+					const char *fmt, ...);
+
 void gk20a_debug_dump(struct platform_device *pdev);
 void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o);
+int gk20a_gr_debug_dump(struct platform_device *pdev);
 void gk20a_debug_init(struct platform_device *pdev);
 void gk20a_init_debug_ops(struct gpu_ops *gops);
 

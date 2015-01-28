@@ -343,6 +343,7 @@ struct snd_atvr {
 
 	/* pointer to hid device */
 	struct hid_device *hdev;
+	struct mutex hdev_lock;
 };
 
 static int atvr_mic_ctrl(struct hid_device *hdev, bool enable)
@@ -1051,12 +1052,15 @@ static int snd_atvr_pcm_open(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	int ret;
 
+	mutex_lock(&atvr_snd->hdev_lock);
 	if (atvr_snd->hdev == NULL) {
 		pr_warn("%s: remote is not ready\n", __func__);
+		mutex_unlock(&atvr_snd->hdev_lock);
 		return -EAGAIN;
 	}
 
 	ret = atvr_mic_ctrl(atvr_snd->hdev, true);
+	mutex_unlock(&atvr_snd->hdev_lock);
 
 	if (ret)
 		return ret;
@@ -1135,10 +1139,12 @@ static int snd_atvr_pcm_close(struct snd_pcm_substream *substream)
 	}
 	spin_unlock(&s_substream_lock);
 
+	mutex_lock(&atvr_snd->hdev_lock);
 	if (atvr_snd->hdev)
 		atvr_mic_ctrl(atvr_snd->hdev, false);
 	else
 		pr_warn("%s: unexpected remote connection lost\n", __func__);
+	mutex_unlock(&atvr_snd->hdev_lock);
 
 	return 0;
 }
@@ -1251,6 +1257,7 @@ static int atvr_snd_initialize(struct hid_device *hdev)
 	}
 	atvr_snd = atvr_card->private_data;
 	atvr_snd->card = atvr_card;
+	mutex_init(&atvr_snd->hdev_lock);
 
 	/* dummy initialization */
 	setup_timer(&atvr_snd->decoding_timer,
@@ -1470,9 +1477,16 @@ err_parse:
 
 static void atvr_remove(struct hid_device *hdev)
 {
-	struct snd_atvr *atvr_snd = hid_get_drvdata(hdev);
+	struct snd_atvr *atvr_snd;
+	unsigned long flags;
 
+	if (atvr_card == NULL)
+		return -EIO;
+
+	atvr_snd = atvr_card->private_data;
+	mutex_lock(&atvr_snd->hdev_lock);
 	atvr_snd->hdev = NULL;
+	mutex_unlock(&atvr_snd->hdev_lock);
 
 	switch_set_state(&shdr_mic_switch, false);
 	hid_set_drvdata(hdev, NULL);
@@ -1555,6 +1569,13 @@ static void atvr_exit(void)
 	misc_deregister(&adpcm_dev_node);
 	misc_deregister(&pcm_dev_node);
 #endif
+
+	if (atvr_card) {
+		struct snd_atvr *atvr_snd = atvr_card->private_data;
+		mutex_destroy(&atvr_snd->hdev_lock);
+		snd_card_free(atvr_card);
+		atvr_card = NULL;
+	}
 
 	hid_unregister_driver(&atvr_driver);
 }

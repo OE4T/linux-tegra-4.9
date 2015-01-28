@@ -76,6 +76,7 @@ static struct snd_soc_jack_gpio tegra_t210ref_hp_jack_gpio = {
 	.name = "headphone detect",
 	.report = SND_JACK_HEADPHONE,
 	.debounce_time = 150,
+	.invert = 1,
 };
 
 #ifdef CONFIG_SWITCH
@@ -93,6 +94,14 @@ static int tegra_t210ref_jack_notifier(struct notifier_block *self,
 	struct tegra_asoc_platform_data *pdata = machine->pdata;
 	enum headset_state state = BIT_NO_HEADSET;
 	unsigned char status_jack = 0;
+	int idx = 0;
+
+	idx = tegra_machine_get_codec_dai_link_idx("rt5639-playback");
+	/* check if idx has valid number */
+	if (idx == -EINVAL)
+		return idx;
+
+	codec = card->rtd[idx].codec;
 
 	if (jack == &tegra_t210ref_hp_jack) {
 		if (action) {
@@ -105,6 +114,7 @@ static int tegra_t210ref_jack_notifier(struct notifier_block *self,
 
 			machine->jack_status &= ~SND_JACK_HEADPHONE;
 			machine->jack_status &= ~SND_JACK_MICROPHONE;
+			machine->jack_status &= ~SND_JACK_HEADSET;
 
 			if (status_jack == RT5639_HEADPHO_DET)
 				machine->jack_status |=
@@ -121,7 +131,7 @@ static int tegra_t210ref_jack_notifier(struct notifier_block *self,
 				gpio_direction_output(
 				pdata->gpio_ext_mic_en, 1);
 
-			rt5639_headset_detect(codec, 1);
+			rt5639_headset_detect(codec, 0);
 
 			machine->jack_status &= ~SND_JACK_HEADPHONE;
 			machine->jack_status &= ~SND_JACK_MICROPHONE;
@@ -203,7 +213,7 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	}
 
 
-	idx = tegra_machine_get_codec_dai_link_idx("earSmart-playback");
+	idx = tegra_machine_get_codec_dai_link_idx("rt5639-playback");
 	/* check if idx has valid number */
 	if (idx == -EINVAL)
 		return idx;
@@ -530,7 +540,8 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	struct snd_soc_codec_conf *tegra_machine_codec_conf = NULL;
 	struct snd_soc_codec_conf *tegra_t210ref_codec_conf = NULL;
 	struct tegra_asoc_platform_data *pdata = NULL;
-	int ret = 0, i;
+	struct snd_soc_codec *codec = NULL;
+	int ret = 0, i, idx;
 
 	if (!np) {
 		dev_err(&pdev->dev, "No device tree node for t210ref driver");
@@ -719,6 +730,14 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 			ret);
 		goto err_alloc_dai_link;
 	}
+
+	idx = tegra_machine_get_codec_dai_link_idx("rt5639-playback");
+	/* check if idx has valid number */
+	if (idx == -EINVAL)
+		return idx;
+
+	codec = card->rtd[idx].codec;
+	rt5639_irq_jd_reg_init(codec);
 
 	return 0;
 

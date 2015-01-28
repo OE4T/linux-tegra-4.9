@@ -1,0 +1,7 @@
+menuconfig TACHOMETER
+	bool "Tachometer support"
+	help
+	  Say Y here to Tachometer support
+
+	  This framework provides a generic interface to Tach
+	  devices.

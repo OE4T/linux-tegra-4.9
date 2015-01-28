@@ -27,3 +27,4 @@ obj-y += i2c/
 obj-y += net/
 obj-$(CONFIG_CPU_IDLE) += cpuidle/
 obj-y += padctrl/
+obj-y += tachometer/

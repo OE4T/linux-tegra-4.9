@@ -885,10 +885,8 @@ static void snd_atvr_timer_start(struct snd_pcm_substream *substream)
 {
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
 
-	/*
-	 * Wait previous timer callback to finish to ensure clean state.
-	 */
-	del_timer_sync(&atvr_snd->decoding_timer);
+	if (try_to_del_timer_sync(&atvr_snd->decoding_timer) < 0)
+		return -EAGAIN;
 
 	atvr_snd->timer_enabled = true;
 	atvr_snd->previous_jiffies = jiffies;
@@ -922,8 +920,10 @@ static void snd_atvr_timer_stop(struct snd_pcm_substream *substream)
 		 * We could temporarily give up the lock and relock later.
 		 * However, that could break the original purpose of the lock.
 		 * Thus we just try delete the timer but do not block.
-		 * Instead, we ensure previous timer is finished in
-		 * snd_atvr_timer_start() where the lock concerned is not held.
+		 * Instead, we check if previous timer is finished in
+		 * snd_atvr_timer_start() where timing has less stress.
+		 * In the rare case it is still not finished, we return EAGAIN
+		 * and let userspace try again later.
 		 */
 		ret = try_to_del_timer_sync(&atvr_snd->decoding_timer);
 		if (ret < 0)

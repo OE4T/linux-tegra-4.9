@@ -343,7 +343,6 @@ struct snd_atvr {
 
 	/* pointer to hid device */
 	struct hid_device *hdev;
-	atomic_t occupied;
 };
 
 static int atvr_mic_ctrl(struct hid_device *hdev, bool enable)
@@ -1052,28 +1051,20 @@ static int snd_atvr_pcm_open(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	int ret;
 
-	if (unlikely(atomic_xchg(&atvr_snd->occupied, 1) == 1))
-		return -EBUSY;
-
 	if (atvr_snd->hdev == NULL) {
 		pr_warn("%s: remote is not ready\n", __func__);
-		atomic_xchg(&atvr_snd->occupied, 0);
 		return -EAGAIN;
 	}
 
 	ret = atvr_mic_ctrl(atvr_snd->hdev, true);
 
-	if (ret) {
-		atomic_xchg(&atvr_snd->occupied, 0);
+	if (ret)
 		return ret;
-	}
 
 	ret = atomic_fifo_init(&atvr_snd->fifo_controller,
 				   MAX_PACKETS_PER_BUFFER);
-	if (ret) {
-		atomic_xchg(&atvr_snd->occupied, 0);
+	if (ret)
 		return ret;
-	}
 
 	runtime->hw = atvr_snd->pcm_hw;
 	if (substream->pcm->device & 1) {
@@ -1097,7 +1088,6 @@ static int snd_atvr_pcm_open(struct snd_pcm_substream *substream)
 	if (atvr_snd->pcm_buffer == NULL) {
 		pr_err("%s:%d - ERROR PCM buffer allocation failed\n",
 			__func__, __LINE__);
-		atomic_xchg(&atvr_snd->occupied, 0);
 		return -ENOMEM;
 	}
 
@@ -1110,7 +1100,6 @@ static int snd_atvr_pcm_open(struct snd_pcm_substream *substream)
 			__func__, __LINE__);
 		vfree(atvr_snd->pcm_buffer);
 		atvr_snd->pcm_buffer = NULL;
-		atomic_xchg(&atvr_snd->occupied, 0);
 		return -ENOMEM;
 	}
 
@@ -1145,8 +1134,6 @@ static int snd_atvr_pcm_close(struct snd_pcm_substream *substream)
 		atvr_snd->fifo_packet_buffer = NULL;
 	}
 	spin_unlock(&s_substream_lock);
-
-	atomic_xchg(&atvr_snd->occupied, 0);
 
 	if (atvr_snd->hdev)
 		atvr_mic_ctrl(atvr_snd->hdev, false);
@@ -1264,7 +1251,6 @@ static int atvr_snd_initialize(struct hid_device *hdev)
 	}
 	atvr_snd = atvr_card->private_data;
 	atvr_snd->card = atvr_card;
-	atomic_set(&atvr_snd->occupied, 0);
 
 	/* dummy initialization */
 	setup_timer(&atvr_snd->decoding_timer,

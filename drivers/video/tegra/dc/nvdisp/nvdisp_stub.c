@@ -136,7 +136,8 @@ static void tegra_panel_register_ops(struct tegra_dc_out *dc_out,
 extern struct tegra_panel_ops panel_sim_ops;
 
 /* Fix T18x kernel-only build - Cloned from common.c */
-bool tegra_is_hdmi_initialised(void)
+/* returns true if bl initialized the display */
+bool tegra_is_bl_display_initialized(int instance)
 {
 	return false;
 }

@@ -5612,6 +5612,12 @@ int gk20a_gr_isr(struct gk20a *g)
 					NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
 		}
 
+		if (exception & gr_exception_ds_m()) {
+			u32 ds = gk20a_readl(g, gr_ds_hww_esr_r());
+			gk20a_dbg(gpu_dbg_intr, "ds exception %08x\n", ds);
+			gk20a_writel(g, gr_ds_hww_esr_r(), ds);
+		}
+
 		gk20a_writel(g, gr_intr_r(), gr_intr_exception_reset_f());
 		gr_intr &= ~gr_intr_exception_pending_f();
 	}

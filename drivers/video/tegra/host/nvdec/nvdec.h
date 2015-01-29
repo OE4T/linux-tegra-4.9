@@ -3,7 +3,7 @@
  *
  * Tegra NVDEC Module Support
  *
- * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,10 +26,6 @@
 #include <linux/nvhost.h>
 
 extern const struct file_operations tegra_nvdec_ctrl_ops;
-
-/* When using USE_NVDEC_BOOTLOADER=0, remember to build the ucode
- * too with NVDEC_BL disabled */
-#define USE_NVDEC_BOOTLOADER   1
 
 #define MC_BASE_ADDR				0x70019000
 #define MC_SECURITY_CARVEOUT1_BOM_0		0xc0c

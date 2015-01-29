@@ -54,17 +54,12 @@
 #define NVDEC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define NVDEC_IDLE_CHECK_PERIOD		10	/* 10 usec */
 
-#if USE_NVDEC_BOOTLOADER
 #define get_nvdec(ndev) ((struct nvdec **)(ndev)->dev.platform_data)
-#else
-#define get_nvdec(ndev) ((struct nvdec *)(ndev)->dev.platform_data)
-#endif
 #define set_nvdec(ndev, f) ((ndev)->dev.platform_data = f)
 
 static int nvhost_nvdec_init_sw(struct platform_device *dev);
 
 /* caller is responsible for freeing */
-#if USE_NVDEC_BOOTLOADER
 enum {
 	host_nvdec_fw_bl = 0,
 	host_nvdec_fw_ls
@@ -84,55 +79,44 @@ static char *nvdec_get_fw_name(struct platform_device *dev, int fw)
 		return NULL;
 
 	decode_nvdec_ver(pdata->version, &maj, &min);
-	if (debug_mode) {
-		if (fw == host_nvdec_fw_bl) {
-			if (tegra_platform_is_qt() ||
-				tegra_platform_is_linsim())
-				sprintf(fw_name,
-					"nvhost_nvdec_bl_no_wpr0%d%d.fw",
-					maj, min);
-			else
-				sprintf(fw_name, "nvhost_nvdec_bl0%d%d.fw",
-					maj, min);
-		} else
-			sprintf(fw_name, "nvhost_nvdec0%d%d.fw", maj, min);
-	} else {
-		if (fw == host_nvdec_fw_bl)
-			if (tegra_platform_is_qt() ||
-				tegra_platform_is_linsim()) {
-				dev_info(&dev->dev,
-					"Prod + No-WPR not allowed\n");
-				kfree(fw_name);
-				return NULL;
+	if (IS_ENABLED(CONFIG_NVDEC_BOOTLOADER)) {
+		if (debug_mode) {
+			if (fw == host_nvdec_fw_bl) {
+				if (tegra_platform_is_qt() ||
+					tegra_platform_is_linsim())
+					sprintf(fw_name,
+							"nvhost_nvdec_bl_no_wpr0%d%d.fw",
+							maj, min);
+				else
+					sprintf(fw_name,
+							"nvhost_nvdec_bl0%d%d.fw",
+							maj, min);
 			} else
-				sprintf(fw_name, "nvhost_nvdec_bl0%d%d_prod.fw",
-					maj, min);
-		else
-			sprintf(fw_name, "nvhost_nvdec0%d%d_prod.fw", maj, min);
-	}
+				sprintf(fw_name, "nvhost_nvdec0%d%d.fw",
+						maj, min);
+		} else {
+			if (fw == host_nvdec_fw_bl)
+				if (tegra_platform_is_qt() ||
+					tegra_platform_is_linsim()) {
+					dev_info(&dev->dev,
+						"Prod + No-WPR not allowed\n");
+					kfree(fw_name);
+					return NULL;
+				} else
+					sprintf(fw_name,
+							"nvhost_nvdec_bl0%d%d_prod.fw",
+							maj, min);
+			else
+				sprintf(fw_name, "nvhost_nvdec0%d%d_prod.fw",
+						maj, min);
+		}
+	} else
+		sprintf(fw_name, "nvhost_nvdec0%d%d_ns.fw", maj, min);
+
 	dev_info(&dev->dev, "fw name:%s\n", fw_name);
 
 	return fw_name;
 }
-#else
-static char *nvdec_get_fw_name(struct platform_device *dev)
-{
-	char *fw_name;
-	u8 maj, min;
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-
-	/* note size here is a little over...*/
-	fw_name = kzalloc(32, GFP_KERNEL);
-	if (!fw_name)
-		return NULL;
-
-	decode_nvdec_ver(pdata->version, &maj, &min);
-	sprintf(fw_name, "nvhost_nvdec0%d%d.fw", maj, min);
-	dev_info(&dev->dev, "fw name:%s\n", fw_name);
-
-	return fw_name;
-}
-#endif
 
 static int nvdec_dma_wait_idle(struct platform_device *dev, u32 *timeout)
 {
@@ -227,15 +211,7 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 	u32 timeout;
 	u32 offset;
 	int err = 0;
-#if USE_NVDEC_BOOTLOADER
 	struct nvdec **m;
-	u32 fb_data_offset = 0;
-	u32 initial_dmem_offset = 0;
-	struct nvdec_bl_shared_data shared_data;
-	u32 debug_mode = host1x_readl(dev, nvdec_scp_ctl_stat_r()) &
-					nvdec_scp_ctl_stat_debug_mode_m();
-	bool skip_wpr_settings = debug_mode &&
-		(tegra_platform_is_qt() || tegra_platform_is_linsim());
 
 	dev_dbg(&dev->dev, "nvdec_boot: start\n");
 	err = nvhost_nvdec_init_sw(dev);
@@ -247,76 +223,61 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 	err = nvdec_wait_mem_scrubbing(dev);
 	if (err)
 		return err;
+	if (IS_ENABLED(CONFIG_NVDEC_BOOTLOADER)) {
 
-	fb_data_offset = (m[0]->os.bin_data_offset +
-				m[0]->os.data_offset)/(sizeof(u32));
+		u32 fb_data_offset = 0;
+		u32 initial_dmem_offset = 0;
+		struct nvdec_bl_shared_data shared_data;
+		u32 debug = host1x_readl(dev,
+					nvdec_scp_ctl_stat_r()) &
+					nvdec_scp_ctl_stat_debug_mode_m();
+		bool skip_wpr_settings = debug &&
+			(tegra_platform_is_qt() || tegra_platform_is_linsim());
 
-	shared_data.ls_fw_start_addr = m[1]->phys >> 8;
-	shared_data.ls_fw_size = m[1]->size;
 
-	/* no wpr firmware does not need these */
-	if (!skip_wpr_settings) {
-		u32 wpr_addr_lo = readl(IO_TO_VIRT((
+		fb_data_offset = (m[0]->os.bin_data_offset +
+					m[0]->os.data_offset)/(sizeof(u32));
+
+		shared_data.ls_fw_start_addr = m[1]->phys >> 8;
+		shared_data.ls_fw_size = m[1]->size;
+
+		/* no wpr firmware does not need these */
+		if (!skip_wpr_settings) {
+			u32 wpr_addr_lo = readl(IO_TO_VIRT((
 					MC_BASE_ADDR +
 					MC_SECURITY_CARVEOUT1_BOM_0)));
-		u32 wpr_addr_hi = readl(IO_TO_VIRT((
+			u32 wpr_addr_hi = readl(IO_TO_VIRT((
 					MC_BASE_ADDR +
 					MC_SECURITY_CARVEOUT1_BOM_HI_0)));
 
-		/* Put the 40-bit addr formed by wpr_addr_hi and wpr_addr_lo
-		   divided by 256 into 32-bit wpr_addr */
-		shared_data.wpr_addr = (wpr_addr_hi << 24) + (wpr_addr_lo >> 8);
-		shared_data.wpr_size = readl(IO_TO_VIRT((
-			MC_BASE_ADDR + MC_SECURITY_CARVEOUT1_SIZE_128KB_0)));
-		shared_data.wpr_size *= 128*1024; /* multiply 128k */
+			/* Put the 40-bit addr formed by wpr_addr_hi and
+			   wpr_addr_lo divided by 256 into 32-bit wpr_addr */
+			shared_data.wpr_addr =
+							(wpr_addr_hi << 24) +
+							(wpr_addr_lo >> 8);
+			shared_data.wpr_size = readl(IO_TO_VIRT((
+					MC_BASE_ADDR +
+					MC_SECURITY_CARVEOUT1_SIZE_128KB_0)));
+			shared_data.wpr_size *= 128*1024; /* multiply 128k */
+		}
+		memcpy(&(m[0]->mapped[fb_data_offset + initial_dmem_offset]),
+			&shared_data, sizeof(shared_data));
 	}
-
-	memcpy(&(m[0]->mapped[fb_data_offset + initial_dmem_offset]),
-		&shared_data, sizeof(shared_data));
-
 	host1x_writel(dev, nvdec_dmactl_r(), 0);
 	host1x_writel(dev, nvdec_dmatrfbase_r(),
 		(m[0]->phys + m[0]->os.bin_data_offset) >> 8);
 
-	/* Write BL data to dmem */
+	/* Write nvdec ucode data to dmem */
 	dev_dbg(&dev->dev, "nvdec_boot: load dmem\n");
 	for (offset = 0; offset < m[0]->os.data_size; offset += 256) {
 		nvdec_dma_pa_to_internal_256b(dev,
 					   m[0]->os.data_offset + offset,
 					   offset, false);
 	}
-
-	/* Write BL code to imem */
+	/* Write nvdec ucode to imem */
 	dev_dbg(&dev->dev, "nvdec_boot: load imem\n");
-	host1x_writel(dev, nvdec_dmatrfbase_r(),
-		(m[0]->phys + m[0]->os.bin_data_offset) >> 8);
 	nvdec_dma_pa_to_internal_256b(dev, m[0]->os.code_offset, 0, true);
-#else /* USE_NVDEC_BOOTLOADER */
-	struct nvdec *m;
 
-	err = nvhost_nvdec_init_sw(dev);
-	if (err)
-		return err;
-
-	m = get_nvdec(dev);
-
-	err = nvdec_wait_mem_scrubbing(dev);
-	if (err)
-		return err;
-
-	host1x_writel(dev, nvdec_dmactl_r(), 0);
-	host1x_writel(dev, nvdec_dmatrfbase_r(),
-		(m->phys + m->os.bin_data_offset) >> 8);
-
-	dev_dbg(&dev->dev, "nvdec_boot: load dmem\n");
-	for (offset = 0; offset < m->os.data_size; offset += 256)
-		nvdec_dma_pa_to_internal_256b(dev,
-					   m->os.data_offset + offset,
-					   offset, false);
-
-	dev_dbg(&dev->dev, "nvdec_boot: load imem\n");
-	nvdec_dma_pa_to_internal_256b(dev, m->os.code_offset, 0, true);
-#endif /* USE_NVDEC_BOOTLOADER */
 	/* setup nvdec interrupts and enable interface */
 	host1x_writel(dev, nvdec_irqmset_r(),
 			(nvdec_irqmset_ext_f(0xff) |
@@ -353,19 +314,11 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 	return 0;
 }
 
-#if USE_NVDEC_BOOTLOADER
 static int nvdec_setup_ucode_image(struct platform_device *dev,
 		u32 *ucode_ptr,
 		const struct firmware *ucode_fw,
 		struct nvdec *m)
 {
-#else
-static int nvdec_setup_ucode_image(struct platform_device *dev,
-		u32 *ucode_ptr,
-		const struct firmware *ucode_fw)
-{
-	struct nvdec *m = get_nvdec(dev);
-#endif
 	/* image data is little endian. */
 	struct nvdec_ucode_v1 ucode;
 	int w;
@@ -422,15 +375,9 @@ static int nvdec_setup_ucode_image(struct platform_device *dev,
 	return 0;
 }
 
-#if USE_NVDEC_BOOTLOADER
 static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name,
 			struct nvdec *m)
 {
-#else
-static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name)
-{
-	struct nvdec *m = get_nvdec(dev);
-#endif
 	const struct firmware *ucode_fw;
 	int err;
 
@@ -458,11 +405,7 @@ static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name)
 		goto clean_up;
 	}
 
-#if USE_NVDEC_BOOTLOADER
 	err = nvdec_setup_ucode_image(dev, m->mapped, ucode_fw, m);
-#else
-	err = nvdec_setup_ucode_image(dev, m->mapped, ucode_fw);
-#endif
 	if (err) {
 		dev_err(&dev->dev, "failed to parse firmware image %s\n",
 				fw_name);
@@ -488,7 +431,6 @@ clean_up:
 	return err;
 }
 
-#if USE_NVDEC_BOOTLOADER
 static int nvhost_nvdec_init_sw(struct platform_device *dev)
 {
 	int err = 0;
@@ -519,18 +461,20 @@ static int nvhost_nvdec_init_sw(struct platform_device *dev)
 
 	fw_name[0] = nvdec_get_fw_name(dev, host_nvdec_fw_bl);
 	if (!fw_name[0]) {
-		dev_err(&dev->dev, "couldn't determine BL firmware name");
+		dev_err(&dev->dev, "couldn't determine BL fw name");
 		err = -EINVAL;
 		goto error_fw_name;
 	}
-	fw_name[1] = nvdec_get_fw_name(dev, host_nvdec_fw_ls);
-	if (!fw_name[1]) {
-		dev_err(&dev->dev, "couldn't determine LS firmware name");
-		err = -EINVAL;
-		goto err_fw;
+	if (IS_ENABLED(CONFIG_NVDEC_BOOTLOADER)) {
+		fw_name[1] = nvdec_get_fw_name(dev, host_nvdec_fw_ls);
+		if (!fw_name[1]) {
+			dev_err(&dev->dev, "couldn't determine LS fw name");
+			err = -EINVAL;
+			goto err_fw;
+		}
 	}
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < (1 + IS_ENABLED(CONFIG_NVDEC_BOOTLOADER)); i++) {
 		m[i] = kzalloc(sizeof(struct nvdec), GFP_KERNEL);
 		if (!m[i]) {
 			dev_err(&dev->dev, "couldn't alloc ucode");
@@ -565,52 +509,6 @@ error:
 	dev_err(&dev->dev, "failed");
 	return err;
 }
-#else
-static int nvhost_nvdec_init_sw(struct platform_device *dev)
-{
-	int err = 0;
-	struct nvdec *m = get_nvdec(dev);
-	char *fw_name;
-
-	nvhost_dbg_fn("in dev:%p", dev);
-
-	/* check if firmware resources already allocated */
-	if (m)
-		return 0;
-
-	fw_name = nvdec_get_fw_name(dev);
-	if (!fw_name) {
-		dev_err(&dev->dev, "couldn't determine firmware name");
-		return -EINVAL;
-	}
-
-	m = kzalloc(sizeof(struct nvdec), GFP_KERNEL);
-	if (!m) {
-		dev_err(&dev->dev, "couldn't alloc ucode");
-		kfree(fw_name);
-		return -ENOMEM;
-	}
-	set_nvdec(dev, m);
-	nvhost_dbg_fn("primed dev:%p", dev);
-
-	err = nvdec_read_ucode(dev, fw_name);
-	kfree(fw_name);
-	fw_name = 0;
-
-	if (err || !m->valid) {
-		dev_err(&dev->dev, "ucode not valid");
-		goto clean_up;
-	}
-
-	return 0;
-
-clean_up:
-	kfree(m);
-	set_nvdec(dev, NULL);
-	dev_err(&dev->dev, "failed");
-	return err;
-}
-#endif
 
 static struct of_device_id tegra_nvdec_of_match[] = {
 #ifdef TEGRA_21X_OR_HIGHER_CONFIG

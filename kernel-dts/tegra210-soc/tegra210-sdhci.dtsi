@@ -33,6 +33,7 @@
 		compad-vref-1v8 = <0x7>;
 		nvidia,en-io-trim-volt;
 		nvidia,is-emmc;
+		nvidia,enable-cq;
 		pll_source = "pll_p";
 	};
 

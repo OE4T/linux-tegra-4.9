@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -50,163 +50,207 @@
 #ifndef _hw_gmmu_gp10b_h_
 #define _hw_gmmu_gp10b_h_
 
-static inline u32 gmmu_pde_aperture_big_w(void)
+static inline u32 gmmu_new_pde_is_pte_w(void)
 {
 	return 0;
 }
-static inline u32 gmmu_pde_aperture_big_invalid_f(void)
+static inline u32 gmmu_new_pde_is_pte_false_f(void)
 {
 	return 0x0;
 }
-static inline u32 gmmu_pde_aperture_big_video_memory_f(void)
-{
-	return 0x1;
-}
-static inline u32 gmmu_pde_size_w(void)
+static inline u32 gmmu_new_pde_aperture_w(void)
 {
 	return 0;
 }
-static inline u32 gmmu_pde_size_full_f(void)
+static inline u32 gmmu_new_pde_aperture_invalid_f(void)
 {
 	return 0x0;
 }
-static inline u32 gmmu_pde_address_big_sys_f(u32 v)
+static inline u32 gmmu_new_pde_aperture_video_memory_f(void)
 {
-	return (v & 0xfffffff) << 4;
+	return 0x2;
 }
-static inline u32 gmmu_pde_address_big_sys_w(void)
+static inline u32 gmmu_new_pde_address_sys_f(u32 v)
+{
+	return (v & 0xffffff) << 8;
+}
+static inline u32 gmmu_new_pde_address_sys_w(void)
 {
 	return 0;
 }
-static inline u32 gmmu_pde_aperture_small_w(void)
+static inline u32 gmmu_new_pde_vol_w(void)
 {
-	return 1;
+	return 0;
 }
-static inline u32 gmmu_pde_aperture_small_invalid_f(void)
-{
-	return 0x0;
-}
-static inline u32 gmmu_pde_aperture_small_video_memory_f(void)
-{
-	return 0x1;
-}
-static inline u32 gmmu_pde_vol_small_w(void)
-{
-	return 1;
-}
-static inline u32 gmmu_pde_vol_small_true_f(void)
-{
-	return 0x4;
-}
-static inline u32 gmmu_pde_vol_small_false_f(void)
-{
-	return 0x0;
-}
-static inline u32 gmmu_pde_vol_big_w(void)
-{
-	return 1;
-}
-static inline u32 gmmu_pde_vol_big_true_f(void)
+static inline u32 gmmu_new_pde_vol_true_f(void)
 {
 	return 0x8;
 }
-static inline u32 gmmu_pde_vol_big_false_f(void)
+static inline u32 gmmu_new_pde_vol_false_f(void)
 {
 	return 0x0;
 }
-static inline u32 gmmu_pde_address_small_sys_f(u32 v)
-{
-	return (v & 0xfffffff) << 4;
-}
-static inline u32 gmmu_pde_address_small_sys_w(void)
-{
-	return 1;
-}
-static inline u32 gmmu_pde_address_shift_v(void)
+static inline u32 gmmu_new_pde_address_shift_v(void)
 {
 	return 0x0000000c;
 }
-static inline u32 gmmu_pde__size_v(void)
+static inline u32 gmmu_new_pde__size_v(void)
 {
 	return 0x00000008;
 }
-static inline u32 gmmu_pte__size_v(void)
-{
-	return 0x00000008;
-}
-static inline u32 gmmu_pte_valid_w(void)
+static inline u32 gmmu_new_dual_pde_is_pte_w(void)
 {
 	return 0;
 }
-static inline u32 gmmu_pte_valid_true_f(void)
-{
-	return 0x1;
-}
-static inline u32 gmmu_pte_valid_false_f(void)
+static inline u32 gmmu_new_dual_pde_is_pte_false_f(void)
 {
 	return 0x0;
 }
-static inline u32 gmmu_pte_address_sys_f(u32 v)
+static inline u32 gmmu_new_dual_pde_aperture_big_w(void)
+{
+	return 0;
+}
+static inline u32 gmmu_new_dual_pde_aperture_big_invalid_f(void)
+{
+	return 0x0;
+}
+static inline u32 gmmu_new_dual_pde_aperture_big_video_memory_f(void)
+{
+	return 0x2;
+}
+static inline u32 gmmu_new_dual_pde_address_big_sys_f(u32 v)
 {
 	return (v & 0xfffffff) << 4;
 }
-static inline u32 gmmu_pte_address_sys_w(void)
+static inline u32 gmmu_new_dual_pde_address_big_sys_w(void)
 {
 	return 0;
 }
-static inline u32 gmmu_pte_vol_w(void)
+static inline u32 gmmu_new_dual_pde_aperture_small_w(void)
 {
-	return 1;
+	return 2;
 }
-static inline u32 gmmu_pte_vol_true_f(void)
+static inline u32 gmmu_new_dual_pde_aperture_small_invalid_f(void)
+{
+	return 0x0;
+}
+static inline u32 gmmu_new_dual_pde_aperture_small_video_memory_f(void)
+{
+	return 0x2;
+}
+static inline u32 gmmu_new_dual_pde_vol_small_w(void)
+{
+	return 2;
+}
+static inline u32 gmmu_new_dual_pde_vol_small_true_f(void)
+{
+	return 0x8;
+}
+static inline u32 gmmu_new_dual_pde_vol_small_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 gmmu_new_dual_pde_vol_big_w(void)
+{
+	return 0;
+}
+static inline u32 gmmu_new_dual_pde_vol_big_true_f(void)
+{
+	return 0x8;
+}
+static inline u32 gmmu_new_dual_pde_vol_big_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 gmmu_new_dual_pde_address_small_sys_f(u32 v)
+{
+	return (v & 0xffffff) << 8;
+}
+static inline u32 gmmu_new_dual_pde_address_small_sys_w(void)
+{
+	return 2;
+}
+static inline u32 gmmu_new_dual_pde_address_shift_v(void)
+{
+	return 0x0000000c;
+}
+static inline u32 gmmu_new_dual_pde_address_big_shift_v(void)
+{
+	return 0x00000008;
+}
+static inline u32 gmmu_new_dual_pde__size_v(void)
+{
+	return 0x00000010;
+}
+static inline u32 gmmu_new_pte__size_v(void)
+{
+	return 0x00000008;
+}
+static inline u32 gmmu_new_pte_valid_w(void)
+{
+	return 0;
+}
+static inline u32 gmmu_new_pte_valid_true_f(void)
 {
 	return 0x1;
 }
-static inline u32 gmmu_pte_vol_false_f(void)
+static inline u32 gmmu_new_pte_valid_false_f(void)
 {
 	return 0x0;
 }
-static inline u32 gmmu_pte_aperture_w(void)
+static inline u32 gmmu_new_pte_address_sys_f(u32 v)
 {
-	return 1;
+	return (v & 0xffffff) << 8;
 }
-static inline u32 gmmu_pte_aperture_video_memory_f(void)
-{
-	return 0x0;
-}
-static inline u32 gmmu_pte_read_only_w(void)
+static inline u32 gmmu_new_pte_address_sys_w(void)
 {
 	return 0;
 }
-static inline u32 gmmu_pte_read_only_true_f(void)
+static inline u32 gmmu_new_pte_vol_w(void)
 {
-	return 0x4;
+	return 0;
 }
-static inline u32 gmmu_pte_write_disable_w(void)
+static inline u32 gmmu_new_pte_vol_true_f(void)
+{
+	return 0x8;
+}
+static inline u32 gmmu_new_pte_vol_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 gmmu_new_pte_aperture_w(void)
+{
+	return 0;
+}
+static inline u32 gmmu_new_pte_aperture_video_memory_f(void)
+{
+	return 0x0;
+}
+static inline u32 gmmu_new_pte_read_only_w(void)
+{
+	return 0;
+}
+static inline u32 gmmu_new_pte_read_only_true_f(void)
+{
+	return 0x40;
+}
+static inline u32 gmmu_new_pte_comptagline_f(u32 v)
+{
+	return (v & 0x3ffff) << 4;
+}
+static inline u32 gmmu_new_pte_comptagline_w(void)
 {
 	return 1;
 }
-static inline u32 gmmu_pte_write_disable_true_f(void)
+static inline u32 gmmu_new_pte_kind_f(u32 v)
 {
-	return 0x80000000;
+	return (v & 0xff) << 24;
 }
-static inline u32 gmmu_pte_read_disable_w(void)
-{
-	return 1;
-}
-static inline u32 gmmu_pte_read_disable_true_f(void)
-{
-	return 0x40000000;
-}
-static inline u32 gmmu_pte_comptagline_f(u32 v)
-{
-	return (v & 0x3ffff) << 12;
-}
-static inline u32 gmmu_pte_comptagline_w(void)
+static inline u32 gmmu_new_pte_kind_w(void)
 {
 	return 1;
 }
-static inline u32 gmmu_pte_address_shift_v(void)
+static inline u32 gmmu_new_pte_address_shift_v(void)
 {
 	return 0x0000000c;
 }

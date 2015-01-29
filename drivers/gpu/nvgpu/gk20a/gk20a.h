@@ -886,4 +886,11 @@ void gk20a_user_deinit(struct platform_device *dev);
 
 extern void gk20a_debug_dump_device(struct platform_device *pdev);
 
+static inline u32 scale_ptimer(u32 timeout , u32 scale10x)
+{
+	if (((timeout*10) % scale10x) >= (scale10x/2))
+		return ((timeout * 10) / scale10x) + 1;
+	else
+		return (timeout * 10) / scale10x;
+}
 #endif /* GK20A_H */

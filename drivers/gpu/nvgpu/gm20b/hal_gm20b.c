@@ -120,7 +120,6 @@ int gm20b_init_hal(struct gk20a *g)
 		}
 	}
 #endif
-
 	gm20b_init_mc(gops);
 	gm20b_init_ltc(gops);
 	gm20b_init_gr(gops);

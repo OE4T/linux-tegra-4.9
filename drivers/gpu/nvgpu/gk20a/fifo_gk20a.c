@@ -344,6 +344,7 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	u32 mask;
 	u32 timeout;
 	int i;
+	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
 
 	gk20a_dbg_fn("");
 	/* enable pmc pfifo */
@@ -408,8 +409,9 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	if (g->ops.fifo.apply_pb_timeout)
 		g->ops.fifo.apply_pb_timeout(g);
 
-	timeout = GRFIFO_TIMEOUT_CHECK_PERIOD_US |
-			fifo_eng_timeout_detection_enabled_f();
+	timeout = GRFIFO_TIMEOUT_CHECK_PERIOD_US;
+	timeout = scale_ptimer(timeout, platform->ptimerscaling10x);
+	timeout |= fifo_eng_timeout_detection_enabled_f();
 	gk20a_writel(g, fifo_eng_timeout_r(), timeout);
 
 	gk20a_dbg_fn("done");

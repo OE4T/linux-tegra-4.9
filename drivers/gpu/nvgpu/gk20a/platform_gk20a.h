@@ -94,6 +94,9 @@ struct gk20a_platform {
 	/* Default big page size 64K or 128K */
 	u32 default_big_page_size;
 
+	/* scaling factor for ptimer */
+	u32  ptimerscaling10x;
+
 	/* Initialize the platform interface of the gk20a driver.
 	 *
 	 * The platform implementation of this function must

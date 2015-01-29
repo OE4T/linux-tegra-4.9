@@ -1,7 +1,7 @@
 /*
  * GK20A graphics channel
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -84,6 +84,7 @@ struct channel_gk20a {
 	bool first_init;
 	bool vpr;
 	pid_t pid;
+	struct mutex ioctl_lock;
 
 	int tsgid;
 	struct list_head ch_entry; /* channel's entry in TSG */

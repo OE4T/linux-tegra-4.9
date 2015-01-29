@@ -1592,11 +1592,19 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	/* Make sure we have enough space for gpfifo entries. If not,
 	 * wait for signals from completed submits */
 	if (gp_free_count(c) < num_entries + extra_entries) {
+		/* we can get here via locked ioctl and other paths too */
+		int locked_path = mutex_is_locked(&c->ioctl_lock);
+		if (locked_path)
+			mutex_unlock(&c->ioctl_lock);
+
 		trace_gk20a_gpfifo_submit_wait_for_space(c->g->dev->name);
 		err = wait_event_interruptible(c->submit_wq,
 			get_gp_free_count(c) >= num_entries + extra_entries ||
 			c->has_timedout);
 		trace_gk20a_gpfifo_submit_wait_for_space_done(c->g->dev->name);
+
+		if (locked_path)
+			mutex_lock(&c->ioctl_lock);
 	}
 
 	if (c->has_timedout) {
@@ -1765,6 +1773,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	c->in_use = false;
 	c->hw_chid = chid;
 	c->bound = false;
+	mutex_init(&c->ioctl_lock);
 	mutex_init(&c->jobs_lock);
 	mutex_init(&c->submit_lock);
 	INIT_LIST_HEAD(&c->jobs);
@@ -2270,6 +2279,10 @@ long gk20a_channel_ioctl(struct file *filp,
 			return -EFAULT;
 	}
 
+	/* protect our sanity for threaded userspace - most of the channel is
+	 * not thread safe */
+	mutex_lock(&ch->ioctl_lock);
+
 	switch (cmd) {
 	case NVGPU_IOCTL_CHANNEL_OPEN:
 		err = gk20a_channel_open_ioctl(ch->g,
@@ -2283,7 +2296,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
 				__func__, cmd);
-			return err;
+			break;
 		}
 		err = ch->g->ops.gr.alloc_obj_ctx(ch,
 				(struct nvgpu_alloc_obj_ctx_args *)buf);
@@ -2295,7 +2308,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
 				__func__, cmd);
-			return err;
+			break;
 		}
 		err = ch->g->ops.gr.free_obj_ctx(ch,
 				(struct nvgpu_free_obj_ctx_args *)buf);
@@ -2307,7 +2320,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
 				__func__, cmd);
-			return err;
+			break;
 		}
 		err = gk20a_alloc_channel_gpfifo(ch,
 				(struct nvgpu_alloc_gpfifo_args *)buf);
@@ -2323,10 +2336,18 @@ long gk20a_channel_ioctl(struct file *filp,
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
 				__func__, cmd);
-			return err;
+			break;
 		}
+
+		/* waiting is thread-safe, not dropping this mutex could
+		 * deadlock in certain conditions */
+		mutex_unlock(&ch->ioctl_lock);
+
 		err = gk20a_channel_wait(ch,
 				(struct nvgpu_wait_args *)buf);
+
+		mutex_lock(&ch->ioctl_lock);
+
 		gk20a_idle(dev);
 		break;
 	case NVGPU_IOCTL_CHANNEL_ZCULL_BIND:
@@ -2335,7 +2356,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
 				__func__, cmd);
-			return err;
+			break;
 		}
 		err = gk20a_channel_zcull_bind(ch,
 				(struct nvgpu_zcull_bind_args *)buf);
@@ -2347,7 +2368,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
 				__func__, cmd);
-			return err;
+			break;
 		}
 		err = gk20a_init_error_notifier(ch,
 				(struct nvgpu_set_error_notifier *)buf);
@@ -2360,7 +2381,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
 				__func__, cmd);
-			return err;
+			break;
 		}
 		err = gk20a_channel_cycle_stats(ch,
 				(struct nvgpu_cycle_stats_args *)buf);
@@ -2399,7 +2420,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
 				__func__, cmd);
-			return err;
+			break;
 		}
 		gk20a_channel_set_priority(ch,
 			((struct nvgpu_set_priority_args *)buf)->priority);
@@ -2411,7 +2432,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
 				__func__, cmd);
-			return err;
+			break;
 		}
 		/* enable channel */
 		gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
@@ -2425,7 +2446,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
 				__func__, cmd);
-			return err;
+			break;
 		}
 		/* disable channel */
 		gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
@@ -2439,7 +2460,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
 				__func__, cmd);
-			return err;
+			break;
 		}
 		err = gk20a_fifo_preempt(ch->g, ch);
 		gk20a_idle(dev);
@@ -2450,7 +2471,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			dev_err(&dev->dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
 				__func__, cmd);
-			return err;
+			break;
 		}
 		err = gk20a_fifo_force_reset_ch(ch, true);
 		gk20a_idle(dev);
@@ -2469,6 +2490,8 @@ long gk20a_channel_ioctl(struct file *filp,
 		err = copy_to_user((void __user *)arg, buf, _IOC_SIZE(cmd));
 
 	gk20a_dbg_fn("end");
+
+	mutex_unlock(&ch->ioctl_lock);
 
 	return err;
 }

@@ -2285,15 +2285,15 @@ static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 	tegra_mipi_cal_write(dsi->mipi_cal, val,
 			MIPI_CAL_MIPI_BIAS_PAD_CFG1_0);
 
-	val = (DSI_PAD_SLEWUPADJ(0x7) | DSI_PAD_SLEWDNADJ(0x7) |
-		DSI_PAD_LPUPADJ(0x1) | DSI_PAD_LPDNADJ(0x1) |
-		DSI_PAD_OUTADJCLK(0x0));
-	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_2_VS1);
+	tegra_dsi_writel(dsi, 0, DSI_PAD_CONTROL_1_VS1);
+	tegra_dsi_writel(dsi, 0, DSI_PAD_CONTROL_2_VS1);
 
 	val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_3_VS1);
 	val |= (DSI_PAD_PREEMP_PD_CLK(0x3) | DSI_PAD_PREEMP_PU_CLK(0x3) |
 		   DSI_PAD_PREEMP_PD(0x3) | DSI_PAD_PREEMP_PU(0x3));
 	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_3_VS1);
+
+	tegra_dsi_writel(dsi, 0, DSI_PAD_CONTROL_4_VS1);
 
 	/* Calibrate DSI 0 */
 	if (dsi->info.ganged_type ||

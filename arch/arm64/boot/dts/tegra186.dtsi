@@ -45,10 +45,17 @@
 
 		calxeda,smmu-secure-config-access;
 
-		mmu-masters = <&{/sdhci@700b0600} TEGRA_SWGROUP_SDMMC4A>,
-			      <&{/sdhci@700b0400} TEGRA_SWGROUP_SDMMC3A>,
-			      <&{/sdhci@700b0200} TEGRA_SWGROUP_SDMMC2A>,
-			      <&{/sdhci@700b0000} TEGRA_SWGROUP_SDMMC1A>;
+		mmu-masters = <&host1x                  TEGRA_SWGROUP_HC>,
+			      <&{/host1x/vic}           TEGRA_SWGROUP_VIC>,
+			      <&{/host1x/vi}            TEGRA_SWGROUP_VI>,
+			      <&{/host1x/isp@54600000}  TEGRA_SWGROUP_ISP>,
+			      <&{/host1x/nvdec}         TEGRA_SWGROUP_NVDEC>,
+			      <&{/host1x/nvenc}         TEGRA_SWGROUP_NVENC>,
+			      <&{/host1x/nvjpg}         TEGRA_SWGROUP_NVJPG>,
+			      <&{/sdhci@700b0600}       TEGRA_SWGROUP_SDMMC4A>,
+			      <&{/sdhci@700b0400}       TEGRA_SWGROUP_SDMMC3A>,
+			      <&{/sdhci@700b0200}       TEGRA_SWGROUP_SDMMC2A>,
+			      <&{/sdhci@700b0000}       TEGRA_SWGROUP_SDMMC1A>;
 
 		domains = <&ppcs_as TEGRA_SWGROUP_CELLS5(PPCS, PPCS1, PPCS2, SE, SE1)
 			   &gpu_as TEGRA_SWGROUP_CELLS(GPUB)

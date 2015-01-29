@@ -833,6 +833,17 @@ static void nvhost_virt_deinit(struct platform_device *dev)
 	}
 }
 
+static int nvhost_check_valid_config(void)
+{
+	if ((nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN &&
+		  nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL) ||
+	    (nvhost_get_channel_policy() == MAP_CHANNEL_ON_SUBMIT &&
+		  nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL_INSTANCE))
+		return 0;
+
+	return -EINVAL;
+}
+
 long linsim_cl = 0;
 static int nvhost_probe(struct platform_device *dev)
 {
@@ -906,6 +917,12 @@ static int nvhost_probe(struct platform_device *dev)
 	 * by nvhost_master later */
 	memcpy(&host->info, pdata->private_data,
 			sizeof(struct host1x_device_info));
+
+	err = nvhost_check_valid_config();
+	if (err) {
+		dev_err(&dev->dev, "booting with invalid config. err:%d", err);
+		return err;
+	}
 
 	pdata->pdev = dev;
 

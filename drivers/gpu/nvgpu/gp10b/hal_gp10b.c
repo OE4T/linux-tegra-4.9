@@ -98,6 +98,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_mm(gops);
 	gp10b_init_pmu_ops(gops);
 	gm20b_init_clk_ops(gops);
+	gk20a_init_debug_ops(gops);
 	gops->name = "gp10b";
 
 	c->twod_class = FERMI_TWOD_A;

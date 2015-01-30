@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dpaux.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014 - 2015, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -29,10 +29,14 @@ static const char *const dpaux_clks[TEGRA_DPAUX_INSTANCE_N] = {
 	 "dpaux1",
 };
 
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 static unsigned long dpaux_base_addr[TEGRA_DPAUX_INSTANCE_N] = {
 	TEGRA_DPAUX_BASE,
 	TEGRA_DPAUX1_BASE,
 };
+#endif
+
+static void __iomem *dpaux_baseaddr[TEGRA_DPAUX_INSTANCE_N];
 
 static DEFINE_MUTEX(dpaux_lock);
 
@@ -57,18 +61,24 @@ void tegra_dpaux_clk_dis(enum tegra_dpaux_instance id)
 static inline void _tegra_dpaux_pad_power(struct tegra_dc *dc,
 					enum tegra_dpaux_instance id, bool on)
 {
+	void __iomem *regaddr;
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
+	regaddr = IO_ADDRESS(dpaux_base_addr[id] + DPAUX_HYBRID_PADCTL * 4);
+#else
+	regaddr = dpaux_baseaddr[id] + DPAUX_HYBRID_PADCTL * 4;
+#endif
 	writel((on ? DPAUX_HYBRID_SPARE_PAD_PWR_POWERUP :
 		DPAUX_HYBRID_SPARE_PAD_PWR_POWERDOWN),
-		IO_ADDRESS(dpaux_base_addr[id] + DPAUX_HYBRID_SPARE * 4));
+		regaddr);
 }
 
 __maybe_unused
 void tegra_dpaux_pad_power(struct tegra_dc *dc,
 				enum tegra_dpaux_instance id, bool on)
 {
-	if (tegra_platform_is_linsim())
-		return;
-	tegra_dpaux_clk_en(id);
+	if (!tegra_platform_is_linsim())
+		tegra_dpaux_clk_en(id);
+
 	tegra_dc_io_start(dc);
 
 	mutex_lock(&dpaux_lock);
@@ -76,7 +86,8 @@ void tegra_dpaux_pad_power(struct tegra_dc *dc,
 	mutex_unlock(&dpaux_lock);
 
 	tegra_dc_io_end(dc);
-	tegra_dpaux_clk_dis(id);
+	if (!tegra_platform_is_linsim())
+		tegra_dpaux_clk_dis(id);
 }
 
 static inline void _tegra_dpaux_config_pad_mode(struct tegra_dc *dc,
@@ -84,15 +95,21 @@ static inline void _tegra_dpaux_config_pad_mode(struct tegra_dc *dc,
 					enum tegra_dpaux_pad_mode mode)
 {
 	u32 val;
+	void __iomem *regaddr;
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
+	regaddr = IO_ADDRESS(dpaux_base_addr[id] + DPAUX_HYBRID_PADCTL * 4);
+#else
+	regaddr = dpaux_baseaddr[id] + DPAUX_HYBRID_PADCTL * 4;
+#endif
 
-	val = readl(IO_ADDRESS(dpaux_base_addr[id] + DPAUX_HYBRID_PADCTL * 4));
+	val = readl(regaddr);
 	val &= ~(DPAUX_HYBRID_PADCTL_I2C_SDA_INPUT_RCV_ENABLE |
 		DPAUX_HYBRID_PADCTL_I2C_SCL_INPUT_RCV_ENABLE |
 		DPAUX_HYBRID_PADCTL_MODE_I2C);
 	val |= mode ? (DPAUX_HYBRID_PADCTL_I2C_SDA_INPUT_RCV_ENABLE |
 		DPAUX_HYBRID_PADCTL_I2C_SCL_INPUT_RCV_ENABLE |
 		mode) : 0;
-	writel(val, IO_ADDRESS(dpaux_base_addr[id] + DPAUX_HYBRID_PADCTL * 4));
+	writel(val, regaddr);
 }
 
 __maybe_unused
@@ -110,4 +127,11 @@ void tegra_dpaux_config_pad_mode(struct tegra_dc *dc,
 
 	tegra_dc_io_end(dc);
 	tegra_dpaux_clk_dis(id);
+}
+
+__maybe_unused
+void tegra_set_dpaux_addr(void __iomem *dpaux_base,
+			enum tegra_dpaux_instance id)
+{
+	dpaux_baseaddr[id] = dpaux_base;
 }

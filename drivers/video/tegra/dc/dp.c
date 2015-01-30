@@ -1728,6 +1728,8 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	dp->irq = irq;
 	dp->pdata = dc->pdata->default_out->dp_out;
 
+	tegra_set_dpaux_addr(dp->aux_base, dc->ndev->id);
+
 	if (IS_ERR_OR_NULL(dp->sor)) {
 		err = PTR_ERR(dp->sor);
 		dp->sor = NULL;

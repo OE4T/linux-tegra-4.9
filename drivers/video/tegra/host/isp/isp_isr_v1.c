@@ -21,6 +21,7 @@
 #include "bus_client.h"
 #include "isp.h"
 #include "dev.h"
+#include "isp_isr_v1.h"
 
 static irqreturn_t isp_isr(int irq, void *dev_id)
 {

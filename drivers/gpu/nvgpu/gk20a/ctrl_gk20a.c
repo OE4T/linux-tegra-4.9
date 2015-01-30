@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2014, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -420,6 +420,12 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	case NVGPU_GPU_IOCTL_GET_TPC_MASKS:
 		err = gk20a_ctrl_get_tpc_masks(g,
 			(struct nvgpu_gpu_get_tpc_masks_args *)buf);
+		break;
+	case NVGPU_GPU_IOCTL_OPEN_CHANNEL:
+		/* this arg type here, but ..gpu_open_channel_args in nvgpu.h
+		 * for consistency - they are the same */
+		err = gk20a_channel_open_ioctl(g,
+			(struct nvgpu_channel_open_args *)buf);
 		break;
 	default:
 		dev_dbg(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x", cmd);

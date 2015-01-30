@@ -185,6 +185,8 @@ int gk20a_channel_resume(struct gk20a *g);
 
 /* Channel file operations */
 int gk20a_channel_open(struct inode *inode, struct file *filp);
+int gk20a_channel_open_ioctl(struct gk20a *g,
+		struct nvgpu_channel_open_args *args);
 long gk20a_channel_ioctl(struct file *filp,
 			 unsigned int cmd,
 			 unsigned long arg);

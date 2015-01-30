@@ -811,6 +811,48 @@ int gk20a_channel_open(struct inode *inode, struct file *filp)
 	return ret;
 }
 
+int gk20a_channel_open_ioctl(struct gk20a *g,
+		struct nvgpu_channel_open_args *args)
+{
+	int err;
+	int fd;
+	struct file *file;
+	char *name;
+
+	err = get_unused_fd_flags(O_RDWR);
+	if (err < 0)
+		return err;
+	fd = err;
+
+	name = kasprintf(GFP_KERNEL, "nvhost-%s-fd%d",
+			dev_name(&g->dev->dev), fd);
+	if (!name) {
+		err = -ENOMEM;
+		goto clean_up;
+	}
+
+	file = anon_inode_getfile(name, g->channel.cdev.ops, NULL, O_RDWR);
+	kfree(name);
+	if (IS_ERR(file)) {
+		err = PTR_ERR(file);
+		goto clean_up;
+	}
+	fd_install(fd, file);
+
+	err = __gk20a_channel_open(g, file);
+	if (err)
+		goto clean_up_file;
+
+	args->channel_fd = fd;
+	return 0;
+
+clean_up_file:
+	fput(file);
+clean_up:
+	put_unused_fd(fd);
+	return err;
+}
+
 /* allocate private cmd buffer.
    used for inserting commands before/after user submitted buffers. */
 static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
@@ -2237,43 +2279,9 @@ long gk20a_channel_ioctl(struct file *filp,
 
 	switch (cmd) {
 	case NVGPU_IOCTL_CHANNEL_OPEN:
-	{
-		int fd;
-		struct file *file;
-		char *name;
-
-		err = get_unused_fd_flags(O_RDWR);
-		if (err < 0)
-			break;
-		fd = err;
-
-		name = kasprintf(GFP_KERNEL, "nvhost-%s-fd%d",
-				dev_name(&dev->dev), fd);
-		if (!name) {
-			err = -ENOMEM;
-			put_unused_fd(fd);
-			break;
-		}
-
-		file = anon_inode_getfile(name, filp->f_op, NULL, O_RDWR);
-		kfree(name);
-		if (IS_ERR(file)) {
-			err = PTR_ERR(file);
-			put_unused_fd(fd);
-			break;
-		}
-		fd_install(fd, file);
-
-		err = __gk20a_channel_open(ch->g, file);
-		if (err) {
-			put_unused_fd(fd);
-			fput(file);
-			break;
-		}
-
-		((struct nvgpu_channel_open_args *)buf)->channel_fd = fd;
+		err = gk20a_channel_open_ioctl(ch->g,
+			(struct nvgpu_channel_open_args *)buf);
 		break;
-	}
 	case NVGPU_IOCTL_CHANNEL_SET_NVMAP_FD:
 		break;
 	case NVGPU_IOCTL_CHANNEL_ALLOC_OBJ_CTX:

@@ -55,8 +55,6 @@
 #include "nvhost_sync.h"
 #include "vhost/vhost.h"
 
-static DEFINE_MUTEX(channel_lock);
-
 int nvhost_check_bondout(unsigned int id)
 {
 #ifdef CONFIG_NVHOST_BONDOUT_CHECK
@@ -205,8 +203,6 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 
 	trace_nvhost_channel_release(dev_name(&priv->pdev->dev));
 
-	mutex_lock(&channel_lock);
-
 	/* remove this client from acm */
 	nvhost_module_remove_client(priv->pdev, priv);
 
@@ -221,10 +217,9 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	    pdata->exclusive)
 		pdata->num_mapped_chs--;
 
-	mutex_unlock(&channel_lock);
-
 	/* drop channel reference if we took one at open time */
-	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
+	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN ||
+	    pdata->forced_map_on_open)
 		nvhost_putchannel(priv->ch, 1);
 
 	if (nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL_INSTANCE) {
@@ -255,7 +250,7 @@ static int __nvhost_channelopen(struct inode *inode,
 {
 	struct nvhost_channel_userctx *priv;
 	struct nvhost_device_data *pdata, *host1x_pdata;
-	struct nvhost_channel *ch = NULL;
+	struct nvhost_master *host;
 	int ret;
 
 	/* grab pdev and pdata based on inputs */
@@ -268,34 +263,23 @@ static int __nvhost_channelopen(struct inode *inode,
 	} else
 		return -EINVAL;
 
-	/* ..and host1x platform data */
+	/* ..and host1x specific data */
 	host1x_pdata = dev_get_drvdata(pdev->dev.parent);
-
-	/* get a channel if we are in map-at-open -mode */
-	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN) {
-		ret = nvhost_channel_map(pdata, &ch, NULL);
-		if (ret || !ch) {
-			pr_err("%s: failed to map channel, error: %d\n",
-			       __func__, ret);
-			return ret;
-		}
-	}
+	host = nvhost_get_host(pdev);
 
 	trace_nvhost_channel_open(dev_name(&pdev->dev));
-
-	mutex_lock(&channel_lock);
 
 	/* If the device is in exclusive mode, make channel reservation here */
 	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_SUBMIT &&
 	    pdata->exclusive) {
 		if (pdata->num_mapped_chs == pdata->num_channels)
-			goto fail;
+			goto fail_mark_used;
 		pdata->num_mapped_chs++;
 	}
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv)
-		goto fail;
+		goto fail_allocate_priv;
 	filp->private_data = priv;
 
 	/* Register this client to acm */
@@ -313,11 +297,9 @@ static int __nvhost_channelopen(struct inode *inode,
 	nvhost_module_idle(pdev);
 
 	/* Get client id */
-	priv->clientid = atomic_add_return(1,
-			&nvhost_get_host(pdev)->clientid);
+	priv->clientid = atomic_add_return(1, &host->clientid);
 	if (!priv->clientid)
-		priv->clientid = atomic_add_return(1,
-				&nvhost_get_host(pdev)->clientid);
+		priv->clientid = atomic_add_return(1, &host->clientid);
 
 	/* Initialize private structure */
 	priv->timeout = host1x_pdata->nvhost_timeout_default;
@@ -325,7 +307,6 @@ static int __nvhost_channelopen(struct inode *inode,
 	priv->timeout_debug_dump = true;
 	mutex_init(&priv->ioctl_lock);
 	priv->pdev = pdev;
-	priv->ch = ch;
 
 	if (!tegra_platform_is_silicon())
 		priv->timeout = 0;
@@ -334,20 +315,34 @@ static int __nvhost_channelopen(struct inode *inode,
 	if (!priv->vm)
 		goto fail_alloc_vm;
 
-	mutex_unlock(&channel_lock);
+	/* if we run in map-at-submit mode but device has override
+	 * flag set, respect the override flag */
+	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN ||
+	    pdata->forced_map_on_open) {
+		ret = nvhost_channel_map(pdata, &priv->ch, priv);
+		if (ret) {
+			pr_err("%s: failed to map channel, error: %d\n",
+			       __func__, ret);
+			goto fail_get_channel;
+		}
+	}
 
 	return 0;
 
+fail_get_channel:
+	nvhost_vm_put(priv->vm);
 fail_alloc_vm:
 fail_power_on:
+	if (pdata->keepalive)
+		nvhost_module_enable_poweroff(pdev);
+	nvhost_module_remove_client(pdev, priv);
 fail_add_client:
 	kfree(priv);
-
-fail:
-	if (ch)
-		nvhost_putchannel(ch, 1);
-	mutex_unlock(&channel_lock);
-
+fail_allocate_priv:
+	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_SUBMIT &&
+	    pdata->exclusive)
+		pdata->num_mapped_chs--;
+fail_mark_used:
 	return -ENOMEM;
 }
 

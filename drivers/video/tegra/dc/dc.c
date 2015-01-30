@@ -74,7 +74,6 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #include "tegra_adf.h"
 #endif
 
-#include "hdmi.h"
 #include "edid.h"
 
 #ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
@@ -4121,18 +4120,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			"No default output specified.  Leaving output disabled.\n");
 	}
 	dc->mode_dirty = false; /* ignore changes tegra_dc_set_out has done */
-
-	if ((config_enabled(CONFIG_FRAMEBUFFER_CONSOLE) ||
-			((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
-			(dc->pdata->flags & TEGRA_DC_FLAG_SET_EARLY_MODE))) &&
-			dc->out && (dc->out->type == TEGRA_DC_OUT_HDMI) &&
-			(!dc->initialized) && tegra_dc_hpd(dc)) {
-		struct fb_monspecs specs;
-		struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
-		if (!tegra_edid_get_monspecs(hdmi->edid, &specs, NULL)) {
-			tegra_dc_set_fb_mode(dc, specs.modedb, false);
-		}
-	}
 
 	if ((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
 			dc->out && dc->out->type == TEGRA_DC_OUT_LVDS) {

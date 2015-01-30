@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1266,6 +1266,22 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	}
 	if (hdmi->info.hdmi2fpd_bridge_enable)
 		hdmi2fpd_init(hdmi);
+
+	/* NOTE: Below code is applicable to L4T or embedded systems and is
+	 * protected accordingly. This section early enables DC with first mode
+	 * from the monitor specs.
+	 * WARN: No fallback mode if monitor specs are unsupported.
+	 */
+	if ((config_enabled(CONFIG_FRAMEBUFFER_CONSOLE) ||
+			((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
+			 (dc->pdata->flags & TEGRA_DC_FLAG_SET_EARLY_MODE))) &&
+			dc->out && (dc->out->type == TEGRA_DC_OUT_HDMI) &&
+			(!dc->initialized) && tegra_dc_hpd(dc)) {
+		struct fb_monspecs specs;
+		if (!tegra_edid_get_monspecs(hdmi->edid, &specs, NULL)) {
+			tegra_dc_set_fb_mode(dc, specs.modedb, false);
+		}
+	}
 
 	/*Add sysfs node to query hdmi audio channels on startup*/
 	hdmi_audio = kobject_create_and_add("hdmi_audio_channels", kernel_kobj);

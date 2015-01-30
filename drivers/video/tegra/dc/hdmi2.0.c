@@ -966,6 +966,22 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	tegra_dc_set_outdata(dc, hdmi);
 
+	/* NOTE: Below code is applicable to L4T or embedded systems and is
+	 * protected accordingly. This section early enables DC with first mode
+	 * from the monitor specs.
+	 * WARN: No fallback mode if monitor specs are unsupported.
+	 */
+	if ((config_enabled(CONFIG_FRAMEBUFFER_CONSOLE) ||
+			((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
+			(dc->pdata->flags & TEGRA_DC_FLAG_SET_EARLY_MODE))) &&
+			dc->out && (dc->out->type == TEGRA_DC_OUT_HDMI) &&
+			(!dc->initialized) && tegra_dc_hpd(dc)) {
+		struct fb_monspecs specs;
+		if (!tegra_edid_get_monspecs(hdmi->edid, &specs, NULL)) {
+			tegra_dc_set_fb_mode(dc, specs.modedb, false);
+		}
+	}
+
 #ifdef CONFIG_SWITCH
 	hdmi->hpd_switch.name = "hdmi";
 	err = switch_dev_register(&hdmi->hpd_switch);

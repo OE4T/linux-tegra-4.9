@@ -703,8 +703,10 @@ static int tegra210_adsp_compr_msg_handler(struct tegra210_adsp_app *app,
 			break;
 		}
 		tegra210_adsp_send_state_msg(prtd->fe_apm,
-			nvfx_state_inactive, 0);
-		tegra210_adsp_send_reset_msg(prtd->fe_apm, 0);
+			nvfx_state_inactive,
+			TEGRA210_ADSP_MSG_FLAG_SEND);
+		tegra210_adsp_send_reset_msg(prtd->fe_apm,
+			TEGRA210_ADSP_MSG_FLAG_SEND);
 		snd_compr_drain_notify(prtd->cstream);
 		prtd->is_draining = 0;
 	}
@@ -837,7 +839,8 @@ static int tegra210_adsp_compr_trigger(struct snd_compr_stream *cstream,
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 		ret = tegra210_adsp_send_state_msg(prtd->fe_apm,
-			nvfx_state_active, 0);
+			nvfx_state_active,
+			TEGRA210_ADSP_MSG_FLAG_SEND);
 		if (ret < 0) {
 			dev_err(prtd->dev, "Failed to set state start.");
 			return ret;
@@ -846,7 +849,8 @@ static int tegra210_adsp_compr_trigger(struct snd_compr_stream *cstream,
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		ret = tegra210_adsp_send_state_msg(prtd->fe_apm,
-				nvfx_state_active, 0);
+				nvfx_state_active,
+				TEGRA210_ADSP_MSG_FLAG_SEND);
 		if (ret < 0) {
 			dev_err(prtd->dev, "Failed to set state resume");
 			return ret;
@@ -854,13 +858,15 @@ static int tegra210_adsp_compr_trigger(struct snd_compr_stream *cstream,
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 		ret = tegra210_adsp_send_state_msg(prtd->fe_apm,
-			nvfx_state_inactive, 0);
+			nvfx_state_inactive,
+			TEGRA210_ADSP_MSG_FLAG_SEND);
 		if (ret < 0) {
 			dev_err(prtd->dev, "Failed to set state stop");
 			return ret;
 		}
 
-		ret = tegra210_adsp_send_reset_msg(prtd->fe_apm, 0);
+		ret = tegra210_adsp_send_reset_msg(prtd->fe_apm,
+			TEGRA210_ADSP_MSG_FLAG_SEND);
 		if (ret < 0) {
 			dev_err(prtd->dev, "Failed to reset");
 			return ret;
@@ -869,7 +875,8 @@ static int tegra210_adsp_compr_trigger(struct snd_compr_stream *cstream,
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		ret = tegra210_adsp_send_state_msg(prtd->fe_apm,
-			nvfx_state_inactive, 0);
+			nvfx_state_inactive,
+			TEGRA210_ADSP_MSG_FLAG_SEND);
 		if (ret < 0) {
 			dev_err(prtd->dev, "Failed to set state pause");
 			return ret;
@@ -877,7 +884,8 @@ static int tegra210_adsp_compr_trigger(struct snd_compr_stream *cstream,
 		break;
 	case SND_COMPR_TRIGGER_DRAIN:
 		prtd->is_draining = 1;
-		ret = tegra210_adsp_send_eos_msg(prtd->fe_apm, 0);
+		ret = tegra210_adsp_send_eos_msg(prtd->fe_apm,
+			TEGRA210_ADSP_MSG_FLAG_SEND);
 		if (ret < 0) {
 			dev_err(prtd->dev, "Failed to set state drain");
 			return ret;
@@ -922,7 +930,8 @@ static int tegra210_adsp_compr_copy(struct snd_compr_stream *cstream,
 			return -EFAULT;
 	}
 	tegra210_adsp_send_pos_msg(prtd->fe_apm,
-	    (runtime->total_bytes_available + count) % runtime->buffer_size, 0);
+	    (runtime->total_bytes_available + count) % runtime->buffer_size,
+	    TEGRA210_ADSP_MSG_FLAG_SEND);
 
 	return count;
 }
@@ -1134,7 +1143,8 @@ static int tegra210_adsp_pcm_trigger(struct snd_pcm_substream *substream,
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		ret = tegra210_adsp_send_state_msg(prtd->fe_apm,
-			nvfx_state_active, 0);
+			nvfx_state_active,
+			TEGRA210_ADSP_MSG_FLAG_SEND);
 		if (ret < 0) {
 			dev_err(prtd->dev, "Failed to set state");
 			return ret;
@@ -1144,13 +1154,15 @@ static int tegra210_adsp_pcm_trigger(struct snd_pcm_substream *substream,
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 		ret = tegra210_adsp_send_state_msg(prtd->fe_apm,
-			nvfx_state_inactive, 0);
+			nvfx_state_inactive,
+			TEGRA210_ADSP_MSG_FLAG_SEND);
 		if (ret < 0) {
 			dev_err(prtd->dev, "Failed to set state");
 			return ret;
 		}
 
-		ret = tegra210_adsp_send_reset_msg(prtd->fe_apm, 0);
+		ret = tegra210_adsp_send_reset_msg(prtd->fe_apm,
+			TEGRA210_ADSP_MSG_FLAG_SEND);
 		if (ret < 0) {
 			dev_err(prtd->dev, "Failed to reset");
 			return ret;
@@ -1175,7 +1187,8 @@ static int tegra210_adsp_pcm_ack(struct snd_pcm_substream *substream)
 
 	pos = frames_to_bytes(runtime,
 		runtime->control->appl_ptr % runtime->buffer_size);
-	ret = tegra210_adsp_send_pos_msg(prtd->fe_apm, pos, 0);
+	ret = tegra210_adsp_send_pos_msg(prtd->fe_apm, pos,
+		TEGRA210_ADSP_MSG_FLAG_SEND);
 	if (ret < 0) {
 		dev_err(prtd->dev, "Failed to send write position.");
 		return ret;
@@ -1327,7 +1340,8 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 		adma_params.direction = ADMA_MEMORY_TO_AHUB;
 		adma_params.event.pvoid = app->apm->output_event.pvoid;
 
-		ret = tegra210_adsp_adma_params_msg(app, &adma_params, 0);
+		ret = tegra210_adsp_adma_params_msg(app, &adma_params,
+			TEGRA210_ADSP_MSG_FLAG_SEND);
 		if (ret < 0) {
 			dev_err(adsp->dev, "ADMA params msg failed. %d.", ret);
 			return ret;
@@ -1350,7 +1364,8 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 			adma_params.event.pvoid = app->apm->input_event.pvoid;
 
 			ret = tegra210_adsp_adma_params_msg(app,
-					&adma_params, 0);
+					&adma_params,
+					TEGRA210_ADSP_MSG_FLAG_SEND);
 			if (ret < 0) {
 				dev_err(adsp->dev, "ADMA params msg failed");
 				return ret;
@@ -1495,12 +1510,14 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 
 	if (SND_SOC_DAPM_EVENT_ON(event)) {
 		if (IS_APM_IN(w->reg))
-			tegra210_adsp_send_state_msg(app, nvfx_state_active, 0);
+			tegra210_adsp_send_state_msg(app, nvfx_state_active,
+			TEGRA210_ADSP_MSG_FLAG_SEND);
 	} else {
 		if (IS_APM_IN(w->reg)) {
 			tegra210_adsp_send_state_msg(app, nvfx_state_inactive,
 				TEGRA210_ADSP_MSG_FLAG_HOLD);
-			tegra210_adsp_send_reset_msg(app, 0);
+			tegra210_adsp_send_reset_msg(app,
+				TEGRA210_ADSP_MSG_FLAG_SEND);
 		} else if (IS_ADMA(w->reg)) {
 			__clear_bit(app->adma_chan -
 				TEGRA210_ADSP_ADMA_CHANNEL_START,
@@ -1965,7 +1982,7 @@ static void tegra210_adsp_route_modify(const char *wt_default,
 	}
 }
 
-int tegra210_adsp_param_info(struct snd_kcontrol *kcontrol,
+static int tegra210_adsp_param_info(struct snd_kcontrol *kcontrol,
 		       struct snd_ctl_elem_info *uinfo)
 {
 	struct soc_bytes *params = (void *)kcontrol->private_value;
@@ -2058,7 +2075,8 @@ static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
 		break;
 	}
 
-	tegra210_adsp_send_msg(app->apm, &apm_msg, 0);
+	tegra210_adsp_send_msg(app->apm, &apm_msg,
+		TEGRA210_ADSP_MSG_FLAG_SEND);
 
 	return 0;
 }

@@ -1,7 +1,7 @@
 /*
  * kernel/drivers/video/tegra/dc/fake_panel.c
  *
- * Copyright (c) 2014-2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -277,15 +277,57 @@ int tegra_dc_destroy_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 {
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 	int i = 0;
+	struct resource *res;
+	struct resource dsi_res;
+	char *ganged_reg_name[2] = {"ganged_dsia_regs", "ganged_dsib_regs"};
+	struct device_node *np = dc->ndev->dev.of_node;
+#ifdef CONFIG_OF
+	struct device_node *np_dsi =
+		of_find_node_by_path(DSI_NODE);
+#else
+	struct device_node *np_dsi = NULL;
+#endif
+
+	if (!dsi) {
+		dev_err(&dc->ndev->dev, " dsi: allocation deleted\n");
+		of_node_put(np_dsi);
+		return -ENOMEM;
+	}
+
+	dsi->max_instances = dc->out->dsi->ganged_type ? MAX_DSI_INSTANCE : 1;
 
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
-
 	for (i = 0; i < dsi->max_instances; i++) {
+		if (np) {
+			if (np_dsi && of_device_is_available(np_dsi)) {
+				if (!dc->out->dsi->ganged_type)
+					of_address_to_resource(np_dsi,
+						dc->out->dsi->dsi_instance,
+						&dsi_res);
+				else /* ganged type */
+					of_address_to_resource(np_dsi,
+						i, &dsi_res);
+				res = &dsi_res;
+			} else {
+				return -EINVAL;
+			}
+		} else {
+			res = platform_get_resource_byname(dc->ndev,
+				IORESOURCE_MEM,
+				dc->out->dsi->ganged_type ?
+				ganged_reg_name[i] :
+				ganged_reg_name[dsi->info.dsi_instance]);
+		}
+		if (!res) {
+			dev_err(&dc->ndev->dev, "dsi: no mem resource\n");
+			return -ENOENT;
+		}
+
 		if (dsi->base[i])
 			iounmap(dsi->base[i]);
 		if (dsi->base_res[i])
-			release_resource(dsi->base_res[i]);
+			release_mem_region(res->start, resource_size(res));
 		dsi->base[i] = NULL;
 		dsi->base_res[i] = NULL;
 	}

@@ -237,6 +237,7 @@ int nvmap_init(struct platform_device *pdev)
 	generic_dma_info.name = "generic";
 	generic_dma_info.size = 0;
 	generic_dma_info.cma_dev = nvmap_carveouts[1].cma_dev;
+	generic_dma_info.notifier.ops = NULL;
 
 	vpr_dma_info.name = "vpr";
 	vpr_dma_info.size = SZ_32M;

@@ -243,10 +243,15 @@ static void alloc_handle(struct nvmap_client *client,
 
 	BUG_ON(type & (type - 1));
 
+	BUILD_BUG_ON(config_enabled(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM) &&
+		     config_enabled(CONFIG_NVMAP_CONVERT_IOVMM_TO_CARVEOUT));
+
 #ifdef CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM
-	/* Convert generic carveout requests to iovmm requests. */
 	carveout_mask &= ~NVMAP_HEAP_CARVEOUT_GENERIC;
 	iovmm_mask |= NVMAP_HEAP_CARVEOUT_GENERIC;
+#elif defined(CONFIG_NVMAP_CONVERT_IOVMM_TO_CARVEOUT)
+	type &= ~NVMAP_HEAP_IOVMM;
+	type |= NVMAP_HEAP_CARVEOUT_GENERIC;
 #endif
 
 	if (type & carveout_mask) {

@@ -80,7 +80,6 @@ static void therm_fan_est_work_func(struct work_struct *work)
 					dwork,
 					struct therm_fan_estimator,
 					therm_fan_est_work);
-
 	for (i = 0; i < est->ndevs; i++) {
 		if (est->devs[i].get_temp(est->devs[i].dev_data, &temp))
 			continue;
@@ -366,7 +365,7 @@ static int fan_est_get_temp_func(const char *data, long *temp)
 
 	thz = thermal_zone_device_find((void *)data, fan_est_match);
 
-	if (!thz || thz->ops->get_temp(thz, temp))
+	if (!thz || thz->ops->get_temp == NULL || thz->ops->get_temp(thz, temp))
 		*temp = 25000;
 
 	return 0;
@@ -658,6 +657,18 @@ static int therm_fan_est_resume(struct platform_device *pdev)
 }
 #endif
 
+static void therm_fan_est_shutdown(struct platform_device *pdev)
+{
+	struct therm_fan_estimator *est = platform_get_drvdata(pdev);
+	pr_info("therm-fan-est: shutting down\n");
+	cancel_delayed_work_sync(&est->therm_fan_est_work);
+	destroy_workqueue(est->workqueue);
+	thermal_zone_device_unregister(est->thz);
+	devm_kfree(&pdev->dev, (void *)est->tzp);
+	devm_kfree(&pdev->dev, (void *)est->devs);
+	devm_kfree(&pdev->dev, (void *)est);
+}
+
 static const struct of_device_id of_thermal_est_match[] = {
 	{ .compatible = "loki-thermal-est", },
 	{ .compatible = "foster-thermal-est", },
@@ -678,6 +689,7 @@ static struct platform_driver therm_fan_est_driver = {
 	.suspend = therm_fan_est_suspend,
 	.resume = therm_fan_est_resume,
 #endif
+	.shutdown = therm_fan_est_shutdown,
 };
 
 module_platform_driver(therm_fan_est_driver);

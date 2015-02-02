@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2014, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2010-2015, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,14 +34,6 @@
 /* the seed consists of 16 bytes of key + 16 bytes of init vector */
 #define TEGRA_CRYPTO_RNG_SEED_SIZE	AES_KEYSIZE_128 + DEFAULT_RNG_BLK_SZ
 #define TEGRA_CRYPTO_RNG_SIZE	SZ_16
-
-/* encrypt/decrypt operations */
-#define TEGRA_CRYPTO_ECB	BIT(0)
-#define TEGRA_CRYPTO_CBC	BIT(1)
-#define TEGRA_CRYPTO_OFB	BIT(2)
-#define TEGRA_CRYPTO_CTR	BIT(3)
-#define TEGRA_CRYPTO_CMAC	BIT(4)
-#define TEGRA_CRYPTO_RNG	BIT(5)
 
 /* a pointer to this struct needs to be passed to:
  * TEGRA_CRYPTO_IOCTL_PROCESS_REQ

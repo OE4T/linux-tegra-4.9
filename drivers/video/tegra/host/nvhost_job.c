@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Job
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -140,6 +140,16 @@ static void job_free(struct kref *ref)
 void nvhost_job_put(struct nvhost_job *job)
 {
 	kref_put(&job->ref, job_free);
+}
+
+int nvhost_job_add_client_gather_address(struct nvhost_job *job,
+		u32 num_words, u32 class_id, dma_addr_t gather_address)
+{
+	nvhost_job_add_gather(job, 0, num_words, 0, class_id, 0);
+
+	job->gathers[0].mem_base = gather_address;
+
+	return 0;
 }
 
 void nvhost_job_add_gather(struct nvhost_job *job,

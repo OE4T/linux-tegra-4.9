@@ -141,6 +141,12 @@ void nvhost_job_add_gather(struct nvhost_job *job,
 		u32 mem_id, u32 words, u32 offset, u32 class_id, int pre_fence);
 
 /*
+ * Add a gather with IOVA address to job
+ */
+int nvhost_job_add_client_gather_address(struct nvhost_job *job,
+		u32 num_words, u32 class_id, dma_addr_t gather_address);
+
+/*
  * Increment reference going to nvhost_job.
  */
 void nvhost_job_get(struct nvhost_job *job);

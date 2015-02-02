@@ -131,12 +131,8 @@ static int gk20a_ctrl_mark_compressible_write(
 {
 	int ret;
 
-	ret = gk20a_busy(g->dev);
-	if (ret)
-		return ret;
 	ret = gk20a_mark_compressible_write(g, args->handle,
 			args->valid_compbits, args->offset, args->zbc_color);
-	gk20a_idle(g->dev);
 
 	return ret;
 }

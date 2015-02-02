@@ -77,6 +77,8 @@ int nvhost_isp_register_isr_v2(struct platform_device *dev)
 		return err;
 	}
 
+	disable_irq(tegra_isp->irq);
+
 	return 0;
 }
 

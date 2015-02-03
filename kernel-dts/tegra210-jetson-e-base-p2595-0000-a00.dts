@@ -685,4 +685,29 @@
 			status = "okay";
 		};
 	};
+
+	soctherm@0x700E2000 {
+		throttle@oc3 {
+			device_type = "throttlectl";
+			oc-alarm-id = <3>;
+			priority = <50>;
+			mode = "brief";
+			intr;
+			active_low;
+			count_threshold = <15>;
+			filter = <5100000>;
+			throttle_dev = <&{/soctherm@0x700E2000/throttle_dev@cpu_medium}
+					&{/soctherm@0x700E2000/throttle_dev@gpu_medium}>;
+		};
+		throttle_dev@cpu_medium {
+			dividend = <63>;
+			divisor = <255>;
+			duration = <0>;
+			step = <0>;
+		};
+		throttle_dev@gpu_medium {
+			level = "medium_throttling";
+		};
+	};
+
 };

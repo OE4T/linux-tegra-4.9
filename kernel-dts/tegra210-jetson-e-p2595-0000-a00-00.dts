@@ -250,9 +250,6 @@
 
 	spi@7000da00 {
 		status = "ok";
-		spi-touch@0 {
-			platform-id = <RM_PLATFORM_A010>;
-		};
 	};
 
 	sound {

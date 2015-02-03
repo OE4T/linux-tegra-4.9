@@ -254,6 +254,30 @@ TRACE_EVENT(window_update,
 		__entry->win_out_w, __entry->win_out_h
 	)
 );
+
+DECLARE_EVENT_CLASS(display_syncpt_notifier,
+	TP_PROTO(unsigned int syncpt_val),
+	TP_ARGS(syncpt_val),
+	TP_STRUCT__entry(
+		__field(	u32,		syncpt_val_value)
+	),
+	TP_fast_assign(
+		__entry->syncpt_val_value = syncpt_val;
+	),
+	TP_printk("Sync Point Value for Latency Measurement:%u ",
+		__entry->syncpt_val_value)
+);
+
+DEFINE_EVENT(display_syncpt_notifier, flip_rcvd_syncpt_upd,
+	TP_PROTO(unsigned int syncpt_val),
+	TP_ARGS(syncpt_val)
+);
+
+DEFINE_EVENT(display_syncpt_notifier, scanout_syncpt_upd,
+	TP_PROTO(unsigned int syncpt_val),
+	TP_ARGS(syncpt_val)
+);
+
 #endif /* _TRACE_DISPLAY_H */
 
 /* This part must be outside protection */

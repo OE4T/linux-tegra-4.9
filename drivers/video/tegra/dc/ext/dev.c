@@ -29,6 +29,7 @@
 
 #include <mach/dc.h>
 #include <mach/tegra_dc_ext.h>
+#include <trace/events/display.h>
 
 /* XXX ew */
 #include "../dc_priv.h"
@@ -682,6 +683,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			tegra_dc_incr_syncpt_min(dc, index,
 					flip_win->syncpt_max);
 		}
+		trace_scanout_syncpt_upd((data->win[win_num-1]).syncpt_max);
 	}
 
 	/* unpin and deref previous front buffers */
@@ -1035,6 +1037,8 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 		*syncpt_val = post_sync_val;
 		*syncpt_id = post_sync_id;
 	}
+
+	trace_flip_rcvd_syncpt_upd(post_sync_val);
 
 	if (has_timestamp) {
 		mutex_lock(&ext->win[work_index].queue_lock);

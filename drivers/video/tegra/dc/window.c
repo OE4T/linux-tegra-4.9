@@ -662,9 +662,18 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 			update_mask |= WIN_A_ACT_REQ << win->idx;
 
 		if (!WIN_IS_ENABLED(win)) {
+		#define RGB_TO_YUV420_8BPC_BLACK_PIX 0x00801010
+
 			dc_win->dirty = no_vsync ? 0 : 1;
 			tegra_dc_writel(dc, 0, DC_WIN_WIN_OPTIONS);
+			if (dc->yuv_bypass)
+				tegra_dc_writel(dc,
+					RGB_TO_YUV420_8BPC_BLACK_PIX,
+					DC_DISP_BLEND_BACKGROUND_COLOR);
+
 			continue;
+
+		#undef RGB_TO_YUV420_8BPC_BLACK_PIX
 		}
 
 		filter_h = win_use_h_filter(dc, win);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -121,6 +121,218 @@ static inline u32 fb_mmu_invalidate_all_va_true_f(void)
 static inline u32 fb_mmu_invalidate_all_pdb_true_f(void)
 {
 	return 0x2;
+}
+static inline u32 fb_mmu_invalidate_hubtlb_only_s(void)
+{
+	return 1;
+}
+static inline u32 fb_mmu_invalidate_hubtlb_only_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 fb_mmu_invalidate_hubtlb_only_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 fb_mmu_invalidate_hubtlb_only_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 fb_mmu_invalidate_hubtlb_only_true_f(void)
+{
+	return 0x4;
+}
+static inline u32 fb_mmu_invalidate_replay_s(void)
+{
+	return 3;
+}
+static inline u32 fb_mmu_invalidate_replay_f(u32 v)
+{
+	return (v & 0x7) << 3;
+}
+static inline u32 fb_mmu_invalidate_replay_m(void)
+{
+	return 0x7 << 3;
+}
+static inline u32 fb_mmu_invalidate_replay_v(u32 r)
+{
+	return (r >> 3) & 0x7;
+}
+static inline u32 fb_mmu_invalidate_replay_none_f(void)
+{
+	return 0x0;
+}
+static inline u32 fb_mmu_invalidate_replay_start_f(void)
+{
+	return 0x8;
+}
+static inline u32 fb_mmu_invalidate_replay_start_ack_all_f(void)
+{
+	return 0x10;
+}
+static inline u32 fb_mmu_invalidate_replay_cancel_targeted_f(void)
+{
+	return 0x18;
+}
+static inline u32 fb_mmu_invalidate_replay_cancel_global_f(void)
+{
+	return 0x20;
+}
+static inline u32 fb_mmu_invalidate_replay_cancel_f(void)
+{
+	return 0x20;
+}
+static inline u32 fb_mmu_invalidate_sys_membar_s(void)
+{
+	return 1;
+}
+static inline u32 fb_mmu_invalidate_sys_membar_f(u32 v)
+{
+	return (v & 0x1) << 6;
+}
+static inline u32 fb_mmu_invalidate_sys_membar_m(void)
+{
+	return 0x1 << 6;
+}
+static inline u32 fb_mmu_invalidate_sys_membar_v(u32 r)
+{
+	return (r >> 6) & 0x1;
+}
+static inline u32 fb_mmu_invalidate_sys_membar_true_f(void)
+{
+	return 0x40;
+}
+static inline u32 fb_mmu_invalidate_ack_s(void)
+{
+	return 2;
+}
+static inline u32 fb_mmu_invalidate_ack_f(u32 v)
+{
+	return (v & 0x3) << 7;
+}
+static inline u32 fb_mmu_invalidate_ack_m(void)
+{
+	return 0x3 << 7;
+}
+static inline u32 fb_mmu_invalidate_ack_v(u32 r)
+{
+	return (r >> 7) & 0x3;
+}
+static inline u32 fb_mmu_invalidate_ack_ack_none_required_f(void)
+{
+	return 0x0;
+}
+static inline u32 fb_mmu_invalidate_ack_ack_intranode_f(void)
+{
+	return 0x100;
+}
+static inline u32 fb_mmu_invalidate_ack_ack_globally_f(void)
+{
+	return 0x80;
+}
+static inline u32 fb_mmu_invalidate_cancel_client_id_s(void)
+{
+	return 6;
+}
+static inline u32 fb_mmu_invalidate_cancel_client_id_f(u32 v)
+{
+	return (v & 0x3f) << 9;
+}
+static inline u32 fb_mmu_invalidate_cancel_client_id_m(void)
+{
+	return 0x3f << 9;
+}
+static inline u32 fb_mmu_invalidate_cancel_client_id_v(u32 r)
+{
+	return (r >> 9) & 0x3f;
+}
+static inline u32 fb_mmu_invalidate_cancel_gpc_id_s(void)
+{
+	return 5;
+}
+static inline u32 fb_mmu_invalidate_cancel_gpc_id_f(u32 v)
+{
+	return (v & 0x1f) << 15;
+}
+static inline u32 fb_mmu_invalidate_cancel_gpc_id_m(void)
+{
+	return 0x1f << 15;
+}
+static inline u32 fb_mmu_invalidate_cancel_gpc_id_v(u32 r)
+{
+	return (r >> 15) & 0x1f;
+}
+static inline u32 fb_mmu_invalidate_cancel_client_type_s(void)
+{
+	return 1;
+}
+static inline u32 fb_mmu_invalidate_cancel_client_type_f(u32 v)
+{
+	return (v & 0x1) << 20;
+}
+static inline u32 fb_mmu_invalidate_cancel_client_type_m(void)
+{
+	return 0x1 << 20;
+}
+static inline u32 fb_mmu_invalidate_cancel_client_type_v(u32 r)
+{
+	return (r >> 20) & 0x1;
+}
+static inline u32 fb_mmu_invalidate_cancel_client_type_gpc_f(void)
+{
+	return 0x0;
+}
+static inline u32 fb_mmu_invalidate_cancel_client_type_hub_f(void)
+{
+	return 0x100000;
+}
+static inline u32 fb_mmu_invalidate_cancel_cache_level_s(void)
+{
+	return 3;
+}
+static inline u32 fb_mmu_invalidate_cancel_cache_level_f(u32 v)
+{
+	return (v & 0x7) << 24;
+}
+static inline u32 fb_mmu_invalidate_cancel_cache_level_m(void)
+{
+	return 0x7 << 24;
+}
+static inline u32 fb_mmu_invalidate_cancel_cache_level_v(u32 r)
+{
+	return (r >> 24) & 0x7;
+}
+static inline u32 fb_mmu_invalidate_cancel_cache_level_all_f(void)
+{
+	return 0x0;
+}
+static inline u32 fb_mmu_invalidate_cancel_cache_level_pte_only_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 fb_mmu_invalidate_cancel_cache_level_up_to_pde0_f(void)
+{
+	return 0x2000000;
+}
+static inline u32 fb_mmu_invalidate_cancel_cache_level_up_to_pde1_f(void)
+{
+	return 0x3000000;
+}
+static inline u32 fb_mmu_invalidate_cancel_cache_level_up_to_pde2_f(void)
+{
+	return 0x4000000;
+}
+static inline u32 fb_mmu_invalidate_cancel_cache_level_up_to_pde3_f(void)
+{
+	return 0x5000000;
+}
+static inline u32 fb_mmu_invalidate_cancel_cache_level_up_to_pde4_f(void)
+{
+	return 0x6000000;
+}
+static inline u32 fb_mmu_invalidate_cancel_cache_level_up_to_pde5_f(void)
+{
+	return 0x7000000;
 }
 static inline u32 fb_mmu_invalidate_trigger_s(void)
 {

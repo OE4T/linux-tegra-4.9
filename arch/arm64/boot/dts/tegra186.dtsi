@@ -502,4 +502,15 @@
 		status = "disabled";
 		clock-frequency = <400000>;
 	};
+
+	agic-controller {
+		compatible = "nvidia,tegra18x-agic";
+		interrupt-controller;
+		no-gic-extension;
+		not-per-cpu;
+		reg = <0x0 0x02A41000 0x0 0x1000>,
+		      <0x0 0x02A42000 0x0 0x2000>;
+		interrupts = <0 145 0xf04>;
+		status = "disabled";
+	};
 };

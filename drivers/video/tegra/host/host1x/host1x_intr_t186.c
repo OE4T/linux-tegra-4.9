@@ -234,7 +234,27 @@ static irqreturn_t intr_host1x_isr(int irq, void *dev_id)
 		pr_err("Host write timeout at address %x\n", addr);
 	}
 
+	if (host1x_sync_intstatus_illegal_pb_access_v(intstat)) {
+		u32 stat = host1x_hypervisor_readl(dev->dev,
+			host1x_sync_illegal_syncpt_access_frm_pb_r());
+		u32 ch = host1x_sync_illegal_syncpt_access_frm_pb_ch_v(stat);
+		u32 id = host1x_sync_illegal_syncpt_access_frm_pb_syncpt_v(stat);
+
+		pr_err("Illegal syncpoint pb access (ch=%u, id=%u)\n", ch, id);
+	}
+
+	if (host1x_sync_intstatus_illegal_client_access_v(intstat)) {
+		u32 stat = host1x_hypervisor_readl(dev->dev,
+			host1x_sync_illegal_syncpt_access_frm_client_r());
+		u32 id = host1x_sync_illegal_syncpt_access_frm_client_syncpt_v(stat);
+		u32 ch = host1x_sync_illegal_syncpt_access_frm_client_ch_v(stat);
+
+		pr_err("Illegal syncpoint client access (ch=%u, id=%u)\n",
+		       ch, id);
+	}
+
 	host1x_hypervisor_writel(dev->dev, host1x_sync_intstatus_r(), intstat);
+
 	return IRQ_HANDLED;
 }
 
@@ -259,8 +279,10 @@ static int intr_request_host_general_irq(struct nvhost_intr *intr)
 	host1x_hypervisor_writel(dev->dev,
 			host1x_sync_syncpt_intgmask_r(), 0xff << 8);
 
-	/* master enable for general (not syncpt) host interrupts */
-	host1x_hypervisor_writel(dev->dev, host1x_sync_intmask_r(), BIT(0));
+	/* master enable for general (not syncpt) host interrupts
+	 * (AXIREAD, AXIWRITE, Syncpoint protection) */
+	host1x_hypervisor_writel(dev->dev, host1x_sync_intmask_r(),
+				 BIT(0) | BIT(1) | BIT(30) | BIT(28));
 
 	return err;
 }

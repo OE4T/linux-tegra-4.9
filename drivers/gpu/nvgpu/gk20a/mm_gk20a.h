@@ -326,7 +326,7 @@ int gk20a_mm_init(struct mm_gk20a *mm);
 
 static inline int bar1_aperture_size_mb_gk20a(void)
 {
-	return 128; /*TBD read this from fuses?*/
+	return 16; /* 16MB is more than enough atm. */
 }
 /* max address bits */
 static inline int max_physaddr_bits_gk20a(void)

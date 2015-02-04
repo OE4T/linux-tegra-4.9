@@ -1592,10 +1592,15 @@ static int _tegra_hdmi_v2_x_config(struct tegra_hdmi *hdmi)
 {
 #define SCDC_STABILIZATION_DELAY_MS (20)
 
-	/* reset hdmi2.x config on host and monitor */
-	tegra_hdmi_v2_x_mon_config(hdmi, false);
-	tegra_hdmi_v2_x_host_config(hdmi, false);
+	/* disable hdmi2.x config on host and monitor only
+	 * if bootloader didn't initialize hdmi
+	 */
+	if (!tegra_is_bl_display_initialized(hdmi->dc->ndev->id)) {
+		tegra_hdmi_v2_x_mon_config(hdmi, false);
+		tegra_hdmi_v2_x_host_config(hdmi, false);
+	}
 
+	/* enable hdmi2.x config on host and monitor */
 	tegra_hdmi_v2_x_mon_config(hdmi, true);
 	msleep(SCDC_STABILIZATION_DELAY_MS);
 

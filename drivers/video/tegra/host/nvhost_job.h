@@ -127,34 +127,15 @@ struct nvhost_job {
 };
 
 /*
- * Allocate memory for a job. Just enough memory will be allocated to
- * accomodate the submit announced in submit header.
- */
-struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
-		int num_cmdbufs, int num_relocs, int num_waitchks,
-		int num_syncpts);
-
-/*
  * Add a gather to a job.
  */
 void nvhost_job_add_gather(struct nvhost_job *job,
 		u32 mem_id, u32 words, u32 offset, u32 class_id, int pre_fence);
 
 /*
- * Add a gather with IOVA address to job
- */
-int nvhost_job_add_client_gather_address(struct nvhost_job *job,
-		u32 num_words, u32 class_id, dma_addr_t gather_address);
-
-/*
  * Increment reference going to nvhost_job.
  */
 void nvhost_job_get(struct nvhost_job *job);
-
-/*
- * Decrement reference job, free if goes to zero.
- */
-void nvhost_job_put(struct nvhost_job *job);
 
 /*
  * Pin memory related to job. This handles relocation of addresses to the

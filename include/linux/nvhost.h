@@ -334,6 +334,25 @@ void nvhost_module_idle_ext(struct platform_device *dev);
 void nvhost_register_client_domain(struct generic_pm_domain *domain);
 void nvhost_unregister_client_domain(struct generic_pm_domain *domain);
 
+/* public APIs required to submit in-kernel work */
+int nvhost_channel_map(struct nvhost_device_data *pdata,
+			struct nvhost_channel **ch,
+			void *identifier);
+void nvhost_putchannel(struct nvhost_channel *ch, int cnt);
+/* Allocate memory for a job. Just enough memory will be allocated to
+ * accomodate the submit announced in submit header.
+ */
+struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
+		int num_cmdbufs, int num_relocs, int num_waitchks,
+		int num_syncpts);
+/* Decrement reference job, free if goes to zero. */
+void nvhost_job_put(struct nvhost_job *job);
+
+/* Add a gather with IOVA address to job */
+int nvhost_job_add_client_gather_address(struct nvhost_job *job,
+		u32 num_words, u32 class_id, dma_addr_t gather_address);
+int nvhost_channel_submit(struct nvhost_job *job);
+
 /* public host1x sync-point management APIs */
 u32 nvhost_get_syncpt_client_managed(const char *syncpt_name);
 u32 nvhost_get_syncpt_host_managed(struct platform_device *pdev,

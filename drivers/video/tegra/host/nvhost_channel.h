@@ -70,19 +70,14 @@ struct nvhost_channel {
 #define channel_op(ch)		(ch->ops)
 
 int nvhost_alloc_channels(struct nvhost_master *host);
-int nvhost_channel_map(struct nvhost_device_data *pdata,
-			struct nvhost_channel **ch,
-			void *identifier);
 int nvhost_channel_unmap(struct nvhost_channel *ch);
 int nvhost_channel_release(struct nvhost_device_data *pdata);
 int nvhost_channel_list_free(struct nvhost_master *host);
 struct nvhost_channel *nvhost_check_channel(struct nvhost_device_data *pdata);
 int nvhost_channel_init(struct nvhost_channel *ch,
 	struct nvhost_master *dev);
-int nvhost_channel_submit(struct nvhost_job *job);
 
 void nvhost_getchannel(struct nvhost_channel *ch);
-void nvhost_putchannel(struct nvhost_channel *ch, int cnt);
 int nvhost_channel_suspend(struct nvhost_master *host);
 
 int nvhost_channel_read_reg(struct nvhost_channel *channel,

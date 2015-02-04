@@ -114,6 +114,7 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 
 	return job;
 }
+EXPORT_SYMBOL(nvhost_job_alloc);
 
 void nvhost_job_get(struct nvhost_job *job)
 {
@@ -141,6 +142,7 @@ void nvhost_job_put(struct nvhost_job *job)
 {
 	kref_put(&job->ref, job_free);
 }
+EXPORT_SYMBOL(nvhost_job_put);
 
 int nvhost_job_add_client_gather_address(struct nvhost_job *job,
 		u32 num_words, u32 class_id, dma_addr_t gather_address)
@@ -151,6 +153,7 @@ int nvhost_job_add_client_gather_address(struct nvhost_job *job,
 
 	return 0;
 }
+EXPORT_SYMBOL(nvhost_job_add_client_gather_address);
 
 void nvhost_job_add_gather(struct nvhost_job *job,
 		u32 mem_id, u32 words, u32 offset, u32 class_id, int pre_fence)

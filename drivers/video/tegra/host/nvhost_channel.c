@@ -283,6 +283,7 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 	*channel = ch;
 	return 0;
 }
+EXPORT_SYMBOL(nvhost_channel_map);
 
 /* Free channel memory and list */
 int nvhost_channel_list_free(struct nvhost_master *host)
@@ -331,6 +332,7 @@ int nvhost_channel_submit(struct nvhost_job *job)
 
 	return channel_op(job->ch).submit(job);
 }
+EXPORT_SYMBOL(nvhost_channel_submit);
 
 
 void nvhost_getchannel(struct nvhost_channel *ch)
@@ -359,6 +361,7 @@ void nvhost_putchannel(struct nvhost_channel *ch, int cnt)
 		WARN_ON(1);
 	mutex_unlock(&host->chlist_mutex);
 }
+EXPORT_SYMBOL(nvhost_putchannel);
 
 int nvhost_channel_suspend(struct nvhost_master *host)
 {

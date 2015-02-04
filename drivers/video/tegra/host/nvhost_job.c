@@ -222,6 +222,9 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 		if (!nvhost_syncpt_is_valid_pt(sp, wait->syncpt_id))
 			continue;
 
+		if (!wait->mem)
+			continue;
+
 		/* skip all other gathers */
 		if (patch_mem != wait->mem)
 			continue;

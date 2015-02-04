@@ -96,7 +96,7 @@
 #define TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC	(1 << 9)
 /*Passthrough condition for running 4K HDMI*/
 #define TEGRA_DC_EXT_FLIP_HEAD_FLAG_YUVBYPASS	(1 << 0)
-#define TEGRA_DC_EXT_FLIP_HEAD_FLAG_GSYNC_MODE	(1 << 1)
+#define TEGRA_DC_EXT_FLIP_HEAD_FLAG_VRR_MODE	(1 << 1)
 
 struct tegra_timespec {
 	__s32	tv_sec; /* seconds */

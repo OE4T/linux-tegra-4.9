@@ -656,10 +656,10 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 
 	if (dc->enabled && !skip_flip) {
 		dc->blanked = false;
-		if (dc->out_ops && dc->out_ops->gsync_enable)
-				dc->out_ops->gsync_enable(dc,
+		if (dc->out_ops && dc->out_ops->vrr_enable)
+				dc->out_ops->vrr_enable(dc,
 					data->flags &
-					TEGRA_DC_EXT_FLIP_HEAD_FLAG_GSYNC_MODE);
+					TEGRA_DC_EXT_FLIP_HEAD_FLAG_VRR_MODE);
 
 		tegra_dc_update_windows(wins, nr_win,
 			data->dirty_rect_valid ? data->dirty_rect : NULL,

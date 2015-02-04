@@ -31,7 +31,6 @@
 		compatible = "nvidia,tegra-mc-sid";
  		reg = <0x0 0x02c00000 0x0 0x00010000>, /* MC_SID_BASE */
  		      <0x0 0x02c10000 0x0 0x00010000>; /* MC_BASE */
-		status = "disabled";
 	};
 
 	/* HACK: Populate earlier than other device */

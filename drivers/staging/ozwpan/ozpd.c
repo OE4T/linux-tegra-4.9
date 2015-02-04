@@ -424,9 +424,10 @@ void oz_pd_stop(struct oz_pd *pd)
 	}
 	/* connect_req will restart timers */
 
-	/* Remove from PD list.*/
-	list_del(&pd->link);
-
+	if (list_empty(&pd->link))
+		WARN(1, "pd list is empty! something went wrong\n");
+	else /* Remove from PD list.*/
+		list_del(&pd->link);
 
 	oz_polling_unlock_bh();
 	oz_trace_msg(M, "pd ref count = %d\n", atomic_read(&pd->ref_count));

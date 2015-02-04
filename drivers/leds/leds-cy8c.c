@@ -52,9 +52,10 @@
 #define P1961_CMD_ENTER_BL		0x01
 #define P1961_CMD_WRITE_EEPROM		0x05
 
-#define P1961_LED_STATE_BLINK       0x01
+#define P1961_LED_STATE_BLINK		0x01
 #define P1961_LED_STATE_BREATH		0x02
-#define P1961_LED_STATE_SOLID       0x03
+#define P1961_LED_STATE_SOLID		0x03
+#define P1961_LED_STATE_OFF		0x04
 
 
 
@@ -92,6 +93,8 @@ struct cy8c_data {
 	struct regmap *regmap;
 	struct led_classdev led;
 	int mode_index; /* mode index to mode_controls */
+	bool led_on_plugin;
+	u8 default_brightness;
 	struct mutex lock;
 };
 
@@ -130,10 +133,31 @@ static void set_led_brightness(struct led_classdev *led_cdev,
 		dev_err(&data->client->dev, "cannot write %d\n", value);
 }
 
+static enum led_brightness get_led_brightness(struct led_classdev *led_cdev)
+{
+	unsigned int val;
+	int ret;
+	struct cy8c_data *data = container_of(led_cdev, struct cy8c_data, led);
+
+	ret = regmap_read(data->regmap,	P1961_REG_NOM_BRIGHT, &val);
+	if (ret)
+		dev_err(&data->client->dev, "cannot read %d\n", val);
+	val = val & 0xff;
+	return val;
+}
+
 static int of_led_parse_pdata(struct i2c_client *client, struct cy8c_data *data)
 {
 	struct device_node *np = client->dev.of_node;
+	u32 value;
 	data->led.name = of_get_property(np, "label", NULL) ? : np->name;
+
+	data->led_on_plugin = of_property_read_bool(np, "led-on-plugin");
+
+	if (of_property_read_u32(np, "default-brightness", &value))
+		data->default_brightness = 0xff;
+	data->default_brightness = value & 0xff;
+
 	return 0;
 }
 
@@ -307,6 +331,40 @@ static DEVICE_ATTR(effects, S_IRUGO|S_IWUSR,
 static DEVICE_ATTR(params, S_IRUGO|S_IWUSR,
 		cy8c_params_show, cy8c_params_set);
 
+static int cy8c_apply_default_settings(struct cy8c_data *data)
+{
+	int ret;
+	u8 state;
+
+	if (!data)
+		return -EINVAL;
+
+	pr_debug("%s: led-on-plugin %d, default-brightness %d\n", __func__,
+				data->led_on_plugin, data->default_brightness);
+	ret = regmap_write(data->regmap, P1961_REG_NOM_BRIGHT,
+						data->default_brightness);
+	ret |= regmap_write(data->regmap, P1961_REG_CMD_DAT,
+						P1961_REG_NOM_BRIGHT);
+	ret |= regmap_write(data->regmap,
+				P1961_REG_CMD, P1961_CMD_WRITE_EEPROM);
+	if (ret)
+		dev_err(&data->client->dev, "cannot write brightness\n");
+
+	if (data->led_on_plugin)
+		state = P1961_LED_STATE_OFF;
+	else
+		state = P1961_LED_STATE_SOLID;
+
+	ret = regmap_write(data->regmap, P1961_REG_LED_STATE, state);
+	ret |= regmap_write(data->regmap, P1961_REG_CMD_DAT,
+						P1961_REG_LED_STATE);
+	ret |= regmap_write(data->regmap,
+			P1961_REG_CMD, P1961_CMD_WRITE_EEPROM);
+	if (ret)
+		dev_err(&data->client->dev, "cannot write led state\n");
+	return ret;
+}
+
 static int cy8c_led_probe(struct i2c_client *client,
 					const struct i2c_device_id *id)
 {
@@ -334,12 +392,7 @@ static int cy8c_led_probe(struct i2c_client *client,
 	of_led_parse_pdata(client, data);
 
 	data->led.brightness_set = set_led_brightness;
-
-	/*TODO? Do we use a dedicated blink_set implementation?
-	  data->led.blink_set = led_blink;*/
-
-	/*TODO?: Do we need max-brightness to be read from DT?
-	  data->led.max_brightness = <value-from-DT>*/
+	data->led.brightness_get = get_led_brightness;
 
 	memset(&rconfig, 0, sizeof(rconfig));
 	rconfig.reg_bits = 8;
@@ -372,12 +425,7 @@ static int cy8c_led_probe(struct i2c_client *client,
 
 	dev_dbg(&client->dev, "0x%02x\n", reg);
 
-	ret = regmap_write(data->regmap, P1961_REG_LED_STATE,
-						P1961_LED_STATE_SOLID);
-	if (ret) {
-		dev_err(&client->dev, "Failed to read revision-minor\n");
-		return ret;
-	}
+	cy8c_apply_default_settings(data);
 
 	mutex_init(&data->lock);
 

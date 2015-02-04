@@ -1,4 +1,5 @@
 #include <dt-bindings/gpio/tegra-gpio.h>
+#include <dt-bindings/clk/tegra210-clk.h>
 
 #define SET_MAP_TRIP(domain, vtype, num, temp)				\
 	trips {								\
@@ -23,6 +24,12 @@
 		compatible = "nvidia,tegra210-dfll";
 		reg = <0x0 0x70110000 0x0 0x400>;
 		out-clock-name="dfll_cpu";
+		clocks = <&tegra_car TEGRA210_CLK_ID_DFLL_CPU>,
+			 <&tegra_car TEGRA210_CLK_ID_DFLL_SOC>,
+			 <&tegra_car TEGRA210_CLK_ID_DFLL_REF>,
+			 <&tegra_car TEGRA210_CLK_ID_CPU_G>,
+			 <&tegra_car TEGRA210_CLK_ID_I2C5>;
+		clock-names = "dfll_cpu", "soc", "ref", "safe_dvfs", "i2c";
 		board-params = <&dfll_ovr_params>;
 
 		pwm_dfll: pwm-pmic-integration {
@@ -50,6 +57,12 @@
 		compatible = "nvidia,tegra210-dfll";
 		reg = <0x0 0x70110000 0x0 0x400>;
 		out-clock-name="dfll_cpu";
+		clocks = <&tegra_car TEGRA210_CLK_ID_DFLL_CPU>,
+			 <&tegra_car TEGRA210_CLK_ID_DFLL_SOC>,
+			 <&tegra_car TEGRA210_CLK_ID_DFLL_REF>,
+			 <&tegra_car TEGRA210_CLK_ID_CPU_G>,
+			 <&tegra_car TEGRA210_CLK_ID_I2C5>;
+		clock-names = "dfll_cpu", "soc", "ref", "safe_dvfs", "i2c";
 		board-params = <&dfll_max77621_parms>;
 		i2c-pmic-integration = <&i2c_dfll>;
 

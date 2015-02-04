@@ -1169,6 +1169,26 @@ static u32 tegra_hdmi_get_aspect_ratio(struct tegra_hdmi *hdmi)
 		aspect_ratio = HDMI_AVI_ASPECT_RATIO_NO_DATA;
 	}
 
+	/* For seamless HDMI, read aspect ratio parameters from bootloader
+	 * set AVI Infoframe parameters
+	 */
+	if ((aspect_ratio == HDMI_AVI_ASPECT_RATIO_NO_DATA) &&
+		tegra_is_bl_display_initialized(hdmi->dc->ndev->id)) {
+		u32 temp = 0;
+		temp = tegra_sor_readl(hdmi->sor,
+			NV_SOR_HDMI_AVI_INFOFRAME_SUBPACK0_LOW);
+		temp = (temp >> 20) & 0x3;
+		switch (temp) {
+		case 1:
+		aspect_ratio = HDMI_AVI_ASPECT_RATIO_4_3;
+		break;
+		case 2:
+		aspect_ratio = HDMI_AVI_ASPECT_RATIO_16_9;
+		break;
+		default:
+		aspect_ratio = HDMI_AVI_ASPECT_RATIO_NO_DATA;
+		}
+	}
 	return aspect_ratio;
 }
 

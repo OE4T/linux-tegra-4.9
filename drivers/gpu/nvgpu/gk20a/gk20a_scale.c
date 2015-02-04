@@ -1,7 +1,7 @@
 /*
  * gk20a clock scaling profile
  *
- * Copyright (c) 2013-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -60,6 +60,9 @@ static int gk20a_scale_qos_notify(struct notifier_block *nb,
 	if (g->devfreq)
 		freq = max(g->devfreq->previous_freq, freq);
 
+	/* Update gpu load because we may scale the emc target
+	 * if the gpu load changed. */
+	gk20a_pmu_load_update(g);
 	platform->postscale(profile->pdev, freq);
 
 	return NOTIFY_OK;
@@ -107,15 +110,18 @@ static int gk20a_scale_target(struct device *dev, unsigned long *freq,
 	struct gk20a_scale_profile *profile = g->scale_profile;
 	unsigned long rounded_rate = gk20a_clk_round_rate(g, *freq);
 
-	if (gk20a_clk_get_rate(g) == rounded_rate) {
+	if (gk20a_clk_get_rate(g) == rounded_rate)
 		*freq = rounded_rate;
-		return 0;
+	else {
+		gk20a_clk_set_rate(g, rounded_rate);
+		*freq = gk20a_clk_get_rate(g);
 	}
 
-	gk20a_clk_set_rate(g, rounded_rate);
+	/* postscale will only scale emc (dram clock) if evaluating
+	 * gk20a_tegra_get_emc_rate() produces a new or different emc
+	 * target because the load or_and gpufreq has changed */
 	if (platform->postscale)
 		platform->postscale(profile->pdev, rounded_rate);
-	*freq = gk20a_clk_get_rate(g);
 
 	return 0;
 }

@@ -481,6 +481,10 @@
         nvidia,cap_method = <1>;
     };
 
+	bcmdhd_wlan {
+		edp-consumer-name = "primary-wifi";
+	};
+
 	cpu_edp {
 		status = "okay";
 		nvidia,edp_limit = <25000>;
@@ -749,4 +753,143 @@
 		nvidia,cap_method = <1>;
 	};
 
+	bcmdhd_wlan {
+		country_code_map {
+			CC1 {
+				iso_abbrev = "XV";
+				custom_locale = "XV";
+				custom_locale_rev = <997>;
+			};
+			CC2 {
+				iso_abbrev = "US";
+				custom_locale = "Q2";
+				custom_locale_rev = <998>;
+			};
+			CC3 {
+				iso_abbrev = "CA";
+				custom_locale = "Q2";
+				custom_locale_rev = <998>;
+			};
+			CC4 {
+				iso_abbrev = "AT";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC5 {
+				iso_abbrev = "BE";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC6 {
+				iso_abbrev = "BG";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC7 {
+				iso_abbrev = "HR";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC8 {
+				iso_abbrev = "CZ";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC9 {
+				iso_abbrev = "DK";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC10 {
+				iso_abbrev = "FR";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC11 {
+				iso_abbrev = "DE";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC12 {
+				iso_abbrev = "GR";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC13 {
+				iso_abbrev = "HU";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC14 {
+				iso_abbrev = "IT";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC15 {
+				iso_abbrev = "NL";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC16 {
+				iso_abbrev = "NO";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC17 {
+				iso_abbrev = "PL";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC18 {
+				iso_abbrev = "PT";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC19 {
+				iso_abbrev = "RO";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC20 {
+				iso_abbrev = "SK";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC21 {
+				iso_abbrev = "ES";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC22 {
+				iso_abbrev = "SE";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC23 {
+				iso_abbrev = "CH";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC24 {
+				iso_abbrev = "GB";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC25 {
+				iso_abbrev = "EU";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC26 {
+				iso_abbrev = "E0";
+				custom_locale = "E0";
+				custom_locale_rev = <994>;
+			};
+			CC27 {
+				iso_abbrev = "IN";
+				custom_locale = "Q2";
+				custom_locale_rev = <998>;
+			};
+		};
+	};
 };

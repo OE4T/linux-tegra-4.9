@@ -235,9 +235,6 @@ struct nvhost_device_data {
 	struct platform_device *pdev;	/* owner platform_device */
 	void *virt_priv;		/* private data for virtualized dev */
 
-	/* flag to enable gather filter for device */
-	bool gather_filter_enabled;
-
 	struct mutex no_poweroff_req_mutex;
 	struct dev_pm_qos_request no_poweroff_req;
 	int no_poweroff_req_count;

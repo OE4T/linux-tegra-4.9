@@ -375,9 +375,6 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 	u32 id = 0;
 	dma_addr_t dma_handle = 0;
 	DEFINE_DMA_ATTRS(attrs);
-	struct nvhost_master *master = nvhost;
-	bool gather_filter_enabled =
-			nvhost_gather_filter_enabled(&master->syncpt);
 
 	id = nvhost_get_syncpt_host_managed_by_name("tsec_hdcp");
 	if (!id) {
@@ -394,11 +391,6 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 	}
 	memset(cpuvaddr, 0x0, HDCP_MTHD_BUF_SIZE);
 
-	if (!gather_filter_enabled)
-		write_mthd(&cpuvaddr[opcode_len],
-			nvhost_opcode_setclass(NV_TSEC_CLASS_ID, 0, 0),
-			NVHOST_OPCODE_NOOP,
-			&opcode_len);
 	tsec_write_mthd(&cpuvaddr[opcode_len],
 		SET_APPLICATION_ID,
 		SET_APPLICATION_ID_ID_HDCP,

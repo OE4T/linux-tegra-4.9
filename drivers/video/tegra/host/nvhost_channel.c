@@ -300,8 +300,7 @@ int nvhost_channel_list_free(struct nvhost_master *host)
 
 void nvhost_channel_init_gather_filter(struct nvhost_channel *ch)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
-	if (channel_op(ch).init_gather_filter && pdata->gather_filter_enabled)
+	if (channel_op(ch).init_gather_filter)
 		channel_op(ch).init_gather_filter(ch);
 }
 

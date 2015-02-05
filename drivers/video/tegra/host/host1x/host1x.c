@@ -525,9 +525,11 @@ static int disable_irq_host(struct platform_device *dev)
 
 int nvhost_gather_filter_enabled(struct nvhost_syncpt *sp)
 {
-	struct nvhost_master *host = syncpt_to_dev(sp);
-	struct nvhost_device_data *pdata = platform_get_drvdata(host->dev);
-	return pdata->gather_filter_enabled;
+	/*
+	 * Keep gather filter always enabled
+	 * We still need this API to inform this to user space
+	 */
+	return 1;
 }
 
 static int alloc_syncpts_per_apps(struct nvhost_syncpt *sp)

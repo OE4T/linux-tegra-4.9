@@ -203,9 +203,6 @@ static void submit_gathers(struct nvhost_job *job)
 {
 	int i;
 	void *cpuva = NULL;
-	struct nvhost_master *master = nvhost;
-	bool gather_filter_enabled =
-		nvhost_gather_filter_enabled(&master->syncpt);
 
 	/* push user gathers */
 	for (i = 0 ; i < job->num_gathers; i++) {
@@ -216,7 +213,7 @@ static void submit_gathers(struct nvhost_job *job)
 		if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
 			add_sync_waits(job->ch, g->pre_fence);
 
-		if (gather_filter_enabled && g->class_id)
+		if (g->class_id)
 			nvhost_cdma_push(&job->ch->cdma,
 				nvhost_opcode_setclass(g->class_id, 0, 0),
 				NVHOST_OPCODE_NOOP);

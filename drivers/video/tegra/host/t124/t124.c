@@ -91,7 +91,6 @@ struct nvhost_device_data t124_host1x_info = {
 	.private_data	= &host1x04_info,
 	.finalize_poweron = nvhost_host1x_finalize_poweron,
 	.prepare_poweroff = nvhost_host1x_prepare_poweroff,
-	.gather_filter_enabled = true,
 };
 
 
@@ -140,7 +139,6 @@ struct nvhost_device_data t124_isp_info = {
 	.prepare_poweroff = nvhost_isp_t124_prepare_poweroff,
 	.hw_init          = nvhost_isp_register_isr_v1,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
-	.gather_filter_enabled = true,
 };
 static struct platform_device tegra_isp01_device = {
 	.name          = "isp",
@@ -182,7 +180,6 @@ struct nvhost_device_data t124_ispb_info = {
 	.prepare_poweroff = nvhost_isp_t124_prepare_poweroff,
 	.hw_init          = nvhost_isp_register_isr_v1,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
-	.gather_filter_enabled = true,
 };
 
 static struct platform_device tegra_isp01b_device = {
@@ -235,7 +232,6 @@ struct nvhost_device_data t124_vi_info = {
 	.finalize_poweron = nvhost_vi_finalize_poweron,
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
 	.reset            = nvhost_vi_reset_all,
-	.gather_filter_enabled = true,
 };
 EXPORT_SYMBOL(t124_vi_info);
 
@@ -275,7 +271,6 @@ struct nvhost_device_data t124_vi_info = {
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
 	.reset            = nvhost_vi_reset,
 	.slave         = &tegra_vi01b_device,
-	.gather_filter_enabled = true,
 };
 EXPORT_SYMBOL(t124_vi_info);
 
@@ -314,7 +309,6 @@ struct nvhost_device_data t124_vib_info = {
 	.ctrl_ops         = &tegra_vi_ctrl_ops,
 	.master           = &tegra_vi01_device,
 	.reset            = nvhost_vi_reset,
-	.gather_filter_enabled = true,
 };
 
 static struct platform_device tegra_vi01b_device = {
@@ -358,7 +352,6 @@ struct nvhost_device_data t124_msenc_info = {
 	.actmon_regs	= HOST1X_CHANNEL_ACTMON1_REG_BASE,
 	.actmon_enabled	= true,
 	.firmware_name	= "nvhost_msenc031.fw",
-	.gather_filter_enabled = true,
 };
 
 static struct platform_device tegra_msenc03_device = {
@@ -398,7 +391,6 @@ struct nvhost_device_data t124_tsec_info = {
 	.moduleid      = NVHOST_MODULE_TSEC,
 	.finalize_poweron = nvhost_tsec_finalize_poweron,
 	.prepare_poweroff = nvhost_tsec_prepare_poweroff,
-	.gather_filter_enabled = true,
 };
 
 static struct platform_device tegra_tsec01_device = {
@@ -455,7 +447,6 @@ struct nvhost_device_data t124_vic_info = {
 	.serialize		= true,
 	.push_work_done		= true,
 	.firmware_name		= "vic03_ucode.bin",
-	.gather_filter_enabled = true,
 	.aggregate_constraints	= nvhost_vic_aggregate_constraints,
 	.num_ppc		= 2,
 };
@@ -491,7 +482,6 @@ static struct nvhost_device_data t132_msenc_info = {
 	.poweron_reset	= true,
 	.finalize_poweron = nvhost_flcn_finalize_poweron,
 	.firmware_name	= "nvhost_msenc031.fw",
-	.gather_filter_enabled = true,
 };
 
 static struct {

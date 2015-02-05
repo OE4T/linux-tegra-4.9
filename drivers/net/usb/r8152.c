@@ -7838,6 +7838,8 @@ static int rtl8152_probe(struct usb_interface *intf,
 
 	/* usb_enable_autosuspend(udev); */
 
+	usb_disable_autosuspend(udev);
+
 	netif_info(tp, probe, netdev, "%s\n", DRIVER_VERSION);
 	netif_info(tp, probe, netdev, "%s\n", PATENTS);
 

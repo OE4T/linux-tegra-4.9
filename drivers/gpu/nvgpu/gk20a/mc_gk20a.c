@@ -14,6 +14,7 @@
  */
 
 #include <linux/types.h>
+#include <trace/events/gk20a.h>
 
 #include "gk20a.h"
 #include "mc_gk20a.h"
@@ -22,6 +23,8 @@
 irqreturn_t mc_gk20a_isr_stall(struct gk20a *g)
 {
 	u32 mc_intr_0;
+
+	trace_mc_gk20a_intr_stall(g->dev->name);
 
 	if (!g->power_on)
 		return IRQ_NONE;
@@ -36,6 +39,8 @@ irqreturn_t mc_gk20a_isr_stall(struct gk20a *g)
 
 	/* flush previous write */
 	gk20a_readl(g, mc_intr_en_0_r());
+
+	trace_mc_gk20a_intr_stall_done(g->dev->name);
 
 	return IRQ_WAKE_THREAD;
 }
@@ -67,6 +72,8 @@ irqreturn_t mc_gk20a_intr_thread_stall(struct gk20a *g)
 
 	gk20a_dbg(gpu_dbg_intr, "interrupt thread launched");
 
+	trace_mc_gk20a_intr_thread_stall(g->dev->name);
+
 	mc_intr_0 = gk20a_readl(g, mc_intr_0_r());
 
 	gk20a_dbg(gpu_dbg_intr, "stall intr %08x\n", mc_intr_0);
@@ -91,6 +98,8 @@ irqreturn_t mc_gk20a_intr_thread_stall(struct gk20a *g)
 
 	/* flush previous write */
 	gk20a_readl(g, mc_intr_en_0_r());
+
+	trace_mc_gk20a_intr_thread_stall_done(g->dev->name);
 
 	return IRQ_HANDLED;
 }

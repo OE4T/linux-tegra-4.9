@@ -1,7 +1,7 @@
 /*
  * gk20a event logging to ftrace.
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -61,6 +61,71 @@ DEFINE_EVENT(gk20a, gk20a_gpfifo_submit_wait_for_space,
 );
 
 DEFINE_EVENT(gk20a, gk20a_gpfifo_submit_wait_for_space_done,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
+DEFINE_EVENT(gk20a, gk20a_mm_l2_invalidate,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
+DEFINE_EVENT(gk20a, gk20a_mm_l2_invalidate_done,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
+DEFINE_EVENT(gk20a, gk20a_mm_l2_flush,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
+DEFINE_EVENT(gk20a, gk20a_mm_l2_flush_done,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
+DEFINE_EVENT(gk20a, gk20a_mm_tlb_invalidate,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
+DEFINE_EVENT(gk20a, gk20a_mm_tlb_invalidate_done,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
+DEFINE_EVENT(gk20a, gk20a_mm_fb_flush,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
+DEFINE_EVENT(gk20a, gk20a_mm_fb_flush_done,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
+DEFINE_EVENT(gk20a, mc_gk20a_intr_thread_stall,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
+DEFINE_EVENT(gk20a, mc_gk20a_intr_thread_stall_done,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
+DEFINE_EVENT(gk20a, mc_gk20a_intr_stall,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
+DEFINE_EVENT(gk20a, mc_gk20a_intr_stall_done,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
+DEFINE_EVENT(gk20a, gr_gk20a_handle_sw_method,
 	TP_PROTO(const char *name),
 	TP_ARGS(name)
 );

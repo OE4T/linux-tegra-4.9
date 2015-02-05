@@ -26,6 +26,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/firmware.h>
 #include <linux/nvhost.h>
+#include <trace/events/gk20a.h>
 
 #include "gk20a.h"
 #include "kind_gk20a.h"
@@ -4997,6 +4998,8 @@ static int gr_gk20a_handle_sw_method(struct gk20a *g, u32 addr,
 					  u32 class_num, u32 offset, u32 data)
 {
 	gk20a_dbg_fn("");
+
+	trace_gr_gk20a_handle_sw_method(g->dev->name);
 
 	if (class_num == KEPLER_COMPUTE_A) {
 		switch (offset << 2) {

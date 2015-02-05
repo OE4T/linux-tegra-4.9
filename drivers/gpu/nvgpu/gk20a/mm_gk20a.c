@@ -27,6 +27,7 @@
 #include <linux/vmalloc.h>
 #include <linux/dma-buf.h>
 #include <uapi/linux/nvgpu.h>
+#include <trace/events/gk20a.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"
@@ -2816,6 +2817,9 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 	/* Make sure all previous writes are committed to the L2. There's no
 	   guarantee that writes are to DRAM. This will be a sysmembar internal
 	   to the L2. */
+
+	trace_gk20a_mm_fb_flush(g->dev->name);
+
 	gk20a_writel(g, flush_fb_flush_r(),
 		flush_fb_flush_pending_busy_f());
 
@@ -2828,7 +2832,7 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 			flush_fb_flush_pending_busy_v()) {
 				gk20a_dbg_info("fb_flush 0x%x", data);
 				retry--;
-				usleep_range(20, 40);
+				udelay(5);
 		} else
 			break;
 	} while (retry >= 0 || !tegra_platform_is_silicon());
@@ -2839,6 +2843,8 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 		ret = -EBUSY;
 	}
 
+	trace_gk20a_mm_fb_flush_done(g->dev->name);
+
 	mutex_unlock(&mm->l2_op_lock);
 
 	return ret;
@@ -2848,6 +2854,8 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 {
 	u32 data;
 	s32 retry = 200;
+
+	trace_gk20a_mm_l2_invalidate(g->dev->name);
 
 	/* Invalidate any clean lines from the L2 so subsequent reads go to
 	   DRAM. Dirty lines are not affected by this operation. */
@@ -2864,7 +2872,7 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 				gk20a_dbg_info("l2_system_invalidate 0x%x",
 						data);
 				retry--;
-				usleep_range(20, 40);
+				udelay(5);
 		} else
 			break;
 	} while (retry >= 0 || !tegra_platform_is_silicon());
@@ -2872,6 +2880,8 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 	if (retry < 0)
 		gk20a_warn(dev_from_gk20a(g),
 			"l2_system_invalidate too many retries");
+
+	trace_gk20a_mm_l2_invalidate_done(g->dev->name);
 }
 
 void gk20a_mm_l2_invalidate(struct gk20a *g)
@@ -2900,6 +2910,8 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 
 	mutex_lock(&mm->l2_op_lock);
 
+	trace_gk20a_mm_l2_flush(g->dev->name);
+
 	/* Flush all dirty lines from the L2 to DRAM. Lines are left in the L2
 	   as clean, so subsequent reads might hit in the L2. */
 	gk20a_writel(g, flush_l2_flush_dirty_r(),
@@ -2914,7 +2926,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 			flush_l2_flush_dirty_pending_busy_v()) {
 				gk20a_dbg_info("l2_flush_dirty 0x%x", data);
 				retry--;
-				usleep_range(20, 40);
+				udelay(5);
 		} else
 			break;
 	} while (retry >= 0 || !tegra_platform_is_silicon());
@@ -2922,6 +2934,8 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 	if (retry < 0)
 		gk20a_warn(dev_from_gk20a(g),
 			"l2_flush_dirty too many retries");
+
+	trace_gk20a_mm_l2_flush_done(g->dev->name);
 
 	if (invalidate)
 		gk20a_mm_l2_invalidate_locked(g);
@@ -2964,7 +2978,7 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 	u32 addr_lo = u64_lo32(gk20a_mm_iova_addr(vm->mm->g,
 						  vm->pdes.sgt->sgl) >> 12);
 	u32 data;
-	s32 retry = 200;
+	s32 retry = 2000;
 	static DEFINE_MUTEX(tlb_lock);
 
 	gk20a_dbg_fn("");
@@ -2986,11 +3000,14 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 	}
 
 	mutex_lock(&tlb_lock);
+
+	trace_gk20a_mm_tlb_invalidate(g->dev->name);
+
 	do {
 		data = gk20a_readl(g, fb_mmu_ctrl_r());
 		if (fb_mmu_ctrl_pri_fifo_space_v(data) != 0)
 			break;
-		usleep_range(20, 40);
+		udelay(2);
 		retry--;
 	} while (retry >= 0 || !tegra_platform_is_silicon());
 
@@ -3014,12 +3031,14 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 			fb_mmu_ctrl_pri_fifo_empty_false_f())
 			break;
 		retry--;
-		usleep_range(20, 40);
+		udelay(2);
 	} while (retry >= 0 || !tegra_platform_is_silicon());
 
 	if (retry < 0)
 		gk20a_warn(dev_from_gk20a(g),
 			"mmu invalidate too many retries");
+
+	trace_gk20a_mm_tlb_invalidate_done(g->dev->name);
 
 out:
 	mutex_unlock(&tlb_lock);

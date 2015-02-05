@@ -2,7 +2,7 @@
  * tegra_nvfx.h - Shared NVFX interface between Tegra ADSP ALSA driver and
  *                ADSP side user space code.
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -139,6 +139,8 @@ typedef struct {
  *
  * @nvfx_method_reset           Resets FX to default state
  * @nvfx_method_set_state       Sets the FX state
+ * @nvfx_method_flush           Flushes input and cached data buffers
+ *                              to support seek operations
  *
  * @nvfx_method_external_start: Start of externally defined FX methods
  *
@@ -146,6 +148,7 @@ typedef struct {
 enum {
 	nvfx_method_reset = 0,
 	nvfx_method_set_state,
+	nvfx_method_flush,
 
 	nvfx_method_external_start = 65536,
 
@@ -193,6 +196,17 @@ typedef struct {
 } nvfx_set_state_params_t;
 
 /**
+ * nvfx_flush_params_t - Flushes input and cached data buffers to
+ *                       support seek operations
+ *
+ * @call                nvfx_call_t parameters
+ *
+ */
+typedef struct {
+	nvfx_call_params_t call;
+} nvfx_flush_params_t;
+
+/**
  * nvfx_req_call_params_t - Parameters for required call functions
  *
  */
@@ -200,6 +214,7 @@ typedef union {
 	nvfx_call_params_t call;
 	nvfx_reset_params_t reset;
 	nvfx_set_state_params_t set_state;
+	nvfx_flush_params_t flush;
 } nvfx_req_call_params_t;
 
 /**

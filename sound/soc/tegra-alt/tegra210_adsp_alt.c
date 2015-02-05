@@ -440,6 +440,18 @@ static int tegra210_adsp_send_state_msg(struct tegra210_adsp_app *app,
 	return tegra210_adsp_send_msg(app->apm, &apm_msg, flags);
 }
 
+static int tegra210_adsp_send_flush_msg(struct tegra210_adsp_app *app,
+					uint32_t flags)
+{
+	apm_msg_t apm_msg;
+
+	apm_msg.msgq_msg.size = MSGQ_MSG_WSIZE(nvfx_flush_params_t);
+	apm_msg.msg.call_params.size = sizeof(nvfx_flush_params_t);
+	apm_msg.msg.call_params.method = nvfx_method_flush;
+
+	return tegra210_adsp_send_msg(app->apm, &apm_msg, flags);
+}
+
 static int tegra210_adsp_send_reset_msg(struct tegra210_adsp_app *app,
 					uint32_t flags)
 {
@@ -705,7 +717,7 @@ static int tegra210_adsp_compr_msg_handler(struct tegra210_adsp_app *app,
 		tegra210_adsp_send_state_msg(prtd->fe_apm,
 			nvfx_state_inactive,
 			TEGRA210_ADSP_MSG_FLAG_SEND);
-		tegra210_adsp_send_reset_msg(prtd->fe_apm,
+		tegra210_adsp_send_flush_msg(prtd->fe_apm,
 			TEGRA210_ADSP_MSG_FLAG_SEND);
 		snd_compr_drain_notify(prtd->cstream);
 		prtd->is_draining = 0;
@@ -769,6 +781,9 @@ static int tegra210_adsp_compr_open(struct snd_compr_stream *cstream)
 static int tegra210_adsp_compr_free(struct snd_compr_stream *cstream)
 {
 	struct tegra210_adsp_compr_rtd *prtd = cstream->runtime->private_data;
+
+	tegra210_adsp_send_reset_msg(prtd->fe_apm,
+		TEGRA210_ADSP_MSG_FLAG_SEND);
 
 	if (prtd) {
 		prtd->fe_apm->fe = 0;
@@ -865,7 +880,7 @@ static int tegra210_adsp_compr_trigger(struct snd_compr_stream *cstream,
 			return ret;
 		}
 
-		ret = tegra210_adsp_send_reset_msg(prtd->fe_apm,
+		ret = tegra210_adsp_send_flush_msg(prtd->fe_apm,
 			TEGRA210_ADSP_MSG_FLAG_SEND);
 		if (ret < 0) {
 			dev_err(prtd->dev, "Failed to reset");
@@ -1087,6 +1102,9 @@ static int tegra210_adsp_pcm_close(struct snd_pcm_substream *substream)
 	dev_vdbg(prtd->dev, "%s", __func__);
 
 	if (prtd) {
+		tegra210_adsp_send_reset_msg(prtd->fe_apm,
+			TEGRA210_ADSP_MSG_FLAG_SEND);
+
 		prtd->fe_apm->fe = 1;
 		devm_kfree(prtd->dev, prtd);
 	}
@@ -1161,7 +1179,7 @@ static int tegra210_adsp_pcm_trigger(struct snd_pcm_substream *substream,
 			return ret;
 		}
 
-		ret = tegra210_adsp_send_reset_msg(prtd->fe_apm,
+		ret = tegra210_adsp_send_flush_msg(prtd->fe_apm,
 			TEGRA210_ADSP_MSG_FLAG_SEND);
 		if (ret < 0) {
 			dev_err(prtd->dev, "Failed to reset");

@@ -710,4 +710,23 @@
 		};
 	};
 
+	sysedp_reactive_capping@3 {
+		compatible = "nvidia,tegra124-sysedp_reactive_capping";
+		nvidia,max_capping_mw = <15000>;
+		nvidia,step_alarm_mw = <1000>;
+		nvidia,step_relax_mw = <500>;
+		nvidia,relax_ms = <250>;
+		interrupt-parent = <&soctherm>;
+		interrupts = <3 0x2002>;
+		sysedpc {
+			nvidia,name = "batmon_oc3";
+		};
+	};
+
+	sysedp-dynamic-capping {
+		compatible = "nvidia,tegra124-sysedp-dynamic-capping";
+		nvidia,throttle_depth = <75>;
+		nvidia,cap_method = <1>;
+	};
+
 };

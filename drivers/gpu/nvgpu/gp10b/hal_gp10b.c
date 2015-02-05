@@ -1,7 +1,7 @@
 /*
  * GP10B Tegra HAL interface
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,6 +24,7 @@
 #include "gp10b/mc_gp10b.h"
 #include "gp10b/ltc_gp10b.h"
 #include "gp10b/mm_gp10b.h"
+#include "gp10b/ce2_gp10b.h"
 #include "gp10b/fb_gp10b.h"
 #include "gp10b/pmu_gp10b.h"
 #include "gp10b/gr_ctx_gp10b.h"
@@ -94,7 +95,8 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_gr(gops);
 	gp10b_init_ltc(gops);
 	gp10b_init_fb(gops);
-	gp10b_init_fifo(gops);
+	gm20b_init_fifo(gops);
+	gp10b_init_ce2(gops);
 	gp10b_init_gr_ctx(gops);
 	gp10b_init_mm(gops);
 	gp10b_init_pmu_ops(gops);

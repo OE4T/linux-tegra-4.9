@@ -1159,7 +1159,6 @@ static long nvhost_channelctl(struct file *filp,
 	}
 	case NVHOST_IOCTL_CHANNEL_SET_NVMAP_FD:
 		break;
-	case NVHOST_IOCTL_CHANNEL_GET_CLK_RATE_LEGACY:
 	case NVHOST_IOCTL_CHANNEL_GET_CLK_RATE:
 	{
 		struct nvhost_clk_rate_args *arg =

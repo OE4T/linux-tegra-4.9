@@ -191,9 +191,9 @@ static long tegra_dc_null_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	static char *plld = "pll_d_out0";
 	static char *plld2 = "pll_d2";
-	const char *clock_name = dc->out &&
-		dc->out->parent_clk ? dc->out->parent_clk :
-		dc->ndev->id == 0 ? plld : plld2;
+	const char *clock_name = ((dc->out &&
+		dc->out->parent_clk) ? dc->out->parent_clk :
+		(dc->ndev->id == 0 ? plld : plld2));
 	struct clk *parent_clk = clk_get_sys(NULL, clock_name);
 	struct clk *base_clk;
 	long rate;
@@ -207,7 +207,11 @@ static long tegra_dc_null_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		clock_name = plld2;
 
 	parent_clk = clk_get_sys(NULL, clock_name);
-	dc->out->parent_clk = clock_name;
+
+	if (dc->out != NULL)
+		dc->out->parent_clk = clock_name;
+	else
+		return 0;
 
 	/* configure the clock rate to something low before we switch to it. */
 	if (clk != dc->clk) {

@@ -112,8 +112,8 @@
 				gap-page = <0>;
 			};
 			ape_as: ape {
-				iova-start = <0x0 0x70300000>;
-				iova-size = <0x0 0x8FC00000>;
+				iova-start = <0x0 0x40000000>;
+				iova-size = <0x0 0xC0000000>;
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;
 				gap-page = <1>;

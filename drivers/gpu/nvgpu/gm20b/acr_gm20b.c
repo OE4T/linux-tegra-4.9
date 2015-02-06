@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -952,6 +952,8 @@ int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 		acr_dmem = (u64 *)
 			&(((u8 *)acr_ucode_data_t210_load)[
 					acr_ucode_header_t210_load[2]]);
+		acr->acr_dmem_desc = (struct flcn_acr_desc *)((u8 *)(
+			pacr_ucode_cpuva) + acr_ucode_header_t210_load[2]);
 		((struct flcn_acr_desc *)acr_dmem)->nonwpr_ucode_blob_start =
 			start;
 		((struct flcn_acr_desc *)acr_dmem)->nonwpr_ucode_blob_size =
@@ -993,7 +995,8 @@ int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 		bl_dmem_desc->data_size = acr_ucode_header_t210_load[3];
 		gk20a_free_sgtable(&sgt_pmu_ucode);
 		sgt_pmu_ucode = NULL;
-	}
+	} else
+		acr->acr_dmem_desc->nonwpr_ucode_blob_size = 0;
 	status = pmu_exec_gen_bl(g, bl_dmem_desc, 1);
 	if (status != 0) {
 		err = status;
@@ -1325,9 +1328,6 @@ err_done:
 int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout)
 {
 	u32 data = 0;
-	udelay(10);
-	data = gk20a_readl(g, pwr_falcon_cpuctl_r());
-	gm20b_dbg_pmu("bef while cpuctl %xi, timeout %d\n", data, timeout);
 	while (timeout != 0) {
 		data = gk20a_readl(g, pwr_falcon_cpuctl_r());
 		if (data & pwr_falcon_cpuctl_halt_intr_m())

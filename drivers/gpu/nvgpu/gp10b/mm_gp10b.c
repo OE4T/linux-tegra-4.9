@@ -17,6 +17,7 @@
 #include <linux/dma-mapping.h>
 #include "gk20a/gk20a.h"
 #include "mm_gp10b.h"
+#include "rpfb_gp10b.h"
 #include "hw_ram_gp10b.h"
 #include "hw_bus_gp10b.h"
 
@@ -52,6 +53,8 @@ static int gp10b_init_mm_setup_hw(struct gk20a *g)
 
 	if (gk20a_mm_fb_flush(g) || gk20a_mm_fb_flush(g))
 		return -EBUSY;
+
+	err = gp10b_replayable_pagefault_buffer_init(g);
 
 	gk20a_dbg_fn("done");
 	return err;

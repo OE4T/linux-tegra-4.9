@@ -357,7 +357,9 @@ struct mm_gk20a {
 
 
 	struct mutex l2_op_lock;
-
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	struct mem_desc bar2_desc;
+#endif
 	void (*remove_support)(struct mm_gk20a *mm);
 	bool sw_ready;
 	int physical_bits;

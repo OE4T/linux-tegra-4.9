@@ -28,7 +28,6 @@
 #include "dc_config.h"
 #include "dc_priv.h"
 #include "dp.h"
-#include "dpaux.h"
 #include "hw_nvdisp_nvdisp.h"
 #include "hw_win_nvdisp.h"
 
@@ -269,7 +268,6 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 {
 	int i;
 	int res;
-	struct device_node *np_dpaux;
 	int idx;
 
 	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
@@ -301,10 +299,6 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 		dev_err(&dc->ndev->dev, "%s, failed head enable\n", __func__);
 		goto failed_enable;
 	}
-
-	np_dpaux = of_find_node_by_path(DPAUX_NODE);
-	if (np_dpaux || !dc->ndev->dev.of_node)
-		tegra_dpaux_pad_power(dc, TEGRA_DPAUX_INSTANCE_0, false);
 
 	if (dc->out_ops && dc->out_ops->enable)
 		dc->out_ops->enable(dc);

@@ -1492,8 +1492,10 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 	g_seq_num_m_retries = 0;
 
 	e = tsec_hdcp_create_context(&hdcp_context);
-	if (e)
+	if (e) {
+		mutex_lock(&nvhdcp->lock);
 		goto err;
+	}
 
 	nvhdcp_vdbg("%s():started thread %s\n", __func__, nvhdcp->name);
 	tegra_dc_io_start(dc);
@@ -1513,14 +1515,17 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 	nvhdcp_vdbg("%s():hpd=%d\n", __func__, nvhdcp->plugged);
 	mutex_unlock(&nvhdcp->lock);
 
-	if (tsec_hdcp_authentication(nvhdcp, &hdcp_context))
+	if (tsec_hdcp_authentication(nvhdcp, &hdcp_context)) {
+		mutex_lock(&nvhdcp->lock);
 		goto failure;
+	}
 
 	mdelay(350);
 	nvhdcp_vdbg("link integrity check ...\n");
 	e = link_integrity_check(nvhdcp, &hdcp_context);
 	if (e) {
 		nvhdcp_err("link integrity check failed err %d\n", e);
+		mutex_lock(&nvhdcp->lock);
 		goto failure;
 	}
 
@@ -1533,6 +1538,7 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 		HDCP_SESSION_CTRL_FLAG_ACTIVATE);
 	if (e) {
 		nvhdcp_info("tsec_hdcp_session_ctrl failed\n");
+		mutex_lock(&nvhdcp->lock);
 		goto failure;
 	}
 	nvhdcp_info("HDCP 2.2 crypt enabled!\n");
@@ -1550,6 +1556,7 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 		e = link_integrity_check(nvhdcp, &hdcp_context);
 		if (e) {
 			nvhdcp_err("link integrity check failed err %d\n", e);
+			mutex_lock(&nvhdcp->lock);
 			goto failure;
 		}
 		tegra_dc_io_end(dc);

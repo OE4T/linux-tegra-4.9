@@ -319,6 +319,7 @@ struct channel_gk20a;
 
 int gk20a_init_mm_support(struct gk20a *g);
 int gk20a_init_mm_setup_sw(struct gk20a *g);
+int gk20a_init_mm_setup_hw(struct gk20a *g);
 
 int gk20a_mm_fb_flush(struct gk20a *g);
 void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate);

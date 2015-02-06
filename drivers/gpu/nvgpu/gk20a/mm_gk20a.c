@@ -391,7 +391,7 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 }
 
 /* make sure gk20a_init_mm_support is called before */
-static int gk20a_init_mm_setup_hw(struct gk20a *g)
+int gk20a_init_mm_setup_hw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct inst_desc *inst_block = &mm->bar1.inst_block;
@@ -435,9 +435,8 @@ int gk20a_init_mm_support(struct gk20a *g)
 	if (err)
 		return err;
 
-	err = gk20a_init_mm_setup_hw(g);
-	if (err)
-		return err;
+	if (g->ops.mm.init_mm_setup_hw)
+		err = g->ops.mm.init_mm_setup_hw(g);
 
 	return err;
 }
@@ -3116,5 +3115,6 @@ void gk20a_init_mm(struct gpu_ops *gops)
 	gops->mm.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits;
 	gops->mm.get_mmu_levels = gk20a_mm_get_mmu_levels;
 	gops->mm.init_pdb = gk20a_mm_init_pdb;
+	gops->mm.init_mm_setup_hw = gk20a_init_mm_setup_hw;
 }
 

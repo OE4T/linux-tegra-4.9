@@ -126,4 +126,5 @@ void gm20b_init_mm(struct gpu_ops *gops)
 	gops->mm.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits;
 	gops->mm.get_mmu_levels = gk20a_mm_get_mmu_levels;
 	gops->mm.init_pdb = gk20a_mm_init_pdb;
+	gops->mm.init_mm_setup_hw = gk20a_init_mm_setup_hw;
 }

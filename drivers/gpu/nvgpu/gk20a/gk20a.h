@@ -334,6 +334,7 @@ struct gpu_ops {
 					  void *inst_ptr, int size);
 		u32 (*get_big_page_sizes)(void);
 		u32 (*get_physical_addr_bits)(struct gk20a *g);
+		int (*init_mm_setup_hw)(struct gk20a *g);
 		int (*init_bar2_vm)(struct gk20a *g);
 		int (*init_bar2_mm_hw_setup)(struct gk20a *g);
 		const struct gk20a_mmu_level *

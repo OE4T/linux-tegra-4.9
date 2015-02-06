@@ -53,6 +53,22 @@
 
 #define TMDS_NODE	"/host1x/sor1"
 
+/* Possibly should be moved to hdmi_common.h */
+static struct fb_videomode tegra_dc_vga_mode = {
+	.refresh = 60,
+	.xres = 640,
+	.yres = 480,
+	.pixclock = KHZ2PICOS(25200),
+	.hsync_len = 96,	/* h_sync_width */
+	.vsync_len = 2,		/* v_sync_width */
+	.left_margin = 48,	/* h_back_porch */
+	.upper_margin = 33,	/* v_back_porch */
+	.right_margin = 16,	/* h_front_porch */
+	.lower_margin = 10,	/* v_front_porch */
+	.vmode = 0,
+	.sync = 0,
+};
+
 static ssize_t hdmi_ddc_power_toggle(struct kobject *kobj,
 	struct kobj_attribute *attr, const char *buf, size_t count);
 
@@ -970,17 +986,19 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	/* NOTE: Below code is applicable to L4T or embedded systems and is
 	 * protected accordingly. This section early enables DC with first mode
 	 * from the monitor specs.
-	 * WARN: No fallback mode if monitor specs are unsupported.
+	 * In case there is no hotplug we are falling back
+	 * to default VGA mode.
 	 */
 	if ((config_enabled(CONFIG_FRAMEBUFFER_CONSOLE) ||
 			((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
-			(dc->pdata->flags & TEGRA_DC_FLAG_SET_EARLY_MODE))) &&
-			dc->out && (dc->out->type == TEGRA_DC_OUT_HDMI) &&
-			(!dc->initialized) && tegra_dc_hpd(dc)) {
+			 (dc->pdata->flags & TEGRA_DC_FLAG_SET_EARLY_MODE))) &&
+			dc->out && (dc->out->type == TEGRA_DC_OUT_HDMI)) {
 		struct fb_monspecs specs;
-		if (!tegra_edid_get_monspecs(hdmi->edid, &specs, NULL)) {
-			tegra_dc_set_fb_mode(dc, specs.modedb, false);
-		}
+		if (tegra_dc_hpd(dc) && (!dc->initialized)) {
+			if (!tegra_edid_get_monspecs(hdmi->edid, &specs, NULL))
+				tegra_dc_set_fb_mode(dc, specs.modedb, false);
+		} else
+			tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false);
 	}
 
 #ifdef CONFIG_SWITCH

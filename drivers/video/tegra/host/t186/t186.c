@@ -51,7 +51,6 @@ struct nvhost_device_data t18_host1x_info = {
 				   {"actmon", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	.private_data		= &host1x04_info,
-	.gather_filter_enabled	= true,
 };
 
 #ifdef CONFIG_TEGRA_GRHOST_ISP

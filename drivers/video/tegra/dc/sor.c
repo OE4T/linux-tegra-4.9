@@ -1378,9 +1378,6 @@ void tegra_sor_start_dc(struct tegra_dc_sor_data *sor)
 	struct tegra_dc *dc = sor->dc;
 	u32 reg_val;
 
-	if (tegra_platform_is_linsim())
-		return;
-
 	if (sor->sor_state == SOR_ATTACHED)
 		return;
 
@@ -1465,6 +1462,7 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
 		NV_SOR_SUPER_STATE1_ASY_ORMODE_NORMAL |
 		NV_SOR_SUPER_STATE1_ATTACHED_YES);
+	tegra_dc_sor_super_update(sor);
 
 	tegra_dc_sor_enable_dc(sor);
 
@@ -1567,8 +1565,6 @@ void tegra_sor_stop_dc(struct tegra_dc_sor_data *sor)
 {
 	struct tegra_dc *dc = sor->dc;
 
-	if (tegra_platform_is_linsim())
-		return;
 	tegra_dc_get(dc);
 
 	/* Stop DC->SOR path */
@@ -1611,6 +1607,7 @@ void tegra_dc_sor_pre_detach(struct tegra_dc_sor_data *sor)
 		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
 		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
 		NV_SOR_SUPER_STATE1_ATTACHED_YES);
+	tegra_dc_sor_super_update(sor);
 
 	tegra_dc_sor_disable_win_short_raster(dc, sor->dc_reg_ctx);
 #endif

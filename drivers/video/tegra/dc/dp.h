@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dp.h
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -74,7 +74,8 @@ static const u32 tegra_dp_vs_regs[][4][4] = {
 /* Both 12x and 13x config enabled for 13x */
 #if (defined(CONFIG_ARCH_TEGRA_12x_SOC) && \
 	!defined(CONFIG_ARCH_TEGRA_13x_SOC)) || \
-	defined(CONFIG_ARCH_TEGRA_21x_SOC)
+	defined(CONFIG_ARCH_TEGRA_21x_SOC)  || \
+	defined(CONFIG_TEGRA_NVDISPLAY)
 static const u32 tegra_dp_pe_regs[][4][4] = {
 	/* postcursor2 L0 */
 	{

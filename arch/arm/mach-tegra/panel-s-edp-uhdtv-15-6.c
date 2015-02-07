@@ -191,7 +191,7 @@ static int edp_s_uhdtv_15_6_check_fb(struct device *dev, struct fb_info *info)
 	return info->device == &pdev->dev;
 }
 
-struct pwm_bl_data_dt_ops edp_s_uhdtv_15_6_pwm_bl_ops = {
+static struct pwm_bl_data_dt_ops edp_s_uhdtv_15_6_pwm_bl_ops = {
 	.notify = edp_s_uhdtv_15_6_bl_notify,
 	.check_fb = edp_s_uhdtv_15_6_check_fb,
 	.blnode_compatible = "s-edp,uhdtv-15-6-bl",

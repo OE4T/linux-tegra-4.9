@@ -26,6 +26,7 @@
 #include "dev.h"
 #include "nvhost_job.h"
 #include "class_ids.h"
+#include "scale3d.h"
 
 #include "t210.h"
 #include "t124/t124.h"
@@ -412,9 +413,11 @@ struct nvhost_device_data t21_vic_info = {
 	.engine_can_cg		= true,
 	.poweron_toggle_slcg	= true,
 	.finalize_poweron	= nvhost_vic_finalize_poweron,
-	.scaling_init           = nvhost_scale_init,
-	.scaling_deinit         = nvhost_scale_deinit,
+	.scaling_init           = nvhost_scale3d_init,
+	.scaling_deinit         = nvhost_scale3d_deinit,
+	.scaling_post_cb	= &nvhost_scale3d_callback,
 	.actmon_regs            = HOST1X_CHANNEL_ACTMON2_REG_BASE,
+	.linear_emc		= true,
 	.actmon_enabled         = true,
 	.actmon_irq		= 13,
 	.devfreq_governor	= "wmark_active",

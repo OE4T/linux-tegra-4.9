@@ -308,7 +308,7 @@ static void tegra_cec_init(struct tegra_cec *cec)
 		TEGRA_CEC_HWCTRL_TX_RX_MODE,
 		cec->cec_base + TEGRA_CEC_HW_CONTROL);
 
-	writel(0x00, cec->cec_base + TEGRA_CEC_INPUT_FILTER);
+	writel((1U << 31) | 0x20, cec->cec_base + TEGRA_CEC_INPUT_FILTER);
 
 	writel((0x7a << TEGRA_CEC_RX_TIMING_0_RX_START_BIT_MAX_LO_TIME_MASK) |
 	   (0x6d << TEGRA_CEC_RX_TIMING_0_RX_START_BIT_MIN_LO_TIME_MASK) |

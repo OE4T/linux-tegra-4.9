@@ -61,10 +61,9 @@ static int dsi_a_1200_1920_8_0_regulator_get(struct device *dev)
 
 	vdd_lcd_bl_en = regulator_get(dev, "vdd_lcd_bl_en");
 	if (IS_ERR_OR_NULL(vdd_lcd_bl_en)) {
-		pr_err("vdd_lcd_bl_en regulator get failed\n");
 		err = PTR_ERR(vdd_lcd_bl_en);
+		pr_warn("warning: vdd_lcd_bl_en regulator get failed, err = %d\n", err);
 		vdd_lcd_bl_en = NULL;
-		goto fail;
 	}
 
 	reg_requested = true;

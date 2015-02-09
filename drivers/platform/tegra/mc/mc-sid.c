@@ -272,6 +272,11 @@ void platform_override_streamid(int sid)
 {
 	int i;
 
+	if (!mc_sid_base) {
+		pr_err("mc-sid isn't populated\n");
+		return;
+	}
+
 	for (i = 0; i < ARRAY_SIZE(swgid_to_sid_config); i++) {
 		struct swgid_to_sid_config *conf;
 

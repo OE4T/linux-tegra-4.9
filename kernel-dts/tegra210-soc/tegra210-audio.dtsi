@@ -95,6 +95,7 @@
 		};
 
 		i2s@702d1200 {
+			prod-name = "i2s2_prod";
 			pinctrl-names = "dap_active", "dap_inactive";
 			pinctrl-0 = <>;
 			pinctrl-1 = <>;

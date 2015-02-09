@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -179,6 +179,19 @@
 					0 0x1C8 0x0FFFC002 0x00001040
 					0 0x1DC 0x08080FFF 0x51212000
 					0 0x1E0 0x0FFFC002 0x00001040
+
+					0 0x20 0xFE0E0FFF 0x01010000	//AUD_MCLK
+					0 0xA0 0xFE0E0FFF 0x01010000	//I2S4B DIN
+					0 0xA4 0xFE0E0FFF 0x01010000	//I2S4B DOUT
+					0 0xA8 0xFE0E0FFF 0x01010000	//I2S4B FS
+					0 0xAC 0xFE0E0FFF 0x01010000	//I2S4B SCLK
+					0 0xB0 0xFE0E0FFF 0x01F1F000	//DMIC1 CLK
+					0 0xB4 0xFE0E0FFF 0x01F1F000	//DMIC1 DATA
+					0 0xB8 0xFE0E0FFF 0x01F1F000	//DMIC2 CLK
+					0 0xBC 0xFE0E0FFF 0x01F1F000	//DMIC2 DATA
+					0 0xC0 0xFE0E0FFF 0x01F1F000	//DMIC3 CLK
+					0 0xC4 0xFE0E0FFF 0x01F1F000	//DMIC3 DATA
+
 					1 0x00 0xFFFF8DFF 0x00002000
 					1 0x04 0xFFFF8DFF 0x00002000
 					1 0x08 0xFFFF8DFF 0x00002000
@@ -192,6 +205,14 @@
 					1 0x2C 0xFFFF8DFF 0x00002000
 					1 0x30 0xFFFF8DFF 0x00002000>;
 			};
+
+			i2s2_prod {
+				prod = <0 0xB0 0xFE0E0FFF 0x01010000	// FS
+					0 0xB4 0xFE0E0FFF 0x01010000		// DIN
+					0 0xB8 0xFE0E0FFF 0x01010000		// DOUT
+					0 0xBC 0xFE0E0FFF 0x01010000>;		// SCLK
+			};
+
 			spi1_prod {
 				nvidia,prod-boot-init;
 				prod = <0 0x200 0x0FFFFFFF 0x50000000

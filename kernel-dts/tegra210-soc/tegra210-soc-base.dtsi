@@ -919,7 +919,8 @@
 	adma: adma@702e2000 {
 		compatible = "nvidia,tegra210-adma";
 		power-domains = <&ape_pd>;
-		reg = <0x0 0x702e2000 0x0 0x2000>;
+		reg =	<0x0 0x702e2000 0x0 0x2000>,	/* GLOBAL Reg */
+			<0x0 0x702e2000 0x0 0x2000>;	/* CH Reg */
 		interrupts = <0 24 0x04
 			      0 25 0x04
 			      0 26 0x04

@@ -536,6 +536,21 @@ int gr_gk20a_enable_ctxsw(struct gk20a *g)
 			gr_fecs_method_push_adr_start_ctxsw_v(), NULL);
 }
 
+int gr_gk20a_halt_pipe(struct gk20a *g)
+{
+	return gr_gk20a_submit_fecs_method_op(g,
+	      (struct fecs_method_op_gk20a) {
+		      .method.addr =
+				gr_fecs_method_push_adr_halt_pipeline_v(),
+		      .method.data = ~0,
+		      .mailbox = { .id   = 1, /*sideband?*/
+				.data = ~0, .clr = ~0, .ret = 0,
+				.ok   = gr_fecs_ctxsw_mailbox_value_pass_v(),
+				.fail = gr_fecs_ctxsw_mailbox_value_fail_v(), },
+		      .cond.ok = GR_IS_UCODE_OP_EQUAL,
+		      .cond.fail = GR_IS_UCODE_OP_EQUAL });
+}
+
 
 static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 {

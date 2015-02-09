@@ -718,6 +718,10 @@ static inline u32 gr_fecs_method_push_adr_set_watchdog_timeout_f(void)
 {
 	return 0x21;
 }
+static inline u32 gr_fecs_method_push_adr_halt_pipeline_v(void)
+{
+	return 0x00000004;
+}
 static inline u32 gr_fecs_host_int_status_r(void)
 {
 	return 0x00409c18;
@@ -1302,10 +1306,6 @@ static inline u32 gr_ds_zbc_color_r_val_f(u32 v)
 {
 	return (v & 0xffffffff) << 0;
 }
-static inline u32 gr_ds_zbc_color_fmt_val_a8_b8_g8_r8_v(void)
-{
-	return 0x00000028;
-}
 static inline u32 gr_ds_zbc_color_g_r(void)
 {
 	return 0x00405808;
@@ -1353,6 +1353,10 @@ static inline u32 gr_ds_zbc_color_fmt_val_unorm_one_v(void)
 static inline u32 gr_ds_zbc_color_fmt_val_rf32_gf32_bf32_af32_v(void)
 {
 	return 0x00000004;
+}
+static inline u32 gr_ds_zbc_color_fmt_val_a8_b8_g8_r8_v(void)
+{
+	return 0x00000028;
 }
 static inline u32 gr_ds_zbc_z_r(void)
 {

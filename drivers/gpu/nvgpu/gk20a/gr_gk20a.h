@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics Engine
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -497,4 +497,5 @@ int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 			  u32 class, u32 padding);
 void gr_gk20a_free_gr_ctx(struct gk20a *g,
 			  struct vm_gk20a *vm, struct gr_ctx_desc *gr_ctx);
+int gr_gk20a_halt_pipe(struct gk20a *g);
 #endif /*__GR_GK20A_H__*/

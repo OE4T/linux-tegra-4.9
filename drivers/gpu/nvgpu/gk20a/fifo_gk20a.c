@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics FIFO (gr host)
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -832,6 +832,9 @@ void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 	gk20a_dbg_fn("");
 
 	if (engine_id == top_device_info_type_enum_graphics_v()) {
+		/*HALT_PIPELINE method, halt GR engine*/
+		if (gr_gk20a_halt_pipe(g))
+			gk20a_err(dev_from_gk20a(g), "failed to HALT gr pipe");
 		/* resetting engine using mc_enable_r() is not enough,
 		 * we do full init sequence */
 		gk20a_gr_reset(g);

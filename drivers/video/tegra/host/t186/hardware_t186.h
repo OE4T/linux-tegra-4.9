@@ -27,15 +27,22 @@
 #include "host1x/hw_host1x5_channel.h"
 #include "host1x/hw_host1x5_actmon.h"
 
-#define NV_HOST1X_CHANNELS	9
-#define NV_HOST1X_SYNC_MLOCK_NUM 16
-
 /* sync registers */
 #define NV_HOST1X_SYNCPT_NB_PTS 576
 #define NV_HOST1X_SYNCPT_NB_BASES 16
 #define NV_HOST1X_NB_MLOCKS 24
 #define HOST1X_CHANNEL_SYNC_REG_BASE 0x2100
 #define NV_HOST1X_CHANNEL_MAP_SIZE_BYTES 16384
+
+#define NV_HOST1X_MLOCK_ID_NVCSI	7
+#define NV_HOST1X_MLOCK_ID_ISP		8
+#define NV_HOST1X_MLOCK_ID_VI		16
+#define NV_HOST1X_MLOCK_ID_VIC		17
+#define NV_HOST1X_MLOCK_ID_NVENC	18
+#define NV_HOST1X_MLOCK_ID_NVDEC	19
+#define NV_HOST1X_MLOCK_ID_NVJPG	20
+#define NV_HOST1X_MLOCK_ID_TSEC		21
+#define NV_HOST1X_MLOCK_ID_TSECB	22
 
 /* Generic support */
 static inline u32 nvhost_class_host_wait_syncpt(

@@ -266,8 +266,9 @@ static void cdma_stop(struct nvhost_cdma *cdma)
  */
 static void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 {
-	struct nvhost_master *dev;
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
+	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
+	struct nvhost_master *dev;
 	u32 cmdproc_stop;
 
 	dev = cdma_to_dev(cdma);
@@ -294,7 +295,27 @@ static void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 			host1x_channel_dmactrl(true, false, false));
 
 	host1x_channel_writel(ch, host1x_sync_ch_teardown_r(), BIT(0));
-	nvhost_module_reset(ch->dev, true);
+
+	/* if resources are allocated per channel instance, the channel does
+	 * not necessaryly hold the mlock */
+	if (pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE) {
+		struct nvhost_syncpt *syncpt = &dev->syncpt;
+		unsigned int owner;
+		bool ch_own, cpu_own;
+
+		/* check the owner */
+		syncpt_op().mutex_owner(syncpt, pdata->modulemutexes[0],
+					&cpu_own, &ch_own, &owner);
+
+		/* if this channel owns the lock, we need to reset the engine */
+		if (ch_own && owner == ch->chid)
+			nvhost_module_reset(ch->dev, true);
+
+	} else {
+		/* if we allocate the resource per channel, the module is always
+		 * contamined */
+		nvhost_module_reset(ch->dev, true);
+	}
 
 	cdma->running = false;
 	cdma->torndown = true;
@@ -317,6 +338,102 @@ static void cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 
 	cdma->torndown = false;
 	cdma_timeout_restart(cdma, getptr);
+}
+
+static void cdma_timeout_release_mlock(struct nvhost_cdma *cdma)
+{
+	struct nvhost_channel *ch = cdma_to_channel(cdma);
+	struct nvhost_master *dev = cdma_to_dev(cdma);
+	struct nvhost_syncpt *syncpt = &dev->syncpt;
+	struct platform_device *pdev = ch->dev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_job *job = NULL;
+	dma_addr_t dma_handle = 0;
+	DEFINE_DMA_ATTRS(attrs);
+	u32 *cpuvaddr = NULL;
+	bool ch_own, cpu_own;
+	unsigned int owner;
+	int err = 0;
+
+	/* nothing to do if resource policy is per device */
+	if (pdata->resource_policy == RESOURCE_PER_DEVICE)
+		return;
+
+	/* read the owner */
+	syncpt_op().mutex_owner(syncpt, pdata->modulemutexes[0],
+				&cpu_own, &ch_own, &owner);
+
+	/* if this channel does not own the mlock, quit */
+	if (!(ch_own && owner == ch->chid))
+		return;
+
+	cpuvaddr = dma_alloc_attrs(&pdev->dev, SZ_4K, &dma_handle, GFP_KERNEL,
+				   &attrs);
+	if (!cpuvaddr) {
+		nvhost_err(&pdev->dev, "mlock release failed: failed to allocate release buffer\n");
+		return;
+	}
+
+	*cpuvaddr = nvhost_opcode_imm_incr_syncpt(0, ch->syncpts[0]);
+
+	job = nvhost_job_alloc(ch, 1, 0, 0, 1);
+	if (!job) {
+		nvhost_err(&pdev->dev, "mlock release failed: failed to allocate job (%d)\n",
+			   err);
+		goto err_job_alloc;
+	}
+
+	job->sp->id = ch->syncpts[0];
+	job->sp->incrs = 1;
+	job->num_syncpts = 1;
+
+	/* Make increment in device class to force acquiring the mlock */
+	err = nvhost_job_add_client_gather_address(job, 1, pdata->class,
+						   dma_handle);
+	if (err) {
+		nvhost_err(&pdev->dev, "mlock release failed: failed to add gather address (%d)\n",
+			   err);
+		goto err_add_gather;
+	}
+
+	/* submit work */
+	err = nvhost_channel_submit(job);
+	if (err) {
+		nvhost_err(&pdev->dev, "mlock release failed: submit failed (%d)\n",
+			   err);
+		goto err_submit;
+	}
+
+	/* WAR to Host1x MLOCK mechanism. Re-acquiring MLOCK for the
+	 * same channel may not succeed automatically but we need to
+	 * assign the MLOCK using register write */
+
+	while (true) {
+		/* Wait a moment */
+		mdelay(10);
+
+		/* If MLOCK is no longer assigned for this channel, quit */
+		syncpt_op().mutex_owner(syncpt, pdata->modulemutexes[0],
+					&cpu_own, &ch_own, &owner);
+		if (!(ch_own && owner == ch->chid))
+			break;
+
+		/* ..otherwise, reassign MLOCK for this channel */
+		host1x_hypervisor_writel(dev->dev,
+				 host1x_sync_common_mlock_r() +
+				 pdata->modulemutexes[0] * 4,
+				 host1x_sync_common_mlock_ch_f(ch->chid) |
+				 host1x_sync_common_mlock_locked_f(true));
+	}
+
+	/* Wait until the MLOCK is released */
+	nvhost_syncpt_wait_timeout_ext(pdev, job->sp->id, job->sp->fence,
+				       (u32)MAX_SCHEDULE_TIMEOUT, NULL, NULL);
+err_submit:
+err_add_gather:
+	nvhost_job_put(job);
+err_job_alloc:
+	dma_free_attrs(&pdev->dev, SZ_4K, cpuvaddr, dma_handle, &attrs);
 }
 
 /**
@@ -412,12 +529,21 @@ static void cdma_timeout_handler(struct work_struct *work)
 			cdma->timeout.sp[i].fence);
 	}
 
+	/* get reference to the channel that is going to be destroyed */
+	nvhost_getchannel(ch);
+
 	/* stop HW, resetting channel/module */
 	cdma_op().timeout_teardown_begin(cdma);
 
 	nvhost_cdma_update_sync_queue(cdma, sp, ch->dev);
 	mutex_unlock(&cdma->lock);
 	mutex_unlock(&dev->timeout_mutex);
+
+	/* ensure that mlocks get released */
+	cdma_timeout_release_mlock(cdma);
+
+	/* channel can be released now */
+	nvhost_putchannel(ch, 1);
 }
 
 static const struct nvhost_cdma_ops host1x_cdma_ops = {

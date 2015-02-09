@@ -1298,7 +1298,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	u32 gmmu_page_size = 0;
 	u64 map_offset = 0;
 	int err = 0;
-	struct buffer_attrs bfr = {0};
+	struct buffer_attrs bfr = {NULL};
 	struct gk20a_comptags comptags;
 	u64 buf_addr;
 	bool clear_ctags = false;

@@ -211,22 +211,27 @@ void tegra_set_fixed_pwm_bl_ops(struct pwm_bl_data_dt_ops *p_ops)
 static bool tegra_available_pwm_bl_ops_register(struct device *dev)
 {
 	struct device_node *np_bl = NULL;
+	struct device_node *np_parent = NULL;
 	const char *pn_compat = NULL;
+	bool ret = false;
 
-	for_each_available_child_of_node(
-		of_find_node_by_path("/backlight"), np_bl) {
-		if (np_bl)
-			break;
+	np_parent = of_find_node_by_path("/backlight");
+	if (np_parent) {
+		for_each_available_child_of_node(np_parent, np_bl) {
+			if (np_bl)
+				break;
+		}
 	}
+
 	if (!np_bl) {
 		pr_info("no avaiable target backlight node\n");
-		return false;
+		goto end;
 	}
 
 	pn_compat = of_get_property(np_bl, "compatible", NULL);
 	if (!pn_compat) {
 		WARN(1, "No compatible prop in backlight node\n");
-		return false;
+		goto end;
 	}
 
 	if (of_device_is_compatible(np_bl, "p,wuxga-10-1-bl")) {
@@ -257,9 +262,14 @@ static bool tegra_available_pwm_bl_ops_register(struct device *dev)
 		dev_set_drvdata(dev, edp_s_uhdtv_15_6_ops.pwm_bl_ops);
 	} else {
 		pr_info("invalid compatible for backlight node\n");
-		return false;
+		goto end;
 	}
-	return true;
+
+	ret = true;
+end:
+	of_node_put(np_parent);
+	of_node_put(np_bl);
+	return ret;
 }
 static void tegra_pwm_bl_ops_reg_based_on_disp_board_id(struct device *dev)
 {
@@ -376,6 +386,7 @@ static struct device_node *available_internal_panel_select(
 			struct tegra_dc_platform_data *pdata)
 {
 	struct device_node *np_panel = NULL;
+	struct device_node *np_dsi = NULL, *np_sor = NULL;
 	struct tegra_dc_out *dc_out = NULL;
 	const char *pn_compat = NULL;
 
@@ -386,37 +397,46 @@ static struct device_node *available_internal_panel_select(
 	 * child node from SOR_NODE.
 	 */
 
-	for_each_available_child_of_node(
-		of_find_node_by_path(DSI_NODE), np_panel) {
-		if (np_panel)
-			break;
+	np_dsi = of_find_node_by_path(DSI_NODE);
+	if (np_dsi) {
+		for_each_available_child_of_node(np_dsi, np_panel) {
+			if (np_panel)
+				break;
+		}
 	}
-	if (!np_panel)
-		for_each_available_child_of_node(
-		of_find_node_by_path(SOR_NODE), np_panel) {
-		if (np_panel)
-			break;
+
+	if (!np_panel) {
+		np_sor = of_find_node_by_path(SOR_NODE);
+		if (np_sor) {
+			for_each_available_child_of_node(np_sor, np_panel) {
+				if (np_panel)
+					break;
+			}
+		}
 	}
+
 	if (!np_panel) {
 		pr_info("panel_select fail by _node_status\n");
-		return NULL;
+		goto end;
 	}
 
 	if (!pdata)
-		return np_panel;
+		goto end;
 
 	dc_out = pdata->default_out;
 	if (!dc_out) {
 		WARN(1, "dc_out is not valid\n");
 		of_node_put(np_panel);
-		return NULL;
+		np_panel = NULL;
+		goto end;
 	}
 
 	pn_compat = of_get_property(np_panel, "compatible", NULL);
 	if (!pn_compat) {
 		WARN(1, "panel node do not have compatible prop\n");
 		of_node_put(np_panel);
-		return NULL;
+		np_panel = NULL;
+		goto end;
 	}
 
 	if (of_device_is_compatible(np_panel, "p,wuxga-10-1")) {
@@ -461,8 +481,12 @@ static struct device_node *available_internal_panel_select(
 	} else {
 		pr_info("invalid panel compatible\n");
 		of_node_put(np_panel);
-		return NULL;
+		np_panel = NULL;
 	}
+
+end:
+	of_node_put(np_dsi);
+	of_node_put(np_sor);
 	return np_panel;
 }
 

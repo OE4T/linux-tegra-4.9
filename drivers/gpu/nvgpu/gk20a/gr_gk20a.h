@@ -28,6 +28,7 @@
 
 #define GR_IDLE_CHECK_DEFAULT		100 /* usec */
 #define GR_IDLE_CHECK_MAX		5000 /* usec */
+#define GR_FECS_POLL_INTERVAL		5 /* usec */
 
 #define INVALID_SCREEN_TILE_ROW_OFFSET	0xFFFFFFFF
 #define INVALID_MAX_WAYS		0xFFFFFFFF
@@ -491,7 +492,8 @@ int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
 		       u32 expect_delay);
 int gr_gk20a_init_ctx_state(struct gk20a *g);
 int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
-				   struct fecs_method_op_gk20a op);
+				   struct fecs_method_op_gk20a op,
+				   bool sleepduringwait);
 int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 			  struct gr_ctx_desc **__gr_ctx, struct vm_gk20a *vm,
 			  u32 class, u32 padding);

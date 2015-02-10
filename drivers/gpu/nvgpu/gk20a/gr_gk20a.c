@@ -365,15 +365,18 @@ static int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long end_jiffies,
 static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 				   u32 *mailbox_ret, u32 opc_success,
 				   u32 mailbox_ok, u32 opc_fail,
-				   u32 mailbox_fail)
+				   u32 mailbox_fail, bool sleepduringwait)
 {
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
-	u32 delay = GR_IDLE_CHECK_DEFAULT;
+	u32 delay = GR_FECS_POLL_INTERVAL;
 	u32 check = WAIT_UCODE_LOOP;
 	u32 reg;
 
 	gk20a_dbg_fn("");
+
+	if (sleepduringwait)
+		delay = GR_IDLE_CHECK_DEFAULT;
 
 	while (check == WAIT_UCODE_LOOP) {
 		if (!time_before(jiffies, end_jiffies) &&
@@ -448,8 +451,11 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 			break;
 		}
 
-		usleep_range(delay, delay * 2);
-		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+		if (sleepduringwait) {
+			usleep_range(delay, delay * 2);
+			delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+		} else
+			udelay(delay);
 	}
 
 	if (check == WAIT_UCODE_TIMEOUT) {
@@ -472,7 +478,8 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 /* The following is a less brittle way to call gr_gk20a_submit_fecs_method(...)
  * We should replace most, if not all, fecs method calls to this instead. */
 int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
-				   struct fecs_method_op_gk20a op)
+				   struct fecs_method_op_gk20a op,
+				   bool sleepduringwait)
 {
 	struct gr_gk20a *gr = &g->gr;
 	int ret;
@@ -497,7 +504,8 @@ int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
 
 	ret = gr_gk20a_ctx_wait_ucode(g, op.mailbox.id, op.mailbox.ret,
 				      op.cond.ok, op.mailbox.ok,
-				      op.cond.fail, op.mailbox.fail);
+				      op.cond.fail, op.mailbox.fail,
+				      sleepduringwait);
 
 	mutex_unlock(&gr->fecs_mutex);
 
@@ -515,7 +523,7 @@ static int gr_gk20a_ctrl_ctxsw(struct gk20a *g, u32 fecs_method, u32 *ret)
 				   .ok   = gr_fecs_ctxsw_mailbox_value_pass_v(),
 				   .fail = gr_fecs_ctxsw_mailbox_value_fail_v(), },
 		      .cond.ok = GR_IS_UCODE_OP_EQUAL,
-		      .cond.fail = GR_IS_UCODE_OP_EQUAL });
+		      .cond.fail = GR_IS_UCODE_OP_EQUAL }, true);
 }
 
 /* Stop processing (stall) context switches at FECS.
@@ -548,7 +556,7 @@ int gr_gk20a_halt_pipe(struct gk20a *g)
 				.ok   = gr_fecs_ctxsw_mailbox_value_pass_v(),
 				.fail = gr_fecs_ctxsw_mailbox_value_fail_v(), },
 		      .cond.ok = GR_IS_UCODE_OP_EQUAL,
-		      .cond.fail = GR_IS_UCODE_OP_EQUAL });
+		      .cond.fail = GR_IS_UCODE_OP_EQUAL }, false);
 }
 
 
@@ -686,7 +694,7 @@ static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 				  .ok = 0x10,
 				  .fail = 0x20, },
 		     .cond.ok = GR_IS_UCODE_OP_AND,
-		     .cond.fail = GR_IS_UCODE_OP_AND});
+		     .cond.fail = GR_IS_UCODE_OP_AND}, true);
 	if (ret)
 		gk20a_err(dev_from_gk20a(g),
 			"bind channel instance failed");
@@ -1382,7 +1390,7 @@ static int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type)
 		},
 		.cond.ok = GR_IS_UCODE_OP_AND,
 		.cond.fail = GR_IS_UCODE_OP_AND,
-		 });
+		 }, true);
 
 	if (ret)
 		gk20a_err(dev_from_gk20a(g), "save context image failed");
@@ -1668,7 +1676,7 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 					  .ok = gr_fecs_ctxsw_mailbox_value_pass_v(),
 					  .fail = 0},
 				  .cond.ok = GR_IS_UCODE_OP_EQUAL,
-				  .cond.fail = GR_IS_UCODE_OP_SKIP});
+				  .cond.fail = GR_IS_UCODE_OP_SKIP}, false);
 
 		if (ret)
 			gk20a_err(dev_from_gk20a(g),
@@ -2145,7 +2153,7 @@ static int gr_gk20a_wait_ctxsw_ready(struct gk20a *g)
 	ret = gr_gk20a_ctx_wait_ucode(g, 0, NULL,
 				      GR_IS_UCODE_OP_EQUAL,
 				      eUcodeHandshakeInitComplete,
-				      GR_IS_UCODE_OP_SKIP, 0);
+				      GR_IS_UCODE_OP_SKIP, 0, false);
 	if (ret) {
 		gk20a_err(dev_from_gk20a(g), "falcon ucode init timeout");
 		return ret;
@@ -2181,7 +2189,7 @@ int gr_gk20a_init_ctx_state(struct gk20a *g)
 		op.method.addr =
 			gr_fecs_method_push_adr_discover_image_size_v();
 		op.mailbox.ret = &g->gr.ctx_vars.golden_image_size;
-		ret = gr_gk20a_submit_fecs_method_op(g, op);
+		ret = gr_gk20a_submit_fecs_method_op(g, op, false);
 		if (ret) {
 			gk20a_err(dev_from_gk20a(g),
 				   "query golden image size failed");
@@ -2190,7 +2198,7 @@ int gr_gk20a_init_ctx_state(struct gk20a *g)
 		op.method.addr =
 			gr_fecs_method_push_adr_discover_zcull_image_size_v();
 		op.mailbox.ret = &g->gr.ctx_vars.zcull_ctxsw_image_size;
-		ret = gr_gk20a_submit_fecs_method_op(g, op);
+		ret = gr_gk20a_submit_fecs_method_op(g, op, false);
 		if (ret) {
 			gk20a_err(dev_from_gk20a(g),
 				   "query zcull ctx image size failed");
@@ -2199,7 +2207,7 @@ int gr_gk20a_init_ctx_state(struct gk20a *g)
 		op.method.addr =
 			gr_fecs_method_push_adr_discover_pm_image_size_v();
 		op.mailbox.ret = &pm_ctx_image_size;
-		ret = gr_gk20a_submit_fecs_method_op(g, op);
+		ret = gr_gk20a_submit_fecs_method_op(g, op, false);
 		if (ret) {
 			gk20a_err(dev_from_gk20a(g),
 				   "query pm ctx image size failed");
@@ -5798,7 +5806,7 @@ int gr_gk20a_fecs_get_reglist_img_size(struct gk20a *g, u32 *size)
 			   .cond.ok = GR_IS_UCODE_OP_NOT_EQUAL,
 			   .mailbox.ok = 0,
 			   .cond.fail = GR_IS_UCODE_OP_SKIP,
-			   .mailbox.fail = 0});
+			   .mailbox.fail = 0}, false);
 }
 
 int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g, phys_addr_t addr)
@@ -5816,7 +5824,7 @@ int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g, phys_addr_t addr)
 			   .cond.ok = GR_IS_UCODE_OP_EQUAL,
 			   .mailbox.ok = 1,
 			   .cond.fail = GR_IS_UCODE_OP_SKIP,
-			   .mailbox.fail = 0});
+			   .mailbox.fail = 0}, false);
 }
 
 int gr_gk20a_fecs_set_reglist_virtual_addr(struct gk20a *g, u64 pmu_va)
@@ -5832,7 +5840,7 @@ int gr_gk20a_fecs_set_reglist_virtual_addr(struct gk20a *g, u64 pmu_va)
 			   .cond.ok = GR_IS_UCODE_OP_EQUAL,
 			   .mailbox.ok = 1,
 			   .cond.fail = GR_IS_UCODE_OP_SKIP,
-			   .mailbox.fail = 0});
+			   .mailbox.fail = 0}, false);
 }
 
 int gk20a_gr_suspend(struct gk20a *g)

@@ -1,7 +1,7 @@
 /*
  * GM20B GPC MMU
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -672,7 +672,7 @@ static void gr_gm20b_load_gpccs_with_bootloader(struct gk20a *g)
 static int gr_gm20b_ctx_wait_lsf_ready(struct gk20a *g, u32 timeout, u32 val)
 {
 	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
-	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
+	unsigned long delay = GR_FECS_POLL_INTERVAL;
 	u32 reg;
 
 	gk20a_dbg_fn("");
@@ -681,8 +681,7 @@ static int gr_gm20b_ctx_wait_lsf_ready(struct gk20a *g, u32 timeout, u32 val)
 		reg = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(0));
 		if (reg == val)
 			return 0;
-		usleep_range(delay, delay * 2);
-		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+		udelay(delay);
 	} while (time_before(jiffies, end_jiffies) ||
 			!tegra_platform_is_silicon());
 

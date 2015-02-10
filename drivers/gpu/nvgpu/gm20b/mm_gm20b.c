@@ -32,8 +32,7 @@ static int allocate_gmmu_ptes_sparse(struct vm_gk20a *vm,
 	u32 pte_w[2] = {0, 0}; /* invalid pte */
 	u64 addr = 0;
 	u32 pte_cur;
-	void *pte_kv_cur;
-	struct page_table_gk20a *pte;
+	struct gk20a_mm_entry *entry;
 	struct gk20a *g = gk20a_from_vm(vm);
 
 	gk20a_dbg_fn("");
@@ -47,13 +46,13 @@ static int allocate_gmmu_ptes_sparse(struct vm_gk20a *vm,
 	/* Expect ptes of the same pde */
 	BUG_ON(pde_lo != pde_hi);
 
-	pte = vm->pdes.ptes[pgsz_idx] + pde_lo;
+	entry = vm->pdb.entries + pde_lo;
 
 	pte_lo = pte_index_from_vaddr(vm, first_vaddr, pgsz_idx);
 	pte_hi = pte_index_from_vaddr(vm, last_vaddr, pgsz_idx);
 
 	/* get cpu access to the ptes */
-	err = map_gmmu_pages(pte->ref, pte->sgt, &pte_kv_cur, pte->size);
+	err = map_gmmu_pages(entry);
 	if (err)
 		goto fail;
 
@@ -68,11 +67,11 @@ static int allocate_gmmu_ptes_sparse(struct vm_gk20a *vm,
 			   pte_cur, addr,
 			   pte_w[1], pte_w[0]);
 
-		gk20a_mem_wr32(pte_kv_cur + pte_cur*8, 0, pte_w[0]);
-		gk20a_mem_wr32(pte_kv_cur + pte_cur*8, 1, pte_w[1]);
+		gk20a_mem_wr32(entry->cpu_va + pte_cur*8, 0, pte_w[0]);
+		gk20a_mem_wr32(entry->cpu_va + pte_cur*8, 1, pte_w[1]);
 	}
 
-	unmap_gmmu_pages(pte->ref, pte->sgt, pte_kv_cur);
+	unmap_gmmu_pages(entry);
 
 	smp_mb();
 	g->ops.mm.tlb_invalidate(vm);

@@ -377,9 +377,7 @@ int gk20a_init_mm_support(struct gk20a *g)
 }
 
 static int alloc_gmmu_phys_pages(struct vm_gk20a *vm, u32 order,
-			    void **handle,
-			    struct sg_table **sgt,
-			    size_t *size)
+				 struct gk20a_mm_entry *entry)
 {
 	u32 num_pages = 1 << order;
 	u32 len = num_pages * PAGE_SIZE;
@@ -393,76 +391,81 @@ static int alloc_gmmu_phys_pages(struct vm_gk20a *vm, u32 order,
 		gk20a_dbg(gpu_dbg_pte, "alloc_pages failed\n");
 		goto err_out;
 	}
-	*sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
-	if (!sgt) {
+	entry->sgt = kzalloc(sizeof(*entry->sgt), GFP_KERNEL);
+	if (!entry->sgt) {
 		gk20a_dbg(gpu_dbg_pte, "cannot allocate sg table");
 		goto err_alloced;
 	}
-	err = sg_alloc_table(*sgt, 1, GFP_KERNEL);
+	err = sg_alloc_table(entry->sgt, 1, GFP_KERNEL);
 	if (err) {
 		gk20a_dbg(gpu_dbg_pte, "sg_alloc_table failed\n");
 		goto err_sg_table;
 	}
-	sg_set_page((*sgt)->sgl, pages, len, 0);
-	*handle = page_address(pages);
-	memset(*handle, 0, len);
-	*size = len;
-	FLUSH_CPU_DCACHE(*handle, sg_phys((*sgt)->sgl), len);
+	sg_set_page(entry->sgt->sgl, pages, len, 0);
+	entry->cpu_va = page_address(pages);
+	memset(entry->cpu_va, 0, len);
+	entry->size = len;
+	FLUSH_CPU_DCACHE(entry->cpu_va, sg_phys(entry->sgt->sgl), len);
 
 	return 0;
 
 err_sg_table:
-	kfree(*sgt);
+	kfree(entry->sgt);
 err_alloced:
 	__free_pages(pages, order);
 err_out:
 	return -ENOMEM;
 }
 
-static void free_gmmu_phys_pages(struct vm_gk20a *vm, void *handle,
-			    struct sg_table *sgt, u32 order,
-			    size_t size)
+static void free_gmmu_phys_pages(struct vm_gk20a *vm,
+			    struct gk20a_mm_entry *entry)
 {
 	gk20a_dbg_fn("");
-	free_pages((unsigned long)handle, order);
-	sg_free_table(sgt);
-	kfree(sgt);
+	free_pages((unsigned long)entry->cpu_va, get_order(entry->size));
+	entry->cpu_va = NULL;
+
+	sg_free_table(entry->sgt);
+	kfree(entry->sgt);
+	entry->sgt = NULL;
 }
 
-static int map_gmmu_phys_pages(void *handle, struct sg_table *sgt,
-			  void **va, size_t size)
+static int map_gmmu_phys_pages(struct gk20a_mm_entry *entry)
 {
-	FLUSH_CPU_DCACHE(handle, sg_phys(sgt->sgl), sgt->sgl->length);
-	*va = handle;
+	FLUSH_CPU_DCACHE(entry->cpu_va,
+			 sg_phys(entry->sgt->sgl),
+			 entry->sgt->sgl->length);
 	return 0;
 }
 
-static void unmap_gmmu_phys_pages(void *handle, struct sg_table *sgt, void *va)
+static void unmap_gmmu_phys_pages(struct gk20a_mm_entry *entry)
 {
-	FLUSH_CPU_DCACHE(handle, sg_phys(sgt->sgl), sgt->sgl->length);
+	FLUSH_CPU_DCACHE(entry->cpu_va,
+			 sg_phys(entry->sgt->sgl),
+			 entry->sgt->sgl->length);
 }
 
 static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
-			    void **handle,
-			    struct sg_table **sgt,
-			    size_t *size)
+			    struct gk20a_mm_entry *entry)
 {
 	struct device *d = dev_from_vm(vm);
 	u32 num_pages = 1 << order;
 	u32 len = num_pages * PAGE_SIZE;
 	dma_addr_t iova;
 	DEFINE_DMA_ATTRS(attrs);
-	struct page **pages;
 	void *cpuva;
 	int err = 0;
 
 	gk20a_dbg_fn("");
 
 	if (tegra_platform_is_linsim())
-		return alloc_gmmu_phys_pages(vm, order,	handle, sgt, size);
+		return alloc_gmmu_phys_pages(vm, order, entry);
 
-	*size = len;
+	entry->size = len;
 
+	/*
+	 * On arm32 we're limited by vmalloc space, so we do not map pages by
+	 * default.
+	 */
 	if (IS_ENABLED(CONFIG_ARM64)) {
 		cpuva = dma_zalloc_coherent(d, len, &iova, GFP_KERNEL);
 		if (!cpuva) {
@@ -470,14 +473,16 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 			goto err_out;
 		}
 
-		err = gk20a_get_sgtable(d, sgt, cpuva, iova, len);
+		err = gk20a_get_sgtable(d, &entry->sgt, cpuva, iova, len);
 		if (err) {
 			gk20a_err(d, "sgt allocation failed\n");
 			goto err_free;
 		}
 
-		*handle = cpuva;
+		entry->cpu_va = cpuva;
 	} else {
+		struct page **pages;
+
 		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
 		pages = dma_alloc_attrs(d, len, &iova, GFP_KERNEL, &attrs);
 		if (!pages) {
@@ -485,99 +490,106 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 			goto err_out;
 		}
 
-		err = gk20a_get_sgtable_from_pages(d, sgt, pages,
+		err = gk20a_get_sgtable_from_pages(d, &entry->sgt, pages,
 					iova, len);
 		if (err) {
 			gk20a_err(d, "sgt allocation failed\n");
 			goto err_free;
 		}
 
-		*handle = (void *)pages;
+		entry->pages = pages;
 	}
 
 	return 0;
 
 err_free:
 	if (IS_ENABLED(CONFIG_ARM64)) {
-		dma_free_coherent(d, len, handle, iova);
+		dma_free_coherent(d, len, entry->cpu_va, iova);
 		cpuva = NULL;
 	} else {
-		dma_free_attrs(d, len, pages, iova, &attrs);
-		pages = NULL;
+		dma_free_attrs(d, len, entry->pages, iova, &attrs);
+		entry->pages = NULL;
 	}
 	iova = 0;
 err_out:
 	return -ENOMEM;
 }
 
-void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
-			    struct sg_table *sgt, u32 order,
-			    size_t size)
+void free_gmmu_pages(struct vm_gk20a *vm,
+		     struct gk20a_mm_entry *entry)
 {
 	struct device *d = dev_from_vm(vm);
 	u64 iova;
 	DEFINE_DMA_ATTRS(attrs);
-	struct page **pages;
 
 	gk20a_dbg_fn("");
-	BUG_ON(sgt == NULL);
+	BUG_ON(entry->sgt == NULL);
 
 	if (tegra_platform_is_linsim()) {
-		free_gmmu_phys_pages(vm, handle, sgt, order, size);
+		free_gmmu_phys_pages(vm, entry);
 		return;
 	}
 
-	iova = sg_dma_address(sgt->sgl);
+	iova = sg_dma_address(entry->sgt->sgl);
 
-	gk20a_free_sgtable(&sgt);
+	gk20a_free_sgtable(&entry->sgt);
 
+	/*
+	 * On arm32 we're limited by vmalloc space, so we do not map pages by
+	 * default.
+	 */
 	if (IS_ENABLED(CONFIG_ARM64)) {
-		dma_free_coherent(d, size, handle, iova);
+		dma_free_coherent(d, entry->size, entry->cpu_va, iova);
+		entry->cpu_va = NULL;
 	} else {
-		pages = (struct page **)handle;
 		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
-		dma_free_attrs(d, size, pages, iova, &attrs);
-		pages = NULL;
+		dma_free_attrs(d, entry->size, entry->pages, iova, &attrs);
+		entry->pages = NULL;
 	}
-
-	handle = NULL;
-	iova = 0;
+	entry->size = 0;
 }
 
-int map_gmmu_pages(void *handle, struct sg_table *sgt,
-			  void **kva, size_t size)
+int map_gmmu_pages(struct gk20a_mm_entry *entry)
 {
-	int count = PAGE_ALIGN(size) >> PAGE_SHIFT;
+	int count = PAGE_ALIGN(entry->size) >> PAGE_SHIFT;
 	struct page **pages;
 	gk20a_dbg_fn("");
 
 	if (tegra_platform_is_linsim())
-		return map_gmmu_phys_pages(handle, sgt, kva, size);
+		return map_gmmu_phys_pages(entry);
 
 	if (IS_ENABLED(CONFIG_ARM64)) {
-		*kva = handle;
+		FLUSH_CPU_DCACHE(entry->cpu_va,
+				 sg_phys(entry->sgt->sgl),
+				 entry->size);
 	} else {
-		pages = (struct page **)handle;
-		*kva = vmap(pages, count, 0, pgprot_writecombine(PAGE_KERNEL));
-		if (!(*kva))
+		pages = entry->pages;
+		entry->cpu_va = vmap(pages, count, 0,
+				     pgprot_writecombine(PAGE_KERNEL));
+		if (!entry->cpu_va)
 			return -ENOMEM;
 	}
 
 	return 0;
 }
 
-void unmap_gmmu_pages(void *handle, struct sg_table *sgt, void *va)
+void unmap_gmmu_pages(struct gk20a_mm_entry *entry)
 {
 	gk20a_dbg_fn("");
 
 	if (tegra_platform_is_linsim()) {
-		unmap_gmmu_phys_pages(handle, sgt, va);
+		unmap_gmmu_phys_pages(entry);
 		return;
 	}
 
-	if (!IS_ENABLED(CONFIG_ARM64))
-		vunmap(va);
-	va = NULL;
+	if (IS_ENABLED(CONFIG_ARM64)) {
+		FLUSH_CPU_DCACHE(entry->cpu_va,
+				 sg_phys(entry->sgt->sgl),
+				 entry->size);
+	} else {
+		vunmap(entry->cpu_va);
+		entry->cpu_va = NULL;
+	}
 }
 
 /* allocate a phys contig region big enough for a full
@@ -585,33 +597,25 @@ void unmap_gmmu_pages(void *handle, struct sg_table *sgt, void *va)
  * the whole range is zeroed so it's "invalid"/will fault
  */
 
-int zalloc_gmmu_page_table_gk20a(struct vm_gk20a *vm,
-					enum gmmu_pgsz_gk20a gmmu_pgsz_idx,
-					struct page_table_gk20a *pte)
+static int gk20a_zalloc_gmmu_page_table(struct vm_gk20a *vm,
+				 enum gmmu_pgsz_gk20a pgsz_idx,
+				 struct gk20a_mm_entry *entry)
 {
 	int err;
 	u32 pte_order;
-	void *handle = NULL;
-	struct sg_table *sgt;
-	size_t size;
 
 	gk20a_dbg_fn("");
 
 	/* allocate enough pages for the table */
-	pte_order = vm->page_table_sizing[gmmu_pgsz_idx].order;
+	pte_order = vm->page_table_sizing[pgsz_idx].order;
 
-	err = alloc_gmmu_pages(vm, pte_order, &handle, &sgt, &size);
-	if (err)
-		return err;
+	err = alloc_gmmu_pages(vm, pte_order, entry);
+	gk20a_dbg(gpu_dbg_pte, "entry = 0x%p, addr=%08llx, size %d",
+		  entry, gk20a_mm_iova_addr(vm->mm->g, entry->sgt->sgl),
+		  pte_order);
+	entry->pgsz = pgsz_idx;
 
-	gk20a_dbg(gpu_dbg_pte, "pte = 0x%p, addr=%08llx, size %d",
-		  pte, gk20a_mm_iova_addr(vm->mm->g, sgt->sgl), pte_order);
-
-	pte->ref = handle;
-	pte->sgt = sgt;
-	pte->size = size;
-
-	return 0;
+	return err;
 }
 
 /* given address range (inclusive) determine the pdes crossed */
@@ -629,7 +633,7 @@ void pde_range_from_vaddr_range(struct vm_gk20a *vm,
 
 u32 *pde_from_index(struct vm_gk20a *vm, u32 i)
 {
-	return (u32 *) (((u8 *)vm->pdes.kv) + i*gmmu_pde__size_v());
+	return (u32 *) (((u8 *)vm->pdb.cpu_va) + i*gmmu_pde__size_v());
 }
 
 u32 pte_index_from_vaddr(struct vm_gk20a *vm,
@@ -671,24 +675,29 @@ int validate_gmmu_page_table_gk20a_locked(struct vm_gk20a *vm,
 				u32 i, enum gmmu_pgsz_gk20a gmmu_pgsz_idx)
 {
 	int err;
-	struct page_table_gk20a *pte =
-		vm->pdes.ptes[gmmu_pgsz_idx] + i;
+	struct gk20a_mm_entry *entry = vm->pdb.entries + i;
 
 	gk20a_dbg_fn("");
 
 	/* if it's already in place it's valid */
-	if (pte->ref)
+	if (entry->size)
 		return 0;
 
 	gk20a_dbg(gpu_dbg_pte, "alloc %dKB ptes for pde %d",
 		   vm->gmmu_page_sizes[gmmu_pgsz_idx]/1024, i);
 
-	err = zalloc_gmmu_page_table_gk20a(vm, gmmu_pgsz_idx, pte);
+	err = gk20a_zalloc_gmmu_page_table(vm, gmmu_pgsz_idx, entry);
 	if (err)
 		return err;
 
 	/* rewrite pde */
+	err = map_gmmu_pages(&vm->pdb);
+	if (err)
+		return err;
+
 	update_gmmu_pde_locked(vm, i);
+
+	unmap_gmmu_pages(&vm->pdb);
 
 	return 0;
 }
@@ -1791,9 +1800,8 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 	for (pde_i = pde_lo; pde_i <= pde_hi; pde_i++) {
 		u32 pte_lo, pte_hi;
 		u32 pte_cur;
-		void *pte_kv_cur;
 
-		struct page_table_gk20a *pte = vm->pdes.ptes[pgsz_idx] + pde_i;
+		struct gk20a_mm_entry *entry = vm->pdb.entries + pde_i;
 
 		if (pde_i == pde_lo)
 			pte_lo = pte_index_from_vaddr(vm, first_vaddr,
@@ -1808,16 +1816,13 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 						      pgsz_idx);
 
 		/* get cpu access to the ptes */
-		err = map_gmmu_pages(pte->ref, pte->sgt, &pte_kv_cur,
-				     pte->size);
+		err = map_gmmu_pages(entry);
 		if (err) {
 			gk20a_err(dev_from_vm(vm),
 				   "couldn't map ptes for update as=%d",
 				   vm_aspace_id(vm));
 			goto clean_up;
 		}
-
-		BUG_ON(!pte_kv_cur);
 
 		gk20a_dbg(gpu_dbg_pte, "pte_lo=%d, pte_hi=%d", pte_lo, pte_hi);
 		for (pte_cur = pte_lo; pte_cur <= pte_hi; pte_cur++) {
@@ -1869,11 +1874,11 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 					   pte_cur);
 			}
 
-			gk20a_mem_wr32(pte_kv_cur + pte_cur*8, 0, pte_w[0]);
-			gk20a_mem_wr32(pte_kv_cur + pte_cur*8, 1, pte_w[1]);
+			gk20a_mem_wr32(entry->cpu_va + pte_cur*8, 0, pte_w[0]);
+			gk20a_mem_wr32(entry->cpu_va + pte_cur*8, 1, pte_w[1]);
 		}
 
-		unmap_gmmu_pages(pte->ref, pte->sgt, pte_kv_cur);
+		unmap_gmmu_pages(entry);
 	}
 
 	smp_mb();
@@ -1917,23 +1922,22 @@ void update_gmmu_pde_locked(struct vm_gk20a *vm, u32 i)
 {
 	bool small_valid, big_valid;
 	u64 pte_addr[2] = {0, 0};
-	struct page_table_gk20a *small_pte =
-		vm->pdes.ptes[gmmu_page_size_small] + i;
-	struct page_table_gk20a *big_pte =
-		vm->pdes.ptes[gmmu_page_size_big] + i;
+	struct gk20a_mm_entry *entry = vm->pdb.entries + i;
 	u32 pde_v[2] = {0, 0};
 	u32 *pde;
 
-	small_valid = small_pte && small_pte->ref;
-	big_valid   = big_pte && big_pte->ref;
+	gk20a_dbg_fn("");
+
+	small_valid = entry->size && entry->pgsz == gmmu_page_size_small;
+	big_valid   = entry->size && entry->pgsz == gmmu_page_size_big;
 
 	if (small_valid)
 		pte_addr[gmmu_page_size_small] =
-			gk20a_mm_iova_addr(vm->mm->g, small_pte->sgt->sgl);
+			gk20a_mm_iova_addr(vm->mm->g, entry->sgt->sgl);
 
 	if (big_valid)
 		pte_addr[gmmu_page_size_big] =
-			gk20a_mm_iova_addr(vm->mm->g, big_pte->sgt->sgl);
+			gk20a_mm_iova_addr(vm->mm->g, entry->sgt->sgl);
 
 	pde_v[0] = gmmu_pde_size_full_f();
 	pde_v[0] |= big_valid ?
@@ -1959,12 +1963,13 @@ void update_gmmu_pde_locked(struct vm_gk20a *vm, u32 i)
 	smp_mb();
 
 	FLUSH_CPU_DCACHE(pde,
-			 sg_phys(vm->pdes.sgt->sgl) + (i*gmmu_pde__size_v()),
+			 sg_phys(vm->pdb.sgt->sgl) + (i*gmmu_pde__size_v()),
 			 sizeof(u32)*2);
 
 	gk20a_mm_l2_invalidate(vm->mm->g);
 
 	gk20a_dbg(gpu_dbg_pte, "pde:%d = 0x%x,0x%08x\n", i, pde_v[1], pde_v[0]);
+	gk20a_dbg_fn("done");
 }
 
 /* NOTE! mapped_buffers lock must be held */
@@ -2046,6 +2051,7 @@ static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 	struct vm_reserved_va_node *va_node, *va_node_tmp;
 	struct rb_node *node;
 	int i;
+	u32 pde_lo, pde_hi;
 
 	gk20a_dbg_fn("");
 	mutex_lock(&vm->update_gmmu_lock);
@@ -2070,29 +2076,18 @@ static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 
 	/* unmapping all buffers above may not actually free
 	 * all vm ptes.  jettison them here for certain... */
-	for (i = 0; i < vm->pdes.num_pdes; i++) {
-		struct page_table_gk20a *pte =
-			&vm->pdes.ptes[gmmu_page_size_small][i];
-		if (pte->ref) {
-			free_gmmu_pages(vm, pte->ref, pte->sgt,
-				vm->page_table_sizing[gmmu_page_size_small].order,
-				pte->size);
-			pte->ref = NULL;
-		}
-		pte = &vm->pdes.ptes[gmmu_page_size_big][i];
-		if (pte->ref) {
-			free_gmmu_pages(vm, pte->ref, pte->sgt,
-				vm->page_table_sizing[gmmu_page_size_big].order,
-				pte->size);
-			pte->ref = NULL;
-		}
+	pde_range_from_vaddr_range(vm, 0, vm->va_limit-1,
+				   &pde_lo, &pde_hi);
+	for (i = 0; i < pde_hi + 1; i++) {
+		struct gk20a_mm_entry *entry = &vm->pdb.entries[i];
+		if (entry->size)
+			free_gmmu_pages(vm, entry);
 	}
 
-	unmap_gmmu_pages(vm->pdes.ref, vm->pdes.sgt, vm->pdes.kv);
-	free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, 0, vm->pdes.size);
+	unmap_gmmu_pages(&vm->pdb);
+	free_gmmu_pages(vm, &vm->pdb);
 
-	kfree(vm->pdes.ptes[gmmu_page_size_small]);
-	kfree(vm->pdes.ptes[gmmu_page_size_big]);
+	kfree(vm->pdb.entries);
 	gk20a_allocator_destroy(&vm->vma[gmmu_page_size_small]);
 	if (vm->big_pages)
 		gk20a_allocator_destroy(&vm->vma[gmmu_page_size_big]);
@@ -2136,7 +2131,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	u32 num_small_pages, num_large_pages, low_hole_pages;
 	char alloc_name[32];
 	u64 small_vma_size, large_vma_size;
-	u32 pde_pages;
+	u32 pde_lo, pde_hi;
 
 	/* note: keep the page sizes sorted lowest to highest here */
 	u32 gmmu_page_sizes[gmmu_nr_page_sizes] = { SZ_4K, big_page_size };
@@ -2181,52 +2176,24 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 			(vm->page_table_sizing[gmmu_page_size_big].num_ptes *
 			 gmmu_pte__size_v()) >> 10);
 
-	{
-		u32 pde_lo, pde_hi;
-		pde_range_from_vaddr_range(vm,
-					   0, vm->va_limit-1,
-					   &pde_lo, &pde_hi);
-		vm->pdes.num_pdes = pde_hi + 1;
-	}
+	pde_range_from_vaddr_range(vm,
+				   0, vm->va_limit-1,
+				   &pde_lo, &pde_hi);
+	vm->pdb.entries = kzalloc(sizeof(struct gk20a_mm_entry) *
+			(pde_hi + 1), GFP_KERNEL);
 
-	vm->pdes.ptes[gmmu_page_size_small] =
-		kzalloc(sizeof(struct page_table_gk20a) *
-			vm->pdes.num_pdes, GFP_KERNEL);
-
-	if (!vm->pdes.ptes[gmmu_page_size_small]) {
-		err = -ENOMEM;
-		goto clean_up_pdes;
-	}
-
-	vm->pdes.ptes[gmmu_page_size_big] =
-		kzalloc(sizeof(struct page_table_gk20a) *
-			vm->pdes.num_pdes, GFP_KERNEL);
-
-	if (!vm->pdes.ptes[gmmu_page_size_big]) {
+	if (!vm->pdb.entries) {
 		err = -ENOMEM;
 		goto clean_up_pdes;
 	}
 
 	gk20a_dbg_info("init space for %s va_limit=0x%llx num_pdes=%d",
-		   name, vm->va_limit, vm->pdes.num_pdes);
+		   name, vm->va_limit, pde_hi + 1);
 
 	/* allocate the page table directory */
-	pde_pages = ilog2((vm->pdes.num_pdes + 511) / 512);
-
-	gk20a_dbg(gpu_dbg_pte, "Allocating %d ** 2 PDE pages\n", pde_pages);
-	err = alloc_gmmu_pages(vm, pde_pages, &vm->pdes.ref,
-			       &vm->pdes.sgt, &vm->pdes.size);
+	err = gk20a_zalloc_gmmu_page_table(vm, 0, &vm->pdb);
 	if (err)
-		goto clean_up_pdes;
-
-	err = map_gmmu_pages(vm->pdes.ref, vm->pdes.sgt, &vm->pdes.kv,
-			     vm->pdes.size);
-	if (err) {
 		goto clean_up_ptes;
-	}
-	gk20a_dbg(gpu_dbg_pte, "bar 1 pdes.kv = 0x%p, pdes.phys = 0x%llx",
-		  vm->pdes.kv, gk20a_mm_iova_addr(vm->mm->g, vm->pdes.sgt->sgl));
-	/* we could release vm->pdes.kv but it's only one page... */
 
 	/* First 16GB of the address space goes towards small pages. What ever
 	 * remains is allocated to large pages. */
@@ -2279,13 +2246,11 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 clean_up_small_allocator:
 	gk20a_allocator_destroy(&vm->vma[gmmu_page_size_small]);
 clean_up_map_pde:
-	unmap_gmmu_pages(vm->pdes.ref, vm->pdes.sgt, vm->pdes.kv);
+	unmap_gmmu_pages(&vm->pdb);
 clean_up_ptes:
-	free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, pde_pages,
-			vm->pdes.size);
+	free_gmmu_pages(vm, &vm->pdb);
 clean_up_pdes:
-	kfree(vm->pdes.ptes[gmmu_page_size_small]);
-	kfree(vm->pdes.ptes[gmmu_page_size_big]);
+	kfree(vm->pdb.entries);
 	return err;
 }
 
@@ -2657,18 +2622,12 @@ int gk20a_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset)
 
 void gk20a_deinit_vm(struct vm_gk20a *vm)
 {
-	u32 pde_pages;
-
 	gk20a_allocator_destroy(&vm->vma[gmmu_page_size_big]);
 	gk20a_allocator_destroy(&vm->vma[gmmu_page_size_small]);
 
-	unmap_gmmu_pages(vm->pdes.ref, vm->pdes.sgt, vm->pdes.kv);
-
-	pde_pages = ilog2((vm->pdes.num_pdes + 511) / 512);
-	free_gmmu_pages(vm, vm->pdes.ref, vm->pdes.sgt, pde_pages,
-			vm->pdes.size);
-	kfree(vm->pdes.ptes[gmmu_page_size_small]);
-	kfree(vm->pdes.ptes[gmmu_page_size_big]);
+	unmap_gmmu_pages(&vm->pdb);
+	free_gmmu_pages(vm, &vm->pdb);
+	kfree(vm->pdb.entries);
 }
 
 int gk20a_alloc_inst_block(struct gk20a *g, struct inst_desc *inst_block)
@@ -2765,7 +2724,7 @@ void gk20a_init_inst_block(struct inst_desc *inst_block, struct vm_gk20a *vm,
 		u32 big_page_size)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	u64 pde_addr = gk20a_mm_iova_addr(g, vm->pdes.sgt->sgl);
+	u64 pde_addr = gk20a_mm_iova_addr(g, vm->pdb.sgt->sgl);
 	u32 pde_addr_lo = u64_lo32(pde_addr >> ram_in_base_shift_v());
 	u32 pde_addr_hi = u64_hi32(pde_addr);
 	phys_addr_t inst_pa = inst_block->cpu_pa;
@@ -2967,7 +2926,7 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	u32 addr_lo = u64_lo32(gk20a_mm_iova_addr(vm->mm->g,
-						  vm->pdes.sgt->sgl) >> 12);
+						  vm->pdb.sgt->sgl) >> 12);
 	u32 data;
 	s32 retry = 2000;
 	static DEFINE_MUTEX(tlb_lock);

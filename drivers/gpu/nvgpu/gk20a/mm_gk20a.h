@@ -195,15 +195,6 @@ struct gk20a_buffer_state {
 	struct gk20a_fence *fence;
 };
 
-struct page_table_gk20a {
-	/* backing for */
-	/* Either a *page or a *mem_handle */
-	void *ref;
-	/* track mapping cnt on this page table */
-	struct sg_table *sgt;
-	size_t size;
-};
-
 enum gmmu_pgsz_gk20a {
 	gmmu_page_size_small = 0,
 	gmmu_page_size_big   = 1,
@@ -215,16 +206,14 @@ struct gk20a_comptags {
 	u32 lines;
 };
 
-
-struct page_directory_gk20a {
+struct gk20a_mm_entry {
 	/* backing for */
-	u32 num_pdes;
-	void *kv;
-	/* Either a *page or a *mem_handle */
-	void *ref;
+	void *cpu_va;
 	struct sg_table *sgt;
+	struct page **pages;
 	size_t size;
-	struct page_table_gk20a *ptes[gmmu_nr_page_sizes];
+	int pgsz;
+	struct gk20a_mm_entry *entries;
 };
 
 struct priv_cmd_queue {
@@ -305,7 +294,7 @@ struct vm_gk20a {
 
 	struct mutex update_gmmu_lock;
 
-	struct page_directory_gk20a pdes;
+	struct gk20a_mm_entry pdb;
 
 	struct gk20a_allocator vma[gmmu_nr_page_sizes];
 	struct rb_root mapped_buffers;
@@ -557,9 +546,8 @@ int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev);
 int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct device *dev,
 			   u64 offset, struct gk20a_buffer_state **state);
 
-int map_gmmu_pages(void *handle, struct sg_table *sgt,
-			  void **va, size_t size);
-void unmap_gmmu_pages(void *handle, struct sg_table *sgt, void *va);
+int map_gmmu_pages(struct gk20a_mm_entry *entry);
+void unmap_gmmu_pages(struct gk20a_mm_entry *entry);
 void pde_range_from_vaddr_range(struct vm_gk20a *vm,
 					      u64 addr_lo, u64 addr_hi,
 					      u32 *pde_lo, u32 *pde_hi);
@@ -568,14 +556,10 @@ u32 pte_index_from_vaddr(struct vm_gk20a *vm,
 			       u64 addr, enum gmmu_pgsz_gk20a pgsz_idx);
 int validate_gmmu_page_table_gk20a_locked(struct vm_gk20a *vm,
 				u32 i, enum gmmu_pgsz_gk20a gmmu_pgsz_idx);
-int zalloc_gmmu_page_table_gk20a(struct vm_gk20a *vm,
-					enum gmmu_pgsz_gk20a gmmu_pgsz_idx,
-					struct page_table_gk20a *pte);
 
-void free_gmmu_pages(struct vm_gk20a *vm, void *handle,
-			    struct sg_table *sgt, u32 order,
-			    size_t size);
 void update_gmmu_pde_locked(struct vm_gk20a *vm, u32 i);
+void free_gmmu_pages(struct vm_gk20a *vm,
+		     struct gk20a_mm_entry *entry);
 
 u32 gk20a_mm_get_physical_addr_bits(struct gk20a *g);
 

@@ -16,6 +16,7 @@
 #include <linux/dma-mapping.h>
 #include "vgpu/vgpu.h"
 #include "gk20a/semaphore_gk20a.h"
+#include "gk20a/mm_gk20a.h"
 
 static int vgpu_init_mm_setup_sw(struct gk20a *g)
 {

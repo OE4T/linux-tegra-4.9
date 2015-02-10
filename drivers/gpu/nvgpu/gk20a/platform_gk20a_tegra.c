@@ -121,7 +121,8 @@ static int gk20a_tegra_secure_alloc(struct platform_device *pdev,
 	}
 	page = phys_to_page(iova);
 	sg_set_page(sgt->sgl, page, size, 0);
-	sg_dma_address(sgt->sgl) = iova;
+	/* This bypasses SMMU for VPR during gmmu_map. */
+	sg_dma_address(sgt->sgl) = 0;
 
 	desc->sgt = sgt;
 

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvhdcp_hdcp22_methods.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -371,7 +371,7 @@ int tsec_hdcp_revocation_check(struct hdcp_context_t *hdcp_context)
 	revocation_check_param.trans_id.session_id = hdcp_context->session_id;
 	revocation_check_param.is_ver_hdcp2x = 1;
 	fp = filp_open(HDCP22_SRM_PATH, O_RDONLY, 0);
-	if (!fp) {
+	if (IS_ERR(fp) || !fp) {
 		hdcp_err("Opening SRM file failed!\n");
 		return -ENOENT;
 	}

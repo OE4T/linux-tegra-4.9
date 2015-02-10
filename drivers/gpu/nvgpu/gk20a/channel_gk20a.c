@@ -1589,13 +1589,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	gk20a_dbg_info("pre-submit put %d, get %d, size %d",
 		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
 
-	/* Invalidate tlb if it's dirty...                                   */
-	/* TBD: this should be done in the cmd stream, not with PRIs.        */
-	/* We don't know what context is currently running...                */
-	/* Note also: there can be more than one context associated with the */
-	/* address space (vm).   */
-	g->ops.mm.tlb_invalidate(c->vm);
-
 	/* Make sure we have enough space for gpfifo entries. If not,
 	 * wait for signals from completed submits */
 	if (gp_free_count(c) < num_entries + extra_entries) {

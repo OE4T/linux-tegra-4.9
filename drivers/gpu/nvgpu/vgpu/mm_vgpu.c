@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU Memory Management
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -114,7 +114,8 @@ static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 	if (err || msg.ret)
 		goto fail;
 
-	vm->tlb_dirty = true;
+	g->ops.mm.tlb_invalidate(vm);
+
 	return map_offset;
 fail:
 	gk20a_err(d, "%s: failed with err=%d\n", __func__, err);
@@ -154,7 +155,7 @@ static void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 		dev_err(dev_from_vm(vm),
 			"failed to update gmmu ptes on unmap");
 
-	vm->tlb_dirty = true;
+	g->ops.mm.tlb_invalidate(vm);
 }
 
 static void vgpu_vm_remove_support(struct vm_gk20a *vm)
@@ -402,20 +403,11 @@ static void vgpu_mm_tlb_invalidate(struct vm_gk20a *vm)
 
 	gk20a_dbg_fn("");
 
-	/* No need to invalidate if tlb is clean */
-	mutex_lock(&vm->update_gmmu_lock);
-	if (!vm->tlb_dirty) {
-		mutex_unlock(&vm->update_gmmu_lock);
-		return;
-	}
-
 	msg.cmd = TEGRA_VGPU_CMD_AS_INVALIDATE;
 	msg.handle = platform->virt_handle;
 	p->handle = vm->handle;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
-	vm->tlb_dirty = false;
-	mutex_unlock(&vm->update_gmmu_lock);
 }
 
 void vgpu_init_mm_ops(struct gpu_ops *gops)

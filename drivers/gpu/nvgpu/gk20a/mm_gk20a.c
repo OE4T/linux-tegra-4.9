@@ -1161,6 +1161,8 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 		goto fail_validate;
 	}
 
+	g->ops.mm.tlb_invalidate(vm);
+
 	return map_offset;
 fail_validate:
 	if (allocated)
@@ -1202,8 +1204,6 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 		dev_err(dev_from_vm(vm),
 			"failed to update gmmu ptes on unmap");
 
-	/* detect which if any pdes/ptes can now be released */
-
 	/* flush l2 so any dirty lines are written out *now*.
 	 *  also as we could potentially be switching this buffer
 	 * from nonvolatile (l2 cacheable) to volatile (l2 non-cacheable) at
@@ -1213,6 +1213,8 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 	 * unmapping (below). */
 
 	gk20a_mm_l2_flush(g, true);
+
+	g->ops.mm.tlb_invalidate(vm);
 }
 
 static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
@@ -1502,10 +1504,6 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	mutex_unlock(&vm->update_gmmu_lock);
 
-	/* Invalidate kernel mappings immediately */
-	if (vm_aspace_id(vm) == -1)
-		gk20a_mm_tlb_invalidate(vm);
-
 	return map_offset;
 
 clean_up:
@@ -1548,9 +1546,6 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 		gk20a_err(dev_from_vm(vm), "failed to allocate va space");
 		return 0;
 	}
-
-	/* Invalidate kernel mappings immediately */
-	g->ops.mm.tlb_invalidate(vm);
 
 	return vaddr;
 }
@@ -1882,8 +1877,6 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 	}
 
 	smp_mb();
-	vm->tlb_dirty = true;
-	gk20a_dbg_fn("set tlb dirty");
 
 	return 0;
 
@@ -1972,8 +1965,6 @@ void update_gmmu_pde_locked(struct vm_gk20a *vm, u32 i)
 	gk20a_mm_l2_invalidate(vm->mm->g);
 
 	gk20a_dbg(gpu_dbg_pte, "pde:%d = 0x%x,0x%08x\n", i, pde_v[1], pde_v[0]);
-
-	vm->tlb_dirty  = true;
 }
 
 /* NOTE! mapped_buffers lock must be held */
@@ -2992,13 +2983,6 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 	if (!g->power_on)
 		return;
 
-	/* No need to invalidate if tlb is clean */
-	mutex_lock(&vm->update_gmmu_lock);
-	if (!vm->tlb_dirty) {
-		mutex_unlock(&vm->update_gmmu_lock);
-		return;
-	}
-
 	mutex_lock(&tlb_lock);
 
 	trace_gk20a_mm_tlb_invalidate(g->dev->name);
@@ -3042,8 +3026,6 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 
 out:
 	mutex_unlock(&tlb_lock);
-	vm->tlb_dirty = false;
-	mutex_unlock(&vm->update_gmmu_lock);
 }
 
 int gk20a_mm_suspend(struct gk20a *g)

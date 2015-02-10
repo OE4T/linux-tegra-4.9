@@ -1,7 +1,7 @@
 /*
  * GM20B MMU
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -34,6 +34,7 @@ static int allocate_gmmu_ptes_sparse(struct vm_gk20a *vm,
 	u32 pte_cur;
 	void *pte_kv_cur;
 	struct page_table_gk20a *pte;
+	struct gk20a *g = gk20a_from_vm(vm);
 
 	gk20a_dbg_fn("");
 
@@ -74,8 +75,7 @@ static int allocate_gmmu_ptes_sparse(struct vm_gk20a *vm,
 	unmap_gmmu_pages(pte->ref, pte->sgt, pte_kv_cur);
 
 	smp_mb();
-	vm->tlb_dirty = true;
-	gk20a_dbg_fn("set tlb dirty");
+	g->ops.mm.tlb_invalidate(vm);
 
 	return 0;
 fail:

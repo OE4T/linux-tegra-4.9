@@ -290,7 +290,6 @@ struct vm_gk20a {
 
 	bool big_pages;   /* enable large page support */
 	bool enable_ctag;
-	bool tlb_dirty;
 	bool mapped;
 
 	u32 big_page_size;

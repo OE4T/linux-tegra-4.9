@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -148,7 +148,8 @@ static const char *tegra_clk_name[] = {
 	"hdmi",
 	"pll_dp",
 	"sor_safe",
-	"pll_d2"
+	"pll_d2",
+	"emc.la"
 	/* Get complete list from BPMP */
 };
 

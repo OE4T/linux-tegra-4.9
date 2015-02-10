@@ -98,7 +98,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   struct sg_table *sgt, u64 buffer_offset,
 				   u64 first_vaddr, u64 last_vaddr,
 				   u8 kind_v, u32 ctag_offset, bool cacheable,
-				   int rw_flag,
+				   bool umapped_pte, int rw_flag,
 				   bool sparse);
 static int __must_check gk20a_init_system_vm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_bar1_vm(struct mm_gk20a *mm);
@@ -1115,6 +1115,8 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 				      ctag_offset,
 				      flags &
 				      NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+				      flags &
+				      NVGPU_GPU_FLAGS_SUPPORT_UNMAPPED_PTE,
 				      rw_flag,
 				      sparse);
 	if (err) {
@@ -1161,7 +1163,7 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 				vaddr,
 				vaddr + size,
 				0, 0, false /* n/a for unmap */,
-				rw_flag,
+				false, rw_flag,
 				sparse);
 	if (err)
 		dev_err(dev_from_vm(vm),
@@ -1729,7 +1731,8 @@ static int update_gmmu_pde_locked(struct vm_gk20a *vm,
 			   u32 i, u32 gmmu_pgsz_idx,
 			   u64 iova,
 			   u32 kind_v, u32 *ctag,
-			   bool cacheable, int rw_flag, bool sparse)
+			   bool cacheable, bool unammped_pte,
+			   int rw_flag, bool sparse)
 {
 	bool small_valid, big_valid;
 	u64 pte_addr_small = 0, pte_addr_big = 0;
@@ -1775,7 +1778,8 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			   u32 i, u32 gmmu_pgsz_idx,
 			   u64 iova,
 			   u32 kind_v, u32 *ctag,
-			   bool cacheable, int rw_flag, bool sparse)
+			   bool cacheable, bool unmapped_pte,
+			   int rw_flag, bool sparse)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	u32 ctag_granularity = g->ops.fb.compression_page_size(g);
@@ -1783,9 +1787,15 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 	u32 pte_w[2] = {0, 0}; /* invalid pte */
 
 	if (iova) {
-		pte_w[0] = gmmu_pte_valid_true_f() |
-			gmmu_pte_address_sys_f(iova
+		if (unmapped_pte)
+			pte_w[0] = gmmu_pte_valid_false_f() |
+				gmmu_pte_address_sys_f(iova
 				>> gmmu_pte_address_shift_v());
+		else
+			pte_w[0] = gmmu_pte_valid_true_f() |
+				gmmu_pte_address_sys_f(iova
+				>> gmmu_pte_address_shift_v());
+
 		pte_w[1] = gmmu_pte_aperture_video_memory_f() |
 			gmmu_pte_kind_f(kind_v) |
 			gmmu_pte_comptagline_f(*ctag / ctag_granularity);
@@ -1799,8 +1809,18 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			pte_w[1] |=
 				gmmu_pte_read_disable_true_f();
 		}
-		if (!cacheable)
-			pte_w[1] |= gmmu_pte_vol_true_f();
+		if (!unmapped_pte) {
+			if (!cacheable)
+				pte_w[1] |=
+					gmmu_pte_vol_true_f();
+			else {
+			/* Store cachable value behind
+			 * gmmu_pte_write_disable_true_f */
+				if (!cacheable)
+					pte_w[1] |=
+					gmmu_pte_write_disable_true_f();
+			}
+		}
 
 		gk20a_dbg(gpu_dbg_pte,
 			"pte=%d iova=0x%llx kind=%d ctag=%d vol=%d [0x%08x, 0x%08x]",
@@ -1829,7 +1849,7 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 				    u64 iova,
 				    u64 gpu_va, u64 gpu_end,
 				    u8 kind_v, u32 *ctag,
-				    bool cacheable,
+				    bool cacheable, bool unmapped_pte,
 				    int rw_flag,
 				    bool sparse,
 				    int lvl)
@@ -1877,7 +1897,7 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 		}
 
 		err = l->update_entry(vm, pte, pde_i, pgsz_idx,
-				iova, kind_v, ctag, cacheable,
+				iova, kind_v, ctag, cacheable, unmapped_pte,
 				rw_flag, sparse);
 		if (err)
 			return err;
@@ -1896,8 +1916,8 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 				iova,
 				gpu_va,
 				next,
-				kind_v, ctag,
-				cacheable, rw_flag, sparse, lvl+1);
+				kind_v, ctag, cacheable, unmapped_pte,
+				rw_flag, sparse, lvl+1);
 			unmap_gmmu_pages(next_pte);
 
 			if (err)
@@ -1921,7 +1941,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   u64 buffer_offset,
 				   u64 gpu_va, u64 gpu_end,
 				   u8 kind_v, u32 ctag_offset,
-				   bool cacheable,
+				   bool cacheable, bool unmapped_pte,
 				   int rw_flag,
 				   bool sparse)
 {
@@ -1956,7 +1976,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 			iova,
 			gpu_va, gpu_end,
 			kind_v, &ctag,
-			cacheable, rw_flag, sparse, 0);
+			cacheable, unmapped_pte, rw_flag, sparse, 0);
 	unmap_gmmu_pages(&vm->pdb);
 
 	smp_mb();

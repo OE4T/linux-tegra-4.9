@@ -276,7 +276,8 @@ struct gk20a_mmu_level {
 			   u32 i, u32 gmmu_pgsz_idx,
 			   u64 iova,
 			   u32 kind_v, u32 *ctag,
-			   bool cacheable, int rw_flag, bool sparse);
+			   bool cacheable, bool unmapped_pte,
+			   int rw_flag, bool sparse);
 	size_t entry_size;
 };
 

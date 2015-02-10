@@ -104,6 +104,8 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_SYNC_FENCE_FDS		(1 << 3)
 /* NVGPU_IOCTL_CHANNEL_CYCLE_STATS is available */
 #define NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS		(1 << 4)
+/* MAP_BUFFER_EX with unmapped PTE */
+#define NVGPU_GPU_FLAGS_SUPPORT_UNMAPPED_PTE		(1 << 5)
 
 struct nvgpu_gpu_characteristics {
 	__u32 arch;

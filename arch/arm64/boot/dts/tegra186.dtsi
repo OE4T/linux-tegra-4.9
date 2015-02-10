@@ -35,7 +35,7 @@
 
 	/* HACK: Populate earlier than other device */
 	smmu: iommu {
-		compatible = "arm,smmu-500";
+		compatible = "arm,mmu-500";
 		reg = <0x0 0x32000000 0x0 0x01000000>; /* 16MB */
 		#global-interrupts = <2>;
 		interrupts = <0 172 4>,

@@ -513,4 +513,14 @@
 		interrupts = <0 145 0xf04>;
 		status = "disabled";
 	};
+
+	adsp {
+	     compatible = "nvidia,tegra18x-adsp";
+	     reg = <0x0 0x02993000 0x0 0x1000>, /* AMC */
+		   <0x0 0x02990000 0x0 0x2000>, /* AMISC */
+		   <0x0 0x40000000 0x0 0xC0000000>, /* DRAM MAP1 */
+		   <0x0 0x0 0x0 0x0>; /* DRAM MAP2 */
+	     iommus = <&smmu TEGRA_SWGROUP_APE>;
+	     status = "disabled";
+	};
 };

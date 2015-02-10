@@ -1,7 +1,7 @@
 /*
  * tegra210_dmic_alt.c - Tegra210 DMIC driver
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -30,6 +30,7 @@
 #include <sound/soc.h>
 #include <linux/of_device.h>
 #include <linux/debugfs.h>
+#include <linux/pinctrl/pinconf-tegra.h>
 
 #include "tegra210_xbar_alt.h"
 #include "tegra210_dmic_alt.h"
@@ -337,11 +338,13 @@ static const struct of_device_id tegra210_dmic_of_match[] = {
 static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 {
 	struct tegra210_dmic *dmic;
+	struct device_node *np = pdev->dev.of_node;
 	struct resource *mem, *memregion;
 	void __iomem *regs;
 	int ret = 0;
 	const struct of_device_id *match;
 	struct tegra210_dmic_soc_data *soc_data;
+	const char *prod_name;
 
 	match = of_match_device(tegra210_dmic_of_match, &pdev->dev);
 	if (!match) {
@@ -399,8 +402,7 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 	}
 	regcache_cache_only(dmic->regmap, true);
 
-	if (of_property_read_u32(pdev->dev.of_node,
-				"nvidia,ahub-dmic-id",
+	if (of_property_read_u32(np, "nvidia,ahub-dmic-id",
 				&pdev->dev.id) < 0) {
 		dev_err(&pdev->dev,
 			"Missing property nvidia,ahub-dmic-id\n");
@@ -422,6 +424,9 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
 		goto err_suspend;
 	}
+
+	if (of_property_read_string(np, "prod-name", &prod_name) == 0)
+		tegra_pinctrl_config_prod(&pdev->dev, prod_name);
 
 	return 0;
 

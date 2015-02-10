@@ -31,11 +31,13 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/pinctrl/pinconf-tegra.h>
 #include <linux/regulator/consumer.h>
 #include <linux/of_device.h>
 #include <linux/delay.h>
 #include <linux/debugfs.h>
 #include <linux/tegra-powergate.h>
+
 
 #include "tegra210_xbar_alt.h"
 #include "tegra210_i2s_alt.h"
@@ -780,7 +782,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	struct property *prop;
 	void __iomem *regs;
 	int ret = 0, count = 0, num_supplies;
-	const char *supply;
+	const char *supply, *prod_name;
 
 	match = of_match_device(tegra210_i2s_of_match, &pdev->dev);
 	if (!match) {
@@ -891,6 +893,9 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	i2s->enable_cya =
 		of_property_read_bool(pdev->dev.of_node,
 			"enable-cya");
+
+	if (of_property_read_string(np, "prod-name", &prod_name) == 0)
+		tegra_pinctrl_config_prod(&pdev->dev, prod_name);
 
 	num_supplies = of_property_count_strings(np, "regulator-supplies");
 	if (num_supplies > 0) {

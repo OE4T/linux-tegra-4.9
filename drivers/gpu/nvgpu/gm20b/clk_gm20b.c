@@ -1129,7 +1129,7 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	clk->sw_ready = true;
 
 	gk20a_dbg_fn("done");
-	pr_info("gm20b gpu.0 GPCPLL initial settings:%s M=%u, N=%u, P=%u\n",
+	dev_info(dev_from_gk20a(g), "GPCPLL initial settings:%s M=%u, N=%u, P=%u",
 		clk->gpc_pll.mode == GPC_PLL_MODE_DVFS ? " NA mode," : "",
 		clk->gpc_pll.M, clk->gpc_pll.N, clk->gpc_pll.PL);
 	return 0;
@@ -1419,7 +1419,8 @@ static int pll_reg_show(struct seq_file *s, void *data)
 
 	mutex_lock(&g->clk.clk_mutex);
 	if (!g->clk.clk_hw_on) {
-		seq_printf(s, "gk20a powered down - no access to registers\n");
+		seq_printf(s, "%s powered down - no access to registers\n",
+			   dev_name(dev_from_gk20a(g)));
 		mutex_unlock(&g->clk.clk_mutex);
 		return 0;
 	}
@@ -1465,7 +1466,8 @@ static int pll_reg_raw_show(struct seq_file *s, void *data)
 
 	mutex_lock(&g->clk.clk_mutex);
 	if (!g->clk.clk_hw_on) {
-		seq_puts(s, "gk20a powered down - no access to registers\n");
+		seq_printf(s, "%s powered down - no access to registers\n",
+			   dev_name(dev_from_gk20a(g)));
 		mutex_unlock(&g->clk.clk_mutex);
 		return 0;
 	}

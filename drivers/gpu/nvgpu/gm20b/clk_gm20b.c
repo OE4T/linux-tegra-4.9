@@ -1653,6 +1653,11 @@ static int clk_gm20b_debugfs_init(struct gk20a *g)
 	if (!d)
 		goto err_out;
 
+	d = debugfs_create_u32("fmax2x_at_vmin_safe_t", S_IRUGO,
+			       platform->debugfs, (u32 *)&dvfs_safe_max_freq);
+	if (!d)
+		goto err_out;
+
 	return 0;
 
 err_out:

@@ -1,7 +1,7 @@
 /*
  * tegra210_mixer_alt.h - Definitions for Tegra210 MIXER driver
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -126,6 +126,7 @@ struct tegra210_mixer_soc_data {
 struct tegra210_mixer {
 	struct regmap *regmap;
 	int gain_coeff[14];
+	int gain_value[TEGRA210_MIXER_AXBAR_RX_MAX];
 	const struct tegra210_mixer_soc_data *soc_data;
 };
 

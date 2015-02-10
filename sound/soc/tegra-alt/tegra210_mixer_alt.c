@@ -1,7 +1,7 @@
 /*
  * tegra210_mixer_alt.c - Tegra210 MIXER driver
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -157,13 +157,22 @@ static int tegra210_mixer_put_gain(struct snd_kcontrol *kcontrol,
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
 	struct tegra210_mixer *mixer = snd_soc_codec_get_drvdata(codec);
 	unsigned int reg = mc->reg;
-	unsigned int ret;
+	unsigned int ret, i;
 
-	/* set the gain and trigger config */
+	/* write default gain config poly coefficients */
+	for (i = 0; i < 14; i++)
+		tegra210_mixer_write_ram(mixer, reg + i, mixer->gain_coeff[i]);
+
+	/* write new gain and trigger config */
 	ret = tegra210_mixer_write_ram(mixer, reg + 0x09,
 				ucontrol->value.integer.value[0]);
 	ret |= tegra210_mixer_write_ram(mixer, reg + 0x0f,
 				ucontrol->value.integer.value[0]);
+
+	/* save gain */
+	i = (reg - TEGRA210_MIXER_AHUBRAMCTL_GAIN_CONFIG_RAM_ADDR_0) /
+		TEGRA210_MIXER_AHUBRAMCTL_GAIN_CONFIG_RAM_ADDR_STRIDE;
+	mixer->gain_value[i] = ucontrol->value.integer.value[0];
 
 	return ret;
 }
@@ -219,13 +228,18 @@ static int tegra210_mixer_in_hw_params(struct snd_pcm_substream *substream,
 
 	/* write the gain config poly coefficients */
 	for (i = 0; i < 14; i++) {
-		tegra210_mixer_write_ram (mixer,
+		tegra210_mixer_write_ram(mixer,
 			MIXER_GAIN_CONFIG_RAM_ADDR(dai->id) + i,
 			mixer->gain_coeff[i]);
 	}
 
+	/* write saved gain */
+	ret = tegra210_mixer_write_ram(mixer,
+			MIXER_GAIN_CONFIG_RAM_ADDR(dai->id) + 0x09,
+			mixer->gain_value[dai->id]);
+
 	/* trigger the polynomial configuration */
-	tegra210_mixer_write_ram (mixer,
+	tegra210_mixer_write_ram(mixer,
 		MIXER_GAIN_CONFIG_RAM_ADDR(dai->id) + 0xf,
 		0x01);
 
@@ -596,7 +610,7 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 	struct tegra210_mixer *mixer;
 	struct resource *mem, *memregion;
 	void __iomem *regs;
-	int ret;
+	int ret, i;
 	const struct of_device_id *match;
 	struct tegra210_mixer_soc_data *soc_data;
 
@@ -632,6 +646,9 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 	mixer->gain_coeff[11] = 0x823;
 	mixer->gain_coeff[12] = 0x3e80;
 	mixer->gain_coeff[13] = 0x83126E;
+
+	for (i = 0; i < TEGRA210_MIXER_AXBAR_RX_MAX; i++)
+		mixer->gain_value[i] = 0x10000;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {

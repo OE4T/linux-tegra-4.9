@@ -36,7 +36,7 @@
 /* FIXME: Move to dt-bindings/memory/tegra-swgroup.h */
 #define TEGRA_SWGROUP_SCE		52
 
-enum {
+enum override_id {
 	PTCR,
 	AFIR,
 	HDAR,
@@ -176,107 +176,107 @@ static int sid_override_offset[] = {
 	[APEDMAW]	= 0x280,
 };
 
-#define MAX_SIDS_IN_SWGROUP 5
-struct swgid_to_sid_config
+#define MAX_OIDS_IN_SID 5
+struct sid_to_oids
 {
-	int swgid;
-	int nsids;
-	int sid[MAX_SIDS_IN_SWGROUP];
+	int sid;			/* StreamID */
+	int noids;			/* # of override IDs */
+	int oid[MAX_OIDS_IN_SID];	/* Override IDs */
 };
 
-static struct swgid_to_sid_config swgid_to_sid_config[] = {
+static struct sid_to_oids sid_to_oids[] = {
 	{
-		.swgid	= TEGRA_SWGROUP_AFI,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_AFI,
+		.noids	= 2,
+		.oid	= {
 			AFIR,
 			AFIW,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_HDA,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_HDA,
+		.noids	= 2,
+		.oid	= {
 			HDAR,
 			HDAW,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_SATA2,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_SATA2,
+		.noids	= 2,
+		.oid	= {
 			SATAR,
 			SATAW,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_XUSB_HOST,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_XUSB_HOST,
+		.noids	= 2,
+		.oid	= {
 			XUSB_HOSTR,
 			XUSB_HOSTW,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_XUSB_DEV,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_XUSB_DEV,
+		.noids	= 2,
+		.oid	= {
 			XUSB_DEVR,
 			XUSB_DEVW,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_TSEC,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_TSEC,
+		.noids	= 2,
+		.oid	= {
 			TSECSRD,
 			TSECSWR,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_GPUB,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_GPUB,
+		.noids	= 2,
+		.oid	= {
 			GPUSRD,
 			GPUSWR,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_SDMMC1A,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_SDMMC1A,
+		.noids	= 2,
+		.oid	= {
 			SDMMCRA,
 			SDMMCWA,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_SDMMC2A,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_SDMMC2A,
+		.noids	= 2,
+		.oid	= {
 			SDMMCRAA,
 			SDMMCWAA,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_SDMMC3A,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_SDMMC3A,
+		.noids	= 2,
+		.oid	= {
 			SDMMCR,
 			SDMMCW,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_SDMMC4A,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_SDMMC4A,
+		.noids	= 2,
+		.oid	= {
 			SDMMCRAB,
 			SDMMCWAB,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_APE,
-		.nsids	= 4,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_APE,
+		.noids	= 4,
+		.oid	= {
 			APER,
 			APEW,
 			APEDMAR,
@@ -284,64 +284,64 @@ static struct swgid_to_sid_config swgid_to_sid_config[] = {
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_SE,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_SE,
+		.noids	= 2,
+		.oid	= {
 			SESRD,
 			SESWR,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_ETR,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_ETR,
+		.noids	= 2,
+		.oid	= {
 			ETRR,
 			ETRW,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_TSECB,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_TSECB,
+		.noids	= 2,
+		.oid	= {
 			TSECSRDB,
 			TSECSWRB,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_AXIS,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_AXIS,
+		.noids	= 2,
+		.oid	= {
 			AXISR,
 			AXISW,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_EQOS,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_EQOS,
+		.noids	= 2,
+		.oid	= {
 			EQOSR,
 			EQOSW,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_UFSHC,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_UFSHC,
+		.noids	= 2,
+		.oid	= {
 			UFSHCR,
 			UFSHCW,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_NVDISPLAY,
-		.nsids	= 1,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_NVDISPLAY,
+		.noids	= 1,
+		.oid	= {
 			NVDISPLAYR,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_BPMP,
-		.nsids	= 4,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_BPMP,
+		.noids	= 4,
+		.oid	= {
 			BPMPR,
 			BPMPW,
 			BPMPDMAR,
@@ -349,9 +349,9 @@ static struct swgid_to_sid_config swgid_to_sid_config[] = {
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_AON,
-		.nsids	= 4,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_AON,
+		.noids	= 4,
+		.oid	= {
 			AONR,
 			AONW,
 			AONDMAR,
@@ -359,9 +359,9 @@ static struct swgid_to_sid_config swgid_to_sid_config[] = {
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_SCE,
-		.nsids	= 4,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_SCE,
+		.noids	= 4,
+		.oid	= {
 			SCER,
 			SCEW,
 			SCEDMAR,
@@ -369,56 +369,56 @@ static struct swgid_to_sid_config swgid_to_sid_config[] = {
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_HC,
-		.nsids	= 1,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_HC,
+		.noids	= 1,
+		.oid	= {
 			HOST1XDMAR,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_VIC,
-		.nsids	= 2,
-		.sid = {
+		.sid	= TEGRA_SWGROUP_VIC,
+		.noids	= 2,
+		.oid = {
 			VICSRD,
 			VICSWR,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_VI,
-		.nsids	= 1,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_VI,
+		.noids	= 1,
+		.oid	= {
 			VIW,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_ISP,
-		.nsids	= 3,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_ISP,
+		.noids	= 3,
+		.oid	= {
 			ISPRA,
 			ISPWA,
 			ISPWB,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_NVDEC,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_NVDEC,
+		.noids	= 2,
+		.oid	= {
 			NVDECSRD,
 			NVDECSWR,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_NVENC,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_NVENC,
+		.noids	= 2,
+		.oid	= {
 			NVENCSRD,
 			NVENCSWR,
 		},
 	},
 	{
-		.swgid	= TEGRA_SWGROUP_NVJPG,
-		.nsids	= 2,
-		.sid	= {
+		.sid	= TEGRA_SWGROUP_NVJPG,
+		.noids	= 2,
+		.oid	= {
 			NVJPGSRD,
 			NVJPGSWR,
 		},
@@ -432,26 +432,26 @@ static struct of_device_id mc_sid_of_match[] = {
 }
 MODULE_DEVICE_TABLE(of, mc_sid_of_match);
 
-static void __mc_override_sid(int sid, int cgid)
+static void __mc_override_sid(int sid, int oid)
 {
 	volatile void __iomem *addr;
 	u32 val;
 
 #if 0	/* FIXME: wait for linsim update */
-	addr = mc_sid_base + sid_override_offset[cgid];
+	addr = mc_sid_base + sid_override_offset[oid];
 	addr += sizeof(u32); /* MC_SID_STREAMID_SECURITY_CONFIG_* */
 	val = SCEW_STREAMID_WRITE_ACCESS | SCEW_STREAMID_OVERRIDE | SCEW_NS;
 	writel_relaxed(val, addr);
 
-	addr = mc_sid_base + sid_override_offset[cgid];
+	addr = mc_sid_base + sid_override_offset[oid];
 	writel_relaxed(sid, addr);
 #else
-	addr = mc_sid_base + sid_override_offset[cgid];
+	addr = mc_sid_base + sid_override_offset[oid];
 	val = 0x80010000 | sid;
 	writel_relaxed(val, addr);
 #endif
-	pr_debug("override sid=%d cgid=%d at offset=%x\n",
-		 sid, cgid, sid_override_offset[cgid]);
+	pr_debug("override sid=%d oid=%d at offset=%x\n",
+		 sid, oid, sid_override_offset[oid]);
 }
 
 void platform_override_streamid(int sid)
@@ -463,17 +463,17 @@ void platform_override_streamid(int sid)
 		return;
 	}
 
-	for (i = 0; i < ARRAY_SIZE(swgid_to_sid_config); i++) {
-		struct swgid_to_sid_config *conf;
+	for (i = 0; i < ARRAY_SIZE(sid_to_oids); i++) {
+		struct sid_to_oids *conf;
 
-		conf = &swgid_to_sid_config[i];
-		if (sid == conf->swgid) {
+		conf = &sid_to_oids[i];
+		if (sid == conf->sid) {
 			int j;
 
-			for (j = 0; j < conf->nsids; j++) {
-				int cgid = conf->sid[j];
+			for (j = 0; j < conf->noids; j++) {
+				int oid = conf->oid[j];
 
-				__mc_override_sid(sid, cgid);
+				__mc_override_sid(sid, oid);
 			}
 			return;
 		}

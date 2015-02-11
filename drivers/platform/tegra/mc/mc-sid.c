@@ -33,6 +33,9 @@
 #define MC_SMMU_BYPASS_CONFIG_0		0x1820
 #define TBU_BYPASS_SID			2
 
+/* FIXME: Move to dt-bindings/memory/tegra-swgroup.h */
+#define TEGRA_SWGROUP_SCE		52
+
 enum {
 	PTCR,
 	AFIR,
@@ -182,6 +185,189 @@ struct swgid_to_sid_config
 };
 
 static struct swgid_to_sid_config swgid_to_sid_config[] = {
+	{
+		.swgid	= TEGRA_SWGROUP_AFI,
+		.nsids	= 2,
+		.sid	= {
+			AFIR,
+			AFIW,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_HDA,
+		.nsids	= 2,
+		.sid	= {
+			HDAR,
+			HDAW,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_SATA2,
+		.nsids	= 2,
+		.sid	= {
+			SATAR,
+			SATAW,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_XUSB_HOST,
+		.nsids	= 2,
+		.sid	= {
+			XUSB_HOSTR,
+			XUSB_HOSTW,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_XUSB_DEV,
+		.nsids	= 2,
+		.sid	= {
+			XUSB_DEVR,
+			XUSB_DEVW,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_TSEC,
+		.nsids	= 2,
+		.sid	= {
+			TSECSRD,
+			TSECSWR,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_GPUB,
+		.nsids	= 2,
+		.sid	= {
+			GPUSRD,
+			GPUSWR,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_SDMMC1A,
+		.nsids	= 2,
+		.sid	= {
+			SDMMCRA,
+			SDMMCWA,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_SDMMC2A,
+		.nsids	= 2,
+		.sid	= {
+			SDMMCRAA,
+			SDMMCWAA,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_SDMMC3A,
+		.nsids	= 2,
+		.sid	= {
+			SDMMCR,
+			SDMMCW,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_SDMMC4A,
+		.nsids	= 2,
+		.sid	= {
+			SDMMCRAB,
+			SDMMCWAB,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_APE,
+		.nsids	= 4,
+		.sid	= {
+			APER,
+			APEW,
+			APEDMAR,
+			APEDMAW,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_SE,
+		.nsids	= 2,
+		.sid	= {
+			SESRD,
+			SESWR,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_ETR,
+		.nsids	= 2,
+		.sid	= {
+			ETRR,
+			ETRW,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_TSECB,
+		.nsids	= 2,
+		.sid	= {
+			TSECSRDB,
+			TSECSWRB,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_AXIS,
+		.nsids	= 2,
+		.sid	= {
+			AXISR,
+			AXISW,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_EQOS,
+		.nsids	= 2,
+		.sid	= {
+			EQOSR,
+			EQOSW,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_UFSHC,
+		.nsids	= 2,
+		.sid	= {
+			UFSHCR,
+			UFSHCW,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_NVDISPLAY,
+		.nsids	= 1,
+		.sid	= {
+			NVDISPLAYR,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_BPMP,
+		.nsids	= 4,
+		.sid	= {
+			BPMPR,
+			BPMPW,
+			BPMPDMAR,
+			BPMPDMAW,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_AON,
+		.nsids	= 4,
+		.sid	= {
+			AONR,
+			AONW,
+			AONDMAR,
+			AONDMAW,
+		},
+	},
+	{
+		.swgid	= TEGRA_SWGROUP_SCE,
+		.nsids	= 4,
+		.sid	= {
+			SCER,
+			SCEW,
+			SCEDMAR,
+			SCEDMAW,
+		},
+	},
 	{
 		.swgid	= TEGRA_SWGROUP_HC,
 		.nsids	= 1,

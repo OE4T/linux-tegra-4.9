@@ -837,12 +837,12 @@ int gk20a_channel_open_ioctl(struct gk20a *g,
 		err = PTR_ERR(file);
 		goto clean_up;
 	}
-	fd_install(fd, file);
 
 	err = __gk20a_channel_open(g, file);
 	if (err)
 		goto clean_up_file;
 
+	fd_install(fd, file);
 	args->channel_fd = fd;
 	return 0;
 

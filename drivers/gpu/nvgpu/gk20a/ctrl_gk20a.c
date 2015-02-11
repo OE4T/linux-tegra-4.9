@@ -162,12 +162,12 @@ static int gk20a_ctrl_alloc_as(
 		err = PTR_ERR(file);
 		goto clean_up;
 	}
-	fd_install(fd, file);
 
 	err = gk20a_as_alloc_share(&g->as, args->big_page_size, &as_share);
 	if (err)
 		goto clean_up_file;
 
+	fd_install(fd, file);
 	file->private_data = as_share;
 
 	args->as_fd = fd;
@@ -203,12 +203,12 @@ static int gk20a_ctrl_open_tsg(struct gk20a *g,
 		err = PTR_ERR(file);
 		goto clean_up;
 	}
-	fd_install(fd, file);
 
 	err = gk20a_tsg_open(g, file);
 	if (err)
 		goto clean_up_file;
 
+	fd_install(fd, file);
 	args->tsg_fd = fd;
 	return 0;
 

@@ -61,15 +61,49 @@ static void __iomem *db_bases[HSP_NR_DBS];
 static DEFINE_SPINLOCK(db_handlers_lock);
 static struct db_handler_info db_handlers[HSP_LAST_MASTER + 1];
 
+static const char * const master_names[] = {
+	[HSP_MASTER_SECURE_CCPLEX] = "SECURE_CCPLEX",
+	[HSP_MASTER_SECURE_DPMU] = "SECURE_DPMU",
+	[HSP_MASTER_SECURE_BPMP] = "SECURE_BPMP",
+	[HSP_MASTER_SECURE_SPE] = "SECURE_SPE",
+	[HSP_MASTER_SECURE_SCE] = "SECURE_SCE",
+	[HSP_MASTER_CCPLEX] = "CCPLEX",
+	[HSP_MASTER_DPMU] = "DPMU",
+	[HSP_MASTER_BPMP] = "BPMP",
+	[HSP_MASTER_SPE] = "SPE",
+	[HSP_MASTER_SCE] = "SCE",
+};
+
+static const char * const db_names[] = {
+	[HSP_DB_DPMU] = "DPMU",
+	[HSP_DB_CCPLEX] = "CCPLEX",
+	[HSP_DB_CCPLEX_TZ] = "CCPLEX_TZ",
+	[HSP_DB_BPMP] = "BPMP",
+	[HSP_DB_SPE] = "SPE",
+	[HSP_DB_SCE] = "SCE",
+	[HSP_DB_APE] = "APE",
+};
+
+static inline int is_master_valid(int master)
+{
+	return master_names[master] != NULL;
+}
+
+static inline int next_valid_master(int m)
+{
+	for (; m <= HSP_LAST_MASTER && !is_master_valid(m); m++)
+		;
+	return m;
+}
+
+#define for_each_valid_master(m) \
+	for (m = HSP_FIRST_MASTER; \
+		 m <= HSP_LAST_MASTER; \
+		 m = next_valid_master(m))
+
 #define hsp_db_offset(i, d) \
 	(d.base + ((1 + (d.nr_sm>>1) + d.nr_ss + d.nr_as)<<16) + (i) * 0x100)
 
-#define MASTER_NS_SHIFT	16
-#define MASTER_NS_LIMIT	((1 << MASTER_NS_SHIFT) - 1)
-
-#define ns_masters(m)	(m >> MASTER_NS_SHIFT)
-#define master_bit(m)	(1 << (m + MASTER_NS_SHIFT))
-#define bad_master(m)	(m < HSP_FIRST_MASTER || m > HSP_LAST_MASTER)
 #define hsp_ready() (hsp_top.status == HSP_INIT_OKAY)
 
 static inline u32 hsp_readl(void __iomem *base, int reg)
@@ -88,16 +122,22 @@ static irqreturn_t dbell_irq(int irq, void *data)
 	ulong reg;
 	int master;
 	struct db_handler_info *info;
+
 	reg = (ulong)hsp_readl(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_PENDING);
 	hsp_writel(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_PENDING, reg);
-	reg = ns_masters(reg);
+
 	spin_lock(&db_handlers_lock);
 	for_each_set_bit(master, &reg, HSP_LAST_MASTER + 1) {
 		info = &db_handlers[master];
+		if (unlikely(!is_master_valid(master))) {
+			pr_warn("invalid master from HW.\n");
+			continue;
+		}
 		if (info)
 			info->handler(master, info->data);
 	}
 	spin_unlock(&db_handlers_lock);
+
 	return IRQ_HANDLED;
 }
 
@@ -125,11 +165,11 @@ int tegra_hsp_db_enable_master(enum tegra_hsp_master master)
 {
 	u32 reg;
 	unsigned long flags;
-	if (!hsp_ready() || master > HSP_LAST_MASTER)
+	if (!hsp_ready() || !is_master_valid(master))
 		return -EINVAL;
 	spin_lock_irqsave(&hsp_top.lock, flags);
 	reg = hsp_readl(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_ENABLE);
-	reg |= master_bit(master);
+	reg |= BIT(master);
 	hsp_writel(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_ENABLE, reg);
 	spin_unlock_irqrestore(&hsp_top.lock, flags);
 	return 0;
@@ -163,22 +203,20 @@ int tegra_hsp_db_can_ring(enum tegra_hsp_doorbell dbell)
 	if (!hsp_ready() || dbell >= HSP_NR_DBS)
 		return 0;
 	reg = hsp_readl(db_bases[dbell], HSP_DB_REG_ENABLE);
-	return !!(reg & master_bit(HSP_MASTER_CCPLEX));
+	return !!(reg & BIT(HSP_MASTER_CCPLEX));
 }
 EXPORT_SYMBOL(tegra_hsp_db_can_ring);
 
 static int tegra_hsp_db_get_signals(u32 reg)
 {
-	u32 val;
 	if (!hsp_ready())
 		return -EINVAL;
-	val = hsp_readl(db_bases[HSP_DB_CCPLEX], reg);
-	return val >> MASTER_NS_SHIFT;
+	return hsp_readl(db_bases[HSP_DB_CCPLEX], reg);
 }
 
 static int tegra_hsp_db_clr_signals(u32 reg, u32 mask)
 {
-	if (!hsp_ready() || mask > MASTER_NS_LIMIT)
+	if (!hsp_ready())
 		return -EINVAL;
 	hsp_writel(db_bases[HSP_DB_CCPLEX], reg, mask);
 	return 0;
@@ -237,7 +275,7 @@ EXPORT_SYMBOL(tegra_hsp_db_clr_raw);
 int tegra_hsp_db_add_handler(int master, db_handler_t handler, void *data)
 {
 	ulong flags;
-	if (!handler || bad_master(master))
+	if (!handler || !is_master_valid(master))
 		return -EINVAL;
 	spin_lock_irqsave(&db_handlers_lock, flags);
 	db_handlers[master].handler = handler;
@@ -256,7 +294,7 @@ EXPORT_SYMBOL(tegra_hsp_db_add_handler);
 int tegra_hsp_db_del_handler(int master)
 {
 	ulong flags;
-	if (bad_master(master))
+	if (!is_master_valid(master))
 		return -EINVAL;
 	spin_lock_irqsave(&db_handlers_lock, flags);
 	db_handlers[master].handler = NULL;
@@ -268,79 +306,6 @@ EXPORT_SYMBOL(tegra_hsp_db_del_handler);
 
 #ifdef CONFIG_DEBUG_FS
 
-static const char *db_name(int db)
-{
-	const char *name = NULL;
-	switch (db)	{
-	case HSP_DB_DPMU:
-		name = "DPMU";
-		break;
-	case HSP_DB_CCPLEX:
-		name = "CCPLEX";
-		break;
-	case HSP_DB_CCPLEX_TZ:
-		name = "CCPLEX_TZ";
-		break;
-	case HSP_DB_BPMP:
-		name = "BPMP";
-		break;
-	case HSP_DB_SPE:
-		name = "SPE";
-		break;
-	case HSP_DB_SCE:
-		name = "SCE";
-		break;
-	case HSP_DB_APE:
-		name = "APE";
-		break;
-	}
-	return name;
-}
-
-static const char *master_name(int m)
-{
-	const char *name = NULL;
-	switch (m)	{
-	case HSP_MASTER_CCPLEX:
-		name = "CCPLEX";
-		break;
-	case HSP_MASTER_DPMU:
-		name = "DPMU";
-		break;
-	case HSP_MASTER_BPMP:
-		name = "BPMP";
-		break;
-	case HSP_MASTER_SPE:
-		name = "SPE";
-		break;
-	case HSP_MASTER_SCE:
-		name = "SCE";
-		break;
-	case HSP_MASTER_DMA:
-		name = "DMA(*)";
-		break;
-	case HSP_MASTER_TSECA:
-		name = "TSECA(*)";
-		break;
-	case HSP_MASTER_TSECB:
-		name = "TSECB(*)";
-		break;
-	case HSP_MASTER_JTAGM:
-		name = "JTAGM(*)";
-		break;
-	case HSP_MASTER_CSITE:
-		name = "CSITE(*)";
-		break;
-	case HSP_MASTER_APE:
-		name = "APE";
-		break;
-	case HSP_MASTER_PEATRANS:
-		name = "PEATRANS(*)";
-		break;
-	}
-	return name;
-}
-
 static int hsp_dbg_enable_master_show(void *data, u64 *val)
 {
 	*val = tegra_hsp_db_get_enabled_masters();
@@ -349,7 +314,7 @@ static int hsp_dbg_enable_master_show(void *data, u64 *val)
 
 static int hsp_dbg_enable_master_store(void *data, u64 val)
 {
-	if (val > HSP_LAST_MASTER)
+	if (!is_master_valid((u32)val))
 		return -EINVAL;
 	return tegra_hsp_db_enable_master((enum tegra_hsp_master)val);
 }
@@ -367,7 +332,7 @@ static int hsp_dbg_can_ring_show(void *data, u64 *val)
 	*val = 0ull;
 	for (db = HSP_FIRST_DB; db <= HSP_LAST_DB; db++)
 		if (tegra_hsp_db_can_ring(db))
-			*val |= (1 << db);
+			*val |= BIT(db);
 	return 0;
 }
 
@@ -383,7 +348,7 @@ static int hsp_dbg_can_ring_store(void *data, u64 val)
 		return -EINVAL;
 	spin_lock_irqsave(&hsp_top.lock, flags);
 	reg = hsp_readl(db_bases[dbell], HSP_DB_REG_ENABLE);
-	reg |= master_bit(HSP_MASTER_CCPLEX);
+	reg |= BIT(HSP_MASTER_CCPLEX);
 	hsp_writel(db_bases[dbell], HSP_DB_REG_ENABLE, reg);
 	spin_unlock_irqrestore(&hsp_top.lock, flags);
 	return 0;
@@ -438,7 +403,7 @@ static int hsp_dbg_doorbells_show(struct seq_file *s, void *data)
 	seq_printf(s, "%-20s%-10s%-10s\n", "name", "id", "offset");
 	seq_printf(s, "--------------------------------------------------\n");
 	for (db = HSP_FIRST_DB; db <= HSP_LAST_DB; db++)
-		seq_printf(s, "%-20s%-10d%-10lx\n", db_name(db), db,
+		seq_printf(s, "%-20s%-10d%-10lx\n", db_names[db], db,
 			(uintptr_t)(db_bases[db] - hsp_top.base));
 	return 0;
 }
@@ -448,8 +413,8 @@ static int hsp_dbg_masters_show(struct seq_file *s, void *data)
 	int m;
 	seq_printf(s, "%-20s%-10s\n", "name", "id");
 	seq_printf(s, "----------------------------------------\n");
-	for (m = HSP_FIRST_MASTER; m <= HSP_LAST_MASTER; m++)
-		seq_printf(s, "%-20s%-10d\n", master_name(m), m);
+	for_each_valid_master(m)
+		seq_printf(s, "%-20s%-10d\n", master_names[m], m);
 	return 0;
 }
 
@@ -458,8 +423,9 @@ static int hsp_dbg_handlers_show(struct seq_file *s, void *data)
 	int m;
 	seq_printf(s, "%-20s%-30s\n", "master", "handler");
 	seq_printf(s, "--------------------------------------------------\n");
-	for (m = HSP_FIRST_MASTER; m <= HSP_LAST_MASTER; m++)
-		seq_printf(s, "%-20s%-30pS\n", master_name(m), db_handlers[m].handler);
+	for_each_valid_master(m)
+		seq_printf(s, "%-20s%-30pS\n", master_names[m],
+			db_handlers[m].handler);
 	return 0;
 }
 

@@ -236,7 +236,7 @@
 			trips {
 				/* Reference only trip, not mapped */
 				gpu_scaling0: gpu-scaling0 {
-					temperature = <(-40000)>;
+					temperature = <(-25000)>;
 					hysteresis = <0>;
 					type = "active";
 				};

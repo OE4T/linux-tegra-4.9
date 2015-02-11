@@ -508,6 +508,7 @@ static int vgpu_gr_free_obj_ctx(struct channel_gk20a  *c,
 static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	u32 gpc_index;
 
 	gk20a_dbg_fn("");
 
@@ -524,6 +525,18 @@ static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 			TEGRA_VGPU_ATTRIB_MAX_TPC_COUNT,
 			&gr->max_tpc_count))
 		return -ENOMEM;
+
+	gr->gpc_tpc_mask = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
+	if (!gr->gpc_tpc_mask) {
+		gk20a_err(dev_from_gk20a(g), "%s: out of memory\n", __func__);
+		return -ENOMEM;
+	}
+
+	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
+		if (g->ops.gr.get_gpc_tpc_mask)
+			gr->gpc_tpc_mask[gpc_index] =
+				g->ops.gr.get_gpc_tpc_mask(g, gpc_index);
+	}
 
 	g->ops.gr.bundle_cb_defaults(g);
 	g->ops.gr.cb_size_default(g);
@@ -610,11 +623,20 @@ static void vgpu_gr_detect_sm_arch(struct gk20a *g)
 		gr_gpc0_tpc0_sm_arch_warp_count_v(v);
 }
 
+static u32 vgpu_gr_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
+{
+	/* One TPC for gk20a */
+	return 0x1;
+}
+
 static void vgpu_remove_gr_support(struct gr_gk20a *gr)
 {
 	gk20a_dbg_fn("");
 
 	gk20a_allocator_destroy(&gr->comp_tags);
+
+	kfree(gr->gpc_tpc_mask);
+	gr->gpc_tpc_mask = NULL;
 }
 
 static int vgpu_gr_init_gr_setup_sw(struct gk20a *g)
@@ -725,4 +747,5 @@ void vgpu_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.bind_ctxsw_zcull = vgpu_gr_bind_ctxsw_zcull;
 	gops->gr.get_zcull_info = vgpu_gr_get_zcull_info;
 	gops->gr.detect_sm_arch = vgpu_gr_detect_sm_arch;
+	gops->gr.get_gpc_tpc_mask = vgpu_gr_get_gpc_tpc_mask;
 }

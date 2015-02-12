@@ -49,7 +49,7 @@
 
 	host1x: host1x {
 		reg = <0x0 0x13e00000 0x0 0x00110000>;
-		interrupts = <0 264 0x04
+		interrupts = <0 265 0x04
 			      0 263 0x04>;
 
 		vi {

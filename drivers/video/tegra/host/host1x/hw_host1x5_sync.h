@@ -228,19 +228,15 @@ static inline u32 host1x_sync_cbclass_r(void)
 }
 static inline u32 host1x_sync_syncpt_thresh_cpu0_int_status_r(void)
 {
-	return 0x54;
-}
-static inline u32 host1x_sync_syncpt_thresh_cpu1_int_status_r(void)
-{
-	return 0x1e4;
+	return 0x16464;
 }
 static inline u32 host1x_sync_syncpt_thresh_int_disable_r(void)
 {
-	return 0x11c;
+	return 0x16590;
 }
 static inline u32 host1x_sync_syncpt_thresh_int_enable_cpu0_r(void)
 {
-	return 0x180;
+	return 0x1652c;
 }
 static inline u32 host1x_sync_syncpt_intgmask_r(void)
 {

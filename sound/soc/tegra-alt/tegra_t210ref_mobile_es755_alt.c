@@ -1,7 +1,7 @@
 /*
  * tegra_t210ref_mobile.c - Tegra T210 Machine driver for mobile
  *
- * Copyright (c) 2013-2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -192,9 +192,27 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	  "nvidia,tegra-audio-t210ref-mobile-foster")) {
 		idx = tegra_machine_get_codec_dai_link_idx("earSmart-playback");
 		/* check if idx has valid number */
-		if (idx == -EINVAL)
-			return idx;
+		if (idx != -EINVAL) {
+			dai_params =
+			  (struct snd_soc_pcm_stream *)
+			  card->rtd[idx].dai_link->params;
 
+			/* update link_param to update hw_param for DAPM */
+			dai_params->rate_min = rate;
+			dai_params->channels_min = channels;
+			dai_params->formats = formats;
+
+			err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
+				tegra_machine_get_bclk_ratio(&card->rtd[idx]));
+			if (err < 0) {
+				dev_err(card->dev, "Can't set cpu dai bclk ratio\n");
+				return err;
+			}
+		}
+	}
+
+	idx = tegra_machine_get_codec_dai_link_idx("spdif-dit-1");
+	if (idx != -EINVAL) {
 		dai_params =
 		  (struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 
@@ -203,16 +221,6 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		dai_params->channels_min = channels;
 		dai_params->formats = formats;
 
-		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
-			tegra_machine_get_bclk_ratio(&card->rtd[idx]));
-		if (err < 0) {
-			dev_err(card->dev, "Can't set cpu dai bclk ratio\n");
-			return err;
-		}
-	}
-
-	idx = tegra_machine_get_codec_dai_link_idx("spdif-dit-1");
-	if (idx != -EINVAL) {
 		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
 			tegra_machine_get_bclk_ratio(&card->rtd[idx]));
 		if (err < 0) {

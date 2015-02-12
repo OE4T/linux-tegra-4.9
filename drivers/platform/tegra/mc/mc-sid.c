@@ -104,6 +104,7 @@ enum override_id {
 	SCEDMAW,
 	APEDMAR,
 	APEDMAW,
+	MAX_OID,
 };
 
 static int sid_override_offset[] = {
@@ -437,6 +438,8 @@ static void __mc_override_sid(int sid, int oid)
 	volatile void __iomem *addr;
 	u32 val;
 
+	BUG_ON(oid >= MAX_OID);
+
 #if 0	/* FIXME: wait for linsim update */
 	addr = mc_sid_base + sid_override_offset[oid];
 	addr += sizeof(u32); /* MC_SID_STREAMID_SECURITY_CONFIG_* */
@@ -467,6 +470,7 @@ void platform_override_streamid(int sid)
 		struct sid_to_oids *conf;
 
 		conf = &sid_to_oids[i];
+		BUG_ON(conf->noids >= MAX_OIDS_IN_SID);
 		if (sid == conf->sid) {
 			int j;
 

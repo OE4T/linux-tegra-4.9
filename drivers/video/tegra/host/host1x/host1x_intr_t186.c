@@ -257,7 +257,7 @@ static int intr_request_host_general_irq(struct nvhost_intr *intr)
 	host1x_hypervisor_writel(dev->dev, host1x_sync_intc0mask_r(), BIT(0));
 	host1x_hypervisor_writel(dev->dev, host1x_sync_intgmask_r(), BIT(0));
 	host1x_hypervisor_writel(dev->dev,
-			host1x_sync_syncpt_intgmask_r(), BIT(0));
+			host1x_sync_syncpt_intgmask_r(), BIT(15));
 
 	/* master enable for general (not syncpt) host interrupts */
 	host1x_hypervisor_writel(dev->dev, host1x_sync_intmask_r(), BIT(0));

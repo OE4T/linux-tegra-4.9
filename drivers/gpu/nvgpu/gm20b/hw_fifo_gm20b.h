@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -206,9 +206,21 @@ static inline u32 fifo_intr_en_0_r(void)
 {
 	return 0x00002140;
 }
+static inline u32 fifo_intr_en_0_sched_error_f(u32 v)
+{
+	return (v & 0x1) << 8;
+}
 static inline u32 fifo_intr_en_0_sched_error_m(void)
 {
 	return 0x1 << 8;
+}
+static inline u32 fifo_intr_en_0_mmu_fault_f(u32 v)
+{
+	return (v & 0x1) << 28;
+}
+static inline u32 fifo_intr_en_0_mmu_fault_m(void)
+{
+	return 0x1 << 28;
 }
 static inline u32 fifo_intr_en_1_r(void)
 {

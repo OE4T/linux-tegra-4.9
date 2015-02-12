@@ -570,7 +570,7 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 	if (g->fifo.deferred_reset_pending) {
 		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "engine reset was"
 			   " deferred, running now");
-		fifo_gk20a_finish_mmu_fault_handling(g, g->fifo.mmu_fault_engines);
+		gk20a_fifo_reset_engine(g, g->fifo.mmu_fault_engines);
 		g->fifo.mmu_fault_engines = 0;
 		g->fifo.deferred_reset_pending = false;
 	}

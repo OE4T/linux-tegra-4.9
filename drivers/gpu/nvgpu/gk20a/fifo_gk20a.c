@@ -827,7 +827,7 @@ static inline void get_exception_mmu_fault_info(
 	f->inst_ptr <<= fifo_intr_mmu_fault_inst_ptr_align_shift_v();
 }
 
-static void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
+void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 {
 	gk20a_dbg_fn("");
 
@@ -875,34 +875,6 @@ static bool gk20a_fifo_should_defer_engine_reset(struct gk20a *g, u32 engine_id,
 		return false;
 
 	return true;
-}
-
-void fifo_gk20a_finish_mmu_fault_handling(struct gk20a *g,
-		unsigned long fault_id) {
-	u32 engine_mmu_id;
-
-	/* reset engines */
-	for_each_set_bit(engine_mmu_id, &fault_id, 32) {
-		u32 engine_id = gk20a_mmu_id_to_engine_id(engine_mmu_id);
-		if (engine_id != ~0)
-			gk20a_fifo_reset_engine(g, engine_id);
-	}
-
-	/* clear interrupt */
-	gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id);
-
-	/* resume scheduler */
-	gk20a_writel(g, fifo_error_sched_disable_r(),
-		     gk20a_readl(g, fifo_error_sched_disable_r()));
-
-	/* Re-enable fifo access */
-	gk20a_writel(g, gr_gpfifo_ctl_r(),
-		     gr_gpfifo_ctl_access_enabled_f() |
-		     gr_gpfifo_ctl_semaphore_access_enabled_f());
-
-	/* It is safe to enable ELPG again. */
-	if (support_gk20a_pmu(g->dev) && g->elpg_enabled)
-		gk20a_pmu_enable_elpg(g);
 }
 
 static bool gk20a_fifo_set_ctx_mmu_error(struct gk20a *g,
@@ -1083,10 +1055,12 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 
 			/* handled during channel free */
 			g->fifo.deferred_reset_pending = true;
-		}
+		} else if (engine_id != ~0)
+			gk20a_fifo_reset_engine(g, engine_id);
 
 		/* disable the channel/TSG from hw and increment
 		 * syncpoints */
+
 		if (tsg) {
 			struct channel_gk20a *ch = NULL;
 			if (!g->fifo.deferred_reset_pending)
@@ -1119,9 +1093,21 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		return verbose;
 	}
 
-	/* resetting the engines and clearing the runlists is done in
-	   a separate function to allow deferred reset. */
-	fifo_gk20a_finish_mmu_fault_handling(g, fault_id);
+	/* clear interrupt */
+	gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id);
+
+	/* resume scheduler */
+	gk20a_writel(g, fifo_error_sched_disable_r(),
+		     gk20a_readl(g, fifo_error_sched_disable_r()));
+
+	/* Re-enable fifo access */
+	gk20a_writel(g, gr_gpfifo_ctl_r(),
+		     gr_gpfifo_ctl_access_enabled_f() |
+		     gr_gpfifo_ctl_semaphore_access_enabled_f());
+
+	/* It is safe to enable ELPG again. */
+	if (support_gk20a_pmu(g->dev) && g->elpg_enabled)
+		gk20a_pmu_enable_elpg(g);
 	return verbose;
 }
 
@@ -1151,15 +1137,6 @@ static void gk20a_fifo_trigger_mmu_fault(struct gk20a *g,
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
 	unsigned long engine_id;
 	int ret;
-
-	/*
-	 * sched error prevents recovery, and ctxsw error will retrigger
-	 * every 100ms. Disable the sched error to allow recovery.
-	 */
-	gk20a_writel(g, fifo_intr_en_0_r(),
-		     0x7FFFFFFF & ~fifo_intr_en_0_sched_error_m());
-	gk20a_writel(g, fifo_intr_0_r(),
-			fifo_intr_0_sched_error_reset_f());
 
 	/* trigger faults for all bad engines */
 	for_each_set_bit(engine_id, &engine_ids, 32) {
@@ -1194,9 +1171,6 @@ static void gk20a_fifo_trigger_mmu_fault(struct gk20a *g,
 	/* release mmu fault trigger */
 	for_each_set_bit(engine_id, &engine_ids, 32)
 		gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_id), 0);
-
-	/* Re-enable sched error */
-	gk20a_writel(g, fifo_intr_en_0_r(), 0x7FFFFFFF);
 }
 
 static u32 gk20a_fifo_engines_on_id(struct gk20a *g, u32 id, bool is_tsg)
@@ -1272,6 +1246,7 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 	unsigned long engine_id, i;
 	unsigned long _engine_ids = __engine_ids;
 	unsigned long engine_ids = 0;
+	u32 val;
 
 	if (verbose)
 		gk20a_debug_dump(g->dev);
@@ -1302,7 +1277,23 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 
 	}
 
+	/*
+	 * sched error prevents recovery, and ctxsw error will retrigger
+	 * every 100ms. Disable the sched error to allow recovery.
+	 */
+	val = gk20a_readl(g, fifo_intr_en_0_r());
+	val &= ~(fifo_intr_en_0_sched_error_m() | fifo_intr_en_0_mmu_fault_m());
+	gk20a_writel(g, fifo_intr_en_0_r(), val);
+	gk20a_writel(g, fifo_intr_0_r(),
+			fifo_intr_0_sched_error_reset_f());
+
 	g->ops.fifo.trigger_mmu_fault(g, engine_ids);
+	gk20a_fifo_handle_mmu_fault(g);
+
+	val = gk20a_readl(g, fifo_intr_en_0_r());
+	val |= fifo_intr_en_0_mmu_fault_f(1)
+		| fifo_intr_en_0_sched_error_f(1);
+	gk20a_writel(g, fifo_intr_en_0_r(), val);
 }
 
 int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch, bool verbose)

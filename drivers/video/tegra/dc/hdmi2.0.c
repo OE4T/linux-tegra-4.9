@@ -1067,7 +1067,7 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 	tegra_sor_write_field(sor, NV_SOR_INPUT_CONTROL,
 			NV_SOR_INPUT_CONTROL_ARM_VIDEO_RANGE_LIMITED |
 			NV_SOR_INPUT_CONTROL_HDMI_SRC_SELECT_DISPLAYB,
-			NV_SOR_INPUT_CONTROL_ARM_VIDEO_RANGE_LIMITED |
+			NV_SOR_INPUT_CONTROL_ARM_VIDEO_RANGE_FULL |
 			NV_SOR_INPUT_CONTROL_HDMI_SRC_SELECT_DISPLAYB);
 
 	dispclk_div_8_2 = clk_get_rate(hdmi->sor->sor_clk) / 1000000 * 4;
@@ -1749,9 +1749,29 @@ static u32 tegra_hdmi_gcp_color_depth(struct tegra_hdmi *hdmi)
 /* return packing phase of last pixel in preceding video data period */
 static u32 tegra_hdmi_gcp_packing_phase(struct tegra_hdmi *hdmi)
 {
-	return tegra_sor_readl(hdmi->sor, NV_SOR_HDMI_GCP_STATUS) >>
-		NV_SOR_HDMI_GCP_STATUS_ACTIVE_END_PP_SHIFT &
-		NV_SOR_HDMI_GCP_STATUS_ACTIVE_END_PP_MASK;
+	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_SET_YUV_MASK;
+
+	if (!tegra_hdmi_gcp_color_depth(hdmi))
+		return 0;
+
+	/* 10P4 for yuv420 10bpc */
+	if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30))
+		return 0;
+
+	 return 0;
+}
+
+static bool tegra_hdmi_gcp_default_phase_en(struct tegra_hdmi *hdmi)
+{
+	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_SET_YUV_MASK;
+
+	if (!tegra_hdmi_gcp_color_depth(hdmi))
+		return false;
+
+	if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30))
+		return true;
+
+	return false;
 }
 
 /* general control packet */
@@ -1760,15 +1780,17 @@ static void tegra_hdmi_gcp(struct tegra_hdmi *hdmi)
 #define GCP_SB1_PP_SHIFT 4
 
 	struct tegra_dc_sor_data *sor = hdmi->sor;
-	u8 sb1;
+	u8 sb1, sb2;
 
 	/* disable gcp before configuring */
 	tegra_sor_writel(sor, NV_SOR_HDMI_GCP_CTRL, 0);
 
 	sb1 = tegra_hdmi_gcp_packing_phase(hdmi) << GCP_SB1_PP_SHIFT |
 		tegra_hdmi_gcp_color_depth(hdmi);
+	sb2 = !!tegra_hdmi_gcp_default_phase_en(hdmi);
 	tegra_sor_writel(sor, NV_SOR_HDMI_GCP_SUBPACK(0),
-			sb1 << NV_SOR_HDMI_GCP_SUBPACK_SB1_SHIFT);
+			sb1 << NV_SOR_HDMI_GCP_SUBPACK_SB1_SHIFT |
+			sb2 << NV_SOR_HDMI_GCP_SUBPACK_SB2_SHIFT);
 
 	/* Send gcp every frame */
 	tegra_sor_writel(sor, NV_SOR_HDMI_GCP_CTRL,
@@ -1825,6 +1847,8 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 			msecs_to_jiffies(HDMI_SCDC_MONITOR_TIMEOUT_MS));
 	}
 
+	tegra_hdmi_gcp(hdmi);
+
 	tegra_dc_put(dc);
 	return 0;
 }
@@ -1847,11 +1871,12 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 
 static inline u32 tegra_hdmi_get_shift_clk_div(struct tegra_hdmi *hdmi)
 {
-	u32 n = tegra_hdmi_get_bpp(hdmi);
-	u32 d = 24;
+	/*
+	 * HW does not support deep color yet
+	 * always return 0
+	 */
 
-	/* real shift clk div is n/d. Reg value is ((n/d - 1) * 2) */
-	return ((n - d) * 2) / d;
+	return 0;
 }
 
 static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
@@ -2070,8 +2095,6 @@ static void tegra_dc_hdmi_modeset_notifier(struct tegra_dc *dc)
 			tegra_hdmi_v2_x_mon_config(hdmi, false);
 		tegra_hdmi_v2_x_host_config(hdmi, false);
 	}
-
-	tegra_hdmi_gcp(hdmi);
 
 	tegra_dc_io_end(dc);
 	tegra_hdmi_put(dc);

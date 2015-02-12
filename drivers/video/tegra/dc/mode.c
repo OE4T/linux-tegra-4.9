@@ -518,6 +518,12 @@ int _tegra_dc_set_mode(struct tegra_dc *dc,
 		new_mode.h_sync_width /= 2;
 		new_mode.h_active /= 2;
 		new_mode.pclk /= 2;
+	} else if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30)) {
+		new_mode.h_back_porch = (new_mode.h_back_porch * 5) / 8;
+		new_mode.h_front_porch = (new_mode.h_front_porch * 5) / 8;
+		new_mode.h_sync_width = (new_mode.h_sync_width * 5) / 8;
+		new_mode.h_active = (new_mode.h_active * 5) / 8;
+		new_mode.pclk = (new_mode.pclk / 8) * 5;
 	}
 
 	if (memcmp(&dc->mode, &new_mode, sizeof(dc->mode)) == 0) {

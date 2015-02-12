@@ -1129,6 +1129,8 @@ void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 	u32 mask;
 	unsigned long timeout;
 	u8 mode;
+	ktime_t cur_time;
+	s64 period_time;
 
 	WARN_ON(host->cmd);
 
@@ -1221,6 +1223,16 @@ void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 	    cmd->opcode == MMC_SEND_TUNING_BLOCK_HS200)
 		flags |= SDHCI_CMD_DATA;
 
+	if ((host->quirks2 & SDHCI_QUIRK2_PERIODIC_CALIBRATION) &&
+		((cmd->opcode == MMC_WRITE_MULTIPLE_BLOCK) ||
+		 (cmd->opcode == MMC_WRITE_BLOCK)) && host->is_calib_done) {
+		cur_time = ktime_get();
+		period_time = ktime_to_ms(ktime_sub(cur_time,
+					host->timestamp));
+		if ((period_time >= SDHCI_PERIODIC_CALIB_TIMEOUT) &&
+			host->ops->pad_autocalib)
+			host->ops->pad_autocalib(host);
+	}
 	sdhci_writew(host, SDHCI_MAKE_CMD(cmd->opcode, flags), SDHCI_COMMAND);
 }
 EXPORT_SYMBOL_GPL(sdhci_send_command);

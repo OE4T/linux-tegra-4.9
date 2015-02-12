@@ -281,6 +281,9 @@
 #define SDHCI_MAX_DIV_SPEC_200	256
 #define SDHCI_MAX_DIV_SPEC_300	2046
 
+/* Time (in milli sec) interval to run auto calibration */
+#define SDHCI_PERIODIC_CALIB_TIMEOUT	100
+
 /*
  * Host SDMA buffer boundary. Valid values from 4K to 512K in powers of 2.
  */
@@ -454,6 +457,7 @@ struct sdhci_host {
 #define SDHCI_QUIRK2_NON_STD_TUN_CARD_CLOCK		(1<<19)
 /* Controller doesn't calculate max_busy_timeout */
 #define SDHCI_QUIRK2_NO_CALC_MAX_BUSY_TO		(1<<20)
+#define SDHCI_QUIRK2_PERIODIC_CALIBRATION		(1<<21)
 
 	int irq;		/* Device IRQ */
 	void __iomem *ioaddr;	/* Mapped address */
@@ -558,6 +562,8 @@ struct sdhci_host {
 #define SDHCI_TUNING_MODE_1	0
 #define SDHCI_TUNING_MODE_2	1
 #define SDHCI_TUNING_MODE_3	2
+	ktime_t timestamp;
+	bool is_calib_done;
 
 	unsigned long private[0] ____cacheline_aligned;
 };
@@ -617,6 +623,7 @@ struct sdhci_ops {
 	void	(*pre_regulator_config)(struct sdhci_host *sdhci, int vdd,
 			bool flag);
 	void	(*voltage_switch_req)(struct sdhci_host *sdhci, bool req);
+	void	(*pad_autocalib)(struct sdhci_host *host);
 };
 
 #ifdef CONFIG_MMC_SDHCI_IO_ACCESSORS

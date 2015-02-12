@@ -38,6 +38,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/pm_runtime.h>
 #include <linux/mmc/cmdq_hci.h>
+#include <linux/ktime.h>
 
 #include <linux/uaccess.h>
 #include <linux/fs.h>
@@ -231,6 +232,8 @@ struct sdhci_tegra {
 	bool is_rail_enabled;
 	bool vqmmc_always_on;
 	bool slcg_status;
+	bool en_periodic_calib;
+	ktime_t timestamp;
 };
 
 static int sdhci_tegra_parse_parent_list_from_dt(struct platform_device *pdev,
@@ -435,6 +438,7 @@ static void tegra_sdhci_card_event(struct sdhci_host *host)
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 
 	tegra_host->tuning_status = TUNING_STATUS_RETUNE;
+	host->is_calib_done = false;
 	if (!host->mmc->rem_card_present)
 		tegra_host->set_1v8_calib_offsets = false;
 }
@@ -790,6 +794,12 @@ static void tegra_sdhci_pad_autocalib(struct sdhci_host *host)
 		clk |= SDHCI_CLOCK_CARD_EN;
 		sdhci_writew(host, clk, SDHCI_CLOCK_CONTROL);
 	}
+
+	if (tegra_host->en_periodic_calib) {
+		tegra_host->timestamp = ktime_get();
+		host->timestamp = ktime_get();
+		host->is_calib_done = true;
+	}
 }
 
 static unsigned long get_nearest_clock_freq(unsigned long parent_rate,
@@ -931,6 +941,8 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 	unsigned long host_clk;
 	int rc;
 	u8 vndr_ctrl;
+	ktime_t cur_time;
+	s64 period_time;
 
 	host_clk = tegra_sdhci_apply_clk_limits(host, clock);
 
@@ -988,6 +1000,14 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 		if (tegra_host->pad_calib_required) {
 			tegra_sdhci_pad_autocalib(host);
 			tegra_host->pad_calib_required = false;
+		}
+
+		if (tegra_host->en_periodic_calib && host->is_calib_done) {
+			cur_time = ktime_get();
+			period_time = ktime_to_ms(ktime_sub(cur_time,
+						tegra_host->timestamp));
+			if (period_time >= SDHCI_PERIODIC_CALIB_TIMEOUT)
+				tegra_sdhci_pad_autocalib(host);
 		}
 
 		/* Enable SDMMC internal and card clocks */
@@ -1539,6 +1559,7 @@ static const struct sdhci_ops tegra_sdhci_ops = {
 	.dump_vendor_regs = tegra_sdhci_dump_vendor_regs,
 	.pre_regulator_config	= tegra_sdhci_pre_regulator_config,
 	.voltage_switch_req	= tegra_sdhci_voltage_switch_req,
+	.pad_autocalib		= tegra_sdhci_pad_autocalib,
 };
 
 static const struct sdhci_pltfm_data sdhci_tegra20_pdata = {
@@ -1799,6 +1820,10 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 
 	tegra_host->vqmmc_always_on = of_property_read_bool(np,
 		"nvidia,vqmmc-always-on");
+
+	tegra_host->en_periodic_calib = of_property_read_bool(np,
+			"nvidia,en-periodic-calib");
+
 	return 0;
 }
 
@@ -2059,6 +2084,8 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 		}
 	}
 #endif
+	if (tegra_host->en_periodic_calib)
+		host->quirks2 |= SDHCI_QUIRK2_PERIODIC_CALIBRATION;
 
 	schedule_delayed_work(&tegra_host->detect_delay,
 			      msecs_to_jiffies(tegra_host->boot_detect_delay));
@@ -2087,6 +2114,7 @@ static int tegra_sdhci_suspend(struct sdhci_host *host)
 		}
 	}
 	tegra_sdhci_set_clock(host, 0);
+	host->is_calib_done = false;
 
 	return 0;
 }

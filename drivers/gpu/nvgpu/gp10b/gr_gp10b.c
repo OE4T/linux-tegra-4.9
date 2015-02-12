@@ -1,7 +1,7 @@
 /*
  * GP10B GPU GR
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -492,7 +492,7 @@ static int gr_gp10b_init_ctx_state(struct gk20a *g)
 		op.method.addr =
 			gr_fecs_method_push_adr_discover_preemption_image_size_v();
 		op.mailbox.ret = &g->gr.t18x.ctx_vars.preempt_image_size;
-		err = gr_gk20a_submit_fecs_method_op(g, op);
+		err = gr_gk20a_submit_fecs_method_op(g, op, false);
 		if (err) {
 			gk20a_err(dev_from_gk20a(g),
 					"query preempt image size failed");

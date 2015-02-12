@@ -157,6 +157,9 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 	/* turn off channel cdma */
 	channel_cdma_op().stop(&ch->cdma);
 
+	if (channel_op(ch).set_low_ch_prio)
+		channel_op(ch).set_low_ch_prio(ch);
+
 	/* this is used only if we map channel on open */
 	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
 		pdata->num_mapped_chs--;
@@ -333,33 +336,9 @@ void nvhost_channel_init_gather_filter(struct nvhost_channel *ch)
 
 int nvhost_channel_submit(struct nvhost_job *job)
 {
-	/*
-	 * Check if queue has higher priority jobs running. If so, wait until
-	 * queue is empty. Ignores result from nvhost_cdma_flush, as we submit
-	 * either when push buffer is empty or when we reach the timeout.
-	 */
-	int higher_count = 0;
-
-	switch (job->priority) {
-	case NVHOST_PRIORITY_HIGH:
-		higher_count = 0;
-		break;
-	case NVHOST_PRIORITY_MEDIUM:
-		higher_count = job->ch->cdma.high_prio_count;
-		break;
-	case NVHOST_PRIORITY_LOW:
-		higher_count = job->ch->cdma.high_prio_count
-			+ job->ch->cdma.med_prio_count;
-		break;
-	}
-	if (higher_count > 0)
-		(void)nvhost_cdma_flush(&job->ch->cdma,
-				NVHOST_CHANNEL_LOW_PRIO_MAX_WAIT);
-
 	return channel_op(job->ch).submit(job);
 }
 EXPORT_SYMBOL(nvhost_channel_submit);
-
 
 void nvhost_getchannel(struct nvhost_channel *ch)
 {

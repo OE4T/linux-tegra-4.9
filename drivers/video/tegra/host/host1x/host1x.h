@@ -87,6 +87,7 @@ struct nvhost_master {
 	struct nvhost_channel **chlist;	/* channel list */
 	struct mutex chlist_mutex;	/* mutex for channel list */
 	unsigned long allocated_channels;
+	struct mutex priority_lock;	/* mutex for priority update */
 
 	/* nvhost vm specific structures */
 	struct list_head static_mappings_list;

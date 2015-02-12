@@ -40,6 +40,7 @@ struct nvhost_channel_ops {
 		    struct nvhost_master *);
 	int (*submit)(struct nvhost_job *job);
 	int (*init_gather_filter)(struct nvhost_channel *ch);
+	int (*set_low_ch_prio)(struct nvhost_channel *ch);
 };
 
 struct nvhost_channel {

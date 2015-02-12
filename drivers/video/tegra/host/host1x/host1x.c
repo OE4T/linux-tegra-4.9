@@ -833,6 +833,7 @@ static int nvhost_probe(struct platform_device *dev)
 	INIT_LIST_HEAD(&host->vm_list);
 	mutex_init(&host->vm_mutex);
 	mutex_init(&pdata->lock);
+	mutex_init(&host->priority_lock);
 
 	/* Copy host1x parameters. The private_data gets replaced
 	 * by nvhost_master later */

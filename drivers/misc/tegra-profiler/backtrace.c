@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/backtrace.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -120,12 +120,8 @@ is_ex_entry_exist(struct pt_regs *regs,
 		  unsigned long addr,
 		  struct task_struct *task)
 {
-#ifdef CONFIG_ARM64
-	if (!compat_user_mode(regs))
-		return quadd_aarch64_is_ex_entry_exist(regs, addr, task);
-#endif
-
-	return quadd_aarch32_is_ex_entry_exist(regs, addr, task);
+	return quadd_is_ex_entry_exist_dwarf(regs, addr, task) ||
+	       quadd_is_ex_entry_exist_arm32_ehabi(regs, addr, task);
 }
 
 static unsigned long __user *
@@ -537,11 +533,21 @@ get_user_callchain_ut(struct pt_regs *regs,
 		      struct quadd_callchain *cc,
 		      struct task_struct *task)
 {
-#ifdef CONFIG_ARM64
-	if (!compat_user_mode(regs))
-		return quadd_aarch64_get_user_callchain_ut(regs, cc, task);
-#endif
-	return quadd_aarch32_get_user_callchain_ut(regs, cc, task);
+	int nr_prev;
+
+	do {
+		nr_prev = cc->nr;
+
+		quadd_get_user_cc_dwarf(regs, cc, task);
+		if (nr_prev > 0 && cc->nr == nr_prev)
+			break;
+
+		nr_prev = cc->nr;
+
+		quadd_get_user_cc_arm32_ehabi(regs, cc, task);
+	} while (nr_prev != cc->nr);
+
+	return cc->nr;
 }
 
 static unsigned int
@@ -554,11 +560,9 @@ get_user_callchain_mixed(struct pt_regs *regs,
 	do {
 		nr_prev = cc->nr;
 
-		get_user_callchain_ut(regs, cc, task);
-		if (nr_prev > 0 && cc->nr == nr_prev)
-			break;
+		quadd_get_user_cc_dwarf(regs, cc, task);
 
-		nr_prev = cc->nr;
+		quadd_get_user_cc_arm32_ehabi(regs, cc, task);
 
 		__get_user_callchain_fp(regs, cc, task);
 	} while (nr_prev != cc->nr);

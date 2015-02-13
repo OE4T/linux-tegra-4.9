@@ -1,7 +1,7 @@
 /*
  * include/linux/tegra_profiler.h
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,7 +20,7 @@
 #include <linux/ioctl.h>
 
 #define QUADD_SAMPLES_VERSION	31
-#define QUADD_IO_VERSION	16
+#define QUADD_IO_VERSION	17
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
 #define QUADD_IO_VERSION_RB_MAX_FILL_COUNT	6
@@ -34,6 +34,7 @@
 #define QUADD_IO_VERSION_DATA_MMAP		14
 #define QUADD_IO_VERSION_BT_LOWER_BOUND		15
 #define QUADD_IO_VERSION_STACK_OFFSET		16
+#define QUADD_IO_VERSION_SECTIONS_INFO		17
 
 #define QUADD_SAMPLE_VERSION_THUMB_MODE_FLAG	17
 #define QUADD_SAMPLE_VERSION_GROUP_SAMPLES	18
@@ -94,13 +95,19 @@
 
 /*
  * Send exception-handling tables info
+ * This ioctl is obsolete
  */
-#define IOCTL_SET_EXTAB _IOW(QUADD_IOCTL, 6, struct quadd_extables)
+/*#define IOCTL_SET_EXTAB _IOW(QUADD_IOCTL, 6, struct quadd_extables)*/
 
 /*
  * Send ring buffer mmap info
  */
 #define IOCTL_SET_MMAP_RB _IOW(QUADD_IOCTL, 7, struct quadd_mmap_rb_info)
+
+/*
+ * Send sections info
+ */
+#define IOCTL_SET_SECTIONS_INFO _IOW(QUADD_IOCTL, 8, struct quadd_sections)
 
 #define QUADD_CPUMODE_TEGRA_POWER_CLUSTER_LP	(1 << 29)	/* LP CPU */
 #define QUADD_CPUMODE_THUMB			(1 << 30)	/* thumb mode */
@@ -455,25 +462,35 @@ struct quadd_module_version {
 	u32 reserved[4];	/* reserved fields for future extensions */
 };
 
+enum {
+	QUADD_SEC_TYPE_EXTAB = 0,
+	QUADD_SEC_TYPE_EXIDX,
+
+	QUADD_SEC_TYPE_EH_FRAME,
+	QUADD_SEC_TYPE_EH_FRAME_HDR,
+
+	QUADD_SEC_TYPE_DEBUG_FRAME,
+	QUADD_SEC_TYPE_DEBUG_FRAME_HDR,
+
+	QUADD_SEC_TYPE_MAX,
+};
+
 struct quadd_sec_info {
 	u64 addr;
 	u64 length;
+
+	u64 mmap_offset;
 };
 
-enum {
-	QUADD_EXT_IDX_EXTAB_OFFSET = 0,
-	QUADD_EXT_IDX_EXIDX_OFFSET = 1,
-	QUADD_EXT_IDX_MMAP_VM_START = 2,
-};
-
-struct quadd_extables {
+struct quadd_sections {
 	u64 vm_start;
 	u64 vm_end;
 
-	struct quadd_sec_info extab;
-	struct quadd_sec_info exidx;
+	struct quadd_sec_info sec[QUADD_SEC_TYPE_MAX];
 
-	u32 reserved[4];	/* reserved fields for future extensions */
+	u64 user_mmap_start;
+
+	u64 reserved[4];	/* reserved fields for future extensions */
 };
 
 struct quadd_mmap_rb_info {

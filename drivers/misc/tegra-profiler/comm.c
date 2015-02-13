@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/comm.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -441,13 +441,12 @@ device_ioctl(struct file *file,
 	     unsigned long ioctl_param)
 {
 	int err = 0;
-	u64 *mmap_vm_start;
 	struct quadd_mmap_area *mmap;
 	struct quadd_parameters *user_params;
 	struct quadd_comm_cap cap;
 	struct quadd_module_state state;
 	struct quadd_module_version versions;
-	struct quadd_extables extabs;
+	struct quadd_sections extabs;
 	struct quadd_mmap_rb_info mmap_rb;
 
 	if (ioctl_num != IOCTL_SETUP &&
@@ -577,19 +576,22 @@ device_ioctl(struct file *file,
 		}
 		break;
 
-	case IOCTL_SET_EXTAB:
+	case IOCTL_SET_SECTIONS_INFO:
 		if (copy_from_user(&extabs, (void __user *)ioctl_param,
 				   sizeof(extabs))) {
-			pr_err("error: set_extab failed\n");
+			pr_err("error: set_sections_info failed\n");
 			err = -EFAULT;
 			goto error_out;
 		}
 
-		mmap_vm_start = (u64 *)
-			&extabs.reserved[QUADD_EXT_IDX_MMAP_VM_START];
+		pr_debug("%s: user_mmap_start: %#llx, sections vma: %#llx - %#llx\n",
+			 __func__,
+			 (unsigned long long)extabs.user_mmap_start,
+			 (unsigned long long)extabs.vm_start,
+			 (unsigned long long)extabs.vm_end);
 
 		spin_lock(&comm_ctx.mmaps_lock);
-		mmap = find_mmap((unsigned long)*mmap_vm_start);
+		mmap = find_mmap(extabs.user_mmap_start);
 		if (!mmap) {
 			pr_err("%s: error: mmap is not found\n", __func__);
 			err = -ENXIO;
@@ -603,7 +605,7 @@ device_ioctl(struct file *file,
 		err = comm_ctx.control->set_extab(&extabs, mmap);
 		spin_unlock(&comm_ctx.mmaps_lock);
 		if (err) {
-			pr_err("error: set_extab\n");
+			pr_err("error: set_sections_info\n");
 			goto error_out;
 		}
 		break;

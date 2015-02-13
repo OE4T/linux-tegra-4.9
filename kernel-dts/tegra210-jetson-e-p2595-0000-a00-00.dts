@@ -27,6 +27,7 @@
 #include "tegra210-platforms/tegra210-jetson-e-gpio-p2595-0000-a00.dtsi"
 #include "tegra210-platforms/tegra210-jetson-e-pinmux-p2595-0000-a00.dtsi"
 #include "tegra210-platforms/tegra210-comms-p2530-0930.dtsi"
+#include "tegra210-platforms/tegra210-jetson-camera-p2595-0000-a00.dtsi"
 #include "tegra210-platforms/tegra210-pwm-fan-p2530-0930.dtsi"
 #include "panel-s-wqxga-10-1.dtsi"
 #include "panel-a-wuxga-8-0.dtsi"
@@ -148,6 +149,36 @@
 		};
 		panel-a-wuxga-8-0-bl {
 			pwms = <&tegra_pwm 0 40161>;
+		};
+	};
+
+	camera-pcl {
+		profiles {
+			ov5693@2_0010 {
+				use_of_node = "yes";
+				dev_name = "ov5693";
+				num = <0>;
+				vana-supply = <&max77620_ldo3>;
+				vif-supply = <&en_vdd_cam>;
+				cam2-gpios = <&gpio CAM_PWDN_RQ 0>;
+			};
+			ad5823@2_000c {
+				use_of_node = "yes";
+				vdd-supply = <&max77620_ldo3>;
+				vif-supply = <&en_vdd_cam>;
+				af-pwdn-gpios = <&gpio CAM_PWDN_AF 0>;
+			};
+			ov5693@2_0036 {
+				use_of_node = "yes";
+				dev_name = "ov5693";
+				num = <1>;
+				vana-supply = <&max77620_ldo3>;
+				vif-supply = <&en_vdd_cam>;
+				cam2-gpios = <&gpio CAM_PWDN_FQ 0>;
+			};
+		};
+		dpd {
+			default-enable;
 		};
 	};
 
@@ -346,12 +377,16 @@
 		active_pwm = <0 70 115 135 135 240 245 250 252 255>;
 	};
 
-        i2c@7000c000 {
+	i2c@7000c000 {
 		rt5639: rt5639.0-001c@1c {
 			compatible = "realtek,rt5639";
 			reg = <0x1c>;
 		};
-        };
+	};
+
+	i2c@546c0000 {
+		avdd_dsi_csi-supply = <&max77620_gpio7>;
+	};
 
 	sysedp {
 		compatible = "nvidia,tegra124-sysedp";

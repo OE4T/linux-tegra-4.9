@@ -1,5 +1,6 @@
 /* -----------------------------------------------------------------------------
  * Copyright (c) 2011 Ozmo Inc
+ * Copyright (c) 2015, NVIDIA CORPORATION. All rights reserved.
  * Released under the GNU General Public License Version 2 (GPLv2).
  *
  * This file provides the implementation of a USB host controller device that
@@ -129,8 +130,9 @@ struct oz_port {
 #define OZ_PORT_F_DYING		0x4
 
 /* Data structure in the private context area of struct usb_hcd.
+ * Keep OZ_NB_PORTS same as OZ_MAX_PDS in ozappif.h
  */
-#define OZ_NB_PORTS	8
+#define OZ_NB_PORTS	4
 struct oz_hcd {
 	spinlock_t hcd_lock;
 	struct list_head urb_pending_list;

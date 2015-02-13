@@ -488,11 +488,7 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		goto err_release_resource_reg;
 	}
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
 	clk = clk_get(NULL, res_name);
-#else
-	clk = clk_get_sys(res_name, NULL);
-#endif
 	if (IS_ERR_OR_NULL(clk)) {
 		dev_err(&dc->ndev->dev, "sor: can't get clock\n");
 		err = -ENOENT;
@@ -500,11 +496,7 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	}
 
 #ifndef	CONFIG_ARCH_TEGRA_12x_SOC
-#ifdef CONFIG_TEGRA_NVDISPLAY
 	safe_clk = clk_get(NULL, "sor_safe");
-#else
-	safe_clk = clk_get_sys("sor_safe", NULL);
-#endif
 	if (IS_ERR_OR_NULL(clk)) {
 		dev_err(&dc->ndev->dev, "sor: can't get safe clock\n");
 		err = -ENOENT;

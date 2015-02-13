@@ -1,5 +1,5 @@
 /*
- * drivers/misc/tegra-profiler/eh_unwind.c
+ * drivers/misc/tegra-profiler/exh_tables.c
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -371,19 +371,25 @@ get_extabs_ehabi(unsigned long key, struct ex_region_info *ri)
 }
 
 long
-quadd_get_extabs_ehframe(unsigned long key, struct ex_region_info *ri)
+quadd_get_dw_frames(unsigned long key, struct ex_region_info *ri)
 {
 	long err;
-	struct extab_info *ti_ehfr, *ti_ehfr_hdr;
+	struct extab_info *ti, *ti_hdr;
 
 	err = search_ex_region(key, ri);
 	if (err < 0)
 		return err;
 
-	ti_ehfr = &ri->ex_sec[QUADD_SEC_TYPE_EH_FRAME];
-	ti_ehfr_hdr = &ri->ex_sec[QUADD_SEC_TYPE_EH_FRAME_HDR];
+	ti = &ri->ex_sec[QUADD_SEC_TYPE_EH_FRAME];
+	ti_hdr = &ri->ex_sec[QUADD_SEC_TYPE_EH_FRAME_HDR];
 
-	return (ti_ehfr->length && ti_ehfr_hdr->length) ? 0 : -ENOENT;
+	if (ti->length && ti_hdr->length)
+		return 0;
+
+	ti = &ri->ex_sec[QUADD_SEC_TYPE_DEBUG_FRAME];
+	ti_hdr = &ri->ex_sec[QUADD_SEC_TYPE_DEBUG_FRAME_HDR];
+
+	return (ti->length && ti_hdr->length) ? 0 : -ENOENT;
 }
 
 static struct regions_data *rd_alloc(unsigned long size)
@@ -466,13 +472,13 @@ int quadd_unwind_set_extab(struct quadd_sections *extabs,
 
 	ri_entry.mmap = mmap;
 
-	ri_entry.tf_start = 0;
-	ri_entry.tf_end = 0;
-
 	for (i = 0; i < QUADD_SEC_TYPE_MAX; i++) {
 		struct quadd_sec_info *si = &extabs->sec[i];
 
 		ti = &ri_entry.ex_sec[i];
+
+		ti->tf_start = 0;
+		ti->tf_end = 0;
 
 		if (!si->addr) {
 			ti->addr = 0;
@@ -521,12 +527,14 @@ error_out:
 
 void
 quadd_unwind_set_tail_info(unsigned long vm_start,
+			   int secid,
 			   unsigned long tf_start,
 			   unsigned long tf_end)
 {
 	struct ex_region_info *ri;
 	unsigned long nr_entries, size;
 	struct regions_data *rd, *rd_new;
+	struct extab_info *ti;
 
 	spin_lock(&ctx.lock);
 
@@ -553,8 +561,10 @@ quadd_unwind_set_tail_info(unsigned long vm_start,
 	if (!ri)
 		goto error_free;
 
-	ri->tf_start = tf_start;
-	ri->tf_end = tf_end;
+	ti = &ri->ex_sec[secid];
+
+	ti->tf_start = tf_start;
+	ti->tf_end = tf_end;
 
 	rcu_assign_pointer(ctx.rd, rd_new);
 

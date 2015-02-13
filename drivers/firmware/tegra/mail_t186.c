@@ -145,25 +145,15 @@ static void bpmp_channel_init(void *virt)
 
 static int bpmp_handshake(void)
 {
-	int i;
-
-	for (i = 0; i < 100; i++) {
-		if (bpmp_readl(HSP_SHRD_SEM_0_STA))
-			break;
-		usleep_range(10, 100);
-	}
-
-	if (i == 100)
-		return -ENODEV;
-
-	for (i = 0; i < 100; i++) {
-		if (tegra_hsp_db_can_ring(HSP_DB_BPMP))
-			break;
-		usleep_range(10, 100);
-	}
-
-	if (i == 100)
+	if (!tegra_hsp_db_can_ring(HSP_DB_BPMP)) {
+		dev_err(device, "doorbell not enabled\n");
 		return -EPERM;
+	}
+
+	if (!bpmp_readl(HSP_SHRD_SEM_0_STA)) {
+		dev_err(device, "firmware mailman not ready\n");
+		return -ENODEV;
+	}
 
 	return 0;
 }

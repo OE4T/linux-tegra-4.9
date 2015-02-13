@@ -226,6 +226,40 @@ static void submit_gathers(struct nvhost_job *job)
 	}
 }
 
+int host1x_channel_set_low_priority(struct nvhost_channel *ch)
+{
+	struct nvhost_master *host = nvhost_get_host(ch->dev);
+	void __iomem *regs = host->aperture;
+	u32 val;
+
+	mutex_lock(&host->priority_lock);
+	val = readl(regs + host1x_channel_ch_hipri_r() + BIT_WORD(ch->chid));
+	val &= ~BIT_MASK(ch->chid);
+	writel(val, regs + host1x_channel_ch_hipri_r() + BIT_WORD(ch->chid));
+	mutex_unlock(&host->priority_lock);
+
+	return 0;
+}
+
+int host1x_channel_update_priority(struct nvhost_job *job)
+{
+	struct nvhost_channel *ch = job->ch;
+	struct nvhost_master *host = nvhost_get_host(ch->dev);
+	void __iomem *regs = host->aperture;
+	u32 val;
+
+	if (job->priority < NVHOST_PRIORITY_HIGH)
+		return 0;
+
+	mutex_lock(&host->priority_lock);
+	val = readl(regs + host1x_channel_ch_hipri_r() + BIT_WORD(ch->chid));
+	val |= BIT_MASK(ch->chid);
+	writel(val, regs + host1x_channel_ch_hipri_r() + BIT_WORD(ch->chid));
+	mutex_unlock(&host->priority_lock);
+
+	return 0;
+}
+
 static int host1x_channel_submit(struct nvhost_job *job)
 {
 	struct nvhost_channel *ch = job->ch;
@@ -235,6 +269,8 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	int err, i;
 	void *completed_waiters[job->num_syncpts];
 	struct nvhost_job_syncpt *hwctx_sp = job->sp + job->hwctx_syncpt_idx;
+
+	host1x_channel_update_priority(job);
 
 	memset(completed_waiters, 0, sizeof(void *) * job->num_syncpts);
 
@@ -392,4 +428,5 @@ static const struct nvhost_channel_ops host1x_channel_ops = {
 #ifdef _hw_host1x04_channel_h_
 	.init_gather_filter = t124_channel_init_gather_filter,
 #endif
+	.set_low_ch_prio = host1x_channel_set_low_priority,
 };

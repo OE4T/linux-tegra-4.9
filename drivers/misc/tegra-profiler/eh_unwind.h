@@ -48,6 +48,7 @@ quadd_is_ex_entry_exist_arm32_ehabi(struct pt_regs *regs,
 
 void
 quadd_unwind_set_tail_info(unsigned long vm_start,
+			   int secid,
 			   unsigned long tf_start,
 			   unsigned long tf_end);
 
@@ -57,6 +58,9 @@ struct extab_info {
 	unsigned long length;
 
 	unsigned long mmap_offset;
+
+	unsigned long tf_start;
+	unsigned long tf_end;
 };
 
 struct ex_region_info {
@@ -67,12 +71,9 @@ struct ex_region_info {
 	struct quadd_mmap_area *mmap;
 
 	struct list_head list;
-
-	unsigned long tf_start;
-	unsigned long tf_end;
 };
 
 long
-quadd_get_extabs_ehframe(unsigned long key, struct ex_region_info *ri);
+quadd_get_dw_frames(unsigned long key, struct ex_region_info *ri);
 
 #endif	/* __QUADD_EH_UNWIND_H__ */

@@ -114,7 +114,7 @@ struct dwarf_cpu_context {
 	struct regs_state rs_stack[DW_MAX_RS_STACK_DEPTH];
 	int depth;
 
-	int dw_word_size;
+	int dw_ptr_size;
 };
 
 struct quadd_dwarf_context {
@@ -221,6 +221,33 @@ get_user_reg_size(int mode)
 {
 	return (mode == DW_MODE_ARM32) ?
 		sizeof(u32) : sizeof(u64);
+}
+
+static inline int
+get_secid_frame(int is_eh)
+{
+	return is_eh ?
+		QUADD_SEC_TYPE_EH_FRAME :
+		QUADD_SEC_TYPE_DEBUG_FRAME;
+}
+
+static inline int
+get_secid_frame_hdr(int is_eh)
+{
+	return is_eh ?
+		QUADD_SEC_TYPE_EH_FRAME_HDR :
+		QUADD_SEC_TYPE_DEBUG_FRAME_HDR;
+}
+
+static inline int
+is_frame_present(struct ex_region_info *ri, int is_eh)
+{
+	struct extab_info *ti, *ti_hdr;
+
+	ti = &ri->ex_sec[get_secid_frame(is_eh)];
+	ti_hdr = &ri->ex_sec[get_secid_frame_hdr(is_eh)];
+
+	return (ti->length && ti_hdr->length) ? 1 : 0;
 }
 
 static inline int
@@ -554,14 +581,14 @@ dwarf_read_encoded_value(struct ex_region_info *ri,
 			 char encoding,
 			 int st)
 {
-	int dw_word_size, count = 0;
+	int dw_ptr_size, count = 0;
 	long stmp = 0, err = 0;
 	unsigned long utmp, res = 0;
 	struct dwarf_cpu_context *cpu_ctx = this_cpu_ptr(ctx.cpu_ctx);
 
 	pr_debug("encoding: %#x\n", encoding);
 
-	dw_word_size = cpu_ctx->dw_word_size;
+	dw_ptr_size = cpu_ctx->dw_ptr_size;
 
 	if (encoding == DW_EH_PE_omit) {
 		pr_debug("DW_EH_PE_omit\n");
@@ -570,13 +597,13 @@ dwarf_read_encoded_value(struct ex_region_info *ri,
 		return 0;
 	} else if (encoding == DW_EH_PE_aligned) {
 		unsigned long aligned = ALIGN((unsigned long)addr,
-					      dw_word_size);
+					      dw_ptr_size);
 
 		pr_debug("DW_EH_PE_aligned\n");
 
-		if (dw_word_size == 4) {
+		if (dw_ptr_size == 4) {
 			*val = read_mmap_data_u32(ri, (u32 *)aligned, st, &err);
-		} else if (dw_word_size == 8) {
+		} else if (dw_ptr_size == 8) {
 			*val = read_mmap_data_u64(ri, (u64 *)aligned, st, &err);
 		} else {
 			pr_err_once("%s: error: encoding\n", __func__);
@@ -586,16 +613,16 @@ dwarf_read_encoded_value(struct ex_region_info *ri,
 		if (err)
 			return err;
 
-		return dw_word_size;
+		return dw_ptr_size;
 	}
 
 	switch (encoding & 0x0f) {
 	case DW_EH_PE_absptr:
 		pr_debug("%s: absptr encoding\n", __func__);
 
-		if (dw_word_size == 4) {
+		if (dw_ptr_size == 4) {
 			*val = read_mmap_data_u32(ri, (u32 *)addr, st, &err);
-		} else if (dw_word_size == 8) {
+		} else if (dw_ptr_size == 8) {
 			*val = read_mmap_data_u64(ri, (u64 *)addr, st, &err);
 		} else {
 			pr_err_once("error: wrong dwarf size\n");
@@ -605,7 +632,7 @@ dwarf_read_encoded_value(struct ex_region_info *ri,
 		if (err)
 			return err;
 
-		return dw_word_size;
+		return dw_ptr_size;
 
 	case DW_EH_PE_sdata2:
 	case DW_EH_PE_udata2:
@@ -694,10 +721,10 @@ dwarf_read_encoded_value(struct ex_region_info *ri,
 		if (encoding & DW_EH_PE_indirect) {
 			pr_debug("DW_EH_PE_indirect\n");
 
-			if (dw_word_size == 4) {
+			if (dw_ptr_size == 4) {
 				res = read_mmap_data_u32(ri, (u32 *)res,
 							 st, &err);
-			} else if (dw_word_size == 8) {
+			} else if (dw_ptr_size == 8) {
 				res = read_mmap_data_u64(ri, (u64 *)res,
 							 st, &err);
 			} else {
@@ -722,15 +749,18 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 		     unsigned char *insn_end,
 		     struct dw_cie *cie,
 		     struct stackframe *sf,
-		     unsigned long pc)
+		     unsigned long pc,
+		     int is_eh)
 {
 	unsigned char insn;
 	unsigned char *c_insn;
-	unsigned int expr_len, delta;
+	unsigned int expr_len, delta, secid;
 	unsigned long utmp, reg;
 	long offset, stmp, err = 0;
 	struct regs_state *rs, *rs_initial, *rs_stack;
 	struct dwarf_cpu_context *cpu_ctx = this_cpu_ptr(ctx.cpu_ctx);
+
+	secid = get_secid_frame(is_eh);
 
 	rs = &sf->rs;
 	rs_initial = &sf->rs_initial;
@@ -742,7 +772,7 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 	while (c_insn < insn_end && sf->pc <= pc) {
 		insn = read_mmap_data_u8(ri, c_insn++,
-					 QUADD_SEC_TYPE_EH_FRAME, &err);
+					 secid, &err);
 		if (err)
 			return err;
 
@@ -758,8 +788,7 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 		case DW_CFA_offset:
 			reg = dw_cfa_operand(insn);
 			c_insn += dwarf_read_uleb128(ri, c_insn, &utmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -787,8 +816,7 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_advance_loc1:
 			delta = read_mmap_data_u8(ri, c_insn++,
-						  QUADD_SEC_TYPE_EH_FRAME,
-						  &err);
+						  secid, &err);
 			if (err)
 				return err;
 
@@ -800,8 +828,7 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_advance_loc2:
 			delta = read_mmap_data_u16(ri, (u16 *)c_insn,
-						   QUADD_SEC_TYPE_EH_FRAME,
-						   &err);
+						   secid, &err);
 			if (err)
 				return err;
 
@@ -814,8 +841,7 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_advance_loc4:
 			delta = read_mmap_data_u32(ri, (u32 *)c_insn,
-						   QUADD_SEC_TYPE_EH_FRAME,
-						   &err);
+						   secid, &err);
 			if (err)
 				return err;
 
@@ -828,15 +854,13 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_offset_extended:
 			c_insn += dwarf_read_uleb128(ri, c_insn, &utmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
 			reg = utmp;
 			c_insn += dwarf_read_uleb128(ri, c_insn, &utmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -847,8 +871,7 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_restore_extended:
 			c_insn += dwarf_read_uleb128(ri, c_insn, &reg,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -857,8 +880,7 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_undefined:
 			c_insn += dwarf_read_uleb128(ri, c_insn, &reg,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -868,15 +890,13 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_def_cfa:
 			c_insn += dwarf_read_uleb128(ri, c_insn, &utmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
 			rs->cfa_register = utmp;
 			c_insn += dwarf_read_uleb128(ri, c_insn, &utmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -888,8 +908,7 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_def_cfa_register:
 			c_insn += dwarf_read_uleb128(ri, c_insn, &utmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -900,8 +919,7 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_def_cfa_offset:
 			c_insn += dwarf_read_uleb128(ri, c_insn, &utmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -912,8 +930,7 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_def_cfa_expression:
 			c_insn += dwarf_read_uleb128(ri, c_insn, &utmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -930,16 +947,14 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_expression:
 			c_insn += dwarf_read_uleb128(ri, c_insn, &reg,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
 			set_rule_exp(rs, reg, DW_WHERE_EXPR, c_insn);
 
 			c_insn += dwarf_read_uleb128(ri, c_insn, &utmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -950,14 +965,12 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_offset_extended_sf:
 			c_insn += dwarf_read_uleb128(ri, c_insn, &reg,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
 			c_insn += dwarf_read_sleb128(ri, c_insn, &stmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -969,14 +982,12 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_val_offset:
 			c_insn += dwarf_read_uleb128(ri, c_insn, &reg,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
 			c_insn += dwarf_read_uleb128(ri, c_insn, &utmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -988,13 +999,12 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_val_offset_sf:
 			c_insn += dwarf_read_uleb128(ri, c_insn, &reg,
-				QUADD_SEC_TYPE_EH_FRAME, &err);
+						     secid, &err);
 			if (err)
 				return err;
 
 			c_insn += dwarf_read_sleb128(ri, c_insn, &stmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -1006,8 +1016,7 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_GNU_args_size:
 			c_insn += dwarf_read_uleb128(ri, c_insn, &utmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -1016,14 +1025,12 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_GNU_negative_offset_extended:
 			c_insn += dwarf_read_uleb128(ri, c_insn, &reg,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
 			c_insn += dwarf_read_uleb128(ri, c_insn, &utmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -1057,14 +1064,12 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_def_cfa_sf:
 			c_insn += dwarf_read_uleb128(ri, c_insn, &utmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
 			c_insn += dwarf_read_sleb128(ri, c_insn, &stmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -1079,8 +1084,7 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_def_cfa_offset_sf:
 			c_insn += dwarf_read_sleb128(ri, c_insn, &stmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -1091,8 +1095,7 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_same_value:
 			c_insn += dwarf_read_uleb128(ri, c_insn, &reg,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -1102,15 +1105,13 @@ dwarf_cfa_exec_insns(struct ex_region_info *ri,
 
 		case DW_CFA_val_expression:
 			c_insn += dwarf_read_uleb128(ri, c_insn, &reg,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
 			set_rule_exp(rs, reg, DW_WHERE_VAL_EXPR, c_insn);
 			c_insn += dwarf_read_uleb128(ri, c_insn, &utmp,
-						     QUADD_SEC_TYPE_EH_FRAME,
-						     &err);
+						     secid, &err);
 			if (err)
 				return err;
 
@@ -1132,28 +1133,35 @@ static long
 decode_cie_entry(struct ex_region_info *ri,
 		 struct dw_cie *cie,
 		 unsigned char *entry,
-		 size_t length)
+		 size_t length,
+		 int is_eh)
 {
 	long err;
 	unsigned long utmp;
 	unsigned char *p, *end, *aug;
+	unsigned int secid, cie_id;
 	unsigned int cie_version, id, len, max_len;
+
+	secid = get_secid_frame(is_eh);
 
 	p = entry;
 	end = entry + length;
 
 	p += sizeof(u32);
 
-	id = read_mmap_data_u32(ri, (u32 *)p, QUADD_SEC_TYPE_EH_FRAME, &err);
+	id = read_mmap_data_u32(ri, (u32 *)p, secid, &err);
 	if (err)
 		return err;
 
 	p += sizeof(u32);
 
-	if (id != 0)
+	cie_id = is_eh ? 0 : DW_CIE_ID;
+	if (id != cie_id) {
+		pr_err_once("error: incorrect cie_id");
 		return -QUADD_URC_TBL_IS_CORRUPT;
+	}
 
-	cie_version = read_mmap_data_u8(ri, p++, QUADD_SEC_TYPE_EH_FRAME, &err);
+	cie_version = read_mmap_data_u8(ri, p++, secid, &err);
 	if (err)
 		return err;
 
@@ -1176,24 +1184,24 @@ decode_cie_entry(struct ex_region_info *ri,
 	pr_debug("aug_string: %s\n", cie->aug_string);
 
 	p += dwarf_read_uleb128(ri, p, &cie->code_align_factor,
-				QUADD_SEC_TYPE_EH_FRAME, &err);
+				secid, &err);
 	if (err)
 		return err;
 
 	p += dwarf_read_sleb128(ri, p, &cie->data_align_factor,
-				QUADD_SEC_TYPE_EH_FRAME, &err);
+				secid, &err);
 	if (err)
 		return err;
 
 	if (cie_version == 1) {
 		cie->retaddr_reg = read_mmap_data_u8(ri, p++,
-						     QUADD_SEC_TYPE_EH_FRAME,
+						     secid,
 						     &err);
 		if (err)
 			return err;
 	} else {
 		p += dwarf_read_uleb128(ri, p, &utmp,
-					QUADD_SEC_TYPE_EH_FRAME, &err);
+					secid, &err);
 		if (err)
 			return err;
 
@@ -1210,7 +1218,7 @@ decode_cie_entry(struct ex_region_info *ri,
 
 	if (*aug == 'z') {
 		p += dwarf_read_uleb128(ri, p, &cie->aug_size,
-					QUADD_SEC_TYPE_EH_FRAME, &err);
+					secid, &err);
 		if (err)
 			return err;
 
@@ -1218,8 +1226,6 @@ decode_cie_entry(struct ex_region_info *ri,
 		aug++;
 
 		cie->z_aug = 1;
-	} else {
-		pr_warn_once("warning: !aug_z\n");
 	}
 
 	cie->fde_encoding = 0;
@@ -1233,7 +1239,7 @@ decode_cie_entry(struct ex_region_info *ri,
 		if (*aug == 'L') {
 			cie->lsda_encoding =
 				read_mmap_data_u8(ri, p++,
-						  QUADD_SEC_TYPE_EH_FRAME,
+						  secid,
 						  &err);
 			if (err)
 				return err;
@@ -1242,7 +1248,7 @@ decode_cie_entry(struct ex_region_info *ri,
 		} else if (*aug == 'R') {
 			cie->fde_encoding =
 				read_mmap_data_u8(ri, p++,
-						  QUADD_SEC_TYPE_EH_FRAME,
+						  secid,
 						  &err);
 			if (err)
 				return err;
@@ -1260,12 +1266,12 @@ decode_cie_entry(struct ex_region_info *ri,
 			pcrel_base = (void *)
 				mmap_addr_to_ex_addr((unsigned long)p,
 						     ri,
-						     QUADD_SEC_TYPE_EH_FRAME);
+						     secid);
 
 			cnt = dwarf_read_encoded_value(ri, p, pcrel_base,
 						       &personality,
 						       handler_encoding,
-						       QUADD_SEC_TYPE_EH_FRAME);
+						       secid);
 			if (cnt < 0) {
 				pr_err_once("%s: error: personality routine\n",
 					    __func__);
@@ -1305,13 +1311,16 @@ static long
 decode_fde_entry(struct ex_region_info *ri,
 		 struct dw_fde *fde,
 		 unsigned char *entry,
-		 size_t length)
+		 size_t length,
+		 int is_eh)
 {
-	int count;
+	int count, secid;
 	long err = 0;
 	unsigned long utmp;
 	unsigned char *p, *end, *pcrel_base;
 	struct dw_cie *cie = fde->cie;
+
+	secid = get_secid_frame(is_eh);
 
 	p = entry;
 	end = entry + length;
@@ -1320,31 +1329,34 @@ decode_fde_entry(struct ex_region_info *ri,
 	p += sizeof(u32);
 
 	pcrel_base = (unsigned char *)
-		mmap_addr_to_ex_addr((unsigned long)p, ri,
-				     QUADD_SEC_TYPE_EH_FRAME);
+		mmap_addr_to_ex_addr((unsigned long)p, ri, secid);
 
 	count = dwarf_read_encoded_value(ri, p, pcrel_base,
 					 &fde->initial_location,
 					 cie->fde_encoding,
-					 QUADD_SEC_TYPE_EH_FRAME);
+					 secid);
 	if (count < 0)
 		return count;
 
 	p += count;
 
 	fde->address_range = read_mmap_data_u32(ri, (u32 *)p,
-						QUADD_SEC_TYPE_EH_FRAME, &err);
+						secid, &err);
 	if (err)
 		return err;
 
 	p += sizeof(u32);
 
+	if (fde->initial_location < ri->vm_start)
+		fde->initial_location += ri->vm_start;
+
+	pr_debug("pcrel_base: %p\n", pcrel_base);
 	pr_debug("init location: %#lx\n", fde->initial_location);
 	pr_debug("address_range: %#lx\n", fde->address_range);
 
 	if (cie->z_aug) {
 		p += dwarf_read_uleb128(ri, p, &utmp,
-					QUADD_SEC_TYPE_EH_FRAME, &err);
+					secid, &err);
 		if (err)
 			return err;
 
@@ -1409,9 +1421,10 @@ dwarf_get_bs_table(struct ex_region_info *ri,
 		   void *data,
 		   unsigned long length,
 		   unsigned long data_base,
-		   unsigned long *nr_entries)
+		   unsigned long *nr_entries,
+		   int is_eh)
 {
-	int count;
+	int count, secid_hdr;
 	unsigned char *p, *end;
 	struct dw_fde_table *bst;
 	unsigned long fde_count, frame_ptr;
@@ -1424,6 +1437,8 @@ dwarf_get_bs_table(struct ex_region_info *ri,
 
 	pr_debug("hdr: %p\n", hdr);
 
+	secid_hdr = get_secid_frame_hdr(is_eh);
+
 	if (hdr->version != 1) {
 		pr_warn_once("warning: unknown eh hdr format\n");
 		return NULL;
@@ -1434,7 +1449,7 @@ dwarf_get_bs_table(struct ex_region_info *ri,
 		count = dwarf_read_encoded_value(ri, p, (void *)data_base,
 						 &frame_ptr,
 						 hdr->eh_frame_ptr_enc,
-						 QUADD_SEC_TYPE_EH_FRAME_HDR);
+						 secid_hdr);
 		if (count < 0)
 			return NULL;
 
@@ -1446,7 +1461,7 @@ dwarf_get_bs_table(struct ex_region_info *ri,
 
 	count = dwarf_read_encoded_value(ri, p, (void *)data_base,
 					 &fde_count, hdr->fde_count_enc,
-					 QUADD_SEC_TYPE_EH_FRAME_HDR);
+					 secid_hdr);
 	if (count < 0)
 		return NULL;
 
@@ -1466,6 +1481,8 @@ dwarf_get_bs_table(struct ex_region_info *ri,
 	bst = (struct dw_fde_table *)p;
 	*nr_entries = fde_count;
 
+	pr_debug("bst: %lu fde entries\n", fde_count);
+
 	return bst;
 }
 
@@ -1473,9 +1490,11 @@ static long
 dwarf_decode_fde_cie(struct ex_region_info *ri,
 		     unsigned char *fde_p,
 		     struct dw_cie *cie,
-		     struct dw_fde *fde)
+		     struct dw_fde *fde,
+		     int is_eh)
 {
 	u32 *p;
+	int secid;
 	long err;
 	unsigned char *cie_p;
 	unsigned long cie_pointer, length;
@@ -1483,26 +1502,27 @@ dwarf_decode_fde_cie(struct ex_region_info *ri,
 	unsigned long frame_len, addr;
 	struct extab_info *ti;
 
-	ti = &ri->ex_sec[QUADD_SEC_TYPE_EH_FRAME];
+	secid = get_secid_frame(is_eh);
+	ti = &ri->ex_sec[secid];
 
 	addr = ti->addr;
 
 	frame_start = (unsigned char *)
-		ex_addr_to_mmap_addr(addr, ri, QUADD_SEC_TYPE_EH_FRAME);
+		ex_addr_to_mmap_addr(addr, ri, secid);
 
 	frame_len = ti->length;
 
-	pr_debug("eh frame: %p - %p\n",
+	pr_debug("frame: %p - %p\n",
 		 frame_start, frame_start + frame_len);
 
 	p = (u32 *)fde_p;
 
-	length = read_mmap_data_u32(ri, p++, QUADD_SEC_TYPE_EH_FRAME, &err);
+	length = read_mmap_data_u32(ri, p++, secid, &err);
 	if (err)
 		return err;
 
 	if (length == 0xffffffff) {
-		pr_warn_once("warning: 64-bit .eh_frame is not supported\n");
+		pr_warn_once("warning: 64-bit frame is not supported\n");
 		return -QUADD_URC_UNHANDLED_INSTRUCTION;
 	}
 
@@ -1512,20 +1532,22 @@ dwarf_decode_fde_cie(struct ex_region_info *ri,
 	pr_debug("FDE: fde_p: %p, offset: %#lx, len: %#lx\n",
 		 fde_p, fde->offset, fde->length);
 
-	cie_pointer = read_mmap_data_u32(ri, p, QUADD_SEC_TYPE_EH_FRAME, &err);
+	cie_pointer = read_mmap_data_u32(ri, p, secid, &err);
 	if (err)
 		return err;
 
 	fde->cie_pointer = cie_pointer;
-	cie_p = (unsigned char *)p - cie_pointer;
+
+	cie_p = is_eh ? (unsigned char *)p - cie_pointer :
+		frame_start + cie_pointer;
 
 	length = read_mmap_data_u32(ri, (u32 *)cie_p,
-				    QUADD_SEC_TYPE_EH_FRAME, &err);
+				    secid, &err);
 	if (err)
 		return err;
 
 	if (length == 0xffffffff) {
-		pr_warn_once("warning: 64-bit .eh_frame is not supported\n");
+		pr_warn_once("warning: 64-bit frame is not supported\n");
 		return -QUADD_URC_UNHANDLED_INSTRUCTION;
 	}
 
@@ -1535,13 +1557,13 @@ dwarf_decode_fde_cie(struct ex_region_info *ri,
 	pr_debug("CIE: cie_p: %p, offset: %#lx, len: %#lx\n",
 		 cie_p, cie->offset, cie->length);
 
-	err = decode_cie_entry(ri, cie, cie_p, cie->length);
+	err = decode_cie_entry(ri, cie, cie_p, cie->length, is_eh);
 	if (err < 0)
 		return err;
 
 	fde->cie = cie;
 
-	err = decode_fde_entry(ri, fde, fde_p, fde->length);
+	err = decode_fde_entry(ri, fde, fde_p, fde->length, is_eh);
 	if (err < 0)
 		return err;
 
@@ -1552,19 +1574,25 @@ static void *
 dwarf_find_fde(struct ex_region_info *ri,
 	       void *data,
 	       unsigned long length,
-	       unsigned long pc)
+	       unsigned long pc,
+	       int is_eh)
 {
 	long err;
+	int secid, secid_hdr;
 	const struct dw_fde_table *fi;
 	unsigned long fde_count = 0, data_base;
 	unsigned long fde_addr, init_loc;
 	struct dw_fde_table *bst;
 	struct extab_info *ti;
 
-	ti = &ri->ex_sec[QUADD_SEC_TYPE_EH_FRAME_HDR];
+	secid = get_secid_frame(is_eh);
+	secid_hdr = get_secid_frame_hdr(is_eh);
+
+	ti = &ri->ex_sec[secid_hdr];
 	data_base = ti->addr;
 
-	bst = dwarf_get_bs_table(ri, data, length, data_base, &fde_count);
+	bst = dwarf_get_bs_table(ri, data, length, data_base,
+				 &fde_count, is_eh);
 	if (!bst || fde_count == 0) {
 		pr_warn_once("warning: bs_table\n");
 		return NULL;
@@ -1573,33 +1601,40 @@ dwarf_find_fde(struct ex_region_info *ri,
 	fi = &bst[fde_count - 1];
 	init_loc = dw_bst_get_initial_loc(fi, data_base);
 
+	pr_debug("pc: %#lx, last bst init_loc: %#lx", pc, init_loc);
+
 	if (pc >= init_loc) {
 		unsigned long start, end;
+		struct extab_info *ti = &ri->ex_sec[secid];
 
 		fde_addr = dw_bst_get_fde_addr(fi, data_base);
 		fde_addr = ex_addr_to_mmap_addr(fde_addr, ri,
-						QUADD_SEC_TYPE_EH_FRAME);
+						secid);
 
 		if (pc == init_loc)
 			return (void *)fde_addr;
 
-		if (ri->tf_end > 0) {
-			start = ri->tf_start;
-			end = ri->tf_end;
+		if (ti->tf_end > 0) {
+			start = ti->tf_start;
+			end = ti->tf_end;
 		} else {
 			struct dw_cie cie;
 			struct dw_fde fde;
 
 			err = dwarf_decode_fde_cie(ri, (void *)fde_addr,
-						   &cie, &fde);
+						   &cie, &fde, is_eh);
 			if (err < 0)
 				return NULL;
 
 			start = fde.initial_location;
 			end = start + fde.address_range;
 
-			quadd_unwind_set_tail_info(ri->vm_start, start, end);
+			quadd_unwind_set_tail_info(ri->vm_start, secid,
+						   start, end);
 		}
+
+		pr_debug("pc: %#lx, last bst entry: %#lx - %#lx",
+			 pc, start, end);
 
 		return (pc >= start && pc < end) ?
 		       (void *)fde_addr : NULL;
@@ -1610,40 +1645,90 @@ dwarf_find_fde(struct ex_region_info *ri,
 		return NULL;
 
 	fde_addr = dw_bst_get_fde_addr(fi, data_base);
-	fde_addr = ex_addr_to_mmap_addr(fde_addr, ri, QUADD_SEC_TYPE_EH_FRAME);
+	fde_addr = ex_addr_to_mmap_addr(fde_addr, ri, secid);
 
 	return (void *)fde_addr;
+}
+
+static int
+__is_fde_entry_exist(struct ex_region_info *ri, unsigned long addr, int is_eh)
+{
+	int secid_hdr;
+	unsigned char *fde_p;
+	struct extab_info *ti;
+	unsigned char *hdr_start;
+	unsigned long hdr_len, a;
+
+	secid_hdr = get_secid_frame_hdr(is_eh);
+
+	ti = &ri->ex_sec[secid_hdr];
+
+	a = ti->addr;
+
+	hdr_start = (unsigned char *)
+		ex_addr_to_mmap_addr(a, ri, secid_hdr);
+
+	hdr_len = ti->length;
+
+	fde_p = dwarf_find_fde(ri, hdr_start, hdr_len, addr, is_eh);
+
+	return fde_p ? 1 : 0;
+}
+
+static int
+is_fde_entry_exist(struct ex_region_info *ri,
+		   unsigned long addr,
+		   int *is_eh,
+		   int *is_debug)
+{
+	*is_eh = 0;
+	*is_debug = 0;
+
+	if (is_frame_present(ri, 1)) {
+		if (__is_fde_entry_exist(ri, addr, 1))
+			*is_eh = 1;
+	}
+
+	if (is_frame_present(ri, 0)) {
+		if (__is_fde_entry_exist(ri, addr, 0))
+			*is_debug = 1;
+	}
+
+	return (*is_eh || *is_debug) ? 1 : 0;
 }
 
 static long
 dwarf_decode(struct ex_region_info *ri,
 	     struct dw_cie *cie,
 	     struct dw_fde *fde,
-	     unsigned long pc)
+	     unsigned long pc,
+	     int is_eh)
 {
 	long err;
+	int secid_hdr;
 	unsigned char *fde_p;
 	unsigned char *hdr_start;
 	unsigned long hdr_len, addr;
 	struct extab_info *ti;
 
-	ti = &ri->ex_sec[QUADD_SEC_TYPE_EH_FRAME_HDR];
+	secid_hdr = get_secid_frame_hdr(is_eh);
+	ti = &ri->ex_sec[secid_hdr];
 
 	addr = ti->addr;
 
 	hdr_start = (unsigned char *)
-		ex_addr_to_mmap_addr(addr, ri, QUADD_SEC_TYPE_EH_FRAME_HDR);
+		ex_addr_to_mmap_addr(addr, ri, secid_hdr);
 
 	hdr_len = ti->length;
 
 	pr_debug("eh frame hdr: %p - %p\n",
 		 hdr_start, hdr_start + hdr_len);
 
-	fde_p = dwarf_find_fde(ri, hdr_start, hdr_len, pc);
+	fde_p = dwarf_find_fde(ri, hdr_start, hdr_len, pc, is_eh);
 	if (!fde_p)
 		return -QUADD_URC_IDX_NOT_FOUND;
 
-	err = dwarf_decode_fde_cie(ri, fde_p, cie, fde);
+	err = dwarf_decode_fde_cie(ri, fde_p, cie, fde, is_eh);
 	if (err < 0)
 		return err;
 
@@ -1680,7 +1765,8 @@ static long
 unwind_frame(struct ex_region_info *ri,
 	     struct stackframe *sf,
 	     struct vm_area_struct *vma_sp,
-	     unsigned int *unw_type)
+	     unsigned int *unw_type,
+	     int is_eh)
 {
 	int i;
 	long err;
@@ -1692,7 +1778,7 @@ unwind_frame(struct ex_region_info *ri,
 	struct regs_state *rs, *rs_initial;
 	int mode = sf->mode;
 
-	err = dwarf_decode(ri, &cie, &fde, pc);
+	err = dwarf_decode(ri, &cie, &fde, pc, is_eh);
 	if (err < 0)
 		return err;
 
@@ -1711,7 +1797,7 @@ unwind_frame(struct ex_region_info *ri,
 	if (cie.initial_insn) {
 		insn_end = cie.initial_insn + cie.initial_insn_len;
 		err = dwarf_cfa_exec_insns(ri, cie.initial_insn,
-					   insn_end, &cie, sf, pc);
+					   insn_end, &cie, sf, pc, is_eh);
 		if (err)
 			return err;
 	}
@@ -1721,7 +1807,7 @@ unwind_frame(struct ex_region_info *ri,
 	if (fde.instructions) {
 		insn_end = fde.instructions + fde.insn_length;
 		err = dwarf_cfa_exec_insns(ri, fde.instructions,
-					   insn_end, fde.cie, sf, pc);
+					   insn_end, fde.cie, sf, pc, is_eh);
 		if (err)
 			return err;
 	}
@@ -1820,7 +1906,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 	unsigned long user_reg_size;
 	struct ex_region_info ri_new;
 	unsigned int unw_type = QUADD_UNW_TYPE_UT;
-	int mode = sf->mode;
+	int is_eh = 1, mode = sf->mode;
 
 	cc->unw_rc = QUADD_URC_FAILURE;
 	user_reg_size = get_user_reg_size(mode);
@@ -1828,10 +1914,10 @@ unwind_backtrace(struct quadd_callchain *cc,
 	while (1) {
 		long sp, err;
 		int nr_added;
+		int __is_eh, __is_debug;
 		struct vm_area_struct *vma_pc;
 		unsigned long addr, where = sf->pc;
 		struct mm_struct *mm = task->mm;
-		struct extab_info *ti;
 
 		if (!mm)
 			break;
@@ -1847,28 +1933,55 @@ unwind_backtrace(struct quadd_callchain *cc,
 		if (!vma_pc)
 			break;
 
-		ti = &ri->ex_sec[QUADD_SEC_TYPE_EH_FRAME_HDR];
-		addr = ti->addr;
+		addr = ri->vm_start;
 
 		if (!is_vma_addr(addr, vma_pc, user_reg_size)) {
-			err = quadd_get_extabs_ehframe(vma_pc->vm_start,
-						       &ri_new);
+			err = quadd_get_dw_frames(vma_pc->vm_start, &ri_new);
 			if (err) {
 				cc->unw_rc = QUADD_URC_TBL_NOT_EXIST;
 				break;
 			}
 
+			pr_debug("ri: %#lx ---> %#lx",
+				 ri->vm_start, ri_new.vm_start);
+
 			ri = &ri_new;
 		}
 
-		err = unwind_frame(ri, sf, vma_sp, &unw_type);
-		if (err < 0) {
-			cc->unw_rc = -err;
+		if (!is_fde_entry_exist(ri, sf->pc, &__is_eh, &__is_debug)) {
+			pr_debug("eh/debug fde entries are not existed\n");
+			cc->unw_rc = QUADD_URC_IDX_NOT_FOUND;
 			break;
 		}
+		pr_debug("is_eh: %d, is_debug: %d\n", __is_eh, __is_debug);
 
-		pr_debug("function at [<%08lx>] from [<%08lx>]\n",
-			 where, sf->pc);
+		if (is_eh) {
+			if (!__is_eh)
+				is_eh = 0;
+		} else {
+			if (!__is_debug)
+				is_eh = 1;
+		}
+
+		err = unwind_frame(ri, sf, vma_sp, &unw_type, is_eh);
+		if (err < 0) {
+			if (__is_eh && __is_debug) {
+				is_eh ^= 1;
+
+				err = unwind_frame(ri, sf, vma_sp,
+						   &unw_type, is_eh);
+				if (err < 0) {
+					cc->unw_rc = -err;
+					break;
+				}
+			} else {
+				cc->unw_rc = -err;
+				break;
+			}
+		}
+
+		pr_debug("[%s]: function at [<%08lx>] from [<%08lx>]\n",
+			 is_eh ? "eh" : "debug", where, sf->pc);
 
 		cc->curr_sp = sf->vregs[regnum_sp(mode)];
 		cc->curr_fp = sf->vregs[regnum_fp(mode)];
@@ -1886,13 +1999,10 @@ quadd_is_ex_entry_exist_dwarf(struct pt_regs *regs,
 			      struct task_struct *task)
 {
 	long err;
-	unsigned char *fde_p;
+	int is_eh, is_debug;
 	struct ex_region_info ri;
-	unsigned char *hdr_start;
-	unsigned long hdr_len, a;
 	struct vm_area_struct *vma;
 	struct mm_struct *mm = task->mm;
-	struct extab_info *ti;
 
 	if (!regs || !mm)
 		return 0;
@@ -1901,24 +2011,11 @@ quadd_is_ex_entry_exist_dwarf(struct pt_regs *regs,
 	if (!vma)
 		return 0;
 
-	err = quadd_get_extabs_ehframe(vma->vm_start, &ri);
+	err = quadd_get_dw_frames(vma->vm_start, &ri);
 	if (err)
 		return 0;
 
-	ti = &ri.ex_sec[QUADD_SEC_TYPE_EH_FRAME_HDR];
-
-	a = ti->addr;
-
-	hdr_start = (unsigned char *)
-		ex_addr_to_mmap_addr(a, &ri, QUADD_SEC_TYPE_EH_FRAME_HDR);
-
-	hdr_len = ti->length;
-
-	fde_p = dwarf_find_fde(&ri, hdr_start, hdr_len, addr);
-	if (!fde_p)
-		return 0;
-
-	return 1;
+	return is_fde_entry_exist(&ri, addr, &is_eh, &is_debug);
 }
 
 unsigned int
@@ -1977,7 +2074,6 @@ quadd_get_user_cc_dwarf(struct pt_regs *regs,
 	mode = DW_MODE_ARM32;
 #endif
 
-
 	pr_debug("%s: pc: %#lx, lr: %#lx\n", __func__, ip, lr);
 	pr_debug("%s: sp: %#lx, fp: %#lx, fp_thumb: %#lx\n",
 		 __func__, sp, fp, fp_thumb);
@@ -1990,7 +2086,7 @@ quadd_get_user_cc_dwarf(struct pt_regs *regs,
 
 	sf.vregs[ARM32_FP_THUMB] = fp_thumb;
 
-	cpu_ctx->dw_word_size = (mode == DW_MODE_ARM32) ?
+	cpu_ctx->dw_ptr_size = (mode == DW_MODE_ARM32) ?
 				sizeof(u32) : sizeof(u64);
 
 	sf.mode = mode;
@@ -2007,7 +2103,7 @@ quadd_get_user_cc_dwarf(struct pt_regs *regs,
 	if (!vma_sp)
 		return 0;
 
-	err = quadd_get_extabs_ehframe(vma->vm_start, &ri);
+	err = quadd_get_dw_frames(vma->vm_start, &ri);
 	if (err) {
 		cc->unw_rc = QUADD_URC_TBL_NOT_EXIST;
 		return 0;
@@ -2026,8 +2122,10 @@ int quadd_dwarf_unwind_start(void)
 {
 	if (!atomic_cmpxchg(&ctx.started, 0, 1)) {
 		ctx.cpu_ctx = alloc_percpu(struct dwarf_cpu_context);
-		if (!ctx.cpu_ctx)
+		if (!ctx.cpu_ctx) {
+			atomic_set(&ctx.started, 0);
 			return -ENOMEM;
+		}
 	}
 
 	return 0;

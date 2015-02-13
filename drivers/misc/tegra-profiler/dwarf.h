@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/dwarf.h
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -77,5 +77,9 @@
 
 #define DW_EH_PE_indirect	0x80
 
+#define DW_CIE_ID	0xffffffff
+#define DW64_CIE_ID	0xffffffffffffffffULL
+
+#define DW_CIE_VERSION	1
 
 #endif  /* __QUADD_DWARF_H */

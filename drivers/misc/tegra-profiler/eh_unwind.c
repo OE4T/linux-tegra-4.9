@@ -1,7 +1,7 @@
 /*
- * drivers/misc/tegra-profiler/exh_tables.c
+ * drivers/misc/tegra-profiler/eh_unwind.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -15,9 +15,6 @@
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-
-/*#pragma message("--- version header: remove for static version ---")*/
-#include <linux/version.h>
 
 #include <linux/mm.h>
 #include <linux/sched.h>
@@ -149,29 +146,29 @@ read_mmap_data(struct quadd_mmap_area *mmap, const u32 *addr, u32 *retval)
 static inline unsigned long
 ex_addr_to_mmap_addr(unsigned long addr,
 		     struct ex_region_info *ri,
-		     int exidx)
+		     int sec_type)
 {
 	unsigned long offset;
-	struct extab_info *ei;
+	struct extab_info *ti;
 
-	ei = exidx ? &ri->tabs.exidx : &ri->tabs.extab;
-	offset = addr - ei->addr;
+	ti = &ri->ex_sec[sec_type];
+	offset = addr - ti->addr;
 
-	return ei->mmap_offset + offset + (unsigned long)ri->mmap->data;
+	return ti->mmap_offset + offset + (unsigned long)ri->mmap->data;
 }
 
 static inline unsigned long
 mmap_addr_to_ex_addr(unsigned long addr,
 		     struct ex_region_info *ri,
-		     int exidx)
+		     int sec_type)
 {
 	unsigned long offset;
-	struct extab_info *ei;
+	struct extab_info *ti;
 
-	ei = exidx ? &ri->tabs.exidx : &ri->tabs.extab;
-	offset = addr - ei->mmap_offset - (unsigned long)ri->mmap->data;
+	ti = &ri->ex_sec[sec_type];
+	offset = addr - ti->mmap_offset - (unsigned long)ri->mmap->data;
 
-	return ei->addr + offset;
+	return ti->addr + offset;
 }
 
 static inline u32
@@ -190,25 +187,21 @@ prel31_to_addr(const u32 *ptr)
 
 static unsigned long
 mmap_prel31_to_addr(const u32 *ptr, struct ex_region_info *ri,
-		    int is_src_exidx, int is_dst_exidx, int to_mmap)
+		    int src_type, int dst_type, int to_mmap)
 {
+	s32 offset;
 	u32 value, addr;
 	unsigned long addr_res;
-	s32 offset;
-	struct extab_info *ei_src, *ei_dst;
-
-	ei_src = is_src_exidx ? &ri->tabs.exidx : &ri->tabs.extab;
-	ei_dst = is_dst_exidx ? &ri->tabs.exidx : &ri->tabs.extab;
 
 	value = *ptr;
 	offset = (((s32)value) << 1) >> 1;
 
-	addr = mmap_addr_to_ex_addr((unsigned long)ptr, ri, is_src_exidx);
+	addr = mmap_addr_to_ex_addr((unsigned long)ptr, ri, src_type);
 	addr += offset;
 	addr_res = addr;
 
 	if (to_mmap)
-		addr_res = ex_addr_to_mmap_addr(addr_res, ri, is_dst_exidx);
+		addr_res = ex_addr_to_mmap_addr(addr_res, ri, dst_type);
 
 	return addr_res;
 }
@@ -313,9 +306,9 @@ remove_ex_region(struct regions_data *rd,
 }
 
 static struct ex_region_info *
-search_ex_region(struct ex_region_info *array,
-		 unsigned long size,
-		 unsigned long key)
+__search_ex_region(struct ex_region_info *array,
+		   unsigned long size,
+		   unsigned long key)
 {
 	unsigned int i_min, i_max, mid;
 
@@ -340,7 +333,8 @@ search_ex_region(struct ex_region_info *array,
 	return NULL;
 }
 
-long quadd_search_ex_region(unsigned long key, struct ex_region_info *ri)
+static long
+search_ex_region(unsigned long key, struct ex_region_info *ri)
 {
 	struct regions_data *rd;
 	struct ex_region_info *ri_p = NULL;
@@ -351,13 +345,45 @@ long quadd_search_ex_region(unsigned long key, struct ex_region_info *ri)
 	if (!rd)
 		goto out;
 
-	ri_p = search_ex_region(rd->entries, rd->curr_nr, key);
+	ri_p = __search_ex_region(rd->entries, rd->curr_nr, key);
 	if (ri_p)
 		memcpy(ri, ri_p, sizeof(*ri));
 
 out:
 	rcu_read_unlock();
 	return ri_p ? 0 : -ENOENT;
+}
+
+static long
+get_extabs_ehabi(unsigned long key, struct ex_region_info *ri)
+{
+	long err;
+	struct extab_info *ti_extab, *ti_exidx;
+
+	err = search_ex_region(key, ri);
+	if (err < 0)
+		return err;
+
+	ti_extab = &ri->ex_sec[QUADD_SEC_TYPE_EXTAB];
+	ti_exidx = &ri->ex_sec[QUADD_SEC_TYPE_EXIDX];
+
+	return (ti_extab->length && ti_exidx->length) ? 0 : -ENOENT;
+}
+
+long
+quadd_get_extabs_ehframe(unsigned long key, struct ex_region_info *ri)
+{
+	long err;
+	struct extab_info *ti_ehfr, *ti_ehfr_hdr;
+
+	err = search_ex_region(key, ri);
+	if (err < 0)
+		return err;
+
+	ti_ehfr = &ri->ex_sec[QUADD_SEC_TYPE_EH_FRAME];
+	ti_ehfr_hdr = &ri->ex_sec[QUADD_SEC_TYPE_EH_FRAME_HDR];
+
+	return (ti_ehfr->length && ti_ehfr_hdr->length) ? 0 : -ENOENT;
 }
 
 static struct regions_data *rd_alloc(unsigned long size)
@@ -394,10 +420,10 @@ static void rd_free_rcu(struct rcu_head *rh)
 	rd_free(rd);
 }
 
-int quadd_unwind_set_extab(struct quadd_extables *extabs,
+int quadd_unwind_set_extab(struct quadd_sections *extabs,
 			   struct quadd_mmap_area *mmap)
 {
-	int err = 0;
+	int i, err = 0;
 	unsigned long nr_entries, nr_added, new_size;
 	struct ex_region_info ri_entry;
 	struct extab_info *ti;
@@ -443,17 +469,23 @@ int quadd_unwind_set_extab(struct quadd_extables *extabs,
 	ri_entry.tf_start = 0;
 	ri_entry.tf_end = 0;
 
-	ti = &ri_entry.tabs.exidx;
-	ti->addr = extabs->exidx.addr;
-	ti->length = extabs->exidx.length;
-	ti->mmap_offset = extabs->reserved[QUADD_EXT_IDX_EXIDX_OFFSET];
-	ctx.ex_tables_size += ti->length;
+	for (i = 0; i < QUADD_SEC_TYPE_MAX; i++) {
+		struct quadd_sec_info *si = &extabs->sec[i];
 
-	ti = &ri_entry.tabs.extab;
-	ti->addr = extabs->extab.addr;
-	ti->length = extabs->extab.length;
-	ti->mmap_offset = extabs->reserved[QUADD_EXT_IDX_EXTAB_OFFSET];
-	ctx.ex_tables_size += ti->length;
+		ti = &ri_entry.ex_sec[i];
+
+		if (!si->addr) {
+			ti->addr = 0;
+			ti->length = 0;
+			ti->mmap_offset = 0;
+
+			continue;
+		}
+
+		ti->addr = si->addr;
+		ti->length = si->length;
+		ti->mmap_offset = si->mmap_offset;
+	}
 
 	nr_added = add_ex_region(rd_new, &ri_entry);
 	if (nr_added == 0)
@@ -517,7 +549,7 @@ quadd_unwind_set_tail_info(unsigned long vm_start,
 
 	rd_new->curr_nr = nr_entries;
 
-	ri = search_ex_region(rd_new->entries, nr_entries, vm_start);
+	ri = __search_ex_region(rd_new->entries, nr_entries, vm_start);
 	if (!ri)
 		goto error_free;
 
@@ -599,33 +631,41 @@ error_out:
 static const struct unwind_idx *
 unwind_find_idx(struct ex_region_info *ri, u32 addr)
 {
-	unsigned long length;
 	u32 value;
+	unsigned long length;
+	struct extab_info *ti;
 	struct unwind_idx *start;
 	struct unwind_idx *stop;
 	struct unwind_idx *mid = NULL;
-	length = ri->tabs.exidx.length / sizeof(*start);
+
+	ti = &ri->ex_sec[QUADD_SEC_TYPE_EXIDX];
+
+	length = ti->length / sizeof(*start);
 
 	if (unlikely(!length))
 		return NULL;
 
-	start = (struct unwind_idx *)((char *)ri->mmap->data +
-		ri->tabs.exidx.mmap_offset);
+	start = (struct unwind_idx *)((char *)ri->mmap->data + ti->mmap_offset);
 	stop = start + length - 1;
 
-	value = (u32)mmap_prel31_to_addr(&start->addr_offset, ri, 1, 0, 0);
+	value = (u32)mmap_prel31_to_addr(&start->addr_offset, ri,
+					 QUADD_SEC_TYPE_EXIDX,
+					 QUADD_SEC_TYPE_EXTAB, 0);
 	if (addr < value)
 		return NULL;
 
-	value = (u32)mmap_prel31_to_addr(&stop->addr_offset, ri, 1, 0, 0);
+	value = (u32)mmap_prel31_to_addr(&stop->addr_offset, ri,
+					 QUADD_SEC_TYPE_EXIDX,
+					 QUADD_SEC_TYPE_EXTAB, 0);
 	if (addr >= value)
 		return NULL;
 
 	while (start < stop - 1) {
 		mid = start + ((stop - start) >> 1);
 
-		value = (u32)mmap_prel31_to_addr(&mid->addr_offset,
-						 ri, 1, 0, 0);
+		value = (u32)mmap_prel31_to_addr(&mid->addr_offset, ri,
+						 QUADD_SEC_TYPE_EXIDX,
+						 QUADD_SEC_TYPE_EXTAB, 0);
 
 		if (addr < value)
 			stop = mid;
@@ -946,7 +986,9 @@ unwind_frame(struct ex_region_info *ri,
 	} else if ((val & 0x80000000) == 0) {
 		/* prel31 to the unwind table */
 		ctrl.insn = (u32 *)(unsigned long)
-				mmap_prel31_to_addr(&idx->insn, ri, 1, 0, 1);
+				mmap_prel31_to_addr(&idx->insn, ri,
+						    QUADD_SEC_TYPE_EXIDX,
+						    QUADD_SEC_TYPE_EXTAB, 1);
 		if (!ctrl.insn)
 			return -QUADD_URC_EACCESS;
 	} else if ((val & 0xff000000) == 0x80000000) {
@@ -1027,6 +1069,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 	while (1) {
 		long err;
 		int nr_added;
+		struct extab_info *ti;
 		unsigned long where = frame->pc;
 		struct vm_area_struct *vma_pc;
 		struct mm_struct *mm = task->mm;
@@ -1043,8 +1086,10 @@ unwind_backtrace(struct quadd_callchain *cc,
 		if (!vma_pc)
 			break;
 
-		if (!is_vma_addr(ri->tabs.exidx.addr, vma_pc, sizeof(u32))) {
-			err = quadd_search_ex_region(vma_pc->vm_start, &ri_new);
+		ti = &ri->ex_sec[QUADD_SEC_TYPE_EXIDX];
+
+		if (!is_vma_addr(ti->addr, vma_pc, sizeof(u32))) {
+			err = get_extabs_ehabi(vma_pc->vm_start, &ri_new);
 			if (err) {
 				cc->unw_rc = QUADD_URC_TBL_NOT_EXIST;
 				break;
@@ -1074,9 +1119,9 @@ unwind_backtrace(struct quadd_callchain *cc,
 }
 
 unsigned int
-quadd_aarch32_get_user_callchain_ut(struct pt_regs *regs,
-				    struct quadd_callchain *cc,
-				    struct task_struct *task)
+quadd_get_user_cc_arm32_ehabi(struct pt_regs *regs,
+			      struct quadd_callchain *cc,
+			      struct task_struct *task)
 {
 	long err;
 	int nr_prev = cc->nr;
@@ -1090,10 +1135,8 @@ quadd_aarch32_get_user_callchain_ut(struct pt_regs *regs,
 		return 0;
 
 #ifdef CONFIG_ARM64
-	if (!compat_user_mode(regs)) {
-		pr_warn_once("user_mode 64: unsupported\n");
+	if (!compat_user_mode(regs))
 		return 0;
-	}
 #endif
 
 	if (cc->unw_rc == QUADD_URC_LEVEL_TOO_DEEP)
@@ -1134,7 +1177,7 @@ quadd_aarch32_get_user_callchain_ut(struct pt_regs *regs,
 	if (!vma_sp)
 		return 0;
 
-	err = quadd_search_ex_region(vma->vm_start, &ri);
+	err = get_extabs_ehabi(vma->vm_start, &ri);
 	if (err) {
 		cc->unw_rc = QUADD_URC_TBL_NOT_EXIST;
 		return 0;
@@ -1142,13 +1185,16 @@ quadd_aarch32_get_user_callchain_ut(struct pt_regs *regs,
 
 	unwind_backtrace(cc, &ri, &frame, vma_sp, task);
 
+	pr_debug("%s: exit, cc->nr: %d --> %d\n",
+		 __func__, nr_prev, cc->nr);
+
 	return cc->nr;
 }
 
 int
-quadd_aarch32_is_ex_entry_exist(struct pt_regs *regs,
-				unsigned long addr,
-				struct task_struct *task)
+quadd_is_ex_entry_exist_arm32_ehabi(struct pt_regs *regs,
+				    unsigned long addr,
+				    struct task_struct *task)
 {
 	long err;
 	u32 value;
@@ -1164,7 +1210,7 @@ quadd_aarch32_is_ex_entry_exist(struct pt_regs *regs,
 	if (!vma)
 		return 0;
 
-	err = quadd_search_ex_region(vma->vm_start, &ri);
+	err = get_extabs_ehabi(vma->vm_start, &ri);
 	if (err)
 		return 0;
 
@@ -1176,6 +1222,7 @@ quadd_aarch32_is_ex_entry_exist(struct pt_regs *regs,
 	if (err < 0)
 		return 0;
 
+	/* EXIDX_CANTUNWIND */
 	if (value == 1)
 		return 0;
 

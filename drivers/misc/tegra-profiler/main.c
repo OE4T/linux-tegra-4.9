@@ -465,7 +465,7 @@ void quadd_get_state(struct quadd_module_state *state)
 }
 
 static int
-set_extab(struct quadd_extables *extabs,
+set_extab(struct quadd_sections *extabs,
 	  struct quadd_mmap_area *mmap)
 {
 	return quadd_unwind_set_extab(extabs, mmap);

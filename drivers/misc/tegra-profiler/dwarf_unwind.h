@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/dwarf_unwind.h
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,15 +21,15 @@ struct pt_regs;
 struct quadd_callchain;
 struct task_struct;
 
-unsigned int
-quadd_aarch64_get_user_callchain_ut(struct pt_regs *regs,
-				    struct quadd_callchain *cc,
-				    struct task_struct *task);
-
 int
-quadd_aarch64_is_ex_entry_exist(struct pt_regs *regs,
-				unsigned long addr,
-				struct task_struct *task);
+quadd_is_ex_entry_exist_dwarf(struct pt_regs *regs,
+			      unsigned long addr,
+			      struct task_struct *task);
+
+unsigned int
+quadd_get_user_cc_dwarf(struct pt_regs *regs,
+			struct quadd_callchain *cc,
+			struct task_struct *task);
 
 int quadd_dwarf_unwind_start(void);
 void quadd_dwarf_unwind_stop(void);

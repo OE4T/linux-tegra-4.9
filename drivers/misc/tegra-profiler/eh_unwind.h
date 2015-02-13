@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/eh_unwind.h
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,6 +17,8 @@
 #ifndef __QUADD_EH_UNWIND_H__
 #define __QUADD_EH_UNWIND_H__
 
+#include <linux/tegra_profiler.h>
+
 struct pt_regs;
 struct quadd_callchain;
 struct quadd_ctx;
@@ -25,9 +27,9 @@ struct task_struct;
 struct quadd_mmap_area;
 
 unsigned int
-quadd_aarch32_get_user_callchain_ut(struct pt_regs *regs,
-				    struct quadd_callchain *cc,
-				    struct task_struct *task);
+quadd_get_user_cc_arm32_ehabi(struct pt_regs *regs,
+			      struct quadd_callchain *cc,
+			      struct task_struct *task);
 
 int quadd_unwind_init(void);
 void quadd_unwind_deinit(void);
@@ -35,19 +37,20 @@ void quadd_unwind_deinit(void);
 int quadd_unwind_start(struct task_struct *task);
 void quadd_unwind_stop(void);
 
-int quadd_unwind_set_extab(struct quadd_extables *extabs,
+int quadd_unwind_set_extab(struct quadd_sections *extabs,
 			   struct quadd_mmap_area *mmap);
 void quadd_unwind_delete_mmap(struct quadd_mmap_area *mmap);
 
 int
-quadd_aarch32_is_ex_entry_exist(struct pt_regs *regs,
-				unsigned long addr,
-				struct task_struct *task);
+quadd_is_ex_entry_exist_arm32_ehabi(struct pt_regs *regs,
+				    unsigned long addr,
+				    struct task_struct *task);
 
 void
 quadd_unwind_set_tail_info(unsigned long vm_start,
 			   unsigned long tf_start,
 			   unsigned long tf_end);
+
 
 struct extab_info {
 	unsigned long addr;
@@ -56,16 +59,11 @@ struct extab_info {
 	unsigned long mmap_offset;
 };
 
-struct extables {
-	struct extab_info extab;
-	struct extab_info exidx;
-};
-
 struct ex_region_info {
 	unsigned long vm_start;
 	unsigned long vm_end;
 
-	struct extables tabs;
+	struct extab_info ex_sec[QUADD_SEC_TYPE_MAX];
 	struct quadd_mmap_area *mmap;
 
 	struct list_head list;
@@ -74,6 +72,7 @@ struct ex_region_info {
 	unsigned long tf_end;
 };
 
-long quadd_search_ex_region(unsigned long key, struct ex_region_info *ri);
+long
+quadd_get_extabs_ehframe(unsigned long key, struct ex_region_info *ri);
 
 #endif	/* __QUADD_EH_UNWIND_H__ */

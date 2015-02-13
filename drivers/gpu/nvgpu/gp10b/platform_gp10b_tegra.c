@@ -216,6 +216,9 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 	.can_railgate           = false,
 	.enable_elpg            = false,
 
+	/* ptimer scaling constant */
+	.ptimerscaling10x	= 10,
+
 	.probe = gp10b_tegra_probe,
 	.late_probe = gp10b_tegra_late_probe,
 

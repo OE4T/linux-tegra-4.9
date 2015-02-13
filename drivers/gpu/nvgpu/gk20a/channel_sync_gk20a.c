@@ -275,6 +275,7 @@ static void gk20a_channel_syncpt_destroy(struct gk20a_channel_sync *s)
 {
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
+	nvhost_syncpt_set_min_eq_max_ext(sp->host1x_pdev, sp->id);
 	nvhost_free_syncpt(sp->id);
 	kfree(sp);
 }
@@ -291,6 +292,7 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 	sp->c = c;
 	sp->host1x_pdev = c->g->host1x_dev;
 	sp->id = nvhost_get_syncpt_host_managed(c->g->dev, c->hw_chid);
+	nvhost_syncpt_set_min_eq_max_ext(sp->host1x_pdev, sp->id);
 	if (!sp->id) {
 		kfree(sp);
 		gk20a_err(&c->g->dev->dev, "failed to get free syncpt");

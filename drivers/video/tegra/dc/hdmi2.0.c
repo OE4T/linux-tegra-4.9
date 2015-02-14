@@ -90,15 +90,6 @@ static struct tmds_prod_pair tmds_config_modes[] = {
 
 static struct tegra_hdmi *dc_hdmi;
 
-static void tegra_clk_writel(u32 val, u32 mask, u32 offset)
-{
-	u32 temp = readl(IO_ADDRESS(0x60006000 + offset));
-
-	temp &= ~(mask);
-	temp |= val;
-	writel(temp, IO_ADDRESS(0x60006000 + offset));
-}
-
 static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi);
 static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type);
 static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk);
@@ -1831,12 +1822,17 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 
 	if (clk_type == TEGRA_HDMI_BRICK_CLK) {
 		u32 val;
+		struct tegra_dc_sor_data *sor = hdmi->sor;
+		int div = hdmi->dc->mode.pclk < 340000000 ? 1 : 2;
+		unsigned long rate = clk_get_rate(sor->src_switch_clk);
+		unsigned long parent_rate =
+			clk_get_rate(clk_get_parent(sor->src_switch_clk));
 
-		/* TODO: Set sor divider */
-		if (hdmi->dc->mode.pclk < 340000000)
-			tegra_clk_writel(0, 0xff, 0x410);
-		else
-			tegra_clk_writel(2, 0xff, 0x410);
+		/* Set sor divider */
+		if (rate != parent_rate / div) {
+			rate = parent_rate / div;
+			clk_set_rate(sor->src_switch_clk, rate);
+		}
 
 		/* Select brick muxes */
 		val = (hdmi->dc->mode.pclk < 340000000) ?
@@ -1847,8 +1843,18 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 		tegra_sor_writel(hdmi->sor, NV_SOR_CLK_CNTRL, val);
 		usleep_range(250, 300); /* sor brick pll stabilization delay */
 
-		/* TODO: Select sor clock muxes */
-		tegra_clk_writel((3 << 14), (0x3 << 14), 0x410);
+		/*
+		 * Report brick configuration and rate, so that SOR clock tree
+		 * is properly updated. No h/w changes by clock api calls below,
+		 * just sync s/w state with brick h/w.
+		 */
+		rate = rate/NV_SOR_HDMI_BRICK_DIV*NV_SOR_HDMI_BRICK_MUL(val);
+		if (clk_get_parent(sor->brick_clk) != sor->src_switch_clk)
+			clk_set_parent(sor->brick_clk, sor->src_switch_clk);
+		clk_set_rate(sor->brick_clk, rate);
+
+		/* Select sor clock muxes */
+		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 3);
 
 		tegra_dc_writel(hdmi->dc, PIXEL_CLK_DIVIDER_PCD1 |
 			SHIFT_CLK_DIVIDER(tegra_hdmi_get_shift_clk_div(hdmi)),
@@ -1883,13 +1889,9 @@ static long tegra_hdmi_get_pclk(struct tegra_dc_mode *mode)
 
 static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	struct clk *parent_clk = clk_get_sys(NULL,
-				dc->out->parent_clk ? : "pll_d2");
-#else
 	struct clk *parent_clk = clk_get(NULL,
 				dc->out->parent_clk ? : "pll_d2");
-#endif
+
 	dc->mode.pclk = tegra_hdmi_get_pclk(&dc->mode);
 
 	if (IS_ERR_OR_NULL(parent_clk)) {
@@ -1897,24 +1899,54 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		return 0;
 	}
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
 	if (clk_get_parent(clk) != parent_clk)
 		clk_set_parent(clk, parent_clk);
+#else
+	if (clk == dc->clk) {
+		if (clk_get_parent(clk) != parent_clk) {
+			if (clk_set_parent(clk, parent_clk)) {
+				dev_err(&dc->ndev->dev,
+					"hdmi: set dc parent failed\n");
+				return 0;
+			}
+		}
+	} else {
+		struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+		struct tegra_dc_sor_data *sor = hdmi->sor;
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	/* TODO: Set parent manually */
-	if (clk == dc->clk)
-		tegra_clk_writel(5 << 29, (0x7 << 29), 0x13c);
-	else
-		tegra_clk_writel((5 << 29), (0x7 << 29), 0x410);
+		if (clk_get_parent(sor->src_switch_clk) != parent_clk) {
+			if (clk_set_parent(sor->src_switch_clk, parent_clk)) {
+				dev_err(&dc->ndev->dev,
+					"hdmi: set src switch parent failed\n");
+				return 0;
+			}
+		}
+	}
 #endif
-
 	if (dc->initialized)
 		goto skip_setup;
 	if (clk_get_rate(parent_clk) != dc->mode.pclk)
 		clk_set_rate(parent_clk, dc->mode.pclk);
 skip_setup:
-	tegra_dvfs_set_rate(parent_clk, dc->mode.pclk);
-	tegra_dvfs_set_rate(clk, dc->mode.pclk);
+	/*
+	 * DC clock divider is controlled by DC driver transparently to clock
+	 * framework -- hence, direct call to DVFS with target mode rate. SOR
+	 * clock rate in clock tree is properly updated, and can be used for
+	 * DVFS update.
+	 *
+	 * TODO: tegra_hdmi_controller_enable() procedure 1st configures SOR
+	 * clock via tegra_hdmi_config_clk(), and then calls this function
+	 * that may re-lock parent PLL. That needs to be double-checked:
+	 * in general re-locking PLL while the downstream module is already
+	 * sourced from it is not recommended. If/when the order of enabling
+	 * HDMI controller is changed, we can remove direct DVFS call for SOR
+	 * (but for DC it should be kept, anyway).
+	 */
+	if (clk == dc->clk)
+		tegra_dvfs_set_rate(clk, dc->mode.pclk);
+	else
+		tegra_dvfs_set_rate(clk, clk_get_rate(clk));
 
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 }

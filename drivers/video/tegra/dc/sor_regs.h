@@ -1,7 +1,7 @@
 /*
 * drivers/video/tegra/dc/sor_regs.h
 *
-* Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
+* Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
 *
 * This software is licensed under the terms of the GNU General Public
 * License version 2, as published by the Free Software Foundation, and
@@ -20,6 +20,8 @@
 #define NV_SOR_HDMI_INFOFRAME_HEADER_TYPE(x)		((x) & 0xff)
 #define NV_SOR_HDMI_INFOFRAME_HEADER_VERSION(x)		(((x) & 0xff) << 8)
 #define NV_SOR_HDMI_INFOFRAME_HEADER_LEN(x)		(((x) & 0xf) << 16)
+#define NV_SOR_HDMI_BRICK_MUL(x)			(((x) >> 2) & 0x1f)
+#define NV_SOR_HDMI_BRICK_DIV				10
 
 #define NV_SOR_SUPER_STATE0					(0x1)
 #define NV_SOR_SUPER_STATE0_UPDATE_SHIFT			(0)

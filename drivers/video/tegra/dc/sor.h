@@ -2,7 +2,7 @@
 /*
  * drivers/video/tegra/dc/sor.h
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -90,6 +90,8 @@ struct tegra_dc_sor_data {
 	struct resource	*base_res;
 	struct clk	*sor_clk;
 	struct clk *safe_clk;
+	struct clk *brick_clk;
+	struct clk *src_switch_clk;
 
 	u8					 portnum;	/* 0 or 1 */
 	const struct tegra_dc_dp_link_config	*link_cfg;

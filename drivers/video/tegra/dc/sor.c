@@ -431,7 +431,9 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	void __iomem *base;
 	struct clk *clk;
 	int err, i;
-	__maybe_unused struct clk *safe_clk = NULL;
+	struct clk *safe_clk = NULL;
+	struct clk *brick_clk = NULL;
+	struct clk *src_clk = NULL;
 	struct device_node *np = dc->ndev->dev.of_node;
 	struct device_node *np_sor =
 		dc->ndev->id ? of_find_node_by_path(SOR1_NODE) :
@@ -497,11 +499,27 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 
 #ifndef	CONFIG_ARCH_TEGRA_12x_SOC
 	safe_clk = clk_get(NULL, "sor_safe");
-	if (IS_ERR_OR_NULL(clk)) {
+	if (IS_ERR_OR_NULL(safe_clk)) {
 		dev_err(&dc->ndev->dev, "sor: can't get safe clock\n");
 		err = -ENOENT;
-		goto err_iounmap_reg;
+		goto err_safe;
 	}
+#ifndef CONFIG_TEGRA_NVDISPLAY
+	if (dc->ndev->id) {
+		brick_clk = clk_get(NULL, "sor1_brick");
+		if (IS_ERR_OR_NULL(brick_clk)) {
+			dev_err(&dc->ndev->dev, "sor: can't get brick clock\n");
+			err = -ENOENT;
+			goto err_brick;
+		}
+		src_clk = clk_get(NULL, "sor1_src");
+		if (IS_ERR_OR_NULL(src_clk)) {
+			dev_err(&dc->ndev->dev, "sor: can't get src clock\n");
+			err = -ENOENT;
+			goto err_src;
+		}
+	}
+#endif
 #endif
 
 	for (i = 0; i < sizeof(sor->xbar_ctrl)/sizeof(u32); i++)
@@ -516,6 +534,8 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	sor->base_res = base_res;
 	sor->sor_clk = clk;
 	sor->safe_clk = safe_clk;
+	sor->brick_clk = brick_clk;
+	sor->src_switch_clk = src_clk;
 	sor->link_cfg = cfg;
 	sor->portnum = 0;
 	sor->sor_state = SOR_DETACHED;
@@ -524,6 +544,13 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	of_node_put(np_sor);
 
 	return sor;
+
+err_src: __maybe_unused
+	clk_put(brick_clk);
+err_brick: __maybe_unused
+	clk_put(safe_clk);
+err_safe: __maybe_unused
+	clk_put(clk);
 err_iounmap_reg:
 	devm_iounmap(&dc->ndev->dev, base);
 err_release_resource_reg:
@@ -581,6 +608,10 @@ void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 	clk_put(sor->sor_clk);
 	if (sor->safe_clk)
 		clk_put(sor->safe_clk);
+	if (sor->brick_clk)
+		clk_put(sor->brick_clk);
+	if (sor->src_switch_clk)
+		clk_put(sor->src_switch_clk);
 	devm_iounmap(&sor->dc->ndev->dev, sor->base);
 	devm_release_mem_region(&sor->dc->ndev->dev,
 		sor->res->start, resource_size(sor->res));

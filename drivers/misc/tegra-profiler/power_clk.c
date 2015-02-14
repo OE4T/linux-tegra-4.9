@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/power_clk.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,6 +22,7 @@
 #include <linux/notifier.h>
 #include <linux/cpu.h>
 #include <linux/timer.h>
+#include <linux/err.h>
 
 #include <linux/tegra_profiler.h>
 
@@ -92,7 +93,7 @@ static void read_source(struct power_clk_source *s)
 	case QUADD_POWER_CLK_GPU:
 		/* update gpu frequency */
 		s->clkp = clk_get_sys("3d", NULL);
-		if (s->clkp) {
+		if (!IS_ERR_OR_NULL(s->clkp)) {
 			s->data[0].value =
 				clk_get_rate(s->clkp) / 1000;
 			clk_put(s->clkp);
@@ -102,7 +103,7 @@ static void read_source(struct power_clk_source *s)
 	case QUADD_POWER_CLK_EMC:
 		/* update emc frequency */
 		s->clkp = clk_get_sys("cpu", "emc");
-		if (s->clkp) {
+		if (!IS_ERR_OR_NULL(s->clkp)) {
 			s->data[0].value =
 				clk_get_rate(s->clkp) / 1000;
 			clk_put(s->clkp);
@@ -332,38 +333,40 @@ int quadd_power_clk_start(void)
 	/* setup gpu frequency */
 	s = &power_ctx.gpu;
 	s->clkp = clk_get_sys("3d", NULL);
-	if (s->clkp) {
+	if (!IS_ERR_OR_NULL(s->clkp)) {
 #ifdef CONFIG_COMMON_CLK
 		status = clk_notifier_register(s->clkp, s->nb);
 		if (status < 0) {
 			pr_err("error: could not setup gpu freq\n");
+			clk_put(s->clkp);
 			return status;
 		}
-		clk_put(s->clkp);
 #endif
+		clk_put(s->clkp);
 		reset_data(s);
 		atomic_set(&s->active, 1);
 	} else {
-		pr_err("error: could not setup gpu freq\n");
+		pr_warn("warning: could not setup gpu freq\n");
 		atomic_set(&s->active, 0);
 	}
 
 	/* setup emc frequency */
 	s = &power_ctx.emc;
 	s->clkp = clk_get_sys("cpu", "emc");
-	if (s->clkp) {
+	if (!IS_ERR_OR_NULL(s->clkp)) {
 #ifdef CONFIG_COMMON_CLK
 		status = clk_notifier_register(s->clkp, s->nb);
 		if (status < 0) {
 			pr_err("error: could not setup emc freq\n");
+			clk_put(s->clkp);
 			return status;
 		}
-		clk_put(s->clkp);
 #endif
+		clk_put(s->clkp);
 		reset_data(s);
 		atomic_set(&s->active, 1);
 	} else {
-		pr_err("error: could not setup emc freq\n");
+		pr_warn("warning: could not setup emc freq\n");
 		atomic_set(&s->active, 0);
 	}
 
@@ -424,8 +427,6 @@ void quadd_power_clk_stop(void)
 
 int quadd_power_clk_init(struct quadd_ctx *quadd_ctx)
 {
-	pr_info("power_clk: init\n");
-
 	init_source(&power_ctx.cpu, cpu_notifier_call, nr_cpu_ids,
 		    QUADD_POWER_CLK_CPU);
 	init_source(&power_ctx.gpu, gpu_notifier_call, 1, QUADD_POWER_CLK_GPU);
@@ -438,6 +439,5 @@ int quadd_power_clk_init(struct quadd_ctx *quadd_ctx)
 
 void quadd_power_clk_deinit(void)
 {
-	pr_info("power_clk: deinit\n");
 	quadd_power_clk_stop();
 }

@@ -271,7 +271,7 @@ static void __iomem *gk20a_ioremap_resource(struct platform_device *dev, int i,
 		return NULL;
 	if (out)
 		*out = r;
-	return devm_request_and_ioremap(&dev->dev, r);
+	return devm_ioremap_resource(&dev->dev, r);
 }
 
 /* TBD: strip from released */
@@ -285,9 +285,9 @@ static int gk20a_init_sim_support(struct platform_device *dev)
 	g->sim.g = g;
 	g->sim.regs = gk20a_ioremap_resource(dev, GK20A_SIM_IORESOURCE_MEM,
 					     &g->sim.reg_mem);
-	if (!g->sim.regs) {
+	if (IS_ERR(g->sim.regs)) {
 		dev_err(d, "failed to remap gk20a sim regs\n");
-		err = -ENXIO;
+		err = PTR_ERR(g->sim.regs);
 		goto fail;
 	}
 
@@ -617,17 +617,17 @@ static int gk20a_init_support(struct platform_device *dev)
 
 	g->regs = gk20a_ioremap_resource(dev, GK20A_BAR0_IORESOURCE_MEM,
 					 &g->reg_mem);
-	if (!g->regs) {
+	if (IS_ERR(g->regs)) {
 		dev_err(dev_from_gk20a(g), "failed to remap gk20a registers\n");
-		err = -ENXIO;
+		err = PTR_ERR(g->regs);
 		goto fail;
 	}
 
 	g->bar1 = gk20a_ioremap_resource(dev, GK20A_BAR1_IORESOURCE_MEM,
 					 &g->bar1_mem);
-	if (!g->bar1) {
+	if (IS_ERR(g->bar1)) {
 		dev_err(dev_from_gk20a(g), "failed to remap gk20a bar1\n");
-		err = -ENXIO;
+		err = PTR_ERR(g->regs);
 		goto fail;
 	}
 

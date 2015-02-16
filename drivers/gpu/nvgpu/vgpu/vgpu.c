@@ -169,10 +169,10 @@ static int vgpu_init_support(struct platform_device *dev)
 		goto fail;
 	}
 
-	g->bar1 = devm_request_and_ioremap(&dev->dev, r);
-	if (!g->bar1) {
+	g->bar1 = devm_ioremap_resource(&dev->dev, r);
+	if (IS_ERR(g->bar1)) {
 		dev_err(dev_from_gk20a(g), "failed to remap gk20a bar1\n");
-		err = -ENXIO;
+		err = PTR_ERR(g->bar1);
 		goto fail;
 	}
 

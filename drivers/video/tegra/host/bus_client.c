@@ -1477,6 +1477,7 @@ int nvhost_client_device_get_resources(struct platform_device *dev)
 	int i;
 	void __iomem *regs = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	int ret;
 
 	for (i = 0; i < dev->num_resources; i++) {
 		struct resource *r = NULL;
@@ -1486,9 +1487,11 @@ int nvhost_client_device_get_resources(struct platform_device *dev)
 		if (!r)
 			break;
 
-		regs = devm_request_and_ioremap(&dev->dev, r);
-		if (!regs)
+		regs = devm_ioremap_resource(&dev->dev, r);
+		if (IS_ERR(regs)) {
+			ret = PTR_ERR(regs);
 			goto fail;
+		}
 
 		pdata->aperture[i] = regs;
 	}
@@ -1498,7 +1501,7 @@ int nvhost_client_device_get_resources(struct platform_device *dev)
 fail:
 	dev_err(&dev->dev, "failed to get register memory\n");
 
-	return -ENXIO;
+	return ret;
 }
 EXPORT_SYMBOL(nvhost_client_device_get_resources);
 

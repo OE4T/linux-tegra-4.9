@@ -902,9 +902,9 @@ static int nvhost_probe(struct platform_device *dev)
 	/* set private host1x device data */
 	nvhost_set_private_data(dev, host);
 
-	host->aperture = devm_request_and_ioremap(&dev->dev, regs);
-	if (!host->aperture) {
-		err = -ENXIO;
+	host->aperture = devm_ioremap_resource(&dev->dev, regs);
+	if (IS_ERR(host->aperture)) {
+		err = PTR_ERR(host->aperture);
 		goto fail;
 	}
 

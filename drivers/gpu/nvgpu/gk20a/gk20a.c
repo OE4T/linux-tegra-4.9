@@ -1164,6 +1164,7 @@ static int gk20a_pm_unrailgate(struct generic_pm_domain *domain)
 	return _gk20a_pm_unrailgate(platform->g->dev);
 }
 
+#if 0
 static int gk20a_pm_suspend(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
@@ -1188,6 +1189,7 @@ static int gk20a_pm_resume(struct device *dev)
 {
 	return gk20a_pm_finalize_poweron(dev);
 }
+#endif
 
 static int gk20a_pm_initialise_domain(struct platform_device *pdev)
 {
@@ -1211,8 +1213,11 @@ static int gk20a_pm_initialise_domain(struct platform_device *pdev)
 	domain->dev_ops.stop = gk20a_pm_disable_clk;
 	domain->dev_ops.save_state = gk20a_pm_prepare_poweroff;
 	domain->dev_ops.restore_state = gk20a_pm_finalize_poweron;
+#warning domain suspend/resume ops have been removed upstream
+#if 0
 	domain->dev_ops.suspend = gk20a_pm_suspend;
 	domain->dev_ops.resume = gk20a_pm_resume;
+#endif
 
 	device_set_wakeup_capable(&pdev->dev, 0);
 	ret = pm_genpd_add_device(domain, &pdev->dev);

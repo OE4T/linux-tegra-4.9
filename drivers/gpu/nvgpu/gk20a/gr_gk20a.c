@@ -580,7 +580,7 @@ int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
 
 	ch_ctx->patch_ctx.cpu_va = vmap(ch_ctx->patch_ctx.pages,
 			PAGE_ALIGN(ch_ctx->patch_ctx.size) >> PAGE_SHIFT,
-			0, pgprot_dmacoherent(PAGE_KERNEL));
+			0, pgprot_writecombine(PAGE_KERNEL));
 
 	if (!ch_ctx->patch_ctx.cpu_va)
 		return -ENOMEM;
@@ -691,7 +691,7 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c,
 
 	ctx_ptr = vmap(ch_ctx->gr_ctx->pages,
 			PAGE_ALIGN(ch_ctx->gr_ctx->size) >> PAGE_SHIFT,
-			0, pgprot_dmacoherent(PAGE_KERNEL));
+			0, pgprot_writecombine(PAGE_KERNEL));
 	if (!ctx_ptr)
 		return -ENOMEM;
 
@@ -1455,13 +1455,13 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 
 	gold_ptr = vmap(gr->global_ctx_buffer[GOLDEN_CTX].pages,
 			PAGE_ALIGN(gr->global_ctx_buffer[GOLDEN_CTX].size) >>
-			PAGE_SHIFT, 0, pgprot_dmacoherent(PAGE_KERNEL));
+			PAGE_SHIFT, 0, pgprot_writecombine(PAGE_KERNEL));
 	if (!gold_ptr)
 		goto clean_up;
 
 	ctx_ptr = vmap(ch_ctx->gr_ctx->pages,
 			PAGE_ALIGN(ch_ctx->gr_ctx->size) >> PAGE_SHIFT,
-			0, pgprot_dmacoherent(PAGE_KERNEL));
+			0, pgprot_writecombine(PAGE_KERNEL));
 	if (!ctx_ptr)
 		goto clean_up;
 
@@ -1535,7 +1535,7 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 
 	ctx_ptr = vmap(ch_ctx->gr_ctx->pages,
 			PAGE_ALIGN(ch_ctx->gr_ctx->size) >> PAGE_SHIFT,
-			0, pgprot_dmacoherent(PAGE_KERNEL));
+			0, pgprot_writecombine(PAGE_KERNEL));
 	if (!ctx_ptr)
 		return -ENOMEM;
 
@@ -1575,7 +1575,7 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 
 	ctx_ptr = vmap(ch_ctx->gr_ctx->pages,
 			PAGE_ALIGN(ch_ctx->gr_ctx->size) >> PAGE_SHIFT,
-			0, pgprot_dmacoherent(PAGE_KERNEL));
+			0, pgprot_writecombine(PAGE_KERNEL));
 	if (!ctx_ptr)
 		return -ENOMEM;
 
@@ -4554,7 +4554,7 @@ static int gr_gk20a_init_access_map(struct gk20a *g)
 
 	data = vmap(gr->global_ctx_buffer[PRIV_ACCESS_MAP].pages,
 		    PAGE_ALIGN(gr->global_ctx_buffer[PRIV_ACCESS_MAP].size) >>
-		    PAGE_SHIFT, 0, pgprot_dmacoherent(PAGE_KERNEL));
+		    PAGE_SHIFT, 0, pgprot_writecombine(PAGE_KERNEL));
 	if (!data) {
 		gk20a_err(dev_from_gk20a(g),
 			  "failed to map priv access map memory");
@@ -6970,7 +6970,7 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 	/* recoded in-place instead.*/
 	ctx_ptr = vmap(ch_ctx->gr_ctx->pages,
 			PAGE_ALIGN(ch_ctx->gr_ctx->size) >> PAGE_SHIFT,
-			0, pgprot_dmacoherent(PAGE_KERNEL));
+			0, pgprot_writecombine(PAGE_KERNEL));
 	if (!ctx_ptr) {
 		err = -ENOMEM;
 		goto cleanup;

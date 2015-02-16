@@ -51,11 +51,6 @@ struct notification {
 	u16 status;
 };
 
-struct fence {
-	u32 hw_chid;
-	u32 syncpt_val;
-};
-
 /* contexts associated with a channel */
 struct channel_ctx_gk20a {
 	struct gr_ctx_desc	*gr_ctx;

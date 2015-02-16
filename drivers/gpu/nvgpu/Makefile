@@ -5,6 +5,7 @@ ccflags-y += -Idrivers/video/tegra/host
 ccflags-y += -Idrivers/devfreq
 ccflags-y += -Wno-multichar
 ccflags-y += -Werror
+ccflags-y += -Wno-error=cpp
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/drivers/gpu/nvgpu

@@ -550,7 +550,7 @@ int map_gmmu_pages(void *handle, struct sg_table *sgt,
 		*kva = handle;
 	} else {
 		pages = (struct page **)handle;
-		*kva = vmap(pages, count, 0, pgprot_dmacoherent(PAGE_KERNEL));
+		*kva = vmap(pages, count, 0, pgprot_writecombine(PAGE_KERNEL));
 		if (!(*kva))
 			return -ENOMEM;
 	}

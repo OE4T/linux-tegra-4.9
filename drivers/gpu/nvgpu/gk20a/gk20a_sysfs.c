@@ -435,7 +435,7 @@ static ssize_t aelpg_param_read(struct device *device,
 		g->pmu.aelpg_param[3], g->pmu.aelpg_param[4]);
 }
 
-static DEVICE_ATTR(aelpg_param, S_IRWXUGO,
+static DEVICE_ATTR(aelpg_param, ROOTRW,
 		aelpg_param_read, aelpg_param_store);
 
 static ssize_t aelpg_enable_store(struct device *device,
@@ -648,7 +648,7 @@ static ssize_t tpc_fs_mask_read(struct device *device,
 	return sprintf(buf, "0x%x\n", tpc_fs_mask);
 }
 
-static DEVICE_ATTR(tpc_fs_mask, S_IRWXUGO, tpc_fs_mask_read, tpc_fs_mask_store);
+static DEVICE_ATTR(tpc_fs_mask, ROOTRW, tpc_fs_mask_read, tpc_fs_mask_store);
 
 void gk20a_remove_sysfs(struct device *dev)
 {

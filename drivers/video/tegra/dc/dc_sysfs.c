@@ -89,7 +89,7 @@ static ssize_t stats_enable_store(struct device *dev,
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	unsigned long val = 0;
 
-	if (strict_strtoul(buf, 10, &val) < 0)
+	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
 	if (mutex_lock_killable(&dc->lock))
@@ -123,7 +123,7 @@ static ssize_t enable_store(struct device *dev,
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	unsigned long val = 0;
 
-	if (strict_strtoul(buf, 10, &val) < 0)
+	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
 	if (val) {
@@ -230,7 +230,7 @@ static ssize_t crc_checksum_latched_store(struct device *dev,
 		return -EFAULT;
 	}
 
-	if (strict_strtoul(buf, 10, &val) < 0)
+	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
 	if (val == 1) {

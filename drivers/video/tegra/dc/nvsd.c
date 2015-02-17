@@ -1005,7 +1005,7 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 		if (IS_NVSD_ATTR(enable)) {
 				nvsd_check_and_update(0, 1, enable);
 		} else if (IS_NVSD_ATTR(aggressiveness)) {
-			err = strict_strtol(buf, 10, &result);
+			err = kstrtol(buf, 10, &result);
 			if (err)
 				return err;
 

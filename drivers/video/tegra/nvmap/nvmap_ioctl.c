@@ -666,11 +666,11 @@ int nvmap_ioctl_free(struct file *filp, unsigned long arg)
 static void inner_cache_maint(unsigned int op, void *vaddr, size_t size)
 {
 	if (op == NVMAP_CACHE_OP_WB_INV)
-		dmac_flush_range(vaddr, vaddr + size);
+		__dma_flush_range(vaddr, vaddr + size);
 	else if (op == NVMAP_CACHE_OP_INV)
-		dmac_map_area(vaddr, size, DMA_FROM_DEVICE);
+		__dma_map_area(vaddr, size, DMA_FROM_DEVICE);
 	else
-		dmac_map_area(vaddr, size, DMA_TO_DEVICE);
+		__dma_map_area(vaddr, size, DMA_TO_DEVICE);
 }
 
 static void outer_cache_maint(unsigned int op, phys_addr_t paddr, size_t size)

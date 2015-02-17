@@ -635,7 +635,7 @@ struct dma_buf *__nvmap_make_dmabuf(struct nvmap_client *client,
 	mutex_init(&info->maps_lock);
 
 	dmabuf = dma_buf_export(info, &nvmap_dma_buf_ops, handle->size,
-				O_RDWR);
+				O_RDWR, NULL);
 	if (IS_ERR(dmabuf)) {
 		err = PTR_ERR(dmabuf);
 		goto err_export;

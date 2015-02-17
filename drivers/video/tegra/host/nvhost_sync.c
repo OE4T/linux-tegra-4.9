@@ -284,17 +284,23 @@ static const struct sync_timeline_ops nvhost_sync_timeline_ops = {
 struct sync_fence *nvhost_sync_fdget(int fd)
 {
 	struct sync_fence *fence = sync_fence_fdget(fd);
-	struct list_head *pos;
+	int i;
 
 	if (!fence)
 		return fence;
 
-	list_for_each(pos, &fence->pt_list_head) {
-		struct sync_pt *pt =
-			container_of(pos, struct sync_pt, pt_list);
-		struct sync_timeline *timeline = pt->parent;
+	for (i = 0; i < fence->num_fences; i++) {
+		struct fence *pt = fence->cbs[i].sync_pt;
+		struct sync_pt *spt = sync_pt_from_fence(pt);
+		struct sync_timeline *t;
 
-		if (timeline->ops != &nvhost_sync_timeline_ops) {
+		if (spt == NULL) {
+			sync_fence_put(fence);
+			return NULL;
+		}
+
+		t = sync_pt_parent(spt);
+		if (t->ops != &nvhost_sync_timeline_ops) {
 			sync_fence_put(fence);
 			return NULL;
 		}
@@ -306,14 +312,7 @@ EXPORT_SYMBOL(nvhost_sync_fdget);
 
 int nvhost_sync_num_pts(struct sync_fence *fence)
 {
-	int num = 0;
-	struct list_head *pos;
-
-	list_for_each(pos, &fence->pt_list_head) {
-		num++;
-	}
-
-	return num;
+	return fence->num_fences;
 }
 EXPORT_SYMBOL(nvhost_sync_num_pts);
 

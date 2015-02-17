@@ -31,6 +31,7 @@
 #include <linux/pm_domain.h>
 #include <linux/pm_qos.h>
 #include <linux/time.h>
+#include <linux/fence.h>
 
 struct nvhost_master;
 struct nvhost_hwctx;

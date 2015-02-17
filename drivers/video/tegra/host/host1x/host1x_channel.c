@@ -114,7 +114,7 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 	struct nvhost_syncpt *sp = &host->syncpt;
 	struct sync_fence *fence;
 	struct sync_pt *pt;
-	struct list_head *pos;
+	int i;
 
 	if (fd < 0)
 		return;
@@ -124,9 +124,9 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 		return;
 
 	/* validate syncpt ids */
-	list_for_each(pos, &fence->pt_list_head) {
+	for (i = 0; i < fence->num_fences; i++) {
 		u32 id;
-		pt = container_of(pos, struct sync_pt, pt_list);
+		pt = sync_pt_from_fence(fence->cbs[i].sync_pt);
 		id = nvhost_sync_pt_id(pt);
 		if (!id || id >= nvhost_syncpt_nb_pts(sp)) {
 			sync_fence_put(fence);
@@ -143,11 +143,11 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 	 * buffer.
 	 */
 
-	list_for_each(pos, &fence->pt_list_head) {
+	for (i = 0; i < fence->num_fences; i++) {
 		u32 id;
 		u32 thresh;
 
-		pt = container_of(pos, struct sync_pt, pt_list);
+		pt = sync_pt_from_fence(fence->cbs[i].sync_pt);
 		id = nvhost_sync_pt_id(pt);
 		thresh = nvhost_sync_pt_thresh(pt);
 

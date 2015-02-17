@@ -32,6 +32,7 @@
 			regulator-name = "vdd-cpu";
 			regulator-min-microvolt = <606250>;
 			regulator-max-microvolt = <1400000>;
+			regulator-n-voltages = <128>;
 			regulator-boot-on;
 			regulator-always-on;
 			#thermal-sensor-cells = <0>;

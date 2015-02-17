@@ -47,8 +47,8 @@
 		#size-cells = <2>;
 		ranges;
 
-		generic_reserved: generic_carveout@0xa8f00000 {
-			reg = <0 0xa8f00000 0 0x20000000>; /* HACK: 512MB */
+		generic_reserved: generic_carveout@0xc0f00000 {
+			reg = <0 0xc0f00000 0 0x08000000>; /* HACK: 128MB */
 			no-map;
 		};
 	};

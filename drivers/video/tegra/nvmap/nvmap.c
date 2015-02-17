@@ -239,7 +239,7 @@ void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum,
 
 	if (h->flags != NVMAP_HANDLE_UNCACHEABLE &&
 	    h->flags != NVMAP_HANDLE_WRITE_COMBINE) {
-		dmac_flush_range(addr, addr + PAGE_SIZE);
+		__dma_flush_range(addr, addr + PAGE_SIZE);
 		outer_flush_range(paddr, paddr + PAGE_SIZE); /* FIXME */
 	}
 

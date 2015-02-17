@@ -347,12 +347,12 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 	if (!task)
 		task = current;
 
-	rcu_read_lock();
-	if (!task_nsproxy(task)) {
-		rcu_read_unlock();
+	task_lock(task);
+	if (!task->nsproxy) {
+		task_unlock(task);
 		return;
 	}
-	rcu_read_unlock();
+	task_unlock(task);
 
 	if (ctx->pmu && ctx->pmu_info.active)
 		nr_events += read_source(ctx->pmu, regs,

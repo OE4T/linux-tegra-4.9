@@ -141,7 +141,7 @@ static struct gk20a_sync_pt *gk20a_sync_pt_create_shared(
 
 	/* Store the dependency fence for this pt. */
 	if (dependency) {
-		if (dependency->status == 0) {
+		if (!atomic_read(&dependency->status)) {
 			shared->dep = dependency;
 		} else {
 			shared->dep_timestamp = ktime_get();
@@ -198,7 +198,6 @@ static int gk20a_sync_pt_has_signaled(struct sync_pt *sync_pt)
 {
 	struct gk20a_sync_pt *pt = to_gk20a_sync_pt(sync_pt);
 	struct gk20a_sync_timeline *obj = pt->obj;
-	struct sync_pt *pos;
 	bool signaled;
 
 	if (!pt->sema)
@@ -217,9 +216,12 @@ static int gk20a_sync_pt_has_signaled(struct sync_pt *sync_pt)
 		 * first.*/
 		if (pt->dep) {
 			s64 ns = 0;
-			struct list_head *dep_pts = &pt->dep->pt_list_head;
-			list_for_each_entry(pos, dep_pts, pt_list) {
-				ns = max(ns, ktime_to_ns(pos->timestamp));
+			struct fence *fence;
+			int i;
+
+			for (i = 0; i < pt->dep->num_fences; i++) {
+				fence = pt->dep->cbs[i].sync_pt;
+				ns = max(ns, ktime_to_ns(fence->timestamp));
 			}
 			pt->dep_timestamp = ns_to_ktime(ns);
 			sync_fence_put(pt->dep);
@@ -238,7 +240,7 @@ static inline ktime_t gk20a_sync_pt_duration(struct sync_pt *sync_pt)
 	struct gk20a_sync_pt *pt = to_gk20a_sync_pt(sync_pt);
 	if (!gk20a_sync_pt_has_signaled(sync_pt) || !pt->dep_timestamp.tv64)
 		return ns_to_ktime(0);
-	return ktime_sub(sync_pt->timestamp, pt->dep_timestamp);
+	return ktime_sub(sync_pt->base.timestamp, pt->dep_timestamp);
 }
 
 static int gk20a_sync_pt_compare(struct sync_pt *a, struct sync_pt *b)

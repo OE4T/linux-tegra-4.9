@@ -91,7 +91,6 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 #ifdef CONFIG_SYNC
 	int i;
 	int num_wait_cmds;
-	struct sync_pt *pt;
 	struct sync_fence *sync_fence;
 	struct priv_cmd_entry *wait_cmd = NULL;
 	struct gk20a_channel_syncpt *sp =
@@ -103,7 +102,8 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 		return -EINVAL;
 
 	/* validate syncpt ids */
-	list_for_each_entry(pt, &sync_fence->pt_list_head, pt_list) {
+	for (i = 0; i < sync_fence->num_fences; i++) {
+		struct sync_pt *pt = sync_pt_from_fence(sync_fence->cbs[i].sync_pt);
 		u32 wait_id = nvhost_sync_pt_id(pt);
 		if (!wait_id ||
 			 wait_id >= nvhost_syncpt_nb_pts_ext(sp->host1x_pdev)) {
@@ -122,7 +122,9 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 	}
 
 	i = 0;
-	list_for_each_entry(pt, &sync_fence->pt_list_head, pt_list) {
+	for (i = 0; i < sync_fence->num_fences; i++) {
+		struct fence *f = sync_fence->cbs[i].sync_pt;
+		struct sync_pt *pt = sync_pt_from_fence(f);
 		u32 wait_id = nvhost_sync_pt_id(pt);
 		u32 wait_value = nvhost_sync_pt_thresh(pt);
 

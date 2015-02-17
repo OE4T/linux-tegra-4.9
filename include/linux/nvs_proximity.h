@@ -78,7 +78,11 @@ struct nvs_proximity {
 static const struct iio_chan_spec iio_chan_spec_nvs_proximity[] = {
 	{
 		.type			= IIO_PROXIMITY,
-		.scan_type		= IIO_ST('u', 32, 32, 0),
+		.scan_type		= { .sign = 'u',
+					    .realbits = 32,
+					    .storagebits = 32,
+					    .endianness = IIO_CPU,
+					  },
 		.info_mask_shared_by_all
 					= BIT(IIO_CHAN_INFO_RAW) |
 					  BIT(IIO_CHAN_INFO_BATCH_FLUSH) |

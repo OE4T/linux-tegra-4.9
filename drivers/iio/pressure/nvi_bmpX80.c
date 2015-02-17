@@ -231,7 +231,11 @@ struct bmp_cmode {
 static const struct iio_chan_spec bmp_chan_pres[] = {
 	{
 		.type			= IIO_PRESSURE,
-		.scan_type		= IIO_ST('s', 32, 32, 0),
+		.scan_type		= { .sign = 's',
+                                            .realbits = 32,
+                                            .storagebits = 32,
+                                            .endianness = IIO_CPU,
+                                          },
 		.info_mask_shared_by_all
 					= BIT(IIO_CHAN_INFO_RAW) |
 					  BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
@@ -258,7 +262,11 @@ static const struct iio_chan_spec bmp_chan_pres[] = {
 static const struct iio_chan_spec bmp_chan_temp[] = {
 	{
 		.type			= IIO_TEMP,
-		.scan_type		= IIO_ST('s', 32, 32, 0),
+		.scan_type		= { .sign = 's',
+                                            .realbits = 32,
+                                            .storagebits = 32,
+                                            .endianness = IIO_CPU,
+                                          },
 		.info_mask_shared_by_all
 					= BIT(IIO_CHAN_INFO_RAW) |
 					  BIT(IIO_CHAN_INFO_BATCH_FLAGS) |

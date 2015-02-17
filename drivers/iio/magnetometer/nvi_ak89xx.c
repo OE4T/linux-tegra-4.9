@@ -156,7 +156,11 @@ static const struct iio_chan_spec akm_channels[] = {
 		.type			= IIO_MAGN,
 		.channel2		= IIO_MOD_X,
 		.scan_index		= AKM_SCAN_X,
-		.scan_type		= IIO_ST('s', 16, 16, 0),
+		.scan_type		= { .sign = 's',
+					    .realbits = 16,
+					    .storagebits = 16,
+					    .endianness = IIO_CPU,
+					  },
 		.info_mask_shared_by_all
 					= BIT(IIO_CHAN_INFO_RAW) |
 					  BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
@@ -182,7 +186,11 @@ static const struct iio_chan_spec akm_channels[] = {
 		.type			= IIO_MAGN,
 		.channel2		= IIO_MOD_Y,
 		.scan_index		= AKM_SCAN_Y,
-		.scan_type		= IIO_ST('s', 16, 16, 0),
+		.scan_type		= { .sign = 's',
+					    .realbits = 16,
+					    .storagebits = 16,
+					    .endianness = IIO_CPU,
+					  },
 		.info_mask_shared_by_all
 					= BIT(IIO_CHAN_INFO_RAW) |
 					  BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
@@ -208,7 +216,11 @@ static const struct iio_chan_spec akm_channels[] = {
 		.type			= IIO_MAGN,
 		.channel2		= IIO_MOD_Z,
 		.scan_index		= AKM_SCAN_Z,
-		.scan_type		= IIO_ST('s', 16, 16, 0),
+		.scan_type		= { .sign = 's',
+					    .realbits = 16,
+					    .storagebits = 16,
+					    .endianness = IIO_CPU,
+					  },
 		.info_mask_shared_by_all
 					= BIT(IIO_CHAN_INFO_RAW) |
 					  BIT(IIO_CHAN_INFO_BATCH_FLAGS) |

@@ -455,7 +455,208 @@
 		nvidia,phy-type = <2>;
 	};
 
+	soctherm@0x700E2000 {
+		throttle@oc1 {
+			device_type = "throttlectl";
+			oc-alarm-id = <1>;
+			priority = <50>;
+			mode = "brief";
+			intr;
+			active_low;
+			count_threshold = <100>;
+			filter = <5100000>;
+			throttle_dev = <&{/soctherm@0x700E2000/throttle_dev@cpu_medium}
+					&{/soctherm@0x700E2000/throttle_dev@gpu_medium}>;
+		};
+		throttle@oc3 {
+			device_type = "throttlectl";
+			oc-alarm-id = <3>;
+			priority = <50>;
+			mode = "brief";
+			intr;
+			active_low;
+			count_threshold = <15>;
+			filter = <5100000>;
+			throttle_dev = <&{/soctherm@0x700E2000/throttle_dev@cpu_medium}
+					&{/soctherm@0x700E2000/throttle_dev@gpu_medium}>;
+		};
+		throttle_dev@cpu_medium {
+			dividend = <63>;
+			divisor = <255>;
+			duration = <0>;
+			step = <0>;
+		};
+		throttle_dev@gpu_medium {
+			level = "medium_throttling";
+		};
+	};
+
 	thermal-zones {
+		CPU-therm {
+			thermal-zone-params {
+				governor-name = "pid_thermal_gov";
+				max_err_temp = <9000>;
+				max_err_gain = <1000>;
+				gain_p = <1000>;
+				gain_d = <0>;
+				up_compensation = <20>;
+				down_compensation = <20>;
+			};
+			trips {
+				cpu_critical {
+					temperature = <102500>;
+					hysteresis = <0>;
+					type = "critical";
+					writable;
+				};
+				cpu_heavy {
+					temperature = <98500>;
+					hysteresis = <0>;
+					type = "hot";
+					writable;
+				};
+				cpu_throttle {
+					temperature = <89000>;
+					hysteresis = <0>;
+					type = "passive";
+					writable;
+				};
+			};
+			cooling-maps {
+				map0 {
+					trip = <&{/thermal-zones/CPU-therm/trips/cpu_critical}>;
+					cdev-type = "tegra-shutdown";
+					cooling-device = <&{/soctherm@0x700E2000/throttle@critical}
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+				map1 {
+					trip = <&{/thermal-zones/CPU-therm/trips/cpu_heavy}>;
+					cdev-type = "tegra-heavy";
+					cooling-device = <&{/soctherm@0x700E2000/throttle@heavy}
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+				map2 {
+					trip = <&{/thermal-zones/CPU-therm/trips/cpu_throttle}>;
+					cdev-type = "cpu-balanced";
+					cooling-device = <&{/bthrot_cdev/cpu_balanced}
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+		GPU-therm {
+			thermal-zone-params {
+				governor-name = "pid_thermal_gov";
+				max_err_temp = <9000>;
+				max_err_gain = <1000>;
+				gain_p = <1000>;
+				gain_d = <0>;
+				up_compensation = <20>;
+				down_compensation = <20>;
+			};
+			trips {
+				gpu_critical {
+					temperature = <103000>;
+					hysteresis = <0>;
+					type = "critical";
+					writable;
+				};
+				gpu_heavy {
+					temperature = <100000>;
+					hysteresis = <0>;
+					type = "hot";
+					writable;
+				};
+				gpu_throttle {
+					temperature = <90500>;
+					hysteresis = <0>;
+					type = "passive";
+					writable;
+				};
+			};
+			cooling-maps {
+				map0 {
+					trip = <&{/thermal-zones/GPU-therm/trips/gpu_critical}>;
+					cdev-type = "tegra-shutdown";
+					cooling-device = <&{/soctherm@0x700E2000/throttle@critical}
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+				map1 {
+					trip = <&{/thermal-zones/GPU-therm/trips/gpu_heavy}>;
+					cdev-type = "tegra-heavy";
+					cooling-device = <&{/soctherm@0x700E2000/throttle@heavy}
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+				map2 {
+					trip = <&{/thermal-zones/GPU-therm/trips/gpu_throttle}>;
+					cdev-type = "gpu-balanced";
+					cooling-device = <&{/bthrot_cdev/gpu_balanced}
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+		LCPU-therm {
+			thermal-zone-params {
+				governor-name = "pid_thermal_gov";
+				max_err_temp = <9000>;
+				max_err_gain = <1000>;
+				gain_p = <1000>;
+				gain_d = <0>;
+				up_compensation = <20>;
+				down_compensation = <20>;
+			};
+			trips {
+				lcpu_critical {
+					temperature = <103000>; /* must be same as GPU's critical temp */
+					hysteresis = <0>;
+					type = "critical";
+					writable;
+				};
+				lcpu_heavy {
+					temperature = <101500>;
+					hysteresis = <0>;
+					type = "hot";
+					writable;
+				};
+				lcpu_throttle {
+					temperature = <92000>;
+					hysteresis = <0>;
+					type = "passive";
+					writable;
+				};
+			};
+			cooling-maps {
+				map0 {
+					trip = <&{/thermal-zones/LCPU-therm/trips/lcpu_critical}>;
+					cdev-type = "tegra-shutdown";
+					cooling-device = <&{/soctherm@0x700E2000/throttle@critical}
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+				map1 {
+					trip = <&{/thermal-zones/LCPU-therm/trips/lcpu_heavy}>;
+					cdev-type = "tegra-heavy";
+					cooling-device = <&{/soctherm@0x700E2000/throttle@heavy}
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+				map2 {
+					trip = <&{/thermal-zones/LCPU-therm/trips/lcpu_throttle}>;
+					cdev-type = "cpu-balanced";
+					cooling-device = <&{/bthrot_cdev/cpu_balanced}
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+		PLL-therm {
+			thermal-zone-params {
+				governor-name = "pid_thermal_gov";
+				max_err_temp = <9000>;
+				max_err_gain = <1000>;
+				gain_p = <1000>;
+				gain_d = <0>;
+				up_compensation = <20>;
+				down_compensation = <20>;
+			};
+		};
+
 		Tboard_tegra {
 			status = "okay";
 		};

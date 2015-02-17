@@ -353,7 +353,7 @@ static ssize_t nct1008_set_temp_overheat(struct device *dev,
 	char bufOverheat[MAX_STR_PRINT];
 	unsigned int ret;
 
-	if (strict_strtol(buf, 0, &num)) {
+	if (kstrtol(buf, 0, &num)) {
 		dev_err(dev, "\n file: %s, line=%d return %s() ", __FILE__,
 			__LINE__, __func__);
 		return -EINVAL;
@@ -437,7 +437,7 @@ static ssize_t nct1008_set_temp_alert(struct device *dev,
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
 
-	if (strict_strtol(buf, 0, &num)) {
+	if (kstrtol(buf, 0, &num)) {
 		dev_err(dev, "\n file: %s, line=%d return %s() ", __FILE__,
 			__LINE__, __func__);
 		return -EINVAL;

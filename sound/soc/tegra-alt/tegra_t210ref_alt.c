@@ -1,7 +1,7 @@
 /*
  * tegra_t210ref_alt.c - Tegra t210ref Machine driver
  *
- * Copyright (c) 2013-2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -130,7 +130,7 @@ static struct snd_soc_pcm_stream tegra_t210ref_amx_input_params[] = {
 	},
 };
 
-static struct snd_soc_pcm_stream tegra_t210ref_amx_output_params[] = {
+static struct snd_soc_pcm_stream tegra_t210ref_amx1_output_params[] = {
 	[0] = {
 		.formats = SNDRV_PCM_FMTBIT_S32_LE,
 		.rate_min = 48000,
@@ -140,6 +140,15 @@ static struct snd_soc_pcm_stream tegra_t210ref_amx_output_params[] = {
 	},
 };
 
+static struct snd_soc_pcm_stream tegra_t210ref_amx2_output_params[] = {
+	[0] = {
+		.formats = SNDRV_PCM_FMTBIT_S32_LE,
+		.rate_min = 48000,
+		.rate_max = 48000,
+		.channels_min = 1,
+		.channels_max = 1,
+	},
+};
 
 static struct snd_soc_pcm_stream tegra_t210ref_adx_output_params[] = {
 	[0] = {
@@ -354,7 +363,7 @@ static int tegra_t210ref_amx1_dai_init(struct snd_soc_pcm_runtime *rtd)
 
 	if (machine->amx_adx_conf.num_amx && slot_size) {
 		if (of_property_read_u32_array(np,
-			"nvidia,amx-slot-map", tx_slot, slot_size))
+			"nvidia,amx1-slot-map", tx_slot, slot_size))
 			default_slot_mode = 1;
 	} else
 		default_slot_mode = 1;
@@ -395,7 +404,7 @@ static int tegra_t210ref_amx2_dai_init(struct snd_soc_pcm_runtime *rtd)
 
 	if ((machine->amx_adx_conf.num_amx > 1) && slot_size) {
 		if (of_property_read_u32_array(np,
-			"nvidia,amx-slot-map", tx_slot, slot_size))
+			"nvidia,amx2-slot-map", tx_slot, slot_size))
 			default_slot_mode = 1;
 	} else
 		default_slot_mode = 1;
@@ -846,7 +855,7 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 				&tegra_t210ref_amx_input_params[3]);
 			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_AMX2,
 				(struct snd_soc_pcm_stream *)
-				&tegra_t210ref_amx_output_params[0]);
+				&tegra_t210ref_amx2_output_params[0]);
 		case 1:
 			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_AMX1_1,
 				(struct snd_soc_pcm_stream *)
@@ -862,7 +871,7 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 				&tegra_t210ref_amx_input_params[3]);
 			tegra_machine_set_dai_params(TEGRA210_DAI_LINK_AMX1,
 				(struct snd_soc_pcm_stream *)
-				&tegra_t210ref_amx_output_params[0]);
+				&tegra_t210ref_amx1_output_params[0]);
 			break;
 		default:
 			break;

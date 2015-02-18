@@ -449,19 +449,14 @@ static void __mc_override_sid(int sid, int oid)
 
 	BUG_ON(oid >= MAX_OID);
 
-#if 0	/* FIXME: wait for linsim update */
 	addr = mc_sid_base + sid_override_offset[oid];
 	addr += sizeof(u32); /* MC_SID_STREAMID_SECURITY_CONFIG_* */
-	val = SCEW_STREAMID_WRITE_ACCESS | SCEW_STREAMID_OVERRIDE | SCEW_NS;
+	val = SCEW_STREAMID_OVERRIDE | SCEW_NS;
 	writel_relaxed(val, addr);
 
 	addr = mc_sid_base + sid_override_offset[oid];
 	writel_relaxed(sid, addr);
-#else
-	addr = mc_sid_base + sid_override_offset[oid];
-	val = 0x80010000 | sid;
-	writel_relaxed(val, addr);
-#endif
+
 	pr_debug("override sid=%d oid=%d at offset=%x\n",
 		 sid, oid, sid_override_offset[oid]);
 }

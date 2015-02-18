@@ -19,6 +19,7 @@
 #include "tegra210-soc-shield.dtsi"
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/tegra-gpio.h>
+#include <dt-bindings/padctrl/tegra210-pads.h>
 #include "tegra210-platforms/tegra210-prods.dtsi"
 #include "tegra210-platforms/tegra210-ers-touch-e1937-1000-a00.dtsi"
 
@@ -114,13 +115,10 @@
 	};
 
 	pmc@7000e400 {
-		prod-settings {
-			#prod-cells = <4>;
-			prod_c_platform_pad_rail {
-				prod = <0 0x48 0xFF5BFFFF 0x00A40000
-					0 0xE4 0xFF5BFFFF 0x00000000>;
-			};
-		};
+		platform-io-pad-voltage = <
+				TEGRA210_PAD_AUDIO_HV IO_PAD_VOLTAGE_1_8V
+				TEGRA210_PAD_GPIO IO_PAD_VOLTAGE_1_8V
+				TEGRA210_PAD_SPI_HV IO_PAD_VOLTAGE_1_8V>;
 	};
 
 	camera-pcl {

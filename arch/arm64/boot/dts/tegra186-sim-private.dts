@@ -97,7 +97,7 @@
 	host1x {
 
 		nvdisplay@0x54200000 {
-			status = "okay";
+			status = "disabled";
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 			nvidia,fb-win = <0>;
@@ -105,7 +105,7 @@
 		};
 
 		nvdisplay@0x54210000 {
-			status = "okay";
+			status = "disabled";
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 			nvidia,fb-win = <3>;

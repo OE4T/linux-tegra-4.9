@@ -52,6 +52,11 @@
 			      <&{/host1x/nvdec}         TEGRA_SWGROUP_NVDEC>,
 			      <&{/host1x/nvenc}         TEGRA_SWGROUP_NVENC>,
 			      <&{/host1x/nvjpg}         TEGRA_SWGROUP_NVJPG>,
+			      <&{/host1x/nvdisplay@0x54200000}	TEGRA_SWGROUP_DC>,
+			      <&{/host1x/nvdisplay@0x54210000}	TEGRA_SWGROUP_DC>,
+			      <&{/host1x/nvdisplay@0x54220000}	TEGRA_SWGROUP_DC>,
+			      <&{/host1x/tsec}		TEGRA_SWGROUP_TSEC>,
+			      <&{/host1x/tsecb}		TEGRA_SWGROUP_TSECB>,
 			      <&{/sdhci@700b0600}       TEGRA_SWGROUP_SDMMC4A>,
 			      <&{/sdhci@700b0400}       TEGRA_SWGROUP_SDMMC3A>,
 			      <&{/sdhci@700b0200}       TEGRA_SWGROUP_SDMMC2A>,
@@ -145,8 +150,8 @@
 			compatible = "nvidia,tegra186-dc";
 			reg = <0x0 0x54200000 0x0 0x00010000>;
 			interrupts = <0 153 0x04>;
-			#stream-id-cells = <3>;
 			win-mask = <0x7>;
+			#stream-id-cells = <1>;
 			status = "disabled";
 		};
 
@@ -154,8 +159,8 @@
 			compatible = "nvidia,tegra186-dc";
 			reg = <0x0 0x54210000 0x0 0x00010000>;
 			interrupts = <0 154 0x04>;
-			#stream-id-cells = <3>;
 			win-mask = <0x38>;
+			#stream-id-cells = <1>;
 			status = "disabled";
 		};
 
@@ -163,8 +168,8 @@
 			compatible = "nvidia,tegra186-dc";
 			reg = <0x0 0x54220000 0x0 0x00010000>;
 			interrupts = <0 155 0x04>;
-			#stream-id-cells = <3>;
 			win-mask = <0x0>;
+			#stream-id-cells = <1>;
 			status = "disabled";
 		};
 

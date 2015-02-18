@@ -143,11 +143,14 @@ static int nvhdcp_i2c_read(struct tegra_nvhdcp *nvhdcp, u8 reg,
 
 	tegra_dc_ddc_enable(dc, true);
 	do {
+		mutex_lock(&nvhdcp->lock);
 		if (!nvhdcp_is_plugged(nvhdcp)) {
 			nvhdcp_err("disconnect during i2c xfer\n");
+			mutex_unlock(&nvhdcp->lock);
 			tegra_dc_ddc_enable(dc, false);
 			return -EIO;
 		}
+		mutex_unlock(&nvhdcp->lock);
 		status = i2c_transfer(nvhdcp->client->adapter,
 			msg, ARRAY_SIZE(msg));
 		if ((status < 0) && (retries > 1))
@@ -184,11 +187,14 @@ static int nvhdcp_i2c_write(struct tegra_nvhdcp *nvhdcp, u8 reg,
 
 	tegra_dc_ddc_enable(dc, true);
 	do {
+		mutex_lock(&nvhdcp->lock);
 		if (!nvhdcp_is_plugged(nvhdcp)) {
 			nvhdcp_err("disconnect during i2c xfer\n");
+			mutex_unlock(&nvhdcp->lock);
 			tegra_dc_ddc_enable(dc, false);
 			return -EIO;
 		}
+		mutex_unlock(&nvhdcp->lock);
 		status = i2c_transfer(nvhdcp->client->adapter,
 			msg, ARRAY_SIZE(msg));
 		if ((status < 0) && (retries > 1))
@@ -785,10 +791,13 @@ static int verify_link(struct tegra_nvhdcp *nvhdcp, bool wait_ri)
 
 	nvhdcp_debug("R0 Ri poll:rx=0x%04x tx=0x%04x\n", rx, tx);
 
+	mutex_lock(&nvhdcp->lock);
 	if (!nvhdcp_is_plugged(nvhdcp)) {
 		nvhdcp_err("aborting verify links - lost hdmi connection\n");
+		mutex_unlock(&nvhdcp->lock);
 		return -EIO;
 	}
+	mutex_unlock(&nvhdcp->lock);
 
 	if (rx != tx)
 		return -EINVAL;
@@ -807,10 +816,13 @@ static int get_repeater_info(struct tegra_nvhdcp *nvhdcp)
 	/* wait up to 5 seconds for READY on repeater */
 	retries = 51;
 	do {
+		mutex_lock(&nvhdcp->lock);
 		if (!nvhdcp_is_plugged(nvhdcp)) {
 			nvhdcp_err("disconnect while waiting for repeater\n");
+			mutex_unlock(&nvhdcp->lock);
 			return -EIO;
 		}
+		mutex_unlock(&nvhdcp->lock);
 
 		e = get_bcaps(nvhdcp, &b_caps);
 		if (!e && (b_caps & BCAPS_READY)) {
@@ -866,36 +878,28 @@ static int get_repeater_info(struct tegra_nvhdcp *nvhdcp)
 static int nvhdcp_ake_init_send(struct tegra_nvhdcp *nvhdcp, u8 *buf)
 {
 	int e;
-	mutex_lock(&nvhdcp->lock);
 	e = nvhdcp_i2c_write(nvhdcp, 0x60, SIZE_AKE_INIT, buf);
-	mutex_unlock(&nvhdcp->lock);
 	return e;
 }
 
 static int nvhdcp_ake_cert_receive(struct tegra_nvhdcp *nvhdcp, u8 *buf)
 {
 	int e;
-	mutex_lock(&nvhdcp->lock);
 	e = nvhdcp_i2c_read(nvhdcp, 0x80, SIZE_AKE_SEND_CERT, buf);
-	mutex_unlock(&nvhdcp->lock);
 	return e;
 }
 
 static int nvhdcp_ake_no_stored_km_send(struct tegra_nvhdcp *nvhdcp, u8 *buf)
 {
 	int e;
-	mutex_lock(&nvhdcp->lock);
 	e = nvhdcp_i2c_write(nvhdcp, 0x60, SIZE_AKE_NO_STORED_KM, buf);
-	mutex_unlock(&nvhdcp->lock);
 	return e;
 }
 
 static int nvhdcp_ake_hprime_receive(struct tegra_nvhdcp *nvhdcp, u8 *buf)
 {
 	int e;
-	mutex_lock(&nvhdcp->lock);
 	e = nvhdcp_i2c_read(nvhdcp, 0x80, SIZE_AKE_SEND_HPRIME, buf);
-	mutex_unlock(&nvhdcp->lock);
 	return e;
 }
 
@@ -903,54 +907,42 @@ static int nvhdcp_ake_pairing_info_receive(struct tegra_nvhdcp *nvhdcp,
 	u8 *buf)
 {
 	int e;
-	mutex_lock(&nvhdcp->lock);
 	e = nvhdcp_i2c_read(nvhdcp, 0x80, SIZE_AKE_SEND_PAIRING_INFO, buf);
-	mutex_unlock(&nvhdcp->lock);
 	return e;
 }
 
 static int nvhdcp_lc_init_send(struct tegra_nvhdcp *nvhdcp, u8 *buf)
 {
 	int e;
-	mutex_lock(&nvhdcp->lock);
 	e = nvhdcp_i2c_write(nvhdcp, 0x60, SIZE_LC_INIT, buf);
-	mutex_unlock(&nvhdcp->lock);
 	return e;
 }
 
 static int nvhdcp_lc_lprime_receive(struct tegra_nvhdcp *nvhdcp, u8 *buf)
 {
 	int e;
-	mutex_lock(&nvhdcp->lock);
 	e = nvhdcp_i2c_read(nvhdcp, 0x80, SIZE_LC_SEND_LPRIME, buf);
-	mutex_unlock(&nvhdcp->lock);
 	return e;
 }
 
 static int nvhdcp_ske_eks_send(struct tegra_nvhdcp *nvhdcp, u8 *buf)
 {
 	int e;
-	mutex_lock(&nvhdcp->lock);
 	e = nvhdcp_i2c_write(nvhdcp, 0x60, SIZE_SKE_SEND_EKS, buf);
-	mutex_unlock(&nvhdcp->lock);
 	return e;
 }
 
 static int nvhdcp_receiverid_list_receive(struct tegra_nvhdcp *nvhdcp, u8 *buf)
 {
 	int e;
-	mutex_lock(&nvhdcp->lock);
 	e = nvhdcp_i2c_read(nvhdcp, 0x80, SIZE_SEND_RCVR_ID_LIST, buf);
-	mutex_unlock(&nvhdcp->lock);
 	return e;
 }
 
 static int nvhdcp_rptr_ack_send(struct tegra_nvhdcp *nvhdcp, u8 *buf)
 {
 	int e;
-	mutex_lock(&nvhdcp->lock);
 	e = nvhdcp_i2c_write(nvhdcp, 0x60, SIZE_SEND_RPTR_ACK, buf);
-	mutex_unlock(&nvhdcp->lock);
 	return e;
 }
 
@@ -958,9 +950,7 @@ static int nvhdcp_rptr_stream_manage_send(struct tegra_nvhdcp *nvhdcp,
 	u8 *buf)
 {
 	int e;
-	mutex_lock(&nvhdcp->lock);
 	e = nvhdcp_i2c_write(nvhdcp, 0x60, SIZE_SEND_RPTR_STREAM_MANAGE, buf);
-	mutex_unlock(&nvhdcp->lock);
 	return e;
 }
 
@@ -968,9 +958,7 @@ static int nvhdcp_rptr_stream_ready_receive(struct tegra_nvhdcp *nvhdcp,
 	u8 *buf)
 {
 	int e;
-	mutex_lock(&nvhdcp->lock);
 	e = nvhdcp_i2c_read(nvhdcp, 0x80, SIZE_SEND_RPTR_STREAM_READY, buf);
-	mutex_unlock(&nvhdcp->lock);
 	return e;
 }
 
@@ -989,9 +977,7 @@ static int nvhdcp_poll(struct tegra_nvhdcp *nvhdcp, int timeout, int status)
 		if ((end_time - start_time)/1000 >= timeout*1000)
 			return -ETIMEDOUT;
 		else {
-			mutex_lock(&nvhdcp->lock);
 			e = nvhdcp_i2c_read(nvhdcp, 0x70, 2, &val);
-			mutex_unlock(&nvhdcp->lock);
 			if (e) {
 				nvhdcp_err("nvhdcp_poll_ready failed\n");
 				goto exit;
@@ -1259,8 +1245,10 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	nvhdcp->a_ksv = 0;
 	nvhdcp->b_ksv = 0;
 	nvhdcp->a_n = 0;
+	mutex_unlock(&nvhdcp->lock);
 
 	e = get_bcaps(nvhdcp, &b_caps);
+	mutex_lock(&nvhdcp->lock);
 	if (e) {
 		nvhdcp_err("Bcaps read failure\n");
 		goto failure;
@@ -1305,11 +1293,13 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		nvhdcp_err("Aksv verify failure! (0x%016llx)\n", nvhdcp->a_ksv);
 		goto disable;
 	}
+	mutex_unlock(&nvhdcp->lock);
 
 	/* write Ainfo to receiver - set 1.1 only if b_caps supports it */
 	e = nvhdcp_i2c_write8(nvhdcp, 0x15, b_caps & BCAPS_11);
 	if (e) {
 		nvhdcp_err("Ainfo write failure\n");
+		mutex_lock(&nvhdcp->lock);
 		goto failure;
 	}
 
@@ -1317,6 +1307,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	e = nvhdcp_i2c_write64(nvhdcp, 0x18, nvhdcp->a_n);
 	if (e) {
 		nvhdcp_err("An write failure\n");
+		mutex_lock(&nvhdcp->lock);
 		goto failure;
 	}
 
@@ -1326,17 +1317,21 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	e = nvhdcp_i2c_write40(nvhdcp, 0x10, nvhdcp->a_ksv);
 	if (e) {
 		nvhdcp_err("Aksv write failure\n");
+		mutex_lock(&nvhdcp->lock);
 		goto failure;
 	}
 
 	nvhdcp_vdbg("wrote Aksv = 0x%010llx\n", nvhdcp->a_ksv);
 
+	mutex_lock(&nvhdcp->lock);
 	/* bail out if unplugged in the middle of negotiation */
 	if (!nvhdcp_is_plugged(nvhdcp))
 		goto lost_hdmi;
+	mutex_unlock(&nvhdcp->lock);
 
 	/* get Bksv from receiver */
 	e = nvhdcp_i2c_read40(nvhdcp, 0x00, &nvhdcp->b_ksv);
+	mutex_lock(&nvhdcp->lock);
 	if (e) {
 		nvhdcp_err("Bksv read failure\n");
 		goto failure;
@@ -1365,9 +1360,11 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 
 	nvhdcp_vdbg("verifying links ...\n");
 
+	mutex_unlock(&nvhdcp->lock);
 	e = verify_link(nvhdcp, false);
 	if (e) {
 		nvhdcp_err("link verification failed err %d\n", e);
+		mutex_lock(&nvhdcp->lock);
 		goto failure;
 	}
 
@@ -1376,10 +1373,12 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		e = get_repeater_info(nvhdcp);
 		if (e) {
 			nvhdcp_err("get repeater info failed\n");
+			mutex_lock(&nvhdcp->lock);
 			goto failure;
 		}
 	}
 
+	mutex_lock(&nvhdcp->lock);
 	tmp = nvhdcp_sor_readl(hdmi, NV_SOR_TMDS_HDCP_CTRL);
 	tmp |= CRYPT_ENABLED;
 	if (b_caps & BCAPS_11) /* HDCP 1.1 ? */
@@ -1398,12 +1397,13 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		if (nvhdcp->state != STATE_LINK_VERIFY)
 			goto failure;
 
+		mutex_unlock(&nvhdcp->lock);
 		e = verify_link(nvhdcp, true);
 		if (e) {
 			nvhdcp_err("link verification failed err %d\n", e);
+			mutex_lock(&nvhdcp->lock);
 			goto failure;
 		}
-		mutex_unlock(&nvhdcp->lock);
 		tegra_dc_io_end(dc);
 		wait_event_interruptible_timeout(wq_worker,
 			!nvhdcp_is_plugged(nvhdcp), msecs_to_jiffies(1500));
@@ -1446,9 +1446,7 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 	u16 rx_status = 0;
 	int err = 0;
 
-	mutex_lock(&nvhdcp->lock);
 	nvhdcp_i2c_read16(nvhdcp, HDCP_RX_STATUS, &rx_status);
-	mutex_unlock(&nvhdcp->lock);
 	if (nvhdcp->repeater && (rx_status & HDCP_RX_STATUS_MSG_READY_YES)) {
 		err = nvhdcp_poll_ready(nvhdcp, 1000);
 		if (err) {
@@ -1601,11 +1599,16 @@ err:
 
 static int tegra_nvhdcp_on(struct tegra_nvhdcp *nvhdcp)
 {
-	u8 hdcp2version;
+	u8 hdcp2version = 0;
+	int e;
 	nvhdcp->state = STATE_UNAUTHENTICATED;
 	if (nvhdcp_is_plugged(nvhdcp)) {
 		nvhdcp->fail_count = 0;
-		nvhdcp_i2c_read8(nvhdcp, HDCP_HDCP2_VERSION, &hdcp2version);
+		e = nvhdcp_i2c_read8(nvhdcp, HDCP_HDCP2_VERSION, &hdcp2version);
+		if (e)
+			nvhdcp_err("nvhdcp i2c HDCP22 version read failed\n");
+		/* Do not stop nauthentication if i2c version reads fail as  */
+		/* HDCP 1.x test 1A-04 expects reading HDCP regs */
 		if (hdcp2version & HDCP_HDCP2_VERSION_HDCP22_YES) {
 			INIT_DELAYED_WORK(&nvhdcp->work,
 				nvhdcp2_downstream_worker);

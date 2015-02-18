@@ -95,10 +95,9 @@ int bpmp_ob_channel(void)
 	return smp_processor_id() + CPU_0_TO_BPMP_CH;
 }
 
-static irqreturn_t bpmp_inbox_irq(int irq, void *data)
+static void bpmp_inbox_irq(int master, void *data)
 {
 	bpmp_handle_irq(BPMP_TO_CPU_CH);
-	return IRQ_HANDLED;
 }
 
 int bpmp_init_irq(struct platform_device *pdev)

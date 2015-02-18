@@ -45,7 +45,8 @@
 
 		calxeda,smmu-secure-config-access;
 
-		mmu-masters = <&host1x                  TEGRA_SWGROUP_HC>,
+		mmu-masters = <&{/gp10b}		TEGRA_SWGROUP_GPUB>,
+			      <&host1x                  TEGRA_SWGROUP_HC>,
 			      <&{/host1x/vic}           TEGRA_SWGROUP_VIC>,
 			      <&{/host1x/vi}            TEGRA_SWGROUP_VI>,
 			      <&{/host1x/isp@54600000}  TEGRA_SWGROUP_ISP>,
@@ -251,6 +252,7 @@
 		interrupts = <0 70 0x04
 			      0 71 0x04>;
 		nvidia,host1x = <&host1x>;
+		#stream-id-cells = <1>;
 	};
 
 	psci {

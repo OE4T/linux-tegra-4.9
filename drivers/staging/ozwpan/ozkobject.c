@@ -261,6 +261,12 @@ static ssize_t latency_show(struct kobject *kobj, struct kobj_attribute *attr,
 	return sprintf(buf, "%d\n", oz_get_latency());
 }
 
+static ssize_t max_devices_show(struct kobject *kobj,
+				struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", OZ_MAX_PDS);
+}
+
 static struct kobj_attribute devices_attribute =
 	__ATTR(devices, 0400, devices_show, NULL);
 
@@ -285,6 +291,9 @@ static struct kobj_attribute fptr_attribute =
 static struct kobj_attribute latency_attribute =
 	__ATTR(latency, 0444, latency_show, NULL);
 
+static struct kobj_attribute max_devices_attribute =
+	__ATTR(max_devices, 0444, max_devices_show, NULL);
+
 static struct attribute *attrs[] = {
 	&devices_attribute.attr,
 	&stop_attribute.attr,
@@ -294,6 +303,7 @@ static struct attribute *attrs[] = {
 	&debug_attribute.attr,
 	&fptr_attribute.attr,
 	&latency_attribute.attr,
+	&max_devices_attribute.attr,
 	NULL,
 };
 

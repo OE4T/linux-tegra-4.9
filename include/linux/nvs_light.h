@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -15,6 +15,7 @@
 #define _NVS_LIGHT_H_
 
 #include <linux/iio/iio.h>
+#include <linux/of.h>
 #include <linux/nvs.h>
 
 #define RET_POLL_NEXT			(-1)
@@ -22,6 +23,7 @@
 #define RET_HW_UPDATE			(1)
 
 #define NVS_LIGHT_STRING		"light"
+#define SENSOR_FLAG_ON_CHANGE_MODE	0x2 /* from AOS sensors.h */
 
 /**
  * struct nvs_light_dynamic - the structure that allows the NVS
@@ -34,7 +36,7 @@
  *
  * Driver includes a pointer to this table to enable dynamic
  * resolution/max_range.
- * The data must be from low resolution to high.
+ * The data must be from low to high max_range.
  */
 struct nvs_light_dynamic {
 	struct nvs_float resolution;
@@ -149,5 +151,6 @@ int nvs_light_read(struct nvs_light *nl);
 int nvs_light_enable(struct nvs_light *nl);
 int nvs_light_of_dt(struct nvs_light *nl, const struct device_node *np,
 		    const char *dev_name);
+ssize_t nvs_light_dbg(struct nvs_light *nl, char *buf);
 
 #endif /* _NVS_LIGHT_H_ */

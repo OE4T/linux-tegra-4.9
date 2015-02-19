@@ -858,6 +858,10 @@ static inline u32 gr_fecs_method_push_adr_discover_preemption_image_size_v(void)
 {
 	return 0x0000001a;
 }
+static inline u32 gr_fecs_method_push_adr_halt_pipeline_v(void)
+{
+	return 0x00000004;
+}
 static inline u32 gr_fecs_host_int_status_r(void)
 {
 	return 0x00409c18;

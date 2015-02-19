@@ -1,7 +1,7 @@
 /*
  * Tegra GK20A GPU Debugger Driver Register Ops
  *
- * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -403,9 +403,9 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 	if (gk20a_gpu_is_virtual(dbg_s->pdev))
 		return -ENOSYS;
 
-	ok = g->allow_all || validate_reg_ops(dbg_s,
+	ok = validate_reg_ops(dbg_s,
 			      &ctx_rd_count, &ctx_wr_count,
-			      ops, num_ops);
+			      ops, num_ops) || g->allow_all;
 	if (!ok) {
 		dev_err(dbg_s->dev, "invalid op(s)");
 		err = -EINVAL;

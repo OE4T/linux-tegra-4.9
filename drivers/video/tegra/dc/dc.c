@@ -2567,6 +2567,17 @@ void tegra_dc_set_act_vfp(struct tegra_dc *dc, int vfp)
 			DC_CMD_STATE_ACCESS);
 }
 
+static void tegra_dc_vrr_extend_vfp(struct tegra_dc *dc)
+{
+	struct tegra_vrr *vrr  = dc->out->vrr;
+
+	if (!vrr)
+		return;
+
+	if (vrr->enable)
+		tegra_dc_set_act_vfp(dc, vrr->vfp_extend);
+}
+
 static void tegra_dc_vblank(struct work_struct *work)
 {
 	struct tegra_dc *dc = container_of(work, struct tegra_dc, vblank_work);
@@ -2924,6 +2935,7 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status,
 		dc->frame_end_timestamp = timespec_to_ns(&tm);
 		wake_up(&dc->timestamp_wq);
 
+		tegra_dc_vrr_extend_vfp(dc);
 		/* Mark the frame_end as complete. */
 		if (!completion_done(&dc->frame_end_complete))
 			complete(&dc->frame_end_complete);

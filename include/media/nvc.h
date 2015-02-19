@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -105,6 +105,7 @@ enum nvc_params {
 	NVC_PARAM_BRACKET_CAPS,
 	NVC_PARAM_NUM,
 	NVC_PARAM_I2C,
+	NVC_PARAM_FEATURES,
 	NVC_PARAM_FORCE32 = 0x7FFFFFFF
 };
 

@@ -96,26 +96,11 @@ static void tegra114_i2s_set_slot_ctrl(struct regmap *regmap,
 
 static int tegra30_i2s_set_clock_rate(struct device *dev, int clock_rate)
 {
-	unsigned int val;
 	struct tegra30_i2s *i2s = dev_get_drvdata(dev);
 	int ret;
 
-	regmap_read(i2s->regmap, TEGRA30_I2S_CTRL, &val);
-
-	if ((val & TEGRA30_I2S_CTRL_MASTER_MASK) ==
-			TEGRA30_I2S_CTRL_MASTER_ENABLE) {
-		ret = clk_set_parent(i2s->clk_i2s, i2s->clk_pll_a_out0);
-		if (ret) {
-			dev_err(dev, "Can't set parent of I2S clock\n");
-			return ret;
-		}
-
-		ret = clk_set_rate(i2s->clk_i2s, clock_rate);
-		if (ret) {
-			dev_err(dev, "Can't set I2S clock rate: %d\n", ret);
-			return ret;
-		}
-	} else {
+	switch (i2s->dai_fmt & SND_SOC_DAIFMT_MASTER_MASK) {
+	case SND_SOC_DAIFMT_CBS_CFS:
 		ret = clk_set_rate(i2s->clk_i2s_sync, clock_rate);
 		if (ret) {
 			dev_err(dev, "Can't set I2S sync clock rate\n");
@@ -140,8 +125,22 @@ static int tegra30_i2s_set_clock_rate(struct device *dev, int clock_rate)
 			dev_err(dev, "Can't set parent of i2s clock\n");
 			return ret;
 		}
+		break;
+	case SND_SOC_DAIFMT_CBM_CFM:
+		ret = clk_set_parent(i2s->clk_i2s, i2s->clk_pll_a_out0);
+		if (ret) {
+			dev_err(dev, "Can't set parent of I2S clock\n");
+			return ret;
+		}
+		ret = clk_set_rate(i2s->clk_i2s, clock_rate);
+		if (ret) {
+			dev_err(dev, "Can't set I2S clock rate: %d\n", ret);
+			return ret;
+		}
+		break;
+	default:
+		return -EINVAL;
 	}
-
 	return ret;
 }
 

@@ -1,7 +1,7 @@
 /* industrial I/O data types needed both in and out of kernel
  *
  * Copyright (c) 2008 Jonathan Cameron
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -47,6 +47,7 @@ enum iio_chan_type {
 	IIO_GESTURE_WAKE,
 	IIO_GESTURE_GLANCE,
 	IIO_GESTURE_PICKUP,
+	IIO_GENERIC,
 };
 
 enum iio_modifier {

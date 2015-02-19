@@ -1,7 +1,7 @@
 /* The industrial I/O core
  *
  * Copyright (c) 2008 Jonathan Cameron
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -97,6 +97,7 @@ const char * const iio_chan_type_name_spec[] = {
 	[IIO_GESTURE_WAKE] = "gesturewake",
 	[IIO_GESTURE_GLANCE] = "gestureglance",
 	[IIO_GESTURE_PICKUP] = "gesturepickup",
+	[IIO_GENERIC] = "generic_sensor",
 };
 EXPORT_SYMBOL(iio_chan_type_name_spec);
 

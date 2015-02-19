@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -91,7 +91,7 @@
  *    proximity_scale_fval = the floating value of the scale.
  *    proximity_offset_ival = the integer value of the offset.
  *    proximity_offset_fval = the floating value of the offset.
- *    The values are in the NVS_SCALE_SIGNIFICANCE format (see nvs.h).
+ *    The values are in the NVS_FLOAT_SIGNIFICANCE_ format (see nvs.h).
  */
 /* The reason calibration method 1 is preferred is that the NVS proximity
  * driver already sets the scaling to coordinate with the resolution by
@@ -152,7 +152,7 @@
 
 
 static void nvs_proximity_interpolate(int x1, s64 x2, int x3,
-				      int y1, unsigned int *y2, int y3)
+				      int y1, u32 *y2, int y3)
 {
 	s64 dividend;
 	s64 divisor;
@@ -160,7 +160,7 @@ static void nvs_proximity_interpolate(int x1, s64 x2, int x3,
 	/* y2 = ((x2 - x1)(y3 - y1)/(x3 - x1)) + y1 */
 	divisor = (x3 - x1);
 	if (!divisor) {
-		*y2 = (unsigned int)x2;
+		*y2 = (u32)x2;
 		return;
 	}
 
@@ -169,7 +169,7 @@ static void nvs_proximity_interpolate(int x1, s64 x2, int x3,
 	dividend += y1;
 	if (dividend < 0)
 		dividend = 0;
-	*y2 = (unsigned int)dividend;
+	*y2 = (u32)dividend;
 }
 
 /**
@@ -311,7 +311,7 @@ int nvs_proximity_read(struct nvs_proximity *np)
 			/* reverse the value in the range */
 			hw_distance = np->hw_mask - np->hw;
 			/* distance = HW * (resolution *
-			 *                  NVS_SCALE_SIGNIFICANCE) / scale
+			 *                  NVS_FLOAT_SIGNIFICANCE_) / scale
 			 */
 			calc_f = 0;
 			if (np->cfg->resolution.fval) {
@@ -322,18 +322,28 @@ int nvs_proximity_read(struct nvs_proximity *np)
 			}
 			calc_i = 0;
 			if (np->cfg->resolution.ival) {
-				calc_i = NVS_SCALE_SIGNIFICANCE /
+				if (np->cfg->float_significance)
+					calc_i = NVS_FLOAT_SIGNIFICANCE_NANO /
+							   np->cfg->scale.fval;
+				else
+					calc_i = NVS_FLOAT_SIGNIFICANCE_MICRO /
 							   np->cfg->scale.fval;
 				calc_i *= (u64)(hw_distance *
 						np->cfg->resolution.ival);
 			}
 			calc = (s64)(calc_i + calc_f);
-			/* get calibrated value */
-			nvs_proximity_interpolate(np->cfg->uncal_lo, calc,
-						  np->cfg->uncal_hi,
-						  np->cfg->cal_lo,
-						  &np->proximity,
-						  np->cfg->cal_hi);
+			if (np->calibration_en) {
+				/* when in calibration mode just return calc */
+				np->proximity = (u32)calc;
+			} else {
+				/* get calibrated value */
+				nvs_proximity_interpolate(np->cfg->uncal_lo,
+							  calc,
+							  np->cfg->uncal_hi,
+							  np->cfg->cal_lo,
+							  &np->proximity,
+							  np->cfg->cal_hi);
+			}
 			/* report proximity */
 			np->handler(np->nvs_data, &np->proximity,
 				    np->timestamp_report);
@@ -398,6 +408,26 @@ int nvs_proximity_enable(struct nvs_proximity *np)
 		np->poll_delay_ms = np->delay_us * 1000;
 	else
 		np->poll_delay_ms = np->cfg->delay_us_min * 1000;
+	return 0;
+}
+
+/**
+ * nvs_proximity_of_dt - called during system boot for
+ * configuration from device tree.
+ * @np: the common structure between driver and common module.
+ * @dn: device node pointer.
+ * @dev_name: device name string.  Typically a string to
+ *            "proximity" or NULL.
+ *
+ * Returns 0 on success or a negative error code.
+ *
+ * Driver must initialize variables if no success.
+ */
+int nvs_proximity_of_dt(struct nvs_proximity *np, const struct device_node *dn,
+			const char *dev_name)
+{
+	if (np->cfg)
+		np->cfg->flags = SENSOR_FLAG_ON_CHANGE_MODE;
 	return 0;
 }
 

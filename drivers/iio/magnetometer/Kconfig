@@ -96,6 +96,7 @@ config NVI_AK89XX
 	depends on I2C
 	select IIO_BUFFER
 	select IIO_TRIGGERED_BUFFER
+	select NVS_IIO
 	help
 	  Say yes here to build support for Asahi Kasei AK89XX 3-Axis
 	  Magnetometer that can be connected via Invensense MPU.

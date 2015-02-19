@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -13,13 +13,20 @@
 
 #include <linux/nvs.h>
 #include <linux/of.h>
+#include <linux/string.h>
 
+
+static const char * const float_significance[] = {
+	"micro",
+	"nano",
+};
 
 int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 	      const char *dev_name)
 {
 	char str[256];
-	char const *charp;
+	const char *charp;
+	unsigned int i;
 	int lenp;
 	int ret;
 
@@ -28,7 +35,30 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 
 	if (dev_name == NULL)
 		dev_name = cfg->name;
-	ret = sprintf(str, "%s_buffer_size", dev_name);
+	ret = sprintf(str, "%s_float_significance", dev_name);
+	if (ret > 0) {
+		if (!(of_property_read_string((struct device_node *)np,
+					      str, &charp))) {
+			for (i = 0; i < ARRAY_SIZE(float_significance); i++) {
+				if (!strcasecmp(charp,
+						float_significance[i])) {
+					cfg->float_significance = i;
+					break;
+				}
+			}
+		}
+	}
+	ret = sprintf(str, "%s_no_suspend", dev_name);
+	if (ret > 0) {
+		ret = of_property_read_u32(np, str, (u32 *)&i);
+		if (!ret) {
+			if (i)
+				cfg->no_suspend = true;
+			else
+				cfg->no_suspend = false;
+		}
+	}
+	ret = sprintf(str, "%s_kbuffer_size", dev_name);
 	if (ret > 0)
 		of_property_read_s32(np, str, (s32 *)&cfg->kbuf_sz);
 	ret = sprintf(str, "%s_max_range_ival", dev_name);
@@ -70,18 +100,6 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 		if (charp && lenp == sizeof(cfg->matrix))
 			memcpy(&cfg->matrix, charp, lenp);
 	}
-	ret = sprintf(str, "%s_scale_ival", dev_name);
-	if (ret > 0)
-		of_property_read_s32(np, str, (s32 *)&cfg->scale.ival);
-	ret = sprintf(str, "%s_scale_fval", dev_name);
-	if (ret > 0)
-		of_property_read_s32(np, str, (s32 *)&cfg->scale.fval);
-	ret = sprintf(str, "%s_offset_ival", dev_name);
-	if (ret > 0)
-		of_property_read_s32(np, str, (s32 *)&cfg->offset.ival);
-	ret = sprintf(str, "%s_offset_fval", dev_name);
-	if (ret > 0)
-		of_property_read_s32(np, str, (s32 *)&cfg->offset.fval);
 	ret = sprintf(str, "%s_uncalibrated_lo", dev_name);
 	if (ret > 0)
 		of_property_read_s32(np, str, (s32 *)&cfg->uncal_lo);
@@ -103,6 +121,36 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 	ret = sprintf(str, "%s_report_count", dev_name);
 	if (ret > 0)
 		of_property_read_s32(np, str, (s32 *)&cfg->report_n);
+	ret = sprintf(str, "%s_scale_ival", dev_name);
+	if (ret > 0)
+		of_property_read_s32(np, str, (s32 *)&cfg->scale.ival);
+	ret = sprintf(str, "%s_scale_fval", dev_name);
+	if (ret > 0)
+		of_property_read_s32(np, str, (s32 *)&cfg->scale.fval);
+	ret = sprintf(str, "%s_offset_ival", dev_name);
+	if (ret > 0)
+		of_property_read_s32(np, str, (s32 *)&cfg->offset.ival);
+	ret = sprintf(str, "%s_offset_fval", dev_name);
+	if (ret > 0)
+		of_property_read_s32(np, str, (s32 *)&cfg->offset.fval);
+	for (i = 0; i < NVS_CHANNEL_N_MAX; i++) {
+		ret = sprintf(str, "%s_scale_ival_ch%u", dev_name, i);
+		if (ret > 0)
+			of_property_read_s32(np, str,
+					     (s32 *)&cfg->scales[i].ival);
+		ret = sprintf(str, "%s_scale_fval_ch%u", dev_name, i);
+		if (ret > 0)
+			of_property_read_s32(np, str,
+					     (s32 *)&cfg->scales[i].fval);
+		ret = sprintf(str, "%s_offset_ival_ch%u", dev_name, i);
+		if (ret > 0)
+			of_property_read_s32(np, str,
+					     (s32 *)&cfg->offsets[i].ival);
+		ret = sprintf(str, "%s_offset_fval_ch%u", dev_name, i);
+		if (ret > 0)
+			of_property_read_s32(np, str,
+					     (s32 *)&cfg->offsets[i].fval);
+	}
 	return 0;
 }
 

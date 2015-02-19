@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -95,7 +95,7 @@
  *    light_scale_fval = the floating value of the scale.
  *    light_offset_ival = the integer value of the offset.
  *    light_offset_fval = the floating value of the offset.
- *    The values are in the NVS_SCALE_SIGNIFICANCE format (see nvs.h).
+ *    The values are in the NVS_FLOAT_SIGNIFICANCE_ format (see nvs.h).
  */
 /* The reason calibration method 1 is preferred is that the NVS ALS driver
  * already sets the scaling to coordinate with the resolution by multiplying
@@ -108,8 +108,77 @@
 #include <linux/nvs_light.h>
 
 
-static unsigned int nvs_light_interpolate(int x1, s64 x2, int x3,
-					  int y1, int y3)
+ssize_t nvs_light_dbg(struct nvs_light *nl, char *buf)
+{
+	ssize_t t;
+	unsigned int i;
+
+	t = sprintf(buf, "%s:\n", __func__);
+	t += sprintf(buf + t, "nvs_light.timestamp=%lld\n", nl->timestamp);
+	t += sprintf(buf + t, "nvs_light.timestamp_report=%lld\n",
+		     nl->timestamp_report);
+	t += sprintf(buf + t, "nvs_light.lux=%u\n", nl->lux);
+	t += sprintf(buf + t, "nvs_light.hw=%u\n", nl->hw);
+	t += sprintf(buf + t, "nvs_light.hw_mask=%x\n", nl->hw_mask);
+	t += sprintf(buf + t, "nvs_light.hw_thresh_lo=%u\n", nl->hw_thresh_lo);
+	t += sprintf(buf + t, "nvs_light.hw_thresh_hi=%u\n", nl->hw_thresh_hi);
+	t += sprintf(buf + t, "nvs_light.hw_limit_lo=%x\n", nl->hw_limit_lo);
+	t += sprintf(buf + t, "nvs_light.hw_limit_hi=%x\n", nl->hw_limit_hi);
+	t += sprintf(buf + t, "nvs_light.thresh_valid_lo=%x\n",
+		     nl->thresh_valid_lo);
+	t += sprintf(buf + t, "nvs_light.thresh_valid_hi=%x\n",
+		     nl->thresh_valid_hi);
+	t += sprintf(buf + t, "nvs_light.thresholds_valid=%x\n",
+		     nl->thresholds_valid);
+	t += sprintf(buf + t, "nvs_light.nld_i_change=%x\n", nl->nld_i_change);
+	t += sprintf(buf + t, "nvs_light.calibration_en=%x\n",
+		     nl->calibration_en);
+	t += sprintf(buf + t, "nvs_light.poll_delay_ms=%u\n",
+		     nl->poll_delay_ms);
+	t += sprintf(buf + t, "nvs_light.delay_us=%u\n", nl->delay_us);
+	t += sprintf(buf + t, "nvs_light.report=%u\n", nl->report);
+	t += sprintf(buf + t, "nvs_light.nld_i=%u\n", nl->nld_i);
+	t += sprintf(buf + t, "nvs_light.nld_i_lo=%u\n", nl->nld_i_lo);
+	t += sprintf(buf + t, "nvs_light.nld_i_hi=%u\n", nl->nld_i_hi);
+	if (nl->nld_tbl) {
+		for (i = nl->nld_i_lo; i <= nl->nld_i_hi; i++) {
+			if (nl->cfg->float_significance) {
+				t += sprintf(buf + t,
+					    "nld_tbl[%d].resolution=%d.%09u\n",
+					     i, nl->nld_tbl[i].resolution.ival,
+					     nl->nld_tbl[i].resolution.fval);
+				t += sprintf(buf + t,
+					     "nld_tbl[%d].max_range=%d.%09u\n",
+					     i, nl->nld_tbl[i].max_range.ival,
+					     nl->nld_tbl[i].max_range.fval);
+				t += sprintf(buf + t,
+					     "nld_tbl[%d].milliamp=%d.%09u\n",
+					     i, nl->nld_tbl[i].milliamp.ival,
+					     nl->nld_tbl[i].milliamp.fval);
+			} else {
+				t += sprintf(buf + t,
+					    "nld_tbl[%d].resolution=%d.%06u\n",
+					     i, nl->nld_tbl[i].resolution.ival,
+					     nl->nld_tbl[i].resolution.fval);
+				t += sprintf(buf + t,
+					     "nld_tbl[%d].max_range=%d.%06u\n",
+					     i, nl->nld_tbl[i].max_range.ival,
+					     nl->nld_tbl[i].max_range.fval);
+				t += sprintf(buf + t,
+					     "nld_tbl[%d].milliamp=%d.%06u\n",
+					     i, nl->nld_tbl[i].milliamp.ival,
+					     nl->nld_tbl[i].milliamp.fval);
+			}
+			t += sprintf(buf + t, "nld_tbl[%d].delay_min_ms=%u\n",
+				     i, nl->nld_tbl[i].delay_min_ms);
+			t += sprintf(buf + t, "nld_tbl[%d].driver_data=%u\n",
+				     i, nl->nld_tbl[i].driver_data);
+		}
+	}
+	return t;
+}
+
+static u32 nvs_light_interpolate(int x1, s64 x2, int x3, int y1, int y3)
 {
 	s64 dividend;
 	s64 divisor;
@@ -117,14 +186,14 @@ static unsigned int nvs_light_interpolate(int x1, s64 x2, int x3,
 	/* y2 = ((x2 - x1)(y3 - y1)/(x3 - x1)) + y1 */
 	divisor = (x3 - x1);
 	if (!divisor)
-		return (unsigned int)x2;
+		return (u32)x2;
 
 	dividend = (x2 - x1) * (y3 - y1);
 	do_div(dividend, divisor);
 	dividend += y1;
 	if (dividend < 0)
 		dividend = 0;
-	return (unsigned int)dividend;
+	return (u32)dividend;
 }
 
 static int nvs_light_nld(struct nvs_light *nl, unsigned int nld_i)
@@ -211,7 +280,7 @@ int nvs_light_read(struct nvs_light *nl)
 		nl->hw_limit_lo = true;
 	else
 		nl->hw_limit_lo = false;
-	if ((nl->hw == nl->hw_mask) || (nl->hw > (nl->hw_mask - thresh_hi)))
+	if ((nl->hw >= nl->hw_mask) || (nl->hw > (nl->hw_mask - thresh_hi)))
 		nl->hw_limit_hi = true;
 	else
 		nl->hw_limit_hi = false;
@@ -238,7 +307,7 @@ int nvs_light_read(struct nvs_light *nl)
 	if (nl->report && report_delay_min) {
 		nl->report--;
 		nl->timestamp_report = nl->timestamp;
-		/* lux = HW * (resolution * NVS_SCALE_SIGNIFICANCE) / scale */
+		/* lux = HW * (resolution * NVS_FLOAT_SIGNIFICANCE_) / scale */
 		calc_f = 0;
 		if (nl->cfg->resolution.fval) {
 			calc_f = (u64)(nl->hw * nl->cfg->resolution.fval);
@@ -247,15 +316,26 @@ int nvs_light_read(struct nvs_light *nl)
 		}
 		calc_i = 0;
 		if (nl->cfg->resolution.ival) {
-			calc_i = NVS_SCALE_SIGNIFICANCE / nl->cfg->scale.fval;
+			if (nl->cfg->float_significance)
+				calc_i = NVS_FLOAT_SIGNIFICANCE_NANO /
+							   nl->cfg->scale.fval;
+			else
+				calc_i = NVS_FLOAT_SIGNIFICANCE_MICRO /
+							   nl->cfg->scale.fval;
 			calc_i *= (u64)(nl->hw * nl->cfg->resolution.ival);
 		}
 		calc = (s64)(calc_i + calc_f);
-		/* get calibrated value */
-		nl->lux = nvs_light_interpolate(nl->cfg->uncal_lo, calc,
-						nl->cfg->uncal_hi,
-						nl->cfg->cal_lo,
-						nl->cfg->cal_hi);
+		if (nl->calibration_en) {
+			/* when in calibration mode just return lux value */
+			nl->lux = (u32)calc;
+		} else {
+			/* get calibrated value if not in calibration mode */
+			nl->lux = nvs_light_interpolate(nl->cfg->uncal_lo,
+							calc,
+							nl->cfg->uncal_hi,
+							nl->cfg->cal_lo,
+							nl->cfg->cal_hi);
+		}
 		/* report lux */
 		nl->handler(nl->nvs_data, &nl->lux, nl->timestamp_report);
 		if ((nl->thresholds_valid) && !nl->report) {
@@ -350,6 +430,8 @@ int nvs_light_of_dt(struct nvs_light *nl, const struct device_node *np,
 	int ret;
 	int ret_t = -EINVAL;
 
+	if (nl->cfg)
+		nl->cfg->flags = SENSOR_FLAG_ON_CHANGE_MODE;
 	if (np == NULL)
 		return -EINVAL;
 

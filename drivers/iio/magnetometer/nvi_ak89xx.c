@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -66,7 +66,6 @@
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
 #include <linux/of.h>
-#include <linux/iio/iio.h>
 #include <linux/nvs.h>
 #if AKM_NVI_MPU_SUPPORT
 #include <linux/mpu_iio.h>
@@ -112,11 +111,6 @@
 #define AXIS_Y				(1)
 #define AXIS_Z				(2)
 #define AXIS_N				(3)
-/* _buf_push expects this scan order */
-#define AKM_SCAN_X			AXIS_X
-#define AKM_SCAN_Y			AXIS_Y
-#define AKM_SCAN_Z			AXIS_Z
-#define AKM_SCAN_TIMESTAMP		AXIS_N
 
 
 /* regulator names in order of powering on */
@@ -151,104 +145,10 @@ struct akm_cmode {
 	u8 mode;
 };
 
-static const struct iio_chan_spec akm_channels[] = {
-	{
-		.type			= IIO_MAGN,
-		.channel2		= IIO_MOD_X,
-		.scan_index		= AKM_SCAN_X,
-		.scan_type		= { .sign = 's',
-					    .realbits = 16,
-					    .storagebits = 16,
-					    .endianness = IIO_CPU,
-					  },
-		.info_mask_shared_by_all
-					= BIT(IIO_CHAN_INFO_RAW) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
-					  BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
-					  BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
-					  BIT(IIO_CHAN_INFO_PEAK) |
-					  BIT(IIO_CHAN_INFO_PEAK_SCALE) |
-					  BIT(IIO_CHAN_INFO_SCALE) |
-					  BIT(IIO_CHAN_INFO_OFFSET),
-		.info_mask_separate	= BIT(IIO_CHAN_INFO_RAW),
-		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
-					    BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
-					    BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
-					    BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
-					    BIT(IIO_CHAN_INFO_PEAK) |
-					    BIT(IIO_CHAN_INFO_PEAK_SCALE) |
-					    BIT(IIO_CHAN_INFO_SCALE) |
-					    BIT(IIO_CHAN_INFO_OFFSET),
-		.modified		= 1,
-	},
-	{
-		.type			= IIO_MAGN,
-		.channel2		= IIO_MOD_Y,
-		.scan_index		= AKM_SCAN_Y,
-		.scan_type		= { .sign = 's',
-					    .realbits = 16,
-					    .storagebits = 16,
-					    .endianness = IIO_CPU,
-					  },
-		.info_mask_shared_by_all
-					= BIT(IIO_CHAN_INFO_RAW) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
-					  BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
-					  BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
-					  BIT(IIO_CHAN_INFO_PEAK) |
-					  BIT(IIO_CHAN_INFO_PEAK_SCALE) |
-					  BIT(IIO_CHAN_INFO_SCALE) |
-					  BIT(IIO_CHAN_INFO_OFFSET),
-		.info_mask_separate	= BIT(IIO_CHAN_INFO_RAW),
-		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
-					    BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
-					    BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
-					    BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
-					    BIT(IIO_CHAN_INFO_PEAK) |
-					    BIT(IIO_CHAN_INFO_PEAK_SCALE) |
-					    BIT(IIO_CHAN_INFO_SCALE) |
-					    BIT(IIO_CHAN_INFO_OFFSET),
-		.modified		= 1,
-	},
-	{
-		.type			= IIO_MAGN,
-		.channel2		= IIO_MOD_Z,
-		.scan_index		= AKM_SCAN_Z,
-		.scan_type		= { .sign = 's',
-					    .realbits = 16,
-					    .storagebits = 16,
-					    .endianness = IIO_CPU,
-					  },
-		.info_mask_shared_by_all
-					= BIT(IIO_CHAN_INFO_RAW) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
-					  BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
-					  BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
-					  BIT(IIO_CHAN_INFO_PEAK) |
-					  BIT(IIO_CHAN_INFO_PEAK_SCALE) |
-					  BIT(IIO_CHAN_INFO_SCALE) |
-					  BIT(IIO_CHAN_INFO_OFFSET),
-		.info_mask_separate	= BIT(IIO_CHAN_INFO_RAW),
-		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
-					    BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
-					    BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
-					    BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
-					    BIT(IIO_CHAN_INFO_PEAK) |
-					    BIT(IIO_CHAN_INFO_PEAK_SCALE) |
-					    BIT(IIO_CHAN_INFO_SCALE) |
-					    BIT(IIO_CHAN_INFO_OFFSET),
-		.modified		= 1,
-	},
-	IIO_CHAN_SOFT_TIMESTAMP(AKM_SCAN_TIMESTAMP)
-};
-
 struct akm_state {
 	struct i2c_client *i2c;
 	struct nvs_fn_if *nvs;
-	void *nvs_data;
+	void *nvs_st;
 	struct sensor_cfg cfg;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(akm_vregs)];
 	struct delayed_work dw;
@@ -261,7 +161,6 @@ struct akm_state {
 	unsigned int scale_i;		/* scale index */
 	u16 i2c_addr;			/* I2C address */
 	u8 dev_id;			/* device ID */
-	bool iio_ts_en;			/* use IIO timestamps */
 	bool irq_dis;			/* interrupt host disable flag */
 	bool initd;			/* set if initialized */
 	bool mpu_en;			/* if device behind MPU */
@@ -298,12 +197,9 @@ struct akm_hal {
 };
 
 
-static s64 akm_get_time_ns(struct akm_state *st)
+static s64 akm_get_time_ns(void)
 {
 	struct timespec ts;
-
-	if (st->iio_ts_en)
-		return iio_get_time_ns();
 
 	ktime_get_ts(&ts);
 	return timespec_to_ns(&ts);
@@ -657,11 +553,11 @@ static int akm_read(struct akm_state *st)
 	if (ret)
 		return ret;
 
-	ts = akm_get_time_ns(st);
+	ts = akm_get_time_ns();
 	ret = akm_read_sts(st, data);
 	if (ret > 0) {
 		akm_calc(st, data);
-		st->nvs->handler(st->nvs_data, &st->magn, ts);
+		st->nvs->handler(st->nvs_st, &st->magn, ts);
 	}
 	return ret;
 }
@@ -674,7 +570,7 @@ static void akm_mpu_handler(u8 *data, unsigned int len, s64 ts, void *p_val)
 
 	if (!ts) {
 		/* no timestamp means flush done */
-		st->nvs->handler(st->nvs_data, NULL, 0);
+		st->nvs->handler(st->nvs_st, NULL, 0);
 		return;
 	}
 
@@ -682,7 +578,7 @@ static void akm_mpu_handler(u8 *data, unsigned int len, s64 ts, void *p_val)
 		ret = akm_read_sts(st, data);
 		if (ret > 0) {
 			akm_calc(st, data);
-			st->nvs->handler(st->nvs_data, &st->magn, ts);
+			st->nvs->handler(st->nvs_st, &st->magn, ts);
 		}
 	}
 }
@@ -694,7 +590,7 @@ static void akm_work(struct work_struct *ws)
 					    struct akm_state, dw);
 	int ret;
 
-	st->nvs->mutex_lock(st->nvs_data);
+	st->nvs->mutex_lock(st->nvs_st);
 	if (st->enabled) {
 		ret = akm_read(st);
 		if (ret > 0) {
@@ -706,7 +602,7 @@ static void akm_work(struct work_struct *ws)
 		schedule_delayed_work(&st->dw,
 				      usecs_to_jiffies(st->poll_delay_us));
 	}
-	st->nvs->mutex_unlock(st->nvs_data);
+	st->nvs->mutex_unlock(st->nvs_st);
 }
 
 static irqreturn_t akm_irq_thread(int irq, void *dev_id)
@@ -968,7 +864,6 @@ static int akm_selftest(void *client, int snsr_id, char *buf)
 	ssize_t t;
 	int ret;
 
-	st->nvs->mutex_lock(st->nvs_data);
 	akm_dis(st);
 	akm_en(st);
 	ret = akm_nvi_mpu_bypass_request(st);
@@ -1004,7 +899,6 @@ static int akm_selftest(void *client, int snsr_id, char *buf)
 		}
 	}
 	akm_enable(st, 0, enabled);
-	st->nvs->mutex_unlock(st->nvs_data);
 	if (buf)
 		return t;
 
@@ -1066,8 +960,8 @@ static int akm_suspend(struct device *dev)
 	int ret = 0;
 
 	st->sts |= NVS_STS_SUSPEND;
-	if (st->nvs && st->nvs_data)
-		ret = st->nvs->suspend(st->nvs_data);
+	if (st->nvs && st->nvs_st)
+		ret = st->nvs->suspend(st->nvs_st);
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
 	return ret;
@@ -1079,8 +973,8 @@ static int akm_resume(struct device *dev)
 	struct akm_state *st = i2c_get_clientdata(client);
 	int ret = 0;
 
-	if (st->nvs && st->nvs_data)
-		ret = st->nvs->resume(st->nvs_data);
+	if (st->nvs && st->nvs_st)
+		ret = st->nvs->resume(st->nvs_st);
 	st->sts &= ~NVS_STS_SUSPEND;
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
@@ -1094,8 +988,8 @@ static void akm_shutdown(struct i2c_client *client)
 	struct akm_state *st = i2c_get_clientdata(client);
 
 	st->sts |= NVS_STS_SHUTDOWN;
-	if (st->nvs && st->nvs_data)
-		st->nvs->shutdown(st->nvs_data);
+	if (st->nvs && st->nvs_st)
+		st->nvs->shutdown(st->nvs_st);
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
 }
@@ -1107,8 +1001,8 @@ static int akm_remove(struct i2c_client *client)
 	if (st != NULL) {
 		akm_shutdown(client);
 		if (st->nvs) {
-			if (st->nvs_data)
-				st->nvs->remove(st->nvs_data);
+			if (st->nvs_st)
+				st->nvs->remove(st->nvs_st);
 		}
 		if (st->dw.wq)
 			destroy_workqueue(st->dw.wq);
@@ -1347,8 +1241,8 @@ static int akm_id_hal(struct akm_state *st, u8 dev_id)
 	st->scale_i = st->hal->scale_i_max;
 	st->cfg.name = "magnetic_field";
 	st->cfg.kbuf_sz = AKM_KBUF_SIZE;
-	st->cfg.ch_n = ARRAY_SIZE(akm_channels);
-	st->cfg.ch_inf = (void *)akm_channels;
+	st->cfg.ch_n = 3;
+	st->cfg.ch_sz = -2;
 	st->cfg.part = st->hal->part;
 	st->cfg.vendor = AKM_VENDOR;
 	st->cfg.version = st->hal->version;
@@ -1569,8 +1463,6 @@ static int akm_of_dt(struct akm_state *st, struct device_node *dn)
 	char const *pchar;
 	u8 cfg;
 
-	/* common NVS programmable parameters */
-	st->iio_ts_en = of_property_read_bool(dn, "iio_timestamps");
 	/* this device supports these programmable parameters */
 	if (!(of_property_read_string(dn, "nvi_config", &pchar))) {
 		for (cfg = 0; cfg < ARRAY_SIZE(akm_configs); cfg++) {
@@ -1638,7 +1530,7 @@ static int akm_probe(struct i2c_client *client,
 		goto akm_probe_err;
 	}
 
-	ret = st->nvs->probe(&st->nvs_data, st, &client->dev,
+	ret = st->nvs->probe(&st->nvs_st, st, &client->dev,
 			     &akm_fn_dev, &st->cfg);
 	if (ret) {
 		dev_err(&client->dev, "%s nvs_probe ERR\n", __func__);

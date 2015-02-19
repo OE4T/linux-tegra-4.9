@@ -1308,103 +1308,6 @@ enum programs {
 /* maximum number of WRITE_PATCHes in the below function */
 #define MAX_CDE_LAUNCH_PATCHES		  32
 
-static int gk20a_buffer_convert_gpu_to_cde_v0(
-		struct gk20a *g,
-		struct dma_buf *dmabuf, u32 consumer,
-		u64 offset, u64 compbits_hoffset, u64 compbits_voffset,
-		u32 width, u32 height, u32 block_height_log2,
-		u32 submit_flags, struct nvgpu_fence *fence_in,
-		struct gk20a_buffer_state *state)
-{
-	struct gk20a_cde_param params[MAX_CDE_LAUNCH_PATCHES];
-	int param = 0;
-	int err = 0;
-	struct gk20a_fence *new_fence = NULL;
-	const int wgx = 8;
-	const int wgy = 8;
-	const int compbits_per_byte = 4; /* one byte stores 4 compbit pairs */
-	const int xalign = compbits_per_byte * wgx;
-	const int yalign = wgy;
-
-	/* firmware v0 needs to call swizzling twice */
-	int i;
-	for (i = 0; i < 2; i++) {
-		/* Compute per launch parameters */
-		const bool vpass = (i == 1);
-		const int transposed_width = vpass ? height : width;
-		const int transposed_height = vpass ? width : height;
-		const int xtiles = (transposed_width + 7) >> 3;
-		const int ytiles = (transposed_height + 7) >> 3;
-		const int gridw = roundup(xtiles, xalign) / xalign;
-		const int gridh = roundup(ytiles, yalign) / yalign;
-		const int flags = (vpass ? 4 : 0) |
-			g->cde_app.shader_parameter;
-		const int dst_stride = 128; /* chip constant */
-
-		if ((vpass && !(consumer & NVGPU_GPU_COMPBITS_CDEV)) ||
-		    (!vpass && !(consumer & NVGPU_GPU_COMPBITS_CDEH)))
-			continue;
-
-		if (xtiles > 4096 / 8 || ytiles > 4096 / 8)
-			gk20a_warn(&g->dev->dev, "cde: surface is exceptionally large (xtiles=%d, ytiles=%d)",
-				   xtiles, ytiles);
-
-		gk20a_dbg(gpu_dbg_cde, "pass=%c", vpass ? 'V' : 'H');
-		gk20a_dbg(gpu_dbg_cde, "w=%d, h=%d, bh_log2=%d, compbits_hoffset=0x%llx, compbits_voffset=0x%llx",
-			  width, height, block_height_log2,
-			  compbits_hoffset, compbits_voffset);
-		gk20a_dbg(gpu_dbg_cde, "resolution (%d, %d) tiles (%d, %d)",
-			  width, height, xtiles, ytiles);
-		gk20a_dbg(gpu_dbg_cde, "group (%d, %d) grid (%d, %d)",
-			  wgx, wgy, gridw, gridh);
-
-		/* Write parameters */
-#define WRITE_PATCH(NAME, VALUE) \
-	params[param++] = (struct gk20a_cde_param){NAME##_ID, 0, VALUE}
-		param = 0;
-		WRITE_PATCH(PATCH_USER_CONST_XTILES, xtiles);
-		WRITE_PATCH(PATCH_USER_CONST_YTILES, ytiles);
-		WRITE_PATCH(PATCH_USER_CONST_BLOCKHEIGHTLOG2,
-			block_height_log2);
-		WRITE_PATCH(PATCH_USER_CONST_DSTPITCH, dst_stride);
-		WRITE_PATCH(PATCH_H_USER_CONST_FLAGS, flags);
-		WRITE_PATCH(PATCH_H_VPC_CURRENT_GRID_SIZE_X, gridw);
-		WRITE_PATCH(PATCH_H_VPC_CURRENT_GRID_SIZE_Y, gridh);
-		WRITE_PATCH(PATCH_H_VPC_CURRENT_GRID_SIZE_Z, 1);
-		WRITE_PATCH(PATCH_VPC_CURRENT_GROUP_SIZE_X, wgx);
-		WRITE_PATCH(PATCH_VPC_CURRENT_GROUP_SIZE_Y, wgy);
-		WRITE_PATCH(PATCH_VPC_CURRENT_GROUP_SIZE_Z, 1);
-		WRITE_PATCH(PATCH_H_QMD_CTA_RASTER_WIDTH, gridw);
-		WRITE_PATCH(PATCH_H_QMD_CTA_RASTER_HEIGHT, gridh);
-		WRITE_PATCH(PATCH_QMD_CTA_RASTER_DEPTH, 1);
-		WRITE_PATCH(PATCH_QMD_CTA_THREAD_DIMENSION0, wgx);
-		WRITE_PATCH(PATCH_QMD_CTA_THREAD_DIMENSION1, wgy);
-		WRITE_PATCH(PATCH_QMD_CTA_THREAD_DIMENSION2, 1);
-#undef WRITE_PATCH
-
-		err = gk20a_cde_convert(g, dmabuf,
-					0, /* dst kind */
-					vpass ?
-					compbits_voffset :
-					compbits_hoffset,
-					0, /* dst_size, 0 = auto */
-					fence_in, submit_flags,
-					params, param,
-					&new_fence);
-		if (err)
-			goto out;
-
-		/* compbits generated, update state & fence */
-		gk20a_fence_put(state->fence);
-		state->fence = new_fence;
-		state->valid_compbits |= vpass ?
-			NVGPU_GPU_COMPBITS_CDEV :
-			NVGPU_GPU_COMPBITS_CDEH;
-	}
-out:
-	return err;
-}
-
 static int gk20a_buffer_convert_gpu_to_cde_v1(
 		struct gk20a *g,
 		struct dma_buf *dmabuf, u32 consumer,
@@ -1446,7 +1349,7 @@ static int gk20a_buffer_convert_gpu_to_cde_v1(
 			PROG_VPASS_SMALL_DEBUG;
 	}
 
-	if (xtiles > 4096 / 8 || ytiles > 4096 / 8)
+	if (xtiles > 8192 / 8 || ytiles > 8192 / 8)
 		gk20a_warn(&g->dev->dev, "cde: surface is exceptionally large (xtiles=%d, ytiles=%d)",
 			   xtiles, ytiles);
 
@@ -1562,16 +1465,15 @@ static int gk20a_buffer_convert_gpu_to_cde(
 	gk20a_dbg(gpu_dbg_cde, "firmware version = %d\n",
 		g->cde_app.firmware_version);
 
-	if (g->cde_app.firmware_version == 0) {
-		err = gk20a_buffer_convert_gpu_to_cde_v0(
-		    g, dmabuf, consumer, offset, compbits_hoffset,
-		    compbits_voffset, width, height, block_height_log2,
-		    submit_flags, fence_in, state);
-	} else {
+	if (g->cde_app.firmware_version == 1) {
 		err = gk20a_buffer_convert_gpu_to_cde_v1(
 		    g, dmabuf, consumer, offset, compbits_hoffset,
 		    compbits_voffset, width, height, block_height_log2,
 		    submit_flags, fence_in, state);
+	} else {
+		dev_err(dev_from_gk20a(g), "unsupported CDE firmware version %d",
+			g->cde_app.firmware_version);
+		err = -EINVAL;
 	}
 
 	gk20a_idle(g->dev);

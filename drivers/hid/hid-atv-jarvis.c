@@ -852,7 +852,7 @@ static void snd_atvr_timer_callback(unsigned long data)
 			 * Fall through into next state. */
 		} else if ((jiffies - atvr_snd->previous_jiffies) >
 			   atvr_snd->timeout_jiffies) {
-			snd_atvr_log("audio UNDERFLOW detected\n");
+			pr_debug("%s: audio UNDERFLOW detected\n", __func__);
 			/*  Not fatal.  Reset timeout. */
 			atvr_snd->previous_jiffies = jiffies;
 			break;

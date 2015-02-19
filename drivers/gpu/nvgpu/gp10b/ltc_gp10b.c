@@ -17,6 +17,8 @@
 
 #include "gk20a/gk20a.h"
 #include "gm20b/ltc_gm20b.h"
+#include "hw_proj_gp10b.h"
+#include "hw_mc_gp10b.h"
 #include "hw_ltc_gp10b.h"
 
 #include "gk20a/ltc_common.c"
@@ -123,6 +125,31 @@ static int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 }
 
+void gp10b_ltc_isr(struct gk20a *g)
+{
+	u32 mc_intr, ltc_intr;
+	int ltc, slice;
+
+	mc_intr = gk20a_readl(g, mc_intr_ltc_r());
+	gk20a_err(dev_from_gk20a(g), "mc_ltc_intr: %08x",
+		  mc_intr);
+	for (ltc = 0; ltc < g->ltc_count; ltc++) {
+		if ((mc_intr & 1 << ltc) == 0)
+			continue;
+		for (slice = 0; slice < g->gr.slices_per_ltc; slice++) {
+			ltc_intr = gk20a_readl(g, ltc_ltc0_lts0_intr_r() +
+					   proj_ltc_stride_v() * ltc +
+					   proj_lts_stride_v() * slice);
+			gk20a_err(dev_from_gk20a(g), "ltc%d, slice %d: %08x",
+				  ltc, slice, ltc_intr);
+			gk20a_writel(g, ltc_ltc0_lts0_intr_r() +
+					   proj_ltc_stride_v() * ltc +
+					   proj_lts_stride_v() * slice,
+				     ltc_intr);
+		}
+	}
+}
+
 void gp10b_init_ltc(struct gpu_ops *gops)
 {
 	gops->ltc.determine_L2_size_bytes = gp10b_determine_L2_size_bytes;
@@ -136,7 +163,7 @@ void gp10b_init_ltc(struct gpu_ops *gops)
 	gops->ltc.init_comptags = gp10b_ltc_init_comptags;
 	gops->ltc.cbc_ctrl = gm20b_ltc_cbc_ctrl;
 	gops->ltc.elpg_flush = gm20b_ltc_g_elpg_flush_locked;
-	gops->ltc.isr = gm20b_ltc_isr;
+	gops->ltc.isr = gp10b_ltc_isr;
 	gops->ltc.cbc_fix_config = gm20b_ltc_cbc_fix_config;
 	gops->ltc.flush = gm20b_flush_ltc;
 #ifdef CONFIG_DEBUG_FS

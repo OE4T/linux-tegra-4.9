@@ -3619,7 +3619,8 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 	else
 		tegra_dvfs_set_rate(dc->clk, 0);
 
-	clk_disable_unprepare(dc->emc_la_clk);
+	if (!tegra_platform_is_linsim())
+		clk_disable_unprepare(dc->emc_la_clk);
 }
 
 void tegra_dc_stats_enable(struct tegra_dc *dc, bool enable)

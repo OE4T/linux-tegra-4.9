@@ -1565,6 +1565,9 @@ tegra_dc_sor_restore_win_and_raster(struct tegra_dc *dc, int *dc_reg_ctx)
 {
 	int selected_windows, i;
 
+	if (tegra_platform_is_linsim())
+		return;
+
 	selected_windows = tegra_dc_readl(dc, DC_CMD_DISPLAY_WINDOW_HEADER);
 
 	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
@@ -1591,12 +1594,22 @@ void tegra_sor_stop_dc(struct tegra_dc_sor_data *sor)
 
 	tegra_dc_get(dc);
 
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	/*SOR should be attached if the Display command != STOP */
+	/* Stop DC */
+	tegra_dc_writel(dc, DISP_CTRL_MODE_STOP, DC_CMD_DISPLAY_COMMAND);
+	tegra_dc_enable_general_act(dc);
+
+	/* Stop DC->SOR path */
+	tegra_dc_sor_enable_sor(sor, false);
+#else
 	/* Stop DC->SOR path */
 	tegra_dc_sor_enable_sor(sor, false);
 	tegra_dc_enable_general_act(dc);
 
 	/* Stop DC */
 	tegra_dc_writel(dc, DISP_CTRL_MODE_STOP, DC_CMD_DISPLAY_COMMAND);
+#endif
 	tegra_dc_enable_general_act(dc);
 
 	tegra_dc_put(dc);

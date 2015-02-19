@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -57,7 +57,6 @@
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/of.h>
-#include <linux/iio/iio.h>
 #include <linux/nvs.h>
 #if BMP_NVI_MPU_SUPPORT
 #include <linux/mpu_iio.h>
@@ -73,10 +72,6 @@
 #define BMP_PRES_MAX_RANGE_MICRO	(0)
 #define BMP_TEMP_MAX_RANGE_IVAL		(125)
 #define BMP_TEMP_MAX_RANGE_MICRO	(0)
-#define BMP_PRES_OFFSET_IVAL		(0)
-#define BMP_PRES_OFFSET_MICRO		(0)
-#define BMP_TEMP_OFFSET_IVAL		(0)
-#define BMP_TEMP_OFFSET_MICRO		(0)
 #define BMP180_RANGE_DFLT		(0)
 /* until BMP280 OSS pressure calculation is supported, this defaults to 5 */
 #define BMP280_RANGE_DFLT		(5)
@@ -228,94 +223,24 @@ struct bmp_cmode {
 	u8 t_sb;
 };
 
-static const struct iio_chan_spec bmp_chan_pres[] = {
-	{
-		.type			= IIO_PRESSURE,
-		.scan_type		= { .sign = 's',
-                                            .realbits = 32,
-                                            .storagebits = 32,
-                                            .endianness = IIO_CPU,
-                                          },
-		.info_mask_shared_by_all
-					= BIT(IIO_CHAN_INFO_RAW) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
-					  BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
-					  BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
-					  BIT(IIO_CHAN_INFO_PEAK) |
-					  BIT(IIO_CHAN_INFO_PEAK_SCALE) |
-					  BIT(IIO_CHAN_INFO_SCALE) |
-					  BIT(IIO_CHAN_INFO_OFFSET),
-		.info_mask_separate	= BIT(IIO_CHAN_INFO_RAW) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
-					  BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
-					  BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
-					  BIT(IIO_CHAN_INFO_PEAK) |
-					  BIT(IIO_CHAN_INFO_PEAK_SCALE) |
-					  BIT(IIO_CHAN_INFO_SCALE) |
-					  BIT(IIO_CHAN_INFO_OFFSET),
-	},
-	IIO_CHAN_SOFT_TIMESTAMP(1)
-};
-
-static const struct iio_chan_spec bmp_chan_temp[] = {
-	{
-		.type			= IIO_TEMP,
-		.scan_type		= { .sign = 's',
-                                            .realbits = 32,
-                                            .storagebits = 32,
-                                            .endianness = IIO_CPU,
-                                          },
-		.info_mask_shared_by_all
-					= BIT(IIO_CHAN_INFO_RAW) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
-					  BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
-					  BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
-					  BIT(IIO_CHAN_INFO_PEAK) |
-					  BIT(IIO_CHAN_INFO_PEAK_SCALE) |
-					  BIT(IIO_CHAN_INFO_SCALE) |
-					  BIT(IIO_CHAN_INFO_OFFSET),
-		.info_mask_separate	= BIT(IIO_CHAN_INFO_RAW) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
-					  BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
-					  BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
-					  BIT(IIO_CHAN_INFO_PEAK) |
-					  BIT(IIO_CHAN_INFO_PEAK_SCALE) |
-					  BIT(IIO_CHAN_INFO_SCALE) |
-					  BIT(IIO_CHAN_INFO_OFFSET),
-	},
-	IIO_CHAN_SOFT_TIMESTAMP(1)
-};
-
-static const struct iio_chan_spec *bmp_channels[] = {
-	bmp_chan_pres,
-	bmp_chan_temp,
-};
-
 struct bmp_state {
 	struct i2c_client *i2c;
 	struct nvs_fn_if *nvs;
-	void *nvs_data[ARRAY_SIZE(bmp_channels)];
-	struct sensor_cfg cfg[ARRAY_SIZE(bmp_channels)];
+	void *nvs_st[BMP_DEV_N];
+	struct sensor_cfg cfg[BMP_DEV_N];
 	struct regulator_bulk_data vreg[ARRAY_SIZE(bmp_vregs)];
 	struct delayed_work dw;
 	struct bmp_hal *hal;		/* Hardware Abstaction Layer */
 	union bmp_rom rom;		/* calibration data */
-	unsigned int dev[ARRAY_SIZE(bmp_channels)]; /* device index */
-	unsigned int snsr_n;		/* number of sensors */
 	unsigned int sts;		/* status flags */
 	unsigned int errs;		/* error count */
 	unsigned int enabled;		/* enable status */
 	unsigned int poll_delay_us;	/* global sampling delay */
-	unsigned int delay_us[ARRAY_SIZE(bmp_channels)]; /* sampling delay */
+	unsigned int delay_us[BMP_DEV_N]; /* sampling delay */
 	unsigned int scale_i;		/* oversampling index */
 	unsigned int scale_user;	/* user oversampling index */
 	u16 i2c_addr;			/* I2C address */
 	u8 dev_id;			/* device ID */
-	bool iio_ts_en;			/* use IIO timestamps */
 	bool initd;			/* set if initialized */
 	bool mpu_en;			/* if device behind MPU */
 	bool fifo_en;			/* MPU FIFO enable */
@@ -345,12 +270,9 @@ struct bmp_hal {
 };
 
 
-static s64 bmp_get_time_ns(struct bmp_state *st)
+static s64 bmp_get_time_ns(void)
 {
 	struct timespec ts;
-
-	if (st->iio_ts_en)
-		return iio_get_time_ns();
 
 	ktime_get_ts(&ts);
 	return timespec_to_ns(&ts);
@@ -701,11 +623,11 @@ static int bmp_read_180(struct bmp_state *st)
 	if (ret)
 		return ret;
 
-	ts = bmp_get_time_ns(st);
+	ts = bmp_get_time_ns();
 	ret = bmp_read_sts_180(st, data, ts);
 	if (ret > 0) {
-		st->nvs->handler(st->nvs_data[0], &st->pressure, ts);
-		st->nvs->handler(st->nvs_data[1], &st->temp, ts);
+		st->nvs->handler(st->nvs_st[BMP_DEV_PRES], &st->pressure, ts);
+		st->nvs->handler(st->nvs_st[BMP_DEV_TEMP], &st->temp, ts);
 		bmp_i2c_wr(st, BMP_REG_CTRL, st->data_out);
 	} else if (ret < 0) {
 		bmp_i2c_wr(st, BMP_REG_CTRL, st->data_out);
@@ -823,11 +745,11 @@ static int bmp_read_280(struct bmp_state *st)
 	if (ret)
 		return ret;
 
-	ts = bmp_get_time_ns(st);
+	ts = bmp_get_time_ns();
 	ret = bmp_read_sts_280(st, data, ts);
 	if (ret > 0) {
-		st->nvs->handler(st->nvs_data[0], &st->pressure, ts);
-		st->nvs->handler(st->nvs_data[1], &st->temp, ts);
+		st->nvs->handler(st->nvs_st[BMP_DEV_PRES], &st->pressure, ts);
+		st->nvs->handler(st->nvs_st[BMP_DEV_TEMP], &st->temp, ts);
 		bmp_i2c_wr(st, BMP_REG_CTRL, st->data_out);
 	}
 	return 0;
@@ -842,16 +764,18 @@ static void bmp_mpu_handler_280(u8 *data, unsigned int len, s64 ts, void *p_val)
 
 	if (!ts) {
 		/* no timestamp means flush done */
-		for (i = 0; i < st->snsr_n; i++)
-			st->nvs->handler(st->nvs_data[i], NULL, 0);
+		for (i = 0; i < BMP_DEV_N; i++)
+			st->nvs->handler(st->nvs_st[i], NULL, 0);
 		return;
 	}
 
 	if (st->enabled) {
 		ret = bmp_read_sts_280(st, data, ts);
 		if (ret > 0) {
-			st->nvs->handler(st->nvs_data[0], &st->pressure, ts);
-			st->nvs->handler(st->nvs_data[1], &st->temp, ts);
+			st->nvs->handler(st->nvs_st[BMP_DEV_PRES],
+					 &st->pressure, ts);
+			st->nvs->handler(st->nvs_st[BMP_DEV_TEMP],
+					 &st->temp, ts);
 		}
 	}
 }
@@ -864,16 +788,18 @@ static void bmp_mpu_handler_180(u8 *data, unsigned int len, s64 ts, void *p_val)
 
 	if (!ts) {
 		/* no timestamp means flush done */
-		for (i = 0; i < st->snsr_n; i++)
-			st->nvs->handler(st->nvs_data[i], NULL, 0);
+		for (i = 0; i < BMP_DEV_N; i++)
+			st->nvs->handler(st->nvs_st[i], NULL, 0);
 		return;
 	}
 
 	if (st->enabled) {
 		ret = bmp_read_sts_180(st, data, ts);
 		if (ret > 0) {
-			st->nvs->handler(st->nvs_data[0], &st->pressure, ts);
-			st->nvs->handler(st->nvs_data[1], &st->temp, ts);
+			st->nvs->handler(st->nvs_st[BMP_DEV_PRES],
+					 &st->pressure, ts);
+			st->nvs->handler(st->nvs_st[BMP_DEV_TEMP],
+					 &st->temp, ts);
 			nvi_mpu_data_out(st->port_id[WR], st->data_out);
 		} else if (ret < 0) {
 			nvi_mpu_data_out(st->port_id[WR], st->data_out);
@@ -888,15 +814,15 @@ static void bmp_work(struct work_struct *ws)
 					    struct bmp_state, dw);
 	unsigned int i;
 
-	for (i = 0; i < st->snsr_n; i++)
-		st->nvs->mutex_lock(st->nvs_data[i]);
+	for (i = 0; i < BMP_DEV_N; i++)
+		st->nvs->mutex_lock(st->nvs_st[i]);
 	if (st->enabled) {
 		st->hal->bmp_read(st);
 		schedule_delayed_work(&st->dw,
 				      usecs_to_jiffies(st->poll_delay_us));
 	}
-	for (i = 0; i < st->snsr_n; i++)
-		st->nvs->mutex_unlock(st->nvs_data[i]);
+	for (i = 0; i < BMP_DEV_N; i++)
+		st->nvs->mutex_unlock(st->nvs_st[i]);
 }
 
 static unsigned int bmp_poll_delay(struct bmp_state *st)
@@ -904,10 +830,10 @@ static unsigned int bmp_poll_delay(struct bmp_state *st)
 	unsigned int i;
 	unsigned int delay_us = -1;
 
-	for (i = 0; i < st->snsr_n; i++) {
-		if (st->enabled & (1 << st->dev[i])) {
-			if (st->delay_us[st->dev[i]] < delay_us)
-				delay_us = st->delay_us[st->dev[i]];
+	for (i = 0; i < BMP_DEV_N; i++) {
+		if (st->enabled & (1 << i)) {
+			if (st->delay_us[i] < delay_us)
+				delay_us = st->delay_us[i];
 		}
 	}
 	if (delay_us == -1)
@@ -1163,8 +1089,8 @@ static int bmp_reset(void *client, int snsr_id)
 	ret = bmp_wr(st, BMP_REG_RESET, BMP_REG_RESET_VAL);
 	if (!ret)
 		mdelay(BMP_HW_DELAY_POR_MS);
-	for (i = 0; i < st->snsr_n; i++)
-		bmp_enable(st, i, enabled & (1 << st->dev[i]));
+	for (i = 0; i < BMP_DEV_N; i++)
+		bmp_enable(st, i, enabled & (1 << i));
 	return ret;
 }
 
@@ -1225,9 +1151,9 @@ static int bmp_suspend(struct device *dev)
 	int ret = 0;
 
 	st->sts |= NVS_STS_SUSPEND;
-	for (i = 0; i < st->snsr_n; i++) {
-		if (st->nvs && st->nvs_data[i])
-			ret |= st->nvs->suspend(st->nvs_data[i]);
+	for (i = 0; i < BMP_DEV_N; i++) {
+		if (st->nvs && st->nvs_st[i])
+			ret |= st->nvs->suspend(st->nvs_st[i]);
 	}
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
@@ -1241,9 +1167,9 @@ static int bmp_resume(struct device *dev)
 	unsigned int i;
 	int ret = 0;
 
-	for (i = 0; i < st->snsr_n; i++) {
-		if (st->nvs && st->nvs_data[i])
-			ret |= st->nvs->resume(st->nvs_data[i]);
+	for (i = 0; i < BMP_DEV_N; i++) {
+		if (st->nvs && st->nvs_st[i])
+			ret |= st->nvs->resume(st->nvs_st[i]);
 	}
 	st->sts &= ~NVS_STS_SUSPEND;
 	if (st->sts & NVS_STS_SPEW_MSG)
@@ -1259,9 +1185,9 @@ static void bmp_shutdown(struct i2c_client *client)
 	unsigned int i;
 
 	st->sts |= NVS_STS_SHUTDOWN;
-	for (i = 0; i < st->snsr_n; i++) {
-		if (st->nvs && st->nvs_data[i])
-			st->nvs->shutdown(st->nvs_data[i]);
+	for (i = 0; i < BMP_DEV_N; i++) {
+		if (st->nvs && st->nvs_st[i])
+			st->nvs->shutdown(st->nvs_st[i]);
 	}
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
@@ -1275,9 +1201,11 @@ static int bmp_remove(struct i2c_client *client)
 	if (st != NULL) {
 		bmp_shutdown(client);
 		if (st->nvs) {
-			for (i = 0; i < st->snsr_n; i++) {
-				if (st->nvs_data[i])
-					st->nvs->remove(st->nvs_data[i]);
+			for (i = 0; i < BMP_DEV_N; i++) {
+				if (st->nvs_st[i]) {
+					st->nvs->remove(st->nvs_st[i]);
+					st->nvs_st[i] = NULL;
+				}
 			}
 		}
 		if (st->dw.wq)
@@ -1293,8 +1221,8 @@ struct sensor_cfg bmp_cfg_dflt[] = {
 		.name			= "pressure",
 		.snsr_id		= BMP_DEV_PRES,
 		.kbuf_sz		= BMP_KBUF_SIZE,
-		.ch_n			= ARRAY_SIZE(bmp_chan_pres),
-		.ch_inf			= &bmp_chan_pres,
+		.ch_n			= 1,
+		.ch_sz			= -4,
 		.part			= BMP_NAME,
 		.vendor			= BMP_VENDOR,
 		.version		= 0,
@@ -1304,16 +1232,12 @@ struct sensor_cfg bmp_cfg_dflt[] = {
 		},
 		.delay_us_min		= 10000,
 		.delay_us_max		= 255000,
-		.offset			= {
-			.ival		= BMP_PRES_OFFSET_IVAL,
-			.fval		= BMP_PRES_OFFSET_MICRO,
-		},
 	},
 	{
 		.name			= "ambient_temperature",
 		.snsr_id		= BMP_DEV_TEMP,
-		.ch_n			= ARRAY_SIZE(bmp_chan_temp),
-		.ch_inf			= &bmp_chan_temp,
+		.ch_n			= 1,
+		.ch_sz			= -4,
 		.part			= BMP_NAME,
 		.vendor			= BMP_VENDOR,
 		.version		= 0,
@@ -1323,10 +1247,7 @@ struct sensor_cfg bmp_cfg_dflt[] = {
 		},
 		.delay_us_min		= 10000,
 		.delay_us_max		= 255000,
-		.offset			= {
-			.ival		= BMP_TEMP_OFFSET_IVAL,
-			.fval		= BMP_TEMP_OFFSET_MICRO,
-		},
+		.flags			= 1,
 	},
 };
 
@@ -1669,7 +1590,7 @@ static int bmp_id_hal(struct bmp_state *st)
 	}
 
 	st->scale_user = st->hal->p->scale_dflt;
-	for (i = 0; i < ARRAY_SIZE(bmp_channels); i++)
+	for (i = 0; i < BMP_DEV_N; i++)
 		memcpy(&st->cfg[i], &bmp_cfg_dflt[i],
 		       sizeof(struct sensor_cfg));
 	st->cfg[BMP_DEV_PRES].part = st->hal->part;
@@ -1878,8 +1799,6 @@ static int bmp_of_dt(struct bmp_state *st, struct device_node *dn)
 	char const *pchar;
 	u8 cfg;
 
-	/* common NVS programmable parameters */
-	st->iio_ts_en = of_property_read_bool(dn, "iio_timestamps");
 	/* this device supports these programmable parameters */
 	if (!(of_property_read_string(dn, "nvi_config", &pchar))) {
 		for (cfg = 0; cfg < ARRAY_SIZE(bmp_configs); cfg++) {
@@ -1898,7 +1817,6 @@ static int bmp_probe(struct i2c_client *client,
 {
 	struct bmp_state *st;
 	unsigned int i;
-	unsigned int n;
 	int ret;
 
 	dev_info(&client->dev, "%s %s\n", id->name, __func__);
@@ -1933,24 +1851,17 @@ static int bmp_probe(struct i2c_client *client,
 		goto bmp_probe_err;
 	}
 
-	st->snsr_n = ARRAY_SIZE(bmp_channels);
-	n = 0;
-	for (i = 0; i < st->snsr_n; i++) {
+	for (i = 0; i < BMP_DEV_N; i++) {
 		nvs_of_dt(client->dev.of_node, &st->cfg[i], NULL);
-		ret = st->nvs->probe(&st->nvs_data[n], st, &client->dev,
-				     &bmp_fn_dev, &st->cfg[i]);
-		if (!ret) {
-			st->dev[n] = st->cfg->snsr_id;
-			n++;
-		}
+		ret |= st->nvs->probe(&st->nvs_st[i], st, &client->dev,
+				      &bmp_fn_dev, &st->cfg[i]);
 	}
-	if (!n) {
+	if (ret) {
 		dev_err(&client->dev, "%s nvs_probe ERR\n", __func__);
 		ret = -ENODEV;
 		goto bmp_probe_err;
 	}
 
-	st->snsr_n = n;
 	if (!st->mpu_en)
 		INIT_DELAYED_WORK(&st->dw, bmp_work);
 

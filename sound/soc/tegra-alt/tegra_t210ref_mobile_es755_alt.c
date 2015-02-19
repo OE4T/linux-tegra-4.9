@@ -450,6 +450,8 @@ static const struct snd_soc_dapm_widget tegra_t210ref_dapm_widgets[] = {
 	SND_SOC_DAPM_SPK("Int Spk", tegra_t210ref_event_int_spk),
 	SND_SOC_DAPM_HP("y Headphone", NULL),
 	SND_SOC_DAPM_MIC("y Mic", NULL),
+	SND_SOC_DAPM_HP("k Headphone", NULL),
+	SND_SOC_DAPM_MIC("k Mic", NULL),
 };
 
 static const struct snd_kcontrol_new tegra_t210ref_controls[] = {

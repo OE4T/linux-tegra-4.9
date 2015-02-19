@@ -243,6 +243,20 @@ static int gk20a_ctrl_get_tpc_masks(struct gk20a *g,
 	return err;
 }
 
+static int nvgpu_gpu_ioctl_l2_fb_ops(struct gk20a *g,
+		struct nvgpu_gpu_l2_fb_args *args)
+{
+	int err = 0;
+
+	if (args->l2_flush)
+		g->ops.mm.l2_flush(g, args->l2_invalidate ? true : false);
+
+	if (args->fb_flush)
+		g->ops.mm.fb_flush(g);
+
+	return err;
+}
+
 long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct platform_device *dev = filp->private_data;
@@ -422,6 +436,10 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		 * for consistency - they are the same */
 		err = gk20a_channel_open_ioctl(g,
 			(struct nvgpu_channel_open_args *)buf);
+		break;
+	case NVGPU_GPU_IOCTL_FLUSH_L2:
+		err = nvgpu_gpu_ioctl_l2_fb_ops(g,
+			   (struct nvgpu_gpu_l2_fb_args *)buf);
 		break;
 	default:
 		dev_dbg(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x", cmd);

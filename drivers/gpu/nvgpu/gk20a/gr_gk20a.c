@@ -1502,7 +1502,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	ctx_header_words =  roundup(ctx_header_bytes, sizeof(u32));
 	ctx_header_words >>= 2;
 
-	gk20a_mm_l2_flush(g, true);
+	g->ops.mm.l2_flush(g, true);
 
 	for (i = 0; i < ctx_header_words; i++) {
 		data = gk20a_mem_rd32(ctx_ptr, i);
@@ -1565,7 +1565,7 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 
 	/* Channel gr_ctx buffer is gpu cacheable.
 	   Flush and invalidate before cpu update. */
-	gk20a_mm_l2_flush(g, true);
+	g->ops.mm.l2_flush(g, true);
 
 	ctx_ptr = vmap(ch_ctx->gr_ctx->pages,
 			PAGE_ALIGN(ch_ctx->gr_ctx->size) >> PAGE_SHIFT,
@@ -1605,7 +1605,7 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 
 	/* Channel gr_ctx buffer is gpu cacheable.
 	   Flush and invalidate before cpu update. */
-	gk20a_mm_l2_flush(g, true);
+	g->ops.mm.l2_flush(g, true);
 
 	ctx_ptr = vmap(ch_ctx->gr_ctx->pages,
 			PAGE_ALIGN(ch_ctx->gr_ctx->size) >> PAGE_SHIFT,
@@ -7003,7 +7003,7 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 		goto cleanup;
 	}
 
-	gk20a_mm_l2_flush(g, true);
+	g->ops.mm.l2_flush(g, true);
 
 	/* write to appropriate place in context image,
 	 * first have to figure out where that really is */

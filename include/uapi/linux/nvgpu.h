@@ -242,6 +242,14 @@ struct nvgpu_gpu_open_channel_args {
 	__s32 channel_fd;
 };
 
+/* L2 cache writeback, optionally invalidate clean lines and flush fb */
+struct nvgpu_gpu_l2_fb_args {
+	__u32 l2_flush:1;
+	__u32 l2_invalidate:1;
+	__u32 fb_flush:1;
+	__u32 reserved;
+} __packed;
+
 #define NVGPU_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
 	_IOR(NVGPU_GPU_IOCTL_MAGIC, 1, struct nvgpu_gpu_zcull_get_ctx_size_args)
 #define NVGPU_GPU_IOCTL_ZCULL_GET_INFO \
@@ -264,12 +272,13 @@ struct nvgpu_gpu_open_channel_args {
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 10, struct nvgpu_gpu_get_tpc_masks_args)
 #define NVGPU_GPU_IOCTL_OPEN_CHANNEL \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 11, struct nvgpu_gpu_open_channel_args)
+#define NVGPU_GPU_IOCTL_FLUSH_L2 \
+	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 12, struct nvgpu_gpu_l2_fb_args)
 
 #define NVGPU_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_GPU_IOCTL_OPEN_CHANNEL)
+	_IOC_NR(NVGPU_GPU_IOCTL_FLUSH_L2)
 #define NVGPU_GPU_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_gpu_prepare_compressible_read_args)
-
 
 /*
  * /dev/nvhost-tsg-gpu device

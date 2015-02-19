@@ -697,7 +697,7 @@ static bool validate_reg_ops(struct dbg_session_gk20a *dbg_s,
 		ok &= !err;
 	}
 
-	gk20a_dbg(gpu_dbg_gpu_dbg, "ctx_wrs:%d ctx_rds:%d\n",
+	gk20a_dbg(gpu_dbg_gpu_dbg, "ctx_wrs:%d ctx_rds:%d",
 		   *ctx_wr_count, *ctx_rd_count);
 
 	return ok;

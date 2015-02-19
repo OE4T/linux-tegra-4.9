@@ -412,19 +412,16 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 	case NVGPU_DBG_GPU_IOCTL_BIND_CHANNEL:
 		err = dbg_bind_channel_gk20a(dbg_s,
 			     (struct nvgpu_dbg_gpu_bind_channel_args *)buf);
-		gk20a_dbg(gpu_dbg_gpu_dbg, "ret=%d", err);
 		break;
 
 	case NVGPU_DBG_GPU_IOCTL_REG_OPS:
 		err = nvgpu_ioctl_channel_reg_ops(dbg_s,
 			   (struct nvgpu_dbg_gpu_exec_reg_ops_args *)buf);
-		gk20a_dbg(gpu_dbg_gpu_dbg, "ret=%d", err);
 		break;
 
 	case NVGPU_DBG_GPU_IOCTL_POWERGATE:
 		err = nvgpu_ioctl_powergate_gk20a(dbg_s,
 			   (struct nvgpu_dbg_gpu_powergate_args *)buf);
-		gk20a_dbg(gpu_dbg_gpu_dbg, "ret=%d", err);
 		break;
 
 	case NVGPU_DBG_GPU_IOCTL_EVENTS_CTRL:
@@ -459,6 +456,8 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 		err = -ENOTTY;
 		break;
 	}
+
+	gk20a_dbg(gpu_dbg_gpu_dbg, "ret=%d", err);
 
 	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ))
 		err = copy_to_user((void __user *)arg,
@@ -740,6 +739,8 @@ static int nvgpu_dbg_gpu_ioctl_suspend_resume_sm(
 	struct channel_gk20a *ch = dbg_s->ch;
 	bool ch_is_curr_ctx;
 	int err = 0, action = args->mode;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "action: %d", args->mode);
 
 	mutex_lock(&g->dbg_sessions_lock);
 

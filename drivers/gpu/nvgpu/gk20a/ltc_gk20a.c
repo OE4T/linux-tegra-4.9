@@ -217,7 +217,7 @@ static void gk20a_mm_g_elpg_flush_locked(struct gk20a *g)
 			break;
 	} while (retry >= 0 || !tegra_platform_is_silicon());
 
-	if (retry < 0)
+	if (tegra_platform_is_silicon() && retry < 0)
 		gk20a_warn(dev_from_gk20a(g),
 			    "g_elpg_flush too many retries");
 

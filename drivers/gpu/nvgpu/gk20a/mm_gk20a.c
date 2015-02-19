@@ -2787,7 +2787,7 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 			break;
 	} while (retry >= 0 || !tegra_platform_is_silicon());
 
-	if (retry < 0) {
+	if (tegra_platform_is_silicon() && retry < 0) {
 		gk20a_warn(dev_from_gk20a(g),
 			"fb_flush too many retries");
 		ret = -EBUSY;
@@ -2827,7 +2827,7 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 			break;
 	} while (retry >= 0 || !tegra_platform_is_silicon());
 
-	if (retry < 0)
+	if (tegra_platform_is_silicon() && retry < 0)
 		gk20a_warn(dev_from_gk20a(g),
 			"l2_system_invalidate too many retries");
 
@@ -2881,7 +2881,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 			break;
 	} while (retry >= 0 || !tegra_platform_is_silicon());
 
-	if (retry < 0)
+	if (tegra_platform_is_silicon() && retry < 0)
 		gk20a_warn(dev_from_gk20a(g),
 			"l2_flush_dirty too many retries");
 
@@ -2954,7 +2954,7 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 		retry--;
 	} while (retry >= 0 || !tegra_platform_is_silicon());
 
-	if (retry < 0) {
+	if (tegra_platform_is_silicon() && retry < 0) {
 		gk20a_warn(dev_from_gk20a(g),
 			"wait mmu fifo space too many retries");
 		goto out;
@@ -2977,7 +2977,7 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 		udelay(2);
 	} while (retry >= 0 || !tegra_platform_is_silicon());
 
-	if (retry < 0)
+	if (tegra_platform_is_silicon() && retry < 0)
 		gk20a_warn(dev_from_gk20a(g),
 			"mmu invalidate too many retries");
 

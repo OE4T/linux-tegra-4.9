@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -15,6 +15,7 @@
 #define _NVS_PROXIMITY_H_
 
 #include <linux/iio/iio.h>
+#include <linux/of.h>
 #include <linux/nvs.h>
 
 #define RET_POLL_NEXT			(-1)
@@ -22,6 +23,7 @@
 #define RET_HW_UPDATE			(1)
 
 #define NVS_PROXIMITY_STRING		"proximity"
+#define SENSOR_FLAG_ON_CHANGE_MODE	0x2 /* from AOS sensors.h */
 
 /**
  * struct nvs_proximity - the common structure between the
@@ -112,5 +114,7 @@ static const struct iio_chan_spec iio_chan_spec_nvs_proximity[] = {
 
 int nvs_proximity_enable(struct nvs_proximity *np);
 int nvs_proximity_read(struct nvs_proximity *np);
+int nvs_proximity_of_dt(struct nvs_proximity *np, const struct device_node *dn,
+			const char *dev_name);
 
 #endif /* _NVS_PROXIMITY_H_ */

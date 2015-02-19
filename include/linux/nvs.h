@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -17,8 +17,6 @@
 #include <linux/device.h>
 #include <linux/regulator/consumer.h>
 
-#define NVS_SCALE_SIGNIFICANCE		(1000000) /* IIO_VAL_INT_PLUS_MICRO*/
-
 #define NVS_STS_SHUTDOWN		(1 << 0)
 #define NVS_STS_SUSPEND			(1 << 1)
 #define NVS_STS_SYS_N			(2)
@@ -34,20 +32,32 @@
 #define NVS_STS_DBG_N			(NVS_STS_SYS_N + 4)
 #define NVS_STS_EXT_N			(NVS_STS_DBG_N)
 
+#define NVS_CHANNEL_N_MAX		(5)
+#define NVS_FLOAT_SIGNIFICANCE_MICRO	(1000000) /* IIO_VAL_INT_PLUS_MICRO */
+#define NVS_FLOAT_SIGNIFICANCE_NANO	(1000000000) /* IIO_VAL_INT_PLUS_NANO */
+
+enum nvs_float_significance {
+	NVS_FLOAT_MICRO			= 0, /* IIO_VAL_INT_PLUS_MICRO */
+	NVS_FLOAT_NANO,			/* IIO_VAL_INT_PLUS_NANO */
+	NVS_FLOAT_N_MAX,
+};
+
 struct nvs_float {
 	int ival;
 	int fval;
 };
 
 struct sensor_cfg {
-	const char *name;
-	int snsr_id;
-	int samplebytes;
-	bool no_suspend;
-	int kbuf_sz;
-	unsigned int ch_n;
-	int ch_sz;
-	void *ch_inf;
+	const char *name;		/* sensor name */
+	int snsr_id;			/* sensor ID */
+	bool no_suspend;		/* true if active during suspend */
+	int kbuf_sz;			/* kernel buffer size (n bytes) */
+	int timestamp_sz;		/* hub: timestamp size (n bytes) */
+	int snsr_data_n;		/* hub: number of data bytes */
+	unsigned int ch_n;		/* number of channels */
+	int ch_sz;			/* channel size (n bytes) */
+	void *ch_inf;			/* if hub then NULL */
+	/* the following is for android struct sensor_t */
 	const char *part;
 	const char *vendor;
 	int version;
@@ -59,16 +69,29 @@ struct sensor_cfg {
 	unsigned int fifo_rsrv_evnt_cnt;
 	unsigned int fifo_max_evnt_cnt;
 	unsigned int flags;
+	/* end of android struct sensor_t data */
 	signed char matrix[9];		/* device orientation on platform */
-	struct nvs_float scale;
-	struct nvs_float offset;
+	/* interpolation calibration */
 	int uncal_lo;
 	int uncal_hi;
 	int cal_lo;
 	int cal_hi;
+	/* thresholds */
 	int thresh_lo;
 	int thresh_hi;
-	int report_n;
+	int report_n;			/* report count for on-change sensor */
+	enum nvs_float_significance float_significance;
+	/* global scale/offset allows for a 1st order polynomial on the data
+	 * e.g. data * scale + offset
+	 */
+	struct nvs_float scale;
+	struct nvs_float offset;
+	unsigned int ch_n_max;		/* NVS_CHANNEL_N_MAX */
+	/* channel scale/offset allows for a 1st order polynomial per channel
+	 * e.g. channel_data * channel_scale + channel_offset
+	 */
+	struct nvs_float scales[NVS_CHANNEL_N_MAX];
+	struct nvs_float offsets[NVS_CHANNEL_N_MAX];
 };
 
 struct nvs_fn_dev {
@@ -149,6 +172,7 @@ struct nvs_fn_dev {
  * scale - set device scale
  * @client: clients private data
  * @snsr_id: sensor ID
+ * @channel: channel index
  * @scale: scale value
  *
  * Returns 0 on success or a negative error code.
@@ -159,11 +183,12 @@ struct nvs_fn_dev {
  * only the device layer will understand the value which will
  * typically be used to change the mode.
  */
-	int (*scale)(void *client, int snsr_id, int scale);
+	int (*scale)(void *client, int snsr_id, int channel, int scale);
 /**
  * offset - set device offset
  * @client: clients private data
  * @snsr_id: sensor ID
+ * @channel: channel index
  * @offset: offset value
  *
  * Returns 0 on success or a negative error code.
@@ -174,7 +199,7 @@ struct nvs_fn_dev {
  * words, only the device layer will understand the value which
  * will typically be used to set calibration.
  */
-	int (*offset)(void *client, int snsr_id, int offset);
+	int (*offset)(void *client, int snsr_id, int channel, int offset);
 /**
  * thresh_lo - set device low threshold
  * @client: clients private data
@@ -212,6 +237,7 @@ struct nvs_fn_dev {
  *
  * Note a < 0 value for snsr_id is another reset option,
  * e.g. global device reset such as on a sensor hub.
+ * Note mutex is locked for this function.
  */
 	int (*reset)(void *client, int snsr_id);
 /**
@@ -222,6 +248,7 @@ struct nvs_fn_dev {
  *
  * Returns 0 on success or a negative error code if buf == NULL.
  * if buf != NULL, return number of characters.
+ * Note mutex is locked for this function.
  */
 	int (*self_test)(void *client, int snsr_id, char *buf);
 /**
@@ -233,6 +260,28 @@ struct nvs_fn_dev {
  * Returns buf count or a negative error code.
  */
 	int (*regs)(void *client, int snsr_id, char *buf);
+/**
+ * nvs_write - nvs attribute write extension
+ * @client: clients private data
+ * @snsr_id: sensor ID
+ * @nvs: value written to nvs attribute
+ *
+ * Returns 0 on success or a negative error code.
+ *
+ * Used to extend the functionality of the nvs attribute.
+ */
+	int (*nvs_write)(void *client, int snsr_id, unsigned int nvs);
+/**
+ * nvs_read - nvs attribute read extension
+ * @client: clients private data
+ * @snsr_id: sensor ID
+ * @buf: character buffer to write to
+ *
+ * Returns buf count or a negative error code.
+ *
+ * Used to extend the functionality of the nvs attribute.
+ */
+	int (*nvs_read)(void *client, int snsr_id, char *buf);
 /**
  * sts - status flags
  * used by both device and NVS layers

@@ -25,6 +25,7 @@
 #include <linux/io.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/dma-mapping.h>
 #include <linux/workqueue.h>
 #include <linux/ktime.h>
 #include <linux/debugfs.h>
@@ -42,6 +43,7 @@
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/pinctrl/pinconf-tegra.h>
+#include <linux/ote_protocol.h>
 
 #include <mach/clk.h>
 #include <mach/dc.h>
@@ -2089,15 +2091,26 @@ struct tegra_dc_platform_data
 	if (!vrr_np) {
 		pr_info("%s: could not find vrr-settings node\n", __func__);
 	} else {
-		pdata->default_out->vrr = devm_kzalloc(&ndev->dev,
-				sizeof(struct tegra_vrr), GFP_KERNEL);
-		if (!pdata->default_out->vrr) {
+		dma_addr_t dma_addr;
+		struct tegra_vrr *vrr;
+
+		pdata->default_out->vrr = dma_alloc_coherent(NULL, PAGE_SIZE,
+						&dma_addr, GFP_KERNEL);
+		vrr = pdata->default_out->vrr;
+		if (vrr) {
+			int retval;
+
+			retval = te_vrr_set_buf(virt_to_phys(vrr));
+			if (retval) {
+				dev_err(&ndev->dev, "failed to set buffer\n");
+				goto fail_parse;
+			}
+		} else {
 			dev_err(&ndev->dev, "not enough memory\n");
 			goto fail_parse;
 		}
 
-		err = parse_vrr_settings(ndev, vrr_np,
-					   pdata->default_out->vrr);
+		err = parse_vrr_settings(ndev, vrr_np, vrr);
 		if (err)
 			goto fail_parse;
 	}

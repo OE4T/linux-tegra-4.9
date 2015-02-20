@@ -63,9 +63,9 @@ static inline void _tegra_dpaux_pad_power(struct tegra_dc *dc,
 {
 	void __iomem *regaddr;
 #if !defined(CONFIG_TEGRA_NVDISPLAY)
-	regaddr = IO_ADDRESS(dpaux_base_addr[id] + DPAUX_HYBRID_PADCTL * 4);
+	regaddr = IO_ADDRESS(dpaux_base_addr[id] + DPAUX_HYBRID_SPARE * 4);
 #else
-	regaddr = dpaux_baseaddr[id] + DPAUX_HYBRID_PADCTL * 4;
+	regaddr = dpaux_baseaddr[id] + DPAUX_HYBRID_SPARE * 4;
 #endif
 	writel((on ? DPAUX_HYBRID_SPARE_PAD_PWR_POWERUP :
 		DPAUX_HYBRID_SPARE_PAD_PWR_POWERDOWN),

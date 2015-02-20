@@ -84,6 +84,16 @@ struct nvhost_vm_static_buffer {
 };
 
 /**
+ * nvhost_vm_init_device - initialize device vm
+ *	@pdev: Pointer to platform device
+ *
+ * This function initializes device VM operations during boot. The
+ * call is routed to hardware specific function that is responsible
+ * for performing hardware initialization.
+ */
+int nvhost_vm_init_device(struct platform_device *pdev);
+
+/**
  * nvhost_vm_get_id - get hw identifier of this vm
  *	@vm: Pointer to nvhost_vm structure
  *

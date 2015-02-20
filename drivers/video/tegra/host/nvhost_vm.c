@@ -31,6 +31,16 @@ struct nvhost_vm_pin {
 	unsigned int num_buffers;
 };
 
+int nvhost_vm_init_device(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+
+	if (!vm_op().init_device || !pdata->isolate_contexts)
+		return 0;
+
+	return vm_op().init_device(pdev);
+}
+
 int nvhost_vm_get_id(struct nvhost_vm *vm)
 {
 	if (!vm_op().get_id)

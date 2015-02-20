@@ -112,6 +112,11 @@ struct nvhost_clock {
 	unsigned long devfreq_rate;
 };
 
+struct nvhost_vm_hwid {
+	u64 addr;
+	bool dynamic;
+};
+
 /*
  * Defines HW and SW class identifiers.
  *
@@ -302,6 +307,7 @@ struct nvhost_device_data {
 	u32 mamask_val;
 	u64 borps_addr;
 	u32 borps_val;
+	struct nvhost_vm_hwid vm_regs[13];
 
 	/* Actmon IRQ from hintstatus_r */
 	unsigned int actmon_irq;

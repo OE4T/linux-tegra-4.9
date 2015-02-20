@@ -69,6 +69,7 @@ struct nvhost_vm_ops {
 				 void *vaddr, dma_addr_t paddr,
 				 size_t size);
 	int (*get_id)(struct nvhost_vm *vm);
+	int (*init_device)(struct platform_device *pdev);
 };
 
 struct nvhost_pushbuffer_ops {

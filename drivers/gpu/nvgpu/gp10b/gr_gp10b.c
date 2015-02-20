@@ -571,11 +571,12 @@ int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 		(*gr_ctx)->preempt_mode = flags;
 	}
 
-	if (class == PASCAL_COMPUTE_A)
+	if (class == PASCAL_COMPUTE_A) {
 		if (flags == NVGPU_GR_PREEMPTION_MODE_CILP)
 			(*gr_ctx)->preempt_mode = NVGPU_GR_PREEMPTION_MODE_CILP;
 		else
 			(*gr_ctx)->preempt_mode = NVGPU_GR_PREEMPTION_MODE_CTA;
+	}
 
 	gk20a_dbg_fn("done");
 

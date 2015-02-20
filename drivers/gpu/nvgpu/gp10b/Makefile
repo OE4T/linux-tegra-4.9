@@ -7,6 +7,7 @@ ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/include
 ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/include/uapi
 
 ccflags-$(CONFIG_GK20A) += -Wno-multichar
+ccflags-y += -Werror
 
 obj-$(CONFIG_GK20A)  += \
 	gr_gp10b.o  \

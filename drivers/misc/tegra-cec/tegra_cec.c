@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-cec/tegra_cec.c
  *
- * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -298,7 +298,15 @@ static void tegra_cec_init(struct tegra_cec *cec)
 	writel(0x00, cec->cec_base + TEGRA_CEC_HW_CONTROL);
 	writel(0x00, cec->cec_base + TEGRA_CEC_INT_MASK);
 	writel(0xffffffff, cec->cec_base + TEGRA_CEC_INT_STAT);
+
+#ifdef CONFIG_PM
+	if (wait_event_interruptible_timeout(cec->suspend_waitq,
+				atomic_xchg(&cec->init_cancel, 0) == 1,
+				msecs_to_jiffies(1000)) > 0)
+		return;
+#else
 	msleep(1000);
+#endif
 
 	writel(0x00, cec->cec_base + TEGRA_CEC_SW_CONTROL);
 
@@ -475,6 +483,11 @@ static int tegra_cec_probe(struct platform_device *pdev)
 	init_waitqueue_head(&cec->tx_waitq);
 	init_waitqueue_head(&cec->init_waitq);
 
+#ifdef CONFIG_PM
+	init_waitqueue_head(&cec->suspend_waitq);
+	atomic_set(&cec->init_cancel, 0);
+#endif
+
 	platform_set_drvdata(pdev, cec);
 	/* clear out the hardware. */
 
@@ -539,10 +552,16 @@ static int tegra_cec_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct tegra_cec *cec = platform_get_drvdata(pdev);
 
+	atomic_set(&cec->init_cancel, 1);
+	wmb();
+
+	wake_up_interruptible(&cec->suspend_waitq);
+
 	/* cancel the work queue */
 	cancel_work_sync(&cec->work);
 
 	atomic_set(&cec->init_done, 0);
+	atomic_set(&cec->init_cancel, 0);
 
 	clk_disable(cec->clk);
 

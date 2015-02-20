@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-cec/tegra_cec.h
  *
- * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,6 +35,10 @@ struct tegra_cec {
 	wait_queue_head_t	tx_waitq;
 	wait_queue_head_t	init_waitq;
 	atomic_t		init_done;
+#ifdef CONFIG_PM
+	wait_queue_head_t	suspend_waitq;
+	atomic_t		init_cancel;
+#endif
 	u16			logical_addr;
 	struct work_struct	work;
 	unsigned int		rx_wake;

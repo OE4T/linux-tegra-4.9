@@ -19,6 +19,7 @@
 #include <dt-bindings/regulator/regulator.h>
 #include <dt-bindings/gpio/tegra-gpio.h>
 #include <dt-bindings/thermal/thermal.h>
+#include <dt-bindings/interrupt-controller/irq.h>
 
 / {
 	i2c@7000d000 {
@@ -27,7 +28,7 @@
 		cpu_max77621_reg: max77621@1b {
 			compatible = "maxim,max77621";
 			reg = <0x1b>;
-			interrupts = <0 86 IRQ_TYPE_NONE>;
+			interrupts = <0 86 IRQF_SHARED>;
 			status = "disabled";
 			regulator-name = "vdd-cpu";
 			regulator-min-microvolt = <606250>;
@@ -45,7 +46,7 @@
 		gpu_max77621_reg: max77621@1c {
 			compatible = "maxim,max77621";
 			reg = <0x1c>;
-			interrupts = <0 86 IRQ_TYPE_NONE>;
+			interrupts = <0 86 IRQF_SHARED>;
 			status = "disabled";
 			regulator-name = "vdd-gpu";
 			regulator-min-microvolt = <606250>;

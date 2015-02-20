@@ -17,6 +17,7 @@
  */
 
 #include "gk20a_allocator.h"
+#include <linux/vmalloc.h>
 
 /* init allocator struct */
 int gk20a_allocator_init(struct gk20a_allocator *allocator,
@@ -29,8 +30,7 @@ int gk20a_allocator_init(struct gk20a_allocator *allocator,
 	allocator->base = start;
 	allocator->limit = start + len - 1;
 
-	allocator->bitmap = kzalloc(BITS_TO_LONGS(len) * sizeof(long),
-			GFP_KERNEL);
+	allocator->bitmap = vzalloc(BITS_TO_LONGS(len) * sizeof(long));
 	if (!allocator->bitmap)
 		return -ENOMEM;
 
@@ -50,7 +50,7 @@ void gk20a_allocator_destroy(struct gk20a_allocator *allocator)
 {
 	down_write(&allocator->rw_sema);
 
-	kfree(allocator->bitmap);
+	vfree(allocator->bitmap);
 
 	memset(allocator, 0, sizeof(struct gk20a_allocator));
 }

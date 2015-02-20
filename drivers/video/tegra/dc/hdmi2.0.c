@@ -1857,6 +1857,12 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 			clk_set_parent(sor->brick_clk, sor->src_switch_clk);
 		clk_set_rate(sor->brick_clk, rate);
 
+		/*
+		 * Select primary -- HDMI -- DVFS table for SOR clock (if SOR
+		 * clock has single DVFS table for all modes, nothing changes).
+		 */
+		tegra_dvfs_use_alt_freqs_on_clk(sor->sor_clk, false);
+
 		/* Select sor clock muxes */
 		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 3);
 

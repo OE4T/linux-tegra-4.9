@@ -118,9 +118,14 @@ void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor)
 	 * HW bug 1425607
 	 * Disable clocks to avoid glitch when switching
 	 * between safe clock and macro pll clock
+	 *
+	 * Select alternative -- DP -- DVFS table for SOR clock (if SOR clock
+	 * has single DVFS table for all modes, nothing changes).
 	 */
 	if (flag)
 		clk_disable_unprepare(sor->sor_clk);
+
+	tegra_dvfs_use_alt_freqs_on_clk(sor->sor_clk, true);
 
 	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 1);
 

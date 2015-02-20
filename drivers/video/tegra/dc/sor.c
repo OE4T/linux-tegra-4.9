@@ -217,7 +217,14 @@ static int dbg_sor_show(struct seq_file *s, void *unused)
 	DUMP_REG(NV_SOR_DP_SPARE(0));
 	DUMP_REG(NV_SOR_DP_SPARE(1));
 	DUMP_REG(NV_SOR_DP_TPG);
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
+	DUMP_REG(NV_SOR_HDMI_CTRL);
+#endif
 	DUMP_REG(NV_SOR_HDMI2_CTRL);
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (tegra_platform_is_linsim())
+		DUMP_REG(NV_SOR_FPGA_HDMI_HEAD_SEL);
+#endif
 	if (sor->dc->ndev->id == 1) { /* sor1 */
 		DUMP_REG(NV_SOR_DP_AUDIO_CTRL);
 
@@ -433,6 +440,54 @@ static inline void tegra_dc_sor_debug_create(struct tegra_dc_sor_data *sor,
 { }
 #endif
 
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+static int sor_fpga_settings(struct tegra_dc *dc,
+				struct tegra_dc_sor_data *sor)
+{
+	u32 mode_sel = NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD1_MODE_FIELD |
+			NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD1_OUT_EN_FIELD;
+	u32 head_sel = NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD1_MODE_HDMI |
+			NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD1_OUT_EN_ENABLE;
+
+	if (!tegra_platform_is_linsim() ||
+		(dc->out->type != TEGRA_DC_OUT_HDMI))
+		return 0;
+
+	if (dc->ndev->id == 0) {/* HEAD 0 */
+		mode_sel =
+			NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD0_MODE_FIELD |
+			NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD0_OUT_EN_FIELD;
+
+		head_sel =
+			NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD0_MODE_HDMI |
+			NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD0_OUT_EN_ENABLE;
+
+	} else if (dc->ndev->id == 1) {/* HEAD 1 */
+		mode_sel =
+			NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD1_MODE_FIELD |
+			NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD1_OUT_EN_FIELD;
+
+		head_sel =
+			NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD1_MODE_HDMI |
+			NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD1_OUT_EN_ENABLE;
+
+	} else if (dc->ndev->id == 2) {/* HEAD 2 */
+		mode_sel =
+			NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD2_MODE_FIELD |
+			NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD2_OUT_EN_FIELD;
+
+		head_sel =
+			NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD2_MODE_HDMI |
+			NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD2_OUT_EN_ENABLE;
+
+	}
+	tegra_sor_write_field(sor, NV_SOR_FPGA_HDMI_HEAD_SEL,
+				mode_sel, head_sel);
+
+	return 0;
+}
+#endif
+
 struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 				const struct tegra_dc_dp_link_config *cfg)
 {
@@ -565,6 +620,9 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	tegra_dc_sor_debug_create(sor, res_name);
 	of_node_put(np_sor);
 
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	sor_fpga_settings(dc, sor);
+#endif
 	return sor;
 
 #ifndef CONFIG_TEGRA_NVDISPLAY

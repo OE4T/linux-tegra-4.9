@@ -345,9 +345,7 @@ static int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long end_jiffies,
 	do {
 		val = gk20a_readl(g, gr_status_r());
 
-		if (!gr_status_fe_method_upper_v(val) &&
-			!gr_status_fe_method_lower_v(val) &&
-			!gr_status_fe_gi_v(val)) {
+		if (!gr_status_fe_method_lower_v(val)) {
 			gk20a_dbg_fn("done");
 			return 0;
 		}
@@ -1407,7 +1405,14 @@ static u32 gk20a_init_sw_bundle(struct gk20a *g)
 	int i;
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+	u32 fe_go_idle_timeout_save;
 
+	/* save and disable fe_go_idle */
+	fe_go_idle_timeout_save =
+		gk20a_readl(g, gr_fe_go_idle_timeout_r());
+	gk20a_writel(g, gr_fe_go_idle_timeout_r(),
+		(fe_go_idle_timeout_save & gr_fe_go_idle_timeout_count_f(0)) |
+		gr_fe_go_idle_timeout_count_disabled_f());
 	/* enable pipe mode override */
 	gk20a_writel(g, gr_pipe_bundle_config_r(),
 		gr_pipe_bundle_config_override_pipe_mode_enabled_f());
@@ -1437,6 +1442,9 @@ static u32 gk20a_init_sw_bundle(struct gk20a *g)
 	/* disable pipe mode override */
 	gk20a_writel(g, gr_pipe_bundle_config_r(),
 		     gr_pipe_bundle_config_override_pipe_mode_disabled_f());
+
+	/* restore fe_go_idle */
+	gk20a_writel(g, gr_fe_go_idle_timeout_r(), fe_go_idle_timeout_save);
 
 	return err;
 }

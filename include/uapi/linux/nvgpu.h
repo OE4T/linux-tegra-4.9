@@ -457,8 +457,20 @@ struct nvgpu_dbg_gpu_perfbuf_unmap_args {
 #define NVGPU_DBG_GPU_IOCTL_PERFBUF_UNMAP \
 	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 8, struct nvgpu_dbg_gpu_perfbuf_unmap_args)
 
+/* Enable/disable PC Sampling */
+struct nvgpu_dbg_gpu_pc_sampling_args {
+	__u32 enable;
+	__u32 _pad0[1];
+};
+
+#define NVGPU_DBG_GPU_IOCTL_PC_SAMPLING_DISABLE	0
+#define NVGPU_DBG_GPU_IOCTL_PC_SAMPLING_ENABLE	1
+
+#define NVGPU_DBG_GPU_IOCTL_PC_SAMPLING \
+	_IOW(NVGPU_DBG_GPU_IOCTL_MAGIC,  9, struct nvgpu_dbg_gpu_pc_sampling_args)
+
 #define NVGPU_DBG_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_DBG_GPU_IOCTL_PERFBUF_UNMAP)
+	_IOC_NR(NVGPU_DBG_GPU_IOCTL_PC_SAMPLING)
 #define NVGPU_DBG_GPU_IOCTL_MAX_ARG_SIZE		\
 	sizeof(struct nvgpu_dbg_gpu_perfbuf_map_args)
 

@@ -110,6 +110,14 @@ static inline u32 ctxsw_prog_main_image_pm_smpc_mode_no_ctxsw_f(void)
 {
 	return 0x0;
 }
+static inline u32 ctxsw_prog_main_image_pm_pc_sampling_f(u32 v)
+{
+	return (v & 0x1) << 6;
+}
+static inline u32 ctxsw_prog_main_image_pm_pc_sampling_m(void)
+{
+	return 0x1 << 6;
+}
 static inline u32 ctxsw_prog_main_image_pm_ptr_o(void)
 {
 	return 0x0000002c;

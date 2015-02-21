@@ -165,6 +165,8 @@ struct gpu_ops {
 				void *ctx_ptr);
 		int (*dump_gr_regs)(struct gk20a *g,
 				struct gk20a_debug_output *o);
+		int (*update_pc_sampling)(struct channel_gk20a *ch,
+					   bool enable);
 	} gr;
 	const char *name;
 	struct {

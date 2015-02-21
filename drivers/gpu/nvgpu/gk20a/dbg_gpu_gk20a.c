@@ -377,6 +377,17 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 static int gk20a_perfbuf_unmap(struct dbg_session_gk20a *dbg_s,
 		struct nvgpu_dbg_gpu_perfbuf_unmap_args *args);
 
+static int gk20a_dbg_pc_sampling(struct dbg_session_gk20a *dbg_s,
+			  struct nvgpu_dbg_gpu_pc_sampling_args *args)
+{
+	struct channel_gk20a *ch = dbg_s->ch;
+	struct gk20a *g = ch->g;
+
+	gk20a_dbg_fn("");
+
+	return g->ops.gr.update_pc_sampling ?
+		g->ops.gr.update_pc_sampling(ch, args->enable) : -EINVAL;
+}
 long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
 {
@@ -447,6 +458,11 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 	case NVGPU_DBG_GPU_IOCTL_PERFBUF_UNMAP:
 		err = gk20a_perfbuf_unmap(dbg_s,
 		       (struct nvgpu_dbg_gpu_perfbuf_unmap_args *)buf);
+		break;
+
+	case NVGPU_DBG_GPU_IOCTL_PC_SAMPLING:
+		err = gk20a_dbg_pc_sampling(dbg_s,
+			   (struct nvgpu_dbg_gpu_pc_sampling_args *)buf);
 		break;
 
 	default:

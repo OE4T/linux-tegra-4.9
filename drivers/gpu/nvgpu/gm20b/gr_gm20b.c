@@ -17,6 +17,7 @@
 #include <linux/delay.h>	/* for mdelay */
 #include <linux/io.h>
 #include <linux/tegra-fuse.h>
+#include <linux/vmalloc.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
@@ -946,6 +947,37 @@ static int gr_gm20b_dump_gr_status_regs(struct gk20a *g,
 		gk20a_readl(g, gr_pri_gpc0_tpc0_tpccs_tpc_exception_r()));
 	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPC0_TPC0_TPCCS_TPC_EXCEPTION_EN: 0x%x\n",
 		gk20a_readl(g, gr_pri_gpc0_tpc0_tpccs_tpc_exception_en_r()));
+
+	return 0;
+}
+
+static int gr_gm20b_update_pc_sampling(struct channel_gk20a *c,
+				       bool enable)
+{
+	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
+	void *ctx_ptr = NULL;
+	u32 v;
+
+	gk20a_dbg_fn("");
+
+	if (!ch_ctx || !ch_ctx->gr_ctx || c->vpr)
+		return -EINVAL;
+
+	ctx_ptr = vmap(ch_ctx->gr_ctx->pages,
+			PAGE_ALIGN(ch_ctx->gr_ctx->size) >> PAGE_SHIFT,
+			0, pgprot_writecombine(PAGE_KERNEL));
+	if (!ctx_ptr)
+		return -ENOMEM;
+
+	v = gk20a_mem_rd32(ctx_ptr, ctxsw_prog_main_image_pm_o());
+	v &= ~ctxsw_prog_main_image_pm_pc_sampling_m();
+	v |= ctxsw_prog_main_image_pm_pc_sampling_f(enable);
+	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0, v);
+
+	vunmap(ctx_ptr);
+
+	gk20a_dbg_fn("done");
+
 	return 0;
 }
 
@@ -993,4 +1025,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.update_ctxsw_preemption_mode =
 		gr_gm20b_update_ctxsw_preemption_mode;
 	gops->gr.dump_gr_regs = gr_gm20b_dump_gr_status_regs;
+	gops->gr.update_pc_sampling = gr_gm20b_update_pc_sampling;
 }

@@ -505,7 +505,7 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		goto err_safe;
 	}
 #ifndef CONFIG_TEGRA_NVDISPLAY
-	if (dc->ndev->id) {
+	if (!strcmp(res_name, "sor1")) {
 		brick_clk = clk_get(NULL, "sor1_brick");
 		if (IS_ERR_OR_NULL(brick_clk)) {
 			dev_err(&dc->ndev->dev, "sor: can't get brick clock\n");

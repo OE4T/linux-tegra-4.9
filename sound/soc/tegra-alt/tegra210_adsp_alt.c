@@ -857,11 +857,6 @@ static int tegra210_adsp_compr_msg_handler(struct tegra210_adsp_app *app,
 			dev_warn(prtd->dev, "EOS reached before drain");
 			break;
 		}
-		tegra210_adsp_send_state_msg(prtd->fe_apm,
-			nvfx_state_inactive,
-			TEGRA210_ADSP_MSG_FLAG_SEND);
-		tegra210_adsp_send_flush_msg(prtd->fe_apm,
-			TEGRA210_ADSP_MSG_FLAG_SEND);
 		snd_compr_drain_notify(prtd->cstream);
 		prtd->is_draining = 0;
 	}
@@ -1055,7 +1050,6 @@ static int tegra210_adsp_compr_trigger(struct snd_compr_stream *cstream,
 			return ret;
 		}
 		break;
-
 	default:
 		dev_err(prtd->dev, "Unsupported state.");
 		return -EINVAL;
@@ -1119,7 +1113,8 @@ static int tegra210_adsp_compr_pointer(struct snd_compr_stream *cstream,
 	tstamp->pcm_frames = frames_played;
 	/* TODO : calculate IO frames correctly */
 	tstamp->pcm_io_frames = frames_played;
-	tstamp->sampling_rate = prtd->codec.sample_rate;
+	tstamp->sampling_rate =
+		snd_pcm_rate_bit_to_rate(prtd->codec.sample_rate);
 
 	dev_vdbg(prtd->dev, "%s off %d copied %d pcm %d pcm io %d",
 		 __func__, (int)tstamp->byte_offset, (int)tstamp->copied_total,

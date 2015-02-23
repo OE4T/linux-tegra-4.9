@@ -2,7 +2,7 @@
  * tegra_nvfx_apm.h - Shared APM interface between Tegra ADSP ALSA driver and
  *                    ADSP side user space code.
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -48,7 +48,7 @@ enum apm_mbx_cmd {
 enum {
 	/* NVFX APM params */
 	nvfx_apm_method_fx_connect = nvfx_method_external_start,
-	nvfx_apm_method_fx_remove,
+	nvfx_apm_method_fx_remove_all,
 	nvfx_apm_method_fx_set_param,
 
 	nvfx_apm_method_set_io_buffer,

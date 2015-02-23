@@ -1466,8 +1466,8 @@
 		sensor-nominal-temp-cp = <25>;
 		sensor-nominal-temp-ft = <105>;
 
-		sensor-compensation-a = <10503>;
-		sensor-compensation-b = <(-63275)>;
+		sensor-compensation-a = <10632>;
+		sensor-compensation-b = <(-67490)>;
 	};
 
 	tegra_cec {

@@ -153,7 +153,7 @@ static void do_module_reset_locked(struct platform_device *dev)
 
 static unsigned long nvhost_emc_bw_to_freq_req(unsigned long rate)
 {
-	return tegra_emc_bw_to_freq_req((unsigned long)(rate >> 10));
+	return tegra_emc_bw_to_freq_req((unsigned long)(rate));
 }
 #else
 static void do_powergate_locked(int id)
@@ -364,10 +364,16 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 		if (!constraint)
 			continue;
 
+		/* Note: We need to take max to avoid wrapping issues */
 		if (type == NVHOST_BW)
-			bw_constraint += constraint;
+			bw_constraint = max(bw_constraint,
+				bw_constraint + (constraint / 1000));
 		else if (type == NVHOST_PIXELRATE)
-			pixelrate += constraint;
+			pixelrate = max(pixelrate,
+				pixelrate + constraint);
+		else if (type == NVHOST_BW_KHZ)
+			bw_constraint = max(bw_constraint,
+				bw_constraint + constraint);
 		else
 			floor_rate = max(floor_rate, constraint);
 	}
@@ -381,7 +387,8 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 	if (!rate) {
 		unsigned long bw_freq_khz =
 			nvhost_emc_bw_to_freq_req(bw_constraint);
-		rate = max(floor_rate, bw_freq_khz << 10);
+		bw_freq_khz = min(ULONG_MAX / 1000, bw_freq_khz);
+		rate = max(floor_rate, bw_freq_khz * 1000);
 	}
 
 	/* take devfreq rate into account */

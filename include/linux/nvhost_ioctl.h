@@ -3,7 +3,7 @@
  *
  * Tegra graphics host driver
  *
- * Copyright (c) 2009-2014, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2009-2015, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -116,6 +116,7 @@ enum nvhost_clk_attr {
 	NVHOST_CLOCK = 0,
 	NVHOST_BW,
 	NVHOST_PIXELRATE,
+	NVHOST_BW_KHZ,
 };
 
 /*

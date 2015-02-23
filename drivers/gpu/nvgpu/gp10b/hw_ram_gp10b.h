@@ -342,6 +342,10 @@ static inline u32 ram_fc_formats_w(void)
 {
 	return 39;
 }
+static inline u32 ram_fc_allowed_syncpoints_w(void)
+{
+	return 58;
+}
 static inline u32 ram_fc_syncpointa_w(void)
 {
 	return 41;

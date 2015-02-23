@@ -147,10 +147,35 @@ static u32 gp10b_fifo_get_pbdma_signature(struct gk20a *g)
 		| pbdma_signature_sw_zero_f();
 }
 
+static int gp10b_fifo_resetup_ramfc(struct channel_gk20a *c)
+{
+	int syncpt_id;
+	void *inst_ptr;
+
+	gk20a_dbg_fn("");
+
+	inst_ptr = c->inst_block.cpu_va;
+	if (c->sync) {
+		u32 v = pbdma_allowed_syncpoints_0_valid_f(1);
+
+		syncpt_id = c->sync->syncpt_id(c->sync);
+		gk20a_dbg_info("Channel %d, syncpt id %d\n",
+				c->hw_chid, syncpt_id);
+
+		v |= pbdma_allowed_syncpoints_0_index_f(syncpt_id);
+
+		gk20a_mem_wr32(inst_ptr, ram_fc_allowed_syncpoints_w(), v);
+	}
+
+	gk20a_dbg_fn("done");
+
+	return 0;
+}
+
 void gp10b_init_fifo(struct gpu_ops *gops)
 {
 	gm20b_init_fifo(gops);
 	gops->fifo.setup_ramfc = channel_gp10b_setup_ramfc;
 	gops->fifo.get_pbdma_signature = gp10b_fifo_get_pbdma_signature;
-
+	gops->fifo.resetup_ramfc = gp10b_fifo_resetup_ramfc;
 }

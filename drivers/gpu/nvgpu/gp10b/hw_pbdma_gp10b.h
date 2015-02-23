@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -410,6 +410,10 @@ static inline u32 pbdma_intr_0_signature_pending_f(void)
 {
 	return 0x80000000;
 }
+static inline u32 pbdma_intr_0_syncpoint_illegal_pending_f(void)
+{
+	return 0x10000000;
+}
 static inline u32 pbdma_intr_1_r(u32 i)
 {
 	return 0x00040148 + i*8192;
@@ -437,6 +441,26 @@ static inline u32 pbdma_intr_stall_lbreq_enabled_f(void)
 static inline u32 pbdma_udma_nop_r(void)
 {
 	return 0x00000008;
+}
+static inline u32 pbdma_allowed_syncpoints_r(u32 i)
+{
+	return 0x000400e8 + i*8192;
+}
+static inline u32 pbdma_allowed_syncpoints_0_valid_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 pbdma_allowed_syncpoints_0_index_f(u32 v)
+{
+	return (v & 0x7fff) << 16;
+}
+static inline u32 pbdma_allowed_syncpoints_1_valid_f(u32 v)
+{
+	return (v & 0x1) << 15;
+}
+static inline u32 pbdma_allowed_syncpoints_1_index_f(u32 v)
+{
+	return (v & 0x7fff) << 0;
 }
 static inline u32 pbdma_syncpointa_r(u32 i)
 {

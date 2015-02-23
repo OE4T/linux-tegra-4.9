@@ -130,6 +130,16 @@ DEFINE_EVENT(gk20a, gr_gk20a_handle_sw_method,
 	TP_ARGS(name)
 );
 
+DEFINE_EVENT(gk20a, gk20a_mm_g_elpg_flush_locked,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
+DEFINE_EVENT(gk20a, gk20a_mm_g_elpg_flush_locked_done,
+	TP_PROTO(const char *name),
+	TP_ARGS(name)
+);
+
 TRACE_EVENT(gk20a_channel_update,
 	TP_PROTO(const void *channel),
 	TP_ARGS(channel),
@@ -366,6 +376,43 @@ TRACE_EVENT(gk20a_mmu_fault,
 		      __entry->fault_hi, __entry->fault_lo,
 		      __entry->fault_info, __entry->instance, __entry->engine_id,
 		      __entry->engine, __entry->client, __entry->fault_type)
+);
+
+TRACE_EVENT(gk20a_ltc_cbc_ctrl_start,
+		TP_PROTO(const char *name, u32 cbc_ctrl, u32 min_value,
+		u32 max_value),
+		TP_ARGS(name, cbc_ctrl, min_value, max_value),
+
+	TP_STRUCT__entry(
+		__field(const char *, name)
+		__field(u32, cbc_ctrl)
+		__field(u32, min_value)
+		__field(u32, max_value)
+	),
+
+	TP_fast_assign(
+		__entry->name = name;
+		__entry->cbc_ctrl = cbc_ctrl;
+		__entry->min_value = min_value;
+		__entry->max_value = max_value;
+	),
+
+	TP_printk("name=%s, cbc_ctrl=%d, min_value=%u, max_value=%u",
+		__entry->name, __entry->cbc_ctrl, __entry->min_value,
+		__entry->max_value)
+);
+
+TRACE_EVENT(gk20a_ltc_cbc_ctrl_done,
+	TP_PROTO(const char *name),
+	TP_ARGS(name),
+	TP_STRUCT__entry(
+			 __field(const char *, name)
+			 ),
+	TP_fast_assign(
+		       __entry->name = name;
+		       ),
+	TP_printk("name=%s ",  __entry->name)
+
 );
 
 DECLARE_EVENT_CLASS(gk20a_cde,

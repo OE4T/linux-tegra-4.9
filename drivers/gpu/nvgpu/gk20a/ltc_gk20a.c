@@ -3,7 +3,7 @@
  *
  * GK20A Graphics
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,6 +19,7 @@
  */
 
 #include <linux/kernel.h>
+#include <trace/events/gk20a.h>
 
 #include "hw_ltc_gk20a.h"
 #include "hw_proj_gk20a.h"
@@ -107,14 +108,14 @@ static int gk20a_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 	int err = 0;
 	struct gr_gk20a *gr = &g->gr;
 	u32 fbp, slice, ctrl1, val, hw_op = 0;
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
-	u32 delay = GR_IDLE_CHECK_DEFAULT;
+	u32  retry = 200;
 	u32 slices_per_fbp =
 		ltc_ltcs_ltss_cbc_param_slices_per_fbp_v(
 			gk20a_readl(g, ltc_ltcs_ltss_cbc_param_r()));
 
 	gk20a_dbg_fn("");
+
+	trace_gk20a_ltc_cbc_ctrl_start(g->dev->name, op, min, max);
 
 	if (gr->compbit_store.size == 0)
 		return 0;
@@ -141,25 +142,23 @@ static int gk20a_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 	for (fbp = 0; fbp < gr->num_fbps; fbp++) {
 		for (slice = 0; slice < slices_per_fbp; slice++) {
 
-			delay = GR_IDLE_CHECK_DEFAULT;
 
 			ctrl1 = ltc_ltc0_lts0_cbc_ctrl1_r() +
 				fbp * proj_ltc_stride_v() +
 				slice * proj_lts_stride_v();
 
+			retry = 200;
 			do {
 				val = gk20a_readl(g, ctrl1);
 				if (!(val & hw_op))
 					break;
+				retry--;
+				udelay(5);
 
-				usleep_range(delay, delay * 2);
-				delay = min_t(u32, delay << 1,
-					GR_IDLE_CHECK_MAX);
-
-			} while (time_before(jiffies, end_jiffies) ||
+			} while (retry >= 0 ||
 					!tegra_platform_is_silicon());
 
-			if (!time_before(jiffies, end_jiffies)) {
+			if (retry < 0 && tegra_platform_is_silicon()) {
 				gk20a_err(dev_from_gk20a(g),
 					   "comp tag clear timeout\n");
 				err = -EBUSY;
@@ -168,6 +167,7 @@ static int gk20a_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 		}
 	}
 out:
+	trace_gk20a_ltc_cbc_ctrl_done(g->dev->name);
 	mutex_unlock(&g->mm.l2_op_lock);
 	return 0;
 }
@@ -200,6 +200,8 @@ static void gk20a_mm_g_elpg_flush_locked(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
+	trace_gk20a_mm_g_elpg_flush_locked(g->dev->name);
+
 	/* Make sure all previous writes are committed to the L2. There's no
 	   guarantee that writes are to DRAM. This will be a sysmembar internal
 	   to the L2. */
@@ -212,7 +214,7 @@ static void gk20a_mm_g_elpg_flush_locked(struct gk20a *g)
 		    ltc_ltc0_ltss_g_elpg_flush_pending_v()) {
 			gk20a_dbg_info("g_elpg_flush 0x%x", data);
 			retry--;
-			usleep_range(20, 40);
+			udelay(5);
 		} else
 			break;
 	} while (retry >= 0 || !tegra_platform_is_silicon());
@@ -220,6 +222,8 @@ static void gk20a_mm_g_elpg_flush_locked(struct gk20a *g)
 	if (tegra_platform_is_silicon() && retry < 0)
 		gk20a_warn(dev_from_gk20a(g),
 			    "g_elpg_flush too many retries");
+
+	trace_gk20a_mm_g_elpg_flush_locked_done(g->dev->name);
 
 }
 

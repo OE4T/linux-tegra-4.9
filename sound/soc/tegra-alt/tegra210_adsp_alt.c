@@ -112,6 +112,10 @@ struct tegra210_adsp {
 	DECLARE_BITMAP(adma_usage, TEGRA210_ADSP_ADMA_CHANNEL_COUNT);
 	struct mutex mutex;
 	int init_done;
+	struct tegra210_adsp_path {
+		uint32_t fe_reg;
+		uint32_t be_reg;
+	} pcm_path[ADSP_FE_END+1][2];
 };
 
 static const struct snd_pcm_hardware adsp_pcm_hardware = {
@@ -352,6 +356,18 @@ static int tegra210_adsp_send_msg(apm_shared_state_t *apm,
 		NVADSP_MBOX_SMSG);
 }
 
+static int tegra210_adsp_send_remove_msg(struct tegra210_adsp_app *app,
+					uint32_t flags)
+{
+	apm_msg_t apm_msg;
+
+	apm_msg.msgq_msg.size = MSGQ_MSG_WSIZE(apm_fx_remove_params_t);
+	apm_msg.msg.call_params.size = sizeof(apm_fx_remove_params_t);
+	apm_msg.msg.call_params.method = nvfx_apm_method_fx_remove_all;
+
+	return tegra210_adsp_send_msg(app->apm, &apm_msg, flags);
+}
+
 static int tegra210_adsp_send_connect_msg(struct tegra210_adsp_app *src,
 					struct tegra210_adsp_app *dst,
 					uint32_t flags)
@@ -552,8 +568,6 @@ static void tegra210_adsp_app_deinit(struct tegra210_adsp *adsp,
 		return;
 
 	if (app->info && !IS_APM_OUT(app->reg)) {
-		nvadsp_mbox_close(&app->rx_mbox);
-		nvadsp_app_stop(app->info);
 		app->info = NULL;
 		app->plugin = NULL;
 		app->apm = NULL;
@@ -564,6 +578,8 @@ static void tegra210_adsp_app_deinit(struct tegra210_adsp *adsp,
 			struct tegra210_adsp_app *apm_out =
 					&adsp->apps[apm_out_reg];
 
+			nvadsp_mbox_close(&app->rx_mbox);
+			nvadsp_app_stop(app->info);
 			apm_out->info = NULL;
 			apm_out->plugin = NULL;
 			apm_out->apm = NULL;
@@ -571,9 +587,36 @@ static void tegra210_adsp_app_deinit(struct tegra210_adsp *adsp,
 	}
 }
 
-/* Recursive function to connect plugins under a APM */
+/* API to connect two APMs */
+static int tegra210_adsp_connect_apm(struct tegra210_adsp *adsp,
+				struct tegra210_adsp_app *app)
+{
+	uint32_t source = tegra210_adsp_get_source(adsp, app->reg);
+	struct tegra210_adsp_app *src = &adsp->apps[source];
+	int ret = 0;
+
+	/* If both APMs are in connected state no need to
+	   send connect message */
+	if (app->connect && src->connect)
+		return 0;
+
+	dev_vdbg(adsp->dev, "Connecting APM 0x%x -> 0x%x",
+		src->reg, app->reg);
+
+	ret = tegra210_adsp_send_connect_msg(src, app,
+		TEGRA210_ADSP_MSG_FLAG_HOLD);
+	if (ret < 0) {
+		dev_err(adsp->dev, "Connect msg failed. err %d.", ret);
+		return ret;
+	}
+	return 1;
+}
+
+/* Recursive function to connect plugins under a APM
+   Returns BE/FE on the pcm path */
 static int tegra210_adsp_connect_plugin(struct tegra210_adsp *adsp,
-					struct tegra210_adsp_app *app)
+					struct tegra210_adsp_app *app,
+					uint32_t *apm_in_src)
 {
 	struct tegra210_adsp_app *src;
 	uint32_t source;
@@ -585,9 +628,30 @@ static int tegra210_adsp_connect_plugin(struct tegra210_adsp *adsp,
 
 	src = &adsp->apps[source];
 	if (!IS_APM_IN(src->reg)) {
-		ret = tegra210_adsp_connect_plugin(adsp, src);
+		ret = tegra210_adsp_connect_plugin(adsp, src, apm_in_src);
 		if (ret < 0)
 			return ret;
+	} else {
+		source = tegra210_adsp_get_source(adsp, src->reg);
+		if (IS_APM_OUT(source)) {
+			/* connect plugins inside next APM */
+			ret = tegra210_adsp_connect_plugin(adsp,
+				&adsp->apps[source], apm_in_src);
+			if (ret < 0)
+				return ret;
+			/* connect APM_IN to APM_OUT */
+			ret = tegra210_adsp_connect_apm(adsp, src);
+			if (ret < 0)
+				return ret;
+		} else {
+			/* return if APM_IN is not
+			   connected to valid inputs */
+			if (!IS_ADSP_FE(source) &&
+				!IS_ADSP_ADMAIF(source))
+				return -ENODEV;
+			if (apm_in_src)
+				*apm_in_src = source;
+		}
 	}
 	app->apm = src->apm;
 
@@ -611,51 +675,129 @@ static int tegra210_adsp_connect_plugin(struct tegra210_adsp *adsp,
 	return 1;
 }
 
-/* API to connect two APMs */
-static int tegra210_adsp_connect_apm(struct tegra210_adsp *adsp,
-				struct tegra210_adsp_app *app)
+/* Manages FE/BE plugins and deletes if fe_apm is specified */
+static void tegra210_adsp_manage_plugin(struct tegra210_adsp *adsp,
+		uint32_t end_reg, uint32_t apm_out, struct tegra210_adsp_app *fe_apm)
 {
-	struct tegra210_adsp_app *src;
-	uint32_t source;
-	int ret = 0;
+	uint32_t j, fe_reg, be_reg;
 
-	source = tegra210_adsp_get_source(adsp, app->reg);
-	if (!IS_ADSP_APP(source))
-		return -EPIPE;
-
-	src = &adsp->apps[source];
-
-	if (IS_APM_OUT(src->reg)) {
-		/* If both APMs are in connected state no need to
-		   send connect message */
-		if (app->connect && src->connect)
-			return 0;
-
-		dev_vdbg(adsp->dev, "Connecting APM 0x%x -> 0x%x",
-			src->reg, app->reg);
-
-		ret = tegra210_adsp_send_connect_msg(src, app,
-			TEGRA210_ADSP_MSG_FLAG_HOLD);
-		if (ret < 0) {
-			dev_err(adsp->dev, "Connect msg failed. err %d.", ret);
-			return ret;
+	if (IS_ADSP_FE(end_reg)) {
+		/* manage playback path */
+		fe_reg = end_reg;
+		be_reg = 0;
+		for (j = ADSP_ADMAIF_START; j <= ADSP_ADMAIF_END; j++) {
+			if (tegra210_adsp_get_source(adsp, j) == apm_out) {
+				be_reg = j;
+				break;
+			}
 		}
-		return 1;
+		if (be_reg && fe_reg) {
+			if (fe_apm) {
+				dev_vdbg(adsp->dev, "Remove playback FE %d -- BE %d pair",
+					fe_reg, be_reg);
+				tegra210_adsp_send_remove_msg(fe_apm,
+						TEGRA210_ADSP_MSG_FLAG_SEND);
+				adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_PLAYBACK].fe_reg = 0;
+				adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_PLAYBACK].be_reg = 0;
+			} else {
+				dev_vdbg(adsp->dev, "Found playback FE %d -- BE %d pair",
+					fe_reg, be_reg);
+				adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_PLAYBACK].fe_reg = fe_reg;
+				adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_PLAYBACK].be_reg = be_reg;
+			}
+		}
+	} else if (IS_ADSP_ADMAIF(end_reg)) {
+		/* manage record path */
+		fe_reg = 0;
+		be_reg = end_reg;
+		for (j = ADSP_FE_START; j <= ADSP_FE_END; j++) {
+			if (tegra210_adsp_get_source(adsp, j) == apm_out) {
+				fe_reg = j;
+				break;
+			}
+		}
+		if (be_reg && fe_reg) {
+			if (fe_apm) {
+				dev_vdbg(adsp->dev, "Remove record FE %d -- BE %d pair",
+					fe_reg, be_reg);
+				tegra210_adsp_send_remove_msg(fe_apm,
+						TEGRA210_ADSP_MSG_FLAG_SEND);
+				adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_CAPTURE].fe_reg = 0;
+				adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_CAPTURE].be_reg = 0;
+			} else {
+				dev_vdbg(adsp->dev, "Found playback FE %d -- BE %d pair",
+					fe_reg, be_reg);
+				adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_CAPTURE].fe_reg = fe_reg;
+				adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_CAPTURE].be_reg = be_reg;
+			}
+		}
 	}
-	return -EPIPE;
 }
 
 /* Iterate over all APMs and establish pending connections */
 static int tegra210_adsp_update_connection(struct tegra210_adsp *adsp)
 {
-	int i;
+	int i, ret;
+	uint32_t end_reg;
 
-	for (i = APM_OUT_START; i <= APM_OUT_END; i++)
-		tegra210_adsp_connect_plugin(adsp, &adsp->apps[i]);
+	for (i = APM_OUT_START; i <= APM_OUT_END; i++) {
+		ret = tegra210_adsp_connect_plugin(adsp, &adsp->apps[i], &end_reg);
+		if (ret >= 0) {
+			/* Record FE/BE pair for every successful connection */
+			tegra210_adsp_manage_plugin(adsp, end_reg, i, NULL);
+		}
+	}
 
-	for (i = APM_IN_START; i <= APM_IN_END; i++)
-		tegra210_adsp_connect_apm(adsp, &adsp->apps[i]);
+	return 0;
+}
 
+/* Remove the plugin connections inside associated APM */
+static int tegra210_adsp_remove_connection(struct tegra210_adsp *adsp,
+		struct tegra210_adsp_app *plugin)
+{
+	struct tegra210_adsp_app *app;
+	uint32_t i, source, apm_out = 0;
+
+	if (!IS_ADSP_APP(plugin->reg))
+		return 0;
+
+	for (i = APM_OUT_START; i <= APM_OUT_END; i++) {
+		app =  &adsp->apps[i];
+		/* if the path is already broken, do not continue */
+		if (!app->connect)
+			continue;
+		while (app->reg != TEGRA210_ADSP_NONE) {
+			if (app->reg == plugin->reg) {
+				apm_out = i;
+				break;
+			}
+			source = tegra210_adsp_get_source(adsp, app->reg);
+			app =  &adsp->apps[source];
+		}
+		if (apm_out != TEGRA210_ADSP_NONE)
+			break;
+	}
+	/* if plugin is not part of any APM, return here */
+	if (apm_out == TEGRA210_ADSP_NONE)
+		return 0;
+
+	/* disconnect the plugins inside APM */
+	app = &adsp->apps[apm_out];
+	while (!IS_APM_IN(app->reg)) {
+		source = tegra210_adsp_get_source(adsp, app->reg);
+		if (!IS_ADSP_APP(source))
+			break;
+		app->connect = 0;
+		app = &adsp->apps[source];
+	}
+
+	/* delete the plugins inside APM */
+	if (IS_APM_IN(app->reg)) {
+		/* clear the FE/BE list */
+		tegra210_adsp_manage_plugin(adsp,
+			tegra210_adsp_get_source(adsp, app->reg),
+			apm_out, app);
+	}
 	return 0;
 }
 
@@ -744,6 +886,12 @@ static int tegra210_adsp_compr_open(struct snd_compr_stream *cstream)
 
 	if (!adsp->init_done)
 		return -ENODEV;
+
+	if (!adsp->pcm_path[fe_reg][cstream->direction].fe_reg ||
+		!adsp->pcm_path[fe_reg][cstream->direction].be_reg) {
+		dev_err(adsp->dev, "Broken Path%d - FE not linked to BE", fe_reg);
+		return -EPIPE;
+	}
 
 	prtd = devm_kzalloc(adsp->dev, sizeof(struct tegra210_adsp_compr_rtd),
 		GFP_KERNEL);
@@ -1038,6 +1186,12 @@ static int tegra210_adsp_pcm_open(struct snd_pcm_substream *substream)
 	int i, ret = 0;
 
 	dev_vdbg(adsp->dev, "%s", __func__);
+
+	if (!adsp->pcm_path[fe_reg][substream->stream].fe_reg ||
+		!adsp->pcm_path[fe_reg][substream->stream].be_reg) {
+		dev_err(adsp->dev, "Broken Path%d - FE not linked to BE", fe_reg);
+		return -EPIPE;
+	}
 
 	prtd = devm_kzalloc(adsp->dev, sizeof(struct tegra210_adsp_pcm_rtd),
 		GFP_KERNEL);
@@ -1454,8 +1608,13 @@ static int tegra210_adsp_mux_put(struct snd_kcontrol *kcontrol,
 	if (IS_ADSP_APP(e->reg)) {
 		app = &adsp->apps[e->reg];
 		cur_val = tegra210_adsp_get_source(adsp, e->reg);
-		if (cur_val != val)
+		if (cur_val != val) {
+			if (app->connect) {
+				/* remove existing connections if any */
+				tegra210_adsp_remove_connection(adsp, app);
+			}
 			app->connect = 0;
+		}
 
 		if (val == TEGRA210_ADSP_NONE) {
 			tegra210_adsp_app_deinit(adsp, app);
@@ -2197,7 +2356,7 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 
 	adsp = devm_kzalloc(&pdev->dev, sizeof(*adsp), GFP_KERNEL);
 	if (!adsp) {
-		dev_err(&pdev->dev, "Can't allocate tegra30_adsp_ctx\n");
+		dev_err(&pdev->dev, "Can't allocate tegra210_adsp_ctx\n");
 		return -ENOMEM;
 	}
 	dev_set_drvdata(&pdev->dev, adsp);

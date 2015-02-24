@@ -29,6 +29,28 @@
 			thermal-zone-params {
 				governor-name = "pid_thermal_gov";
 			};
+
+			tboard_dram_cool_dev: dram-cool-dev {
+				#cooling-cells = <2>; /* min followed by max */
+			};
+
+			trips {
+				tboard_dram_throttle: dram-throttle {
+					temperature = <80000>;
+					hysteresis = <0>;
+					type = "active";
+					writable;
+				};
+			};
+
+			cooling-maps {
+				map0 {
+					trip = <&tboard_dram_throttle>;
+					cooling-device = <&tboard_dram_cool_dev
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+					cdev-type = "tegra-dram";
+				};
+			};
 		};
 
 		Tdiode_tegra {

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dc_sysfs.c
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@
 #include "nvsd.h"
 #include "hdmi.h"
 #include "nvsr.h"
+#include "vrr.h"
 
 static ssize_t mode_show(struct device *device,
 	struct device_attribute *attr, char *buf)
@@ -771,6 +772,7 @@ void tegra_dc_create_sysfs(struct device *dev)
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	struct tegra_dc_sd_settings *sd_settings = dc->out->sd_settings;
 	struct tegra_dc_nvsr_data *nvsr = dc->nvsr;
+	struct tegra_vrr *vrr  = dc->out->vrr;
 	int error = 0;
 
 	error |= device_create_file(dev, &dev_attr_mode);
@@ -800,6 +802,11 @@ void tegra_dc_create_sysfs(struct device *dev)
 
 	if (nvsr)
 		error |= nvsr_create_sysfs(dev);
+
+	if (vrr)
+#ifdef CONFIG_TEGRA_VRR
+		error |= vrr_create_sysfs(dev);
+#endif
 
 	if (dc->fb)
 		error |= tegra_fb_create_sysfs(dev);

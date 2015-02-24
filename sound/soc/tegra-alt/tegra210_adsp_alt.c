@@ -1527,9 +1527,13 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 		return 0;
 
 	if (SND_SOC_DAPM_EVENT_ON(event)) {
-		if (IS_APM_IN(w->reg))
+		if (IS_APM_IN(w->reg)) {
+			/* Request higher ADSP clock when starting stream.
+			 * Actmon takes care of adjusting frequency later. */
+			adsp_update_dfs(500000, 1);
 			tegra210_adsp_send_state_msg(app, nvfx_state_active,
 			TEGRA210_ADSP_MSG_FLAG_SEND);
+		}
 	} else {
 		if (IS_APM_IN(w->reg)) {
 			tegra210_adsp_send_state_msg(app, nvfx_state_inactive,

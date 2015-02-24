@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Automatic Clock Management
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -29,11 +29,8 @@
 #include <linux/pm_runtime.h>
 #include <linux/nvhost.h>
 
-extern const struct dev_pm_ops nvhost_module_pm_ops;
-
 /* Sets clocks and powergating state for a module */
 int nvhost_clk_get(struct platform_device *dev, char *name, struct clk **clk);
-int nvhost_module_init(struct platform_device *ndev);
 void nvhost_module_deinit(struct platform_device *dev);
 
 void nvhost_module_busy_noresume(struct platform_device *dev);
@@ -65,9 +62,6 @@ static inline void nvhost_module_idle(struct platform_device *dev)
 }
 
 /* common runtime pm and power domain APIs */
-int nvhost_module_add_domain(struct generic_pm_domain *domain,
-	struct platform_device *pdev);
 int nvhost_module_enable_clk(struct device *dev);
 int nvhost_module_disable_clk(struct device *dev);
-
 #endif

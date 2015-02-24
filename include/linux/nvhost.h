@@ -350,6 +350,18 @@ int nvhost_job_add_client_gather_address(struct nvhost_job *job,
 		u32 num_words, u32 class_id, dma_addr_t gather_address);
 int nvhost_channel_submit(struct nvhost_job *job);
 
+/* common device management APIs */
+int nvhost_client_device_get_resources(struct platform_device *dev);
+int nvhost_client_device_release(struct platform_device *dev);
+int nvhost_client_device_init(struct platform_device *dev);
+int nvhost_check_bondout(unsigned int id);
+
+/* common runtime pm and power domain APIs */
+int nvhost_module_init(struct platform_device *ndev);
+int nvhost_module_add_domain(struct generic_pm_domain *domain,
+	struct platform_device *pdev);
+extern const struct dev_pm_ops nvhost_module_pm_ops;
+
 /* public host1x sync-point management APIs */
 u32 nvhost_get_syncpt_client_managed(const char *syncpt_name);
 u32 nvhost_get_syncpt_host_managed(struct platform_device *pdev,

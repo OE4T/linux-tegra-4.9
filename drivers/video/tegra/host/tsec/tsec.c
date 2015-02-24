@@ -973,13 +973,7 @@ static int tsec_probe(struct platform_device *dev)
 
 static int __exit tsec_remove(struct platform_device *dev)
 {
-#ifdef CONFIG_PM_RUNTIME
-	pm_runtime_put(&dev->dev);
-	pm_runtime_disable(&dev->dev);
-#else
-	nvhost_module_disable_clk(&dev->dev);
-#endif
-
+	nvhost_client_device_release(dev);
 	return 0;
 }
 

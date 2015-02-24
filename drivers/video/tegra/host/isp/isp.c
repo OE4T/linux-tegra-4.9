@@ -402,12 +402,6 @@ static int __exit isp_remove(struct platform_device *dev)
 	if (tegra_isp->isomgr_handle)
 		isp_isomgr_unregister(tegra_isp);
 #endif
-#ifdef CONFIG_PM_RUNTIME
-	pm_runtime_put(&dev->dev);
-	pm_runtime_disable(&dev->dev);
-#else
-	nvhost_module_disable_clk(&dev->dev);
-#endif
 	nvhost_client_device_release(dev);
 	disable_irq(tegra_isp->irq);
 	kfree(tegra_isp->my_isr_work);

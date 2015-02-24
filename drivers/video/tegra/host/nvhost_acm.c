@@ -958,7 +958,6 @@ int nvhost_module_enable_clk(struct device *dev)
 
 	return 0;
 }
-EXPORT_SYMBOL(nvhost_module_enable_clk);
 
 int nvhost_module_disable_clk(struct device *dev)
 {
@@ -981,7 +980,6 @@ int nvhost_module_disable_clk(struct device *dev)
 
 	return 0;
 }
-EXPORT_SYMBOL(nvhost_module_disable_clk);
 
 static void nvhost_module_load_regs(struct platform_device *pdev, bool prod)
 {

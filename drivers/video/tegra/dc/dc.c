@@ -3951,7 +3951,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	int irq;
 	int i;
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	static char *clk_name = "disp1";
+	static char *clk_name = "disp0";
 #endif
 
 #ifdef CONFIG_ARCH_TEGRA_21x_SOC
@@ -4053,11 +4053,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		goto err_release_resource_reg;
 	}
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	ret = tegra_nvdisp_init(dc);
-	if (ret)
-		goto err_release_resource_reg;
-#else
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	for (i = 0; i < DC_N_WINDOWS; i++)
 		dc->windows[i].syncpt.id = NVSYNCPT_INVALID;
 
@@ -4166,6 +4162,13 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->pdata = dt_pdata;
 
 	dc->bw_kbps = 0;
+
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	/* dc variables need to initialized before nvdisp init */
+	ret = tegra_nvdisp_init(dc);
+	if (ret)
+		goto err_iounmap_reg;
+#endif
 
 	mutex_init(&dc->lock);
 	mutex_init(&dc->one_shot_lock);

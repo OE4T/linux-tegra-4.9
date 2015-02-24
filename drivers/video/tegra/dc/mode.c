@@ -582,7 +582,11 @@ int tegra_dc_to_fb_videomode(struct fb_videomode *fbmode,
 int tegra_dc_update_mode(struct tegra_dc *dc)
 {
 	if (dc->mode_dirty)
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		return tegra_nvdisp_program_mode(dc, &dc->mode);
+#else
 		return tegra_dc_program_mode(dc, &dc->mode);
+#endif
 	return 0;
 }
 

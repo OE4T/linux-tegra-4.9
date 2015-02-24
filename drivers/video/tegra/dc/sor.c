@@ -753,7 +753,7 @@ int tegra_sor_power_lanes(struct tegra_dc_sor_data *sor,
 		case 2:
 			reg_val |= NV_SOR_DP_PADCTL_PD_TXD_1_NO;
 		case 1:
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
 			reg_val |= NV_SOR_DP_PADCTL_PD_TXD_2_NO;
 #else
 			reg_val |= NV_SOR_DP_PADCTL_PD_TXD_0_NO;
@@ -1966,7 +1966,7 @@ void tegra_sor_precharge_lanes(struct tegra_dc_sor_data *sor)
 	case 2:
 		val |= NV_SOR_DP_PADCTL_PD_TXD_1_NO;
 	case 1:
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
 		val |= NV_SOR_DP_PADCTL_PD_TXD_2_NO;
 #else
 		val |= NV_SOR_DP_PADCTL_PD_TXD_0_NO;

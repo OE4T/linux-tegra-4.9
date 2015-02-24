@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -571,10 +571,13 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	struct tegra_dc_win *windows[], int n,
 	u16 *dirty_rect, bool wait_for_vblank);
 int tegra_nvdisp_head_enable(struct tegra_dc *dc);
+int tegra_nvdisp_head_disable(struct tegra_dc *dc);
 int tegra_nvdisp_get_linestride(struct tegra_dc *dc, int win);
 void tegra_nvdisp_enable_crc(struct tegra_dc *dc);
 void tegra_nvdisp_disable_crc(struct tegra_dc *dc);
 u32 tegra_nvdisp_read_rg_crc(struct tegra_dc *dc);
+int tegra_nvdisp_program_mode(struct tegra_dc *dc,
+			struct tegra_dc_mode *mode);
 
 struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
 	struct tegra_dc *dc, struct tegra_fb_data *fb_data,

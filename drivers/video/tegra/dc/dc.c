@@ -1403,7 +1403,7 @@ static const struct file_operations dbg_hotplug_fops = {
 	.release	= single_release,
 };
 
-static int tegra_vrr_dbg_show(struct seq_file *m, void *unused)
+static int dbg_vrr_enable_show(struct seq_file *m, void *unused)
 {
 	struct tegra_vrr *vrr = m->private;
 
@@ -1414,14 +1414,128 @@ static int tegra_vrr_dbg_show(struct seq_file *m, void *unused)
 	return 0;
 }
 
-static int tegra_vrr_dbg_open(struct inode *inode, struct file *file)
+static int dbg_vrr_enable_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, tegra_vrr_dbg_show, inode->i_private);
+	return single_open(file, dbg_vrr_enable_show, inode->i_private);
 }
 
-static const struct file_operations tegra_vrr_dbg_ops = {
-	.open = tegra_vrr_dbg_open,
+static const struct file_operations dbg_vrr_enable_ops = {
+	.open = dbg_vrr_enable_open,
 	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static int dbg_vrr_dc_balance_show(struct seq_file *m, void *unused)
+{
+	struct tegra_vrr *vrr = m->private;
+
+	if (!vrr)
+		return -EINVAL;
+
+	seq_printf(m, "vrr dc balance: %d\n", vrr->dc_balance);
+
+	return 0;
+}
+
+static int dbg_vrr_dc_balance_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_vrr_dc_balance_show, inode->i_private);
+}
+
+static const struct file_operations dbg_vrr_dc_balance_ops = {
+	.open = dbg_vrr_dc_balance_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static int dbg_vrr_frame_avg_pct_show(struct seq_file *m, void *unused)
+{
+	struct tegra_vrr *vrr = m->private;
+
+	if (!vrr)
+		return -EINVAL;
+
+	seq_printf(m, "vrr frame average percent: %d\n", vrr->frame_avg_pct);
+
+	return 0;
+}
+
+static ssize_t dbg_vrr_frame_avg_pct_write(struct file *file,
+		const char __user *addr, size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data;
+	struct tegra_vrr *vrr = m->private;
+	long   new_pct;
+	int    ret;
+
+	if (!vrr)
+		return -EINVAL;
+
+	ret = kstrtol_from_user(addr, len, 10, &new_pct);
+	if (ret < 0)
+		return ret;
+
+	vrr->frame_avg_pct = new_pct;
+
+	return len;
+}
+
+static int dbg_vrr_frame_avg_pct_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_vrr_frame_avg_pct_show, inode->i_private);
+}
+
+static const struct file_operations dbg_vrr_frame_avg_pct_ops = {
+	.open = dbg_vrr_frame_avg_pct_open,
+	.read = seq_read,
+	.write = dbg_vrr_frame_avg_pct_write,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static int dbg_vrr_fluct_avg_pct_show(struct seq_file *m, void *unused)
+{
+	struct tegra_vrr *vrr = m->private;
+
+	if (!vrr)
+		return -EINVAL;
+
+	seq_printf(m, "vrr fluct average percent: %d\n", vrr->fluct_avg_pct);
+
+	return 0;
+}
+
+static ssize_t dbg_vrr_fluct_avg_pct_write(struct file *file,
+		const char __user *addr, size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data;
+	struct tegra_vrr *vrr = m->private;
+	long   new_pct;
+	int    ret;
+
+	if (!vrr)
+		return -EINVAL;
+
+	ret = kstrtol_from_user(addr, len, 10, &new_pct);
+	if (ret < 0)
+		return ret;
+
+	vrr->fluct_avg_pct = new_pct;
+
+	return len;
+}
+
+static int dbg_vrr_fluct_avg_pct_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_vrr_fluct_avg_pct_show, inode->i_private);
+}
+
+static const struct file_operations dbg_vrr_fluct_avg_pct_ops = {
+	.open = dbg_vrr_fluct_avg_pct_open,
+	.read = seq_read,
+	.write = dbg_vrr_fluct_avg_pct_write,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -1486,7 +1600,22 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 		goto remove_out;
 
 	retval = debugfs_create_file("enable", S_IRUGO, vrrdir,
-				dc->out->vrr, &tegra_vrr_dbg_ops);
+				dc->out->vrr, &dbg_vrr_enable_ops);
+	if (!retval)
+		goto remove_out;
+
+	retval = debugfs_create_file("dc_balance", S_IRUGO, vrrdir,
+				dc->out->vrr, &dbg_vrr_dc_balance_ops);
+	if (!retval)
+		goto remove_out;
+
+	retval = debugfs_create_file("frame_avg_pct", S_IRUGO, vrrdir,
+				dc->out->vrr, &dbg_vrr_frame_avg_pct_ops);
+	if (!retval)
+		goto remove_out;
+
+	retval = debugfs_create_file("fluct_avg_pct", S_IRUGO, vrrdir,
+				dc->out->vrr, &dbg_vrr_fluct_avg_pct_ops);
 	if (!retval)
 		goto remove_out;
 
@@ -1559,9 +1688,19 @@ void tegra_dc_setup_vrr(struct tegra_dc *dc)
 		vrr->v_front_porch_min = vrr->v_front_porch;
 	vrr->vfp_extend = vrr->v_front_porch_max;
 	vrr->vfp_shrink = vrr->v_front_porch_min;
+
 	vrr->frame_len_fluct = 2000;
 	vrr->frame_type = 0;
 	vrr->frame_time_delta_us = 0;
+
+	vrr->max_adj_pct = 50;
+	vrr->max_flip_pct = 20;
+	vrr->max_dc_balance = 16667;
+	vrr->max_inc_pct = 5;
+
+	vrr->dc_balance = 0;
+	vrr->frame_avg_pct = 75;
+	vrr->fluct_avg_pct = 75;
 }
 unsigned long tegra_dc_poll_register(struct tegra_dc *dc, u32 reg, u32 mask,
 		u32 exp_val, u32 poll_interval_us, u32 timeout_ms)

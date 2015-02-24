@@ -271,6 +271,13 @@ static void gk20a_channel_syncpt_signal_timeline(
 	/* Nothing to do. */
 }
 
+static int gk20a_channel_syncpt_id(struct gk20a_channel_sync *s)
+{
+	struct gk20a_channel_syncpt *sp =
+		container_of(s, struct gk20a_channel_syncpt, ops);
+	return sp->id;
+}
+
 static void gk20a_channel_syncpt_destroy(struct gk20a_channel_sync *s)
 {
 	struct gk20a_channel_syncpt *sp =
@@ -306,6 +313,7 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 	sp->ops.incr_user		= gk20a_channel_syncpt_incr_user;
 	sp->ops.set_min_eq_max		= gk20a_channel_syncpt_set_min_eq_max;
 	sp->ops.signal_timeline		= gk20a_channel_syncpt_signal_timeline;
+	sp->ops.syncpt_id		= gk20a_channel_syncpt_id;
 	sp->ops.destroy			= gk20a_channel_syncpt_destroy;
 
 	sp->ops.aggressive_destroy	= true;
@@ -587,6 +595,11 @@ static void gk20a_channel_semaphore_signal_timeline(
 	gk20a_sync_timeline_signal(sp->timeline);
 }
 
+static int gk20a_channel_semaphore_syncpt_id(struct gk20a_channel_sync *s)
+{
+	return -EINVAL;
+}
+
 static void gk20a_channel_semaphore_destroy(struct gk20a_channel_sync *s)
 {
 	struct gk20a_channel_semaphore *sema =
@@ -645,6 +658,7 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c)
 	sema->ops.incr_user	= gk20a_channel_semaphore_incr_user;
 	sema->ops.set_min_eq_max = gk20a_channel_semaphore_set_min_eq_max;
 	sema->ops.signal_timeline = gk20a_channel_semaphore_signal_timeline;
+	sema->ops.syncpt_id	= gk20a_channel_semaphore_syncpt_id;
 	sema->ops.destroy	= gk20a_channel_semaphore_destroy;
 
 	/* Aggressively destroying the semaphore sync would cause overhead

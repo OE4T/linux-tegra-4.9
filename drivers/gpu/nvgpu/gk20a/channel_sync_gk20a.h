@@ -86,6 +86,9 @@ struct gk20a_channel_sync {
 	 * expired. */
 	void (*signal_timeline)(struct gk20a_channel_sync *s);
 
+	/* Returns the sync point id or negative number if no syncpt*/
+	int (*syncpt_id)(struct gk20a_channel_sync *s);
+
 	/* flag to set sync destroy aggressiveness */
 	bool aggressive_destroy;
 

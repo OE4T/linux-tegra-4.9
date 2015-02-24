@@ -1233,7 +1233,7 @@ static int gk20a_channel_submit_wfi(struct channel_gk20a *c)
 	struct priv_cmd_entry *cmd = NULL;
 	struct gk20a *g = c->g;
 	u32 free_count;
-	int err;
+	int err = 0;
 
 	if (c->has_timedout)
 		return -ETIMEDOUT;
@@ -1254,6 +1254,10 @@ static int gk20a_channel_submit_wfi(struct channel_gk20a *c)
 			mutex_unlock(&c->submit_lock);
 			return -ENOMEM;
 		}
+		if (g->ops.fifo.resetup_ramfc)
+			err = g->ops.fifo.resetup_ramfc(c);
+		if (err)
+			return err;
 	}
 
 	gk20a_fence_put(c->last_submit.pre_fence);
@@ -1547,6 +1551,10 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			mutex_unlock(&c->submit_lock);
 			goto clean_up;
 		}
+		if (g->ops.fifo.resetup_ramfc)
+			err = g->ops.fifo.resetup_ramfc(c);
+		if (err)
+			return err;
 	}
 
 	/*

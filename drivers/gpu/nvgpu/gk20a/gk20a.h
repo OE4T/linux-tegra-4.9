@@ -217,6 +217,7 @@ struct gpu_ops {
 		void (*free_inst)(struct gk20a *g, struct channel_gk20a *ch);
 		int (*setup_ramfc)(struct channel_gk20a *c, u64 gpfifo_base,
 				u32 gpfifo_entries);
+		int (*resetup_ramfc)(struct channel_gk20a *c);
 		int (*preempt_channel)(struct gk20a *g, u32 hw_chid);
 		int (*update_runlist)(struct gk20a *g, u32 runlist_id,
 				u32 hw_chid, bool add,

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisplay/nvdis.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -54,7 +54,7 @@ int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 	return 0;
 }
 
-static int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
+int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 				     *mode)
 {
 	unsigned long v_back_porch;
@@ -199,6 +199,7 @@ static int tegra_nvdisp_set_control(struct tegra_dc *dc)
 	}
 
 	tegra_dc_writel(dc, protocol, reg);
+	tegra_dc_enable_general_act(dc);
 	return 0;
 }
 
@@ -261,6 +262,24 @@ static int tegra_nvdisp_rg_init(struct tegra_dc *dc)
 
 static int tegra_nvdisp_cursor_init(struct tegra_dc *dc)
 {
+	return 0;
+}
+
+int tegra_nvdisp_head_disable(struct tegra_dc *dc)
+{
+	int idx;
+
+	/* Detach windows from the head */
+	for_each_set_bit(idx, &dc->pdata->win_mask, DC_N_WINDOWS) {
+		if (tegra_nvdisp_detach_win(dc, idx))
+			dev_err(&dc->ndev->dev,
+				"failed to detach window %d\n", idx);
+		else
+			dev_dbg(&dc->ndev->dev,
+				"Window %d detached from head %d\n", idx,
+				dc->ctrl_num);
+	}
+
 	return 0;
 }
 
@@ -440,6 +459,18 @@ u32 tegra_nvdisp_read_rg_crc(struct tegra_dc *dc)
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
 	val = tegra_dc_readl(dc, nvdisp_rg_crca_r());
+
+	/* tegrasim seems to need more time to set the
+	 * CRCA valid bit. So adding an infinite
+	 * polling loop for tegrasim
+	 */
+	if (tegra_platform_is_linsim()) {
+		while (val <= 0) {
+			val = tegra_dc_readl(dc, nvdisp_rg_crca_r());
+			msleep(100);
+		}
+	}
+
 	if (val & nvdisp_rg_crca_valid_true_f())
 		crc = tegra_dc_readl(dc, nvdisp_rg_crcb_r());
 	/* clear the error bit if set */

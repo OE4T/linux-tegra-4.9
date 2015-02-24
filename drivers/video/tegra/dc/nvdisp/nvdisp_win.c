@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisplay/nvdis_win.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -135,8 +135,6 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 	bool yuv = tegra_dc_is_yuv(win->fmt);
 	bool yuvp = tegra_dc_is_yuv_planar(win->fmt);
 	bool yuvsp = tegra_dc_is_yuv_semi_planar(win->fmt);
-	bool invert_h = (win->flags & TEGRA_WIN_FLAG_INVERT_H) != 0;
-	bool invert_v = (win->flags & TEGRA_WIN_FLAG_INVERT_V) != 0;
 
 	struct tegra_dc *dc = win->dc;
 
@@ -223,21 +221,20 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 			win_win_set_params_r());
 	}
 
-	if (invert_h) {
-		h_offset.full = win->x.full + win->w.full;
-		h_offset.full -= dfixed_const(1);
-	} else {
-		h_offset.full = dfixed_floor(win->x);
-	}
-
-	v_offset = win->y;
-	if (invert_v)
-		v_offset.full += win->h.full - dfixed_const(1);
-
+	/* In T186 - Relative offset of the image is displayed w.r.t the
+	 * Source image on rotation. So With HD/VD -> 0 or 1 Cropped_pt.x/y
+	 * is set as zero. Recheck how to handle the case of passing
+	 * offset values or change existing apps to pass corrected values for
+	 * x & y
+	 */
+/*
+	h_offset.full = dfixed_floor(win->x);
+	v_offset      = win->y;
+*/
+	h_offset.full = 0;
+	v_offset.full = 0;
 	nvdisp_win_write(win,
-			win_cropped_point_h_offset_f(dfixed_trunc(h_offset)),
-			win_cropped_point_r());
-	nvdisp_win_write(win,
+			win_cropped_point_h_offset_f(dfixed_trunc(h_offset))|
 			win_cropped_point_v_offset_f(dfixed_trunc(v_offset)),
 			win_cropped_point_r());
 

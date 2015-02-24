@@ -236,7 +236,8 @@ static void action_signal_sync_pt(struct nvhost_waitlist *waiter)
 {
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 	struct nvhost_sync_pt *pt = waiter->data;
-	nvhost_sync_pt_signal(pt);
+	ktime_t time = timespec_to_ktime(waiter->isr_recv);
+	nvhost_sync_pt_signal(pt, ktime_to_ns(time));
 #endif
 }
 

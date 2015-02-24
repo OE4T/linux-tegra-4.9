@@ -360,7 +360,7 @@ struct nvhost_sync_timeline *nvhost_sync_timeline_create(
 	return obj;
 }
 
-void nvhost_sync_pt_signal(struct nvhost_sync_pt *pt)
+void nvhost_sync_pt_signal(struct nvhost_sync_pt *pt, u64 timestamp)
 {
 	/* At this point the fence (and its sync_pt's) might already be gone if
 	 * the user has closed its fd's. The nvhost_sync_pt object still exists
@@ -371,7 +371,7 @@ void nvhost_sync_pt_signal(struct nvhost_sync_pt *pt)
 		pt->has_intr = false;
 		kref_put(&pt->refcount, nvhost_sync_pt_free_shared);
 	}
-	sync_timeline_signal(&obj->obj, 0);
+	sync_timeline_signal(&obj->obj, timestamp);
 }
 
 int nvhost_sync_fence_set_name(int fence_fd, const char *name)

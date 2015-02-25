@@ -122,4 +122,8 @@ static inline u32 host1x_channel_ch_hipri_r(void)
 {
 	return 0x2010;
 }
+static inline u32 host1x_channel_filter_gbuffer_r(void)
+{
+	return 0x2020;
+}
 #endif

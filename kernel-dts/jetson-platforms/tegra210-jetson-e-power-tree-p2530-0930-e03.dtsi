@@ -263,13 +263,13 @@
 		pwrdet-audio-supply = <&max77620_sd3>;
 		pwrdet-cam-supply = <&max77620_sd3>;
 		pwrdet-pex-ctrl-supply = <&max77620_ldo1>;
-		pwrdet-sdmmc1-supply = <&max77620_sd3>;
-		pwrdet-sdmmc3-supply = <&max77620_ldo2>;
+		pwrdet-sdmmc1-supply = <&max77620_ldo2>;
+		pwrdet-sdmmc3-supply = <&max77620_sd3>;
 		pwrdet-sdmmc4-supply = <&max77620_sd3>;
 		pwrdet-audio-hv-supply = <&max77620_sd3>;
 		pwrdet-debug-supply = <&max77620_sd3>;
 		pwrdet-dmic-supply = <&max77620_sd3>;
-		pwrdet-gpio-supply = <&max77620_sd3>;
+		pwrdet-gpio-supply = <&vdd_3v3>;
 		pwrdet-spi-supply = <&max77620_sd3>;
 		pwrdet-spi-hv-supply = <&max77620_sd3>;
 		pwrdet-sdmmc2-supply = <&max77620_sd3>;

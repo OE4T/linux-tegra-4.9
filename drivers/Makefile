@@ -23,3 +23,4 @@ obj-y += thermal/
 obj-$(CONFIG_STAGING) += staging/
 obj-y += i2c/
 obj-y += net/
+obj-$(CONFIG_CPU_IDLE) += cpuidle/

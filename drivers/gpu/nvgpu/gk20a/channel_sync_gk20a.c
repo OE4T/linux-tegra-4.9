@@ -3,7 +3,7 @@
  *
  * GK20A Channel Synchronization Abstraction
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -61,7 +61,7 @@ static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	struct priv_cmd_entry *wait_cmd = NULL;
 
-	if (id >= nvhost_syncpt_nb_pts_ext(sp->host1x_pdev)) {
+	if (!nvhost_syncpt_is_valid_pt_ext(sp->host1x_pdev, id)) {
 		dev_warn(dev_from_gk20a(sp->c->g),
 				"invalid wait id in gpfifo submit, elided");
 		return 0;
@@ -105,8 +105,8 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 	for (i = 0; i < sync_fence->num_fences; i++) {
 		struct sync_pt *pt = sync_pt_from_fence(sync_fence->cbs[i].sync_pt);
 		u32 wait_id = nvhost_sync_pt_id(pt);
-		if (!wait_id ||
-			 wait_id >= nvhost_syncpt_nb_pts_ext(sp->host1x_pdev)) {
+		if (!wait_id || !nvhost_syncpt_is_valid_pt_ext(sp->host1x_pdev,
+					wait_id)) {
 			sync_fence_put(sync_fence);
 			return -EINVAL;
 		}

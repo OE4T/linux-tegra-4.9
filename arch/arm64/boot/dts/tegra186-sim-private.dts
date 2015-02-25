@@ -93,6 +93,50 @@
 		reg = < 0x0 0x7e101000 0x0 0x00001000 >;
 	};
 
+	adma: adma@2930000 {
+		compatible = "nvidia,tegra210-adma";
+		reg = <0x0 0x02930000 0x0 0x10000>,	/* GLOBAL Reg */
+		      <0x0 0x02940000 0x0 0x10000>,	/* PAGE1 */
+		      <0x0 0x02950000 0x0 0x10000>,	/* PAGE2 */
+		      <0x0 0x02960000 0x0 0x10000>,	/* PAGE3 */
+		      <0x0 0x02970000 0x0 0x10000>;	/* PAGE4 */
+		interrupts = <0 0 0x04
+			      0 1 0x04
+			      0 2 0x04
+			      0 3 0x04
+			      0 4 0x04
+			      0 5 0x04
+			      0 6 0x04
+			      0 7 0x04
+			      0 8 0x04
+			      0 9 0x04
+			      0 10 0x04
+			      0 11 0x04
+			      0 12 0x04
+			      0 13 0x04
+			      0 14 0x04
+			      0 15 0x04
+			      0 16 0x04
+			      0 17 0x04
+			      0 18 0x04
+			      0 19 0x04
+			      0 20 0x04
+			      0 21 0x04
+			      0 22 0x04
+			      0 23 0x04
+			      0 24 0x04
+			      0 25 0x04
+			      0 26 0x04
+			      0 27 0x04
+			      0 28 0x04
+			      0 29 0x04
+			      0 30 0x04
+			      0 31 0x04>;
+			#dma-cells = <1>;
+			dma-channels = <10>;
+		status = "disabled";
+	};
+
 	tegra_axbar: ahub {
 		compatible = "nvidia,tegra210-axbar";
 		reg = <0x0 0x02900800 0x0 0x800>;
@@ -461,7 +505,6 @@
 			name-prefix = "dmic-x";
 		};
 	};
-
 
 	host1x {
 

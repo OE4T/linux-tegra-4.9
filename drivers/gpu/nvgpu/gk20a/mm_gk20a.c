@@ -530,7 +530,9 @@ void free_gmmu_pages(struct vm_gk20a *vm,
 	DEFINE_DMA_ATTRS(attrs);
 
 	gk20a_dbg_fn("");
-	BUG_ON(entry->sgt == NULL);
+
+	if (!entry->sgt)
+		return;
 
 	if (tegra_platform_is_linsim()) {
 		free_gmmu_phys_pages(vm, entry);
@@ -554,6 +556,7 @@ void free_gmmu_pages(struct vm_gk20a *vm,
 		entry->pages = NULL;
 	}
 	entry->size = 0;
+	entry->sgt = NULL;
 }
 
 int map_gmmu_pages(struct gk20a_mm_entry *entry)
@@ -2140,13 +2143,28 @@ void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset)
 	mutex_unlock(&vm->update_gmmu_lock);
 }
 
+static void gk20a_vm_free_entries(struct vm_gk20a *vm,
+				  struct gk20a_mm_entry *parent,
+				  int level)
+{
+	const struct gk20a_mmu_level *l = &vm->mmu_levels[level];
+	int num_entries = 1 << (l->hi_bit[parent->pgsz] - l->lo_bit[parent->pgsz]);
+	int i;
+
+	if (parent->entries)
+		for (i = 0; i < num_entries; i++)
+			gk20a_vm_free_entries(vm, &parent->entries[i], level+1);
+
+	if (parent->size)
+		free_gmmu_pages(vm, parent);
+	kfree(parent->entries);
+}
+
 static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 {
 	struct mapped_buffer_node *mapped_buffer;
 	struct vm_reserved_va_node *va_node, *va_node_tmp;
 	struct rb_node *node;
-	int i;
-	u32 pde_lo = 0, pde_hi = 0;
 
 	gk20a_dbg_fn("");
 	mutex_lock(&vm->update_gmmu_lock);
@@ -2167,17 +2185,6 @@ static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 		reserved_va_list) {
 		list_del(&va_node->reserved_va_list);
 		kfree(va_node);
-	}
-
-	/* unmapping all buffers above may not actually free
-	 * all vm ptes.  jettison them here for certain... */
-	pde_range_from_vaddr_range(vm,
-				   0, vm->va_limit-1,
-				   &pde_lo, &pde_hi);
-	for (i = 0; i < pde_hi + 1; i++) {
-		struct gk20a_mm_entry *entry = &vm->pdb.entries[i];
-		if (entry->size)
-			free_gmmu_pages(vm, entry);
 	}
 
 	gk20a_deinit_vm(vm);
@@ -2709,9 +2716,7 @@ void gk20a_deinit_vm(struct vm_gk20a *vm)
 	gk20a_allocator_destroy(&vm->vma[gmmu_page_size_big]);
 	gk20a_allocator_destroy(&vm->vma[gmmu_page_size_small]);
 
-	unmap_gmmu_pages(&vm->pdb);
-	free_gmmu_pages(vm, &vm->pdb);
-	kfree(vm->pdb.entries);
+	gk20a_vm_free_entries(vm, &vm->pdb, 0);
 }
 
 int gk20a_alloc_inst_block(struct gk20a *g, struct mem_desc *inst_block)

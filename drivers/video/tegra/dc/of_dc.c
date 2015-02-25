@@ -1188,6 +1188,32 @@ static struct device_node *parse_dsi_settings(struct platform_device *ndev,
 	}
 
 	if (!of_property_read_u32(np_dsi_panel,
+		"nvidia,dsi-ganged-overlap", &temp)) {
+		dsi->ganged_overlap = (u16)temp;
+		OF_DC_LOG("dsi ganged overlap %d\n", dsi->ganged_overlap);
+		if (!dsi->ganged_type)
+			pr_warn("specified ganged overlap, but no ganged type\n");
+	}
+
+	if (!of_property_read_u32(np_dsi_panel,
+		"nvidia,dsi-ganged-swap-links", &temp)) {
+		dsi->ganged_swap_links = (bool)temp;
+		OF_DC_LOG("dsi ganged swapped links %d\n",
+			dsi->ganged_swap_links);
+		if (!dsi->ganged_type)
+			pr_warn("specified ganged swapped links, but no ganged type\n");
+	}
+
+	if (!of_property_read_u32(np_dsi_panel,
+		"nvidia,dsi-ganged-write-to-all-links", &temp)) {
+		dsi->ganged_write_to_all_links = (bool)temp;
+		OF_DC_LOG("dsi ganged write to both links %d\n",
+			dsi->ganged_write_to_all_links);
+		if (!dsi->ganged_type)
+			pr_warn("specified ganged write to all links, but no ganged type\n");
+	}
+
+	if (!of_property_read_u32(np_dsi_panel,
 		"nvidia,dsi-suspend-aggr", &temp)) {
 		dsi->suspend_aggr = (u8)temp;
 		OF_DC_LOG("dsi suspend_aggr %d\n", dsi->suspend_aggr);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,6 +49,7 @@
 		compad-vref-1v8 = <0x7>;
 		pll_source = "pll_p";
 		nvidia,en-io-trim-volt;
+		nvidia,en-periodic-calib;
 	};
 
 	sdhci@700b0200 {
@@ -81,5 +82,6 @@
 		cd-gpios = <&gpio TEGRA_GPIO_PZ1 0>;
 		pll_source = "pll_p";
 		nvidia,en-io-trim-volt;
+		nvidia,en-periodic-calib;
 	};
 };

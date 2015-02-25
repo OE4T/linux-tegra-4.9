@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -334,15 +334,15 @@ out:
 		/* won't need a timeout when replayed */
 		job->timeout = 0;
 
+		/* set notifier to userspace about submit timeout */
+		nvhost_job_set_notifier(job, NVHOST_CHANNEL_SUBMIT_TIMEOUT);
+
 		for (i = 0; i < job->num_syncpts; ++i)
 			nvhost_cdma_finalize_job_incrs(syncpt, job->sp + i);
 
 		/* cleanup push buffer */
 		cdma_op().timeout_pb_cleanup(cdma, job->first_get,
 			job->num_slots);
-
-		/* set notifier to userspace about submit timeout */
-		nvhost_job_set_notifier(job, NVHOST_CHANNEL_SUBMIT_TIMEOUT);
 	}
 
 	list_for_each_entry_from(job, &cdma->sync_queue, list)

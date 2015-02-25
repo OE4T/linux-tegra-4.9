@@ -66,6 +66,8 @@ static const char *num_mutexes_name = "num_mlocks";
 static const char *gather_filter_enabled_name = "gather_filter_enabled";
 static const char *alloc_syncpts_per_apps_name = "alloc_syncpts_per_apps";
 static const char *alloc_chs_per_submits_name = "alloc_chs_per_submits";
+static const char *syncpts_pts_base_name = "pts_base";
+static const char *syncpts_pts_limit_name = "pts_limit";
 
 struct nvhost_master *nvhost;
 
@@ -617,7 +619,7 @@ static int nvhost_user_init(struct nvhost_master *host)
 	}
 
 	host->caps_nodes = devm_kzalloc(&host->dev->dev,
-			sizeof(struct nvhost_capability_node) * 5, GFP_KERNEL);
+			sizeof(struct nvhost_capability_node) * 7, GFP_KERNEL);
 	if (!host->caps_nodes) {
 		err = -ENOMEM;
 		goto fail;
@@ -660,6 +662,18 @@ static int nvhost_user_init(struct nvhost_master *host)
 	if (nvhost_set_sysfs_capability_node(host,
 		alloc_syncpts_per_apps_name, host->caps_nodes + 4,
 		alloc_syncpts_per_apps, NULL)) {
+		err = -EIO;
+		goto fail;
+	}
+
+	if (nvhost_set_sysfs_capability_node(host, syncpts_pts_limit_name,
+		host->caps_nodes + 5, &nvhost_syncpt_pts_limit, NULL)) {
+		err = -EIO;
+		goto fail;
+	}
+
+	if (nvhost_set_sysfs_capability_node(host, syncpts_pts_base_name,
+		host->caps_nodes + 6, &nvhost_syncpt_pts_base, NULL)) {
 		err = -EIO;
 		goto fail;
 	}

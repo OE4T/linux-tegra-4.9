@@ -1,0 +1,71 @@
+/ {
+	cpus {
+
+		A57_CORE_POWER_STATES: a57_core_power_states {
+			compatible = "nvidia,tegra186-cpuidle-a57";
+
+			A57_C1: c1 {
+				compatible = "nvidia,tegra186-cpuidle-a57";
+				state-name = "Clock gated";
+				wakeup-latency-us = <1>;
+				min-residency-us = <1>;
+				power = <70>;
+				pmstate = <0x1>;
+				status = "enabled";
+			};
+			A57_C7: c7 {
+				compatible = "nvidia,tegra186-cpuidle-a57";
+				state-name = "Core powergate";
+				wakeup-latency-us = <20>;
+				min-residency-us = <50>;
+				power = <60>;
+				pmstate = <0x7>;
+				arm,psci-suspend-param= <0x7>;
+				status = "enabled";
+			};
+		};
+
+		a57_cluster_power_states {
+			compatible = "nvidia,tegra186-cpuidle-a57-cluster";
+			cc1 {
+				state-name = "Cluster clock gated";
+				wakeup-latency-us = <1>;
+				min-residency-us = <1>;
+				power = <65>;
+				pmstate = <0x1>;
+				status = "enabled";
+			};
+			cc6 {
+				state-name = "Cluster powergate";
+				wakeup-latency-us = <50>;
+				min-residency-us = <500>;
+				power = <19>;
+				pmstate = <0x6>;
+				status = "disabled";
+			};
+			cc7 {
+				state-name = "Cluster railgate";
+				wakeup-latency-us = <80>;
+				min-residency-us = <800>;
+				power = <5>;
+				pmstate = <0x7>;
+				status = "disabled";
+			};
+		};
+
+		a57_crossover_thresholds {
+			compatible = "nvidia,tegra186-cpuidle-a57-thresholds";
+
+			thresholds {
+				crossover_cc1_cc6       = <500>;
+				crossover_cc1_cc7       = <700>;
+				crossover_ccp1_ccp3     = <300>;
+				crossover_ccp3_sc1      = <400>;
+				crossover_ccp3_sc2      = <500>;
+				crossover_ccp3_sc3      = <600>;
+				crossover_ccp3_sc4      = <700>;
+				crossover_ccp3_sc7      = <800>;
+			};
+		};
+	};
+};

@@ -1004,4 +1004,8 @@
 		reg-names = "can-regs", "glue-regs", "msg-ram", "car-reg";
 		interrupts = <0 42 0x04 >;
 	};
+
+	cpuidle {
+		compatible = "nvidia,tegra18x-cpuidle";
+	};
 };

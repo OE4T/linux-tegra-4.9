@@ -2196,7 +2196,7 @@ static int tegra210_adsp_get_param(struct snd_kcontrol *kcontrol,
 
 /* tegra210_adsp_set_param - sets plugin parameters
  * @default: byte_format
- * @byte_format: <param1>,<param2>,....
+ * @byte_format: nvfx_call_params_t based structure
  * @int_format: <plugin_method>,<#params>,<param1>,<param2>,....
  */
 static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
@@ -2221,45 +2221,46 @@ static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
 
 	switch (params->mask) {
 	case SNDRV_CTL_ELEM_TYPE_INTEGER:
-		{
-			int32_t num_params, i;
-			/* check number of params to pass */
-			num_params = (int32_t)ucontrol->value.integer.value[1];
-			if (num_params < 1) {
-				dev_warn(adsp->dev, "No params to pass to the plugin\n");
-				return 0;
-			}
-			apm_msg.msg.fx_set_param_params.params[0] =
-				(sizeof(nvfx_call_params_t) +
-				num_params * sizeof(int32_t));
-
-			/* initialize the method */
-			apm_msg.msg.fx_set_param_params.params[1] =
-				(int32_t)ucontrol->value.integer.value[0];
-
-			/* copy parameters */
-			for (i = 0; i < num_params; i++)
-				apm_msg.msg.fx_set_param_params.params[i + 2] =
-					(int32_t)ucontrol->value.integer.value[i + 2];
+	{
+		int32_t num_params, i;
+		/* check number of params to pass */
+		num_params = (int32_t)ucontrol->value.integer.value[1];
+		if (num_params < 1) {
+			dev_warn(adsp->dev, "No params to pass to the plugin\n");
+			return 0;
 		}
-		break;
+		apm_msg.msg.fx_set_param_params.params[0] =
+			(sizeof(nvfx_call_params_t) +
+			num_params * sizeof(int32_t));
+
+		/* initialize the method */
+		apm_msg.msg.fx_set_param_params.params[1] =
+			(int32_t)ucontrol->value.integer.value[0];
+
+		/* copy parameters */
+		for (i = 0; i < num_params; i++)
+			apm_msg.msg.fx_set_param_params.params[i + 2] =
+				(int32_t)ucontrol->value.integer.value[i + 2];
+	}
+	break;
+
 	case SNDRV_CTL_ELEM_TYPE_BYTES:
-	default:
-		{
-			uint16_t *size = (uint16_t *)ucontrol->value.bytes.data;
-			uint8_t *data = (uint8_t *)(size + 1);
+	{
+		nvfx_call_params_t *call_params =
+			(nvfx_call_params_t *)ucontrol->value.bytes.data;
 
-			/* copy parameters */
-			memcpy(&apm_msg.msg.fx_set_param_params.params,
-				data, *size);
-		}
-		break;
+		/* copy parameters */
+		memcpy(&apm_msg.msg.fx_set_param_params.params,
+			call_params, call_params->size);
+	}
+	break;
+
+	default:
+		return -EINVAL;
 	}
 
-	tegra210_adsp_send_msg(app->apm, &apm_msg,
+	return tegra210_adsp_send_msg(app->apm, &apm_msg,
 		TEGRA210_ADSP_MSG_FLAG_SEND);
-
-	return 0;
 }
 
 /* Maximum 128 integers or 512 bytes allowed */

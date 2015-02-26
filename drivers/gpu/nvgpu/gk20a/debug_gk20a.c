@@ -104,7 +104,7 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 	u32 syncpointa, syncpointb;
 	void *inst_ptr;
 
-	inst_ptr = ch->inst_block.cpuva;
+	inst_ptr = ch->inst_block.cpu_va;
 	if (!inst_ptr)
 		return;
 

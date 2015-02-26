@@ -381,9 +381,9 @@ struct acr_gm20b {
 	u32 pmu_args;
 	const struct firmware *acr_fw;
 	struct flcn_acr_desc *acr_dmem_desc;
-	struct pmu_mem_desc acr_ucode;
+	struct mem_desc acr_ucode;
 	const struct firmware *hsbl_fw;
-	struct pmu_mem_desc hsbl_ucode;
+	struct mem_desc hsbl_ucode;
 	struct flcn_bl_dmem_desc bl_dmem_desc;
 	const struct firmware *pmu_fw;
 	const struct firmware *pmu_desc;

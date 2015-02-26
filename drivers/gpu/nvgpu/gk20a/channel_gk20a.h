@@ -99,7 +99,7 @@ struct channel_gk20a {
 
 	struct channel_ctx_gk20a ch_ctx;
 
-	struct inst_desc inst_block;
+	struct mem_desc inst_block;
 	struct mem_desc_sub ramfc;
 
 	void *userd_cpu_va;

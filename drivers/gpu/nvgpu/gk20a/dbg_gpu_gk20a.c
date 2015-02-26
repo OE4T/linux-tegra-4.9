@@ -851,7 +851,7 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 	gk20a_writel(g, perf_pmasys_outsize_r(), virt_size);
 
 	/* this field is aligned to 4K */
-	inst_pa_page = g->mm.hwpm.inst_block.cpu_pa >> 12;
+	inst_pa_page = gk20a_mem_phys(&g->mm.hwpm.inst_block) >> 12;
 
 	/* A write to MEM_BLOCK triggers the block bind operation. MEM_BLOCK
 	 * should be written last */

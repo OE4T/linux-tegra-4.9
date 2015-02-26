@@ -268,7 +268,7 @@ static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-static void gk20a_remove_vm(struct vm_gk20a *vm, struct inst_desc *inst_block)
+static void gk20a_remove_vm(struct vm_gk20a *vm, struct mem_desc *inst_block)
 {
 	struct gk20a *g = vm->mm->g;
 
@@ -335,8 +335,8 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 int gk20a_init_mm_setup_hw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
-	struct inst_desc *inst_block = &mm->bar1.inst_block;
-	phys_addr_t inst_pa = inst_block->cpu_pa;
+	struct mem_desc *inst_block = &mm->bar1.inst_block;
+	phys_addr_t inst_pa = gk20a_mem_phys(inst_block);
 	int err;
 
 	gk20a_dbg_fn("");
@@ -1516,54 +1516,95 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 	return vaddr;
 }
 
-int gk20a_gmmu_alloc_map(struct vm_gk20a *vm,
-			 size_t size, struct mem_desc *mem)
+int gk20a_gmmu_alloc(struct gk20a *g, size_t size, struct mem_desc *mem)
 {
-	struct gk20a *g = vm->mm->g;
+	return gk20a_gmmu_alloc_attr(g, 0, size, mem);
+}
+
+int gk20a_gmmu_alloc_attr(struct gk20a *g, enum dma_attr attr, size_t size, struct mem_desc *mem)
+{
 	struct device *d = dev_from_gk20a(g);
 	int err;
-	struct sg_table *sgt;
+	dma_addr_t iova;
 
-	mem->cpu_va = dma_alloc_coherent(d, size, &mem->iova, GFP_KERNEL);
+	gk20a_dbg_fn("");
+
+	if (attr) {
+		DEFINE_DMA_ATTRS(attrs);
+		dma_set_attr(attr, &attrs);
+		mem->cpu_va =
+			dma_alloc_attrs(d, size, &iova, GFP_KERNEL, &attrs);
+	} else {
+		mem->cpu_va = dma_alloc_coherent(d, size, &iova, GFP_KERNEL);
+	}
+
 	if (!mem->cpu_va)
 		return -ENOMEM;
 
-	err = gk20a_get_sgtable(d, &sgt, mem->cpu_va, mem->iova, size);
+	err = gk20a_get_sgtable(d, &mem->sgt, mem->cpu_va, iova, size);
 	if (err)
 		goto fail_free;
 
-	mem->gpu_va = gk20a_gmmu_map(vm, &sgt, size, 0, gk20a_mem_flag_none);
-	gk20a_free_sgtable(&sgt);
+	mem->size = size;
+	memset(mem->cpu_va, 0, size);
+
+	gk20a_dbg_fn("done");
+
+	return 0;
+
+fail_free:
+	dma_free_coherent(d, size, mem->cpu_va, iova);
+	mem->cpu_va = NULL;
+	mem->sgt = NULL;
+	return err;
+}
+
+void gk20a_gmmu_free(struct gk20a *g, struct mem_desc *mem)
+{
+	struct device *d = dev_from_gk20a(g);
+
+	if (mem->cpu_va)
+		dma_free_coherent(d, mem->size, mem->cpu_va,
+				  sg_dma_address(mem->sgt->sgl));
+	mem->cpu_va = NULL;
+
+	if (mem->sgt)
+		gk20a_free_sgtable(&mem->sgt);
+}
+
+int gk20a_gmmu_alloc_map(struct vm_gk20a *vm, size_t size, struct mem_desc *mem)
+{
+	return gk20a_gmmu_alloc_map_attr(vm, 0, size, mem);
+}
+
+int gk20a_gmmu_alloc_map_attr(struct vm_gk20a *vm,
+			 enum dma_attr attr, size_t size, struct mem_desc *mem)
+{
+	int err = gk20a_gmmu_alloc_attr(vm->mm->g, attr, size, mem);
+
+	if (err)
+		return err;
+
+	mem->gpu_va = gk20a_gmmu_map(vm, &mem->sgt, size, 0, gk20a_mem_flag_none);
 	if (!mem->gpu_va) {
 		err = -ENOMEM;
 		goto fail_free;
 	}
 
-	mem->size = size;
-
 	return 0;
 
 fail_free:
-	dma_free_coherent(d, size, mem->cpu_va, mem->iova);
-	mem->cpu_va = NULL;
-	mem->iova = 0;
-
+	gk20a_gmmu_free(vm->mm->g, mem);
 	return err;
 }
 
 void gk20a_gmmu_unmap_free(struct vm_gk20a *vm, struct mem_desc *mem)
 {
-	struct gk20a *g = vm->mm->g;
-	struct device *d = dev_from_gk20a(g);
-
 	if (mem->gpu_va)
 		gk20a_gmmu_unmap(vm, mem->gpu_va, mem->size, gk20a_mem_flag_none);
 	mem->gpu_va = 0;
 
-	if (mem->cpu_va)
-		dma_free_coherent(d, mem->size, mem->cpu_va, mem->iova);
-	mem->cpu_va = NULL;
-	mem->iova = 0;
+	gk20a_gmmu_free(vm->mm->g, mem);
 }
 
 dma_addr_t gk20a_mm_gpuva_to_iova_base(struct vm_gk20a *vm, u64 gpu_vaddr)
@@ -2644,42 +2685,24 @@ void gk20a_deinit_vm(struct vm_gk20a *vm)
 	kfree(vm->pdb.entries);
 }
 
-int gk20a_alloc_inst_block(struct gk20a *g, struct inst_desc *inst_block)
+int gk20a_alloc_inst_block(struct gk20a *g, struct mem_desc *inst_block)
 {
 	struct device *dev = dev_from_gk20a(g);
-	dma_addr_t iova;
+	int err;
 
-	inst_block->size = ram_in_alloc_size_v();
-	inst_block->cpuva = dma_alloc_coherent(dev, inst_block->size,
-				&iova, GFP_KERNEL);
-	if (!inst_block->cpuva) {
+	err = gk20a_gmmu_alloc(g, ram_in_alloc_size_v(), inst_block);
+	if (err) {
 		gk20a_err(dev, "%s: memory allocation failed\n", __func__);
-		return -ENOMEM;
+		return err;
 	}
-
-	inst_block->iova = iova;
-	inst_block->cpu_pa = gk20a_get_phys_from_iova(dev, inst_block->iova);
-	if (!inst_block->cpu_pa) {
-		gk20a_err(dev, "%s: failed to get phys address\n", __func__);
-		gk20a_free_inst_block(g, inst_block);
-		return -ENOMEM;
-	}
-
-	memset(inst_block->cpuva, 0, inst_block->size);
 
 	return 0;
 }
 
-void gk20a_free_inst_block(struct gk20a *g, struct inst_desc *inst_block)
+void gk20a_free_inst_block(struct gk20a *g, struct mem_desc *inst_block)
 {
-	struct device *dev = dev_from_gk20a(g);
-
-	if (inst_block->cpuva) {
-		dma_free_coherent(dev, inst_block->size,
-				inst_block->cpuva, inst_block->iova);
-	}
-
-	memset(inst_block, 0, sizeof(*inst_block));
+	if (inst_block->cpu_va)
+		gk20a_gmmu_free(g, inst_block);
 }
 
 static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
@@ -2687,7 +2710,7 @@ static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	int err;
 	struct vm_gk20a *vm = &mm->bar1.vm;
 	struct gk20a *g = gk20a_from_mm(mm);
-	struct inst_desc *inst_block = &mm->bar1.inst_block;
+	struct mem_desc *inst_block = &mm->bar1.inst_block;
 	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
 	mm->bar1.aperture_size = bar1_aperture_size_mb_gk20a() << 20;
@@ -2713,7 +2736,7 @@ static int gk20a_init_system_vm(struct mm_gk20a *mm)
 	int err;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct gk20a *g = gk20a_from_mm(mm);
-	struct inst_desc *inst_block = &mm->pmu.inst_block;
+	struct mem_desc *inst_block = &mm->pmu.inst_block;
 	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
 	mm->pmu.aperture_size = GK20A_PMU_VA_SIZE;
@@ -2739,7 +2762,7 @@ static int gk20a_init_hwpm(struct mm_gk20a *mm)
 	int err;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct gk20a *g = gk20a_from_mm(mm);
-	struct inst_desc *inst_block = &mm->hwpm.inst_block;
+	struct mem_desc *inst_block = &mm->hwpm.inst_block;
 
 	err = gk20a_alloc_inst_block(g, inst_block);
 	if (err)
@@ -2763,13 +2786,13 @@ void gk20a_mm_init_pdb(struct gk20a *g, void *inst_ptr, u64 pdb_addr)
 		ram_in_page_dir_base_hi_f(pdb_addr_hi));
 }
 
-void gk20a_init_inst_block(struct inst_desc *inst_block, struct vm_gk20a *vm,
+void gk20a_init_inst_block(struct mem_desc *inst_block, struct vm_gk20a *vm,
 		u32 big_page_size)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	u64 pde_addr = gk20a_mm_iova_addr(g, vm->pdb.sgt->sgl);
-	phys_addr_t inst_pa = inst_block->cpu_pa;
-	void *inst_ptr = inst_block->cpuva;
+	phys_addr_t inst_pa = gk20a_mem_phys(inst_block);
+	void *inst_ptr = inst_block->cpu_va;
 
 	gk20a_dbg_info("inst block phys = 0x%llx, kv = 0x%p",
 		(u64)inst_pa, inst_ptr);

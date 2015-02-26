@@ -32,7 +32,7 @@ struct fifo_runlist_info_gk20a {
 	unsigned long *active_channels;
 	unsigned long *active_tsgs;
 	/* Each engine has its own SW and HW runlist buffer.*/
-	struct runlist_mem_desc mem[MAX_RUNLIST_BUFFERS];
+	struct mem_desc mem[MAX_RUNLIST_BUFFERS];
 	u32  cur_buffer;
 	u32  total_entries;
 	bool stopped;
@@ -102,9 +102,8 @@ struct fifo_gk20a {
 	struct fifo_runlist_info_gk20a *runlist_info;
 	u32 max_runlists;
 
-	struct userd_desc userd;
+	struct mem_desc userd;
 	u32 userd_entry_size;
-	u32 userd_total_size;
 
 	struct channel_gk20a *channel;
 	struct mutex ch_inuse_mutex; /* protect unused chid look up */

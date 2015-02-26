@@ -567,7 +567,7 @@ static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 
 	gk20a_dbg_fn("");
 
-	inst_ptr = c->inst_block.cpuva;
+	inst_ptr = c->inst_block.cpu_va;
 	if (!inst_ptr)
 		return -ENOMEM;
 
@@ -674,7 +674,7 @@ int gr_gk20a_ctx_patch_write(struct gk20a *g,
 static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 					struct channel_gk20a *c)
 {
-	u32 inst_base_ptr = u64_lo32(c->inst_block.cpu_pa
+	u32 inst_base_ptr = u64_lo32(gk20a_mem_phys(&c->inst_block)
 				     >> ram_in_base_shift_v());
 	u32 ret;
 
@@ -1375,7 +1375,7 @@ static int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type)
 	int ret;
 
 	u32 inst_base_ptr =
-		u64_lo32(c->inst_block.cpu_pa
+		u64_lo32(gk20a_mem_phys(&c->inst_block)
 		>> ram_in_base_shift_v());
 
 
@@ -1671,7 +1671,7 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 
 	if (tegra_platform_is_linsim()) {
 		u32 inst_base_ptr =
-			u64_lo32(c->inst_block.cpu_pa
+			u64_lo32(gk20a_mem_phys(&c->inst_block)
 			>> ram_in_base_shift_v());
 
 		ret = gr_gk20a_submit_fecs_method_op(g,
@@ -1729,12 +1729,12 @@ static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
 	gk20a_init_inst_block(&ucode_info->inst_blk_desc, vm, 0);
 
 	/* Map ucode surface to GMMU */
-	ucode_info->ucode_gpuva = gk20a_gmmu_map(vm,
+	ucode_info->surface_desc.gpu_va = gk20a_gmmu_map(vm,
 					&ucode_info->surface_desc.sgt,
 					ucode_info->surface_desc.size,
 					0, /* flags */
 					gk20a_mem_flag_read_only);
-	if (!ucode_info->ucode_gpuva) {
+	if (!ucode_info->surface_desc.gpu_va) {
 		gk20a_err(d, "failed to update gmmu ptes\n");
 		return -ENOMEM;
 	}
@@ -1798,8 +1798,6 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 	u8 *buf;
 	u32 ucode_size;
 	int err = 0;
-	dma_addr_t iova;
-	DEFINE_DMA_ATTRS(attrs);
 
 	fecs_fw = gk20a_request_firmware(g, GK20A_FECS_UCODE_IMAGE);
 	if (!fecs_fw) {
@@ -1832,30 +1830,12 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 		g->gr.ctx_vars.ucode.gpccs.inst.count * sizeof(u32),
 		g->gr.ctx_vars.ucode.gpccs.data.count * sizeof(u32));
 
-	ucode_info->surface_desc.size = ucode_size;
-	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
-	ucode_info->surface_desc.cpuva = dma_alloc_attrs(d,
-					ucode_info->surface_desc.size,
-					&iova,
-					GFP_KERNEL,
-					&attrs);
-	if (!ucode_info->surface_desc.cpuva) {
-		gk20a_err(d, "memory allocation failed\n");
-		err = -ENOMEM;
+	err = gk20a_gmmu_alloc_attr(g, DMA_ATTR_READ_ONLY, ucode_size,
+			&ucode_info->surface_desc);
+	if (err)
 		goto clean_up;
-	}
 
-	ucode_info->surface_desc.iova = iova;
-	err = gk20a_get_sgtable(d, &ucode_info->surface_desc.sgt,
-				ucode_info->surface_desc.cpuva,
-				ucode_info->surface_desc.iova,
-				ucode_info->surface_desc.size);
-	if (err) {
-		gk20a_err(d, "failed to create sg table\n");
-		goto clean_up;
-	}
-
-	buf = (u8 *)ucode_info->surface_desc.cpuva;
+	buf = (u8 *)ucode_info->surface_desc.cpu_va;
 	if (!buf) {
 		gk20a_err(d, "failed to map surface desc buffer");
 		err = -ENOMEM;
@@ -1882,23 +1862,13 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 	if (err)
 		goto clean_up;
 
-	gk20a_free_sgtable(&ucode_info->surface_desc.sgt);
-
 	return 0;
 
  clean_up:
-	if (ucode_info->ucode_gpuva)
-		gk20a_gmmu_unmap(vm, ucode_info->ucode_gpuva,
+	if (ucode_info->surface_desc.gpu_va)
+		gk20a_gmmu_unmap(vm, ucode_info->surface_desc.gpu_va,
 			ucode_info->surface_desc.size, gk20a_mem_flag_none);
-	if (ucode_info->surface_desc.sgt)
-		gk20a_free_sgtable(&ucode_info->surface_desc.sgt);
-	if (ucode_info->surface_desc.cpuva)
-		dma_free_attrs(d, ucode_info->surface_desc.size,
-				ucode_info->surface_desc.cpuva,
-				ucode_info->surface_desc.iova,
-				&attrs);
-	ucode_info->surface_desc.cpuva = NULL;
-	ucode_info->surface_desc.iova = 0;
+	gk20a_gmmu_free(g, &ucode_info->surface_desc);
 
 	release_firmware(gpccs_fw);
 	gpccs_fw = NULL;
@@ -1928,7 +1898,7 @@ void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 
 	gk20a_writel(g, gr_fecs_arb_ctx_adr_r(), 0x0);
 
-	inst_ptr = ucode_info->inst_blk_desc.cpu_pa;
+	inst_ptr = gk20a_mem_phys(&ucode_info->inst_blk_desc);
 	gk20a_writel(g, gr_fecs_new_ctx_r(),
 			gr_fecs_new_ctx_ptr_f(inst_ptr >> 12) |
 			gr_fecs_new_ctx_target_m() |
@@ -2111,7 +2081,7 @@ static int gr_gk20a_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,
 static void gr_gk20a_load_falcon_with_bootloader(struct gk20a *g)
 {
 	struct gk20a_ctxsw_ucode_info *ucode_info = &g->ctxsw_ucode_info;
-	u64 addr_base = ucode_info->ucode_gpuva;
+	u64 addr_base = ucode_info->surface_desc.gpu_va;
 
 	gk20a_writel(g, gr_fecs_ctxsw_mailbox_clear_r(0), 0x0);
 
@@ -2128,6 +2098,7 @@ static void gr_gk20a_load_falcon_with_bootloader(struct gk20a *g)
 
 int gr_gk20a_load_ctxsw_ucode(struct gk20a *g)
 {
+	int err;
 
 	gk20a_dbg_fn("");
 
@@ -2147,8 +2118,12 @@ int gr_gk20a_load_ctxsw_ucode(struct gk20a *g)
 		gr_gk20a_load_falcon_imem(g);
 		gr_gk20a_start_falcon_ucode(g);
 	} else {
-		if (!g->gr.skip_ucode_init)
-			gr_gk20a_init_ctxsw_ucode(g);
+		if (!g->gr.skip_ucode_init) {
+			err = gr_gk20a_init_ctxsw_ucode(g);
+
+			if (err)
+				return err;
+		}
 		gr_gk20a_load_falcon_with_bootloader(g);
 		g->gr.skip_ucode_init = true;
 	}
@@ -2976,21 +2951,13 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 
 	gr_gk20a_free_global_ctx_buffers(g);
 
-	dma_free_coherent(d, gr->mmu_wr_mem.size,
-		gr->mmu_wr_mem.cpuva, gr->mmu_wr_mem.iova);
-	gr->mmu_wr_mem.cpuva = NULL;
-	gr->mmu_wr_mem.iova = 0;
-	dma_free_coherent(d, gr->mmu_rd_mem.size,
-		gr->mmu_rd_mem.cpuva, gr->mmu_rd_mem.iova);
-	gr->mmu_rd_mem.cpuva = NULL;
-	gr->mmu_rd_mem.iova = 0;
+	gk20a_gmmu_free(g, &gr->mmu_wr_mem);
+	gk20a_gmmu_free(g, &gr->mmu_rd_mem);
 
 	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
 	dma_free_attrs(d, gr->compbit_store.size, gr->compbit_store.pages,
 			gr->compbit_store.base_iova, &attrs);
 
-	memset(&gr->mmu_wr_mem, 0, sizeof(struct mmu_desc));
-	memset(&gr->mmu_rd_mem, 0, sizeof(struct mmu_desc));
 	memset(&gr->compbit_store, 0, sizeof(struct compbit_store_desc));
 
 	kfree(gr->gpc_tpc_count);
@@ -3234,33 +3201,19 @@ clean_up:
 
 static int gr_gk20a_init_mmu_sw(struct gk20a *g, struct gr_gk20a *gr)
 {
-	struct device *d = dev_from_gk20a(g);
-	dma_addr_t iova;
+	int err;
 
-	gr->mmu_wr_mem_size = gr->mmu_rd_mem_size = 0x1000;
-
-	gr->mmu_wr_mem.size = gr->mmu_wr_mem_size;
-	gr->mmu_wr_mem.cpuva = dma_zalloc_coherent(d, gr->mmu_wr_mem_size,
-					&iova, GFP_KERNEL);
-	if (!gr->mmu_wr_mem.cpuva)
+	err = gk20a_gmmu_alloc(g, 0x1000, &gr->mmu_wr_mem);
+	if (err)
 		goto err;
 
-	gr->mmu_wr_mem.iova = iova;
-
-	gr->mmu_rd_mem.size = gr->mmu_rd_mem_size;
-	gr->mmu_rd_mem.cpuva = dma_zalloc_coherent(d, gr->mmu_rd_mem_size,
-					&iova, GFP_KERNEL);
-	if (!gr->mmu_rd_mem.cpuva)
+	err = gk20a_gmmu_alloc(g, 0x1000, &gr->mmu_rd_mem);
+	if (err)
 		goto err_free_wr_mem;
-
-	gr->mmu_rd_mem.iova = iova;
 	return 0;
 
  err_free_wr_mem:
-	dma_free_coherent(d, gr->mmu_wr_mem.size,
-		gr->mmu_wr_mem.cpuva, gr->mmu_wr_mem.iova);
-	gr->mmu_wr_mem.cpuva = NULL;
-	gr->mmu_wr_mem.iova = 0;
+	gk20a_gmmu_free(g, &gr->mmu_wr_mem);
  err:
 	return -ENOMEM;
 }
@@ -4241,7 +4194,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	/* init mmu debug buffer */
-	addr = gk20a_mm_smmu_vaddr_translate(g, gr->mmu_wr_mem.iova);
+	addr = gk20a_mm_iova_addr(g, gr->mmu_wr_mem.sgt->sgl);
 	addr >>= fb_mmu_debug_wr_addr_alignment_v();
 
 	gk20a_writel(g, fb_mmu_debug_wr_r(),
@@ -4249,7 +4202,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 		     fb_mmu_debug_wr_vol_false_f() |
 		     fb_mmu_debug_wr_addr_f(addr));
 
-	addr = gk20a_mm_smmu_vaddr_translate(g, gr->mmu_rd_mem.iova);
+	addr = gk20a_mm_iova_addr(g, gr->mmu_rd_mem.sgt->sgl);
 	addr >>= fb_mmu_debug_rd_addr_alignment_v();
 
 	gk20a_writel(g, fb_mmu_debug_rd_r(),
@@ -4651,8 +4604,6 @@ static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g)
 	int err = 0;
 
 	u32 size;
-	struct sg_table *sgt_pg_buf;
-	dma_addr_t iova;
 
 	gk20a_dbg_fn("");
 
@@ -4665,65 +4616,30 @@ static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g)
 		return err;
 	}
 
-	if (!pmu->pg_buf.cpuva) {
-		pmu->pg_buf.cpuva = dma_alloc_coherent(d, size,
-						&iova,
-						GFP_KERNEL);
-		if (!pmu->pg_buf.cpuva) {
+	if (!pmu->pg_buf.cpu_va) {
+		err = gk20a_gmmu_alloc_map(vm, size, &pmu->pg_buf);
+		if (err) {
 			gk20a_err(d, "failed to allocate memory\n");
 			return -ENOMEM;
 		}
-
-		pmu->pg_buf.iova = iova;
-		pmu->pg_buf.size = size;
-
-		err = gk20a_get_sgtable(d, &sgt_pg_buf,
-					pmu->pg_buf.cpuva,
-					pmu->pg_buf.iova,
-					size);
-		if (err) {
-			gk20a_err(d, "failed to create sg table\n");
-			goto err_free_pg_buf;
-		}
-
-		pmu->pg_buf.pmu_va = gk20a_gmmu_map(vm,
-					&sgt_pg_buf,
-					size,
-					0, /* flags */
-					gk20a_mem_flag_none);
-		if (!pmu->pg_buf.pmu_va) {
-			gk20a_err(d, "failed to map fecs pg buffer");
-			err = -ENOMEM;
-			goto err_free_sgtable;
-		}
-
-		gk20a_free_sgtable(&sgt_pg_buf);
 	}
 
 
-	err = gr_gk20a_fecs_set_reglist_bind_inst(g, mm->pmu.inst_block.cpu_pa);
+	err = gr_gk20a_fecs_set_reglist_bind_inst(g,
+			gk20a_mem_phys(&mm->pmu.inst_block));
 	if (err) {
 		gk20a_err(dev_from_gk20a(g),
 			"fail to bind pmu inst to gr");
 		return err;
 	}
 
-	err = gr_gk20a_fecs_set_reglist_virtual_addr(g, pmu->pg_buf.pmu_va);
+	err = gr_gk20a_fecs_set_reglist_virtual_addr(g, pmu->pg_buf.gpu_va);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g),
 			"fail to set pg buffer pmu va");
 		return err;
 	}
 
-	return err;
-
-err_free_sgtable:
-	gk20a_free_sgtable(&sgt_pg_buf);
-err_free_pg_buf:
-	dma_free_coherent(d, size,
-		pmu->pg_buf.cpuva, pmu->pg_buf.iova);
-	pmu->pg_buf.cpuva = NULL;
-	pmu->pg_buf.iova = 0;
 	return err;
 }
 
@@ -4983,14 +4899,14 @@ int gk20a_gr_reset(struct gk20a *g)
 	}
 
 	err = gr_gk20a_fecs_set_reglist_bind_inst(g,
-			g->mm.pmu.inst_block.cpu_pa);
+			gk20a_mem_phys(&g->mm.pmu.inst_block));
 	if (err) {
 		gk20a_err(dev_from_gk20a(g),
 			"fail to bind pmu inst to gr");
 		return err;
 	}
 
-	err = gr_gk20a_fecs_set_reglist_virtual_addr(g, g->pmu.pg_buf.pmu_va);
+	err = gr_gk20a_fecs_set_reglist_virtual_addr(g, g->pmu.pg_buf.gpu_va);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g),
 			"fail to set pg buffer pmu va");
@@ -5357,7 +5273,7 @@ static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx,
 	/* slow path */
 	for (chid = 0; chid < f->num_channels; chid++)
 		if (f->channel[chid].in_use) {
-			if ((u32)(f->channel[chid].inst_block.cpu_pa >>
+			if ((u32)(gk20a_mem_phys(&f->channel[chid].inst_block) >>
 				ram_in_base_shift_v()) ==
 				gr_fecs_current_ctx_ptr_v(curr_ctx)) {
 				tsgid = f->channel[chid].tsgid;

@@ -46,15 +46,11 @@ static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct gk20a *g);
 
 static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 {
-	struct device *dev = &cde_ctx->pdev->dev;
 	int i;
 
 	for (i = 0; i < cde_ctx->num_bufs; i++) {
-		struct gk20a_cde_mem_desc *mem = cde_ctx->mem + i;
-		gk20a_gmmu_unmap(cde_ctx->vm, mem->gpu_va, mem->num_bytes, 1);
-		gk20a_free_sgtable(&mem->sgt);
-		dma_free_writecombine(dev, mem->num_bytes, mem->cpuva,
-							  mem->iova);
+		struct mem_desc *mem = cde_ctx->mem + i;
+		gk20a_gmmu_unmap_free(cde_ctx->vm, mem);
 	}
 
 	kfree(cde_ctx->init_convert_cmd);
@@ -225,8 +221,7 @@ static int gk20a_init_cde_buf(struct gk20a_cde_ctx *cde_ctx,
 			      const struct firmware *img,
 			      struct gk20a_cde_hdr_buf *buf)
 {
-	struct device *dev = &cde_ctx->pdev->dev;
-	struct gk20a_cde_mem_desc *mem;
+	struct mem_desc *mem;
 	int err;
 
 	/* check that the file can hold the buf */
@@ -246,49 +241,21 @@ static int gk20a_init_cde_buf(struct gk20a_cde_ctx *cde_ctx,
 
 	/* allocate buf */
 	mem = cde_ctx->mem + cde_ctx->num_bufs;
-	mem->num_bytes = buf->num_bytes;
-	mem->cpuva = dma_alloc_writecombine(dev, mem->num_bytes, &mem->iova,
-					GFP_KERNEL);
-	if (!mem->cpuva) {
+	err = gk20a_gmmu_alloc_map(cde_ctx->vm, buf->num_bytes, mem);
+	if (err) {
 		gk20a_warn(&cde_ctx->pdev->dev, "cde: could not allocate device memory. buffer idx = %d",
 			   cde_ctx->num_bufs);
 		return -ENOMEM;
 	}
 
-	err = gk20a_get_sgtable(dev, &mem->sgt, mem->cpuva, mem->iova,
-				mem->num_bytes);
-	if (err) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: could not get sg table. buffer idx = %d",
-			   cde_ctx->num_bufs);
-		err = -ENOMEM;
-		goto err_get_sgtable;
-	}
-
-	mem->gpu_va = gk20a_gmmu_map(cde_ctx->vm, &mem->sgt, mem->num_bytes,
-					0,
-					gk20a_mem_flag_none);
-	if (!mem->gpu_va) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: could not map buffer to gpuva. buffer idx = %d",
-			   cde_ctx->num_bufs);
-		err = -ENOMEM;
-		goto err_map_buffer;
-	}
-
 	/* copy the content */
 	if (buf->data_byte_offset != 0)
-		memcpy(mem->cpuva, img->data + buf->data_byte_offset,
+		memcpy(mem->cpu_va, img->data + buf->data_byte_offset,
 		       buf->num_bytes);
 
 	cde_ctx->num_bufs++;
 
 	return 0;
-
-err_map_buffer:
-	gk20a_free_sgtable(&mem->sgt);
-	kfree(mem->sgt);
-err_get_sgtable:
-	dma_free_writecombine(dev, mem->num_bytes, &mem->cpuva, mem->iova);
-	return err;
 }
 
 static int gk20a_replace_data(struct gk20a_cde_ctx *cde_ctx, void *target,
@@ -340,8 +307,8 @@ static int gk20a_init_cde_replace(struct gk20a_cde_ctx *cde_ctx,
 				  const struct firmware *img,
 				  struct gk20a_cde_hdr_replace *replace)
 {
-	struct gk20a_cde_mem_desc *source_mem;
-	struct gk20a_cde_mem_desc *target_mem;
+	struct mem_desc *source_mem;
+	struct mem_desc *target_mem;
 	u32 *target_mem_ptr;
 	u64 vaddr;
 	int err;
@@ -356,15 +323,15 @@ static int gk20a_init_cde_replace(struct gk20a_cde_ctx *cde_ctx,
 
 	source_mem = cde_ctx->mem + replace->source_buf;
 	target_mem = cde_ctx->mem + replace->target_buf;
-	target_mem_ptr = target_mem->cpuva;
+	target_mem_ptr = target_mem->cpu_va;
 
-	if (source_mem->num_bytes < (replace->source_byte_offset + 3) ||
-	    target_mem->num_bytes < (replace->target_byte_offset + 3)) {
+	if (source_mem->size < (replace->source_byte_offset + 3) ||
+	    target_mem->size < (replace->target_byte_offset + 3)) {
 		gk20a_warn(&cde_ctx->pdev->dev, "cde: invalid buffer offsets. target_buf_offs=%lld, source_buf_offs=%lld, source_buf_size=%zu, dest_buf_size=%zu",
 			   replace->target_byte_offset,
 			   replace->source_byte_offset,
-			 source_mem->num_bytes,
-			 target_mem->num_bytes);
+			 source_mem->size,
+			 target_mem->size);
 		return -EINVAL;
 	}
 
@@ -390,7 +357,7 @@ static int gk20a_init_cde_replace(struct gk20a_cde_ctx *cde_ctx,
 static int gk20a_cde_patch_params(struct gk20a_cde_ctx *cde_ctx)
 {
 	struct gk20a *g = cde_ctx->g;
-	struct gk20a_cde_mem_desc *target_mem;
+	struct mem_desc *target_mem;
 	u32 *target_mem_ptr;
 	u64 new_data;
 	int user_id = 0, i, err;
@@ -398,7 +365,7 @@ static int gk20a_cde_patch_params(struct gk20a_cde_ctx *cde_ctx)
 	for (i = 0; i < cde_ctx->num_params; i++) {
 		struct gk20a_cde_hdr_param *param = cde_ctx->params + i;
 		target_mem = cde_ctx->mem + param->target_buf;
-		target_mem_ptr = target_mem->cpuva;
+		target_mem_ptr = target_mem->cpu_va;
 		target_mem_ptr += (param->target_byte_offset / sizeof(u32));
 
 		switch (param->id) {
@@ -472,7 +439,7 @@ static int gk20a_init_cde_param(struct gk20a_cde_ctx *cde_ctx,
 				const struct firmware *img,
 				struct gk20a_cde_hdr_param *param)
 {
-	struct gk20a_cde_mem_desc *target_mem;
+	struct mem_desc *target_mem;
 
 	if (param->target_buf >= cde_ctx->num_bufs) {
 		gk20a_warn(&cde_ctx->pdev->dev, "cde: invalid buffer parameter. param idx = %d, target_buf=%u, num_bufs=%u",
@@ -482,10 +449,10 @@ static int gk20a_init_cde_param(struct gk20a_cde_ctx *cde_ctx,
 	}
 
 	target_mem = cde_ctx->mem + param->target_buf;
-	if (target_mem->num_bytes < (param->target_byte_offset + 3)) {
+	if (target_mem->size< (param->target_byte_offset + 3)) {
 		gk20a_warn(&cde_ctx->pdev->dev, "cde: invalid buffer parameter. param idx = %d, target_buf_offs=%lld, target_buf_size=%zu",
 			   cde_ctx->num_params, param->target_byte_offset,
-			   target_mem->num_bytes);
+			   target_mem->size);
 		return -EINVAL;
 	}
 
@@ -563,7 +530,7 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 
 	gpfifo_elem = *gpfifo;
 	for (i = 0; i < num_elems; i++, cmd_elem++, gpfifo_elem++) {
-		struct gk20a_cde_mem_desc *target_mem;
+		struct mem_desc *target_mem;
 
 		/* validate the current entry */
 		if (cmd_elem->target_buf >= cde_ctx->num_bufs) {
@@ -573,10 +540,10 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 		}
 
 		target_mem = cde_ctx->mem + cmd_elem->target_buf;
-		if (target_mem->num_bytes <
+		if (target_mem->size<
 		    cmd_elem->target_byte_offset + cmd_elem->num_bytes) {
 			gk20a_warn(&cde_ctx->pdev->dev, "cde: target buffer cannot hold all entries (target_size=%zu, target_byte_offset=%lld, num_bytes=%llu)",
-				   target_mem->num_bytes,
+				   target_mem->size,
 				   cmd_elem->target_byte_offset,
 				   cmd_elem->num_bytes);
 			return -EINVAL;

@@ -656,7 +656,7 @@ static u32 gr_gm20b_get_tpc_num(u32 addr)
 static void gr_gm20b_load_gpccs_with_bootloader(struct gk20a *g)
 {
 	struct gk20a_ctxsw_ucode_info *ucode_info = &g->ctxsw_ucode_info;
-	u64 addr_base = ucode_info->ucode_gpuva;
+	u64 addr_base = ucode_info->surface_desc.gpu_va;
 
 	gr_gk20a_load_falcon_bind_instblk(g);
 

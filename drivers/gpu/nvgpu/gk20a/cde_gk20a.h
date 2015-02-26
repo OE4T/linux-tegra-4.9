@@ -205,14 +205,6 @@ enum {
 	TYPE_ARRAY
 };
 
-struct gk20a_cde_mem_desc {
-	struct sg_table *sgt;
-	dma_addr_t iova;
-	void *cpuva;
-	size_t num_bytes;
-	u64 gpu_va;
-};
-
 struct gk20a_cde_param {
 	u32 id;
 	u32 padding;
@@ -228,7 +220,7 @@ struct gk20a_cde_ctx {
 	struct vm_gk20a *vm;
 
 	/* buf converter configuration */
-	struct gk20a_cde_mem_desc mem[MAX_CDE_BUFS];
+	struct mem_desc mem[MAX_CDE_BUFS];
 	int num_bufs;
 
 	/* buffer patching params (where should patching be done) */

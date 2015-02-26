@@ -89,7 +89,7 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 {
 	gk20a_dbg_fn("");
 
-	if (!c->inst_block.cpuva)
+	if (!c->inst_block.cpu_va)
 		return -ENOMEM;
 
 	gk20a_init_inst_block(&c->inst_block, c->vm,
@@ -106,7 +106,7 @@ static int channel_gk20a_commit_userd(struct channel_gk20a *c)
 
 	gk20a_dbg_fn("");
 
-	inst_ptr = c->inst_block.cpuva;
+	inst_ptr = c->inst_block.cpu_va;
 	if (!inst_ptr)
 		return -ENOMEM;
 
@@ -134,7 +134,7 @@ static int channel_gk20a_set_schedule_params(struct channel_gk20a *c,
 	int shift = 3;
 	int value = timeslice_timeout;
 
-	inst_ptr = c->inst_block.cpuva;
+	inst_ptr = c->inst_block.cpu_va;
 	if (!inst_ptr)
 		return -ENOMEM;
 
@@ -177,7 +177,7 @@ int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 
 	gk20a_dbg_fn("");
 
-	inst_ptr = c->inst_block.cpuva;
+	inst_ptr = c->inst_block.cpu_va;
 	if (!inst_ptr)
 		return -ENOMEM;
 
@@ -263,7 +263,7 @@ static void channel_gk20a_bind(struct channel_gk20a *ch_gk20a)
 	struct fifo_engine_info_gk20a *engine_info =
 		f->engine_info + ENGINE_GR_GK20A;
 
-	u32 inst_ptr = ch_gk20a->inst_block.cpu_pa
+	u32 inst_ptr = sg_phys(ch_gk20a->inst_block.sgt->sgl)
 		>> ram_in_base_shift_v();
 
 	gk20a_dbg_info("bind channel %d inst ptr 0x%08x",
@@ -322,7 +322,7 @@ int channel_gk20a_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 		return err;
 
 	gk20a_dbg_info("channel %d inst block physical addr: 0x%16llx",
-		ch->hw_chid, (u64)ch->inst_block.cpu_pa);
+		ch->hw_chid, (u64)sg_phys(ch->inst_block.sgt->sgl));
 
 	gk20a_dbg_fn("done");
 	return 0;

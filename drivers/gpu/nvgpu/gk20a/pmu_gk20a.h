@@ -1124,12 +1124,12 @@ struct pmu_pg_stats {
 struct pmu_gk20a {
 
 	struct pmu_ucode_desc *desc;
-	struct pmu_mem_desc ucode;
+	struct mem_desc ucode;
 
-	struct pmu_mem_desc pg_buf;
+	struct mem_desc pg_buf;
 	/* TBD: remove this if ZBC seq is fixed */
-	struct pmu_mem_desc seq_buf;
-	struct pmu_mem_desc trace_buf;
+	struct mem_desc seq_buf;
+	struct mem_desc trace_buf;
 	bool buf_loaded;
 
 	struct pmu_sha1_gid gid_info;

@@ -256,10 +256,8 @@ struct gr_gk20a {
 
 	struct gr_ctx_buffer_desc global_ctx_buffer[NR_GLOBAL_CTX_BUF];
 
-	struct mmu_desc mmu_wr_mem;
-	u32 mmu_wr_mem_size;
-	struct mmu_desc mmu_rd_mem;
-	u32 mmu_rd_mem_size;
+	struct mem_desc mmu_wr_mem;
+	struct mem_desc mmu_rd_mem;
 
 	u8 *map_tiles;
 	u32 map_tile_count;
@@ -336,9 +334,8 @@ struct gk20a_ctxsw_ucode_segments {
 
 struct gk20a_ctxsw_ucode_info {
 	u64 *p_va;
-	struct inst_desc inst_blk_desc;
-	struct surface_mem_desc surface_desc;
-	u64 ucode_gpuva;
+	struct mem_desc inst_blk_desc;
+	struct mem_desc surface_desc;
 	struct gk20a_ctxsw_ucode_segments fecs;
 	struct gk20a_ctxsw_ucode_segments gpccs;
 };

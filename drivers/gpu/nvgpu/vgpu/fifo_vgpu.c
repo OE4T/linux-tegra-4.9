@@ -196,19 +196,11 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 
 	runlist_size  = sizeof(u16) * f->num_channels;
 	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
-		dma_addr_t iova;
-
-		runlist->mem[i].cpuva =
-			dma_alloc_coherent(d,
-					runlist_size,
-					&iova,
-					GFP_KERNEL);
-		if (!runlist->mem[i].cpuva) {
+		int err = gk20a_gmmu_alloc(g, runlist_size, &runlist->mem[i]);
+		if (err) {
 			dev_err(d, "memory allocation failed\n");
 			goto clean_up_runlist;
 		}
-		runlist->mem[i].iova = iova;
-		runlist->mem[i].size = runlist_size;
 	}
 	mutex_init(&runlist->mutex);
 
@@ -220,15 +212,8 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 	return 0;
 
 clean_up_runlist:
-	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
-		if (runlist->mem[i].cpuva)
-			dma_free_coherent(d,
-				runlist->mem[i].size,
-				runlist->mem[i].cpuva,
-				runlist->mem[i].iova);
-		runlist->mem[i].cpuva = NULL;
-		runlist->mem[i].iova = 0;
-	}
+	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++)
+		gk20a_gmmu_free(g, &runlist->mem[i]);
 
 	kfree(runlist->active_channels);
 	runlist->active_channels = NULL;
@@ -248,7 +233,6 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 	struct fifo_gk20a *f = &g->fifo;
 	struct device *d = dev_from_gk20a(g);
 	int chid, err = 0;
-	dma_addr_t iova;
 
 	gk20a_dbg_fn("");
 
@@ -268,36 +252,22 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 	f->max_engines = ENGINE_INVAL_GK20A;
 
 	f->userd_entry_size = 1 << ram_userd_base_shift_v();
-	f->userd_total_size = f->userd_entry_size * f->num_channels;
 
-	f->userd.cpuva = dma_alloc_coherent(d,
-					f->userd_total_size,
-					&iova,
-					GFP_KERNEL);
-	if (!f->userd.cpuva) {
+	err = gk20a_gmmu_alloc(g, f->userd_entry_size * f->num_channels,
+			&f->userd);
+	if (err) {
 		dev_err(d, "memory allocation failed\n");
 		goto clean_up;
 	}
 
-	f->userd.iova = iova;
-	err = gk20a_get_sgtable(d, &f->userd.sgt,
-				f->userd.cpuva, f->userd.iova,
-				f->userd_total_size);
-	if (err) {
-		dev_err(d, "failed to create sg table\n");
-		goto clean_up;
-	}
-
 	/* bar1 va */
-	f->userd.gpu_va = vgpu_bar1_map(g, &f->userd.sgt, f->userd_total_size);
+	f->userd.gpu_va = vgpu_bar1_map(g, &f->userd.sgt, f->userd.size);
 	if (!f->userd.gpu_va) {
 		dev_err(d, "gmmu mapping failed\n");
 		goto clean_up;
 	}
 
 	gk20a_dbg(gpu_dbg_map, "userd bar1 va = 0x%llx", f->userd.gpu_va);
-
-	f->userd.size = f->userd_total_size;
 
 	f->channel = kzalloc(f->num_channels * sizeof(*f->channel),
 				GFP_KERNEL);
@@ -315,9 +285,9 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		f->channel[chid].userd_cpu_va =
-			f->userd.cpuva + chid * f->userd_entry_size;
+			f->userd.cpu_va + chid * f->userd_entry_size;
 		f->channel[chid].userd_iova =
-			gk20a_mm_smmu_vaddr_translate(g, f->userd.iova)
+			gk20a_mm_iova_addr(g, f->userd.sgt->sgl)
 				+ chid * f->userd_entry_size;
 		f->channel[chid].userd_gpu_va =
 			f->userd.gpu_va + chid * f->userd_entry_size;
@@ -337,17 +307,9 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 clean_up:
 	gk20a_dbg_fn("fail");
 	/* FIXME: unmap from bar1 */
-	if (f->userd.sgt)
-		gk20a_free_sgtable(&f->userd.sgt);
-	if (f->userd.cpuva)
-		dma_free_coherent(d,
-				f->userd_total_size,
-				f->userd.cpuva,
-				f->userd.iova);
-	f->userd.cpuva = NULL;
-	f->userd.iova = 0;
+	gk20a_gmmu_free(g, &f->userd);
 
-	memset(&f->userd, 0, sizeof(struct userd_desc));
+	memset(&f->userd, 0, sizeof(f->userd));
 
 	kfree(f->channel);
 	f->channel = NULL;
@@ -368,7 +330,7 @@ static int vgpu_init_fifo_setup_hw(struct gk20a *g)
 		u32 v, v1 = 0x33, v2 = 0x55;
 
 		u32 bar1_vaddr = f->userd.gpu_va;
-		volatile u32 *cpu_vaddr = f->userd.cpuva;
+		volatile u32 *cpu_vaddr = f->userd.cpu_va;
 
 		gk20a_dbg_info("test bar1 @ vaddr 0x%x",
 			   bar1_vaddr);
@@ -505,7 +467,7 @@ static int vgpu_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	    add /* resume to add all channels back */) {
 		u32 chid;
 
-		runlist_entry = runlist->mem[0].cpuva;
+		runlist_entry = runlist->mem[0].cpu_va;
 		for_each_set_bit(chid,
 			runlist->active_channels, f->num_channels) {
 			gk20a_dbg_info("add channel %d to runlist", chid);
@@ -517,7 +479,7 @@ static int vgpu_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 		count = 0;
 
 	return vgpu_submit_runlist(platform->virt_handle, runlist_id,
-				runlist->mem[0].cpuva, count);
+				runlist->mem[0].cpu_va, count);
 }
 
 /* add/remove a channel from runlist

@@ -263,7 +263,7 @@ get_user_callchain_fp(struct pt_regs *regs,
 			unsigned long lr = quadd_user_link_register(regs);
 
 			nr_added = quadd_callchain_store(cc, lr,
-							 QUADD_UNW_TYPE_LR_FP);
+							 QUADD_UNW_TYPE_FP);
 			if (nr_added == 0)
 				return cc->nr;
 
@@ -450,7 +450,7 @@ get_user_callchain_fp_compat(struct pt_regs *regs,
 			u32 lr = quadd_user_link_register(regs);
 
 			nr_added = quadd_callchain_store(cc, lr,
-							 QUADD_UNW_TYPE_LR_FP);
+							 QUADD_UNW_TYPE_FP);
 			if (nr_added == 0)
 				return cc->nr;
 

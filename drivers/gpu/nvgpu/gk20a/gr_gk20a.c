@@ -2235,10 +2235,15 @@ static void gk20a_gr_destroy_ctx_buffer(struct platform_device *pdev,
 	struct device *dev = &pdev->dev;
 	if (!desc)
 		return;
-	if (desc->sgt)
+	if (desc->sgt) {
 		gk20a_free_sgtable(&desc->sgt);
-	dma_free_attrs(dev, desc->size, desc->pages,
+		desc->sgt = NULL;
+	}
+	if (desc->pages) {
+		dma_free_attrs(dev, desc->size, desc->pages,
 		       desc->iova, &desc->attrs);
+		desc->pages = NULL;
+	}
 }
 
 static int gk20a_gr_alloc_ctx_buffer(struct platform_device *pdev,
@@ -4510,7 +4515,7 @@ out:
 	else
 		gk20a_dbg_fn("done");
 
-	return 0;
+	return err;
 }
 
 static int gk20a_init_gr_reset_enable_hw(struct gk20a *g)

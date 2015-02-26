@@ -78,10 +78,17 @@ static int gk20a_tegra_secure_page_alloc(struct platform_device *pdev)
 static void gk20a_tegra_secure_destroy(struct platform_device *pdev,
 				       struct gr_ctx_buffer_desc *desc)
 {
-	gk20a_free_sgtable(&desc->sgt);
-	dma_free_attrs(&tegra_vpr_dev, desc->size,
+	if (desc->sgt) {
+		gk20a_free_sgtable(&desc->sgt);
+		desc->sgt = NULL;
+	}
+
+	if (desc->iova) {
+		dma_free_attrs(&tegra_vpr_dev, desc->size,
 			(void *)(uintptr_t)desc->iova,
 			desc->iova, &desc->attrs);
+		desc->iova = 0;
+	}
 }
 
 static int gk20a_tegra_secure_alloc(struct platform_device *pdev,

@@ -1045,18 +1045,11 @@ static void nvmap_get_total_mss(u64 *pss, u64 *total, u32 heap_type)
 
 		for (i = 0; i < h->size >> PAGE_SHIFT; i++) {
 			struct page *page = nvmap_to_page(h->pgalloc.pages[i]);
-			int mapcount = page_mapcount(page);
-			if (mapcount > 0) {
-				if (mapcount >= 2)
-					*pss += (PAGE_SIZE << PSS_SHIFT) /
-						mapcount;
-				else
-					*pss += (PAGE_SIZE << PSS_SHIFT);
-			}
+
+			if (page_mapcount(page) > 0)
+				*pss += PAGE_SIZE;
 		}
 	}
-	if (pss)
-		*pss = (*pss >> PSS_SHIFT);
 	spin_unlock(&dev->handle_lock);
 }
 

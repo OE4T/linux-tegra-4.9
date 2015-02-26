@@ -954,8 +954,7 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 static long
 unwind_frame(struct ex_region_info *ri,
 	     struct stackframe *frame,
-	     struct vm_area_struct *vma_sp,
-	     unsigned int *unw_type)
+	     struct vm_area_struct *vma_sp)
 {
 	unsigned long high, low;
 	const struct unwind_idx *idx;
@@ -1037,12 +1036,8 @@ unwind_frame(struct ex_region_info *ri,
 			return -QUADD_URC_SP_INCORRECT;
 	}
 
-	if (ctrl.vrs[PC] == 0) {
+	if (ctrl.vrs[PC] == 0)
 		ctrl.vrs[PC] = ctrl.vrs[LR];
-		*unw_type = QUADD_UNW_TYPE_LR_UT;
-	} else {
-		*unw_type = QUADD_UNW_TYPE_UT;
-	}
 
 	if (!validate_pc_addr(ctrl.vrs[PC], sizeof(u32)))
 		return -QUADD_URC_PC_INCORRECT;
@@ -1064,7 +1059,6 @@ unwind_backtrace(struct quadd_callchain *cc,
 		 struct vm_area_struct *vma_sp,
 		 struct task_struct *task)
 {
-	unsigned int unw_type;
 	struct ex_region_info ri_new;
 
 	cc->unw_rc = QUADD_URC_FAILURE;
@@ -1108,7 +1102,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 			ri = &ri_new;
 		}
 
-		err = unwind_frame(ri, frame, vma_sp, &unw_type);
+		err = unwind_frame(ri, frame, vma_sp);
 		if (err < 0) {
 			pr_debug("end unwind, urc: %ld\n", err);
 			cc->unw_rc = -err;
@@ -1123,7 +1117,8 @@ unwind_backtrace(struct quadd_callchain *cc,
 		cc->curr_fp_thumb = frame->fp_thumb;
 		cc->curr_pc = frame->pc;
 
-		nr_added = quadd_callchain_store(cc, frame->pc, unw_type);
+		nr_added = quadd_callchain_store(cc, frame->pc,
+						 QUADD_UNW_TYPE_UT);
 		if (nr_added == 0)
 			break;
 	}

@@ -1765,7 +1765,6 @@ static long
 unwind_frame(struct ex_region_info *ri,
 	     struct stackframe *sf,
 	     struct vm_area_struct *vma_sp,
-	     unsigned int *unw_type,
 	     int is_eh)
 {
 	int i;
@@ -1905,7 +1904,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 {
 	unsigned long user_reg_size;
 	struct ex_region_info ri_new;
-	unsigned int unw_type = QUADD_UNW_TYPE_UT;
+	unsigned int unw_type;
 	int is_eh = 1, mode = sf->mode;
 
 	cc->unw_rc = QUADD_URC_FAILURE;
@@ -1963,13 +1962,12 @@ unwind_backtrace(struct quadd_callchain *cc,
 				is_eh = 1;
 		}
 
-		err = unwind_frame(ri, sf, vma_sp, &unw_type, is_eh);
+		err = unwind_frame(ri, sf, vma_sp, is_eh);
 		if (err < 0) {
 			if (__is_eh && __is_debug) {
 				is_eh ^= 1;
 
-				err = unwind_frame(ri, sf, vma_sp,
-						   &unw_type, is_eh);
+				err = unwind_frame(ri, sf, vma_sp, is_eh);
 				if (err < 0) {
 					cc->unw_rc = -err;
 					break;
@@ -1980,9 +1978,11 @@ unwind_backtrace(struct quadd_callchain *cc,
 			}
 		}
 
+		unw_type = is_eh ? QUADD_UNW_TYPE_DWARF_EH :
+				   QUADD_UNW_TYPE_DWARF_DF;
+
 		pr_debug("[%s]: function at [<%08lx>] from [<%08lx>]\n",
 			 is_eh ? "eh" : "debug", where, sf->pc);
-
 
 		cc->curr_sp = sf->vregs[regnum_sp(mode)];
 

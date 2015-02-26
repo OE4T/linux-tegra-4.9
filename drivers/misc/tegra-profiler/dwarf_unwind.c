@@ -1983,8 +1983,13 @@ unwind_backtrace(struct quadd_callchain *cc,
 		pr_debug("[%s]: function at [<%08lx>] from [<%08lx>]\n",
 			 is_eh ? "eh" : "debug", where, sf->pc);
 
+
 		cc->curr_sp = sf->vregs[regnum_sp(mode)];
+
 		cc->curr_fp = sf->vregs[regnum_fp(mode)];
+		if (mode == DW_MODE_ARM32)
+			cc->curr_fp_thumb = sf->vregs[ARM32_FP_THUMB];
+
 		cc->curr_pc = sf->pc;
 
 		nr_added = quadd_callchain_store(cc, sf->pc, unw_type);
@@ -2044,7 +2049,7 @@ quadd_get_user_cc_dwarf(struct pt_regs *regs,
 		ip = cc->curr_pc;
 		sp = cc->curr_sp;
 		fp = cc->curr_fp;
-		fp_thumb = 0;
+		fp_thumb = cc->curr_fp_thumb;
 		lr = 0;
 	} else {
 		ip = instruction_pointer(regs);
@@ -2084,7 +2089,8 @@ quadd_get_user_cc_dwarf(struct pt_regs *regs,
 	sf.vregs[regnum_sp(mode)] = sp;
 	sf.vregs[regnum_fp(mode)] = fp;
 
-	sf.vregs[ARM32_FP_THUMB] = fp_thumb;
+	if (mode == DW_MODE_ARM32)
+		sf.vregs[ARM32_FP_THUMB] = fp_thumb;
 
 	cpu_ctx->dw_ptr_size = (mode == DW_MODE_ARM32) ?
 				sizeof(u32) : sizeof(u64);

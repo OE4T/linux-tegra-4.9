@@ -1120,6 +1120,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 
 		cc->curr_sp = frame->sp;
 		cc->curr_fp = frame->fp_arm;
+		cc->curr_fp_thumb = frame->fp_thumb;
 		cc->curr_pc = frame->pc;
 
 		nr_added = quadd_callchain_store(cc, frame->pc, unw_type);
@@ -1159,7 +1160,7 @@ quadd_get_user_cc_arm32_ehabi(struct pt_regs *regs,
 		sp = cc->curr_sp;
 		lr = 0;
 
-		frame.fp_thumb = 0;
+		frame.fp_thumb = cc->curr_fp_thumb;
 		frame.fp_arm = cc->curr_fp;
 	} else {
 		ip = instruction_pointer(regs);
@@ -1178,6 +1179,10 @@ quadd_get_user_cc_arm32_ehabi(struct pt_regs *regs,
 	frame.pc = ip;
 	frame.sp = sp;
 	frame.lr = lr;
+
+	pr_debug("pc: %#lx, lr: %#lx\n", ip, lr);
+	pr_debug("sp: %#lx, fp_arm: %#lx, fp_thumb: %#lx\n",
+		 sp, frame.fp_arm, frame.fp_thumb);
 
 	vma = find_vma(mm, ip);
 	if (!vma)

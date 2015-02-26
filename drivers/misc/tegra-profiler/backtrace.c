@@ -168,12 +168,12 @@ user_backtrace(struct pt_regs *regs,
 			return NULL;
 		}
 
+		if (!is_vma_addr(value_fp, stack_vma, sizeof(value_fp)))
+			return NULL;
+
 		cc->curr_fp = value_fp;
 		cc->curr_sp = (unsigned long)tail + sizeof(value_fp);
 		cc->curr_pc = value_lr = value;
-
-		if (!is_vma_addr(value_fp, stack_vma, sizeof(value_fp)))
-			return NULL;
 	}
 
 	fp_prev = (unsigned long __user *)value_fp;
@@ -355,12 +355,12 @@ user_backtrace_compat(struct pt_regs *regs,
 			return NULL;
 		}
 
+		if (!is_vma_addr(value_fp, stack_vma, sizeof(value_fp)))
+			return NULL;
+
 		cc->curr_fp = value_fp;
 		cc->curr_sp = (unsigned long)tail + sizeof(value_fp);
 		cc->curr_pc = value_lr = value;
-
-		if (!is_vma_addr(value_fp, stack_vma, sizeof(value_fp)))
-			return NULL;
 	}
 
 	fp_prev = (u32 __user *)(unsigned long)value_fp;
@@ -561,8 +561,10 @@ get_user_callchain_mixed(struct pt_regs *regs,
 		nr_prev = cc->nr;
 
 		quadd_get_user_cc_dwarf(regs, cc, task);
-
 		quadd_get_user_cc_arm32_ehabi(regs, cc, task);
+
+		if (nr_prev != cc->nr)
+			continue;
 
 		__get_user_callchain_fp(regs, cc, task);
 	} while (nr_prev != cc->nr);
@@ -587,6 +589,7 @@ quadd_get_user_callchain(struct pt_regs *regs,
 
 	cc->curr_sp = 0;
 	cc->curr_fp = 0;
+	cc->curr_fp_thumb = 0;
 	cc->curr_pc = 0;
 
 #ifdef CONFIG_ARM64

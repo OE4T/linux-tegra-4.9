@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -222,6 +222,34 @@ static inline u32 fb_mmu_vpr_info_r(void)
 {
 	return 0x00100cd0;
 }
+static inline u32 fb_mmu_vpr_info_index_f(u32 v)
+{
+	return (v & 0x3) << 0;
+}
+static inline u32 fb_mmu_vpr_info_index_v(u32 r)
+{
+	return (r >> 0) & 0x3;
+}
+static inline u32 fb_mmu_vpr_info_index_addr_lo_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fb_mmu_vpr_info_index_addr_hi_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_vpr_info_index_cya_lo_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 fb_mmu_vpr_info_index_cya_hi_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 fb_mmu_vpr_info_fetch_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
 static inline u32 fb_mmu_vpr_info_fetch_v(u32 r)
 {
 	return (r >> 2) & 0x1;
@@ -233,5 +261,37 @@ static inline u32 fb_mmu_vpr_info_fetch_false_v(void)
 static inline u32 fb_mmu_vpr_info_fetch_true_v(void)
 {
 	return 0x00000001;
+}
+static inline u32 fb_mmu_wpr_info_r(void)
+{
+	return 0x00100cd4;
+}
+static inline u32 fb_mmu_wpr_info_index_f(u32 v)
+{
+	return (v & 0xf) << 0;
+}
+static inline u32 fb_mmu_wpr_info_index_allow_read_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fb_mmu_wpr_info_index_allow_write_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_wpr_info_index_wpr1_addr_lo_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 fb_mmu_wpr_info_index_wpr1_addr_hi_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 fb_mmu_wpr_info_index_wpr2_addr_lo_v(void)
+{
+	return 0x00000004;
+}
+static inline u32 fb_mmu_wpr_info_index_wpr2_addr_hi_v(void)
+{
+	return 0x00000005;
 }
 #endif

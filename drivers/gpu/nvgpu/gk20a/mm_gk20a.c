@@ -2805,6 +2805,8 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 	if (tegra_platform_is_silicon() && retry < 0) {
 		gk20a_warn(dev_from_gk20a(g),
 			"fb_flush too many retries");
+		if (g->ops.fb.dump_vpr_wpr_info)
+			g->ops.fb.dump_vpr_wpr_info(g);
 		ret = -EBUSY;
 	}
 

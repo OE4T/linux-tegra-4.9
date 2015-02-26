@@ -1,7 +1,7 @@
 /*
  * GM20B GPC MMU
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
 *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -95,11 +95,41 @@ static int gm20b_fb_compression_page_size(struct gk20a *g)
 	return SZ_128K;
 }
 
+static void gm20b_fb_dump_vpr_wpr_info(struct gk20a *g)
+{
+	u32 val;
+
+	/* print vpr and wpr info */
+	val = gk20a_readl(g, fb_mmu_vpr_info_r());
+	val &= ~0x3;
+	val |= fb_mmu_vpr_info_index_addr_lo_v();
+	gk20a_writel(g, fb_mmu_vpr_info_r(), val);
+	gk20a_err(dev_from_gk20a(g), "VPR: %08x %08x %08x %08x",
+		gk20a_readl(g, fb_mmu_vpr_info_r()),
+		gk20a_readl(g, fb_mmu_vpr_info_r()),
+		gk20a_readl(g, fb_mmu_vpr_info_r()),
+		gk20a_readl(g, fb_mmu_vpr_info_r()));
+
+	val = gk20a_readl(g, fb_mmu_wpr_info_r());
+	val &= ~0xf;
+	val |= (fb_mmu_wpr_info_index_allow_read_v());
+	gk20a_writel(g, fb_mmu_wpr_info_r(), val);
+	gk20a_err(dev_from_gk20a(g), "WPR: %08x %08x %08x %08x %08x %08x",
+		gk20a_readl(g, fb_mmu_wpr_info_r()),
+		gk20a_readl(g, fb_mmu_wpr_info_r()),
+		gk20a_readl(g, fb_mmu_wpr_info_r()),
+		gk20a_readl(g, fb_mmu_wpr_info_r()),
+		gk20a_readl(g, fb_mmu_wpr_info_r()),
+		gk20a_readl(g, fb_mmu_wpr_info_r()));
+
+}
+
 void gm20b_init_fb(struct gpu_ops *gops)
 {
 	gops->fb.init_fs_state = fb_gm20b_init_fs_state;
 	gops->fb.set_mmu_page_size = gm20b_fb_set_mmu_page_size;
 	gops->fb.compression_page_size = gm20b_fb_compression_page_size;
+	gops->fb.dump_vpr_wpr_info = gm20b_fb_dump_vpr_wpr_info;
 	gm20b_init_uncompressed_kind_map();
 	gm20b_init_kind_attr();
 }

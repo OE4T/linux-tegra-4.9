@@ -176,6 +176,7 @@ struct gpu_ops {
 		void (*init_kind_attr)(struct gk20a *g);
 		void (*set_mmu_page_size)(struct gk20a *g);
 		int (*compression_page_size)(struct gk20a *g);
+		void (*dump_vpr_wpr_info)(struct gk20a *g);
 	} fb;
 	struct {
 		void (*slcg_bus_load_gating_prod)(struct gk20a *g, bool prod);

@@ -847,7 +847,7 @@ struct tegra_hv_ivc_cookie *tegra_hv_ivc_reserve(struct device_node *dn,
 	int ret;
 
 	if (IS_ERR(hvd))
-		return hvd;
+		return (void *)hvd;
 
 	ivc = ivc_device_by_id(hvd, id);
 	if (ivc == NULL)

@@ -110,6 +110,7 @@ struct tegra210_adsp {
 	struct tegra210_adsp_app apps[TEGRA210_ADSP_VIRT_REG_MAX];
 	atomic_t reg_val[TEGRA210_ADSP_VIRT_REG_MAX];
 	DECLARE_BITMAP(adma_usage, TEGRA210_ADSP_ADMA_CHANNEL_COUNT);
+	uint32_t i2s_rate;
 	struct mutex mutex;
 	int init_done;
 	struct tegra210_adsp_path {
@@ -1103,18 +1104,22 @@ static int tegra210_adsp_compr_pointer(struct snd_compr_stream *cstream,
 			struct snd_compr_tstamp *tstamp)
 {
 	struct tegra210_adsp_compr_rtd *prtd = cstream->runtime->private_data;
+	struct snd_soc_pcm_runtime *rtd = cstream->device->private_data;
+	struct tegra210_adsp *adsp =
+		snd_soc_platform_get_drvdata(rtd->platform);
 	struct tegra210_adsp_app *app = prtd->fe_apm;
 	nvfx_shared_state_t *shared = &app->apm->nvfx_shared_state;
+	uint32_t frames_played = ((shared->output[0].bytes >> 2) *
+		snd_pcm_rate_bit_to_rate(prtd->codec.sample_rate)) /
+		adsp->i2s_rate;
 
 	tstamp->byte_offset = shared->input[0].bytes %
 		cstream->runtime->buffer_size;
 	tstamp->copied_total = shared->input[0].bytes;
-	tstamp->pcm_frames = shared->output[0].bytes / 4;
+	tstamp->pcm_frames = frames_played;
 	/* TODO : calculate IO frames correctly */
-	tstamp->pcm_io_frames = shared->output[0].bytes / 4;
+	tstamp->pcm_io_frames = frames_played;
 	tstamp->sampling_rate = prtd->codec.sample_rate;
-
-	/* TODO : If SRC in path do size conversion */
 
 	dev_vdbg(prtd->dev, "%s off %d copied %d pcm %d pcm io %d",
 		 __func__, (int)tstamp->byte_offset, (int)tstamp->copied_total,
@@ -2362,6 +2367,8 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, adsp);
 	adsp->dev = &pdev->dev;
 
+	/* TODO: Add mixer control to set I2S playback rate */
+	adsp->i2s_rate = 48000;
 	mutex_init(&adsp->mutex);
 	pdev->dev.dma_mask = &tegra_dma_mask;
 	pdev->dev.coherent_dma_mask = tegra_dma_mask;

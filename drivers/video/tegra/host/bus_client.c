@@ -438,16 +438,12 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	u32 __user *class_ids = (u32 __user *)(uintptr_t)args->class_ids;
 	struct nvhost_device_data *pdata = platform_get_drvdata(ctx->pdev);
 
-	struct nvhost_master *host = nvhost_get_host(ctx->pdev);
 	const u32 *syncpt_array =
 		(nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL_INSTANCE) ?
 		ctx->syncpts :
 		ctx->ch->syncpts;
 	u32 *local_class_ids = NULL;
 	int err, i;
-
-	if (num_syncpt_incrs > host->info.nb_pts)
-		return -EINVAL;
 
 	job = nvhost_job_alloc(ctx->ch,
 			num_cmdbufs,

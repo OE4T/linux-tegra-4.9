@@ -128,7 +128,7 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 		u32 id;
 		pt = sync_pt_from_fence(fence->cbs[i].sync_pt);
 		id = nvhost_sync_pt_id(pt);
-		if (!id || id >= nvhost_syncpt_nb_pts(sp)) {
+		if (!id || !nvhost_syncpt_is_valid_pt(sp, id)) {
 			sync_fence_put(fence);
 			return;
 		}

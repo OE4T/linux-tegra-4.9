@@ -112,9 +112,11 @@ static int show_channels_no_fifo(struct platform_device *pdev, void *data,
 static void show_syncpts(struct nvhost_master *m, struct output *o)
 {
 	int i;
+
 	nvhost_debug_output(o, "---- syncpts ----\n");
 	mutex_lock(&m->syncpt.syncpt_mutex);
-	for (i = 0; i < nvhost_syncpt_nb_pts(&m->syncpt); i++) {
+	for (i = nvhost_syncpt_pts_base(&m->syncpt);
+			i < nvhost_syncpt_pts_limit(&m->syncpt); i++) {
 		u32 max = nvhost_syncpt_read_max(&m->syncpt, i);
 		u32 min = nvhost_syncpt_update_min(&m->syncpt, i);
 		if (!min && !max)

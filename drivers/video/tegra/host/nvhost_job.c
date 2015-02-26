@@ -219,7 +219,7 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 		struct nvhost_waitchk *wait = &job->waitchk[i];
 
 		/* validate syncpt id */
-		if (wait->syncpt_id > nvhost_syncpt_nb_pts(sp))
+		if (!nvhost_syncpt_is_valid_pt(sp, wait->syncpt_id))
 			continue;
 
 		/* skip all other gathers */
@@ -398,7 +398,7 @@ int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 	bitmap_zero(waitchk_mask, nvhost_syncpt_nb_pts(sp));
 	for (i = 0; i < job->num_waitchk; i++) {
 		u32 syncpt_id = job->waitchk[i].syncpt_id;
-		if (syncpt_id < nvhost_syncpt_nb_pts(sp))
+		if (nvhost_syncpt_is_valid_pt(sp, syncpt_id))
 			set_bit(syncpt_id, waitchk_mask);
 	}
 

@@ -380,6 +380,7 @@ int nvhost_syncpt_is_expired_ext(struct platform_device *dev,
 	u32 id, u32 thresh);
 void nvhost_syncpt_set_min_eq_max_ext(struct platform_device *dev, u32 id);
 int nvhost_syncpt_nb_pts_ext(struct platform_device *dev);
+bool nvhost_syncpt_is_valid_pt_ext(struct platform_device *dev, u32 id);
 
 /* public host1x interrupt management APIs */
 int nvhost_intr_register_notifier(struct platform_device *pdev,

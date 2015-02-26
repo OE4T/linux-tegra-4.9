@@ -28,7 +28,7 @@
 
 /* when searching for free syncpt id, start from this base */
 #define NVHOST_FREE_SYNCPT_BASE(sp)	\
-	(nvhost_syncpt_graphics_host_sp(sp) + 1)
+	(nvhost_syncpt_pts_base(sp) + 1)
 
 /* timeout to wait for a syncpt to become free */
 #define NVHOST_SYNCPT_FREE_WAIT_TIMEOUT (1 * HZ)
@@ -107,6 +107,8 @@ void nvhost_syncpt_patch_check(struct nvhost_syncpt *sp);
 void nvhost_syncpt_set_min_eq_max(struct nvhost_syncpt *sp, u32 id);
 int nvhost_syncpt_client_managed(struct nvhost_syncpt *sp, u32 id);
 int nvhost_syncpt_nb_pts(struct nvhost_syncpt *sp);
+int nvhost_syncpt_pts_base(struct nvhost_syncpt *sp);
+bool nvhost_syncpt_is_valid_pt(struct nvhost_syncpt *sp, u32 id);
 int nvhost_nb_syncpts_store(struct nvhost_syncpt *sp, const char *buf);
 int nvhost_syncpt_nb_mlocks(struct nvhost_syncpt *sp);
 void nvhost_syncpt_set_manager(struct nvhost_syncpt *sp, int id, bool client);
@@ -159,11 +161,6 @@ static inline int nvhost_syncpt_wait(struct nvhost_syncpt *sp, u32 id, u32 thres
 }
 
 int nvhost_syncpt_patch_wait(struct nvhost_syncpt *sp, void *patch_addr);
-
-static inline int nvhost_syncpt_is_valid(struct nvhost_syncpt *sp, u32 id)
-{
-	return id != NVSYNCPT_INVALID && id < nvhost_syncpt_nb_pts(sp);
-}
 
 int nvhost_mutex_try_lock(struct nvhost_syncpt *sp, int idx);
 

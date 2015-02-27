@@ -85,6 +85,7 @@ struct nvmap_platform_carveout {
 	int vmid;
 	int can_alloc;
 	bool enable_static_dma_map;
+	bool disable_dynamic_dma_map;
 };
 
 struct nvmap_platform_data {

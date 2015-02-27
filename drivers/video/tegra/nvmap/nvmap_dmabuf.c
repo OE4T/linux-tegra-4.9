@@ -223,7 +223,7 @@ static void __nvmap_dmabuf_free_sgt_locked(struct nvmap_handle_sgt *nvmap_sgt)
 
 	list_del(&nvmap_sgt->maps_entry);
 
-	if (info->handle->heap_type == NVMAP_HEAP_CARVEOUT_IRAM) {
+	if (!(nvmap_dev->dynamic_dma_map_mask & info->handle->heap_type)) {
 		sg_dma_address(nvmap_sgt->sgt->sgl) = 0;
 	} else if (info->handle->heap_type == NVMAP_HEAP_CARVEOUT_VPR &&
 			access_vpr_phys(nvmap_sgt->dev)) {
@@ -395,7 +395,8 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 
 	if (!info->handle->alloc) {
 		goto err_map;
-	} else if (info->handle->heap_type == NVMAP_HEAP_CARVEOUT_IRAM) {
+	} else if (!(nvmap_dev->dynamic_dma_map_mask &
+			info->handle->heap_type)) {
 		sg_dma_address(sgt->sgl) = info->handle->carveout->base;
 	} else if (info->handle->heap_type == NVMAP_HEAP_CARVEOUT_VPR &&
 			access_vpr_phys(attach->dev)) {

@@ -251,6 +251,7 @@ struct nvmap_device {
 	struct list_head lru_handles;
 	spinlock_t	lru_lock;
 	struct dentry *handles_by_pid;
+	u32 dynamic_dma_map_mask;
 };
 
 enum nvmap_stats_t {

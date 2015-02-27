@@ -393,6 +393,9 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 				&attrs);
 #endif
 finish:
+	if (co->disable_dynamic_dma_map)
+		nvmap_dev->dynamic_dma_map_mask &= ~co->usage_mask;
+
 	dev_info(parent, "created heap %s base 0x%p size (%zuKiB)\n",
 		co->name, (void *)(uintptr_t)base, len/1024);
 	return h;

@@ -1711,6 +1711,7 @@ int nvmap_probe(struct platform_device *pdev)
 	debugfs_create_u32("max_handle_count", S_IRUGO,
 			nvmap_debug_root, &nvmap_max_handle_count);
 
+	nvmap_dev->dynamic_dma_map_mask = ~0;
 	for (i = 0; i < plat->nr_carveouts; i++) {
 		struct nvmap_carveout_node *node = &dev->heaps[dev->nr_carveouts];
 		const struct nvmap_platform_carveout *co = &plat->carveouts[i];

@@ -66,6 +66,7 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.base		= 0,
 		.size		= 0,
 		.dma_dev	= &tegra_iram_dev,
+		.disable_dynamic_dma_map = true,
 	},
 	[1] = {
 		.name		= "generic-0",

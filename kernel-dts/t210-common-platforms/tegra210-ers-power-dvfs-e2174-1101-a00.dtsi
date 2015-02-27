@@ -15,9 +15,9 @@
 #include <dt-bindings/gpio/tegra-gpio.h>
 #include <dt-bindings/clk/tegra210-clk.h>
 
-#define SET_MAP_TRIP(domain, vtype, num, temp)				\
+#define SET_MAP_TRIP(tdomain, cdomain, vtype, num, temp)		\
 	trips {								\
-		domain##_##vtype##num: domain-vtype##num {		\
+		tdomain##_##vtype##num: tdomain-vtype##num {		\
 			temperature = <temp>;				\
 			hysteresis = <1000>;				\
 			type = "active";				\
@@ -25,9 +25,9 @@
 		};							\
 	};								\
 	cooling-maps {							\
-		domain-vtype-map##num {					\
-			trip = <&domain##_##vtype##num>;		\
-			cooling-device = <&domain##_##vtype##_cdev num num>; \
+		tdomain-vtype-map##num {				\
+			trip = <&tdomain##_##vtype##num>;		\
+			cooling-device = <&cdomain##_##vtype##_cdev num num>; \
 		};							\
 	}
 
@@ -157,6 +157,7 @@
 			compatible = "nvidia,tegra210-dvfs-rail";
 			vdd_cpu-supply = <&cpu_ovr_reg>;
 			vmin-cdev = <&cpu_vmin_cdev>;
+			vmax-cdev = <&cpu_vmax_cdev>;
 		};
 
 		vdd-gpu-rail-ovr@1 {
@@ -174,6 +175,7 @@
 			compatible = "nvidia,tegra210-dvfs-rail";
 			vdd_cpu-supply = <&cpu_max77621_reg>;
 			vmin-cdev = <&cpu_vmin_cdev>;
+			vmax-cdev = <&cpu_vmax_cdev>;
 		};
 
 		vdd-gpu-rail-max77621@3 {
@@ -226,11 +228,22 @@
 					&gpu_scaling2 0 &gpu_scaling3 0
 					&gpu_scaling4 0>;
 		};
+
+		cpu_vmax_cdev: vdd-cpu-vmax-cdev@8 {
+			reg = <8>;
+			cooling-min-state = <0>;
+			cooling-max-state = <1>;
+			#cooling-cells = <2>;
+			compatible = "nvidia,tegra210-rail-vmax-cdev";
+			cdev-type = "cpu_hot";
+			nvidia,constraint;
+			nvidia,trips = <&cpu_vmax1 1130>;
+		};
 	};
 
 	thermal-zones {
 		Tdiode_tegra {
-			SET_MAP_TRIP(cpu, vmin, 1, 15000);
+			SET_MAP_TRIP(cpu, cpu, vmin, 1, 15000);
 		};
 		Tdiode_tegra {
 			trips {
@@ -241,13 +254,19 @@
 					type = "active";
 				};
 			};
-			SET_MAP_TRIP(gpu, scaling, 1, 15000);
-			SET_MAP_TRIP(gpu, scaling, 2, 30000);
-			SET_MAP_TRIP(gpu, scaling, 3, 50000);
-			SET_MAP_TRIP(gpu, scaling, 4, 70000);
+			SET_MAP_TRIP(gpu, gpu, scaling, 1, 15000);
+			SET_MAP_TRIP(gpu, gpu, scaling, 2, 30000);
+			SET_MAP_TRIP(gpu, gpu, scaling, 3, 50000);
+			SET_MAP_TRIP(gpu, gpu, scaling, 4, 70000);
 		};
 		Tdiode_tegra {
-			SET_MAP_TRIP(core, vmin, 1, 20000);
+			SET_MAP_TRIP(core, core, vmin, 1, 20000);
+		};
+		CPU-therm {
+			SET_MAP_TRIP(cpu, cpu, vmax, 1, 90000);
+		};
+		LCPU-therm {
+			SET_MAP_TRIP(lcpu, cpu, vmax, 1, 90000);
 		};
 	};
 };

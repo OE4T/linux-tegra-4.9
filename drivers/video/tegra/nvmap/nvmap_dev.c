@@ -739,14 +739,39 @@ void nvmap_vma_open(struct vm_area_struct *vma)
 	struct list_head *tmp_head = NULL;
 	pid_t current_pid = task_tgid_nr(current);
 	bool vma_pos_found = false;
+	int nr_page, i;
+	ulong vma_open_count;
 
 	priv = vma->vm_private_data;
 	BUG_ON(!priv);
 	BUG_ON(!priv->handle);
 
-	atomic_inc(&priv->count);
 	h = priv->handle;
 	nvmap_umaps_inc(h);
+
+	mutex_lock(&h->lock);
+	vma_open_count = atomic_inc_return(&priv->count);
+	if (vma_open_count == 1 && h->heap_pgalloc) {
+		nr_page = PAGE_ALIGN(h->size) >> PAGE_SHIFT;
+		for (i = 0; i < nr_page; i++) {
+			struct page *page = nvmap_to_page(h->pgalloc.pages[i]);
+			/* This is necessry to avoid page being accounted
+			 * under NR_FILE_MAPPED. This way NR_FILE_MAPPED would
+			 * be fully accounted under NR_FILE_PAGES. This allows
+			 * Android low mem killer detect low memory condition
+			 * precisely.
+			 * This has a side effect of inaccurate pss accounting
+			 * for NvMap memory mapped into user space. Android
+			 * procrank and NvMap Procrank both would have same
+			 * issue. Subtracting NvMap_Procrank pss from
+			 * procrank pss would give non-NvMap pss held by process
+			 * and adding NvMap memory used by process represents
+			 * entire memroy consumption by the process.
+			 */
+			atomic_inc(&page->_mapcount);
+		}
+	}
+	mutex_unlock(&h->lock);
 
 	vma_list = kmalloc(sizeof(*vma_list), GFP_KERNEL);
 	if (vma_list) {
@@ -784,6 +809,7 @@ static void nvmap_vma_close(struct vm_area_struct *vma)
 	struct nvmap_vma_list *vma_list;
 	struct nvmap_handle *h;
 	bool vma_found = false;
+	int nr_page, i;
 
 	if (!priv)
 		return;
@@ -791,6 +817,8 @@ static void nvmap_vma_close(struct vm_area_struct *vma)
 	BUG_ON(!priv->handle);
 
 	h = priv->handle;
+	nr_page = PAGE_ALIGN(h->size) >> PAGE_SHIFT;
+
 	mutex_lock(&h->lock);
 	list_for_each_entry(vma_list, &h->vmas, list) {
 		if (vma_list->vma != vma)
@@ -801,15 +829,24 @@ static void nvmap_vma_close(struct vm_area_struct *vma)
 		break;
 	}
 	BUG_ON(!vma_found);
-	mutex_unlock(&h->lock);
+	nvmap_umaps_dec(h);
 
 	if (__atomic_add_unless(&priv->count, -1, 0) == 1) {
+		if (h->heap_pgalloc) {
+			for (i = 0; i < nr_page; i++) {
+				struct page *page;
+				page = nvmap_to_page(h->pgalloc.pages[i]);
+				atomic_dec(&page->_mapcount);
+			}
+		}
+		mutex_unlock(&h->lock);
 		if (priv->handle)
 			nvmap_handle_put(priv->handle);
 		vma->vm_private_data = NULL;
 		kfree(priv);
+	} else {
+		mutex_unlock(&h->lock);
 	}
-	nvmap_umaps_dec(h);
 }
 
 static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)

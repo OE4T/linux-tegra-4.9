@@ -382,9 +382,17 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	outer_flush_range(base, base + len);
 	wmb();
 
+	if (!co->enable_static_dma_map)
+		goto finish;
+
 	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
 	dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
 
+#ifdef CONFIG_PLATFORM_ENABLE_IOMMU
+	dma_map_linear_attrs(parent->parent, base, len, DMA_TO_DEVICE,
+				&attrs);
+#endif
+finish:
 	dev_info(parent, "created heap %s base 0x%p size (%zuKiB)\n",
 		co->name, (void *)(uintptr_t)base, len/1024);
 	return h;

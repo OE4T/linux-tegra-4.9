@@ -459,6 +459,9 @@ static int oz_net_notifier(struct notifier_block *nb, unsigned long event,
 		oz_trace_msg(M, "%s: event %s\n", __func__,
 			(event == NETDEV_UNREGISTER) ?
 			"NETDEV_UNREGISTER" : "NETDEV_DOWN");
+		pr_info("%s: event %s\n", __func__,
+			(event == NETDEV_UNREGISTER) ?
+			"NETDEV_UNREGISTER" : "NETDEV_DOWN");
 		oz_binding_remove(dev->name);
 		break;
 	}
@@ -501,6 +504,7 @@ void oz_protocol_term(void)
 			list_first_entry(&g_pd_list, struct oz_pd, link);
 		oz_pd_get(pd);
 		spin_unlock_bh(&g_polling_lock);
+		pr_info("%s: Protocol stop requested\n", __func__);
 		oz_pd_stop(pd);
 		oz_pd_put(pd);
 		spin_lock_bh(&g_polling_lock);
@@ -542,6 +546,7 @@ void oz_pd_timeout_handler(unsigned long data)
 		oz_pd_sleep(pd);
 		break;
 	case OZ_TIMER_STOP:
+		pr_info("%s: timeout happend.\n", __func__);
 		oz_trace_msg(D, "OZ_TIMER_STOP:\n");
 		oz_pd_stop(pd);
 		break;
@@ -797,6 +802,7 @@ void oz_binding_remove(const char *net_dev)
 	int found = 0;
 
 	oz_trace_msg(M, "Removing binding: '%s'\n", net_dev);
+	pr_info("%s: Remove binding: '%s'\n", __func__, net_dev);
 	spin_lock_bh(&g_binding_lock);
 	list_for_each_entry_safe(binding, tmp, &g_binding, link) {
 		if (compare_binding_name(binding->name, net_dev)) {

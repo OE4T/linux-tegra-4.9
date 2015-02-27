@@ -455,6 +455,7 @@ int oz_pd_sleep(struct oz_pd *pd)
 	stop_apps = pd->total_apps;
 	oz_polling_unlock_bh();
 	if (do_stop) {
+		pr_info("%s: disconnect requested from device\n", __func__);
 		oz_pd_stop(pd);
 	} else {
 		oz_services_stop(pd, stop_apps, 1);

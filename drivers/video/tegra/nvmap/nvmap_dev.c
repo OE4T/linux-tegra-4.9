@@ -1605,22 +1605,6 @@ int nvmap_probe(struct platform_device *pdev)
 	unsigned int i;
 	int e;
 
-	nvmap_init(pdev);
-
-	plat = pdev->dev.platform_data;
-	if (!plat) {
-		dev_err(&pdev->dev, "no platform data?\n");
-		return -ENODEV;
-	}
-
-	/*
-	 * The DMA mapping API uses these parameters to decide how to map the
-	 * passed buffers. If the maximum physical segment size is set to
-	 * smaller than the size of the buffer, then the buffer will be mapped
-	 * as separate IO virtual address ranges.
-	 */
-	pdev->dev.dma_parms = &nvmap_dma_parameters;
-
 	if (WARN_ON(nvmap_dev != NULL)) {
 		dev_err(&pdev->dev, "only one nvmap device may be present\n");
 		return -ENODEV;
@@ -1634,6 +1618,23 @@ int nvmap_probe(struct platform_device *pdev)
 
 	nvmap_dev = dev;
 
+	nvmap_init(pdev);
+
+	plat = pdev->dev.platform_data;
+	if (!plat) {
+		dev_err(&pdev->dev, "no platform data?\n");
+		nvmap_dev = NULL;
+		kfree(dev);
+		return -ENODEV;
+	}
+
+	/*
+	 * The DMA mapping API uses these parameters to decide how to map the
+	 * passed buffers. If the maximum physical segment size is set to
+	 * smaller than the size of the buffer, then the buffer will be mapped
+	 * as separate IO virtual address ranges.
+	 */
+	pdev->dev.dma_parms = &nvmap_dma_parameters;
 	dev->dev_user.minor = MISC_DYNAMIC_MINOR;
 	dev->dev_user.name = "nvmap";
 	dev->dev_user.fops = &nvmap_user_fops;
@@ -1781,8 +1782,8 @@ fail:
 	kfree(dev->heaps);
 	if (dev->dev_user.minor != MISC_DYNAMIC_MINOR)
 		misc_deregister(&dev->dev_user);
-	kfree(dev);
 	nvmap_dev = NULL;
+	kfree(dev);
 	return e;
 }
 

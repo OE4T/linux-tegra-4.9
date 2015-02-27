@@ -1199,6 +1199,23 @@
 
 	power-detect {
 		compatible = "nvidia,tegra210-pwr-detect";
+		pad-controllers = <&tegra_pmc TEGRA210_PAD_SYS
+					&tegra_pmc TEGRA210_PAD_UART
+					&tegra_pmc TEGRA210_PAD_AUDIO
+					&tegra_pmc TEGRA210_PAD_CAM
+					&tegra_pmc TEGRA210_PAD_PEX_CTRL
+					&tegra_pmc TEGRA210_PAD_SDMMC1
+					&tegra_pmc TEGRA210_PAD_SDMMC3
+					&tegra_pmc TEGRA210_PAD_HV
+					&tegra_pmc TEGRA210_PAD_AUDIO_HV
+					&tegra_pmc TEGRA210_PAD_DBG
+					&tegra_pmc TEGRA210_PAD_DMIC
+					&tegra_pmc TEGRA210_PAD_GPIO
+					&tegra_pmc TEGRA210_PAD_SPI
+					&tegra_pmc TEGRA210_PAD_SPI_HV>;
+		pad-names = "sys", "uart", "audio", "cam", "pex-ctrl",
+			"sdmmc1", "sdmmc3", "hv", "audio-hv", "debug", "dmic",
+			"gpio", "spi", "spi-hv";
 		status = "disabled";
 	};
 

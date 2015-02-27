@@ -228,7 +228,10 @@ static ssize_t railgate_delay_store(struct device *dev,
 				    const char *buf, size_t count)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	struct platform_device *ndev = to_platform_device(dev);
 	int railgate_delay = 0, ret = 0;
+	struct gk20a *g = get_gk20a(ndev);
+	int err;
 
 	if (!platform->can_railgate) {
 		dev_info(dev, "does not support power-gating\n");
@@ -242,6 +245,11 @@ static ssize_t railgate_delay_store(struct device *dev,
 		pm_genpd_set_poweroff_delay(genpd, platform->railgate_delay);
 	} else
 		dev_err(dev, "Invalid powergate delay\n");
+	/* wake-up system to make rail-gating delay effective immediately */
+	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
+	gk20a_idle(g->dev);
 
 	return count;
 }

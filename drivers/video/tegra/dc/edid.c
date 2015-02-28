@@ -35,6 +35,7 @@ struct tegra_edid_pvt {
 	bool				support_underscan;
 	bool				support_audio;
 	bool				scdc_present;
+	bool				hfvsdb_present;
 	int			        hdmi_vic_len;
 	u8			        hdmi_vic[7];
 	u16			color_depth_flag;
@@ -210,6 +211,7 @@ static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 	edid->support_audio = 0;
 	edid->hdmi_vic_len = 0;
 	edid->scdc_present = false;
+	edid->hfvsdb_present = false;
 	ptr = &raw[0];
 
 	/* If CEA 861 block get info for eld struct */
@@ -283,6 +285,7 @@ static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 			if ((ptr[1] == 0xd8) &&
 				(ptr[2] == 0x5d) &&
 				(ptr[3] == 0xc4)) {
+				edid->hfvsdb_present = true;
 				edid->color_depth_flag = ptr[7] &
 							TEGRA_DC_Y420_MASK;
 				edid->max_tmds_char_rate_hf_mhz = ptr[5] * 5;
@@ -411,6 +414,16 @@ bool tegra_edid_is_scdc_present(struct tegra_edid *edid)
 	}
 
 	return edid->data->scdc_present;
+}
+
+bool tegra_edid_is_hfvsdb_present(struct tegra_edid *edid)
+{
+	if (!edid || !edid->data) {
+		pr_warn("edid invalid\n");
+		return false;
+	}
+
+	return edid->data->hfvsdb_present;
 }
 
 int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs,

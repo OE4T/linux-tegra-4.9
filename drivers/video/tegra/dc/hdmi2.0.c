@@ -459,7 +459,7 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 	if (mode->xres > 4096)
 		return false;
 
-	if (!tegra_edid_is_scdc_present(hdmi->edid) &&
+	if (!tegra_edid_is_hfvsdb_present(hdmi->edid) &&
 		KHZ2PICOS(340000) >= mode->pixclock &&
 		!(mode->vmode & FB_VMODE_Y420_ONLY))
 		return false;

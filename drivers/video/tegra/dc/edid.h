@@ -115,6 +115,7 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid,
 u16 tegra_edid_get_cd_flag(struct tegra_edid *edid);
 u16 tegra_edid_get_max_clk_rate(struct tegra_edid *edid);
 bool tegra_edid_is_scdc_present(struct tegra_edid *edid);
+bool tegra_edid_is_hfvsdb_present(struct tegra_edid *edid);
 int tegra_edid_get_eld(struct tegra_edid *edid, struct tegra_edid_hdmi_eld *elddata);
 
 struct tegra_dc_edid *tegra_edid_get_data(struct tegra_edid *edid);

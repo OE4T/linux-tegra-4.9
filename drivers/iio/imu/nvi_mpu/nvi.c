@@ -552,7 +552,7 @@ int nvi_wr_accel_config(struct nvi_state *st, u8 test, u8 avg, u8 fsr, u8 lpf)
 		else
 			val |= fsr << 1;
 	}
-	if (((val != st->rc.accel_config) || st->rc_dis) && !ret) {
+	if (!ret) {
 		ret = nvi_wr_reg_bank_sel(st, st->hal->reg->accel_config.bank);
 		if (ret)
 			return ret;

@@ -92,7 +92,7 @@ struct nvhost_master {
 
 	struct nvhost_channel **chlist;	/* channel list */
 	struct mutex chlist_mutex;	/* mutex for channel list */
-	unsigned long allocated_channels;
+	unsigned long allocated_channels[2];
 	struct mutex priority_lock;	/* mutex for priority update */
 
 	/* nvhost vm specific structures */

@@ -192,7 +192,7 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 	}
 
 	index = nvhost_channel_get_index_from_id(host, ch->chid);
-	clear_bit(index, &host->allocated_channels);
+	clear_bit(index, host->allocated_channels);
 
 	ch->dev = NULL;
 	ch->refcount = 0;
@@ -247,7 +247,7 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 	}
 
 	do {
-		index = find_first_zero_bit(&host->allocated_channels,
+		index = find_first_zero_bit(host->allocated_channels,
 					    max_channels);
 		if (index >= max_channels) {
 			mutex_unlock(&host->chlist_mutex);
@@ -260,7 +260,7 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 	} while (index >= max_channels);
 
 	/* Reserve the channel */
-	set_bit(index, &host->allocated_channels);
+	set_bit(index, host->allocated_channels);
 	ch = host->chlist[index];
 
 	/* If virtual, allocate a client id on the server side. This is needed
@@ -272,7 +272,7 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 					nvhost_get_virt_data(pdata->pdev);
 
 		if (virt_moduleid < 0) {
-			clear_bit(index, &host->allocated_channels);
+			clear_bit(index, host->allocated_channels);
 			mutex_unlock(&host->chlist_mutex);
 			return -EINVAL;
 		}
@@ -283,7 +283,7 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 		if (ch->virt_clientid == 0) {
 			dev_err(&pdata->pdev->dev,
 				"vhost_channel_alloc_clientid failed\n");
-			clear_bit(index, &host->allocated_channels);
+			clear_bit(index, host->allocated_channels);
 			mutex_unlock(&host->chlist_mutex);
 			return -ENOMEM;
 		}

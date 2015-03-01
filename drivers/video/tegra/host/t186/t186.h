@@ -20,8 +20,7 @@
 
 #include "chip_support.h"
 
-/* FIXME: Update correct number of channels here */
-#define T186_NVHOST_NUMCHANNELS 12
+#define T186_NVHOST_NUMCHANNELS 63
 
 extern struct nvhost_device_data t18_host1x_info;
 extern struct nvhost_device_data t18_vic_info;

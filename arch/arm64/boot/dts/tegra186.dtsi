@@ -291,6 +291,13 @@
 		#clock-cells = <1>;
 	};
 
+	ufshci@02450000 {
+		compatible = "jedec,ufs-1.1";
+		reg = <0x0 0x02450000 0x0 0x4000>;
+		interrupts = < 0 44 0x04 >;
+		status = "diasbled";
+	};
+
 	uarta: serial@70006000 {
 		compatible = "nvidia,tegra210-uart";
 		reg = <0x0 0x70006000 0x0 0x40>;

@@ -97,6 +97,13 @@ static int tegra_p1889ref_audio_dsp_tdm2_hw_params(
 	return 0;
 }
 
+static int tegra_p1889ref_spdif_hw_params(struct snd_pcm_substream *substream,
+					struct snd_pcm_hw_params *params)
+{
+	/* dummy hw_params; clocks set in the init function */
+	return 0;
+}
+
 static struct snd_soc_ops tegra_p1889ref_audio_dsp_tdm1_ops = {
 	.hw_params = tegra_p1889ref_audio_dsp_tdm1_hw_params,
 };
@@ -105,11 +112,17 @@ static struct snd_soc_ops tegra_p1889ref_audio_dsp_tdm2_ops = {
 	.hw_params = tegra_p1889ref_audio_dsp_tdm2_hw_params,
 };
 
+static struct snd_soc_ops tegra_p1889ref_spdif_ops = {
+	.hw_params = tegra_p1889ref_spdif_hw_params,
+};
+
 static const struct snd_soc_dapm_widget tegra_p1889ref_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone-x", NULL),
 	SND_SOC_DAPM_HP("Headphone-y", NULL),
+	SND_SOC_DAPM_HP("Headphone-z", NULL),
 	SND_SOC_DAPM_LINE("LineIn-x", NULL),
 	SND_SOC_DAPM_LINE("LineIn-y", NULL),
+	SND_SOC_DAPM_LINE("LineIn-z", NULL),
 };
 
 static int tegra_p1889ref_i2s_dai_init(struct snd_soc_pcm_runtime *rtd)
@@ -581,6 +594,9 @@ static int tegra_p1889ref_driver_probe(struct platform_device *pdev)
 	tegra_p1889ref_new_codec_conf(machine->pdata);
 
 	/* set APBIF dai_ops */
+	for (i = TEGRA124_DAI_LINK_APBIF0; i <= TEGRA124_DAI_LINK_APBIF9; i++)
+		tegra_machine_set_dai_ops(i, &tegra_p1889ref_spdif_ops);
+
 	for (i = 0; i < num_codec_links; i++) {
 		if (machine->pdata->dai_config[i].link_name) {
 			if (!strcmp(machine->pdata->dai_config[i].link_name,

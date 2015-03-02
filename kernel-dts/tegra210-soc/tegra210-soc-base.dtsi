@@ -1254,7 +1254,7 @@
 		pwrdet-support;
 		pad-controllers = <&tegra_pmc TEGRA210_PAD_SDMMC1>;
 		pad-names = "sdmmc";
-		nvidia,runtime-pm-type = <0>;
+		nvidia,runtime-pm-type = <1>;
 		status = "disabled";
 	};
 

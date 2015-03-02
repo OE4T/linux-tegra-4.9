@@ -7437,6 +7437,18 @@ static int gr_gk20a_dump_gr_status_regs(struct gk20a *g,
 		gk20a_readl(g, gr_pri_bes_zrop_status_r()));
 	gk20a_debug_output(o, "NV_PGRAPH_PRI_BES_ZROP_STATUS2 : 0x%x\n",
 		gk20a_readl(g, gr_pri_bes_zrop_status2_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_BE0_BECS_BE_EXCEPTION: 0x%x\n",
+		gk20a_readl(g, gr_pri_be0_becs_be_exception_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_BE0_BECS_BE_EXCEPTION_EN: 0x%x\n",
+		gk20a_readl(g, gr_pri_be0_becs_be_exception_en_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPC0_GPCCS_GPC_EXCEPTION: 0x%x\n",
+		gk20a_readl(g, gr_pri_gpc0_gpccs_gpc_exception_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPC0_GPCCS_GPC_EXCEPTION_EN: 0x%x\n",
+		gk20a_readl(g, gr_pri_gpc0_gpccs_gpc_exception_en_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPC0_TPC0_TPCCS_TPC_EXCEPTION: 0x%x\n",
+		gk20a_readl(g, gr_pri_gpc0_tpc0_tpccs_tpc_exception_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPC0_TPC0_TPCCS_TPC_EXCEPTION_EN: 0x%x\n",
+		gk20a_readl(g, gr_pri_gpc0_tpc0_tpccs_tpc_exception_en_r()));
 	return 0;
 }
 

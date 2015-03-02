@@ -1219,7 +1219,7 @@
 		reg = <0x0 0x700b0600 0x0 0x200>;
 		interrupts = < 0 31 0x04 >;
 		iommus = <&smmu TEGRA_SWGROUP_SDMMC4A>;
-		nvidia,runtime-pm-type = <0>;
+		nvidia,runtime-pm-type = <1>;
 		status = "disabled";
 	};
 

@@ -1273,7 +1273,6 @@ static int gr_gk20a_ctx_state_floorsweep(struct gk20a *g)
 	u32 tpc_index, gpc_index;
 	u32 tpc_offset, gpc_offset;
 	u32 sm_id = 0, gpc_id = 0;
-	u32 sm_id_to_gpc_id[proj_scal_max_gpcs_v() * proj_scal_max_tpc_per_gpc_v()];
 	u32 tpc_per_gpc;
 	u32 max_ways_evict = INVALID_MAX_WAYS;
 	u32 l1c_dbg_reg_val;
@@ -1295,7 +1294,9 @@ static int gr_gk20a_ctx_state_floorsweep(struct gk20a *g)
 				gk20a_writel(g, gr_gpc0_tpc0_pe_cfg_smid_r() + gpc_offset + tpc_offset,
 					     gr_gpc0_tpc0_pe_cfg_smid_value_f(sm_id));
 
-				sm_id_to_gpc_id[sm_id] = gpc_index;
+				g->gr.sm_to_cluster[sm_id].tpc_index = tpc_index;
+				g->gr.sm_to_cluster[sm_id].gpc_index = gpc_index;
+
 				sm_id++;
 			}
 
@@ -1305,6 +1306,8 @@ static int gr_gk20a_ctx_state_floorsweep(struct gk20a *g)
 				     gr_gpc0_gpm_sd_active_tpcs_num_f(gr->gpc_tpc_count[gpc_index]));
 		}
 	}
+
+	gr->no_of_sm = sm_id;
 
 	for (tpc_index = 0, gpc_id = 0;
 	     tpc_index < gr_pd_num_tpc_per_gpc__size_1_v();
@@ -2997,6 +3000,7 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	kfree(gr->pes_tpc_count[1]);
 	kfree(gr->pes_tpc_mask[0]);
 	kfree(gr->pes_tpc_mask[1]);
+	kfree(gr->sm_to_cluster);
 	kfree(gr->gpc_skip_mask);
 	kfree(gr->map_tiles);
 	gr->gpc_tpc_count = NULL;
@@ -3089,6 +3093,7 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	gr->pes_tpc_count[1] = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
 	gr->pes_tpc_mask[0] = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
 	gr->pes_tpc_mask[1] = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
+
 	gr->gpc_skip_mask =
 		kzalloc(gr_pd_dist_skip_table__size_1_v() * 4 * sizeof(u32),
 			GFP_KERNEL);
@@ -3158,6 +3163,10 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 		}
 		gr->gpc_skip_mask[gpc_index] = gpc_new_skip_mask;
 	}
+
+	gr->sm_to_cluster = kzalloc(gr->gpc_count * gr->tpc_count *
+							sizeof(struct sm_info), GFP_KERNEL);
+	gr->no_of_sm = 0;
 
 	gk20a_dbg_info("fbps: %d", gr->num_fbps);
 	gk20a_dbg_info("max_gpc_count: %d", gr->max_gpc_count);

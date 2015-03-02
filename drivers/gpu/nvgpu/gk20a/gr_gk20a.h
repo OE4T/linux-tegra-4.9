@@ -165,6 +165,11 @@ struct zbc_query_params {
 	u32 index_size;	/* [out] size, [in] index */
 };
 
+struct sm_info {
+	u8 gpc_index;
+	u8 tpc_index;
+};
+
 struct gr_gk20a {
 	struct gk20a *g;
 	struct {
@@ -290,6 +295,8 @@ struct gr_gk20a {
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct gr_t18x t18x;
 #endif
+	u32 no_of_sm;
+	struct sm_info *sm_to_cluster;
 };
 
 void gk20a_fecs_dump_falcon_stats(struct gk20a *g);

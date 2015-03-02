@@ -252,6 +252,36 @@ struct nvgpu_gpu_l2_fb_args {
 	__u32 reserved;
 } __packed;
 
+struct nvgpu_gpu_inval_icache_args {
+	int channel_fd;
+	__u32 reserved;
+} __packed;
+
+struct nvgpu_gpu_mmu_debug_mode_args {
+	__u32 state;
+	__u32 reserved;
+} __packed;
+
+struct nvgpu_gpu_sm_debug_mode_args {
+	int channel_fd;
+	__u32 enable;
+	__u64 sms;
+} __packed;
+
+struct warpstate {
+	__u64 valid_warps;
+	__u64 trapped_warps;
+	__u64 paused_warps;
+};
+
+struct nvgpu_gpu_wait_pause_args {
+	__u64 pwarpstate;
+};
+
+struct nvgpu_gpu_tpc_exception_en_status_args {
+	__u64 tpc_exception_en_sm_mask;
+};
+
 #define NVGPU_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
 	_IOR(NVGPU_GPU_IOCTL_MAGIC, 1, struct nvgpu_gpu_zcull_get_ctx_size_args)
 #define NVGPU_GPU_IOCTL_ZCULL_GET_INFO \
@@ -276,9 +306,19 @@ struct nvgpu_gpu_l2_fb_args {
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 11, struct nvgpu_gpu_open_channel_args)
 #define NVGPU_GPU_IOCTL_FLUSH_L2 \
 	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 12, struct nvgpu_gpu_l2_fb_args)
+#define NVGPU_GPU_IOCTL_INVAL_ICACHE \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 13, struct nvgpu_gpu_inval_icache_args)
+#define NVGPU_GPU_IOCTL_SET_MMUDEBUG_MODE \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 14, struct nvgpu_gpu_mmu_debug_mode_args)
+#define NVGPU_GPU_IOCTL_SET_SM_DEBUG_MODE \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 15, struct nvgpu_gpu_sm_debug_mode_args)
+#define NVGPU_GPU_IOCTL_WAIT_FOR_PAUSE \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 16, struct nvgpu_gpu_wait_pause_args)
+#define NVGPU_GPU_IOCTL_GET_TPC_EXCEPTION_EN_STATUS \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 17, struct nvgpu_gpu_tpc_exception_en_status_args)
 
 #define NVGPU_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_GPU_IOCTL_FLUSH_L2)
+	_IOC_NR(NVGPU_GPU_IOCTL_GET_TPC_EXCEPTION_EN_STATUS)
 #define NVGPU_GPU_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_gpu_prepare_compressible_read_args)
 

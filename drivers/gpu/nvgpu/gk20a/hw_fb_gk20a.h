@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -194,9 +194,17 @@ static inline u32 fb_mmu_debug_ctrl_debug_v(u32 r)
 {
 	return (r >> 16) & 0x1;
 }
+static inline u32 fb_mmu_debug_ctrl_debug_m(void)
+{
+	return 0x1 << 16;
+}
 static inline u32 fb_mmu_debug_ctrl_debug_enabled_v(void)
 {
 	return 0x00000001;
+}
+static inline u32 fb_mmu_debug_ctrl_debug_disabled_v(void)
+{
+	return 0x00000000;
 }
 static inline u32 fb_mmu_vpr_info_r(void)
 {

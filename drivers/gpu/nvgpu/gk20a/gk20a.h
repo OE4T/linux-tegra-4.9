@@ -511,6 +511,7 @@ struct gk20a {
 	struct device_dma_parameters dma_parms;
 
 	struct gk20a_cde_app cde_app;
+	bool mmu_debug_ctrl;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)

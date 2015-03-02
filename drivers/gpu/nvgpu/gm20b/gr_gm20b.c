@@ -533,9 +533,14 @@ static int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 					+ gpc_offset + tpc_offset,
 				gr_gpc0_tpc0_pe_cfg_smid_value_f(sm_id));
 
+			g->gr.sm_to_cluster[sm_id].tpc_index = tpc_index;
+			g->gr.sm_to_cluster[sm_id].gpc_index = gpc_index;
+
 			sm_id++;
 		}
 	}
+
+	gr->no_of_sm = sm_id;
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++)
 		tpc_per_gpc |= gr->gpc_tpc_count[gpc_index]

@@ -20,9 +20,16 @@
 #include <linux/anon_inodes.h>
 #include <linux/nvgpu.h>
 #include <uapi/linux/nvgpu.h>
+#include <linux/delay.h>
 
 #include "gk20a.h"
+#include "gr_gk20a.h"
 #include "fence_gk20a.h"
+#include "regops_gk20a.h"
+#include "hw_gr_gk20a.h"
+#include "hw_fb_gk20a.h"
+#include "hw_proj_gk20a.h"
+
 
 int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 {
@@ -257,6 +264,238 @@ static int nvgpu_gpu_ioctl_l2_fb_ops(struct gk20a *g,
 	return err;
 }
 
+/* Invalidate i-cache for kepler & maxwell */
+static int nvgpu_gpu_ioctl_inval_icache(
+		struct gk20a *g,
+		struct nvgpu_gpu_inval_icache_args *args)
+{
+
+	int err = 0;
+	u32	cache_ctrl, regval;
+	struct channel_gk20a *ch;
+	struct nvgpu_dbg_gpu_reg_op ops;
+
+	ch = gk20a_get_channel_from_file(args->channel_fd);
+
+	ops.op	   = REGOP(READ_32);
+	ops.type   = REGOP(TYPE_GR_CTX);
+	ops.status = REGOP(STATUS_SUCCESS);
+	ops.value_hi	  = 0;
+	ops.and_n_mask_lo = 0;
+	ops.and_n_mask_hi = 0;
+	ops.offset	 = gr_pri_gpc0_gcc_dbg_r();
+
+	/* Take the global lock, since we'll be doing global regops */
+	mutex_lock(&g->dbg_sessions_lock);
+
+	err = gr_gk20a_exec_ctx_ops(ch, &ops, 1, 0, 1);
+
+	regval = ops.value_lo;
+
+	if (!err) {
+		ops.op = REGOP(WRITE_32);
+		ops.value_lo = set_field(regval, gr_pri_gpcs_gcc_dbg_invalidate_m(), 1);
+		err = gr_gk20a_exec_ctx_ops(ch, &ops, 1, 1, 0);
+	}
+
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "Failed to access register\n");
+		goto end;
+	}
+
+	cache_ctrl = gk20a_readl(g, gr_pri_gpc0_tpc0_sm_cache_control_r());
+	cache_ctrl = set_field(cache_ctrl, gr_pri_gpcs_tpcs_sm_cache_control_invalidate_cache_m(), 1);
+	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_cache_control_r(), cache_ctrl);
+
+end:
+	mutex_unlock(&g->dbg_sessions_lock);
+	return err;
+}
+
+static int nvgpu_gpu_ioctl_set_mmu_debug_mode(
+		struct gk20a *g,
+		struct nvgpu_gpu_mmu_debug_mode_args *args)
+{
+	int err = 0;
+	u32 mmu_debug_ctrl;
+
+	err = gk20a_busy(g->dev);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "failed to power on gpu\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&g->dbg_sessions_lock);
+
+	if (args->state == 1) {
+		mmu_debug_ctrl = fb_mmu_debug_ctrl_debug_enabled_v();
+		g->mmu_debug_ctrl = true;
+	} else {
+		mmu_debug_ctrl = fb_mmu_debug_ctrl_debug_disabled_v();
+		g->mmu_debug_ctrl = false;
+	}
+
+	mmu_debug_ctrl = gk20a_readl(g, fb_mmu_debug_ctrl_r());
+	mmu_debug_ctrl = set_field(mmu_debug_ctrl, fb_mmu_debug_ctrl_debug_m(), mmu_debug_ctrl);
+	gk20a_writel(g, fb_mmu_debug_ctrl_r(), mmu_debug_ctrl);
+
+	mutex_unlock(&g->dbg_sessions_lock);
+	gk20a_idle(g->dev);
+	return err;
+}
+
+static int nvgpu_gpu_ioctl_set_debug_mode(
+		struct gk20a *g,
+		struct nvgpu_gpu_sm_debug_mode_args *args)
+{
+	int gpc, tpc, err = 0;
+	u32 sm_id, sm_dbgr_ctrl0;
+	struct channel_gk20a *ch;
+	struct nvgpu_dbg_gpu_reg_op ops;
+	u32  tpc_offset, gpc_offset, reg_offset;
+
+	ch = gk20a_get_channel_from_file(args->channel_fd);
+
+	mutex_lock(&g->dbg_sessions_lock);
+
+	for (sm_id = 0; sm_id < g->gr.no_of_sm; sm_id++) {
+		if (args->sms & (1 << sm_id)) {
+			gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
+			tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
+
+			tpc_offset = proj_tpc_in_gpc_stride_v() * tpc;
+			gpc_offset = proj_gpc_stride_v() * gpc;
+			reg_offset = tpc_offset + gpc_offset;
+
+			ops.op	   = REGOP(READ_32);
+			ops.type   = REGOP(TYPE_GR_CTX);
+			ops.status = REGOP(STATUS_SUCCESS);
+			ops.value_hi	  = 0;
+			ops.and_n_mask_lo = 0;
+			ops.and_n_mask_hi = 0;
+			ops.offset	 = gr_gpc0_tpc0_sm_dbgr_control0_r() + reg_offset;
+
+			err = gr_gk20a_exec_ctx_ops(ch, &ops, 1, 0, 1);
+			sm_dbgr_ctrl0 = ops.value_lo;
+
+			if (args->enable) {
+				sm_dbgr_ctrl0 = gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_on_v() |
+							  gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_warp_disable_f() |
+							  gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_sm_disable_f() |
+							  sm_dbgr_ctrl0;
+			} else
+				sm_dbgr_ctrl0 = gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_off_v() | sm_dbgr_ctrl0;
+
+			if (!err) {
+				ops.op = REGOP(WRITE_32);
+				ops.value_lo = sm_dbgr_ctrl0;
+				err = gr_gk20a_exec_ctx_ops(ch, &ops, 1, 1, 0);
+			} else
+				gk20a_err(dev_from_gk20a(g), "Failed to access register\n");
+		}
+	}
+
+	mutex_unlock(&g->dbg_sessions_lock);
+	return err;
+}
+
+static int nvgpu_gpu_ioctl_wait_for_pause(
+		struct gk20a *g,
+		struct nvgpu_gpu_wait_pause_args *args)
+{
+	int err = 0, gpc, tpc;
+	u32 sm_count, sm_id, size;
+	struct warpstate *w_state;
+	struct gr_gk20a *gr = &g->gr;
+	u32  tpc_offset, gpc_offset, reg_offset, global_mask;
+	u64 warps_valid = 0, warps_paused = 0, warps_trapped = 0;
+
+	sm_count = g->gr.gpc_count * g->gr.tpc_count;
+	size = sm_count * sizeof(struct warpstate);
+	w_state = kzalloc(size, GFP_KERNEL);
+
+	global_mask = gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f()   |
+			  gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f() |
+			  gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f();
+
+	mutex_lock(&g->dbg_sessions_lock);
+
+	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
+
+		gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
+		tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
+
+		tpc_offset = proj_tpc_in_gpc_stride_v() * tpc;
+		gpc_offset = proj_gpc_stride_v() * gpc;
+		reg_offset = tpc_offset + gpc_offset;
+
+		/* Wait until all valid warps on the sm are paused. The valid warp mask
+		 * must be re-read with the paused mask because new warps may become
+		 * valid as the sm is pausing.
+		 */
+
+		err = gk20a_gr_lock_down_sm(g, gpc, tpc, global_mask);
+		if (err) {
+			gk20a_err(dev_from_gk20a(g), "sm did not lock down!\n");
+			goto end;
+		}
+
+		/* 64 bit read */
+		warps_valid = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_warp_valid_mask_r() + reg_offset) << 32;
+		warps_valid |= gk20a_readl(g, gr_gpc0_tpc0_sm_warp_valid_mask_r() + reg_offset + 4);
+
+		/* 64 bit read */
+		warps_paused = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_r() + reg_offset) << 32;
+		warps_paused |= gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_r() + reg_offset + 4);
+
+		/* 64 bit read */
+		warps_trapped = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_r() + reg_offset) << 32;
+		warps_trapped |= gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_r() + reg_offset + 4);
+
+		w_state[sm_id].valid_warps = warps_valid;
+		w_state[sm_id].trapped_warps = warps_trapped;
+		w_state[sm_id].paused_warps = warps_paused;
+	}
+
+	if (copy_to_user((void __user *)(uintptr_t)args->pwarpstate, w_state, size)) {
+		gk20a_dbg_fn("copy_to_user failed!");
+		err = -EFAULT;
+	}
+
+end:
+	mutex_unlock(&g->dbg_sessions_lock);
+	kfree(w_state);
+	return err;
+}
+
+static int nvgpu_gpu_ioctl_has_any_exception(
+		struct gk20a *g,
+		struct nvgpu_gpu_tpc_exception_en_status_args *args)
+{
+	int err = 0;
+	struct gr_gk20a *gr = &g->gr;
+	u32 sm_id, tpc_exception_en = 0;
+	u32 offset, regval, tpc_offset, gpc_offset;
+
+	mutex_lock(&g->dbg_sessions_lock);
+
+	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
+
+		tpc_offset = proj_tpc_in_gpc_stride_v() * g->gr.sm_to_cluster[sm_id].tpc_index;
+		gpc_offset = proj_gpc_stride_v() * g->gr.sm_to_cluster[sm_id].gpc_index;
+		offset = tpc_offset + gpc_offset;
+
+		regval = gk20a_readl(g,	gr_gpc0_tpc0_tpccs_tpc_exception_en_r() +
+								offset);
+		/* Each bit represents corresponding enablement state, bit 0 corrsponds to SM0 */
+		tpc_exception_en |= gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_v(regval) << sm_id;
+	}
+
+	mutex_unlock(&g->dbg_sessions_lock);
+	args->tpc_exception_en_sm_mask = tpc_exception_en;
+	return err;
+}
+
 long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct platform_device *dev = filp->private_data;
@@ -441,6 +680,31 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		err = nvgpu_gpu_ioctl_l2_fb_ops(g,
 			   (struct nvgpu_gpu_l2_fb_args *)buf);
 		break;
+	case NVGPU_GPU_IOCTL_INVAL_ICACHE:
+		err = gr_gk20a_elpg_protected_call(g,
+				nvgpu_gpu_ioctl_inval_icache(g, (struct nvgpu_gpu_inval_icache_args *)buf));
+		break;
+
+	case NVGPU_GPU_IOCTL_SET_MMUDEBUG_MODE:
+		err =  nvgpu_gpu_ioctl_set_mmu_debug_mode(g,
+				(struct nvgpu_gpu_mmu_debug_mode_args *)buf);
+		break;
+
+	case NVGPU_GPU_IOCTL_SET_SM_DEBUG_MODE:
+		err = gr_gk20a_elpg_protected_call(g,
+				nvgpu_gpu_ioctl_set_debug_mode(g, (struct nvgpu_gpu_sm_debug_mode_args *)buf));
+		break;
+
+	case NVGPU_GPU_IOCTL_WAIT_FOR_PAUSE:
+		err =  nvgpu_gpu_ioctl_wait_for_pause(g,
+				(struct nvgpu_gpu_wait_pause_args *)buf);
+		break;
+
+	case NVGPU_GPU_IOCTL_GET_TPC_EXCEPTION_EN_STATUS:
+		err =  nvgpu_gpu_ioctl_has_any_exception(g,
+				(struct nvgpu_gpu_tpc_exception_en_status_args *)buf);
+		break;
+
 	default:
 		dev_dbg(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;
@@ -452,4 +716,3 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 
 	return err;
 }
-

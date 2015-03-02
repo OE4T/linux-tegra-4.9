@@ -342,6 +342,30 @@ static inline u32 gr_activity_4_r(void)
 {
 	return 0x00400390;
 }
+static inline u32 gr_pri_gpc0_gcc_dbg_r(void)
+{
+	return 0x00501000;
+}
+static inline u32 gr_pri_gpcs_gcc_dbg_r(void)
+{
+	return 0x00419000;
+}
+static inline u32 gr_pri_gpcs_gcc_dbg_invalidate_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_cache_control_r(void)
+{
+	return 0x005046a4;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_cache_control_r(void)
+{
+	return 0x00419ea4;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_cache_control_invalidate_cache_m(void)
+{
+	return 0x1 << 0;
+}
 static inline u32 gr_pri_sked_activity_r(void)
 {
 	return 0x00407054;
@@ -2962,6 +2986,10 @@ static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_en_r(void)
 {
 	return 0x0050450c;
 }
+static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
 static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_enabled_f(void)
 {
 	return 0x2;
@@ -3010,6 +3038,10 @@ static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_on_v(void)
 {
 	return 0x00000001;
 }
+static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_off_v(void)
+{
+	return 0x00000000;
+}
 static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_trigger_enable_f(void)
 {
 	return 0x80000000;
@@ -3022,9 +3054,49 @@ static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_run_trigger_task_f(void)
 {
 	return 0x40000000;
 }
+static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_warp_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_warp_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_sm_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_sm_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_gpc0_tpc0_sm_warp_valid_mask_r(void)
+{
+	return 0x00504614;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_r(void)
+{
+	return 0x00504624;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_r(void)
+{
+	return 0x00504634;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_stop_on_any_warp_disable_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_stop_on_any_sm_disable_v(void)
+{
+	return 0x00000000;
+}
 static inline u32 gr_gpc0_tpc0_sm_dbgr_status0_r(void)
 {
 	return 0x0050460c;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_status0_sm_in_trap_mode_v(u32 r)
+{
+	return (r >> 0) & 0x1;
 }
 static inline u32 gr_gpc0_tpc0_sm_dbgr_status0_locked_down_v(u32 r)
 {

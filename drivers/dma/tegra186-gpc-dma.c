@@ -290,8 +290,10 @@ static inline struct device *tdc2dev(struct tegra_dma_channel *tdc)
 }
 
 static dma_cookie_t tegra_dma_tx_submit(struct dma_async_tx_descriptor *tx);
+#ifdef CONFIG_PM_RUNTIME
 static int tegra_dma_runtime_suspend(struct device *dev);
 static int tegra_dma_runtime_resume(struct device *dev);
+#endif
 
 /* Get DMA desc from free list, if not there then allocate it.  */
 static struct tegra_dma_desc *tegra_dma_desc_get(
@@ -1078,7 +1080,7 @@ static int tegra_dma_probe(struct platform_device *pdev)
 	if (IS_ERR(tdma->base_addr))
 		return PTR_ERR(tdma->base_addr);
 
-	tdma->dma_clk = devm_clk_get(&pdev->dev, NULL);
+	tdma->dma_clk = devm_clk_get(&pdev->dev, "gpcdma");
 	if (IS_ERR(tdma->dma_clk)) {
 		dev_err(&pdev->dev, "Error: Missing controller clock\n");
 		return PTR_ERR(tdma->dma_clk);
@@ -1088,6 +1090,7 @@ static int tegra_dma_probe(struct platform_device *pdev)
 
 	dma_device = &pdev->dev;
 
+#ifdef CONFIG_PM_RUNTIME
 	tegra_pd_add_device(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
 	if (!pm_runtime_enabled(&pdev->dev)) {
@@ -1098,7 +1101,7 @@ static int tegra_dma_probe(struct platform_device *pdev)
 			goto err_pm_disable;
 		}
 	}
-
+#endif
 	/* Enable clock before accessing registers */
 	ret = clk_prepare_enable(tdma->dma_clk);
 	if (ret < 0) {
@@ -1110,8 +1113,6 @@ static int tegra_dma_probe(struct platform_device *pdev)
 	tegra_periph_reset_assert(tdma->dma_clk);
 	udelay(2);
 	tegra_periph_reset_deassert(tdma->dma_clk);
-
-	clk_disable_unprepare(tdma->dma_clk);
 
 	INIT_LIST_HEAD(&tdma->dma_dev.channels);
 	for (i = 0; i < cdata->nr_channels; i++) {
@@ -1196,10 +1197,12 @@ err_irq:
 	}
 
 err_pm_disable:
+#ifdef CONFIG_PM_RUNTIME
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra_dma_runtime_suspend(&pdev->dev);
 	tegra_pd_remove_device(&pdev->dev);
+#endif
 	return ret;
 }
 
@@ -1216,14 +1219,17 @@ static int tegra_dma_remove(struct platform_device *pdev)
 		tasklet_kill(&tdc->tasklet);
 	}
 
+#ifdef CONFIG_PM_RUNTIME
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra_dma_runtime_suspend(&pdev->dev);
 
 	tegra_pd_remove_device(&pdev->dev);
+#endif
 	return 0;
 }
 
+#ifdef CONFIG_PM_RUNTIME
 static int tegra_dma_runtime_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -1246,6 +1252,7 @@ static int tegra_dma_runtime_resume(struct device *dev)
 	}
 	return 0;
 }
+#endif
 
 #ifdef CONFIG_PM_SLEEP
 static int tegra_dma_pm_suspend(struct device *dev)

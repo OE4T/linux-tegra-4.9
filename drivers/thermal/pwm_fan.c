@@ -470,7 +470,7 @@ static int get_next_lower_pwm(int pwm, struct fan_dev_data *fan_data)
 
 static void fan_ramping_work_func(struct work_struct *work)
 {
-	int rru, rrd;
+	int rru, rrd, err;
 	int cur_pwm, next_pwm;
 	struct delayed_work *dwork = container_of(work, struct delayed_work,
 									work);
@@ -501,6 +501,26 @@ static void fan_ramping_work_func(struct work_struct *work)
 		next_pwm = max(next_pwm, fan_data->next_target_pwm);
 		next_pwm = max(0, next_pwm);
 	}
+
+	if ((next_pwm != 0) && !(regulator_is_enabled(fan_data->fan_reg))) {
+		err = regulator_enable(fan_data->fan_reg);
+		if (err < 0)
+			dev_err(fan_data->dev,
+				" Coudn't enable vdd-fan\n");
+		else
+			dev_info(fan_data->dev,
+				" Enabled vdd-fan\n");
+	}
+	if ((next_pwm == 0) && (regulator_is_enabled(fan_data->fan_reg))) {
+		err = regulator_disable(fan_data->fan_reg);
+		if (err < 0)
+			dev_err(fan_data->dev,
+				" Couldn't disable vdd-fan\n");
+		else
+			dev_info(fan_data->dev,
+				" Disabled vdd-fan\n");
+	}
+
 	set_pwm_duty_cycle(next_pwm, fan_data);
 	fan_data->fan_cur_pwm = next_pwm;
 	if (fan_data->next_target_pwm != next_pwm)
@@ -929,12 +949,6 @@ static int pwm_fan_probe(struct platform_device *pdev)
 			fan_data->fan_state_cap_lookup[i]);
 	}
 
-	err = regulator_enable(fan_data->fan_reg);
-	if (err < 0)
-		dev_err(&pdev->dev, " Coudn't enable regulator\n");
-	else
-		dev_info(&pdev->dev, " Enabled regulator\n");
-
 	return err;
 
 sysfs_fail:
@@ -1043,10 +1057,6 @@ static int pwm_fan_resume(struct platform_device *pdev)
 	set_pwm_duty_cycle(0, fan_data);
 	/*Start thermal control*/
 	fan_data->fan_temp_control_flag = 1;
-
-	err = regulator_enable(fan_data->fan_reg);
-	if (err < 0)
-		dev_err(&pdev->dev, "Not able to enable Fan regulator\n");
 
 	mutex_unlock(&fan_data->fan_state_lock);
 	return 0;

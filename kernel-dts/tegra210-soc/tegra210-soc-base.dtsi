@@ -1241,7 +1241,7 @@
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x700b0200 0x0 0x200>;
 		interrupts = < 0 15 0x04 >;
-		nvidia,runtime-pm-type = <0>;
+		nvidia,runtime-pm-type = <1>;
 		status = "disabled";
 	};
 

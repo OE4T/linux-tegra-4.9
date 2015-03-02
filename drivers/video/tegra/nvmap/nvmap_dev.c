@@ -583,11 +583,12 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 
 static int nvmap_map(struct file *filp, struct vm_area_struct *vma)
 {
-	BUG_ON(vma->vm_private_data != NULL);
-	vma->vm_flags |= (VM_SHARED | VM_DONTEXPAND |
-			  VM_DONTDUMP | VM_DONTCOPY);
-	vma->vm_ops = &nvmap_vma_ops;
-	return 0;
+	char task_comm[TASK_COMM_LEN];
+
+	get_task_comm(task_comm, current);
+	pr_err("error: mmap not supported on nvmap file, pid=%d, %s\n",
+		task_tgid_nr(current), task_comm);
+	return -EPERM;
 }
 
 static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
@@ -678,13 +679,10 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 #ifdef CONFIG_COMPAT
 	case NVMAP_IOC_MMAP_32:
-		err = nvmap_map_into_caller_ptr(filp, uarg, true);
-		break;
 #endif
-
 	case NVMAP_IOC_MMAP:
-		err = nvmap_map_into_caller_ptr(filp, uarg, false);
-		break;
+		pr_warn("nvmap: unsupported MMAP IOCTL used.\n");
+		return -ENOTTY;
 
 #ifdef CONFIG_COMPAT
 	case NVMAP_IOC_WRITE_32:

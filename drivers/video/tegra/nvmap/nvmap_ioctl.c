@@ -207,27 +207,6 @@ out:
 	return err;
 }
 
-static int nvmap_share_release(struct inode *inode, struct file *file)
-{
-	struct nvmap_handle *h = file->private_data;
-
-	nvmap_handle_put(h);
-	return 0;
-}
-
-static int nvmap_share_mmap(struct file *file, struct vm_area_struct *vma)
-{
-	/* unsupported operation */
-	WARN(1, "mmap is not supported on fd, which shares nvmap handle");
-	return -EPERM;
-}
-
-static const struct file_operations nvmap_fd_fops = {
-	.owner		= THIS_MODULE,
-	.release	= nvmap_share_release,
-	.mmap		= nvmap_share_mmap,
-};
-
 int nvmap_ioctl_getfd(struct file *filp, void __user *arg)
 {
 	struct nvmap_handle *handle;
@@ -400,100 +379,6 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 
 	if (err && fd > 0)
 		sys_close(fd);
-	return err;
-}
-
-int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg, bool is32)
-{
-	struct nvmap_client *client = filp->private_data;
-	struct nvmap_map_caller op;
-#ifdef CONFIG_COMPAT
-	struct nvmap_map_caller_32 op32;
-#endif
-	struct nvmap_vma_priv *priv;
-	struct vm_area_struct *vma;
-	struct nvmap_handle *h = NULL;
-	int err = 0;
-
-#ifdef CONFIG_COMPAT
-	if (is32) {
-		if (copy_from_user(&op32, arg, sizeof(op32)))
-			return -EFAULT;
-		op.handle = op32.handle;
-		op.offset = op32.offset;
-		op.length = op32.length;
-		op.flags = op32.flags;
-		op.addr = op32.addr;
-	} else
-#endif
-		if (copy_from_user(&op, arg, sizeof(op)))
-			return -EFAULT;
-
-	h = nvmap_handle_get_from_fd(op.handle);
-	if (!h)
-		return -EINVAL;
-
-	if(!h->alloc) {
-		nvmap_handle_put(h);
-		return -EFAULT;
-	}
-
-	trace_nvmap_map_into_caller_ptr(client, h, op.offset,
-					op.length, op.flags);
-	down_read(&current->mm->mmap_sem);
-
-	vma = find_vma(current->mm, op.addr);
-	if (!vma) {
-		err = -ENOMEM;
-		goto out;
-	}
-
-	if (op.offset & ~PAGE_MASK) {
-		err = -EFAULT;
-		goto out;
-	}
-
-	if (op.offset >= h->size || op.length > h->size - op.offset) {
-		err = -EADDRNOTAVAIL;
-		goto out;
-	}
-
-	/* the VMA must exactly match the requested mapping operation, and the
-	 * VMA that is targetted must have been created by this driver
-	 */
-	if ((vma->vm_start != op.addr) || !is_nvmap_vma(vma) ||
-	    (vma->vm_end-vma->vm_start != op.length)) {
-		err = -EPERM;
-		goto out;
-	}
-
-	/* verify that each mmap() system call creates a unique VMA */
-	if (vma->vm_private_data)
-		goto out;
-
-	if (!h->heap_pgalloc && (h->carveout->base & ~PAGE_MASK)) {
-		err = -EFAULT;
-		goto out;
-	}
-
-	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-	if (!priv)  {
-		err = -ENOMEM;
-		goto out;
-	}
-
-	vma->vm_flags |= (h->heap_pgalloc ? 0 : VM_PFNMAP);
-	priv->handle = h;
-	priv->offs = op.offset;
-	vma->vm_private_data = priv;
-	vma->vm_page_prot = nvmap_pgprot(h, vma->vm_page_prot);
-	nvmap_vma_open(vma);
-
-out:
-	up_read(&current->mm->mmap_sem);
-
-	if (err)
-		nvmap_handle_put(h);
 	return err;
 }
 

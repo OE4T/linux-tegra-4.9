@@ -286,6 +286,30 @@ static inline u32 gr_engine_status_value_busy_f(void)
 {
 	return 0x1;
 }
+static inline u32 gr_pri_be0_becs_be_exception_r(void)
+{
+	return 0x00410204;
+}
+static inline u32 gr_pri_be0_becs_be_exception_en_r(void)
+{
+	return 0x00410208;
+}
+static inline u32 gr_pri_gpc0_gpccs_gpc_exception_r(void)
+{
+	return 0x00502c90;
+}
+static inline u32 gr_pri_gpc0_gpccs_gpc_exception_en_r(void)
+{
+	return 0x00502c94;
+}
+static inline u32 gr_pri_gpc0_tpc0_tpccs_tpc_exception_r(void)
+{
+	return 0x00504508;
+}
+static inline u32 gr_pri_gpc0_tpc0_tpccs_tpc_exception_en_r(void)
+{
+	return 0x0050450c;
+}
 static inline u32 gr_activity_0_r(void)
 {
 	return 0x00400380;

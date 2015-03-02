@@ -3,7 +3,7 @@
  *
  * Some MM related functionality specific to nvmap.
  *
- * Copyright (c) 2013-2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,16 +28,21 @@ inline static void nvmap_flush_dcache_all(void *dummy)
 {
 #if defined(CONFIG_DENVER_CPU)
 	u64 id_afr0;
-	asm volatile ("mrs %0, ID_AFR0_EL1" : "=r"(id_afr0));
-	if (likely((id_afr0 & 0xf00) == 0x100)) {
-		asm volatile ("msr s3_0_c15_c13_0, %0" : : "r" (0));
-		asm volatile ("dsb sy");
-	} else {
-		__flush_dcache_all(NULL);
+	u64 midr;
+
+	asm volatile ("mrs %0, MIDR_EL1" : "=r"(midr));
+	/* check if current core is a Denver processor */
+	if ((midr & 0xFF8FFFF0) == 0x4e0f0000) {
+		asm volatile ("mrs %0, ID_AFR0_EL1" : "=r"(id_afr0));
+		/* check if complete cache flush through msr is supported */
+		if (likely((id_afr0 & 0xf00) == 0x100)) {
+			asm volatile ("msr s3_0_c15_c13_0, %0" : : "r" (0));
+			asm volatile ("dsb sy");
+			return;
+		}
 	}
-#else
-	__flush_dcache_all(NULL);
 #endif
+	__flush_dcache_all(NULL);
 }
 
 void inner_flush_cache_all(void)

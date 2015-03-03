@@ -32,7 +32,7 @@
 #include "tegra210-platforms/tegra210-sdhci.dtsi"
 #include "tegra210-platforms/tegra210-thermal-fan-est-p2530-0930.dtsi"
 #include "tegra210-platforms/tegra210-keys-p2530-0930.dtsi"
-#include "tegra210-platforms/tegra210-powermon-p2530-0930.dtsi"
+#include "tegra210-platforms/tegra210-jetson-e-powermon-p2595-0000-a00.dtsi"
 #include <dt-bindings/iio/meter/ina3221x.h>
 #include "tegra210-platforms/tegra210-foster-e-extcon-p2530-0930-e01.dtsi"
 #include "tegra210-platforms/tegra210-loki-e-emc-a01.dtsi"

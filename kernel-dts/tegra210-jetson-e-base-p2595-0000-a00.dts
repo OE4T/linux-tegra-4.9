@@ -30,6 +30,7 @@
 #include "tegra210-platforms/tegra210-ers-hdmi-e2190-1100-a00.dtsi"
 #include "tegra210-platforms/tegra210-loki-e-sensor-p2530-0032-e00.dtsi"
 #include "tegra210-platforms/tegra210-sdhci.dtsi"
+#include "tegra210-platforms/tegra210-p2530-common.dtsi"
 #include "tegra210-platforms/tegra210-thermal-fan-est-p2530-0930.dtsi"
 #include "tegra210-platforms/tegra210-keys-p2530-0930.dtsi"
 #include "tegra210-platforms/tegra210-jetson-e-powermon-p2595-0000-a00.dtsi"
@@ -417,7 +418,7 @@
 		compatible = "nvidia,tegra124-sysedp";
 		nvidia,margin = <0>;
 		nvidia,min_budget = <0>;
-		nvidia,initial_budget = <25000>;
+		nvidia,initial_budget = <40000>;
 
 		consumers {
 			consumer1 {
@@ -460,6 +461,25 @@
 			};
 		};
 	};
+
+    sysedp_reactive_capping@3 {
+        compatible = "nvidia,tegra124-sysedp_reactive_capping";
+        nvidia,max_capping_mw = <15000>;
+        nvidia,step_alarm_mw = <1000>;
+        nvidia,step_relax_mw = <500>;
+        nvidia,relax_ms = <250>;
+        interrupt-parent = <&soctherm>;
+        interrupts = <3 0x2002>;
+        sysedpc {
+            nvidia,name = "batmon_oc3";
+        };
+    };
+
+    sysedp-dynamic-capping {
+        compatible = "nvidia,tegra124-sysedp-dynamic-capping";
+        nvidia,throttle_depth = <75>;
+        nvidia,cap_method = <1>;
+    };
 
 	cpu_edp {
 		status = "okay";

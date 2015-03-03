@@ -116,7 +116,7 @@ static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 	if (err || msg.ret)
 		goto fail;
 
-	g->ops.mm.tlb_invalidate(vm);
+	/* TLB invalidate handled on server side */
 
 	return map_offset;
 fail:
@@ -158,7 +158,7 @@ static void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 		dev_err(dev_from_vm(vm),
 			"failed to update gmmu ptes on unmap");
 
-	g->ops.mm.tlb_invalidate(vm);
+	/* TLB invalidate handled on server side */
 }
 
 static void vgpu_vm_remove_support(struct vm_gk20a *vm)

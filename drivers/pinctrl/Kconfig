@@ -1,0 +1,5 @@
+config PINCTRL_TEGRA186
+	bool "NVIDIA Tegra186 Pinmux support"
+	select PINCTRL_TEGRA
+	help
+	Support for the NVIDIA Tegra186 PINCTRL controller driver.

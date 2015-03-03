@@ -118,8 +118,24 @@ static inline u32 host1x_channel_dmactrl_dmainitget_f(u32 v)
 {
 	return (v & 0x1) << 2;
 }
+static inline u32 host1x_channel_rdata_r(void)
+{
+	return 0x28;
+}
+static inline u32 host1x_channel_mlock_en_r(void)
+{
+	return 0x2000;
+}
 static inline u32 host1x_channel_ch_hipri_r(void)
 {
 	return 0x2010;
+}
+static inline u32 host1x_channel_filter_gbuffer_r(void)
+{
+	return 0x2020;
+}
+static inline u32 host1x_channel_smmu_streamid_r(void)
+{
+	return 0x84;
 }
 #endif

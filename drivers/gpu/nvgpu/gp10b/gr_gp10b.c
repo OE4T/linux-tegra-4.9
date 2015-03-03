@@ -664,8 +664,9 @@ static void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 
 		addr = (u64_lo32(gr_ctx->t18x.spill_ctxsw_buffer.gpu_va) >>
 			gr_gpc0_swdx_rm_spill_buffer_addr_39_8_align_bits_v()) |
-			(u64_hi32(gr_ctx->t18x.pagepool_ctxsw_buffer.gpu_va) <<
+			(u64_hi32(gr_ctx->t18x.spill_ctxsw_buffer.gpu_va) <<
 			 (32 - gr_gpc0_swdx_rm_spill_buffer_addr_39_8_align_bits_v()));
+		size = gr_ctx->t18x.spill_ctxsw_buffer.size;
 
 		gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_swdx_rm_spill_buffer_addr_r(),
@@ -673,7 +674,7 @@ static void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 				true);
 		gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_swdx_rm_spill_buffer_size_r(),
-				gr_gpc0_swdx_rm_spill_buffer_size_256b_f(addr),
+				gr_gpc0_swdx_rm_spill_buffer_size_256b_f(size),
 				true);
 
 		cbes_reserve = gr_gpcs_swdx_beta_cb_ctrl_cbes_reserve_gfxp_v();

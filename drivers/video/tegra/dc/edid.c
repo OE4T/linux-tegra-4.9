@@ -35,6 +35,7 @@ struct tegra_edid_pvt {
 	bool				support_underscan;
 	bool				support_audio;
 	bool				scdc_present;
+	bool				db420_present;
 	bool				hfvsdb_present;
 	int			        hdmi_vic_len;
 	u8			        hdmi_vic[7];
@@ -212,6 +213,7 @@ static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 	edid->hdmi_vic_len = 0;
 	edid->scdc_present = false;
 	edid->hfvsdb_present = false;
+	edid->db420_present = false;
 	ptr = &raw[0];
 
 	/* If CEA 861 block get info for eld struct */
@@ -278,7 +280,13 @@ static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 				(ptr[3] == 0)) {
 				edid->eld.port_id[0] = ptr[4];
 				edid->eld.port_id[1] = ptr[5];
-				edid->max_tmds_char_rate_hllc_mhz = ptr[7] * 5;
+
+				if (len >= 7)
+					edid->max_tmds_char_rate_hllc_mhz =
+								ptr[7] * 5;
+				edid->max_tmds_char_rate_hllc_mhz =
+					edid->max_tmds_char_rate_hllc_mhz ? :
+					165; /* for <=165MHz field may be 0 */
 			}
 
 			/* OUI for hdmi forum */
@@ -342,6 +350,21 @@ static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 			edid->eld.spk_alloc = ptr[1];
 			len++;
 			ptr += len; /* adding the header */
+			break;
+		}
+		case CEA_DATA_BLOCK_EXT:
+		{
+			u8 ext_db = ptr[1];
+
+			switch (ext_db) {
+			case CEA_DATA_BLOCK_EXT_Y420VDB: /* fall through */
+			case CEA_DATA_BLOCK_EXT_Y420CMDB:
+				edid->db420_present = true;
+				break;
+			};
+
+			len++;
+			ptr += len;
 			break;
 		}
 		default:
@@ -413,6 +436,12 @@ bool tegra_edid_is_scdc_present(struct tegra_edid *edid)
 		return false;
 	}
 
+	if (edid->data->scdc_present &&
+		!tegra_edid_is_hfvsdb_present(edid)) {
+		pr_warn("scdc presence incorrectly parsed\n");
+		dump_stack();
+	}
+
 	return edid->data->scdc_present;
 }
 
@@ -424,6 +453,16 @@ bool tegra_edid_is_hfvsdb_present(struct tegra_edid *edid)
 	}
 
 	return edid->data->hfvsdb_present;
+}
+
+bool tegra_edid_is_420db_present(struct tegra_edid *edid)
+{
+	if (!edid || !edid->data) {
+		pr_warn("edid invalid\n");
+		return false;
+	}
+
+	return edid->data->db420_present;
 }
 
 int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs,

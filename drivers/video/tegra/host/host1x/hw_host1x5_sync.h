@@ -62,6 +62,14 @@ static inline u32 host1x_sync_intstatus_ip_write_int_v(u32 r)
 {
 	return (r >> 1) & 0x1;
 }
+static inline u32 host1x_sync_intstatus_illegal_pb_access_v(u32 r)
+{
+	return (r >> 28) & 0x1;
+}
+static inline u32 host1x_sync_intstatus_illegal_client_access_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
 static inline u32 host1x_sync_intmask_r(void)
 {
 	return 0x30;
@@ -73,6 +81,30 @@ static inline u32 host1x_sync_intgmask_r(void)
 static inline u32 host1x_sync_intc0mask_r(void)
 {
 	return 0x4;
+}
+static inline u32 host1x_sync_illegal_syncpt_access_frm_client_r(void)
+{
+	return 0x2268;
+}
+static inline u32 host1x_sync_illegal_syncpt_access_frm_client_syncpt_v(u32 r)
+{
+	return (r >> 16) & 0x3ff;
+}
+static inline u32 host1x_sync_illegal_syncpt_access_frm_client_ch_v(u32 r)
+{
+	return (r >> 10) & 0x3f;
+}
+static inline u32 host1x_sync_illegal_syncpt_access_frm_pb_r(void)
+{
+	return 0x2270;
+}
+static inline u32 host1x_sync_illegal_syncpt_access_frm_pb_syncpt_v(u32 r)
+{
+	return (r >> 16) & 0x3ff;
+}
+static inline u32 host1x_sync_illegal_syncpt_access_frm_pb_ch_v(u32 r)
+{
+	return (r >> 10) & 0x3f;
 }
 static inline u32 host1x_sync_cmdproc_stat_r(void)
 {
@@ -257,5 +289,33 @@ static inline u32 host1x_sync_syncpt_ch_app_0_syncpt_app_f(u32 v)
 static inline u32 host1x_sync_syncpt_vm_0_r(void)
 {
 	return 0x844;
+}
+static inline u32 host1x_sync_common_mlock_r(void)
+{
+	return 0x2030;
+}
+static inline u32 host1x_sync_common_mlock_vm_f(u32 v)
+{
+	return (v & 0xf) << 16;
+}
+static inline u32 host1x_sync_common_mlock_vm_v(u32 r)
+{
+	return (r >> 16) & 0xf;
+}
+static inline u32 host1x_sync_common_mlock_ch_f(u32 v)
+{
+	return (v & 0x3f) << 2;
+}
+static inline u32 host1x_sync_common_mlock_ch_v(u32 r)
+{
+	return (r >> 2) & 0x3f;
+}
+static inline u32 host1x_sync_common_mlock_locked_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 host1x_sync_common_mlock_locked_v(u32 r)
+{
+	return (r >> 0) & 0x1;
 }
 #endif

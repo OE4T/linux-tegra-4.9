@@ -1791,7 +1791,7 @@ static inline u32 small_valid_pde1_bits(u64 pte_addr)
    made.  So, superfluous updates will cause unnecessary
    pde invalidations.
 */
-int update_gmmu_pde_locked(struct vm_gk20a *vm,
+static int update_gmmu_pde_locked(struct vm_gk20a *vm,
 			   struct gk20a_mm_entry *pte,
 			   u32 i, u32 gmmu_pgsz_idx,
 			   u64 iova,
@@ -1837,7 +1837,7 @@ int update_gmmu_pde_locked(struct vm_gk20a *vm,
 	return 0;
 }
 
-int update_gmmu_pte_locked(struct vm_gk20a *vm,
+static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			   struct gk20a_mm_entry *pte,
 			   u32 i, u32 gmmu_pgsz_idx,
 			   u64 iova,

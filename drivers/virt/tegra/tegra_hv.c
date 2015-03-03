@@ -909,6 +909,15 @@ int tegra_hv_ivc_read(struct tegra_hv_ivc_cookie *ivck, void *buf, int size)
 }
 EXPORT_SYMBOL(tegra_hv_ivc_read);
 
+int tegra_hv_ivc_read_peek(struct tegra_hv_ivc_cookie *ivck, void *buf,
+			   int off, int count)
+{
+	struct ivc *ivc = &cookie_to_ivc_dev(ivck)->ivc;
+
+	return tegra_ivc_read_peek(ivc, buf, off, count);
+}
+EXPORT_SYMBOL(tegra_hv_ivc_read_peek);
+
 int tegra_hv_ivc_can_read(struct tegra_hv_ivc_cookie *ivck)
 {
 	struct ivc *ivc = &cookie_to_ivc_dev(ivck)->ivc;

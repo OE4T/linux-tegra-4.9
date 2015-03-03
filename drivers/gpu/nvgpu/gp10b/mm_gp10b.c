@@ -29,8 +29,8 @@ u32 gp10b_mm_get_physical_addr_bits(struct gk20a *g)
 static int gp10b_init_mm_setup_hw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
-	struct inst_desc *inst_block = &mm->bar1.inst_block;
-	phys_addr_t inst_pa = inst_block->cpu_pa;
+	struct mem_desc *inst_block = &mm->bar1.inst_block;
+	phys_addr_t inst_pa = gk20a_mem_phys(inst_block);
 	int err = 0;
 
 	gk20a_dbg_fn("");
@@ -66,7 +66,7 @@ static int gb10b_init_bar2_vm(struct gk20a *g)
 	int err;
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->bar2.vm;
-	struct inst_desc *inst_block = &mm->bar2.inst_block;
+	struct mem_desc *inst_block = &mm->bar2.inst_block;
 	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
 	/* BAR2 aperture size is 32MB */
@@ -93,8 +93,8 @@ clean_up_va:
 static int gb10b_init_bar2_mm_hw_setup(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
-	struct inst_desc *inst_block = &mm->bar2.inst_block;
-	phys_addr_t inst_pa = inst_block->cpu_pa;
+	struct mem_desc *inst_block = &mm->bar2.inst_block;
+	phys_addr_t inst_pa = gk20a_mem_phys(inst_block);
 
 	gk20a_dbg_fn("");
 

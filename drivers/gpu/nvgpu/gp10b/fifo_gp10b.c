@@ -56,7 +56,7 @@ static int channel_gp10b_commit_userd(struct channel_gk20a *c)
 
 	gk20a_dbg_fn("");
 
-	inst_ptr = c->inst_block.cpuva;
+	inst_ptr = c->inst_block.cpu_va;
 	if (!inst_ptr)
 		return -ENOMEM;
 
@@ -84,7 +84,7 @@ static int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 
 	gk20a_dbg_fn("");
 
-	inst_ptr = c->inst_block.cpuva;
+	inst_ptr = c->inst_block.cpu_va;
 	if (!inst_ptr)
 		return -ENOMEM;
 

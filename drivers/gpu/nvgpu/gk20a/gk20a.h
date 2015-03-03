@@ -349,6 +349,8 @@ struct gpu_ops {
 		const struct gk20a_mmu_level *
 			(*get_mmu_levels)(struct gk20a *g, u32 big_page_size);
 		void (*init_pdb)(struct gk20a *g, void *inst_ptr, u64 pdb_addr);
+		u64 (*get_iova_addr)(struct gk20a *g, struct scatterlist *sgl,
+					 u32 flags);
 	} mm;
 	struct {
 		int (*prepare_ucode)(struct gk20a *g);

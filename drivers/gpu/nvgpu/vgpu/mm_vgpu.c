@@ -75,7 +75,7 @@ static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 	struct dma_iommu_mapping *mapping = to_dma_iommu_mapping(d);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_as_map_params *p = &msg.params.as_map;
-	u64 addr = gk20a_mm_iova_addr(g, sgt->sgl);
+	u64 addr = g->ops.mm.get_iova_addr(g, sgt->sgl, flags);
 	u8 prot;
 
 	gk20a_dbg_fn("");
@@ -213,7 +213,7 @@ u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt, u64 size)
 	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct dma_iommu_mapping *mapping =
 			to_dma_iommu_mapping(dev_from_gk20a(g));
-	u64 addr = gk20a_mm_iova_addr(g, (*sgt)->sgl);
+	u64 addr = g->ops.mm.get_iova_addr(g, (*sgt)->sgl, 0);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_as_map_params *p = &msg.params.as_map;
 	int err;
@@ -450,4 +450,5 @@ void vgpu_init_mm_ops(struct gpu_ops *gops)
 	gops->mm.l2_flush = vgpu_mm_l2_flush;
 	gops->mm.tlb_invalidate = vgpu_mm_tlb_invalidate;
 	gops->mm.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits;
+	gops->mm.get_iova_addr = gk20a_mm_iova_addr;
 }

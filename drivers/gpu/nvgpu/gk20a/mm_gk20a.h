@@ -223,7 +223,7 @@ struct gk20a_mmu_level {
 			   u64 iova,
 			   u32 kind_v, u32 *ctag,
 			   bool cacheable, bool unmapped_pte,
-			   int rw_flag, bool sparse);
+			   int rw_flag, bool sparse, u32 flags);
 	size_t entry_size;
 };
 
@@ -375,7 +375,8 @@ int gk20a_get_sgtable_from_pages(struct device *d, struct sg_table **sgt,
 
 void gk20a_free_sgtable(struct sg_table **sgt);
 
-u64 gk20a_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl);
+u64 gk20a_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl,
+		u32 flags);
 u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova);
 
 void gk20a_mm_ltc_isr(struct gk20a *g);

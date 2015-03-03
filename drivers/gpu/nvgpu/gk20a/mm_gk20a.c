@@ -99,7 +99,8 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   u64 first_vaddr, u64 last_vaddr,
 				   u8 kind_v, u32 ctag_offset, bool cacheable,
 				   bool umapped_pte, int rw_flag,
-				   bool sparse);
+				   bool sparse,
+				   u32 flags);
 static int __must_check gk20a_init_system_vm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_bar1_vm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_hwpm(struct mm_gk20a *mm);
@@ -610,6 +611,7 @@ static int gk20a_zalloc_gmmu_page_table(struct vm_gk20a *vm,
 {
 	int err;
 	int order;
+	struct gk20a *g = gk20a_from_vm(vm);
 
 	gk20a_dbg_fn("");
 
@@ -621,7 +623,8 @@ static int gk20a_zalloc_gmmu_page_table(struct vm_gk20a *vm,
 
 	err = alloc_gmmu_pages(vm, order, entry);
 	gk20a_dbg(gpu_dbg_pte, "entry = 0x%p, addr=%08llx, size %d",
-		  entry, gk20a_mm_iova_addr(vm->mm->g, entry->sgt->sgl), order);
+		  entry, g->ops.mm.get_iova_addr(g, entry->sgt->sgl, 0),
+		  order);
 	if (err)
 		return err;
 	entry->pgsz = pgsz_idx;
@@ -1118,7 +1121,8 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 				      flags &
 				      NVGPU_GPU_FLAGS_SUPPORT_UNMAPPED_PTE,
 				      rw_flag,
-				      sparse);
+				      sparse,
+				      flags);
 	if (err) {
 		gk20a_err(d, "failed to update ptes on map");
 		goto fail_validate;
@@ -1164,7 +1168,7 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 				vaddr + size,
 				0, 0, false /* n/a for unmap */,
 				false, rw_flag,
-				sparse);
+				sparse, 0);
 	if (err)
 		dev_err(dev_from_vm(vm),
 			"failed to update gmmu ptes on unmap");
@@ -1645,11 +1649,13 @@ dma_addr_t gk20a_mm_gpuva_to_iova_base(struct vm_gk20a *vm, u64 gpu_vaddr)
 {
 	struct mapped_buffer_node *buffer;
 	dma_addr_t addr = 0;
+	struct gk20a *g = gk20a_from_vm(vm);
 
 	mutex_lock(&vm->update_gmmu_lock);
 	buffer = find_mapped_buffer_locked(&vm->mapped_buffers, gpu_vaddr);
 	if (buffer)
-		addr = gk20a_mm_iova_addr(vm->mm->g, buffer->sgt->sgl);
+		addr = g->ops.mm.get_iova_addr(g, buffer->sgt->sgl,
+				buffer->flags);
 	mutex_unlock(&vm->update_gmmu_lock);
 
 	return addr;
@@ -1761,7 +1767,8 @@ u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova)
 		return iova | 1ULL << g->ops.mm.get_physical_addr_bits(g);
 }
 
-u64 gk20a_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl)
+u64 gk20a_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl,
+		u32 flags)
 {
 	if (!device_is_iommuable(dev_from_gk20a(g)))
 		return sg_phys(sgl);
@@ -1807,8 +1814,9 @@ static int update_gmmu_pde_locked(struct vm_gk20a *vm,
 			   u64 iova,
 			   u32 kind_v, u32 *ctag,
 			   bool cacheable, bool unammped_pte,
-			   int rw_flag, bool sparse)
+			   int rw_flag, bool sparse, u32 flags)
 {
+	struct gk20a *g = gk20a_from_vm(vm);
 	bool small_valid, big_valid;
 	u64 pte_addr_small = 0, pte_addr_big = 0;
 	struct gk20a_mm_entry *entry = vm->pdb.entries + i;
@@ -1821,10 +1829,10 @@ static int update_gmmu_pde_locked(struct vm_gk20a *vm,
 	big_valid   = entry->size && entry->pgsz == gmmu_page_size_big;
 
 	if (small_valid)
-		pte_addr_small = gk20a_mm_iova_addr(vm->mm->g, entry->sgt->sgl);
+		pte_addr_small = g->ops.mm.get_iova_addr(g, entry->sgt->sgl, 0);
 
 	if (big_valid)
-		pte_addr_big = gk20a_mm_iova_addr(vm->mm->g, entry->sgt->sgl);
+		pte_addr_big = g->ops.mm.get_iova_addr(g, entry->sgt->sgl, 0);
 
 	pde_v[0] = gmmu_pde_size_full_f();
 	pde_v[0] |= big_valid ? big_valid_pde0_bits(pte_addr_big) :
@@ -1854,7 +1862,7 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			   u64 iova,
 			   u32 kind_v, u32 *ctag,
 			   bool cacheable, bool unmapped_pte,
-			   int rw_flag, bool sparse)
+			   int rw_flag, bool sparse, u32 flags)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	u32 ctag_granularity = g->ops.fb.compression_page_size(g);
@@ -1927,7 +1935,8 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 				    bool cacheable, bool unmapped_pte,
 				    int rw_flag,
 				    bool sparse,
-				    int lvl)
+				    int lvl,
+				    u32 flags)
 {
 	const struct gk20a_mmu_level *l = &vm->mmu_levels[lvl];
 	const struct gk20a_mmu_level *next_l = &vm->mmu_levels[lvl+1];
@@ -1973,7 +1982,7 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 
 		err = l->update_entry(vm, pte, pde_i, pgsz_idx,
 				iova, kind_v, ctag, cacheable, unmapped_pte,
-				rw_flag, sparse);
+				rw_flag, sparse, flags);
 		if (err)
 			return err;
 
@@ -1992,7 +2001,7 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 				gpu_va,
 				next,
 				kind_v, ctag, cacheable, unmapped_pte,
-				rw_flag, sparse, lvl+1);
+				rw_flag, sparse, lvl+1, flags);
 			unmap_gmmu_pages(next_pte);
 
 			if (err)
@@ -2018,7 +2027,8 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   u8 kind_v, u32 ctag_offset,
 				   bool cacheable, bool unmapped_pte,
 				   int rw_flag,
-				   bool sparse)
+				   bool sparse,
+				   u32 flags)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	int ctag_granularity = g->ops.fb.compression_page_size(g);
@@ -2030,13 +2040,15 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 
 	gk20a_dbg(gpu_dbg_pte, "size_idx=%d, iova=%llx",
 		   pgsz_idx,
-		   sgt ? gk20a_mm_iova_addr(vm->mm->g, sgt->sgl) : 0ULL);
+		   sgt ? g->ops.mm.get_iova_addr(vm->mm->g, sgt->sgl, flags)
+		       : 0ULL);
 
 	if (space_to_skip & (page_size - 1))
 		return -EINVAL;
 
 	if (sgt)
-		iova = gk20a_mm_iova_addr(vm->mm->g, sgt->sgl) + space_to_skip;
+		iova = g->ops.mm.get_iova_addr(vm->mm->g, sgt->sgl, flags)
+				+ space_to_skip;
 
 	gk20a_dbg(gpu_dbg_map, "size_idx=%d, gpu_va=[%llx,%llx], iova=%llx",
 			pgsz_idx, gpu_va, gpu_end-1, iova);
@@ -2051,7 +2063,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 			iova,
 			gpu_va, gpu_end,
 			kind_v, &ctag,
-			cacheable, unmapped_pte, rw_flag, sparse, 0);
+			cacheable, unmapped_pte, rw_flag, sparse, 0, flags);
 	unmap_gmmu_pages(&vm->pdb);
 
 	smp_mb();
@@ -2824,7 +2836,7 @@ void gk20a_init_inst_block(struct mem_desc *inst_block, struct vm_gk20a *vm,
 		u32 big_page_size)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	u64 pde_addr = gk20a_mm_iova_addr(g, vm->pdb.sgt->sgl);
+	u64 pde_addr = g->ops.mm.get_iova_addr(g, vm->pdb.sgt->sgl, 0);
 	phys_addr_t inst_pa = gk20a_mem_phys(inst_block);
 	void *inst_ptr = inst_block->cpu_va;
 
@@ -3019,8 +3031,8 @@ int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	u32 addr_lo = u64_lo32(gk20a_mm_iova_addr(vm->mm->g,
-						  vm->pdb.sgt->sgl) >> 12);
+	u32 addr_lo = u64_lo32(g->ops.mm.get_iova_addr(vm->mm->g,
+						  vm->pdb.sgt->sgl, 0) >> 12);
 	u32 data;
 	s32 retry = 2000;
 	static DEFINE_MUTEX(tlb_lock);
@@ -3122,6 +3134,7 @@ void gk20a_init_mm(struct gpu_ops *gops)
 	gops->mm.l2_invalidate = gk20a_mm_l2_invalidate;
 	gops->mm.l2_flush = gk20a_mm_l2_flush;
 	gops->mm.tlb_invalidate = gk20a_mm_tlb_invalidate;
+	gops->mm.get_iova_addr = gk20a_mm_iova_addr;
 	gops->mm.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits;
 	gops->mm.get_mmu_levels = gk20a_mm_get_mmu_levels;
 	gops->mm.init_pdb = gk20a_mm_init_pdb;

@@ -502,7 +502,7 @@ void tegra_dc_win_partial_update(struct tegra_dc *dc, struct tegra_dc_win *win,
 	}
 }
 
-void tegra_dc_vrr_frame_time(struct tegra_dc *dc)
+static void tegra_dc_vrr_frame_time(struct tegra_dc *dc)
 {
 	struct timespec time_now;
 	struct tegra_vrr *vrr  = dc->out->vrr;

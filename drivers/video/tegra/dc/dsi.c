@@ -5287,7 +5287,7 @@ skip_setup:
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 }
 
-void tegra_dc_dsi_vrr_enable(struct tegra_dc *dc, bool enable)
+static void tegra_dc_dsi_vrr_enable(struct tegra_dc *dc, bool enable)
 {
 	struct tegra_vrr *vrr  = dc->out->vrr;
 

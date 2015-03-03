@@ -552,6 +552,16 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 		apm_out->info = app->info;
 		apm_out->plugin = app->plugin;
 		apm_out->apm = app->apm;
+	} else if (IS_ADMA(app->reg)) {
+		app->adma_chan = find_first_zero_bit(adsp->adma_usage,
+					TEGRA210_ADSP_ADMA_CHANNEL_COUNT);
+		if (app->adma_chan >= TEGRA210_ADSP_ADMA_CHANNEL_COUNT) {
+			dev_err(adsp->dev, "All ADMA channels are busy");
+			return -EBUSY;
+		}
+		__set_bit(app->adma_chan, adsp->adma_usage);
+
+		app->adma_chan += TEGRA210_ADSP_ADMA_CHANNEL_START;
 	}
 	return 0;
 
@@ -584,6 +594,10 @@ static void tegra210_adsp_app_deinit(struct tegra210_adsp *adsp,
 			apm_out->info = NULL;
 			apm_out->plugin = NULL;
 			apm_out->apm = NULL;
+		} else if (IS_ADMA(app->reg)) {
+			__clear_bit(app->adma_chan -
+				TEGRA210_ADSP_ADMA_CHANNEL_START,
+				adsp->adma_usage);
 		}
 	}
 }
@@ -1481,15 +1495,6 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 	dev_vdbg(adsp->dev, "%s : stream %d admaif %d\n",
 		__func__, substream->stream, admaif_id);
 
-	adma_params.adma_channel = find_first_zero_bit(adsp->adma_usage,
-					TEGRA210_ADSP_ADMA_CHANNEL_COUNT);
-	if (adma_params.adma_channel >= TEGRA210_ADSP_ADMA_CHANNEL_COUNT) {
-		dev_err(adsp->dev, "All ADMA channels are busy");
-		return -EBUSY;
-	}
-	__set_bit(adma_params.adma_channel, adsp->adma_usage);
-
-	adma_params.adma_channel += TEGRA210_ADSP_ADMA_CHANNEL_START;
 	adma_params.mode = ADMA_MODE_CONTINUOUS;
 	adma_params.ahub_channel = admaif_id;
 	adma_params.periods = 2; /* We need ping-pong buffers for ADMA */
@@ -1509,7 +1514,7 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 		if (!IS_ADMA(app->reg))
 			return 0;
 
-		app->adma_chan = adma_params.adma_channel;
+		adma_params.adma_channel = app->adma_chan;
 		adma_params.direction = ADMA_MEMORY_TO_AHUB;
 		adma_params.event.pvoid = app->apm->output_event.pvoid;
 
@@ -1532,7 +1537,7 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 				continue;
 
 			app = &adsp->apps[i];
-			app->adma_chan = adma_params.adma_channel;
+			adma_params.adma_channel = app->adma_chan;
 			adma_params.direction = ADMA_AHUB_TO_MEMORY;
 			adma_params.event.pvoid = app->apm->input_event.pvoid;
 
@@ -1703,10 +1708,6 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 				TEGRA210_ADSP_MSG_FLAG_HOLD);
 			tegra210_adsp_send_reset_msg(app,
 				TEGRA210_ADSP_MSG_FLAG_SEND);
-		} else if (IS_ADMA(w->reg)) {
-			__clear_bit(app->adma_chan -
-				TEGRA210_ADSP_ADMA_CHANNEL_START,
-				adsp->adma_usage);
 		}
 	}
 

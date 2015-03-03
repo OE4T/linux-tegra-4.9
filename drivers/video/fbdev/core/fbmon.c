@@ -2,6 +2,7 @@
  * linux/drivers/video/fbmon.c
  *
  * Copyright (C) 2002 James Simmons <jsimmons@users.sf.net>
+ * Copyright (C) 2014-2015 NVIDIA CORPORATION. All rights reserved.
  *
  * Credits:
  *
@@ -1146,10 +1147,12 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 			u32 ext_type = edid[pos];
 
 			if (ext_type == CEA_DATA_BLOCK_EXT_Y420VDB) {
+				specs->misc |= FB_MISC_HDMI_FORUM;
 				for (i = pos + 1; i < pos + len; i++)
 					y420_svd[y420_svd_n++] =
 							edid[i] & 0x7f;
 			} else if (ext_type == CEA_DATA_BLOCK_EXT_Y420CMDB) {
+				specs->misc |= FB_MISC_HDMI_FORUM;
 				if (len == 1)
 					y420_support_full = true;
 				else {

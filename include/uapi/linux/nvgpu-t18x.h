@@ -27,6 +27,12 @@
 #define NVGPU_GPU_ARCH_GP100 0x00000130
 #define NVGPU_GPU_IMPL_GP10B 0x0000000B
 
+/*
+ * this flag is used in struct nvgpu_as_map_buffer_ex_args
+ * to specify IO coherence
+ */
+#define NVGPU_AS_MAP_BUFFER_FLAGS_IO_COHERENT	    (1 << 4)
+
 #endif /* _UAPI__LINUX_NVGPU_T18X_IOCTL_H_ */
 
 

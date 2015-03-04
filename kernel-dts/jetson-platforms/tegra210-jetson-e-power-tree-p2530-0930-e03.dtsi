@@ -262,7 +262,7 @@
 		pwrdet-uart-supply = <&max77620_sd3>;
 		pwrdet-audio-supply = <&max77620_sd3>;
 		pwrdet-cam-supply = <&max77620_sd3>;
-		pwrdet-pex-ctrl-supply = <&max77620_ldo1>;
+		pwrdet-pex-ctrl-supply = <&max77620_sd3>;
 		pwrdet-sdmmc1-supply = <&max77620_ldo2>;
 		pwrdet-sdmmc3-supply = <&max77620_sd3>;
 		pwrdet-sdmmc4-supply = <&max77620_sd3>;

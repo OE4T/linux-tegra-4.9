@@ -926,13 +926,14 @@ static int tegra210_adsp_compr_free(struct snd_compr_stream *cstream)
 {
 	struct tegra210_adsp_compr_rtd *prtd = cstream->runtime->private_data;
 
+	if (!prtd)
+		return -ENODEV;
+
 	tegra210_adsp_send_reset_msg(prtd->fe_apm,
 		TEGRA210_ADSP_MSG_FLAG_SEND);
 
-	if (prtd) {
-		prtd->fe_apm->fe = 0;
-		devm_kfree(prtd->dev, prtd);
-	}
+	prtd->fe_apm->fe = 0;
+	devm_kfree(prtd->dev, prtd);
 
 	return 0;
 }
@@ -1603,6 +1604,9 @@ static int tegra210_adsp_mux_put(struct snd_kcontrol *kcontrol,
 
 	if (!adsp->init_done)
 		return -ENODEV;
+
+	if (e->reg >= TEGRA210_ADSP_VIRT_REG_MAX)
+		return -EINVAL;
 
 	/* Init or de-init app based on connection */
 	if (IS_ADSP_APP(e->reg)) {

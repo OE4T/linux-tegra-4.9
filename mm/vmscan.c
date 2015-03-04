@@ -3500,11 +3500,18 @@ void wakeup_kswapd(struct zone *zone, int order, enum zone_type classzone_idx)
 	pg_data_t *pgdat;
 	int z;
 
+	/*
+	 * kswapd can be disabled for normal zone only when ZRAM is
+	 * disabled.
+	 */
+
+	if(!total_swap_pages) {
 #ifdef CONFIG_ZONE_DMA32
 	/* Avoid Normal zone balancing when DMA32 zone exist. */
-	if (classzone_idx == ZONE_NORMAL)
-		return;
+		if (classzone_idx == ZONE_NORMAL)
+			return;
 #endif
+	}
 
 	if (!managed_zone(zone))
 		return;

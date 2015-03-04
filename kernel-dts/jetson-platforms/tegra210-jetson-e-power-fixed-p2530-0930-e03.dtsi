@@ -104,6 +104,11 @@
 			regulator-max-microvolt = <1800000>;
 			gpio = <&gpio TEGRA_GPIO(S, 4) 0>;
 			enable-active-high;
+			consumers {
+				c1 {
+					regulator-consumer-supply = "vif";
+				};
+			};
 		};
 
 		vdd_sys_boost: regulator@6 {

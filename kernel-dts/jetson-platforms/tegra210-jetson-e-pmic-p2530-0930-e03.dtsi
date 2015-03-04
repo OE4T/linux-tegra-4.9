@@ -195,6 +195,9 @@
 							regulator-consumer-supply = "vddio_hsic";
 							regulator-consumer-device = "tegra-ehci.2";
 						};
+						c2 {
+							regulator-consumer-supply = "vdig";
+						};
 					};
 				};
 
@@ -217,6 +220,11 @@
 					regulator-min-microvolt = <2800000>;
 					regulator-max-microvolt = <2800000>;
 					maxim,fps-source = <FPS_SRC_NONE>;
+					consumers {
+						c0 {
+							regulator-consumer-supply = "vana";
+						};
+					};
 				};
 
 				max77620_ldo4: ldo4 {

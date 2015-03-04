@@ -264,6 +264,10 @@
 		status = "ok";
 	};
 
+	spi@7000d400 {
+		status = "okay";
+	};
+
 	sound {
 		compatible = "nvidia,tegra-audio-t210ref-mobile-rt5639";
 		nvidia,model = "tegra-snd-t210ref-mobile-rt5639";

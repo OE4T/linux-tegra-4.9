@@ -399,17 +399,6 @@ static void gr_gm20b_set_circular_buffer_size(struct gk20a *g, u32 data)
 	}
 }
 
-static void gr_gm20b_enable_hww_exceptions(struct gk20a *g)
-{
-	gr_gk20a_enable_hww_exceptions(g);
-
-	gk20a_writel(g, gr_ds_hww_esr_2_r(),
-			gr_ds_hww_esr_2_en_enabled_f() |
-			gr_ds_hww_esr_2_reset_task_f());
-	gk20a_writel(g, gr_ds_hww_report_mask_2_r(),
-			gr_ds_hww_report_mask_2_sph24_err_report_f());
-}
-
 static void gr_gm20b_set_hww_esr_report_mask(struct gk20a *g)
 {
 	/* setup sm warp esr report masks */
@@ -995,7 +984,7 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.handle_sw_method = gr_gm20b_handle_sw_method;
 	gops->gr.set_alpha_circular_buffer_size = gr_gm20b_set_alpha_circular_buffer_size;
 	gops->gr.set_circular_buffer_size = gr_gm20b_set_circular_buffer_size;
-	gops->gr.enable_hww_exceptions = gr_gm20b_enable_hww_exceptions;
+	gops->gr.enable_hww_exceptions = gr_gk20a_enable_hww_exceptions;
 	gops->gr.is_valid_class = gr_gm20b_is_valid_class;
 	gops->gr.get_sm_dsm_perf_regs = gr_gm20b_get_sm_dsm_perf_regs;
 	gops->gr.get_sm_dsm_perf_ctrl_regs = gr_gm20b_get_sm_dsm_perf_ctrl_regs;

@@ -4176,45 +4176,6 @@ void gr_gk20a_enable_hww_exceptions(struct gk20a *g)
 	gk20a_writel(g, gr_memfmt_hww_esr_r(),
 		     gr_memfmt_hww_esr_en_enable_f() |
 		     gr_memfmt_hww_esr_reset_active_f());
-	gk20a_writel(g, gr_scc_hww_esr_r(),
-		     gr_scc_hww_esr_en_enable_f() |
-		     gr_scc_hww_esr_reset_active_f());
-	gk20a_writel(g, gr_mme_hww_esr_r(),
-		     gr_mme_hww_esr_en_enable_f() |
-		     gr_mme_hww_esr_reset_active_f());
-	gk20a_writel(g, gr_pd_hww_esr_r(),
-		     gr_pd_hww_esr_en_enable_f() |
-		     gr_pd_hww_esr_reset_active_f());
-	gk20a_writel(g, gr_sked_hww_esr_r(), /* enabled by default */
-		     gr_sked_hww_esr_reset_active_f());
-	gk20a_writel(g, gr_ds_hww_esr_r(),
-		     gr_ds_hww_esr_en_enabled_f() |
-		     gr_ds_hww_esr_reset_task_f());
-	gk20a_writel(g, gr_ds_hww_report_mask_r(),
-		     gr_ds_hww_report_mask_sph0_err_report_f() |
-		     gr_ds_hww_report_mask_sph1_err_report_f() |
-		     gr_ds_hww_report_mask_sph2_err_report_f() |
-		     gr_ds_hww_report_mask_sph3_err_report_f() |
-		     gr_ds_hww_report_mask_sph4_err_report_f() |
-		     gr_ds_hww_report_mask_sph5_err_report_f() |
-		     gr_ds_hww_report_mask_sph6_err_report_f() |
-		     gr_ds_hww_report_mask_sph7_err_report_f() |
-		     gr_ds_hww_report_mask_sph8_err_report_f() |
-		     gr_ds_hww_report_mask_sph9_err_report_f() |
-		     gr_ds_hww_report_mask_sph10_err_report_f() |
-		     gr_ds_hww_report_mask_sph11_err_report_f() |
-		     gr_ds_hww_report_mask_sph12_err_report_f() |
-		     gr_ds_hww_report_mask_sph13_err_report_f() |
-		     gr_ds_hww_report_mask_sph14_err_report_f() |
-		     gr_ds_hww_report_mask_sph15_err_report_f() |
-		     gr_ds_hww_report_mask_sph16_err_report_f() |
-		     gr_ds_hww_report_mask_sph17_err_report_f() |
-		     gr_ds_hww_report_mask_sph18_err_report_f() |
-		     gr_ds_hww_report_mask_sph19_err_report_f() |
-		     gr_ds_hww_report_mask_sph20_err_report_f() |
-		     gr_ds_hww_report_mask_sph21_err_report_f() |
-		     gr_ds_hww_report_mask_sph22_err_report_f() |
-		     gr_ds_hww_report_mask_sph23_err_report_f());
 }
 
 static void gr_gk20a_set_hww_esr_report_mask(struct gk20a *g)

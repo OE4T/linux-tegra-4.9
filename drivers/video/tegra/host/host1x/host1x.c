@@ -772,7 +772,7 @@ int nvhost_host1x_prepare_poweroff(struct platform_device *dev)
 	return power_off_host(dev);
 }
 
-static void of_nvhost_parse_platform_data(struct platform_device *dev,
+static int of_nvhost_parse_platform_data(struct platform_device *dev,
 					struct nvhost_device_data *pdata)
 {
 	struct device_node *np = dev->dev.of_node;
@@ -791,6 +791,22 @@ static void of_nvhost_parse_platform_data(struct platform_device *dev,
 		host->info.nb_channels = value;
 
 	host->info.ch_limit = host->info.ch_base + host->info.nb_channels;
+
+	if (!of_property_read_u32(np, "nvidia,nb-hw-pts", &value))
+		host->info.nb_hw_pts = value;
+
+	if (!of_property_read_u32(np, "nvidia,pts-base", &value))
+		host->info.pts_base = value;
+
+	if (!of_property_read_u32(np, "nvidia,nb-pts", &value))
+		host->info.nb_pts = value;
+
+	if (host->info.nb_pts > host->info.nb_hw_pts)
+		return -EINVAL;
+
+	host->info.pts_limit = host->info.pts_base + host->info.nb_pts;
+
+	return 0;
 }
 
 long linsim_cl = 0;
@@ -892,7 +908,13 @@ static int nvhost_probe(struct platform_device *dev)
 	/* set private host1x device data */
 	nvhost_set_private_data(dev, host);
 
-	of_nvhost_parse_platform_data(dev, pdata);
+	err = of_nvhost_parse_platform_data(dev, pdata);
+	if (err) {
+		dev_err(&dev->dev, "error in parsing DT properties, err:%d",
+			err);
+		return err;
+	}
+
 	if (pdata->virtual_dev) {
 		err = nvhost_virt_init(dev, NVHOST_MODULE_NONE);
 		if (err) {

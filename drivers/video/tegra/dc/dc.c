@@ -1313,6 +1313,7 @@ const char __user *addr, size_t len, loff_t *pos)
 	if (len < 128) { /* invalid edid, turn off vedid */
 		dc->vedid = false;
 		tegra_edid_get_monspecs(dc->edid, &mon_spec, NULL);
+		kfree(mon_spec.modedb);
 		return 1;
 	}
 
@@ -1324,6 +1325,7 @@ const char __user *addr, size_t len, loff_t *pos)
 
 	tegra_edid_get_monspecs(dc->edid, &mon_spec, vedid);
 	kfree(vedid);
+	kfree(mon_spec.modedb);
 	dc->vedid = true;
 	return len;
 }
@@ -1331,6 +1333,7 @@ const char __user *addr, size_t len, loff_t *pos)
 static const struct file_operations edid_fops = {
 	.open		= dbg_edid_open,
 	.write		= dbg_edid_write,
+	.release	= single_release,
 };
 
 static int dbg_hotplug_show(struct seq_file *s, void *unused)

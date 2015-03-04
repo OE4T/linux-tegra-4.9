@@ -68,6 +68,7 @@ struct tegra_panel_ops {
 extern struct tegra_panel_ops dsi_p_wuxga_10_1_ops;
 extern struct tegra_panel_ops dsi_lgd_wxga_7_0_ops;
 extern struct tegra_panel_ops dsi_s_wqxga_10_1_ops;
+extern struct tegra_panel_ops dsi_s_wuxga_7_0_ops;
 extern struct tegra_panel_ops dsi_a_1200_1920_8_0_ops;
 extern struct tegra_panel_ops dsi_a_1200_800_8_0_ops;
 extern struct tegra_panel_ops edp_a_1080p_14_0_ops;

@@ -580,7 +580,7 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
 	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	/* use clk_round_rate on root emc clock instead to get correct rate */
-	emc_clk = clk_get(NULL, "emc");
+	emc_clk = clk_get_sys("tegra_emc", "emc");
 	emc_freq_hz = tegra_emc_bw_to_freq_req(bw * 1000000);
 	emc_freq_hz = clk_round_rate(emc_clk, emc_freq_hz);
 

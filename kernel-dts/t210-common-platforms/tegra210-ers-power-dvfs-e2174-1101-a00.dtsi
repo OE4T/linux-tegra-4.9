@@ -193,6 +193,7 @@
 			compatible = "nvidia,tegra210-dvfs-rail";
 			vdd_core-supply = <&max77620_sd0>;
 			vmin-cdev = <&core_vmin_cdev>;
+			vmax-cdev = <&core_vmax_cdev>;
 		};
 
 		cpu_vmin_cdev: vdd-cpu-vmin-cdev@5 {
@@ -251,6 +252,17 @@
 			nvidia,constraint;
 			nvidia,trips = <&gpu_vmax1 1130>;
 		};
+
+		core_vmax_cdev: vdd-core-vmax-cdev@10 {
+			reg = <10>;
+			cooling-min-state = <0>;
+			cooling-max-state = <1>;
+			#cooling-cells = <2>;
+			compatible = "nvidia,tegra210-rail-vmax-cdev";
+			cdev-type = "core_hot";
+			nvidia,constraint;
+			nvidia,trips = <&core_vmax1 1130>;
+		};
 	};
 
 	thermal-zones {
@@ -275,6 +287,7 @@
 		};
 		Tdiode_tegra {
 			SET_MAP_TRIP(core, core, vmin, 1, 20000);
+			SET_MAP_TRIP(core, core, vmax, 1, 86000);
 		};
 		CPU-therm {
 			SET_MAP_TRIP(cpu, cpu, vmax, 1, 86000);

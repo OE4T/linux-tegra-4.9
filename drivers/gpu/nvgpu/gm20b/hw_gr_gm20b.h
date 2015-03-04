@@ -166,6 +166,10 @@ static inline u32 gr_exception_gpc_m(void)
 {
 	return 0x1 << 24;
 }
+static inline u32 gr_exception_memfmt_m(void)
+{
+	return 0x1 << 1;
+}
 static inline u32 gr_exception1_r(void)
 {
 	return 0x00400118;

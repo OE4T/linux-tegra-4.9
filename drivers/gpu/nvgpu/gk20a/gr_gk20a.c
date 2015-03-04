@@ -5740,6 +5740,13 @@ int gk20a_gr_isr(struct gk20a *g)
 			need_reset |= -EFAULT;
 		}
 
+		if (exception & gr_exception_memfmt_m()) {
+			u32 memfmt = gk20a_readl(g, gr_memfmt_hww_esr_r());
+			gk20a_dbg(gpu_dbg_intr, "memfmt exception %08x\n",
+					memfmt);
+			gk20a_writel(g, gr_memfmt_hww_esr_r(), memfmt);
+		}
+
 		/* check if a gpc exception has occurred */
 		if (exception & gr_exception_gpc_m() && need_reset == 0) {
 			struct channel_gk20a *fault_ch;

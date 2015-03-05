@@ -557,9 +557,6 @@ void gk20a_deinit_vm(struct vm_gk20a *vm);
 int gk20a_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset);
 void gk20a_get_comptags(struct device *dev, struct dma_buf *dmabuf,
 			struct gk20a_comptags *comptags);
-u64 gk20a_vm_cde_mapped(struct vm_gk20a *vm, struct dma_buf *dmabuf);
-void gk20a_vm_mark_cde_mapped(struct vm_gk20a *vm, struct dma_buf *dmabuf,
-		u64 map_vaddr);
 dma_addr_t gk20a_mm_gpuva_to_iova_base(struct vm_gk20a *vm, u64 gpu_vaddr);
 
 int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev);

@@ -117,11 +117,6 @@ struct gk20a_dmabuf_priv {
 	int pin_count;
 
 	struct list_head states;
-
-	/* cached cde compbits buf */
-	struct vm_gk20a *cde_vm;
-	u64 cde_map_vaddr;
-	int map_count;
 };
 
 static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm);
@@ -199,60 +194,6 @@ void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
 		dma_buf_unmap_attachment(priv->attach, priv->sgt,
 					 DMA_BIDIRECTIONAL);
 		dma_buf_detach(dmabuf, priv->attach);
-	}
-	mutex_unlock(&priv->lock);
-}
-
-/* CDE compbits buf caching: keep compbit buffer mapped during user mappings.
- * Call these four only after dma_buf has a drvdata allocated */
-
-u64 gk20a_vm_cde_mapped(struct vm_gk20a *vm, struct dma_buf *dmabuf)
-{
-	struct device *dev = dev_from_vm(vm);
-	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
-	u64 map_vaddr;
-
-	mutex_lock(&priv->lock);
-	map_vaddr = priv->cde_map_vaddr;
-	mutex_unlock(&priv->lock);
-
-	return map_vaddr;
-}
-
-void gk20a_vm_mark_cde_mapped(struct vm_gk20a *vm, struct dma_buf *dmabuf,
-		u64 map_vaddr)
-{
-	struct device *dev = dev_from_vm(vm);
-	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
-
-	mutex_lock(&priv->lock);
-	priv->cde_vm = vm;
-	priv->cde_map_vaddr = map_vaddr;
-	mutex_unlock(&priv->lock);
-}
-
-static void gk20a_vm_inc_maps(struct vm_gk20a *vm, struct dma_buf *dmabuf)
-{
-	struct device *dev = dev_from_vm(vm);
-	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
-
-	mutex_lock(&priv->lock);
-	priv->map_count++;
-	mutex_unlock(&priv->lock);
-}
-
-static void gk20a_vm_dec_maps(struct vm_gk20a *vm, struct dma_buf *dmabuf,
-		struct vm_gk20a **cde_vm, u64 *cde_map_vaddr)
-{
-	struct device *dev = dev_from_vm(vm);
-	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
-
-	mutex_lock(&priv->lock);
-	if (--priv->map_count == 0) {
-		*cde_vm = priv->cde_vm;
-		*cde_map_vaddr = priv->cde_map_vaddr;
-		priv->cde_vm = NULL;
-		priv->cde_map_vaddr = 0;
 	}
 	mutex_unlock(&priv->lock);
 }
@@ -809,8 +750,6 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 	struct device *d = dev_from_vm(vm);
 	int retries;
 	struct mapped_buffer_node *mapped_buffer;
-	struct vm_gk20a *cde_vm = NULL;
-	u64 cde_map_vaddr = 0;
 
 	mutex_lock(&vm->update_gmmu_lock);
 
@@ -843,15 +782,9 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 	mapped_buffer->user_mapped--;
 	if (mapped_buffer->user_mapped == 0)
 		vm->num_user_mapped_buffers--;
-
-	gk20a_vm_dec_maps(vm, mapped_buffer->dmabuf, &cde_vm, &cde_map_vaddr);
-
 	kref_put(&mapped_buffer->ref, gk20a_vm_unmap_locked_kref);
 
 	mutex_unlock(&vm->update_gmmu_lock);
-
-	if (cde_map_vaddr)
-		gk20a_vm_unmap(cde_vm, cde_map_vaddr);
 }
 
 u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
@@ -2665,9 +2598,7 @@ int gk20a_vm_map_buffer(struct vm_gk20a *vm,
 			mapping_size);
 
 	*offset_align = ret_va;
-	if (ret_va) {
-		gk20a_vm_inc_maps(vm, dmabuf);
-	} else {
+	if (!ret_va) {
 		dma_buf_put(dmabuf);
 		err = -EINVAL;
 	}

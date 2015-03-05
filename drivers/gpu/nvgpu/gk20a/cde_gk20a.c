@@ -1,7 +1,7 @@
 /*
  * Color decompression engine support
  *
- * Copyright (c) 2014-2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -979,23 +979,17 @@ __releases(&cde_app->mutex)
 		map_size = compbits_buf->size - map_offset;
 	}
 
-	/* map the destination buffer, if not cached yet */
-	/* races protected by the cde app mutex above */
-	map_vaddr = gk20a_vm_cde_mapped(cde_ctx->vm, compbits_buf);
+	/* map the destination buffer */
+	get_dma_buf(compbits_buf); /* a ref for gk20a_vm_map */
+	map_vaddr = gk20a_vm_map(cde_ctx->vm, compbits_buf, 0,
+				 NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+				 compbits_kind, NULL, true,
+				 gk20a_mem_flag_none,
+				 map_offset, map_size);
 	if (!map_vaddr) {
-		/* take a ref for gk20a_vm_map, pair is in (cached) unmap */
-		get_dma_buf(compbits_buf);
-		map_vaddr = gk20a_vm_map(cde_ctx->vm, compbits_buf, 0,
-				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-				compbits_kind, NULL, true,
-				gk20a_mem_flag_none,
-				map_offset, map_size);
-		if (!map_vaddr) {
-			dma_buf_put(compbits_buf);
-			err = -EINVAL;
-			goto exit_unlock;
-		}
-		gk20a_vm_mark_cde_mapped(cde_ctx->vm, compbits_buf, map_vaddr);
+		dma_buf_put(compbits_buf);
+		err = -EINVAL;
+		goto exit_unlock;
 	}
 
 	/* store source buffer compression tags */
@@ -1058,7 +1052,9 @@ __releases(&cde_app->mutex)
 
 exit_unlock:
 
-	/* leave map_vaddr mapped - released when unmapped from userspace */
+	/* unmap the buffers - channel holds references to them now */
+	if (map_vaddr)
+		gk20a_vm_unmap(cde_ctx->vm, map_vaddr);
 
 	mutex_unlock(&g->cde_app.mutex);
 	return err;

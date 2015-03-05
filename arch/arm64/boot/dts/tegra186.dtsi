@@ -412,4 +412,12 @@
 		#dma-cells = <1>;
 		status = "disabled";
 	};
+
+	pinmux: pinmux@2430000 {
+                compatible = "nvidia,tegra186-pinmux";
+                reg = <0x0 0x2430000 0x0 0x15000
+			0x0 0xC300000 0x0 0x4000>;
+                status = "okay";
+        };
+
 };

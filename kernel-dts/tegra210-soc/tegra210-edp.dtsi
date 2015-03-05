@@ -128,7 +128,7 @@
 				MAP_CPU_EDP(102);
 			};
 		};
-		GPU-therm {
+		Tdiode_tegra {
 			trips {
 				MAKE_EDP_TRIP(gpu, 20);
 				MAKE_EDP_TRIP(gpu, 50);
@@ -151,6 +151,4 @@
 			};
 		};
 	};
-
-
 };

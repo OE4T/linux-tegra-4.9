@@ -90,4 +90,6 @@ int tegra_mce_read_versions(u32 *major, u32 *minor);
 int tegra_mce_enum_features(u64 *features);
 int tegra_mce_online_core(u32 core);
 
+int tegra_mce_flush_cache_all(void);
+
 #endif

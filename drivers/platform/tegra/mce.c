@@ -24,7 +24,11 @@
 #include <linux/notifier.h>
 #include <linux/tegra-mce.h>
 
-#include <asm/cputype.h> /* cpuid */
+#include <asm/cputype.h>
+#include <asm/smp_plat.h>
+
+#define MCE_APERTURE_LEN		(1 << 16) /* 64KB */
+#define MCE_APERTURE_ARI0		(0 * MCE_APERTURE_LEN)
 
 struct mce_ops {
 	int (*enter_cstate)(u32 state, u32 wake);
@@ -64,23 +68,28 @@ struct mce_ops type ## _ops = { \
 
 enum { MCE_MISC_CMD_ECHO, MCE_MISC_CMD_VERS, MCE_MISC_CMD_ENUM };
 
+static void __iomem	*ari_base;
+
+/* Store MCE ops in a per-CPU variable */
+DEFINE_PER_CPU(struct mce_ops *, cpu_mce_ops);
+DEFINE_PER_CPU(void __iomem *, cpu_ari_bases);
+
 /*
  * ARI support for ARM cores
  */
-#define ARI_APERTURE_LEN		0x20
 
 #define ARI_REQUEST				0x0
 #define ARI_REQUEST_EVENT_MASK	0x4
 #define ARI_STATUS				0x8
-#define ARI_REQUEST_DATA_LO		0x10
-#define ARI_REQUEST_DATA_HI		0x14
-#define ARI_RESPONSE_DATA_LO	0x18
-#define ARI_RESPONSE_DATA_HI	0x1c
+#define ARI_REQUEST_DATA_LO		0xc
+#define ARI_REQUEST_DATA_HI		0x10
+#define ARI_RESPONSE_DATA_LO	0x14
+#define ARI_RESPONSE_DATA_HI	0x18
 
-#define ARI_REQUEST_VALID		8
+#define ARI_REQUEST_VALID		BIT(8)
 
 #define ARI_EVT_MASK_NULL		(0)
-#define ARI_EVT_MASK_STANDBYWFI	(1 << 7)
+#define ARI_EVT_MASK_STANDBYWFI	BIT(7)
 
 enum {
 	ARI_STATUS_PENDING = 1,
@@ -89,26 +98,24 @@ enum {
 };
 
 enum {
+	ARI_REQ_CALL_MISC = 0x0,
 	ARI_REQ_ENTER_CSTATE = 0x1,
 	ARI_REQ_UPDATE_CLUSTER_CSTATE,
 	ARI_REQ_UPDATE_CROSSOVER_TIME,
 	ARI_REQ_READ_CSTATE_STATS,
 	ARI_REQ_WRITE_CSTATE_STATS,
 	ARI_REQ_IS_SC7_ALLOWED,
-	ARI_REQ_CALL_MISC,
 	ARI_REQ_ONLINE_CORE,
 };
 
-static void __iomem	*ari_bases[NR_CPUS];
-
 static inline u32 ari_readl(u32 cpu, u32 reg)
 {
-	return readl(ari_bases[cpu] + reg);
+	return readl(per_cpu(cpu_ari_bases, cpu) + reg);
 }
 
 static inline void ari_writel(u32 cpu, u32 val, u32 reg)
 {
-	writel(val, ari_bases[cpu] + reg);
+	writel(val, per_cpu(cpu_ari_bases, cpu) + reg);
 }
 
 static void ari_request_nowait(u32 events, u32 request, u32 low, u32 high)
@@ -119,11 +126,11 @@ static void ari_request_nowait(u32 events, u32 request, u32 low, u32 high)
 	ari_writel(cpu, low, ARI_REQUEST_DATA_LO);
 	ari_writel(cpu, high, ARI_REQUEST_DATA_HI);
 
-	ari_writel(cpu, ARI_REQUEST_EVENT_MASK, events);
+	ari_writel(cpu, events, ARI_REQUEST_EVENT_MASK);
 
 	barrier();
 
-	reg = request | (1 << ARI_REQUEST_VALID);
+	reg = request | ARI_REQUEST_VALID;
 	ari_writel(cpu, reg, ARI_REQUEST);
 }
 
@@ -377,9 +384,6 @@ static int nvg_online_core(u32 core)
 DEFINE_MCE_OPS(ari);
 DEFINE_MCE_OPS(nvg);
 
-/* Store MCE ops in a per-CPU variable */
-DEFINE_PER_CPU(struct mce_ops *, cpu_mce_ops);
-
 /**
  * Prepare MCE for a c-state.
  *
@@ -569,8 +573,9 @@ EXPORT_SYMBOL(tegra_mce_online_core);
 static int mce_echo_set(void *data, u64 val)
 {
 	u32 matched;
-	int ret = tegra_mce_echo_data((u32)val, &matched);
-	return ret ? ret : matched != 1;
+	if (tegra_mce_echo_data((u32)val, &matched))
+		return -EINVAL;
+	return 0;
 }
 
 static int mce_versions_get(void *data, u64 *val)
@@ -634,20 +639,39 @@ abort:
 static __init int mce_debugfs_init(struct device *dev) { return 0; }
 #endif
 
+/*
+ * MCE MMIO aperture layout:
+ *
+ *  Offset	Description
+ *  ------  -------------
+ *  0*64KB	A57 Core0 ARI
+ *  1*64KB	A57 Core1 ARI
+ *  2*64KB	A57 Core2 ARI
+ *  3*64KB	A57 Core3 ARI
+ *  4*64KB	D15 Core0 ARI
+ *  5*64KB	D15 Core1 ARI
+ */
+static void mce_core_init(int cpu)
+{
+	int core = cpu_logical_map(cpu);
+	int impl = read_cpuid_implementor();
+	int ari_off;
+	if (impl == ARM_CPU_IMP_ARM) {
+		ari_off = core * MCE_APERTURE_LEN;
+		per_cpu(cpu_mce_ops, cpu) = &ari_ops;
+	}
+	else {
+		ari_off = (core + 4) * MCE_APERTURE_LEN;
+		per_cpu(cpu_mce_ops, cpu) = &nvg_ops;
+	}
+	per_cpu(cpu_ari_bases, cpu) = ari_base + ari_off;
+}
+
 static int tegra_mce_cpu_notify(struct notifier_block *nb,
 	unsigned long action, void *pcpu)
 {
-	int impl;
-	int cpu = (long)pcpu;
-	switch (action) {
-	case CPU_STARTING:
-		impl = read_cpuid_implementor();
-		if (impl == ARM_CPU_IMP_ARM)
-			per_cpu(cpu_mce_ops, cpu) = &ari_ops;
-		else
-			per_cpu(cpu_mce_ops, cpu) = &nvg_ops;
-		break;
-	}
+	if (action == CPU_STARTING)
+		mce_core_init((long)pcpu);
 	return NOTIFY_OK;
 }
 
@@ -657,8 +681,6 @@ static struct notifier_block mce_cpu_notifier = {
 
 static int __init tegra_mce_early_init(void)
 {
-	/* Initialize boot CPU now */
-	tegra_mce_cpu_notify(NULL, CPU_STARTING, (void *)0);
 	register_cpu_notifier(&mce_cpu_notifier);
 	return 0;
 }
@@ -666,7 +688,6 @@ early_initcall(tegra_mce_early_init);
 
 static __init int tegra_mce_probe(struct platform_device *pdev)
 {
-	int cpu;
 	void __iomem *base;
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
@@ -682,12 +703,13 @@ static __init int tegra_mce_probe(struct platform_device *pdev)
 		return -1;
 	}
 
+	ari_base = base + MCE_APERTURE_ARI0;
+
 	/*
-	 * Configure bases for all cpus even though only
-	 * ARM cores need to use ARI to be future-proof.
+	 * Assign ops/aperture for the boot CPU.
+	 * Secondaries are handled in notifier.
 	 */
-	for_each_possible_cpu(cpu)
-		ari_bases[cpu] = base + cpu * ARI_APERTURE_LEN;
+	mce_core_init(0);
 
 	dev_info(dev, "initialized.\n");
 

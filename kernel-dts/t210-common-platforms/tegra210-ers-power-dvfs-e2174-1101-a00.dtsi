@@ -219,7 +219,7 @@
 		gpu_scaling_cdev: vdd-gpu-scaling-cdev@7 {
 			reg = <7>;
 			cooling-min-state = <0>;
-			cooling-max-state = <1>;
+			cooling-max-state = <4>;
 			#cooling-cells = <2>;
 			compatible = "nvidia,tegra210-rail-scaling-cdev";
 			cdev-type = "gpu_scaling";

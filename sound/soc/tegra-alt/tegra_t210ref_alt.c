@@ -59,7 +59,6 @@ struct tegra_t210ref {
 	struct tegra_asoc_audio_clock_info audio_clock;
 	struct tegra_t210ref_amx_adx_conf amx_adx_conf;
 	unsigned int num_codec_links;
-	int ad_rate_via_kcontrol;
 	struct i2c_client *max9485_client;
 };
 
@@ -594,11 +593,6 @@ static int tegra_t210ref_ad1937_hw_params(
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 	fmt = card->rtd[idx].dai_link->dai_fmt;
 
-	/* rate set by pcm params or via kcontrol for ad1937-x codec */
-	if (!strcmp(prefix, "x") &&
-		!machine->ad_rate_via_kcontrol)
-		dai_params->rate_min = params_rate(params);
-
 	switch (dai_params->rate_min) {
 	case 8000:
 		clk_out_rate = dai_params->rate_min * 512;
@@ -717,92 +711,12 @@ static int tegra_t210ref_suspend_pre(struct snd_soc_card *card)
 	return 0;
 }
 
-static const int tegra_t210ref_srate_values[] = {
-	0,
-	8000,
-	16000,
-	44100,
-	48000,
-	11025,
-	22050,
-	24000,
-	32000,
-	88200,
-	96000,
-	176000,
-	192000,
-};
-
-static const char * const tegra_t210ref_srate_text[] = {
-	"None",
-	"8kHz",
-	"16kHz",
-	"44kHz",
-	"48kHz",
-	"11kHz",
-	"22kHz",
-	"24kHz",
-	"32kHz",
-	"88kHz",
-	"96kHz",
-	"176kHz",
-	"192kHz",
-};
-
-static int tegra_t210ref_ad1937_get_rate(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
-	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
-
-	ucontrol->value.integer.value[0] = machine->ad_rate_via_kcontrol;
-
-	return 0;
-}
-
-static int tegra_t210ref_ad1937_put_rate(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
-	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
-	unsigned int idx =
-		tegra_machine_get_codec_dai_link_idx("ad-playback-x");
-	struct snd_soc_pcm_stream *dai_params =
-		(struct snd_soc_pcm_stream *)card->dai_link[idx].params;
-
-	/* set the rate control flag */
-	machine->ad_rate_via_kcontrol = ucontrol->value.integer.value[0];
-
-	/* update the dai params rate */
-	dai_params->rate_min =
-		tegra_t210ref_srate_values[machine->ad_rate_via_kcontrol];
-
-	return 0;
-}
-
-static int tegra_t210ref_remove(struct snd_soc_card *card)
-{
-	return 0;
-}
-
-static const struct soc_enum tegra_t210ref_codec_rate =
-	SOC_ENUM_SINGLE_EXT(13, tegra_t210ref_srate_text);
-
-static const struct snd_kcontrol_new tegra_t210ref_controls[] = {
-	SOC_ENUM_EXT("codec-ad-x rate", tegra_t210ref_codec_rate,
-		tegra_t210ref_ad1937_get_rate,
-		tegra_t210ref_ad1937_put_rate),
-};
-
 static struct snd_soc_card snd_soc_tegra_t210ref = {
 	.name = "tegra-t210ref",
 	.owner = THIS_MODULE,
-	.remove = tegra_t210ref_remove,
 	.suspend_pre = tegra_t210ref_suspend_pre,
 	.dapm_widgets = tegra_t210ref_dapm_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(tegra_t210ref_dapm_widgets),
-	.controls = tegra_t210ref_controls,
-	.num_controls = ARRAY_SIZE(tegra_t210ref_controls),
 	.fully_routed = true,
 };
 
@@ -1058,8 +972,6 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 			machine->num_codec_links);
 	tegra_machine_codec_conf = tegra_machine_get_codec_conf();
 	card->codec_conf = tegra_machine_codec_conf;
-
-	machine->ad_rate_via_kcontrol = 0;
 
 	ret = of_property_read_u32(np,
 		"nvidia,addr-max9485", (u32 *)&max9485_info.addr);

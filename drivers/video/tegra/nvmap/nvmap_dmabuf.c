@@ -410,7 +410,11 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 			goto err_map;
 		}
 #ifndef CONFIG_MODS
-		BUG_ON(ents != 1);
+		if (ents != 1) {
+			dev_err(attach->dev,
+				"Device is not attached to IOMMU. But the memory is allocated from IOMMU Heap. Either enable IOMMU for the device or avoid using IOMMU heap.\n");
+			BUG();
+		}
 #endif
 	}
 

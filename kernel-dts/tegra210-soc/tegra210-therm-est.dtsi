@@ -77,7 +77,7 @@
 		Tboard_tegra {
 			trips {
 				tegra_tboard_trip: therm_est_trip {
-					temperature = <4000>;
+					temperature = <40000>;
 					type = "active";
 					hysteresis = <1000>;
 					writable;

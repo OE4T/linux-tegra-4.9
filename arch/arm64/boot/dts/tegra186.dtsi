@@ -61,7 +61,8 @@
 			      <&{/sdhci@700b0600}       TEGRA_SWGROUP_SDMMC4A>,
 			      <&{/sdhci@700b0400}       TEGRA_SWGROUP_SDMMC3A>,
 			      <&{/sdhci@700b0200}       TEGRA_SWGROUP_SDMMC2A>,
-			      <&{/sdhci@700b0000}       TEGRA_SWGROUP_SDMMC1A>;
+			      <&{/sdhci@700b0000}       TEGRA_SWGROUP_SDMMC1A>,
+			      <&{/bpmp}			TEGRA_SWGROUP_BPMP>;
 
 		domains = <&ppcs_as TEGRA_SWGROUP_CELLS5(PPCS, PPCS1, PPCS2, SE, SE1)
 			   &gpu_as TEGRA_SWGROUP_CELLS(GPUB)

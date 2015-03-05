@@ -114,7 +114,7 @@ static int gb10b_init_bar2_mm_hw_setup(struct gk20a *g)
 void gp10b_init_mm(struct gpu_ops *gops)
 {
 	gm20b_init_mm(gops);
-	gops->mm.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits;
+	gops->mm.get_physical_addr_bits = gp10b_mm_get_physical_addr_bits;
 	gops->mm.init_mm_setup_hw = gp10b_init_mm_setup_hw;
 	gops->mm.init_bar2_vm = gb10b_init_bar2_vm;
 	gops->mm.init_bar2_mm_hw_setup = gb10b_init_bar2_mm_hw_setup;

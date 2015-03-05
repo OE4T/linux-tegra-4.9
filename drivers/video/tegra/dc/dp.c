@@ -2419,6 +2419,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		if (tegra_dp_hpd_plug(dp) < 0) {
 			dev_info(&dc->ndev->dev,
 				"dp: no panel/monitor plugged\n");
+			dc->connected = false; /* unplugged during suspend */
 			goto error_enable;
 		}
 	}
@@ -2495,17 +2496,18 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 
-	if (!dp->enabled)
-		return;
-
-	cancel_work_sync(&dp->lt_work);
-
 	tegra_dc_io_start(dc);
 
 	tegra_dp_default_int(dp, false);
+	cancel_work_sync(&dp->lt_work);
 
 	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP)
 		tegra_dp_disable_irq(dp->irq);
+
+	if (!dp->enabled) {
+		tegra_dc_io_end(dc);
+		return;
+	}
 
 	tegra_dpaux_pad_power(dp->dc,
 	dp->dc->ndev->id == 0 ? TEGRA_DPAUX_INSTANCE_0 : TEGRA_DPAUX_INSTANCE_1

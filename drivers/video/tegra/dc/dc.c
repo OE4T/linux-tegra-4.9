@@ -1657,6 +1657,7 @@ void tegra_dc_setup_vrr(struct tegra_dc *dc)
 
 	vrr->v_front_porch = m->v_front_porch;
 	vrr->v_back_porch = m->v_back_porch;
+	vrr->pclk = m->pclk;
 
 	if (vrr->vrr_min_fps > 0)
 		vrr->v_front_porch_max = tegra_dc_calc_v_front_porch(m,
@@ -1691,7 +1692,7 @@ void tegra_dc_setup_vrr(struct tegra_dc *dc)
 
 	vrr->frame_len_fluct = 2000;
 	vrr->frame_type = 0;
-	vrr->frame_time_delta_us = 0;
+	vrr->frame_delta_us = 0;
 
 	vrr->max_adj_pct = 50;
 	vrr->max_flip_pct = 20;

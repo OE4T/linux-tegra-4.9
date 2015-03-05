@@ -538,6 +538,9 @@ static void tegra_dc_vrr_cancel_vfp(struct tegra_dc *dc)
 			vrr->lastenable = 0;
 			vrr->frame_type = 0;
 			vrr->last_frame_us = 0;
+			vrr->flip_interval_us = 0;
+			vrr->frame_count = 0;
+			vrr->flip_count = 0;
 		}
 	}
 }

@@ -69,7 +69,7 @@ static int show_channels(struct platform_device *pdev, void *data,
 		return 0;
 	}
 
-	for (index = 0; index < m->info.nb_channels; index++) {
+	for (index = 0;	index < nvhost_channel_nb_channels(m); index++) {
 		ch = m->chlist[index];
 		if (!ch || ch->dev != pdev)
 			continue;

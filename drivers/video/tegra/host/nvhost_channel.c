@@ -36,23 +36,17 @@
 /* Memory allocation for all supported channels */
 int nvhost_alloc_channels(struct nvhost_master *host)
 {
-	int max_channels = host->info.nb_channels;
 	struct nvhost_channel *ch;
-	int i, err;
+	int index, err;
 
-	if (host->info.nb_channels > BITS_PER_LONG) {
-		WARN(1, "host1x hardware has more channels than supported\n");
-		return -ENOSYS;
-	}
-
-	host->chlist = kzalloc(host->info.nb_channels *
+	host->chlist = kzalloc(nvhost_channel_nb_channels(host) *
 			       sizeof(struct nvhost_channel *), GFP_KERNEL);
 	if (host->chlist == NULL)
 		return -ENOMEM;
 
 	mutex_init(&host->chlist_mutex);
 
-	for (i = 0; i < max_channels; i++) {
+	for (index = 0;	index < nvhost_channel_nb_channels(host); index++) {
 		ch = kzalloc(sizeof(*ch), GFP_KERNEL);
 		if (!ch) {
 			dev_err(&host->dev->dev, "failed to alloc channels\n");
@@ -63,7 +57,7 @@ int nvhost_alloc_channels(struct nvhost_master *host)
 		nvhost_set_chanops(ch);
 		mutex_init(&ch->submitlock);
 		mutex_init(&ch->syncpts_lock);
-		ch->chid = i;
+		ch->chid = nvhost_channel_get_id_from_index(host, index);
 
 		/* initialize channel cdma */
 		err = nvhost_cdma_init(host->dev, &ch->cdma);
@@ -81,7 +75,7 @@ int nvhost_alloc_channels(struct nvhost_master *host)
 		}
 
 		/* store the channel */
-		host->chlist[i] = ch;
+		host->chlist[index] = ch;
 	}
 
 	return 0;
@@ -141,8 +135,8 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 {
 	struct nvhost_device_data *pdata;
 	struct nvhost_master *host;
-	int max_channels;
 	int i = 0;
+	int index;
 
 	if (!ch->dev) {
 		pr_err("%s: freeing unmapped channel\n", __func__);
@@ -151,8 +145,6 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 
 	pdata = platform_get_drvdata(ch->dev);
 	host = nvhost_get_host(pdata->pdev);
-
-	max_channels = host->info.nb_channels;
 
 	/* turn off channel cdma */
 	channel_cdma_op().stop(&ch->cdma);
@@ -199,7 +191,8 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 		ch->client_managed_syncpt = 0;
 	}
 
-	clear_bit(ch->chid, &host->allocated_channels);
+	index = nvhost_channel_get_index_from_id(host, ch->chid);
+	clear_bit(index, &host->allocated_channels);
 
 	ch->dev = NULL;
 	ch->refcount = 0;
@@ -229,7 +222,7 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 	host = nvhost_get_host(pdata->pdev);
 
 	mutex_lock(&host->chlist_mutex);
-	max_channels = host->info.nb_channels;
+	max_channels = nvhost_channel_nb_channels(host);
 
 	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_SUBMIT) {
 		/* check if the channel is still in use */
@@ -320,7 +313,7 @@ int nvhost_channel_list_free(struct nvhost_master *host)
 {
 	int i;
 
-	for (i = 0; i < host->info.nb_channels; i++)
+	for (i = 0; i < nvhost_channel_nb_channels(host); i++)
 		kfree(host->chlist[i]);
 
 	dev_info(&host->dev->dev, "channel list free'd\n");
@@ -372,11 +365,36 @@ int nvhost_channel_suspend(struct nvhost_master *host)
 {
 	int i;
 
-	for (i = 0; i < host->info.nb_channels; i++) {
+	for (i = 0; i < nvhost_channel_nb_channels(host); i++) {
 		struct nvhost_channel *ch = host->chlist[i];
 		if (channel_cdma_op().stop && ch->dev)
 			channel_cdma_op().stop(&ch->cdma);
 	}
 
 	return 0;
+}
+
+int nvhost_channel_nb_channels(struct nvhost_master *host)
+{
+	return host->info.nb_channels;
+}
+
+int nvhost_channel_ch_base(struct nvhost_master *host)
+{
+	return host->info.ch_base;
+}
+
+int nvhost_channel_ch_limit(struct nvhost_master *host)
+{
+	return host->info.ch_limit;
+}
+
+int nvhost_channel_get_id_from_index(struct nvhost_master *host, int index)
+{
+	return nvhost_channel_ch_base(host) + index;
+}
+
+int nvhost_channel_get_index_from_id(struct nvhost_master *host, int chid)
+{
+	return chid - nvhost_channel_ch_base(host);
 }

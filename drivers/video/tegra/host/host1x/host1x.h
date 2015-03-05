@@ -58,15 +58,21 @@ enum nvhost_channel_policy {
 };
 
 struct host1x_device_info {
+	/* Channel info */
 	int		nb_channels;	/* host1x: num channels supported */
+	int		ch_base;	/* host1x: channel base */
+	int		ch_limit;	/* host1x: channel limit */
+	enum nvhost_channel_policy channel_policy; /* host1x: channel policy */
+
+	/* Syncpoint info */
 	int		nb_pts; 	/* host1x: num syncpoints supported */
-	int		nb_mlocks;	/* host1x: number of mlocks */
-	int		(*initialize_chip_support)(struct nvhost_master *,
-						struct nvhost_chip_support *);
 	int		pts_base;	/* host1x: syncpoint base */
 	int		pts_limit;	/* host1x: syncpoint limit */
 	enum nvhost_syncpt_policy syncpt_policy; /* host1x: syncpoint policy */
-	enum nvhost_channel_policy channel_policy; /* host1x: channel policy */
+
+	int		nb_mlocks;	/* host1x: number of mlocks */
+	int		(*initialize_chip_support)(struct nvhost_master *,
+						struct nvhost_chip_support *);
 };
 
 struct nvhost_master {

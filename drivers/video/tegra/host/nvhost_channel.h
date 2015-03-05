@@ -92,4 +92,10 @@ struct nvhost_channel *nvhost_alloc_channel_internal(int chindex,
 
 void nvhost_channel_init_gather_filter(struct nvhost_channel *ch);
 
+int nvhost_channel_nb_channels(struct nvhost_master *host);
+int nvhost_channel_ch_base(struct nvhost_master *host);
+int nvhost_channel_ch_limit(struct nvhost_master *host);
+int nvhost_channel_get_id_from_index(struct nvhost_master *host, int index);
+int nvhost_channel_get_index_from_id(struct nvhost_master *host, int chid);
+
 #endif

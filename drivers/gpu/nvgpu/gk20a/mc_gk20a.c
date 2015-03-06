@@ -40,6 +40,8 @@ irqreturn_t mc_gk20a_isr_stall(struct gk20a *g)
 	/* flush previous write */
 	gk20a_readl(g, mc_intr_en_0_r());
 
+	atomic_inc(&g->hw_irq_stall_count);
+
 	trace_mc_gk20a_intr_stall_done(g->dev->name);
 
 	return IRQ_WAKE_THREAD;
@@ -63,18 +65,22 @@ irqreturn_t mc_gk20a_isr_nonstall(struct gk20a *g)
 	/* flush previous write */
 	gk20a_readl(g, mc_intr_en_1_r());
 
+	atomic_inc(&g->hw_irq_nonstall_count);
+
 	return IRQ_WAKE_THREAD;
 }
 
 irqreturn_t mc_gk20a_intr_thread_stall(struct gk20a *g)
 {
 	u32 mc_intr_0;
+	int hw_irq_count;
 
 	gk20a_dbg(gpu_dbg_intr, "interrupt thread launched");
 
 	trace_mc_gk20a_intr_thread_stall(g->dev->name);
 
 	mc_intr_0 = gk20a_readl(g, mc_intr_0_r());
+	hw_irq_count = atomic_read(&g->hw_irq_stall_count);
 
 	gk20a_dbg(gpu_dbg_intr, "stall intr %08x\n", mc_intr_0);
 
@@ -94,11 +100,16 @@ irqreturn_t mc_gk20a_intr_thread_stall(struct gk20a *g)
 	if (mc_intr_0 & mc_intr_0_pbus_pending_f())
 		gk20a_pbus_isr(g);
 
+	/* sync handled irq counter before re-enabling interrupts */
+	atomic_set(&g->sw_irq_stall_last_handled, hw_irq_count);
+
 	gk20a_writel(g, mc_intr_en_0_r(),
 		mc_intr_en_0_inta_hardware_f());
 
 	/* flush previous write */
 	gk20a_readl(g, mc_intr_en_0_r());
+
+	wake_up_all(&g->sw_irq_stall_last_handled_wq);
 
 	trace_mc_gk20a_intr_thread_stall_done(g->dev->name);
 
@@ -108,10 +119,12 @@ irqreturn_t mc_gk20a_intr_thread_stall(struct gk20a *g)
 irqreturn_t mc_gk20a_intr_thread_nonstall(struct gk20a *g)
 {
 	u32 mc_intr_1;
+	int hw_irq_count;
 
 	gk20a_dbg(gpu_dbg_intr, "interrupt thread launched");
 
 	mc_intr_1 = gk20a_readl(g, mc_intr_1_r());
+	hw_irq_count = atomic_read(&g->hw_irq_nonstall_count);
 
 	gk20a_dbg(gpu_dbg_intr, "non-stall intr %08x\n", mc_intr_1);
 
@@ -125,11 +138,16 @@ irqreturn_t mc_gk20a_intr_thread_nonstall(struct gk20a *g)
 		&& g->ops.ce2.isr_nonstall)
 		g->ops.ce2.isr_nonstall(g);
 
+	/* sync handled irq counter before re-enabling interrupts */
+	atomic_set(&g->sw_irq_nonstall_last_handled, hw_irq_count);
+
 	gk20a_writel(g, mc_intr_en_1_r(),
 		mc_intr_en_1_inta_hardware_f());
 
 	/* flush previous write */
 	gk20a_readl(g, mc_intr_en_1_r());
+
+	wake_up_all(&g->sw_irq_stall_last_handled_wq);
 
 	return IRQ_HANDLED;
 }

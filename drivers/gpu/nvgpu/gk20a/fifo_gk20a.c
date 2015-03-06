@@ -515,6 +515,9 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 
 	init_runlist(g, f);
 
+	INIT_LIST_HEAD(&f->free_chs);
+	mutex_init(&f->free_chs_mutex);
+
 	for (chid = 0; chid < f->num_channels; chid++) {
 		f->channel[chid].userd_cpu_va =
 			f->userd.cpu_va + chid * f->userd_entry_size;
@@ -527,7 +530,6 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 		gk20a_init_channel_support(g, chid);
 		gk20a_init_tsg_support(g, chid);
 	}
-	mutex_init(&f->ch_inuse_mutex);
 	mutex_init(&f->tsg_inuse_mutex);
 
 	f->remove_support = gk20a_remove_fifo_support;
@@ -637,6 +639,7 @@ int gk20a_init_fifo_support(struct gk20a *g)
 	return err;
 }
 
+/* return with a reference to the channel, caller must put it back */
 static struct channel_gk20a *
 channel_from_inst_ptr(struct fifo_gk20a *f, u64 inst_ptr)
 {
@@ -644,10 +647,16 @@ channel_from_inst_ptr(struct fifo_gk20a *f, u64 inst_ptr)
 	if (unlikely(!f->channel))
 		return NULL;
 	for (ci = 0; ci < f->num_channels; ci++) {
-		struct channel_gk20a *c = f->channel+ci;
-		if (c->inst_block.cpu_va &&
-		    (inst_ptr == gk20a_mem_phys(&c->inst_block)))
-			return f->channel+ci;
+		struct channel_gk20a *ch = gk20a_channel_get(&f->channel[ci]);
+		/* only alive channels are searched */
+		if (!ch)
+			continue;
+
+		if (ch->inst_block.cpu_va &&
+		    (inst_ptr == gk20a_mem_phys(&ch->inst_block)))
+			return ch;
+
+		gk20a_channel_put(ch);
 	}
 	return NULL;
 }
@@ -803,6 +812,7 @@ static bool gk20a_fifo_should_defer_engine_reset(struct gk20a *g, u32 engine_id,
 	return true;
 }
 
+/* caller must hold a channel reference */
 static bool gk20a_fifo_set_ctx_mmu_error(struct gk20a *g,
 		struct channel_gk20a *ch)
 {
@@ -854,14 +864,38 @@ static bool gk20a_fifo_set_ctx_mmu_error_tsg(struct gk20a *g,
 		"TSG %d generated a mmu fault", tsg->tsgid);
 
 	mutex_lock(&tsg->ch_list_lock);
-	list_for_each_entry(ch, &tsg->ch_list, ch_entry)
-		ret = gk20a_fifo_set_ctx_mmu_error(g, ch);
+	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+		if (gk20a_channel_get(ch)) {
+			if (!gk20a_fifo_set_ctx_mmu_error(g, ch))
+				ret = false;
+			gk20a_channel_put(ch);
+		}
+	}
 	mutex_unlock(&tsg->ch_list_lock);
 
 	return ret;
 }
 
-static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
+static void gk20a_fifo_abort_tsg(struct gk20a *g, u32 tsgid)
+{
+	struct tsg_gk20a *tsg = &g->fifo.tsg[tsgid];
+	struct channel_gk20a *ch;
+
+	mutex_lock(&tsg->ch_list_lock);
+	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+		if (gk20a_channel_get(ch)) {
+			gk20a_channel_abort(ch);
+			gk20a_channel_put(ch);
+		}
+	}
+	mutex_unlock(&tsg->ch_list_lock);
+}
+
+static bool gk20a_fifo_handle_mmu_fault(
+	struct gk20a *g,
+	u32 mmu_fault_engines, /* queried from HW if 0 */
+	u32 hw_id, /* queried from HW if ~(u32)0 OR mmu_fault_engines == 0*/
+	bool id_is_tsg)
 {
 	bool fake_fault;
 	unsigned long fault_id;
@@ -894,10 +928,8 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		grfifo_ctl | gr_gpfifo_ctl_access_f(0) |
 		gr_gpfifo_ctl_semaphore_access_f(0));
 
-	/* If we have recovery in progress, MMU fault id is invalid */
-	if (g->fifo.mmu_fault_engines) {
-		fault_id = g->fifo.mmu_fault_engines;
-		g->fifo.mmu_fault_engines = 0;
+	if (mmu_fault_engines) {
+		fault_id = mmu_fault_engines;
 		fake_fault = true;
 	} else {
 		fault_id = gk20a_readl(g, fifo_intr_mmu_fault_id_r());
@@ -914,6 +946,7 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		struct fifo_mmu_fault_info_gk20a f;
 		struct channel_gk20a *ch = NULL;
 		struct tsg_gk20a *tsg = NULL;
+		struct channel_gk20a *referenced_channel = 0;
 		/* read and parse engine status */
 		u32 status = gk20a_readl(g, fifo_engine_status_r(engine_id));
 		u32 ctx_status = fifo_engine_status_ctx_status_v(status);
@@ -953,22 +986,34 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		/* get the channel/TSG */
 		if (fake_fault) {
 			/* use next_id if context load is failing */
-			u32 id = (ctx_status ==
-				fifo_engine_status_ctx_status_ctxsw_load_v()) ?
-				fifo_engine_status_next_id_v(status) :
-				fifo_engine_status_id_v(status);
-			u32 type = (ctx_status ==
-				fifo_engine_status_ctx_status_ctxsw_load_v()) ?
-				fifo_engine_status_next_id_type_v(status) :
-				fifo_engine_status_id_type_v(status);
+			u32 id, type;
+
+			if (hw_id == ~(u32)0) {
+				id = (ctx_status ==
+				      fifo_engine_status_ctx_status_ctxsw_load_v()) ?
+					fifo_engine_status_next_id_v(status) :
+					fifo_engine_status_id_v(status);
+				type = (ctx_status ==
+					fifo_engine_status_ctx_status_ctxsw_load_v()) ?
+					fifo_engine_status_next_id_type_v(status) :
+					fifo_engine_status_id_type_v(status);
+			} else {
+				id = hw_id;
+				type = id_is_tsg ?
+					fifo_engine_status_id_type_tsgid_v() :
+					fifo_engine_status_id_type_chid_v();
+			}
 
 			if (type == fifo_engine_status_id_type_tsgid_v())
 				tsg = &g->fifo.tsg[id];
-			else if (type == fifo_engine_status_id_type_chid_v())
+			else if (type == fifo_engine_status_id_type_chid_v()) {
 				ch = &g->fifo.channel[id];
+				referenced_channel = gk20a_channel_get(ch);
+			}
 		} else {
 			/* read channel based on instruction pointer */
 			ch = channel_from_inst_ptr(&g->fifo, f.inst_ptr);
+			referenced_channel = ch;
 		}
 
 		if (ch && gk20a_is_channel_marked_as_tsg(ch))
@@ -977,7 +1022,7 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		/* check if engine reset should be deferred */
 		if ((ch || tsg) && gk20a_fifo_should_defer_engine_reset(g,
 				engine_id, &f, fake_fault)) {
-			g->fifo.mmu_fault_engines = fault_id;
+			g->fifo.deferred_fault_engines = fault_id;
 
 			/* handled during channel free */
 			g->fifo.deferred_reset_pending = true;
@@ -988,19 +1033,31 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 		 * syncpoints */
 
 		if (tsg) {
-			struct channel_gk20a *ch = NULL;
 			if (!g->fifo.deferred_reset_pending)
 				verbose =
 				       gk20a_fifo_set_ctx_mmu_error_tsg(g, tsg);
-			mutex_lock(&tsg->ch_list_lock);
-			list_for_each_entry(ch, &tsg->ch_list, ch_entry)
-				gk20a_channel_abort(ch);
-			mutex_unlock(&tsg->ch_list_lock);
+
+			gk20a_fifo_abort_tsg(g, ch->tsgid);
+
+			/* put back the ref taken early above */
+			if (referenced_channel) {
+				gk20a_channel_put(ch);
+			} else {
+				gk20a_err(dev_from_gk20a(g),
+						"mmu error in freed tsg channel %d on tsgid %d",
+						ch->hw_chid, ch->tsgid);
+			}
 		} else if (ch) {
-			if (!g->fifo.deferred_reset_pending)
-				verbose =
-					gk20a_fifo_set_ctx_mmu_error_ch(g, ch);
-			gk20a_channel_abort(ch);
+			if (referenced_channel) {
+				if (!g->fifo.deferred_reset_pending)
+					verbose = gk20a_fifo_set_ctx_mmu_error_ch(g, ch);
+				gk20a_channel_abort(ch);
+				gk20a_channel_put(ch);
+			} else {
+				gk20a_err(dev_from_gk20a(g),
+						"mmu error in freed channel %d",
+						ch->hw_chid);
+			}
 		} else if (f.inst_ptr ==
 				gk20a_mem_phys(&g->mm.bar1.inst_block)) {
 			gk20a_err(dev_from_gk20a(g), "mmu fault from bar1");
@@ -1133,46 +1190,69 @@ static u32 gk20a_fifo_engines_on_id(struct gk20a *g, u32 id, bool is_tsg)
 
 void gk20a_fifo_recover_ch(struct gk20a *g, u32 hw_chid, bool verbose)
 {
-	u32 engines = gk20a_fifo_engines_on_id(g, hw_chid, false);
+	u32 engines;
+
+	/* stop context switching to prevent engine assignments from
+	   changing until channel is recovered */
+	mutex_lock(&g->dbg_sessions_lock);
+	gr_gk20a_disable_ctxsw(g);
+
+	engines = gk20a_fifo_engines_on_id(g, hw_chid, false);
+
 	if (engines)
-		gk20a_fifo_recover(g, engines, verbose);
+		gk20a_fifo_recover(g, engines, hw_chid, false, verbose);
 	else {
-		struct channel_gk20a *ch =
-			g->fifo.channel + hw_chid;
+		struct channel_gk20a *ch = &g->fifo.channel[hw_chid];
 
-		gk20a_channel_abort(ch);
+		if (gk20a_channel_get(ch)) {
+			gk20a_channel_abort(ch);
 
-		if (gk20a_fifo_set_ctx_mmu_error_ch(g, ch))
-			gk20a_debug_dump(g->dev);
+			if (gk20a_fifo_set_ctx_mmu_error_ch(g, ch))
+				gk20a_debug_dump(g->dev);
+
+			gk20a_channel_put(ch);
+		}
 	}
+
+	gr_gk20a_enable_ctxsw(g);
+	mutex_unlock(&g->dbg_sessions_lock);
 }
 
 void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose)
 {
-	u32 engines = gk20a_fifo_engines_on_id(g, tsgid, true);
+	u32 engines;
+
+	/* stop context switching to prevent engine assignments from
+	   changing until TSG is recovered */
+	mutex_lock(&g->dbg_sessions_lock);
+	gr_gk20a_disable_ctxsw(g);
+
+	engines = gk20a_fifo_engines_on_id(g, tsgid, true);
+
 	if (engines)
-		gk20a_fifo_recover(g, engines, verbose);
+		gk20a_fifo_recover(g, engines, tsgid, true, verbose);
 	else {
 		struct tsg_gk20a *tsg = &g->fifo.tsg[tsgid];
-		struct channel_gk20a *ch;
 
 		if (gk20a_fifo_set_ctx_mmu_error_tsg(g, tsg))
 			gk20a_debug_dump(g->dev);
 
-		mutex_lock(&tsg->ch_list_lock);
-		list_for_each_entry(ch, &tsg->ch_list, ch_entry)
-			gk20a_channel_abort(ch);
-		mutex_unlock(&tsg->ch_list_lock);
+		gk20a_fifo_abort_tsg(g, tsgid);
 	}
+
+	gr_gk20a_enable_ctxsw(g);
+	mutex_unlock(&g->dbg_sessions_lock);
 }
 
 void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
-		bool verbose)
+			u32 hw_id, bool id_is_tsg,
+			bool verbose)
 {
 	unsigned long engine_id, i;
 	unsigned long _engine_ids = __engine_ids;
 	unsigned long engine_ids = 0;
 	u32 val;
+	u32 mmu_fault_engines = 0;
 
 	if (verbose)
 		gk20a_debug_dump(g->dev);
@@ -1181,7 +1261,6 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 		g->ops.ltc.flush(g);
 
 	/* store faulted engines in advance */
-	g->fifo.mmu_fault_engines = 0;
 	for_each_set_bit(engine_id, &_engine_ids, 32) {
 		u32 ref_type;
 		u32 ref_id;
@@ -1196,11 +1275,10 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 			gk20a_fifo_get_faulty_id_type(g, i, &id, &type);
 			if (ref_type == type && ref_id == id) {
 				engine_ids |= BIT(i);
-				g->fifo.mmu_fault_engines |=
+				mmu_fault_engines |=
 					BIT(gk20a_engine_id_to_mmu_id(i));
 			}
 		}
-
 	}
 
 	/*
@@ -1214,7 +1292,7 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 			fifo_intr_0_sched_error_reset_f());
 
 	g->ops.fifo.trigger_mmu_fault(g, engine_ids);
-	gk20a_fifo_handle_mmu_fault(g);
+	gk20a_fifo_handle_mmu_fault(g, engine_ids, hw_id, id_is_tsg);
 
 	val = gk20a_readl(g, fifo_intr_en_0_r());
 	val |= fifo_intr_en_0_mmu_fault_f(1)
@@ -1222,25 +1300,32 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 	gk20a_writel(g, fifo_intr_en_0_r(), val);
 }
 
+/* force reset channel and tsg (if it's part of one) */
 int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch, bool verbose)
 {
 	struct tsg_gk20a *tsg = NULL;
 	struct channel_gk20a *ch_tsg = NULL;
+	struct gk20a *g = ch->g;
 
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		tsg = &ch->g->fifo.tsg[ch->hw_chid];
+		tsg = &g->fifo.tsg[ch->hw_chid];
 
 		mutex_lock(&tsg->ch_list_lock);
+
 		list_for_each_entry(ch_tsg, &tsg->ch_list, ch_entry) {
-			gk20a_set_error_notifier(ch_tsg,
-			       NVGPU_CHANNEL_RESETCHANNEL_VERIF_ERROR);
+			if (gk20a_channel_get(ch_tsg)) {
+				gk20a_set_error_notifier(ch_tsg,
+				       NVGPU_CHANNEL_RESETCHANNEL_VERIF_ERROR);
+				gk20a_channel_put(ch_tsg);
+			}
 		}
+
 		mutex_unlock(&tsg->ch_list_lock);
-		gk20a_fifo_recover_tsg(ch->g, ch->tsgid, verbose);
+		gk20a_fifo_recover_tsg(g, ch->tsgid, verbose);
 	} else {
 		gk20a_set_error_notifier(ch,
 			NVGPU_CHANNEL_RESETCHANNEL_VERIF_ERROR);
-		gk20a_fifo_recover_ch(ch->g, ch->hw_chid, verbose);
+		gk20a_fifo_recover_ch(g, ch->hw_chid, verbose);
 	}
 
 	return 0;
@@ -1300,10 +1385,13 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 		struct channel_gk20a *ch = &f->channel[id];
 
 		if (non_chid) {
-			gk20a_fifo_recover(g, BIT(engine_id), true);
+			gk20a_fifo_recover(g, BIT(engine_id), id, true, true);
 			ret = true;
 			goto err;
 		}
+
+		if (!gk20a_channel_get(ch))
+			goto err;
 
 		if (gk20a_channel_update_and_check_timeout(ch,
 			GRFIFO_TIMEOUT_CHECK_PERIOD_US / 1000)) {
@@ -1313,7 +1401,7 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 				"fifo sched ctxsw timeout error:"
 				"engine = %u, ch = %d", engine_id, id);
 			gk20a_gr_debug_dump(g->dev);
-			gk20a_fifo_recover(g, BIT(engine_id),
+			gk20a_fifo_recover(g, BIT(engine_id), id, false,
 				ch->timeout_debug_dump);
 			ret = true;
 		} else {
@@ -1324,6 +1412,7 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 				id);
 			ret = false;
 		}
+		gk20a_channel_put(ch);
 		return ret;
 	}
 
@@ -1336,7 +1425,7 @@ err:
 
 static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 {
-	bool print_channel_reset_log = false, reset_engine = false;
+	bool print_channel_reset_log = false;
 	struct device *dev = dev_from_gk20a(g);
 	u32 handled = 0;
 
@@ -1367,8 +1456,8 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 	}
 
 	if (fifo_intr & fifo_intr_0_mmu_fault_pending_f()) {
-		print_channel_reset_log = gk20a_fifo_handle_mmu_fault(g);
-		reset_engine  = true;
+		print_channel_reset_log =
+			gk20a_fifo_handle_mmu_fault(g, 0, ~(u32)0, false);
 		handled |= fifo_intr_0_mmu_fault_pending_f();
 	}
 
@@ -1452,9 +1541,12 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 				== fifo_pbdma_status_id_type_chid_v()) {
 			struct channel_gk20a *ch = &f->channel[id];
 
-			gk20a_set_error_notifier(ch,
-				NVGPU_CHANNEL_PBDMA_ERROR);
-			gk20a_fifo_recover_ch(g, id, true);
+			if (gk20a_channel_get(ch)) {
+				gk20a_set_error_notifier(ch,
+						NVGPU_CHANNEL_PBDMA_ERROR);
+				gk20a_fifo_recover_ch(g, id, true);
+				gk20a_channel_put(ch);
+			}
 		} else if (fifo_pbdma_status_id_type_v(status)
 				== fifo_pbdma_status_id_type_tsgid_v()) {
 			struct tsg_gk20a *tsg = &f->tsg[id];
@@ -1462,8 +1554,11 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 
 			mutex_lock(&tsg->ch_list_lock);
 			list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
-				gk20a_set_error_notifier(ch,
-					NVGPU_CHANNEL_PBDMA_ERROR);
+				if (gk20a_channel_get(ch)) {
+					gk20a_set_error_notifier(ch,
+						NVGPU_CHANNEL_PBDMA_ERROR);
+					gk20a_channel_put(ch);
+				}
 			}
 			mutex_unlock(&tsg->ch_list_lock);
 			gk20a_fifo_recover_tsg(g, id, true);
@@ -1559,6 +1654,8 @@ static int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 		+ msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 ret = 0;
 
+	gk20a_dbg_fn("%d", id);
+
 	/* issue preempt */
 	if (is_tsg)
 		gk20a_writel(g, fifo_preempt_r(),
@@ -1569,6 +1666,7 @@ static int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 			fifo_preempt_chid_f(id) |
 			fifo_preempt_type_channel_f());
 
+	gk20a_dbg_fn("%d", id);
 	/* wait for preempt */
 	ret = -EBUSY;
 	do {
@@ -1583,6 +1681,7 @@ static int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 	} while (time_before(jiffies, end_jiffies) ||
 			!tegra_platform_is_silicon());
 
+	gk20a_dbg_fn("%d", id);
 	if (ret) {
 		if (is_tsg) {
 			struct tsg_gk20a *tsg = &g->fifo.tsg[id];
@@ -1593,8 +1692,11 @@ static int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 
 			mutex_lock(&tsg->ch_list_lock);
 			list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+				if (!gk20a_channel_get(ch))
+					continue;
 				gk20a_set_error_notifier(ch,
 					NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
+				gk20a_channel_put(ch);
 			}
 			mutex_unlock(&tsg->ch_list_lock);
 			gk20a_fifo_recover_tsg(g, id, true);
@@ -1604,9 +1706,12 @@ static int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 			gk20a_err(dev_from_gk20a(g),
 				"preempt channel %d timeout\n", id);
 
-			gk20a_set_error_notifier(ch,
-					NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
-			gk20a_fifo_recover_ch(g, id, true);
+			if (gk20a_channel_get(ch)) {
+				gk20a_set_error_notifier(ch,
+						NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
+				gk20a_fifo_recover_ch(g, id, true);
+				gk20a_channel_put(ch);
+			}
 		}
 	}
 
@@ -1790,7 +1895,9 @@ static void gk20a_fifo_runlist_reset_engines(struct gk20a *g, u32 runlist_id)
 		    (f->engine_info[i].runlist_id == runlist_id))
 			engines |= BIT(i);
 	}
-	gk20a_fifo_recover(g, engines, true);
+
+	if (engines)
+		gk20a_fifo_recover(g, engines, ~(u32)0, false, true);
 }
 
 static int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)
@@ -1993,6 +2100,8 @@ int gk20a_fifo_update_runlist(struct gk20a *g, u32 runlist_id, u32 hw_chid,
 	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
 	u32 mutex_ret;
 	u32 ret = 0;
+
+	gk20a_dbg_fn("");
 
 	runlist = &f->runlist_info[runlist_id];
 

@@ -5138,22 +5138,25 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
  * Also used by regops to translate current ctx to chid and tsgid.
  * For performance, we don't want to go through 128 channels every time.
  * curr_ctx should be the value read from gr_fecs_current_ctx_r().
- * A small tlb is used here to cache translation */
-static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx,
-				      int *curr_tsgid)
+ * A small tlb is used here to cache translation.
+ *
+ * Returned channel must be freed with gk20a_channel_put() */
+static struct channel_gk20a *gk20a_gr_get_channel_from_ctx(
+	struct gk20a *g, u32 curr_ctx, int *curr_tsgid)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct gr_gk20a *gr = &g->gr;
 	u32 chid = -1;
 	int tsgid = NVGPU_INVALID_TSG_ID;
 	u32 i;
+	struct channel_gk20a *ret = NULL;
 
 	/* when contexts are unloaded from GR, the valid bit is reset
 	 * but the instance pointer information remains intact. So the
 	 * valid bit must be checked to be absolutely certain that a
 	 * valid context is currently resident. */
 	if (!gr_fecs_current_ctx_valid_v(curr_ctx))
-		return -1;
+		return NULL;
 
 	spin_lock(&gr->ch_tlb_lock);
 
@@ -5162,25 +5165,30 @@ static int gk20a_gr_get_chid_from_ctx(struct gk20a *g, u32 curr_ctx,
 		if (gr->chid_tlb[i].curr_ctx == curr_ctx) {
 			chid = gr->chid_tlb[i].hw_chid;
 			tsgid = gr->chid_tlb[i].tsgid;
+			ret = gk20a_channel_get(&f->channel[chid]);
 			goto unlock;
 		}
 	}
 
 	/* slow path */
-	for (chid = 0; chid < f->num_channels; chid++)
-		if (f->channel[chid].in_use) {
-			if ((u32)(gk20a_mem_phys(&f->channel[chid].inst_block) >>
-				ram_in_base_shift_v()) ==
+	for (chid = 0; chid < f->num_channels; chid++) {
+		struct channel_gk20a *ch = &f->channel[chid];
+		if (!gk20a_channel_get(ch))
+			continue;
+
+		if ((u32)(gk20a_mem_phys(&ch->inst_block) >>
+					ram_in_base_shift_v()) ==
 				gr_fecs_current_ctx_ptr_v(curr_ctx)) {
-				tsgid = f->channel[chid].tsgid;
-				break;
-			}
+			tsgid = ch->tsgid;
+			/* found it */
+			ret = ch;
+			break;
+		}
+		gk20a_channel_put(ch);
 	}
 
-	if (chid >= f->num_channels) {
-		chid = -1;
+	if (!ret)
 		goto unlock;
-	}
 
 	/* add to free tlb entry */
 	for (i = 0; i < GR_CHANNEL_MAP_TLB_SIZE; i++) {
@@ -5205,7 +5213,7 @@ unlock:
 	spin_unlock(&gr->ch_tlb_lock);
 	if (curr_tsgid)
 		*curr_tsgid = tsgid;
-	return chid;
+	return ret;
 }
 
 int gk20a_gr_lock_down_sm(struct gk20a *g,
@@ -5399,6 +5407,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	u32 obj_table;
 	int need_reset = 0;
 	u32 gr_intr = gk20a_readl(g, gr_intr_r());
+	struct channel_gk20a *ch = NULL;
 
 	gk20a_dbg_fn("");
 	gk20a_dbg(gpu_dbg_intr, "pgraph intr %08x", gr_intr);
@@ -5424,13 +5433,13 @@ int gk20a_gr_isr(struct gk20a *g)
 		gr_fe_object_table_r(isr_data.sub_chan)) : 0;
 	isr_data.class_num = gr_fe_object_table_nvclass_v(obj_table);
 
-	isr_data.chid =
-		gk20a_gr_get_chid_from_ctx(g, isr_data.curr_ctx, NULL);
-	if (isr_data.chid == -1) {
+	ch = gk20a_gr_get_channel_from_ctx(g, isr_data.curr_ctx, NULL);
+	if (!ch) {
 		gk20a_err(dev_from_gk20a(g), "invalid channel ctx 0x%08x",
 			   isr_data.curr_ctx);
 		goto clean_up;
 	}
+	isr_data.chid = ch->hw_chid;
 
 	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
 		"channel %d: addr 0x%08x, "
@@ -5512,8 +5521,6 @@ int gk20a_gr_isr(struct gk20a *g)
 
 	if (gr_intr & gr_intr_exception_pending_f()) {
 		u32 exception = gk20a_readl(g, gr_exception_r());
-		struct fifo_gk20a *f = &g->fifo;
-		struct channel_gk20a *ch = &f->channel[isr_data.chid];
 
 		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "exception %08x\n", exception);
 
@@ -5572,9 +5579,20 @@ int gk20a_gr_isr(struct gk20a *g)
 	}
 
 	if (need_reset)
-		gk20a_fifo_recover(g, BIT(ENGINE_GR_GK20A), true);
+		gk20a_fifo_recover(g, BIT(ENGINE_GR_GK20A),
+				   ~(u32)0, false, true);
 
 clean_up:
+	if (gr_intr && !ch) {
+		/* Clear interrupts for unused channel. This is
+		   probably an interrupt during gk20a_free_channel() */
+		gk20a_err(dev_from_gk20a(g),
+			  "unhandled gr interrupt 0x%08x for unreferenceable channel, clearing",
+			  gr_intr);
+		gk20a_writel(g, gr_intr_r(), gr_intr);
+		gr_intr = 0;
+	}
+
 	gk20a_writel(g, gr_gpfifo_ctl_r(),
 		grfifo_ctl | gr_gpfifo_ctl_access_f(1) |
 		gr_gpfifo_ctl_semaphore_access_f(1));
@@ -5582,6 +5600,9 @@ clean_up:
 	if (gr_intr)
 		gk20a_err(dev_from_gk20a(g),
 			   "unhandled gr interrupt 0x%08x", gr_intr);
+
+	if (ch)
+		gk20a_channel_put(ch);
 
 	return 0;
 }
@@ -6670,28 +6691,34 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 
 bool gk20a_is_channel_ctx_resident(struct channel_gk20a *ch)
 {
-	int curr_gr_chid, curr_gr_ctx, curr_gr_tsgid;
+	int curr_gr_ctx, curr_gr_tsgid;
 	struct gk20a *g = ch->g;
+	struct channel_gk20a *curr_ch;
+	bool ret = false;
 
 	curr_gr_ctx  = gk20a_readl(g, gr_fecs_current_ctx_r());
-	curr_gr_chid = gk20a_gr_get_chid_from_ctx(g, curr_gr_ctx,
-						  &curr_gr_tsgid);
+	curr_ch = gk20a_gr_get_channel_from_ctx(g, curr_gr_ctx,
+					      &curr_gr_tsgid);
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
-			"curr_gr_chid=%d curr_tsgid=%d, ch->tsgid=%d"
-			" ch->hw_chid=%d", curr_gr_chid,
-			curr_gr_tsgid, ch->tsgid, ch->hw_chid);
+		  "curr_gr_chid=%d curr_tsgid=%d, ch->tsgid=%d"
+		  " ch->hw_chid=%d",
+		  curr_ch ? curr_ch->hw_chid : -1,
+		  curr_gr_tsgid,
+		  ch->tsgid,
+		  ch->hw_chid);
 
-	if (curr_gr_chid == -1)
+	if (!curr_ch)
 		return false;
 
-	if (ch->hw_chid == curr_gr_chid)
-		return true;
+	if (ch->hw_chid == curr_ch->hw_chid)
+		ret = true;
 
 	if (gk20a_is_channel_marked_as_tsg(ch) && (ch->tsgid == curr_gr_tsgid))
-		return true;
+		ret = true;
 
-	return false;
+	gk20a_channel_put(curr_ch);
+	return ret;
 }
 
 int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,

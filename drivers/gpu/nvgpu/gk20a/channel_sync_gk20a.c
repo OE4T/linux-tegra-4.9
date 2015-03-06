@@ -154,8 +154,23 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 
 static void gk20a_channel_syncpt_update(void *priv, int nr_completed)
 {
-	struct channel_gk20a *ch20a = priv;
-	gk20a_channel_update(ch20a, nr_completed);
+	struct channel_gk20a *ch = priv;
+	struct gk20a *g = ch->g;
+
+	/* need busy for possible channel deletion */
+	if (gk20a_busy(ch->g->dev)) {
+		gk20a_err(dev_from_gk20a(ch->g),
+				"failed to busy while syncpt update");
+		/* Last gk20a_idle()s are in channel_update, so we shouldn't
+		 * get here. If we do, the channel is badly broken now */
+		return;
+	}
+
+	/* note: channel_get() is in __gk20a_channel_syncpt_incr() */
+	gk20a_channel_update(ch, nr_completed);
+	gk20a_channel_put(ch);
+
+	gk20a_idle(g->dev);
 }
 
 static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
@@ -209,14 +224,37 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 	thresh = nvhost_syncpt_incr_max_ext(sp->host1x_pdev, sp->id, 2);
 
 	if (register_irq) {
-		err = nvhost_intr_register_notifier(sp->host1x_pdev,
-				sp->id, thresh,
-				gk20a_channel_syncpt_update, c);
+		err = gk20a_busy(c->g->dev);
+		if (err)
+			gk20a_err(dev_from_gk20a(c->g),
+				  "failed to add syncpt interrupt notifier for channel %d",
+				  c->hw_chid);
+		else {
+			struct channel_gk20a *referenced = gk20a_channel_get(c);
 
-		/* Adding interrupt action should never fail. A proper error
-		 * handling here would require us to decrement the syncpt max
-		 * back to its original value. */
-		WARN(err, "failed to set submit complete interrupt");
+			WARN_ON(!referenced);
+			gk20a_idle(c->g->dev);
+
+			if (referenced) {
+				/* note: channel_put() is in
+				 * gk20a_channel_syncpt_update() */
+
+				err = nvhost_intr_register_notifier(
+					sp->host1x_pdev,
+					sp->id, thresh,
+					gk20a_channel_syncpt_update, c);
+				if (err)
+					gk20a_channel_put(referenced);
+
+				/* Adding interrupt action should
+				 * never fail. A proper error handling
+				 * here would require us to decrement
+				 * the syncpt max back to its original
+				 * value. */
+				WARN(err,
+				     "failed to set submit complete interrupt");
+			}
+		}
 	}
 
 	*fence = gk20a_fence_from_syncpt(sp->host1x_pdev, sp->id, thresh,

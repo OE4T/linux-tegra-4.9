@@ -19,12 +19,13 @@
 #define CHANNEL_GK20A_H
 
 #include <linux/log2.h>
-#include <linux/slab.h>
-#include <linux/wait.h>
 #include <linux/mutex.h>
-#include <uapi/linux/nvgpu.h>
 #include <linux/poll.h>
+#include <linux/semaphore.h>
+#include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/wait.h>
+#include <uapi/linux/nvgpu.h>
 
 struct gk20a;
 struct gr_gk20a;
@@ -77,8 +78,15 @@ struct channel_gk20a_poll_events {
 
 /* this is the priv element of struct nvhost_channel */
 struct channel_gk20a {
-	struct gk20a *g;
-	bool in_use;
+	struct gk20a *g; /* set only when channel is active */
+
+	struct list_head free_chs;
+
+	spinlock_t ref_obtain_lock;
+	bool referenceable;
+	atomic_t ref_count;
+	wait_queue_head_t ref_count_dec_wq;
+
 	int hw_chid;
 	bool bound;
 	bool first_init;
@@ -171,7 +179,10 @@ static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)
 }
 int channel_gk20a_commit_va(struct channel_gk20a *c);
 int gk20a_init_channel_support(struct gk20a *, u32 chid);
-void gk20a_free_channel(struct channel_gk20a *ch, bool finish);
+
+/* must be inside gk20a_busy()..gk20a_idle() */
+void gk20a_channel_close(struct channel_gk20a *ch);
+
 bool gk20a_channel_update_and_check_timeout(struct channel_gk20a *ch,
 					    u32 timeout_delta_ms);
 void gk20a_disable_channel(struct channel_gk20a *ch,
@@ -201,6 +212,15 @@ unsigned int gk20a_channel_poll(struct file *filep, poll_table *wait);
 void gk20a_channel_event(struct channel_gk20a *ch);
 
 void gk20a_init_channel(struct gpu_ops *gops);
+
+/* returns ch if reference was obtained */
+struct channel_gk20a *__must_check _gk20a_channel_get(struct channel_gk20a *ch,
+						      const char *caller);
+#define gk20a_channel_get(ch) _gk20a_channel_get(ch, __func__)
+
+
+void _gk20a_channel_put(struct channel_gk20a *ch, const char *caller);
+#define gk20a_channel_put(ch) _gk20a_channel_put(ch, __func__)
 
 int gk20a_wait_channel_idle(struct channel_gk20a *ch);
 struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g);

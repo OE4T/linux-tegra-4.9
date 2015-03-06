@@ -1388,6 +1388,9 @@ static int gk20a_probe(struct platform_device *dev)
 		return -ENOMEM;
 	}
 
+	init_waitqueue_head(&gk20a->sw_irq_stall_last_handled_wq);
+	init_waitqueue_head(&gk20a->sw_irq_nonstall_last_handled_wq);
+
 #ifdef CONFIG_PM_GENERIC_DOMAINS_OF
 	gk20a_domain = container_of(dev_to_genpd(&dev->dev),
 			     struct gk20a_domain_data, gpd);

@@ -42,8 +42,8 @@
 
 #define NVMAP_HANDLE_PARAM_SIZE 1
 
-static struct channel_gk20a *acquire_unused_channel(struct fifo_gk20a *f);
-static void release_used_channel(struct fifo_gk20a *f, struct channel_gk20a *c);
+static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f);
+static void free_channel(struct fifo_gk20a *f, struct channel_gk20a *c);
 
 static void free_priv_cmdbuf(struct channel_gk20a *c,
 			     struct priv_cmd_entry *e);
@@ -61,29 +61,33 @@ static int channel_gk20a_update_runlist(struct channel_gk20a *c,
 					bool add);
 static void gk20a_free_error_notifiers(struct channel_gk20a *ch);
 
-static struct channel_gk20a *acquire_unused_channel(struct fifo_gk20a *f)
+/* allocate GPU channel */
+static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f)
 {
 	struct channel_gk20a *ch = NULL;
-	int chid;
 
-	mutex_lock(&f->ch_inuse_mutex);
-	for (chid = 0; chid < f->num_channels; chid++) {
-		if (!f->channel[chid].in_use) {
-			f->channel[chid].in_use = true;
-			ch = &f->channel[chid];
-			break;
-		}
+	mutex_lock(&f->free_chs_mutex);
+	if (!list_empty(&f->free_chs)) {
+		ch = list_first_entry(&f->free_chs, struct channel_gk20a,
+				free_chs);
+		list_del(&ch->free_chs);
+		WARN_ON(atomic_read(&ch->ref_count));
+		WARN_ON(ch->referenceable);
 	}
-	mutex_unlock(&f->ch_inuse_mutex);
+	mutex_unlock(&f->free_chs_mutex);
 
 	return ch;
 }
 
-static void release_used_channel(struct fifo_gk20a *f, struct channel_gk20a *c)
+static void free_channel(struct fifo_gk20a *f,
+		struct channel_gk20a *ch)
 {
-	mutex_lock(&f->ch_inuse_mutex);
-	f->channel[c->hw_chid].in_use = false;
-	mutex_unlock(&f->ch_inuse_mutex);
+	trace_gk20a_release_used_channel(ch->hw_chid);
+	/* refcount is zero here and channel is in a freed/dead state */
+	mutex_lock(&f->free_chs_mutex);
+	/* add to head to increase visibility of timing-related bugs */
+	list_add(&ch->free_chs, &f->free_chs);
+	mutex_unlock(&f->free_chs_mutex);
 }
 
 int channel_gk20a_commit_va(struct channel_gk20a *c)
@@ -361,6 +365,11 @@ void gk20a_channel_abort(struct channel_gk20a *ch)
 	struct channel_gk20a_job *job, *n;
 	bool released_job_semaphore = false;
 
+	gk20a_dbg_fn("");
+
+	/* make sure new kickoffs are prevented */
+	ch->has_timedout = true;
+
 	/* ensure no fences are pending */
 	mutex_lock(&ch->submit_lock);
 	if (ch->sync)
@@ -416,6 +425,8 @@ void gk20a_disable_channel(struct channel_gk20a *ch,
 			   bool finish,
 			   unsigned long finish_timeout)
 {
+	gk20a_dbg_fn("");
+
 	if (finish) {
 		int err = gk20a_channel_finish(ch, finish_timeout);
 		WARN_ON(err);
@@ -627,8 +638,9 @@ void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error)
 				(u32)(nsec >> 32);
 		ch->error_notifier->info32 = error;
 		ch->error_notifier->status = 0xffff;
+
 		gk20a_err(dev_from_gk20a(ch->g),
-		    "error notifier set to %d for ch %d\n", error, ch->hw_chid);
+		    "error notifier set to %d for ch %d", error, ch->hw_chid);
 	}
 }
 
@@ -643,7 +655,53 @@ static void gk20a_free_error_notifiers(struct channel_gk20a *ch)
 	}
 }
 
-void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
+/* Returns delta of cyclic integers a and b. If a is ahead of b, delta
+ * is positive */
+static int cyclic_delta(int a, int b)
+{
+	return a - b;
+}
+
+static void gk20a_wait_for_deferred_interrupts(struct gk20a *g)
+{
+	int stall_irq_threshold = atomic_read(&g->hw_irq_stall_count);
+	int nonstall_irq_threshold = atomic_read(&g->hw_irq_nonstall_count);
+
+	/* wait until all stalling irqs are handled */
+	wait_event(g->sw_irq_stall_last_handled_wq,
+		   cyclic_delta(stall_irq_threshold,
+				atomic_read(&g->sw_irq_stall_last_handled))
+		   <= 0);
+
+	/* wait until all non-stalling irqs are handled */
+	wait_event(g->sw_irq_nonstall_last_handled_wq,
+		   cyclic_delta(nonstall_irq_threshold,
+				atomic_read(&g->sw_irq_nonstall_last_handled))
+		   <= 0);
+}
+
+static void gk20a_wait_until_counter_is_N(
+	struct channel_gk20a *ch, atomic_t *counter, int wait_value,
+	wait_queue_head_t *wq, const char *caller, const char *counter_name)
+{
+	while (true) {
+		if (wait_event_timeout(
+			    *wq,
+			    atomic_read(counter) == wait_value,
+			    msecs_to_jiffies(5000)) > 0)
+			break;
+
+		gk20a_warn(dev_from_gk20a(ch->g),
+			   "%s: channel %d, still waiting, %s left: %d, waiting for: %d",
+			   caller, ch->hw_chid, counter_name,
+			   atomic_read(counter), wait_value);
+	}
+}
+
+
+
+/* call ONLY when no references to the channel exist: after the last put */
+static void gk20a_free_channel(struct channel_gk20a *ch)
 {
 	struct gk20a *g = ch->g;
 	struct fifo_gk20a *f = &g->fifo;
@@ -654,13 +712,50 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 
 	gk20a_dbg_fn("");
 
+	WARN_ON(ch->g == NULL);
+
+	trace_gk20a_free_channel(ch->hw_chid);
+
+	/* prevent new kickoffs */
+	ch->has_timedout = true;
+	wmb();
+
+	/* wait until there's only our ref to the channel */
+	gk20a_wait_until_counter_is_N(
+		ch, &ch->ref_count, 1, &ch->ref_count_dec_wq,
+		__func__, "references");
+
+	/* wait until all pending interrupts for recently completed
+	 * jobs are handled */
+	gk20a_wait_for_deferred_interrupts(g);
+
+	/* prevent new refs */
+	spin_lock(&ch->ref_obtain_lock);
+	if (!ch->referenceable) {
+		spin_unlock(&ch->ref_obtain_lock);
+		gk20a_err(dev_from_gk20a(ch->g),
+			  "Extra %s() called to channel %u",
+			  __func__, ch->hw_chid);
+		return;
+	}
+	ch->referenceable = false;
+	spin_unlock(&ch->ref_obtain_lock);
+
+	/* matches with the initial reference in gk20a_open_new_channel() */
+	atomic_dec(&ch->ref_count);
+
+	/* wait until no more refs to the channel */
+	gk20a_wait_until_counter_is_N(
+		ch, &ch->ref_count, 0, &ch->ref_count_dec_wq,
+		__func__, "references");
+
 	/* if engine reset was deferred, perform it now */
 	mutex_lock(&f->deferred_reset_mutex);
 	if (g->fifo.deferred_reset_pending) {
 		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "engine reset was"
 			   " deferred, running now");
-		gk20a_fifo_reset_engine(g, g->fifo.mmu_fault_engines);
-		g->fifo.mmu_fault_engines = 0;
+		gk20a_fifo_reset_engine(g, g->fifo.deferred_fault_engines);
+		g->fifo.deferred_fault_engines = 0;
 		g->fifo.deferred_reset_pending = false;
 	}
 	mutex_unlock(&f->deferred_reset_mutex);
@@ -674,7 +769,7 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 	gk20a_dbg_info("freeing bound channel context, timeout=%ld",
 			timeout);
 
-	gk20a_disable_channel(ch, finish && !ch->has_timedout, timeout);
+	gk20a_disable_channel(ch, !ch->has_timedout, timeout);
 
 	gk20a_free_error_notifiers(ch);
 
@@ -714,6 +809,10 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 	spin_unlock(&ch->update_fn_lock);
 	cancel_work_sync(&ch->update_fn_work);
 
+	/* make sure we don't have deferred interrupts pending that
+	 * could still touch the channel */
+	gk20a_wait_for_deferred_interrupts(g);
+
 unbind:
 	if (gk20a_is_channel_marked_as_tsg(ch))
 		gk20a_tsg_unbind_channel(ch);
@@ -743,8 +842,66 @@ unbind:
 	mutex_unlock(&ch->dbg_s_lock);
 
 release:
+	/* make sure we catch accesses of unopened channels in case
+	 * there's non-refcounted channel pointers hanging around */
+	ch->g = NULL;
+	wmb();
+
 	/* ALWAYS last */
-	release_used_channel(f, ch);
+	free_channel(f, ch);
+}
+
+/* Try to get a reference to the channel. Return nonzero on success. If fails,
+ * the channel is dead or being freed elsewhere and you must not touch it.
+ *
+ * Always when a channel_gk20a pointer is seen and about to be used, a
+ * reference must be held to it - either by you or the caller, which should be
+ * documented well or otherwise clearly seen. This usually boils down to the
+ * file from ioctls directly, or an explicit get in exception handlers when the
+ * channel is found by a hw_chid.
+ *
+ * Most global functions in this file require a reference to be held by the
+ * caller.
+ */
+struct channel_gk20a *_gk20a_channel_get(struct channel_gk20a *ch,
+					 const char *caller) {
+	struct channel_gk20a *ret;
+
+	spin_lock(&ch->ref_obtain_lock);
+
+	if (likely(ch->referenceable)) {
+		atomic_inc(&ch->ref_count);
+		ret = ch;
+	} else
+		ret = NULL;
+
+	spin_unlock(&ch->ref_obtain_lock);
+
+	if (ret)
+		trace_gk20a_channel_get(ch->hw_chid, caller);
+
+	return ret;
+}
+
+void _gk20a_channel_put(struct channel_gk20a *ch, const char *caller)
+{
+	trace_gk20a_channel_put(ch->hw_chid, caller);
+	atomic_dec(&ch->ref_count);
+	wake_up_all(&ch->ref_count_dec_wq);
+
+	/* More puts than gets. Channel is probably going to get
+	 * stuck. */
+	WARN_ON(atomic_read(&ch->ref_count) < 0);
+
+	/* Also, more puts than gets. ref_count can go to 0 only if
+	 * the channel is closing. Channel is probably going to get
+	 * stuck. */
+	WARN_ON(atomic_read(&ch->ref_count) == 0 && ch->referenceable);
+}
+
+void gk20a_channel_close(struct channel_gk20a *ch)
+{
+	gk20a_free_channel(ch);
 }
 
 int gk20a_channel_release(struct inode *inode, struct file *filp)
@@ -758,14 +915,14 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 
 	trace_gk20a_channel_release(dev_name(&g->dev->dev));
 
-	err = gk20a_busy(ch->g->dev);
+	err = gk20a_busy(g->dev);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g), "failed to release channel %d",
 			ch->hw_chid);
 		return err;
 	}
-	gk20a_free_channel(ch, true);
-	gk20a_idle(ch->g->dev);
+	gk20a_channel_close(ch);
+	gk20a_idle(g->dev);
 
 	filp->private_data = NULL;
 	return 0;
@@ -808,22 +965,31 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch;
 
-	ch = acquire_unused_channel(f);
+	gk20a_dbg_fn("");
+
+	ch = allocate_channel(f);
 	if (ch == NULL) {
 		/* TBD: we want to make this virtualizable */
 		gk20a_err(dev_from_gk20a(g), "out of hw chids");
 		return NULL;
 	}
 
+	trace_gk20a_open_new_channel(ch->hw_chid);
+
+	BUG_ON(ch->g);
 	ch->g = g;
 
 	if (g->ops.fifo.alloc_inst(g, ch)) {
-		ch->in_use = false;
+		ch->g = NULL;
+		free_channel(f, ch);
 		gk20a_err(dev_from_gk20a(g),
 			   "failed to open gk20a channel, out of inst mem");
-
 		return NULL;
 	}
+
+	/* now the channel is in a limbo out of the free list but not marked as
+	 * alive and used (i.e. get-able) yet */
+
 	ch->pid = current->pid;
 
 	/* By default, channel is regular (non-TSG) channel */
@@ -853,6 +1019,13 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 	ch->update_fn_data = NULL;
 	spin_lock_init(&ch->update_fn_lock);
 	INIT_WORK(&ch->update_fn_work, gk20a_channel_update_runcb_fn);
+
+	/* Mark the channel alive, get-able, with 1 initial use
+	 * references. The initial reference will be decreased in
+	 * gk20a_free_channel() */
+	ch->referenceable = true;
+	atomic_set(&ch->ref_count, 1);
+	wmb();
 
 	return ch;
 }
@@ -1379,7 +1552,7 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 	struct mapped_buffer_node **mapped_buffers = NULL;
 	int err = 0, num_mapped_buffers;
 
-	/* job needs reference to this vm */
+	/* job needs reference to this vm (released in channel_update) */
 	gk20a_vm_get(vm);
 
 	err = gk20a_vm_get_buffers(vm, &mapped_buffers, &num_mapped_buffers);
@@ -1395,14 +1568,21 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 		return -ENOMEM;
 	}
 
-	job->num_mapped_buffers = num_mapped_buffers;
-	job->mapped_buffers = mapped_buffers;
-	job->pre_fence = gk20a_fence_get(pre_fence);
-	job->post_fence = gk20a_fence_get(post_fence);
+	/* put() is done in gk20a_channel_update() when the job is done */
+	c = gk20a_channel_get(c);
 
-	mutex_lock(&c->jobs_lock);
-	list_add_tail(&job->list, &c->jobs);
-	mutex_unlock(&c->jobs_lock);
+	if (c) {
+		job->num_mapped_buffers = num_mapped_buffers;
+		job->mapped_buffers = mapped_buffers;
+		job->pre_fence = gk20a_fence_get(pre_fence);
+		job->post_fence = gk20a_fence_get(post_fence);
+
+		mutex_lock(&c->jobs_lock);
+		list_add_tail(&job->list, &c->jobs);
+		mutex_unlock(&c->jobs_lock);
+	} else {
+		return -ETIMEDOUT;
+	}
 
 	return 0;
 }
@@ -1412,13 +1592,15 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 	struct vm_gk20a *vm = c->vm;
 	struct channel_gk20a_job *job, *n;
 
-	trace_gk20a_channel_update(c);
+	trace_gk20a_channel_update(c->hw_chid);
 
 	wake_up(&c->submit_wq);
 
 	mutex_lock(&c->submit_lock);
 	mutex_lock(&c->jobs_lock);
 	list_for_each_entry_safe(job, n, &c->jobs, list) {
+		struct gk20a *g = c->g;
+
 		bool completed = gk20a_fence_is_expired(job->post_fence);
 		if (!completed)
 			break;
@@ -1434,12 +1616,15 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 		gk20a_fence_put(job->pre_fence);
 		gk20a_fence_put(job->post_fence);
 
-		/* job is done. release its reference to vm */
+		/* job is done. release its vm reference (taken in add_job) */
 		gk20a_vm_put(vm);
+		/* another bookkeeping taken in add_job. caller must hold a ref
+		 * so this wouldn't get freed here. */
+		gk20a_channel_put(c);
 
 		list_del_init(&job->list);
 		kfree(job);
-		gk20a_idle(c->g->dev);
+		gk20a_idle(g->dev);
 	}
 
 	/*
@@ -1719,10 +1904,13 @@ clean_up:
 int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 {
 	struct channel_gk20a *c = g->fifo.channel+chid;
-	c->g = g;
-	c->in_use = false;
+	c->g = NULL;
 	c->hw_chid = chid;
 	c->bound = false;
+	spin_lock_init(&c->ref_obtain_lock);
+	atomic_set(&c->ref_count, 0);
+	c->referenceable = false;
+	init_waitqueue_head(&c->ref_count_dec_wq);
 	mutex_init(&c->ioctl_lock);
 	mutex_init(&c->jobs_lock);
 	mutex_init(&c->submit_lock);
@@ -1733,6 +1921,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 #endif
 	INIT_LIST_HEAD(&c->dbg_s_list);
 	mutex_init(&c->dbg_s_lock);
+	list_add(&c->free_chs, &g->fifo.free_chs);
 
 	return 0;
 }
@@ -2066,8 +2255,7 @@ int gk20a_channel_suspend(struct gk20a *g)
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *ch = &f->channel[chid];
-		if (ch->in_use) {
-
+		if (gk20a_channel_get(ch)) {
 			gk20a_dbg_info("suspend channel %d", chid);
 			/* disable channel */
 			g->ops.fifo.disable_channel(ch);
@@ -2079,6 +2267,8 @@ int gk20a_channel_suspend(struct gk20a *g)
 				flush_work(&ch->update_fn_work);
 
 			channels_in_use = true;
+
+			gk20a_channel_put(ch);
 		}
 	}
 
@@ -2086,8 +2276,10 @@ int gk20a_channel_suspend(struct gk20a *g)
 		g->ops.fifo.update_runlist(g, 0, ~0, false, true);
 
 		for (chid = 0; chid < f->num_channels; chid++) {
-			if (f->channel[chid].in_use)
+			if (gk20a_channel_get(&f->channel[chid])) {
 				g->ops.fifo.unbind_channel(&f->channel[chid]);
+				gk20a_channel_put(&f->channel[chid]);
+			}
 		}
 	}
 
@@ -2095,8 +2287,6 @@ int gk20a_channel_suspend(struct gk20a *g)
 	return 0;
 }
 
-/* in this context the "channel" is the host1x channel which
- * maps to *all* gk20a channels */
 int gk20a_channel_resume(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
@@ -2106,10 +2296,11 @@ int gk20a_channel_resume(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	for (chid = 0; chid < f->num_channels; chid++) {
-		if (f->channel[chid].in_use) {
+		if (gk20a_channel_get(&f->channel[chid])) {
 			gk20a_dbg_info("resume channel %d", chid);
 			g->ops.fifo.bind_channel(&f->channel[chid]);
 			channels_in_use = true;
+			gk20a_channel_put(&f->channel[chid]);
 		}
 	}
 
@@ -2129,10 +2320,11 @@ void gk20a_channel_semaphore_wakeup(struct gk20a *g)
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *c = g->fifo.channel+chid;
-		if (c->in_use) {
+		if (gk20a_channel_get(c)) {
 			gk20a_channel_event(c);
 			wake_up_interruptible_all(&c->semaphore_wq);
 			gk20a_channel_update(c, 0);
+			gk20a_channel_put(c);
 		}
 	}
 }
@@ -2225,9 +2417,17 @@ long gk20a_channel_ioctl(struct file *filp,
 			return -EFAULT;
 	}
 
+	/* take a ref or return timeout if channel refs can't be taken */
+	ch = gk20a_channel_get(ch);
+	if (!ch)
+		return -ETIMEDOUT;
+
 	/* protect our sanity for threaded userspace - most of the channel is
 	 * not thread safe */
 	mutex_lock(&ch->ioctl_lock);
+
+	/* this ioctl call keeps a ref to the file which keeps a ref to the
+	 * channel */
 
 	switch (cmd) {
 	case NVGPU_IOCTL_CHANNEL_OPEN:
@@ -2449,9 +2649,11 @@ long gk20a_channel_ioctl(struct file *filp,
 	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ))
 		err = copy_to_user((void __user *)arg, buf, _IOC_SIZE(cmd));
 
-	gk20a_dbg_fn("end");
-
 	mutex_unlock(&ch->ioctl_lock);
+
+	gk20a_channel_put(ch);
+
+	gk20a_dbg_fn("end");
 
 	return err;
 }

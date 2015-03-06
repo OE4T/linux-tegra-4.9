@@ -3,7 +3,7 @@
  *
  * GK20A graphics fifo (gr host)
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -106,7 +106,9 @@ struct fifo_gk20a {
 	u32 userd_entry_size;
 
 	struct channel_gk20a *channel;
-	struct mutex ch_inuse_mutex; /* protect unused chid look up */
+	/* zero-kref'd channels here */
+	struct list_head free_chs;
+	struct mutex free_chs_mutex;
 
 	struct tsg_gk20a *tsg;
 	struct mutex tsg_inuse_mutex;
@@ -130,7 +132,7 @@ struct fifo_gk20a {
 
 	} intr;
 
-	u32 mmu_fault_engines;
+	u32 deferred_fault_engines;
 	bool deferred_reset_pending;
 	struct mutex deferred_reset_mutex;
 };
@@ -157,7 +159,12 @@ int gk20a_fifo_update_runlist(struct gk20a *g, u32 engine_id, u32 hw_chid,
 int gk20a_fifo_suspend(struct gk20a *g);
 
 bool gk20a_fifo_mmu_fault_pending(struct gk20a *g);
-void gk20a_fifo_recover(struct gk20a *g, u32 engine_ids, bool verbose);
+
+void gk20a_fifo_recover(struct gk20a *g,
+			u32 engine_ids, /* if zero, will be queried from HW */
+			u32 hw_id, /* if ~0, will be queried from HW */
+			bool hw_id_is_tsg, /* ignored if hw_id == ~0 */
+			bool verbose);
 void gk20a_fifo_recover_ch(struct gk20a *g, u32 hw_chid, bool verbose);
 void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose);
 int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch, bool verbose);

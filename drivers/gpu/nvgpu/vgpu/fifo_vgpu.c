@@ -283,6 +283,9 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 
 	init_runlist(g, f);
 
+	INIT_LIST_HEAD(&f->free_chs);
+	mutex_init(&f->free_chs_mutex);
+
 	for (chid = 0; chid < f->num_channels; chid++) {
 		f->channel[chid].userd_cpu_va =
 			f->userd.cpu_va + chid * f->userd_entry_size;
@@ -294,7 +297,6 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 
 		gk20a_init_channel_support(g, chid);
 	}
-	mutex_init(&f->ch_inuse_mutex);
 
 	f->deferred_reset_pending = false;
 	mutex_init(&f->deferred_reset_mutex);

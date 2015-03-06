@@ -1,7 +1,7 @@
 /*
  * Color decompression engine support
  *
- * Copyright (c) 2014, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -74,7 +74,7 @@ __must_hold(&cde_app->mutex)
 	trace_gk20a_cde_remove_ctx(cde_ctx);
 
 	/* free the channel */
-	gk20a_free_channel(cde_ctx->ch, true);
+	gk20a_channel_close(ch);
 
 	/* ..then release mapped memory */
 	gk20a_deinit_cde_img(cde_ctx);

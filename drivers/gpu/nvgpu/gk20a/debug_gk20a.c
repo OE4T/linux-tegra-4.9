@@ -36,6 +36,7 @@ static struct platform_device *gk20a_device;
 
 struct ch_state {
 	int pid;
+	int refs;
 	u8 inst_block[0];
 };
 
@@ -118,9 +119,10 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 	syncpointa = gk20a_mem_rd32(inst_ptr, ram_fc_syncpointa_w());
 	syncpointb = gk20a_mem_rd32(inst_ptr, ram_fc_syncpointb_w());
 
-	gk20a_debug_output(o, "%d-%s, pid %d: ", hw_chid,
+	gk20a_debug_output(o, "%d-%s, pid %d, refs: %d: ", hw_chid,
 			g->dev->name,
-			ch_state->pid);
+			ch_state->pid,
+			ch_state->refs);
 	gk20a_debug_output(o, "%s in use %s %s\n",
 			ccsr_channel_enable_v(channel) ? "" : "not",
 			ccsr_chan_status_str[status],
@@ -231,16 +233,30 @@ void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o)
 	}
 
 	for (chid = 0; chid < f->num_channels; chid++) {
-		if (f->channel[chid].in_use)
-			ch_state[chid] = kmalloc(sizeof(struct ch_state) + ram_in_alloc_size_v(), GFP_KERNEL);
+		struct channel_gk20a *ch = &f->channel[chid];
+		if (gk20a_channel_get(ch)) {
+			ch_state[chid] =
+				kmalloc(sizeof(struct ch_state) +
+					ram_in_alloc_size_v(), GFP_KERNEL);
+			/* ref taken stays to below loop with
+			 * successful allocs */
+			if (!ch_state[chid])
+				gk20a_channel_put(ch);
+		}
 	}
 
 	for (chid = 0; chid < f->num_channels; chid++) {
-		if (ch_state[chid] && f->channel[chid].inst_block.cpu_va) {
-			ch_state[chid]->pid = f->channel[chid].pid;
-			memcpy(&ch_state[chid]->inst_block[0],
-			       f->channel[chid].inst_block.cpu_va,
-			       ram_in_alloc_size_v());
+		struct channel_gk20a *ch = &f->channel[chid];
+		if (ch_state[chid]) {
+			if (ch->inst_block.cpu_va) {
+				ch_state[chid]->pid = ch->pid;
+				ch_state[chid]->refs =
+					atomic_read(&ch->ref_count);
+				memcpy(&ch_state[chid]->inst_block[0],
+						ch->inst_block.cpu_va,
+						ram_in_alloc_size_v());
+			}
+			gk20a_channel_put(ch);
 		}
 	}
 	for (chid = 0; chid < f->num_channels; chid++) {

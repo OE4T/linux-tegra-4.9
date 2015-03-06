@@ -140,12 +140,54 @@ DEFINE_EVENT(gk20a, gk20a_mm_g_elpg_flush_locked_done,
 	TP_ARGS(name)
 );
 
-TRACE_EVENT(gk20a_channel_update,
-	TP_PROTO(const void *channel),
+DECLARE_EVENT_CLASS(gk20a_channel,
+	TP_PROTO(int channel),
 	TP_ARGS(channel),
-	TP_STRUCT__entry(__field(const void *, channel)),
+	TP_STRUCT__entry(__field(int, channel)),
 	TP_fast_assign(__entry->channel = channel;),
-	TP_printk("channel=%p", __entry->channel)
+	TP_printk("ch id %d", __entry->channel)
+);
+DEFINE_EVENT(gk20a_channel, gk20a_channel_update,
+	TP_PROTO(int channel),
+	TP_ARGS(channel)
+);
+DEFINE_EVENT(gk20a_channel, gk20a_free_channel,
+	TP_PROTO(int channel),
+	TP_ARGS(channel)
+);
+DEFINE_EVENT(gk20a_channel, gk20a_open_new_channel,
+	TP_PROTO(int channel),
+	TP_ARGS(channel)
+);
+DEFINE_EVENT(gk20a_channel, gk20a_release_used_channel,
+	TP_PROTO(int channel),
+	TP_ARGS(channel)
+);
+
+DECLARE_EVENT_CLASS(gk20a_channel_getput,
+	TP_PROTO(int channel, const char *caller),
+	TP_ARGS(channel, caller),
+	TP_STRUCT__entry(
+		__field(int, channel)
+		__field(const char *, caller)
+	),
+	TP_fast_assign(
+		__entry->channel = channel;
+		__entry->caller = caller;
+	),
+	TP_printk("channel %d caller %s", __entry->channel, __entry->caller)
+);
+DEFINE_EVENT(gk20a_channel_getput, gk20a_channel_get,
+	TP_PROTO(int channel, const char *caller),
+	TP_ARGS(channel, caller)
+);
+DEFINE_EVENT(gk20a_channel_getput, gk20a_channel_put,
+	TP_PROTO(int channel, const char *caller),
+	TP_ARGS(channel, caller)
+);
+DEFINE_EVENT(gk20a_channel_getput, gk20a_channel_put_nofree,
+	TP_PROTO(int channel, const char *caller),
+	TP_ARGS(channel, caller)
 );
 
 TRACE_EVENT(gk20a_push_cmdbuf,

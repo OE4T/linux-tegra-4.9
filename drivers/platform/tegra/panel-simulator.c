@@ -158,6 +158,7 @@ static struct tegra_dsi_out panel_sim_pdata = {
 	.video_clock_mode = TEGRA_DSI_VIDEO_CLOCK_TX_ONLY,
 	.dsi_init_cmd = panel_sim_init_cmd,
 	.n_init_cmd = ARRAY_SIZE(panel_sim_init_cmd),
+	.dsi_panel_rst_gpio = -1,
 };
 
 static int panel_sim_regulator_get(struct device *dev)

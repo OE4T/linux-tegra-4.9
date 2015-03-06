@@ -1001,10 +1001,9 @@ struct tegra_hv_ivm_cookie *tegra_hv_mempool_reserve(struct device_node *dn,
 
 	/* Locate a mempool with matching id. */
 	for (i = 0; i < tegra_hv_data->info->nr_mempools; i++) {
-		if (tegra_hv_data->mempools->mpd->id == id) {
-			mempool = &tegra_hv_data->mempools[i];
+		mempool = &tegra_hv_data->mempools[i];
+		if (mempool->mpd->id == id)
 			break;
-		}
 	}
 
 	if (i == tegra_hv_data->info->nr_mempools)

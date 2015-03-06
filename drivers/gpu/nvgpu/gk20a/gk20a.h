@@ -167,6 +167,11 @@ struct gpu_ops {
 				struct gk20a_debug_output *o);
 		int (*update_pc_sampling)(struct channel_gk20a *ch,
 					   bool enable);
+		u32 (*get_max_fbps_count)(struct gk20a *g);
+		u32 (*get_fbp_en_mask)(struct gk20a *g);
+		u32 (*get_max_ltc_per_fbp)(struct gk20a *g);
+		u32 (*get_max_lts_per_ltc)(struct gk20a *g);
+		u32* (*get_rop_l2_en_mask)(struct gk20a *g);
 	} gr;
 	const char *name;
 	struct {

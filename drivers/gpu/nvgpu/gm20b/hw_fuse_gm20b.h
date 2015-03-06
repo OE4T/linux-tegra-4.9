@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -97,5 +97,25 @@ static inline u32 fuse_ctrl_opt_ram_svop_pdp_override_data_yes_f(void)
 static inline u32 fuse_ctrl_opt_ram_svop_pdp_override_data_no_f(void)
 {
 	return 0x0;
+}
+static inline u32 fuse_status_opt_fbio_r(void)
+{
+	return 0x00021c14;
+}
+static inline u32 fuse_status_opt_fbio_data_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
+static inline u32 fuse_status_opt_fbio_data_m(void)
+{
+	return 0xffff << 0;
+}
+static inline u32 fuse_status_opt_fbio_data_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 fuse_status_opt_rop_l2_fbp_r(u32 i)
+{
+	return 0x00021d70 + i*4;
 }
 #endif

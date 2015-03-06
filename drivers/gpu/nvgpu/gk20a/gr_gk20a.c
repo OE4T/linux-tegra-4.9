@@ -3066,6 +3066,8 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	tmp = gk20a_readl(g, top_num_fbps_r());
 	gr->max_fbps_count = top_num_fbps_value_v(tmp);
 
+	gr->fbp_en_mask = g->ops.gr.get_fbp_en_mask(g);
+
 	tmp = gk20a_readl(g, top_tpc_per_gpc_r());
 	gr->max_tpc_per_gpc_count = top_tpc_per_gpc_value_v(tmp);
 
@@ -7313,6 +7315,41 @@ static u32 gr_gk20a_pagepool_default_size(struct gk20a *g)
 	return gr_scc_pagepool_total_pages_hwmax_value_v();
 }
 
+static u32 gr_gk20a_get_max_fbps_count(struct gk20a *g)
+{
+	u32 max_fbps_count, tmp;
+	tmp = gk20a_readl(g, top_num_fbps_r());
+	max_fbps_count = top_num_fbps_value_v(tmp);
+	return max_fbps_count;
+}
+
+
+static u32 gr_gk20a_get_fbp_en_mask(struct gk20a *g)
+{
+	u32 fbp_en_mask, opt_fbio;
+	opt_fbio = gk20a_readl(g,  top_fs_status_fbp_r());
+	fbp_en_mask = top_fs_status_fbp_cluster_v(opt_fbio);
+	return fbp_en_mask;
+}
+
+static u32 gr_gk20a_get_max_ltc_per_fbp(struct gk20a *g)
+{
+	return 1;
+}
+
+static u32 gr_gk20a_get_max_lts_per_ltc(struct gk20a *g)
+{
+	return 1;
+}
+
+u32 *gr_gk20a_rop_l2_en_mask(struct gk20a *g)
+{
+	/* gk20a doesnt have rop_l2_en_mask */
+	return NULL;
+}
+
+
+
 static int gr_gk20a_dump_gr_status_regs(struct gk20a *g,
 			   struct gk20a_debug_output *o)
 {
@@ -7470,5 +7507,9 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.alloc_gr_ctx = gr_gk20a_alloc_gr_ctx;
 	gops->gr.free_gr_ctx = gr_gk20a_free_gr_ctx;
 	gops->gr.dump_gr_regs = gr_gk20a_dump_gr_status_regs;
+	gops->gr.get_max_fbps_count = gr_gk20a_get_max_fbps_count;
+	gops->gr.get_fbp_en_mask = gr_gk20a_get_fbp_en_mask;
+	gops->gr.get_max_ltc_per_fbp = gr_gk20a_get_max_ltc_per_fbp;
+	gops->gr.get_max_lts_per_ltc = gr_gk20a_get_max_lts_per_ltc;
+	gops->gr.get_rop_l2_en_mask = gr_gk20a_rop_l2_en_mask;
 }
-

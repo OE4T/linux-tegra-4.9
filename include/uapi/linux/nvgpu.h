@@ -111,7 +111,6 @@ struct nvgpu_gpu_characteristics {
 	__u32 arch;
 	__u32 impl;
 	__u32 rev;
-
 	__u32 num_gpc;
 
 	__u64 L2_cache_size;               /* bytes */
@@ -153,8 +152,21 @@ struct nvgpu_gpu_characteristics {
 	__s16 as_ioctl_nr_last;
 
 	__u8 gpu_va_bit_count;
-
 	__u8 reserved;
+
+	__u32 max_fbps_count;
+	__u32 fbp_en_mask;
+	__u32 max_ltc_per_fbp;
+	__u32 max_lts_per_ltc;
+	__u32 max_tex_per_tpc;
+	__u32 max_gpc_count;
+	/* mask of Rop_L2 for each FBP */
+	__u32 rop_l2_en_mask[2];
+
+
+	__u8 chipname[8];
+
+
 
 	/* Notes:
 	   - This struct can be safely appended with new fields. However, always
@@ -282,6 +294,15 @@ struct nvgpu_gpu_tpc_exception_en_status_args {
 	__u64 tpc_exception_en_sm_mask;
 };
 
+struct nvgpu_gpu_num_vsms {
+	__u32 num_vsms;
+	__u32 reserved;
+};
+
+struct nvgpu_gpu_vsms_mapping {
+	__u64 vsms_map_buf_addr;
+};
+
 #define NVGPU_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
 	_IOR(NVGPU_GPU_IOCTL_MAGIC, 1, struct nvgpu_gpu_zcull_get_ctx_size_args)
 #define NVGPU_GPU_IOCTL_ZCULL_GET_INFO \
@@ -316,9 +337,13 @@ struct nvgpu_gpu_tpc_exception_en_status_args {
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 16, struct nvgpu_gpu_wait_pause_args)
 #define NVGPU_GPU_IOCTL_GET_TPC_EXCEPTION_EN_STATUS \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 17, struct nvgpu_gpu_tpc_exception_en_status_args)
+#define NVGPU_GPU_IOCTL_NUM_VSMS \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 18, struct nvgpu_gpu_num_vsms)
+#define NVGPU_GPU_IOCTL_VSMS_MAPPING \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 19, struct nvgpu_gpu_vsms_mapping)
 
 #define NVGPU_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_GPU_IOCTL_GET_TPC_EXCEPTION_EN_STATUS)
+	_IOC_NR(NVGPU_GPU_IOCTL_VSMS_MAPPING)
 #define NVGPU_GPU_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_gpu_prepare_compressible_read_args)
 
@@ -913,7 +938,7 @@ struct nvgpu_as_get_va_regions_args {
 #define NVGPU_AS_IOCTL_GET_VA_REGIONS \
 	_IOWR(NVGPU_AS_IOCTL_MAGIC, 8, struct nvgpu_as_get_va_regions_args)
 
-#define NVGPU_AS_IOCTL_LAST		\
+#define NVGPU_AS_IOCTL_LAST            \
 	_IOC_NR(NVGPU_AS_IOCTL_GET_VA_REGIONS)
 #define NVGPU_AS_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_as_map_buffer_ex_args)

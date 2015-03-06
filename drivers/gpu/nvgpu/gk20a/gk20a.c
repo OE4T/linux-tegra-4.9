@@ -1927,6 +1927,8 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->on_board_video_memory_size = 0; /* integrated GPU */
 
 	gpu->num_gpc = g->gr.gpc_count;
+	gpu->max_gpc_count = g->gr.gpc_count;
+
 	gpu->num_tpc_per_gpc = g->gr.max_tpc_per_gpc_count;
 
 	gpu->bus_type = NVGPU_GPU_BUS_TYPE_AXI; /* always AXI for now */
@@ -1962,8 +1964,14 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->dbg_gpu_ioctl_nr_last = NVGPU_DBG_GPU_IOCTL_LAST;
 	gpu->ioctl_channel_nr_last = NVGPU_IOCTL_CHANNEL_LAST;
 	gpu->as_ioctl_nr_last = NVGPU_AS_IOCTL_LAST;
-
 	gpu->gpu_va_bit_count = 40;
+
+	memcpy(gpu->chipname, g->ops.name, strlen(g->ops.name));
+	gpu->max_fbps_count = g->ops.gr.get_max_fbps_count(g);
+	gpu->fbp_en_mask = g->ops.gr.get_fbp_en_mask(g);
+	gpu->max_ltc_per_fbp =  g->ops.gr.get_max_ltc_per_fbp(g);
+	gpu->max_lts_per_ltc = g->ops.gr.get_max_lts_per_ltc(g);
+	g->ops.gr.get_rop_l2_en_mask(g);
 
 	gpu->reserved = 0;
 

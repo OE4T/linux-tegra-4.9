@@ -496,6 +496,28 @@ static int nvgpu_gpu_ioctl_has_any_exception(
 	return err;
 }
 
+static int gk20a_ctrl_get_num_vsms(struct gk20a *g,
+				    struct nvgpu_gpu_num_vsms *args)
+{
+	struct gr_gk20a *gr = &g->gr;
+	args->num_vsms = gr->no_of_sm;
+	return 0;
+}
+
+static int gk20a_ctrl_vsm_mapping(struct gk20a *g,
+				    struct nvgpu_gpu_vsms_mapping *args)
+{
+	int err = 0;
+	struct gr_gk20a *gr = &g->gr;
+	size_t write_size = gr->no_of_sm * sizeof(struct sm_info);
+
+	err = copy_to_user((void __user *)(uintptr_t)
+			   args->vsms_map_buf_addr,
+			   gr->sm_to_cluster, write_size);
+
+	return err;
+}
+
 long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct platform_device *dev = filp->private_data;
@@ -704,6 +726,16 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		err =  nvgpu_gpu_ioctl_has_any_exception(g,
 				(struct nvgpu_gpu_tpc_exception_en_status_args *)buf);
 		break;
+
+	case NVGPU_GPU_IOCTL_NUM_VSMS:
+		err = gk20a_ctrl_get_num_vsms(g,
+			(struct nvgpu_gpu_num_vsms *)buf);
+		break;
+	case NVGPU_GPU_IOCTL_VSMS_MAPPING:
+		err = gk20a_ctrl_vsm_mapping(g,
+			(struct nvgpu_gpu_vsms_mapping *)buf);
+		break;
+
 
 	default:
 		dev_dbg(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x", cmd);

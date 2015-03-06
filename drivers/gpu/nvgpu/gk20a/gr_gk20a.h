@@ -295,6 +295,7 @@ struct gr_gk20a {
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct gr_t18x t18x;
 #endif
+	u32 fbp_en_mask;
 	u32 no_of_sm;
 	struct sm_info *sm_to_cluster;
 };

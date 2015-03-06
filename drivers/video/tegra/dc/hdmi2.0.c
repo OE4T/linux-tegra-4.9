@@ -468,6 +468,18 @@ static bool tegra_hdmi_check_dc_constraint(const struct fb_videomode *mode)
 		(mode->xres >= 16) && (mode->yres >= 16);
 }
 
+/*  does not return precise tmds character rate */
+static u32 tegra_hdmi_mode_min_tmds_rate(const struct fb_videomode *mode)
+{
+	u32 tmds_csc_8bpc_khz = PICOS2KHZ(mode->pixclock);
+
+	if (mode->vmode & (FB_VMODE_Y420 | FB_VMODE_Y420_ONLY))
+		tmds_csc_8bpc_khz /= 2;
+
+	return tmds_csc_8bpc_khz;
+}
+
+__maybe_unused
 static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 					struct fb_videomode *mode)
 {
@@ -479,9 +491,17 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 	if (mode->xres > 4096)
 		return false;
 
-	if (!tegra_edid_is_hfvsdb_present(hdmi->edid) &&
-		KHZ2PICOS(340000) >= mode->pixclock &&
-		!(mode->vmode & FB_VMODE_Y420_ONLY))
+	/* some non-compliant edids list 420vdb modes in vdb */
+	if ((mode->vmode & FB_VMODE_Y420) &&
+		!(tegra_edid_is_hfvsdb_present(hdmi->edid) &&
+		tegra_edid_is_scdc_present(hdmi->edid)) &&
+		tegra_edid_is_420db_present(hdmi->edid)) {
+		mode->vmode &= ~FB_VMODE_Y420;
+		mode->vmode |= FB_VMODE_Y420_ONLY;
+	}
+
+	if (!hdmi->dvi && (tegra_hdmi_mode_min_tmds_rate(mode) / 1000 >
+		tegra_edid_get_max_clk_rate(hdmi->edid)))
 		return false;
 
 	if (mode->pixclock && tegra_dc_get_out_max_pixclock(dc) &&

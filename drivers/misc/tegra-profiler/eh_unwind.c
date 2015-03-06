@@ -910,7 +910,6 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 		if (insn == 0xb3)
 			vsp++;
 
-		ctrl->vrs[SP] = (unsigned long)vsp;
 		ctrl->vrs[SP] = (u32)(unsigned long)vsp;
 
 		pr_debug("CMD_VFP_POP (%#lx %#lx): pop {D%lu-D%lu}\n",

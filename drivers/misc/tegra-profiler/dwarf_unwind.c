@@ -1789,8 +1789,6 @@ unwind_frame(struct ex_region_info *ri,
 	rs->cfa_register = -1;
 	rs_initial->cfa_register = -1;
 
-	rs->cfa_register = 0;
-
 	set_rule(rs, regnum_lr(mode), DW_WHERE_UNDEF, 0);
 
 	if (cie.initial_insn) {

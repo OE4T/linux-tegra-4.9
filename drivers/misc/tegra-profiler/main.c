@@ -85,14 +85,14 @@ static int start(void)
 		return -EBUSY;
 	}
 
-	preempt_disable();
-
 	if (!atomic_cmpxchg(&ctx.started, 0, 1)) {
+		preempt_disable();
+
 		if (ctx.pmu) {
 			err = ctx.pmu->enable();
 			if (err) {
 				pr_err("error: pmu enable\n");
-				goto errout;
+				goto errout_preempt;
 			}
 		}
 
@@ -100,46 +100,48 @@ static int start(void)
 			err = ctx.pl310->enable();
 			if (err) {
 				pr_err("error: pl310 enable\n");
-				goto errout;
+				goto errout_preempt;
 			}
 		}
 
 		ctx.comm->reset();
+
+		err = quadd_hrt_start();
+		if (err) {
+			pr_err("error: hrt start\n");
+			goto errout_preempt;
+		}
+
+		preempt_enable();
 
 		err = quadd_power_clk_start();
 		if (err < 0) {
 			pr_err("error: power_clk start\n");
 			goto errout;
 		}
-
-		err = quadd_hrt_start();
-		if (err) {
-			pr_err("error: hrt start\n");
-			goto errout;
-		}
 	}
 
-	preempt_enable();
 	return 0;
+
+errout_preempt:
+	preempt_enable();
 
 errout:
 	atomic_set(&ctx.started, 0);
 	tegra_profiler_unlock();
-	preempt_enable();
 
 	return err;
 }
 
 static void stop(void)
 {
-	preempt_disable();
-
 	if (atomic_cmpxchg(&ctx.started, 1, 0)) {
+		preempt_disable();
+
 		quadd_hrt_stop();
 
 		ctx.comm->reset();
 
-		quadd_power_clk_stop();
 		quadd_unwind_stop();
 
 		if (ctx.pmu)
@@ -149,9 +151,11 @@ static void stop(void)
 			ctx.pl310->disable();
 
 		tegra_profiler_unlock();
-	}
 
-	preempt_enable();
+		preempt_enable();
+
+		quadd_power_clk_stop();
+	}
 }
 
 static inline int is_event_supported(struct source_info *si, int event)

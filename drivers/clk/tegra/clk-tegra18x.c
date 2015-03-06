@@ -147,6 +147,7 @@ static const char *tegra_clk_name[] = {
 	"dpaux",
 	"dpaux1",
 	"hdmi",
+	"spi",
 	"pll_dp",
 	"sor_safe",
 	"pll_d2",

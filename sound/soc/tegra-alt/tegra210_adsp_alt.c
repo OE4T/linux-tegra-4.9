@@ -757,7 +757,7 @@ static int tegra210_adsp_remove_connection(struct tegra210_adsp *adsp,
 		struct tegra210_adsp_app *plugin)
 {
 	struct tegra210_adsp_app *app;
-	uint32_t i, source, apm_out = 0;
+	uint32_t i, source, apm_out = TEGRA210_ADSP_NONE;
 
 	if (!IS_ADSP_APP(plugin->reg))
 		return 0;
@@ -767,7 +767,7 @@ static int tegra210_adsp_remove_connection(struct tegra210_adsp *adsp,
 		/* if the path is already broken, do not continue */
 		if (!app->connect)
 			continue;
-		while (app->reg != TEGRA210_ADSP_NONE) {
+		while (IS_ADSP_APP(app->reg)) {
 			if (app->reg == plugin->reg) {
 				apm_out = i;
 				break;

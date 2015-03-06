@@ -52,7 +52,6 @@ struct isc_mgr_priv {
 	atomic_t in_use;
 	int err_irq;
 	char devname[32];
-	u8 power_is_on;
 };
 
 #define PW_ON(flag)	((flag) ? 0 : 1)
@@ -246,10 +245,7 @@ static int isc_mgr_power_up(struct isc_mgr_priv *isc_mgr,
 	struct isc_mgr_platform_data *pd = isc_mgr->pdata;
 	int i;
 
-	dev_dbg(isc_mgr->dev, "%s - %lu, %d\n",
-		__func__, arg, isc_mgr->power_is_on);
-	if (isc_mgr->power_is_on)
-		return 0;
+	dev_dbg(isc_mgr->dev, "%s - %lu\n", __func__, arg);
 
 	if (!pd->num_gpios)
 		goto pwr_up_end;
@@ -268,7 +264,6 @@ pwr_up_end:
 	if (isc_mgr->err_irq)
 		enable_irq(isc_mgr->err_irq);
 
-	isc_mgr->power_is_on = 1;
 	return 0;
 }
 
@@ -278,10 +273,7 @@ static int isc_mgr_power_down(struct isc_mgr_priv *isc_mgr,
 	struct isc_mgr_platform_data *pd = isc_mgr->pdata;
 	int i;
 
-	dev_dbg(isc_mgr->dev, "%s - %lu, %d\n",
-		__func__, arg, isc_mgr->power_is_on);
-	if (!isc_mgr->power_is_on)
-		return 0;
+	dev_dbg(isc_mgr->dev, "%s - %lx\n", __func__, arg);
 
 	if (isc_mgr->err_irq)
 		disable_irq(isc_mgr->err_irq);
@@ -299,7 +291,6 @@ static int isc_mgr_power_down(struct isc_mgr_priv *isc_mgr,
 	mdelay(7);
 
 pwr_dn_end:
-	isc_mgr->power_is_on = 0;
 	return 0;
 }
 

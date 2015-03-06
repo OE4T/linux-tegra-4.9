@@ -16,14 +16,35 @@
 
 #define ISC_DEV_IOCTL_READ	_IOW('o', 1, struct isc_dev_package)
 #define ISC_DEV_IOCTL_WRITE	_IOR('o', 2, struct isc_dev_package)
+#define ISC_DEV_IOCTL_RDWR	_IOW('o', 3, struct isc_dev_pkg)
+
+#ifdef CONFIG_COMPAT
+#define ISC_DEV_IOCTL_RDWR32	_IOW('o', 3, struct isc_dev_pkg32)
+#endif
 
 #define MAX_ISC_DEV_PAK_SIZE	32
+#define ISC_DEV_PKG_FLAG_WR	1
 
+/* to be deprecated. */
 struct isc_dev_package {
 	__u32 offset;
 	__u8 buf[MAX_ISC_DEV_PAK_SIZE];
 	int size;
-};
+} __packed;
+
+struct isc_dev_pkg {
+	__u16 offset;
+	__u16 size;
+	__u32 flags;
+	unsigned long buffer;
+} __packed;
+
+struct isc_dev_pkg32 {
+	__u16 offset;
+	__u16 size;
+	__u32 flags;
+	__u32 buffer;
+} __packed;
 
 #ifdef __KERNEL__
 #include <linux/ioctl.h>  /* For IOCTL macros */

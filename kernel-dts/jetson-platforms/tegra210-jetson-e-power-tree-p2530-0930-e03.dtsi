@@ -289,7 +289,6 @@
 	ehci@7d000000 {
 		avdd_usb-supply = <&vdd_3v3>;
 		avdd_pll_utmip-supply = <&max77620_sd3>;
-		usb_vbus-supply = <&usb0_vbus>;
 	};
 
 	xusb@70090000 {

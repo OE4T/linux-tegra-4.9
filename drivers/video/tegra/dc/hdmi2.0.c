@@ -1120,7 +1120,8 @@ static int tegra_hdmi_find_cea_vic(struct tegra_hdmi *hdmi)
 
 	tegra_dc_to_fb_videomode(&m, mode);
 
-	m.vmode &= ~FB_VMODE_STEREO_MASK; /* stereo modes have the same VICs */
+	/* only interlaced required for VIC identification */
+	m.vmode &= FB_VMODE_INTERLACED;
 
 	for (i = 1; i < modedb_size; i++) {
 		const struct fb_videomode *curr = &cea_modes[i];

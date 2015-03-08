@@ -1,0 +1,45 @@
+* Soltech JSA-1127 ambient light sensor
+
+Required properties:
+- compatible: must be "solteamopto,jsa1127"
+- reg: i2c address of the device. It should be 0x39.
+
+Optional propertied:
+Format:	light_mode_settingname
+Where:	'light' refers to the light sensor classification
+	'mode' refers to data collection mode:
+		hwm = hardware mode
+		swm = software mode
+		hyb = hybrid mode
+	'settingname' is a named identifier and rather free-form, can include more underscores if desired
+
+Valid Properties:
+light_hyb_resolution_ival	:
+light_hyb_resolution_fval	:
+light_hyb_maxrange_ival		:
+light_hyb_maxrange_fval		:
+light_hyb_interval		: Time capture interval in ms.  5000 = 5 seconds.
+
+Future Properties (not yet implemented):
+light_hwm_resolution_ival	:
+light_hwm_resolution_fval	:
+light_hwm_maxrange_ival		:
+light_hwm_maxrange_fval		:
+light_hwm_interval		: Time capture interval in ms.  5000 = 5 seconds.
+light_swm_resolution_ival	:
+light_swm_resolution_fval	:
+light_swm_maxrange_ival		:
+light_swm_maxrange_fval		:
+light_swm_interval		: Time capture interval in ms.  5000 = 5 seconds.
+
+
+Example:
+                jsa1127@39 {
+                        compatible = "solteamopto,jsa1127";
+                        reg = <0x39>;
+                        light_hyb_resolution_ival = <20>;
+                        light_hyb_resolution_fval = <0>;
+                        light_hwm_maxrange_ival = <6553>;
+                        light_hwm_maxrange_fval = <400000>;
+                };
+

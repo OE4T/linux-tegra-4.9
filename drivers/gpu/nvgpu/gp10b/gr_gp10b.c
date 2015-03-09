@@ -163,27 +163,8 @@ void gr_gp10b_commit_global_pagepool(struct gk20a *g,
 static int gr_gp10b_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 				  struct zbc_entry *color_val, u32 index)
 {
-	struct fifo_gk20a *f = &g->fifo;
-	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
 	u32 i;
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
-	u32 ret;
 	u32 zbc_c;
-
-	ret = gk20a_fifo_disable_engine_activity(g, gr_info, true);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to disable gr engine activity\n");
-		return ret;
-	}
-
-	ret = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to idle graphics\n");
-		goto clean_up;
-	}
 
 	/* update l2 table */
 	g->ops.ltc.set_zbc_color_entry(g, color_val, index);
@@ -226,39 +207,13 @@ static int gr_gp10b_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 	zbc_c |= color_val->format << (index % 4) * 6;
 	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_c_01_to_04_format_r() + ALIGN(index, 4), zbc_c);
 
-clean_up:
-	ret = gk20a_fifo_enable_engine_activity(g, gr_info);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to enable gr engine activity\n");
-	}
-
-	return ret;
+	return 0;
 }
 
 static int gr_gp10b_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 				struct zbc_entry *depth_val, u32 index)
 {
-	struct fifo_gk20a *f = &g->fifo;
-	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
-	u32 ret;
 	u32 zbc_z;
-
-	ret = gk20a_fifo_disable_engine_activity(g, gr_info, true);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to disable gr engine activity\n");
-		return ret;
-	}
-
-	ret = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to idle graphics\n");
-		goto clean_up;
-	}
 
 	/* update l2 table */
 	g->ops.ltc.set_zbc_depth_entry(g, depth_val, index);
@@ -289,14 +244,7 @@ static int gr_gp10b_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 	zbc_z |= depth_val->format << (index % 4) * 6;
 	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_z_01_to_04_format_r() + ALIGN(index, 4), zbc_z);
 
-clean_up:
-	ret = gk20a_fifo_enable_engine_activity(g, gr_info);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to enable gr engine activity\n");
-	}
-
-	return ret;
+	return 0;
 }
 
 static u32 gr_gp10b_pagepool_default_size(struct gk20a *g)

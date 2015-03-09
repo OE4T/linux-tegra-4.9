@@ -27,16 +27,7 @@
 #include "eh_unwind.h"
 #include "dwarf_unwind.h"
 #include "hrt.h"
-
-static inline int
-is_thumb_mode(struct pt_regs *regs)
-{
-#ifdef CONFIG_ARM64
-	return compat_thumb_mode(regs);
-#else
-	return thumb_mode(regs);
-#endif
-}
+#include "tegra.h"
 
 unsigned long
 quadd_user_stack_pointer(struct pt_regs *regs)
@@ -177,6 +168,8 @@ user_backtrace(struct pt_regs *regs,
 	}
 
 	fp_prev = (unsigned long __user *)value_fp;
+	if (fp_prev <= tail)
+		return NULL;
 
 	nr_added = quadd_callchain_store(cc, value_lr, QUADD_UNW_TYPE_FP);
 	if (nr_added == 0)
@@ -184,9 +177,6 @@ user_backtrace(struct pt_regs *regs,
 
 	if (cc->unw_method == QUADD_UNW_METHOD_MIXED &&
 	    is_ex_entry_exist(regs, value_lr, task))
-		return NULL;
-
-	if (fp_prev <= tail)
 		return NULL;
 
 	return fp_prev;
@@ -364,6 +354,8 @@ user_backtrace_compat(struct pt_regs *regs,
 	}
 
 	fp_prev = (u32 __user *)(unsigned long)value_fp;
+	if (fp_prev <= tail)
+		return NULL;
 
 	nr_added = quadd_callchain_store(cc, value_lr, QUADD_UNW_TYPE_FP);
 	if (nr_added == 0)
@@ -371,9 +363,6 @@ user_backtrace_compat(struct pt_regs *regs,
 
 	if (cc->unw_method == QUADD_UNW_METHOD_MIXED &&
 	    is_ex_entry_exist(regs, value_lr, task))
-		return NULL;
-
-	if (fp_prev <= tail)
 		return NULL;
 
 	return fp_prev;
@@ -534,9 +523,11 @@ get_user_callchain_ut(struct pt_regs *regs,
 		      struct task_struct *task)
 {
 	int nr_prev;
+	unsigned long prev_sp;
 
 	do {
 		nr_prev = cc->nr;
+		prev_sp = cc->curr_sp;
 
 		quadd_get_user_cc_dwarf(regs, cc, task);
 		if (nr_prev > 0 && cc->nr == nr_prev)
@@ -545,7 +536,8 @@ get_user_callchain_ut(struct pt_regs *regs,
 		nr_prev = cc->nr;
 
 		quadd_get_user_cc_arm32_ehabi(regs, cc, task);
-	} while (nr_prev != cc->nr);
+	} while (nr_prev != cc->nr &&
+		 (cc->nr <= 1 || cc->curr_sp > prev_sp));
 
 	return cc->nr;
 }
@@ -556,18 +548,26 @@ get_user_callchain_mixed(struct pt_regs *regs,
 		      struct task_struct *task)
 {
 	int nr_prev;
+	unsigned long prev_sp;
 
 	do {
 		nr_prev = cc->nr;
+		prev_sp = cc->curr_sp;
 
 		quadd_get_user_cc_dwarf(regs, cc, task);
 		quadd_get_user_cc_arm32_ehabi(regs, cc, task);
 
-		if (nr_prev != cc->nr)
+		if (nr_prev != cc->nr) {
+			if (cc->nr > 1 &&
+			    cc->curr_sp <= prev_sp)
+				break;
+
 			continue;
+		}
 
 		__get_user_callchain_fp(regs, cc, task);
-	} while (nr_prev != cc->nr);
+	} while (nr_prev != cc->nr &&
+		 (cc->nr <= 1 || cc->curr_sp > prev_sp));
 
 	return cc->nr;
 }

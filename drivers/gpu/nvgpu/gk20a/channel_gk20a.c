@@ -25,6 +25,7 @@
 #include <linux/file.h>
 #include <linux/anon_inodes.h>
 #include <linux/dma-buf.h>
+#include <linux/vmalloc.h>
 
 #include "debug_gk20a.h"
 
@@ -2200,7 +2201,7 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	struct nvgpu_submit_gpfifo_args *args)
 {
 	struct gk20a_fence *fence_out;
-	void *gpfifo;
+	void *gpfifo = NULL;
 	u32 size;
 	int ret = 0;
 
@@ -2209,16 +2210,20 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	if (ch->has_timedout)
 		return -ETIMEDOUT;
 
+	/* zero-sized submits are allowed, since they can be used for
+	 * synchronization; we might still wait and do an increment */
 	size = args->num_entries * sizeof(struct nvgpu_gpfifo);
+	if (size) {
+		gpfifo = vmalloc(size);
+		if (!gpfifo)
+			return -ENOMEM;
 
-	gpfifo = kzalloc(size, GFP_KERNEL);
-	if (!gpfifo)
-		return -ENOMEM;
-
-	if (copy_from_user(gpfifo,
-			   (void __user *)(uintptr_t)args->gpfifo, size)) {
-		ret = -EINVAL;
-		goto clean_up;
+		if (copy_from_user(gpfifo,
+					(void __user *)(uintptr_t)args->gpfifo,
+					size)) {
+			ret = -EINVAL;
+			goto clean_up;
+		}
 	}
 
 	ret = gk20a_submit_channel_gpfifo(ch, gpfifo, args->num_entries,
@@ -2244,7 +2249,7 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	gk20a_fence_put(fence_out);
 
 clean_up:
-	kfree(gpfifo);
+	vfree(gpfifo);
 	return ret;
 }
 

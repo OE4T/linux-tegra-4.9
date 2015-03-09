@@ -248,6 +248,8 @@ static bool tegra_available_pwm_bl_ops_register(struct device *dev)
 		dev_set_drvdata(dev, dsi_j_1440_810_5_8_ops.pwm_bl_ops);
 	} else if (of_device_is_compatible(np_bl, "s,wuxga-7-0-bl")) {
 		dev_set_drvdata(dev, dsi_s_wuxga_7_0_ops.pwm_bl_ops);
+	} else if (of_device_is_compatible(np_bl, "s,wuxga-8-0-bl")) {
+		dev_set_drvdata(dev, dsi_s_wuxga_8_0_ops.pwm_bl_ops);
 	} else if (of_device_is_compatible(np_bl, "a,wuxga-8-0-bl")) {
 		dev_set_drvdata(dev, dsi_a_1200_1920_8_0_ops.pwm_bl_ops);
 	} else if (of_device_is_compatible(np_bl, "a,wxga-8-0-bl")) {
@@ -462,6 +464,9 @@ static struct device_node *available_internal_panel_select(
 	} else if (of_device_is_compatible(np_panel, "s,wuxga-7-0")) {
 		tegra_panel_register_ops(dc_out,
 			&dsi_s_wuxga_7_0_ops);
+	} else if (of_device_is_compatible(np_panel, "s,wuxga-8-0")) {
+		tegra_panel_register_ops(dc_out,
+			&dsi_s_wuxga_8_0_ops);
 	} else if (of_device_is_compatible(np_panel, "a,wuxga-8-0")) {
 		tegra_panel_register_ops(dc_out,
 			&dsi_a_1200_1920_8_0_ops);

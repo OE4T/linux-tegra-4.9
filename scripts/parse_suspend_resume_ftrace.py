@@ -1,5 +1,5 @@
 import subprocess
-import os
+import os,re
 import time
 from datetime import datetime
 
@@ -8,7 +8,7 @@ cycle =0
 str1 = ""
 
 date = datetime.now()
-fp = open('/var/www/suspend-resume/res' + str(date)+'.txt','w')
+fp = open('res' + str(date)+'.txt','w')
 
 #open file for reading suspend-resume details
 with open("ftrace.txt", "r") as file:
@@ -140,3 +140,38 @@ with open("ftrace.txt", "r") as file:
                  except IndexError:
                      syssusend =float(line.split("N.1")[1].replace(" ","").split(":")[0])
                  str1 = str1 + "SYSTEM CORE SUSPEND took " +str(syssusend-syssusstart) +" secs\n"
+
+
+
+
+with open('res' + str(date)+'.txt', "r") as file:
+     length = 0
+     for line in file:
+          matchObj = re.match( r'Cycle (.*) took (.*?) sec.*', line, re.M|re.I)
+          if matchObj:
+              flag = 1;
+
+          matchObj1 = re.match( r'(.*)Cycle (.*) starts(.*)', line, re.M|re.I)
+          if matchObj1:
+              flag = 0;
+              if length == 19:
+                   digit = re.findall(r'\d+', line)
+                   cycle =  int(digit[0]) - 1
+                   break;
+              length = 0;
+
+          if flag:
+               matchObj1 = re.match( r'(.*)\n', line, re.M|re.I)
+               if matchObj1:
+                   length = length + 1;
+fp = open('/var/www/suspend-resume/result' + str(date) + '.txt','w')
+with open('res' + str(date)+'.txt', "r") as file:
+     for line in file:
+          matchObj1 = re.match( r'(.*)Cycle ' + str(cycle) + ' starts(.*)', line, re.M|re.I)
+          if matchObj1:
+                flag = 1;
+          matchObj = re.match( r'(.*)Cycle ' + str(cycle+1) + ' starts(.*)',  line, re.M|re.I)
+          if matchObj:
+              flag = 0;
+          if flag:
+               fp.write(line);

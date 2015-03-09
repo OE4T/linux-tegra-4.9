@@ -12,10 +12,6 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
- *
  */
 
 /dts-v1/;
@@ -321,14 +317,12 @@
 		nvidia,port-otg;
 		nvidia,charging-supported;
 		#extcon-cells = <1>;
-		status = "disabled";
-		dt-override-status-odm-data = <0x01000000 0x00000000>;
+		status = "okay";
 	};
 
         otg@7d000000 {
 		#extcon-cells = <1>;
-		status = "disabled";
-		dt-override-status-odm-data = <0x01000000 0x00000000>;
+		status = "okay";
 	};
 
 	xusb_pad_ctl: padctl@0 { /* Put common control config here */
@@ -352,14 +346,12 @@
 		nvidia,portmap = <0x0108>;
 		#extcon-cells = <1>;
 		status = "disabled";
-		dt-override-status-odm-data = <0x01000000 0x01000000>;
 	};
 
 	xotg {
 		#extcon-cells = <1>;
 		nvidia,common_padctl = <&xusb_pad_ctl>;
 		status = "disabled";
-		dt-override-status-odm-data = <0x01000000 0x01000000>;
 	};
 
 	gpio-keys {

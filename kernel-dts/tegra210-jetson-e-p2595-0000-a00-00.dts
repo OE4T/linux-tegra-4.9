@@ -12,10 +12,6 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
- *
  */
 
 #include "tegra210-jetson-e-base-p2595-0000-a00.dts"
@@ -28,5 +24,29 @@
 
 	#address-cells = <2>;
 	#size-cells = <2>;
+
+	udc@7d000000 {
+		#extcon-cells = <1>;
+		status = "disabled";
+		dt-override-status-odm-data = <0x01000000 0x00000000>;
+	};
+
+        otg@7d000000 {
+		#extcon-cells = <1>;
+		status = "disabled";
+		dt-override-status-odm-data = <0x01000000 0x00000000>;
+	};
+
+	xudc@700d0000 {
+		#extcon-cells = <1>;
+		status = "disabled";
+		dt-override-status-odm-data = <0x01000000 0x01000000>;
+	};
+
+	xotg {
+		#extcon-cells = <1>;
+		status = "disabled";
+		dt-override-status-odm-data = <0x01000000 0x01000000>;
+	};
 
 };

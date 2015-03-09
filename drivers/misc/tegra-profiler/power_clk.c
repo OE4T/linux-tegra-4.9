@@ -118,11 +118,11 @@ static void make_sample(void)
 		power_rate->emc = 0;
 
 	mutex_unlock(&s->lock);
-
+/*
 	pr_debug("make_sample: cpu: %u/%u/%u/%u, gpu: %u, emc: %u\n",
 		 extra_cpus[0], extra_cpus[1], extra_cpus[2], extra_cpus[3],
 		 power_rate->gpu, power_rate->emc);
-
+*/
 	vec.base = extra_cpus;
 	vec.len = power_rate->nr_cpus * sizeof(extra_cpus[0]);
 

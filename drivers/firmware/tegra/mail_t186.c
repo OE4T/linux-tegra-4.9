@@ -47,6 +47,7 @@
 #define BPMP_TO_CPU_CH			13
 
 static void __iomem *bpmp_base;
+static void __iomem *channel_page;
 
 static uint32_t bpmp_readl(uint32_t reg)
 {
@@ -100,7 +101,7 @@ static void bpmp_inbox_irq(int master, void *data)
 	bpmp_handle_irq(BPMP_TO_CPU_CH);
 }
 
-int bpmp_init_irq(struct platform_device *pdev)
+int bpmp_init_irq(void)
 {
 	tegra_hsp_db_add_handler(HSP_MASTER_BPMP, bpmp_inbox_irq, NULL);
 	tegra_hsp_db_enable_master(HSP_MASTER_BPMP);
@@ -128,9 +129,9 @@ static void bpmp_get_sysram_off(int ch, int *ib_off, int *ob_off)
 	*ob_off = SZ_256K + ob_page * GSC_PAGE_SZ + ch * MSG_SZ;
 }
 
-static void bpmp_channel_init(void *virt)
+static void bpmp_channel_init(void)
 {
-	uint8_t *base = virt;
+	uint8_t *base = channel_page;
 	int ib_off;
 	int ob_off;
 	int i;
@@ -145,36 +146,71 @@ static void bpmp_channel_init(void *virt)
 static int bpmp_handshake(void)
 {
 	if (!tegra_hsp_db_can_ring(HSP_DB_BPMP)) {
-		dev_err(device, "doorbell not enabled\n");
-		return -EPERM;
-	}
-
-	if (!bpmp_readl(HSP_SHRD_SEM_0_STA)) {
-		dev_err(device, "firmware mailman not ready\n");
+		pr_err("bpmp db not enabled\n");
 		return -ENODEV;
 	}
+
+	pr_info("bpmp: waiting for handshake\n");
+	while (!bpmp_readl(HSP_SHRD_SEM_0_STA))
+		;
+
+	pr_info("bpmp: handshake completed\n");
+	return 0;
+}
+
+static int bpmp_iomem_init(void)
+{
+	struct device_node *of_node;
+
+	of_node = of_find_node_by_path("/bpmp");
+	if (!of_node) {
+		WARN_ON(!of_node);
+		return -ENODEV;
+	}
+
+	bpmp_base = of_iomap(of_node, 0);
+	if (!bpmp_base)
+		return -ENODEV;
+
+	channel_page = of_iomap(of_node, 1);
+	if (!channel_page)
+		return -ENODEV;
 
 	return 0;
 }
 
 int bpmp_connect(void)
 {
-	void __iomem *mb;
 	int ret;
 
 	if (connected)
 		return 0;
 
-	bpmp_base = of_iomap(device->of_node, 0);
-	mb = of_iomap(device->of_node, 1);
-	bpmp_channel_init(mb);
-
-	ret = bpmp_handshake();
+	ret = bpmp_iomem_init();
 	if (ret) {
-		dev_err(device, "bpmp handshake failed (%d)\n", ret);
+		pr_err("bpmp iomem init failed (%d)\n", ret);
 		return ret;
 	}
 
+	ret = bpmp_handshake();
+	if (ret) {
+		pr_err("bpmp handshake failed (%d)\n", ret);
+		return ret;
+	}
+
+	bpmp_channel_init();
 	connected = 1;
 	return 0;
+}
+
+int bpmp_mail_init_prepare(void)
+{
+	return tegra_hsp_init();
+}
+
+early_initcall(bpmp_mail_init);
+
+void tegra_bpmp_init_early(void)
+{
+	bpmp_mail_init();
 }

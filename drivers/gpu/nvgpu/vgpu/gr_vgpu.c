@@ -629,6 +629,34 @@ static u32 vgpu_gr_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 	return 0x1;
 }
 
+static u32 vgpu_gr_get_max_fbps_count(struct gk20a *g)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	u32 max_fbps_count = 0;
+
+	gk20a_dbg_fn("");
+
+	if (vgpu_get_attribute(platform->virt_handle,
+			TEGRA_VGPU_ATTRIB_NUM_FBPS, &max_fbps_count))
+		gk20a_err(dev_from_gk20a(g), "failed to retrieve num fbps");
+
+	return max_fbps_count;
+}
+
+static u32 vgpu_gr_get_fbp_en_mask(struct gk20a *g)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	u32 fbp_en_mask = 0;
+
+	gk20a_dbg_fn("");
+
+	if (vgpu_get_attribute(platform->virt_handle,
+			TEGRA_VGPU_ATTRIB_FBP_EN_MASK, &fbp_en_mask))
+		gk20a_err(dev_from_gk20a(g), "failed to retrieve fbp en mask");
+
+	return fbp_en_mask;
+}
+
 static void vgpu_remove_gr_support(struct gr_gk20a *gr)
 {
 	gk20a_dbg_fn("");
@@ -748,4 +776,6 @@ void vgpu_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.get_zcull_info = vgpu_gr_get_zcull_info;
 	gops->gr.detect_sm_arch = vgpu_gr_detect_sm_arch;
 	gops->gr.get_gpc_tpc_mask = vgpu_gr_get_gpc_tpc_mask;
+	gops->gr.get_max_fbps_count = vgpu_gr_get_max_fbps_count;
+	gops->gr.get_fbp_en_mask = vgpu_gr_get_fbp_en_mask;
 }

@@ -2213,6 +2213,11 @@ static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
 	struct tegra210_adsp_app *app = &adsp->apps[params->base];
 	apm_msg_t apm_msg;
 
+	if (!adsp->init_done) {
+		dev_warn(adsp->dev, "ADSP is not booted yet\n");
+		return 0;
+	}
+
 	if (!app->plugin) {
 		dev_warn(adsp->dev, "Plugin not yet initialized\n");
 		return 0;

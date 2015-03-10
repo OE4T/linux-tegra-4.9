@@ -315,9 +315,18 @@ static int tegra210_adsp_init(struct tegra210_adsp *adsp)
 		if (!adsp_app_desc[i].handle) {
 			dev_err(adsp->dev, "Failed to load app %s",
 						adsp_app_desc[i].name);
+			nvadsp_os_stop();
 			goto exit;
 		}
 	}
+
+	/* Suspend OS for now. Resume will happen via runtime pm calls */
+	ret = nvadsp_os_suspend();
+	if (ret < 0) {
+		dev_err(adsp->dev, "Failed to suspend OS.");
+		goto exit;
+	}
+
 	adsp->init_done = 1;
 
 exit:
@@ -329,7 +338,7 @@ static void tegra210_adsp_deinit(struct tegra210_adsp *adsp)
 {
 	mutex_lock(&adsp->mutex);
 	if (adsp->init_done) {
-		/* TODO : Stop ADSP OS if possible */
+		nvadsp_os_stop();
 		adsp->init_done = 0;
 	}
 	mutex_unlock(&adsp->mutex);
@@ -866,6 +875,10 @@ static int tegra210_adsp_compr_msg_handler(struct tegra210_adsp_app *app,
 {
 	struct tegra210_adsp_compr_rtd *prtd = app->private_data;
 
+	if (!prtd) {
+		return 0;
+	}
+
 	switch (apm_msg->msg.call_params.method) {
 	case nvfx_apm_method_set_position:
 		snd_compr_fragment_elapsed(prtd->cstream);
@@ -951,6 +964,7 @@ static int tegra210_adsp_compr_free(struct snd_compr_stream *cstream)
 		TEGRA210_ADSP_MSG_FLAG_SEND);
 
 	prtd->fe_apm->fe = 0;
+	cstream->runtime->private_data = NULL;
 	devm_kfree(prtd->dev, prtd);
 
 	return 0;
@@ -1279,6 +1293,7 @@ static int tegra210_adsp_pcm_close(struct snd_pcm_substream *substream)
 			TEGRA210_ADSP_MSG_FLAG_SEND);
 
 		prtd->fe_apm->fe = 1;
+		substream->runtime->private_data = NULL;
 		devm_kfree(prtd->dev, prtd);
 	}
 
@@ -1551,6 +1566,47 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+static int tegra210_adsp_runtime_suspend(struct device *dev)
+{
+	struct tegra210_adsp *adsp = dev_get_drvdata(dev);
+	int ret = 0;
+
+	dev_dbg(adsp->dev, "%s\n", __func__);
+
+	if (!adsp->init_done)
+		return 0;
+
+	ret = nvadsp_os_suspend();
+	if (ret)
+		dev_err(adsp->dev, "Failed to suspend ADSP OS");
+
+	return ret;
+}
+
+static int tegra210_adsp_runtime_resume(struct device *dev)
+{
+	struct tegra210_adsp *adsp = dev_get_drvdata(dev);
+	int ret = 0;
+
+	dev_dbg(adsp->dev, "%s\n", __func__);
+
+	if (!adsp->init_done)
+		return 0;
+
+	ret = nvadsp_os_start();
+	if (ret)
+		dev_err(adsp->dev, "Failed to start ADSP OS");
+
+	return ret;
+}
+
+#ifdef CONFIG_PM_SLEEP
+static int tegra210_adsp_suspend(struct device *dev)
+{
+	return tegra210_adsp_runtime_suspend(dev);
+}
+#endif
+
 /* ADSP platform driver read/write call-back */
 static int tegra210_adsp_read(struct snd_soc_component *component,
 		unsigned int reg, unsigned int *val)
@@ -1616,6 +1672,8 @@ static int tegra210_adsp_mux_put(struct snd_kcontrol *kcontrol,
 	if (e->reg >= TEGRA210_ADSP_VIRT_REG_MAX)
 		return -EINVAL;
 
+	pm_runtime_get_sync(adsp->dev);
+
 	/* Init or de-init app based on connection */
 	if (IS_ADSP_APP(e->reg)) {
 		app = &adsp->apps[e->reg];
@@ -1634,7 +1692,7 @@ static int tegra210_adsp_mux_put(struct snd_kcontrol *kcontrol,
 			ret = tegra210_adsp_app_init(adsp, app);
 			if (ret < 0) {
 				dev_err(adsp->dev, "Failed to init app.");
-				return -ENODEV;
+				goto err_put;
 			}
 		}
 	}
@@ -1643,7 +1701,10 @@ static int tegra210_adsp_mux_put(struct snd_kcontrol *kcontrol,
 	tegra210_adsp_update_connection(adsp);
 
 	snd_soc_dapm_mux_update_power(dapm, kcontrol, val, e, NULL);
-	return 1;
+
+err_put:
+	pm_runtime_put(adsp->dev);
+	return ret ? ret : 1;
 }
 
 /* ALSA control get/put call-back implementation */
@@ -1701,7 +1762,9 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 		if (IS_APM_IN(w->reg)) {
 			/* Request higher ADSP clock when starting stream.
 			 * Actmon takes care of adjusting frequency later. */
+			pm_runtime_get_sync(adsp->dev);
 			adsp_update_dfs(500000, 1);
+			pm_runtime_put(adsp->dev);
 			tegra210_adsp_send_state_msg(app, nvfx_state_active,
 			TEGRA210_ADSP_MSG_FLAG_SEND);
 		}
@@ -2252,6 +2315,7 @@ static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
 	struct tegra210_adsp *adsp = snd_soc_component_get_drvdata(cmpnt);
 	struct tegra210_adsp_app *app = &adsp->apps[params->base];
 	apm_msg_t apm_msg;
+	int ret;
 
 	if (!adsp->init_done) {
 		dev_warn(adsp->dev, "ADSP is not booted yet\n");
@@ -2309,8 +2373,12 @@ static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
 		return -EINVAL;
 	}
 
-	return tegra210_adsp_send_msg(app->apm, &apm_msg,
+	pm_runtime_get_sync(adsp->dev);
+	ret = tegra210_adsp_send_msg(app->apm, &apm_msg,
 		TEGRA210_ADSP_MSG_FLAG_SEND);
+	pm_runtime_put(adsp->dev);
+
+	return ret;
 }
 
 /* Maximum 128 integers or 512 bytes allowed */
@@ -2426,16 +2494,15 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	pdev->dev.dma_mask = &tegra_dma_mask;
 	pdev->dev.coherent_dma_mask = tegra_dma_mask;
 
-	tegra_ape_pd_add_device(&pdev->dev);
-	pm_genpd_dev_need_save(&pdev->dev, true);
-	pm_genpd_dev_need_restore(&pdev->dev, true);
-
 	pm_runtime_enable(&pdev->dev);
 	if (!pm_runtime_enabled(&pdev->dev))
 		goto err_pm_disable;
 
-	pm_runtime_get_sync(&pdev->dev);
 	/* HACK : Should be handled through dma-engine */
+	tegra_ape_pd_add_device(&pdev->dev);
+	pm_genpd_dev_need_save(&pdev->dev, true);
+	pm_genpd_dev_need_restore(&pdev->dev, true);
+	pm_runtime_get_sync(&pdev->dev);
 	for (i = 0; i < TEGRA210_ADSP_ADMA_CHANNEL_COUNT; i++) {
 		ret = tegra_agic_route_interrupt(
 			INT_ADMA_EOT0 + TEGRA210_ADSP_ADMA_CHANNEL_START + i,
@@ -2445,8 +2512,9 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 			goto err_pm_disable;
 		}
 	}
-	/* HACK end */
 	pm_runtime_put(&pdev->dev);
+	tegra_ape_pd_remove_device(&pdev->dev);
+	/* HACK end */
 
 	for (i = 0; i < TEGRA210_ADSP_VIRT_REG_MAX; i++)
 		adsp->apps[i].reg = i;
@@ -2587,23 +2655,28 @@ err_unregister_platform:
 	snd_soc_unregister_platform(&pdev->dev);
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
-	tegra_ape_pd_remove_device(&pdev->dev);
 	return ret;
 }
 
 static int tegra210_adsp_audio_platform_remove(struct platform_device *pdev)
 {
 	pm_runtime_disable(&pdev->dev);
-	tegra_ape_pd_remove_device(&pdev->dev);
 	snd_soc_unregister_platform(&pdev->dev);
 	return 0;
 }
+
+static const struct dev_pm_ops tegra210_adsp_pm_ops = {
+	SET_RUNTIME_PM_OPS(tegra210_adsp_runtime_suspend,
+			   tegra210_adsp_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(tegra210_adsp_suspend, NULL)
+};
 
 static struct platform_driver tegra210_adsp_audio_driver = {
 	.driver = {
 		.name = DRV_NAME,
 		.owner = THIS_MODULE,
 		.of_match_table = tegra210_adsp_audio_of_match,
+		.pm = &tegra210_adsp_pm_ops,
 	},
 	.probe = tegra210_adsp_audio_platform_probe,
 	.remove = tegra210_adsp_audio_platform_remove,

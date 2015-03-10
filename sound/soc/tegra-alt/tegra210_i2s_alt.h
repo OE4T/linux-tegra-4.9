@@ -216,6 +216,7 @@ struct tegra210_i2s {
 	unsigned int fsync_width;
 	unsigned int tx_mask;
 	unsigned int rx_mask;
+	unsigned int loopback;
 	bool enable_cya;
 };
 

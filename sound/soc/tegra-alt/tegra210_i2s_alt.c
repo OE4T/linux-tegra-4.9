@@ -621,8 +621,37 @@ static struct snd_soc_dai_driver tegra210_i2s_dais[] = {
 	}
 };
 
+static int tegra210_i2s_loopback_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra210_i2s *i2s = snd_soc_codec_get_drvdata(codec);
+
+	ucontrol->value.integer.value[0] = i2s->loopback;
+
+	return 0;
+}
+
+static int tegra210_i2s_loopback_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra210_i2s *i2s = snd_soc_codec_get_drvdata(codec);
+
+	i2s->loopback = ucontrol->value.integer.value[0];
+
+	pm_runtime_get_sync(codec->dev);
+	regmap_update_bits(i2s->regmap, TEGRA210_I2S_CTRL,
+		TEGRA210_I2S_CTRL_LPBK_MASK,
+		i2s->loopback << TEGRA210_I2S_CTRL_LPBK_SHIFT);
+	pm_runtime_put(codec->dev);
+
+	return 0;
+}
+
 static const struct snd_kcontrol_new tegra210_i2s_controls[] = {
-	SOC_SINGLE("Loopback", TEGRA210_I2S_CTRL, 8, 1, 0),
+	SOC_SINGLE_EXT("Loopback", SND_SOC_NOPM, 0, 1, 0,
+		tegra210_i2s_loopback_get, tegra210_i2s_loopback_put),
 };
 
 static const struct snd_soc_dapm_widget tegra210_i2s_widgets[] = {
@@ -804,6 +833,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	i2s->tx_mask = i2s->rx_mask = 0xFFFF;
 	i2s->bclk_ratio = 2;
 	i2s->enable_cya = false;
+	i2s->loopback = 0;
 
 	i2s->clk_i2s = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(i2s->clk_i2s)) {

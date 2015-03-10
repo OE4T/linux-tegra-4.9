@@ -159,6 +159,7 @@ static int tegra210_mixer_put_gain(struct snd_kcontrol *kcontrol,
 	unsigned int reg = mc->reg;
 	unsigned int ret, i;
 
+	pm_runtime_get_sync(codec->dev);
 	/* write default gain config poly coefficients */
 	for (i = 0; i < 14; i++)
 		tegra210_mixer_write_ram(mixer, reg + i, mixer->gain_coeff[i]);
@@ -168,6 +169,7 @@ static int tegra210_mixer_put_gain(struct snd_kcontrol *kcontrol,
 				ucontrol->value.integer.value[0]);
 	ret |= tegra210_mixer_write_ram(mixer, reg + 0x0f,
 				ucontrol->value.integer.value[0]);
+	pm_runtime_put(codec->dev);
 
 	/* save gain */
 	i = (reg - TEGRA210_MIXER_AHUBRAMCTL_GAIN_CONFIG_RAM_ADDR_0) /

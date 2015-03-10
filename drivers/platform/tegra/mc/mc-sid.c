@@ -261,7 +261,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			GPUSRD2,
 			GPUSWR2,
 		},
-		.mc_overrides = true,
+		.mc_overrides = false,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_SDMMC1A,

@@ -1375,7 +1375,8 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 	if (print_channel_reset_log) {
 		int engine_id;
 		gk20a_err(dev_from_gk20a(g),
-			   "channel reset initated from %s", __func__);
+			   "channel reset initated from %s; intr=0x%08x",
+			   __func__, fifo_intr);
 		for (engine_id = 0;
 		     engine_id < g->fifo.max_engines;
 		     engine_id++) {

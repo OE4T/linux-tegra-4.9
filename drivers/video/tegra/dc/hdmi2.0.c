@@ -646,8 +646,6 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 
 	tegra_dc_unpowergate_locked(hdmi->dc);
 
-	_tegra_hdmi_ddc_enable(hdmi);
-
 	err = tegra_hdmi_edid_read(hdmi);
 	if (err < 0)
 		goto fail;
@@ -655,8 +653,6 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 	err = tegra_hdmi_eld_read(hdmi);
 	if (err < 0)
 		goto fail;
-
-	_tegra_hdmi_ddc_disable(hdmi);
 
 	tegra_dc_powergate_locked(hdmi->dc);
 

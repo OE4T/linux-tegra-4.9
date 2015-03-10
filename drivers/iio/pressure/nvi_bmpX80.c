@@ -1024,10 +1024,10 @@ static int bmp_batch(void *client, int snsr_id, int flags,
 
 static int bmp_flush(void *client, int snsr_id)
 {
-	struct bmp_state *st = (struct bmp_state *)client;
 	int ret = -EINVAL;
-
 #if BMP_NVI_MPU_SUPPORT
+	struct bmp_state *st = (struct bmp_state *)client;
+
 	if (st->mpu_en)
 		ret = nvi_mpu_flush(st->port_id[RD]);
 #endif /* BMP_NVI_MPU_SUPPORT */

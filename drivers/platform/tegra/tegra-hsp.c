@@ -55,7 +55,7 @@ struct db_handler_info {
 	void			*data;
 };
 
-static struct hsp_top hsp_top;
+static struct hsp_top hsp_top = { .status = HSP_INIT_PENDING };
 static void __iomem *db_bases[HSP_NR_DBS];
 
 static DEFINE_SPINLOCK(db_handlers_lock);
@@ -511,20 +511,22 @@ abort:
 late_initcall(debugfs_init);
 #endif
 
-static int tegra_hsp_probe(struct platform_device *pdev)
+int tegra_hsp_init(void)
 {
 	int i;
 	int irq;
-	struct device *dev = &pdev->dev;
-	struct device_node *np = dev->of_node;
+	struct device_node *np;
 	int ret = 0;
 
+	if (hsp_ready())
+		return 0;
+
+	np = of_find_node_by_path("/hsp_top");
 	if (!np) {
-		dev_err(dev, "DT data required.\n");
+		WARN_ON(1);
+		pr_err("tegra-hsp: DT data required.\n");
 		return -EINVAL;
 	}
-
-	hsp_top.status = HSP_INIT_FAILED;
 
 	ret |= of_property_read_u32(np, "num-SM", &hsp_top.nr_sm);
 	ret |= of_property_read_u32(np, "num-AS", &hsp_top.nr_as);
@@ -533,35 +535,40 @@ static int tegra_hsp_probe(struct platform_device *pdev)
 	ret |= of_property_read_u32(np, "num-SI", &hsp_top.nr_si);
 
 	if (ret) {
-		dev_err(dev, "failed to parse HSP config.\n");
+		pr_err("tegra-hsp: failed to parse HSP config.\n");
 		return -EINVAL;
 	}
 
 	hsp_top.base = of_iomap(np, 0);
 	if (!hsp_top.base) {
-		dev_err(dev, "failed to map HSP IO space.\n");
+		pr_err("tegra-hsp: failed to map HSP IO space.\n");
 		return -EINVAL;
 	}
 
 	for (i = HSP_FIRST_DB; i <= HSP_LAST_DB; i++) {
 		db_bases[i] = hsp_db_offset(i, hsp_top);
-		dev_dbg(dev, "db[%d]: %p\n", i, db_bases[i]);
+		pr_debug("tegra-hsp: db[%d]: %p\n", i, db_bases[i]);
 	}
 
 	irq = irq_of_parse_and_map(np, 0);
 	if (!irq) {
-		dev_err(dev, "failed to parse doorbell interrupt.\n");
+		pr_err("tegra-hsp: failed to parse doorbell irq\n");
 		return -EINVAL;
 	}
 
-	if (devm_request_irq(dev, irq, dbell_irq, 0, dev_name(dev), NULL)) {
-		dev_err(dev, "failed to request doorbell interrupt.\n");
+	ret = request_irq(irq, dbell_irq, 0, "hsp", NULL);
+	if (ret) {
+		pr_err("tegra-hsp: request_irq() failed (%d)\n", ret);
 		return -EINVAL;
 	}
 
 	hsp_top.status = HSP_INIT_OKAY;
+	return 0;
+}
 
-	return ret;
+static int tegra_hsp_probe(struct platform_device *pdev)
+{
+	return tegra_hsp_init();
 }
 
 static const struct of_device_id tegra_hsp_of_match[] = {
@@ -578,8 +585,8 @@ static struct platform_driver tegra_hsp_driver = {
 	},
 };
 
-static int __init tegra_hsp_init(void)
+static int __init tegra_hsp_initcall(void)
 {
 	return platform_driver_register(&tegra_hsp_driver);
 }
-core_initcall(tegra_hsp_init);
+core_initcall(tegra_hsp_initcall);

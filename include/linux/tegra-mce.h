@@ -78,7 +78,6 @@ enum {
 	TEGRA_MCE_FEATURE_CCP3,
 };
 
-int tegra_mce_enter_cstate(u32 state, u32 wake);
 int tegra_mce_update_cstate_info(u32 cluster, u32 ccplex,
 	u32 system, u8 force, u32 wake);
 int tegra_mce_update_crossover_time(u32 type, u32 time);
@@ -88,8 +87,5 @@ int tegra_mce_is_sc7_allowed(u32 state, u32 wake, u32 *allowed);
 int tegra_mce_echo_data(u32 data, int *matched);
 int tegra_mce_read_versions(u32 *major, u32 *minor);
 int tegra_mce_enum_features(u64 *features);
-int tegra_mce_online_core(u32 core);
-
-int tegra_mce_flush_cache_all(void);
 
 #endif

@@ -31,7 +31,6 @@
 #define MCE_APERTURE_ARI0		(0 * MCE_APERTURE_LEN)
 
 struct mce_ops {
-	int (*enter_cstate)(u32 state, u32 wake);
 	int (*update_cstate_info)(u32 cluster, u32 ccplex,
 		u32 system, u8 force, u32 wake);
 	int (*update_crossover_time)(u32 type, u32 time);
@@ -39,21 +38,18 @@ struct mce_ops {
 	int (*write_cstate_stats)(u32 state, u32 stats);
 	int (*call_misc)(u32 *low, u32 *high);
 	int (*is_sc7_allowed)(u32 state, u32 wake, u32 *allowed);
-	int (*online_core)(u32 core);
 };
 
 #define ENTRY(type, op) .op = type ## _ ## op
 
 #define DEFINE_MCE_OPS(type) \
 struct mce_ops type ## _ops = { \
-	ENTRY(type, enter_cstate), \
 	ENTRY(type, update_cstate_info), \
 	ENTRY(type, update_crossover_time), \
 	ENTRY(type, read_cstate_stats), \
 	ENTRY(type, write_cstate_stats), \
 	ENTRY(type, call_misc), \
 	ENTRY(type, is_sc7_allowed), \
-	ENTRY(type, online_core), \
 };
 
 #define mce_request(opfunc, ...) \
@@ -68,11 +64,13 @@ struct mce_ops type ## _ops = { \
 
 enum { MCE_MISC_CMD_ECHO, MCE_MISC_CMD_VERS, MCE_MISC_CMD_ENUM };
 
+static struct device *mce_dev;
+
 static void __iomem	*ari_base;
 
 /* Store MCE ops in a per-CPU variable */
-DEFINE_PER_CPU(struct mce_ops *, cpu_mce_ops);
-DEFINE_PER_CPU(void __iomem *, cpu_ari_bases);
+static DEFINE_PER_CPU(struct mce_ops *, cpu_mce_ops);
+static DEFINE_PER_CPU(void __iomem *, cpu_ari_bases);
 
 /*
  * ARI support for ARM cores
@@ -108,71 +106,59 @@ enum {
 	ARI_REQ_ONLINE_CORE,
 };
 
-static inline u32 ari_readl(u32 cpu, u32 reg)
+static inline u32 ari_readl(u32 reg)
 {
-	return readl(per_cpu(cpu_ari_bases, cpu) + reg);
+	return readl(__get_cpu_var(cpu_ari_bases) + reg);
 }
 
-static inline void ari_writel(u32 cpu, u32 val, u32 reg)
+static inline void ari_writel(u32 val, u32 reg)
 {
-	writel(val, per_cpu(cpu_ari_bases, cpu) + reg);
+	writel(val, __get_cpu_var(cpu_ari_bases) + reg);
 }
 
 static void ari_request_nowait(u32 events, u32 request, u32 low, u32 high)
 {
 	u32 reg;
-	int cpu = raw_smp_processor_id();
 
-	ari_writel(cpu, low, ARI_REQUEST_DATA_LO);
-	ari_writel(cpu, high, ARI_REQUEST_DATA_HI);
-
-	ari_writel(cpu, events, ARI_REQUEST_EVENT_MASK);
-
-	barrier();
+	ari_writel(low, ARI_REQUEST_DATA_LO);
+	ari_writel(high, ARI_REQUEST_DATA_HI);
+	ari_writel(events, ARI_REQUEST_EVENT_MASK);
 
 	reg = request | ARI_REQUEST_VALID;
-	ari_writel(cpu, reg, ARI_REQUEST);
+	ari_writel(reg, ARI_REQUEST);
 }
 
 static inline u32 ari_get_response_low(void)
 {
-	return ari_readl(raw_smp_processor_id(), ARI_RESPONSE_DATA_LO);
+	return ari_readl(ARI_RESPONSE_DATA_LO);
 }
 
 static inline u32 ari_get_response_high(void)
 {
-	return ari_readl(raw_smp_processor_id(), ARI_RESPONSE_DATA_HI);
+	return ari_readl(ARI_RESPONSE_DATA_HI);
 }
 
 static inline void ari_clobber_response(void)
 {
-	int cpu = raw_smp_processor_id();
-	ari_writel(cpu, 0, ARI_RESPONSE_DATA_LO);
-	ari_writel(cpu, 0, ARI_RESPONSE_DATA_HI);
+	ari_writel(0, ARI_RESPONSE_DATA_LO);
+	ari_writel(0, ARI_RESPONSE_DATA_HI);
 }
 
 static int ari_request(u32 events, u32 request, u32 low, u32 high)
 {
 	int status;
 	int busy_mask;
-	int cpu = raw_smp_processor_id();
 
 	ari_request_nowait(events, request, low, high);
 
-	status = ARI_STATUS_NONE;
+	status = ari_readl(ARI_STATUS);
 	busy_mask = ARI_STATUS_ONGOING | ARI_STATUS_PENDING;
 
 	/* NOTE: add timeout check if needed */
 	while (status & busy_mask)
-		status = ari_readl(cpu, ARI_STATUS);
+		status = ari_readl(ARI_STATUS);
 
 	return 0;
-}
-
-static int ari_enter_cstate(u32 state, u32 wake)
-{
-	return ari_request(ARI_EVT_MASK_STANDBYWFI,
-		ARI_REQ_ENTER_CSTATE, state & 0x3, wake);
 }
 
 static u32 gen_cstate_info_low(u32 cluster, u32 ccplex, u32 system, u8 force)
@@ -232,11 +218,6 @@ static int ari_is_sc7_allowed(u32 state, u32 wake, u32 *allowed)
 	if (!ret)
 		*allowed = ari_get_response_low() & 0x1;
 	return ret;
-}
-
-static int ari_online_core(u32 core)
-{
-	return ari_request(0, ARI_REQ_ONLINE_CORE, core & 0x7, 0);
 }
 
 /*
@@ -312,17 +293,6 @@ static inline void nvg_clr_output(void)
 	asm volatile("msr s3_0_c15_c1_3, %0" : : "r"(0));
 }
 
-static int nvg_enter_cstate(u32 state, u32 wake)
-{
-	/* Program wake time */
-	nvg_write_input(wake);
-	nvg_write_request(NVG_REQ_WAKE_TIME);
-	/* Enter c-state */
-	asm volatile("msr actlr_el1, %0" : : "r" (state));
-	asm volatile("wfi");
-	return 0;
-}
-
 static int nvg_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
 	u8 force, u32 wake)
 {
@@ -373,30 +343,9 @@ static int nvg_is_sc7_allowed(u32 state, u32 wake, u32 *allowed)
 	return 0;
 }
 
-static int nvg_online_core(u32 core)
-{
-	nvg_write_input(core & 0x7);
-	nvg_write_request(NVG_REQ_ONLINE_CORE);
-	return 0;
-}
-
 /* Instantiate MCE operations */
 DEFINE_MCE_OPS(ari);
 DEFINE_MCE_OPS(nvg);
-
-/**
- * Prepare MCE for a c-state.
- *
- * @state: power state to enter.
- * @wake: idle expectancy.
- *
- * Returns 0 if success.
- */
-int tegra_mce_enter_cstate(u32 state, u32 wake)
-{
-	return mce_request(enter_cstate, state, wake);
-}
-EXPORT_SYMBOL(tegra_mce_enter_cstate);
 
 /**
  * Specify deepest cluster/ccplex/system states allowed.
@@ -553,21 +502,6 @@ int tegra_mce_enum_features(u64 *features)
 }
 EXPORT_SYMBOL(tegra_mce_enum_features);
 
-/**
- * Bring an offlined core back online to C0 state.
- *
- * @core: core to be onlined.
- *
- * Returns 0 if success.
- */
-int tegra_mce_online_core(u32 core)
-{
-	if (core > TEGRA_MCE_ENUM_MAX)
-		return -EINVAL;
-	return mce_request(online_core, core);
-}
-EXPORT_SYMBOL(tegra_mce_online_core);
-
 #ifdef CONFIG_DEBUG_FS
 
 static int mce_echo_set(void *data, u64 val)
@@ -686,7 +620,7 @@ static int __init tegra_mce_early_init(void)
 }
 early_initcall(tegra_mce_early_init);
 
-static __init int tegra_mce_probe(struct platform_device *pdev)
+static int tegra_mce_probe(struct platform_device *pdev)
 {
 	void __iomem *base;
 	struct device *dev = &pdev->dev;
@@ -696,6 +630,8 @@ static __init int tegra_mce_probe(struct platform_device *pdev)
 		dev_err(dev, "DT data required.\n");
 		return -EINVAL;
 	}
+
+	mce_dev = dev;
 
 	base = of_iomap(np, 0);
 	if (!base) {
@@ -716,12 +652,12 @@ static __init int tegra_mce_probe(struct platform_device *pdev)
 	return mce_debugfs_init(dev);
 }
 
-static const struct of_device_id mce_of_match[] __initconst = {
+static const struct of_device_id mce_of_match[] = {
 	{ .compatible = "nvidia,tegra186-mce", },
 	{},
 };
 
-static __initdata struct platform_driver tegra_mce_driver = {
+static struct platform_driver tegra_mce_driver = {
 	.probe	= tegra_mce_probe,
 	.driver = {
 		.owner	= THIS_MODULE,
@@ -730,8 +666,4 @@ static __initdata struct platform_driver tegra_mce_driver = {
 	},
 };
 
-static int __init tegra_mce_init(void)
-{
-	return platform_driver_register(&tegra_mce_driver);
-}
-core_initcall(tegra_mce_init);
+module_platform_driver_probe(tegra_mce_driver, tegra_mce_probe);

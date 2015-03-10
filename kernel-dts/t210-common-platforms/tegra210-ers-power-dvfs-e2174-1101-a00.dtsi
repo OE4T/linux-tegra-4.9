@@ -21,7 +21,6 @@
 			temperature = <temp>;				\
 			hysteresis = <1000>;				\
 			type = "active";				\
-			writable;					\
 		};							\
 	};								\
 	cooling-maps {							\

@@ -680,6 +680,8 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	/* cancel any pending cde work */
 	gk20a_cde_suspend(g);
 
+	/* disable elpg before gr or fifo suspend */
+	ret |= gk20a_pmu_destroy(g);
 	/*
 	 * After this point, gk20a interrupts should not get
 	 * serviced.
@@ -687,8 +689,6 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	disable_irq(g->irq_stall);
 	disable_irq(g->irq_nonstall);
 
-	/* disable elpg before gr or fifo suspend */
-	ret |= gk20a_pmu_destroy(g);
 	ret |= gk20a_gr_suspend(g);
 	ret |= gk20a_mm_suspend(g);
 	ret |= gk20a_fifo_suspend(g);

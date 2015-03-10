@@ -137,6 +137,7 @@ static int tegra210_mvc_put_vol(struct snd_kcontrol *kcontrol,
 	unsigned int reg = mc->reg;
 	unsigned int ret, value, wait = 0xffff;
 
+	pm_runtime_get_sync(codec->dev);
 	/* check if VOLUME_SWITCH is triggered*/
 	do {
 		regmap_read(mvc->regmap,
@@ -157,6 +158,7 @@ static int tegra210_mvc_put_vol(struct snd_kcontrol *kcontrol,
 	ret |= regmap_update_bits(mvc->regmap, TEGRA210_MVC_SWITCH,
 			TEGRA210_MVC_VOLUME_SWITCH_MASK,
 			TEGRA210_MVC_VOLUME_SWITCH_TRIGGER);
+	pm_runtime_put(codec->dev);
 
 	return ret;
 }

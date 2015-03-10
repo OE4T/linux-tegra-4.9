@@ -151,7 +151,8 @@ static const char *tegra_clk_name[] = {
 	"sor_safe",
 	"pll_d2",
 	"emc.la",
-	"gpcdma"
+	"gpcdma",
+	"div-clk"
 	/* Get complete list from BPMP */
 };
 

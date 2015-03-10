@@ -47,7 +47,8 @@
 #define BPMP_TO_CPU_CH			13
 
 static void __iomem *bpmp_base;
-static void __iomem *channel_page;
+static void __iomem *cpu_ma_page;
+static void __iomem *cpu_sl_page;
 
 static uint32_t bpmp_readl(uint32_t reg)
 {
@@ -108,39 +109,29 @@ int bpmp_init_irq(void)
 	return 0;
 }
 
-#define CPU_MA_PAGE	0
-#define CPU_SL_PAGE	1
-#define GSC_PAGE_SZ	4096
-
-static void bpmp_get_sysram_off(int ch, int *ib_off, int *ob_off)
+static void __bpmp_channel_init(int ch)
 {
-	int ib_page;
-	int ob_page;
+	void __iomem *ibmem;
+	void __iomem *obmem;
 
 	if (ch == BPMP_TO_CPU_CH) {
-		ib_page = CPU_SL_PAGE;
-		ob_page = CPU_MA_PAGE;
+		ibmem = cpu_sl_page;
+		obmem = cpu_ma_page;
 	} else {
-		ib_page = CPU_MA_PAGE;
-		ob_page = CPU_SL_PAGE;
+		ibmem = cpu_ma_page;
+		obmem = cpu_sl_page;
 	}
 
-	*ib_off = SZ_256K + ib_page * GSC_PAGE_SZ + ch * MSG_SZ;
-	*ob_off = SZ_256K + ob_page * GSC_PAGE_SZ + ch * MSG_SZ;
+	channel_area[ch].ib = ibmem + ch * MSG_SZ;
+	channel_area[ch].ob = obmem + ch * MSG_SZ;
 }
 
 static void bpmp_channel_init(void)
 {
-	uint8_t *base = channel_page;
-	int ib_off;
-	int ob_off;
 	int i;
 
-	for (i = 0; i < NR_CHANNELS; i++) {
-		bpmp_get_sysram_off(i, &ib_off, &ob_off);
-		channel_area[i].ib = (struct mb_data *)(base + ib_off);
-		channel_area[i].ob = (struct mb_data *)(base + ob_off);
-	}
+	for (i = 0; i < NR_CHANNELS; i++)
+		__bpmp_channel_init(i);
 }
 
 static int bpmp_handshake(void)
@@ -172,8 +163,12 @@ static int bpmp_iomem_init(void)
 	if (!bpmp_base)
 		return -ENODEV;
 
-	channel_page = of_iomap(of_node, 1);
-	if (!channel_page)
+	cpu_ma_page = of_iomap(of_node, 1);
+	if (!cpu_ma_page)
+		return -ENODEV;
+
+	cpu_sl_page = of_iomap(of_node, 2);
+	if (!cpu_sl_page)
 		return -ENODEV;
 
 	return 0;

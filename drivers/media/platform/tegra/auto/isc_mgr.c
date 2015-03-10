@@ -498,6 +498,9 @@ static int isc_mgr_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	INIT_LIST_HEAD(&isc_mgr->dev_list);
+	mutex_init(&isc_mgr->mutex);
+
 	if (pdev->dev.of_node) {
 		pd = of_isc_mgr_pdata(pdev);
 		if (IS_ERR(pd))
@@ -544,8 +547,6 @@ static int isc_mgr_probe(struct platform_device *pdev)
 
 	spin_lock_init(&isc_mgr->spinlock);
 	atomic_set(&isc_mgr->in_use, 0);
-	INIT_LIST_HEAD(&isc_mgr->dev_list);
-	mutex_init(&isc_mgr->mutex);
 
 	isc_mgr->err_irq = platform_get_irq(pdev, 0);
 	if (isc_mgr->err_irq > 0) {
@@ -591,8 +592,10 @@ static int isc_mgr_remove(struct platform_device *pdev)
 {
 	struct isc_mgr_priv *isc_mgr = dev_get_drvdata(&pdev->dev);
 
-	isc_mgr_del(isc_mgr);
-	misc_deregister(&isc_mgr->misc_device);
+	if (isc_mgr) {
+		isc_mgr_del(isc_mgr);
+		misc_deregister(&isc_mgr->misc_device);
+	}
 
 	return 0;
 }

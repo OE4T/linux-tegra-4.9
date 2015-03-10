@@ -103,7 +103,6 @@ extern struct tegra_panel dsi_j_1440_810_5_8;
 extern struct tegra_panel dsi_j_720p_5;
 extern struct tegra_panel dsi_a_1200_1920_8_0;
 extern struct tegra_panel dsi_a_1200_800_8_0;
-extern struct tegra_panel edp_c_1366_768_14_0;
 
 void tegra_dsi_resources_init(u8 dsi_instance,
 			struct resource *resources, int n_resources);

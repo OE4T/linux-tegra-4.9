@@ -26,12 +26,14 @@
 
 void gk20a_reset_priv_ring(struct gk20a *g)
 {
-	u32 data;
+	u32 data = 0;
 
 	if (tegra_platform_is_linsim())
 		return;
 
-	data = gk20a_readl(g, trim_sys_gpc2clk_out_r());
+	/* Skipping read and then writeback to this reg, as we are just getting
+	* out of reset, and before this call, the reg is not written to*/
+
 	data = set_field(data,
 			trim_sys_gpc2clk_out_bypdiv_m(),
 			trim_sys_gpc2clk_out_bypdiv_f(0));

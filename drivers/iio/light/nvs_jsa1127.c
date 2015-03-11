@@ -61,7 +61,7 @@ static unsigned short jsa_i2c_addrs[] = {
 };
 
 static struct nvs_light_dynamic jsa_nld_tbl[] = {
-	{{6, 610000}, {212000,   0}, {0, 90000}, 800, 0},
+	{{0, 210000}, {6500,   0}, {0, 90000}, 800, 0},
 	{{0, 420000}, {13000,  0}, {0, 90000}, 400, 0},
 	{{0, 560000}, {18000,  0}, {0, 90000}, 300, 0},
 	{{0, 830000}, {27000,  0}, {0, 90000}, 200, 0},
@@ -572,6 +572,21 @@ static int jsa_of_dt(struct jsa_state *st, struct device_node *dn)
 		st->hw_it = true;
 		/* disable dynamic resolution */
 		st->light.nld_tbl = NULL;
+
+		/* Initialize default dynamic parameter table	*/
+		/* Overlay device-specific dynamic parameters, where necessary*/
+		if (dn) {
+			of_property_read_u32(dn, "light_hwm_maxrange_ival",
+					     &jsa_nld_tbl[st->light.nld_i].max_range.ival);
+			of_property_read_u32(dn, "light_hwm_maxrange_fval",
+					     &jsa_nld_tbl[st->light.nld_i].max_range.fval);
+			of_property_read_u32(dn, "light_hwm_resolution_ival",
+					     &jsa_nld_tbl[st->light.nld_i].resolution.ival);
+			of_property_read_u32(dn, "light_hwm_resolution_fval",
+					     &jsa_nld_tbl[st->light.nld_i].resolution.fval);
+			of_property_read_u32(dn, "light_hwm_interval",
+					     &jsa_nld_tbl[st->light.nld_i].delay_min_ms);
+		}
 
 		/* Initialize default hybrid parameter table	*/
 		/* memcpy(&st->hnld[0], &jsa_hnld_tbl, sizeof(st->hnld[0]));*/

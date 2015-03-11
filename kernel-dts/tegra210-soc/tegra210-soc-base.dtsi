@@ -579,6 +579,9 @@
 
 		ranges;
 
+		nvidia,ch-base = <0>;
+		nvidia,nb-channels = <12>;
+
 		vi {
 			compatible = "nvidia,tegra210-vi";
 			power-domains = <&ve_pd>;

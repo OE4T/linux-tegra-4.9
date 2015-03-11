@@ -14,6 +14,11 @@ Where:	'light' refers to the light sensor classification
 	'settingname' is a named identifier and rather free-form, can include more underscores if desired
 
 Valid Properties:
+light_hwm_resolution_ival	:
+light_hwm_resolution_fval	:
+light_hwm_maxrange_ival		:
+light_hwm_maxrange_fval		:
+light_hwm_interval		: Time capture interval in ms.  5000 = 5 seconds.
 light_hyb_resolution_ival	:
 light_hyb_resolution_fval	:
 light_hyb_maxrange_ival		:
@@ -21,11 +26,6 @@ light_hyb_maxrange_fval		:
 light_hyb_interval		: Time capture interval in ms.  5000 = 5 seconds.
 
 Future Properties (not yet implemented):
-light_hwm_resolution_ival	:
-light_hwm_resolution_fval	:
-light_hwm_maxrange_ival		:
-light_hwm_maxrange_fval		:
-light_hwm_interval		: Time capture interval in ms.  5000 = 5 seconds.
 light_swm_resolution_ival	:
 light_swm_resolution_fval	:
 light_swm_maxrange_ival		:

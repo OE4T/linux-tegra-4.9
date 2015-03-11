@@ -72,6 +72,7 @@ static const char * const master_names[] = {
 	[HSP_MASTER_BPMP] = "BPMP",
 	[HSP_MASTER_SPE] = "SPE",
 	[HSP_MASTER_SCE] = "SCE",
+	[HSP_MASTER_APE] = "APE",
 };
 
 static const char * const db_names[] = {
@@ -91,7 +92,7 @@ static inline int is_master_valid(int master)
 
 static inline int next_valid_master(int m)
 {
-	for (; m <= HSP_LAST_MASTER && !is_master_valid(m); m++)
+	for (m++; m <= HSP_LAST_MASTER && !is_master_valid(m); m++)
 		;
 	return m;
 }

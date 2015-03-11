@@ -19,6 +19,9 @@
 		jsa1127@39 {
 			compatible = "solteamopto,jsa1127";
 			reg = <0x39>;
+			light_hwm_maxrange_ival = <212000>;
+			light_hwm_resolution_ival = <6>;
+			light_hwm_resolution_fval = <610000>;
 			light_hyb_maxrange_ival = <63>;
 			light_hyb_maxrange_fval = <0>;
 			light_hyb_resolution_ival = <6>;

@@ -47,7 +47,9 @@
 #include <linux/of_address.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/uaccess.h>
+#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
 #include <linux/ote_protocol.h>
+#endif
 #include <linux/tegra-timer.h>
 
 #define CREATE_TRACE_POINTS
@@ -1710,6 +1712,7 @@ void tegra_dc_setup_vrr(struct tegra_dc *dc)
 	vrr->frame_avg_pct = 75;
 	vrr->fluct_avg_pct = 75;
 }
+
 unsigned long tegra_dc_poll_register(struct tegra_dc *dc, u32 reg, u32 mask,
 		u32 exp_val, u32 poll_interval_us, u32 timeout_ms)
 {
@@ -2728,6 +2731,40 @@ static void tegra_dc_vrr_extend_vfp(struct tegra_dc *dc)
 		tegra_dc_set_act_vfp(dc, vrr->vfp_extend);
 }
 
+int tegra_dc_get_v_count(struct tegra_dc *dc)
+{
+	u32     value;
+
+	value = tegra_dc_readl(dc, DC_DISP_DISPLAY_DBG_TIMING);
+	return (value & DBG_V_COUNT_MASK) >> DBG_V_COUNT_SHIFT;
+}
+
+static void tegra_dc_vrr_get_ts(struct tegra_dc *dc)
+{
+	struct timespec time_now;
+	struct tegra_vrr *vrr  = dc->out->vrr;
+
+	if (!vrr || !vrr->enable)
+		return;
+
+	getnstimeofday(&time_now);
+	vrr->fe_time_us = (s64)time_now.tv_sec * 1000000 +
+				time_now.tv_nsec / 1000;
+	vrr->v_count = tegra_dc_get_v_count(dc);
+}
+
+static void tegra_dc_vrr_sec(struct tegra_dc *dc)
+{
+	struct tegra_vrr *vrr  = dc->out->vrr;
+
+	if (!vrr || !vrr->enable)
+		return;
+
+#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
+	te_vrr_sec();
+#endif
+}
+
 static void tegra_dc_vblank(struct work_struct *work)
 {
 	struct tegra_dc *dc = container_of(work, struct tegra_dc, vblank_work);
@@ -3094,7 +3131,8 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status,
 		wake_up(&dc->timestamp_wq);
 
 		tegra_dc_vrr_extend_vfp(dc);
-		te_vrr_sec();
+		tegra_dc_vrr_get_ts(dc);
+		tegra_dc_vrr_sec(dc);
 
 		/* Mark the frame_end as complete. */
 		if (!completion_done(&dc->frame_end_complete))

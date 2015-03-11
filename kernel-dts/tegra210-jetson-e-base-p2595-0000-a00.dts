@@ -60,6 +60,13 @@
 	chosen {
         };
 
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "jetson_e";
+		};
+	};
+
 	pmc@7000e400 {
 		nvidia,invert-interrupt;
 		platform-io-pad-voltage = <

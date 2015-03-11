@@ -236,6 +236,18 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		}
 	}
 
+	/* update dai link hw_params for non pcm links */
+	for (idx = 0; idx < card->num_rtd; idx++) {
+		if (card->rtd[idx].dai_link->params) {
+			dai_params =
+			  (struct snd_soc_pcm_stream *)
+			  card->rtd[idx].dai_link->params;
+			dai_params->rate_min = rate;
+			dai_params->channels_min = channels;
+			dai_params->formats = formats;
+		}
+	}
+
 	return 0;
 }
 

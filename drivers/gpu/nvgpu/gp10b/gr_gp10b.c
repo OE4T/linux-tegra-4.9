@@ -642,7 +642,7 @@ static void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 		u32 size;
 		u32 cbes_reserve;
 
-		gk20a_mem_wr32(ctx_ptr, ctxsw_prog_main_image_full_preemption_ptr_o(),
+		gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_full_preemption_ptr_o(), 0,
 				gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va >> 8);
 
 		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);

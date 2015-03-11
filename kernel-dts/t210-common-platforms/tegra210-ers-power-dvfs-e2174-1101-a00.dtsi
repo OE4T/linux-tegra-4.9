@@ -272,16 +272,16 @@
 			SET_MAP_TRIP(gpu, gpu, scaling, 3, 50000);
 			SET_MAP_TRIP(gpu, gpu, scaling, 4, 70000);
 
-			SET_MAP_TRIP(gpu, gpu, vmax, 1, 90000);
+			SET_MAP_TRIP(gpu, gpu, vmax, 1, 83000);
 		};
 		Tdiode_tegra {
 			SET_MAP_TRIP(core, core, vmin, 1, 20000);
 		};
 		CPU-therm {
-			SET_MAP_TRIP(cpu, cpu, vmax, 1, 90000);
+			SET_MAP_TRIP(cpu, cpu, vmax, 1, 86000);
 		};
 		LCPU-therm {
-			SET_MAP_TRIP(lcpu, cpu, vmax, 1, 90000);
+			SET_MAP_TRIP(lcpu, cpu, vmax, 1, 86000);
 		};
 	};
 };

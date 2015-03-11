@@ -745,12 +745,21 @@ static void of_nvhost_parse_platform_data(struct platform_device *dev,
 					struct nvhost_device_data *pdata)
 {
 	struct device_node *np = dev->dev.of_node;
+	struct nvhost_master *host = nvhost_get_host(dev);
 	u32 value;
 
 	if (!of_property_read_u32(np, "virtual-dev", &value)) {
 		if (value)
 			pdata->virtual_dev = true;
 	}
+
+	if (!of_property_read_u32(np, "nvidia,ch-base", &value))
+		host->info.ch_base = value;
+
+	if (!of_property_read_u32(np, "nvidia,nb-channels", &value))
+		host->info.nb_channels = value;
+
+	host->info.ch_limit = host->info.ch_base + host->info.nb_channels;
 }
 
 static int nvhost_check_valid_config(void)

@@ -162,6 +162,24 @@ static irqreturn_t tegra_hv_net_interrupt(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+static void *tegra_hv_net_xmit_get_buffer(struct tegra_hv_net *hvn)
+{
+	void *p;
+	int ret;
+
+	p = tegra_hv_ivc_write_get_next_frame(hvn->ivck);
+	if (IS_ERR(p)) {
+		ret = wait_event_interruptible(hvn->wq,
+			!IS_ERR(p = tegra_hv_ivc_write_get_next_frame(
+				hvn->ivck)));
+		if (ret) {
+			netdev_err(hvn->ndev, "%s: wait error=%d\n",
+				__func__, ret);
+		}
+	}
+
+	return p;
+}
 
 static void tegra_hv_net_xmit_work(struct work_struct *work)
 {
@@ -205,22 +223,12 @@ static void tegra_hv_net_xmit_work(struct work_struct *work)
 			if (count > max_frame)
 				count = max_frame;
 
-			/* wait until we have space to write */
-			if (!tegra_hv_ivc_can_write(hvn->ivck)) {
-				ret = wait_event_interruptible(hvn->wq,
-					tegra_hv_ivc_can_write(hvn->ivck));
-				if (ret) {
-					netdev_err(hvn->ndev,
-						"%s: wait error=%d\n",
-						__func__, ret);
-					dk = dk_wq;
-					goto drop;
-				}
+			/* wait up to the maximum send timeout */
+			p = tegra_hv_net_xmit_get_buffer(hvn);
+			if (IS_ERR(p)) {
+				dk = dk_wq;
+				goto drop;
 			}
-
-			/* after we check write no failure is expected */
-			p = tegra_hv_ivc_write_get_next_frame(hvn->ivck);
-			BUG_ON(IS_ERR(p));
 
 			last = skb->len == count;
 
@@ -431,11 +439,10 @@ static int tegra_hv_net_rx(struct tegra_hv_net *hvn, int limit)
 
 	nr = 0;
 	dk = dk_none;
-	while (nr < limit && tegra_hv_ivc_can_read(hvn->ivck)) {
-
-		/* we checked, so this is expected to be successful */
+	while (nr < limit) {
 		p = tegra_hv_ivc_read_get_next_frame(hvn->ivck);
-		BUG_ON(IS_ERR(p));
+		if (IS_ERR(p))
+			break;
 
 		nr++;
 

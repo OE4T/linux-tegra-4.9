@@ -215,28 +215,52 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 
 	idx = tegra_machine_get_codec_dai_link_idx("rt5639-playback");
 	/* check if idx has valid number */
-	if (idx == -EINVAL)
-		return idx;
-	dai_params =
+	if (idx != -EINVAL) {
+		dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
-	err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
+		err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
 		RT5639_SCLK_S_MCLK, clk_out_rate, SND_SOC_CLOCK_IN);
-	if (err < 0) {
-		dev_err(card->dev, "codec_dai clock not set\n");
-		return err;
+		if (err < 0) {
+			dev_err(card->dev, "codec_dai clock not set\n");
+			return err;
+		}
+
+		/* update link_param to update hw_param for DAPM */
+		dai_params->rate_min = rate;
+		dai_params->channels_min = channels;
+		dai_params->formats = formats;
+
+		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
+		tegra_machine_get_bclk_ratio(&card->rtd[idx]));
+		if (err < 0) {
+			dev_err(card->dev, "Can't set cpu dai bclk ratio\n");
+			return err;
+		}
 	}
 
+	idx = tegra_machine_get_codec_dai_link_idx("spdif-dit-1");
+	if (idx != -EINVAL) {
+		dai_params =
+		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 
-	/* update link_param to update hw_param for DAPM */
-	dai_params->rate_min = rate;
-	dai_params->channels_min = channels;
-	dai_params->formats = formats;
+		/* update link_param to update hw_param for DAPM */
+		dai_params->rate_min = rate;
+		dai_params->channels_min = channels;
+		dai_params->formats = formats;
 
-	err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
-		tegra_machine_get_bclk_ratio(&card->rtd[idx]));
-	if (err < 0) {
-		dev_err(card->dev, "Can't set cpu dai bclk ratio\n");
-		return err;
+		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
+			tegra_machine_get_bclk_ratio(&card->rtd[idx]));
+		if (err < 0) {
+			dev_err(card->dev, "Can't set cpu dai bclk ratio\n");
+			return err;
+		}
+
+		err = snd_soc_dai_set_tdm_slot(card->rtd[idx].cpu_dai,
+			(1 << channels) - 1, (1 << channels) - 1, 0, 0);
+		if (err < 0) {
+			dev_err(card->dev, "Can't set cpu dai slot ctrl\n");
+			return err;
+		}
 	}
 
 	return 0;
@@ -312,10 +336,6 @@ static int tegra_t210ref_init(struct snd_soc_pcm_runtime *rtd)
 					&tegra_t210ref_hp_jack_gpio);
 		machine->gpio_requested |= GPIO_HP_DET;
 	}
-
-	/* FIXME: Calculate automatically based on DAPM routes? */
-	snd_soc_dapm_nc_pin(dapm, "LOUTL");
-	snd_soc_dapm_nc_pin(dapm, "LOUTR");
 
 	snd_soc_dapm_sync(dapm);
 

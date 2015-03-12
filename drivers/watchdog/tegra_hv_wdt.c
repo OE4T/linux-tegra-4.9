@@ -28,6 +28,8 @@
 #include <linux/kthread.h>
 #include <linux/delay.h>
 #include <linux/mutex.h>
+#include <linux/wait.h>
+#include <linux/interrupt.h>
 
 /* The hypervisor monitor service requires the watchdog to be refreshed at
  * least once every 60 seconds, so set our refresh time to less than half of
@@ -44,7 +46,9 @@ struct tegra_hv_wdt {
 	struct tegra_hv_ivc_cookie *ivc;
 	struct platform_device *pdev;
 	struct task_struct *thread;
+	wait_queue_head_t notify;
 	struct mutex lock;
+	bool interrupt;
 	bool user;
 	int saved;
 };
@@ -79,6 +83,7 @@ static int tegra_hv_wdt_ping(struct watchdog_device *wdt)
 	int ret;
 
 	mutex_lock(&hv->lock);
+
 	ret = tegra_hv_ivc_write(hv->ivc, IVC_MESSAGE_DATA,
 		sizeof(IVC_MESSAGE_DATA));
 
@@ -88,6 +93,7 @@ static int tegra_hv_wdt_ping(struct watchdog_device *wdt)
 	 * starting but won't flood system logs with duplicate information of
 	 * little value if the error condition persists.
 	 */
+
 	if ((ret != IVC_SUCCESS_CODE) && (ret != hv->saved))
 		dev_err(&hv->pdev->dev, "ivc write error %d\n", ret);
 	hv->saved = ret;
@@ -97,9 +103,36 @@ static int tegra_hv_wdt_ping(struct watchdog_device *wdt)
 	return 0;
 }
 
+static int tegra_hv_wdt_notified(struct tegra_hv_wdt *hv)
+{
+	int ret;
+
+	mutex_lock(&hv->lock);
+	ret = tegra_hv_ivc_channel_notified(hv->ivc);
+	mutex_unlock(&hv->lock);
+
+	return ret;
+}
+
 static int tegra_hv_wdt_loop(void *arg)
 {
 	struct tegra_hv_wdt *hv = (struct tegra_hv_wdt *)arg;
+
+	mutex_lock(&hv->lock);
+	tegra_hv_ivc_channel_reset(hv->ivc);
+	mutex_unlock(&hv->lock);
+
+	wait_event(hv->notify, tegra_hv_wdt_notified(hv) == 0);
+	dev_info(&hv->pdev->dev, "ivc channel ready\n");
+
+	/*
+	 * At this point, the channel has completed reset and we can
+	 * now communicate with the monitor service. We no longer have
+	 * a need for interrupts (though they shouldn't happen.)
+	 */
+
+	devm_free_irq(&hv->pdev->dev, hv->ivc->irq, &hv->wdt);
+	hv->interrupt = false;
 
 	while (!kthread_should_stop()) {
 		if (!hv->user)
@@ -108,6 +141,13 @@ static int tegra_hv_wdt_loop(void *arg)
 	}
 
 	return 0;
+}
+
+static irqreturn_t tegra_hv_wdt_interrupt(int irq, void *data)
+{
+	struct tegra_hv_wdt *hv = (struct tegra_hv_wdt *)data;
+	wake_up(&hv->notify);
+	return IRQ_HANDLED;
 }
 
 static int tegra_hv_wdt_parse(struct platform_device *pdev,
@@ -148,6 +188,76 @@ static const struct watchdog_ops tegra_hv_wdt_ops = {
 	.ping = tegra_hv_wdt_ping,
 };
 
+static int tegra_hv_wdt_setup_no_cleanup(struct tegra_hv_wdt *hv,
+	struct platform_device *pdev, struct device_node *qn, unsigned int id)
+{
+	int errcode;
+
+	init_waitqueue_head(&hv->notify);
+	mutex_init(&hv->lock);
+
+	hv->user = false;
+	hv->saved = IVC_SUCCESS_CODE;
+	hv->pdev = pdev;
+
+	hv->ivc = tegra_hv_ivc_reserve(qn, id, NULL);
+	if (IS_ERR_OR_NULL(hv->ivc)) {
+		dev_err(&pdev->dev, "failed to reserve ivc %u\n", id);
+		return -EINVAL;
+	}
+
+	errcode = devm_request_irq(&pdev->dev, hv->ivc->irq,
+		tegra_hv_wdt_interrupt, 0, dev_name(&pdev->dev), (void *)hv);
+	if (errcode < 0) {
+		dev_err(&pdev->dev, "failed to get irq %d\n", hv->ivc->irq);
+		return -EINVAL;
+	}
+
+	hv->interrupt = true;
+
+	hv->thread = kthread_create(tegra_hv_wdt_loop, (void *)hv,
+		"tegra-hv-wdt");
+	if (IS_ERR_OR_NULL(hv->thread)) {
+		dev_err(&pdev->dev, "failed to create kthread\n");
+		return -EINVAL;
+	}
+
+	hv->wdt.info = &tegra_hv_wdt_info;
+	hv->wdt.ops = &tegra_hv_wdt_ops;
+	hv->wdt.timeout = REFRESH_INTERVAL_SECS;
+
+	errcode = watchdog_register_device(&hv->wdt);
+	if (errcode < 0) {
+		memset(&hv->wdt, 0, sizeof(hv->wdt));
+		dev_err(&pdev->dev, "failed to register device\n");
+		return errcode;
+	}
+
+	return 0;
+}
+
+static void tegra_hv_wdt_cleanup(struct tegra_hv_wdt *hv)
+{
+	int errcode;
+
+	if (!IS_ERR_OR_NULL(hv->thread)) {
+		errcode = kthread_stop(hv->thread);
+		if ((errcode != 0) && (errcode != -EINTR))
+			dev_err(&hv->pdev->dev, "failed to stop thread\n");
+	}
+
+	if (hv->wdt.info)
+		watchdog_unregister_device(&hv->wdt);
+
+	if (hv->interrupt)
+		devm_free_irq(&hv->pdev->dev, hv->ivc->irq, &hv->wdt);
+
+	if (!IS_ERR_OR_NULL(hv->ivc)) {
+		if (tegra_hv_ivc_unreserve(hv->ivc) != 0)
+			dev_err(&hv->pdev->dev, "failed to unreserve ivc\n");
+	}
+}
+
 static int tegra_hv_wdt_probe(struct platform_device *pdev)
 {
 	struct tegra_hv_wdt *hv;
@@ -173,43 +283,19 @@ static int tegra_hv_wdt_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	hv->pdev = pdev;
-	hv->ivc = tegra_hv_ivc_reserve(qn, id, NULL);
+	/*
+	 * Note that if the setup function fails, there may be
+	 * dangling resources. So, we must clean up after failure.
+	 */
+
+	errcode = tegra_hv_wdt_setup_no_cleanup(hv, pdev, qn, id);
 	of_node_put(qn);
 
-	if (IS_ERR_OR_NULL(hv->ivc)) {
-		devm_kfree(&pdev->dev, hv);
-		dev_err(&pdev->dev, "failed to reserve ivc %u\n", id);
-		return -EINVAL;
-	}
-
-	mutex_init(&hv->lock);
-	hv->user = false;
-	hv->saved = IVC_SUCCESS_CODE;
-
-	hv->thread = kthread_create(tegra_hv_wdt_loop, (void *)hv,
-		"tegra-hv-wdt");
-	if (IS_ERR_OR_NULL(hv->thread)) {
-		if (tegra_hv_ivc_unreserve(hv->ivc) != 0)
-			dev_err(&pdev->dev, "failed to unreserve ivc\n");
-		devm_kfree(&pdev->dev, hv);
-		dev_err(&pdev->dev, "failed to create kthread\n");
-		return -ENOMEM;
-	}
-
-	hv->wdt.info = &tegra_hv_wdt_info;
-	hv->wdt.ops = &tegra_hv_wdt_ops;
-	hv->wdt.timeout = REFRESH_INTERVAL_SECS;
-
-	errcode = watchdog_register_device(&hv->wdt);
 	if (errcode < 0) {
-		if (kthread_stop(hv->thread) != -EINTR)
-			dev_err(&pdev->dev, "failed to stop thread\n");
-		if (tegra_hv_ivc_unreserve(hv->ivc) != 0)
-			dev_err(&pdev->dev, "failed to unreserve ivc\n");
+		tegra_hv_wdt_cleanup(hv);
 		devm_kfree(&pdev->dev, hv);
-		dev_err(&pdev->dev, "failed to register device\n");
-		return errcode;
+		dev_err(&pdev->dev, "failed to setup device\n");
+		return -EINVAL;
 	}
 
 	platform_set_drvdata(pdev, hv);
@@ -229,11 +315,12 @@ static int tegra_hv_wdt_remove(struct platform_device *pdev)
 {
 	struct tegra_hv_wdt *hv = platform_get_drvdata(pdev);
 
-	if (kthread_stop(hv->thread) != 0)
-		dev_err(&pdev->dev, "failed to stop thread\n");
-	watchdog_unregister_device(&hv->wdt);
-	if (tegra_hv_ivc_unreserve(hv->ivc) != 0)
-		dev_err(&pdev->dev, "failed to unreserve ivc\n");
+	/*
+	 * The below cleanup function will block waiting for the
+	 * refresh kthread to exit (if it has already started running.)
+	 */
+
+	tegra_hv_wdt_cleanup(hv);
 	devm_kfree(&pdev->dev, hv);
 	platform_set_drvdata(pdev, NULL);
 

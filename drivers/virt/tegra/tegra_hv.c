@@ -715,7 +715,9 @@ static int tegra_hv_setup(struct tegra_hv_data *hvd)
 		}
 	}
 
-	hvd->mempools = kzalloc(hvd->info->nr_mempools, sizeof(*hvd->mempools));
+	hvd->mempools =
+		kzalloc(hvd->info->nr_mempools * sizeof(*hvd->mempools),
+								GFP_KERNEL);
 	if (hvd->mempools == NULL) {
 		dev_err(dev, "failed to allocate %u-entry mempools array\n",
 				hvd->info->nr_mempools);

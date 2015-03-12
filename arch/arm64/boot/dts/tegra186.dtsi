@@ -21,6 +21,7 @@
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include <dt-bindings/memory/tegra186-swgroup.h>
 #include <dt-bindings/display/tegra-dc.h>
+#include "../../../../include/dt-bindings/pinctrl/pinctrl-tegra-padctl-uphy.h"
 #include "../../../../include/dt-bindings/clock/tegra186-clock.h"
 #include "../../../../include/dt-bindings/reset/tegra186-reset.h"
 #include "tegra186-pinmux-fpga.dtsi"
@@ -91,6 +92,8 @@
 			      <&{/sdhci@3440000}       TEGRA_SWGROUP_SDMMC3A>,
 			      <&{/sdhci@3420000}       TEGRA_SWGROUP_SDMMC2A>,
 			      <&{/sdhci@3400000}       TEGRA_SWGROUP_SDMMC1A>,
+			      <&{/xhci@0x03530000}	TEGRA_SWGROUP_XUSB_HOST>,
+			      <&{/xudc@0x03550000}	TEGRA_SWGROUP_XUSB_DEV>,
 			      <&{/bpmp}                 TEGRA_SWGROUP_BPMP>,
 			      <&{/dma@2600000}		TEGRA_SWGROUP_AXIS>,
 			      <&host1x_ctx0		TEGRA_SWGROUP_HOST1X_CTX0>,
@@ -119,6 +122,8 @@
 			  <&common_as TEGRA_SWGROUP_CELLS(SDMMC2A)>,
 			  <&common_as TEGRA_SWGROUP_CELLS(SDMMC3A)>,
 			  <&common_as TEGRA_SWGROUP_CELLS(SDMMC4A)>,
+			  <&common_as TEGRA_SWGROUP_CELLS(XUSB_HOST)>,
+			  <&common_as TEGRA_SWGROUP_CELLS(XUSB_DEV)>,
 			  <&common_as TEGRA_SWGROUP_CELLS(AXIS)>,
 			  <&common_as TEGRA_SWGROUP_CELLS(BPMP)>,
 			  <&common_as TEGRA_SWGROUP_CELLS(AFI)>;
@@ -185,6 +190,63 @@
 
 		channels   = <4>;
         };
+
+	xusb_mbox: mailbox@0x03538000 {
+		compatible = "nvidia,tegra186-xusb-mbox";
+		reg = <0x0 0x03538000 0x0 0x1000>;
+		interrupts = <0 164 0x4>;
+
+		#mbox-cells = <0>;
+		status = "disabled";
+	};
+
+	xhci@0x03530000 {
+		compatible = "nvidia,tegra186-xhci";
+		reg = <0x0 0x03530000 0x0 0x8000>,
+			<0x0 0x03538000 0x0 0x1000>,
+			<0x0 0x03539000 0x0 0x1000>;
+		interrupts = <0 163 0x4>;
+		mboxes = <&xusb_mbox>;
+		mbox-names = "xusb";
+		#stream-id-cells = <1>;
+		status = "disabled";
+	};
+
+	xudc@0x03550000 {
+		compatible = "nvidia,tegra186-xudc";
+		reg = <0x0 0x03550000 0x0 0x8000>,
+			<0x0 0x03558000 0x0 0x1000>,
+			<0x0 0x03559000 0x0 0x1000>;
+		interrupts = <0 166 0x4>;
+		#stream-id-cells = <1>;
+		status = "disabled";
+	};
+
+	pinctrl@0x03520000 {
+		compatible = "nvidia,tegra186-padctl-uphy";
+		reg = <0x0 0x03520000 0x0 0x1000>,
+			<0x0 0x02500000 0x0 0xa0000>;
+		resets = <&tegra_car TEGRA186_RESET_UPHY>,
+			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY>,
+			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_PLL0>,
+			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_PLL1>,
+			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_L0>,
+			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_L1>,
+			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_L2>,
+			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_L3>,
+			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_L4>,
+			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_L5>;
+		reset-names = "uphy_rst", "uphy_master_rst", "uphy_pll0_rst", "uphy_pll1_rst", "uphy_lane0_rst",
+			"uphy_lane1_rst", "uphy_lane2_rst", "uphy_lane3_rst", "uphy_lane4_rst", "uphy_lane5_rst";
+		clocks = <&tegra_car TEGRA186_CLK_USB2_TRK>,
+			<&tegra_car TEGRA186_CLK_HSIC_TRK>;
+		clock-names = "usb2_trk", "hsic_trk";
+		interrupts = <0 167 0x4>;
+		mboxes = <&xusb_mbox>;
+		mbox-names = "xusb";
+		#phy-cells = <1>;
+		status = "disabled";
+	};
 
 	host1x: host1x {
 		compatible = "nvidia,tegra186-host1x", "simple-bus";

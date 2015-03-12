@@ -45,8 +45,9 @@
 #define TEGRA_GPCDMA_CSR_IE_EOC			BIT(30)
 #define TEGRA_GPCDMA_CSR_ONCE			BIT(27)
 #define TEGRA_GPCDMA_CSR_FC_MODE_NO_MMIO	(0 << 24)
-#define TEGRA_GPCDMA_CSR_FC_MODE_ONE_MMIO	(2 << 24)
-#define TEGRA_GPCDMA_CSR_FC_MODE_TWO_MMIO	(3 << 24)
+#define TEGRA_GPCDMA_CSR_FC_MODE_ONE_MMIO	(1 << 24)
+#define TEGRA_GPCDMA_CSR_FC_MODE_TWO_MMIO	(2 << 24)
+#define TEGRA_GPCDMA_CSR_FC_MODE_FOUR_MMIO	(3 << 24)
 #define TEGRA_GPCDMA_CSR_DMA_IO2MEM_NO_FC	(0 << 21)
 #define TEGRA_GPCDMA_CSR_DMA_IO2MEM_FC		(1 << 21)
 #define TEGRA_GPCDMA_CSR_DMA_MEM2IO_NO_FC	(2 << 21)
@@ -54,7 +55,7 @@
 #define TEGRA_GPCDMA_CSR_DMA_MEM2MEM		(4 << 21)
 #define TEGRA_GPCDMA_CSR_DMA_FIXED_PAT		(6 << 21)
 #define TEGRA_GPCDMA_CSR_REQ_SEL_SHIFT		16
-#define TEGRA_GPCDMA_CSR_IRQ_MASK		15
+#define TEGRA_GPCDMA_CSR_IRQ_MASK		BIT(15)
 #define TEGRA_GPCDMA_CSR_WEIGHT_SHIFT		10
 
 /* STATUS register */
@@ -71,7 +72,7 @@
 #define TEGRA_GPCDMA_STATUS_IRQ_TRIG_STA	BIT(20)
 
 #define TEGRA_GPCDMA_CHAN_CSRE			0x008
-#define TEGRA_GPCDMA_CHAN_CSRE_PAUSE		(1 << 31)
+#define TEGRA_GPCDMA_CHAN_CSRE_PAUSE		BIT(31)
 
 /* Source address */
 #define TEGRA_GPCDMA_CHAN_SRC_PTR		0x00C
@@ -80,16 +81,17 @@
 #define TEGRA_GPCDMA_CHAN_DST_PTR		0x010
 
 /* High address pointer */
-#define TEGRA_GPCDMA_HIGH_ADDR_PTR		0x014
+#define TEGRA_GPCDMA_CHAN_HIGH_ADDR_PTR		0x014
 #define TEGRA_GPCDMA_HIGH_ADDR_SCR_PTR_SHIFT	0
+#define TEGRA_GPCDMA_HIGH_ADDR_SCR_PTR_MASK	0xFF
 #define TEGRA_GPCDMA_HIGH_ADDR_DST_PTR_SHIFT	16
+#define TEGRA_GPCDMA_HIGH_ADDR_DST_PTR_MASK	0xFF
 
 /* MC sequence register */
 #define TEGRA_GPCDMA_CHAN_MCSEQ		0x18
 #define TEGRA_GPCDMA_MCSEQ_DATA_SWAP		BIT(31)
 #define TEGRA_GPCDMA_MCSEQ_REQ_COUNT_SHIFT	25
-#define TEGRA_GPCDMA_MCSEQ_BURST_4		(1 << 23)
-#define TEGRA_GPCDMA_MCSEQ_BURST_8		(2 << 23)
+#define TEGRA_GPCDMA_MCSEQ_BURST_2		(0 << 23)
 #define TEGRA_GPCDMA_MCSEQ_BURST_16		(3 << 23)
 #define TEGRA_GPCDMA_MCSEQ_WRAP1_SHIFT		20
 #define TEGRA_GPCDMA_MCSEQ_WRAP0_SHIFT		17
@@ -108,14 +110,17 @@
 #define TEGRA_GPCDMA_MMIOSEQ_BUS_WIDTH_64	(3 << 28)
 #define TEGRA_GPCDMA_MMIOSEQ_BUS_WIDTH_128	(4 << 28)
 #define TEGRA_GPCDMA_MMIOSEQ_DATA_SWAP		BIT(27)
-/* Burst sizes from 1 word to 15 words are supported */
-#define TEGRA_GPCDMA_MMIOSEQ_BURST_SHIFT	23
+#define TEGRA_GPCDMA_MMIOSEQ_BURST_1		(0 << 23)
+#define TEGRA_GPCDMA_MMIOSEQ_BURST_2		(1 << 23)
+#define TEGRA_GPCDMA_MMIOSEQ_BURST_4		(3 << 23)
+#define TEGRA_GPCDMA_MMIOSEQ_BURST_8		(7 << 23)
+#define TEGRA_GPCDMA_MMIOSEQ_BURST_16		(15 << 23)
 #define TEGRA_GPCDMA_MMIOSEQ_MASTER_ID_SHIFT	19
 #define TEGRA_GPCDMA_MMIOSEQ_WRAP_WORD_SHIFT	16
 #define TEGRA_GPCDMA_MMIOSEQ_MMIO_PROT_SHIFT	7
 
-/* Channel BCOUNT */
-#define TEGRA_GPCDMA_CHAN_BCOUNT		0x20
+/* Channel WCOUNT */
+#define TEGRA_GPCDMA_CHAN_WCOUNT		0x20
 
 /* Transfer count */
 #define TEGRA_GPCDMA_CHAN_XFER_COUNT		0x24
@@ -166,7 +171,7 @@ struct tegra_dma_channel_regs {
 	unsigned long	dst_ptr;
 	unsigned long	mc_seq;
 	unsigned long	mmio_seq;
-	unsigned long	bcount;
+	unsigned long	wcount;
 };
 
 /*
@@ -422,7 +427,7 @@ static void tegra_dma_start(struct tegra_dma_channel *tdc,
 {
 	struct tegra_dma_channel_regs *ch_regs = &sg_req->ch_regs;
 
-	tdc_write(tdc, TEGRA_GPCDMA_CHAN_BCOUNT, ch_regs->bcount);
+	tdc_write(tdc, TEGRA_GPCDMA_CHAN_WCOUNT, ch_regs->wcount);
 
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSR, 0);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSR, ch_regs->csr);
@@ -430,6 +435,7 @@ static void tegra_dma_start(struct tegra_dma_channel *tdc,
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_MCSEQ, ch_regs->mc_seq);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_SRC_PTR, ch_regs->src_ptr);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_DST_PTR, ch_regs->dst_ptr);
+	tdc_write(tdc, TEGRA_GPCDMA_CHAN_HIGH_ADDR_PTR, 0);
 
 	/* Start DMA */
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSR,
@@ -608,7 +614,7 @@ static void tegra_dma_terminate_all(struct dma_chan *dc)
 	struct tegra_dma_desc *dma_desc;
 	unsigned long flags;
 	unsigned long status;
-	unsigned long bcount = 0;
+	unsigned long wcount = 0;
 	bool was_busy;
 
 	spin_lock_irqsave(&tdc->lock, flags);
@@ -624,12 +630,12 @@ static void tegra_dma_terminate_all(struct dma_chan *dc)
 	tegra_dma_pause(tdc, true);
 
 	status = tdc_read(tdc, TEGRA_GPCDMA_CHAN_STATUS);
-	bcount = tdc_read(tdc, TEGRA_GPCDMA_CHAN_XFER_COUNT);
+	wcount = tdc_read(tdc, TEGRA_GPCDMA_CHAN_XFER_COUNT);
 	if (status & TEGRA_GPCDMA_STATUS_ISE_EOC) {
 		dev_dbg(tdc2dev(tdc), "%s():handling isr\n", __func__);
 		tdc->isr_handler(tdc, true);
 		status = tdc_read(tdc, TEGRA_GPCDMA_CHAN_STATUS);
-		bcount = tdc_read(tdc, TEGRA_GPCDMA_CHAN_XFER_COUNT);
+		wcount = tdc_read(tdc, TEGRA_GPCDMA_CHAN_XFER_COUNT);
 	}
 
 	was_busy = tdc->busy;
@@ -748,30 +754,38 @@ static inline int get_burst_size(struct tegra_dma_channel *tdc,
 	u32 burst_size, enum dma_slave_buswidth slave_bw, int len)
 {
 	int burst_byte;
-	int burst_mc_width;
+	int burst_mmio_width;
 
 	/*
 	 * burst_size from client is in terms of the bus_width.
 	 * convert that into words.
 	 */
 	burst_byte = burst_size * slave_bw;
-	burst_mc_width = burst_byte / 4;
+	burst_mmio_width = burst_byte / 4;
 
 	/* If burst size is 0 then calculate the burst size based on length */
-	if (!burst_mc_width) {
+	if (!burst_mmio_width) {
 		if (len & 0xF)
-			return TEGRA_GPCDMA_MCSEQ_BURST_4;
+			return TEGRA_GPCDMA_MMIOSEQ_BURST_1;
+		else if ((len >> 3) & 0x1)
+			return TEGRA_GPCDMA_MMIOSEQ_BURST_2;
 		else if ((len >> 4) & 0x1)
-			return TEGRA_GPCDMA_MCSEQ_BURST_8;
+			return TEGRA_GPCDMA_MMIOSEQ_BURST_4;
+		else if ((len >> 5) & 0x1)
+			return TEGRA_GPCDMA_MMIOSEQ_BURST_8;
 		else
-			return TEGRA_GPCDMA_MCSEQ_BURST_16;
+			return TEGRA_GPCDMA_MMIOSEQ_BURST_16;
 	}
-	if (burst_mc_width < 4)
-		return TEGRA_GPCDMA_MCSEQ_BURST_4;
-	else if (burst_mc_width < 8)
-		return TEGRA_GPCDMA_MCSEQ_BURST_8;
+	if (burst_mmio_width < 2)
+		return TEGRA_GPCDMA_MMIOSEQ_BURST_1;
+	else if (burst_mmio_width < 4)
+		return TEGRA_GPCDMA_MMIOSEQ_BURST_2;
+	else if (burst_mmio_width < 8)
+		return TEGRA_GPCDMA_MMIOSEQ_BURST_4;
+	else if (burst_mmio_width < 16)
+		return TEGRA_GPCDMA_MMIOSEQ_BURST_8;
 	else
-		return TEGRA_GPCDMA_MCSEQ_BURST_16;
+		return TEGRA_GPCDMA_MMIOSEQ_BURST_16;
 }
 
 static int get_transfer_param(struct tegra_dma_channel *tdc,
@@ -835,11 +849,17 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_slave_sg(
 
 	INIT_LIST_HEAD(&req_list);
 
+	/* Enable once or continuous mode */
 	csr |= TEGRA_GPCDMA_CSR_ONCE;
+	/* Program the slave id in requestor select */
 	csr |= tdc->slave_id << TEGRA_GPCDMA_CSR_REQ_SEL_SHIFT;
+	/* Enable IRQ mask */
+	csr |= TEGRA_GPCDMA_CSR_IRQ_MASK;
+
 	if (flags & DMA_PREP_INTERRUPT)
 		csr |= TEGRA_GPCDMA_CSR_IE_EOC;
 
+	/* Set the address wrapping on both MC and MMIO side */
 	mc_seq = TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
 			TEGRA_GPCDMA_MCSEQ_WRAP0_SHIFT;
 	mc_seq |= TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
@@ -880,7 +900,7 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_slave_sg(
 			return NULL;
 		}
 
-		mc_seq |= get_burst_size(tdc, burst_size, slave_bw, len);
+		mmio_seq |= get_burst_size(tdc, burst_size, slave_bw, len);
 		dma_desc->bytes_requested += len;
 
 		if (direction == DMA_MEM_TO_DEV) {
@@ -890,7 +910,8 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_slave_sg(
 			sg_req->ch_regs.src_ptr = apb_ptr;
 			sg_req->ch_regs.dst_ptr = mem;
 		}
-		sg_req->ch_regs.bcount = len;
+		/* Word count register takes input in Words */
+		sg_req->ch_regs.wcount = (len >> 2);
 		sg_req->ch_regs.csr = csr;
 		sg_req->ch_regs.mmio_seq = mmio_seq;
 		sg_req->ch_regs.mc_seq = mc_seq;
@@ -1274,7 +1295,7 @@ static int tegra_dma_pm_suspend(struct device *dev)
 		ch_reg->dst_ptr = tdc_read(tdc, TEGRA_GPCDMA_CHAN_DST_PTR);
 		ch_reg->mc_seq = tdc_read(tdc, TEGRA_GPCDMA_CHAN_MCSEQ);
 		ch_reg->mmio_seq = tdc_read(tdc, TEGRA_GPCDMA_CHAN_MMIOSEQ);
-		ch_reg->bcount = tdc_read(tdc, TEGRA_GPCDMA_CHAN_BCOUNT);
+		ch_reg->wcount = tdc_read(tdc, TEGRA_GPCDMA_CHAN_WCOUNT);
 	}
 	tegra_dma_runtime_suspend(dev);
 	return 0;
@@ -1294,7 +1315,7 @@ static int tegra_dma_pm_resume(struct device *dev)
 		struct tegra_dma_channel *tdc = &tdma->channels[i];
 		struct tegra_dma_channel_regs *ch_reg = &tdc->channel_reg;
 
-		tdc_write(tdc, TEGRA_GPCDMA_CHAN_BCOUNT, ch_reg->bcount);
+		tdc_write(tdc, TEGRA_GPCDMA_CHAN_WCOUNT, ch_reg->wcount);
 		tdc_write(tdc, TEGRA_GPCDMA_CHAN_MMIOSEQ, ch_reg->mmio_seq);
 		tdc_write(tdc, TEGRA_GPCDMA_CHAN_DST_PTR, ch_reg->dst_ptr);
 		tdc_write(tdc, TEGRA_GPCDMA_CHAN_MCSEQ, ch_reg->mc_seq);

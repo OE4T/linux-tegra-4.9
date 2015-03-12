@@ -81,7 +81,7 @@ static int tegra_fb_check_var(struct fb_var_screeninfo *var,
 	struct tegra_dc_out_ops *ops = dc->out_ops;
 	struct fb_videomode mode;
 
-	if ((var->yres * var->xres * var->bits_per_pixel / 8 * 2) >
+	if ((var->yres * var->xres * var->bits_per_pixel / 8) >
 		info->screen_size) {
 		dev_err(&tegra_fb->ndev->dev,
 			"FB %lu is NOT enough for %dx%d %dbpp!\n",
@@ -108,8 +108,8 @@ static int tegra_fb_check_var(struct fb_var_screeninfo *var,
 		var->yoffset = yoffset;
 	}
 
-	/* Double yres_virtual to allow double buffering through pan_display */
-	var->yres_virtual = var->yres * 2;
+	/* no support for double buffering */
+	var->yres_virtual = var->yres;
 
 	return 0;
 }
@@ -840,7 +840,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	tegra_dc_to_fb_videomode(&m, &dc->mode);
 	fb_videomode_to_var(&info->var, &m);
 	info->var.xres_virtual		= fb_data->xres;
-	info->var.yres_virtual		= fb_data->yres * 2;
+	info->var.yres_virtual		= fb_data->yres;
 	info->var.bits_per_pixel	= fb_data->bits_per_pixel;
 	info->var.activate		= FB_ACTIVATE_VBL;
 	info->var.height		= tegra_dc_get_out_height(dc);

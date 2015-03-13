@@ -57,7 +57,8 @@ static void lock_device(struct nvhost_job *job, bool lock)
 		nvhost_opcode_release_mlock(pdata->class);
 
 	/* No need to do anything if we have a channel/engine */
-	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
+	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN ||
+	    pdata->forced_map_on_open)
 		return;
 
 	nvhost_cdma_push(&ch->cdma, opcode, NVHOST_OPCODE_NOOP);
@@ -149,24 +150,41 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 
 static void push_waits(struct nvhost_job *job)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
+	struct nvhost_syncpt *sp = &nvhost_get_host(job->ch->dev)->syncpt;
 	struct nvhost_channel *ch = job->ch;
 	int i;
 
-	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
+	for (i = 0; i < job->num_waitchk; i++) {
+		struct nvhost_waitchk *wait = &job->waitchk[i];
+
+		/* skip pushing waits if we allow them (map-at-open mode)
+		 * and userspace wants to push a wait to some explicit
+		 * position */
+		if ((nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN ||
+		     pdata->forced_map_on_open) && wait->mem)
+			continue;
+
+		/* Skip pushing wait if it has already been expired */
+		if (nvhost_syncpt_is_expired(sp, wait->syncpt_id,
+					     wait->thresh))
+			continue;
+
+		nvhost_cdma_push(&ch->cdma,
+			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
+				host1x_uclass_wait_syncpt_r(), 1),
+			nvhost_class_host_wait_syncpt(
+				wait->syncpt_id, wait->thresh));
+	}
+
+	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN ||
+	    pdata->forced_map_on_open)
 		return;
 
 	for (i = 0; i < job->num_gathers; i++) {
 		struct nvhost_job_gather *g = &job->gathers[i];
 		add_sync_waits(job->ch, g->pre_fence);
 	}
-
-	for (i = 0; i < job->num_waitchk; i++)
-		nvhost_cdma_push(&ch->cdma,
-			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-				host1x_uclass_wait_syncpt_r(), 1),
-			nvhost_class_host_wait_syncpt(
-				job->waitchk[i].syncpt_id,
-				job->waitchk[i].thresh));
 }
 
 static inline u32 gather_regnum(u32 word)
@@ -186,6 +204,7 @@ static inline u32 gather_count(u32 word)
 
 static void submit_gathers(struct nvhost_job *job)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
 	void *cpuva = NULL;
 	int i;
 
@@ -195,7 +214,8 @@ static void submit_gathers(struct nvhost_job *job)
 		u32 op1;
 		u32 op2;
 
-		if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
+		if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN ||
+		    pdata->forced_map_on_open)
 			add_sync_waits(job->ch, g->pre_fence);
 
 		nvhost_cdma_push(&job->ch->cdma,

@@ -41,8 +41,6 @@
 #define NVI_FIFO_SAMPLE_SIZE_MAX	(38)
 #define TIMESTAMP_FIFO_SIZE		(64)
 #define FIFO_THRESHOLD			(800)
-#define FIFO_RESERVED_EVENT_COUNT	(0)
-#define FIFO_MAX_EVENT_COUNT		(0)
 #define KBUF_SZ				(64)
 
 #define AXIS_X				(0)
@@ -61,7 +59,6 @@
 #define EN_STDBY			(16)
 #define EN_LPA				(17)
 #define EN_FW				(18)
-#define EN_SELF_TEST			(19)
 #define DEV_MASTER			(31)
 #define DEV_MPU_MASK			((1 << DEV_ACCEL) | \
 					(1 << DEV_ANGLVEL) | \
@@ -85,20 +82,8 @@
 
 #define NVI_DBG_SPEW_MSG		(1 << 0)
 #define NVI_DBG_SPEW_AUX		(1 << 1)
-#define NVI_DBG_SPEW_ANGLVEL		(1 << 2)
-#define NVI_DBG_SPEW_TEMP		(1 << 3)
-#define NVI_DBG_SPEW_ACCEL		(1 << 4)
-#define NVI_DBG_SPEW_ACCEL_UC		(1 << 5)
-#define NVI_DBG_SPEW_FIFO		(1 << 6)
-#define NVI_DBG_SPEW_BUF		(1 << 7)
-#define NVI_DBG_SPEW_IRQ		(1 << 8)
-#define NVI_DBG_ACCEL_AXIS_X		(1 << 9)
-#define NVI_DBG_ACCEL_AXIS_Y		(1 << 10)
-#define NVI_DBG_ACCEL_AXIS_Z		(1 << 11)
-#define NVI_DBG_ANGLVEL_AXIS_X		(1 << 12)
-#define NVI_DBG_ANGLVEL_AXIS_Y		(1 << 13)
-#define NVI_DBG_ANGLVEL_AXIS_Z		(1 << 14)
-#define NVI_DBG_TEMP_VAL		(1 << 15)
+#define NVI_DBG_SPEW_FIFO		(1 << 2)
+#define NVI_DBG_SPEW_BUF		(1 << 3)
 /* registers */
 #define REG_FIFO_RST_BANK		(0)
 #define REG_FIFO_RST			(0x68)
@@ -322,7 +307,6 @@ struct nvi_hal {
 	const char *part_name;
 	unsigned int regs_n;
 	unsigned int reg_bank_n;
-	bool dmp;
 	unsigned int fifo_size;
 	const unsigned long *lpa_tbl;
 	unsigned int lpa_tbl_n;
@@ -344,6 +328,7 @@ struct aux_port {
 	bool hw_en;
 	bool hw_do;
 	bool fifo_en;
+	bool flush;
 	unsigned int batch_flags;
 	unsigned int batch_period_us;
 	unsigned int batch_timeout_us;
@@ -423,8 +408,6 @@ struct inv_chip_config_s {
 	unsigned int bypass_timeout_ms;
 	unsigned int temp_fifo_en;
 	unsigned int fifo_thr;
-	unsigned int fifo_reserve;
-	unsigned int fifo_max;
 };
 
 /**
@@ -450,32 +433,6 @@ struct inv_chip_info_s {
 };
 
 /**
- *  struct inv_tap structure to store tap data.
- *  @min_count:  minimum taps counted.
- *  @thresh:    tap threshold.
- *  @time:	tap time.
- *  @on: tap on/off.
- */
-struct inv_tap {
-	u16 min_count;
-	u16 thresh;
-	u16 time;
-	bool on;
-};
-
-/**
- *  struct accel_mot_int_s structure to store motion interrupt data
- *  @mot_thr:    motion threshold.
- *  @mot_dur:    motion duration.
- *  @mot_on:     flag to indicate motion detection on;
- */
-struct accel_mot_int {
-	u16 mot_thr;
-	u32 mot_dur;
-	u8 mot_on:1;
-};
-
-/**
  * struct self_test_setting - self test settables from sysfs
  * samples: number of samples used in self test.
  * threshold: threshold fail/pass criterion in self test.
@@ -487,42 +444,11 @@ struct self_test_setting {
 	u16 threshold;
 };
 
-/**
- * struct inv_smd significant motion detection structure.
- * @threshold: accel threshold for motion detection.
- * @delay: delay time to confirm 2nd motion.
- * @delay2: delay window parameter.
- */
-struct inv_smd {
-	u32 threshold;
-	u32 delay;
-	u32 delay2;
-};
-
-/**
- * struct inv_ped pedometer related data structure.
- * @step: steps taken.
- * @time: time taken during the period.
- * @last_step_time: last time the step is taken.
- * @step_thresh: step threshold to show steps.
- * @int_thresh: step threshold to generate interrupt.
- * @int_on:   pedometer interrupt enable/disable.
- * @on:  pedometer on/off.
- */
-struct inv_ped {
-	u64 step;
-	u64 time;
-	u64 last_step_time;
-	u16 step_thresh;
-	u16 int_thresh;
-	bool int_on;
-	bool on;
-};
-
-
 struct nvi_state {
 	struct i2c_client *i2c;
-	struct iio_trigger *trig;
+	void *nvs_st[DEV_N];
+	struct nvs_fn_if *nvs;
+	struct sensor_cfg cfg[DEV_N];
 	struct regulator_bulk_data vreg[2];
 	struct notifier_block nb_vreg[2];
 	struct mpu_platform_data pdata;
@@ -530,37 +456,30 @@ struct nvi_state {
 	struct nvi_rc rc;
 	struct aux_ports aux;
 	s64 vreg_en_ts[2];
+	unsigned int sts;		/* status flags */
+	unsigned int errs;		/* error count */
 	unsigned int info;		/* info data to return */
 	unsigned int dbg;		/* debug flags */
-	unsigned int errs;		/* error count */
 	unsigned int master_enable;	/* global enable */
-	unsigned int enable[DEV_N_AUX];	/* enable status */
+	unsigned int enabled[DEV_N_AUX]; /* enable status */
 	unsigned int delay_us[DEV_N_AUX]; /* device sampling delay */
 	unsigned int smplrt_delay_us[DEV_N_AUX]; /* source sampling delay */
 	unsigned int batch_flags[DEV_N]; /* batch flags */
 	unsigned int batch_timeout_us[DEV_N]; /* batch timeout us */
+	unsigned int fsync[DEV_N];	/* FSYNC configuration */
 	unsigned short i2c_addr;	/* I2C address */
-	bool iio_ts_en;			/* use IIO timestamps */
-	bool shutdown;
-	bool suspend;
-	bool flush;
 	bool rc_dis;
 	bool irq_dis;
-	bool dmp_en;
+	bool flush[DEV_N];
 	int pm;
 
 	struct inv_chip_config_s chip_config;
 	struct inv_chip_info_s chip_info;
 	struct self_test_setting self_test;
-	struct inv_tap tap;
-	struct inv_ped ped;
-	struct accel_mot_int mot_int;
 	int accel_bias[AXIS_N];
 	int gyro_bias[AXIS_N];
 	s16 input_accel_offset[AXIS_N];
 	s16 input_gyro_offset[AXIS_N];
-	int input_accel_dmp_bias[AXIS_N];
-	int input_gyro_dmp_bias[AXIS_N];
 	s16 rom_accel_offset[AXIS_N];
 	s16 rom_gyro_offset[AXIS_N];
 	u8 st_data_accel[AXIS_N];
@@ -569,10 +488,6 @@ struct nvi_state {
 	DECLARE_KFIFO(timestamps, s64, TIMESTAMP_FIFO_SIZE);
 	spinlock_t time_stamp_lock;
 	u16 fifo_sample_size;
-	s16 accel_uc[AXIS_N];
-	s16 accel[AXIS_N];
-	s16 anglvel[AXIS_N];
-	s16 temp;
 	s64 ts;
 	s64 fifo_ts;
 	s64 push_ts;
@@ -584,8 +499,7 @@ struct nvi_state {
 #endif /* NVI_I2C_DEBUG_INTERFACE */
 };
 
-s64 nvi_get_time_ns(struct nvi_state *st);
-ssize_t nvi_dbg_reg(struct nvi_state *st, char *buf);
+s64 nvi_get_time_ns(void);
 int nvi_i2c_read(struct nvi_state *st, u16 addr, u8 reg, u16 len, u8 *buf);
 int nvi_i2c_rd(struct nvi_state *st, u8 bank, u8 reg, u16 len, u8 *buf);
 int nvi_i2c_write(struct nvi_state *st, u16 addr, u16 len, u8 *buf);
@@ -603,13 +517,12 @@ int nvi_user_ctrl_en(struct nvi_state *st, bool fifo_enable, bool i2c_enable);
 int nvi_wr_pwr_mgmt_1(struct nvi_state *st, u8 pwr_mgmt_1);
 int nvi_pm_wr(struct nvi_state *st, u8 pwr_mgmt_1, u8 pwr_mgmt_2, u8 lpa);
 int nvi_pm(struct nvi_state *st, int pm_req);
-int nvi_enable(struct iio_dev *indio_dev);
+int nvi_en(struct nvi_state *st);
 
 int inv_icm_init(struct nvi_state *st);
 int inv_get_silicon_rev_mpu6050(struct nvi_state *st);
 int inv_get_silicon_rev_mpu6500(struct nvi_state *st);
-int inv_hw_self_test(struct iio_dev *indio_dev);
-int inv_create_dmp_sysfs(struct iio_dev *ind);
+int inv_hw_self_test(struct nvi_state *st, int snsr_id);
 
 u16 inv_dmp_get_address(u16 key);
 

@@ -183,12 +183,16 @@ static int gk20a_as_ioctl_get_va_regions(
 	unsigned int write_entries;
 	struct nvgpu_as_va_region __user *user_region_ptr;
 	struct vm_gk20a *vm = as_share->vm;
+	int page_sizes = gmmu_nr_page_sizes;
 
 	gk20a_dbg_fn("");
 
+	if (!vm->big_pages)
+		page_sizes--;
+
 	write_entries = args->buf_size / sizeof(struct nvgpu_as_va_region);
-	if (write_entries > gmmu_nr_page_sizes)
-		write_entries = gmmu_nr_page_sizes;
+	if (write_entries > page_sizes)
+		write_entries = page_sizes;
 
 	user_region_ptr =
 		(struct nvgpu_as_va_region __user *)(uintptr_t)args->buf_addr;
@@ -216,7 +220,7 @@ static int gk20a_as_ioctl_get_va_regions(
 	}
 
 	args->buf_size =
-		gmmu_nr_page_sizes * sizeof(struct nvgpu_as_va_region);
+		page_sizes * sizeof(struct nvgpu_as_va_region);
 
 	return 0;
 }

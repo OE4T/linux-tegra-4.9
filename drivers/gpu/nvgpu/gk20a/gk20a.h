@@ -452,6 +452,8 @@ struct gk20a {
 	struct dentry *debugfs_ltc_enabled;
 	struct dentry *debugfs_timeouts_enabled;
 	struct dentry *debugfs_gr_idle_timeout_default;
+	struct dentry *debugfs_bypass_smmu;
+	struct dentry *debugfs_disable_bigpage;
 #endif
 	struct gk20a_ctxsw_ucode_info ctxsw_ucode_info;
 

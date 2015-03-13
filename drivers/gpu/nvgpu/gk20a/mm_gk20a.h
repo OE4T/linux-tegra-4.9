@@ -210,7 +210,9 @@ struct gk20a_mmu_level {
 	int (*update_entry)(struct vm_gk20a *vm,
 			   struct gk20a_mm_entry *pte,
 			   u32 i, u32 gmmu_pgsz_idx,
-			   u64 iova,
+			   struct scatterlist **sgl,
+			   u64 *offset,
+			   u64 *iova,
 			   u32 kind_v, u32 *ctag,
 			   bool cacheable, bool unmapped_pte,
 			   int rw_flag, bool sparse, u32 flags);
@@ -303,6 +305,8 @@ struct mm_gk20a {
 #ifdef CONFIG_DEBUG_FS
 	u32 ltc_enabled;
 	u32 ltc_enabled_debug;
+	u32 bypass_smmu;
+	u32 disable_bigpage;
 #endif
 };
 

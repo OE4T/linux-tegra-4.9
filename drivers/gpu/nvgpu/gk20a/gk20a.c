@@ -1482,6 +1482,8 @@ static int gk20a_probe(struct platform_device *dev)
 	spin_lock_init(&gk20a->debugfs_lock);
 	gk20a->mm.ltc_enabled = true;
 	gk20a->mm.ltc_enabled_debug = true;
+	gk20a->mm.bypass_smmu = platform->bypass_smmu;
+	gk20a->mm.disable_bigpage = platform->disable_bigpage;
 	gk20a->debugfs_ltc_enabled =
 			debugfs_create_bool("ltc_enabled", S_IRUGO|S_IWUSR,
 				 platform->debugfs,
@@ -1496,6 +1498,16 @@ static int gk20a_probe(struct platform_device *dev)
 					S_IRUGO|S_IWUSR,
 					platform->debugfs,
 					&gk20a->timeouts_enabled);
+	gk20a->debugfs_bypass_smmu =
+			debugfs_create_bool("bypass_smmu",
+					S_IRUGO|S_IWUSR,
+					platform->debugfs,
+					&gk20a->mm.bypass_smmu);
+	gk20a->debugfs_disable_bigpage =
+			debugfs_create_bool("disable_bigpage",
+					S_IRUGO|S_IWUSR,
+					platform->debugfs,
+					&gk20a->mm.disable_bigpage);
 	gk20a_pmu_debugfs_init(dev);
 	gk20a_cde_debugfs_init(dev);
 #endif
@@ -1929,9 +1941,14 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->pde_coverage_bit_count =
 		gk20a_mm_pde_coverage_bit_count(&g->mm.pmu.vm);
 
-	gpu->available_big_page_sizes = gpu->big_page_size;
-	if (g->ops.mm.get_big_page_sizes)
-		gpu->available_big_page_sizes |= g->ops.mm.get_big_page_sizes();
+	if (g->mm.disable_bigpage) {
+		gpu->big_page_size = 0;
+		gpu->available_big_page_sizes = 0;
+	} else {
+		gpu->available_big_page_sizes = gpu->big_page_size;
+		if (g->ops.mm.get_big_page_sizes)
+			gpu->available_big_page_sizes |= g->ops.mm.get_big_page_sizes();
+	}
 
 	gpu->flags = NVGPU_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS
 		| NVGPU_GPU_FLAGS_SUPPORT_SYNC_FENCE_FDS;

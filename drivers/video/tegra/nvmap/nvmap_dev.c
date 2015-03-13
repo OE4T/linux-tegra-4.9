@@ -1341,6 +1341,7 @@ static void nvmap_iovmm_get_client_mss(struct nvmap_client *client, u64 *pss,
 		if (!h || !h->alloc || !h->heap_pgalloc)
 			continue;
 
+		mutex_lock(&h->lock);
 		list_for_each_entry(tmp, &h->vmas, list) {
 			if (client->task->pid == tmp->pid) {
 
@@ -1349,6 +1350,7 @@ static void nvmap_iovmm_get_client_mss(struct nvmap_client *client, u64 *pss,
 					mm = mm_access(client->task,
 							PTRACE_MODE_READ);
 					if (!mm || IS_ERR(mm)) {
+						mutex_unlock(&h->lock);
 						nvmap_ref_unlock(client);
 						return;
 					}
@@ -1362,6 +1364,7 @@ static void nvmap_iovmm_get_client_mss(struct nvmap_client *client, u64 *pss,
 						&procrank_walk);
 			}
 		}
+		mutex_unlock(&h->lock);
 
 		*total += h->size / atomic_read(&h->share_count);
 	}

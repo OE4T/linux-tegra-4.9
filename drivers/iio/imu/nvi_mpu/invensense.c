@@ -207,27 +207,6 @@ struct prod_rev_map_t {
 #define END_MARKER                            0x0010
 #define EMPTY_MARKER                          0x0020
 
-/*tap related defines */
-#define INV_TAP                               0x08
-#define INV_NUM_TAP_AXES                      3
-
-#define INV_TAP_AXIS_X_POS                    0x20
-#define INV_TAP_AXIS_X_NEG                    0x10
-#define INV_TAP_AXIS_Y_POS                    0x08
-#define INV_TAP_AXIS_Y_NEG                    0x04
-#define INV_TAP_AXIS_Z_POS                    0x02
-#define INV_TAP_AXIS_Z_NEG                    0x01
-#define INV_TAP_ALL_DIRECTIONS                0x3f
-
-#define INV_TAP_AXIS_X                        0x1
-#define INV_TAP_AXIS_Y                        0x2
-#define INV_TAP_AXIS_Z                        0x4
-
-#define INV_TAP_AXIS_ALL               \
-		(INV_TAP_AXIS_X            |   \
-		INV_TAP_AXIS_Y             |   \
-		INV_TAP_AXIS_Z)
-
 #define INT_SRC_TAP             0x01
 #define INT_SRC_DISPLAY_ORIENT  0x08
 #define INT_SRC_SHAKE           0x10
@@ -1201,7 +1180,7 @@ static int inv_mpu_do_test(struct nvi_state *st, int self_test_flag,
 /*
  *  inv_mpu_self_test() - main function to do hardware self test
  */
-int inv_mpu_self_test(struct nvi_state *st)
+static int inv_mpu_self_test(struct nvi_state *st)
 {
 	int result;
 	int gyro_bias_st[AXIS_N];
@@ -1369,8 +1348,9 @@ static int inv_icm_check_gyro_self_test(struct nvi_state *st,
 
 	ret_val = 0;
 	regs = st->st_data_gyro;
-	pr_debug("%s data: %02x %02x %02x\n", __func__,
-		 regs[0], regs[1], regs[2]);
+	if (st->dbg & NVI_DBG_SPEW_MSG)
+		dev_info(&st->i2c->dev, "%s data: %02x %02x %02x\n",
+			 __func__, regs[0], regs[1], regs[2]);
 	for (i = 0; i < AXIS_N; i++) {
 		if (regs[i] != 0) {
 			st_shift_prod[i] = icm_st_tb[regs[i] - 1];
@@ -1379,8 +1359,10 @@ static int inv_icm_check_gyro_self_test(struct nvi_state *st,
 			otp_value_zero = 1;
 		}
 	}
-	pr_debug("%s st_shift_prod: %+d %+d %+d\n", __func__,
-		 st_shift_prod[0], st_shift_prod[1], st_shift_prod[2]);
+	if (st->dbg & NVI_DBG_SPEW_MSG)
+		dev_info(&st->i2c->dev,
+			 "%s st_shift_prod: %+d %+d %+d\n", __func__,
+			 st_shift_prod[0], st_shift_prod[1], st_shift_prod[2]);
 	for (i = 0; i < AXIS_N; i++) {
 		st_shift_cust[i] = st_avg[i] - reg_avg[i];
 		if (!otp_value_zero) {
@@ -1388,8 +1370,10 @@ static int inv_icm_check_gyro_self_test(struct nvi_state *st,
 			if (st_shift_cust[i] < (ICM_GYRO_CT_SHIFT_DELTA *
 						st_shift_prod[i])) {
 				ret_val = 1;
-				pr_debug("%s criteria A axis %d FAIL\n",
-					 __func__, i);
+				if (st->dbg & NVI_DBG_SPEW_MSG)
+					dev_info(&st->i2c->dev,
+						 "%s FAIL A axis %d\n",
+						 __func__, i);
 			}
 		} else {
 			/* Self Test Pass/Fail Criteria B */
@@ -1397,13 +1381,17 @@ static int inv_icm_check_gyro_self_test(struct nvi_state *st,
 						ICM_SELFTEST_GYRO_SENS *
 						ICM_ST_PRECISION)) {
 				ret_val = 1;
-				pr_debug("%s criteria B axis %d FAIL\n",
-					 __func__, i);
+				if (st->dbg & NVI_DBG_SPEW_MSG)
+					dev_info(&st->i2c->dev,
+						 "%s FAIL B axis %d\n",
+						 __func__, i);
 			}
 		}
 	}
-	pr_debug("%s st_shift_cust: %+d %+d %+d\n", __func__,
-		 st_shift_cust[0], st_shift_cust[1], st_shift_cust[2]);
+	if (st->dbg & NVI_DBG_SPEW_MSG)
+		dev_info(&st->i2c->dev, "%s st_shift_cust: %+d %+d %+d\n",
+			 __func__,
+			 st_shift_cust[0], st_shift_cust[1], st_shift_cust[2]);
 	if (ret_val == 0) {
 		/* Self Test Pass/Fail Criteria C */
 		for (i = 0; i < AXIS_N; i++) {
@@ -1411,8 +1399,10 @@ static int inv_icm_check_gyro_self_test(struct nvi_state *st,
 					       ICM_SELFTEST_GYRO_SENS *
 					       ICM_ST_PRECISION)) {
 				ret_val = 1;
-				pr_debug("%s criteria C axis %d FAIL\n",
-					 __func__, i);
+				if (st->dbg & NVI_DBG_SPEW_MSG)
+					dev_info(&st->i2c->dev,
+						 "%s FAIL C axis %d\n",
+						 __func__, i);
 			}
 		}
 	}
@@ -1439,8 +1429,9 @@ static int inv_icm_check_accel_self_test(struct nvi_state *st,
 
 	ret_val = 0;
 	regs = st->st_data_accel;
-	pr_debug("%s data: %02x %02x %02x\n", __func__,
-		 regs[0], regs[1], regs[2]);
+	if (st->dbg & NVI_DBG_SPEW_MSG)
+		dev_info(&st->i2c->dev, "%s data: %02x %02x %02x\n",
+			 __func__, regs[0], regs[1], regs[2]);
 	for (i = 0; i < AXIS_N; i++) {
 		if (regs[i] != 0) {
 			st_shift_prod[i] = icm_st_tb[regs[i] - 1];
@@ -1449,8 +1440,10 @@ static int inv_icm_check_accel_self_test(struct nvi_state *st,
 			otp_value_zero = 1;
 		}
 	}
-	pr_debug("%s st_shift_prod: %+d %+d %+d\n", __func__,
-		 st_shift_prod[0], st_shift_prod[1], st_shift_prod[2]);
+	if (st->dbg & NVI_DBG_SPEW_MSG)
+		dev_info(&st->i2c->dev,
+			 "%s st_shift_prod: %+d %+d %+d\n", __func__,
+			 st_shift_prod[0], st_shift_prod[1], st_shift_prod[2]);
 	if (!otp_value_zero) {
 		/* Self Test Pass/Fail Criteria A */
 		for (i = 0; i < AXIS_N; i++) {
@@ -1458,14 +1451,18 @@ static int inv_icm_check_accel_self_test(struct nvi_state *st,
 			if (st_shift_cust[i] < (ICM_ACCEL_ST_SHIFT_DELTA_MIN *
 						st_shift_prod[i])) {
 				ret_val = 1;
-				pr_debug("%s criteria A (min) axis %d FAIL\n",
-					 __func__, i);
+				if (st->dbg & NVI_DBG_SPEW_MSG)
+					dev_info(&st->i2c->dev,
+						 "%s FAIL A (min) axis %d\n",
+						 __func__, i);
 			}
 			if (st_shift_cust[i] > (ICM_ACCEL_ST_SHIFT_DELTA_MAX *
 						st_shift_prod[i])) {
 				ret_val = 1;
-				pr_debug("%s criteria A (max) axis %d FAIL\n",
-					 __func__, i);
+				if (st->dbg & NVI_DBG_SPEW_MSG)
+					dev_info(&st->i2c->dev,
+						 "%s FAIL A (max) axis %d\n",
+						 __func__, i);
 			}
 		}
 	} else {
@@ -1475,13 +1472,17 @@ static int inv_icm_check_accel_self_test(struct nvi_state *st,
 			if ((st_shift_cust[i] < ICM_ACCEL_ST_AL_MIN) ||
 				    (st_shift_cust[i] > ICM_ACCEL_ST_AL_MAX)) {
 				ret_val = 1;
-				pr_debug("%s criteria B axis %d FAIL\n",
-					 __func__, i);
+				if (st->dbg & NVI_DBG_SPEW_MSG)
+					dev_info(&st->i2c->dev,
+						 "%s FAIL B axis %d\n",
+						 __func__, i);
 			}
 		}
 	}
-	pr_debug("%s st_shift_cust: %+d %+d %+d\n", __func__,
-		 st_shift_cust[0], st_shift_cust[1], st_shift_cust[2]);
+	if (st->dbg & NVI_DBG_SPEW_MSG)
+		dev_info(&st->i2c->dev, "%s st_shift_cust: %+d %+d %+d\n",
+			 __func__,
+			 st_shift_cust[0], st_shift_cust[1], st_shift_cust[2]);
 	return ret_val;
 }
 
@@ -1618,7 +1619,9 @@ static int inv_icm_selftest_read_samples(struct nvi_state *st, int dev,
 			return r;
 
 		fifo_count = be16_to_cpup((__be16 *)(&d[0]));
-		pr_debug("%s fifo_count=%d\n", __func__, fifo_count);
+		if (st->dbg & NVI_DBG_SPEW_MSG)
+			dev_info(&st->i2c->dev, "%s fifo_count=%d\n",
+				 __func__, fifo_count);
 		if (ICM_MAX_PACKETS * BYTES_PER_SENSOR < fifo_count) {
 			r = nvi_i2c_rd(st, st->hal->reg->fifo_r_w.bank,
 				       st->hal->reg->fifo_r_w.reg,
@@ -1640,8 +1643,11 @@ static int inv_icm_selftest_read_samples(struct nvi_state *st, int dev,
 				vals[j] = (s16)be16_to_cpup((__be16 *)(&d[t]));
 				sum_result[j] += vals[j];
 			}
-			pr_debug("%s %s %d: %+d %+d %+d\n", __func__,
-				 dev_name, *s, vals[0], vals[1], vals[2]);
+			if (st->dbg & NVI_DBG_SPEW_MSG)
+				dev_info(&st->i2c->dev,
+					 "%s %s %d: %+d %+d %+d\n",
+					 __func__, dev_name,
+					 *s, vals[0], vals[1], vals[2]);
 			(*s)++;
 			i++;
 		}
@@ -1692,8 +1698,9 @@ static int inv_icm_do_test_accel(struct nvi_state *st,
 		accel_st_result[j] = accel_st_result[j] / accel_s;
 		accel_st_result[j] *= ICM_ST_PRECISION;
 	}
-	pr_debug("%s %d, %d, %d\n", __func__,
-		 accel_result[0], accel_result[1], accel_result[2]);
+	if (st->dbg & NVI_DBG_SPEW_MSG)
+		dev_info(&st->i2c->dev, "%s %d, %d, %d\n", __func__,
+			 accel_result[0], accel_result[1], accel_result[2]);
 
 	return 0;
 }
@@ -1739,24 +1746,19 @@ static int inv_icm_do_test_gyro(struct nvi_state *st, int *gyro_result,
 		gyro_st_result[j] = gyro_st_result[j] / gyro_s;
 		gyro_st_result[j] *= ICM_ST_PRECISION;
 	}
-	pr_debug("%s %d, %d, %d\n", __func__,
-		 gyro_result[0], gyro_result[1], gyro_result[2]);
+	if (st->dbg & NVI_DBG_SPEW_MSG)
+		dev_info(&st->i2c->dev, "%s %d, %d, %d\n", __func__,
+			 gyro_result[0], gyro_result[1], gyro_result[2]);
 	return 0;
 }
 
-/*
- *  inv_icm_self_test() - main function to do hardware self test
- */
-int inv_icm_self_test(struct nvi_state *st)
+static int inv_icm_self_test_gyro(struct nvi_state *st)
 {
 	int result;
 	int gyro_bias_st[AXIS_N];
 	int gyro_bias_regular[AXIS_N];
-	int accel_bias_st[AXIS_N];
-	int accel_bias_regular[AXIS_N];
 	int test_times;
 	int i;
-	char accel_result;
 	char gyro_result;
 
 	result = inv_icm_setup_selftest(st);
@@ -1775,14 +1777,38 @@ int inv_icm_self_test(struct nvi_state *st)
 	if (result)
 		return result;
 
-	pr_debug("%s gyro bias_regular: %+d %+d %+d\n", __func__,
-		 gyro_bias_regular[0], gyro_bias_regular[1],
-		 gyro_bias_regular[2]);
-	pr_debug("%s gyro bias_st: %+d %+d %+d\n", __func__,
-		 gyro_bias_st[0], gyro_bias_st[1], gyro_bias_st[2]);
+	if (st->dbg & NVI_DBG_SPEW_MSG) {
+		dev_info(&st->i2c->dev, "%s gyro bias_regular: %+d %+d %+d\n",
+			 __func__, gyro_bias_regular[0], gyro_bias_regular[1],
+			 gyro_bias_regular[2]);
+		dev_info(&st->i2c->dev, "%s gyro bias_st: %+d %+d %+d\n",
+			 __func__, gyro_bias_st[0], gyro_bias_st[1],
+			 gyro_bias_st[2]);
+	}
+	for (i = 0; i < AXIS_N; i++) {
+		st->gyro_bias[i] = gyro_bias_regular[i] / ICM_ST_PRECISION;
+	}
 	gyro_result = inv_icm_check_gyro_self_test(st, gyro_bias_regular,
 						   gyro_bias_st);
-	pr_debug("%s gyro_result %hhd\n", __func__, gyro_result);
+	if (st->dbg & NVI_DBG_SPEW_MSG)
+		dev_info(&st->i2c->dev, "%s gyro_result %hhd\n",
+			 __func__, gyro_result);
+
+	return gyro_result;
+}
+
+static int inv_icm_self_test_accel(struct nvi_state *st)
+{
+	int result;
+	int accel_bias_st[AXIS_N];
+	int accel_bias_regular[AXIS_N];
+	int test_times;
+	int i;
+	char accel_result;
+
+	result = inv_icm_setup_selftest(st);
+	if (result)
+		return result;
 
 	test_times = ICM_ST_TRY_TIMES;
 	while (test_times > 0) {
@@ -1796,922 +1822,57 @@ int inv_icm_self_test(struct nvi_state *st)
 	if (result)
 		return result;
 
-	pr_debug("%s accel bias_regular: %+d %+d %+d\n", __func__,
-		 accel_bias_regular[0], accel_bias_regular[1],
-		 accel_bias_regular[2]);
-	pr_debug("%s accel bias_st: %+d %+d %+d\n", __func__,
-		 accel_bias_st[0], accel_bias_st[1], accel_bias_st[2]);
-
+	if (st->dbg & NVI_DBG_SPEW_MSG) {
+		dev_info(&st->i2c->dev, "%s accel bias_regular: %+d %+d %+d\n",
+			 __func__, accel_bias_regular[0],
+			 accel_bias_regular[1], accel_bias_regular[2]);
+		dev_info(&st->i2c->dev, "%s accel bias_st: %+d %+d %+d\n",
+			 __func__, accel_bias_st[0], accel_bias_st[1],
+			 accel_bias_st[2]);
+	}
 	for (i = 0; i < AXIS_N; i++) {
-		st->gyro_bias[i] = gyro_bias_regular[i] / ICM_ST_PRECISION;
 		st->accel_bias[i] = accel_bias_regular[i] / ICM_ST_PRECISION;
 	}
 	accel_result = inv_icm_check_accel_self_test(st, accel_bias_regular,
 						     accel_bias_st);
-	pr_debug("%s accel_result %hhd\n", __func__, accel_result);
-
-	return (accel_result << DEF_ST_ACCEL_RESULT_SHIFT) | gyro_result;
+	if (st->dbg & NVI_DBG_SPEW_MSG)
+		dev_info(&st->i2c->dev, "%s accel_result %hhd\n",
+			 __func__, accel_result);
+	return accel_result;
 }
 
 /*
  *  inv_hw_self_test() - main function to do hardware self test
  */
-int inv_hw_self_test(struct iio_dev *indio_dev)
+int inv_hw_self_test(struct nvi_state *st, int snsr_id)
 {
-	struct nvi_state *st = iio_priv(indio_dev);
 	int ret;
 
-	if (st->hal->part < ICM20628)
-		ret = inv_mpu_self_test(st);
-	else
-		ret = inv_icm_self_test(st);
-	nvi_enable(indio_dev);
-	return ret;
-}
-
-static int inv_load_firmware(struct nvi_state *st,
-	u8 *data, int size)
-{
-	int bank, write_size;
-	int result;
-	u16 memaddr;
-
-	/* first bank start at MPU_DMP_LOAD_START */
-	write_size = MPU_MEM_BANK_SIZE - MPU_DMP_LOAD_START;
-	memaddr = MPU_DMP_LOAD_START;
-	result = mem_w(memaddr, write_size, data);
-	if (result)
-		return result;
-	size -= write_size;
-	data += write_size;
-
-	/* Write and verify memory */
-	for (bank = 1; size > 0; bank++, size -= write_size,
-				data += write_size) {
-		if (size > MPU_MEM_BANK_SIZE)
-			write_size = MPU_MEM_BANK_SIZE;
-		else
-			write_size = size;
-
-		memaddr = ((bank << 8) | 0x00);
-
-		result = mem_w(memaddr, write_size, data);
-		if (result)
-			return result;
-	}
-	return 0;
-}
-
-static int inv_verify_firmware(struct nvi_state *st,
-	u8 *data, int size)
-{
-	int bank, write_size;
-	int result;
-	u16 memaddr;
-	u8 firmware[MPU_MEM_BANK_SIZE];
-
-	/* Write and verify memory */
-	write_size = MPU_MEM_BANK_SIZE - MPU_DMP_LOAD_START;
-	size -= write_size;
-	data += write_size;
-	for (bank = 1; size > 0; bank++,
-		size -= write_size,
-		data += write_size) {
-		if (size > MPU_MEM_BANK_SIZE)
-			write_size = MPU_MEM_BANK_SIZE;
-		else
-			write_size = size;
-
-		memaddr = ((bank << 8) | 0x00);
-		result = mpu_memory_read(st,
-			st->i2c_addr, memaddr, write_size, firmware);
-		if (result)
-			return result;
-		if (0 != memcmp(firmware, data, write_size))
-			return -EINVAL;
-	}
-	return 0;
-}
-
-int inv_enable_pedometer_interrupt(struct nvi_state *st, bool en)
-{
-	u8 reg[3];
-
-	if (en) {
-		reg[0] = 0xf4;
-		reg[1] = 0x44;
-		reg[2] = 0xf1;
-
+	if (st->hal->part < ICM20628) {
+		if (snsr_id == DEV_ACCEL) {
+			ret = inv_mpu_self_test(st);
+			ret >>= DEF_ST_ACCEL_RESULT_SHIFT;
+		} else if (snsr_id == DEV_ANGLVEL) {
+			ret = inv_mpu_self_test(st);
+			ret &= DEF_ST_ACCEL_RESULT_SHIFT;
+		} else {
+			ret = 0;
+		}
 	} else {
-		reg[0] = 0xf1;
-		reg[1] = 0xf1;
-		reg[2] = 0xf1;
-	}
-
-	return mem_w_key(KEY_CFG_PED_INT, ARRAY_SIZE(reg), reg);
-}
-
-int inv_read_pedometer_counter(struct nvi_state *st)
-{
-	int result;
-	u8 d[4];
-	u32 last_step_counter, curr_counter;
-
-	result = mpu_memory_read(st, st->i2c_addr,
-			inv_dmp_get_address(KEY_D_STPDET_TIMESTAMP), 4, d);
-	if (result)
-		return result;
-	last_step_counter = (u32)be32_to_cpup((__be32 *)(d));
-
-	result = mpu_memory_read(st, st->i2c_addr,
-			inv_dmp_get_address(KEY_DMP_RUN_CNTR), 4, d);
-	if (result)
-		return result;
-	curr_counter = (u32)be32_to_cpup((__be32 *)(d));
-	if (0 != last_step_counter)
-		/* get_time_ns() - */
-		st->ped.last_step_time = nvi_get_time_ns(st) -
-			((u64)(curr_counter - last_step_counter)) *
-			DMP_INTERVAL_INIT;
-
-	return 0;
-}
-
-int inv_enable_pedometer(struct nvi_state *st, bool en)
-{
-	u8 d[1];
-
-	if (en)
-		d[0] = 0xf1;
-	else
-		d[0] = 0xff;
-
-	return mem_w_key(KEY_CFG_PED_ENABLE, ARRAY_SIZE(d), d);
-}
-
-int inv_get_pedometer_steps(struct nvi_state *st, u32 *steps)
-{
-	u8 d[4];
-	int result;
-
-	result = mpu_memory_read(st, st->i2c_addr,
-			inv_dmp_get_address(KEY_D_PEDSTD_STEPCTR), 4, d);
-	*steps = (u32)be32_to_cpup((__be32 *)(d));
-
-	return result;
-}
-
-int inv_get_pedometer_time(struct nvi_state *st, u32 *time)
-{
-	u8 d[4];
-	int result;
-
-	result = mpu_memory_read(st, st->i2c_addr,
-			inv_dmp_get_address(KEY_D_PEDSTD_TIMECTR), 4, d);
-	*time = (u32)be32_to_cpup((__be32 *)(d));
-
-	return result;
-}
-
-int inv_set_display_orient_interrupt_dmp(struct nvi_state *st, bool on)
-{
-	int r;
-	u8  rn[] = {0xf4, 0x41};
-	u8  rf[] = {0xd8, 0xd8};
-
-	if (on)
-		r = mem_w_key(KEY_CFG_DISPLAY_ORIENT_INT, ARRAY_SIZE(rn), rn);
-	else
-		r = mem_w_key(KEY_CFG_DISPLAY_ORIENT_INT, ARRAY_SIZE(rf), rf);
-
-	return r;
-}
-
-int inv_write_2bytes(struct nvi_state *st, int k, int data)
-{
-	u8 d[2];
-
-	if (data < 0 || data > USHRT_MAX)
-		return -EINVAL;
-
-	d[0] = (u8)((data >> 8) & 0xff);
-	d[1] = (u8)(data & 0xff);
-
-	return mem_w_key(k, ARRAY_SIZE(d), d);
-}
-
-static int inv_set_tap_interrupt_dmp(struct nvi_state *st, u8 on)
-{
-	int result;
-	u16 d;
-
-	if (on)
-		d = 192;
-	else
-		d = 128;
-
-	result = inv_write_2bytes(st, KEY_DMP_TAP_GATE, d);
-
-	return result;
-}
-
-/*
- * inv_set_tap_threshold_dmp():
- * Sets the tap threshold in the dmp
- * Simultaneously sets secondary tap threshold to help correct the tap
- * direction for soft taps.
- */
-int inv_set_tap_threshold_dmp(struct nvi_state *st, u16 threshold)
-{
-	int result;
-	int sample_divider;
-	int scaled_threshold;
-	u32 dmp_threshold;
-	u8 sample_div;
-	const u32  accel_sens = (0x20000000 / 0x00010000);
-
-	if (threshold > (1 << 15))
-		return -EINVAL;
-	sample_div = INIT_SAMPLE_DIVIDER;
-
-	sample_divider = (1 + sample_div);
-	/* Scale factor corresponds linearly using
-	* 0  : 0
-	* 25 : 0.0250  g/ms
-	* 50 : 0.0500  g/ms
-	* 100: 1.0000  g/ms
-	* 200: 2.0000  g/ms
-	* 400: 4.0000  g/ms
-	* 800: 8.0000  g/ms
-	*/
-	/*multiply by 1000 to avoid floating point 1000/1000*/
-	scaled_threshold = threshold;
-	/* Convert to per sample */
-	scaled_threshold *= sample_divider;
-
-	/* Scale to DMP 16 bit value */
-	if (accel_sens != 0)
-		dmp_threshold = (u32)(scaled_threshold * accel_sens);
-	else
-		return -EINVAL;
-	dmp_threshold = dmp_threshold / DMP_PRECISION;
-	result = inv_write_2bytes(st, KEY_DMP_TAP_THR_Z, dmp_threshold);
-	if (result)
-		return result;
-	result = inv_write_2bytes(st, KEY_DMP_TAP_PREV_JERK_Z,
-						dmp_threshold * 3 / 4);
-
-	return result;
-}
-
-
-/*
- * inv_set_min_taps_dmp():
- * Indicates the minimum number of consecutive taps required
- * before the DMP will generate an interrupt.
- */
-int inv_set_min_taps_dmp(struct nvi_state *st, u16 min_taps)
-{
-	u8 result;
-
-	/* check if any spurious bit other the ones expected are set */
-	if ((min_taps > DMP_MAX_MIN_TAPS) || (min_taps < 1))
-		return -EINVAL;
-
-	/* DMP tap count is zero-based. So single-tap is 0.
-	   Furthermore, DMP code checks for tap_count > min_taps.
-	   So we have to do minus 2 here.
-	   For example, if the user expects any single tap will generate an
-	   interrupt, (s)he will call inv_set_min_taps_dmp(1).
-	   When DMP gets a single tap, tap_count = 0. To get
-	   tap_count > min_taps, we have to decrement min_taps by 2 to -1. */
-	result = inv_write_2bytes(st, KEY_DMP_TAP_MIN_TAPS, (u16)(min_taps-2));
-
-	return result;
-}
-
-/*
- * inv_set_tap_time_dmp():
- * Determines how long after a tap the DMP requires before
- * another tap can be registered.
- */
-int  inv_set_tap_time_dmp(struct nvi_state *st, u16 time)
-{
-	int result;
-	u16 dmp_time;
-	u8 sample_divider;
-
-	sample_divider = INIT_SAMPLE_DIVIDER;
-	sample_divider++;
-
-	/* 60 ms minimum time added */
-	dmp_time = ((time) / sample_divider);
-	result = inv_write_2bytes(st, KEY_DMP_TAPW_MIN, dmp_time);
-
-	return result;
-}
-
-/*
- * inv_set_multiple_tap_time_dmp():
- * Determines how close together consecutive taps must occur
- * to be considered double/triple taps.
- */
-static int inv_set_multiple_tap_time_dmp(struct nvi_state *st, u32 time)
-{
-	int result;
-	u16 dmp_time;
-	u8 sample_divider;
-
-	sample_divider = INIT_SAMPLE_DIVIDER;
-	sample_divider++;
-
-	/* 60 ms minimum time added */
-	dmp_time = ((time) / sample_divider);
-	result = inv_write_2bytes(st, KEY_DMP_TAP_NEXT_TAP_THRES, dmp_time);
-
-	return result;
-}
-
-int inv_q30_mult(int a, int b)
-{
-	u64 temp;
-	int result;
-
-	temp = (u64)a * b;
-	result = (int)(temp >> DMP_MULTI_SHIFT);
-
-	return result;
-}
-
-static u16 inv_row_2_scale(const s8 *row)
-{
-	u16 b;
-
-	if (row[0] > 0)
-		b = 0;
-	else if (row[0] < 0)
-		b = 4;
-	else if (row[1] > 0)
-		b = 1;
-	else if (row[1] < 0)
-		b = 5;
-	else if (row[2] > 0)
-		b = 2;
-	else if (row[2] < 0)
-		b = 6;
-	else
-		b = 7;
-
-	return b;
-}
-
-/** Converts an orientation matrix made up of 0,+1,and -1 to a scalar
-*	representation.
-* @param[in] mtx Orientation matrix to convert to a scalar.
-* @return Description of orientation matrix. The lowest 2 bits (0 and 1)
-* represent the column the one is on for the
-* first row, with the bit number 2 being the sign. The next 2 bits
-* (3 and 4) represent
-* the column the one is on for the second row with bit number 5 being
-* the sign.
-* The next 2 bits (6 and 7) represent the column the one is on for the
-* third row with
-* bit number 8 being the sign. In binary the identity matrix would therefor
-* be: 010_001_000 or 0x88 in hex.
-*/
-static u16 inv_orientation_matrix_to_scaler(const signed char *mtx)
-{
-
-	u16 scalar;
-	scalar = inv_row_2_scale(mtx);
-	scalar |= inv_row_2_scale(mtx + 3) << 3;
-	scalar |= inv_row_2_scale(mtx + 6) << 6;
-
-	return scalar;
-}
-
-static int inv_gyro_dmp_cal(struct nvi_state *st)
-{
-	int inv_gyro_orient;
-	u8 regs[3];
-	int result;
-
-	u8 tmp_d = DINA4C;
-	u8 tmp_e = DINACD;
-	u8 tmp_f = DINA6C;
-
-	inv_gyro_orient =
-		inv_orientation_matrix_to_scaler(st->pdata.orientation);
-
-	if ((inv_gyro_orient & 3) == 0)
-		regs[0] = tmp_d;
-	else if ((inv_gyro_orient & 3) == 1)
-		regs[0] = tmp_e;
-	else if ((inv_gyro_orient & 3) == 2)
-		regs[0] = tmp_f;
-	if ((inv_gyro_orient & 0x18) == 0)
-		regs[1] = tmp_d;
-	else if ((inv_gyro_orient & 0x18) == 0x8)
-		regs[1] = tmp_e;
-	else if ((inv_gyro_orient & 0x18) == 0x10)
-		regs[1] = tmp_f;
-	if ((inv_gyro_orient & 0xc0) == 0)
-		regs[2] = tmp_d;
-	else if ((inv_gyro_orient & 0xc0) == 0x40)
-		regs[2] = tmp_e;
-	else if ((inv_gyro_orient & 0xc0) == 0x80)
-		regs[2] = tmp_f;
-
-	result = mem_w_key(KEY_FCFG_1, ARRAY_SIZE(regs), regs);
-	if (result)
-		return result;
-
-	if (inv_gyro_orient & 4)
-		regs[0] = DINA36 | 1;
-	else
-		regs[0] = DINA36;
-	if (inv_gyro_orient & 0x20)
-		regs[1] = DINA56 | 1;
-	else
-		regs[1] = DINA56;
-	if (inv_gyro_orient & 0x100)
-		regs[2] = DINA76 | 1;
-	else
-		regs[2] = DINA76;
-	result = mem_w_key(KEY_FCFG_3, ARRAY_SIZE(regs), regs);
-
-	return result;
-}
-
-static int inv_accel_dmp_cal(struct nvi_state *st)
-{
-	int inv_accel_orient;
-	int result;
-	u8 regs[3];
-	const u8 tmp[3] = { DINA0C, DINAC9, DINA2C };
-	inv_accel_orient =
-		inv_orientation_matrix_to_scaler(st->pdata.orientation);
-
-	regs[0] = tmp[inv_accel_orient & 3];
-	regs[1] = tmp[(inv_accel_orient >> 3) & 3];
-	regs[2] = tmp[(inv_accel_orient >> 6) & 3];
-	result = mem_w_key(KEY_FCFG_2, ARRAY_SIZE(regs), regs);
-	if (result)
-		return result;
-
-	regs[0] = DINA26;
-	regs[1] = DINA46;
-	regs[2] = DINA66;
-	if (inv_accel_orient & 4)
-		regs[0] |= 1;
-	if (inv_accel_orient & 0x20)
-		regs[1] |= 1;
-	if (inv_accel_orient & 0x100)
-		regs[2] |= 1;
-	result = mem_w_key(KEY_FCFG_7, ARRAY_SIZE(regs), regs);
-
-	return result;
-}
-
-int inv_set_accel_bias_dmp(struct nvi_state *st)
-{
-	int inv_accel_orient, result, i, accel_bias_body[3], out[3];
-	int tmp[] = {1, 1, 1};
-	int mask[] = {4, 0x20, 0x100};
-	int accel_sf = 0x20000000;/* 536870912 */
-	u8 *regs;
-
-	inv_accel_orient =
-		inv_orientation_matrix_to_scaler(st->pdata.orientation);
-
-	for (i = 0; i < 3; i++)
-		if (inv_accel_orient & mask[i])
-			tmp[i] = -1;
-
-	for (i = 0; i < 3; i++)
-		accel_bias_body[i] =
-			st->input_accel_dmp_bias[(inv_accel_orient >>
-			(i * 3)) & 3] * tmp[i];
-	for (i = 0; i < 3; i++)
-		accel_bias_body[i] = inv_q30_mult(accel_sf,
-					accel_bias_body[i]);
-	for (i = 0; i < 3; i++)
-		out[i] = cpu_to_be32p(&accel_bias_body[i]);
-	regs = (u8 *)out;
-	result = mem_w_key(KEY_D_ACCEL_BIAS, sizeof(out), regs);
-
-	return result;
-}
-
-int write_be32_key_to_mem(struct nvi_state *st,
-					u32 data, int key)
-{
-	cpu_to_be32s(&data);
-	return mem_w_key(key, sizeof(data), (u8 *)&data);
-}
-
-/*
- * inv_set_gyro_sf_dmp():
- * The gyro threshold, in dps, above which taps will be rejected.
- */
-static int inv_set_gyro_sf_dmp(struct nvi_state *st)
-{
-	int result;
-	u8 sample_divider;
-	u32 gyro_sf;
-	const u32 gyro_sens = 0x03e80000;
-
-	sample_divider = INIT_SAMPLE_DIVIDER;
-	gyro_sf = inv_q30_mult(gyro_sens,
-			(int)(DMP_TAP_SCALE * (sample_divider + 1)));
-	result = write_be32_key_to_mem(st, gyro_sf, KEY_D_0_104);
-
-	return result;
-}
-
-/*
- * inv_set_shake_reject_thresh_dmp():
- * The gyro threshold, in dps, above which taps will be rejected.
- */
-static int inv_set_shake_reject_thresh_dmp(struct nvi_state *st,
-						int thresh)
-{
-	int result;
-	u8 sample_divider;
-	int thresh_scaled;
-	u32 gyro_sf;
-	const u32 gyro_sens = 0x03e80000;
-
-	sample_divider = INIT_SAMPLE_DIVIDER;
-	gyro_sf = inv_q30_mult(gyro_sens, (int)(DMP_TAP_SCALE *
-			(sample_divider + 1)));
-	/* We're in units of DPS, convert it back to chip units*/
-	/*split the operation to aviod overflow of integer*/
-	thresh_scaled = gyro_sens / (1L << 16);
-	thresh_scaled = thresh_scaled / thresh;
-	thresh_scaled = gyro_sf / thresh_scaled;
-	result = write_be32_key_to_mem(st, thresh_scaled,
-						KEY_DMP_TAP_SHAKE_REJECT);
-
-	return result;
-}
-
-/*
- * inv_set_shake_reject_time_dmp():
- * How long a gyro axis must remain above its threshold
- * before taps are rejected.
- */
-static int inv_set_shake_reject_time_dmp(struct nvi_state *st,
-						u32 time)
-{
-	int result;
-	u16 dmp_time;
-	u8 sample_divider;
-
-	sample_divider = INIT_SAMPLE_DIVIDER;
-	sample_divider++;
-
-	/* 60 ms minimum time added */
-	dmp_time = ((time) / sample_divider);
-	result = inv_write_2bytes(st, KEY_DMP_TAP_SHAKE_COUNT_MAX, dmp_time);
-
-	return result;
-}
-
-/*
- * inv_set_shake_reject_timeout_dmp():
- * How long the gyros must remain below their threshold,
- * after taps have been rejected, before taps can be detected again.
- */
-static int inv_set_shake_reject_timeout_dmp(struct nvi_state *st,
-						u32 time)
-{
-	int result;
-	u16 dmp_time;
-	u8 sample_divider;
-
-	sample_divider = INIT_SAMPLE_DIVIDER;
-	sample_divider++;
-
-	/* 60 ms minimum time added */
-	dmp_time = ((time) / sample_divider);
-	result = inv_write_2bytes(st, KEY_DMP_TAP_SHAKE_TIMEOUT_MAX, dmp_time);
-
-	return result;
-}
-
-int inv_set_interrupt_on_gesture_event(struct nvi_state *st, bool on)
-{
-	u8 r;
-	const u8 rn[] = {0xA3};
-	const u8 rf[] = {0xFE};
-
-	if (on)
-		r = mem_w_key(KEY_CFG_FIFO_INT, ARRAY_SIZE(rn), rn);
-	else
-		r = mem_w_key(KEY_CFG_FIFO_INT, ARRAY_SIZE(rf), rf);
-
-	return r;
-}
-
-/*
- * inv_enable_tap_dmp() -  calling this function will enable/disable tap
- *                         function.
- */
-int inv_enable_tap_dmp(struct nvi_state *st, bool on)
-{
-	int result;
-
-	result = inv_set_tap_interrupt_dmp(st, on);
-	if (result)
-		return result;
-	result = inv_set_tap_threshold_dmp(st, st->tap.thresh);
-	if (result)
-		return result;
-
-	result = inv_set_min_taps_dmp(st, st->tap.min_count);
-	if (result)
-		return result;
-
-	result = inv_set_tap_time_dmp(st, st->tap.time);
-	if (result)
-		return result;
-
-	result = inv_set_multiple_tap_time_dmp(st, DMP_MULTI_TAP_TIME);
-	if (result)
-		return result;
-
-	result = inv_set_gyro_sf_dmp(st);
-	if (result)
-		return result;
-
-	result = inv_set_shake_reject_thresh_dmp(st, DMP_SHAKE_REJECT_THRESH);
-	if (result)
-		return result;
-
-	result = inv_set_shake_reject_time_dmp(st, DMP_SHAKE_REJECT_TIME);
-	if (result)
-		return result;
-
-	result = inv_set_shake_reject_timeout_dmp(st,
-						  DMP_SHAKE_REJECT_TIMEOUT);
-	return result;
-}
-
-static int inv_dry_run_dmp(struct nvi_state *st)
-{
-	int result;
-
-	result = nvi_pm(st, NVI_PM_ON_FULL);
-	if (result)
-		return result;
-	result = nvi_wr_user_ctrl(st, BIT_DMP_EN);
-	if (result)
-		return result;
-	msleep(400);
-	result = nvi_wr_user_ctrl(st, 0);
-	if (result)
-		return result;
-	result = nvi_pm(st, NVI_PM_ON);
-	if (result)
-		return result;
-
-	return 0;
-}
-
-static void inv_test_reset(struct nvi_state *st)
-{
-	int result, ii;
-	u8 d[0x80];
-
-	if (st->hal->part < MPU6500)
-		return;
-
-	for (ii = 3; ii < 0x80; ii++) {
-		/* don't read fifo r/w register */
-		if (ii != st->hal->reg->fifo_r_w.reg)
-			nvi_i2c_rd(st, 0, ii, 1, &d[ii]);
-	}
-	result = nvi_wr_pwr_mgmt_1(st, BIT_H_RESET);
-	if (result)
-		return;
-	msleep(POWER_UP_TIME);
-
-	for (ii = 3; ii < 0x80; ii++) {
-		/* don't write certain registers */
-		if ((ii != REG_FIFO_R_W) &&
-		    (ii != REG_MEM_RW) &&
-		    (ii != REG_MEM_START_ADDR) &&
-		    (ii != REG_FIFO_COUNT_H) &&
-		    ii != REG_FIFO_COUNT_L)
-			result = nvi_i2c_wr(st, ii, d[ii]);
-	}
-}
-
-/*
- * inv_dmp_firmware_write() -  calling this function will load the firmware.
- *                        This is the write function of file "dmp_firmware".
- */
-static ssize_t inv_dmp_firmware_write(struct file *fp, struct kobject *kobj,
-	struct bin_attribute *attr,
-	char *buf, loff_t pos, size_t size)
-{
-	u8 *firmware;
-	int result;
-	struct iio_dev *indio_dev;
-	struct nvi_state *st;
-
-	indio_dev = dev_get_drvdata(container_of(kobj, struct device, kobj));
-	st = iio_priv(indio_dev);
-
-	if (st->chip_config.firmware_loaded)
-		return -EINVAL;
-	if (st->chip_config.enable)
-		return -EBUSY;
-
-	if (DMP_IMAGE_SIZE != size) {
-		pr_err("wrong DMP image size - expected %d, actual %u\n",
-			DMP_IMAGE_SIZE, (unsigned int)size);
-		return -EINVAL;
-	}
-
-	firmware = kmalloc(size, GFP_KERNEL);
-	if (!firmware)
-		return -ENOMEM;
-
-	mutex_lock(&indio_dev->mlock);
-
-	memcpy(firmware, buf, size);
-	result = crc32(CRC_FIRMWARE_SEED, firmware, size);
-	if (DMP_IMAGE_CRC_VALUE != result) {
-		pr_err("firmware CRC error - 0x%08x vs 0x%08x\n",
-			result, DMP_IMAGE_CRC_VALUE);
-		result = -EINVAL;
-		goto firmware_write_fail;
-	}
-
-	result = nvi_pm(st, NVI_PM_ON);
-	if (result)
-		goto firmware_write_fail;
-	inv_test_reset(st);
-
-	result = inv_load_firmware(st, firmware, size);
-	if (result)
-		goto firmware_write_fail;
-
-	result = inv_verify_firmware(st, firmware, size);
-	if (result)
-		goto firmware_write_fail;
-
-	result = nvi_i2c_wr(st, REG_PRGM_STRT_ADDRH, DMP_START_ADDR >> 8);
-	if (result)
-		goto firmware_write_fail;
-	result = nvi_i2c_wr(st, REG_PRGM_STRT_ADDRL, DMP_START_ADDR & 0xff);
-	if (result)
-		goto firmware_write_fail;
-
-	result = inv_gyro_dmp_cal(st);
-	if (result)
-		goto firmware_write_fail;
-	result = inv_accel_dmp_cal(st);
-	if (result)
-		goto firmware_write_fail;
-	result = inv_dry_run_dmp(st);
-	if (result)
-		goto firmware_write_fail;
-
-	st->chip_config.firmware_loaded = 1;
-	st->master_enable |= (1 << EN_FW);
-
-firmware_write_fail:
-	result |= nvi_enable(indio_dev);
-	mutex_unlock(&indio_dev->mlock);
-	kfree(firmware);
-	if (result)
-		return result;
-
-	return size;
-}
-
-static ssize_t inv_dmp_firmware_read(struct file *filp,
-				struct kobject *kobj,
-				struct bin_attribute *bin_attr,
-				char *buf, loff_t off, size_t count)
-{
-	int bank, write_size, size, data, result;
-	u16 memaddr;
-	struct iio_dev *indio_dev;
-	struct nvi_state *st;
-
-	size = count;
-	indio_dev = dev_get_drvdata(container_of(kobj, struct device, kobj));
-	st = iio_priv(indio_dev);
-
-	data = 0;
-	mutex_lock(&indio_dev->mlock);
-	result = nvi_pm(st, NVI_PM_ON);
-	if (result) {
-		mutex_unlock(&indio_dev->mlock);
-		return result;
-	}
-	for (bank = 0; size > 0; bank++, size -= write_size,
-					data += write_size) {
-		if (size > MPU_MEM_BANK_SIZE)
-			write_size = MPU_MEM_BANK_SIZE;
+		if (snsr_id == DEV_ACCEL)
+			ret = inv_icm_self_test_accel(st);
+		else if (snsr_id == DEV_ANGLVEL)
+			ret = inv_icm_self_test_gyro(st);
 		else
-			write_size = size;
-
-		memaddr = (bank << 8);
-		result = mpu_memory_read(st,
-			st->i2c_addr, memaddr, write_size, &buf[data]);
+			ret = 0;
 	}
-	result |= nvi_enable(indio_dev);
-	mutex_unlock(&indio_dev->mlock);
-	if (result)
-		return result;
-
-	return count;
-}
-
-static ssize_t inv_six_q_write(struct file *fp, struct kobject *kobj,
-	struct bin_attribute *attr, char *buf, loff_t pos, size_t size)
-{
-	u8 q[QUATERNION_BYTES];
-	struct iio_dev *indio_dev;
-	struct nvi_state *st;
-	int result;
-
-	indio_dev = dev_get_drvdata(container_of(kobj, struct device, kobj));
-	st = iio_priv(indio_dev);
-
-	mutex_lock(&indio_dev->mlock);
-
-	if (!st->chip_config.firmware_loaded) {
-		mutex_unlock(&indio_dev->mlock);
-		return -EINVAL;
-	}
-	if (st->chip_config.enable) {
-		mutex_unlock(&indio_dev->mlock);
-		return -EBUSY;
-	}
-	if (QUATERNION_BYTES != size) {
-		mutex_unlock(&indio_dev->mlock);
-		return -EINVAL;
-	}
-
-	memcpy(q, buf, size);
-	result = nvi_pm(st, NVI_PM_ON);
-	if (result)
-		goto firmware_write_fail;
-	result = mem_w_key(KEY_DMP_Q0, QUATERNION_BYTES, q);
-
-firmware_write_fail:
-	result = nvi_enable(indio_dev);
-	mutex_unlock(&indio_dev->mlock);
-	if (result)
-		return result;
-
-	return size;
+	nvi_en(st);
+	return ret;
 }
 
 int inv_icm_init(struct nvi_state *st)
 {
 	st->chip_info.multi = 1;
 	return 0;
-}
-
-/*
- *  inv_create_dmp_sysfs() - create binary sysfs dmp entry.
- */
-static const struct bin_attribute dmp_firmware = {
-	.attr = {
-		.name = "dmp_firmware",
-		.mode = S_IRUGO | S_IWUSR
-	},
-	.size = DMP_IMAGE_SIZE + 32,
-	.read = inv_dmp_firmware_read,
-	.write = inv_dmp_firmware_write,
-};
-
-static const struct bin_attribute six_q_value = {
-	.attr = {
-		.name = "six_axes_q_value",
-		.mode = S_IWUSR
-	},
-	.size = QUATERNION_BYTES,
-	.read = NULL,
-	.write = inv_six_q_write,
-};
-
-int inv_create_dmp_sysfs(struct iio_dev *ind)
-{
-	int result;
-
-	result = sysfs_create_bin_file(&ind->dev.kobj, &dmp_firmware);
-	if (result)
-		return result;
-	result = sysfs_create_bin_file(&ind->dev.kobj, &six_q_value);
-
-	return result;
 }
 

@@ -264,7 +264,7 @@ static void channel_gk20a_bind(struct channel_gk20a *ch_gk20a)
 	struct fifo_engine_info_gk20a *engine_info =
 		f->engine_info + ENGINE_GR_GK20A;
 
-	u32 inst_ptr = sg_phys(ch_gk20a->inst_block.sgt->sgl)
+	u32 inst_ptr = gk20a_mem_phys(&ch_gk20a->inst_block)
 		>> ram_in_base_shift_v();
 
 	gk20a_dbg_info("bind channel %d inst ptr 0x%08x",
@@ -323,7 +323,7 @@ int channel_gk20a_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 		return err;
 
 	gk20a_dbg_info("channel %d inst block physical addr: 0x%16llx",
-		ch->hw_chid, (u64)sg_phys(ch->inst_block.sgt->sgl));
+		ch->hw_chid, (u64)gk20a_mem_phys(&ch->inst_block));
 
 	gk20a_dbg_fn("done");
 	return 0;

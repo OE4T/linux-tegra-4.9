@@ -646,7 +646,7 @@ channel_from_inst_ptr(struct fifo_gk20a *f, u64 inst_ptr)
 	for (ci = 0; ci < f->num_channels; ci++) {
 		struct channel_gk20a *c = f->channel+ci;
 		if (c->inst_block.cpu_va &&
-		    (inst_ptr == sg_phys(c->inst_block.sgt->sgl)))
+		    (inst_ptr == gk20a_mem_phys(&c->inst_block)))
 			return f->channel+ci;
 	}
 	return NULL;
@@ -1002,10 +1002,10 @@ static bool gk20a_fifo_handle_mmu_fault(struct gk20a *g)
 					gk20a_fifo_set_ctx_mmu_error_ch(g, ch);
 			gk20a_channel_abort(ch);
 		} else if (f.inst_ptr ==
-				sg_phys(g->mm.bar1.inst_block.sgt->sgl)) {
+				gk20a_mem_phys(&g->mm.bar1.inst_block)) {
 			gk20a_err(dev_from_gk20a(g), "mmu fault from bar1");
 		} else if (f.inst_ptr ==
-				sg_phys(g->mm.pmu.inst_block.sgt->sgl)) {
+				gk20a_mem_phys(&g->mm.pmu.inst_block)) {
 			gk20a_err(dev_from_gk20a(g), "mmu fault from pmu");
 		} else
 			gk20a_err(dev_from_gk20a(g), "couldn't locate channel for mmu fault");

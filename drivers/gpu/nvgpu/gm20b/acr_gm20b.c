@@ -1041,7 +1041,7 @@ static int bl_bootstrap(struct pmu_gk20a *pmu,
 			pwr_falcon_itfen_ctxen_enable_f());
 	gk20a_writel(g, pwr_pmu_new_instblk_r(),
 			pwr_pmu_new_instblk_ptr_f(
-				sg_phys(mm->pmu.inst_block.sgt->sgl) >> 12) |
+				gk20a_mem_phys(&mm->pmu.inst_block) >> 12) |
 			pwr_pmu_new_instblk_valid_f(1) |
 			pwr_pmu_new_instblk_target_sys_coh_f());
 

@@ -212,6 +212,7 @@ void nvhost_job_set_notifier(struct nvhost_job *job, u32 error)
 static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 		u32 patch_mem, struct dma_buf *buf)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
 	int i;
 
 	/* compare syncpt vs wait threshold */
@@ -234,7 +235,8 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 				nvhost_syncpt_read(sp, wait->syncpt_id));
 		if (nvhost_syncpt_is_expired(sp,
 		    wait->syncpt_id, wait->thresh) ||
-		    nvhost_get_channel_policy() == MAP_CHANNEL_ON_SUBMIT) {
+		    (nvhost_get_channel_policy() == MAP_CHANNEL_ON_SUBMIT &&
+		     !pdata->forced_map_on_open)) {
 			void *patch_addr = NULL;
 
 			/*

@@ -58,7 +58,8 @@ static void lock_device(struct nvhost_job *job, bool lock)
 		nvhost_opcode_release_mlock(pdata->modulemutexes[0]);
 
 	/* No need to do anything if we have a channel/engine */
-	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
+	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN ||
+	    pdata->forced_map_on_open)
 		return;
 
 	/* If we have a hardware mlock, use it. */
@@ -166,6 +167,7 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 
 static void push_waits(struct nvhost_job *job)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
 	struct nvhost_syncpt *sp = &nvhost_get_host(job->ch->dev)->syncpt;
 	struct nvhost_channel *ch = job->ch;
 	int i;
@@ -173,11 +175,11 @@ static void push_waits(struct nvhost_job *job)
 	for (i = 0; i < job->num_waitchk; i++) {
 		struct nvhost_waitchk *wait = &job->waitchk[i];
 
-		/* skip pushing waits if we allow them (map-at-submit mode)
+		/* skip pushing waits if we allow them (map-at-open mode)
 		 * and userspace wants to push a wait to some explicit
 		 * position */
-		if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN &&
-		    wait->mem)
+		if ((nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN ||
+		     pdata->forced_map_on_open) && wait->mem)
 			continue;
 
 		/* Skip pushing wait if it has already been expired */
@@ -192,7 +194,8 @@ static void push_waits(struct nvhost_job *job)
 				wait->syncpt_id, wait->thresh));
 	}
 
-	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
+	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN ||
+	    pdata->forced_map_on_open)
 		return;
 
 	for (i = 0; i < job->num_gathers; i++) {

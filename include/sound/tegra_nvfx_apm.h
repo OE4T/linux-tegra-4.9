@@ -113,7 +113,7 @@ typedef struct {
 typedef struct {
 	nvfx_call_params_t call_params;
 	variant_t plugin;   /* pointer to plugin_t */
-	int32_t params[NVFX_MAX_CALL_PARAMS_SIZE];
+	int32_t params[NVFX_MAX_CALL_PARAMS_WSIZE];
 } apm_fx_set_param_params_t;
 
 /* unified app message structure */

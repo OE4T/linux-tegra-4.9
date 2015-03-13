@@ -121,14 +121,14 @@ typedef struct {
 /**
  * nvfx_call_params_t
  *
- * @NVFX_MAX_CALL_PARAMS_SIZE   Maximum size of unioned call parameters
+ * @NVFX_MAX_CALL_PARAMS_WSIZE  Max size in int32s of unioned call parameters
  * @size                        Size of the call parameters
  * @method                      The index of the function to call
  * [custom params]              Variable length buffer of parameters e.g.:
  *                                  uint32_t custom_params[...]
  */
 typedef struct {
-	#define NVFX_MAX_CALL_PARAMS_SIZE   256
+#define NVFX_MAX_CALL_PARAMS_WSIZE   128
 	uint32_t size;
 	uint32_t method;
 	/* custom params */

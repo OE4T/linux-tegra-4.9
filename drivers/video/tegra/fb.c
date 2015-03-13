@@ -771,6 +771,99 @@ void tegra_fb_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_nvdps);
 }
 
+static void tegra_fb_420_10bpc_blank_frame(struct tegra_fb_info *tegra_fb)
+{
+#define phase0(p0)	(p0 & 0xff)
+#define phase1(p0, p1)	(((p1 & 0x3f) << 2) | ((p0 & 0x300) >> 8))
+#define phase2(p1, p2)	(((p2 & 0xf) << 4) | ((p1 & 0x3c0) >> 6))
+#define phase3(p2, p3)	(((p3 & 0x3) << 6) | ((p2 & 0x3f0) >> 4))
+#define phase4(p3)	((p3 & 0x3fc) >> 2)
+#define p0(y, c, a)	(phase0(a) << 24 | phase0(y) << 16 | \
+		phase0(y) << 8 | phase0(c))
+#define p1(y, c, a)	(phase1(a, a) << 24 | phase1(y, y) << 16 | \
+		phase1(y, y) << 8 | phase1(c, c))
+#define p2(y, c, a)	(phase2(a, a) << 24 | phase2(y, y) << 16 | \
+		phase2(y, y) << 8 | phase2(c, c))
+#define p3(y, c, a)	(phase3(a, a) << 24 | phase3(y, y) << 16 | \
+		phase3(y, y) << 8 | phase3(c, c))
+#define p4(y, c, a)	(phase4(a) << 24 | phase4(y) << 16 | \
+		phase4(y) << 8 | phase4(c))
+#define YCC_10BPC_Y_BLACK (64)
+#define YCC_10BPC_C_BLACK (512)
+
+	u32 y = YCC_10BPC_Y_BLACK;
+	u32 cb = YCC_10BPC_C_BLACK;
+	u32 cr = YCC_10BPC_C_BLACK;
+	u32 a = 0;
+	u32 active_width = tegra_fb->win.dc->mode.h_active;
+	u32 active_height = tegra_fb->win.dc->mode.v_active;
+	u32 temp_w, temp_h;
+	u32 bytes_per_pix;
+	char __iomem *mem_start = tegra_fb->info->screen_base;
+	u32 offset = 0;
+
+	/* phase statically rendered for TEGRA_WIN_FMT_B8G8R8A8 */
+	bytes_per_pix = tegra_dc_fmt_bpp(TEGRA_WIN_FMT_B8G8R8A8) / 8;
+
+	for (temp_h = 0; temp_h < active_height; temp_h++) {
+		for (temp_w = 0; temp_w < active_width; temp_w += 5) {
+			if (temp_h % 2) {
+				writel_relaxed(p0(y, cr, a), mem_start +
+						offset);
+				writel_relaxed(p1(y, cr, a), mem_start +
+						({offset += bytes_per_pix; }));
+				writel_relaxed(p2(y, cr, a), mem_start +
+						({offset += bytes_per_pix; }));
+				writel_relaxed(p3(y, cr, a), mem_start +
+						({offset += bytes_per_pix; }));
+				writel_relaxed(p4(y, cr, a), mem_start +
+						({offset += bytes_per_pix; }));
+				offset += bytes_per_pix;
+			} else {
+				writel_relaxed(p0(y, cb, a), mem_start +
+						offset);
+				writel_relaxed(p1(y, cb, a), mem_start +
+						({offset += bytes_per_pix; }));
+				writel_relaxed(p2(y, cb, a), mem_start +
+						({offset += bytes_per_pix; }));
+				writel_relaxed(p3(y, cb, a), mem_start +
+						({offset += bytes_per_pix; }));
+				writel_relaxed(p4(y, cb, a), mem_start +
+						({offset += bytes_per_pix; }));
+				offset += bytes_per_pix;
+			}
+		}
+	}
+
+#undef YCC_10BPC_C_BLACK
+#undef YCC_10BPC_Y_BLACK
+#undef p4
+#undef p3
+#undef p2
+#undef p1
+#undef phase4
+#undef phase3
+#undef phase2
+#undef phase1
+#undef phase0
+}
+
+void tegra_fb_frame_update(struct tegra_fb_info *tegra_fb)
+{
+	if (!tegra_fb || !tegra_fb->valid)
+		return;
+
+	tegra_fb_420_10bpc_blank_frame(tegra_fb);
+}
+
+struct tegra_dc_win *tegra_fb_get_win(struct tegra_fb_info *tegra_fb)
+{
+	if (!tegra_fb)
+		return NULL;
+
+	return &tegra_fb->win;
+}
+
 struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 					struct tegra_dc *dc,
 					struct tegra_fb_data *fb_data,

@@ -3901,6 +3901,53 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 	unsigned i;
 	unsigned long int blank_windows;
 	int nr_win = 0;
+	int yuv_flag = dc->mode.vmode & FB_VMODE_SET_YUV_MASK;
+
+	if (dc->yuv_bypass && yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30)) {
+		u32 active_width = dc->mode.h_active;
+		u32 active_height = dc->mode.v_active;
+		u32 orig_h_full, orig_w_full;
+		u32 orig_fmt;
+		u32 orig_out_w, orig_out_h;
+
+		tegra_fb_frame_update(dc->fb);
+
+		dcwins[0] = tegra_fb_get_win(dc->fb);
+		nr_win = 1;
+
+		orig_h_full = dcwins[0]->h.full;
+		orig_w_full = dcwins[0]->w.full;
+		orig_fmt = dcwins[0]->fmt;
+		orig_out_w = dcwins[0]->out_w;
+		orig_out_h = dcwins[0]->out_h;
+
+		dcwins[0]->h.full = dfixed_const(active_height);
+		dcwins[0]->w.full = dfixed_const(active_width);
+
+		/*
+		 * 420 10bpc blank frame statically
+		 * created for this pixel format
+		 */
+		dcwins[0]->fmt = TEGRA_WIN_FMT_B8G8R8A8;
+
+		dcwins[0]->out_w = active_width;
+		dcwins[0]->out_h = active_height;
+
+		if (!tegra_platform_is_linsim()) {
+			tegra_dc_update_windows(dcwins, nr_win, NULL, true);
+			tegra_dc_sync_windows(dcwins, nr_win);
+		}
+		tegra_dc_program_bandwidth(dc, true);
+
+		/* reinstate window config */
+		dcwins[0]->h.full = orig_h_full;
+		dcwins[0]->w.full = orig_w_full;
+		dcwins[0]->fmt = orig_fmt;
+		dcwins[0]->out_w = orig_out_w;
+		dcwins[0]->out_h = orig_out_h;
+
+		return;
+	}
 
 	blank_windows = windows & dc->valid_windows;
 
@@ -3920,6 +3967,7 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 		tegra_dc_sync_windows(dcwins, nr_win);
 	}
 	tegra_dc_program_bandwidth(dc, true);
+
 	for_each_set_bit(i, &blank_windows, DC_N_WINDOWS) {
 		/* Advance pending syncpoints */
 		tegra_dc_disable_window(dc, i);

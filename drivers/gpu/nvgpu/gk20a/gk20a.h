@@ -172,6 +172,7 @@ struct gpu_ops {
 		u32 (*get_max_ltc_per_fbp)(struct gk20a *g);
 		u32 (*get_max_lts_per_ltc)(struct gk20a *g);
 		u32* (*get_rop_l2_en_mask)(struct gk20a *g);
+		void (*init_sm_dsm_reg_info)(void);
 	} gr;
 	const char *name;
 	struct {

@@ -5995,7 +5995,7 @@ static const u32 _num_sm_dsm_perf_ctrl_regs = 4;
 static u32 _sm_dsm_perf_regs[5];
 static u32 _sm_dsm_perf_ctrl_regs[4];
 
-static void init_sm_dsm_reg_info(void)
+static void init_ovr_perf_reg_info(void)
 {
 	if (_ovr_perf_regs[0] != 0)
 		return;
@@ -6017,7 +6017,12 @@ static void init_sm_dsm_reg_info(void)
 	_ovr_perf_regs[14] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter5_r();
 	_ovr_perf_regs[15] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter6_r();
 	_ovr_perf_regs[16] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter7_r();
+}
 
+void gr_gk20a_init_sm_dsm_reg_info(void)
+{
+	if (_sm_dsm_perf_regs[0] != 0)
+		return;
 
 	_sm_dsm_perf_regs[0] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter_status_r();
 	_sm_dsm_perf_regs[1] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter0_r();
@@ -6050,7 +6055,8 @@ static int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
 	u32 vaddr_hi;
 	u32 tmp;
 
-	init_sm_dsm_reg_info();
+	init_ovr_perf_reg_info();
+	g->ops.gr.init_sm_dsm_reg_info();
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
 
@@ -6274,7 +6280,7 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 				       &sm_dsm_perf_regs,
 				       &perf_register_stride);
 
-	init_sm_dsm_reg_info();
+	g->ops.gr.init_sm_dsm_reg_info();
 
 	for (i = 0; i < num_sm_dsm_perf_regs; i++) {
 		if ((addr & tpc_gpc_mask) == (sm_dsm_perf_regs[i] & tpc_gpc_mask)) {
@@ -7375,4 +7381,5 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.get_max_ltc_per_fbp = gr_gk20a_get_max_ltc_per_fbp;
 	gops->gr.get_max_lts_per_ltc = gr_gk20a_get_max_lts_per_ltc;
 	gops->gr.get_rop_l2_en_mask = gr_gk20a_rop_l2_en_mask;
+	gops->gr.init_sm_dsm_reg_info = gr_gk20a_init_sm_dsm_reg_info;
 }

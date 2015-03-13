@@ -453,26 +453,46 @@ static bool gr_gm20b_is_valid_class(struct gk20a *g, u32 class_num)
 	return valid;
 }
 
-static void gr_gm20b_get_sm_dsm_perf_regs(struct gk20a *g,
-					       u32 *num_sm_dsm_perf_regs,
-					       u32 **sm_dsm_perf_regs,
-					       u32 *perf_register_stride)
+/* Following are the blocks of registers that the ucode
+ stores in the extended region.*/
+/* ==  ctxsw_extended_sm_dsm_perf_counter_register_stride_v() ? */
+static const u32 _num_sm_dsm_perf_regs;
+/* ==  ctxsw_extended_sm_dsm_perf_counter_control_register_stride_v() ?*/
+static const u32 _num_sm_dsm_perf_ctrl_regs = 2;
+static u32 *_sm_dsm_perf_regs;
+static u32 _sm_dsm_perf_ctrl_regs[2];
+
+void gr_gm20b_init_sm_dsm_reg_info(void)
 {
-	gr_gk20a_get_sm_dsm_perf_regs(g, num_sm_dsm_perf_regs,
-				      sm_dsm_perf_regs,
-				      perf_register_stride);
-	*perf_register_stride = ctxsw_prog_extended_sm_dsm_perf_counter_register_stride_v();
+	if (_sm_dsm_perf_ctrl_regs[0] != 0)
+		return;
+
+	_sm_dsm_perf_ctrl_regs[0] =
+			      gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control0_r();
+	_sm_dsm_perf_ctrl_regs[1] =
+			      gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control5_r();
 }
 
-static void gr_gm20b_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
-					       u32 *num_sm_dsm_perf_regs,
-					       u32 **sm_dsm_perf_regs,
-					       u32 *ctrl_register_stride)
+void gr_gm20b_get_sm_dsm_perf_regs(struct gk20a *g,
+				   u32 *num_sm_dsm_perf_regs,
+				   u32 **sm_dsm_perf_regs,
+				   u32 *perf_register_stride)
 {
-	gr_gk20a_get_sm_dsm_perf_ctrl_regs(g, num_sm_dsm_perf_regs,
-					   sm_dsm_perf_regs,
-					   ctrl_register_stride);
-	*ctrl_register_stride = ctxsw_prog_extended_sm_dsm_perf_counter_control_register_stride_v();
+	*num_sm_dsm_perf_regs = _num_sm_dsm_perf_regs;
+	*sm_dsm_perf_regs = _sm_dsm_perf_regs;
+	*perf_register_stride = 0;
+}
+
+void gr_gm20b_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
+					u32 *num_sm_dsm_perf_ctrl_regs,
+					u32 **sm_dsm_perf_ctrl_regs,
+					u32 *ctrl_register_stride)
+{
+	*num_sm_dsm_perf_ctrl_regs = _num_sm_dsm_perf_ctrl_regs;
+	*sm_dsm_perf_ctrl_regs = _sm_dsm_perf_ctrl_regs;
+
+	*ctrl_register_stride =
+	    ctxsw_prog_extended_sm_dsm_perf_counter_control_register_stride_v();
 }
 
 static u32 gr_gm20b_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
@@ -1072,4 +1092,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.get_max_lts_per_ltc = gr_gm20b_get_max_lts_per_ltc;
 	gops->gr.get_rop_l2_en_mask = gr_gm20b_rop_l2_en_mask;
 	gops->gr.get_max_fbps_count = gr_gm20b_get_max_fbps_count;
+	gops->gr.init_sm_dsm_reg_info = gr_gm20b_init_sm_dsm_reg_info;
 }

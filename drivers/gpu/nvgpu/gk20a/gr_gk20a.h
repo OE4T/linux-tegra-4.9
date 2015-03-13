@@ -461,14 +461,6 @@ void gr_gk20a_commit_global_pagepool(struct gk20a *g,
 				     u64 addr, u32 size, bool patch);
 void gk20a_gr_set_shader_exceptions(struct gk20a *g, u32 data);
 void gr_gk20a_enable_hww_exceptions(struct gk20a *g);
-void gr_gk20a_get_sm_dsm_perf_regs(struct gk20a *g,
-				   u32 *num_sm_dsm_perf_regs,
-				   u32 **sm_dsm_perf_regs,
-				   u32 *perf_register_stride);
-void gr_gk20a_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
-					u32 *num_sm_dsm_perf_regs,
-					u32 **sm_dsm_perf_regs,
-					u32 *perf_register_stride);
 int gr_gk20a_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr);
 int gr_gk20a_init_ctxsw_ucode(struct gk20a *g);
 int gr_gk20a_load_ctxsw_ucode(struct gk20a *g);

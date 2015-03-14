@@ -5350,6 +5350,16 @@ static void tegra_dc_dsi_vrr_enable(struct tegra_dc *dc, bool enable)
 		vrr->enable = enable;
 }
 
+static void tegra_dc_dsi_modeset_notifier(struct tegra_dc *dc)
+{
+	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
+
+	if (dsi->info.ganged_type &&
+		dsi->info.ganged_type !=
+			TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT_OVERLAP)
+		tegra_dsi_pix_correction(dc, dsi);
+}
+
 struct tegra_dc_out_ops tegra_dc_dsi_ops = {
 	.init = tegra_dc_dsi_init,
 	.destroy = tegra_dc_dsi_destroy,
@@ -5367,4 +5377,5 @@ struct tegra_dc_out_ops tegra_dc_dsi_ops = {
 	.setup_clk = tegra_dc_dsi_setup_clk,
 	.osidle = tegra_dc_dsi_osidle,
 	.vrr_enable = tegra_dc_dsi_vrr_enable,
+	.modeset_notifier = tegra_dc_dsi_modeset_notifier,
 };

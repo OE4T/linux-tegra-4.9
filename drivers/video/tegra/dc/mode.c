@@ -336,6 +336,11 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 	unsigned long v_sync_width;
 	unsigned long v_active;
 
+	tegra_dc_get(dc);
+
+	if (dc->out_ops && dc->out_ops->modeset_notifier)
+		dc->out_ops->modeset_notifier(dc);
+
 	v_back_porch = mode->v_back_porch;
 	v_front_porch = mode->v_front_porch;
 	v_sync_width = mode->v_sync_width;
@@ -349,8 +354,6 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 	}
 
 	print_mode(dc, mode, __func__);
-
-	tegra_dc_get(dc);
 
 	/* use default EMC rate when switching modes */
 #ifdef CONFIG_TEGRA_ISOMGR
@@ -486,9 +489,6 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 #endif
 
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
-
-	if (dc->out_ops && dc->out_ops->modeset_notifier)
-		dc->out_ops->modeset_notifier(dc);
 
 	tegra_dc_put(dc);
 

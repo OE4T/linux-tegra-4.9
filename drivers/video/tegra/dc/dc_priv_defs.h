@@ -113,7 +113,7 @@ struct tegra_dc_out_ops {
 	 * during OSidle.
 	 */
 	bool (*osidle)(struct tegra_dc *dc);
-	/* callback after new mode is programmed.
+	/* callback before new mode is programmed.
 	 * dc clocks are on at this point */
 	void (*modeset_notifier)(struct tegra_dc *dc);
 	/* Set up interface and sink for partial frame update.

@@ -19,7 +19,7 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	31
+#define QUADD_SAMPLES_VERSION	32
 #define QUADD_IO_VERSION	17
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
@@ -49,6 +49,7 @@
 #define QUADD_SAMPLE_VERSION_HDR_UNW_METHOD	29
 #define QUADD_SAMPLE_VERSION_HDR_ARCH_TIMER	30
 #define QUADD_SAMPLE_VERSION_STACK_OFFSET	31
+#define QUADD_SAMPLE_VERSION_SCHED_TASK_STATE	32
 
 #define QUADD_MMAP_HEADER_VERSION		1
 
@@ -265,6 +266,11 @@ struct quadd_additional_sample {
 
 	u32 values[6];
 	u16 extra_length;
+};
+
+enum {
+	QUADD_SCHED_IDX_TASK_STATE = 0,
+	QUADD_SCHED_IDX_RESERVED,
 };
 
 struct quadd_sched_data {

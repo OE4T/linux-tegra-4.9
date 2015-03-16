@@ -78,7 +78,6 @@
 		compatible = "nvidia,tegra210-host1x-pd";
 		is_off;
 		host1x;
-		wakeup_capable;
 		#power-domain-cells = <0>;
 		power-domains = <&mc_clk_pd>;
 	};
@@ -568,6 +567,7 @@
 	host1x: host1x {
 		compatible = "nvidia,tegra210-host1x", "simple-bus";
 		power-domains = <&host1x_pd>;
+		wakeup-capable;
 		reg = <0x0 0x50000000 0x0 0x00034000>;
 		interrupts = <0 65 0x04   /* mpcore syncpt */
 			      0 67 0x04>; /* mpcore general */

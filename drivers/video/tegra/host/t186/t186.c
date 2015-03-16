@@ -78,6 +78,7 @@ struct nvhost_device_data t18_isp_info = {
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
 	.serialize		= 1,
 	.push_work_done		= 1,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 };
 #endif
 
@@ -111,6 +112,7 @@ struct nvhost_device_data t18_vi_info = {
 	.finalize_poweron = nvhost_vi_finalize_poweron,
 	.serialize		= 1,
 	.push_work_done		= 1,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 };
 #endif
 
@@ -133,6 +135,7 @@ struct nvhost_device_data t18_msenc_info = {
 	.firmware_name		= "nvhost_nvenc061.fw",
 	.serialize		= 1,
 	.push_work_done		= 1,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 };
 
 struct nvhost_device_data t18_nvdec_info = {
@@ -154,6 +157,7 @@ struct nvhost_device_data t18_nvdec_info = {
 	.num_channels		= 1,
 	.serialize		= 1,
 	.push_work_done		= 1,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 };
 
 struct nvhost_device_data t18_nvjpg_info = {
@@ -177,6 +181,7 @@ struct nvhost_device_data t18_nvjpg_info = {
 	.firmware_name		= "nvhost_nvjpg011.fw",
 	.serialize		= 1,
 	.push_work_done		= 1,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 };
 
 struct nvhost_device_data t18_tsec_info = {
@@ -195,6 +200,7 @@ struct nvhost_device_data t18_tsec_info = {
 	.prepare_poweroff	= nvhost_tsec_prepare_poweroff,
 	.serialize		= 1,
 	.push_work_done		= 1,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 };
 
 struct nvhost_device_data t18_tsecb_info = {
@@ -212,6 +218,7 @@ struct nvhost_device_data t18_tsecb_info = {
 	.prepare_poweroff	= nvhost_tsec_prepare_poweroff,
 	.serialize		= 1,
 	.push_work_done		= 1,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 };
 
 struct nvhost_device_data t18_vic_info = {
@@ -238,6 +245,7 @@ struct nvhost_device_data t18_vic_info = {
 	.firmware_name		= "vic04_ucode.bin",
 	.serialize		= 1,
 	.push_work_done		= 1,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 };
 
 struct nvhost_device_data t18_nvcsi_info = {
@@ -249,6 +257,7 @@ struct nvhost_device_data t18_nvcsi_info = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.serialize		= 1,
 	.push_work_done		= 1,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 };
 
 #include "host1x/host1x_channel_t186.c"

@@ -145,8 +145,7 @@ static void push_waits(struct nvhost_job *job)
 		/* skip pushing waits if we allow them (map-at-open mode)
 		 * and userspace wants to push a wait to some explicit
 		 * position */
-		if ((nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN ||
-		     pdata->forced_map_on_open) && wait->mem)
+		if (pdata->resource_policy == RESOURCE_PER_DEVICE && wait->mem)
 			continue;
 
 		/* Skip pushing wait if it has already been expired */
@@ -186,8 +185,7 @@ static void submit_work(struct nvhost_job *job)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
 	bool use_locking =
-		!pdata->forced_map_on_open &&
-		nvhost_get_channel_policy() == MAP_CHANNEL_ON_SUBMIT;
+		pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE;
 	void *cpuva = NULL;
 	u32 cur_class = 0;
 	int i;

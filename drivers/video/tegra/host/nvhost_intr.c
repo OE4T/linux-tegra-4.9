@@ -481,7 +481,7 @@ int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync)
 	unsigned int id;
 	struct nvhost_intr_syncpt *syncpt;
 	struct nvhost_master *host = intr_to_dev(intr);
-	u32 nb_pts = nvhost_syncpt_nb_pts(&host->syncpt);
+	u32 nb_pts = nvhost_syncpt_nb_hw_pts(&host->syncpt);
 
 	mutex_init(&intr->mutex);
 	intr->syncpt_irq = irq_sync;
@@ -527,7 +527,7 @@ void nvhost_intr_stop(struct nvhost_intr *intr)
 {
 	unsigned int id;
 	struct nvhost_intr_syncpt *syncpt;
-	u32 nb_pts = nvhost_syncpt_nb_pts(&intr_to_dev(intr)->syncpt);
+	u32 nb_pts = nvhost_syncpt_nb_hw_pts(&intr_to_dev(intr)->syncpt);
 
 	mutex_lock(&intr->mutex);
 

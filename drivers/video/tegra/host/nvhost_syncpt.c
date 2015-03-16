@@ -207,7 +207,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 			u32 id,
 			u32 thresh);
 
-	if (!id || !nvhost_syncpt_is_valid_pt(sp, id))
+	if (!id || !nvhost_syncpt_is_valid_hw_pt(sp, id))
 		return -EINVAL;
 
 	if (value)
@@ -963,7 +963,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 {
 	int i;
 	struct nvhost_master *host = syncpt_to_dev(sp);
-	int nb_pts = nvhost_syncpt_nb_pts(sp);
+	int nb_pts = nvhost_syncpt_nb_hw_pts(sp);
 	int err = 0;
 
 	/* Allocate structs for min, max and base values */
@@ -1026,8 +1026,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 	}
 
 	/* Fill in the attributes */
-	for (i = nvhost_syncpt_pts_base(sp);
-			i < nvhost_syncpt_pts_limit(sp); i++) {
+	for (i = 0; i < nvhost_syncpt_nb_hw_pts(sp); i++) {
 		struct nvhost_syncpt_attr *min =
 			&sp->syncpt_attrs[i*NUM_SYSFS_ENTRY];
 		struct nvhost_syncpt_attr *max =
@@ -1094,8 +1093,7 @@ static void nvhost_syncpt_deinit_timeline(struct nvhost_syncpt *sp)
 {
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 	int i;
-	for (i = nvhost_syncpt_pts_base(sp);
-			i < nvhost_syncpt_pts_limit(sp); i++) {
+	for (i = 0; i < nvhost_syncpt_nb_hw_pts(sp); i++) {
 		if (sp->timeline && sp->timeline[i]) {
 			sync_timeline_destroy(
 				(struct sync_timeline *)sp->timeline[i]);
@@ -1145,6 +1143,11 @@ int nvhost_syncpt_client_managed(struct nvhost_syncpt *sp, u32 id)
 	return sp->client_managed[id];
 }
 
+int nvhost_syncpt_nb_hw_pts(struct nvhost_syncpt *sp)
+{
+	return syncpt_to_dev(sp)->info.nb_hw_pts;
+}
+
 int nvhost_syncpt_nb_pts(struct nvhost_syncpt *sp)
 {
 	return syncpt_to_dev(sp)->info.nb_pts;
@@ -1163,6 +1166,12 @@ int nvhost_syncpt_pts_limit(struct nvhost_syncpt *sp)
 int nvhost_syncpt_pts_base(struct nvhost_syncpt *sp)
 {
 	return syncpt_to_dev(sp)->info.pts_base;
+}
+
+bool nvhost_syncpt_is_valid_hw_pt(struct nvhost_syncpt *sp, u32 id)
+{
+	return (id >= 0 && id < nvhost_syncpt_nb_hw_pts(sp) &&
+		id != NVSYNCPT_INVALID);
 }
 
 bool nvhost_syncpt_is_valid_pt(struct nvhost_syncpt *sp, u32 id)
@@ -1271,12 +1280,16 @@ void nvhost_syncpt_set_min_eq_max_ext(struct platform_device *dev, u32 id)
 }
 EXPORT_SYMBOL(nvhost_syncpt_set_min_eq_max_ext);
 
+/*
+ * For external clients, check the validity in full
+ * h/w supported syncpoint range
+ */
 bool nvhost_syncpt_is_valid_pt_ext(struct platform_device *dev, u32 id)
 {
 	struct nvhost_master *master = nvhost_get_host(dev);
 	struct nvhost_syncpt *sp = &master->syncpt;
 
-	return nvhost_syncpt_is_valid_pt(sp, id);
+	return nvhost_syncpt_is_valid_hw_pt(sp, id);
 }
 EXPORT_SYMBOL(nvhost_syncpt_is_valid_pt_ext);
 

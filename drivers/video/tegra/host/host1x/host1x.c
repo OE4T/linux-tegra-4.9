@@ -130,7 +130,7 @@ static int nvhost_ctrlopen(struct inode *inode, struct file *filp)
 static int nvhost_ioctl_ctrl_syncpt_read(struct nvhost_ctrl_userctx *ctx,
 	struct nvhost_ctrl_syncpt_read_args *args)
 {
-	if (!nvhost_syncpt_is_valid_pt(&ctx->dev->syncpt, args->id))
+	if (!nvhost_syncpt_is_valid_hw_pt(&ctx->dev->syncpt, args->id))
 		return -EINVAL;
 	args->value = nvhost_syncpt_read(&ctx->dev->syncpt, args->id);
 	trace_nvhost_ioctl_ctrl_syncpt_read(args->id, args->value);
@@ -152,7 +152,7 @@ static int nvhost_ioctl_ctrl_syncpt_waitex(struct nvhost_ctrl_userctx *ctx,
 {
 	u32 timeout;
 	int err;
-	if (!nvhost_syncpt_is_valid_pt(&ctx->dev->syncpt, args->id))
+	if (!nvhost_syncpt_is_valid_hw_pt(&ctx->dev->syncpt, args->id))
 		return -EINVAL;
 	if (args->timeout == NVHOST_NO_TIMEOUT)
 		/* FIXME: MAX_SCHEDULE_TIMEOUT is ulong which can be bigger
@@ -177,7 +177,7 @@ static int nvhost_ioctl_ctrl_syncpt_waitmex(struct nvhost_ctrl_userctx *ctx,
 	ulong timeout;
 	int err;
 	struct timespec ts;
-	if (!nvhost_syncpt_is_valid_pt(&ctx->dev->syncpt, args->id))
+	if (!nvhost_syncpt_is_valid_hw_pt(&ctx->dev->syncpt, args->id))
 		return -EINVAL;
 	if (args->timeout == NVHOST_NO_TIMEOUT)
 		timeout = MAX_SCHEDULE_TIMEOUT;
@@ -227,7 +227,8 @@ static int nvhost_ioctl_ctrl_sync_fence_create(struct nvhost_ctrl_userctx *ctx,
 	}
 
 	for (i = 0; i < args->num_pts; i++) {
-		if (!nvhost_syncpt_is_valid_pt(&ctx->dev->syncpt, pts[i].id)) {
+		if (!nvhost_syncpt_is_valid_hw_pt(&ctx->dev->syncpt,
+					pts[i].id)) {
 			err = -EINVAL;
 			goto out;
 		}
@@ -386,7 +387,7 @@ static int nvhost_ioctl_ctrl_get_version(struct nvhost_ctrl_userctx *ctx,
 static int nvhost_ioctl_ctrl_syncpt_read_max(struct nvhost_ctrl_userctx *ctx,
 	struct nvhost_ctrl_syncpt_read_args *args)
 {
-	if (!nvhost_syncpt_is_valid_pt(&ctx->dev->syncpt, args->id))
+	if (!nvhost_syncpt_is_valid_hw_pt(&ctx->dev->syncpt, args->id))
 		return -EINVAL;
 	args->value = nvhost_syncpt_read_max(&ctx->dev->syncpt, args->id);
 	return 0;
@@ -702,7 +703,7 @@ static int nvhost_alloc_resources(struct nvhost_master *host)
 		return err;
 
 	host->intr.syncpt = kzalloc(sizeof(struct nvhost_intr_syncpt) *
-				    nvhost_syncpt_nb_pts(&host->syncpt),
+				    nvhost_syncpt_nb_hw_pts(&host->syncpt),
 				    GFP_KERNEL);
 
 	if (!host->intr.syncpt) {

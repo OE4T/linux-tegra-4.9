@@ -54,7 +54,8 @@ static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 
 	ktime_get_ts(&isr_recv);
 
-	for (i = 0; i < DIV_ROUND_UP(dev->info.nb_pts, 32); i++) {
+	for (i = 0; i < DIV_ROUND_UP(nvhost_syncpt_nb_hw_pts(&dev->syncpt), 32);
+			i++) {
 		reg = readl(sync_regs +
 				host1x_sync_syncpt_thresh_cpu0_int_status_r() +
 				i * REGISTER_STRIDE);
@@ -65,9 +66,11 @@ static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 			int graphics_host_sp =
 				nvhost_syncpt_graphics_host_sp(&dev->syncpt);
 
-			if (unlikely(sp_id >= dev->info.nb_pts)) {
+			if (unlikely(!nvhost_syncpt_is_valid_hw_pt(&dev->syncpt,
+					sp_id))) {
 				dev_err(&dev->dev->dev, "%s(): syncpoint id %d is beyond the number of syncpoints (%d)\n",
-					__func__, sp_id, dev->info.nb_pts);
+					__func__, sp_id,
+					nvhost_syncpt_nb_hw_pts(&dev->syncpt));
 				goto out;
 			}
 
@@ -101,7 +104,7 @@ static void t20_intr_init_host_sync(struct nvhost_intr *intr)
 
 	intr_op().disable_all_syncpt_intrs(intr);
 
-	for (i = 0; i < dev->info.nb_pts; i++)
+	for (i = 0; i < nvhost_syncpt_nb_hw_pts(&dev->syncpt); i++)
 		INIT_WORK(&intr->syncpt[i].work, syncpt_thresh_cascade_fn);
 
 	err = request_irq(intr->syncpt_irq,
@@ -176,8 +179,8 @@ static void t20_intr_disable_all_syncpt_intrs(struct nvhost_intr *intr)
 	void __iomem *sync_regs = dev->sync_aperture;
 	u32 reg;
 
-	for (reg = 0; reg < bit_word(dev->info.nb_pts) * REGISTER_STRIDE;
-			reg += REGISTER_STRIDE) {
+	for (reg = 0; reg < bit_word(nvhost_syncpt_nb_hw_pts(&dev->syncpt))
+			* REGISTER_STRIDE; reg += REGISTER_STRIDE) {
 		/* disable interrupts for both cpu's */
 		writel(0xffffffffu, sync_regs +
 				host1x_sync_syncpt_thresh_int_disable_r() +
@@ -331,21 +334,23 @@ static int intr_debug_dump(struct nvhost_intr *intr, struct output *o)
 		readl(sync_regs + host1x_sync_intmask_r()));
 
 	nvhost_debug_output(o, "\n---- host syncpt irq mask ----\n\n");
-	for (i = 0; i < DIV_ROUND_UP(dev->info.nb_pts, 16); i++)
+	for (i = 0; i < DIV_ROUND_UP(nvhost_syncpt_nb_hw_pts(&dev->syncpt), 16);
+			i++)
 		nvhost_debug_output(o, "syncpt_thresh_int_mask(%d) = 0x%08x\n",
 			i, readl(sync_regs +
 				host1x_sync_syncpt_thresh_int_mask_r() +
 				i * REGISTER_STRIDE));
 
 	nvhost_debug_output(o, "\n---- host syncpt irq status ----\n\n");
-	for (i = 0; i < DIV_ROUND_UP(dev->info.nb_pts, 32); i++)
+	for (i = 0; i < DIV_ROUND_UP(nvhost_syncpt_nb_hw_pts(&dev->syncpt), 32);
+			i++)
 		nvhost_debug_output(o, "syncpt_thresh_cpu0_int_status(%d) = 0x%08x\n",
 			i, readl(sync_regs +
 				host1x_sync_syncpt_thresh_cpu0_int_status_r() +
 				i * REGISTER_STRIDE));
 
 	nvhost_debug_output(o, "\n---- host syncpt thresh ----\n\n");
-	for (i = 0; i < dev->info.nb_pts; i++) {
+	for (i = 0; i < nvhost_syncpt_nb_hw_pts(&dev->syncpt); i++) {
 		u32 reg = readl(sync_regs +
 				host1x_sync_syncpt_thresh_int_mask_r() +
 				bit_word(i * 2) * REGISTER_STRIDE);

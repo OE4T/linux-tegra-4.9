@@ -421,7 +421,7 @@ struct sync_fence *nvhost_sync_create_fence(struct platform_device *pdev,
 	struct sync_fence *fence = NULL;
 
 	for (i = 0; i < num_pts; i++) {
-		if (!nvhost_syncpt_is_valid_pt(sp, pts[i].id)) {
+		if (!nvhost_syncpt_is_valid_hw_pt(sp, pts[i].id)) {
 			WARN_ON(1);
 			return ERR_PTR(-EINVAL);
 		}

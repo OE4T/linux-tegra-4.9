@@ -65,7 +65,10 @@ struct host1x_device_info {
 	enum nvhost_channel_policy channel_policy; /* host1x: channel policy */
 
 	/* Syncpoint info */
-	int		nb_pts; 	/* host1x: num syncpoints supported */
+	int		nb_hw_pts;	/* host1x: num syncpoints supported
+					   in h/w */
+	int		nb_pts;		/* host1x: num syncpoints supported
+					   in s/w where nb_pts <= nb_hw_pts */
 	int		pts_base;	/* host1x: syncpoint base */
 	int		pts_limit;	/* host1x: syncpoint limit */
 	enum nvhost_syncpt_policy syncpt_policy; /* host1x: syncpoint policy */

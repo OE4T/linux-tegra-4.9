@@ -264,7 +264,7 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 {
 	u32 get_restart;
 	struct nvhost_job *job = NULL;
-	int nb_pts = nvhost_syncpt_nb_pts(syncpt);
+	int nb_pts = nvhost_syncpt_nb_hw_pts(syncpt);
 	DECLARE_BITMAP(syncpt_used, nb_pts);
 
 	bitmap_zero(syncpt_used, nb_pts);

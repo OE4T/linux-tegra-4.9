@@ -220,7 +220,7 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 		struct nvhost_waitchk *wait = &job->waitchk[i];
 
 		/* validate syncpt id */
-		if (!nvhost_syncpt_is_valid_pt(sp, wait->syncpt_id))
+		if (!nvhost_syncpt_is_valid_hw_pt(sp, wait->syncpt_id))
 			continue;
 
 		if (!wait->mem)
@@ -397,17 +397,18 @@ static int do_relocs(struct nvhost_job *job,
 int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 {
 	int err = 0, i = 0, j = 0;
-	DECLARE_BITMAP(waitchk_mask, nvhost_syncpt_nb_pts(sp));
+	int nb_hw_pts = nvhost_syncpt_nb_hw_pts(sp);
+	DECLARE_BITMAP(waitchk_mask, nb_hw_pts);
 
-	bitmap_zero(waitchk_mask, nvhost_syncpt_nb_pts(sp));
+	bitmap_zero(waitchk_mask, nb_hw_pts);
 	for (i = 0; i < job->num_waitchk; i++) {
 		u32 syncpt_id = job->waitchk[i].syncpt_id;
-		if (nvhost_syncpt_is_valid_pt(sp, syncpt_id))
+		if (nvhost_syncpt_is_valid_hw_pt(sp, syncpt_id))
 			set_bit(syncpt_id, waitchk_mask);
 	}
 
 	/* get current syncpt values for waitchk */
-	for_each_set_bit(i, waitchk_mask, nvhost_syncpt_nb_pts(sp))
+	for_each_set_bit(i, waitchk_mask, nb_hw_pts)
 		nvhost_syncpt_update_min(sp, i);
 
 	/* pin memory */

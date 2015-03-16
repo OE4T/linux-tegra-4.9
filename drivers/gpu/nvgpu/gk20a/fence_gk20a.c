@@ -64,6 +64,8 @@ struct gk20a_fence *gk20a_fence_get(struct gk20a_fence *f)
 
 int gk20a_fence_wait(struct gk20a_fence *f, int timeout)
 {
+	if (!tegra_platform_is_silicon())
+		timeout = (u32)MAX_SCHEDULE_TIMEOUT;
 	return f->ops->wait(f, timeout);
 }
 

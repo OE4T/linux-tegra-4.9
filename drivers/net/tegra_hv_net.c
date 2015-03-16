@@ -72,6 +72,7 @@
 
 #define DEFAULT_HIGH_WATERMARK_MULT	50
 #define DEFAULT_LOW_WATERMARK_MULT	25
+#define DEFAULT_MAX_TX_DELAY_MSECS	10
 
 enum drop_kind {
 	dk_none,
@@ -129,6 +130,7 @@ struct tegra_hv_net {
 
 	unsigned int high_watermark;	/* mult * framesize */
 	unsigned int low_watermark;
+	unsigned int max_tx_delay;
 };
 
 static int tegra_hv_net_open(struct net_device *ndev)
@@ -169,12 +171,15 @@ static void *tegra_hv_net_xmit_get_buffer(struct tegra_hv_net *hvn)
 
 	p = tegra_hv_ivc_write_get_next_frame(hvn->ivck);
 	if (IS_ERR(p)) {
-		ret = wait_event_interruptible(hvn->wq,
+		ret = wait_event_interruptible_timeout(hvn->wq,
 			!IS_ERR(p = tegra_hv_ivc_write_get_next_frame(
-				hvn->ivck)));
-		if (ret) {
-			netdev_err(hvn->ndev, "%s: wait error=%d\n",
-				__func__, ret);
+				hvn->ivck)),
+			msecs_to_jiffies(hvn->max_tx_delay));
+		if (ret <= 0) {
+			net_warn_ratelimited(
+				"%s: timed out after %u ms\n",
+				hvn->ndev->name,
+				hvn->max_tx_delay);
 		}
 	}
 
@@ -580,7 +585,7 @@ static int tegra_hv_net_probe(struct platform_device *pdev)
 	struct tegra_hv_net *hvn = NULL;
 	int ret;
 	u32 id;
-	u32 highmark, lowmark;
+	u32 highmark, lowmark, txdelay;
 
 	if (!is_tegra_hypervisor_mode()) {
 		dev_info(dev, "Hypervisor is not present\n");
@@ -619,6 +624,10 @@ static int tegra_hv_net_probe(struct platform_device *pdev)
 		goto out_of_put;
 	}
 
+	ret = of_property_read_u32(dn, "max-tx-delay-msecs", &txdelay);
+	if (ret != 0)
+		txdelay = DEFAULT_MAX_TX_DELAY_MSECS;
+
 	ndev = alloc_etherdev(sizeof(*hvn));
 	if (ndev == NULL) {
 		dev_err(dev, "Failed to allocate netdev\n");
@@ -648,6 +657,7 @@ static int tegra_hv_net_probe(struct platform_device *pdev)
 
 	hvn->high_watermark = highmark * hvn->ivck->nframes;
 	hvn->low_watermark = lowmark * hvn->ivck->nframes;
+	hvn->max_tx_delay = txdelay;
 
 	/* make sure the frame size is sufficient */
 	if (hvn->ivck->frame_size <= HDR_SIZE + 4) {

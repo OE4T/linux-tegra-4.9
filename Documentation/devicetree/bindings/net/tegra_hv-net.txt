@@ -16,11 +16,12 @@ Optional properties:
   falls below the 'low-watermark-mult' * 'the capacity in frames' level the network
   queue will be started. Note that high-watermark-mult must be higher than the
   low-watermark-mult value.
+- max-tx-delay-msecs: The maximum timeout value for transmits (in milliseconds.)
+  Any packet part of a send request that exceeds this value will be dropped.
 
 Example:
 	tegra_hv_net {
 		compatible = "nvidia,tegra-hv-net";
 		status = "okay";
-		/* ivc channel to use definition (third one in tegra_hv) */
 		ivc = <&tegra_hv 2>;
 	};

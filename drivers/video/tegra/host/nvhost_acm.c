@@ -947,7 +947,7 @@ int nvhost_module_add_domain(struct generic_pm_domain *domain,
 		pm_genpd_set_poweroff_delay(domain,
 				pdata->powergate_delay);
 
-	if (of_property_read_bool(dn, "wakeup_capable"))
+	if (of_property_read_bool(dn, "wakeup-capable"))
 		wakeup_capable = true;
 
 	device_set_wakeup_capable(&pdev->dev, wakeup_capable);

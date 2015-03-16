@@ -1905,7 +1905,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 	unsigned int unw_type;
 	int is_eh = 1, mode = sf->mode;
 
-	cc->unw_rc = QUADD_URC_FAILURE;
+	cc->urc_dwarf = QUADD_URC_FAILURE;
 	user_reg_size = get_user_reg_size(mode);
 
 	while (1) {
@@ -1922,7 +1922,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 		sp = sf->vregs[regnum_sp(mode)];
 
 		if (!validate_stack_addr(sp, vma_sp, user_reg_size)) {
-			cc->unw_rc = -QUADD_URC_SP_INCORRECT;
+			cc->urc_dwarf = QUADD_URC_SP_INCORRECT;
 			break;
 		}
 
@@ -1935,7 +1935,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 		if (!is_vma_addr(addr, vma_pc, user_reg_size)) {
 			err = quadd_get_dw_frames(vma_pc->vm_start, &ri_new);
 			if (err) {
-				cc->unw_rc = QUADD_URC_TBL_NOT_EXIST;
+				cc->urc_dwarf = QUADD_URC_TBL_NOT_EXIST;
 				break;
 			}
 
@@ -1947,7 +1947,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 
 		if (!is_fde_entry_exist(ri, sf->pc, &__is_eh, &__is_debug)) {
 			pr_debug("eh/debug fde entries are not existed\n");
-			cc->unw_rc = QUADD_URC_IDX_NOT_FOUND;
+			cc->urc_dwarf = QUADD_URC_IDX_NOT_FOUND;
 			break;
 		}
 		pr_debug("is_eh: %d, is_debug: %d\n", __is_eh, __is_debug);
@@ -1967,11 +1967,11 @@ unwind_backtrace(struct quadd_callchain *cc,
 
 				err = unwind_frame(ri, sf, vma_sp, is_eh);
 				if (err < 0) {
-					cc->unw_rc = -err;
+					cc->urc_dwarf = -err;
 					break;
 				}
 			} else {
-				cc->unw_rc = -err;
+				cc->urc_dwarf = -err;
 				break;
 			}
 		}
@@ -2038,10 +2038,10 @@ quadd_get_user_cc_dwarf(struct pt_regs *regs,
 	if (!regs || !mm)
 		return 0;
 
-	if (cc->unw_rc == QUADD_URC_LEVEL_TOO_DEEP)
+	if (cc->urc_dwarf == QUADD_URC_LEVEL_TOO_DEEP)
 		return nr_prev;
 
-	cc->unw_rc = QUADD_URC_FAILURE;
+	cc->urc_dwarf = QUADD_URC_FAILURE;
 
 	if (nr_prev > 0) {
 		ip = cc->curr_pc;
@@ -2109,7 +2109,7 @@ quadd_get_user_cc_dwarf(struct pt_regs *regs,
 
 	err = quadd_get_dw_frames(vma->vm_start, &ri);
 	if (err) {
-		cc->unw_rc = QUADD_URC_TBL_NOT_EXIST;
+		cc->urc_dwarf = QUADD_URC_TBL_NOT_EXIST;
 		return 0;
 	}
 

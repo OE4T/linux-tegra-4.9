@@ -371,6 +371,7 @@ init_mmap_hdr(struct quadd_mmap_rb_info *mmap_rb,
 	mmap_hdr->magic = QUADD_MMAP_HEADER_MAGIC;
 	mmap_hdr->version = QUADD_MMAP_HEADER_VERSION;
 	mmap_hdr->cpu_id = cpu_id;
+	mmap_hdr->samples_version = QUADD_SAMPLES_VERSION;
 
 	rb_hdr = (struct quadd_ring_buffer_hdr *)(mmap_hdr + 1);
 	rb->rb_hdr = rb_hdr;

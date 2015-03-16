@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/ma.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -85,7 +85,7 @@ static void timer_interrupt(unsigned long data)
 	struct quadd_hrt_ctx *hrt_ctx = (struct quadd_hrt_ctx *)data;
 	struct timer_list *timer = &hrt_ctx->ma_timer;
 
-	if (hrt_ctx->active == 0)
+	if (!atomic_read(&hrt_ctx->active))
 		return;
 
 	check_ma(hrt_ctx);

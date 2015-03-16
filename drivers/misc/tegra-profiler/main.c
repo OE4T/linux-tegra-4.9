@@ -185,7 +185,6 @@ set_parameters(struct quadd_parameters *p, uid_t *debug_app_uid)
 	int pl310_events_id;
 	int nr_pmu = 0, nr_pl310 = 0;
 	struct task_struct *task;
-	unsigned int extra;
 	u64 *low_addr_p;
 
 	if (!validate_freq(p->freq)) {
@@ -294,17 +293,6 @@ set_parameters(struct quadd_parameters *p, uid_t *debug_app_uid)
 			ctx.pl310->set_events(NULL, 0);
 		}
 	}
-
-	extra = p->reserved[QUADD_PARAM_IDX_EXTRA];
-
-	if (extra & QUADD_PARAM_EXTRA_BT_UNWIND_TABLES)
-		pr_info("unwinding: exception-handling tables\n");
-
-	if (extra & QUADD_PARAM_EXTRA_BT_FP)
-		pr_info("unwinding: frame pointers\n");
-
-	if (extra & QUADD_PARAM_EXTRA_BT_MIXED)
-		pr_info("unwinding: mixed mode\n");
 
 	low_addr_p = (u64 *)&p->reserved[QUADD_PARAM_IDX_BT_LOWER_BOUND];
 	ctx.hrt->low_addr = (unsigned long)*low_addr_p;

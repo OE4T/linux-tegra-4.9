@@ -1060,7 +1060,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 {
 	struct ex_region_info ri_new;
 
-	cc->unw_rc = QUADD_URC_FAILURE;
+	cc->urc_ut = QUADD_URC_FAILURE;
 
 	pr_debug("fp_arm: %#lx, fp_thumb: %#lx, sp: %#lx, lr: %#lx, pc: %#lx\n",
 		 frame->fp_arm, frame->fp_thumb,
@@ -1081,7 +1081,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 			break;
 
 		if (!validate_stack_addr(frame->sp, vma_sp, sizeof(u32))) {
-			cc->unw_rc = -QUADD_URC_SP_INCORRECT;
+			cc->urc_ut = QUADD_URC_SP_INCORRECT;
 			break;
 		}
 
@@ -1094,7 +1094,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 		if (!is_vma_addr(ti->addr, vma_pc, sizeof(u32))) {
 			err = get_extabs_ehabi(vma_pc->vm_start, &ri_new);
 			if (err) {
-				cc->unw_rc = QUADD_URC_TBL_NOT_EXIST;
+				cc->urc_ut = QUADD_URC_TBL_NOT_EXIST;
 				break;
 			}
 
@@ -1104,7 +1104,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 		err = unwind_frame(ri, frame, vma_sp);
 		if (err < 0) {
 			pr_debug("end unwind, urc: %ld\n", err);
-			cc->unw_rc = -err;
+			cc->urc_ut = -err;
 			break;
 		}
 
@@ -1144,10 +1144,10 @@ quadd_get_user_cc_arm32_ehabi(struct pt_regs *regs,
 		return 0;
 #endif
 
-	if (cc->unw_rc == QUADD_URC_LEVEL_TOO_DEEP)
+	if (cc->urc_ut == QUADD_URC_LEVEL_TOO_DEEP)
 		return nr_prev;
 
-	cc->unw_rc = QUADD_URC_FAILURE;
+	cc->urc_ut = QUADD_URC_FAILURE;
 
 	if (nr_prev > 0) {
 		ip = cc->curr_pc;
@@ -1188,7 +1188,7 @@ quadd_get_user_cc_arm32_ehabi(struct pt_regs *regs,
 
 	err = get_extabs_ehabi(vma->vm_start, &ri);
 	if (err) {
-		cc->unw_rc = QUADD_URC_TBL_NOT_EXIST;
+		cc->urc_ut = QUADD_URC_TBL_NOT_EXIST;
 		return 0;
 	}
 

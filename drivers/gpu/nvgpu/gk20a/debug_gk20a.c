@@ -34,6 +34,11 @@
 unsigned int gk20a_debug_trace_cmdbuf;
 static struct platform_device *gk20a_device;
 
+struct ch_state {
+	int pid;
+	u8 inst_block[0];
+};
+
 static const char * const ccsr_chan_status_str[] = {
 	"idle",
 	"pending",
@@ -97,23 +102,25 @@ void gk20a_debug_output(struct gk20a_debug_output *o,
 
 static void gk20a_debug_show_channel(struct gk20a *g,
 				     struct gk20a_debug_output *o,
-				     struct channel_gk20a *ch)
+				     u32 hw_chid,
+				     struct ch_state *ch_state)
 {
-	u32 channel = gk20a_readl(g, ccsr_channel_r(ch->hw_chid));
+	u32 channel = gk20a_readl(g, ccsr_channel_r(hw_chid));
 	u32 status = ccsr_channel_status_v(channel);
 	u32 syncpointa, syncpointb;
 	void *inst_ptr;
 
-	inst_ptr = ch->inst_block.cpu_va;
-	if (!inst_ptr)
+	if (!ch_state)
 		return;
+
+	inst_ptr = &ch_state->inst_block[0];
 
 	syncpointa = gk20a_mem_rd32(inst_ptr, ram_fc_syncpointa_w());
 	syncpointb = gk20a_mem_rd32(inst_ptr, ram_fc_syncpointb_w());
 
-	gk20a_debug_output(o, "%d-%s, pid %d: ", ch->hw_chid,
-			ch->g->dev->name,
-			ch->pid);
+	gk20a_debug_output(o, "%d-%s, pid %d: ", hw_chid,
+			g->dev->name,
+			ch_state->pid);
 	gk20a_debug_output(o, "%s in use %s %s\n",
 			ccsr_channel_enable_v(channel) ? "" : "not",
 			ccsr_chan_status_str[status],
@@ -159,6 +166,8 @@ void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o)
 	struct fifo_gk20a *f = &g->fifo;
 	u32 chid;
 	int i, err;
+
+	struct ch_state **ch_state;
 
 	err = gk20a_busy(g->dev);
 	if (err) {
@@ -214,12 +223,34 @@ void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o)
 	}
 	gk20a_debug_output(o, "\n");
 
+	ch_state = kzalloc(sizeof(*ch_state)
+				 * f->num_channels, GFP_KERNEL);
+	if (!ch_state) {
+		gk20a_debug_output(o, "cannot alloc memory for channels\n");
+		goto done;
+	}
+
 	for (chid = 0; chid < f->num_channels; chid++) {
-		if (f->channel[chid].in_use) {
-			struct channel_gk20a *gpu_ch = &f->channel[chid];
-			gk20a_debug_show_channel(g, o, gpu_ch);
+		if (f->channel[chid].in_use)
+			ch_state[chid] = kmalloc(sizeof(struct ch_state) + ram_in_alloc_size_v(), GFP_KERNEL);
+	}
+
+	for (chid = 0; chid < f->num_channels; chid++) {
+		if (ch_state[chid] && f->channel[chid].inst_block.cpu_va) {
+			ch_state[chid]->pid = f->channel[chid].pid;
+			memcpy(&ch_state[chid]->inst_block[0],
+			       f->channel[chid].inst_block.cpu_va,
+			       ram_in_alloc_size_v());
 		}
 	}
+	for (chid = 0; chid < f->num_channels; chid++) {
+		if (ch_state[chid]) {
+			gk20a_debug_show_channel(g, o, chid, ch_state[chid]);
+			kfree(ch_state[chid]);
+		}
+	}
+	kfree(ch_state);
+done:
 	gk20a_idle(g->dev);
 }
 

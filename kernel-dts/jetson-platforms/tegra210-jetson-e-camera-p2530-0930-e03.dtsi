@@ -27,6 +27,10 @@
 #define CAM_PWDN_AF	TEGRA_GPIO(S, 5)
 
 / {
+	tegra-camera-platform {
+		compatible = "nvidia, tegra-camera-platform";
+	};
+
 	camera-pcl {
 		compatible = "nvidia,tegra210-camera", "simple-bus";
 		configuration = <0xAA55AA55>;

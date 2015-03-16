@@ -33,6 +33,7 @@
 #include <linux/time.h>
 #include <linux/fence.h>
 
+struct nvhost_channel;
 struct nvhost_master;
 struct nvhost_hwctx;
 struct nvhost_device_power_attr;
@@ -133,6 +134,11 @@ enum nvhost_module_identifier {
 	NVHOST_MODULE_ID_MAX
 };
 
+enum nvhost_resource_policy {
+	RESOURCE_PER_DEVICE = 0,
+	RESOURCE_PER_CHANNEL_INSTANCE,
+};
+
 struct nvhost_device_data {
 	int		version;	/* ip version number of device */
 	int		id;		/* Separates clients of same hw */
@@ -186,9 +192,6 @@ struct nvhost_device_data {
 	int		num_channels;	/* Max num of channel supported */
 	int		num_mapped_chs;	/* Num of channel mapped to device */
 	int		num_ppc;	/* Number of pixels per clock cycle */
-
-	/* Channel(s) assigned for the module */
-	struct nvhost_channel **channels;
 
 	/* device node for channel operations */
 	dev_t cdev_region;
@@ -306,8 +309,8 @@ struct nvhost_device_data {
 	/* Is the device already forced on? */
 	bool forced_on;
 
-	/* Override flag for a device */
-	bool forced_map_on_open;
+	/* Should we map channel at submit time? */
+	bool resource_policy;
 };
 
 

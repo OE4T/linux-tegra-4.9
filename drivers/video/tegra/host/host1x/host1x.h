@@ -115,18 +115,6 @@ void nvhost_set_chanops(struct nvhost_channel *ch);
 
 int nvhost_gather_filter_enabled(struct nvhost_syncpt *sp);
 
-static inline enum nvhost_syncpt_policy nvhost_get_syncpt_policy(void)
-{
-	struct nvhost_master *host = nvhost;
-	return host->info.syncpt_policy;
-}
-
-static inline enum nvhost_channel_policy nvhost_get_channel_policy(void)
-{
-	struct nvhost_master *host = nvhost;
-	return host->info.channel_policy;
-}
-
 static inline void *nvhost_get_private_data(struct platform_device *_dev)
 {
 	struct nvhost_device_data *pdata =

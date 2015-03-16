@@ -81,55 +81,6 @@ int nvhost_alloc_channels(struct nvhost_master *host)
 	return 0;
 }
 
-/* return any one of assigned channel from device
- * This API can be used to check if any channel assigned to device
- */
-struct nvhost_channel *nvhost_check_channel(struct nvhost_device_data *pdata)
-{
-	int i;
-	struct nvhost_channel *ch;
-
-	for (i = 0; i < pdata->num_channels; i++) {
-		ch = pdata->channels[i];
-		if (ch)
-			return ch;
-	}
-
-	return NULL;
-}
-
-/* Check if more than channel needed for device and assign */
-static int nvhost_channel_assign(struct nvhost_device_data *pdata,
-			  struct nvhost_channel *ch)
-{
-	int i;
-
-	for (i = 0; i < pdata->num_channels; i++) {
-		if (!pdata->channels[i]) {
-			pdata->channels[i] = ch;
-			pdata->num_mapped_chs++;
-			ch->dev_chid = i;
-			return 0;
-		}
-	}
-	dev_err(&pdata->pdev->dev, "%s: All channels assigned\n", __func__);
-
-	return -EINVAL;
-}
-
-/* Releases all channels assigned with device */
-int nvhost_channel_release(struct nvhost_device_data *pdata)
-{
-	struct nvhost_channel *ch;
-	int i;
-
-	for (i = 0; i < pdata->num_channels; i++) {
-		ch = pdata->channels[i];
-		if (ch && ch->dev)
-			nvhost_putchannel(ch, 1);
-	}
-	return 0;
-}
 /* Unmap channel from device and free all resources, deinit device */
 static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 {
@@ -152,10 +103,6 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 	if (channel_op(ch).set_low_ch_prio)
 		channel_op(ch).set_low_ch_prio(ch);
 
-	/* this is used only if we map channel on open */
-	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
-		pdata->num_mapped_chs--;
-
 	/* log this event */
 	dev_dbg(&ch->dev->dev, "channel %d un-mapped\n", ch->chid);
 	trace_nvhost_channel_unmap_locked(pdata->pdev->name, ch->chid,
@@ -171,7 +118,7 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 		nvhost_syncpt_mark_unused(&host->syncpt, ch->syncpts[i]);
 
 		/* release syncpoint if we allocate syncpoints per channels */
-		if (nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL)
+		if (pdata->resource_policy == RESOURCE_PER_DEVICE)
 			nvhost_free_syncpt(ch->syncpts[i]);
 
 		/* finally, clear information from channel bookkeeping */
@@ -184,7 +131,7 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 					  ch->client_managed_syncpt);
 
 		/* release it */
-		if (nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL)
+		if (pdata->resource_policy == RESOURCE_PER_DEVICE)
 			nvhost_free_syncpt(ch->client_managed_syncpt);
 
 		/* ..and handle bookkeeping */
@@ -197,9 +144,6 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 	ch->dev = NULL;
 	ch->refcount = 0;
 	ch->identifier = NULL;
-
-	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
-		pdata->channels[ch->dev_chid] = NULL;
 
 	return 0;
 }
@@ -224,26 +168,16 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 	mutex_lock(&host->chlist_mutex);
 	max_channels = nvhost_channel_nb_channels(host);
 
-	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_SUBMIT) {
-		/* check if the channel is still in use */
-		ch = *channel;
-		if (ch && ch->refcount && ch->identifier == identifier) {
+	/* check if the channel is still in use */
+	for (index = 0; index < max_channels; index++) {
+		ch = host->chlist[index];
+		if (ch->refcount && ch->identifier == identifier) {
 			/* yes, client can continue using it */
 			ch->refcount++;
+			*channel = ch;
 			mutex_unlock(&host->chlist_mutex);
 			return 0;
 		}
-	} else if (pdata->num_channels == pdata->num_mapped_chs) {
-		if (pdata->exclusive) {
-			mutex_unlock(&host->chlist_mutex);
-			return -EBUSY;
-		}
-		ch = nvhost_check_channel(pdata);
-		if (ch)
-			ch->refcount++;
-		mutex_unlock(&host->chlist_mutex);
-		*channel = ch;
-		return 0;
 	}
 
 	do {
@@ -251,9 +185,6 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 					    max_channels);
 		if (index >= max_channels) {
 			mutex_unlock(&host->chlist_mutex);
-			if (nvhost_get_channel_policy() !=
-				MAP_CHANNEL_ON_SUBMIT)
-				return -ENOMEM;
 			mdelay(1);
 			mutex_lock(&host->chlist_mutex);
 		}
@@ -292,8 +223,6 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 	/* Bind the reserved channel to the device */
 	ch->dev = pdata->pdev;
 	ch->identifier = identifier;
-	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
-		nvhost_channel_assign(pdata, ch);
 	ch->refcount = 1;
 
 	/* Handle logging */

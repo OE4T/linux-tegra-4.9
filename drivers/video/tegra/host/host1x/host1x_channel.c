@@ -58,8 +58,7 @@ static void lock_device(struct nvhost_job *job, bool lock)
 		nvhost_opcode_release_mlock(pdata->modulemutexes[0]);
 
 	/* No need to do anything if we have a channel/engine */
-	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN ||
-	    pdata->forced_map_on_open)
+	if (pdata->resource_policy == RESOURCE_PER_DEVICE)
 		return;
 
 	/* If we have a hardware mlock, use it. */
@@ -178,8 +177,7 @@ static void push_waits(struct nvhost_job *job)
 		/* skip pushing waits if we allow them (map-at-open mode)
 		 * and userspace wants to push a wait to some explicit
 		 * position */
-		if ((nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN ||
-		     pdata->forced_map_on_open) && wait->mem)
+		if (pdata->resource_policy == RESOURCE_PER_DEVICE && wait->mem)
 			continue;
 
 		/* Skip pushing wait if it has already been expired */
@@ -194,8 +192,7 @@ static void push_waits(struct nvhost_job *job)
 				wait->syncpt_id, wait->thresh));
 	}
 
-	if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN ||
-	    pdata->forced_map_on_open)
+	if (pdata->resource_policy == RESOURCE_PER_DEVICE)
 		return;
 
 	for (i = 0; i < job->num_gathers; i++) {
@@ -221,8 +218,9 @@ static inline u32 gather_count(u32 word)
 
 static void submit_gathers(struct nvhost_job *job)
 {
-	int i;
+	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
 	void *cpuva = NULL;
+	int i;
 
 	/* push user gathers */
 	for (i = 0 ; i < job->num_gathers; i++) {
@@ -230,7 +228,7 @@ static void submit_gathers(struct nvhost_job *job)
 		u32 op1;
 		u32 op2;
 
-		if (nvhost_get_channel_policy() == MAP_CHANNEL_ON_OPEN)
+		if (pdata->resource_policy == RESOURCE_PER_DEVICE)
 			add_sync_waits(job->ch, g->pre_fence);
 
 		if (g->class_id)

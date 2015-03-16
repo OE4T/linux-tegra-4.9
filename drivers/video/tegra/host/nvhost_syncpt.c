@@ -816,11 +816,12 @@ static u32 nvhost_get_syncpt(struct nvhost_syncpt *sp, bool client_managed,
 u32 nvhost_get_syncpt_host_managed(struct platform_device *pdev,
 					u32 param)
 {
-	u32 id;
-	char *syncpt_name;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_master *nvhost_master = nvhost;
+	char *syncpt_name;
+	u32 id;
 
-	if (nvhost_get_syncpt_policy() == SYNCPT_PER_CHANNEL_INSTANCE)
+	if (pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE)
 		syncpt_name = kasprintf(GFP_KERNEL, "%s_%s_%d",
 				dev_name(&pdev->dev), current->comm, param);
 	else

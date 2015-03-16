@@ -710,9 +710,7 @@ void tegra_dsi_init_clock_param(struct tegra_dc *dc)
 			DSI_CONTROL_VID_SOURCE(dc->ctrl_num) |
 			DSI_CONTROL_DATA_FORMAT(dsi->info.pixel_format);
 
-	if (dsi->info.ganged_type &&
-		dsi->info.ganged_type !=
-			TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT_OVERLAP)
+	if (dsi->info.ganged_type)
 		tegra_dsi_pix_correction(dc, dsi);
 
 	/* Below we are going to calculate dsi and dc clock rate.
@@ -5354,9 +5352,7 @@ static void tegra_dc_dsi_modeset_notifier(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 
-	if (dsi->info.ganged_type &&
-		dsi->info.ganged_type !=
-			TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT_OVERLAP)
+	if (dsi->info.ganged_type)
 		tegra_dsi_pix_correction(dc, dsi);
 }
 

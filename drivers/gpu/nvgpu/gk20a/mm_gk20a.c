@@ -2171,13 +2171,7 @@ static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 			free_gmmu_pages(vm, entry);
 	}
 
-	unmap_gmmu_pages(&vm->pdb);
-	free_gmmu_pages(vm, &vm->pdb);
-
-	kfree(vm->pdb.entries);
-	gk20a_allocator_destroy(&vm->vma[gmmu_page_size_small]);
-	if (vm->big_pages)
-		gk20a_allocator_destroy(&vm->vma[gmmu_page_size_big]);
+	gk20a_deinit_vm(vm);
 
 	mutex_unlock(&vm->update_gmmu_lock);
 }

@@ -4,11 +4,14 @@ import time
 from datetime import datetime
 
 
-cycle =0
+cycle1 =[]
 str1 = ""
+cycle=0;
+flag = 0;
+COUNT = 13;
 
 date = datetime.now()
-fp = open('res' + str(date)+'.txt','w')
+fp = open('res.txt','w')
 
 #open file for reading suspend-resume details
 with open("ftrace.txt", "r") as file:
@@ -66,7 +69,7 @@ with open("ftrace.txt", "r") as file:
                  dpm_end = float(line.split(" .N.1")[1].replace(" ","").split(":")[0])
             driver_ename = line.split("device_pm_callback_end: ")[1].split(",")[0]
             if driver_ename == driver_sname:
-                fp.write("      " +driver_ename.ljust(50) + " ------>       " + str((dpm_end - dpm_start)*1000000) + " us \n")
+                fp.write("      " +driver_ename.ljust(50) + " ------>       " + str(int((dpm_end - dpm_start)*1000000)) + " us \n")
 
         if "thaw_processes[0] end" in line:
             try:
@@ -140,38 +143,39 @@ with open("ftrace.txt", "r") as file:
                  except IndexError:
                      syssusend =float(line.split("N.1")[1].replace(" ","").split(":")[0])
                  str1 = str1 + "SYSTEM CORE SUSPEND took " +str(syssusend-syssusstart) +" secs\n"
+fp.close();
 
+lines=0;
 
-
-
-with open('res' + str(date)+'.txt', "r") as file:
+with open('res.txt', "r") as file:
      length = 0
      for line in file:
-          matchObj = re.match( r'Cycle (.*) took (.*?) sec.*', line, re.M|re.I)
+          lines +=1;
+          matchObj = re.match( r'Cycle (.*?) took (.*?) sec.*', line, re.M|re.I)
           if matchObj:
+              digit = re.findall(r'\d+', line)
               flag = 1;
-
-          matchObj1 = re.match( r'(.*)Cycle (.*) starts(.*)', line, re.M|re.I)
-          if matchObj1:
+          #matchObj1 = re.match( r'\n', line, re.M|re.I)
+          if line == "\n" and flag:
               flag = 0;
-              if length == 19:
-                   digit = re.findall(r'\d+', line)
-                   cycle =  int(digit[0]) - 1
-                   break;
+              if length >= COUNT:
+                   cycle1.append(int(digit[0]))
               length = 0;
 
           if flag:
                matchObj1 = re.match( r'(.*)\n', line, re.M|re.I)
                if matchObj1:
                    length = length + 1;
+
 fp = open('/var/www/suspend-resume/result' + str(date) + '.txt','w')
-with open('res' + str(date)+'.txt', "r") as file:
-     for line in file:
-          matchObj1 = re.match( r'(.*)Cycle ' + str(cycle) + ' starts(.*)', line, re.M|re.I)
-          if matchObj1:
+for i in range(len(cycle1)):
+    with open('res.txt', "r") as file:
+        for line in file:
+             matchObj1 = re.match( r'(.*)Cycle ' + str(cycle1[i]) + ' starts(.*)', line, re.M|re.I)
+             if matchObj1:
                 flag = 1;
-          matchObj = re.match( r'(.*)Cycle ' + str(cycle+1) + ' starts(.*)',  line, re.M|re.I)
-          if matchObj:
-              flag = 0;
-          if flag:
-               fp.write(line);
+             matchObj = re.match( r'(.*)Cycle ' + str(cycle1[i] + 1) + ' starts(.*)',  line, re.M|re.I)
+             if matchObj:
+                 flag = 0;
+             if flag:
+                 fp.write(line);

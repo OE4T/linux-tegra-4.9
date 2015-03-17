@@ -22,6 +22,7 @@
 #include <linux/err.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/platform_device.h>
 
 #include <dt-bindings/memory/tegra-swgroup.h>
@@ -472,9 +473,13 @@ static struct sid_to_oids sid_to_oids[] = {
 static void __iomem *mc_sid_base;
 
 static struct of_device_id mc_sid_of_match[] = {
-	{ .compatible = "nvidia,tegra-mc-sid", },
-}
+	{ .compatible = "nvidia,tegra-mc-sid", .data = (void *)0, },
+	{ .compatible = "nvidia,tegra-mc-sid-cl34000094", .data = (void *)1, },
+	{},
+};
 MODULE_DEVICE_TABLE(of, mc_sid_of_match);
+
+static long ms_sid_is_cl34000094; /* support for obsolete cl34000094 */
 
 static void __mc_override_sid(int sid, int oid)
 {
@@ -483,13 +488,19 @@ static void __mc_override_sid(int sid, int oid)
 
 	BUG_ON(oid >= MAX_OID);
 
-	addr = mc_sid_base + sid_override_offset[oid];
-	addr += sizeof(u32); /* MC_SID_STREAMID_SECURITY_CONFIG_* */
-	val = SCEW_STREAMID_OVERRIDE | SCEW_NS;
-	writel_relaxed(val, addr);
+	if (ms_sid_is_cl34000094) {
+		addr = mc_sid_base + sid_override_offset[oid] / 2;
+		val = 0x80010000 | sid;
+		writel_relaxed(val, addr);
+	} else {
+		addr = mc_sid_base + sid_override_offset[oid];
+		addr += sizeof(u32); /* MC_SID_STREAMID_SECURITY_CONFIG_* */
+		val = SCEW_STREAMID_OVERRIDE | SCEW_NS;
+		writel_relaxed(val, addr);
 
-	addr = mc_sid_base + sid_override_offset[oid];
-	writel_relaxed(sid, addr);
+		addr = mc_sid_base + sid_override_offset[oid];
+		writel_relaxed(sid, addr);
+	}
 
 	pr_debug("override sid=%d oid=%d at offset=%x\n",
 		 sid, oid, sid_override_offset[oid]);
@@ -527,12 +538,16 @@ static int mc_sid_probe(struct platform_device *pdev)
 	int i;
 	struct resource *res;
 	static void __iomem *addr;
+	const struct of_device_id *id;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	addr = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(addr))
 		return PTR_ERR(addr);
 	mc_sid_base = addr;
+
+	id = of_match_device(mc_sid_of_match, &pdev->dev);
+	ms_sid_is_cl34000094 = (long)id->data;
 
 	for (i = 0; i < ARRAY_SIZE(sid_override_offset); i++)
 		__mc_override_sid(0x7f, i);

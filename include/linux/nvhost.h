@@ -311,6 +311,9 @@ struct nvhost_device_data {
 
 	/* Should we map channel at submit time? */
 	bool resource_policy;
+
+	/* Should we enable context isolation for this device? */
+	bool isolate_contexts;
 };
 
 

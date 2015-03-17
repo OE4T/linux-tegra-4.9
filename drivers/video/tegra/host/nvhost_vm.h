@@ -44,6 +44,9 @@ struct nvhost_vm {
 
 	/* to track all vms in the system */
 	struct list_head vm_list;
+
+	/* does this context required hardware backing? */
+	bool enable_hw;
 };
 
 struct nvhost_vm_buffer {

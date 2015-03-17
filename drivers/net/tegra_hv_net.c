@@ -155,6 +155,10 @@ static irqreturn_t tegra_hv_net_interrupt(int irq, void *data)
 	struct net_device *ndev = data;
 	struct tegra_hv_net *hvn = netdev_priv(ndev);
 
+	/* until this function returns 0, the channel is unusable */
+	if (tegra_hv_ivc_channel_notified(hvn->ivck) != 0)
+		return IRQ_HANDLED;
+
 	if (tegra_hv_ivc_can_write(hvn->ivck))
 		wake_up_interruptible_all(&hvn->wq);
 
@@ -169,6 +173,11 @@ static void *tegra_hv_net_xmit_get_buffer(struct tegra_hv_net *hvn)
 	void *p;
 	int ret;
 
+	/*
+	 * grabbing a frame can fail for the following reasons:
+	 * 1. the channel is full / peer is uncooperative
+	 * 2. the channel is under reset / peer has restarted
+	 */
 	p = tegra_hv_ivc_write_get_next_frame(hvn->ivck);
 	if (IS_ERR(p)) {
 		ret = wait_event_interruptible_timeout(hvn->wq,
@@ -256,7 +265,7 @@ static void tegra_hv_net_xmit_work(struct work_struct *work)
 			skb_copy_from_linear_data(skb, &p[2], count);
 
 			/* advance the tx queue */
-			tegra_hv_ivc_write_advance(hvn->ivck);
+			(void)tegra_hv_ivc_write_advance(hvn->ivck);
 			skb_pull(skb, count);
 		}
 		/* all OK */
@@ -445,6 +454,11 @@ static int tegra_hv_net_rx(struct tegra_hv_net *hvn, int limit)
 	nr = 0;
 	dk = dk_none;
 	while (nr < limit) {
+		/*
+		 * grabbing a frame can fail for the following reasons:
+		 * 1. the channel is empty / peer is uncooperative
+		 * 2. the channel is under reset / peer has restarted
+		 */
 		p = tegra_hv_ivc_read_get_next_frame(hvn->ivck);
 		if (IS_ERR(p))
 			break;
@@ -516,7 +530,7 @@ static int tegra_hv_net_rx(struct tegra_hv_net *hvn, int limit)
 		}
 		dk = dk_none;
 drop:
-		tegra_hv_ivc_read_advance(hvn->ivck);
+		(void)tegra_hv_ivc_read_advance(hvn->ivck);
 
 		u64_stats_update_begin(&stats->rx_syncp);
 		if (dk == dk_none) {
@@ -710,6 +724,13 @@ static int tegra_hv_net_probe(struct platform_device *pdev)
 		dev_err(dev, "Failed to register netdev\n");
 		goto out_free_wq;
 	}
+
+	/*
+	 * start the channel reset process asynchronously. until the reset
+	 * process completes, any attempt to use the ivc channel will return
+	 * an error (e.g., all transmits will fail).
+	 */
+	tegra_hv_ivc_channel_reset(hvn->ivck);
 
 	/* the interrupt request must be the last action */
 	ret = devm_request_irq(dev, ndev->irq, tegra_hv_net_interrupt, 0,

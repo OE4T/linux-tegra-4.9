@@ -718,6 +718,14 @@ void tegra_fb_update_fix(struct tegra_fb_info *fb_info,
 	mutex_unlock(&fb_info->info->lock);
 }
 
+struct fb_var_screeninfo *tegra_fb_get_var(struct tegra_fb_info *fb_info)
+{
+	if (!fb_info || !fb_info->info)
+		return NULL;
+
+	return &fb_info->info->var;
+}
+
 static ssize_t nvdps_show(struct device *device,
 	struct device_attribute *attr, char *buf)
 {

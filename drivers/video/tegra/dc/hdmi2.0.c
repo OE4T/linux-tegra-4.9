@@ -1143,19 +1143,55 @@ static u32 tegra_hdmi_get_cea_modedb_size(struct tegra_hdmi *hdmi)
 		CEA_861_F_MODEDB_SIZE : CEA_861_D_MODEDB_SIZE;
 }
 
+static void tegra_hdmi_get_cea_fb_videomode(struct fb_videomode *m,
+						struct tegra_hdmi *hdmi)
+{
+	struct tegra_dc *dc = hdmi->dc;
+	struct tegra_dc_mode dc_mode;
+	int yuv_flag;
+
+	memcpy(&dc_mode, &dc->mode, sizeof(dc->mode));
+
+	/* get CEA video timings */
+	yuv_flag = dc_mode.vmode & FB_VMODE_SET_YUV_MASK;
+	if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y24)) {
+		dc_mode.h_back_porch *= 2;
+		dc_mode.h_front_porch *= 2;
+		dc_mode.h_sync_width *= 2;
+		dc_mode.h_active *= 2;
+		dc_mode.pclk *= 2;
+	} else if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30)) {
+		dc_mode.h_back_porch = (dc_mode.h_back_porch * 8) / 5;
+		dc_mode.h_front_porch = (dc_mode.h_front_porch * 8) / 5;
+		dc_mode.h_sync_width = (dc_mode.h_sync_width * 8) / 5;
+		dc_mode.h_active = (dc_mode.h_active * 8) / 5;
+		dc_mode.pclk = (dc_mode.pclk / 5) * 8;
+	}
+
+	tegra_dc_to_fb_videomode(m, &dc_mode);
+
+	/* only interlaced required for VIC identification */
+	m->vmode &= FB_VMODE_INTERLACED;
+}
+
 __maybe_unused
 static int tegra_hdmi_find_cea_vic(struct tegra_hdmi *hdmi)
 {
 	struct fb_videomode m;
+	struct tegra_dc *dc = hdmi->dc;
 	unsigned i;
 	unsigned best = 0;
 	u32 modedb_size = tegra_hdmi_get_cea_modedb_size(hdmi);
-	const struct tegra_dc_mode *mode = &hdmi->dc->mode;
 
-	tegra_dc_to_fb_videomode(&m, mode);
+	if (dc->initialized) {
+		u32 vic = tegra_sor_readl(hdmi->sor,
+			NV_SOR_HDMI_AVI_INFOFRAME_SUBPACK0_HIGH) & 0xff;
+		if (!vic)
+			dev_warn(&dc->ndev->dev, "hdmi: BL set VIC 0\n");
+		return vic;
+	}
 
-	/* only interlaced required for VIC identification */
-	m.vmode &= FB_VMODE_INTERLACED;
+	tegra_hdmi_get_cea_fb_videomode(&m, hdmi);
 
 	for (i = 1; i < modedb_size; i++) {
 		const struct fb_videomode *curr = &cea_modes[i];

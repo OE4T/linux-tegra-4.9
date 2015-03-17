@@ -34,9 +34,6 @@
 #define MC_SMMU_BYPASS_CONFIG_0		0x1820
 #define TBU_BYPASS_SID			2
 
-/* FIXME: Move to dt-bindings/memory/tegra-swgroup.h */
-#define TEGRA_SWGROUP_SCE		52
-
 enum override_id {
 	PTCR,
 	AFIR,

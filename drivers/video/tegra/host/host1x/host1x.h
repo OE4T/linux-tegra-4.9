@@ -73,10 +73,10 @@ struct host1x_device_info {
 	int		pts_base;	/* host1x: syncpoint base */
 	int		pts_limit;	/* host1x: syncpoint limit */
 	enum nvhost_syncpt_policy syncpt_policy; /* host1x: syncpoint policy */
-
 	int		nb_mlocks;	/* host1x: number of mlocks */
 	int		(*initialize_chip_support)(struct nvhost_master *,
 						struct nvhost_chip_support *);
+	bool		allow_user_mappings; /* allow userspace mappings? */
 };
 
 struct nvhost_master {

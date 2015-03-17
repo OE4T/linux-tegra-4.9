@@ -1900,7 +1900,7 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 		gk20a_dbg(gpu_dbg_pte,
 			"pte=%d iova=0x%llx kind=%d ctag=%d vol=%d [0x%08x, 0x%08x]",
 			   i, iova,
-			   kind_v, *ctag, !cacheable,
+			   kind_v, *ctag / ctag_granularity, !cacheable,
 			   pte_w[1], pte_w[0]);
 
 		if (*ctag)

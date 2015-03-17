@@ -24,6 +24,7 @@
 #include <linux/module.h>
 #include <linux/seq_file.h>
 #include <linux/vmalloc.h>
+#include <linux/delay.h>
 
 #include "edid.h"
 #include "dc_priv.h"
@@ -144,9 +145,9 @@ int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data)
 {
 	u8 block_buf[] = {block >> 1};
 	u8 cmd_buf[] = {(block & 0x1) * 128};
-	int status;
-	u8 checksum = 0;
 	u8 i;
+	u8 last_checksum = 0;
+	size_t attempt_cnt = 0;
 	struct i2c_msg msg[] = {
 		{
 			.addr = 0x30,
@@ -177,19 +178,63 @@ int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data)
 		m = &msg[1];
 	}
 
-	status = edid->i2c_ops.i2c_transfer(edid->dc, m, msg_len);
+	do {
+		u8 checksum = 0;
+		int status = edid->i2c_ops.i2c_transfer(edid->dc, m, msg_len);
 
-	if (status < 0)
-		return status;
+		if (status < 0)
+			return status;
 
-	if (status != msg_len)
-		return -EIO;
+		if (status != msg_len)
+			return -EIO;
 
-	for (i = 0; i < 128; i++)
-		checksum += data[i];
-	if (checksum != 0) {
-		pr_err("%s: checksum failed\n", __func__);
-		return -EIO;
+		for (i = 0; i < 128; i++)
+			checksum += data[i];
+		if (checksum != 0) {
+			/*
+			 * It is completely possible that the sink that we are
+			 * reading has a bad EDID checksum (specifically, some
+			 * of the older TVs). These TVs have the modes, etc
+			 * programmed in their EDID correctly, but just have
+			 * a bad checksum. It then becomes hard to distinguish
+			 * between an i2c failure vs bad EDID.
+			 * To get around this, read the EDID multiple times.
+			 * If the calculated checksum is the exact same
+			 * multiple number of times, just print a
+			 * warning and ignore.
+			 */
+
+			if (attempt_cnt == 0)
+				last_checksum = checksum;
+
+			if (last_checksum != checksum) {
+				pr_warn("%s: checksum failed and did not match consecutive reads. Previous remainder was %u. New remainder is %u. Failed at attempt %zu\n",
+					__func__, last_checksum, checksum,
+					attempt_cnt);
+				return -EIO;
+			}
+
+			usleep_range(TEGRA_EDID_MIN_RETRY_DELAY_US,
+				TEGRA_EDID_MAX_RETRY_DELAY_US);
+		}
+	} while (last_checksum != 0 && ++attempt_cnt < TEGRA_EDID_MAX_RETRY);
+
+	/*
+	 * Re-calculate the checksum since the standard EDID parser doesn't
+	 * like the bad checksum
+	 */
+	if (last_checksum != 0) {
+		u8 checksum = 0;
+
+		for (i = 0; i < 127; i++)
+			checksum += data[i];
+
+		checksum = (u8)(256 - checksum);
+		data[127] = checksum;
+
+		pr_warn("%s: remainder is %u for the last %d attempts. Assuming bad sink EDID and ignoring. New checksum is %u\n",
+				__func__, last_checksum, TEGRA_EDID_MAX_RETRY,
+				checksum);
 	}
 
 	return 0;

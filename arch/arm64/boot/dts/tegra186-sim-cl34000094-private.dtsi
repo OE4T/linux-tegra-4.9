@@ -176,6 +176,10 @@
 		interrupts = <0 65 0x04>;
 	};
 
+	mc_sid {
+		compatible = "nvidia,tegra-mc-sid-cl34000094";
+	};
+
 	smmu: iommu {
 		reg = <0x0 0x12000000 0x0 0x01000000>;
 		status = "disabled";

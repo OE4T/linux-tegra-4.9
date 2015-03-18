@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2012-2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2015, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,6 +26,7 @@
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
 #include <linux/clk/tegra.h>
+#include <linux/tegra-soc.h>
 #include <linux/tegra_pm_domains.h>
 
 #include <media/tegra_v4l2_camera.h>
@@ -264,7 +265,8 @@ static int vi_probe(struct platform_device *dev)
 			dev_err(&tegra_vi->ndev->dev,
 				"%s: couldn't get regulator\n", __func__);
 		tegra_vi->reg = NULL;
-		goto camera_i2c_unregister;
+		if (tegra_platform_is_silicon())
+			goto camera_i2c_unregister;
 	}
 
 #ifdef CONFIG_TEGRA_CAMERA

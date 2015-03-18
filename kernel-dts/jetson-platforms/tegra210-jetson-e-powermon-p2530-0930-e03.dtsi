@@ -43,5 +43,18 @@
 				ti,shunt-resistor-mohm = <5>;
 			};
 		};
+		ina226@46 {
+			status = "disabled";
+			compatible = "ti,ina226x";
+			reg = <0x46>;
+			ti,rail-name = "VDD_DDR";
+			ti,continuous-config = <0x0407>;
+			ti,trigger-config = <0x0403>;
+			ti,resistor = <10>;
+			ti,calibration-data = <0x0DF1>;
+			ti,power-lsb = <143>;
+			ti,divisor = <25>;
+			ti,precision-multiplier = <1000>;
+		};
 	};
 };

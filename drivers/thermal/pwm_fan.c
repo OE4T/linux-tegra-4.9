@@ -71,6 +71,7 @@ struct fan_dev_data {
 	int pwm_id;
 	const char *name;
 	struct regulator *fan_reg;
+	bool is_fan_reg_enabled;
 };
 
 #ifdef CONFIG_DEBUG_FS
@@ -502,23 +503,27 @@ static void fan_ramping_work_func(struct work_struct *work)
 		next_pwm = max(0, next_pwm);
 	}
 
-	if ((next_pwm != 0) && !(regulator_is_enabled(fan_data->fan_reg))) {
+	if ((next_pwm != 0) && !(fan_data->is_fan_reg_enabled)) {
 		err = regulator_enable(fan_data->fan_reg);
 		if (err < 0)
 			dev_err(fan_data->dev,
 				" Coudn't enable vdd-fan\n");
-		else
+		else {
 			dev_info(fan_data->dev,
 				" Enabled vdd-fan\n");
+			fan_data->is_fan_reg_enabled = true;
+		}
 	}
-	if ((next_pwm == 0) && (regulator_is_enabled(fan_data->fan_reg))) {
+	if ((next_pwm == 0) && (fan_data->is_fan_reg_enabled)) {
 		err = regulator_disable(fan_data->fan_reg);
 		if (err < 0)
 			dev_err(fan_data->dev,
 				" Couldn't disable vdd-fan\n");
-		else
+		else {
 			dev_info(fan_data->dev,
 				" Disabled vdd-fan\n");
+			fan_data->is_fan_reg_enabled = false;
+		}
 	}
 
 	set_pwm_duty_cycle(next_pwm, fan_data);
@@ -1026,9 +1031,16 @@ static int pwm_fan_suspend(struct platform_device *pdev, pm_message_t state)
 
 	gpio_direction_output(fan_data->pwm_gpio, 1);
 
-	err = regulator_disable(fan_data->fan_reg);
-	if (err < 0)
-		dev_err(&pdev->dev, "Not able to disable Fan regulator\n");
+	if (fan_data->is_fan_reg_enabled) {
+		err = regulator_disable(fan_data->fan_reg);
+		if (err < 0)
+			dev_err(&pdev->dev, "Not able to disable Fan regulator\n");
+		else {
+			dev_info(fan_data->dev,
+				" Disabled vdd-fan\n");
+			fan_data->is_fan_reg_enabled = false;
+		}
+	}
 	/*Stop thermal control*/
 	fan_data->fan_temp_control_flag = 0;
 	mutex_unlock(&fan_data->fan_state_lock);

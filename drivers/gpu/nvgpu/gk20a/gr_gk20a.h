@@ -279,8 +279,6 @@ struct gr_gk20a {
 	s32 max_used_color_index;
 	s32 max_used_depth_index;
 
-	u32 status_disable_mask;
-
 #define GR_CHANNEL_MAP_TLB_SIZE		2 /* must of power of 2 */
 	struct gr_channel_map_tlb_entry chid_tlb[GR_CHANNEL_MAP_TLB_SIZE];
 	u32 channel_tlb_flush_index;

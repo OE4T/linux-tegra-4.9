@@ -4214,10 +4214,6 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	gk20a_writel(g, gr_exception2_r(), 0xFFFFFFFF);
 	gk20a_writel(g, gr_exception2_en_r(), 0xFFFFFFFF);
 
-	/* ignore status from some units */
-	data = gk20a_readl(g, gr_status_mask_r());
-	gk20a_writel(g, gr_status_mask_r(), data & gr->status_disable_mask);
-
 	gr_gk20a_load_zbc_table(g, gr);
 
 	g->ops.ltc.init_cbc(g, gr);

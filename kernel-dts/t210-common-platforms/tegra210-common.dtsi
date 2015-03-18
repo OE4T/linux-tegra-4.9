@@ -30,6 +30,7 @@
 		compatible = "nvidia,tegra210-uart", "nvidia,tegra114-hsuart";
 		console-port;
 		sqa-automation-port;
+		enable-rx-poll-timer;
 		status = "okay";
 	};
 

@@ -1,7 +1,7 @@
 /*
  * tegra_hv_comm.c: TTY over Tegra HV
  *
- * Copyright (c) 2014 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2015 NVIDIA CORPORATION. All rights reserved.
  *
  * Very loosely based on altera_jtaguart.c
  *
@@ -323,11 +323,14 @@ static irqreturn_t tegra_hv_comm_interrupt(int irq, void *data)
 
 	spin_lock(&port->lock);
 
-	if (pp->rx_en && tegra_hv_ivc_can_read(pp->ivck))
-		tegra_hv_comm_rx_chars(pp);
+	/* until this function returns 0, the channel is unusable */
+	if (tegra_hv_ivc_channel_notified(pp->ivck) == 0) {
+		if (pp->rx_en && tegra_hv_ivc_can_read(pp->ivck))
+			tegra_hv_comm_rx_chars(pp);
 
-	tegra_hv_comm_tx_chars(pp);
-	xmit_timer_setup(pp, 0);
+		tegra_hv_comm_tx_chars(pp);
+		xmit_timer_setup(pp, 0);
+	}
 
 	spin_unlock(&port->lock);
 
@@ -542,6 +545,13 @@ static int tegra_hv_comm_probe(struct platform_device *pdev)
 	port->iotype = SERIAL_IO_MEM;
 	port->ops = &tegra_hv_comm_ops;
 	port->flags = UPF_BOOT_AUTOCONF;
+
+	/*
+	 * start the channel reset process asynchronously. until the reset
+	 * process completes, any attempt to use the ivc channel will return
+	 * an error (e.g., all transmits will fail.)
+	 */
+	tegra_hv_ivc_channel_reset(pp->ivck);
 
 	ret = uart_add_one_port(&tegra_hv_comm_driver, port);
 	if (ret != 0) {

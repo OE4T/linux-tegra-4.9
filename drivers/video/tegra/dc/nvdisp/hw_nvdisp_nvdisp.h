@@ -550,9 +550,85 @@ static inline u32 nvdisp_color_ctl_r(void)
 {
 	return 0x00000430;
 }
+static inline u32 nvdisp_color_ctl_cmu_enable_f(void)
+{
+	return 0x100000;
+}
+static inline u32 nvdisp_color_ctl_cmu_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_color_ctl_dither_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_color_ctl_dither_enable_f(void)
+{
+	return 0x80000;
+}
+static inline u32 nvdisp_color_ctl_ord_dither_rot_f(u32 v)
+{
+	return (v & 0x3) << 12;
+}
+static inline u32 nvdisp_color_ctl_dither_ctl_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_color_ctl_dither_ctl_err_acc_f(void)
+{
+	return 0x100;
+}
+static inline u32 nvdisp_color_ctl_dither_ctl_ordered_f(void)
+{
+	return 0x200;
+}
+static inline u32 nvdisp_color_ctl_dither_ctl_temporal_f(void)
+{
+	return 0x300;
+}
+static inline u32 nvdisp_color_ctl_dither_phase_f(u32 v)
+{
+	return (v & 0x3) << 6;
+}
+static inline u32 nvdisp_color_ctl_base_color_size_6bits_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_color_ctl_base_color_size_18bits_f(void)
+{
+	return 0x8;
+}
+static inline u32 nvdisp_color_ctl_base_color_size_24bits_f(void)
+{
+	return 0xa;
+}
+static inline u32 nvdisp_color_ctl_base_color_size_30bits_f(void)
+{
+	return 0xc;
+}
 static inline u32 nvdisp_output_lut_ctl_r(void)
 {
 	return 0x00000431;
+}
+static inline u32 nvdisp_output_lut_ctl_mode_f(u32 v)
+{
+	return (v & 0x3) << 5;
+}
+static inline u32 nvdisp_output_lut_ctl_range_f(u32 v)
+{
+	return (v & 0x3) << 3;
+}
+static inline u32 nvdisp_output_lut_ctl_size_v(u32 r)
+{
+	return (r >> 1) & 0x3;
+}
+static inline u32 nvdisp_output_lut_ctl_size_257_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_output_lut_ctl_size_1025_f(void)
+{
+	return 0x4;
 }
 static inline u32 nvdisp_output_lut_base_r(void)
 {
@@ -561,6 +637,10 @@ static inline u32 nvdisp_output_lut_base_r(void)
 static inline u32 nvdisp_output_lut_base_hi_r(void)
 {
 	return 0x00000433;
+}
+static inline u32 nvdisp_procamp_r(void)
+{
+	return 0x00000434;
 }
 static inline u32 nvdisp_cursor_ctrl_r(void)
 {

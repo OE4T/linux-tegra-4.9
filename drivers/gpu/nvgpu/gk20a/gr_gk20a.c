@@ -7258,7 +7258,7 @@ static u32 gr_gk20a_get_max_lts_per_ltc(struct gk20a *g)
 	return 1;
 }
 
-u32 *gr_gk20a_rop_l2_en_mask(struct gk20a *g)
+static u32 *gr_gk20a_rop_l2_en_mask(struct gk20a *g)
 {
 	/* gk20a doesnt have rop_l2_en_mask */
 	return NULL;

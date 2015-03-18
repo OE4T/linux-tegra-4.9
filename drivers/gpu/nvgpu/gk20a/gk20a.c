@@ -729,7 +729,7 @@ static int gk20a_detect_chip(struct gk20a *g)
 	return gpu_init_hal(g);
 }
 
-void gk20a_pm_restore_debug_setting(struct gk20a *g)
+static void gk20a_pm_restore_debug_setting(struct gk20a *g)
 {
 	u32 mmu_debug_ctrl;
 

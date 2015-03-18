@@ -1000,7 +1000,7 @@ static u32 gr_gm20b_get_max_lts_per_ltc(struct gk20a *g)
 	return lts_per_ltc;
 }
 
-u32 *gr_gm20b_rop_l2_en_mask(struct gk20a *g)
+static u32 *gr_gm20b_rop_l2_en_mask(struct gk20a *g)
 {
 	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
 	u32 i, tmp, max_fbps_count;

@@ -3,7 +3,7 @@
  *
  * GK20A PMU (aka. gPMU outside gk20a context)
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -437,7 +437,7 @@ struct pmu_ucode_desc {
 #define PMU_UNIT_ID_IS_VALID(id)		\
 		(((id) < PMU_UNIT_END) || ((id) >= PMU_UNIT_TEST_START))
 
-#define PMU_DMEM_ALLOC_ALIGNMENT	(32)
+#define PMU_DMEM_ALLOC_ALIGNMENT	(4)
 #define PMU_DMEM_ALIGNMENT		(4)
 
 #define PMU_CMD_FLAGS_PMU_MASK		(0xF0)

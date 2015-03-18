@@ -59,6 +59,7 @@
 #include "hw_fb_gk20a.h"
 #include "gk20a_scale.h"
 #include "dbg_gpu_gk20a.h"
+#include "gk20a_allocator.h"
 #include "hal.h"
 #include "vgpu/vgpu.h"
 
@@ -1510,6 +1511,7 @@ static int gk20a_probe(struct platform_device *dev)
 					&gk20a->mm.disable_bigpage);
 	gk20a_pmu_debugfs_init(dev);
 	gk20a_cde_debugfs_init(dev);
+	gk20a_alloc_debugfs_init(dev);
 #endif
 
 	gk20a_init_gr(gk20a);

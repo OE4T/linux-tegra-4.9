@@ -17,8 +17,10 @@
  */
 
 #include <linux/slab.h>
+#include <linux/uaccess.h>
 
 #include "vhost.h"
+#include "../host1x/host1x.h"
 
 static inline int vhost_comm_init(struct platform_device *pdev)
 {
@@ -141,4 +143,121 @@ void nvhost_virt_deinit(struct platform_device *dev)
 		vhost_comm_deinit();
 		kfree(virt_ctx);
 	}
+}
+
+static int vhost_host1x_regrdwr(u64 handle, u32 moduleid, u32 num_offsets,
+			u32 block_size, u32 *offs, u32 *vals, u32 write)
+{
+	struct tegra_vhost_cmd_msg msg;
+	struct tegra_vhost_channel_regrdwr_params *p =
+			&msg.params.regrdwr;
+	int err;
+	u32 num_per_block = block_size >> 2;
+	u32 remaining = num_offsets * num_per_block;
+	u32 i, n = 0;
+	u32 *ptr;
+
+	msg.cmd = TEGRA_VHOST_CMD_HOST1X_REGRDWR;
+	msg.handle = handle;
+	p->moduleid = moduleid;
+	p->write = write;
+
+	/* For writes, fill the back end of the msg buffer with offset/value
+	 * pairs. For reads, it's all offsets, which will be replaced by
+	 * the returned register values.
+	 */
+	if (write) {
+		while (remaining > 0) {
+			p->count = min(remaining, REGRDWR_ARRAY_SIZE >> 1);
+			remaining -= p->count;
+
+			ptr = p->regs;
+			for (i = 0; i < p->count; i++) {
+				*ptr++ = *offs + n * 4;
+				*ptr++ = *vals++;
+				if (++n == num_per_block) {
+					offs++;
+					n = 0;
+				}
+			}
+			err = vhost_sendrecv(&msg);
+			if (err || msg.ret)
+				return -1;
+		}
+	} else {
+		while (remaining > 0) {
+			p->count = min(remaining, REGRDWR_ARRAY_SIZE);
+			remaining -= p->count;
+
+			ptr = p->regs;
+			for (i = 0; i < p->count; i++) {
+				*ptr++ = *offs + n * 4;
+				if (++n == num_per_block) {
+					offs++;
+					n = 0;
+				}
+			}
+			err = vhost_sendrecv(&msg);
+			if (err || msg.ret)
+				return -1;
+			memcpy(vals, p->regs, p->count * sizeof(u32));
+			vals += p->count;
+		}
+	}
+
+	return 0;
+}
+
+int vhost_rdwr_module_regs(struct platform_device *ndev, u32 num_offsets,
+			u32 block_size, u32 __user *offsets,
+			u32 __user *values, u32 write)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(ndev);
+	struct nvhost_master *nvhost_master = nvhost_get_host(ndev);
+	struct nvhost_virt_ctx *ctx = nvhost_get_virt_data(nvhost_master->dev);
+	u32 *vals, *offs;
+	int err;
+
+	vals = kmalloc(num_offsets * block_size, GFP_KERNEL);
+	if (!vals)
+		return -ENOMEM;
+
+	offs = kmalloc(num_offsets * sizeof(u32), GFP_KERNEL);
+	if (!offs) {
+		kfree(vals);
+		return -ENOMEM;
+	}
+
+	if (copy_from_user((char *)offs, (char *)offsets,
+			num_offsets * sizeof(u32))) {
+		err = -EFAULT;
+		goto done;
+	}
+
+	if (write) {
+		if (copy_from_user((char *)vals, (char *)values,
+				num_offsets * block_size)) {
+			err = -EFAULT;
+			goto done;
+		}
+	}
+	err = vhost_host1x_regrdwr(ctx->handle,
+				vhost_virt_moduleid(pdata->moduleid),
+				num_offsets, block_size, offs, vals, write);
+
+	if (err) {
+		err = -EFAULT;
+		goto done;
+	}
+
+	if (!write) {
+		if (copy_to_user((char *)values, (char *)vals,
+				num_offsets * block_size))
+			err = -EFAULT;
+	}
+
+done:
+	kfree(vals);
+	kfree(offs);
+	return err;
 }

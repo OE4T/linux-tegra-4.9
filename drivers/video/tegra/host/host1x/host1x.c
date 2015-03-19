@@ -320,6 +320,10 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 	if (!ndev)
 		return -ENODEV;
 
+	if (nvhost_dev_is_virtual(ndev))
+		return vhost_rdwr_module_regs(ndev, num_offsets,
+				args->block_size, offsets, values, args->write);
+
 	remaining = args->block_size >> 2;
 
 	vals = kmalloc(num_offsets * args->block_size,

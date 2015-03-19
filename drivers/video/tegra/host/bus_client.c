@@ -884,6 +884,10 @@ static int nvhost_ioctl_channel_module_regrdwr(
 
 	ndev = ctx->pdev;
 
+	if (nvhost_dev_is_virtual(ndev))
+		return vhost_rdwr_module_regs(ndev, num_offsets,
+				args->block_size, offsets, values, args->write);
+
 	while (num_offsets--) {
 		int err;
 		u32 offs;
@@ -1199,6 +1203,12 @@ static long nvhost_channelctl(struct file *filp,
 	{
 		struct nvhost_clk_rate_args *arg =
 				(struct nvhost_clk_rate_args *)buf;
+
+		/* if virtualized, client requests to change clock rate
+		 * are ignored
+		 */
+		if (nvhost_dev_is_virtual(priv->pdev))
+			break;
 
 		err = nvhost_ioctl_channel_set_rate(priv, arg);
 		break;

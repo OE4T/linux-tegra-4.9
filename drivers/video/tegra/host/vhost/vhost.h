@@ -49,6 +49,8 @@ int vhost_syncpt_get_range(u64 handle, u32 *base, u32 *size);
 int vhost_sendrecv(struct tegra_vhost_cmd_msg *msg);
 int vhost_virt_moduleid(int moduleid);
 u32 vhost_channel_alloc_clientid(u64 handle, u32 moduleid);
+int vhost_rdwr_module_regs(struct platform_device *ndev, u32 count,
+			u32 block_size, u32 *offsets, u32 *values, u32 write);
 
 int nvhost_virt_init(struct platform_device *dev, int moduleid);
 void nvhost_virt_deinit(struct platform_device *dev);

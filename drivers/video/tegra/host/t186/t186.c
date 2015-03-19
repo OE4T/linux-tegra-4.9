@@ -37,9 +37,12 @@
 
 static struct host1x_device_info host1x04_info = {
 	.nb_channels	= T186_NVHOST_NUMCHANNELS,
-	.nb_pts		= NV_HOST1X_SYNCPT_NB_PTS,
+	.ch_base	= 0,
+	.ch_limit	= T186_NVHOST_NUMCHANNELS,
 	.nb_mlocks	= NV_HOST1X_NB_MLOCKS,
 	.initialize_chip_support = nvhost_init_t186_support,
+	.nb_hw_pts	= NV_HOST1X_SYNCPT_NB_PTS,
+	.nb_pts		= NV_HOST1X_SYNCPT_NB_PTS,
 	.pts_base	= 0,
 	.pts_limit	= NV_HOST1X_SYNCPT_NB_PTS,
 	.syncpt_policy	= SYNCPT_PER_CHANNEL_INSTANCE,

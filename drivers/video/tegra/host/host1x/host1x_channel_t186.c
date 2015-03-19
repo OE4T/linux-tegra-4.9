@@ -419,18 +419,31 @@ error:
 	return err;
 }
 
-static int host1x_channel_init_security(struct nvhost_channel *ch)
+#ifdef _hw_host1x04_channel_h_
+static int t124_channel_init_gather_filter(struct nvhost_channel *ch)
 {
 
 	struct platform_device *pdev = ch->dev;
-	struct nvhost_master *host = nvhost_get_host(pdev);
-	void __iomem *aperture = host->aperture;
+	void __iomem *regs = ch->aperture;
+	struct nvhost_master *master = nvhost_get_host(pdev);
+	int err;
 
-	writel(BIT_MASK(ch->chid), aperture +
-	       host1x_channel_filter_gbuffer_r() + BIT_WORD(ch->chid));
+	if (!nvhost_gather_filter_enabled(&master->syncpt))
+		return -EINVAL;
+
+	err = nvhost_module_busy(nvhost_get_parent(pdev));
+	if (err) {
+		dev_warn(&ch->dev->dev, "failed to initialise gather filter");
+		return err;
+	}
+
+	writel(host1x_channel_channelctrl_kernel_filter_gbuffer_f(1),
+	       regs + host1x_channel_channelctrl_r());
+	nvhost_module_idle(nvhost_get_parent(pdev));
 
 	return 0;
 }
+#endif
 
 static int host1x_channel_init(struct nvhost_channel *ch,
 	struct nvhost_master *dev)
@@ -443,6 +456,8 @@ static int host1x_channel_init(struct nvhost_channel *ch,
 static const struct nvhost_channel_ops host1x_channel_ops = {
 	.init = host1x_channel_init,
 	.submit = host1x_channel_submit,
-	.init_gather_filter = host1x_channel_init_security,
+#ifdef _hw_host1x04_channel_h_
+	.init_gather_filter = t124_channel_init_gather_filter,
+#endif
 	.set_low_ch_prio = host1x_channel_set_low_priority,
 };

@@ -32,6 +32,10 @@
 #include "board.h"
 #include "iomap.h"
 #include <linux/platform/tegra/dvfs.h>
+#include <linux/platform_data/lp855x.h>
+
+#define PRISM_THRESHOLD		50
+#define HYST_VAL		25
 
 atomic_t sd_brightness = ATOMIC_INIT(255);
 EXPORT_SYMBOL(sd_brightness);
@@ -103,6 +107,61 @@ int tegra_panel_reset(struct tegra_panel_of *panel, unsigned int delay_ms)
 
 	return 0;
 }
+
+
+static int tegra_bl_notify(struct device *dev, int brightness)
+{
+	int cur_sd_brightness;
+
+	struct lp855x_platform_data *lp = NULL;
+	struct platform_device *pdev = NULL;
+	struct device *dc_dev;
+
+	pdev = to_platform_device(bus_find_device_by_name(
+		&platform_bus_type, NULL, "tegradc.0"));
+	dc_dev = &pdev->dev;
+
+	if (dc_dev) {
+		if (brightness <= PRISM_THRESHOLD)
+			nvsd_enbl_dsbl_prism(dc_dev, false);
+		else if (brightness > PRISM_THRESHOLD + HYST_VAL)
+			nvsd_enbl_dsbl_prism(dc_dev, true);
+	}
+
+	cur_sd_brightness = atomic_read(&sd_brightness);
+	/* SD brightness is a percentage */
+	brightness = (brightness * cur_sd_brightness) / 255;
+
+	/* Apply any backlight response curve */
+	if (brightness > 255)
+		pr_info("Error: Brightness > 255!\n");
+	else if (of_device_is_compatible(dev->of_node,
+				"ti,lp8550") ||
+		of_device_is_compatible(dev->of_node,
+				"ti,lp8551") ||
+		of_device_is_compatible(dev->of_node,
+				"ti,lp8552") ||
+		of_device_is_compatible(dev->of_node,
+				"ti,lp8553") ||
+		of_device_is_compatible(dev->of_node,
+				"ti,lp8554") ||
+		of_device_is_compatible(dev->of_node,
+				"ti,lp8555") ||
+		of_device_is_compatible(dev->of_node,
+				"ti,lp8556") ||
+		of_device_is_compatible(dev->of_node,
+				"ti,lp8557")) {
+		lp = (struct lp855x_platform_data *)dev_get_drvdata(dev);
+		if (lp->bl_measured)
+			brightness = lp->bl_measured[brightness];
+	}
+
+	return brightness;
+}
+
+static struct generic_bl_data_dt_ops generic_bl_ops = {
+	.notify = tegra_bl_notify,
+};
 
 int tegra_panel_gpio_get_dt(const char *comp_str,
 				struct tegra_panel_of *panel)
@@ -368,6 +427,10 @@ void tegra_pwm_bl_ops_register(struct device *dev)
 		tegra_pwm_bl_ops_reg_based_on_disp_board_id(dev);
 }
 
+void ti_lp855x_bl_ops_register(struct device *dev)
+{
+	dev_set_drvdata(dev, &generic_bl_ops);
+}
 
 static void tegra_panel_register_ops(struct tegra_dc_out *dc_out,
 				struct tegra_panel_ops *p_ops)

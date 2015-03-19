@@ -65,6 +65,11 @@ struct tegra_panel_ops {
 	void (*hotplug_report)(bool);
 	struct pwm_bl_data_dt_ops *pwm_bl_ops;
 };
+
+struct generic_bl_data_dt_ops {
+	int (*notify)(struct device *dev, int brightness);
+};
+
 extern struct tegra_panel_ops dsi_p_wuxga_10_1_ops;
 extern struct tegra_panel_ops dsi_lgd_wxga_7_0_ops;
 extern struct tegra_panel_ops dsi_s_wqxga_10_1_ops;
@@ -124,5 +129,7 @@ void tegra_set_fixed_panel_ops(bool is_primary,
 void tegra_set_fixed_pwm_bl_ops(struct pwm_bl_data_dt_ops *p_ops);
 
 void tegra_pwm_bl_ops_register(struct device *dev);
+
+void ti_lp855x_bl_ops_register(struct device *dev);
 
 #endif /* __MACH_TEGRA_BOARD_PANEL_H */

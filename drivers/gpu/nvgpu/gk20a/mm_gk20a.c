@@ -221,7 +221,9 @@ static int gk20a_alloc_comptags(struct gk20a *g,
 				struct device *dev,
 				struct dma_buf *dmabuf,
 				struct gk20a_allocator *allocator,
-				u32 lines, bool user_mappable)
+				u32 lines, bool user_mappable,
+				u64 *ctag_map_win_size,
+				u32 *ctag_map_win_ctagline)
 {
 	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
 	u32 offset = 0;
@@ -313,6 +315,8 @@ static int gk20a_alloc_comptags(struct gk20a *g,
 				first_unneeded_cacheline *
 				g->gr.comptags_per_cacheline;
 
+			u64 win_size;
+
 			if (needed_ctaglines < ctaglines_to_allocate) {
 				/* free alignment lines */
 				int tmp=
@@ -326,6 +330,14 @@ static int gk20a_alloc_comptags(struct gk20a *g,
 
 				ctaglines_to_allocate = needed_ctaglines;
 			}
+
+			*ctag_map_win_ctagline = offset;
+			win_size =
+				DIV_ROUND_UP(lines,
+					     g->gr.comptags_per_cacheline) *
+				aggregate_cacheline_sz;
+
+			*ctag_map_win_size = round_up(win_size, small_pgsz);
 		}
 
 		priv->comptags.offset = offset;
@@ -1374,6 +1386,8 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	bool clear_ctags = false;
 	struct scatterlist *sgl;
 	u64 buf_addr;
+	u64 ctag_map_win_size = 0;
+	u32 ctag_map_win_ctagline = 0;
 
 	mutex_lock(&vm->update_gmmu_lock);
 
@@ -1501,7 +1515,9 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 		/* allocate compression resources if needed */
 		err = gk20a_alloc_comptags(g, d, dmabuf, ctag_allocator,
-					   bfr.ctag_lines, user_mappable);
+					   bfr.ctag_lines, user_mappable,
+					   &ctag_map_win_size,
+					   &ctag_map_win_ctagline);
 		if (err) {
 			/* ok to fall back here if we ran out */
 			/* TBD: we can partially alloc ctags as well... */
@@ -1588,6 +1604,8 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	mapped_buffer->ctag_lines  = bfr.ctag_lines;
 	mapped_buffer->ctag_allocated_lines = bfr.ctag_allocated_lines;
 	mapped_buffer->ctags_mappable = bfr.ctag_user_mappable;
+	mapped_buffer->ctag_map_win_size = ctag_map_win_size;
+	mapped_buffer->ctag_map_win_ctagline = ctag_map_win_ctagline;
 	mapped_buffer->vm          = vm;
 	mapped_buffer->flags       = flags;
 	mapped_buffer->kind        = kind;
@@ -1637,6 +1655,140 @@ clean_up:
 
 	mutex_unlock(&vm->update_gmmu_lock);
 	gk20a_dbg_info("err=%d\n", err);
+	return 0;
+}
+
+int gk20a_vm_get_compbits_info(struct vm_gk20a *vm,
+			       u64 mapping_gva,
+			       u64 *compbits_win_size,
+			       u32 *compbits_win_ctagline,
+			       u32 *mapping_ctagline,
+			       u32 *flags)
+{
+	struct mapped_buffer_node *mapped_buffer;
+	struct device *d = dev_from_vm(vm);
+
+	mutex_lock(&vm->update_gmmu_lock);
+
+	mapped_buffer = find_mapped_buffer_locked(&vm->mapped_buffers, mapping_gva);
+
+	if (!mapped_buffer | !mapped_buffer->user_mapped)
+	{
+		mutex_unlock(&vm->update_gmmu_lock);
+		gk20a_err(d, "%s: bad offset 0x%llx", __func__, mapping_gva);
+		return -EFAULT;
+	}
+
+	*compbits_win_size = 0;
+	*compbits_win_ctagline = 0;
+	*mapping_ctagline = 0;
+	*flags = 0;
+
+	if (mapped_buffer->ctag_offset)
+		*flags |= NVGPU_AS_GET_BUFFER_COMPBITS_INFO_FLAGS_HAS_COMPBITS;
+
+	if (mapped_buffer->ctags_mappable)
+	{
+		*flags |= NVGPU_AS_GET_BUFFER_COMPBITS_INFO_FLAGS_MAPPABLE;
+		*compbits_win_size = mapped_buffer->ctag_map_win_size;
+		*compbits_win_ctagline = mapped_buffer->ctag_map_win_ctagline;
+		*mapping_ctagline = mapped_buffer->ctag_offset;
+	}
+
+	mutex_unlock(&vm->update_gmmu_lock);
+	return 0;
+}
+
+
+int gk20a_vm_map_compbits(struct vm_gk20a *vm,
+			  u64 mapping_gva,
+			  u64 *compbits_win_gva,
+			  u64 *mapping_iova,
+			  u32 flags)
+{
+	struct mapped_buffer_node *mapped_buffer;
+	struct gk20a *g = gk20a_from_vm(vm);
+	struct device *d = dev_from_vm(vm);
+
+	if (flags & NVGPU_AS_MAP_BUFFER_COMPBITS_FLAGS_FIXED_OFFSET) {
+		/* This will be implemented later */
+		gk20a_err(d,
+			  "%s: fixed-offset compbits mapping not yet supported",
+			  __func__);
+		return -EFAULT;
+	}
+
+	mutex_lock(&vm->update_gmmu_lock);
+
+	mapped_buffer = find_mapped_buffer_locked(&vm->mapped_buffers, mapping_gva);
+
+	if (!mapped_buffer || !mapped_buffer->user_mapped) {
+		mutex_unlock(&vm->update_gmmu_lock);
+		gk20a_err(d, "%s: bad offset 0x%llx", __func__, mapping_gva);
+		return -EFAULT;
+	}
+
+	if (!mapped_buffer->ctags_mappable) {
+		mutex_unlock(&vm->update_gmmu_lock);
+		gk20a_err(d, "%s: comptags not mappable, offset 0x%llx", __func__, mapping_gva);
+		return -EFAULT;
+	}
+
+	if (!mapped_buffer->ctag_map_win_addr) {
+		const u32 small_pgsz_index = 0; /* small pages, 4K */
+		const u32 aggregate_cacheline_sz =
+			g->gr.cacheline_size * g->gr.slices_per_ltc *
+			g->ltc_count;
+
+		/* first aggregate cacheline to map */
+		u32 cacheline_start; /* inclusive */
+
+		/* offset of the start cacheline (will be page aligned) */
+		u64 cacheline_offset_start;
+
+		if (!mapped_buffer->ctag_map_win_size) {
+			mutex_unlock(&vm->update_gmmu_lock);
+			gk20a_err(d,
+				  "%s: mapping 0x%llx does not have "
+				  "mappable comptags",
+				  __func__, mapping_gva);
+			return -EFAULT;
+		}
+
+		cacheline_start = mapped_buffer->ctag_offset /
+			g->gr.comptags_per_cacheline;
+		cacheline_offset_start =
+			cacheline_start * aggregate_cacheline_sz;
+
+		mapped_buffer->ctag_map_win_addr =
+			g->ops.mm.gmmu_map(
+				vm,
+				0,
+				g->gr.compbit_store.mem.sgt,
+				cacheline_offset_start, /* sg offset */
+				mapped_buffer->ctag_map_win_size, /* size */
+				small_pgsz_index,
+				0, /* kind */
+				0, /* ctag_offset */
+				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+				gk20a_mem_flag_read_only,
+				false,
+				false);
+
+		if (!mapped_buffer->ctag_map_win_addr) {
+			mutex_unlock(&vm->update_gmmu_lock);
+			gk20a_err(d,
+				  "%s: failed to map comptags for mapping 0x%llx",
+				  __func__, mapping_gva);
+			return -ENOMEM;
+		}
+	}
+
+	*mapping_iova = gk20a_mm_iova_addr(g, mapped_buffer->sgt->sgl, 0);
+	*compbits_win_gva = mapped_buffer->ctag_map_win_addr;
+
+	mutex_unlock(&vm->update_gmmu_lock);
+
 	return 0;
 }
 
@@ -2275,6 +2427,18 @@ void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 {
 	struct vm_gk20a *vm = mapped_buffer->vm;
 	struct gk20a *g = vm->mm->g;
+
+	if (mapped_buffer->ctag_map_win_addr) {
+		/* unmap compbits */
+
+		g->ops.mm.gmmu_unmap(vm,
+				     mapped_buffer->ctag_map_win_addr,
+				     mapped_buffer->ctag_map_win_size,
+				     0,       /* page size 4k */
+				     true,    /* va allocated */
+				     gk20a_mem_flag_none,
+				     false);  /* not sparse */
+	}
 
 	g->ops.mm.gmmu_unmap(vm,
 		mapped_buffer->addr,

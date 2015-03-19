@@ -166,7 +166,13 @@ struct nvgpu_gpu_characteristics {
 
 	__u8 chipname[8];
 
-
+	__u64 gr_compbit_store_base_hw;
+	__u32 gr_gobs_per_comptagline_per_slice;
+	__u32 num_ltc;
+	__u32 lts_per_ltc;
+	__u32 cbc_cache_line_size;
+	__u32 cbc_comptags_per_line;
+	__u32 reserved2;
 
 	/* Notes:
 	   - This struct can be safely appended with new fields. However, always
@@ -896,6 +902,91 @@ struct nvgpu_as_map_buffer_ex_args {
 };
 
 /*
+ * Get info about buffer compbits. Requires that buffer is mapped with
+ * NVGPU_AS_MAP_BUFFER_FLAGS_MAPPABLE_COMPBITS.
+ *
+ * The compbits for a mappable buffer are organized in a mappable
+ * window to the compbits store. In case the window contains comptags
+ * for more than one buffer, the buffer comptag line index may differ
+ * from the window comptag line index.
+ */
+struct nvgpu_as_get_buffer_compbits_info_args {
+
+	/* in: address of an existing buffer mapping */
+	__u64 mapping_gva;
+
+	/* out: size of compbits mapping window (bytes) */
+	__u64 compbits_win_size;
+
+	/* out: comptag line index of the window start */
+	__u32 compbits_win_ctagline;
+
+	/* out: comptag line index of the buffer mapping */
+	__u32 mapping_ctagline;
+
+/* Buffer uses compbits */
+#define NVGPU_AS_GET_BUFFER_COMPBITS_INFO_FLAGS_HAS_COMPBITS    (1 << 0)
+
+/* Buffer compbits are mappable */
+#define NVGPU_AS_GET_BUFFER_COMPBITS_INFO_FLAGS_MAPPABLE        (1 << 1)
+
+/* Buffer IOVA addresses are discontiguous */
+#define NVGPU_AS_GET_BUFFER_COMPBITS_INFO_FLAGS_DISCONTIG_IOVA  (1 << 2)
+
+	/* out */
+	__u32 flags;
+
+	__u32 reserved1;
+};
+
+/*
+ * Map compbits of a mapped buffer to the GPU address space. The
+ * compbits mapping is automatically unmapped when the buffer is
+ * unmapped.
+ *
+ * The compbits mapping always uses small pages, it is read-only, and
+ * is GPU cacheable. The mapping is a window to the compbits
+ * store. The window may not be exactly the size of the cache lines
+ * for the buffer mapping.
+ */
+struct nvgpu_as_map_buffer_compbits_args {
+
+	/* in: address of an existing buffer mapping */
+	__u64 mapping_gva;
+
+	/* in: gva to the mapped compbits store window when
+	 * FIXED_OFFSET is set. Otherwise, ignored and should be be 0.
+	 *
+	 * For FIXED_OFFSET mapping:
+	 * - If compbits are already mapped compbits_win_gva
+	 *   must match with the previously mapped gva.
+	 * - The user must have allocated enough GVA space for the
+	 *   mapping window (see compbits_win_size in
+	 *   nvgpu_as_get_buffer_compbits_info_args)
+	 *
+	 * out: gva to the mapped compbits store window */
+	__u64 compbits_win_gva;
+
+	/* in: reserved, must be 0
+	   out: physical or IOMMU address for mapping */
+	union {
+		/* contiguous iova addresses */
+		__u64 mapping_iova;
+
+		/* buffer to receive discontiguous iova addresses (reserved) */
+		__u64 mapping_iova_buf_addr;
+	};
+
+	/* in: Buffer size (in bytes) for discontiguous iova
+	 * addresses. Reserved, must be 0. */
+	__u64 mapping_iova_buf_size;
+
+#define NVGPU_AS_MAP_BUFFER_COMPBITS_FLAGS_FIXED_OFFSET        (1 << 0)
+	__u32 flags;
+	__u32 reserved1;
+};
+
+/*
  * Unmapping a buffer:
  *
  * To unmap a previously mapped buffer set 'offset' to the offset returned in
@@ -938,9 +1029,13 @@ struct nvgpu_as_get_va_regions_args {
 	_IOWR(NVGPU_AS_IOCTL_MAGIC, 7, struct nvgpu_as_map_buffer_ex_args)
 #define NVGPU_AS_IOCTL_GET_VA_REGIONS \
 	_IOWR(NVGPU_AS_IOCTL_MAGIC, 8, struct nvgpu_as_get_va_regions_args)
+#define NVGPU_AS_IOCTL_GET_BUFFER_COMPBITS_INFO \
+	_IOWR(NVGPU_AS_IOCTL_MAGIC, 9, struct nvgpu_as_get_buffer_compbits_info_args)
+#define NVGPU_AS_IOCTL_MAP_BUFFER_COMPBITS \
+	_IOWR(NVGPU_AS_IOCTL_MAGIC, 10, struct nvgpu_as_map_buffer_compbits_args)
 
 #define NVGPU_AS_IOCTL_LAST            \
-	_IOC_NR(NVGPU_AS_IOCTL_GET_VA_REGIONS)
+	_IOC_NR(NVGPU_AS_IOCTL_MAP_BUFFER_COMPBITS)
 #define NVGPU_AS_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_as_map_buffer_ex_args)
 

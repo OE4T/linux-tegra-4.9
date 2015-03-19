@@ -186,7 +186,13 @@ struct mapped_buffer_node {
 	u32 ctag_offset;
 	u32 ctag_lines;
 	u32 ctag_allocated_lines;
+
+	/* For comptag mapping, these are the mapping window parameters */
 	bool ctags_mappable;
+	u64 ctag_map_win_addr; /* non-zero if mapped */
+	u64 ctag_map_win_size; /* non-zero if ctags_mappable */
+	u32 ctag_map_win_ctagline; /* ctagline at win start, set if
+				    * ctags_mappable */
 
 	u32 flags;
 	u32 kind;
@@ -503,6 +509,19 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 		int rw_flag,
 		 u64 buffer_offset,
 		 u64 mapping_size);
+
+int gk20a_vm_get_compbits_info(struct vm_gk20a *vm,
+			       u64 mapping_gva,
+			       u64 *compbits_win_size,
+			       u32 *compbits_win_ctagline,
+			       u32 *mapping_ctagline,
+			       u32 *flags);
+
+int gk20a_vm_map_compbits(struct vm_gk20a *vm,
+			  u64 mapping_gva,
+			  u64 *compbits_win_gva,
+			  u64 *mapping_iova,
+			  u32 flags);
 
 /* unmap handle from kernel */
 void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset);

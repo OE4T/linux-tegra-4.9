@@ -2016,8 +2016,13 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->max_ltc_per_fbp =  g->ops.gr.get_max_ltc_per_fbp(g);
 	gpu->max_lts_per_ltc = g->ops.gr.get_max_lts_per_ltc(g);
 	g->ops.gr.get_rop_l2_en_mask(g);
-
-	gpu->reserved = 0;
+	gpu->gr_compbit_store_base_hw = g->gr.compbit_store.base_hw;
+	gpu->gr_gobs_per_comptagline_per_slice =
+		g->gr.gobs_per_comptagline_per_slice;
+	gpu->num_ltc = g->ltc_count;
+	gpu->lts_per_ltc = g->gr.slices_per_ltc;
+	gpu->cbc_cache_line_size = g->gr.cacheline_size;
+	gpu->cbc_comptags_per_line = g->gr.comptags_per_cacheline;
 
 	return 0;
 }

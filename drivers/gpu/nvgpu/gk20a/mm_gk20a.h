@@ -57,17 +57,13 @@ struct mem_desc_sub {
 };
 
 struct gpfifo_desc {
-	size_t size;
+	struct mem_desc mem;
 	u32 entry_num;
 
 	u32 get;
 	u32 put;
 
 	bool wrap;
-
-	u64 iova;
-	struct gpfifo *cpu_va;
-	u64 gpu_va;
 };
 
 struct patch_desc {

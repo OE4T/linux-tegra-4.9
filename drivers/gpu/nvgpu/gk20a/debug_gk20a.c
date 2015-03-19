@@ -321,6 +321,10 @@ void gk20a_debug_dump_device(struct platform_device *pdev)
 	};
 	struct gk20a *g;
 
+	/* In pre-silicon we don't need full spew on stuck syncpoint */
+	if (!tegra_platform_is_silicon())
+		return;
+
 	/* Dump the first device if no info is provided */
 	if (!pdev) {
 		if (!gk20a_device)

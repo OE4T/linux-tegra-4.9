@@ -1,7 +1,7 @@
 /*
- * arch/arm64/boot/dts/tegra210-jetson-e-base-p2595-0000-a00.dts
+ * arch/arm64/boot/dts/tegra210-jetson-cv-base-p2597-2180-a00.dts
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,70 +19,46 @@
 /memreserve/ 0x80000000 0x00020000;
 
 #include "tegra210-common.dtsi"
-#include "tegra210-platforms/tegra210-jetson-e-power-tree-p2530-0930-e03.dtsi"
-#include "tegra210-platforms/tegra210-jetson-e-gpio-p2530-0930-e03.dtsi"
-#include "tegra210-platforms/tegra210-jetson-e-pinmux-p2530-0930-e03.dtsi"
-#include "tegra210-platforms/tegra210-jetson-e-prods.dtsi"
+#include "tegra210-platforms/tegra210-jetson-cv-power-tree-p2597-2180-a00.dtsi"
+#include "tegra210-platforms/tegra210-jetson-cv-pinmux-p2597-2180-a00.dtsi"
+#include "tegra210-platforms/tegra210-jetson-cv-sdmmc-drv-p2597-2180-a00.dtsi"
 #include "tegra210-platforms/tegra210-comms-p2530-0930.dtsi"
-#include "tegra210-platforms/tegra210-jetson-e-camera-p2530-0930-e03.dtsi"
 #include "tegra210-platforms/tegra210-pwm-fan-p2530-0930.dtsi"
-#include "panel-s-wqxga-10-1.dtsi"
 #include "panel-a-wuxga-8-0.dtsi"
 #include "tegra210-platforms/tegra210-ers-hdmi-e2190-1100-a00.dtsi"
-#include "tegra210-platforms/tegra210-loki-e-sensor-p2530-0032-e00.dtsi"
 #include "tegra210-platforms/tegra210-sdhci.dtsi"
 #include "tegra210-platforms/tegra210-p2530-common.dtsi"
 #include "tegra210-platforms/tegra210-thermal-fan-est-p2530-0930.dtsi"
-#include "tegra210-platforms/tegra210-keys-p2530-0930.dtsi"
-#include "tegra210-platforms/tegra210-jetson-e-powermon-p2595-0000-a00.dtsi"
+#include "tegra210-platforms/tegra210-jetson-cv-keys-p2597-2180-a00.dtsi"
 #include <dt-bindings/iio/meter/ina3221x.h>
 #include "tegra210-platforms/tegra210-foster-e-extcon-p2530-0930-e01.dtsi"
-#include "tegra210-platforms/tegra210-loki-e-emc-a01.dtsi"
+#include "tegra210-platforms/tegra210-jetson-cv-emc-p2180-1000-a00.dtsi"
 #include "tegra210-platforms/tegra210-edp.dtsi"
 #include "tegra210-platforms/tegra210-sysedp.dtsi"
-#include "tegra210-platforms/tegra210-audio.dtsi"
 #include "tegra210-platforms/tegra210-thermal-nct72-p2530.dtsi"
 #include "tegra210-platforms/tegra210-thermal-Tboard-Tdiode.dtsi"
-#include "tegra210-platforms/tegra210-ers-clk-init.dtsi"
-#include "tegra210-platforms/tegra210-jetson-e-powermon-p2530-0930-e03.dtsi"
+#include "tegra210-platforms/tegra210-jetson-cv-powermon-p2180-1000-a00.dtsi"
 
 
 / {
-	model = "jetson_e";
-	compatible = "nvidia,jetson-e", "nvidia,tegra210";
+	model = "jetson_cv";
+	compatible = "nvidia,jetson-cv", "nvidia,tegra210";
 	nvidia,dtsfilename = __FILE__;
 
-	nvidia,boardids = "2595:0000:A0";
-	nvidia,proc-boardid = "2595:0000:A0";
-	nvidia,pmu-boardid = "2595:0000:A0";
+	nvidia,boardids = "2597:2180:A0";
+	nvidia,proc-boardid = "2597:2180:A0";
+	nvidia,pmu-boardid = "2597:2180:A0";
 	#address-cells = <2>;
 	#size-cells = <2>;
 
 	chosen {
-        };
-
-	firmware {
-		android {
-			compatible = "android,firmware";
-			hardware = "jetson_e";
-		};
 	};
 
 	pmc@7000e400 {
 		nvidia,invert-interrupt;
-		io-pad-defaults {
-			audio-hv {
-				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
-			};
-
-			spi-hv {
-				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
-			};
-
-			sdmmc3 {
-				nvidia,deep-power-down-enable;
-			};
-		};
+		platform-io-pad-voltage = <
+				TEGRA210_PAD_AUDIO_HV IO_PAD_VOLTAGE_1_8V
+				TEGRA210_PAD_SPI_HV IO_PAD_VOLTAGE_1_8V>;
 	};
 
 	memory@80000000 {
@@ -91,9 +67,8 @@
 	};
 
 	sdhci@700b0600 { /* SDMMC4 for EMMC */
-		uhs-mask = <0x40>;
+		uhs-mask = <0x0>;
 		built-in;
-		pll_source = "pll_p", "pll_c4_out2";
 		power-off-rail;
 		status = "okay";
 	};
@@ -104,7 +79,7 @@
 		status = "okay";
 	};
 
-	sdhci@700b0000 { /* SDMMC1 for uSD card */
+	sdhci@700b0000 { /* SDMMC1 for SD card */
 		uhs-mask = <0xc>;
 		power-off-rail;
 		nvidia,update-pinctrl-settings;
@@ -116,7 +91,7 @@
 		pinctrl-4 = <&sdmmc1_drv_code_1_8V>;
 		pinctrl-5 = <&sdmmc1_default_drv_code_3_3V>;
 		nvidia,sd-device;
-		max-clk-limit = <180000000>;
+		wp-gpios = <&gpio TEGRA_GPIO_PZ4 0>;
 		status = "okay";
 	};
 
@@ -135,35 +110,6 @@
 		status = "okay";
 	};
 
-	ahub {
-		i2s@702d1000 {
-			pinctrl-names = "dap_active", "dap_inactive";
-			pinctrl-0 = <>;
-			pinctrl-1 = <>;
-			regulator-supplies = "vdd-1v8-audio-hv", "vdd-1v8-audio-hv-bias";
-			vdd-1v8-audio-hv-supply = <&max77620_sd3>;
-			vdd-1v8-audio-hv-bias-supply = <&max77620_sd3>;
-		};
-
-		i2s@702d1300 {
-			pinctrl-names = "dap_active", "dap_inactive";
-			pinctrl-0 = <>;
-			pinctrl-1 = <>;
-			regulator-supplies = "vddio-dmic";
-			vddio-dmic-supply = <&max77620_sd3>;
-		};
-
-		i2s@702d1100 {
-			pinctrl-names = "dap_active", "dap_inactive";
-			pinctrl-0 = <>;
-			pinctrl-1 = <>;
-			regulator-supplies = "vdd-1v8-spi-hv", "vdd-1v8-spi-hv-bias";
-			vdd-1v8-spi-hv-supply = <&max77620_sd3>;
-			vdd-1v8-spi-hv-bias-supply = <&max77620_sd3>;
-			fsync-width = <0>;
-		};
-	};
-
 	sata@70020000 {
 		compatible = "nvidia,tegra210-ahci-sata";
 		nvidia,enable-sata-port;
@@ -178,103 +124,6 @@
 		};
 		panel-a-wuxga-8-0-bl {
 			pwms = <&tegra_pwm 0 40161>;
-		};
-	};
-
-	camera-pcl {
-		profiles {
-			ov5693@2_0010 {
-				use_of_node = "yes";
-				dev_name = "ov5693";
-				num = <0>;
-				vana-supply = <&max77620_ldo3>;
-				vif-supply = <&en_vdd_cam>;
-				cam2-gpios = <&gpio CAM_PWDN_RQ 0>;
-			};
-			ad5823@2_000c {
-				use_of_node = "yes";
-				vdd-supply = <&max77620_ldo3>;
-				vif-supply = <&en_vdd_cam>;
-				af-pwdn-gpios = <&gpio CAM_PWDN_AF 0>;
-			};
-			ov5693@2_0036 {
-				use_of_node = "yes";
-				dev_name = "ov5693";
-				num = <1>;
-				vana-supply = <&max77620_ldo3>;
-				vif-supply = <&en_vdd_cam>;
-				cam2-gpios = <&gpio CAM_PWDN_FQ 0>;
-			};
-
-			ov10823@6_0020 {
-				use_of_node = "yes";
-				dev_name = "ov10823";
-				num = <0>;
-				cam,cam-change-i2c-addr;
-				cam,cam-sids-high-to-low;
-				cam,cam-skip-sw-reset;
-				#cam,cam-i2c-recovery;
-				cam,cam-use-osc-for-mclk;
-				cam,cam-use-26mhz-mclk;
-				default_i2c_sid_low = <OV10823_DEFAULT_I2C_ADDR_SID_LOW>;
-				default_i2c_sid_high = <OV10823_DEFAULT_I2C_ADDR_SID_HIGH>;
-				regw_sid_low = <OV10823_SENSOR_REG_RW_SID_LOW>;
-				regw_sid_high = <OV10823_SENSOR_REG_RW_SID_HIGH>;
-				cam1i2c_addr = <OV10823_I2C_ADDR_CAM1>;
-				cam2i2c_addr = <OV10823_I2C_ADDR_CAM2>;
-				cam3i2c_addr = <OV10823_I2C_ADDR_CAM3>;
-				cam1sid-gpios = <&gpio TEGRA_GPIO(T, 1) 0>;
-				cam2sid-gpios = <&gpio TEGRA_GPIO(S, 5) 0>;
-				cam3sid-gpios = <&gpio TEGRA_GPIO(T, 0) 0>;
-			};
-
-			ov10823@6_0022 {
-				use_of_node = "yes";
-				dev_name = "ov10823";
-				num = <1>;
-				cam,cam-change-i2c-addr;
-				cam,cam-sids-high-to-low;
-				cam,cam-skip-sw-reset;
-				#cam,cam-i2c-recovery;
-				cam,cam-use-osc-for-mclk;
-				cam,cam-use-26mhz-mclk;
-				default_i2c_sid_low = <OV10823_DEFAULT_I2C_ADDR_SID_LOW>;
-				default_i2c_sid_high = <OV10823_DEFAULT_I2C_ADDR_SID_HIGH>;
-				regw_sid_low = <OV10823_SENSOR_REG_RW_SID_LOW>;
-				regw_sid_high = <OV10823_SENSOR_REG_RW_SID_HIGH>;
-				cam1i2c_addr = <OV10823_I2C_ADDR_CAM1>;
-				cam2i2c_addr = <OV10823_I2C_ADDR_CAM2>;
-				cam3i2c_addr = <OV10823_I2C_ADDR_CAM3>;
-				cam1sid-gpios = <&gpio TEGRA_GPIO(T, 1) 0>;
-				cam2sid-gpios = <&gpio TEGRA_GPIO(S, 5) 0>;
-				cam3sid-gpios = <&gpio TEGRA_GPIO(T, 0) 0>;
-			};
-
-			ov10823@6_0024 {
-				use_of_node = "yes";
-				dev_name = "ov10823";
-				num = <2>;
-				cam,cam-change-i2c-addr;
-				cam,cam-sids-high-to-low;
-				cam,cam-skip-sw-reset;
-				#cam,cam-i2c-recovery;
-				cam,cam-use-osc-for-mclk;
-				cam,cam-use-26mhz-mclk;
-				default_i2c_sid_low = <OV10823_DEFAULT_I2C_ADDR_SID_LOW>;
-				default_i2c_sid_high = <OV10823_DEFAULT_I2C_ADDR_SID_HIGH>;
-				regw_sid_low = <OV10823_SENSOR_REG_RW_SID_LOW>;
-				regw_sid_high = <OV10823_SENSOR_REG_RW_SID_HIGH>;
-				cam1i2c_addr = <OV10823_I2C_ADDR_CAM1>;
-				cam2i2c_addr = <OV10823_I2C_ADDR_CAM2>;
-				cam3i2c_addr = <OV10823_I2C_ADDR_CAM3>;
-				cam1sid-gpios = <&gpio TEGRA_GPIO(T, 1) 0>;
-				cam2sid-gpios = <&gpio TEGRA_GPIO(S, 5) 0>;
-				cam3sid-gpios = <&gpio TEGRA_GPIO(T, 0) 0>;
-			};
-
-		};
-		dpd {
-			default-enable;
 		};
 	};
 
@@ -332,17 +181,20 @@
 		dsi {
 			nvidia,dsi-controller-vs = <DSI_VS_1>;
 			status = "okay";
-			panel-s-wqxga-10-1 {
-				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
-				nvidia,panel-bl-pwm-gpio = <&gpio TEGRA_GPIO(V, 0) 0>; /* PV0 */
-				nvidia,dsi-te-gpio = <&gpio TEGRA_GPIO(Y, 2) 0>;
-			};
 			panel-a-wuxga-8-0 {
+				status = "okay";
 				nvidia,dsi-dpd-pads = <DSIC_DPD_EN DSID_DPD_EN>;
 				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
 				nvidia,panel-bl-pwm-gpio = <&gpio TEGRA_GPIO(V, 0) 0>; /* PV0 */
+				disp-default-out {
+					nvidia,out-flags = <TEGRA_DC_OUT_CONTINUOUS_MODE TEGRA_DC_OUT_INITIALIZED_MODE>;
+				};
 			};
 		};
+	};
+
+	serial@70006040 {
+		status = "okay";
 	};
 
 	spi@7000da00 {
@@ -351,69 +203,6 @@
 
 	spi@7000d400 {
 		status = "okay";
-	};
-
-	sound {
-		compatible = "nvidia,tegra-audio-t210ref-mobile-rt5639";
-		nvidia,model = "tegra-snd-t210ref-mobile-rt5639";
-		nvidia,ldo-gpios = <&gpio TEGRA_GPIO(BB, 3) GPIO_ACTIVE_HIGH>;
-		nvidia,hp-det-gpios = <&gpio TEGRA_GPIO(E, 6) GPIO_ACTIVE_HIGH>;
-
-		nvidia,num-codec-link = <2>;
-
-		nvidia,audio-routing =
-			"x Headphone Jack", 	"x HPOL",
-			"x Headphone Jack", 	"x HPOR",
-			"x Int Spk", 	"x SPORP",
-			"x Int Spk", 	"x SPORN",
-			"x Int Spk", 	"x SPOLP",
-			"x Int Spk", 	"x SPOLN",
-			"x micbias1",	"x Mic Jack",
-			"x IN2P",		"x Mic Jack",
-			"x IN2P",		"x Mic Jack",
-			"x DMIC L1",	"x Int Mic",
-			"x DMIC L2",	"x Int Mic",
-			"x DMIC R1",	"x Int Mic",
-			"x DMIC R2",	"x Int Mic",
-			"y Headphone", 	"y OUT",
-			"y IN",		"y Mic";
-
-		nvidia,xbar = <&tegra_axbar>;
-
-		nvidia,dai-link-1 {
-			link-name = "rt5639-playback";
-			cpu-dai = <&tegra_i2s1>;
-			codec-dai = <&rt5639>;
-			cpu-dai-name = "I2S1";
-			codec-dai-name = "rt5639-aif1";
-			format = "i2s";
-			bitclock-slave;
-			frame-slave;
-			bitclock-noninversion;
-			frame-noninversion;
-			bit-format = "s16_le";
-			bclk_ratio = <0>;
-			srate = <48000>;
-			num-channel = <2>;
-			name-prefix = "x";
-		};
-		nvidia,dai-link-2 {
-			link-name = "spdif-dit-1";
-			cpu-dai = <&tegra_i2s2>;
-			codec-dai = <&spdif_dit1>;
-			cpu-dai-name = "I2S2";
-			codec-dai-name = "dit-hifi";
-			format = "dsp_a";
-			bitclock-slave;
-			frame-slave;
-			bitclock-inversion;
-			frame-inversion;
-			bit-format = "s16_le";
-			bclk_ratio = <4>;
-			srate = <8000>;
-			num-channel = <1>;
-			name-prefix = "y";
-		};
 	};
 
 	extcon {
@@ -429,7 +218,7 @@
 		status = "okay";
 	};
 
-        otg@7d000000 {
+	otg@7d000000 {
 		#extcon-cells = <1>;
 		status = "okay";
 	};
@@ -445,8 +234,9 @@
 		/* nvidia,gpio_controls_muxed_ss_lanes; */
 		nvidia,gpio_ss1_sata = <0>;
 		nvidia,ulpicap = <0>; /* No ulpi support. can we remove */
-		nvidia,portmap = <0x0e02>;
+		nvidia,portmap = <0x0e03>;
 		nvidia,common_padctl = <&xusb_pad_ctl>;
+		nvidia,boost_cpu_frequency = <1600>;
 		status = "okay";
 	};
 
@@ -463,62 +253,64 @@
 		status = "disabled";
 	};
 
-	gpio-keys {
-		power {
-			gpios = <&gpio TEGRA_GPIO(X, 7) GPIO_ACTIVE_LOW>;
-		};
-
-		sw_lid {
-			status="disabled";
-		};
-	};
-
 	gpu-dvfs-rework {
-		status = "disabled";
-	};
-
-	thermal-zones {
-		AO-therm {
-			status = "okay";
-		};
+		status = "ok";
 	};
 
 	thermal-fan-est {
 		compatible = "thermal-fan-est";
-		active_trip_temps = <0 63000 74000 85000 120000
+		active_trip_temps = <0 51000 61000 71000 82000
 				140000 150000 160000 170000 180000>;
-		active_hysteresis = <0 15000 11000 6000 4000
+		active_hysteresis = <0 15000 9000 9000 10000
 				0 0 0 0 0>;
-	};
-
-	regulators {
-		vdd_fan: regulator@13 {
-			enable-active-high;
-		};
 	};
 
 	pwm-fan {
 		compatible = "pwm-fan";
 		shared_data = <&pwm_fan_shared_data>;
-		active_pwm = <0 70 115 135 135 240 245 250 252 255>;
+		active_pwm = <0 80 120 160 255 255 255 255 255 255>;
+	};
+
+	pwm_fan_shared_data: pfsd {
+		tach_gpio =  <TEGRA_GPIO(K, 7)>; /* TEGRA_GPIO_PK7 */
 	};
 
 	i2c@7000c000 {
-		icm20628@68 {
-			accelerometer_matrix = [ff 00 00 00 ff 00 00 00 01];
-			gyroscope_matrix = [ff 00 00 00 ff 00 00 00 01];
-		};
-		ak8963c@0c {
-			magnetic_field_matrix = [00 ff 00 01 00 00 00 00 01];
-		};
 		rt5639: rt5639.0-001c@1c {
 			compatible = "realtek,rt5639";
 			reg = <0x1c>;
 		};
 	};
 
+	i2c@7000c400 {
+		nvidia,clock-always-on;
+
+		tca9539_74: tca9539@74 {
+			compatible = "ti,tca9539";
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x74>;
+			interrupt-parent = <&gpio>;
+			interrupts = <TEGRA_GPIO(L, 1) 0x0>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+		};
+
+		tca9539_77: tca9539@77 {
+			compatible = "ti,tca9539";
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x77>;
+			interrupt-parent = <&gpio>;
+			interrupts = <TEGRA_GPIO(Z, 2) 0x0>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+		};
+	};
+
 	i2c@546c0000 {
-		avdd_dsi_csi-supply = <&max77620_gpio7>;
+		bus-pullup-supply = <&max77620_sd3>;
+		avdd_dsi_csi-supply = <&max77620_sd3>;
 	};
 
 	sysedp {
@@ -526,67 +318,39 @@
 		nvidia,margin = <0>;
 		nvidia,min_budget = <0>;
 		nvidia,initial_budget = <40000>;
+	};
 
-		consumers {
-			consumer1 {
-				nvidia,consumer_name = "ov7695";
-				nvidia,states = <0 124>;
-			};
-			consumer2 {
-				nvidia,consumer_name = "primary-wifi";
-				nvidia,states = <0 2345>;
-			};
-			consumer3 {
-				nvidia,consumer_name = "secondary-wifi";
-				nvidia,states = <0 1170>;
-			};
-			/*eMMC*/
-			consumer4 {
-				nvidia,consumer_name = "sdhci-tegra.3";
-				nvidia,states = <0 1785>;
-			};
-			consumer5 {
-				nvidia,consumer_name = "dsi_0";
-				nvidia,states = <0 616>;
-			};
-			consumer6 {
-				nvidia,consumer_name = "dsi_1";
-				nvidia,states = <0 616>;
-			};
-			consumer7 {
-				nvidia,consumer_name = "codec+speaker";
-				nvidia,states = <0 1270>;
-			};
-			consumer8 {
-				nvidia,consumer_name = "pwm-backlight";
-				nvidia,states = <0 127 255 382 510 638 765 893 1020 1148 1276>;
-			};
-			/*SD Card */
-			consumer9 {
-				nvidia,consumer_name = "sdhci-tegra.0";
-				nvidia,states = <0 1785>;
-			};
+	sysedp_reactive_capping@1 {
+		compatible = "nvidia,tegra124-sysedp_reactive_capping";
+		nvidia,max_capping_mw = <15000>;
+		nvidia,step_alarm_mw = <1000>;
+		nvidia,step_relax_mw = <500>;
+		nvidia,relax_ms = <250>;
+		interrupt-parent = <&soctherm>;
+		interrupts = <1 0x2002>;
+		sysedpc {
+			nvidia,name = "voltmon_oc1";
 		};
 	};
 
-    sysedp_reactive_capping@3 {
-        compatible = "nvidia,tegra124-sysedp_reactive_capping";
-        nvidia,max_capping_mw = <15000>;
-        nvidia,step_alarm_mw = <1000>;
-        nvidia,step_relax_mw = <500>;
-        nvidia,relax_ms = <250>;
-        interrupt-parent = <&soctherm>;
-        interrupts = <3 0x2002>;
-        sysedpc {
-            nvidia,name = "batmon_oc3";
-        };
-    };
+	sysedp_reactive_capping@3 {
+		compatible = "nvidia,tegra124-sysedp_reactive_capping";
+		nvidia,max_capping_mw = <15000>;
+		nvidia,step_alarm_mw = <1000>;
+		nvidia,step_relax_mw = <500>;
+		nvidia,relax_ms = <250>;
+		interrupt-parent = <&soctherm>;
+		interrupts = <3 0x2002>;
+		sysedpc {
+			nvidia,name = "batmon_oc3";
+		};
+	};
 
-    sysedp-dynamic-capping {
-        compatible = "nvidia,tegra124-sysedp-dynamic-capping";
-        nvidia,throttle_depth = <75>;
-        nvidia,cap_method = <1>;
-    };
+	sysedp-dynamic-capping {
+		compatible = "nvidia,tegra124-sysedp-dynamic-capping";
+		nvidia,throttle_depth = <75>;
+		nvidia,cap_method = <1>;
+	};
 
 	bcmdhd_wlan {
 		edp-consumer-name = "primary-wifi";
@@ -600,6 +364,11 @@
 	gpu_edp {
 		status = "okay";
 		nvidia,edp_limit = <25000>;
+	};
+
+	modem {
+		/* using XHCI UTMI */
+		nvidia,phy-type = <2>;
 	};
 
 	soctherm@0x700E2000 {
@@ -812,49 +581,6 @@
 		};
 	};
 
-	soctherm@0x700E2000 {
-		throttle@oc3 {
-			device_type = "throttlectl";
-			oc-alarm-id = <3>;
-			priority = <50>;
-			mode = "brief";
-			intr;
-			active_low;
-			count_threshold = <15>;
-			filter = <5100000>;
-			throttle_dev = <&{/soctherm@0x700E2000/throttle_dev@cpu_medium}
-					&{/soctherm@0x700E2000/throttle_dev@gpu_medium}>;
-		};
-		throttle_dev@cpu_medium {
-			dividend = <63>;
-			divisor = <255>;
-			duration = <0>;
-			step = <0>;
-		};
-		throttle_dev@gpu_medium {
-			level = "medium_throttling";
-		};
-	};
-
-	sysedp_reactive_capping@3 {
-		compatible = "nvidia,tegra124-sysedp_reactive_capping";
-		nvidia,max_capping_mw = <15000>;
-		nvidia,step_alarm_mw = <1000>;
-		nvidia,step_relax_mw = <500>;
-		nvidia,relax_ms = <250>;
-		interrupt-parent = <&soctherm>;
-		interrupts = <3 0x2002>;
-		sysedpc {
-			nvidia,name = "batmon_oc3";
-		};
-	};
-
-	sysedp-dynamic-capping {
-		compatible = "nvidia,tegra124-sysedp-dynamic-capping";
-		nvidia,throttle_depth = <75>;
-		nvidia,cap_method = <1>;
-	};
-
 	bcmdhd_wlan {
 		country_code_map {
 			CC1 {
@@ -997,5 +723,13 @@
 
 	serial@70006300 {
 		dma-names = "tx";
+	};
+
+	pmc@7000e400 {
+		io-pad-defaults {
+			gpio {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
+			};
+		};
 	};
 };

@@ -144,6 +144,7 @@ struct lp855x_platform_data {
 	unsigned int period_ns;
 	int size_program;
 	struct lp855x_rom_data *rom_data;
+	u8 *bl_measured;
 };
 
 #endif

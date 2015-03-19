@@ -48,7 +48,7 @@ static const struct gating_desc gm20b_slcg_chiplet[] = {
 
 /* slcg fb */
 static const struct gating_desc gm20b_slcg_fb[] = {
-	{.addr = 0x00100d14, .prod = 0x00000020, .disable = 0xfffffffe},
+	{.addr = 0x00100d14, .prod = 0x00000000, .disable = 0xfffffffe},
 	{.addr = 0x00100c9c, .prod = 0x00000000, .disable = 0x000001fe},
 };
 

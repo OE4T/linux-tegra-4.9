@@ -21,8 +21,6 @@
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include <dt-bindings/memory/tegra186-swgroup.h>
 #include <dt-bindings/display/tegra-dc.h>
-#include "tegra186-pinmux-fpga.dtsi"
-#include "tegra186-fpga-fixed.dtsi"
 
 / {
 	compatible = "nvidia,tegra186";

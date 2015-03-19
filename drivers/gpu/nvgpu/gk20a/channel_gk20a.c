@@ -866,7 +866,7 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 	   max size of priv_cmdbuf is :
 	   (gpfifo entry number * (2 / 3) * (4 + 6) * 4 bytes */
 	size = roundup_pow_of_two(
-		c->gpfifo.entry_num * 2 * 10 * sizeof(u32) / 3);
+		c->gpfifo.entry_num * 2 * 12 * sizeof(u32) / 3);
 
 	err = gk20a_gmmu_alloc_map(ch_vm, size, &q->mem);
 	if (err) {

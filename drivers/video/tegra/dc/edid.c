@@ -47,64 +47,6 @@ struct tegra_edid_pvt {
 	struct tegra_dc_edid		dc_edid;
 };
 
-#if defined(DEBUG) || defined(CONFIG_DEBUG_FS)
-static int tegra_edid_show(struct seq_file *s, void *unused)
-{
-	struct tegra_edid *edid = s->private;
-	struct tegra_dc_edid *data;
-	u8 *buf;
-	int i;
-
-	data = tegra_edid_get_data(edid);
-	if (!data) {
-		seq_printf(s, "No EDID\n");
-		return 0;
-	}
-
-	buf = data->buf;
-
-	for (i = 0; i < data->len; i++) {
-		if (i % 16 == 0)
-			seq_printf(s, "edid[%03x] =", i);
-
-		seq_printf(s, " %02x", buf[i]);
-
-		if (i % 16 == 15)
-			seq_printf(s, "\n");
-	}
-
-	tegra_edid_put_data(data);
-
-	return 0;
-}
-#endif
-
-#ifdef CONFIG_DEBUG_FS
-static int tegra_edid_debug_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, tegra_edid_show, inode->i_private);
-}
-
-static const struct file_operations tegra_edid_debug_fops = {
-	.open		= tegra_edid_debug_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-
-static void tegra_edid_debug_add(struct tegra_edid *edid)
-{
-	char name[] = "edidX";
-
-	snprintf(name, sizeof(name), "edid%1d", edid->dc->ndev->id);
-	debugfs_create_file(name, S_IRUGO, NULL, edid, &tegra_edid_debug_fops);
-}
-#else
-void tegra_edid_debug_add(struct tegra_edid *edid)
-{
-}
-#endif
-
 #ifdef DEBUG
 static char tegra_edid_dump_buff[16 * 1024];
 
@@ -691,8 +633,6 @@ struct tegra_edid *tegra_edid_create(struct tegra_dc *dc,
 	mutex_init(&edid->lock);
 	edid->i2c_ops.i2c_transfer = i2c_func;
 	edid->dc = dc;
-
-	tegra_edid_debug_add(edid);
 
 	return edid;
 }

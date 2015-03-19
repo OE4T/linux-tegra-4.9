@@ -1292,12 +1292,35 @@ static const struct file_operations outtype_fops = {
 static int dbg_edid_show(struct seq_file *s, void *unused)
 {
 	struct tegra_dc *dc = s->private;
+	struct tegra_edid *edid = dc->edid;
+	struct tegra_dc_edid *data;
+	u8 *buf;
+	int i;
 
-	if (WARN_ON(!dc || !dc->out))
+	if (WARN_ON(!dc || !dc->out || !dc->edid))
 		return -EINVAL;
 
-	/* seq_put_decimal_ll(s, '\0', dc->edid); */
-	seq_putc(s, '\n');
+	data = tegra_edid_get_data(edid);
+	if (!data) {
+		seq_puts(s, "No EDID\n");
+		return 0;
+	}
+
+	buf = data->buf;
+
+	for (i = 0; i < data->len; i++) {
+		if (i % 16 == 0)
+			seq_printf(s, "edid[%03x] =", i);
+
+		seq_printf(s, " %02x", buf[i]);
+
+		if (i % 16 == 15)
+			seq_puts(s, "\n");
+
+	}
+
+	tegra_edid_put_data(data);
+
 	return 0;
 }
 
@@ -1341,6 +1364,8 @@ const char __user *addr, size_t len, loff_t *pos)
 
 static const struct file_operations edid_fops = {
 	.open		= dbg_edid_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
 	.write		= dbg_edid_write,
 	.release	= single_release,
 };

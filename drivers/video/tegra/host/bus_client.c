@@ -1551,6 +1551,11 @@ int nvhost_client_device_init(struct platform_device *dev)
 		pdata->slave_initialized = 1;
 	}
 
+	if (pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE) {
+		nvhost_master->info.channel_policy = MAP_CHANNEL_ON_SUBMIT;
+		nvhost_update_characteristics(dev);
+	}
+
 	if (pdata->hw_init)
 		return pdata->hw_init(dev);
 

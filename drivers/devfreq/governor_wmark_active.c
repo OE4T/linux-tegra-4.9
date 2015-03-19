@@ -30,13 +30,21 @@ struct wmark_gov_info {
 	int			freq_count;
 
 	/* algorithm parameters */
+	unsigned int		p_block_window;
 	unsigned int		p_load_target;
 	unsigned int		p_load_max;
+	unsigned int		p_smooth;
 
 	/* common data */
 	struct devfreq		*df;
 	struct platform_device	*pdev;
 	struct dentry		*debugdir;
+
+	/* used for ensuring that we do not update frequency too often */
+	ktime_t			last_frequency_update;
+
+	/* variable for keeping the average frequency request */
+	unsigned long long	average_target_freq;
 };
 
 static unsigned long freqlist_up(struct wmark_gov_info *wmarkinfo,
@@ -79,27 +87,40 @@ static unsigned long freqlist_round(struct wmark_gov_info *wmarkinfo,
 	return wmarkinfo->freqlist[pos];
 }
 
+
+ /*
+  * update_watermarks - Re-estimate low and high watermarks
+  *     @df: pointer to the devfreq structure
+  *     @current_frequency: current frequency of the device
+  *     @ideal_frequency: frequency that would change load to target load.
+  *
+  * This function updates the devfreq high and low watermarks. Target is
+  * to ensure that the interrupts are triggered whenever the load changes
+  * enough to make a change to the ideal frequency (given the DVFS table).
+  */
+
 static void update_watermarks(struct devfreq *df,
-			      unsigned long current_frequency)
+			      unsigned long current_frequency,
+			      unsigned long ideal_frequency)
 {
 	struct wmark_gov_info *wmarkinfo = df->data;
 	unsigned long long relation = 0, next_freq = 0;
 	unsigned long long current_frequency_khz = current_frequency / 1000;
 
-	if (current_frequency == wmarkinfo->freqlist[0]) {
+	if (ideal_frequency == wmarkinfo->freqlist[0]) {
 		/* disable the low watermark if we are at lowest clock */
 		df->profile->set_low_wmark(df->dev.parent, 0);
 	} else {
 		/* calculate the low threshold; what is the load value
 		 * at which we would go into lower frequency given the
 		 * that we are running at the new frequency? */
-		next_freq = freqlist_down(wmarkinfo, current_frequency);
+		next_freq = freqlist_down(wmarkinfo, ideal_frequency);
 		relation = ((next_freq / current_frequency_khz) *
 			wmarkinfo->p_load_target) / 1000;
 		df->profile->set_low_wmark(df->dev.parent, relation);
 	}
 
-	if (current_frequency ==
+	if (ideal_frequency ==
 	    wmarkinfo->freqlist[wmarkinfo->freq_count - 1]) {
 		/* disable the high watermark if we are at highest clock */
 		df->profile->set_high_wmark(df->dev.parent, 1000);
@@ -107,14 +128,13 @@ static void update_watermarks(struct devfreq *df,
 		/* calculate the high threshold; what is the load value
 		 * at which we would go into highest frequency given the
 		 * that we are running at the new frequency? */
-		next_freq = freqlist_up(wmarkinfo, current_frequency);
+		next_freq = freqlist_up(wmarkinfo, ideal_frequency);
 		relation = ((next_freq / current_frequency_khz) *
 			wmarkinfo->p_load_target) / 1000;
 		relation = min((unsigned long long)wmarkinfo->p_load_max,
 			       relation);
 		df->profile->set_high_wmark(df->dev.parent, relation);
 	}
-
 }
 
 static int devfreq_watermark_target_freq(struct devfreq *df,
@@ -122,18 +142,21 @@ static int devfreq_watermark_target_freq(struct devfreq *df,
 {
 	struct wmark_gov_info *wmarkinfo = df->data;
 	struct devfreq_dev_status dev_stat;
-	unsigned long long load, relation, next_freq;
+	unsigned long long load, relation, ideal_freq;
+	ktime_t current_time = ktime_get();
+	s64 dt = ktime_us_delta(current_time, wmarkinfo->last_frequency_update);
 	int err;
 
 	err = df->profile->get_dev_status(df->dev.parent, &dev_stat);
 	if (err < 0)
 		return err;
 
-	/* keep current frequency if we do not have proper data available */
-	if (!dev_stat.total_time) {
-		*freq = dev_stat.current_frequency;
+	/* use current frequency by default */
+	*freq = dev_stat.current_frequency;
+
+	/* quit now if we are getting calls too often */
+	if (!dev_stat.total_time)
 		return 0;
-	}
 
 	/* calculate first load and relation load/p_load_target */
 	load = (dev_stat.busy_time * 1000) / dev_stat.total_time;
@@ -144,20 +167,39 @@ static int devfreq_watermark_target_freq(struct devfreq *df,
 		 * on frequency table we might never go higher than
 		 * the current frequency (i.e. load should be over 100%
 		 * to make relation push to the next frequency). */
-		*freq = wmarkinfo->freqlist[wmarkinfo->freq_count - 1];
+		ideal_freq = wmarkinfo->freqlist[wmarkinfo->freq_count - 1];
 	} else {
 		/* otherwise, based on relation between current load and
 		 * load target we calculate the "ideal" frequency
 		 * where we would be just at the target */
 		relation = (load * 1000) / wmarkinfo->p_load_target;
-		next_freq = relation * (dev_stat.current_frequency / 1000);
+		ideal_freq = relation * (dev_stat.current_frequency / 1000);
 
 		/* round this frequency */
-		*freq = freqlist_round(wmarkinfo, next_freq);
+		ideal_freq = freqlist_round(wmarkinfo, ideal_freq);
 	}
 
-	/* update watermarks to match with the new frequency */
-	update_watermarks(df, *freq);
+	/* update average target frequency */
+	wmarkinfo->average_target_freq =
+		(wmarkinfo->p_smooth * wmarkinfo->average_target_freq +
+		 ideal_freq) / (wmarkinfo->p_smooth + 1);
+
+	/* update watermarks to match the ideal frequency */
+	update_watermarks(df, dev_stat.current_frequency, ideal_freq);
+
+	/* do not scale too often */
+	if (dt < wmarkinfo->p_block_window)
+		return 0;
+
+	/* update the frequency */
+	*freq = freqlist_round(wmarkinfo, wmarkinfo->average_target_freq);
+
+	/* check if frequency actually got updated */
+	if (*freq == dev_stat.current_frequency)
+		return 0;
+
+	/* enable hysteresis - frequency is updated */
+	wmarkinfo->last_frequency_update = current_time;
 
 	return 0;
 }
@@ -192,6 +234,8 @@ static void devfreq_watermark_debug_start(struct devfreq *df)
 
 	CREATE_DBG_FILE(load_target);
 	CREATE_DBG_FILE(load_max);
+	CREATE_DBG_FILE(block_window);
+	CREATE_DBG_FILE(smooth);
 #undef CREATE_DBG_FILE
 
 }
@@ -221,6 +265,8 @@ static int devfreq_watermark_start(struct devfreq *df)
 	wmarkinfo->freq_count = df->profile->max_state;
 	wmarkinfo->p_load_target = 700;
 	wmarkinfo->p_load_max = 900;
+	wmarkinfo->p_smooth = 10;
+	wmarkinfo->p_block_window = 50000;
 	wmarkinfo->df = df;
 	wmarkinfo->pdev = pdev;
 
@@ -246,7 +292,8 @@ static int devfreq_watermark_event_handler(struct devfreq *df,
 		if (ret < 0)
 			break;
 
-		update_watermarks(df, dev_stat.current_frequency);
+		update_watermarks(df, dev_stat.current_frequency,
+					dev_stat.current_frequency);
 		break;
 	}
 	case DEVFREQ_GOV_STOP:
@@ -262,7 +309,8 @@ static int devfreq_watermark_event_handler(struct devfreq *df,
 		if (ret < 0)
 			break;
 
-		update_watermarks(df, dev_stat.current_frequency);
+		update_watermarks(df, dev_stat.current_frequency,
+					dev_stat.current_frequency);
 		devfreq_monitor_resume(df);
 		break;
 	}

@@ -38,6 +38,14 @@ static HLIST_HEAD(clk_root_list);
 static HLIST_HEAD(clk_orphan_list);
 static LIST_HEAD(clk_notifier_list);
 
+#ifdef CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING
+struct freq_stats {
+	ktime_t time_spent;
+	unsigned long rate;
+	struct rb_node node;
+};
+#endif /*CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING*/
+
 /***    private data structures    ***/
 
 struct clk_core {
@@ -71,6 +79,13 @@ struct clk_core {
 	struct dentry		*dentry;
 	struct hlist_node	debug_node;
 #endif
+#ifdef CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING
+	struct rb_root freq_stats_table;
+	struct freq_stats *current_freq_stats;
+	ktime_t default_freq_time;
+	ktime_t start_time;
+#endif /* CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING*/
+
 	struct kref		ref;
 };
 
@@ -170,6 +185,133 @@ static bool clk_core_is_enabled(struct clk_core *core)
 
 	return core->ops->is_enabled(core->hw);
 }
+
+#ifdef CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING
+
+#ifdef CONFIG_COMMON_CLK_BEGIN_ACCOUNTING_FROM_BOOT
+static bool freq_stats_on = true;
+#else
+static bool freq_stats_on;
+#endif /*CONFIG_COMMON_CLK_BEGIN_ACCOUNTING_FROM_BOOT*/
+
+static void free_tree(struct rb_node *node)
+{
+	struct freq_stats *this;
+
+	if (!node)
+		return;
+
+	free_tree(node->rb_left);
+	free_tree(node->rb_right);
+
+	this = rb_entry(node, struct freq_stats, node);
+	kfree(this);
+}
+
+static struct freq_stats *freq_stats_insert(struct rb_root *freq_stats_table,
+		unsigned long rate)
+{
+	struct rb_node **new = &(freq_stats_table->rb_node), *parent = NULL;
+	struct freq_stats *this;
+
+	/* Figure out where to put new node */
+	while (*new) {
+		this = rb_entry(*new, struct freq_stats, node);
+		parent = *new;
+
+		if (rate < this->rate)
+			new = &((*new)->rb_left);
+		else if (rate > this->rate)
+			new = &((*new)->rb_right);
+		else
+			return this;
+	}
+
+	this = kzalloc(sizeof(*this), GFP_ATOMIC);
+	this->rate = rate;
+
+	/* Add new node and rebalance tree. */
+	rb_link_node(&this->node, parent, new);
+	rb_insert_color(&this->node, freq_stats_table);
+
+	return this;
+}
+
+static void generic_print_freq_stats_table(struct seq_file *m,
+				struct clk_core *core,
+				bool indent, int level)
+{
+	struct rb_node *pos;
+	struct freq_stats *cur;
+
+	if (indent)
+		seq_printf(m, "%*s*%s%20s", level * 3 + 1, "",
+			!core->current_freq_stats ? "[" : "",
+			"default_freq");
+	else
+		seq_printf(m, "%2s%20s", !core->current_freq_stats ? "[" : "",
+			"default_freq");
+
+	if (!core->current_freq_stats && !ktime_equal(core->start_time,
+					ktime_set(0, 0)))
+		seq_printf(m, "%40llu",
+			ktime_to_ms(ktime_add(core->default_freq_time,
+			ktime_sub(ktime_get(), core->start_time))));
+	else
+		seq_printf(m, "%40llu", ktime_to_ms(core->default_freq_time));
+
+	if (!core->current_freq_stats)
+		seq_puts(m, "]");
+
+	seq_puts(m, "\n");
+
+	for (pos = rb_first(&core->freq_stats_table); pos; pos = rb_next(pos)) {
+		cur = rb_entry(pos, typeof(*cur), node);
+
+		if (indent)
+			seq_printf(m, "%*s*%s%20lu", level * 3 + 1, "",
+				cur->rate == core->rate ? "[" : "", cur->rate);
+		else
+			seq_printf(m, "%2s%20lu", cur->rate == core->rate ?
+				"[" : "", cur->rate);
+
+		if (cur->rate == core->rate &&
+			!ktime_equal(core->start_time, ktime_set(0, 0)))
+			seq_printf(m, "%40llu",
+			ktime_to_ms(ktime_add(cur->time_spent,
+			ktime_sub(ktime_get(), core->start_time))));
+		else
+			seq_printf(m, "%40llu", ktime_to_ms(cur->time_spent));
+
+		if (cur->rate == core->rate)
+			seq_puts(m, "]");
+		seq_puts(m, "\n");
+	}
+}
+
+static int clock_print_freq_stats_table(struct seq_file *m, void *unused)
+{
+	struct clk_core *core = m->private;
+
+	if (!(core->flags & CLK_GET_RATE_NOCACHE))
+		generic_print_freq_stats_table(m, core, false, 0);
+
+	return 0;
+}
+
+static int freq_stats_table_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, clock_print_freq_stats_table,
+		inode->i_private);
+}
+
+static const struct file_operations freq_stats_table_fops = {
+	.open           = freq_stats_table_open,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = seq_release,
+};
+#endif /*CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING*/
 
 /***    helper functions   ***/
 
@@ -275,6 +417,8 @@ unsigned int __clk_get_enable_count(struct clk *clk)
 	return !clk ? 0 : clk->core->enable_count;
 }
 
+
+/* caller must hold prepare_lock */
 static unsigned long clk_core_get_rate_nolock(struct clk_core *core)
 {
 	unsigned long ret;
@@ -302,6 +446,77 @@ unsigned long clk_hw_get_rate(const struct clk_hw *hw)
 }
 EXPORT_SYMBOL_GPL(clk_hw_get_rate);
 
+#ifdef CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING
+static int freq_stats_get(void *unused, u64 *val)
+{
+	*val = freq_stats_on;
+	return 0;
+}
+
+static void clk_traverse_subtree(struct clk_core *core, int freq_stats_on)
+{
+	struct clk_core *child;
+	struct rb_node *node;
+
+	if (!core)
+		return;
+
+	if (freq_stats_on) {
+		for (node = rb_first(&core->freq_stats_table);
+			node; node = rb_next(node))
+			rb_entry(node, struct freq_stats, node)->time_spent =
+							ktime_set(0, 0);
+
+		core->current_freq_stats = freq_stats_insert(
+						&core->freq_stats_table,
+					clk_core_get_rate_nolock(core));
+
+		if (core->enable_count > 0)
+			core->start_time = ktime_get();
+	} else {
+		if (core->enable_count > 0) {
+			if (!core->current_freq_stats)
+				core->default_freq_time =
+				ktime_add(core->default_freq_time,
+				ktime_sub(ktime_get(), core->start_time));
+			else
+				core->current_freq_stats->time_spent =
+				ktime_add(core->current_freq_stats->time_spent,
+				ktime_sub(ktime_get(), core->start_time));
+
+			core->start_time = ktime_set(0, 0);
+		}
+	}
+	hlist_for_each_entry(child, &core->children, child_node)
+		clk_traverse_subtree(child, freq_stats_on);
+}
+
+static int freq_stats_set(void *data, u64 val)
+{
+	struct clk_core *c;
+	unsigned long flags;
+	struct hlist_head **lists = (struct hlist_head **)data;
+
+	clk_prepare_lock();
+	flags = clk_enable_lock();
+
+	if (val == 0)
+		freq_stats_on = 0;
+	else
+		freq_stats_on = 1;
+
+	for (; *lists; lists++)
+		hlist_for_each_entry(c, *lists, child_node)
+			clk_traverse_subtree(c, freq_stats_on);
+
+	clk_enable_unlock(flags);
+	clk_prepare_unlock();
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(freq_stats_fops, freq_stats_get,
+			freq_stats_set, "%llu\n");
+#endif /*CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING*/
 static unsigned long __clk_get_accuracy(struct clk_core *core)
 {
 	if (!core)
@@ -607,6 +822,23 @@ static void clk_core_disable(struct clk_core *core)
 
 	trace_clk_disable_complete_rcuidle(core);
 
+#ifdef CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING
+
+	if (freq_stats_on) {
+		if (!core->current_freq_stats)
+			core->default_freq_time =
+				ktime_add(core->default_freq_time,
+					ktime_sub(ktime_get(),
+						  core->start_time));
+		else
+			core->current_freq_stats->time_spent =
+			ktime_add(core->current_freq_stats->time_spent,
+			ktime_sub(ktime_get(), core->start_time));
+
+		core->start_time = ktime_set(0, 0);
+	}
+#endif /*CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING*/
+
 	clk_core_disable(core->parent);
 }
 
@@ -669,6 +901,10 @@ static int clk_core_enable(struct clk_core *core)
 			clk_core_disable(core->parent);
 			return ret;
 		}
+#ifdef CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING
+		if (freq_stats_on)
+			core->start_time = ktime_get();
+#endif /*CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING*/
 	}
 
 	core->enable_count++;
@@ -832,6 +1068,7 @@ static int clk_disable_unused(void)
 	return 0;
 }
 late_initcall_sync(clk_disable_unused);
+
 
 static int clk_core_round_rate_nolock(struct clk_core *core,
 				      struct clk_rate_request *req)
@@ -1536,6 +1773,31 @@ static void clk_change_rate(struct clk_core *core)
 	if (core->flags & CLK_OPS_PARENT_ENABLE)
 		clk_core_disable_unprepare(parent);
 
+#ifdef CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING
+	if (freq_stats_on) {
+		if (!ktime_equal(core->start_time, ktime_set(0, 0))) {
+			if (!core->current_freq_stats)
+				core->default_freq_time =
+					ktime_add(core->default_freq_time,
+						ktime_sub(ktime_get(),
+							core->start_time));
+			else
+				core->current_freq_stats->time_spent =
+					ktime_add(
+					core->current_freq_stats->time_spent,
+					ktime_sub(ktime_get(),
+					core->start_time));
+		}
+
+		core->current_freq_stats = freq_stats_insert(
+						&core->freq_stats_table,
+						core->rate);
+
+		if (core->enable_count > 0)
+			core->start_time = ktime_get();
+	}
+#endif /*CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING*/
+
 	if (core->notifier_count && old_rate != core->rate)
 		__clk_notify(core, POST_RATE_CHANGE, old_rate, core->rate);
 
@@ -2009,6 +2271,11 @@ static void clk_summary_show_one(struct seq_file *s, struct clk_core *c,
 		   30 - level * 3, c->name,
 		   c->enable_count, c->prepare_count, clk_core_get_rate(c),
 		   clk_core_get_accuracy(c), clk_core_get_phase(c));
+
+#ifdef CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING
+	if (!(c->flags & CLK_GET_RATE_NOCACHE))
+		generic_print_freq_stats_table(s, c, true, level);
+#endif /*CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING*/
 }
 
 static void clk_summary_show_subtree(struct seq_file *s, struct clk_core *c,
@@ -2177,6 +2444,14 @@ static int clk_debug_create_one(struct clk_core *core, struct dentry *pdentry)
 	if (!d)
 		goto err_out;
 
+#ifdef CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING
+	d = debugfs_create_file("frequency_stats_table", S_IRUGO, core->dentry,
+			core, &freq_stats_table_fops);
+
+	if (!d)
+		goto err_out;
+#endif /*CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING*/
+
 	if (core->ops->debug_init) {
 		ret = core->ops->debug_init(core->hw, core->dentry);
 		if (ret)
@@ -2299,6 +2574,13 @@ static int __init clk_debug_init(void)
 				&orphan_list, &clk_dump_fops);
 	if (!d)
 		return -ENOMEM;
+
+#ifdef CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING
+	d = debugfs_create_file("freq_stats_on", S_IRUGO|S_IWUSR,
+				rootdir, &all_lists, &freq_stats_fops);
+	if (!d)
+		return -ENOMEM;
+#endif /*CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING*/
 
 	mutex_lock(&clk_debug_lock);
 	hlist_for_each_entry(core, &clk_debug_list, debug_node)
@@ -2659,6 +2941,11 @@ static void __clk_release(struct kref *ref)
 
 	kfree(core->parent_names);
 	kfree_const(core->name);
+
+#ifdef CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING
+	free_tree(core->freq_stats_table.rb_node);
+#endif/*CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING*/
+
 	kfree(core);
 }
 

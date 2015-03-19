@@ -864,8 +864,6 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 	struct priv_cmd_entry *e;
 	u32 i = 0, size;
 	int err = 0;
-	struct sg_table *sgt;
-	dma_addr_t iova;
 
 	/* Kernel can insert gpfifos before and after user gpfifos.
 	   Before user gpfifos, kernel inserts fence_wait, which takes
@@ -879,36 +877,10 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 	size = roundup_pow_of_two(
 		c->gpfifo.entry_num * 2 * 10 * sizeof(u32) / 3);
 
-	q->mem.base_cpuva = dma_alloc_coherent(d, size,
-					&iova,
-					GFP_KERNEL);
-	if (!q->mem.base_cpuva) {
-		gk20a_err(d, "%s: memory allocation failed\n", __func__);
-		err = -ENOMEM;
-		goto clean_up;
-	}
-
-	q->mem.base_iova = iova;
-	q->mem.size = size;
-
-	err = gk20a_get_sgtable(d, &sgt,
-			q->mem.base_cpuva, q->mem.base_iova, size);
+	err = gk20a_gmmu_alloc_map(ch_vm, size, &q->mem);
 	if (err) {
-		gk20a_err(d, "%s: failed to create sg table\n", __func__);
+		gk20a_err(d, "%s: memory allocation failed\n", __func__);
 		goto clean_up;
-	}
-
-	memset(q->mem.base_cpuva, 0, size);
-
-	q->base_gpuva = gk20a_gmmu_map(ch_vm, &sgt,
-					size,
-					0, /* flags */
-					gk20a_mem_flag_none);
-	if (!q->base_gpuva) {
-		gk20a_err(d, "ch %d : failed to map gpu va"
-			   "for priv cmd buffer", c->hw_chid);
-		err = -ENOMEM;
-		goto clean_up_sgt;
 	}
 
 	q->size = q->mem.size / sizeof (u32);
@@ -923,18 +895,14 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 			gk20a_err(d, "ch %d: fail to pre-alloc cmd entry",
 				c->hw_chid);
 			err = -ENOMEM;
-			goto clean_up_sgt;
+			goto clean_up;
 		}
 		e->pre_alloc = true;
 		list_add(&e->list, &q->free);
 	}
 
-	gk20a_free_sgtable(&sgt);
-
 	return 0;
 
-clean_up_sgt:
-	gk20a_free_sgtable(&sgt);
 clean_up:
 	channel_gk20a_free_priv_cmdbuf(c);
 	return err;
@@ -942,7 +910,6 @@ clean_up:
 
 static void channel_gk20a_free_priv_cmdbuf(struct channel_gk20a *c)
 {
-	struct device *d = dev_from_gk20a(c->g);
 	struct vm_gk20a *ch_vm = c->vm;
 	struct priv_cmd_queue *q = &c->priv_cmd_q;
 	struct priv_cmd_entry *e;
@@ -951,14 +918,7 @@ static void channel_gk20a_free_priv_cmdbuf(struct channel_gk20a *c)
 	if (q->size == 0)
 		return;
 
-	if (q->base_gpuva)
-		gk20a_gmmu_unmap(ch_vm, q->base_gpuva,
-				q->mem.size, gk20a_mem_flag_none);
-	if (q->mem.base_cpuva)
-		dma_free_coherent(d, q->mem.size,
-			q->mem.base_cpuva, q->mem.base_iova);
-	q->mem.base_cpuva = NULL;
-	q->mem.base_iova = 0;
+	gk20a_gmmu_unmap_free(ch_vm, &q->mem);
 
 	/* free used list */
 	head = &q->head;
@@ -1039,12 +999,12 @@ TRY_AGAIN:
 	/* if we have increased size to skip free space in the end, set put
 	   to beginning of cmd buffer (0) + size */
 	if (size != orig_size) {
-		e->ptr = q->mem.base_cpuva;
-		e->gva = q->base_gpuva;
+		e->ptr = (u32 *)q->mem.cpu_va;
+		e->gva = q->mem.gpu_va;
 		q->put = orig_size;
 	} else {
-		e->ptr = q->mem.base_cpuva + q->put;
-		e->gva = q->base_gpuva + q->put * sizeof(u32);
+		e->ptr = (u32 *)q->mem.cpu_va + q->put;
+		e->gva = q->mem.gpu_va + q->put * sizeof(u32);
 		q->put = (q->put + orig_size) & (q->size - 1);
 	}
 
@@ -1119,7 +1079,7 @@ static void recycle_priv_cmdbuf(struct channel_gk20a *c)
 	}
 
 	if (found)
-		q->get = (e->ptr - q->mem.base_cpuva) + e->size;
+		q->get = (e->ptr - (u32 *)q->mem.cpu_va) + e->size;
 	else {
 		gk20a_dbg_info("no free entry recycled");
 		return;

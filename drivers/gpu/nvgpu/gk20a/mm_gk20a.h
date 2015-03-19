@@ -79,12 +79,6 @@ struct patch_desc {
 	u32 data_count;
 };
 
-struct priv_cmd_queue_mem_desc {
-	u64 base_iova;
-	u32 *base_cpuva;
-	size_t size;
-};
-
 struct zcull_ctx_desc {
 	u64 gpu_va;
 	u32 ctx_attr;
@@ -176,8 +170,7 @@ struct gk20a_mm_entry {
 };
 
 struct priv_cmd_queue {
-	struct priv_cmd_queue_mem_desc mem;
-	u64 base_gpuva;	/* gpu_va base */
+	struct mem_desc mem;
 	u32 size;	/* num of entries in words */
 	u32 put;	/* put for priv cmd queue */
 	u32 get;	/* get for priv cmd queue */

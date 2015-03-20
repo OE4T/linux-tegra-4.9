@@ -53,10 +53,8 @@ static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	gk20a_dbg_fn("");
 
-	if (max_comptag_lines == 0) {
-		gr->compbit_store.size = 0;
+	if (max_comptag_lines == 0)
 		return 0;
-	}
 
 	if (max_comptag_lines > hw_max_comptag_lines)
 		max_comptag_lines = hw_max_comptag_lines;
@@ -117,7 +115,7 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 
 	trace_gk20a_ltc_cbc_ctrl_start(g->dev->name, op, min, max);
 
-	if (gr->compbit_store.size == 0)
+	if (gr->compbit_store.mem.size == 0)
 		return 0;
 
 	mutex_lock(&g->mm.l2_op_lock);

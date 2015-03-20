@@ -113,10 +113,7 @@ struct gr_ctx_desc {
 #define NVGPU_GR_PREEMPTION_MODE_CTA		2
 
 struct compbit_store_desc {
-	struct page **pages;
-	struct sg_table *sgt;
-	size_t size;
-	u64 base_iova;
+	struct mem_desc mem;
 
 	/* The value that is written to the hardware. This depends on
 	 * on the number of ltcs and is not an address. */

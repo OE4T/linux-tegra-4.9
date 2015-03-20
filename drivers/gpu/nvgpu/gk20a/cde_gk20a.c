@@ -79,7 +79,7 @@ __must_hold(&cde_app->mutex)
 	/* ..then release mapped memory */
 	gk20a_deinit_cde_img(cde_ctx);
 	gk20a_gmmu_unmap(vm, cde_ctx->backing_store_vaddr,
-			 g->gr.compbit_store.size, 1);
+			 g->gr.compbit_store.mem.size, 1);
 
 	/* housekeeping on app */
 	list_del(&cde_ctx->list);
@@ -392,7 +392,7 @@ static int gk20a_cde_patch_params(struct gk20a_cde_ctx *cde_ctx)
 			new_data = cde_ctx->compbit_size;
 			break;
 		case TYPE_PARAM_BACKINGSTORE_SIZE:
-			new_data = g->gr.compbit_store.size;
+			new_data = g->gr.compbit_store.mem.size;
 			break;
 		case TYPE_PARAM_SOURCE_SMMU_ADDR:
 			new_data = gk20a_mm_gpuva_to_iova_base(cde_ctx->vm,
@@ -998,7 +998,7 @@ __releases(&cde_app->mutex)
 	}
 
 	gk20a_dbg(gpu_dbg_cde, "cde: buffer=cbc, size=%zu, gpuva=%llx\n",
-		 g->gr.compbit_store.size, cde_ctx->backing_store_vaddr);
+		 g->gr.compbit_store.mem.size, cde_ctx->backing_store_vaddr);
 	gk20a_dbg(gpu_dbg_cde, "cde: buffer=compbits, size=%llu, gpuva=%llx\n",
 		 cde_ctx->compbit_size, cde_ctx->compbit_vaddr);
 
@@ -1122,8 +1122,8 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	}
 
 	/* map backing store to gpu virtual space */
-	vaddr = gk20a_gmmu_map(ch->vm, &gr->compbit_store.sgt,
-			       g->gr.compbit_store.size,
+	vaddr = gk20a_gmmu_map(ch->vm, &gr->compbit_store.mem.sgt,
+			       g->gr.compbit_store.mem.size,
 			       NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 			       gk20a_mem_flag_read_only);
 
@@ -1151,7 +1151,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	return 0;
 
 err_init_cde_img:
-	gk20a_gmmu_unmap(ch->vm, vaddr, g->gr.compbit_store.size, 1);
+	gk20a_gmmu_unmap(ch->vm, vaddr, g->gr.compbit_store.mem.size, 1);
 err_map_backingstore:
 err_alloc_gpfifo:
 	gk20a_vm_put(ch->vm);

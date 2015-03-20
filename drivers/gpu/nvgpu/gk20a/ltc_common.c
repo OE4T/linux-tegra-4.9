@@ -77,87 +77,20 @@ static int gk20a_ltc_alloc_phys_cbc(struct gk20a *g,
 				    size_t compbit_backing_size)
 {
 	struct gr_gk20a *gr = &g->gr;
-	int order = order_base_2(compbit_backing_size >> PAGE_SHIFT);
-	struct page *pages;
-	struct sg_table *sgt;
-	int err = 0;
 
-	/* allocate pages */
-	pages = alloc_pages(GFP_KERNEL, order);
-	if (!pages) {
-		gk20a_dbg(gpu_dbg_pte, "alloc_pages failed\n");
-		err = -ENOMEM;
-		goto err_alloc_pages;
-	}
-
-	/* clean up the pages */
-	memset(page_address(pages), 0, compbit_backing_size);
-
-	/* allocate room for placing the pages pointer.. */
-	gr->compbit_store.pages =
-		kzalloc(sizeof(*gr->compbit_store.pages), GFP_KERNEL);
-	if (!gr->compbit_store.pages) {
-		gk20a_dbg(gpu_dbg_pte, "failed to allocate pages struct");
-		err = -ENOMEM;
-		goto err_alloc_compbit_store;
-	}
-
-	err = gk20a_get_sgtable_from_pages(&g->dev->dev, &sgt, &pages, 0,
-					   compbit_backing_size);
-	if (err) {
-		gk20a_dbg(gpu_dbg_pte, "could not get sg table for pages\n");
-		goto err_alloc_sg_table;
-	}
-
-	/* store the parameters to gr structure */
-	*gr->compbit_store.pages = pages;
-	gr->compbit_store.base_iova = sg_phys(sgt->sgl);
-	gr->compbit_store.size = compbit_backing_size;
-	gr->compbit_store.sgt = sgt;
-
-	return 0;
-
-err_alloc_sg_table:
-	kfree(gr->compbit_store.pages);
-	gr->compbit_store.pages = NULL;
-err_alloc_compbit_store:
-	__free_pages(pages, order);
-err_alloc_pages:
-	return err;
+	return gk20a_gmmu_alloc_attr(g, DMA_ATTR_FORCE_CONTIGUOUS,
+				    compbit_backing_size,
+				    &gr->compbit_store.mem);
 }
 
 static int gk20a_ltc_alloc_virt_cbc(struct gk20a *g,
 				    size_t compbit_backing_size)
 {
-	struct device *d = dev_from_gk20a(g);
 	struct gr_gk20a *gr = &g->gr;
-	DEFINE_DMA_ATTRS(attrs);
-	dma_addr_t iova;
-	int err;
 
-	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
-
-	gr->compbit_store.pages =
-		dma_alloc_attrs(d, compbit_backing_size, &iova,
-				GFP_KERNEL, &attrs);
-	if (!gr->compbit_store.pages) {
-		gk20a_err(dev_from_gk20a(g), "failed to allocate backing store for compbit : size %zu",
-				  compbit_backing_size);
-		return -ENOMEM;
-	}
-
-	gr->compbit_store.base_iova = iova;
-	gr->compbit_store.size = compbit_backing_size;
-	err = gk20a_get_sgtable_from_pages(d,
-				   &gr->compbit_store.sgt,
-				   gr->compbit_store.pages, iova,
-				   compbit_backing_size);
-	if (err) {
-		gk20a_err(dev_from_gk20a(g), "failed to allocate sgt for backing store");
-		return err;
-	}
-
-	return 0;
+	return gk20a_gmmu_alloc_attr(g, DMA_ATTR_NO_KERNEL_MAPPING,
+				    compbit_backing_size,
+				    &gr->compbit_store.mem);
 }
 
 static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
@@ -167,16 +100,16 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 
 	u32 compbit_base_post_divide;
 	u64 compbit_base_post_multiply64;
-	u64 compbit_store_base_iova;
+	u64 compbit_store_iova;
 	u64 compbit_base_post_divide64;
 
 	if (tegra_platform_is_linsim())
-		compbit_store_base_iova = gr->compbit_store.base_iova;
+		compbit_store_iova = gk20a_mem_phys(&gr->compbit_store.mem);
 	else
-		compbit_store_base_iova = gk20a_mm_smmu_vaddr_translate(g,
-			gr->compbit_store.base_iova);
+		compbit_store_iova = gk20a_mm_iova_addr(g,
+				gr->compbit_store.mem.sgt->sgl);
 
-	compbit_base_post_divide64 = compbit_store_base_iova >>
+	compbit_base_post_divide64 = compbit_store_iova >>
 		ltc_ltcs_ltss_cbc_base_alignment_shift_v();
 
 	do_div(compbit_base_post_divide64, g->ltc_count);
@@ -185,7 +118,7 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 	compbit_base_post_multiply64 = ((u64)compbit_base_post_divide *
 		g->ltc_count) << ltc_ltcs_ltss_cbc_base_alignment_shift_v();
 
-	if (compbit_base_post_multiply64 < compbit_store_base_iova)
+	if (compbit_base_post_multiply64 < compbit_store_iova)
 		compbit_base_post_divide++;
 
 	/* Bug 1477079 indicates sw adjustment on the posted divided base. */
@@ -198,8 +131,8 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 
 	gk20a_dbg(gpu_dbg_info | gpu_dbg_map | gpu_dbg_pte,
 		   "compbit base.pa: 0x%x,%08x cbc_base:0x%08x\n",
-		   (u32)(compbit_store_base_iova >> 32),
-		   (u32)(compbit_store_base_iova & 0xffffffff),
+		   (u32)(compbit_store_iova >> 32),
+		   (u32)(compbit_store_iova & 0xffffffff),
 		   compbit_base_post_divide);
 
 	gr->compbit_store.base_hw = compbit_base_post_divide;

@@ -1560,7 +1560,6 @@ int gk20a_gmmu_alloc_attr(struct gk20a *g, enum dma_attr attr, size_t size, stru
 		goto fail_free;
 
 	mem->size = size;
-	memset(mem->cpu_va, 0, size);
 
 	gk20a_dbg_fn("done");
 

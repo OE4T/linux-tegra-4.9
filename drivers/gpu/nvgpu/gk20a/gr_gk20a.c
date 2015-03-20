@@ -2944,8 +2944,6 @@ int gk20a_free_obj_ctx(struct channel_gk20a  *c,
 static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 {
 	struct gk20a *g = gr->g;
-	struct device *d = dev_from_gk20a(g);
-	DEFINE_DMA_ATTRS(attrs);
 
 	gk20a_dbg_fn("");
 
@@ -2954,9 +2952,8 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	gk20a_gmmu_free(g, &gr->mmu_wr_mem);
 	gk20a_gmmu_free(g, &gr->mmu_rd_mem);
 
-	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
-	dma_free_attrs(d, gr->compbit_store.size, gr->compbit_store.pages,
-			gr->compbit_store.base_iova, &attrs);
+	gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING,
+			     &gr->compbit_store.mem);
 
 	memset(&gr->compbit_store, 0, sizeof(struct compbit_store_desc));
 

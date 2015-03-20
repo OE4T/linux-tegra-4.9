@@ -1989,6 +1989,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 			cc->curr_fp_thumb = sf->vregs[ARM32_FP_THUMB];
 
 		cc->curr_pc = sf->pc;
+		cc->curr_lr = sf->vregs[regnum_lr(mode)];
 
 		nr_added = quadd_callchain_store(cc, sf->pc, unw_type);
 		if (nr_added == 0)
@@ -2048,7 +2049,7 @@ quadd_get_user_cc_dwarf(struct pt_regs *regs,
 		sp = cc->curr_sp;
 		fp = cc->curr_fp;
 		fp_thumb = cc->curr_fp_thumb;
-		lr = 0;
+		lr = cc->curr_lr;
 	} else {
 		ip = instruction_pointer(regs);
 		lr = quadd_user_link_register(regs);

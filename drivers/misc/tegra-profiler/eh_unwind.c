@@ -25,10 +25,13 @@
 
 #include <linux/tegra_profiler.h>
 
+#include "hrt.h"
+#include "tegra.h"
 #include "eh_unwind.h"
 #include "backtrace.h"
 #include "comm.h"
 #include "dwarf_unwind.h"
+#include "disassembler.h"
 
 #define QUADD_EXTABS_SIZE	0x100
 
@@ -639,7 +642,7 @@ error_out:
 }
 
 static const struct unwind_idx *
-unwind_find_idx(struct ex_region_info *ri, u32 addr)
+unwind_find_idx(struct ex_region_info *ri, u32 addr, unsigned long *lowaddr)
 {
 	u32 value;
 	unsigned long length;
@@ -683,6 +686,9 @@ unwind_find_idx(struct ex_region_info *ri, u32 addr)
 			start = mid;
 	}
 
+	if (lowaddr)
+		*lowaddr = mmap_prel31_to_addr(&start->addr_offset,
+					       ri, 1, 0, 0);
 	return start;
 }
 
@@ -755,7 +761,8 @@ read_uleb128(struct quadd_mmap_area *mmap,
  */
 static long
 unwind_exec_insn(struct quadd_mmap_area *mmap,
-		 struct unwind_ctrl_block *ctrl)
+		 struct unwind_ctrl_block *ctrl,
+		 struct quadd_disasm_data *qd)
 {
 	long err;
 	unsigned int i;
@@ -768,12 +775,13 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 
 	if ((insn & 0xc0) == 0x00) {
 		ctrl->vrs[SP] += ((insn & 0x3f) << 2) + 4;
+		qd->stacksize -= ((insn & 0x3f) << 2) + 4;
 
 		pr_debug("CMD_DATA_POP: vsp = vsp + %lu (new: %#x)\n",
 			((insn & 0x3f) << 2) + 4, ctrl->vrs[SP]);
 	} else if ((insn & 0xc0) == 0x40) {
 		ctrl->vrs[SP] -= ((insn & 0x3f) << 2) + 4;
-
+		qd->stackoff -= ((insn & 0x3f) << 2) + 4;
 		pr_debug("CMD_DATA_PUSH: vsp = vsp – %lu (new: %#x)\n",
 			((insn & 0x3f) << 2) + 4, ctrl->vrs[SP]);
 	} else if ((insn & 0xf0) == 0x80) {
@@ -800,6 +808,7 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 				if (err < 0)
 					return err;
 
+				qd->r_regset &= ~(1 << reg);
 				pr_debug("CMD_REG_POP: pop {r%d}\n", reg);
 			}
 			mask >>= 1;
@@ -812,6 +821,7 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 	} else if ((insn & 0xf0) == 0x90 &&
 		   (insn & 0x0d) != 0x0d) {
 		ctrl->vrs[SP] = ctrl->vrs[insn & 0x0f];
+		qd->ustackreg = (insn & 0xf);
 		pr_debug("CMD_REG_TO_SP: vsp = {r%lu}\n", insn & 0x0f);
 	} else if ((insn & 0xf0) == 0xa0) {
 		u32 __user *vsp = (u32 __user *)(unsigned long)ctrl->vrs[SP];
@@ -823,6 +833,7 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 			if (err < 0)
 				return err;
 
+			qd->r_regset &= ~(1 << reg);
 			pr_debug("CMD_REG_POP: pop {r%u}\n", reg);
 		}
 
@@ -831,6 +842,7 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 			if (err < 0)
 				return err;
 
+			qd->r_regset &= ~(1 << 14);
 			pr_debug("CMD_REG_POP: pop {r14}\n");
 		}
 
@@ -864,6 +876,7 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 				if (err < 0)
 					return err;
 
+				qd->r_regset &= ~(1 << reg);
 				pr_debug("CMD_REG_POP: pop {r%d}\n", reg);
 			}
 			mask >>= 1;
@@ -885,6 +898,7 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 
 		ctrl->vrs[SP] += 0x204 + (uleb128 << 2);
 
+		qd->stacksize -= 0x204 + (uleb128 << 2);
 		pr_debug("CMD_DATA_POP: vsp = vsp + %lu (%#lx), new vsp: %#x\n",
 			 0x204 + (uleb128 << 2), 0x204 + (uleb128 << 2),
 			 ctrl->vrs[SP]);
@@ -905,7 +919,7 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 		}
 
 		for (i = reg_from; i <= reg_to; i++)
-			vsp += 2;
+			vsp += 2, qd->d_regset &= ~(1 << i);
 
 		if (insn == 0xb3)
 			vsp++;
@@ -923,7 +937,7 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 		reg_to = 8 + data;
 
 		for (i = 8; i <= reg_to; i++)
-			vsp += 2;
+			vsp += 2, qd->d_regset &= ~(1 << i);
 
 		if ((insn & 0xf8) == 0xb8)
 			vsp++;
@@ -951,13 +965,19 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
  * updates the *pc and *sp with the new values.
  */
 static long
-unwind_frame(struct ex_region_info *ri,
+unwind_frame(struct quadd_unw_methods um,
+	     struct ex_region_info *ri,
 	     struct stackframe *frame,
-	     struct vm_area_struct *vma_sp)
+	     struct vm_area_struct *vma_sp,
+	     int thumbflag)
 {
-	unsigned long high, low;
+	unsigned long high, low, min, max;
 	const struct unwind_idx *idx;
 	struct unwind_ctrl_block ctrl;
+	struct quadd_disasm_data qd;
+#ifdef QM_DEBUG_DISASSEMBLER
+	struct quadd_disasm_data orig;
+#endif
 	long err = 0;
 	u32 val;
 
@@ -968,10 +988,10 @@ unwind_frame(struct ex_region_info *ri,
 	low = frame->sp;
 	high = vma_sp->vm_end;
 
-	pr_debug("pc: %#lx, lr: %#lx, sp:%#lx, low/high: %#lx/%#lx\n",
-		frame->pc, frame->lr, frame->sp, low, high);
+	pr_debug("pc: %#lx, lr: %#lx, sp:%#lx, low/high: %#lx/%#lx, thumb: %d\n",
+		 frame->pc, frame->lr, frame->sp, low, high, thumbflag);
 
-	idx = unwind_find_idx(ri, frame->pc);
+	idx = unwind_find_idx(ri, frame->pc, &min);
 	if (IS_ERR_OR_NULL(idx))
 		return -QUADD_URC_IDX_NOT_FOUND;
 
@@ -1025,8 +1045,25 @@ unwind_frame(struct ex_region_info *ri,
 		return -QUADD_URC_UNSUPPORTED_PR;
 	}
 
+	if (um.ut_ce) {
+		/* guess for the boundaries to disassemble */
+		if (frame->pc - min < QUADD_DISASM_MIN)
+			max = min + QUADD_DISASM_MIN;
+		else
+			max = (frame->pc - min < QUADD_DISASM_MAX)
+				? frame->pc : min + QUADD_DISASM_MAX;
+		err = quadd_disassemble(&qd, min, max, thumbflag);
+		if (err < 0)
+			return err;
+#ifdef QM_DEBUG_DISASSEMBLER
+		/* saved for verbose unwind mismatch reporting */
+		orig = qd;
+		qd.orig = &orig;
+#endif
+	}
+
 	while (ctrl.entries > 0) {
-		err = unwind_exec_insn(ri->mmap, &ctrl);
+		err = unwind_exec_insn(ri->mmap, &ctrl, &qd);
 		if (err < 0)
 			return err;
 
@@ -1034,6 +1071,9 @@ unwind_frame(struct ex_region_info *ri,
 		    ctrl.vrs[SP] < low || ctrl.vrs[SP] >= high)
 			return -QUADD_URC_SP_INCORRECT;
 	}
+
+	if (um.ut_ce && quadd_check_unwind_result(frame->pc, &qd) < 0)
+		return -QUADD_URC_UNWIND_MISMATCH;
 
 	if (ctrl.vrs[PC] == 0)
 		ctrl.vrs[PC] = ctrl.vrs[LR];
@@ -1056,7 +1096,8 @@ unwind_backtrace(struct quadd_callchain *cc,
 		 struct ex_region_info *ri,
 		 struct stackframe *frame,
 		 struct vm_area_struct *vma_sp,
-		 struct task_struct *task)
+		 struct task_struct *task,
+		 int thumbflag)
 {
 	struct ex_region_info ri_new;
 
@@ -1101,12 +1142,15 @@ unwind_backtrace(struct quadd_callchain *cc,
 			ri = &ri_new;
 		}
 
-		err = unwind_frame(ri, frame, vma_sp);
+		err = unwind_frame(cc->um, ri, frame, vma_sp, thumbflag);
 		if (err < 0) {
 			pr_debug("end unwind, urc: %ld\n", err);
 			cc->urc_ut = -err;
 			break;
 		}
+
+		/* determine whether outer frame is ARM or Thumb */
+		thumbflag = (frame->lr & 0x1);
 
 		pr_debug("function at [<%08lx>] from [<%08lx>]\n",
 			 where, frame->pc);
@@ -1115,6 +1159,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 		cc->curr_fp = frame->fp_arm;
 		cc->curr_fp_thumb = frame->fp_thumb;
 		cc->curr_pc = frame->pc;
+		cc->curr_lr = frame->lr;
 
 		nr_added = quadd_callchain_store(cc, frame->pc,
 						 QUADD_UNW_TYPE_UT);
@@ -1129,7 +1174,7 @@ quadd_get_user_cc_arm32_ehabi(struct pt_regs *regs,
 			      struct task_struct *task)
 {
 	long err;
-	int nr_prev = cc->nr;
+	int nr_prev = cc->nr, thumbflag;
 	unsigned long ip, sp, lr;
 	struct vm_area_struct *vma, *vma_sp;
 	struct mm_struct *mm = task->mm;
@@ -1152,7 +1197,8 @@ quadd_get_user_cc_arm32_ehabi(struct pt_regs *regs,
 	if (nr_prev > 0) {
 		ip = cc->curr_pc;
 		sp = cc->curr_sp;
-		lr = 0;
+		lr = cc->curr_lr;
+		thumbflag = (lr & 1);
 
 		frame.fp_thumb = cc->curr_fp_thumb;
 		frame.fp_arm = cc->curr_fp;
@@ -1160,6 +1206,7 @@ quadd_get_user_cc_arm32_ehabi(struct pt_regs *regs,
 		ip = instruction_pointer(regs);
 		sp = quadd_user_stack_pointer(regs);
 		lr = quadd_user_link_register(regs);
+		thumbflag = is_thumb_mode(regs);
 
 #ifdef CONFIG_ARM64
 		frame.fp_thumb = regs->compat_usr(7);
@@ -1192,7 +1239,7 @@ quadd_get_user_cc_arm32_ehabi(struct pt_regs *regs,
 		return 0;
 	}
 
-	unwind_backtrace(cc, &ri, &frame, vma_sp, task);
+	unwind_backtrace(cc, &ri, &frame, vma_sp, task, thumbflag);
 
 	pr_debug("%s: exit, cc->nr: %d --> %d\n",
 		 __func__, nr_prev, cc->nr);
@@ -1223,7 +1270,7 @@ quadd_is_ex_entry_exist_arm32_ehabi(struct pt_regs *regs,
 	if (err)
 		return 0;
 
-	idx = unwind_find_idx(&ri, addr);
+	idx = unwind_find_idx(&ri, addr, NULL);
 	if (IS_ERR_OR_NULL(idx))
 		return 0;
 

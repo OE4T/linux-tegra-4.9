@@ -82,15 +82,10 @@ struct zcull_ctx_desc {
 	u32 ctx_sw_mode;
 };
 
-struct gr_ctx_buffer_desc;
-struct platform_device;
+struct gk20a;
 struct gr_ctx_buffer_desc {
-	void (*destroy)(struct platform_device *, struct gr_ctx_buffer_desc *);
-	struct sg_table *sgt;
-	struct page **pages;
-	size_t size;
-	u64 iova;
-	struct dma_attrs attrs;
+	void (*destroy)(struct gk20a *, struct gr_ctx_buffer_desc *);
+	struct mem_desc mem;
 	void *priv;
 };
 
@@ -99,10 +94,8 @@ struct gr_ctx_buffer_desc {
 #endif
 
 struct gr_ctx_desc {
-	struct page **pages;
-	u64 iova;
-	size_t size;
-	u64 gpu_va;
+	struct mem_desc mem;
+
 	int preempt_mode;
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct gr_ctx_desc_t18x t18x;

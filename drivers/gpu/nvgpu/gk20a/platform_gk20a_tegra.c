@@ -80,19 +80,18 @@ static int gk20a_tegra_secure_page_alloc(struct platform_device *pdev)
 	return 0;
 }
 
-static void gk20a_tegra_secure_destroy(struct platform_device *pdev,
+static void gk20a_tegra_secure_destroy(struct gk20a *g,
 				       struct gr_ctx_buffer_desc *desc)
 {
-	if (desc->sgt) {
-		gk20a_free_sgtable(&desc->sgt);
-		desc->sgt = NULL;
-	}
+	DEFINE_DMA_ATTRS(attrs);
 
-	if (desc->iova) {
-		dma_free_attrs(&tegra_vpr_dev, desc->size,
-			(void *)(uintptr_t)desc->iova,
-			desc->iova, &desc->attrs);
-		desc->iova = 0;
+	if (desc->mem.sgt) {
+		phys_addr_t pa = sg_phys(desc->mem.sgt->sgl);
+		dma_free_attrs(&tegra_vpr_dev, desc->mem.size,
+			(void *)(uintptr_t)pa,
+			pa, &attrs);
+		gk20a_free_sgtable(&desc->mem.sgt);
+		desc->mem.sgt = NULL;
 	}
 }
 
@@ -116,9 +115,7 @@ static int gk20a_tegra_secure_alloc(struct platform_device *pdev,
 	if (dma_mapping_error(&tegra_vpr_dev, iova))
 		return -ENOMEM;
 
-	desc->iova = iova;
-	desc->size = size;
-	desc->attrs = attrs;
+	desc->mem.size = size;
 	desc->destroy = gk20a_tegra_secure_destroy;
 
 	sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
@@ -136,16 +133,15 @@ static int gk20a_tegra_secure_alloc(struct platform_device *pdev,
 	/* This bypasses SMMU for VPR during gmmu_map. */
 	sg_dma_address(sgt->sgl) = 0;
 
-	desc->sgt = sgt;
+	desc->mem.sgt = sgt;
 
 	return err;
 
 fail_sgt:
 	kfree(sgt);
 fail:
-	dma_free_attrs(&tegra_vpr_dev, desc->size,
-			(void *)(uintptr_t)&desc->iova,
-			desc->iova, &desc->attrs);
+	dma_free_attrs(&tegra_vpr_dev, desc->mem.size,
+			(void *)(uintptr_t)iova, iova, &attrs);
 	return err;
 }
 

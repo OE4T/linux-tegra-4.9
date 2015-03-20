@@ -978,8 +978,8 @@ static int gr_gm20b_update_pc_sampling(struct channel_gk20a *c,
 	if (!ch_ctx || !ch_ctx->gr_ctx || c->vpr)
 		return -EINVAL;
 
-	ctx_ptr = vmap(ch_ctx->gr_ctx->pages,
-			PAGE_ALIGN(ch_ctx->gr_ctx->size) >> PAGE_SHIFT,
+	ctx_ptr = vmap(ch_ctx->gr_ctx->mem.pages,
+			PAGE_ALIGN(ch_ctx->gr_ctx->mem.size) >> PAGE_SHIFT,
 			0, pgprot_writecombine(PAGE_KERNEL));
 	if (!ctx_ptr)
 		return -ENOMEM;

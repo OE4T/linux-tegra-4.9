@@ -1581,7 +1581,7 @@ void gk20a_gmmu_free_attr(struct gk20a *g, enum dma_attr attr,
 {
 	struct device *d = dev_from_gk20a(g);
 
-	if (mem->cpu_va) {
+	if (mem->cpu_va || mem->pages) {
 		if (attr) {
 			DEFINE_DMA_ATTRS(attrs);
 			dma_set_attr(attr, &attrs);

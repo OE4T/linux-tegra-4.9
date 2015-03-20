@@ -147,6 +147,9 @@ static inline bool tegra_hdmi_hpd_asserted(struct tegra_hdmi *hdmi)
 
 static inline void tegra_hdmi_reset(struct tegra_hdmi *hdmi)
 {
+	if (tegra_platform_is_linsim())
+		return;
+
 	tegra_periph_reset_assert(hdmi->sor->sor_clk);
 	mdelay(20);
 	tegra_periph_reset_deassert(hdmi->sor->sor_clk);

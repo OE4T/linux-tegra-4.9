@@ -406,6 +406,7 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 	cc->curr_sp = 0;
 	cc->curr_fp = 0;
 	cc->curr_pc = 0;
+	cc->curr_lr = 0;
 
 	if (ctx->param.backtrace) {
 		cc->um = hrt.um;

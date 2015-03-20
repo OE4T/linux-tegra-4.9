@@ -156,7 +156,7 @@ user_backtrace(struct pt_regs *regs,
 
 		cc->curr_fp = value_fp;
 		cc->curr_sp = (unsigned long)tail + sizeof(value_fp) * 2;
-		cc->curr_pc = value_lr;
+		cc->curr_pc = cc->curr_lr = value_lr;
 	} else {
 		/* gcc arm frame */
 		if (__copy_from_user_inatomic(&value_fp, tail - 1,
@@ -170,7 +170,7 @@ user_backtrace(struct pt_regs *regs,
 
 		cc->curr_fp = value_fp;
 		cc->curr_sp = (unsigned long)tail + sizeof(value_fp);
-		cc->curr_pc = value_lr = value;
+		cc->curr_pc = cc->curr_lr = value_lr = value;
 	}
 
 	fp_prev = (unsigned long __user *)value_fp;
@@ -342,7 +342,7 @@ user_backtrace_compat(struct pt_regs *regs,
 
 		cc->curr_fp = value_fp;
 		cc->curr_sp = (unsigned long)tail + sizeof(value_fp) * 2;
-		cc->curr_pc = value_lr;
+		cc->curr_pc = cc->curr_lr = value_lr;
 	} else {
 		/* gcc arm frame */
 		if (__copy_from_user_inatomic(&value_fp, tail - 1,
@@ -356,7 +356,7 @@ user_backtrace_compat(struct pt_regs *regs,
 
 		cc->curr_fp = value_fp;
 		cc->curr_sp = (unsigned long)tail + sizeof(value_fp);
-		cc->curr_pc = value_lr = value;
+		cc->curr_pc = cc->curr_lr = value_lr = value;
 	}
 
 	fp_prev = (u32 __user *)(unsigned long)value_fp;
@@ -576,6 +576,7 @@ quadd_get_user_callchain(struct pt_regs *regs,
 	cc->curr_fp = 0;
 	cc->curr_fp_thumb = 0;
 	cc->curr_pc = 0;
+	cc->curr_lr = 0;
 
 #ifdef CONFIG_ARM64
 	cc->cs_64 = compat_user_mode(regs) ? 0 : 1;

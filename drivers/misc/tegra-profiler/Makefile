@@ -10,7 +10,7 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
 #
-# Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
 #
 
 ccflags-y += -Werror
@@ -29,10 +29,10 @@ tegra-profiler-y := \
 	auth.o \
 	quadd_proc.o \
 	eh_unwind.o \
-	dwarf_unwind.o
+	dwarf_unwind.o \
+	disassembler.o
 
 obj-$(CONFIG_CACHE_L2X0) += pl310.o
 
 obj-$(CONFIG_ARM) += armv7_pmu.o
 obj-$(CONFIG_ARM64) += armv8_pmu.o
-

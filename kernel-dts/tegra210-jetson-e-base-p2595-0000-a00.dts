@@ -22,6 +22,7 @@
 #include "tegra210-platforms/tegra210-jetson-e-power-tree-p2530-0930-e03.dtsi"
 #include "tegra210-platforms/tegra210-jetson-e-gpio-p2530-0930-e03.dtsi"
 #include "tegra210-platforms/tegra210-jetson-e-pinmux-p2530-0930-e03.dtsi"
+#include "tegra210-platforms/tegra210-jetson-e-prods.dtsi"
 #include "tegra210-platforms/tegra210-comms-p2530-0930.dtsi"
 #include "tegra210-platforms/tegra210-jetson-e-camera-p2530-0930-e03.dtsi"
 #include "tegra210-platforms/tegra210-pwm-fan-p2530-0930.dtsi"

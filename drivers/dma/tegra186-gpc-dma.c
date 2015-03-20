@@ -430,12 +430,12 @@ static void tegra_dma_start(struct tegra_dma_channel *tdc,
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_WCOUNT, ch_regs->wcount);
 
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSR, 0);
-	tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSR, ch_regs->csr);
-	tdc_write(tdc, TEGRA_GPCDMA_CHAN_MMIOSEQ, ch_regs->mmio_seq);
-	tdc_write(tdc, TEGRA_GPCDMA_CHAN_MCSEQ, ch_regs->mc_seq);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_SRC_PTR, ch_regs->src_ptr);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_DST_PTR, ch_regs->dst_ptr);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_HIGH_ADDR_PTR, 0);
+	tdc_write(tdc, TEGRA_GPCDMA_CHAN_MMIOSEQ, ch_regs->mmio_seq);
+	tdc_write(tdc, TEGRA_GPCDMA_CHAN_MCSEQ, ch_regs->mc_seq);
+	tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSR, ch_regs->csr);
 
 	/* Start DMA */
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSR,
@@ -552,7 +552,6 @@ static irqreturn_t tegra_dma_isr(int irq, void *dev_id)
 
 	status = tdc_read(tdc, TEGRA_GPCDMA_CHAN_STATUS);
 	if (status & TEGRA_GPCDMA_STATUS_ISE_EOC) {
-		tdc_write(tdc, TEGRA_GPCDMA_CHAN_STATUS, status);
 		tdc_write(tdc, TEGRA_GPCDMA_CHAN_STATUS, TEGRA_GPCDMA_STATUS_ISE_EOC);
 		tdc->isr_handler(tdc, false);
 		tasklet_schedule(&tdc->tasklet);
@@ -855,9 +854,13 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_slave_sg(
 	csr |= tdc->slave_id << TEGRA_GPCDMA_CSR_REQ_SEL_SHIFT;
 	/* Enable IRQ mask */
 	csr |= TEGRA_GPCDMA_CSR_IRQ_MASK;
+	/* Configure default priority weight for the channel*/
+	csr |= (1 << TEGRA_GPCDMA_CSR_WEIGHT_SHIFT);
 
+	/* Enable the dma interrupt */
 	if (flags & DMA_PREP_INTERRUPT)
 		csr |= TEGRA_GPCDMA_CSR_IE_EOC;
+
 
 	/* Set the address wrapping on both MC and MMIO side */
 	mc_seq = TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
@@ -865,6 +868,11 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_slave_sg(
 	mc_seq |= TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
 			TEGRA_GPCDMA_MCSEQ_WRAP1_SHIFT;
 	mmio_seq |= (1 << TEGRA_GPCDMA_MMIOSEQ_WRAP_WORD_SHIFT);
+
+	/* Program 2 MC outstanding requests by default. */
+	mc_seq |= (1 << TEGRA_GPCDMA_MCSEQ_REQ_COUNT_SHIFT);
+	/* Setting 16 words burst size on MC side */
+	mc_seq |= TEGRA_GPCDMA_MCSEQ_BURST_16;
 
 	dma_desc = tegra_dma_desc_get(tdc);
 	if (!dma_desc) {
@@ -910,8 +918,11 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_slave_sg(
 			sg_req->ch_regs.src_ptr = apb_ptr;
 			sg_req->ch_regs.dst_ptr = mem;
 		}
-		/* Word count register takes input in Words */
-		sg_req->ch_regs.wcount = (len >> 2);
+		/*
+		 * Word count register takes input in words. Writing a value
+		 * of N into word count register means a req of (N+1) words.
+		 */
+		sg_req->ch_regs.wcount = ((len - 4) >> 2);
 		sg_req->ch_regs.csr = csr;
 		sg_req->ch_regs.mmio_seq = mmio_seq;
 		sg_req->ch_regs.mc_seq = mc_seq;

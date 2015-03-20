@@ -17,6 +17,7 @@
  */
 
 #include <linux/delay.h>
+#include <linux/device.h>
 #include <linux/fs.h>
 #include <linux/i2c.h>
 #include <linux/miscdevice.h>
@@ -28,25 +29,9 @@
 #include <media/isc-dev.h>
 #include <media/isc-mgr.h>
 
-/*#define DEBUG_I2C_TRAFFIC */
+#include "isc-dev-priv.h"
 
-struct isc_dev_info {
-	struct i2c_client *i2c_client;
-	struct device *dev;
-	struct miscdevice miscdev;
-	struct regmap_config regmap_cfg;
-	struct regmap *regmap;
-	struct isc_dev_platform_data *pdata;
-	atomic_t in_use;
-	struct mutex mutex;
-	u8 power_is_on;
-	char devname[32];
-	struct isc_dev_package package;
-	struct isc_dev_pkg rw_pkg;
-#if (defined(DEBUG) || defined(DEBUG_I2C_TRAFFIC))
-	char dump_buf[32 + 3 * 16];
-#endif
-};
+/*#define DEBUG_I2C_TRAFFIC*/
 
 static const struct regmap_config default_regmap_config = {
 	.reg_bits = 16,
@@ -71,7 +56,7 @@ static void isc_dev_dump(
 #endif
 }
 
-static int isc_dev_raw_rd(
+int isc_dev_raw_rd(
 	struct isc_dev_info *info, unsigned int offset, void *val, size_t size)
 {
 	int ret = -ENODEV;
@@ -90,7 +75,7 @@ static int isc_dev_raw_rd(
 	return ret;
 }
 
-static int isc_dev_raw_wr(
+int isc_dev_raw_wr(
 	struct isc_dev_info *info, unsigned int offset, void *val, size_t size)
 {
 	int ret = -ENODEV;
@@ -300,7 +285,6 @@ static int isc_dev_open(struct inode *inode, struct file *file)
 		return -EBUSY;
 
 	file->private_data = info;
-	info->power_is_on = 1;
 	dev_dbg(info->dev, "%s\n", __func__);
 	return 0;
 }
@@ -310,7 +294,6 @@ int isc_dev_release(struct inode *inode, struct file *file)
 	struct isc_dev_info *info = file->private_data;
 
 	dev_dbg(info->dev, "%s\n", __func__);
-	info->power_is_on = 0;
 	file->private_data = NULL;
 	WARN_ON(!atomic_xchg(&info->in_use, 0));
 	return 0;
@@ -388,7 +371,9 @@ static int isc_dev_probe(struct i2c_client *client,
 		return err;
 	}
 
+	info->power_is_on = 1;
 	i2c_set_clientdata(client, info);
+	isc_dev_debugfs_init(info);
 	return 0;
 }
 
@@ -397,65 +382,57 @@ static int isc_dev_remove(struct i2c_client *client)
 	struct isc_dev_info *info = i2c_get_clientdata(client);
 
 	dev_dbg(info->dev, "%s\n", __func__);
+	isc_dev_debugfs_remove(info);
 	isc_delete_lst(info->pdata->isc_mgr, client);
 	misc_deregister(&info->miscdev);
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int isc_dev_suspend(struct i2c_client *client, pm_message_t msg)
+static int isc_dev_suspend(struct device *dev)
 {
-	struct isc_dev_info *info = i2c_get_clientdata(client);
+	struct isc_dev_info *isc = (struct isc_dev_info *)dev_get_drvdata(dev);
 
-	dev_info(info->dev, "Suspending\n");
-	mutex_lock(&info->mutex);
-	info->power_is_on = 0;
-	mutex_unlock(&info->mutex);
+	dev_info(dev, "Suspending\n");
+	mutex_lock(&isc->mutex);
+	isc->power_is_on = 0;
+	mutex_unlock(&isc->mutex);
 
 	return 0;
 }
 
-static int isc_dev_resume(struct i2c_client *client)
+static int isc_dev_resume(struct device *dev)
 {
-	struct isc_dev_info *info = i2c_get_clientdata(client);
+	struct isc_dev_info *isc = (struct isc_dev_info *)dev_get_drvdata(dev);
 
-	dev_info(info->dev, "Resuming\n");
-	mutex_lock(&info->mutex);
-	info->power_is_on = 1;
-	mutex_unlock(&info->mutex);
+	dev_info(dev, "Resuming\n");
+	mutex_lock(&isc->mutex);
+	isc->power_is_on = 1;
+	mutex_unlock(&isc->mutex);
 
 	return 0;
 }
-
-static void isc_dev_shutdown(struct i2c_client *client)
-{
-	struct isc_dev_info *info = i2c_get_clientdata(client);
-
-	dev_info(info->dev, "Shutting down\n");
-	mutex_lock(&info->mutex);
-	info->power_is_on = 0;
-	mutex_unlock(&info->mutex);
-}
-#endif
 
 static const struct i2c_device_id isc_dev_id[] = {
 	{ "isc-dev", 0 },
 	{ },
 };
 
+static const struct dev_pm_ops isc_dev_pm_ops = {
+	SET_RUNTIME_PM_OPS(isc_dev_suspend,
+			isc_dev_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(isc_dev_resume,
+			NULL)
+};
+
 static struct i2c_driver isc_dev_drv = {
 	.driver = {
 		.name = "isc-dev",
 		.owner = THIS_MODULE,
+		.pm = &isc_dev_pm_ops,
 	},
 	.id_table = isc_dev_id,
 	.probe = isc_dev_probe,
 	.remove = isc_dev_remove,
-#ifdef CONFIG_PM
-	.shutdown = isc_dev_shutdown,
-	.suspend  = isc_dev_suspend,
-	.resume   = isc_dev_resume,
-#endif
 };
 
 module_i2c_driver(isc_dev_drv);

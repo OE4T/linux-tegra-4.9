@@ -38,21 +38,7 @@
 #include <media/isc-dev.h>
 #include <media/isc-mgr.h>
 
-struct isc_mgr_priv {
-	struct device *dev;
-	struct miscdevice misc_device;
-	struct i2c_adapter *adap;
-	struct isc_mgr_platform_data *pdata;
-	struct list_head dev_list;
-	struct mutex mutex;
-	struct task_struct *t;
-	struct siginfo sinfo;
-	int sig_no; /* store signal number from user space */
-	spinlock_t spinlock;
-	atomic_t in_use;
-	int err_irq;
-	char devname[32];
-};
+#include "isc-mgr-priv.h"
 
 #define PW_ON(flag)	((flag) ? 0 : 1)
 #define PW_OFF(flag)	((flag) ? 1 : 0)
@@ -124,11 +110,23 @@ static int isc_remove_dev(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 	return 0;
 }
 
-static int isc_create_dev(struct isc_mgr_priv *isc_mgr, const void __user *arg)
+static int __isc_create_dev(
+	struct isc_mgr_priv *isc_mgr, struct isc_mgr_new_dev *new_dev)
 {
 	struct isc_mgr_client *isc_dev;
 	struct i2c_board_info brd;
 	int err = 0;
+
+	if (new_dev->addr >= 0x80 || new_dev->drv_name[0] == '\0' ||
+		(new_dev->val_bits != 8 && new_dev->val_bits != 16) ||
+		(new_dev->reg_bits != 0 && new_dev->reg_bits != 8 &&
+		new_dev->reg_bits != 16)) {
+		dev_err(isc_mgr->dev,
+			"%s: invalid isc dev params: %s %x %d %d\n",
+			__func__, new_dev->drv_name, new_dev->addr,
+			new_dev->reg_bits, new_dev->val_bits);
+		return -EINVAL;
+	}
 
 	isc_dev = devm_kzalloc(isc_mgr->dev, sizeof(*isc_dev), GFP_KERNEL);
 	if (!isc_dev) {
@@ -136,22 +134,10 @@ static int isc_create_dev(struct isc_mgr_priv *isc_mgr, const void __user *arg)
 		return -ENOMEM;
 	}
 
-	if (copy_from_user(&isc_dev->cfg, arg, sizeof(isc_dev->cfg))) {
-		dev_err(isc_mgr->dev,
-			"%s: failed to copy from user\n", __func__);
-		err = -EFAULT;
-		goto dev_create_err;
-	}
+	memcpy(&isc_dev->cfg, new_dev, sizeof(isc_dev->cfg));
 	dev_dbg(isc_mgr->dev, "%s - %s @ %x, %d %d\n", __func__,
 		isc_dev->cfg.drv_name, isc_dev->cfg.addr,
 		isc_dev->cfg.reg_bits, isc_dev->cfg.val_bits);
-
-	if (isc_dev->cfg.addr >= 0x80) {
-		dev_err(isc_mgr->dev, "%s: invalid slave addr %x\n",
-			__func__, isc_dev->cfg.addr);
-		err = -EINVAL;
-		goto dev_create_err;
-	}
 
 	isc_dev->pdata.isc_mgr = isc_mgr;
 	snprintf(isc_dev->pdata.drv_name, sizeof(isc_dev->pdata.drv_name),
@@ -179,7 +165,7 @@ static int isc_create_dev(struct isc_mgr_priv *isc_mgr, const void __user *arg)
 
 	mutex_lock(&isc_mgr->mutex);
 	if (!list_empty(&isc_mgr->dev_list))
-		isc_dev->id = list_entry(isc_mgr->dev_list.prev,
+		isc_dev->id = list_entry(isc_mgr->dev_list.next,
 			struct isc_mgr_client, list)->id + 1;
 	list_add(&isc_dev->list, &isc_mgr->dev_list);
 	mutex_unlock(&isc_mgr->mutex);
@@ -192,8 +178,20 @@ dev_create_err:
 		return isc_dev->id;
 }
 
-static int isc_mgr_write_pid(struct file *file,
-			const void __user *arg)
+static int isc_create_dev(struct isc_mgr_priv *isc_mgr, const void __user *arg)
+{
+	struct isc_mgr_new_dev d_cfg;
+
+	if (copy_from_user(&d_cfg, arg, sizeof(d_cfg))) {
+		dev_err(isc_mgr->dev,
+			"%s: failed to copy from user\n", __func__);
+		return -EFAULT;
+	}
+
+	return __isc_create_dev(isc_mgr, &d_cfg);
+}
+
+static int isc_mgr_write_pid(struct file *file, const void __user *arg)
 {
 	struct isc_mgr_priv *isc_mgr = file->private_data;
 	struct isc_mgr_sinfo sinfo;
@@ -239,25 +237,28 @@ static int isc_mgr_write_pid(struct file *file,
 	return 0;
 }
 
-static int isc_mgr_power_up(struct isc_mgr_priv *isc_mgr,
-			unsigned long arg)
+int isc_mgr_power_up(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 {
 	struct isc_mgr_platform_data *pd = isc_mgr->pdata;
 	int i;
 
 	dev_dbg(isc_mgr->dev, "%s - %lu\n", __func__, arg);
 
-	if (!pd->num_gpios)
+	if (!pd->num_pwr_gpios)
 		goto pwr_up_end;
 
-	if (arg < pd->num_gpios)
-		gpio_set_value(pd->gpios[arg], PW_ON(pd->flags[arg]));
-	else
-		for (i = 0; i < pd->num_gpios; i++) {
-			dev_dbg(isc_mgr->dev, "  - %d, %d\n",
-				pd->gpios[i], PW_ON(pd->flags[i]));
-			gpio_set_value(pd->gpios[i], PW_ON(pd->flags[i]));
-		}
+	if (arg < pd->num_pwr_gpios) {
+		gpio_set_value(pd->pwr_gpios[arg], PW_ON(pd->pwr_flags[arg]));
+		isc_mgr->pwr_state |= BIT(arg);
+		return 0;
+	}
+
+	for (i = 0; i < pd->num_pwr_gpios; i++) {
+		dev_dbg(isc_mgr->dev, "  - %d, %d\n",
+			pd->pwr_gpios[i], PW_ON(pd->pwr_flags[i]));
+		gpio_set_value(pd->pwr_gpios[i], PW_ON(pd->pwr_flags[i]));
+		isc_mgr->pwr_state |= BIT(i);
+	}
 	mdelay(7);
 
 pwr_up_end:
@@ -267,37 +268,73 @@ pwr_up_end:
 	return 0;
 }
 
-static int isc_mgr_power_down(struct isc_mgr_priv *isc_mgr,
-			unsigned long arg)
+int isc_mgr_power_down(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 {
 	struct isc_mgr_platform_data *pd = isc_mgr->pdata;
 	int i;
 
 	dev_dbg(isc_mgr->dev, "%s - %lx\n", __func__, arg);
 
+	if (arg < pd->num_pwr_gpios) {
+		gpio_set_value(pd->pwr_gpios[arg], PW_OFF(pd->pwr_flags[arg]));
+		isc_mgr->pwr_state &= ~BIT(arg);
+		return 0;
+	}
+
 	if (isc_mgr->err_irq)
 		disable_irq(isc_mgr->err_irq);
-	if (!pd->num_gpios)
+	if (!pd->num_pwr_gpios)
 		goto pwr_dn_end;
 
-	if (arg < pd->num_gpios)
-		gpio_set_value(pd->gpios[arg], PW_OFF(pd->flags[arg]));
-	else
-		for (i = 0; i < pd->num_gpios; i++) {
-			dev_dbg(isc_mgr->dev, "  - %d, %d\n",
-				pd->gpios[i], PW_OFF(pd->flags[i]));
-			gpio_set_value(pd->gpios[i], PW_OFF(pd->flags[i]));
-		}
+	for (i = 0; i < pd->num_pwr_gpios; i++) {
+		dev_dbg(isc_mgr->dev, "  - %d, %d\n",
+			pd->pwr_gpios[i], PW_OFF(pd->pwr_flags[i]));
+		gpio_set_value(pd->pwr_gpios[i], PW_OFF(pd->pwr_flags[i]));
+		isc_mgr->pwr_state &= ~BIT(i);
+	}
 	mdelay(7);
 
 pwr_dn_end:
 	return 0;
 }
 
+int isc_mgr_misc_ctrl(struct isc_mgr_priv *isc_mgr, bool misc_on)
+{
+	struct isc_mgr_platform_data *pd = isc_mgr->pdata;
+	int err, i;
 
-static long isc_mgr_ioctl(struct file *file,
-			 unsigned int cmd,
-			 unsigned long arg)
+	dev_dbg(isc_mgr->dev, "%s - %s\n", __func__, misc_on ? "ON" : "OFF");
+
+	if (!pd->num_misc_gpios)
+		return 0;
+
+	for (i = 0; i < pd->num_misc_gpios; i++) {
+		if (misc_on) {
+			if (devm_gpio_request(
+				isc_mgr->dev, pd->misc_gpios[i], "misc-gpio")) {
+				dev_err(isc_mgr->dev, "failed req GPIO: %d\n",
+					pd->misc_gpios[i]);
+				goto misc_ctrl_err;
+			}
+
+			err = gpio_direction_output(
+				pd->misc_gpios[i], PW_ON(pd->misc_flags[i]));
+		} else {
+			err = gpio_direction_output(
+				pd->misc_gpios[i], PW_OFF(pd->misc_flags[i]));
+			devm_gpio_free(isc_mgr->dev, pd->misc_gpios[i]);
+		}
+	}
+	return 0;
+
+misc_ctrl_err:
+	for (; i >= 0; i--)
+		devm_gpio_free(isc_mgr->dev, pd->misc_gpios[i]);
+	return -EBUSY;
+}
+
+static long isc_mgr_ioctl(
+	struct file *file, unsigned int cmd, unsigned long arg)
 {
 	struct isc_mgr_priv *isc_mgr = file->private_data;
 	int err = 0;
@@ -368,6 +405,8 @@ static int isc_mgr_open(struct inode *inode, struct file *file)
 
 	dev_dbg(isc_mgr->dev, "%s\n", __func__);
 	file->private_data = isc_mgr;
+
+	isc_mgr_misc_ctrl(isc_mgr, true);
 	return 0;
 }
 
@@ -375,6 +414,8 @@ static int isc_mgr_release(struct inode *inode, struct file *file)
 {
 	struct isc_mgr_priv *isc_mgr = file->private_data;
 	unsigned long flags;
+
+	isc_mgr_misc_ctrl(isc_mgr, false);
 
 	/* clear sinfo to prevent report error after handler is closed */
 	spin_lock_irqsave(&isc_mgr->spinlock, flags);
@@ -409,17 +450,88 @@ static void isc_mgr_del(struct isc_mgr_priv *isc_mgr)
 	}
 	mutex_unlock(&isc_mgr->mutex);
 
-	for (i = 0; i < pd->num_gpios; i++)
-		if (pd->gpios[i])
+	for (i = 0; i < pd->num_pwr_gpios; i++)
+		if (pd->pwr_gpios[i])
 			gpio_direction_output(
-				pd->gpios[i], PW_OFF(pd->flags[i]));
+				pd->pwr_gpios[i], PW_OFF(pd->pwr_flags[i]));
+
+	i2c_put_adapter(isc_mgr->adap);
+}
+
+static void isc_mgr_dev_ins(struct work_struct *work)
+{
+	struct isc_mgr_priv *isc_mgr =
+		container_of(work, struct isc_mgr_priv, ins_work);
+	struct device_node *np = isc_mgr->dev->of_node;
+	struct device_node *subdev;
+	struct isc_mgr_new_dev d_cfg = {.drv_name = "isc-dev"};
+	const char *sname;
+	u32 val;
+	int err = 0;
+
+	if (np == NULL)
+		return;
+
+	dev_dbg(isc_mgr->dev, "%s - %s\n", __func__, np->full_name);
+	sname = of_get_property(np, "isc-dev", NULL);
+	if (sname)
+		strncpy(d_cfg.drv_name, sname, sizeof(d_cfg.drv_name) - 8);
+
+	for_each_child_of_node(np, subdev) {
+		err = of_property_read_u32(subdev, "addr", &val);
+		if (err || !val) {
+			dev_err(isc_mgr->dev, "%s: ERROR %d addr = %d\n",
+				__func__, err, val);
+			continue;
+		}
+		d_cfg.addr = val;
+		err = of_property_read_u32(subdev, "reg_len", &val);
+		if (err || !val) {
+			dev_err(isc_mgr->dev, "%s: ERROR %d reg_len = %d\n",
+				__func__, err, val);
+			continue;
+		}
+		d_cfg.reg_bits = val;
+		err = of_property_read_u32(subdev, "dat_len", &val);
+		if (err || !val) {
+			dev_err(isc_mgr->dev, "%s: ERROR %d dat_len = %d\n",
+				__func__, err, val);
+			continue;
+		}
+		d_cfg.val_bits = val;
+
+		__isc_create_dev(isc_mgr, &d_cfg);
+	}
+}
+
+static int isc_mgr_of_get_grp_gpio(
+	struct device *dev, struct device_node *np,
+	const char *name, int size, u32 *grp, u32 *flags)
+{
+	int num, i;
+
+	num = of_gpio_named_count(np, name);
+	dev_dbg(dev, "    num gpios of %s: %d\n", name, num);
+	if (num < 0)
+		return 0;
+
+	for (i = 0; (i < num) && (i < size); i++) {
+		grp[i] = of_get_named_gpio_flags(np, name, i, &flags[i]);
+		if (grp[i] < 0) {
+			dev_err(dev, "%s: gpio[%d] invalid\n", __func__, i);
+			return -EINVAL;
+		}
+		dev_dbg(dev, "        [%d] - %d %x\n", i, grp[i], flags[i]);
+	}
+
+	return num;
 }
 
 struct isc_mgr_platform_data *of_isc_mgr_pdata(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	struct isc_mgr_platform_data *pd = NULL;
-	int err, i;
+	int err;
 
 	dev_dbg(&pdev->dev, "%s\n", __func__);
 	pd = devm_kzalloc(&pdev->dev, sizeof(*pd), GFP_KERNEL);
@@ -448,24 +560,17 @@ struct isc_mgr_platform_data *of_isc_mgr_pdata(struct platform_device *pdev)
 	}
 	dev_dbg(&pdev->dev, "    csiport: %d\n", pd->csi_port);
 
-	pd->num_gpios = of_gpio_named_count(np, "pwdn-gpios");
-	if (pd->num_gpios < 0)
-		pd->num_gpios = 0;
-	dev_dbg(&pdev->dev, "    gpionum: %d\n", pd->num_gpios);
-	if (pd->num_gpios > 0) {
-		for (i = 0; (i < pd->num_gpios) &&
-			(i < ARRAY_SIZE(pd->gpios)); i++) {
-			pd->gpios[i] = of_get_named_gpio_flags(
-				np, "pwdn-gpios", i, &pd->flags[i]);
-			if (pd->gpios[i] < 0) {
-				dev_err(&pdev->dev, "%s: gpio[%d] invalid\n",
-					__func__, i);
-				return ERR_PTR(-EINVAL);
-			}
-			dev_dbg(&pdev->dev, "        [%d] - %d %x\n",
-				i, pd->gpios[i], pd->flags[i]);
-		}
-	}
+	pd->num_pwr_gpios = isc_mgr_of_get_grp_gpio(
+		&pdev->dev, np, "pwdn-gpios",
+		ARRAY_SIZE(pd->pwr_gpios), pd->pwr_gpios, pd->pwr_flags);
+	if (pd->num_pwr_gpios < 0)
+		return ERR_PTR(pd->num_pwr_gpios);
+
+	pd->num_misc_gpios = isc_mgr_of_get_grp_gpio(
+		&pdev->dev, np, "misc-gpios",
+		ARRAY_SIZE(pd->misc_gpios), pd->misc_gpios, pd->misc_flags);
+	if (pd->num_misc_gpios < 0)
+		return ERR_PTR(pd->num_misc_gpios);
 
 	pd->default_pwr_on = of_property_read_bool(np, "default-power-on");
 
@@ -489,6 +594,8 @@ static int isc_mgr_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	spin_lock_init(&isc_mgr->spinlock);
+	atomic_set(&isc_mgr->in_use, 0);
 	INIT_LIST_HEAD(&isc_mgr->dev_list);
 	mutex_init(&isc_mgr->mutex);
 
@@ -512,32 +619,31 @@ static int isc_mgr_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	if (pd->num_gpios > 0) {
-		for (i = 0; i < pd->num_gpios; i++) {
-			if (!gpio_is_valid(pd->gpios[i]))
+	if (pd->num_pwr_gpios > 0) {
+		for (i = 0; i < pd->num_pwr_gpios; i++) {
+			if (!gpio_is_valid(pd->pwr_gpios[i]))
 				goto err_probe;
 
 			if (devm_gpio_request(
-				&pdev->dev, pd->gpios[i], "pwdn-gpios")) {
+				&pdev->dev, pd->pwr_gpios[i], "pwdn-gpios")) {
 				dev_err(&pdev->dev, "failed to req GPIO: %d\n",
-					pd->gpios[i]);
+					pd->pwr_gpios[i]);
 				goto err_probe;
 			}
 
-			err = gpio_direction_output(pd->gpios[i],
+			err = gpio_direction_output(pd->pwr_gpios[i],
 				pd->default_pwr_on ?
-				PW_ON(pd->flags[i]) : PW_OFF(pd->flags[i]));
+				PW_ON(pd->pwr_flags[i]) :
+				PW_OFF(pd->pwr_flags[i]));
 			if (err < 0) {
 				dev_err(&pdev->dev, "failed to setup GPIO: %d\n",
-					pd->gpios[i]);
+					pd->pwr_gpios[i]);
 				i++;
 				goto err_probe;
 			}
+			isc_mgr->pwr_state |= BIT(i);
 		}
 	}
-
-	spin_lock_init(&isc_mgr->spinlock);
-	atomic_set(&isc_mgr->in_use, 0);
 
 	isc_mgr->err_irq = platform_get_irq(pdev, 0);
 	if (isc_mgr->err_irq > 0) {
@@ -550,6 +656,7 @@ static int isc_mgr_probe(struct platform_device *pdev)
 			isc_mgr->err_irq = 0;
 			goto err_probe;
 		}
+		disable_irq(isc_mgr->err_irq);
 	}
 
 	isc_mgr->dev = &pdev->dev;
@@ -572,6 +679,9 @@ static int isc_mgr_probe(struct platform_device *pdev)
 		goto err_probe;
 	}
 
+	isc_mgr_debugfs_init(isc_mgr);
+	INIT_WORK(&isc_mgr->ins_work, isc_mgr_dev_ins);
+	schedule_work(&isc_mgr->ins_work);
 	return 0;
 
 err_probe:
@@ -584,6 +694,7 @@ static int isc_mgr_remove(struct platform_device *pdev)
 	struct isc_mgr_priv *isc_mgr = dev_get_drvdata(&pdev->dev);
 
 	if (isc_mgr) {
+		isc_mgr_debugfs_remove(isc_mgr);
 		isc_mgr_del(isc_mgr);
 		misc_deregister(&isc_mgr->misc_device);
 	}

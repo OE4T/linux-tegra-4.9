@@ -60,9 +60,12 @@ struct isc_mgr_client {
 
 struct isc_mgr_platform_data {
 	int bus;
-	int num_gpios;
-	u32 gpios[MAX_ISC_GPIOS];
-	u32 flags[MAX_ISC_GPIOS];
+	int num_pwr_gpios;
+	u32 pwr_gpios[MAX_ISC_GPIOS];
+	u32 pwr_flags[MAX_ISC_GPIOS];
+	int num_misc_gpios;
+	u32 misc_gpios[MAX_ISC_GPIOS];
+	u32 misc_flags[MAX_ISC_GPIOS];
 	int csi_port;
 	bool default_pwr_on;
 	char *drv_name;

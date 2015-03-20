@@ -137,7 +137,6 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 		} else
 			add_wait_cmd(&wait_cmd->ptr[i * 4], wait_id,
 					wait_value);
-		i++;
 	}
 	WARN_ON(i != num_wait_cmds);
 	sync_fence_put(sync_fence);

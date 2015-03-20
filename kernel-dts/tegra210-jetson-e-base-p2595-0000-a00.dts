@@ -98,6 +98,7 @@
 		pinctrl-4 = <&sdmmc1_drv_code_1_8V>;
 		pinctrl-5 = <&sdmmc1_default_drv_code_3_3V>;
 		nvidia,sd-device;
+		max-clk-limit = <180000000>;
 		status = "okay";
 	};
 

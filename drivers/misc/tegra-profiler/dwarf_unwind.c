@@ -573,6 +573,19 @@ dw_cfa_operand(unsigned int insn)
 	return insn & 0x3f;
 }
 
+static void
+rules_cleanup(struct regs_state *rs, int mode)
+{
+	int i, num_regs;
+
+	num_regs = (mode == DW_MODE_ARM32) ?
+		QUADD_AARCH32_REGISTERS :
+		QUADD_AARCH64_REGISTERS;
+
+	for (i = 0; i < num_regs; i++)
+		set_rule(rs, i, DW_WHERE_UNDEF, 0);
+}
+
 static int
 dwarf_read_encoded_value(struct ex_region_info *ri,
 			 void *addr,
@@ -1767,7 +1780,7 @@ unwind_frame(struct ex_region_info *ri,
 	     struct vm_area_struct *vma_sp,
 	     int is_eh)
 {
-	int i;
+	int i, num_regs;
 	long err;
 	unsigned char *insn_end;
 	unsigned long addr, return_addr, val, user_reg_size;
@@ -1789,7 +1802,7 @@ unwind_frame(struct ex_region_info *ri,
 	rs->cfa_register = -1;
 	rs_initial->cfa_register = -1;
 
-	set_rule(rs, regnum_lr(mode), DW_WHERE_UNDEF, 0);
+	rules_cleanup(rs, mode);
 
 	if (cie.initial_insn) {
 		insn_end = cie.initial_insn + cie.initial_insn_len;
@@ -1818,7 +1831,8 @@ unwind_frame(struct ex_region_info *ri,
 	if (err < 0)
 		return err;
 
-	pr_debug("pc: %#lx, lr: %#lx\n", sf->pc, sf->vregs[regnum_lr(mode)]);
+	pr_debug("pc: %#lx, exec pc: %#lx, lr: %#lx\n",
+		 pc, sf->pc, sf->vregs[regnum_lr(mode)]);
 
 	pr_debug("sp: %#lx, fp: %#lx, fp_thumb: %#lx\n",
 		 sf->vregs[regnum_sp(mode)],
@@ -1845,7 +1859,11 @@ unwind_frame(struct ex_region_info *ri,
 	pr_debug("cfa_register: %u\n", rs->cfa_register);
 	pr_debug("new cfa: %#lx\n", sf->cfa);
 
-	for (i = 0; i < QUADD_NUM_REGS; i++) {
+	num_regs = (mode == DW_MODE_ARM32) ?
+		QUADD_AARCH32_REGISTERS :
+		QUADD_AARCH64_REGISTERS;
+
+	for (i = 0; i < num_regs; i++) {
 		switch (rs->reg[i].where) {
 		case DW_WHERE_UNDEF:
 			break;
@@ -1875,8 +1893,8 @@ unwind_frame(struct ex_region_info *ri,
 			break;
 
 		default:
-			pr_err_once("[r%d] error: unsupported rule\n",
-				    rs->reg[i].where);
+			pr_err_once("[r%d] error: unsupported rule (%d)\n",
+				    i, rs->reg[i].where);
 			break;
 		}
 	}
@@ -2028,7 +2046,7 @@ quadd_get_user_cc_dwarf(struct pt_regs *regs,
 			struct task_struct *task)
 {
 	long err;
-	int i, mode, nr_prev = cc->nr;
+	int mode, nr_prev = cc->nr;
 	unsigned long ip, lr, sp, fp, fp_thumb;
 	struct vm_area_struct *vma, *vma_sp;
 	struct mm_struct *mm = task->mm;
@@ -2057,10 +2075,10 @@ quadd_get_user_cc_dwarf(struct pt_regs *regs,
 
 #ifdef CONFIG_ARM64
 		if (compat_user_mode(regs)) {
-			fp = regs->compat_usr(11);
-			fp_thumb = regs->compat_usr(7);
+			fp = regs->compat_usr(ARM32_FP);
+			fp_thumb = regs->compat_usr(ARM32_FP_THUMB);
 		} else {
-			fp = regs->regs[29];
+			fp = regs->regs[ARM64_FP];
 			fp_thumb = 0;
 		}
 #else
@@ -2070,10 +2088,8 @@ quadd_get_user_cc_dwarf(struct pt_regs *regs,
 	}
 
 #ifdef CONFIG_ARM64
-	if (compat_user_mode(regs))
-		mode = DW_MODE_ARM32;
-	else
-		mode = DW_MODE_ARM64;
+	mode = compat_user_mode(regs) ?
+		DW_MODE_ARM32 : DW_MODE_ARM64;
 #else
 	mode = DW_MODE_ARM32;
 #endif
@@ -2096,9 +2112,6 @@ quadd_get_user_cc_dwarf(struct pt_regs *regs,
 
 	sf.mode = mode;
 	sf.cfa = 0;
-
-	for (i = 0; i < QUADD_NUM_REGS; i++)
-		set_rule(&sf.rs, i, DW_WHERE_UNDEF, 0);
 
 	vma = find_vma(mm, ip);
 	if (!vma)

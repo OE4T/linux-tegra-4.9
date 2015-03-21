@@ -27,7 +27,7 @@ struct tegra_hv_i2c_comm_chan;
 
 int hv_i2c_transfer(struct tegra_hv_i2c_comm_chan *comm_chan, int cont_id,
 		int addr, int read, uint8_t *buf, size_t len, int *err,
-		int seq_no, bool more_msgs);
+		int seq_no, uint32_t flags);
 int hv_i2c_get_max_payload(struct tegra_hv_i2c_comm_chan *comm_chan,
 		int cont_id, uint32_t *max_payload, int *err);
 int hv_i2c_comm_chan_cleanup(struct tegra_hv_i2c_comm_chan *comm_chan,
@@ -57,7 +57,13 @@ enum i2c_rx_state_t {
 	I2C_RX_PENDING_CLEANUP,
 };
 
-#define HV_I2C_FLAGS_REPEAT_START	(1<<0)
+#define HV_I2C_FLAGS_HIGHSPEED_MODE	(1<<22)
+#define HV_I2C_FLAGS_CONT_ON_NAK	(1<<21)
+#define HV_I2C_FLAGS_SEND_START_BYTE	(1<<20)
+#define HV_I2C_FLAGS_10BIT_ADDR		(1<<18)
+#define HV_I2C_FLAGS_IE_ENABLE		(1<<17)
+#define HV_I2C_FLAGS_REPEAT_START	(1<<16)
+#define HV_I2C_FLAGS_CONTINUE_XFER	(1<<15)
 
 struct i2c_ivc_msg_common {
 	uint32_t s_marker;
@@ -71,7 +77,6 @@ struct i2c_ivc_msg_common {
 struct i2c_ivc_msg_tx_rx_hdr {
 	int32_t seq_no;
 	uint32_t slave_address;
-	uint32_t slave_reg;
 	uint32_t buf_len;
 	uint32_t flags;
 };
@@ -107,8 +112,6 @@ struct i2c_ivc_msg {
 					(_msg_ptr->body.m.fixed.seq_no)
 #define i2c_ivc_message_slave_addr(_msg_ptr)	\
 					(_msg_ptr->body.m.fixed.slave_address)
-#define i2c_ivc_message_slave_reg(_msg_ptr)	\
-					(_msg_ptr->body.m.fixed.slave_reg)
 #define i2c_ivc_message_buf_len(_msg_ptr)	\
 					(_msg_ptr->body.m.fixed.buf_len)
 #define i2c_ivc_message_flags(_msg_ptr)	(_msg_ptr->body.m.fixed.flags)

@@ -163,14 +163,14 @@ int hv_i2c_comm_chan_cleanup(struct tegra_hv_i2c_comm_chan *comm_chan,
  */
 int hv_i2c_transfer(struct tegra_hv_i2c_comm_chan *comm_chan, int cont_id,
 		int addr, int read, uint8_t *buf, size_t len, int *err,
-		int seq_no, bool more_msgs)
+		int seq_no, uint32_t flags)
 {
 	/* Using skbs for fast allocation  and deallocation */
 	struct sk_buff *tx_msg_skb = NULL;
 	struct i2c_ivc_msg *tx_msg = NULL;
 	int rv;
 	int msg_len = I2C_IVC_COMMON_HEADER_LEN
-		      + sizeof(struct i2c_ivc_msg_tx_rx_hdr) + len - 1;
+		      + sizeof(struct i2c_ivc_msg_tx_rx_hdr) + len;
 	struct device *dev = comm_chan->dev;
 
 	tx_msg_skb = alloc_skb(msg_len, GFP_KERNEL);
@@ -186,18 +186,13 @@ int hv_i2c_transfer(struct tegra_hv_i2c_comm_chan *comm_chan, int cont_id,
 		i2c_ivc_msg_type(tx_msg) = I2C_READ;
 	else {
 		i2c_ivc_msg_type(tx_msg) = I2C_WRITE;
-		memcpy(&i2c_ivc_message_buffer(tx_msg), &(buf[1]), len-1);
-		len = len - 1;
+		memcpy(&i2c_ivc_message_buffer(tx_msg), &(buf[0]), len);
 	}
 
 	i2c_ivc_message_seq_nr(tx_msg) = seq_no;
 	i2c_ivc_message_slave_addr(tx_msg) = addr;
-	i2c_ivc_message_slave_reg(tx_msg) = buf[0];
 	i2c_ivc_message_buf_len(tx_msg) = len;
-	if (more_msgs)
-		i2c_ivc_message_flags(tx_msg) = HV_I2C_FLAGS_REPEAT_START;
-	else
-		i2c_ivc_message_flags(tx_msg) = 0;
+	i2c_ivc_message_flags(tx_msg) = flags;
 
 	rv = _hv_i2c_send_msg(dev, comm_chan, tx_msg, buf, err, len, msg_len);
 	kfree_skb(tx_msg_skb);

@@ -68,11 +68,7 @@ struct gpfifo_desc {
 };
 
 struct patch_desc {
-	struct page **pages;
-	u64 iova;
-	size_t size;
-	void *cpu_va;
-	u64 gpu_va;
+	struct mem_desc mem;
 	u32 data_count;
 };
 

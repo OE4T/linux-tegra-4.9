@@ -321,18 +321,20 @@ static int vgpu_gr_alloc_channel_patch_ctx(struct gk20a *g,
 
 	gk20a_dbg_fn("");
 
-	patch_ctx->size = 128 * sizeof(u32);
-	patch_ctx->gpu_va = gk20a_vm_alloc_va(ch_vm, patch_ctx->size, 0);
-	if (!patch_ctx->gpu_va)
+	patch_ctx->mem.size = 128 * sizeof(u32);
+	patch_ctx->mem.gpu_va = gk20a_vm_alloc_va(ch_vm,
+						  patch_ctx->mem.size, 0);
+	if (!patch_ctx->mem.gpu_va)
 		return -ENOMEM;
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_ALLOC_GR_PATCH_CTX;
 	msg.handle = platform->virt_handle;
 	p->handle = c->virt_ctx;
-	p->patch_ctx_va = patch_ctx->gpu_va;
+	p->patch_ctx_va = patch_ctx->mem.gpu_va;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	if (err || msg.ret) {
-		gk20a_vm_free_va(ch_vm, patch_ctx->gpu_va, patch_ctx->size, 0);
+		gk20a_vm_free_va(ch_vm, patch_ctx->mem.gpu_va,
+				 patch_ctx->mem.size, 0);
 		err = -ENOMEM;
 	}
 
@@ -347,7 +349,7 @@ static void vgpu_gr_free_channel_patch_ctx(struct channel_gk20a *c)
 
 	gk20a_dbg_fn("");
 
-	if (patch_ctx->gpu_va) {
+	if (patch_ctx->mem.gpu_va) {
 		struct tegra_vgpu_cmd_msg msg;
 		struct tegra_vgpu_gr_ctx_params *p = &msg.params.gr_ctx;
 		int err;
@@ -358,8 +360,9 @@ static void vgpu_gr_free_channel_patch_ctx(struct channel_gk20a *c)
 		err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 		WARN_ON(err || msg.ret);
 
-		gk20a_vm_free_va(ch_vm, patch_ctx->gpu_va, patch_ctx->size, 0);
-		patch_ctx->gpu_va = 0;
+		gk20a_vm_free_va(ch_vm, patch_ctx->mem.gpu_va,
+				 patch_ctx->mem.size, 0);
+		patch_ctx->mem.gpu_va = 0;
 	}
 }
 
@@ -438,7 +441,7 @@ static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 	}
 
 	/* allocate patch buffer */
-	if (ch_ctx->patch_ctx.pages == NULL) {
+	if (ch_ctx->patch_ctx.mem.pages == NULL) {
 		err = vgpu_gr_alloc_channel_patch_ctx(g, c);
 		if (err) {
 			gk20a_err(dev_from_gk20a(g),

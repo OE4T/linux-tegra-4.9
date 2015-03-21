@@ -1616,6 +1616,7 @@ void gk20a_gmmu_free_attr(struct gk20a *g, enum dma_attr attr,
 		}
 
 		mem->cpu_va = NULL;
+		mem->pages = NULL;
 	}
 
 	if (mem->sgt)

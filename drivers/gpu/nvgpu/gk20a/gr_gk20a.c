@@ -597,16 +597,16 @@ int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
 					  struct channel_ctx_gk20a *ch_ctx)
 {
 	/* being defensive still... */
-	if (WARN_ON(ch_ctx->patch_ctx.cpu_va)) {
+	if (WARN_ON(ch_ctx->patch_ctx.mem.cpu_va)) {
 		gk20a_err(dev_from_gk20a(g), "nested ctx patch begin?");
 		return -EBUSY;
 	}
 
-	ch_ctx->patch_ctx.cpu_va = vmap(ch_ctx->patch_ctx.pages,
-			PAGE_ALIGN(ch_ctx->patch_ctx.size) >> PAGE_SHIFT,
+	ch_ctx->patch_ctx.mem.cpu_va = vmap(ch_ctx->patch_ctx.mem.pages,
+			PAGE_ALIGN(ch_ctx->patch_ctx.mem.size) >> PAGE_SHIFT,
 			0, pgprot_writecombine(PAGE_KERNEL));
 
-	if (!ch_ctx->patch_ctx.cpu_va)
+	if (!ch_ctx->patch_ctx.mem.cpu_va)
 		return -ENOMEM;
 
 	return 0;
@@ -616,13 +616,13 @@ int gr_gk20a_ctx_patch_write_end(struct gk20a *g,
 					struct channel_ctx_gk20a *ch_ctx)
 {
 	/* being defensive still... */
-	if (!ch_ctx->patch_ctx.cpu_va) {
+	if (!ch_ctx->patch_ctx.mem.cpu_va) {
 		gk20a_err(dev_from_gk20a(g), "dangling ctx patch end?");
 		return -EINVAL;
 	}
 
-	vunmap(ch_ctx->patch_ctx.cpu_va);
-	ch_ctx->patch_ctx.cpu_va = NULL;
+	vunmap(ch_ctx->patch_ctx.mem.cpu_va);
+	ch_ctx->patch_ctx.mem.cpu_va = NULL;
 	return 0;
 }
 
@@ -642,7 +642,7 @@ int gr_gk20a_ctx_patch_write(struct gk20a *g,
 		/* we added an optimization prolog, epilog
 		 * to get rid of unnecessary maps and l2 invals.
 		 * but be defensive still... */
-		if (!ch_ctx->patch_ctx.cpu_va) {
+		if (!ch_ctx->patch_ctx.mem.cpu_va) {
 			int err;
 			gk20a_err(dev_from_gk20a(g),
 				   "per-write ctx patch begin?");
@@ -654,7 +654,7 @@ int gr_gk20a_ctx_patch_write(struct gk20a *g,
 		} else
 			mapped_here = false;
 
-		patch_ptr = ch_ctx->patch_ctx.cpu_va;
+		patch_ptr = ch_ctx->patch_ctx.mem.cpu_va;
 		patch_slot = ch_ctx->patch_ctx.data_count * 2;
 
 		gk20a_mem_wr32(patch_ptr, patch_slot++, addr);
@@ -1622,8 +1622,8 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_num_save_ops_o(), 0, 0);
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_num_restore_ops_o(), 0, 0);
 
-	virt_addr_lo = u64_lo32(ch_ctx->patch_ctx.gpu_va);
-	virt_addr_hi = u64_hi32(ch_ctx->patch_ctx.gpu_va);
+	virt_addr_lo = u64_lo32(ch_ctx->patch_ctx.mem.gpu_va);
+	virt_addr_hi = u64_hi32(ch_ctx->patch_ctx.mem.gpu_va);
 
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_count_o(), 0,
 		 ch_ctx->patch_ctx.data_count);
@@ -2568,82 +2568,33 @@ static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
 				struct channel_gk20a *c)
 {
 	struct patch_desc *patch_ctx = &c->ch_ctx.patch_ctx;
-	struct device *d = dev_from_gk20a(g);
 	struct vm_gk20a *ch_vm = c->vm;
-	DEFINE_DMA_ATTRS(attrs);
-	struct sg_table *sgt;
 	int err = 0;
-	dma_addr_t iova;
 
 	gk20a_dbg_fn("");
 
-	patch_ctx->size = 128 * sizeof(u32);
-	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
-	patch_ctx->pages = dma_alloc_attrs(d, patch_ctx->size,
-				&iova, GFP_KERNEL,
-				&attrs);
-	if (!patch_ctx->pages)
-		return -ENOMEM;
-
-	patch_ctx->iova = iova;
-	err = gk20a_get_sgtable_from_pages(d, &sgt, patch_ctx->pages,
-			patch_ctx->iova, patch_ctx->size);
+	err = gk20a_gmmu_alloc_map_attr(ch_vm, DMA_ATTR_NO_KERNEL_MAPPING,
+					128 * sizeof(u32), &patch_ctx->mem);
 	if (err)
-		goto err_free;
-
-	patch_ctx->gpu_va = gk20a_gmmu_map(ch_vm, &sgt, patch_ctx->size,
-					0, gk20a_mem_flag_none);
-	if (!patch_ctx->gpu_va)
-		goto err_free_sgtable;
-
-	gk20a_free_sgtable(&sgt);
+		return err;
 
 	gk20a_dbg_fn("done");
 	return 0;
-
- err_free_sgtable:
-	gk20a_free_sgtable(&sgt);
- err_free:
-	dma_free_attrs(d, patch_ctx->size,
-		patch_ctx->pages, patch_ctx->iova, &attrs);
-	patch_ctx->pages = NULL;
-	patch_ctx->iova = 0;
-	gk20a_err(dev_from_gk20a(g), "fail");
-	return err;
-}
-
-static void gr_gk20a_unmap_channel_patch_ctx(struct channel_gk20a *c)
-{
-	struct patch_desc *patch_ctx = &c->ch_ctx.patch_ctx;
-	struct vm_gk20a *ch_vm = c->vm;
-
-	gk20a_dbg_fn("");
-
-	if (patch_ctx->gpu_va)
-		gk20a_gmmu_unmap(ch_vm, patch_ctx->gpu_va,
-			patch_ctx->size, gk20a_mem_flag_none);
-	patch_ctx->gpu_va = 0;
-	patch_ctx->data_count = 0;
 }
 
 static void gr_gk20a_free_channel_patch_ctx(struct channel_gk20a *c)
 {
 	struct patch_desc *patch_ctx = &c->ch_ctx.patch_ctx;
 	struct gk20a *g = c->g;
-	struct device *d = dev_from_gk20a(g);
-	DEFINE_DMA_ATTRS(attrs);
 
 	gk20a_dbg_fn("");
 
-	gr_gk20a_unmap_channel_patch_ctx(c);
+	if (patch_ctx->mem.gpu_va)
+		gk20a_gmmu_unmap(c->vm, patch_ctx->mem.gpu_va,
+				 patch_ctx->mem.size, gk20a_mem_flag_none);
 
-	if (patch_ctx->pages) {
-		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
-		dma_free_attrs(d, patch_ctx->size,
-			patch_ctx->pages, patch_ctx->iova, &attrs);
-		patch_ctx->pages = NULL;
-		patch_ctx->iova = 0;
-	}
+	gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING, &patch_ctx->mem);
+	patch_ctx->data_count = 0;
 }
 
 void gk20a_free_channel_ctx(struct channel_gk20a *c)
@@ -2757,7 +2708,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 	}
 
 	/* allocate patch buffer */
-	if (ch_ctx->patch_ctx.pages == NULL) {
+	if (ch_ctx->patch_ctx.mem.sgt == NULL) {
 		err = gr_gk20a_alloc_channel_patch_ctx(g, c);
 		if (err) {
 			gk20a_err(dev_from_gk20a(g),
@@ -2883,7 +2834,7 @@ int gk20a_free_obj_ctx(struct channel_gk20a  *c,
 		gk20a_disable_channel(c,
 			!c->has_timedout,
 			timeout);
-		gr_gk20a_unmap_channel_patch_ctx(c);
+		gr_gk20a_free_channel_patch_ctx(c);
 	}
 
 	return 0;
@@ -6081,8 +6032,8 @@ static int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
 				gr_gk20a_ctx_patch_write(g, ch_ctx,
 							 addr, data, true);
 
-				vaddr_lo = u64_lo32(ch_ctx->patch_ctx.gpu_va);
-				vaddr_hi = u64_hi32(ch_ctx->patch_ctx.gpu_va);
+				vaddr_lo = u64_lo32(ch_ctx->patch_ctx.mem.gpu_va);
+				vaddr_hi = u64_hi32(ch_ctx->patch_ctx.mem.gpu_va);
 
 				gk20a_mem_wr32(context +
 					 ctxsw_prog_main_image_patch_count_o(),

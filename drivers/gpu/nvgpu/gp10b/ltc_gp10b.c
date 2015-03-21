@@ -72,10 +72,8 @@ static int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	gk20a_dbg_fn("");
 
-	if (max_comptag_lines == 0) {
-		gr->compbit_store.size = 0;
+	if (max_comptag_lines == 0)
 		return 0;
-	}
 
 	if (max_comptag_lines > hw_max_comptag_lines)
 		max_comptag_lines = hw_max_comptag_lines;

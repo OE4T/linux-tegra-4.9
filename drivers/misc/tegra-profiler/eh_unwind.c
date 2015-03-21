@@ -103,14 +103,14 @@ validate_mmap_addr(struct quadd_mmap_area *mmap,
 	if (addr & 0x03) {
 		pr_err_once("%s: error: unaligned address: %#lx, data: %#lx-%#lx, vma: %#lx-%#lx\n",
 			    __func__, addr, data, data + size,
-		       vma->vm_start, vma->vm_end);
+			    vma->vm_start, vma->vm_end);
 		return 0;
 	}
 
 	if (addr < data || addr >= data + (size - nbytes)) {
 		pr_err_once("%s: error: addr: %#lx, data: %#lx-%#lx, vma: %#lx-%#lx\n",
 			    __func__, addr, data, data + size,
-		       vma->vm_start, vma->vm_end);
+			    vma->vm_start, vma->vm_end);
 		return 0;
 	}
 
@@ -155,8 +155,10 @@ ex_addr_to_mmap_addr(unsigned long addr,
 	struct extab_info *ti;
 
 	ti = &ri->ex_sec[sec_type];
-	offset = addr - ti->addr;
+	if (unlikely(!ti->length))
+		return 0;
 
+	offset = addr - ti->addr;
 	return ti->mmap_offset + offset + (unsigned long)ri->mmap->data;
 }
 
@@ -169,8 +171,10 @@ mmap_addr_to_ex_addr(unsigned long addr,
 	struct extab_info *ti;
 
 	ti = &ri->ex_sec[sec_type];
-	offset = addr - ti->mmap_offset - (unsigned long)ri->mmap->data;
+	if (unlikely(!ti->length))
+		return 0;
 
+	offset = addr - ti->mmap_offset - (unsigned long)ri->mmap->data;
 	return ti->addr + offset;
 }
 
@@ -200,6 +204,9 @@ mmap_prel31_to_addr(const u32 *ptr, struct ex_region_info *ri,
 	offset = (((s32)value) << 1) >> 1;
 
 	addr = mmap_addr_to_ex_addr((unsigned long)ptr, ri, src_type);
+	if (unlikely(!addr))
+		return 0;
+
 	addr += offset;
 	addr_res = addr;
 
@@ -361,16 +368,14 @@ static long
 get_extabs_ehabi(unsigned long key, struct ex_region_info *ri)
 {
 	long err;
-	struct extab_info *ti_extab, *ti_exidx;
+	struct extab_info *ti_exidx;
 
 	err = search_ex_region(key, ri);
 	if (err < 0)
 		return err;
 
-	ti_extab = &ri->ex_sec[QUADD_SEC_TYPE_EXTAB];
 	ti_exidx = &ri->ex_sec[QUADD_SEC_TYPE_EXIDX];
-
-	return (ti_extab->length && ti_exidx->length) ? 0 : -ENOENT;
+	return ti_exidx->length ? 0 : -ENOENT;
 }
 
 long
@@ -664,13 +669,13 @@ unwind_find_idx(struct ex_region_info *ri, u32 addr, unsigned long *lowaddr)
 	value = (u32)mmap_prel31_to_addr(&start->addr_offset, ri,
 					 QUADD_SEC_TYPE_EXIDX,
 					 QUADD_SEC_TYPE_EXTAB, 0);
-	if (addr < value)
+	if (!value || addr < value)
 		return NULL;
 
 	value = (u32)mmap_prel31_to_addr(&stop->addr_offset, ri,
 					 QUADD_SEC_TYPE_EXIDX,
 					 QUADD_SEC_TYPE_EXTAB, 0);
-	if (addr >= value)
+	if (!value || addr >= value)
 		return NULL;
 
 	while (start < stop - 1) {
@@ -679,6 +684,8 @@ unwind_find_idx(struct ex_region_info *ri, u32 addr, unsigned long *lowaddr)
 		value = (u32)mmap_prel31_to_addr(&mid->addr_offset, ri,
 						 QUADD_SEC_TYPE_EXIDX,
 						 QUADD_SEC_TYPE_EXTAB, 0);
+		if (!value)
+			return NULL;
 
 		if (addr < value)
 			stop = mid;
@@ -1018,7 +1025,7 @@ unwind_frame(struct quadd_unw_methods um,
 						    QUADD_SEC_TYPE_EXIDX,
 						    QUADD_SEC_TYPE_EXTAB, 1);
 		if (!ctrl.insn)
-			return -QUADD_URC_EACCESS;
+			return -QUADD_URC_TBL_LINK_INCORRECT;
 	} else if ((val & 0xff000000) == 0x80000000) {
 		/* only personality routine 0 supported in the index */
 		ctrl.insn = &idx->insn;

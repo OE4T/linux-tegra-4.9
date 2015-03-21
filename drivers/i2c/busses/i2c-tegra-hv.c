@@ -71,6 +71,7 @@ static int tegra_hv_i2c_xfer_msg(struct tegra_hv_i2c_dev *i2c_dev,
 	int msg_err;
 	int msg_read;
 	int rv;
+	uint32_t flags = 0;
 
 	if (msg->len == 0)
 		return -EINVAL;
@@ -82,8 +83,14 @@ static int tegra_hv_i2c_xfer_msg(struct tegra_hv_i2c_dev *i2c_dev,
 	msg_read = (msg->flags & I2C_M_RD);
 	INIT_COMPLETION(i2c_dev->msg_complete);
 
+	if (more_msgs)
+		flags |= HV_I2C_FLAGS_REPEAT_START;
+
+	if (msg->flags & I2C_M_TEN)
+		flags |= HV_I2C_FLAGS_10BIT_ADDR;
+
 	ret = hv_i2c_transfer(i2c_dev->comm_chan, i2c_dev->cont_id, msg->addr,
-			msg_read, msg->buf, msg->len, &msg_err, sno, more_msgs);
+			msg_read, msg->buf, msg->len, &msg_err, sno, flags);
 	if (ret < 0) {
 		dev_err(i2c_dev->dev, "unable to send message (%d)\n", ret);
 		return ret;
@@ -145,7 +152,7 @@ static int tegra_hv_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 
 static u32 tegra_hv_i2c_func(struct i2c_adapter *adap)
 {
-	u32 ret = I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL;
+	u32 ret = I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL | I2C_FUNC_10BIT_ADDR;
 
 	return ret;
 }

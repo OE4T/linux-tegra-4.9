@@ -1532,16 +1532,30 @@ int gk20a_gmmu_alloc_attr(struct gk20a *g, enum dma_attr attr, size_t size, stru
 	if (attr) {
 		DEFINE_DMA_ATTRS(attrs);
 		dma_set_attr(attr, &attrs);
-		mem->cpu_va =
-			dma_alloc_attrs(d, size, &iova, GFP_KERNEL, &attrs);
+		if (attr == DMA_ATTR_NO_KERNEL_MAPPING) {
+			mem->pages = dma_alloc_attrs(d,
+					size, &iova, GFP_KERNEL, &attrs);
+			if (!mem->pages)
+				return -ENOMEM;
+		} else {
+			mem->cpu_va = dma_alloc_attrs(d,
+					size, &iova, GFP_KERNEL, &attrs);
+			if (!mem->cpu_va)
+				return -ENOMEM;
+		}
 	} else {
 		mem->cpu_va = dma_alloc_coherent(d, size, &iova, GFP_KERNEL);
+		if (!mem->cpu_va)
+			return -ENOMEM;
 	}
 
-	if (!mem->cpu_va)
-		return -ENOMEM;
-
-	err = gk20a_get_sgtable(d, &mem->sgt, mem->cpu_va, iova, size);
+	if (attr == DMA_ATTR_NO_KERNEL_MAPPING)
+		err = gk20a_get_sgtable_from_pages(d, &mem->sgt, mem->pages,
+						   iova, size);
+	else {
+		err = gk20a_get_sgtable(d, &mem->sgt, mem->cpu_va, iova, size);
+		memset(mem->cpu_va, 0, size);
+	}
 	if (err)
 		goto fail_free;
 
@@ -1559,17 +1573,38 @@ fail_free:
 	return err;
 }
 
-void gk20a_gmmu_free(struct gk20a *g, struct mem_desc *mem)
+void gk20a_gmmu_free_attr(struct gk20a *g, enum dma_attr attr,
+			  struct mem_desc *mem)
 {
 	struct device *d = dev_from_gk20a(g);
 
-	if (mem->cpu_va)
-		dma_free_coherent(d, mem->size, mem->cpu_va,
+	if (mem->cpu_va) {
+		if (attr) {
+			DEFINE_DMA_ATTRS(attrs);
+			dma_set_attr(attr, &attrs);
+			if (attr == DMA_ATTR_NO_KERNEL_MAPPING)
+				dma_free_attrs(d, mem->size, mem->pages,
+					       sg_dma_address(mem->sgt->sgl),
+					       &attrs);
+			else
+				dma_free_attrs(d, mem->size, mem->cpu_va,
+					       sg_dma_address(mem->sgt->sgl),
+					       &attrs);
+		} else {
+			dma_free_coherent(d, mem->size, mem->cpu_va,
 				  sg_dma_address(mem->sgt->sgl));
-	mem->cpu_va = NULL;
+		}
+
+		mem->cpu_va = NULL;
+	}
 
 	if (mem->sgt)
 		gk20a_free_sgtable(&mem->sgt);
+}
+
+void gk20a_gmmu_free(struct gk20a *g, struct mem_desc *mem)
+{
+	return gk20a_gmmu_free_attr(g, 0, mem);
 }
 
 int gk20a_gmmu_alloc_map(struct vm_gk20a *vm, size_t size, struct mem_desc *mem)

@@ -46,6 +46,7 @@
 
 struct mem_desc {
 	void *cpu_va;
+	struct page **pages;
 	struct sg_table *sgt;
 	size_t size;
 	u64 gpu_va;
@@ -414,6 +415,10 @@ int gk20a_gmmu_alloc_attr(struct gk20a *g,
 		struct mem_desc *mem);
 
 void gk20a_gmmu_free(struct gk20a *g,
+		struct mem_desc *mem);
+
+void gk20a_gmmu_free_attr(struct gk20a *g,
+		enum dma_attr attr,
 		struct mem_desc *mem);
 
 static inline phys_addr_t gk20a_mem_phys(struct mem_desc *mem)

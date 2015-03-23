@@ -491,27 +491,42 @@ static long ms_sid_is_cl34000094; /* support for obsolete cl34000094 */
 
 static void __mc_override_sid(int sid, int oid)
 {
+	const char *name = sid_override_reg[oid].name;
+	int offs = sid_override_reg[oid].offs;
 	volatile void __iomem *addr;
 	u32 val;
 
 	BUG_ON(oid >= MAX_OID);
 
 	if (ms_sid_is_cl34000094) {
-		addr = mc_sid_base + sid_override_reg[oid].offs / 2;
+		addr = mc_sid_base + offs / 2;
 		val = 0x80010000 | sid;
 		writel_relaxed(val, addr);
 	} else {
-		addr = mc_sid_base + sid_override_reg[oid].offs;
+		addr = mc_sid_base + offs;
 		addr += sizeof(u32); /* MC_SID_STREAMID_SECURITY_CONFIG_* */
+		val = readl_relaxed(addr);
+
+		if (val & SCEW_STREAMID_OVERRIDE) {
+			/* OK */;
+		} else if (val & SCEW_STREAMID_WRITE_ACCESS_DISABLED) {
+			pr_info("Cann't OVERRIDE SID for MC_SID_STRAMID_SECURITY_CONFIG_%s(%x) %x\n",
+				name, offs, val);
+			return;
+		}
+
+		if ((val & SCEW_NS) == 0)
+			pr_info("SECURE for MC_SID_STRAMID_SECURITY_CONFIG_%s(%x) %x\n",
+				name, offs, val);
+
 		val = SCEW_STREAMID_OVERRIDE | SCEW_NS;
 		writel_relaxed(val, addr);
 
-		addr = mc_sid_base + sid_override_reg[oid].offs;
+		addr = mc_sid_base + offs;
 		writel_relaxed(sid, addr);
 	}
 
-	pr_debug("override sid=%d oid=%d at offset=%x\n",
-		 sid, oid, sid_override_reg[oid].offs);
+	pr_debug("override sid=%d oid=%d at offset=%x\n", sid, oid, offs);
 }
 
 void platform_override_streamid(int sid)

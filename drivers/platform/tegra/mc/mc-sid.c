@@ -27,7 +27,7 @@
 
 #include <dt-bindings/memory/tegra-swgroup.h>
 
-#define SCEW_STREAMID_WRITE_ACCESS	BIT(16)
+#define SCEW_STREAMID_WRITE_ACCESS_DISABLED	BIT(16)
 #define SCEW_STREAMID_OVERRIDE		BIT(8)
 #define SCEW_NS				BIT(0)
 
@@ -110,81 +110,92 @@ enum override_id {
 	MAX_OID,
 };
 
-/* Generated from sim.t186/linsim/include_chip/collector/t186/armc_sid.h */
-static int sid_override_offset[] = {
-	[PTCR]		= 0x000,
-	[AFIR]		= 0x070,
-	[HDAR]		= 0x0a8,
-	[HOST1XDMAR]	= 0x0b0,
-	[NVENCSRD]	= 0x0e0,
-	[SATAR]		= 0x0f8,
-	[MPCORER]	= 0x138,
-	[NVENCSWR]	= 0x158,
-	[AFIW]		= 0x188,
-	[HDAW]		= 0x1a8,
-	[MPCOREW]	= 0x1c8,
-	[SATAW]		= 0x1e8,
-	[ISPRA]		= 0x220,
-	[ISPWA]		= 0x230,
-	[ISPWB]		= 0x238,
-	[XUSB_HOSTR]	= 0x250,
-	[XUSB_HOSTW]	= 0x258,
-	[XUSB_DEVR]	= 0x260,
-	[XUSB_DEVW]	= 0x268,
-	[TSECSRD]	= 0x2a0,
-	[TSECSWR]	= 0x2a8,
-	[GPUSRD]	= 0x2c0,
-	[GPUSWR]	= 0x2c8,
-	[SDMMCRA]	= 0x300,
-	[SDMMCRAA]	= 0x308,
-	[SDMMCR]	= 0x310,
-	[SDMMCRAB]	= 0x318,
-	[SDMMCWA]	= 0x320,
-	[SDMMCWAA]	= 0x328,
-	[SDMMCW]	= 0x330,
-	[SDMMCWAB]	= 0x338,
-	[VICSRD]	= 0x360,
-	[VICSWR]	= 0x368,
-	[VIW]		= 0x390,
-	[NVDECSRD]	= 0x3c0,
-	[NVDECSWR]	= 0x3c8,
-	[APER]		= 0x3d0,
-	[APEW]		= 0x3d8,
-	[NVJPGSRD]	= 0x3f0,
-	[NVJPGSWR]	= 0x3f8,
-	[SESRD]		= 0x400,
-	[SESWR]		= 0x408,
-	[ETRR]		= 0x420,
-	[ETRW]		= 0x428,
-	[TSECSRDB]	= 0x430,
-	[TSECSWRB]	= 0x438,
-	[GPUSRD2]	= 0x440,
-	[GPUSWR2]	= 0x448,
-	[AXISR]		= 0x460,
-	[AXISW]		= 0x468,
-	[EQOSR]		= 0x470,
-	[EQOSW]		= 0x478,
-	[UFSHCR]	= 0x480,
-	[UFSHCW]	= 0x488,
-	[NVDISPLAYR]	= 0x490,
-	[BPMPR]		= 0x498,
-	[BPMPW]		= 0x4a0,
-	[BPMPDMAR]	= 0x4a8,
-	[BPMPDMAW]	= 0x4b0,
-	[AONR]		= 0x4b8,
-	[AONW]		= 0x4c0,
-	[AONDMAR]	= 0x4c8,
-	[AONDMAW]	= 0x4d0,
-	[SCER]		= 0x4d8,
-	[SCEW]		= 0x4e0,
-	[SCEDMAR]	= 0x4e8,
-	[SCEDMAW]	= 0x4f0,
-	[APEDMAR]	= 0x4f8,
-	[APEDMAW]	= 0x500,
-	[NVDISPLAYR1]	= 0x508,
-	[VICSRD1]	= 0x510,
-	[NVDECSRD1]	= 0x518,
+struct sid_override_reg {
+	const char *name;
+	int offs;
 };
+
+#define DEFREG(__name, __offset)		\
+	[__name] = {				\
+		.name = __stringify(__name),	\
+		.offs = __offset,		\
+	}
+
+static struct sid_override_reg sid_override_reg[] = {
+	DEFREG(PTCR, 0x000),
+	DEFREG(AFIR, 0x070),
+	DEFREG(HDAR, 0x0a8),
+	DEFREG(HOST1XDMAR, 0x0b0),
+	DEFREG(NVENCSRD, 0x0e0),
+	DEFREG(SATAR, 0x0f8),
+	DEFREG(MPCORER, 0x138),
+	DEFREG(NVENCSWR, 0x158),
+	DEFREG(AFIW, 0x188),
+	DEFREG(HDAW, 0x1a8),
+	DEFREG(MPCOREW, 0x1c8),
+	DEFREG(SATAW, 0x1e8),
+	DEFREG(ISPRA, 0x220),
+	DEFREG(ISPWA, 0x230),
+	DEFREG(ISPWB, 0x238),
+	DEFREG(XUSB_HOSTR, 0x250),
+	DEFREG(XUSB_HOSTW, 0x258),
+	DEFREG(XUSB_DEVR, 0x260),
+	DEFREG(XUSB_DEVW, 0x268),
+	DEFREG(TSECSRD, 0x2a0),
+	DEFREG(TSECSWR, 0x2a8),
+	DEFREG(GPUSRD, 0x2c0),
+	DEFREG(GPUSWR, 0x2c8),
+	DEFREG(SDMMCRA, 0x300),
+	DEFREG(SDMMCRAA, 0x308),
+	DEFREG(SDMMCR, 0x310),
+	DEFREG(SDMMCRAB, 0x318),
+	DEFREG(SDMMCWA, 0x320),
+	DEFREG(SDMMCWAA, 0x328),
+	DEFREG(SDMMCW, 0x330),
+	DEFREG(SDMMCWAB, 0x338),
+	DEFREG(VICSRD, 0x360),
+	DEFREG(VICSWR, 0x368),
+	DEFREG(VIW, 0x390),
+	DEFREG(NVDECSRD, 0x3c0),
+	DEFREG(NVDECSWR, 0x3c8),
+	DEFREG(APER, 0x3d0),
+	DEFREG(APEW, 0x3d8),
+	DEFREG(NVJPGSRD, 0x3f0),
+	DEFREG(NVJPGSWR, 0x3f8),
+	DEFREG(SESRD, 0x400),
+	DEFREG(SESWR, 0x408),
+	DEFREG(ETRR, 0x420),
+	DEFREG(ETRW, 0x428),
+	DEFREG(TSECSRDB, 0x430),
+	DEFREG(TSECSWRB, 0x438),
+	DEFREG(GPUSRD2, 0x440),
+	DEFREG(GPUSWR2, 0x448),
+	DEFREG(AXISR, 0x460),
+	DEFREG(AXISW, 0x468),
+	DEFREG(EQOSR, 0x470),
+	DEFREG(EQOSW, 0x478),
+	DEFREG(UFSHCR, 0x480),
+	DEFREG(UFSHCW, 0x488),
+	DEFREG(NVDISPLAYR, 0x490),
+	DEFREG(BPMPR, 0x498),
+	DEFREG(BPMPW, 0x4a0),
+	DEFREG(BPMPDMAR, 0x4a8),
+	DEFREG(BPMPDMAW, 0x4b0),
+	DEFREG(AONR, 0x4b8),
+	DEFREG(AONW, 0x4c0),
+	DEFREG(AONDMAR, 0x4c8),
+	DEFREG(AONDMAW, 0x4d0),
+	DEFREG(SCER, 0x4d8),
+	DEFREG(SCEW, 0x4e0),
+	DEFREG(SCEDMAR, 0x4e8),
+	DEFREG(SCEDMAW, 0x4f0),
+	DEFREG(APEDMAR, 0x4f8),
+	DEFREG(APEDMAW, 0x500),
+	DEFREG(NVDISPLAYR1, 0x508),
+	DEFREG(VICSRD1, 0x510),
+	DEFREG(NVDECSRD1, 0x518),
+};
+#undef DEFREG
 
 #define MAX_OIDS_IN_SID 5
 struct sid_to_oids
@@ -486,21 +497,21 @@ static void __mc_override_sid(int sid, int oid)
 	BUG_ON(oid >= MAX_OID);
 
 	if (ms_sid_is_cl34000094) {
-		addr = mc_sid_base + sid_override_offset[oid] / 2;
+		addr = mc_sid_base + sid_override_reg[oid].offs / 2;
 		val = 0x80010000 | sid;
 		writel_relaxed(val, addr);
 	} else {
-		addr = mc_sid_base + sid_override_offset[oid];
+		addr = mc_sid_base + sid_override_reg[oid].offs;
 		addr += sizeof(u32); /* MC_SID_STREAMID_SECURITY_CONFIG_* */
 		val = SCEW_STREAMID_OVERRIDE | SCEW_NS;
 		writel_relaxed(val, addr);
 
-		addr = mc_sid_base + sid_override_offset[oid];
+		addr = mc_sid_base + sid_override_reg[oid].offs;
 		writel_relaxed(sid, addr);
 	}
 
 	pr_debug("override sid=%d oid=%d at offset=%x\n",
-		 sid, oid, sid_override_offset[oid]);
+		 sid, oid, sid_override_reg[oid].offs);
 }
 
 void platform_override_streamid(int sid)
@@ -546,7 +557,7 @@ static int mc_sid_probe(struct platform_device *pdev)
 	id = of_match_device(mc_sid_of_match, &pdev->dev);
 	ms_sid_is_cl34000094 = (long)id->data;
 
-	for (i = 0; i < ARRAY_SIZE(sid_override_offset); i++)
+	for (i = 0; i < ARRAY_SIZE(sid_override_reg); i++)
 		__mc_override_sid(0x7f, i);
 
 	/* FIXME: wait for MC driver */

@@ -57,6 +57,9 @@
 /* Flag to enable/disable loading of ADSP firmware */
 #define ENABLE_ADSP 1
 
+/* Suspend delay to avoid frequent ADSP suspend/resume */
+#define TEGRA210_ADSP_SUSPEND_DELAY		(3000) /* ms */
+
 static struct tegra210_adsp_app_desc {
 	const char *name;
 	const char *fw_name;
@@ -1600,12 +1603,14 @@ static int tegra210_adsp_runtime_resume(struct device *dev)
 	return ret;
 }
 
-#ifdef CONFIG_PM_SLEEP
-static int tegra210_adsp_suspend(struct device *dev)
+static int tegra210_adsp_runtime_idle(struct device *dev)
 {
-	return tegra210_adsp_runtime_suspend(dev);
+	struct tegra210_adsp *adsp = dev_get_drvdata(dev);
+	dev_dbg(adsp->dev, "%s\n", __func__);
+	pm_runtime_mark_last_busy(adsp->dev);
+	pm_runtime_autosuspend(adsp->dev);
+	return 1;
 }
-#endif
 
 /* ADSP platform driver read/write call-back */
 static int tegra210_adsp_read(struct snd_soc_component *component,
@@ -1703,7 +1708,8 @@ static int tegra210_adsp_mux_put(struct snd_kcontrol *kcontrol,
 	snd_soc_dapm_mux_update_power(dapm, kcontrol, val, e, NULL);
 
 err_put:
-	pm_runtime_put(adsp->dev);
+	pm_runtime_mark_last_busy(adsp->dev);
+	pm_runtime_put_autosuspend(adsp->dev);
 	return ret ? ret : 1;
 }
 
@@ -1764,7 +1770,8 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 			 * Actmon takes care of adjusting frequency later. */
 			pm_runtime_get_sync(adsp->dev);
 			adsp_update_dfs(500000, 1);
-			pm_runtime_put(adsp->dev);
+			pm_runtime_mark_last_busy(adsp->dev);
+			pm_runtime_put_autosuspend(adsp->dev);
 			tegra210_adsp_send_state_msg(app, nvfx_state_active,
 			TEGRA210_ADSP_MSG_FLAG_SEND);
 		}
@@ -2376,7 +2383,8 @@ static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
 	pm_runtime_get_sync(adsp->dev);
 	ret = tegra210_adsp_send_msg(app->apm, &apm_msg,
 		TEGRA210_ADSP_MSG_FLAG_SEND);
-	pm_runtime_put(adsp->dev);
+	pm_runtime_mark_last_busy(adsp->dev);
+	pm_runtime_put_autosuspend(adsp->dev);
 
 	return ret;
 }
@@ -2494,6 +2502,10 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	pdev->dev.dma_mask = &tegra_dma_mask;
 	pdev->dev.coherent_dma_mask = tegra_dma_mask;
 
+	/* Delay suspend to avoid frequent ADSP OS suspend-resume */
+	pm_runtime_use_autosuspend(&pdev->dev);
+	pm_runtime_set_autosuspend_delay(&pdev->dev,
+		TEGRA210_ADSP_SUSPEND_DELAY);
 	pm_runtime_enable(&pdev->dev);
 	if (!pm_runtime_enabled(&pdev->dev))
 		goto err_pm_disable;
@@ -2667,8 +2679,7 @@ static int tegra210_adsp_audio_platform_remove(struct platform_device *pdev)
 
 static const struct dev_pm_ops tegra210_adsp_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra210_adsp_runtime_suspend,
-			   tegra210_adsp_runtime_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(tegra210_adsp_suspend, NULL)
+		tegra210_adsp_runtime_resume, tegra210_adsp_runtime_idle)
 };
 
 static struct platform_driver tegra210_adsp_audio_driver = {

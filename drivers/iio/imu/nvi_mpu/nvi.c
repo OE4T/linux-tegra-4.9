@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(200)
+#define NVI_DRIVER_VERSION		(201)
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"MPU6050"
 #define NVI_NAME_MPU6500		"MPU6500"
@@ -1601,7 +1601,8 @@ static int nvi_dev_delay(struct nvi_state *st, unsigned int dev)
 	/* calculate LPF */
 	if (st->hal->smplrt[dev]->lpf_us_tbl_n) {
 		delay_us <<= 1;
-		for (lpf = 0; lpf < st->hal->smplrt[dev]->lpf_us_tbl_n; lpf++) {
+		for (lpf = 0; lpf < st->hal->smplrt[dev]->lpf_us_tbl_n;
+								       lpf++) {
 			if (delay_us < st->hal->smplrt[dev]->lpf_us_tbl[lpf])
 				break;
 		}
@@ -3592,7 +3593,7 @@ static const struct nvi_hal nvi_hal_6050 = {
 	.reg_bank_n			= 1,
 	.fifo_size			= 1024,
 	.lpa_tbl			= nvi_lpa_delay_us_tbl_6050,
-	.lpa_tbl_n			= ARRAY_SIZE(nvi_lpa_delay_us_tbl_6050),
+	.lpa_tbl_n		       = ARRAY_SIZE(nvi_lpa_delay_us_tbl_6050),
 	.smplrt[DEV_ACCEL]		= &smplrt_6050,
 	.smplrt[DEV_ANGLVEL]		= &smplrt_6050,
 	.smplrt[DEV_TEMP]		= &smplrt_6050,
@@ -3771,7 +3772,7 @@ static const struct nvi_hal nvi_hal_6500 = {
 	.reg_bank_n			= 1,
 	.fifo_size			= 4096,
 	.lpa_tbl			= nvi_lpa_delay_us_tbl_6500,
-	.lpa_tbl_n			= ARRAY_SIZE(nvi_lpa_delay_us_tbl_6500),
+	.lpa_tbl_n		       = ARRAY_SIZE(nvi_lpa_delay_us_tbl_6500),
 	.smplrt[DEV_ACCEL]		= &smplrt_6050,
 	.smplrt[DEV_ANGLVEL]		= &smplrt_6050,
 	.smplrt[DEV_TEMP]		= &smplrt_6050,
@@ -3793,7 +3794,7 @@ static const struct nvi_hal nvi_hal_6515 = {
 	.reg_bank_n			= 1,
 	.fifo_size			= 4096,
 	.lpa_tbl			= nvi_lpa_delay_us_tbl_6500,
-	.lpa_tbl_n			= ARRAY_SIZE(nvi_lpa_delay_us_tbl_6500),
+	.lpa_tbl_n		       = ARRAY_SIZE(nvi_lpa_delay_us_tbl_6500),
 	.smplrt[DEV_ACCEL]		= &smplrt_6050,
 	.smplrt[DEV_ANGLVEL]		= &smplrt_6050,
 	.smplrt[DEV_TEMP]		= &smplrt_6050,
@@ -4095,7 +4096,7 @@ static const struct nvi_hal nvi_hal_20628 = {
 	.reg_bank_n			= 4,
 	.fifo_size			= 4096,
 	.lpa_tbl			= nvi_lpa_delay_us_tbl_6500,
-	.lpa_tbl_n			= ARRAY_SIZE(nvi_lpa_delay_us_tbl_6500),
+	.lpa_tbl_n		       = ARRAY_SIZE(nvi_lpa_delay_us_tbl_6500),
 	.smplrt[DEV_ACCEL]		= &smplrt_20628_accel,
 	.smplrt[DEV_ANGLVEL]		= &smplrt_20628_anglvel,
 	.smplrt[DEV_TEMP]		= &smplrt_20628_anglvel,
@@ -4120,6 +4121,7 @@ struct sensor_cfg nvi_cfg_dflt[] = {
 		.ch_n			= AXIS_N,
 		.ch_sz			= -2,
 		.vendor			= NVI_VENDOR,
+		.matrix			= { 1, 0, 0, 0, 1, 0, 0, 0, 1 },
 		.float_significance	= NVS_FLOAT_NANO,
 		.ch_n_max		= AXIS_N,
 	},
@@ -4131,6 +4133,7 @@ struct sensor_cfg nvi_cfg_dflt[] = {
 		.ch_n			= AXIS_N,
 		.ch_sz			= -2,
 		.vendor			= NVI_VENDOR,
+		.matrix			= { 1, 0, 0, 0, 1, 0, 0, 0, 1 },
 		.float_significance	= NVS_FLOAT_NANO,
 		.ch_n_max		= AXIS_N,
 	},
@@ -4148,7 +4151,7 @@ static void nvi_init_config(struct nvi_state *st)
 {
 	unsigned int i;
 
-	memcpy(st->cfg, nvi_cfg_dflt, sizeof(struct sensor_cfg) * DEV_N);
+	memcpy(st->cfg, nvi_cfg_dflt, sizeof(st->cfg));
 	st->hal = &nvi_hal_6050;
 	for (i = 0; i < DEV_N_AUX; i++) {
 		st->enabled[i] = 0;
@@ -4246,9 +4249,10 @@ static int nvi_id_dev(struct nvi_state *st, const char *name)
 
 		ret = nvi_id_hal(st, dev_id);
 		if (ret) {
+			st->hal = &nvi_hal_20628;
+			/* cause a master reset by disabling regulators */
 			nvs_vregs_disable(&st->i2c->dev, st->vreg,
 					  ARRAY_SIZE(nvi_vregs));
-			st->hal = &nvi_hal_20628;
 			ret = nvi_pm_wr(st, 0, 0, 0);
 			ret = nvi_i2c_read(st, st->i2c_addr,
 					   nvi_hal_reg_20628.who_am_i.reg,
@@ -4268,11 +4272,16 @@ static int nvi_id_dev(struct nvi_state *st, const char *name)
 		}
 	} else {
 		nvi_id_hal(st, dev_id);
+		/* cause a master reset by disabling regulators */
+		nvs_vregs_disable(&st->i2c->dev, st->vreg,
+				  ARRAY_SIZE(nvi_vregs));
 		nvi_pm_wr(st, 0, 0, 0);
 	}
+	ret = nvs_vregs_sts(st->vreg, ARRAY_SIZE(nvi_vregs));
+	if (ret < 0)
+		/* regulators aren't supported so manually do master reset */
+		nvi_wr_pwr_mgmt_1(st, BIT_H_RESET);
 	ret = st->hal->init(st);
-	nvi_rd_accel_offset(st);
-	nvi_rd_gyro_offset(st);
 	for (i = 0; i < AXIS_N; i++) {
 		st->rom_accel_offset[i] = (s16)st->rc.accel_offset[i];
 		st->rom_gyro_offset[i] = (s16)st->rc.gyro_offset[i];

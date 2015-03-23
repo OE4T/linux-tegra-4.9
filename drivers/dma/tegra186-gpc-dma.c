@@ -172,6 +172,7 @@ struct tegra_dma_channel_regs {
 	unsigned long	mc_seq;
 	unsigned long	mmio_seq;
 	unsigned long	wcount;
+	unsigned long	fixed_pattern;
 };
 
 /*
@@ -433,6 +434,7 @@ static void tegra_dma_start(struct tegra_dma_channel *tdc,
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_SRC_PTR, ch_regs->src_ptr);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_DST_PTR, ch_regs->dst_ptr);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_HIGH_ADDR_PTR, 0);
+	tdc_write(tdc, TEGRA_GPCDMA_CHAN_FIXED_PATTERN, ch_regs->fixed_pattern);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_MMIOSEQ, ch_regs->mmio_seq);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_MCSEQ, ch_regs->mc_seq);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSR, ch_regs->csr);
@@ -809,11 +811,190 @@ static int get_transfer_param(struct tegra_dma_channel *tdc,
 		*slave_bw = tdc->dma_sconfig.src_addr_width;
 		*csr = TEGRA_GPCDMA_CSR_DMA_IO2MEM_FC;
 		return 0;
+	case DMA_MEM_TO_MEM:
+		*burst_size = tdc->dma_sconfig.src_addr_width;
+		*csr = TEGRA_GPCDMA_CSR_DMA_MEM2MEM;
+		return 0;
 	default:
 		dev_err(tdc2dev(tdc), "Dma direction is not supported\n");
 		return -EINVAL;
 	}
 	return -EINVAL;
+}
+
+static struct dma_async_tx_descriptor *tegra_dma_prep_dma_memset(
+	struct dma_chan *dc, dma_addr_t dest, int value, size_t len,
+	unsigned long flags)
+{
+	struct tegra_dma_channel *tdc = to_tegra_dma_chan(dc);
+	struct tegra_dma_desc *dma_desc;
+	struct list_head req_list;
+	struct tegra_dma_sg_req *sg_req = NULL;
+	unsigned long csr, mc_seq;
+
+	INIT_LIST_HEAD(&req_list);
+	/* Set dma mode to fixed pattern */
+	csr = TEGRA_GPCDMA_CSR_DMA_FIXED_PAT;
+	/* Enable once or continuous mode */
+	csr |= TEGRA_GPCDMA_CSR_ONCE;
+	/* Enable IRQ mask */
+	csr |= TEGRA_GPCDMA_CSR_IRQ_MASK;
+	/* Enable the dma interrupt */
+	if (flags & DMA_PREP_INTERRUPT)
+		csr |= TEGRA_GPCDMA_CSR_IE_EOC;
+	/* Configure default priority weight for the channel */
+	csr |= (1 << TEGRA_GPCDMA_CSR_WEIGHT_SHIFT);
+
+	/* Set the address wrapping */
+	mc_seq = TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
+			TEGRA_GPCDMA_MCSEQ_WRAP0_SHIFT;
+	mc_seq = TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
+			TEGRA_GPCDMA_MCSEQ_WRAP1_SHIFT;
+
+	/* Program outstanding MC requests */
+	mc_seq |= (1 << TEGRA_GPCDMA_MCSEQ_REQ_COUNT_SHIFT);
+	/* Set burst size */
+	mc_seq |= TEGRA_GPCDMA_MCSEQ_BURST_16;
+
+	dma_desc = tegra_dma_desc_get(tdc);
+	if (!dma_desc) {
+		dev_err(tdc2dev(tdc), "Dma descriptors not available\n");
+		return NULL;
+	}
+	INIT_LIST_HEAD(&dma_desc->tx_list);
+	INIT_LIST_HEAD(&dma_desc->cb_node);
+	dma_desc->cb_count = 0;
+	dma_desc->bytes_requested = 0;
+	dma_desc->bytes_transferred = 0;
+	dma_desc->dma_status = DMA_IN_PROGRESS;
+
+	if ((len & 3) || (dest & 3) ||
+		(len > tdc->tdma->chip_data->max_dma_count)) {
+		dev_err(tdc2dev(tdc),
+			"Dma length/memory address is not supported\n");
+		tegra_dma_desc_put(tdc, dma_desc);
+		return NULL;
+	}
+
+	sg_req = tegra_dma_sg_req_get(tdc);
+	if (!sg_req) {
+		dev_err(tdc2dev(tdc), "Dma sg-req not available\n");
+		tegra_dma_desc_put(tdc, dma_desc);
+		return NULL;
+	}
+
+	dma_desc->bytes_requested += len;
+	sg_req->ch_regs.src_ptr = 0;
+	sg_req->ch_regs.dst_ptr = dest;
+	sg_req->ch_regs.fixed_pattern = value;
+	/* Word count reg takes value as (N +1) words */
+	sg_req->ch_regs.wcount = ((len - 4) >> 2);
+	sg_req->ch_regs.csr = csr;
+	sg_req->ch_regs.mmio_seq = 0;
+	sg_req->ch_regs.mc_seq = mc_seq;
+	sg_req->configured = false;
+	sg_req->skipped = false;
+	sg_req->last_sg = false;
+	sg_req->dma_desc = dma_desc;
+	sg_req->req_len = len;
+	sg_req->last_sg = true;
+
+	list_add_tail(&sg_req->node, &dma_desc->tx_list);
+
+	if (flags & DMA_CTRL_ACK)
+		dma_desc->txd.flags = DMA_CTRL_ACK;
+
+	if (!tdc->isr_handler)
+		tdc->isr_handler = handle_once_dma_done;
+
+	return &dma_desc->txd;
+}
+
+static struct dma_async_tx_descriptor *tegra_dma_prep_dma_memcpy(
+	struct dma_chan *dc, dma_addr_t dest, dma_addr_t src,	size_t len,
+	unsigned long flags)
+{
+	struct tegra_dma_channel *tdc = to_tegra_dma_chan(dc);
+	struct tegra_dma_desc *dma_desc;
+	struct list_head req_list;
+	struct tegra_dma_sg_req *sg_req = NULL;
+	unsigned long csr, mc_seq;
+
+	INIT_LIST_HEAD(&req_list);
+	/* Set dma mode to memory to memory transfer */
+	csr = TEGRA_GPCDMA_CSR_DMA_MEM2MEM;
+	/* Enable once or continuous mode */
+	csr |= TEGRA_GPCDMA_CSR_ONCE;
+	/* Enable IRQ mask */
+	csr |= TEGRA_GPCDMA_CSR_IRQ_MASK;
+	/* Enable the dma interrupt */
+	if (flags & DMA_PREP_INTERRUPT)
+		csr |= TEGRA_GPCDMA_CSR_IE_EOC;
+	/* Configure default priority weight for the channel */
+	csr |= (1 << TEGRA_GPCDMA_CSR_WEIGHT_SHIFT);
+
+	/* Set the address wrapping */
+	mc_seq = TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
+			TEGRA_GPCDMA_MCSEQ_WRAP0_SHIFT;
+	mc_seq = TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
+			TEGRA_GPCDMA_MCSEQ_WRAP1_SHIFT;
+
+	/* Program outstanding MC requests */
+	mc_seq |= (1 << TEGRA_GPCDMA_MCSEQ_REQ_COUNT_SHIFT);
+	/* Set burst size */
+	mc_seq |= TEGRA_GPCDMA_MCSEQ_BURST_16;
+
+	dma_desc = tegra_dma_desc_get(tdc);
+	if (!dma_desc) {
+		dev_err(tdc2dev(tdc), "Dma descriptors not available\n");
+		return NULL;
+	}
+	INIT_LIST_HEAD(&dma_desc->tx_list);
+	INIT_LIST_HEAD(&dma_desc->cb_node);
+	dma_desc->cb_count = 0;
+	dma_desc->bytes_requested = 0;
+	dma_desc->bytes_transferred = 0;
+	dma_desc->dma_status = DMA_IN_PROGRESS;
+
+	if ((len & 3) || (src & 3) || (dest & 3) ||
+		(len > tdc->tdma->chip_data->max_dma_count)) {
+		dev_err(tdc2dev(tdc),
+			"Dma length/memory address is not supported\n");
+		tegra_dma_desc_put(tdc, dma_desc);
+		return NULL;
+	}
+
+	sg_req = tegra_dma_sg_req_get(tdc);
+	if (!sg_req) {
+		dev_err(tdc2dev(tdc), "Dma sg-req not available\n");
+		tegra_dma_desc_put(tdc, dma_desc);
+		return NULL;
+	}
+
+	dma_desc->bytes_requested += len;
+	sg_req->ch_regs.src_ptr = src;
+	sg_req->ch_regs.dst_ptr = dest;
+	/* Word count reg takes value as (N +1) words */
+	sg_req->ch_regs.wcount = ((len - 4) >> 2);
+	sg_req->ch_regs.csr = csr;
+	sg_req->ch_regs.mmio_seq = 0;
+	sg_req->ch_regs.mc_seq = mc_seq;
+	sg_req->configured = false;
+	sg_req->skipped = false;
+	sg_req->last_sg = false;
+	sg_req->dma_desc = dma_desc;
+	sg_req->req_len = len;
+	sg_req->last_sg = true;
+
+	list_add_tail(&sg_req->node, &dma_desc->tx_list);
+
+	if (flags & DMA_CTRL_ACK)
+		dma_desc->txd.flags = DMA_CTRL_ACK;
+
+	if (!tdc->isr_handler)
+		tdc->isr_handler = handle_once_dma_done;
+
+	return &dma_desc->txd;
 }
 
 static struct dma_async_tx_descriptor *tegra_dma_prep_slave_sg(
@@ -1190,13 +1371,22 @@ static int tegra_dma_probe(struct platform_device *pdev)
 
 	dma_cap_set(DMA_SLAVE, tdma->dma_dev.cap_mask);
 	dma_cap_set(DMA_PRIVATE, tdma->dma_dev.cap_mask);
+	dma_cap_set(DMA_MEMCPY, tdma->dma_dev.cap_mask);
+	dma_cap_set(DMA_MEMSET, tdma->dma_dev.cap_mask);
 
 	tdma->dma_dev.dev = &pdev->dev;
+	/*
+	 * Only word aligned transfers are supported. Set the copy
+	 * alignment shift.
+	 */
+	tdma->dma_dev.copy_align = 2;
 	tdma->dma_dev.device_alloc_chan_resources =
 					tegra_dma_alloc_chan_resources;
 	tdma->dma_dev.device_free_chan_resources =
 					tegra_dma_free_chan_resources;
 	tdma->dma_dev.device_prep_slave_sg = tegra_dma_prep_slave_sg;
+	tdma->dma_dev.device_prep_dma_memcpy = tegra_dma_prep_dma_memcpy;
+	tdma->dma_dev.device_prep_dma_memset = tegra_dma_prep_dma_memset;
 	tdma->dma_dev.device_control = tegra_dma_device_control;
 	tdma->dma_dev.device_tx_status = tegra_dma_tx_status;
 	tdma->dma_dev.device_issue_pending = tegra_dma_issue_pending;

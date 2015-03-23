@@ -267,6 +267,7 @@ struct nvhost_device_data t21_msenc_info = {
 	.borps_val		= 0x2008,
 	.actmon_enabled		= true,
 	.firmware_name		= "nvhost_nvenc050.fw",
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.bond_out_id		= BOND_OUT_NVENC
 };
 
@@ -301,6 +302,7 @@ struct nvhost_device_data t21_nvdec_info = {
 	.borps_addr		= 0x00001650,
 	.borps_val		= 0x2008,
 	.actmon_enabled		= true,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.bond_out_id		= BOND_OUT_NVDEC,
 };
 
@@ -334,6 +336,7 @@ struct nvhost_device_data t21_nvjpg_info = {
 	.borps_val		= 0x2008,
 	.actmon_enabled		= true,
 	.bond_out_id		= BOND_OUT_NVJPG,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.firmware_name		= "nvhost_nvjpg010.fw",
 };
 
@@ -357,6 +360,7 @@ struct nvhost_device_data t21_tsec_info = {
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_tsec_finalize_poweron,
 	.prepare_poweroff	= nvhost_tsec_prepare_poweroff,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.bond_out_id		= BOND_OUT_TSEC,
 };
 
@@ -379,6 +383,7 @@ struct nvhost_device_data t21_tsecb_info = {
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_tsec_finalize_poweron,
 	.prepare_poweroff	= nvhost_tsec_prepare_poweroff,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.bond_out_id		= BOND_OUT_TSEC,
 };
 #ifdef CONFIG_ARCH_TEGRA_VIC
@@ -423,6 +428,7 @@ struct nvhost_device_data t21_vic_info = {
 	.firmware_name		= "vic04_ucode.bin",
 	.bond_out_id		= BOND_OUT_VIC,
 	.aggregate_constraints	= nvhost_vic_aggregate_constraints,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.num_ppc		= 8,
 };
 #endif

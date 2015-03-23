@@ -478,6 +478,8 @@ static struct sid_to_oids sid_to_oids[] = {
 	},
 };
 
+#define TO_MC_SID_STREAMID_SECURITY_CONFIG(addr)	(addr + sizeof(u32))
+
 static void __iomem *mc_sid_base;
 
 static struct of_device_id mc_sid_of_match[] = {
@@ -504,8 +506,7 @@ static void __mc_override_sid(int sid, int oid)
 		writel_relaxed(val, addr);
 	} else {
 		addr = mc_sid_base + offs;
-		addr += sizeof(u32); /* MC_SID_STREAMID_SECURITY_CONFIG_* */
-		val = readl_relaxed(addr);
+		val = readl_relaxed(TO_MC_SID_STREAMID_SECURITY_CONFIG(addr));
 
 		if (val & SCEW_STREAMID_OVERRIDE) {
 			/* OK */;

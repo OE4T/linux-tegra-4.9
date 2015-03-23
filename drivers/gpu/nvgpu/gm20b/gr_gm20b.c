@@ -984,7 +984,7 @@ static int gr_gm20b_update_pc_sampling(struct channel_gk20a *c,
 	if (!ctx_ptr)
 		return -ENOMEM;
 
-	v = gk20a_mem_rd32(ctx_ptr, ctxsw_prog_main_image_pm_o());
+	v = gk20a_mem_rd32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0);
 	v &= ~ctxsw_prog_main_image_pm_pc_sampling_m();
 	v |= ctxsw_prog_main_image_pm_pc_sampling_f(enable);
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0, v);

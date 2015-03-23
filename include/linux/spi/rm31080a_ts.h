@@ -2,7 +2,7 @@
  * Raydium RM31080 touchscreen header
  *
  * Copyright (C) 2012-2014, Raydium Semiconductor Corporation.
- * Copyright (C) 2012-2014, NVIDIA Corporation.  All Rights Reserved.
+ * Copyright (C) 2012-2015, NVIDIA Corporation.  All Rights Reserved.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -251,7 +251,7 @@
  ***************************************************************************/
 
 /*#define ENABLE_CALC_QUEUE_COUNT*/
-#define ENABLE_SLOW_SCAN
+/*#define ENABLE_SLOW_SCAN*/
 #define ENABLE_SMOOTH_LEVEL
 #define ENABLE_SPI_SETTING		0
 #define ENABLE_FREQ_HOPPING		1

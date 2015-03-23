@@ -21,6 +21,7 @@
 
 #include <linux/err.h>
 #include <linux/module.h>
+#include <linux/debugfs.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
@@ -481,6 +482,7 @@ static struct sid_to_oids sid_to_oids[] = {
 #define TO_MC_SID_STREAMID_SECURITY_CONFIG(addr)	(addr + sizeof(u32))
 
 static void __iomem *mc_sid_base;
+static void __iomem *mc_base;
 
 static struct of_device_id mc_sid_of_match[] = {
 	{ .compatible = "nvidia,tegra-mc-sid", .data = (void *)0, },
@@ -557,6 +559,51 @@ void platform_override_streamid(int sid)
 	}
 }
 
+#if defined(CONFIG_DEBUG_FS)
+enum { ORD, SEC, TXN, MAX_REGS_TYPE};
+static const char *mc_regs_type[] = { "ord", "sec", "txn", };
+static struct debugfs_reg32 mc_regs[MAX_REGS_TYPE * MAX_OID];
+static struct debugfs_regset32 mc_regset[MAX_REGS_TYPE];
+
+static void mc_sid_debugfs(void)
+{
+	int i, j;
+	struct dentry *dent;
+
+	dent = debugfs_create_dir("mc_sid", NULL);
+	if (!dent)
+		return;
+
+	for (i = 0; i < MAX_REGS_TYPE; i++) {
+		struct debugfs_regset32 *set = mc_regset + i;
+		struct debugfs_reg32 *reg = mc_regs + i * MAX_OID;
+		int diff = 0;
+
+		set->regs = reg;
+		set->nregs = MAX_OID;
+		set->base = mc_sid_base;
+		if (i == SEC) {
+			diff = sizeof(u32);
+		} else if (i == TXN) {
+			set->base = mc_base;
+			diff = 0x1000;
+		}
+
+		for (j = 0; j < MAX_OID; j++, reg++) {
+			reg->name = (char *)sid_override_reg[j].name;
+			reg->offset = sid_override_reg[j].offs;
+			reg->offset += diff;
+		}
+
+		debugfs_create_regset32(mc_regs_type[i], S_IRUGO, dent, set);
+	}
+}
+#else
+static inline void mc_sid_debugfs(void)
+{
+}
+#endif	/* CONFIG_DEBUG_FS */
+
 static int mc_sid_probe(struct platform_device *pdev)
 {
 	int i;
@@ -581,8 +628,10 @@ static int mc_sid_probe(struct platform_device *pdev)
 	addr = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(addr))
 		return PTR_ERR(addr);
+	mc_base = addr;
+	writel_relaxed(TBU_BYPASS_SID, mc_base + MC_SMMU_BYPASS_CONFIG_0);
 
-	writel_relaxed(TBU_BYPASS_SID, addr + MC_SMMU_BYPASS_CONFIG_0);
+	mc_sid_debugfs();
 	return 0;
 }
 

@@ -212,20 +212,17 @@ rel_sig:
 
 int prepare_ucode_blob(struct gk20a *g)
 {
-	struct device *d = dev_from_gk20a(g);
-	dma_addr_t iova;
-	u32 status;
-	void *nonwpr_addr;
+	int err;
 	struct ls_flcn_mgr lsfm_l, *plsfm;
 	struct pmu_gk20a *pmu = &g->pmu;
 
 	if (g->acr.ucode_blob_start) {
 		/*Recovery case, we do not need to form
 		non WPR blob of ucodes*/
-		status = gk20a_init_pmu(pmu);
-		if (status) {
+		err = gk20a_init_pmu(pmu);
+		if (err) {
 			gm20b_dbg_pmu("failed to set function pointers\n");
-			return status;
+			return err;
 		}
 		return 0;
 	}
@@ -236,28 +233,27 @@ int prepare_ucode_blob(struct gk20a *g)
 	gr_gk20a_init_ctxsw_ucode(g);
 
 	/* Discover all managed falcons*/
-	status = lsfm_discover_ucode_images(g, plsfm);
+	err = lsfm_discover_ucode_images(g, plsfm);
 	gm20b_dbg_pmu(" Managed Falcon cnt %d\n", plsfm->managed_flcn_cnt);
-	if (status != 0)
-		return status;
+	if (err)
+		return err;
 
 	if (plsfm->managed_flcn_cnt) {
 		/* Generate WPR requirements*/
-		status = lsf_gen_wpr_requirements(g, plsfm);
-		if (status != 0)
-			return status;
+		err = lsf_gen_wpr_requirements(g, plsfm);
+		if (err)
+			return err;
 
 		/*Alloc memory to hold ucode blob contents*/
-		nonwpr_addr = dma_alloc_coherent(d, plsfm->wpr_size, &iova,
-			GFP_KERNEL);
-		if (nonwpr_addr == NULL)
-			return -ENOMEM;
+		err = gk20a_gmmu_alloc(g, plsfm->wpr_size, &plsfm->mem);
+		if (err)
+			return err;
 
 		gm20b_dbg_pmu("managed LS falcon %d, WPR size %d bytes.\n",
 			plsfm->managed_flcn_cnt, plsfm->wpr_size);
-		lsfm_init_wpr_contents(g, plsfm, nonwpr_addr);
-		g->acr.ucode_blob_start =
-			gk20a_mm_smmu_vaddr_translate(g, iova);
+		lsfm_init_wpr_contents(g, plsfm, plsfm->mem.cpu_va);
+		g->acr.ucode_blob_start = g->ops.mm.get_iova_addr(g,
+				plsfm->mem.sgt->sgl, 0);
 		g->acr.ucode_blob_size = plsfm->wpr_size;
 		gm20b_dbg_pmu("base reg carveout 2:%x\n",
 		readl(mc + MC_SECURITY_CARVEOUT2_BOM_0));

@@ -259,6 +259,7 @@ struct lsfm_managed_ucode_img {
 struct ls_flcn_mgr {
 	u16 managed_flcn_cnt;
 	u32 wpr_size;
+	struct mem_desc mem;
 	u32 disable_mask;
 	struct lsfm_managed_ucode_img *ucode_img_list;
 	void *wpr_client_req_state;/*PACR_CLIENT_REQUEST_STATE originally*/

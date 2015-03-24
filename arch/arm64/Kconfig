@@ -8,6 +8,7 @@ config ARCH_TEGRA_18x_SOC_PRIVATE
 	select PINCTRL
 	select PINCTRL_TEGRA186
 	select ARCH_TEGRA_APE
+	select GPIO_TEGRA186
 	default n
 	help
 	  Support for NVIDIA Tegra 18x family of SoCs

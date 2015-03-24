@@ -5,3 +5,4 @@ obj-y += clk/
 obj-y += dma/
 obj-$(CONFIG_TEGRA_BPMP) += firmware/tegra/
 obj-y += pinctrl/
+obj-y += gpio/

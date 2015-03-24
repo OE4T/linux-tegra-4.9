@@ -554,7 +554,11 @@ u32 tegra_nvdisp_read_rg_crc(struct tegra_dc *dc)
 	if (!tegra_dc_is_powered(dc))
 		return 0;
 
+#ifdef INIT_COMPLETION
 	INIT_COMPLETION(dc->crc_complete);
+#else
+	reinit_completion(&dc->crc_complete);
+#endif
 	if (dc->crc_pending &&
 	    wait_for_completion_interruptible(&dc->crc_complete)) {
 		pr_err("CRC read interrupted.\n");

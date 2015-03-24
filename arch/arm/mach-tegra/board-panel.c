@@ -764,6 +764,7 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 {
 	struct device_node *np_panel = NULL, *np_display = NULL;
 	struct tegra_dc_out *dc_out = NULL;
+	const char *sor1_output_type;
 
 	if (pdata)
 		dc_out = pdata->default_out;
@@ -776,26 +777,23 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 				tegra_panel_register_ops(dc_out,
 					fixed_secondary_panel_ops);
 	} else {
-		/* CONFIG_TEGRA_HDMI2_0 and CONFIG_TEGRA_DP are both
-		 * defined on TOT to make hdmi and edp panels work.
-		 * So, Here, when choosing between HDMI and DP,
-		 * HDMI takes priority than DP monitors.
-		 * Since disabling/enabling CONFIG_TEGRA_DP macro
-		 * on usecase basis for DP would break all edp panels
-		 */
-#if defined(CONFIG_TEGRA_HDMI2_0) || defined(CONFIG_TEGRA_HDMI)
-		np_display = of_find_node_by_path(HDMI_NODE);
-		np_panel = of_get_child_by_name(np_display, "hdmi-display");
-#elif defined(CONFIG_TEGRA_DP) /* DP monitors */
 		np_display = of_find_node_by_path(SOR1_NODE);
-		np_panel = of_get_child_by_name(np_display, "dp-display");
-#else
-		np_display = of_find_node_by_path(HDMI_NODE);
-		np_panel = of_get_child_by_name(np_display, "hdmi-display");
-#endif
+		if (!of_property_read_string(np_display,
+			"nvidia,sor1-output-type", &sor1_output_type)) {
+			if (strcmp(sor1_output_type, "dp") == 0) {
+				np_panel = of_get_child_by_name(np_display,
+						"dp-display");
+				goto success;
+			}
+		}
 	}
-	of_node_put(np_display);
 
+	of_node_put(np_display);
+	np_display = of_find_node_by_path(HDMI_NODE);
+	np_panel = of_get_child_by_name(np_display, "hdmi-display");
+
+success:
+	of_node_put(np_display);
 	return of_device_is_available(np_panel) ? np_panel : NULL;
 }
 

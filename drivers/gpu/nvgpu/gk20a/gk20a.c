@@ -41,7 +41,6 @@
 #include <linux/kthread.h>
 
 #include <linux/sched.h>
-#include <linux/input-cfboost.h>
 
 #ifdef CONFIG_TEGRA_GK20A
 #include <linux/nvhost.h>
@@ -884,13 +883,6 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 	enable_irq(g->irq_stall);
 	enable_irq(g->irq_nonstall);
 
-#ifdef CONFIG_INPUT_CFBOOST
-	if (!g->boost_added) {
-		gk20a_dbg_info("add touch boost");
-		cfb_add_device(dev);
-		g->boost_added = true;
-	}
-#endif
 done:
 	return err;
 }
@@ -1526,11 +1518,6 @@ static int __exit gk20a_remove(struct platform_device *dev)
 
 	if (platform->has_cde)
 		gk20a_cde_destroy(g);
-
-#ifdef CONFIG_INPUT_CFBOOST
-	if (g->boost_added)
-		cfb_remove_device(&dev->dev);
-#endif
 
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
 		gk20a_scale_exit(dev);

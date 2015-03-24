@@ -475,8 +475,9 @@ static int tegra_spi_start_dma_based_transfer(
 {
 	u32 val;
 	unsigned int len;
-	int ret = 0;
 	u32 status;
+	int ret = 0, maxburst;
+	struct dma_slave_config dma_sconfig;
 
 	/* Make sure that Rx and Tx fifo are empty */
 	status = tegra_spi_readl(tspi, SPI_FIFO_STATUS);
@@ -496,12 +497,16 @@ static int tegra_spi_start_dma_based_transfer(
 		len = tspi->curr_dma_words * 4;
 
 	/* Set attention level based on length of transfer */
-	if (len & 0xF)
+	if (len & 0xF) {
 		val |= SPI_TX_TRIG_1 | SPI_RX_TRIG_1;
-	else if (((len) >> 4) & 0x1)
+		maxburst = 1;
+	} else if (((len) >> 4) & 0x1) {
 		val |= SPI_TX_TRIG_4 | SPI_RX_TRIG_4;
-	else
+		maxburst = 4;
+	} else {
 		val |= SPI_TX_TRIG_8 | SPI_RX_TRIG_8;
+		maxburst = 8;
+	}
 
 	if (tspi->cur_direction & DATA_DIR_TX)
 		val |= SPI_IE_TX;
@@ -513,6 +518,11 @@ static int tegra_spi_start_dma_based_transfer(
 	tspi->dma_control_reg = val;
 
 	if (tspi->cur_direction & DATA_DIR_TX) {
+		dma_sconfig.dst_addr = tspi->phys + SPI_TX_FIFO;
+		dma_sconfig.dst_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+		dma_sconfig.dst_maxburst = maxburst;
+		dmaengine_slave_config(tspi->tx_dma_chan, &dma_sconfig);
+
 		tegra_spi_copy_client_txbuf_to_spi_txbuf(tspi, t);
 		ret = tegra_spi_start_tx_dma(tspi, len);
 		if (ret < 0) {
@@ -526,6 +536,10 @@ static int tegra_spi_start_dma_based_transfer(
 		/* Make the dma buffer to read by dma */
 		dma_sync_single_for_device(tspi->dev, tspi->rx_dma_phys,
 				tspi->dma_buf_size, DMA_FROM_DEVICE);
+		dma_sconfig.src_addr = tspi->phys + SPI_RX_FIFO;
+		dma_sconfig.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+		dma_sconfig.src_maxburst = maxburst;
+		dmaengine_slave_config(tspi->rx_dma_chan, &dma_sconfig);
 
 		ret = tegra_spi_start_rx_dma(tspi, len);
 		if (ret < 0) {

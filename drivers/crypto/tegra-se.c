@@ -122,6 +122,10 @@ struct tegra_se_dev {
 	u32 dst_ll_size;	/* Size of destination linked list buffer */
 	u32 *ctx_save_buf;	/* LP context buffer pointer*/
 	dma_addr_t ctx_save_buf_adr;	/* LP context buffer dma address*/
+	u32 *sg_in_buf;
+	dma_addr_t sg_in_buf_adr;
+	u32 *sg_out_buf;
+	dma_addr_t sg_out_buf_adr;
 	struct completion complete;	/* Tells the task completion */
 	bool work_q_busy;	/* Work queue busy status */
 	bool polling;
@@ -197,6 +201,7 @@ static DEFINE_SPINLOCK(rsa_key_slot_lock);
 
 #define RSA_MIN_SIZE	64
 #define RSA_MAX_SIZE	256
+#define DISK_ENCR_BUF_SZ	512
 #define RNG_RESEED_INTERVAL	0x00773594
 #define TEGRA_SE_RSA_CONTEXT_SAVE_KEYSLOT_COUNT	2
 
@@ -858,6 +863,54 @@ static void tegra_se_free_ll_buf(struct tegra_se_dev *se_dev)
 	}
 }
 
+static void tegra_se_get_sg_dma_buf(struct scatterlist *sg, u32 num_sgs,
+					u32 nbytes, u32 *sg_buf)
+{
+	struct sg_mapping_iter miter;
+	unsigned int sg_flags = SG_MITER_ATOMIC | SG_MITER_FROM_SG;
+	unsigned long flags;
+	u32 *temp_buffer = sg_buf;
+	int total = 0;
+
+	sg_miter_start(&miter, sg, num_sgs, sg_flags);
+
+	local_irq_save(flags);
+	while (sg_miter_next(&miter) && total < nbytes) {
+		unsigned int len;
+		len = min(miter.length, (size_t)(nbytes - total));
+		memcpy(temp_buffer, miter.addr + total, len);
+		temp_buffer += len;
+		total += len;
+	}
+	sg_miter_stop(&miter);
+	local_irq_restore(flags);
+}
+
+static void tegra_se_get_dst_sg(struct scatterlist *sg, u32 num_sgs,
+					u32 nbytes, u32 *sg_buf)
+{
+	struct sg_mapping_iter miter;
+	unsigned int sg_flags = SG_MITER_ATOMIC | SG_MITER_FROM_SG;
+	unsigned long flags;
+	u32 *temp_buffer = sg_buf;
+	int total = 0;
+
+	sg_miter_start(&miter, sg, num_sgs, sg_flags);
+
+	local_irq_save(flags);
+	total = 0;
+	while (sg_miter_next(&miter) && total < nbytes) {
+		unsigned int len;
+		len = min(miter.length, (size_t)(nbytes - total));
+		memcpy(miter.addr + total, temp_buffer, len);
+		temp_buffer += len;
+		total += len;
+	}
+
+	sg_miter_stop(&miter);
+	local_irq_restore(flags);
+}
+
 static int tegra_se_setup_ablk_req(struct tegra_se_dev *se_dev,
 	struct ablkcipher_request *req)
 {
@@ -887,10 +940,21 @@ static int tegra_se_setup_ablk_req(struct tegra_se_dev *se_dev,
 	total = req->nbytes;
 
 	if (total) {
-		tegra_map_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE,
-					src_ll, total);
-		tegra_map_sg(se_dev->dev, dst_sg, 1, DMA_FROM_DEVICE,
-					dst_ll, total);
+		if (req->nbytes == DISK_ENCR_BUF_SZ) {
+			tegra_se_get_sg_dma_buf(src_sg, num_src_sgs, total,
+							se_dev->sg_in_buf);
+			src_ll->addr = se_dev->sg_in_buf_adr;
+			src_ll->data_len = req->nbytes;
+
+			dst_ll->addr = se_dev->sg_out_buf_adr;
+			dst_ll->data_len = req->nbytes;
+		} else {
+			tegra_map_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE,
+						src_ll, total);
+			tegra_map_sg(se_dev->dev, dst_sg, 1, DMA_FROM_DEVICE,
+						dst_ll, total);
+		}
+
 		WARN_ON(src_sg->length != dst_sg->length);
 	}
 	return ret;
@@ -940,7 +1004,11 @@ static void tegra_se_process_new_req(struct crypto_async_request *async_req)
 	tegra_se_config_crypto(se_dev, req_ctx->op_mode, req_ctx->encrypt,
 			aes_ctx->slot->slot_num, req->info ? true : false);
 	ret = tegra_se_start_operation(se_dev, req->nbytes, false);
-	tegra_se_dequeue_complete_req(se_dev, req);
+	if (req->nbytes == DISK_ENCR_BUF_SZ)
+		tegra_se_get_dst_sg(req->dst, 1, req->nbytes,
+						se_dev->sg_out_buf);
+	else
+		tegra_se_dequeue_complete_req(se_dev, req);
 
 	mutex_unlock(&se_hw_lock);
 	req->base.complete(&req->base, ret);
@@ -2841,6 +2909,14 @@ static int tegra_se_probe(struct platform_device *pdev)
 		}
 	}
 
+	se_dev->sg_in_buf = dma_alloc_coherent(se_dev->dev,
+		DISK_ENCR_BUF_SZ, &se_dev->sg_in_buf_adr,
+		GFP_KERNEL);
+
+	se_dev->sg_out_buf = dma_alloc_coherent(se_dev->dev,
+		DISK_ENCR_BUF_SZ, &se_dev->sg_out_buf_adr,
+		GFP_KERNEL);
+
 #if defined(CONFIG_PM)
 	if (!se_dev->chipdata->drbg_supported)
 		se_dev->ctx_save_buf = dma_alloc_coherent(se_dev->dev,
@@ -2948,6 +3024,13 @@ static int tegra_se_remove(struct platform_device *pdev)
 		clk_put(se_dev->pclk);
 
 	tegra_se_free_ll_buf(se_dev);
+
+	dma_free_coherent(se_dev->dev, DISK_ENCR_BUF_SZ,
+			se_dev->sg_in_buf, se_dev->sg_in_buf_adr);
+
+	dma_free_coherent(se_dev->dev, DISK_ENCR_BUF_SZ,
+			se_dev->sg_out_buf, se_dev->sg_out_buf_adr);
+
 	if (se_dev->ctx_save_buf) {
 		if (!se_dev->chipdata->drbg_supported)
 			dma_free_coherent(se_dev->dev, SE_CONTEXT_BUFER_SIZE,

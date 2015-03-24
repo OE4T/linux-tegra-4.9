@@ -3229,7 +3229,7 @@ static const struct tegra_function tegra186_functions[] = {
 #define PINGROUP_REG_N(r) -1
 
 #define PINGROUP(pg_name, f0, f1, f2, f3, r, bank, pupd, e_io_hv, e_input, e_lpdr, e_pbias_buf, \
-			gpio_sf_sel, e_od, schmitt_b, drvtype, epreemp, io_reset, rfu_in)	\
+			gpio_sfio_sel, e_od, schmitt_b, drvtype, epreemp, io_reset, rfu_in)	\
 	{	\
 		.name = #pg_name,			\
 		.pins = pg_name##_pins,		\
@@ -3260,6 +3260,9 @@ static const struct tegra_function tegra186_functions[] = {
 		.einput_reg = PINGROUP_REG_Y(r),		\
 		.einput_bank = bank,				\
 		.einput_bit = e_input,				\
+		.gpio_reg = PINGROUP_REG_Y(r),	\
+		.gpio_bank = bank,				\
+		.gpio_bit = gpio_sfio_sel,			\
 		.odrain_reg = PINGROUP_REG_Y(r),		\
 		.odrain_bit = e_od,				\
 		.schmitt_bit = schmitt_b,			\
@@ -3711,6 +3714,7 @@ static const struct tegra_pinctrl_soc_data tegra186_pinctrl = {
 	.nfunctions = ARRAY_SIZE(tegra186_functions),
 	.groups = tegra186_groups,
 	.ngroups = ARRAY_SIZE(tegra186_groups),
+	.is_gpio_reg_support = true,
 	.suspend = tegra186_pinctrl_suspend,
 	.resume = tegra186_pinctrl_resume,
 	.gpio_request_enable = tegra186_gpio_request_enable,

@@ -27,6 +27,7 @@
 #include <linux/platform_device.h>
 
 #include <dt-bindings/memory/tegra-swgroup.h>
+#include <dt-bindings/memory/tegra186-swgroup.h>
 
 #define SCEW_STREAMID_WRITE_ACCESS_DISABLED	BIT(16)
 #define SCEW_STREAMID_OVERRIDE		BIT(8)

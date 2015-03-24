@@ -35,9 +35,9 @@ struct isc_mgr_new_dev {
 };
 
 struct isc_mgr_sinfo {
-	int pid;
-	int sig_no;
-	void *context;
+	__s32 pid;
+	__s32 sig_no;
+	__u64 context;
 };
 
 enum {

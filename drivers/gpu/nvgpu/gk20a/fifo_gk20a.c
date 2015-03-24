@@ -590,14 +590,16 @@ static int gk20a_init_fifo_setup_hw(struct gk20a *g)
 		smp_mb();
 
 		if (v1 != gk20a_bar1_readl(g, bar1_vaddr)) {
-			gk20a_err(dev_from_gk20a(g), "bar1 broken @ gk20a!");
+			gk20a_err(dev_from_gk20a(g), "bar1 broken @ gk20a: CPU wrote 0x%x, \
+				GPU read 0x%x", *cpu_vaddr, gk20a_bar1_readl(g, bar1_vaddr));
 			return -EINVAL;
 		}
 
 		gk20a_bar1_writel(g, bar1_vaddr, v2);
 
 		if (v2 != gk20a_bar1_readl(g, bar1_vaddr)) {
-			gk20a_err(dev_from_gk20a(g), "bar1 broken @ gk20a!");
+			gk20a_err(dev_from_gk20a(g), "bar1 broken @ gk20a: GPU wrote 0x%x, \
+				CPU read 0x%x", gk20a_bar1_readl(g, bar1_vaddr), *cpu_vaddr);
 			return -EINVAL;
 		}
 

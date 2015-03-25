@@ -118,4 +118,12 @@ static inline u32 fuse_status_opt_rop_l2_fbp_r(u32 i)
 {
 	return 0x00021d70 + i*4;
 }
+static inline u32 fuse_status_opt_fbp_r(void)
+{
+	return 0x00021d38;
+}
+static inline u32 fuse_status_opt_fbp_idx_v(u32 r, u32 i)
+{
+	return (r >> (0 + i*0)) & 0x1;
+}
 #endif

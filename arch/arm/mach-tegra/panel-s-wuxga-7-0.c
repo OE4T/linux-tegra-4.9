@@ -121,6 +121,22 @@ static int dsi_s_wuxga_7_0_enable(struct device *dev)
 		}
 	}
 
+	if (vpp_lcd) {
+		err = regulator_enable(vpp_lcd);
+		if (err < 0) {
+			pr_err("vpp_lcd regulator enable failed\n");
+			goto fail;
+		}
+	}
+
+	if (vmm_lcd) {
+		err = regulator_enable(vmm_lcd);
+		if (err < 0) {
+			pr_err("vmm_lcd regulator enable failed\n");
+			goto fail;
+		}
+	}
+
 	msleep(20);
 #if DSI_PANEL_RESET
 	if (!(flags & TEGRA_DC_OUT_INITIALIZED_MODE)) {
@@ -151,6 +167,12 @@ static int dsi_s_wuxga_7_0_disable(struct device *dev)
 
 	if (dvdd_lcd_1v8)
 		regulator_disable(dvdd_lcd_1v8);
+
+	if (vpp_lcd)
+		regulator_disable(vpp_lcd);
+
+	if (vmm_lcd)
+		regulator_disable(vmm_lcd);
 
 	dc_dev = NULL;
 	return 0;

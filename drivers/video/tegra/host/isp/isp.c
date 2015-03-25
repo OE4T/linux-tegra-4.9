@@ -476,62 +476,15 @@ static int isp_set_la(struct isp *tegra_isp, uint isp_bw, uint la_client)
 }
 #endif
 
-static int isp_set_isp_clk(struct isp *tegra_isp,
-		long isp_clk_rate, bool set_default_rate)
-{
-	struct clk *isp_clk;
-	int ret = 0;
-
-	struct nvhost_device_data *pdata =
-				platform_get_drvdata(tegra_isp->ndev);
-
-	if (WARN_ONCE(pdata == NULL, "pdata not found, %s failed\n", __func__))
-		return -ENODEV;
-
-	if (!pdata->clk || !pdata->clocks) {
-		dev_err(&tegra_isp->ndev->dev,
-			"%s: pdata does not have clock entries\n",
-			__func__);
-		return -EFAULT;
-	}
-
-	if (set_default_rate)
-		isp_clk_rate = pdata->clocks[0].default_rate;
-
-	if (!isp_clk_rate) {
-		dev_err(&tegra_isp->ndev->dev,
-			"%s: Invalid isp clock rate\n", __func__);
-		return -EINVAL;
-	}
-
-	isp_clk = pdata->clk[0];
-
-	if (IS_ERR(isp_clk)) {
-		dev_err(&tegra_isp->ndev->dev,
-			"%s: isp clock not found\n", __func__);
-		return -EFAULT;
-	}
-
-	isp_clk_rate = clk_round_rate(isp_clk, isp_clk_rate);
-
-	ret = clk_set_rate(isp_clk, isp_clk_rate);
-
-	if (ret) {
-		dev_err(&tegra_isp->ndev->dev,
-			"%s: isp clk_set_rate failed\n", __func__);
-		return ret;
-	}
-
-	return 0;
-}
-
 static long isp_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)
 {
-	struct isp *tegra_isp = file->private_data;
+	struct isp *tegra_isp;
 
 	if (_IOC_TYPE(cmd) != NVHOST_ISP_IOCTL_MAGIC)
 		return -EFAULT;
+
+	tegra_isp = file->private_data;
 
 	switch (cmd) {
 	case NVHOST_ISP_IOCTL_SET_EMC: {
@@ -602,18 +555,6 @@ static long isp_ioctl(struct file *file,
 #endif
 		return ret;
 	}
-	case NVHOST_ISP_IOCTL_SET_ISP_CLK: {
-		long isp_clk_rate = 0;
-
-		if (copy_from_user(&isp_clk_rate,
-			(const void __user *)arg, sizeof(long))) {
-			dev_err(&tegra_isp->ndev->dev,
-				"%s: Failed to copy arg from user\n", __func__);
-			return -EFAULT;
-		}
-
-		return isp_set_isp_clk(tegra_isp, isp_clk_rate, false);
-	}
 	default:
 		dev_err(&tegra_isp->ndev->dev,
 			"%s: Unknown ISP ioctl.\n", __func__);
@@ -644,9 +585,8 @@ static int isp_open(struct inode *inode, struct file *file)
 
 static int isp_release(struct inode *inode, struct file *file)
 {
-	int ret = 0;
-
 #if defined(CONFIG_TEGRA_ISOMGR)
+	int ret = 0;
 	struct isp *tegra_isp = file->private_data;
 
 	/* nullify isomgr request */
@@ -660,11 +600,7 @@ static int isp_release(struct inode *inode, struct file *file)
 		}
 	}
 #endif
-
-	/* Reset to default isp clk rate on release */
-	ret = isp_set_isp_clk(tegra_isp, 0, true);
-
-	return ret;
+	return 0;
 }
 
 const struct file_operations tegra_isp_ctrl_ops = {

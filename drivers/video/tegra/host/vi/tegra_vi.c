@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -266,52 +266,6 @@ static int vi_set_la(struct vi *tegra_vi1, uint vi_bw)
 	return ret;
 }
 
-static int vi_set_vi_clk(struct vi *tegra_vi,
-		long vi_clk_rate, bool set_default_rate)
-{
-	struct clk *vi_clk;
-	int ret = 0;
-	struct nvhost_device_data *pdata = tegra_vi->ndev->dev.platform_data;
-
-	if (WARN_ONCE(pdata == NULL, "pdata not found, %s failed\n", __func__))
-		return -ENODEV;
-
-	if (!pdata->clk || !pdata->clocks) {
-		dev_err(&tegra_vi->ndev->dev,
-			"%s: pdata does not have clock entries\n",
-			__func__);
-		return -EFAULT;
-	}
-
-	if (set_default_rate)
-		vi_clk_rate = pdata->clocks[0].default_rate;
-
-	if (!vi_clk_rate) {
-		dev_err(&tegra_vi->ndev->dev,
-			"%s: Invalid vi clock rate\n", __func__);
-		return -EINVAL;
-	}
-
-	vi_clk = pdata->clk[0];
-
-	if (IS_ERR(vi_clk)) {
-		dev_err(&tegra_vi->ndev->dev,
-			"%s: vi clock not found\n", __func__);
-		return -EFAULT;
-	}
-
-	vi_clk_rate = clk_round_rate(vi_clk, vi_clk_rate);
-
-	ret = clk_set_rate(vi_clk, vi_clk_rate);
-
-	if (ret) {
-		dev_err(&tegra_vi->ndev->dev,
-			"%s: vi clk_set_rate failed\n", __func__);
-		return ret;
-	}
-
-	return 0;
-}
 
 static long vi_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)
@@ -398,18 +352,6 @@ static long vi_ioctl(struct file *file,
 #endif
 		return ret;
 	}
-	case NVHOST_VI_IOCTL_SET_VI_CLK: {
-		long vi_clk_rate = 0;
-
-		if (copy_from_user(&vi_clk_rate,
-			(const void __user *)arg, sizeof(long))) {
-			dev_err(&tegra_vi->ndev->dev,
-				"%s: Failed to copy arg from user\n", __func__);
-			return -EFAULT;
-		}
-
-		return vi_set_vi_clk(tegra_vi, vi_clk_rate, false);
-	}
 	default:
 		dev_err(&tegra_vi->ndev->dev,
 			"%s: Unknown vi ioctl.\n", __func__);
@@ -468,10 +410,7 @@ static int vi_release(struct inode *inode, struct file *file)
 	}
 #endif
 
-	/* Reset to default vi clk rate on release */
-	ret = vi_set_vi_clk(tegra_vi, 0, true);
-
-	return ret;
+	return 0;
 }
 
 const struct file_operations tegra_vi_ctrl_ops = {

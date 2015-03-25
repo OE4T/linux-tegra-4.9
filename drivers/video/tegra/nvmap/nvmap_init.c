@@ -181,7 +181,7 @@ int nvmap_populate_ivm_carveout(struct device_node *n,
 	if (of_property_read_u32(n, "alloc", &co->can_alloc))
 		return -EINVAL;
 
-	pr_info("IVM carveout IPA:%p, size=%d, peer vmid=%d\n",
+	pr_info("IVM carveout IPA:%p, size=%zu, peer vmid=%d\n",
 		(void *)(uintptr_t)co->base, co->size, co->peer);
 
 	co->is_ivm    = true;

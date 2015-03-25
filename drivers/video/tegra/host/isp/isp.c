@@ -479,12 +479,10 @@ static int isp_set_la(struct isp *tegra_isp, uint isp_bw, uint la_client)
 static long isp_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)
 {
-	struct isp *tegra_isp;
+	struct isp *tegra_isp = file->private_data;
 
 	if (_IOC_TYPE(cmd) != NVHOST_ISP_IOCTL_MAGIC)
 		return -EFAULT;
-
-	tegra_isp = file->private_data;
 
 	switch (cmd) {
 	case NVHOST_ISP_IOCTL_SET_EMC: {
@@ -555,6 +553,19 @@ static long isp_ioctl(struct file *file,
 #endif
 		return ret;
 	}
+	case NVHOST_ISP_IOCTL_SET_ISP_CLK: {
+		long isp_clk_rate = 0;
+
+		if (copy_from_user(&isp_clk_rate,
+			(const void __user *)arg, sizeof(long))) {
+			dev_err(&tegra_isp->ndev->dev,
+				"%s: Failed to copy arg from user\n", __func__);
+			return -EFAULT;
+		}
+
+		return nvhost_module_set_rate(tegra_isp->ndev,
+				tegra_isp, isp_clk_rate, 0, NVHOST_CLOCK);
+	}
 	default:
 		dev_err(&tegra_isp->ndev->dev,
 			"%s: Unknown ISP ioctl.\n", __func__);
@@ -580,14 +591,24 @@ static int isp_open(struct inode *inode, struct file *file)
 
 	file->private_data = tegra_isp;
 
+	/* add isp client to acm */
+	if (nvhost_module_add_client(tegra_isp->ndev, tegra_isp)) {
+		dev_err(&tegra_isp->ndev->dev,
+			"%s: failed add isp client\n",
+			__func__);
+		return -ENOMEM;
+	}
+
 	return 0;
 }
 
 static int isp_release(struct inode *inode, struct file *file)
 {
-#if defined(CONFIG_TEGRA_ISOMGR)
 	int ret = 0;
+
 	struct isp *tegra_isp = file->private_data;
+
+#if defined(CONFIG_TEGRA_ISOMGR)
 
 	/* nullify isomgr request */
 	if (tegra_isp->isomgr_handle) {
@@ -600,7 +621,11 @@ static int isp_release(struct inode *inode, struct file *file)
 		}
 	}
 #endif
-	return 0;
+
+	/* remove isp client from acm */
+	nvhost_module_remove_client(tegra_isp->ndev, tegra_isp);
+
+	return ret;
 }
 
 const struct file_operations tegra_isp_ctrl_ops = {

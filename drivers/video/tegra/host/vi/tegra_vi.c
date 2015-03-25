@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -266,7 +266,6 @@ static int vi_set_la(struct vi *tegra_vi1, uint vi_bw)
 	return ret;
 }
 
-
 static long vi_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)
 {
@@ -352,6 +351,19 @@ static long vi_ioctl(struct file *file,
 #endif
 		return ret;
 	}
+	case NVHOST_VI_IOCTL_SET_VI_CLK: {
+		long vi_clk_rate = 0;
+
+		if (copy_from_user(&vi_clk_rate,
+			(const void __user *)arg, sizeof(long))) {
+			dev_err(&tegra_vi->ndev->dev,
+				"%s: Failed to copy arg from user\n", __func__);
+			return -EFAULT;
+		}
+
+		return nvhost_module_set_rate(tegra_vi->ndev,
+				tegra_vi, vi_clk_rate, 0, NVHOST_CLOCK);
+	}
 	default:
 		dev_err(&tegra_vi->ndev->dev,
 			"%s: Unknown vi ioctl.\n", __func__);
@@ -380,6 +392,14 @@ static int vi_open(struct inode *inode, struct file *file)
 	err = vi_enable_irq(vi);
 	if (err)
 		dev_err(&vi->ndev->dev, "%s: vi_enable_irq failed\n", __func__);
+
+	/* add vi client to acm */
+	if (nvhost_module_add_client(vi->ndev, vi)) {
+		dev_err(&vi->ndev->dev,
+			"%s: failed add vi client\n",
+			__func__);
+		return -ENOMEM;
+	}
 
 	return err;
 }
@@ -410,7 +430,10 @@ static int vi_release(struct inode *inode, struct file *file)
 	}
 #endif
 
-	return 0;
+	/* remove vi client from acm */
+	nvhost_module_remove_client(tegra_vi->ndev, tegra_vi);
+
+	return ret;
 }
 
 const struct file_operations tegra_vi_ctrl_ops = {

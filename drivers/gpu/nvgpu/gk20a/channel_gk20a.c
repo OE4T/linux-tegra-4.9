@@ -1178,7 +1178,8 @@ static inline bool check_gp_put(struct gk20a *g,
 	if (c->gpfifo.put != put) {
 		/*TBD: BUG_ON/teardown on this*/
 		gk20a_err(dev_from_gk20a(g), "gp_put changed unexpectedly "
-			   "since last update");
+			  "since last update, channel put = %u, ram put = %u\n",
+			  c->gpfifo.put, put);
 		c->gpfifo.put = put;
 		return false; /* surprise! */
 	}

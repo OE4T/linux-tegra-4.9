@@ -47,6 +47,65 @@
 		cap-sd-highspeed;
 		status = "okay";
         };
+	mailbox@0x03538000 {
+		status = "okay";
+	};
+
+	xudc@0x03550000 {
+		status = "okay";
+
+		phys = <&sysfpga_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>,
+			<&sysfpga_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
+		phy-names = "usb3", "usb2";
+	};
+
+	xhci@0x03530000 {
+		status = "okay";
+
+		phys = 	<&sysfpga_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
+			<&sysfpga_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
+			<&sysfpga_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>;
+
+		phy-names = "usb3-1", "utmi-1", "utmi-2";
+	};
+
+	sysfpga_padctl_uphy: pinctrl@0x03520000 {
+		status = "okay";
+
+		vbus-1-supply = <&battery_reg>;
+		vbus-2-supply = <&battery_reg>;
+		vbus-3-supply = <&battery_reg>;
+		vddio_hsic-supply = <&battery_reg>;
+
+		/* use virtual clocks for fpga */
+		clocks = <&clk32k_in>, <&clk32k_in>;
+		pinctrl-0 = <&sysfpga_default>;
+		pinctrl-names = "default";
+		sysfpga_default: pinmux {
+			host-mode-utmi-pads {
+				nvidia,lanes = "otg-1", "otg-2";
+				nvidia,function = "xusb";
+				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
+			};
+			host-mode-ss-port {
+				nvidia,lanes = "uphy-lane-1";
+				nvidia,function = "usb3";
+				nvidia,usb3-port = <1>;
+				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
+			};
+			device-mode-utmi-pads {
+				nvidia,lanes = "otg-0";
+				nvidia,function = "xusb";
+				nvidia,port-cap = <TEGRA_PADCTL_PORT_DEVICE_ONLY>;
+			};
+			device-mode-ss-port {
+				nvidia,lanes = "uphy-lane-0";
+				nvidia,function = "usb3";
+				nvidia,usb3-port = <0>;
+				nvidia,port-cap = <TEGRA_PADCTL_PORT_DEVICE_ONLY>;
+			};
+		};
+	};
 
 	host1x: host1x {
 		dpaux {

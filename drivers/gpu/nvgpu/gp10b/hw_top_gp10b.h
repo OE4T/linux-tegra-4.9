@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -71,6 +71,22 @@ static inline u32 top_num_fbps_r(void)
 	return 0x00022438;
 }
 static inline u32 top_num_fbps_value_v(u32 r)
+{
+	return (r >> 0) & 0x1f;
+}
+static inline u32 top_ltc_per_fbp_r(void)
+{
+	return 0x00022450;
+}
+static inline u32 top_ltc_per_fbp_value_v(u32 r)
+{
+	return (r >> 0) & 0x1f;
+}
+static inline u32 top_slices_per_ltc_r(void)
+{
+	return 0x0002245c;
+}
+static inline u32 top_slices_per_ltc_value_v(u32 r)
 {
 	return (r >> 0) & 0x1f;
 }

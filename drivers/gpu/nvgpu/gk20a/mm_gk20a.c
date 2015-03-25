@@ -2273,10 +2273,8 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	vm->pdb.entries = kzalloc(sizeof(struct gk20a_mm_entry) *
 			(pde_hi + 1), GFP_KERNEL);
 
-	if (!vm->pdb.entries) {
-		err = -ENOMEM;
-		goto clean_up_pdes;
-	}
+	if (!vm->pdb.entries)
+		return -ENOMEM;
 
 	gk20a_dbg_info("init space for %s va_limit=0x%llx num_pdes=%d",
 		   name, vm->va_limit, pde_hi + 1);
@@ -2284,7 +2282,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	/* allocate the page table directory */
 	err = gk20a_zalloc_gmmu_page_table(vm, 0, &vm->mmu_levels[0], &vm->pdb);
 	if (err)
-		goto clean_up_ptes;
+		goto clean_up_pdes;
 
 	/* First 16GB of the address space goes towards small pages. What ever
 	 * remains is allocated to large pages. */
@@ -2308,7 +2306,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 			     low_hole_pages,		 /*start*/
 			     num_small_pages - low_hole_pages);/* length*/
 	if (err)
-		goto clean_up_map_pde;
+		goto clean_up_ptes;
 
 	if (big_pages) {
 		u32 start = (u32)(small_vma_size >>
@@ -2336,8 +2334,6 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 
 clean_up_small_allocator:
 	gk20a_allocator_destroy(&vm->vma[gmmu_page_size_small]);
-clean_up_map_pde:
-	unmap_gmmu_pages(&vm->pdb);
 clean_up_ptes:
 	free_gmmu_pages(vm, &vm->pdb);
 clean_up_pdes:

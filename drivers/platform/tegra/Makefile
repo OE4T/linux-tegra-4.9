@@ -6,4 +6,5 @@ obj-$(CONFIG_TEGRA_HSP) += tegra-hsp.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra-mce.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra_chipid.o
 obj-$(CONFIG_TEGRA_IPC) += tegra-ivc-client.o
+obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra-roc.o
 obj-y += mc/

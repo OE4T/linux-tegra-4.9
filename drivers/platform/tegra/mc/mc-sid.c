@@ -392,7 +392,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			BPMPDMAR,
 			BPMPDMAW,
 		},
-		.mc_overrides = true,
+		.mc_overrides = false,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_AON,

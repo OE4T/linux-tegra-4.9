@@ -1252,10 +1252,10 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 	u32 engine_id;
 	int id = -1;
 	bool non_chid = false;
+	bool ret = false;
 
-	/* read and reset the scheduler error register */
+	/* read the scheduler error register */
 	sched_error = gk20a_readl(g, fifo_intr_sched_error_r());
-	gk20a_writel(g, fifo_intr_0_r(), fifo_intr_0_sched_error_reset_f());
 
 	for (engine_id = 0; engine_id < g->fifo.max_engines; engine_id++) {
 		u32 status = gk20a_readl(g, fifo_engine_status_r(engine_id));
@@ -1287,8 +1287,12 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 	}
 
 	/* could not find the engine - should never happen */
-	if (unlikely(engine_id >= g->fifo.max_engines))
+	if (unlikely(engine_id >= g->fifo.max_engines)) {
+		gk20a_err(dev_from_gk20a(g), "fifo sched error : 0x%08x, failed to find engine\n",
+			sched_error);
+		ret = false;
 		goto err;
+	}
 
 	if (fifo_intr_sched_error_code_f(sched_error) ==
 			fifo_intr_sched_error_code_ctxsw_timeout_v()) {
@@ -1297,6 +1301,7 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 
 		if (non_chid) {
 			gk20a_fifo_recover(g, BIT(engine_id), true);
+			ret = true;
 			goto err;
 		}
 
@@ -1310,20 +1315,23 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 			gk20a_gr_debug_dump(g->dev);
 			gk20a_fifo_recover(g, BIT(engine_id),
 				ch->timeout_debug_dump);
+			ret = true;
 		} else {
 			gk20a_dbg_info(
 				"fifo is waiting for ctx switch for %d ms,"
 				"ch = %d\n",
 				ch->timeout_accumulated_ms,
 				id);
+			ret = false;
 		}
-		return ch->timeout_debug_dump;
+		return ret;
 	}
-err:
-	gk20a_err(dev_from_gk20a(g), "fifo sched error : 0x%08x, engine=%u, %s=%d",
-		   sched_error, engine_id, non_chid ? "non-ch" : "ch", id);
 
-	return true;
+	gk20a_err(dev_from_gk20a(g), "fifo sched error : 0x%08x, engine=%u, %s=%d",
+		sched_error, engine_id, non_chid ? "non-ch" : "ch", id);
+
+err:
+	return ret;
 }
 
 static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
@@ -1375,7 +1383,7 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 	if (print_channel_reset_log) {
 		int engine_id;
 		gk20a_err(dev_from_gk20a(g),
-			   "channel reset initated from %s; intr=0x%08x",
+			   "channel reset initiated from %s; intr=0x%08x",
 			   __func__, fifo_intr);
 		for (engine_id = 0;
 		     engine_id < g->fifo.max_engines;

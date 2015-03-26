@@ -462,7 +462,7 @@ static const u32 _num_sm_dsm_perf_ctrl_regs = 2;
 static u32 *_sm_dsm_perf_regs;
 static u32 _sm_dsm_perf_ctrl_regs[2];
 
-void gr_gm20b_init_sm_dsm_reg_info(void)
+static void gr_gm20b_init_sm_dsm_reg_info(void)
 {
 	if (_sm_dsm_perf_ctrl_regs[0] != 0)
 		return;
@@ -473,20 +473,20 @@ void gr_gm20b_init_sm_dsm_reg_info(void)
 			      gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control5_r();
 }
 
-void gr_gm20b_get_sm_dsm_perf_regs(struct gk20a *g,
-				   u32 *num_sm_dsm_perf_regs,
-				   u32 **sm_dsm_perf_regs,
-				   u32 *perf_register_stride)
+static void gr_gm20b_get_sm_dsm_perf_regs(struct gk20a *g,
+					  u32 *num_sm_dsm_perf_regs,
+					  u32 **sm_dsm_perf_regs,
+					  u32 *perf_register_stride)
 {
 	*num_sm_dsm_perf_regs = _num_sm_dsm_perf_regs;
 	*sm_dsm_perf_regs = _sm_dsm_perf_regs;
 	*perf_register_stride = 0;
 }
 
-void gr_gm20b_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
-					u32 *num_sm_dsm_perf_ctrl_regs,
-					u32 **sm_dsm_perf_ctrl_regs,
-					u32 *ctrl_register_stride)
+static void gr_gm20b_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
+					       u32 *num_sm_dsm_perf_ctrl_regs,
+					       u32 **sm_dsm_perf_ctrl_regs,
+					       u32 *ctrl_register_stride)
 {
 	*num_sm_dsm_perf_ctrl_regs = _num_sm_dsm_perf_ctrl_regs;
 	*sm_dsm_perf_ctrl_regs = _sm_dsm_perf_ctrl_regs;

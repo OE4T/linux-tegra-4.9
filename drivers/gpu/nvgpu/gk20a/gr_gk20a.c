@@ -6022,7 +6022,7 @@ static void init_ovr_perf_reg_info(void)
 	_ovr_perf_regs[16] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter7_r();
 }
 
-void gr_gk20a_init_sm_dsm_reg_info(void)
+static void gr_gk20a_init_sm_dsm_reg_info(void)
 {
 	if (_sm_dsm_perf_regs[0] != 0)
 		return;
@@ -6168,20 +6168,20 @@ static inline int ctxsw_prog_ucode_header_size_in_bytes(void)
 	return 256;
 }
 
-void gr_gk20a_get_sm_dsm_perf_regs(struct gk20a *g,
-					u32 *num_sm_dsm_perf_regs,
-					u32 **sm_dsm_perf_regs,
-					u32 *perf_register_stride)
+static void gr_gk20a_get_sm_dsm_perf_regs(struct gk20a *g,
+					  u32 *num_sm_dsm_perf_regs,
+					  u32 **sm_dsm_perf_regs,
+					  u32 *perf_register_stride)
 {
 	*num_sm_dsm_perf_regs = _num_sm_dsm_perf_regs;
 	*sm_dsm_perf_regs = _sm_dsm_perf_regs;
 	*perf_register_stride = ctxsw_prog_extended_sm_dsm_perf_counter_register_stride_v();
 }
 
-void gr_gk20a_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
-					u32 *num_sm_dsm_perf_ctrl_regs,
-					u32 **sm_dsm_perf_ctrl_regs,
-					u32 *ctrl_register_stride)
+static void gr_gk20a_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
+					       u32 *num_sm_dsm_perf_ctrl_regs,
+					       u32 **sm_dsm_perf_ctrl_regs,
+					       u32 *ctrl_register_stride)
 {
 	*num_sm_dsm_perf_ctrl_regs = _num_sm_dsm_perf_ctrl_regs;
 	*sm_dsm_perf_ctrl_regs = _sm_dsm_perf_ctrl_regs;

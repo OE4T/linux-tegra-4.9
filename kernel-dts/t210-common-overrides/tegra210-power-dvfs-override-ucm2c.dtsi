@@ -1,0 +1,44 @@
+/*
+ * Copyright (c) 2015 NVIDIA CORPORATION. All rights reserved.
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
+
+/*
+ * DVFS overrides for T210 UCM2 (always on) personality in commercial
+ * temperature range.
+ *
+ * Recommended to copy the contents of this file to final .dts file for
+ * the respective platform. If file is included "as is", the #include statement
+ * should be placed after .dtsi with dvfs_rail node definition is included.
+ */
+
+/ {
+	chosen {
+		nvidia,tegra-always-on-personality;
+	};
+
+	dvfs_rails {
+		vdd-cpu-vmax-cdev@8 {
+			nvidia,trips = <&cpu_vmax1 1170 &cpu_vmax2 1094>;
+		};
+
+		vdd-gpu-vmax-cdev@9 {
+			nvidia,trips = <&gpu_vmax1 1094>;
+		};
+
+		vdd-core-vmax-cdev@10 {
+			nvidia,trips = <&core_vmax1 1094>;
+		};
+	};
+};
+
+

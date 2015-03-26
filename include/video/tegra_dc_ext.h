@@ -94,6 +94,7 @@
 #define TEGRA_DC_EXT_FLIP_FLAG_INTERLACE	(1 << 7)
 #define TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED	(1 << 8)
 #define TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC	(1 << 9)
+#define TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC_V2	(1 << 10)
 /*Passthrough condition for running 4K HDMI*/
 #define TEGRA_DC_EXT_FLIP_HEAD_FLAG_YUVBYPASS	(1 << 0)
 #define TEGRA_DC_EXT_FLIP_HEAD_FLAG_VRR_MODE	(1 << 1)
@@ -336,11 +337,71 @@ struct tegra_dc_ext_csc {
 	__u16 kvb;	/* s.2.8 */
 };
 
+/*
+ * Coefficients should be specified as fixed-point values; the exact format
+ * varies for each coefficient.
+ * Each coefficient is a signed 19bit number with 3 integer bits and 16
+ * fractional bits. Overall range is from -4.0 to 3.999
+ * All three fields should be tightly packed in 32bit
+ * For example, the "s.3.16" value should be packed as:
+ * (MSB) 12 bits of 0, 1 bit of sign, 3 bits of integer, 16 bits of frac (LSB)
+ */
+struct tegra_dc_ext_csc_v2 {
+	__u32 win_index;
+	__u32 csc_enable;
+	__u32 r2r;		/* s.3.16 */
+	__u32 g2r;		/* s.3.16 */
+	__u32 b2r;		/* s.3.16 */
+	__u32 const2r;		/* s.3.16 */
+	__u32 r2g;		/* s.3.16 */
+	__u32 g2g;		/* s.3.16 */
+	__u32 b2g;		/* s.3.16 */
+	__u32 const2g;		/* s.3.16 */
+	__u32 r2b;		/* s.3.16 */
+	__u32 g2b;		/* s.3.16 */
+	__u32 b2b;		/* s.3.16 */
+	__u32 const2b;		/* s.3.16 */
+};
+
 struct tegra_dc_ext_cmu {
 	__u16 cmu_enable;
 	__u16 csc[9];
 	__u16 lut1[256];
 	__u16 lut2[960];
+};
+
+/*
+ * Two types for LUT size 257 or 1025
+ * Based on lut size the input width is different
+ * Each component is in 16 bit format
+ * For example With Unity LUT range with 1025 size
+ * Each component (R,G,B) content is in 14bits
+ * Index bits are in upper 10 bits
+ * Black to White range from 0x6000 to 0x9FFF
+ * LUT array is represented in 64 bit, each component is shifted
+ * appropriately to represent in 64bit data.
+ * For example, rgb[i] = (B << 32) | (G << 16) | (R << 0)
+ * lut_ranges - input value range covered by lut,
+ * it can be unity (0.0 ..1.0), xrbias(-0.75 .. +1.25),
+ * xvycc(-1.5 to +2.5)
+ * lut_mode - index or interpolate
+ */
+#define TEGRA_DC_EXT_LUT_SIZE_257	256
+#define TEGRA_DC_EXT_LUT_SIZE_1025	1024
+
+#define TEGRA_DC_EXT_OUTLUT_MODE_INDEX		0
+#define TEGRA_DC_EXT_OUTLUT_MODE_INTERPOLATE	1
+
+#define TEGRA_DC_EXT_OUTLUT_RANGE_UNITY		0
+#define TEGRA_DC_EXT_OUTLUT_RANGE_XRBAIS	1
+#define TEGRA_DC_EXT_OUTLUT_RANGE_XVYCC		2
+
+struct tegra_dc_ext_cmu_v2 {
+	__u16 cmu_enable;
+	__u16 lut_size;
+	__u16 lut_range;
+	__u16 lut_mode;
+	__u64 rgb[TEGRA_DC_EXT_LUT_SIZE_1025 + 1];
 };
 
 /*
@@ -459,6 +520,18 @@ struct tegra_dc_ext_feature {
 
 #define TEGRA_DC_EXT_SET_CMU_ALIGNED \
 	_IOW('D', 0x16, struct tegra_dc_ext_cmu)
+
+#define TEGRA_DC_EXT_SET_CSC_V2 \
+	_IOW('D', 0x17, struct tegra_dc_ext_csc_v2)
+
+#define TEGRA_DC_EXT_SET_CMU_V2 \
+	_IOW('D', 0x18, struct tegra_dc_ext_cmu_v2)
+
+#define TEGRA_DC_EXT_GET_CMU_V2 \
+	_IOR('D', 0x19, struct tegra_dc_ext_cmu_v2)
+
+#define TEGRA_DC_EXT_GET_CUSTOM_CMU_V2 \
+	_IOR('D', 0x1A, struct tegra_dc_ext_cmu_v2)
 
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,

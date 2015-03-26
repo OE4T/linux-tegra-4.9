@@ -242,7 +242,7 @@
 			nvidia,trips = <&cpu_vmax1 1170 &cpu_vmax2 1130>;
 		};
 
-		gpu_vmax_cdev: vdd-cpu-vmax-cdev@9 {
+		gpu_vmax_cdev: vdd-gpu-vmax-cdev@9 {
 			reg = <9>;
 			cooling-min-state = <0>;
 			cooling-max-state = <1>;

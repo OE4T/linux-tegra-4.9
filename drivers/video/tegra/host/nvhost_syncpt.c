@@ -738,7 +738,7 @@ static int nvhost_reserve_syncpt(struct nvhost_syncpt *sp, u32 id,
 					bool client_managed)
 {
 	/* is it already reserved ? */
-	if (id < NVHOST_FREE_SYNCPT_BASE(sp) || sp->assigned[id])
+	if (!nvhost_syncpt_is_valid_pt(sp, id) || sp->assigned[id])
 		return -EINVAL;
 
 	sp->assigned[id] = true;
@@ -895,6 +895,11 @@ void nvhost_free_syncpt(u32 id)
 	struct device *d = &host->dev->dev;
 
 	/* first check if we are freeing a valid syncpt */
+	if (!nvhost_syncpt_is_valid_pt(sp, id)) {
+		nvhost_warn(d, "trying to free syncpt out of s/w range %u\n",
+			id);
+		return;
+	}
 	if (!sp->assigned[id]) {
 		nvhost_warn(d, "trying to free unused syncpt %u\n", id);
 		return;
@@ -1045,7 +1050,10 @@ int nvhost_syncpt_init(struct platform_device *dev,
 
 		/* initialize syncpt status */
 		sp->assigned[i] = false;
-		sp->client_managed[i] = false;
+		if (nvhost_syncpt_is_valid_pt(sp, i))
+			sp->client_managed[i] = false;
+		else
+			sp->client_managed[i] = true;
 		sp->syncpt_names[i] = NULL;
 		sp->last_used_by[i] = NULL;
 

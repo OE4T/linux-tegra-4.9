@@ -239,7 +239,7 @@
 			compatible = "nvidia,tegra210-rail-vmax-cdev";
 			cdev-type = "cpu_hot";
 			nvidia,constraint;
-			nvidia,trips = <&cpu_vmax1 1130>;
+			nvidia,trips = <&cpu_vmax1 1170 &cpu_vmax2 1130>;
 		};
 
 		gpu_vmax_cdev: vdd-cpu-vmax-cdev@9 {
@@ -290,10 +290,12 @@
 			SET_MAP_TRIP(core, core, vmax, 1, 86000);
 		};
 		CPU-therm {
-			SET_MAP_TRIP(cpu, cpu, vmax, 1, 86000);
+			SET_MAP_TRIP(cpu, cpu, vmax, 1, 66000);
+			SET_MAP_TRIP(cpu, cpu, vmax, 2, 86000);
 		};
 		LCPU-therm {
-			SET_MAP_TRIP(lcpu, cpu, vmax, 1, 86000);
+			SET_MAP_TRIP(lcpu, cpu, vmax, 1, 66000);
+			SET_MAP_TRIP(lcpu, cpu, vmax, 2, 86000);
 		};
 	};
 };

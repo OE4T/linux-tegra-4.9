@@ -181,7 +181,25 @@
 
 	smmu: iommu {
 		reg = <0x0 0x12000000 0x0 0x01000000>;
-		status = "disabled";
+		mmu-masters = <&host1x                  TEGRA_SWGROUP_HC>,
+			      <&{/host1x/nvcsi}		TEGRA_SWGROUP_NVCSI>,
+			      <&{/host1x/vic}           TEGRA_SWGROUP_VIC>,
+			      <&{/host1x/vi}            TEGRA_SWGROUP_VI>,
+			      <&{/host1x/isp@54600000}  TEGRA_SWGROUP_ISP>,
+			      <&{/host1x/nvdec}         TEGRA_SWGROUP_NVDEC>,
+			      <&{/host1x/nvenc}         TEGRA_SWGROUP_NVENC>,
+			      <&{/host1x/nvjpg}         TEGRA_SWGROUP_NVJPG>,
+			      <&{/host1x/nvdisplay@0x54200000}	TEGRA_SWGROUP_DC>,
+			      <&{/host1x/nvdisplay@0x54210000}	TEGRA_SWGROUP_DC>,
+			      <&{/host1x/nvdisplay@0x54220000}	TEGRA_SWGROUP_DC>,
+			      <&{/host1x/tsec}		TEGRA_SWGROUP_TSEC>,
+			      <&{/host1x/tsecb}		TEGRA_SWGROUP_TSECB>,
+			      <&{/sdhci@700b0600}       TEGRA_SWGROUP_SDMMC4A>,
+			      <&{/sdhci@700b0400}       TEGRA_SWGROUP_SDMMC3A>,
+			      <&{/sdhci@700b0200}       TEGRA_SWGROUP_SDMMC2A>,
+			      <&{/sdhci@700b0000}       TEGRA_SWGROUP_SDMMC1A>,
+			      <&{/bpmp}			TEGRA_SWGROUP_BPMP>;
+
 	};
 
 	tegra_car: clock {

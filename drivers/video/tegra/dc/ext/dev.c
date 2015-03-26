@@ -1236,7 +1236,59 @@ static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
 	return 0;
 }
 
-#ifdef CONFIG_TEGRA_DC_CMU
+#if defined(CONFIG_TEGRA_DC_CMU_V2)
+static int tegra_dc_ext_get_cmu_v2(struct tegra_dc_ext_user *user,
+			struct tegra_dc_ext_cmu_v2 *args, bool custom_value)
+{
+	int i;
+	struct tegra_dc *dc = user->ext->dc;
+	struct tegra_dc_cmu *cmu;
+	struct tegra_dc_lut *cmu_lut;
+
+	if (custom_value && dc->pdata->cmu)
+		cmu = dc->pdata->cmu;
+	else if (custom_value && !dc->pdata->cmu)
+		return -EACCES;
+	else
+		cmu_lut = &dc->cmu;
+
+	args->cmu_enable = dc->pdata->cmu_enable;
+	for (i = 0; i < TEGRA_DC_EXT_LUT_SIZE_1025; i++) {
+		if (custom_value)
+			args->rgb[i] = cmu->rgb[i];
+		else
+			args->rgb[i] = cmu_lut->rgb[i];
+	}
+	return 0;
+}
+
+static int tegra_dc_ext_set_cmu_v2(struct tegra_dc_ext_user *user,
+				struct tegra_dc_ext_cmu_v2 *args)
+{
+	int i, lut_size;
+	struct tegra_dc_lut *cmu;
+	struct tegra_dc *dc = user->ext->dc;
+
+	/* Directly copying the values to DC
+	 * output lut whose address is already
+	 * programmed to HW register.
+	 */
+	cmu = &dc->cmu;
+	if (!cmu)
+		return -ENOMEM;
+
+	dc->pdata->cmu_enable = args->cmu_enable;
+	lut_size = args->lut_size;
+	for (i = 0; i < lut_size; i++)
+		cmu->rgb[i] = args->rgb[i];
+
+	tegra_nvdisp_update_cmu(dc, cmu);
+
+	kfree(cmu);
+	return 0;
+}
+
+#elif defined(CONFIG_TEGRA_DC_CMU)
 static int tegra_dc_ext_get_cmu(struct tegra_dc_ext_user *user,
 			struct tegra_dc_ext_cmu *args, bool custom_value)
 {
@@ -1812,6 +1864,62 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		}
 
 		ret = tegra_dc_ext_set_cmu(user, args);
+
+		kfree(args);
+
+		return ret;
+#else
+		return -EACCES;
+#endif
+	}
+
+	case TEGRA_DC_EXT_GET_CMU_V2:
+	case TEGRA_DC_EXT_GET_CUSTOM_CMU_V2:
+	{
+#ifdef CONFIG_TEGRA_DC_CMU_V2
+		struct tegra_dc_ext_cmu_v2 *args;
+		bool custom_value = false;
+
+		if (TEGRA_DC_EXT_GET_CUSTOM_CMU_V2 == cmd)
+			custom_value = true;
+
+		args = kzalloc(sizeof(*args), GFP_KERNEL);
+		if (!args)
+			return -ENOMEM;
+
+		if (tegra_dc_ext_get_cmu_v2(user, args, custom_value)) {
+			kfree(args);
+			return -EACCES;
+		}
+
+		if (copy_to_user(user_arg, args, sizeof(*args))) {
+			kfree(args);
+			return -EFAULT;
+		}
+
+		kfree(args);
+		return 0;
+#else
+		return -EACCES;
+#endif
+	}
+
+	case TEGRA_DC_EXT_SET_CMU_V2:
+	{
+#ifdef CONFIG_TEGRA_DC_CMU_V2
+		int ret;
+		struct tegra_dc_ext_cmu_v2 *args;
+
+		args = kzalloc(sizeof(*args), GFP_KERNEL);
+		if (!args)
+			return -ENOMEM;
+
+		if (copy_from_user(args, user_arg, sizeof(*args))) {
+			kfree(args);
+			return -EFAULT;
+		}
+
+		ret = tegra_dc_ext_set_cmu_v2(user, args);
 
 		kfree(args);
 

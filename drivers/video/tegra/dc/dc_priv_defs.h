@@ -198,8 +198,14 @@ struct tegra_dc {
 
 	struct tegra_dc_blend		blend;
 	int				n_windows;
-#ifdef CONFIG_TEGRA_DC_CMU
+
+#if defined(CONFIG_TEGRA_DC_CMU)
 	struct tegra_dc_cmu		cmu;
+#elif defined(CONFIG_TEGRA_DC_CMU_V2)
+	struct tegra_dc_lut		cmu;
+#endif
+
+#if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 	struct tegra_dc_cmu		cmu_shadow;
 	bool				cmu_dirty;
 	/* Is CMU set by bootloader */

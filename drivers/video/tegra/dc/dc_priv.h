@@ -591,6 +591,10 @@ struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
 
 void nvdisp_dc_feature_register(struct tegra_dc *dc);
 int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y);
+int tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
+					struct tegra_dc_lut *lut);
+int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *lut);
+void tegra_dc_cache_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *src_cmu);
 #endif
 
 #endif

@@ -63,6 +63,7 @@ enum {
 	 * ADSP to CPU : Used to notify that all input data is consumed
 	 */
 	nvfx_apm_method_set_eos,
+	nvfx_apm_method_set_priority
 };
 
 /* For method nvfx_apm_method_set_io_buffer */
@@ -95,6 +96,12 @@ typedef struct {
 typedef struct {
 	nvfx_call_params_t call_params;
 } apm_eos_params_t;
+
+/* For nvfx_apm_method_set_priority */
+typedef struct {
+	nvfx_call_params_t call_params;
+	uint32_t priority;
+} apm_set_priority_params_t;
 
 /* Module specific structures */
 typedef struct {
@@ -130,6 +137,7 @@ typedef union {
 			nvfx_set_state_params_t            state_params;
 			nvfx_reset_params_t                reset_params;
 			apm_eos_params_t                   eos_params;
+			apm_set_priority_params_t          priority_params;
 			apm_fx_connect_params_t            fx_connect_params;
 			apm_fx_remove_params_t             fx_remove_params;
 			apm_fx_set_param_params_t          fx_set_param_params;
@@ -163,6 +171,14 @@ typedef struct {
 	variant_t plugin;
 	/* NVFX specific shared memory follows */
 } plugin_shared_mem_t;
+
+/**
+ * Defines for APM priority levels
+ * 48 corresponds to HIGH_PRIORITY in LK.
+ */
+#define APM_PRIORITY_MAX		(58)
+#define APM_PRIORITY_DEFAULT	(48)
+
 
 #define PLUGIN_SHARED_MEM(x) ((plugin_shared_mem_t *)x)
 #define APM_SHARED_STATE(x) (apm_shared_state_t *)(PLUGIN_SHARED_MEM(x) + 1)

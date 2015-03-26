@@ -563,40 +563,52 @@ void platform_override_streamid(int sid)
 #if defined(CONFIG_DEBUG_FS)
 enum { ORD, SEC, TXN, MAX_REGS_TYPE};
 static const char *mc_regs_type[] = { "ord", "sec", "txn", };
-static struct debugfs_reg32 mc_regs[MAX_REGS_TYPE * MAX_OID];
-static struct debugfs_regset32 mc_regset[MAX_REGS_TYPE];
+
+static int mc_reg32_debugfs_set(void *data, u64 val)
+{
+	writel(val, data);
+	return 0;
+}
+static int mc_reg32_debugfs_get(void *data, u64 *val)
+{
+	*val = readl(data);
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(mc_reg32_debugfs_fops,
+			mc_reg32_debugfs_get,
+			mc_reg32_debugfs_set, "%08llx\n");
 
 static void mc_sid_debugfs(void)
 {
 	int i, j;
-	struct dentry *dent;
+	struct dentry *root;
 
-	dent = debugfs_create_dir("mc_sid", NULL);
-	if (!dent)
+	root = debugfs_create_dir("mc_sid", NULL);
+	if (!root)
 		return;
 
 	for (i = 0; i < MAX_REGS_TYPE; i++) {
-		struct debugfs_regset32 *set = mc_regset + i;
-		struct debugfs_reg32 *reg = mc_regs + i * MAX_OID;
-		int diff = 0;
+		void __iomem *base;
+		struct dentry *dent;
 
-		set->regs = reg;
-		set->nregs = MAX_OID;
-		set->base = mc_sid_base;
-		if (i == SEC) {
-			diff = sizeof(u32);
-		} else if (i == TXN) {
-			set->base = mc_base;
-			diff = 0x1000;
+		if (i == SEC)
+			base = mc_sid_base + sizeof(u32);
+		else if (i == TXN)
+			base = mc_base + 0x1000;
+		else
+			base = mc_sid_base;
+
+		dent = debugfs_create_dir(mc_regs_type[i], root);
+		if (!dent)
+			continue;
+
+		for (j = 0; j < MAX_OID; j++) {
+			void *addr;
+
+			addr = base + sid_override_reg[j].offs;
+			debugfs_create_file(sid_override_reg[j].name, S_IRWXUGO,
+					    dent, addr, &mc_reg32_debugfs_fops);
 		}
-
-		for (j = 0; j < MAX_OID; j++, reg++) {
-			reg->name = (char *)sid_override_reg[j].name;
-			reg->offset = sid_override_reg[j].offs;
-			reg->offset += diff;
-		}
-
-		debugfs_create_regset32(mc_regs_type[i], S_IRUGO, dent, set);
 	}
 }
 #else

@@ -113,7 +113,7 @@ static int tegra_bl_notify(struct device *dev, int brightness)
 {
 	int cur_sd_brightness;
 
-	struct lp855x_platform_data *lp = NULL;
+	struct lp855x *lp = NULL;
 	struct platform_device *pdev = NULL;
 	struct device *dc_dev;
 
@@ -151,9 +151,9 @@ static int tegra_bl_notify(struct device *dev, int brightness)
 				"ti,lp8556") ||
 		of_device_is_compatible(dev->of_node,
 				"ti,lp8557")) {
-		lp = (struct lp855x_platform_data *)dev_get_drvdata(dev);
-		if (lp->bl_measured)
-			brightness = lp->bl_measured[brightness];
+		lp = (struct lp855x *)dev_get_drvdata(dev);
+		if (lp->pdata->bl_measured)
+			brightness = lp->pdata->bl_measured[brightness];
 	}
 
 	return brightness;

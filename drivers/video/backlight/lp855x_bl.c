@@ -44,42 +44,6 @@
 #define DEFAULT_BL_NAME		"lcd-backlight"
 #define MAX_BRIGHTNESS		255
 
-enum lp855x_brightness_ctrl_mode {
-	PWM_BASED = 1,
-	REGISTER_BASED,
-};
-
-struct lp855x;
-
-/*
- * struct lp855x_device_config
- * @pre_init_device: init device function call before updating the brightness
- * @reg_brightness: register address for brigthenss control
- * @reg_devicectrl: register address for device control
- * @post_init_device: late init device function call
- */
-struct lp855x_device_config {
-	int (*pre_init_device)(struct lp855x *);
-	u8 reg_brightness;
-	u8 reg_devicectrl;
-	int (*post_init_device)(struct lp855x *);
-};
-
-struct lp855x {
-	const char *chipname;
-	enum lp855x_chip_id chip_id;
-	enum lp855x_brightness_ctrl_mode mode;
-	struct lp855x_device_config *cfg;
-	struct i2c_client *client;
-	struct backlight_device *bl;
-	struct device *dev;
-	struct lp855x_platform_data *pdata;
-	struct pwm_device *pwm;
-	struct regulator *supply;	/* regulator for VDD input */
-	struct regulator *enable;	/* regulator for EN/VDDIO input */
-	int (*notify)(struct device *, int brightness);
-};
-
 static int lp855x_write_byte(struct lp855x *lp, u8 reg, u8 data)
 {
 	return i2c_smbus_write_byte_data(lp->client, reg, data);
@@ -373,7 +337,6 @@ static int lp855x_parse_dt(struct lp855x *lp)
 	int n_bl_measured = 0;
 	const __be32 *p;
 	u32 u;
-	int length;
 	struct property *prop;
 	int ret = 0;
 
@@ -412,7 +375,6 @@ static int lp855x_parse_dt(struct lp855x *lp)
 		pdata->rom_data = &rom[0];
 	}
 
-	prop = of_find_property(node, "brightness-levels", &length);
 	of_property_for_each_u32(node, "bl-measured", prop, p, u)
 		n_bl_measured++;
 	if (n_bl_measured > 0) {

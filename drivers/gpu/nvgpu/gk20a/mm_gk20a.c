@@ -1735,12 +1735,12 @@ int gk20a_get_sgtable_from_pages(struct device *d, struct sg_table **sgt,
 		err = -ENOMEM;
 		goto fail;
 	}
-	err = sg_alloc_table(*sgt, 1, GFP_KERNEL);
+	err = sg_alloc_table_from_pages(*sgt, pages,
+			DIV_ROUND_UP(size, 4096), 0, size, GFP_KERNEL);
 	if (err) {
 		dev_err(d, "failed to allocate sg_table\n");
 		goto fail;
 	}
-	sg_set_page((*sgt)->sgl, *pages, size, 0);
 	sg_dma_address((*sgt)->sgl) = iova;
 
 	return 0;

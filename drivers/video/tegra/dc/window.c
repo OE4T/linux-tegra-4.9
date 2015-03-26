@@ -422,7 +422,7 @@ static inline void tegra_dc_update_scaling(struct tegra_dc *dc,
 	}
 }
 
-
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 static bool update_is_hsync_safe(struct tegra_dc_win *cur_win,
 				 struct tegra_dc_win *new_win)
 {
@@ -440,6 +440,7 @@ static bool update_is_hsync_safe(struct tegra_dc_win *cur_win,
 		(!memcmp(&cur_win->csc, &new_win->csc,
 			sizeof(struct tegra_dc_csc))));
 }
+#endif
 
 void tegra_dc_win_partial_update(struct tegra_dc *dc, struct tegra_dc_win *win,
 	unsigned int xoff, unsigned int yoff, unsigned int width,
@@ -545,65 +546,25 @@ static void tegra_dc_vrr_cancel_vfp(struct tegra_dc *dc)
 	}
 }
 
-/* Does not support updating windows on multiple dcs in one call.
- * Requires a matching sync_windows to avoid leaking ref-count on clocks. */
-int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
-	u16 *dirty_rect, bool wait_for_vblank)
+
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
+/* Program registers for each window. struct tegra_dc_win --> Assembly registers
+ */
+static int _tegra_dc_program_windows(struct tegra_dc *dc,
+	struct tegra_dc_win *windows[], int n, u16 *dirty_rect,
+	bool wait_for_vblank)
 {
-	struct tegra_dc *dc;
 	unsigned long update_mask = GENERAL_ACT_REQ;
-#ifndef CONFIG_TEGRA_NVDISPLAY
 	unsigned long act_control = 0;
 	unsigned long win_options;
 	bool update_blend_par = false;
 	bool update_blend_seq = false;
-#endif
 	int i;
 	bool do_partial_update = false;
 	unsigned int xoff;
 	unsigned int yoff;
 	unsigned int width;
 	unsigned int height;
-
-	dc = windows[0]->dc;
-	trace_update_windows(dc);
-
-	/* check that window arguments are valid */
-	for (i = 0; i < n; i++) {
-		struct tegra_dc_win *win = windows[i];
-		struct tegra_dc_win *dc_win =
-			win ? tegra_dc_get_window(dc, win->idx) : NULL;
-		if (WARN_ONCE(!dc_win, "ignoring invalid windows in request"))
-			return -EINVAL;
-	}
-
-	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
-		/* Acquire one_shot_lock to avoid race condition between
-		 * cancellation of old delayed work and schedule of new
-		 * delayed work. */
-		mutex_lock(&dc->one_shot_lock);
-		cancel_delayed_work_sync(&dc->one_shot_work);
-		tegra_dc_get(dc);
-	}
-	mutex_lock(&dc->lock);
-
-	if (!dc->enabled) {
-		mutex_unlock(&dc->lock);
-		if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
-			tegra_dc_put(dc);
-			mutex_unlock(&dc->one_shot_lock);
-		}
-		return -EFAULT;
-	}
-
-	tegra_dc_io_start(dc);
-	if (dc->out_ops && dc->out_ops->hold)
-		dc->out_ops->hold(dc);
-
-	if (no_vsync)
-		wait_for_vblank = 0;
-
-	BUG_ON(!wait_for_vblank && dirty_rect);
 
 	if (dirty_rect) {
 		xoff = dirty_rect[0];
@@ -635,10 +596,6 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 		       sizeof(struct tegra_dc_win));
 	}
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	tegra_nvdisp_update_windows(dc, windows, n, dirty_rect,
-		wait_for_vblank);
-#else
 	for (i = 0; i < n; i++) {
 		struct tegra_dc_win *win = windows[i];
 		struct tegra_dc_win *dc_win = tegra_dc_get_window(dc, win->idx);
@@ -1042,6 +999,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 	tegra_dc_writel(dc, MEMFETCH_RESET, DC_WINBUF_MEMFETCH_CONTROL);
 #endif
 
+	/* WIN_x_UPDATE is the same as WIN_x_ACT_REQ << 8 */
 	tegra_dc_writel(dc, update_mask << 8, DC_CMD_STATE_CONTROL);
 
 	if (tegra_cpu_is_asim())
@@ -1075,13 +1033,6 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 		update_mask |= NC_HOST_TRIG;
 
 	tegra_dc_writel(dc, update_mask, DC_CMD_STATE_CONTROL);
-#endif	/* NVDISPLAY */
-
-	/*
-	 * tegra_dc_put() called at frame end, for one shot.
-	 * out_ops->release called in tegra_dc_sync_windows.
-	 */
-	tegra_dc_io_end(dc);
 
 	if (!wait_for_vblank) {
 		/* Don't use a interrupt handler for the update, but leave
@@ -1098,9 +1049,76 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 		for_each_set_bit(i, &dc->valid_windows, n)
 			tegra_dc_get_window(dc, windows[i]->idx)->dirty = 0;
 	}
+	return 0;
+}
+#endif
+
+/* Does not support updating windows on multiple dcs in one call.
+ * Requires a matching sync_windows to avoid leaking ref-count on clocks.
+ */
+int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
+	u16 *dirty_rect, bool wait_for_vblank)
+{
+	struct tegra_dc *dc;
+	int i;
+	int e = 0;
+
+	dc = windows[0]->dc;
+	trace_update_windows(dc);
+
+	/* check that window arguments are valid */
+	for (i = 0; i < n; i++) {
+		struct tegra_dc_win *win = windows[i];
+		struct tegra_dc_win *dc_win =
+			win ? tegra_dc_get_window(dc, win->idx) : NULL;
+		if (WARN_ONCE(!dc_win, "ignoring invalid windows in request"))
+			return -EINVAL;
+	}
+
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
+		/* Acquire one_shot_lock to avoid race condition between
+		 * cancellation of old delayed work and schedule of new
+		 * delayed work. */
+		mutex_lock(&dc->one_shot_lock);
+		cancel_delayed_work_sync(&dc->one_shot_work);
+		tegra_dc_get(dc);
+	}
+	mutex_lock(&dc->lock);
+
+	if (!dc->enabled) {
+		e = -EFAULT;
+		goto done;
+	}
+
+	tegra_dc_io_start(dc);
+	if (dc->out_ops && dc->out_ops->hold)
+		dc->out_ops->hold(dc);
+
+	if (no_vsync)
+		wait_for_vblank = 0;
+
+	BUG_ON(!wait_for_vblank && dirty_rect);
+
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	e = tegra_nvdisp_update_windows(dc, windows, n, dirty_rect,
+		wait_for_vblank);
+#else
+	e = _tegra_dc_program_windows(dc, windows, n, dirty_rect,
+		wait_for_vblank);
+#endif
+	/*
+	 * tegra_dc_put() called at frame end, for one shot.
+	 * out_ops->release called in tegra_dc_sync_windows.
+	 */
+	tegra_dc_io_end(dc);
+
+	BUG_ON(e);
+	if (WARN_ONCE(e, "horrible failure")) /* horrible failure */
+		goto done;
 
 	tegra_dc_vrr_frame_time(dc);
 	tegra_dc_vrr_cancel_vfp(dc);
+done:
 	mutex_unlock(&dc->lock);
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		mutex_unlock(&dc->one_shot_lock);

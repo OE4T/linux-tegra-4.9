@@ -89,6 +89,7 @@ struct tegra210_adsp_app {
 	uint32_t adma_chan; /* Valid for only ADMA app */
 	uint32_t fe:1; /* Whether the app is used as a FE APM */
 	uint32_t connect:1; /* if app is connected to a source */
+	uint32_t priority; /* Valid for only APM app */
 	void *private_data;
 	int (*msg_handler)(struct tegra210_adsp_app *, apm_msg_t *);
 };
@@ -635,7 +636,7 @@ static int tegra210_adsp_connect_apm(struct tegra210_adsp *adsp,
 		src->reg, app->reg);
 
 	ret = tegra210_adsp_send_connect_msg(src, app,
-		TEGRA210_ADSP_MSG_FLAG_HOLD);
+		TEGRA210_ADSP_MSG_FLAG_SEND);
 	if (ret < 0) {
 		dev_err(adsp->dev, "Connect msg failed. err %d.", ret);
 		return ret;
@@ -2389,6 +2390,58 @@ static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
 	return ret;
 }
 
+static int tegra210_adsp_apm_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	struct snd_soc_platform *platform = snd_kcontrol_chip(kcontrol);
+	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
+	struct tegra210_adsp_app *app = &adsp->apps[mc->reg];
+
+	ucontrol->value.integer.value[0] = app->priority;
+	return 0;
+}
+
+static int tegra210_adsp_apm_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	struct snd_soc_platform *platform = snd_kcontrol_chip(kcontrol);
+	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
+	struct tegra210_adsp_app *app = &adsp->apps[mc->reg];
+	apm_msg_t apm_msg;
+	int ret = 0;
+
+	pr_info("%s : mc->reg %d\n", __func__, mc->reg);
+
+	if (!adsp->init_done) {
+		dev_warn(adsp->dev, "ADSP is not booted yet\n");
+		return 0;
+	}
+
+	if (!app->plugin) {
+		dev_warn(adsp->dev, "APM not yet initialized\n");
+		return 0;
+	}
+
+	if (strstr(kcontrol->id.name, "Priority")) {
+		apm_msg.msgq_msg.size = MSGQ_MSG_WSIZE(apm_set_priority_params_t);
+		apm_msg.msg.call_params.size = sizeof(apm_set_priority_params_t);
+		apm_msg.msg.call_params.method = nvfx_apm_method_set_priority;
+		apm_msg.msg.priority_params.priority =
+			ucontrol->value.integer.value[0];
+		pm_runtime_get_sync(adsp->dev);
+		ret = tegra210_adsp_send_msg(app->apm, &apm_msg,
+				TEGRA210_ADSP_MSG_FLAG_SEND);
+		pm_runtime_mark_last_busy(adsp->dev);
+		pm_runtime_put_autosuspend(adsp->dev);
+	}
+
+	return ret;
+}
+
 /* Maximum 128 integers or 512 bytes allowed */
 #define SND_SOC_PARAM_EXT(xname, xbase)		\
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,	\
@@ -2400,6 +2453,24 @@ static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
 		((unsigned long)&(struct soc_bytes)		\
 		{.base = xbase, .num_regs = 512,		\
 		.mask = SNDRV_CTL_ELEM_TYPE_BYTES}) }
+
+#define APM_CONTROL(xname, xmax)	\
+	SOC_SINGLE_EXT("APM1 " xname, TEGRA210_ADSP_APM_IN1, 0, xmax, 0,\
+	tegra210_adsp_apm_get, tegra210_adsp_apm_put),	\
+	SOC_SINGLE_EXT("APM2 " xname, TEGRA210_ADSP_APM_IN2, 0, xmax, 0,\
+	tegra210_adsp_apm_get, tegra210_adsp_apm_put),	\
+	SOC_SINGLE_EXT("APM3 " xname, TEGRA210_ADSP_APM_IN3, 0, xmax, 0,\
+	tegra210_adsp_apm_get, tegra210_adsp_apm_put),	\
+	SOC_SINGLE_EXT("APM4 " xname, TEGRA210_ADSP_APM_IN4, 0, xmax, 0,\
+	tegra210_adsp_apm_get, tegra210_adsp_apm_put),	\
+	SOC_SINGLE_EXT("APM5 " xname, TEGRA210_ADSP_APM_IN5, 0, xmax, 0,\
+	tegra210_adsp_apm_get, tegra210_adsp_apm_put),	\
+	SOC_SINGLE_EXT("APM6 " xname, TEGRA210_ADSP_APM_IN6, 0, xmax, 0,\
+	tegra210_adsp_apm_get, tegra210_adsp_apm_put),	\
+	SOC_SINGLE_EXT("APM7 " xname, TEGRA210_ADSP_APM_IN7, 0, xmax, 0,\
+	tegra210_adsp_apm_get, tegra210_adsp_apm_put),	\
+	SOC_SINGLE_EXT("APM8 " xname, TEGRA210_ADSP_APM_IN8, 0, xmax, 0,\
+	tegra210_adsp_apm_get, tegra210_adsp_apm_put)
 
 static const struct snd_kcontrol_new tegra210_adsp_controls[] = {
 	SOC_SINGLE_BOOL_EXT("ADSP init", 0,
@@ -2424,6 +2495,7 @@ static const struct snd_kcontrol_new tegra210_adsp_controls[] = {
 		TEGRA210_ADSP_PLUGIN9),
 	SND_SOC_PARAM_EXT("PLUGIN10 set params",
 		TEGRA210_ADSP_PLUGIN10),
+	APM_CONTROL("Priority", APM_PRIORITY_MAX),
 };
 
 static const struct snd_soc_component_driver tegra210_adsp_component = {

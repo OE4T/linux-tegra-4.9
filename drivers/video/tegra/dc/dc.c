@@ -1345,7 +1345,6 @@ const char __user *addr, size_t len, loff_t *pos)
 	if (len < 128) { /* invalid edid, turn off vedid */
 		dc->vedid = false;
 		tegra_edid_get_monspecs(dc->edid, &mon_spec, NULL);
-		kfree(mon_spec.modedb);
 		return 1;
 	}
 

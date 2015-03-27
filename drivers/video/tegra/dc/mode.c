@@ -290,6 +290,11 @@ static bool check_mode_timings(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 			/* HDMI controller requires h_ref=1, v_ref=1 */
 		mode->h_ref_to_sync = 1;
 		mode->v_ref_to_sync = 1;
+	} else if (dc->out->vrr) {
+		mode->h_ref_to_sync =
+			dc->out->modes[VRR_NATIVE_MODE_IDX].h_ref_to_sync;
+		mode->v_ref_to_sync =
+			dc->out->modes[VRR_NATIVE_MODE_IDX].v_ref_to_sync;
 	} else {
 		calc_ref_to_sync(mode);
 	}
@@ -547,8 +552,6 @@ int _tegra_dc_set_mode(struct tegra_dc *dc,
 
 	print_mode(dc, &new_mode, __func__);
 	dc->frametime_ns = calc_frametime_ns(&new_mode);
-
-	tegra_dc_setup_vrr(dc);
 
 	return 0;
 }

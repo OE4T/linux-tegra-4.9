@@ -1688,15 +1688,16 @@ static s32 tegra_dc_calc_v_front_porch(struct tegra_dc_mode *mode,
 	return vfp;
 }
 
-void tegra_dc_setup_vrr(struct tegra_dc *dc)
+static void tegra_dc_setup_vrr(struct tegra_dc *dc)
 {
 	int lines_per_frame_max, lines_per_frame_min;
 
-	struct tegra_dc_mode *m = &dc->mode;
+	struct tegra_dc_mode *m;
 	struct tegra_vrr *vrr  = dc->out->vrr;
 
 	if (!vrr) return;
 
+	m = &dc->out->modes[VRR_NATIVE_MODE_IDX];
 	vrr->v_front_porch = m->v_front_porch;
 	vrr->v_back_porch = m->v_back_porch;
 	vrr->pclk = m->pclk;
@@ -1705,9 +1706,10 @@ void tegra_dc_setup_vrr(struct tegra_dc *dc)
 		vrr->v_front_porch_max = tegra_dc_calc_v_front_porch(m,
 				vrr->vrr_min_fps);
 
-	if (vrr->vrr_max_fps > 0)
-		vrr->v_front_porch_min = tegra_dc_calc_v_front_porch(m,
-				vrr->vrr_max_fps);
+	vrr->vrr_max_fps =
+		(s32)div_s64(NSEC_PER_SEC, dc->frametime_ns);
+
+	vrr->v_front_porch_min = m->v_front_porch;
 
 	vrr->line_width = m->h_sync_width + m->h_back_porch +
 			m->h_active + m->h_front_porch;
@@ -1727,8 +1729,6 @@ void tegra_dc_setup_vrr(struct tegra_dc *dc)
 					(m->pclk / 1000000);
 	vrr->frame_len_min = vrr->line_width * lines_per_frame_min /
 					(m->pclk / 1000000);
-	if(vrr->v_front_porch_min < vrr->v_front_porch)
-		vrr->v_front_porch_min = vrr->v_front_porch;
 	vrr->vfp_extend = vrr->v_front_porch_max;
 	vrr->vfp_shrink = vrr->v_front_porch_min;
 
@@ -2389,8 +2389,17 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 				dc->out->h_size, dc->out->v_size,
 				dc->mode.pclk);
 		dc->initialized = true;
-	} else if (out->n_modes > 0)
-		tegra_dc_set_mode(dc, &dc->out->modes[0]);
+	} else if (out->n_modes > 0) {
+		/* For VRR panels, default mode is first in the list,
+		 * and native panel mode is at index VRR_NATIVE_MODE_IDX.
+		 * Initialization must occur using the native panel mode. */
+		if (dc->out->vrr) {
+			tegra_dc_set_mode(dc,
+				&dc->out->modes[VRR_NATIVE_MODE_IDX]);
+			tegra_dc_setup_vrr(dc);
+		} else
+			tegra_dc_set_mode(dc, &dc->out->modes[0]);
+	}
 
 	switch (out->type) {
 	case TEGRA_DC_OUT_RGB:

@@ -44,6 +44,9 @@
 
 #define tegra_dc_hotplug_supported(dc) (dc && dc->out ? \
 		(dc->out->hotplug_gpio >= 0) : 0)
+
+#define VRR_NATIVE_MODE_IDX 1
+
 static inline int tegra_dc_io_start(struct tegra_dc *dc)
 {
 	int ret = 0;
@@ -494,9 +497,6 @@ int tegra_dc_config_frame_end_intr(struct tegra_dc *dc, bool enable);
 /* defined in dc.c, used in dsi.c */
 int _tegra_dc_wait_for_frame_end(struct tegra_dc *dc,
 	u32 timeout_ms);
-
-/* defined in dc.c, used in mode.c */
-void tegra_dc_setup_vrr(struct tegra_dc *dc);
 
 /* defined in bandwidth.c, used in dc.c */
 void tegra_dc_clear_bandwidth(struct tegra_dc *dc);

@@ -497,10 +497,6 @@ static int parse_vrr_settings(struct platform_device *ndev,
 		OF_DC_LOG("vrr_min_fps %d\n", vrr_min_fps);
 	}
 
-	if (!of_property_read_u32(np, "nvidia,vrr_max_fps", &temp)) {
-		vrr->vrr_max_fps = (unsigned) temp;
-		OF_DC_LOG("vrr_max_fps %d\n", vrr_max_fps);
-	}
 
 	/*
 	 * VRR capability is set when we have vrr_settings section in DT
@@ -2114,36 +2110,6 @@ struct tegra_dc_platform_data
 			goto fail_parse;
 	}
 
-	vrr_np = of_get_child_by_name(np_target_disp, "vrr-settings");
-	if (!vrr_np) {
-		pr_info("%s: could not find vrr-settings node\n", __func__);
-	} else {
-		dma_addr_t dma_addr;
-		struct tegra_vrr *vrr;
-
-		pdata->default_out->vrr = dma_alloc_coherent(NULL, PAGE_SIZE,
-						&dma_addr, GFP_KERNEL);
-		vrr = pdata->default_out->vrr;
-		if (vrr) {
-#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
-			int retval;
-
-			retval = te_vrr_set_buf(virt_to_phys(vrr));
-			if (retval) {
-				dev_err(&ndev->dev, "failed to set buffer\n");
-				goto fail_parse;
-			}
-#endif // CONFIG_TRUSTED_LITTLE_KERNEL
-		} else {
-			dev_err(&ndev->dev, "not enough memory\n");
-			goto fail_parse;
-		}
-
-		err = parse_vrr_settings(ndev, vrr_np, vrr);
-		if (err)
-			goto fail_parse;
-	}
-
 	timings_np = of_get_child_by_name(np_target_disp, "display-timings");
 	if (!timings_np) {
 		if (pdata->default_out->type == TEGRA_DC_OUT_DSI) {
@@ -2194,6 +2160,36 @@ struct tegra_dc_platform_data
 			goto fail_parse;
 #endif
 		}
+	}
+
+	vrr_np = of_get_child_by_name(np_target_disp, "vrr-settings");
+	if (!vrr_np || (pdata->default_out->n_modes < 2)) {
+		pr_info("%s: could not find vrr-settings node\n", __func__);
+	} else {
+		dma_addr_t dma_addr;
+		struct tegra_vrr *vrr;
+
+		pdata->default_out->vrr = dma_alloc_coherent(NULL, PAGE_SIZE,
+						&dma_addr, GFP_KERNEL);
+		vrr = pdata->default_out->vrr;
+		if (vrr) {
+#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
+			int retval;
+
+			retval = te_vrr_set_buf(virt_to_phys(vrr));
+			if (retval) {
+				dev_err(&ndev->dev, "failed to set buffer\n");
+				goto fail_parse;
+			}
+#endif /* CONFIG_TRUSTED_LITTLE_KERNEL */
+		} else {
+			dev_err(&ndev->dev, "not enough memory\n");
+			goto fail_parse;
+		}
+
+		err = parse_vrr_settings(ndev, vrr_np, vrr);
+		if (err)
+			goto fail_parse;
 	}
 
 	sd_np = of_get_child_by_name(np_target_disp,

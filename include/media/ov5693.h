@@ -143,6 +143,7 @@ struct ov5693_platform_data {
 struct ov5693_v4l2_platform_data {
 	const char *mclk_name;
 	struct ov5693_regulators *regulators;
+	bool use_cam_gpio;
 	int gpio_pwdn;
 };
 

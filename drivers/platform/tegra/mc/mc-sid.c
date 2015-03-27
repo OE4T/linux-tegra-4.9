@@ -508,8 +508,8 @@ static void __mc_override_sid(int sid, int oid)
 		val = 0x80010000 | sid;
 		writel_relaxed(val, addr);
 	} else {
-		addr = mc_sid_base + offs;
-		val = readl_relaxed(TO_MC_SID_STREAMID_SECURITY_CONFIG(addr));
+		addr = TO_MC_SID_STREAMID_SECURITY_CONFIG(mc_sid_base + offs);
+		val = readl_relaxed(addr);
 
 		if (val & SCEW_STREAMID_OVERRIDE) {
 			/* OK */;

@@ -45,14 +45,23 @@ static void isc_dev_dump(
 	u8 *buf, size_t size)
 {
 #if (defined(DEBUG) || defined(DEBUG_I2C_TRAFFIC))
-	int len;
-	int i;
+	char *dump_buf;
+	int len, i, off;
 
-	len = sprintf(info->dump_buf, "%s %04x =", str, offset);
-	for (i = 0; i < size && len < sizeof(info->dump_buf) - 1; i++)
-		len += sprintf(info->dump_buf + len, " %02x", buf[i]);
-	info->dump_buf[len] = 0;
-	dev_err(info->dev, "%s\n", info->dump_buf);
+	/* alloc enough memory for function name + offset + data */
+	len = strlen(str) + size * 3 + 10;
+	dump_buf = kzalloc(len, GFP_KERNEL);
+	if (dump_buf == NULL) {
+		dev_err(info->dev, "%s: Memory alloc ERROR!\n", __func__);
+		return;
+	}
+
+	off = sprintf(dump_buf, "%s %04x =", str, offset);
+	for (i = 0; i < size && off < len - 1; i++)
+		off += sprintf(dump_buf + off, " %02x", buf[i]);
+	dump_buf[off] = 0;
+	dev_notice(info->dev, "%s\n", dump_buf);
+	kfree(dump_buf);
 #endif
 }
 

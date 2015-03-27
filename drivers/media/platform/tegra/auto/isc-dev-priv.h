@@ -29,9 +29,6 @@ struct isc_dev_info {
 	u32 reg_off;
 	char devname[32];
 	u8 power_is_on;
-#if (defined(DEBUG) || defined(DEBUG_I2C_TRAFFIC))
-	char dump_buf[32 + 3 * 16];
-#endif
 };
 
 int isc_dev_raw_rd(struct isc_dev_info *, unsigned int, void *, size_t);

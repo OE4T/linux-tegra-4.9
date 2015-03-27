@@ -221,11 +221,7 @@ static int isc_mgr_write_pid(struct file *file, const void __user *arg)
 	spin_lock_irqsave(&isc_mgr->spinlock, flags);
 	isc_mgr->sinfo.si_signo = isc_mgr->sig_no = sinfo.sig_no;
 	isc_mgr->sinfo.si_code = SI_QUEUE;
-#ifdef CONFIG_COMPAT
-	isc_mgr->sinfo.si_ptr = (void __user *)sinfo.context;
-#else
-	isc_mgr->sinfo.si_ptr = (void __user *)(__u32)sinfo.context;
-#endif
+	isc_mgr->sinfo.si_ptr = (void __user *)((unsigned long)sinfo.context);
 	spin_unlock_irqrestore(&isc_mgr->spinlock, flags);
 
 	rcu_read_lock();
@@ -645,7 +641,8 @@ static int isc_mgr_probe(struct platform_device *pdev)
 				i++;
 				goto err_probe;
 			}
-			isc_mgr->pwr_state |= BIT(i);
+			if (pd->default_pwr_on)
+				isc_mgr->pwr_state |= BIT(i);
 		}
 	}
 

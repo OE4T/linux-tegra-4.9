@@ -514,4 +514,12 @@ static inline u32 ltc_ltc0_lts0_tstg_info_1_slices_per_l2_v(u32 r)
 {
 	return (r >> 16) & 0x1f;
 }
+static inline u32 ltc_ltca_g_axi_pctrl_r(void)
+{
+	return 0x00160000;
+}
+static inline u32 ltc_ltca_g_axi_pctrl_user_sid_f(u32 v)
+{
+	return (v & 0xff) << 2;
+}
 #endif

@@ -148,6 +148,14 @@ void gp10b_ltc_isr(struct gk20a *g)
 	}
 }
 
+void gp10b_ltc_init_fs_state(struct gk20a *g)
+{
+	gm20b_ltc_init_fs_state(g);
+
+	gk20a_writel(g, ltc_ltca_g_axi_pctrl_r(),
+			ltc_ltca_g_axi_pctrl_user_sid_f(31));
+}
+
 void gp10b_init_ltc(struct gpu_ops *gops)
 {
 	gops->ltc.determine_L2_size_bytes = gp10b_determine_L2_size_bytes;
@@ -157,7 +165,7 @@ void gp10b_init_ltc(struct gpu_ops *gops)
 	gops->ltc.init_cbc = gk20a_ltc_init_cbc;
 
 	/* GM20b specific ops. */
-	gops->ltc.init_fs_state = gm20b_ltc_init_fs_state;
+	gops->ltc.init_fs_state = gp10b_ltc_init_fs_state;
 	gops->ltc.init_comptags = gp10b_ltc_init_comptags;
 	gops->ltc.cbc_ctrl = gm20b_ltc_cbc_ctrl;
 	gops->ltc.elpg_flush = gm20b_ltc_g_elpg_flush_locked;

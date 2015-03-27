@@ -405,7 +405,8 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 
 	ok = validate_reg_ops(dbg_s,
 			      &ctx_rd_count, &ctx_wr_count,
-			      ops, num_ops) || g->allow_all;
+			      ops, num_ops);
+
 	if (!ok) {
 		dev_err(dbg_s->dev, "invalid op(s)");
 		err = -EINVAL;
@@ -678,6 +679,7 @@ static bool validate_reg_ops(struct dbg_session_gk20a *dbg_s,
 	u32 i;
 	int err;
 	bool ok = true;
+	struct gk20a *g = dbg_s->g;
 
 	/* keep going until the end so every op can get
 	 * a separate error code if needed */
@@ -693,8 +695,11 @@ static bool validate_reg_ops(struct dbg_session_gk20a *dbg_s,
 				(*ctx_wr_count)++;
 		}
 
-		err = validate_reg_op_offset(dbg_s, &ops[i]);
-		ok &= !err;
+		/* if "allow_all" flag enabled, dont validate offset */
+		if (!g->allow_all) {
+			err = validate_reg_op_offset(dbg_s, &ops[i]);
+			ok &= !err;
+		}
 	}
 
 	gk20a_dbg(gpu_dbg_gpu_dbg, "ctx_wrs:%d ctx_rds:%d",

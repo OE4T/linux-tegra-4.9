@@ -204,6 +204,8 @@
 		 * EL1(normal).
 		 */
 		calxeda,smmu-secure-config-access;
+
+		linsim,smmu-broken-sim-irq;
 	};
 
 	tegra_car: clock {

@@ -57,8 +57,6 @@
 				TEGRA_GPIO(T, 0)
 				TEGRA_GPIO(T, 1)
 				TEGRA_GPIO(V, 6)
-				TEGRA_GPIO(V, 1)
-				TEGRA_GPIO(V, 2)
 				TEGRA_GPIO(V, 5)
 				TEGRA_GPIO(Z, 4)
 				TEGRA_GPIO(G, 3)

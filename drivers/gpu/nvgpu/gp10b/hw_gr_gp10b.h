@@ -2174,6 +2174,14 @@ static inline u32 gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_r(void)
 {
 	return 0x005030f0;
 }
+static inline u32 gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_v_f(u32 v)
+{
+	return (v & 0x3fffff) << 0;
+}
+static inline u32 gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_v_default_v(void)
+{
+	return 0x00030000;
+}
 static inline u32 gr_gpccs_falcon_addr_r(void)
 {
 	return 0x0041a0ac;

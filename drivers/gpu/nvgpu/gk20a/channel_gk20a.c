@@ -1460,8 +1460,11 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	if (c->has_timedout)
 		return -ETIMEDOUT;
 
-	/* fifo not large enough for request. Return error immediately */
-	if (c->gpfifo.entry_num < num_entries) {
+	/* fifo not large enough for request. Return error immediately.
+	 * Kernel can insert gpfifo entries before and after user gpfifos.
+	 * So, add extra_entries in user request. Also, HW with fifo size N
+	 * can accept only N-1 entreis and so the below condition */
+	if (c->gpfifo.entry_num - 1 < num_entries + extra_entries) {
 		gk20a_err(d, "not enough gpfifo space allocated");
 		return -ENOMEM;
 	}

@@ -95,23 +95,17 @@ static int dsi_s_wuxga_8_0_enable(struct device *dev)
 
 	err = tegra_panel_gpio_get_dt("s,wuxga-8-0", &panel_of);
 	if (err < 0) {
-		pr_err("dsi gpio request failed\n");
+		pr_err("display gpio get failed\n");
 		goto fail;
 	}
 
-	/* If panel rst gpio is specified in device tree,
-	 * use that
-	 */
 	if (gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_RESET]))
 		en_panel_rst = panel_of.panel_gpio[TEGRA_GPIO_RESET];
-
-	if (avdd_lcd_3v0) {
-		err = regulator_enable(avdd_lcd_3v0);
-		if (err < 0) {
-			pr_err("avdd_lcd regulator enable failed\n");
-			goto fail;
-		}
+	else {
+		pr_err("display reset gpio invalid\n");
+		goto fail;
 	}
+
 
 	if (dvdd_lcd_1v8) {
 		err = regulator_enable(dvdd_lcd_1v8);
@@ -121,13 +115,33 @@ static int dsi_s_wuxga_8_0_enable(struct device *dev)
 		}
 	}
 
+	usleep_range(500, 1500);
+
+	if (avdd_lcd_3v0) {
+		err = regulator_enable(avdd_lcd_3v0);
+		if (err < 0) {
+			pr_err("avdd_lcd regulator enable failed\n");
+			goto fail;
+		}
+	}
+
+	usleep_range(500, 1500);
+
 	if (vpp_lcd) {
 		err = regulator_enable(vpp_lcd);
 		if (err < 0) {
 			pr_err("vpp_lcd regulator enable failed\n");
 			goto fail;
 		}
+
+		err = regulator_set_voltage(vpp_lcd, 5500000, 5500000);
+		if (err < 0) {
+			pr_err("vpp_lcd regulator failed changing voltage\n");
+			goto fail;
+		}
 	}
+
+	usleep_range(500, 1500);
 
 	if (vmm_lcd) {
 		err = regulator_enable(vmm_lcd);
@@ -135,17 +149,23 @@ static int dsi_s_wuxga_8_0_enable(struct device *dev)
 			pr_err("vmm_lcd regulator enable failed\n");
 			goto fail;
 		}
+
+		err = regulator_set_voltage(vmm_lcd, 5500000, 5500000);
+		if (err < 0) {
+			pr_err("vmm_lcd regulator failed changing voltage\n");
+			goto fail;
+		}
 	}
 
-	msleep(20);
+	usleep_range(1000, 5000);
+
 #if DSI_PANEL_RESET
 	if (!(flags & TEGRA_DC_OUT_INITIALIZED_MODE)) {
-		gpio_direction_output(en_panel_rst, 1);
-		usleep_range(1000, 5000);
-		gpio_set_value(en_panel_rst, 0);
-		usleep_range(1000, 5000);
-		gpio_set_value(en_panel_rst, 1);
-		msleep(20);
+		err = gpio_direction_output(en_panel_rst, 1);
+		if (err < 0) {
+			pr_err("setting display reset gpio value failed\n");
+			goto fail;
+		}
 	}
 #endif
 	dc_dev = dev;
@@ -160,19 +180,31 @@ static int dsi_s_wuxga_8_0_disable(struct device *dev)
 		/* Wait for 50ms before triggering panel reset */
 		msleep(50);
 		gpio_set_value(en_panel_rst, 0);
-	}
+		usleep_range(500, 1000);
+	} else
+		pr_err("ERROR! display reset gpio invalid\n");
 
-	if (avdd_lcd_3v0)
-		regulator_disable(avdd_lcd_3v0);
+	if (vmm_lcd)
+		regulator_disable(vmm_lcd);
 
-	if (dvdd_lcd_1v8)
-		regulator_disable(dvdd_lcd_1v8);
+	usleep_range(500, 2000);
 
 	if (vpp_lcd)
 		regulator_disable(vpp_lcd);
 
-	if (vmm_lcd)
-		regulator_disable(vmm_lcd);
+	usleep_range(500, 1500);
+
+	if (avdd_lcd_3v0)
+		regulator_disable(avdd_lcd_3v0);
+
+	usleep_range(500, 1500);
+
+	if (dvdd_lcd_1v8)
+		regulator_disable(dvdd_lcd_1v8);
+
+	/* Min delay of 140ms required to avoid turning
+	 * the panel on too soon after power off */
+	msleep(140);
 
 	dc_dev = NULL;
 	return 0;

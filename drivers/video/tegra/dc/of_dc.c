@@ -1369,6 +1369,13 @@ static struct device_node *parse_dsi_settings(struct platform_device *ndev,
 	};
 
 	if (!of_property_read_u32(np_dsi_panel,
+		"nvidia,dsi-suspend-stop-stream-late", &temp)) {
+		dsi->suspend_stop_stream_late = (bool)temp;
+		OF_DC_LOG("suspend stop stream late %d\n",
+			dsi->suspend_stop_stream_late);
+	}
+
+	if (!of_property_read_u32(np_dsi_panel,
 		"nvidia,dsi-n-late-resume-cmd", &temp)) {
 		dsi->n_late_resume_cmd = (u16)temp;
 		OF_DC_LOG("dsi n_late_resume_cmd %d\n",

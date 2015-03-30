@@ -5152,8 +5152,9 @@ static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
 
-	if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
-		tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi, 2);
+	if (!dsi->info.suspend_stop_stream_late)
+		if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
+			tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi, 2);
 
 	if (dsi->out_ops && dsi->out_ops->disable)
 		dsi->out_ops->disable(dsi);
@@ -5184,6 +5185,10 @@ static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 			}
 		}
 	}
+
+	if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
+		tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi, 2);
+
 fail:
 	mutex_unlock(&dsi->lock);
 	tegra_dc_io_end(dc);

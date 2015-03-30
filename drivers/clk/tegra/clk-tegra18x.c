@@ -171,6 +171,50 @@ static struct of_device_id tegra18x_clock_of_match[] = {
 #define CLK_RST_CONTROLLER_RST_DEV_NVDISPLAY0_CLR_0 0x800008
 #define CLK_RST_CONTROLLER_CLK_OUT_ENB_NVDISPLAY0_SET_0 0x80100
 
+void enable_gpio_clk(void)
+{
+	void __iomem *clk_base = ioremap(0x5840000, 0x21000);
+
+	__raw_writel(0x0, clk_base);
+	udelay(2);
+	__raw_writel(0x1, clk_base + 0x1000);
+	udelay(2);
+
+	__raw_writel(0x0, clk_base + 0x10000);
+	udelay(2);
+	__raw_writel(0x1, clk_base + 0x11000);
+
+	udelay(2);
+	iounmap(clk_base);
+
+	clk_base = ioremap(0x5860000, 0x21000);
+	__raw_writel(0x0, clk_base);
+	udelay(2);
+	__raw_writel(0x1, clk_base + 1000);
+	udelay(2);
+
+	__raw_writel(0x0, clk_base + 0x10000);
+	udelay(2);
+	__raw_writel(0x1, clk_base + 0x11000);
+	udelay(2);
+	iounmap(clk_base);
+
+	clk_base = ioremap(0x5880000, 0x21000);
+	__raw_writel(0x0, clk_base);
+	udelay(2);
+	__raw_writel(0x1, clk_base + 0x1000);
+	udelay(2);
+	iounmap(clk_base);
+
+	clk_base = ioremap(0x5fc0000, 0x21000);
+
+	__raw_writel(0x0, clk_base);
+	udelay(2);
+	__raw_writel(0x1, clk_base + 1000);
+	udelay(2);
+	iounmap(clk_base);
+}
+
 static int tegra18x_clock_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -198,7 +242,7 @@ static int tegra18x_clock_probe(struct platform_device *pdev)
 		writel(0x3ff, base + CLK_RST_CONTROLLER_RST_DEV_NVDISPLAY0_CLR_0);
 		writel(0xf, base + CLK_RST_CONTROLLER_CLK_OUT_ENB_NVDISPLAY0_SET_0);
 	}
-
+	enable_gpio_clk();
 	return ret;
 }
 

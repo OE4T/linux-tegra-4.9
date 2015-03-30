@@ -492,7 +492,7 @@ static struct of_device_id mc_sid_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, mc_sid_of_match);
 
-static long ms_sid_is_cl34000094; /* support for obsolete cl34000094 */
+static long mc_sid_is_cl34000094; /* support for obsolete cl34000094 */
 
 static void __mc_override_sid(int sid, int oid)
 {
@@ -503,7 +503,7 @@ static void __mc_override_sid(int sid, int oid)
 
 	BUG_ON(oid >= MAX_OID);
 
-	if (ms_sid_is_cl34000094) {
+	if (mc_sid_is_cl34000094) {
 		addr = mc_sid_base + offs / 2;
 		val = 0x80010000 | sid;
 		writel_relaxed(val, addr);
@@ -634,7 +634,7 @@ static int mc_sid_probe(struct platform_device *pdev)
 	mc_sid_base = addr;
 
 	id = of_match_device(mc_sid_of_match, &pdev->dev);
-	ms_sid_is_cl34000094 = (long)id->data;
+	mc_sid_is_cl34000094 = (long)id->data;
 
 	for (i = 0; i < ARRAY_SIZE(sid_override_reg); i++)
 		__mc_override_sid(0x7f, i);

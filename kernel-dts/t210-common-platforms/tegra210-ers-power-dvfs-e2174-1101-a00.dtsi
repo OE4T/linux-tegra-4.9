@@ -239,7 +239,7 @@
 			compatible = "nvidia,tegra210-rail-vmax-cdev";
 			cdev-type = "cpu_hot";
 			nvidia,constraint;
-			nvidia,trips = <&cpu_vmax1 1170 &cpu_vmax2 1130>;
+			nvidia,trips = <&cpu_vmax1 1170 &cpu_vmax2 1132>;
 		};
 
 		gpu_vmax_cdev: vdd-gpu-vmax-cdev@9 {
@@ -250,7 +250,7 @@
 			compatible = "nvidia,tegra210-rail-vmax-cdev";
 			cdev-type = "gpu_hot";
 			nvidia,constraint;
-			nvidia,trips = <&gpu_vmax1 1130>;
+			nvidia,trips = <&gpu_vmax1 1132>;
 		};
 
 		core_vmax_cdev: vdd-core-vmax-cdev@10 {
@@ -261,7 +261,7 @@
 			compatible = "nvidia,tegra210-rail-vmax-cdev";
 			cdev-type = "core_hot";
 			nvidia,constraint;
-			nvidia,trips = <&core_vmax1 1130>;
+			nvidia,trips = <&core_vmax1 1132>;
 		};
 	};
 
@@ -286,7 +286,7 @@
 			SET_MAP_TRIP(gpu, gpu, vmax, 1, 83000);
 		};
 		Tdiode_tegra {
-			SET_MAP_TRIP(core, core, vmin, 1, 20000);
+			SET_MAP_TRIP(core, core, vmin, 1, 15000);
 			SET_MAP_TRIP(core, core, vmax, 1, 86000);
 		};
 		CPU-therm {

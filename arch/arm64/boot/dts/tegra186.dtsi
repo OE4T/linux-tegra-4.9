@@ -43,6 +43,11 @@
 		spi3 = &spi3;
 	};
 
+	tegra-carveouts {
+		compatible = "nvidia,carveouts";
+		memory-region = <&generic_reserved>;
+	};
+
 	mc_sid {
 		compatible = "nvidia,tegra-mc-sid";
  		reg = <0x0 0x02c00000 0x0 0x00010000>, /* MC_SID_BASE */

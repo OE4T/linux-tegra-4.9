@@ -1316,8 +1316,10 @@ static int dbg_edid_show(struct seq_file *s, void *unused)
 	buf = data->buf;
 
 	for (i = 0; i < data->len; i++) {
+#ifdef DEBUG
 		if (i % 16 == 0)
 			seq_printf(s, "edid[%03x] =", i);
+#endif
 
 		seq_printf(s, " %02x", buf[i]);
 

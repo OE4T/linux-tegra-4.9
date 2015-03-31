@@ -92,10 +92,16 @@ static int gp10b_fb_compression_page_size(struct gk20a *g)
 	return SZ_64K;
 }
 
+static int gp10b_fb_compressible_page_size(struct gk20a *g)
+{
+	return SZ_4K;
+}
+
 void gp10b_init_fb(struct gpu_ops *gops)
 {
 	gm20b_init_fb(gops);
 	gops->fb.compression_page_size = gp10b_fb_compression_page_size;
+	gops->fb.compressible_page_size = gp10b_fb_compressible_page_size;
 
 	gp10b_init_uncompressed_kind_map();
 	gp10b_init_kind_attr();

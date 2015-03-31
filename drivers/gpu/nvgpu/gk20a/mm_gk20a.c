@@ -1378,6 +1378,11 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	gk20a_get_comptags(d, dmabuf, &comptags);
 
+	/* ensure alignment to compression page size if compression enabled */
+	if (bfr.ctag_offset)
+		mapping_size = ALIGN(mapping_size,
+				     g->ops.fb.compression_page_size(g));
+
 	if (bfr.ctag_lines && !comptags.lines) {
 		/* allocate compression resources if needed */
 		err = gk20a_alloc_comptags(d, dmabuf, ctag_allocator,

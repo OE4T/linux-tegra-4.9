@@ -2431,13 +2431,6 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 		goto clean_up;
 	}
 
-	if (args->flags & NVGPU_AS_ALLOC_SPACE_FLAGS_SPARSE &&
-	    pgsz_idx != gmmu_page_size_big) {
-		err = -ENOSYS;
-		kfree(va_node);
-		goto clean_up;
-	}
-
 	start_page_nr = 0;
 	if (args->flags & NVGPU_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET)
 		start_page_nr = (u32)(args->o_a.offset >>

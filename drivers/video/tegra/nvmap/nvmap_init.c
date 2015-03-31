@@ -21,6 +21,7 @@
 #include <linux/kernel.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
+#include <linux/of_reserved_mem.h>
 #include <linux/memblock.h>
 
 #include <linux/nvmap.h>
@@ -201,7 +202,7 @@ int nvmap_populate_ivm_carveout(struct device_node *n,
 }
 #endif
 
-static int __nvmap_init_legacy(void);
+static int __nvmap_init_legacy(struct device *dev);
 static int __nvmap_init_dt(struct platform_device *pdev)
 {
 	const void *prop;
@@ -225,7 +226,7 @@ static int __nvmap_init_dt(struct platform_device *pdev)
 	}
 
 	/* For VM_2 we need carveout. So, enabling it here */
-	__nvmap_init_legacy();
+	__nvmap_init_legacy(&pdev->dev);
 	/* Parse and setup inter VM carveouts */
 	node = of_get_child_by_name(pdev->dev.of_node, "ivm_carveouts");
 	if (node) {
@@ -266,15 +267,38 @@ static int __nvmap_init_dt(struct platform_device *pdev)
 	return 0;
 }
 
+static int nvmap_co_device_init(struct reserved_mem *rmem, struct device *dev)
+{
+	tegra_carveout_start = rmem->base;
+	tegra_carveout_size = rmem->size;
+	dev_dbg(dev, "carveout=%s %pa@%pa\n",
+		 rmem->name, &tegra_carveout_size, &tegra_carveout_start);
+
+	return 0;
+}
+static void nvmap_co_device_release(struct reserved_mem *rmem,struct device *dev)
+{ }
+static const struct reserved_mem_ops nvmap_co_ops = {
+	.device_init	= nvmap_co_device_init,
+	.device_release	= nvmap_co_device_release,
+};
+static int __init nvmap_co_setup(struct reserved_mem *rmem)
+{
+	rmem->ops = &nvmap_co_ops;
+	return 0;
+}
+RESERVEDMEM_OF_DECLARE(nvmap_co, "nvidia,generic_carveout", nvmap_co_setup);
+
 /*
  * This requires proper kernel arguments to have been passed.
  */
-static int __nvmap_init_legacy(void)
+static int __nvmap_init_legacy(struct device *dev)
 {
 	/* IRAM. */
 	nvmap_carveouts[0].base = TEGRA_IRAM_BASE + TEGRA_RESET_HANDLER_SIZE;
 	nvmap_carveouts[0].size = TEGRA_IRAM_SIZE - TEGRA_RESET_HANDLER_SIZE;
 
+	of_reserved_mem_device_init(dev);
 	/* Carveout. */
 	if (config_enabled(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM) ||
 	    tegra_vpr_resize || tegra_carveout_size) {
@@ -330,7 +354,7 @@ int nvmap_init(struct platform_device *pdev)
 	struct dma_declare_info generic_dma_info;
 
 	if (pdev->dev.platform_data) {
-		err = __nvmap_init_legacy();
+		err = __nvmap_init_legacy(&pdev->dev);
 		if (err)
 			return err;
 	}

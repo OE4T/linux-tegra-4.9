@@ -55,11 +55,17 @@ static int gk20a_fb_compression_page_size(struct gk20a *g)
 	return SZ_128K;
 }
 
+static int gk20a_fb_compressible_page_size(struct gk20a *g)
+{
+	return SZ_64K;
+}
+
 void gk20a_init_fb(struct gpu_ops *gops)
 {
 	gops->fb.reset = fb_gk20a_reset;
 	gops->fb.set_mmu_page_size = gk20a_fb_set_mmu_page_size;
 	gops->fb.compression_page_size = gk20a_fb_compression_page_size;
+	gops->fb.compressible_page_size = gk20a_fb_compressible_page_size;
 	gk20a_init_uncompressed_kind_map();
 	gk20a_init_kind_attr();
 }

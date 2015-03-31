@@ -1312,16 +1312,25 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	bfr.pgsz_idx = -1;
 	mapping_size = mapping_size ? mapping_size : bfr.size;
 
-	/* If FIX_OFFSET is set, pgsz is determined. Otherwise, select
-	 * page size according to memory alignment */
+	if (vm->big_pages)
+		gmmu_select_page_size(vm, &bfr);
+	else
+		bfr.pgsz_idx = gmmu_page_size_small;
+
+	/* If FIX_OFFSET is set, pgsz is determined at address allocation
+	 * time. The alignment at address alloc time must be the same as
+	 * the alignment determined by gmmu_select_page_size().
+	 */
 	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
-		bfr.pgsz_idx = NV_GMMU_VA_IS_UPPER(offset_align) ?
+		int pgsz_idx = NV_GMMU_VA_IS_UPPER(offset_align) ?
 				gmmu_page_size_big : gmmu_page_size_small;
-	} else {
-		if (vm->big_pages)
-			gmmu_select_page_size(vm, &bfr);
-		else
-			bfr.pgsz_idx = gmmu_page_size_small;
+		if (pgsz_idx > bfr.pgsz_idx) {
+			gk20a_err(d, "%llx buffer pgsz %d, VA pgsz %d",
+				  offset_align, bfr.pgsz_idx, pgsz_idx);
+			err = -EINVAL;
+			goto clean_up;
+		}
+		bfr.pgsz_idx = min(bfr.pgsz_idx, pgsz_idx);
 	}
 
 	/* validate/adjust bfr attributes */
@@ -2495,17 +2504,8 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 			args->pages, args->offset);
 
 	/* determine pagesz idx */
-	for (pgsz_idx = gmmu_page_size_small;
-	     pgsz_idx < gmmu_nr_page_sizes;
-	     pgsz_idx++) {
-		if (vm->gmmu_page_sizes[pgsz_idx] == args->page_size)
-			break;
-	}
-
-	if (pgsz_idx >= gmmu_nr_page_sizes) {
-		err = -EINVAL;
-		goto clean_up;
-	}
+	pgsz_idx = NV_GMMU_VA_IS_UPPER(args->offset) ?
+			gmmu_page_size_big : gmmu_page_size_small;
 
 	start_page_nr = (u32)(args->offset >>
 			ilog2(vm->gmmu_page_sizes[pgsz_idx]));

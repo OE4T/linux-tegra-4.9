@@ -71,6 +71,7 @@ static int tegra_hv_i2c_xfer_msg(struct tegra_hv_i2c_dev *i2c_dev,
 	int msg_err;
 	int msg_read;
 	int rv;
+	int j = 0;
 	uint32_t flags = 0;
 
 	if (msg->len == 0)
@@ -121,15 +122,21 @@ error:
 
 	if (ret < 0) {
 		dev_err(i2c_dev->dev, "Failed to send cleanup message\n");
-		BUG();
 	}
 
-	ret = wait_for_completion_timeout(&i2c_dev->msg_complete,
-			i2c_dev->completion_timeout * 2);
-	if (ret == 0) {
-		dev_err(i2c_dev->dev, "Cleanup failed after timeout\n");
-		BUG();
+	while ((ret = wait_for_completion_timeout(&i2c_dev->msg_complete,
+				i2c_dev->completion_timeout * 2)) == 0) {
+		dev_err(i2c_dev->dev, "Cleanup failed after timeout (%d tries)\n",
+				j++);
+		if (j >= 5)
+			break;
+		/* Skipping INIT_COMPLETION on purpose, if completion gets
+		 * signalled in the time between 2 calls to wait_for_completion
+		 * we don't want to overwrite that
+		 */
 	}
+	tegra_hv_i2c_poll_cleanup(i2c_dev->comm_chan);
+
 	return rv;
 }
 
@@ -250,6 +257,23 @@ static int tegra_hv_i2c_probe(struct platform_device *pdev)
 	}
 	i2c_dev->cont_id = i2c_dev->adapter.nr;
 	init_completion(&i2c_dev->msg_complete);
+	INIT_COMPLETION(i2c_dev->msg_complete);
+
+	/* Send a cleanup message in case this is a reboot and we had a
+	 * transaction in progress
+	 */
+	ret = hv_i2c_comm_chan_cleanup(i2c_dev->comm_chan, i2c_dev->cont_id);
+	if (ret < 0) {
+		dev_warn(&pdev->dev, "Cleanup after (re)boot failed\n");
+	} else {
+		ret = wait_for_completion_timeout(&i2c_dev->msg_complete,
+				i2c_dev->completion_timeout);
+		if (ret == 0)
+			dev_warn(&pdev->dev, "Timed out sending cleanup after (re)boot\n");
+		else if (err != I2C_NO_ERROR)
+			dev_warn(&pdev->dev, "Error sending cleanup after (re)boot\n");
+	}
+
 	INIT_COMPLETION(i2c_dev->msg_complete);
 
 	ret = hv_i2c_get_max_payload(i2c_dev->comm_chan, i2c_dev->cont_id,

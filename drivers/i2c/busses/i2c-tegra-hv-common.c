@@ -24,6 +24,7 @@
 #include <linux/list.h>
 #include <linux/interrupt.h>
 #include <linux/skbuff.h>
+#include <linux/delay.h>
 
 #include "i2c-tegra-hv-common.h"
 
@@ -316,6 +317,12 @@ static void hv_i2c_work(struct work_struct *work)
 	int comm_chan_id;
 	u32 len = 0;
 
+	if (tegra_hv_ivc_channel_notified(ivck)) {
+		pr_warn("%s: Skipping work since queue is not ready\n",
+				__func__);
+		return;
+	}
+
 	for (; tegra_hv_ivc_can_read(ivck); tegra_hv_ivc_read_advance(ivck)) {
 		/* Message available
 		 * Initialize local variables to safe values
@@ -395,6 +402,20 @@ static void hv_i2c_work(struct work_struct *work)
 	return;
 }
 
+void tegra_hv_i2c_poll_cleanup(struct tegra_hv_i2c_comm_chan *comm_chan)
+{
+	struct tegra_hv_i2c_comm_dev *comm_dev = comm_chan->hv_comm_dev;
+	unsigned long ms = 0;
+
+	while (comm_chan->rx_state != I2C_RX_INIT) {
+		msleep(20);
+		ms += 20;
+		dev_err(comm_chan->dev, "Polling for response (Total %lu ms)\n",
+				ms);
+		hv_i2c_work(&comm_dev->work);
+	}
+}
+
 struct tegra_hv_i2c_comm_dev *_hv_i2c_get_comm_dev(struct device *dev,
 		struct device_node *hv_dn, uint32_t ivc_queue)
 {
@@ -444,6 +465,7 @@ struct tegra_hv_i2c_comm_dev *_hv_i2c_get_comm_dev(struct device *dev,
 
 	INIT_HLIST_NODE(&comm_dev->list);
 	hlist_add_head(&comm_dev->list, &ivc_comm_devs);
+	INIT_WORK(&comm_dev->work, hv_i2c_work);
 
 	/* Our comm_dev is ready, so enable irq here. But channels are
 	 * not yet allocated, we need to take care of that in the
@@ -459,7 +481,8 @@ struct tegra_hv_i2c_comm_dev *_hv_i2c_get_comm_dev(struct device *dev,
 		goto end;
 	}
 
-	INIT_WORK(&comm_dev->work, hv_i2c_work);
+	/* set ivc channel to invalid state */
+	tegra_hv_ivc_channel_reset(ivck);
 
 end:
 	spin_unlock_irqrestore(&ivc_comm_devs_lock, flags);

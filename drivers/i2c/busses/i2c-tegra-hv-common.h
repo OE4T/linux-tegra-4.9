@@ -35,9 +35,9 @@ int hv_i2c_comm_chan_cleanup(struct tegra_hv_i2c_comm_chan *comm_chan,
 void hv_i2c_comm_chan_free(struct tegra_hv_i2c_comm_chan *comm_chan);
 void *hv_i2c_comm_init(struct device *dev, i2c_isr_handler handler,
 		void *data);
+void tegra_hv_i2c_poll_cleanup(struct tegra_hv_i2c_comm_chan *comm_chan);
 
 #define MAX_COMM_CHANS  7
-#define COMM_CHAN_UNASSIGNED	MAX_COMM_CHANS
 
 enum i2c_ivc_msg_t {
 	I2C_READ,

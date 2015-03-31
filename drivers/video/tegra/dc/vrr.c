@@ -27,7 +27,7 @@
 #include "vrr.h"
 
 /* Elements for sysfs access */
-#define VRR_ATTR(__name) struct kobj_attribute vrr_attr_##__name = \
+#define VRR_ATTR(__name) static struct kobj_attribute vrr_attr_##__name = \
 	__ATTR(__name, S_IRUGO|S_IWUSR, vrr_settings_show, vrr_settings_store)
 #define VRR_ATTRS_ENTRY(__name) (&vrr_attr_##__name.attr)
 #define IS_VRR_ATTR(__name) (attr == &vrr_attr_##__name)

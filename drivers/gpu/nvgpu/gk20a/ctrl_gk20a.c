@@ -620,10 +620,11 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 
 		if (!err) {
 			err = gk20a_busy(dev);
-			if (!err)
+			if (!err) {
 				err = gk20a_gr_zbc_set_table(g, &g->gr,
 							     zbc_val);
-			gk20a_idle(dev);
+				gk20a_idle(dev);
+			}
 		}
 
 		if (zbc_val)

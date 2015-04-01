@@ -143,6 +143,11 @@ static int dbg_sor_show(struct seq_file *s, void *unused)
 #define DUMP_REG(a) seq_printf(s, "%-32s  %03x  %08x\n",		\
 		#a, a, tegra_sor_readl(sor, a));
 
+	if (!tegra_powergate_is_powered(TEGRA_POWERGATE_SOR)) {
+		seq_puts(s, "SOR is powergated\n");
+		return 0;
+	}
+
 	tegra_dc_io_start(sor->dc);
 	tegra_sor_clk_enable(sor);
 

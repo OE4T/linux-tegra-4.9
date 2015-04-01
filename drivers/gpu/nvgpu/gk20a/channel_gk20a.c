@@ -2109,6 +2109,7 @@ void gk20a_channel_semaphore_wakeup(struct gk20a *g)
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *c = g->fifo.channel+chid;
 		if (c->in_use) {
+			gk20a_channel_event(c);
 			wake_up_interruptible_all(&c->semaphore_wq);
 			gk20a_channel_update(c, 0);
 		}

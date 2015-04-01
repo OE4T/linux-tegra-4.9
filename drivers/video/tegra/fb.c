@@ -710,7 +710,7 @@ void tegra_fb_update_fix(struct tegra_fb_info *fb_info,
 
 	mutex_lock(&fb_info->info->lock);
 
-	fix->capabilities |= (tegra_edid_get_cd_flag(dc_edid) <<
+	fix->capabilities = (tegra_edid_get_cd_flag(dc_edid) <<
 			FB_CAP_FOURCC) & FB_CAP_DC_MASK;
 
 	fix->max_clk_rate = tegra_edid_get_max_clk_rate(dc_edid);

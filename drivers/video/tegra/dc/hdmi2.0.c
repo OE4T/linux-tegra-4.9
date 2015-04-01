@@ -1727,7 +1727,7 @@ static void tegra_hdmi_scdc_worker(struct work_struct *work)
 		{HDMI_SCDC_TMDS_CONFIG_OFFSET, 0x0}
 	};
 
-	if (!hdmi->enabled)
+	if (!hdmi->enabled || hdmi->dc->mode.pclk <= 340000000)
 		return;
 
 	mutex_lock(&hdmi->ddc_lock);

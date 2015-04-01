@@ -22,8 +22,6 @@
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/of_reserved_mem.h>
-#include <linux/memblock.h>
-
 #include <linux/nvmap.h>
 #include <linux/tegra-ivc.h>
 
@@ -33,10 +31,8 @@
 #include <linux/platform/tegra/common.h>
 #include "../../../drivers/virt/tegra/syscalls.h"
 
-/* FIXME: Statically allocated from DT carveout */
-phys_addr_t __weak tegra_carveout_start = 0xa8f00000;
-phys_addr_t __weak tegra_carveout_size =
-	config_enabled(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM) ? 0 : SZ_512M;
+phys_addr_t __weak tegra_carveout_start;
+phys_addr_t __weak tegra_carveout_size;
 
 phys_addr_t __weak tegra_vpr_start;
 phys_addr_t __weak tegra_vpr_size;
@@ -300,34 +296,6 @@ static int __nvmap_init_legacy(struct device *dev)
 
 	of_reserved_mem_device_init(dev);
 	/* Carveout. */
-	if (config_enabled(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM) ||
-	    tegra_vpr_resize || tegra_carveout_size) {
-		/* Do nothing */
-	} else {
-		int err;
-		phys_addr_t addr, size = SZ_128M;
-
-		addr = memblock_find_in_range(size, 0, size, SZ_128K);
-		if (!addr) {
-			pr_err("%s() Failed to allocate %pa\n",
-			       __func__, &size);
-			return -ENOMEM;
-		}
-
-		err = memblock_reserve(addr, size);
-		if (err) {
-			pr_err("%s() Failed to reserve %pa\n",
-			       __func__, &size);
-			return -ENOMEM;
-		}
-
-		tegra_carveout_size = size;
-		tegra_carveout_start = addr;
-
-		pr_info("%s() allocate carveout=%pa@0%pa\n",
-			__func__, &size, &addr);
-	}
-
 	nvmap_carveouts[1].base = tegra_carveout_start;
 	nvmap_carveouts[1].size = tegra_carveout_size;
 

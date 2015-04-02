@@ -16,6 +16,7 @@
 
 #include "tegra210-jetson-e-base-p2595-0000-a00.dts"
 #include "tegra210-platforms/tegra210-p2530-common.dtsi"
+#include "tegra210-platforms/tegra210-therm-est.dtsi"
 
 / {
 	model = "jetson_e";

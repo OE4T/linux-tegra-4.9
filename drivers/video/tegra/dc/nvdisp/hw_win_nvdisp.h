@@ -168,7 +168,7 @@ static inline u32 win_ihub_fetch_meter_r(void)
 }
 static inline u32 win_ihub_fetch_meter_slots_f(u32 v)
 {
-	return (v & 0xf) << 0;
+	return (v & 0xff) << 0;
 }
 static inline u32 win_ihub_linebuf_config_r(void)
 {

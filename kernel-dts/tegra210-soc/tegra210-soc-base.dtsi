@@ -35,6 +35,7 @@
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x0>;
 			enable-method = "psci";
+			errata_hwcaps = <0x7>;
 			status = "disabled";
 		};
 
@@ -43,6 +44,7 @@
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x1>;
 			enable-method = "psci";
+			errata_hwcaps = <0x7>;
 			status = "disabled";
 		};
 
@@ -51,6 +53,7 @@
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x2>;
 			enable-method = "psci";
+			errata_hwcaps = <0x7>;
 			status = "disabled";
 		};
 
@@ -59,6 +62,7 @@
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x3>;
 			enable-method = "psci";
+			errata_hwcaps = <0x7>;
 			status = "disabled";
 		};
 	};

@@ -1599,6 +1599,30 @@
 	     status = "disabled";
 	};
 
+	watchdog@30c0000 {
+		compatible = "nvidia,tegra-wdt-t18x";
+		reg = <0x0 0x030c0000 0x0 0x10000
+		0x0 0x03090000 0x0 0x10000>;
+		interrupts = <1 15 0xf01>;
+		/* uncomment to enable on boot */
+		/* nvidia,enable-on-init; */
+		nvidia,wdt-cpu-id = <4>; /* denver cpu */
+		nvidia,expiry-count = <5>;
+		status = "disabled";
+	};
+
+	watchdog@30d0000 {
+		compatible = "nvidia,tegra-wdt-t18x";
+		reg = <0x0 0x030d0000 0x0 0x10000
+		0x0 0x030a0000 0x0 0x10000>;
+		interrupts = <1 15 0xf01>;
+		/* uncomment to enable on boot */
+		/* nvidia,enable-on-init; */
+		nvidia,wdt-cpu-id = <0>; /* ARM cpu */
+		nvidia,expiry-count = <5>;
+		status = "disabled";
+	};
+
 	roc-flush@e080000 {
 		compatible = "nvidia,tegra186-roc-flush";
 		reg = <0x0 0x0e080000 0x0 0x10000>;

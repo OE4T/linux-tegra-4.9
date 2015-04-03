@@ -72,6 +72,7 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #include "dev.h"
 #include "nvhost_sync.h"
 #include "nvsd.h"
+#include "nvsd2.h"
 #include "dpaux.h"
 #include "nvsr.h"
 
@@ -2857,6 +2858,19 @@ static void tegra_dc_vblank(struct work_struct *work)
 	if (!tegra_dc_windows_are_dirty(dc, WIN_ALL_ACT_REQ))
 		clear_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (dc->out->sd_settings) {
+		if (dc->out->sd_settings->enable) {
+			if ((dc->out->sd_settings->update_sd) ||
+					(dc->out->sd_settings->phase_in_steps)) {
+				tegra_dc_mask_interrupt(dc, SMARTDIM_INT);
+				nvsd_updated = tegra_sd_update_brightness(dc);
+				dc->out->sd_settings->update_sd = false;
+				tegra_dc_unmask_interrupt(dc, SMARTDIM_INT);
+			}
+		}
+	}
+#endif
 #ifdef CONFIG_TEGRA_NVSD
 	/* Update the SD brightness */
 	if (dc->out->sd_settings && !dc->out->sd_settings->use_vpulse2) {
@@ -3188,9 +3202,16 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status,
 		ktime_t timestamp)
 {
 	/* Schedule any additional bottom-half vblank actvities. */
-	if (status & V_BLANK_INT)
+	if (status & V_BLANK_INT) {
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		if (status & SMARTDIM_INT) {
+			if (dc->out->sd_settings) {
+				dc->out->sd_settings->update_sd = true;
+			}
+		}
+#endif
 		queue_work(system_freezable_wq, &dc->vblank_work);
-
+	}
 	if (status & (V_BLANK_INT | MSF_INT)) {
 		if (dc->out->user_needs_vblank) {
 			dc->out->user_needs_vblank = false;

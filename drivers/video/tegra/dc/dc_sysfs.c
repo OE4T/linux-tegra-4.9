@@ -28,6 +28,7 @@
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "nvsd.h"
+#include "nvsd2.h"
 #include "hdmi.h"
 #include "nvsr.h"
 #include "vrr.h"
@@ -747,7 +748,10 @@ void tegra_dc_remove_sysfs(struct device *dev)
 
 	if (sd_settings)
 #ifdef CONFIG_TEGRA_NVSD
-		nvsd_remove_sysfs(dev);
+	nvsd_remove_sysfs(dev);
+#endif
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	tegra_sd_remove_sysfs(dev);
 #endif
 
 	if (nvsr)
@@ -798,6 +802,9 @@ void tegra_dc_create_sysfs(struct device *dev)
 	if (sd_settings)
 #ifdef CONFIG_TEGRA_NVSD
 		error |= nvsd_create_sysfs(dev);
+#endif
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		error |= tegra_sd_create_sysfs(dev);
 #endif
 
 	if (nvsr)

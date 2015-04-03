@@ -19,7 +19,9 @@ obj-$(CONFIG_TEGRA_NVHDCP) += nvhdcp.o
 obj-$(CONFIG_TEGRA_HDMIHDCP) += hdmihdcp.o
 obj-$(CONFIG_TEGRA_HDMIHDCP) += nvhdcp_hdcp22_methods.o
 obj-y += edid.o
+ifneq ($(CONFIG_TEGRA_NVDISPLAY),y)
 obj-$(CONFIG_TEGRA_NVSD) += nvsd.o
+endif
 obj-y += dsi.o
 obj-$(CONFIG_DEBUG_FS) += dsi_debug.o
 obj-y += dc_sysfs.o

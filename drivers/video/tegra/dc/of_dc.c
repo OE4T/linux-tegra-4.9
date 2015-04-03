@@ -590,6 +590,10 @@ static int parse_sd_settings(struct device_node *np,
 		sd_settings->enable_int = (unsigned) 0;
 	}
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	sd_settings->enable = 0;
+#endif
+
 	OF_DC_LOG("nvidia,sd-enable %d\n", sd_settings->enable);
 	if (!of_property_read_u32(np, "nvidia,enable-threshold", &temp)) {
 		sd_settings->enable_threshold = (u8) temp;

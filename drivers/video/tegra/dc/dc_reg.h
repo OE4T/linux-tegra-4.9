@@ -85,6 +85,9 @@
 #define  GPIO_0_INT		(1 << 18)
 #define  GPIO_1_INT		(1 << 19)
 #define  GPIO_2_INT		(1 << 20)
+#ifdef CONFIG_TEGRA_NVDISPLAY
+#define  SMARTDIM_INT		(1 << 24)
+#endif
 #define  NVDISP_UF_INT		(1 << 23)
 #define  HC_UF_INT		(1 << 23) /* Cursor or WinH */
 #define  WIN_D_UF_INT		(1 << 24)

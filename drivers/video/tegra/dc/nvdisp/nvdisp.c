@@ -335,7 +335,8 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 	/* enable interrupts for vblank, frame_end and underflows */
 	int_enable = nvdisp_cmd_int_status_frame_end_f(1) |
 			nvdisp_cmd_int_status_v_blank_f(1) |
-			nvdisp_cmd_int_status_uf_f(1);
+			nvdisp_cmd_int_status_uf_f(1) |
+			nvdisp_cmd_int_status_sd3_f(1);
 	/* for panels with one-shot mode enable tearing effect interrupt */
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		int_enable |= MSF_INT;

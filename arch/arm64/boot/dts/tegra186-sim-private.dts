@@ -26,7 +26,7 @@
 #include "tegra186-cpus-2D4A.dtsi"
 #include "panel-sim.dtsi"
 #include "tegra186-sim-hdmi.dtsi"
-
+#include "tegra186-sdhci.dtsi"
 / {
 	model = "t186ref";
 	compatible = "nvidia,tegra186";
@@ -74,13 +74,10 @@
 		trim-delay = <3>;
 		mmc-ocr-mask = <0>;
 		max-clk-limit = <200000000>;
-		uhs_mask = <0x0>;
-		bus-width = <8>;
 		id = <3>;
 		built-in;
 		calib_3v3_offsets = <0x0202>;
 		calib_1v8_offsets = <0x0202>;
-		status = "okay";
 	};
 	ethernet@0x7ffff000 {
 		compatible = "smsc,lan9115";

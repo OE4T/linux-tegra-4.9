@@ -22,6 +22,7 @@
  * DISCLAIMER: THIS FILE IS AUTO GENERATED. DO NOT MANUALLY EDIT THIS FILE!!!
  */
 
+#include "tegra186-sdhci.dtsi"
 
 / {
 
@@ -155,26 +156,6 @@
 		       0x0 0x0300f800 0x0 0x00000800>;
 	};
 
-	sdhci@700b0000 {
-		reg = <0x0 0x03400000 0x0 0x00020000>;
-		interrupts = <0 62 0x04>;
-	};
-
-	sdhci@700b0200 {
-		reg = <0x0 0x03420000 0x0 0x00020000>;
-		interrupts = <0 63 0x04>;
-	};
-
-	sdhci@700b0400 {
-		reg = <0x0 0x03440000 0x0 0x00020000>;
-		interrupts = <0 64 0x04>;
-	};
-
-	sdhci@700b0600 {
-		reg = <0x0 0x03460000 0x0 0x00020000>;
-		interrupts = <0 65 0x04>;
-	};
-
 	smmu: iommu {
 		reg = <0x0 0x12000000 0x0 0x01000000>;
 		mmu-masters = <&host1x                  TEGRA_SWGROUP_HC>,
@@ -190,10 +171,10 @@
 			      <&{/host1x/nvdisplay@0x54220000}	TEGRA_SWGROUP_DC>,
 			      <&{/host1x/tsec}		TEGRA_SWGROUP_TSEC>,
 			      <&{/host1x/tsecb}		TEGRA_SWGROUP_TSECB>,
-			      <&{/sdhci@700b0600}       TEGRA_SWGROUP_SDMMC4A>,
-			      <&{/sdhci@700b0400}       TEGRA_SWGROUP_SDMMC3A>,
-			      <&{/sdhci@700b0200}       TEGRA_SWGROUP_SDMMC2A>,
-			      <&{/sdhci@700b0000}       TEGRA_SWGROUP_SDMMC1A>,
+			      <&{/sdhci@3460000}       TEGRA_SWGROUP_SDMMC4A>,
+			      <&{/sdhci@3440000}       TEGRA_SWGROUP_SDMMC3A>,
+			      <&{/sdhci@3420000}       TEGRA_SWGROUP_SDMMC2A>,
+			      <&{/sdhci@3400000}       TEGRA_SWGROUP_SDMMC1A>,
 			      <&{/bpmp}			TEGRA_SWGROUP_BPMP>;
 
 		/*

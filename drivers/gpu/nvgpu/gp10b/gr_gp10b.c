@@ -24,7 +24,7 @@
 #include "hw_proj_gp10b.h"
 #include "hw_ctxsw_prog_gp10b.h"
 
-bool gr_gp10b_is_valid_class(struct gk20a *g, u32 class_num)
+static bool gr_gp10b_is_valid_class(struct gk20a *g, u32 class_num)
 {
 	bool valid = false;
 
@@ -50,7 +50,7 @@ bool gr_gp10b_is_valid_class(struct gk20a *g, u32 class_num)
 	return valid;
 }
 
-int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
+static int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 			struct channel_gk20a *c, bool patch)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -142,7 +142,7 @@ int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 	return 0;
 }
 
-void gr_gp10b_commit_global_pagepool(struct gk20a *g,
+static void gr_gp10b_commit_global_pagepool(struct gk20a *g,
 					    struct channel_ctx_gk20a *ch_ctx,
 					    u64 addr, u32 size, bool patch)
 {
@@ -457,7 +457,7 @@ static int gr_gp10b_init_ctx_state(struct gk20a *g)
 	return 0;
 }
 
-int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
+static int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 			  struct gr_ctx_desc **gr_ctx, struct vm_gk20a *vm,
 			  u32 class,
 			  u32 flags)

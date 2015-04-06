@@ -58,14 +58,18 @@ void inner_flush_cache_all(void)
 #endif
 }
 
+extern void __clean_dcache_louis(void *);
+extern void v7_clean_kern_cache_louis(void *);
 void inner_clean_cache_all(void)
 {
 #if defined(CONFIG_ARM64) && \
 	defined(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS_ON_ONE_CPU)
+	on_each_cpu(__clean_dcache_louis, NULL, 1);
 	__clean_dcache_all(NULL);
 #elif defined(CONFIG_ARM64)
 	on_each_cpu(__clean_dcache_all, NULL, 1);
 #elif defined(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS_ON_ONE_CPU)
+	on_each_cpu(v7_clean_kern_cache_louis, NULL, 1);
 	v7_clean_kern_cache_all(NULL);
 #else
 	on_each_cpu(v7_clean_kern_cache_all, NULL, 1);

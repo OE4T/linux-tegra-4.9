@@ -270,8 +270,6 @@ static int tegra_hv_i2c_probe(struct platform_device *pdev)
 				i2c_dev->completion_timeout);
 		if (ret == 0)
 			dev_warn(&pdev->dev, "Timed out sending cleanup after (re)boot\n");
-		else if (err != I2C_NO_ERROR)
-			dev_warn(&pdev->dev, "Error sending cleanup after (re)boot\n");
 	}
 
 	INIT_COMPLETION(i2c_dev->msg_complete);

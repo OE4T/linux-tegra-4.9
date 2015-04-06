@@ -3390,26 +3390,7 @@ static void gr_gk20a_detect_sm_arch(struct gk20a *g)
 int gr_gk20a_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 			   struct zbc_entry *color_val, u32 index)
 {
-	struct fifo_gk20a *f = &g->fifo;
-	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
 	u32 i;
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
-	u32 ret;
-
-	ret = gk20a_fifo_disable_engine_activity(g, gr_info, true);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to disable gr engine activity\n");
-		return ret;
-	}
-
-	ret = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to idle graphics\n");
-		goto clean_up;
-	}
 
 	/* update l2 table */
 	g->ops.ltc.set_zbc_color_entry(g, color_val, index);
@@ -3444,39 +3425,12 @@ int gr_gk20a_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 	gr->zbc_col_tbl[index].format = color_val->format;
 	gr->zbc_col_tbl[index].ref_cnt++;
 
-clean_up:
-	ret = gk20a_fifo_enable_engine_activity(g, gr_info);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to enable gr engine activity\n");
-	}
-
-	return ret;
+	return 0;
 }
 
 int gr_gk20a_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 			   struct zbc_entry *depth_val, u32 index)
 {
-	struct fifo_gk20a *f = &g->fifo;
-	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
-	u32 ret;
-
-	ret = gk20a_fifo_disable_engine_activity(g, gr_info, true);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to disable gr engine activity\n");
-		return ret;
-	}
-
-	ret = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to idle graphics\n");
-		goto clean_up;
-	}
-
 	/* update l2 table */
 	g->ops.ltc.set_zbc_depth_entry(g, depth_val, index);
 
@@ -3501,14 +3455,7 @@ int gr_gk20a_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 	gr->zbc_dep_tbl[index].format = depth_val->format;
 	gr->zbc_dep_tbl[index].ref_cnt++;
 
-clean_up:
-	ret = gk20a_fifo_enable_engine_activity(g, gr_info);
-	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to enable gr engine activity\n");
-	}
-
-	return ret;
+	return 0;
 }
 
 void gr_gk20a_pmu_save_zbc(struct gk20a *g, u32 entries)
@@ -3794,13 +3741,47 @@ int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 }
 
+static int _gk20a_gr_zbc_set_table(struct gk20a *g, struct gr_gk20a *gr,
+			struct zbc_entry *zbc_val)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
+	unsigned long end_jiffies;
+	int ret;
+
+	ret = gk20a_fifo_disable_engine_activity(g, gr_info, true);
+	if (ret) {
+		gk20a_err(dev_from_gk20a(g),
+			"failed to disable gr engine activity\n");
+		return ret;
+	}
+
+	end_jiffies = jiffies + msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+	ret = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
+	if (ret) {
+		gk20a_err(dev_from_gk20a(g),
+			"failed to idle graphics\n");
+		goto clean_up;
+	}
+
+	ret = gr_gk20a_add_zbc(g, gr, zbc_val);
+
+clean_up:
+	if (gk20a_fifo_enable_engine_activity(g, gr_info)) {
+		gk20a_err(dev_from_gk20a(g),
+			"failed to enable gr engine activity\n");
+	}
+
+	return ret;
+}
+
 int gk20a_gr_zbc_set_table(struct gk20a *g, struct gr_gk20a *gr,
 			struct zbc_entry *zbc_val)
 {
 	gk20a_dbg_fn("");
 
 	return gr_gk20a_elpg_protected_call(g,
-		gr_gk20a_add_zbc(g, gr, zbc_val));
+		_gk20a_gr_zbc_set_table(g, gr, zbc_val));
 }
 
 void gr_gk20a_init_blcg_mode(struct gk20a *g, u32 mode, u32 engine)

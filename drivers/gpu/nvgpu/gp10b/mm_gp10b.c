@@ -21,7 +21,7 @@
 #include "hw_ram_gp10b.h"
 #include "hw_bus_gp10b.h"
 
-u32 gp10b_mm_get_physical_addr_bits(struct gk20a *g)
+static u32 gp10b_mm_get_physical_addr_bits(struct gk20a *g)
 {
 	return 36;
 }

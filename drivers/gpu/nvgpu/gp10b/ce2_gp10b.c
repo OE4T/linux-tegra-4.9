@@ -44,7 +44,7 @@ static u32 ce2_launcherr_isr(struct gk20a *g, u32 fifo_intr)
 	return ce2_intr_status_launcherr_pending_f();
 }
 
-void gp10b_ce2_isr(struct gk20a *g)
+static void gp10b_ce2_isr(struct gk20a *g)
 {
 	u32 ce2_intr = gk20a_readl(g, ce2_intr_status_r(0));
 	u32 clear_intr = 0;
@@ -62,7 +62,7 @@ void gp10b_ce2_isr(struct gk20a *g)
 	return;
 }
 
-void gp10b_ce2_nonstall_isr(struct gk20a *g)
+static void gp10b_ce2_nonstall_isr(struct gk20a *g)
 {
 	u32 ce2_intr = gk20a_readl(g, ce2_intr_status_r(0));
 	u32 clear_intr = 0;

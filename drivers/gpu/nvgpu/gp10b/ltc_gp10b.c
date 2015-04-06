@@ -123,7 +123,7 @@ static int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 }
 
-void gp10b_ltc_isr(struct gk20a *g)
+static void gp10b_ltc_isr(struct gk20a *g)
 {
 	u32 mc_intr, ltc_intr;
 	int ltc, slice;
@@ -148,7 +148,7 @@ void gp10b_ltc_isr(struct gk20a *g)
 	}
 }
 
-void gp10b_ltc_init_fs_state(struct gk20a *g)
+static void gp10b_ltc_init_fs_state(struct gk20a *g)
 {
 	gm20b_ltc_init_fs_state(g);
 

@@ -37,7 +37,7 @@
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/clk_gm20b.h"
 
-struct gpu_ops gp10b_ops = {
+static struct gpu_ops gp10b_ops = {
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =
 			gm20b_slcg_bus_load_gating_prod,

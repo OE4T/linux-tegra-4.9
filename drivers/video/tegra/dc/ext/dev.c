@@ -568,9 +568,14 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			continue;
 		ext_win = &ext->win[index];
 
+#ifdef CONFIG_ANDROID
+		if (!atomic_dec_and_test(&ext_win->nr_pending_flips))
+			skip_flip = true;
+#else
 		if (!(atomic_dec_and_test(&ext_win->nr_pending_flips)) &&
 			(flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_CURSOR))
 			skip_flip = true;
+#endif
 
 		mutex_lock(&ext_win->queue_lock);
 		list_for_each_entry(temp, &ext_win->timestamp_queue,

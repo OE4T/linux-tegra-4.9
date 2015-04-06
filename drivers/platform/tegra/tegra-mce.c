@@ -43,7 +43,7 @@ struct mce_ops {
 #define ENTRY(type, op) .op = type ## _ ## op
 
 #define DEFINE_MCE_OPS(type) \
-struct mce_ops type ## _ops = { \
+static struct mce_ops type ## _ops = { \
 	ENTRY(type, update_cstate_info), \
 	ENTRY(type, update_crossover_time), \
 	ENTRY(type, read_cstate_stats), \

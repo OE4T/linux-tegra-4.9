@@ -36,6 +36,7 @@
 #include <linux/slab.h>
 #include <linux/clk/tegra.h>
 #include <linux/tegra_pm_domains.h>
+#include <linux/version.h>
 
 #include "dmaengine.h"
 
@@ -496,7 +497,11 @@ static void handle_once_dma_done(struct tegra_dma_channel *tdc,
 
 	list_del(&sgreq->node);
 	if (sgreq->last_sg) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
 		dma_desc->dma_status = DMA_SUCCESS;
+#else
+		dma_desc->dma_status = DMA_COMPLETE;
+#endif
 		dma_cookie_complete(&dma_desc->txd);
 		if (!dma_desc->cb_count)
 			list_add_tail(&dma_desc->cb_node, &tdc->cb_desc);
@@ -676,7 +681,11 @@ static enum dma_status tegra_dma_tx_status(struct dma_chan *dc,
 	spin_lock_irqsave(&tdc->lock, flags);
 
 	ret = dma_cookie_status(dc, cookie, txstate);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
 	if (ret == DMA_SUCCESS) {
+#else
+	if (ret == DMA_COMPLETE) {
+#endif
 		spin_unlock_irqrestore(&tdc->lock, flags);
 		return ret;
 	}

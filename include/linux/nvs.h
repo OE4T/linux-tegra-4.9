@@ -326,8 +326,8 @@ struct nvs_fn_if {
 		     struct nvs_fn_dev *fn_dev, struct sensor_cfg *snsr_cfg);
 	int (*remove)(void *handle);
 	void (*shutdown)(void *handle);
-	void (*mutex_lock)(void *handle);
-	void (*mutex_unlock)(void *handle);
+	void (*nvs_mutex_lock)(void *handle);
+	void (*nvs_mutex_unlock)(void *handle);
 	int (*suspend)(void *handle);
 	int (*resume)(void *handle);
 	int (*handler)(void *handle, void *buffer, s64 ts);

@@ -305,6 +305,24 @@ struct gpu_ops {
 		void (*set_perfmon_cntr_index)(struct pmu_gk20a *pmu, u8 val);
 		void (*set_perfmon_cntr_group_id)(struct pmu_gk20a *pmu,
 				u8 gid);
+
+		u8 (*pg_cmd_eng_buf_load_size)(struct pmu_pg_cmd *pg);
+		void (*pg_cmd_eng_buf_load_set_cmd_type)(struct pmu_pg_cmd *pg,
+				u8 value);
+		void (*pg_cmd_eng_buf_load_set_engine_id)(struct pmu_pg_cmd *pg,
+				u8 value);
+		void (*pg_cmd_eng_buf_load_set_buf_idx)(struct pmu_pg_cmd *pg,
+				u8 value);
+		void (*pg_cmd_eng_buf_load_set_pad)(struct pmu_pg_cmd *pg,
+				u8 value);
+		void (*pg_cmd_eng_buf_load_set_buf_size)(struct pmu_pg_cmd *pg,
+				u16 value);
+		void (*pg_cmd_eng_buf_load_set_dma_base)(struct pmu_pg_cmd *pg,
+				u32 value);
+		void (*pg_cmd_eng_buf_load_set_dma_offset)(struct pmu_pg_cmd *pg,
+				u8 value);
+		void (*pg_cmd_eng_buf_load_set_dma_idx)(struct pmu_pg_cmd *pg,
+				u8 value);
 	} pmu_ver;
 	struct {
 		int (*get_netlist_name)(int index, char *name);

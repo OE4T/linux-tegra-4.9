@@ -49,7 +49,7 @@
 /* Mapping between AP_CTRLs and Idle counters */
 #define PMU_AP_IDLE_MASK_GRAPHICS	(PMU_AP_IDLE_MASK_HIST_IDX_1)
 
-#define APP_VERSION			19123622
+#define APP_VERSION_T186_0	19494277
 #define APP_VERSION_GM20B_4 19008461
 #define APP_VERSION_GM20B_3 18935575
 #define APP_VERSION_GM20B_2 18694072
@@ -304,6 +304,15 @@ enum {
 	GK20A_PMU_DMAIDX_END		= 7
 };
 
+struct falc_dma_addr {
+	u32 dma_base;
+	/*dma_base1 is 9-bit MSB for FB Base
+	 *address for the transfer in FB after
+	 *address using 49b FB address*/
+	u16 dma_base1;
+	u8 dma_offset;
+};
+
 struct pmu_mem_v0 {
 	u32 dma_base;
 	u8  dma_offset;
@@ -313,6 +322,12 @@ struct pmu_mem_v0 {
 struct pmu_mem_v1 {
 	u32 dma_base;
 	u8  dma_offset;
+	u8  dma_idx;
+	u16 fb_size;
+};
+
+struct pmu_mem_v2 {
+	struct falc_dma_addr dma_addr;
 	u8  dma_idx;
 	u16 fb_size;
 };
@@ -362,6 +377,20 @@ struct pmu_cmdline_args_v3 {
 					registers*/
 	struct pmu_mem_v1 gc6_ctx;		/* dmem offset of gc6 context */
 };
+
+struct pmu_cmdline_args_v4 {
+	u32 reserved;
+	u32 cpu_freq_hz;		/* Frequency of the clock driving PMU */
+	u32 falc_trace_size;		/* falctrace buffer size (bytes) */
+	struct falc_dma_addr dma_addr;	/* 256-byte block address */
+	u32 falc_trace_dma_idx;		/* dmaIdx for DMA operations */
+	u8 secure_mode;
+	u8 raise_priv_sec;     /*Raise priv level required for desired
+					registers*/
+	struct pmu_mem_v2 gc6_ctx;		/* dmem offset of gc6 context */
+	u8 pad;
+};
+
 
 #define GK20A_PMU_TRACE_BUFSIZE     0x4000   /* 4K */
 #define GK20A_PMU_DMEM_BLKSIZE2		8
@@ -471,6 +500,13 @@ struct pmu_allocation_v1 {
 	struct {
 		struct pmu_dmem dmem;
 		struct pmu_mem_v1 fb;
+	} alloc;
+};
+
+struct pmu_allocation_v2 {
+	struct {
+		struct pmu_dmem dmem;
+		struct pmu_mem_v2 fb;
 	} alloc;
 };
 
@@ -623,7 +659,7 @@ struct pmu_pg_cmd_elpg_cmd {
 	u16 cmd;
 };
 
-struct pmu_pg_cmd_eng_buf_load {
+struct pmu_pg_cmd_eng_buf_load_v0 {
 	u8 cmd_type;
 	u8 engine_id;
 	u8 buf_idx;
@@ -631,6 +667,16 @@ struct pmu_pg_cmd_eng_buf_load {
 	u16 buf_size;
 	u32 dma_base;
 	u8 dma_offset;
+	u8 dma_idx;
+};
+
+struct pmu_pg_cmd_eng_buf_load_v1 {
+	u8 cmd_type;
+	u8 engine_id;
+	u8 buf_idx;
+	u8 pad;
+	u16 buf_size;
+	struct falc_dma_addr dma_addr;	/* 256-byte block address */
 	u8 dma_idx;
 };
 
@@ -649,7 +695,8 @@ struct pmu_pg_cmd {
 	union {
 		u8 cmd_type;
 		struct pmu_pg_cmd_elpg_cmd elpg_cmd;
-		struct pmu_pg_cmd_eng_buf_load eng_buf_load;
+		struct pmu_pg_cmd_eng_buf_load_v0 eng_buf_load_v0;
+		struct pmu_pg_cmd_eng_buf_load_v1 eng_buf_load_v1;
 		struct pmu_pg_cmd_stat stat;
 		/* TBD: other pg commands */
 		union pmu_ap_cmd ap_cmd;
@@ -1189,6 +1236,7 @@ struct pmu_gk20a {
 		struct pmu_cmdline_args_v1 args_v1;
 		struct pmu_cmdline_args_v2 args_v2;
 		struct pmu_cmdline_args_v3 args_v3;
+		struct pmu_cmdline_args_v4 args_v4;
 	};
 	unsigned long perfmon_events_cnt;
 	bool perfmon_sampling_enabled;

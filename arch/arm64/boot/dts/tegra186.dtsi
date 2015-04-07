@@ -439,7 +439,7 @@
 			      0 106 0x04
 			      0 107 0x04>;
 		#dma-cells = <1>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	pinmux: pinmux@2430000 {

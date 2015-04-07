@@ -37,7 +37,7 @@ static bool is_scaler_coeff_set = false;
  * For supporting the normal scaler will use only the last
  * 10 bits
  */
-unsigned int vic_filter_coeffs[192] = {
+static unsigned int vic_filter_coeffs[192] = {
 	0x00000000,    0x3c70e400,    0x3bb037e4,    0x0c51cc9c,
 	0x00100001,    0x3bf0dbfa,    0x3d00f406,    0x3fe003ff,
 	0x00300002,    0x3b80cbf5,    0x3da1040d,    0x3fb003fe,

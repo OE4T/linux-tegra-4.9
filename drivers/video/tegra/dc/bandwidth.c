@@ -25,11 +25,11 @@
 #include <mach/dc.h>
 #include <mach/fb.h>
 #include <linux/nvhost.h>
-#include <mach/latency_allowance.h>
-#include <mach/tegra_emc.h>
 #include <trace/events/display.h>
 
-#include <tegra/mc.h>
+#include <linux/platform/tegra/latency_allowance.h>
+#include <linux/platform/tegra/tegra_emc.h>
+#include <linux/platform/tegra/mc.h>
 
 #include "dc_reg.h"
 #include "dc_config.h"

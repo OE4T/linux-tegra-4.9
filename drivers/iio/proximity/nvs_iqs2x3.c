@@ -420,7 +420,7 @@ static void iqs_mutex_lock(struct iqs_state *st)
 	if (st->nvs) {
 		for (i = 0; i < IQS_DEV_N; i++) {
 			if (st->nvs_st[i])
-				st->nvs->mutex_lock(st->nvs_st[i]);
+				st->nvs->nvs_mutex_lock(st->nvs_st[i]);
 		}
 	}
 }
@@ -432,7 +432,7 @@ static void iqs_mutex_unlock(struct iqs_state *st)
 	if (st->nvs) {
 		for (i = 0; i < IQS_DEV_N; i++) {
 			if (st->nvs_st[i])
-				st->nvs->mutex_unlock(st->nvs_st[i]);
+				st->nvs->nvs_mutex_unlock(st->nvs_st[i]);
 		}
 	}
 }

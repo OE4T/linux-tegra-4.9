@@ -23,7 +23,8 @@
 #include <linux/of.h>
 #include <linux/tegra-soc.h>
 
-#include "mach/latency_allowance.h"
+#include <linux/platform/tegra/latency_allowance.h>
+
 #include "mach/io_dpd.h"
 #include "mach/dc.h"
 #include "board.h"
@@ -71,43 +72,9 @@ int tegra_unpowergate_partition(int id)
 	return 0;
 }
 
-unsigned int tegra_emc_bw_to_freq_req(unsigned int bw_kbps)
-{
-	return 0;
-}
-
-unsigned int tegra_emc_freq_req_to_bw(unsigned int freq_khz)
-{
-	return 0;
-}
-
-u32 tegra_get_dvfs_clk_change_latency_nsec(unsigned long emc_freq_khz)
-{
-	return 0;
-}
-
-int tegra_set_disp_latency_allowance(enum tegra_la_id id,
-	unsigned long emc_freq_hz,
-	unsigned int bw_mbps,
-	struct dc_to_la_params disp_params)
-{
-	return 0;
-}
-
-int tegra_mc_get_tiled_memory_bandwidth_multiplier(void)
-{
-	return 0;
-}
-
 int tegra_dvfs_use_alt_freqs_on_clk(struct clk *c, bool use_alt_freq)
 {
 	return 0;
-}
-
-struct la_to_dc_params tegra_get_la_to_dc_params(void)
-{
-	static struct la_to_dc_params la;
-	return la;
 }
 
 void tegra_io_dpd_enable(struct tegra_io_dpd *hnd)

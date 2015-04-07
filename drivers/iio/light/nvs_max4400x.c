@@ -561,7 +561,7 @@ static void mx_read(struct mx_state *st)
 	int ret;
 
 	for (i = 0; i < st->snsr_n; i++)
-		st->nvs->mutex_lock(st->nvs_data[i]);
+		st->nvs->nvs_mutex_lock(st->nvs_data[i]);
 	if (st->enabled) {
 		ret = mx_rd(st);
 		if (ret < 1)
@@ -569,7 +569,7 @@ static void mx_read(struct mx_state *st)
 					   msecs_to_jiffies(mx_polldelay(st)));
 	}
 	for (i = 0; i < st->snsr_n; i++)
-		st->nvs->mutex_unlock(st->nvs_data[i]);
+		st->nvs->nvs_mutex_unlock(st->nvs_data[i]);
 }
 
 static void mx_work(struct work_struct *ws)

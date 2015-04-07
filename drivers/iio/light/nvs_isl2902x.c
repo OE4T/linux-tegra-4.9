@@ -470,7 +470,7 @@ static void isl_read(struct isl_state *st)
 	int ret;
 
 	for (i = 0; i < st->snsr_n; i++)
-		st->nvs->mutex_lock(st->nvs_data[i]);
+		st->nvs->nvs_mutex_lock(st->nvs_data[i]);
 	if (st->enabled) {
 		ret = isl_rd(st);
 		if (ret < 1)
@@ -478,7 +478,7 @@ static void isl_read(struct isl_state *st)
 					  msecs_to_jiffies(isl_polldelay(st)));
 	}
 	for (i = 0; i < st->snsr_n; i++)
-		st->nvs->mutex_unlock(st->nvs_data[i]);
+		st->nvs->nvs_mutex_unlock(st->nvs_data[i]);
 }
 
 static void isl_work(struct work_struct *ws)

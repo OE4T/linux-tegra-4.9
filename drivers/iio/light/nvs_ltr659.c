@@ -563,7 +563,7 @@ static void ltr_read(struct ltr_state *st)
 	int ret;
 
 	for (i = 0; i < st->snsr_n; i++)
-		st->nvs->mutex_lock(st->nvs_data[i]);
+		st->nvs->nvs_mutex_lock(st->nvs_data[i]);
 	if (st->enabled) {
 		ret = ltr_rd(st);
 		if (ret < 1)
@@ -571,7 +571,7 @@ static void ltr_read(struct ltr_state *st)
 					  msecs_to_jiffies(ltr_polldelay(st)));
 	}
 	for (i = 0; i < st->snsr_n; i++)
-		st->nvs->mutex_unlock(st->nvs_data[i]);
+		st->nvs->nvs_mutex_unlock(st->nvs_data[i]);
 }
 
 static void ltr_work(struct work_struct *ws)

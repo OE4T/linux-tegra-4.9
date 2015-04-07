@@ -21,7 +21,7 @@
 #include <linux/tegra-powergate.h>
 #include <linux/tegra-fuse.h>
 
-#include <tegra/mc.h>
+#include <linux/platform/tegra/mc.h>
 
 #include "dev.h"
 #include "nvhost_channel.h"

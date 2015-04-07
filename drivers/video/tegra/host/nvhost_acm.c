@@ -37,7 +37,7 @@
 #include <linux/tegra_pm_domains.h>
 #include <linux/nvhost_ioctl.h>
 
-#include <tegra/mc.h>
+#include <linux/platform/tegra/mc.h>
 
 #include "nvhost_acm.h"
 #include "nvhost_scale.h"

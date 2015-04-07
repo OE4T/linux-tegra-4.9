@@ -26,7 +26,7 @@
 #include <asm/uaccess.h>
 
 #include <mach/clk.h>
-#include <mach/latency_allowance.h>
+#include <linux/platform/tegra/latency_allowance.h>
 
 #include "bus_client.h"
 #include "nvhost_acm.h"

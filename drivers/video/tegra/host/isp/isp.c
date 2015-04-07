@@ -40,7 +40,7 @@
 #include <linux/uaccess.h>
 #include <linux/fs.h>
 #include <linux/nvhost_isp_ioctl.h>
-#include <mach/latency_allowance.h>
+#include <linux/platform/tegra/latency_allowance.h>
 #include "isp.h"
 
 #define T12_ISP_CG_CTRL		0x74

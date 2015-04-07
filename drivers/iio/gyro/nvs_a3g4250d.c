@@ -405,14 +405,14 @@ static int stm_rd(struct stm_state *st)
 
 static void stm_read(struct stm_state *st)
 {
-	st->nvs->mutex_lock(st->nvs_st);
+	st->nvs->nvs_mutex_lock(st->nvs_st);
 	if (st->enabled) {
 		stm_rd(st);
 		if (st->i2c->irq <= 0)
 			schedule_delayed_work(&st->dw,
 					      usecs_to_jiffies(st->delay_us));
 	}
-	st->nvs->mutex_unlock(st->nvs_st);
+	st->nvs->nvs_mutex_unlock(st->nvs_st);
 }
 
 static void stm_work(struct work_struct *ws)

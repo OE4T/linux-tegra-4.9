@@ -283,7 +283,7 @@ static void jsa_read(struct jsa_state *st)
 	unsigned int ms;
 	int ret;
 
-	st->nvs->mutex_lock(st->nvs_data);
+	st->nvs->nvs_mutex_lock(st->nvs_data);
 	if (st->enabled) {
 		if (st->hw_it) {
 			jsa_rd(st);
@@ -309,7 +309,7 @@ static void jsa_read(struct jsa_state *st)
 				 "%s schedule_delayed_work=%ums\n",
 				 __func__, ms);
 	}
-	st->nvs->mutex_unlock(st->nvs_data);
+	st->nvs->nvs_mutex_unlock(st->nvs_data);
 }
 
 static void jsa_work(struct work_struct *ws)

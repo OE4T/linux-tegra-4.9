@@ -265,13 +265,13 @@ static int cm_rd(struct cm_state *st)
 
 static void cm_read(struct cm_state *st)
 {
-	st->nvs->mutex_lock(st->nvs_data);
+	st->nvs->nvs_mutex_lock(st->nvs_data);
 	if (st->enabled) {
 		cm_rd(st);
 		schedule_delayed_work(&st->dw,
 				    msecs_to_jiffies(st->light.poll_delay_ms));
 	}
-	st->nvs->mutex_unlock(st->nvs_data);
+	st->nvs->nvs_mutex_unlock(st->nvs_data);
 }
 
 static void cm_work(struct work_struct *ws)

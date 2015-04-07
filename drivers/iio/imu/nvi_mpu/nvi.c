@@ -107,7 +107,7 @@ static void nvi_mutex_lock(struct nvi_state *st)
 	if (st->nvs) {
 		for (i = 0; i < DEV_N; i++) {
 			if (st->nvs_st[i])
-				st->nvs->mutex_lock(st->nvs_st[i]);
+				st->nvs->nvs_mutex_lock(st->nvs_st[i]);
 		}
 	}
 }
@@ -119,7 +119,7 @@ static void nvi_mutex_unlock(struct nvi_state *st)
 	if (st->nvs) {
 		for (i = 0; i < DEV_N; i++) {
 			if (st->nvs_st[i])
-				st->nvs->mutex_unlock(st->nvs_st[i]);
+				st->nvs->nvs_mutex_unlock(st->nvs_st[i]);
 		}
 	}
 }

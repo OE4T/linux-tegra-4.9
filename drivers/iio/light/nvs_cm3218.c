@@ -331,14 +331,14 @@ static void cm_read(struct cm_state *st)
 {
 	int ret;
 
-	st->nvs->mutex_lock(st->nvs_data);
+	st->nvs->nvs_mutex_lock(st->nvs_data);
 	if (st->enabled) {
 		ret = cm_rd(st);
 		if (ret < RET_HW_UPDATE)
 			schedule_delayed_work(&st->dw,
 				    msecs_to_jiffies(st->light.poll_delay_ms));
 	}
-	st->nvs->mutex_unlock(st->nvs_data);
+	st->nvs->nvs_mutex_unlock(st->nvs_data);
 }
 
 static void cm_work(struct work_struct *ws)

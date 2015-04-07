@@ -815,14 +815,14 @@ static void bmp_work(struct work_struct *ws)
 	unsigned int i;
 
 	for (i = 0; i < BMP_DEV_N; i++)
-		st->nvs->mutex_lock(st->nvs_st[i]);
+		st->nvs->nvs_mutex_lock(st->nvs_st[i]);
 	if (st->enabled) {
 		st->hal->bmp_read(st);
 		schedule_delayed_work(&st->dw,
 				      usecs_to_jiffies(st->poll_delay_us));
 	}
 	for (i = 0; i < BMP_DEV_N; i++)
-		st->nvs->mutex_unlock(st->nvs_st[i]);
+		st->nvs->nvs_mutex_unlock(st->nvs_st[i]);
 }
 
 static unsigned int bmp_poll_delay(struct bmp_state *st)

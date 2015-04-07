@@ -1245,7 +1245,7 @@ static u32 tegra_hdmi_get_aspect_ratio(struct tegra_hdmi *hdmi)
 	 * set AVI Infoframe parameters
 	 */
 	if ((aspect_ratio == HDMI_AVI_ASPECT_RATIO_NO_DATA) &&
-		tegra_is_bl_display_initialized(hdmi->dc->ndev->id)) {
+					(hdmi->dc->initialized)) {
 		u32 temp = 0;
 		temp = tegra_sor_readl(hdmi->sor,
 			NV_SOR_HDMI_AVI_INFOFRAME_SUBPACK0_LOW);
@@ -1695,7 +1695,7 @@ static int _tegra_hdmi_v2_x_config(struct tegra_hdmi *hdmi)
 	/* disable hdmi2.x config on host and monitor only
 	 * if bootloader didn't initialize hdmi
 	 */
-	if (!tegra_is_bl_display_initialized(hdmi->dc->ndev->id)) {
+	if (!hdmi->dc->initialized) {
 		tegra_hdmi_v2_x_mon_config(hdmi, false);
 		tegra_hdmi_v2_x_host_config(hdmi, false);
 	}

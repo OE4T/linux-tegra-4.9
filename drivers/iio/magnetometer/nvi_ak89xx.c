@@ -590,7 +590,7 @@ static void akm_work(struct work_struct *ws)
 					    struct akm_state, dw);
 	int ret;
 
-	st->nvs->mutex_lock(st->nvs_st);
+	st->nvs->nvs_mutex_lock(st->nvs_st);
 	if (st->enabled) {
 		ret = akm_read(st);
 		if (ret > 0) {
@@ -602,7 +602,7 @@ static void akm_work(struct work_struct *ws)
 		schedule_delayed_work(&st->dw,
 				      usecs_to_jiffies(st->poll_delay_us));
 	}
-	st->nvs->mutex_unlock(st->nvs_st);
+	st->nvs->nvs_mutex_unlock(st->nvs_st);
 }
 
 static irqreturn_t akm_irq_thread(int irq, void *dev_id)

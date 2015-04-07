@@ -194,6 +194,73 @@
 				vif-supply = <&en_vdd_cam>;
 				cam2-gpios = <&gpio CAM_PWDN_FQ 0>;
 			};
+
+			ov10823@6_0020 {
+				use_of_node = "yes";
+				dev_name = "ov10823";
+				num = <0>;
+				cam,cam-change-i2c-addr;
+				cam,cam-sids-high-to-low;
+				cam,cam-skip-sw-reset;
+				#cam,cam-i2c-recovery;
+				cam,cam-use-osc-for-mclk;
+				cam,cam-use-26mhz-mclk;
+				default_i2c_sid_low = <OV10823_DEFAULT_I2C_ADDR_SID_LOW>;
+				default_i2c_sid_high = <OV10823_DEFAULT_I2C_ADDR_SID_HIGH>;
+				regw_sid_low = <OV10823_SENSOR_REG_RW_SID_LOW>;
+				regw_sid_high = <OV10823_SENSOR_REG_RW_SID_HIGH>;
+				cam1i2c_addr = <OV10823_I2C_ADDR_CAM1>;
+				cam2i2c_addr = <OV10823_I2C_ADDR_CAM2>;
+				cam3i2c_addr = <OV10823_I2C_ADDR_CAM3>;
+				cam1sid-gpios = <&gpio TEGRA_GPIO(T, 1) 0>;
+				cam2sid-gpios = <&gpio TEGRA_GPIO(S, 5) 0>;
+				cam3sid-gpios = <&gpio TEGRA_GPIO(T, 0) 0>;
+			};
+
+			ov10823@6_0022 {
+				use_of_node = "yes";
+				dev_name = "ov10823";
+				num = <1>;
+				cam,cam-change-i2c-addr;
+				cam,cam-sids-high-to-low;
+				cam,cam-skip-sw-reset;
+				#cam,cam-i2c-recovery;
+				cam,cam-use-osc-for-mclk;
+				cam,cam-use-26mhz-mclk;
+				default_i2c_sid_low = <OV10823_DEFAULT_I2C_ADDR_SID_LOW>;
+				default_i2c_sid_high = <OV10823_DEFAULT_I2C_ADDR_SID_HIGH>;
+				regw_sid_low = <OV10823_SENSOR_REG_RW_SID_LOW>;
+				regw_sid_high = <OV10823_SENSOR_REG_RW_SID_HIGH>;
+				cam1i2c_addr = <OV10823_I2C_ADDR_CAM1>;
+				cam2i2c_addr = <OV10823_I2C_ADDR_CAM2>;
+				cam3i2c_addr = <OV10823_I2C_ADDR_CAM3>;
+				cam1sid-gpios = <&gpio TEGRA_GPIO(T, 1) 0>;
+				cam2sid-gpios = <&gpio TEGRA_GPIO(S, 5) 0>;
+				cam3sid-gpios = <&gpio TEGRA_GPIO(T, 0) 0>;
+			};
+
+			ov10823@6_0024 {
+				use_of_node = "yes";
+				dev_name = "ov10823";
+				num = <2>;
+				cam,cam-change-i2c-addr;
+				cam,cam-sids-high-to-low;
+				cam,cam-skip-sw-reset;
+				#cam,cam-i2c-recovery;
+				cam,cam-use-osc-for-mclk;
+				cam,cam-use-26mhz-mclk;
+				default_i2c_sid_low = <OV10823_DEFAULT_I2C_ADDR_SID_LOW>;
+				default_i2c_sid_high = <OV10823_DEFAULT_I2C_ADDR_SID_HIGH>;
+				regw_sid_low = <OV10823_SENSOR_REG_RW_SID_LOW>;
+				regw_sid_high = <OV10823_SENSOR_REG_RW_SID_HIGH>;
+				cam1i2c_addr = <OV10823_I2C_ADDR_CAM1>;
+				cam2i2c_addr = <OV10823_I2C_ADDR_CAM2>;
+				cam3i2c_addr = <OV10823_I2C_ADDR_CAM3>;
+				cam1sid-gpios = <&gpio TEGRA_GPIO(T, 1) 0>;
+				cam2sid-gpios = <&gpio TEGRA_GPIO(S, 5) 0>;
+				cam3sid-gpios = <&gpio TEGRA_GPIO(T, 0) 0>;
+			};
+
 		};
 		dpd {
 			default-enable;

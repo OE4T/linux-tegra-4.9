@@ -18,13 +18,44 @@
 #include <dt-bindings/media/camera.h>
 #include <dt-bindings/platform/t210/t210.h>
 
-#define CAM_I2C_BUS	6
+#define CAM_I2C_BUS	2
+#define VI_I2C_BUS	6
 
-/* camera control gpio definitions */
-#define CAM_PWDN_FQ	TEGRA_GPIO(T, 0)
+/* generally used camera control gpio definitions and aliases*/
+#define CAM_RST		TEGRA_GPIO(S, 4)
+#define CAM_AF_EN	TEGRA_GPIO(S, 5)
+#define CAM_FLASH_EN	TEGRA_GPIO(S, 6)
 #define CAM_PWDN_RQ	TEGRA_GPIO(S, 7)
-#define CAM_RST	TEGRA_GPIO(S, 4)
-#define CAM_PWDN_AF	TEGRA_GPIO(S, 5)
+#define CAM_PWDN_FQ	TEGRA_GPIO(T, 0)
+#define CAM_STROBE_EN	TEGRA_GPIO(T, 1)
+/* alias */
+#define CAM_PWDN_AF	CAM_AF_EN
+#define CAMFI_PWDN	CAM_STROBE_EN
+#define CAMRI_PWDN	CAM_STROBE_EN
+
+/* specifically used on camera board designs */
+/* NxOV10823 general */
+
+#define OV10823_SID_CAM1	CAMRI_PWDN	/*PT1*/
+#define OV10823_SID_CAM2	CAM_AF_EN	/*PS5*/
+#define OV10823_SID_CAM3	CAM_PWDN_FQ	/*PT0*/
+
+#define OV10823_DEFAULT_I2C_ADDR_SID_LOW	(0x10)
+#define OV10823_DEFAULT_I2C_ADDR_SID_HIGH	(0x36)
+#define OV10823_SENSOR_REG_RW_SID_LOW		(0x300c)
+#define OV10823_SENSOR_REG_RW_SID_HIGH		(0x3661)
+
+#define OV10823_I2C_ADDR_CAM1	(0x20)
+#define OV10823_I2C_ADDR_CAM2	(0x22)
+#define OV10823_I2C_ADDR_CAM3	(0x24)
+
+/* ov10823 board specific */
+#define OV10823_USE_OSC_FOR_MCLK	(1)
+#define OV10823_NEED_I2C_RECOVERY	(0)
+
+#define FIRST_CAM_POS (0)
+#define SECOND_CAM_POS (1)
+#define THIRD_CAM_POS (2)
 
 / {
 	tegra-camera-platform {
@@ -58,6 +89,36 @@
 					platformdata = "t210ref_ov5693f_pdata";
 				};
 			};
+
+			module3: module3@modules {
+				compatible = "sensor,rear";
+				badge_info = "e2385_angle0_ov10823";
+
+				sensor {
+					profile = <&ov10823_A>;
+					platformdata = "t210ref_ov10823A_pdata";
+				};
+			};
+
+			module4: module4@modules {
+				compatible = "sensor,rear";
+				badge_info = "e2385_angle120_ov10823";
+
+				sensor {
+					profile = <&ov10823_B>;
+					platformdata = "t210ref_ov10823B_pdata";
+				};
+			};
+
+			module5: module5@modules {
+				compatible = "sensor,rear";
+				badge_info = "e2385_angle240_ov10823";
+
+				sensor {
+					profile = <&ov10823_C>;
+					platformdata = "t210ref_ov10823C_pdata";
+				};
+			};
 		};
 
 		profiles {
@@ -68,7 +129,7 @@
 				guid = "s_OV5693";
 				position = <0>;
 				bustype = "i2c";
-				busnum = <CAM_I2C_BUS>;
+				busnum = <VI_I2C_BUS>;
 				addr = <0x10>;
 				datalen = <2>;
 				pinmuxgrp = <0xFFFF>;
@@ -129,7 +190,7 @@
 				guid = "f_AD5823";
 				position = <0>;
 				bustype = "i2c";
-				busnum = <CAM_I2C_BUS>;
+				busnum = <VI_I2C_BUS>;
 				addr = <0xc>;
 				datalen = <1>;
 				pinmuxgrp = <0xFFFF>;
@@ -161,7 +222,7 @@
 				guid = "sOV5693f";
 				position = <1>;
 				bustype = "i2c";
-				busnum = <CAM_I2C_BUS>;
+				busnum = <VI_I2C_BUS>;
 				addr = <0x36>;
 				datalen = <2>;
 				pinmuxgrp = <0xFFFF>;
@@ -215,6 +276,98 @@
 				cap-clock_multiplier_1 = <0>;
 				cap-hdr-enabled;
 			};
+
+			ov10823_A: ov10823@6_0020 {
+				index = <4>;
+				chipname = "pcl_OV10823_A";
+				type = "sensor";
+				guid = "sOVA823A";
+				position = <FIRST_CAM_POS>;
+				bustype = "i2c";
+				busnum = <VI_I2C_BUS>;
+				addr = <OV10823_I2C_ADDR_CAM1>;
+				datalen = <2>;
+				pinmuxgrp = <0xFFFF>;
+				gpios = <3>;
+				drivername = "ov10823";
+				detect = <0x0002 0x300A 0xFFFF 0xA820>;
+				devid = <0xA823>;
+				poweron = <
+					CAMERA_GPIO_SET(OV10823_SID_CAM1)
+					CAMERA_GPIO_SET(OV10823_SID_CAM2)
+					CAMERA_GPIO_SET(OV10823_SID_CAM3)
+					CAMERA_WAITUS(10)
+					CAMERA_GPIO_CLR(OV10823_SID_CAM1)
+					CAMERA_WAITUS(300)
+					CAMERA_TABLE_RAW_WRITE(CAMERA_RAW_I2C_ADDRESS(\
+						OV10823_DEFAULT_I2C_ADDR_SID_LOW, \
+						OV10823_SENSOR_REG_RW_SID_LOW, \
+						(OV10823_I2C_ADDR_CAM1 << 1)))
+					CAMERA_END
+					>;
+				poweroff = <
+					CAMERA_END
+					>;
+			};
+
+			ov10823_B: ov10823@6_0022 {
+				index = <4>;
+				chipname = "pcl_OV10823_B";
+				type = "sensor";
+				guid = "sOVA823B";
+				position = <SECOND_CAM_POS>;
+				bustype = "i2c";
+				busnum = <VI_I2C_BUS>;
+				addr = <OV10823_I2C_ADDR_CAM2>;
+				datalen = <2>;
+				pinmuxgrp = <0xFFFF>;
+				gpios = <3>;
+				drivername = "ov10823";
+				detect = <0x0002 0x300A 0xFFFF 0xA820>;
+				devid = <0xA823>;
+				poweron = <
+					CAMERA_GPIO_CLR(OV10823_SID_CAM2)
+					CAMERA_WAITUS(300)
+					CAMERA_TABLE_RAW_WRITE(CAMERA_RAW_I2C_ADDRESS(\
+						OV10823_DEFAULT_I2C_ADDR_SID_LOW, \
+						OV10823_SENSOR_REG_RW_SID_LOW, \
+						(OV10823_I2C_ADDR_CAM2 << 1)))
+					CAMERA_END
+					>;
+				poweroff = <
+					CAMERA_END
+					>;
+			};
+
+			ov10823_C: ov10823@6_0024 {
+				index = <4>;
+				chipname = "pcl_OV10823_C";
+				type = "sensor";
+				guid = "sOVA823C";
+				position = <THIRD_CAM_POS>;
+				bustype = "i2c";
+				busnum = <VI_I2C_BUS>;
+				addr = <OV10823_I2C_ADDR_CAM3>;
+				datalen = <2>;
+				pinmuxgrp = <0xFFFF>;
+				gpios = <3>;
+				drivername = "ov10823";
+				detect = <0x0002 0x300A 0xFFFF 0xA820>;
+				devid = <0xA823>;
+				poweron = <
+					CAMERA_GPIO_CLR(OV10823_SID_CAM3)
+					CAMERA_WAITUS(300)
+					CAMERA_TABLE_RAW_WRITE(CAMERA_RAW_I2C_ADDRESS(\
+						OV10823_DEFAULT_I2C_ADDR_SID_LOW, \
+						OV10823_SENSOR_REG_RW_SID_LOW, \
+						(OV10823_I2C_ADDR_CAM3 << 1)))
+					CAMERA_END
+					>;
+				poweroff = <
+					CAMERA_END
+					>;
+			};
+
 		};
 	};
 };

@@ -28,7 +28,8 @@
 #include <linux/platform/tegra/dvfs.h>
 #include <linux/platform/tegra/common.h>
 #include <linux/clk/tegra.h>
-#include <mach/tegra_emc.h>
+
+#include <linux/platform/tegra/tegra_emc.h>
 
 #include "gk20a.h"
 #include "hal_gk20a.h"

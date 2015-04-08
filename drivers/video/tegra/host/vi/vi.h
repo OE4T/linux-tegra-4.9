@@ -76,6 +76,9 @@ struct vi {
 	tegra_isomgr_handle isomgr_handle;
 #endif
 	bool master_deinitialized;
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	struct vi_notify_dev *vi_notify;
+#endif
 };
 
 extern const struct file_operations tegra_vi_ctrl_ops;

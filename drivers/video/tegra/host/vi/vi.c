@@ -43,6 +43,7 @@
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "t186/t186.h"
+#include "vi/vi4.h"
 #endif
 
 #define MAX_DEVID_LENGTH	16
@@ -359,6 +360,10 @@ static int vi_probe(struct platform_device *dev)
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	nvhost_vi_notify_dev_probe(dev);
+#endif
+
 	err = nvhost_client_device_init(dev);
 	if (err)
 		goto camera_unregister;
@@ -371,7 +376,9 @@ camera_unregister:
 vi_regulator_put:
 #endif
 
-#ifndef CONFIG_ARCH_TEGRA_18x_SOC
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	nvhost_vi_notify_dev_remove(dev);
+#else
 	regulator_put(tegra_vi->reg);
 	tegra_vi->reg = NULL;
 
@@ -401,6 +408,10 @@ static int __exit vi_remove(struct platform_device *dev)
 #endif
 
 	dev_info(&dev->dev, "%s: ++\n", __func__);
+
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	nvhost_vi_notify_dev_remove(dev);
+#endif
 
 #if defined(CONFIG_TEGRA_ISOMGR)
 	if (tegra_vi->isomgr_handle)

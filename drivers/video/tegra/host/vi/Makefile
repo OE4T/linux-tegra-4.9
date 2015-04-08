@@ -14,6 +14,9 @@ endif
 obj-y += tegra_vi.o
 endif
 
+obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += \
+	../../../../../../kernel-t18x/drivers/video/tegra/host/vi/host_vi_notify.o
+
 nvhost-vi-objs = \
 		vi.o \
 

@@ -286,15 +286,16 @@ u32 gm20b_ltc_cbc_fix_config(struct gk20a *g, int base)
 void gm20b_flush_ltc(struct gk20a *g)
 {
 	u32 op_pending;
-	unsigned long now, timeout;
+	unsigned long timeout;
 
 #define __timeout_init()				\
 	do {						\
-		now = jiffies;	timeout = now + HZ;	\
+		timeout = jiffies + HZ;			\
 	} while (0)
 #define __timeout_check()						\
 	do {								\
-		if (tegra_platform_is_silicon() && time_after(now, timeout)) { \
+		if (tegra_platform_is_silicon() &&			\
+		    time_after(jiffies, timeout)) {			\
 			gk20a_err(dev_from_gk20a(g), "L2 flush timeout!"); \
 			break;						\
 		}							\

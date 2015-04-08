@@ -92,6 +92,8 @@ int gp10b_init_hal(struct gk20a *g)
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
 
 	*gops = gp10b_ops;
+	gops->privsecurity = 0;
+
 	gp10b_init_mc(gops);
 	gp10b_init_gr(gops);
 	gp10b_init_ltc(gops);

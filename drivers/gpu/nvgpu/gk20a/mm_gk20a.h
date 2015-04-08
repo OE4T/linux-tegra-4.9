@@ -458,7 +458,9 @@ void gk20a_gmmu_free_attr(struct gk20a *g,
 
 static inline phys_addr_t gk20a_mem_phys(struct mem_desc *mem)
 {
-	return sg_phys(mem->sgt->sgl);
+	/* the sgt may get null if this is accessed e.g. in an isr during
+	 * channel deletion */
+	return mem->sgt ? sg_phys(mem->sgt->sgl) : 0;
 }
 
 u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,

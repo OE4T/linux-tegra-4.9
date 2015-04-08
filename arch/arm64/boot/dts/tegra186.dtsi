@@ -60,9 +60,7 @@
 		compatible = "arm,mmu-500";
 		reg = <0x0 0x32000000 0x0 0x01000000>; /* 16MB */
 		#global-interrupts = <2>;
-		interrupts = <0 172 4>,
-			     <0 173 4>,
-			     <0 170 4>, /* This is the first context interrupt */
+		interrupts = <0 170 4>,
 			     <0 171 4>;
 
 		mmu-masters = <&{/gp10b}		TEGRA_SWGROUP_GPUB>,

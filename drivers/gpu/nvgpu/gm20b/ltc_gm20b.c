@@ -165,7 +165,7 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 out:
 	trace_gk20a_ltc_cbc_ctrl_done(g->dev->name);
 	mutex_unlock(&g->mm.l2_op_lock);
-	return 0;
+	return err;
 }
 
 void gm20b_ltc_init_fs_state(struct gk20a *g)

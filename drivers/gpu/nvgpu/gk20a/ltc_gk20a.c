@@ -167,7 +167,7 @@ static int gk20a_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 out:
 	trace_gk20a_ltc_cbc_ctrl_done(g->dev->name);
 	mutex_unlock(&g->mm.l2_op_lock);
-	return 0;
+	return err;
 }
 
 

@@ -659,6 +659,8 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 		wins[nr_win++] = win;
 	}
 
+	trace_sync_wt_ovr_syncpt_upd((data->win[win_num-1]).syncpt_max);
+
 	if (dc->enabled && !skip_flip) {
 		dc->blanked = false;
 		if (dc->out_ops && dc->out_ops->vrr_enable)
@@ -671,6 +673,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			wait_for_vblank);
 		/* TODO: implement swapinterval here */
 		tegra_dc_sync_windows(wins, nr_win);
+		trace_scanout_syncpt_upd((data->win[win_num-1]).syncpt_max);
 		tegra_dc_program_bandwidth(dc, true);
 		if (!tegra_dc_has_multiple_dc())
 			tegra_dc_call_flip_callback();
@@ -688,7 +691,6 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			tegra_dc_incr_syncpt_min(dc, index,
 					flip_win->syncpt_max);
 		}
-		trace_scanout_syncpt_upd((data->win[win_num-1]).syncpt_max);
 	}
 
 	/* unpin and deref previous front buffers */

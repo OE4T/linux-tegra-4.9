@@ -273,6 +273,11 @@ DEFINE_EVENT(display_syncpt_notifier, flip_rcvd_syncpt_upd,
 	TP_ARGS(syncpt_val)
 );
 
+DEFINE_EVENT(display_syncpt_notifier, sync_wt_ovr_syncpt_upd,
+	TP_PROTO(unsigned int syncpt_val),
+	TP_ARGS(syncpt_val)
+);
+
 DEFINE_EVENT(display_syncpt_notifier, scanout_syncpt_upd,
 	TP_PROTO(unsigned int syncpt_val),
 	TP_ARGS(syncpt_val)

@@ -59,26 +59,19 @@ struct tegra_vi_stats {
 struct vi {
 	struct tegra_camera *camera;
 	struct platform_device *ndev;
-#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	struct regulator *reg;
-#endif
 	uint vi_bw;
 	uint max_bw;
-#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	int vi_irq;
 	struct dentry *debugdir;
 	struct tegra_vi_stats vi_out;
 	struct workqueue_struct *vi_workqueue;
 	struct work_struct stats_work;
 	struct work_struct mfi_cb_work;
-#endif
 #if defined(CONFIG_TEGRA_ISOMGR)
 	tegra_isomgr_handle isomgr_handle;
 #endif
 	bool master_deinitialized;
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	struct vi_notify_dev *vi_notify;
-#endif
 };
 
 extern const struct file_operations tegra_vi_ctrl_ops;

@@ -41,11 +41,6 @@
 #include "vi_irq.h"
 #include "camera_priv_defs.h"
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-#include "t186/t186.h"
-#include "vi/vi4.h"
-#endif
-
 #define MAX_DEVID_LENGTH	16
 #define TEGRA_VI_NAME		"tegra_vi"
 
@@ -58,16 +53,11 @@ static struct of_device_id tegra_vi_of_match[] = {
 	{ .compatible = "nvidia,tegra210-vi",
 		.data = (struct nvhost_device_data *)&t21_vi_info },
 #endif
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	{ .compatible = "nvidia,tegra186-vi",
-		.data = (struct nvhost_device_data *)&t18_vi_info },
-#endif
 	{ },
 };
 
 static struct i2c_camera_ctrl *i2c_ctrl;
 
-#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 static void (*mfi_callback)(void *);
 static void *mfi_callback_arg;
 static DEFINE_MUTEX(vi_isr_lock);
@@ -114,7 +104,6 @@ static void vi_mfi_worker(struct work_struct *vi_work)
 	mutex_unlock(&vi_isr_lock);
 	return;
 }
-#endif
 
 #if defined(CONFIG_TEGRA_ISOMGR)
 static int vi_isomgr_unregister(struct vi *tegra_vi)
@@ -126,7 +115,6 @@ static int vi_isomgr_unregister(struct vi *tegra_vi)
 }
 #endif
 
-#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 static int vi_out_show(struct seq_file *s, void *unused)
 {
 	struct vi *vi = s->private;
@@ -188,7 +176,6 @@ create_debugfs_fail:
 	dev_err(&vi->ndev->dev, "%s: could not create debugfs", __func__);
 	vi_remove_debugfs(vi);
 }
-#endif
 
 static int nvhost_vi_slcg_handler(struct notifier_block *nb,
 		unsigned long action, void *data)
@@ -290,7 +277,6 @@ static int vi_probe(struct platform_device *dev)
 
 	tegra_vi->ndev = dev;
 
-#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	/* create workqueue for mfi callback */
 	tegra_vi->vi_workqueue = alloc_workqueue("vi_workqueue",
 					WQ_HIGHPRI | WQ_UNBOUND, 1);
@@ -309,7 +295,6 @@ static int vi_probe(struct platform_device *dev)
 		goto vi_probe_fail;
 
 	vi_create_debugfs(tegra_vi);
-#endif
 
 	i2c_ctrl = pdata->private_data;
 	pdata->private_data = tegra_vi;
@@ -318,7 +303,6 @@ static int vi_probe(struct platform_device *dev)
 	if (i2c_ctrl && i2c_ctrl->new_devices)
 		i2c_ctrl->new_devices(dev);
 
-#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	tegra_vi->reg = regulator_get(&tegra_vi->ndev->dev, "avdd_dsi_csi");
 	if (IS_ERR(tegra_vi->reg)) {
 		err = PTR_ERR(tegra_vi->reg);
@@ -332,7 +316,6 @@ static int vi_probe(struct platform_device *dev)
 		if (tegra_platform_is_silicon())
 			goto camera_i2c_unregister;
 	}
-#endif
 
 #ifdef CONFIG_TEGRA_CAMERA
 	tegra_vi->camera = tegra_camera_register(dev);
@@ -360,10 +343,6 @@ static int vi_probe(struct platform_device *dev)
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	nvhost_vi_notify_dev_probe(dev);
-#endif
-
 	err = nvhost_client_device_init(dev);
 	if (err)
 		goto camera_unregister;
@@ -376,14 +355,10 @@ camera_unregister:
 vi_regulator_put:
 #endif
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	nvhost_vi_notify_dev_remove(dev);
-#else
 	regulator_put(tegra_vi->reg);
 	tegra_vi->reg = NULL;
 
 camera_i2c_unregister:
-#endif
 	if (i2c_ctrl && i2c_ctrl->remove_devices)
 		i2c_ctrl->remove_devices(dev);
 	pdata->private_data = i2c_ctrl;
@@ -398,9 +373,7 @@ static int __exit vi_remove(struct platform_device *dev)
 	int err = 0;
 #endif
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	struct vi *tegra_vi = (struct vi *)pdata->private_data;
-#endif
 
 #ifdef CONFIG_PM_RUNTIME
 	if (atomic_read(&dev->dev.power.usage_count) > 0)
@@ -409,18 +382,12 @@ static int __exit vi_remove(struct platform_device *dev)
 
 	dev_info(&dev->dev, "%s: ++\n", __func__);
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	nvhost_vi_notify_dev_remove(dev);
-#endif
-
 #if defined(CONFIG_TEGRA_ISOMGR)
 	if (tegra_vi->isomgr_handle)
 		vi_isomgr_unregister(tegra_vi);
 #endif
 
-#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	vi_remove_debugfs(tegra_vi);
-#endif
 
 	nvhost_client_device_release(dev);
 
@@ -429,15 +396,11 @@ static int __exit vi_remove(struct platform_device *dev)
 		slcg_unregister_notifier(pdata->powergate_id,
 					 &pdata->toggle_slcg_notifier);
 
-#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	vi_intr_free(tegra_vi);
-#endif
 
 	pdata->aperture[0] = NULL;
-#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	flush_workqueue(tegra_vi->vi_workqueue);
 	destroy_workqueue(tegra_vi->vi_workqueue);
-#endif
 #ifdef CONFIG_TEGRA_CAMERA
 	err = tegra_camera_unregister(tegra_vi->camera);
 	if (err)
@@ -448,10 +411,8 @@ static int __exit vi_remove(struct platform_device *dev)
 	tegra_pd_remove_device(&dev->dev);
 #endif
 
-#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	regulator_put(tegra_vi->reg);
 	tegra_vi->reg = NULL;
-#endif
 
 	/* Remove I2C Devices according to settings from board file */
 	if (i2c_ctrl && i2c_ctrl->remove_devices)
@@ -483,10 +444,6 @@ static struct of_device_id tegra_vi_domain_match[] = {
 #ifdef TEGRA_21X_OR_HIGHER_CONFIG
 	{.compatible = "nvidia,tegra210-ve-pd",
 	.data = (struct nvhost_device_data *)&t21_vi_info},
-#endif
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	{.compatible = "nvidia,tegra186-ve-pd",
-	.data = (struct nvhost_device_data *)&t18_vi_info},
 #endif
 	{},
 };

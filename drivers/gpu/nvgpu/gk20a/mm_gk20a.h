@@ -150,6 +150,7 @@ struct gk20a_mm_entry {
 	size_t size;
 	int pgsz;
 	struct gk20a_mm_entry *entries;
+	int num_entries;
 };
 
 struct priv_cmd_queue {

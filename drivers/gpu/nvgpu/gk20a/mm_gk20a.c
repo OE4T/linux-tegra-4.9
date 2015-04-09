@@ -1984,9 +1984,10 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 				pte->entries =
 					kzalloc(sizeof(struct gk20a_mm_entry) *
 						num_entries, GFP_KERNEL);
-				pte->pgsz = pgsz_idx;
 				if (!pte->entries)
 					return -ENOMEM;
+				pte->pgsz = pgsz_idx;
+				pte->num_entries = num_entries;
 			}
 			next_pte = pte->entries + pde_i;
 
@@ -2153,17 +2154,16 @@ static void gk20a_vm_free_entries(struct vm_gk20a *vm,
 				  struct gk20a_mm_entry *parent,
 				  int level)
 {
-	const struct gk20a_mmu_level *l = &vm->mmu_levels[level];
-	int num_entries = 1 << (l->hi_bit[parent->pgsz] - l->lo_bit[parent->pgsz]);
 	int i;
 
 	if (parent->entries)
-		for (i = 0; i < num_entries; i++)
+		for (i = 0; i < parent->num_entries; i++)
 			gk20a_vm_free_entries(vm, &parent->entries[i], level+1);
 
 	if (parent->size)
 		free_gmmu_pages(vm, parent);
 	kfree(parent->entries);
+	parent->entries = NULL;
 }
 
 static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
@@ -2288,6 +2288,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 				   &pde_lo, &pde_hi);
 	vm->pdb.entries = kzalloc(sizeof(struct gk20a_mm_entry) *
 			(pde_hi + 1), GFP_KERNEL);
+	vm->pdb.num_entries = pde_hi + 1;
 
 	if (!vm->pdb.entries)
 		return -ENOMEM;

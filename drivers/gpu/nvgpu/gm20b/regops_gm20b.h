@@ -16,9 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __REGOPS_GK20A_H_
-#define __REGOPS_GK20A_H_
+#ifndef __REGOPS_GM20B_H_
+#define __REGOPS_GM20B_H_
 
 void gm20b_init_regops(struct gpu_ops *gops);
 
-#endif /* __REGOPS_GK20A_H_ */
+#endif /* __REGOPS_GM20B_H_ */

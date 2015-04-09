@@ -52,6 +52,7 @@ int gk20a_init_hal(struct gk20a *g)
 
 	*gops = gk20a_ops;
 	gops->privsecurity = 0;
+	gops->securegpccs = 0;
 	gk20a_init_mc(gops);
 	gk20a_init_ltc(gops);
 	gk20a_init_gr_ops(gops);

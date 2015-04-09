@@ -377,15 +377,15 @@ struct gpu_ops {
 		int (*pmu_setup_hw_and_bootstrap)(struct gk20a *g);
 		int (*pmu_setup_elpg)(struct gk20a *g);
 		int (*init_wpr_region)(struct gk20a *g);
-		bool lspmuwprinitdone;
+		u32  lspmuwprinitdone;
 		bool fecsbootstrapdone;
-		u32  fecsrecoveryinprogress;
 	} pmu;
 	struct {
 		int (*init_clk_support)(struct gk20a *g);
 		int (*suspend_clk_support)(struct gk20a *g);
 	} clk;
 	bool privsecurity;
+	bool securegpccs;
 	struct {
 		const struct regop_offset_range* (
 				*get_global_whitelist_ranges)(void);

@@ -3333,12 +3333,16 @@ int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout,
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
+	u32 servicedpmuint;
 
+	servicedpmuint = pwr_falcon_irqstat_halt_true_f() |
+				pwr_falcon_irqstat_exterr_true_f() |
+				pwr_falcon_irqstat_swgen0_true_f();
 	do {
 		if (*var == val)
 			return 0;
 
-		if (gk20a_readl(g, pwr_falcon_irqstat_r()))
+		if (gk20a_readl(g, pwr_falcon_irqstat_r()) & servicedpmuint)
 			gk20a_pmu_isr(g);
 
 		usleep_range(delay, delay * 2);
@@ -4042,8 +4046,6 @@ int gk20a_pmu_destroy(struct gk20a *g)
 	pmu->zbc_ready = false;
 	g->ops.pmu.lspmuwprinitdone = false;
 	g->ops.pmu.fecsbootstrapdone = false;
-	g->ops.pmu.fecsrecoveryinprogress = 0;
-
 
 	gk20a_dbg_fn("done");
 	return 0;

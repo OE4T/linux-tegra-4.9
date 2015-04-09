@@ -91,6 +91,7 @@ int gm20b_init_hal(struct gk20a *g)
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
 
 	*gops = gm20b_ops;
+	gops->securegpccs = false;
 #ifdef CONFIG_TEGRA_ACR
 	if (tegra_platform_is_linsim()) {
 		gops->privsecurity = 1;

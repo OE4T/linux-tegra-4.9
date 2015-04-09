@@ -161,7 +161,7 @@ static void pmu_handle_acr_init_wpr_msg(struct gk20a *g, struct pmu_msg *msg,
 	gm20b_dbg_pmu("reply PMU_ACR_CMD_ID_INIT_WPR_REGION");
 
 	if (msg->msg.acr.acrmsg.errorcode == PMU_ACR_SUCCESS)
-		g->ops.pmu.lspmuwprinitdone = true;
+		g->ops.pmu.lspmuwprinitdone = 1;
 	gk20a_dbg_fn("done");
 }
 
@@ -213,7 +213,7 @@ void gm20b_pmu_load_lsf(struct gk20a *g, u8 falcon_id)
 	gk20a_dbg_fn("");
 
 	gm20b_dbg_pmu("wprinit status = %x\n", g->ops.pmu.lspmuwprinitdone);
-	if (g->ops.pmu.lspmuwprinitdone && g->ops.pmu.fecsbootstrapdone) {
+	if (g->ops.pmu.lspmuwprinitdone) {
 		/* send message to load FECS falcon */
 		memset(&cmd, 0, sizeof(struct pmu_cmd));
 		cmd.hdr.unit_id = PMU_UNIT_ACR;
@@ -224,8 +224,8 @@ void gm20b_pmu_load_lsf(struct gk20a *g, u8 falcon_id)
 		cmd.cmd.acr.bootstrap_falcon.flags =
 		  PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_YES;
 		cmd.cmd.acr.bootstrap_falcon.falconid = falcon_id;
-		gm20b_dbg_pmu("cmd post PMU_ACR_CMD_ID_BOOTSTRAP_FALCON");
-		g->ops.pmu.fecsrecoveryinprogress = 1;
+		gm20b_dbg_pmu("cmd post PMU_ACR_CMD_ID_BOOTSTRAP_FALCON: %x\n",
+				falcon_id);
 		gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 				pmu_handle_fecs_boot_acr_msg, pmu, &seq, ~0);
 	}
@@ -244,7 +244,6 @@ void gm20b_init_pmu_ops(struct gpu_ops *gops)
 		gops->pmu.init_wpr_region = NULL;
 	}
 	gops->pmu.pmu_setup_elpg = gm20b_pmu_setup_elpg;
-	gops->pmu.lspmuwprinitdone = false;
+	gops->pmu.lspmuwprinitdone = 0;
 	gops->pmu.fecsbootstrapdone = false;
-	gops->pmu.fecsrecoveryinprogress = 0;
 }

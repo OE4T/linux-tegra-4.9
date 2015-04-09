@@ -21,7 +21,7 @@
 /*Defines*/
 
 /*chip specific defines*/
-#define MAX_SUPPORTED_LSFM 2 /*PMU, FECS, GPCCS*/
+#define MAX_SUPPORTED_LSFM 3 /*PMU, FECS, GPCCS*/
 #define LSF_UCODE_DATA_ALIGNMENT 4096
 
 #define GM20B_PMU_UCODE_IMAGE "gpmu_ucode_image.bin"
@@ -75,6 +75,8 @@
 #define NV_FLCN_ACR_LSF_FLAG_LOAD_CODE_AT_0_TRUE        1
 #define NV_FLCN_ACR_LSF_FLAG_DMACTL_REQ_CTX_FALSE       0
 #define NV_FLCN_ACR_LSF_FLAG_DMACTL_REQ_CTX_TRUE        4
+#define NV_FLCN_ACR_LSF_FLAG_FORCE_PRIV_LOAD_TRUE       8
+#define NV_FLCN_ACR_LSF_FLAG_FORCE_PRIV_LOAD_FALSE      0
 
 /*!
  * Light Secure WPR Content Alignments

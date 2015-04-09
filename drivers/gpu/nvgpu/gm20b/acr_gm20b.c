@@ -57,6 +57,7 @@ static void free_acr_resources(struct gk20a *g, struct ls_flcn_mgr *plsfm);
 static get_ucode_details pmu_acr_supp_ucode_list[] = {
 	pmu_ucode_details,
 	fecs_ucode_details,
+	gpccs_ucode_details,
 };
 
 /*Once is LS mode, cpuctl_alias is only accessible*/
@@ -207,6 +208,77 @@ free_lsf_desc:
 	kfree(lsf_desc);
 rel_sig:
 	release_firmware(fecs_sig);
+	return err;
+}
+int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
+{
+	struct lsf_ucode_desc *lsf_desc;
+	const struct firmware *gpccs_sig;
+	int err;
+
+	if (g->ops.securegpccs == false)
+		return -ENOENT;
+
+	gpccs_sig = gk20a_request_firmware(g, GM20B_FECS_UCODE_SIG);
+	if (!gpccs_sig) {
+		gk20a_err(dev_from_gk20a(g), "failed to load gpccs sig");
+		return -ENOENT;
+	}
+	lsf_desc = kzalloc(sizeof(struct lsf_ucode_desc), GFP_KERNEL);
+	if (!lsf_desc) {
+		err = -ENOMEM;
+		goto rel_sig;
+	}
+	memcpy(lsf_desc, (void *)gpccs_sig->data,
+		sizeof(struct lsf_ucode_desc));
+	lsf_desc->falcon_id = LSF_FALCON_ID_GPCCS;
+
+	p_img->desc = kzalloc(sizeof(struct pmu_ucode_desc), GFP_KERNEL);
+	if (p_img->desc == NULL) {
+		err = -ENOMEM;
+		goto free_lsf_desc;
+	}
+
+	p_img->desc->bootloader_start_offset =
+		0;
+	p_img->desc->bootloader_size =
+		ALIGN(g->ctxsw_ucode_info.gpccs.boot.size, 256);
+	p_img->desc->bootloader_imem_offset =
+		g->ctxsw_ucode_info.gpccs.boot_imem_offset;
+	p_img->desc->bootloader_entry_point =
+		g->ctxsw_ucode_info.gpccs.boot_entry;
+
+	p_img->desc->image_size =
+		ALIGN(g->ctxsw_ucode_info.gpccs.boot.size, 256) +
+		ALIGN(g->ctxsw_ucode_info.gpccs.code.size, 256) +
+		ALIGN(g->ctxsw_ucode_info.gpccs.data.size, 256);
+	p_img->desc->app_size = ALIGN(g->ctxsw_ucode_info.gpccs.code.size, 256)
+		+ ALIGN(g->ctxsw_ucode_info.gpccs.data.size, 256);
+	p_img->desc->app_start_offset = p_img->desc->bootloader_size;
+	p_img->desc->app_imem_offset = 0;
+	p_img->desc->app_imem_entry = 0;
+	p_img->desc->app_dmem_offset = 0;
+	p_img->desc->app_resident_code_offset = 0;
+	p_img->desc->app_resident_code_size =
+		ALIGN(g->ctxsw_ucode_info.gpccs.code.size, 256);
+	p_img->desc->app_resident_data_offset =
+		ALIGN(g->ctxsw_ucode_info.gpccs.data.offset, 256) -
+		ALIGN(g->ctxsw_ucode_info.gpccs.code.offset, 256);
+	p_img->desc->app_resident_data_size =
+		ALIGN(g->ctxsw_ucode_info.gpccs.data.size, 256);
+	p_img->data = (u32 *)((u8 *)g->ctxsw_ucode_info.surface_desc.cpu_va +
+		g->ctxsw_ucode_info.gpccs.boot.offset);
+	p_img->data_size = ALIGN(p_img->desc->image_size, 256);
+	p_img->fw_ver = NULL;
+	p_img->header = NULL;
+	p_img->lsf_desc = (struct lsf_ucode_desc *)lsf_desc;
+	gm20b_dbg_pmu("gpccs fw loaded\n");
+	release_firmware(gpccs_sig);
+	return 0;
+free_lsf_desc:
+	kfree(lsf_desc);
+rel_sig:
+	release_firmware(gpccs_sig);
 	return err;
 }
 
@@ -571,6 +643,18 @@ static int lsfm_init_wpr_contents(struct gk20a *g, struct ls_flcn_mgr *plsfm,
 			gm20b_dbg_pmu("bl_data_size :%x %x\n",
 				pnode->lsb_header.bl_data_size,
 				lsb_hdr->bl_data_size);
+			gm20b_dbg_pmu("app_code_off :%x %x\n",
+				pnode->lsb_header.app_code_off,
+				lsb_hdr->app_code_off);
+			gm20b_dbg_pmu("app_code_size :%x %x\n",
+				pnode->lsb_header.app_code_size,
+				lsb_hdr->app_code_size);
+			gm20b_dbg_pmu("app_data_off :%x %x\n",
+				pnode->lsb_header.app_data_off,
+				lsb_hdr->app_data_off);
+			gm20b_dbg_pmu("app_data_size :%x %x\n",
+				pnode->lsb_header.app_data_size,
+				lsb_hdr->app_data_size);
 			gm20b_dbg_pmu("flags :%x %x\n",
 				pnode->lsb_header.flags, lsb_hdr->flags);
 
@@ -702,16 +786,6 @@ static void lsfm_fill_static_lsb_hdr_info(struct gk20a *g,
 		VA range */
 		pnode->lsb_header.bl_imem_off =
 			pnode->ucode_img.desc->bootloader_imem_offset;
-		pnode->lsb_header.app_code_off =
-			pnode->ucode_img.desc->app_start_offset +
-			pnode->ucode_img.desc->app_resident_code_offset;
-		pnode->lsb_header.app_code_size =
-			pnode->ucode_img.desc->app_resident_code_size;
-		pnode->lsb_header.app_data_off =
-			pnode->ucode_img.desc->app_start_offset +
-			pnode->ucode_img.desc->app_resident_data_offset;
-		pnode->lsb_header.app_data_size =
-			pnode->ucode_img.desc->app_resident_data_size;
 
 		/* TODO: OBJFLCN should export properties using which the below
 			flags should be populated.*/
@@ -720,6 +794,10 @@ static void lsfm_fill_static_lsb_hdr_info(struct gk20a *g,
 		if (falcon_id == pmu->falcon_id) {
 			data = NV_FLCN_ACR_LSF_FLAG_DMACTL_REQ_CTX_TRUE;
 			pnode->lsb_header.flags = data;
+		}
+		if (falcon_id == LSF_FALCON_ID_GPCCS) {
+			pnode->lsb_header.flags |=
+				NV_FLCN_ACR_LSF_FLAG_FORCE_PRIV_LOAD_TRUE;
 		}
 	}
 }
@@ -741,6 +819,9 @@ static int lsfm_add_ucode_img(struct gk20a *g, struct ls_flcn_mgr *plsfm,
 	pnode->wpr_header.falcon_id = falcon_id;
 	pnode->wpr_header.bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
 	pnode->wpr_header.status = LSF_IMAGE_STATUS_COPY;
+
+	if (falcon_id == LSF_FALCON_ID_GPCCS)
+		pnode->wpr_header.lazy_bootstrap = 1;
 
 	/*TODO to check if PDB_PROP_FLCN_LAZY_BOOTSTRAP is to be supported by
 	Android */
@@ -854,6 +935,17 @@ static int lsf_gen_wpr_requirements(struct gk20a *g, struct ls_flcn_mgr *plsfm)
 		/* Finally, update ucode surface size to include updates */
 		pnode->full_ucode_size = wpr_offset -
 			pnode->lsb_header.ucode_off;
+		if (pnode->wpr_header.falcon_id != LSF_FALCON_ID_PMU) {
+			pnode->lsb_header.app_code_off =
+				pnode->lsb_header.bl_code_size;
+			pnode->lsb_header.app_code_size =
+				pnode->lsb_header.ucode_size -
+				pnode->lsb_header.bl_code_size;
+			pnode->lsb_header.app_data_off =
+				pnode->lsb_header.ucode_size;
+			pnode->lsb_header.app_data_size =
+				pnode->lsb_header.data_size;
+		}
 		pnode = pnode->next;
 	}
 	plsfm->wpr_size = wpr_offset;

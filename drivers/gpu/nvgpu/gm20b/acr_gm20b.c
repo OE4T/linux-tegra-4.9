@@ -238,7 +238,7 @@ int prepare_ucode_blob(struct gk20a *g)
 	if (err)
 		return err;
 
-	if (plsfm->managed_flcn_cnt) {
+	if (plsfm->managed_flcn_cnt && !plsfm->mem.cpu_va) {
 		/* Generate WPR requirements*/
 		err = lsf_gen_wpr_requirements(g, plsfm);
 		if (err)

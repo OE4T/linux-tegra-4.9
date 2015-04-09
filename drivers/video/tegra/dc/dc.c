@@ -2801,9 +2801,20 @@ static void tegra_dc_vrr_sec(struct tegra_dc *dc)
 	if (!vrr || !vrr->enable)
 		return;
 
+	/* Decrement frame end interrupt refcount previously
+	   requested by secure library */
+	if (vrr->fe_intr_req) {
+		_tegra_dc_config_frame_end_intr(dc, false);
+		vrr->fe_intr_req = 0;
+	}
+
 #ifdef CONFIG_TRUSTED_LITTLE_KERNEL
 	te_vrr_sec();
 #endif
+	/* Increment frame end interrupt refcount requested
+	   by secure library */
+	if (vrr->fe_intr_req)
+		_tegra_dc_config_frame_end_intr(dc, true);
 }
 
 static void tegra_dc_vblank(struct work_struct *work)

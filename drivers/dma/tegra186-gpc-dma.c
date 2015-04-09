@@ -1015,11 +1015,11 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_slave_sg(
 	struct tegra_dma_desc *dma_desc;
 	unsigned int i;
 	struct scatterlist *sg;
-	unsigned long csr, mc_seq, apb_ptr, mmio_seq;
+	unsigned long csr, mc_seq, apb_ptr = 0, mmio_seq = 0;
 	struct list_head req_list;
 	struct tegra_dma_sg_req *sg_req = NULL;
 	u32 burst_size;
-	enum dma_slave_buswidth slave_bw;
+	enum dma_slave_buswidth slave_bw = 0;
 	int ret;
 
 	if (!tdc->config_init) {

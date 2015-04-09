@@ -868,6 +868,9 @@
 	     iommus = <&smmu TEGRA_SWGROUP_APE>;
 	     nvidia,adsp_unit_fpga;
 	     nvidia,adsp_unit_fpga_reset = <0x07F00040 0x00000040>;
+	     nvidia,adsp_mem = <0x8f000000 0x01000000>, /* ADSP OS */
+			       <0x8f800000 0x00800000>, /* ADSP APP */
+			       <0x3F800000 0x00018000>; /* ARAM ALIAS 0 */
 	     status = "disabled";
 	};
 };

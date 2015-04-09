@@ -40,6 +40,7 @@ enum {
 	TEGRA_MCE_CSTATS_ENTRIES_CCP3,
 	TEGRA_MCE_CSTATS_ENTRIES_A57_CC6,
 	TEGRA_MCE_CSTATS_ENTRIES_A57_CC7,
+	TEGRA_MCE_CSTATS_ENTRIES_D15_CC6,
 	TEGRA_MCE_CSTATS_ENTRIES_D15_CC7,
 	TEGRA_MCE_CSTATS_ENTRIES_D15_CORE0_C6,
 	TEGRA_MCE_CSTATS_ENTRIES_D15_CORE1_C6,
@@ -78,8 +79,9 @@ enum {
 	TEGRA_MCE_FEATURE_CCP3,
 };
 
+int tegra_mce_enter_cstate(u32 state, u32 wake_time);
 int tegra_mce_update_cstate_info(u32 cluster, u32 ccplex,
-	u32 system, u8 force, u32 wake);
+	u32 system, u8 force, u32 wake_mask);
 int tegra_mce_update_crossover_time(u32 type, u32 time);
 int tegra_mce_read_cstate_stats(u32 state, u32 *stats);
 int tegra_mce_write_cstate_stats(u32 state, u32 stats);

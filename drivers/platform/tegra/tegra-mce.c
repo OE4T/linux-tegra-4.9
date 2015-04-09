@@ -9,9 +9,6 @@
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <linux/of.h>
@@ -23,329 +20,78 @@
 #include <linux/cpu.h>
 #include <linux/notifier.h>
 #include <linux/tegra-mce.h>
-
-#include <asm/cputype.h>
 #include <asm/smp_plat.h>
 
-#define MCE_APERTURE_LEN		(1 << 16) /* 64KB */
-#define MCE_APERTURE_ARI0		(0 * MCE_APERTURE_LEN)
+#define SMC_SIP_INVOKE_MCE	0x82FFFF00
 
-struct mce_ops {
-	int (*update_cstate_info)(u32 cluster, u32 ccplex,
-		u32 system, u8 force, u32 wake);
-	int (*update_crossover_time)(u32 type, u32 time);
-	int (*read_cstate_stats)(u32 state, u32 *stats);
-	int (*write_cstate_stats)(u32 state, u32 stats);
-	int (*call_misc)(u32 *low, u32 *high);
-	int (*is_sc7_allowed)(u32 state, u32 wake, u32 *allowed);
+#define NR_SMC_REGS		6
+
+/* MCE command enums for SMC calls */
+enum {
+	MCE_SMC_ENTER_CSTATE,
+	MCE_SMC_UPDATE_CSTATE_INFO,
+	MCE_SMC_UPDATE_XOVER_TIME,
+	MCE_SMC_READ_CSTATE_STATS,
+	MCE_SMC_WRITE_CSTATE_STATS,
+	MCE_SMC_IS_SC7_ALLOWED,
+	MCE_SMC_ONLINE_CORE,
+	MCE_SMC_CC3_CTRL,
+	MCE_SMC_ECHO_DATA,
+	MCE_SMC_READ_VERSIONS,
+	MCE_SMC_ENUM_FEATURES,
 };
 
-#define ENTRY(type, op) .op = type ## _ ## op
-
-#define DEFINE_MCE_OPS(type) \
-static struct mce_ops type ## _ops = { \
-	ENTRY(type, update_cstate_info), \
-	ENTRY(type, update_crossover_time), \
-	ENTRY(type, read_cstate_stats), \
-	ENTRY(type, write_cstate_stats), \
-	ENTRY(type, call_misc), \
-	ENTRY(type, is_sc7_allowed), \
+struct mce_regs {
+	u64 args[NR_SMC_REGS];
 };
 
-#define mce_request(opfunc, ...) \
+static noinline notrace int __send_smc(u64 func, struct mce_regs *regs)
+{
+	u32 ret = SMC_SIP_INVOKE_MCE;
+	asm volatile (
+	"	mov	x0, %0 \n"
+	"	mov	x1, %1 \n"
+	"	ldp	x2, x3, [%2, #16 * 0] \n"
+	"	ldp	x4, x5, [%2, #16 * 1] \n"
+	"	ldp	x6, x7, [%2, #16 * 2] \n"
+	"	isb \n"
+	"	smc	#0 \n"
+	"	mov	%0, x0 \n"
+	"	stp	x2, x3, [%2, #16 * 0] \n"
+	"	stp	x4, x5, [%2, #16 * 1] \n"
+	"	stp	x6, x7, [%2, #16 * 2] \n"
+	: "+r" (ret)
+	: "r" (func), "r" (regs)
+	: "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7");
+	return ret;
+}
+
+#define send_smc(func, regs) \
 ({ \
-	int __ret; \
-	struct mce_ops *__ops = get_cpu_var(cpu_mce_ops); \
-	BUG_ON(!__ops); \
-	__ret = __ops->opfunc(__VA_ARGS__); \
-	put_cpu_var(cpu_mce_ops); \
+	int __ret = __send_smc(func, regs); \
+	if (__ret) { \
+		pr_err("%s: failed (ret=%d)\n", __func__, __ret); \
+		return __ret; \
+	} \
 	__ret; \
 })
 
-enum { MCE_MISC_CMD_ECHO, MCE_MISC_CMD_VERS, MCE_MISC_CMD_ENUM };
-
-static struct device *mce_dev;
-
-static void __iomem	*ari_base;
-
-/* Store MCE ops in a per-CPU variable */
-static DEFINE_PER_CPU(struct mce_ops *, cpu_mce_ops);
-static DEFINE_PER_CPU(void __iomem *, cpu_ari_bases);
-
-/*
- * ARI support for ARM cores
+/**
+ * Specify power state and wake time for entering upon STANDBYWFI
+ *
+ * @state:		requested core power state
+ * @wake_time:	wake time in TSC ticks
+ *
+ * Returns 0 if success.
  */
-
-#define ARI_REQUEST				0x0
-#define ARI_REQUEST_EVENT_MASK	0x4
-#define ARI_STATUS				0x8
-#define ARI_REQUEST_DATA_LO		0xc
-#define ARI_REQUEST_DATA_HI		0x10
-#define ARI_RESPONSE_DATA_LO	0x14
-#define ARI_RESPONSE_DATA_HI	0x18
-
-#define ARI_REQUEST_VALID		BIT(8)
-
-#define ARI_EVT_MASK_NULL		(0)
-#define ARI_EVT_MASK_STANDBYWFI	BIT(7)
-
-enum {
-	ARI_STATUS_PENDING = 1,
-	ARI_STATUS_ONGOING = 3,
-	ARI_STATUS_NONE,
-};
-
-enum {
-	ARI_REQ_CALL_MISC = 0x0,
-	ARI_REQ_ENTER_CSTATE = 0x1,
-	ARI_REQ_UPDATE_CLUSTER_CSTATE,
-	ARI_REQ_UPDATE_CROSSOVER_TIME,
-	ARI_REQ_READ_CSTATE_STATS,
-	ARI_REQ_WRITE_CSTATE_STATS,
-	ARI_REQ_IS_SC7_ALLOWED,
-	ARI_REQ_ONLINE_CORE,
-};
-
-static inline u32 ari_readl(u32 reg)
+int tegra_mce_enter_cstate(u32 state, u32 wake_time)
 {
-	return readl(__get_cpu_var(cpu_ari_bases) + reg);
+	struct mce_regs regs;
+	regs.args[0] = state;
+	regs.args[1] = wake_time;
+	return send_smc(MCE_SMC_ENTER_CSTATE, &regs);
 }
-
-static inline void ari_writel(u32 val, u32 reg)
-{
-	writel(val, __get_cpu_var(cpu_ari_bases) + reg);
-}
-
-static void ari_request_nowait(u32 events, u32 request, u32 low, u32 high)
-{
-	u32 reg;
-
-	ari_writel(low, ARI_REQUEST_DATA_LO);
-	ari_writel(high, ARI_REQUEST_DATA_HI);
-	ari_writel(events, ARI_REQUEST_EVENT_MASK);
-
-	reg = request | ARI_REQUEST_VALID;
-	ari_writel(reg, ARI_REQUEST);
-}
-
-static inline u32 ari_get_response_low(void)
-{
-	return ari_readl(ARI_RESPONSE_DATA_LO);
-}
-
-static inline u32 ari_get_response_high(void)
-{
-	return ari_readl(ARI_RESPONSE_DATA_HI);
-}
-
-static inline void ari_clobber_response(void)
-{
-	ari_writel(0, ARI_RESPONSE_DATA_LO);
-	ari_writel(0, ARI_RESPONSE_DATA_HI);
-}
-
-static int ari_request(u32 events, u32 request, u32 low, u32 high)
-{
-	int status;
-	int busy_mask;
-
-	ari_request_nowait(events, request, low, high);
-
-	status = ari_readl(ARI_STATUS);
-	busy_mask = ARI_STATUS_ONGOING | ARI_STATUS_PENDING;
-
-	/* NOTE: add timeout check if needed */
-	while (status & busy_mask)
-		status = ari_readl(ARI_STATUS);
-
-	return 0;
-}
-
-static u32 gen_cstate_info_low(u32 cluster, u32 ccplex, u32 system, u8 force)
-{
-	u32 low = 0;
-	if (cluster)
-		low |= (cluster & 0x7) | (1<<7);
-	if (ccplex)
-		low |= (ccplex & 0x3) << 8 | (1 << 15);
-	if (system)
-		low |= (system & 0x7) << 16 | (force << 22) | 1 << 23;
-	return low;
-}
-
-static int
-ari_update_cstate_info(u32 cluster, u32 ccplex, u32 system, u8 force, u32 wake)
-{
-	u32 low = gen_cstate_info_low(cluster, ccplex, system, force);
-	return ari_request(0, ARI_REQ_UPDATE_CLUSTER_CSTATE, low, wake);
-}
-
-static int ari_update_crossover_time(u32 type, u32 time)
-{
-	if (type == TEGRA_MCE_XOVER_C1_C6)
-		return -EINVAL;
-	return ari_request(0, ARI_REQ_UPDATE_CROSSOVER_TIME, type & 0x3, time);
-}
-
-static int ari_read_cstate_stats(u32 state, u32 *stats)
-{
-	int ret = ari_request(0, ARI_REQ_READ_CSTATE_STATS, state, 0);
-	if (!ret)
-		*stats = ari_get_response_low();
-	return ret;
-}
-
-static int ari_write_cstate_stats(u32 state, u32 stats)
-{
-	return ari_request(0, ARI_REQ_WRITE_CSTATE_STATS, state, stats);
-}
-
-static int ari_call_misc(u32 *low, u32 *high)
-{
-	int ret;
-	ari_clobber_response();
-	ret = ari_request(0, ARI_REQ_CALL_MISC, *low, *high);
-	if (!ret) {
-		*low = ari_get_response_low();
-		*high = ari_get_response_high();
-	}
-	return ret;
-}
-
-static int ari_is_sc7_allowed(u32 state, u32 wake, u32 *allowed)
-{
-	int ret = ari_request(0, ARI_REQ_IS_SC7_ALLOWED, state & 0x3, wake);
-	if (!ret)
-		*allowed = ari_get_response_low() & 0x1;
-	return ret;
-}
-
-/*
- * NV generic (NVG) MTS-SW interfaces for Denver cores
- */
-
-#define	NVG_ECHO_SUPPORTED	0 /* No ECHO support in NVG */
-
-enum {
-	NVG_REQ_WAKE_TIME = 0x3,
-	NVG_REQ_CSTATE_INFO,
-
-	/* crossovers */
-	NVG_REQ_XOVER_C1_C6,
-	NVG_REQ_XOVER_CC1_CC6,
-	NVG_REQ_XOVER_CC1_CC7,
-	NVG_REQ_XOVER_CCP1_CCP3,
-	NVG_REQ_XOVER_CCP3_SC2,
-	NVG_REQ_XOVER_CCP3_SC3,
-	NVG_REQ_XOVER_CCP3_SC4,
-	NVG_REQ_XOVER_CCP3_SC7,
-
-	/* cstate stats */
-	NVG_REQ_CSTATS_CLEAR,
-	NVG_REQ_CSTATS_ENTRIES_SC7,
-	NVG_REQ_CSTATS_ENTRIES_SC4,
-	NVG_REQ_CSTATS_ENTRIES_SC3,
-	NVG_REQ_CSTATS_ENTRIES_SC2,
-	NVG_REQ_CSTATS_ENTRIES_CCP3,
-	NVG_REQ_CSTATS_ENTRIES_A57_CC6,
-	NVG_REQ_CSTATS_ENTRIES_A57_CC7,
-	NVG_REQ_CSTATS_ENTRIES_D15_CC6,
-	NVG_REQ_CSTATS_ENTRIES_D15_CC7,
-	NVG_REQ_CSTATS_ENTRIES_D15_CORE0_C6,
-	NVG_REQ_CSTATS_ENTRIES_D15_CORE1_C6,
-	/* RESV: 25-26 */
-	NVG_REQ_CSTATS_ENTRIES_D15_CORE0_C7,
-	NVG_REQ_CSTATS_ENTRIES_D15_CORE1_C7,
-	/* RESV: 28-29 */
-	NVG_REQ_CSTATS_ENTRIES_A57_CORE0_C7 = 18,
-	NVG_REQ_CSTATS_ENTRIES_A57_CORE1_C7,
-	NVG_REQ_CSTATS_ENTRIES_A57_CORE2_C7,
-	NVG_REQ_CSTATS_ENTRIES_A57_CORE3_C7,
-	NVG_REQ_CSTATS_LAST_ENTRY_D15_CORE0,
-	NVG_REQ_CSTATS_LAST_ENTRY_D15_CORE1,
-	/* RESV: 36-37 */
-	NVG_REQ_CSTATS_LAST_ENTRY_A57_CORE0,
-	NVG_REQ_CSTATS_LAST_ENTRY_A57_CORE1,
-	NVG_REQ_CSTATS_LAST_ENTRY_A57_CORE2,
-	NVG_REQ_CSTATS_LAST_ENTRY_A57_CORE3,
-
-	NVG_REQ_IS_SC7_ALLOWED = 42,
-	NVG_REQ_ONLINE_CORE,
-};
-
-static inline void nvg_write_request(u32 index)
-{
-	asm volatile("msr s3_0_c15_c1_2, %0" : : "r" (index));
-}
-
-static inline void nvg_write_input(u64 data)
-{
-	asm volatile("msr s3_0_c15_c1_3, %0" : : "r" (data));
-}
-
-static inline void nvg_read_output(u64 *data)
-{
-	asm volatile("mrs %0, s3_0_c15_c1_3" : "=r" (*data));
-}
-
-static inline void nvg_clr_output(void)
-{
-	asm volatile("msr s3_0_c15_c1_3, %0" : : "r"(0));
-}
-
-static int nvg_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
-	u8 force, u32 wake)
-{
-	u32 low = gen_cstate_info_low(cluster, ccplex, system, force);
-	u64 high = ((u64)wake << 32);
-	nvg_write_input(high | low);
-	nvg_write_request(NVG_REQ_CSTATE_INFO);
-	return 0;
-}
-
-static int nvg_update_crossover_time(u32 type, u32 time)
-{
-	nvg_write_input((u64)time << 32);
-	nvg_write_request(type + NVG_REQ_XOVER_C1_C6);
-	return 0;
-}
-
-static int nvg_read_cstate_stats(u32 state, u32 *stats)
-{
-	u64 data;
-	nvg_write_input(state);
-	nvg_write_request(state + NVG_REQ_CSTATS_CLEAR);
-	nvg_read_output(&data);
-	*stats = (u32)data;
-	return 0;
-}
-
-static int nvg_write_cstate_stats(u32 state, u32 stats)
-{
-	nvg_write_input((u64)stats << 32 | state);
-	nvg_write_request(state + NVG_REQ_CSTATS_CLEAR);
-	return 0;
-}
-
-static int nvg_call_misc(u32 *low, u32 *high)
-{
-	/* Reroute MISC to ARI  */
-	return ari_call_misc(low, high);
-}
-
-static int nvg_is_sc7_allowed(u32 state, u32 wake, u32 *allowed)
-{
-	u64 data = ((u64)wake << 32) | (state & 0x7);
-	nvg_write_input(data);
-	nvg_write_request(NVG_REQ_IS_SC7_ALLOWED);
-	nvg_read_output(&data);
-	*allowed = (u32)(data & 0x1);
-	return 0;
-}
-
-/* Instantiate MCE operations */
-DEFINE_MCE_OPS(ari);
-DEFINE_MCE_OPS(nvg);
+EXPORT_SYMBOL(tegra_mce_enter_cstate);
 
 /**
  * Specify deepest cluster/ccplex/system states allowed.
@@ -354,15 +100,20 @@ DEFINE_MCE_OPS(nvg);
  * @ccplex:		deepest ccplex-wide state
  * @system:		deepest system-wide state
  * @force:		forced system state
- * @wake:		wake mask to be updated
+ * @wake_mask:	wake mask to be updated
  *
  * Returns 0 if success.
  */
 int tegra_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
 	u8 force, u32 wake_mask)
 {
-	return mce_request(update_cstate_info, cluster,
-		ccplex, system, force, wake_mask);
+	struct mce_regs regs;
+	regs.args[0] = cluster;
+	regs.args[1] = ccplex;
+	regs.args[2] = system;
+	regs.args[3] = force;
+	regs.args[4] = wake_mask;
+	return send_smc(MCE_SMC_UPDATE_CSTATE_INFO, &regs);
 }
 EXPORT_SYMBOL(tegra_mce_update_cstate_info);
 
@@ -376,9 +127,10 @@ EXPORT_SYMBOL(tegra_mce_update_cstate_info);
  */
 int tegra_mce_update_crossover_time(u32 type, u32 time)
 {
-	if (type > TEGRA_MCE_XOVER_MAX)
-		return -EINVAL;
-	return mce_request(update_crossover_time, type, time);
+	struct mce_regs regs;
+	regs.args[0] = type;
+	regs.args[1] = time;
+	return send_smc(MCE_SMC_UPDATE_XOVER_TIME, &regs);
 }
 EXPORT_SYMBOL(tegra_mce_update_crossover_time);
 
@@ -392,11 +144,11 @@ EXPORT_SYMBOL(tegra_mce_update_crossover_time);
  */
 int tegra_mce_read_cstate_stats(u32 state, u32 *stats)
 {
-	if (!stats ||
-		state == TEGRA_MCE_CSTATS_CLEAR ||
-		state > TEGRA_MCE_CSTATS_MAX)
-		return -EINVAL;
-	return mce_request(read_cstate_stats, state, stats);
+	struct mce_regs regs;
+	regs.args[0] = state;
+	send_smc(MCE_SMC_READ_CSTATE_STATS, &regs);
+	*stats = (u32)regs.args[1];
+	return 0;
 }
 EXPORT_SYMBOL(tegra_mce_read_cstate_stats);
 
@@ -410,9 +162,10 @@ EXPORT_SYMBOL(tegra_mce_read_cstate_stats);
  */
 int tegra_mce_write_cstate_stats(u32 state, u32 stats)
 {
-	if (state > TEGRA_MCE_CSTATS_MAX)
-		return -EINVAL;
-	return mce_request(write_cstate_stats, state, stats);
+	struct mce_regs regs;
+	regs.args[0] = state;
+	regs.args[1] = stats;
+	return send_smc(MCE_SMC_WRITE_CSTATE_STATS, &regs);
 }
 EXPORT_SYMBOL(tegra_mce_write_cstate_stats);
 
@@ -428,11 +181,48 @@ EXPORT_SYMBOL(tegra_mce_write_cstate_stats);
  */
 int tegra_mce_is_sc7_allowed(u32 state, u32 wake, u32 *allowed)
 {
-	if (!allowed)
-		return -EINVAL;
-	return mce_request(is_sc7_allowed, state, wake, allowed);
+	struct mce_regs regs;
+	regs.args[0] = state;
+	regs.args[1] = wake;
+	send_smc(MCE_SMC_IS_SC7_ALLOWED, &regs);
+	*allowed = (u32)regs.args[3];
+	return 0;
 }
 EXPORT_SYMBOL(tegra_mce_is_sc7_allowed);
+
+/**
+ * Bring another offlined core back online to C0 state.
+ *
+ * @cpu:		logical cpuid from smp_processor_id()
+ *
+ * Returns 0 if success.
+ */
+int tegra_mce_online_core(int cpu)
+{
+	struct mce_regs regs;
+	regs.args[0] = cpu_logical_map(cpu);
+	return send_smc(MCE_SMC_ONLINE_CORE, &regs);
+}
+EXPORT_SYMBOL(tegra_mce_online_core);
+
+/**
+ * Program Auto-CC3 feature.
+ *
+ * @freq:		freq of IDLE voltage/freq register
+ * @volt:		volt of IDLE voltage/freq register
+ * @enable:		enable bit for Auto-CC3
+ *
+ * Returns 0 if success.
+ */
+int tegra_mce_cc3_ctrl(u32 freq, u32 volt, u8 enable)
+{
+	struct mce_regs regs;
+	regs.args[0] = freq;
+	regs.args[1] = volt;
+	regs.args[2] = enable;
+	return send_smc(MCE_SMC_CC3_CTRL, &regs);
+}
+EXPORT_SYMBOL(tegra_mce_cc3_ctrl);
 
 /**
  * Send data to MCE which echoes it back.
@@ -445,15 +235,11 @@ EXPORT_SYMBOL(tegra_mce_is_sc7_allowed);
  */
 int tegra_mce_echo_data(u32 data, int *matched)
 {
-	u32 high = data;
-	u32 low = MCE_MISC_CMD_ECHO;
-	int ret;
-	if (!matched)
-		return -EINVAL;
-	ret = mce_request(call_misc, &low, &high);
-	if (!ret)
-		*matched = (low == data && high == data);
-	return ret;
+	struct mce_regs regs;
+	regs.args[0] = data;
+	send_smc(MCE_SMC_ECHO_DATA, &regs);
+	*matched = (u32)regs.args[1];
+	return 0;
 }
 EXPORT_SYMBOL(tegra_mce_echo_data);
 
@@ -467,17 +253,11 @@ EXPORT_SYMBOL(tegra_mce_echo_data);
  */
 int tegra_mce_read_versions(u32 *major, u32 *minor)
 {
-	u32 high = 0;
-	u32 low = MCE_MISC_CMD_VERS;
-	int ret;
-	if (!major || !minor)
-		return -EINVAL;
-	ret = mce_request(call_misc, &low, &high);
-	if (!ret) {
-		*major = low;
-		*minor = high;
-	}
-	return ret;
+	struct mce_regs regs;
+	send_smc(MCE_SMC_READ_VERSIONS, &regs);
+	*major = (u32)regs.args[0];
+	*minor = (u32)regs.args[1];
+	return 0;
 }
 EXPORT_SYMBOL(tegra_mce_read_versions);
 
@@ -490,19 +270,42 @@ EXPORT_SYMBOL(tegra_mce_read_versions);
  */
 int tegra_mce_enum_features(u64 *features)
 {
-	u32 high = 0;
-	u32 low = MCE_MISC_CMD_ENUM;
-	int ret;
-	if (!features)
-		return -EINVAL;
-	ret = mce_request(call_misc, &low, &high);
-	if (!ret)
-		*features = ((u64)high << 32) | low;
-	return ret;
+	struct mce_regs regs;
+	send_smc(MCE_SMC_ENUM_FEATURES, &regs);
+	*features = (u32)regs.args[0];
+	return 0;
 }
 EXPORT_SYMBOL(tegra_mce_enum_features);
 
 #ifdef CONFIG_DEBUG_FS
+
+#define CSTAT_ENTRY(stat) [TEGRA_MCE_CSTATS_##stat] = #stat
+
+static const char * const cstats_table[] = {
+	CSTAT_ENTRY(ENTRIES_SC7),
+	CSTAT_ENTRY(ENTRIES_SC4),
+	CSTAT_ENTRY(ENTRIES_SC3),
+	CSTAT_ENTRY(ENTRIES_SC2),
+	CSTAT_ENTRY(ENTRIES_CCP3),
+	CSTAT_ENTRY(ENTRIES_A57_CC6),
+	CSTAT_ENTRY(ENTRIES_A57_CC7),
+	CSTAT_ENTRY(ENTRIES_D15_CC6),
+	CSTAT_ENTRY(ENTRIES_D15_CC7),
+	CSTAT_ENTRY(ENTRIES_D15_CORE0_C6),
+	CSTAT_ENTRY(ENTRIES_D15_CORE1_C6),
+	CSTAT_ENTRY(ENTRIES_D15_CORE0_C7),
+	CSTAT_ENTRY(ENTRIES_D15_CORE1_C7),
+	CSTAT_ENTRY(ENTRIES_A57_CORE0_C7),
+	CSTAT_ENTRY(ENTRIES_A57_CORE1_C7),
+	CSTAT_ENTRY(ENTRIES_A57_CORE2_C7),
+	CSTAT_ENTRY(ENTRIES_A57_CORE3_C7),
+	CSTAT_ENTRY(LAST_ENTRY_D15_CORE0),
+	CSTAT_ENTRY(LAST_ENTRY_D15_CORE1),
+	CSTAT_ENTRY(LAST_ENTRY_A57_CORE0),
+	CSTAT_ENTRY(LAST_ENTRY_A57_CORE1),
+	CSTAT_ENTRY(LAST_ENTRY_A57_CORE2),
+	CSTAT_ENTRY(LAST_ENTRY_A57_CORE3),
+};
 
 static int mce_echo_set(void *data, u64 val)
 {
@@ -526,6 +329,36 @@ static int mce_features_get(void *data, u64 *val)
 	return tegra_mce_enum_features(val);
 }
 
+static int mce_dbg_cstats_show(struct seq_file *s, void *data)
+{
+	int st;
+	u32 val;
+	seq_printf(s, "%-30s%-10s\n", "name", "count");
+	seq_printf(s, "----------------------------------------\n");
+	for(st = 1; st <= TEGRA_MCE_CSTATS_MAX; st++) {
+		if (!cstats_table[st])
+			continue;
+		if (tegra_mce_read_cstate_stats(st, &val)) {
+			pr_err("mce: failed to read cstat: %d\n", st);
+			break;
+		}
+		seq_printf(s, "%-30s%-10d\n", cstats_table[st], val);
+	}
+	return 0;
+}
+
+static int mce_dbg_cstats_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, mce_dbg_cstats_show, inode->i_private);
+}
+
+static const struct file_operations mce_cstats_fops = {
+	.open = mce_dbg_cstats_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 DEFINE_SIMPLE_ATTRIBUTE(mce_echo_fops, NULL, mce_echo_set, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(mce_versions_fops, mce_versions_get, NULL, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(mce_features_fops, mce_features_get, NULL, "%llu\n");
@@ -542,10 +375,11 @@ static struct debugfs_entry mce_dbg_attrs[] = {
 	{ "echo", &mce_echo_fops, S_IWUSR },
 	{ "versions", &mce_versions_fops, S_IRUGO },
 	{ "features", &mce_features_fops, S_IRUGO },
+	{ "cstats", &mce_cstats_fops, S_IRUGO },
 	{ NULL, NULL, 0 }
 };
 
-static __init int mce_debugfs_init(struct device *dev)
+static __init int mce_debugfs_init(void)
 {
 	struct dentry *dent;
 	struct debugfs_entry *fent;
@@ -569,101 +403,6 @@ abort:
 	debugfs_remove_recursive(mce_debugfs_root);
 	return -EFAULT;
 }
-#else
-static __init int mce_debugfs_init(struct device *dev) { return 0; }
+fs_initcall(mce_debugfs_init);
+
 #endif
-
-/*
- * MCE MMIO aperture layout:
- *
- *  Offset	Description
- *  ------  -------------
- *  0*64KB	A57 Core0 ARI
- *  1*64KB	A57 Core1 ARI
- *  2*64KB	A57 Core2 ARI
- *  3*64KB	A57 Core3 ARI
- *  4*64KB	D15 Core0 ARI
- *  5*64KB	D15 Core1 ARI
- */
-static void mce_core_init(int cpu)
-{
-	int core = cpu_logical_map(cpu);
-	int impl = read_cpuid_implementor();
-	int ari_off;
-	if (impl == ARM_CPU_IMP_ARM) {
-		ari_off = core * MCE_APERTURE_LEN;
-		per_cpu(cpu_mce_ops, cpu) = &ari_ops;
-	}
-	else {
-		ari_off = (core + 4) * MCE_APERTURE_LEN;
-		per_cpu(cpu_mce_ops, cpu) = &nvg_ops;
-	}
-	per_cpu(cpu_ari_bases, cpu) = ari_base + ari_off;
-}
-
-static int tegra_mce_cpu_notify(struct notifier_block *nb,
-	unsigned long action, void *pcpu)
-{
-	if (action == CPU_STARTING)
-		mce_core_init((long)pcpu);
-	return NOTIFY_OK;
-}
-
-static struct notifier_block mce_cpu_notifier = {
-	.notifier_call = tegra_mce_cpu_notify,
-};
-
-static int __init tegra_mce_early_init(void)
-{
-	register_cpu_notifier(&mce_cpu_notifier);
-	return 0;
-}
-early_initcall(tegra_mce_early_init);
-
-static int tegra_mce_probe(struct platform_device *pdev)
-{
-	void __iomem *base;
-	struct device *dev = &pdev->dev;
-	struct device_node *np = dev->of_node;
-
-	if (!np) {
-		dev_err(dev, "DT data required.\n");
-		return -EINVAL;
-	}
-
-	mce_dev = dev;
-
-	base = of_iomap(np, 0);
-	if (!base) {
-		dev_err(dev, "failed to map aperture.\n");
-		return -1;
-	}
-
-	ari_base = base + MCE_APERTURE_ARI0;
-
-	/*
-	 * Assign ops/aperture for the boot CPU.
-	 * Secondaries are handled in notifier.
-	 */
-	mce_core_init(0);
-
-	dev_info(dev, "initialized.\n");
-
-	return mce_debugfs_init(dev);
-}
-
-static const struct of_device_id mce_of_match[] = {
-	{ .compatible = "nvidia,tegra186-mce", },
-	{},
-};
-
-static struct platform_driver tegra_mce_driver = {
-	.probe	= tegra_mce_probe,
-	.driver = {
-		.owner	= THIS_MODULE,
-		.name	= "tegra_mce",
-		.of_match_table = of_match_ptr(mce_of_match),
-	},
-};
-
-module_platform_driver_probe(tegra_mce_driver, tegra_mce_probe);

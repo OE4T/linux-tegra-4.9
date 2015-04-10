@@ -2513,6 +2513,13 @@ int tegra_dc_get_out(const struct tegra_dc *dc)
 	return -EINVAL;
 }
 
+bool tegra_dc_is_ext_dp_panel(const struct tegra_dc *dc)
+{
+	if (dc && dc->out)
+		return dc->out->is_ext_dp_panel;
+	return false;
+}
+
 unsigned tegra_dc_get_out_height(const struct tegra_dc *dc)
 {
 	unsigned height = 0;

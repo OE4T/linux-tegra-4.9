@@ -2329,6 +2329,10 @@ struct tegra_dc_platform_data
 	}
 #endif
 
+	if (pdata->default_out->type == TEGRA_DC_OUT_DP)
+		pdata->default_out->is_ext_dp_panel = of_property_read_bool(
+				np_target_disp, "nvidia,is_ext_dp_panel");
+
 	dev_info(&ndev->dev, "DT parsed successfully\n");
 	of_node_put(default_out_np);
 	of_node_put(timings_np);

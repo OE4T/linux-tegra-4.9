@@ -74,7 +74,7 @@ static ssize_t vrr_settings_show(struct kobject *kobj,
 	ssize_t res = 0;
 
 	if (!vrr)
-		res = -EINVAL;
+		return -EINVAL;
 
 	if (IS_VRR_ATTR(capability))
 		res = snprintf(buf, PAGE_SIZE, "%d\n", vrr->capability);
@@ -113,7 +113,7 @@ static ssize_t vrr_settings_store(struct kobject *kobj,
 	ssize_t res = count;
 
 	if (!vrr)
-		res = -EINVAL;
+		return -EINVAL;
 
 	if (IS_VRR_ATTR(capability))
 		vrr_check_and_update(0, 1, capability)

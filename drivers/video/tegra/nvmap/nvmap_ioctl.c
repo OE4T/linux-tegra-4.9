@@ -1098,9 +1098,6 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 		return -EFAULT;
 	}
 
-	if (err && fd > 0)
-		sys_close(fd);
-
 	ref->handle->peer = peer;
 
 	block = nvmap_carveout_alloc(client, ref->handle,

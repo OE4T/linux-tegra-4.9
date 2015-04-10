@@ -20,7 +20,7 @@
 		reg = <0x0 0x3460000 0x0 0x200>;
 		interrupts = < 0 65 0x04 >;
 		bus-width = <8>;
-		status = "okay";
+		status = "disabled";
 		uhs-mask = <0x60>;
 	};
 

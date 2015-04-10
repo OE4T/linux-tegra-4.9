@@ -157,7 +157,7 @@ static int dsi_s_wuxga_7_0_enable(struct device *dev)
 		}
 	}
 
-	usleep_range(1000, 5000);
+	usleep_range(7000, 8000);
 
 #if DSI_PANEL_RESET
 	if (!(flags & TEGRA_DC_OUT_INITIALIZED_MODE)) {

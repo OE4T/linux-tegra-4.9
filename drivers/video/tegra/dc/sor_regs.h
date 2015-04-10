@@ -1166,5 +1166,6 @@
 #define NV_SOR_KEY_HDCP_KEY_TRIG			0xf2
 #define LOAD_HDCP_KEY					(1 << 8)
 #define NV_SOR_KEY_SKEY_INDEX				0xf3
-
+#define NV_PDISP_SOR_AUDIO_SPARE0_0			0xfe
+#define HDMI_AUDIO_HBR_ENABLE_SHIFT			27
 #endif

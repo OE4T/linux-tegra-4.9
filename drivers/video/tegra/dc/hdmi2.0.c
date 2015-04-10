@@ -1529,6 +1529,11 @@ static void tegra_hdmi_audio_config(struct tegra_hdmi *hdmi,
 		val |= NV_SOR_AUDIO_CTRL_NULL_SAMPLE_EN;
 	tegra_sor_writel(sor, NV_SOR_AUDIO_CTRL, val);
 
+	/* override to advertise HBR capability */
+	tegra_sor_writel(sor, NV_PDISP_SOR_AUDIO_SPARE0_0,
+		(1 << HDMI_AUDIO_HBR_ENABLE_SHIFT) |
+		tegra_sor_readl(sor, NV_PDISP_SOR_AUDIO_SPARE0_0));
+
 	tegra_hdmi_audio_acr(hdmi, audio_freq);
 	tegra_hdmi_audio_infoframe(hdmi);
 }

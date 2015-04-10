@@ -26,6 +26,7 @@
 #include <linux/tegra-soc.h>
 #include <linux/vmalloc.h>
 #include <linux/dma-buf.h>
+#include <linux/lcm.h>
 #include <uapi/linux/nvgpu.h>
 #include <trace/events/gk20a.h>
 
@@ -133,7 +134,8 @@ static void gk20a_mm_delete_priv(void *_priv)
 		BUG_ON(!priv->comptag_allocator);
 		priv->comptag_allocator->free(priv->comptag_allocator,
 					      priv->comptags.offset,
-					      priv->comptags.lines, 1);
+					      priv->comptags.allocated_lines,
+					      1);
 	}
 
 	/* Free buffer states */
@@ -208,22 +210,28 @@ void gk20a_get_comptags(struct device *dev, struct dma_buf *dmabuf,
 		return;
 
 	if (!priv) {
-		comptags->lines = 0;
-		comptags->offset = 0;
+		memset(comptags, 0, sizeof(*comptags));
 		return;
 	}
 
 	*comptags = priv->comptags;
 }
 
-static int gk20a_alloc_comptags(struct device *dev,
+static int gk20a_alloc_comptags(struct gk20a *g,
+				struct device *dev,
 				struct dma_buf *dmabuf,
 				struct gk20a_allocator *allocator,
-				int lines)
+				u32 lines, bool user_mappable)
 {
 	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
 	u32 offset = 0;
 	int err;
+	u32 ctaglines_to_allocate;
+	u32 ctagline_align;
+	const u32 aggregate_cacheline_sz =
+		g->gr.cacheline_size * g->gr.slices_per_ltc *
+		g->ltc_count;
+	const u32 small_pgsz = 4096;
 
 	if (!priv)
 		return -ENOSYS;
@@ -231,12 +239,99 @@ static int gk20a_alloc_comptags(struct device *dev,
 	if (!lines)
 		return -EINVAL;
 
+	if (!user_mappable) {
+		ctaglines_to_allocate = lines;
+		ctagline_align = 1;
+	} else {
+		/* Unfortunately, we cannot use allocation alignment
+		 * here, since compbits per cacheline is not always a
+		 * power of two. So, we just have to allocate enough
+		 * extra that we're guaranteed to find a ctagline
+		 * inside the allocation so that: 1) it is the first
+		 * ctagline in a cacheline that starts at a page
+		 * boundary, and 2) we can add enough overallocation
+		 * that the ctaglines of the succeeding allocation
+		 * are on different page than ours
+		 */
+
+		ctagline_align =
+			(lcm(aggregate_cacheline_sz, small_pgsz) /
+			 aggregate_cacheline_sz) *
+			g->gr.comptags_per_cacheline;
+
+		ctaglines_to_allocate =
+			/* for alignment */
+			ctagline_align +
+
+			/* lines rounded up to cachelines */
+			DIV_ROUND_UP(lines, g->gr.comptags_per_cacheline) *
+			g->gr.comptags_per_cacheline +
+
+			/* trail-padding */
+			DIV_ROUND_UP(aggregate_cacheline_sz, small_pgsz) *
+			g->gr.comptags_per_cacheline;
+
+		if (ctaglines_to_allocate < lines)
+			return -EINVAL; /* integer overflow */
+	}
+
 	/* store the allocator so we can use it when we free the ctags */
 	priv->comptag_allocator = allocator;
-	err = allocator->alloc(allocator, &offset, lines, 1);
+	err = allocator->alloc(allocator, &offset,
+			       ctaglines_to_allocate, 1);
 	if (!err) {
-		priv->comptags.lines = lines;
+		const u32 alignment_lines =
+			DIV_ROUND_UP(offset, ctagline_align) * ctagline_align -
+			offset;
+
+		/* prune the preceding ctaglines that were allocated
+		   for alignment */
+		if (alignment_lines) {
+			/* free alignment lines */
+			int tmp=
+				allocator->free(allocator, offset,
+						alignment_lines,
+						1);
+			WARN_ON(tmp);
+
+			offset += alignment_lines;
+			ctaglines_to_allocate -= alignment_lines;
+		}
+
+		/* check if we can prune the trailing, too */
+		if (user_mappable)
+		{
+			u32 needed_cachelines =
+				DIV_ROUND_UP(lines, g->gr.comptags_per_cacheline);
+
+			u32 first_unneeded_cacheline =
+				DIV_ROUND_UP(round_up(needed_cachelines *
+						      aggregate_cacheline_sz,
+						      small_pgsz),
+					     aggregate_cacheline_sz);
+			u32 needed_ctaglines =
+				first_unneeded_cacheline *
+				g->gr.comptags_per_cacheline;
+
+			if (needed_ctaglines < ctaglines_to_allocate) {
+				/* free alignment lines */
+				int tmp=
+					allocator->free(
+						allocator,
+						offset + needed_ctaglines,
+						(ctaglines_to_allocate -
+						 needed_ctaglines),
+						1);
+				WARN_ON(tmp);
+
+				ctaglines_to_allocate = needed_ctaglines;
+			}
+		}
+
 		priv->comptags.offset = offset;
+		priv->comptags.lines = lines;
+		priv->comptags.allocated_lines = ctaglines_to_allocate;
+		priv->comptags.user_mappable = user_mappable;
 	}
 	return err;
 }
@@ -955,9 +1050,11 @@ struct buffer_attrs {
 	u64 align;
 	u32 ctag_offset;
 	u32 ctag_lines;
+	u32 ctag_allocated_lines;
 	int pgsz_idx;
 	u8 kind_v;
 	u8 uc_kind_v;
+	bool ctag_user_mappable;
 };
 
 static void gmmu_select_page_size(struct vm_gk20a *vm,
@@ -1399,22 +1496,37 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 				     g->ops.fb.compression_page_size(g));
 
 	if (bfr.ctag_lines && !comptags.lines) {
+		const bool user_mappable =
+			!!(flags & NVGPU_AS_MAP_BUFFER_FLAGS_MAPPABLE_COMPBITS);
+
 		/* allocate compression resources if needed */
-		err = gk20a_alloc_comptags(d, dmabuf, ctag_allocator,
-					   bfr.ctag_lines);
+		err = gk20a_alloc_comptags(g, d, dmabuf, ctag_allocator,
+					   bfr.ctag_lines, user_mappable);
 		if (err) {
 			/* ok to fall back here if we ran out */
 			/* TBD: we can partially alloc ctags as well... */
-			bfr.ctag_lines = bfr.ctag_offset = 0;
 			bfr.kind_v = bfr.uc_kind_v;
 		} else {
 			gk20a_get_comptags(d, dmabuf, &comptags);
 			clear_ctags = true;
+
+			if (comptags.lines < comptags.allocated_lines) {
+				/* clear tail-padding comptags */
+				u32 ctagmin = comptags.offset + comptags.lines;
+				u32 ctagmax = comptags.offset +
+					comptags.allocated_lines - 1;
+
+				g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_clear,
+						    ctagmin, ctagmax);
+			}
 		}
 	}
 
 	/* store the comptag info */
 	bfr.ctag_offset = comptags.offset;
+	bfr.ctag_lines = comptags.lines;
+	bfr.ctag_allocated_lines = comptags.allocated_lines;
+	bfr.ctag_user_mappable = comptags.user_mappable;
 
 	/* update gmmu ptes */
 	map_offset = g->ops.mm.gmmu_map(vm, map_offset,
@@ -1433,10 +1545,11 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	gk20a_dbg(gpu_dbg_map,
 	   "as=%d pgsz=%d "
 	   "kind=0x%x kind_uc=0x%x flags=0x%x "
-	   "ctags=%d start=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x",
+	   "ctags=%d start=%d ctags_allocated=%d ctags_mappable=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x",
 	   vm_aspace_id(vm), gmmu_page_size,
 	   bfr.kind_v, bfr.uc_kind_v, flags,
 	   bfr.ctag_lines, bfr.ctag_offset,
+	   bfr.ctag_allocated_lines, bfr.ctag_user_mappable,
 	   hi32(map_offset), lo32(map_offset),
 	   hi32((u64)sg_dma_address(bfr.sgt->sgl)),
 	   lo32((u64)sg_dma_address(bfr.sgt->sgl)),
@@ -1473,6 +1586,8 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	mapped_buffer->pgsz_idx    = bfr.pgsz_idx;
 	mapped_buffer->ctag_offset = bfr.ctag_offset;
 	mapped_buffer->ctag_lines  = bfr.ctag_lines;
+	mapped_buffer->ctag_allocated_lines = bfr.ctag_allocated_lines;
+	mapped_buffer->ctags_mappable = bfr.ctag_user_mappable;
 	mapped_buffer->vm          = vm;
 	mapped_buffer->flags       = flags;
 	mapped_buffer->kind        = kind;

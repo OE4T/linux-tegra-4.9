@@ -140,6 +140,8 @@ enum gmmu_pgsz_gk20a {
 struct gk20a_comptags {
 	u32 offset;
 	u32 lines;
+	u32 allocated_lines;
+	bool user_mappable;
 };
 
 struct gk20a_mm_entry {
@@ -190,6 +192,9 @@ struct mapped_buffer_node {
 	u32 pgsz_idx;
 	u32 ctag_offset;
 	u32 ctag_lines;
+	u32 ctag_allocated_lines;
+	bool ctags_mappable;
+
 	u32 flags;
 	u32 kind;
 	bool va_allocated;

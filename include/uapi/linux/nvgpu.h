@@ -859,6 +859,7 @@ struct nvgpu_as_map_buffer_args {
 	__u32 flags;		/* in/out */
 #define NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET	    (1 << 0)
 #define NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE	    (1 << 2)
+#define NVGPU_AS_MAP_BUFFER_FLAGS_MAPPABLE_COMPBITS (1 << 6)
 	__u32 reserved;		/* in */
 	__u32 dmabuf_fd;	/* in */
 	__u32 page_size;	/* inout, 0:= best fit to buffer */

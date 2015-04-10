@@ -43,6 +43,7 @@
 			 <&tegra_car TEGRA210_CLK_ID_CPU_G>,
 			 <&tegra_car TEGRA210_CLK_ID_I2C5>;
 		clock-names = "dfll_cpu", "soc", "ref", "safe_dvfs", "i2c";
+		calibrate-force-vmin;
 		board-params = <&dfll_ovr_params>;
 
 		pwm_dfll: pwm-pmic-integration {

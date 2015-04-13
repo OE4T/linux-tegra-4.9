@@ -75,6 +75,22 @@ struct tegra_t210ref {
 	int rate_via_kcontrol;
 };
 
+static const int tegra_t210ref_srate_values[] = {
+	0,
+	8000,
+	16000,
+	44100,
+	48000,
+	11025,
+	22050,
+	24000,
+	32000,
+	88200,
+	96000,
+	176000,
+	192000,
+};
+
 static struct snd_soc_jack tegra_t210ref_hp_jack;
 
 static struct snd_soc_jack_gpio tegra_t210ref_hp_jack_gpio = {
@@ -155,9 +171,12 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_stream *dai_params;
 	unsigned int idx, mclk, clk_out_rate;
-	int err;
+	int err, codec_rate, clk_rate;
 
-	switch (rate) {
+	codec_rate = tegra_t210ref_srate_values[machine->rate_via_kcontrol];
+	clk_rate = (machine->rate_via_kcontrol) ? codec_rate : rate;
+
+	switch (clk_rate) {
 	case 11025:
 	case 22050:
 	case 44100:
@@ -181,7 +200,7 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 
 	pr_info("Setting pll_a = %d Hz clk_out = %d Hz\n", mclk, clk_out_rate);
 	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
-				rate, mclk, clk_out_rate);
+				clk_rate, mclk, clk_out_rate);
 	if (err < 0) {
 		dev_err(card->dev, "Can't configure clocks\n");
 		return err;
@@ -192,6 +211,18 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		dev_err(card->dev,
 		"Can't configure clocks pll_a = %d Hz\n", mclk);
 		return err;
+	}
+
+	/* update dai link hw_params for non pcm links */
+	for (idx = 0; idx < card->num_rtd; idx++) {
+		if (card->rtd[idx].dai_link->params) {
+			dai_params =
+			  (struct snd_soc_pcm_stream *)
+			  card->rtd[idx].dai_link->params;
+			dai_params->rate_min = rate;
+			dai_params->channels_min = channels;
+			dai_params->formats = formats;
+		}
 	}
 
 	if (!of_device_is_compatible(np,
@@ -207,8 +238,7 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 			if (!machine->rate_via_kcontrol)
 				dai_params->rate_min = rate;
 			else
-				dai_params->rate_min =
-					machine->rate_via_kcontrol;
+				dai_params->rate_min = codec_rate;
 
 			dai_params->channels_min = channels;
 			dai_params->formats = formats;
@@ -247,16 +277,16 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		}
 	}
 
-	/* update dai link hw_params for non pcm links */
-	for (idx = 0; idx < card->num_rtd; idx++) {
-		if (card->rtd[idx].dai_link->params) {
-			dai_params =
-			  (struct snd_soc_pcm_stream *)
-			  card->rtd[idx].dai_link->params;
+	idx = tegra_machine_get_codec_dai_link_idx("spdif-dit-2");
+	if (idx != -EINVAL) {
+		dai_params =
+		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+
+		/* update link_param to update hw_param for DAPM */
+		if (!machine->rate_via_kcontrol)
 			dai_params->rate_min = rate;
-			dai_params->channels_min = channels;
-			dai_params->formats = formats;
-		}
+		else
+			dai_params->rate_min = codec_rate;
 	}
 
 	return 0;
@@ -302,8 +332,7 @@ static int tegra_t210ref_compr_set_params(struct snd_compr_stream *cstream)
 		return -EINVAL;
 	}
 
-	/* TODO: Add SRC in offload path */
-	srate = 48000;
+	srate = snd_pcm_rate_bit_to_rate(codec_params.sample_rate);
 
 	err = tegra_t210ref_dai_init(rtd, srate, codec_params.ch_out,
 			SNDRV_PCM_FMTBIT_S16_LE);
@@ -447,21 +476,6 @@ static int tegra_t210ref_event_int_spk(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
-static const int tegra_t210ref_srate_values[] = {
-	0,
-	8000,
-	16000,
-	44100,
-	48000,
-	11025,
-	22050,
-	24000,
-	32000,
-	88200,
-	96000,
-	176000,
-	192000,
-};
 
 static const char * const tegra_t210ref_srate_text[] = {
 	"None",
@@ -762,6 +776,7 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	machine->pdata = pdata;
 	machine->pcard = card;
 	machine->clock_enabled = 1;
+	machine->rate_via_kcontrol = 0;
 
 	ret = tegra_alt_asoc_utils_init(&machine->audio_clock,
 					&pdev->dev,

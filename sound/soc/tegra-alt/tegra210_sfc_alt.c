@@ -30,6 +30,7 @@
 #include <sound/soc.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/of_device.h>
+#include <linux/delay.h>
 
 #include "tegra210_xbar_alt.h"
 #include "tegra210_sfc_alt.h"
@@ -294,6 +295,25 @@ static int tegra210_sfc_set_audio_cif(struct tegra210_sfc *sfc,
 	return 0;
 }
 
+static int tegra210_sfc_soft_reset(struct tegra210_sfc *sfc)
+{
+	u32 val;
+	int cnt = 10;
+	int ret = 0;
+
+	regmap_update_bits(sfc->regmap,
+			TEGRA210_SFC_SOFT_RESET,
+			TEGRA210_SFC_SOFT_RESET_EN,
+			1);
+	do {
+		udelay(100);
+		regmap_read(sfc->regmap, TEGRA210_SFC_SOFT_RESET, &val);
+	} while ((val & TEGRA210_SFC_SOFT_RESET_EN) && cnt--);
+	if (!cnt)
+		ret = -ETIMEDOUT;
+	return ret;
+}
+
 static int tegra210_sfc_in_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
@@ -302,7 +322,17 @@ static int tegra210_sfc_in_hw_params(struct snd_pcm_substream *substream,
 	struct tegra210_sfc *sfc = snd_soc_dai_get_drvdata(dai);
 	int ret;
 
-	sfc->srate_in = params_rate(params);
+	regmap_update_bits(sfc->regmap,
+			TEGRA210_SFC_COEF_RAM,
+			TEGRA210_SFC_COEF_RAM_COEF_RAM_EN,
+			0);
+
+	ret = tegra210_sfc_soft_reset(sfc);
+	if (ret) {
+		dev_err(dev, "SOFT_RESET error: %d\n", ret);
+		return ret;
+	}
+
 	ret = tegra210_sfc_set_audio_cif(sfc, params,
 				TEGRA210_SFC_AXBAR_RX_CIF_CTRL);
 	if (ret) {
@@ -350,7 +380,10 @@ static int tegra210_sfc_get_srate(struct snd_kcontrol *kcontrol,
 	struct tegra210_sfc *sfc = snd_soc_codec_get_drvdata(codec);
 
 	/* get the sfc output rate */
-	ucontrol->value.integer.value[0] = sfc->srate_out + 1;
+	if (strstr(kcontrol->id.name, "input"))
+		ucontrol->value.integer.value[0] = sfc->srate_in + 1;
+	else if (strstr(kcontrol->id.name, "output"))
+		ucontrol->value.integer.value[0] = sfc->srate_out + 1;
 
 	return 0;
 }
@@ -360,9 +393,16 @@ static int tegra210_sfc_put_srate(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_sfc *sfc = snd_soc_codec_get_drvdata(codec);
+	int srate = ucontrol->value.integer.value[0] - 1;
 
-	/* update the sfc output rate */
-	sfc->srate_out = ucontrol->value.integer.value[0] - 1;
+	if ((srate < TEGRA210_SFC_FS8 - 1) || (srate > TEGRA210_SFC_FS192))
+		return -EINVAL;
+
+	/* Update the SFC input/output rate */
+	if (strstr(kcontrol->id.name, "input"))
+		sfc->srate_in = srate;
+	else if (strstr(kcontrol->id.name, "output"))
+		sfc->srate_out = srate;
 
 	return 0;
 }
@@ -446,6 +486,8 @@ static const struct soc_enum tegra210_sfc_srate_enum =
 		tegra210_sfc_srate_text);
 
 static const struct snd_kcontrol_new tegra210_sfc_controls[] = {
+	SOC_ENUM_EXT("input rate", tegra210_sfc_srate_enum,
+		tegra210_sfc_get_srate, tegra210_sfc_put_srate),
 	SOC_ENUM_EXT("output rate", tegra210_sfc_srate_enum,
 		tegra210_sfc_get_srate, tegra210_sfc_put_srate),
 };

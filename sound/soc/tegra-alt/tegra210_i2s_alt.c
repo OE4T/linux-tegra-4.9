@@ -38,11 +38,22 @@
 #include <linux/debugfs.h>
 #include <linux/tegra-powergate.h>
 #include <linux/tegra-soc.h>
+#include <linux/pm_domain.h>
+#include <linux/tegra_pm_domains.h>
 
 #include "tegra210_xbar_alt.h"
 #include "tegra210_i2s_alt.h"
 
 #define DRV_NAME "tegra210-i2s"
+
+#if defined(CONFIG_ARCH_TEGRA_21X_SOC)
+#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
+static struct of_device_id tegra_ape_pd[] = {
+	{ .compatible = "nvidia,tegra210-ape-pd", },
+	{},
+};
+#endif
+#endif
 
 static const struct reg_default tegra210_i2s_reg_defaults[] = {
 	{ TEGRA210_I2S_AXBAR_RX_INT_MASK, 0x00000003},
@@ -810,6 +821,17 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	void __iomem *regs;
 	int ret = 0, count = 0, num_supplies;
 	const char *supply, *prod_name;
+#if defined(CONFIG_ARCH_TEGRA_21X_SOC)
+	int partition_id;
+
+#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
+	partition_id = tegra_pd_get_powergate_id(tegra_ape_pd);
+	if (partition_id < 0)
+		return -EINVAL;
+#else
+	partition_id = TEGRA_POWERGATE_APE;
+#endif
+#endif
 
 	match = of_match_device(tegra210_i2s_of_match, &pdev->dev);
 	if (!match) {
@@ -894,8 +916,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 
 	i2s->slgc_notifier.notifier_call = _tegra210_i2s_slcg_notifier;
 #if defined(CONFIG_ARCH_TEGRA_21X_SOC)
-	slcg_register_notifier(TEGRA_POWERGATE_APE,
-		&i2s->slgc_notifier);
+	slcg_register_notifier(partition_id, &i2s->slgc_notifier);
 #endif
 
 

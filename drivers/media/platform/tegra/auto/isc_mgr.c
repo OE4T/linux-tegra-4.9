@@ -258,7 +258,6 @@ int isc_mgr_power_up(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 		gpio_set_value(pd->pwr_gpios[i], PW_ON(pd->pwr_flags[i]));
 		isc_mgr->pwr_state |= BIT(i);
 	}
-	mdelay(7);
 
 pwr_up_end:
 	if (isc_mgr->err_irq)

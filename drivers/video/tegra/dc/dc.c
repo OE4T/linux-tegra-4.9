@@ -96,6 +96,18 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #define DC_COM_PIN_OUTPUT_POLARITY1_INIT_VAL	0x01000000
 #define DC_COM_PIN_OUTPUT_POLARITY3_INIT_VAL	0x0
 
+#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
+static struct of_device_id tegra_disa_pd[] = {
+	{ .compatible = "nvidia, tegra210-disa-pd", },
+	{},
+};
+
+static struct of_device_id tegra_disb_pd[] = {
+	{ .compatible = "nvidia, tegra210-disb-pd", },
+	{},
+};
+#endif
+
 static struct fb_videomode tegra_dc_vga_mode = {
 	.refresh = 60,
 	.xres = 640,
@@ -4376,6 +4388,11 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	void __iomem *base;
 	int irq;
 	int i;
+#ifndef CONFIG_TEGRA_NVDISPLAY
+#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
+	int partition_id_disa, partition_id_disb;
+#endif
+#endif
 
 #ifdef CONFIG_ARCH_TEGRA_21x_SOC
 	if (tegra_platform_is_linsim()) {
@@ -4502,12 +4519,20 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			nvhost_get_syncpt_client_managed(ndev, "disp0_d");
 		dc->valid_windows |= 0x08;
 #endif
+#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
+		partition_id_disa = tegra_pd_get_powergate_id(tegra_disa_pd);
+		if (partition_id_disa < 0)
+			return -EINVAL;
+
+		dc->powergate_id = partition_id_disa;
+#else
 		dc->powergate_id = TEGRA_POWERGATE_DISA;
+#endif
 #ifdef CONFIG_TEGRA_ISOMGR
 		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_0;
 #endif
 		dc->slgc_notifier.notifier_call = tegra_dc_slgc_disp0;
-		slcg_register_notifier(TEGRA_POWERGATE_DISA,
+		slcg_register_notifier(dc->powergate_id,
 			&dc->slgc_notifier);
 	} else if (TEGRA_DISPLAY2_BASE == res->start) {
 		dc->vblank_syncpt = NVSYNCPT_VBLANK1;
@@ -4523,7 +4548,15 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			nvhost_get_syncpt_client_managed(ndev, "disp1_h");
 		dc->valid_windows |= 0x10;
 #endif
+#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
+		partition_id_disb = tegra_pd_get_powergate_id(tegra_disb_pd);
+		if (partition_id_disb < 0)
+			return -EINVAL;
+
+		dc->powergate_id = partition_id_disb;
+#else
 		dc->powergate_id = TEGRA_POWERGATE_DISB;
+#endif
 #ifdef CONFIG_TEGRA_ISOMGR
 		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_1;
 #endif

@@ -87,6 +87,8 @@
 /* Fields in TEGRA210_SFC_COEF_RAM */
 #define TEGRA210_SFC_COEF_RAM_COEF_RAM_EN	BIT(0)
 
+#define TEGRA210_SFC_SOFT_RESET_EN              BIT(0)
+
 /* SRC coefficients */
 #define TEGRA210_SFC_COEF_RAM_DEPTH		64
 

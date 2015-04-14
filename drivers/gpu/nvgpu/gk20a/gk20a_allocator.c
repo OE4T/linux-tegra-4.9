@@ -35,7 +35,7 @@ int gk20a_allocator_init(struct gk20a_allocator *allocator,
 		return -ENOMEM;
 
 	allocator_dbg(allocator, "%s : base %d, limit %d",
-		allocator->name, allocator->base);
+		allocator->name, allocator->base, allocator->limit);
 
 	init_rwsem(&allocator->rw_sema);
 

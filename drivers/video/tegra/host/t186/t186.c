@@ -18,6 +18,7 @@
 
 #include <linux/slab.h>
 #include <linux/io.h>
+#include <linux/tegra-soc.h>
 
 #include "dev.h"
 #include "class_ids.h"
@@ -320,10 +321,16 @@ int nvhost_init_t186_support(struct nvhost_master *host,
 
 	host->sync_aperture = host->aperture;
 	op->syncpt = host1x_syncpt_ops;
-	op->syncpt.reset = t186_syncpt_reset;
-	op->syncpt.mark_used = t186_syncpt_mark_used;
-	op->syncpt.mark_unused = t186_syncpt_mark_unused;
 	op->intr = host1x_intr_ops;
+
+	/* WAR to bugs 200094901 and 200082771: enable protection
+	 * only on silicon/emulation */
+
+	if (!tegra_platform_is_linsim()) {
+		op->syncpt.reset = t186_syncpt_reset;
+		op->syncpt.mark_used = t186_syncpt_mark_used;
+		op->syncpt.mark_unused = t186_syncpt_mark_unused;
+	}
 
 	op->remove_support = t186_remove_support;
 

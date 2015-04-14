@@ -1993,7 +1993,7 @@ void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable)
 #endif
 
 #ifdef CONFIG_TEGRA_DC_CMU
-void tegra_dc_cache_cmu(struct tegra_dc *dc,
+static void tegra_dc_cache_cmu(struct tegra_dc *dc,
 				struct tegra_dc_cmu *src_cmu)
 {
 	if (&dc->cmu != src_cmu) /* ignore if it would require memmove() */

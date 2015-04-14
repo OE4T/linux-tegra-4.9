@@ -183,13 +183,13 @@ static int i2c_get(void *data, u64 *val)
 static int i2c_set(void *data, u64 val)
 {
 	struct isc_dev_info *isc_dev = data;
-	u8 temp = 0;
+	u8 temp[3];
 
 	if (val & (~0xffff))
-		isc_dev->reg_off = (u16) val;
+		isc_dev->reg_off = (u16)(val & 0xffff);
 	else {
-		temp = val & 0xff;
-		if (isc_dev_raw_wr(isc_dev, isc_dev->reg_off, &temp, 1)) {
+		temp[2] = val & 0xff;
+		if (isc_dev_raw_wr(isc_dev, isc_dev->reg_off, temp, 1)) {
 			dev_err(isc_dev->dev, "ERR:%s failed\n", __func__);
 			return -EIO;
 		}

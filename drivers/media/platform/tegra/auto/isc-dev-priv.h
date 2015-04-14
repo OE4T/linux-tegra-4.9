@@ -18,21 +18,19 @@ struct isc_dev_info {
 	struct i2c_client *i2c_client;
 	struct device *dev;
 	struct miscdevice miscdev;
-	struct regmap_config regmap_cfg;
-	struct regmap *regmap;
 	struct isc_dev_platform_data *pdata;
 	atomic_t in_use;
 	struct mutex mutex;
-	struct isc_dev_package package;
 	struct isc_dev_pkg rw_pkg;
 	struct dentry *d_entry;
+	u32 reg_len;
 	u32 reg_off;
 	char devname[32];
 	u8 power_is_on;
 };
 
-int isc_dev_raw_rd(struct isc_dev_info *, unsigned int, void *, size_t);
-int isc_dev_raw_wr(struct isc_dev_info *, unsigned int, void *, size_t);
+int isc_dev_raw_rd(struct isc_dev_info *, unsigned int, u8 *, size_t);
+int isc_dev_raw_wr(struct isc_dev_info *, unsigned int, u8 *, size_t);
 
 int isc_dev_debugfs_init(struct isc_dev_info *isc_dev);
 int isc_dev_debugfs_remove(struct isc_dev_info *isc_dev);

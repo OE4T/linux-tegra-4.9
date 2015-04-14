@@ -33,11 +33,6 @@
 
 /*#define DEBUG_I2C_TRAFFIC*/
 
-static const struct regmap_config default_regmap_config = {
-	.reg_bits = 16,
-	.val_bits = 8,
-};
-
 static void isc_dev_dump(
 	const char *str,
 	struct isc_dev_info *info,
@@ -65,17 +60,38 @@ static void isc_dev_dump(
 #endif
 }
 
+/* i2c read from device.
+   val    - buffer contains data to write.
+   size   - number of bytes to be writen to device.
+   offset - address in the device's register space to start with.
+*/
 int isc_dev_raw_rd(
-	struct isc_dev_info *info, unsigned int offset, void *val, size_t size)
+	struct isc_dev_info *info, unsigned int offset, u8 *val, size_t size)
 {
 	int ret = -ENODEV;
+	u8 data[2];
 
 	dev_dbg(info->dev, "%s\n", __func__);
 	mutex_lock(&info->mutex);
-	if (info->power_is_on) {
-		ret = regmap_raw_read(info->regmap, offset, val, size);
-	} else
+	if (!info->power_is_on) {
 		dev_err(info->dev, "%s: power is off.\n", __func__);
+		mutex_unlock(&info->mutex);
+		return ret;
+	}
+
+	if (info->reg_len == 2) {
+		data[0] = (u8)((offset >> 8) & 0xff);
+		data[1] = (u8)(offset & 0xff);
+	} else if (info->reg_len == 1)
+		data[0] = (u8)(offset & 0xff);
+
+	if (info->reg_len)
+		ret = i2c_master_send(info->i2c_client, data, info->reg_len);
+
+	ret = i2c_master_recv(info->i2c_client, val, size);
+	if (ret > 0)
+		ret = 0;
+
 	mutex_unlock(&info->mutex);
 
 	if (!ret)
@@ -84,8 +100,15 @@ int isc_dev_raw_rd(
 	return ret;
 }
 
+/* i2c write to device.
+   val    - buffer contains data to write.
+   size   - number of bytes to be writen to device.
+   offset - address in the device's register space to start with.
+		if offset == -1, it will be ignored and no offset
+		value will be integrated into the data buffer.
+*/
 int isc_dev_raw_wr(
-	struct isc_dev_info *info, unsigned int offset, void *val, size_t size)
+	struct isc_dev_info *info, unsigned int offset, u8 *val, size_t size)
 {
 	int ret = -ENODEV;
 
@@ -93,11 +116,25 @@ int isc_dev_raw_wr(
 	isc_dev_dump(__func__, info, offset, val, size);
 
 	mutex_lock(&info->mutex);
-	if (info->power_is_on)
-		ret = regmap_raw_write(
-			info->regmap, offset, val, size);
-	else
+	if (!info->power_is_on) {
 		dev_err(info->dev, "%s: power is off.\n", __func__);
+		mutex_unlock(&info->mutex);
+		return ret;
+	}
+
+	if (offset != (unsigned int)-1) { /* offset is valid */
+		if (info->reg_len == 2) {
+			val[0] = (u8)((offset >> 8) & 0xff);
+			val[1] = (u8)(offset & 0xff);
+			size += 2;
+		} else if (info->reg_len == 1) {
+			val++;
+			val[0] = (u8)(offset & 0xff);
+			size += 1;
+		} else
+			val += 2;
+	}
+	ret = i2c_master_send(info->i2c_client, val, size);
 	mutex_unlock(&info->mutex);
 
 	return ret;
@@ -127,7 +164,9 @@ static int isc_dev_raw_rw(struct isc_dev_info *info)
 			kfree(buf);
 			return -EFAULT;
 		}
-		ret = isc_dev_raw_wr(info, pkg->offset, buf, pkg->size);
+		/* in the user access case, the offset is integrated in the
+		   buffer to be transferred, so pass -1 as the offset */
+		ret = isc_dev_raw_wr(info, -1, buf, pkg->size);
 	} else {
 		/* read from device */
 		ret = isc_dev_raw_rd(info, pkg->offset, buf, pkg->size);
@@ -180,40 +219,6 @@ static int isc_dev_get_pkg(
 	return 0;
 }
 
-/* to be deprecated. */
-static int isc_dev_get_package(struct isc_dev_info *info, unsigned long arg)
-{
-	if (copy_from_user(&info->package,
-		(const void __user *)arg, sizeof(info->package))) {
-		dev_err(info->dev, "%s copy_from_user err line %d\n",
-			__func__, __LINE__);
-		return -EFAULT;
-	}
-
-	if (!info->package.size ||
-		(info->package.size > sizeof(info->package.buf))) {
-		dev_err(info->dev, "%s invalid package size %d\n",
-			__func__, info->package.size);
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
-/* to be deprecated. */
-static inline int isc_dev_set_package(
-	struct isc_dev_info *info, unsigned long arg)
-{
-	if (copy_to_user((void __user *)arg, &info->package,
-		sizeof(info->package))) {
-		dev_err(info->dev, "%s copy_to_user err line %d\n",
-			__func__, __LINE__);
-		return -EFAULT;
-	}
-
-	return 0;
-}
-
 static long isc_dev_ioctl(struct file *file,
 			unsigned int cmd, unsigned long arg)
 {
@@ -221,28 +226,6 @@ static long isc_dev_ioctl(struct file *file,
 	int err = 0;
 
 	switch (cmd) {
-	/* to be deprecated. */
-	case ISC_DEV_IOCTL_READ:
-		err = isc_dev_get_package(info, arg);
-		if (err)
-			break;
-
-		err = isc_dev_raw_rd(info, info->package.offset,
-			info->package.buf, info->package.size);
-		if (err)
-			break;
-
-		err = isc_dev_set_package(info, arg);
-		break;
-	/* to be deprecated. */
-	case ISC_DEV_IOCTL_WRITE:
-		err = isc_dev_get_package(info, arg);
-		if (err)
-			break;
-
-		err = isc_dev_raw_wr(info, info->package.offset,
-			info->package.buf, info->package.size);
-		break;
 	case ISC_DEV_IOCTL_RDWR:
 		err = isc_dev_get_pkg(info, arg, false);
 		if (err)
@@ -342,23 +325,15 @@ static int isc_dev_probe(struct i2c_client *client,
 	} else
 		dev_notice(&client->dev, "%s NO platform data\n", __func__);
 
-	if (info->pdata && info->pdata->regmap_cfg.name)
-		memcpy(&info->regmap_cfg, &info->pdata->regmap_cfg,
-			sizeof(info->regmap_cfg));
+	if (info->pdata && info->pdata->reg_bits)
+		info->reg_len = info->pdata->reg_bits / 8;
 	else
-		memcpy(&info->regmap_cfg, &default_regmap_config,
-			sizeof(info->regmap_cfg));
-	dev_dbg(&client->dev, "    %s - %d %d %d %d\n",
-		info->regmap_cfg.name, info->regmap_cfg.reg_bits,
-		info->regmap_cfg.val_bits, info->regmap_cfg.pad_bits,
-		info->regmap_cfg.num_ranges);
-	info->regmap = devm_regmap_init_i2c(client, &info->regmap_cfg);
-	if (IS_ERR(info->regmap)) {
+		info->reg_len = 2;
+	if (info->reg_len > 2) {
 		dev_err(&client->dev,
-			"regmap init failed: %ld\n", PTR_ERR(info->regmap));
+			"device offset length invalid: %d\n", info->reg_len);
 		return -ENODEV;
 	}
-
 	info->i2c_client = client;
 	info->dev = &client->dev;
 

@@ -143,9 +143,8 @@ static int __isc_create_dev(
 	snprintf(isc_dev->pdata.drv_name, sizeof(isc_dev->pdata.drv_name),
 			"%s.%u.%02x", isc_dev->cfg.drv_name,
 			isc_mgr->adap->nr, isc_dev->cfg.addr);
-	isc_dev->pdata.regmap_cfg.name = isc_dev->pdata.drv_name;
-	isc_dev->pdata.regmap_cfg.reg_bits = isc_dev->cfg.reg_bits;
-	isc_dev->pdata.regmap_cfg.val_bits = isc_dev->cfg.val_bits;
+	isc_dev->pdata.reg_bits = isc_dev->cfg.reg_bits;
+	isc_dev->pdata.val_bits = isc_dev->cfg.val_bits;
 
 	mutex_init(&isc_dev->mutex);
 	INIT_LIST_HEAD(&isc_dev->list);

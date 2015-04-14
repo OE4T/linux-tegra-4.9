@@ -14,8 +14,6 @@
 #ifndef __ISC_DEV_H__
 #define __ISC_DEV_H__
 
-#define ISC_DEV_IOCTL_READ	_IOW('o', 1, struct isc_dev_package)
-#define ISC_DEV_IOCTL_WRITE	_IOR('o', 2, struct isc_dev_package)
 #define ISC_DEV_IOCTL_RDWR	_IOW('o', 3, struct isc_dev_pkg)
 
 #ifdef CONFIG_COMPAT
@@ -24,13 +22,6 @@
 
 #define MAX_ISC_DEV_PAK_SIZE	32
 #define ISC_DEV_PKG_FLAG_WR	1
-
-/* to be deprecated. */
-struct isc_dev_package {
-	__u32 offset;
-	__u8 buf[MAX_ISC_DEV_PAK_SIZE];
-	int size;
-} __packed;
 
 struct isc_dev_pkg {
 	__u16 offset;
@@ -54,7 +45,8 @@ struct isc_dev_pkg32 {
 
 struct isc_dev_platform_data {
 	void *isc_mgr;
-	struct regmap_config regmap_cfg;
+	int reg_bits;
+	int val_bits;
 	char drv_name[MAX_ISC_NAME_LENGTH];
 };
 #endif /* __KERNEL__ */

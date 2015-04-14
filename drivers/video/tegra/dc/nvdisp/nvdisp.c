@@ -101,7 +101,7 @@ static int nvdisp_alloc_input_lut(struct tegra_dc *dc,
 	return 0;
 }
 
-int _tegra_nvdisp_init_once(struct tegra_dc *dc)
+static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 {
 	int ret = 0;
 	int i;
@@ -611,7 +611,7 @@ void tegra_nvdisp_underflow_handler(struct tegra_dc *dc)
 	/* Do we need to see whether the reset is done */
 }
 
-int tegra_nvdisp_set_color_control(struct tegra_dc *dc)
+static int tegra_nvdisp_set_color_control(struct tegra_dc *dc)
 {
 	u32 color_control;
 

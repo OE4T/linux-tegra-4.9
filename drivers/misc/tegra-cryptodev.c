@@ -96,6 +96,19 @@ static int tegra_crypto_dev_open(struct inode *inode, struct file *filp)
 		ret = -ENOMEM;
 	}
 
+	/* CBC tfm is allocated during device_open itself
+	 * for (LP0) CTX_SAVE test that is performed using CBC
+	 */
+	ctx->aes_tfm[TEGRA_CRYPTO_CBC] =
+		crypto_alloc_ablkcipher("cbc-aes-tegra",
+		CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC, 0);
+	if (IS_ERR(ctx->aes_tfm[TEGRA_CRYPTO_CBC])) {
+		pr_err("Failed to load transform for cbc-aes-tegra: %ld\n",
+			PTR_ERR(ctx->aes_tfm[TEGRA_CRYPTO_CBC]));
+		kfree(ctx);
+		return PTR_ERR(ctx->aes_tfm[TEGRA_CRYPTO_CBC]);
+	}
+
 	filp->private_data = ctx;
 	return ret;
 }
@@ -104,6 +117,7 @@ static int tegra_crypto_dev_release(struct inode *inode, struct file *filp)
 {
 	struct tegra_crypto_ctx *ctx = filp->private_data;
 
+	crypto_free_ablkcipher(ctx->aes_tfm[TEGRA_CRYPTO_CBC]);
 	kfree(ctx);
 	filp->private_data = NULL;
 	return 0;
@@ -133,17 +147,21 @@ static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 	struct tegra_crypto_completion tcrypt_complete;
 	char aes_algo[5][10] = {"ecb(aes)", "cbc(aes)", "ofb(aes)", "ctr(aes)"};
 
-	tfm = crypto_alloc_ablkcipher(aes_algo[crypt_req->op],
+	if (crypt_req->op != TEGRA_CRYPTO_CBC) {
+		tfm = crypto_alloc_ablkcipher(aes_algo[crypt_req->op],
 			CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC, 0);
-	if (IS_ERR(tfm)) {
-		pr_err("Failed to load transform for %s: %ld\n",
-			aes_algo[crypt_req->op], PTR_ERR(tfm));
-		ret = PTR_ERR(tfm);
-		goto out;
-	}
+		if (IS_ERR(tfm)) {
+			pr_err("Failed to load transform for %s: %ld\n",
+				aes_algo[crypt_req->op], PTR_ERR(tfm));
+			ret = PTR_ERR(tfm);
+			goto out;
+		}
 
-	ctx->aes_tfm[crypt_req->op] = tfm;
-	filp->private_data = ctx;
+		ctx->aes_tfm[crypt_req->op] = tfm;
+		filp->private_data = ctx;
+	} else {
+		tfm = ctx->aes_tfm[TEGRA_CRYPTO_CBC];
+	}
 
 	req = ablkcipher_request_alloc(tfm, GFP_KERNEL);
 	if (!req) {
@@ -245,7 +263,8 @@ process_req_buf_out:
 process_req_out:
 	ablkcipher_request_free(req);
 free_tfm:
-	crypto_free_ablkcipher(tfm);
+	if (crypt_req->op != TEGRA_CRYPTO_CBC)
+		crypto_free_ablkcipher(tfm);
 out:
 	return ret;
 }

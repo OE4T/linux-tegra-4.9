@@ -35,6 +35,11 @@
 #define TEGRA_CRYPTO_RNG_SEED_SIZE	AES_KEYSIZE_128 + DEFAULT_RNG_BLK_SZ
 #define TEGRA_CRYPTO_RNG_SIZE	SZ_16
 
+#define TEGRA_CRYPTO_ECB	0
+#define TEGRA_CRYPTO_CBC	1
+#define TEGRA_CRYPTO_OFB	2
+#define TEGRA_CRYPTO_CTR	3
+
 /* a pointer to this struct needs to be passed to:
  * TEGRA_CRYPTO_IOCTL_PROCESS_REQ
  */

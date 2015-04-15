@@ -520,6 +520,76 @@
 		clock-frequency = <400000>;
 	};
 
+	pcie-controller {
+		compatible = "nvidia,tegra186-pcie";
+		device_type = "pci";
+		reg = <0x0 0x10003000 0x0 0x00000800   /* PADS registers */
+		       0x0 0x10003800 0x0 0x00000800   /* AFI registers */
+		       0x0 0x50000000 0x0 0x10000000>; /* configuration space */
+		reg-names = "pads", "afi", "cs";
+		interrupts = <0 72 0x04>, /* controller interrupt */
+			     <0 73 0x04>; /* MSI interrupt */
+		interrupt-names = "intr", "msi";
+
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0 0 0 0 &intc 0 72 0x04>;// check this
+
+		bus-range = <0x00 0xff>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		ranges = <0x82000000 0 0x10000000 0x0 0x10000000 0 0x00001000   /* port 0 configuration space */
+			  0x82000000 0 0x10001000 0x0 0x10001000 0 0x00001000   /* port 1 configuration space */
+			  0x82000000 0 0x10004000 0x0 0x10004000 0 0x00001000   /* port 2 configuration space */
+			  0x81000000 0 0x0        0x0 0x60000000 0 0x00010000   /* downstream I/O (64 KiB) */
+			  0x82000000 0 0x61000000 0x0 0x61000000 0 0x02800000   /* non-prefetchable memory (40 MiB) */
+			  0xc2000000 0 0x63800000 0x0 0x63800000 0 0x1C800000>; /* prefetchable memory (456 MiB) */
+
+		nvidia,lane-map = <0x04>;
+		status = "okay";
+
+		pci@1,0 {
+			device_type = "pci";
+			assigned-addresses = <0x82000800 0 0x10000000 0 0x1000>;
+			reg = <0x000800 0 0 0 0>;
+			status = "okay";
+
+			#address-cells = <3>;
+			#size-cells = <2>;
+			ranges;
+
+			nvidia,num-lanes = <4>;
+		};
+
+		pci@2,0 {
+			device_type = "pci";
+			assigned-addresses = <0x82001000 0 0x10001000 0 0x1000>;
+			reg = <0x001000 0 0 0 0>;
+			status = "disabled";
+
+			#address-cells = <3>;
+			#size-cells = <2>;
+			ranges;
+
+			nvidia,num-lanes = <1>;
+		};
+
+		pci@3,0 {
+			device_type = "pci";
+			assigned-addresses = <0x82001000 0 0x10004000 0 0x1000>;
+			reg = <0x001000 0 0 0 0>;
+			status = "disabled";
+
+			#address-cells = <3>;
+			#size-cells = <2>;
+			ranges;
+
+			nvidia,num-lanes = <1>;
+		};
+
+	};
+
 	agic-controller {
 		compatible = "nvidia,tegra18x-agic";
 		interrupt-controller;

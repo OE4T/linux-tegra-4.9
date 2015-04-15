@@ -145,7 +145,7 @@
 
 		nvcsi {
 			compatible = "nvidia,tegra186-nvcsi";
-			reg = <0x0 0x540c0000 0x0 0x00040000>;
+			reg = <0x0 0x150c0000 0x0 0x00040000>;
 			interrupts = <0 119 0x04>;
 			#stream-id-cells = <1>;
 		};

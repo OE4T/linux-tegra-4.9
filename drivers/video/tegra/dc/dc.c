@@ -1991,6 +1991,9 @@ void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable)
 	tegra_dc_update_cmu(dc, tegra_dc_get_cmu(dc));
 #endif
 }
+EXPORT_SYMBOL(tegra_dc_cmu_enable);
+#else
+#define tegra_dc_cmu_enable(dc, cmu_enable)
 #endif
 
 #ifdef CONFIG_TEGRA_DC_CMU

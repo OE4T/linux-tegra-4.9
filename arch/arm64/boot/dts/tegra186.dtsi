@@ -468,12 +468,55 @@
                 status = "okay";
         };
 
+	gpio: gpio@2210000 {
+		compatible = "nvidia,tegra186-gpio";
+		reg = <0x0 0x2210000 0x0 0x5700>;
+		status = "okay";
+		gpio-ranges = <&pinmux 0 0 246>;
+		#gpio-cells = <2>;
+		gpio-controller;
+		nvidia,gpio_mapping = < 0x2000
+					0x3000
+					0x3200
+					0X3400
+					0x2200
+					0x2400
+					0x4200
+					0x1000
+					0x0800
+					0x5000
+					0x5200
+					0x1200
+					0x5600
+					0x0000
+					0x0200
+					0x4000
+					0x0400
+					0x0A00
+					1
+					0x0600
+					1
+					1
+					1
+					0x1400
+					0x1600
+					1
+					1
+					0x2600
+					0x5400
+					1
+					1
+					1>;
+	};
+
 	i2c1: i2c@3160000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "nvidia,tegra210-i2c";
 		reg = <0x0 0x3160000 0x0 0x100>;
 		interrupts = <0 25 0x04>;
+		scl-gpio = <&gpio 21 0>;
+		sda-gpio = <&gpio 22 0>;
 		status = "okay";
 		clock-frequency = <400000>;
 	};
@@ -484,6 +527,8 @@
 		compatible = "nvidia,tegra210-i2c";
 		reg = <0x0 0x3180000 0x0 0x100>;
 		interrupts = <0 27 0x04>;
+		scl-gpio = <&gpio 114 0>;
+		sda-gpio = <&gpio 115 0>;
 		status = "okay";
 		clock-frequency = <400000>;
 	};
@@ -504,6 +549,8 @@
 		compatible = "nvidia,tegra210-i2c";
 		reg = <0x0 0x31a0000 0x0 0x100>;
 		interrupts = <0 29 0x04>;
+		scl-gpio = <&gpio 144 0>;
+		sda-gpio = <&gpio 145 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
 	};
@@ -524,6 +571,8 @@
 		compatible = "nvidia,tegra210-i2c";
 		reg = <0x0 0x31c0000 0x0 0x100>;
 		interrupts = <0 31 0x04>;
+		scl-gpio = <&gpio 88 0>;
+		sda-gpio = <&gpio 89 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
 	};
@@ -534,6 +583,8 @@
 		compatible = "nvidia,tegra210-i2c";
 		reg = <0x0 0x31e0000 0x0 0x100>;
 		interrupts = <0 33 0x04>;
+		scl-gpio = <&gpio 90 0>;
+		sda-gpio = <&gpio 91 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
 	};
@@ -627,46 +678,6 @@
 		   <0x0 0x0 0x0 0x0>; /* DRAM MAP2 */
 	     iommus = <&smmu TEGRA_SWGROUP_APE>;
 	     status = "disabled";
-	};
-	gpio: gpio@2210000 {
-		compatible = "nvidia,tegra186-gpio";
-		reg = <0x0 0x2210000 0x0 0x5700>;
-		status = "okay";
-		gpio-ranges = <&pinmux 0 0 246>;
-		#gpio-cells = <2>;
-		gpio-controller;
-		nvidia,gpio_mapping = < 0x2000
-					0x3000
-					0x3200
-					0X3400
-					0x2200
-					0x2400
-					0x4200
-					0x1000
-					0x0800
-					0x5000
-					0x5200
-					0x1200
-					0x5600
-					0x0000
-					0x0200
-					0x4000
-					0x0400
-					0x0A00
-					1
-					0x0600
-					1
-					1
-					1
-					0x1400
-					0x1600
-					1
-					1
-					0x2600
-					0x5400
-					1
-					1
-					1>;
 	};
 
 	mce {

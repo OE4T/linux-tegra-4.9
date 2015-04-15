@@ -503,7 +503,7 @@ void tegra_dc_win_partial_update(struct tegra_dc *dc, struct tegra_dc_win *win,
 	}
 }
 
-static void tegra_dc_vrr_frame_time(struct tegra_dc *dc)
+static void tegra_dc_vrr_flip_time(struct tegra_dc *dc)
 {
 	struct timespec time_now;
 	struct tegra_vrr *vrr  = dc->out->vrr;
@@ -1116,7 +1116,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 	if (WARN_ONCE(e, "horrible failure")) /* horrible failure */
 		goto done;
 
-	tegra_dc_vrr_frame_time(dc);
+	tegra_dc_vrr_flip_time(dc);
 	tegra_dc_vrr_cancel_vfp(dc);
 done:
 	mutex_unlock(&dc->lock);

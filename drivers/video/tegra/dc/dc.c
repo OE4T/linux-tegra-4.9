@@ -1738,12 +1738,13 @@ void tegra_dc_setup_vrr(struct tegra_dc *dc)
 
 	vrr->max_adj_pct = 50;
 	vrr->max_flip_pct = 20;
-	vrr->max_dc_balance = 16667;
+	vrr->max_dc_balance = 20000;
 	vrr->max_inc_pct = 5;
 
 	vrr->dc_balance = 0;
 	vrr->frame_avg_pct = 75;
 	vrr->fluct_avg_pct = 75;
+	vrr->db_tolerance = 5000;
 }
 
 unsigned long tegra_dc_poll_register(struct tegra_dc *dc, u32 reg, u32 mask,
@@ -2798,7 +2799,7 @@ static void tegra_dc_vrr_sec(struct tegra_dc *dc)
 {
 	struct tegra_vrr *vrr  = dc->out->vrr;
 
-	if (!vrr || !vrr->enable)
+	if (!vrr || (!vrr->enable && !vrr->fe_intr_req))
 		return;
 
 	/* Decrement frame end interrupt refcount previously

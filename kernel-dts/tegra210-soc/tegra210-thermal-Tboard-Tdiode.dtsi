@@ -37,17 +37,17 @@
 			trips {
 				tboard_dram_throttle: dram-throttle {
 					temperature = <80000>;
-					hysteresis = <0>;
+					hysteresis = <1000>;
 					type = "active";
 					writable;
 				};
 			};
 
 			cooling-maps {
-				map0 {
+				map-tegra-dram {
 					trip = <&tboard_dram_throttle>;
 					cooling-device = <&tboard_dram_cool_dev
-						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						1 1>;
 					cdev-type = "tegra-dram";
 				};
 			};

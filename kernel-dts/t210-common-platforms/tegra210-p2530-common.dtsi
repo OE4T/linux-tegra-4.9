@@ -292,10 +292,6 @@
 			};
 		};
 
-		Charger-Die {
-			status = "okay";
-		};
-
 		Tboard_tegra {
 			status = "okay";
 		};

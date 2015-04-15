@@ -29,8 +29,7 @@
 			device_type = "cpu";
 			compatible = "nvidia,denver", "arm,armv8";
 			reg = <0x0 0x0>;
-			enable-method = "spin-table";
-			cpu-release-addr = <0x0 0x8000fff8>;
+			enable-method = "psci";
 			power-states = <&power_states>;
 		};
 
@@ -38,8 +37,7 @@
 			device_type = "cpu";
 			compatible = "nvidia,denver", "arm,armv8";
 			reg = <0x0 0x1>;
-			enable-method = "spin-table";
-			cpu-release-addr = <0x0 0x8000fff8>;
+			enable-method = "psci";
 			power-states = <&power_states>;
 		};
 

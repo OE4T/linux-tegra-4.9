@@ -803,13 +803,18 @@ int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
 	struct channel_gk20a *ch = &f->channel[info->chid];
 
 	gk20a_dbg_fn("");
-	if (info->type != TEGRA_VGPU_GR_INTR_NOTIFY)
+	if (info->type != TEGRA_VGPU_GR_INTR_NOTIFY &&
+		info->type != TEGRA_VGPU_GR_INTR_SEMAPHORE)
 		gk20a_err(dev_from_gk20a(g), "gr intr (%d) on ch %u",
 			info->type, info->chid);
 
 	switch (info->type) {
 	case TEGRA_VGPU_GR_INTR_NOTIFY:
 		wake_up(&ch->notifier_wq);
+		break;
+	case TEGRA_VGPU_GR_INTR_SEMAPHORE:
+		gk20a_channel_event(ch);
+		wake_up(&ch->semaphore_wq);
 		break;
 	case TEGRA_VGPU_GR_INTR_SEMAPHORE_TIMEOUT:
 		gk20a_set_error_notifier(ch,
@@ -837,6 +842,23 @@ int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
 	case TEGRA_VGPU_GR_INTR_EXCEPTION:
 		gk20a_set_error_notifier(ch,
 				NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
+		break;
+	default:
+		WARN_ON(1);
+		break;
+	}
+
+	return 0;
+}
+
+int vgpu_gr_nonstall_isr(struct gk20a *g,
+			struct tegra_vgpu_gr_nonstall_intr_info *info)
+{
+	gk20a_dbg_fn("");
+
+	switch (info->type) {
+	case TEGRA_VGPU_GR_NONSTALL_INTR_SEMAPHORE:
+		gk20a_channel_semaphore_wakeup(g);
 		break;
 	default:
 		WARN_ON(1);

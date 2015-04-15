@@ -114,8 +114,15 @@ static int vgpu_intr_thread(void *dev_id)
 
 		if (msg->unit == TEGRA_VGPU_INTR_GR)
 			vgpu_gr_isr(g, &msg->info.gr_intr);
+		else if (msg->unit == TEGRA_VGPU_NONSTALL_INTR_GR)
+			vgpu_gr_nonstall_isr(g, &msg->info.gr_nonstall_intr);
 		else if (msg->unit == TEGRA_VGPU_INTR_FIFO)
 			vgpu_fifo_isr(g, &msg->info.fifo_intr);
+		else if (msg->unit == TEGRA_VGPU_NONSTALL_INTR_FIFO)
+			vgpu_fifo_nonstall_isr(g,
+					&msg->info.fifo_nonstall_intr);
+		else if (msg->unit == TEGRA_VGPU_NONSTALL_INTR_CE2)
+			vgpu_ce2_nonstall_isr(g, &msg->info.ce2_nonstall_intr);
 
 		tegra_gr_comm_release(handle);
 	}

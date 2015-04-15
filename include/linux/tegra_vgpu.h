@@ -251,9 +251,13 @@ enum {
 	TEGRA_VGPU_GR_INTR_CLASS_ERROR,
 	TEGRA_VGPU_GR_INTR_FIRMWARE_METHOD,
 	TEGRA_VGPU_GR_INTR_EXCEPTION,
+	TEGRA_VGPU_GR_INTR_SEMAPHORE,
 	TEGRA_VGPU_FIFO_INTR_PBDMA,
 	TEGRA_VGPU_FIFO_INTR_CTXSW_TIMEOUT,
-	TEGRA_VGPU_FIFO_INTR_MMU_FAULT
+	TEGRA_VGPU_FIFO_INTR_MMU_FAULT,
+	TEGRA_VGPU_GR_NONSTALL_INTR_SEMAPHORE,
+	TEGRA_VGPU_FIFO_NONSTALL_INTR_CHANNEL,
+	TEGRA_VGPU_CE2_NONSTALL_INTR_NONBLOCKPIPE
 };
 
 struct tegra_vgpu_gr_intr_info {
@@ -261,14 +265,30 @@ struct tegra_vgpu_gr_intr_info {
 	u32 chid;
 };
 
+struct tegra_vgpu_gr_nonstall_intr_info {
+	u32 type;
+};
+
 struct tegra_vgpu_fifo_intr_info {
 	u32 type;
 	u32 chid;
 };
 
+struct tegra_vgpu_fifo_nonstall_intr_info {
+	u32 type;
+};
+
+struct tegra_vgpu_ce2_nonstall_intr_info {
+	u32 type;
+};
+
 enum {
 	TEGRA_VGPU_INTR_GR = 0,
-	TEGRA_VGPU_INTR_FIFO
+	TEGRA_VGPU_INTR_FIFO,
+	TEGRA_VGPU_INTR_CE2,
+	TEGRA_VGPU_NONSTALL_INTR_GR,
+	TEGRA_VGPU_NONSTALL_INTR_FIFO,
+	TEGRA_VGPU_NONSTALL_INTR_CE2
 };
 
 enum {
@@ -281,7 +301,10 @@ struct tegra_vgpu_intr_msg {
 	u32 unit;
 	union {
 		struct tegra_vgpu_gr_intr_info gr_intr;
+		struct tegra_vgpu_gr_nonstall_intr_info gr_nonstall_intr;
 		struct tegra_vgpu_fifo_intr_info fifo_intr;
+		struct tegra_vgpu_fifo_nonstall_intr_info fifo_nonstall_intr;
+		struct tegra_vgpu_ce2_nonstall_intr_info ce2_nonstall_intr;
 	} info;
 };
 

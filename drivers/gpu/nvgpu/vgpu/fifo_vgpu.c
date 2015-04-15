@@ -566,6 +566,23 @@ int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info)
 	return 0;
 }
 
+int vgpu_fifo_nonstall_isr(struct gk20a *g,
+			struct tegra_vgpu_fifo_nonstall_intr_info *info)
+{
+	gk20a_dbg_fn("");
+
+	switch (info->type) {
+	case TEGRA_VGPU_FIFO_NONSTALL_INTR_CHANNEL:
+		gk20a_channel_semaphore_wakeup(g);
+		break;
+	default:
+		WARN_ON(1);
+		break;
+	}
+
+	return 0;
+}
+
 void vgpu_init_fifo_ops(struct gpu_ops *gops)
 {
 	gops->fifo.bind_channel = vgpu_channel_bind;

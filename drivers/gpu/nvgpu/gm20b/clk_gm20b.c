@@ -36,6 +36,7 @@
 
 #define DFS_DET_RANGE	6	/* -2^6 ... 2^6-1 */
 #define SDM_DIN_RANGE	12	/* -2^12 ... 2^12-1 */
+#define DFS_TESTOUT_DET	BIT(0)
 #define DFS_EXT_CAL_EN	BIT(9)
 #define DFS_EXT_STROBE	BIT(16)
 
@@ -377,7 +378,8 @@ static void clk_set_dfs_ext_cal(struct gk20a *g, u32 dfs_det_cal)
 	udelay(1);
 	if (~trim_sys_gpcpll_dvfs1_dfs_ctrl_v(data) & DFS_EXT_CAL_EN) {
 		data = set_field(data, trim_sys_gpcpll_dvfs1_dfs_ctrl_m(),
-			trim_sys_gpcpll_dvfs1_dfs_ctrl_f(DFS_EXT_CAL_EN));
+				 trim_sys_gpcpll_dvfs1_dfs_ctrl_f(
+					 DFS_EXT_CAL_EN | DFS_TESTOUT_DET));
 		gk20a_writel(g, trim_sys_gpcpll_dvfs1_r(), data);
 	}
 }
@@ -709,6 +711,12 @@ static int clk_lock_gpc_pll_under_bypass(struct gk20a *g, struct pll *gpll)
 	if (gpll->mode == GPC_PLL_MODE_DVFS) {
 		gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 		udelay(g->clk.na_pll_delay);
+		gk20a_dbg_clk("NA config_pll under bypass: %u (%u) kHz %d mV",
+			      gpll->freq, gpll->freq / 2,
+			      (trim_sys_gpcpll_cfg3_dfs_testout_v(
+				      gk20a_readl(g, trim_sys_gpcpll_cfg3_r()))
+			       * gpc_pll_params.uvdet_slope
+			       + gpc_pll_params.uvdet_offs) / 1000);
 		goto pll_locked;
 	}
 
@@ -1598,6 +1606,34 @@ static int monitor_get(void *data, u64 *val)
 }
 DEFINE_SIMPLE_ATTRIBUTE(monitor_fops, monitor_get, NULL, "%llu\n");
 
+static int voltage_get(void *data, u64 *val)
+{
+	struct gk20a *g = (struct gk20a *)data;
+	struct clk_gk20a *clk = &g->clk;
+	u32 det_out;
+	int err;
+
+	if (clk->gpc_pll.mode != GPC_PLL_MODE_DVFS)
+		return -ENOSYS;
+
+	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
+
+	mutex_lock(&g->clk.clk_mutex);
+
+	det_out = gk20a_readl(g, trim_sys_gpcpll_cfg3_r());
+	det_out = trim_sys_gpcpll_cfg3_dfs_testout_v(det_out);
+	*val = (det_out * gpc_pll_params.uvdet_slope +
+		gpc_pll_params.uvdet_offs) / 1000;
+
+	mutex_unlock(&g->clk.clk_mutex);
+
+	gk20a_idle(g->dev);
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(voltage_fops, voltage_get, NULL, "%llu\n");
+
 static int pll_param_show(struct seq_file *s, void *data)
 {
 	seq_printf(s, "ADC offs = %d uV, ADC slope = %d uV, VCO ctrl = 0x%x\n",
@@ -1640,6 +1676,11 @@ static int clk_gm20b_debugfs_init(struct gk20a *g)
 
 	d = debugfs_create_file(
 		"monitor", S_IRUGO, platform->debugfs, g, &monitor_fops);
+	if (!d)
+		goto err_out;
+
+	d = debugfs_create_file(
+		"voltage", S_IRUGO, platform->debugfs, g, &voltage_fops);
 	if (!d)
 		goto err_out;
 

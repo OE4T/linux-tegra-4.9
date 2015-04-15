@@ -25,8 +25,8 @@ enum {
 };
 
 enum gpc_pll_mode {
-	GPC_PLL_MODE_F = 0,
-	GPC_PLL_MODE_DVFS,
+	GPC_PLL_MODE_F = 0,	/* fixed frequency mode a.k.a legacy mode */
+	GPC_PLL_MODE_DVFS,	/* DVFS mode a.k.a NA mode */
 };
 
 struct na_dvfs {
@@ -62,6 +62,16 @@ struct pll_parms {
 	int coeff_slope, coeff_offs; /* coeff = slope * V + offs */
 	int uvdet_slope, uvdet_offs; /* uV = slope * det + offs */
 	u32 vco_ctrl;
+	/*
+	 * Timing parameters in us. Lock timeout is applied to locking in fixed
+	 * frequency mode and to dynamic ramp in any mode; does not affect lock
+	 * latency, since lock/ramp done status bit is polled. NA mode lock and
+	 * and IDDQ exit delays set the time of the respective opertaions with
+	 * no status polling.
+	 */
+	u32 lock_timeout;
+	u32 na_lock_delay;
+	u32 iddq_exit_delay;
 };
 
 struct clk_gk20a {
@@ -70,7 +80,6 @@ struct clk_gk20a {
 	struct pll gpc_pll;
 	struct pll gpc_pll_last;
 	u32 pll_delay; /* default PLL settle time */
-	u32 na_pll_delay; /* default PLL settle time in NA mode */
 	struct mutex clk_mutex;
 	bool sw_ready;
 	bool clk_hw_on;

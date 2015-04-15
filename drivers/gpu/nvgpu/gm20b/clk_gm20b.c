@@ -56,6 +56,9 @@ static struct pll_parms gpc_pll_params = {
 	-165230, 214007,	/* DFS_COEFF */
 	0, 0,			/* ADC char coeff - to be read from fuses */
 	0x7 << 3,		/* vco control in NA mode */
+	500,			/* Locking and ramping timeout */
+	40,			/* Lock delay in NA mode */
+	5,			/* IDDQ mode exit delay */
 };
 
 #ifdef CONFIG_DEBUG_FS
@@ -411,7 +414,7 @@ static void clk_setup_dvfs_detection(struct gk20a *g, struct pll *gpll)
 static int clk_enbale_pll_dvfs(struct gk20a *g)
 {
 	u32 data;
-	int delay = 5;	/* use for iddq exit delay & calib timeout */
+	int delay = gpc_pll_params.iddq_exit_delay; /* iddq & calib delay */
 	struct pll_parms *p = &gpc_pll_params;
 	bool calibrated = p->uvdet_slope && p->uvdet_offs;
 
@@ -527,7 +530,7 @@ static int clk_slide_gpc_pll(struct gk20a *g, struct pll *gpll)
 {
 	u32 data, coeff;
 	u32 nold, sdm_old;
-	int ramp_timeout = 500;
+	int ramp_timeout = gpc_pll_params.lock_timeout;
 
 	/* get old coefficients */
 	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
@@ -666,7 +669,7 @@ static int clk_lock_gpc_pll_under_bypass(struct gk20a *g, struct pll *gpll)
 				trim_sys_gpcpll_cfg_iddq_power_on_v());
 		gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
 		gk20a_readl(g, trim_sys_gpcpll_cfg_r());
-		udelay(5);
+		udelay(gpc_pll_params.iddq_exit_delay);
 	} else {
 		/* clear SYNC_MODE before disabling PLL */
 		cfg = set_field(cfg, trim_sys_gpcpll_cfg_sync_mode_m(),
@@ -710,7 +713,7 @@ static int clk_lock_gpc_pll_under_bypass(struct gk20a *g, struct pll *gpll)
 	/* just delay in DVFS mode (lock cannot be used) */
 	if (gpll->mode == GPC_PLL_MODE_DVFS) {
 		gk20a_readl(g, trim_sys_gpcpll_cfg_r());
-		udelay(g->clk.na_pll_delay);
+		udelay(gpc_pll_params.na_lock_delay);
 		gk20a_dbg_clk("NA config_pll under bypass: %u (%u) kHz %d mV",
 			      gpll->freq, gpll->freq / 2,
 			      (trim_sys_gpcpll_cfg3_dfs_testout_v(
@@ -730,7 +733,7 @@ static int clk_lock_gpc_pll_under_bypass(struct gk20a *g, struct pll *gpll)
 	}
 
 	/* wait pll lock */
-	timeout = g->clk.pll_delay + 1;
+	timeout = gpc_pll_params.lock_timeout + 1;
 	do {
 		udelay(1);
 		cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
@@ -1087,15 +1090,6 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 			"failed to get GPCPLL reference clock");
 		return -EINVAL;
 	}
-
-	/*
-	 * Locking time in both legacy and DVFS mode is 40us. However, in legacy
-	 * mode we rely on lock detection signal, and delay is just timeout
-	 * limit, so we can afford set it longer. In DVFS mode each lock inserts
-	 * specified delay, so it should be set as short as h/w allows.
-	 */
-	clk->pll_delay = 300; /* usec */
-	clk->na_pll_delay = 40; /* usec*/
 
 	clk->gpc_pll.id = GK20A_GPC_PLL;
 	clk->gpc_pll.clk_in = clk_get_rate(ref) / KHZ;

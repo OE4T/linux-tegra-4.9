@@ -131,6 +131,24 @@
 		};
 	};
 
+	mc {
+		compatible = "nvidia,tegra-mc";
+
+		reg-ranges = <1>;
+		reg        = <0x0 0x2c10000 0x0 0x1000   /* Broadcast channel */
+			      0x0 0x2c20000 0x0 0x1000   /* MC0 */
+			      0x0 0x2c30000 0x0 0x1000   /* MC1 */
+			      0x0 0x2c40000 0x0 0x1000   /* MC2 */
+			      0x0 0x2c50000 0x0 0x1000>; /* MC3 */
+
+		interrupts = <0 223 0x4>;
+		int_count  = <8>;
+		int_mask   = <0xf3140>;
+
+		channels   = <1>; /* Until support for quad channel is available. */
+        };
+
+
 	host1x: host1x {
 		compatible = "nvidia,tegra186-host1x", "simple-bus";
 		reg = <0x0 0x3de00000 0x0 0x00040000>;

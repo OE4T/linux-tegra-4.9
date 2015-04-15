@@ -110,7 +110,7 @@ static bool add_waiter_to_queue(struct nvhost_waitlist *waiter,
  */
 static void remove_completed_waiters(struct list_head *head, u32 sync,
 			struct timespec isr_recv,
-			struct list_head completed[NVHOST_INTR_ACTION_COUNT])
+			struct list_head *completed[NVHOST_INTR_ACTION_COUNT])
 {
 	struct list_head *dest;
 	struct nvhost_waitlist *waiter, *next, *prev;
@@ -120,7 +120,7 @@ static void remove_completed_waiters(struct list_head *head, u32 sync,
 			break;
 
 		waiter->isr_recv = isr_recv;
-		dest = completed + waiter->action;
+		dest = *(completed + waiter->action);
 
 		/* consolidate submit cleanups */
 		if (waiter->action == NVHOST_INTR_ACTION_SUBMIT_COMPLETE
@@ -224,21 +224,24 @@ static void action_signal_sync_pt(struct nvhost_waitlist *waiter)
 typedef void (*action_handler)(struct nvhost_waitlist *waiter);
 
 static action_handler action_handlers[NVHOST_INTR_ACTION_COUNT] = {
-	action_submit_complete,
 	action_signal_sync_pt,
 	action_wakeup,
 	action_wakeup_interruptible,
+	action_submit_complete,
 	action_notify,
 };
 
-static void run_handlers(struct list_head completed[NVHOST_INTR_ACTION_COUNT])
+static void run_handlers(struct list_head *completed[NVHOST_INTR_ACTION_COUNT])
 {
-	struct list_head *head = completed;
 	int i;
 
-	for (i = 0; i < NVHOST_INTR_ACTION_COUNT; ++i, ++head) {
+	for (i = 0; i < NVHOST_INTR_ACTION_COUNT; ++i) {
+		struct list_head *head = completed[i];
 		action_handler handler = action_handlers[i];
 		struct nvhost_waitlist *waiter, *next;
+
+		if (!head)
+			continue;
 
 		list_for_each_entry_safe(waiter, next, head, list) {
 			list_del(&waiter->list);
@@ -256,31 +259,88 @@ static int process_wait_list(struct nvhost_intr *intr,
 			     struct nvhost_intr_syncpt *syncpt,
 			     u32 threshold)
 {
-	struct list_head completed[NVHOST_INTR_ACTION_COUNT];
-	unsigned int i;
+	struct list_head *completed[NVHOST_INTR_ACTION_COUNT] = {NULL};
+	struct list_head high_prio_handlers[NVHOST_INTR_HIGH_PRIO_COUNT];
+	bool run_low_prio_work = false;
+	unsigned int i, j;
 	int empty;
-
-	for (i = 0; i < NVHOST_INTR_ACTION_COUNT; ++i)
-		INIT_LIST_HEAD(completed + i);
 
 	/* take lock on waiter list */
 	mutex_lock(&syncpt->lock);
 
+	/* keep high priority workers in local list */
+	for (i = 0; i < NVHOST_INTR_HIGH_PRIO_COUNT; ++i) {
+		INIT_LIST_HEAD(high_prio_handlers + i);
+		completed[i] = high_prio_handlers + i;
+	}
+
+	/* .. and low priority workers in global list */
+	for (j = 0; i < NVHOST_INTR_ACTION_COUNT; ++i, ++j)
+		completed[i] = syncpt->low_prio_handlers + j;
+
+	/* this functions fills completed data */
 	remove_completed_waiters(&syncpt->wait_head, threshold,
 		syncpt->isr_recv, completed);
 
+	/* check if there are still waiters left */
 	empty = list_empty(&syncpt->wait_head);
+
+	/* if not, disable interrupt. If yes, update the inetrrupt */
 	if (empty)
 		intr_op().disable_syncpt_intr(intr, syncpt->id);
 	else
 		reset_threshold_interrupt(intr, &syncpt->wait_head,
 					  syncpt->id);
 
+	/* remove low priority handlers from this list */
+	for (i = NVHOST_INTR_HIGH_PRIO_COUNT;
+	     i < NVHOST_INTR_ACTION_COUNT; ++i) {
+		if (!list_empty(completed[i]))
+			run_low_prio_work = true;
+		completed[i] = NULL;
+	}
+
+	/* release waiter lock */
 	mutex_unlock(&syncpt->lock);
 
 	run_handlers(completed);
 
+	/* schedule a separate task to handle low priority handlers */
+	if (run_low_prio_work)
+		schedule_work(&syncpt->low_prio_work);
+
 	return empty;
+}
+
+static void nvhost_syncpt_low_prio_work(struct work_struct *work)
+{
+	struct nvhost_intr_syncpt *syncpt = container_of(work,
+						     struct nvhost_intr_syncpt,
+						     low_prio_work);
+	struct list_head *completed[NVHOST_INTR_ACTION_COUNT] = {NULL};
+	struct list_head low_prio_handlers[NVHOST_INTR_LOW_PRIO_COUNT];
+	unsigned int i, j;
+
+	/* go through low priority handlers.. */
+	mutex_lock(&syncpt->lock);
+	for (i = 0, j = NVHOST_INTR_HIGH_PRIO_COUNT;
+	     j < NVHOST_INTR_ACTION_COUNT;
+	     i++, j++) {
+		struct list_head *handler = low_prio_handlers + i;
+
+		/* move entries from low priority queue into local queue */
+		INIT_LIST_HEAD(handler);
+		list_cut_position(handler,
+				  &syncpt->low_prio_handlers[i],
+				  syncpt->low_prio_handlers[i].prev);
+
+		/* maintain local completed list */
+		completed[j] = handler;
+	}
+	mutex_unlock(&syncpt->lock);
+
+	/* ..and run them */
+	run_handlers(completed);
 }
 
 /*** host syncpt interrupt service functions ***/
@@ -459,7 +519,7 @@ void nvhost_intr_put_ref(struct nvhost_intr *intr, u32 id, void *ref)
 
 int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync)
 {
-	unsigned int id;
+	unsigned int id, i;
 	struct nvhost_intr_syncpt *syncpt;
 	struct nvhost_master *host = intr_to_dev(intr);
 	u32 nb_pts = nvhost_syncpt_nb_hw_pts(&host->syncpt);
@@ -479,6 +539,10 @@ int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync)
 		snprintf(syncpt->thresh_irq_name,
 			sizeof(syncpt->thresh_irq_name),
 			"host_sp_%02d", id);
+		for (i = 0; i < NVHOST_INTR_LOW_PRIO_COUNT; ++i)
+			INIT_LIST_HEAD(syncpt->low_prio_handlers + i);
+		INIT_WORK(&syncpt->low_prio_work,
+			  nvhost_syncpt_low_prio_work);
 	}
 
 	return 0;

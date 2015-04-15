@@ -31,16 +31,10 @@ struct platform_device;
 
 enum nvhost_intr_action {
 	/**
-	 * Perform cleanup after a submit has completed.
-	 * 'data' points to a channel
-	 */
-	NVHOST_INTR_ACTION_SUBMIT_COMPLETE = 0,
-
-	/**
 	 * Signal a nvhost_sync_pt.
 	 * 'data' points to a nvhost_sync_pt
 	 */
-	NVHOST_INTR_ACTION_SIGNAL_SYNC_PT,
+	NVHOST_INTR_ACTION_SIGNAL_SYNC_PT = 0,
 
 	/**
 	 * Wake up a  task.
@@ -55,6 +49,12 @@ enum nvhost_intr_action {
 	NVHOST_INTR_ACTION_WAKEUP_INTERRUPTIBLE,
 
 	/**
+	 * Perform cleanup after a submit has completed.
+	 * 'data' points to a channel
+	 */
+	NVHOST_INTR_ACTION_SUBMIT_COMPLETE,
+
+	/**
 	 * Notify some external function about completion
 	 * 'data' holds pointer to an internal structure that holds a
 	 * function pointer and the stored private data
@@ -63,6 +63,10 @@ enum nvhost_intr_action {
 
 	NVHOST_INTR_ACTION_COUNT
 };
+
+#define NVHOST_INTR_HIGH_PRIO_COUNT NVHOST_INTR_ACTION_SUBMIT_COMPLETE
+#define NVHOST_INTR_LOW_PRIO_COUNT \
+	(NVHOST_INTR_ACTION_COUNT - NVHOST_INTR_HIGH_PRIO_COUNT)
 
 struct nvhost_intr;
 
@@ -74,6 +78,8 @@ struct nvhost_intr_syncpt {
 	char thresh_irq_name[12];
 	struct work_struct work;
 	struct timespec isr_recv;
+	struct work_struct low_prio_work;
+	struct list_head low_prio_handlers[NVHOST_INTR_LOW_PRIO_COUNT];
 };
 
 struct nvhost_intr {

@@ -317,6 +317,7 @@ struct tegra_hdmi {
 	struct delayed_work  hpd_worker;
 	struct mutex hpd_lock;
 
+	int ddc_i2c_original_rate;
 	int irq;
 	struct tegra_prod_list *prod_list;
 	int ddc_refcount;

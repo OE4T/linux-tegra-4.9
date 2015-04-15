@@ -340,6 +340,7 @@ static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi, int edid_src)
 		err = -EBUSY;
 		goto fail_edid_free;
 	}
+	hdmi->ddc_i2c_original_rate = i2c_get_adapter_bus_clk_rate(i2c_adap);
 
 	hdmi->ddc_i2c_client = i2c_new_device(i2c_adap, &i2c_dev_info);
 	i2c_put_adapter(i2c_adap);
@@ -547,11 +548,14 @@ static int tegra_hdmi_get_mon_spec(struct tegra_hdmi *hdmi)
 
 	size_t attempt_cnt = 0;
 	int err = 0;
+	struct i2c_adapter *i2c_adap = i2c_get_adapter(hdmi->dc->out->ddc_bus);
 
 	if (IS_ERR_OR_NULL(hdmi->edid)) {
 		dev_err(&hdmi->dc->ndev->dev, "hdmi: edid not initialized\n");
 		return PTR_ERR(hdmi->edid);
 	}
+
+	tegra_edid_i2c_adap_change_rate(i2c_adap, hdmi->ddc_i2c_original_rate);
 
 	hdmi->mon_spec_valid = false;
 	if (hdmi->mon_spec_valid)

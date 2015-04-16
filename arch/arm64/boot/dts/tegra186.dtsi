@@ -679,9 +679,4 @@
 	     iommus = <&smmu TEGRA_SWGROUP_APE>;
 	     status = "disabled";
 	};
-
-	mce {
-		compatible = "nvidia,tegra186-mce";
-		reg = <0x0 0x0e000000 0x0 0x60000>;
-	};
 };

@@ -1,7 +1,7 @@
 /*
  * GP10B PMU
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
 *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -155,7 +155,7 @@ void gp10b_init_pmu_ops(struct gpu_ops *gops)
 {
 	if (gops->privsecurity) {
 		gm20b_init_secure_pmu(gops);
-		gops->pmu.init_wpr_region = NULL;
+		gops->pmu.init_wpr_region = gm20b_pmu_init_acr;
 	} else {
 		gk20a_init_pmu_ops(gops);
 		gops->pmu.init_wpr_region = NULL;

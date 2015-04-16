@@ -80,14 +80,14 @@ static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 		return -ENOSYS;
 
 	/* check for duplicate frequencies at higher end */
-	while ((num_freqs >= 2 &&
-		freqs[num_freqs - 2] == freqs[num_freqs - 1]) ||
-	       (num_freqs && max_freq < freqs[num_freqs - 1]))
+	while (((num_freqs >= 2) &&
+		(freqs[num_freqs - 2] == freqs[num_freqs - 1])) ||
+	       (num_freqs && (max_freq < freqs[num_freqs - 1])))
 		num_freqs--;
 
 	/* check low end */
-	while ((num_freqs >= 2 && freqs[0] == freqs[1]) ||
-	       (num_freqs && freqs[0] < min_freq)) {
+	while (((num_freqs >= 2) && (freqs[0] == freqs[1])) ||
+	       (num_freqs && (freqs[0] < min_freq))) {
 		freqs++;
 		num_freqs--;
 	}

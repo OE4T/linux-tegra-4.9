@@ -77,7 +77,6 @@ struct nvhost_device_data t18_isp_info = {
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
 	.hw_init		= nvhost_isp_register_isr_v2,
-	.moduleid		= NVHOST_MODULE_ISP,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
 	.serialize		= 1,
 	.push_work_done		= 1,
@@ -282,7 +281,7 @@ int nvhost_init_t186_channel_support(struct nvhost_master *host,
 static void t186_remove_support(struct nvhost_chip_support *op)
 {
 	kfree(op->priv);
-	op->priv = 0;
+	op->priv = NULL;
 }
 
 #include "host1x/host1x_cdma_t186.c"

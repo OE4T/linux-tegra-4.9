@@ -21,17 +21,10 @@
 #include <linux/scatterlist.h>
 #include <linux/dma-attrs.h>
 #include <linux/iommu.h>
+#include <linux/tegra-soc.h>
 #include <asm/dma-iommu.h>
 #include <asm/cacheflush.h>
 #include "gk20a_allocator.h"
-
-/*
- * Amount of the GVA space we actually use is smaller than the available space.
- * The bottom 16GB of the space are used for small pages, the remaining high
- * memory is for large pages.
- */
-#define NV_GMMU_VA_RANGE	37ULL
-#define NV_GMMU_VA_IS_UPPER(x)	((x) >= ((u64)SZ_1G * 16))
 
 #ifdef CONFIG_ARM64
 #define outer_flush_range(a, b)
@@ -342,6 +335,51 @@ static inline int max_vid_physaddr_bits_gk20a(void)
 static inline int max_vaddr_bits_gk20a(void)
 {
 	return 40; /* chopped for area? */
+}
+
+/*
+ * Amount of the GVA space we actually use is smaller than the available space.
+ */
+#define NV_GMMU_VA_RANGE	37
+
+/*
+ * The bottom 16GB of the space are used for small pages, the remaining high
+ * memory is for large pages. On simulation use 2GB for small pages, 2GB for
+ * large pages (if enabled).
+ */
+static inline u64 __nv_gmmu_va_small_page_limit(void)
+{
+	if (tegra_platform_is_linsim())
+		return ((u64)SZ_1G * 2);
+	else
+		return ((u64)SZ_1G * 16);
+}
+
+static inline int __nv_gmmu_va_is_upper(struct vm_gk20a *vm, u64 addr)
+{
+	if (!vm->big_pages)
+		return 0;
+
+	return addr >= __nv_gmmu_va_small_page_limit();
+}
+
+/*
+ * This determines the PTE size for a given alloc. Used by both the GVA space
+ * allocator and the mm core code so that agreement can be reached on how to
+ * map allocations.
+ */
+static inline enum gmmu_pgsz_gk20a __get_pte_size(struct vm_gk20a *vm,
+						  u64 base, u64 size)
+{
+	/*
+	 * Currently userspace is not ready for a true unified address space.
+	 * As a result, even though the allocator supports mixed address spaces
+	 * the address spaces must be treated as separate for now.
+	 */
+	if (__nv_gmmu_va_is_upper(vm, base))
+		return gmmu_page_size_big;
+	else
+		return gmmu_page_size_small;
 }
 
 #if 0 /*related to addr bits above, concern below TBD on which is accurate */

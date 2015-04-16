@@ -1437,7 +1437,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	 * the alignment determined by gmmu_select_page_size().
 	 */
 	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
-		int pgsz_idx = NV_GMMU_VA_IS_UPPER(offset_align) ?
+		int pgsz_idx = __nv_gmmu_va_is_upper(vm, offset_align) ?
 				gmmu_page_size_big : gmmu_page_size_small;
 		if (pgsz_idx > bfr.pgsz_idx) {
 			gk20a_err(d, "%llx buffer pgsz %d, VA pgsz %d",
@@ -2441,6 +2441,13 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	/* note: keep the page sizes sorted lowest to highest here */
 	u32 gmmu_page_sizes[gmmu_nr_page_sizes] = { SZ_4K, big_page_size };
 
+	/*
+	 * Linsim bug: seems like we can't have pushbuffers above 4GB. Easy WAR for sim
+	 * is to just limit the address space to 4GB.
+	 */
+	if (tegra_platform_is_linsim() && aperture_size > SZ_4G)
+		aperture_size = SZ_4G;
+
 	vm->mm = mm;
 
 	vm->va_start = low_hole;
@@ -2483,7 +2490,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	 * remains is allocated to large pages. */
 	small_vma_size = vm->va_limit;
 	if (big_pages) {
-		small_vma_size = (u64)16 << 30;
+		small_vma_size = __nv_gmmu_va_small_page_limit();
 		large_vma_size = vm->va_limit - small_vma_size;
 	}
 
@@ -2698,7 +2705,7 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 			args->pages, args->offset);
 
 	/* determine pagesz idx */
-	pgsz_idx = NV_GMMU_VA_IS_UPPER(args->offset) ?
+	pgsz_idx = __nv_gmmu_va_is_upper(vm, args->offset) ?
 			gmmu_page_size_big : gmmu_page_size_small;
 
 	start_page_nr = (u32)(args->offset >>

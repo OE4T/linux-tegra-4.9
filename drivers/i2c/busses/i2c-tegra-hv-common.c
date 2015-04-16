@@ -38,6 +38,9 @@ static int _hv_i2c_ivc_send(struct tegra_hv_i2c_comm_chan *comm_chan,
 	if (!comm_chan->ivck || !msg || !size)
 		return -EINVAL;
 
+	while (tegra_hv_ivc_channel_notified(comm_chan->ivck))
+		/* Waiting for the channel to be ready */;
+
 	spin_lock_irqsave(&comm_dev->ivck_tx_lock, flags);
 
 	if (!tegra_hv_ivc_can_write(comm_chan->ivck)) {
@@ -122,6 +125,8 @@ static int _hv_i2c_send_msg(struct device *dev,
 	rv = _hv_i2c_ivc_send(comm_chan, msg, total_len);
 	if (rv < 0) {
 		dev_err(dev, "ivc_send failed err %d\n", rv);
+		/* restore channel state because no message was sent */
+		comm_chan->rx_state = I2C_RX_INIT;
 		goto fail; /* Redundant but safe */
 	}
 fail:

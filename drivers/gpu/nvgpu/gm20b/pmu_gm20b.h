@@ -1,7 +1,7 @@
 /*
  * GM20B PMU
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,5 +18,6 @@
 
 void gm20b_init_pmu_ops(struct gpu_ops *gops);
 void gm20b_pmu_load_lsf(struct gk20a *g, u8 falcon_id);
+int gm20b_pmu_init_acr(struct gk20a *g);
 
 #endif /*__PMU_GM20B_H_*/

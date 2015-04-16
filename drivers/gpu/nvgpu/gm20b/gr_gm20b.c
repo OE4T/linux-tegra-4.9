@@ -1103,6 +1103,8 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.detect_sm_arch = gr_gm20b_detect_sm_arch;
 	gops->gr.add_zbc_color = gr_gk20a_add_zbc_color;
 	gops->gr.add_zbc_depth = gr_gk20a_add_zbc_depth;
+	gops->gr.zbc_set_table = gk20a_gr_zbc_set_table;
+	gops->gr.zbc_query_table = gr_gk20a_query_zbc;
 	gops->gr.pagepool_default_size = gr_gm20b_pagepool_default_size;
 	gops->gr.init_ctx_state = gr_gk20a_init_ctx_state;
 	gops->gr.alloc_gr_ctx = gr_gm20b_alloc_gr_ctx;

@@ -62,7 +62,9 @@ enum {
 	TEGRA_VGPU_CMD_CHANNEL_BIND_ZCULL,
 	TEGRA_VGPU_CMD_CACHE_MAINT,
 	TEGRA_VGPU_CMD_SUBMIT_RUNLIST,
-	TEGRA_VGPU_CMD_GET_ZCULL_INFO
+	TEGRA_VGPU_CMD_GET_ZCULL_INFO,
+	TEGRA_VGPU_CMD_ZBC_SET_TABLE,
+	TEGRA_VGPU_CMD_ZBC_QUERY_TABLE
 };
 
 struct tegra_vgpu_connect_params {
@@ -191,6 +193,29 @@ struct tegra_vgpu_zcull_info_params {
 	u32 subregion_count;
 };
 
+#define TEGRA_VGPU_ZBC_COLOR_VALUE_SIZE		4
+#define TEGRA_VGPU_ZBC_TYPE_INVALID		0
+#define TEGRA_VGPU_ZBC_TYPE_COLOR		1
+#define TEGRA_VGPU_ZBC_TYPE_DEPTH		2
+
+struct tegra_vgpu_zbc_set_table_params {
+	u32 color_ds[TEGRA_VGPU_ZBC_COLOR_VALUE_SIZE];
+	u32 color_l2[TEGRA_VGPU_ZBC_COLOR_VALUE_SIZE];
+	u32 depth;
+	u32 format;
+	u32 type;     /* color or depth */
+};
+
+struct tegra_vgpu_zbc_query_table_params {
+	u32 color_ds[TEGRA_VGPU_ZBC_COLOR_VALUE_SIZE];
+	u32 color_l2[TEGRA_VGPU_ZBC_COLOR_VALUE_SIZE];
+	u32 depth;
+	u32 ref_cnt;
+	u32 format;
+	u32 type;             /* color or depth */
+	u32 index_size;       /* [out] size, [in] index */
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -211,6 +236,8 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_runlist_params runlist;
 		struct tegra_vgpu_golden_ctx_params golden_ctx;
 		struct tegra_vgpu_zcull_info_params zcull_info;
+		struct tegra_vgpu_zbc_set_table_params zbc_set_table;
+		struct tegra_vgpu_zbc_query_table_params zbc_query_table;
 	} params;
 };
 

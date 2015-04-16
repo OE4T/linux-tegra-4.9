@@ -588,10 +588,6 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	case NVGPU_GPU_IOCTL_ZBC_SET_TABLE:
 		set_table_args = (struct nvgpu_gpu_zbc_set_table_args *)buf;
 
-		/* not supported for vgpu */
-		if (gk20a_gpu_is_virtual(dev))
-			return -ENOMEM;
-
 		zbc_val = kzalloc(sizeof(struct zbc_entry), GFP_KERNEL);
 		if (zbc_val == NULL)
 			return -ENOMEM;
@@ -616,7 +612,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		if (!err) {
 			err = gk20a_busy(dev);
 			if (!err) {
-				err = gk20a_gr_zbc_set_table(g, &g->gr,
+				err = g->ops.gr.zbc_set_table(g, &g->gr,
 							     zbc_val);
 				gk20a_idle(dev);
 			}
@@ -635,7 +631,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		zbc_tbl->type = query_table_args->type;
 		zbc_tbl->index_size = query_table_args->index_size;
 
-		err = gr_gk20a_query_zbc(g, &g->gr, zbc_tbl);
+		err = g->ops.gr.zbc_query_table(g, &g->gr, zbc_tbl);
 
 		if (!err) {
 			switch (zbc_tbl->type) {

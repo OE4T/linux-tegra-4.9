@@ -661,6 +661,81 @@ static u32 vgpu_gr_get_fbp_en_mask(struct gk20a *g)
 	return fbp_en_mask;
 }
 
+static int vgpu_gr_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
+			   struct zbc_entry *zbc_val)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct tegra_vgpu_cmd_msg msg = {0};
+	struct tegra_vgpu_zbc_set_table_params *p = &msg.params.zbc_set_table;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	msg.cmd = TEGRA_VGPU_CMD_ZBC_SET_TABLE;
+	msg.handle = platform->virt_handle;
+
+	p->type = zbc_val->type;
+	p->format = zbc_val->format;
+	switch (p->type) {
+	case GK20A_ZBC_TYPE_COLOR:
+		memcpy(p->color_ds, zbc_val->color_ds, sizeof(p->color_ds));
+		memcpy(p->color_l2, zbc_val->color_l2, sizeof(p->color_l2));
+		break;
+	case GK20A_ZBC_TYPE_DEPTH:
+		p->depth = zbc_val->depth;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+
+	return (err || msg.ret) ? -ENOMEM : 0;
+}
+
+static int vgpu_gr_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
+			struct zbc_query_params *query_params)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct tegra_vgpu_cmd_msg msg = {0};
+	struct tegra_vgpu_zbc_query_table_params *p =
+					&msg.params.zbc_query_table;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	msg.cmd = TEGRA_VGPU_CMD_ZBC_QUERY_TABLE;
+	msg.handle = platform->virt_handle;
+
+	p->type = query_params->type;
+	p->index_size = query_params->index_size;
+
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	if (err || msg.ret)
+		return -ENOMEM;
+
+	switch (query_params->type) {
+	case GK20A_ZBC_TYPE_COLOR:
+		memcpy(query_params->color_ds, p->color_ds,
+				sizeof(query_params->color_ds));
+		memcpy(query_params->color_l2, p->color_l2,
+				sizeof(query_params->color_l2));
+		break;
+	case GK20A_ZBC_TYPE_DEPTH:
+		query_params->depth = p->depth;
+		break;
+	case GK20A_ZBC_TYPE_INVALID:
+		query_params->index_size = p->index_size;
+		break;
+	default:
+		return -EINVAL;
+	}
+	query_params->ref_cnt = p->ref_cnt;
+	query_params->format = p->format;
+
+	return 0;
+}
+
 static void vgpu_remove_gr_support(struct gr_gk20a *gr)
 {
 	gk20a_dbg_fn("");
@@ -782,4 +857,6 @@ void vgpu_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.get_gpc_tpc_mask = vgpu_gr_get_gpc_tpc_mask;
 	gops->gr.get_max_fbps_count = vgpu_gr_get_max_fbps_count;
 	gops->gr.get_fbp_en_mask = vgpu_gr_get_fbp_en_mask;
+	gops->gr.zbc_set_table = vgpu_gr_add_zbc;
+	gops->gr.zbc_query_table = vgpu_gr_query_zbc;
 }

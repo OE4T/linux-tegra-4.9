@@ -271,7 +271,7 @@ static void submit_work(struct nvhost_job *job)
 			NVHOST_OPCODE_NOOP);
 }
 
-int host1x_channel_set_low_priority(struct nvhost_channel *ch)
+static int host1x_channel_set_low_priority(struct nvhost_channel *ch)
 {
 	struct nvhost_master *host = nvhost_get_host(ch->dev);
 	void __iomem *regs = host->aperture;
@@ -286,7 +286,7 @@ int host1x_channel_set_low_priority(struct nvhost_channel *ch)
 	return 0;
 }
 
-int host1x_channel_update_priority(struct nvhost_job *job)
+static int host1x_channel_update_priority(struct nvhost_job *job)
 {
 	struct nvhost_channel *ch = job->ch;
 	struct nvhost_master *host = nvhost_get_host(ch->dev);

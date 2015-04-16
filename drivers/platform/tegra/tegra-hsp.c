@@ -512,6 +512,13 @@ abort:
 late_initcall(debugfs_init);
 #endif
 
+#define NV(prop) "nvidia," prop
+
+static const struct of_device_id tegra_hsp_of_match[] = {
+	{ .compatible = "nvidia,tegra186-hsp", },
+	{},
+};
+
 int tegra_hsp_init(void)
 {
 	int i;
@@ -522,18 +529,19 @@ int tegra_hsp_init(void)
 	if (hsp_ready())
 		return 0;
 
-	np = of_find_node_by_path("/hsp_top");
+	np = of_find_compatible_node(NULL, NULL,
+		tegra_hsp_of_match[0].compatible);
 	if (!np) {
 		WARN_ON(1);
-		pr_err("tegra-hsp: DT data required.\n");
+		pr_err("tegra-hsp: NV data required.\n");
 		return -EINVAL;
 	}
 
-	ret |= of_property_read_u32(np, "num-SM", &hsp_top.nr_sm);
-	ret |= of_property_read_u32(np, "num-AS", &hsp_top.nr_as);
-	ret |= of_property_read_u32(np, "num-SS", &hsp_top.nr_ss);
-	ret |= of_property_read_u32(np, "num-DB", &hsp_top.nr_db);
-	ret |= of_property_read_u32(np, "num-SI", &hsp_top.nr_si);
+	ret |= of_property_read_u32(np, NV("num-SM"), &hsp_top.nr_sm);
+	ret |= of_property_read_u32(np, NV("num-AS"), &hsp_top.nr_as);
+	ret |= of_property_read_u32(np, NV("num-SS"), &hsp_top.nr_ss);
+	ret |= of_property_read_u32(np, NV("num-DB"), &hsp_top.nr_db);
+	ret |= of_property_read_u32(np, NV("num-SI"), &hsp_top.nr_si);
 
 	if (ret) {
 		pr_err("tegra-hsp: failed to parse HSP config.\n");
@@ -563,6 +571,8 @@ int tegra_hsp_init(void)
 		return -EINVAL;
 	}
 
+	of_node_put(np);
+
 	hsp_top.status = HSP_INIT_OKAY;
 	return 0;
 }
@@ -571,11 +581,6 @@ static int tegra_hsp_probe(struct platform_device *pdev)
 {
 	return tegra_hsp_init();
 }
-
-static const struct of_device_id tegra_hsp_of_match[] = {
-	{ .compatible = "nvidia,tegra186-hsp", },
-	{},
-};
 
 static struct platform_driver tegra_hsp_driver = {
 	.probe	= tegra_hsp_probe,

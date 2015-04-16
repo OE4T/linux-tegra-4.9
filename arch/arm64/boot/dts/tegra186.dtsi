@@ -394,15 +394,16 @@
 		status = "disabled";
 	};
 
-	hsp_top {
+	hsp_top: tegra-hsp {
 		compatible = "nvidia,tegra186-hsp";
-		reg = <0x0 0x3c00000 0x0 0xa0000>;
-		interrupts = <0 176 4>; /* doorbell IRQ for CCPLEX */
-		num-SM = <0x8>;
-		num-AS = <0x2>;
-		num-SS = <0x2>;
-		num-DB = <0x7>;
-		num-SI = <0x8>;
+		reg = <0x0 0x03c00000 0x0 0x000a0000>;
+		interrupts = <0 176 4>;
+		nvidia,num-SM = <0x8>;
+		nvidia,num-AS = <0x2>;
+		nvidia,num-SS = <0x2>;
+		nvidia,num-DB = <0x7>;
+		nvidia,num-SI = <0x8>;
+		status = "okay";
 	};
 
 	chipid {

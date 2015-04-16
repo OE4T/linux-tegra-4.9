@@ -1,0 +1,26 @@
+* NVIDIA Tegra Hardware Synchronization Primitives (HSP) bindings
+
+Tegra HSP unit is designed to support synchronization among processors on the
+SOC for various tasks where shared resources need to be accessed exclusively
+or inter-processor communications support.
+
+Required properties:
+
+- compatible: should be "nvidia,tegra186-hsp"
+
+- reg: base address and length of the HSP aperture
+
+- interrupts: CPU's doorbell interrupt
+
+- nvidia,num-SM: number of shared mailboxes
+
+- nvidia,num-AS: number of arbitrated semaphores
+
+- nvidia,num-SS: number of shared semaphores
+
+- nvidia,num-DB: number of doorbells
+
+- nvidia,num-SI: number of shared interrupts
+
+Symbolic doorbell constants are defined in:
+  <dt-bindings/platform/t186/tegra-hsp.h>

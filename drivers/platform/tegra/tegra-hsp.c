@@ -134,7 +134,7 @@ static irqreturn_t dbell_irq(int irq, void *data)
 			pr_warn("invalid master from HW.\n");
 			continue;
 		}
-		if (info)
+		if (info->handler)
 			info->handler(master, info->data);
 	}
 	spin_unlock(&db_handlers_lock);

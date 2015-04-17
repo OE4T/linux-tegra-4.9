@@ -34,6 +34,23 @@ const struct disp_client *tegra_la_disp_clients_info;
 atomic_t sd_brightness = ATOMIC_INIT(255);
 EXPORT_SYMBOL(sd_brightness);
 
+#ifndef CONFIG_TEGRA_POWERGATE
+bool tegra_powergate_is_powered(int id)
+{
+	return true;
+}
+
+int tegra_powergate_partition(int id)
+{
+	return 0;
+}
+
+int tegra_unpowergate_partition(int id)
+{
+	return 0;
+}
+#endif
+
 int tegra_is_clk_enabled(struct clk *c)
 {
 	return 1;
@@ -54,16 +71,6 @@ void tegra_get_fb2_resource(struct resource *fb2_res)
 }
 
 int tegra_dvfs_set_rate(struct clk *c, unsigned long rate)
-{
-	return 0;
-}
-
-int tegra_powergate_partition(int id)
-{
-	return 0;
-}
-
-int tegra_unpowergate_partition(int id)
 {
 	return 0;
 }

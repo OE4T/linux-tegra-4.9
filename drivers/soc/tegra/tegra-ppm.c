@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2015, NVIDIA CORPORATION. All Rights Reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -25,18 +25,27 @@
 #include <linux/fs.h>
 #include <linux/debugfs.h>
 #include <linux/of.h>
-#include <linux/tegra_ppm.h>
+
+#include <soc/tegra/tegra-ppm.h>
 
 #define for_each_fv_entry(fv, fve) \
 	for (fve = fv->table + fv->size - 1; fve >= fv->table; fve--)
 
 struct fv_relation {
 	struct mutex lock;
-	struct clk *c;
-	int (*lookup_voltage)(struct clk*, long unsigned int);
+
+	/*
+	 * private data for the lookup_voltage() callback
+	 * normally it will be "struct clk*"
+	 */
+	void *c;
+	int (*lookup_voltage)(void*, unsigned long);
 
 	ssize_t max_size;
 	int freq_step;
+
+	unsigned int max_freq;
+	unsigned int min_freq;
 
 	ssize_t size;
 	struct fv_entry {
@@ -67,6 +76,12 @@ struct tegra_ppm {
 
 	struct dentry *debugfs_dir;
 
+#ifdef CONFIG_DEBUG_FS
+	/*
+	 * Used in debug fs:
+	 * set following parameters manually,
+	 * then query total_ma or total_mw.
+	 */
 	struct {
 		s32 temp_c;
 		u32 volt_mv;
@@ -75,27 +90,32 @@ struct tegra_ppm {
 		u32 iddq_ma;
 	} model_query;
 
+	/*
+	 * Used in debug fs:
+	 * set following parameters manually,
+	 * then query ma_limited_hz or mw_limited_hz.
+	 */
 	struct {
 		s32 temp_c;
 		u32 cores;
 		u32 iddq_ma;
 		u32 budget;
 	} cap_query;
+#endif
 };
 
 static int fv_relation_update(struct fv_relation *fv)
 {
 	int ret = 0;
-	unsigned long f, maxf;
+	unsigned int f, maxf, minf;
 	struct fv_entry *fve;
 
 	mutex_lock(&fv->lock);
 
-	maxf = clk_round_rate(fv->c, ULONG_MAX);
-	if (IS_ERR_VALUE(maxf))
-		return -ENODATA;
+	maxf = fv->max_freq;
+	minf = fv->min_freq;
 
-	fv->size = maxf / fv->freq_step + 1;
+	fv->size = (maxf - minf) / fv->freq_step + 1;
 
 	if (fv->size > fv->max_size) {
 		pr_warn("%s: fv->table ought to be bigger (%zu > %zu)\n",
@@ -110,7 +130,8 @@ static int fv_relation_update(struct fv_relation *fv)
 
 		if (fve->voltage_mv < 0) {
 			int mv = (f == maxf ? INT_MAX : fve[1].voltage_mv);
-			pr_warn("%s: failure %d. guessing %dmV for %uHz\n",
+
+			pr_warn("%s: failure %d. guessing %dmV for %dHz\n",
 				__func__, fve->voltage_mv, mv, fve->freq);
 			fve->voltage_mv = mv;
 			ret = -ENODATA;
@@ -125,7 +146,8 @@ static int fv_relation_update(struct fv_relation *fv)
 
 /**
  * fv_relation_create() - build a voltage/frequency table for a clock
- * @c : the subject clock domain
+ * @c : private driver data that can be used by the client in conjunction
+ *      with the lookup_voltage() function pointer.
  * @freq_step : step size between frequency points in Hz
  * @max_size : max number of frequency/voltage entries
  * @lookup_voltage : callback to get the minimium voltage for a frequency
@@ -138,9 +160,9 @@ static int fv_relation_update(struct fv_relation *fv)
  *  success. -%ENOMEM or -%EINVAL for the usual reasons. -%ENODATA if
  *  a call to @lookup_voltage or clk_round_rate fails
  */
-struct fv_relation *fv_relation_create(struct clk *c, int freq_step,
-				       ssize_t max_size, int (*lookup_voltage)(
-					       struct clk *, long unsigned int))
+struct fv_relation *fv_relation_create(void *c, int freq_step,
+		ssize_t max_size, unsigned int max_freq, unsigned int min_freq,
+		int (*lookup_voltage)(void *, unsigned long))
 {
 	int ret = 0;
 	struct fv_relation *result;
@@ -163,6 +185,8 @@ struct fv_relation *fv_relation_create(struct clk *c, int freq_step,
 	result->lookup_voltage = lookup_voltage;
 	result->freq_step = freq_step;
 	result->max_size = max_size;
+	result->max_freq = max_freq;
+	result->min_freq = min_freq;
 	result->table = table;
 
 	ret = fv_relation_update(result);
@@ -191,9 +215,9 @@ EXPORT_SYMBOL_GPL(fv_relation_destroy);
 
 static inline s64 _pow(s64 val, int pwr)
 {
-	s64 retval = 1;
+	s64 retval = val ? 1 : 0;
 
-	while (pwr) {
+	while (val && pwr) {
 		if (pwr & 1)
 			retval *= val;
 		pwr >>= 1;
@@ -407,6 +431,7 @@ unsigned tegra_ppm_get_maxf(struct tegra_ppm *ctx, unsigned int limit,
 			    int units, int temp_c, int cores)
 {
 	unsigned ret;
+
 	mutex_lock(&ctx->lock);
 
 	ret = get_maxf_locked(ctx, limit, units, temp_c, cores);
@@ -536,6 +561,7 @@ static ssize_t ppm_cache_poison(struct file *f, const char __user *buf,
 			    size_t sz, loff_t *off)
 {
 	struct tegra_ppm *ctx = f->f_inode->i_private;
+
 	tegra_ppm_drop_cache(ctx);
 
 	return sz;
@@ -622,6 +648,7 @@ static int ppm_debugfs_init(struct tegra_ppm *ctx,
 		parent = debugfs_create_dir(ctx->name, parent);
 	} else {
 		char buf[32];
+
 		snprintf(buf, sizeof(buf), "ppm.%s", ctx->name);
 		parent = debugfs_create_dir(buf, parent);
 	}
@@ -684,7 +711,8 @@ struct tegra_ppm_params *of_read_tegra_ppm_params(struct device_node *np)
 		return ERR_PTR(-EDOM);
 	}
 
-	n_coeff = of_property_count_u32_elems(np, "nvidia,tegra-ppm-leakage_coeffs");
+	n_coeff = of_property_count_u32_elems(np,
+					"nvidia,tegra-ppm-leakage_coeffs");
 	if (n_coeff <= 0) {
 		pr_warn("%s: missing required property %s\n",
 			__func__, "nvidia,tegra-ppm-leakage_coeffs");
@@ -695,7 +723,8 @@ struct tegra_ppm_params *of_read_tegra_ppm_params(struct device_node *np)
 		return ERR_PTR(-EDOM);
 	}
 
-	n_leak = of_property_count_u32_elems(np, "nvidia,tegra-ppm-leakage_weights");
+	n_leak = of_property_count_u32_elems(np,
+					"nvidia,tegra-ppm-leakage_weights");
 	if ((n_dyn == 1) ? (n_leak > 1) : (n_leak != n_dyn)) {
 		pr_warn("__func__: nvidia,tegra-ppm-leakage_weights required but invalid\n");
 		return ERR_PTR(-EINVAL);

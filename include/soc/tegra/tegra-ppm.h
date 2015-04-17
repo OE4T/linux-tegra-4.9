@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION. All Rights Reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,7 +22,8 @@
 
 struct fv_relation;
 struct fv_relation *fv_relation_create(
-	struct clk *, int, ssize_t, int (*)(struct clk *, long unsigned int));
+	void *, int, ssize_t, unsigned int, unsigned int,
+	int (*)(void *, unsigned long));
 void fv_relation_destroy(struct fv_relation *);
 
 #define TEGRA_PPM_MAX_CORES 4
@@ -51,11 +52,11 @@ struct tegra_ppm_params {
 	s32 leakage_consts_ijk[4][4][4];
 	u32 ijk_scaled;
 
-	u32 leakage_min; /* minimum leakage current */
+	/* minimum leakage current */
+	u32 leakage_min;
 };
 
 struct tegra_ppm;
-struct dt;
 
 struct tegra_ppm_params *of_read_tegra_ppm_params(struct device_node *np);
 

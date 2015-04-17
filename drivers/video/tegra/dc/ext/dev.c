@@ -1245,20 +1245,21 @@ static int tegra_dc_ext_get_cmu_v2(struct tegra_dc_ext_user *user,
 	struct tegra_dc_cmu *cmu;
 	struct tegra_dc_lut *cmu_lut;
 
-	if (custom_value && dc->pdata->cmu)
+	if (custom_value && dc->pdata->cmu) {
 		cmu = dc->pdata->cmu;
+		for (i = 0; i < TEGRA_DC_EXT_LUT_SIZE_1025; i++)
+			args->rgb[i] = cmu->rgb[i];
+	}
+
 	else if (custom_value && !dc->pdata->cmu)
 		return -EACCES;
-	else
+	else {
 		cmu_lut = &dc->cmu;
-
-	args->cmu_enable = dc->pdata->cmu_enable;
-	for (i = 0; i < TEGRA_DC_EXT_LUT_SIZE_1025; i++) {
-		if (custom_value)
-			args->rgb[i] = cmu->rgb[i];
-		else
+		for (i = 0; i < TEGRA_DC_EXT_LUT_SIZE_1025; i++)
 			args->rgb[i] = cmu_lut->rgb[i];
 	}
+
+	args->cmu_enable = dc->pdata->cmu_enable;
 	return 0;
 }
 

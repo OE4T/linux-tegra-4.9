@@ -1331,7 +1331,8 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 		if (!completed)
 			break;
 
-		c->sync->signal_timeline(c->sync);
+		if (c->sync)
+			c->sync->signal_timeline(c->sync);
 
 		gk20a_vm_put_buffers(vm, job->mapped_buffers,
 				job->num_mapped_buffers);

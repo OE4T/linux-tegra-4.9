@@ -74,6 +74,8 @@ struct regulator_linear_range {
  * @disable: Configure the regulator as disabled.
  * @is_enabled: Return 1 if the regulator is enabled, 0 if not.
  *		May also return negative errno.
+ * @post_enable: Post enable call, specially when it is GPIO controlled.
+ * @post_disable: Post disable call, specially when it is GPIO controlled.
  *
  * @set_voltage: Set the voltage for the regulator within the range specified.
  *               The driver should select the voltage closest to min_uV.
@@ -164,6 +166,8 @@ struct regulator_ops {
 	int (*enable) (struct regulator_dev *);
 	int (*disable) (struct regulator_dev *);
 	int (*is_enabled) (struct regulator_dev *);
+	int (*post_enable) (struct regulator_dev *);
+	int (*post_disable) (struct regulator_dev *);
 
 	/* get/set regulator operating mode (defined in consumer.h) */
 	int (*set_mode) (struct regulator_dev *, unsigned int mode);

@@ -690,21 +690,12 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 		const struct fb_videomode *fbmode, bool stereo_mode)
 {
 	struct tegra_dc_mode mode;
-	long h_total, v_total;
 
 	if (!fbmode->pixclock)
 		return -EINVAL;
 
 	memset(&mode, 0, sizeof(mode));
-
-	h_total = fbmode->xres + fbmode->right_margin +
-		fbmode->left_margin + fbmode->hsync_len;
-	v_total = fbmode->yres + fbmode->upper_margin +
-		fbmode->lower_margin + fbmode->vsync_len;
-	mode.pclk = h_total * v_total *
-		(_tegra_dc_calc_refresh(
-		PICOS2KHZ(fbmode->pixclock) * 1000,
-				h_total, v_total) / 1000);
+	mode.pclk = PICOS2KHZ(fbmode->pixclock) * 1000;
 
 	mode.h_sync_width = fbmode->hsync_len;
 	mode.v_sync_width = fbmode->vsync_len;

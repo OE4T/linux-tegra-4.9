@@ -14,6 +14,8 @@ Device supports two regulators OUTP and OUTN. A sub node within the
 -ti,enable-gpio: Regulators are controlled by the input pins. If
    it is connected to GPIO through host system then provide the
    gpio number as per gpio.txt.
+-ti,disable-active-discharge: Boolean, presence of this property
+   will disable active discharge.
 
 Each regulator is defined using the standard binding for regulators.
 

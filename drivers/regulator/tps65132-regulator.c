@@ -46,12 +46,16 @@
 #define TPS65132_VOUT_VMAX		6000000
 #define TPS65132_VOUT_STEP		100000
 
+#define TPS65132_REG_APPS_DISN		BIT(0)
+#define TPS65132_REG_APPS_DISP		BIT(1)
+
 #define TPS65132_REGULATOR_ID_VPOS	0
 #define TPS65132_REGULATOR_ID_VNEG	1
 #define TPS65132_MAX_REGULATORS		2
 
 struct tps65132_regulator_pdata {
 	int enable_gpio;
+	bool disable_active_discharge;
 	struct regulator_init_data *ridata;
 };
 
@@ -63,7 +67,30 @@ struct tps65132_regulator {
 	struct regulator_dev *rdev[TPS65132_MAX_REGULATORS];
 };
 
+static int tps65132_post_enable(struct regulator_dev *rdev)
+{
+	struct tps65132_regulator *tps = rdev_get_drvdata(rdev);
+	int id = rdev_get_id(rdev);
+	unsigned int dis_mask;
+	int ret;
+
+	dis_mask = (id == TPS65132_REGULATOR_ID_VPOS) ?
+			TPS65132_REG_APPS_DISP : TPS65132_REG_APPS_DISN;
+
+	if (tps->reg_pdata[id].disable_active_discharge) {
+		ret = regmap_update_bits(tps->rmap, TPS65132_REG_APPS_DISP_DISN,
+			dis_mask, 0);
+		if (ret < 0) {
+			dev_err(tps->dev,
+				"Reg APPS_DISP_DISN update failed: %d\n", ret);
+			return ret;
+		}
+	}
+	return 0;
+}
+
 static struct regulator_ops tps65132_regulator_ops = {
+	.post_enable = tps65132_post_enable,
 	.list_voltage = regulator_list_voltage_linear,
 	.map_voltage = regulator_map_voltage_linear,
 	.get_voltage_sel = regulator_get_voltage_sel_regmap,
@@ -122,6 +149,9 @@ static int tps65132_get_regulator_dt_data(struct device *dev,
 						"ti,enable-gpio", 0);
 		if (rpdata->enable_gpio == -EPROBE_DEFER)
 			return -EPROBE_DEFER;
+
+		rpdata->disable_active_discharge = of_property_read_bool(rnode,
+						"ti,disable-active-discharge");
 	}
 	return 0;
 }

@@ -89,17 +89,12 @@ static int gk20a_ctrl_prepare_compressible_read(
 	fence.id = args->fence.syncpt_id;
 	fence.value = args->fence.syncpt_value;
 
-	ret = gk20a_busy(g->dev);
-	if (ret)
-		return ret;
-
 	ret = gk20a_prepare_compressible_read(g, args->handle,
 			args->request_compbits, args->offset,
 			args->compbits_hoffset, args->compbits_voffset,
 			args->width, args->height, args->block_height_log2,
 			flags, &fence, &args->valid_compbits,
 			&args->zbc_color, &fence_out);
-	gk20a_idle(g->dev);
 
 	if (ret)
 		return ret;

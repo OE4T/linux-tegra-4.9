@@ -312,7 +312,7 @@ fail:
 	return err;
 }
 
-static int panel_sim_disable(void)
+static int panel_sim_disable(struct device *dev)
 {
 	if (gpio_is_valid(panel_sim_pdata.dsi_panel_rst_gpio))
 		gpio_set_value(panel_sim_pdata.dsi_panel_rst_gpio, 0);

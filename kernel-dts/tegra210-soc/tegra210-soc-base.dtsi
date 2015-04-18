@@ -761,6 +761,11 @@
 			status = "disabled";
 		};
 
+		vi-bypass {
+			compatible = "nvidia,tegra210-vi-bypass";
+			status = "okay";
+		};
+
 		isp@54600000 {
 			compatible = "nvidia,tegra210-isp";
 			power-domains = <&ve_pd>;

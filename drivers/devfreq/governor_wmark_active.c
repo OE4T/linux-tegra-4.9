@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -233,33 +233,44 @@ static int devfreq_watermark_event_handler(struct devfreq *df,
 			unsigned int event, void *wmark_type)
 {
 	int ret = 0;
-	struct wmark_gov_info *wmarkinfo = df->data;
 
 	switch (event) {
 	case DEVFREQ_GOV_START:
-		devfreq_watermark_start(df);
-		wmarkinfo = df->data;
-		update_watermarks(df, wmarkinfo->freqlist[0]);
+	{
+		struct devfreq_dev_status dev_stat;
+		ret = df->profile->get_dev_status(df->dev.parent, &dev_stat);
+		if (ret < 0)
+			break;
+
+		ret = devfreq_watermark_start(df);
+		if (ret < 0)
+			break;
+
+		update_watermarks(df, dev_stat.current_frequency);
 		break;
+	}
 	case DEVFREQ_GOV_STOP:
 		devfreq_watermark_debug_stop(df);
 		break;
 	case DEVFREQ_GOV_SUSPEND:
 		devfreq_monitor_suspend(df);
 		break;
-
 	case DEVFREQ_GOV_RESUME:
-		wmarkinfo = df->data;
-		update_watermarks(df, wmarkinfo->freqlist[0]);
+	{
+		struct devfreq_dev_status dev_stat;
+		ret = df->profile->get_dev_status(df->dev.parent, &dev_stat);
+		if (ret < 0)
+			break;
+
+		update_watermarks(df, dev_stat.current_frequency);
 		devfreq_monitor_resume(df);
 		break;
-
+	}
 	case DEVFREQ_GOV_WMARK:
 		mutex_lock(&df->lock);
 		update_devfreq(df);
 		mutex_unlock(&df->lock);
 		break;
-
 	default:
 		break;
 	}

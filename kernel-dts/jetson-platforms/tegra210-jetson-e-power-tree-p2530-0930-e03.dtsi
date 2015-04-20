@@ -93,8 +93,6 @@
 					regulator-disable-ramp-delay = <610>;
 					regulator-ramp-delay = <100000>;
 					regulator-ramp-delay-scale = <200>;
-					regulator-min-microvolt = <900000>;
-					regulator-max-microvolt = <900000>;
 				};
 
 				ldo5 {

@@ -85,8 +85,9 @@ static void gr_gm20b_cb_size_default(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 
-	gr->attrib_cb_default_size =
-		gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v();
+	if (!gr->attrib_cb_default_size)
+		gr->attrib_cb_default_size =
+			gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v();
 	gr->alpha_cb_default_size =
 		gr_gpc0_ppc0_cbm_alpha_cb_size_v_default_v();
 }

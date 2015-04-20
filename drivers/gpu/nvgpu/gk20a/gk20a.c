@@ -1518,6 +1518,7 @@ static int gk20a_probe(struct platform_device *dev)
 					S_IRUGO|S_IWUSR,
 					platform->debugfs,
 					&gk20a->mm.disable_bigpage);
+	gr_gk20a_debugfs_init(gk20a);
 	gk20a_pmu_debugfs_init(dev);
 	gk20a_cde_debugfs_init(dev);
 #endif

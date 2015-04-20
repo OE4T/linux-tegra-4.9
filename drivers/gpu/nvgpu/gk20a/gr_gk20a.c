@@ -21,6 +21,7 @@
 #include <linux/mm.h>		/* for totalram_pages */
 #include <linux/scatterlist.h>
 #include <linux/tegra-soc.h>
+#include <linux/debugfs.h>
 #include <uapi/linux/nvgpu.h>
 #include <linux/vmalloc.h>
 #include <linux/dma-mapping.h>
@@ -54,6 +55,7 @@
 #include "dbg_gpu_gk20a.h"
 #include "debug_gk20a.h"
 #include "semaphore_gk20a.h"
+#include "platform_gk20a.h"
 
 #define BLK_SIZE (256)
 
@@ -6909,8 +6911,9 @@ static void gr_gk20a_cb_size_default(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 
-	gr->attrib_cb_default_size =
-		gr_gpc0_ppc0_cbm_cfg_size_default_v();
+	if (!gr->attrib_cb_default_size)
+		gr->attrib_cb_default_size =
+			gr_gpc0_ppc0_cbm_cfg_size_default_v();
 	gr->alpha_cb_default_size =
 		gr_gpc0_ppc0_cbm_cfg2_size_default_v();
 }
@@ -7264,6 +7267,18 @@ static int gr_gk20a_dump_gr_status_regs(struct gk20a *g,
 		gk20a_readl(g, gr_pri_gpc0_tpc0_tpccs_tpc_exception_r()));
 	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPC0_TPC0_TPCCS_TPC_EXCEPTION_EN: 0x%x\n",
 		gk20a_readl(g, gr_pri_gpc0_tpc0_tpccs_tpc_exception_en_r()));
+	return 0;
+}
+
+int gr_gk20a_debugfs_init(struct gk20a *g)
+{
+	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
+
+	g->debugfs_gr_default_attrib_cb_size =
+		debugfs_create_u32("gr_default_attrib_cb_size",
+				   S_IRUGO|S_IWUSR, platform->debugfs,
+				   &g->gr.attrib_cb_default_size);
+
 	return 0;
 }
 

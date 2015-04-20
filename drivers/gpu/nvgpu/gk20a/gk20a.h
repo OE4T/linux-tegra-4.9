@@ -472,6 +472,7 @@ struct gk20a {
 	struct dentry *debugfs_gr_idle_timeout_default;
 	struct dentry *debugfs_bypass_smmu;
 	struct dentry *debugfs_disable_bigpage;
+	struct dentry *debugfs_gr_default_attrib_cb_size;
 #endif
 	struct gk20a_ctxsw_ucode_info ctxsw_ucode_info;
 

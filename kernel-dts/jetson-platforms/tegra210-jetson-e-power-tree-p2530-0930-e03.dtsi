@@ -161,7 +161,7 @@
 			regulator-min-microvolt = <3000000>;
 			regulator-max-microvolt = <3000000>;
 			gpio = <&gpio TEGRA_GPIO(I, 3) 0>;
-			regulator-always-on;
+			regulator-boot-on;
 			enable-active-high;
 			regulator-enable-ramp-delay = <232>;
 		};

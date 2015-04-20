@@ -426,8 +426,9 @@ static struct sid_to_oids sid_to_oids[] = {
 	},
 	{
 		.sid	= TEGRA_SWGROUP_VIC,
-		.noids	= 2,
+		.noids	= 3,
 		.oid = {
+			VICSRD1,
 			VICSRD,
 			VICSWR,
 		},
@@ -453,8 +454,9 @@ static struct sid_to_oids sid_to_oids[] = {
 	},
 	{
 		.sid	= TEGRA_SWGROUP_NVDEC,
-		.noids	= 2,
+		.noids	= 3,
 		.oid	= {
+			NVDECSRD1,
 			NVDECSRD,
 			NVDECSWR,
 		},

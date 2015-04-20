@@ -1687,6 +1687,12 @@
 		status = "disabled";
 	};
 
+        fiq_debugger {
+		compatible = "nvidia,fiq-debugger";
+		use-console-port;
+		interrupts = <1 12 0x0108>;
+        };
+
 	ptm {
 		compatible = "nvidia,ptm";
 		reg = <0x0 0x72010000 0x0 0x1000>, /* funnel_major */

@@ -225,6 +225,13 @@ struct gk20a_mmu_level {
 	size_t entry_size;
 };
 
+/* map/unmap batch state */
+struct vm_gk20a_mapping_batch
+{
+	bool gpu_l2_flushed;
+	bool need_tlb_invalidate;
+};
+
 struct vm_gk20a {
 	struct mm_gk20a *mm;
 	struct gk20a_as_share *as_share; /* as_share this represents */
@@ -257,6 +264,10 @@ struct vm_gk20a {
 	u64 handle;
 #endif
 	u32 gmmu_page_sizes[gmmu_nr_page_sizes];
+
+	/* if non-NULL, kref_put will use this batch when
+	   unmapping. Must hold vm->update_gmmu_lock. */
+	struct vm_gk20a_mapping_batch *kref_put_batch;
 };
 
 struct gk20a;
@@ -486,7 +497,8 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			u32 flags,
 			int rw_flag,
 			bool clear_ctags,
-			bool sparse);
+			bool sparse,
+			struct vm_gk20a_mapping_batch *batch);
 
 void gk20a_gmmu_unmap(struct vm_gk20a *vm,
 		u64 vaddr,
@@ -499,7 +511,8 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 			int pgsz_idx,
 			bool va_allocated,
 			int rw_flag,
-			bool sparse);
+			bool sparse,
+			struct vm_gk20a_mapping_batch *batch);
 
 struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf);
 void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
@@ -514,7 +527,8 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 		bool user_mapped,
 		int rw_flag,
 		 u64 buffer_offset,
-		 u64 mapping_size);
+		 u64 mapping_size,
+		 struct vm_gk20a_mapping_batch *mapping_batch);
 
 int gk20a_vm_get_compbits_info(struct vm_gk20a *vm,
 			       u64 mapping_gva,
@@ -532,7 +546,8 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 /* unmap handle from kernel */
 void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset);
 
-void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer);
+void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer,
+			   struct vm_gk20a_mapping_batch *batch);
 
 /* get reference to all currently mapped buffers */
 int gk20a_vm_get_buffers(struct vm_gk20a *vm,
@@ -576,13 +591,25 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 			struct nvgpu_as_free_space_args *args);
 int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
 			  struct channel_gk20a *ch);
+
+/* batching eliminates redundant cache flushes and invalidates */
+void gk20a_vm_mapping_batch_start(struct vm_gk20a_mapping_batch *batch);
+void gk20a_vm_mapping_batch_finish(
+	struct vm_gk20a *vm, struct vm_gk20a_mapping_batch *batch);
+/* called when holding vm->update_gmmu_lock */
+void gk20a_vm_mapping_batch_finish_locked(
+	struct vm_gk20a *vm, struct vm_gk20a_mapping_batch *batch);
+
+
+/* Note: batch may be NULL if map op is not part of a batch */
 int gk20a_vm_map_buffer(struct vm_gk20a *vm,
 			int dmabuf_fd,
 			u64 *offset_align,
 			u32 flags, /* NVGPU_AS_MAP_BUFFER_FLAGS_ */
 			int kind,
 			u64 buffer_offset,
-			u64 mapping_size);
+			u64 mapping_size,
+			struct vm_gk20a_mapping_batch *batch);
 
 int gk20a_init_vm(struct mm_gk20a *mm,
 		struct vm_gk20a *vm,
@@ -592,7 +619,10 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 		bool big_pages,
 		char *name);
 void gk20a_deinit_vm(struct vm_gk20a *vm);
-int gk20a_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset);
+
+/* Note: batch may be NULL if unmap op is not part of a batch */
+int gk20a_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset,
+			  struct vm_gk20a_mapping_batch *batch);
 void gk20a_get_comptags(struct device *dev, struct dma_buf *dmabuf,
 			struct gk20a_comptags *comptags);
 dma_addr_t gk20a_mm_gpuva_to_iova_base(struct vm_gk20a *vm, u64 gpu_vaddr);

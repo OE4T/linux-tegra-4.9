@@ -66,7 +66,8 @@ static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 				u32 flags,
 				int rw_flag,
 				bool clear_ctags,
-				bool sparse)
+				bool sparse,
+				struct vm_gk20a_mapping_batch *batch)
 {
 	int err = 0;
 	struct device *d = dev_from_vm(vm);
@@ -130,7 +131,8 @@ static void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 				int pgsz_idx,
 				bool va_allocated,
 				int rw_flag,
-				bool sparse)
+				bool sparse,
+				struct vm_gk20a_mapping_batch *batch)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
@@ -182,7 +184,7 @@ static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 	while (node) {
 		mapped_buffer =
 			container_of(node, struct mapped_buffer_node, node);
-		gk20a_vm_unmap_locked(mapped_buffer);
+		gk20a_vm_unmap_locked(mapped_buffer, NULL);
 		node = rb_first(&vm->mapped_buffers);
 	}
 

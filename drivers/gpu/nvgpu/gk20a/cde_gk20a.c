@@ -952,7 +952,8 @@ __releases(&cde_app->mutex)
 				 NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				 compbits_kind, NULL, true,
 				 gk20a_mem_flag_none,
-				 map_offset, map_size);
+				 map_offset, map_size,
+				 NULL);
 	if (!map_vaddr) {
 		dma_buf_put(compbits_buf);
 		err = -EINVAL;

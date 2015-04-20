@@ -151,8 +151,8 @@ static int gk20a_as_ioctl_map_buffer_ex(
 				   &args->offset, args->flags,
 				   args->kind,
 				   args->buffer_offset,
-				   args->mapping_size
-				   );
+				   args->mapping_size,
+				   NULL);
 }
 
 static int gk20a_as_ioctl_map_buffer(
@@ -163,7 +163,7 @@ static int gk20a_as_ioctl_map_buffer(
 	return gk20a_vm_map_buffer(as_share->vm, args->dmabuf_fd,
 				   &args->o_a.offset,
 				   args->flags, NV_KIND_DEFAULT,
-				   0, 0);
+				   0, 0, NULL);
 	/* args->o_a.offset will be set if !err */
 }
 
@@ -172,7 +172,86 @@ static int gk20a_as_ioctl_unmap_buffer(
 		struct nvgpu_as_unmap_buffer_args *args)
 {
 	gk20a_dbg_fn("");
-	return gk20a_vm_unmap_buffer(as_share->vm, args->offset);
+	return gk20a_vm_unmap_buffer(as_share->vm, args->offset, NULL);
+}
+
+static int gk20a_as_ioctl_map_buffer_batch(
+	struct gk20a_as_share *as_share,
+	struct nvgpu_as_map_buffer_batch_args *args)
+{
+	struct gk20a *g = as_share->vm->mm->g;
+	u32 i;
+	int err = 0;
+
+	struct nvgpu_as_unmap_buffer_args __user *user_unmap_args =
+		(struct nvgpu_as_unmap_buffer_args __user *)(uintptr_t)
+		args->unmaps;
+	struct nvgpu_as_map_buffer_ex_args __user *user_map_args =
+		(struct nvgpu_as_map_buffer_ex_args __user *)(uintptr_t)
+		args->maps;
+
+	struct vm_gk20a_mapping_batch batch;
+
+	gk20a_dbg_fn("");
+
+	if (args->num_unmaps > g->gpu_characteristics.map_buffer_batch_limit ||
+	    args->num_maps > g->gpu_characteristics.map_buffer_batch_limit)
+		return -EINVAL;
+
+	gk20a_vm_mapping_batch_start(&batch);
+
+	for (i = 0; i < args->num_unmaps; ++i) {
+		struct nvgpu_as_unmap_buffer_args unmap_args;
+
+		if (copy_from_user(&unmap_args, &user_unmap_args[i],
+				   sizeof(unmap_args))) {
+			err = -EFAULT;
+			break;
+		}
+
+		err = gk20a_vm_unmap_buffer(as_share->vm, unmap_args.offset,
+					    &batch);
+		if (err)
+			break;
+	}
+
+	if (err) {
+		gk20a_vm_mapping_batch_finish(as_share->vm, &batch);
+
+		args->num_unmaps = i;
+		args->num_maps = 0;
+		return err;
+	}
+
+	for (i = 0; i < args->num_maps; ++i) {
+		struct nvgpu_as_map_buffer_ex_args map_args;
+		memset(&map_args, 0, sizeof(map_args));
+
+		if (copy_from_user(&map_args, &user_map_args[i],
+				   sizeof(map_args))) {
+			err = -EFAULT;
+			break;
+		}
+
+		err = gk20a_vm_map_buffer(
+			as_share->vm, map_args.dmabuf_fd,
+			&map_args.offset, map_args.flags,
+			map_args.kind,
+			map_args.buffer_offset,
+			map_args.mapping_size,
+			&batch);
+		if (err)
+			break;
+	}
+
+	gk20a_vm_mapping_batch_finish(as_share->vm, &batch);
+
+	if (err)
+		args->num_maps = i;
+	/* note: args->num_unmaps will be unmodified, which is ok
+	 * since all unmaps are done */
+
+	return err;
 }
 
 static int gk20a_as_ioctl_get_va_regions(
@@ -359,6 +438,10 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case NVGPU_AS_IOCTL_MAP_BUFFER_COMPBITS:
 		err = gk20a_as_ioctl_map_buffer_compbits(as_share,
 				(struct nvgpu_as_map_buffer_compbits_args *)buf);
+		break;
+	case NVGPU_AS_IOCTL_MAP_BUFFER_BATCH:
+		err = gk20a_as_ioctl_map_buffer_batch(as_share,
+				(struct nvgpu_as_map_buffer_batch_args *)buf);
 		break;
 	default:
 		dev_dbg(dev_from_gk20a(g), "unrecognized as ioctl: 0x%x", cmd);

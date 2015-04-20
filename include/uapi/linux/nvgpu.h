@@ -172,7 +172,10 @@ struct nvgpu_gpu_characteristics {
 	__u32 lts_per_ltc;
 	__u32 cbc_cache_line_size;
 	__u32 cbc_comptags_per_line;
-	__u32 reserved2;
+
+	/* MAP_BUFFER_BATCH: the upper limit for num_unmaps and
+	 * num_maps */
+	__u32 map_buffer_batch_limit;
 
 	/* Notes:
 	   - This struct can be safely appended with new fields. However, always
@@ -1031,6 +1034,16 @@ struct nvgpu_as_get_va_regions_args {
 	__u32 reserved;
 };
 
+struct nvgpu_as_map_buffer_batch_args {
+	__u64 unmaps; /* ptr to array of nvgpu_unmap_buffer_args */
+	__u64 maps;   /* ptr to array of nvgpu_as_map_buffer_ex_args */
+	__u32 num_unmaps; /* in: number of unmaps
+			   * out: on error, number of successful unmaps */
+	__u32 num_maps;   /* in: number of maps
+			   * out: on error, number of successful maps */
+	__u64 reserved;
+};
+
 #define NVGPU_AS_IOCTL_BIND_CHANNEL \
 	_IOWR(NVGPU_AS_IOCTL_MAGIC, 1, struct nvgpu_as_bind_channel_args)
 #define NVGPU32_AS_IOCTL_ALLOC_SPACE \
@@ -1051,9 +1064,11 @@ struct nvgpu_as_get_va_regions_args {
 	_IOWR(NVGPU_AS_IOCTL_MAGIC, 9, struct nvgpu_as_get_buffer_compbits_info_args)
 #define NVGPU_AS_IOCTL_MAP_BUFFER_COMPBITS \
 	_IOWR(NVGPU_AS_IOCTL_MAGIC, 10, struct nvgpu_as_map_buffer_compbits_args)
+#define NVGPU_AS_IOCTL_MAP_BUFFER_BATCH	\
+	_IOWR(NVGPU_AS_IOCTL_MAGIC, 11, struct nvgpu_as_map_buffer_batch_args)
 
 #define NVGPU_AS_IOCTL_LAST            \
-	_IOC_NR(NVGPU_AS_IOCTL_MAP_BUFFER_COMPBITS)
+	_IOC_NR(NVGPU_AS_IOCTL_MAP_BUFFER_BATCH)
 #define NVGPU_AS_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_as_map_buffer_ex_args)
 

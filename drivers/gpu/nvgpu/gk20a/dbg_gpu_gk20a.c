@@ -828,7 +828,8 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 			0,
 			0,
 			0,
-			args->mapping_size);
+			args->mapping_size,
+			NULL);
 	if (err)
 		return err;
 
@@ -839,7 +840,7 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 	virt_addr_hi = u64_hi32(args->offset);
 	/* but check anyway */
 	if (args->offset + virt_size > SZ_4G) {
-		gk20a_vm_unmap_buffer(&g->mm.pmu.vm, args->offset);
+		gk20a_vm_unmap_buffer(&g->mm.pmu.vm, args->offset, NULL);
 		return -EINVAL;
 	}
 
@@ -881,7 +882,7 @@ static int gk20a_perfbuf_unmap(struct dbg_session_gk20a *dbg_s,
 			perf_pmasys_mem_block_valid_false_f() |
 			perf_pmasys_mem_block_target_f(0));
 
-	gk20a_vm_unmap_buffer(&g->mm.pmu.vm, args->offset);
+	gk20a_vm_unmap_buffer(&g->mm.pmu.vm, args->offset, NULL);
 
 	return 0;
 }

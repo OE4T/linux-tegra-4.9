@@ -787,7 +787,34 @@ static void gk20a_vm_unmap_locked_kref(struct kref *ref)
 {
 	struct mapped_buffer_node *mapped_buffer =
 		container_of(ref, struct mapped_buffer_node, ref);
-	gk20a_vm_unmap_locked(mapped_buffer);
+	gk20a_vm_unmap_locked(mapped_buffer, mapped_buffer->vm->kref_put_batch);
+}
+
+void gk20a_vm_mapping_batch_start(struct vm_gk20a_mapping_batch *mapping_batch)
+{
+	memset(mapping_batch, 0, sizeof(*mapping_batch));
+	mapping_batch->gpu_l2_flushed = false;
+	mapping_batch->need_tlb_invalidate = false;
+}
+
+void gk20a_vm_mapping_batch_finish_locked(
+	struct vm_gk20a *vm, struct vm_gk20a_mapping_batch *mapping_batch)
+{
+	 /* hanging kref_put batch pointer? */
+	WARN_ON(vm->kref_put_batch == mapping_batch);
+
+	if (mapping_batch->need_tlb_invalidate) {
+		struct gk20a *g = gk20a_from_vm(vm);
+		g->ops.mm.tlb_invalidate(vm);
+	}
+}
+
+void gk20a_vm_mapping_batch_finish(struct vm_gk20a *vm,
+				   struct vm_gk20a_mapping_batch *mapping_batch)
+{
+	mutex_lock(&vm->update_gmmu_lock);
+	gk20a_vm_mapping_batch_finish_locked(vm, mapping_batch);
+	mutex_unlock(&vm->update_gmmu_lock);
 }
 
 void gk20a_vm_put_buffers(struct vm_gk20a *vm,
@@ -795,19 +822,25 @@ void gk20a_vm_put_buffers(struct vm_gk20a *vm,
 				 int num_buffers)
 {
 	int i;
+	struct vm_gk20a_mapping_batch batch;
 
 	mutex_lock(&vm->update_gmmu_lock);
+	gk20a_vm_mapping_batch_start(&batch);
+	vm->kref_put_batch = &batch;
 
 	for (i = 0; i < num_buffers; ++i)
 		kref_put(&mapped_buffers[i]->ref,
 			 gk20a_vm_unmap_locked_kref);
 
+	vm->kref_put_batch = NULL;
+	gk20a_vm_mapping_batch_finish_locked(vm, &batch);
 	mutex_unlock(&vm->update_gmmu_lock);
 
 	nvgpu_free(mapped_buffers);
 }
 
-static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
+static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
+				struct vm_gk20a_mapping_batch *batch)
 {
 	struct device *d = dev_from_vm(vm);
 	int retries = 10000; /* 50 ms */
@@ -840,7 +873,10 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 	mapped_buffer->user_mapped--;
 	if (mapped_buffer->user_mapped == 0)
 		vm->num_user_mapped_buffers--;
+
+	vm->kref_put_batch = batch;
 	kref_put(&mapped_buffer->ref, gk20a_vm_unmap_locked_kref);
+	vm->kref_put_batch = NULL;
 
 	mutex_unlock(&vm->update_gmmu_lock);
 }
@@ -1131,7 +1167,8 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			u32 flags,
 			int rw_flag,
 			bool clear_ctags,
-			bool sparse)
+			bool sparse,
+			struct vm_gk20a_mapping_batch *batch)
 {
 	int err = 0;
 	bool allocated = false;
@@ -1177,7 +1214,10 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 		goto fail_validate;
 	}
 
-	g->ops.mm.tlb_invalidate(vm);
+	if (!batch)
+		g->ops.mm.tlb_invalidate(vm);
+	else
+		batch->need_tlb_invalidate = true;
 
 	return map_offset;
 fail_validate:
@@ -1194,7 +1234,8 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 			int pgsz_idx,
 			bool va_allocated,
 			int rw_flag,
-			bool sparse)
+			bool sparse,
+			struct vm_gk20a_mapping_batch *batch)
 {
 	int err = 0;
 	struct gk20a *g = gk20a_from_vm(vm);
@@ -1230,9 +1271,16 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 	 * for gmmu ptes.  note the positioning of this relative to any smmu
 	 * unmapping (below). */
 
-	gk20a_mm_l2_flush(g, true);
-
-	g->ops.mm.tlb_invalidate(vm);
+	if (!batch) {
+		gk20a_mm_l2_flush(g, true);
+		g->ops.mm.tlb_invalidate(vm);
+	} else {
+		if (!batch->gpu_l2_flushed) {
+			gk20a_mm_l2_flush(g, true);
+			batch->gpu_l2_flushed = true;
+		}
+		batch->need_tlb_invalidate = true;
+	}
 }
 
 static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
@@ -1308,7 +1356,8 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 			bool user_mapped,
 			int rw_flag,
 			u64 buffer_offset,
-			u64 mapping_size)
+			u64 mapping_size,
+			struct vm_gk20a_mapping_batch *batch)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct gk20a_allocator *ctag_allocator = &g->gr.comp_tags;
@@ -1509,7 +1558,8 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 					bfr.ctag_offset,
 					flags, rw_flag,
 					clear_ctags,
-					false);
+					false,
+					batch);
 	if (!map_offset)
 		goto clean_up;
 
@@ -1727,8 +1777,9 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 				0, /* ctag_offset */
 				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				gk20a_mem_flag_read_only,
-				false,
-				false);
+				false, /* clear_ctags */
+				false, /* sparse */
+				NULL); /* mapping_batch handle */
 
 		if (!mapped_buffer->ctag_map_win_addr) {
 			mutex_unlock(&vm->update_gmmu_lock);
@@ -1764,7 +1815,10 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 				0, /* page size index = 0 i.e. SZ_4K */
 				0, /* kind */
 				0, /* ctag_offset */
-				flags, rw_flag, false, false);
+				flags, rw_flag,
+				false, /* clear_ctags */
+				false, /* sparse */
+				NULL); /* mapping_batch handle */
 	mutex_unlock(&vm->update_gmmu_lock);
 	if (!vaddr) {
 		gk20a_err(dev_from_vm(vm), "failed to allocate va space");
@@ -1930,7 +1984,8 @@ void gk20a_gmmu_unmap(struct vm_gk20a *vm,
 			0, /* page size 4K */
 			true, /*va_allocated */
 			rw_flag,
-			false);
+			false,
+			NULL);
 	mutex_unlock(&vm->update_gmmu_lock);
 }
 
@@ -2378,7 +2433,8 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 }
 
 /* NOTE! mapped_buffers lock must be held */
-void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
+void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer,
+			   struct vm_gk20a_mapping_batch *batch)
 {
 	struct vm_gk20a *vm = mapped_buffer->vm;
 	struct gk20a *g = vm->mm->g;
@@ -2392,7 +2448,8 @@ void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 				     0,       /* page size 4k */
 				     true,    /* va allocated */
 				     gk20a_mem_flag_none,
-				     false);  /* not sparse */
+				     false,   /* not sparse */
+				     batch);  /* batch handle */
 	}
 
 	g->ops.mm.gmmu_unmap(vm,
@@ -2402,7 +2459,8 @@ void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer)
 		mapped_buffer->va_allocated,
 		gk20a_mem_flag_none,
 		mapped_buffer->va_node ?
-		  mapped_buffer->va_node->sparse : false);
+		  mapped_buffer->va_node->sparse : false,
+		batch);
 
 	gk20a_dbg(gpu_dbg_map, "as=%d pgsz=%d gv=0x%x,%08x own_mem_ref=%d",
 		   vm_aspace_id(vm),
@@ -2479,7 +2537,7 @@ static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 	while (node) {
 		mapped_buffer =
 			container_of(node, struct mapped_buffer_node, node);
-		gk20a_vm_unmap_locked(mapped_buffer);
+		gk20a_vm_unmap_locked(mapped_buffer, NULL);
 		node = rb_first(&vm->mapped_buffers);
 	}
 
@@ -2776,7 +2834,8 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 					 args->flags,
 					 gk20a_mem_flag_none,
 					 false,
-					 true);
+					 true,
+					 NULL);
 		if (!map_offset) {
 			mutex_unlock(&vm->update_gmmu_lock);
 			gk20a_bfree(vma, vaddr_start);
@@ -2841,7 +2900,8 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 					va_node->pgsz_idx,
 					true,
 					gk20a_mem_flag_none,
-					true);
+					true,
+					NULL);
 		kfree(va_node);
 	}
 	mutex_unlock(&vm->update_gmmu_lock);
@@ -2960,7 +3020,8 @@ int gk20a_vm_map_buffer(struct vm_gk20a *vm,
 			u32 flags, /*NVGPU_AS_MAP_BUFFER_FLAGS_*/
 			int kind,
 			u64 buffer_offset,
-			u64 mapping_size)
+			u64 mapping_size,
+			struct vm_gk20a_mapping_batch *batch)
 {
 	int err = 0;
 	struct dma_buf *dmabuf;
@@ -2986,7 +3047,8 @@ int gk20a_vm_map_buffer(struct vm_gk20a *vm,
 			flags, kind, NULL, true,
 			gk20a_mem_flag_none,
 			buffer_offset,
-			mapping_size);
+			mapping_size,
+			batch);
 
 	*offset_align = ret_va;
 	if (!ret_va) {
@@ -2997,11 +3059,12 @@ int gk20a_vm_map_buffer(struct vm_gk20a *vm,
 	return err;
 }
 
-int gk20a_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset)
+int gk20a_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset,
+			  struct vm_gk20a_mapping_batch *batch)
 {
 	gk20a_dbg_fn("");
 
-	gk20a_vm_unmap_user(vm, offset);
+	gk20a_vm_unmap_user(vm, offset, batch);
 	return 0;
 }
 

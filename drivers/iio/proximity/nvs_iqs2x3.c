@@ -32,7 +32,7 @@
 #include <linux/nvs_proximity.h>
 
 
-#define IQS_DRIVER_VERSION		(2)
+#define IQS_DRIVER_VERSION		(3)
 #define IQS_VENDOR			"Azoteq"
 #define IQS_NAME			"iqs2x3"
 #define IQS_NAME_IQS253			"iqs253"
@@ -79,106 +79,51 @@ static unsigned short iqs_i2c_addrs[] = {
 	0x47,
 };
 
-struct iqs_wr {
-	u8 len;
-	u8 reg;
-	u8 val[20];
-	u8 msk[20];
+static unsigned char iqs263_wr_stream[] = {
+	2, 0x09, 0x00, 0x00, /* data */
+		 0x18, 0x40, /* mask */
+	0 /* end - done - exit */
 };
 
-static struct iqs_wr iqs263_wr_stream[] = {
-	{ 2, 0x09, { 0x00, 0x00, },
-		   { 0x18, 0x40, } },
-	{ }, /* end - done - exit */
+static unsigned char iqs253_wr_stream[] = {
+	16, 0xC4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x04, /* data */
+		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x04, /* mask */
+	0, /* end - done - exit */
 };
 
-static struct iqs_wr iqs253_wr_stream[] = {
+static unsigned char iqs263_wr_events[] = {
+	2, 0x09, 0x00, 0x40, /* data */
+		 0x18, 0x40, /* mask */
+	0 /* end - done - exit */
+};
+
+static unsigned char iqs253_wr_events[] = {
+	16, 0xC4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x00, /* data */
+		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x04, /* mask */
+	0 /* end - done - exit */
+};
+
+static unsigned char iqs263_wr_reseed[] = {
+	1, 0x09, 0x08, /* data */
+		 0x18, /* mask */
+	0 /* end - done - exit */
+};
+
+static unsigned char iqs253_wr_reseed[] = {
+	14, 0xC4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x08, /* data */
+		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x08, /* mask */
+	0 /* end - done - exit */
+};
+
+static unsigned char iqs263_wr_disable[] = {
+	3, 0x09, 0x00, 0x00, 0xC0, /* data */
+		 0xFF, 0xFF, 0xFF, /* mask */
+	0 /* end - done - exit */
+};
+
+static unsigned char iqs253_wr_disable[] = {
 	/* TODO */
-	{ }, /* end - done - exit */
-};
-
-static struct iqs_wr iqs263_wr_events[] = {
-	{ 2, 0x09, { 0x00, 0x40, },
-		   { 0x18, 0x40, } },
-	{ }, /* end - done - exit */
-};
-
-static struct iqs_wr iqs253_wr_events[] = {
-	/* TODO */
-	{ }, /* end - done - exit */
-};
-
-static struct iqs_wr iqs263_wr_reseed[] = {
-	{ 1, 0x09, { 0x08, },
-		   { 0x18, } },
-	{ }, /* end - done - exit */
-};
-
-static struct iqs_wr iqs253_wr_reseed[] = {
-	/* TODO */
-	{ }, /* end - done - exit */
-};
-
-static struct iqs_wr iqs263_wr_en_prox[] = {
-	{ 1, 0x09, { 0x10, },
-		   { 0x18, } },
-	{ -1,}, /* write to HW */
-	{ 1, 0x09, { 0x08, },
-		   { 0x18, } },
-	{ }, /* end - done - exit */
-};
-
-static struct iqs_wr iqs253_wr_en_prox[] = {
-	/* TODO */
-	{ }, /* end - done - exit */
-};
-
-static struct iqs_wr iqs263_wr_en_touch[] = {
-	{ 1, 0x09, { 0x10, },
-		   { 0xFF, } },
-	{ -1,}, /* write to HW */
-	{ 1, 0x09, { 0x08, },
-		   { 0xFF, } },
-	{ }, /* end - done - exit */
-};
-
-static struct iqs_wr iqs253_wr_en_touch[] = {
-	/* TODO */
-	{ }, /* end - done - exit */
-};
-
-static struct iqs_wr iqs263_wr_init[] = {
-	{ 5, 0x09, { 0x40, 0x03, 0x00, 0x01, 0x03, },
-		   { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, } },
-	{ 1, 0x0D, { 0x09, },
-		   { 0xFF, } },
-	{ 1, 0x01, { 0x00, },
-		   { 0xFF, } },
-	{ 5, 0x07, { 0x36, 0x10, 0x20, 0x2A, 0x44, },
-		   { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, } },
-	{ 8, 0x0A, { 0x08, 0x10, 0x10, 0x02, 0x04, 0x08, 0x14, 0x3F, },
-		   { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, } },
-	{ 3, 0x0B, { 0x00, 0x64, 0x80, },
-		   { 0xFF, 0xFF, 0xFF, } },
-	{ }, /* end - done - exit */
-};
-
-
-static struct iqs_wr iqs253_wr_init[] = {
-	/* TODO */
-	{ }, /* end - done - exit */
-};
-
-
-static struct iqs_wr iqs263_wr_disable[] = {
-	{ 3, 0x09, { 0x00, 0x00, 0xC0, },
-		   { 0xFF, 0xFF, 0xFF, } },
-	{ }, /* end - done - exit */
-};
-
-static struct iqs_wr iqs253_wr_disable[] = {
-	/* TODO */
-	{ }, /* end - done - exit */
+	0 /* end - done - exit */
 };
 
 struct iqs_hal {
@@ -298,6 +243,8 @@ static const struct iqs_hal const iqs253_hal_tbl[] = {
 	{ 0xC4, IQS253_RL_SETTINGS, IQS253_BI_SETTINGS, true, },
 };
 
+#define IQS_DT_INIT_N			(128) /* max DT init bytes */
+#define IQS_DT_EN_N			(64) /* max DT enable bytes */
 #define IQS263_MSG_N			(14)
 #define IQS253_MSG_N			(9)
 
@@ -317,15 +264,16 @@ struct iqs_hal_bit {
 	struct iqs_hal_iom devinf_id;
 	struct iqs_hal_iom sysflag_reset;
 	struct iqs_hal_iom event_mode;
+	struct iqs_hal_iom ati_partial;
 	struct iqs_hal_iom active_ch;
 	struct iqs_hal_iom multi_comp;
 	struct iqs_hal_iom multi_sens;
-	struct iqs_hal_iom touch_prox;
-	struct iqs_hal_iom touch_touch;
-	struct iqs_hal_iom count_prox;
-	struct iqs_hal_iom count_touch;
-	struct iqs_hal_iom thresh_prox;
-	struct iqs_hal_iom thresh_touch;
+	struct iqs_hal_iom touch_prx;
+	struct iqs_hal_iom touch_tch;
+	struct iqs_hal_iom count_prx;
+	struct iqs_hal_iom count_tch;
+	struct iqs_hal_iom thresh_prx;
+	struct iqs_hal_iom thresh_tch;
 };
 
 static const struct iqs_hal_bit iqs263_hal_bit = {
@@ -340,8 +288,13 @@ static const struct iqs_hal_bit iqs263_hal_bit = {
 		.mask			= 0x80,
 	},
 	.event_mode			= {
-		.hal_i			= 7,
+		.hal_i			= 9,
 		.offset			= 1,
+		.mask			= 0x40,
+	},
+	.ati_partial			= {
+		.hal_i			= 9,
+		.offset			= 0,
 		.mask			= 0x40,
 	},
 	.active_ch			= {
@@ -359,32 +312,32 @@ static const struct iqs_hal_bit iqs263_hal_bit = {
 		.offset			= 0,
 		.mask			= 0x30,
 	},
-	.touch_prox			= {
+	.touch_prx			= {
 		.hal_i			= 3,
 		.offset			= 0,
 		.mask			= 0x01,
 	},
-	.touch_touch			= {
+	.touch_tch			= {
 		.hal_i			= 3,
 		.offset			= 0,
 		.mask			= 0xE0,
 	},
-	.count_prox			= {
+	.count_prx			= {
 		.hal_i			= 4,
 		.offset			= 0,
 		.mask			= 1,
 	},
-	.count_touch			= {
+	.count_tch			= {
 		.hal_i			= 4,
 		.offset			= 4,
 		.mask			= 3,
 	},
-	.thresh_prox			= {
+	.thresh_prx			= {
 		.hal_i			= 10,
 		.offset			= 0,
 		.mask			= 1,
 	},
-	.thresh_touch			= {
+	.thresh_tch			= {
 		.hal_i			= 10,
 		.offset			= 1,
 		.mask			= 3,
@@ -402,22 +355,22 @@ static const struct iqs_hal_bit iqs253_hal_bit = {
 		.offset			= 0,
 		.mask			= 0x20,
 	},
-	.thresh_prox			= {
+	.thresh_prx			= {
 		.hal_i			= 10,
 		.offset			= 0,
 		.mask			= 1,
 	},
-	.thresh_touch			= {
+	.thresh_tch			= {
 		.hal_i			= 10,
 		.offset			= 1,
 		.mask			= 3,
 	},
-	.count_prox			= {
+	.count_prx			= {
 		.hal_i			= 4,
 		.offset			= 0,
 		.mask			= 1,
 	},
-	.count_touch			= {
+	.count_tch			= {
 		.hal_i			= 4,
 		.offset			= 4,
 		.mask			= 3,
@@ -457,13 +410,16 @@ struct iqs_state {
 	const struct iqs_hal *hal_tbl;	/* HAL register table */
 	unsigned int hal_tbl_n;		/* HAL register table count */
 	const struct iqs_hal_bit *hal_bit;
-	struct iqs_wr *wr_disable;
-	struct iqs_wr *wr_init;
-	struct iqs_wr *wr_stream;
-	struct iqs_wr *wr_events;
-	struct iqs_wr *wr_en_prox;
-	struct iqs_wr *wr_en_touch;
-	struct iqs_wr *wr_reseed;
+	unsigned char *wr_disable;
+	unsigned char *wr_stream;
+	unsigned char *wr_events;
+	unsigned char *wr_reseed;
+	unsigned char dt_init263[IQS_DT_INIT_N];
+	unsigned char dt_init253[IQS_DT_INIT_N];
+	unsigned char dt_en_prx263[IQS_DT_EN_N];
+	unsigned char dt_en_tch263[IQS_DT_EN_N];
+	unsigned char dt_en_prx253[IQS_DT_EN_N];
+	unsigned char dt_en_tch253[IQS_DT_EN_N];
 	u8 rc[IQS_BI_N];		/* register cache */
 };
 
@@ -725,41 +681,74 @@ static int iqs_i2c_write(struct iqs_state *st, int hal_i, u16 len)
 	return iqs_i2c(st);
 };
 
-static int iqs_write(struct iqs_state *st, struct iqs_wr *wr)
+static int iqs_wr(struct iqs_state *st, unsigned char *wr)
 {
-	unsigned int i = 0;
+	u8 ndx = 0;
+	unsigned int i;
 	unsigned int j;
 	unsigned int k;
-	unsigned int b;
+	unsigned char len;
+	unsigned char reg;
+	int hal_i;
 	int ret = 0;
 
 	if (!st->hal_tbl_n)
 		/* exit if HAL not initialized */
 		return -EINVAL;
 
-	while (wr[i].len) {
-		if (wr[i].len == 0xFF) {
+	i = 0;
+	while (wr[i] != 0) { /* while a length */
+		len = wr[i];
+		i++;
+		if (len == 0xFF) {
+			/* if length == FF then do an I2C write now */
 			ret |= iqs_i2c(st);
+			if (wr[i])
+				mdelay(wr[i]);
 			i++;
 			continue;
 		}
 
-		for (j = st->hal_tbl_n - 1; j > 0; j--) {
-			if (st->hal_tbl[j].reg == wr[i].reg) {
-				if (st->hal_tbl[j].len >= wr[i].len) {
-					b = st->hal_tbl[j].ndx + 1;
-					for (k = 0; k < wr[i].len; k++) {
-						st->rc[b + k] &= ~wr[i].msk[k];
-						st->rc[b + k] |= wr[i].val[k];
-					}
-					ret |= iqs_i2c_wr(st, j, wr[i].len);
+		/* get the register */
+		reg = wr[i];
+		i++;
+		/* find the register and reg cache index in the hal table */
+		for (hal_i = st->hal_tbl_n - 1; hal_i > 0; hal_i--) {
+			if (st->hal_tbl[hal_i].reg == reg) {
+				if (st->hal_tbl[hal_i].len >= len) {
+					ndx = st->hal_tbl[hal_i].ndx + 1;
+					break;
 				}
 			}
 		}
-		i++;
+		if (hal_i) {
+			/* if register and index found, mask data to cache */
+			for (j = 0; j < len; j++) {
+				k = ndx + j;
+				st->rc[k] &= ~wr[i + len];
+				st->rc[k] |= wr[i];
+				i++;
+			}
+			ret |= iqs_i2c_wr(st, hal_i, len);
+			i += len;
+		} else {
+			/* if register not found we're lost and need to exit */
+			return -EFAULT;
+		}
 	}
+
 	return ret;
 };
+
+static int iqs_write(struct iqs_state *st, unsigned char *wr)
+{
+	int ret;
+
+	ret = iqs_wr(st, wr);
+	if (!ret)
+		ret = iqs_i2c(st);
+	return ret;
+}
 
 static void iqs_op_rd(struct iqs_state *st)
 {
@@ -767,21 +756,30 @@ static void iqs_op_rd(struct iqs_state *st)
 	bool prox_full = false;
 	unsigned int i;
 
-	st->op_read_reg[0] = st->hal_bit->multi_comp.hal_i;
-	st->op_read_reg[1] = st->hal_bit->sysflag_reset.hal_i;
-	st->op_read_n = 2;
+	st->op_read_n = 0;
+	/* add multi_comp if ATI partial is enabled */
+	i = st->hal_tbl[st->hal_bit->ati_partial.hal_i].ndx + 1;
+	i += st->hal_bit->ati_partial.offset;
+	if (st->rc[i] & st->hal_bit->ati_partial.mask) {
+		st->op_read_reg[st->op_read_n] = st->hal_bit->multi_comp.hal_i;
+		st->op_read_n++;
+	}
+	/* always test for device reset */
+	st->op_read_reg[st->op_read_n] = st->hal_bit->sysflag_reset.hal_i;
+	st->op_read_n++;
+	/* read either binary data or full counts */
 	for (i = 0; i < IQS_DEV_N; i++) {
 		if (st->enabled & (1 << i)) {
 			if (st->prox[i].proximity_binary_hw) {
 				if (!prox_binary) {
 					st->op_read_reg[st->op_read_n] =
-						 st->hal_bit->touch_prox.hal_i;
+						 st->hal_bit->touch_prx.hal_i;
 					prox_binary = true;
 					st->op_read_n++;
 				}
 			} else if (!prox_full) {
 				st->op_read_reg[st->op_read_n] =
-						 st->hal_bit->count_prox.hal_i;
+						 st->hal_bit->count_prx.hal_i;
 				prox_full = true;
 				st->op_read_n++;
 			}
@@ -792,19 +790,24 @@ static void iqs_op_rd(struct iqs_state *st)
 
 static int iqs_en(struct iqs_state *st, int snsr_id)
 {
-	struct iqs_wr *wr;
+	unsigned char *wr;
 	int ret;
 
-	if (snsr_id == IQS_DEV_PROX)
-		wr = st->wr_en_prox;
-	else if (snsr_id == IQS_DEV_TOUCH)
-		wr = st->wr_en_touch;
-	else
+	if (snsr_id == IQS_DEV_PROX) {
+		if (st->dev_id == IQS_DEVID_IQS253)
+			wr = st->dt_en_prx253;
+		else
+			wr = st->dt_en_prx263;
+	} else if (snsr_id == IQS_DEV_TOUCH) {
+		if (st->dev_id == IQS_DEVID_IQS253)
+			wr = st->dt_en_tch253;
+		else
+			wr = st->dt_en_tch263;
+	} else {
 		return -EINVAL;
+	}
 
 	ret = iqs_write(st, wr);
-	if (!ret)
-		ret = iqs_i2c(st);
 	if (!ret)
 		ret = nvs_proximity_enable(&st->prox[snsr_id]);
 	return ret;
@@ -812,21 +815,24 @@ static int iqs_en(struct iqs_state *st, int snsr_id)
 
 static int iqs_init(struct iqs_state *st)
 {
-	int ret;
+	unsigned char *wr = st->dt_init263;
+	int ret = 0;
 
-	ret = iqs_write(st, st->wr_init);
-	if (!ret)
-		ret = iqs_i2c(st);
+	if (st->dev_id == IQS_DEVID_IQS253)
+		wr = st->dt_init253;
+	if (st->hal_tbl_n)
+		/* only if HAL initialized */
+		ret = iqs_write(st, wr);
 	return ret;
 }
 
 static int iqs_dis(struct iqs_state *st)
 {
-	int ret;
+	int ret = 0;
 
-	ret = iqs_write(st, st->wr_disable);
-	if (!ret)
-		ret = iqs_i2c(st);
+	if (st->hal_tbl_n)
+		/* only if HAL initialized */
+		ret = iqs_write(st, st->wr_disable);
 	return ret;
 }
 
@@ -835,13 +841,11 @@ static int iqs_pm(struct iqs_state *st, bool enable)
 	int ret = 0;
 
 	if (enable) {
-		nvs_vregs_enable(&st->i2c->dev, st->vreg,
-				 ARRAY_SIZE(iqs_vregs));
-		if (ret)
+		ret = nvs_vregs_enable(&st->i2c->dev, st->vreg,
+				       ARRAY_SIZE(iqs_vregs));
+		if (ret > 0)
 			mdelay(IQS_HW_DELAY_MS);
-		if (st->hal_tbl_n)
-			/* only if HAL initialized */
-			ret = iqs_init(st);
+		ret = iqs_init(st);
 	} else {
 		ret = nvs_vregs_sts(st->vreg, ARRAY_SIZE(iqs_vregs));
 		if ((ret < 0) || (ret == ARRAY_SIZE(iqs_vregs))) {
@@ -893,12 +897,12 @@ static int iqs_rd_touch(struct iqs_state *st, s64 ts)
 	int ret;
 
 	if (st->prox[IQS_DEV_TOUCH].proximity_binary_hw) {
-		i = st->hal_tbl[st->hal_bit->touch_touch.hal_i].ndx + 1;
-		i += st->hal_bit->touch_touch.offset;
-		hw = !!(st->rc[i] & st->hal_bit->touch_touch.mask);
+		i = st->hal_tbl[st->hal_bit->touch_tch.hal_i].ndx + 1;
+		i += st->hal_bit->touch_tch.offset;
+		hw = !!(st->rc[i] & st->hal_bit->touch_tch.mask);
 	} else {
-		i = st->hal_tbl[st->hal_bit->count_touch.hal_i].ndx + 1;
-		i += st->hal_bit->count_touch.offset;
+		i = st->hal_tbl[st->hal_bit->count_tch.hal_i].ndx + 1;
+		i += st->hal_bit->count_tch.offset;
 		hw = (u16)st->rc[i];
 	}
 	if (st->sts & NVS_STS_SPEW_DATA)
@@ -911,20 +915,20 @@ static int iqs_rd_touch(struct iqs_state *st, s64 ts)
 	return ret;
 }
 
-static int iqs_rd_prox(struct iqs_state *st, s64 ts)
+static int iqs_rd_proximity(struct iqs_state *st, s64 ts)
 {
 	u16 hw;
 	unsigned int i;
 	int ret;
 
 	if (st->prox[IQS_DEV_PROX].proximity_binary_hw) {
-		i = st->hal_tbl[st->hal_bit->touch_prox.hal_i].ndx + 1;
-		i += st->hal_bit->touch_prox.offset;
+		i = st->hal_tbl[st->hal_bit->touch_prx.hal_i].ndx + 1;
+		i += st->hal_bit->touch_prx.offset;
 		/* reverse polarity for Android (0=close 1=far) */
-		hw = !(st->rc[i] & st->hal_bit->touch_prox.mask);
+		hw = !(st->rc[i] & st->hal_bit->touch_prx.mask);
 	} else {
-		i = st->hal_tbl[st->hal_bit->count_prox.hal_i].ndx + 1;
-		i += st->hal_bit->count_prox.offset;
+		i = st->hal_tbl[st->hal_bit->count_prx.hal_i].ndx + 1;
+		i += st->hal_bit->count_prx.offset;
 		hw = (u16)st->rc[i];
 	}
 	if (st->sts & NVS_STS_SPEW_DATA)
@@ -964,51 +968,62 @@ static int iqs_rd(struct iqs_state *st)
 		st->op_i = 0;
 		if (!st->stream)
 			/* enter stream mode on first I2C transaction */
-			iqs_write(st, st->wr_stream);
+			iqs_wr(st, st->wr_stream);
 	}
 	if ((st->op_i == st->op_read_n - 1) && !st->stream)
-		iqs_write(st, st->wr_events); /* event mode at end of reads */
+		iqs_wr(st, st->wr_events); /* event mode at end of reads */
 	if (st->reseed) {
-		iqs_write(st, st->wr_reseed);
+		iqs_wr(st, st->wr_reseed);
 		st->reseed = false;
 	}
 	iqs_i2c_rd(st, st->op_read_reg[st->op_i], 0);
 	ret = iqs_i2c(st);
 #endif /* IQS_I2C_M_NO_RD_ACK */
 	if (!ret) {
-		i = st->hal_tbl[st->hal_bit->sysflag_reset.hal_i].ndx + 1;
-		if (st->rc[i] & st->hal_bit->sysflag_reset.mask) {
-			iqs_err(st);
-			iqs_init(st);
-			for (i = 0; i < IQS_DEV_N; i++) {
-				if (st->enabled & (1 << i))
-					iqs_en(st, i);
+		/* test for device reset */
+		i = st->hal_bit->sysflag_reset.hal_i;
+		if (st->op_read_reg[st->op_i] == i) {
+			i = st->hal_tbl[i].ndx + 1;
+			i += st->hal_bit->sysflag_reset.offset;
+			if (st->rc[i] & st->hal_bit->sysflag_reset.mask) {
+				iqs_err(st);
+				iqs_init(st);
+				for (i = 0; i < IQS_DEV_N; i++) {
+					if (st->enabled & (1 << i))
+						iqs_en(st, i);
+				}
+				iqs_op_rd(st);
+				return RET_POLL_NEXT;
 			}
-			iqs_op_rd(st);
-			return RET_POLL_NEXT;
 		}
 
-		/* check if reseed needed */
-		ch = st->hal_tbl[st->hal_bit->active_ch.hal_i].ndx + 1;
-		for (i = 0; i < IQS_CH_N; i++) {
-			if (st->rc[ch] & (1 << i)) {
-				mc = st->hal_bit->multi_comp.hal_i;
-				mc = st->hal_tbl[mc].ndx + 1;
-				mc += i;
-				mc = st->rc[mc];
-				mc &= st->hal_bit->multi_comp.mask;
-				if (i)
-					k = IQS_DEV_TOUCH;
-				else
-					k = IQS_DEV_PROX;
-				if (mc > st->cfg[k].thresh_hi)
-					st->reseed = true;
+		i = st->hal_bit->multi_comp.hal_i;
+		if (st->op_read_reg[st->op_i] == i) {
+			/* check if reseed needed */
+			i = st->hal_bit->active_ch.hal_i;
+			ch = st->hal_tbl[i].ndx + 1;
+			for (i = 0; i < IQS_CH_N; i++) {
+				if (st->rc[ch] & (1 << i)) {
+					mc = st->hal_bit->multi_comp.hal_i;
+					mc = st->hal_tbl[mc].ndx + 1;
+					mc += i;
+					mc = st->rc[mc];
+					mc &= st->hal_bit->multi_comp.mask;
+					if (i)
+						k = IQS_DEV_TOUCH;
+					else
+						k = IQS_DEV_PROX;
+					if (mc > st->cfg[k].thresh_hi) {
+						st->reseed = true;
+						break;
+					}
+				}
 			}
 		}
 		/* read data */
 		ts = iqs_get_time_ns();
 		if (st->enabled & (1 << IQS_DEV_PROX))
-			ret |= iqs_rd_prox(st, ts);
+			ret |= iqs_rd_proximity(st, ts);
 		if (st->enabled & (1 << IQS_DEV_TOUCH))
 			ret |= iqs_rd_touch(st, ts);
 	}
@@ -1158,7 +1173,7 @@ static int iqs_enable_os(void *client, int snsr_id, int enable)
 {
 	struct iqs_state *st = (struct iqs_state *)client;
 
-	if (st->os)
+	if (st->os || st->sts & NVS_STS_SHUTDOWN)
 		return iqs_enable(st, snsr_id, enable);
 
 	if (enable < 0)
@@ -1191,13 +1206,13 @@ static	int iqs_thresh(void *client, int snsr_id, int thresh)
 	int ret;
 
 	if (snsr_id == IQS_DEV_TOUCH) {
-		hal_i = st->hal_bit->thresh_touch.hal_i;
-		i = st->hal_bit->thresh_touch.offset + 1;
-		n = i + st->hal_bit->thresh_touch.mask;
+		hal_i = st->hal_bit->thresh_tch.hal_i;
+		i = st->hal_bit->thresh_tch.offset + 1;
+		n = i + st->hal_bit->thresh_tch.mask;
 	} else {
-		hal_i = st->hal_bit->thresh_prox.hal_i;
-		i = st->hal_bit->thresh_prox.offset + 1;
-		n = i + st->hal_bit->thresh_prox.mask;
+		hal_i = st->hal_bit->thresh_prx.hal_i;
+		i = st->hal_bit->thresh_prx.offset + 1;
+		n = i + st->hal_bit->thresh_prx.mask;
 	}
 	for (; i < n; i++) {
 		st->rc[st->hal_tbl[hal_i].ndx + i] = thresh & 0xFF;
@@ -1320,6 +1335,35 @@ static int iqs_nvs_write(void *client, int snsr_id, unsigned int nvs)
 	return ret;
 }
 
+static ssize_t iqs_nvs_dbg_db(struct iqs_state *st, char *buf, ssize_t t,
+			      unsigned char *db)
+{
+	unsigned int i;
+	unsigned int j;
+	unsigned int n;
+
+	i = 0;
+	while (db[i]) {
+		n = db[i];
+		i++;
+		if (n == 0xFF) {
+			t += sprintf(buf + t, "flush write and mdelay=%hhu\n",
+				     db[i]);
+			i++;
+			continue;
+		}
+
+		t += sprintf(buf + t, "len=%x reg=%x data/mask=", n, db[i]);
+		i++;
+		for (j = 0; j < n; j++)
+			t += sprintf(buf + t, "%x/%x ",
+				     db[i + j], db[i + j + n]);
+		t += sprintf(buf + t, "\n");
+		i += (n << 1);
+	}
+	return t;
+}
+
 static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 {
 	struct iqs_state *st = (struct iqs_state *)client;
@@ -1347,6 +1391,18 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 		     st->prox[IQS_DEV_PROX].proximity_binary_hw);
 	t += sprintf(buf + t, "touch_proximity_binary_hw=%x\n",
 		     st->prox[IQS_DEV_TOUCH].proximity_binary_hw);
+	t += sprintf(buf + t, "IQS263 initialization:\n");
+	t += iqs_nvs_dbg_db(st, buf, t, st->dt_init263);
+	t += sprintf(buf + t, "IQS263 proximity enable:\n");
+	t += iqs_nvs_dbg_db(st, buf, t, st->dt_en_prx263);
+	t += sprintf(buf + t, "IQS263 touch enable:\n");
+	t += iqs_nvs_dbg_db(st, buf, t, st->dt_en_tch263);
+	t += sprintf(buf + t, "IQS253 initialization:\n");
+	t += iqs_nvs_dbg_db(st, buf, t, st->dt_init253);
+	t += sprintf(buf + t, "IQS253 proximity enable:\n");
+	t += iqs_nvs_dbg_db(st, buf, t, st->dt_en_prx253);
+	t += sprintf(buf + t, "IQS253 touch enable:\n");
+	t += iqs_nvs_dbg_db(st, buf, t, st->dt_en_tch253);
 	return t;
 }
 
@@ -1367,12 +1423,10 @@ static int iqs_suspend(struct device *dev)
 	int ret = 0;
 
 	st->sts |= NVS_STS_SUSPEND;
-	if (st->os) {
-		if (st->nvs) {
-			for (i = 0; i < IQS_DEV_N; i++) {
-				if (st->nvs_st[i])
-					ret |= st->nvs->suspend(st->nvs_st[i]);
-			}
+	if (st->nvs) {
+		for (i = 0; i < IQS_DEV_N; i++) {
+			if (st->nvs_st[i])
+				ret |= st->nvs->suspend(st->nvs_st[i]);
 		}
 	}
 	if (st->sts & NVS_STS_SPEW_MSG)
@@ -1387,15 +1441,19 @@ static int iqs_resume(struct device *dev)
 	unsigned int i;
 	int ret = 0;
 
-	if (st->os) {
-		if (st->nvs) {
-			for (i = 0; i < IQS_DEV_N; i++) {
-				if (st->nvs_st[i])
-					ret |= st->nvs->resume(st->nvs_st[i]);
-			}
+	if (st->nvs) {
+		for (i = 0; i < IQS_DEV_N; i++) {
+			if (st->nvs_st[i])
+				ret |= st->nvs->resume(st->nvs_st[i]);
 		}
 	}
 	st->sts &= ~NVS_STS_SUSPEND;
+	if (!st->os) {
+		for (i = 0; i < IQS_DEV_N; i++) {
+			if (!(st->enabled & (1 << i)))
+				iqs_enable(st, i, 1);
+		}
+	}
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s err=%d\n", __func__, ret);
 	return 0;
@@ -1483,11 +1541,8 @@ static int iqs_id_dev(struct iqs_state *st, const char *name)
 		BUG_ON(IQS263_MSG_N != ARRAY_SIZE(iqs263_hal_tbl));
 		iqs_id_part(st, IQS_NAME_IQS263);
 		st->wr_disable = iqs263_wr_disable;
-		st->wr_init = iqs263_wr_init;
 		st->wr_stream = iqs263_wr_stream;
 		st->wr_events = iqs263_wr_events;
-		st->wr_en_prox = iqs263_wr_en_prox;
-		st->wr_en_touch = iqs263_wr_en_touch;
 		st->wr_reseed = iqs263_wr_reseed;
 		break;
 
@@ -1498,11 +1553,8 @@ static int iqs_id_dev(struct iqs_state *st, const char *name)
 		st->hal_tbl_n = ARRAY_SIZE(iqs253_hal_tbl);
 		st->hal_bit = &iqs253_hal_bit;
 		st->wr_disable = iqs253_wr_disable;
-		st->wr_init = iqs253_wr_init;
 		st->wr_stream = iqs253_wr_stream;
 		st->wr_events = iqs253_wr_events;
-		st->wr_en_prox = iqs253_wr_en_prox;
-		st->wr_en_touch = iqs253_wr_en_touch;
 		st->wr_reseed = iqs253_wr_reseed;
 		break;
 
@@ -1553,6 +1605,7 @@ static const char *iqs_sensor_cfg_name[] = {
 
 static const struct sensor_cfg iqs_cfg_dflt = {
 	.snsr_id			= SENSOR_TYPE_PROXIMITY,
+	.no_suspend			= true,
 	.ch_n				= 1,
 	.ch_sz				= 4,
 	.part				= IQS_NAME,
@@ -1575,6 +1628,48 @@ static const struct sensor_cfg iqs_cfg_dflt = {
 	.thresh_lo			= IQS_PROX_THRESHOLD,
 	.thresh_hi			= IQS_MULTI_THRESHOLD,
 };
+
+static int iqs_of_dt_db(struct iqs_state *st, struct device_node *dn,
+			char *name, unsigned char *dt_db, int db_n)
+{
+	char str[16];
+	const char *charp;
+	unsigned int limit = IQS_MSG_N;
+	unsigned int i;
+	int n;
+	int lenp;
+	int ret;
+
+	n = 0;
+	for (i = 0; i < limit; i++) {
+		ret = sprintf(str, "%s_%u", name, i);
+		if (ret <= 0) {
+			dev_err(&st->i2c->dev, "%s sprintf(%s_%u)\n",
+				__func__, name, i);
+			return -ENODEV;
+		}
+
+		charp = of_get_property(dn, str, &lenp);
+		if (charp) {
+			if (lenp < (db_n - n)) {
+				memcpy(&dt_db[n], charp, lenp);
+				if (dt_db[n] == 0xFF)
+					/* flush is done so limit extended */
+					limit = i + IQS_MSG_N;
+				n += lenp;
+			} else {
+				dev_err(&st->i2c->dev, "%s ERR: NOMEM @ %s\n",
+					__func__, str);
+				return -ENOMEM;
+			}
+		} else {
+			dt_db[n] = 0; /* terminate byte stream */
+			break;
+		}
+	}
+
+	return 0;
+}
 
 static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 {
@@ -1609,7 +1704,22 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 		st->sar_assert_pol = !!st->sar_assert_pol;
 		st->gpio_rdy = of_get_named_gpio(dn, "gpio_rdy", 0);
 		st->gpio_sar = of_get_named_gpio(dn, "gpio_sar", 0);
+		ret = iqs_of_dt_db(st, dn, "263init", st->dt_init263,
+				   sizeof(st->dt_init263));
+		ret |= iqs_of_dt_db(st, dn, "263en_prox", st->dt_en_prx263,
+				    sizeof(st->dt_en_prx263));
+		ret |= iqs_of_dt_db(st, dn, "263en_touch", st->dt_en_tch263,
+				    sizeof(st->dt_en_tch263));
+		ret |= iqs_of_dt_db(st, dn, "253init", st->dt_init253,
+				    sizeof(st->dt_en_tch253));
+		ret |= iqs_of_dt_db(st, dn, "253en_prox", st->dt_en_prx253,
+				    sizeof(st->dt_en_tch253));
+		ret |= iqs_of_dt_db(st, dn, "253en_touch", st->dt_en_tch253,
+				    sizeof(st->dt_en_tch253));
+		if (ret)
+			return ret;
 	}
+
 	if (gpio_is_valid(st->gpio_rdy)) {
 		ret = gpio_request(st->gpio_rdy, IQS_NAME);
 		if (ret) {
@@ -1714,6 +1824,10 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	INIT_DELAYED_WORK(&st->dw, iqs_work);
 	if (client->irq) {
 		irqflags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT;
+		for (i = 0; i < IQS_DEV_N; i++) {
+			if (st->cfg[i].no_suspend)
+				irqflags |= IRQF_NO_SUSPEND;
+		}
 		ret = request_threaded_irq(client->irq, NULL, iqs_irq_thread,
 					   irqflags, IQS_NAME, st);
 		if (ret) {
@@ -1727,8 +1841,17 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (st->os) {
 		iqs_disable(st, -1);
 	} else {
-		iqs_enable(st, IQS_DEV_PROX, 1);
-		iqs_enable(st, IQS_DEV_TOUCH, 1);
+		ret = iqs_enable(st, IQS_DEV_PROX, 1);
+		ret |= iqs_enable(st, IQS_DEV_TOUCH, 1);
+		if (ret) {
+			iqs_err(st);
+			/* if an error then switch to OS controlled */
+			dev_err(&client->dev,
+				"%s auto enable ERR=%d (now OS controlled)\n",
+				__func__, ret);
+			st->os = 3;
+			iqs_disable(st, -1);
+		}
 	}
 	dev_info(&client->dev, "%s done\n", __func__);
 	return 0;

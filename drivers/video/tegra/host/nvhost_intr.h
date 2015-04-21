@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -69,10 +69,7 @@ struct nvhost_intr;
 struct nvhost_intr_syncpt {
 	struct nvhost_intr *intr;
 	u8 id;
-	struct {
-		spinlock_t s;
-		struct mutex m;
-	} lock;
+	struct mutex lock;
 	struct list_head wait_head;
 	char thresh_irq_name[12];
 	struct work_struct work;

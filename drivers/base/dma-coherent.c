@@ -606,6 +606,7 @@ int dma_release_from_coherent_dev(struct device *dev, size_t size, void *vaddr,
 
 		unsigned long flags;
 
+		pageno = (vaddr - mem_addr) >> PAGE_SHIFT;
 		if (DMA_ATTR_ALLOC_EXACT_SIZE & attrs)
 			count = PAGE_ALIGN(size) >> PAGE_SHIFT;
 		else

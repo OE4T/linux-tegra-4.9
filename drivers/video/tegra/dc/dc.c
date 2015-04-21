@@ -3820,17 +3820,10 @@ void tegra_dc_enable(struct tegra_dc *dc)
 	trace_display_mode(dc, &dc->mode);
 }
 
-void tegra_dc_disable_window(struct tegra_dc *dc, unsigned win)
+static void tegra_dc_flush_syncpts_window(struct tegra_dc *dc, unsigned win)
 {
 	struct tegra_dc_win *w = tegra_dc_get_window(dc, win);
 	u32 max;
-
-	/* reset window bandwidth */
-	w->bandwidth = 0;
-	w->new_bandwidth = 0;
-
-	/* disable windows */
-	w->flags &= ~TEGRA_WIN_FLAG_ENABLED;
 
 	/* refuse to operate on invalid syncpts */
 	if (WARN_ON(w->syncpt.id == NVSYNCPT_INVALID))
@@ -3844,6 +3837,21 @@ void tegra_dc_disable_window(struct tegra_dc *dc, unsigned win)
 		w->syncpt.min++;
 		nvhost_syncpt_cpu_incr_ext(dc->ndev, w->syncpt.id);
 	}
+}
+
+void tegra_dc_disable_window(struct tegra_dc *dc, unsigned win)
+{
+	struct tegra_dc_win *w = tegra_dc_get_window(dc, win);
+
+	/* reset window bandwidth */
+	w->bandwidth = 0;
+	w->new_bandwidth = 0;
+
+	/* disable windows */
+	w->flags &= ~TEGRA_WIN_FLAG_ENABLED;
+
+	/* flush pending syncpts */
+	tegra_dc_flush_syncpts_window(dc, win);
 }
 
 static void _tegra_dc_controller_disable(struct tegra_dc *dc)
@@ -3933,19 +3941,27 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 	unsigned i;
 	unsigned long int blank_windows;
 	int nr_win = 0;
-	int yuv_flag = dc->mode.vmode & FB_VMODE_SET_YUV_MASK;
 
-	if (dc->yuv_bypass && yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30)) {
+	/* YUV420 10bpc variables */
+	int yuv_flag = dc->mode.vmode & FB_VMODE_SET_YUV_MASK;
+	bool yuv_420_10b_path = false;
+	int fb_win_idx = -1;
+	int fb_win_pos = -1;
+	u32 orig_h_full, orig_w_full;
+	u32 orig_fmt;
+	u32 orig_out_w, orig_out_h;
+
+	if (dc->yuv_bypass && yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30))
+		yuv_420_10b_path = true;
+
+	if (yuv_420_10b_path) {
 		u32 active_width = dc->mode.h_active;
 		u32 active_height = dc->mode.v_active;
-		u32 orig_h_full, orig_w_full;
-		u32 orig_fmt;
-		u32 orig_out_w, orig_out_h;
 
 		tegra_fb_frame_update(dc->fb);
-
 		dcwins[0] = tegra_fb_get_win(dc->fb);
-		nr_win = 1;
+		fb_win_idx = dcwins[0]->idx;
+		nr_win++;
 
 		orig_h_full = dcwins[0]->h.full;
 		orig_w_full = dcwins[0]->w.full;
@@ -3964,21 +3980,6 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 
 		dcwins[0]->out_w = active_width;
 		dcwins[0]->out_h = active_height;
-
-		if (!tegra_platform_is_linsim()) {
-			tegra_dc_update_windows(dcwins, nr_win, NULL, true);
-			tegra_dc_sync_windows(dcwins, nr_win);
-		}
-		tegra_dc_program_bandwidth(dc, true);
-
-		/* reinstate window config */
-		dcwins[0]->h.full = orig_h_full;
-		dcwins[0]->w.full = orig_w_full;
-		dcwins[0]->fmt = orig_fmt;
-		dcwins[0]->out_w = orig_out_w;
-		dcwins[0]->out_h = orig_out_h;
-
-		return;
 	}
 
 	blank_windows = windows & dc->valid_windows;
@@ -3990,6 +3991,15 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 		dcwins[nr_win] = tegra_dc_get_window(dc, i);
 		if (!dcwins[nr_win])
 			continue;
+		/*
+		 * Prevent disabling the YUV410 10bpc window in case
+		 * it is also in blank_windows, additionally, prevent
+		 * adding it to the list twice.
+		 */
+		if (fb_win_idx == dcwins[nr_win]->idx) {
+			fb_win_pos = i;
+			continue;
+		}
 		dcwins[nr_win++]->flags &= ~TEGRA_WIN_FLAG_ENABLED;
 	}
 
@@ -4000,8 +4010,25 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 	}
 	tegra_dc_program_bandwidth(dc, true);
 
+	/* reinstate window config */
+	if (yuv_420_10b_path) {
+		dcwins[0]->h.full = orig_h_full;
+		dcwins[0]->w.full = orig_w_full;
+		dcwins[0]->fmt = orig_fmt;
+		dcwins[0]->out_w = orig_out_w;
+		dcwins[0]->out_h = orig_out_h;
+	}
+
+	/*
+	 * Disable, reset bandwidth and advance pending syncpoints
+	 * of all windows. In case the statically created 420 10bpc
+	 * is also present in blank_windows, only advance syncpoints.
+	 */
 	for_each_set_bit(i, &blank_windows, DC_N_WINDOWS) {
-		/* Advance pending syncpoints */
+		if (fb_win_pos == i) {
+			tegra_dc_flush_syncpts_window(dc, i);
+			continue;
+		}
 		tegra_dc_disable_window(dc, i);
 	}
 }

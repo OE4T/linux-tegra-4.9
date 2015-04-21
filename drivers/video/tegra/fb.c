@@ -106,6 +106,15 @@ static int tegra_fb_check_var(struct fb_var_screeninfo *var,
 		if (!ops->mode_filter(dc, &mode))
 			return -EINVAL;
 
+		/*
+		 * FB_VMODE_Y420_ONLY is only for notification to userspace.
+		 * Use FB_VMODE_Y420 to flag kernel configuration.
+		 */
+		if (mode.vmode & FB_VMODE_Y420_ONLY) {
+			mode.vmode &= ~FB_VMODE_Y420_ONLY;
+			mode.vmode |= FB_VMODE_Y420;
+		}
+
 		/* Mode filter may have modified the mode */
 		fb_videomode_to_var(var, &mode);
 

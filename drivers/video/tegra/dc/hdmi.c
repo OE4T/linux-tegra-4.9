@@ -1141,7 +1141,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		goto err_put_clock;
 	}
 
-	hdmi->hda2codec_clk = clk_get_sys("tegra30-hda", "hda2codec");
+	hdmi->hda2codec_clk = clk_get_sys("tegra30-hda", "hda2codec_2x");
 	if (IS_ERR_OR_NULL(hdmi->hda2codec_clk)) {
 		dev_err(&dc->ndev->dev, "hdmi: can't get hda2codec clock\n");
 		err = -ENOENT;

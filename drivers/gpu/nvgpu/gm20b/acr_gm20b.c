@@ -216,7 +216,7 @@ int prepare_ucode_blob(struct gk20a *g)
 	struct ls_flcn_mgr lsfm_l, *plsfm;
 	struct pmu_gk20a *pmu = &g->pmu;
 
-	if (g->acr.ucode_blob_start) {
+	if (g->acr.ucode_blob.cpu_va) {
 		/*Recovery case, we do not need to form
 		non WPR blob of ucodes*/
 		err = gk20a_init_pmu(pmu);
@@ -238,23 +238,20 @@ int prepare_ucode_blob(struct gk20a *g)
 	if (err)
 		return err;
 
-	if (plsfm->managed_flcn_cnt && !plsfm->mem.cpu_va) {
+	if (plsfm->managed_flcn_cnt && !g->acr.ucode_blob.cpu_va) {
 		/* Generate WPR requirements*/
 		err = lsf_gen_wpr_requirements(g, plsfm);
 		if (err)
 			return err;
 
 		/*Alloc memory to hold ucode blob contents*/
-		err = gk20a_gmmu_alloc(g, plsfm->wpr_size, &plsfm->mem);
+		err = gk20a_gmmu_alloc(g, plsfm->wpr_size, &g->acr.ucode_blob);
 		if (err)
 			return err;
 
 		gm20b_dbg_pmu("managed LS falcon %d, WPR size %d bytes.\n",
 			plsfm->managed_flcn_cnt, plsfm->wpr_size);
-		lsfm_init_wpr_contents(g, plsfm, plsfm->mem.cpu_va);
-		g->acr.ucode_blob_start = g->ops.mm.get_iova_addr(g,
-				plsfm->mem.sgt->sgl, 0);
-		g->acr.ucode_blob_size = plsfm->wpr_size;
+		lsfm_init_wpr_contents(g, plsfm, g->acr.ucode_blob.cpu_va);
 	} else {
 		gm20b_dbg_pmu("LSFM is managing no falcons.\n");
 	}
@@ -880,8 +877,8 @@ int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 	u32 *acr_ucode_header_t210_load;
 	u32 *acr_ucode_data_t210_load;
 
-	start = acr->ucode_blob_start;
-	size = acr->ucode_blob_size;
+	start = g->ops.mm.get_iova_addr(g, acr->ucode_blob.sgt->sgl, 0);
+	size = acr->ucode_blob.size;
 
 	gm20b_dbg_pmu("");
 

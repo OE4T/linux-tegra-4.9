@@ -259,7 +259,6 @@ struct lsfm_managed_ucode_img {
 struct ls_flcn_mgr {
 	u16 managed_flcn_cnt;
 	u32 wpr_size;
-	struct mem_desc mem;
 	u32 disable_mask;
 	struct lsfm_managed_ucode_img *ucode_img_list;
 	void *wpr_client_req_state;/*PACR_CLIENT_REQUEST_STATE originally*/
@@ -373,8 +372,7 @@ struct acr_fw_header {
 };
 
 struct acr_gm20b {
-	u64 ucode_blob_start;
-	u32 ucode_blob_size;
+	struct mem_desc ucode_blob;
 	struct bin_hdr *bl_bin_hdr;
 	struct hsflcn_bl_desc *pmu_hsbl_desc;
 	struct bin_hdr *hsbin_hdr;

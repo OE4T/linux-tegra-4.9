@@ -53,4 +53,15 @@
 		dt-override-status-odm-data = <0x01000000 0x01000000>;
 	};
 
+	host1x {
+		dsi {
+			panel-s-wqxga-10-1 {
+				status = "disabled";
+			};
+			panel-a-wuxga-8-0 {
+				status = "disabled";
+			};
+		};
+	};
+
 };

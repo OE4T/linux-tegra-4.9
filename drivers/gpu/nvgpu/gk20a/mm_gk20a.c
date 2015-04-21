@@ -2784,7 +2784,7 @@ static int gk20a_init_system_vm(struct mm_gk20a *mm)
 	gk20a_dbg_info("pmu vm size = 0x%x", mm->pmu.aperture_size);
 
 	gk20a_init_vm(mm, vm, big_page_size,
-		      SZ_128K << 10, GK20A_PMU_VA_SIZE, false, "system");
+		      SZ_4K, GK20A_PMU_VA_SIZE, false, "system");
 
 	err = gk20a_alloc_inst_block(g, inst_block);
 	if (err)

@@ -229,6 +229,7 @@ static int tegra_dc_reset_fakedsi_panel(struct tegra_dc *dc, long dc_outtype)
 	struct tegra_dc_out *dc_out = dc->out;
 	if (dc_outtype == TEGRA_DC_OUT_FAKE_DSI_GANGED) {
 		dc_out->dsi->ganged_type = TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD;
+		dc_out->dsi->even_odd_split_width = 1;
 		dc_out->dsi->dsi_instance = 0;
 		dc_out->dsi->n_data_lanes = 8;
 	} else if (dc_outtype == TEGRA_DC_OUT_FAKE_DSIB) {

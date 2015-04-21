@@ -2948,11 +2948,12 @@ static void tegra_dsi_ganged(struct tegra_dc *dc,
 			DSI_GANGED_MODE_START, dsi_instances[0]);
 		/* DSI 1 */
 		tegra_dsi_controller_writel(dsi,
-			DSI_GANGED_MODE_START_POINTER(1),
+			DSI_GANGED_MODE_START_POINTER(
+				dsi->info.even_odd_split_width),
 			DSI_GANGED_MODE_START, dsi_instances[1]);
 
-		low_width = 0x1;
-		high_width = 0x1;
+		low_width = dsi->info.even_odd_split_width;
+		high_width = dsi->info.even_odd_split_width;
 		val = DSI_GANGED_MODE_SIZE_VALID_LOW_WIDTH(low_width) |
 			DSI_GANGED_MODE_SIZE_VALID_HIGH_WIDTH(high_width);
 	}

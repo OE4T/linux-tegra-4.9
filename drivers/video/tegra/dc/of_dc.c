@@ -1218,6 +1218,16 @@ static struct device_node *parse_dsi_settings(struct platform_device *ndev,
 		"nvidia,dsi-ganged-type", &temp)) {
 		dsi->ganged_type = (u8)temp;
 		OF_DC_LOG("dsi ganged_type %d\n", dsi->ganged_type);
+		/* Set pixel width to 1 by default for even-odd split */
+		if (dsi->ganged_type == TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD)
+			dsi->even_odd_split_width = 1;
+	}
+
+	if (!of_property_read_u32(np_dsi_panel,
+		"nvidia,dsi-even-odd-pixel-width", &temp)) {
+		dsi->even_odd_split_width = temp;
+		OF_DC_LOG("dsi pixel width for even/odd split %d\n",
+				dsi->even_odd_split_width);
 	}
 
 	if (!of_property_read_u32(np_dsi_panel,

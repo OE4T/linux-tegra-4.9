@@ -331,6 +331,8 @@
 										//				3:2=HS_DISCON_LEVEL_LSB		0x03
 						0x00000850 0xfffffffe 0x00000002// UTMIP_BIAS_CFG2_0
 										//				2:0=HSSQUELCH_LEVEL_NEW		0x02
+						0x00000810 0xf0ffffff 0x00000000// UTMIP_HSRX_CFG0
+										// 				27:24=UTMIP_PCOUNT_UPDN_DIV	0x00
 					>;
 				};
 				prod_c_bias {

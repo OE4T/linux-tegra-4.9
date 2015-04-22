@@ -644,8 +644,7 @@ int gr_gk20a_ctx_patch_write(struct gk20a *g,
 		 * but be defensive still... */
 		if (!ch_ctx->patch_ctx.mem.cpu_va) {
 			int err;
-			gk20a_err(dev_from_gk20a(g),
-				   "per-write ctx patch begin?");
+			gk20a_dbg_info("per-write ctx patch begin?");
 			/* yes, gr_gk20a_ctx_patch_smpc causes this one */
 			err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
 			if (err)

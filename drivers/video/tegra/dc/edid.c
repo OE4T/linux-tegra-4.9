@@ -514,8 +514,7 @@ u16 tegra_edid_get_ex_colorimetry(struct tegra_edid *edid)
 	return edid->data->colorimetry;
 }
 
-int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs,
-u8 *vedid)
+int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 {
 	int i;
 	int j;
@@ -524,11 +523,6 @@ u8 *vedid)
 	struct tegra_edid_pvt *new_data, *old_data;
 	u8 checksum = 0;
 	u8 *data;
-
-	if (edid->dc->vedid && !vedid) {
-		pr_debug("%s: using virtual edid\n", __func__);
-		return 0;
-	}
 
 	new_data = vmalloc(SZ_32K + sizeof(struct tegra_edid_pvt));
 	if (!new_data)
@@ -543,8 +537,8 @@ u8 *vedid)
 
 	data = new_data->dc_edid.buf;
 
-	if (vedid) {
-		memcpy(data, vedid, 128);
+	if (edid->dc->vedid) {
+		memcpy(data, edid->dc->vedid_data, 128);
 		/* checksum new edid */
 		for (i = 0; i < 128; i++)
 			checksum += data[i];
@@ -576,8 +570,9 @@ u8 *vedid)
 	extension_blocks = data[0x7e];
 
 	for (i = 1; i <= extension_blocks; i++) {
-		if (vedid) {
-			memcpy(data + i * 128, vedid + i * 128, 128);
+		if (edid->dc->vedid) {
+			memcpy(data + i * 128,
+				edid->dc->vedid_data + i * 128, 128);
 			for (j = 0; j < 128; j++)
 				checksum += data[i * 128 + j];
 			if (checksum != 0) {

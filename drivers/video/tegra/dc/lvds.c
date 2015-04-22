@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/lvds.c
  *
- * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -98,7 +98,7 @@ static int tegra_lvds_edid(struct tegra_dc_lvds_data *lvds)
 
 	memset(&specs, 0 , sizeof(specs));
 
-	err = tegra_edid_get_monspecs(lvds->edid, &specs, NULL);
+	err = tegra_edid_get_monspecs(lvds->edid, &specs);
 	if (err < 0) {
 		dev_err(&dc->ndev->dev,
 			"lvds: Failed to get EDID data\n");

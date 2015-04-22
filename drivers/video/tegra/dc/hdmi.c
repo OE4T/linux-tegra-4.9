@@ -1293,7 +1293,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			dc->out && (dc->out->type == TEGRA_DC_OUT_HDMI)) {
 		struct fb_monspecs specs;
 		if (tegra_dc_hpd(dc) && (!dc->initialized)) {
-			if (!tegra_edid_get_monspecs(hdmi->edid, &specs, NULL))
+			if (!tegra_edid_get_monspecs(hdmi->edid, &specs))
 				tegra_dc_set_fb_mode(dc, specs.modedb, false);
 		} else
 			tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false);

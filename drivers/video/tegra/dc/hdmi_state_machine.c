@@ -4,7 +4,7 @@
  * HDMI library support functions for Nvidia Tegra processors.
  *
  * Copyright (C) 2012-2013 Google - http://www.google.com/
- * Copyright (C) 2013-2014 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2013-2015 NVIDIA CORPORATION. All rights reserved.
  * Authors:	John Grossman <johngro@google.com>
  * Authors:	Mike J. Chen <mjchen@google.com>
  *
@@ -248,7 +248,7 @@ static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 		goto end_disabled;
 	}
 
-	if (tegra_edid_get_monspecs(hdmi->edid, &specs, NULL)) {
+	if (tegra_edid_get_monspecs(hdmi->edid, &specs)) {
 		/* Failed to read EDID.  If we still have retry attempts left,
 		 * schedule another attempt.  Otherwise give up and just go to
 		 * the disabled state.

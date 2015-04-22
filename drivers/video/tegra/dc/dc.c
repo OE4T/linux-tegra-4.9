@@ -1343,30 +1343,35 @@ const char __user *addr, size_t len, loff_t *pos)
 {
 	struct seq_file *m = file->private_data;
 	struct tegra_dc *dc = m ? m->private : NULL;
-	struct fb_monspecs mon_spec; /*TODO: currently a placeholder for monspec
-					held in tegra_hdmi */
-	u8 *vedid;
 	int ret;
 
 	if (WARN_ON(!dc || !dc->out))
 		return -EINVAL;
 
-	if (len < 128) { /* invalid edid, turn off vedid */
-		dc->vedid = false;
-		tegra_edid_get_monspecs(dc->edid, &mon_spec, NULL);
+	dc->vedid = false;
+
+	kfree(dc->vedid_data);
+	dc->vedid_data = NULL;
+
+	if (len < 128) /* invalid edid, turn off vedid */
 		return 1;
+
+	dc->vedid_data = kmalloc(sizeof(char) * len, GFP_KERNEL);
+	if (!dc->vedid_data) {
+		dev_err(&dc->ndev->dev, "no memory for edid\n");
+		return 0; /* dc->vedid is false */
 	}
 
-	/* store write data */
-	vedid = kmalloc(sizeof(char) * len, GFP_KERNEL);
-	ret = copy_from_user(vedid, addr, len);
-	if (ret < 0)
-		return ret;
+	ret = copy_from_user(dc->vedid_data, addr, len);
+	if (ret < 0) {
+		dev_err(&dc->ndev->dev, "error copying edid\n");
+		kfree(dc->vedid_data);
+		dc->vedid_data = NULL;
+		return ret; /* dc->vedid is false */
+	}
 
-	tegra_edid_get_monspecs(dc->edid, &mon_spec, vedid);
-	kfree(vedid);
-	kfree(mon_spec.modedb);
 	dc->vedid = true;
+
 	return len;
 }
 
@@ -3561,6 +3566,7 @@ static int tegra_dc_init(struct tegra_dc *dc)
 	tegra_dc_io_end(dc);
 
 	dc->vedid = false;
+	dc->vedid_data = NULL;
 
 	return 0;
 }
@@ -4594,7 +4600,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			dc->out && dc->out->type == TEGRA_DC_OUT_LVDS) {
 		struct fb_monspecs specs;
 		struct tegra_dc_lvds_data *lvds = tegra_dc_get_outdata(dc);
-		if (!tegra_edid_get_monspecs(lvds->edid, &specs, NULL))
+		if (!tegra_edid_get_monspecs(lvds->edid, &specs))
 			tegra_dc_set_fb_mode(dc, specs.modedb, false);
 	}
 
@@ -4992,6 +4998,11 @@ static void tegra_dc_shutdown(struct platform_device *ndev)
 
 	if (!dc->enabled)
 		return;
+
+	kfree(dc->vedid_data);
+	dc->vedid_data = NULL;
+	dc->vedid = false;
+
 
 	/* Let dc clients know about shutdown event before calling disable */
 	if (dc->out_ops && dc->out_ops->shutdown)

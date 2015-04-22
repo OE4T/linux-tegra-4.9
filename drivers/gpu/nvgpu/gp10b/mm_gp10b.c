@@ -148,7 +148,9 @@ u32 *pde3_from_index(struct gk20a_mm_entry *entry, u32 i)
 static int update_gmmu_pde3_locked(struct vm_gk20a *vm,
 			   struct gk20a_mm_entry *parent,
 			   u32 i, u32 gmmu_pgsz_idx,
-			   u64 iova,
+			   struct scatterlist **sgl,
+			   u64 *offset,
+			   u64 *iova,
 			   u32 kind_v, u32 *ctag,
 			   bool cacheable, bool unmapped_pte,
 			   int rw_flag, bool sparse, u32 flags)
@@ -188,7 +190,9 @@ u32 *pde0_from_index(struct gk20a_mm_entry *entry, u32 i)
 static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 			   struct gk20a_mm_entry *pte,
 			   u32 i, u32 gmmu_pgsz_idx,
-			   u64 iova,
+			   struct scatterlist **sgl,
+			   u64 *offset,
+			   u64 *iova,
 			   u32 kind_v, u32 *ctag,
 			   bool cacheable, bool unmapped_pte,
 			   int rw_flag, bool sparse, u32 flags)
@@ -241,7 +245,9 @@ static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			   struct gk20a_mm_entry *pte,
 			   u32 i, u32 gmmu_pgsz_idx,
-			   u64 iova,
+			   struct scatterlist **sgl,
+			   u64 *offset,
+			   u64 *iova,
 			   u32 kind_v, u32 *ctag,
 			   bool cacheable, bool unmapped_pte,
 			   int rw_flag, bool sparse, u32 flags)
@@ -251,23 +257,31 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 
 	gk20a_dbg_fn("");
 
-	if (iova) {
-		pte_w[0] = gmmu_new_pte_valid_true_f() |
-			gmmu_new_pte_address_sys_f(iova
-				>> gmmu_new_pte_address_shift_v());
+	if (*iova) {
+		if (unmapped_pte)
+			pte_w[0] = gmmu_new_pte_valid_false_f() |
+				gmmu_new_pte_address_sys_f(*iova
+					>> gmmu_new_pte_address_shift_v());
+		else
+			pte_w[0] = gmmu_new_pte_valid_true_f() |
+				gmmu_new_pte_address_sys_f(*iova
+					>> gmmu_new_pte_address_shift_v());
+
 		pte_w[1] = gmmu_new_pte_aperture_video_memory_f() |
 			gmmu_new_pte_kind_f(kind_v) |
 			gmmu_new_pte_comptagline_f(*ctag / SZ_128K);
 
 		if (rw_flag == gk20a_mem_flag_read_only)
 			pte_w[0] |= gmmu_new_pte_read_only_true_f();
-		if (!cacheable)
+		if (unmapped_pte && !cacheable)
+			pte_w[0] |= gmmu_new_pte_read_only_true_f();
+		else if (!cacheable)
 			pte_w[1] |= gmmu_new_pte_vol_true_f();
 
 		gk20a_dbg(gpu_dbg_pte, "pte=%d iova=0x%llx kind=%d"
 			   " ctag=%d vol=%d"
 			   " [0x%08x, 0x%08x]",
-			   i, iova,
+			   i, *iova,
 			   kind_v, *ctag, !cacheable,
 			   pte_w[1], pte_w[0]);
 
@@ -283,6 +297,23 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 	gk20a_mem_wr32(pte->cpu_va + i*8, 0, pte_w[0]);
 	gk20a_mem_wr32(pte->cpu_va + i*8, 1, pte_w[1]);
 
+	if (*iova) {
+		*iova += page_size;
+		*offset += page_size;
+		if (*sgl && *offset + page_size > (*sgl)->length) {
+			u64 new_iova;
+			*sgl = sg_next(*sgl);
+			if (*sgl) {
+				new_iova = sg_phys(*sgl);
+				gk20a_dbg(gpu_dbg_pte, "chunk address %llx, size %d",
+					  new_iova, (*sgl)->length);
+				if (new_iova) {
+					*offset = 0;
+					*iova = new_iova;
+				}
+			}
+		}
+	}
 	gk20a_dbg_fn("done");
 	return 0;
 }

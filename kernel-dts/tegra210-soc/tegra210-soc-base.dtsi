@@ -171,6 +171,13 @@
 		status = "disabled";
 	};
 
+	tegra-carveouts {
+		compatible = "nvidia,carveouts";
+		iommus = <&smmu TEGRA_SWGROUP_HC>,
+			 <&smmu TEGRA_SWGROUP_AVPC>;
+		status = "okay";
+	};
+
 	smmu: iommu {
 		compatible = "nvidia,tegra210-smmu";
 		reg = <0x0 0x70019000 0x0 0x1000

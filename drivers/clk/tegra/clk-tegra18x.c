@@ -215,6 +215,18 @@ void enable_gpio_clk(void)
 	iounmap(clk_base);
 }
 
+/* Needed for GPCDMA controller reset */
+#define CLK_RST_CONTROLLER_RST_DEV_AXI_CBB_0 0x56A0000
+void reset_gpcdma_controller(void)
+{
+	void __iomem *gpcdma_rst;
+
+	gpcdma_rst = ioremap(CLK_RST_CONTROLLER_RST_DEV_AXI_CBB_0, 0x4);
+	writel(0x6, gpcdma_rst);
+	udelay(2);
+	writel(0x4, gpcdma_rst);
+}
+
 static int tegra18x_clock_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -243,6 +255,10 @@ static int tegra18x_clock_probe(struct platform_device *pdev)
 		writel(0xf, base + CLK_RST_CONTROLLER_CLK_OUT_ENB_NVDISPLAY0_SET_0);
 	}
 	enable_gpio_clk();
+
+	/* Reset GPCDMA controller */
+	reset_gpcdma_controller();
+
 	return ret;
 }
 

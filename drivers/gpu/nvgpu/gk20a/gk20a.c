@@ -1122,8 +1122,27 @@ static int gk20a_pm_disable_clk(struct device *dev)
 
 static void gk20a_pm_shutdown(struct platform_device *pdev)
 {
+#ifdef CONFIG_PM_RUNTIME
+	unsigned long timeout = jiffies +
+		msecs_to_jiffies(GK20A_WAIT_FOR_IDLE_MS);
+	int ref_cnt;
+#endif
+
 	dev_info(&pdev->dev, "shutting down");
+
+#ifdef CONFIG_PM_RUNTIME
+	/* Prevent more requests by disabling Runtime PM */
 	__pm_runtime_disable(&pdev->dev, false);
+
+	/* Wait until current running requests are finished */
+	while (time_before(jiffies, timeout)) {
+		ref_cnt = atomic_read(&pdev->dev.power.usage_count);
+		if (ref_cnt > 1)
+			msleep(1);
+		else
+			break;
+	}
+#endif
 }
 
 #ifdef CONFIG_PM

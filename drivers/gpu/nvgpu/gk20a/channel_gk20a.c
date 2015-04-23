@@ -1223,77 +1223,6 @@ bool gk20a_channel_update_and_check_timeout(struct channel_gk20a *ch,
 		ch->timeout_accumulated_ms > ch->timeout_ms_max;
 }
 
-
-/* Issue a syncpoint increment *preceded* by a wait-for-idle
- * command.  All commands on the channel will have been
- * consumed at the time the fence syncpoint increment occurs.
- */
-static int gk20a_channel_submit_wfi(struct channel_gk20a *c)
-{
-	struct priv_cmd_entry *cmd = NULL;
-	struct gk20a *g = c->g;
-	u32 free_count;
-	int err = 0;
-
-	if (c->has_timedout)
-		return -ETIMEDOUT;
-
-	update_gp_get(g, c);
-	free_count = gp_free_count(c);
-	if (unlikely(!free_count)) {
-		gk20a_err(dev_from_gk20a(g),
-			   "not enough gpfifo space");
-		return -EAGAIN;
-	}
-
-	mutex_lock(&c->submit_lock);
-
-	if (!c->sync) {
-		c->sync = gk20a_channel_sync_create(c);
-		if (!c->sync) {
-			mutex_unlock(&c->submit_lock);
-			return -ENOMEM;
-		}
-		if (g->ops.fifo.resetup_ramfc)
-			err = g->ops.fifo.resetup_ramfc(c);
-		if (err)
-			return err;
-	}
-
-	gk20a_fence_put(c->last_submit.pre_fence);
-	gk20a_fence_put(c->last_submit.post_fence);
-	c->last_submit.pre_fence = NULL;
-	c->last_submit.post_fence = NULL;
-
-	err = c->sync->incr_wfi(c->sync, &cmd, &c->last_submit.post_fence);
-	if (unlikely(err)) {
-		mutex_unlock(&c->submit_lock);
-		return err;
-	}
-
-	WARN_ON(!c->last_submit.post_fence->wfi);
-
-	((struct gpfifo *)(c->gpfifo.mem.cpu_va))[c->gpfifo.put].entry0 = u64_lo32(cmd->gva);
-	((struct gpfifo *)(c->gpfifo.mem.cpu_va))[c->gpfifo.put].entry1 = u64_hi32(cmd->gva) |
-		pbdma_gp_entry1_length_f(cmd->size);
-
-	c->gpfifo.put = (c->gpfifo.put + 1) & (c->gpfifo.entry_num - 1);
-
-	/* save gp_put */
-	cmd->gp_put = c->gpfifo.put;
-
-	gk20a_bar1_writel(g,
-		c->userd_gpu_va + 4 * ram_userd_gp_put_w(),
-		c->gpfifo.put);
-
-	mutex_unlock(&c->submit_lock);
-
-	gk20a_dbg_info("post-submit put %d, get %d, size %d",
-		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
-
-	return 0;
-}
-
 static u32 get_gp_free_count(struct channel_gk20a *c)
 {
 	update_gp_get(c->g, c);
@@ -1725,16 +1654,6 @@ int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout)
 	/* Do not wait for a timedout channel */
 	if (ch->has_timedout)
 		return -ETIMEDOUT;
-
-	if (!(fence && fence->wfi) && ch->obj_class != KEPLER_C) {
-		gk20a_dbg_fn("issuing wfi, incr to finish the channel");
-		err = gk20a_channel_submit_wfi(ch);
-		fence = ch->last_submit.post_fence;
-	}
-	if (err)
-		return err;
-
-	BUG_ON(!(fence && fence->wfi) && ch->obj_class != KEPLER_C);
 
 	gk20a_dbg_fn("waiting for channel to finish thresh:%d sema:%p",
 		     fence->syncpt_value, fence->semaphore);

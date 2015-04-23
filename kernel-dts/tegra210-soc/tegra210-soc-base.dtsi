@@ -1391,6 +1391,18 @@
 			gpu  = <1085800  (-1097500)>;
 			pllx = <1078800  (-890700)>;
 		};
+		fuse_war@fuse_rev_2 {
+			device_type = "fuse_war";
+			match_fuse_rev = <2>;
+			cpu0 = <1085000  3244200 >;
+			cpu1 = <1126200  (-67500) >;
+			cpu2 = <1098400  2251100 >;
+			cpu3 = <1108000  602700>;
+			mem0 = <1069200  3549900>;
+			mem1 = <1173700  (-6263600)>;
+			gpu  = <1074300  2734900>;
+			pllx = <1039700  6829100>;
+		};
 		/* thermctl - groups of sensors */
 		therm_cpu {
 			device_type = "thermctl";

@@ -284,6 +284,33 @@ static u8 calc_default_avi_m(struct tegra_dc *dc)
 #undef EDID_AVI_M_256_135
 }
 
+u32 tegra_dc_get_aspect_ratio(struct tegra_dc *dc)
+{
+	u32 aspect_ratio = 0;
+
+	if (!dc)
+		return 0;
+
+	switch (calc_default_avi_m(dc)) {
+	case TEGRA_DC_MODE_AVI_M_256_135:
+		aspect_ratio = FB_FLAG_RATIO_256_135;
+		break;
+	case TEGRA_DC_MODE_AVI_M_64_27:
+		aspect_ratio = FB_FLAG_RATIO_64_27;
+		break;
+	case TEGRA_DC_MODE_AVI_M_16_9:
+		aspect_ratio = FB_FLAG_RATIO_16_9;
+		break;
+	case TEGRA_DC_MODE_AVI_M_4_3:
+		aspect_ratio = FB_FLAG_RATIO_4_3;
+		break;
+	default:
+		aspect_ratio = 0;
+	};
+
+	return aspect_ratio;
+}
+
 static bool check_mode_timings(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 {
 	if (dc->out->type == TEGRA_DC_OUT_HDMI) {

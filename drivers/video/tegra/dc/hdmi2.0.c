@@ -1211,6 +1211,9 @@ static int tegra_hdmi_find_cea_vic(struct tegra_hdmi *hdmi)
 
 	tegra_hdmi_get_cea_fb_videomode(&m, hdmi);
 
+	m.flag &= ~FB_FLAG_RATIO_MASK;
+	m.flag |= tegra_dc_get_aspect_ratio(dc);
+
 	for (i = 1; i < modedb_size; i++) {
 		const struct fb_videomode *curr = &cea_modes[i];
 

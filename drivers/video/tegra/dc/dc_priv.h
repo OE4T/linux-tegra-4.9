@@ -663,6 +663,9 @@ void tegra_dc_set_color_control(struct tegra_dc *dc);
 #if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable);
 #endif
+#ifdef CONFIG_TEGRA_DC_CMU
+void _tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable);
+#endif
 
 #ifdef CONFIG_TEGRA_DC_CMU
 int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu);

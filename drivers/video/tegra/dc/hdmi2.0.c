@@ -1489,6 +1489,36 @@ static u32 tegra_hdmi_get_ex_colorimetry(struct tegra_hdmi *hdmi)
 		HDMI_AVI_EXT_COLORIMETRY_INVALID;
 }
 
+static u32 tegra_hdmi_get_rgb_quant(struct tegra_hdmi *hdmi)
+{
+	u32 vmode = hdmi->dc->mode.vmode;
+
+	if (tegra_edid_get_quant_cap(hdmi->edid) & FB_CAP_RGB_QUANT_SELECTABLE)
+		return vmode & FB_VMODE_LIMITED_RANGE ?
+			HDMI_AVI_RGB_QUANT_LIMITED : HDMI_AVI_RGB_QUANT_FULL;
+	else
+		/*
+		 * The safest way to break the HDMI spec when forcing full range
+		 * on a limited system: send full data with the QUANT_DEFAULT
+		 * */
+		return HDMI_AVI_RGB_QUANT_DEFAULT;
+}
+
+static u32 tegra_hdmi_get_ycc_quant(struct tegra_hdmi *hdmi)
+{
+	u32 vmode = hdmi->dc->mode.vmode;
+
+	if (tegra_edid_get_quant_cap(hdmi->edid) & FB_CAP_YUV_QUANT_SELECTABLE)
+		return vmode & FB_VMODE_LIMITED_RANGE ?
+			HDMI_AVI_YCC_QUANT_LIMITED : HDMI_AVI_YCC_QUANT_FULL;
+	else
+		/*
+		 * The safest way to break the HDMI spec when forcing full range
+		 * on a limited system: send full data with the QUANT_DEFAULT
+		 * */
+		return HDMI_AVI_YCC_QUANT_NONE;
+}
+
 static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 {
 	struct hdmi_avi_infoframe *avi = &hdmi->avi;
@@ -1510,7 +1540,7 @@ static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 			HDMI_AVI_COLORIMETRY_DEFAULT;
 
 	avi->scaling = HDMI_AVI_SCALING_UNKNOWN;
-	avi->rgb_quant = HDMI_AVI_RGB_QUANT_DEFAULT;
+	avi->rgb_quant = tegra_hdmi_get_rgb_quant(hdmi);
 	avi->ext_colorimetry = tegra_hdmi_get_ex_colorimetry(hdmi);
 	avi->it_content = HDMI_AVI_IT_CONTENT_FALSE;
 
@@ -1519,7 +1549,7 @@ static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 
 	avi->pix_rep = HDMI_AVI_NO_PIX_REPEAT;
 	avi->it_content_type = HDMI_AVI_IT_CONTENT_NONE;
-	avi->ycc_quant = HDMI_AVI_YCC_QUANT_NONE;
+	avi->ycc_quant = tegra_hdmi_get_ycc_quant(hdmi);
 
 	avi->top_bar_end_line_low_byte = 0;
 	avi->top_bar_end_line_high_byte = 0;
@@ -2539,7 +2569,11 @@ static void tegra_dc_hdmi_modeset_notifier(struct tegra_dc *dc)
 			tegra_hdmi_v2_x_mon_config(hdmi, false);
 		tegra_hdmi_v2_x_host_config(hdmi, false);
 	}
-
+#ifdef CONFIG_TEGRA_DC_CMU
+	if (!(dc->mode.vmode & FB_VMODE_SET_YUV_MASK))
+		_tegra_dc_cmu_enable(dc,
+			dc->mode.vmode & FB_VMODE_LIMITED_RANGE);
+#endif
 	tegra_dc_io_end(dc);
 	tegra_hdmi_put(dc);
 }

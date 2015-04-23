@@ -171,6 +171,7 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid,
 				struct fb_monspecs *specs);
 u16 tegra_edid_get_cd_flag(struct tegra_edid *edid);
 u16 tegra_edid_get_ex_hdr_cap(struct tegra_edid *edid);
+u16 tegra_edid_get_quant_cap(struct tegra_edid *edid);
 u16 tegra_edid_get_max_clk_rate(struct tegra_edid *edid);
 bool tegra_edid_is_scdc_present(struct tegra_edid *edid);
 bool tegra_edid_is_420db_present(struct tegra_edid *edid);

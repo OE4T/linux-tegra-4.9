@@ -98,6 +98,29 @@ int vhost_sendrecv(struct tegra_vhost_cmd_msg *msg)
 	return err;
 }
 
+static void vhost_fake_debug_show_channel_cdma(struct nvhost_master *m,
+		struct nvhost_channel *ch, struct output *o, int chid)
+{
+}
+
+static void vhost_fake_debug_show_channel_fifo(struct nvhost_master *m,
+		struct nvhost_channel *ch, struct output *o, int chid)
+{
+}
+
+static void vhost_fake_debug_show_mlocks(struct nvhost_master *m,
+		struct output *o)
+{
+}
+
+void vhost_init_host1x_debug_ops(struct nvhost_debug_ops *ops)
+{
+	/* Does not support hw debug on VM side */
+	ops->show_channel_cdma = vhost_fake_debug_show_channel_cdma;
+	ops->show_channel_fifo = vhost_fake_debug_show_channel_fifo;
+	ops->show_mlocks = vhost_fake_debug_show_mlocks;
+}
+
 int nvhost_virt_init(struct platform_device *dev, int moduleid)
 {
 	struct nvhost_virt_ctx *virt_ctx =

@@ -203,6 +203,11 @@ static int vhost_free_syncpt_irq(struct nvhost_intr *intr)
 	return 0;
 }
 
+static int vhost_fake_debug_dump(struct nvhost_intr *intr, struct output *o)
+{
+	return 0;
+}
+
 void vhost_init_host1x_intr_ops(struct nvhost_intr_ops *ops)
 {
 	ops->init_host_sync = vhost_intr_init_host_sync;
@@ -214,4 +219,5 @@ void vhost_init_host1x_intr_ops(struct nvhost_intr_ops *ops)
 	ops->request_host_general_irq = vhost_intr_request_host_general_irq;
 	ops->free_host_general_irq = vhost_intr_free_host_general_irq;
 	ops->free_syncpt_irq = vhost_free_syncpt_irq;
+	ops->debug_dump = vhost_fake_debug_dump;
 }

@@ -597,6 +597,7 @@ int nvhost_init_t124_support(struct nvhost_master *host,
 		vhost_init_host1x_syncpt_ops(&op->syncpt);
 		vhost_init_host1x_intr_ops(&op->intr);
 		vhost_init_host1x_cdma_ops(&op->cdma);
+		vhost_init_host1x_debug_ops(&op->debug);
 	}
 
 	t124 = kzalloc(sizeof(struct t124), GFP_KERNEL);

@@ -3864,7 +3864,7 @@ int snd_soc_dapm_link_dai_widgets(struct snd_soc_card *card)
 				break;
 			}
 
-			if (!w->sname || !strstr(w->sname, dai_w->sname))
+			if (!w->sname || !strstr(dai_w->name, w->sname))
 				continue;
 
 			if (dai_w->id == snd_soc_dapm_dai_in) {

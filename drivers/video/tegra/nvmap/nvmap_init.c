@@ -50,15 +50,6 @@ static const struct of_device_id nvmap_of_ids[] = {
 	{ }
 };
 
-/*
- * Order of this must match nvmap_carveouts;
- */
-static char *nvmap_carveout_names[] = {
-	"iram",
-	"generic",
-	"vpr"
-};
-
 static struct nvmap_platform_carveout nvmap_carveouts[] = {
 	[0] = {
 		.name		= "iram",
@@ -89,48 +80,6 @@ static struct nvmap_platform_data nvmap_data = {
 	.carveouts	= nvmap_carveouts,
 	.nr_carveouts	= ARRAY_SIZE(nvmap_carveouts),
 };
-
-/*
- * In case there is no DT entry.
- */
-static struct platform_device nvmap_platform_device  = {
-	.name	= "tegra-carveouts",
-	.id	= -1,
-	.dev	= {
-		.platform_data = &nvmap_data,
-	},
-};
-
-/*
- * @data must be at least a 2 element array of u64's.
- */
-static int nvmap_populate_carveout(const void *data,
-				   struct nvmap_platform_carveout *co)
-{
-	__be64 *co_data = (__be64 *)data;
-	u64 base, size;
-
-	base = be64_to_cpup(co_data);
-	size = be64_to_cpup(co_data + 1);
-
-	/*
-	 * If base and size are 0, then assume the CO is not being populated.
-	 */
-	if (base == 0 && size == 0)
-		return -ENODEV;
-
-	if (size == 0)
-		return -EINVAL;
-
-	co->base = (phys_addr_t)base;
-	co->size = (size_t)size;
-
-	pr_info("Populating %s\n", co->name);
-	pr_info("  base = 0x%08lx size = 0x%x\n",
-		(unsigned long)base, (unsigned int)size);
-
-	return 0;
-}
 
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
 int nvmap_populate_ivm_carveout(struct device_node *n,
@@ -202,24 +151,11 @@ int nvmap_populate_ivm_carveout(struct device_node *n,
 static int __nvmap_init_legacy(struct device *dev);
 static int __nvmap_init_dt(struct platform_device *pdev)
 {
-	const void *prop;
-	int prop_len, i;
 	struct device_node *node, *n;
 
 	if (!of_match_device(nvmap_of_ids, &pdev->dev)) {
 		pr_err("Missing DT entry!\n");
 		return -EINVAL;
-	}
-
-	for (i = 0; i < ARRAY_SIZE(nvmap_carveout_names); i++) {
-		prop = of_get_property(pdev->dev.of_node,
-				       nvmap_carveout_names[i], &prop_len);
-		if (!prop || prop_len != 4 * sizeof(u32)) {
-			pr_err("Missing carveout for %s!\n",
-			       nvmap_carveout_names[i]);
-			continue;
-		}
-		nvmap_populate_carveout(prop, &nvmap_carveouts[i]);
 	}
 
 	/* For VM_2 we need carveout. So, enabling it here */
@@ -322,12 +258,6 @@ int nvmap_init(struct platform_device *pdev)
 	struct dma_declare_info vpr_dma_info;
 	struct dma_declare_info generic_dma_info;
 
-	if (pdev->dev.platform_data) {
-		err = __nvmap_init_legacy(&pdev->dev);
-		if (err)
-			return err;
-	}
-
 	if (pdev->dev.of_node) {
 		err = __nvmap_init_dt(pdev);
 		if (err)
@@ -393,19 +323,8 @@ static struct platform_driver nvmap_driver = {
 static int __init nvmap_init_driver(void)
 {
 	int e = 0;
-	struct device_node *dnode;
 
 	nvmap_dev = NULL;
-
-	/* Pick DT vs legacy loading. */
-	dnode = of_find_compatible_node(NULL, NULL, "nvidia,carveouts");
-	if (!dnode)
-		e = platform_device_register(&nvmap_platform_device);
-	else
-		of_node_put(dnode);
-
-	if (e)
-		goto fail;
 
 	e = nvmap_heap_init();
 	if (e)

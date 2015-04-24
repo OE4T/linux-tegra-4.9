@@ -2562,8 +2562,6 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 
 	/* HACK : Should be handled through dma-engine */
 	tegra_adsp_pd_add_device(&pdev->dev);
-	pm_genpd_dev_need_save(&pdev->dev, true);
-	pm_genpd_dev_need_restore(&pdev->dev, true);
 	pm_runtime_get_sync(&pdev->dev);
 	for (i = 0; i < TEGRA210_ADSP_ADMA_CHANNEL_COUNT; i++) {
 		ret = tegra_agic_route_interrupt(

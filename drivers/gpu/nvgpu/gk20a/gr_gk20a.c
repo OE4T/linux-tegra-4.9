@@ -4692,7 +4692,8 @@ static void gk20a_gr_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 		gr_pd_ab_dist_cfg1_max_output_granularity_v();
 
 	gk20a_writel(g, gr_pd_ab_dist_cfg1_r(),
-		gr_pd_ab_dist_cfg1_max_output_f(pd_ab_max_output));
+		gr_pd_ab_dist_cfg1_max_output_f(pd_ab_max_output) |
+		gr_pd_ab_dist_cfg1_max_batches_init_f());
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
 		stride = proj_gpc_stride_v() * gpc_index;

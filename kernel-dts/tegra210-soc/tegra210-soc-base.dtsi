@@ -169,6 +169,12 @@
 		partition-id = <TEGRA_POWERGATE_APE>;
 	};
 
+	adsp_pd: adsp-pd {
+		compatible = "nvidia,tegra210-adsp-pd";
+		#power-domain-cells = <0>;
+		power-domains = <&ape_pd>;
+	};
+
 	host1x_pd: host1x-pd {
 		compatible = "nvidia,tegra210-host1x-pd";
 		is_off;
@@ -1259,14 +1265,14 @@
 
 	tegra_adsp_audio: adsp_audio {
 		compatible = "nvidia,tegra210-adsp-audio";
-		power-domains = <&ape_pd>;
+		power-domains = <&adsp_pd>;
 		iommus = <&smmu TEGRA_SWGROUP_APE>;
 		status = "disabled";
 	};
 
 	adsp {
 	     compatible = "nvidia,tegra210-adsp";
-	     power-domains = <&ape_pd>;
+	     power-domains = <&adsp_pd>;
 	     reg = <0x0 0x702ef000 0x0 0x1000>, /* AMC */
 		   <0x0 0x702ec000 0x0 0x2000>, /* AMISC */
 		   <0x0 0x702ee000 0x0 0x1000>, /* ABRIDGE */

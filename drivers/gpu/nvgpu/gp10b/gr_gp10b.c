@@ -476,17 +476,20 @@ static int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 	if (flags == NVGPU_GR_PREEMPTION_MODE_GFXP) {
 		u32 spill_size =
 			gr_gpc0_swdx_rm_spill_buffer_size_256b_default_v();
-		u32 betacb_size = ALIGN(
-			(gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v() *
-			 gr_gpc0_ppc0_cbm_beta_cb_size_v_granularity_v() *
-			 g->gr.max_tpc_count) +
-			(g->gr.alpha_cb_size *
-			 gr_gpc0_ppc0_cbm_beta_cb_size_v_granularity_v() *
-			 g->gr.max_tpc_count),
-			128);
 		u32 pagepool_size = g->ops.gr.pagepool_default_size(g) *
 			gr_scc_pagepool_total_pages_byte_granularity_v();
+		u32 betacb_size = g->gr.attrib_cb_default_size +
+				  (gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v() -
+				   gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v());
+		u32 attrib_cb_size = (betacb_size + g->gr.alpha_cb_size) *
+				  gr_gpc0_ppc0_cbm_beta_cb_size_v_granularity_v() *
+				  g->gr.max_tpc_count;
+		attrib_cb_size = ALIGN(attrib_cb_size, 128);
 
+		gk20a_dbg_info("gfxp context spill_size=%d", spill_size);
+		gk20a_dbg_info("gfxp context pagepool_size=%d", pagepool_size);
+		gk20a_dbg_info("gfxp context attrib_cb_size=%d",
+				attrib_cb_size);
 		err = gk20a_gmmu_alloc_map(vm, g->gr.t18x.ctx_vars.preempt_image_size,
 				&(*gr_ctx)->t18x.preempt_ctxsw_buffer);
 		if (err) {

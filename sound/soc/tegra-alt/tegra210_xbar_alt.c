@@ -962,8 +962,6 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 	regcache_cache_only(xbar->regmap, true);
 
 	tegra_ape_pd_add_device(&pdev->dev);
-	pm_genpd_dev_need_save(&pdev->dev, true);
-	pm_genpd_dev_need_restore(&pdev->dev, true);
 
 	pm_runtime_enable(&pdev->dev);
 	if (!pm_runtime_enabled(&pdev->dev)) {

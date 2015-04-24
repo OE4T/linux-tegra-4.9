@@ -39,6 +39,10 @@ static struct pll_parms gpc_pll_params = {
 	1, 255,			/* M */
 	8, 255,			/* N */
 	1, 32,			/* PL */
+	0, 0, 0, 0, 0,		/* NA mode parameters: not supported on GK20A */
+	500,			/* Locking and ramping timeout */
+	0,			/* NA mode lock delay: not supported on GK20A */
+	2,			/* IDDQ mode exit delay */
 };
 
 #ifdef CONFIG_DEBUG_FS
@@ -185,7 +189,7 @@ static int clk_slide_gpc_pll(struct gk20a *g, u32 n)
 {
 	u32 data, coeff;
 	u32 nold;
-	int ramp_timeout = 500;
+	int ramp_timeout = gpc_pll_params.lock_timeout;
 
 	/* get old coefficients */
 	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
@@ -307,7 +311,7 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 				trim_sys_gpcpll_cfg_iddq_power_on_v());
 		gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
 		gk20a_readl(g, trim_sys_gpcpll_cfg_r());
-		udelay(2);
+		udelay(gpc_pll_params.iddq_exit_delay);
 	}
 
 	/* disable PLL before changing coefficients */
@@ -341,7 +345,7 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 	}
 
 	/* wait pll lock */
-	timeout = clk->pll_delay / 2 + 1;
+	timeout = gpc_pll_params.lock_timeout / 2 + 1;
 	do {
 		cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 		if (cfg & trim_sys_gpcpll_cfg_pll_lock_true_f())
@@ -455,8 +459,6 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 		return -EINVAL;
 	}
 	ref_rate = clk_get_rate(ref);
-
-	clk->pll_delay = 300; /* usec */
 
 	clk->gpc_pll.id = GK20A_GPC_PLL;
 	clk->gpc_pll.clk_in = ref_rate / KHZ;

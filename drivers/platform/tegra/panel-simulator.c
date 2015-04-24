@@ -26,6 +26,7 @@
 #include <linux/leds.h>
 #include <linux/ioport.h>
 #include <linux/export.h>
+#include <linux/tegra-soc.h>
 
 #include "board.h"
 #include "board-panel.h"
@@ -165,8 +166,9 @@ static int panel_sim_regulator_get(struct device *dev)
 {
 	int err = 0;
 
-	if (reg_requested)
+	if (reg_requested || tegra_platform_is_linsim())
 		return 0;
+
 	avdd_lcd_3v3 = regulator_get(dev, "avdd_lcd");
 	if (IS_ERR(avdd_lcd_3v3)) {
 		pr_err("avdd_lcd regulator get failed\n");
@@ -235,6 +237,9 @@ fail:
 static int panel_sim_enable(struct device *dev)
 {
 	int err = 0;
+
+	if (tegra_platform_is_linsim())
+		return err;
 
 	err = panel_sim_regulator_get(dev);
 	if (err < 0) {

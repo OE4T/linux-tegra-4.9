@@ -2561,7 +2561,7 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 		goto err_pm_disable;
 
 	/* HACK : Should be handled through dma-engine */
-	tegra_ape_pd_add_device(&pdev->dev);
+	tegra_adsp_pd_add_device(&pdev->dev);
 	pm_genpd_dev_need_save(&pdev->dev, true);
 	pm_genpd_dev_need_restore(&pdev->dev, true);
 	pm_runtime_get_sync(&pdev->dev);
@@ -2575,7 +2575,7 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 		}
 	}
 	pm_runtime_put(&pdev->dev);
-	tegra_ape_pd_remove_device(&pdev->dev);
+	tegra_adsp_pd_remove_device(&pdev->dev);
 	/* HACK end */
 
 	for (i = 0; i < TEGRA210_ADSP_VIRT_REG_MAX; i++)

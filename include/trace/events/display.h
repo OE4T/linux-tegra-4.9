@@ -283,6 +283,22 @@ DEFINE_EVENT(display_syncpt_notifier, scanout_syncpt_upd,
 	TP_ARGS(syncpt_val)
 );
 
+TRACE_EVENT(scanout_vrr_stats,
+	TP_PROTO(unsigned int syncpt_val, int db_val),
+	TP_ARGS(syncpt_val, db_val),
+	TP_STRUCT__entry(
+		__field(	u32,		syncpt_val_value)
+		__field(	int,		db_val_value)
+	),
+	TP_fast_assign(
+		__entry->syncpt_val_value = syncpt_val;
+		__entry->db_val_value = db_val;
+	),
+	TP_printk("Sync Point Value for Dbalance Measurement:%u,Db_value:%d",
+		__entry->syncpt_val_value,__entry->db_val_value)
+);
+
+
 #endif /* _TRACE_DISPLAY_H */
 
 /* This part must be outside protection */

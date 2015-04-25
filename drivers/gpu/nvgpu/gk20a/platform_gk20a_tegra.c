@@ -162,8 +162,9 @@ static unsigned long gk20a_tegra_get_emc_rate(struct gk20a *g,
 	gpu_fmax_at_vmin = tegra_dvfs_get_fmax_at_vmin_safe_t(
 		clk_get_parent(g->clk.tegra_clk));
 
-	/* When scaling emc, only account for the gpu load below fmax@vmin */
-	if (gpu_freq < gpu_fmax_at_vmin)
+	/* When scaling emc, account for the gpu load when the
+	 * gpu frequency is less than or equal to fmax@vmin. */
+	if (gpu_freq <= gpu_fmax_at_vmin)
 		emc_scale = min(g->pmu.load_avg, g->emc3d_ratio);
 	else
 		emc_scale = g->emc3d_ratio;

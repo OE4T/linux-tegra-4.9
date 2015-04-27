@@ -86,11 +86,6 @@ static void tegra_gpio_enable(int gpio)
 	writel(val, regs + reg1);
 }
 
-static void tegra_gpio_disable(int gpio)
-{
-	tegra_gpio_writel(0, gpio);
-}
-
 static int tegra_gpio_request(struct gpio_chip *chip, unsigned offset)
 {
 	return pinctrl_request_gpio(chip->base + offset);
@@ -229,11 +224,6 @@ static struct gpio_chip tegra_gpio_chip = {
 	.set_debounce		= tegra_gpio_set_debounce,
 	.base			= 0,
 };
-
-static void tegra_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
-{
-	WARN_ON(1);
-}
 
 struct tegra_gpio_soc_config {
 	bool debounce_support;

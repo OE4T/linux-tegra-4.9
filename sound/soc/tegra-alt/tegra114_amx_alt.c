@@ -374,14 +374,8 @@ int tegra114_amx_set_channel_map(struct snd_soc_dai *dai,
 static int tegra114_amx_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra114_amx *amx = snd_soc_codec_get_drvdata(codec);
-	int ret;
 
 	codec->control_data = amx->regmap;
-	ret = snd_soc_codec_set_cache_io(codec, 32, 32, SND_SOC_REGMAP);
-	if (ret != 0) {
-		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
-		return ret;
-	}
 
 	return 0;
 }
@@ -467,7 +461,7 @@ static const struct snd_soc_dapm_route tegra114_amx_routes[] = {
 static int tegra124_virt_amx_chan_en_get(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra114_amx *amx = snd_soc_codec_get_drvdata(codec);
 	unsigned int channel_mask = (unsigned int)kcontrol->private_value;
 	unsigned int val;
@@ -484,7 +478,7 @@ static int tegra124_virt_amx_chan_en_get(struct snd_kcontrol *kcontrol,
 static int tegra124_virt_amx_chan_en_set(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra114_amx *amx = snd_soc_codec_get_drvdata(codec);
 	unsigned int enable_mask = (unsigned int)kcontrol->private_value;
 	unsigned int val;

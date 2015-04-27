@@ -158,14 +158,8 @@ static int tegra210_ope_hw_params(struct snd_pcm_substream *substream,
 static int tegra210_ope_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_ope *ope = snd_soc_codec_get_drvdata(codec);
-	int ret;
 
 	codec->control_data = ope->regmap;
-	ret = snd_soc_codec_set_cache_io(codec, 32, 32, SND_SOC_REGMAP);
-	if (ret != 0) {
-		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
-		return ret;
-	}
 
 	ope->soc_data->peq_soc_data.codec_init(codec);
 	ope->soc_data->mbdrc_soc_data.codec_init(codec);

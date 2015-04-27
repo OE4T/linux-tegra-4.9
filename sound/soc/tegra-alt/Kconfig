@@ -2,7 +2,7 @@ config SND_SOC_TEGRA_ALT
 	tristate "Alternative DAPM-based SoC audio support for the Tegra System-on-Chip"
 	depends on ARCH_TEGRA
 	select REGMAP_MMIO
-	select SND_SOC_DMAENGINE_PCM
+	select SND_DMAENGINE_PCM
 	help
 	  Say Y or M here if you want support for SoC audio on Tegra, using the
 	  alternative driver that exposes to user-space the full routing capabilities

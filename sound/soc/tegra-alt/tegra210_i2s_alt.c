@@ -522,14 +522,8 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 static int tegra210_i2s_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_i2s *i2s = snd_soc_codec_get_drvdata(codec);
-	int ret;
 
 	codec->control_data = i2s->regmap;
-	ret = snd_soc_codec_set_cache_io(codec, 64, 32, SND_SOC_REGMAP);
-	if (ret != 0) {
-		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
-		return ret;
-	}
 
 	return 0;
 }
@@ -624,7 +618,7 @@ static struct snd_soc_dai_driver tegra210_i2s_dais[] = {
 static int tegra210_i2s_loopback_get(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_i2s *i2s = snd_soc_codec_get_drvdata(codec);
 
 	ucontrol->value.integer.value[0] = i2s->loopback;
@@ -635,7 +629,7 @@ static int tegra210_i2s_loopback_get(struct snd_kcontrol *kcontrol,
 static int tegra210_i2s_loopback_put(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_i2s *i2s = snd_soc_codec_get_drvdata(codec);
 
 	i2s->loopback = ucontrol->value.integer.value[0];

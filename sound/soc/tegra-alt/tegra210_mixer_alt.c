@@ -154,7 +154,7 @@ static int tegra210_mixer_put_gain(struct snd_kcontrol *kcontrol,
 {
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_mixer *mixer = snd_soc_codec_get_drvdata(codec);
 	unsigned int reg = mc->reg;
 	unsigned int ret, i;
@@ -265,14 +265,8 @@ static int tegra210_mixer_out_hw_params(struct snd_pcm_substream *substream,
 static int tegra210_mixer_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_mixer *mixer = snd_soc_codec_get_drvdata(codec);
-	int ret;
 
 	codec->control_data = mixer->regmap;
-	ret = snd_soc_codec_set_cache_io(codec, 32, 32, SND_SOC_REGMAP);
-	if (ret != 0) {
-		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
-		return ret;
-	}
 
 	return 0;
 }

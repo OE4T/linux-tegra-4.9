@@ -32,7 +32,6 @@
 #endif
 #include <linux/pm_runtime.h>
 #include <mach/tegra_asoc_pdata.h>
-#include <mach/tegra_rt5640_pdata.h>
 
 #include <sound/core.h>
 #include <sound/jack.h>
@@ -93,7 +92,7 @@ static int tegra_t210ref_jack_notifier(struct notifier_block *self,
 {
 	struct snd_soc_jack *jack = dev;
 	struct snd_soc_codec *codec = jack->codec;
-	struct snd_soc_card *card = codec->card;
+	struct snd_soc_card *card = codec->component.card;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	enum headset_state state = BIT_NO_HEADSET;
 	static bool button_pressed;
@@ -149,9 +148,7 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 					int channels,
 					u64 formats)
 {
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct snd_soc_card *card = codec->card;
+	struct snd_soc_card *card = rtd->card;
 	struct device_node *np = card->dev->of_node;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_stream *dai_params;
@@ -255,9 +252,7 @@ static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 					struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct snd_soc_card *card = codec->card;
+	struct snd_soc_card *card = rtd->card;
 	int err;
 
 	err = tegra_t210ref_dai_init(rtd, params_rate(params),
@@ -274,9 +269,7 @@ static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 static int tegra_t210ref_compr_set_params(struct snd_compr_stream *cstream)
 {
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct snd_soc_card *card = codec->card;
+	struct snd_soc_card *card = rtd->card;
 	struct snd_soc_platform *platform = rtd->platform;
 	struct snd_codec codec_params;
 	int srate;
@@ -312,7 +305,7 @@ static int tegra_t210ref_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_codec *codec = codec_dai->codec;
-	struct snd_soc_card *card = codec->card;
+	struct snd_soc_card *card = rtd->card;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct tegra_asoc_platform_data *pdata = machine->pdata;
 	struct snd_soc_pcm_stream *dai_params =

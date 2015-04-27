@@ -1,7 +1,7 @@
 /*
  * regmap_util.c - utilities for writing regmap tables
  *
- * Copyright (c) 2013-2014, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2013-2015, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,7 +17,7 @@
  */
 
 #include <linux/regmap.h>
-#include "regmap_util.h"
+#include <media/camera_common.h>
 
 int
 regmap_util_write_table_8(struct regmap *regmap,

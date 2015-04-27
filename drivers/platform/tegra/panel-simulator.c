@@ -641,7 +641,7 @@ static void panel_sim_cmu_init(struct tegra_dc_platform_data *pdata)
 }
 #endif
 
-struct pwm_bl_data_dt_ops panel_sim_pwm_bl_ops = {
+static struct pwm_bl_data_dt_ops panel_sim_pwm_bl_ops = {
 	.notify = panel_sim_bl_notify,
 	.check_fb = panel_sim_check_fb,
 	.blnode_compatible = "p,wuxga-10-1-bl",
@@ -654,7 +654,7 @@ struct tegra_panel_ops panel_sim_ops = {
 	.pwm_bl_ops = &panel_sim_pwm_bl_ops,
 };
 
-struct tegra_panel __initdata panel_sim = {
+static struct tegra_panel __initdata panel_sim = {
 	.init_sd_settings = panel_sim_sd_settings_init,
 	.init_dc_out = panel_sim_dc_out_init,
 	.init_fb_data = panel_sim_fb_data_init,

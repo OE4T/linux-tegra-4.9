@@ -1922,6 +1922,7 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 	char dai_link_name[MAX_STR_SIZE];
 	char *str;
 	const char *prefix;
+	struct device_node *bitclkmaster = NULL, *framemaster = NULL;
 
 	if (tegra_codec_links)
 		return tegra_codec_links;
@@ -1995,7 +1996,8 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 				goto err;
 			}
 			tegra_codec_links[i].dai_fmt =
-				snd_soc_of_parse_daifmt(subnp, NULL);
+				snd_soc_of_parse_daifmt(subnp, NULL,
+					&bitclkmaster, &framemaster);
 
 			params = devm_kzalloc(&pdev->dev,
 				sizeof(struct snd_soc_pcm_stream), GFP_KERNEL);

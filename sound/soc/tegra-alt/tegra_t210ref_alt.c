@@ -196,8 +196,7 @@ static int tegra_t210ref_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_dai *ad1937_dai = rtd->codec_dai;
 	struct snd_soc_dai *i2s_dai = rtd->cpu_dai;
-	struct snd_soc_codec *codec = ad1937_dai->codec;
-	struct snd_soc_card *card = codec->card;
+	struct snd_soc_card *card = rtd->card;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
@@ -271,10 +270,8 @@ static int tegra_t210ref_ad1937_init(struct snd_soc_pcm_runtime *rtd)
 
 static int tegra_t210ref_spdif_init(struct snd_soc_pcm_runtime *rtd)
 {
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct snd_soc_card *card = codec->card;
+	struct snd_soc_card *card = rtd->card;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
@@ -351,9 +348,7 @@ static int tegra_t210ref_spdif_init(struct snd_soc_pcm_runtime *rtd)
 
 static int tegra_t210ref_amx1_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct snd_soc_card *card = codec->card;
+	struct snd_soc_card *card = rtd->card;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai *amx_dai = rtd->cpu_dai;
 	struct device_node *np = rtd->card->dev->of_node;
@@ -392,9 +387,7 @@ static int tegra_t210ref_amx1_dai_init(struct snd_soc_pcm_runtime *rtd)
 
 static int tegra_t210ref_amx2_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct snd_soc_card *card = codec->card;
+	struct snd_soc_card *card = rtd->card;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai *amx_dai = rtd->cpu_dai;
 	struct device_node *np = rtd->card->dev->of_node;
@@ -435,9 +428,7 @@ static int tegra_t210ref_amx2_dai_init(struct snd_soc_pcm_runtime *rtd)
 
 static int tegra_t210ref_adx1_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct snd_soc_card *card = codec->card;
+	struct snd_soc_card *card = rtd->card;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai *adx_dai = rtd->codec_dai;
 	struct device_node *np = rtd->card->dev->of_node;
@@ -476,9 +467,7 @@ static int tegra_t210ref_adx1_dai_init(struct snd_soc_pcm_runtime *rtd)
 
 static int tegra_t210ref_adx2_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct snd_soc_card *card = codec->card;
+	struct snd_soc_card *card = rtd->card;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai *adx_dai = rtd->codec_dai;
 	struct device_node *np = rtd->card->dev->of_node;
@@ -585,9 +574,7 @@ static int tegra_t210ref_ad1937_hw_params(
 			unsigned int idx, char *prefix)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct snd_soc_card *card = codec->card;
+	struct snd_soc_card *card = rtd->card;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_stream *dai_params;
 	unsigned int fmt;

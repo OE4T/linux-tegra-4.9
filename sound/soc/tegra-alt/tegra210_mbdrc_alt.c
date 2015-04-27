@@ -156,7 +156,7 @@ static int tegra210_mbdrc_get(struct snd_kcontrol *kcontrol,
 {
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_ope *ope = snd_soc_codec_get_drvdata(codec);
 	unsigned int mask = (1 << fls(mc->max)) - 1;
 	unsigned int val;
@@ -175,7 +175,7 @@ static int tegra210_mbdrc_put(struct snd_kcontrol *kcontrol,
 {
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_ope *ope = snd_soc_codec_get_drvdata(codec);
 	unsigned int mask = (1 << fls(mc->max)) - 1;
 	unsigned int val;
@@ -192,7 +192,7 @@ static int tegra210_mbdrc_put(struct snd_kcontrol *kcontrol,
 static int tegra210_mbdrc_get_enum(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_ope *ope = snd_soc_codec_get_drvdata(codec);
 	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
 	unsigned int val;
@@ -206,13 +206,13 @@ static int tegra210_mbdrc_get_enum(struct snd_kcontrol *kcontrol,
 static int tegra210_mbdrc_put_enum(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_ope *ope = snd_soc_codec_get_drvdata(codec);
 	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
 	unsigned int val;
 	unsigned int mask;
 
-	if (ucontrol->value.enumerated.item[0] > e->max - 1)
+	if (ucontrol->value.enumerated.item[0] > e->items - 1)
 		return -EINVAL;
 
 	val = ucontrol->value.enumerated.item[0] << e->shift_l;
@@ -225,7 +225,7 @@ static int tegra210_mbdrc_band_params_get(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct tegra_soc_bytes *params = (void *)kcontrol->private_value;
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_ope *ope = snd_soc_codec_get_drvdata(codec);
 	u32 *data = (u32 *)ucontrol->value.bytes.data;
 	u32 regs = params->soc.base;
@@ -233,7 +233,8 @@ static int tegra210_mbdrc_band_params_get(struct snd_kcontrol *kcontrol,
 	u32 shift = params->shift;
 	int i;
 
-	for (i = 0; i < params->soc.num_regs; i++, regs += codec->val_bytes) {
+	for (i = 0; i < params->soc.num_regs; i++,
+			regs += codec->component.val_bytes) {
 		regmap_read(ope->mbdrc_regmap, regs, &data[i]);
 		data[i] = ((data[i] & mask) >> shift);
 	}
@@ -245,7 +246,7 @@ static int tegra210_mbdrc_band_params_put(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct tegra_soc_bytes *params = (void *)kcontrol->private_value;
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_ope *ope = snd_soc_codec_get_drvdata(codec);
 	u32 *data = (u32 *)ucontrol->value.bytes.data;
 	u32 regs = params->soc.base;
@@ -253,7 +254,8 @@ static int tegra210_mbdrc_band_params_put(struct snd_kcontrol *kcontrol,
 	u32 shift = params->shift;
 	int i;
 
-	for (i = 0; i < params->soc.num_regs; i++, regs += codec->val_bytes)
+	for (i = 0; i < params->soc.num_regs; i++,
+			regs += codec->component.val_bytes)
 		regmap_update_bits(ope->mbdrc_regmap, regs, mask,
 				   data[i] << shift);
 
@@ -264,7 +266,7 @@ static int tegra210_mbdrc_threshold_get(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct tegra_soc_bytes *params = (void *)kcontrol->private_value;
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_ope *ope = snd_soc_codec_get_drvdata(codec);
 	u32 *data = (u32 *)ucontrol->value.bytes.data;
 	u32 regs = params->soc.base;
@@ -272,7 +274,7 @@ static int tegra210_mbdrc_threshold_get(struct snd_kcontrol *kcontrol,
 	u32 val;
 	int i;
 
-	for (i = 0; i < num_regs; i += 4, regs += codec->val_bytes) {
+	for (i = 0; i < num_regs; i += 4, regs += codec->component.val_bytes) {
 		regmap_read(ope->mbdrc_regmap, regs, &val);
 
 		data[i] = (val & TEGRA210_MBDRC_THRESH_1ST_MASK) >>
@@ -292,14 +294,14 @@ static int tegra210_mbdrc_threshold_put(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct tegra_soc_bytes *params = (void *)kcontrol->private_value;
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_ope *ope = snd_soc_codec_get_drvdata(codec);
 	u32 *data = (u32 *)ucontrol->value.bytes.data;
 	u32 regs = params->soc.base;
 	u32 num_regs = params->soc.num_regs;
 	int i;
 
-	for (i = 0; i < num_regs; i += 4, regs += codec->val_bytes) {
+	for (i = 0; i < num_regs; i += 4, regs += codec->component.val_bytes) {
 		data[i] = (((data[i] >> TEGRA210_MBDRC_THRESH_1ST_SHIFT) &
 					TEGRA210_MBDRC_THRESH_1ST_MASK) |
 			((data[i + 1] >> TEGRA210_MBDRC_THRESH_2ND_SHIFT) &
@@ -319,10 +321,10 @@ static int tegra210_mbdrc_biquad_coeffs_get(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct tegra_soc_bytes *params = (void *)kcontrol->private_value;
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	u32 *data = (u32 *)ucontrol->value.bytes.data;
 
-	memset(data, 0, params->soc.num_regs * codec->val_bytes);
+	memset(data, 0, params->soc.num_regs * codec->component.val_bytes);
 	return 0;
 }
 
@@ -330,10 +332,10 @@ static int tegra210_mbdrc_biquad_coeffs_put(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct tegra_soc_bytes *params = (void *)kcontrol->private_value;
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_ope *ope = snd_soc_codec_get_drvdata(codec);
 	u32 reg_ctrl = params->soc.base;
-	u32 reg_data = reg_ctrl + codec->val_bytes;
+	u32 reg_data = reg_ctrl + codec->component.val_bytes;
 	u32 *data = (u32 *)ucontrol->value.bytes.data;
 
 	tegra210_xbar_write_ahubram(ope->mbdrc_regmap, reg_ctrl, reg_data,

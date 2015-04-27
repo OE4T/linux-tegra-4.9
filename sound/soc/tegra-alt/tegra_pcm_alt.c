@@ -80,8 +80,8 @@ static int tegra_alt_pcm_open(struct snd_pcm_substream *substream)
 		return ret;
 	}
 
-	ret = snd_dmaengine_pcm_open_request_chan_with_name(substream,
-		dmap->chan_name);
+	ret = snd_dmaengine_pcm_open(substream,
+			dma_request_slave_channel(dev, dmap->chan_name));
 	if (ret) {
 		dev_err(dev, "dmaengine pcm open failed with err %d\n", ret);
 		return ret;
@@ -276,7 +276,7 @@ static void tegra_alt_pcm_free(struct snd_pcm *pcm)
 
 static int tegra_alt_pcm_probe(struct snd_soc_platform *platform)
 {
-	platform->dapm.idle_bias_off = 1;
+	platform->component.dapm.idle_bias_off = 1;
 	return 0;
 }
 

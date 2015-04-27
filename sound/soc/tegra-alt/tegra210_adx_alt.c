@@ -427,14 +427,8 @@ static int tegra210_adx_set_channel_map(struct snd_soc_dai *dai,
 static int tegra210_adx_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_adx *adx = snd_soc_codec_get_drvdata(codec);
-	int ret;
 
 	codec->control_data = adx->regmap;
-	ret = snd_soc_codec_set_cache_io(codec, 32, 32, SND_SOC_REGMAP);
-	if (ret != 0) {
-		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
-		return ret;
-	}
 
 	return 0;
 }

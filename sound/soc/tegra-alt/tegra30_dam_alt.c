@@ -696,7 +696,7 @@ static int tegra30_dam_out_hw_params(struct snd_pcm_substream *substream,
 static int tegra30_dam_get_out_srate(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra30_dam *dam = snd_soc_codec_get_drvdata(codec);
 
 	/* get the dam output rate */
@@ -708,7 +708,7 @@ static int tegra30_dam_get_out_srate(struct snd_kcontrol *kcontrol,
 static int tegra30_dam_put_out_srate(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra30_dam *dam = snd_soc_codec_get_drvdata(codec);
 
 	/* update the dam output rate */
@@ -720,7 +720,7 @@ static int tegra30_dam_put_out_srate(struct snd_kcontrol *kcontrol,
 static int tegra30_dam_get_in_srate(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra30_dam *dam = snd_soc_codec_get_drvdata(codec);
 
 	/* get the dam input rate */
@@ -732,7 +732,7 @@ static int tegra30_dam_get_in_srate(struct snd_kcontrol *kcontrol,
 static int tegra30_dam_put_in_srate(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra30_dam *dam = snd_soc_codec_get_drvdata(codec);
 
 	/* update the dam input rate */
@@ -750,7 +750,7 @@ static int tegra124_virt_dam_get_out_srate(struct snd_kcontrol *kcontrol,
 static int tegra124_virt_dam_put_out_srate(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra30_dam *dam = snd_soc_codec_get_drvdata(codec);
 	int ret;
 
@@ -775,7 +775,7 @@ static int tegra124_virt_dam_get_in_srate(struct snd_kcontrol *kcontrol,
 static int tegra124_virt_dam_put_in_srate(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra30_dam *dam = snd_soc_codec_get_drvdata(codec);
 	int ret;
 
@@ -794,7 +794,7 @@ static int tegra124_virt_dam_put_in_srate(struct snd_kcontrol *kcontrol,
 static int tegra124_virt_dam_get_ch_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra30_dam *dam = snd_soc_codec_get_drvdata(codec);
 
 	ucontrol->value.integer.value[0] = dam->in_ch0_gain;
@@ -805,7 +805,7 @@ static int tegra124_virt_dam_get_ch_gain(struct snd_kcontrol *kcontrol,
 static int tegra124_virt_dam_put_ch_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra30_dam *dam = snd_soc_codec_get_drvdata(codec);
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
@@ -820,14 +820,8 @@ static int tegra124_virt_dam_put_ch_gain(struct snd_kcontrol *kcontrol,
 static int tegra30_dam_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra30_dam *dam = snd_soc_codec_get_drvdata(codec);
-	int ret;
 
 	codec->control_data = dam->regmap;
-	ret = snd_soc_codec_set_cache_io(codec, 32, 32, SND_SOC_REGMAP);
-	if (ret != 0) {
-		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
-		return ret;
-	}
 
 	return 0;
 }

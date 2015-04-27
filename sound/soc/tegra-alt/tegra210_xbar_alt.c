@@ -99,14 +99,7 @@ static int tegra210_xbar_suspend(struct device *dev)
 
 static int tegra210_xbar_codec_probe(struct snd_soc_codec *codec)
 {
-	int ret;
-
 	codec->control_data = xbar->regmap;
-	ret = snd_soc_codec_set_cache_io(codec, 32, 32, SND_SOC_REGMAP);
-	if (ret != 0) {
-		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
-		return ret;
-	}
 
 	return 0;
 }
@@ -335,9 +328,7 @@ static const int tegra210_xbar_mux_values[] = {
 static int tegra210_xbar_get_value_enum(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
-	struct snd_soc_dapm_widget *widget = wlist->widgets[0];
-	struct snd_soc_codec *codec = widget->codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_kcontrol_codec(kcontrol);
 	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
 	unsigned int reg_count, reg_val, val, bit_pos = 0, i;
 	unsigned int reg[TEGRA210_XBAR_UPDATE_MAX_REG];
@@ -353,12 +344,13 @@ static int tegra210_xbar_get_value_enum(struct snd_kcontrol *kcontrol,
 		reg_val = snd_soc_read(codec, reg[i]);
 		val = reg_val & xbar->soc_data->mask[i];
 		if (val != 0) {
-			bit_pos = ffs(val) + (8 * codec->val_bytes * i);
+			bit_pos = ffs(val) +
+					(8*codec->component.val_bytes * i);
 			break;
 		}
 	}
 
-	for (i = 0; i < e->max; i++) {
+	for (i = 0; i < e->items; i++) {
 		if (bit_pos == e->values[i]) {
 			ucontrol->value.enumerated.item[0] = i;
 			break;
@@ -371,13 +363,13 @@ static int tegra210_xbar_get_value_enum(struct snd_kcontrol *kcontrol,
 static int tegra210_xbar_put_value_enum(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
-	struct snd_soc_dapm_widget *widget = wlist->widgets[0];
-	struct snd_soc_codec *codec = widget->codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_kcontrol_codec(kcontrol);
+	struct snd_soc_dapm_context *dapm =
+				snd_soc_dapm_kcontrol_dapm(kcontrol);
 	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
 	unsigned int *item = ucontrol->value.enumerated.item;
 	unsigned int change = 0, reg_idx = 0, value, *mask, bit_pos = 0;
-	unsigned int i, wi, reg_count, reg_val = 0, update_idx = 0;
+	unsigned int i, reg_count, reg_val = 0, update_idx = 0;
 	unsigned int reg[TEGRA210_XBAR_UPDATE_MAX_REG];
 	struct snd_soc_dapm_update update[TEGRA210_XBAR_UPDATE_MAX_REG];
 
@@ -385,15 +377,15 @@ static int tegra210_xbar_put_value_enum(struct snd_kcontrol *kcontrol,
 	reg_count = xbar->soc_data->reg_count;
 	mask = (unsigned int *)xbar->soc_data->mask;
 
-	if (item[0] >= e->max || reg_count > TEGRA210_XBAR_UPDATE_MAX_REG)
+	if (item[0] >= e->items || reg_count > TEGRA210_XBAR_UPDATE_MAX_REG)
 		return -EINVAL;
 
 	value = e->values[item[0]];
 
 	if (value) {
 		/* get the register index and value to set */
-		reg_idx = (value - 1) / (8 * codec->val_bytes);
-		bit_pos = (value - 1) % (8 * codec->val_bytes);
+		reg_idx = (value - 1) / (8 * codec->component.val_bytes);
+		bit_pos = (value - 1) % (8 * codec->component.val_bytes);
 		reg_val = BIT(bit_pos);
 	}
 
@@ -421,17 +413,10 @@ static int tegra210_xbar_put_value_enum(struct snd_kcontrol *kcontrol,
 
 	/* power the widgets */
 	if (change) {
-		for (wi = 0; wi < wlist->num_widgets; wi++) {
-			widget = wlist->widgets[wi];
-			widget->value = reg_val;
-			for (i = 0; i < reg_count; i++) {
-				update[i].kcontrol = kcontrol;
-				update[i].widget = widget;
-				widget->dapm->update = &update[i];
-				snd_soc_dapm_mux_update_power(widget,
-					kcontrol, item[0], e);
-				widget->dapm->update = NULL;
-			}
+		for (i = 0; i < reg_count; i++) {
+			update[i].kcontrol = kcontrol;
+			snd_soc_dapm_mux_update_power(dapm,
+				kcontrol, item[0], e, &update[i]);
 		}
 	}
 
@@ -442,7 +427,7 @@ static int tegra210_xbar_put_value_enum(struct snd_kcontrol *kcontrol,
 
 #define SOC_VALUE_ENUM_WIDE(xreg, shift, xmax, xtexts, xvalues) \
 {	.reg = xreg, .shift_l = shift, .shift_r = shift, \
-	.max = xmax, .texts = xtexts, .values = xvalues, \
+	.items = xmax, .texts = xtexts, .values = xvalues, \
 	.mask = xmax ? roundup_pow_of_two(xmax) - 1 : 0}
 
 #define SOC_VALUE_ENUM_WIDE_DECL(name, xreg, shift, \
@@ -514,7 +499,7 @@ MUX_ENUM_CTRL_DECL(adx2_tx, 0x59);
 #define WIDGETS(sname, ename) \
 	SND_SOC_DAPM_AIF_IN(sname " RX", NULL, 0, SND_SOC_NOPM, 0, 0), \
 	SND_SOC_DAPM_AIF_OUT(sname " TX", NULL, 0, SND_SOC_NOPM, 0, 0), \
-	SND_SOC_DAPM_VALUE_MUX(sname " Mux", SND_SOC_NOPM, 0, 0, &ename##_control)
+	SND_SOC_DAPM_MUX(sname " Mux", SND_SOC_NOPM, 0, 0, &ename##_control)
 
 #define TX_WIDGETS(sname) \
 	SND_SOC_DAPM_AIF_IN(sname " RX", NULL, 0, SND_SOC_NOPM, 0, 0), \
@@ -818,6 +803,7 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 	int ret, i;
 	const struct of_device_id *match;
 	struct tegra210_xbar_soc_data *soc_data;
+	struct resource *res;
 	struct clk *parent_clk;
 
 	match = of_match_device(tegra210_xbar_of_match, &pdev->dev);
@@ -869,7 +855,7 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 		goto err_clk_put;
 	}
 
-	xbar->clk_ape = clk_get_sys(NULL, "ape");
+	xbar->clk_ape = clk_get_sys(NULL, "xbar.ape");
 	if (IS_ERR(xbar->clk_ape)) {
 		dev_err(&pdev->dev, "Can't retrieve ape clock\n");
 		ret = PTR_ERR(xbar->clk_ape);
@@ -902,7 +888,14 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 		goto err_clk_put_ape;
 	}
 
-	regs = devm_request_and_ioremap(&pdev->dev, pdev->resource);
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(&pdev->dev, "No memory resource for admaif\n");
+		ret = -ENODEV;
+		goto err;
+	}
+
+	regs = devm_ioremap_resource(&pdev->dev, res);
 	if (!regs) {
 		dev_err(&pdev->dev, "request/iomap region failed\n");
 		ret = -ENODEV;

@@ -94,14 +94,7 @@ static int tegra30_xbar_suspend(struct device *dev)
 
 static int tegra30_xbar_codec_probe(struct snd_soc_codec *codec)
 {
-	int ret;
-
 	codec->control_data = xbar->regmap;
-	ret = snd_soc_codec_set_cache_io(codec, 32, 32, SND_SOC_REGMAP);
-	if (ret != 0) {
-		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
-		return ret;
-	}
 
 	return 0;
 }
@@ -294,12 +287,13 @@ int tegra30_xbar_get_value_enum(struct snd_kcontrol *kcontrol,
 		reg_val = snd_soc_read(codec, reg[i]);
 		val = reg_val & xbar->soc_data->mask[i];
 		if (val != 0) {
-			bit_pos = ffs(val) + (8 * codec->val_bytes * i);
+			bit_pos = ffs(val) +
+					(8 * codec->component.val_bytes * i);
 			break;
 		}
 	}
 
-	for (i = 0; i < e->max; i++) {
+	for (i = 0; i < e->items; i++) {
 		if (bit_pos == e->values[i]) {
 			ucontrol->value.enumerated.item[0] = i;
 			break;
@@ -326,15 +320,15 @@ int tegra30_xbar_put_value_enum(struct snd_kcontrol *kcontrol,
 	reg_count = xbar->soc_data->reg_count;
 	mask = (unsigned int *)xbar->soc_data->mask;
 
-	if (item[0] >= e->max || reg_count > TEGRA_AHUB_AUDIO_UPDATE_MAX_REG)
+	if (item[0] >= e->items || reg_count > TEGRA_AHUB_AUDIO_UPDATE_MAX_REG)
 		return -EINVAL;
 
 	value = e->values[item[0]];
 
 	if (value) {
 		/* get the register index and value to set */
-		reg_idx = (value - 1) / (8 * codec->val_bytes);
-		bit_pos = (value - 1) % (8 * codec->val_bytes);
+		reg_idx = (value - 1) / (8 * codec->component.val_bytes);
+		bit_pos = (value - 1) % (8 * codec->component.val_bytes);
 		reg_val = BIT(bit_pos);
 	}
 
@@ -369,7 +363,7 @@ int tegra30_xbar_put_value_enum(struct snd_kcontrol *kcontrol,
 				update[i].kcontrol = kcontrol;
 				update[i].widget = widget;
 				widget->dapm->update = &update[i];
-				snd_soc_dapm_mux_update_power(widget,
+				snd_soc_dapm_mux_update_power(&codec->dapm,
 					kcontrol, item[0], e);
 				widget->dapm->update = NULL;
 			}

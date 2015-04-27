@@ -596,14 +596,8 @@ static const struct snd_soc_dapm_route tegra210_admaif_routes[] = {
 static int tegra210_admaif_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_admaif *admaif = snd_soc_codec_get_drvdata(codec);
-	int ret;
 
 	codec->control_data = admaif->regmap;
-	ret = snd_soc_codec_set_cache_io(codec, 32, 32, SND_SOC_REGMAP);
-	if (ret != 0) {
-		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
-		return ret;
-	}
 
 	return 0;
 }
@@ -689,7 +683,7 @@ static int tegra210_admaif_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	regs = devm_request_and_ioremap(&pdev->dev, res);
+	regs = devm_ioremap_resource(&pdev->dev, res);
 	if (!regs) {
 		dev_err(&pdev->dev, "request/iomap region failed\n");
 		ret = -ENODEV;

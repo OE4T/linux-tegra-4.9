@@ -165,7 +165,9 @@ static struct snd_compr_codec_caps adsp_compr_codec_caps[] = {
 		.descriptor = {
 			[0] = {
 				.max_ch = 2,
-				.sample_rates = SNDRV_PCM_RATE_8000_48000,
+				.sample_rates = {
+					[0] = SNDRV_PCM_RATE_8000_48000,
+				},
 				.bit_rate = {
 					[0] = 32000,
 					[1] = 64000,
@@ -190,7 +192,9 @@ static struct snd_compr_codec_caps adsp_compr_codec_caps[] = {
 		.descriptor = {
 			[0] = {
 				.max_ch = 2,
-				.sample_rates = SNDRV_PCM_RATE_8000_48000,
+				.sample_rates = {
+					[0] = SNDRV_PCM_RATE_8000_48000,
+				},
 				.bit_rate = {
 					[0] = 32000,
 					[1] = 64000,
@@ -1473,12 +1477,6 @@ static void tegra210_adsp_pcm_free(struct snd_pcm *pcm)
 	}
 }
 
-static int tegra210_adsp_pcm_probe(struct snd_soc_platform *platform)
-{
-	platform->dapm.idle_bias_off = 1;
-	return 0;
-}
-
 /* ADSP-ADMAIF codec driver HW-params. Used for configuring ADMA */
 static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
@@ -1554,21 +1552,26 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 }
 
 /* ADSP platform driver read/write call-back */
-static unsigned int tegra210_adsp_read(struct snd_soc_platform *platform,
-		unsigned int reg)
+static int tegra210_adsp_read(struct snd_soc_component *component,
+		unsigned int reg, unsigned int *val)
 {
+	struct snd_soc_platform *platform =
+				snd_soc_component_to_platform(component);
 	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
 
 	dev_vdbg(adsp->dev, "%s [0x%x] -> 0x%x\n", __func__, reg,
 		tegra210_adsp_reg_read(adsp, reg));
 
-	return tegra210_adsp_reg_read(adsp, reg);
+	*val = tegra210_adsp_reg_read(adsp, reg);
+	return 0;
 }
 
-static int tegra210_adsp_write(struct snd_soc_platform *platform,
+static int tegra210_adsp_write(struct snd_soc_component *component,
 		unsigned int reg,
 		unsigned int val)
 {
+	struct snd_soc_platform *platform =
+				snd_soc_component_to_platform(component);
 	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
 
 	dev_vdbg(adsp->dev, "%s [0x%x] -> 0x%x\n", __func__, reg, val);
@@ -1583,7 +1586,8 @@ static int tegra210_adsp_mux_get(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
 	struct snd_soc_dapm_widget *widget = wlist->widgets[0];
-	struct snd_soc_platform *platform = widget->platform;
+	struct snd_soc_platform *platform =
+				snd_soc_dapm_to_platform(widget->dapm);
 	struct soc_enum *e =
 		(struct soc_enum *)kcontrol->private_value;
 	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
@@ -1599,13 +1603,14 @@ static int tegra210_adsp_mux_put(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
 	struct snd_soc_dapm_widget *w = wlist->widgets[0];
-	struct snd_soc_platform *platform = w->platform;
+	struct snd_soc_platform *platform = snd_soc_dapm_to_platform(w->dapm);
 	uint32_t val = ucontrol->value.enumerated.item[0];
 	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
 	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
 	struct tegra210_adsp_app *app;
 	uint32_t cur_val = 0;
 	int ret = 0;
+	struct snd_soc_dapm_update update;
 
 	if (!adsp->init_done)
 		return -ENODEV;
@@ -1639,7 +1644,8 @@ static int tegra210_adsp_mux_put(struct snd_kcontrol *kcontrol,
 		TEGRA210_ADSP_WIDGET_SOURCE_MASK, val << e->shift_l);
 	tegra210_adsp_update_connection(adsp);
 
-	snd_soc_dapm_mux_update_power(w, kcontrol, val, e);
+	update.kcontrol = kcontrol;
+	snd_soc_dapm_mux_update_power(w->dapm, kcontrol, val, e, &update);
 	return 1;
 }
 
@@ -1647,8 +1653,8 @@ static int tegra210_adsp_mux_put(struct snd_kcontrol *kcontrol,
 static int tegra210_adsp_init_get(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_platform *platform = snd_kcontrol_chip(kcontrol);
-	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
+	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
+	struct tegra210_adsp *adsp = snd_soc_component_get_drvdata(cmpnt);
 
 	ucontrol->value.enumerated.item[0] = adsp->init_done;
 	return 0;
@@ -1657,8 +1663,8 @@ static int tegra210_adsp_init_get(struct snd_kcontrol *kcontrol,
 static int tegra210_adsp_init_put(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_platform *platform = snd_kcontrol_chip(kcontrol);
-	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
+	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
+	struct tegra210_adsp *adsp = snd_soc_component_get_drvdata(cmpnt);
 	int init = ucontrol->value.enumerated.item[0];
 	int ret = 0;
 
@@ -1682,7 +1688,7 @@ static int tegra210_adsp_init_put(struct snd_kcontrol *kcontrol,
 static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 				struct snd_kcontrol *kcontrol, int event)
 {
-	struct snd_soc_platform *platform = w->platform;
+	struct snd_soc_platform *platform = snd_soc_dapm_to_platform(w->dapm);
 	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
 	struct tegra210_adsp_app *app;
 
@@ -2208,8 +2214,8 @@ static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct soc_bytes *params = (void *)kcontrol->private_value;
-	struct snd_soc_platform *platform = snd_kcontrol_chip(kcontrol);
-	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
+	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
+	struct tegra210_adsp *adsp = snd_soc_component_get_drvdata(cmpnt);
 	struct tegra210_adsp_app *app = &adsp->apps[params->base];
 	apm_msg_t apm_msg;
 
@@ -2312,6 +2318,12 @@ static const struct snd_kcontrol_new tegra210_adsp_controls[] = {
 
 static const struct snd_soc_component_driver tegra210_adsp_component = {
 	.name		= "tegra210-adsp",
+	.dapm_widgets		= tegra210_adsp_widgets,
+	.num_dapm_widgets	= ARRAY_SIZE(tegra210_adsp_widgets),
+	.dapm_routes		= tegra210_adsp_routes,
+	.num_dapm_routes	= ARRAY_SIZE(tegra210_adsp_routes),
+	.controls		= tegra210_adsp_controls,
+	.num_controls		= ARRAY_SIZE(tegra210_adsp_controls),
 };
 
 static int tegra210_adsp_codec_probe(struct snd_soc_codec *codec)
@@ -2324,20 +2336,20 @@ static struct snd_soc_codec_driver tegra210_adsp_codec = {
 	.idle_bias_off = 1,
 };
 
+static int tegra210_adsp_pcm_probe(struct snd_soc_platform *platform)
+{
+	platform->component.dapm.idle_bias_off = 1;
+	platform->component.read = tegra210_adsp_read;
+	platform->component.write = tegra210_adsp_write;
+	return 0;
+}
+
 static struct snd_soc_platform_driver tegra210_adsp_platform = {
 	.ops			= &tegra210_adsp_pcm_ops,
 	.compr_ops		= &tegra210_adsp_compr_ops,
 	.pcm_new		= tegra210_adsp_pcm_new,
 	.pcm_free		= tegra210_adsp_pcm_free,
 	.probe			= tegra210_adsp_pcm_probe,
-	.read			= tegra210_adsp_read,
-	.write			= tegra210_adsp_write,
-	.dapm_widgets		= tegra210_adsp_widgets,
-	.num_dapm_widgets	= ARRAY_SIZE(tegra210_adsp_widgets),
-	.dapm_routes		= tegra210_adsp_routes,
-	.num_dapm_routes	= ARRAY_SIZE(tegra210_adsp_routes),
-	.controls		= tegra210_adsp_controls,
-	.num_controls		= ARRAY_SIZE(tegra210_adsp_controls),
 };
 
 static u64 tegra_dma_mask = DMA_BIT_MASK(32);

@@ -169,7 +169,7 @@
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 			vin-supply = <&vdd_3v3>;
-			regulator-always-on;
+			regulator-disable-on-shutdown;
 			enable-active-high;
 			consumers {
 				c0 {

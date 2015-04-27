@@ -252,8 +252,10 @@ static void alloc_handle(struct nvmap_client *client,
 	carveout_mask &= ~NVMAP_HEAP_CARVEOUT_GENERIC;
 	iovmm_mask |= NVMAP_HEAP_CARVEOUT_GENERIC;
 #elif defined(CONFIG_NVMAP_CONVERT_IOVMM_TO_CARVEOUT)
-	type &= ~NVMAP_HEAP_IOVMM;
-	type |= NVMAP_HEAP_CARVEOUT_GENERIC;
+	if (type & NVMAP_HEAP_IOVMM) {
+		type &= ~NVMAP_HEAP_IOVMM;
+		type |= NVMAP_HEAP_CARVEOUT_GENERIC;
+	}
 #endif
 
 	if (type & carveout_mask) {

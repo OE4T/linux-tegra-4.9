@@ -140,7 +140,7 @@ static u64 gp10b_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl,
 	return gk20a_mm_smmu_vaddr_translate(g, sg_dma_address(sgl));
 }
 
-u32 *pde3_from_index(struct gk20a_mm_entry *entry, u32 i)
+static u32 *pde3_from_index(struct gk20a_mm_entry *entry, u32 i)
 {
 	return (u32 *) (((u8 *)entry->cpu_va) + i*gmmu_new_pde__size_v());
 }
@@ -182,7 +182,7 @@ static int update_gmmu_pde3_locked(struct vm_gk20a *vm,
 	return 0;
 }
 
-u32 *pde0_from_index(struct gk20a_mm_entry *entry, u32 i)
+static u32 *pde0_from_index(struct gk20a_mm_entry *entry, u32 i)
 {
 	return (u32 *) (((u8 *)entry->cpu_va) + i*gmmu_new_dual_pde__size_v());
 }
@@ -318,7 +318,7 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 	return 0;
 }
 
-const struct gk20a_mmu_level gp10b_mm_levels[] = {
+static const struct gk20a_mmu_level gp10b_mm_levels[] = {
 	{.hi_bit = {48, 48},
 	 .lo_bit = {47, 47},
 	 .update_entry = update_gmmu_pde3_locked,
@@ -342,7 +342,8 @@ const struct gk20a_mmu_level gp10b_mm_levels[] = {
 	{.update_entry = NULL}
 };
 
-const struct gk20a_mmu_level *gp10b_mm_get_mmu_levels(struct gk20a *g, u32 big_page_size)
+static const struct gk20a_mmu_level *gp10b_mm_get_mmu_levels(struct gk20a *g,
+	u32 big_page_size)
 {
 	return gp10b_mm_levels;
 }

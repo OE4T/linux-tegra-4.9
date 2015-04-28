@@ -3938,6 +3938,7 @@ bool tegra_dc_stats_get(struct tegra_dc *dc)
 void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 {
 	struct tegra_dc_win *dcwins[DC_N_WINDOWS];
+	struct tegra_dc_win blank_win;
 	unsigned i;
 	unsigned long int blank_windows;
 	int nr_win = 0;
@@ -3947,9 +3948,6 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 	bool yuv_420_10b_path = false;
 	int fb_win_idx = -1;
 	int fb_win_pos = -1;
-	u32 orig_h_full, orig_w_full;
-	u32 orig_fmt;
-	u32 orig_out_w, orig_out_h;
 
 	if (dc->yuv_bypass && yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30))
 		yuv_420_10b_path = true;
@@ -3958,28 +3956,21 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 		u32 active_width = dc->mode.h_active;
 		u32 active_height = dc->mode.v_active;
 
-		tegra_fb_frame_update(dc->fb);
-		dcwins[0] = tegra_fb_get_win(dc->fb);
-		fb_win_idx = dcwins[0]->idx;
-		nr_win++;
-
-		orig_h_full = dcwins[0]->h.full;
-		orig_w_full = dcwins[0]->w.full;
-		orig_fmt = dcwins[0]->fmt;
-		orig_out_w = dcwins[0]->out_w;
-		orig_out_h = dcwins[0]->out_h;
-
-		dcwins[0]->h.full = dfixed_const(active_height);
-		dcwins[0]->w.full = dfixed_const(active_width);
+		blank_win = *tegra_fb_get_blank_win(dc->fb);
 
 		/*
 		 * 420 10bpc blank frame statically
 		 * created for this pixel format
 		 */
-		dcwins[0]->fmt = TEGRA_WIN_FMT_B8G8R8A8;
+		blank_win.h.full = dfixed_const(1);
+		blank_win.w.full = dfixed_const(active_width);
+		blank_win.fmt = TEGRA_WIN_FMT_B8G8R8A8;
+		blank_win.out_w = active_width;
+		blank_win.out_h = active_height;
 
-		dcwins[0]->out_w = active_width;
-		dcwins[0]->out_h = active_height;
+		dcwins[0] = &blank_win;
+		fb_win_idx = dcwins[0]->idx;
+		nr_win++;
 	}
 
 	blank_windows = windows & dc->valid_windows;
@@ -4009,15 +4000,6 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 		tegra_dc_sync_windows(dcwins, nr_win);
 	}
 	tegra_dc_program_bandwidth(dc, true);
-
-	/* reinstate window config */
-	if (yuv_420_10b_path) {
-		dcwins[0]->h.full = orig_h_full;
-		dcwins[0]->w.full = orig_w_full;
-		dcwins[0]->fmt = orig_fmt;
-		dcwins[0]->out_w = orig_out_w;
-		dcwins[0]->out_h = orig_out_h;
-	}
 
 	/*
 	 * Disable, reset bandwidth and advance pending syncpoints

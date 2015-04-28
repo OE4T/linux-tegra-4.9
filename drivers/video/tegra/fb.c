@@ -43,6 +43,7 @@
 #include "host/dev.h"
 #include "dc/dc_priv.h"
 #include "dc/edid.h"
+#include "dc/dc_config.h"
 
 /* Pad pitch to 256-byte boundary. */
 #define TEGRA_LINEAR_PITCH_ALIGNMENT 256
@@ -55,6 +56,7 @@
 
 struct tegra_fb_info {
 	struct tegra_dc_win	win;
+	struct tegra_dc_win	blank_win;
 	struct platform_device	*ndev;
 	struct fb_info		*info;
 	bool			valid;
@@ -68,6 +70,9 @@ struct tegra_fb_info {
 
 	struct fb_videomode	mode;
 	phys_addr_t		phys_start;
+
+	char __iomem		*blank_base;	/* Virtual address */
+	phys_addr_t		blank_start;
 };
 
 /* palette array used by the fbcon */
@@ -761,7 +766,10 @@ void tegra_fb_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_nvdps);
 }
 
-static void tegra_fb_420_10bpc_blank_frame(struct tegra_fb_info *tegra_fb)
+#define BLANK_LINE_WIDTH	2400
+#define BLANK_LINE_SIZE		(BLANK_LINE_WIDTH*4)
+
+static void tegra_fb_fill_420_10bpc_blank_frame(struct tegra_dc_win *win)
 {
 #define phase0(p0)	(p0 & 0xff)
 #define phase1(p0, p1)	(((p1 & 0x3f) << 2) | ((p0 & 0x300) >> 8))
@@ -782,47 +790,31 @@ static void tegra_fb_420_10bpc_blank_frame(struct tegra_fb_info *tegra_fb)
 #define YCC_10BPC_C_BLACK (512)
 
 	u32 y = YCC_10BPC_Y_BLACK;
-	u32 cb = YCC_10BPC_C_BLACK;
-	u32 cr = YCC_10BPC_C_BLACK;
+	u32 crcb = YCC_10BPC_C_BLACK;
 	u32 a = 0;
-	u32 active_width = tegra_fb->win.dc->mode.h_active;
-	u32 active_height = tegra_fb->win.dc->mode.v_active;
-	u32 temp_w, temp_h;
+	u32 active_width = BLANK_LINE_WIDTH;
+	u32 temp_w;
 	u32 bytes_per_pix;
-	char __iomem *mem_start = tegra_fb->info->screen_base;
+	char __iomem *mem_start = win->virt_addr;
 	u32 offset = 0;
 
 	/* phase statically rendered for TEGRA_WIN_FMT_B8G8R8A8 */
 	bytes_per_pix = tegra_dc_fmt_bpp(TEGRA_WIN_FMT_B8G8R8A8) / 8;
 
-	for (temp_h = 0; temp_h < active_height; temp_h++) {
-		for (temp_w = 0; temp_w < active_width; temp_w += 5) {
-			if (temp_h % 2) {
-				writel_relaxed(p0(y, cr, a), mem_start +
-						offset);
-				writel_relaxed(p1(y, cr, a), mem_start +
-						({offset += bytes_per_pix; }));
-				writel_relaxed(p2(y, cr, a), mem_start +
-						({offset += bytes_per_pix; }));
-				writel_relaxed(p3(y, cr, a), mem_start +
-						({offset += bytes_per_pix; }));
-				writel_relaxed(p4(y, cr, a), mem_start +
-						({offset += bytes_per_pix; }));
-				offset += bytes_per_pix;
-			} else {
-				writel_relaxed(p0(y, cb, a), mem_start +
-						offset);
-				writel_relaxed(p1(y, cb, a), mem_start +
-						({offset += bytes_per_pix; }));
-				writel_relaxed(p2(y, cb, a), mem_start +
-						({offset += bytes_per_pix; }));
-				writel_relaxed(p3(y, cb, a), mem_start +
-						({offset += bytes_per_pix; }));
-				writel_relaxed(p4(y, cb, a), mem_start +
-						({offset += bytes_per_pix; }));
-				offset += bytes_per_pix;
-			}
-		}
+	/* A single line can be repeated through the whole frame height, hence
+	 * only the first line needs to be setup. */
+	for (temp_w = 0; temp_w < active_width; temp_w += 5) {
+		writel_relaxed(p0(y, crcb, a), mem_start +
+				offset);
+		writel_relaxed(p1(y, crcb, a), mem_start +
+				({offset += bytes_per_pix; }));
+		writel_relaxed(p2(y, crcb, a), mem_start +
+				({offset += bytes_per_pix; }));
+		writel_relaxed(p3(y, crcb, a), mem_start +
+				({offset += bytes_per_pix; }));
+		writel_relaxed(p4(y, crcb, a), mem_start +
+				({offset += bytes_per_pix; }));
+		offset += bytes_per_pix;
 	}
 
 #undef YCC_10BPC_C_BLACK
@@ -838,20 +830,20 @@ static void tegra_fb_420_10bpc_blank_frame(struct tegra_fb_info *tegra_fb)
 #undef phase0
 }
 
-void tegra_fb_frame_update(struct tegra_fb_info *tegra_fb)
-{
-	if (!tegra_fb || !tegra_fb->valid)
-		return;
-
-	tegra_fb_420_10bpc_blank_frame(tegra_fb);
-}
-
 struct tegra_dc_win *tegra_fb_get_win(struct tegra_fb_info *tegra_fb)
 {
 	if (!tegra_fb)
 		return NULL;
 
 	return &tegra_fb->win;
+}
+
+struct tegra_dc_win *tegra_fb_get_blank_win(struct tegra_fb_info *tegra_fb)
+{
+	if (!tegra_fb)
+		return NULL;
+
+	return &tegra_fb->blank_win;
 }
 
 struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
@@ -868,6 +860,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	int mode_idx;
 	unsigned stride;
 	struct fb_videomode m;
+	DEFINE_DMA_ATTRS(attrs);
 
 	if (!tegra_dc_get_window(dc, fb_data->win)) {
 		dev_err(&ndev->dev, "dc does not have a window at index %d\n",
@@ -903,6 +896,18 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 			goto err_free;
 		}
 		tegra_fb->valid = true;
+	}
+
+	dma_set_attr(DMA_ATTR_WRITE_COMBINE, &attrs);
+	tegra_fb->blank_base = dma_alloc_attrs(&ndev->dev,
+					       BLANK_LINE_SIZE,
+					       &tegra_fb->blank_start,
+					       GFP_KERNEL,
+					       &attrs);
+	if (!tegra_fb->blank_base) {
+		dev_err(&ndev->dev, "failed to allocate blank buffer\n");
+		ret = -EBUSY;
+		goto err_free;
 	}
 
 	info->fix.line_length = fb_data->xres * fb_data->bits_per_pixel / 8;
@@ -959,6 +964,11 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	tegra_fb->win.flags = TEGRA_WIN_FLAG_ENABLED;
 	tegra_fb->win.global_alpha = 0xFF;
 
+	tegra_fb->blank_win = tegra_fb->win;
+	tegra_fb->blank_win.phys_addr = tegra_fb->blank_start;
+	tegra_fb->blank_win.virt_addr = tegra_fb->blank_base;
+	tegra_fb_fill_420_10bpc_blank_frame(&tegra_fb->blank_win);
+
 	for (mode_idx = 0; mode_idx < dc->out->n_modes; mode_idx++) {
 		struct tegra_dc_mode mode = dc->out->modes[mode_idx];
 		struct fb_videomode vmode;
@@ -1002,6 +1012,8 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	return tegra_fb;
 
 err_iounmap_fb:
+	dma_free_attrs(&ndev->dev, BLANK_LINE_SIZE, tegra_fb->blank_base,
+		       tegra_fb->blank_start, &attrs);
 	if (fb_base)
 		iounmap(fb_base);
 err_free:
@@ -1013,6 +1025,13 @@ err:
 void tegra_fb_unregister(struct tegra_fb_info *fb_info)
 {
 	struct fb_info *info = fb_info->info;
+	struct device *dev = &fb_info->ndev->dev;
+	DEFINE_DMA_ATTRS(attrs);
+
+	dma_set_attr(DMA_ATTR_WRITE_COMBINE, &attrs);
+
+	dma_free_attrs(dev, BLANK_LINE_SIZE, fb_info->blank_base,
+		       fb_info->blank_start, &attrs);
 
 	unregister_framebuffer(info);
 

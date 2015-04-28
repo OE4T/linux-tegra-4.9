@@ -24,6 +24,7 @@
 #include <linux/slab.h>
 #include <linux/workqueue.h>
 #include <linux/export.h>
+#include <mach/fb.h>
 #include <linux/fb.h>
 #include <video/tegra_dc_ext.h>
 
@@ -497,6 +498,67 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 	return err;
 }
 
+static int tegra_dc_ext_should_show_background(
+		struct tegra_dc_ext_flip_data *data,
+		int win_num)
+{
+	struct tegra_dc *dc = data->ext->dc;
+	int yuv_flag = dc->mode.vmode & FB_VMODE_SET_YUV_MASK;
+	int i;
+
+	if (!dc->yuv_bypass || yuv_flag != (FB_VMODE_Y420 | FB_VMODE_Y30))
+		return false;
+
+	for (i = 0; i < win_num; i++) {
+		struct tegra_dc_ext_flip_win *flip_win = &data->win[i];
+		int index = flip_win->attr.index;
+
+		if (index < 0 || !test_bit(index, &dc->valid_windows))
+			continue;
+
+		if (flip_win->handle[TEGRA_DC_Y] == NULL)
+			continue;
+
+		/* Bypass expects only a single window, thus it is enough to
+		 * inspect the first enabled window.
+		 *
+		 * Full screen input surface for YUV420 10-bit 4k has 2400x2160
+		 * active area. dc->mode is already adjusted to this dimension.
+		 */
+		if (flip_win->attr.out_x > 0 ||
+		    flip_win->attr.out_y > 0 ||
+		    flip_win->attr.out_w != dc->mode.h_active ||
+		    flip_win->attr.out_h != dc->mode.v_active)
+			return true;
+	}
+
+	return false;
+}
+
+static int tegra_dc_ext_get_background(struct tegra_dc_ext *ext,
+		struct tegra_dc_win *win)
+{
+	struct tegra_dc *dc = ext->dc;
+	u32 active_width = dc->mode.h_active;
+	u32 active_height = dc->mode.v_active;
+
+	*win = *tegra_fb_get_blank_win(dc->fb);
+
+	win->flags |= TEGRA_WIN_FLAG_ENABLED;
+	win->fmt = TEGRA_WIN_FMT_B8G8R8A8;
+	win->x.full = dfixed_const(0);
+	win->y.full = dfixed_const(0);
+	win->h.full = dfixed_const(1);
+	win->w.full = dfixed_const(active_width);
+	win->out_x = 0;
+	win->out_y = 0;
+	win->out_w = active_width;
+	win->out_h = active_height;
+	win->z = 0xff;
+
+	return 0;
+}
+
 static int tegra_dc_ext_set_vblank(struct tegra_dc_ext *ext, bool enable)
 {
 	struct tegra_dc *dc;
@@ -541,6 +603,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 	int win_num = data->act_window_num;
 	struct tegra_dc_ext *ext = data->ext;
 	struct tegra_dc_win *wins[DC_N_WINDOWS];
+	struct tegra_dc_win *blank_win;
 	struct tegra_dc_dmabuf *unpin_handles[DC_N_WINDOWS *
 					       TEGRA_DC_NUM_PLANES];
 	struct tegra_dc_dmabuf *old_handle;
@@ -548,6 +611,12 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 	int i, nr_unpin = 0, nr_win = 0;
 	bool skip_flip = false;
 	bool wait_for_vblank = false;
+	bool show_background =
+		tegra_dc_ext_should_show_background(data, win_num);
+
+	blank_win = kzalloc(sizeof(*blank_win), GFP_KERNEL);
+	if (!blank_win)
+		dev_err(&ext->dc->ndev->dev, "Failed to allocate blank_win.\n");
 
 	BUG_ON(win_num > DC_N_WINDOWS);
 	for (i = 0; i < win_num; i++) {
@@ -651,8 +720,25 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			wait_for_vblank = true;
 
 		ext_win->enabled = !!(win->flags & TEGRA_WIN_FLAG_ENABLED);
-		wins[nr_win++] = win;
+
+		/* Hijack first disabled, scaling capable window to host
+		 * the background pattern.
+		 */
+		if (blank_win && !ext_win->enabled && show_background &&
+			tegra_dc_feature_has_scaling(ext->dc, win->idx)) {
+			tegra_dc_ext_get_background(ext, blank_win);
+			blank_win->idx = win->idx;
+			wins[nr_win++] = blank_win;
+			show_background = false;
+		} else {
+			wins[nr_win++] = win;
+		}
 	}
+
+	/* YUV packing consumes only one window, thus there must have been
+	 * free window which can host background pattern.
+	 */
+	BUG_ON(show_background);
 
 	trace_sync_wt_ovr_syncpt_upd((data->win[win_num-1]).syncpt_max);
 
@@ -695,6 +781,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 	tegra_dc_ext_unpin_handles(unpin_handles, nr_unpin);
 
 	kfree(data);
+	kfree(blank_win);
 }
 
 static int lock_windows_for_flip(struct tegra_dc_ext_user *user,

@@ -484,8 +484,8 @@ static long isp_ioctl(struct file *file,
 	if (_IOC_TYPE(cmd) != NVHOST_ISP_IOCTL_MAGIC)
 		return -EFAULT;
 
-	switch (cmd) {
-	case NVHOST_ISP_IOCTL_SET_EMC: {
+	switch (_IOC_NR(cmd)) {
+	case _IOC_NR(NVHOST_ISP_IOCTL_SET_EMC): {
 		int ret;
 		uint la_client = 0;
 		uint isp_bw = 0;
@@ -561,7 +561,7 @@ static long isp_ioctl(struct file *file,
 #endif
 		return ret;
 	}
-	case NVHOST_ISP_IOCTL_SET_ISP_CLK: {
+	case _IOC_NR(NVHOST_ISP_IOCTL_SET_ISP_CLK): {
 		long isp_clk_rate = 0;
 
 		if (copy_from_user(&isp_clk_rate,

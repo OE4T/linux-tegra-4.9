@@ -274,8 +274,8 @@ static long vi_ioctl(struct file *file,
 	if (_IOC_TYPE(cmd) != NVHOST_VI_IOCTL_MAGIC)
 		return -EFAULT;
 
-	switch (cmd) {
-	case NVHOST_VI_IOCTL_ENABLE_TPG: {
+	switch (_IOC_NR(cmd)) {
+	case _IOC_NR(NVHOST_VI_IOCTL_ENABLE_TPG): {
 		uint enable;
 		int ret;
 		struct clk *clk;
@@ -301,7 +301,7 @@ static long vi_ioctl(struct file *file,
 
 		return ret;
 	}
-	case NVHOST_VI_IOCTL_SET_EMC_INFO: {
+	case _IOC_NR(NVHOST_VI_IOCTL_SET_EMC_INFO): {
 		uint vi_bw;
 		int ret;
 		if (copy_from_user(&vi_bw,
@@ -359,7 +359,7 @@ static long vi_ioctl(struct file *file,
 #endif
 		return ret;
 	}
-	case NVHOST_VI_IOCTL_SET_VI_CLK: {
+	case _IOC_NR(NVHOST_VI_IOCTL_SET_VI_CLK): {
 		long vi_clk_rate = 0;
 
 		if (copy_from_user(&vi_clk_rate,

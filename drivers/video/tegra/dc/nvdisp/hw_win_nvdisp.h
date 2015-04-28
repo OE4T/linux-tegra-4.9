@@ -134,6 +134,30 @@ static inline u32 win_base_addr_dc_f_winbuf_r(void)
 {
 	return 0x00001ac0;
 }
+static inline u32 win_precomp_wgrp_capb_r(void)
+{
+	return 0x00000501;
+}
+static inline u32 win_precomp_wgrp_capb_is_degamma_enable_v(u32 r)
+{
+	return (r >> 16) & 0x1;
+}
+static inline u32 win_precomp_wgrp_capb_is_fp16_enable_v(u32 r)
+{
+	return (r >> 15) & 0x1;
+}
+static inline u32 win_precomp_wgrp_capb_is_cgmt_present_v(u32 r)
+{
+	return (r >> 14) & 0x1;
+}
+static inline u32 win_precomp_wgrp_capb_scaler_type_v(u32 r)
+{
+	return (r >> 8) & 0x3;
+}
+static inline u32 win_precomp_wgrp_capb_max_windows_v(u32 r)
+{
+	return (r >> 0) & 0x3;
+}
 static inline u32 win_act_control_r(void)
 {
 	return 0x0000050e;
@@ -145,6 +169,10 @@ static inline u32 win_act_control_ctrl_sel_vcounter_f(void)
 static inline u32 win_act_control_ctrl_sel_hcounter_f(void)
 {
 	return 0x1;
+}
+static inline u32 win_precomp_loadv_counter_r(void)
+{
+	return 0x00000520;
 }
 static inline u32 win_ihub_pool_config_r(void)
 {
@@ -174,9 +202,13 @@ static inline u32 win_ihub_linebuf_config_r(void)
 {
 	return 0x00000563;
 }
-static inline u32 win_ihub_linebuf_config_mode_f(u32 v)
+static inline u32 win_ihub_linebuf_config_mode_two_lines_f(void)
 {
-	return (v & 0x1) << 14;
+	return 0x0;
+}
+static inline u32 win_ihub_linebuf_config_mode_four_lines_f(void)
+{
+	return 0x4000;
 }
 static inline u32 win_ihub_req_r(void)
 {
@@ -741,5 +773,105 @@ static inline u32 win_cropped_point_fld2_v_f(u32 v)
 static inline u32 win_cropped_point_fld2_h_f(u32 v)
 {
 	return (v & 0xffff) << 0;
+}
+static inline u32 win_cde_ctrl_r(void)
+{
+	return 0x0000082f;
+}
+static inline u32 win_cde_ctrl_pattern_fixed_f(void)
+{
+	return 0x0;
+}
+static inline u32 win_cde_ctrl_pattern_random_f(void)
+{
+	return 0x800;
+}
+static inline u32 win_cde_ctrl_kind_cra_f(void)
+{
+	return 0x0;
+}
+static inline u32 win_cde_ctrl_kind_bra_f(void)
+{
+	return 0x10;
+}
+static inline u32 win_cde_ctrl_kind_yuv_8b_1c_f(void)
+{
+	return 0x20;
+}
+static inline u32 win_cde_ctrl_kind_yuv_8b_2c_f(void)
+{
+	return 0x30;
+}
+static inline u32 win_cde_ctrl_kind_yuv_10b_1c_f(void)
+{
+	return 0x40;
+}
+static inline u32 win_cde_ctrl_kind_yuv_10b_2c_f(void)
+{
+	return 0x50;
+}
+static inline u32 win_cde_ctrl_kind_yuv_12b_1c_f(void)
+{
+	return 0x60;
+}
+static inline u32 win_cde_ctrl_kind_yuv_12b_2c_f(void)
+{
+	return 0x70;
+}
+static inline u32 win_cde_ctrl_surface_enable_f(void)
+{
+	return 0x1;
+}
+static inline u32 win_cde_ctrl_surface_disble_f(void)
+{
+	return 0x0;
+}
+static inline u32 win_cde_base_r(void)
+{
+	return 0x00000830;
+}
+static inline u32 win_cde_base_addr_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 win_cde_base_hi_r(void)
+{
+	return 0x00000832;
+}
+static inline u32 win_cde_base_hi_addr_f(u32 v)
+{
+	return (v & 0xff) << 0;
+}
+static inline u32 win_cde_base_fld2_r(void)
+{
+	return 0x00000834;
+}
+static inline u32 win_cde_base_fld2_addr_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 win_cde_base_hi_fld2_r(void)
+{
+	return 0x00000836;
+}
+static inline u32 win_cde_base_hi_fld2_addr_f(u32 v)
+{
+	return (v & 0xff) << 0;
+}
+static inline u32 win_cde_zbc_r(void)
+{
+	return 0x00000838;
+}
+static inline u32 win_cde_zbc_color_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 win_cde_ctb_r(void)
+{
+	return 0x0000083d;
+}
+static inline u32 win_cde_ctb_entry_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
 }
 #endif

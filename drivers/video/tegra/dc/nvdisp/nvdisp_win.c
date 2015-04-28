@@ -293,7 +293,28 @@ static int tegra_nvdisp_scaling(struct tegra_dc_win *win)
 
 static int tegra_nvdisp_enable_cde(struct tegra_dc_win *win)
 {
-	/* TODO */
+#if defined(CONFIG_TEGRA_DC_CDE)
+	if (win->cde.cde_addr) {
+		nvdisp_win_write(win, tegra_dc_reg_l32(win->cde.cde_addr),
+			win_cde_base_r());
+		nvdisp_win_write(win, tegra_dc_reg_h32(win->cde.cde_addr),
+			win_cde_base_hi_r());
+		nvdisp_win_write(win,
+			win_cde_zbc_color_f(win->cde.zbc_color),
+			win_cde_zbc_r());
+		nvdisp_win_write(win,
+			win_cde_ctb_entry_f(win->cde.ctb_entry),
+			win_cde_ctb_r());
+		nvdisp_win_write(win,
+			win_cde_ctrl_surface_enable_f(),
+			win_cde_ctrl_r());
+
+	} else
+		nvdisp_win_write(win,
+			0,
+			win_cde_ctrl_r());
+#endif
+
 	return 0;
 }
 
@@ -305,9 +326,9 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 	bool yuv = tegra_dc_is_yuv(win->fmt);
 	bool yuvp = tegra_dc_is_yuv_planar(win->fmt);
 	bool yuvsp = tegra_dc_is_yuv_semi_planar(win->fmt);
+	bool enable_blx4 = false;
 
 	struct tegra_dc *dc = win->dc;
-
 
 	nvdisp_win_write(win, tegra_dc_fmt(win->fmt), win_color_depth_r());
 	nvdisp_win_write(win,
@@ -328,8 +349,10 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 	}
 
 	win_options = win_options_win_enable_enable_f();
-	if (win->flags & TEGRA_WIN_FLAG_SCAN_COLUMN)
+	if (win->flags & TEGRA_WIN_FLAG_SCAN_COLUMN) {
 		win_options |= win_options_scan_column_enable_f();
+		enable_blx4 = true;
+	}
 	if (win->flags & TEGRA_WIN_FLAG_INVERT_H)
 		win_options |= win_options_h_direction_decrement_f();
 	if (win->flags & TEGRA_WIN_FLAG_INVERT_V)
@@ -339,6 +362,10 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 	if (win->ppflags & TEGRA_WIN_PPFLAG_CP_ENABLE)
 		win_options |= win_options_cp_enable_enable_f();
 	nvdisp_win_write(win, win_options, win_options_r());
+
+	/* enable BLx4 for CDE support */
+	if (win->cde.cde_addr)
+		enable_blx4 = true;
 
 	nvdisp_win_write(win,
 		win_set_cropped_size_in_height_f(dfixed_trunc(win->h)) |
@@ -474,6 +501,15 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 			win_surface_kind_r());
 	}
 
+	if (enable_blx4)
+		nvdisp_win_write(win,
+				win_ihub_linebuf_config_mode_four_lines_f(),
+				win_ihub_linebuf_config_r());
+	else
+		nvdisp_win_write(win,
+				win_ihub_linebuf_config_mode_two_lines_f(),
+				win_ihub_linebuf_config_r());
+
 	return 0;
 }
 
@@ -518,8 +554,7 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 
 		tegra_nvdisp_blend(win);
 		tegra_nvdisp_scaling(win);
-		if (win->cde.cde_addr)
-			tegra_nvdisp_enable_cde(win);
+		tegra_nvdisp_enable_cde(win);
 
 		/* if (do_partial_update) { */
 			/* /\* calculate the xoff, yoff etc values *\/ */
@@ -541,10 +576,6 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 			nvdisp_cmd_int_status_v_blank_f(1)),
 			nvdisp_cmd_int_status_r());
 
-	tegra_dc_writel(dc, update_mask << 8 |
-		nvdisp_cmd_state_ctrl_common_act_update_enable_f(),
-		nvdisp_cmd_state_ctrl_r());
-
 	if (wait_for_vblank) {
 		/* Use the interrupt handler.  ISR will clear the dirty flags
 		   when the flip is completed */
@@ -564,6 +595,12 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		update_mask |= (nvdisp_cmd_state_ctrl_host_trig_enable_f() |
 			nvdisp_cmd_state_ctrl_common_act_req_enable_f());
+
+	/* setting common active request as default now to
+	   get scan_column feature working */
+	update_mask |= (update_mask << 8) |
+		nvdisp_cmd_state_ctrl_common_act_update_enable_f() |
+		nvdisp_cmd_state_ctrl_common_act_req_enable_f();
 
 	tegra_dc_writel(dc, update_mask, nvdisp_cmd_state_ctrl_r());
 

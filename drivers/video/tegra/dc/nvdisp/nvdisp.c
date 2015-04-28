@@ -313,13 +313,18 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 	/* Init syncpt */
 	tegra_dc_writel(dc, nvdisp_incr_syncpt_cntrl_no_stall_f(1),
 		nvdisp_incr_syncpt_cntrl_r());
-	tegra_dc_writel(dc, nvdisp_cont_syncpt_vsync_en_enable_f() |
-		(NVSYNCPT_VBLANK0 + dc->ctrl_num),
-		nvdisp_cont_syncpt_vsync_r());
+
+	/* Disabled this feature as unit fpga hang on enabling this*/
+	if (!tegra_platform_is_linsim())
+		tegra_dc_writel(dc, nvdisp_cont_syncpt_vsync_en_enable_f() |
+			(NVSYNCPT_VBLANK0 + dc->ctrl_num),
+			nvdisp_cont_syncpt_vsync_r());
 
 	/* Init interrupts */
-	/* Setting Int type, polarity is left as default now */
+	/* Setting Int type */
 	tegra_dc_writel(dc, 0x3C001004, nvdisp_int_type_r());
+	/* Setting all the Int polarity to high */
+	tegra_dc_writel(dc, 0x3D8010F6, nvdisp_int_polarity_r());
 
 	/* enable interrupts for vblank, frame_end and underflows */
 	int_enable = nvdisp_cmd_int_status_frame_end_f(1) |
@@ -336,7 +341,7 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 	tegra_dc_writel(dc, int_mask, nvdisp_cmd_int_mask_r());
 
 	tegra_dc_writel(dc, nvdisp_state_access_write_mux_assembly_f() |
-		nvdisp_state_access_read_mux_assembly_f(),
+		nvdisp_state_access_read_mux_active_f(),
 		nvdisp_state_access_r());
 
 	tegra_dc_writel(dc, 0x00000000, nvdisp_background_color_r());

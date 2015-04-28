@@ -1586,6 +1586,7 @@ static int nct1008_probe(struct i2c_client *client,
 {
 	struct nct1008_data *data;
 	struct nct1008_platform_data *pdata;
+	struct thermal_zone_device *zone_device;
 	int err;
 	int i;
 	u64 mask = 0;
@@ -1671,14 +1672,18 @@ static int nct1008_probe(struct i2c_client *client,
 
 	if (client->dev.of_node) {
 		/* Config for the Local sensor. */
-		data->sensors[LOC].thz =
-			thermal_zone_of_sensor_register(&client->dev, LOC, data,
-				&loc_sops);
+		zone_device = thermal_zone_of_sensor_register(&client->dev, LOC,
+				data, &loc_sops);
+
+		if (!IS_ERR_OR_NULL(zone_device))
+			data->sensors[LOC].thz = zone_device;
 
 		/* register External sensor if connection is good  */
-		data->sensors[EXT].thz = ext_err ? NULL :
-			thermal_zone_of_sensor_register(&client->dev, EXT, data,
-				&ext_sops);
+		zone_device = thermal_zone_of_sensor_register(&client->dev, EXT,
+				data, &ext_sops);
+
+		if (!IS_ERR_OR_NULL(zone_device))
+			data->sensors[EXT].thz = zone_device;
 	} else {
 		sensor_data = &data->plat_data.sensors[LOC];
 
@@ -1969,8 +1974,10 @@ static struct i2c_driver nct1008_driver = {
 static int __init nct1008_sync_thz(struct device *dev, void *unused)
 {
 	struct nct1008_data *data = dev_get_drvdata(dev);
-	thermal_zone_device_update(data->sensors[LOC].thz);
-	thermal_zone_device_update(data->sensors[EXT].thz);
+	if (data->sensors[LOC].thz)
+		thermal_zone_device_update(data->sensors[LOC].thz);
+	if (data->sensors[EXT].thz)
+		thermal_zone_device_update(data->sensors[EXT].thz);
 	return 0;
 }
 

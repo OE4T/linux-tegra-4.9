@@ -53,6 +53,11 @@
 #define GPIO_EXT_MIC_EN BIT(3)
 #define GPIO_HP_DET     BIT(4)
 
+#define MAX_AMX_SLOT_SIZE 64
+
+#define TDM_SLOT_MAP(stream_id, nth_channel, nth_byte)	\
+	((stream_id << 16) | (nth_channel << 8) | nth_byte)
+
 struct tegra_t210ref {
 	struct snd_soc_card *pcard;
 	struct tegra_asoc_platform_data *pdata;
@@ -244,6 +249,30 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 			dai_params->formats = formats;
 		}
 	}
+
+	return 0;
+}
+
+static int tegra_t210ref_amx1_dai_init(struct snd_soc_pcm_runtime *rtd)
+{
+	struct snd_soc_dai *amx_dai = rtd->cpu_dai;
+	unsigned int tx_slot[MAX_AMX_SLOT_SIZE];
+	unsigned int slot_size;
+
+	/* HACK: TODO: Add mixer controls to configute byte ram map */
+	slot_size = 8;
+	tx_slot[0] = TDM_SLOT_MAP(0, 1, 0);
+	tx_slot[1] = TDM_SLOT_MAP(0, 1, 1);
+	tx_slot[2] = 0;
+	tx_slot[3] = 0;
+	tx_slot[4] = TDM_SLOT_MAP(1, 1, 0);
+	tx_slot[5] = TDM_SLOT_MAP(1, 1, 1);
+	tx_slot[6] = 0;
+	tx_slot[7] = 0;
+
+	if (amx_dai->driver->ops->set_channel_map)
+		amx_dai->driver->ops->set_channel_map(amx_dai,
+			slot_size, tx_slot, 0, 0);
 
 	return 0;
 }
@@ -619,16 +648,18 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	if (!tegra_machine_codec_conf)
 		goto err_alloc_dai_link;
 
-
 	/* set ADMAIF dai_ops */
 	for (i = TEGRA210_DAI_LINK_ADMAIF1;
 		i <= TEGRA210_DAI_LINK_ADMAIF10; i++)
 		tegra_machine_set_dai_ops(i, &tegra_t210ref_ops);
 
-
 	/* set sfc dai_init */
 	tegra_machine_set_dai_init(TEGRA210_DAI_LINK_SFC1_RX,
 		&tegra_t210ref_sfc_init);
+
+	/* set AMX/ADX dai_init */
+	tegra_machine_set_dai_init(TEGRA210_DAI_LINK_AMX1,
+		&tegra_t210ref_amx1_dai_init);
 
 	/* set ADSP PCM */
 	tegra_machine_set_dai_ops(TEGRA210_DAI_LINK_ADSP_PCM,
@@ -651,14 +682,13 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	pdata->gpio_int_mic_en = pdata->gpio_ext_mic_en =
 	pdata->gpio_ldo1_en =  -1;
 
-		/* set codec init */
+	/* set codec init */
 	for (i = 0; i < machine->num_codec_links; i++) {
 		if (tegra_t210ref_codec_links[i].name) {
 			if (strstr(tegra_t210ref_codec_links[i]
 				.name, "earSmart-playback"))
 				tegra_t210ref_codec_links[i].init =
 						tegra_t210ref_init;
-
 		}
 	}
 

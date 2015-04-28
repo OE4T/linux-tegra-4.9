@@ -2134,7 +2134,7 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 				int num_entries =
 					1 <<
 					 (l->hi_bit[pgsz_idx]
-					  - l->lo_bit[pgsz_idx]);
+					  - l->lo_bit[pgsz_idx] + 1);
 				pte->entries =
 					kzalloc(sizeof(struct gk20a_mm_entry) *
 						num_entries, GFP_KERNEL);

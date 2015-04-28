@@ -11,6 +11,7 @@ obj-$(CONFIG_TEGRA186_PMC) += tegra186-pmc.o
 ifeq ($(CONFIG_PM_SLEEP),y)
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += pm-irq-t18x.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += wakeups-t18x.o
+obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += pm-tegra186.o
 endif
 obj-y += mc/
 obj-$(CONFIG_TEGRA_AST) += tegra_ast.o

@@ -313,8 +313,11 @@ struct nvhost_device_data t18_nvcsi_info = {
 
 static void t186_set_nvhost_chanops(struct nvhost_channel *ch)
 {
-	if (ch)
-		ch->ops = host1x_channel_ops;
+	if (!ch)
+		return;
+
+	ch->ops = host1x_channel_ops;
+	ch->ops.init_gather_filter = NULL;
 }
 
 int nvhost_init_t186_channel_support(struct nvhost_master *host,

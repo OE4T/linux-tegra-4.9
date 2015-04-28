@@ -210,7 +210,7 @@ read_source(struct power_clk_source *s, int cpu)
 	switch (s->type) {
 	case QUADD_POWER_CLK_CPU:
 		/* update cpu frequency */
-		if (cpu < 0 || cpu >= POWER_CLK_MAX_VALUES) {
+		if (cpu < 0 || cpu >= max_t(int, s->nr, nr_cpu_ids)) {
 			pr_err_once("error: cpu id: %d\n", cpu);
 			break;
 		}

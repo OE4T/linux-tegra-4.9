@@ -316,8 +316,6 @@ static int tegra210_adsp_init(struct tegra210_adsp *adsp)
 		if (!adsp_app_desc[i].handle) {
 			dev_err(adsp->dev, "Failed to load app %s",
 						adsp_app_desc[i].name);
-			nvadsp_os_stop();
-			goto exit;
 		}
 	}
 
@@ -532,6 +530,10 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 	/* If app is already open or it is APM output pin don't open app */
 	if (app->info || IS_APM_OUT(app->reg))
 		return 0;
+
+	if (!app->desc->handle) {
+		return -ENODEV;
+	}
 
 	app->info = nvadsp_app_init(app->desc->handle, NULL);
 	if (!app->info) {
@@ -1685,7 +1687,8 @@ static int tegra210_adsp_mux_put(struct snd_kcontrol *kcontrol,
 		} else {
 			ret = tegra210_adsp_app_init(adsp, app);
 			if (ret < 0) {
-				dev_err(adsp->dev, "Failed to init app.");
+				dev_err(adsp->dev, "Failed to init app %s(%s)",
+					app->desc->name, app->desc->fw_name);
 				goto err_put;
 			}
 		}

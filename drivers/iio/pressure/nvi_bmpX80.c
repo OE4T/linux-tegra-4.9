@@ -243,7 +243,6 @@ struct bmp_state {
 	u8 dev_id;			/* device ID */
 	bool initd;			/* set if initialized */
 	bool mpu_en;			/* if device behind MPU */
-	bool fifo_en;			/* MPU FIFO enable */
 	bool port_en[2];		/* enable status of MPU write port */
 	int port_id[2];			/* MPU port ID */
 	u8 data_out;			/* write value to mode register */
@@ -467,7 +466,6 @@ static int bmp_pm_init(struct bmp_state *st)
 	st->poll_delay_us = (BMP_POLL_DELAY_MS_DFLT * 1000);
 	st->initd = false;
 	st->mpu_en = false;
-	st->fifo_en = true;
 	st->port_en[WR] = false;
 	st->port_en[RD] = false;
 	st->port_id[WR] = -1;
@@ -484,7 +482,7 @@ static int bmp_port_enable(struct bmp_state *st, int port, bool enable)
 
 #if BMP_NVI_MPU_SUPPORT
 	if ((enable != st->port_en[port]) && (st->port_id[port] >= 0)) {
-		ret = nvi_mpu_enable(st->port_id[port], enable, st->fifo_en);
+		ret = nvi_mpu_enable(st->port_id[port], enable);
 		if (!ret)
 			st->port_en[port] = enable;
 	}
@@ -626,8 +624,12 @@ static int bmp_read_180(struct bmp_state *st)
 	ts = bmp_get_time_ns();
 	ret = bmp_read_sts_180(st, data, ts);
 	if (ret > 0) {
-		st->nvs->handler(st->nvs_st[BMP_DEV_PRES], &st->pressure, ts);
-		st->nvs->handler(st->nvs_st[BMP_DEV_TEMP], &st->temp, ts);
+		if (st->nvs_st[BMP_DEV_PRES])
+			st->nvs->handler(st->nvs_st[BMP_DEV_PRES],
+					 &st->pressure, ts);
+		if (st->nvs_st[BMP_DEV_TEMP])
+			st->nvs->handler(st->nvs_st[BMP_DEV_TEMP],
+					 &st->temp, ts);
 		bmp_i2c_wr(st, BMP_REG_CTRL, st->data_out);
 	} else if (ret < 0) {
 		bmp_i2c_wr(st, BMP_REG_CTRL, st->data_out);
@@ -711,13 +713,11 @@ static int bmp_calc_pres_280(struct bmp_state *st)
 
 static int bmp_read_sts_280(struct bmp_state *st, u8 *data, s64 ts)
 {
-	u8 sts;
 	s32 val;
 	int ret;
 
-	sts = data[1] & BMP280_REG_CTRL_MODE_MASK;
-	if ((sts == BMP280_REG_CTRL_MODE_FORCED1) ||
-					 (sts == BMP280_REG_CTRL_MODE_FORCED2))
+	if (data[0] & (1 << BMP280_REG_STATUS_IM_UPDATE))
+		/* registers are updating */
 		return 0;
 
 	val = (data[4] << 16) | (data[5] << 8) | data[6];
@@ -748,8 +748,12 @@ static int bmp_read_280(struct bmp_state *st)
 	ts = bmp_get_time_ns();
 	ret = bmp_read_sts_280(st, data, ts);
 	if (ret > 0) {
-		st->nvs->handler(st->nvs_st[BMP_DEV_PRES], &st->pressure, ts);
-		st->nvs->handler(st->nvs_st[BMP_DEV_TEMP], &st->temp, ts);
+		if (st->nvs_st[BMP_DEV_PRES])
+			st->nvs->handler(st->nvs_st[BMP_DEV_PRES],
+					 &st->pressure, ts);
+		if (st->nvs_st[BMP_DEV_TEMP])
+			st->nvs->handler(st->nvs_st[BMP_DEV_TEMP],
+					 &st->temp, ts);
 		bmp_i2c_wr(st, BMP_REG_CTRL, st->data_out);
 	}
 	return 0;
@@ -764,18 +768,22 @@ static void bmp_mpu_handler_280(u8 *data, unsigned int len, s64 ts, void *p_val)
 
 	if (!ts) {
 		/* no timestamp means flush done */
-		for (i = 0; i < BMP_DEV_N; i++)
-			st->nvs->handler(st->nvs_st[i], NULL, 0);
+		for (i = 0; i < BMP_DEV_N; i++) {
+			if (st->nvs_st[i])
+				st->nvs->handler(st->nvs_st[i], NULL, 0);
+		}
 		return;
 	}
 
 	if (st->enabled) {
 		ret = bmp_read_sts_280(st, data, ts);
 		if (ret > 0) {
-			st->nvs->handler(st->nvs_st[BMP_DEV_PRES],
-					 &st->pressure, ts);
-			st->nvs->handler(st->nvs_st[BMP_DEV_TEMP],
-					 &st->temp, ts);
+			if (st->nvs_st[BMP_DEV_PRES])
+				st->nvs->handler(st->nvs_st[BMP_DEV_PRES],
+						 &st->pressure, ts);
+			if (st->nvs_st[BMP_DEV_TEMP])
+				st->nvs->handler(st->nvs_st[BMP_DEV_TEMP],
+						 &st->temp, ts);
 		}
 	}
 }
@@ -788,18 +796,22 @@ static void bmp_mpu_handler_180(u8 *data, unsigned int len, s64 ts, void *p_val)
 
 	if (!ts) {
 		/* no timestamp means flush done */
-		for (i = 0; i < BMP_DEV_N; i++)
-			st->nvs->handler(st->nvs_st[i], NULL, 0);
+		for (i = 0; i < BMP_DEV_N; i++) {
+			if (st->nvs_st[i])
+				st->nvs->handler(st->nvs_st[i], NULL, 0);
+		}
 		return;
 	}
 
 	if (st->enabled) {
 		ret = bmp_read_sts_180(st, data, ts);
 		if (ret > 0) {
-			st->nvs->handler(st->nvs_st[BMP_DEV_PRES],
-					 &st->pressure, ts);
-			st->nvs->handler(st->nvs_st[BMP_DEV_TEMP],
-					 &st->temp, ts);
+			if (st->nvs_st[BMP_DEV_PRES])
+				st->nvs->handler(st->nvs_st[BMP_DEV_PRES],
+						 &st->pressure, ts);
+			if (st->nvs_st[BMP_DEV_TEMP])
+				st->nvs->handler(st->nvs_st[BMP_DEV_TEMP],
+						 &st->temp, ts);
 			nvi_mpu_data_out(st->port_id[WR], st->data_out);
 		} else if (ret < 0) {
 			nvi_mpu_data_out(st->port_id[WR], st->data_out);

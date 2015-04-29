@@ -1785,9 +1785,8 @@ static int inv_icm_self_test_gyro(struct nvi_state *st)
 			 __func__, gyro_bias_st[0], gyro_bias_st[1],
 			 gyro_bias_st[2]);
 	}
-	for (i = 0; i < AXIS_N; i++) {
+	for (i = 0; i < AXIS_N; i++)
 		st->gyro_bias[i] = gyro_bias_regular[i] / ICM_ST_PRECISION;
-	}
 	gyro_result = inv_icm_check_gyro_self_test(st, gyro_bias_regular,
 						   gyro_bias_st);
 	if (st->dbg & NVI_DBG_SPEW_MSG)

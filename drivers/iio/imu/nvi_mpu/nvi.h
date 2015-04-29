@@ -16,12 +16,10 @@
 #ifndef _NVI_H_
 #define _NVI_H_
 
+#include <asm/atomic.h>
 #include <linux/i2c.h>
-#include <linux/kfifo.h>
 #include <linux/miscdevice.h>
-#include <linux/spinlock.h>
 #include <linux/regulator/consumer.h>
-#include <linux/iio/iio.h>
 #include <linux/mpu_iio.h>
 #include <linux/nvs.h>
 
@@ -37,9 +35,9 @@
 #define REG_UP_TIME			(5)
 #define POR_MS				(100)
 #define GYRO_STARTUP_DELAY_NS		(100000000) /* 100ms */
-
+#define NVI_IRQ_STORM_MIN_NS		(1000000) /* storm if irq faster 1ms */
+#define NVI_IRQ_STORM_MAX_N		(100) /* max storm irqs b4 dis irq */
 #define NVI_FIFO_SAMPLE_SIZE_MAX	(38)
-#define TIMESTAMP_FIFO_SIZE		(64)
 #define FIFO_THRESHOLD			(800)
 #define KBUF_SZ				(64)
 
@@ -485,12 +483,11 @@ struct nvi_state {
 	u8 st_data_accel[AXIS_N];
 	u8 st_data_gyro[AXIS_N];
 
-	DECLARE_KFIFO(timestamps, s64, TIMESTAMP_FIFO_SIZE);
-	spinlock_t time_stamp_lock;
+	unsigned int irq_storm_n;
+	atomic64_t ts_irq;
+	s64 ts_last;
+	s64 ts_gyro;
 	u16 fifo_sample_size;
-	s64 ts;
-	s64 fifo_ts;
-	s64 push_ts;
 	u8 buf[NVI_FIFO_SAMPLE_SIZE_MAX * 2]; /* (* 2)=FIFO OVERFLOW OFFSET */
 #ifdef NVI_I2C_DEBUG_INTERFACE
 	u16 dbg_i2c_addr;

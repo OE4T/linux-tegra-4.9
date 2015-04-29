@@ -310,7 +310,7 @@ int nvi_mpu_port_free(int port);
  *            - -EBUSY: MPU is busy with another request.
  *            - -EINVAL: Problem with input parameters.
  */
-int nvi_mpu_enable(int port, bool enable, bool fifo_enable);
+int nvi_mpu_enable(int port, bool enable);
 
 /**
  * Use to change the ports sampling delay in microseconds. The

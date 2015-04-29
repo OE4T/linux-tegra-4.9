@@ -22,6 +22,8 @@
 		bus-width = <8>;
 		status = "disabled";
 		uhs-mask = <0x60>;
+		nvidia,is-emmc;
+		nvidia,clk-name = "sdmmc4";
 	};
 
 	sdhci@3440000 {

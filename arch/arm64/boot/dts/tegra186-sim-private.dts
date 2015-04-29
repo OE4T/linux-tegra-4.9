@@ -69,16 +69,6 @@
 		status = "okay";
 	};
 
-	sdhci@700b0600 {
-		tap-delay = <4>;
-		trim-delay = <3>;
-		mmc-ocr-mask = <0>;
-		max-clk-limit = <200000000>;
-		id = <3>;
-		built-in;
-		calib_3v3_offsets = <0x0202>;
-		calib_1v8_offsets = <0x0202>;
-	};
 	ethernet@0x7ffff000 {
 		compatible = "smsc,lan9115";
 		reg = < 0x0 0x7ffff000 0x0 0x00000100 >;

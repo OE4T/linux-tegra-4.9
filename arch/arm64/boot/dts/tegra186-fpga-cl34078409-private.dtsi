@@ -27,6 +27,10 @@
 		status = "disabled";
 	};
 
+	sdhci@3460000 {
+		status = "okay";
+        };
+
 	host1x: host1x {
 		dpaux {
 			status = "disabled";

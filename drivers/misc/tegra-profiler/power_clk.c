@@ -32,24 +32,32 @@
 #include "comm.h"
 #include "debug.h"
 
-#define POWER_CLK_MAX_VALUES	32
-
-typedef int (*notifier_call_ft)(struct notifier_block *,
-				unsigned long, void *);
+#define PCLK_MAX_VALUES	32
 
 struct power_clk_data {
 	unsigned long value;
 	unsigned long prev;
 };
 
+#define PCLK_NB_GPU	0
+#define PCLK_NB_EMC	0
+
+enum {
+	PCLK_NB_CPU_FREQ,
+	PCLK_NB_CPU_HOTPLUG,
+	PCLK_NB_CPU_MAX,
+};
+
+#define PCLK_NB_MAX	PCLK_NB_CPU_MAX
+
 struct power_clk_source {
 	int type;
 
 	struct clk *clkp;
-	struct notifier_block nb;
+	struct notifier_block nb[PCLK_NB_MAX];
 
 	int nr;
-	struct power_clk_data data[POWER_CLK_MAX_VALUES];
+	struct power_clk_data data[PCLK_MAX_VALUES];
 
 	atomic_t active;
 	struct mutex lock;
@@ -125,6 +133,22 @@ static void make_sample(void)
 	vec.len = power_rate->nr_cpus * sizeof(extra_cpus[0]);
 
 	quadd_put_sample(&record, &vec, 1);
+}
+
+static void
+make_sample_hotplug(int cpu, int is_online)
+{
+	struct quadd_record_data record;
+	struct quadd_hotplug_data *s = &record.hotplug;
+
+	record.record_type = QUADD_RECORD_TYPE_HOTPLUG;
+
+	s->cpu = cpu;
+	s->is_online = is_online ? 1 : 0;
+	s->time = quadd_get_time();
+	s->reserved = 0;
+
+	quadd_put_sample(&record, NULL, 0);
 }
 
 static inline int
@@ -325,6 +349,48 @@ cpufreq_notifier_call(struct notifier_block *nb,
 	return 0;
 }
 
+static int
+cpu_hotplug_notifier_call(struct notifier_block *nb,
+			  unsigned long action, void *hcpu)
+{
+	int cpu;
+	struct power_clk_source *s = &power_ctx.cpu;
+
+	if (!atomic_read(&s->active))
+		return NOTIFY_DONE;
+
+	cpu = (long)hcpu;
+
+	pr_debug("cpu: %d, action: %lu\n", cpu, action);
+
+	if (cpu >= s->nr) {
+		pr_err_once("error: cpu id: %d\n", cpu);
+		return NOTIFY_DONE;
+	}
+
+	switch (action) {
+	case CPU_ONLINE:
+	case CPU_ONLINE_FROZEN:
+		make_sample_hotplug(cpu, 1);
+		break;
+
+	case CPU_DEAD:
+	case CPU_DEAD_FROZEN:
+		mutex_lock(&s->lock);
+		if (atomic_read(&s->active))
+			s->data[cpu].value = 0;
+		mutex_unlock(&s->lock);
+
+		make_sample_hotplug(cpu, 0);
+		break;
+
+	default:
+		return NOTIFY_DONE;
+	}
+
+	return NOTIFY_OK;
+}
+
 static void reset_data(struct power_clk_source *s)
 {
 	int i;
@@ -338,13 +404,11 @@ static void reset_data(struct power_clk_source *s)
 }
 
 static void init_source(struct power_clk_source *s,
-			notifier_call_ft notifier,
 			int nr_values,
 			int type)
 {
 	s->type = type;
-	s->nb.notifier_call = notifier;
-	s->nr = min_t(int, nr_values, POWER_CLK_MAX_VALUES);
+	s->nr = min_t(int, nr_values, PCLK_MAX_VALUES);
 	atomic_set(&s->active, 0);
 	mutex_init(&s->lock);
 
@@ -507,23 +571,37 @@ void quadd_power_clk_stop(void)
 
 int quadd_power_clk_init(struct quadd_ctx *quadd_ctx)
 {
-	init_source(&power_ctx.cpu, cpufreq_notifier_call, nr_cpu_ids,
-		    QUADD_POWER_CLK_CPU);
+	struct power_clk_source *s;
 
-	init_source(&power_ctx.gpu, gpu_notifier_call, 1, QUADD_POWER_CLK_GPU);
-	init_source(&power_ctx.emc, emc_notifier_call, 1, QUADD_POWER_CLK_EMC);
+	s = &power_ctx.gpu;
+	s->nb[PCLK_NB_GPU].notifier_call = gpu_notifier_call;
+	init_source(s, 1, QUADD_POWER_CLK_GPU);
 
-	cpufreq_register_notifier(&power_ctx.cpu.nb,
-				  CPUFREQ_TRANSITION_NOTIFIER);
+	s = &power_ctx.emc;
+	s->nb[PCLK_NB_EMC].notifier_call = emc_notifier_call;
+	init_source(s, 1, QUADD_POWER_CLK_EMC);
+
+	s = &power_ctx.cpu;
+	s->nb[PCLK_NB_CPU_FREQ].notifier_call = cpufreq_notifier_call;
+	s->nb[PCLK_NB_CPU_HOTPLUG].notifier_call = cpu_hotplug_notifier_call;
+	init_source(s, nr_cpu_ids, QUADD_POWER_CLK_CPU);
 
 	power_ctx.quadd_ctx = quadd_ctx;
+
+	cpufreq_register_notifier(&s->nb[PCLK_NB_CPU_FREQ],
+				  CPUFREQ_TRANSITION_NOTIFIER);
+	register_cpu_notifier(&s->nb[PCLK_NB_CPU_HOTPLUG]);
 
 	return 0;
 }
 
 void quadd_power_clk_deinit(void)
 {
+	struct power_clk_source *s = &power_ctx.cpu;
+
 	quadd_power_clk_stop();
-	cpufreq_unregister_notifier(&power_ctx.cpu.nb,
+
+	cpufreq_unregister_notifier(&s->nb[PCLK_NB_CPU_FREQ],
 				    CPUFREQ_TRANSITION_NOTIFIER);
+	unregister_cpu_notifier(&s->nb[PCLK_NB_CPU_HOTPLUG]);
 }

@@ -1,7 +1,7 @@
 /*
  * include/linux/tegra_profiler.h
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,7 +19,7 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	33
+#define QUADD_SAMPLES_VERSION	34
 #define QUADD_IO_VERSION	18
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
@@ -52,6 +52,7 @@
 #define QUADD_SAMPLE_VERSION_STACK_OFFSET	31
 #define QUADD_SAMPLE_VERSION_SCHED_TASK_STATE	32
 #define QUADD_SAMPLE_VERSION_URCS		33
+#define QUADD_SAMPLE_VERSION_HOTPLUG		34
 
 #define QUADD_MMAP_HEADER_VERSION		1
 
@@ -152,6 +153,7 @@ enum quadd_record_type {
 	QUADD_RECORD_TYPE_POWER_RATE,
 	QUADD_RECORD_TYPE_ADDITIONAL_SAMPLE,
 	QUADD_RECORD_TYPE_SCHED,
+	QUADD_RECORD_TYPE_HOTPLUG,
 };
 
 enum quadd_event_source {
@@ -258,6 +260,14 @@ struct quadd_power_rate_data {
 	u32 emc;
 };
 
+struct quadd_hotplug_data {
+	u64 time;
+	u32 cpu;
+
+	u32 is_online:1,
+	    reserved:31;
+};
+
 struct quadd_additional_sample {
 	u8 type;
 
@@ -353,6 +363,7 @@ struct quadd_record_data {
 		struct quadd_debug_data		debug;
 		struct quadd_header_data	hdr;
 		struct quadd_power_rate_data	power_rate;
+		struct quadd_hotplug_data	hotplug;
 		struct quadd_sched_data		sched;
 		struct quadd_additional_sample	additional_sample;
 	};

@@ -161,11 +161,7 @@ EXPORT_SYMBOL_GPL(host1x_sync_readl);
 int nvhost_read_module_regs(struct platform_device *ndev,
 			u32 offset, int count, u32 *values)
 {
-	void __iomem *p = get_aperture(ndev);
 	int err;
-
-	if (!p)
-		return -ENODEV;
 
 	/* verify offset */
 	err = validate_reg(ndev, offset, count);
@@ -176,10 +172,9 @@ int nvhost_read_module_regs(struct platform_device *ndev,
 	if (err)
 		return err;
 
-	p += offset;
 	while (count--) {
-		*(values++) = readl(p);
-		p += 4;
+		*(values++) = host1x_readl(ndev, offset);
+		offset += 4;
 	}
 	rmb();
 	nvhost_module_idle(ndev);
@@ -191,10 +186,6 @@ int nvhost_write_module_regs(struct platform_device *ndev,
 			u32 offset, int count, const u32 *values)
 {
 	int err;
-	void __iomem *p = get_aperture(ndev);
-
-	if (!p)
-		return -ENODEV;
 
 	/* verify offset */
 	err = validate_reg(ndev, offset, count);
@@ -205,10 +196,9 @@ int nvhost_write_module_regs(struct platform_device *ndev,
 	if (err)
 		return err;
 
-	p += offset;
 	while (count--) {
-		writel(*(values++), p);
-		p += 4;
+		host1x_writel(ndev, offset, *(values++));
+		offset += 4;
 	}
 	wmb();
 	nvhost_module_idle(ndev);

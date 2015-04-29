@@ -33,7 +33,7 @@ static void t20_syncpt_reset(struct nvhost_syncpt *sp, u32 id)
 {
 	struct nvhost_master *dev = syncpt_to_dev(sp);
 	int min = nvhost_syncpt_read_min(sp, id);
-	writel(min, dev->sync_aperture + (host1x_sync_syncpt_0_r() + id * 4));
+	host1x_sync_writel(dev->dev, (host1x_sync_syncpt_0_r() + id * 4), min);
 }
 
 /**
@@ -43,12 +43,12 @@ static void t20_syncpt_reset(struct nvhost_syncpt *sp, u32 id)
 static u32 t20_syncpt_update_min(struct nvhost_syncpt *sp, u32 id)
 {
 	struct nvhost_master *dev = syncpt_to_dev(sp);
-	void __iomem *sync_regs = dev->sync_aperture;
 	u32 old, live;
 
 	do {
 		old = nvhost_syncpt_read_min(sp, id);
-		live = readl(sync_regs + (host1x_sync_syncpt_0_r() + id * 4));
+		live = host1x_sync_readl(dev->dev,
+				(host1x_sync_syncpt_0_r() + id * 4));
 	} while ((u32)atomic_cmpxchg(&sp->min_val[id], old, live) != old);
 
 	return live;
@@ -71,8 +71,8 @@ static void t20_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id)
 		nvhost_debug_dump(syncpt_to_dev(sp));
 		return;
 	}
-	writel(bit_mask(id), dev->sync_aperture +
-			host1x_sync_syncpt_cpu_incr_r() + reg_offset * 4);
+	host1x_sync_writel(dev->dev,
+		host1x_sync_syncpt_cpu_incr_r() + reg_offset * 4, bit_mask(id));
 }
 
 /* remove a wait pointed to by patch_addr */
@@ -95,18 +95,19 @@ static const char *t20_syncpt_name(struct nvhost_syncpt *sp, u32 id)
 static int syncpt_mutex_try_lock(struct nvhost_syncpt *sp,
 		unsigned int idx)
 {
-	void __iomem *sync_regs = syncpt_to_dev(sp)->sync_aperture;
+	struct nvhost_master *dev = syncpt_to_dev(sp);
 	/* mlock registers returns 0 when the lock is aquired.
 	 * writing 0 clears the lock. */
-	return !!readl(sync_regs + (host1x_sync_mlock_0_r() + idx * 4));
+	return !!host1x_sync_readl(dev->dev,
+			(host1x_sync_mlock_0_r() + idx * 4));
 }
 
 static void syncpt_mutex_unlock(struct nvhost_syncpt *sp,
 	       unsigned int idx)
 {
-	void __iomem *sync_regs = syncpt_to_dev(sp)->sync_aperture;
+	struct nvhost_master *dev = syncpt_to_dev(sp);
 
-	writel(0, sync_regs + (host1x_sync_mlock_0_r() + idx * 4));
+	host1x_sync_writel(dev->dev, (host1x_sync_mlock_0_r() + idx * 4), 0);
 }
 
 static void syncpt_mutex_owner(struct nvhost_syncpt *sp,
@@ -115,9 +116,8 @@ static void syncpt_mutex_owner(struct nvhost_syncpt *sp,
 				unsigned int *chid)
 {
 	struct nvhost_master *dev = syncpt_to_dev(sp);
-	u32 __iomem *mlo_regs = dev->sync_aperture +
-		host1x_sync_mlock_owner_0_r();
-	u32 owner = readl(mlo_regs + idx);
+	u32 owner = host1x_sync_readl(dev->dev,
+			host1x_sync_mlock_owner_0_r() + idx * 4);
 
 	*chid = host1x_sync_mlock_owner_0_mlock_owner_chid_0_v(owner);
 	*cpu = host1x_sync_mlock_owner_0_mlock_cpu_owns_0_v(owner);

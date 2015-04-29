@@ -61,13 +61,12 @@ void t124_debug_show_channel_fifo(struct nvhost_master *m,
 
 static void t124_debug_show_mlocks(struct nvhost_master *m, struct output *o)
 {
-	u32 __iomem *mlo_regs = m->sync_aperture +
-		host1x_sync_mlock_owner_0_r();
 	int i;
 
 	nvhost_debug_output(o, "---- mlocks ----\n");
 	for (i = 0; i < NV_HOST1X_NB_MLOCKS; i++) {
-		u32 owner = readl(mlo_regs + i * 4);
+		u32 owner = host1x_sync_readl(m->dev,
+				host1x_sync_mlock_owner_0_r() + i * 4);
 		if (owner & 0x1)
 			nvhost_debug_output(o, "%d: locked by channel %d\n",
 					    i, (owner >> 8) & 0xf);

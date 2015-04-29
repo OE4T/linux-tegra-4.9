@@ -46,7 +46,6 @@ static void syncpt_thresh_cascade_fn(struct work_struct *work)
 static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 {
 	struct nvhost_master *dev = dev_id;
-	void __iomem *sync_regs = dev->sync_aperture;
 	struct nvhost_intr *intr = &dev->intr;
 	unsigned long reg;
 	int i, id;
@@ -56,7 +55,7 @@ static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 
 	for (i = 0; i < DIV_ROUND_UP(nvhost_syncpt_nb_hw_pts(&dev->syncpt), 32);
 			i++) {
-		reg = readl(sync_regs +
+		reg = host1x_sync_readl(dev->dev,
 				host1x_sync_syncpt_thresh_cpu0_int_status_r() +
 				i * REGISTER_STRIDE);
 
@@ -99,7 +98,6 @@ out:
 static void t20_intr_init_host_sync(struct nvhost_intr *intr)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
-	void __iomem *sync_regs = dev->sync_aperture;
 	int i, err;
 
 	intr_op().disable_all_syncpt_intrs(intr);
@@ -116,7 +114,7 @@ static void t20_intr_init_host_sync(struct nvhost_intr *intr)
 	/* increase the auto-ack timout to the maximum value. 2d will hang
 	 * otherwise on ap20.
 	 */
-	writel(0xff, sync_regs + host1x_sync_ctxsw_timeout_cfg_r());
+	host1x_sync_writel(dev->dev, host1x_sync_ctxsw_timeout_cfg_r(), 0xff);
 
 	/* enable graphics host syncpoint interrupt */
 	t20_intr_set_syncpt_threshold(intr,
@@ -129,68 +127,66 @@ static void t20_intr_init_host_sync(struct nvhost_intr *intr)
 static void t20_intr_set_host_clocks_per_usec(struct nvhost_intr *intr, u32 cpm)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
-	void __iomem *sync_regs = dev->sync_aperture;
 	/* write microsecond clock register */
-	writel(cpm, sync_regs + host1x_sync_usec_clk_r());
+	host1x_sync_writel(dev->dev, host1x_sync_usec_clk_r(), cpm);
 	/* set the ip_busy_timeout */
-	writel(cpm * 500000, sync_regs + host1x_sync_ip_busy_timeout_r());
+	host1x_sync_writel(dev->dev,
+			host1x_sync_ip_busy_timeout_r(), cpm * 500000);
 }
 
 static void t20_intr_set_syncpt_threshold(struct nvhost_intr *intr,
 	u32 id, u32 thresh)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
-	void __iomem *sync_regs = dev->sync_aperture;
-	writel(thresh, sync_regs +
-		(host1x_sync_syncpt_int_thresh_0_r() + id * REGISTER_STRIDE));
+	host1x_sync_writel(dev->dev, (host1x_sync_syncpt_int_thresh_0_r() +
+			id * REGISTER_STRIDE), thresh);
 }
 
 static void t20_intr_enable_syncpt_intr(struct nvhost_intr *intr, u32 id)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
-	void __iomem *sync_regs = dev->sync_aperture;
 
-	writel(bit_mask(id), sync_regs +
+	host1x_sync_writel(dev->dev,
 			host1x_sync_syncpt_thresh_int_enable_cpu0_r() +
-			bit_word(id) * REGISTER_STRIDE);
+			bit_word(id) * REGISTER_STRIDE, bit_mask(id));
 }
 
 static void t20_intr_disable_syncpt_intr(struct nvhost_intr *intr, u32 id)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
-	void __iomem *sync_regs = dev->sync_aperture;
 
-	writel(bit_mask(id), sync_regs +
+	host1x_sync_writel(dev->dev,
 			host1x_sync_syncpt_thresh_int_disable_r() +
-			bit_word(id) * REGISTER_STRIDE);
+			bit_word(id) * REGISTER_STRIDE, bit_mask(id));
 
 	/* clear status for both cpu's */
-	writel(bit_mask(id), sync_regs +
+	host1x_sync_writel(dev->dev,
 		host1x_sync_syncpt_thresh_cpu0_int_status_r() +
-		bit_word(id) * REGISTER_STRIDE);
-	writel(bit_mask(id), sync_regs +
+		bit_word(id) * REGISTER_STRIDE, bit_mask(id));
+	host1x_sync_writel(dev->dev,
 		host1x_sync_syncpt_thresh_cpu1_int_status_r() +
-		bit_word(id) * REGISTER_STRIDE);
+		bit_word(id) * REGISTER_STRIDE, bit_mask(id));
 }
 
 static void t20_intr_disable_all_syncpt_intrs(struct nvhost_intr *intr)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
-	void __iomem *sync_regs = dev->sync_aperture;
 	u32 reg;
 
 	for (reg = 0; reg < bit_word(nvhost_syncpt_nb_hw_pts(&dev->syncpt))
 			* REGISTER_STRIDE; reg += REGISTER_STRIDE) {
 		/* disable interrupts for both cpu's */
-		writel(0xffffffffu, sync_regs +
+		host1x_sync_writel(dev->dev,
 				host1x_sync_syncpt_thresh_int_disable_r() +
-				reg);
+				reg, 0xffffffffu);
 
 		/* clear status for both cpu's */
-		writel(0xffffffffu, sync_regs +
-			host1x_sync_syncpt_thresh_cpu0_int_status_r() + reg);
-		writel(0xffffffffu, sync_regs +
-			host1x_sync_syncpt_thresh_cpu1_int_status_r() + reg);
+		host1x_sync_writel(dev->dev,
+			host1x_sync_syncpt_thresh_cpu0_int_status_r() + reg,
+			0xffffffffu);
+		host1x_sync_writel(dev->dev,
+			host1x_sync_syncpt_thresh_cpu1_int_status_r() + reg,
+			0xffffffffu);
 	}
 }
 
@@ -203,17 +199,18 @@ static void t20_intr_syncpt_intr_ack(struct nvhost_intr_syncpt *syncpt,
 {
 	unsigned int id = syncpt->id;
 	struct nvhost_intr *intr = intr_syncpt_to_intr(syncpt);
-
-	void __iomem *sync_regs = intr_to_dev(intr)->sync_aperture;
+	struct nvhost_master *dev = intr_to_dev(intr);
 
 	u32 reg = bit_word(id) * REGISTER_STRIDE;
 
 	if (disable_intr)
-		writel(bit_mask(id), sync_regs +
-		       host1x_sync_syncpt_thresh_int_disable_r() + reg);
+		host1x_sync_writel(dev->dev,
+		       host1x_sync_syncpt_thresh_int_disable_r() + reg,
+		       bit_mask(id));
 
-	writel(bit_mask(id), sync_regs +
-		host1x_sync_syncpt_thresh_cpu0_int_status_r() + reg);
+	host1x_sync_writel(dev->dev,
+		host1x_sync_syncpt_thresh_cpu0_int_status_r() + reg,
+		bit_mask(id));
 }
 
 /**
@@ -223,19 +220,19 @@ static void t20_intr_syncpt_intr_ack(struct nvhost_intr_syncpt *syncpt,
 static irqreturn_t t20_intr_host1x_isr(int irq, void *dev_id)
 {
 	struct nvhost_intr *intr = dev_id;
-	void __iomem *sync_regs = intr_to_dev(intr)->sync_aperture;
+	struct nvhost_master *dev = intr_to_dev(intr);
 	unsigned long stat;
 	u32 ext_stat;
 	u32 addr;
 	unsigned long intstat;
 	int i;
 
-	intstat = readl(sync_regs + host1x_sync_intstatus_r());
+	intstat = host1x_sync_readl(dev->dev, host1x_sync_intstatus_r());
 	intr->intstatus = intstat;
 
 	/* Handle host1x interrupt in ISR */
-	stat = readl(sync_regs + host1x_sync_hintstatus_r());
-	ext_stat = readl(sync_regs + host1x_sync_hintstatus_ext_r());
+	stat = host1x_sync_readl(dev->dev, host1x_sync_hintstatus_r());
+	ext_stat = host1x_sync_readl(dev->dev, host1x_sync_hintstatus_ext_r());
 
 	for_each_set_bit(i, &stat, 32) {
 		if (intr->host_isr[i])
@@ -243,34 +240,38 @@ static irqreturn_t t20_intr_host1x_isr(int irq, void *dev_id)
 	}
 
 	if (host1x_sync_hintstatus_ext_ip_read_int_v(ext_stat)) {
-		addr = readl(sync_regs + host1x_sync_ip_read_timeout_addr_r());
+		addr = host1x_sync_readl(dev->dev,
+				host1x_sync_ip_read_timeout_addr_r());
 		pr_err("Host read timeout at address %x\n", addr);
 	}
 
 	if (host1x_sync_hintstatus_ext_ip_write_int_v(ext_stat)) {
-		addr = readl(sync_regs + host1x_sync_ip_write_timeout_addr_r());
+		addr = host1x_sync_readl(dev->dev,
+				host1x_sync_ip_write_timeout_addr_r());
 		pr_err("Host write timeout at address %x\n", addr);
 	}
 
-	writel(ext_stat, sync_regs + host1x_sync_hintstatus_ext_r());
-	writel(stat, sync_regs + host1x_sync_hintstatus_r());
+	host1x_sync_writel(dev->dev, host1x_sync_hintstatus_ext_r(), ext_stat);
+	host1x_sync_writel(dev->dev, host1x_sync_hintstatus_r(), stat);
 
-	writel(intstat, sync_regs + host1x_sync_intstatus_r());
+	host1x_sync_writel(dev->dev, host1x_sync_intstatus_r(), intstat);
 	return IRQ_HANDLED;
 }
 
 static int t20_intr_request_host_general_irq(struct nvhost_intr *intr)
 {
-	void __iomem *sync_regs = intr_to_dev(intr)->sync_aperture;
+	struct nvhost_master *dev = intr_to_dev(intr);
 	int err;
 	u32 val;
 
 	/* master disable for general (not syncpt) host interrupts */
-	writel(0, sync_regs + host1x_sync_intmask_r());
+	host1x_sync_writel(dev->dev, host1x_sync_intmask_r(), 0);
 
 	/* clear status & extstatus */
-	writel(0xfffffffful, sync_regs + host1x_sync_hintstatus_ext_r());
-	writel(0xfffffffful, sync_regs + host1x_sync_hintstatus_r());
+	host1x_sync_writel(dev->dev, host1x_sync_hintstatus_ext_r(),
+			0xfffffffful);
+	host1x_sync_writel(dev->dev, host1x_sync_hintstatus_r(),
+			0xfffffffful);
 
 	err = request_irq(intr->general_irq, t20_intr_host1x_isr,
 			0, "host_status", intr);
@@ -278,28 +279,29 @@ static int t20_intr_request_host_general_irq(struct nvhost_intr *intr)
 		return err;
 
 	/* enable extra interrupt sources IP_READ_INT and IP_WRITE_INT */
-	writel(BIT(30) | BIT(31), sync_regs + host1x_sync_hintmask_ext_r());
+	host1x_sync_writel(dev->dev, host1x_sync_hintmask_ext_r(),
+			BIT(30) | BIT(31));
 
 	/* enable extra interrupt sources */
-	val = readl(sync_regs + host1x_sync_hintmask_r());
+	val = host1x_sync_readl(dev->dev, host1x_sync_hintmask_r());
 	val |= BIT(31);
-	writel(val, sync_regs + host1x_sync_hintmask_r());
+	host1x_sync_writel(dev->dev, host1x_sync_hintmask_r(), val);
 
 	/* enable host module interrupt to CPU0 */
-	writel(BIT(0), sync_regs + host1x_sync_intc0mask_r());
+	host1x_sync_writel(dev->dev, host1x_sync_intc0mask_r(), BIT(0));
 
 	/* master enable for general (not syncpt) host interrupts */
-	writel(BIT(0), sync_regs + host1x_sync_intmask_r());
+	host1x_sync_writel(dev->dev, host1x_sync_intmask_r(), BIT(0));
 
 	return err;
 }
 
 static void t20_intr_free_host_general_irq(struct nvhost_intr *intr)
 {
-	void __iomem *sync_regs = intr_to_dev(intr)->sync_aperture;
+	struct nvhost_master *dev = intr_to_dev(intr);
 
 	/* master disable for general (not syncpt) host interrupts */
-	writel(0, sync_regs + host1x_sync_intmask_r());
+	host1x_sync_writel(dev->dev, host1x_sync_intmask_r(), 0);
 
 	free_irq(intr->general_irq, intr);
 }
@@ -320,24 +322,23 @@ static int t20_free_syncpt_irq(struct nvhost_intr *intr)
 static int intr_debug_dump(struct nvhost_intr *intr, struct output *o)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
-	void __iomem *sync_regs = intr_to_dev(intr)->sync_aperture;
 	int i;
 
 	nvhost_debug_output(o, "\n---- host general irq ----\n\n");
 	nvhost_debug_output(o, "sync_hintmask_ext = 0x%08x\n",
-		readl(sync_regs + host1x_sync_hintmask_ext_r()));
+		host1x_sync_readl(dev->dev, host1x_sync_hintmask_ext_r()));
 	nvhost_debug_output(o, "sync_hintmask = 0x%08x\n",
-		readl(sync_regs + host1x_sync_hintmask_r()));
+		host1x_sync_readl(dev->dev, host1x_sync_hintmask_r()));
 	nvhost_debug_output(o, "sync_intc0mask = 0x%08x\n",
-		readl(sync_regs + host1x_sync_intc0mask_r()));
+		host1x_sync_readl(dev->dev, host1x_sync_intc0mask_r()));
 	nvhost_debug_output(o, "sync_intmask = 0x%08x\n",
-		readl(sync_regs + host1x_sync_intmask_r()));
+		host1x_sync_readl(dev->dev, host1x_sync_intmask_r()));
 
 	nvhost_debug_output(o, "\n---- host syncpt irq mask ----\n\n");
 	for (i = 0; i < DIV_ROUND_UP(nvhost_syncpt_nb_hw_pts(&dev->syncpt), 16);
 			i++)
 		nvhost_debug_output(o, "syncpt_thresh_int_mask(%d) = 0x%08x\n",
-			i, readl(sync_regs +
+			i, host1x_sync_readl(dev->dev,
 				host1x_sync_syncpt_thresh_int_mask_r() +
 				i * REGISTER_STRIDE));
 
@@ -345,20 +346,20 @@ static int intr_debug_dump(struct nvhost_intr *intr, struct output *o)
 	for (i = 0; i < DIV_ROUND_UP(nvhost_syncpt_nb_hw_pts(&dev->syncpt), 32);
 			i++)
 		nvhost_debug_output(o, "syncpt_thresh_cpu0_int_status(%d) = 0x%08x\n",
-			i, readl(sync_regs +
+			i, host1x_sync_readl(dev->dev,
 				host1x_sync_syncpt_thresh_cpu0_int_status_r() +
 				i * REGISTER_STRIDE));
 
 	nvhost_debug_output(o, "\n---- host syncpt thresh ----\n\n");
 	for (i = 0; i < nvhost_syncpt_nb_hw_pts(&dev->syncpt); i++) {
-		u32 reg = readl(sync_regs +
+		u32 reg = host1x_sync_readl(dev->dev,
 				host1x_sync_syncpt_thresh_int_mask_r() +
 				bit_word(i * 2) * REGISTER_STRIDE);
 		if (!(reg & bit_mask(i * 2)))
 			continue;
 
 		nvhost_debug_output(o, "syncpt_int_thresh_thresh_0(%d) = %u\n",
-			i, readl(sync_regs +
+			i, host1x_sync_readl(dev->dev,
 				host1x_sync_syncpt_int_thresh_0_r() +
 				i * REGISTER_STRIDE));
 	}
@@ -368,22 +369,22 @@ static int intr_debug_dump(struct nvhost_intr *intr, struct output *o)
 
 static void intr_enable_host_irq(struct nvhost_intr *intr, int irq)
 {
-	void __iomem *sync_regs = intr_to_dev(intr)->sync_aperture;
+	struct nvhost_master *dev = intr_to_dev(intr);
 	long val;
 
-	val = readl(sync_regs + host1x_sync_hintmask_r());
+	val = host1x_sync_readl(dev->dev, host1x_sync_hintmask_r());
 	val |= BIT(irq);
-	writel(val, sync_regs + host1x_sync_hintmask_r());
+	host1x_sync_writel(dev->dev, host1x_sync_hintmask_r(), val);
 }
 
 static void intr_disable_host_irq(struct nvhost_intr *intr, int irq)
 {
-	void __iomem *sync_regs = intr_to_dev(intr)->sync_aperture;
+	struct nvhost_master *dev = intr_to_dev(intr);
 	long val;
 
-	val = readl(sync_regs + host1x_sync_hintmask_r());
+	val = host1x_sync_readl(dev->dev, host1x_sync_hintmask_r());
 	val &= ~BIT(irq);
-	writel(val, sync_regs + host1x_sync_hintmask_r());
+	host1x_sync_writel(dev->dev, host1x_sync_hintmask_r(), val);
 }
 
 static const struct nvhost_intr_ops host1x_intr_ops = {

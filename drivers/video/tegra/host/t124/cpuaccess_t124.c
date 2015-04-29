@@ -29,22 +29,20 @@ static int t124_cpuaccess_mutex_try_lock(struct nvhost_cpuaccess *ctx,
 					unsigned int idx)
 {
 	struct nvhost_master *dev = cpuaccess_to_dev(ctx);
-	void __iomem *sync_regs = dev->sync_aperture;
 
 	nvhost_dbg_fn("");
 	/* mlock registers returns 0 when the lock is aquired.
 	 * writing 0 clears the lock. */
-	return !!readl(sync_regs + (host1x_sync_mlock_0_0_r() + idx * 4));
+	return !!host1x_sync_readl(dev->dev, (host1x_sync_mlock_0_0_r() + idx * 4));
 }
 
 static void t124_cpuaccess_mutex_unlock(struct nvhost_cpuaccess *ctx,
 				       unsigned int idx)
 {
 	struct nvhost_master *dev = cpuaccess_to_dev(ctx);
-	void __iomem *sync_regs = dev->sync_aperture;
 
 	nvhost_dbg_fn("");
-	writel(0, sync_regs + (host1x_sync_mlock_0_0_r() + idx * 4));
+	host1x_sync_writel(dev->dev, (host1x_sync_mlock_0_0_r() + idx * 4), 0);
 }
 
 int nvhost_init_t124_cpuaccess_support(struct nvhost_master *host,

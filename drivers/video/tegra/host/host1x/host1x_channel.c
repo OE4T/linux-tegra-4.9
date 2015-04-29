@@ -421,7 +421,6 @@ static int t124_channel_init_gather_filter(struct nvhost_channel *ch)
 {
 
 	struct platform_device *pdev = ch->dev;
-	void __iomem *regs = ch->aperture;
 	struct nvhost_master *master = nvhost_get_host(pdev);
 	int err;
 
@@ -434,8 +433,8 @@ static int t124_channel_init_gather_filter(struct nvhost_channel *ch)
 		return err;
 	}
 
-	writel(host1x_channel_channelctrl_kernel_filter_gbuffer_f(1),
-	       regs + host1x_channel_channelctrl_r());
+	host1x_channel_writel(ch, host1x_channel_channelctrl_r(),
+		host1x_channel_channelctrl_kernel_filter_gbuffer_f(1));
 	nvhost_module_idle(nvhost_get_parent(pdev));
 
 	return 0;

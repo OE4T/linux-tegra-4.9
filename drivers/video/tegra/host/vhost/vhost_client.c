@@ -38,10 +38,14 @@ static struct of_device_id tegra_client_of_match[] = {
 	{ .compatible = "nvidia,tegra124-vhost-vic",
 		.data = (struct nvhost_device_data *)&t124_vic_info },
 #endif
+#if defined(CONFIG_TEGRA_GRHOST_VI) || defined(CONFIG_TEGRA_GRHOST_VI_MODULE)
 	{ .compatible = "nvidia,tegra124-vhost-vi",
 		.data = (struct nvhost_device_data *)&t124_vi_info },
+#endif
+#ifdef CONFIG_TEGRA_GRHOST_ISP
 	{ .compatible = "nvidia,tegra124-vhost-isp",
 		.data = (struct nvhost_device_data *)&t124_isp_info },
+#endif
 	{ .compatible = "nvidia,tegra124-vhost-msenc",
 		.data = (struct nvhost_device_data *)&t124_msenc_info },
 	{ },
@@ -50,7 +54,6 @@ static struct of_device_id tegra_client_of_match[] = {
 static int vhost_client_probe(struct platform_device *dev)
 {
 	int err;
-	int dev_id = 0;
 	struct nvhost_device_data *pdata = NULL;
 
 	if (dev->dev.of_node) {
@@ -63,8 +66,10 @@ static int vhost_client_probe(struct platform_device *dev)
 
 		pdata = (struct nvhost_device_data *)match->data;
 
+#ifdef CONFIG_TEGRA_GRHOST_ISP
 		/* If ISP, need to differentiate ISP.0 from ISP.1 */
 		if (!IS_ENABLED(CONFIG_ARCH_TEGRA_18x_SOC)) {
+			int dev_id = 0;
 			if (sscanf(dev->name, "%x.isp", &dev_id) == 1) {
 				switch (tegra_get_chipid()) {
 				case TEGRA_CHIPID_TEGRA12:
@@ -79,6 +84,7 @@ static int vhost_client_probe(struct platform_device *dev)
 				}
 			}
 		}
+#endif
 	} else {
 		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
 

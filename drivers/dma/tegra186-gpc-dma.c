@@ -17,7 +17,6 @@
  */
 
 #include <linux/bitops.h>
-#include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/dmaengine.h>
 #include <linux/dma-mapping.h>
@@ -33,7 +32,6 @@
 #include <linux/platform_device.h>
 #include <linux/pm.h>
 #include <linux/slab.h>
-#include <linux/clk/tegra.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/version.h>
 #include <linux/reset.h>
@@ -227,6 +225,7 @@ struct tegra_dma_channel {
 	unsigned long		chan_base_offset;
 	spinlock_t		lock;
 	bool			busy;
+	bool			cyclic;
 	struct tegra_dma	*tdma;
 
 	/* Different lists for managing the requests */
@@ -441,6 +440,36 @@ static void tegra_dma_start(struct tegra_dma_channel *tdc,
 				ch_regs->csr | TEGRA_GPCDMA_CSR_ENB);
 }
 
+static void tegra_dma_configure_for_next(struct tegra_dma_channel *tdc,
+		struct tegra_dma_sg_req *nsg_req)
+{
+	unsigned long status;
+
+	status  = tdc_read(tdc, TEGRA_GPCDMA_CHAN_STATUS);
+
+	/*
+	 * If interrupt is pending then do nothing as the ISR will handle
+	 * the programing for new request.
+	 */
+	if (status & TEGRA_GPCDMA_STATUS_ISE_EOC) {
+		dev_err(tdc2dev(tdc),
+			"Skipping new configuration as interrupt is pending\n");
+		nsg_req->skipped = true;
+		tegra_dma_resume(tdc);
+		return;
+	}
+
+	/* Safe to program new configuration */
+	tdc_write(tdc, TEGRA_GPCDMA_CHAN_SRC_PTR, nsg_req->ch_regs.src_ptr);
+	tdc_write(tdc, TEGRA_GPCDMA_CHAN_DST_PTR, nsg_req->ch_regs.dst_ptr);
+	tdc_write(tdc, TEGRA_GPCDMA_CHAN_HIGH_ADDR_PTR, nsg_req->ch_regs.high_addr_ptr);
+	tdc_write(tdc, TEGRA_GPCDMA_CHAN_WCOUNT, nsg_req->ch_regs.wcount);
+	tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSR,
+		nsg_req->ch_regs.csr | TEGRA_GPCDMA_CSR_ENB);
+	nsg_req->configured = true;
+	nsg_req->skipped = false;
+}
+
 static void tdc_start_head_req(struct tegra_dma_channel *tdc)
 {
 	struct tegra_dma_sg_req *sg_req;
@@ -454,6 +483,22 @@ static void tdc_start_head_req(struct tegra_dma_channel *tdc)
 	sg_req->configured = true;
 	sg_req->skipped = false;
 	tdc->busy = true;
+}
+
+static void tdc_configure_next_head_desc(struct tegra_dma_channel *tdc)
+{
+	struct tegra_dma_sg_req *hsgreq;
+	struct tegra_dma_sg_req *hnsgreq;
+
+	if (list_empty(&tdc->pending_sg_req))
+		return;
+
+	hsgreq = list_first_entry(&tdc->pending_sg_req, typeof(*hsgreq), node);
+	if (!list_is_last(&hsgreq->node, &tdc->pending_sg_req)) {
+		hnsgreq = list_first_entry(&hsgreq->node,
+					typeof(*hnsgreq), node);
+		tegra_dma_configure_for_next(tdc, hnsgreq);
+	}
 }
 
 static void tegra_dma_abort_all(struct tegra_dma_channel *tdc)
@@ -478,6 +523,36 @@ static void tegra_dma_abort_all(struct tegra_dma_channel *tdc)
 		}
 	}
 	tdc->isr_handler = NULL;
+}
+
+static bool handle_continuous_head_request(struct tegra_dma_channel *tdc,
+		struct tegra_dma_sg_req *last_sg_req, bool to_terminate)
+{
+	struct tegra_dma_sg_req *hsgreq = NULL;
+
+	if (list_empty(&tdc->pending_sg_req)) {
+		dev_err(tdc2dev(tdc), "Dma is running without req\n");
+		tegra_dma_stop(tdc);
+		return false;
+	}
+
+	/*
+	 * Check that head req on list should be in flight.
+	 * If it is not in flight then abort transfer as
+	 * looping of transfer can not continue.
+	 */
+	hsgreq = list_first_entry(&tdc->pending_sg_req, typeof(*hsgreq), node);
+	if (!hsgreq->configured && !hsgreq->skipped) {
+		tegra_dma_stop(tdc);
+		dev_err(tdc2dev(tdc), "Error in dma transfer, aborting dma\n");
+		tegra_dma_abort_all(tdc);
+		return false;
+	}
+
+	/* Configure next request */
+	if (!to_terminate)
+		tdc_configure_next_head_desc(tdc);
+	return true;
 }
 
 static void handle_once_dma_done(struct tegra_dma_channel *tdc,
@@ -510,6 +585,34 @@ static void handle_once_dma_done(struct tegra_dma_channel *tdc,
 		return;
 
 	tdc_start_head_req(tdc);
+	return;
+}
+
+static void handle_cont_sngl_cycle_dma_done(struct tegra_dma_channel *tdc,
+		bool to_terminate)
+{
+	struct tegra_dma_sg_req *sgreq;
+	struct tegra_dma_desc *dma_desc;
+	bool st;
+
+	sgreq = list_first_entry(&tdc->pending_sg_req, typeof(*sgreq), node);
+	dma_desc = sgreq->dma_desc;
+	dma_desc->bytes_transferred += sgreq->req_len;
+
+	/* Callback need to be call */
+	if (!dma_desc->cb_count)
+		list_add_tail(&dma_desc->cb_node, &tdc->cb_desc);
+	dma_desc->cb_count++;
+
+	/* If not last req then put at end of pending list */
+	if (!list_is_last(&sgreq->node, &tdc->pending_sg_req)) {
+		list_move_tail(&sgreq->node, &tdc->pending_sg_req);
+		sgreq->configured = false;
+		sgreq->skipped = false;
+		st = handle_continuous_head_request(tdc, sgreq, to_terminate);
+		if (!st)
+			dma_desc->dma_status = DMA_ERROR;
+	}
 	return;
 }
 
@@ -581,6 +684,8 @@ static void tegra_dma_issue_pending(struct dma_chan *dc)
 {
 	struct tegra_dma_channel *tdc = to_tegra_dma_chan(dc);
 	unsigned long flags;
+	unsigned long status;
+	int count;
 
 	spin_lock_irqsave(&tdc->lock, flags);
 	if (list_empty(&tdc->pending_sg_req)) {
@@ -588,8 +693,29 @@ static void tegra_dma_issue_pending(struct dma_chan *dc)
 		goto end;
 	}
 
-	if (!tdc->busy)
+	if (!tdc->busy) {
 		tdc_start_head_req(tdc);
+		/* Continuous mode: Configure next req */
+		if (tdc->cyclic) {
+			/*
+			 * For cyclic dma transfers, program the second transfer
+			 * parameters as soon as the first dma transfer is
+			 * started inorder for the dma controller to trigger the
+			 * second transfer with the correct parameters. Poll
+			 * for the channel busy bit and start the transfer.
+			 */
+			count = 20;
+			do {
+				status = tdc_read(tdc, TEGRA_GPCDMA_CHAN_STATUS);
+				if (status & TEGRA_GPCDMA_STATUS_BUSY)
+					break;
+				udelay(1);
+				count--;
+			} while(count);
+			tdc_configure_next_head_desc(tdc);
+		}
+	}
+
 end:
 	spin_unlock_irqrestore(&tdc->lock, flags);
 	return;
@@ -632,7 +758,7 @@ static void tegra_dma_terminate_all(struct dma_chan *dc)
 	if (!list_empty(&tdc->pending_sg_req) && was_busy) {
 		sgreq = list_first_entry(&tdc->pending_sg_req,
 					typeof(*sgreq), node);
-		sgreq->dma_desc->bytes_transferred += sgreq->req_len - status;
+		sgreq->dma_desc->bytes_transferred += sgreq->req_len - wcount;
 	}
 	tegra_dma_resume(tdc);
 
@@ -1127,8 +1253,182 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_slave_sg(
 	 * Make sure that mode should not be conflicting with currently
 	 * configured mode.
 	 */
-	if (!tdc->isr_handler)
+	if (!tdc->isr_handler) {
 		tdc->isr_handler = handle_once_dma_done;
+		tdc->cyclic = false;
+	} else {
+		if (tdc->cyclic) {
+			dev_err(tdc2dev(tdc), "Cyclic DMA mode configured\n");
+			tegra_dma_desc_put(tdc, dma_desc);
+			return NULL;
+		}
+	}
+
+	return &dma_desc->txd;
+}
+
+
+static struct dma_async_tx_descriptor *tegra_dma_prep_dma_cyclic(
+	struct dma_chan *dc, dma_addr_t buf_addr, size_t buf_len,
+	size_t period_len, enum dma_transfer_direction direction,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+	unsigned long flags, void *context)
+#else
+	unsigned long flags)
+#endif
+{
+	struct tegra_dma_channel *tdc = to_tegra_dma_chan(dc);
+	struct tegra_dma_desc *dma_desc = NULL;
+	struct tegra_dma_sg_req  *sg_req = NULL;
+	unsigned long csr, mc_seq, apb_ptr = 0, mmio_seq = 0;
+	int len;
+	size_t remain_len;
+	dma_addr_t mem = buf_addr;
+	u32 burst_size;
+	enum dma_slave_buswidth slave_bw;
+	int ret;
+
+	if (!buf_len || !period_len) {
+		dev_err(tdc2dev(tdc), "Invalid buffer/period len\n");
+		return NULL;
+	}
+
+	if (!tdc->config_init) {
+		dev_err(tdc2dev(tdc), "DMA slave is not configured\n");
+		return NULL;
+	}
+
+	/*
+	 * We allow to take more number of requests till DMA is
+	 * not started. The driver will loop over all requests.
+	 * Once DMA is started then new requests can be queued only after
+	 * terminating the DMA.
+	 */
+	if (tdc->busy) {
+		dev_err(tdc2dev(tdc), "Request not allowed when dma running\n");
+		return NULL;
+	}
+
+	/*
+	 * We only support cycle transfer when buf_len is multiple of
+	 * period_len.
+	 */
+	if (buf_len % period_len) {
+		dev_err(tdc2dev(tdc), "buf_len is not multiple of period_len\n");
+		return NULL;
+	}
+
+	len = period_len;
+	if ((len & 3) || (buf_addr & 3) ||
+			(len > tdc->tdma->chip_data->max_dma_count)) {
+		dev_err(tdc2dev(tdc), "Req len/mem address is not correct\n");
+		return NULL;
+	}
+
+	ret = get_transfer_param(tdc, direction, &apb_ptr, &mmio_seq, &csr,
+		&burst_size, &slave_bw);
+	if (ret < 0)
+		return NULL;
+
+	/* Enable once or continuous mode */
+	csr |= TEGRA_GPCDMA_CSR_ONCE;
+	/* Program the slave id in requestor select */
+	csr |= tdc->slave_id << TEGRA_GPCDMA_CSR_REQ_SEL_SHIFT;
+	/* Enable IRQ mask */
+	csr |= TEGRA_GPCDMA_CSR_IRQ_MASK;
+	/* Configure default priority weight for the channel*/
+	csr |= (1 << TEGRA_GPCDMA_CSR_WEIGHT_SHIFT);
+
+	/* Enable the dma interrupt */
+	if (flags & DMA_PREP_INTERRUPT)
+		csr |= TEGRA_GPCDMA_CSR_IE_EOC;
+
+
+	/* Set the address wrapping on both MC and MMIO side */
+	mc_seq = TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
+			TEGRA_GPCDMA_MCSEQ_WRAP0_SHIFT;
+	mc_seq |= TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
+			TEGRA_GPCDMA_MCSEQ_WRAP1_SHIFT;
+	mmio_seq |= (1 << TEGRA_GPCDMA_MMIOSEQ_WRAP_WORD_SHIFT);
+
+	/* Program 2 MC outstanding requests by default. */
+	mc_seq |= (1 << TEGRA_GPCDMA_MCSEQ_REQ_COUNT_SHIFT);
+	/* Setting 16 words burst size on MC side */
+	mc_seq |= TEGRA_GPCDMA_MCSEQ_BURST_16;
+
+	dma_desc = tegra_dma_desc_get(tdc);
+	if (!dma_desc) {
+		dev_err(tdc2dev(tdc), "not enough descriptors available\n");
+		return NULL;
+	}
+
+	INIT_LIST_HEAD(&dma_desc->tx_list);
+	INIT_LIST_HEAD(&dma_desc->cb_node);
+	dma_desc->cb_count = 0;
+
+	dma_desc->bytes_transferred = 0;
+	dma_desc->bytes_requested = buf_len;
+	remain_len = buf_len;
+
+	/* Split transfer equal to period size */
+	while (remain_len) {
+		sg_req = tegra_dma_sg_req_get(tdc);
+		if (!sg_req) {
+			dev_err(tdc2dev(tdc), "Dma sg-req not available\n");
+			tegra_dma_desc_put(tdc, dma_desc);
+			return NULL;
+		}
+
+		mmio_seq |= get_burst_size(tdc, burst_size, slave_bw, len);
+		if (direction == DMA_MEM_TO_DEV) {
+			sg_req->ch_regs.src_ptr = mem;
+			sg_req->ch_regs.dst_ptr = apb_ptr;
+			sg_req->ch_regs.high_addr_ptr = (mem >> 32) &
+				TEGRA_GPCDMA_HIGH_ADDR_SCR_PTR_MASK;
+		} else if (direction == DMA_DEV_TO_MEM) {
+			sg_req->ch_regs.src_ptr = apb_ptr;
+			sg_req->ch_regs.dst_ptr = mem;
+			sg_req->ch_regs.high_addr_ptr = ((mem >> 32) &
+				TEGRA_GPCDMA_HIGH_ADDR_DST_PTR_MASK) <<
+				TEGRA_GPCDMA_HIGH_ADDR_DST_PTR_SHIFT;
+		}
+		/*
+		 * Word count register takes input in words. Writing a value
+		 * of N into word count register means a req of (N+1) words.
+		 */
+		sg_req->ch_regs.wcount = ((len - 4) >> 2);
+		sg_req->ch_regs.csr = csr;
+		sg_req->ch_regs.mmio_seq = mmio_seq;
+		sg_req->ch_regs.mc_seq = mc_seq;
+		sg_req->configured = false;
+		sg_req->skipped = false;
+		sg_req->half_done = false;
+		sg_req->last_sg = false;
+		sg_req->dma_desc = dma_desc;
+		sg_req->req_len = len;
+
+		list_add_tail(&sg_req->node, &dma_desc->tx_list);
+		remain_len -= len;
+		mem += len;
+	}
+	sg_req->last_sg = true;
+	if (flags & DMA_CTRL_ACK)
+		dma_desc->txd.flags = DMA_CTRL_ACK;
+
+	/*
+	 * Make sure that mode should not be conflicting with currently
+	 * configured mode.
+	 */
+	if (!tdc->isr_handler) {
+		tdc->isr_handler = handle_cont_sngl_cycle_dma_done;
+		tdc->cyclic = true;
+	} else {
+		if (!tdc->cyclic) {
+			dev_err(tdc2dev(tdc), "DMA configuration conflict\n");
+			tegra_dma_desc_put(tdc, dma_desc);
+			return NULL;
+		}
+	}
 
 	return &dma_desc->txd;
 }
@@ -1351,6 +1651,7 @@ static int tegra_dma_probe(struct platform_device *pdev)
 
 	dma_cap_set(DMA_SLAVE, tdma->dma_dev.cap_mask);
 	dma_cap_set(DMA_PRIVATE, tdma->dma_dev.cap_mask);
+	dma_cap_set(DMA_CYCLIC, tdma->dma_dev.cap_mask);
 	dma_cap_set(DMA_MEMCPY, tdma->dma_dev.cap_mask);
 	dma_cap_set(DMA_MEMSET, tdma->dma_dev.cap_mask);
 
@@ -1366,6 +1667,7 @@ static int tegra_dma_probe(struct platform_device *pdev)
 	tdma->dma_dev.device_free_chan_resources =
 					tegra_dma_free_chan_resources;
 	tdma->dma_dev.device_prep_slave_sg = tegra_dma_prep_slave_sg;
+	tdma->dma_dev.device_prep_dma_cyclic = tegra_dma_prep_dma_cyclic;
 	tdma->dma_dev.device_prep_dma_memcpy = tegra_dma_prep_dma_memcpy;
 	tdma->dma_dev.device_prep_dma_memset = tegra_dma_prep_dma_memset;
 	tdma->dma_dev.device_control = tegra_dma_device_control;

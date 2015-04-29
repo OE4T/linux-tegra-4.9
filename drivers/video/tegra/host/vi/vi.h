@@ -60,6 +60,7 @@ struct vi {
 	struct regulator *reg;
 	int vi_irq;
 	uint vi_bw;
+	uint max_bw;
 	struct dentry *debugdir;
 	struct tegra_vi_stats vi_out;
 	struct work_struct stats_work;

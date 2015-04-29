@@ -124,7 +124,6 @@ static int vi_isomgr_register(struct vi *tegra_vi)
 {
 	int iso_client_id = TEGRA_ISO_CLIENT_VI_0;
 	struct clk *vi_clk;
-	unsigned long max_bw = 0;
 	struct nvhost_device_data *pdata =
 				platform_get_drvdata(tegra_vi->ndev);
 
@@ -138,11 +137,12 @@ static int vi_isomgr_register(struct vi *tegra_vi)
 
 	/* Get max VI BW */
 	vi_clk = pdata->clk[0];
-	max_bw = (clk_round_rate(vi_clk, UINT_MAX) / 1000) * VI_MAX_BPP;
+	tegra_vi->max_bw =
+			(clk_round_rate(vi_clk, UINT_MAX) / 1000) * VI_MAX_BPP;
 
 	/* Register with max possible BW in VI usecases.*/
 	tegra_vi->isomgr_handle = tegra_isomgr_register(iso_client_id,
-					max_bw,
+					tegra_vi->max_bw,
 					NULL,	/* tegra_isomgr_renegotiate */
 					NULL);	/* *priv */
 
@@ -331,6 +331,14 @@ static long vi_ioctl(struct file *file,
 				__func__);
 				return -ENOMEM;
 			}
+		}
+
+		if (vi_bw > tegra_vi->max_bw) {
+			dev_err(&tegra_vi->ndev->dev,
+			"%s: Requested ISO BW %u is more than "
+			"VI's max BW %u possible\n",
+			__func__, vi_bw, tegra_vi->max_bw);
+			return -EINVAL;
 		}
 
 		/*

@@ -335,6 +335,12 @@ struct nvhost_device_power_attr {
 void host1x_writel(struct platform_device *dev, u32 r, u32 v);
 u32 host1x_readl(struct platform_device *dev, u32 r);
 
+void host1x_channel_writel(struct nvhost_channel *ch, u32 r, u32 v);
+u32 host1x_channel_readl(struct nvhost_channel *ch, u32 r);
+
+void host1x_sync_writel(struct platform_device *pdev, u32 r, u32 v);
+u32 host1x_sync_readl(struct platform_device *pdev, u32 r);
+
 /* public host1x power management APIs */
 bool nvhost_module_powered_ext(struct platform_device *dev);
 int nvhost_module_busy_ext(struct platform_device *dev);

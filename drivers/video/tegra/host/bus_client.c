@@ -116,6 +116,48 @@ u32 host1x_readl(struct platform_device *pdev, u32 r)
 }
 EXPORT_SYMBOL_GPL(host1x_readl);
 
+void host1x_channel_writel(struct nvhost_channel *ch, u32 r, u32 v)
+{
+	void __iomem *addr = ch->aperture + r;
+	nvhost_dbg(dbg_reg, " chid=%d r=0x%x v=0x%x", ch->chid, r, v);
+	writel(v, addr);
+}
+EXPORT_SYMBOL_GPL(host1x_channel_writel);
+
+u32 host1x_channel_readl(struct nvhost_channel *ch, u32 r)
+{
+	void __iomem *addr = ch->aperture + r;
+	u32 v;
+
+	nvhost_dbg(dbg_reg, " chid=%d r=0x%x", ch->chid, r);
+	v = readl(addr);
+	nvhost_dbg(dbg_reg, " chid=%d r=0x%x v=0x%x", ch->chid, r, v);
+
+	return v;
+}
+EXPORT_SYMBOL_GPL(host1x_channel_readl);
+
+void host1x_sync_writel(struct platform_device *pdev, u32 r, u32 v)
+{
+	void __iomem *addr = nvhost_get_host(pdev)->sync_aperture + r;
+	nvhost_dbg(dbg_reg, " d=%s r=0x%x v=0x%x", pdev->name, r, v);
+	writel(v, addr);
+}
+EXPORT_SYMBOL_GPL(host1x_sync_writel);
+
+u32 host1x_sync_readl(struct platform_device *pdev, u32 r)
+{
+	void __iomem *addr = nvhost_get_host(pdev)->sync_aperture + r;
+	u32 v;
+
+	nvhost_dbg(dbg_reg, " d=%s r=0x%x", pdev->name, r);
+	v = readl(addr);
+	nvhost_dbg(dbg_reg, " d=%s r=0x%x v=0x%x", pdev->name, r, v);
+
+	return v;
+}
+EXPORT_SYMBOL_GPL(host1x_sync_readl);
+
 int nvhost_read_module_regs(struct platform_device *ndev,
 			u32 offset, int count, u32 *values)
 {

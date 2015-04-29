@@ -468,6 +468,7 @@
 			      0 71 0x04>;
 		nvidia,host1x = <&host1x>;
 		#stream-id-cells = <1>;
+		access-vpr-phys;
 	};
 
 	psci {

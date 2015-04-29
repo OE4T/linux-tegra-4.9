@@ -164,7 +164,6 @@ struct akm_state {
 	bool irq_dis;			/* interrupt host disable flag */
 	bool initd;			/* set if initialized */
 	bool mpu_en;			/* if device behind MPU */
-	bool fifo_en;			/* MPU FIFO enable */
 	bool port_en[2];		/* enable status of MPU write port */
 	int port_id[2];			/* MPU port ID */
 	u8 data_out;			/* write value to trigger a sample */
@@ -404,7 +403,6 @@ static int akm_pm_init(struct akm_state *st)
 	st->poll_delay_us = (AKM_POLL_DELAY_MS_DFLT * 1000);
 	st->initd = false;
 	st->mpu_en = false;
-	st->fifo_en = true;
 	st->port_en[WR] = false;
 	st->port_en[RD] = false;
 	st->port_id[WR] = -1;
@@ -421,7 +419,7 @@ static int akm_port_enable(struct akm_state *st, int port, bool enable)
 
 #if AKM_NVI_MPU_SUPPORT
 	if ((enable != st->port_en[port]) && (st->port_id[port] >= 0)) {
-		ret = nvi_mpu_enable(st->port_id[port], enable, st->fifo_en);
+		ret = nvi_mpu_enable(st->port_id[port], enable);
 		if (!ret)
 			st->port_en[port] = enable;
 	}

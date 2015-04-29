@@ -20,7 +20,6 @@
 #include <linux/err.h>
 #include <linux/delay.h>
 #include <linux/ktime.h>
-#include <linux/workqueue.h>
 #include <linux/interrupt.h>
 #include <linux/regulator/consumer.h>
 #include <linux/of.h>
@@ -29,7 +28,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(201)
+#define NVI_DRIVER_VERSION		(208)
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"MPU6050"
 #define NVI_NAME_MPU6500		"MPU6500"
@@ -121,6 +120,26 @@ static void nvi_mutex_unlock(struct nvi_state *st)
 			if (st->nvs_st[i])
 				st->nvs->nvs_mutex_unlock(st->nvs_st[i]);
 		}
+	}
+}
+
+static void nvi_disable_irq(struct nvi_state *st)
+{
+	if (st->i2c->irq && !st->irq_dis) {
+		disable_irq_nosync(st->i2c->irq);
+		st->irq_dis = true;
+		if (st->sts & NVS_STS_SPEW_MSG)
+			dev_info(&st->i2c->dev, "%s IRQ disabled\n", __func__);
+	}
+}
+
+static void nvi_enable_irq(struct nvi_state *st)
+{
+	if (st->i2c->irq && st->irq_dis) {
+		enable_irq(st->i2c->irq);
+		st->irq_dis = false;
+		if (st->sts & NVS_STS_SPEW_MSG)
+			dev_info(&st->i2c->dev, "%s IRQ enabled\n", __func__);
 	}
 }
 
@@ -911,10 +930,8 @@ static int nvi_wr_int_enable(struct nvi_state *st, u32 int_enable)
 					__func__, st->hal->reg->int_enable.reg,
 					 st->rc.int_enable, int_enable);
 			st->rc.int_enable = int_enable;
-			if (int_enable && st->irq_dis) {
-				enable_irq(st->i2c->irq);
-				st->irq_dis = false;
-			}
+			if (int_enable)
+				nvi_enable_irq(st);
 		}
 	}
 	return ret;
@@ -1423,7 +1440,7 @@ int nvi_pm(struct nvi_state *st, int pm_req)
 					    (pwr_mgmt_2 != (st->rc.pwr_mgmt_2 &
 				  (BIT_PWR_ACCEL_STBY | BIT_PWR_GYRO_STBY)))) {
 		nvi_int_able(st, false);
-		st->push_ts = 0;
+		st->ts_gyro = 0;
 		if (pm == NVI_PM_OFF) {
 			switch (st->pm) {
 			case NVI_PM_STDBY:
@@ -1477,8 +1494,8 @@ int nvi_pm(struct nvi_state *st, int pm_req)
 			irq = false;
 		if (pm > NVI_PM_ON_CYCLE)
 			nvi_user_ctrl_en(st, true, true);
-		if ((pm == NVI_PM_ON_FULL) && (!st->push_ts))
-			st->push_ts = nvi_get_time_ns() +
+		if ((pm == NVI_PM_ON_FULL) && (!st->ts_gyro))
+			st->ts_gyro = nvi_get_time_ns() +
 					   st->chip_config.gyro_start_delay_ns;
 	} else {
 		/* interrupts are disabled until NVI_PM_AUTO */
@@ -1884,9 +1901,9 @@ static int nvi_aux_enable(struct nvi_state *st, bool enable)
 	return ret;
 }
 
-static int nvi_aux_port_enable(struct nvi_state *st,
-			       int port, bool enable, bool fifo_enable)
+static int nvi_aux_port_enable(struct nvi_state *st, int port, bool enable)
 {
+	bool fifo_enable = true;
 	unsigned int i;
 	int ret;
 
@@ -1926,15 +1943,14 @@ static int nvi_reset(struct nvi_state *st,
 		     bool reset_fifo, bool reset_i2c)
 {
 	u8 val;
-	bool irq = false;
-	unsigned long flags;
+	bool irq = true;
 	int ret;
 
 	if (st->dbg & NVI_DBG_SPEW_MSG)
 		dev_info(&st->i2c->dev, "%s FIFO=%x I2C=%x\n",
 			 __func__, reset_fifo, reset_i2c);
-	if (st->rc.int_enable)
-		irq = true;
+	if (st->irq_dis)
+		irq = false;
 	ret = nvi_int_able(st, false);
 	val = 0;
 	if (reset_i2c) {
@@ -1955,12 +1971,8 @@ static int nvi_reset(struct nvi_state *st,
 		ret |= nvi_aux_enable(st, true);
 	else
 		ret |= nvi_user_ctrl_en(st, true, true);
-	if (reset_fifo && (st->rc.user_ctrl & BIT_FIFO_EN)) {
-		spin_lock_irqsave(&st->time_stamp_lock, flags);
-		kfifo_reset(&st->timestamps);
-		spin_unlock_irqrestore(&st->time_stamp_lock, flags);
-		st->fifo_ts = nvi_get_time_ns();
-	}
+	if (reset_fifo && (st->rc.user_ctrl & BIT_FIFO_EN))
+		st->ts_last = nvi_get_time_ns();
 	if (irq)
 		ret |= nvi_int_able(st, true);
 	return ret;
@@ -2100,7 +2112,7 @@ static int nvi_aux_dev_valid(struct nvi_state *st,
 	st->aux.port[AUX_PORT_IO].nmp.delay_ms = 0;
 	st->aux.port[AUX_PORT_IO].nmp.delay_us =
 					st->hal->smplrt[DEV_AUX]->delay_us_min;
-	ret = nvi_aux_port_enable(st, AUX_PORT_IO, true, false);
+	ret = nvi_aux_port_enable(st, AUX_PORT_IO, true);
 	if (ret) {
 		nvi_aux_port_free(st, AUX_PORT_IO);
 		nvi_aux_bypass_release(st);
@@ -2263,7 +2275,7 @@ int nvi_mpu_port_free(int port)
 }
 EXPORT_SYMBOL(nvi_mpu_port_free);
 
-int nvi_mpu_enable(int port, bool enable, bool fifo_enable)
+int nvi_mpu_enable(int port, bool enable)
 {
 	struct nvi_state *st = nvi_state_local;
 	int ret;
@@ -2281,7 +2293,7 @@ int nvi_mpu_enable(int port, bool enable, bool fifo_enable)
 	ret = nvi_aux_mpu_call_pre(st, port);
 	if (!ret) {
 		nvi_pm(st, NVI_PM_ON);
-		ret = nvi_aux_port_enable(st, port, enable, fifo_enable);
+		ret = nvi_aux_port_enable(st, port, enable);
 		nvi_pm(st, NVI_PM_AUTO);
 		ret = nvi_aux_mpu_call_post(st, "nvi_mpu_enable ret=", ret);
 	}
@@ -2583,12 +2595,12 @@ static unsigned int nvi_report_gyro(struct nvi_state *st, u8 *data, s64 ts)
 			/* FSYNC asserted if LSb set for this axis */
 			anglvel[AXIS_N] = 0x10 << st->fsync[DEV_ANGLVEL];
 	}
-	if (ts >= st->push_ts)
+	if (ts >= st->ts_gyro)
 		st->nvs->handler(st->nvs_st[DEV_ANGLVEL], &anglvel, ts);
 	return buf_i * 2;
 }
 
-static int nvi_accel_read(struct nvi_state *st)
+static int nvi_accel_read(struct nvi_state *st, s64 ts)
 {
 	u8 data[6];
 	int ret;
@@ -2596,7 +2608,7 @@ static int nvi_accel_read(struct nvi_state *st)
 	ret = nvi_i2c_rd(st, st->hal->reg->accel_xout_h.bank,
 			 st->hal->reg->accel_xout_h.reg, 6, data);
 	if (!ret)
-		ret = nvi_report_accel(st, data, nvi_get_time_ns());
+		ret = nvi_report_accel(st, data, ts);
 	return ret;
 }
 
@@ -2638,26 +2650,29 @@ static irqreturn_t nvi_irq_thread(int irq, void *dev_id)
 	u16 fifo_rd_n;
 	u16 fifo_align;
 	s64 ts;
-	s64 ts_irq;
-	s64 delay;
-	s64 delay_lo;
-	s64 delay_hi;
-	s64 delay_add;
+	s64 ts_now;
+	s64 ts_end;
+	s64 ts_rng;
+	unsigned int ts_dly;
+	unsigned int ts_n;
 	unsigned int buf_index;
-	unsigned int ts_len;
 	unsigned int samples;
 	unsigned int len;
 	unsigned int i;
 	int ret;
 
 	nvi_mutex_lock(st);
+	if (st->irq_storm_n > NVI_IRQ_STORM_MAX_N)
+		goto nvi_irq_thread_exit_reset;
+
 	if (st->sts & (NVS_STS_SUSPEND | NVS_STS_SHUTDOWN))
 		goto nvi_irq_thread_exit;
 
 	/* if only accelermeter data */
 	if (st->rc.pwr_mgmt_1 & BIT_CYCLE) {
-		ret = nvi_accel_read(st);
-		goto nvi_irq_thread_exit;
+		ts = nvi_get_time_ns();
+		ret = nvi_accel_read(st, ts);
+		goto nvi_irq_thread_exit_ts;
 	}
 
 	nvi_aux_read(st);
@@ -2666,13 +2681,13 @@ static irqreturn_t nvi_irq_thread(int irq, void *dev_id)
 	if (!fifo_sample_size)
 		goto nvi_irq_thread_exit;
 
-	/* must get IRQ timestamp len first for timestamp best-fit algorithm */
-	ts_len = kfifo_len(&st->timestamps);
+	ts_now = nvi_get_time_ns();
 	ret = nvi_i2c_rd(st, st->hal->reg->fifo_count_h.bank,
 			 st->hal->reg->fifo_count_h.reg, 2, st->buf);
 	if (ret)
 		goto nvi_irq_thread_exit;
 
+	ts_end = atomic64_read(&st->ts_irq);
 	fifo_count = be16_to_cpup((__be16 *)(&st->buf));
 	/* FIFO threshold */
 	if (st->chip_config.fifo_thr > fifo_sample_size) {
@@ -2689,21 +2704,31 @@ static irqreturn_t nvi_irq_thread(int irq, void *dev_id)
 		/* consider resetting FIFO if doesn't divide cleanly */
 		goto nvi_irq_thread_exit;
 
-	delay = st->smplrt_delay_us[DEV_ACCEL] * 1000;
-	delay_lo = delay >> 1;
-	delay_hi = delay + delay_lo;
-	if (st->fifo_ts < st->ts) {
-		ts = st->ts + delay_lo;
-		delay_add = delay_lo;
-	} else {
-		ts = st->fifo_ts;
-		delay_add = delay;
-	}
 	samples = (fifo_count / fifo_sample_size);
 	if (st->dbg & NVI_DBG_SPEW_FIFO)
 		dev_info(&st->i2c->dev,
 			 "fifo_count=%u sample_size=%u offset=%u samples=%u\n",
 			 fifo_count, fifo_sample_size, fifo_align, samples);
+	if (!samples)
+		goto nvi_irq_thread_exit;
+
+	/* ts_dly = the programmed sample rate */
+	ts_dly = st->smplrt_delay_us[0] * 1000;
+	if (ts_end < (ts_now - ts_dly))
+		/* if TS IRQ hasn't occured within the rate then use now TS */
+		ts_end = ts_now;
+	/* ts_rng = the time range we have for TSs to fit */
+	ts_rng = ts_end - st->ts_last;
+	ts = ts_rng;
+	do_div(ts, ts_dly);
+	/* ts_n = the number of TS we'll have at unmodified rate */
+	ts_n = ts;
+	if (samples > ts_n) {
+		/* modify rate to fit */
+		do_div(ts_rng, samples);
+		ts_dly = ts_rng;
+	}
+	ts = ts_end - (ts_dly * samples);
 	fifo_rd_n = 0;
 	buf_index = 0;
 	while (samples) {
@@ -2719,60 +2744,12 @@ static irqreturn_t nvi_irq_thread(int irq, void *dev_id)
 					 st->hal->reg->fifo_r_w.reg,
 					 fifo_rd_n, st->buf);
 			if (ret)
-				goto nvi_irq_thread_exit;
+				goto nvi_irq_thread_exit_ts;
 
 			buf_index = fifo_align;
 		}
 
-		if (ts_len) {
-			len = ts_len;
-			for (i = 0; i < len; i++) {
-				ret = kfifo_out_peek(&st->timestamps,
-						     &ts_irq, 1);
-				if (ret != 1)
-					goto nvi_irq_thread_exit_reset;
-
-				if (ts < (ts_irq - delay))
-					break;
-
-				ret = kfifo_out_spinlocked(&st->timestamps,
-							   &ts_irq, 1,
-							 &st->time_stamp_lock);
-				if (ret != 1)
-					goto nvi_irq_thread_exit_reset;
-
-				ts_len--;
-				if (ts < (ts_irq + delay)) {
-					ts = ts_irq;
-					break;
-				}
-			}
-			if (ts != ts_irq) {
-				if (ts_len) {
-					/* ts < ts_irq: speed until lock */
-					if (st->irq_dis)
-						/* kfifo full */
-						delay_add = delay_hi;
-					else
-						delay_add = delay;
-				} else {
-					/* ts > last ts_irq: slower to lock */
-					delay_add = delay_lo;
-				}
-				if (st->dbg & NVI_DBG_SPEW_FIFO)
-					dev_info(&st->i2c->dev,
-					  "%s TS=%lld != IRQ=%lld s=%u n=%u\n",
-					__func__, ts, ts_irq, samples, ts_len);
-			} else {
-				delay_add = delay;
-			}
-		} else {
-			if (st->dbg & NVI_DBG_SPEW_FIFO)
-				dev_info(&st->i2c->dev,
-					 "%s NO IRQ_TS TS=%lld s=%u\n",
-					 __func__, ts, samples);
-		}
-
+		ts += ts_dly;
 		for (i = 0; i < st->hal->fifo_read_n; i++)
 			buf_index = st->hal->fifo_read[i](st, buf_index, ts);
 		for (i = 0; i < AUX_PORT_IO; i++) {
@@ -2788,26 +2765,11 @@ static irqreturn_t nvi_irq_thread(int irq, void *dev_id)
 			}
 		}
 		samples--;
-		ts += delay_add;
 	}
-	if (ts_len) {
-		if (st->dbg & NVI_DBG_SPEW_FIFO)
-			dev_info(&st->i2c->dev, "%s SYNC TO IRQ_TS %lld\n",
-				 __func__, ts);
-		for (i = 0; i < ts_len; i++) {
-			ret = kfifo_out_spinlocked(&st->timestamps, &ts_irq, 1,
-						    &st->time_stamp_lock);
-			if (ret != 1)
-				goto nvi_irq_thread_exit_reset;
-		}
-	}
-
-	st->fifo_ts = ts;
+nvi_irq_thread_exit_ts:
+	st->ts_last = ts;
 nvi_irq_thread_exit:
-	if (st->irq_dis) {
-		enable_irq(st->i2c->irq);
-		st->irq_dis = false;
-	}
+	nvi_enable_irq(st);
 	nvi_mutex_unlock(st);
 	return IRQ_HANDLED;
 
@@ -2824,22 +2786,22 @@ nvi_irq_thread_exit_reset:
 static irqreturn_t nvi_irq_handler(int irq, void *dev_id)
 {
 	struct nvi_state *st = (struct nvi_state *)dev_id;
-	s64 ts = 0;
+	u64 ts = nvi_get_time_ns();
+	u64 ts_old = atomic64_xchg(&st->ts_irq, ts);
+	u64 ts_diff = ts - ts_old;
 
-	if (!(st->master_enable & (1 << DEV_DMP))) {
-		ts = nvi_get_time_ns();
-		kfifo_in_spinlocked(&st->timestamps, &ts, 1,
-				    &st->time_stamp_lock);
-		if (kfifo_is_full(&st->timestamps)) {
-			disable_irq_nosync(st->i2c->irq);
-			st->irq_dis = true;
-			if (st->sts & NVS_STS_SPEW_IRQ)
-				dev_info(&st->i2c->dev, "%s kfifo_is_full\n",
-					 __func__);
-		}
+	/* test for MPU IRQ storm problem */
+	if (ts_diff < NVI_IRQ_STORM_MIN_NS) {
+		st->irq_storm_n++;
+		if (st->irq_storm_n > NVI_IRQ_STORM_MAX_N)
+			nvi_disable_irq(st);
+	} else {
+		st->irq_storm_n = 0;
 	}
+
 	if (st->sts & NVS_STS_SPEW_IRQ)
-		dev_info(&st->i2c->dev, "%s %lld\n", __func__, ts);
+		dev_info(&st->i2c->dev, "%s ts=%llu ts_diff=%llu irq_dis=%x\n",
+			 __func__, ts, ts_diff, st->irq_dis);
 	return IRQ_WAKE_THREAD;
 }
 
@@ -2847,8 +2809,6 @@ static int nvi_enable(void *client, int snsr_id, int enable)
 {
 	struct nvi_state *st = (struct nvi_state *)client;
 
-	if (snsr_id == SENSOR_TYPE_TEMPERATURE)
-		snsr_id = DEV_TEMP;
 	if (enable < 0)
 		return st->enabled[snsr_id];
 
@@ -2867,8 +2827,6 @@ static int nvi_batch(void *client, int snsr_id, int flags,
 		/* timeout not supported at this time */
 		return -EINVAL;
 
-	if (snsr_id == SENSOR_TYPE_TEMPERATURE)
-		snsr_id = DEV_TEMP;
 	old = st->delay_us[snsr_id];
 	st->delay_us[snsr_id] = period;
 	if (st->enabled[snsr_id]) {
@@ -2884,8 +2842,6 @@ static int nvi_flush(void *client, int snsr_id)
 	struct nvi_state *st = (struct nvi_state *)client;
 	int ret = -EINVAL;
 
-	if (snsr_id == SENSOR_TYPE_TEMPERATURE)
-		snsr_id = DEV_TEMP;
 	if (st->enabled[snsr_id]) {
 		st->flush[snsr_id] = true;
 		ret = nvi_en(st);
@@ -2932,11 +2888,10 @@ static int nvi_max_range(void *client, int snsr_id, int max_range)
 		}
 		break;
 
-	case SENSOR_TYPE_TEMPERATURE:
+	case DEV_TEMP:
 		if (i)
 			return -EINVAL;
 
-		snsr_id = DEV_TEMP;
 		st->cfg[DEV_TEMP].offset.ival =
 					   st->hal->dev[DEV_TEMP]->offset.ival;
 		st->cfg[DEV_TEMP].offset.fval =
@@ -3007,7 +2962,7 @@ static int nvi_offset(void *client, int snsr_id, int channel, int offset)
 		}
 		break;
 
-	case SENSOR_TYPE_TEMPERATURE:
+	case DEV_TEMP:
 		st->cfg[DEV_TEMP].offset.ival = offset;
 		break;
 
@@ -3034,7 +2989,7 @@ static int nvi_self_test(void *client, int snsr_id, char *buf)
 	struct nvi_state *st = (struct nvi_state *)client;
 	int ret = 0;
 
-	if (snsr_id != SENSOR_TYPE_TEMPERATURE) {
+	if (snsr_id != DEV_TEMP) {
 		nvi_aux_enable(st, false);
 		ret = inv_hw_self_test(st, snsr_id);
 		nvi_aux_enable(st, true);
@@ -3234,8 +3189,7 @@ static void nvi_shutdown(struct i2c_client *client)
 				st->nvs->shutdown(st->nvs_st[i]);
 		}
 	}
-	if (st->i2c->irq)
-		disable_irq_nosync(st->i2c->irq);
+	nvi_disable_irq(st);
 	if (st->hal)
 		nvi_pm(st, NVI_PM_OFF);
 	if (st->sts & NVS_STS_SPEW_MSG)
@@ -3255,8 +3209,6 @@ static int nvi_remove(struct i2c_client *client)
 					st->nvs->remove(st->nvs_st[i]);
 			}
 		}
-		if (kfifo_initialized(&st->timestamps))
-			kfifo_free(&st->timestamps);
 		nvi_pm_exit(st);
 	}
 	dev_info(&client->dev, "%s\n", __func__);
@@ -4198,7 +4150,7 @@ static int nvi_id_hal(struct nvi_state *st, u8 dev_id)
 	/* populate st->cfg based on max_range setting */
 	nvi_max_range(st, DEV_ACCEL, INV_FS_02G);
 	nvi_max_range(st, DEV_ANGLVEL, INV_FSR_2000DPS);
-	nvi_max_range(st, SENSOR_TYPE_TEMPERATURE, 0);
+	nvi_max_range(st, DEV_TEMP, 0);
 	/* populate the rest of st->cfg */
 	for (i = 0; i < DEV_N; i++) {
 		st->cfg[i].part = st->hal->part_name;
@@ -4393,8 +4345,6 @@ static int nvi_probe(struct i2c_client *client,
 		}
 	}
 
-	spin_lock_init(&st->time_stamp_lock);
-	INIT_KFIFO(st->timestamps);
 	nvi_pm_init(st);
 	ret = nvi_id_i2c(st, id);
 	if (ret) {
@@ -4420,8 +4370,16 @@ static int nvi_probe(struct i2c_client *client,
 
 		ret = st->nvs->probe(&st->nvs_st[i], st, &client->dev,
 				     &nvi_fn_dev, &st->cfg[i]);
-		if (!ret)
+		if (!ret) {
 			n++;
+			if (st->cfg[i].snsr_id == SENSOR_TYPE_TEMPERATURE)
+				/* SENSOR_TYPE_TEMPERATURE is only used to tell
+				 * NVS what type of sensor it is since this is
+				 * an unknown sensor name.  snsr_id can now be
+				 * changed to DEV_TEMP for any future NVS calls
+				 */
+				st->cfg[i].snsr_id = DEV_TEMP;
+		}
 	}
 	if (!n) {
 		dev_err(&client->dev, "%s nvs_probe ERR\n", __func__);

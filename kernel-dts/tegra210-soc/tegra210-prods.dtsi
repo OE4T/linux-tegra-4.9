@@ -343,6 +343,10 @@
 					prod = <0x00000284 0xffffffc0 0x00000038
 					>;
 				};
+				prod_c_bias_a02 {
+					prod = <0x00000284 0xffffffc0 0x00000038
+					>;
+				};
 		};
 	};
 

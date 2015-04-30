@@ -163,9 +163,6 @@ static void t20_intr_disable_syncpt_intr(struct nvhost_intr *intr, u32 id)
 	host1x_sync_writel(dev->dev,
 		host1x_sync_syncpt_thresh_cpu0_int_status_r() +
 		bit_word(id) * REGISTER_STRIDE, bit_mask(id));
-	host1x_sync_writel(dev->dev,
-		host1x_sync_syncpt_thresh_cpu1_int_status_r() +
-		bit_word(id) * REGISTER_STRIDE, bit_mask(id));
 }
 
 static void t20_intr_disable_all_syncpt_intrs(struct nvhost_intr *intr)
@@ -183,9 +180,6 @@ static void t20_intr_disable_all_syncpt_intrs(struct nvhost_intr *intr)
 		/* clear status for both cpu's */
 		host1x_sync_writel(dev->dev,
 			host1x_sync_syncpt_thresh_cpu0_int_status_r() + reg,
-			0xffffffffu);
-		host1x_sync_writel(dev->dev,
-			host1x_sync_syncpt_thresh_cpu1_int_status_r() + reg,
 			0xffffffffu);
 	}
 }

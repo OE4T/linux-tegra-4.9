@@ -16,6 +16,7 @@
 
 #include <linux/err.h>
 #include <linux/init.h>
+#include <linux/platform_data/gpio-tegra.h>
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
@@ -32,7 +33,6 @@
 #include <linux/syscore_ops.h>
 #include <linux/tegra-soc.h>
 #include <linux/irqchip/tegra.h>
-#include <linux/platform_data/gpio-tegra.h>
 
 static u32 address_map[32];
 

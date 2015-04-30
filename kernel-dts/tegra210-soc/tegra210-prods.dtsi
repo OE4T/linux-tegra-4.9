@@ -339,6 +339,10 @@
 					prod = <0x00000284 0xffffffc0 0x0000003a
 					>;
 				};
+				prod_c_bias_a02 {
+					prod = <0x00000284 0xffffffc0 0x00000038
+					>;
+				};
 		};
 	};
 
@@ -355,6 +359,10 @@
 				};
 				prod_c_bias {
 					prod = <0x00000284 0xffffffc0 0x0000003a
+					>;
+				};
+				prod_c_bias_a02 {
+					prod = <0x00000284 0xffffffc0 0x00000038
 					>;
 				};
 		};
@@ -430,6 +438,11 @@
 			prod_c_bias {
 			    prod = <
 				0 0x00000284 0xffffffc0 0x0000003a
+			    >;
+			};
+			prod_c_bias_a02 {
+			    prod = <
+				0 0x00000284 0xffffffc0 0x00000038
 			    >;
 			};
 			prod_c_utmi0 {
@@ -539,6 +552,11 @@
 			prod_c_bias {
 				prod = <
 					0 0x00000284 0xffffffc0 0x0000003a
+				>;
+			};
+			prod_c_bias_a02 {
+				prod = <
+					0 0x00000284 0xffffffc0 0x00000038
 				>;
 			};
 

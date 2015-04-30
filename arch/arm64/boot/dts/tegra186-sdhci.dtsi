@@ -17,7 +17,7 @@
 / {
 	sdhci@3460000 {
 		compatible = "nvidia,tegra186-sdhci";
-		reg = <0x0 0x3460000 0x0 0x200>;
+		reg = <0x0 0x3460000 0x0 0x210>;
 		interrupts = < 0 65 0x04 >;
 		bus-width = <8>;
 		status = "disabled";
@@ -28,21 +28,21 @@
 
 	sdhci@3440000 {
 		compatible = "nvidia,tegra186-sdhci";
-		reg = <0x0 0x3440000 0x0 0x200>;
+		reg = <0x0 0x3440000 0x0 0x210>;
 		interrupts = < 0 64 0x04 >;
 		status = "disabled";
 	};
 
 	sdhci@3420000 {
 		compatible = "nvidia,tegra186-sdhci";
-		reg = <0x0 0x3420000 0x0 0x200>;
+		reg = <0x0 0x3420000 0x0 0x210>;
 		interrupts = < 0 63 0x04 >;
 		status = "disabled";
 	};
 
 	sdhci@3400000 {
 		compatible = "nvidia,tegra186-sdhci";
-		reg = <0x0 0x3400000 0x0 0x200>;
+		reg = <0x0 0x3400000 0x0 0x210>;
 		interrupts = < 0 62 0x04 >;
 		status = "disabled";
 	 };

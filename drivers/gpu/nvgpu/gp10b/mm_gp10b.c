@@ -253,7 +253,9 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			   bool cacheable, bool unmapped_pte,
 			   int rw_flag, bool sparse, u32 flags)
 {
+	struct gk20a *g = vm->mm->g;
 	u32 page_size  = vm->gmmu_page_sizes[gmmu_pgsz_idx];
+	u32 ctag_granularity = g->ops.fb.compression_page_size(g);
 	u32 pte_w[2] = {0, 0}; /* invalid pte */
 
 	gk20a_dbg_fn("");
@@ -268,7 +270,7 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			      >> gmmu_new_pte_address_shift_v());
 
 		pte_w[1] = gmmu_new_pte_kind_f(kind_v) |
-			   gmmu_new_pte_comptagline_f(*ctag / SZ_128K);
+			   gmmu_new_pte_comptagline_f(*ctag / ctag_granularity);
 
 		if (rw_flag == gk20a_mem_flag_read_only)
 			pte_w[0] |= gmmu_new_pte_read_only_true_f();
@@ -281,7 +283,7 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			   " ctag=%d vol=%d"
 			   " [0x%08x, 0x%08x]",
 			   i, *iova,
-			   kind_v, *ctag, !cacheable,
+			   kind_v, *ctag / ctag_granularity, !cacheable,
 			   pte_w[1], pte_w[0]);
 
 		if (*ctag)

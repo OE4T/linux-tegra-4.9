@@ -170,6 +170,7 @@ static int update_gmmu_pde3_locked(struct vm_gk20a *vm,
 
 	pde_v[0] |= gmmu_new_pde_aperture_video_memory_f();
 	pde_v[0] |= gmmu_new_pde_address_sys_f(u64_lo32(pte_addr));
+	pde_v[0] |= gmmu_new_pde_vol_true_f();
 
 	pde = pde3_from_index(parent, i);
 
@@ -259,24 +260,22 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 
 	if (*iova) {
 		if (unmapped_pte)
-			pte_w[0] = gmmu_new_pte_valid_false_f() |
-				gmmu_new_pte_address_sys_f(*iova
-					>> gmmu_new_pte_address_shift_v());
+			pte_w[0] = gmmu_new_pte_valid_false_f();
 		else
-			pte_w[0] = gmmu_new_pte_valid_true_f() |
-				gmmu_new_pte_address_sys_f(*iova
-					>> gmmu_new_pte_address_shift_v());
+			pte_w[0] = gmmu_new_pte_valid_true_f();
+		pte_w[0] |= gmmu_new_pte_aperture_video_memory_f() |
+			    gmmu_new_pte_address_sys_f(*iova
+			      >> gmmu_new_pte_address_shift_v());
 
-		pte_w[1] = gmmu_new_pte_aperture_video_memory_f() |
-			gmmu_new_pte_kind_f(kind_v) |
-			gmmu_new_pte_comptagline_f(*ctag / SZ_128K);
+		pte_w[1] = gmmu_new_pte_kind_f(kind_v) |
+			   gmmu_new_pte_comptagline_f(*ctag / SZ_128K);
 
 		if (rw_flag == gk20a_mem_flag_read_only)
 			pte_w[0] |= gmmu_new_pte_read_only_true_f();
 		if (unmapped_pte && !cacheable)
 			pte_w[0] |= gmmu_new_pte_read_only_true_f();
 		else if (!cacheable)
-			pte_w[1] |= gmmu_new_pte_vol_true_f();
+			pte_w[0] |= gmmu_new_pte_vol_true_f();
 
 		gk20a_dbg(gpu_dbg_pte, "pte=%d iova=0x%llx kind=%d"
 			   " ctag=%d vol=%d"
@@ -289,7 +288,7 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			*ctag += page_size;
 	} else if (sparse) {
 		pte_w[0] = gmmu_new_pte_valid_false_f();
-		pte_w[1] |= gmmu_new_pte_vol_true_f();
+		pte_w[0] |= gmmu_new_pte_vol_true_f();
 	} else {
 		gk20a_dbg(gpu_dbg_pte, "pte_cur=%d [0x0,0x0]", i);
 	}

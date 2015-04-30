@@ -274,13 +274,15 @@ static void submit_work(struct nvhost_job *job)
 static int host1x_channel_set_low_priority(struct nvhost_channel *ch)
 {
 	struct nvhost_master *host = nvhost_get_host(ch->dev);
-	void __iomem *regs = host->aperture;
 	u32 val;
 
 	mutex_lock(&host->priority_lock);
-	val = readl(regs + host1x_channel_ch_hipri_r() + BIT_WORD(ch->chid));
+	val = host1x_readl(host->dev,
+			host1x_channel_ch_hipri_r() + BIT_WORD(ch->chid));
 	val &= ~BIT_MASK(ch->chid);
-	writel(val, regs + host1x_channel_ch_hipri_r() + BIT_WORD(ch->chid));
+	host1x_writel(host->dev,
+			host1x_channel_ch_hipri_r() + BIT_WORD(ch->chid),
+			val);
 	mutex_unlock(&host->priority_lock);
 
 	return 0;
@@ -290,16 +292,18 @@ static int host1x_channel_update_priority(struct nvhost_job *job)
 {
 	struct nvhost_channel *ch = job->ch;
 	struct nvhost_master *host = nvhost_get_host(ch->dev);
-	void __iomem *regs = host->aperture;
 	u32 val;
 
 	if (job->priority < NVHOST_PRIORITY_HIGH)
 		return 0;
 
 	mutex_lock(&host->priority_lock);
-	val = readl(regs + host1x_channel_ch_hipri_r() + BIT_WORD(ch->chid));
+	val = host1x_readl(host->dev,
+			host1x_channel_ch_hipri_r() + BIT_WORD(ch->chid));
 	val |= BIT_MASK(ch->chid);
-	writel(val, regs + host1x_channel_ch_hipri_r() + BIT_WORD(ch->chid));
+	host1x_writel(host->dev,
+			host1x_channel_ch_hipri_r() + BIT_WORD(ch->chid),
+			val);
 	mutex_unlock(&host->priority_lock);
 
 	return 0;
@@ -433,7 +437,6 @@ static int t124_channel_init_gather_filter(struct nvhost_channel *ch)
 {
 
 	struct platform_device *pdev = ch->dev;
-	void __iomem *regs = ch->aperture;
 	struct nvhost_master *master = nvhost_get_host(pdev);
 	int err;
 
@@ -446,8 +449,8 @@ static int t124_channel_init_gather_filter(struct nvhost_channel *ch)
 		return err;
 	}
 
-	writel(host1x_channel_channelctrl_kernel_filter_gbuffer_f(1),
-	       regs + host1x_channel_channelctrl_r());
+	host1x_channel_writel(ch, host1x_channel_channelctrl_r(),
+		host1x_channel_channelctrl_kernel_filter_gbuffer_f(1));
 	nvhost_module_idle(nvhost_get_parent(pdev));
 
 	return 0;

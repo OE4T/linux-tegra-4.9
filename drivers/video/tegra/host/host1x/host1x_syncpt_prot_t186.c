@@ -27,19 +27,20 @@ static void t186_syncpt_reset(struct nvhost_syncpt *sp, u32 id)
 	int min = nvhost_syncpt_read_min(sp, id);
 
 	/* move syncpoint to VM1 */
-	writel(1, dev->sync_aperture + (host1x_sync_syncpt_vm_0_r() + id * 4));
+	host1x_sync_writel(dev->dev, (host1x_sync_syncpt_vm_0_r() + id * 4), 1);
 
 	/* reserve it for channel 63 */
-	writel(host1x_sync_syncpt_ch_app_0_syncpt_ch_f(63),
-	       dev->sync_aperture +
-	       (host1x_sync_syncpt_ch_app_0_r() + id * 4));
+	host1x_sync_writel(dev->dev,
+		(host1x_sync_syncpt_ch_app_0_r() + id * 4),
+		host1x_sync_syncpt_ch_app_0_syncpt_ch_f(63));
 
 	/* enable protection */
-	writel(host1x_sync_syncpt_prot_en_0_ch_en_f(1),
-	       dev->sync_aperture + host1x_sync_syncpt_prot_en_0_r());
+	host1x_sync_writel(dev->dev,
+		host1x_sync_syncpt_prot_en_0_r(),
+		host1x_sync_syncpt_prot_en_0_ch_en_f(1));
 
 	/* restore current min value */
-	writel(min, dev->sync_aperture + (host1x_sync_syncpt_0_r() + id * 4));
+	host1x_sync_writel(dev->dev, (host1x_sync_syncpt_0_r() + id * 4), min);
 
 }
 
@@ -48,9 +49,9 @@ static int t186_syncpt_mark_used(struct nvhost_syncpt *sp,
 {
 	struct nvhost_master *dev = syncpt_to_dev(sp);
 
-	writel(host1x_sync_syncpt_ch_app_0_syncpt_ch_f(chid),
-	       dev->sync_aperture +
-	       (host1x_sync_syncpt_ch_app_0_r() + syncptid * 4));
+	host1x_sync_writel(dev->dev,
+		(host1x_sync_syncpt_ch_app_0_r() + syncptid * 4),
+		host1x_sync_syncpt_ch_app_0_syncpt_ch_f(chid));
 	return 0;
 }
 
@@ -58,8 +59,8 @@ static int t186_syncpt_mark_unused(struct nvhost_syncpt *sp, u32 syncptid)
 {
 	struct nvhost_master *dev = syncpt_to_dev(sp);
 
-	writel(host1x_sync_syncpt_ch_app_0_syncpt_ch_f(0xff),
-	       dev->sync_aperture +
-	       (host1x_sync_syncpt_ch_app_0_r() + syncptid * 4));
+	host1x_sync_writel(dev->dev,
+		(host1x_sync_syncpt_ch_app_0_r() + syncptid * 4),
+		host1x_sync_syncpt_ch_app_0_syncpt_ch_f(0xff));
 	return 0;
 }

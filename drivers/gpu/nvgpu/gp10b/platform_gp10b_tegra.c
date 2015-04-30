@@ -26,6 +26,7 @@
 #include <linux/tegra_pm_domains.h>
 #include "gk20a/platform_gk20a.h"
 #include "gk20a/gk20a.h"
+#include "platform_tegra.h"
 
 static int gp10b_tegra_probe(struct platform_device *pdev)
 {
@@ -103,4 +104,7 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 	.default_big_page_size	= SZ_64K,
 
 	.has_cde = true,
+
+	.secure_alloc = gk20a_tegra_secure_alloc,
+	.secure_page_alloc = gk20a_tegra_secure_page_alloc,
 };

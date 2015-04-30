@@ -370,8 +370,6 @@ void gp10b_init_mm(struct gpu_ops *gops)
 	gops->mm.init_bar2_vm = gb10b_init_bar2_vm;
 	gops->mm.init_bar2_mm_hw_setup = gb10b_init_bar2_mm_hw_setup;
 	gops->mm.get_iova_addr = gp10b_mm_iova_addr;
-	if (tegra_platform_is_linsim()) {
-		gops->mm.get_mmu_levels = gp10b_mm_get_mmu_levels;
-		gops->mm.init_pdb = gp10b_mm_init_pdb;
-	}
+	gops->mm.get_mmu_levels = gp10b_mm_get_mmu_levels;
+	gops->mm.init_pdb = gp10b_mm_init_pdb;
 }

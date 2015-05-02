@@ -330,6 +330,18 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 		mode->vmode |= FB_VMODE_Y420_ONLY;
 	}
 
+	/*
+	 * There are currently many TVs in the market that actually do NOT support
+	 * 4k@60fps 4:4:4 (594 MHz), (especially on the HDCP 2.2 ports), but
+	 * advertise it in the DTD block in their EDIDs. The workaround for this port
+	 * is to disable the 594 MHz mode if no HF-VSDB is present or if no SCDC
+	 * support is indicated
+	 */
+	if (tegra_hdmi_mode_min_tmds_rate(mode) / 1000 >= 340 &&
+		(!tegra_edid_is_hfvsdb_present(hdmi->edid) ||
+		!tegra_edid_is_scdc_present(hdmi->edid)))
+		return false;
+
 	if (!hdmi->dvi && (tegra_hdmi_mode_min_tmds_rate(mode) / 1000 >
 		tegra_edid_get_max_clk_rate(hdmi->edid)))
 		return false;

@@ -518,7 +518,7 @@
 			status = "okay";
 		};
 		LCPU-therm {
-			status = "okay";
+			status = "disabled";
 		};
 		PLL-therm {
 			status = "okay";

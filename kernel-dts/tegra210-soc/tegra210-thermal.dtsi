@@ -52,7 +52,7 @@
 		LCPU-therm {
 			polling-delay		= <0>;
 			polling-delay-passive	= <1000>;
-			thermal-sensors		= <&{/soctherm@0x700E2000} 3>;
+			thermal-sensors		= <&{/soctherm@0x700E2000} 2>;
 			status = "disabled";
 		};
 		PLL-therm {

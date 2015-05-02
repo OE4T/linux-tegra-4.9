@@ -20,6 +20,7 @@
 
 #include "tegra210-platforms/tegra210-thermal-nct72-p2530.dtsi"
 #include "tegra210-platforms/tegra210-thermal-Tboard-Tdiode.dtsi"
+#include "tegra210-platforms/tegra210-ers-clk-init.dtsi"
 
 / {
 	nvidia,boardids = "2530:0032:E0";

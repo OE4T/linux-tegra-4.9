@@ -43,6 +43,7 @@
 #include "tegra210-platforms/tegra210-audio.dtsi"
 #include "tegra210-platforms/tegra210-thermal-nct72-p2530.dtsi"
 #include "tegra210-platforms/tegra210-thermal-Tboard-Tdiode.dtsi"
+#include "tegra210-platforms/tegra210-ers-clk-init.dtsi"
 #include "tegra210-platforms/tegra210-jetson-e-powermon-p2530-0930-e03.dtsi"
 
 

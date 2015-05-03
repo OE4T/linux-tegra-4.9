@@ -37,6 +37,7 @@ struct tegra_panel {
 enum {
 	TEGRA_GPIO_RESET,
 	TEGRA_GPIO_PANEL_EN,
+	TEGRA_GPIO_PANEL_EN_1,
 	TEGRA_GPIO_BL_ENABLE,
 	TEGRA_GPIO_PWM,
 	TEGRA_GPIO_BRIDGE_EN_0,
@@ -85,6 +86,7 @@ extern struct tegra_panel_ops dsi_j_1440_810_5_8_ops;
 extern struct tegra_panel_ops dsi_j_720p_5_ops;
 extern struct tegra_panel_ops dsi_l_720p_5_loki_ops;
 extern struct tegra_panel_ops edp_s_uhdtv_15_6_ops;
+extern struct tegra_panel_ops dsi_o_720p_6_0_ops;
 
 extern struct tegra_panel_ops *fixed_primary_panel_ops;
 extern struct tegra_panel_ops *fixed_secondary_panel_ops;

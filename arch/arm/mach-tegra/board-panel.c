@@ -228,6 +228,9 @@ int tegra_panel_gpio_get_dt(const char *comp_str,
 	panel->panel_gpio[TEGRA_GPIO_PANEL_EN] =
 		of_get_named_gpio(node, "nvidia,panel-en-gpio", 0);
 
+	panel->panel_gpio[TEGRA_GPIO_PANEL_EN_1] =
+		of_get_named_gpio(node, "nvidia,panel-en-1-gpio", 0);
+
 	panel->panel_gpio[TEGRA_GPIO_BL_ENABLE] =
 		of_get_named_gpio(node, "nvidia,panel-bl-en-gpio", 0);
 
@@ -252,6 +255,9 @@ int tegra_panel_gpio_get_dt(const char *comp_str,
 				break;
 			case TEGRA_GPIO_PANEL_EN:
 				label = "tegra-panel-en";
+				break;
+			case TEGRA_GPIO_PANEL_EN_1:
+				label = "tegra-panel-en-1";
 				break;
 			case TEGRA_GPIO_BL_ENABLE:
 				label = "tegra-panel-bl-enable";
@@ -361,6 +367,8 @@ static bool tegra_available_pwm_bl_ops_register(struct device *dev)
 		dev_set_drvdata(dev, dsi_l_720p_5_loki_ops.pwm_bl_ops);
 	} else if (of_device_is_compatible(np_bl, "s-edp,uhdtv-15-6-bl")) {
 		dev_set_drvdata(dev, edp_s_uhdtv_15_6_ops.pwm_bl_ops);
+	} else if (of_device_is_compatible(np_bl, "o,720-1280-6-0-bl")) {
+		dev_set_drvdata(dev, dsi_o_720p_6_0_ops.pwm_bl_ops);
 	} else {
 		pr_info("invalid compatible for backlight node\n");
 		goto end;
@@ -589,6 +597,9 @@ static struct device_node *available_internal_panel_select(
 	} else if (of_device_is_compatible(np_panel, "s-edp,uhdtv-15-6")) {
 		tegra_panel_register_ops(dc_out,
 			&edp_s_uhdtv_15_6_ops);
+	} else if (of_device_is_compatible(np_panel, "o,720-1280-6-0")) {
+		tegra_panel_register_ops(dc_out,
+			&dsi_o_720p_6_0_ops);
 	} else {
 		pr_info("invalid panel compatible\n");
 		of_node_put(np_panel);

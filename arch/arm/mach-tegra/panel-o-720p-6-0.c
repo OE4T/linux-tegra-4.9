@@ -28,6 +28,7 @@
 static u16 en_panel_rst;
 static u16 en_panel_p5v;
 static u16 en_panel_n5v;
+static u16 en_backlight;
 
 static int dsi_o_720p_6_0_enable(struct device *dev)
 {
@@ -56,6 +57,11 @@ static int dsi_o_720p_6_0_enable(struct device *dev)
 	else
 		pr_warn("panel en-1 gpio is not defined in DT\n");
 
+	if (gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_BL_ENABLE]))
+		en_backlight = panel_of.panel_gpio[TEGRA_GPIO_BL_ENABLE];
+	else
+		pr_warn("en_backlight gpio is not defined in DT\n");
+
 	gpio_direction_output(en_panel_rst, 0);
 
 	gpio_direction_output(en_panel_p5v, 1);
@@ -78,12 +84,15 @@ static int dsi_o_720p_6_0_postpoweron(struct device *dev)
 	msleep(20);
 	gpio_set_value(en_panel_rst, 1);
 	msleep(20);
+	gpio_direction_output(en_backlight, 1);
 
 	return 0;
 }
 
 static int dsi_o_720p_6_0_disable(struct device *dev)
 {
+	gpio_set_value(en_backlight, 0);
+	usleep_range(1000, 1020);
 	gpio_set_value(en_panel_rst, 0);
 	usleep_range(1000, 1020);
 	gpio_direction_output(en_panel_n5v, 0);

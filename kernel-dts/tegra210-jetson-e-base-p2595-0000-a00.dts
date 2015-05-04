@@ -524,11 +524,11 @@
 				nvidia,states = <0 1785>;
 			};
 			consumer5 {
-				nvidia,consumer_name = "display_0";
+				nvidia,consumer_name = "dsi_0";
 				nvidia,states = <0 616>;
 			};
 			consumer6 {
-				nvidia,consumer_name = "display_1";
+				nvidia,consumer_name = "dsi_1";
 				nvidia,states = <0 616>;
 			};
 			consumer7 {

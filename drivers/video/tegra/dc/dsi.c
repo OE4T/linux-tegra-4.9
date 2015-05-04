@@ -4238,7 +4238,7 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 	int err = 0;
 
-	sysedp_set_state(dc->sysedpc, 1);
+	sysedp_set_state(dsi->sysedpc, 1);
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
 
@@ -5149,7 +5149,7 @@ static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 	if (dsi->host_suspended)
 		tegra_dsi_host_resume(dc);
 
-	sysedp_set_state(dc->sysedpc, 0);
+	sysedp_set_state(dsi->sysedpc, 0);
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
 
@@ -5252,6 +5252,7 @@ static void tegra_dc_dsi_resume(struct tegra_dc *dc)
 static int tegra_dc_dsi_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi;
+	char sysedp_name[50];
 	int err = 0;
 
 	err = _tegra_dc_dsi_init(dc);
@@ -5276,6 +5277,10 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 		err = PTR_ERR(dsi->mipi_cal);
 		goto err_mipi;
 	}
+
+	sprintf(sysedp_name, "dsi_%d", dsi->dc->ndev->id);
+	dsi->sysedpc = sysedp_create_consumer(sysedp_name, sysedp_name);
+
 	return 0;
 err_mipi:
 	if (dsi->avdd_dsi_csi)

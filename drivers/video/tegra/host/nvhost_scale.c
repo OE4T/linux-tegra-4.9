@@ -67,7 +67,7 @@ static DEVICE_ATTR(load, S_IRUGO, nvhost_scale_load_show, NULL);
 static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 {
 	unsigned long *freqs;
-	int num_freqs, err;
+	int num_freqs, err, low_end_cnt = 0;
 	unsigned long max_freq =  clk_round_rate(profile->clk, UINT_MAX);
 	unsigned long min_freq =  clk_round_rate(profile->clk, 0);
 
@@ -87,11 +87,12 @@ static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 		num_freqs--;
 
 	/* check low end */
-	while (((num_freqs >= 2) && (freqs[0] == freqs[1])) ||
-	       (num_freqs && (freqs[0] < min_freq))) {
-		freqs++;
+	while (((num_freqs >= 2) && (freqs[low_end_cnt] == freqs[low_end_cnt + 1])) ||
+	       (num_freqs && (freqs[low_end_cnt] < min_freq))) {
+		low_end_cnt++;
 		num_freqs--;
 	}
+	freqs += low_end_cnt;
 
 	if (!num_freqs)
 		dev_warn(&profile->pdev->dev, "dvfs table had no applicable frequencies!\n");

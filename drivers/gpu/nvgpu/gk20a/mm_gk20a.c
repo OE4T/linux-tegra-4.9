@@ -767,6 +767,12 @@ int gk20a_vm_get_buffers(struct vm_gk20a *vm,
 	struct rb_node *node;
 	int i = 0;
 
+	if (vm->userspace_managed) {
+		*mapped_buffers = NULL;
+		*num_buffers = 0;
+		return 0;
+	}
+
 	mutex_lock(&vm->update_gmmu_lock);
 
 	buffer_list = nvgpu_alloc(sizeof(*buffer_list) *
@@ -1135,7 +1141,8 @@ static int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
 
 static int validate_fixed_buffer(struct vm_gk20a *vm,
 				 struct buffer_attrs *bfr,
-				 u64 map_offset, u64 map_size)
+				 u64 map_offset, u64 map_size,
+				 struct vm_reserved_va_node **pva_node)
 {
 	struct device *dev = dev_from_vm(vm);
 	struct vm_reserved_va_node *va_node;
@@ -1154,15 +1161,16 @@ static int validate_fixed_buffer(struct vm_gk20a *vm,
 		return -EINVAL;
 	}
 
-	/* find the space reservation */
+	/* Find the space reservation, but it's ok to have none for
+	 * userspace-managed address spaces */
 	va_node = addr_to_reservation(vm, map_offset);
-	if (!va_node) {
+	if (!va_node && !vm->userspace_managed) {
 		gk20a_warn(dev, "fixed offset mapping without space allocation");
 		return -EINVAL;
 	}
 
-	/* mapped area should fit inside va */
-	if (map_end > va_node->vaddr_start + va_node->size) {
+	/* Mapped area should fit inside va, if there's one */
+	if (va_node && map_end > va_node->vaddr_start + va_node->size) {
 		gk20a_warn(dev, "fixed offset mapping size overflows va node");
 		return -EINVAL;
 	}
@@ -1176,6 +1184,8 @@ static int validate_fixed_buffer(struct vm_gk20a *vm,
 		gk20a_warn(dev, "overlapping buffer map requested");
 		return -EINVAL;
 	}
+
+	*pva_node = va_node;
 
 	return 0;
 }
@@ -1411,16 +1421,28 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	u64 buf_addr;
 	u64 ctag_map_win_size = 0;
 	u32 ctag_map_win_ctagline = 0;
+	struct vm_reserved_va_node *va_node = NULL;
+
+	if (user_mapped && vm->userspace_managed &&
+	    !(flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)) {
+		gk20a_err(d,
+			  "%s: non-fixed-offset mapping not available on userspace managed address spaces",
+			  __func__);
+		return -EFAULT;
+	}
 
 	mutex_lock(&vm->update_gmmu_lock);
 
 	/* check if this buffer is already mapped */
-	map_offset = gk20a_vm_map_duplicate_locked(vm, dmabuf, offset_align,
-						   flags, kind, sgt,
-						   user_mapped, rw_flag);
-	if (map_offset) {
-		mutex_unlock(&vm->update_gmmu_lock);
-		return map_offset;
+	if (!vm->userspace_managed) {
+		map_offset = gk20a_vm_map_duplicate_locked(
+			vm, dmabuf, offset_align,
+			flags, kind, sgt,
+			user_mapped, rw_flag);
+		if (map_offset) {
+			mutex_unlock(&vm->update_gmmu_lock);
+			return map_offset;
+		}
 	}
 
 	/* pin buffer to get phys/iovmm addr */
@@ -1504,7 +1526,8 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)  {
 		err = validate_fixed_buffer(vm, &bfr,
-			offset_align, mapping_size);
+					    offset_align, mapping_size,
+					    &va_node);
 		if (err)
 			goto clean_up;
 
@@ -1671,11 +1694,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	gk20a_dbg_info("allocated va @ 0x%llx", map_offset);
 
-	if (!va_allocated) {
-		struct vm_reserved_va_node *va_node;
-
-		/* find the space reservation */
-		va_node = addr_to_reservation(vm, map_offset);
+	if (va_node) {
 		list_add_tail(&mapped_buffer->va_buffers_list,
 			      &va_node->va_buffers_list);
 		mapped_buffer->va_node = va_node;
@@ -1753,18 +1772,27 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 	struct mapped_buffer_node *mapped_buffer;
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct device *d = dev_from_vm(vm);
+	const bool fixed_mapping =
+		(flags & NVGPU_AS_MAP_BUFFER_COMPBITS_FLAGS_FIXED_OFFSET) != 0;
 
-	if (flags & NVGPU_AS_MAP_BUFFER_COMPBITS_FLAGS_FIXED_OFFSET) {
-		/* This will be implemented later */
+	if (vm->userspace_managed && !fixed_mapping) {
 		gk20a_err(d,
-			  "%s: fixed-offset compbits mapping not yet supported",
+			  "%s: non-fixed-offset mapping is not available on userspace managed address spaces",
+			  __func__);
+		return -EFAULT;
+	}
+
+	if (fixed_mapping && !vm->userspace_managed) {
+		gk20a_err(d,
+			  "%s: fixed-offset mapping is available only on userspace managed address spaces",
 			  __func__);
 		return -EFAULT;
 	}
 
 	mutex_lock(&vm->update_gmmu_lock);
 
-	mapped_buffer = find_mapped_buffer_locked(&vm->mapped_buffers, mapping_gva);
+	mapped_buffer =
+		find_mapped_buffer_locked(&vm->mapped_buffers, mapping_gva);
 
 	if (!mapped_buffer || !mapped_buffer->user_mapped) {
 		mutex_unlock(&vm->update_gmmu_lock);
@@ -1774,7 +1802,8 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 
 	if (!mapped_buffer->ctags_mappable) {
 		mutex_unlock(&vm->update_gmmu_lock);
-		gk20a_err(d, "%s: comptags not mappable, offset 0x%llx", __func__, mapping_gva);
+		gk20a_err(d, "%s: comptags not mappable, offset 0x%llx",
+			  __func__, mapping_gva);
 		return -EFAULT;
 	}
 
@@ -1804,10 +1833,41 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 		cacheline_offset_start =
 			cacheline_start * aggregate_cacheline_sz;
 
+		if (fixed_mapping) {
+			struct buffer_attrs bfr;
+			int err;
+			struct vm_reserved_va_node *va_node = NULL;
+
+			memset(&bfr, 0, sizeof(bfr));
+
+			bfr.pgsz_idx = small_pgsz_index;
+
+			err = validate_fixed_buffer(
+				vm, &bfr, *compbits_win_gva,
+				mapped_buffer->ctag_map_win_size, &va_node);
+
+			if (err) {
+				mutex_unlock(&vm->update_gmmu_lock);
+				return err;
+			}
+
+			if (va_node) {
+				/* this would create a dangling GPU VA
+				 * pointer if the space is freed
+				 * before before the buffer is
+				 * unmapped */
+				mutex_unlock(&vm->update_gmmu_lock);
+				gk20a_err(d,
+					  "%s: comptags cannot be mapped into allocated space",
+					  __func__);
+				return -EINVAL;
+			}
+		}
+
 		mapped_buffer->ctag_map_win_addr =
 			g->ops.mm.gmmu_map(
 				vm,
-				0,
+				!fixed_mapping ? 0 : *compbits_win_gva, /* va */
 				g->gr.compbit_store.mem.sgt,
 				cacheline_offset_start, /* sg offset */
 				mapped_buffer->ctag_map_win_size, /* size */
@@ -1828,6 +1888,15 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 				  __func__, mapping_gva);
 			return -ENOMEM;
 		}
+	} else if (fixed_mapping && *compbits_win_gva &&
+		   mapped_buffer->ctag_map_win_addr != *compbits_win_gva) {
+		mutex_unlock(&vm->update_gmmu_lock);
+		gk20a_err(d,
+			  "%s: re-requesting comptags map into mismatching address. buffer offset 0x"
+			  "%llx, existing comptag map at 0x%llx, requested remap 0x%llx",
+			  __func__, mapping_gva,
+			  mapped_buffer->ctag_map_win_addr, *compbits_win_gva);
+		return -EINVAL;
 	}
 
 	*mapping_iova = gk20a_mm_iova_addr(g, mapped_buffer->sgt->sgl, 0);
@@ -2662,6 +2731,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 		u64 kernel_reserved,
 		u64 aperture_size,
 		bool big_pages,
+		bool userspace_managed,
 		char *name)
 {
 	int err, i;
@@ -2684,6 +2754,8 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	vm->big_pages = big_pages;
 
 	vm->big_page_size = gmmu_page_sizes[gmmu_page_size_big];
+
+	vm->userspace_managed = userspace_managed;
 
 	vm->mmu_levels = vm->mm->g->ops.mm.get_mmu_levels(vm->mm->g,
 			vm->big_page_size);
@@ -2821,7 +2893,8 @@ clean_up_pdes:
 }
 
 /* address space interfaces for the gk20a module */
-int gk20a_vm_alloc_share(struct gk20a_as_share *as_share, u32 big_page_size)
+int gk20a_vm_alloc_share(struct gk20a_as_share *as_share, u32 big_page_size,
+			 u32 flags)
 {
 	struct gk20a_as *as = as_share->as;
 	struct gk20a *g = gk20a_from_as(as);
@@ -2829,6 +2902,8 @@ int gk20a_vm_alloc_share(struct gk20a_as_share *as_share, u32 big_page_size)
 	struct vm_gk20a *vm;
 	char name[32];
 	int err;
+	const bool userspace_managed =
+		(flags & NVGPU_GPU_IOCTL_ALLOC_AS_FLAGS_USERSPACE_MANAGED) != 0;
 
 	gk20a_dbg_fn("");
 
@@ -2856,7 +2931,7 @@ int gk20a_vm_alloc_share(struct gk20a_as_share *as_share, u32 big_page_size)
 	err = gk20a_init_vm(mm, vm, big_page_size, big_page_size << 10,
 			    mm->channel.kernel_size,
 			    mm->channel.user_size + mm->channel.kernel_size,
-			    !mm->disable_bigpage, name);
+			    !mm->disable_bigpage, userspace_managed, name);
 
 	return err;
 }
@@ -3235,7 +3310,7 @@ static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	gk20a_dbg_info("bar1 vm size = 0x%x", mm->bar1.aperture_size);
 	gk20a_init_vm(mm, vm, big_page_size, SZ_4K,
 		      mm->bar1.aperture_size - SZ_4K,
-		      mm->bar1.aperture_size, false, "bar1");
+		      mm->bar1.aperture_size, false, false, "bar1");
 
 	err = gk20a_alloc_inst_block(g, inst_block);
 	if (err)
@@ -3263,7 +3338,7 @@ static int gk20a_init_system_vm(struct mm_gk20a *mm)
 
 	gk20a_init_vm(mm, vm, big_page_size,
 		      SZ_4K * 16, GK20A_PMU_VA_SIZE,
-		      GK20A_PMU_VA_SIZE * 2, false,
+		      GK20A_PMU_VA_SIZE * 2, false, false,
 		      "system");
 
 	err = gk20a_alloc_inst_block(g, inst_block);
@@ -3303,7 +3378,7 @@ static int gk20a_init_cde_vm(struct mm_gk20a *mm)
 			SZ_4K * 16,
 			NV_MM_DEFAULT_KERNEL_SIZE,
 			NV_MM_DEFAULT_KERNEL_SIZE + NV_MM_DEFAULT_USER_SIZE,
-			false, "cde");
+			false, false, "cde");
 }
 
 void gk20a_mm_init_pdb(struct gk20a *g, void *inst_ptr, u64 pdb_addr)

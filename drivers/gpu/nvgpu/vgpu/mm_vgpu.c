@@ -267,7 +267,7 @@ u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt, u64 size)
 
 /* address space interfaces for the gk20a module */
 static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
-		u32 big_page_size)
+			       u32 big_page_size, u32 flags)
 {
 	struct gk20a_as *as = as_share->as;
 	struct gk20a *g = gk20a_from_as(as);
@@ -280,6 +280,8 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 		kernel_vma_start, kernel_vma_limit;
 	char name[32];
 	int err, i;
+	const bool userspace_managed =
+		(flags & NVGPU_GPU_IOCTL_ALLOC_AS_FLAGS_USERSPACE_MANAGED) != 0;
 
 	/* note: keep the page sizes sorted lowest to highest here */
 	u32 gmmu_page_sizes[gmmu_nr_page_sizes] = {
@@ -289,6 +291,12 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 	};
 
 	gk20a_dbg_fn("");
+
+	if (userspace_managed) {
+		gk20a_err(dev_from_gk20a(g),
+			  "userspace-managed address spaces not yet supported");
+		return -ENOSYS;
+	}
 
 	big_page_size = gmmu_page_sizes[gmmu_page_size_big];
 

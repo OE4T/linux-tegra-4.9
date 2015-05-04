@@ -106,6 +106,8 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS		(1 << 4)
 /* NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT is available */
 #define NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT	(1 << 6)
+/* User-space managed address spaces support */
+#define NVGPU_GPU_FLAGS_SUPPORT_USERSPACE_MANAGED_AS	(1 << 7)
 
 struct nvgpu_gpu_characteristics {
 	__u32 arch;
@@ -239,7 +241,22 @@ struct nvgpu_gpu_mark_compressible_write_args {
 struct nvgpu_alloc_as_args {
 	__u32 big_page_size;
 	__s32 as_fd;
-	__u64 reserved;			/* must be zero */
+
+/*
+ * The GPU address space will be managed by the userspace. This has
+ * the following changes in functionality:
+ *   1. All non-fixed-offset user mappings are rejected (i.e.,
+ *      fixed-offset only)
+ *   2. Address space does not need to be allocated for fixed-offset
+ *      mappings, except to mark sparse address space areas.
+ *   3. Maps and unmaps are immediate. In particular, mapping ref
+ *      increments at kickoffs and decrements at job completion are
+ *      bypassed.
+ */
+#define NVGPU_GPU_IOCTL_ALLOC_AS_FLAGS_USERSPACE_MANAGED (1 << 0)
+	__u32 flags;
+
+	__u32 reserved;			/* must be zero */
 };
 
 struct nvgpu_gpu_open_tsg_args {

@@ -1993,6 +1993,8 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	    gk20a_platform_has_syncpoints(g->dev))
 		gpu->flags |= NVGPU_GPU_FLAGS_HAS_SYNCPOINTS;
 
+	gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_USERSPACE_MANAGED_AS;
+
 	gpu->gpc_mask = 1;
 
 	g->ops.gr.detect_sm_arch(g);

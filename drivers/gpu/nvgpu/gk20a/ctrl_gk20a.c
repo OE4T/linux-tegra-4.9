@@ -166,7 +166,8 @@ static int gk20a_ctrl_alloc_as(
 		goto clean_up;
 	}
 
-	err = gk20a_as_alloc_share(&g->as, args->big_page_size, &as_share);
+	err = gk20a_as_alloc_share(&g->as, args->big_page_size, args->flags,
+				   &as_share);
 	if (err)
 		goto clean_up_file;
 

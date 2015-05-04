@@ -370,7 +370,7 @@ struct gpu_ops {
 				struct vm_gk20a_mapping_batch *batch);
 		void (*vm_remove)(struct vm_gk20a *vm);
 		int (*vm_alloc_share)(struct gk20a_as_share *as_share,
-				      u32 flags);
+				      u32 big_page_size, u32 flags);
 		int (*vm_bind_channel)(struct gk20a_as_share *as_share,
 				struct channel_gk20a *ch);
 		int (*fb_flush)(struct gk20a *g);

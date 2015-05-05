@@ -182,6 +182,10 @@ static int tegra210_sfc_write_coeff_ram(struct tegra210_sfc *sfc)
 			coeff_ram = coef_48to16;
 		else if (sfc->srate_out == TEGRA210_SFC_FS44_1)
 			coeff_ram = coef_48to44;
+		else if (sfc->srate_out == TEGRA210_SFC_FS96)
+			coeff_ram = coef_48to96;
+		else if (sfc->srate_out == TEGRA210_SFC_FS192)
+			coeff_ram = coef_48to192;
 		break;
 
 	case TEGRA210_SFC_FS11_025:
@@ -261,6 +265,12 @@ static int tegra210_sfc_write_coeff_ram(struct tegra210_sfc *sfc)
 	return 0;
 }
 
+static const int tegra210_sfc_fmt_values[] = {
+	0,
+	TEGRA210_AUDIOCIF_BITS_16,
+	TEGRA210_AUDIOCIF_BITS_32,
+};
+
 static int tegra210_sfc_set_audio_cif(struct tegra210_sfc *sfc,
 				struct snd_pcm_hw_params *params,
 				unsigned int reg)
@@ -288,6 +298,8 @@ static int tegra210_sfc_set_audio_cif(struct tegra210_sfc *sfc,
 	cif_conf.audio_channels = channels;
 	cif_conf.client_channels = channels;
 	cif_conf.audio_bits = audio_bits;
+	if (sfc->format_in && (reg == TEGRA210_SFC_AXBAR_RX_CIF_CTRL))
+		cif_conf.audio_bits = tegra210_sfc_fmt_values[sfc->format_in];
 	cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_32;
 
 	sfc->soc_data->set_audio_cif(sfc->regmap, reg, &cif_conf);
@@ -407,6 +419,32 @@ static int tegra210_sfc_put_srate(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int tegra210_sfc_get_format(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra210_sfc *sfc = snd_soc_codec_get_drvdata(codec);
+
+	/* get the format control flag */
+	if (strstr(kcontrol->id.name, "input"))
+		ucontrol->value.integer.value[0] = sfc->format_in;
+
+	return 0;
+}
+
+static int tegra210_sfc_put_format(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra210_sfc *sfc = snd_soc_codec_get_drvdata(codec);
+
+	/* set the format control flag */
+	if (strstr(kcontrol->id.name, "input"))
+		sfc->format_in = ucontrol->value.integer.value[0];
+
+	return 0;
+}
+
 static int tegra210_sfc_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_sfc *sfc = snd_soc_codec_get_drvdata(codec);
@@ -433,7 +471,10 @@ static struct snd_soc_dai_driver tegra210_sfc_dais[] = {
 			.channels_min = 1,
 			.channels_max = 2,
 			.rates = SNDRV_PCM_RATE_8000_96000,
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.formats = SNDRV_PCM_FMTBIT_S8 |
+				SNDRV_PCM_FMTBIT_S16_LE |
+				SNDRV_PCM_FMTBIT_S24_LE |
+				SNDRV_PCM_FMTBIT_S32_LE,
 		},
 		.ops = &tegra210_sfc_in_dai_ops,
 	},
@@ -444,7 +485,10 @@ static struct snd_soc_dai_driver tegra210_sfc_dais[] = {
 			.channels_min = 1,
 			.channels_max = 16,
 			.rates = SNDRV_PCM_RATE_8000_96000,
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.formats = SNDRV_PCM_FMTBIT_S8 |
+				SNDRV_PCM_FMTBIT_S16_LE |
+				SNDRV_PCM_FMTBIT_S24_LE |
+				SNDRV_PCM_FMTBIT_S32_LE,
 		},
 		.ops = &tegra210_sfc_out_dai_ops,
 	}
@@ -480,16 +524,28 @@ static const char * const tegra210_sfc_srate_text[] = {
 	"192kHz",
 };
 
+static const char * const tegra210_sfc_format_text[] = {
+	"None",
+	"16",
+	"32",
+};
 static const struct soc_enum tegra210_sfc_srate_enum =
 	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
 		ARRAY_SIZE(tegra210_sfc_srate_text),
 		tegra210_sfc_srate_text);
+
+static const struct soc_enum tegra210_sfc_format_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
+		ARRAY_SIZE(tegra210_sfc_format_text),
+		tegra210_sfc_format_text);
 
 static const struct snd_kcontrol_new tegra210_sfc_controls[] = {
 	SOC_ENUM_EXT("input rate", tegra210_sfc_srate_enum,
 		tegra210_sfc_get_srate, tegra210_sfc_put_srate),
 	SOC_ENUM_EXT("output rate", tegra210_sfc_srate_enum,
 		tegra210_sfc_get_srate, tegra210_sfc_put_srate),
+	SOC_ENUM_EXT("input bit format", tegra210_sfc_format_enum,
+		tegra210_sfc_get_format, tegra210_sfc_put_format),
 };
 
 static struct snd_soc_codec_driver tegra210_sfc_codec = {

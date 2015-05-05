@@ -101,6 +101,7 @@ struct tegra210_sfc_soc_data {
 struct tegra210_sfc {
 	int srate_in;
 	int srate_out;
+	int format_in;
 	struct regmap *regmap;
 	const struct tegra210_sfc_soc_data *soc_data;
 };
@@ -549,6 +550,30 @@ u32 coef_48to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00e55557, 0xffcadd5b, 0x003d80ba,
 	0x00d13397, 0xfff232f8, 0x00683337,
 	0x00000001 /* output gain */
+};
+
+u32 coef_48to96[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+	0x00006102, /* header */
+	0x0001d727, /* input gain */
+	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
+	0x00e55557, 0xffcadd5b, 0x003d80ba,
+	0x00d13397, 0xfff232f8, 0x00683337,
+	0x00000002 /* output gain */
+};
+
+u32 coef_48to192[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+	0x000c6102, /* header */
+	0x0001d727, /* input gain */
+	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
+	0x00e55557, 0xffcadd5b, 0x003d80ba,
+	0x00d13397, 0xfff232f8, 0x00683337,
+	0x00000002, /* output gain */
+	0x00006102, /* header */
+	0x000013d9, /* input gain */
+	0x00ebd477, 0xff4ce383, 0x0042049d,
+	0x0089c278, 0xff54414d, 0x00531ded,
+	0x004a5e07, 0xff53cf41, 0x006efbdc,
+	0x00000002 /* output gain */
 };
 
 u32 coef_88to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {

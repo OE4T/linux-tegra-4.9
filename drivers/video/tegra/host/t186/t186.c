@@ -107,8 +107,6 @@ struct nvhost_device_data t18_vi_info = {
 		{"cilab", 102000000},
 		{"cilcd", 102000000},
 		{"cile", 102000000},
-		{"vii2c", 86400000},
-		{"i2cslow", 1000000},
 		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
 	.num_channels		= 6,
@@ -142,7 +140,7 @@ struct nvhost_device_data t18_msenc_info = {
 	NVHOST_MODULE_NO_POWERGATE_ID,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.clocks			= {{"msenc", UINT_MAX, 0},
+	.clocks			= {{"nvenc", UINT_MAX, 0},
 				   {"emc", UINT_MAX} },
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_flcn_finalize_poweron,
@@ -245,7 +243,7 @@ struct nvhost_device_data t18_tsecb_info = {
 struct nvhost_device_data t18_vic_info = {
 	.num_channels		= 1,
 	.devfs_name		= "vic",
-	.clocks			= {{"vic03", UINT_MAX, 0},
+	.clocks			= {{"vic", UINT_MAX, 0},
 				   {"emc", UINT_MAX,
 				   NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},
 				   {"vic_floor", 0,

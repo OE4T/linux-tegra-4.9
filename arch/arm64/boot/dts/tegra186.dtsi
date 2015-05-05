@@ -223,12 +223,13 @@
 		channels   = <1>; /* Until support for quad channel is available. */
         };
 
-
 	host1x: host1x {
 		compatible = "nvidia,tegra186-host1x", "simple-bus";
 		reg = <0x0 0x3de00000 0x0 0x00040000>;
 		interrupts = <0 65 0x04   /* mpcore syncpt */
 			      0 67 0x04>; /* mpcore general */
+		clocks = <&clk32k_in>, <&clk32k_in>;
+		clock-names = "host1x", "actmon";
 		#stream-id-cells = <1>;
 
 		#address-cells = <2>;
@@ -280,6 +281,8 @@
 			compatible = "nvidia,tegra186-nvcsi";
 			reg = <0x0 0x150c0000 0x0 0x00040000>;
 			interrupts = <0 119 0x04>;
+			clocks = <&clk32k_in>;
+			clock-names = "nvcsi";
 			#stream-id-cells = <1>;
 		};
 
@@ -287,6 +290,10 @@
 			compatible = "nvidia,tegra186-vi";
 			reg = <0x0 0x54700000 0x0 0x00100000>;
 			interrupts = <0 69 0x04>;
+			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>,
+				 <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
+			clock-names = "vi", "csi", "cilab",
+				      "cilcd", "cile", "emc";
 			#stream-id-cells = <1>;
 		};
 
@@ -294,6 +301,8 @@
 			compatible = "nvidia,tegra186-isp";
 			reg = <0x0 0x54600000 0x0 0x00040000>;
 			interrupts = <0 71 0x04>;
+			clocks = <&clk32k_in>;
+			clock-names = "isp";
 			#stream-id-cells = <1>;
 		};
 
@@ -370,36 +379,50 @@
 		vic {
 			compatible = "nvidia,tegra186-vic";
 			reg = <0x0 0x54340000 0x0 0x00040000>;
+			clocks = <&clk32k_in>, <&clk32k_in>,
+				 <&clk32k_in>, <&clk32k_in>;
+			clock-names = "vic", "emc",
+				      "vic_floor", "emc_shared";
 			#stream-id-cells = <1>;
 		};
 
 		nvenc {
 			compatible = "nvidia,tegra186-nvenc";
 			reg = <0x0 0x544c0000 0x0 0x00040000>;
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "nvenc", "emc";
 			#stream-id-cells = <1>;
 		};
 
 		nvdec {
 			compatible = "nvidia,tegra186-nvdec";
 			reg = <0x0 0x54480000 0x0 0x00040000>;
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "nvdec", "emc";
 			#stream-id-cells = <1>;
 		};
 
 		nvjpg {
 			compatible = "nvidia,tegra186-nvjpg";
 			reg = <0x0 0x54380000 0x0 0x00040000>;
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "nvjpg", "emc";
 			#stream-id-cells = <1>;
 		};
 
 		tsec {
 			compatible = "nvidia,tegra186-tsec";
 			reg = <0x0 0x54500000 0x0 0x00040000>;
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "tsec", "emc";
 			#stream-id-cells = <1>;
 		};
 
 		tsecb {
 			compatible = "nvidia,tegra186-tsec";
 			reg = <0x0 0x54100000 0x0 0x00040000>;
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "tsecb", "emc";
 			#stream-id-cells = <1>;
 		};
 

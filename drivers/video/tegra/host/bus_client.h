@@ -34,4 +34,6 @@ int nvhost_write_module_regs(struct platform_device *ndev,
 
 int nvhost_client_user_init(struct platform_device *dev);
 
+int nvhost_device_get_resources(struct platform_device *dev);
+
 #endif

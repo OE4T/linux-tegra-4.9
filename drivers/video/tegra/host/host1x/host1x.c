@@ -768,7 +768,6 @@ long linsim_cl = 0;
 static int nvhost_probe(struct platform_device *dev)
 {
 	struct nvhost_master *host;
-	struct resource *regs;
 	int syncpt_irq, generic_irq;
 	int err;
 	struct nvhost_device_data *pdata = NULL;
@@ -801,12 +800,6 @@ static int nvhost_probe(struct platform_device *dev)
 	if (err) {
 		dev_err(&dev->dev, "No HOST1X unit present. err:%d", err);
 		return err;
-	}
-
-	regs = platform_get_resource(dev, IORESOURCE_MEM, 0);
-	if (!regs) {
-		dev_err(&dev->dev, "missing host1x regs\n");
-		return -ENXIO;
 	}
 
 	syncpt_irq = platform_get_irq(dev, 0);
@@ -855,12 +848,12 @@ static int nvhost_probe(struct platform_device *dev)
 			goto fail;
 		}
 	} else {
-		host->aperture = devm_ioremap_resource(&dev->dev, regs);
-		if (IS_ERR(host->aperture)) {
-			err = PTR_ERR(host->aperture);
+		err = nvhost_device_get_resources(dev);
+		if (err) {
+			dev_err(&dev->dev, "failed to get resources\n");
 			goto fail;
 		}
-		pdata->aperture[0] = host->aperture;
+		host->aperture = pdata->aperture[0];
 	}
 
 	err = nvhost_alloc_resources(host);

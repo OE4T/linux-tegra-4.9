@@ -1586,7 +1586,7 @@ int nvhost_client_device_release(struct platform_device *dev)
 }
 EXPORT_SYMBOL(nvhost_client_device_release);
 
-int nvhost_client_device_get_resources(struct platform_device *dev)
+int nvhost_device_get_resources(struct platform_device *dev)
 {
 	int i;
 	void __iomem *regs = NULL;
@@ -1616,6 +1616,11 @@ fail:
 	dev_err(&dev->dev, "failed to get register memory\n");
 
 	return ret;
+}
+
+int nvhost_client_device_get_resources(struct platform_device *dev)
+{
+	return nvhost_device_get_resources(dev);
 }
 EXPORT_SYMBOL(nvhost_client_device_get_resources);
 

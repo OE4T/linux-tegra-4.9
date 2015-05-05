@@ -386,6 +386,15 @@ config REGULATOR_MAX77620
 	  chip to control Step-Down DC-DC and LDOs. Say Y here to
 	  enable the regulator driver.
 
+config REGULATOR_MAX16989
+	tristate "Maxim 16989 2-Channel Step Down controller"
+	depends on I2C
+	select REGMAP_I2C
+	help
+	  MAXIM MAX16989 is automotive low-voltage 2 Channel High-Efficiency
+	  DC-DC Controller. This driver supports configuration of this device
+	  through regulator interface.
+
 config REGULATOR_MAX8649
 	tristate "Maxim 8649 voltage regulator"
 	depends on I2C

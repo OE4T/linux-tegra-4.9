@@ -673,7 +673,15 @@ int nvhost_module_init(struct platform_device *dev)
 		snprintf(devname, MAX_DEVID_LENGTH,
 			 (dev->id <= 0) ? "tegra_%s" : "tegra_%s.%d",
 			 dev->name, dev->id);
-		c = clk_get_sys(devname, pdata->clocks[i].name);
+
+		/* Get device managed clock if CCF is available, otherwise
+		 * assume tegra specific clock framework */
+
+		if (IS_ENABLED(CONFIG_COMMON_CLK))
+			c = devm_clk_get(&dev->dev, pdata->clocks[i].name);
+		else
+			c = clk_get_sys(devname, pdata->clocks[i].name);
+
 		if (IS_ERR(c)) {
 			dev_err(&dev->dev, "clk_get_sys failed for i=%d %s:%s",
 				i, devname, pdata->clocks[i].name);
@@ -841,8 +849,9 @@ void nvhost_module_deinit(struct platform_device *dev)
 	else
 		pm_runtime_disable(&dev->dev);
 
-	for (i = 0; i < pdata->num_clks; i++)
-		clk_put(pdata->clk[i]);
+	if (!IS_ENABLED(CONFIG_COMMON_CLK))
+		for (i = 0; i < pdata->num_clks; i++)
+			clk_put(pdata->clk[i]);
 
 	if (pdata->power_kobj) {
 		for (i = 0; i < NVHOST_POWER_SYSFS_ATTRIB_MAX; i++) {

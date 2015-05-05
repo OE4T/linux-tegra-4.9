@@ -1210,19 +1210,11 @@ static int gk20a_pm_initialise_domain(struct platform_device *pdev)
 	struct gk20a_platform *platform = platform_get_drvdata(pdev);
 	struct dev_power_governor *pm_domain_gov = NULL;
 	struct generic_pm_domain *domain = dev_to_genpd(&pdev->dev);
-	struct device *dev = &pdev->dev;
 
 #ifdef CONFIG_PM_RUNTIME
 	if (!platform->can_railgate)
 		pm_domain_gov = &pm_domain_always_on_gov;
 #endif
-	/*
-	 * FIXME: We can remove below assignment once we have clean shutdown
-	 * for gk20a.
-	 */
-	if (dev->pm_domain)
-		dev->pm_domain->detach = NULL;
-
 	domain->gov = pm_domain_gov;
 
 	if (platform->railgate_delay)

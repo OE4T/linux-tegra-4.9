@@ -1584,10 +1584,9 @@ static int tegra210_adsp_write(struct snd_soc_component *component,
 static int tegra210_adsp_mux_get(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
-	struct snd_soc_dapm_widget *widget = wlist->widgets[0];
-	struct snd_soc_platform *platform =
-				snd_soc_dapm_to_platform(widget->dapm);
+	struct snd_soc_dapm_context *dapm =
+			snd_soc_dapm_kcontrol_dapm(kcontrol);
+	struct snd_soc_platform *platform = snd_soc_dapm_to_platform(dapm);
 	struct soc_enum *e =
 		(struct soc_enum *)kcontrol->private_value;
 	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
@@ -1601,16 +1600,15 @@ static int tegra210_adsp_mux_get(struct snd_kcontrol *kcontrol,
 static int tegra210_adsp_mux_put(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
-	struct snd_soc_dapm_widget *w = wlist->widgets[0];
-	struct snd_soc_platform *platform = snd_soc_dapm_to_platform(w->dapm);
+	struct snd_soc_dapm_context *dapm =
+			snd_soc_dapm_kcontrol_dapm(kcontrol);
+	struct snd_soc_platform *platform = snd_soc_dapm_to_platform(dapm);
 	uint32_t val = ucontrol->value.enumerated.item[0];
 	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
 	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
 	struct tegra210_adsp_app *app;
 	uint32_t cur_val = 0;
 	int ret = 0;
-	struct snd_soc_dapm_update update;
 
 	if (!adsp->init_done)
 		return -ENODEV;
@@ -1644,8 +1642,7 @@ static int tegra210_adsp_mux_put(struct snd_kcontrol *kcontrol,
 		TEGRA210_ADSP_WIDGET_SOURCE_MASK, val << e->shift_l);
 	tegra210_adsp_update_connection(adsp);
 
-	update.kcontrol = kcontrol;
-	snd_soc_dapm_mux_update_power(w->dapm, kcontrol, val, e, &update);
+	snd_soc_dapm_mux_update_power(dapm, kcontrol, val, e, NULL);
 	return 1;
 }
 

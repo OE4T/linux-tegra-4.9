@@ -1163,7 +1163,7 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 				}
 			}
 		}
-		pos += len + 1;
+		pos += len;
 	}
 
 	block = edid + edid[2];

@@ -1740,6 +1740,9 @@ static void tegra_dsi_stop_dc_stream(struct tegra_dc *dc,
 	tegra_dc_writel(dc, 0, DC_DISP_DISP_WIN_OPTIONS);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ , DC_CMD_STATE_CONTROL);
 
+	/* stabilization delay */
+	udelay(500);
+
 	tegra_dc_put(dc);
 
 	dsi->status.dc_stream = DSI_DC_STREAM_DISABLE;

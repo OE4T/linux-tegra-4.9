@@ -1085,7 +1085,9 @@ static struct platform_driver platform_driver = {
 	},
 };
 
-static struct of_device_id tegra21x_host1x_domain_match[] = {
+static struct of_device_id tegra_host1x_domain_match[] = {
+	{.compatible = "nvidia,tegra132-host1x-pd",
+	 .data = (struct nvhost_device_data *)&t124_host1x_info},
 	{.compatible = "nvidia,tegra210-host1x-pd",
 	 .data = (struct nvhost_device_data *)&t21_host1x_info},
 	{},
@@ -1095,7 +1097,7 @@ static int __init nvhost_mod_init(void)
 {
 	int ret;
 
-	ret = nvhost_domain_init(tegra21x_host1x_domain_match);
+	ret = nvhost_domain_init(tegra_host1x_domain_match);
 	if (ret)
 		return ret;
 

@@ -191,6 +191,7 @@ static int nvhost_vi_slcg_handler(struct notifier_block *nb,
 static int vi_probe(struct platform_device *dev)
 {
 	int err = 0;
+	int ret;
 	struct vi *tegra_vi;
 	struct nvhost_device_data *pdata = NULL;
 
@@ -289,6 +290,14 @@ static int vi_probe(struct platform_device *dev)
 
 	nvhost_module_init(dev);
 
+	if (pdata->master) {
+		ret = genpd_dev_pm_add(tegra_vi_of_match,
+					 &pdata->pdev->dev);
+		if (ret)
+			pr_err("Could not add %s to power-domain using device tree\n",
+						dev_name(&pdata->pdev->dev));
+	}
+
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 #ifndef CONFIG_PM_GENERIC_DOMAINS_OF
 	pdata->pd.name = "ve";
@@ -386,7 +395,9 @@ static struct platform_driver vi_driver = {
 	}
 };
 
-static struct of_device_id tegra21x_vi_domain_match[] = {
+static struct of_device_id tegra_vi_domain_match[] = {
+	{.compatible = "nvidia,tegra132-ve-pd",
+	 .data = (struct nvhost_device_data *)&t124_vi_info},
 	{.compatible = "nvidia,tegra210-ve-pd",
 	.data = (struct nvhost_device_data *)&t21_vi_info},
 	{},
@@ -396,7 +407,7 @@ static int __init vi_init(void)
 {
 	int ret;
 
-	ret = nvhost_domain_init(tegra21x_vi_domain_match);
+	ret = nvhost_domain_init(tegra_vi_domain_match);
 	if (ret)
 		return ret;
 

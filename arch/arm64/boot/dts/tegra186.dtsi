@@ -536,9 +536,9 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "nvidia,tegra210-i2c";
-		reg = <0x0 0x3180000 0x0 0x100>;
+		reg = <0x0 0x3190000 0x0 0x100>;
 		interrupts = <0 28 0x04>;
-		status = "disabled";
+		status = "okay";
 		clock-frequency = <100000>;
 	};
 

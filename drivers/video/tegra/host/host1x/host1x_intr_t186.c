@@ -49,7 +49,7 @@ static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 
 	for (i = 0; i < DIV_ROUND_UP(nvhost_syncpt_nb_hw_pts(&dev->syncpt), 32);
 			i++) {
-		reg = host1x_sync_readl(dev->dev,
+		reg = host1x_readl(dev->dev,
 				host1x_sync_syncpt_thresh_cpu0_int_status_r() +
 				i * REGISTER_STRIDE);
 
@@ -108,7 +108,7 @@ static void intr_init_host_sync(struct nvhost_intr *intr)
 	/* increase the auto-ack timout to the maximum value. 2d will hang
 	 * otherwise on ap20.
 	 */
-	host1x_sync_writel(dev->dev, host1x_sync_ctxsw_timeout_cfg_r(), 0xff);
+	host1x_writel(dev->dev, host1x_sync_ctxsw_timeout_cfg_r(), 0xff);
 
 	/* enable graphics host syncpoint interrupt */
 	intr_set_syncpt_threshold(intr,
@@ -122,9 +122,9 @@ static void intr_set_host_clocks_per_usec(struct nvhost_intr *intr, u32 cpm)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
 	/* write microsecond clock register */
-	host1x_sync_writel(dev->dev, host1x_sync_usec_clk_r(), cpm);
+	host1x_writel(dev->dev, host1x_sync_usec_clk_r(), cpm);
 	/* set the ip_busy_timeout */
-	host1x_sync_writel(dev->dev,
+	host1x_writel(dev->dev,
 			host1x_sync_ip_busy_timeout_r(), cpm * 500000);
 }
 
@@ -132,7 +132,7 @@ static void intr_set_syncpt_threshold(struct nvhost_intr *intr,
 	u32 id, u32 thresh)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
-	host1x_sync_writel(dev->dev,
+	host1x_writel(dev->dev,
 		(host1x_sync_syncpt_int_thresh_0_r() + id * REGISTER_STRIDE),
 		thresh);
 }
@@ -141,7 +141,7 @@ static void intr_enable_syncpt_intr(struct nvhost_intr *intr, u32 id)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
 
-	host1x_sync_writel(dev->dev,
+	host1x_writel(dev->dev,
 			host1x_sync_syncpt_thresh_int_enable_cpu0_r() +
 			bit_word(id) * REGISTER_STRIDE,
 			bit_mask(id));
@@ -151,13 +151,13 @@ static void intr_disable_syncpt_intr(struct nvhost_intr *intr, u32 id)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
 
-	host1x_sync_writel(dev->dev,
+	host1x_writel(dev->dev,
 			host1x_sync_syncpt_thresh_int_disable_r() +
 			bit_word(id) * REGISTER_STRIDE,
 			bit_mask(id));
 
 	/* clear status for both cpu's */
-	host1x_sync_writel(dev->dev,
+	host1x_writel(dev->dev,
 		host1x_sync_syncpt_thresh_cpu0_int_status_r() +
 		bit_word(id) * REGISTER_STRIDE,
 		bit_mask(id));
@@ -171,12 +171,12 @@ static void intr_disable_all_syncpt_intrs(struct nvhost_intr *intr)
 	for (reg = 0; reg < bit_word(nvhost_syncpt_nb_hw_pts(&dev->syncpt))
 			* REGISTER_STRIDE; reg += REGISTER_STRIDE) {
 		/* disable interrupts for both cpu's */
-		host1x_sync_writel(dev->dev,
+		host1x_writel(dev->dev,
 				host1x_sync_syncpt_thresh_int_disable_r() +
 				reg, 0xffffffffu);
 
 		/* clear status for both cpu's */
-		host1x_sync_writel(dev->dev,
+		host1x_writel(dev->dev,
 			host1x_sync_syncpt_thresh_cpu0_int_status_r() + reg,
 			0xffffffffu);
 	}
@@ -196,11 +196,11 @@ static void intr_syncpt_intr_ack(struct nvhost_intr_syncpt *syncpt,
 	u32 reg = bit_word(id) * REGISTER_STRIDE;
 
 	if (disable_intr)
-		host1x_sync_writel(dev->dev,
+		host1x_writel(dev->dev,
 		       host1x_sync_syncpt_thresh_int_disable_r() + reg,
 			bit_mask(id));
 
-	host1x_sync_writel(dev->dev,
+	host1x_writel(dev->dev,
 		host1x_sync_syncpt_thresh_cpu0_int_status_r() + reg,
 		bit_mask(id));
 }
@@ -216,22 +216,22 @@ static irqreturn_t intr_host1x_isr(int irq, void *dev_id)
 	u32 addr;
 	unsigned long intstat;
 
-	intstat = host1x_sync_readl(dev->dev, host1x_sync_intstatus_r());
+	intstat = host1x_readl(dev->dev, host1x_sync_intstatus_r());
 	intr->intstatus = intstat;
 
 	if (host1x_sync_intstatus_ip_read_int_v(intstat)) {
-		addr = host1x_sync_readl(dev->dev,
+		addr = host1x_readl(dev->dev,
 				host1x_sync_ip_read_timeout_addr_r());
 		pr_err("Host read timeout at address %x\n", addr);
 	}
 
 	if (host1x_sync_intstatus_ip_write_int_v(intstat)) {
-		addr = host1x_sync_readl(dev->dev,
+		addr = host1x_readl(dev->dev,
 				host1x_sync_ip_write_timeout_addr_r());
 		pr_err("Host write timeout at address %x\n", addr);
 	}
 
-	host1x_sync_writel(dev->dev, host1x_sync_intstatus_r(), intstat);
+	host1x_writel(dev->dev, host1x_sync_intstatus_r(), intstat);
 	return IRQ_HANDLED;
 }
 
@@ -241,9 +241,9 @@ static int intr_request_host_general_irq(struct nvhost_intr *intr)
 	int err;
 
 	/* master disable for general (not syncpt) host interrupts */
-	host1x_sync_writel(dev->dev, host1x_sync_intc0mask_r(), 0);
-	host1x_sync_writel(dev->dev, host1x_sync_intgmask_r(), 0);
-	host1x_sync_writel(dev->dev, host1x_sync_intmask_r(), 0);
+	host1x_writel(dev->dev, host1x_sync_intc0mask_r(), 0);
+	host1x_writel(dev->dev, host1x_sync_intgmask_r(), 0);
+	host1x_writel(dev->dev, host1x_sync_intmask_r(), 0);
 
 	err = request_irq(intr->general_irq, intr_host1x_isr,
 			0, "host_status", intr);
@@ -251,12 +251,12 @@ static int intr_request_host_general_irq(struct nvhost_intr *intr)
 		return err;
 
 	/* enable host module interrupt to CPU0 */
-	host1x_sync_writel(dev->dev, host1x_sync_intc0mask_r(), BIT(0));
-	host1x_sync_writel(dev->dev, host1x_sync_intgmask_r(), BIT(0));
-	host1x_sync_writel(dev->dev, host1x_sync_syncpt_intgmask_r(), BIT(0));
+	host1x_writel(dev->dev, host1x_sync_intc0mask_r(), BIT(0));
+	host1x_writel(dev->dev, host1x_sync_intgmask_r(), BIT(0));
+	host1x_writel(dev->dev, host1x_sync_syncpt_intgmask_r(), BIT(0));
 
 	/* master enable for general (not syncpt) host interrupts */
-	host1x_sync_writel(dev->dev, host1x_sync_intmask_r(), BIT(0));
+	host1x_writel(dev->dev, host1x_sync_intmask_r(), BIT(0));
 
 	return err;
 }
@@ -266,8 +266,8 @@ static void intr_free_host_general_irq(struct nvhost_intr *intr)
 	struct nvhost_master *dev = intr_to_dev(intr);
 
 	/* master disable for general (not syncpt) host interrupts */
-	host1x_sync_writel(dev->dev, host1x_sync_intmask_r(), 0);
-	host1x_sync_writel(dev->dev, host1x_sync_syncpt_intgmask_r(), 0);
+	host1x_writel(dev->dev, host1x_sync_intmask_r(), 0);
+	host1x_writel(dev->dev, host1x_sync_syncpt_intgmask_r(), 0);
 
 	free_irq(intr->general_irq, intr);
 }
@@ -292,9 +292,9 @@ static int intr_debug_dump(struct nvhost_intr *intr, struct output *o)
 
 	nvhost_debug_output(o, "\n---- host general irq ----\n\n");
 	nvhost_debug_output(o, "sync_intc0mask = 0x%08x\n",
-		host1x_sync_readl(dev->dev, host1x_sync_intc0mask_r()));
+		host1x_readl(dev->dev, host1x_sync_intc0mask_r()));
 	nvhost_debug_output(o, "sync_intmask = 0x%08x\n",
-		host1x_sync_readl(dev->dev, host1x_sync_intmask_r()));
+		host1x_readl(dev->dev, host1x_sync_intmask_r()));
 
 	nvhost_debug_output(o, "\n---- host syncpt irq mask ----\n\n");
 
@@ -302,7 +302,7 @@ static int intr_debug_dump(struct nvhost_intr *intr, struct output *o)
 	for (i = 0; i < DIV_ROUND_UP(nvhost_syncpt_nb_hw_pts(&dev->syncpt), 32);
 			i++)
 		nvhost_debug_output(o, "syncpt_thresh_cpu0_int_status(%d) = 0x%08x\n",
-			i, host1x_sync_readl(dev->dev,
+			i, host1x_readl(dev->dev,
 				host1x_sync_syncpt_thresh_cpu0_int_status_r() +
 				i * REGISTER_STRIDE));
 

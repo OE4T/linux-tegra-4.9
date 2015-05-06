@@ -850,18 +850,34 @@ static int nvhost_ioctl_channel_set_rate(struct nvhost_channel_userctx *ctx,
 			& ((1 << NVHOST_CLOCK_ATTR_BIT_WIDTH) - 1);
 	int index = moduleid ?
 			moduleid_to_index(ctx->pdev, moduleid) : 0;
+	int err;
 
-	return nvhost_module_set_rate(ctx->pdev,
-			ctx, arg->rate, index, attr);
+	err = nvhost_module_set_rate(ctx->pdev, ctx, arg->rate, index, attr);
+	if (!tegra_platform_is_silicon() && err) {
+		nvhost_dbg(dbg_clk, "ignoring error: module=%u, attr=%u, index=%d, err=%d",
+			   moduleid, attr, index, err);
+		err = 0;
+	}
+
+	return err;
 }
 
 static int nvhost_ioctl_channel_get_rate(struct nvhost_channel_userctx *ctx,
 	u32 moduleid, u32 *rate)
 {
 	int index = moduleid ? moduleid_to_index(ctx->pdev, moduleid) : 0;
+	int err;
 
-	return nvhost_module_get_rate(ctx->pdev,
-			(unsigned long *)rate, index);
+	err = nvhost_module_get_rate(ctx->pdev, (unsigned long *)rate, index);
+	if (!tegra_platform_is_silicon() && err) {
+		nvhost_dbg(dbg_clk, "ignoring error: module=%u, rate=%u, error=%d",
+			   moduleid, *rate, err);
+		err = 0;
+		/* fake the return value */
+		*rate = 32 * 1024;
+	}
+
+	return err;
 }
 
 static int nvhost_ioctl_channel_module_regrdwr(

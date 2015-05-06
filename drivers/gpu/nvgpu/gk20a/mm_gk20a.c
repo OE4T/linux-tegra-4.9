@@ -1054,6 +1054,27 @@ static struct mapped_buffer_node *find_mapped_buffer_range_locked(
 	return NULL;
 }
 
+/* find the first mapped buffer with GPU VA less than addr */
+static struct mapped_buffer_node *find_mapped_buffer_less_than_locked(
+	struct rb_root *root, u64 addr)
+{
+	struct rb_node *node = root->rb_node;
+	struct mapped_buffer_node *ret = NULL;
+
+	while (node) {
+		struct mapped_buffer_node *mapped_buffer =
+			container_of(node, struct mapped_buffer_node, node);
+		if (mapped_buffer->addr >= addr)
+			node = node->rb_left;
+		else {
+			ret = mapped_buffer;
+			node = node->rb_right;
+		}
+	}
+
+	return ret;
+}
+
 #define BFR_ATTRS (sizeof(nvmap_bfr_param)/sizeof(nvmap_bfr_param[0]))
 
 struct buffer_attrs {
@@ -1165,19 +1186,14 @@ static int validate_fixed_buffer(struct vm_gk20a *vm,
 		return -EINVAL;
 	}
 
-	/* check that this mappings does not collide with existing
-	 * mappings by checking the overlapping area between the current
-	 * buffer and all other mapped buffers */
-
-	list_for_each_entry(buffer,
-		&va_node->va_buffers_list, va_buffers_list) {
-		s64 begin = max(buffer->addr, map_offset);
-		s64 end = min(buffer->addr +
-			buffer->size, map_offset + map_size);
-		if (end - begin > 0) {
-			gk20a_warn(dev, "overlapping buffer map requested");
-			return -EINVAL;
-		}
+	/* check that this mapping does not collide with existing
+	 * mappings by checking the buffer with the highest GPU VA
+	 * that is less than our buffer end */
+	buffer = find_mapped_buffer_less_than_locked(
+		&vm->mapped_buffers, map_offset + map_size);
+	if (buffer && buffer->addr + buffer->size > map_offset) {
+		gk20a_warn(dev, "overlapping buffer map requested");
+		return -EINVAL;
 	}
 
 	return 0;

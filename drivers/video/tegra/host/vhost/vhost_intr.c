@@ -36,53 +36,70 @@ static void syncpt_thresh_cascade_fn(struct work_struct *work)
 	nvhost_syncpt_thresh_fn(sp);
 }
 
-static int syncpt_thresh_cascade_handler(void *dev_id)
+static void syncpt_thresh_cascade_handler(struct nvhost_master *dev,
+			struct tegra_vhost_syncpt_intr_info *info)
 {
+	struct nvhost_intr *intr = &dev->intr;
+	struct nvhost_intr_syncpt *sp;
+	int graphics_host_sp =
+			nvhost_syncpt_graphics_host_sp(&dev->syncpt);
+	u32 sp_id;
+
+	sp_id = info->id;
+	if (unlikely(!nvhost_syncpt_is_valid_hw_pt(&dev->syncpt,
+			sp_id))) {
+		dev_err(&dev->dev->dev,
+			"%s(): syncpoint id %d is beyond the number of syncpoints (%d)\n",
+			__func__, sp_id,
+			nvhost_syncpt_nb_hw_pts(&dev->syncpt));
+		return;
+	}
+
+	sp = intr->syncpt + sp_id;
+	ktime_get_ts(&sp->isr_recv);
+	nvhost_syncpt_set_min_cached(&dev->syncpt, sp_id, info->thresh);
+
+	/* handle graphics host syncpoint increments immediately */
+	if (sp_id == graphics_host_sp) {
+		dev_warn(&dev->dev->dev, "%s(): syncpoint id %d incremented\n",
+			 __func__, graphics_host_sp);
+		nvhost_syncpt_patch_check(&dev->syncpt);
+	} else
+		queue_work(intr->wq, &sp->work);
+
+}
+
+static int vhost_intr_handler(void *dev_id)
+{
+	struct nvhost_master *dev = dev_id;
+
 	while (true) {
-		struct nvhost_master *dev = dev_id;
-		struct nvhost_intr *intr = &dev->intr;
-		struct nvhost_intr_syncpt *sp;
-		struct tegra_vhost_syncpt_intr_msg *msg;
-		u32 sp_id, sender;
+		struct tegra_vhost_intr_msg *msg;
+		int err;
+		u32 sender;
 		void *handle;
 		size_t size;
-		int err;
-		int graphics_host_sp =
-				nvhost_syncpt_graphics_host_sp(&dev->syncpt);
 
 		err = tegra_gr_comm_recv(TEGRA_GR_COMM_CTX_CLIENT,
 					TEGRA_VHOST_QUEUE_INTR, &handle,
 					(void **)&msg, &size, &sender);
 		if (WARN_ON(err))
 			continue;
-
-		if (msg->event == TEGRA_VHOST_EVENT_ABORT) {
+		if (unlikely(msg->event == TEGRA_VHOST_EVENT_ABORT)) {
 			tegra_gr_comm_release(handle);
 			break;
 		}
 
-		sp_id = msg->id;
-		if (unlikely(!nvhost_syncpt_is_valid_hw_pt(&dev->syncpt,
-				sp_id))) {
-			dev_err(&dev->dev->dev,
-				"%s(): syncpoint id %d is beyond the number of syncpoints (%d)\n",
-				__func__, sp_id,
-				nvhost_syncpt_nb_hw_pts(&dev->syncpt));
-			tegra_gr_comm_release(handle);
-			continue;
+		switch (msg->event) {
+		case TEGRA_VHOST_EVENT_SYNCPT_INTR:
+			syncpt_thresh_cascade_handler(dev,
+				&msg->info.syncpt_intr);
+			break;
+		default:
+			dev_warn(&dev->dev->dev,
+				"Unknown interrupt event %d\n", msg->event);
+			break;
 		}
-
-		sp = intr->syncpt + sp_id;
-		ktime_get_ts(&sp->isr_recv);
-		nvhost_syncpt_set_min_cached(&dev->syncpt, sp_id, msg->thresh);
-
-		/* handle graphics host syncpoint increments immediately */
-		if (sp_id == graphics_host_sp) {
-			dev_warn(&dev->dev->dev, "%s(): syncpoint id %d incremented\n",
-				 __func__, graphics_host_sp);
-			nvhost_syncpt_patch_check(&dev->syncpt);
-		} else
-			queue_work(intr->wq, &sp->work);
 
 		tegra_gr_comm_release(handle);
 	}
@@ -118,7 +135,7 @@ static void vhost_intr_init_host_sync(struct nvhost_intr *intr)
 		INIT_WORK(&intr->syncpt[i].work, syncpt_thresh_cascade_fn);
 
 	ctx->syncpt_handler =
-		kthread_run(syncpt_thresh_cascade_handler, dev, "host_syncpt");
+		kthread_run(vhost_intr_handler, dev, "vhost_intr");
 	if (IS_ERR(ctx->syncpt_handler))
 		BUG();
 
@@ -186,7 +203,7 @@ static int vhost_free_syncpt_irq(struct nvhost_intr *intr)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
 	struct nvhost_virt_ctx *ctx = nvhost_get_virt_data(dev->dev);
-	struct tegra_vhost_syncpt_intr_msg msg;
+	struct tegra_vhost_intr_msg msg;
 	int err;
 
 	/* disable graphics host syncpoint interrupt */

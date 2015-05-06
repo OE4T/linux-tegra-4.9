@@ -393,6 +393,7 @@
 			status = "disabled";
 			polling-delay = <0>; /* milliseconds */
 			polling-delay-passive = <0>; /* milliseconds */
+			thermal-sensors = <&cpu_max77621_reg>;
 
 			trips {
 				die_temp_thresh_max77621_0: hot-die {
@@ -417,7 +418,7 @@
 			status = "disabled";
 			polling-delay = <0>; /* milliseconds */
 			polling-delay-passive = <0>; /* milliseconds */
-
+			thermal-sensors = <&gpu_max77621_reg>;
 
 			trips {
 				die_temp_thresh_max77621_1: hot-die {

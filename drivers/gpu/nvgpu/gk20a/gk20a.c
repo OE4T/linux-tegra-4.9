@@ -1383,6 +1383,7 @@ static int gk20a_secure_page_alloc(struct platform_device *pdev)
 }
 
 static struct of_device_id tegra_gpu_domain_match[] = {
+	{.compatible = "nvidia,tegra124-gpu-pd"},
 	{.compatible = "nvidia,tegra132-gpu-pd"},
 	{.compatible = "nvidia,tegra210-gpu-pd"},
 	{.compatible = "nvidia,tegra186-gpu-pd"},

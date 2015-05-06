@@ -636,9 +636,10 @@ static int dma_alloc_from_coherent_heap_dev(struct device *dev, size_t len,
 {
 	struct heap_info *h = NULL;
 
-	*dma_handle = DMA_ERROR_CODE;
 	if (!dma_is_coherent_dev(dev))
 		return 0;
+
+	*dma_handle = DMA_ERROR_CODE;
 
 	h = dev_get_drvdata(dev);
 	BUG_ON(!h);

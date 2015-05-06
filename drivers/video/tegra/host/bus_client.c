@@ -85,19 +85,19 @@ static int validate_reg(struct platform_device *ndev, u32 offset, int count)
 	return err;
 }
 
-static __iomem void *get_aperture(struct platform_device *pdev)
+void __iomem *get_aperture(struct platform_device *pdev, int index)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 
 	if (pdata->master)
 		pdata = platform_get_drvdata(pdata->master);
 
-	return pdata->aperture[0];
+	return pdata->aperture[index];
 }
 
 void host1x_writel(struct platform_device *pdev, u32 r, u32 v)
 {
-	void __iomem *addr = get_aperture(pdev) + r;
+	void __iomem *addr = get_aperture(pdev, 0) + r;
 	nvhost_dbg(dbg_reg, " d=%s r=0x%x v=0x%x", pdev->name, r, v);
 	writel(v, addr);
 }
@@ -105,7 +105,7 @@ EXPORT_SYMBOL_GPL(host1x_writel);
 
 u32 host1x_readl(struct platform_device *pdev, u32 r)
 {
-	void __iomem *addr = get_aperture(pdev) + r;
+	void __iomem *addr = get_aperture(pdev, 0) + r;
 	u32 v;
 
 	nvhost_dbg(dbg_reg, " d=%s r=0x%x", pdev->name, r);

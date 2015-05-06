@@ -161,8 +161,18 @@ static int tegra210_mixer_put_gain(struct snd_kcontrol *kcontrol,
 
 	pm_runtime_get_sync(codec->dev);
 	/* write default gain config poly coefficients */
-	for (i = 0; i < 14; i++)
+	for (i = 0; i < 10; i++)
 		tegra210_mixer_write_ram(mixer, reg + i, mixer->gain_coeff[i]);
+
+	/* set duration parameter */
+	if (strstr(kcontrol->id.name, "Instant")) {
+		for (; i < 14; i++)
+			tegra210_mixer_write_ram(mixer, reg + i, 1);
+	} else {
+		for (; i < 14; i++)
+			tegra210_mixer_write_ram(mixer, reg + i,
+				mixer->gain_coeff[i]);
+	}
 
 	/* write new gain and trigger config */
 	ret = tegra210_mixer_write_ram(mixer, reg + 0x09,
@@ -370,6 +380,26 @@ static const struct snd_kcontrol_new tegra210_mixer_gain_ctls[] = {	\
 		tegra210_mixer_get_gain, tegra210_mixer_put_gain),
 	SOC_SINGLE_EXT("RX10 Gain", MIXER_GAIN_CONFIG_RAM_ADDR(9), 0, 0x20000, 0,
 		tegra210_mixer_get_gain, tegra210_mixer_put_gain),
+	SOC_SINGLE_EXT("RX1 Gain Instant", MIXER_GAIN_CONFIG_RAM_ADDR(0), 0,
+		0x20000, 0, tegra210_mixer_get_gain, tegra210_mixer_put_gain),
+	SOC_SINGLE_EXT("RX2 Gain Instant", MIXER_GAIN_CONFIG_RAM_ADDR(1), 0,
+		0x20000, 0, tegra210_mixer_get_gain, tegra210_mixer_put_gain),
+	SOC_SINGLE_EXT("RX3 Gain Instant", MIXER_GAIN_CONFIG_RAM_ADDR(2), 0,
+		0x20000, 0, tegra210_mixer_get_gain, tegra210_mixer_put_gain),
+	SOC_SINGLE_EXT("RX4 Gain Instant", MIXER_GAIN_CONFIG_RAM_ADDR(3), 0,
+		0x20000, 0, tegra210_mixer_get_gain, tegra210_mixer_put_gain),
+	SOC_SINGLE_EXT("RX5 Gain Instant", MIXER_GAIN_CONFIG_RAM_ADDR(4), 0,
+		0x20000, 0, tegra210_mixer_get_gain, tegra210_mixer_put_gain),
+	SOC_SINGLE_EXT("RX6 Gain Instant", MIXER_GAIN_CONFIG_RAM_ADDR(5), 0,
+		0x20000, 0, tegra210_mixer_get_gain, tegra210_mixer_put_gain),
+	SOC_SINGLE_EXT("RX7 Gain Instant", MIXER_GAIN_CONFIG_RAM_ADDR(6), 0,
+		0x20000, 0, tegra210_mixer_get_gain, tegra210_mixer_put_gain),
+	SOC_SINGLE_EXT("RX8 Gain Instant", MIXER_GAIN_CONFIG_RAM_ADDR(7), 0,
+		0x20000, 0, tegra210_mixer_get_gain, tegra210_mixer_put_gain),
+	SOC_SINGLE_EXT("RX9 Gain Instant", MIXER_GAIN_CONFIG_RAM_ADDR(8), 0,
+		0x20000, 0, tegra210_mixer_get_gain, tegra210_mixer_put_gain),
+	SOC_SINGLE_EXT("RX10 Gain Instant", MIXER_GAIN_CONFIG_RAM_ADDR(9), 0,
+		0x20000, 0, tegra210_mixer_get_gain, tegra210_mixer_put_gain),
 	SOC_SINGLE("Mixer Enable", TEGRA210_MIXER_ENABLE, 0, 1, 0),
 };
 

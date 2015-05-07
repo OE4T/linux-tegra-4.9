@@ -276,9 +276,10 @@ static struct platform_driver platform_driver = {
 	},
 };
 
-static int __init tegra18x_clock_init(struct device_node *np)
+static void __init tegra18x_clock_init(struct device_node *np)
 {
 	int i;
+	int ret;
 
 	for (i = 0; i < MAXCLK; i++) {
 		tegra_clks[i] = clk_register_tegra(NULL, tegra_clk_name[i],
@@ -286,7 +287,9 @@ static int __init tegra18x_clock_init(struct device_node *np)
 		BUG_ON(IS_ERR(tegra_clks[i]));
 	}
 
-	return platform_driver_register(&platform_driver);
+	ret = platform_driver_register(&platform_driver);
+	if (ret)
+		pr_err("Driver registration failed for %s\n", platform_driver.driver.name);
 }
 
 static void __exit tegra18x_clock_exit(void)

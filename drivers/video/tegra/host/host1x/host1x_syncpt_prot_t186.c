@@ -18,6 +18,7 @@
 
 #include <linux/io.h>
 
+#include "bus_client_t186.h"
 #include "nvhost_syncpt.h"
 #include "chip_support.h"
 
@@ -27,7 +28,8 @@ static void t186_syncpt_reset(struct nvhost_syncpt *sp, u32 id)
 	int min = nvhost_syncpt_read_min(sp, id);
 
 	/* move syncpoint to VM1 */
-	host1x_writel(dev->dev, (host1x_sync_syncpt_vm_0_r() + id * 4), 1);
+	host1x_hypervisor_writel(dev->dev,
+			(host1x_sync_syncpt_vm_0_r() + id * 4), 1);
 
 	/* reserve it for channel 63 */
 	host1x_writel(dev->dev,
@@ -35,7 +37,7 @@ static void t186_syncpt_reset(struct nvhost_syncpt *sp, u32 id)
 		host1x_sync_syncpt_ch_app_0_syncpt_ch_f(63));
 
 	/* enable protection */
-	host1x_writel(dev->dev,
+	host1x_hypervisor_writel(dev->dev,
 		host1x_sync_syncpt_prot_en_0_r(),
 		host1x_sync_syncpt_prot_en_0_ch_en_f(1));
 

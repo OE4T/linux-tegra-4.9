@@ -21,6 +21,7 @@
 #include <linux/io.h>
 #include <linux/ktime.h>
 
+#include "bus_client_t186.h"
 #include "nvhost_intr.h"
 #include "dev.h"
 
@@ -108,7 +109,8 @@ static void intr_init_host_sync(struct nvhost_intr *intr)
 	/* increase the auto-ack timout to the maximum value. 2d will hang
 	 * otherwise on ap20.
 	 */
-	host1x_writel(dev->dev, host1x_sync_ctxsw_timeout_cfg_r(), 0xff);
+	host1x_hypervisor_writel(dev->dev,
+			host1x_sync_ctxsw_timeout_cfg_r(), 0xff);
 
 	/* enable graphics host syncpoint interrupt */
 	intr_set_syncpt_threshold(intr,
@@ -122,9 +124,9 @@ static void intr_set_host_clocks_per_usec(struct nvhost_intr *intr, u32 cpm)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
 	/* write microsecond clock register */
-	host1x_writel(dev->dev, host1x_sync_usec_clk_r(), cpm);
+	host1x_hypervisor_writel(dev->dev, host1x_sync_usec_clk_r(), cpm);
 	/* set the ip_busy_timeout */
-	host1x_writel(dev->dev,
+	host1x_hypervisor_writel(dev->dev,
 			host1x_sync_ip_busy_timeout_r(), cpm * 500000);
 }
 
@@ -216,22 +218,23 @@ static irqreturn_t intr_host1x_isr(int irq, void *dev_id)
 	u32 addr;
 	unsigned long intstat;
 
-	intstat = host1x_readl(dev->dev, host1x_sync_intstatus_r());
+	intstat = host1x_hypervisor_readl(dev->dev,
+			host1x_sync_intstatus_r());
 	intr->intstatus = intstat;
 
 	if (host1x_sync_intstatus_ip_read_int_v(intstat)) {
-		addr = host1x_readl(dev->dev,
+		addr = host1x_hypervisor_readl(dev->dev,
 				host1x_sync_ip_read_timeout_addr_r());
 		pr_err("Host read timeout at address %x\n", addr);
 	}
 
 	if (host1x_sync_intstatus_ip_write_int_v(intstat)) {
-		addr = host1x_readl(dev->dev,
+		addr = host1x_hypervisor_readl(dev->dev,
 				host1x_sync_ip_write_timeout_addr_r());
 		pr_err("Host write timeout at address %x\n", addr);
 	}
 
-	host1x_writel(dev->dev, host1x_sync_intstatus_r(), intstat);
+	host1x_hypervisor_writel(dev->dev, host1x_sync_intstatus_r(), intstat);
 	return IRQ_HANDLED;
 }
 
@@ -241,9 +244,9 @@ static int intr_request_host_general_irq(struct nvhost_intr *intr)
 	int err;
 
 	/* master disable for general (not syncpt) host interrupts */
-	host1x_writel(dev->dev, host1x_sync_intc0mask_r(), 0);
-	host1x_writel(dev->dev, host1x_sync_intgmask_r(), 0);
-	host1x_writel(dev->dev, host1x_sync_intmask_r(), 0);
+	host1x_hypervisor_writel(dev->dev, host1x_sync_intc0mask_r(), 0);
+	host1x_hypervisor_writel(dev->dev, host1x_sync_intgmask_r(), 0);
+	host1x_hypervisor_writel(dev->dev, host1x_sync_intmask_r(), 0);
 
 	err = request_irq(intr->general_irq, intr_host1x_isr,
 			0, "host_status", intr);
@@ -251,12 +254,13 @@ static int intr_request_host_general_irq(struct nvhost_intr *intr)
 		return err;
 
 	/* enable host module interrupt to CPU0 */
-	host1x_writel(dev->dev, host1x_sync_intc0mask_r(), BIT(0));
-	host1x_writel(dev->dev, host1x_sync_intgmask_r(), BIT(0));
-	host1x_writel(dev->dev, host1x_sync_syncpt_intgmask_r(), BIT(0));
+	host1x_hypervisor_writel(dev->dev, host1x_sync_intc0mask_r(), BIT(0));
+	host1x_hypervisor_writel(dev->dev, host1x_sync_intgmask_r(), BIT(0));
+	host1x_hypervisor_writel(dev->dev,
+			host1x_sync_syncpt_intgmask_r(), BIT(0));
 
 	/* master enable for general (not syncpt) host interrupts */
-	host1x_writel(dev->dev, host1x_sync_intmask_r(), BIT(0));
+	host1x_hypervisor_writel(dev->dev, host1x_sync_intmask_r(), BIT(0));
 
 	return err;
 }
@@ -266,8 +270,8 @@ static void intr_free_host_general_irq(struct nvhost_intr *intr)
 	struct nvhost_master *dev = intr_to_dev(intr);
 
 	/* master disable for general (not syncpt) host interrupts */
-	host1x_writel(dev->dev, host1x_sync_intmask_r(), 0);
-	host1x_writel(dev->dev, host1x_sync_syncpt_intgmask_r(), 0);
+	host1x_hypervisor_writel(dev->dev, host1x_sync_intmask_r(), 0);
+	host1x_hypervisor_writel(dev->dev, host1x_sync_syncpt_intgmask_r(), 0);
 
 	free_irq(intr->general_irq, intr);
 }
@@ -292,9 +296,9 @@ static int intr_debug_dump(struct nvhost_intr *intr, struct output *o)
 
 	nvhost_debug_output(o, "\n---- host general irq ----\n\n");
 	nvhost_debug_output(o, "sync_intc0mask = 0x%08x\n",
-		host1x_readl(dev->dev, host1x_sync_intc0mask_r()));
+		host1x_hypervisor_readl(dev->dev, host1x_sync_intc0mask_r()));
 	nvhost_debug_output(o, "sync_intmask = 0x%08x\n",
-		host1x_readl(dev->dev, host1x_sync_intmask_r()));
+		host1x_hypervisor_readl(dev->dev, host1x_sync_intmask_r()));
 
 	nvhost_debug_output(o, "\n---- host syncpt irq mask ----\n\n");
 

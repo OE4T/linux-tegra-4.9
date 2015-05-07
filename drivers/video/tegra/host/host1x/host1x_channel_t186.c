@@ -18,6 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "bus_client_t186.h"
 #include "nvhost_channel.h"
 #include "dev.h"
 #include "class_ids.h"
@@ -277,10 +278,10 @@ static int host1x_channel_set_low_priority(struct nvhost_channel *ch)
 	u32 val;
 
 	mutex_lock(&host->priority_lock);
-	val = host1x_readl(host->dev,
+	val = host1x_hypervisor_readl(host->dev,
 			host1x_channel_ch_hipri_r() + BIT_WORD(ch->chid));
 	val &= ~BIT_MASK(ch->chid);
-	host1x_writel(host->dev,
+	host1x_hypervisor_writel(host->dev,
 			host1x_channel_ch_hipri_r() + BIT_WORD(ch->chid),
 			val);
 	mutex_unlock(&host->priority_lock);
@@ -298,10 +299,10 @@ static int host1x_channel_update_priority(struct nvhost_job *job)
 		return 0;
 
 	mutex_lock(&host->priority_lock);
-	val = host1x_readl(host->dev,
+	val = host1x_hypervisor_readl(host->dev,
 			host1x_channel_ch_hipri_r() + BIT_WORD(ch->chid));
 	val |= BIT_MASK(ch->chid);
-	host1x_writel(host->dev,
+	host1x_hypervisor_writel(host->dev,
 			host1x_channel_ch_hipri_r() + BIT_WORD(ch->chid),
 			val);
 	mutex_unlock(&host->priority_lock);

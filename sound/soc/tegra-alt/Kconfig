@@ -283,7 +283,7 @@ config SND_SOC_TEGRA_T210REF_ALT
 	select SND_SOC_TEGRA210_ADSP_ALT
 	select SND_SOC_TEGRA_ASOC_HWDEP_ALT
 	select SND_SOC_SPDIF
-	select SND_SOC_AD193X
+	select SND_SOC_AD193X_I2C
 	help
 	  Say Y or M here.
 

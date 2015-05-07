@@ -115,10 +115,11 @@ static int tegra_alt_pcm_hw_params(struct snd_pcm_substream *substream,
 	if (rtd->dai_link->no_pcm)
 		return 0;
 
-	chan = snd_dmaengine_pcm_get_chan(substream);
 	dmap = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
 	if (!dmap)
 		return 0;
+
+	chan = snd_dmaengine_pcm_get_chan(substream);
 
 	ret = snd_hwparams_to_dma_slave_config(substream, params,
 						&slave_config);
@@ -276,7 +277,8 @@ static void tegra_alt_pcm_free(struct snd_pcm *pcm)
 
 static int tegra_alt_pcm_probe(struct snd_soc_platform *platform)
 {
-	platform->component.dapm.idle_bias_off = 1;
+	struct snd_soc_dapm_context *dapm = snd_soc_component_get_dapm(&platform->component);
+	dapm->idle_bias_off = 1;
 	return 0;
 }
 

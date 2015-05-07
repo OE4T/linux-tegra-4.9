@@ -2335,7 +2335,8 @@ static struct snd_soc_codec_driver tegra210_adsp_codec = {
 
 static int tegra210_adsp_pcm_probe(struct snd_soc_platform *platform)
 {
-	platform->component.dapm.idle_bias_off = 1;
+	struct snd_soc_dapm_context *dapm = snd_soc_component_get_dapm(&platform->component);
+	dapm->idle_bias_off = 1;
 	platform->component.read = tegra210_adsp_read;
 	platform->component.write = tegra210_adsp_write;
 	return 0;

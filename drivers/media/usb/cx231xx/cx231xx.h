@@ -78,6 +78,9 @@
 #define CX231XX_BOARD_HAUPPAUGE_930C_HD_1114xx 20
 #define CX231XX_BOARD_HAUPPAUGE_955Q 21
 #define CX231XX_BOARD_TERRATEC_GRABBY 22
+#define CX231XX_BOARD_AVERMEDIA_H837A 23
+#define CX231XX_BOARD_AVERMEDIA_H837B 24
+#define CX231XX_BOARD_AVERMEDIA_H837M 25
 
 /* Limits minimum and default number of buffers */
 #define CX231XX_MIN_BUF                 4
@@ -1005,4 +1008,16 @@ static inline unsigned int norm_maxh(struct cx231xx *dev)
 	else
 		return (dev->norm & V4L2_STD_625_50) ? 576 : 480;
 }
+
+static inline bool is_model_avermedia_h837_series(int model)
+{
+	switch (model) {
+	case CX231XX_BOARD_AVERMEDIA_H837A:
+	case CX231XX_BOARD_AVERMEDIA_H837B:
+	case CX231XX_BOARD_AVERMEDIA_H837M:
+		return true;
+	}
+	return false;
+}
+
 #endif

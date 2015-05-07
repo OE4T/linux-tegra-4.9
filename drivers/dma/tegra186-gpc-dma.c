@@ -831,6 +831,7 @@ static int get_transfer_param(struct tegra_dma_channel *tdc,
 	return -EINVAL;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
 static struct dma_async_tx_descriptor *tegra_dma_prep_dma_memset(
 	struct dma_chan *dc, dma_addr_t dest, int value, size_t len,
 	unsigned long flags)
@@ -918,6 +919,7 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_dma_memset(
 
 	return &dma_desc->txd;
 }
+#endif
 
 static struct dma_async_tx_descriptor *tegra_dma_prep_dma_memcpy(
 	struct dma_chan *dc, dma_addr_t dest, dma_addr_t src,	size_t len,

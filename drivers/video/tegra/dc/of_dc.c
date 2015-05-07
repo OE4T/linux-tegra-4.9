@@ -888,16 +888,19 @@ static int parse_cmu_data(struct device_node *np,
 	struct tegra_dc_cmu *cmu)
 {
 	u16 *csc_parse;
+	u16 *addr_cmu_lut1;
 	u8 *addr_cmu_lut2;
 	struct property *prop;
 	const __be32 *p;
 	u32 u;
 	int csc_count = 0;
+	int lut1_count = 0;
 	int lut2_count = 0;
 
 	memcpy(cmu, &default_cmu, sizeof(struct tegra_dc_cmu));
 
 	csc_parse = &(cmu->csc.krr);
+	addr_cmu_lut1 = &(cmu->lut1[0]);
 	addr_cmu_lut2 = &(cmu->lut2[0]);
 
 	of_property_for_each_u32(np, "nvidia,cmu-csc", prop, p, u)
@@ -914,9 +917,22 @@ static int parse_cmu_data(struct device_node *np,
 		}
 	}
 
+	of_property_for_each_u32(np, "nvidia,cmu-lut1", prop, p, u)
+		lut1_count++;
+	if (lut1_count >
+		(sizeof(cmu->lut1) / sizeof(cmu->lut1[0]))) {
+		pr_err("cmu lut1 overflow\n");
+		return -EINVAL;
+	} else {
+		of_property_for_each_u32(np, "nvidia,cmu-lut1",
+			prop, p, u) {
+			/* OF_DC_LOG("cmu lut1 0x%x\n", u); */
+			*(addr_cmu_lut1++) = (u16)u;
+		}
+	}
+
 	of_property_for_each_u32(np, "nvidia,cmu-lut2", prop, p, u)
 		lut2_count++;
-
 	if (lut2_count >
 		(sizeof(cmu->lut2) / sizeof(cmu->lut2[0]))) {
 		pr_err("cmu lut2 overflow\n");
@@ -2108,6 +2124,7 @@ struct tegra_dc_platform_data
 	struct device_node *entry = NULL;
 #if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 	struct device_node *cmu_np = NULL;
+	struct device_node *cmu_adbRGB_np = NULL;
 #endif
 	struct property *prop;
 	const __be32 *p;
@@ -2435,6 +2452,22 @@ struct tegra_dc_platform_data
 			goto fail_parse;
 		}
 	}
+
+	cmu_adbRGB_np = of_get_child_by_name(np_target_disp,
+		"cmu_adobe_rgb");
+
+	if (!cmu_adbRGB_np) {
+		pr_info("%s: could not find cmu node for adobeRGB\n",
+			__func__);
+	} else {
+		pdata->cmu_adbRGB = devm_kzalloc(&ndev->dev,
+			sizeof(struct tegra_dc_cmu), GFP_KERNEL);
+		if (!pdata->cmu_adbRGB) {
+			dev_err(&ndev->dev, "not enough memory\n");
+			goto fail_parse;
+		}
+	}
+
 #endif
 
 	/*
@@ -2463,6 +2496,16 @@ struct tegra_dc_platform_data
 		if (err)
 			goto fail_parse;
 	}
+
+	if (pdata->cmu_adbRGB != NULL) {
+		err = parse_cmu_data(cmu_adbRGB_np, pdata->cmu_adbRGB);
+		if (err)
+			goto fail_parse;
+	}
+
+	if (!of_property_read_u32(np_dsi_panel, "nvidia,default_color_space"
+						, &pdata->default_clr_space))
+		pdata->default_clr_space = 0;
 #endif
 
 	of_property_for_each_u32(np, "nvidia,dc-flags", prop, p, temp) {
@@ -2512,6 +2555,7 @@ struct tegra_dc_platform_data
 	of_node_put(sd_np);
 #if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 	of_node_put(cmu_np);
+	of_node_put(cmu_adbRGB_np);
 #endif
 	of_node_put(np_target_disp);
 	of_node_put(np_dsi);
@@ -2523,6 +2567,7 @@ fail_parse:
 	of_node_put(sd_np);
 #if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 	of_node_put(cmu_np);
+	of_node_put(cmu_adbRGB_np);
 #endif
 	of_node_put(np_dsi);
 	of_node_put(np_sor);

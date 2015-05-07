@@ -2047,8 +2047,10 @@ static struct tegra_dc_cmu *tegra_dc_get_cmu(struct tegra_dc *dc)
 		dc->out->type == TEGRA_DC_OUT_FAKE_DSI_GANGED ||
 		dc->out->type == TEGRA_DC_OUT_NULL)
 		return &default_cmu;
-	else if (dc->pdata->cmu)
+	if (dc->pdata->cmu && !dc->pdata->default_clr_space)
 		return dc->pdata->cmu;
+	else if (dc->pdata->cmu_adbRGB && dc->pdata->default_clr_space)
+		return dc->pdata->cmu_adbRGB;
 	else if (dc->out->type == TEGRA_DC_OUT_HDMI)
 		return &default_limited_cmu;
 	else
@@ -2184,7 +2186,6 @@ int tegra_dc_update_cmu_aligned(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 }
 
 EXPORT_SYMBOL(tegra_dc_update_cmu_aligned);
-
 #else
 #define tegra_dc_cache_cmu(dc, src_cmu)
 #define tegra_dc_set_cmu(dc, cmu)

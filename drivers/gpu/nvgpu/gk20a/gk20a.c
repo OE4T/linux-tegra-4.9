@@ -2011,8 +2011,10 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	    gk20a_platform_has_syncpoints(g->dev))
 		gpu->flags |= NVGPU_GPU_FLAGS_HAS_SYNCPOINTS;
 
-	if (IS_ENABLED(CONFIG_GK20A_CYCLE_STATS))
+	if (IS_ENABLED(CONFIG_GK20A_CYCLE_STATS)) {
 		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS;
+		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT;
+	}
 
 	gpu->gpc_mask = 1;
 

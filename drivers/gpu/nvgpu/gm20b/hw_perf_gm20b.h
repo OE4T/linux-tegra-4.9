@@ -47,8 +47,8 @@
  *         comparison with unshifted values appropriate for use in field <y>
  *         of register <x>.
  */
-#ifndef _hw_perf_gk20a_h_
-#define _hw_perf_gk20a_h_
+#ifndef _hw_perf_gm20b_h_
+#define _hw_perf_gm20b_h_
 
 static inline u32 perf_pmasys_control_r(void)
 {

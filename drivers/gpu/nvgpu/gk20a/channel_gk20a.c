@@ -486,6 +486,95 @@ static int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 		return -EINVAL;
 	}
 }
+
+
+static int gk20a_flush_cycle_stats_snapshot(struct channel_gk20a *ch)
+{
+	int ret;
+
+	mutex_lock(&ch->cs_client_mutex);
+	if (ch->cs_client)
+		ret = gr_gk20a_css_flush(ch->g, ch->cs_client);
+	else
+		ret = -EBADF;
+	mutex_unlock(&ch->cs_client_mutex);
+
+	return ret;
+}
+
+static int gk20a_attach_cycle_stats_snapshot(struct channel_gk20a *ch,
+				u32 dmabuf_fd,
+				u32 perfmon_id_count,
+				u32 *perfmon_id_start)
+{
+	int ret;
+
+	mutex_lock(&ch->cs_client_mutex);
+	if (ch->cs_client) {
+		ret = -EEXIST;
+	} else {
+		ret = gr_gk20a_css_attach(ch->g,
+					dmabuf_fd,
+					perfmon_id_count,
+					perfmon_id_start,
+					&ch->cs_client);
+	}
+	mutex_unlock(&ch->cs_client_mutex);
+
+	return ret;
+}
+
+static int gk20a_free_cycle_stats_snapshot(struct channel_gk20a *ch)
+{
+	int ret;
+
+	mutex_lock(&ch->cs_client_mutex);
+	if (ch->cs_client) {
+		ret = gr_gk20a_css_detach(ch->g, ch->cs_client);
+		ch->cs_client = NULL;
+	} else {
+		ret = 0;
+	}
+	mutex_unlock(&ch->cs_client_mutex);
+
+	return ret;
+}
+
+static int gk20a_channel_cycle_stats_snapshot(struct channel_gk20a *ch,
+			struct nvgpu_cycle_stats_snapshot_args *args)
+{
+	int ret;
+
+	if (!args->dmabuf_fd)
+		return -EINVAL;
+
+	/* handle the command (most frequent cases first) */
+	switch (args->cmd) {
+	case NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT_CMD_FLUSH:
+		ret = gk20a_flush_cycle_stats_snapshot(ch);
+		args->extra = 0;
+		break;
+
+	case NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT_CMD_ATTACH:
+		ret = gk20a_attach_cycle_stats_snapshot(ch,
+						args->dmabuf_fd,
+						args->extra,
+						&args->extra);
+		break;
+
+	case NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT_CMD_DETACH:
+		ret = gk20a_free_cycle_stats_snapshot(ch);
+		args->extra = 0;
+		break;
+
+	default:
+		pr_err("cyclestats: unknown command %u\n", args->cmd);
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret;
+}
 #endif
 
 static int gk20a_init_error_notifier(struct channel_gk20a *ch,
@@ -602,6 +691,7 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	gk20a_free_cycle_stats_buffer(ch);
+	gk20a_free_cycle_stats_snapshot(ch);
 #endif
 
 	channel_gk20a_free_priv_cmdbuf(ch);
@@ -1639,6 +1729,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	INIT_LIST_HEAD(&c->jobs);
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	mutex_init(&c->cyclestate.cyclestate_buffer_mutex);
+	mutex_init(&c->cs_client_mutex);
 #endif
 	INIT_LIST_HEAD(&c->dbg_s_list);
 	mutex_init(&c->dbg_s_lock);
@@ -2335,6 +2426,20 @@ long gk20a_channel_ioctl(struct file *filp,
 		err = gk20a_channel_events_ctrl(ch,
 			   (struct nvgpu_channel_events_ctrl_args *)buf);
 		break;
+#ifdef CONFIG_GK20A_CYCLE_STATS
+	case NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT:
+		err = gk20a_busy(dev);
+		if (err) {
+			dev_err(&dev->dev,
+				"%s: failed to host gk20a for ioctl cmd: 0x%x",
+				__func__, cmd);
+			break;
+		}
+		err = gk20a_channel_cycle_stats_snapshot(ch,
+				(struct nvgpu_cycle_stats_snapshot_args *)buf);
+		gk20a_idle(dev);
+		break;
+#endif
 	default:
 		dev_dbg(&dev->dev, "unrecognized ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;

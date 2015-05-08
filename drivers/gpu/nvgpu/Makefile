@@ -82,6 +82,9 @@ nvgpu-$(CONFIG_TEGRA_CLK_FRAMEWORK) += \
 nvgpu-$(CONFIG_GK20A_DEVFREQ) += \
 	gk20a/gk20a_scale.o
 
+nvgpu-$(CONFIG_GK20A_CYCLE_STATS) += \
+	gk20a/css_gr_gk20a.o
+
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/drivers/gpu/nvgpu
 ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/include

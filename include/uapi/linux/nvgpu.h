@@ -106,6 +106,8 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS		(1 << 4)
 /* MAP_BUFFER_EX with unmapped PTE */
 #define NVGPU_GPU_FLAGS_SUPPORT_UNMAPPED_PTE		(1 << 5)
+/* NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT is available */
+#define NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT	(1 << 6)
 
 struct nvgpu_gpu_characteristics {
 	__u32 arch;
@@ -731,6 +733,21 @@ struct nvgpu_channel_events_ctrl_args {
 #define NVGPU_IOCTL_CHANNEL_EVENTS_CTRL_CMD_ENABLE  1
 #define NVGPU_IOCTL_CHANNEL_EVENTS_CTRL_CMD_CLEAR   2
 
+/* cycle stats snapshot buffer support for mode E */
+struct nvgpu_cycle_stats_snapshot_args {
+	__u32 cmd;		/* in: command to handle     */
+	__u32 dmabuf_fd;	/* in: dma buffer handler    */
+	__u32 extra;		/* in/out: extra payload e.g.*/
+				/*    counter/start perfmon  */
+	__u32 pad0[1];
+};
+
+/* valid commands to control cycle stats shared buffer */
+#define NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT_CMD_FLUSH   0
+#define NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT_CMD_ATTACH  1
+#define NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT_CMD_DETACH  2
+
+
 #define NVGPU_IOCTL_CHANNEL_SET_NVMAP_FD	\
 	_IOW(NVGPU_IOCTL_MAGIC, 5, struct nvgpu_set_nvmap_fd_args)
 #define NVGPU_IOCTL_CHANNEL_SET_TIMEOUT	\
@@ -769,9 +786,11 @@ struct nvgpu_channel_events_ctrl_args {
 	_IO(NVGPU_IOCTL_MAGIC,  116)
 #define NVGPU_IOCTL_CHANNEL_EVENTS_CTRL	\
 	_IOW(NVGPU_IOCTL_MAGIC,  117, struct nvgpu_channel_events_ctrl_args)
+#define NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT	\
+	_IOWR(NVGPU_IOCTL_MAGIC, 118, struct nvgpu_cycle_stats_snapshot_args)
 
 #define NVGPU_IOCTL_CHANNEL_LAST	\
-	_IOC_NR(NVGPU_IOCTL_CHANNEL_EVENTS_CTRL)
+	_IOC_NR(NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT)
 #define NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvgpu_submit_gpfifo_args)
 
 /*

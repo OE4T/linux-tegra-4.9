@@ -170,6 +170,11 @@ struct sm_info {
 	u8 tpc_index;
 };
 
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+struct gk20a_cs_snapshot_client;
+struct gk20a_cs_snapshot;
+#endif
+
 struct gr_gk20a {
 	struct gk20a *g;
 	struct {
@@ -294,6 +299,10 @@ struct gr_gk20a {
 	u32 fbp_en_mask;
 	u32 no_of_sm;
 	struct sm_info *sm_to_cluster;
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	struct mutex			cs_lock;
+	struct gk20a_cs_snapshot	*cs_data;
+#endif
 };
 
 void gk20a_fecs_dump_falcon_stats(struct gk20a *g);
@@ -496,5 +505,28 @@ void gr_gk20a_free_gr_ctx(struct gk20a *g,
 			  struct vm_gk20a *vm, struct gr_ctx_desc *gr_ctx);
 int gr_gk20a_halt_pipe(struct gk20a *g);
 int gr_gk20a_debugfs_init(struct gk20a *g);
+
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+int gr_gk20a_css_attach(struct gk20a *g,	/* in - main hw structure */
+			u32 dmabuf_fd,		/* in - dma mapped memory */
+			u32 perfmon_id_count,	/* in - number of perfmons*/
+			u32 *perfmon_id_start,	/* out- index of first pm */
+			/* out - pointer to client data used in later     */
+			struct gk20a_cs_snapshot_client **css_client);
+
+int gr_gk20a_css_detach(struct gk20a *g,
+				struct gk20a_cs_snapshot_client *css_client);
+int gr_gk20a_css_flush(struct gk20a *g,
+				struct gk20a_cs_snapshot_client *css_client);
+
+void gr_gk20a_free_cyclestats_snapshot_data(struct gk20a *g);
+
+#else
+/* fake empty cleanup function if no cyclestats snapshots enabled */
+static inline void gr_gk20a_free_cyclestats_snapshot_data(struct gk20a *g)
+{
+	(void)g;
+}
+#endif
 
 #endif /*__GR_GK20A_H__*/

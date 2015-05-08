@@ -133,6 +133,9 @@ struct channel_gk20a {
 	struct dma_buf *cyclestate_buffer_handler;
 	struct mutex cyclestate_buffer_mutex;
 	} cyclestate;
+
+	struct mutex cs_client_mutex;
+	struct gk20a_cs_snapshot_client *cs_client;
 #endif
 	struct mutex dbg_s_lock;
 	struct list_head dbg_s_list;

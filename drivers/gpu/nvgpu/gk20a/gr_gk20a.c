@@ -2847,6 +2847,8 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 
 	gk20a_dbg_fn("");
 
+	gr_gk20a_free_cyclestats_snapshot_data(g);
+
 	gr_gk20a_free_global_ctx_buffers(g);
 
 	gk20a_gmmu_free(g, &gr->mmu_wr_mem);
@@ -4522,6 +4524,11 @@ int gk20a_init_gr_support(struct gk20a *g)
 	u32 err;
 
 	gk20a_dbg_fn("");
+
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	mutex_init(&g->gr.cs_lock);
+	g->gr.cs_data = NULL;
+#endif
 
 	/* this is required before gr_gk20a_init_ctx_state */
 	mutex_init(&g->gr.fecs_mutex);

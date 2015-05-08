@@ -1162,7 +1162,6 @@ static ssize_t nvsd_registers_show(struct kobject *kobj,
 
 	tegra_dc_get(dc);
 
-	mutex_unlock(&dc->lock);
 	NVSD_PRINT_REG(DC_DISP_SD_CONTROL);
 	NVSD_PRINT_REG(DC_DISP_SD_CSC_COEFF);
 	NVSD_PRINT_REG_ARRAY(DC_DISP_SD_LUT);

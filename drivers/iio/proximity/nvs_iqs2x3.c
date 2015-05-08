@@ -32,7 +32,7 @@
 #include <linux/nvs_proximity.h>
 
 
-#define IQS_DRIVER_VERSION		(3)
+#define IQS_DRIVER_VERSION		(4)
 #define IQS_VENDOR			"Azoteq"
 #define IQS_NAME			"iqs2x3"
 #define IQS_NAME_IQS253			"iqs253"
@@ -1105,8 +1105,6 @@ static void iqs_work(struct work_struct *ws)
 	struct iqs_state *st = container_of((struct delayed_work *)ws,
 					    struct iqs_state, dw);
 
-	if (st->sts & NVS_STS_SPEW_IRQ)
-		dev_info(&st->i2c->dev, "%s\n", __func__);
 	iqs_read(st);
 }
 
@@ -1133,7 +1131,8 @@ static int iqs_disable(struct iqs_state *st, int snsr_id)
 	}
 	if (disable) {
 		iqs_disable_irq(st);
-		cancel_delayed_work(&st->dw);
+		if (st->dw.work.func)
+			cancel_delayed_work(&st->dw);
 		ret = iqs_pm(st, false);
 		if (!ret)
 			st->enabled = 0;
@@ -1492,8 +1491,6 @@ static int iqs_remove(struct i2c_client *client)
 					st->nvs->remove(st->nvs_st[i]);
 			}
 		}
-		if (st->dw.wq)
-			destroy_workqueue(st->dw.wq);
 		iqs_pm_exit(st);
 	}
 	dev_info(&client->dev, "%s\n", __func__);
@@ -1529,6 +1526,7 @@ static int iqs_id_dev(struct iqs_state *st, const char *name)
 		i = st->hal_bit->devinf_id.offset + 1;
 		ret = iqs_i2c_read(st, hal_i, i);
 		if (ret) {
+			st->hal_tbl_n = 0; /* disable PM I2C */
 			return ret;
 		} else {
 			i += st->hal_tbl[hal_i].ndx;
@@ -1736,8 +1734,6 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 					__func__, st->gpio_rdy, ret);
 				return -ENODEV;
 			}
-
-			st->i2c->irq = gpio_to_irq(st->gpio_rdy);
 		}
 	} else {
 		/* can't communicate with device without this GPIO */
@@ -1822,6 +1818,8 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 
 	INIT_DELAYED_WORK(&st->dw, iqs_work);
+	if (st->gpio_rdy > 0)
+		st->i2c->irq = gpio_to_irq(st->gpio_rdy);
 	if (client->irq) {
 		irqflags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT;
 		for (i = 0; i < IQS_DEV_N; i++) {
@@ -1838,6 +1836,7 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		}
 	}
 
+	iqs_mutex_lock(st);
 	if (st->os) {
 		iqs_disable(st, -1);
 	} else {
@@ -1853,6 +1852,7 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 			iqs_disable(st, -1);
 		}
 	}
+	iqs_mutex_unlock(st);
 	dev_info(&client->dev, "%s done\n", __func__);
 	return 0;
 

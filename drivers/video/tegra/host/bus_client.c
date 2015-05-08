@@ -1073,7 +1073,7 @@ static long nvhost_channelctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
 	struct nvhost_channel_userctx *priv = filp->private_data;
-	struct nvhost_master *host = nvhost_get_host(priv->pdev);
+	struct nvhost_master *host;
 	struct device *dev;
 	u8 buf[NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE];
 	int err = 0;
@@ -1097,6 +1097,7 @@ static long nvhost_channelctl(struct file *filp,
 		return -EFAULT;
 	}
 
+	host = nvhost_get_host(priv->pdev);
 	dev = &priv->pdev->dev;
 	switch (cmd) {
 	case NVHOST_IOCTL_CHANNEL_OPEN:

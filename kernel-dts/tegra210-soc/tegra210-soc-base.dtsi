@@ -13,6 +13,7 @@
  * more details.
  */
 
+#include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include "tegra210-platforms/tegra210-thermal.dtsi"
 #include <dt-bindings/gpio/tegra-gpio.h>
@@ -730,14 +731,15 @@
 	};
 
 	gpu {
-		compatible = "nvidia,tegra210-gm20b";
+		compatible = "nvidia,tegra210-gm20b", "nvidia,gm20b";
 		nvidia,host1x = <&host1x>;
 		power-domains = <&gpu_pd>;
 		reg = <0x0 0x57000000 0x0 0x01000000>,
 		    <0x0 0x58000000 0x0 0x01000000>,
 		    <0x0 0x538f0000 0x0 0x00001000>;
-		    interrupts = <0 157 0x04
-			    0 158 0x04>;
+		interrupts = <GIC_SPI 157 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 158 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "stall", "nonstall";
 		iommus = <&smmu TEGRA_SWGROUP_GPUB>;
 		access-vpr-phys;
 		status = "disabled";

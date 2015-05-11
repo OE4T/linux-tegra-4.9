@@ -1276,6 +1276,20 @@ static u32 tegra_hdmi_get_rgb_ycc(struct tegra_hdmi *hdmi)
 	return HDMI_AVI_RGB;
 }
 
+static bool tegra_hdmi_is_ex_colorimetry(struct tegra_hdmi *hdmi)
+{
+	return !!(hdmi->dc->mode.vmode & FB_VMODE_EC_ENABLE);
+}
+
+static u32 tegra_hdmi_get_ex_colorimetry(struct tegra_hdmi *hdmi)
+{
+	u32 vmode = hdmi->dc->mode.vmode;
+
+	return tegra_hdmi_is_ex_colorimetry(hdmi) ?
+		((vmode & FB_VMODE_EC_MASK) >> FB_VMODE_EC_SHIFT) :
+		HDMI_AVI_EXT_COLORIMETRY_INVALID;
+}
+
 static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 {
 	struct hdmi_avi_infoframe *avi = &hdmi->avi;
@@ -1292,11 +1306,13 @@ static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 
 	avi->act_format = HDMI_AVI_ACTIVE_FORMAT_SAME;
 	avi->aspect_ratio = tegra_hdmi_get_aspect_ratio(hdmi);
-	avi->colorimetry = HDMI_AVI_COLORIMETRY_DEFAULT;
+	avi->colorimetry = tegra_hdmi_is_ex_colorimetry(hdmi) ?
+			HDMI_AVI_COLORIMETRY_EXTENDED_VALID :
+			HDMI_AVI_COLORIMETRY_DEFAULT;
 
 	avi->scaling = HDMI_AVI_SCALING_UNKNOWN;
 	avi->rgb_quant = HDMI_AVI_RGB_QUANT_DEFAULT;
-	avi->ext_colorimetry = HDMI_AVI_EXT_COLORIMETRY_INVALID;
+	avi->ext_colorimetry = tegra_hdmi_get_ex_colorimetry(hdmi);
 	avi->it_content = HDMI_AVI_IT_CONTENT_FALSE;
 
 	/* set correct vic if video format is cea defined else set 0 */

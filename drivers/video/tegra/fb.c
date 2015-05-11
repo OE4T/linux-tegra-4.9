@@ -715,6 +715,8 @@ void tegra_fb_update_fix(struct tegra_fb_info *fb_info,
 
 	fix->max_clk_rate = tegra_edid_get_max_clk_rate(dc_edid);
 
+	fix->colorimetry = tegra_edid_get_ex_colorimetry(dc_edid);
+
 	mutex_unlock(&fb_info->info->lock);
 }
 

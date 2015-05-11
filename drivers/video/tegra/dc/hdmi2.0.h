@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/hdmi2.0.h
  *
- * Copyright (c) 2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -114,6 +114,11 @@ enum {
 	HDMI_AVI_EXT_COLORIMETRY_INVALID = 0x0,
 	HDMI_AVI_EXT_COLORIMETRY_xvYCC601 = 0x0,
 	HDMI_AVI_EXT_COLORIMETRY_xvYCC709 = 0x1,
+	HDMI_AVI_EXT_COLORIMETRY_sYCC601 = 0x2,
+	HDMI_AVI_EXT_COLORIMETRY_ADOBE_YCC601 = 0x3,
+	HDMI_AVI_EXT_COLORIMETRY_ADOBE_RGB = 0x4,
+	HDMI_AVI_EXT_COLORIMETRY_BT2020_CYCC = 0x5,
+	HDMI_AVI_EXT_COLORIMETRY_BT2020_YCC_RGB = 0x6,
 };
 
 enum {

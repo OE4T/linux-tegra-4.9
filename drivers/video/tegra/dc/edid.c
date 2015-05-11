@@ -43,6 +43,7 @@ struct tegra_edid_pvt {
 	u16			color_depth_flag;
 	u16			max_tmds_char_rate_hf_mhz;
 	u16			max_tmds_char_rate_hllc_mhz;
+	u16			colorimetry;
 	/* Note: dc_edid must remain the last member */
 	struct tegra_dc_edid		dc_edid;
 };
@@ -201,6 +202,7 @@ static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 	edid->scdc_present = false;
 	edid->hfvsdb_present = false;
 	edid->db420_present = false;
+	edid->colorimetry = 0;
 	ptr = &raw[0];
 
 	/* If CEA 861 block get info for eld struct */
@@ -348,6 +350,9 @@ static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 			case CEA_DATA_BLOCK_EXT_Y420CMDB:
 				edid->db420_present = true;
 				break;
+			case CEA_DATA_BLOCK_EXT_CDB:
+				edid->colorimetry = ptr[2];
+				break;
 			};
 
 			len++;
@@ -450,6 +455,16 @@ bool tegra_edid_is_420db_present(struct tegra_edid *edid)
 	}
 
 	return edid->data->db420_present;
+}
+
+u16 tegra_edid_get_ex_colorimetry(struct tegra_edid *edid)
+{
+	if (!edid || !edid->data) {
+		pr_warn("edid invalid\n");
+		return 0;
+	}
+
+	return edid->data->colorimetry;
 }
 
 int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs,

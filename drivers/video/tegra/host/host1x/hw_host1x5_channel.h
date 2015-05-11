@@ -50,6 +50,14 @@
 #ifndef _hw_host1x5_channel_h_
 #define _hw_host1x5_channel_h_
 
+static inline u32 host1x_channel_ch_aperture_start_r(void)
+{
+	return 0x0;
+}
+static inline u32 host1x_channel_ch_aperture_size_r(void)
+{
+	return 0x100;
+}
 static inline u32 host1x_channel_fifostat_r(void)
 {
 	return 0x24;
@@ -57,14 +65,6 @@ static inline u32 host1x_channel_fifostat_r(void)
 static inline u32 host1x_channel_fifostat_cfempty_v(u32 r)
 {
 	return (r >> 13) & 0x1;
-}
-static inline u32 host1x_channel_ch_aperture_start_r(void)
-{
-	return 0x10000;
-}
-static inline u32 host1x_channel_ch_aperture_size_r(void)
-{
-	return 0x100;
 }
 static inline u32 host1x_channel_dmastart_r(void)
 {

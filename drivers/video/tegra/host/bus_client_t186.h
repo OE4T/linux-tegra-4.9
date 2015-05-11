@@ -21,7 +21,7 @@
 
 void host1x_hypervisor_writel(struct platform_device *pdev, u32 r, u32 v)
 {
-	void __iomem *aperture = get_aperture(pdev, 0);
+	void __iomem *aperture = get_aperture(pdev, 1);
 
 	if (aperture) {
 		nvhost_dbg(dbg_reg, " d=%s r=0x%x v=0x%x", pdev->name, r, v);
@@ -31,7 +31,7 @@ void host1x_hypervisor_writel(struct platform_device *pdev, u32 r, u32 v)
 
 u32 host1x_hypervisor_readl(struct platform_device *pdev, u32 r)
 {
-	void __iomem *aperture = get_aperture(pdev, 0);
+	void __iomem *aperture = get_aperture(pdev, 1);
 	u32 v = 0;
 
 	if (aperture) {

@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/clk.h>
 #include <linux/kernel.h>
 #include <linux/io.h>
 #include <linux/err.h>
@@ -184,3 +185,21 @@ struct clk *tegra_clk_register_mc(const char *name, const char *parent_name,
 	return clk_register_divider_table(NULL, name, parent_name, 0, reg,
 					  16, 1, 0, mc_div_table, lock);
 }
+
+#if defined(CONFIG_PM_SLEEP)
+void tegra_clk_divider_resume(struct clk *c, unsigned long rate)
+{
+	struct clk_hw *hw = __clk_get_hw(c);
+	struct clk *parent = clk_get_parent(c);
+	unsigned long parent_rate;
+
+	if (IS_ERR(parent)) {
+		WARN_ON(1);
+		return;
+	}
+	parent_rate = clk_get_rate(parent);
+
+	if (clk_frac_div_set_rate(hw, rate, parent_rate) < 0)
+		WARN_ON(1);
+}
+#endif

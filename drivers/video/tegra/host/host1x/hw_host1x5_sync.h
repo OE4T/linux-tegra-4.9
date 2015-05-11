@@ -160,7 +160,7 @@ static inline u32 host1x_sync_mlock_owner_0_mlock_ch_owns_0_v(u32 r)
 }
 static inline u32 host1x_sync_syncpt_base_0_r(void)
 {
-	return 0x18000;
+	return 0x8000;
 }
 static inline u32 host1x_sync_cfpeek_ctrl_r(void)
 {
@@ -228,15 +228,15 @@ static inline u32 host1x_sync_cbclass_r(void)
 }
 static inline u32 host1x_sync_syncpt_thresh_cpu0_int_status_r(void)
 {
-	return 0x16464;
+	return 0x6464;
 }
 static inline u32 host1x_sync_syncpt_thresh_int_disable_r(void)
 {
-	return 0x16590;
+	return 0x6590;
 }
 static inline u32 host1x_sync_syncpt_thresh_int_enable_cpu0_r(void)
 {
-	return 0x1652c;
+	return 0x652c;
 }
 static inline u32 host1x_sync_syncpt_intgmask_r(void)
 {
@@ -244,15 +244,15 @@ static inline u32 host1x_sync_syncpt_intgmask_r(void)
 }
 static inline u32 host1x_sync_syncpt_cpu_incr_r(void)
 {
-	return 0x16400;
+	return 0x6400;
 }
 static inline u32 host1x_sync_syncpt_0_r(void)
 {
-	return 0x18080;
+	return 0x8080;
 }
 static inline u32 host1x_sync_syncpt_int_thresh_0_r(void)
 {
-	return 0x18a00;
+	return 0x8a00;
 }
 static inline u32 host1x_sync_syncpt_prot_en_0_r(void)
 {
@@ -272,7 +272,7 @@ static inline u32 host1x_sync_syncpt_prot_en_0_vm_en_f(u32 v)
 }
 static inline u32 host1x_sync_syncpt_ch_app_0_r(void)
 {
-	return 0x19384;
+	return 0x9384;
 }
 static inline u32 host1x_sync_syncpt_ch_app_0_syncpt_ch_f(u32 v)
 {

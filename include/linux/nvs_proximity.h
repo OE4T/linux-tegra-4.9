@@ -46,6 +46,9 @@
  * @thresholds_valid: NVS determines if both thresholds valid.
  * @proximity_binary_en: NVS determines if binary reporting is
  *                       enabled.
+ * @proximity_binary_en: NVS determines if HW binary reporting is
+ *                       enabled via device tree, or driver enables
+ *                       this by setting hw_mask to 1.
  * @calibration_en: NVS determines if calibration is enabled.
  * @poll_delay_ms: NVS writes the poll time needed if polling.
  * @delay_us: Driver writes the requested sample time.
@@ -69,6 +72,7 @@ struct nvs_proximity {
 	bool thresholds_valid;		/* both thresholds valid */
 	bool calibration_en;		/* if calibration enabled */
 	bool proximity_binary_en;	/* if binary proximity enabled */
+	bool proximity_binary_hw;	/* if HW binary proximity enabled */
 	unsigned int poll_delay_ms;	/* HW polling delay (ms) */
 	unsigned int delay_us;		/* OS requested sample delay */
 	unsigned int report;		/* report count */

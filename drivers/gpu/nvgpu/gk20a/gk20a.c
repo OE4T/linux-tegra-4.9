@@ -1311,10 +1311,12 @@ static int gk20a_secure_page_alloc(struct platform_device *pdev)
 	int err = 0;
 
 	if (platform->secure_page_alloc) {
-		tegra_periph_reset_assert(platform->clk[0]);
+		if (platform->num_clks > 0)
+			tegra_periph_reset_assert(platform->clk[0]);
 		udelay(10);
 		err = platform->secure_page_alloc(pdev);
-		tegra_periph_reset_deassert(platform->clk[0]);
+		if (platform->num_clks > 0)
+			tegra_periph_reset_deassert(platform->clk[0]);
 	}
 
 	if (!err)

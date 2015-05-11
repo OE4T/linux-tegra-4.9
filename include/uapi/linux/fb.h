@@ -158,6 +158,15 @@
 #define FB_CAP_DC_MASK		(FB_CAP_Y420_DC_30 | \
 				FB_CAP_Y420_DC_36 | FB_CAP_Y420_DC_48)
 
+#define FB_COL_XVYCC601		0x1
+#define FB_COL_XVYCC709		0x2
+#define FB_COL_SYCC601		0x4
+#define FB_COL_ADOBE_YCC601	0x8
+#define FB_COL_ADOBE_RGB	0x10
+#define FB_COL_BT2020_CYCC	0x20
+#define FB_COL_BT2020_YCC	0x40
+#define FB_COL_BT2020_RGB	0x80
+
 struct fb_fix_screeninfo {
 	char id[16];			/* identification string eg "TT Builtin" */
 	unsigned long smem_start;	/* Start of frame buffer mem */
@@ -178,6 +187,7 @@ struct fb_fix_screeninfo {
 	__u16 capabilities;		/* see FB_CAP_*			*/
 	__u16 max_clk_rate;	/* max supported clock rate on link in Mhz */
 	__u16 reserved[1];		/* Reserved for future compatibility */
+	__u16 colorimetry;		/* see FB_COL_* */
 };
 
 /* Interpretation of offset for color fields: All offsets are from the right,
@@ -237,7 +247,23 @@ struct fb_bitfield {
 
 #define FB_VMODE_SET_YUV_MASK	(FB_VMODE_Y420 | FB_VMODE_Y422 | \
 				 FB_VMODE_Y24 | FB_VMODE_Y30)
-#define FB_VMODE_MASK		0x03ff
+
+/* extended colorimetry */
+#define FB_VMODE_EC_ENABLE	0x400
+#define FB_VMODE_EC_SHIFT	11
+#define FB_VMODE_EC_MASK	(0xf << FB_VMODE_EC_SHIFT)
+#define FB_VMODE_EC_XVYCC601	((0x0 << FB_VMODE_EC_SHIFT) & FB_VMODE_EC_MASK)
+#define FB_VMODE_EC_XVYCC709	((0x1 << FB_VMODE_EC_SHIFT) & FB_VMODE_EC_MASK)
+#define FB_VMODE_EC_SYCC601	((0x2 << FB_VMODE_EC_SHIFT) & FB_VMODE_EC_MASK)
+#define FB_VMODE_EC_ADOBE_YCC601	((0x3 << FB_VMODE_EC_SHIFT) & \
+					FB_VMODE_EC_MASK)
+#define FB_VMODE_EC_ADOBE_RGB	((0x4 << FB_VMODE_EC_SHIFT) & FB_VMODE_EC_MASK)
+#define FB_VMODE_EC_BT2020_CYCC	((0x5 << FB_VMODE_EC_SHIFT) & \
+					FB_VMODE_EC_MASK)
+#define FB_VMODE_EC_BT2020_YCC_RGB	((0x6 << FB_VMODE_EC_SHIFT) & \
+					FB_VMODE_EC_MASK)
+
+#define FB_VMODE_MASK		0x7fff
 
 #define FB_VMODE_YWRAP		0x10000	/* ywrap instead of panning     */
 #define FB_VMODE_SMOOTH_XPAN	0x20000	/* smooth xpan possible (internally used) */

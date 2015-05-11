@@ -72,6 +72,10 @@ extern int i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 extern int __i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 			  int num);
 
+/* Change bus clock rate for i2c adapter */
+extern int i2c_set_adapter_bus_clk_rate(struct i2c_adapter *adap, int bus_rate);
+extern int i2c_get_adapter_bus_clk_rate(struct i2c_adapter *adap);
+
 /* This is the very generalized SMBus access routine. You probably do not
    want to use this, though; one of the functions below may be much easier,
    and probably just as fast.

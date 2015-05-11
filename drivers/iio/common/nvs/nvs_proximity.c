@@ -148,6 +148,7 @@
  */
 
 
+#include <linux/of.h>
 #include <linux/nvs_proximity.h>
 
 
@@ -170,6 +171,20 @@ static void nvs_proximity_interpolate(int x1, s64 x2, int x3,
 	if (dividend < 0)
 		dividend = 0;
 	*y2 = (u32)dividend;
+}
+
+static int nvs_proximity_poll_delay(struct nvs_proximity *np, int ret,
+				    unsigned int poll_delay,
+				    bool report_delay_min)
+{
+	if (report_delay_min)
+		poll_delay = np->delay_us;
+	if ((poll_delay < np->cfg->delay_us_min) || np->calibration_en)
+		poll_delay = np->cfg->delay_us_min;
+	np->poll_delay_ms = poll_delay / 1000;
+	if (np->report || np->calibration_en)
+		ret = RET_POLL_NEXT; /* poll for next sample */
+	return ret;
 }
 
 /**
@@ -219,6 +234,27 @@ int nvs_proximity_read(struct nvs_proximity *np)
 			poll_delay = delay;
 			report_delay_min = false;
 		}
+	}
+	if (np->proximity_binary_hw) {
+		/* this device has proximity binary HW (HW reads 0 or 1)
+		 * so just report value if changed
+		 */
+		ret = RET_NO_CHANGE;
+		if (np->hw != np->proximity) {
+			np->proximity = np->hw;
+			np->report = np->cfg->report_n;
+		}
+		if (np->calibration_en)
+			np->proximity = np->hw;
+		if (np->report && report_delay_min) {
+			np->report--;
+			np->timestamp_report = np->timestamp;
+			np->handler(np->nvs_data, &np->proximity,
+				    np->timestamp_report);
+			ret = RET_HW_UPDATE;
+		}
+		return nvs_proximity_poll_delay(np, ret, poll_delay,
+						report_delay_min);
 	}
 	/* threshold flags */
 	thresh_lo = np->cfg->thresh_lo;
@@ -367,14 +403,8 @@ int nvs_proximity_read(struct nvs_proximity *np)
 			}
 		}
 	}
-	if (report_delay_min)
-		poll_delay = np->delay_us;
-	if ((poll_delay < np->cfg->delay_us_min) || np->calibration_en)
-		poll_delay = np->cfg->delay_us_min;
-	np->poll_delay_ms = poll_delay / 1000;
-	if (np->report || np->calibration_en)
-		ret = RET_POLL_NEXT; /* poll for next sample */
-	return ret;
+	return nvs_proximity_poll_delay(np, ret, poll_delay,
+					report_delay_min);
 }
 
 /**
@@ -408,6 +438,8 @@ int nvs_proximity_enable(struct nvs_proximity *np)
 		np->poll_delay_ms = np->delay_us * 1000;
 	else
 		np->poll_delay_ms = np->cfg->delay_us_min * 1000;
+	if (np->hw_mask == 1)
+		np->proximity_binary_hw = true;
 	return 0;
 }
 
@@ -426,8 +458,24 @@ int nvs_proximity_enable(struct nvs_proximity *np)
 int nvs_proximity_of_dt(struct nvs_proximity *np, const struct device_node *dn,
 			const char *dev_name)
 {
+	s32 binary_hw = -1;
+	char str[256];
+	int ret;
+
 	if (np->cfg)
 		np->cfg->flags = SENSOR_FLAG_ON_CHANGE_MODE;
+	if (dn == NULL)
+		return -EINVAL;
+
+	if (dev_name == NULL)
+		dev_name = NVS_PROXIMITY_STRING;
+	ret = sprintf(str, "%s_binary_hw", dev_name);
+	if (ret > 0)
+		of_property_read_s32(dn, str, &binary_hw);
+	if (binary_hw > 0)
+		np->proximity_binary_hw = true;
+	else if (!binary_hw)
+		np->proximity_binary_hw = false;
 	return 0;
 }
 

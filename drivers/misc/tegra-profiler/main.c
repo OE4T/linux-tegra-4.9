@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/main.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -178,9 +178,10 @@ validate_freq(unsigned int freq)
 }
 
 static int
-set_parameters(struct quadd_parameters *p, uid_t *debug_app_uid)
+set_parameters(struct quadd_parameters *p)
 {
 	int i, err, uid = 0;
+	uid_t task_uid, current_uid;
 	int pmu_events_id[QUADD_MAX_COUNTERS];
 	int pl310_events_id;
 	int nr_pmu = 0, nr_pl310 = 0;
@@ -188,14 +189,9 @@ set_parameters(struct quadd_parameters *p, uid_t *debug_app_uid)
 	u64 *low_addr_p;
 
 	if (!validate_freq(p->freq)) {
-		pr_err("%s: incorrect frequency: %u\n", __func__, p->freq);
+		pr_err("error: incorrect frequency: %u\n", p->freq);
 		return -EINVAL;
 	}
-
-	ctx.param = *p;
-
-	for (i = 0; i < ARRAY_SIZE(p->reserved); i++)
-		ctx.param.reserved[i] = p->reserved[i];
 
 	/* Currently only one process */
 	if (p->nr_pids != 1)
@@ -203,40 +199,43 @@ set_parameters(struct quadd_parameters *p, uid_t *debug_app_uid)
 
 	p->package_name[sizeof(p->package_name) - 1] = '\0';
 
+	ctx.param = *p;
+
 	rcu_read_lock();
 	task = pid_task(find_vpid(p->pids[0]), PIDTYPE_PID);
 	rcu_read_unlock();
 	if (!task) {
-		pr_err("Process not found: %u\n", p->pids[0]);
+		pr_err("error: process not found: %u\n", p->pids[0]);
 		return -ESRCH;
 	}
 
-	pr_info("owner/task uids: %u/%u\n",
-		from_kuid(&init_user_ns, current_fsuid()),
-		from_kuid(&init_user_ns, task_uid(task)));
+	current_uid = from_kuid(&init_user_ns, current_fsuid());
+	task_uid = from_kuid(&init_user_ns, task_uid(task));
+	pr_info("owner/task uids: %u/%u\n", current_uid, task_uid);
+
 	if (!capable(CAP_SYS_ADMIN)) {
-		if (!uid_eq(current_fsuid(), task_uid(task))) {
+		if (current_uid != task_uid) {
+			pr_info("package: %s\n", p->package_name);
+
 			uid = quadd_auth_is_debuggable((char *)p->package_name);
 			if (uid < 0) {
-				pr_err("Error: QuadD security service\n");
+				pr_err("error: tegra profiler security service\n");
 				return uid;
 			} else if (uid == 0) {
-				pr_err("Error: app is not debuggable\n");
+				pr_err("error: app is not debuggable\n");
 				return -EACCES;
 			}
+			pr_info("app is debuggable, uid: %u\n", uid);
 
-			*debug_app_uid = uid;
-			pr_info("debug_app_uid: %u\n", uid);
+			if (task_uid != uid) {
+				pr_err("error: uids are not matched\n");
+				return -EACCES;
+			}
 		}
 		ctx.collect_kernel_ips = 0;
 	} else {
 		ctx.collect_kernel_ips = 1;
 	}
-
-	for (i = 0; i < p->nr_pids; i++)
-		ctx.param.pids[i] = p->pids[i];
-
-	ctx.param.nr_pids = p->nr_pids;
 
 	for (i = 0; i < p->nr_events; i++) {
 		int event = p->events[i];

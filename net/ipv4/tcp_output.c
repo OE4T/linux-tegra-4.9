@@ -42,6 +42,12 @@
 #include <linux/gfp.h>
 #include <linux/module.h>
 
+/* allow Tegra qdisc to restrict tcp rx datarate */
+#ifdef CONFIG_NET_SCH_TEGRA
+uint tcp_window_divisor = 1;
+module_param(tcp_window_divisor, uint, 0644);
+#endif
+
 /* People can turn this off for buggy TCP's found in printers etc. */
 int sysctl_tcp_retrans_collapse __read_mostly = 1;
 
@@ -991,6 +997,17 @@ static int tcp_transmit_skb(struct sock *sk, struct sk_buff *skb, int clone_it,
 	skb_shinfo(skb)->gso_type = sk->sk_gso_type;
 	if (likely(!(tcb->tcp_flags & TCPHDR_SYN))) {
 		th->window      = htons(tcp_select_window(sk));
+#ifdef CONFIG_NET_SCH_TEGRA
+		if (tcp_window_divisor > 1) {
+			unsigned short window = ntohs(th->window);
+			pr_debug("%s: skb %p len %d window %hu"
+				" scale %d tp->rcv_wnd %lu\n",
+				__func__, skb, skb->len, window,
+				tp->rx_opt.rcv_wscale, tp->rcv_wnd);
+			window /= tcp_window_divisor;
+			th->window = htons(window);
+		}
+#endif
 		tcp_ecn_send(sk, skb, th, tcp_header_size);
 	} else {
 		/* RFC1323: The window in SYN & SYN/ACK segments

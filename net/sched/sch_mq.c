@@ -57,9 +57,16 @@ static int mq_init(struct Qdisc *sch, struct nlattr *opt)
 
 	for (ntx = 0; ntx < dev->num_tx_queues; ntx++) {
 		dev_queue = netdev_get_tx_queue(dev, ntx);
+#ifdef CONFIG_NET_SCH_TEGRA
+		extern struct Qdisc_ops sch_tegra_pfifo_fast_ops;
+		qdisc = qdisc_create_dflt(dev_queue, &sch_tegra_pfifo_fast_ops,
+					  TC_H_MAKE(TC_H_MAJ(sch->handle),
+						    TC_H_MIN(ntx + 1)));
+#else
 		qdisc = qdisc_create_dflt(dev_queue, get_default_qdisc_ops(dev, ntx),
 					  TC_H_MAKE(TC_H_MAJ(sch->handle),
 						    TC_H_MIN(ntx + 1)));
+#endif
 		if (!qdisc)
 			return -ENOMEM;
 		priv->qdiscs[ntx] = qdisc;

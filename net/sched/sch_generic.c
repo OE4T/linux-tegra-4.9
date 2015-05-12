@@ -758,13 +758,20 @@ static void attach_one_default_qdisc(struct net_device *dev,
 				     struct netdev_queue *dev_queue,
 				     void *_unused)
 {
+#ifdef CONFIG_NET_SCH_TEGRA
+	extern struct Qdisc_ops sch_tegra_pfifo_fast_ops;
+#endif
 	struct Qdisc *qdisc;
 	const struct Qdisc_ops *ops = default_qdisc_ops;
 
 	if (dev->priv_flags & IFF_NO_QUEUE)
 		ops = &noqueue_qdisc_ops;
 
+#ifdef CONFIG_NET_SCH_TEGRA
+	qdisc = qdisc_create_dflt(dev_queue, &sch_tegra_pfifo_fast_ops, TC_H_ROOT);
+#else
 	qdisc = qdisc_create_dflt(dev_queue, ops, TC_H_ROOT);
+#endif
 	if (!qdisc) {
 		netdev_info(dev, "activation failed\n");
 		return;

@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/comm.h
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -54,8 +54,7 @@ struct quadd_mmap_area {
 struct quadd_comm_control_interface {
 	int (*start)(void);
 	void (*stop)(void);
-	int (*set_parameters)(struct quadd_parameters *param,
-			      uid_t *debug_app_uid);
+	int (*set_parameters)(struct quadd_parameters *param);
 	void (*get_capabilities)(struct quadd_comm_cap *cap);
 	void (*get_state)(struct quadd_module_state *state);
 	int (*set_extab)(struct quadd_sections *extabs,

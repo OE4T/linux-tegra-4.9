@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/comm.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -54,8 +54,6 @@ struct quadd_comm_ctx {
 	int nr_users;
 
 	int params_ok;
-	pid_t process_pid;
-	uid_t debug_app_uid;
 
 	wait_queue_head_t read_wait;
 
@@ -251,32 +249,6 @@ static struct quadd_comm_data_interface comm_data = {
 	.is_active = is_active,
 };
 
-static int check_access_permission(void)
-{
-	struct task_struct *task;
-
-	if (capable(CAP_SYS_ADMIN))
-		return 0;
-
-	if (!comm_ctx.params_ok || comm_ctx.process_pid == 0)
-		return -EACCES;
-
-	rcu_read_lock();
-	task = pid_task(find_vpid(comm_ctx.process_pid), PIDTYPE_PID);
-	rcu_read_unlock();
-	if (!task)
-		return -EACCES;
-
-	if (!uid_eq(current_fsuid() , task_uid(task)) &&
-	    from_kuid(&init_user_ns, task_uid(task)) != comm_ctx.debug_app_uid) {
-		pr_err("Permission denied, owner/task uids: %u/%u\n",
-			   from_kuid(&init_user_ns, current_fsuid()),
-			   from_kuid(&init_user_ns, task_uid(task)));
-		return -EACCES;
-	}
-	return 0;
-}
-
 static struct quadd_mmap_area *
 find_mmap(unsigned long vm_start)
 {
@@ -450,16 +422,17 @@ device_ioctl(struct file *file,
 	struct quadd_sections extabs;
 	struct quadd_mmap_rb_info mmap_rb;
 
+	mutex_lock(&comm_ctx.io_mutex);
+
 	if (ioctl_num != IOCTL_SETUP &&
 	    ioctl_num != IOCTL_GET_CAP &&
 	    ioctl_num != IOCTL_GET_STATE &&
 	    ioctl_num != IOCTL_GET_VERSION) {
-		err = check_access_permission();
-		if (err)
-			return err;
+		if (!comm_ctx.params_ok) {
+			err = -EACCES;
+			goto error_out;
+		}
 	}
-
-	mutex_lock(&comm_ctx.io_mutex);
 
 	switch (ioctl_num) {
 	case IOCTL_SETUP:
@@ -468,6 +441,7 @@ device_ioctl(struct file *file,
 			err = -EBUSY;
 			goto error_out;
 		}
+		comm_ctx.params_ok = 0;
 
 		user_params = vmalloc(sizeof(*user_params));
 		if (!user_params) {
@@ -483,15 +457,12 @@ device_ioctl(struct file *file,
 			goto error_out;
 		}
 
-		err = comm_ctx.control->set_parameters(user_params,
-						       &comm_ctx.debug_app_uid);
+		err = comm_ctx.control->set_parameters(user_params);
 		if (err) {
 			pr_err("error: setup failed\n");
 			vfree(user_params);
 			goto error_out;
 		}
-		comm_ctx.params_ok = 1;
-		comm_ctx.process_pid = user_params->pids[0];
 
 		if (user_params->reserved[QUADD_PARAM_IDX_SIZE_OF_RB] == 0) {
 			pr_err("error: too old version of daemon\n");
@@ -499,6 +470,8 @@ device_ioctl(struct file *file,
 			err = -EINVAL;
 			goto error_out;
 		}
+
+		comm_ctx.params_ok = 1;
 
 		pr_info("setup success: freq/mafreq: %u/%u, backtrace: %d, pid: %d\n",
 			user_params->freq,
@@ -551,13 +524,6 @@ device_ioctl(struct file *file,
 
 	case IOCTL_START:
 		if (!atomic_cmpxchg(&comm_ctx.active, 0, 1)) {
-			if (!comm_ctx.params_ok) {
-				pr_err("error: params failed\n");
-				atomic_set(&comm_ctx.active, 0);
-				err = -EFAULT;
-				goto error_out;
-			}
-
 			err = comm_ctx.control->start();
 			if (err) {
 				pr_err("error: start failed\n");
@@ -825,7 +791,6 @@ static int comm_init(void)
 	atomic_set(&comm_ctx.active, 0);
 
 	comm_ctx.params_ok = 0;
-	comm_ctx.process_pid = 0;
 	comm_ctx.nr_users = 0;
 
 	init_waitqueue_head(&comm_ctx.read_wait);

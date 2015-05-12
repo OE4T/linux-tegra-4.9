@@ -132,8 +132,10 @@ static void gk20a_mm_delete_priv(void *_priv)
 
 	if (priv->comptags.lines) {
 		BUG_ON(!priv->comptag_allocator);
-		gk20a_bfree(priv->comptag_allocator,
-			    priv->comptags.real_offset);
+		priv->comptag_allocator->free(priv->comptag_allocator,
+					      priv->comptags.offset,
+					      priv->comptags.allocated_lines,
+					      1);
 	}
 
 	/* Free buffer states */
@@ -222,9 +224,10 @@ static int gk20a_alloc_comptags(struct gk20a *g,
 				u32 lines, bool user_mappable)
 {
 	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
+	u32 offset = 0;
+	int err;
 	u32 ctaglines_to_allocate;
-	u32 ctagline_align = 1;
-	u32 offset;
+	u32 ctagline_align;
 	const u32 aggregate_cacheline_sz =
 		g->gr.cacheline_size * g->gr.slices_per_ltc *
 		g->ltc_count;
@@ -238,6 +241,7 @@ static int gk20a_alloc_comptags(struct gk20a *g,
 
 	if (!user_mappable) {
 		ctaglines_to_allocate = lines;
+		ctagline_align = 1;
 	} else {
 		/* Unfortunately, we cannot use allocation alignment
 		 * here, since compbits per cacheline is not always a
@@ -269,25 +273,71 @@ static int gk20a_alloc_comptags(struct gk20a *g,
 
 		if (ctaglines_to_allocate < lines)
 			return -EINVAL; /* integer overflow */
-		pr_info("user-mapped CTAGS: %u\n", ctaglines_to_allocate);
 	}
 
 	/* store the allocator so we can use it when we free the ctags */
 	priv->comptag_allocator = allocator;
-	offset = gk20a_balloc(allocator, ctaglines_to_allocate);
-	if (!offset)
-		return -ENOMEM;
+	err = allocator->alloc(allocator, &offset,
+			       ctaglines_to_allocate, 1);
+	if (!err) {
+		const u32 alignment_lines =
+			DIV_ROUND_UP(offset, ctagline_align) * ctagline_align -
+			offset;
 
-	priv->comptags.lines = lines;
-	priv->comptags.real_offset = offset;
+		/* prune the preceding ctaglines that were allocated
+		   for alignment */
+		if (alignment_lines) {
+			/* free alignment lines */
+			int tmp=
+				allocator->free(allocator, offset,
+						alignment_lines,
+						1);
+			WARN_ON(tmp);
 
-	if (user_mappable)
-		offset = DIV_ROUND_UP(offset, ctagline_align) * ctagline_align;
+			offset += alignment_lines;
+			ctaglines_to_allocate -= alignment_lines;
+		}
 
-	priv->comptags.offset = offset;
+		/* check if we can prune the trailing, too */
+		if (user_mappable)
+		{
+			u32 needed_cachelines =
+				DIV_ROUND_UP(lines, g->gr.comptags_per_cacheline);
 
-	return 0;
+			u32 first_unneeded_cacheline =
+				DIV_ROUND_UP(round_up(needed_cachelines *
+						      aggregate_cacheline_sz,
+						      small_pgsz),
+					     aggregate_cacheline_sz);
+			u32 needed_ctaglines =
+				first_unneeded_cacheline *
+				g->gr.comptags_per_cacheline;
+
+			if (needed_ctaglines < ctaglines_to_allocate) {
+				/* free alignment lines */
+				int tmp=
+					allocator->free(
+						allocator,
+						offset + needed_ctaglines,
+						(ctaglines_to_allocate -
+						 needed_ctaglines),
+						1);
+				WARN_ON(tmp);
+
+				ctaglines_to_allocate = needed_ctaglines;
+			}
+		}
+
+		priv->comptags.offset = offset;
+		priv->comptags.lines = lines;
+		priv->comptags.allocated_lines = ctaglines_to_allocate;
+		priv->comptags.user_mappable = user_mappable;
+	}
+	return err;
 }
+
+
+
 
 static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 {
@@ -839,12 +889,14 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 }
 
 u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
-		      u64 size,
-		      enum gmmu_pgsz_gk20a gmmu_pgsz_idx)
+		     u64 size,
+		     enum gmmu_pgsz_gk20a gmmu_pgsz_idx)
 
 {
 	struct gk20a_allocator *vma = &vm->vma[gmmu_pgsz_idx];
+	int err;
 	u64 offset;
+	u32 start_page_nr = 0, num_pages;
 	u64 gmmu_page_size = vm->gmmu_page_sizes[gmmu_pgsz_idx];
 
 	if (gmmu_pgsz_idx >= gmmu_nr_page_sizes) {
@@ -860,19 +912,28 @@ u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
 
 	}
 
-	/* Be certain we round up to gmmu_page_size if needed */
+	/* be certain we round up to gmmu_page_size if needed */
+	/* TBD: DIV_ROUND_UP -> undefined reference to __aeabi_uldivmod */
 	size = (size + ((u64)gmmu_page_size - 1)) & ~((u64)gmmu_page_size - 1);
+
 	gk20a_dbg_info("size=0x%llx @ pgsz=%dKB", size,
 			vm->gmmu_page_sizes[gmmu_pgsz_idx]>>10);
 
-	offset = gk20a_balloc(vma, size);
-	if (!offset) {
+	/* The vma allocator represents page accounting. */
+	num_pages = size >> ilog2(vm->gmmu_page_sizes[gmmu_pgsz_idx]);
+
+	err = vma->alloc(vma, &start_page_nr, num_pages, 1);
+
+	if (err) {
 		gk20a_err(dev_from_vm(vm),
-			  "%s oom: sz=0x%llx", vma->name, size);
+			   "%s oom: sz=0x%llx", vma->name, size);
 		return 0;
 	}
 
+	offset = (u64)start_page_nr <<
+		 ilog2(vm->gmmu_page_sizes[gmmu_pgsz_idx]);
 	gk20a_dbg_fn("%s found addr: 0x%llx", vma->name, offset);
+
 	return offset;
 }
 
@@ -881,12 +942,25 @@ int gk20a_vm_free_va(struct vm_gk20a *vm,
 		     enum gmmu_pgsz_gk20a pgsz_idx)
 {
 	struct gk20a_allocator *vma = &vm->vma[pgsz_idx];
+	u32 page_size = vm->gmmu_page_sizes[pgsz_idx];
+	u32 page_shift = ilog2(page_size);
+	u32 start_page_nr, num_pages;
+	int err;
 
 	gk20a_dbg_info("%s free addr=0x%llx, size=0x%llx",
 			vma->name, offset, size);
-	gk20a_bfree(vma, offset);
 
-	return 0;
+	start_page_nr = (u32)(offset >> page_shift);
+	num_pages = (u32)((size + page_size - 1) >> page_shift);
+
+	err = vma->free(vma, start_page_nr, num_pages, 1);
+	if (err) {
+		gk20a_err(dev_from_vm(vm),
+			   "not found: offset=0x%llx, sz=0x%llx",
+			   offset, size);
+	}
+
+	return err;
 }
 
 static int insert_mapped_buffer(struct rb_root *root,
@@ -1062,7 +1136,7 @@ static int validate_fixed_buffer(struct vm_gk20a *vm,
 
 	if (map_offset & (vm->gmmu_page_sizes[bfr->pgsz_idx] - 1)) {
 		gk20a_err(dev, "map offset must be buffer page size aligned 0x%llx",
-			  map_offset);
+			   map_offset);
 		return -EINVAL;
 	}
 
@@ -2359,6 +2433,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 		char *name)
 {
 	int err, i;
+	u32 num_small_pages, num_large_pages, low_hole_pages;
 	char alloc_name[32];
 	u64 small_vma_size, large_vma_size;
 	u32 pde_lo, pde_hi;
@@ -2419,31 +2494,34 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 		large_vma_size = vm->va_limit - small_vma_size;
 	}
 
+	num_small_pages = (u32)(small_vma_size >>
+		    ilog2(vm->gmmu_page_sizes[gmmu_page_size_small]));
+
+	/* num_pages above is without regard to the low-side hole. */
+	low_hole_pages = (vm->va_start >>
+			  ilog2(vm->gmmu_page_sizes[gmmu_page_size_small]));
+
 	snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s-%dKB", name,
 		 vm->gmmu_page_sizes[gmmu_page_size_small]>>10);
-	err = __gk20a_allocator_init(&vm->vma[gmmu_page_size_small],
-				     vm, alloc_name,
-				     vm->va_start,
-				     small_vma_size - vm->va_start,
-				     SZ_4K,
-				     GPU_BALLOC_MAX_ORDER,
-				     GPU_BALLOC_GVA_SPACE);
+	err = gk20a_allocator_init(&vm->vma[gmmu_page_size_small],
+			     alloc_name,
+			     low_hole_pages,		 /*start*/
+			     num_small_pages - low_hole_pages);/* length*/
 	if (err)
 		goto clean_up_ptes;
 
 	if (big_pages) {
+		u32 start = (u32)(small_vma_size >>
+			    ilog2(vm->gmmu_page_sizes[gmmu_page_size_big]));
+		num_large_pages = (u32)(large_vma_size >>
+			    ilog2(vm->gmmu_page_sizes[gmmu_page_size_big]));
+
 		snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s-%dKB",
 			 name, vm->gmmu_page_sizes[gmmu_page_size_big]>>10);
-		/*
-		 * Big page VMA starts at the end of the small page VMA.
-		 */
-		err = __gk20a_allocator_init(&vm->vma[gmmu_page_size_big],
-					     vm, alloc_name,
-					     small_vma_size,
-					     large_vma_size,
-					     big_page_size,
-					     GPU_BALLOC_MAX_ORDER,
-					     GPU_BALLOC_GVA_SPACE);
+		err = gk20a_allocator_init(&vm->vma[gmmu_page_size_big],
+				      alloc_name,
+				      start,			/* start */
+				      num_large_pages);		/* length */
 		if (err)
 			goto clean_up_small_allocator;
 	}
@@ -2524,9 +2602,9 @@ int gk20a_vm_release_share(struct gk20a_as_share *as_share)
 int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 			 struct nvgpu_as_alloc_space_args *args)
 
-{
-	int err = -ENOMEM;
+{	int err = -ENOMEM;
 	int pgsz_idx = gmmu_page_size_small;
+	u32 start_page_nr;
 	struct gk20a_allocator *vma;
 	struct vm_gk20a *vm = as_share->vm;
 	struct gk20a *g = vm->mm->g;
@@ -2557,18 +2635,20 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 		goto clean_up;
 	}
 
-	vma = &vm->vma[pgsz_idx];
+	start_page_nr = 0;
 	if (args->flags & NVGPU_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET)
-		vaddr_start = gk20a_balloc_fixed(vma, args->o_a.offset,
-						 (u64)args->pages *
-						 (u64)args->page_size);
-	else
-		vaddr_start = gk20a_balloc(vma, args->pages * args->page_size);
+		start_page_nr = (u32)(args->o_a.offset >>
+				ilog2(vm->gmmu_page_sizes[pgsz_idx]));
 
-	if (!vaddr_start) {
+	vma = &vm->vma[pgsz_idx];
+	err = vma->alloc(vma, &start_page_nr, args->pages, 1);
+	if (err) {
 		kfree(va_node);
 		goto clean_up;
 	}
+
+	vaddr_start = (u64)start_page_nr <<
+		      ilog2(vm->gmmu_page_sizes[pgsz_idx]);
 
 	va_node->vaddr_start = vaddr_start;
 	va_node->size = (u64)args->page_size * (u64)args->pages;
@@ -2593,7 +2673,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 					 true);
 		if (!map_offset) {
 			mutex_unlock(&vm->update_gmmu_lock);
-			gk20a_bfree(vma, vaddr_start);
+			vma->free(vma, start_page_nr, args->pages, 1);
 			kfree(va_node);
 			goto clean_up;
 		}
@@ -2605,7 +2685,6 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 	mutex_unlock(&vm->update_gmmu_lock);
 
 	args->o_a.offset = vaddr_start;
-	err = 0;
 
 clean_up:
 	return err;
@@ -2616,6 +2695,7 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 {
 	int err = -ENOMEM;
 	int pgsz_idx;
+	u32 start_page_nr;
 	struct gk20a_allocator *vma;
 	struct vm_gk20a *vm = as_share->vm;
 	struct vm_reserved_va_node *va_node;
@@ -2628,8 +2708,14 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 	pgsz_idx = __nv_gmmu_va_is_upper(vm, args->offset) ?
 			gmmu_page_size_big : gmmu_page_size_small;
 
+	start_page_nr = (u32)(args->offset >>
+			ilog2(vm->gmmu_page_sizes[pgsz_idx]));
+
 	vma = &vm->vma[pgsz_idx];
-	gk20a_bfree(vma, args->offset);
+	err = vma->free(vma, start_page_nr, args->pages, 1);
+
+	if (err)
+		goto clean_up;
 
 	mutex_lock(&vm->update_gmmu_lock);
 	va_node = addr_to_reservation(vm, args->offset);
@@ -2659,8 +2745,8 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 		kfree(va_node);
 	}
 	mutex_unlock(&vm->update_gmmu_lock);
-	err = 0;
 
+clean_up:
 	return err;
 }
 

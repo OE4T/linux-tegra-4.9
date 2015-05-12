@@ -3,7 +3,7 @@
  *
  * GK20A Semaphores
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -44,10 +44,8 @@ struct gk20a_semaphore_pool *gk20a_semaphore_pool_alloc(struct device *d,
 	if (gk20a_get_sgtable(d, &p->sgt, p->cpu_va, p->iova, p->size))
 		goto clean_up;
 
-	/* Sacrifice one semaphore in the name of returning error codes. */
-	if (gk20a_allocator_init(&p->alloc, unique_name,
-				 SEMAPHORE_SIZE, p->size - SEMAPHORE_SIZE,
-				 SEMAPHORE_SIZE))
+	if (gk20a_allocator_init(&p->alloc, unique_name, 0,
+			     p->size))
 		goto clean_up;
 
 	gk20a_dbg_info("cpuva=%p iova=%llx phys=%llx", p->cpu_va,
@@ -165,8 +163,8 @@ struct gk20a_semaphore *gk20a_semaphore_alloc(struct gk20a_semaphore_pool *pool)
 	if (!s)
 		return NULL;
 
-	s->offset = gk20a_balloc(&pool->alloc, SEMAPHORE_SIZE);
-	if (!s->offset) {
+	if (pool->alloc.alloc(&pool->alloc, &s->offset, SEMAPHORE_SIZE,
+				SEMAPHORE_SIZE)) {
 		gk20a_err(pool->dev, "failed to allocate semaphore");
 		kfree(s);
 		return NULL;
@@ -188,7 +186,8 @@ static void gk20a_semaphore_free(struct kref *ref)
 	struct gk20a_semaphore *s =
 		container_of(ref, struct gk20a_semaphore, ref);
 
-	gk20a_bfree(&s->pool->alloc, s->offset);
+	s->pool->alloc.free(&s->pool->alloc, s->offset, SEMAPHORE_SIZE,
+			SEMAPHORE_SIZE);
 	gk20a_semaphore_pool_put(s->pool);
 	kfree(s);
 }

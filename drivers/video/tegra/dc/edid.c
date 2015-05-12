@@ -44,6 +44,7 @@ struct tegra_edid_pvt {
 	u16			max_tmds_char_rate_hf_mhz;
 	u16			max_tmds_char_rate_hllc_mhz;
 	u16			colorimetry;
+	u16			min_vrr_fps;
 	/* Note: dc_edid must remain the last member */
 	struct tegra_dc_edid		dc_edid;
 };
@@ -328,6 +329,15 @@ static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 							TEGRA_DC_Y420_MASK;
 				edid->max_tmds_char_rate_hf_mhz = ptr[5] * 5;
 				edid->scdc_present = (ptr[6] >> 7) & 0x1;
+			}
+
+			/* OUI for Nvidia */
+			if ((ptr[1] == 0x4b) &&
+				(ptr[2] == 0x04) &&
+				(ptr[3] == 0)) {
+				/* version 1.0 vrr capabilities */
+				if (ptr[4] == 1)
+					edid->min_vrr_fps = ptr[5];
 			}
 
 			if ((len >= 8) &&

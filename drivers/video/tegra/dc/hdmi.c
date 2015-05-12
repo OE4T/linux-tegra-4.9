@@ -38,7 +38,7 @@
 #include <mach/dc.h>
 #include <mach/fb.h>
 #include <linux/nvhost.h>
-#include <mach/hdmi-audio.h>
+#include <video/tegra_hdmi_audio.h>
 
 #include <video/tegrafb.h>
 

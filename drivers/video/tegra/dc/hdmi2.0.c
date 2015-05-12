@@ -32,7 +32,7 @@
 #include <linux/of_address.h>
 
 #include <mach/dc.h>
-#include <mach/hdmi-audio.h>
+#include <video/tegra_hdmi_audio.h>
 #include <mach/fb.h>
 #include <mach/powergate.h>
 

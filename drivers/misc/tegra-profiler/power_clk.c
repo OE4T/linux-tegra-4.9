@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/power_clk.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -51,9 +51,7 @@ struct power_clk_source {
 	int nr;
 	struct power_clk_data data[POWER_CLK_MAX_VALUES];
 
-	unsigned long long counter;
 	atomic_t active;
-
 	struct mutex lock;
 };
 
@@ -185,10 +183,8 @@ static void check_source(struct power_clk_source *s)
 {
 	mutex_lock(&s->lock);
 
-	if (!is_data_changed(s)) {
-		mutex_unlock(&s->lock);
-		return;
-	}
+	if (!is_data_changed(s))
+		goto out_unlock;
 
 	pr_debug("cpu: %lu/%lu/%lu/%lu\n",
 		 power_ctx.cpu.data[0].value,
@@ -200,6 +196,10 @@ static void check_source(struct power_clk_source *s)
 	mutex_unlock(&s->lock);
 
 	make_sample();
+	return;
+
+out_unlock:
+	mutex_unlock(&s->lock);
 }
 
 static void
@@ -246,10 +246,9 @@ read_source(struct power_clk_source *s, int cpu)
 
 	default:
 		pr_err_once("error: invalid power_clk type\n");
-		return;
+		break;
 	}
 
-	s->counter++;
 	mutex_unlock(&s->lock);
 }
 
@@ -280,18 +279,17 @@ read_cpufreq(struct power_clk_source *s, struct cpufreq_freqs *freq)
 
 	mutex_lock(&s->lock);
 
-	if (!atomic_read(&s->active)) {
-		mutex_unlock(&s->lock);
-		return;
-	}
+	if (!atomic_read(&s->active))
+		goto out_unlock;
 
 	cpu = freq->cpu;
 	cpufreq = freq->new;
 
-	if (cpu >= POWER_CLK_MAX_VALUES) {
+	pr_debug("cpu: %d, cpufreq: %d\n", cpu, cpufreq);
+
+	if (cpu >= s->nr) {
 		pr_err_once("error: cpu id: %d\n", cpu);
-		mutex_unlock(&s->lock);
-		return;
+		goto out_unlock;
 	}
 
 	s->data[cpu].value = cpufreq;
@@ -300,8 +298,11 @@ read_cpufreq(struct power_clk_source *s, struct cpufreq_freqs *freq)
 		 cpu, freq->old, cpufreq);
 
 	mutex_unlock(&s->lock);
-
 	check_source(s);
+	return;
+
+out_unlock:
+	mutex_unlock(&s->lock);
 }
 
 static int
@@ -313,6 +314,8 @@ cpufreq_notifier_call(struct notifier_block *nb,
 
 	if (!atomic_read(&s->active))
 		return 0;
+
+	pr_debug("action: %lu\n", action);
 
 	if (action == CPUFREQ_POSTCHANGE) {
 		freq = hcpu;
@@ -331,7 +334,6 @@ static void reset_data(struct power_clk_source *s)
 		s->data[i].value = 0;
 		s->data[i].prev = 0;
 	}
-	atomic_set(s, 0);
 	mutex_unlock(&s->lock);
 }
 
@@ -343,8 +345,9 @@ static void init_source(struct power_clk_source *s,
 	s->type = type;
 	s->nb.notifier_call = notifier;
 	s->nr = min_t(int, nr_values, POWER_CLK_MAX_VALUES);
-
+	atomic_set(&s->active, 0);
 	mutex_init(&s->lock);
+
 	reset_data(s);
 }
 
@@ -367,6 +370,22 @@ static void power_clk_timer(unsigned long data)
 	timer->expires = jiffies + msecs_to_jiffies(power_ctx.period);
 	add_timer(timer);
 }
+
+static void
+read_all_sources_work_func(struct work_struct *work)
+{
+	int cpu_id;
+
+	for_each_possible_cpu(cpu_id)
+		read_source(&power_ctx.cpu, cpu_id);
+
+	read_source(&power_ctx.gpu, -1);
+	read_source(&power_ctx.emc, -1);
+
+	check_clks();
+}
+
+static DECLARE_WORK(read_all_sources_work, read_all_sources_work_func);
 
 int quadd_power_clk_start(void)
 {
@@ -442,6 +461,8 @@ int quadd_power_clk_start(void)
 		add_timer(timer);
 	}
 
+	schedule_work(&read_all_sources_work);
+
 	return 0;
 }
 
@@ -477,9 +498,9 @@ void quadd_power_clk_stop(void)
 	mutex_unlock(&s->lock);
 
 	s = &power_ctx.cpu;
-	mutex_unlock(&s->lock);
-	atomic_set(&s->active, 0);
 	mutex_lock(&s->lock);
+	atomic_set(&s->active, 0);
+	mutex_unlock(&s->lock);
 
 	pr_info("power_clk: stop\n");
 }

@@ -2429,6 +2429,20 @@ struct tegra_dc_platform_data
 			goto fail_parse;
 	}
 
+	if (!of_property_read_u32(np_target_disp,
+				"nvidia,hdmi-vrr-caps", &temp)) {
+		struct tegra_vrr *vrr;
+
+		pdata->default_out->vrr = devm_kzalloc(&ndev->dev,
+				sizeof(struct tegra_vrr), GFP_KERNEL);
+		if (!pdata->default_out->vrr)
+			goto fail_parse;
+		vrr = pdata->default_out->vrr;
+		vrr->capability = (unsigned) temp;
+		OF_DC_LOG("vrr->capability %d\n", vrr->capability);
+	} else
+		pr_info("%s: nvidia,hdmi-vrr-caps not present\n", __func__);
+
 	sd_np = of_get_child_by_name(np_target_disp,
 		"smartdimmer");
 	if (!sd_np) {

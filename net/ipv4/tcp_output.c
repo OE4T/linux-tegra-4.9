@@ -45,7 +45,9 @@
 /* allow Tegra qdisc to restrict tcp rx datarate */
 #ifdef CONFIG_NET_SCH_TEGRA
 uint tcp_window_divisor = 1;
+uint tcp_window_max = 0;
 module_param(tcp_window_divisor, uint, 0644);
+module_param(tcp_window_max, uint, 0644);
 #endif
 
 /* People can turn this off for buggy TCP's found in printers etc. */
@@ -298,6 +300,14 @@ static u16 tcp_select_window(struct sock *sk)
 		new_win = min(new_win, MAX_TCP_WINDOW);
 	else
 		new_win = min(new_win, (65535U << tp->rx_opt.rcv_wscale));
+
+#ifdef CONFIG_NET_SCH_TEGRA
+	if ((tcp_window_max > 0) && (new_win > tcp_window_max)) {
+		pr_debug("%s: tcp_window_max %u: new_win %d -> %d\n",
+			__func__, tcp_window_max, new_win, tcp_window_max);
+		new_win = min(new_win, tcp_window_max);
+	}
+#endif
 
 	/* RFC1323 scaling applied */
 	new_win >>= tp->rx_opt.rcv_wscale;

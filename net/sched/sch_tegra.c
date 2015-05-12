@@ -28,6 +28,7 @@
 #include <linux/rtnetlink.h>
 #include <linux/moduleparam.h>
 #include <linux/atomic.h>
+#include <linux/spinlock.h>
 #include <net/pkt_sched.h>
 #include <net/sch_generic.h>
 
@@ -45,7 +46,7 @@
 static int sch_tegra_debug;
 module_param(sch_tegra_debug, int, 0644);
 
-static int sch_tegra_enable = 1;
+static int sch_tegra_enable = 0;
 module_param(sch_tegra_enable, int, 0644);
 
 static unsigned long sch_tegra_pfifo_fast_dequeue_bits;
@@ -91,33 +92,48 @@ struct sch_tegra_pfifo_fast_priv {
 	struct qdisc_skb_head q_highest_prio;
 };
 
+static DEFINE_SPINLOCK(sch_tegra_datarate_lock);
+
 static struct sk_buff *
 sch_tegra_pfifo_fast_dequeue_datarate(struct sk_buff *skb)
 {
+	unsigned long bits = skb ? skb->len * 8 : 0;
+	unsigned long flags;
 	unsigned long delta;
 
-	if (skb)
-		sch_tegra_pfifo_fast_dequeue_bits += skb->len * 8;
+	spin_lock_irqsave(&sch_tegra_datarate_lock, flags);
+	if (ULONG_MAX - bits < sch_tegra_pfifo_fast_dequeue_bits) {
+		sch_tegra_pfifo_fast_dequeue_bits
+			= bits;
+		sch_tegra_pfifo_fast_dequeue_jiffies0
+			= jiffies;
+		sch_tegra_pfifo_fast_dequeue_jiffies1
+			= sch_tegra_pfifo_fast_dequeue_jiffies0;
+		goto unlock;
+	}
+	sch_tegra_pfifo_fast_dequeue_bits += bits;
 	if (!sch_tegra_pfifo_fast_dequeue_jiffies0)
 		sch_tegra_pfifo_fast_dequeue_jiffies0 = jiffies;
 	sch_tegra_pfifo_fast_dequeue_jiffies1 = jiffies;
 	delta = sch_tegra_pfifo_fast_dequeue_jiffies1
 		- sch_tegra_pfifo_fast_dequeue_jiffies0;
-	if (delta < 10)
-		return skb;
+	if (delta < msecs_to_jiffies(100))
+		goto unlock;
 	if ((delta > msecs_to_jiffies(1000)) ||
 		(sch_tegra_pfifo_fast_dequeue_bits / (delta + 1)
 			> ULONG_MAX / HZ)) {
 		sch_tegra_pfifo_fast_dequeue_bits
-			/= (delta + 1);
+			= bits;
 		sch_tegra_pfifo_fast_dequeue_jiffies0
 			= jiffies;
 		sch_tegra_pfifo_fast_dequeue_jiffies1
 			= sch_tegra_pfifo_fast_dequeue_jiffies0;
-		delta = 0;
+		goto unlock;
 	}
 	sch_tegra_pfifo_fast_dequeue_bits_per_sec
 		= sch_tegra_pfifo_fast_dequeue_bits / (delta + 1) * HZ;
+unlock:
+	spin_unlock_irqrestore(&sch_tegra_datarate_lock, flags);
 
 	return skb;
 }

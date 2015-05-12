@@ -3,7 +3,7 @@
  *
  * Some MM related functionality specific to nvmap.
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,6 +77,79 @@ void nvmap_zap_handles(struct nvmap_handle **handles, u32 *offsets,
 		nvmap_zap_handle(handles[i], offsets[i], sizes[i]);
 }
 
+void nvmap_vm_insert_handle(struct nvmap_handle *handle, u32 offset, u32 size)
+{
+	struct list_head *vmas;
+	struct nvmap_vma_list *vma_list;
+	struct vm_area_struct *vma;
+
+	if (!handle->heap_pgalloc)
+		return;
+
+	if (!size) {
+		offset = 0;
+		size = handle->size;
+	}
+
+	mutex_lock(&handle->lock);
+	vmas = &handle->vmas;
+	list_for_each_entry(vma_list, vmas, list) {
+		struct nvmap_vma_priv *priv;
+		u32 vm_size = size;
+		int end;
+		int i;
+
+		vma = vma_list->vma;
+		priv = vma->vm_private_data;
+		if ((offset + size) > (vma->vm_end - vma->vm_start))
+			vm_size = vma->vm_end - vma->vm_start - offset;
+
+		end = PAGE_ALIGN(offset + vm_size) >> PAGE_SHIFT;
+		offset >>= PAGE_SHIFT;
+		for (i = offset; i < end; i++) {
+			struct page *page;
+			pte_t *pte;
+			spinlock_t *ptl;
+
+			page = nvmap_to_page(handle->pgalloc.pages[i]);
+			down_write(&vma->vm_mm->mmap_sem);
+			pte = get_locked_pte(vma->vm_mm,
+					vma->vm_start + (i << PAGE_SHIFT),
+					&ptl);
+			if (!pte) {
+				pr_err("nvmap: %s get_locked_pte failed\n",
+					__func__);
+				up_write(&vma->vm_mm->mmap_sem);
+				mutex_unlock(&handle->lock);
+				return;
+			}
+			/*
+			 * page->_map_count gets incremented while mapping here.
+			 * If _count is not incremented, zap code will see that
+			 * page as a bad page and throws lot of warnings.
+			 */
+			atomic_inc(&page->_count);
+			do_set_pte(vma, vma->vm_start + (i << PAGE_SHIFT), page,
+					pte, true, false);
+			pte_unmap_unlock(pte, ptl);
+			up_write(&vma->vm_mm->mmap_sem);
+		}
+	}
+	mutex_unlock(&handle->lock);
+}
+
+void nvmap_vm_insert_handles(struct nvmap_handle **handles, u32 *offsets,
+		       u32 *sizes, u32 nr)
+{
+	int i;
+
+	for (i = 0; i < nr; i++) {
+		nvmap_vm_insert_handle(handles[i], offsets[i], sizes[i]);
+		nvmap_handle_mkdirty(handles[i], offsets[i],
+				     sizes[i] ? sizes[i] : handles[i]->size);
+	}
+}
+
 int nvmap_reserve_pages(struct nvmap_handle **handles, u32 *offsets, u32 *sizes,
 			u32 nr, u32 op)
 {
@@ -94,6 +167,8 @@ int nvmap_reserve_pages(struct nvmap_handle **handles, u32 *offsets, u32 *sizes,
 
 	if (op == NVMAP_PAGES_RESERVE)
 		nvmap_zap_handles(handles, offsets, sizes, nr);
+	else if (op == NVMAP_INSERT_PAGES_ON_UNRESERVE)
+		nvmap_vm_insert_handles(handles, offsets, sizes, nr);
 
 	if (!(handles[0]->userflags & NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE))
 		return 0;
@@ -104,7 +179,9 @@ int nvmap_reserve_pages(struct nvmap_handle **handles, u32 *offsets, u32 *sizes,
 		for (i = 0; i < nr; i++)
 			nvmap_handle_mkclean(handles[i], offsets[i],
 					     sizes[i] ? sizes[i] : handles[i]->size);
-	} else if (!handles[0]->heap_pgalloc) {
+	} else if ((op == NVMAP_PAGES_UNRESERVE) && handles[0]->heap_pgalloc) {
+		/* Do nothing */
+	} else {
 		nvmap_do_cache_maint_list(handles, offsets, sizes,
 					  NVMAP_CACHE_OP_WB_INV, nr);
 	}

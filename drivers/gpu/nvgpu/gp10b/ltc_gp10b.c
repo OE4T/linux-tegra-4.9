@@ -16,7 +16,6 @@
 #include <linux/types.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/gk20a_allocator.h"
 #include "gm20b/ltc_gm20b.h"
 #include "hw_proj_gp10b.h"
 #include "hw_mc_gp10b.h"
@@ -112,8 +111,9 @@ static int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	if (err)
 		return err;
 
-	__gk20a_allocator_init(&gr->comp_tags, NULL, "comptag",
-			       1, max_comptag_lines - 1, 1, 10, 0);
+	gk20a_allocator_init(&gr->comp_tags, "comptag",
+			      1, /* start */
+			      max_comptag_lines - 1); /* length*/
 
 	gr->comptags_per_cacheline = comptags_per_cacheline;
 	gr->slices_per_ltc = slices_per_ltc;

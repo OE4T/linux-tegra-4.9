@@ -2107,6 +2107,14 @@ static bool tegra_dc_hdmi_hpd_state(struct tegra_dc *dc)
 	return hpd;
 }
 
+static void tegra_dc_hdmi_vrr_enable(struct tegra_dc *dc, bool enable)
+{
+	struct tegra_vrr *vrr  = dc->out->vrr;
+
+	if (vrr)
+		vrr->enable = enable;
+}
+
 struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.init = tegra_dc_hdmi_init,
 	.destroy = tegra_dc_hdmi_destroy,
@@ -2122,4 +2130,5 @@ struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.modeset_notifier = tegra_dc_hdmi_modeset_notifier,
 	.mode_filter = tegra_hdmi_fb_mode_filter,
 	.hpd_state = tegra_dc_hdmi_hpd_state,
+	.vrr_enable = tegra_dc_hdmi_vrr_enable,
 };

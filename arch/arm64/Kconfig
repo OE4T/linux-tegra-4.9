@@ -11,6 +11,7 @@ config ARCH_TEGRA_18x_SOC_PRIVATE
 	select PCI_MSI if PCI_TEGRA
 	select ARCH_TEGRA_APE
 	select GPIO_TEGRA186
+	select ARCH_HAS_RESET_CONTROLLER
 	default n
 	help
 	  Support for NVIDIA Tegra 18x family of SoCs

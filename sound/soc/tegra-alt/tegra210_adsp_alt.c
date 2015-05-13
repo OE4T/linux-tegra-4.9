@@ -953,6 +953,7 @@ static int tegra210_adsp_compr_open(struct snd_compr_stream *cstream)
 	prtd->cstream = cstream;
 	prtd->dev = adsp->dev;
 	cstream->runtime->private_data = prtd;
+	pm_runtime_get_sync(adsp->dev);
 	return 0;
 }
 
@@ -965,6 +966,8 @@ static int tegra210_adsp_compr_free(struct snd_compr_stream *cstream)
 
 	tegra210_adsp_send_reset_msg(prtd->fe_apm,
 		TEGRA210_ADSP_MSG_FLAG_SEND);
+
+	pm_runtime_put(prtd->dev);
 
 	prtd->fe_apm->fe = 0;
 	cstream->runtime->private_data = NULL;

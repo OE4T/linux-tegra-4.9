@@ -43,7 +43,7 @@ VRR_ATTR(max_fps);
 VRR_ATTR(min_fps);
 VRR_ATTR(max_adj_pct);
 VRR_ATTR(max_flip_pct);
-VRR_ATTR(max_dc_balance);
+VRR_ATTR(max_dcb);
 VRR_ATTR(max_inc_pct);
 
 static struct attribute *vrr_attrs[] = {
@@ -52,7 +52,7 @@ static struct attribute *vrr_attrs[] = {
 	VRR_ATTRS_ENTRY(min_fps),
 	VRR_ATTRS_ENTRY(max_adj_pct),
 	VRR_ATTRS_ENTRY(max_flip_pct),
-	VRR_ATTRS_ENTRY(max_dc_balance),
+	VRR_ATTRS_ENTRY(max_dcb),
 	VRR_ATTRS_ENTRY(max_inc_pct),
 	NULL,
 };
@@ -86,8 +86,8 @@ static ssize_t vrr_settings_show(struct kobject *kobj,
 		res = snprintf(buf, PAGE_SIZE, "%d\n", vrr->max_adj_pct);
 	else if (IS_VRR_ATTR(max_flip_pct))
 		res = snprintf(buf, PAGE_SIZE, "%d\n", vrr->max_flip_pct);
-	else if (IS_VRR_ATTR(max_dc_balance))
-		res = snprintf(buf, PAGE_SIZE, "%d\n", vrr->max_dc_balance);
+	else if (IS_VRR_ATTR(max_dcb))
+		res = snprintf(buf, PAGE_SIZE, "%d\n", vrr->max_dcb);
 	else if (IS_VRR_ATTR(max_inc_pct))
 		res = snprintf(buf, PAGE_SIZE, "%d\n", vrr->max_inc_pct);
 	else
@@ -125,8 +125,8 @@ static ssize_t vrr_settings_store(struct kobject *kobj,
 		vrr_check_and_update(0, 100, max_adj_pct)
 	else if (IS_VRR_ATTR(max_flip_pct))
 		vrr_check_and_update(0, 100, max_flip_pct)
-	else if (IS_VRR_ATTR(max_dc_balance))
-		vrr_check_and_update(0, 50000, max_dc_balance)
+	else if (IS_VRR_ATTR(max_dcb))
+		vrr_check_and_update(0, 50000, max_dcb)
 	else if (IS_VRR_ATTR(max_inc_pct))
 		vrr_check_and_update(0, 100, max_inc_pct)
 	else

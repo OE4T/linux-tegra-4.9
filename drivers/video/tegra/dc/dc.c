@@ -1511,25 +1511,25 @@ static const struct file_operations dbg_vrr_enable_ops = {
 	.release = single_release,
 };
 
-static int dbg_vrr_dc_balance_show(struct seq_file *m, void *unused)
+static int dbg_vrr_dcb_show(struct seq_file *m, void *unused)
 {
 	struct tegra_vrr *vrr = m->private;
 
 	if (!vrr)
 		return -EINVAL;
 
-	seq_printf(m, "vrr dc balance: %d\n", vrr->dc_balance);
+	seq_printf(m, "vrr dc balance: %d\n", vrr->dcb);
 
 	return 0;
 }
 
-static int dbg_vrr_dc_balance_open(struct inode *inode, struct file *file)
+static int dbg_vrr_dcb_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, dbg_vrr_dc_balance_show, inode->i_private);
+	return single_open(file, dbg_vrr_dcb_show, inode->i_private);
 }
 
-static const struct file_operations dbg_vrr_dc_balance_ops = {
-	.open = dbg_vrr_dc_balance_open,
+static const struct file_operations dbg_vrr_dcb_ops = {
+	.open = dbg_vrr_dcb_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.release = single_release,
@@ -1716,8 +1716,8 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("dc_balance", S_IRUGO, vrrdir,
-				dc->out->vrr, &dbg_vrr_dc_balance_ops);
+	retval = debugfs_create_file("dcb", S_IRUGO, vrrdir,
+				dc->out->vrr, &dbg_vrr_dcb_ops);
 	if (!retval)
 		goto remove_out;
 
@@ -1812,10 +1812,10 @@ static void tegra_dc_setup_vrr(struct tegra_dc *dc)
 
 	vrr->max_adj_pct = 50;
 	vrr->max_flip_pct = 20;
-	vrr->max_dc_balance = 20000;
+	vrr->max_dcb = 20000;
 	vrr->max_inc_pct = 5;
 
-	vrr->dc_balance = 0;
+	vrr->dcb = 0;
 	vrr->frame_avg_pct = 75;
 	vrr->fluct_avg_pct = 75;
 	vrr->db_tolerance = 5000;

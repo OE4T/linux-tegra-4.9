@@ -829,7 +829,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 		trace_scanout_syncpt_upd((data->win[win_num-1]).syncpt_max);
 		if (dc->out->vrr)
 			trace_scanout_vrr_stats((data->win[win_num-1]).syncpt_max
-							, dc->out->vrr->dc_balance);
+							, dc->out->vrr->dcb);
 		tegra_dc_program_bandwidth(dc, true);
 		if (!tegra_dc_has_multiple_dc())
 			tegra_dc_call_flip_callback();

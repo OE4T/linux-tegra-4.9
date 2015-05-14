@@ -34,6 +34,14 @@
 		nvidia,en-io-trim-volt;
 		nvidia,is-emmc;
 		nvidia,enable-cq;
+		ignore-pm-notify;
+		keep-power-in-suspend;
+		non-removable;
+		cap-mmc-highspeed;
+		cap-sd-highspeed;
+		mmc-ddr-1_8v;
+		mmc-hs200-1_8v;
+		mmc-hs400-1_8v;
 		pll_source = "pll_p";
 	};
 
@@ -48,6 +56,11 @@
 		compad-vref-3v3 = <0x7>;
 		compad-vref-1v8 = <0x7>;
 		pll_source = "pll_p";
+		keep-power-in-suspend;
+		ignore-pm-notify;
+		non-removable;
+		cap-mmc-highspeed;
+		cap-sd-highspeed;
 		nvidia,en-io-trim-volt;
 		nvidia,en-periodic-calib;
 	};
@@ -65,6 +78,11 @@
 		compad-vref-1v8 = <0x7>;
 		default-drive-type = <1>;
 		pll_source = "pll_p";
+		non-removable;
+		cap-mmc-highspeed;
+		cap-sd-highspeed;
+		keep-power-in-suspend;
+		ignore-pm-notify;
 		nvidia,en-io-trim-volt;
 	};
 
@@ -81,7 +99,11 @@
 		compad-vref-1v8 = <0x7>;
 		cd-gpios = <&gpio TEGRA_GPIO_PZ1 0>;
 		pll_source = "pll_p";
+		cap-mmc-highspeed;
+		cap-sd-highspeed;
 		nvidia,en-io-trim-volt;
 		nvidia,en-periodic-calib;
+		keep-power-in-suspend;
+		ignore-pm-notify;
 	};
 };

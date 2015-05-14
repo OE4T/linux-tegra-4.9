@@ -200,6 +200,7 @@
 			      <&{/sdhci@700b0000}       TEGRA_SWGROUP_SDMMC1A>,
 			      <&{/bpmp}			TEGRA_SWGROUP_BPMP>;
 
+		calxeda,smmu-secure-config-access;
 	};
 
 	tegra_car: clock {

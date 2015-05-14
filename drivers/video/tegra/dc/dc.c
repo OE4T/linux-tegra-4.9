@@ -2889,7 +2889,7 @@ static void tegra_dc_vrr_get_ts(struct tegra_dc *dc)
 	struct timespec time_now;
 	struct tegra_vrr *vrr  = dc->out->vrr;
 
-	if (!vrr || !vrr->enable)
+	if (!vrr || (!vrr->enable && !vrr->lastenable))
 		return;
 
 	getnstimeofday(&time_now);

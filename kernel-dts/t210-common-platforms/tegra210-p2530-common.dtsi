@@ -37,11 +37,10 @@
 
 	sdhci@700b0600 {
 		max-clk-limit = <266000000>;
-		uhs-mask = <0x0>;
+		uhs-mask = <0x40>;
 		built-in;
 		power-off-rail;
-		nvidia,enable-hs533-mode;
-		pll_source = "pll_p", "pll_c4_out1";
+		pll_source = "pll_p", "pll_c4_out2";
 		status = "okay";
 	};
 

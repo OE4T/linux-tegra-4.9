@@ -228,14 +228,14 @@ int vhost_rdwr_module_regs(struct platform_device *ndev, u32 num_offsets,
 		return -ENOMEM;
 	}
 
-	if (copy_from_user((char *)offs, (char *)offsets,
+	if (copy_from_user((void *)offs, (void __user *)offsets,
 			num_offsets * sizeof(u32))) {
 		err = -EFAULT;
 		goto done;
 	}
 
 	if (write) {
-		if (copy_from_user((char *)vals, (char *)values,
+		if (copy_from_user((void *)vals, (void __user *)values,
 				num_offsets * block_size)) {
 			err = -EFAULT;
 			goto done;
@@ -251,7 +251,7 @@ int vhost_rdwr_module_regs(struct platform_device *ndev, u32 num_offsets,
 	}
 
 	if (!write) {
-		if (copy_to_user((char *)values, (char *)vals,
+		if (copy_to_user((void __user *)values, (void *)vals,
 				num_offsets * block_size))
 			err = -EFAULT;
 	}

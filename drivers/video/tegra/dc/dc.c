@@ -1535,6 +1535,51 @@ static const struct file_operations dbg_vrr_dcb_ops = {
 	.release = single_release,
 };
 
+static int dbg_vrr_db_tolerance_show(struct seq_file *m, void *unused)
+{
+	struct tegra_vrr *vrr = m->private;
+
+	if (!vrr)
+		return -EINVAL;
+
+	seq_printf(m, "vrr db tolerance: %d\n", vrr->db_tolerance);
+
+	return 0;
+}
+
+static ssize_t dbg_vrr_db_tolerance_write(struct file *file,
+		const char __user *addr, size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data;
+	struct tegra_vrr *vrr = m->private;
+	long   new_value;
+	int    ret;
+
+	if (!vrr)
+		return -EINVAL;
+
+	ret = kstrtol_from_user(addr, len, 10, &new_value);
+	if (ret < 0)
+		return ret;
+
+	vrr->db_tolerance = new_value;
+
+	return len;
+}
+
+static int dbg_vrr_db_tolerance_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_vrr_db_tolerance_show, inode->i_private);
+}
+
+static const struct file_operations dbg_vrr_db_tolerance_ops = {
+	.open = dbg_vrr_db_tolerance_open,
+	.read = seq_read,
+	.write = dbg_vrr_db_tolerance_write,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static int dbg_vrr_frame_avg_pct_show(struct seq_file *m, void *unused)
 {
 	struct tegra_vrr *vrr = m->private;

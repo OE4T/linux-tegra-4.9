@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/tsec/tsec_methods.h
  *
- * Copyright (c) 2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -14,7 +14,7 @@
  *
  */
 
-#include "tsec_drv.h"
+#include "../../dc/tsec_drv.h"
 
 #define NV_PSEC_THI_METHOD1                  0x00000044      /* RW-4R */
 #define NV_PSEC_THI_METHOD0                  0x00000040      /* RW-4R */

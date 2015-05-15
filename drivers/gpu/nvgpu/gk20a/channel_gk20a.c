@@ -172,7 +172,7 @@ static int channel_gk20a_set_schedule_params(struct channel_gk20a *c,
 }
 
 int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
-			u64 gpfifo_base, u32 gpfifo_entries)
+			u64 gpfifo_base, u32 gpfifo_entries, u32 flags)
 {
 	void *inst_ptr;
 
@@ -1142,7 +1142,8 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 
 	channel_gk20a_setup_userd(c);
 
-	err = g->ops.fifo.setup_ramfc(c, c->gpfifo.mem.gpu_va, c->gpfifo.entry_num);
+	err = g->ops.fifo.setup_ramfc(c, c->gpfifo.mem.gpu_va,
+					c->gpfifo.entry_num, args->flags);
 	if (err)
 		goto clean_up_unmap;
 

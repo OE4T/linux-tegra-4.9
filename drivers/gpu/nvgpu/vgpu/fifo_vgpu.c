@@ -126,7 +126,7 @@ static void vgpu_channel_disable(struct channel_gk20a *ch)
 }
 
 static int vgpu_channel_setup_ramfc(struct channel_gk20a *ch, u64 gpfifo_base,
-				u32 gpfifo_entries)
+				u32 gpfifo_entries, u32 flags)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
 	struct device __maybe_unused *d = dev_from_gk20a(ch->g);

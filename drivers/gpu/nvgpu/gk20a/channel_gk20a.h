@@ -221,6 +221,6 @@ void channel_gk20a_disable(struct channel_gk20a *ch);
 int channel_gk20a_alloc_inst(struct gk20a *g, struct channel_gk20a *ch);
 void channel_gk20a_free_inst(struct gk20a *g, struct channel_gk20a *ch);
 int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
-			u64 gpfifo_base, u32 gpfifo_entries);
+			u64 gpfifo_base, u32 gpfifo_entries, u32 flags);
 void channel_gk20a_enable(struct channel_gk20a *ch);
 #endif /* CHANNEL_GK20A_H */

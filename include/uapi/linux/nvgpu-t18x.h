@@ -33,6 +33,12 @@
  */
 #define NVGPU_AS_MAP_BUFFER_FLAGS_IO_COHERENT	    (1 << 4)
 
+/*
+ * this flag is used in struct nvgpu_alloc_gpfifo_args
+ * to enable re-playable faults for that channel
+ */
+#define NVGPU_ALLOC_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE   (1 << 2)
+
 #endif /* _UAPI__LINUX_NVGPU_T18X_IOCTL_H_ */
 
 

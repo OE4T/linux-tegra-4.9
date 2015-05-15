@@ -78,7 +78,7 @@ static int channel_gp10b_commit_userd(struct channel_gk20a *c)
 }
 
 static int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
-			u64 gpfifo_base, u32 gpfifo_entries)
+			u64 gpfifo_base, u32 gpfifo_entries, u32 flags)
 {
 	void *inst_ptr;
 
@@ -133,7 +133,8 @@ static int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 		pbdma_runlist_timeslice_timescale_3_f() |
 		pbdma_runlist_timeslice_enable_true_f());
 
-	gp10b_set_pdb_fault_replay_flags(c->g, inst_ptr);
+	if ( flags & NVGPU_ALLOC_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE)
+		gp10b_set_pdb_fault_replay_flags(c->g, inst_ptr);
 
 
 	gk20a_mem_wr32(inst_ptr, ram_fc_chid_w(), ram_fc_chid_id_f(c->hw_chid));

@@ -63,17 +63,28 @@ static int gp10b_tegra_late_probe(struct platform_device *pdev)
 
 static bool gp10b_tegra_is_railgated(struct platform_device *pdev)
 {
-	return false;
+	bool ret = false;
+
+	if (!tegra_platform_is_linsim())
+		ret = !tegra_powergate_is_powered(TEGRA_POWERGATE_GPU);
+
+	return ret;
 }
 
 static int gp10b_tegra_railgate(struct platform_device *pdev)
 {
+	if (!tegra_platform_is_linsim() &&
+	    tegra_powergate_is_powered(TEGRA_POWERGATE_GPU))
+		tegra_powergate_partition(TEGRA_POWERGATE_GPU);
 	return 0;
 }
 
 static int gp10b_tegra_unrailgate(struct platform_device *pdev)
 {
-	return 0;
+	int ret = 0;
+	if (!tegra_platform_is_linsim())
+		ret = tegra_unpowergate_partition(TEGRA_POWERGATE_GPU);
+	return ret;
 }
 
 static int gp10b_tegra_suspend(struct device *dev)
@@ -85,6 +96,11 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 	.has_syncpoints = true,
 
 	/* power management configuration */
+	.railgate_delay		= 500,
+	.clockgate_delay	= 50,
+
+	/* power management configuration */
+	.can_railgate           = false,
 	.enable_elpg            = false,
 
 	.probe = gp10b_tegra_probe,

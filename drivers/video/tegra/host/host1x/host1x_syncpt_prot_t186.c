@@ -27,9 +27,10 @@ static void t186_syncpt_reset(struct nvhost_syncpt *sp, u32 id)
 	struct nvhost_master *dev = syncpt_to_dev(sp);
 	int min = nvhost_syncpt_read_min(sp, id);
 
-	/* move syncpoint to VM1 */
+	/* move syncpoint to VM */
 	host1x_hypervisor_writel(dev->dev,
-			(host1x_sync_syncpt_vm_0_r() + id * 4), 1);
+			(host1x_sync_syncpt_vm_0_r() + id * 4),
+			nvhost_host1x_get_vmid(dev->dev));
 
 	/* reserve it for channel 63 */
 	host1x_writel(dev->dev,

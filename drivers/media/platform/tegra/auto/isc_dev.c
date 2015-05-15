@@ -70,6 +70,7 @@ int isc_dev_raw_rd(
 {
 	int ret = -ENODEV;
 	u8 data[2];
+	struct i2c_msg i2cmsg[2];
 
 	dev_dbg(info->dev, "%s\n", __func__);
 	mutex_lock(&info->mutex);
@@ -85,13 +86,19 @@ int isc_dev_raw_rd(
 	} else if (info->reg_len == 1)
 		data[0] = (u8)(offset & 0xff);
 
-	if (info->reg_len)
-		ret = i2c_master_send(info->i2c_client, data, info->reg_len);
+	i2cmsg[0].addr = info->i2c_client->addr;
+	i2cmsg[0].len = info->reg_len;
+	i2cmsg[0].buf = (__u8 *)data;
+	i2cmsg[0].flags = I2C_M_NOSTART;
 
-	ret = i2c_master_recv(info->i2c_client, val, size);
+	i2cmsg[1].addr = info->i2c_client->addr;
+	i2cmsg[1].flags = I2C_M_RD;
+	i2cmsg[1].len = size;
+	i2cmsg[1].buf = (__u8 *)val;
+
+	ret = i2c_transfer(info->i2c_client->adapter, i2cmsg, 2);
 	if (ret > 0)
 		ret = 0;
-
 	mutex_unlock(&info->mutex);
 
 	if (!ret)

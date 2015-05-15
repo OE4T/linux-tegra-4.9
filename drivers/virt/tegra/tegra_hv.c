@@ -453,14 +453,21 @@ static ssize_t peer_show(struct device *dev,
 
 static const struct device_attribute hv_vmid_attr = __ATTR_RO(vmid);
 
-struct device_attribute ivc_dev_attrs[] = {
-	__ATTR_RO(id),
-	__ATTR_RO(frame_size),
-	__ATTR_RO(nframes),
-	__ATTR_RO(reserved),
-	__ATTR_RO(peer),
-	__ATTR_NULL
+static DEVICE_ATTR_RO(id);
+static DEVICE_ATTR_RO(frame_size);
+static DEVICE_ATTR_RO(nframes);
+static DEVICE_ATTR_RO(reserved);
+static DEVICE_ATTR_RO(peer);
+
+struct attribute *ivc_attrs[] = {
+	&dev_attr_id.attr,
+	&dev_attr_frame_size.attr,
+	&dev_attr_nframes.attr,
+	&dev_attr_reserved.attr,
+	&dev_attr_peer.attr,
+	NULL,
 };
+ATTRIBUTE_GROUPS(ivc);
 
 static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 		const struct tegra_hv_queue_data *qd)
@@ -656,7 +663,7 @@ static int tegra_hv_setup(struct tegra_hv_data *hvd)
 	}
 
 	/* set class attributes */
-	hvd->ivc_class->dev_attrs = ivc_dev_attrs;
+	hvd->ivc_class->dev_groups = ivc_groups;
 
 	ret = hyp_read_ivc_info(&info_page);
 	if (ret != 0) {
@@ -664,7 +671,7 @@ static int tegra_hv_setup(struct tegra_hv_data *hvd)
 		return ret;
 	}
 
-	hvd->info = (struct ivc_info_page *)ioremap_cached(info_page,
+	hvd->info = (struct ivc_info_page *)ioremap_cache(info_page,
 			PAGE_SIZE);
 	if (hvd->info == NULL) {
 		dev_err(dev, "failed to map IVC info page (%llx)\n", info_page);
@@ -680,7 +687,7 @@ static int tegra_hv_setup(struct tegra_hv_data *hvd)
 	}
 
 	for (i = 0; i < hvd->info->nr_areas; i++) {
-		hvd->guest_ivc_info[i].shmem = (uintptr_t)ioremap_cached(
+		hvd->guest_ivc_info[i].shmem = (uintptr_t)ioremap_cache(
 				hvd->info->areas[i].pa,
 				hvd->info->areas[i].size);
 		if (hvd->guest_ivc_info[i].shmem == 0) {

@@ -93,7 +93,7 @@ static int tegra_crypto_dev_open(struct inode *inode, struct file *filp)
 	ctx = kzalloc(sizeof(struct tegra_crypto_ctx), GFP_KERNEL);
 	if (!ctx) {
 		pr_err("no memory for context\n");
-		ret = -ENOMEM;
+		return -ENOMEM;
 	}
 
 	/* CBC tfm is allocated during device_open itself

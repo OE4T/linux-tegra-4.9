@@ -335,6 +335,11 @@
 										// 				27:24=UTMIP_PCOUNT_UPDN_DIV	0x00
 					>;
 				};
+				prod_a02 {
+					prod = <0x00000850 0xfffffffe 0x00000000
+					>;
+				};
+
 				prod_c_bias {
 					prod = <0x00000284 0xffffffc0 0x0000003a
 					>;
@@ -355,6 +360,10 @@
 										//				3:2=HS_DISCON_LEVEL_LSB		0x03
 						0x00000850 0xfffffffe 0x00000002// UTMIP_BIAS_CFG2_0
 										//				2:0=HSSQUELCH_LEVEL_NEW		0x02
+					>;
+				};
+				prod_a02 {
+					prod = <0x00000850 0xfffffffe 0x00000000
 					>;
 				};
 				prod_c_bias {

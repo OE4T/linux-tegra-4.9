@@ -577,7 +577,7 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 	mutex_unlock(&f->deferred_reset_mutex);
 
 	if (!ch->bound)
-		return;
+		goto release;
 
 	if (!gk20a_channel_as_bound(ch))
 		goto unbind;
@@ -652,6 +652,7 @@ unbind:
 
 	mutex_unlock(&ch->dbg_s_lock);
 
+release:
 	/* ALWAYS last */
 	release_used_channel(f, ch);
 }

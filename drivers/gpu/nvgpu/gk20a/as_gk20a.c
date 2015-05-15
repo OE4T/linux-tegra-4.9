@@ -199,21 +199,14 @@ static int gk20a_as_ioctl_get_va_regions(
 
 	for (i = 0; i < write_entries; ++i) {
 		struct nvgpu_as_va_region region;
-		u32 base, limit;
 
 		memset(&region, 0, sizeof(struct nvgpu_as_va_region));
 
-		if (!vm->vma[i].constraint.enable) {
-			base = vm->vma[i].base;
-			limit = vm->vma[i].limit;
-		} else {
-			base = vm->vma[i].constraint.base;
-			limit = vm->vma[i].constraint.limit;
-		}
-
 		region.page_size = vm->gmmu_page_sizes[i];
-		region.offset = (u64)base * region.page_size;
-		region.pages = limit - base; /* NOTE: limit is exclusive */
+		region.offset = vm->vma[i].base;
+		/* No __aeabi_uldivmod() on some platforms... */
+		region.pages = (vm->vma[i].end - vm->vma[i].start) >>
+			ilog2(region.page_size);
 
 		if (copy_to_user(user_region_ptr + i, &region, sizeof(region)))
 			return -EFAULT;

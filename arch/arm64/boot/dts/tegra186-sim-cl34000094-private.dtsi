@@ -55,6 +55,8 @@
 		interrupts = <0 265 0x04
 			      0 263 0x04>;
 
+		nvidia,vmid = <1>;
+
 		vi {
 			reg = <0x0 0x15700000 0x0 0x00100000>;
 			interrupts = <0 201 0x04

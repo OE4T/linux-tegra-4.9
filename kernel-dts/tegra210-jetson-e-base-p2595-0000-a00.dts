@@ -527,67 +527,26 @@
 		nvidia,margin = <0>;
 		nvidia,min_budget = <0>;
 		nvidia,initial_budget = <40000>;
+	};
 
-		consumers {
-			consumer1 {
-				nvidia,consumer_name = "ov7695";
-				nvidia,states = <0 124>;
-			};
-			consumer2 {
-				nvidia,consumer_name = "primary-wifi";
-				nvidia,states = <0 2345>;
-			};
-			consumer3 {
-				nvidia,consumer_name = "secondary-wifi";
-				nvidia,states = <0 1170>;
-			};
-			/*eMMC*/
-			consumer4 {
-				nvidia,consumer_name = "sdhci-tegra.3";
-				nvidia,states = <0 1785>;
-			};
-			consumer5 {
-				nvidia,consumer_name = "dsi_0";
-				nvidia,states = <0 616>;
-			};
-			consumer6 {
-				nvidia,consumer_name = "dsi_1";
-				nvidia,states = <0 616>;
-			};
-			consumer7 {
-				nvidia,consumer_name = "codec+speaker";
-				nvidia,states = <0 1270>;
-			};
-			consumer8 {
-				nvidia,consumer_name = "pwm-backlight";
-				nvidia,states = <0 127 255 382 510 638 765 893 1020 1148 1276>;
-			};
-			/*SD Card */
-			consumer9 {
-				nvidia,consumer_name = "sdhci-tegra.0";
-				nvidia,states = <0 1785>;
-			};
+	sysedp_reactive_capping@3 {
+		compatible = "nvidia,tegra124-sysedp_reactive_capping";
+		nvidia,max_capping_mw = <15000>;
+		nvidia,step_alarm_mw = <1000>;
+		nvidia,step_relax_mw = <500>;
+		nvidia,relax_ms = <250>;
+		interrupt-parent = <&soctherm>;
+		interrupts = <3 0x2002>;
+		sysedpc {
+			nvidia,name = "batmon_oc3";
 		};
 	};
 
-    sysedp_reactive_capping@3 {
-        compatible = "nvidia,tegra124-sysedp_reactive_capping";
-        nvidia,max_capping_mw = <15000>;
-        nvidia,step_alarm_mw = <1000>;
-        nvidia,step_relax_mw = <500>;
-        nvidia,relax_ms = <250>;
-        interrupt-parent = <&soctherm>;
-        interrupts = <3 0x2002>;
-        sysedpc {
-            nvidia,name = "batmon_oc3";
-        };
-    };
-
-    sysedp-dynamic-capping {
-        compatible = "nvidia,tegra124-sysedp-dynamic-capping";
-        nvidia,throttle_depth = <75>;
-        nvidia,cap_method = <1>;
-    };
+	sysedp-dynamic-capping {
+		compatible = "nvidia,tegra124-sysedp-dynamic-capping";
+		nvidia,throttle_depth = <75>;
+		nvidia,cap_method = <1>;
+	};
 
 	bcmdhd_wlan {
 		edp-consumer-name = "primary-wifi";

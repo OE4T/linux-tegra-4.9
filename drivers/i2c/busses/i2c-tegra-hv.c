@@ -20,7 +20,6 @@
 #include <linux/i2c.h>
 #include <linux/i2c-tegra-hv.h>
 #include <linux/of_device.h>
-#include <linux/of_i2c.h>
 #include <linux/module.h>
 #include <linux/spinlock.h>
 #include <linux/completion.h>
@@ -82,7 +81,7 @@ static int tegra_hv_i2c_xfer_msg(struct tegra_hv_i2c_dev *i2c_dev,
 
 	msg_err = I2C_NO_ERROR;
 	msg_read = (msg->flags & I2C_M_RD);
-	INIT_COMPLETION(i2c_dev->msg_complete);
+	reinit_completion(&i2c_dev->msg_complete);
 
 	if (more_msgs)
 		flags |= HV_I2C_FLAGS_REPEAT_START;
@@ -117,7 +116,7 @@ static int tegra_hv_i2c_xfer_msg(struct tegra_hv_i2c_dev *i2c_dev,
 	dev_dbg(i2c_dev->dev, "received error code %d\n", msg_err);
 	rv = -EIO;
 error:
-	INIT_COMPLETION(i2c_dev->msg_complete);
+	reinit_completion(&i2c_dev->msg_complete);
 	ret = hv_i2c_comm_chan_cleanup(i2c_dev->comm_chan, i2c_dev->cont_id);
 
 	if (ret < 0) {
@@ -257,7 +256,6 @@ static int tegra_hv_i2c_probe(struct platform_device *pdev)
 	}
 	i2c_dev->cont_id = i2c_dev->adapter.nr;
 	init_completion(&i2c_dev->msg_complete);
-	INIT_COMPLETION(i2c_dev->msg_complete);
 
 	/* Send a cleanup message in case this is a reboot and we had a
 	 * transaction in progress
@@ -272,7 +270,7 @@ static int tegra_hv_i2c_probe(struct platform_device *pdev)
 			dev_warn(&pdev->dev, "Timed out sending cleanup after (re)boot\n");
 	}
 
-	INIT_COMPLETION(i2c_dev->msg_complete);
+	reinit_completion(&i2c_dev->msg_complete);
 
 	ret = hv_i2c_get_max_payload(i2c_dev->comm_chan, i2c_dev->cont_id,
 				     &(i2c_dev->max_payload_size), &err);
@@ -290,8 +288,6 @@ static int tegra_hv_i2c_probe(struct platform_device *pdev)
 			i2c_dev->max_payload_size = 4096;
 		}
 	}
-
-	of_i2c_register_devices(&i2c_dev->adapter);
 
 	return 0;
 }

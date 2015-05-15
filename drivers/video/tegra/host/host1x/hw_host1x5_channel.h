@@ -134,6 +134,10 @@ static inline u32 host1x_channel_filter_gbuffer_r(void)
 {
 	return 0x2020;
 }
+static inline u32 host1x_channel_ch_vm_0_r(void)
+{
+	return 0x644;
+}
 static inline u32 host1x_channel_smmu_streamid_r(void)
 {
 	return 0x84;

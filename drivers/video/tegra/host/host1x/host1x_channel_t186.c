@@ -466,6 +466,11 @@ static int host1x_channel_init(struct nvhost_channel *ch,
 {
 	ch->aperture = host1x_channel_aperture(dev->aperture, ch->chid);
 
+	/* move channel to VM */
+	host1x_hypervisor_writel(dev->dev,
+			(host1x_channel_ch_vm_0_r() + ch->chid * 4),
+			nvhost_host1x_get_vmid(dev->dev));
+
 	return 0;
 }
 

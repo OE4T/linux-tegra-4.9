@@ -590,7 +590,6 @@ static struct sk_buff *oz_build_frame(struct oz_pd *pd, struct oz_tx_frame *f)
 	skb_reset_network_header(skb);
 	skb->dev = dev;
 	skb->protocol = htons(OZ_ETHERTYPE);
-	skb->priority = AC_VO;
 	if (dev_hard_header(skb, dev, OZ_ETHERTYPE, pd->mac_addr,
 		dev->dev_addr, skb->len) < 0)
 		goto fail;

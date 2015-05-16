@@ -554,6 +554,21 @@ static ssize_t emc3d_ratio_read(struct device *device,
 
 static DEVICE_ATTR(emc3d_ratio, ROOTRW, emc3d_ratio_read, emc3d_ratio_store);
 
+static ssize_t fmax_at_vmin_safe_read(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct gk20a *g = get_gk20a(ndev);
+	unsigned long gpu_fmax_at_vmin_hz = 0;
+
+	gpu_fmax_at_vmin_hz = tegra_dvfs_get_fmax_at_vmin_safe_t(
+		clk_get_parent(g->clk.tegra_clk));
+
+	return sprintf(buf, "%d\n", (int)(gpu_fmax_at_vmin_hz));
+}
+
+static DEVICE_ATTR(fmax_at_vmin_safe, S_IRUGO, fmax_at_vmin_safe_read, NULL);
+
 #ifdef CONFIG_PM_RUNTIME
 static ssize_t force_idle_store(struct device *device,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -671,6 +686,7 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_ptimer_scale_factor);
 	device_remove_file(dev, &dev_attr_elpg_enable);
 	device_remove_file(dev, &dev_attr_emc3d_ratio);
+	device_remove_file(dev, &dev_attr_fmax_at_vmin_safe);
 	device_remove_file(dev, &dev_attr_counters);
 	device_remove_file(dev, &dev_attr_counters_reset);
 	device_remove_file(dev, &dev_attr_load);
@@ -699,6 +715,7 @@ void gk20a_create_sysfs(struct platform_device *dev)
 	error |= device_create_file(&dev->dev, &dev_attr_ptimer_scale_factor);
 	error |= device_create_file(&dev->dev, &dev_attr_elpg_enable);
 	error |= device_create_file(&dev->dev, &dev_attr_emc3d_ratio);
+	error |= device_create_file(&dev->dev, &dev_attr_fmax_at_vmin_safe);
 	error |= device_create_file(&dev->dev, &dev_attr_counters);
 	error |= device_create_file(&dev->dev, &dev_attr_counters_reset);
 	error |= device_create_file(&dev->dev, &dev_attr_load);

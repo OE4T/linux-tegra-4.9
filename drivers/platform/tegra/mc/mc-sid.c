@@ -273,7 +273,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			TSECSRD,
 			TSECSWR,
 		},
-		.ord = OVERRIDE,
+		.ord = SIM_OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_GPUB,
@@ -358,7 +358,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			TSECSRDB,
 			TSECSWRB,
 		},
-		.ord = OVERRIDE,
+		.ord = SIM_OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_AXIS,
@@ -435,7 +435,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.oid	= {
 			HOST1XDMAR,
 		},
-		.ord = OVERRIDE,
+		.ord = SIM_OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_VIC,
@@ -445,7 +445,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			VICSRD,
 			VICSWR,
 		},
-		.ord = OVERRIDE,
+		.ord = SIM_OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_VI,
@@ -482,7 +482,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			NVENCSRD,
 			NVENCSWR,
 		},
-		.ord = OVERRIDE,
+		.ord = SIM_OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_NVJPG,
@@ -491,7 +491,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			NVJPGSRD,
 			NVJPGSWR,
 		},
-		.ord = OVERRIDE,
+		.ord = SIM_OVERRIDE,
 	},
 };
 

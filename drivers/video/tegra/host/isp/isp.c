@@ -115,7 +115,6 @@ static int isp_isomgr_register(struct isp *tegra_isp)
 {
 	int iso_client_id = TEGRA_ISO_CLIENT_ISP_A;
 	struct clk *isp_clk;
-	unsigned long max_bw = 0;
 	struct nvhost_device_data *pdata =
 				platform_get_drvdata(tegra_isp->ndev);
 
@@ -131,11 +130,12 @@ static int isp_isomgr_register(struct isp *tegra_isp)
 
 	/* Get max ISP BW */
 	isp_clk = pdata->clk[0];
-	max_bw = (clk_round_rate(isp_clk, UINT_MAX) / 1000) * ISP_MAX_BPP;
+	tegra_isp->max_bw =
+		(clk_round_rate(isp_clk, UINT_MAX) / 1000) * ISP_MAX_BPP;
 
 	/* Register with max possible BW for ISP usecases.*/
 	tegra_isp->isomgr_handle = tegra_isomgr_register(iso_client_id,
-					max_bw,
+					tegra_isp->max_bw,
 					NULL,	/* tegra_isomgr_renegotiate */
 					NULL);	/* *priv */
 
@@ -484,8 +484,8 @@ static long isp_ioctl(struct file *file,
 	if (_IOC_TYPE(cmd) != NVHOST_ISP_IOCTL_MAGIC)
 		return -EFAULT;
 
-	switch (cmd) {
-	case NVHOST_ISP_IOCTL_SET_EMC: {
+	switch (_IOC_NR(cmd)) {
+	case _IOC_NR(NVHOST_ISP_IOCTL_SET_EMC): {
 		int ret;
 		uint la_client = 0;
 		uint isp_bw = 0;
@@ -542,6 +542,14 @@ static long isp_ioctl(struct file *file,
 			/* isomgr driver expects BW in KBps */
 			isp_bw = isp_bw * 1000;
 
+			if (isp_bw > tegra_isp->max_bw) {
+				dev_err(&tegra_isp->ndev->dev,
+				"%s: Requested ISO BW %u is more than "
+				"ISP's max BW %u possible\n",
+				__func__, isp_bw, tegra_isp->max_bw);
+				return -EINVAL;
+			}
+
 			ret = isp_isomgr_request(tegra_isp, isp_bw, 4);
 			if (ret) {
 				dev_err(&tegra_isp->ndev->dev,
@@ -553,7 +561,7 @@ static long isp_ioctl(struct file *file,
 #endif
 		return ret;
 	}
-	case NVHOST_ISP_IOCTL_SET_ISP_CLK: {
+	case _IOC_NR(NVHOST_ISP_IOCTL_SET_ISP_CLK): {
 		long isp_clk_rate = 0;
 
 		if (copy_from_user(&isp_clk_rate,

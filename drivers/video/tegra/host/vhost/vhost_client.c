@@ -19,6 +19,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
+#include <linux/tegra-soc.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -37,6 +38,16 @@ static struct of_device_id tegra_client_of_match[] = {
 	{ .compatible = "nvidia,tegra124-vhost-vic",
 		.data = (struct nvhost_device_data *)&t124_vic_info },
 #endif
+#if defined(CONFIG_TEGRA_GRHOST_VI) || defined(CONFIG_TEGRA_GRHOST_VI_MODULE)
+	{ .compatible = "nvidia,tegra124-vhost-vi",
+		.data = (struct nvhost_device_data *)&t124_vi_info },
+#endif
+#ifdef CONFIG_TEGRA_GRHOST_ISP
+	{ .compatible = "nvidia,tegra124-vhost-isp",
+		.data = (struct nvhost_device_data *)&t124_isp_info },
+#endif
+	{ .compatible = "nvidia,tegra124-vhost-msenc",
+		.data = (struct nvhost_device_data *)&t124_msenc_info },
 	{ },
 };
 
@@ -49,10 +60,45 @@ static int vhost_client_probe(struct platform_device *dev)
 		const struct of_device_id *match;
 
 		match = of_match_device(tegra_client_of_match, &dev->dev);
-		if (match)
-			pdata = (struct nvhost_device_data *)match->data;
-	} else
+
+		if (!match)
+			return -ENODEV;
+
+		pdata = (struct nvhost_device_data *)match->data;
+
+#ifdef CONFIG_TEGRA_GRHOST_ISP
+		/* If ISP, need to differentiate ISP.0 from ISP.1 */
+		if (!IS_ENABLED(CONFIG_ARCH_TEGRA_18x_SOC)) {
+			int dev_id = 0;
+			if (sscanf(dev->name, "%x.isp", &dev_id) == 1) {
+				switch (tegra_get_chipid()) {
+				case TEGRA_CHIPID_TEGRA12:
+					if (dev_id == 0x54600000)
+						pdata = &t124_isp_info;
+					if (dev_id == 0x54680000)
+						pdata = &t124_ispb_info;
+					break;
+				default:
+					/* Only T124 is virtualized, for now */
+					return -EINVAL;
+				}
+			}
+		}
+#endif
+	} else {
 		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
+
+		/* If this is a slave device, verify that the master is
+		 * virtual. If it isn't, return -ENODEV to indicate no match.
+		 */
+		if (pdata && pdata->master) {
+			struct nvhost_device_data *master_dev =
+				(struct nvhost_device_data *)
+					pdata->master->dev.platform_data;
+			if (master_dev && !master_dev->virtual_dev)
+				return -ENODEV;
+		}
+	}
 
 	if (!pdata) {
 		dev_err(&dev->dev, "no platform data\n");
@@ -75,6 +121,9 @@ static int vhost_client_probe(struct platform_device *dev)
 	pdata->finalize_poweron = nvhost_vhost_client_finalize_poweron;
 	pdata->poweron_reset = false;
 	pdata->engine_cg_regs = NULL;
+	pdata->keepalive = false;
+
+	pdata->hw_init = NULL;
 
 	dev->dev.platform_data = NULL;
 
@@ -118,6 +167,9 @@ static int __exit vhost_client_remove(struct platform_device *dev)
 
 static struct platform_device_id client_id_table[] = {
 	{ .name = "vic03" },
+	{ .name = "vi" },
+	{ .name = "isp" },
+	{ .name = "msenc" },
 	{},
 };
 static struct platform_driver client_driver = {

@@ -36,7 +36,7 @@ struct isp {
 	void __iomem    *base;
 	spinlock_t lock;
 	int irq;
-
+	uint max_bw;
 	struct workqueue_struct *isp_workqueue;
 	struct tegra_isp_mfi *my_isr_work;
 };

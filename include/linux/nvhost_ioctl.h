@@ -390,6 +390,27 @@ enum nvhost_module_id {
 	NVHOST_MODULE_VII2C,
 };
 
+struct nvhost_characteristics {
+#define NVHOST_CHARACTERISTICS_GFILTER (1 << 0)
+#define NVHOST_CHARACTERISTICS_RESOURCE_PER_CHANNEL_INSTANCE (1 << 1)
+#define NVHOST_CHARACTERISTICS_SUPPORT_PREFENCES (1 << 2)
+	__u64 flags;
+
+	__u32 num_mlocks;
+	__u32 num_syncpts;
+
+	__u32 syncpts_base;
+	__u32 syncpts_limit;
+
+	__u32 num_hw_pts;
+	__u32 padding;
+};
+
+struct nvhost_ctrl_get_characteristics {
+	__u64 nvhost_characteristics_buf_size;
+	__u64 nvhost_characteristics_buf_addr;
+};
+
 #define NVHOST_IOCTL_CTRL_SYNCPT_READ		\
 	_IOWR(NVHOST_IOCTL_MAGIC, 1, struct nvhost_ctrl_syncpt_read_args)
 #define NVHOST_IOCTL_CTRL_SYNCPT_INCR		\
@@ -422,9 +443,11 @@ enum nvhost_module_id {
 	_IOWR(NVHOST_IOCTL_MAGIC, 12, struct nvhost_ctrl_module_regrdwr_args)
 #define NVHOST_IOCTL_CTRL_SYNC_FENCE_SET_NAME  \
 	_IOWR(NVHOST_IOCTL_MAGIC, 13, struct nvhost_ctrl_sync_fence_name_args)
+#define NVHOST_IOCTL_CTRL_GET_CHARACTERISTICS  \
+	_IOWR(NVHOST_IOCTL_MAGIC, 14, struct nvhost_ctrl_get_characteristics)
 
 #define NVHOST_IOCTL_CTRL_LAST			\
-	_IOC_NR(NVHOST_IOCTL_CTRL_SYNC_FENCE_SET_NAME)
+	_IOC_NR(NVHOST_IOCTL_CTRL_GET_CHARACTERISTICS)
 #define NVHOST_IOCTL_CTRL_MAX_ARG_SIZE	\
 	sizeof(struct nvhost_ctrl_syncpt_waitmex_args)
 

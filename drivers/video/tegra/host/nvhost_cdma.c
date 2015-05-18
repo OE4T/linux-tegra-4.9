@@ -469,7 +469,6 @@ void nvhost_cdma_push_gather(struct nvhost_cdma *cdma,
 		trace_write_gather(cdma, cpuva, iova, offset, op1 & 0x1fff);
 
 	if (slots_free == 0) {
-		cdma_op().kick(cdma);
 		slots_free = nvhost_cdma_wait_locked(cdma,
 				CDMA_EVENT_PUSH_BUFFER_SPACE);
 	}

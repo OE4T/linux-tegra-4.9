@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -31,16 +31,10 @@ struct platform_device;
 
 enum nvhost_intr_action {
 	/**
-	 * Perform cleanup after a submit has completed.
-	 * 'data' points to a channel
-	 */
-	NVHOST_INTR_ACTION_SUBMIT_COMPLETE = 0,
-
-	/**
 	 * Signal a nvhost_sync_pt.
 	 * 'data' points to a nvhost_sync_pt
 	 */
-	NVHOST_INTR_ACTION_SIGNAL_SYNC_PT,
+	NVHOST_INTR_ACTION_SIGNAL_SYNC_PT = 0,
 
 	/**
 	 * Wake up a  task.
@@ -55,6 +49,12 @@ enum nvhost_intr_action {
 	NVHOST_INTR_ACTION_WAKEUP_INTERRUPTIBLE,
 
 	/**
+	 * Perform cleanup after a submit has completed.
+	 * 'data' points to a channel
+	 */
+	NVHOST_INTR_ACTION_SUBMIT_COMPLETE,
+
+	/**
 	 * Notify some external function about completion
 	 * 'data' holds pointer to an internal structure that holds a
 	 * function pointer and the stored private data
@@ -64,19 +64,22 @@ enum nvhost_intr_action {
 	NVHOST_INTR_ACTION_COUNT
 };
 
+#define NVHOST_INTR_HIGH_PRIO_COUNT NVHOST_INTR_ACTION_SUBMIT_COMPLETE
+#define NVHOST_INTR_LOW_PRIO_COUNT \
+	(NVHOST_INTR_ACTION_COUNT - NVHOST_INTR_HIGH_PRIO_COUNT)
+
 struct nvhost_intr;
 
 struct nvhost_intr_syncpt {
 	struct nvhost_intr *intr;
 	u8 id;
-	struct {
-		spinlock_t s;
-		struct mutex m;
-	} lock;
+	struct mutex lock;
 	struct list_head wait_head;
 	char thresh_irq_name[12];
 	struct work_struct work;
 	struct timespec isr_recv;
+	struct work_struct low_prio_work;
+	struct list_head low_prio_handlers[NVHOST_INTR_LOW_PRIO_COUNT];
 };
 
 struct nvhost_intr {

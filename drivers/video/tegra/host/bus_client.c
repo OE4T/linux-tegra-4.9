@@ -850,18 +850,34 @@ static int nvhost_ioctl_channel_set_rate(struct nvhost_channel_userctx *ctx,
 			& ((1 << NVHOST_CLOCK_ATTR_BIT_WIDTH) - 1);
 	int index = moduleid ?
 			moduleid_to_index(ctx->pdev, moduleid) : 0;
+	int err;
 
-	return nvhost_module_set_rate(ctx->pdev,
-			ctx, arg->rate, index, attr);
+	err = nvhost_module_set_rate(ctx->pdev, ctx, arg->rate, index, attr);
+	if (!tegra_platform_is_silicon() && err) {
+		nvhost_dbg(dbg_clk, "ignoring error: module=%u, attr=%u, index=%d, err=%d",
+			   moduleid, attr, index, err);
+		err = 0;
+	}
+
+	return err;
 }
 
 static int nvhost_ioctl_channel_get_rate(struct nvhost_channel_userctx *ctx,
 	u32 moduleid, u32 *rate)
 {
 	int index = moduleid ? moduleid_to_index(ctx->pdev, moduleid) : 0;
+	int err;
 
-	return nvhost_module_get_rate(ctx->pdev,
-			(unsigned long *)rate, index);
+	err = nvhost_module_get_rate(ctx->pdev, (unsigned long *)rate, index);
+	if (!tegra_platform_is_silicon() && err) {
+		nvhost_dbg(dbg_clk, "ignoring error: module=%u, rate=%u, error=%d",
+			   moduleid, *rate, err);
+		err = 0;
+		/* fake the return value */
+		*rate = 32 * 1024;
+	}
+
+	return err;
 }
 
 static int nvhost_ioctl_channel_module_regrdwr(
@@ -883,6 +899,10 @@ static int nvhost_ioctl_channel_module_regrdwr(
 		return -EINVAL;
 
 	ndev = ctx->pdev;
+
+	if (nvhost_dev_is_virtual(ndev))
+		return vhost_rdwr_module_regs(ndev, num_offsets,
+				args->block_size, offsets, values, args->write);
 
 	while (num_offsets--) {
 		int err;
@@ -1047,6 +1067,7 @@ static long nvhost_channelctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
 	struct nvhost_channel_userctx *priv = filp->private_data;
+	struct nvhost_master *host = nvhost_get_host(priv->pdev);
 	struct device *dev;
 	u8 buf[NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE];
 	int err = 0;
@@ -1198,6 +1219,12 @@ static long nvhost_channelctl(struct file *filp,
 	{
 		struct nvhost_clk_rate_args *arg =
 				(struct nvhost_clk_rate_args *)buf;
+
+		/* if virtualized, client requests to change clock rate
+		 * are ignored
+		 */
+		if (nvhost_dev_is_virtual(priv->pdev))
+			break;
 
 		err = nvhost_ioctl_channel_set_rate(priv, arg);
 		break;
@@ -1353,9 +1380,19 @@ static long nvhost_channelctl(struct file *filp,
 			(struct nvhost_set_error_notifier *)buf);
 		break;
 	case NVHOST_IOCTL_CHANNEL_MAP_BUFFER:
+		if (!host->info.allow_user_mappings) {
+			err = -ENOSYS;
+			break;
+		}
+
 		err = nvhost_ioctl_channel_map_buffer(priv, (void *)buf);
 		break;
 	case NVHOST_IOCTL_CHANNEL_UNMAP_BUFFER:
+		if (!host->info.allow_user_mappings) {
+			err = -ENOSYS;
+			break;
+		}
+
 		err = nvhost_ioctl_channel_unmap_buffer(priv, (void *)buf);
 		break;
 	case NVHOST_IOCTL_CHANNEL_SET_TIMEOUT_EX:
@@ -1549,6 +1586,11 @@ int nvhost_client_device_init(struct platform_device *dev)
 		pdata->slave->dev.parent = dev->dev.parent;
 		platform_device_register(pdata->slave);
 		pdata->slave_initialized = 1;
+	}
+
+	if (pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE) {
+		nvhost_master->info.channel_policy = MAP_CHANNEL_ON_SUBMIT;
+		nvhost_update_characteristics(dev);
 	}
 
 	if (pdata->hw_init)

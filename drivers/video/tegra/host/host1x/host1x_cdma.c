@@ -361,6 +361,7 @@ static void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 {
 	struct nvhost_master *dev;
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
+	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 	u32 cmdproc_stop;
 
 	dev = cdma_to_dev(cdma);
@@ -390,7 +391,26 @@ static void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 
 	host1x_sync_writel(dev->dev,
 			host1x_sync_ch_teardown_r(), BIT(ch->chid));
-	nvhost_module_reset(ch->dev, true);
+
+	/* if resources are allocated per channel instance, the channel does
+	 * not necessaryly hold the mlock */
+	if (pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE) {
+		struct nvhost_syncpt *syncpt = &dev->syncpt;
+		unsigned int owner;
+		bool ch_own, cpu_own;
+
+		/* check the owner */
+		syncpt_op().mutex_owner(syncpt, pdata->modulemutexes[0],
+					&cpu_own, &ch_own, &owner);
+
+		/* if this channel owns the lock, we need to reset the engine */
+		if (ch_own && owner == ch->chid)
+			nvhost_module_reset(ch->dev, true);
+	} else {
+		/* if we allocate the resource per channel, the module is always
+		 * contamined */
+		nvhost_module_reset(ch->dev, true);
+	}
 
 	cdma_timeout_release_mlocks(cdma);
 

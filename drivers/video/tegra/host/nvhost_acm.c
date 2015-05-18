@@ -40,6 +40,7 @@
 #include <linux/platform/tegra/mc.h>
 
 #include "nvhost_acm.h"
+#include "nvhost_vm.h"
 #include "nvhost_scale.h"
 #include "nvhost_channel.h"
 #include "dev.h"
@@ -254,6 +255,13 @@ int nvhost_module_busy(struct platform_device *dev)
 	}
 #else
 	if (!pdata->booted && pdata->finalize_poweron) {
+		ret = nvhost_vm_init_device(dev);
+		if (ret < 0) {
+			nvhost_err(&dev->dev, "failed to init vm, err %d",
+				   ret);
+			return ret;
+		}
+
 		ret = pdata->finalize_poweron(dev);
 		if (ret < 0) {
 			nvhost_err(&dev->dev, "failed to power on, err %d",
@@ -1213,6 +1221,11 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 					nvhost_module_load_regs(pdev, true);
 			}
 		}
+
+		/* initialize device vm */
+		ret = nvhost_vm_init_device(pdev);
+		if (ret)
+			continue;
 
 		if (pdata->finalize_poweron)
 			ret = pdata->finalize_poweron(to_platform_device(dev));

@@ -320,6 +320,10 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 	if (!ndev)
 		return -ENODEV;
 
+	if (nvhost_dev_is_virtual(ndev))
+		return vhost_rdwr_module_regs(ndev, num_offsets,
+				args->block_size, offsets, values, args->write);
+
 	remaining = args->block_size >> 2;
 
 	vals = kmalloc(num_offsets * args->block_size,
@@ -391,6 +395,29 @@ static int nvhost_ioctl_ctrl_syncpt_read_max(struct nvhost_ctrl_userctx *ctx,
 		return -EINVAL;
 	args->value = nvhost_syncpt_read_max(&ctx->dev->syncpt, args->id);
 	return 0;
+}
+
+static int nvhost_ioctl_ctrl_get_characteristics(struct nvhost_ctrl_userctx *ctx,
+	struct nvhost_ctrl_get_characteristics *args)
+{
+	struct nvhost_characteristics *nvhost_char = &ctx->dev->nvhost_char;
+	int err = 0;
+
+	if (args->nvhost_characteristics_buf_size > 0) {
+		size_t write_size = sizeof(*nvhost_char);
+
+		if (write_size > args->nvhost_characteristics_buf_size)
+			write_size = args->nvhost_characteristics_buf_size;
+
+		err = copy_to_user((void __user *)(uintptr_t)
+			args->nvhost_characteristics_buf_addr,
+			nvhost_char, write_size);
+	}
+
+	if (err == 0)
+		args->nvhost_characteristics_buf_size = sizeof(*nvhost_char);
+
+	return err;
 }
 
 static long nvhost_ctrlctl(struct file *filp,
@@ -470,6 +497,9 @@ static long nvhost_ctrlctl(struct file *filp,
 		break;
 	case NVHOST_IOCTL_CTRL_SYNCPT_WAITMEX:
 		err = nvhost_ioctl_ctrl_syncpt_waitmex(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CTRL_GET_CHARACTERISTICS:
+		err = nvhost_ioctl_ctrl_get_characteristics(priv, (void *)buf);
 		break;
 	default:
 		err = -ENOTTY;
@@ -765,6 +795,28 @@ static void of_nvhost_parse_platform_data(struct platform_device *dev,
 
 long linsim_cl = 0;
 
+int nvhost_update_characteristics(struct platform_device *dev)
+{
+	struct nvhost_master *host = nvhost_get_host(dev);
+
+	if (nvhost_gather_filter_enabled(&host->syncpt))
+		host->nvhost_char.flags |= NVHOST_CHARACTERISTICS_GFILTER;
+
+	if (host->info.channel_policy == MAP_CHANNEL_ON_SUBMIT)
+		host->nvhost_char.flags |=
+			NVHOST_CHARACTERISTICS_RESOURCE_PER_CHANNEL_INSTANCE;
+
+	host->nvhost_char.flags |= NVHOST_CHARACTERISTICS_SUPPORT_PREFENCES;
+
+	host->nvhost_char.num_mlocks = host->info.nb_mlocks;
+	host->nvhost_char.num_syncpts = host->info.nb_pts;
+	host->nvhost_char.syncpts_base = host->info.pts_base;
+	host->nvhost_char.syncpts_limit = host->info.pts_limit;
+	host->nvhost_char.num_hw_pts = host->info.nb_hw_pts;
+
+	return 0;
+}
+
 static int nvhost_probe(struct platform_device *dev)
 {
 	struct nvhost_master *host;
@@ -908,6 +960,8 @@ static int nvhost_probe(struct platform_device *dev)
 	nvhost_debug_init(host);
 
 	nvhost_module_idle(dev);
+
+	nvhost_update_characteristics(dev);
 
 	dev_info(&dev->dev, "initialized\n");
 	return 0;

@@ -23,6 +23,7 @@
 
 #include <linux/cdev.h>
 #include <linux/nvhost.h>
+#include <linux/nvhost_ioctl.h>
 
 #include "nvhost_syncpt.h"
 #include "nvhost_channel.h"
@@ -72,10 +73,10 @@ struct host1x_device_info {
 	int		pts_base;	/* host1x: syncpoint base */
 	int		pts_limit;	/* host1x: syncpoint limit */
 	enum nvhost_syncpt_policy syncpt_policy; /* host1x: syncpoint policy */
-
 	int		nb_mlocks;	/* host1x: number of mlocks */
 	int		(*initialize_chip_support)(struct nvhost_master *,
 						struct nvhost_chip_support *);
+	bool		allow_user_mappings; /* allow userspace mappings? */
 };
 
 struct nvhost_master {
@@ -89,6 +90,7 @@ struct nvhost_master {
 	struct platform_device *dev;
 	atomic_t clientid;
 	struct host1x_device_info info;
+	struct nvhost_characteristics nvhost_char;
 	struct kobject *caps_kobj;
 	struct nvhost_capability_node *caps_nodes;
 	struct mutex timeout_mutex;
@@ -117,6 +119,8 @@ int nvhost_host1x_prepare_poweroff(struct platform_device *dev);
 void nvhost_set_chanops(struct nvhost_channel *ch);
 
 int nvhost_gather_filter_enabled(struct nvhost_syncpt *sp);
+
+int nvhost_update_characteristics(struct platform_device *dev);
 
 static inline void *nvhost_get_private_data(struct platform_device *_dev)
 {

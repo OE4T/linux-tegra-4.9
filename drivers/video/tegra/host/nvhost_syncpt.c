@@ -908,7 +908,10 @@ void nvhost_free_syncpt(u32 id)
 			!nvhost_syncpt_min_eq_max(sp, id)) {
 		nvhost_warn(d, "trying to free host managed syncpt still in use %u (%s)\n",
 			id, nvhost_syncpt_get_name(host->dev, id));
-		nvhost_syncpt_wait(sp, id, nvhost_syncpt_read_max(sp, id));
+		nvhost_syncpt_wait_timeout(sp, id,
+					   nvhost_syncpt_read_max(sp, id),
+					   (u32)MAX_SCHEDULE_TIMEOUT,
+					   NULL, NULL, false);
 	}
 
 	mutex_lock(&sp->syncpt_mutex);

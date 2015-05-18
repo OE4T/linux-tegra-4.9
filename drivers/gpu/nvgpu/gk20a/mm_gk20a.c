@@ -810,7 +810,7 @@ void gk20a_vm_put_buffers(struct vm_gk20a *vm,
 static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 {
 	struct device *d = dev_from_vm(vm);
-	int retries;
+	int retries = 1000;
 	struct mapped_buffer_node *mapped_buffer;
 
 	mutex_lock(&vm->update_gmmu_lock);
@@ -825,17 +825,13 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 	if (mapped_buffer->flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
 		mutex_unlock(&vm->update_gmmu_lock);
 
-		if (tegra_platform_is_silicon())
-			retries = 1000;
-		else
-			retries = 1000000;
-		while (retries) {
+		while (retries >= 0 || !tegra_platform_is_silicon()) {
 			if (atomic_read(&mapped_buffer->ref.refcount) == 1)
 				break;
 			retries--;
-			udelay(50);
+			udelay(5);
 		}
-		if (!retries)
+		if (retries < 0 && tegra_platform_is_silicon())
 			gk20a_err(d, "sync-unmap failed on 0x%llx",
 								offset);
 		mutex_lock(&vm->update_gmmu_lock);

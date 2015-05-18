@@ -105,8 +105,9 @@ static int tegra_crypto_dev_open(struct inode *inode, struct file *filp)
 	if (IS_ERR(ctx->aes_tfm[TEGRA_CRYPTO_CBC])) {
 		pr_err("Failed to load transform for cbc-aes-tegra: %ld\n",
 			PTR_ERR(ctx->aes_tfm[TEGRA_CRYPTO_CBC]));
+		ret = PTR_ERR(ctx->aes_tfm[TEGRA_CRYPTO_CBC]);
 		kfree(ctx);
-		return PTR_ERR(ctx->aes_tfm[TEGRA_CRYPTO_CBC]);
+		return ret;
 	}
 
 	filp->private_data = ctx;

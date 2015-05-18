@@ -292,11 +292,9 @@ static int host1x_channel_submit(struct nvhost_job *job)
 {
 	struct nvhost_channel *ch = job->ch;
 	struct nvhost_syncpt *sp = &nvhost_get_host(job->ch->dev)->syncpt;
-	u32 user_syncpt_incrs;
 	u32 prev_max = 0;
 	int err, i;
 	void *completed_waiters[job->num_syncpts];
-	struct nvhost_job_syncpt *hwctx_sp = job->sp + job->hwctx_syncpt_idx;
 
 	host1x_channel_prio_check(job);
 
@@ -315,7 +313,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	}
 
 	/* before error checks, return current max */
-	prev_max = hwctx_sp->fence = nvhost_syncpt_read_max(sp, hwctx_sp->id);
+	prev_max = job->sp->fence = nvhost_syncpt_read_max(sp, job->sp->id);
 
 	/* get submit lock */
 	err = mutex_lock_interruptible(&ch->submitlock);
@@ -353,14 +351,9 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	push_waits(job);
 	lock_device(job, true);
 
-	/* submit_ctxsave() and submit_ctxrestore() use the channel syncpt */
-	user_syncpt_incrs = hwctx_sp->incrs;
-
 	/* determine fences for all syncpoints */
 	for (i = 0; i < job->num_syncpts; ++i) {
-		u32 incrs = (i == job->hwctx_syncpt_idx) ?
-			user_syncpt_incrs :
-			job->sp[i].incrs;
+		u32 incrs = job->sp[i].incrs;
 
 		/* create a valid max for client managed syncpoints */
 		if (nvhost_syncpt_client_managed(sp, job->sp[i].id)) {
@@ -395,7 +388,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	nvhost_cdma_end(&ch->cdma, job);
 
 	trace_nvhost_channel_submitted(ch->dev->name, prev_max,
-		hwctx_sp->fence);
+		job->sp->fence);
 
 	for (i = 0; i < job->num_syncpts; ++i) {
 		/* schedule a submit complete interrupt */

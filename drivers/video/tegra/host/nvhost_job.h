@@ -96,9 +96,6 @@ struct nvhost_job {
 	struct nvhost_job_syncpt *sp;
 	int num_syncpts;
 
-	/* Hold number to the "stream syncpoint" index */
-	int hwctx_syncpt_idx;
-
 	/* Priority of this submit. */
 	int priority;
 

@@ -20,7 +20,7 @@ nvhost-objs = \
 	nvhost_scale.o \
 	pod_scaling.o \
 	nvhost_vm.o \
-	scale3d.o
+	scale_emc.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost.o
 obj-$(CONFIG_TEGRA_GRHOST) += host1x/

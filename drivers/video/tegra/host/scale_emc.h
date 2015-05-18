@@ -1,9 +1,9 @@
 /*
- * drivers/video/tegra/host/gr3d/scale3d.h
+ * drivers/video/tegra/host/gr3d/scale_emc.h
  *
  * Tegra Graphics Host 3D Clock Scaling
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -37,20 +37,20 @@ struct nvhost_emc_params {
 };
 
 /* Suspend is called when powering down module */
-void nvhost_scale3d_suspend(struct device *);
+void nvhost_scale_emc_suspend(struct device *);
 
 /* Initialization and de-initialization for module */
-void nvhost_scale3d_init(struct platform_device *pdev);
-void nvhost_scale3d_deinit(struct platform_device *pdev);
+void nvhost_scale_emc_init(struct platform_device *pdev);
+void nvhost_scale_emc_deinit(struct platform_device *pdev);
 
 /* Callback for generic profile. The callback handles setting
  * the frequencies of EMC and the second 3d unit (if available) */
-void nvhost_scale3d_callback(struct nvhost_device_profile *profile,
+void nvhost_scale_emc_callback(struct nvhost_device_profile *profile,
 			     unsigned long freq);
 
-void nvhost_scale3d_calibrate_emc(struct nvhost_emc_params *emc_params,
+void nvhost_scale_emc_calibrate_emc(struct nvhost_emc_params *emc_params,
 				  struct clk *clk_3d, struct clk *clk_3d_emc,
 				  bool linear_emc);
-long nvhost_scale3d_get_emc_rate(struct nvhost_emc_params *emc_params,
+long nvhost_scale_emc_get_emc_rate(struct nvhost_emc_params *emc_params,
 				 long freq);
 #endif

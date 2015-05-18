@@ -36,7 +36,7 @@
 #include "vi/vi.h"
 #include "isp/isp.h"
 #include "isp/isp_isr_v1.h"
-#include "scale3d.h"
+#include "scale_emc.h"
 #include "chip_support.h"
 #include "nvhost_scale.h"
 #include "vhost/vhost.h"
@@ -439,11 +439,11 @@ struct nvhost_device_data t124_vic_info = {
 	.powergate_delay	= 500,
 	.powergate_id		= TEGRA_POWERGATE_VIC,
 	.finalize_poweron	= nvhost_vic_finalize_poweron,
-	.scaling_init		= nvhost_scale3d_init,
-	.scaling_deinit		= nvhost_scale3d_deinit,
+	.scaling_init		= nvhost_scale_emc_init,
+	.scaling_deinit		= nvhost_scale_emc_deinit,
 	.busy			= nvhost_scale_notify_busy,
 	.idle			= nvhost_scale_notify_idle,
-	.scaling_post_cb	= &nvhost_scale3d_callback,
+	.scaling_post_cb	= &nvhost_scale_emc_callback,
 	.devfreq_governor	= "nvhost_podgov",
 	.actmon_regs		= HOST1X_CHANNEL_ACTMON2_REG_BASE,
 	.actmon_enabled		= true,

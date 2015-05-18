@@ -1,9 +1,9 @@
 /*
- * drivers/video/tegra/host/gr3d/scale3d.c
+ * drivers/video/tegra/host/gr3d/scale_emc.c
  *
  * Tegra Graphics Host 3D clock scaling
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -38,7 +38,7 @@
 
 #include "chip_support.h"
 #include "dev.h"
-#include "scale3d.h"
+#include "scale_emc.h"
 #include "nvhost_acm.h"
 #include "nvhost_scale.h"
 
@@ -76,7 +76,7 @@ static inline struct clk *clk(struct nvhost_device_profile *profile, int index)
 	return pdata->clk[index];
 }
 
-long nvhost_scale3d_get_emc_rate(struct nvhost_emc_params *emc_params,
+long nvhost_scale_emc_get_emc_rate(struct nvhost_emc_params *emc_params,
 				 long freq)
 {
 	long hz;
@@ -96,7 +96,7 @@ long nvhost_scale3d_get_emc_rate(struct nvhost_emc_params *emc_params,
 	return hz;
 }
 
-void nvhost_scale3d_callback(struct nvhost_device_profile *profile,
+void nvhost_scale_emc_callback(struct nvhost_device_profile *profile,
 			     unsigned long freq)
 {
 	struct nvhost_gr3d_params *gr3d_params = profile->private_data;
@@ -106,13 +106,13 @@ void nvhost_scale3d_callback(struct nvhost_device_profile *profile,
 
 	/* Set EMC clockrate */
 	after = (long) clk_get_rate(clk(profile, gr3d_params->clk_3d));
-	hz = nvhost_scale3d_get_emc_rate(emc_params, after);
+	hz = nvhost_scale_emc_get_emc_rate(emc_params, after);
 	nvhost_module_set_devfreq_rate(profile->pdev, gr3d_params->clk_3d_emc,
 				       hz);
 }
 
 /*
- * nvhost_scale3d_calibrate_emc()
+ * nvhost_scale_emc_calibrate_emc()
  *
  * Compute emc scaling parameters
  *
@@ -162,7 +162,7 @@ void nvhost_scale3d_callback(struct nvhost_device_profile *profile,
  *
  */
 
-void nvhost_scale3d_calibrate_emc(struct nvhost_emc_params *emc_params,
+void nvhost_scale_emc_calibrate_emc(struct nvhost_emc_params *emc_params,
 				  struct clk *clk_3d, struct clk *clk_3d_emc,
 				  bool linear_emc)
 {
@@ -210,13 +210,13 @@ void nvhost_scale3d_calibrate_emc(struct nvhost_emc_params *emc_params,
 }
 
 /*
- * nvhost_scale3d_init(dev)
+ * nvhost_scale_emc_init(dev)
  *
  * Initialise 3d clock scaling for the given device. This function installs
  * pod_scaling governor to handle the clock scaling.
  */
 
-void nvhost_scale3d_init(struct platform_device *pdev)
+void nvhost_scale_emc_init(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_device_profile *profile;
@@ -236,7 +236,7 @@ void nvhost_scale3d_init(struct platform_device *pdev)
 
 	profile->private_data = gr3d_params;
 
-	nvhost_scale3d_calibrate_emc(&gr3d_params->emc_params,
+	nvhost_scale_emc_calibrate_emc(&gr3d_params->emc_params,
 				     clk(profile, gr3d_params->clk_3d),
 				     clk(profile, gr3d_params->clk_3d_emc),
 				     pdata->linear_emc);
@@ -248,12 +248,12 @@ err_allocate_gr3d_params:
 }
 
 /*
- * nvhost_scale3d_deinit(dev)
+ * nvhost_scale_emc_deinit(dev)
  *
  * Stop 3d scaling for the given device.
  */
 
-void nvhost_scale3d_deinit(struct platform_device *pdev)
+void nvhost_scale_emc_deinit(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	if (!pdata->power_profile)

@@ -53,7 +53,7 @@
 #include <governor.h>
 
 #include "nvhost_acm.h"
-#include "scale3d.h"
+#include "scale_emc.h"
 #include "dev.h"
 
 #define GET_TARGET_FREQ_DONTSCALE	1
@@ -459,13 +459,13 @@ static int freqlist_down(struct podgov_info_rec *podgov, unsigned long target,
 }
 
 /*******************************************************************************
- * nvhost_scale3d_set_throughput_hint(hint)
+ * nvhost_scale_emc_set_throughput_hint(hint)
  *
  * This function can be used to request scaling up or down based on the
  * required throughput
  ******************************************************************************/
 
-static int nvhost_scale3d_set_throughput_hint(struct notifier_block *nb,
+static int nvhost_scale_emc_set_throughput_hint(struct notifier_block *nb,
 					      unsigned long action, void *data)
 {
 	struct podgov_info_rec *podgov =
@@ -547,7 +547,7 @@ exit_unlock:
 
 #ifdef CONFIG_DEBUG_FS
 
-static void nvhost_scale3d_debug_init(struct devfreq *df)
+static void nvhost_scale_emc_debug_init(struct devfreq *df)
 {
 	struct podgov_info_rec *podgov = df->data;
 	struct dentry *f;
@@ -590,7 +590,7 @@ static void nvhost_scale3d_debug_init(struct devfreq *df)
 #undef CREATE_PODGOV_FILE
 }
 
-static void nvhost_scale3d_debug_deinit(struct devfreq *df)
+static void nvhost_scale_emc_debug_deinit(struct devfreq *df)
 {
 	struct podgov_info_rec *podgov = df->data;
 
@@ -598,12 +598,12 @@ static void nvhost_scale3d_debug_deinit(struct devfreq *df)
 }
 
 #else
-static void nvhost_scale3d_debug_init(struct devfreq *df)
+static void nvhost_scale_emc_debug_init(struct devfreq *df)
 {
 	(void)df;
 }
 
-static void nvhost_scale3d_debug_deinit(struct devfreq *df)
+static void nvhost_scale_emc_debug_deinit(struct devfreq *df)
 {
 	(void)df;
 }
@@ -934,12 +934,12 @@ static int nvhost_pod_init(struct devfreq *df)
 	podgov->freq_avg = 0;
 	podgov->hint_avg = 0;
 
-	nvhost_scale3d_debug_init(df);
+	nvhost_scale_emc_debug_init(df);
 
 	/* register the governor to throughput hint notifier chain */
 #ifdef CONFIG_TEGRA_THROUGHPUT
 	podgov->throughput_hint_notifier.notifier_call =
-		&nvhost_scale3d_set_throughput_hint;
+		&nvhost_scale_emc_set_throughput_hint;
 	blocking_notifier_chain_register(&throughput_notifier_list,
 					 &podgov->throughput_hint_notifier);
 #endif
@@ -984,7 +984,7 @@ static void nvhost_pod_exit(struct devfreq *df)
 	sysfs_remove_file(&df->dev.parent->kobj,
 			  &podgov->enable_3d_scaling_attr.attr);
 
-	nvhost_scale3d_debug_deinit(df);
+	nvhost_scale_emc_debug_deinit(df);
 
 	kfree(podgov);
 }

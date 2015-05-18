@@ -18,7 +18,6 @@ nvhost-objs = \
 	bus_client.o \
 	chip_support.o \
 	nvhost_scale.o \
-	pod_scaling.o \
 	nvhost_vm.o \
 	scale_emc.o
 

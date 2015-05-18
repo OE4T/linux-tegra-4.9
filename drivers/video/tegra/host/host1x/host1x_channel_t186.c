@@ -215,18 +215,21 @@ static void submit_work(struct nvhost_job *job)
 			if (use_locking &&
 			    cur_class && cur_class != NV_HOST1X_CLASS_ID) {
 				nvhost_cdma_push(&job->ch->cdma,
-					nvhost_opcode_release_mlock(cur_class),
-					NVHOST_OPCODE_NOOP);
+					NVHOST_OPCODE_NOOP,
+					nvhost_opcode_release_mlock(cur_class));
 				dev_warn(&job->ch->dev->dev, "%s changes out from engine class",
 					 current->comm);
 			}
 
 			/* acquire lock of the new class */
-			if (use_locking && g->class_id != NV_HOST1X_CLASS_ID)
+			if (use_locking && g->class_id != NV_HOST1X_CLASS_ID) {
 				op1 = nvhost_opcode_acquire_mlock(g->class_id);
+				op2 = nvhost_opcode_setclass(g->class_id, 0, 0);
+			} else {
+				op1 = nvhost_opcode_setclass(g->class_id, 0, 0);
+				op2 = NVHOST_OPCODE_NOOP;
+			}
 
-			/* change the class */
-			op2 = nvhost_opcode_setclass(g->class_id, 0, 0);
 
 			/* ..and finally, push opcode pair to hardware */
 			nvhost_cdma_push(&job->ch->cdma, op1, op2);
@@ -268,8 +271,8 @@ static void submit_work(struct nvhost_job *job)
 	/* release the engine */
 	if (use_locking && cur_class && cur_class != NV_HOST1X_CLASS_ID)
 		nvhost_cdma_push(&job->ch->cdma,
-			nvhost_opcode_release_mlock(cur_class),
-			NVHOST_OPCODE_NOOP);
+			NVHOST_OPCODE_NOOP,
+			nvhost_opcode_release_mlock(cur_class));
 }
 
 static int host1x_channel_set_low_priority(struct nvhost_channel *ch)

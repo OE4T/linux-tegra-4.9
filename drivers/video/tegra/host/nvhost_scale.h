@@ -34,7 +34,9 @@ struct clk;
 
 struct nvhost_device_profile {
 	struct platform_device		*pdev;
-	struct host1x_actmon		*actmon;
+
+	struct host1x_actmon		**actmon;
+
 	struct clk			*clk;
 
 	bool				busy;
@@ -45,6 +47,7 @@ struct nvhost_device_profile {
 
 	void				*private_data;
 	struct notifier_block		qos_notify_block;
+	int				num_actmons;
 };
 
 /* Initialization and de-initialization for module */

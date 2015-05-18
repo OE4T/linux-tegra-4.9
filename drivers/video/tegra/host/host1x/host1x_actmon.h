@@ -31,6 +31,11 @@ enum init_e {
 	ACTMON_SLEEP = 2
 };
 
+enum type_e {
+	ENGINE_ACTMON = 0,
+	MAX_ACTMON = 1
+};
+
 struct host1x_actmon_worker {
 	int type;
 	struct host1x_actmon *actmon;
@@ -41,6 +46,7 @@ struct host1x_actmon {
 	/* Set to 1 if actmon has been initialized */
 	enum init_e init;
 
+	enum type_e type;
 	struct nvhost_master *host;
 	void __iomem *regs;
 	struct clk *clk;

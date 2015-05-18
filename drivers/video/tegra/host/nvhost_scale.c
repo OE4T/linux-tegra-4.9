@@ -50,7 +50,8 @@ static ssize_t nvhost_scale_load_show(struct device *dev,
 	u32 busy_time;
 	ssize_t res;
 
-	actmon_op().read_avg_norm(profile->actmon, &busy_time);
+	actmon_op().read_avg_norm(profile->actmon[ENGINE_ACTMON],
+				&busy_time);
 	res = snprintf(buf, PAGE_SIZE, "%u\n", busy_time);
 
 	return res;
@@ -186,7 +187,8 @@ static void update_load_estimate_actmon(struct nvhost_device_profile *profile)
 
 	profile->dev_stat.total_time = dt;
 	profile->last_event_time = t;
-	actmon_op().read_avg_norm(profile->actmon, &busy_time);
+	actmon_op().read_avg_norm(profile->actmon[ENGINE_ACTMON],
+				&busy_time);
 	profile->dev_stat.busy_time = (busy_time * dt) / 1000;
 }
 
@@ -209,8 +211,11 @@ static void nvhost_scale_notify(struct platform_device *pdev, bool busy)
 
 	if (nvhost_debug_trace_actmon) {
 		u32 load;
-		actmon_op().read_avg_norm(profile->actmon, &load);
-		trace_nvhost_scale_notify(pdev->name, load, busy);
+
+		actmon_op().read_avg_norm(profile->actmon[ENGINE_ACTMON],
+					&load);
+		if (load)
+			trace_nvhost_scale_notify(pdev->name, load, busy);
 	}
 
 	/* If defreq is disabled, set the freq to max or min */
@@ -252,7 +257,7 @@ static int nvhost_scale_get_dev_status(struct device *dev,
 	/* Make sure there are correct values for the current frequency */
 	profile->dev_stat.current_frequency = clk_get_rate(profile->clk);
 
-	if (profile->actmon)
+	if (profile->actmon[ENGINE_ACTMON])
 		update_load_estimate_actmon(profile);
 
 	/* Copy the contents of the current device status */
@@ -278,7 +283,8 @@ static int nvhost_scale_set_low_wmark(struct device *dev,
 	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
 	struct nvhost_device_profile *profile = pdata->power_profile;
 
-	actmon_op().set_low_wmark(profile->actmon, threshold);
+	actmon_op().set_low_wmark(profile->actmon[ENGINE_ACTMON],
+			threshold);
 
 	return 0;
 }
@@ -296,7 +302,8 @@ static int nvhost_scale_set_high_wmark(struct device *dev,
 	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
 	struct nvhost_device_profile *profile = pdata->power_profile;
 
-	actmon_op().set_high_wmark(profile->actmon, threshold);
+	actmon_op().set_high_wmark(profile->actmon[ENGINE_ACTMON],
+			threshold);
 
 	return 0;
 }
@@ -309,7 +316,8 @@ void nvhost_scale_init(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_device_profile *profile;
-	int err;
+	int err, i;
+	struct host1x_actmon *actmon;
 
 	if (pdata->power_profile)
 		return;
@@ -321,6 +329,7 @@ void nvhost_scale_init(struct platform_device *pdev)
 	profile->pdev = pdev;
 	profile->clk = pdata->clk[0];
 	profile->dev_stat.busy = false;
+	profile->num_actmons = nvhost_get_host(pdev)->info.nb_actmons;
 
 	/* Create frequency table */
 	err = nvhost_scale_make_freq_table(profile);
@@ -340,20 +349,32 @@ void nvhost_scale_init(struct platform_device *pdev)
 		    &dev_attr_load))
 			goto err_create_sysfs_entry;
 
-		profile->actmon = kzalloc(sizeof(struct host1x_actmon),
+		profile->actmon = kzalloc(profile->num_actmons *
+					sizeof(struct host1x_actmon *),
 					  GFP_KERNEL);
 		if (!profile->actmon)
-			goto err_allocate_actmon;
+			goto err_allocate_actmons;
 
-		profile->actmon->host = nvhost_get_host(pdev);
-		profile->actmon->pdev = pdev;
+		for (i = 0; i < profile->num_actmons; i++) {
+			profile->actmon[i] = kzalloc(
+					sizeof(struct host1x_actmon),
+					GFP_KERNEL);
 
-		profile->actmon->regs =
-			actmon_op().get_actmon_regs(profile->actmon);
+			if (!profile->actmon[i])
+				goto err_allocate_actmon;
 
-		actmon_op().init(profile->actmon);
-		nvhost_actmon_debug_init(profile->actmon, pdata->debugfs);
-		actmon_op().deinit(profile->actmon);
+			actmon = profile->actmon[i];
+			actmon->host = nvhost_get_host(pdev);
+			actmon->pdev = pdev;
+
+			actmon->type = i;
+
+			actmon->regs = actmon_op().get_actmon_regs(actmon);
+
+			actmon_op().init(actmon);
+			nvhost_actmon_debug_init(actmon, pdata->debugfs);
+			actmon_op().deinit(actmon);
+		}
 	}
 
 	if (pdata->devfreq_governor) {
@@ -393,6 +414,8 @@ void nvhost_scale_init(struct platform_device *pdev)
 	return;
 
 err_allocate_actmon:
+	kfree(profile->actmon);
+err_allocate_actmons:
 	nvhost_module_idle(nvhost_get_host(pdev)->dev);
 err_module_busy:
 err_get_freqs:
@@ -447,12 +470,14 @@ int nvhost_scale_hw_init(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_device_profile *profile = pdata->power_profile;
+	int i;
 
 	if (!(profile && profile->actmon))
 		return 0;
 
 	/* initialize actmon */
-	actmon_op().init(profile->actmon);
+	for (i = 0; i < profile->num_actmons; i++)
+		actmon_op().init(profile->actmon[i]);
 
 	/* load engine specific actmon settings */
 	if (pdata->mamask_addr)
@@ -475,6 +500,7 @@ void nvhost_scale_hw_deinit(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_device_profile *profile = pdata->power_profile;
+	int i;
 
 	if (profile && profile->actmon) {
 		if (pdata->mamask_addr)
@@ -483,7 +509,8 @@ void nvhost_scale_hw_deinit(struct platform_device *pdev)
 		if (pdata->borps_addr)
 			host1x_writel(pdev, pdata->borps_addr, 0x0);
 
-		actmon_op().deinit(profile->actmon);
+		for (i = 0; i < profile->num_actmons; i++)
+			actmon_op().deinit(profile->actmon[i]);
 	}
 }
 

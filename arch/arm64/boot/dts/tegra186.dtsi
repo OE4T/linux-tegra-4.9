@@ -397,6 +397,26 @@
 			interrupts = <0 11 0x4>; /* INT_DPAUX_1 */
 			status = "disabled";
 		};
+
+		se1 {
+			compatible = "nvidia,tegra186-se-nvhost";
+			reg = <0x0 0x15810000 0x0 0x10000>;
+		};
+
+		se2 {
+			compatible = "nvidia,tegra186-se-nvhost";
+			reg = <0x0 0x15820000 0x0 0x10000>;
+		};
+
+		se3 {
+			compatible = "nvidia,tegra186-se-nvhost";
+			reg = <0x0 0x15830000 0x0 0x10000>;
+		};
+
+		se4 {
+			compatible = "nvidia,tegra186-se-nvhost";
+			reg = <0x0 0x15840000 0x0 0x10000>;
+		};
 	};
 
 	gp10b {

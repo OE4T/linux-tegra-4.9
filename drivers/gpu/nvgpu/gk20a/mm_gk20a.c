@@ -745,8 +745,8 @@ int gk20a_vm_get_buffers(struct vm_gk20a *vm,
 
 	mutex_lock(&vm->update_gmmu_lock);
 
-	buffer_list = kzalloc(sizeof(*buffer_list) *
-			      vm->num_user_mapped_buffers, GFP_KERNEL);
+	buffer_list = nvgpu_alloc(sizeof(*buffer_list) *
+			      vm->num_user_mapped_buffers, true);
 	if (!buffer_list) {
 		mutex_unlock(&vm->update_gmmu_lock);
 		return -ENOMEM;
@@ -795,7 +795,7 @@ void gk20a_vm_put_buffers(struct vm_gk20a *vm,
 
 	mutex_unlock(&vm->update_gmmu_lock);
 
-	kfree(mapped_buffers);
+	nvgpu_free(mapped_buffers);
 }
 
 static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)

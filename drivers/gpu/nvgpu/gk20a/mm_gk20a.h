@@ -22,6 +22,7 @@
 #include <linux/dma-attrs.h>
 #include <linux/iommu.h>
 #include <linux/tegra-soc.h>
+#include <linux/vmalloc.h>
 #include <asm/dma-iommu.h>
 #include <asm/cacheflush.h>
 #include "gk20a_allocator.h"
@@ -627,5 +628,32 @@ void gk20a_mm_init_pdb(struct gk20a *g, void *inst_ptr, u64 pdb_addr);
 
 extern const struct gk20a_mmu_level gk20a_mm_levels_64k[];
 extern const struct gk20a_mmu_level gk20a_mm_levels_128k[];
+
+static inline void *nvgpu_alloc(size_t size, bool clear)
+{
+	void *p;
+
+	if (size > PAGE_SIZE) {
+		if (clear)
+			p = vzalloc(size);
+		else
+			p = vmalloc(size);
+	} else {
+		if (clear)
+			p = kzalloc(size, GFP_KERNEL);
+		else
+			p = kmalloc(size, GFP_KERNEL);
+	}
+
+	return p;
+}
+
+static inline void nvgpu_free(void *p)
+{
+	if (virt_addr_valid(p))
+		kfree(p);
+	else
+		vfree(p);
+}
 
 #endif /* MM_GK20A_H */

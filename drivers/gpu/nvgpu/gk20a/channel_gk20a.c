@@ -1116,8 +1116,7 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 	struct device *d = dev_from_gk20a(c->g);
 	struct vm_gk20a *ch_vm = c->vm;
 	struct priv_cmd_queue *q = &c->priv_cmd_q;
-	struct priv_cmd_entry *e;
-	u32 i = 0, size;
+	u32 size;
 	int err = 0;
 
 	/* Kernel can insert gpfifos before and after user gpfifos.
@@ -1142,19 +1141,6 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 
 	INIT_LIST_HEAD(&q->head);
 	INIT_LIST_HEAD(&q->free);
-
-	/* pre-alloc 25% of priv cmdbuf entries and put them on free list */
-	for (i = 0; i < q->size / 4; i++) {
-		e = kzalloc(sizeof(struct priv_cmd_entry), GFP_KERNEL);
-		if (!e) {
-			gk20a_err(d, "ch %d: fail to pre-alloc cmd entry",
-				c->hw_chid);
-			err = -ENOMEM;
-			goto clean_up;
-		}
-		e->pre_alloc = true;
-		list_add(&e->list, &q->free);
-	}
 
 	return 0;
 
@@ -1186,8 +1172,7 @@ static void channel_gk20a_free_priv_cmdbuf(struct channel_gk20a *c)
 	head = &q->free;
 	list_for_each_safe(pos, tmp, head) {
 		e = container_of(pos, struct priv_cmd_entry, list);
-		e->pre_alloc = false;
-		free_priv_cmdbuf(c, e);
+		kfree(e);
 	}
 
 	memset(q, 0, sizeof(struct priv_cmd_queue));
@@ -1199,7 +1184,6 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 {
 	struct priv_cmd_queue *q = &c->priv_cmd_q;
 	struct priv_cmd_entry *e;
-	struct list_head *node;
 	u32 free_count;
 	u32 size = orig_size;
 	bool no_retry = false;
@@ -1228,22 +1212,12 @@ TRY_AGAIN:
 			return -EAGAIN;
 	}
 
-	if (unlikely(list_empty(&q->free))) {
-
-		gk20a_dbg_info("ch %d: run out of pre-alloc entries",
+	e = kzalloc(sizeof(struct priv_cmd_entry), GFP_KERNEL);
+	if (!e) {
+		gk20a_err(dev_from_gk20a(c->g),
+			"ch %d: fail to allocate priv cmd entry",
 			c->hw_chid);
-
-		e = kzalloc(sizeof(struct priv_cmd_entry), GFP_KERNEL);
-		if (!e) {
-			gk20a_err(dev_from_gk20a(c->g),
-				"ch %d: fail to allocate priv cmd entry",
-				c->hw_chid);
-			return -ENOMEM;
-		}
-	} else  {
-		node = q->free.next;
-		list_del(node);
-		e = container_of(node, struct priv_cmd_entry, list);
+		return -ENOMEM;
 	}
 
 	e->size = orig_size;
@@ -1281,20 +1255,12 @@ TRY_AGAIN:
 static void free_priv_cmdbuf(struct channel_gk20a *c,
 			     struct priv_cmd_entry *e)
 {
-	struct priv_cmd_queue *q = &c->priv_cmd_q;
-
 	if (!e)
 		return;
 
 	list_del(&e->list);
 
-	if (unlikely(!e->pre_alloc))
-		kfree(e);
-	else {
-		memset(e, 0, sizeof(struct priv_cmd_entry));
-		e->pre_alloc = true;
-		list_add(&e->list, &q->free);
-	}
+	kfree(e);
 }
 
 /* free entries if they're no longer being used */

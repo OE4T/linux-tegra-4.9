@@ -168,7 +168,6 @@ struct priv_cmd_entry {
 	u32 gp_get;	/* gp_get when submitting last priv cmd */
 	u32 gp_put;	/* gp_put when submitting last priv cmd */
 	u32 gp_wrap;	/* wrap when submitting last priv cmd */
-	bool pre_alloc;	/* prealloc entry, free to free list */
 	struct list_head list;	/* node for lists */
 };
 

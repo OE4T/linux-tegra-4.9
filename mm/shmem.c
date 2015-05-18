@@ -101,12 +101,20 @@ struct shmem_falloc {
 #ifdef CONFIG_TMPFS
 static unsigned long shmem_default_max_blocks(void)
 {
+#ifdef CONFIG_SHMEM_ALL_RAM
+	return totalram_pages;
+#else
 	return totalram_pages / 2;
+#endif
 }
 
 static unsigned long shmem_default_max_inodes(void)
 {
+#ifdef CONFIG_SHMEM_ALL_RAM
+	return min(totalram_pages - totalhigh_pages, totalram_pages);
+#else
 	return min(totalram_pages - totalhigh_pages, totalram_pages / 2);
+#endif
 }
 #endif
 

@@ -272,7 +272,7 @@ static int tegra_t210ref_amx1_dai_init(struct snd_soc_pcm_runtime *rtd)
 
 	if (amx_dai->driver->ops->set_channel_map)
 		amx_dai->driver->ops->set_channel_map(amx_dai,
-			slot_size, tx_slot, 0, 0);
+			slot_size, tx_slot, 0, NULL);
 
 	return 0;
 }

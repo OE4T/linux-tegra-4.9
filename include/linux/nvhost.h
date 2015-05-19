@@ -46,12 +46,11 @@ struct nvhost_sync_pt;
 struct sync_pt;
 
 #define NVHOST_MODULE_MAX_CLOCKS		8
-#define NVHOST_MODULE_MAX_POWERGATE_IDS 	2
 #define NVHOST_MODULE_MAX_SYNCPTS		8
 #define NVHOST_MODULE_MAX_WAITBASES		3
 #define NVHOST_MODULE_MAX_MODMUTEXES		5
 #define NVHOST_MODULE_MAX_IORESOURCE_MEM	3
-#define NVHOST_MODULE_NO_POWERGATE_IDS		.powergate_ids = {-1, -1}
+#define NVHOST_MODULE_NO_POWERGATE_ID		.powergate_id = -1
 #define NVHOST_DEFAULT_CLOCKGATE_DELAY		.clockgate_delay = 25
 #define NVHOST_MODULE_MAX_IORESOURCE_MEM 3
 #define NVHOST_NAME_SIZE			24
@@ -174,7 +173,7 @@ struct nvhost_device_data {
 
 	char		*firmware_name;	/* Name of firmware */
 
-	int		powergate_ids[NVHOST_MODULE_MAX_POWERGATE_IDS];
+	int		powergate_id;
 	bool		engine_can_cg;	/* True if CG is enabled */
 	bool		can_powergate;	/* True if module can be power gated */
 	int		clockgate_delay;/* Delay before clock gated */

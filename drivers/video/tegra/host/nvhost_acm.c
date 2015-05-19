@@ -189,9 +189,9 @@ void nvhost_module_reset(struct platform_device *dev, bool reboot)
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	dev_dbg(&dev->dev,
-		"%s: asserting %s module reset (id %d, id2 %d)\n",
+		"%s: asserting %s module reset (id %d)\n",
 		__func__, dev_name(&dev->dev),
-		pdata->powergate_ids[0], pdata->powergate_ids[1]);
+		pdata->powergate_id);
 
 	mutex_lock(&pdata->lock);
 	do_module_reset_locked(dev);
@@ -711,29 +711,22 @@ int nvhost_module_init(struct platform_device *dev)
 	if (pdata->poweron_toggle_slcg) {
 		pdata->toggle_slcg_notifier.notifier_call =
 			&nvhost_module_toggle_slcg;
-		if (pdata->powergate_ids[0] != -1)
-			slcg_register_notifier(pdata->powergate_ids[0],
-					       &pdata->toggle_slcg_notifier);
-		if (pdata->powergate_ids[1] != -1)
-			slcg_register_notifier(pdata->powergate_ids[1],
+		if (pdata->powergate_id != -1)
+			slcg_register_notifier(pdata->powergate_id,
 					       &pdata->toggle_slcg_notifier);
 	}
 
 	/* Ensure that the above or device specific MBIST WAR gets applied */
 	if (pdata->poweron_toggle_slcg || pdata->slcg_notifier_enable) {
-		do_powergate_locked(pdata->powergate_ids[0]);
-		do_powergate_locked(pdata->powergate_ids[1]);
-		do_unpowergate_locked(pdata->powergate_ids[0]);
-		do_unpowergate_locked(pdata->powergate_ids[1]);
+		do_powergate_locked(pdata->powergate_id);
+		do_unpowergate_locked(pdata->powergate_id);
 	}
 
 	/* power gate units that we can power gate */
 	if (pdata->can_powergate) {
-		do_powergate_locked(pdata->powergate_ids[0]);
-		do_powergate_locked(pdata->powergate_ids[1]);
+		do_powergate_locked(pdata->powergate_id);
 	} else {
-		do_unpowergate_locked(pdata->powergate_ids[0]);
-		do_unpowergate_locked(pdata->powergate_ids[1]);
+		do_unpowergate_locked(pdata->powergate_id);
 	}
 
 	/* set pm runtime delays */
@@ -1143,9 +1136,8 @@ static int nvhost_module_power_on(struct generic_pm_domain *domain)
 	mutex_lock(&pdata->lock);
 	if (pdata->can_powergate) {
 		trace_nvhost_module_power_on(pdata->pdev->name,
-			pdata->powergate_ids[0], pdata->powergate_ids[1]);
-		do_unpowergate_locked(pdata->powergate_ids[0]);
-		do_unpowergate_locked(pdata->powergate_ids[1]);
+			pdata->powergate_id);
+		do_unpowergate_locked(pdata->powergate_id);
 	}
 
 	mutex_unlock(&pdata->lock);
@@ -1162,9 +1154,8 @@ static int nvhost_module_power_off(struct generic_pm_domain *domain)
 	mutex_lock(&pdata->lock);
 	if (pdata->can_powergate) {
 		trace_nvhost_module_power_off(pdata->pdev->name,
-			pdata->powergate_ids[0], pdata->powergate_ids[1]);
-		do_powergate_locked(pdata->powergate_ids[0]);
-		do_powergate_locked(pdata->powergate_ids[1]);
+			pdata->powergate_id);
+		do_powergate_locked(pdata->powergate_id);
 	}
 	mutex_unlock(&pdata->lock);
 

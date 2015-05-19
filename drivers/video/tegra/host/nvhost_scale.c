@@ -167,30 +167,6 @@ static int nvhost_scale_qos_notify(struct notifier_block *nb,
 }
 
 /*
- * update_load_estimate(profile)
- *
- * Update load estimate using busy/idle flag.
- */
-
-static void update_load_estimate(struct nvhost_device_profile *profile,
-				 bool busy)
-{
-	ktime_t t;
-	unsigned long dt;
-
-	t = ktime_get();
-	dt = ktime_us_delta(t, profile->last_event_time);
-
-	profile->dev_stat.total_time += dt;
-	profile->last_event_time = t;
-
-	if (profile->busy)
-		profile->dev_stat.busy_time += dt;
-
-	profile->busy = busy;
-}
-
-/*
  * update_load_estimate_actmon(profile)
  *
  * Update load estimate using hardware actmon. The actmon value is normalised
@@ -243,8 +219,6 @@ static void nvhost_scale_notify(struct platform_device *pdev, bool busy)
 	}
 
 	mutex_lock(&devfreq->lock);
-	if (!profile->actmon)
-		update_load_estimate(profile, busy);
 	profile->dev_stat.busy = busy;
 	update_devfreq(devfreq);
 	mutex_unlock(&devfreq->lock);

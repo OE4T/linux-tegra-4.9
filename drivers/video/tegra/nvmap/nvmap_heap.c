@@ -74,7 +74,6 @@ struct nvmap_heap {
 	size_t len;
 	struct device *cma_dev;
 	struct device *dma_dev;
-	struct device dev;
 	bool is_ivm;
 	bool can_alloc; /* Used only if is_ivm == true */
 	int peer; /* Used only if is_ivm == true */
@@ -324,6 +323,7 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 		return NULL;
 	}
 
+	h->dma_dev = co->dma_dev;
 	if (co->cma_dev) {
 #ifdef CONFIG_DMA_CMA
 		struct dma_contiguous_stats stats;
@@ -334,7 +334,6 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 		base = stats.base;
 		len = stats.size;
 		h->cma_dev = co->cma_dev;
-		h->dma_dev = co->dma_dev;
 #else
 		dev_err(parent, "invalid resize config for carveout %s\n",
 				co->name);
@@ -342,14 +341,6 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 #endif
 	} else {
 		int err;
-
-		if (co->dma_dev)
-			h->dma_dev = co->dma_dev;
-		else
-			/* To continue working with bsp that doesn't
-			 * pass dma_dev ptr.
-			 */
-			h->dma_dev = &h->dev;
 
 		/* declare Non-CMA heap */
 		err = dma_declare_coherent_memory(h->dma_dev, 0, base, len,

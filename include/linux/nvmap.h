@@ -80,6 +80,7 @@ struct nvmap_platform_carveout {
 	struct device *cma_dev;
 	bool resize;
 	struct device *dma_dev;
+	struct device dev;
 	bool is_ivm;
 	int peer;
 	int vmid;

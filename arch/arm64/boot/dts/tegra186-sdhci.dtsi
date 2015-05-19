@@ -30,6 +30,7 @@
 		compatible = "nvidia,tegra186-sdhci";
 		reg = <0x0 0x3440000 0x0 0x210>;
 		interrupts = < 0 64 0x04 >;
+		nvidia,clk-name = "sdmmc3";
 		status = "disabled";
 	};
 

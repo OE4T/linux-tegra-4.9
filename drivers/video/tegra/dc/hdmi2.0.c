@@ -1289,6 +1289,26 @@ static u32 tegra_hdmi_get_rgb_ycc(struct tegra_hdmi *hdmi)
 {
 	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_SET_YUV_MASK;
 
+	/*
+	 * For seamless HDMI, read YUV flag parameters from bootloader
+	 * set AVI Infoframe parameters
+	 */
+	if (hdmi->dc->initialized) {
+		u32 temp = 0;
+		temp = tegra_sor_readl(hdmi->sor,
+			NV_SOR_HDMI_AVI_INFOFRAME_SUBPACK0_LOW);
+		temp = (temp >> 12) & 0x3;
+		switch (temp) {
+		case HDMI_AVI_RGB:
+			return HDMI_AVI_RGB;
+		case HDMI_AVI_YCC_420:
+			return HDMI_AVI_YCC_420;
+		default:
+			dev_warn(&hdmi->dc->ndev->dev, "hdmi: BL didn't set RGB/YUV indicator flag\n");
+			break;
+		}
+	}
+
 	if (yuv_flag & FB_VMODE_Y420)
 		return HDMI_AVI_YCC_420;
 	else if (yuv_flag & FB_VMODE_Y422)
@@ -1366,8 +1386,9 @@ static void tegra_hdmi_avi_infoframe(struct tegra_hdmi *hdmi)
 	if (tegra_platform_is_linsim())
 		return;
 
-	/* disable avi infoframe before configuring */
-	tegra_sor_writel(sor, NV_SOR_HDMI_AVI_INFOFRAME_CTRL, 0);
+	/* disable avi infoframe before configuring except for seamless case */
+	if (!hdmi->dc->initialized)
+		tegra_sor_writel(sor, NV_SOR_HDMI_AVI_INFOFRAME_CTRL, 0);
 
 	tegra_hdmi_avi_infoframe_update(hdmi);
 

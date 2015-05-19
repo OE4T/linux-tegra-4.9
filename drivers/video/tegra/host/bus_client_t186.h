@@ -43,4 +43,19 @@ u32 host1x_hypervisor_readl(struct platform_device *pdev, u32 r)
 	return v;
 }
 
+int nvhost_host1x_get_vmid(struct platform_device *dev)
+{
+	u32 value;
+	struct device_node *np;
+
+	np = of_node_get(dev->dev.of_node);
+
+	if (of_property_read_u32(np, "nvidia,vmid", &value))
+		value = 1;
+
+	of_node_put(np);
+
+	return value;
+}
+
 #endif /* __NVHOST_BUS_CLIENT_T186_H */

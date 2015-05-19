@@ -53,11 +53,6 @@
 #define GPIO_EXT_MIC_EN BIT(3)
 #define GPIO_HP_DET     BIT(4)
 
-#define MAX_AMX_SLOT_SIZE 64
-
-#define TDM_SLOT_MAP(stream_id, nth_channel, nth_byte)	\
-	((stream_id << 16) | (nth_channel << 8) | nth_byte)
-
 struct tegra_t210ref {
 	struct snd_soc_card *pcard;
 	struct tegra_asoc_platform_data *pdata;
@@ -253,30 +248,6 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	return 0;
 }
 
-static int tegra_t210ref_amx1_dai_init(struct snd_soc_pcm_runtime *rtd)
-{
-	struct snd_soc_dai *amx_dai = rtd->cpu_dai;
-	unsigned int tx_slot[MAX_AMX_SLOT_SIZE];
-	unsigned int slot_size;
-
-	/* HACK: TODO: Add mixer controls to configute byte ram map */
-	slot_size = 8;
-	tx_slot[0] = TDM_SLOT_MAP(0, 1, 0);
-	tx_slot[1] = TDM_SLOT_MAP(0, 1, 1);
-	tx_slot[2] = 0;
-	tx_slot[3] = 0;
-	tx_slot[4] = TDM_SLOT_MAP(1, 1, 0);
-	tx_slot[5] = TDM_SLOT_MAP(1, 1, 1);
-	tx_slot[6] = 0;
-	tx_slot[7] = 0;
-
-	if (amx_dai->driver->ops->set_channel_map)
-		amx_dai->driver->ops->set_channel_map(amx_dai,
-			slot_size, tx_slot, 0, NULL);
-
-	return 0;
-}
-
 static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 					struct snd_pcm_hw_params *params)
 {
@@ -392,23 +363,6 @@ static int tegra_t210ref_init(struct snd_soc_pcm_runtime *rtd)
 
 		es755_detect(codec, &tegra_t210ref_hp_jack);
 	}
-
-	return 0;
-}
-
-static int tegra_t210ref_sfc_init(struct snd_soc_pcm_runtime *rtd)
-{
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	unsigned int in_srate, out_srate;
-	int err;
-
-	in_srate = 48000;
-	out_srate = 8000;
-
-	err = snd_soc_dai_set_sysclk(codec_dai, 0, out_srate,
-					SND_SOC_CLOCK_OUT);
-	err = snd_soc_dai_set_sysclk(codec_dai, 0, in_srate,
-					SND_SOC_CLOCK_IN);
 
 	return 0;
 }
@@ -652,14 +606,6 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	for (i = TEGRA210_DAI_LINK_ADMAIF1;
 		i <= TEGRA210_DAI_LINK_ADMAIF10; i++)
 		tegra_machine_set_dai_ops(i, &tegra_t210ref_ops);
-
-	/* set sfc dai_init */
-	tegra_machine_set_dai_init(TEGRA210_DAI_LINK_SFC1_RX,
-		&tegra_t210ref_sfc_init);
-
-	/* set AMX/ADX dai_init */
-	tegra_machine_set_dai_init(TEGRA210_DAI_LINK_AMX1,
-		&tegra_t210ref_amx1_dai_init);
 
 	/* set ADSP PCM */
 	tegra_machine_set_dai_ops(TEGRA210_DAI_LINK_ADSP_PCM1,

@@ -85,6 +85,7 @@ static __initdata struct tegra_bpmp_clk_init tegra186_clocks[] = {
 	{ .clk_num = TEGRA_CLK_VI, .name = "vi" },
 	{ .clk_num = TEGRA_CLK_SDMMC1, .name = "sdmmc1" },
 	{ .clk_num = TEGRA_CLK_SDMMC2, .name = "sdmmc2" },
+	{ .clk_num = TEGRA_CLK_SDMMC3, .name = "sdmmc3" },
 	{ .clk_num = TEGRA_CLK_SDMMC4, .name = "sdmmc4" },
 	{ .clk_num = TEGRA_CLK_UARTA, .name = "uarta" },
 	{ .clk_num = TEGRA_CLK_UARTB, .name = "uartb" },

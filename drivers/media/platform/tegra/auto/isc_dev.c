@@ -373,6 +373,7 @@ static int isc_dev_probe(struct i2c_client *client,
 	info->miscdev.fops = &isc_dev_fileops;
 	info->miscdev.minor = MISC_DYNAMIC_MINOR;
 	info->miscdev.parent = &client->dev;
+	info->miscdev.mode = S_IWUGO | S_IRUGO;
 	err = misc_register(&info->miscdev);
 	if (err) {
 		pr_err("%s: Unable to register misc device!\n", __func__);

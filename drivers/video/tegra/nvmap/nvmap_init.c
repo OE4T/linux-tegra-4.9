@@ -176,6 +176,8 @@ int nvmap_populate_ivm_carveout(phandle handle)
 	 */
 	co->usage_mask = NVMAP_HEAP_CARVEOUT_IVM;
 
+	nvmap_dev->nr_carveouts++;
+
 	of_node_put(hvn);
 	return 0;
 }
@@ -204,10 +206,12 @@ static int __nvmap_init_dt(struct platform_device *pdev)
 		int ret;
 
 		for_each_child_of_node(node, n) {
+			/* NOTE: take care in DT not to have same ivm carveout in both
+			 * reserved-memory and ivm_carveouts node
+			 */
 			ret = nvmap_populate_ivm_carveout(n->phandle);
 			if (ret)
 				return ret;
-			nvmap_dev->nr_carveouts++;
 		}
 	}
 
@@ -270,9 +274,14 @@ static int __init nvmap_co_setup(struct reserved_mem *rmem)
 		return ret;
 
 	rmem->ops = &nvmap_co_ops;
+	rmem->priv = co;
+
+	/* IVM carveouts */
+	if (!co->name)
+		return nvmap_populate_ivm_carveout(rmem->phandle);
+
 	co->base = rmem->base;
 	co->size = rmem->size;
-	rmem->priv = co;
 
 	ret = of_property_read_u32_array(of_find_node_by_phandle(rmem->phandle),
 				       "nvidia,resizable", &resizable, 1);
@@ -293,6 +302,7 @@ static int __init nvmap_co_setup(struct reserved_mem *rmem)
 	return ret;
 }
 RESERVEDMEM_OF_DECLARE(nvmap_co, "nvidia,generic_carveout", nvmap_co_setup);
+RESERVEDMEM_OF_DECLARE(nvmap_ivc_co, "nvidia,ivm_carveout", nvmap_co_setup);
 
 /*
  * This requires proper kernel arguments to have been passed.

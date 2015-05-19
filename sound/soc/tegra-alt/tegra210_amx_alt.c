@@ -127,9 +127,9 @@ static void tegra210_amx_set_out_byte_mask(struct tegra210_amx *amx)
  * tegra210_amx_set_map_table - set map table not RAM
  * @amx: struct of tegra210_amx
  * @out_byte_addr: byte address in one frame
- * @stream_id: input stream id
- * @nth_word: n-th word in the input stream
- * @nth_byte: n-th byte in the word
+ * @stream_id: input stream id (0 to 3)
+ * @nth_word: n-th word in the input stream (1 to 16)
+ * @nth_byte: n-th byte in the word (0 to 3)
  */
 static void tegra210_amx_set_map_table(struct tegra210_amx *amx,
 				unsigned int out_byte_addr,
@@ -457,6 +457,60 @@ static int tegra210_amx_set_channel_map(struct snd_soc_dai *dai,
 	return 0;
 }
 
+static int tegra210_amx_get_byte_map(struct snd_kcontrol *kcontrol,
+					 struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	struct tegra210_amx *amx = snd_soc_codec_get_drvdata(codec);
+	unsigned char *bytes_map = (unsigned char *)&amx->map;
+
+	ucontrol->value.integer.value[0] = bytes_map[mc->reg];
+	return 0;
+}
+
+static int tegra210_amx_put_byte_map(struct snd_kcontrol *kcontrol,
+					 struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra210_amx *amx = snd_soc_codec_get_drvdata(codec);
+	int reg = mc->reg;
+	int value = ucontrol->value.integer.value[0];
+	unsigned int stream, channel, byte;
+
+	stream = (value & TEGRA210_AMX_MAP_STREAM_NUMBER_MASK)
+					>> TEGRA210_AMX_MAP_STREAM_NUMBER_SHIFT;
+
+	channel = (value & TEGRA210_AMX_MAP_WORD_NUMBER_MASK)
+					>> TEGRA210_AMX_MAP_WORD_NUMBER_SHIFT;
+
+	byte = (value & TEGRA210_AMX_MAP_BYTE_NUMBER_MASK)
+					>> TEGRA210_AMX_MAP_BYTE_NUMBER_SHIFT;
+
+	/* update byte map */
+	tegra210_amx_set_map_table(amx, reg, stream, channel, byte);
+
+	/* update byte_mask */
+	if (value) {
+		/* enable slot */
+		if (reg > 31)
+			amx->byte_mask[1] |= (1 << (reg - 32));
+		else
+			amx->byte_mask[0] |= (1 << reg);
+	} else {
+		/* disable slot */
+		if (reg > 31)
+			amx->byte_mask[1] &= ~(1 << (reg - 32));
+		else
+			amx->byte_mask[0] &= ~(1 << reg);
+	}
+
+	return 0;
+}
+
 static int tegra210_amx_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_amx *amx = snd_soc_codec_get_drvdata(codec);
@@ -532,12 +586,85 @@ static const struct snd_soc_dapm_route tegra210_amx_routes[] = {
 	{ "OUT Transmit", NULL, "OUT" },
 };
 
+#define TEGRA210_AMX_BYTE_MAP_CTRL(reg) \
+	SOC_SINGLE_EXT("Byte Map " #reg, reg, 0, 0xFF, 0, \
+		tegra210_amx_get_byte_map, tegra210_amx_put_byte_map)
+
+static struct snd_kcontrol_new tegra210_amx_map_controls[] = {
+	TEGRA210_AMX_BYTE_MAP_CTRL(0),
+	TEGRA210_AMX_BYTE_MAP_CTRL(1),
+	TEGRA210_AMX_BYTE_MAP_CTRL(2),
+	TEGRA210_AMX_BYTE_MAP_CTRL(3),
+	TEGRA210_AMX_BYTE_MAP_CTRL(4),
+	TEGRA210_AMX_BYTE_MAP_CTRL(5),
+	TEGRA210_AMX_BYTE_MAP_CTRL(6),
+	TEGRA210_AMX_BYTE_MAP_CTRL(7),
+	TEGRA210_AMX_BYTE_MAP_CTRL(8),
+	TEGRA210_AMX_BYTE_MAP_CTRL(9),
+	TEGRA210_AMX_BYTE_MAP_CTRL(10),
+	TEGRA210_AMX_BYTE_MAP_CTRL(11),
+	TEGRA210_AMX_BYTE_MAP_CTRL(12),
+	TEGRA210_AMX_BYTE_MAP_CTRL(13),
+	TEGRA210_AMX_BYTE_MAP_CTRL(14),
+	TEGRA210_AMX_BYTE_MAP_CTRL(15),
+	TEGRA210_AMX_BYTE_MAP_CTRL(16),
+	TEGRA210_AMX_BYTE_MAP_CTRL(17),
+	TEGRA210_AMX_BYTE_MAP_CTRL(18),
+	TEGRA210_AMX_BYTE_MAP_CTRL(19),
+	TEGRA210_AMX_BYTE_MAP_CTRL(20),
+	TEGRA210_AMX_BYTE_MAP_CTRL(21),
+	TEGRA210_AMX_BYTE_MAP_CTRL(22),
+	TEGRA210_AMX_BYTE_MAP_CTRL(23),
+	TEGRA210_AMX_BYTE_MAP_CTRL(24),
+	TEGRA210_AMX_BYTE_MAP_CTRL(25),
+	TEGRA210_AMX_BYTE_MAP_CTRL(26),
+	TEGRA210_AMX_BYTE_MAP_CTRL(27),
+	TEGRA210_AMX_BYTE_MAP_CTRL(28),
+	TEGRA210_AMX_BYTE_MAP_CTRL(29),
+	TEGRA210_AMX_BYTE_MAP_CTRL(30),
+	TEGRA210_AMX_BYTE_MAP_CTRL(31),
+	TEGRA210_AMX_BYTE_MAP_CTRL(32),
+	TEGRA210_AMX_BYTE_MAP_CTRL(33),
+	TEGRA210_AMX_BYTE_MAP_CTRL(34),
+	TEGRA210_AMX_BYTE_MAP_CTRL(35),
+	TEGRA210_AMX_BYTE_MAP_CTRL(36),
+	TEGRA210_AMX_BYTE_MAP_CTRL(37),
+	TEGRA210_AMX_BYTE_MAP_CTRL(38),
+	TEGRA210_AMX_BYTE_MAP_CTRL(39),
+	TEGRA210_AMX_BYTE_MAP_CTRL(40),
+	TEGRA210_AMX_BYTE_MAP_CTRL(41),
+	TEGRA210_AMX_BYTE_MAP_CTRL(42),
+	TEGRA210_AMX_BYTE_MAP_CTRL(43),
+	TEGRA210_AMX_BYTE_MAP_CTRL(44),
+	TEGRA210_AMX_BYTE_MAP_CTRL(45),
+	TEGRA210_AMX_BYTE_MAP_CTRL(46),
+	TEGRA210_AMX_BYTE_MAP_CTRL(47),
+	TEGRA210_AMX_BYTE_MAP_CTRL(48),
+	TEGRA210_AMX_BYTE_MAP_CTRL(49),
+	TEGRA210_AMX_BYTE_MAP_CTRL(50),
+	TEGRA210_AMX_BYTE_MAP_CTRL(51),
+	TEGRA210_AMX_BYTE_MAP_CTRL(52),
+	TEGRA210_AMX_BYTE_MAP_CTRL(53),
+	TEGRA210_AMX_BYTE_MAP_CTRL(54),
+	TEGRA210_AMX_BYTE_MAP_CTRL(55),
+	TEGRA210_AMX_BYTE_MAP_CTRL(56),
+	TEGRA210_AMX_BYTE_MAP_CTRL(57),
+	TEGRA210_AMX_BYTE_MAP_CTRL(58),
+	TEGRA210_AMX_BYTE_MAP_CTRL(59),
+	TEGRA210_AMX_BYTE_MAP_CTRL(60),
+	TEGRA210_AMX_BYTE_MAP_CTRL(61),
+	TEGRA210_AMX_BYTE_MAP_CTRL(62),
+	TEGRA210_AMX_BYTE_MAP_CTRL(63),
+};
+
 static struct snd_soc_codec_driver tegra210_amx_codec = {
 	.probe = tegra210_amx_codec_probe,
 	.dapm_widgets = tegra210_amx_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(tegra210_amx_widgets),
 	.dapm_routes = tegra210_amx_routes,
 	.num_dapm_routes = ARRAY_SIZE(tegra210_amx_routes),
+	.controls = tegra210_amx_map_controls,
+	.num_controls = ARRAY_SIZE(tegra210_amx_map_controls),
 	.idle_bias_off = 1,
 };
 
@@ -679,6 +806,8 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, amx);
 
 	amx->soc_data = soc_data;
+	memset(amx->map, 0, sizeof(amx->map));
+	memset(amx->byte_mask, 0, sizeof(amx->byte_mask));
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {

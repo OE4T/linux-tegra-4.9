@@ -1,7 +1,7 @@
 /*
  * tegra210_amx_alt.h - Definitions for Tegra210 AMX driver
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -144,10 +144,13 @@
 /*
  * Those defines are not in register field.
  */
-#define TEGRA210_AMX_RAM_DEPTH				16
-#define TEGRA210_AMX_MAP_STREAM_NUMBER_SHIFT		6
+#define TEGRA210_AMX_RAM_DEPTH					16
+#define TEGRA210_AMX_MAP_STREAM_NUMBER_SHIFT	6
+#define TEGRA210_AMX_MAP_STREAM_NUMBER_MASK		(0x3 << TEGRA210_AMX_MAP_STREAM_NUMBER_SHIFT)
 #define TEGRA210_AMX_MAP_WORD_NUMBER_SHIFT		2
+#define TEGRA210_AMX_MAP_WORD_NUMBER_MASK		(0xF << TEGRA210_AMX_MAP_WORD_NUMBER_SHIFT)
 #define TEGRA210_AMX_MAP_BYTE_NUMBER_SHIFT		0
+#define TEGRA210_AMX_MAP_BYTE_NUMBER_MASK		(0x3 << TEGRA210_AMX_MAP_BYTE_NUMBER_SHIFT)
 
 enum {
 	TEGRA210_AMX_WAIT_ON_ALL,

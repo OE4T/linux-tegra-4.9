@@ -26,13 +26,57 @@
 #include "gpio-names.h"
 
 static u16 en_panel_rst;
-static u16 en_panel_p5v;
-static u16 en_panel_n5v;
-static u16 en_backlight;
+
+static struct regulator *pavdd_lcd_reg;
+static struct regulator *navdd_lcd_reg;
+static struct regulator *bl_en_reg;
+
+static bool reg_requested;
+
+static int reg_get(struct device *dev)
+{
+	int err = 0;
+
+	if (reg_requested)
+		return 0;
+
+	pavdd_lcd_reg = regulator_get(dev, "pavdd_lcd");
+	if (IS_ERR(pavdd_lcd_reg)) {
+		pr_err("pavdd_lcd_reg regulator get failed\n");
+		err = PTR_ERR(pavdd_lcd_reg);
+		pavdd_lcd_reg = NULL;
+		goto fail;
+	}
+	navdd_lcd_reg = regulator_get(dev, "navdd_lcd");
+	if (IS_ERR(navdd_lcd_reg)) {
+		pr_err("navdd_lcd_reg regulator get failed\n");
+		err = PTR_ERR(navdd_lcd_reg);
+		navdd_lcd_reg = NULL;
+		goto fail;
+	}
+
+	bl_en_reg = regulator_get(dev, "vdd_lcd_bl_en");
+	if (IS_ERR(bl_en_reg)) {
+		pr_err("bl_en_reg regulator get failed\n");
+		err = PTR_ERR(bl_en_reg);
+		bl_en_reg = NULL;
+		goto fail;
+	}
+	reg_requested = true;
+	return 0;
+fail:
+	return err;
+}
 
 static int dsi_o_720p_6_0_enable(struct device *dev)
 {
 	int err = 0;
+
+	err = reg_get(dev);
+	if (err < 0) {
+		pr_err("dsi regulator get failed\n");
+		goto fail;
+	}
 
 	err = tegra_panel_gpio_get_dt("o,720-1280-6-0", &panel_of);
 	if (err < 0) {
@@ -46,29 +90,24 @@ static int dsi_o_720p_6_0_enable(struct device *dev)
 		en_panel_rst = panel_of.panel_gpio[TEGRA_GPIO_RESET];
 	else
 		pr_warn("rst gpio is not defined in DT\n");
-
-	if (gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_PANEL_EN]))
-		en_panel_p5v = panel_of.panel_gpio[TEGRA_GPIO_PANEL_EN];
-	else
-		pr_warn("panel en-0 gpio is not defined in DT\n");
-
-	if (gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_PANEL_EN_1]))
-		en_panel_n5v = panel_of.panel_gpio[TEGRA_GPIO_PANEL_EN_1];
-	else
-		pr_warn("panel en-1 gpio is not defined in DT\n");
-
-	if (gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_BL_ENABLE]))
-		en_backlight = panel_of.panel_gpio[TEGRA_GPIO_BL_ENABLE];
-	else
-		pr_warn("en_backlight gpio is not defined in DT\n");
-
 	gpio_direction_output(en_panel_rst, 0);
 
-	gpio_direction_output(en_panel_p5v, 1);
+	if (pavdd_lcd_reg) {
+		err = regulator_enable(pavdd_lcd_reg);
+		if (err < 0) {
+			pr_err("pavdd lcd reg regulator enable failed\n");
+			goto fail;
+		}
+	}
 	msleep(20);
-	gpio_direction_output(en_panel_n5v, 1);
+	if (navdd_lcd_reg) {
+		err = regulator_enable(navdd_lcd_reg);
+		if (err < 0) {
+			pr_err("navdd lcd reg regulator enable failed\n");
+			goto fail;
+		}
+	}
 	msleep(20);
-
 	return 0;
 fail:
 	return err;
@@ -81,23 +120,38 @@ static int dsi_o_720p_6_0_postpoweron(struct device *dev)
  *  - dc->out->postpoweron => reset control
  *  - dc->out_ops->postpoweron => dsi init command trigger
  */
+	int err;
+
 	msleep(20);
 	gpio_set_value(en_panel_rst, 1);
 	msleep(20);
-	gpio_direction_output(en_backlight, 1);
+
+	if (bl_en_reg) {
+		err = regulator_enable(bl_en_reg);
+		if (err < 0) {
+			pr_err("bl_en_reg regulator enable failed\n");
+			goto fail;
+		}
+	}
 
 	return 0;
+fail:
+	return err;
 }
 
 static int dsi_o_720p_6_0_disable(struct device *dev)
 {
-	gpio_set_value(en_backlight, 0);
+	if (bl_en_reg)
+		regulator_disable(bl_en_reg);
 	usleep_range(1000, 1020);
 	gpio_set_value(en_panel_rst, 0);
 	usleep_range(1000, 1020);
-	gpio_direction_output(en_panel_n5v, 0);
+
+	if (navdd_lcd_reg)
+		regulator_disable(navdd_lcd_reg);
 	msleep(20);
-	gpio_direction_output(en_panel_p5v, 0);
+	if (pavdd_lcd_reg)
+		regulator_disable(pavdd_lcd_reg);
 	msleep(20);
 
 	return 0;

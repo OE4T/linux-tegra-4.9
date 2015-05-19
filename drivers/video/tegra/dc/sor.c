@@ -767,24 +767,25 @@ static int tegra_dc_sor_enable_lane_sequencer(struct tegra_dc_sor_data *sor,
 int tegra_sor_power_lanes(struct tegra_dc_sor_data *sor,
 					u32 lane_count, bool pu)
 {
-	u32 reg_val;
+	u32 val = 0;
+	u8 pd_txd_0_no = NV_SOR_DP_PADCTL_PD_TXD_0_NO,
+		pd_txd_2_no = NV_SOR_DP_PADCTL_PD_TXD_2_NO;
 
-	reg_val = tegra_sor_readl(sor, NV_SOR_DP_PADCTL(sor->portnum));
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
+	pd_txd_0_no = NV_SOR_DP_PADCTL_PD_TXD_2_NO;
+	pd_txd_2_no = NV_SOR_DP_PADCTL_PD_TXD_0_NO;
+#endif
 
 	if (pu) {
 		switch (lane_count) {
+		/* T210 boards need to swap lanes 0 and 2 - bug 1545275 */
 		case 4:
-			reg_val |= (NV_SOR_DP_PADCTL_PD_TXD_3_NO |
-				NV_SOR_DP_PADCTL_PD_TXD_2_NO);
+			val |= (NV_SOR_DP_PADCTL_PD_TXD_3_NO | pd_txd_2_no);
 			/* fall through */
 		case 2:
-			reg_val |= NV_SOR_DP_PADCTL_PD_TXD_1_NO;
+			val |= NV_SOR_DP_PADCTL_PD_TXD_1_NO;
 		case 1:
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
-			reg_val |= NV_SOR_DP_PADCTL_PD_TXD_2_NO;
-#else
-			reg_val |= NV_SOR_DP_PADCTL_PD_TXD_0_NO;
-#endif
+			val |= pd_txd_0_no;
 			break;
 		default:
 			dev_dbg(&sor->dc->ndev->dev,
@@ -792,7 +793,8 @@ int tegra_sor_power_lanes(struct tegra_dc_sor_data *sor,
 			return -EFAULT;
 		}
 
-		tegra_sor_writel(sor, NV_SOR_DP_PADCTL(sor->portnum), reg_val);
+		tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
+						NV_SOR_DP_PADCTL_PD_TXD_MASK, val);
 		tegra_dc_sor_set_lane_count(sor, lane_count);
 	}
 
@@ -1996,9 +1998,14 @@ void tegra_sor_precharge_lanes(struct tegra_dc_sor_data *sor)
 	u32 val = 0;
 
 	switch (cfg->lane_count) {
+	/* T210 boards need to swap lanes 0 and 2 */
 	case 4:
 		val |= (NV_SOR_DP_PADCTL_PD_TXD_3_NO |
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
+			NV_SOR_DP_PADCTL_PD_TXD_0_NO);
+#else
 			NV_SOR_DP_PADCTL_PD_TXD_2_NO);
+#endif
 		/* fall through */
 	case 2:
 		val |= NV_SOR_DP_PADCTL_PD_TXD_1_NO;

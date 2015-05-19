@@ -857,6 +857,7 @@
 #define NV_SOR_DP_PADCTL_PD_TXD_2_SHIFT				(0)
 #define NV_SOR_DP_PADCTL_PD_TXD_2_YES				(0)
 #define NV_SOR_DP_PADCTL_PD_TXD_2_NO				(1)
+#define NV_SOR_DP_PADCTL_PD_TXD_MASK				(0xf)
 #define NV_SOR_DP_DEBUG(i)					(0x5e + i)
 #define NV_SOR_DP_SPARE(i)					(0x60 + (i))
 #define NV_SOR_DP_SPARE_REG_SHIFT				(3)

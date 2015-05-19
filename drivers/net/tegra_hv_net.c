@@ -15,6 +15,7 @@
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
+#include <linux/netdevice.h>
 #include <linux/of.h>
 #include <linux/of_net.h>
 #include <linux/tty.h>
@@ -642,7 +643,8 @@ static int tegra_hv_net_probe(struct platform_device *pdev)
 	if (ret != 0)
 		txdelay = DEFAULT_MAX_TX_DELAY_MSECS;
 
-	ndev = alloc_etherdev(sizeof(*hvn));
+	ndev = alloc_netdev(sizeof(*hvn), "hv%d", NET_NAME_UNKNOWN,
+			    ether_setup);
 	if (ndev == NULL) {
 		dev_err(dev, "Failed to allocate netdev\n");
 		ret = -ENOMEM;

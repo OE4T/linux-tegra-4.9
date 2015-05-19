@@ -81,15 +81,36 @@ static struct nvmap_platform_data nvmap_data = {
 	.nr_carveouts	= 3,
 };
 
+static struct nvmap_platform_carveout *nvmap_get_carveout_pdata(const char *name)
+{
+	struct nvmap_platform_carveout *co;
+	for (co = nvmap_carveouts;
+	     co < nvmap_carveouts + ARRAY_SIZE(nvmap_carveouts); co++) {
+		int i = strcspn(name, "_");
+		if (!strncmp("ivm", name, min(i, 3)) && !co->name)
+			return co;
+	}
+	pr_err("not enough space for all nvmap carveouts\n");
+	return NULL;
+}
+
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
-int nvmap_populate_ivm_carveout(struct device_node *n,
-				struct nvmap_platform_carveout *co)
+int nvmap_populate_ivm_carveout(phandle handle)
 {
 	struct device_node *hvn;
 	u32 id;
 	int ret;
 	struct tegra_hv_ivm_cookie *ivm;
+	struct nvmap_platform_carveout *co;
 	unsigned int guestid;
+	struct device_node *n = of_find_node_by_phandle(handle);
+
+	if (!n)
+		return -ENODEV;
+
+	co = nvmap_get_carveout_pdata(n->name);
+	if (!co)
+		return -ENOMEM;
 
 	if (hyp_read_gid(&guestid)) {
 		pr_err("failed to read gid\n");
@@ -141,8 +162,7 @@ int nvmap_populate_ivm_carveout(struct device_node *n,
 	return 0;
 }
 #else
-int nvmap_populate_ivm_carveout(struct device_node *n,
-				struct nvmap_platform_carveout *co)
+int nvmap_populate_ivm_carveout(phandle handle)
 {
 	return -EINVAL;
 }
@@ -163,21 +183,13 @@ static int __nvmap_init_dt(struct platform_device *pdev)
 	/* Parse and setup inter VM carveouts */
 	node = of_get_child_by_name(pdev->dev.of_node, "ivm_carveouts");
 	if (node) {
-		int nivm = of_get_child_count(node);
+		int ret;
 
-		if (nivm) {
-			int index = nvmap_data.nr_carveouts;
-
-			for_each_child_of_node(node, n) {
-				if (index == ARRAY_SIZE(nvmap_carveouts)) {
-					pr_err("not enough space for all nvmap carveouts\n");
-					return -ENOMEM;
-				}
-				if (nvmap_populate_ivm_carveout(n, &nvmap_carveouts[index]))
-					return -EINVAL;
-				index++;
-			}
-			nvmap_data.nr_carveouts = index;
+		for_each_child_of_node(node, n) {
+			ret = nvmap_populate_ivm_carveout(n->phandle);
+			if (ret)
+				return ret;
+			nvmap_dev->nr_carveouts++;
 		}
 	}
 

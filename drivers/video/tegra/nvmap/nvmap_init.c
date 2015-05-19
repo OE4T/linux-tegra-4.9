@@ -87,10 +87,17 @@ static struct nvmap_platform_carveout *nvmap_get_carveout_pdata(const char *name
 	for (co = nvmap_carveouts;
 	     co < nvmap_carveouts + ARRAY_SIZE(nvmap_carveouts); co++) {
 		int i = strcspn(name, "_");
-		if (!strncmp("ivm", name, min(i, 3)) && !co->name) {
-			co->dma_dev = co->dma_dev ? co->dma_dev : &co->dev;
-			return co;
-		}
+		if (!strncmp("ivm", name, min(i, 3)) && co->name)
+			continue;
+
+		if (!co->name)
+			break;
+
+		if (strncmp(co->name, name, i))
+			continue;
+
+		co->dma_dev = co->dma_dev ? co->dma_dev : &co->dev;
+		return co;
 	}
 	pr_err("not enough space for all nvmap carveouts\n");
 	return NULL;

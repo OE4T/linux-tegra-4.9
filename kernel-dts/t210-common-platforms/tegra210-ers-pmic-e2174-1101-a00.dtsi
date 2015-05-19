@@ -46,13 +46,20 @@
 		gpu_max77621_reg: max77621@1c {
 			compatible = "maxim,max77621";
 			reg = <0x1c>;
-			interrupts = <0 86 IRQF_SHARED>;
+			interrupts = <0 86 0>;
+			interrupt-flags = <IRQF_SHARED>;
 			status = "disabled";
 			regulator-name = "vdd-gpu";
 			regulator-min-microvolt = <606250>;
 			regulator-max-microvolt = <1400000>;
+			regulator-init-microvolt = <1000000>;
+			regulator-enable-ramp-delay = <200>;
+			regulator-disable-ramp-delay = <60000>;
+			regulator-boot-off;
+			regulator-ramp-delay = <12000>;
 			#thermal-sensor-cells = <0>;
-			maxim,externally-enable;
+			maxim,enable-active-discharge;
+			maxim,enable-bias;
 			maxim,dvs-default-state = <1>;
 			maxim,external-enable-gpio = <&max77620 6 0>;
 		};

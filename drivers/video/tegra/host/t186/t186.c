@@ -53,7 +53,7 @@ static struct host1x_device_info host1x04_info = {
 struct nvhost_device_data t18_host1x_info = {
 	.clocks			= {{"host1x", UINT_MAX},
 				   {"actmon", UINT_MAX}, {} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_MODULE_NO_POWERGATE_ID,
 	.private_data		= &host1x04_info,
 };
 
@@ -67,9 +67,9 @@ struct nvhost_device_data t18_isp_info = {
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive		= true,
 #ifdef TEGRA_POWERGATE_VE
-	.powergate_ids		= {TEGRA_POWERGATE_VE, -1},
+	.powergate_id		= TEGRA_POWERGATE_VE,
 #else
-	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_MODULE_NO_POWERGATE_ID,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay	= 500,
@@ -93,9 +93,9 @@ struct nvhost_device_data t18_vi_info = {
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive		= true,
 #ifdef TEGRA_POWERGATE_VE
-	.powergate_ids		= {TEGRA_POWERGATE_VE, -1},
+	.powergate_id		= TEGRA_POWERGATE_VE,
 #else
-	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_MODULE_NO_POWERGATE_ID,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay	= 500,
@@ -124,9 +124,9 @@ struct nvhost_device_data t18_msenc_info = {
 	.devfs_name		= "msenc",
 	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,
 #ifdef TEGRA_POWERGATE_NVENC
-	.powergate_ids		= { TEGRA_POWERGATE_NVENC, -1 },
+	.powergate_id		= TEGRA_POWERGATE_NVENC,
 #else
-	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_MODULE_NO_POWERGATE_ID,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.clocks			= {{"msenc", UINT_MAX, 0},
@@ -146,9 +146,9 @@ struct nvhost_device_data t18_nvdec_info = {
 	.devfs_name		= "nvdec",
 	.class			= NV_NVDEC_CLASS_ID,
 #ifdef TEGRA_POWERGATE_NVDEC
-	.powergate_ids		= { TEGRA_POWERGATE_NVDEC, -1 },
+	.powergate_id		= TEGRA_POWERGATE_NVDEC,
 #else
-	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_MODULE_NO_POWERGATE_ID,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.clocks			= {{"nvdec", UINT_MAX, 0},
@@ -168,9 +168,9 @@ struct nvhost_device_data t18_nvjpg_info = {
 	.devfs_name		= "nvjpg",
 	.class			= NV_NVJPG_CLASS_ID,
 #ifdef TEGRA_POWERGATE_NVJPG
-	.powergate_ids		= { TEGRA_POWERGATE_NVJPG, -1 },
+	.powergate_id		= TEGRA_POWERGATE_NVJPG,
 #else
-	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_MODULE_NO_POWERGATE_ID,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay	= 500,
@@ -194,7 +194,7 @@ struct nvhost_device_data t18_tsec_info = {
 	.class			= NV_TSEC_CLASS_ID,
 	.clocks			= {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
 				   {"emc"} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_MODULE_NO_POWERGATE_ID,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.keepalive		= true,
 	.moduleid		= NVHOST_MODULE_TSEC,
@@ -213,7 +213,7 @@ struct nvhost_device_data t18_tsecb_info = {
 	.class			= NV_TSECB_CLASS_ID,
 	.clocks			= {{"tsecb", UINT_MAX, 0, TEGRA_MC_CLIENT_TSECB},
 				   {"emc"} },
-	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_MODULE_NO_POWERGATE_ID,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.keepalive		= true,
 	.poweron_reset		= true,
@@ -236,9 +236,9 @@ struct nvhost_device_data t18_vic_info = {
 				   NVHOST_MODULE_ID_EMC_SHARED}, {} },
 	.version		= NVHOST_ENCODE_FLCN_VER(4, 0),
 #ifdef TEGRA_POWERGATE_VIC
-	.powergate_ids	= { TEGRA_POWERGATE_VIC, -1 },
+	.powergate_id	= TEGRA_POWERGATE_VIC,
 #else
-	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_MODULE_NO_POWERGATE_ID,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid		= NVHOST_MODULE_VIC,
@@ -256,7 +256,7 @@ struct nvhost_device_data t18_nvcsi_info = {
 	.clocks			= {{"nvcsi", UINT_MAX, 0}},
 	.devfs_name		= "nvcsi",
 	.class			= NV_VIDEO_STREAMING_NVCSI_CLASS_ID,
-	NVHOST_MODULE_NO_POWERGATE_IDS,
+	NVHOST_MODULE_NO_POWERGATE_ID,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.serialize		= 1,
 	.push_work_done		= 1,

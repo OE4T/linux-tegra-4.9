@@ -162,7 +162,7 @@
 				cap-version = <0x34340002>;
 				cap-identifier = "OV5693";
 				cap-sensor_nvc_interface = <3>;
-				cap-pixel_types = <0x101>;
+				cap-pixel_types = <0x2101>;
 				cap-orientation = <3>;
 				cap-direction = <0>;
 				cap-initial_clock_rate_khz = <6000>;
@@ -255,7 +255,7 @@
 				cap-version = <0x34340002>;
 				cap-identifier = "OV5693.1";
 				cap-sensor_nvc_interface = <5>;
-				cap-pixel_types = <0x101>;
+				cap-pixel_types = <0x2101>;
 				cap-orientation = <3>;
 				cap-direction = <1>;
 				cap-initial_clock_rate_khz = <6000>;

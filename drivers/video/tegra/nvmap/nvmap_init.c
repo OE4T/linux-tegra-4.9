@@ -50,7 +50,7 @@ static const struct of_device_id nvmap_of_ids[] = {
 	{ }
 };
 
-static struct nvmap_platform_carveout nvmap_carveouts[] = {
+static struct nvmap_platform_carveout nvmap_carveouts[4] = {
 	[0] = {
 		.name		= "iram",
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_IRAM,
@@ -78,7 +78,7 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 
 static struct nvmap_platform_data nvmap_data = {
 	.carveouts	= nvmap_carveouts,
-	.nr_carveouts	= ARRAY_SIZE(nvmap_carveouts),
+	.nr_carveouts	= 3,
 };
 
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
@@ -166,32 +166,18 @@ static int __nvmap_init_dt(struct platform_device *pdev)
 		int nivm = of_get_child_count(node);
 
 		if (nivm) {
-			int ncarveouts = ARRAY_SIZE(nvmap_carveouts) + nivm;
-			/* Where should this be freed? */
-			struct nvmap_platform_carveout *carveouts =
-				devm_kzalloc(&pdev->dev,
-					ncarveouts * sizeof(*carveouts),
-					GFP_KERNEL);
-			int index;
-			if (!carveouts)
-				return -EINVAL;
+			int index = nvmap_data.nr_carveouts;
 
-			/* Copy over data from fixed carveouts */
-			memcpy(carveouts, nvmap_carveouts,
-					ARRAY_SIZE(nvmap_carveouts) *
-						sizeof(*carveouts));
-
-			index = ARRAY_SIZE(nvmap_carveouts);
 			for_each_child_of_node(node, n) {
-				if (nvmap_populate_ivm_carveout(n,
-						&carveouts[index])) {
-					kfree(carveouts);
+				if (index == ARRAY_SIZE(nvmap_carveouts)) {
+					pr_err("not enough space for all nvmap carveouts\n");
 					return -ENOMEM;
 				}
+				if (nvmap_populate_ivm_carveout(n, &nvmap_carveouts[index]))
+					return -EINVAL;
 				index++;
 			}
-			nvmap_data.carveouts = carveouts;
-			nvmap_data.nr_carveouts = ncarveouts;
+			nvmap_data.nr_carveouts = index;
 		}
 	}
 

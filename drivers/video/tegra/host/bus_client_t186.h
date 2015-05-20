@@ -19,6 +19,7 @@
 
 #include "bus_client.h"
 
+static inline
 void host1x_hypervisor_writel(struct platform_device *pdev, u32 r, u32 v)
 {
 	void __iomem *aperture = get_aperture(pdev, 1);
@@ -29,7 +30,7 @@ void host1x_hypervisor_writel(struct platform_device *pdev, u32 r, u32 v)
 	}
 }
 
-u32 host1x_hypervisor_readl(struct platform_device *pdev, u32 r)
+static inline u32 host1x_hypervisor_readl(struct platform_device *pdev, u32 r)
 {
 	void __iomem *aperture = get_aperture(pdev, 1);
 	u32 v = 0;
@@ -43,7 +44,7 @@ u32 host1x_hypervisor_readl(struct platform_device *pdev, u32 r)
 	return v;
 }
 
-int nvhost_host1x_get_vmid(struct platform_device *dev)
+static inline int nvhost_host1x_get_vmid(struct platform_device *dev)
 {
 	u32 value;
 	struct device_node *np;

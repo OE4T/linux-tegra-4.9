@@ -271,7 +271,6 @@ static int gk20a_alloc_comptags(struct gk20a *g,
 
 		if (ctaglines_to_allocate < lines)
 			return -EINVAL; /* integer overflow */
-		pr_info("user-mapped CTAGS: %u\n", ctaglines_to_allocate);
 	}
 
 	/* store the allocator so we can use it when we free the ctags */
@@ -282,9 +281,19 @@ static int gk20a_alloc_comptags(struct gk20a *g,
 
 	priv->comptags.lines = lines;
 	priv->comptags.real_offset = offset;
+	priv->comptags.allocated_lines = ctaglines_to_allocate;
 
-	if (user_mappable)
+	if (user_mappable) {
+		u64 win_size =
+			DIV_ROUND_UP(lines, g->gr.comptags_per_cacheline) *
+			aggregate_cacheline_sz;
+		win_size = roundup(win_size, small_pgsz);
+
 		offset = DIV_ROUND_UP(offset, ctagline_align) * ctagline_align;
+		*ctag_map_win_ctagline = offset;
+		*ctag_map_win_size = win_size;
+	}
+
 
 	priv->comptags.offset = offset;
 
@@ -1458,14 +1467,32 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 			gk20a_get_comptags(d, dmabuf, &comptags);
 			clear_ctags = true;
 
-			if (comptags.lines < comptags.allocated_lines) {
-				/* clear tail-padding comptags */
-				u32 ctagmin = comptags.offset + comptags.lines;
-				u32 ctagmax = comptags.offset +
-					comptags.allocated_lines - 1;
+			comptags.user_mappable = user_mappable;
 
-				g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_clear,
-						    ctagmin, ctagmax);
+			if (user_mappable) {
+				/* comptags for the buffer will be
+				   cleared later, but we need to make
+				   sure the whole comptags allocation
+				   (which may be bigger) is cleared in
+				   order not to leak compbits */
+
+				const u32 buffer_ctag_end =
+					comptags.offset + comptags.lines;
+				const u32 alloc_ctag_end =
+					comptags.real_offset +
+					comptags.allocated_lines;
+
+				if (comptags.real_offset < comptags.offset)
+					g->ops.ltc.cbc_ctrl(
+						g, gk20a_cbc_op_clear,
+						comptags.real_offset,
+						comptags.offset - 1);
+
+				if (buffer_ctag_end < alloc_ctag_end)
+					g->ops.ltc.cbc_ctrl(
+						g, gk20a_cbc_op_clear,
+						buffer_ctag_end,
+						alloc_ctag_end - 1);
 			}
 		}
 	}

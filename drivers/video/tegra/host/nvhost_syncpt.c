@@ -966,6 +966,29 @@ int nvhost_syncpt_mark_unused(struct nvhost_syncpt *sp, u32 syncptid)
 	return 0;
 }
 
+int nvhost_syncpt_get_ref(struct nvhost_syncpt *sp, u32 id)
+{
+	return atomic_inc_return(&sp->ref[id]);
+}
+
+int nvhost_syncpt_read_ref(struct nvhost_syncpt *sp, u32 id)
+{
+	return atomic_read(&sp->ref[id]);
+}
+
+void nvhost_syncpt_put_ref(struct nvhost_syncpt *sp, u32 id)
+{
+	WARN_ON(nvhost_syncpt_read_ref(sp, id) == 0);
+	if (atomic_dec_and_test(&sp->ref[id]))
+		nvhost_free_syncpt(id);
+}
+
+void nvhost_syncpt_put_ref_ext(u32 id)
+{
+	nvhost_syncpt_put_ref(&nvhost->syncpt, id);
+}
+EXPORT_SYMBOL_GPL(nvhost_syncpt_put_ref_ext);
+
 int nvhost_syncpt_init(struct platform_device *dev,
 		struct nvhost_syncpt *sp)
 {
@@ -984,6 +1007,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 	sp->lock_counts =
 		kzalloc(sizeof(atomic_t) * nvhost_syncpt_nb_mlocks(sp),
 			GFP_KERNEL);
+	sp->ref = kzalloc(sizeof(atomic_t) * nb_pts, GFP_KERNEL);
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 	sp->timeline = kzalloc(sizeof(struct nvhost_sync_timeline *) *
 			nb_pts, GFP_KERNEL);
@@ -1059,6 +1083,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 			sp->client_managed[i] = true;
 		sp->syncpt_names[i] = NULL;
 		sp->last_used_by[i] = NULL;
+		atomic_set(&sp->ref[i], 0);
 
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 		sp->timeline[i] = nvhost_sync_timeline_create(sp, i);
@@ -1127,6 +1152,9 @@ void nvhost_syncpt_deinit(struct nvhost_syncpt *sp)
 
 	kfree(sp->max_val);
 	sp->max_val = NULL;
+
+	kfree(sp->ref);
+	sp->ref = NULL;
 
 	kfree(sp->lock_counts);
 	sp->lock_counts = NULL;

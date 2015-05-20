@@ -50,6 +50,7 @@ struct nvhost_syncpt {
 	atomic_t *min_val;
 	atomic_t *max_val;
 	atomic_t *lock_counts;
+	atomic_t *ref;
 	const char **syncpt_names;
 	const char **last_used_by;
 	struct nvhost_syncpt_attr *syncpt_attrs;
@@ -175,5 +176,9 @@ struct nvhost_sync_timeline *nvhost_syncpt_timeline(struct nvhost_syncpt *sp,
 int nvhost_syncpt_mark_unused(struct nvhost_syncpt *sp, u32 syncptid);
 int nvhost_syncpt_mark_used(struct nvhost_syncpt *sp,
 			    u32 chid, u32 syncptid);
+
+int nvhost_syncpt_get_ref(struct nvhost_syncpt *sp, u32 id);
+void nvhost_syncpt_put_ref(struct nvhost_syncpt *sp, u32 id);
+int nvhost_syncpt_read_ref(struct nvhost_syncpt *sp, u32 id);
 
 #endif

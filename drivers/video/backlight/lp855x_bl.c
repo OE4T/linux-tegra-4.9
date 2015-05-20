@@ -335,6 +335,7 @@ static int lp855x_parse_dt(struct lp855x *lp)
 	struct lp855x_platform_data *pdata;
 	int rom_length;
 	int n_bl_measured = 0;
+	int n_bl_curve = 0;
 	const __be32 *p;
 	u32 u;
 	struct property *prop;
@@ -388,6 +389,21 @@ static int lp855x_parse_dt(struct lp855x *lp)
 		of_property_for_each_u32(node,
 			"bl-measured", prop, p, u)
 			pdata->bl_measured[n_bl_measured++] = u;
+	}
+
+	of_property_for_each_u32(node, "bl-curve", prop, p, u)
+		n_bl_curve++;
+	if (n_bl_curve > 0) {
+		pdata->bl_curve = devm_kzalloc(dev,
+		sizeof(*pdata->bl_curve) * n_bl_curve, GFP_KERNEL);
+		if (!pdata->bl_curve) {
+			pr_err("bl_curve memory allocation failed\n");
+			ret = -ENOMEM;
+		}
+		n_bl_curve = 0;
+		of_property_for_each_u32(node,
+			"bl-curve", prop, p, u)
+			pdata->bl_curve[n_bl_curve++] = u;
 	}
 
 	lp->pdata = pdata;

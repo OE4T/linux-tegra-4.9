@@ -136,6 +136,8 @@ struct lp855x_rom_data {
 		Only valid when mode is PWM_BASED.
  * @size_program : total size of lp855x_rom_data
  * @rom_data : list of new eeprom/eprom registers
+ * @bl_measured : pwm vs. brightness response linearization LUT
+ * @bl_curve : backlight transfer function
  */
 struct lp855x_platform_data {
 	const char *name;
@@ -145,6 +147,7 @@ struct lp855x_platform_data {
 	int size_program;
 	struct lp855x_rom_data *rom_data;
 	u8 *bl_measured;
+	u8 *bl_curve;
 };
 
 enum lp855x_brightness_ctrl_mode {

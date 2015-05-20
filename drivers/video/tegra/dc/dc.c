@@ -1770,7 +1770,7 @@ static void tegra_dc_setup_vrr(struct tegra_dc *dc)
 
 	if (!vrr) return;
 
-	m = &dc->out->modes[VRR_NATIVE_MODE_IDX];
+	m = &dc->out->modes[dc->out->n_modes-1];
 	vrr->v_front_porch = m->v_front_porch;
 	vrr->v_back_porch = m->v_back_porch;
 	vrr->pclk = m->pclk;
@@ -2487,11 +2487,11 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		dc->initialized = true;
 	} else if (out->n_modes > 0) {
 		/* For VRR panels, default mode is first in the list,
-		 * and native panel mode is at index VRR_NATIVE_MODE_IDX.
+		 * and native panel mode is the last.
 		 * Initialization must occur using the native panel mode. */
 		if (dc->out->vrr) {
 			tegra_dc_set_mode(dc,
-				&dc->out->modes[VRR_NATIVE_MODE_IDX]);
+				&dc->out->modes[dc->out->n_modes-1]);
 			tegra_dc_setup_vrr(dc);
 		} else
 			tegra_dc_set_mode(dc, &dc->out->modes[0]);

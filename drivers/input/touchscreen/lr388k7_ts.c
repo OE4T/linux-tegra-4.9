@@ -83,7 +83,7 @@
 #define K7_CMD_DATA_OFFSET (0x030400)
 #define K7_CMD_DATA_SIZE (251 + K7_RD_HEADER_SIZE)
 #define K7_Q_SIZE (8)
-#define K7_DRIVER_VERSION (6)
+#define K7_DRIVER_VERSION (7)
 #define K7_INT_STATUS_MASK_DATA (0x01)
 #define K7_INT_STATUS_MASK_BOOT (0x02)
 #define K7_INT_STATUS_MASK_CMD  (0x04)
@@ -1342,8 +1342,6 @@ static int dev_open(struct inode *inode, struct file *filp)
 #if defined(DEBUG_LR388K7)
 	dev_info(&g_spi->dev, "dev_open\n");
 #endif
-
-	lr388k7_init_parameter();
 
 	return 0;
 }

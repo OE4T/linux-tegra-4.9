@@ -573,7 +573,8 @@ static struct gk20a_buddy *__balloc_find_buddy(struct gk20a_allocator *a,
 {
 	struct gk20a_buddy *bud;
 
-	if (list_empty(balloc_get_order_list(a, order)))
+	if (order > a->max_order ||
+	    list_empty(balloc_get_order_list(a, order)))
 		return NULL;
 
 	if (a->flags & GPU_BALLOC_GVA_SPACE &&
@@ -608,6 +609,10 @@ static u64 __balloc_do_alloc(struct gk20a_allocator *a, u64 order, int pte_size)
 	split_order = order;
 	while (!(bud = __balloc_find_buddy(a, split_order, pte_size)))
 		split_order++;
+
+	/* Out of memory! */
+	if (!bud)
+		return 0;
 
 	while (bud->order != order) {
 		if (balloc_split_buddy(a, bud, pte_size))
@@ -658,15 +663,19 @@ u64 gk20a_balloc(struct gk20a_allocator *a, u64 len)
 
 	addr = __balloc_do_alloc(a, order, pte_size);
 
-	a->bytes_alloced += len;
-	a->bytes_alloced_real += balloc_order_to_len(a, order);
+	if (addr) {
+		a->bytes_alloced += len;
+		a->bytes_alloced_real += balloc_order_to_len(a, order);
+		balloc_dbg(a, "Alloc 0x%-10llx %3lld:0x%-10llx pte_size=%s\n",
+			   addr, order, len,
+			   pte_size == gmmu_page_size_big   ? "big" :
+			   pte_size == gmmu_page_size_small ? "small" :
+			   "NA/any");
+	} else {
+		balloc_dbg(a, "Alloc failed: no mem!\n");
+	}
 
 	balloc_unlock(a);
-	balloc_dbg(a, "Alloc 0x%-10llx %3lld:0x%-10llx pte_size=%s\n",
-		   addr, order, len,
-		   pte_size == gmmu_page_size_big   ? "big" :
-		   pte_size == gmmu_page_size_small ? "small" :
-		   "NA/any");
 
 	balloc_trace_func_done();
 	return addr;
@@ -1071,11 +1080,11 @@ static void balloc_print_stats(struct gk20a_allocator *a, struct seq_file *s,
 	__balloc_pstat(s, "base = %llu, limit = %llu, blk_size = %llu\n",
 		   a->base, a->length, a->blk_size);
 	__balloc_pstat(s, "Internal params:\n");
-	__balloc_pstat(s, "  start = %llu\n", a->start);
-	__balloc_pstat(s, "  end   = %llu\n", a->end);
-	__balloc_pstat(s, "  count = %llu\n", a->count);
-	__balloc_pstat(s, "  blks  = %llu\n", a->blks);
-	__balloc_pstat(s, "  max_order  = %llu\n", a->max_order);
+	__balloc_pstat(s, "  start = 0x%llx\n", a->start);
+	__balloc_pstat(s, "  end   = 0x%llx\n", a->end);
+	__balloc_pstat(s, "  count = 0x%llx\n", a->count);
+	__balloc_pstat(s, "  blks  = 0x%llx\n", a->blks);
+	__balloc_pstat(s, "  max_order = %llu\n", a->max_order);
 
 	__balloc_pstat(s, "Buddy blocks:\n");
 	__balloc_pstat(s, "  Order   Free    Alloced   Split\n");

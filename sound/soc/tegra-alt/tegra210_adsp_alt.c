@@ -591,31 +591,13 @@ err_app_exit:
 static void tegra210_adsp_app_deinit(struct tegra210_adsp *adsp,
 				struct tegra210_adsp_app *app)
 {
-	if (!app || !app->desc)
-		return;
-
-	if (app->info && !IS_APM_OUT(app->reg)) {
-		app->info = NULL;
-		app->plugin = NULL;
-		app->apm = NULL;
-
-		if (IS_APM_IN(app->reg)) {
-			uint32_t apm_out_reg = APM_OUT_START +
-					(app->reg - APM_IN_START);
-			struct tegra210_adsp_app *apm_out =
-					&adsp->apps[apm_out_reg];
-
-			nvadsp_mbox_close(&app->rx_mbox);
-			nvadsp_app_stop(app->info);
-			apm_out->info = NULL;
-			apm_out->plugin = NULL;
-			apm_out->apm = NULL;
-		} else if (IS_ADMA(app->reg)) {
-			__clear_bit(app->adma_chan -
-				TEGRA210_ADSP_ADMA_CHANNEL_START,
-				adsp->adma_usage);
-		}
-	}
+	/* TODO:
+	 * Current usecases use static paths so app_deinit functionality
+	 * is not needed and adds overhead of freeing and allocating apps
+	 * everytime. Add app deinit functionality properly if needed in
+	 * future.
+	 */
+	return;
 }
 
 /* API to connect two APMs */

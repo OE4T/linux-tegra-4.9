@@ -116,6 +116,8 @@ static int tegra_bl_notify(struct device *dev, int brightness)
 	struct lp855x *lp = NULL;
 	struct platform_device *pdev = NULL;
 	struct device *dc_dev;
+	u8 *bl_measured = NULL;
+	u8 *bl_curve = NULL;
 
 	pdev = to_platform_device(bus_find_device_by_name(
 		&platform_bus_type, NULL, "tegradc.0"));
@@ -127,10 +129,6 @@ static int tegra_bl_notify(struct device *dev, int brightness)
 		else if (brightness > PRISM_THRESHOLD + HYST_VAL)
 			nvsd_enbl_dsbl_prism(dc_dev, true);
 	}
-
-	cur_sd_brightness = atomic_read(&sd_brightness);
-	/* SD brightness is a percentage */
-	brightness = (brightness * cur_sd_brightness) / 255;
 
 	/* Apply any backlight response curve */
 	if (brightness > 255)
@@ -152,9 +150,21 @@ static int tegra_bl_notify(struct device *dev, int brightness)
 		of_device_is_compatible(dev->of_node,
 				"ti,lp8557")) {
 		lp = (struct lp855x *)dev_get_drvdata(dev);
-		if (lp->pdata->bl_measured)
-			brightness = lp->pdata->bl_measured[brightness];
+		if (lp && lp->pdata) {
+			bl_measured = lp->pdata->bl_measured;
+			bl_curve = lp->pdata->bl_curve;
+		}
 	}
+
+	if (bl_curve)
+		brightness = bl_curve[brightness];
+
+	cur_sd_brightness = atomic_read(&sd_brightness);
+	/* SD brightness is a percentage */
+	brightness = (brightness * cur_sd_brightness) / 255;
+
+	if (bl_measured)
+		brightness = bl_measured[brightness];
 
 	return brightness;
 }

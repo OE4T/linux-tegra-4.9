@@ -359,7 +359,7 @@ static inline int max_vaddr_bits_gk20a(void)
 /*
  * Amount of the GVA space we actually use is smaller than the available space.
  */
-#define NV_GMMU_VA_RANGE	37
+#define NV_GMMU_VA_RANGE	40
 
 /*
  * The bottom 16GB of the space are used for small pages, the remaining high

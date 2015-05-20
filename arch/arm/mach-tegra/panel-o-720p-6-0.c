@@ -108,6 +108,8 @@ static int dsi_o_720p_6_0_enable(struct device *dev)
 		}
 	}
 	msleep(20);
+	gpio_set_value(en_panel_rst, 1);
+
 	return 0;
 fail:
 	return err;
@@ -121,10 +123,6 @@ static int dsi_o_720p_6_0_postpoweron(struct device *dev)
  *  - dc->out_ops->postpoweron => dsi init command trigger
  */
 	int err;
-
-	msleep(20);
-	gpio_set_value(en_panel_rst, 1);
-	msleep(20);
 
 	if (bl_en_reg) {
 		err = regulator_enable(bl_en_reg);

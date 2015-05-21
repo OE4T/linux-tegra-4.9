@@ -188,6 +188,44 @@ int padctrl_get_voltage(struct padctrl *pad, u32 *voltage)
 }
 EXPORT_SYMBOL(padctrl_get_voltage);
 
+int padctrl_power_enable(struct padctrl *pad)
+{
+	struct padctrl_dev *pad_dev;
+	int ret = -EINVAL;
+
+	if (!pad || !pad->pad_dev)
+		return -EINVAL;
+
+	pad_dev = pad->pad_dev;
+	mutex_lock(&pad_dev->mutex);
+	if (pad_dev->desc->ops->power_enable)
+		ret = pad_dev->desc->ops->power_enable(pad->pad_dev,
+				pad->index);
+	mutex_unlock(&pad_dev->mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL(padctrl_power_enable);
+
+int padctrl_power_disable(struct padctrl *pad)
+{
+	struct padctrl_dev *pad_dev;
+	int ret = -EINVAL;
+
+	if (!pad || !pad->pad_dev)
+		return -EINVAL;
+
+	pad_dev = pad->pad_dev;
+	mutex_lock(&pad_dev->mutex);
+	if (pad_dev->desc->ops->power_disable)
+		ret = pad_dev->desc->ops->power_disable(pad->pad_dev,
+				pad->index);
+	mutex_unlock(&pad_dev->mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL(padctrl_power_disable);
+
 struct padctrl_dev *padctrl_register(struct device *dev,
 	struct padctrl_desc *desc, struct padctrl_config *config)
 {

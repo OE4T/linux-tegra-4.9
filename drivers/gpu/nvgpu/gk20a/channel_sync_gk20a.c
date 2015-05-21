@@ -283,7 +283,7 @@ static void gk20a_channel_syncpt_destroy(struct gk20a_channel_sync *s)
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	nvhost_syncpt_set_min_eq_max_ext(sp->host1x_pdev, sp->id);
-	nvhost_free_syncpt(sp->id);
+	nvhost_syncpt_put_ref_ext(sp->id);
 	kfree(sp);
 }
 

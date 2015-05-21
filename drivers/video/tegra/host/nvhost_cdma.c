@@ -25,6 +25,7 @@
 #include "debug.h"
 #include "chip_support.h"
 #include <asm/cacheflush.h>
+#include <nvhost_vm.h>
 
 #include <linux/slab.h>
 #include <linux/kfifo.h>
@@ -38,6 +39,94 @@
  *   resizable push buffer
  *     - some channels hardly need any, some channels (3d) could use more
  */
+
+/*
+ * push_buffer
+ *
+ * The push buffer is a circular array of words to be fetched by command DMA.
+ * Note that it works slightly differently to the sync queue; fence == cur
+ * means that the push buffer is full, not empty.
+ */
+
+/**
+ * Allocate pushbuffer memory
+ */
+int nvhost_push_buffer_alloc(struct push_buffer *pb)
+{
+	struct nvhost_cdma *cdma = pb_to_cdma(pb);
+	pb->mapped = NULL;
+	pb->dma_addr = 0;
+
+	pb->mapped = dma_alloc_writecombine(&cdma_to_dev(cdma)->dev->dev,
+			PUSH_BUFFER_SIZE + 4,
+			&pb->dma_addr,
+			GFP_KERNEL);
+	if (!pb->mapped) {
+		pb->mapped = NULL;
+		return -ENOMEM;
+	}
+
+	/* for now, map pushbuffer to all address spaces */
+	nvhost_vm_map_static(cdma_to_dev(cdma)->dev, pb->mapped,
+			     pb->dma_addr, PUSH_BUFFER_SIZE + 4);
+
+	return 0;
+}
+
+/**
+ * Clean up push buffer resources
+ */
+void nvhost_push_buffer_destroy(struct push_buffer *pb)
+{
+	struct nvhost_cdma *cdma = pb_to_cdma(pb);
+	if (pb->mapped)
+		dma_free_writecombine(&cdma_to_dev(cdma)->dev->dev,
+					PUSH_BUFFER_SIZE + 4,
+					pb->mapped,
+					pb->dma_addr);
+
+	pb->mapped = NULL;
+	pb->dma_addr = 0;
+}
+
+/**
+ * Push two words to the push buffer
+ * Caller must ensure push buffer is not full
+ */
+static void nvhost_push_buffer_push_to(struct push_buffer *pb,
+				u32 op1, u32 op2)
+{
+	u32 cur = pb->cur;
+	u32 *p = (u32 *)((uintptr_t)pb->mapped + cur);
+	WARN_ON(cur == pb->fence);
+	*(p++) = op1;
+	*(p++) = op2;
+	pb->cur = (cur + 8) & (PUSH_BUFFER_SIZE - 1);
+}
+
+/**
+ * Pop a number of two word slots from the push buffer
+ * Caller must ensure push buffer is not empty
+ */
+static void nvhost_push_buffer_pop_from(struct push_buffer *pb,
+		unsigned int slots)
+{
+	/* Advance the next write position */
+	pb->fence = (pb->fence + slots * 8) & (PUSH_BUFFER_SIZE - 1);
+}
+
+/**
+ * Return the number of two word slots free in the push buffer
+ */
+static u32 nvhost_push_buffer_space(struct push_buffer *pb)
+{
+	return ((pb->fence - pb->cur) & (PUSH_BUFFER_SIZE - 1)) / 8;
+}
+
+u32 nvhost_push_buffer_putptr(struct push_buffer *pb)
+{
+	return pb->dma_addr + pb->cur;
+}
 
 /**
  * Add an entry to the sync queue.
@@ -79,7 +168,7 @@ static unsigned int cdma_status_locked(struct nvhost_cdma *cdma,
 		return list_empty(&cdma->sync_queue) ? 1 : 0;
 	case CDMA_EVENT_PUSH_BUFFER_SPACE: {
 		struct push_buffer *pb = &cdma->push_buffer;
-		return cdma_pb_op().space(pb);
+		return nvhost_push_buffer_space(pb);
 	}
 	default:
 		return 0;
@@ -213,7 +302,7 @@ static void update_cdma_locked(struct nvhost_cdma *cdma)
 		/* Pop push buffer slots */
 		if (job->num_slots) {
 			struct push_buffer *pb = &cdma->push_buffer;
-			cdma_pb_op().pop_from(pb, job->num_slots);
+			nvhost_push_buffer_pop_from(pb, job->num_slots);
 			if (cdma->event == CDMA_EVENT_PUSH_BUFFER_SPACE)
 				signal = true;
 		}
@@ -392,7 +481,7 @@ void nvhost_cdma_deinit(struct nvhost_cdma *cdma)
 	struct push_buffer *pb = &cdma->push_buffer;
 
 	WARN_ON(cdma->running);
-	cdma_pb_op().destroy(pb);
+	nvhost_push_buffer_destroy(pb);
 	cdma_op().timeout_destroy(cdma);
 }
 
@@ -420,7 +509,7 @@ int nvhost_cdma_begin(struct nvhost_cdma *cdma, struct nvhost_job *job)
 	}
 	cdma->slots_free = 0;
 	cdma->slots_used = 0;
-	cdma->first_get = cdma_pb_op().putptr(&cdma->push_buffer);
+	cdma->first_get = nvhost_push_buffer_putptr(&cdma->push_buffer);
 	return 0;
 }
 
@@ -478,7 +567,7 @@ void nvhost_cdma_push_gather(struct nvhost_cdma *cdma,
 	}
 	cdma->slots_free = slots_free - 1;
 	cdma->slots_used++;
-	cdma_pb_op().push_to(pb, op1, op2);
+	nvhost_push_buffer_push_to(pb, op1, op2);
 }
 
 /**

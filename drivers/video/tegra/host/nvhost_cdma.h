@@ -33,6 +33,17 @@ struct nvhost_job;
 struct mem_mgr;
 struct mem_handle;
 
+/* Number of gathers we allow to be queued up per channel. Must be a
+ * power of two. Currently sized such that pushbuffer is 4KB (512*8B). */
+#define NVHOST_GATHER_QUEUE_SIZE 512
+
+  /* 8 bytes per slot. (This number does not include the final RESTART.) */
+#define PUSH_BUFFER_SIZE (NVHOST_GATHER_QUEUE_SIZE * 8)
+
+   /* 4K page containing GATHERed methods to increment channel syncpts
+     * and replaces the original timed out contexts GATHER slots */
+#define SYNCPT_INCR_BUFFER_SIZE_WORDS   (4096 / sizeof(u32))
+
 /*
  * cdma
  *
@@ -95,6 +106,10 @@ struct nvhost_cdma {
 #define cdma_to_channel(cdma) container_of(cdma, struct nvhost_channel, cdma)
 #define cdma_to_dev(cdma) nvhost_get_host(cdma->pdev)
 #define pb_to_cdma(pb) container_of(pb, struct nvhost_cdma, push_buffer)
+
+void nvhost_push_buffer_destroy(struct push_buffer *pb);
+int nvhost_push_buffer_alloc(struct push_buffer *pb);
+u32 nvhost_push_buffer_putptr(struct push_buffer *pb);
 
 int	nvhost_cdma_init(struct platform_device *pdev,
 			 struct nvhost_cdma *cdma);

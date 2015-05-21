@@ -113,7 +113,6 @@ int isc_dev_raw_wr(
 	int ret = -ENODEV;
 
 	dev_dbg(info->dev, "%s\n", __func__);
-	isc_dev_dump(__func__, info, offset, val, size);
 
 	mutex_lock(&info->mutex);
 	if (!info->power_is_on) {
@@ -134,9 +133,13 @@ int isc_dev_raw_wr(
 		} else
 			val += 2;
 	}
+
+	isc_dev_dump(__func__, info, offset, val, size);
 	ret = i2c_master_send(info->i2c_client, val, size);
 	mutex_unlock(&info->mutex);
 
+	if (ret > 0)
+		ret = 0;
 	return ret;
 }
 

@@ -414,6 +414,7 @@ static int isc_mgr_release(struct inode *inode, struct file *file)
 	unsigned long flags;
 
 	isc_mgr_misc_ctrl(isc_mgr, false);
+	isc_mgr_power_down(isc_mgr, (unsigned long)-1);
 
 	/* clear sinfo to prevent report error after handler is closed */
 	spin_lock_irqsave(&isc_mgr->spinlock, flags);

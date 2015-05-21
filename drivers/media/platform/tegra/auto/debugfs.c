@@ -167,7 +167,7 @@ int isc_mgr_debugfs_remove(struct isc_mgr_priv *isc_mgr)
 	return 0;
 }
 
-static int i2c_get(void *data, u64 *val)
+static int i2c_val_get(void *data, u64 *val)
 {
 	struct isc_dev_info *isc_dev = data;
 	u8 temp = 0;
@@ -180,24 +180,39 @@ static int i2c_get(void *data, u64 *val)
 	return 0;
 }
 
-static int i2c_set(void *data, u64 val)
+static int i2c_val_set(void *data, u64 val)
 {
 	struct isc_dev_info *isc_dev = data;
 	u8 temp[3];
 
-	if (val & (~0xffff))
-		isc_dev->reg_off = (u16)(val & 0xffff);
-	else {
-		temp[2] = val & 0xff;
-		if (isc_dev_raw_wr(isc_dev, isc_dev->reg_off, temp, 1)) {
-			dev_err(isc_dev->dev, "ERR:%s failed\n", __func__);
-			return -EIO;
-		}
+	temp[2] = val & 0xff;
+	if (isc_dev_raw_wr(isc_dev, isc_dev->reg_off, temp, 1)) {
+		dev_err(isc_dev->dev, "ERR:%s failed\n", __func__);
+		return -EIO;
 	}
 	return 0;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(isc_dev_fops, i2c_get, i2c_set, "0x%02llx\n");
+DEFINE_SIMPLE_ATTRIBUTE(isc_val_fops, i2c_val_get, i2c_val_set, "0x%02llx\n");
+
+static int i2c_oft_get(void *data, u64 *val)
+{
+	struct isc_dev_info *isc_dev = data;
+
+	*val = (u64)isc_dev->reg_off;
+	return 0;
+}
+
+static int i2c_oft_set(void *data, u64 val)
+{
+	struct isc_dev_info *isc_dev = data;
+
+	isc_dev->reg_off = (typeof (isc_dev->reg_off))val;
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(isc_oft_fops, i2c_oft_get, i2c_oft_set, "0x%02llx\n");
+
 int isc_dev_debugfs_init(struct isc_dev_info *isc_dev)
 {
 	struct isc_mgr_priv *isc_mgr = NULL;
@@ -214,8 +229,16 @@ int isc_dev_debugfs_init(struct isc_dev_info *isc_dev)
 		return -ENOMEM;
 	}
 
-	d = debugfs_create_file("dev", S_IRUGO|S_IWUSR, isc_dev->d_entry,
-		(void *)isc_dev, &isc_dev_fops);
+	d = debugfs_create_file("val", S_IRUGO|S_IWUSR, isc_dev->d_entry,
+		(void *)isc_dev, &isc_val_fops);
+	if (!d) {
+		dev_err(isc_dev->dev, "%s: create file failed\n", __func__);
+		debugfs_remove_recursive(isc_dev->d_entry);
+		isc_dev->d_entry = NULL;
+	}
+
+	d = debugfs_create_file("offset", S_IRUGO|S_IWUSR, isc_dev->d_entry,
+		(void *)isc_dev, &isc_oft_fops);
 	if (!d) {
 		dev_err(isc_dev->dev, "%s: create file failed\n", __func__);
 		debugfs_remove_recursive(isc_dev->d_entry);

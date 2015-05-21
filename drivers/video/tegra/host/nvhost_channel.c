@@ -117,9 +117,11 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 		/* first, mark syncpoint as unused by hardware */
 		nvhost_syncpt_mark_unused(&host->syncpt, ch->syncpts[i]);
 
-		/* release syncpoint if we allocate syncpoints per channels */
+		/* drop syncpoints reference if we allocate syncpoints
+		 * per channels
+		 */
 		if (pdata->resource_policy == RESOURCE_PER_DEVICE)
-			nvhost_free_syncpt(ch->syncpts[i]);
+			nvhost_syncpt_put_ref(&host->syncpt, ch->syncpts[i]);
 
 		/* finally, clear information from channel bookkeeping */
 		ch->syncpts[i] = 0;
@@ -132,7 +134,8 @@ static int nvhost_channel_unmap_locked(struct nvhost_channel *ch)
 
 		/* release it */
 		if (pdata->resource_policy == RESOURCE_PER_DEVICE)
-			nvhost_free_syncpt(ch->client_managed_syncpt);
+			nvhost_syncpt_put_ref(&host->syncpt,
+					ch->client_managed_syncpt);
 
 		/* ..and handle bookkeeping */
 		ch->client_managed_syncpt = 0;

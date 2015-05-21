@@ -231,6 +231,7 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 {
 	struct nvhost_channel_userctx *priv = filp->private_data;
 	struct nvhost_device_data *pdata = platform_get_drvdata(priv->pdev);
+	struct nvhost_master *host = nvhost_get_host(pdata->pdev);
 	int i = 0;
 
 	trace_nvhost_channel_release(dev_name(&priv->pdev->dev));
@@ -252,16 +253,18 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	if (pdata->resource_policy == RESOURCE_PER_DEVICE) {
 		nvhost_putchannel(priv->ch, 1);
 	} else {
-		/* Release instance syncpoints */
+		/* drop instance syncpoints reference */
 		for (i = 0; i < NVHOST_MODULE_MAX_SYNCPTS; ++i) {
 			if (priv->syncpts[i]) {
-				nvhost_free_syncpt(priv->syncpts[i]);
+				nvhost_syncpt_put_ref(&host->syncpt,
+						priv->syncpts[i]);
 				priv->syncpts[i] = 0;
 			}
 		}
 
 		if (priv->client_managed_syncpt) {
-			nvhost_free_syncpt(priv->client_managed_syncpt);
+			nvhost_syncpt_put_ref(&host->syncpt,
+					priv->client_managed_syncpt);
 			priv->client_managed_syncpt = 0;
 		}
 	}

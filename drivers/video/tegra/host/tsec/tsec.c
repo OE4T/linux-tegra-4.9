@@ -444,7 +444,7 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 		&opcode_len);
 	tsec_execute_method(dma_handle, cpuvaddr, opcode_len, id, 1);
 
-	nvhost_free_syncpt(id);
+	nvhost_syncpt_put_ref_ext(id);
 
 	dma_free_attrs(&tsec->dev,
 		HDCP_MTHD_BUF_SIZE, cpuvaddr,

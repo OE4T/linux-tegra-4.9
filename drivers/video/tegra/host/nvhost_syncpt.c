@@ -766,6 +766,7 @@ static u32 nvhost_get_syncpt(struct nvhost_syncpt *sp, bool client_managed,
 {
 	u32 id;
 	int err = 0;
+	int ret = 0;
 	struct nvhost_master *host = syncpt_to_dev(sp);
 	struct device *d = &host->dev->dev;
 	unsigned long timeout = jiffies + NVHOST_SYNCPT_FREE_WAIT_TIMEOUT;
@@ -801,6 +802,14 @@ static u32 nvhost_get_syncpt(struct nvhost_syncpt *sp, bool client_managed,
 	err = nvhost_syncpt_assign_name(sp, id, syncpt_name);
 	if (err) {
 		nvhost_err(d, "syncpt name assignment failed\n");
+		mutex_unlock(&sp->syncpt_mutex);
+		return 0;
+	}
+
+	ret = nvhost_syncpt_get_ref(sp, id);
+	if (ret != 1) {
+		nvhost_err(d, "syncpt found with invalid refcount %d\n", ret);
+		nvhost_syncpt_put_ref(sp, id);
 		mutex_unlock(&sp->syncpt_mutex);
 		return 0;
 	}
@@ -939,14 +948,17 @@ static void nvhost_reserve_syncpts(struct nvhost_syncpt *sp)
 	sp->assigned[NVSYNCPT_VBLANK0] = true;
 	sp->client_managed[NVSYNCPT_VBLANK0] = true;
 	sp->syncpt_names[NVSYNCPT_VBLANK0] = "vblank0";
+	nvhost_syncpt_get_ref(sp, NVSYNCPT_VBLANK0);
 
 	sp->assigned[NVSYNCPT_VBLANK1] = true;
 	sp->client_managed[NVSYNCPT_VBLANK1] = true;
 	sp->syncpt_names[NVSYNCPT_VBLANK1] = "vblank1";
+	nvhost_syncpt_get_ref(sp, NVSYNCPT_VBLANK1);
 
 	sp->assigned[NVSYNCPT_AVP_0] = true;
 	sp->client_managed[NVSYNCPT_AVP_0] = true;
 	sp->syncpt_names[NVSYNCPT_AVP_0] = "avp";
+	nvhost_syncpt_get_ref(sp, NVSYNCPT_AVP_0);
 
 	mutex_unlock(&sp->syncpt_mutex);
 }

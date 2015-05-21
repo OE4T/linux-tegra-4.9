@@ -119,12 +119,13 @@ static void show_syncpts(struct nvhost_master *m, struct output *o)
 			i < nvhost_syncpt_pts_limit(&m->syncpt); i++) {
 		u32 max = nvhost_syncpt_read_max(&m->syncpt, i);
 		u32 min = nvhost_syncpt_update_min(&m->syncpt, i);
+		u32 refs = nvhost_syncpt_read_ref(&m->syncpt, i);
 		if (!min && !max)
 			continue;
 		nvhost_debug_output(o,
-				"id %d (%s) min %d max %d (previous client : %s)\n",
+				"id %d (%s) min %d max %d refs %d (previous client : %s)\n",
 				i, nvhost_get_chip_ops()->syncpt.name(&m->syncpt, i),
-				min, max,
+				min, max, refs,
 				nvhost_syncpt_get_last_client(m->dev, i));
 	}
 	mutex_unlock(&m->syncpt.syncpt_mutex);

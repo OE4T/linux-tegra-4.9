@@ -14,6 +14,7 @@
  */
 
 #include "gk20a/gk20a.h" /* FERMI and MAXWELL classes defined here */
+#include <linux/delay.h>
 
 #include "gk20a/gr_gk20a.h"
 
@@ -23,6 +24,7 @@
 #include "hw_fifo_gp10b.h"
 #include "hw_proj_gp10b.h"
 #include "hw_ctxsw_prog_gp10b.h"
+#include "hw_mc_gp10b.h"
 
 static bool gr_gp10b_is_valid_class(struct gk20a *g, u32 class_num)
 {
@@ -779,6 +781,69 @@ static int gr_gp10b_dump_gr_status_regs(struct gk20a *g,
 	return 0;
 }
 
+static bool gr_activity_empty_or_preempted(u32 val)
+{
+	while(val) {
+		u32 v = val & 7;
+		if (v != gr_activity_4_gpc0_empty_v() &&
+		    v != gr_activity_4_gpc0_preempted_v())
+			return false;
+		val >>= 3;
+	}
+
+	return true;
+}
+
+static int gr_gp10b_wait_empty(struct gk20a *g, unsigned long end_jiffies,
+		       u32 expect_delay)
+{
+	u32 delay = expect_delay;
+	bool gr_enabled;
+	bool ctxsw_active;
+	bool gr_busy;
+	u32 gr_status;
+	u32 activity0, activity1, activity2, activity4;
+
+	gk20a_dbg_fn("");
+
+	do {
+		/* fmodel: host gets fifo_engine_status(gr) from gr
+		   only when gr_status is read */
+		gr_status = gk20a_readl(g, gr_status_r());
+
+		gr_enabled = gk20a_readl(g, mc_enable_r()) &
+			mc_enable_pgraph_enabled_f();
+
+		ctxsw_active = gr_status & 1<<7;
+
+		activity0 = gk20a_readl(g, gr_activity_0_r());
+		activity1 = gk20a_readl(g, gr_activity_1_r());
+		activity2 = gk20a_readl(g, gr_activity_2_r());
+		activity4 = gk20a_readl(g, gr_activity_4_r());
+
+		gr_busy = !(gr_activity_empty_or_preempted(activity0) &&
+			    gr_activity_empty_or_preempted(activity1) &&
+			    activity2 == 0 &&
+			    gr_activity_empty_or_preempted(activity4));
+
+		if (!gr_enabled || (!gr_busy && !ctxsw_active)) {
+			gk20a_dbg_fn("done");
+			return 0;
+		}
+
+		usleep_range(delay, delay * 2);
+		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+
+	} while (time_before(jiffies, end_jiffies)
+			|| !tegra_platform_is_silicon());
+
+	gk20a_err(dev_from_gk20a(g),
+		"timeout, ctxsw busy : %d, gr busy : %d, %08x, %08x, %08x, %08x",
+		ctxsw_active, gr_busy, activity0, activity1, activity2, activity4);
+
+	return -EAGAIN;
+}
+
 void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
@@ -802,4 +867,5 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.update_ctxsw_preemption_mode =
 		gr_gp10b_update_ctxsw_preemption_mode;
 	gops->gr.dump_gr_regs = gr_gp10b_dump_gr_status_regs;
+	gops->gr.wait_empty = gr_gp10b_wait_empty;
 }

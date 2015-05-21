@@ -334,6 +334,30 @@ static inline u32 gr_activity_4_r(void)
 {
 	return 0x00400390;
 }
+static inline u32 gr_activity_4_gpc0_s(void)
+{
+	return 3;
+}
+static inline u32 gr_activity_4_gpc0_f(u32 v)
+{
+	return (v & 0x7) << 0;
+}
+static inline u32 gr_activity_4_gpc0_m(void)
+{
+	return 0x7 << 0;
+}
+static inline u32 gr_activity_4_gpc0_v(u32 r)
+{
+	return (r >> 0) & 0x7;
+}
+static inline u32 gr_activity_4_gpc0_empty_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 gr_activity_4_gpc0_preempted_v(void)
+{
+	return 0x00000004;
+}
 static inline u32 gr_pri_gpc0_gcc_dbg_r(void)
 {
 	return 0x00501000;

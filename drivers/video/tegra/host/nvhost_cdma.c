@@ -203,6 +203,10 @@ static void update_cdma_locked(struct nvhost_cdma *cdma)
 		if (cdma->timeout.clientid)
 			stop_cdma_timer_locked(cdma);
 
+		/* Drop syncpoint references from this job */
+		for (i = 0; i < job->num_syncpts; ++i)
+			nvhost_syncpt_put_ref(sp, job->sp[i].id);
+
 		/* Unpin the memory */
 		nvhost_job_unpin(job);
 

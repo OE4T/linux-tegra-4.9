@@ -74,6 +74,13 @@ struct tegra_t210ref {
 	const char *edp_name;
 	int rate_via_kcontrol;
 	int fmt_via_kcontrol;
+	/* Fast path QOS related variables */
+	u32 fast_latency_ms;
+	u32 fast_cpu_rate;
+	u32 fast_cpu_cores;
+	atomic_t qos_req_count;
+	struct pm_qos_request min_cpu_core;
+	struct pm_qos_request min_cpu_rate;
 };
 
 static const int tegra_t210ref_srate_values[] = {
@@ -301,6 +308,9 @@ static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
+	int buffer_time_ms = (params_buffer_size(params) * 1000) /
+							params_rate(params);
 	int err;
 
 	err = tegra_t210ref_dai_init(rtd, params_rate(params),
@@ -309,6 +319,40 @@ static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 	if (err < 0) {
 		dev_err(card->dev, "Failed dai init\n");
 		return err;
+	}
+
+	if (buffer_time_ms > machine->fast_latency_ms)
+		return 0;
+
+	if (atomic_inc_return(&machine->qos_req_count) == 1) {
+		if (machine->fast_cpu_cores > 1)
+			pm_qos_add_request(&machine->min_cpu_core,
+				PM_QOS_MIN_ONLINE_CPUS,
+				machine->fast_cpu_cores);
+		if (machine->fast_cpu_rate)
+			pm_qos_add_request(&machine->min_cpu_rate,
+				PM_QOS_CPU_FREQ_MIN,
+				machine->fast_cpu_rate);
+	}
+
+	return 0;
+}
+
+static int tegra_t210ref_hw_free(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_card *card = rtd->card;
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	int buffer_time_ms = (runtime->buffer_size * 1000) / runtime->rate;
+
+	if (buffer_time_ms <= machine->fast_latency_ms) {
+		if (atomic_dec_and_test(&machine->qos_req_count)) {
+			if (pm_qos_request_active(&machine->min_cpu_core))
+				pm_qos_remove_request(&machine->min_cpu_core);
+			if (pm_qos_request_active(&machine->min_cpu_rate))
+				pm_qos_remove_request(&machine->min_cpu_rate);
+		}
 	}
 
 	return 0;
@@ -438,6 +482,7 @@ static void tegra_es755_shutdown_compr(struct snd_compr_stream *cstream)
 
 static struct snd_soc_ops tegra_t210ref_ops = {
 	.hw_params = tegra_t210ref_hw_params,
+	.hw_free = tegra_t210ref_hw_free,
 	.startup = tegra_es755_startup,
 	.shutdown = tegra_es755_shutdown,
 };
@@ -842,6 +887,18 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 			machine->sysedpc =
 				sysedp_create_consumer("codec+speaker",
 					machine->edp_name);
+		}
+	}
+
+	if (!of_property_read_u32(np, "nvidia,fast-path-latency-ms",
+		(u32 *)&machine->fast_latency_ms)) {
+		if (machine->fast_latency_ms > 0) {
+			of_property_read_u32(np,
+				"nvidia,fast-path-min-cpu-rate",
+				(u32 *)&machine->fast_cpu_rate);
+			of_property_read_u32(np,
+				"nvidia,fast-path-min-cpu-core",
+				(u32 *)&machine->fast_cpu_cores);
 		}
 	}
 

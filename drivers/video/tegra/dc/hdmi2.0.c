@@ -964,8 +964,8 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	struct tegra_dc *dc = hdmi->dc;
-	u32 h_pulse_start, h_pulse_end;
-	unsigned long val = 0;
+	u32 h_pulse_start, h_pulse_end, hblank, max_ac, rekey;
+	unsigned long val;
 #endif
 	u32 dispclk_div_8_2;
 
@@ -983,9 +983,18 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 			NV_SOR_REFCLK_DIV_INT(dispclk_div_8_2 >> 2) |
 			NV_SOR_REFCLK_DIV_FRAC(dispclk_div_8_2));
 
-	hdmi->dvi ?
-		({tegra_sor_writel(sor, NV_SOR_HDMI_CTRL, 0x00020438); }) :
-		({tegra_sor_writel(sor, NV_SOR_HDMI_CTRL, 0x40020438); });
+	rekey = NV_SOR_HDMI_CTRL_REKEY_DEFAULT;
+	hblank = dc->mode.h_sync_width + dc->mode.h_back_porch +
+			dc->mode.h_front_porch;
+	max_ac = (hblank - rekey - 18) / 32;
+
+	val = 0;
+	val |= hdmi->dvi ? 0x0 : NV_SOR_HDMI_CTRL_ENABLE;
+	/* The register wants "-2" of the required rekey val */
+	val |= NV_SOR_HDMI_CTRL_REKEY(rekey - 2);
+	val |= NV_SOR_HDMI_CTRL_MAX_AC_PACKET(max_ac);
+	val |= NV_SOR_HDMI_CTRL_AUDIO_LAYOUT_SELECT;
+	tegra_sor_writel(sor, NV_SOR_HDMI_CTRL, val);
 
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_dc_writel(dc, 0x180, DC_DISP_H_PULSE2_CONTROL);

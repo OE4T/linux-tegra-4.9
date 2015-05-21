@@ -1066,6 +1066,7 @@
 #define NV_SOR_HDMI_CTRL_REKEY(x)		(((x) & 0x7f) << 0)
 #define NV_SOR_HDMI_CTRL_AUDIO_LAYOUT		(1 << 8)
 #define NV_SOR_HDMI_CTRL_SAMPLE_FLAT		(1 << 12)
+#define NV_SOR_HDMI_CTRL_AUDIO_LAYOUT_SELECT	(1 << 10)
 #define NV_SOR_HDMI_CTRL_MAX_AC_PACKET(x)	(((x) & 0x1f) << 16)
 #define NV_SOR_HDMI_CTRL_ENABLE			(1 << 30)
 #define NV_SOR_AUDIO_HDA_ELD_BUFWR		(0x10c)
@@ -1191,4 +1192,7 @@
 #define NV_SOR_KEY_SKEY_INDEX				0xf3
 #define NV_PDISP_SOR_AUDIO_SPARE0_0			0xfe
 #define HDMI_AUDIO_HBR_ENABLE_SHIFT			27
+
+#define NV_SOR_HDMI_CTRL_REKEY_DEFAULT	58
+
 #endif

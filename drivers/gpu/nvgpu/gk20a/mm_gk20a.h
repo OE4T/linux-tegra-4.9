@@ -23,6 +23,7 @@
 #include <linux/iommu.h>
 #include <linux/tegra-soc.h>
 #include <linux/vmalloc.h>
+#include <linux/slab.h>
 #include <asm/dma-iommu.h>
 #include <asm/cacheflush.h>
 #include "gk20a_allocator.h"

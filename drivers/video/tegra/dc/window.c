@@ -542,6 +542,8 @@ static void tegra_dc_vrr_cancel_vfp(struct tegra_dc *dc)
 			vrr->flip_interval_us = 0;
 			vrr->frame_count = 0;
 			vrr->flip_count = 0;
+			vrr->vfp_shrink = vrr->v_front_porch_min;
+			vrr->vfp_extend = vrr->v_front_porch_max;
 		}
 	}
 }

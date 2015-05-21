@@ -44,15 +44,10 @@ void nvhost_device_list_remove(struct platform_device *pdev);
 #endif
 
 enum nvhost_dbg_categories {
-	dbg_info    = BIT(0),  /* lightly verbose info */
+	dbg_info    = BIT(0),  /* slightly verbose info */
 	dbg_fn      = BIT(2),  /* fn name tracing */
 	dbg_reg     = BIT(3),  /* register accesses, very verbose */
-	dbg_pte     = BIT(4),  /* gmmu ptes */
-	dbg_intr    = BIT(5),  /* interrupts */
-	dbg_pmu     = BIT(6),  /* gk20a pmu */
-	dbg_clk     = BIT(7),  /* gk20a clk */
-	dbg_map     = BIT(8),  /* mem mappings */
-	dbg_gpu_dbg  = BIT(9),  /* gpu debugger/profiler */
+	dbg_clk     = BIT(7),  /* nvhost clk */
 	dbg_mem     = BIT(31), /* memory accesses, very verbose */
 };
 

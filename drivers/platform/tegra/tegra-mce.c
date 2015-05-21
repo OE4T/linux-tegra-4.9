@@ -197,7 +197,7 @@ EXPORT_SYMBOL(tegra_mce_is_sc7_allowed);
  *
  * Returns 0 if success.
  */
-int tegra_mce_online_core(int cpu)
+static int tegra_mce_online_core(int cpu)
 {
 	struct mce_regs regs;
 	regs.args[0] = cpu_logical_map(cpu);
@@ -214,7 +214,7 @@ EXPORT_SYMBOL(tegra_mce_online_core);
  *
  * Returns 0 if success.
  */
-int tegra_mce_cc3_ctrl(u32 freq, u32 volt, u8 enable)
+static int tegra_mce_cc3_ctrl(u32 freq, u32 volt, u8 enable)
 {
 	struct mce_regs regs;
 	regs.args[0] = freq;

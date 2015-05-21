@@ -395,7 +395,6 @@ u32 nvhost_get_syncpt_client_managed(const char *syncpt_name);
 u32 nvhost_get_syncpt_host_managed(struct platform_device *pdev,
 				   u32 param);
 u32 nvhost_get_syncpt_host_managed_by_name(const char *syncpt_name);
-void nvhost_free_syncpt(u32 id);
 void nvhost_syncpt_put_ref_ext(u32 id);
 const char *nvhost_syncpt_get_name(struct platform_device *dev, int id);
 u32 nvhost_syncpt_incr_max_ext(struct platform_device *dev, u32 id, u32 incrs);

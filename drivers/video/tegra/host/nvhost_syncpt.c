@@ -897,7 +897,7 @@ EXPORT_SYMBOL_GPL(nvhost_get_syncpt_client_managed);
 /**
  * API to mark in-use syncpt as free
  */
-void nvhost_free_syncpt(u32 id)
+static void nvhost_free_syncpt(u32 id)
 {
 	struct nvhost_master *host = nvhost;
 	struct nvhost_syncpt *sp = &host->syncpt;
@@ -939,7 +939,6 @@ void nvhost_free_syncpt(u32 id)
 
 	mutex_unlock(&sp->syncpt_mutex);
 }
-EXPORT_SYMBOL_GPL(nvhost_free_syncpt);
 
 static void nvhost_reserve_syncpts(struct nvhost_syncpt *sp)
 {

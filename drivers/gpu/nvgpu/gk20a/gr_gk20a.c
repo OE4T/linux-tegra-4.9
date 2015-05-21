@@ -3475,7 +3475,7 @@ void gr_gk20a_pmu_save_zbc(struct gk20a *g, u32 entries)
 		return;
 	}
 
-	ret = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
+	ret = g->ops.gr.wait_empty(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (ret) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to idle graphics\n");
@@ -3758,7 +3758,7 @@ static int _gk20a_gr_zbc_set_table(struct gk20a *g, struct gr_gk20a *gr,
 	}
 
 	end_jiffies = jiffies + msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
-	ret = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
+	ret = g->ops.gr.wait_empty(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (ret) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to idle graphics\n");
@@ -5641,7 +5641,7 @@ int gk20a_gr_suspend(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	ret = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
+	ret = g->ops.gr.wait_empty(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (ret)
 		return ret;
 
@@ -7329,4 +7329,5 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.get_max_lts_per_ltc = gr_gk20a_get_max_lts_per_ltc;
 	gops->gr.get_rop_l2_en_mask = gr_gk20a_rop_l2_en_mask;
 	gops->gr.init_sm_dsm_reg_info = gr_gk20a_init_sm_dsm_reg_info;
+	gops->gr.wait_empty = gr_gk20a_wait_idle;
 }

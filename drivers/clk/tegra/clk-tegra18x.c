@@ -422,8 +422,11 @@ static void __init tegra186_clock_init(struct device_node *np)
 {
 	int err;
 
+	printk(KERN_INFO "Registering Tegra186 clocks (this may take a while)...");
 	err = PTR_RET(tegra_bpmp_clk_init(tegra186_clocks,
 				ARRAY_SIZE(tegra186_clocks), np));
+	printk("done\n");
+
 	if (err)
 		pr_err("Failed to initialize Tegra186 clocks. err: %d\n", err);
 

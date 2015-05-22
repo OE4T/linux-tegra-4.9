@@ -14,7 +14,6 @@
 #ifndef _NVS_PROXIMITY_H_
 #define _NVS_PROXIMITY_H_
 
-#include <linux/iio/iio.h>
 #include <linux/of.h>
 #include <linux/nvs.h>
 
@@ -23,7 +22,6 @@
 #define RET_HW_UPDATE			(1)
 
 #define NVS_PROXIMITY_STRING		"proximity"
-#define SENSOR_FLAG_ON_CHANGE_MODE	0x2 /* from AOS sensors.h */
 
 /**
  * struct nvs_proximity - the common structure between the
@@ -77,43 +75,8 @@ struct nvs_proximity {
 	unsigned int delay_us;		/* OS requested sample delay */
 	unsigned int report;		/* report count */
 	struct sensor_cfg *cfg;		/* pointer to sensor configuration */
-	void *nvs_data;			/* NVS data for NVS handler */
+	void *nvs_st;			/* NVS state data for NVS handler */
 	int (*handler)(void *handle, void *buffer, s64 ts);
-};
-
-static const struct iio_chan_spec iio_chan_spec_nvs_proximity[] = {
-	{
-		.type			= IIO_PROXIMITY,
-		.scan_type		= { .sign = 'u',
-					    .realbits = 32,
-					    .storagebits = 32,
-					    .endianness = IIO_CPU,
-					  },
-		.info_mask_shared_by_all
-					= BIT(IIO_CHAN_INFO_RAW) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
-					  BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
-					  BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
-					  BIT(IIO_CHAN_INFO_PEAK) |
-					  BIT(IIO_CHAN_INFO_PEAK_SCALE) |
-					  BIT(IIO_CHAN_INFO_SCALE) |
-					  BIT(IIO_CHAN_INFO_OFFSET) |
-					  BIT(IIO_CHAN_INFO_THRESHOLD_LOW) |
-					  BIT(IIO_CHAN_INFO_THRESHOLD_HIGH),
-		.info_mask_separate	= BIT(IIO_CHAN_INFO_RAW) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLUSH) |
-					  BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
-					  BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
-					  BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
-					  BIT(IIO_CHAN_INFO_PEAK) |
-					  BIT(IIO_CHAN_INFO_PEAK_SCALE) |
-					  BIT(IIO_CHAN_INFO_SCALE) |
-					  BIT(IIO_CHAN_INFO_OFFSET) |
-					  BIT(IIO_CHAN_INFO_THRESHOLD_LOW) |
-					  BIT(IIO_CHAN_INFO_THRESHOLD_HIGH),
-	},
-	IIO_CHAN_SOFT_TIMESTAMP(1)
 };
 
 int nvs_proximity_enable(struct nvs_proximity *np);

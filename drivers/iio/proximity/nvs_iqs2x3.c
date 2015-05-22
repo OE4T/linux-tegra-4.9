@@ -32,7 +32,7 @@
 #include <linux/nvs_proximity.h>
 
 
-#define IQS_DRIVER_VERSION		(4)
+#define IQS_DRIVER_VERSION		(6)
 #define IQS_VENDOR			"Azoteq"
 #define IQS_NAME			"iqs2x3"
 #define IQS_NAME_IQS253			"iqs253"
@@ -244,7 +244,8 @@ static const struct iqs_hal const iqs253_hal_tbl[] = {
 };
 
 #define IQS_DT_INIT_N			(128) /* max DT init bytes */
-#define IQS_DT_EN_N			(64) /* max DT enable bytes */
+#define IQS_DT_ABLE_N			(64) /* max DT en/dis-able bytes */
+#define IQS_DT_EVNT_N			(32) /* max DT en/dis-able bytes */
 #define IQS263_MSG_N			(14)
 #define IQS253_MSG_N			(9)
 
@@ -416,10 +417,16 @@ struct iqs_state {
 	unsigned char *wr_reseed;
 	unsigned char dt_init263[IQS_DT_INIT_N];
 	unsigned char dt_init253[IQS_DT_INIT_N];
-	unsigned char dt_en_prx263[IQS_DT_EN_N];
-	unsigned char dt_en_tch263[IQS_DT_EN_N];
-	unsigned char dt_en_prx253[IQS_DT_EN_N];
-	unsigned char dt_en_tch253[IQS_DT_EN_N];
+	unsigned char dt_en_prx263[IQS_DT_ABLE_N];
+	unsigned char dt_en_tch263[IQS_DT_ABLE_N];
+	unsigned char dt_en_prx253[IQS_DT_ABLE_N];
+	unsigned char dt_en_tch253[IQS_DT_ABLE_N];
+	unsigned char dt_dis_prx263[IQS_DT_ABLE_N];
+	unsigned char dt_dis_tch263[IQS_DT_ABLE_N];
+	unsigned char dt_dis_prx253[IQS_DT_ABLE_N];
+	unsigned char dt_dis_tch253[IQS_DT_ABLE_N];
+	unsigned char dt_evnt263[IQS_DT_EVNT_N];
+	unsigned char dt_evnt253[IQS_DT_EVNT_N];
 	u8 rc[IQS_BI_N];		/* register cache */
 };
 
@@ -745,7 +752,7 @@ static int iqs_write(struct iqs_state *st, unsigned char *wr)
 	int ret;
 
 	ret = iqs_wr(st, wr);
-	if (!ret)
+	if (st->msg_n && !ret)
 		ret = iqs_i2c(st);
 	return ret;
 }
@@ -788,6 +795,19 @@ static void iqs_op_rd(struct iqs_state *st)
 	st->op_i = st->op_read_n; /* force new read cycle */
 }
 
+static int iqs_init(struct iqs_state *st)
+{
+	unsigned char *wr = st->dt_init263;
+	int ret = 0;
+
+	if (st->dev_id == IQS_DEVID_IQS253)
+		wr = st->dt_init253;
+	if (st->hal_tbl_n)
+		/* only if HAL initialized */
+		ret = iqs_write(st, wr);
+	return ret;
+}
+
 static int iqs_en(struct iqs_state *st, int snsr_id)
 {
 	unsigned char *wr;
@@ -807,32 +827,37 @@ static int iqs_en(struct iqs_state *st, int snsr_id)
 		return -EINVAL;
 	}
 
+	/* if sensor enabled */
 	ret = iqs_write(st, wr);
 	if (!ret)
 		ret = nvs_proximity_enable(&st->prox[snsr_id]);
 	return ret;
 }
 
-static int iqs_init(struct iqs_state *st)
+static int iqs_dis(struct iqs_state *st, int snsr_id)
 {
-	unsigned char *wr = st->dt_init263;
+	unsigned char *wr;
 	int ret = 0;
 
-	if (st->dev_id == IQS_DEVID_IQS253)
-		wr = st->dt_init253;
+	if (snsr_id == IQS_DEV_PROX) {
+		if (st->dev_id == IQS_DEVID_IQS253)
+			wr = st->dt_dis_prx253;
+		else
+			wr = st->dt_dis_prx263;
+	} else if (snsr_id == IQS_DEV_TOUCH) {
+		if (st->dev_id == IQS_DEVID_IQS253)
+			wr = st->dt_dis_tch253;
+		else
+			wr = st->dt_dis_tch263;
+	} else if (snsr_id < 0) {
+		wr = st->wr_disable;
+	} else {
+		return -EINVAL;
+	}
+
 	if (st->hal_tbl_n)
 		/* only if HAL initialized */
 		ret = iqs_write(st, wr);
-	return ret;
-}
-
-static int iqs_dis(struct iqs_state *st)
-{
-	int ret = 0;
-
-	if (st->hal_tbl_n)
-		/* only if HAL initialized */
-		ret = iqs_write(st, st->wr_disable);
 	return ret;
 }
 
@@ -849,13 +874,13 @@ static int iqs_pm(struct iqs_state *st, bool enable)
 	} else {
 		ret = nvs_vregs_sts(st->vreg, ARRAY_SIZE(iqs_vregs));
 		if ((ret < 0) || (ret == ARRAY_SIZE(iqs_vregs))) {
-			ret = iqs_dis(st);
+			ret = iqs_dis(st, -1);
 		} else if (ret > 0) {
 			nvs_vregs_enable(&st->i2c->dev, st->vreg,
 					 ARRAY_SIZE(iqs_vregs));
 			mdelay(IQS_HW_DELAY_MS);
 			ret = iqs_init(st);
-			ret |= iqs_dis(st);
+			ret |= iqs_dis(st, -1);
 		}
 		ret |= nvs_vregs_disable(&st->i2c->dev, st->vreg,
 					 ARRAY_SIZE(iqs_vregs));
@@ -969,6 +994,10 @@ static int iqs_rd(struct iqs_state *st)
 		if (!st->stream)
 			/* enter stream mode on first I2C transaction */
 			iqs_wr(st, st->wr_stream);
+		if (st->dev_id == IQS_DEVID_IQS253)
+			iqs_wr(st, st->dt_evnt253);
+		else
+			iqs_wr(st, st->dt_evnt263);
 	}
 	if ((st->op_i == st->op_read_n - 1) && !st->stream)
 		iqs_wr(st, st->wr_events); /* event mode at end of reads */
@@ -1121,12 +1150,19 @@ static irqreturn_t iqs_irq_thread(int irq, void *dev_id)
 static int iqs_disable(struct iqs_state *st, int snsr_id)
 {
 	bool disable = true;
+	unsigned int i;
 	int ret = 0;
 
 	if (snsr_id >= 0) {
-		if (st->enabled & ~(1 << snsr_id)) {
+		ret = iqs_dis(st, snsr_id);
+		if (!ret)
 			st->enabled &= ~(1 << snsr_id);
+		if (st->enabled)
 			disable = false;
+	} else {
+		for (i = 0; i < IQS_DEV_N; i++) {
+			if (st->enabled & (1 << i))
+				iqs_dis(st, snsr_id);
 		}
 	}
 	if (disable) {
@@ -1299,8 +1335,11 @@ static int iqs_nvs_write(void *client, int snsr_id, unsigned int nvs)
 
 	case 0x12:
 		val = !!val;
-		if (st->gpio_sar >= 0)
+		if (st->gpio_sar >= 0) {
 			ret = gpio_direction_output(st->gpio_sar, val);
+			if (!ret)
+				st->gpio_sar_val = val;
+		}
 		dev_info(&st->i2c->dev,
 			 "%s gpio_direction_output(gpio_sar(%d), %hhx)=%d\n",
 			 __func__, st->gpio_sar, val, ret);
@@ -1396,12 +1435,24 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 	t += iqs_nvs_dbg_db(st, buf, t, st->dt_en_prx263);
 	t += sprintf(buf + t, "IQS263 touch enable:\n");
 	t += iqs_nvs_dbg_db(st, buf, t, st->dt_en_tch263);
+	t += sprintf(buf + t, "IQS263 proximity disable:\n");
+	t += iqs_nvs_dbg_db(st, buf, t, st->dt_dis_prx263);
+	t += sprintf(buf + t, "IQS263 touch disable:\n");
+	t += iqs_nvs_dbg_db(st, buf, t, st->dt_dis_tch263);
+	t += sprintf(buf + t, "IQS263 event:\n");
+	t += iqs_nvs_dbg_db(st, buf, t, st->dt_evnt263);
 	t += sprintf(buf + t, "IQS253 initialization:\n");
 	t += iqs_nvs_dbg_db(st, buf, t, st->dt_init253);
 	t += sprintf(buf + t, "IQS253 proximity enable:\n");
 	t += iqs_nvs_dbg_db(st, buf, t, st->dt_en_prx253);
 	t += sprintf(buf + t, "IQS253 touch enable:\n");
 	t += iqs_nvs_dbg_db(st, buf, t, st->dt_en_tch253);
+	t += sprintf(buf + t, "IQS253 proximity disable:\n");
+	t += iqs_nvs_dbg_db(st, buf, t, st->dt_dis_prx253);
+	t += sprintf(buf + t, "IQS253 touch disable:\n");
+	t += iqs_nvs_dbg_db(st, buf, t, st->dt_dis_tch253);
+	t += sprintf(buf + t, "IQS253 event:\n");
+	t += iqs_nvs_dbg_db(st, buf, t, st->dt_evnt253);
 	return t;
 }
 
@@ -1603,7 +1654,6 @@ static const char *iqs_sensor_cfg_name[] = {
 
 static const struct sensor_cfg iqs_cfg_dflt = {
 	.snsr_id			= SENSOR_TYPE_PROXIMITY,
-	.no_suspend			= true,
 	.ch_n				= 1,
 	.ch_sz				= 4,
 	.part				= IQS_NAME,
@@ -1623,6 +1673,8 @@ static const struct sensor_cfg iqs_cfg_dflt = {
 	},
 	.delay_us_min			= IQS_POLL_DLY_MS_MIN * 1000,
 	.delay_us_max			= IQS_POLL_DLY_MS_MAX * 1000,
+	.flags				= SENSOR_FLAG_ON_CHANGE_MODE |
+					  SENSOR_FLAG_WAKE_UP,
 	.thresh_lo			= IQS_PROX_THRESHOLD,
 	.thresh_hi			= IQS_MULTI_THRESHOLD,
 };
@@ -1708,12 +1760,24 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 				    sizeof(st->dt_en_prx263));
 		ret |= iqs_of_dt_db(st, dn, "263en_touch", st->dt_en_tch263,
 				    sizeof(st->dt_en_tch263));
+		ret |= iqs_of_dt_db(st, dn, "263dis_prox", st->dt_dis_prx263,
+				    sizeof(st->dt_dis_prx263));
+		ret |= iqs_of_dt_db(st, dn, "263dis_touch", st->dt_dis_tch263,
+				    sizeof(st->dt_dis_tch263));
+		ret |= iqs_of_dt_db(st, dn, "263event", st->dt_evnt263,
+				    sizeof(st->dt_evnt263));
 		ret |= iqs_of_dt_db(st, dn, "253init", st->dt_init253,
 				    sizeof(st->dt_en_tch253));
 		ret |= iqs_of_dt_db(st, dn, "253en_prox", st->dt_en_prx253,
 				    sizeof(st->dt_en_tch253));
 		ret |= iqs_of_dt_db(st, dn, "253en_touch", st->dt_en_tch253,
 				    sizeof(st->dt_en_tch253));
+		ret |= iqs_of_dt_db(st, dn, "253dis_prox", st->dt_dis_prx253,
+				    sizeof(st->dt_dis_tch253));
+		ret |= iqs_of_dt_db(st, dn, "253dis_touch", st->dt_dis_tch253,
+				    sizeof(st->dt_dis_tch253));
+		ret |= iqs_of_dt_db(st, dn, "253event", st->dt_evnt253,
+				    sizeof(st->dt_evnt253));
 		if (ret)
 			return ret;
 	}
@@ -1774,7 +1838,12 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	st->i2c = client;
 	ret = iqs_of_dt(st, client->dev.of_node);
 	if (ret) {
-		dev_err(&client->dev, "%s _of_dt ERR\n", __func__);
+		if (ret == -ENODEV) {
+			dev_info(&client->dev, "%s DT disabled\n", __func__);
+		} else {
+			dev_err(&client->dev, "%s _of_dt ERR\n", __func__);
+			ret = -ENODEV;
+		}
 		goto iqs_probe_exit;
 	}
 
@@ -1806,7 +1875,7 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 				     &iqs_fn_dev, &st->cfg[i]);
 		st->cfg[i].snsr_id = i;
 		if (!ret) {
-			st->prox[i].nvs_data = st->nvs_st[i];
+			st->prox[i].nvs_st = st->nvs_st[i];
 			st->prox[i].handler = st->nvs->handler;
 			n++;
 		}
@@ -1823,8 +1892,10 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (client->irq) {
 		irqflags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT;
 		for (i = 0; i < IQS_DEV_N; i++) {
-			if (st->cfg[i].no_suspend)
-				irqflags |= IRQF_NO_SUSPEND;
+			if (st->cfg[i].snsr_id >= 0) {
+				if (st->cfg[i].flags & SENSOR_FLAG_WAKE_UP)
+					irqflags |= IRQF_NO_SUSPEND;
+			}
 		}
 		ret = request_threaded_irq(client->irq, NULL, iqs_irq_thread,
 					   irqflags, IQS_NAME, st);
@@ -1840,8 +1911,11 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (st->os) {
 		iqs_disable(st, -1);
 	} else {
-		ret = iqs_enable(st, IQS_DEV_PROX, 1);
-		ret |= iqs_enable(st, IQS_DEV_TOUCH, 1);
+		ret = 0;
+		if (st->nvs_st[IQS_DEV_PROX])
+			ret |= iqs_enable(st, IQS_DEV_PROX, 1);
+		if (st->nvs_st[IQS_DEV_TOUCH])
+			ret |= iqs_enable(st, IQS_DEV_TOUCH, 1);
 		if (ret) {
 			iqs_err(st);
 			/* if an error then switch to OS controlled */

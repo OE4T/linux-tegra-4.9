@@ -659,7 +659,7 @@ struct tegra_panel_ops panel_sim_ops = {
 	.pwm_bl_ops = &panel_sim_pwm_bl_ops,
 };
 
-static struct tegra_panel __initdata panel_sim = {
+struct tegra_panel __initdata panel_sim = {
 	.init_sd_settings = panel_sim_sd_settings_init,
 	.init_dc_out = panel_sim_dc_out_init,
 	.init_fb_data = panel_sim_fb_data_init,

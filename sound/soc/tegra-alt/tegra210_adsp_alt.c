@@ -116,6 +116,7 @@ struct tegra210_adsp {
 	uint32_t i2s_rate;
 	struct mutex mutex;
 	int init_done;
+	int adsp_started;
 	struct tegra210_adsp_path {
 		uint32_t fe_reg;
 		uint32_t be_reg;
@@ -901,6 +902,7 @@ static int tegra210_adsp_compr_open(struct snd_compr_stream *cstream)
 		snd_soc_platform_get_drvdata(rtd->platform);
 	struct tegra210_adsp_compr_rtd *prtd;
 	uint32_t fe_reg = rtd->codec_dai->id;
+	int ret;
 	int i;
 
 	dev_vdbg(adsp->dev, "%s : DAI ID %d", __func__, rtd->codec_dai->id);
@@ -944,8 +946,12 @@ static int tegra210_adsp_compr_open(struct snd_compr_stream *cstream)
 	prtd->cstream = cstream;
 	prtd->dev = adsp->dev;
 	cstream->runtime->private_data = prtd;
-	pm_runtime_get_sync(adsp->dev);
-	return 0;
+	ret = pm_runtime_get_sync(adsp->dev);
+	if (ret < 0) {
+		dev_err(adsp->dev, "%s pm_runtime_get_sync error 0x%x\n",
+			__func__, ret);
+	}
+	return ret;
 }
 
 static int tegra210_adsp_compr_free(struct snd_compr_stream *cstream)
@@ -1523,6 +1529,9 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 	dev_vdbg(adsp->dev, "%s : stream %d admaif %d\n",
 		__func__, substream->stream, admaif_id);
 
+	if (!adsp->adsp_started)
+		return -EINVAL;
+
 	adma_params.mode = ADMA_MODE_CONTINUOUS;
 	adma_params.ahub_channel = admaif_id;
 	adma_params.periods = 2; /* We need ping-pong buffers for ADMA */
@@ -1596,6 +1605,8 @@ static int tegra210_adsp_runtime_suspend(struct device *dev)
 	if (ret)
 		dev_err(adsp->dev, "Failed to suspend ADSP OS");
 
+	adsp->adsp_started = 0;
+
 	return ret;
 }
 
@@ -1610,8 +1621,12 @@ static int tegra210_adsp_runtime_resume(struct device *dev)
 		return 0;
 
 	ret = nvadsp_os_start();
-	if (ret)
-		dev_err(adsp->dev, "Failed to start ADSP OS");
+	if (ret) {
+		dev_err(adsp->dev, "Failed to start ADSP OS ret 0x%x", ret);
+		adsp->adsp_started = 0;
+		return ret;
+	}
+	adsp->adsp_started = 1;
 
 	return ret;
 }
@@ -1682,7 +1697,12 @@ static int tegra210_adsp_mux_put(struct snd_kcontrol *kcontrol,
 	if (e->reg >= TEGRA210_ADSP_VIRT_REG_MAX)
 		return -EINVAL;
 
-	pm_runtime_get_sync(adsp->dev);
+	ret = pm_runtime_get_sync(adsp->dev);
+	if (ret < 0) {
+		dev_err(adsp->dev, "%s pm_runtime_get_sync error 0x%x\n",
+			__func__, ret);
+		return ret;
+	}
 
 	/* Init or de-init app based on connection */
 	if (IS_ADSP_APP(e->reg)) {
@@ -1773,10 +1793,8 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 		if (IS_APM_IN(w->reg)) {
 			/* Request higher ADSP clock when starting stream.
 			 * Actmon takes care of adjusting frequency later. */
-			pm_runtime_get_sync(adsp->dev);
 			if (app->min_adsp_clock)
 				adsp_update_dfs_min_rate(app->min_adsp_clock * 1000);
-			pm_runtime_put(adsp->dev);
 			tegra210_adsp_send_state_msg(app, nvfx_state_active,
 			TEGRA210_ADSP_MSG_FLAG_SEND);
 		}
@@ -2397,7 +2415,12 @@ static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
 		return -EINVAL;
 	}
 
-	pm_runtime_get_sync(adsp->dev);
+	ret = pm_runtime_get_sync(adsp->dev);
+	if (ret < 0) {
+		dev_err(adsp->dev, "%s pm_runtime_get_sync error 0x%x\n",
+			__func__, ret);
+		return ret;
+	}
 	ret = tegra210_adsp_send_msg(app->apm, &apm_msg,
 		TEGRA210_ADSP_MSG_FLAG_SEND);
 	pm_runtime_put(adsp->dev);
@@ -2449,7 +2472,12 @@ static int tegra210_adsp_apm_put(struct snd_kcontrol *kcontrol,
 		apm_msg.msg.call_params.method = nvfx_apm_method_set_priority;
 		apm_msg.msg.priority_params.priority =
 			ucontrol->value.integer.value[0];
-		pm_runtime_get_sync(adsp->dev);
+		ret = pm_runtime_get_sync(adsp->dev);
+		if (ret < 0) {
+			dev_err(adsp->dev, "%s pm_runtime_get_sync error 0x%x\n",
+				__func__, ret);
+			return ret;
+		}
 		ret = tegra210_adsp_send_msg(app->apm, &apm_msg,
 				TEGRA210_ADSP_MSG_FLAG_SEND);
 		pm_runtime_put(adsp->dev);

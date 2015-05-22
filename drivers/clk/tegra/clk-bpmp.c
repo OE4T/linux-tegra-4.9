@@ -326,11 +326,14 @@ struct clk **tegra_bpmp_clk_init(struct tegra_bpmp_clk_init *init_clks,
 			max_clk_id = init_clks[i].clk_num;
 	}
 
-	clks = kzalloc((max_clk_id + 1) * sizeof(struct clk *), GFP_KERNEL);
+	clks = kmalloc((max_clk_id + 1) * sizeof(struct clk *), GFP_KERNEL);
 	if (!clks) {
 		WARN_ON(1);
 		return ERR_PTR(-ENOMEM);
 	}
+
+	for (i = 0; i < max_clk_id + 1; i++)
+		clks[i] = ERR_PTR(-EINVAL);
 
 	for (i = 0; i < num_clks; i++) {
 		struct tegra_bpmp_clk_init *clk_init = init_clks + i;
@@ -390,7 +393,7 @@ struct clk **tegra_bpmp_clk_init(struct tegra_bpmp_clk_init *init_clks,
 	}
 
 	clk_data.clks = clks;
-	clk_data.clk_num = num_clks;
+	clk_data.clk_num = max_clk_id + 1;
 	of_clk_add_provider(np, of_clk_src_onecell_get, &clk_data);
 
 	return clks;

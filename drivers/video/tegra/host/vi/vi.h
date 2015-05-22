@@ -50,6 +50,8 @@
 #define NUM_VI_WATCHDOG							2
 #endif
 
+typedef void (*callback)(void *);
+
 struct tegra_vi_stats {
 	atomic_t overflow;
 };
@@ -63,7 +65,9 @@ struct vi {
 	uint max_bw;
 	struct dentry *debugdir;
 	struct tegra_vi_stats vi_out;
+	struct workqueue_struct *vi_workqueue;
 	struct work_struct stats_work;
+	struct work_struct mfi_cb_work;
 #if defined(CONFIG_TEGRA_ISOMGR)
 	tegra_isomgr_handle isomgr_handle;
 #endif
@@ -76,4 +80,17 @@ int nvhost_vi_finalize_poweron(struct platform_device *);
 void nvhost_vi_reset_all(struct platform_device *);
 void nvhost_vi_reset(struct platform_device *);
 
+#ifdef CONFIG_TEGRA_GRHOST_VI
+int tegra_vi_register_mfi_cb(callback cb, void *cb_arg);
+int tegra_vi_unregister_mfi_cb(void);
+#else
+static inline int tegra_vi_register_mfi_cb(callback cb, void *cb_arg)
+{
+	return -ENOSYS;
+}
+static inline int tegra_vi_unregister_mfi_cb(void)
+{
+	return -ENOSYS;
+}
+#endif
 #endif

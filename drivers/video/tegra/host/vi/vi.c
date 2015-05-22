@@ -18,6 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/init.h>
 #include <linux/export.h>
 #include <linux/module.h>
 #include <linux/resource.h>
@@ -64,6 +65,53 @@ static struct of_device_id tegra_vi_of_match[] = {
 };
 
 static struct i2c_camera_ctrl *i2c_ctrl;
+
+static void (*mfi_callback)(void *);
+static void *mfi_callback_arg;
+static DEFINE_MUTEX(vi_isr_lock);
+
+#ifdef CONFIG_TEGRA_GRHOST_VI
+int tegra_vi_register_mfi_cb(callback cb, void *cb_arg)
+{
+	if (mfi_callback || mfi_callback_arg) {
+		pr_err("cb already registered\n");
+		return -1;
+	}
+
+	mutex_lock(&vi_isr_lock);
+	mfi_callback = cb;
+	mfi_callback_arg = cb_arg;
+	mutex_unlock(&vi_isr_lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_vi_register_mfi_cb);
+
+int tegra_vi_unregister_mfi_cb(void)
+{
+	mutex_lock(&vi_isr_lock);
+	mfi_callback = NULL;
+	mfi_callback_arg = NULL;
+	mutex_unlock(&vi_isr_lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_vi_unregister_mfi_cb);
+#endif
+
+static void vi_mfi_worker(struct work_struct *vi_work)
+{
+	struct vi *pdev = container_of(vi_work, struct vi, mfi_cb_work);
+
+	if (mfi_callback == NULL) {
+		dev_dbg(&pdev->ndev->dev, "NULL callback\n");
+		return;
+	}
+	mutex_lock(&vi_isr_lock);
+	mfi_callback(mfi_callback_arg);
+	mutex_unlock(&vi_isr_lock);
+	return;
+}
 
 #if defined(CONFIG_TEGRA_ISOMGR)
 static int vi_isomgr_unregister(struct vi *tegra_vi)
@@ -240,6 +288,16 @@ static int vi_probe(struct platform_device *dev)
 
 	tegra_vi->ndev = dev;
 
+	/* create workqueue for mfi callback */
+	tegra_vi->vi_workqueue = alloc_workqueue("vi_workqueue",
+					WQ_HIGHPRI | WQ_UNBOUND, 1);
+	if (!tegra_vi->vi_workqueue) {
+		dev_err(&dev->dev, "Failed to allocated vi_workqueue");
+		goto vi_probe_fail;
+	}
+	/* Init mfi callback work */
+	INIT_WORK(&tegra_vi->mfi_cb_work, vi_mfi_worker);
+
 	/* call vi_intr_init and stats_work */
 	INIT_WORK(&tegra_vi->stats_work, vi_stats_worker);
 
@@ -357,7 +415,8 @@ static int __exit vi_remove(struct platform_device *dev)
 
 	nvhost_client_device_release(dev);
 	pdata->aperture[0] = NULL;
-
+	flush_workqueue(tegra_vi->vi_workqueue);
+	destroy_workqueue(tegra_vi->vi_workqueue);
 #ifdef CONFIG_TEGRA_CAMERA
 	err = tegra_camera_unregister(tegra_vi->camera);
 	if (err)

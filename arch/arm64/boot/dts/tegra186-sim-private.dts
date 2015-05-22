@@ -38,6 +38,13 @@
 
 	/* chosen */
 
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "t186ref";
+		};
+	};
+
 	memory@80000000 {
 		device_type = "memory";
 		reg = < 0x0 0x80000000 0x0 0x80000000 >;

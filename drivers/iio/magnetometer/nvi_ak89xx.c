@@ -1460,6 +1460,11 @@ static int akm_of_dt(struct akm_state *st, struct device_node *dn)
 {
 	char const *pchar;
 	u8 cfg;
+	int ret;
+
+	ret = nvs_of_dt(dn, &st->cfg, NULL);
+	if (ret == -ENODEV)
+		return -ENODEV;
 
 	/* this device supports these programmable parameters */
 	if (!(of_property_read_string(dn, "nvi_config", &pchar))) {
@@ -1497,8 +1502,17 @@ static int akm_probe(struct i2c_client *client,
 	st->cfg.matrix[8] = 1;
 	if (client->dev.of_node) {
 		ret = akm_of_dt(st, client->dev.of_node);
-		if (ret)
+		if (ret) {
+			if (ret == -ENODEV) {
+				dev_info(&client->dev, "%s DT disabled\n",
+					 __func__);
+			} else {
+				dev_err(&client->dev, "%s _of_dt ERR\n",
+					__func__);
+				ret = -ENODEV;
+			}
 			goto akm_probe_err;
+		}
 #if AKM_NVI_MPU_SUPPORT
 	} else {
 		pd = (struct mpu_platform_data *)
@@ -1517,9 +1531,6 @@ static int akm_probe(struct i2c_client *client,
 
 	akm_init_hw(st);
 	akm_pm(st, false);
-	ret = nvs_of_dt(client->dev.of_node, &st->cfg, NULL);
-	if (ret)
-		dev_info(&client->dev, "%s nvs_of_dt ERR\n", __func__);
 	akm_fn_dev.errs = &st->errs;
 	akm_fn_dev.sts = &st->sts;
 	st->nvs = nvs_iio();

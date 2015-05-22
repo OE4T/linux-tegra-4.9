@@ -36,6 +36,7 @@
 #define NVS_FLOAT_SIGNIFICANCE_MICRO	(1000000) /* IIO_VAL_INT_PLUS_MICRO */
 #define NVS_FLOAT_SIGNIFICANCE_NANO	(1000000000) /* IIO_VAL_INT_PLUS_NANO */
 
+/* from AOS sensors.h */
 #define SENSOR_TYPE_ACCELEROMETER		(1)
 #define SENSOR_TYPE_MAGNETIC_FIELD		(2)
 #define SENSOR_TYPE_ORIENTATION			(3)
@@ -61,6 +62,13 @@
 #define SENSOR_TYPE_WAKE_GESTURE		(23)
 #define SENSOR_TYPE_GLANCE_GESTURE		(24)
 #define SENSOR_TYPE_PICK_UP_GESTURE		(25)
+/* from AOS sensors.h */
+#define SENSOR_FLAG_WAKE_UP			(0x1)
+#define SENSOR_FLAG_ON_CHANGE_MODE		(0x2)
+#define SENSOR_FLAG_ONE_SHOT_MODE		(0x4)
+#define SENSOR_FLAG_SPECIAL_REPORTING_MODE	(0x6)
+/* end AOS sensors.h */
+#define SENSOR_FLAG_NO_CFG_MASK		(0x6) /* unconfigurable flags */
 
 enum nvs_float_significance {
 	NVS_FLOAT_MICRO			= 0, /* IIO_VAL_INT_PLUS_MICRO */
@@ -76,7 +84,6 @@ struct nvs_float {
 struct sensor_cfg {
 	const char *name;		/* sensor name */
 	int snsr_id;			/* sensor ID */
-	bool no_suspend;		/* true if active during suspend */
 	int kbuf_sz;			/* kernel buffer size (n bytes) */
 	int timestamp_sz;		/* hub: timestamp size (n bytes) */
 	int snsr_data_n;		/* hub: number of data bytes */

@@ -30,11 +30,25 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 	int lenp;
 	int ret;
 
-	if (np == NULL || cfg == NULL)
+	if (np == NULL)
+		return -EINVAL;
+
+	if (!of_device_is_available(np))
+		return -ENODEV;
+
+	if (cfg == NULL)
 		return -EINVAL;
 
 	if (dev_name == NULL)
 		dev_name = cfg->name;
+	ret = sprintf(str, "%s_disable", dev_name);
+	if (ret > 0) {
+		ret = of_property_read_u32(np, str, (u32 *)&i);
+		if (!ret) {
+			if (i)
+				cfg->snsr_id = -1;
+		}
+	}
 	ret = sprintf(str, "%s_float_significance", dev_name);
 	if (ret > 0) {
 		if (!(of_property_read_string((struct device_node *)np,
@@ -48,14 +62,13 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	ret = sprintf(str, "%s_no_suspend", dev_name);
+	ret = sprintf(str, "%s_flags", dev_name);
 	if (ret > 0) {
 		ret = of_property_read_u32(np, str, (u32 *)&i);
 		if (!ret) {
-			if (i)
-				cfg->no_suspend = true;
-			else
-				cfg->no_suspend = false;
+			cfg->flags &= SENSOR_FLAG_NO_CFG_MASK;
+			i &= ~SENSOR_FLAG_NO_CFG_MASK;
+			cfg->flags |= i;
 		}
 	}
 	ret = sprintf(str, "%s_kbuffer_size", dev_name);
@@ -91,9 +104,6 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 	ret = sprintf(str, "%s_fifo_reserved_event_count", dev_name);
 	if (ret > 0)
 		of_property_read_u32(np, str, (u32 *)&cfg->fifo_max_evnt_cnt);
-	ret = sprintf(str, "%s_flags", dev_name);
-	if (ret > 0)
-		of_property_read_u32(np, str, (u32 *)&cfg->flags);
 	ret = sprintf(str, "%s_matrix", dev_name);
 	if (ret > 0) {
 		charp = of_get_property(np, str, &lenp);

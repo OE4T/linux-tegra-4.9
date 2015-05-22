@@ -44,8 +44,8 @@
 #define CM_LIGHT_VERSION		(1)
 #define CM_LIGHT_SCALE_IVAL		(0)
 #define CM_LIGHT_SCALE_MICRO		(10000)
-#define CM_LIGHT_THRESHOLD_LO		(100)
-#define CM_LIGHT_THRESHOLD_HI		(100)
+#define CM_LIGHT_THRESHOLD_LO		(10)
+#define CM_LIGHT_THRESHOLD_HI		(10)
 #define CM_POLL_DLY_MS_MAX		(4000)
 /* HW registers */
 #define CM_REG_CFG			(0x00)
@@ -78,17 +78,17 @@ static unsigned short cm_i2c_addrs[] = {
 };
 
 static struct nvs_light_dynamic cm3218_nld_tbl[] = {
-	{ {0, 3570},  {233,  959950}, {0, 130000}, 1000, 0x00C0 },
-	{ {0, 7140},  {467,  919900}, {0, 130000}, 500,  0x0080 },
-	{ {0, 14280}, {935,  839800}, {0, 130000}, 250,  0x0040 },
-	{ {0, 28560}, {1871, 679600}, {0, 130000}, 125,  0x0000 }
+	{ {0, 3571},  {234,  25485},  {0, 130000}, 1000, 0x08C0 },
+	{ {0, 7140},  {467,  919900}, {0, 130000}, 500,  0x0880 },
+	{ {0, 14280}, {935,  839800}, {0, 130000}, 250,  0x0840 },
+	{ {0, 28570}, {1872, 334950}, {0, 130000}, 125,  0x0800 }
 };
 
 static struct nvs_light_dynamic cm32180_nld_tbl[] = {
-	{ {0, 890},  {58,  326150}, {0, 130000}, 1000, 0x00C0 },
-	{ {0, 1780}, {116, 652300}, {0, 130000}, 500,  0x0080 },
-	{ {0, 3560}, {233, 304600}, {0, 130000}, 250,  0x0040 },
-	{ {0, 7120}, {466, 609200}, {0, 130000}, 125,  0x0000 }
+	{ {0, 3571},  {234,  25485},  {0, 130000}, 1000, 0x08C0 },
+	{ {0, 7140},  {467,  919900}, {0, 130000}, 500,  0x0880 },
+	{ {0, 14280}, {935,  839800}, {0, 130000}, 250,  0x0840 },
+	{ {0, 28570}, {1872, 334950}, {0, 130000}, 125,  0x0800 }
 };
 
 static struct nvs_light_dynamic cm32181_nld_tbl[] = {
@@ -115,7 +115,7 @@ static struct cm_psm cm_psm_tbl[] = {
 struct cm_state {
 	struct i2c_client *i2c;
 	struct nvs_fn_if *nvs;
-	void *nvs_data;
+	void *nvs_st;
 	struct sensor_cfg cfg;
 	struct delayed_work dw;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(cm_vregs)];
@@ -124,7 +124,6 @@ struct cm_state {
 	unsigned int sts;		/* debug flags */
 	unsigned int errs;		/* error count */
 	unsigned int enabled;		/* enable status */
-	bool iio_ts_en;			/* use IIO timestamps */
 	bool hw_change;			/* HW changed so drop first sample */
 	u16 i2c_addr;			/* I2C address */
 	u8 dev_id;			/* device ID */
@@ -134,12 +133,9 @@ struct cm_state {
 };
 
 
-static s64 cm_get_time_ns(struct cm_state *st)
+static s64 cm_get_time_ns(void)
 {
 	struct timespec ts;
-
-	if (st->iio_ts_en)
-		return iio_get_time_ns();
 
 	ktime_get_ts(&ts);
 	return timespec_to_ns(&ts);
@@ -296,7 +292,7 @@ static int cm_rd(struct cm_state *st)
 		return 0;
 	}
 
-	ts = cm_get_time_ns(st);
+	ts = cm_get_time_ns();
 	if (st->sts & NVS_STS_SPEW_DATA)
 		dev_info(&st->i2c->dev,
 			 "poll light hw %hu %lld  diff=%d %lldns  index=%u\n",
@@ -331,14 +327,14 @@ static void cm_read(struct cm_state *st)
 {
 	int ret;
 
-	st->nvs->nvs_mutex_lock(st->nvs_data);
+	st->nvs->nvs_mutex_lock(st->nvs_st);
 	if (st->enabled) {
 		ret = cm_rd(st);
 		if (ret < RET_HW_UPDATE)
 			schedule_delayed_work(&st->dw,
 				    msecs_to_jiffies(st->light.poll_delay_ms));
 	}
-	st->nvs->nvs_mutex_unlock(st->nvs_data);
+	st->nvs->nvs_mutex_unlock(st->nvs_st);
 }
 
 static void cm_work(struct work_struct *ws)
@@ -423,7 +419,9 @@ static int cm_regs(void *client, int snsr_id, char *buf)
 	t = sprintf(buf, "registers:\n");
 	for (i = 0; i <= CM_REG_ALS_IF; i++) {
 		ret = cm_i2c_rd(st, i, &val);
-		if (!ret)
+		if (ret)
+			t += sprintf(buf + t, "%#2x=ERR: %d\n", i, ret);
+		else
 			t += sprintf(buf + t, "%#2x=%#4x\n", i, val);
 	}
 	return t;
@@ -442,8 +440,8 @@ static int cm_suspend(struct device *dev)
 	int ret = 0;
 
 	st->sts |= NVS_STS_SUSPEND;
-	if (st->nvs && st->nvs_data)
-		ret = st->nvs->suspend(st->nvs_data);
+	if (st->nvs && st->nvs_st)
+		ret = st->nvs->suspend(st->nvs_st);
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
 	return ret;
@@ -455,8 +453,8 @@ static int cm_resume(struct device *dev)
 	struct cm_state *st = i2c_get_clientdata(client);
 	int ret = 0;
 
-	if (st->nvs && st->nvs_data)
-		ret = st->nvs->resume(st->nvs_data);
+	if (st->nvs && st->nvs_st)
+		ret = st->nvs->resume(st->nvs_st);
 	st->sts &= ~NVS_STS_SUSPEND;
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
@@ -470,8 +468,8 @@ static void cm_shutdown(struct i2c_client *client)
 	struct cm_state *st = i2c_get_clientdata(client);
 
 	st->sts |= NVS_STS_SHUTDOWN;
-	if (st->nvs && st->nvs_data)
-		st->nvs->shutdown(st->nvs_data);
+	if (st->nvs && st->nvs_st)
+		st->nvs->shutdown(st->nvs_st);
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
 }
@@ -482,8 +480,8 @@ static int cm_remove(struct i2c_client *client)
 
 	if (st != NULL) {
 		cm_shutdown(client);
-		if (st->nvs && st->nvs_data)
-			st->nvs->remove(st->nvs_data);
+		if (st->nvs && st->nvs_st)
+			st->nvs->remove(st->nvs_st);
 		if (st->dw.wq)
 			destroy_workqueue(st->dw.wq);
 		cm_pm_exit(st);
@@ -606,12 +604,13 @@ static int cm_id_i2c(struct cm_state *st, const char *name)
 
 static struct sensor_cfg cm_cfg_dflt = {
 	.name			= NVS_LIGHT_STRING,
-	.ch_n			= ARRAY_SIZE(iio_chan_spec_nvs_light),
-	.ch_inf			= &iio_chan_spec_nvs_light,
+	.ch_n			= 1,
+	.ch_sz			= 4,
 	.part			= CM_NAME,
 	.vendor			= CM_VENDOR,
 	.version		= CM_LIGHT_VERSION,
 	.delay_us_max		= CM_POLL_DLY_MS_MAX * 1000,
+	.flags			= SENSOR_FLAG_ON_CHANGE_MODE,
 	.scale			= {
 		.ival		= CM_LIGHT_SCALE_IVAL,
 		.fval		= CM_LIGHT_SCALE_MICRO,
@@ -624,6 +623,7 @@ static int cm_of_dt(struct cm_state *st, struct device_node *dn)
 {
 	u16 als_sm;
 	u16 als_pers;
+	int ret;
 
 	/* default device specific parameters */
 	als_sm = CM_ALS_SM_DFLT;
@@ -637,16 +637,18 @@ static int cm_of_dt(struct cm_state *st, struct device_node *dn)
 	st->light.nld_tbl = st->nld_tbl;
 	/* device tree parameters */
 	if (dn) {
-		/* common NVS IIO programmable parameters */
-		st->iio_ts_en = of_property_read_bool(dn, "iio_timestamps");
+		/* common NVS parameters */
+		ret = nvs_of_dt(dn, &st->cfg, NULL);
+		if (ret == -ENODEV)
+			return -ENODEV;
+
 		/* device specific parameters */
 		of_property_read_u16(dn, "als_sm", &als_sm);
 		of_property_read_u16(dn, "als_pers", &als_pers);
 		of_property_read_u16(dn, "als_psm", &st->als_psm);
 		of_property_read_u32(dn, "Rset", &st->r_set);
 	}
-	/* common NVS parameters */
-	nvs_of_dt(dn, &st->cfg, NULL);
+
 	/* this device supports these programmable parameters */
 	if (nvs_light_of_dt(&st->light, dn, NULL)) {
 		st->light.nld_i_lo = 0;
@@ -675,8 +677,12 @@ static int cm_probe(struct i2c_client *client,
 	st->i2c = client;
 	ret = cm_of_dt(st, client->dev.of_node);
 	if (ret) {
-		dev_err(&client->dev, "%s _of_dt ERR\n", __func__);
-		ret = -ENODEV;
+		if (ret == -ENODEV) {
+			dev_info(&client->dev, "%s DT disabled\n", __func__);
+		} else {
+			dev_err(&client->dev, "%s _of_dt ERR\n", __func__);
+			ret = -ENODEV;
+		}
 		goto cm_probe_exit;
 	}
 
@@ -698,7 +704,8 @@ static int cm_probe(struct i2c_client *client,
 		goto cm_probe_exit;
 	}
 
-	ret = st->nvs->probe(&st->nvs_data, st, &client->dev,
+	st->light.handler = st->nvs->handler;
+	ret = st->nvs->probe(&st->nvs_st, st, &client->dev,
 			     &cm_fn_dev, &st->cfg);
 	if (ret) {
 		dev_err(&client->dev, "%s nvs_probe ERR\n", __func__);
@@ -706,8 +713,7 @@ static int cm_probe(struct i2c_client *client,
 		goto cm_probe_exit;
 	}
 
-	st->light.nvs_data = st->nvs_data;
-	st->light.handler = st->nvs->handler;
+	st->light.nvs_st = st->nvs_st;
 	INIT_DELAYED_WORK(&st->dw, cm_work);
 	if (client->irq) {
 		ret = request_threaded_irq(client->irq, NULL, cm_irq_thread,

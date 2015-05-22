@@ -349,7 +349,6 @@ static ssize_t nvs_dbg_cfg(struct iio_dev *indio_dev, char *buf)
 	t += sprintf(buf + t, "snsr_id=%d\n", st->cfg->snsr_id);
 	t += sprintf(buf + t, "timestamp_sz=%d\n", st->cfg->timestamp_sz);
 	t += sprintf(buf + t, "snsr_data_n=%d\n", st->cfg->snsr_data_n);
-	t += sprintf(buf + t, "no_suspend=%x\n", st->cfg->no_suspend);
 	t += sprintf(buf + t, "kbuf_sz=%d\n", st->cfg->kbuf_sz);
 	t += sprintf(buf + t, "ch_n=%u\n", st->cfg->ch_n);
 	t += sprintf(buf + t, "ch_sz=%d\n", st->cfg->ch_sz);
@@ -1449,7 +1448,7 @@ static int nvs_suspend(void *handle)
 
 	mutex_lock(&indio_dev->mlock);
 	st->suspend = true;
-	if (!st->cfg->no_suspend) {
+	if (!(st->cfg->flags & SENSOR_FLAG_WAKE_UP)) {
 		ret = st->fn_dev->enable(st->client, st->cfg->snsr_id, -1);
 		if (ret > 0)
 			ret = st->fn_dev->enable(st->client,

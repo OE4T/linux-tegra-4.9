@@ -189,7 +189,13 @@ static u32 nvs_light_interpolate(int x1, s64 x2, int x3, int y1, int y3)
 		return (u32)x2;
 
 	dividend = (x2 - x1) * (y3 - y1);
-	do_div(dividend, divisor);
+	if (dividend < 0) {
+		dividend = abs64(dividend);
+		do_div(dividend, divisor);
+		dividend = 0 - dividend;
+	} else {
+		do_div(dividend, divisor);
+	}
 	dividend += y1;
 	if (dividend < 0)
 		dividend = 0;
@@ -337,7 +343,7 @@ int nvs_light_read(struct nvs_light *nl)
 							nl->cfg->cal_hi);
 		}
 		/* report lux */
-		nl->handler(nl->nvs_data, &nl->lux, nl->timestamp_report);
+		nl->handler(nl->nvs_st, &nl->lux, nl->timestamp_report);
 		if ((nl->thresholds_valid) && !nl->report) {
 			/* calculate low threshold */
 			calc = (s64)nl->hw;
@@ -431,7 +437,7 @@ int nvs_light_of_dt(struct nvs_light *nl, const struct device_node *np,
 	int ret_t = -EINVAL;
 
 	if (nl->cfg)
-		nl->cfg->flags = SENSOR_FLAG_ON_CHANGE_MODE;
+		nl->cfg->flags |= SENSOR_FLAG_ON_CHANGE_MODE;
 	if (np == NULL)
 		return -EINVAL;
 

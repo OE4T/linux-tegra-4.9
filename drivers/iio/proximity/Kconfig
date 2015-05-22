@@ -50,14 +50,14 @@ config SX9500
 menu "Proximity sensors"
 
 config NVS_IQS2X3
-	tristate "Maxim MAX4400X ALS/Proximity"
+	tristate "Azoteq IQS253/IQS263 SAR proximity"
 	select NVS_IIO
 	select NVS_PROXIMITY
 	select IIO_BUFFER
 	select IIO_TRIGGERED_BUFFER
 	depends on I2C
 	help
-	  Say Y here for Azoteq IQS253 and IQS263 proximity support.
+	  Say Y here for Azoteq IQS253 and IQS263 SAR proximity support.
 
 	  The driver uses the NVS (NVidia Sensor) IIO and proximity
 	  framework.

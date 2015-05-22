@@ -28,7 +28,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(208)
+#define NVI_DRIVER_VERSION		(209)
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"MPU6050"
 #define NVI_NAME_MPU6500		"MPU6500"
@@ -147,13 +147,15 @@ int nvi_i2c_write(struct nvi_state *st, u16 addr, u16 len, u8 *buf)
 {
 	struct i2c_msg msg;
 
-	msg.addr = addr;
-	msg.flags = 0;
-	msg.len = len;
-	msg.buf = buf;
-	if (i2c_transfer(st->i2c->adapter, &msg, 1) != 1) {
-		nvi_err(st);
-		return -EIO;
+	if (addr) {
+		msg.addr = addr;
+		msg.flags = 0;
+		msg.len = len;
+		msg.buf = buf;
+		if (i2c_transfer(st->i2c->adapter, &msg, 1) != 1) {
+			nvi_err(st);
+			return -EIO;
+		}
 	}
 
 	return 0;
@@ -198,17 +200,19 @@ int nvi_i2c_read(struct nvi_state *st, u16 addr, u8 reg, u16 len, u8 *buf)
 {
 	struct i2c_msg msg[2];
 
-	msg[0].addr = addr;
-	msg[0].flags = 0;
-	msg[0].len = 1;
-	msg[0].buf = &reg;
-	msg[1].addr = addr;
-	msg[1].flags = I2C_M_RD;
-	msg[1].len = len;
-	msg[1].buf = buf;
-	if (i2c_transfer(st->i2c->adapter, msg, 2) != 2) {
-		nvi_err(st);
-		return -EIO;
+	if (addr) {
+		msg[0].addr = addr;
+		msg[0].flags = 0;
+		msg[0].len = 1;
+		msg[0].buf = &reg;
+		msg[1].addr = addr;
+		msg[1].flags = I2C_M_RD;
+		msg[1].len = len;
+		msg[1].buf = buf;
+		if (i2c_transfer(st->i2c->adapter, msg, 2) != 2) {
+			nvi_err(st);
+			return -EIO;
+		}
 	}
 
 	return 0;
@@ -2646,7 +2650,7 @@ static irqreturn_t nvi_irq_thread(int irq, void *dev_id)
 	struct nvi_state *st = (struct nvi_state *)dev_id;
 	struct aux_port *ap;
 	u16 fifo_count = 0;
-	u16 fifo_sample_size;
+	u16 fifo_sample_size = 0;
 	u16 fifo_rd_n;
 	u16 fifo_align;
 	s64 ts;
@@ -4272,6 +4276,16 @@ static int nvi_id_i2c(struct nvi_state *st, const struct i2c_device_id *id)
 static int nvi_of_dt(struct nvi_state *st, struct device_node *dn)
 {
 	u32 tmp;
+	unsigned int i;
+	int ret;
+
+	/* common NVS parameters */
+	for (i = 0; i < DEV_N; i++) {
+		ret = nvs_of_dt(dn, &st->cfg[i], NULL);
+		if (ret == -ENODEV)
+			/* the entire device has been disabled */
+			return -ENODEV;
+	}
 
 	/* device specific parameters */
 	if (!of_property_read_u32(dn, "invensense,standby_en", &tmp)) {
@@ -4327,8 +4341,17 @@ static int nvi_probe(struct i2c_client *client,
 	nvi_init_config(st);
 	if (client->dev.of_node) {
 		ret = nvi_of_dt(st, client->dev.of_node);
-		if (ret)
+		if (ret) {
+			if (ret == -ENODEV) {
+				dev_info(&client->dev, "%s DT disabled\n",
+					 __func__);
+			} else {
+				dev_err(&client->dev, "%s _of_dt ERR\n",
+					__func__);
+				ret = -ENODEV;
+			}
 			goto nvi_probe_err;
+		}
 	} else {
 		pdata = (struct mpu_platform_data *)
 						dev_get_platdata(&client->dev);
@@ -4362,12 +4385,6 @@ static int nvi_probe(struct i2c_client *client,
 
 	n = 0;
 	for (i = 0; i < DEV_N; i++) {
-		/* populate any overrides */
-		ret = nvs_of_dt(client->dev.of_node, &st->cfg[i], NULL);
-		if (ret == -ENODEV)
-			/* the entire device has been disabled */
-			goto nvi_probe_err;
-
 		ret = st->nvs->probe(&st->nvs_st[i], st, &client->dev,
 				     &nvi_fn_dev, &st->cfg[i]);
 		if (!ret) {
@@ -4416,6 +4433,7 @@ static struct i2c_device_id nvi_i2c_device_id[] = {
 	{ "mpu9250", 0 },
 	{ "mpu9150", 0 },
 	{ "mpu9350", 0 },
+	{ "icm20628", 0 },
 	{}
 };
 
@@ -4429,6 +4447,7 @@ static const struct of_device_id nvi_of_match[] = {
 	{ .compatible = "invensense,mpu9150", },
 	{ .compatible = "invensense,mpu9250", },
 	{ .compatible = "invensense,mpu9350", },
+	{ .compatible = "invensense,icm20628", },
 	{}
 };
 

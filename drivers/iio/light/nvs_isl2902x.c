@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -117,18 +117,15 @@ static struct nvs_light_dynamic isl_nld_tbl[] = {
 struct isl_state {
 	struct i2c_client *i2c;
 	struct nvs_fn_if *nvs;
-	void *nvs_data[ISL_DEV_N];
+	void *nvs_st[ISL_DEV_N];
 	struct sensor_cfg cfg[ISL_DEV_N];
 	struct delayed_work dw;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(isl_vregs)];
 	struct nvs_light light;
 	struct nvs_proximity prox;
-	unsigned int dev[ISL_DEV_N];
-	unsigned int snsr_n;		/* number of sensors */
 	unsigned int sts;		/* status flags */
 	unsigned int errs;		/* error count */
 	unsigned int enabled;		/* enable status */
-	bool iio_ts_en;			/* use IIO timestamps */
 	bool irq_dis;			/* interrupt host disable flag */
 	u16 i2c_addr;			/* I2C address */
 	u8 dev_id;			/* device ID */
@@ -138,12 +135,9 @@ struct isl_state {
 };
 
 
-static s64 isl_get_time_ns(struct isl_state *st)
+static s64 isl_get_time_ns(void)
 {
 	struct timespec ts;
-
-	if (st->iio_ts_en)
-		return iio_get_time_ns();
 
 	ktime_get_ts(&ts);
 	return timespec_to_ns(&ts);
@@ -154,6 +148,30 @@ static void isl_err(struct isl_state *st)
 	st->errs++;
 	if (!st->errs)
 		st->errs--;
+}
+
+static void isl_mutex_lock(struct isl_state *st)
+{
+	unsigned int i;
+
+	if (st->nvs) {
+		for (i = 0; i < ISL_DEV_N; i++) {
+			if (st->nvs_st[i])
+				st->nvs->nvs_mutex_lock(st->nvs_st[i]);
+		}
+	}
+}
+
+static void isl_mutex_unlock(struct isl_state *st)
+{
+	unsigned int i;
+
+	if (st->nvs) {
+		for (i = 0; i < ISL_DEV_N; i++) {
+			if (st->nvs_st[i])
+				st->nvs->nvs_mutex_unlock(st->nvs_st[i]);
+		}
+	}
 }
 
 static int isl_i2c_read(struct isl_state *st, u8 reg, u16 len, u8 *val)
@@ -438,7 +456,7 @@ static int isl_rd(struct isl_state *st)
 	s64 ts;
 	int ret = 0;
 
-	ts = isl_get_time_ns(st);
+	ts = isl_get_time_ns();
 	if (st->enabled & (1 << ISL_DEV_PROX))
 		ret |= isl_rd_prox(st, ts);
 	if (st->enabled & (1 << ISL_DEV_LIGHT))
@@ -466,19 +484,16 @@ static unsigned int isl_polldelay(struct isl_state *st)
 
 static void isl_read(struct isl_state *st)
 {
-	unsigned int i;
 	int ret;
 
-	for (i = 0; i < st->snsr_n; i++)
-		st->nvs->nvs_mutex_lock(st->nvs_data[i]);
+	isl_mutex_lock(st);
 	if (st->enabled) {
 		ret = isl_rd(st);
 		if (ret < 1)
 			schedule_delayed_work(&st->dw,
 					  msecs_to_jiffies(isl_polldelay(st)));
 	}
-	for (i = 0; i < st->snsr_n; i++)
-		st->nvs->nvs_mutex_unlock(st->nvs_data[i]);
+	isl_mutex_unlock(st);
 }
 
 static void isl_work(struct work_struct *ws)
@@ -596,9 +611,11 @@ static int isl_suspend(struct device *dev)
 	int ret = 0;
 
 	st->sts |= NVS_STS_SUSPEND;
-	for (i = 0; i < st->snsr_n; i++) {
-		if (st->nvs && st->nvs_data[i])
-			ret |= st->nvs->suspend(st->nvs_data[i]);
+	if (st->nvs) {
+		for (i = 0; i < ISL_DEV_N; i++) {
+			if (st->nvs_st[i])
+				ret |= st->nvs->suspend(st->nvs_st[i]);
+		}
 	}
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
@@ -612,9 +629,11 @@ static int isl_resume(struct device *dev)
 	unsigned int i;
 	int ret = 0;
 
-	for (i = 0; i < st->snsr_n; i++) {
-		if (st->nvs && st->nvs_data[i])
-			ret |= st->nvs->resume(st->nvs_data[i]);
+	if (st->nvs) {
+		for (i = 0; i < ISL_DEV_N; i++) {
+			if (st->nvs_st[i])
+				ret |= st->nvs->resume(st->nvs_st[i]);
+		}
 	}
 	st->sts &= ~NVS_STS_SUSPEND;
 	if (st->sts & NVS_STS_SPEW_MSG)
@@ -630,9 +649,11 @@ static void isl_shutdown(struct i2c_client *client)
 	unsigned int i;
 
 	st->sts |= NVS_STS_SHUTDOWN;
-	for (i = 0; i < st->snsr_n; i++) {
-		if (st->nvs && st->nvs_data[i])
-			st->nvs->shutdown(st->nvs_data[i]);
+	if (st->nvs) {
+		for (i = 0; i < ISL_DEV_N; i++) {
+			if (st->nvs_st[i])
+				st->nvs->shutdown(st->nvs_st[i]);
+		}
 	}
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
@@ -646,9 +667,9 @@ static int isl_remove(struct i2c_client *client)
 	if (st != NULL) {
 		isl_shutdown(client);
 		if (st->nvs) {
-			for (i = 0; i < st->snsr_n; i++) {
-				if (st->nvs_data[i])
-					st->nvs->remove(st->nvs_data[i]);
+			for (i = 0; i < ISL_DEV_N; i++) {
+				if (st->nvs_st[i])
+					st->nvs->remove(st->nvs_st[i]);
 			}
 		}
 		if (st->dw.wq)
@@ -733,8 +754,8 @@ struct sensor_cfg isl_cfg_dflt[] = {
 	{
 		.name			= NVS_LIGHT_STRING,
 		.snsr_id		= ISL_DEV_LIGHT,
-		.ch_n			= ARRAY_SIZE(iio_chan_spec_nvs_light),
-		.ch_inf			= &iio_chan_spec_nvs_light,
+		.ch_n			= 1,
+		.ch_sz			= 4,
 		.part			= ISL_NAME,
 		.vendor			= ISL_VENDOR,
 		.version		= ISL_LIGHT_VERSION,
@@ -752,6 +773,7 @@ struct sensor_cfg isl_cfg_dflt[] = {
 		},
 		.delay_us_min		= ISL_POLL_DLY_MS_MIN * 1000,
 		.delay_us_max		= ISL_POLL_DLY_MS_MAX * 1000,
+		.flags			= SENSOR_FLAG_ON_CHANGE_MODE,
 		.scale			= {
 			.ival		= ISL_LIGHT_SCALE_IVAL,
 			.fval		= ISL_LIGHT_SCALE_MICRO,
@@ -762,8 +784,8 @@ struct sensor_cfg isl_cfg_dflt[] = {
 	{
 		.name			= NVS_PROXIMITY_STRING,
 		.snsr_id		= ISL_DEV_PROX,
-		.ch_n		     = ARRAY_SIZE(iio_chan_spec_nvs_proximity),
-		.ch_inf			= &iio_chan_spec_nvs_proximity,
+		.ch_n			= 1,
+		.ch_sz			= 4,
 		.part			= ISL_NAME,
 		.vendor			= ISL_VENDOR,
 		.version		= ISL_PROX_VERSION,
@@ -781,6 +803,8 @@ struct sensor_cfg isl_cfg_dflt[] = {
 		},
 		.delay_us_min		= ISL_POLL_DLY_MS_MIN * 1000,
 		.delay_us_max		= ISL_POLL_DLY_MS_MAX * 1000,
+		.flags			= SENSOR_FLAG_ON_CHANGE_MODE |
+					  SENSOR_FLAG_WAKE_UP,
 		.scale			= {
 			.ival		= ISL_PROX_SCALE_IVAL,
 			.fval		= ISL_PROX_SCALE_MICRO,
@@ -793,27 +817,32 @@ struct sensor_cfg isl_cfg_dflt[] = {
 static int isl_of_dt(struct isl_state *st, struct device_node *dn)
 {
 	unsigned int i;
+	int ret;
 
 	for (i = 0; i < ISL_DEV_N; i++)
-		memcpy(&st->cfg[i], &isl_cfg_dflt[i],
-		       sizeof(struct sensor_cfg));
+		memcpy(&st->cfg[i], &isl_cfg_dflt[i], sizeof(st->cfg[0]));
+	st->light.cfg = &st->cfg[ISL_DEV_LIGHT];
 	st->light.hw_mask = 0x0FFF;
 	st->light.nld_tbl = isl_nld_tbl;
+	st->prox.cfg = &st->cfg[ISL_DEV_PROX];
 	st->prox.hw_mask = 0x00FF;
 	/* default device specific parameters */
 	st->reg_cfg = ISL_CFG_DFLT;
 	st->reg_int = ISL_INT_DFLT;
 	/* device tree parameters */
 	if (dn) {
-		/* common NVS programmable parameters */
-		st->iio_ts_en = of_property_read_bool(dn, "iio_timestamps");
+		/* common NVS parameters */
+		for (i = 0; i < ISL_DEV_N; i++) {
+			ret = nvs_of_dt(dn, &st->cfg[i], NULL);
+			if (ret == -ENODEV)
+				/* the entire device has been disabled */
+				return -ENODEV;
+		}
+
 		/* device specific parameters */
 		of_property_read_u8(dn, "configure_reg", &st->reg_cfg);
 		of_property_read_u8(dn, "interrupt_reg", &st->reg_int);
 	}
-	/* common NVS parameters */
-	for (i = 0; i < ISL_DEV_N; i++)
-		nvs_of_dt(dn, &st->cfg[i], NULL);
 	/* this device supports these programmable parameters */
 	if (nvs_light_of_dt(&st->light, dn, NULL)) {
 		st->light.nld_i_lo = 0;
@@ -851,8 +880,12 @@ static int isl_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	st->i2c = client;
 	ret = isl_of_dt(st, client->dev.of_node);
 	if (ret) {
-		dev_err(&client->dev, "%s _of_dt ERR\n", __func__);
-		ret = -ENODEV;
+		if (ret == -ENODEV) {
+			dev_info(&client->dev, "%s DT disabled\n", __func__);
+		} else {
+			dev_err(&client->dev, "%s _of_dt ERR\n", __func__);
+			ret = -ENODEV;
+		}
 		goto isl_probe_exit;
 	}
 
@@ -873,23 +906,14 @@ static int isl_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto isl_probe_exit;
 	}
 
+	st->light.handler = st->nvs->handler;
+	st->prox.handler = st->nvs->handler;
 	n = 0;
 	for (i = 0; i < ISL_DEV_N; i++) {
-		ret = st->nvs->probe(&st->nvs_data[n], st, &client->dev,
+		ret = st->nvs->probe(&st->nvs_st[i], st, &client->dev,
 				     &isl_fn_dev, &st->cfg[i]);
-		if (!ret) {
-			st->dev[n] = st->cfg[i].snsr_id;
-			if (st->dev[n] == ISL_DEV_LIGHT) {
-				st->light.cfg = &st->cfg[i];
-				st->light.nvs_data = st->nvs_data[n];
-				st->light.handler = st->nvs->handler;
-			} else if (st->dev[n] == ISL_DEV_PROX) {
-				st->prox.cfg = &st->cfg[i];
-				st->prox.nvs_data = st->nvs_data[n];
-				st->prox.handler = st->nvs->handler;
-			}
+		if (!ret)
 			n++;
-		}
 	}
 	if (!n) {
 		dev_err(&client->dev, "%s nvs_probe ERR\n", __func__);
@@ -897,11 +921,17 @@ static int isl_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto isl_probe_exit;
 	}
 
-	st->snsr_n = n;
+	st->light.nvs_st = st->nvs_st[ISL_DEV_LIGHT];
+	st->prox.nvs_st = st->nvs_st[ISL_DEV_PROX];
 	INIT_DELAYED_WORK(&st->dw, isl_work);
 	if (client->irq) {
 		irqflags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT;
-		irqflags |= IRQF_NO_SUSPEND; /* for proximity */
+		for (i = 0; i < ISL_DEV_N; i++) {
+			if (st->cfg[i].snsr_id >= 0) {
+				if (st->cfg[i].flags & SENSOR_FLAG_WAKE_UP)
+					irqflags |= IRQF_NO_SUSPEND;
+			}
+		}
 		ret = request_threaded_irq(client->irq, NULL, isl_irq_thread,
 					   irqflags, ISL_NAME, st);
 		if (ret) {

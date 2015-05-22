@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -151,18 +151,15 @@ static struct nvs_light_dynamic ltr_nld_tbl[] = {
 struct ltr_state {
 	struct i2c_client *i2c;
 	struct nvs_fn_if *nvs;
-	void *nvs_data[LTR_DEV_N];
+	void *nvs_st[LTR_DEV_N];
 	struct sensor_cfg cfg[LTR_DEV_N];
 	struct delayed_work dw;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(ltr_vregs)];
 	struct nvs_light light;
 	struct nvs_proximity prox;
-	unsigned int dev[LTR_DEV_N];
-	unsigned int snsr_n;		/* number of sensors */
 	unsigned int sts;		/* status flags */
 	unsigned int errs;		/* error count */
 	unsigned int enabled;		/* enable status */
-	bool iio_ts_en;			/* use IIO timestamps */
 	u16 i2c_addr;			/* I2C address */
 	u8 dev_id;			/* device ID */
 	u8 ps_contr;			/* PS_CONTR register default */
@@ -177,12 +174,9 @@ struct ltr_state {
 	u8 rc_interrupt;		/* cache of INTERRUPT */
 };
 
-static s64 ltr_get_time_ns(struct ltr_state *st)
+static s64 ltr_get_time_ns(void)
 {
 	struct timespec ts;
-
-	if (st->iio_ts_en)
-		return iio_get_time_ns();
 
 	ktime_get_ts(&ts);
 	return timespec_to_ns(&ts);
@@ -193,6 +187,30 @@ static void ltr_err(struct ltr_state *st)
 	st->errs++;
 	if (!st->errs)
 		st->errs--;
+}
+
+static void ltr_mutex_lock(struct ltr_state *st)
+{
+	unsigned int i;
+
+	if (st->nvs) {
+		for (i = 0; i < LTR_DEV_N; i++) {
+			if (st->nvs_st[i])
+				st->nvs->nvs_mutex_lock(st->nvs_st[i]);
+		}
+	}
+}
+
+static void ltr_mutex_unlock(struct ltr_state *st)
+{
+	unsigned int i;
+
+	if (st->nvs) {
+		for (i = 0; i < LTR_DEV_N; i++) {
+			if (st->nvs_st[i])
+				st->nvs->nvs_mutex_unlock(st->nvs_st[i]);
+		}
+	}
 }
 
 static int ltr_i2c_read(struct ltr_state *st, u8 reg, u16 len, u8 *val)
@@ -528,7 +546,7 @@ static int ltr_rd(struct ltr_state *st)
 		return ret;
 
 	if (sts & LTR_REG_STATUS_DATA_MASK) {
-		ts = ltr_get_time_ns(st);
+		ts = ltr_get_time_ns();
 		if (st->enabled & (1 << LTR_DEV_PROX))
 			ret |= ltr_rd_prox(st, ts);
 		if (st->enabled & (1 << LTR_DEV_LIGHT))
@@ -559,19 +577,16 @@ static unsigned int ltr_polldelay(struct ltr_state *st)
 
 static void ltr_read(struct ltr_state *st)
 {
-	unsigned int i;
 	int ret;
 
-	for (i = 0; i < st->snsr_n; i++)
-		st->nvs->nvs_mutex_lock(st->nvs_data[i]);
+	ltr_mutex_lock(st);
 	if (st->enabled) {
 		ret = ltr_rd(st);
 		if (ret < 1)
 			schedule_delayed_work(&st->dw,
 					  msecs_to_jiffies(ltr_polldelay(st)));
 	}
-	for (i = 0; i < st->snsr_n; i++)
-		st->nvs->nvs_mutex_unlock(st->nvs_data[i]);
+	ltr_mutex_unlock(st);
 }
 
 static void ltr_work(struct work_struct *ws)
@@ -763,9 +778,11 @@ static int ltr_suspend(struct device *dev)
 	int ret = 0;
 
 	st->sts |= NVS_STS_SUSPEND;
-	for (i = 0; i < st->snsr_n; i++) {
-		if (st->nvs && st->nvs_data[i])
-			ret |= st->nvs->suspend(st->nvs_data[i]);
+	if (st->nvs) {
+		for (i = 0; i < LTR_DEV_N; i++) {
+			if (st->nvs_st[i])
+				ret |= st->nvs->suspend(st->nvs_st[i]);
+		}
 	}
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
@@ -779,9 +796,11 @@ static int ltr_resume(struct device *dev)
 	unsigned int i;
 	int ret = 0;
 
-	for (i = 0; i < st->snsr_n; i++) {
-		if (st->nvs && st->nvs_data[i])
-			ret |= st->nvs->resume(st->nvs_data[i]);
+	if (st->nvs) {
+		for (i = 0; i < LTR_DEV_N; i++) {
+			if (st->nvs_st[i])
+				ret |= st->nvs->resume(st->nvs_st[i]);
+		}
 	}
 	st->sts &= ~NVS_STS_SUSPEND;
 	if (st->sts & NVS_STS_SPEW_MSG)
@@ -797,9 +816,11 @@ static void ltr_shutdown(struct i2c_client *client)
 	unsigned int i;
 
 	st->sts |= NVS_STS_SHUTDOWN;
-	for (i = 0; i < st->snsr_n; i++) {
-		if (st->nvs && st->nvs_data[i])
-			st->nvs->shutdown(st->nvs_data[i]);
+	if (st->nvs) {
+		for (i = 0; i < LTR_DEV_N; i++) {
+			if (st->nvs_st[i])
+				st->nvs->shutdown(st->nvs_st[i]);
+		}
 	}
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
@@ -813,9 +834,9 @@ static int ltr_remove(struct i2c_client *client)
 	if (st != NULL) {
 		ltr_shutdown(client);
 		if (st->nvs) {
-			for (i = 0; i < st->snsr_n; i++) {
-				if (st->nvs_data[i])
-					st->nvs->remove(st->nvs_data[i]);
+			for (i = 0; i < LTR_DEV_N; i++) {
+				if (st->nvs_st[i])
+					st->nvs->remove(st->nvs_st[i]);
 			}
 		}
 		if (st->dw.wq)
@@ -922,8 +943,8 @@ struct sensor_cfg ltr_cfg_dflt[] = {
 	{
 		.name			= NVS_LIGHT_STRING,
 		.snsr_id		= LTR_DEV_LIGHT,
-		.ch_n			= ARRAY_SIZE(iio_chan_spec_nvs_light),
-		.ch_inf			= &iio_chan_spec_nvs_light,
+		.ch_n			= 1,
+		.ch_sz			= 4,
 		.part			= LTR_NAME,
 		.vendor			= LTR_VENDOR,
 		.version		= LTR_LIGHT_VERSION,
@@ -941,6 +962,7 @@ struct sensor_cfg ltr_cfg_dflt[] = {
 		},
 		.delay_us_min		= LTR_POLL_DLY_MS_MIN * 1000,
 		.delay_us_max		= LTR_POLL_DLY_MS_MAX * 1000,
+		.flags			= SENSOR_FLAG_ON_CHANGE_MODE,
 		.scale			= {
 			.ival		= LTR_LIGHT_SCALE_IVAL,
 			.fval		= LTR_LIGHT_SCALE_MICRO,
@@ -951,8 +973,8 @@ struct sensor_cfg ltr_cfg_dflt[] = {
 	{
 		.name			= NVS_PROXIMITY_STRING,
 		.snsr_id		= LTR_DEV_PROX,
-		.ch_n		     = ARRAY_SIZE(iio_chan_spec_nvs_proximity),
-		.ch_inf			= &iio_chan_spec_nvs_proximity,
+		.ch_n			= 1,
+		.ch_sz			= 4,
 		.part			= LTR_NAME,
 		.vendor			= LTR_VENDOR,
 		.version		= LTR_PROX_VERSION,
@@ -970,6 +992,8 @@ struct sensor_cfg ltr_cfg_dflt[] = {
 		},
 		.delay_us_min		= LTR_POLL_DLY_MS_MIN * 1000,
 		.delay_us_max		= LTR_POLL_DLY_MS_MAX * 1000,
+		.flags			= SENSOR_FLAG_ON_CHANGE_MODE |
+					  SENSOR_FLAG_WAKE_UP,
 		.scale			= {
 			.ival		= LTR_PROX_SCALE_IVAL,
 			.fval		= LTR_PROX_SCALE_MICRO,
@@ -982,10 +1006,15 @@ struct sensor_cfg ltr_cfg_dflt[] = {
 static int ltr_of_dt(struct ltr_state *st, struct device_node *dn)
 {
 	unsigned int i;
+	int ret;
 
 	for (i = 0; i < LTR_DEV_N; i++)
-		memcpy(&st->cfg[i], &ltr_cfg_dflt[i],
-		       sizeof(struct sensor_cfg));
+		memcpy(&st->cfg[i], &ltr_cfg_dflt[i], sizeof(st->cfg[0]));
+	st->light.cfg = &st->cfg[LTR_DEV_LIGHT];
+	st->light.hw_mask = 0xFFFF;
+	st->light.nld_tbl = ltr_nld_tbl;
+	st->prox.cfg = &st->cfg[LTR_DEV_PROX];
+	st->prox.hw_mask = 0xFFFF;
 	/* default device specific parameters */
 	st->ps_contr = LTR_REG_PS_CONTR_DFLT;
 	st->ps_led = LTR_REG_PS_LED_DFLT;
@@ -995,8 +1024,14 @@ static int ltr_of_dt(struct ltr_state *st, struct device_node *dn)
 	st->interrupt_persist = LTR_REG_INTERRUPT_PERSIST_DFLT;
 	/* device tree parameters */
 	if (dn) {
-		/* common NVS programmable parameters */
-		st->iio_ts_en = of_property_read_bool(dn, "iio_timestamps");
+		/* common NVS parameters */
+		for (i = 0; i < LTR_DEV_N; i++) {
+			ret = nvs_of_dt(dn, &st->cfg[i], NULL);
+			if (ret == -ENODEV)
+				/* the entire device has been disabled */
+				return -ENODEV;
+		}
+
 		/* device specific parameters */
 		of_property_read_u8(dn, "register_ps_contr", &st->ps_contr);
 		st->ps_contr &= LTR_REG_PS_CONTR_POR_MASK;
@@ -1013,9 +1048,6 @@ static int ltr_of_dt(struct ltr_state *st, struct device_node *dn)
 		of_property_read_u8(dn, "register_interrupt_persist",
 				    &st->interrupt_persist);
 	}
-	/* common NVS parameters */
-	for (i = 0; i < LTR_DEV_N; i++)
-		nvs_of_dt(dn, &st->cfg[i], NULL);
 	/* this device supports these programmable parameters */
 	if (nvs_light_of_dt(&st->light, dn, NULL)) {
 		st->light.nld_i_lo = 0;
@@ -1043,8 +1075,12 @@ static int ltr_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	st->i2c = client;
 	ret = ltr_of_dt(st, client->dev.of_node);
 	if (ret) {
-		dev_err(&client->dev, "%s _of_dt ERR\n", __func__);
-		ret = -ENODEV;
+		if (ret == -ENODEV) {
+			dev_info(&client->dev, "%s DT disabled\n", __func__);
+		} else {
+			dev_err(&client->dev, "%s _of_dt ERR\n", __func__);
+			ret = -ENODEV;
+		}
 		goto ltr_probe_exit;
 	}
 
@@ -1065,31 +1101,14 @@ static int ltr_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto ltr_probe_exit;
 	}
 
+	st->light.handler = st->nvs->handler;
+	st->prox.handler = st->nvs->handler;
 	n = 0;
 	for (i = 0; i < LTR_DEV_N; i++) {
-		if (st->dev_id == LTR_DEVID_659PS) {
-			if (st->cfg[i].snsr_id == LTR_DEV_LIGHT)
-				continue;
-		}
-
-		ret = st->nvs->probe(&st->nvs_data[n], st, &client->dev,
+		ret = st->nvs->probe(&st->nvs_st[i], st, &client->dev,
 				     &ltr_fn_dev, &st->cfg[i]);
-		if (!ret) {
-			st->dev[n] = st->cfg[i].snsr_id;
-			if (st->dev[n] == LTR_DEV_LIGHT) {
-				st->light.cfg = &st->cfg[i];
-				st->light.nvs_data = st->nvs_data[n];
-				st->light.handler = st->nvs->handler;
-				st->light.hw_mask = 0xFFFF;
-				st->light.nld_tbl = ltr_nld_tbl;
-			} else if (st->dev[n] == LTR_DEV_PROX) {
-				st->prox.cfg = &st->cfg[i];
-				st->prox.nvs_data = st->nvs_data[n];
-				st->prox.handler = st->nvs->handler;
-				st->prox.hw_mask = 0xFFFF;
-			}
+		if (!ret)
 			n++;
-		}
 	}
 	if (!n) {
 		dev_err(&client->dev, "%s nvs_probe ERR\n", __func__);
@@ -1097,15 +1116,21 @@ static int ltr_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto ltr_probe_exit;
 	}
 
-	st->snsr_n = n;
+	st->light.nvs_st = st->nvs_st[LTR_DEV_LIGHT];
+	st->prox.nvs_st = st->nvs_st[LTR_DEV_PROX];
 	INIT_DELAYED_WORK(&st->dw, ltr_work);
 	if (client->irq) {
-		/* IRQF_NO_SUSPEND for proximity */
-		irqflags = IRQF_NO_SUSPEND | IRQF_ONESHOT;
+		irqflags = IRQF_ONESHOT;
 		if (st->interrupt & LTR_REG_INTERRUPT_POLARITY)
 			irqflags |= IRQF_TRIGGER_RISING;
 		else
 			irqflags |= IRQF_TRIGGER_FALLING;
+		for (i = 0; i < LTR_DEV_N; i++) {
+			if (st->cfg[i].snsr_id >= 0) {
+				if (st->cfg[i].flags & SENSOR_FLAG_WAKE_UP)
+					irqflags |= IRQF_NO_SUSPEND;
+			}
+		}
 		ret = request_threaded_irq(client->irq, NULL, ltr_irq_thread,
 					   irqflags, LTR_NAME, st);
 		if (ret) {

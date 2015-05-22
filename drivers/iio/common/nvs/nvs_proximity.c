@@ -166,7 +166,13 @@ static void nvs_proximity_interpolate(int x1, s64 x2, int x3,
 	}
 
 	dividend = (x2 - x1) * (y3 - y1);
-	do_div(dividend, divisor);
+	if (dividend < 0) {
+		dividend = abs64(dividend);
+		do_div(dividend, divisor);
+		dividend = 0 - dividend;
+	} else {
+		do_div(dividend, divisor);
+	}
 	dividend += y1;
 	if (dividend < 0)
 		dividend = 0;
@@ -249,7 +255,7 @@ int nvs_proximity_read(struct nvs_proximity *np)
 		if (np->report && report_delay_min) {
 			np->report--;
 			np->timestamp_report = np->timestamp;
-			np->handler(np->nvs_data, &np->proximity,
+			np->handler(np->nvs_st, &np->proximity,
 				    np->timestamp_report);
 			ret = RET_HW_UPDATE;
 		}
@@ -326,7 +332,7 @@ int nvs_proximity_read(struct nvs_proximity *np)
 		if (np->report && report_delay_min) {
 			np->report--;
 			np->timestamp_report = np->timestamp;
-			np->handler(np->nvs_data, &np->proximity,
+			np->handler(np->nvs_st, &np->proximity,
 				    np->timestamp_report);
 			ret = RET_HW_UPDATE;
 		}
@@ -381,7 +387,7 @@ int nvs_proximity_read(struct nvs_proximity *np)
 							  np->cfg->cal_hi);
 			}
 			/* report proximity */
-			np->handler(np->nvs_data, &np->proximity,
+			np->handler(np->nvs_st, &np->proximity,
 				    np->timestamp_report);
 			if ((np->thresholds_valid) && !np->report) {
 				/* calculate low threshold */
@@ -463,7 +469,7 @@ int nvs_proximity_of_dt(struct nvs_proximity *np, const struct device_node *dn,
 	int ret;
 
 	if (np->cfg)
-		np->cfg->flags = SENSOR_FLAG_ON_CHANGE_MODE;
+		np->cfg->flags |= SENSOR_FLAG_ON_CHANGE_MODE;
 	if (dn == NULL)
 		return -EINVAL;
 

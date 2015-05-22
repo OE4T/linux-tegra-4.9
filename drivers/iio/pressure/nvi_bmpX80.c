@@ -1810,13 +1810,23 @@ static int bmp_of_dt(struct bmp_state *st, struct device_node *dn)
 {
 	char const *pchar;
 	u8 cfg;
+	unsigned int i;
+	int ret;
 
-	/* this device supports these programmable parameters */
-	if (!(of_property_read_string(dn, "nvi_config", &pchar))) {
-		for (cfg = 0; cfg < ARRAY_SIZE(bmp_configs); cfg++) {
-			if (!strcasecmp(pchar, bmp_configs[cfg])) {
-				st->nvi_config = cfg;
-				break;
+	if (dn) {
+		for (i = 0; i < BMP_DEV_N; i++) {
+			ret = nvs_of_dt(dn, &st->cfg[i], NULL);
+			if (ret == -ENODEV)
+				return -ENODEV;
+		}
+
+		/* this device supports these programmable parameters */
+		if (!(of_property_read_string(dn, "nvi_config", &pchar))) {
+			for (cfg = 0; cfg < ARRAY_SIZE(bmp_configs); cfg++) {
+				if (!strcasecmp(pchar, bmp_configs[cfg])) {
+					st->nvi_config = cfg;
+					break;
+				}
 			}
 		}
 	}
@@ -1840,10 +1850,15 @@ static int bmp_probe(struct i2c_client *client,
 
 	i2c_set_clientdata(client, st);
 	st->i2c = client;
-	if (client->dev.of_node) {
-		ret = bmp_of_dt(st, client->dev.of_node);
-		if (ret)
-			goto bmp_probe_err;
+	ret = bmp_of_dt(st, client->dev.of_node);
+	if (ret) {
+		if (ret == -ENODEV) {
+			dev_info(&client->dev, "%s DT disabled\n", __func__);
+		} else {
+			dev_err(&client->dev, "%s _of_dt ERR\n", __func__);
+			ret = -ENODEV;
+		}
+		goto bmp_probe_err;
 	}
 
 	bmp_pm_init(st);

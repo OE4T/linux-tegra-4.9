@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -72,7 +72,7 @@ static struct nvs_light_dynamic jsa_nld_tbl[] = {
 struct jsa_state {
 	struct i2c_client *i2c;
 	struct nvs_fn_if *nvs;
-	void *nvs_data;
+	void *nvs_st;
 	struct sensor_cfg cfg;
 	struct delayed_work dw;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(jsa_vregs)];
@@ -283,7 +283,7 @@ static void jsa_read(struct jsa_state *st)
 	unsigned int ms;
 	int ret;
 
-	st->nvs->nvs_mutex_lock(st->nvs_data);
+	st->nvs->nvs_mutex_lock(st->nvs_st);
 	if (st->enabled) {
 		if (st->hw_it) {
 			jsa_rd(st);
@@ -309,7 +309,7 @@ static void jsa_read(struct jsa_state *st)
 				 "%s schedule_delayed_work=%ums\n",
 				 __func__, ms);
 	}
-	st->nvs->nvs_mutex_unlock(st->nvs_data);
+	st->nvs->nvs_mutex_unlock(st->nvs_st);
 }
 
 static void jsa_work(struct work_struct *ws)
@@ -433,8 +433,8 @@ static int jsa_suspend(struct device *dev)
 	int ret = 0;
 
 	st->sts |= NVS_STS_SUSPEND;
-	if (st->nvs && st->nvs_data)
-		ret = st->nvs->suspend(st->nvs_data);
+	if (st->nvs && st->nvs_st)
+		ret = st->nvs->suspend(st->nvs_st);
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
 	return ret;
@@ -446,8 +446,8 @@ static int jsa_resume(struct device *dev)
 	struct jsa_state *st = i2c_get_clientdata(client);
 	int ret = 0;
 
-	if (st->nvs && st->nvs_data)
-		ret = st->nvs->resume(st->nvs_data);
+	if (st->nvs && st->nvs_st)
+		ret = st->nvs->resume(st->nvs_st);
 	st->sts &= ~NVS_STS_SUSPEND;
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
@@ -461,8 +461,8 @@ static void jsa_shutdown(struct i2c_client *client)
 	struct jsa_state *st = i2c_get_clientdata(client);
 
 	st->sts |= NVS_STS_SHUTDOWN;
-	if (st->nvs && st->nvs_data)
-		st->nvs->shutdown(st->nvs_data);
+	if (st->nvs && st->nvs_st)
+		st->nvs->shutdown(st->nvs_st);
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
 }
@@ -473,8 +473,8 @@ static int jsa_remove(struct i2c_client *client)
 
 	if (st != NULL) {
 		jsa_shutdown(client);
-		if (st->nvs && st->nvs_data)
-			st->nvs->remove(st->nvs_data);
+		if (st->nvs && st->nvs_st)
+			st->nvs->remove(st->nvs_st);
 		if (st->dw.wq)
 			destroy_workqueue(st->dw.wq);
 		jsa_pm_exit(st);
@@ -526,8 +526,8 @@ static int jsa_id_i2c(struct jsa_state *st, const char *name)
 
 static struct sensor_cfg jsa_cfg_dflt = {
 	.name			= NVS_LIGHT_STRING,
-	.ch_n			= ARRAY_SIZE(iio_chan_spec_nvs_light),
-	.ch_inf			= &iio_chan_spec_nvs_light,
+	.ch_n			= 1,
+	.ch_sz			= 4,
 	.part			= JSA_NAME,
 	.vendor			= JSA_VENDOR,
 	.version		= JSA_LIGHT_VERSION,
@@ -536,6 +536,7 @@ static struct sensor_cfg jsa_cfg_dflt = {
 		.fval		= JSA_LIGHT_MILLIAMP_FVAL,
 	},
 	.delay_us_max		= JSA_POLL_DLY_MS_MAX * 1000,
+	.flags			= SENSOR_FLAG_ON_CHANGE_MODE,
 	.scale			= {
 		.ival		= JSA_LIGHT_SCALE_IVAL,
 		.fval		= JSA_LIGHT_SCALE_MICRO,
@@ -555,7 +556,10 @@ static int jsa_of_dt(struct jsa_state *st, struct device_node *dn)
 	st->light.nld_tbl = jsa_nld_tbl;
 	/* device tree parameters */
 	/* common NVS parameters */
-	nvs_of_dt(dn, &st->cfg, NULL);
+	ret = nvs_of_dt(dn, &st->cfg, NULL);
+	if (ret == -ENODEV)
+		return -ENODEV;
+
 	/* this device supports these programmable parameters */
 	ret = nvs_light_of_dt(&st->light, dn, NULL);
 	if (ret) {
@@ -662,8 +666,12 @@ static int jsa_probe(struct i2c_client *client,
 	st->i2c = client;
 	ret = jsa_of_dt(st, client->dev.of_node);
 	if (ret) {
-		dev_err(&client->dev, "%s _of_dt ERR\n", __func__);
-		ret = -ENODEV;
+		if (ret == -ENODEV) {
+			dev_info(&client->dev, "%s DT disabled\n", __func__);
+		} else {
+			dev_err(&client->dev, "%s _of_dt ERR\n", __func__);
+			ret = -ENODEV;
+		}
 		goto jsa_probe_exit;
 	}
 
@@ -684,7 +692,8 @@ static int jsa_probe(struct i2c_client *client,
 		goto jsa_probe_exit;
 	}
 
-	ret = st->nvs->probe(&st->nvs_data, st, &client->dev,
+	st->light.handler = st->nvs->handler;
+	ret = st->nvs->probe(&st->nvs_st, st, &client->dev,
 			     &jsa_fn_dev, &st->cfg);
 	if (ret) {
 		dev_err(&client->dev, "%s nvs_probe ERR\n", __func__);
@@ -692,8 +701,7 @@ static int jsa_probe(struct i2c_client *client,
 		goto jsa_probe_exit;
 	}
 
-	st->light.nvs_data = st->nvs_data;
-	st->light.handler = st->nvs->handler;
+	st->light.nvs_st = st->nvs_st;
 	INIT_DELAYED_WORK(&st->dw, jsa_work);
 	dev_info(&client->dev, "%s done\n", __func__);
 	return 0;

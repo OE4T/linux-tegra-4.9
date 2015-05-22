@@ -309,6 +309,7 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 {
 	u32 int_enable;
 	u32 int_mask;
+	u32 i, val;
 
 	/* Init syncpt */
 	tegra_dc_writel(dc, nvdisp_incr_syncpt_cntrl_no_stall_f(1),
@@ -345,6 +346,20 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 		nvdisp_state_access_r());
 
 	tegra_dc_writel(dc, 0x00000000, nvdisp_background_color_r());
+
+	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
+
+		BUG_ON(!win);
+
+		/* refuse to operate on invalid syncpts */
+		if (WARN_ON(win->syncpt.id == NVSYNCPT_INVALID))
+			continue;
+
+		if (!nvhost_syncpt_read_ext_check(dc->ndev,
+						win->syncpt.id, &val))
+			win->syncpt.min = win->syncpt.max = val;
+	}
 
 	dc->crc_pending = false;
 

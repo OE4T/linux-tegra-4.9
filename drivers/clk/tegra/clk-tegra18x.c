@@ -435,9 +435,8 @@ static void __init tegra186_clock_init(struct device_node *np)
 		pr_err("Failed to initialize Tegra186 clocks. err: %d\n", err);
 
 	/* Nvdisp linsim clock hack */
-	if (tegra_platform_is_linsim()) {
+	if (tegra_platform_is_linsim() || tegra_platform_is_fpga()) {
 		void __iomem *base;
-
 		base = of_iomap(np, 0);
 		if (!base) {
 			pr_err("ioremap Tegra186 CAR failed\n");

@@ -262,7 +262,7 @@ static int gk20a_as_ioctl_get_va_regions(
 	unsigned int write_entries;
 	struct nvgpu_as_va_region __user *user_region_ptr;
 	struct vm_gk20a *vm = as_share->vm;
-	int page_sizes = gmmu_nr_page_sizes;
+	int page_sizes = gmmu_page_size_kernel;
 
 	gk20a_dbg_fn("");
 

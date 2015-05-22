@@ -127,9 +127,10 @@ struct gk20a_buffer_state {
 };
 
 enum gmmu_pgsz_gk20a {
-	gmmu_page_size_small = 0,
-	gmmu_page_size_big   = 1,
-	gmmu_nr_page_sizes   = 2
+	gmmu_page_size_small  = 0,
+	gmmu_page_size_big    = 1,
+	gmmu_page_size_kernel = 2,
+	gmmu_nr_page_sizes    = 3,
 };
 
 struct gk20a_comptags {
@@ -284,8 +285,10 @@ void gk20a_mm_l2_invalidate(struct gk20a *g);
 struct mm_gk20a {
 	struct gk20a *g;
 
+	/* GPU VA default sizes address spaces for channels */
 	struct {
-		u64 size;
+		u64 user_size;   /* userspace-visible GPU VA region */
+		u64 kernel_size; /* kernel-only GPU VA region */
 	} channel;
 
 	struct {
@@ -340,26 +343,15 @@ static inline int bar1_aperture_size_mb_gk20a(void)
 {
 	return 16; /* 16MB is more than enough atm. */
 }
-/* max address bits */
-static inline int max_physaddr_bits_gk20a(void)
-{
-	return 40;/*"old" sys physaddr, meaningful? */
-}
-static inline int max_vid_physaddr_bits_gk20a(void)
-{
-	/* "vid phys" is asid/smmu phys?,
-	 * i.e. is this the real sys physaddr? */
-	return 37;
-}
-static inline int max_vaddr_bits_gk20a(void)
-{
-	return 40; /* chopped for area? */
-}
 
-/*
- * Amount of the GVA space we actually use is smaller than the available space.
- */
-#define NV_GMMU_VA_RANGE	40
+/*The maximum GPU VA range supported */
+#define NV_GMMU_VA_RANGE          38
+
+/* The default userspace-visible GPU VA size */
+#define NV_MM_DEFAULT_USER_SIZE   (1ULL << 37)
+
+/* The default kernel-reserved GPU VA size */
+#define NV_MM_DEFAULT_KERNEL_SIZE (1ULL << 32)
 
 /*
  * The bottom 16GB of the space are used for small pages, the remaining high
@@ -370,12 +362,14 @@ static inline u64 __nv_gmmu_va_small_page_limit(void)
 	return ((u64)SZ_1G * 16);
 }
 
-static inline int __nv_gmmu_va_is_upper(struct vm_gk20a *vm, u64 addr)
+static inline int __nv_gmmu_va_is_big_page_region(struct vm_gk20a *vm, u64 addr)
 {
 	if (!vm->big_pages)
 		return 0;
 
-	return addr >= __nv_gmmu_va_small_page_limit();
+	return addr >= vm->vma[gmmu_page_size_big].base &&
+		addr < vm->vma[gmmu_page_size_big].base +
+		vm->vma[gmmu_page_size_big].length;
 }
 
 /*
@@ -391,7 +385,7 @@ static inline enum gmmu_pgsz_gk20a __get_pte_size(struct vm_gk20a *vm,
 	 * As a result, even though the allocator supports mixed address spaces
 	 * the address spaces must be treated as separate for now.
 	 */
-	if (__nv_gmmu_va_is_upper(vm, base))
+	if (__nv_gmmu_va_is_big_page_region(vm, base))
 		return gmmu_page_size_big;
 	else
 		return gmmu_page_size_small;
@@ -617,6 +611,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 		struct vm_gk20a *vm,
 		u32 big_page_size,
 		u64 low_hole,
+		u64 kernel_reserved,
 		u64 aperture_size,
 		bool big_pages,
 		char *name);

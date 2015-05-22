@@ -34,9 +34,12 @@ static int vgpu_init_mm_setup_sw(struct gk20a *g)
 	mm->g = g;
 
 	/*TBD: make channel vm size configurable */
-	mm->channel.size = 1ULL << NV_GMMU_VA_RANGE;
+	mm->channel.user_size = NV_MM_DEFAULT_USER_SIZE;
+	mm->channel.kernel_size = NV_MM_DEFAULT_KERNEL_SIZE;
 
-	gk20a_dbg_info("channel vm size: %dMB", (int)(mm->channel.size >> 20));
+	gk20a_dbg_info("channel vm size: user %dMB  kernel %dMB",
+		       (int)(mm->channel.user_size >> 20),
+		       (int)(mm->channel.kernel_size >> 20));
 
 	/* gk20a_init_gpu_characteristics expects this to be populated */
 	vm->big_page_size = big_page_size;
@@ -276,8 +279,8 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 	vm->big_page_size = big_page_size;
 
 	vm->va_start  = big_page_size << 10;   /* create a one pde hole */
-	vm->va_limit  = mm->channel.size; /* note this means channel.size is
-					     really just the max */
+	vm->va_limit  = mm->channel.user_size; /* note this means channel.size
+						  is really just the max */
 
 	msg.cmd = TEGRA_VGPU_CMD_AS_ALLOC_SHARE;
 	msg.handle = platform->virt_handle;

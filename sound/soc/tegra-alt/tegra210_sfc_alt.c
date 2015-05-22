@@ -351,6 +351,7 @@ static int tegra210_sfc_in_hw_params(struct snd_pcm_substream *substream,
 		dev_err(dev, "Can't set SFC RX CIF: %d\n", ret);
 		return ret;
 	}
+	memcpy(&sfc->in_hw_params, params, sizeof(struct snd_pcm_hw_params));
 
 	regmap_write(sfc->regmap, TEGRA210_SFC_AXBAR_RX_FREQ, sfc->srate_in);
 
@@ -374,6 +375,7 @@ static int tegra210_sfc_out_hw_params(struct snd_pcm_substream *substream,
 		dev_err(dev, "Can't set SFC TX CIF: %d\n", ret);
 		return ret;
 	}
+	memcpy(&sfc->out_hw_params, params, sizeof(struct snd_pcm_hw_params));
 
 	if (sfc->srate_out < 0) {
 		dev_err(dev, "SFC%d output rate not set: %d\n",
@@ -441,6 +443,89 @@ static int tegra210_sfc_put_format(struct snd_kcontrol *kcontrol,
 	/* set the format control flag */
 	if (strstr(kcontrol->id.name, "input"))
 		sfc->format_in = ucontrol->value.integer.value[0];
+
+	return 0;
+}
+
+static int tegra210_sfc_init_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+
+static int tegra210_sfc_init_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra210_sfc *sfc = snd_soc_codec_get_drvdata(codec);
+	int init = ucontrol->value.enumerated.item[0];
+	int ret = 0;
+	int is_enabled = 0;
+
+	if (!init)
+		return ret;
+
+	dev_dbg(codec->dev, "%s: inrate %d outrate %d\n",
+		__func__, sfc->srate_in, sfc->srate_out);
+
+	ret = pm_runtime_get_sync(codec->dev->parent);
+	if (ret < 0) {
+		dev_err(codec->dev, "parent get_sync failed: %d\n", ret);
+		return ret;
+	}
+
+	regmap_read(sfc->regmap, TEGRA210_SFC_ENABLE, &is_enabled);
+
+	if (is_enabled) {
+		u32 val;
+		int cnt = 100;
+
+		regmap_write(sfc->regmap, TEGRA210_SFC_ENABLE, 0);
+
+		regmap_read(sfc->regmap, TEGRA210_SFC_STATUS, &val);
+		while ((val & 1) && cnt--) {
+			udelay(100);
+			regmap_read(sfc->regmap, TEGRA210_SFC_STATUS, &val);
+		}
+
+		if (!cnt)
+			dev_warn(codec->dev, "SFC disable timeout\n");
+
+		regmap_update_bits(sfc->regmap,
+				TEGRA210_SFC_COEF_RAM,
+				TEGRA210_SFC_COEF_RAM_COEF_RAM_EN,
+				0);
+
+		ret = tegra210_sfc_soft_reset(sfc);
+		if (ret) {
+			dev_err(codec->dev, "SOFT_RESET error: %d\n", ret);
+			return ret;
+		}
+
+		ret = tegra210_sfc_set_audio_cif(sfc, &sfc->in_hw_params,
+					TEGRA210_SFC_AXBAR_RX_CIF_CTRL);
+		if (ret) {
+			dev_err(codec->dev, "Can't set SFC RX CIF: %d\n", ret);
+			return ret;
+		}
+
+		ret = tegra210_sfc_set_audio_cif(sfc, &sfc->out_hw_params,
+						TEGRA210_SFC_AXBAR_TX_CIF_CTRL);
+		if (ret) {
+			dev_err(codec->dev, "Can't set SFC TX CIF: %d\n", ret);
+			return ret;
+		}
+
+		regmap_write(sfc->regmap, TEGRA210_SFC_AXBAR_RX_FREQ, sfc->srate_in);
+		regmap_write(sfc->regmap, TEGRA210_SFC_AXBAR_TX_FREQ, sfc->srate_out);
+
+		if (sfc->srate_in != sfc->srate_out)
+			tegra210_sfc_write_coeff_ram(sfc);
+
+		regmap_write(sfc->regmap, TEGRA210_SFC_ENABLE, 1);
+	}
+
+	pm_runtime_put(codec->dev->parent);
 
 	return 0;
 }
@@ -546,6 +631,8 @@ static const struct snd_kcontrol_new tegra210_sfc_controls[] = {
 		tegra210_sfc_get_srate, tegra210_sfc_put_srate),
 	SOC_ENUM_EXT("input bit format", tegra210_sfc_format_enum,
 		tegra210_sfc_get_format, tegra210_sfc_put_format),
+	SOC_SINGLE_EXT("init", 0, 0, 1, 0,
+		tegra210_sfc_init_get, tegra210_sfc_init_put),
 };
 
 static struct snd_soc_codec_driver tegra210_sfc_codec = {

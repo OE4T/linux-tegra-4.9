@@ -20,17 +20,19 @@
 		reg = <0x0 0x3460000 0x0 0x210>;
 		interrupts = < 0 65 0x04 >;
 		bus-width = <8>;
-		status = "disabled";
 		uhs-mask = <0x60>;
 		nvidia,is-emmc;
-		nvidia,clk-name = "sdmmc4";
+		clocks = <&tegra_car TEGRA186_CLK_SDMMC4>;
+		clock-names = "sdmmc4";
+		status = "disabled";
 	};
 
 	sdhci@3440000 {
 		compatible = "nvidia,tegra186-sdhci";
 		reg = <0x0 0x3440000 0x0 0x210>;
 		interrupts = < 0 64 0x04 >;
-		nvidia,clk-name = "sdmmc3";
+		clocks = <&tegra_car TEGRA186_CLK_SDMMC3>;
+		clock-names = "sdmmc3";
 		status = "disabled";
 	};
 
@@ -38,6 +40,8 @@
 		compatible = "nvidia,tegra186-sdhci";
 		reg = <0x0 0x3420000 0x0 0x210>;
 		interrupts = < 0 63 0x04 >;
+		clocks = <&tegra_car TEGRA186_CLK_SDMMC2>;
+		clock-names = "sdmmc2";
 		status = "disabled";
 	};
 
@@ -45,6 +49,8 @@
 		compatible = "nvidia,tegra186-sdhci";
 		reg = <0x0 0x3400000 0x0 0x210>;
 		interrupts = < 0 62 0x04 >;
+		clocks = <&tegra_car TEGRA186_CLK_SDMMC1>;
+		clock-names = "sdmmc1";
 		status = "disabled";
 	 };
 };

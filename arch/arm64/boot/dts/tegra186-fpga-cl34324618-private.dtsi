@@ -27,6 +27,23 @@
 		status = "disabled";
 	};
 
+	sdhci@3460000 {
+		uhs-mask = <0x0>;
+		nvidia,enable-strobe-mode;
+		max-clk-limit = <6400000>;
+		status = "okay";
+        };
+
+	sdhci@3440000 {
+		bus-width = <4>;
+		mmc-ocr-mask = <3>;
+		uhs-mask = <0x1C>;
+		power-gpios = <180>;
+		nvidia,sd-device;
+		max-clk-limit = <12800000>;
+		status = "okay";
+        };
+
 	host1x: host1x {
 		dpaux {
 			status = "disabled";

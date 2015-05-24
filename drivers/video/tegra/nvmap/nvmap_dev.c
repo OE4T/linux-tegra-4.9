@@ -1160,6 +1160,44 @@ static int nvmap_debug_all_allocations_show(struct seq_file *s, void *unused)
 
 DEBUGFS_OPEN_FOPS(all_allocations);
 
+static int nvmap_debug_orphan_handles_show(struct seq_file *s, void *unused)
+{
+	u32 heap_type = (u32)(uintptr_t)s->private;
+	struct rb_node *n;
+
+
+	spin_lock(&nvmap_dev->handle_lock);
+	seq_printf(s, "%8s %11s %9s %6s %6s %6s %6s %8s\n",
+			"BASE", "SIZE", "USERFLAGS", "REFS",
+			"KMAPS", "UMAPS", "SHARE", "UID");
+
+	/* for each handle */
+	n = rb_first(&nvmap_dev->handles);
+	for (; n != NULL; n = rb_next(n)) {
+		struct nvmap_handle *handle =
+			rb_entry(n, struct nvmap_handle, node);
+		if (handle->alloc && handle->heap_type == heap_type &&
+			!atomic_read(&handle->share_count)) {
+			phys_addr_t base = heap_type == NVMAP_HEAP_IOVMM ? 0 :
+					   (handle->carveout->base);
+			seq_printf(s,
+				"%8llx %10zuK %9x %6u %6u %6u %8p\n",
+				(unsigned long long)base, K(handle->size),
+				handle->userflags,
+				atomic_read(&handle->ref),
+				atomic_read(&handle->kmap_count),
+				atomic_read(&handle->umap_count),
+				handle);
+		}
+	}
+
+	spin_unlock(&nvmap_dev->handle_lock);
+
+	return 0;
+}
+
+DEBUGFS_OPEN_FOPS(orphan_handles);
+
 static int nvmap_debug_maps_show(struct seq_file *s, void *unused)
 {
 	u64 total;
@@ -1797,6 +1835,10 @@ int nvmap_probe(struct platform_device *pdev)
 					heap_root,
 					(void *)(uintptr_t)node->heap_bit,
 					&debug_all_allocations_fops);
+				debugfs_create_file("orphan_handles", S_IRUGO,
+					heap_root,
+					(void *)(uintptr_t)node->heap_bit,
+					&debug_orphan_handles_fops);
 				debugfs_create_file("maps", S_IRUGO,
 					heap_root,
 					(void *)(uintptr_t)node->heap_bit,
@@ -1819,6 +1861,9 @@ int nvmap_probe(struct platform_device *pdev)
 			debugfs_create_file("all_allocations", S_IRUGO,
 				iovmm_root, (void *)(uintptr_t)NVMAP_HEAP_IOVMM,
 				&debug_all_allocations_fops);
+			debugfs_create_file("orphan_handles", S_IRUGO,
+				iovmm_root, (void *)(uintptr_t)NVMAP_HEAP_IOVMM,
+				&debug_orphan_handles_fops);
 			debugfs_create_file("maps", S_IRUGO, iovmm_root,
 				(void *)(uintptr_t)NVMAP_HEAP_IOVMM,
 				&debug_maps_fops);

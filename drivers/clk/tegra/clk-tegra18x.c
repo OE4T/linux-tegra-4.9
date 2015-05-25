@@ -14,10 +14,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/io.h>
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
 #include <linux/clkdev.h>
+#include <linux/init.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/delay.h>
@@ -447,4 +447,16 @@ static void __init tegra186_clock_init(struct device_node *np)
 	reset_gpcdma_controller();
 }
 
-CLK_OF_DECLARE(tegra186, "nvidia,tegra18x-car", tegra186_clock_init);
+static const struct of_device_id tegra186_clock_ids[] __initconst = {
+	{ .compatible = "nvidia,tegra18x-car",  .data = tegra186_clock_init},
+	{},
+};
+
+static int __init tegra186_of_clk_init(void)
+{
+	of_clk_init(tegra186_clock_ids);
+
+	return 0;
+}
+
+arch_initcall(tegra186_of_clk_init);

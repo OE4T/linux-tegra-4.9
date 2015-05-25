@@ -76,7 +76,7 @@ static int gb10b_init_bar2_vm(struct gk20a *g)
 	gk20a_dbg_info("bar2 vm size = 0x%x", mm->bar2.aperture_size);
 	gk20a_init_vm(mm, vm, big_page_size, SZ_4K,
 		mm->bar2.aperture_size - SZ_4K,
-		mm->bar2.aperture_size, false, "bar2");
+		mm->bar2.aperture_size, false, false, "bar2");
 
 	/* allocate instance mem for bar2 */
 	err = gk20a_alloc_inst_block(g, inst_block);

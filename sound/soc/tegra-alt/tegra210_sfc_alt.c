@@ -46,6 +46,22 @@ static const struct reg_default tegra210_sfc_reg_defaults[] = {
 	{ TEGRA210_SFC_AHUBRAMCTL_SFC_CTRL, 0x00004000},
 };
 
+static int tegra210_sfc_rates[] = {
+	8000,	/* #define TEGRA210_SFC_FS8				0	*/
+	11025,	/* #define TEGRA210_SFC_FS11_025		1	*/
+	16000,	/* #define TEGRA210_SFC_FS16			2	*/
+	22050,	/* #define TEGRA210_SFC_FS22_05			3	*/
+	24000,	/* #define TEGRA210_SFC_FS24			4	*/
+	32000,	/* #define TEGRA210_SFC_FS32			5	*/
+	44100,	/* #define TEGRA210_SFC_FS44_1			6	*/
+	48000,	/* #define TEGRA210_SFC_FS48			7	*/
+	64000,	/* #define TEGRA210_SFC_FS64			8	*/
+	88200,	/* #define TEGRA210_SFC_FS88_2			9	*/
+	96000,	/* #define TEGRA210_SFC_FS96			10	*/
+	176400,	/* #define TEGRA210_SFC_FS176_4			11	*/
+	192000,	/* #define TEGRA210_SFC_FS192			12	*/
+};
+
 static int tegra210_sfc_runtime_suspend(struct device *dev)
 {
 	struct tegra210_sfc *sfc = dev_get_drvdata(dev);
@@ -387,6 +403,16 @@ static int tegra210_sfc_out_hw_params(struct snd_pcm_substream *substream,
 	return ret;
 }
 
+static int tegra210_sfc_rate_to_index(int rate)
+{
+	int index;
+	for (index = 0; index < ARRAY_SIZE(tegra210_sfc_rates); index++) {
+		if (rate == tegra210_sfc_rates[index])
+			return index;
+	}
+	return -1;
+}
+
 static int tegra210_sfc_get_srate(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -395,9 +421,9 @@ static int tegra210_sfc_get_srate(struct snd_kcontrol *kcontrol,
 
 	/* get the sfc output rate */
 	if (strstr(kcontrol->id.name, "input"))
-		ucontrol->value.integer.value[0] = sfc->srate_in + 1;
+		ucontrol->value.integer.value[0] = tegra210_sfc_rates[sfc->srate_in];
 	else if (strstr(kcontrol->id.name, "output"))
-		ucontrol->value.integer.value[0] = sfc->srate_out + 1;
+		ucontrol->value.integer.value[0] = tegra210_sfc_rates[sfc->srate_out];
 
 	return 0;
 }
@@ -407,9 +433,9 @@ static int tegra210_sfc_put_srate(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_sfc *sfc = snd_soc_codec_get_drvdata(codec);
-	int srate = ucontrol->value.integer.value[0] - 1;
+	int srate = tegra210_sfc_rate_to_index(ucontrol->value.integer.value[0]);
 
-	if ((srate < TEGRA210_SFC_FS8 - 1) || (srate > TEGRA210_SFC_FS192))
+	if ((srate < TEGRA210_SFC_FS8) || (srate > TEGRA210_SFC_FS192))
 		return -EINVAL;
 
 	/* Update the SFC input/output rate */
@@ -592,32 +618,11 @@ static const struct snd_soc_dapm_route tegra210_sfc_routes[] = {
 	{ "SFC Transmit", NULL, "SFC TX" },
 };
 
-static const char * const tegra210_sfc_srate_text[] = {
-	"None",
-	"8kHz",
-	"11kHz",
-	"16kHz",
-	"22kHz",
-	"24kHz",
-	"32kHz",
-	"44kHz",
-	"48kHz",
-	"64kHz",
-	"88kHz",
-	"96kHz",
-	"176kHz",
-	"192kHz",
-};
-
 static const char * const tegra210_sfc_format_text[] = {
 	"None",
 	"16",
 	"32",
 };
-static const struct soc_enum tegra210_sfc_srate_enum =
-	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
-		ARRAY_SIZE(tegra210_sfc_srate_text),
-		tegra210_sfc_srate_text);
 
 static const struct soc_enum tegra210_sfc_format_enum =
 	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
@@ -625,9 +630,9 @@ static const struct soc_enum tegra210_sfc_format_enum =
 		tegra210_sfc_format_text);
 
 static const struct snd_kcontrol_new tegra210_sfc_controls[] = {
-	SOC_ENUM_EXT("input rate", tegra210_sfc_srate_enum,
+	SOC_SINGLE_EXT("input rate", 0, 0, 192000, 0,
 		tegra210_sfc_get_srate, tegra210_sfc_put_srate),
-	SOC_ENUM_EXT("output rate", tegra210_sfc_srate_enum,
+	SOC_SINGLE_EXT("output rate", 0, 0, 192000, 0,
 		tegra210_sfc_get_srate, tegra210_sfc_put_srate),
 	SOC_ENUM_EXT("input bit format", tegra210_sfc_format_enum,
 		tegra210_sfc_get_format, tegra210_sfc_put_format),

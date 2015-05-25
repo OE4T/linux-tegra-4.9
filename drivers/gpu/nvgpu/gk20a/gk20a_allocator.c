@@ -507,7 +507,7 @@ static int balloc_split_buddy(struct gk20a_allocator *a, struct gk20a_buddy *b,
  *
  * @a must be locked.
  */
-void balloc_alloc_buddy(struct gk20a_allocator *a, struct gk20a_buddy *b)
+static void balloc_alloc_buddy(struct gk20a_allocator *a, struct gk20a_buddy *b)
 {
 	struct rb_node **new = &(a->alloced_buddies.rb_node);
 	struct rb_node *parent = NULL;

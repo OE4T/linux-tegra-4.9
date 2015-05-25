@@ -710,8 +710,13 @@ bool nvsd_update_brightness(struct tegra_dc *dc)
 	u32 val = 0;
 	int cur_sd_brightness;
 	int sw_sd_brightness;
-	struct tegra_dc_sd_settings *settings = dc->out->sd_settings;
 	bool nvsd_updated = false;
+	struct tegra_dc_sd_settings *settings;
+
+	if (dc->out && dc->out->sd_settings)
+		settings = dc->out->sd_settings;
+	else
+		return false;
 
 	if (_sd_brightness) {
 		if (atomic_read(&man_k_until_blank) &&

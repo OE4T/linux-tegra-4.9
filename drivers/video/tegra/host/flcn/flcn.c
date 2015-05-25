@@ -502,11 +502,6 @@ static int flcn_probe(struct platform_device *dev)
 	nvhost_module_init(dev);
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
-#ifndef CONFIG_PM_GENERIC_DOMAINS_OF
-	pdata->pd.name = kstrdup(dev->name, GFP_KERNEL);
-	if (!pdata->pd.name)
-		return -ENOMEM;
-#endif
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
 

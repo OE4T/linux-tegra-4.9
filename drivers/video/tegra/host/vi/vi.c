@@ -299,12 +299,8 @@ static int vi_probe(struct platform_device *dev)
 	nvhost_module_init(dev);
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
-#ifndef CONFIG_PM_GENERIC_DOMAINS_OF
-	pdata->pd.name = "ve";
-#endif
-
 	/* add module power domain and also add its domain
-	 * as sub-domain of MC domain */
+	 * as sub-domain of host1x domain */
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
 

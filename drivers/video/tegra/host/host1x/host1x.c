@@ -958,9 +958,6 @@ static int nvhost_probe(struct platform_device *dev)
 		goto fail;
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
-#ifndef CONFIG_PM_GENERIC_DOMAINS_OF
-	pdata->pd.name = "tegra-host1x";
-#endif
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
 

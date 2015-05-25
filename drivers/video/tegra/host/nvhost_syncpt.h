@@ -44,6 +44,7 @@ struct nvhost_syncpt_attr {
 
 struct nvhost_syncpt {
 	bool *assigned;
+	bool *in_use;
 	bool *client_managed;
 	struct kobject *kobj;
 	struct mutex syncpt_mutex;

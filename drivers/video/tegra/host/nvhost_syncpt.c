@@ -966,16 +966,31 @@ static void nvhost_reserve_syncpts(struct nvhost_syncpt *sp)
 int nvhost_syncpt_mark_used(struct nvhost_syncpt *sp,
 			    u32 chid, u32 syncptid)
 {
-	if (syncpt_op().mark_used)
-		return syncpt_op().mark_used(sp, chid, syncptid);
-	return 0;
+	int err = 0;
+
+	if (syncpt_op().mark_used && !sp->in_use[syncptid]) {
+		err = syncpt_op().mark_used(sp, chid, syncptid);
+		if (!err) {
+			sp->in_use[syncptid] = true;
+			nvhost_syncpt_get_ref(sp, syncptid);
+		}
+	}
+
+	return err;
 }
 
 int nvhost_syncpt_mark_unused(struct nvhost_syncpt *sp, u32 syncptid)
 {
-	if (syncpt_op().mark_unused)
-		return syncpt_op().mark_unused(sp, syncptid);
-	return 0;
+	int err = 0;
+
+	if (syncpt_op().mark_unused && sp->in_use[syncptid]) {
+		err = syncpt_op().mark_unused(sp, syncptid);
+		if (!err) {
+			sp->in_use[syncptid] = false;
+			nvhost_syncpt_put_ref(sp, syncptid);
+		}
+	}
+	return err;
 }
 
 int nvhost_syncpt_get_ref(struct nvhost_syncpt *sp, u32 id)
@@ -1011,6 +1026,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 
 	/* Allocate structs for min, max and base values */
 	sp->assigned = kzalloc(sizeof(bool) * nb_pts, GFP_KERNEL);
+	sp->in_use = kzalloc(sizeof(bool) * nb_pts, GFP_KERNEL);
 	sp->client_managed = kzalloc(sizeof(bool) * nb_pts, GFP_KERNEL);
 	sp->syncpt_names = kzalloc(sizeof(char *) * nb_pts, GFP_KERNEL);
 	sp->last_used_by = kzalloc(sizeof(char *) * nb_pts, GFP_KERNEL);
@@ -1041,7 +1057,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 	}
 
 	if (!(sp->assigned && sp->client_managed && sp->min_val && sp->max_val
-		     && sp->lock_counts)) {
+		     && sp->lock_counts && sp->in_use && sp->ref)) {
 		/* frees happen in the deinit */
 		err = -ENOMEM;
 		goto fail;
@@ -1089,6 +1105,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 
 		/* initialize syncpt status */
 		sp->assigned[i] = false;
+		sp->in_use[i] = false;
 		if (nvhost_syncpt_is_valid_pt(sp, i))
 			sp->client_managed[i] = false;
 		else
@@ -1182,6 +1199,9 @@ void nvhost_syncpt_deinit(struct nvhost_syncpt *sp)
 
 	kfree(sp->client_managed);
 	sp->client_managed = NULL;
+
+	kfree(sp->in_use);
+	sp->in_use = NULL;
 
 	kfree(sp->assigned);
 	sp->assigned = NULL;

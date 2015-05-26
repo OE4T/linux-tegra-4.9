@@ -320,6 +320,7 @@ struct tegra_hdmi {
 	struct mutex ddc_refcount_lock;
 	bool device_shutdown;
 	int plug_state;
+	atomic_t suspended;
 };
 
 #define HDMI_ELD_BUF 96

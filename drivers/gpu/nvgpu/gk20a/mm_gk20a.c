@@ -2816,7 +2816,9 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 						 (u64)args->pages *
 						 (u64)args->page_size);
 	else
-		vaddr_start = gk20a_balloc(vma, args->pages * args->page_size);
+		vaddr_start = gk20a_balloc(vma,
+					   (u64)args->pages *
+					   (u64)args->page_size);
 
 	if (!vaddr_start) {
 		kfree(va_node);

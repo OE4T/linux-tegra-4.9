@@ -108,13 +108,6 @@
 		vdd-core-supply=<&max77620_sd0>;
 	};
 
-	pmc@7000e400 {
-		platform-io-pad-voltage = <
-				TEGRA210_PAD_AUDIO_HV IO_PAD_VOLTAGE_1_8V
-				TEGRA210_PAD_GPIO IO_PAD_VOLTAGE_1_8V
-				TEGRA210_PAD_SPI_HV IO_PAD_VOLTAGE_1_8V>;
-	};
-
 	camera-pcl {
 		dpd {
 			compatible = "nvidia,csi-dpd";

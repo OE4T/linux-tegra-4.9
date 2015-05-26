@@ -2529,7 +2529,7 @@ static void nvhost_free_channel_syncpt_all(struct tegra_se_dev *se_dev)
 {
 	int i = 0;
 	for (i = 0; i < 4; i++)
-		nvhost_free_syncpt(se_dev->syncpt_ids[i]);
+		nvhost_syncpt_put_ref_ext(se_dev->syncpt_ids[i]);
 }
 
 static int tegra_se_probe(struct platform_device *pdev)

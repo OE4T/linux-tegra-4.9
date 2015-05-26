@@ -26,6 +26,8 @@
 #include <linux/list.h>
 #include <linux/of.h>
 
+#include <iommu_context_dev.h>
+
 static struct of_device_id tegra_iommu_context_dev_of_match[] = {
 	{ .compatible = "nvidia,tegra186-iommu-context" },
 	{ },
@@ -44,9 +46,9 @@ struct iommu_ctx {
 	bool allocated;
 };
 
-LIST_HEAD(iommu_ctx_list);
-LIST_HEAD(iommu_static_mappings_list);
-DEFINE_MUTEX(iommu_ctx_list_mutex);
+static LIST_HEAD(iommu_ctx_list);
+static LIST_HEAD(iommu_static_mappings_list);
+static DEFINE_MUTEX(iommu_ctx_list_mutex);
 
 struct platform_device *iommu_context_dev_allocate(void)
 {

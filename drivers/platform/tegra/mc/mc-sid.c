@@ -199,13 +199,19 @@ static struct sid_override_reg sid_override_reg[] = {
 };
 #undef DEFREG
 
+enum mc_overrides {
+	DONTCARE,
+	OVERRIDE,
+	NO_OVERRIDE,
+};
+
 #define MAX_OIDS_IN_SID 5
 struct sid_to_oids
 {
 	int sid;			/* StreamID */
 	int noids;			/* # of override IDs */
 	int oid[MAX_OIDS_IN_SID];	/* Override IDs */
-	bool mc_overrides;		/* MC or Device overrides SID? */
+	enum mc_overrides ord;		/* MC or Device overrides SID? */
 };
 
 static struct sid_to_oids sid_to_oids[] = {
@@ -216,7 +222,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			AFIR,
 			AFIW,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_HDA,
@@ -225,7 +231,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			HDAR,
 			HDAW,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_SATA2,
@@ -234,7 +240,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			SATAR,
 			SATAW,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_XUSB_HOST,
@@ -243,7 +249,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			XUSB_HOSTR,
 			XUSB_HOSTW,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_XUSB_DEV,
@@ -252,7 +258,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			XUSB_DEVR,
 			XUSB_DEVW,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_TSEC,
@@ -261,7 +267,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			TSECSRD,
 			TSECSWR,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_GPUB,
@@ -272,7 +278,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			GPUSRD2,
 			GPUSWR2,
 		},
-		.mc_overrides = false,
+		.ord = NO_OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_SDMMC1A,
@@ -281,7 +287,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			SDMMCRA,
 			SDMMCWA,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_SDMMC2A,
@@ -290,7 +296,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			SDMMCRAA,
 			SDMMCWAA,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_SDMMC3A,
@@ -299,7 +305,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			SDMMCR,
 			SDMMCW,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_SDMMC4A,
@@ -308,7 +314,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			SDMMCRAB,
 			SDMMCWAB,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_APE,
@@ -319,7 +325,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			APEDMAR,
 			APEDMAW,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_SE,
@@ -328,7 +334,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			SESRD,
 			SESWR,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_ETR,
@@ -337,7 +343,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			ETRR,
 			ETRW,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_TSECB,
@@ -346,7 +352,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			TSECSRDB,
 			TSECSWRB,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_AXIS,
@@ -355,7 +361,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			AXISR,
 			AXISW,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_EQOS,
@@ -364,7 +370,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			EQOSR,
 			EQOSW,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_UFSHC,
@@ -373,7 +379,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			UFSHCR,
 			UFSHCW,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_NVDISPLAY,
@@ -381,7 +387,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.oid	= {
 			NVDISPLAYR,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_BPMP,
@@ -392,7 +398,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			BPMPDMAR,
 			BPMPDMAW,
 		},
-		.mc_overrides = false,
+		.ord = NO_OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_AON,
@@ -403,7 +409,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			AONDMAR,
 			AONDMAW,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_SCE,
@@ -414,7 +420,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			SCEDMAR,
 			SCEDMAW,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_HC,
@@ -422,7 +428,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.oid	= {
 			HOST1XDMAR,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_VIC,
@@ -432,7 +438,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			VICSRD,
 			VICSWR,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_VI,
@@ -440,7 +446,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.oid	= {
 			VIW,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_ISP,
@@ -450,7 +456,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			ISPWA,
 			ISPWB,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_NVDEC,
@@ -460,7 +466,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			NVDECSRD,
 			NVDECSWR,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_NVENC,
@@ -469,7 +475,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			NVENCSRD,
 			NVENCSWR,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_NVJPG,
@@ -478,7 +484,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			NVJPGSRD,
 			NVJPGSWR,
 		},
-		.mc_overrides = true,
+		.ord = OVERRIDE,
 	},
 };
 
@@ -496,7 +502,7 @@ MODULE_DEVICE_TABLE(of, mc_sid_of_match);
 
 static long mc_sid_is_cl34000094; /* support for obsolete cl34000094 */
 
-static void __mc_override_sid(int sid, int oid)
+static void __mc_override_sid(int sid, int oid, enum mc_overrides ord)
 {
 	const char *name = sid_override_reg[oid].name;
 	int offs = sid_override_reg[oid].offs;
@@ -512,6 +518,15 @@ static void __mc_override_sid(int sid, int oid)
 	} else {
 		addr = TO_MC_SID_STREAMID_SECURITY_CONFIG(mc_sid_base + offs);
 		val = readl_relaxed(addr);
+
+		if (ord != DONTCARE) {
+			int ord_in_reg = (val & SCEW_STREAMID_OVERRIDE) ?
+				OVERRIDE : NO_OVERRIDE;
+
+			if (WARN_ON(ord_in_reg != ord))
+				pr_warning("Incompatible MC_SID_STRAMID_SECURITY_CONFIG_%s(%x) %x\n",
+					   name, offs, val);
+		}
 
 		if (val & SCEW_STREAMID_OVERRIDE) {
 			/* OK */;
@@ -557,11 +572,8 @@ void platform_override_streamid(int sid)
 		if (sid != conf->sid)
 			continue;
 
-		if (!conf->mc_overrides)
-			continue;
-
 		for (j = 0; j < conf->noids; j++)
-			__mc_override_sid(sid, conf->oid[j]);
+			__mc_override_sid(sid, conf->oid[j], conf->ord);
 	}
 }
 
@@ -639,7 +651,7 @@ static int mc_sid_probe(struct platform_device *pdev)
 	mc_sid_is_cl34000094 = (long)id->data;
 
 	for (i = 0; i < ARRAY_SIZE(sid_override_reg); i++)
-		__mc_override_sid(0x7f, i);
+		__mc_override_sid(0x7f, i, DONTCARE);
 
 	/* FIXME: wait for MC driver */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);

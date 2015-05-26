@@ -9,3 +9,4 @@ obj-$(CONFIG_TEGRA_IPC) += tegra-ivc-client.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra-roc.o
 obj-$(CONFIG_TEGRA186_PMC) += tegra186-pmc.o
 obj-y += mc/
+obj-$(CONFIG_TEGRA_AST) += tegra_ast.o

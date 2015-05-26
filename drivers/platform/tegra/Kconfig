@@ -14,3 +14,8 @@ config TEGRA186_PMC
         default y
         help
           Enable Tegra186 PMC.
+
+config TEGRA_AST
+	bool "Enable Tegra Address Space Translation Driver"
+	depends on ARCH_TEGRA_18x_SOC
+	default y

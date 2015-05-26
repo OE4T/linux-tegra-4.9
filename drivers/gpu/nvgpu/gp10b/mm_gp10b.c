@@ -171,7 +171,7 @@ static int update_gmmu_pde3_locked(struct vm_gk20a *vm,
 	pde_v[0] |= gmmu_new_pde_aperture_video_memory_f();
 	pde_v[0] |= gmmu_new_pde_address_sys_f(u64_lo32(pte_addr));
 	pde_v[0] |= gmmu_new_pde_vol_true_f();
-
+	pde_v[1] |= pte_addr >> 24;
 	pde = pde3_from_index(parent, i);
 
 	gk20a_mem_wr32(pde, 0, pde_v[0]);
@@ -222,12 +222,14 @@ static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 		pde_v[2] |= gmmu_new_dual_pde_address_small_sys_f(pte_addr_small);
 		pde_v[2] |= gmmu_new_dual_pde_aperture_small_video_memory_f();
 		pde_v[2] |= gmmu_new_dual_pde_vol_small_true_f();
+		pde_v[3] |= pte_addr_small >> 24;
 	}
 
 	if (big_valid) {
 		pde_v[0] |= gmmu_new_dual_pde_address_big_sys_f(pte_addr_big);
 		pde_v[0] |= gmmu_new_dual_pde_vol_big_true_f();
 		pde_v[0] |= gmmu_new_dual_pde_aperture_big_video_memory_f();
+		pde_v[1] |= pte_addr_big >> 28;
 	}
 
 	pde = pde0_from_index(pte, i);
@@ -269,7 +271,8 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			    gmmu_new_pte_address_sys_f(*iova
 			      >> gmmu_new_pte_address_shift_v());
 
-		pte_w[1] = gmmu_new_pte_kind_f(kind_v) |
+		pte_w[1] = *iova >> (24 + gmmu_new_pte_address_shift_v()) |
+			   gmmu_new_pte_kind_f(kind_v) |
 			   gmmu_new_pte_comptagline_f(*ctag / ctag_granularity);
 
 		if (rw_flag == gk20a_mem_flag_read_only)

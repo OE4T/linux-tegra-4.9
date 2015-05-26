@@ -73,6 +73,20 @@
 		platform-io-pad-voltage = <
 				TEGRA210_PAD_AUDIO_HV IO_PAD_VOLTAGE_1_8V
 				TEGRA210_PAD_SPI_HV IO_PAD_VOLTAGE_1_8V>;
+
+		io-pad-defaults {
+			audio-hv {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
+			};
+
+			spi-hv {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
+			};
+
+			sdmmc3 {
+				nvidia,deep-power-down-enable;
+			};
+		};
 	};
 
 	memory@80000000 {

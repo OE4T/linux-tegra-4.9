@@ -2503,8 +2503,9 @@ struct tegra_dc_platform_data
 			goto fail_parse;
 	}
 
-	if (!of_property_read_u32(np_dsi_panel, "nvidia,default_color_space"
-						, &pdata->default_clr_space))
+	err = of_property_read_u32(np_dsi_panel, "nvidia,default_color_space"
+						, &pdata->default_clr_space);
+	if (err)
 		pdata->default_clr_space = 0;
 #endif
 

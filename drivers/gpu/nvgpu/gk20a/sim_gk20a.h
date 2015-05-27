@@ -30,7 +30,7 @@ struct sim_gk20a {
 	struct {
 		struct page *page;
 		void *kvaddr;
-		phys_addr_t phys;
+		u64 phys;
 	} send_bfr, recv_bfr, msg_bfr;
 	u32 send_ring_put;
 	u32 recv_ring_get;

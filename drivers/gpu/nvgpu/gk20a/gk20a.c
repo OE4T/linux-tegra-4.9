@@ -238,7 +238,7 @@ static void gk20a_remove_sim_support(struct sim_gk20a *s)
 
 static int alloc_and_kmap_iopage(struct device *d,
 				 void **kvaddr,
-				 phys_addr_t *phys,
+				 u64 *phys,
 				 struct page **page)
 {
 	int err = 0;
@@ -282,7 +282,7 @@ static int gk20a_init_sim_support(struct platform_device *dev)
 	int err = 0;
 	struct gk20a *g = get_gk20a(dev);
 	struct device *d = &dev->dev;
-	phys_addr_t phys;
+	u64 phys;
 
 	g->sim.g = g;
 	g->sim.regs = gk20a_ioremap_resource(dev, GK20A_SIM_IORESOURCE_MEM,
@@ -320,9 +320,9 @@ static int gk20a_init_sim_support(struct platform_device *dev)
 	sim_writel(g, sim_send_put_r(), g->sim.send_ring_put);
 
 	/*write send ring address and make it valid*/
-	/*TBD: work for >32b physmem*/
 	phys = g->sim.send_bfr.phys;
-	sim_writel(g, sim_send_ring_hi_r(), 0);
+	sim_writel(g, sim_send_ring_hi_r(),
+		   sim_send_ring_hi_addr_f(u64_hi32(phys)));
 	sim_writel(g, sim_send_ring_r(),
 		   sim_send_ring_status_valid_f() |
 		   sim_send_ring_target_phys_pci_coherent_f() |
@@ -337,9 +337,9 @@ static int gk20a_init_sim_support(struct platform_device *dev)
 	sim_writel(g, sim_recv_get_r(), g->sim.recv_ring_get);
 
 	/*write send ring address and make it valid*/
-	/*TBD: work for >32b physmem*/
 	phys = g->sim.recv_bfr.phys;
-	sim_writel(g, sim_recv_ring_hi_r(), 0);
+	sim_writel(g, sim_recv_ring_hi_r(),
+		   sim_recv_ring_hi_addr_f(u64_hi32(phys)));
 	sim_writel(g, sim_recv_ring_r(),
 		   sim_recv_ring_status_valid_f() |
 		   sim_recv_ring_target_phys_pci_coherent_f() |
@@ -408,7 +408,8 @@ static int rpc_send_message(struct gk20a *g)
 		sim_dma_size_4kb_f() |
 		sim_dma_addr_lo_f(g->sim.msg_bfr.phys >> PAGE_SHIFT);
 
-	*sim_send_ring_bfr(g, dma_hi_offset*sizeof(u32)) = 0; /*TBD >32b phys*/
+	*sim_send_ring_bfr(g, dma_hi_offset*sizeof(u32)) =
+		u64_hi32(g->sim.msg_bfr.phys);
 
 	*sim_msg_hdr(g, sim_msg_sequence_r()) = g->sim.sequence_base++;
 
@@ -432,7 +433,7 @@ static inline u32 *sim_recv_ring_bfr(struct gk20a *g, u32 byte_offset)
 
 static int rpc_recv_poll(struct gk20a *g)
 {
-	phys_addr_t recv_phys_addr;
+	u64 recv_phys_addr;
 
 	/* XXX This read is not required (?) */
 	/*pVGpu->recv_ring_get = VGPU_REG_RD32(pGpu, NV_VGPU_RECV_GET);*/
@@ -447,14 +448,14 @@ static int rpc_recv_poll(struct gk20a *g)
 		/* these are in u32 offsets*/
 		u32 dma_lo_offset =
 			sim_recv_put_pointer_v(g->sim.recv_ring_get)*2 + 0;
-		/*u32 dma_hi_offset = dma_lo_offset + 1;*/
-		u32 recv_phys_addr_lo =	sim_dma_addr_lo_v(*sim_recv_ring_bfr(g, dma_lo_offset*4));
+		u32 dma_hi_offset = dma_lo_offset + 1;
+		u32 recv_phys_addr_lo = sim_dma_addr_lo_v(
+				*sim_recv_ring_bfr(g, dma_lo_offset*4));
+		u32 recv_phys_addr_hi = sim_dma_hi_addr_v(
+				*sim_recv_ring_bfr(g, dma_hi_offset*4));
 
-		/*u32 recv_phys_addr_hi = sim_dma_hi_addr_v(
-		      (phys_addr_t)sim_recv_ring_bfr(g,dma_hi_offset*4));*/
-
-		/*TBD >32b phys addr */
-		recv_phys_addr = recv_phys_addr_lo << PAGE_SHIFT;
+		recv_phys_addr = (u64)recv_phys_addr_hi << 32 |
+				 (u64)recv_phys_addr_lo << PAGE_SHIFT;
 
 		if (recv_phys_addr != g->sim.msg_bfr.phys) {
 			dev_err(dev_from_gk20a(g), "%s Error in RPC reply\n",

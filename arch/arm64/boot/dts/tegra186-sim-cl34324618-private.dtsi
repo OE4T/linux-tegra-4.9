@@ -56,6 +56,13 @@
 
 		nvidia,vmid = <1>;
 
+		nvidia,ch-base = <0>;
+		nvidia,nb-channels = <63>;
+
+		nvidia,nb-hw-pts = <576>;
+		nvidia,pts-base = <0>;
+		nvidia,nb-pts = <576>;
+
 		vi {
 			reg = <0x0 0x15700000 0x0 0x00100000>;
 			interrupts = <0 201 0x04

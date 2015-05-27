@@ -834,13 +834,19 @@ void nvhost_module_deinit(struct platform_device *dev)
 
 	devfreq_suspend_device(pdata->power_manager);
 
-	if (pdata->prepare_poweroff)
-		pdata->prepare_poweroff(dev);
-
-	if (!pm_runtime_enabled(&dev->dev))
-		nvhost_module_disable_clk(&dev->dev);
-	else
+	if (pm_runtime_enabled(&dev->dev)) {
 		pm_runtime_disable(&dev->dev);
+	} else {
+		/* call device specific poweroff call */
+		if (pdata->booted && pdata->prepare_poweroff)
+			pdata->prepare_poweroff(dev);
+
+		/* disable clock.. */
+		nvhost_module_disable_clk(&dev->dev);
+
+		/* ..and turn off the module */
+		do_powergate_locked(pdata->powergate_id);
+	}
 
 	if (!IS_ENABLED(CONFIG_COMMON_CLK))
 		for (i = 0; i < pdata->num_clks; i++)

@@ -494,13 +494,13 @@ static struct tegra_dc_cmu default_limited_cmu = {
 
 void tegra_dc_clk_enable(struct tegra_dc *dc)
 {
-	clk_prepare_enable(dc->clk);
+	tegra_disp_clk_prepare_enable(dc->clk);
 	tegra_dvfs_set_rate(dc->clk, dc->mode.pclk);
 }
 
 void tegra_dc_clk_disable(struct tegra_dc *dc)
 {
-	clk_disable_unprepare(dc->clk);
+	tegra_disp_clk_disable_unprepare(dc->clk);
 	tegra_dvfs_set_rate(dc->clk, 0);
 }
 
@@ -509,15 +509,14 @@ void tegra_dc_get(struct tegra_dc *dc)
 	tegra_dc_io_start(dc);
 
 	/* extra reference to dc clk */
-	clk_prepare_enable(dc->clk);
+	tegra_disp_clk_prepare_enable(dc->clk);
 }
 EXPORT_SYMBOL(tegra_dc_get);
 
 void tegra_dc_put(struct tegra_dc *dc)
 {
 	/* balance extra dc clk reference */
-	if (!tegra_platform_is_linsim())
-		clk_disable_unprepare(dc->clk);
+	tegra_disp_clk_disable_unprepare(dc->clk);
 
 	tegra_dc_io_end(dc);
 }

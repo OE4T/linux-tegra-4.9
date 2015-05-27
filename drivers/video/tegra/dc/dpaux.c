@@ -50,12 +50,12 @@ static inline struct clk *tegra_dpaux_clk_get(enum tegra_dpaux_instance id)
 
 int tegra_dpaux_clk_en(enum tegra_dpaux_instance id)
 {
-	return clk_prepare_enable(tegra_dpaux_clk_get(id));
+	return tegra_disp_clk_prepare_enable(tegra_dpaux_clk_get(id));
 }
 
 void tegra_dpaux_clk_dis(enum tegra_dpaux_instance id)
 {
-	clk_disable_unprepare(tegra_dpaux_clk_get(id));
+	tegra_disp_clk_disable_unprepare(tegra_dpaux_clk_get(id));
 }
 
 static inline void _tegra_dpaux_pad_power(struct tegra_dc *dc,

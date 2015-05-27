@@ -81,7 +81,7 @@ void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
 {
 	int flag = tegra_is_clk_enabled(sor->sor_clk);
 
-	if (sor->clk_type == TEGRA_SOR_SAFE_CLK || tegra_platform_is_linsim())
+	if (sor->clk_type == TEGRA_SOR_SAFE_CLK)
 		return;
 
 	/*
@@ -90,12 +90,13 @@ void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
 	 * between safe clock and macro pll clock
 	 */
 	if (flag)
-		clk_disable_unprepare(sor->sor_clk);
+		tegra_sor_clk_disable(sor);
 
-	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 0);
+	if (tegra_platform_is_silicon())
+		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 0);
 
 	if (flag)
-		clk_prepare_enable(sor->sor_clk);
+		tegra_sor_clk_enable(sor);
 
 	sor->clk_type = TEGRA_SOR_SAFE_CLK;
 }
@@ -123,14 +124,15 @@ void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor)
 	 * has single DVFS table for all modes, nothing changes).
 	 */
 	if (flag)
-		clk_disable_unprepare(sor->sor_clk);
+		tegra_sor_clk_disable(sor);
 
 	tegra_dvfs_use_alt_freqs_on_clk(sor->sor_clk, true);
 
-	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 1);
+	if (tegra_platform_is_silicon())
+		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 1);
 
 	if (flag)
-		clk_prepare_enable(sor->sor_clk);
+		tegra_sor_clk_enable(sor);
 
 	sor->clk_type = TEGRA_SOR_MACRO_CLK;
 }
@@ -1031,12 +1033,13 @@ void tegra_sor_config_hdmi_clk(struct tegra_dc_sor_data *sor)
 	 * between safe clock and macro pll clock
 	 */
 	if (flag)
-		clk_disable_unprepare(sor->sor_clk);
+		tegra_sor_clk_disable(sor);
 
-	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 3);
+	if (tegra_platform_is_silicon())
+		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 3);
 
 	if (flag)
-		clk_prepare_enable(sor->sor_clk);
+		tegra_sor_clk_enable(sor);
 
 	sor->clk_type = TEGRA_SOR_MACRO_CLK;
 }
@@ -1745,12 +1748,13 @@ static void tegra_sor_config_lvds_clk(struct tegra_dc_sor_data *sor)
 	 * between safe clock and macro pll clock
 	 */
 	if (flag)
-		clk_disable_unprepare(sor->sor_clk);
+		tegra_sor_clk_disable(sor);
 
-	tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 1);
+	if (tegra_platform_is_silicon())
+		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 1);
 
 	if (flag)
-		clk_prepare_enable(sor->sor_clk);
+		tegra_sor_clk_enable(sor);
 
 	sor->clk_type = TEGRA_SOR_MACRO_CLK;
 }

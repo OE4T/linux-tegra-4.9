@@ -78,28 +78,24 @@ static inline void tegra_dpaux_writel(struct tegra_dc_dp_data *dp,
 
 static inline void tegra_dpaux_clk_enable(struct tegra_dc_dp_data *dp)
 {
-	if (tegra_platform_is_linsim())
-		return;
-	clk_prepare_enable(dp->dpaux_clk);
+	tegra_disp_clk_prepare_enable(dp->dpaux_clk);
 }
 
 static inline void tegra_dpaux_clk_disable(struct tegra_dc_dp_data *dp)
 {
-	if (tegra_platform_is_linsim())
-		return;
-	clk_disable_unprepare(dp->dpaux_clk);
+	tegra_disp_clk_disable_unprepare(dp->dpaux_clk);
 }
 
 static inline void tegra_dp_clk_enable(struct tegra_dc_dp_data *dp)
 {
 	if (!tegra_is_clk_enabled(dp->parent_clk))
-		clk_prepare_enable(dp->parent_clk);
+		tegra_disp_clk_prepare_enable(dp->parent_clk);
 }
 
 static inline void tegra_dp_clk_disable(struct tegra_dc_dp_data *dp)
 {
 	if (tegra_is_clk_enabled(dp->parent_clk))
-		clk_disable_unprepare(dp->parent_clk);
+		tegra_disp_clk_disable_unprepare(dp->parent_clk);
 }
 
 static inline void tegra_dpaux_write_field(struct tegra_dc_dp_data *dp,
@@ -2405,7 +2401,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 	tegra_dp_reset(dp);
 	if (dp->sor->safe_clk)
-		clk_prepare_enable(dp->sor->safe_clk);
+		tegra_disp_clk_prepare_enable(dp->sor->safe_clk);
 	tegra_dpaux_clk_enable(dp);
 
 	tegra_dc_io_start(dc);

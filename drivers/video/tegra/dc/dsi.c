@@ -418,7 +418,7 @@ void tegra_dsi_clk_enable(struct tegra_dc_dsi_data *dsi)
 {
 	int i = 0;
 	for (i = 0; i < dsi->max_instances; i++) {
-		clk_prepare_enable(dsi->dsi_clk[i]);
+		tegra_disp_clk_prepare_enable(dsi->dsi_clk[i]);
 		udelay(800);
 	}
 }
@@ -427,7 +427,7 @@ void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi)
 {
 	int i = 0;
 	for (i = 0; i < dsi->max_instances; i++) {
-		clk_disable_unprepare(dsi->dsi_clk[i]);
+		tegra_disp_clk_disable_unprepare(dsi->dsi_clk[i]);
 		udelay(800);
 	}
 }
@@ -436,7 +436,7 @@ static inline void tegra_dsi_lp_clk_enable(struct tegra_dc_dsi_data *dsi)
 {
 	int i = 0;
 	for (i = 0; i < dsi->max_instances; i++) {
-		clk_prepare_enable(dsi->dsi_lp_clk[i]);
+		tegra_disp_clk_prepare_enable(dsi->dsi_lp_clk[i]);
 		udelay(800);
 	}
 }
@@ -445,7 +445,7 @@ static inline void tegra_dsi_lp_clk_disable(struct tegra_dc_dsi_data *dsi)
 {
 	int i = 0;
 	for (i = 0; i < dsi->max_instances; i++) {
-		clk_disable_unprepare(dsi->dsi_lp_clk[i]);
+		tegra_disp_clk_disable_unprepare(dsi->dsi_lp_clk[i]);
 		udelay(800);
 	}
 }
@@ -2151,7 +2151,7 @@ void tegra_dsi_mipi_calibration_13x(struct tegra_dc_dsi_data *dsi)
 		dev_err(&dsi->dc->ndev->dev, "dsi: can't get clk72mhz clock\n");
 		return;
 	}
-	clk_prepare_enable(clk72mhz);
+	tegra_disp_clk_prepare_enable(clk72mhz);
 
 	/* Calibration settings begin */
 	val = tegra_mipi_cal_read(dsi->mipi_cal,
@@ -2269,7 +2269,7 @@ void tegra_dsi_mipi_calibration_13x(struct tegra_dc_dsi_data *dsi)
 		tegra_dsi_mipi_calibration_status(dsi);
 	}
 
-	clk_disable_unprepare(clk72mhz);
+	tegra_disp_clk_disable_unprepare(clk72mhz);
 }
 #endif
 
@@ -2283,7 +2283,7 @@ static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 		dev_err(&dsi->dc->ndev->dev, "dsi: can't get clk72mhz clock\n");
 		return;
 	}
-	clk_prepare_enable(clk72mhz);
+	tegra_disp_clk_prepare_enable(clk72mhz);
 
 	/* Calibration settings begin */
 	val = tegra_mipi_cal_read(dsi->mipi_cal,
@@ -2371,7 +2371,7 @@ static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 		tegra_dsi_mipi_calibration_status(dsi);
 	}
 
-	clk_disable_unprepare(clk72mhz);
+	tegra_disp_clk_disable_unprepare(clk72mhz);
 }
 #endif
 
@@ -2387,7 +2387,7 @@ tegra_dsi_mipi_calibration_12x(struct tegra_dc_dsi_data *dsi)
 		dev_err(&dsi->dc->ndev->dev, "dsi: can't get clk72mhz clock\n");
 		return;
 	}
-	clk_prepare_enable(clk72mhz);
+	tegra_disp_clk_prepare_enable(clk72mhz);
 
 	/* Calibration settings begin */
 	val = tegra_mipi_cal_read(dsi->mipi_cal,
@@ -2512,7 +2512,7 @@ tegra_dsi_mipi_calibration_12x(struct tegra_dc_dsi_data *dsi)
 		tegra_dsi_mipi_calibration_status(dsi);
 	}
 
-	clk_disable_unprepare(clk72mhz);
+	tegra_disp_clk_disable_unprepare(clk72mhz);
 }
 #endif
 
@@ -2527,7 +2527,7 @@ void tegra_dsi_mipi_calibration_14x(struct tegra_dc_dsi_data *dsi)
 		dev_err(&dsi->dc->ndev->dev, "dsi: can't get clk72mhz clock\n");
 		return;
 	}
-	clk_prepare_enable(clk72mhz);
+	tegra_disp_clk_prepare_enable(clk72mhz);
 
 	tegra_mipi_cal_write(dsi->mipi_cal,
 			PAD_DRIV_DN_REF(0x2),
@@ -2566,7 +2566,7 @@ void tegra_dsi_mipi_calibration_14x(struct tegra_dc_dsi_data *dsi)
 
 	tegra_dsi_mipi_calibration_status(dsi);
 
-	clk_disable_unprepare(clk72mhz);
+	tegra_disp_clk_disable_unprepare(clk72mhz);
 }
 #endif
 
@@ -3877,7 +3877,7 @@ int tegra_dsi_read_data(struct tegra_dc *dc,
 	tegra_dc_dsi_hold_host(dc);
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
-	clk_prepare_enable(dsi->dsi_fixed_clk);
+	tegra_disp_clk_prepare_enable(dsi->dsi_fixed_clk);
 	tegra_dsi_lp_clk_enable(dsi);
 	init_status = tegra_dsi_prepare_host_transmission(
 				dc, dsi, DSI_LP_OP_WRITE);
@@ -3936,7 +3936,7 @@ fail:
 	if (err < 0)
 		dev_err(&dc->ndev->dev, "Failed to restore prev state\n");
 	tegra_dsi_lp_clk_disable(dsi);
-	clk_disable_unprepare(dsi->dsi_fixed_clk);
+	tegra_disp_clk_disable_unprepare(dsi->dsi_fixed_clk);
 	tegra_dc_io_end(dc);
 	mutex_unlock(&dsi->lock);
 	tegra_dc_dsi_release_host(dc);
@@ -3980,7 +3980,7 @@ int tegra_dsi_panel_sanity_check(struct tegra_dc *dc,
 	}
 	tegra_dc_dsi_hold_host(dc);
 	tegra_dc_io_start(dc);
-	clk_prepare_enable(dsi->dsi_fixed_clk);
+	tegra_disp_clk_prepare_enable(dsi->dsi_fixed_clk);
 	tegra_dsi_lp_clk_enable(dsi);
 	memset(flagset, 0, sizeof(flagset));
 	init_status = tegra_dsi_prepare_host_transmission(
@@ -4063,7 +4063,7 @@ fail:
 	if (err < 0)
 		dev_err(&dc->ndev->dev, "Failed to restore prev state\n");
 	tegra_dsi_lp_clk_disable(dsi);
-	clk_disable_unprepare(dsi->dsi_fixed_clk);
+	tegra_disp_clk_disable_unprepare(dsi->dsi_fixed_clk);
 	tegra_dc_io_end(dc);
 	tegra_dc_dsi_release_host(dc);
 	return err;

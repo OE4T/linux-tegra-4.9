@@ -204,12 +204,14 @@ static inline void tegra_sor_write_field(struct tegra_dc_sor_data *sor,
 
 static inline void tegra_sor_clk_enable(struct tegra_dc_sor_data *sor)
 {
-	clk_prepare_enable(sor->sor_clk);
+	if (tegra_platform_is_silicon())
+		clk_prepare_enable(sor->sor_clk);
 }
 
 static inline void tegra_sor_clk_disable(struct tegra_dc_sor_data *sor)
 {
-	clk_disable_unprepare(sor->sor_clk);
+	if (tegra_platform_is_silicon())
+		clk_disable_unprepare(sor->sor_clk);
 }
 
 static inline int lt_param_idx(int link_bw)

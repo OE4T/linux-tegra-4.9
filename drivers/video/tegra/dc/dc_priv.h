@@ -366,6 +366,19 @@ static inline unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
 	return clk_get_rate(dc->clk);
 }
 
+static inline int tegra_disp_clk_prepare_enable(struct clk *clk)
+{
+	if (tegra_platform_is_silicon())
+		return clk_prepare_enable(clk);
+	return 0;
+}
+
+static inline void tegra_disp_clk_disable_unprepare(struct clk *clk)
+{
+	if (tegra_platform_is_silicon())
+		clk_disable_unprepare(clk);
+}
+
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
 {
@@ -537,8 +550,11 @@ void tegra_dc_set_csc(struct tegra_dc *dc, struct tegra_dc_csc *csc);
 void tegra_dc_trigger_windows(struct tegra_dc *dc);
 
 void tegra_dc_set_color_control(struct tegra_dc *dc);
-#ifdef CONFIG_TEGRA_DC_CMU
+#if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable);
+#endif
+
+#ifdef CONFIG_TEGRA_DC_CMU
 int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu);
 int tegra_dc_update_cmu_aligned(struct tegra_dc *dc, struct tegra_dc_cmu *cmu);
 #endif

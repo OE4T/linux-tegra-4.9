@@ -406,22 +406,16 @@ fail:
 
 static void tegra_hdmi_hda_clk_enable(struct tegra_hdmi *hdmi)
 {
-	if (tegra_platform_is_linsim())
-		return;
-
-	clk_prepare_enable(hdmi->hda_clk);
-	clk_prepare_enable(hdmi->hda2codec_clk);
-	clk_prepare_enable(hdmi->hda2hdmi_clk);
+	tegra_disp_clk_prepare_enable(hdmi->hda_clk);
+	tegra_disp_clk_prepare_enable(hdmi->hda2codec_clk);
+	tegra_disp_clk_prepare_enable(hdmi->hda2hdmi_clk);
 }
 
 static void tegra_hdmi_hda_clk_disable(struct tegra_hdmi *hdmi)
 {
-	if (tegra_platform_is_linsim())
-		return;
-
-	clk_disable_unprepare(hdmi->hda2hdmi_clk);
-	clk_disable_unprepare(hdmi->hda2codec_clk);
-	clk_disable_unprepare(hdmi->hda_clk);
+	tegra_disp_clk_disable_unprepare(hdmi->hda2hdmi_clk);
+	tegra_disp_clk_disable_unprepare(hdmi->hda2codec_clk);
+	tegra_disp_clk_disable_unprepare(hdmi->hda_clk);
 }
 
 static int tegra_hdmi_hda_clk_get(struct tegra_hdmi *hdmi)
@@ -1759,7 +1753,7 @@ static void tegra_hdmi_scdc_worker(struct work_struct *work)
 static void _tegra_hdmi_clock_enable(struct tegra_hdmi *hdmi)
 {
 	struct tegra_dc_sor_data *sor = hdmi->sor;
-	clk_prepare_enable(sor->safe_clk);
+	tegra_disp_clk_prepare_enable(sor->safe_clk);
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_SAFE_CLK);
 	tegra_sor_clk_enable(sor);
 }

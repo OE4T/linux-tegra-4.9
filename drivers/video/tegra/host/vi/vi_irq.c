@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/vi/vi_irq.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -25,44 +25,38 @@
 int vi_enable_irq(struct vi *tegra_vi)
 {
 	int val;
-	int err = 0;
-
-	err = nvhost_module_busy(tegra_vi->ndev);
-	if (err)
-		return err;
 
 	if (tegra_vi->ndev->id) {
+		/* Disable VI interrupts by default */
+		host1x_writel(tegra_vi->ndev,
+			      CSI_CSI_PIXEL_PARSER_B_INTERRUPT_MASK_0,
+			      0);
+
 		/* Reset VI status register */
 		val = host1x_readl(tegra_vi->ndev,
-					CSI_CSI_PIXEL_PARSER_B_STATUS_0);
+				   CSI_CSI_PIXEL_PARSER_B_STATUS_0);
 
 		host1x_writel(tegra_vi->ndev,
-				CSI_CSI_PIXEL_PARSER_B_STATUS_0,
-				val);
+			      CSI_CSI_PIXEL_PARSER_B_STATUS_0,
+			      val);
 
-		/* Enable FIFO Overflow Interrupt */
-		host1x_writel(tegra_vi->ndev,
-				CSI_CSI_PIXEL_PARSER_B_INTERRUPT_MASK_0,
-				PPB_FIFO_OVRF);
 	} else {
+		/* Disable VI interrupts by default */
+		host1x_writel(tegra_vi->ndev,
+			      CSI_CSI_PIXEL_PARSER_A_INTERRUPT_MASK_0,
+			      0);
+
 		/* Reset VI status register */
 		val = host1x_readl(tegra_vi->ndev,
-					CSI_CSI_PIXEL_PARSER_A_STATUS_0);
+				   CSI_CSI_PIXEL_PARSER_A_STATUS_0);
 
 		host1x_writel(tegra_vi->ndev,
-				CSI_CSI_PIXEL_PARSER_A_STATUS_0,
-				val);
-
-		/* Enable FIFO Overflow Interrupt */
-		host1x_writel(tegra_vi->ndev,
-			CSI_CSI_PIXEL_PARSER_A_INTERRUPT_MASK_0,
-				PPA_FIFO_OVRF);
+			      CSI_CSI_PIXEL_PARSER_A_STATUS_0,
+			      val);
 
 		/* interrupts are associated only with master dev vi.0 */
 		enable_irq(tegra_vi->vi_irq);
 	}
-
-	nvhost_module_idle(tegra_vi->ndev);
 
 	return 0;
 }
@@ -71,44 +65,37 @@ EXPORT_SYMBOL(vi_enable_irq);
 int vi_disable_irq(struct vi *tegra_vi)
 {
 	int val;
-	int err = 0;
-
-	err = nvhost_module_busy(tegra_vi->ndev);
-	if (err)
-		return err;
 
 	if (tegra_vi->ndev->id) {
 		/* Disable FIFO Overflow Interrupt */
 		host1x_writel(tegra_vi->ndev,
-				CSI_CSI_PIXEL_PARSER_B_INTERRUPT_MASK_0,
-				0);
+			      CSI_CSI_PIXEL_PARSER_B_INTERRUPT_MASK_0,
+			      0);
 
 		/* Reset status register */
 		val = host1x_readl(tegra_vi->ndev,
-					CSI_CSI_PIXEL_PARSER_B_STATUS_0);
+				   CSI_CSI_PIXEL_PARSER_B_STATUS_0);
 
 		host1x_writel(tegra_vi->ndev,
-				CSI_CSI_PIXEL_PARSER_B_STATUS_0,
-				val);
+			      CSI_CSI_PIXEL_PARSER_B_STATUS_0,
+			      val);
 	} else {
 		/* interrupts are associated only with master dev vi.0 */
 		disable_irq(tegra_vi->vi_irq);
 
 		/* Disable FIFO Overflow Interrupt */
 		host1x_writel(tegra_vi->ndev,
-				CSI_CSI_PIXEL_PARSER_A_INTERRUPT_MASK_0,
-				0);
+			      CSI_CSI_PIXEL_PARSER_A_INTERRUPT_MASK_0,
+			      0);
 
 		/* Reset status register */
 		val = host1x_readl(tegra_vi->ndev,
-					CSI_CSI_PIXEL_PARSER_A_STATUS_0);
+				   CSI_CSI_PIXEL_PARSER_A_STATUS_0);
 
 		host1x_writel(tegra_vi->ndev,
-				CSI_CSI_PIXEL_PARSER_A_STATUS_0,
-				val);
+			      CSI_CSI_PIXEL_PARSER_A_STATUS_0,
+			      val);
 	}
-
-	nvhost_module_idle(tegra_vi->ndev);
 
 	return 0;
 }

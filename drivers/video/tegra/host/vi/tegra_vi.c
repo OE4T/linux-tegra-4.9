@@ -57,18 +57,24 @@ static DEFINE_MUTEX(la_lock);
 
 int nvhost_vi_finalize_poweron(struct platform_device *dev)
 {
+	struct vi *tegra_vi = nvhost_get_private_data(dev);
 	int ret = 0;
-	struct vi *tegra_vi;
 
-	tegra_vi = (struct vi *)nvhost_get_private_data(dev);
+	if (!tegra_vi)
+		return -EINVAL;
 
-	if (tegra_vi && tegra_vi->reg) {
+	/* skip power-on routine for slave if the master device is no longer
+	 * available */
+	if (tegra_vi->master_deinitialized)
+		return 0;
+
+	if (tegra_vi->reg) {
 		ret = regulator_enable(tegra_vi->reg);
 		if (ret) {
 			dev_err(&dev->dev,
 					"%s: enable csi regulator failed.\n",
 					__func__);
-			goto fail;
+			return ret;
 		}
 	}
 
@@ -96,26 +102,43 @@ int nvhost_vi_finalize_poweron(struct platform_device *dev)
 	}
 #endif
 
-fail:
+
+	ret = vi_enable_irq(tegra_vi);
+	if (ret)
+		dev_err(&tegra_vi->ndev->dev, "%s: vi_enable_irq failed\n",
+			__func__);
+
 	return ret;
 }
 
 int nvhost_vi_prepare_poweroff(struct platform_device *dev)
 {
 	int ret = 0;
-	struct vi *tegra_vi;
-	tegra_vi = (struct vi *)nvhost_get_private_data(dev);
+	struct vi *tegra_vi = nvhost_get_private_data(dev);
 
-	if (tegra_vi && tegra_vi->reg) {
+	if (!tegra_vi)
+		return -EINVAL;
+
+	/* skip power-off routine for slave if the master device is no longer
+	 * available */
+	if (tegra_vi->master_deinitialized)
+		return 0;
+
+	ret = vi_disable_irq(tegra_vi);
+	if (ret) {
+		dev_err(&tegra_vi->ndev->dev, "%s: vi_disable_irq failed\n",
+			__func__);
+		return ret;
+	}
+
+	if (tegra_vi->reg) {
 		ret = regulator_disable(tegra_vi->reg);
-		if (ret) {
+		if (ret)
 			dev_err(&dev->dev,
 				"%s: disable csi regulator failed.\n",
 				__func__);
-			goto fail;
-		}
 	}
-fail:
+
 	return ret;
 }
 
@@ -397,10 +420,6 @@ static int vi_open(struct inode *inode, struct file *file)
 
 	file->private_data = vi;
 
-	err = vi_enable_irq(vi);
-	if (err)
-		dev_err(&vi->ndev->dev, "%s: vi_enable_irq failed\n", __func__);
-
 	/* add vi client to acm */
 	if (nvhost_module_add_client(vi->ndev, vi)) {
 		dev_err(&vi->ndev->dev,
@@ -416,14 +435,6 @@ static int vi_release(struct inode *inode, struct file *file)
 {
 	int ret = 0;
 	struct vi *tegra_vi = file->private_data;
-
-	ret = vi_disable_irq(tegra_vi);
-	if (ret) {
-		dev_err(&tegra_vi->ndev->dev,
-			"%s: vi_disable_irq failed\n",
-			__func__);
-		return ret;
-	}
 
 #if defined(CONFIG_TEGRA_ISOMGR)
 	/* nullify isomgr request */

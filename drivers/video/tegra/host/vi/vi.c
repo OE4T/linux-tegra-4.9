@@ -393,6 +393,11 @@ static int __exit vi_remove(struct platform_device *dev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	struct vi *tegra_vi = (struct vi *)pdata->private_data;
 
+#ifdef CONFIG_PM_RUNTIME
+	if (atomic_read(&dev->dev.power.usage_count) > 0)
+		return -EBUSY;
+#endif
+
 	dev_info(&dev->dev, "%s: ++\n", __func__);
 
 #if defined(CONFIG_TEGRA_ISOMGR)
@@ -402,14 +407,15 @@ static int __exit vi_remove(struct platform_device *dev)
 
 	vi_remove_debugfs(tegra_vi);
 
-	vi_intr_free(tegra_vi);
+	nvhost_client_device_release(dev);
 
 	if (pdata->slcg_notifier_enable &&
 	    (pdata->powergate_id != -1))
 		slcg_unregister_notifier(pdata->powergate_id,
 					 &pdata->toggle_slcg_notifier);
 
-	nvhost_client_device_release(dev);
+	vi_intr_free(tegra_vi);
+
 	pdata->aperture[0] = NULL;
 	flush_workqueue(tegra_vi->vi_workqueue);
 	destroy_workqueue(tegra_vi->vi_workqueue);
@@ -431,6 +437,16 @@ static int __exit vi_remove(struct platform_device *dev)
 		i2c_ctrl->remove_devices(dev);
 
 	pdata->private_data = i2c_ctrl;
+
+	/* Set "master deinitialized" flag on the slave device */
+	if (pdata->slave) {
+		struct nvhost_device_data *slave_pdata =
+			platform_get_drvdata(pdata->slave);
+		if (slave_pdata) {
+			struct vi *slave_vi = slave_pdata->private_data;
+			slave_vi->master_deinitialized = true;
+		}
+	}
 
 	return 0;
 }

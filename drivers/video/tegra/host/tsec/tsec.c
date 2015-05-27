@@ -35,6 +35,8 @@
 
 #include "dev.h"
 #include "tsec.h"
+#include "flcn/flcn.h"
+#include "flcn/hw_flcn.h"
 #include "hw_tsec.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
@@ -65,9 +67,6 @@
 
 #define TSEC_CARVEOUT_ADDR_OFFSET	0
 #define TSEC_CARVEOUT_SIZE_OFFSET	8
-
-#define get_tsec(ndev) ((struct tsec *)(ndev)->dev.platform_data)
-#define set_tsec(ndev, f) ((ndev)->dev.platform_data = f)
 
 #define hdcp_align(var)	(((unsigned long)((u8 *)hdcp_context->var \
 			+ HDCP_ALIGNMENT_256 - 1)) & ~HDCP_ALIGNMENT_256);
@@ -479,65 +478,6 @@ static char *tsec_get_fw_name(struct platform_device *dev)
 	return fw_name;
 }
 
-static int tsec_dma_wait_idle(struct platform_device *dev, u32 *timeout)
-{
-	if (!*timeout)
-		*timeout = TSEC_IDLE_TIMEOUT_DEFAULT;
-
-	do {
-		u32 check = min_t(u32, TSEC_IDLE_CHECK_PERIOD, *timeout);
-		u32 dmatrfcmd = host1x_readl(dev, tsec_dmatrfcmd_r());
-		u32 idle_v = tsec_dmatrfcmd_idle_v(dmatrfcmd);
-
-		if (tsec_dmatrfcmd_idle_true_v() == idle_v)
-			return 0;
-
-		udelay(TSEC_IDLE_CHECK_PERIOD);
-		*timeout -= check;
-	} while (*timeout || !tegra_platform_is_silicon());
-
-	dev_err(&dev->dev, "dma idle timeout");
-
-	return -1;
-}
-
-static int tsec_dma_pa_to_internal_256b(struct platform_device *dev,
-		u32 offset, u32 internal_offset, bool imem)
-{
-	u32 cmd = tsec_dmatrfcmd_size_256b_f();
-	u32 pa_offset =  tsec_dmatrffboffs_offs_f(offset);
-	u32 i_offset = tsec_dmatrfmoffs_offs_f(internal_offset);
-	u32 timeout = 0; /* default*/
-
-	if (imem)
-		cmd |= tsec_dmatrfcmd_imem_true_f();
-
-	host1x_writel(dev, tsec_dmatrfmoffs_r(), i_offset);
-	host1x_writel(dev, tsec_dmatrffboffs_r(), pa_offset);
-	host1x_writel(dev, tsec_dmatrfcmd_r(), cmd);
-
-	return tsec_dma_wait_idle(dev, &timeout);
-
-}
-
-static int tsec_wait_idle(struct platform_device *dev, u32 *timeout)
-{
-	if (!*timeout)
-		*timeout = TSEC_IDLE_TIMEOUT_DEFAULT;
-
-	do {
-		u32 check = min_t(u32, TSEC_IDLE_CHECK_PERIOD, *timeout);
-		u32 w = host1x_readl(dev, tsec_idlestate_r());
-
-		if (!w)
-			return 0;
-		udelay(TSEC_IDLE_CHECK_PERIOD);
-		*timeout -= check;
-	} while (*timeout || !tegra_platform_is_silicon());
-
-	return -1;
-}
-
 static int tsec_load_kfuse(struct platform_device *pdev)
 {
 	u32 val;
@@ -576,87 +516,66 @@ static int tsec_load_kfuse(struct platform_device *pdev)
 		return -1;
 }
 
-static int tsec_wait_mem_scrubbing(struct platform_device *dev)
-{
-	int retries = TSEC_IDLE_TIMEOUT_DEFAULT / TSEC_IDLE_CHECK_PERIOD;
-	nvhost_dbg_fn("");
-
-	do {
-		u32 w = host1x_readl(dev, tsec_dmactl_r()) &
-			(tsec_dmactl_dmem_scrubbing_m() |
-			 tsec_dmactl_imem_scrubbing_m());
-
-		if (!w) {
-			nvhost_dbg_fn("done");
-			return 0;
-		}
-		udelay(TSEC_IDLE_CHECK_PERIOD);
-	} while (--retries || !tegra_platform_is_silicon());
-
-	nvhost_err(&dev->dev, "Falcon mem scrubbing timeout");
-	return -ETIMEDOUT;
-}
-
 int nvhost_tsec_finalize_poweron(struct platform_device *dev)
 {
 	u32 timeout;
 	u32 offset;
 	int err = 0;
-	struct tsec *m;
+	struct flcn *m;
 
 	err = nvhost_tsec_init_sw(dev);
 	if (err)
 		return err;
 
-	m = get_tsec(dev);
+	m = get_flcn(dev);
 
 	if (m->is_booted)
 		return 0;
 
-	err = tsec_wait_mem_scrubbing(dev);
+	err = flcn_wait_mem_scrubbing(dev);
 	if (err)
 		return err;
 
-	host1x_writel(dev, tsec_dmactl_r(), 0);
-	host1x_writel(dev, tsec_dmatrfbase_r(),
+	host1x_writel(dev, flcn_dmactl_r(), 0);
+	host1x_writel(dev, flcn_dmatrfbase_r(),
 		(m->dma_addr + m->os.bin_data_offset) >> 8);
 
 	for (offset = 0; offset < m->os.data_size; offset += 256)
-		tsec_dma_pa_to_internal_256b(dev,
+		flcn_dma_pa_to_internal_256b(dev,
 					   m->os.data_offset + offset,
 					   offset, false);
 
-	tsec_dma_pa_to_internal_256b(dev,
+	flcn_dma_pa_to_internal_256b(dev,
 				     m->os.code_offset+TSEC_OS_START_OFFSET,
 				     TSEC_OS_START_OFFSET, true);
 
 
 	/* boot tsec */
-	host1x_writel(dev, tsec_bootvec_r(),
-			     tsec_bootvec_vec_f(TSEC_OS_START_OFFSET));
-	host1x_writel(dev, tsec_cpuctl_r(),
-			tsec_cpuctl_startcpu_true_f());
+	host1x_writel(dev, flcn_bootvec_r(),
+			     flcn_bootvec_vec_f(TSEC_OS_START_OFFSET));
+	host1x_writel(dev, flcn_cpuctl_r(),
+			flcn_cpuctl_startcpu_true_f());
 
 	timeout = 0; /* default */
 
-	err = tsec_wait_idle(dev, &timeout);
+	err = flcn_wait_idle(dev, &timeout);
 	if (err != 0) {
 		dev_err(&dev->dev, "boot failed due to timeout");
 		return err;
 	}
 
 	/* setup tsec interrupts and enable interface */
-	host1x_writel(dev, tsec_irqmset_r(),
-			(tsec_irqmset_ext_f(0xff) |
-				tsec_irqmset_swgen1_set_f() |
-				tsec_irqmset_swgen0_set_f() |
-				tsec_irqmset_exterr_set_f() |
-				tsec_irqmset_halt_set_f()   |
-				tsec_irqmset_wdtmr_set_f()));
+	host1x_writel(dev, flcn_irqmset_r(),
+			(flcn_irqmset_ext_f(0xff) |
+				flcn_irqmset_swgen1_set_f() |
+				flcn_irqmset_swgen0_set_f() |
+				flcn_irqmset_exterr_set_f() |
+				flcn_irqmset_halt_set_f()   |
+				flcn_irqmset_wdtmr_set_f()));
 
-	host1x_writel(dev, tsec_itfen_r(),
-			(tsec_itfen_mthden_enable_f() |
-				tsec_itfen_ctxen_enable_f()));
+	host1x_writel(dev, flcn_itfen_r(),
+			(flcn_itfen_mthden_enable_f() |
+				flcn_itfen_ctxen_enable_f()));
 
 	err = tsec_load_kfuse(dev);
 	if (err)
@@ -671,62 +590,20 @@ static int tsec_setup_ucode_image(struct platform_device *dev,
 		const struct firmware *ucode_fw)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	struct tsec *m = get_tsec(dev);
+	struct flcn *m = get_flcn(dev);
 	/* image data is little endian. */
-	struct tsec_ucode_v1 ucode;
-	int w;
+	struct ucode_v1_flcn ucode;
+	int err;
 	u32 reserved_offset;
 	u32 tsec_key_offset;
 	u32 tsec_carveout_addr_off;
 	u32 tsec_carveout_size_off;
 
-	/* copy the whole thing taking into account endianness */
-	for (w = 0; w < ucode_fw->size / sizeof(u32); w++)
-		ucode_ptr[w] = le32_to_cpu(((u32 *)ucode_fw->data)[w]);
+	ucode.bin_header = (struct ucode_bin_header_v1_flcn *)ucode_ptr;
 
-	ucode.bin_header = (struct tsec_ucode_bin_header_v1 *)ucode_ptr;
-	/* endian problems would show up right here */
-	if (ucode.bin_header->bin_magic != 0x10de) {
-		dev_err(&dev->dev,
-			   "failed to get firmware magic");
-		return -EINVAL;
-	}
-	if (ucode.bin_header->bin_ver != 1) {
-		dev_err(&dev->dev,
-			   "unsupported firmware version");
-		return -ENOENT;
-	}
-	/* shouldn't be bigger than what firmware thinks */
-	if (ucode.bin_header->bin_size > ucode_fw->size) {
-		dev_err(&dev->dev,
-			   "ucode image size inconsistency");
-		return -EINVAL;
-	}
-
-	dev_dbg(&dev->dev,
-		"ucode bin header: magic:0x%x ver:%d size:%d\n",
-		ucode.bin_header->bin_magic,
-		ucode.bin_header->bin_ver,
-		ucode.bin_header->bin_size);
-	dev_dbg(&dev->dev,
-		"ucode bin header: os bin (header,data) offset size: 0x%x, 0x%x %d\n",
-		ucode.bin_header->os_bin_header_offset,
-		ucode.bin_header->os_bin_data_offset,
-		ucode.bin_header->os_bin_size);
-	ucode.os_header = (struct tsec_ucode_os_header_v1 *)
-		(((void *)ucode_ptr) + ucode.bin_header->os_bin_header_offset);
-
-	dev_dbg(&dev->dev,
-		"os ucode header: os code (offset,size): 0x%x, 0x%x\n",
-		ucode.os_header->os_code_offset,
-		ucode.os_header->os_code_size);
-	dev_dbg(&dev->dev,
-		"os ucode header: os data (offset,size): 0x%x, 0x%x\n",
-		ucode.os_header->os_data_offset,
-		ucode.os_header->os_data_size);
-	dev_dbg(&dev->dev,
-		"os ucode header: num apps: %d\n",
-		ucode.os_header->num_apps);
+	err = flcn_setup_ucode_image(dev, ucode_ptr, ucode_fw);
+	if (err)
+		return err;
 
 	/* make space for reserved area - we need 20 bytes, but we move 256
 	 * bytes because firmware needs to be 256 byte aligned */
@@ -755,16 +632,13 @@ static int tsec_setup_ucode_image(struct platform_device *dev,
 	m->os.size = ucode.bin_header->os_bin_size;
 	m->os.reserved_offset = reserved_offset;
 	m->os.bin_data_offset = ucode.bin_header->os_bin_data_offset;
-	m->os.code_offset = ucode.os_header->os_code_offset;
-	m->os.data_offset = ucode.os_header->os_data_offset;
-	m->os.data_size   = ucode.os_header->os_data_size;
 
 	return 0;
 }
 
 static int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 {
-	struct tsec *m = get_tsec(dev);
+	struct flcn *m = get_flcn(dev);
 	const struct firmware *ucode_fw;
 	int err;
 	DEFINE_DMA_ATTRS(attrs);
@@ -820,7 +694,7 @@ clean_up:
 static int nvhost_tsec_init_sw(struct platform_device *dev)
 {
 	int err = 0;
-	struct tsec *m = get_tsec(dev);
+	struct flcn *m = get_flcn(dev);
 	char *fw_name;
 
 	if (m)
@@ -832,13 +706,13 @@ static int nvhost_tsec_init_sw(struct platform_device *dev)
 		return -EINVAL;
 	}
 
-	m = kzalloc(sizeof(struct tsec), GFP_KERNEL);
+	m = kzalloc(sizeof(struct flcn), GFP_KERNEL);
 	if (!m) {
 		dev_err(&dev->dev, "couldn't alloc ucode");
 		kfree(fw_name);
 		return -ENOMEM;
 	}
-	set_tsec(dev, m);
+	set_flcn(dev, m);
 	m->is_booted = false;
 
 	err = tsec_read_ucode(dev, fw_name);
@@ -859,7 +733,7 @@ clean_up:
 
 int nvhost_tsec_prepare_poweroff(struct platform_device *dev)
 {
-	struct tsec *m = get_tsec(dev);
+	struct flcn *m = get_flcn(dev);
 	if (m)
 		m->is_booted = false;
 

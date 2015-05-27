@@ -3,7 +3,7 @@
  *
  * Tegra TSEC Module Support
  *
- * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -40,52 +40,6 @@ static inline void decode_tsec_ver(int version, u8 *maj, u8 *min)
 	*maj = (u8)((uv32 >> 8) & 0xff);
 	*min = (u8)(uv32 & 0xff);
 }
-
-struct tsec {
-	bool valid;
-	size_t size;
-	bool is_booted;
-
-	struct {
-		u32 reserved_offset;
-		u32 bin_data_offset;
-		u32 data_offset;
-		u32 data_size;
-		u32 code_offset;
-		u32 size;
-	} os;
-
-	dma_addr_t dma_addr;
-	u32 *mapped;
-};
-
-struct tsec_ucode_bin_header_v1 {
-	u32 bin_magic;		/* 0x10de */
-	u32 bin_ver;		/* cya, versioning of bin format (1) */
-	u32 bin_size;		/* entire image size including this header */
-	u32 os_bin_header_offset;
-	u32 os_bin_data_offset;
-	u32 os_bin_size;
-};
-
-struct tsec_ucode_os_code_header_v1 {
-	u32 offset;
-	u32 size;
-};
-
-struct tsec_ucode_os_header_v1 {
-	u32 os_code_offset;
-	u32 os_code_size;
-	u32 os_data_offset;
-	u32 os_data_size;
-	u32 num_apps;
-};
-
-struct tsec_ucode_v1 {
-	struct tsec_ucode_bin_header_v1 *bin_header;
-	struct tsec_ucode_os_header_v1  *os_header;
-	bool valid;
-};
 
 enum tsec_host1x_state_t {
 	tsec_host1x_none,

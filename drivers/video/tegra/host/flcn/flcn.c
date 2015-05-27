@@ -50,18 +50,9 @@
 
 static int nvhost_flcn_init_sw(struct platform_device *dev);
 
-static inline struct flcn *get_flcn(struct platform_device *dev)
-{
-	return (struct flcn *)nvhost_get_private_data(dev);
-}
-static inline void set_flcn(struct platform_device *dev, struct flcn *flcn)
-{
-	nvhost_set_private_data(dev, flcn);
-}
-
 #define FLCN_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define FLCN_IDLE_CHECK_PERIOD		10	/* 10 usec */
-static int flcn_wait_idle(struct platform_device *pdev,
+int flcn_wait_idle(struct platform_device *pdev,
 				u32 *timeout)
 {
 	nvhost_dbg_fn("");
@@ -112,7 +103,7 @@ static int flcn_dma_wait_idle(struct platform_device *pdev, u32 *timeout)
 }
 
 
-static int flcn_dma_pa_to_internal_256b(struct platform_device *pdev,
+int flcn_dma_pa_to_internal_256b(struct platform_device *pdev,
 					      phys_addr_t pa,
 					      u32 internal_offset,
 					      bool imem)
@@ -133,7 +124,7 @@ static int flcn_dma_pa_to_internal_256b(struct platform_device *pdev,
 
 }
 
-static int flcn_setup_ucode_image(struct platform_device *dev,
+int flcn_setup_ucode_image(struct platform_device *dev,
 				   u32 *ucode_ptr,
 				   const struct firmware *ucode_fw)
 {
@@ -271,7 +262,7 @@ static int flcn_read_ucode(struct platform_device *dev, const char *fw_name)
 	return err;
 }
 
-static int flcn_wait_mem_scrubbing(struct platform_device *dev)
+int flcn_wait_mem_scrubbing(struct platform_device *dev)
 {
 	int retries = FLCN_IDLE_TIMEOUT_DEFAULT / FLCN_IDLE_CHECK_PERIOD;
 	nvhost_dbg_fn("");

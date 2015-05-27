@@ -1,7 +1,7 @@
 /*
  * Tegra flcn common Module Support
  *
- * Copyright (c) 2011-2014, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -63,13 +63,16 @@ struct ucode_v1_flcn {
 	struct ucode_bin_header_v1_flcn *bin_header;
 	struct ucode_os_header_v1_flcn  *os_header;
 	struct ucode_fce_header_v1_flcn *fce_header;
+	bool valid;
 };
 
 struct flcn {
 	bool valid;
 	size_t size;
+	bool is_booted;
 
 	struct {
+		u32 reserved_offset;
 		u32 bin_data_offset;
 		u32 data_offset;
 		u32 data_size;
@@ -81,6 +84,15 @@ struct flcn {
 	u32 *mapped;
 };
 
+static inline struct flcn *get_flcn(struct platform_device *dev)
+{
+	return (struct flcn *)nvhost_get_private_data(dev);
+}
+static inline void set_flcn(struct platform_device *dev, struct flcn *flcn)
+{
+	nvhost_set_private_data(dev, flcn);
+}
+
 int nvhost_vic_prepare_poweroff(struct platform_device *);
 int nvhost_flcn_finalize_poweron(struct platform_device *);
 int nvhost_vic_finalize_poweron(struct platform_device *);
@@ -91,6 +103,19 @@ int nvhost_vic_aggregate_constraints(struct platform_device *dev,
 				     unsigned long floor_rate,
 				     unsigned long pixelrate,
 				     unsigned long bw_constraint);
+
+int flcn_dma_pa_to_internal_256b(struct platform_device *pdev,
+					      phys_addr_t pa,
+					      u32 internal_offset,
+					      bool imem);
+int flcn_wait_mem_scrubbing(struct platform_device *dev);
+
+int flcn_wait_idle(struct platform_device *pdev,
+				u32 *timeout);
+int flcn_setup_ucode_image(struct platform_device *dev,
+				u32 *ucode_ptr,
+				const struct firmware *ucode_fw);
+
 
 /* hack, get these from elsewhere */
 #define NVA0B6_VIDEO_COMPOSITOR_SET_APPLICATION_ID		(0x00000200)

@@ -155,8 +155,10 @@ static int parse_dc_out_type(struct device_node *np,
 
 	if (ndev->id == 0)
 		np_target_disp = tegra_primary_panel_get_dt_node(NULL);
-	else
+	else if (ndev->id == 1)
 		np_target_disp = tegra_secondary_panel_get_dt_node(NULL);
+	else if (ndev->id == 2)
+		np_target_disp = tegra_tertiary_panel_get_dt_node(NULL);
 
 	out_type = out_type_from_pn(np_target_disp);
 
@@ -1086,8 +1088,11 @@ static struct device_node *parse_dsi_settings(struct platform_device *ndev,
 
 	if (ndev->id == 0)
 		np_dsi_panel = tegra_primary_panel_get_dt_node(pdata);
-	else
+	else if (ndev->id == 1)
 		np_dsi_panel = tegra_secondary_panel_get_dt_node(pdata);
+	else if (ndev->id == 2)
+		np_dsi_panel = tegra_tertiary_panel_get_dt_node(pdata);
+
 
 	if (!np_dsi_panel) {
 		pr_err("There is no valid panel node\n");
@@ -1613,8 +1618,11 @@ static struct device_node *parse_dp_settings(struct platform_device *ndev,
 
 	if (ndev->id == 0)
 		np_dp_panel = tegra_primary_panel_get_dt_node(pdata);
-	else
+	else if (ndev->id == 1)
 		np_dp_panel = tegra_secondary_panel_get_dt_node(pdata);
+	else if (ndev->id == 2)
+		np_dp_panel = tegra_tertiary_panel_get_dt_node(pdata);
+
 
 	if (!np_dp_panel) {
 		pr_err("There is no valid panel node\n");
@@ -1877,8 +1885,11 @@ struct device_node *tegra_get_panel_node_out_type_check
 
 	if (dc->ndev->id == 0)
 		np_panel = tegra_primary_panel_get_dt_node(NULL);
-	else
+	else if (dc->ndev->id == 1)
 		np_panel = tegra_secondary_panel_get_dt_node(NULL);
+	else if (dc->ndev->id == 2)
+		np_panel = tegra_tertiary_panel_get_dt_node(NULL);
+
 	if (!np_panel) {
 		pr_err("There is no valid panel node\n");
 		return NULL;
@@ -2052,9 +2063,12 @@ struct tegra_dc_platform_data
 		if (ndev->id == 0)
 			np_target_disp
 				= tegra_primary_panel_get_dt_node(pdata);
-		else
+		else if (ndev->id == 1)
 			np_target_disp
 				= tegra_secondary_panel_get_dt_node(pdata);
+		else if (ndev->id == 2)
+			np_target_disp
+				= tegra_tertiary_panel_get_dt_node(pdata);
 
 		if (!np_target_disp ||
 			!of_device_is_available(np_target_disp)) {

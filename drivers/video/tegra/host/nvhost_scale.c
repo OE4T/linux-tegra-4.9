@@ -30,6 +30,7 @@
 #include <linux/platform_data/tegra_edp.h>
 #include <linux/pm_qos.h>
 #include <trace/events/nvhost.h>
+#include <linux/uaccess.h>
 
 #include <governor.h>
 
@@ -350,7 +351,7 @@ void nvhost_scale_init(struct platform_device *pdev)
 			actmon_op().get_actmon_regs(profile->actmon);
 
 		actmon_op().init(profile->actmon);
-		actmon_op().debug_init(profile->actmon, pdata->debugfs);
+		nvhost_actmon_debug_init(profile->actmon, pdata->debugfs);
 		actmon_op().deinit(profile->actmon);
 	}
 
@@ -484,3 +485,237 @@ void nvhost_scale_hw_deinit(struct platform_device *pdev)
 		actmon_op().deinit(profile->actmon);
 	}
 }
+
+/* activity monitor */
+static int actmon_count_norm_show(struct seq_file *s, void *unused)
+{
+	struct host1x_actmon *actmon = s->private;
+	u32 avg;
+	int err;
+
+	err = actmon_op().read_count_norm(actmon, &avg);
+	if (!err)
+		seq_printf(s, "%d\n", avg);
+	return err;
+}
+
+static int actmon_count_norm_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, actmon_count_norm_show, inode->i_private);
+}
+
+static const struct file_operations actmon_count_norm_fops = {
+	.open		= actmon_count_norm_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int actmon_count_show(struct seq_file *s, void *unused)
+{
+	struct host1x_actmon *actmon = s->private;
+	u32 avg;
+	int err;
+
+	err = actmon_op().read_count(actmon, &avg);
+	if (!err)
+		seq_printf(s, "%d\n", avg);
+	return err;
+}
+
+static int actmon_count_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, actmon_count_show, inode->i_private);
+}
+
+static const struct file_operations actmon_count_fops = {
+	.open		= actmon_count_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int actmon_avg_show(struct seq_file *s, void *unused)
+{
+	struct host1x_actmon *actmon = s->private;
+	u32 avg;
+	int err;
+
+	err = actmon_op().read_avg(actmon, &avg);
+	if (!err)
+		seq_printf(s, "%d\n", avg);
+	return err;
+}
+
+static int actmon_avg_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, actmon_avg_show, inode->i_private);
+}
+
+static const struct file_operations actmon_avg_fops = {
+	.open		= actmon_avg_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int actmon_avg_norm_show(struct seq_file *s, void *unused)
+{
+	struct host1x_actmon *actmon = s->private;
+	u32 avg;
+	int err;
+
+	err = actmon_op().read_avg_norm(actmon, &avg);
+	if (!err)
+		seq_printf(s, "%d\n", avg);
+	return err;
+}
+
+static int actmon_avg_norm_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, actmon_avg_norm_show, inode->i_private);
+}
+
+static const struct file_operations actmon_avg_norm_fops = {
+	.open		= actmon_avg_norm_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int actmon_sample_period_norm_show(struct seq_file *s, void *unused)
+{
+	struct host1x_actmon *actmon = s->private;
+	long period = actmon_op().get_sample_period_norm(actmon);
+	seq_printf(s, "%ld\n", period);
+	return 0;
+}
+
+static int actmon_sample_period_norm_open(struct inode *inode,
+						struct file *file)
+{
+	return single_open(file, actmon_sample_period_norm_show,
+		inode->i_private);
+}
+
+static ssize_t actmon_sample_period_norm_write(struct file *file,
+				const char __user *user_buf,
+				size_t count, loff_t *ppos)
+{
+	struct seq_file *s = file->private_data;
+	struct host1x_actmon *actmon = s->private;
+	char buffer[40];
+	int buf_size;
+	unsigned long period;
+
+	memset(buffer, 0, sizeof(buffer));
+	buf_size = min(count, (sizeof(buffer)-1));
+
+	if (copy_from_user(buffer, user_buf, buf_size))
+		return -EFAULT;
+
+	if (kstrtoul(buffer, 10, &period))
+		return -EINVAL;
+
+	actmon_op().set_sample_period_norm(actmon, period);
+
+	return count;
+}
+
+static const struct file_operations actmon_sample_period_norm_fops = {
+	.open		= actmon_sample_period_norm_open,
+	.read		= seq_read,
+	.write          = actmon_sample_period_norm_write,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int actmon_sample_period_show(struct seq_file *s, void *unused)
+{
+	struct host1x_actmon *actmon = s->private;
+	long period = actmon_op().get_sample_period(actmon);
+	seq_printf(s, "%ld\n", period);
+	return 0;
+}
+
+static int actmon_sample_period_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, actmon_sample_period_show, inode->i_private);
+}
+
+static const struct file_operations actmon_sample_period_fops = {
+	.open		= actmon_sample_period_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int actmon_k_show(struct seq_file *s, void *unused)
+{
+	struct host1x_actmon *actmon = s->private;
+	long period = actmon_op().get_k(actmon);
+	seq_printf(s, "%ld\n", period);
+	return 0;
+}
+
+static int actmon_k_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, actmon_k_show, inode->i_private);
+}
+
+static ssize_t actmon_k_write(struct file *file,
+				const char __user *user_buf,
+				size_t count, loff_t *ppos)
+{
+	struct seq_file *s = file->private_data;
+	struct host1x_actmon *actmon = s->private;
+	char buffer[40];
+	int buf_size;
+	unsigned long k;
+
+	memset(buffer, 0, sizeof(buffer));
+	buf_size = min(count, (sizeof(buffer)-1));
+
+	if (copy_from_user(buffer, user_buf, buf_size))
+		return -EFAULT;
+
+	if (kstrtoul(buffer, 10, &k))
+		return -EINVAL;
+
+	actmon_op().set_k(actmon, k);
+
+	return count;
+}
+
+static const struct file_operations actmon_k_fops = {
+	.open		= actmon_k_open,
+	.read		= seq_read,
+	.write          = actmon_k_write,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+void nvhost_actmon_debug_init(struct host1x_actmon *actmon,
+				     struct dentry *de)
+{
+	BUG_ON(!actmon);
+	debugfs_create_file("actmon_k", S_IRUGO, de,
+			actmon, &actmon_k_fops);
+	debugfs_create_file("actmon_sample_period", S_IRUGO, de,
+			actmon, &actmon_sample_period_fops);
+	debugfs_create_file("actmon_sample_period_norm", S_IRUGO, de,
+			actmon, &actmon_sample_period_norm_fops);
+	debugfs_create_file("actmon_avg_norm", S_IRUGO, de,
+			actmon, &actmon_avg_norm_fops);
+	debugfs_create_file("actmon_avg", S_IRUGO, de,
+			actmon, &actmon_avg_fops);
+	debugfs_create_file("actmon_count", S_IRUGO, de,
+			actmon, &actmon_count_fops);
+	debugfs_create_file("actmon_count_norm", S_IRUGO, de,
+			actmon, &actmon_count_norm_fops);
+	/* additional hardware specific debugfs nodes */
+	if (actmon_op().debug_init)
+		actmon_op().debug_init(actmon, de);
+
+}
+

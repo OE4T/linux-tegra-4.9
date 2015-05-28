@@ -147,6 +147,8 @@ struct nvhost_actmon_ops {
 	int (*init)(struct host1x_actmon *actmon);
 	void (*deinit)(struct host1x_actmon *actmon);
 	int (*read_avg)(struct host1x_actmon *actmon, u32 *val);
+	int (*read_count)(struct host1x_actmon *actmon, u32 *val);
+	int (*read_count_norm)(struct host1x_actmon *actmon, u32 *val);
 	int (*above_wmark_count)(struct host1x_actmon *actmon);
 	int (*below_wmark_count)(struct host1x_actmon *actmon);
 	int (*read_avg_norm)(struct host1x_actmon *actmon, u32 *val);

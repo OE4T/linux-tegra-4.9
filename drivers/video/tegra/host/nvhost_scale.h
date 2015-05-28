@@ -62,4 +62,7 @@ int nvhost_scale_hw_init(struct platform_device *);
 void nvhost_scale_hw_deinit(struct platform_device *);
 
 int nvhost_get_actmon_irq(struct nvhost_device_profile *profile);
+
+void nvhost_actmon_debug_init(struct host1x_actmon *actmon,
+				     struct dentry *de);
 #endif

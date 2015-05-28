@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisplay/nvdis_stub.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -140,6 +140,15 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 	if (pdata)
 		dc_out = pdata->default_out;
 
+#if 0 /* DSI */
+	struct device_node *np_dsi =
+			of_find_node_by_path(DSI_NODE);
+	if (pdata && dc_out)
+		tegra_panel_register_ops(dc_out, &panel_sim_ops);
+
+	np_panel = of_get_child_by_name(np_dsi, "panel-s-wqxga-10-1");
+#endif
+
 	if (tegra_platform_is_linsim()) {
 
 		if (pdata && dc_out)
@@ -156,6 +165,24 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 
 	if (!np_panel)
 		pr_err("Could not find right panel\n");
+
+	return of_device_is_available(np_panel) ? np_panel : NULL;
+}
+
+struct device_node *tegra_tertiary_panel_get_dt_node(
+			struct tegra_dc_platform_data *pdata)
+{
+	struct device_node *np_panel = NULL;
+	struct tegra_dc_out *dc_out = NULL;
+	struct device_node *np_hdmi =
+			of_find_node_by_path(HDMI_NODE);
+
+	if (pdata)
+		dc_out = pdata->default_out;
+
+	np_panel = of_get_child_by_name(np_hdmi, "hdmi-display");
+	if (!np_panel)
+		pr_err("Could not find node nvidia,dsi-panel\n");
 
 	return of_device_is_available(np_panel) ? np_panel : NULL;
 }

@@ -83,7 +83,7 @@
 #define K7_CMD_DATA_OFFSET (0x030400)
 #define K7_CMD_DATA_SIZE (251 + K7_RD_HEADER_SIZE)
 #define K7_Q_SIZE (8)
-#define K7_DRIVER_VERSION (7)
+#define K7_DRIVER_VERSION (8)
 #define K7_INT_STATUS_MASK_DATA (0x01)
 #define K7_INT_STATUS_MASK_BOOT (0x02)
 #define K7_INT_STATUS_MASK_CMD  (0x04)
@@ -95,6 +95,10 @@
 #define K7_REMOTE_WAKEUP_CODE (0xEA)
 #define K7_DEFAULT_MODE (3)
 
+enum K7_SCAN_STATE_OPTIONS {
+	K7_SCAN_STATE_IDLE = 0,
+	K7_SCAN_STATE_ACTIVE,
+};
 
 enum K7_SLOW_SCAN_OPTIONS {
 	K7_SLOW_SCAN_30 = 30,
@@ -185,6 +189,7 @@ static struct lr388k7_queue_info g_st_q;
 static struct lr388k7_cmd_queue_info g_st_cmd_q;
 static struct lr388k7_ts_dbg g_st_dbg;
 static u8 g_u8_mode;
+static u8 g_u8_scan;
 static u32 g_u32_raw_data_size = 50 * 88 * 2;
 
 #define IS_DBG (g_st_dbg.u8ForceCap == 1 || \
@@ -763,6 +768,14 @@ static irqreturn_t lr388k7_wakeup_thread(int irq, void *_ts)
 
 static irqreturn_t lr388k7_irq_thread(int irq, void *_ts)
 {
+	struct lr388k7 *ts = (struct lr388k7 *)_ts;
+	struct input_dev *input_dev = ts->idev;
+
+	if (g_u8_scan == K7_SCAN_STATE_IDLE) {
+		input_event(input_dev, EV_MSC, MSC_ACTIVITY, 1);
+		input_sync(input_dev);
+	}
+
 	if (g_st_state.b_is_suspended) {
 		if (g_st_dbg.wakeup.enable == 1) {
 			dev_info(&g_spi->dev, "Throw IRQ_WAKE_THREAD\n");
@@ -1753,6 +1766,10 @@ static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 #endif
 		break;
 
+	case LR388K7_IOCTL_SET_STATE:
+		g_u8_scan = (u8)arg;
+		break;
+
 	default:
 		ret = false;
 		break;
@@ -1780,6 +1797,7 @@ static struct miscdevice lr388k7_ts_miscdev = {
 static void lr388k7_init_parameter(void)
 {
 	g_u8_mode = K7_DEFAULT_MODE;
+	g_u8_scan = K7_SCAN_STATE_IDLE;
 	g_st_state.u32_pid = 0;
 	g_st_state.b_is_init_finish = false;
 	g_st_state.b_is_suspended = false;
@@ -2139,6 +2157,8 @@ static int lr388k7_probe(struct spi_device *spi)
 	}
 
 #endif
+
+	input_set_capability(input_dev, EV_MSC, MSC_ACTIVITY);
 
 	input_dev->open = lr388k7_open;
 	input_dev->close = lr388k7_close;

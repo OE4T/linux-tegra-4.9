@@ -810,7 +810,7 @@ void gk20a_vm_put_buffers(struct vm_gk20a *vm,
 static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset)
 {
 	struct device *d = dev_from_vm(vm);
-	int retries = 1000;
+	int retries = 10000; /* 50 ms */
 	struct mapped_buffer_node *mapped_buffer;
 
 	mutex_lock(&vm->update_gmmu_lock);

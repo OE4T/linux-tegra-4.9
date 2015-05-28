@@ -641,46 +641,54 @@
                 status = "okay";
         };
 
-	gpio: gpio@2210000 {
-		compatible = "nvidia,tegra186-gpio";
-		reg = <0x0 0x2210000 0x0 0x5700>;
-		status = "okay";
-		gpio-ranges = <&pinmux 0 0 246>;
-		#gpio-cells = <2>;
-		gpio-controller;
-		nvidia,gpio_mapping = < 0x2000
-					0x3000
-					0x3200
-					0X3400
-					0x2200
-					0x2400
-					0x4200
-					0x1000
-					0x0800
-					0x5000
-					0x5200
-					0x1200
-					0x5600
-					0x0000
-					0x0200
-					0x4000
-					0x0400
-					0x0A00
-					1
-					0x0600
-					1
-					1
-					1
-					0x1400
-					0x1600
-					1
-					1
-					0x2600
-					0x5400
-					1
-					1
-					1>;
-	};
+        gpio: gpio@2200000 {
+                compatible = "nvidia,tegra186-gpio";
+                reg = <0x0 0x2200000 0x0 0x15700
+                        0x0 0xC2F0000 0x0 0x2000>;
+                interrupts = <0 47 0x04
+                        0 50 0x04
+                        0 53 0x04
+                        0 56 0x04
+                        0 59 0x04
+                        0 180 0x04
+                        0 60 0x04>; /*AON GPIO */
+                status = "okay";
+                gpio-ranges = <&pinmux 0 0 246>;
+                #gpio-cells = <2>;
+                gpio-controller;
+                nvidia,gpio_mapping = < 0 0x12000
+                                        0 0x13000
+                                        0 0x13200
+                                        0 0X13400
+                                        0 0x12200
+                                        0 0x12400
+                                        0 0x14200
+                                        0 0x11000
+                                        0 0x10800
+                                        0 0x15000
+                                        0 0x15200
+                                        0 0x11200
+                                        0 0x15600
+                                        0 0x10000
+                                        0 0x10200
+                                        0 0x14000
+                                        0 0x10400
+                                        0 0x10A00
+                                        1 0x1200
+                                        0 0x10600
+                                        1 0x1400
+                                        1 0x1800
+                                        1 0x1A00
+                                        0 0x11400
+                                        0 0x11600
+                                        1 0x1E00
+                                        1 0x1A00
+                                        0 0x12600
+                                        0 0x15400
+                                        (-1) (-1)
+                                        1 0x1600
+                                        1 0x1000>;
+        };
 
 	i2c1: i2c@3160000 {
 		#address-cells = <1>;

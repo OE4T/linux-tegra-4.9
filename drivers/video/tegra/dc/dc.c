@@ -64,6 +64,7 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 
 #include <linux/platform/tegra/latency_allowance.h>
 #include <linux/platform/tegra/mc.h>
+#include <soc/tegra/tegra_bpmp.h>
 
 #include "dc_reg.h"
 #include "dc_config.h"
@@ -2307,9 +2308,13 @@ static struct tegra_dc_mode *tegra_dc_get_override_mode(struct tegra_dc *dc)
 		 */
 		u32 val = 0;
 		struct tegra_dc_mode *mode = &override_disp_mode[dc->out->type];
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		struct clk *parent_clk = tegra_disp_clk_get(&dc->ndev->dev,
+				dc->out->parent_clk ? : "plld2");
+#else
 		struct clk *parent_clk = clk_get_sys(NULL,
 				dc->out->parent_clk ? : "pll_d2");
-
+#endif
 		memset(mode, 0, sizeof(struct tegra_dc_mode));
 		mode->pclk = clk_get_rate(parent_clk);
 		mode->rated_pclk = 0;
@@ -3659,7 +3664,7 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 
 	tegra_dc_put(dc);
 
-	clk_prepare_enable(dc->emc_la_clk);
+	tegra_disp_clk_prepare_enable(dc->emc_la_clk);
 
 	return true;
 }
@@ -3879,8 +3884,7 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 	else
 		tegra_dvfs_set_rate(dc->clk, 0);
 
-	if (!tegra_platform_is_linsim())
-		clk_disable_unprepare(dc->emc_la_clk);
+	tegra_disp_clk_disable_unprepare(dc->emc_la_clk);
 }
 
 void tegra_dc_stats_enable(struct tegra_dc *dc, bool enable)
@@ -4237,6 +4241,39 @@ int tegra_dc_slgc_disp0(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
+struct clk *tegra_disp_of_clk_get_by_name(struct device_node *np,
+						const char *name)
+{
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (!tegra_platform_is_silicon() && !tegra_bpmp_running())
+		return of_clk_get_by_name(np, "clk32k_in");
+#endif
+	return of_clk_get_by_name(np, name);
+}
+
+struct clk *tegra_disp_clk_get(struct device *dev, const char *id)
+{
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (!tegra_platform_is_silicon() && !tegra_bpmp_running())
+		return of_clk_get_by_name(dev->of_node, "clk32k_in");
+	else
+		return devm_clk_get(dev, id);
+
+#else
+	return clk_get(dev, id);
+#endif
+}
+
+void tegra_disp_clk_put(struct device *dev, struct clk *clk)
+{
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (tegra_platform_is_silicon() || tegra_bpmp_running())
+		devm_clk_put(dev, clk);
+#else
+	return clk_put(clk);
+#endif
+}
+
 static int tegra_dc_probe(struct platform_device *ndev)
 {
 	struct tegra_dc *dc;
@@ -4254,12 +4291,15 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	struct resource dt_res;
 	struct resource *base_res;
 	struct resource *fb_mem = NULL;
+	char clk_name[16];
 	int ret = 0;
 	void __iomem *base;
 	int irq;
 	int i;
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	static char *clk_name = "disp0";
+#ifndef CONFIG_TEGRA_NVDISPLAY
+#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
+	int partition_id_disa, partition_id_disb;
+#endif
 #endif
 
 #ifdef CONFIG_ARCH_TEGRA_21x_SOC
@@ -4421,10 +4461,14 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 	if (np) {
 		struct resource of_fb_res;
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		tegra_get_fb_resource(&of_fb_res);
+#else
 		if (dc->ctrl_num == 0)
 			tegra_get_fb_resource(&of_fb_res);
 		else /* dc->ctrl_num == 1*/
 			tegra_get_fb2_resource(&of_fb_res);
+#endif
 
 		fb_mem = kzalloc(sizeof(struct resource), GFP_KERNEL);
 		if (fb_mem == NULL) {
@@ -4441,11 +4485,11 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	}
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	clk_name[4] += dc->ctrl_num;
-	clk = clk_get(NULL, clk_name);
+	snprintf(clk_name, sizeof(clk_name), "nvdisplay_p%u", dc->ctrl_num);
 #else
-	clk = clk_get(&ndev->dev, NULL);
+	memset(clk_name, 0, sizeof(clk_name));
 #endif
+	clk = tegra_disp_clk_get(&ndev->dev, clk_name);
 	if (IS_ERR_OR_NULL(clk)) {
 		dev_err(&ndev->dev, "can't get clock\n");
 		ret = -ENOENT;
@@ -4564,7 +4608,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		 * The emc is a shared clock, it will be set based on
 		 * the requirements for each user on the bus.
 		 */
-		emc_clk = clk_get(&ndev->dev, "emc");
+		emc_clk = tegra_disp_clk_get(&ndev->dev, "emc");
 		if (IS_ERR_OR_NULL(emc_clk)) {
 			dev_err(&ndev->dev, "can't get emc clock\n");
 			ret = -ENOENT;
@@ -4576,7 +4620,11 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		 * The emc_la clock is being added to set the floor value
 		 * for emc depending on the LA calculaions for each window
 		 */
-		emc_la_clk = clk_get(&ndev->dev, "emc.la");
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		emc_la_clk = tegra_disp_clk_get(&ndev->dev, "emc_latency");
+#else
+		emc_la_clk = tegra_disp_clk_get(&ndev->dev, "emc.la");
+#endif
 		if (IS_ERR_OR_NULL(emc_la_clk)) {
 			dev_err(&ndev->dev, "can't get emc.la clock\n");
 			ret = -ENOENT;
@@ -4618,12 +4666,12 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		if (!tegra_platform_is_linsim() &&
 			(dc->out->type == TEGRA_DC_OUT_DP ||
 				dc->out->type == TEGRA_DC_OUT_NVSR_DP)) {
-			clk_prepare_enable(dc->clk);
+			tegra_disp_clk_prepare_enable(dc->clk);
 			tegra_periph_reset_assert(dc->clk);
 			udelay(10);
 			tegra_periph_reset_deassert(dc->clk);
 			udelay(10);
-			clk_disable_unprepare(dc->clk);
+			tegra_disp_clk_disable_unprepare(dc->clk);
 		}
 		_tegra_dc_set_default_videomode(dc);
 		dc->enabled = _tegra_dc_enable(dc);
@@ -4761,15 +4809,15 @@ err_disable_dc:
 #ifdef CONFIG_TEGRA_ISOMGR
 	tegra_isomgr_unregister(dc->isomgr_handle);
 #else
-	clk_put(emc_clk);
+	tegra_disp_clk_put(&ndev->dev, emc_clk);
 #endif
-	clk_put(dc->emc_la_clk);
+	tegra_disp_clk_put(&ndev->dev, dc->emc_la_clk);
 err_put_clk:
 #ifdef CONFIG_SWITCH
 	if (dc->switchdev_registered)
 		switch_dev_unregister(&dc->modeset_switch);
 #endif
-	clk_put(clk);
+	tegra_disp_clk_put(&ndev->dev, clk);
 err_iounmap_reg:
 	iounmap(base);
 	if (fb_mem) {
@@ -4839,11 +4887,11 @@ static int tegra_dc_remove(struct platform_device *ndev)
 		dc->isomgr_handle = NULL;
 	}
 #else
-	clk_put(dc->emc_clk);
+	tegra_disp_clk_put(&ndev->dev, dc->emc_clk);
 #endif
-	clk_put(dc->emc_la_clk);
+	tegra_disp_clk_put(&ndev->dev, dc->emc_la_clk);
 
-	clk_put(dc->clk);
+	tegra_disp_clk_put(&ndev->dev, dc->clk);
 	iounmap(dc->base);
 	if (dc->fb_mem)
 		release_resource(dc->base_res);

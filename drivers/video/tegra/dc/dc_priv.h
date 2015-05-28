@@ -27,7 +27,7 @@
 #endif
 #include <linux/tegra-powergate.h>
 #include <video/tegra_dc_ext.h>
-
+#include <soc/tegra/tegra_bpmp.h>
 
 #define WIN_IS_TILED(win)	((win)->flags & TEGRA_WIN_FLAG_TILED)
 #define WIN_IS_ENABLED(win)	((win)->flags & TEGRA_WIN_FLAG_ENABLED)
@@ -368,14 +368,14 @@ static inline unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
 
 static inline int tegra_disp_clk_prepare_enable(struct clk *clk)
 {
-	if (tegra_platform_is_silicon())
+	if (tegra_platform_is_silicon() || tegra_bpmp_running())
 		return clk_prepare_enable(clk);
 	return 0;
 }
 
 static inline void tegra_disp_clk_disable_unprepare(struct clk *clk)
 {
-	if (tegra_platform_is_silicon())
+	if (tegra_platform_is_silicon() || tegra_bpmp_running())
 		clk_disable_unprepare(clk);
 }
 
@@ -585,6 +585,12 @@ void tegra_dc_win_partial_update(struct tegra_dc *dc, struct tegra_dc_win *win,
 	unsigned int height);
 int tegra_dc_slgc_disp0(struct notifier_block *nb, unsigned long unused0,
 	void *unused1);
+
+/* common display clock calls */
+struct clk *tegra_disp_clk_get(struct device *dev, const char *id);
+void tegra_disp_clk_put(struct device *dev, struct clk *clk);
+struct clk *tegra_disp_of_clk_get_by_name(struct device_node *np,
+						const char *name);
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 int tegra_nvdisp_init(struct tegra_dc *dc);

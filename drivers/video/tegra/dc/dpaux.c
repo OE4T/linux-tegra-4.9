@@ -40,22 +40,26 @@ static void __iomem *dpaux_baseaddr[TEGRA_DPAUX_INSTANCE_N];
 
 static DEFINE_MUTEX(dpaux_lock);
 
-static inline struct clk *tegra_dpaux_clk_get(enum tegra_dpaux_instance id)
+static inline struct clk *tegra_dpaux_clk_get(struct device_node *np,
+					enum tegra_dpaux_instance id)
 {
 	if (id >= TEGRA_DPAUX_INSTANCE_N)
 		return ERR_PTR(-EINVAL);
-
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	return tegra_disp_of_clk_get_by_name(np, dpaux_clks[id]);
+#else
 	return clk_get_sys(dpaux_clks[id], NULL);
+#endif
 }
 
-int tegra_dpaux_clk_en(enum tegra_dpaux_instance id)
+int tegra_dpaux_clk_en(struct device_node *np, enum tegra_dpaux_instance id)
 {
-	return tegra_disp_clk_prepare_enable(tegra_dpaux_clk_get(id));
+	return tegra_disp_clk_prepare_enable(tegra_dpaux_clk_get(np, id));
 }
 
-void tegra_dpaux_clk_dis(enum tegra_dpaux_instance id)
+void tegra_dpaux_clk_dis(struct device_node *np, enum tegra_dpaux_instance id)
 {
-	tegra_disp_clk_disable_unprepare(tegra_dpaux_clk_get(id));
+	tegra_disp_clk_disable_unprepare(tegra_dpaux_clk_get(np, id));
 }
 
 static inline void _tegra_dpaux_pad_power(struct tegra_dc *dc,
@@ -76,8 +80,16 @@ __maybe_unused
 void tegra_dpaux_pad_power(struct tegra_dc *dc,
 				enum tegra_dpaux_instance id, bool on)
 {
-	if (!tegra_platform_is_linsim())
-		tegra_dpaux_clk_en(id);
+	struct device_node *np_dp =
+		(dc->ndev->id) ? of_find_node_by_path(DPAUX1_NODE)
+		: of_find_node_by_path(DPAUX_NODE);
+
+	if (!np_dp) {
+		dev_err(&dc->ndev->dev, "dp node not available\n");
+		return;
+	}
+
+	tegra_dpaux_clk_en(np_dp, id);
 
 	tegra_dc_io_start(dc);
 
@@ -86,8 +98,8 @@ void tegra_dpaux_pad_power(struct tegra_dc *dc,
 	mutex_unlock(&dpaux_lock);
 
 	tegra_dc_io_end(dc);
-	if (!tegra_platform_is_linsim())
-		tegra_dpaux_clk_dis(id);
+	tegra_dpaux_clk_dis(np_dp, id);
+	of_node_put(np_dp);
 }
 
 static inline void _tegra_dpaux_config_pad_mode(struct tegra_dc *dc,
@@ -117,7 +129,16 @@ void tegra_dpaux_config_pad_mode(struct tegra_dc *dc,
 					enum tegra_dpaux_instance id,
 					enum tegra_dpaux_pad_mode mode)
 {
-	tegra_dpaux_clk_en(id);
+	struct device_node *np_dp =
+		(dc->ndev->id) ? of_find_node_by_path(DPAUX1_NODE)
+		: of_find_node_by_path(DPAUX_NODE);
+
+	if (!np_dp) {
+		dev_err(&dc->ndev->dev, "dp node not available\n");
+		return;
+	}
+
+	tegra_dpaux_clk_en(np_dp, id);
 	tegra_dc_io_start(dc);
 
 	mutex_lock(&dpaux_lock);
@@ -126,7 +147,8 @@ void tegra_dpaux_config_pad_mode(struct tegra_dc *dc,
 	mutex_unlock(&dpaux_lock);
 
 	tegra_dc_io_end(dc);
-	tegra_dpaux_clk_dis(id);
+	tegra_dpaux_clk_dis(np_dp, id);
+	of_node_put(np_dp);
 }
 
 __maybe_unused

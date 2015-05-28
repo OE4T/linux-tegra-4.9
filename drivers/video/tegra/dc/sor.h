@@ -20,6 +20,7 @@
 
 #include <linux/tegra-soc.h>
 #include <linux/clk/tegra.h>
+#include <soc/tegra/tegra_bpmp.h>
 
 enum {
 	TRAINING_PATTERN_DISABLE = 0,
@@ -204,13 +205,13 @@ static inline void tegra_sor_write_field(struct tegra_dc_sor_data *sor,
 
 static inline void tegra_sor_clk_enable(struct tegra_dc_sor_data *sor)
 {
-	if (tegra_platform_is_silicon())
+	if (tegra_platform_is_silicon() || tegra_bpmp_running())
 		clk_prepare_enable(sor->sor_clk);
 }
 
 static inline void tegra_sor_clk_disable(struct tegra_dc_sor_data *sor)
 {
-	if (tegra_platform_is_silicon())
+	if (tegra_platform_is_silicon() || tegra_bpmp_running())
 		clk_disable_unprepare(sor->sor_clk);
 }
 

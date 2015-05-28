@@ -2040,8 +2040,13 @@ static long tegra_hdmi_get_pclk(struct tegra_dc_mode *mode)
 
 static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	struct clk *parent_clk = tegra_disp_clk_get(&dc->ndev->dev,
+				dc->out->parent_clk ? : "plld2");
+#else
 	struct clk *parent_clk = clk_get(NULL,
 				dc->out->parent_clk ? : "pll_d2");
+#endif
 
 	dc->mode.pclk = tegra_hdmi_get_pclk(&dc->mode);
 
@@ -2049,6 +2054,9 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		dev_err(&dc->ndev->dev, "hdmi: parent clk get failed\n");
 		return 0;
 	}
+
+	if (!tegra_platform_is_silicon())
+		return dc->mode.pclk;
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	if (clk_get_parent(clk) != parent_clk)

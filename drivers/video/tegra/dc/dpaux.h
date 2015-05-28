@@ -31,8 +31,8 @@ enum tegra_dpaux_instance {
 
 void tegra_set_dpaux_addr(void __iomem *dpaux_base,
 				enum tegra_dpaux_instance id);
-int tegra_dpaux_clk_en(enum tegra_dpaux_instance id);
-void tegra_dpaux_clk_dis(enum tegra_dpaux_instance id);
+int tegra_dpaux_clk_en(struct device_node *np, enum tegra_dpaux_instance id);
+void tegra_dpaux_clk_dis(struct device_node *np, enum tegra_dpaux_instance id);
 void tegra_dpaux_pad_power(struct tegra_dc *dc,
 			enum tegra_dpaux_instance id,
 			bool on);

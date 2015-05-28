@@ -502,7 +502,11 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		goto err_release_resource_reg;
 	}
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	clk = tegra_disp_of_clk_get_by_name(np_sor, res_name);
+#else
 	clk = clk_get(NULL, res_name);
+#endif
 	if (IS_ERR_OR_NULL(clk)) {
 		dev_err(&dc->ndev->dev, "sor: can't get clock\n");
 		err = -ENOENT;
@@ -510,7 +514,13 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	}
 
 #ifndef	CONFIG_ARCH_TEGRA_12x_SOC
+
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	safe_clk = tegra_disp_of_clk_get_by_name(np_sor, "sor_safe");
+#else
 	safe_clk = clk_get(NULL, "sor_safe");
+#endif
+
 	if (IS_ERR_OR_NULL(safe_clk)) {
 		dev_err(&dc->ndev->dev, "sor: can't get safe clock\n");
 		err = -ENOENT;
@@ -558,11 +568,17 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	return sor;
 
 err_src: __maybe_unused
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	clk_put(brick_clk);
+#endif
 err_brick: __maybe_unused
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	clk_put(safe_clk);
+#endif
 err_safe: __maybe_unused
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	clk_put(clk);
+#endif
 err_iounmap_reg:
 	devm_iounmap(&dc->ndev->dev, base);
 err_release_resource_reg:
@@ -612,11 +628,14 @@ void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 		of_find_node_by_path(SOR1_NODE) :
 		of_find_node_by_path(SOR_NODE);
 
+	struct device *dev = &sor->dc->ndev->dev;
+
 	if (sor->dc->out->type == TEGRA_DC_OUT_HDMI) {
 		of_node_put(np_sor);
 		np_sor = of_find_node_by_path(SOR1_NODE);
 	}
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	clk_put(sor->sor_clk);
 	if (sor->safe_clk)
 		clk_put(sor->safe_clk);
@@ -624,13 +643,14 @@ void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 		clk_put(sor->brick_clk);
 	if (sor->src_switch_clk)
 		clk_put(sor->src_switch_clk);
-	devm_iounmap(&sor->dc->ndev->dev, sor->base);
-	devm_release_mem_region(&sor->dc->ndev->dev,
+#endif
+	devm_iounmap(dev, sor->base);
+	devm_release_mem_region(dev,
 		sor->res->start, resource_size(sor->res));
 
 	if (!np_sor || !of_device_is_available(np_sor))
 		release_resource(sor->res);
-	devm_kfree(&sor->dc->ndev->dev, sor);
+	devm_kfree(dev, sor);
 	of_node_put(np_sor);
 }
 

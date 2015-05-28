@@ -1678,7 +1678,8 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	clk = clk_get(NULL, dc->ndev->id ? "dpaux1" : "dpaux");
+	clk = tegra_disp_of_clk_get_by_name(np_dp,
+			dc->ndev->id ? "dpaux1" : "dpaux");
 #else
 	clk = clk_get_sys(dc->ndev->id ? "dpaux1" : "dpaux", NULL);
 #endif
@@ -1690,7 +1691,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	}
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	parent_clk = clk_get(NULL, "pll_dp");
+	parent_clk = tegra_disp_of_clk_get_by_name(np_dp, "plldp");
 #else
 	parent_clk = tegra_get_clock_by_name("pll_dp");
 #endif
@@ -1764,7 +1765,9 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 err_edid_destroy:
 	tegra_edid_destroy(dp->dp_edid);
 err_get_clk:
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	clk_put(clk);
+#endif
 err_iounmap_reg:
 	devm_iounmap(&dc->ndev->dev, base);
 err_release_resource_reg:
@@ -2476,8 +2479,10 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 		tegra_dc_sor_destroy(dp->sor);
 	if (dp->dp_edid)
 		tegra_edid_destroy(dp->dp_edid);
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	clk_put(dp->dpaux_clk);
 	clk_put(dp->parent_clk);
+#endif
 	devm_iounmap(&dc->ndev->dev, dp->aux_base);
 	devm_release_mem_region(&dc->ndev->dev,
 		dp->res->start,

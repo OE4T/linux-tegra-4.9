@@ -1462,7 +1462,8 @@ static int akm_of_dt(struct akm_state *st, struct device_node *dn)
 	u8 cfg;
 	int ret;
 
-	ret = nvs_of_dt(dn, &st->cfg, NULL);
+	/* just test if global disable */
+	ret = nvs_of_dt(dn, NULL, NULL);
 	if (ret == -ENODEV)
 		return -ENODEV;
 
@@ -1539,6 +1540,7 @@ static int akm_probe(struct i2c_client *client,
 		goto akm_probe_err;
 	}
 
+	nvs_of_dt(client->dev.of_node, &st->cfg, NULL);
 	ret = st->nvs->probe(&st->nvs_st, st, &client->dev,
 			     &akm_fn_dev, &st->cfg);
 	if (ret) {

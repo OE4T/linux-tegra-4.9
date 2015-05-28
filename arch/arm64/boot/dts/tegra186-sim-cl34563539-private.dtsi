@@ -185,7 +185,8 @@
 
 	smmu: iommu {
 		reg = <0x0 0x12000000 0x0 0x01000000>;
-		mmu-masters = <&host1x                  TEGRA_SWGROUP_HC>,
+		mmu-masters = <&{/gp10b}		TEGRA_SWGROUP_GPUB>,
+			      <&host1x                  TEGRA_SWGROUP_HC>,
 			      <&{/host1x/nvcsi}		TEGRA_SWGROUP_NVCSI>,
 			      <&{/host1x/vic}           TEGRA_SWGROUP_VIC>,
 			      <&{/host1x/vi}            TEGRA_SWGROUP_VI>,

@@ -1810,15 +1810,13 @@ static int bmp_of_dt(struct bmp_state *st, struct device_node *dn)
 {
 	char const *pchar;
 	u8 cfg;
-	unsigned int i;
 	int ret;
 
 	if (dn) {
-		for (i = 0; i < BMP_DEV_N; i++) {
-			ret = nvs_of_dt(dn, &st->cfg[i], NULL);
-			if (ret == -ENODEV)
-				return -ENODEV;
-		}
+		/* just test if global disable */
+		ret = nvs_of_dt(dn, NULL, NULL);
+		if (ret == -ENODEV)
+			return -ENODEV;
 
 		/* this device supports these programmable parameters */
 		if (!(of_property_read_string(dn, "nvi_config", &pchar))) {

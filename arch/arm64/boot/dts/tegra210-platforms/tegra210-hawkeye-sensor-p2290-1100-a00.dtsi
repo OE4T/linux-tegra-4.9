@@ -30,7 +30,7 @@
 		ak8963c@0d {
 			compatible = "ak,ak89xx";
 			reg = <0x0d>;
-			orientation = [ff 00 00 00 ff 00 00 00 01];
+			magnetic_field_matrix = [00 ff 00 01 00 00 00 00 01];
 		};
 
 		cm3218@48 {

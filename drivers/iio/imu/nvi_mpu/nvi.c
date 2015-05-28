@@ -4276,16 +4276,12 @@ static int nvi_id_i2c(struct nvi_state *st, const struct i2c_device_id *id)
 static int nvi_of_dt(struct nvi_state *st, struct device_node *dn)
 {
 	u32 tmp;
-	unsigned int i;
 	int ret;
 
-	/* common NVS parameters */
-	for (i = 0; i < DEV_N; i++) {
-		ret = nvs_of_dt(dn, &st->cfg[i], NULL);
-		if (ret == -ENODEV)
-			/* the entire device has been disabled */
-			return -ENODEV;
-	}
+	/* just test if global disable */
+	ret = nvs_of_dt(dn, NULL, NULL);
+	if (ret == -ENODEV)
+		return -ENODEV;
 
 	/* device specific parameters */
 	if (!of_property_read_u32(dn, "invensense,standby_en", &tmp)) {
@@ -4385,6 +4381,7 @@ static int nvi_probe(struct i2c_client *client,
 
 	n = 0;
 	for (i = 0; i < DEV_N; i++) {
+		nvs_of_dt(client->dev.of_node, &st->cfg[i], NULL);
 		ret = st->nvs->probe(&st->nvs_st[i], st, &client->dev,
 				     &nvi_fn_dev, &st->cfg[i]);
 		if (!ret) {

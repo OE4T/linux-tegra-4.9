@@ -170,8 +170,8 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 
 	if (actmon->init == ACTMON_OFF) {
 		if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA21) {
-			actmon->usecs_per_sample = 20;
-			actmon->k = 3;
+			actmon->usecs_per_sample = 80;
+			actmon->k = 4;
 		} else {
 			actmon->usecs_per_sample = 10;
 			actmon->k = 1;

@@ -951,6 +951,8 @@ static int tegra210_adsp_compr_free(struct snd_compr_stream *cstream)
 
 	pm_runtime_put(prtd->dev);
 
+	tegra210_adsp_deallocate_dma_buffer(&prtd->buf);
+
 	prtd->fe_apm->fe = 0;
 	cstream->runtime->private_data = NULL;
 	devm_kfree(prtd->dev, prtd);
@@ -1472,7 +1474,7 @@ static void tegra210_adsp_pcm_free(struct snd_pcm *pcm)
 		tegra210_adsp_deallocate_dma_buffer(
 			&pcm->streams[stream].substream->dma_buffer);
 	}
-	if (pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream) {
+	if (pcm->streams[SNDRV_PCM_STREAM_CAPTURE].substream) {
 		int stream = SNDRV_PCM_STREAM_CAPTURE;
 
 		tegra210_adsp_deallocate_dma_buffer(

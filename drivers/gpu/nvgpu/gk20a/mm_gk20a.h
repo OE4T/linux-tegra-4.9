@@ -131,7 +131,6 @@ enum gmmu_pgsz_gk20a {
 };
 
 struct gk20a_comptags {
-	u32 real_offset;
 	u32 offset;
 	u32 lines;
 	u32 allocated_lines;

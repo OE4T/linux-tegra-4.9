@@ -39,6 +39,10 @@
  */
 #define NVGPU_ALLOC_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE   (1 << 2)
 
+/* Flags in nvgpu_alloc_obj_ctx_args.flags */
+#define NVGPU_ALLOC_OBJ_FLAGS_GFXP		(1 << 1)
+#define NVGPU_ALLOC_OBJ_FLAGS_CILP		(1 << 2)
+
 #endif /* _UAPI__LINUX_NVGPU_T18X_IOCTL_H_ */
 
 

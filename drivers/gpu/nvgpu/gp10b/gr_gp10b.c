@@ -475,7 +475,7 @@ static int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 	if (err)
 		return err;
 
-	if (flags == NVGPU_GR_PREEMPTION_MODE_GFXP) {
+	if (flags & NVGPU_ALLOC_OBJ_FLAGS_GFXP) {
 		u32 spill_size =
 			gr_gpc0_swdx_rm_spill_buffer_size_256b_default_v();
 		u32 pagepool_size = g->ops.gr.pagepool_default_size(g) *
@@ -528,7 +528,7 @@ static int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 	}
 
 	if (class == PASCAL_COMPUTE_A) {
-		if (flags == NVGPU_GR_PREEMPTION_MODE_CILP)
+		if (flags & NVGPU_ALLOC_OBJ_FLAGS_CILP)
 			(*gr_ctx)->preempt_mode = NVGPU_GR_PREEMPTION_MODE_CILP;
 		else
 			(*gr_ctx)->preempt_mode = NVGPU_GR_PREEMPTION_MODE_CTA;

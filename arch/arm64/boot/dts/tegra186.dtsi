@@ -43,6 +43,11 @@
 		spi0 = &spi0;
 		spi2 = &spi2;
 		spi3 = &spi3;
+		serial0 = &uarta;
+		serial1 = &uartb;
+		serial3 = &uartd;
+		serial4 = &uarte;
+		serial5 = &uartf;
 	};
 
 	tegra-carveouts {
@@ -455,14 +460,6 @@
 		status = "diasbled";
 	};
 
-	uarta: serial@70006000 {
-		compatible = "nvidia,tegra210-uart";
-		reg = <0x0 0x70006000 0x0 0x40>;
-		reg-shift = <2>;
-		interrupts = <0 36 0x04>;
-		clock-frequency = <408000000>;
-		nvidia,memory-clients = <14>;
-	};
 
 	spi0: spi@03210000 {
 		compatible = "nvidia,tegra186-spi";
@@ -569,6 +566,71 @@
 			      0 107 0x04>;
 		#dma-cells = <1>;
 		status = "okay";
+	};
+
+	uarta: serial@70006000 {
+		compatible = "nvidia,tegra210-uart";
+		reg = <0x0 0x03100000 0x0 0x40>;
+		reg-shift = <2>;
+		interrupts = <0 36 0x04>;
+		clock-frequency = <408000000>;
+		nvidia,memory-clients = <14>;
+		nvidia,dma-request-selector = <&gpcdma 8>;
+		dmas = <&gpcdma 8>, <&gpcdma 8>;
+		dma-names = "rx", "tx";
+		clocks = <&tegra_car TEGRA186_CLK_UARTA>;
+	};
+
+	uartb: serial@3110000 {
+		compatible = "nvidia,tegra186-hsuart";
+		reg = <0x0 0x03110000 0x0 0x40>;
+		reg-shift = <2>;
+		interrupts = <0 113 0x04>;
+		nvidia,memory-clients = <14>;
+		nvidia,dma-request-selector = <&gpcdma 9>;
+		dmas = <&gpcdma 9>, <&gpcdma 9>;
+		dma-names = "rx", "tx";
+		clocks = <&tegra_car TEGRA186_CLK_UARTB>;
+		status = "disabled";
+	};
+
+	uartd: serial@3130000 {
+		compatible = "nvidia,tegra186-hsuart";
+		reg = <0x0 0x03130000 0x0 0x40>;
+		reg-shift = <2>;
+		interrupts = <0 115 0x04>;
+		nvidia,memory-clients = <14>;
+		nvidia,dma-request-selector = <&gpcdma 19>;
+		dmas = <&gpcdma 19>, <&gpcdma 19>;
+		dma-names = "rx", "tx";
+		clocks = <&tegra_car TEGRA186_CLK_UARTD>;
+		status = "disabled";
+	};
+
+	uarte: serial@3140000 {
+		compatible = "nvidia,tegra186-hsuart";
+		reg = <0x0 0x03140000 0x0 0x40>;
+		reg-shift = <2>;
+		interrupts = <0 116 0x04>;
+		nvidia,memory-clients = <14>;
+		nvidia,dma-request-selector = <&gpcdma 20>;
+		dmas = <&gpcdma 20>, <&gpcdma 20>;
+		dma-names = "rx", "tx";
+		clocks = <&tegra_car TEGRA186_CLK_UARTE>;
+		status = "disabled";
+	};
+
+	uartf: serial@3150000 {
+		compatible = "nvidia,tegra186-hsuart";
+		reg = <0x0 0x03150000 0x0 0x40>;
+		reg-shift = <2>;
+		interrupts = <0 117 0x04>;
+		nvidia,memory-clients = <14>;
+		nvidia,dma-request-selector = <&gpcdma 12>;
+		dmas = <&gpcdma 12>, <&gpcdma 12>;
+		dma-names = "rx", "tx";
+		clocks = <&tegra_car TEGRA186_CLK_UARTF>;
+		status = "disabled";
 	};
 
 	pinmux: pinmux@2430000 {

@@ -55,13 +55,12 @@
 
 #define TMDS_NODE	"/host1x/sor1"
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
 static struct of_device_id tegra_sor_pd[] = {
+	{ .compatible = "nvidia, tegra186-sor-pd", },
 	{ .compatible = "nvidia, tegra210-sor-pd", },
 	{ .compatible = "nvidia, tegra132-sor-pd", },
 	{},
 };
-#endif
 
 /* Possibly should be moved to hdmi_common.h */
 static struct fb_videomode tegra_dc_vga_mode = {
@@ -537,13 +536,9 @@ static void tegra_hdmi_ddc_power_toggle(int value)
 	if (dc_hdmi == NULL)
 		return;
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
 	partition_id = tegra_pd_get_powergate_id(tegra_sor_pd);
 	if (partition_id < 0)
 		return;
-#else
-	partition_id = TEGRA_POWERGATE_SOR;
-#endif
 
 	if (value == 0) {
 		_tegra_hdmi_ddc_disable(dc_hdmi);

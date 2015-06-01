@@ -26,7 +26,6 @@
 
 #define DSI_PANEL_RESET		1
 
-#define PRISM_THRESHOLD		50
 #define HYST_VAL		25
 
 static bool reg_requested;
@@ -170,12 +169,8 @@ static int dsi_a_1200_1920_8_0_bl_notify(struct device *dev, int brightness)
 	bl = (struct backlight_device *)dev_get_drvdata(dev);
 	pb = (struct pwm_bl_data *)dev_get_drvdata(&bl->dev);
 
-	if (dc_dev) {
-		if (brightness <= PRISM_THRESHOLD)
-			nvsd_enbl_dsbl_prism(dc_dev, false);
-		else if (brightness > PRISM_THRESHOLD + HYST_VAL)
-			nvsd_enbl_dsbl_prism(dc_dev, true);
-	}
+	if (dc_dev)
+		nvsd_check_prism_thresh(dc_dev, brightness, HYST_VAL);
 
 	cur_sd_brightness = atomic_read(&sd_brightness);
 	/* SD brightness is a percentage */

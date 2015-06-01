@@ -42,6 +42,7 @@
 
 #include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"
+#include "tegra210_xbar_alt.h"
 
 #define DRV_NAME "tegra-snd-t210ref-mobile-rt5639"
 
@@ -67,6 +68,23 @@ struct tegra_t210ref {
 	struct regulator *spk_reg;
 	struct regulator *dmic_reg;
 	struct snd_soc_card *pcard;
+	int rate_via_kcontrol;
+};
+
+static const int tegra_t210ref_srate_values[] = {
+	0,
+	8000,
+	16000,
+	44100,
+	48000,
+	11025,
+	22050,
+	24000,
+	32000,
+	88200,
+	96000,
+	176000,
+	192000,
 };
 
 static struct snd_soc_jack tegra_t210ref_hp_jack;
@@ -176,16 +194,19 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_stream *dai_params;
 	unsigned int idx, mclk, clk_out_rate;
-	int err;
+	int err, codec_rate, clk_rate;
 
-	switch (rate) {
+	codec_rate = tegra_t210ref_srate_values[machine->rate_via_kcontrol];
+	clk_rate = (machine->rate_via_kcontrol) ? codec_rate : rate;
+
+	switch (clk_rate) {
 	case 11025:
 	case 22050:
 	case 44100:
 	case 88200:
 	case 176000:
 		clk_out_rate = 11289600; /* Codec rate */
-		mclk = 11289600 * 2; /* PLL_A rate */
+		mclk = 11289600 * 4; /* PLL_A rate */
 		break;
 	case 8000:
 	case 16000:
@@ -196,19 +217,24 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	case 192000:
 	default:
 		clk_out_rate = 12288000;
-		mclk = 12288000 * 2;
+		mclk = 12288000 * 3;
 		break;
 	}
 
 	pr_info("Setting pll_a = %d Hz clk_out = %d Hz\n",
 			mclk, clk_out_rate);
 	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
-				rate, mclk, clk_out_rate);
+				clk_rate, mclk, clk_out_rate);
 	if (err < 0) {
 		dev_err(card->dev, "Can't configure clocks\n");
 		return err;
 	}
 
+	err = tegra210_xbar_set_clock(mclk);
+	if (err < 0) {
+		dev_err(card->dev, "Can't configure xbar clock = %d Hz\n", mclk);
+		return err;
+	}
 
 	idx = tegra_machine_get_codec_dai_link_idx("rt5639-playback");
 	/* check if idx has valid number */
@@ -223,7 +249,8 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		}
 
 		/* update link_param to update hw_param for DAPM */
-		dai_params->rate_min = rate;
+		dai_params->rate_min = (machine->rate_via_kcontrol) ?
+			codec_rate : rate;
 		dai_params->channels_min = channels;
 		dai_params->formats = formats;
 
@@ -258,6 +285,16 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 			dev_err(card->dev, "Can't set cpu dai slot ctrl\n");
 			return err;
 		}
+	}
+
+	idx = tegra_machine_get_codec_dai_link_idx("spdif-dit-3");
+	if (idx != -EINVAL) {
+		dai_params =
+		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+
+		/* update link_param to update hw_param for DAPM */
+		dai_params->rate_min = (machine->rate_via_kcontrol) ?
+			codec_rate : rate;
 	}
 
 	return 0;
@@ -516,14 +553,56 @@ static int tegra_t210ref_resume_pre(struct snd_soc_card *card)
 	return 0;
 }
 
-static const struct snd_soc_dapm_route tegra_t210ref_audio_map[] = {
+static const char * const tegra_t210ref_srate_text[] = {
+	"None",
+	"8kHz",
+	"16kHz",
+	"44kHz",
+	"48kHz",
+	"11kHz",
+	"22kHz",
+	"24kHz",
+	"32kHz",
+	"88kHz",
+	"96kHz",
+	"176kHz",
+	"192kHz",
 };
+
+static int tegra_t210ref_codec_get_rate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
+
+	ucontrol->value.integer.value[0] = machine->rate_via_kcontrol;
+
+	return 0;
+}
+
+static int tegra_t210ref_codec_put_rate(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
+
+	/* set the rate control flag */
+	machine->rate_via_kcontrol = ucontrol->value.integer.value[0];
+
+	return 0;
+}
+
+static const struct soc_enum tegra_t210ref_codec_rate =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_t210ref_srate_text),
+		tegra_t210ref_srate_text);
 
 static const struct snd_kcontrol_new tegra_t210ref_controls[] = {
 	SOC_DAPM_PIN_SWITCH("x Int Spk"),
 	SOC_DAPM_PIN_SWITCH("x Headphone Jack"),
 	SOC_DAPM_PIN_SWITCH("x Mic Jack"),
 	SOC_DAPM_PIN_SWITCH("x Int Mic"),
+	SOC_ENUM_EXT("codec-x rate", tegra_t210ref_codec_rate,
+		tegra_t210ref_codec_get_rate, tegra_t210ref_codec_put_rate),
 };
 
 static int tegra_t210ref_remove(struct snd_soc_card *card)

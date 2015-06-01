@@ -873,4 +873,9 @@
 			       <0x3F800000 0x00018000>; /* ARAM ALIAS 0 */
 	     status = "disabled";
 	};
+
+	roc-flush {
+		compatible = "nvidia,tegra186-roc-flush";
+		reg = <0x0 0x0e080000 0x0 0x10000>;
+	};
 };

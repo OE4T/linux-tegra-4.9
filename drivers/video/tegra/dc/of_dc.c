@@ -589,6 +589,10 @@ static int parse_sd_settings(struct device_node *np,
 	}
 
 	OF_DC_LOG("nvidia,sd-enable %d\n", sd_settings->enable);
+	if (!of_property_read_u32(np, "nvidia,enable-threshold", &temp)) {
+		sd_settings->enable_threshold = (u8) temp;
+		OF_DC_LOG("nvidia,enable-threshold %d\n", temp);
+	}
 
 	if (!of_property_read_u32(np, "nvidia,use-auto-pwm", &temp)) {
 		sd_settings->use_auto_pwm = (bool) temp;

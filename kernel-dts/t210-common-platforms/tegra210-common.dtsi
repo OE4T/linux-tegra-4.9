@@ -45,6 +45,22 @@
 		status = "okay";
 	};
 
+	pmc@7000e400 {
+		io-pad-defaults {
+			pex-bias {
+				nvidia,deep-power-down-enable;
+			};
+
+			pex-clk1 {
+				nvidia,deep-power-down-enable;
+			};
+
+			pex-clk2 {
+				nvidia,deep-power-down-enable;
+			};
+		};
+	};
+
 	extcon {
 		id_gpio_extcon: extcon@0 {
 			compatible = "extcon-gpio";

@@ -1708,6 +1708,14 @@ static struct device_node *parse_dp_settings(struct platform_device *ndev,
 		OF_DC_LOG("tx_pu_disable %d\n", dpout->tx_pu_disable);
 	}
 	if (!of_property_read_u32(np_dp_panel,
+			"nvidia,lanes", &temp)) {
+		dpout->lanes = (int)temp;
+		OF_DC_LOG("lanes %d\n", dpout->lanes);
+	} else {
+		dpout->lanes = 4;
+		OF_DC_LOG("default lanes %d\n", dpout->lanes);
+	}
+	if (!of_property_read_u32(np_dp_panel,
 			"nvidia,link-bw", &temp)) {
 		dpout->link_bw = (u8)temp;
 		OF_DC_LOG("link_bw %d\n", dpout->link_bw);

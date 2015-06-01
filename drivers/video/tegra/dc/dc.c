@@ -2177,6 +2177,10 @@ int tegra_dc_update_cmu_aligned(struct tegra_dc *dc, struct tegra_dc_cmu *cmu)
 	int ret;
 
 	mutex_lock(&dc->lock);
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return 0;
+	}
 	ret = _tegra_dc_update_cmu_aligned(dc, cmu, false);
 	mutex_unlock(&dc->lock);
 

@@ -20,6 +20,8 @@
 #include <linux/cpu.h>
 #include <linux/notifier.h>
 #include <linux/tegra-mce.h>
+#include <linux/tegra-soc.h>
+
 #include <asm/smp_plat.h>
 
 #define SMC_SIP_INVOKE_MCE	0x82FFFF00
@@ -197,7 +199,7 @@ EXPORT_SYMBOL(tegra_mce_is_sc7_allowed);
  *
  * Returns 0 if success.
  */
-static int tegra_mce_online_core(int cpu)
+int tegra_mce_online_core(int cpu)
 {
 	struct mce_regs regs;
 	regs.args[0] = cpu_logical_map(cpu);
@@ -214,7 +216,7 @@ EXPORT_SYMBOL(tegra_mce_online_core);
  *
  * Returns 0 if success.
  */
-static int tegra_mce_cc3_ctrl(u32 freq, u32 volt, u8 enable)
+int tegra_mce_cc3_ctrl(u32 freq, u32 volt, u8 enable)
 {
 	struct mce_regs regs;
 	regs.args[0] = freq;
@@ -406,3 +408,33 @@ abort:
 fs_initcall(mce_debugfs_init);
 
 #endif
+
+static __init int tegra_mce_init(void)
+{
+	u32 major = 0;
+	u32 minor = 0;
+
+	/* Skip validation for pre-Si */
+	if (!tegra_platform_is_silicon())
+		return 0;
+
+	/* Validate ARI version */
+	if (tegra_mce_read_versions(&major, &minor))
+		panic("tegra-mce: ARI version query failed.\n");
+
+	pr_info("tegra-mce: ARI versions HW=%d:%d, SW=%d:%d\n",
+		major, minor, CUR_ARI_VER_MAJOR, CUR_ARI_VER_MINOR);
+
+	if (major > CUR_ARI_VER_MAJOR)
+		pr_warn("tegra-mce: ARI HW is newer than SW (%d:%d > %d:%d).\n",
+			CUR_ARI_VER_MAJOR, CUR_ARI_VER_MINOR,
+			major, minor);
+
+	if (major < CUR_ARI_VER_MAJOR || minor < CUR_ARI_VER_MINOR)
+		pr_warn("tegra-mce: ARI HW is older than SW (%d:%d > %d:%d).\n",
+			CUR_ARI_VER_MAJOR, CUR_ARI_VER_MINOR,
+			major, minor);
+
+	return 0;
+}
+early_initcall(tegra_mce_init);

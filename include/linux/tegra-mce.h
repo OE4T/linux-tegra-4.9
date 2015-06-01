@@ -17,6 +17,13 @@
 #ifndef _LINUX_TEGRA_MCE_H
 #define _LINUX_TEGRA_MCE_H
 
+/* NOTE:
+ * For correct version validation, below two defines need to be
+ * updated whenever there is a new ARI implementation.
+ */
+#define CUR_ARI_VER_MAJOR	1
+#define CUR_ARI_VER_MINOR	2
+
 enum {
 	TEGRA_MCE_XOVER_C1_C6, /* Only valid for Denver */
 	TEGRA_MCE_XOVER_CC1_CC6,
@@ -86,6 +93,8 @@ int tegra_mce_update_crossover_time(u32 type, u32 time);
 int tegra_mce_read_cstate_stats(u32 state, u32 *stats);
 int tegra_mce_write_cstate_stats(u32 state, u32 stats);
 int tegra_mce_is_sc7_allowed(u32 state, u32 wake, u32 *allowed);
+int tegra_mce_online_core(int cpu);
+int tegra_mce_cc3_ctrl(u32 freq, u32 volt, u8 enable);
 int tegra_mce_echo_data(u32 data, int *matched);
 int tegra_mce_read_versions(u32 *major, u32 *minor);
 int tegra_mce_enum_features(u64 *features);

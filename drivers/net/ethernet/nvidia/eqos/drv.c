@@ -4367,10 +4367,10 @@ static VOID DWC_ETH_QOS_config_timer_registers(
 		 *       achive 20ns accuracy.
 		 *
 		 * 2^x * y == (y << x), hence
-		 * 2^32 * 50000000 ==> (50000000 << 32)
+		 * 2^32 * 6250000 ==> (6250000 << 32)
 		 * */
-		temp = (u64)(50000000ULL << 32);
-		pdata->default_addend = div_u64(temp, 62500000);
+		temp = (u64)(6250000ULL << 32);
+		pdata->default_addend = div_u64(temp, 12500000);
 
 		hw_if->config_addend(pdata->default_addend);
 
@@ -5129,10 +5129,10 @@ static int DWC_ETH_QOS_handle_hwtstamp_ioctl(struct DWC_ETH_QOS_prv_data *pdata,
 		 *       achive 20ns accuracy.
 		 *
 		 * 2^x * y == (y << x), hence
-		 * 2^32 * 50000000 ==> (50000000 << 32)
+		 * 2^32 * 6250000 ==> (6250000 << 32)
 		 * */
-		temp = (u64)(50000000ULL << 32);
-		pdata->default_addend = div_u64(temp, 62500000);
+		temp = (u64)(6250000ULL << 32);
+		pdata->default_addend = div_u64(temp, 12500000);
 
 		hw_if->config_addend(pdata->default_addend);
 

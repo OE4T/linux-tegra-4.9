@@ -156,6 +156,13 @@ static int gp10b_fifo_resetup_ramfc(struct channel_gk20a *c)
 	gk20a_dbg_fn("");
 
 	inst_ptr = c->inst_block.cpu_va;
+
+	/* disable channel */
+	c->g->ops.fifo.disable_channel(c);
+
+	/* preempt the channel */
+	WARN_ON(c->g->ops.fifo.preempt_channel(c->g, c->hw_chid));
+
 	if (c->sync) {
 		u32 v = pbdma_allowed_syncpoints_0_valid_f(1);
 
@@ -166,7 +173,14 @@ static int gp10b_fifo_resetup_ramfc(struct channel_gk20a *c)
 		v |= pbdma_allowed_syncpoints_0_index_f(syncpt_id);
 
 		gk20a_mem_wr32(inst_ptr, ram_fc_allowed_syncpoints_w(), v);
+	} else {
+		gk20a_mem_wr32(inst_ptr, ram_fc_allowed_syncpoints_w(), 0);
 	}
+
+	/* enable channel */
+	gk20a_writel(c->g, ccsr_channel_r(c->hw_chid),
+		gk20a_readl(c->g, ccsr_channel_r(c->hw_chid)) |
+		ccsr_channel_enable_set_true_f());
 
 	gk20a_dbg_fn("done");
 

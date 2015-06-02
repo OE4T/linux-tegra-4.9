@@ -1,7 +1,7 @@
 /*
  * tegra210_mixer_alt.c - Tegra210 MIXER driver
  *
- * Copyright (c) 2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -196,6 +196,8 @@ static int tegra210_mixer_set_audio_cif(struct tegra210_mixer *mixer,
 	int channels, audio_bits;
 	struct tegra210_xbar_cif_conf cif_conf;
 
+	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
+
 	channels = params_channels(params);
 	if (channels < 2)
 		return -EINVAL;
@@ -211,16 +213,10 @@ static int tegra210_mixer_set_audio_cif(struct tegra210_mixer *mixer,
 		return -EINVAL;
 	}
 
-	cif_conf.threshold = 0;
 	cif_conf.audio_channels = channels;
 	cif_conf.client_channels = channels;
 	cif_conf.audio_bits = audio_bits;
 	cif_conf.client_bits = audio_bits;
-	cif_conf.expand = 0;
-	cif_conf.stereo_conv = 0;
-	cif_conf.replicate = 0;
-	cif_conf.truncate = 0;
-	cif_conf.mono_conv = 0;
 
 	mixer->soc_data->set_audio_cif(mixer->regmap, reg, &cif_conf);
 	return 0;

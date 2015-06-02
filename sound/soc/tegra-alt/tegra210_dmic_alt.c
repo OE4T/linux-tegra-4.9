@@ -24,6 +24,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
 #include <linux/slab.h>
+#include <linux/tegra-soc.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -73,9 +74,9 @@ static int tegra210_dmic_runtime_suspend(struct device *dev)
 	struct tegra210_dmic *dmic = dev_get_drvdata(dev);
 	regcache_cache_only(dmic->regmap, true);
 
-#ifndef CONFIG_MACH_GRENADA
-	clk_disable_unprepare(dmic->clk_dmic);
-#endif
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
+		clk_disable_unprepare(dmic->clk_dmic);
+
 	pm_runtime_put_sync(dev->parent);
 
 	return 0;
@@ -92,13 +93,13 @@ static int tegra210_dmic_runtime_resume(struct device *dev)
 		return ret;
 	}
 
-#ifndef CONFIG_MACH_GRENADA
-	ret = clk_prepare_enable(dmic->clk_dmic);
-	if (ret) {
-		dev_err(dev, "clk_enable failed: %d\n", ret);
-		return ret;
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		ret = clk_prepare_enable(dmic->clk_dmic);
+		if (ret) {
+			dev_err(dev, "clk_enable failed: %d\n", ret);
+			return ret;
+		}
 	}
-#endif
 
 	regcache_cache_only(dmic->regmap, false);
 	regcache_sync(dmic->regmap);
@@ -125,14 +126,16 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 	int channels, srate, dmic_clk, osr = TEGRA210_DMIC_OSR_64;
 	struct tegra210_xbar_cif_conf cif_conf;
 
+	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
+
 	channels = params_channels(params);
 	srate = params_rate(params);
 	dmic_clk = (1 << (6+osr)) * (srate/2);
 
-#ifdef CONFIG_MACH_GRENADA
-	program_dmic_gpio();
-	program_dmic_clk(dmic_clk);
-#endif
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		program_dmic_gpio();
+		program_dmic_clk(dmic_clk);
+	}
 
 	regmap_update_bits(dmic->regmap,
 				TEGRA210_DMIC_CTRL,
@@ -150,7 +153,6 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 				((1 << channels) - 1) <<
 				   TEGRA210_DMIC_CTRL_CHANNEL_SELECT_SHIFT);
 
-	cif_conf.threshold = 0;
 	cif_conf.audio_channels = channels;
 	cif_conf.client_channels = channels;
 
@@ -167,11 +169,6 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_24;
-	cif_conf.expand = 0;
-	cif_conf.stereo_conv = 0;
-	cif_conf.replicate = 0;
-	cif_conf.truncate = 0;
-	cif_conf.mono_conv = 0;
 
 	dmic->soc_data->set_audio_cif(dmic->regmap, TEGRA210_DMIC_TX_CIF_CTRL,
 		&cif_conf);
@@ -358,11 +355,13 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 
 	dmic->soc_data = soc_data;
 
-	dmic->clk_dmic = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(dmic->clk_dmic)) {
-		dev_err(&pdev->dev, "Can't retrieve dmic clock\n");
-		ret = PTR_ERR(dmic->clk_dmic);
-		goto err;
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		dmic->clk_dmic = devm_clk_get(&pdev->dev, NULL);
+		if (IS_ERR(dmic->clk_dmic)) {
+			dev_err(&pdev->dev, "Can't retrieve dmic clock\n");
+			ret = PTR_ERR(dmic->clk_dmic);
+			goto err;
+		}
 	}
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -430,7 +429,8 @@ err_suspend:
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 err_clk_put:
-	devm_clk_put(&pdev->dev, dmic->clk_dmic);
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
+		devm_clk_put(&pdev->dev, dmic->clk_dmic);
 err:
 	return ret;
 }

@@ -37,7 +37,7 @@
 #include <linux/delay.h>
 #include <linux/debugfs.h>
 #include <linux/tegra-powergate.h>
-
+#include <linux/tegra-soc.h>
 
 #include "tegra210_xbar_alt.h"
 #include "tegra210_i2s_alt.h"
@@ -69,40 +69,44 @@ static int tegra210_i2s_set_clock_rate(struct device *dev, int clock_rate)
 {
 	unsigned int val;
 	struct tegra210_i2s *i2s = dev_get_drvdata(dev);
-	int ret;
+	int ret = 0;
 
 	regmap_read(i2s->regmap, TEGRA210_I2S_CTRL, &val);
 
-	if ((val & TEGRA210_I2S_CTRL_MASTER_EN_MASK) ==
-			TEGRA210_I2S_CTRL_MASTER_EN) {
-		ret = clk_set_parent(i2s->clk_i2s, i2s->clk_pll_a_out0);
-		if (ret) {
-			dev_err(dev, "Can't set parent of I2S clock\n");
-			return ret;
-		}
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		if ((val & TEGRA210_I2S_CTRL_MASTER_EN_MASK) ==
+				TEGRA210_I2S_CTRL_MASTER_EN) {
+			ret = clk_set_parent(i2s->clk_i2s, i2s->clk_pll_a_out0);
+			if (ret) {
+				dev_err(dev, "Can't set parent of I2S clock\n");
+				return ret;
+			}
 
-		ret = clk_set_rate(i2s->clk_i2s, clock_rate);
-		if (ret) {
-			dev_err(dev, "Can't set I2S clock rate: %d\n", ret);
-			return ret;
-		}
-	} else {
-		ret = clk_set_rate(i2s->clk_i2s_sync, clock_rate);
-		if (ret) {
-			dev_err(dev, "Can't set I2S sync clock rate\n");
-			return ret;
-		}
+			ret = clk_set_rate(i2s->clk_i2s, clock_rate);
+			if (ret) {
+				dev_err(dev,
+					"Can't set I2S clock rate: %d\n", ret);
+				return ret;
+			}
+		} else {
+			ret = clk_set_rate(i2s->clk_i2s_sync, clock_rate);
+			if (ret) {
+				dev_err(dev, "Can't set I2S sync clock rate\n");
+				return ret;
+			}
 
-		ret = clk_set_parent(i2s->clk_i2s, i2s->clk_audio_sync);
-		if (ret) {
-			dev_err(dev, "Can't set parent of i2s clock\n");
-			return ret;
-		}
+			ret = clk_set_parent(i2s->clk_i2s, i2s->clk_audio_sync);
+			if (ret) {
+				dev_err(dev, "Can't set parent of i2s clock\n");
+				return ret;
+			}
 
-		ret = clk_set_rate(i2s->clk_i2s, clock_rate);
-		if (ret) {
-			dev_err(dev, "Can't set I2S clock rate: %d\n", ret);
-			return ret;
+			ret = clk_set_rate(i2s->clk_i2s, clock_rate);
+			if (ret) {
+				dev_err(dev,
+					"Can't set I2S clock rate: %d\n", ret);
+				return ret;
+			}
 		}
 	}
 
@@ -160,8 +164,8 @@ static int tegra210_i2s_get_status(struct tegra210_i2s *i2s,
 	unsigned int status_reg, val;
 
 	status_reg = (direction == SNDRV_PCM_STREAM_PLAYBACK) ?
-		TEGRA210_I2S_AXBAR_TX_STATUS :
-		TEGRA210_I2S_AXBAR_RX_STATUS;
+		TEGRA210_I2S_AXBAR_RX_STATUS :
+		TEGRA210_I2S_AXBAR_TX_STATUS;
 
 	regmap_read(i2s->regmap, status_reg, &val);
 	val = val & 0x00000001;
@@ -220,21 +224,27 @@ static int tegra210_i2s_runtime_suspend(struct device *dev)
 	struct tegra210_i2s *i2s = dev_get_drvdata(dev);
 	int ret;
 
-	if (!IS_ERR(i2s->pin_idle_state)) {
-		ret = pinctrl_select_state(i2s->pinctrl, i2s->pin_idle_state);
-		if (ret < 0)
-			dev_err(dev, "setting dap pinctrl idle state failed\n");
-	}
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		if (!IS_ERR(i2s->pin_idle_state)) {
+			ret = pinctrl_select_state(
+				i2s->pinctrl, i2s->pin_idle_state);
+			if (ret < 0)
+				dev_err(dev, "setting dap pinctrl idle state failed\n");
+		}
 
-	if (i2s->num_supplies > 0) {
-		ret = regulator_bulk_disable(i2s->num_supplies,
-							i2s->supplies);
-		if (ret < 0)
-			dev_err(dev, "failed to disable i2s io regulator\n");
-	}
+		if (i2s->num_supplies > 0) {
+			ret = regulator_bulk_disable(i2s->num_supplies,
+								i2s->supplies);
+			if (ret < 0)
+				dev_err(dev, "failed to disable i2s io regulator\n");
+		}
 
-	regcache_cache_only(i2s->regmap, true);
-	clk_disable_unprepare(i2s->clk_i2s);
+		regcache_cache_only(i2s->regmap, true);
+
+		clk_disable_unprepare(i2s->clk_i2s);
+	} else
+		regcache_cache_only(i2s->regmap, true);
+
 	pm_runtime_put_sync(dev->parent);
 
 	return 0;
@@ -251,24 +261,26 @@ static int tegra210_i2s_runtime_resume(struct device *dev)
 		return ret;
 	}
 
-	if (!IS_ERR(i2s->pin_default_state)) {
-		ret = pinctrl_select_state(i2s->pinctrl,
-					i2s->pin_default_state);
-		if (ret < 0)
-			dev_err(dev, "setting dap pinctrl default state failed\n");
-	}
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		if (!IS_ERR(i2s->pin_default_state)) {
+			ret = pinctrl_select_state(i2s->pinctrl,
+						i2s->pin_default_state);
+			if (ret < 0)
+				dev_err(dev, "setting dap pinctrl default state failed\n");
+		}
 
-	if (i2s->num_supplies > 0) {
-		ret = regulator_bulk_enable(i2s->num_supplies,
-							i2s->supplies);
-		if (ret < 0)
-			dev_err(dev, "failed to enable i2s io regulator\n");
-	}
+		if (i2s->num_supplies > 0) {
+			ret = regulator_bulk_enable(i2s->num_supplies,
+								i2s->supplies);
+			if (ret < 0)
+				dev_err(dev, "failed to enable i2s io regulator\n");
+		}
 
-	ret = clk_prepare_enable(i2s->clk_i2s);
-	if (ret) {
-		dev_err(dev, "clk_enable failed: %d\n", ret);
-		return ret;
+		ret = clk_prepare_enable(i2s->clk_i2s);
+		if (ret) {
+			dev_err(dev, "clk_enable failed: %d\n", ret);
+			return ret;
+		}
 	}
 
 	regcache_cache_only(i2s->regmap, false);
@@ -407,6 +419,8 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 	int ret, sample_size, channels, srate, i2sclock, bitcnt;
 	struct tegra210_xbar_cif_conf cif_conf;
 
+	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
+
 	channels = params_channels(params);
 	if (channels < 1) {
 		dev_err(dev, "Doesn't support %d channels\n", channels);
@@ -459,20 +473,10 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 		cif_conf.threshold = 3;
 		cif_conf.audio_channels = channels;
 		cif_conf.client_channels = channels;
-		cif_conf.expand = 0;
-		cif_conf.stereo_conv = 0;
-		cif_conf.replicate = 0;
-		cif_conf.truncate = 0;
-		cif_conf.mono_conv = 0;
 	} else {
 		cif_conf.threshold = 3;
 		cif_conf.audio_channels = channels;
 		cif_conf.client_channels = (channels == 1) ? 2 : channels;
-		cif_conf.expand = 0;
-		cif_conf.stereo_conv = 0;
-		cif_conf.replicate = 0;
-		cif_conf.truncate = 0;
-		cif_conf.mono_conv = 0;
 	}
 
 	i2sclock = srate * sample_size * cif_conf.client_channels;
@@ -829,34 +833,35 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	i2s->enable_cya = false;
 	i2s->loopback = 0;
 
-	i2s->clk_i2s = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(i2s->clk_i2s)) {
-		dev_err(&pdev->dev, "Can't retrieve i2s clock\n");
-		ret = PTR_ERR(i2s->clk_i2s);
-		goto err;
-	}
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		i2s->clk_i2s = devm_clk_get(&pdev->dev, NULL);
+		if (IS_ERR(i2s->clk_i2s)) {
+			dev_err(&pdev->dev, "Can't retrieve i2s clock\n");
+			ret = PTR_ERR(i2s->clk_i2s);
+			goto err;
+		}
 
-	i2s->clk_i2s_sync = devm_clk_get(&pdev->dev, "ext_audio_sync");
-	if (IS_ERR(i2s->clk_i2s_sync)) {
-		dev_err(&pdev->dev, "Can't retrieve i2s_sync clock\n");
-		ret = PTR_ERR(i2s->clk_i2s_sync);
-		goto err_clk_put;
-	}
+		i2s->clk_i2s_sync = devm_clk_get(&pdev->dev, "ext_audio_sync");
+		if (IS_ERR(i2s->clk_i2s_sync)) {
+			dev_err(&pdev->dev, "Can't retrieve i2s_sync clock\n");
+			ret = PTR_ERR(i2s->clk_i2s_sync);
+			goto err_clk_put;
+		}
 
-	i2s->clk_audio_sync = devm_clk_get(&pdev->dev, "audio_sync");
-	if (IS_ERR(i2s->clk_audio_sync)) {
-		dev_err(&pdev->dev, "Can't retrieve audio sync clock\n");
-		ret = PTR_ERR(i2s->clk_audio_sync);
-		goto err_i2s_sync_clk_put;
-	}
+		i2s->clk_audio_sync = devm_clk_get(&pdev->dev, "audio_sync");
+		if (IS_ERR(i2s->clk_audio_sync)) {
+			dev_err(&pdev->dev, "Can't retrieve audio sync clock\n");
+			ret = PTR_ERR(i2s->clk_audio_sync);
+			goto err_i2s_sync_clk_put;
+		}
 
-	i2s->clk_pll_a_out0 = clk_get_sys(NULL, "pll_a_out0");
-	if (IS_ERR(i2s->clk_pll_a_out0)) {
-		dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
-		ret = PTR_ERR(i2s->clk_pll_a_out0);
-		goto err_audio_sync_clk_put;
+		i2s->clk_pll_a_out0 = clk_get_sys(NULL, "pll_a_out0");
+		if (IS_ERR(i2s->clk_pll_a_out0)) {
+			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
+			ret = PTR_ERR(i2s->clk_pll_a_out0);
+			goto err_audio_sync_clk_put;
+		}
 	}
-
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
 		dev_err(&pdev->dev, "No memory resource\n");
@@ -888,8 +893,11 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	}
 
 	i2s->slgc_notifier.notifier_call = _tegra210_i2s_slcg_notifier;
+#if defined(CONFIG_ARCH_TEGRA_21X_SOC)
 	slcg_register_notifier(TEGRA_POWERGATE_APE,
 		&i2s->slgc_notifier);
+#endif
+
 
 	regcache_cache_only(i2s->regmap, true);
 
@@ -918,57 +926,60 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 		of_property_read_bool(pdev->dev.of_node,
 			"enable-cya");
 
-	if (of_property_read_string(np, "prod-name", &prod_name) == 0)
-		tegra_pinctrl_config_prod(&pdev->dev, prod_name);
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		if (of_property_read_string(np, "prod-name", &prod_name) == 0)
+			tegra_pinctrl_config_prod(&pdev->dev, prod_name);
 
-	num_supplies = of_property_count_strings(np, "regulator-supplies");
-	if (num_supplies > 0) {
-		i2s->num_supplies = num_supplies;
-		i2s->supplies = devm_kzalloc(&pdev->dev, num_supplies *
-				sizeof(*i2s->supplies), GFP_KERNEL);
-		if (!i2s->supplies) {
-			ret = -ENOMEM;
-			goto err_pll_a_out0_clk_put;
+		num_supplies =
+			of_property_count_strings(np, "regulator-supplies");
+		if (num_supplies > 0) {
+			i2s->num_supplies = num_supplies;
+			i2s->supplies = devm_kzalloc(&pdev->dev, num_supplies *
+					sizeof(*i2s->supplies), GFP_KERNEL);
+			if (!i2s->supplies) {
+				ret = -ENOMEM;
+				goto err_pll_a_out0_clk_put;
+			}
+			of_property_for_each_string(np,
+				"regulator-supplies", prop, supply)
+				i2s->supplies[count++].supply = supply;
+
+			ret = devm_regulator_bulk_get(
+					&pdev->dev, i2s->num_supplies,
+					i2s->supplies);
+			if (ret) {
+				dev_err(&pdev->dev,
+					"Failed to get supplies: %d\n", ret);
+				return ret;
+			}
 		}
-		of_property_for_each_string(np, "regulator-supplies",
-				prop, supply)
-		i2s->supplies[count++].supply = supply;
 
-		ret = devm_regulator_bulk_get(&pdev->dev, i2s->num_supplies,
-						  i2s->supplies);
-		if (ret) {
-			dev_err(&pdev->dev,
-				"Failed to get supplies: %d\n", ret);
-			return ret;
+		i2s->pinctrl = devm_pinctrl_get(&pdev->dev);
+		if (IS_ERR(i2s->pinctrl)) {
+			dev_warn(&pdev->dev, "Missing pinctrl device\n");
+			goto err_dap;
+		}
+
+		i2s->pin_default_state = pinctrl_lookup_state(i2s->pinctrl,
+									"dap_active");
+		if (IS_ERR(i2s->pin_default_state)) {
+			dev_warn(&pdev->dev, "Missing dap-active state\n");
+			goto err_dap;
+		}
+
+		i2s->pin_idle_state = pinctrl_lookup_state(i2s->pinctrl,
+								"dap_inactive");
+		if (IS_ERR(i2s->pin_idle_state)) {
+			dev_warn(&pdev->dev, "Missing dap-inactive state\n");
+			goto err_dap;
+		}
+
+		ret = pinctrl_select_state(i2s->pinctrl, i2s->pin_idle_state);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "setting state failed\n");
+			goto err_dap;
 		}
 	}
-
-	i2s->pinctrl = devm_pinctrl_get(&pdev->dev);
-	if (IS_ERR(i2s->pinctrl)) {
-		dev_warn(&pdev->dev, "Missing pinctrl device\n");
-		goto err_dap;
-	}
-
-	i2s->pin_default_state = pinctrl_lookup_state(i2s->pinctrl,
-								"dap_active");
-	if (IS_ERR(i2s->pin_default_state)) {
-		dev_warn(&pdev->dev, "Missing dap-active state\n");
-		goto err_dap;
-	}
-
-	i2s->pin_idle_state = pinctrl_lookup_state(i2s->pinctrl,
-							"dap_inactive");
-	if (IS_ERR(i2s->pin_idle_state)) {
-		dev_warn(&pdev->dev, "Missing dap-inactive state\n");
-		goto err_dap;
-	}
-
-	ret = pinctrl_select_state(i2s->pinctrl, i2s->pin_idle_state);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "setting state failed\n");
-		goto err_dap;
-	}
-
 err_dap:
 	pm_runtime_enable(&pdev->dev);
 	if (!pm_runtime_enabled(&pdev->dev)) {
@@ -993,7 +1004,8 @@ err_suspend:
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 err_pll_a_out0_clk_put:
-	clk_put(i2s->clk_pll_a_out0);
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
+		clk_put(i2s->clk_pll_a_out0);
 err_audio_sync_clk_put:
 	devm_clk_put(&pdev->dev, i2s->clk_audio_sync);
 err_i2s_sync_clk_put:
@@ -1014,10 +1026,12 @@ static int tegra210_i2s_platform_remove(struct platform_device *pdev)
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_i2s_runtime_suspend(&pdev->dev);
 
-	devm_clk_put(&pdev->dev, i2s->clk_i2s);
-	devm_clk_put(&pdev->dev, i2s->clk_audio_sync);
-	devm_clk_put(&pdev->dev, i2s->clk_i2s_sync);
-	clk_put(i2s->clk_pll_a_out0);
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		devm_clk_put(&pdev->dev, i2s->clk_i2s);
+		devm_clk_put(&pdev->dev, i2s->clk_audio_sync);
+		devm_clk_put(&pdev->dev, i2s->clk_i2s_sync);
+		clk_put(i2s->clk_pll_a_out0);
+	}
 
 	return 0;
 }

@@ -1,7 +1,7 @@
 /*
  * ahub_unit_fpga_clock.h
  *
- * Copyright (c) 2013-2014, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,9 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+
+#ifndef __AHUB_UNIT_FPGA_CLOCK_H__
+#define __AHUB_UNIT_FPGA_CLOCK_H__
 
 #define SYSTEM_FPGA	0
 #define DEBUG_FPGA	1
@@ -74,14 +77,18 @@
 #define NV_ADDRESS_MAP_APE_AHUB_FPGA_CAR_BASE		1882050560
 #define NV_ADDRESS_MAP_APE_AHUB_FPGA_CAR_LIMIT		1882054655
 #define NV_ADDRESS_MAP_APE_AHUB_FPGA_CAR_SIZE		4096
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 #define NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_BASE		1882048512
 #define NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_LIMIT		1882048767
+#endif
 #define NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_SIZE		256
 
 #if SYSTEM_FPGA
 #define NV_ADDRESS_MAP_APE_AHUB_I2C_BASE			0x7000c000
 #else
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 #define NV_ADDRESS_MAP_APE_AHUB_I2C_BASE			1882047744
+#endif
 #define NV_ADDRESS_MAP_APE_AHUB_GPIO_BASE		0x702DC700
 #define APE_AHUB_GPIO_CNF_0	0x0
 #define APE_AHUB_GPIO_OE_0	0x10
@@ -94,12 +101,14 @@
 #define NV_ADDRESS_MAP_APB_PP_BASE				1879048192
 #define NV_ADDRESS_MAP_PPSB_CLK_RST_BASE			1610637312
 
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 #define NV_ADDRESS_MAP_APE_I2S5_BASE                           0x702d1400
+#endif
 #define I2S5_CYA_0                                             0xb0
 
 #define CDCE906_04_0960_MHz   0
 #define CDCE906_06_1440_MHz   1
- #define CDCE906_08_1920_MHz   2
+#define CDCE906_08_1920_MHz   2
 #define CDCE906_11_2896_MHz   3
 #define CDCE906_12_2880_MHz   4
 #define CDCE906_16_3840_MHz   5
@@ -110,6 +119,14 @@
 #define CDCE906_18_4320_MHz  10
 #define CDCE906_33_8688_MHz  11
 #define CDCE906_36_8640_MHz  12
+
+#define MAX9485_DEVICE_ADDRESS 0x60
+
+#define MAX9485_MCLK_FREQ_163840 0x31
+#define MAX9485_MCLK_FREQ_112896 0x22
+#define MAX9485_MCLK_FREQ_122880 0x23
+#define MAX9485_MCLK_FREQ_225792 0x32
+#define MAX9485_MCLK_FREQ_245760 0x33
 
 enum AUDIO_DAC_DATAWIDTH{
 	AUDIO_DAC_DATAWIDTH_16 = 3,
@@ -400,6 +417,9 @@ enum AUDIO_CLOCK_GEN_SELECT{
 #define I2S_DATAWIDTH_28 6
 #define I2S_DATAWIDTH_32 7
 
+#define AD1937_MCLK_PLL_INTERNAL_MODE 0
+#define AD1937_MCLK_DIRECT_MODE 1
+
 enum AUDIO_INTERFACE_FORMAT{
 	AUDIO_INTERFACE_I2S_FORMAT,
 	AUDIO_INTERFACE_LJM_FORMAT,
@@ -416,7 +436,19 @@ typedef struct AD1937_EXTRA_INFO{
 	unsigned int clkgenId;
 	unsigned int dacMasterEn;
 	unsigned int daisyEn;
+	unsigned int mclk_mode;
 } AD1937_EXTRA_INFO;
+
+struct ahub_unit_fpga {
+	unsigned int configured;
+	void __iomem *ape_fpga_misc_base;
+	void __iomem *ape_fpga_misc_i2s_clk_base[5];
+	void __iomem *ape_i2c_base;
+	void __iomem *pinmux_base;
+	void __iomem *ape_gpio_base;
+	void __iomem *rst_clk_base;
+	void __iomem *i2s5_cya_base;
+};
 
 void i2c_write(u32 addr, u32 regAddrr, u32 regData, u32 NoBytes);
 u32 i2c_read(u32 addr, u32 regAddrr);
@@ -431,6 +463,10 @@ void i2s_pinmux_setup(u32 i2s, u32 i2s_b);
 void program_io_expander(void);
 void program_dmic_gpio(void);
 void program_dmic_clk(int dmic_clk);
+void SetMax9485(int freq);
+void ahub_unit_fpga_init(void);
+void ahub_unit_fpga_deinit(void);
+struct ahub_unit_fpga *get_ahub_unit_fpga_private(void);
 
 void OnAD1937CaptureAndPlayback(int mode,
 	int codec_data_format,
@@ -440,3 +476,4 @@ void OnAD1937CaptureAndPlayback(int mode,
 	int bitclkInv,
 	int frameRate,
 	AD1937_EXTRA_INFO * extra_info);
+#endif

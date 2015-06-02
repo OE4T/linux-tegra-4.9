@@ -1,7 +1,7 @@
 /*
  * tegra210_amx_alt.c - Tegra210 AMX driver
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,6 +26,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
 #include <linux/slab.h>
+#include <linux/tegra-soc.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -155,7 +156,6 @@ static void tegra210_amx_write_map_ram(struct tegra210_amx *amx,
 				unsigned int val)
 {
 	unsigned int reg;
-
 	regmap_write(amx->regmap, TEGRA210_AMX_AHUBRAMCTL_AMX_CTRL,
 		(addr << TEGRA210_AMX_AHUBRAMCTL_AMX_CTRL_RAM_ADDR_SHIFT));
 
@@ -318,6 +318,8 @@ static int tegra210_amx_set_audio_cif(struct tegra210_amx *amx,
 	int channels, audio_bits;
 	struct tegra210_xbar_cif_conf cif_conf;
 
+	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
+
 	channels = params_channels(params);
 	if (channels < 1 || channels > 16)
 		return -EINVAL;
@@ -339,16 +341,10 @@ static int tegra210_amx_set_audio_cif(struct tegra210_amx *amx,
 		return -EINVAL;
 	}
 
-	cif_conf.threshold = 0;
 	cif_conf.audio_channels = channels;
 	cif_conf.client_channels = channels;
 	cif_conf.audio_bits = audio_bits;
 	cif_conf.client_bits = audio_bits;
-	cif_conf.expand = 0;
-	cif_conf.stereo_conv = 0;
-	cif_conf.replicate = 0;
-	cif_conf.truncate = 0;
-	cif_conf.mono_conv = 0;
 
 	amx->soc_data->set_audio_cif(amx->regmap, reg, &cif_conf);
 
@@ -400,6 +396,13 @@ static int tegra210_amx_out_hw_params(struct snd_pcm_substream *substream,
 {
 	struct tegra210_amx *amx = snd_soc_dai_get_drvdata(dai);
 	int ret;
+	if (tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()) {
+		/* update map ram */
+		tegra210_amx_set_master_stream(amx, 0,
+				TEGRA210_AMX_WAIT_ON_ANY);
+		tegra210_amx_update_map_ram(amx);
+		tegra210_amx_set_out_byte_mask(amx);
+	}
 
 	ret = tegra210_amx_set_audio_cif(amx, params,
 				TEGRA210_AMX_AXBAR_TX_CIF_CTRL);
@@ -444,7 +447,7 @@ static int tegra210_amx_set_channel_map(struct snd_soc_dai *dai,
 					in_byte_idx);
 
 			/* making byte_mask */
-			if (i > 32)
+			if (i > 31)
 				amx->byte_mask[1] |= (1 << (i - 32));
 			else
 				amx->byte_mask[0] |= (1 << i);

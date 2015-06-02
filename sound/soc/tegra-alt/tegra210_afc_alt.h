@@ -1,7 +1,7 @@
 /*
  * tegra210_afc_alt.h - Definitions for Tegra210 AFC driver
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -79,6 +79,23 @@
 #define TEGRA210_AFC_FIFO_HIGH_THRESHOLD_SHIFT		16
 #define TEGRA210_AFC_FIFO_START_THRESHOLD_SHIFT		8
 
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#define XBAR_AFC_REG_OFFSET_DIVIDED_BY_4 0x34
+
+#define MAX_NUM_I2S 5
+#define MAX_NUM_AMX 2
+#define MASK_AMX_TX 0x300
+
+#define AFC_CLK_PPM_DIFF 50
+
+#define CONFIG_AFC_DEST_PARAM(module_sel, module_id)\
+	(module_id << TEGRA210_AFC_DEST_I2S_ID_SHIFT)
+
+#define SET_AFC_DEST_PARAM(value)\
+	regmap_write(afc->regmap,\
+		TEGRA210_AFC_DEST_I2S_PARAMS, value)
+#endif
+
 struct tegra210_afc_soc_data {
 	void (*set_audio_cif)(struct regmap *map,
 			unsigned int reg,
@@ -90,5 +107,7 @@ struct tegra210_afc {
 	struct regmap *regmap;
 	const struct tegra210_afc_soc_data *soc_data;
 };
+
+unsigned int tegra210_afc_get_sfc_id(unsigned int afc_id);
 
 #endif

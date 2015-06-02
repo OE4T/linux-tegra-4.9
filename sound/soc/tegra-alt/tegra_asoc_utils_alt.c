@@ -2,7 +2,7 @@
  * tegra_asoc_utils_alt.c - MCLK and DAP Utility driver
  *
  * Author: Stephen Warren <swarren@nvidia.com>
- * Copyright (c) 2010-2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -41,7 +41,7 @@
 static bool is_switch_registered;
 #endif
 
-#if !defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_21x_SOC) && !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 static atomic_t dap_ref_count[5];
 static const char *tegra_dap_group_names[4][4] = {
 	{"dap1_fs_pn0", "dap1_din_pn1", "dap1_dout_pn2", "dap1_sclk_pn3"},
@@ -258,6 +258,8 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA124;
 	else if (of_machine_is_compatible("nvidia,tegra210"))
 		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA210;
+	else if (of_machine_is_compatible("nvidia,tegra186"))
+		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA186;
 	else if (!dev->of_node) {
 		/* non-DT is always Tegra20 */
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC)

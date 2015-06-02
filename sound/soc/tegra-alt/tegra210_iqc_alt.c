@@ -1,7 +1,7 @@
 /*
  * tegra210_iqc.c - Tegra210 IQC driver
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -115,16 +115,11 @@ static int tegra210_iqc_set_audio_cif(struct tegra210_iqc *iqc,
 		return -EINVAL;
 	}
 
-	cif_conf.threshold = 0;
+	memset(cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
 	cif_conf.audio_channels = channels;
 	cif_conf.client_channels = channels;
 	cif_conf.audio_bits = audio_bits;
 	cif_conf.client_bits = audio_bits;
-	cif_conf.expand = 0;
-	cif_conf.stereo_conv = 0;
-	cif_conf.replicate = 0;
-	cif_conf.truncate = 0;
-	cif_conf.mono_conv = 0;
 
 	iqc->soc_data->set_audio_cif(iqc->regmap, reg, &cif_conf);
 
@@ -349,11 +344,13 @@ static int tegra210_iqc_platform_probe(struct platform_device *pdev)
 
 	iqc->soc_data = soc_data;
 
-	iqc->clk_iqc = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(iqc->clk_iqc)) {
-		dev_err(&pdev->dev, "Can't retrieve iqc clock\n");
-		ret = PTR_ERR(iqc->clk_iqc);
-		goto err;
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		iqc->clk_iqc = devm_clk_get(&pdev->dev, NULL);
+		if (IS_ERR(iqc->clk_iqc)) {
+			dev_err(&pdev->dev, "Can't retrieve iqc clock\n");
+			ret = PTR_ERR(iqc->clk_iqc);
+			goto err;
+		}
 	}
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);

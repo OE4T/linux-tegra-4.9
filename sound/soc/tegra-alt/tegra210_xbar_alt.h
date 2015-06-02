@@ -1,7 +1,7 @@
 /*
  * tegra210_xbar_alt.h - TEGRA210 XBAR registers
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -135,8 +135,52 @@
 #define TEGRA210_AHUBRAMCTL_CTRL_RAM_ADDR_SHIFT		0
 #define TEGRA210_AHUBRAMCTL_CTRL_RAM_ADDR_MASK		(0x1ff << TEGRA210_AHUBRAMCTL_CTRL_RAM_ADDR_SHIFT)
 
-/* maximum mux count in T210 */
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#define NUM_DAIS		69
+#define NUM_MUX_WIDGETS		52
+#define NUM_MUX_INPUT		56	/* size of TEGRA210_ROUTES */
+
+#define MAX_REGISTER_ADDR (TEGRA210_XBAR_PART2_RX +\
+	(TEGRA210_XBAR_RX_STRIDE * (TEGRA210_XBAR_AUDIO_RX_COUNT - 1)))
+
+#define TEGRA210_XBAR_REG_MASK_0	0xf1f03ff
+#define TEGRA210_XBAR_REG_MASK_1	0x3f30031f
+#define TEGRA210_XBAR_REG_MASK_2	0xff1cf313
+#define TEGRA210_XBAR_REG_MASK_3	0x0
 #define TEGRA210_XBAR_UPDATE_MAX_REG	3
+
+#define ADMAIF_BASE_ADDR	0x702d0000
+#define I2S1_BASE_ADDR		0x702d1000
+#define I2S2_BASE_ADDR		0x702d1100
+#define I2S3_BASE_ADDR		0x702d1200
+#define I2S4_BASE_ADDR		0x702d1300
+#define I2S5_BASE_ADDR		0x702d1400
+#define AMX1_BASE_ADDR		0x702d3000
+#define AMX2_BASE_ADDR		0x702d3100
+#define ADX1_BASE_ADDR		0x702d3800
+#define ADX2_BASE_ADDR		0x702d3900
+#define AFC1_BASE_ADDR		0x702d7000
+#define AFC2_BASE_ADDR		0x702d7100
+#define AFC3_BASE_ADDR		0x702d7200
+#define AFC4_BASE_ADDR		0x702d7300
+#define AFC5_BASE_ADDR		0x702d7400
+#define AFC6_BASE_ADDR		0x702d7500
+#define SFC1_BASE_ADDR		0x702d2000
+#define SFC2_BASE_ADDR		0x702d2200
+#define SFC3_BASE_ADDR		0x702d2400
+#define SFC4_BASE_ADDR		0x702d2600
+#define MVC1_BASE_ADDR		0x702da000
+#define MVC2_BASE_ADDR		0x702da200
+#define IQC1_BASE_ADDR		0x702de000
+#define IQC2_BASE_ADDR		0x702de200
+#define DMIC1_BASE_ADDR		0x702d4000
+#define DMIC2_BASE_ADDR		0x702d4100
+#define DMIC3_BASE_ADDR		0x702d4200
+#define OPE1_BASE_ADDR		0x702d8000
+#define OPE2_BASE_ADDR		0x702d8400
+#define AMIXER1_BASE_ADDR	0x702dbb00
+#define SPDIF1_BASE_ADDR	0x702d6000
+#endif
 
 struct tegra210_xbar_cif_conf {
 	unsigned int threshold;
@@ -146,7 +190,10 @@ struct tegra210_xbar_cif_conf {
 	unsigned int client_bits;
 	unsigned int expand;
 	unsigned int stereo_conv;
-	unsigned int replicate;
+	union {
+		unsigned int fifo_size_downshift;
+		unsigned int replicate;
+	};
 	unsigned int truncate;
 	unsigned int mono_conv;
 };
@@ -163,7 +210,7 @@ int tegra210_xbar_read_reg (unsigned int reg, unsigned int *val);
 
 struct tegra210_xbar_soc_data {
 	const struct regmap_config *regmap_config;
-	unsigned int mask[3];
+	unsigned int mask[4];
 	unsigned int reg_count;
 	unsigned int reg_offset;
 };

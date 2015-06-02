@@ -1,7 +1,7 @@
 /*
  * tegra_asoc_machine_alt.h
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -273,6 +273,18 @@ unsigned int tegra_machine_get_codec_dai_link_idx(const char *codec_name);
 unsigned int tegra_machine_get_bclk_ratio(
 	struct snd_soc_pcm_runtime *rtd);
 
+void tegra_machine_set_num_dai_links(unsigned int val);
+
 unsigned int tegra_machine_get_num_dai_links(void);
+
+void tegra_machine_set_machine_links(struct snd_soc_dai_link *links);
+
+struct snd_soc_dai_link *tegra_machine_get_machine_links(void);
+
+void tegra_machine_set_machine_codec_conf(struct snd_soc_codec_conf *codec_conf);
+
+struct snd_soc_codec_conf *tegra_machine_get_machine_codec_conf(void);
+
+unsigned int *tegra_machine_get_bclk_ratio_array(void);
 
 #endif

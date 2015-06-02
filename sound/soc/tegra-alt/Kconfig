@@ -1,6 +1,6 @@
 config SND_SOC_TEGRA_ALT
 	tristate "Alternative DAPM-based SoC audio support for the Tegra System-on-Chip"
-	depends on ARCH_TEGRA
+	depends on ARCH_TEGRA || PLATFORM_TEGRA
 	select REGMAP_MMIO
 	select SND_DMAENGINE_PCM
 	help

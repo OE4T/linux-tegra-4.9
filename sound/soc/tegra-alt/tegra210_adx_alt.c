@@ -1,7 +1,7 @@
 /*
  * tegra210_adx_alt.c - Tegra210 ADX driver
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,6 +26,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
 #include <linux/slab.h>
+#include <linux/tegra-soc.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -290,6 +291,8 @@ static int tegra210_adx_set_audio_cif(struct tegra210_adx *adx,
 	int channels, audio_bits;
 	struct tegra210_xbar_cif_conf cif_conf;
 
+	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
+
 	channels = params_channels(params);
 	if (channels < 1 || channels > 16)
 		return -EINVAL;
@@ -311,16 +314,10 @@ static int tegra210_adx_set_audio_cif(struct tegra210_adx *adx,
 		return -EINVAL;
 	}
 
-	cif_conf.threshold = 0;
 	cif_conf.audio_channels = channels;
 	cif_conf.client_channels = channels;
 	cif_conf.audio_bits = audio_bits;
 	cif_conf.client_bits = audio_bits;
-	cif_conf.expand = 0;
-	cif_conf.stereo_conv = 0;
-	cif_conf.replicate = 0;
-	cif_conf.truncate = 0;
-	cif_conf.mono_conv = 0;
 
 	adx->soc_data->set_audio_cif(adx->regmap, reg, &cif_conf);
 
@@ -372,6 +369,12 @@ static int tegra210_adx_in_hw_params(struct snd_pcm_substream *substream,
 	struct tegra210_adx *adx = snd_soc_dai_get_drvdata(dai);
 	int ret;
 
+	if (tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()) {
+		/* update the map ram */
+		tegra210_adx_update_map_ram(adx);
+		tegra210_adx_set_in_byte_mask(adx);
+	}
+
 	ret = tegra210_adx_set_audio_cif(adx, params,
 					TEGRA210_ADX_AXBAR_RX_CIF_CTRL);
 	return ret;
@@ -414,7 +417,7 @@ static int tegra210_adx_set_channel_map(struct snd_soc_dai *dai,
 					out_byte_idx);
 
 			/* making byte_mask */
-			if (i > 32)
+			if (i > 31)
 				adx->byte_mask[1] |= (1 << (i - 32));
 			else
 				adx->byte_mask[0] |= (1 << i);

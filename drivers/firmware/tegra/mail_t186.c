@@ -111,19 +111,8 @@ int bpmp_init_irq(void)
 
 static void __bpmp_channel_init(int ch)
 {
-	void __iomem *ibmem;
-	void __iomem *obmem;
-
-	if (ch == BPMP_TO_CPU_CH) {
-		ibmem = cpu_sl_page;
-		obmem = cpu_ma_page;
-	} else {
-		ibmem = cpu_ma_page;
-		obmem = cpu_sl_page;
-	}
-
-	channel_area[ch].ib = ibmem + ch * MSG_SZ;
-	channel_area[ch].ob = obmem + ch * MSG_SZ;
+	channel_area[ch].ib = cpu_sl_page + ch * MSG_SZ;
+	channel_area[ch].ob = cpu_ma_page + ch * MSG_SZ;
 }
 
 static void bpmp_channel_init(void)

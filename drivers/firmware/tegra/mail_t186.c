@@ -24,12 +24,7 @@
 #include <linux/platform_device.h>
 #include <linux/tegra-hsp.h>
 #include "bpmp.h"
-
-#define TEGRA_BPMP_HSP_BASE		0x150000
-#define TEGRA_BPMP_HSP_SHRD_SEM_BASE	(TEGRA_BPMP_HSP_BASE + 0x50000)
-#define HSP_SHRD_SEM_0_STA		(TEGRA_BPMP_HSP_SHRD_SEM_BASE + 0x0)
-#define HSP_SHRD_SEM_0_SET		(TEGRA_BPMP_HSP_SHRD_SEM_BASE + 0x4)
-#define HSP_SHRD_SEM_0_CLR		(TEGRA_BPMP_HSP_SHRD_SEM_BASE + 0x8)
+#include "mail_t186.h"
 
 #define CPU_0_TO_BPMP_CH		0
 #define CPU_1_TO_BPMP_CH		1
@@ -50,111 +45,49 @@ static void __iomem *bpmp_base;
 static void __iomem *cpu_ma_page;
 static void __iomem *cpu_sl_page;
 
-static uint32_t bpmp_readl(uint32_t reg)
+uint32_t bpmp_readl(uint32_t reg)
 {
 	return __raw_readl(bpmp_base + reg);
 }
 
-static void bpmp_writel(uint32_t val, uint32_t reg)
+void bpmp_writel(uint32_t val, uint32_t reg)
 {
 	__raw_writel(val, bpmp_base + reg);
 }
 
-uint32_t bpmp_mail_token(void)
+bool bpmp_master_acked(int ch)
 {
-	return bpmp_readl(HSP_SHRD_SEM_0_STA);
-}
-
-void bpmp_mail_token_set(uint32_t val)
-{
-	bpmp_writel(val, HSP_SHRD_SEM_0_SET);
-}
-
-void bpmp_mail_token_clr(uint32_t val)
-{
-	bpmp_writel(val, HSP_SHRD_SEM_0_CLR);
-}
-
-/*
- * How the token bits are interpretted
- *
- * SL_SIGL (b00): slave ch in signalled state
- * SL_QUED (b01): slave ch is in queue
- * MA_FREE (b10): master ch is free
- * MA_ACKD (b11): master ch is acked
- *
- * Ideally, the slave should only set bits while the
- * master do only clear them. But there is an exception -
- * see bpmp_ack_master()
- */
-#define CH_MASK(ch)	(0x3 << ((ch) * 2))
-#define SL_SIGL(ch)	(0x0 << ((ch) * 2))
-#define SL_QUED(ch)	(0x1 << ((ch) * 2))
-#define MA_FREE(ch)	(0x2 << ((ch) * 2))
-#define MA_ACKD(ch)	(0x3 << ((ch) * 2))
-
-static u32 bpmp_ch_sta(int ch)
-{
-	return bpmp_mail_token() & CH_MASK(ch);
-}
-
-bool bpmp_master_free(int ch)
-{
-	return bpmp_ch_sta(ch) == MA_FREE(ch);
+	return mail_ops.master_acked(ch);
 }
 
 bool bpmp_slave_signalled(int ch)
 {
-	return bpmp_ch_sta(ch) == SL_SIGL(ch);
+	return mail_ops.slave_signalled(ch);
 }
 
-bool bpmp_master_acked(int ch)
+void bpmp_free_master(int ch)
 {
-	return bpmp_ch_sta(ch) == MA_ACKD(ch);
+	mail_ops.free_master(ch);
 }
 
 void bpmp_signal_slave(int ch)
 {
-	bpmp_mail_token_clr(CH_MASK(ch));
+	mail_ops.signal_slave(ch);
 }
 
-static void bpmp_ack_master(int ch, int flags)
+bool bpmp_master_free(int ch)
 {
-	bpmp_mail_token_set(MA_ACKD(ch));
-
-	/*
-	 * We have to violate the bit modification rule while
-	 * moving from SL_QUED to MA_FREE (DO_ACK not set) so that
-	 * the channel won't be in ACKD state forever.
-	 */
-	if (!(flags & DO_ACK))
-		bpmp_mail_token_clr(MA_ACKD(ch) ^ MA_FREE(ch));
-}
-
-/* MA_ACKD to MA_FREE */
-void bpmp_free_master(int ch)
-{
-	bpmp_mail_token_clr(MA_ACKD(ch) ^ MA_FREE(ch));
+	return mail_ops.master_free(ch);
 }
 
 void tegra_bpmp_mail_return_data(int ch, int code, void *data, int sz)
 {
-	struct mb_data *p;
-	int flags;
-
 	if (sz > MSG_DATA_SZ) {
 		WARN_ON(1);
 		return;
 	}
 
-	p = channel_area[ch].ob;
-	p->code = code;
-	memcpy(p->data, data, sz);
-
-	flags = channel_area[ch].ib->flags;
-	bpmp_ack_master(ch, flags);
-	if (flags & RING_DOORBELL)
-		bpmp_ring_doorbell();
+	mail_ops.return_data(ch, code, data, sz);
 }
 EXPORT_SYMBOL(tegra_bpmp_mail_return_data);
 
@@ -192,18 +125,15 @@ int bpmp_init_irq(void)
 	return 0;
 }
 
-static void __bpmp_channel_init(int ch)
+static int bpmp_channel_init(void)
 {
-	channel_area[ch].ib = cpu_sl_page + ch * MSG_SZ;
-	channel_area[ch].ob = cpu_ma_page + ch * MSG_SZ;
-}
-
-static void bpmp_channel_init(void)
-{
+	int e = 0;
 	int i;
 
-	for (i = 0; i < NR_CHANNELS; i++)
-		__bpmp_channel_init(i);
+	for (i = 0; i < NR_CHANNELS && !e; i++)
+		e = mail_ops.channel_init(i, cpu_ma_page, cpu_sl_page, SZ_4K);
+
+	return e;
 }
 
 static int bpmp_handshake(void)

@@ -1726,6 +1726,11 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 	unsigned int i;
 	int ret;
 
+	/* just test if global disable */
+	ret = nvs_of_dt(dn, NULL, NULL);
+	if (ret == -ENODEV)
+		return -ENODEV;
+
 	/* default device specific parameters */
 	for (i = 0; i < IQS_DEV_N; i++) {
 		memcpy(&st->cfg[i], &iqs_cfg_dflt, sizeof(st->cfg[0]));
@@ -1866,11 +1871,7 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	n = 0;
 	for (i = 0; i < IQS_DEV_N; i++) {
-		ret = nvs_of_dt(client->dev.of_node, &st->cfg[i], NULL);
-		if (ret == -ENODEV)
-			/* the entire device has been disabled */
-			goto iqs_probe_exit;
-
+		nvs_of_dt(client->dev.of_node, &st->cfg[i], NULL);
 		ret = st->nvs->probe(&st->nvs_st[i], st, &client->dev,
 				     &iqs_fn_dev, &st->cfg[i]);
 		st->cfg[i].snsr_id = i;

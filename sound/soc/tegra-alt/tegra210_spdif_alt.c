@@ -25,6 +25,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
 #include <linux/slab.h>
+#include <linux/tegra-soc.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -60,9 +61,11 @@ static int tegra210_spdif_runtime_suspend(struct device *dev)
 	struct tegra210_spdif *spdif = dev_get_drvdata(dev);
 
 	regcache_cache_only(spdif->regmap, true);
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		clk_disable_unprepare(spdif->clk_spdif_out);
+		clk_disable_unprepare(spdif->clk_spdif_in);
+	}
 
-	clk_disable_unprepare(spdif->clk_spdif_out);
-	clk_disable_unprepare(spdif->clk_spdif_in);
 	pm_runtime_put_sync(dev->parent);
 
 	return 0;
@@ -71,7 +74,7 @@ static int tegra210_spdif_runtime_suspend(struct device *dev)
 static int tegra210_spdif_runtime_resume(struct device *dev)
 {
 	struct tegra210_spdif *spdif = dev_get_drvdata(dev);
-	int ret = 0;
+	int ret;
 
 	ret = pm_runtime_get_sync(dev->parent);
 	if (ret < 0) {
@@ -79,22 +82,24 @@ static int tegra210_spdif_runtime_resume(struct device *dev)
 		return ret;
 	}
 
-	ret = clk_prepare_enable(spdif->clk_spdif_out);
-	if (ret) {
-		dev_err(dev, "spdif_out_clk_enable failed: %d\n", ret);
-		return ret;
-	}
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		ret = clk_prepare_enable(spdif->clk_spdif_out);
+		if (ret) {
+			dev_err(dev, "spdif_out_clk_enable failed: %d\n", ret);
+			return ret;
+		}
 
-	ret = clk_prepare_enable(spdif->clk_spdif_in);
-	if (ret) {
-		dev_err(dev, "spdif_in_clk_enable failed: %d\n", ret);
-		return ret;
+		ret = clk_prepare_enable(spdif->clk_spdif_in);
+		if (ret) {
+			dev_err(dev, "spdif_in_clk_enable failed: %d\n", ret);
+			return ret;
+		}
 	}
 
 	regcache_cache_only(spdif->regmap, false);
 	regcache_sync(spdif->regmap);
 
-	return ret;
+	return 0;
 }
 
 #ifdef CONFIG_PM_SLEEP
@@ -148,19 +153,23 @@ static int tegra210_spdif_set_dai_sysclk(struct snd_soc_dai *dai,
 		return -EINVAL;
 	}
 
-	if (dir == SND_SOC_CLOCK_OUT) {
-		ret = clk_set_rate(spdif->clk_spdif_out, spdif_out_clock_rate);
-		if (ret) {
-			dev_err(dev, "Can't set SPDIF Out clock rate: %d\n",
-				ret);
-			return ret;
-		}
-	} else {
-		ret = clk_set_rate(spdif->clk_spdif_in, spdif_in_clock_rate);
-		if (ret) {
-			dev_err(dev, "Can't set SPDIF In clock rate: %d\n",
-				ret);
-			return ret;
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		if (dir == SND_SOC_CLOCK_OUT) {
+			ret = clk_set_rate(
+				spdif->clk_spdif_out, spdif_out_clock_rate);
+			if (ret) {
+				dev_err(dev, "Can't set SPDIF Out clock rate: %d\n",
+					ret);
+				return ret;
+			}
+		} else {
+			ret = clk_set_rate(
+				spdif->clk_spdif_in, spdif_in_clock_rate);
+			if (ret) {
+				dev_err(dev, "Can't set SPDIF In clock rate: %d\n",
+					ret);
+				return ret;
+			}
 		}
 	}
 
@@ -175,6 +184,8 @@ static int tegra210_spdif_hw_params(struct snd_pcm_substream *substream,
 	struct tegra210_spdif *spdif = snd_soc_dai_get_drvdata(dai);
 	int channels, audio_bits, bit_mode;
 	struct tegra210_xbar_cif_conf cif_conf;
+
+	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
 
 	channels = params_channels(params);
 
@@ -196,7 +207,6 @@ static int tegra210_spdif_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-	memset(&cif_conf, 0, sizeof(cif_conf));
 	cif_conf.audio_channels = channels;
 	cif_conf.client_channels = channels;
 	cif_conf.audio_bits = audio_bits;
@@ -390,19 +400,20 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, spdif);
 
 	spdif->soc_data = soc_data;
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		spdif->clk_spdif_out = devm_clk_get(&pdev->dev, "spdif_out");
+		if (IS_ERR(spdif->clk_spdif_out)) {
+			dev_err(&pdev->dev, "Can't retrieve spdif clock\n");
+			ret = PTR_ERR(spdif->clk_spdif_out);
+			goto err;
+		}
 
-	spdif->clk_spdif_out = devm_clk_get(&pdev->dev, "spdif_out");
-	if (IS_ERR(spdif->clk_spdif_out)) {
-		dev_err(&pdev->dev, "Can't retrieve spdif clock\n");
-		ret = PTR_ERR(spdif->clk_spdif_out);
-		goto err;
-	}
-
-	spdif->clk_spdif_in = devm_clk_get(&pdev->dev, "spdif_in");
-	if (IS_ERR(spdif->clk_spdif_in)) {
-		dev_err(&pdev->dev, "Can't retrieve spdif clock\n");
-		ret = PTR_ERR(spdif->clk_spdif_in);
-		goto err_spdif_out_clk_put;
+		spdif->clk_spdif_in = devm_clk_get(&pdev->dev, "spdif_in");
+		if (IS_ERR(spdif->clk_spdif_in)) {
+			dev_err(&pdev->dev, "Can't retrieve spdif clock\n");
+			ret = PTR_ERR(spdif->clk_spdif_in);
+			goto err_spdif_out_clk_put;
+		}
 	}
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -470,9 +481,11 @@ err_suspend:
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 err_spdif_in_clk_put:
-	devm_clk_put(&pdev->dev, spdif->clk_spdif_in);
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
+		devm_clk_put(&pdev->dev, spdif->clk_spdif_in);
 err_spdif_out_clk_put:
-	devm_clk_put(&pdev->dev, spdif->clk_spdif_out);
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
+		devm_clk_put(&pdev->dev, spdif->clk_spdif_out);
 err:
 	return ret;
 }
@@ -487,8 +500,10 @@ static int tegra210_spdif_platform_remove(struct platform_device *pdev)
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_spdif_runtime_suspend(&pdev->dev);
 
-	devm_clk_put(&pdev->dev, spdif->clk_spdif_out);
-	devm_clk_put(&pdev->dev, spdif->clk_spdif_in);
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		devm_clk_put(&pdev->dev, spdif->clk_spdif_out);
+		devm_clk_put(&pdev->dev, spdif->clk_spdif_in);
+	}
 
 	return 0;
 }

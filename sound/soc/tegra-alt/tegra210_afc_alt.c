@@ -1,7 +1,7 @@
 /*
  * tegra210_afc_alt.c - Tegra210 AFC driver
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -34,6 +34,9 @@
 
 #include "tegra210_xbar_alt.h"
 #include "tegra210_afc_alt.h"
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#include <sound/tegra_audio.h>
+#endif
 
 #define DRV_NAME "tegra210-afc"
 
@@ -56,7 +59,6 @@ static const struct reg_default tegra210_afc_reg_defaults[] = {
 	{ TEGRA210_AFC_LCOEF_2_4_1, 0x0000f26b},
 	{ TEGRA210_AFC_LCOEF_2_4_2, 0x00004c07},
 };
-
 
 static int tegra210_afc_runtime_suspend(struct device *dev)
 {
@@ -96,20 +98,44 @@ static int tegra210_afc_suspend(struct device *dev)
 }
 #endif
 
+static void tegra210_afc_set_ppm_diff(struct tegra210_afc *afc,
+			unsigned int ppm_diff)
+{
+	regmap_update_bits(afc->regmap,
+		TEGRA210_AFC_CLK_PPM_DIFF, 0xFFFF, ppm_diff);
+}
+
+/* returns the id if SFC is connected along the AFC src path */
+unsigned int tegra210_afc_get_sfc_id(unsigned int afc_id)
+{
+	unsigned int reg, val = 0;
+
+	reg = TEGRA210_XBAR_PART0_RX +
+		TEGRA210_XBAR_RX_STRIDE *
+		(afc_id + XBAR_AFC_REG_OFFSET_DIVIDED_BY_4);
+
+	tegra210_xbar_read_reg(reg, &val);
+	val = val >> 24;
+
+	return val;
+}
+EXPORT_SYMBOL_GPL(tegra210_afc_get_sfc_id);
+
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 /* returns the destination I2S id connected along the AFC path */
 static unsigned int tegra210_afc_get_i2s_id(unsigned int afc_id)
 {
 	unsigned int i2s_reg, i2s_val, amx_reg, amx_val, i, j;
 
-	for (i = 1; i < 6; i++) {
+	for (i = 1; i < MAX_NUM_I2S; i++) {
 		i2s_val = 0;
 		i2s_reg = TEGRA210_XBAR_PART1_RX +
 			TEGRA210_XBAR_RX_STRIDE * (i + 0xF);
 		tegra210_xbar_read_reg(i2s_reg, &i2s_val);
 		if ((i2s_val >> 24) & (1 << afc_id)) {
 			return i;
-		} else if (i2s_val & 0x300) {
-			for (j = 1; j < 9; j++) {
+		} else if (i2s_val & MASK_AMX_TX) {
+			for (j = 1; j < 9; j++) { /* AMX1/2 */
 				amx_val = 0;
 				amx_reg = TEGRA210_XBAR_PART1_RX +
 					TEGRA210_XBAR_RX_STRIDE * (j + 0x4F);
@@ -119,28 +145,7 @@ static unsigned int tegra210_afc_get_i2s_id(unsigned int afc_id)
 			}
 		}
 	}
-	return 1;
-}
-
-/* returns the id if SFC is connected along the AFC src path */
-static unsigned int tegra210_afc_get_sfc_id(unsigned int afc_id)
-{
-	unsigned int reg, val = 0;
-
-	reg = TEGRA210_XBAR_PART0_RX +
-		TEGRA210_XBAR_RX_STRIDE * (afc_id + 0x34);
-
-	tegra210_xbar_read_reg(reg, &val);
-	val = val >> 24;
-
-	return val;
-}
-
-static void tegra210_afc_set_ppm_diff(struct tegra210_afc *afc,
-			unsigned int ppm_diff)
-{
-	regmap_update_bits(afc->regmap,
-		TEGRA210_AFC_CLK_PPM_DIFF, 0xFFFF, ppm_diff);
+	return 0;
 }
 
 static int tegra210_afc_set_thresholds(struct tegra210_afc *afc,
@@ -158,13 +163,15 @@ static int tegra210_afc_set_thresholds(struct tegra210_afc *afc,
 	regmap_write(afc->regmap, TEGRA210_AFC_TXCIF_FIFO_PARAMS, value);
 
 	i2s_id = tegra210_afc_get_i2s_id(afc_id);
+	if (!i2s_id)
+		return -EINVAL;
 
-	value |= i2s_id << TEGRA210_AFC_DEST_I2S_ID_SHIFT;
-
-	regmap_write(afc->regmap, TEGRA210_AFC_DEST_I2S_PARAMS, value);
+	value |= CONFIG_AFC_DEST_PARAM(0, i2s_id);
+	SET_AFC_DEST_PARAM(value);
 
 	return 0;
 }
+#endif
 
 static int tegra210_afc_set_audio_cif(struct tegra210_afc *afc,
 				struct snd_pcm_hw_params *params,
@@ -172,6 +179,8 @@ static int tegra210_afc_set_audio_cif(struct tegra210_afc *afc,
 {
 	int channels, audio_bits;
 	struct tegra210_xbar_cif_conf cif_conf;
+
+	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
 
 	channels = params_channels(params);
 	if (channels < 2)
@@ -188,16 +197,10 @@ static int tegra210_afc_set_audio_cif(struct tegra210_afc *afc,
 		return -EINVAL;
 	}
 
-	cif_conf.threshold = 0;
 	cif_conf.audio_channels = channels;
 	cif_conf.client_channels = channels;
 	cif_conf.audio_bits = audio_bits;
 	cif_conf.client_bits = audio_bits;
-	cif_conf.expand = 0;
-	cif_conf.stereo_conv = 0;
-	cif_conf.replicate = 0;
-	cif_conf.truncate = 0;
-	cif_conf.mono_conv = 0;
 
 	afc->soc_data->set_audio_cif(afc->regmap, reg, &cif_conf);
 
@@ -226,10 +229,11 @@ static int tegra210_afc_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	tegra210_afc_set_ppm_diff(afc, 50);
+	tegra210_afc_set_ppm_diff(afc, AFC_CLK_PPM_DIFF);
 
 	/* program the thresholds, destn i2s id, PPM values */
-	tegra210_afc_set_thresholds(afc, dev->id);
+	if (tegra210_afc_set_thresholds(afc, dev->id) == -EINVAL)
+		dev_err(dev, "Can't set AFC threshold: %d\n", ret);
 
 	return ret;
 
@@ -445,7 +449,6 @@ static int tegra210_afc_platform_probe(struct platform_device *pdev)
 
 	/* Disable SLGC */
 	regmap_write(afc->regmap, TEGRA210_AFC_CG, 0);
-	regcache_cache_only(afc->regmap, true);
 
 	ret = snd_soc_register_codec(&pdev->dev, &tegra210_afc_codec,
 				     tegra210_afc_dais,

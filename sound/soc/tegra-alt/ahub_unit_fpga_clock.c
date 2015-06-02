@@ -1,25 +1,22 @@
 /*
-* ahub_unit_fpga_clock.c
-*
-* Author: Dara Ramesh <dramesh@nvidia.com>
-*
-* Copyright (C) 2013-2014, NVIDIA CORPORATION. All rights reserved.
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* version 2 as published by the Free Software Foundation.
-*
-* This program is distributed in the hope that it will be useful, but
-* WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-* General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
-* 02110-1301 USA
-*
-*/
+ * ahub_unit_fpga_clock.c
+ *
+ * Author: Dara Ramesh <dramesh@nvidia.com>
+ *
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program;  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 
 #define VERBOSE_DEBUG
@@ -30,9 +27,12 @@
 #include <linux/io.h>
 #include <linux/printk.h>
 #include "ahub_unit_fpga_clock.h"
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#include <sound/tegra_audio.h>
+#endif
 
-static void __iomem *ahub_fpga_misc_base = IO_ADDRESS(NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_BASE);
-static void __iomem *ahub_i2c_base = IO_ADDRESS(NV_ADDRESS_MAP_APE_AHUB_I2C_BASE);
+struct ahub_unit_fpga ahub_unit_fpga_private;
+
 static void __iomem *pinmux_base = IO_ADDRESS(NV_ADDRESS_MAP_APB_PP_BASE);
 static void __iomem *ahub_gpio_base = IO_ADDRESS(NV_ADDRESS_MAP_APE_AHUB_GPIO_BASE);
 
@@ -86,21 +86,23 @@ static unsigned char cdce906_setting[27] = {
 };
 void i2s_clk_divider(u32 i2s, u32 divider)
 {
+	void __iomem *ape_fpga_misc_i2s_offset =
+		ahub_unit_fpga_private.ape_fpga_misc_i2s_clk_base[i2s];
+	void __iomem *ape_fpga_misc_i2s5_cya_offset =
+		ahub_unit_fpga_private.i2s5_cya_base;
 	u32 write_data, read_data;
+
 	write_data = ((divider << 1) | (1 << 28));
-	writel(write_data, ahub_fpga_misc_base +
-				ahub_fpga_misc_i2s_offset[i2s]);
-	read_data = readl(ahub_fpga_misc_base +
-				ahub_fpga_misc_i2s_offset[i2s]);
+	writel(write_data, ape_fpga_misc_i2s_offset);
+	read_data = readl(ape_fpga_misc_i2s_offset);
 	if (i2s == I2S5)
-		writel(1, i2s5_base + I2S5_CYA_0);
+		writel(1, ape_fpga_misc_i2s5_cya_offset);
 #if DEBUG_FPGA
 	if (read_data == write_data)
-		pr_err("\n DATA MATCH I2S1 0x%x\n", read_data);
+		pr_err("\n DATA MATCH I2S%d 0x%x\n", i2s+1, read_data);
 	else
-		pr_err("DATA MISMATCH APE_FPGA_MISC_CLK_SOURCE_I2S1_0 Actual data: 0x%x \
-			expected data: 0x%x\n", read_data, write_data);
-
+		pr_err("DATA MISMATCH APE_FPGA_MISC_CLK_SOURCE_I2S%d_0 Actual data: 0x%x expected data: 0x%x\n",
+			i2s+1, read_data, write_data);
 #endif
 }
 
@@ -170,15 +172,20 @@ void i2c_clk_setup(u32 divider)
 void i2c_clk_divider(u32 divider)
 {
 	u32 write_data, read_data;
+	void __iomem *ape_fpga_misc_base =
+		ahub_unit_fpga_private.ape_fpga_misc_base;
+
 	write_data = divider << 1;
-	writel(write_data, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_I2C1_0);
-	read_data = readl(ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_I2C1_0);
+	writel(write_data,
+		ape_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_I2C1_0);
+	read_data = readl(ape_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_I2C1_0);
 }
 
 void i2c_write(u32 addr, u32 reg_addr, u32 regData, u32 no_bytes)
 {
 	u32 write_data, read_data;
 	u32 data;
+	void __iomem *ape_i2c_base = ahub_unit_fpga_private.ape_i2c_base;
 
 	if (no_bytes == 3) {
 		data = (reg_addr & 0xFF) | ((regData & 0xFF) << 16) |
@@ -188,36 +195,36 @@ void i2c_write(u32 addr, u32 reg_addr, u32 regData, u32 no_bytes)
 	}
 
 	write_data = addr << 1;
-	writel(write_data, ahub_i2c_base + I2C_I2C_CMD_ADDR0_0);
+	writel(write_data, ape_i2c_base + I2C_I2C_CMD_ADDR0_0);
 
 	write_data = (no_bytes - 1) << 1;
-	writel(write_data, ahub_i2c_base + I2C_I2C_CNFG_0);
+	writel(write_data, ape_i2c_base + I2C_I2C_CNFG_0);
 
 	write_data = data;
-	writel(write_data, ahub_i2c_base + I2C_I2C_CMD_DATA1_0);
+	writel(write_data, ape_i2c_base + I2C_I2C_CMD_DATA1_0);
 
 	write_data = 0x01;
-	writel(write_data, ahub_i2c_base + I2C_I2C_CONFIG_LOAD_0);
+	writel(write_data, ape_i2c_base + I2C_I2C_CONFIG_LOAD_0);
 
-	read_data = readl(ahub_i2c_base + I2C_I2C_CONFIG_LOAD_0);
+	read_data = readl(ape_i2c_base + I2C_I2C_CONFIG_LOAD_0);
 
 	while (read_data != 0x0) {
-		read_data = readl(ahub_i2c_base + I2C_I2C_CONFIG_LOAD_0);
+		read_data = readl(ape_i2c_base + I2C_I2C_CONFIG_LOAD_0);
 	}
 
 	write_data = 0x200 | (no_bytes - 1) << 1;
-	writel(write_data, ahub_i2c_base + I2C_I2C_CNFG_0);
+	writel(write_data, ape_i2c_base + I2C_I2C_CNFG_0);
 
 	/* CHECKING STATUS for Busy status */
-	read_data = readl(ahub_i2c_base + I2C_I2C_STATUS_0);
+	read_data = readl(ape_i2c_base + I2C_I2C_STATUS_0);
 
 	while (read_data & 0x100) { /* wait for master  busy LOW */
-		pr_err("\n status before  %9x   \n", read_data);
-		read_data = readl(ahub_i2c_base + I2C_I2C_STATUS_0);
+		pr_err("\n status before %9x\n", read_data);
+		read_data = readl(ape_i2c_base + I2C_I2C_STATUS_0);
 	}
 
 
-	read_data = readl(ahub_i2c_base + I2C_I2C_STATUS_0);
+	read_data = readl(ape_i2c_base + I2C_I2C_STATUS_0);
 	read_data = read_data & 0xFF;
 	if (read_data)
 		pr_err("\n FAIL NoaCK Received for Reg_add %08x before %9x Byte\n",
@@ -227,37 +234,39 @@ void i2c_write(u32 addr, u32 reg_addr, u32 regData, u32 no_bytes)
 u32 i2c_read(u32 addr, u32 reg_addr)
 {
 	u32 write_data, read_data;
+	void __iomem *ape_i2c_base = ahub_unit_fpga_private.ape_i2c_base;
+
 	write_data = 0x1 << 11 | (0x1 << 4) | (0 << 6) | (1 << 7);
-	writel(write_data, ahub_i2c_base + I2C_I2C_CNFG_0);
+	writel(write_data, ape_i2c_base + I2C_I2C_CNFG_0);
 
 	write_data = addr << 1;
-	writel(write_data, ahub_i2c_base + I2C_I2C_CMD_ADDR0_0);
+	writel(write_data, ape_i2c_base + I2C_I2C_CMD_ADDR0_0);
 
 	write_data = addr << 1 | 1;
-	writel(write_data, ahub_i2c_base + I2C_I2C_CMD_ADDR1_0);
+	writel(write_data, ape_i2c_base + I2C_I2C_CMD_ADDR1_0);
 
 	write_data = reg_addr;
-	writel(write_data, ahub_i2c_base + I2C_I2C_CMD_DATA1_0);
+	writel(write_data, ape_i2c_base + I2C_I2C_CMD_DATA1_0);
 
 	write_data = 0x1 << 11 | (0x1 << 4) | (0 << 6) | (1 << 7) | (1 << 9);
-	writel(write_data, ahub_i2c_base + I2C_I2C_CNFG_0); /* Go */
+	writel(write_data, ape_i2c_base + I2C_I2C_CNFG_0); /* Go */
 
 	/* CHECKING STATUS for Busy status */
-	read_data = readl(ahub_i2c_base + I2C_I2C_STATUS_0);
+	read_data = readl(ape_i2c_base + I2C_I2C_STATUS_0);
 
 	while (read_data & 0x100)  { /* wait for master  busy LOW  */
-		pr_err("\n status before  %9x   \n", read_data);
-		read_data = readl(ahub_i2c_base + I2C_I2C_STATUS_0);
+		pr_err("\n status before %9x\n", read_data);
+		read_data = readl(ape_i2c_base + I2C_I2C_STATUS_0);
 	}
 
-	read_data = readl(ahub_i2c_base + I2C_I2C_STATUS_0);
+	read_data = readl(ape_i2c_base + I2C_I2C_STATUS_0);
 	read_data = read_data & 0xFF;
 
 	if (read_data)
-		pr_err("\n FAIL NoaCK Received for Reg_add %d before  %9x  Byte \n",
+		pr_err("\nNoaCK Received for addr %d before %9x Byte\n",
 			reg_addr, read_data);
 
-	read_data = readl(ahub_i2c_base + I2C_I2C_CMD_DATA2_0);
+	read_data = readl(ape_i2c_base + I2C_I2C_CMD_DATA2_0);
 
 	return read_data;
 }
@@ -274,8 +283,15 @@ void program_cdc_pll(u32 pll_no, u32 freq)
 		slv_add = 0x69;
 	else if (pll_no == 3)
 		slv_add = 0x6a;
+	else if (pll_no == 4)
+		slv_add = 0x6b;
 
 	switch (freq) {
+	case CLK_OUT_3_0720_MHZ:
+		m = 125;
+		n = 768;
+		p = 54;
+		break;
 	case CLK_OUT_4_0960_MHZ:
 		m = 375;
 		n = 2048;
@@ -362,7 +378,7 @@ void program_cdc_pll(u32 pll_no, u32 freq)
 		break;
 	}
 
-	pr_err("\n PLL Parems SLV_ADD 0x%x,  freq  %d   M %d    N  %d  P %d \n",
+	pr_err("\n PLL Parems SLV_ADD 0x%x,  freq  %d   M %d    N  %d  P %d\n",
 		slv_add, freq, m, n, p);
 
 	i2c_write(slv_add, (10 | 1 << 7), 0xff, 2);
@@ -371,10 +387,12 @@ void program_cdc_pll(u32 pll_no, u32 freq)
 	cdce906_setting[2] = (unsigned char)n & 0xff;
 	cdce906_setting[3] &= ~(0x1f);
 	cdce906_setting[3] |= (unsigned char)((((n >> 8) & 0xf) << 1) | ((m >> 8) & 1));
+	cdce906_setting[12] |= (0<<6);	/* 0 : power on, 1 : power off */
 	cdce906_setting[13] = p;
 
 	for (i = 1; i < 25; i++) {
-		pr_err("\n I2C_PLL_PRJ SLV_ADD 0x%x,  REG_ADD 0x%x  REG_DATA 0x%x \n", slv_add, i, cdce906_setting[i]);
+		pr_err("\n I2C_PLL_PRJ SLV_ADD 0x%x,  REG_ADD 0x%x  REG_DATA 0x%x\n",
+			slv_add, i, cdce906_setting[i]);
 		reg_add = i | (1 << 7);
 		i2c_write(slv_add, reg_add, cdce906_setting[i], 2);
 	}
@@ -394,10 +412,16 @@ void program_max_codec(void)
 {
 	unsigned int i;
 	unsigned char read_data;
+	/* mclk_freq(system clock) - 0x10 : 12.288Mhz, 0x8 : 12Mhz */
 	unsigned char mclk_freq = 0x10;
-	unsigned char frame_rate = 1;
+	/* frame_rate - 0x1 : 8khz, 0x2 : 16khz, 0x10 : 32khz,
+		0x4 : 44.1khz, 0x8 : 48khz, 0x20 : 96khz */
+	unsigned char frame_rate = 0x1;
+	/* codec_data_format - 1 : codec slave, 2 : codec master */
 	unsigned char codec_data_format = 1;
 	unsigned char codec_slv_add = 0x10;
+	unsigned char loopback = 0; /* DIN -> DOUT */
+	unsigned int power = 1; /* 1 : on, 0 : off */
 
 #if DEBUG_FPGA
 	pr_err("Audio maxim 98090/98091 codec programming\n");
@@ -434,11 +458,12 @@ void program_max_codec(void)
 	i2c_write(codec_slv_add, 0x1e, 0x00, 2);
 	i2c_write(codec_slv_add, 0x1f, 0x00, 2);
 	i2c_write(codec_slv_add, 0x20, 0x00, 2);
-	i2c_write(codec_slv_add, 0x21, 0x03, 2);
+	i2c_write(codec_slv_add, 0x21,
+		((codec_data_format == 1) ? 0x03 : 0x83), 2);
 	i2c_write(codec_slv_add, 0x22, 0x04, 2);
 	i2c_write(codec_slv_add, 0x23, 0x00, 2);
 	i2c_write(codec_slv_add, 0x24, 0x00, 2);
-	i2c_write(codec_slv_add, 0x25, 0x03, 2);
+	i2c_write(codec_slv_add, 0x25, (loopback<<4)|0x03, 2);
 	i2c_write(codec_slv_add, 0x26, 0x00, 2);
 	i2c_write(codec_slv_add, 0x27, 0x00, 2);
 	i2c_write(codec_slv_add, 0x28, 0x00, 2);
@@ -479,7 +504,7 @@ void program_max_codec(void)
 	i2c_write(codec_slv_add, 0x42, 0x00, 2);
 	i2c_write(codec_slv_add, 0x43, 0x01, 2);
 	i2c_write(codec_slv_add, 0x44, 0x01, 2);
-	i2c_write(codec_slv_add, 0x45, 0x80, 2);
+	i2c_write(codec_slv_add, 0x45, power<<7, 2);
 
 	for (i = 1; i < 0x50; i++) {
 		read_data = i2c_read(codec_slv_add, i);
@@ -504,61 +529,62 @@ void program_dmic_gpio(void)
 
 void program_dmic_clk(int dmic_clk)
 {
+	void __iomem *misc_base = ahub_unit_fpga_private.ape_fpga_misc_base;
 #if !SYSTEM_FPGA
-	writel(0x1, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_I2C1_0);
+	writel(0x1, misc_base + APE_FPGA_MISC_CLK_SOURCE_I2C1_0);
 
 	switch (dmic_clk) {
 	case 256000:
 		program_cdc_pll(2, CLK_OUT_4_0960_MHZ);
-		writel(0xf, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		writel(0xf, misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
 		break;
 	case 512000:
 		program_cdc_pll(2, CLK_OUT_4_0960_MHZ);
-		writel(0x7, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		writel(0x7, misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
 		break;
 	case 1024000:
 		program_cdc_pll(2, CLK_OUT_4_0960_MHZ);
-		writel(0x3, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		writel(0x3, misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
 		break;
 	case 1411200:
 		program_cdc_pll(2, CLK_OUT_5_6448_MHZ);
-		writel(0x3, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		writel(0x3, misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
 		break;
 	case 1536000:
 		program_cdc_pll(2, CLK_OUT_6_1440_MHZ);
-		writel(0x3, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		writel(0x3, misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
 		break;
 	case 2048000:
 		program_cdc_pll(2, CLK_OUT_4_0960_MHZ);
-		writel(0x1, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		writel(0x1, misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
 		break;
 	case 2822400:
 		program_cdc_pll(2, CLK_OUT_5_6448_MHZ);
-		writel(0x1, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		writel(0x1, misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
 		break;
 	case 3072000:
 		program_cdc_pll(2, CLK_OUT_6_1440_MHZ);
-		writel(0x1, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		writel(0x1, misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
 		break;
 	case 4096000:
 		program_cdc_pll(2, CLK_OUT_4_0960_MHZ);
-		writel(0x0, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		writel(0x0, misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
 		break;
 	case 5644800:
 		program_cdc_pll(2, CLK_OUT_11_2896_MHZ);
-		writel(0x1, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		writel(0x1, misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
 		break;
 	case 6144000:
 		program_cdc_pll(2, CLK_OUT_12_2888_MHZ);
-		writel(0x1, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		writel(0x1, misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
 		break;
 	case 11289600:
 		program_cdc_pll(2, CLK_OUT_11_2896_MHZ);
-		writel(0x0, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		writel(0x0, misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
 		break;
 	case 12288000:
 		program_cdc_pll(2, CLK_OUT_12_2888_MHZ);
-		writel(0x0, ahub_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
+		writel(0x0, misc_base + APE_FPGA_MISC_CLK_SOURCE_DMIC1_0);
 		break;
 	default:
 		pr_err("Unsupported sample rate and OSR combination\n");
@@ -760,6 +786,29 @@ static unsigned char ad1937y_enable[17] = {
 
 static unsigned char *ad1937_enable[2] = {ad1937x_enable, ad1937y_enable};
 
+void SetMax9485(int freq)
+{
+	unsigned char max9485_value;
+
+	switch (freq) {
+	default:
+	case CLK_OUT_12_2888_MHZ:
+		max9485_value = MAX9485_MCLK_FREQ_122880;
+		break;
+	case CLK_OUT_11_2896_MHZ:
+		max9485_value = MAX9485_MCLK_FREQ_112896;
+		break;
+	case CLK_OUT_24_5760_MHZ:
+		max9485_value = MAX9485_MCLK_FREQ_245760;
+		break;
+	case CLK_OUT_22_5792_MHZ:
+		max9485_value = MAX9485_MCLK_FREQ_225792;
+		break;
+	}
+
+	i2c_write(MAX9485_DEVICE_ADDRESS, max9485_value, 0, 1);
+}
+
 void OnAD1937CaptureAndPlayback(int mode,
 	int codec_data_format,
 	int codec_data_width,
@@ -784,150 +833,242 @@ void OnAD1937CaptureAndPlayback(int mode,
 
 	switch (frame_rate) {
 	case AUDIO_SAMPLE_RATE_8_00:
-	    target_freq = CLK_OUT_4_0960_MHZ; /* direct MCLK mode */
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_PWR_OFF;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_DAC_CLK_MCLK;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_ADC_CLK_MCLK;
+		target_freq = CLK_OUT_4_0960_MHZ; /* direct MCLK mode */
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+			AD1937_PLL_CLK_CTRL_0_PWR_OFF;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+			AD1937_PLL_CLK_CTRL_1_DAC_CLK_MCLK;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+			AD1937_PLL_CLK_CTRL_1_ADC_CLK_MCLK;
 
-	    ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |= AD1937_DAC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
-	    ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |= AD1937_ADC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
-	    break;
+		ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |=
+			AD1937_DAC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
+		ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |=
+			AD1937_ADC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
+		break;
 	case AUDIO_SAMPLE_RATE_16_00:
-	    target_freq = CLK_OUT_8_1920_MHZ; /* direct MCLK mode */
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_PWR_OFF;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_DAC_CLK_MCLK;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_ADC_CLK_MCLK;
+		target_freq = CLK_OUT_8_1920_MHZ; /* direct MCLK mode */
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+			AD1937_PLL_CLK_CTRL_0_PWR_OFF;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+			AD1937_PLL_CLK_CTRL_1_DAC_CLK_MCLK;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+			AD1937_PLL_CLK_CTRL_1_ADC_CLK_MCLK;
 
-	    ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |= AD1937_DAC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
-	    ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |= AD1937_ADC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
-	    break;
+		ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |=
+			AD1937_DAC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
+		ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |=
+			AD1937_ADC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
+		break;
 	case AUDIO_SAMPLE_RATE_32_00:
-#ifdef DIRECT_MCLK_MODE
-	    target_freq = CLK_OUT_16_3840_MHZ; /* direct MCLK mode */
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_PWR_OFF;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_DAC_CLK_MCLK;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_ADC_CLK_MCLK;
-#else
-	    target_freq = CLK_OUT_8_1920_MHZ; /* internal PLL mode */
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_PWR_ON;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_MCLKI_256;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
-#endif
-	    ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |= AD1937_DAC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
-	    ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |= AD1937_ADC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
-	    break;
+		if (pExtraInfo->mclk_mode == AD1937_MCLK_DIRECT_MODE) {
+			/* direct MCLK mode */
+			target_freq = CLK_OUT_16_3840_MHZ;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+				AD1937_PLL_CLK_CTRL_0_PWR_OFF;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+				AD1937_PLL_CLK_CTRL_1_DAC_CLK_MCLK;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+				AD1937_PLL_CLK_CTRL_1_ADC_CLK_MCLK;
+		} else {
+			/* internal PLL mode */
+			target_freq = CLK_OUT_8_1920_MHZ;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+				AD1937_PLL_CLK_CTRL_0_PWR_ON;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+				AD1937_PLL_CLK_CTRL_0_MCLKI_256;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+				AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+				AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
+		}
+		ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |=
+			AD1937_DAC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
+		ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |=
+			AD1937_ADC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
+		break;
 	case AUDIO_SAMPLE_RATE_44_10:
-#ifdef DIRECT_MCLK_MODE
-	    target_freq = CLK_OUT_22_5792_MHZ; /* direct MCLK mode */
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_PWR_OFF;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_DAC_CLK_MCLK;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_ADC_CLK_MCLK;
-#else
-	    target_freq = CLK_OUT_11_2896_MHZ; /* internal PLL mode */
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_PWR_ON;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_MCLKI_256;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
-#endif
-	    ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |= AD1937_DAC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
-	    ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |= AD1937_ADC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
-	    break;
+		if (pExtraInfo->mclk_mode == AD1937_MCLK_DIRECT_MODE) {
+			/* direct MCLK mode */
+			target_freq = CLK_OUT_22_5792_MHZ;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+				AD1937_PLL_CLK_CTRL_0_PWR_OFF;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+				AD1937_PLL_CLK_CTRL_1_DAC_CLK_MCLK;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+				AD1937_PLL_CLK_CTRL_1_ADC_CLK_MCLK;
+		} else {
+			/* internal PLL mode */
+			target_freq = CLK_OUT_11_2896_MHZ;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+				AD1937_PLL_CLK_CTRL_0_PWR_ON;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+				AD1937_PLL_CLK_CTRL_0_MCLKI_256;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+				AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+				AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
+		}
+		ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |=
+			AD1937_DAC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
+		ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |=
+			AD1937_ADC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
+		break;
 	case AUDIO_SAMPLE_RATE_48_00:
-#ifdef DIRECT_MCLK_MODE
-	    target_freq = CLK_OUT_24_5760_MHZ; /* direct MCLK mode */
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_PWR_OFF;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_DAC_CLK_MCLK;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_ADC_CLK_MCLK;
-#else
-	    target_freq = CLK_OUT_12_2888_MHZ; /* internal PLL mode */
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_PWR_ON;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_PLL_INPUT_DLRCLK;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
-#endif
-	    ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |= AD1937_DAC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
-	    ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |= AD1937_ADC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
-	    break;
+		if (pExtraInfo->mclk_mode == AD1937_MCLK_DIRECT_MODE) {
+			/* direct MCLK mode */
+			target_freq = CLK_OUT_24_5760_MHZ;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+				AD1937_PLL_CLK_CTRL_0_PWR_OFF;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+				(bit_size != 512) ? 0 :
+					AD1937_PLL_CLK_CTRL_0_MCLKI_512;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+				AD1937_PLL_CLK_CTRL_1_DAC_CLK_MCLK;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+				AD1937_PLL_CLK_CTRL_1_ADC_CLK_MCLK;
+		} else {
+			/* internal PLL mode */
+			target_freq = CLK_OUT_12_2888_MHZ;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+				AD1937_PLL_CLK_CTRL_0_PWR_ON;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+				AD1937_PLL_CLK_CTRL_0_PLL_INPUT_DLRCLK;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+				AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
+			ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+				AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
+		}
+		ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |=
+			AD1937_DAC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
+		ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |=
+			AD1937_ADC_CTRL_0_SAMPLE_RATE_32_44_1_48_KHZ;
+		break;
 	case AUDIO_SAMPLE_RATE_64_00:
-	    target_freq = CLK_OUT_16_3840_MHZ; /* internal PLL mode */
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_PWR_ON;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_MCLKI_512;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
+		/* internal PLL mode */
+		target_freq = CLK_OUT_16_3840_MHZ;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+			AD1937_PLL_CLK_CTRL_0_PWR_ON;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+			AD1937_PLL_CLK_CTRL_0_MCLKI_512;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+			AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+			AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
 
-	    ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |= AD1937_DAC_CTRL_0_SAMPLE_RATE_64_88_2_96_KHZ;
-	    ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |= AD1937_ADC_CTRL_0_SAMPLE_RATE_64_88_2_96_KHZ;
-	    break;
+		ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |=
+			AD1937_DAC_CTRL_0_SAMPLE_RATE_64_88_2_96_KHZ;
+		ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |=
+			AD1937_ADC_CTRL_0_SAMPLE_RATE_64_88_2_96_KHZ;
+		break;
 	case AUDIO_SAMPLE_RATE_88_20:
-	    target_freq = CLK_OUT_22_5792_MHZ;/* internal PLL mode */
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_PWR_ON;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_MCLKI_512;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
+		/* internal PLL mode */
+		target_freq = CLK_OUT_22_5792_MHZ;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+			AD1937_PLL_CLK_CTRL_0_PWR_ON;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+			AD1937_PLL_CLK_CTRL_0_MCLKI_512;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+			AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+			AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
 
-	    ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |= AD1937_DAC_CTRL_0_SAMPLE_RATE_64_88_2_96_KHZ;
-	    ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |= AD1937_ADC_CTRL_0_SAMPLE_RATE_64_88_2_96_KHZ;
-	    break;
+		ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |=
+			AD1937_DAC_CTRL_0_SAMPLE_RATE_64_88_2_96_KHZ;
+		ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |=
+			AD1937_ADC_CTRL_0_SAMPLE_RATE_64_88_2_96_KHZ;
+		break;
 	case AUDIO_SAMPLE_RATE_96_00:
-	    target_freq = CLK_OUT_24_5760_MHZ;/* internal PLL mode */
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_PWR_ON;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_MCLKI_512;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
+		/* internal PLL mode */
+		target_freq = CLK_OUT_24_5760_MHZ;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+			AD1937_PLL_CLK_CTRL_0_PWR_ON;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+			AD1937_PLL_CLK_CTRL_0_MCLKI_512;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+			AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+			AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
 
-	    ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |= AD1937_DAC_CTRL_0_SAMPLE_RATE_64_88_2_96_KHZ;
-	    ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |= AD1937_ADC_CTRL_0_SAMPLE_RATE_64_88_2_96_KHZ;
-	    break;
+		ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |=
+			AD1937_DAC_CTRL_0_SAMPLE_RATE_64_88_2_96_KHZ;
+		ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |=
+			AD1937_ADC_CTRL_0_SAMPLE_RATE_64_88_2_96_KHZ;
+		break;
 	case AUDIO_SAMPLE_RATE_128_00:
-	    target_freq = CLK_OUT_16_3840_MHZ;/* internal PLL mode */
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_PWR_ON;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_MCLKI_512;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
+		/* internal PLL mode */
+		target_freq = CLK_OUT_16_3840_MHZ;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+			AD1937_PLL_CLK_CTRL_0_PWR_ON;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+			AD1937_PLL_CLK_CTRL_0_MCLKI_512;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+			AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+			AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
 
-	    ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |= AD1937_DAC_CTRL_0_SAMPLE_RATE_128_176_4_192_KHZ;
-	    ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |= AD1937_ADC_CTRL_0_SAMPLE_RATE_128_176_4_192_KHZ;
-	    break;
+		ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |=
+			AD1937_DAC_CTRL_0_SAMPLE_RATE_128_176_4_192_KHZ;
+		ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |=
+			AD1937_ADC_CTRL_0_SAMPLE_RATE_128_176_4_192_KHZ;
+		break;
 	case AUDIO_SAMPLE_RATE_176_40:
-	    target_freq = CLK_OUT_22_5792_MHZ;/* internal PLL mode */
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_PWR_ON;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_MCLKI_512;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
+		/* internal PLL mode */
+		target_freq = CLK_OUT_22_5792_MHZ;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+			AD1937_PLL_CLK_CTRL_0_PWR_ON;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+			AD1937_PLL_CLK_CTRL_0_MCLKI_512;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+			AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+			AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
 
-	    ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |= AD1937_DAC_CTRL_0_SAMPLE_RATE_128_176_4_192_KHZ;
-	    ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |= AD1937_ADC_CTRL_0_SAMPLE_RATE_128_176_4_192_KHZ;
-	    break;
+		ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |=
+			AD1937_DAC_CTRL_0_SAMPLE_RATE_128_176_4_192_KHZ;
+		ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |=
+			AD1937_ADC_CTRL_0_SAMPLE_RATE_128_176_4_192_KHZ;
+		break;
 	case AUDIO_SAMPLE_RATE_192_00:
-	    target_freq = CLK_OUT_24_5760_MHZ;/* internal PLL mode */
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_PWR_ON;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |= AD1937_PLL_CLK_CTRL_0_MCLKI_512;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
-	    ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |= AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
+		/* internal PLL mode */
+		target_freq = CLK_OUT_24_5760_MHZ;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+			AD1937_PLL_CLK_CTRL_0_PWR_ON;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_0] |=
+			AD1937_PLL_CLK_CTRL_0_MCLKI_512;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+			AD1937_PLL_CLK_CTRL_1_DAC_CLK_PLL;
+		ad1937_enable[codec_idx][AD1937_PLL_CLK_CTRL_1] |=
+			AD1937_PLL_CLK_CTRL_1_ADC_CLK_PLL;
 
-	    ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |= AD1937_DAC_CTRL_0_SAMPLE_RATE_128_176_4_192_KHZ;
-	    ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |= AD1937_ADC_CTRL_0_SAMPLE_RATE_128_176_4_192_KHZ;
-	    break;
+		ad1937_enable[codec_idx][AD1937_DAC_CTRL_0] |=
+			AD1937_DAC_CTRL_0_SAMPLE_RATE_128_176_4_192_KHZ;
+		ad1937_enable[codec_idx][AD1937_ADC_CTRL_0] |=
+			AD1937_ADC_CTRL_0_SAMPLE_RATE_128_176_4_192_KHZ;
+		break;
 	default:
-	    break;
+		break;
 	}
 
 	{
 	/* slave mode clock setting */
-	ad1937_enable[codec_idx][AD1937_DAC_CTRL_1] &= ~(AD1937_DAC_CTRL_1_DLRCLK_MASK |
-						    AD1937_DAC_CTRL_1_DBCLK_MASK |
-						    AD1937_DAC_CTRL_1_DBCLK_SOURCE_MASK);
-	ad1937_enable[codec_idx][AD1937_ADC_CTRL_2] &= ~(AD1937_ADC_CTRL_2_ALRCLK_MASK |
-						    AD1937_ADC_CTRL_2_ABCLK_MASK |
-						    AD1937_ADC_CTRL_2_ABCLK_SOURCE_MASK);
+	ad1937_enable[codec_idx][AD1937_DAC_CTRL_1] &=
+			~(AD1937_DAC_CTRL_1_DLRCLK_MASK |
+			AD1937_DAC_CTRL_1_DBCLK_MASK |
+			AD1937_DAC_CTRL_1_DBCLK_SOURCE_MASK);
+	ad1937_enable[codec_idx][AD1937_ADC_CTRL_2] &=
+			~(AD1937_ADC_CTRL_2_ALRCLK_MASK |
+			AD1937_ADC_CTRL_2_ABCLK_MASK |
+			AD1937_ADC_CTRL_2_ABCLK_SOURCE_MASK);
 
-	ad1937_enable[codec_idx][AD1937_DAC_CTRL_1] |= (AD1937_DAC_CTRL_1_DLRCLK_SLAVE |
-						    AD1937_DAC_CTRL_1_DBCLK_SLAVE |
-						    AD1937_DAC_CTRL_1_DBCLK_SOURCE_DBCLK_PIN);
-	ad1937_enable[codec_idx][AD1937_ADC_CTRL_2] |= (AD1937_ADC_CTRL_2_ALRCLK_SLAVE |
-						    AD1937_ADC_CTRL_2_ABCLK_SLAVE |
-						    AD1937_ADC_CTRL_2_ABCLK_SOURCE_ABCLK_PIN);
+	ad1937_enable[codec_idx][AD1937_DAC_CTRL_1] |=
+			(AD1937_DAC_CTRL_1_DLRCLK_SLAVE |
+			AD1937_DAC_CTRL_1_DBCLK_SLAVE |
+			AD1937_DAC_CTRL_1_DBCLK_SOURCE_DBCLK_PIN);
+	ad1937_enable[codec_idx][AD1937_ADC_CTRL_2] |=
+			(AD1937_ADC_CTRL_2_ALRCLK_SLAVE |
+			AD1937_ADC_CTRL_2_ABCLK_SLAVE |
+			AD1937_ADC_CTRL_2_ABCLK_SOURCE_ABCLK_PIN);
 	}
 
 	if (pExtraInfo->daisyEn) {
@@ -1117,4 +1258,45 @@ void OnAD1937CaptureAndPlayback(int mode,
 		val[3] = i2c_read(pExtraInfo->codecId, val[2]);
 		pr_err("::Reg Addr 0x%02x 0x%02x : 0x%02x \r\n", i, ad1937_enable[codec_idx][i], val[3]);
 	}
+}
+
+struct ahub_unit_fpga *get_ahub_unit_fpga_private(void)
+{
+	return &ahub_unit_fpga_private;
+}
+
+void ahub_unit_fpga_init(void)
+{
+	unsigned int i;
+
+	ahub_unit_fpga_private.ape_fpga_misc_base =
+		ioremap(NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_BASE, 256);
+	for (i = 0; i < 5; i++)
+		ahub_unit_fpga_private.ape_fpga_misc_i2s_clk_base[i] =
+			ioremap(NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_BASE +
+				ahub_fpga_misc_i2s_offset[i], 0x4);
+	ahub_unit_fpga_private.ape_i2c_base =
+		ioremap(NV_ADDRESS_MAP_APE_AHUB_I2C_BASE, 512);
+	ahub_unit_fpga_private.pinmux_base =
+		ioremap(NV_ADDRESS_MAP_APB_PP_BASE, 512);
+	ahub_unit_fpga_private.ape_gpio_base =
+		ioremap(NV_ADDRESS_MAP_APE_AHUB_GPIO_BASE, 256);
+	ahub_unit_fpga_private.rst_clk_base =
+		ioremap(NV_ADDRESS_MAP_PPSB_CLK_RST_BASE, 512);
+	ahub_unit_fpga_private.i2s5_cya_base =
+		ioremap(NV_ADDRESS_MAP_APE_I2S5_BASE + I2S5_CYA_0, 0x10);
+}
+
+void ahub_unit_fpga_deinit(void)
+{
+	unsigned int i;
+
+	iounmap(ahub_unit_fpga_private.ape_fpga_misc_base);
+	for (i = 0; i < 5; i++)
+		iounmap(ahub_unit_fpga_private.ape_fpga_misc_i2s_clk_base[i]);
+	iounmap(ahub_unit_fpga_private.ape_i2c_base);
+	iounmap(ahub_unit_fpga_private.pinmux_base);
+	iounmap(ahub_unit_fpga_private.ape_gpio_base);
+	iounmap(ahub_unit_fpga_private.rst_clk_base);
+	iounmap(ahub_unit_fpga_private.i2s5_cya_base);
 }

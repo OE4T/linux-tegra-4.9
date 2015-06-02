@@ -1,7 +1,7 @@
 /*
  * tegra210_xbar_alt.c - Tegra210 XBAR driver
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,12 +26,18 @@
 #include <linux/tegra_pm_domains.h>
 #include <linux/regmap.h>
 #include <linux/slab.h>
+#include <linux/tegra-soc.h>
 #include <sound/soc.h>
 #include <mach/clk.h>
 
 #include "tegra210_xbar_alt.h"
-
+/* TODO: remove DRV_NAME_T18X after registering properly */
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 #define DRV_NAME "tegra210-axbar"
+#else
+#include <sound/tegra_audio.h>
+#define DRV_NAME DRV_NAME_T18X
+#endif
 
 static struct tegra210_xbar *xbar;
 
@@ -44,8 +50,7 @@ static const struct regmap_config tegra210_xbar_regmap_config = {
 	.reg_bits = 32,
 	.val_bits = 32,
 	.reg_stride = 4,
-	.max_register = TEGRA210_XBAR_PART2_RX + (TEGRA210_XBAR_RX_STRIDE *
-			(TEGRA210_XBAR_AUDIO_RX_COUNT - 1)),
+	.max_register = MAX_REGISTER_ADDR,
 	.volatile_reg = tegra210_xbar_volatile_reg,
 	.cache_type = REGCACHE_FLAT,
 };
@@ -54,8 +59,10 @@ static int tegra210_xbar_runtime_suspend(struct device *dev)
 {
 	regcache_cache_only(xbar->regmap, true);
 
-	clk_disable(xbar->clk);
-	clk_disable(xbar->clk_ape);
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		clk_disable(xbar->clk);
+		clk_disable(xbar->clk_ape);
+	}
 
 	return 0;
 }
@@ -64,16 +71,18 @@ static int tegra210_xbar_runtime_resume(struct device *dev)
 {
 	int ret;
 
-	ret = clk_enable(xbar->clk_ape);
-	if (ret) {
-		dev_err(dev, "clk_enable failed: %d\n", ret);
-		return ret;
-	}
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		ret = clk_enable(xbar->clk_ape);
+		if (ret) {
+			dev_err(dev, "clk_enable failed: %d\n", ret);
+			return ret;
+		}
 
-	ret = clk_enable(xbar->clk);
-	if (ret) {
-		dev_err(dev, "clk_enable failed: %d\n", ret);
-		return ret;
+		ret = clk_enable(xbar->clk);
+		if (ret) {
+			dev_err(dev, "clk_enable failed: %d\n", ret);
+			return ret;
+		}
 	}
 
 	regcache_cache_only(xbar->regmap, false);
@@ -97,13 +106,15 @@ static int tegra210_xbar_suspend(struct device *dev)
 }
 #endif
 
-static int tegra210_xbar_codec_probe(struct snd_soc_codec *codec)
+int tegra210_xbar_codec_probe(struct snd_soc_codec *codec)
 {
 	codec->control_data = xbar->regmap;
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(tegra210_xbar_codec_probe);
 
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 #define DAI(sname)						\
 	{							\
 		.name = #sname,					\
@@ -200,6 +211,7 @@ static struct snd_soc_dai_driver tegra210_xbar_dais[] = {
 	DAI(ADX2-4),
 	DAI(ADX2),
 };
+#endif
 
 static const char * const tegra210_xbar_mux_texts[] = {
 	"None",
@@ -325,7 +337,7 @@ static const int tegra210_xbar_mux_values[] = {
 	/* index 35..53 above are inputs of PART2 Mux */
 };
 
-static int tegra210_xbar_get_value_enum(struct snd_kcontrol *kcontrol,
+int tegra210_xbar_get_value_enum(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_kcontrol_codec(kcontrol);
@@ -359,8 +371,9 @@ static int tegra210_xbar_get_value_enum(struct snd_kcontrol *kcontrol,
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(tegra210_xbar_get_value_enum);
 
-static int tegra210_xbar_put_value_enum(struct snd_kcontrol *kcontrol,
+int tegra210_xbar_put_value_enum(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_kcontrol_codec(kcontrol);
@@ -422,6 +435,7 @@ static int tegra210_xbar_put_value_enum(struct snd_kcontrol *kcontrol,
 
 	return change;
 }
+EXPORT_SYMBOL_GPL(tegra210_xbar_put_value_enum);
 
 #define MUX_REG(id) (TEGRA210_XBAR_RX_STRIDE * (id))
 
@@ -640,7 +654,6 @@ static const struct snd_soc_dapm_widget tegra210_xbar_widgets[] = {
 	{ name " Mux",      "ADX2-3",		"ADX2-3 RX" },		\
 	{ name " Mux",      "ADX2-4",		"ADX2-4 RX" },
 
-
 #define IN_OUT_ROUTES(name)				\
 	{ name " RX",       NULL,	name " Receive" },	\
 	{ name " Transmit", NULL,	name " TX" },
@@ -722,6 +735,7 @@ static const struct snd_soc_dapm_route tegra210_xbar_routes[] = {
 	IN_OUT_ROUTES("ADX2-4")
 };
 
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 static struct snd_soc_codec_driver tegra210_xbar_codec = {
 	.probe = tegra210_xbar_codec_probe,
 	.dapm_widgets = tegra210_xbar_widgets,
@@ -730,13 +744,14 @@ static struct snd_soc_codec_driver tegra210_xbar_codec = {
 	.num_dapm_routes = ARRAY_SIZE(tegra210_xbar_routes),
 	.idle_bias_off = 1,
 };
-
+#endif
 static const struct tegra210_xbar_soc_data soc_data_tegra210 = {
 	.regmap_config = &tegra210_xbar_regmap_config,
-	.mask[0] = 0xf1f03ff,
-	.mask[1] = 0x3f30031f,
-	.mask[2] = 0xff1cf313,
-	.reg_count = 3,
+	.mask[0] = TEGRA210_XBAR_REG_MASK_0,
+	.mask[1] = TEGRA210_XBAR_REG_MASK_1,
+	.mask[2] = TEGRA210_XBAR_REG_MASK_2,
+	.mask[3] = TEGRA210_XBAR_REG_MASK_3,
+	.reg_count = TEGRA210_XBAR_UPDATE_MAX_REG,
 	.reg_offset = TEGRA210_XBAR_PART1_RX,
 };
 
@@ -745,56 +760,71 @@ static const struct of_device_id tegra210_xbar_of_match[] = {
 	{},
 };
 
-#define CLK_LIST_MASK_TEGRA30 BIT(0)
-#define CLK_LIST_MASK_TEGRA114 BIT(1)
-#define CLK_LIST_MASK_TEGRA124 BIT(2)
-
-#define CLK_LIST_MASK_TEGRA30_OR_LATER \
-		(CLK_LIST_MASK_TEGRA30 | CLK_LIST_MASK_TEGRA114 |\
-		CLK_LIST_MASK_TEGRA124)
-#define CLK_LIST_MASK_TEGRA114_OR_LATER \
-		(CLK_LIST_MASK_TEGRA114 | CLK_LIST_MASK_TEGRA124)
-
 static const struct {
 	const char *clk_name;
 } configlink_clocks[] = {
 };
 
-/* FIXME: base address for T210 */
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 static struct of_dev_auxdata tegra210_xbar_auxdata[] = {
-	OF_DEV_AUXDATA("nvidia,tegra210-admaif", 0x702d0000, "tegra210-admaif", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-i2s", 0x702d1000, "tegra210-i2s.0", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-i2s", 0x702d1100, "tegra210-i2s.1", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-i2s", 0x702d1200, "tegra210-i2s.2", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-i2s", 0x702d1300, "tegra210-i2s.3", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-i2s", 0x702d1400, "tegra210-i2s.4", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-amx", 0x702d3000, "tegra210-amx.0", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-amx", 0x702d3100, "tegra210-amx.1", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-adx", 0x702d3800, "tegra210-adx.0", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-adx", 0x702d3900, "tegra210-adx.1", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-afc", 0x702d7000, "tegra210-afc.0", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-afc", 0x702d7100, "tegra210-afc.1", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-afc", 0x702d7200, "tegra210-afc.2", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-afc", 0x702d7300, "tegra210-afc.3", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-afc", 0x702d7400, "tegra210-afc.4", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-afc", 0x702d7500, "tegra210-afc.5", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-sfc", 0x702d2000, "tegra210-sfc.0", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-sfc", 0x702d2200, "tegra210-sfc.1", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-sfc", 0x702d2400, "tegra210-sfc.2", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-sfc", 0x702d2600, "tegra210-sfc.3", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-mvc", 0x702da000, "tegra210-mvc.0", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-mvc", 0x702da200, "tegra210-mvc.1", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-iqc", 0x702de000, "tegra210-iqc.0", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-iqc", 0x702de200, "tegra210-iqc.1", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-dmic", 0x702d4000, "tegra210-dmic.0", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-dmic", 0x702d4100, "tegra210-dmic.1", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-dmic", 0x702d4200, "tegra210-dmic.2", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-ope", 0x702d8000, "tegra210-ope.0", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-ope", 0x702d8400, "tegra210-ope.1", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-amixer", 0x702dbb00, "tegra210-mixer", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-spdif", 0x702d6000, "tegra210-spdif", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-admaif", ADMAIF_BASE_ADDR, "tegra210-admaif", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-i2s", I2S1_BASE_ADDR, "tegra210-i2s.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-i2s", I2S2_BASE_ADDR, "tegra210-i2s.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-i2s", I2S3_BASE_ADDR, "tegra210-i2s.2", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-i2s", I2S4_BASE_ADDR, "tegra210-i2s.3", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-i2s", I2S5_BASE_ADDR, "tegra210-i2s.4", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-amx", AMX1_BASE_ADDR, "tegra210-amx.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-amx", AMX2_BASE_ADDR, "tegra210-amx.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-adx", ADX1_BASE_ADDR, "tegra210-adx.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-adx", ADX2_BASE_ADDR, "tegra210-adx.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-afc", AFC1_BASE_ADDR, "tegra210-afc.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-afc", AFC2_BASE_ADDR, "tegra210-afc.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-afc", AFC3_BASE_ADDR, "tegra210-afc.2", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-afc", AFC4_BASE_ADDR, "tegra210-afc.3", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-afc", AFC5_BASE_ADDR, "tegra210-afc.4", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-afc", AFC6_BASE_ADDR, "tegra210-afc.5", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-sfc", SFC1_BASE_ADDR, "tegra210-sfc.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-sfc", SFC2_BASE_ADDR, "tegra210-sfc.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-sfc", SFC3_BASE_ADDR, "tegra210-sfc.2", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-sfc", SFC4_BASE_ADDR, "tegra210-sfc.3", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-mvc", MVC1_BASE_ADDR, "tegra210-mvc.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-mvc", MVC2_BASE_ADDR, "tegra210-mvc.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-iqc", IQC1_BASE_ADDR, "tegra210-iqc.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-iqc", IQC2_BASE_ADDR, "tegra210-iqc.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-dmic", DMIC1_BASE_ADDR, "tegra210-dmic.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-dmic", DMIC2_BASE_ADDR, "tegra210-dmic.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-dmic", DMIC3_BASE_ADDR, "tegra210-dmic.2", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-ope", OPE1_BASE_ADDR, "tegra210-ope.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-ope", OPE2_BASE_ADDR, "tegra210-ope.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-amixer", AMIXER1_BASE_ADDR, "tegra210-mixer", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra210-spdif", SPDIF1_BASE_ADDR, "tegra210-spdif", NULL),
 	{}
 };
+
+static int tegra210_xbar_registration(struct platform_device *pdev)
+{
+	int ret;
+
+	tegra210_xbar_codec.num_dapm_widgets = (NUM_MUX_WIDGETS * 3) +
+				(NUM_DAIS - NUM_MUX_WIDGETS) * 2;
+	tegra210_xbar_codec.num_dapm_routes =
+		(NUM_DAIS - NUM_MUX_WIDGETS) * 2 +
+		(NUM_MUX_WIDGETS * NUM_MUX_INPUT);
+
+	ret = snd_soc_register_codec(&pdev->dev, &tegra210_xbar_codec,
+				tegra210_xbar_dais, NUM_DAIS);
+
+	if (ret != 0) {
+		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
+		return -EBUSY;
+	}
+
+	of_platform_populate(pdev->dev.of_node, NULL, tegra210_xbar_auxdata,
+			     &pdev->dev);
+
+	return 0;
+}
+#endif
 
 static int tegra210_xbar_probe(struct platform_device *pdev)
 {
@@ -841,25 +871,27 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 
 	xbar->soc_data = soc_data;
 
-	xbar->clk = devm_clk_get(&pdev->dev, "ahub");
-	if (IS_ERR(xbar->clk)) {
-		dev_err(&pdev->dev, "Can't retrieve ahub clock\n");
-		ret = PTR_ERR(xbar->clk);
-		goto err;
-	}
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		xbar->clk = devm_clk_get(&pdev->dev, "ahub");
+		if (IS_ERR(xbar->clk)) {
+			dev_err(&pdev->dev, "Can't retrieve ahub clock\n");
+			ret = PTR_ERR(xbar->clk);
+			goto err;
+		}
 
-	xbar->clk_parent = clk_get_sys(NULL, "pll_a_out0");
-	if (IS_ERR(xbar->clk)) {
-		dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
-		ret = PTR_ERR(xbar->clk_parent);
-		goto err_clk_put;
-	}
+		xbar->clk_parent = clk_get_sys(NULL, "pll_a_out0");
+		if (IS_ERR(xbar->clk)) {
+			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
+			ret = PTR_ERR(xbar->clk_parent);
+			goto err_clk_put;
+		}
 
-	xbar->clk_ape = clk_get_sys(NULL, "xbar.ape");
-	if (IS_ERR(xbar->clk_ape)) {
-		dev_err(&pdev->dev, "Can't retrieve ape clock\n");
-		ret = PTR_ERR(xbar->clk_ape);
-		goto err_clk_put_parent;
+		xbar->clk_ape = clk_get_sys(NULL, "xbar.ape");
+		if (IS_ERR(xbar->clk_ape)) {
+			dev_err(&pdev->dev, "Can't retrieve ape clock\n");
+			ret = PTR_ERR(xbar->clk_ape);
+			goto err_clk_put_parent;
+		}
 	}
 
 	parent_clk = clk_get_parent(xbar->clk);
@@ -869,23 +901,24 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 		goto err_clk_put_ape;
 	}
 
-	ret = clk_set_rate(xbar->clk_parent, 24560000);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to set clock rate of pll_a_out0\n");
-		goto err_clk_put_ape;
-	}
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		ret = clk_set_rate(xbar->clk_parent, 24560000);
+		if (ret) {
+			dev_err(&pdev->dev, "Failed to set clock rate of pll_a_out0\n");
+			goto err_clk_put_ape;
+		}
 
-	ret = clk_set_parent(xbar->clk, xbar->clk_parent);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to set parent clock with pll_a_out0\n");
-		goto err_clk_put_ape;
-	}
+		ret = clk_set_parent(xbar->clk, xbar->clk_parent);
+		if (ret) {
+			dev_err(&pdev->dev, "Failed to set parent clock with pll_a_out0\n");
+			goto err_clk_put_ape;
+		}
 
-	ret = clk_set_rate(xbar->clk, 12288000);
-
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to set clock rate of ahub\n");
-		goto err_clk_put_ape;
+		ret = clk_set_rate(xbar->clk, 12288000);
+		if (ret) {
+			dev_err(&pdev->dev, "Failed to set clock rate of ahub\n");
+			goto err_clk_put_ape;
+		}
 	}
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -922,15 +955,14 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 			goto err_pm_disable;
 	}
 
-	ret = snd_soc_register_codec(&pdev->dev, &tegra210_xbar_codec,
-				tegra210_xbar_dais, ARRAY_SIZE(tegra210_xbar_dais));
-	if (ret != 0) {
-		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+	ret = tegra210_xbar_registration(pdev);
+#else
+	ret = tegra186_xbar_registration(pdev);
+#endif
+	if (ret == -EBUSY)
 		goto err_suspend;
-	}
 
-	of_platform_populate(pdev->dev.of_node, NULL, tegra210_xbar_auxdata,
-			     &pdev->dev);
 	return 0;
 
 err_suspend:
@@ -944,7 +976,8 @@ err_clk_set_parent:
 err_clk_put_ape:
 	clk_put(xbar->clk_ape);
 err_clk_put_parent:
-	clk_put(xbar->clk_parent);
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
+		clk_put(xbar->clk_parent);
 err_clk_put:
 	devm_clk_put(&pdev->dev, xbar->clk);
 err:

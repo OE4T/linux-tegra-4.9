@@ -1,7 +1,7 @@
 /*
  * tegra210_admaif_alt.c - Tegra ADMAIF driver
  *
- * Copyright (c) 2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -33,6 +33,9 @@
 #include "tegra_pcm_alt.h"
 #include "tegra210_xbar_alt.h"
 #include "tegra210_admaif_alt.h"
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#include <sound/tegra_audio.h>
+#endif
 
 #define DRV_NAME "tegra210-ape-admaif"
 
@@ -46,17 +49,47 @@
 	{ ADMAIF_CH_REG(TEGRA210_ADMAIF_XBAR_TX_FIFO_CTRL, id), tx_fifo_ctrl}
 
 static const struct reg_default tegra210_admaif_reg_defaults[] = {
-	ADMAIF_REG_DEFAULTS(0, 0x00000300, 0x02000300),
-	ADMAIF_REG_DEFAULTS(1, 0x00000304, 0x02000304),
-	ADMAIF_REG_DEFAULTS(2, 0x00000208, 0x01800208),
-	ADMAIF_REG_DEFAULTS(3, 0x0000020b, 0x0180020b),
-	ADMAIF_REG_DEFAULTS(4, 0x0000020e, 0x0180020e),
-	ADMAIF_REG_DEFAULTS(5, 0x00000211, 0x01800211),
-	ADMAIF_REG_DEFAULTS(6, 0x00000214, 0x01800214),
-	ADMAIF_REG_DEFAULTS(7, 0x00000217, 0x01800217),
-	ADMAIF_REG_DEFAULTS(8, 0x0000021a, 0x0180021a),
-	ADMAIF_REG_DEFAULTS(9, 0x0000021d, 0x0180021d),
-	{ TEGRA210_ADMAIF_GLOBAL_CG_0, 0x00000003}
+	{ TEGRA210_ADMAIF_GLOBAL_CG_0, 0x00000003},
+	ADMAIF_REG_DEFAULTS(0,  ADMAIF_RX1_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX1_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(1,  ADMAIF_RX2_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX2_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(2,  ADMAIF_RX3_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX3_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(3,  ADMAIF_RX4_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX4_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(4,  ADMAIF_RX5_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX5_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(5,  ADMAIF_RX6_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX6_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(6,  ADMAIF_RX7_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX7_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(7,  ADMAIF_RX8_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX8_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(8,  ADMAIF_RX9_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX9_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(9,  ADMAIF_RX10_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX10_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(10, ADMAIF_RX11_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX11_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(11, ADMAIF_RX12_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX12_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(12, ADMAIF_RX13_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX13_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(13, ADMAIF_RX14_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX14_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(14, ADMAIF_RX15_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX15_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(15, ADMAIF_RX16_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX16_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(16, ADMAIF_RX17_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX17_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(17, ADMAIF_RX18_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX18_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(18, ADMAIF_RX19_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX19_FIFO_CTRL_REG_DEFAULT),
+	ADMAIF_REG_DEFAULTS(19, ADMAIF_RX20_FIFO_CTRL_REG_DEFAULT,
+				ADMAIF_TX20_FIFO_CTRL_REG_DEFAULT),
 };
 
 static bool tegra210_admaif_wr_reg(struct device *dev, unsigned int reg)
@@ -134,7 +167,7 @@ static const struct regmap_config tegra210_admaif_regmap_config = {
 	.readable_reg = tegra210_admaif_rd_reg,
 	.volatile_reg = tegra210_admaif_volatile_reg,
 	.reg_defaults = tegra210_admaif_reg_defaults,
-	.num_reg_defaults = ARRAY_SIZE(tegra210_admaif_reg_defaults),
+	.num_reg_defaults = TEGRA210_ADMAIF_CHANNEL_COUNT * 6 + 1,
 	.cache_type = REGCACHE_FLAT,
 };
 
@@ -266,14 +299,25 @@ static int tegra210_admaif_hw_params(struct snd_pcm_substream *substream,
 	unsigned int reg, fifo_ctrl, fifo_size;
 	int valid_bit;
 
+	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
 	cif_conf.audio_channels = params_channels(params);
 	cif_conf.client_channels = params_channels(params);
 
 	switch (params_format(params)) {
+	case SNDRV_PCM_FORMAT_S8:
+		cif_conf.audio_bits = TEGRA210_AUDIOCIF_BITS_8;
+		cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_8;
+		valid_bit = DATA_8BIT;
+		break;
 	case SNDRV_PCM_FORMAT_S16_LE:
 		cif_conf.audio_bits = TEGRA210_AUDIOCIF_BITS_16;
 		cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_16;
 		valid_bit = DATA_16BIT;
+		break;
+	case SNDRV_PCM_FORMAT_S24_LE:
+		cif_conf.audio_bits = TEGRA210_AUDIOCIF_BITS_24;
+		cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_24;
+		valid_bit = DATA_32BIT;
 		break;
 	case SNDRV_PCM_FORMAT_S32_LE:
 		cif_conf.audio_bits = TEGRA210_AUDIOCIF_BITS_32;
@@ -284,13 +328,6 @@ static int tegra210_admaif_hw_params(struct snd_pcm_substream *substream,
 		dev_err(dev, "Wrong format!\n");
 		return -EINVAL;
 	}
-
-	cif_conf.threshold = 0;
-	cif_conf.expand = 0;
-	cif_conf.stereo_conv = 0;
-	cif_conf.replicate = 0;
-	cif_conf.truncate = 0;
-	cif_conf.mono_conv = 0;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		reg = TEGRA210_ADMAIF_CHAN_ACIF_TX_CTRL +
@@ -462,7 +499,7 @@ static int tegra210_admaif_dai_probe(struct snd_soc_dai *dai)
 		.ops = &tegra210_admaif_dai_ops,			\
 	}
 
-static struct snd_soc_dai_driver tegra210_admaif_dais[10] = {
+static struct snd_soc_dai_driver tegra210_admaif_dais[] = {
 	ADMAIF_DAI(1),
 	ADMAIF_DAI(2),
 	ADMAIF_DAI(3),
@@ -473,6 +510,16 @@ static struct snd_soc_dai_driver tegra210_admaif_dais[10] = {
 	ADMAIF_DAI(8),
 	ADMAIF_DAI(9),
 	ADMAIF_DAI(10),
+	ADMAIF_DAI(11),
+	ADMAIF_DAI(12),
+	ADMAIF_DAI(13),
+	ADMAIF_DAI(14),
+	ADMAIF_DAI(15),
+	ADMAIF_DAI(16),
+	ADMAIF_DAI(17),
+	ADMAIF_DAI(18),
+	ADMAIF_DAI(19),
+	ADMAIF_DAI(20),
 };
 
 #define ADMAIF_CODEC_FIFO_DAI(id)					\
@@ -547,6 +594,26 @@ static struct snd_soc_dai_driver tegra210_admaif_codec_dais[] = {
 	ADMAIF_CODEC_CIF_DAI(8),
 	ADMAIF_CODEC_CIF_DAI(9),
 	ADMAIF_CODEC_CIF_DAI(10),
+	ADMAIF_CODEC_FIFO_DAI(11),
+	ADMAIF_CODEC_FIFO_DAI(12),
+	ADMAIF_CODEC_FIFO_DAI(13),
+	ADMAIF_CODEC_FIFO_DAI(14),
+	ADMAIF_CODEC_FIFO_DAI(15),
+	ADMAIF_CODEC_FIFO_DAI(16),
+	ADMAIF_CODEC_FIFO_DAI(17),
+	ADMAIF_CODEC_FIFO_DAI(18),
+	ADMAIF_CODEC_FIFO_DAI(19),
+	ADMAIF_CODEC_FIFO_DAI(20),
+	ADMAIF_CODEC_CIF_DAI(11),
+	ADMAIF_CODEC_CIF_DAI(12),
+	ADMAIF_CODEC_CIF_DAI(13),
+	ADMAIF_CODEC_CIF_DAI(14),
+	ADMAIF_CODEC_CIF_DAI(15),
+	ADMAIF_CODEC_CIF_DAI(16),
+	ADMAIF_CODEC_CIF_DAI(17),
+	ADMAIF_CODEC_CIF_DAI(18),
+	ADMAIF_CODEC_CIF_DAI(19),
+	ADMAIF_CODEC_CIF_DAI(20),
 };
 
 #define ADMAIF_WIDGETS(id)					\
@@ -569,7 +636,17 @@ static const struct snd_soc_dapm_widget tegra210_admaif_widgets[] = {
 	ADMAIF_WIDGETS(7),
 	ADMAIF_WIDGETS(8),
 	ADMAIF_WIDGETS(9),
-	ADMAIF_WIDGETS(10)
+	ADMAIF_WIDGETS(10),
+	ADMAIF_WIDGETS(11),
+	ADMAIF_WIDGETS(12),
+	ADMAIF_WIDGETS(13),
+	ADMAIF_WIDGETS(14),
+	ADMAIF_WIDGETS(15),
+	ADMAIF_WIDGETS(16),
+	ADMAIF_WIDGETS(17),
+	ADMAIF_WIDGETS(18),
+	ADMAIF_WIDGETS(19),
+	ADMAIF_WIDGETS(20)
 };
 
 #define ADMAIF_ROUTES(id)						\
@@ -590,7 +667,17 @@ static const struct snd_soc_dapm_route tegra210_admaif_routes[] = {
 	ADMAIF_ROUTES(7),
 	ADMAIF_ROUTES(8),
 	ADMAIF_ROUTES(9),
-	ADMAIF_ROUTES(10)
+	ADMAIF_ROUTES(10),
+	ADMAIF_ROUTES(11),
+	ADMAIF_ROUTES(12),
+	ADMAIF_ROUTES(13),
+	ADMAIF_ROUTES(14),
+	ADMAIF_ROUTES(15),
+	ADMAIF_ROUTES(16),
+	ADMAIF_ROUTES(17),
+	ADMAIF_ROUTES(18),
+	ADMAIF_ROUTES(19),
+	ADMAIF_ROUTES(20)
 };
 
 static int tegra210_admaif_codec_probe(struct snd_soc_codec *codec)
@@ -605,9 +692,9 @@ static int tegra210_admaif_codec_probe(struct snd_soc_codec *codec)
 static struct snd_soc_codec_driver tegra210_admaif_codec = {
 	.probe = tegra210_admaif_codec_probe,
 	.dapm_widgets = tegra210_admaif_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra210_admaif_widgets),
+	.num_dapm_widgets = TEGRA210_ADMAIF_CHANNEL_COUNT * 4,
 	.dapm_routes = tegra210_admaif_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra210_admaif_routes),
+	.num_dapm_routes = TEGRA210_ADMAIF_CHANNEL_COUNT * 6,
 	.idle_bias_off = 1,
 };
 
@@ -616,7 +703,7 @@ static const struct snd_soc_component_driver tegra210_admaif_dai_driver = {
 };
 
 static struct tegra210_admaif_soc_data soc_data_tegra210 = {
-	.num_ch = 10,
+	.num_ch = TEGRA210_ADMAIF_CHANNEL_COUNT,
 	.set_audio_cif = tegra210_xbar_set_cif,
 };
 
@@ -745,7 +832,7 @@ static int tegra210_admaif_probe(struct platform_device *pdev)
 	ret = snd_soc_register_component(&pdev->dev,
 					&tegra210_admaif_dai_driver,
 					tegra210_admaif_dais,
-					ARRAY_SIZE(tegra210_admaif_dais));
+					admaif->soc_data->num_ch);
 	if (ret) {
 		dev_err(&pdev->dev, "Could not register DAIs %d: %d\n",
 			i, ret);
@@ -755,7 +842,7 @@ static int tegra210_admaif_probe(struct platform_device *pdev)
 
 	ret = snd_soc_register_codec(&pdev->dev, &tegra210_admaif_codec,
 				tegra210_admaif_codec_dais,
-				ARRAY_SIZE(tegra210_admaif_codec_dais));
+				admaif->soc_data->num_ch * 2);
 	if (ret != 0) {
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
 		goto err_unregister_dais;

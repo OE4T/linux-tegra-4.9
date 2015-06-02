@@ -2,7 +2,7 @@
  * tegra_alt_asoc_utils.h - Definitions for MCLK and DAP Utility driver
  *
  * Author: Stephen Warren <swarren@nvidia.com>
- * Copyright (c) 2011-2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -37,6 +37,7 @@ enum tegra_asoc_utils_soc {
 	TEGRA_ASOC_UTILS_SOC_TEGRA148,
 	TEGRA_ASOC_UTILS_SOC_TEGRA124,
 	TEGRA_ASOC_UTILS_SOC_TEGRA210,
+	TEGRA_ASOC_UTILS_SOC_TEGRA186,
 };
 
 /* These values are copied from WiredAccessoryObserver */

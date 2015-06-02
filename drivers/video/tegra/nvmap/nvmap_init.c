@@ -24,6 +24,7 @@
 #include <linux/of_reserved_mem.h>
 #include <linux/nvmap.h>
 #include <linux/tegra-ivc.h>
+#include <linux/dma-contiguous.h>
 
 #include "nvmap_priv.h"
 #include "iomap.h"
@@ -50,6 +51,12 @@ static const struct of_device_id nvmap_of_ids[] = {
 	{ }
 };
 
+static struct dma_declare_info generic_dma_info = {
+	.name = "generic",
+	.size = 0,
+	.notifier.ops = NULL,
+};
+
 static struct nvmap_platform_carveout nvmap_carveouts[4] = {
 	[0] = {
 		.name		= "iram",
@@ -65,6 +72,8 @@ static struct nvmap_platform_carveout nvmap_carveouts[4] = {
 		.base		= 0,
 		.size		= 0,
 		.dma_dev	= &tegra_generic_dev,
+		.cma_dev	= &tegra_generic_cma_dev,
+		.dma_info	= &generic_dma_info,
 	},
 	[2] = {
 		.name		= "vpr",
@@ -209,12 +218,40 @@ static int __nvmap_init_dt(struct platform_device *pdev)
 
 static int nvmap_co_device_init(struct reserved_mem *rmem, struct device *dev)
 {
-	tegra_carveout_start = rmem->base;
-	tegra_carveout_size = rmem->size;
-	dev_dbg(dev, "carveout=%s %pa@%pa\n",
-		 rmem->name, &tegra_carveout_size, &tegra_carveout_start);
+	struct nvmap_platform_carveout *co = rmem->priv;
+	int err;
 
-	return 0;
+	if (!co)
+		return -ENODEV;
+
+	/* if co size is 0, => co is not present. So, skip init. */
+	if (!co->size)
+		return 0;
+
+	if (!co->cma_dev) {
+		err = dma_declare_coherent_memory(co->dma_dev, 0,
+				co->base, co->size,
+				DMA_MEMORY_NOMAP | DMA_MEMORY_EXCLUSIVE);
+		if (err & DMA_MEMORY_NOMAP) {
+			dev_info(dev,
+				 "%s :dma coherent mem declare %pa,%zu\n",
+				 co->name, &co->base, co->size);
+			co->init_done = true;
+		} else
+			dev_err(dev,
+				"%s :dma coherent mem declare fail %pa,%zu\n",
+				co->name, &co->base, co->size);
+	} else {
+		co->dma_info->cma_dev = co->cma_dev;
+		err = dma_declare_coherent_resizable_cma_memory(
+				co->dma_dev, co->dma_info);
+		if (err)
+			dev_err(dev, "%s coherent memory declaration failed\n",
+				     co->name);
+		else
+			co->init_done = true;
+	}
+	return err;
 }
 static void nvmap_co_device_release(struct reserved_mem *rmem,struct device *dev)
 { }
@@ -224,8 +261,36 @@ static const struct reserved_mem_ops nvmap_co_ops = {
 };
 static int __init nvmap_co_setup(struct reserved_mem *rmem)
 {
+	int resizable;
+	struct nvmap_platform_carveout *co;
+	int ret = 0;
+
+	co = nvmap_get_carveout_pdata(rmem->name);
+	if (!co)
+		return ret;
+
 	rmem->ops = &nvmap_co_ops;
-	return 0;
+	co->base = rmem->base;
+	co->size = rmem->size;
+	rmem->priv = co;
+
+	ret = of_property_read_u32_array(of_find_node_by_phandle(rmem->phandle),
+				       "nvidia,resizable", &resizable, 1);
+	if (ret || !resizable) {
+		co->cma_dev = NULL;
+		return ret;
+	}
+
+	WARN_ON(!rmem->base);
+	ret = dma_declare_contiguous(co->cma_dev, rmem->size, rmem->base, 0);
+	if (ret) {
+		pr_info("dma_declare_contiguous fails for %s\n", rmem->name);
+		return ret;
+	}
+
+	pr_debug("tegra-carveouts carveout=%s %pa@%pa\n",
+		 rmem->name, &rmem->size, &rmem->base);
+	return ret;
 }
 RESERVEDMEM_OF_DECLARE(nvmap_co, "nvidia,generic_carveout", nvmap_co_setup);
 
@@ -238,19 +303,19 @@ static int __nvmap_init_legacy(struct device *dev)
 	nvmap_carveouts[0].base = TEGRA_IRAM_BASE + TEGRA_RESET_HANDLER_SIZE;
 	nvmap_carveouts[0].size = TEGRA_IRAM_SIZE - TEGRA_RESET_HANDLER_SIZE;
 
-	of_reserved_mem_device_init(dev);
 	/* Carveout. */
-	nvmap_carveouts[1].base = tegra_carveout_start;
-	nvmap_carveouts[1].size = tegra_carveout_size;
+	if (!nvmap_carveouts[1].base) {
+		nvmap_carveouts[1].base = tegra_carveout_start;
+		nvmap_carveouts[1].size = tegra_carveout_size;
+		if (!tegra_vpr_resize)
+			nvmap_carveouts[1].cma_dev = NULL;
+	}
 
 	/* VPR */
 	nvmap_carveouts[2].base = tegra_vpr_start;
 	nvmap_carveouts[2].size = tegra_vpr_size;
-
-	if (tegra_vpr_resize) {
-		nvmap_carveouts[1].cma_dev = &tegra_generic_cma_dev;
+	if (tegra_vpr_resize)
 		nvmap_carveouts[2].cma_dev = &tegra_vpr_cma_dev;
-	}
 
 	return 0;
 }
@@ -263,7 +328,7 @@ int nvmap_init(struct platform_device *pdev)
 {
 	int err;
 	struct dma_declare_info vpr_dma_info;
-	struct dma_declare_info generic_dma_info;
+	struct reserved_mem rmem;
 
 	if (pdev->dev.of_node) {
 		err = __nvmap_init_dt(pdev);
@@ -273,24 +338,24 @@ int nvmap_init(struct platform_device *pdev)
 
 	if (!tegra_vpr_resize)
 		goto end;
-	generic_dma_info.name = "generic";
-	generic_dma_info.size = 0;
-	generic_dma_info.cma_dev = nvmap_carveouts[1].cma_dev;
-	generic_dma_info.notifier.ops = NULL;
 
 	vpr_dma_info.name = "vpr";
 	vpr_dma_info.size = SZ_32M;
 	vpr_dma_info.cma_dev = nvmap_carveouts[2].cma_dev;
 	vpr_dma_info.notifier.ops = &vpr_dev_ops;
 
-	if (nvmap_carveouts[1].size) {
-		err = dma_declare_coherent_resizable_cma_memory(
-				&tegra_generic_dev, &generic_dma_info);
-		if (err) {
-			pr_err("Generic coherent memory declaration failed\n");
-			return err;
-		}
+	err = of_reserved_mem_device_init(&pdev->dev);
+	if (err)
+		pr_err("reserved_mem_device_init fails, try legacy init\n");
+
+	/* try legacy init */
+	if (!nvmap_carveouts[1].init_done) {
+		rmem.priv = &nvmap_carveouts[1];
+		err = nvmap_co_device_init(&rmem, &pdev->dev);
+		if (err)
+			goto end;
 	}
+
 	if (nvmap_carveouts[2].size) {
 		err = dma_declare_coherent_resizable_cma_memory(
 				&tegra_vpr_dev, &vpr_dma_info);

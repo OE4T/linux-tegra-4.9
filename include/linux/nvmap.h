@@ -81,12 +81,14 @@ struct nvmap_platform_carveout {
 	bool resize;
 	struct device *dma_dev;
 	struct device dev;
+	struct dma_declare_info *dma_info;
 	bool is_ivm;
 	int peer;
 	int vmid;
 	int can_alloc;
 	bool enable_static_dma_map;
 	bool disable_dynamic_dma_map;
+	bool init_done;	/* FIXME: remove once all caveouts use reserved-memory */
 };
 
 struct nvmap_platform_data {

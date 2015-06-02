@@ -339,7 +339,7 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 				co->name);
 		goto fail;
 #endif
-	} else {
+	} else if (!co->init_done) {
 		int err;
 
 		/* declare Non-CMA heap */

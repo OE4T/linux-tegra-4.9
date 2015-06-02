@@ -288,8 +288,6 @@ static int vi_probe(struct platform_device *dev)
 			&pdata->toggle_slcg_notifier);
 	}
 
-	nvhost_module_init(dev);
-
 	if (pdata->master) {
 		ret = genpd_dev_pm_add(tegra_vi_of_match,
 					 &pdata->pdev->dev);
@@ -297,6 +295,8 @@ static int vi_probe(struct platform_device *dev)
 			pr_err("Could not add %s to power-domain using device tree\n",
 						dev_name(&pdata->pdev->dev));
 	}
+
+	nvhost_module_init(dev);
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 #ifndef CONFIG_PM_GENERIC_DOMAINS_OF

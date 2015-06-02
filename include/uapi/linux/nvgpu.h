@@ -104,8 +104,6 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_SYNC_FENCE_FDS		(1 << 3)
 /* NVGPU_IOCTL_CHANNEL_CYCLE_STATS is available */
 #define NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS		(1 << 4)
-/* MAP_BUFFER_EX with unmapped PTE */
-#define NVGPU_GPU_FLAGS_SUPPORT_UNMAPPED_PTE		(1 << 5)
 /* NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT is available */
 #define NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT	(1 << 6)
 
@@ -884,6 +882,7 @@ struct nvgpu_as_map_buffer_args {
 	__u32 flags;		/* in/out */
 #define NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET	    (1 << 0)
 #define NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE	    (1 << 2)
+#define NVGPU_AS_MAP_BUFFER_FLAGS_UNMAPPED_PTE	    (1 << 5)
 #define NVGPU_AS_MAP_BUFFER_FLAGS_MAPPABLE_COMPBITS (1 << 6)
 	__u32 reserved;		/* in */
 	__u32 dmabuf_fd;	/* in */

@@ -1168,7 +1168,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 				      flags &
 				      NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				      flags &
-				      NVGPU_GPU_FLAGS_SUPPORT_UNMAPPED_PTE,
+				      NVGPU_AS_MAP_BUFFER_FLAGS_UNMAPPED_PTE,
 				      rw_flag,
 				      sparse,
 				      flags);

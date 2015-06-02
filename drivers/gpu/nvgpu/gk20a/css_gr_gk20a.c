@@ -504,12 +504,17 @@ static u32 css_gr_allocate_perfmon_ids(struct gk20a_cs_snapshot *data,
 	if (!count || count > CSS_MAX_PERFMON_IDS - CSS_FIRST_PERFMON_ID)
 		return 0;
 
-	for (f = CSS_FIRST_PERFMON_ID; f < e; f++) {
-		u32 slots = 0;
+	for (f = CSS_FIRST_PERFMON_ID; f <= e; f++) {
+		u32 slots;
 		u32 cur;
-		u32 end = f + count;
+		u32 end;
+
+		if (CSS_PERFMON_GET(pids, f))
+			continue;
 
 		/* lookup for continuous hole [f, f+count) of unused bits */
+		slots = 0;
+		end = f + count;
 		for (cur = f; cur < end; cur++) {
 			if (CSS_PERFMON_GET(pids, cur))
 				break;
@@ -556,7 +561,9 @@ static int css_gr_free_client_data(struct gk20a_cs_snapshot *data,
 {
 	int ret = 0;
 
-	list_del(&client->list);
+	if (client->list.next && client->list.prev)
+		list_del(&client->list);
+
 	if (client->perfmon_start && client->perfmon_count) {
 		if (client->perfmon_count != css_gr_release_perfmon_ids(data,
 				client->perfmon_start, client->perfmon_count))

@@ -4,4 +4,4 @@ subdir-ccflags-y += -Werror
 
 obj-y		+= bpmp_t186.o
 obj-y		+= mail_t186.o
-obj-y		+= mail_tmo.o
+obj-y		+= mail_imo.o

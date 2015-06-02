@@ -75,6 +75,89 @@ void bpmp_mail_token_clr(uint32_t val)
 	bpmp_writel(val, HSP_SHRD_SEM_0_CLR);
 }
 
+/*
+ * How the token bits are interpretted
+ *
+ * SL_SIGL (b00): slave ch in signalled state
+ * SL_QUED (b01): slave ch is in queue
+ * MA_FREE (b10): master ch is free
+ * MA_ACKD (b11): master ch is acked
+ *
+ * Ideally, the slave should only set bits while the
+ * master do only clear them. But there is an exception -
+ * see bpmp_ack_master()
+ */
+#define CH_MASK(ch)	(0x3 << ((ch) * 2))
+#define SL_SIGL(ch)	(0x0 << ((ch) * 2))
+#define SL_QUED(ch)	(0x1 << ((ch) * 2))
+#define MA_FREE(ch)	(0x2 << ((ch) * 2))
+#define MA_ACKD(ch)	(0x3 << ((ch) * 2))
+
+static u32 bpmp_ch_sta(int ch)
+{
+	return bpmp_mail_token() & CH_MASK(ch);
+}
+
+bool bpmp_master_free(int ch)
+{
+	return bpmp_ch_sta(ch) == MA_FREE(ch);
+}
+
+bool bpmp_slave_signalled(int ch)
+{
+	return bpmp_ch_sta(ch) == SL_SIGL(ch);
+}
+
+bool bpmp_master_acked(int ch)
+{
+	return bpmp_ch_sta(ch) == MA_ACKD(ch);
+}
+
+void bpmp_signal_slave(int ch)
+{
+	bpmp_mail_token_clr(CH_MASK(ch));
+}
+
+static void bpmp_ack_master(int ch, int flags)
+{
+	bpmp_mail_token_set(MA_ACKD(ch));
+
+	/*
+	 * We have to violate the bit modification rule while
+	 * moving from SL_QUED to MA_FREE (DO_ACK not set) so that
+	 * the channel won't be in ACKD state forever.
+	 */
+	if (!(flags & DO_ACK))
+		bpmp_mail_token_clr(MA_ACKD(ch) ^ MA_FREE(ch));
+}
+
+/* MA_ACKD to MA_FREE */
+void bpmp_free_master(int ch)
+{
+	bpmp_mail_token_clr(MA_ACKD(ch) ^ MA_FREE(ch));
+}
+
+void tegra_bpmp_mail_return_data(int ch, int code, void *data, int sz)
+{
+	struct mb_data *p;
+	int flags;
+
+	if (sz > MSG_DATA_SZ) {
+		WARN_ON(1);
+		return;
+	}
+
+	p = channel_area[ch].ob;
+	p->code = code;
+	memcpy(p->data, data, sz);
+
+	flags = channel_area[ch].ib->flags;
+	bpmp_ack_master(ch, flags);
+	if (flags & RING_DOORBELL)
+		bpmp_ring_doorbell();
+}
+EXPORT_SYMBOL(tegra_bpmp_mail_return_data);
+
 void bpmp_ring_doorbell(void)
 {
 	tegra_hsp_db_ring(HSP_DB_BPMP);

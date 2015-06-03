@@ -2529,7 +2529,7 @@ static void nvhost_free_channel_syncpt_all(struct tegra_se_dev *se_dev)
 {
 	int i = 0;
 	for (i = 0; i < 4; i++)
-		nvhost_syncpt_put_ref_ext(se_dev->syncpt_ids[i]);
+		nvhost_syncpt_put_ref_ext(se_dev->pdev, se_dev->syncpt_ids[i]);
 }
 
 static int tegra_se_probe(struct platform_device *pdev)
@@ -2730,7 +2730,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 			SE_RNG_SRC_CONFIG_REG_OFFSET);
 
 	se_dev->syncpt_ids[se_num] =
-			nvhost_get_syncpt_host_managed_by_name("se");
+			nvhost_get_syncpt_host_managed(pdev, 0, "se");
 	if (!se_dev->syncpt_ids[se_num]) {
 		err = -EINVAL;
 		dev_err(se_dev->dev, "Cannot get syncpt_id for SE%d\n",

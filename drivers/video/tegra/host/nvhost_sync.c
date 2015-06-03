@@ -248,7 +248,7 @@ static void nvhost_sync_get_pt_name(struct sync_pt *sync_pt, char *str,
 
 	if (obj->id != NVSYNCPT_INVALID)
 		snprintf(str, size, "%s",
-			nvhost_syncpt_get_name_from_id(obj->id));
+			nvhost_syncpt_get_name_from_id(obj->sp, obj->id));
 	else
 		snprintf(str, size, "0");
 }

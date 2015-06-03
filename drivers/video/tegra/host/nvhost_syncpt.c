@@ -569,10 +569,8 @@ const char *nvhost_syncpt_get_last_client(struct platform_device *pdev, int id)
 	return name ? name : "";
 }
 
-const char *nvhost_syncpt_get_name_from_id(int id)
+const char *nvhost_syncpt_get_name_from_id(struct nvhost_syncpt *sp, int id)
 {
-	struct nvhost_master *host = nvhost;
-	struct nvhost_syncpt *sp = &host->syncpt;
 	const char *name = NULL;
 
 	name = sp->syncpt_names[id];

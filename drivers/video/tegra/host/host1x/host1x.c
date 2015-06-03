@@ -69,8 +69,6 @@ static const char *alloc_chs_per_submits_name = "alloc_chs_per_submits";
 static const char *syncpts_pts_base_name = "pts_base";
 static const char *syncpts_pts_limit_name = "pts_limit";
 
-struct nvhost_master *nvhost;
-
 struct nvhost_ctrl_userctx {
 	struct nvhost_master *dev;
 	u32 *mod_locks;
@@ -885,8 +883,6 @@ static int nvhost_probe(struct platform_device *dev)
 	host = devm_kzalloc(&dev->dev, sizeof(*host), GFP_KERNEL);
 	if (!host)
 		return -ENOMEM;
-
-	nvhost = host;
 
 	host->dev = dev;
 	INIT_LIST_HEAD(&host->static_mappings_list);

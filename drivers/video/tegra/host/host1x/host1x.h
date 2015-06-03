@@ -106,8 +106,6 @@ struct nvhost_master {
 	struct mutex vm_mutex;
 };
 
-extern struct nvhost_master *nvhost;
-
 void nvhost_debug_init(struct nvhost_master *master);
 void nvhost_device_debug_init(struct platform_device *dev);
 void nvhost_device_debug_deinit(struct platform_device *dev);

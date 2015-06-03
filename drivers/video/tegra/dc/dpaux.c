@@ -142,8 +142,14 @@ void tegra_dpaux_config_pad_mode(struct tegra_dc *dc,
 	tegra_dc_io_start(dc);
 
 	mutex_lock(&dpaux_lock);
-	_tegra_dpaux_pad_power(dc, id, true);
+	/*
+	 * Make sure to configure the pad mode before we power it on.
+	 * If not done in this order, there is a chance that the pad
+	 * runs in the default mode for a while causing intermittent
+	 * glitches on the physical lines
+	 */
 	_tegra_dpaux_config_pad_mode(dc, id, mode);
+	_tegra_dpaux_pad_power(dc, id, true);
 	mutex_unlock(&dpaux_lock);
 
 	tegra_dc_io_end(dc);

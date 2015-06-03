@@ -905,12 +905,24 @@ static void gr_gp10b_commit_global_bundle_cb(struct gk20a *g,
 	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg2_r(),
 		gr_pd_ab_dist_cfg2_token_limit_f(g->gr.bundle_cb_token_limit) |
 		gr_pd_ab_dist_cfg2_state_limit_f(data), patch);
+}
 
+static int gr_gp10b_init_fs_state(struct gk20a *g)
+{
+	u32 data;
+
+	data = gk20a_readl(g, gr_gpcs_tpcs_sm_texio_control_r());
+	data = set_field(data, gr_gpcs_tpcs_sm_texio_control_oor_addr_check_mode_m(),
+			gr_gpcs_tpcs_sm_texio_control_oor_addr_check_mode_arm_63_48_match_f());
+	gk20a_writel(g, gr_gpcs_tpcs_sm_texio_control_r(), data);
+
+	return gr_gm20b_ctx_state_floorsweep(g);
 }
 
 void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
+	gops->gr.init_fs_state = gr_gp10b_init_fs_state;
 	gops->gr.is_valid_class = gr_gp10b_is_valid_class;
 	gops->gr.commit_global_cb_manager = gr_gp10b_commit_global_cb_manager;
 	gops->gr.commit_global_pagepool = gr_gp10b_commit_global_pagepool;

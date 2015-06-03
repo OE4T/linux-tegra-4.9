@@ -3758,4 +3758,16 @@ static inline u32 gr_fe_gfxp_wfi_timeout_count_disabled_f(void)
 {
 	return 0x0;
 }
+static inline u32 gr_gpcs_tpcs_sm_texio_control_r(void)
+{
+	return 0x00419c84;
+}
+static inline u32 gr_gpcs_tpcs_sm_texio_control_oor_addr_check_mode_f(u32 v)
+{
+	return (v & 0x7) << 8;
+}
+static inline u32 gr_gpcs_tpcs_sm_texio_control_oor_addr_check_mode_arm_63_48_match_f(void)
+{
+	return 0x100;
+}
 #endif

@@ -3766,8 +3766,24 @@ static inline u32 gr_gpcs_tpcs_sm_texio_control_oor_addr_check_mode_f(u32 v)
 {
 	return (v & 0x7) << 8;
 }
+static inline u32 gr_gpcs_tpcs_sm_texio_control_oor_addr_check_mode_m(void)
+{
+	return 0x7 << 8;
+}
 static inline u32 gr_gpcs_tpcs_sm_texio_control_oor_addr_check_mode_arm_63_48_match_f(void)
 {
 	return 0x100;
+}
+static inline u32 gr_gpcs_tpcs_sm_disp_ctrl_r(void)
+{
+	return 0x00419f78;
+}
+static inline u32 gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_m(void)
+{
+	return 0x3 << 11;
+}
+static inline u32 gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_disable_f(void)
+{
+	return 0x1000;
 }
 #endif

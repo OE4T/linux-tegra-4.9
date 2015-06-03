@@ -916,6 +916,11 @@ static int gr_gp10b_init_fs_state(struct gk20a *g)
 			gr_gpcs_tpcs_sm_texio_control_oor_addr_check_mode_arm_63_48_match_f());
 	gk20a_writel(g, gr_gpcs_tpcs_sm_texio_control_r(), data);
 
+	data = gk20a_readl(g, gr_gpcs_tpcs_sm_disp_ctrl_r());
+	data = set_field(data, gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_m(),
+			 gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_disable_f());
+	gk20a_writel(g, gr_gpcs_tpcs_sm_disp_ctrl_r(), data);
+
 	return gr_gm20b_ctx_state_floorsweep(g);
 }
 

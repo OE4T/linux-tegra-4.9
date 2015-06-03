@@ -788,7 +788,7 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 	dsi->clk_ref = false;
 
 #if DSI_USE_SYNC_POINTS
-	dsi->syncpt_id = nvhost_get_syncpt_client_managed("dsi");
+	dsi->syncpt_id = nvhost_get_syncpt_client_managed(dc->ndev, "dsi");
 #endif
 
 	tegra_dsi_init_clock_param(dc);

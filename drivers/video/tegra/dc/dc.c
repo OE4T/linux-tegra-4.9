@@ -4369,23 +4369,23 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	if (TEGRA_DISPLAY_BASE == res->start) {
 		dc->vblank_syncpt = NVSYNCPT_VBLANK0;
 		dc->windows[0].syncpt.id =
-			nvhost_get_syncpt_client_managed("disp0_a");
+			nvhost_get_syncpt_client_managed(ndev, "disp0_a");
 		dc->windows[1].syncpt.id =
-			nvhost_get_syncpt_client_managed("disp0_b");
+			nvhost_get_syncpt_client_managed(ndev, "disp0_b");
 		dc->windows[2].syncpt.id =
-			nvhost_get_syncpt_client_managed("disp0_c");
+			nvhost_get_syncpt_client_managed(ndev, "disp0_c");
 		dc->valid_windows = 0x07;
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 		dc->windows[3].syncpt.id =
-			nvhost_get_syncpt_client_managed("disp0_d");
+			nvhost_get_syncpt_client_managed(ndev, "disp0_d");
 		dc->windows[4].syncpt.id =
-			nvhost_get_syncpt_client_managed("disp0_h");
+			nvhost_get_syncpt_client_managed(ndev, "disp0_h");
 		dc->valid_windows |= 0x18;
 #elif !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
 	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
 	!defined(CONFIG_ARCH_TEGRA_11x_SOC)
 		dc->windows[3].syncpt.id =
-			nvhost_get_syncpt_client_managed("disp0_d");
+			nvhost_get_syncpt_client_managed(ndev, "disp0_d");
 		dc->valid_windows |= 0x08;
 #endif
 		dc->powergate_id = TEGRA_POWERGATE_DISA;
@@ -4398,15 +4398,15 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	} else if (TEGRA_DISPLAY2_BASE == res->start) {
 		dc->vblank_syncpt = NVSYNCPT_VBLANK1;
 		dc->windows[0].syncpt.id =
-			nvhost_get_syncpt_client_managed("disp1_a");
+			nvhost_get_syncpt_client_managed(ndev, "disp1_a");
 		dc->windows[1].syncpt.id =
-			nvhost_get_syncpt_client_managed("disp1_b");
+			nvhost_get_syncpt_client_managed(ndev, "disp1_b");
 		dc->windows[2].syncpt.id =
-			nvhost_get_syncpt_client_managed("disp1_c");
+			nvhost_get_syncpt_client_managed(ndev, "disp1_c");
 		dc->valid_windows = 0x07;
 #ifdef CONFIG_ARCH_TEGRA_14x_SOC
 		dc->windows[4].syncpt.id =
-			nvhost_get_syncpt_client_managed("disp1_h");
+			nvhost_get_syncpt_client_managed(ndev, "disp1_h");
 		dc->valid_windows |= 0x10;
 #endif
 		dc->powergate_id = TEGRA_POWERGATE_DISB;

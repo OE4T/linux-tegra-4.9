@@ -113,6 +113,9 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 	}
 
 	num_wait_cmds = nvhost_sync_num_pts(sync_fence);
+	if (num_wait_cmds == 0)
+		return 0;
+
 	gk20a_channel_alloc_priv_cmdbuf(c, 4 * num_wait_cmds, &wait_cmd);
 	if (wait_cmd == NULL) {
 		gk20a_err(dev_from_gk20a(c->g),

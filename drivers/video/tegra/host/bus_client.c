@@ -998,7 +998,7 @@ static u32 nvhost_ioctl_channel_get_syncpt_channel(struct nvhost_channel *ch,
 		goto exit_unlock;
 
 	/* ... otherwise get a new syncpt dynamically */
-	id = nvhost_get_syncpt_host_managed(pdata->pdev, index);
+	id = nvhost_get_syncpt_host_managed(pdata->pdev, index, NULL);
 	if (!id)
 		goto exit_unlock;
 
@@ -1023,7 +1023,7 @@ static u32 nvhost_ioctl_channel_get_syncpt_instance(
 	}
 
 	/* ... otherwise get a new syncpt dynamically */
-	id = nvhost_get_syncpt_host_managed(pdata->pdev, index);
+	id = nvhost_get_syncpt_host_managed(pdata->pdev, index, NULL);
 	if (!id)
 		return 0;
 
@@ -1058,14 +1058,16 @@ static int nvhost_ioctl_channel_get_client_syncpt(
 	if (pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE) {
 		if (!ctx->client_managed_syncpt)
 			ctx->client_managed_syncpt =
-				nvhost_get_syncpt_client_managed(set_name);
+				nvhost_get_syncpt_client_managed(pdata->pdev,
+								set_name);
 		args->value = ctx->client_managed_syncpt;
 	} else {
 		struct nvhost_channel *ch = ctx->ch;
 		mutex_lock(&ch->syncpts_lock);
 		if (!ch->client_managed_syncpt)
 			ch->client_managed_syncpt =
-				nvhost_get_syncpt_client_managed(set_name);
+				nvhost_get_syncpt_client_managed(pdata->pdev,
+								set_name);
 		mutex_unlock(&ch->syncpts_lock);
 		args->value = ch->client_managed_syncpt;
 	}

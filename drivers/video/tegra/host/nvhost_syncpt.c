@@ -823,14 +823,16 @@ static u32 nvhost_get_syncpt(struct nvhost_syncpt *sp, bool client_managed,
  * Interface to get a new free (host managed) syncpt dynamically
  */
 u32 nvhost_get_syncpt_host_managed(struct platform_device *pdev,
-					u32 param)
+					u32 param,
+					const char *syncpt_name)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	struct nvhost_master *nvhost_master = nvhost;
-	char *syncpt_name;
+	struct nvhost_master *nvhost_master = nvhost_get_host(pdev);
 	u32 id;
 
-	if (pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE)
+	if (syncpt_name)
+		syncpt_name = kasprintf(GFP_KERNEL, "%s", syncpt_name);
+	else if (pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE)
 		syncpt_name = kasprintf(GFP_KERNEL, "%s_%s_%d",
 				dev_name(&pdev->dev), current->comm, param);
 	else
@@ -848,36 +850,13 @@ u32 nvhost_get_syncpt_host_managed(struct platform_device *pdev,
 EXPORT_SYMBOL_GPL(nvhost_get_syncpt_host_managed);
 
 /**
- * Interface to get a new free (host managed) syncpt dynamically
- * with a specified name (used for in-kernel operations)
- */
-u32 nvhost_get_syncpt_host_managed_by_name(const char *syncpt_name)
-{
-	u32 id;
-	struct nvhost_master *nvhost_master = nvhost;
-
-	if (!syncpt_name)
-		syncpt_name = kasprintf(GFP_KERNEL, "host_managed");
-	else
-		syncpt_name = kasprintf(GFP_KERNEL, "%s", syncpt_name);
-
-	id = nvhost_get_syncpt(&nvhost_master->syncpt, false, syncpt_name);
-	if (!id) {
-		nvhost_err(&nvhost_master->dev->dev, "failed to get syncpt\n");
-		return 0;
-	}
-
-	return id;
-}
-EXPORT_SYMBOL_GPL(nvhost_get_syncpt_host_managed_by_name);
-
-/**
  * Interface to get a new free (client managed) syncpt dynamically
  */
-u32 nvhost_get_syncpt_client_managed(const char *syncpt_name)
+u32 nvhost_get_syncpt_client_managed(struct platform_device *pdev,
+					const char *syncpt_name)
 {
 	u32 id;
-	struct nvhost_master *host = nvhost;
+	struct nvhost_master *host = nvhost_get_host(pdev);
 
 	if (!syncpt_name)
 		syncpt_name = kasprintf(GFP_KERNEL, "client_managed");
@@ -897,10 +876,9 @@ EXPORT_SYMBOL_GPL(nvhost_get_syncpt_client_managed);
 /**
  * API to mark in-use syncpt as free
  */
-static void nvhost_free_syncpt(u32 id)
+static void nvhost_free_syncpt(struct nvhost_syncpt *sp, u32 id)
 {
-	struct nvhost_master *host = nvhost;
-	struct nvhost_syncpt *sp = &host->syncpt;
+	struct nvhost_master *host = syncpt_to_dev(sp);
 	struct device *d = &host->dev->dev;
 
 	/* first check if we are freeing a valid syncpt */
@@ -1006,12 +984,12 @@ void nvhost_syncpt_put_ref(struct nvhost_syncpt *sp, u32 id)
 {
 	WARN_ON(nvhost_syncpt_read_ref(sp, id) == 0);
 	if (atomic_dec_and_test(&sp->ref[id]))
-		nvhost_free_syncpt(id);
+		nvhost_free_syncpt(sp, id);
 }
 
-void nvhost_syncpt_put_ref_ext(u32 id)
+void nvhost_syncpt_put_ref_ext(struct platform_device *pdev, u32 id)
 {
-	nvhost_syncpt_put_ref(&nvhost->syncpt, id);
+	nvhost_syncpt_put_ref(&nvhost_get_host(pdev)->syncpt, id);
 }
 EXPORT_SYMBOL_GPL(nvhost_syncpt_put_ref_ext);
 

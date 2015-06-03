@@ -376,7 +376,7 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 	dma_addr_t dma_handle = 0;
 	DEFINE_DMA_ATTRS(attrs);
 
-	id = nvhost_get_syncpt_host_managed_by_name("tsec_hdcp");
+	id = nvhost_get_syncpt_host_managed(tsec, 0, "tsec_hdcp");
 	if (!id) {
 		nvhost_err(&tsec->dev, "failed to get sync point\n");
 		return;
@@ -444,7 +444,7 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 		&opcode_len);
 	tsec_execute_method(dma_handle, cpuvaddr, opcode_len, id, 1);
 
-	nvhost_syncpt_put_ref_ext(id);
+	nvhost_syncpt_put_ref_ext(tsec, id);
 
 	dma_free_attrs(&tsec->dev,
 		HDCP_MTHD_BUF_SIZE, cpuvaddr,

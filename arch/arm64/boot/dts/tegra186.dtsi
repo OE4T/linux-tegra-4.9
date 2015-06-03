@@ -309,6 +309,16 @@
 			win-mask = <0x7>;
 			#stream-id-cells = <1>;
 			status = "disabled";
+			clocks = <&clk32k_in>,
+				 <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
+				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
+				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P0>,
+				 <&tegra_car TEGRA186_CLK_PLLD2>,
+				 <&tegra_car TEGRA186_CLK_EMC>,
+				 <&tegra_car TEGRA186_CLK_EMC_LATENCY>;
+			clock-names = "clk32k_in", "nvdisplay_disp",
+				      "nvdisplayhub", "nvdisplay_p0", "plld2",
+				      "emc", "emc_latency";
 		};
 
 		nvdisplay@0x54210000 {
@@ -318,6 +328,16 @@
 			win-mask = <0x38>;
 			#stream-id-cells = <1>;
 			status = "disabled";
+			clocks = <&clk32k_in>,
+				 <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
+				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
+				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P1>,
+				 <&tegra_car TEGRA186_CLK_PLLD2>,
+				 <&tegra_car TEGRA186_CLK_EMC>,
+				 <&tegra_car TEGRA186_CLK_EMC_LATENCY>;
+			clock-names = "clk32k_in", "nvdisplay_disp",
+				      "nvdisplayhub", "nvdisplay_p1", "plld2",
+				      "emc", "emc_latency";
 		};
 
 		nvdisplay@0x54220000 {
@@ -327,12 +347,24 @@
 			win-mask = <0x0>;
 			#stream-id-cells = <1>;
 			status = "disabled";
+			clocks = <&clk32k_in>,
+				 <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
+				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
+				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P2>,
+				 <&tegra_car TEGRA186_CLK_PLLD2>,
+				 <&tegra_car TEGRA186_CLK_EMC>,
+				 <&tegra_car TEGRA186_CLK_EMC_LATENCY>;
+			clock-names = "clk32k_in", "nvdisplay_disp",
+				      "nvdisplayhub", "nvdisplay_p2", "plld2",
+				      "emc", "emc_latency";
 		};
 
 		dsi {
 			compatible = "nvidia,tegra186-dsi";
 			reg = <0x0 0x54300000 0x0 0x00040000>,
 			      <0x0 0x54400000 0x0 0x00040000>;
+			clocks = <&clk32k_in>;
+			clock-names = "clk32k_in";
 		};
 
 		vic {
@@ -375,6 +407,10 @@
 			compatible = "nvidia,tegra186-sor";
 			reg = <0x0 0x54540000 0x0 0x00040000>;
 			status = "disabled";
+			clocks = <&clk32k_in>,
+				 <&tegra_car TEGRA186_CLK_SOR0>,
+				 <&tegra_car TEGRA186_CLK_SOR_SAFE>;
+			clock-names = "clk32k_in", "sor0", "sor_safe";
 		};
 
 		sor1 {
@@ -382,6 +418,10 @@
 			reg = <0x0 0x54580000 0x0 0x00040000>;
 			interrupts = <0 76 0x4>; /* INT_SOR_1 */
 			status = "disabled";
+			clocks = <&clk32k_in>,
+				 <&tegra_car TEGRA186_CLK_SOR1>,
+				 <&tegra_car TEGRA186_CLK_SOR_SAFE>;
+			clock-names = "clk32k_in", "sor1", "sor_safe";
 		};
 
 		dpaux {
@@ -389,6 +429,10 @@
 			reg = <0x0 0x545c0000 0x0 0x00040000>;
 			interrupts = <0 159 0x4>; /* INT_DPAUX */
 			status = "disabled";
+			clocks = <&clk32k_in>,
+				 <&tegra_car TEGRA186_CLK_DPAUX>,
+				 <&tegra_car TEGRA186_CLK_PLLDP>;
+			clock-names = "clk32k_in", "dpaux", "plldp";
 		};
 
 		dpaux1 {
@@ -396,6 +440,11 @@
 			reg = <0x0 0x54040000 0x0 0x00040000>;
 			interrupts = <0 11 0x4>; /* INT_DPAUX_1 */
 			status = "disabled";
+			clocks = <&clk32k_in>,
+				 <&tegra_car TEGRA186_CLK_DPAUX1>,
+				 <&tegra_car TEGRA186_CLK_PLLDP>;
+			clock-names = "clk32k_in", "dpaux1", "plldp";
+
 		};
 
 		se1 {
@@ -905,5 +954,18 @@
 	roc-flush {
 		compatible = "nvidia,tegra186-roc-flush";
 		reg = <0x0 0x0e080000 0x0 0x10000>;
+	};
+
+	clocks {
+	     compatible = "simple-bus";
+             #address-cells = <1>;
+	     #size-cells = <0>;
+
+	     clk32k_in: clk32k_in@0 {
+		compatible = "fixed-clock";
+		reg = <0>;
+		#clock-cells = <0>;
+		clock-frequency = <32768>;
+	     };
 	};
 };

@@ -113,9 +113,9 @@ static int gr_gm20b_calc_global_ctx_buffer_size(struct gk20a *g)
 	return size;
 }
 
-static void gr_gk20a_commit_global_attrib_cb(struct gk20a *g,
-					    struct channel_ctx_gk20a *ch_ctx,
-					    u64 addr, bool patch)
+void gr_gm20b_commit_global_attrib_cb(struct gk20a *g,
+				      struct channel_ctx_gk20a *ch_ctx,
+				      u64 addr, bool patch)
 {
 	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_setup_attrib_cb_base_r(),
 		gr_gpcs_setup_attrib_cb_base_addr_39_12_f(addr) |
@@ -1073,7 +1073,7 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.cb_size_default = gr_gm20b_cb_size_default;
 	gops->gr.calc_global_ctx_buffer_size =
 		gr_gm20b_calc_global_ctx_buffer_size;
-	gops->gr.commit_global_attrib_cb = gr_gk20a_commit_global_attrib_cb;
+	gops->gr.commit_global_attrib_cb = gr_gm20b_commit_global_attrib_cb;
 	gops->gr.commit_global_bundle_cb = gr_gm20b_commit_global_bundle_cb;
 	gops->gr.commit_global_cb_manager = gr_gm20b_commit_global_cb_manager;
 	gops->gr.commit_global_pagepool = gr_gm20b_commit_global_pagepool;

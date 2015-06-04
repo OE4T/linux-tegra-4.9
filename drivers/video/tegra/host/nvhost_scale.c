@@ -370,9 +370,10 @@ void nvhost_scale_init(struct platform_device *pdev)
 			goto err_allocate_actmon;
 
 		profile->actmon->host = nvhost_get_host(pdev);
-		profile->actmon->regs = nvhost_get_host(pdev)->aperture +
-			pdata->actmon_regs;
 		profile->actmon->pdev = pdev;
+
+		profile->actmon->regs =
+			actmon_op().get_actmon_regs(profile->actmon);
 
 		actmon_op().init(profile->actmon);
 		actmon_op().debug_init(profile->actmon, pdata->debugfs);

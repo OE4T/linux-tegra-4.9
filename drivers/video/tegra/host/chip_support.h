@@ -143,6 +143,7 @@ struct nvhost_dev_ops {
 };
 
 struct nvhost_actmon_ops {
+	 void __iomem * (*get_actmon_regs)(struct host1x_actmon *actmon);
 	int (*init)(struct host1x_actmon *actmon);
 	void (*deinit)(struct host1x_actmon *actmon);
 	int (*read_avg)(struct host1x_actmon *actmon, u32 *val);

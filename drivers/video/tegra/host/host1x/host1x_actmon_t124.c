@@ -146,6 +146,14 @@ static void actmon_update_sample_period_safe(struct host1x_actmon *actmon)
 }
 #endif
 
+static  void __iomem *host1x_actmon_get_regs(struct host1x_actmon *actmon)
+{
+	struct nvhost_device_data *pdata =
+		platform_get_drvdata(actmon->pdev);
+
+	return  nvhost_get_host(actmon->pdev)->aperture + pdata->actmon_regs;
+}
+
 static int host1x_actmon_init(struct host1x_actmon *actmon)
 {
 	struct platform_device *host_pdev = actmon->host->dev;
@@ -651,6 +659,7 @@ static void host1x_actmon_debug_init(struct host1x_actmon *actmon,
 }
 
 static const struct nvhost_actmon_ops host1x_actmon_ops = {
+	.get_actmon_regs = host1x_actmon_get_regs,
 	.init = host1x_actmon_init,
 	.deinit = host1x_actmon_deinit,
 	.read_avg = host1x_actmon_avg,

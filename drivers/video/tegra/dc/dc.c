@@ -2876,17 +2876,6 @@ void tegra_dc_set_act_vfp(struct tegra_dc *dc, int vfp)
 			DC_CMD_STATE_ACCESS);
 }
 
-static void tegra_dc_vrr_extend_vfp(struct tegra_dc *dc)
-{
-	struct tegra_vrr *vrr  = dc->out->vrr;
-
-	if (!vrr)
-		return;
-
-	if (vrr->enable)
-		tegra_dc_set_act_vfp(dc, vrr->vfp_extend);
-}
-
 int tegra_dc_get_v_count(struct tegra_dc *dc)
 {
 	u32     value;
@@ -3320,9 +3309,10 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status,
 		dc->frame_end_timestamp = timespec_to_ns(&tm);
 		wake_up(&dc->timestamp_wq);
 
-		tegra_dc_vrr_extend_vfp(dc);
-		tegra_dc_vrr_get_ts(dc);
-		tegra_dc_vrr_sec(dc);
+		if (!tegra_dc_windows_are_dirty(dc, WIN_ALL_ACT_REQ)) {
+			tegra_dc_vrr_get_ts(dc);
+			tegra_dc_vrr_sec(dc);
+		}
 
 		/* Mark the frame_end as complete. */
 		if (!completion_done(&dc->frame_end_complete))

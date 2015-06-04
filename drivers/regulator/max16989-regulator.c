@@ -46,7 +46,7 @@
 #define MAX16989_CONFIG_VSTEP			BIT(7)
 #define MAX16989_CONFIG_FPWM			BIT(3)
 #define MAX16989_CONFIG_SS			BIT(2)
-#define MAX16989_CONFIG_SYNC_OUTPUT		0x00
+#define MAX16989_CONFIG_SYNC_OUTPUT		0x02
 
 #define MAX16989_TCONFIG_ENTRK			BIT(7)
 
@@ -139,6 +139,10 @@ static struct regulator_ops max16989_ops = {
 	.get_mode		= max16989_get_mode,
 	.set_voltage_time_sel	= max16989_set_voltage_time_sel,
 };
+static int slew_table_startup[] = {
+	22000, 11000, 5500, 11000, 5500, 22000, 22000, 11000, 5500, 5500};
+static int slew_table_rising[] = {
+	22000, 22000, 22000, 11000, 11000, 22000, 22000, 22000, 22000, 5500};
 
 static int max16989_init(struct max16989_chip *mchip,
 	struct max16989_regulator_platform_data *pdata)
@@ -152,6 +156,22 @@ static int max16989_init(struct max16989_chip *mchip,
 	int vsel;
 
 	config = 0;
+	if (pdata->voltage_step_uv == -EINVAL) {
+		ret = regmap_read(mchip->rmap, MAX16989_CONFIG_REG, &config);
+		if (ret < 0) {
+			dev_err(mchip->dev,
+				 "CONFIG reg read failed: %d\n", ret);
+			return ret;
+		}
+		pdata->voltage_step_uv = (config & MAX16989_CONFIG_VSTEP) ?
+						12500 : 10000;
+
+		pdata->enable_clock_ss = !!(config & MAX16989_CONFIG_SS);
+		pdata->enable_sync_output = ((config & 0x3) ==
+						MAX16989_CONFIG_SYNC_OUTPUT);
+		config = 0;
+	}
+
 	if (pdata->voltage_step_uv == 12500)
 		config |= MAX16989_CONFIG_VSTEP;
 	if (pdata->enable_clock_ss)
@@ -234,6 +254,21 @@ static int max16989_init(struct max16989_chip *mchip,
 		return ret;
 	}
 
+	if (pdata->slew_rate == -EINVAL) {
+		slew = 0;
+		ret = regmap_read(mchip->rmap, MAX16989_SLEW_REG, &slew);
+		if (ret < 0) {
+			dev_err(mchip->dev, "SLEW reg read failed: %d\n", ret);
+			return ret;
+		}
+
+		slew = slew & 0xF;
+		if (slew > 0x9)
+			slew = 0x9;
+		startup = slew_table_startup[slew];
+		rising = slew_table_rising[slew];
+		goto slew_done;
+	}
 	startup = 22000;
 	rising = 22000;
 	slew = 0;
@@ -276,6 +311,7 @@ static int max16989_init(struct max16989_chip *mchip,
 		dev_err(mchip->dev, "SLEW write failed: %d\n", ret);
 		return ret;
 	}
+slew_done:
 	if (pdata->voltage_step_uv == 12500) {
 		rising = DIV_ROUND_UP(rising * 5, 4);
 		startup = DIV_ROUND_UP(startup * 5, 4);
@@ -388,7 +424,7 @@ static struct max16989_regulator_platform_data *
 	}
 
 	ret = of_property_read_u32(np, "regulator-voltage-steps", &pval);
-	pdata->voltage_step_uv = (ret) ? 12500 : pval;
+	pdata->voltage_step_uv = (ret) ? -EINVAL : pval;
 
 	pdata->enable_sync_output = of_property_read_bool(np,
 				"maxim,enable-sync-output");
@@ -411,7 +447,7 @@ static struct max16989_regulator_platform_data *
 	pdata->tracking_device_i2c_address = (ret) ? 0 : pval;
 
 	ret = of_property_read_u32(np, "maxim,slew-rate", &pval);
-	pdata->slew_rate = (ret) ? 0 : pval;
+	pdata->slew_rate = (ret) ? -EINVAL : pval;
 	return pdata;
 }
 

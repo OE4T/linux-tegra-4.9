@@ -2206,6 +2206,58 @@ static inline u32 gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_v_default_v(void)
 {
 	return 0x00030000;
 }
+static inline u32 gr_gpcs_tpcs_tex_rm_cb_0_r(void)
+{
+	return 0x00419b00;
+}
+static inline u32 gr_gpcs_tpcs_tex_rm_cb_0_base_addr_43_12_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 gr_gpcs_tpcs_tex_rm_cb_1_r(void)
+{
+	return 0x00419b04;
+}
+static inline u32 gr_gpcs_tpcs_tex_rm_cb_1_size_div_128b_s(void)
+{
+	return 21;
+}
+static inline u32 gr_gpcs_tpcs_tex_rm_cb_1_size_div_128b_f(u32 v)
+{
+	return (v & 0x1fffff) << 0;
+}
+static inline u32 gr_gpcs_tpcs_tex_rm_cb_1_size_div_128b_m(void)
+{
+	return 0x1fffff << 0;
+}
+static inline u32 gr_gpcs_tpcs_tex_rm_cb_1_size_div_128b_v(u32 r)
+{
+	return (r >> 0) & 0x1fffff;
+}
+static inline u32 gr_gpcs_tpcs_tex_rm_cb_1_size_div_128b_granularity_f(void)
+{
+	return 0x80;
+}
+static inline u32 gr_gpcs_tpcs_tex_rm_cb_1_valid_s(void)
+{
+	return 1;
+}
+static inline u32 gr_gpcs_tpcs_tex_rm_cb_1_valid_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 gr_gpcs_tpcs_tex_rm_cb_1_valid_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 gr_gpcs_tpcs_tex_rm_cb_1_valid_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 gr_gpcs_tpcs_tex_rm_cb_1_valid_true_f(void)
+{
+	return 0x80000000;
+}
 static inline u32 gr_gpccs_falcon_addr_r(void)
 {
 	return 0x0041a0ac;

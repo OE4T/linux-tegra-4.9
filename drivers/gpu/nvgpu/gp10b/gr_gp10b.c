@@ -267,9 +267,9 @@ static int gr_gp10b_calc_global_ctx_buffer_size(struct gk20a *g)
 		+ (gr->alpha_cb_default_size >> 1);
 
 	gr->attrib_cb_size = min(gr->attrib_cb_size,
-				 gr_gpc0_ppc0_cbm_beta_cb_size_v_f(0xffffffff));
-	gr->alpha_cb_size = min(gr->attrib_cb_size,
-				 gr_gpc0_ppc0_cbm_alpha_cb_size_v_f(0xffffffff));
+		 gr_gpc0_ppc0_cbm_beta_cb_size_v_f(~0) / g->gr.tpc_count);
+	gr->alpha_cb_size = min(gr->alpha_cb_size,
+		 gr_gpc0_ppc0_cbm_alpha_cb_size_v_f(~0) / g->gr.tpc_count);
 
 	size = gr->attrib_cb_size *
 		gr_gpc0_ppc0_cbm_beta_cb_size_v_granularity_v() *

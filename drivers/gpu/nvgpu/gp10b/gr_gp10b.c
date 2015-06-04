@@ -872,6 +872,42 @@ static void gr_gp10b_commit_global_attrib_cb(struct gk20a *g,
 		gr_gpcs_tpcs_tex_rm_cb_1_valid_true_f(), patch);
 }
 
+static void gr_gp10b_commit_global_bundle_cb(struct gk20a *g,
+					    struct channel_ctx_gk20a *ch_ctx,
+					    u64 addr, u64 size, bool patch)
+{
+	u32 data;
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_bundle_cb_base_r(),
+		gr_scc_bundle_cb_base_addr_39_8_f(addr), patch);
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_bundle_cb_size_r(),
+		gr_scc_bundle_cb_size_div_256b_f(size) |
+		gr_scc_bundle_cb_size_valid_true_f(), patch);
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_swdx_bundle_cb_base_r(),
+		gr_gpcs_swdx_bundle_cb_base_addr_39_8_f(addr), patch);
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_swdx_bundle_cb_size_r(),
+		gr_gpcs_swdx_bundle_cb_size_div_256b_f(size) |
+		gr_gpcs_swdx_bundle_cb_size_valid_true_f(), patch);
+
+	/* data for state_limit */
+	data = (g->gr.bundle_cb_default_size *
+		gr_scc_bundle_cb_size_div_256b_byte_granularity_v()) /
+		gr_pd_ab_dist_cfg2_state_limit_scc_bundle_granularity_v();
+
+	data = min_t(u32, data, g->gr.min_gpm_fifo_depth);
+
+	gk20a_dbg_info("bundle cb token limit : %d, state limit : %d",
+		   g->gr.bundle_cb_token_limit, data);
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg2_r(),
+		gr_pd_ab_dist_cfg2_token_limit_f(g->gr.bundle_cb_token_limit) |
+		gr_pd_ab_dist_cfg2_state_limit_f(data), patch);
+
+}
+
 void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
@@ -884,6 +920,7 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.calc_global_ctx_buffer_size =
 		gr_gp10b_calc_global_ctx_buffer_size;
 	gops->gr.commit_global_attrib_cb = gr_gp10b_commit_global_attrib_cb;
+	gops->gr.commit_global_bundle_cb = gr_gp10b_commit_global_bundle_cb;
 	gops->gr.handle_sw_method = gr_gp10b_handle_sw_method;
 	gops->gr.cb_size_default = gr_gp10b_cb_size_default;
 	gops->gr.set_alpha_circular_buffer_size =

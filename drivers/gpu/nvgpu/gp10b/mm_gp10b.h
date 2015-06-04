@@ -14,15 +14,7 @@
 #ifndef MM_GP10B_H
 #define MM_GP10B_H
 
-#include <linux/version.h>
-
 #define NVGPU_MM_GET_IO_COHERENCE_BIT	35
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0)
-#define NVGPU_USE_NEW_ALLOCATOR	1
-#else
-#define NVGPU_USE_NEW_ALLOCATOR	0
-#endif
 
 struct gpu_ops;
 

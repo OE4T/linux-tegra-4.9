@@ -2559,13 +2559,6 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	/* note: keep the page sizes sorted lowest to highest here */
 	u32 gmmu_page_sizes[gmmu_nr_page_sizes] = { SZ_4K, big_page_size };
 
-	/*
-	 * Linsim bug: seems like we can't have pushbuffers above 4GB. Easy WAR for sim
-	 * is to just limit the address space to 4GB.
-	 */
-	if (tegra_platform_is_linsim() && aperture_size > SZ_4G)
-		aperture_size = SZ_4G;
-
 	vm->mm = mm;
 
 	vm->va_start = low_hole;

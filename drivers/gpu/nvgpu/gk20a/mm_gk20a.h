@@ -352,15 +352,11 @@ static inline int max_vaddr_bits_gk20a(void)
 
 /*
  * The bottom 16GB of the space are used for small pages, the remaining high
- * memory is for large pages. On simulation use 2GB for small pages, 2GB for
- * large pages (if enabled).
+ * memory is for large pages.
  */
 static inline u64 __nv_gmmu_va_small_page_limit(void)
 {
-	if (tegra_platform_is_linsim())
-		return ((u64)SZ_1G * 2);
-	else
-		return ((u64)SZ_1G * 16);
+	return ((u64)SZ_1G * 16);
 }
 
 static inline int __nv_gmmu_va_is_upper(struct vm_gk20a *vm, u64 addr)

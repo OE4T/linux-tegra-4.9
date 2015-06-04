@@ -844,6 +844,34 @@ static int gr_gp10b_wait_empty(struct gk20a *g, unsigned long end_jiffies,
 	return -EAGAIN;
 }
 
+static void gr_gp10b_commit_global_attrib_cb(struct gk20a *g,
+					     struct channel_ctx_gk20a *ch_ctx,
+					     u64 addr, bool patch)
+{
+	struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
+	int attrBufferSize;
+
+	if (gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va)
+		attrBufferSize = gr_ctx->t18x.preempt_ctxsw_buffer.size;
+	else
+		attrBufferSize = g->ops.gr.calc_global_ctx_buffer_size(g);
+
+	attrBufferSize /= gr_gpcs_tpcs_tex_rm_cb_1_size_div_128b_granularity_f();
+
+	gr_gm20b_commit_global_attrib_cb(g, ch_ctx, addr, patch);
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_mpc_vtg_cb_global_base_addr_r(),
+		gr_gpcs_tpcs_mpc_vtg_cb_global_base_addr_v_f(addr) |
+		gr_gpcs_tpcs_mpc_vtg_cb_global_base_addr_valid_true_f(), patch);
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_tex_rm_cb_0_r(),
+		gr_gpcs_tpcs_tex_rm_cb_0_base_addr_43_12_f(addr), patch);
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_tex_rm_cb_1_r(),
+		gr_gpcs_tpcs_tex_rm_cb_1_size_div_128b_f(attrBufferSize) |
+		gr_gpcs_tpcs_tex_rm_cb_1_valid_true_f(), patch);
+}
+
 void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
@@ -855,6 +883,7 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.pagepool_default_size = gr_gp10b_pagepool_default_size;
 	gops->gr.calc_global_ctx_buffer_size =
 		gr_gp10b_calc_global_ctx_buffer_size;
+	gops->gr.commit_global_attrib_cb = gr_gp10b_commit_global_attrib_cb;
 	gops->gr.handle_sw_method = gr_gp10b_handle_sw_method;
 	gops->gr.cb_size_default = gr_gp10b_cb_size_default;
 	gops->gr.set_alpha_circular_buffer_size =

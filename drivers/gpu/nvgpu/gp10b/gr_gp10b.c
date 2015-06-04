@@ -508,7 +508,7 @@ static int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 			goto fail_free_preempt;
 		}
 
-		err = gk20a_gmmu_alloc_map(vm, betacb_size,
+		err = gk20a_gmmu_alloc_map(vm, attrib_cb_size,
 					   &(*gr_ctx)->t18x.betacb_ctxsw_buffer);
 		if (err) {
 			gk20a_err(dev_from_gk20a(vm->mm->g),

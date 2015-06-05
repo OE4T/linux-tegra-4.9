@@ -30,10 +30,10 @@
  *
  * ========================================================================= */
 
-/*!@file: DWC_ETH_QOS_eee.c
+/*!@file: eee.c
  * @brief: Driver functions.
  */
-#include "DWC_ETH_QOS_yheader.h"
+#include "yheader.h"
 
 /* Clause 22 registers to access clause 45 register set */
 #define MMD_CTRL_REG		0x0D	/* MMD Access Control Register */

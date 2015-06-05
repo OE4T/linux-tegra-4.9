@@ -30,9 +30,9 @@
  *
  * ========================================================================= */
 
-#ifndef __DWC_ETH_QOS_YPG_H__
+#ifndef __YPG_H__
 
-#define __DWC_ETH_QOS_YPG_H__
+#define __YPG_H__
 
 static void DWC_ETH_QOS_tx_interrupt_pg(struct DWC_ETH_QOS_prv_data *pdata,
 				     UINT qInx);

@@ -32,11 +32,11 @@
 
 #include <linux/fs.h>
 #include <linux/debugfs.h>
-#include "DWC_ETH_QOS_yheader.h"
+#include "yheader.h"
 
 extern ULONG dwc_eth_qos_pci_base_addr;
 
-#include "DWC_ETH_QOS_yregacc.h"
+#include "yregacc.h"
 
 #define DEBUGFS_MAX_SIZE 100
 static char debugfs_buf[DEBUGFS_MAX_SIZE];

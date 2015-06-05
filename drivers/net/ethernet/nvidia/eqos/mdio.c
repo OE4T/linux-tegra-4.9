@@ -30,10 +30,10 @@
  *
  * ========================================================================= */
 
-/*!@file: DWC_ETH_QOS_mdio.c
+/*!@file: mdio.c
  * @brief: Driver functions.
  */
-#include "DWC_ETH_QOS_yheader.h"
+#include "yheader.h"
 
 /*!
 * \brief read MII PHY register, function called by the driver alone

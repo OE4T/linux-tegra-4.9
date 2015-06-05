@@ -30,9 +30,9 @@
  *
  * ========================================================================= */
 
-#ifndef __DWC_ETH_QOS__YHEADER__
+#ifndef __YHEADER__
 
-#define __DWC_ETH_QOS__YHEADER__
+#define __YHEADER__
 
 /* OS Specific declarations and definitions */
 

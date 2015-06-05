@@ -30,12 +30,12 @@
  *
  * ========================================================================= */
 
-/*!@file: DWC_ETH_QOS_desc.c
+/*!@file: desc.c
  * @brief: Driver functions.
  */
-#include "DWC_ETH_QOS_yheader.h"
-#include "DWC_ETH_QOS_desc.h"
-#include "DWC_ETH_QOS_yregacc.h"
+#include "yheader.h"
+#include "desc.h"
+#include "yregacc.h"
 
 /*!
 * \brief API to free the transmit descriptor memory.

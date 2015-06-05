@@ -30,10 +30,10 @@
  *
  * ========================================================================= */
 
-/*!@file: DWC_ETH_QOS_ptp.c
+/*!@file: ptp.c
  * @brief: Driver functions.
  */
-#include "DWC_ETH_QOS_yheader.h"
+#include "yheader.h"
 
 
 /*!

@@ -30,15 +30,15 @@
  *
  * ========================================================================= */
 
-/*!@file: DWC_ETH_QOS_dev.c
+/*!@file: dev.c
  * @brief: Driver functions.
  */
-#include "DWC_ETH_QOS_yheader.h"
-#include "DWC_ETH_QOS_yapphdr.h"
+#include "yheader.h"
+#include "yapphdr.h"
 
 extern ULONG dwc_eth_qos_pci_base_addr;
 
-#include "DWC_ETH_QOS_yregacc.h"
+#include "yregacc.h"
 
 #ifdef DWC_ETH_QOS_CONFIG_PGTEST
 

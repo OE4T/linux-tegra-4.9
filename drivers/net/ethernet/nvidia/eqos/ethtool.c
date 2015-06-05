@@ -30,11 +30,11 @@
  *
  * ========================================================================= */
 
-/*!@file: DWC_ETH_QOS_ethtool.c
+/*!@file: ethtool.c
  * @brief: Driver functions.
  */
-#include "DWC_ETH_QOS_yheader.h"
-#include "DWC_ETH_QOS_ethtool.h"
+#include "yheader.h"
+#include "ethtool.h"
 
 struct DWC_ETH_QOS_stats {
 	char stat_string[ETH_GSTRING_LEN];

@@ -30,17 +30,17 @@
  *
  * ========================================================================= */
 
-/*!@file: DWC_ETH_QOS_drv.c
+/*!@file: drv.c
  * @brief: Driver functions.
  */
 
-#include "DWC_ETH_QOS_yheader.h"
-#include "DWC_ETH_QOS_yapphdr.h"
-#include "DWC_ETH_QOS_drv.h"
+#include "yheader.h"
+#include "yapphdr.h"
+#include "drv.h"
 
 extern ULONG dwc_eth_qos_pci_base_addr;
 
-#include "DWC_ETH_QOS_yregacc.h"
+#include "yregacc.h"
 
 static INT DWC_ETH_QOS_GStatus;
 

@@ -30,9 +30,9 @@
  *
  * ========================================================================= */
 
-#ifndef __DWC_ETH_QOS_YAPPHDR_H__
+#ifndef __YAPPHDR_H__
 
-#define __DWC_ETH_QOS_YAPPHDR_H__
+#define __YAPPHDR_H__
 
 #define DWC_ETH_QOS_MAX_TX_QUEUE_CNT 8
 #define DWC_ETH_QOS_MAX_RX_QUEUE_CNT 8

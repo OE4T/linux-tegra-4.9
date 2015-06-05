@@ -30,9 +30,9 @@
  *
  * ========================================================================= */
 
-#ifndef __DWC_ETH_QOS__REGACC__H__
+#ifndef __YREGACC__H__
 
-#define __DWC_ETH_QOS__REGACC__H__
+#define __YREGACC__H__
 
 
 #define MAKE_MASK_32(e, s) (((e)-(s))==31?0xffffffffUL:((1UL<<((e)-(s)+1))-1))

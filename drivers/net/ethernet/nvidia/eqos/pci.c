@@ -30,11 +30,11 @@
  *
  * ========================================================================= */
 
-/*!@file: DWC_ETH_QOS_pci.c
+/*!@file: pci.c
  * @brief: Driver functions.
  */
-#include "DWC_ETH_QOS_yheader.h"
-#include "DWC_ETH_QOS_pci.h"
+#include "yheader.h"
+#include "pci.h"
 
 static UCHAR dev_addr[6] = {0, 0x55, 0x7b, 0xb5, 0x7d, 0xf7};
 

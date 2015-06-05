@@ -30,9 +30,9 @@
  *
  * ========================================================================= */
 
-#ifndef __DWC_ETH_QOS_DRV_H__
+#ifndef __DRV_H__
 
-#define __DWC_ETH_QOS_DRV_H__
+#define __DRV_H__
 
 static int DWC_ETH_QOS_open(struct net_device *);
 

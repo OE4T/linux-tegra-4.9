@@ -30,24 +30,37 @@
  *
  * ========================================================================= */
 
-#ifndef __DWC_ETH_QOS__PCI_H__
+#ifndef __ETHTOOL_H__
 
-#define __DWC_ETH_QOS__PCI_H__
+#define __ETHTOOL_H__
 
-int __devinit DWC_ETH_QOS_probe(struct pci_dev *, const struct pci_device_id *);
+static void DWC_ETH_QOS_get_pauseparam(struct net_device *dev,
+				       struct ethtool_pauseparam *pause);
+static int DWC_ETH_QOS_set_pauseparam(struct net_device *dev,
+				      struct ethtool_pauseparam *pause);
 
-void __devexit DWC_ETH_QOS_remove(struct pci_dev *);
+static int DWC_ETH_QOS_getsettings(struct net_device *dev,
+				   struct ethtool_cmd *cmd);
+static int DWC_ETH_QOS_setsettings(struct net_device *dev,
+				   struct ethtool_cmd *cmd);
+static void DWC_ETH_QOS_get_wol(struct net_device *dev,
+				struct ethtool_wolinfo *wol);
+static int DWC_ETH_QOS_set_wol(struct net_device *dev,
+			       struct ethtool_wolinfo *wol);
 
-static void DWC_ETH_QOS_shutdown(struct pci_dev *);
+static int DWC_ETH_QOS_set_coalesce(struct net_device *dev,
+				    struct ethtool_coalesce *ec);
+static int DWC_ETH_QOS_get_coalesce(struct net_device *dev,
+				    struct ethtool_coalesce *ec);
 
-static INT DWC_ETH_QOS_suspend_late(struct pci_dev *, pm_message_t);
+static int DWC_ETH_QOS_get_sset_count(struct net_device *dev, int sset);
 
-static INT DWC_ETH_QOS_resume_early(struct pci_dev *);
+static void DWC_ETH_QOS_get_strings(struct net_device *dev, u32 stringset, u8 *data);
 
-#ifdef CONFIG_PM
-static INT DWC_ETH_QOS_suspend(struct pci_dev *, pm_message_t);
+static void DWC_ETH_QOS_get_ethtool_stats(struct net_device *dev,
+	struct ethtool_stats *dummy, u64 *data);
 
-static INT DWC_ETH_QOS_resume(struct pci_dev *);
-#endif				/* end of CONFIG_PM */
+static int DWC_ETH_QOS_set_tso(struct net_device *dev, u32 data);
+static u32 DWC_ETH_QOS_get_tso(struct net_device *dev);
 
 #endif

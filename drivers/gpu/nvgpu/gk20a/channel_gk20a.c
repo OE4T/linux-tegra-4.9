@@ -1790,23 +1790,51 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	start = c->gpfifo.put;
 	end = start + num_entries;
 
-	if (end > c->gpfifo.entry_num) {
-		int length0 = c->gpfifo.entry_num - start;
-		int length1 = num_entries - length0;
+	/*
+	 * This WAR is in place for handling invalid simulation GPFIFO entries
+	 * passed to us from userspace. This will be removed once these invalid
+	 * GPFIFO entries are handled in userspace.
+	 */
+	if (tegra_platform_is_linsim()) {
+		int i;
+		struct gpfifo *gpfifo_entries = c->gpfifo.mem.cpu_va;
 
-		memcpy((struct gpfifo *)c->gpfifo.mem.cpu_va + start, gpfifo,
-		       length0 * sizeof(*gpfifo));
+		for (i = 0; i < num_entries; i++) {
+			int index = (start + i) & (c->gpfifo.entry_num - 1);
 
-		memcpy((struct gpfifo *)c->gpfifo.mem.cpu_va, gpfifo + length0,
-		       length1 * sizeof(*gpfifo));
+			/* Copy the entry... */
+			gpfifo_entries[index].entry0 = gpfifo[i].entry0;
+			gpfifo_entries[index].entry1 = gpfifo[i].entry1;
 
-		trace_write_pushbuffer_range(c, gpfifo, length0);
-		trace_write_pushbuffer_range(c, gpfifo + length0, length1);
+			/*
+			 * And here's the WAR: if the length is 0 clear the
+			 * opcode field (bottom 8 bits).
+			 */
+			if (!pbdma_gp_entry1_length_v(gpfifo[i].entry1))
+				gpfifo_entries[index].entry1 &= ~0xff;
+
+			trace_write_pushbuffer_range(c, gpfifo, num_entries);
+		}
 	} else {
-		memcpy((struct gpfifo *)c->gpfifo.mem.cpu_va + start, gpfifo,
-		       num_entries * sizeof(*gpfifo));
+		if (end > c->gpfifo.entry_num) {
+			int length0 = c->gpfifo.entry_num - start;
+			int length1 = num_entries - length0;
 
-		trace_write_pushbuffer_range(c, gpfifo, num_entries);
+			memcpy((struct gpfifo *)c->gpfifo.mem.cpu_va + start,
+			       gpfifo, length0 * sizeof(*gpfifo));
+
+			memcpy((struct gpfifo *)c->gpfifo.mem.cpu_va,
+			       gpfifo + length0, length1 * sizeof(*gpfifo));
+
+			trace_write_pushbuffer_range(c, gpfifo, length0);
+			trace_write_pushbuffer_range(c, gpfifo + length0,
+						     length1);
+		} else {
+			memcpy((struct gpfifo *)c->gpfifo.mem.cpu_va + start,
+			       gpfifo, num_entries * sizeof(*gpfifo));
+
+			trace_write_pushbuffer_range(c, gpfifo, num_entries);
+		}
 	}
 	c->gpfifo.put = (c->gpfifo.put + num_entries) &
 		(c->gpfifo.entry_num - 1);

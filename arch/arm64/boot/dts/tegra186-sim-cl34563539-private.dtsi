@@ -162,21 +162,25 @@
 	sdhci@700b0000 {
 		reg = <0x0 0x03400000 0x0 0x00020000>;
 		interrupts = <0 62 0x04>;
+		#stream-id-cells = <1>;
 	};
 
 	sdhci@700b0200 {
 		reg = <0x0 0x03420000 0x0 0x00020000>;
 		interrupts = <0 63 0x04>;
+		#stream-id-cells = <1>;
 	};
 
 	sdhci@700b0400 {
 		reg = <0x0 0x03440000 0x0 0x00020000>;
 		interrupts = <0 64 0x04>;
+		#stream-id-cells = <1>;
 	};
 
 	sdhci@700b0600 {
 		reg = <0x0 0x03460000 0x0 0x00020000>;
 		interrupts = <0 65 0x04>;
+		#stream-id-cells = <1>;
 	};
 
 	smmu: iommu {

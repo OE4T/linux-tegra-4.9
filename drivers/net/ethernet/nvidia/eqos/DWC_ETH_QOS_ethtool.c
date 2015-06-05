@@ -28,7 +28,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * Signed-off-by: Aravind Mothi<AravindY.Mothi@synopsys.com>
  * ========================================================================= */
 
 /*!@file: DWC_ETH_QOS_ethtool.c

@@ -303,16 +303,23 @@ static int spidev_message(struct spidev_data *spidev,
 
 	/* copy any rx data out of bounce buffer */
 	rx_buf = spidev->rx_buffer;
-	for (n = n_xfers, u_tmp = u_xfers; n; n--, u_tmp++) {
+	total = 0;
+	u_tmp = u_xfers;
+	k_tmp = k_xfers;
+	for (n = n_xfers; n; n--) {
 		if (u_tmp->rx_buf) {
 			if (__copy_to_user((u8 __user *)
 					(uintptr_t) u_tmp->rx_buf, rx_buf,
-					u_tmp->len)) {
+					k_tmp->len)) {
 				status = -EFAULT;
 				goto done;
 			}
-			rx_buf += u_tmp->len;
+			u_tmp->len = k_tmp->len;
 		}
+		rx_buf += k_tmp->len;
+		total += k_tmp->len;
+		u_tmp++;
+		k_tmp++;
 	}
 	status = total;
 

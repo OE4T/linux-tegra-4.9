@@ -110,7 +110,7 @@ struct tegra210_sfc {
 
 /* coeff RAM tables required for SFC */
 
-u32 coef_8to16[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_8to16[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00006102, /* header */
 	0x0001d727, /* input gain */
 	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
@@ -119,7 +119,7 @@ u32 coef_8to16[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000002 /* output gain */
 };
 
-u32 coef_8to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_8to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x0156105, /* interpolation + IIR filter */
 	0x0000d649, /* input gain */
 	0x00e87afb, 0xff5f69d0, 0x003df3cf,
@@ -148,7 +148,7 @@ u32 coef_8to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00200000
 };
 
-u32 coef_8to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_8to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00156105, /* interpolation + IIR Filter */
 	0x0000d649, /* input gain */
 	0x00e87afb, 0xff5f69d0, 0x003df3cf,
@@ -166,7 +166,7 @@ u32 coef_8to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000003 /* output gain */
 };
 
-u32 coef_11to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_11to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x000c6102, /* header */
 	0x0001d727,  /* input gain */
 	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
@@ -181,7 +181,7 @@ u32 coef_11to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000002 /* output gain */
 };
 
-u32 coef_11to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_11to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x000c6102,  /* header */
 	0x0001d727, /* input gain */
 	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
@@ -213,7 +213,7 @@ u32 coef_11to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00200000
 };
 
-u32 coef_16to8[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_16to8[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00005102, /* header */
 	0x0001d727, /* input gain */
 	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
@@ -222,7 +222,7 @@ u32 coef_16to8[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* output gain */
 };
 
-u32 coef_16to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_16to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00156105, /* interpolation + IIR filter */
 	0x0000d649, /* input gain */
 	0x00e87afb, 0xff5f69d0, 0x003df3cf,
@@ -256,7 +256,7 @@ u32 coef_16to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* output gain */
 };
 
-u32 coef_16to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_16to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x0000a105, /* interpolation + IIR Filter */
 	0x00000784, /* input gain */
 	0x00cc516e, 0xff2c9639, 0x005ad5b3,
@@ -268,7 +268,7 @@ u32 coef_16to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000003 /* output gain */
 };
 
-u32 coef_22to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_22to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00006102, /* header */
 	0x0001d727, /* input gain */
 	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
@@ -277,7 +277,7 @@ u32 coef_22to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000002 /* output gain */
 };
 
-u32 coef_22to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_22to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x000c6102, /* header */
 	0x0001d727, /* input gain */
 	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
@@ -303,7 +303,7 @@ u32 coef_22to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00200000
 };
 
-u32 coef_24to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_24to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x000c6102, /* header */
 	0x0001d727, /* input gain */
 	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
@@ -335,7 +335,7 @@ u32 coef_24to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* output gain */
 };
 
-u32 coef_24to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_24to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00006102, /* header */
 	0x0001d727, /* input gain */
 	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
@@ -344,7 +344,7 @@ u32 coef_24to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000002 /* output gain */
 };
 
-u32 coef_32to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_32to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x000c6102, /* header */
 	0x0001d727, /* input gain */
 	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
@@ -376,7 +376,7 @@ u32 coef_32to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* output gain */
 };
 
-u32 coef_32to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_32to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x0015a105, /* header */
 	0x00000292, /* input gain */
 	0x00e4320a, 0xff41d2d9, 0x004911ac,
@@ -397,7 +397,7 @@ u32 coef_32to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* output gain */
 };
 
-u32 coef_44to8[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_44to8[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00120104, /* IIR Filter */
 	0x00000af2, /* input gain */
 	0x0057eebe, 0xff1e9863, 0x00652604,
@@ -428,7 +428,7 @@ u32 coef_44to8[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* output gain */
 };
 
-u32 coef_44to16[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_44to16[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00126104, /* IIR Filter + interpolation */
 	0x00000af2, /* input gain */
 	0x0057eebe, 0xff1e9863, 0x00652604,
@@ -459,7 +459,7 @@ u32 coef_44to16[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* output gain */
 };
 
-u32 coef_44to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_44to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x000c6102,/* header */
 	0x0001d727, /* input gain */
 	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
@@ -491,7 +491,7 @@ u32 coef_44to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* output gain */
 };
 
-u32 coef_48to8[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_48to8[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x000c9102, /* IIR Filter + Decimator */
 	0x00000e00, /* input gain */
 	0x00e2e000, 0xff6e1a00, 0x002aaa00,
@@ -509,7 +509,7 @@ u32 coef_48to8[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* ouptut gain */
 };
 
-u32 coef_48to16[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_48to16[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00009105, /* IIR Filter + Decimator */
 	0x00000784, /* input gain */
 	0x00cc516e, 0xff2c9639, 0x005ad5b3,
@@ -521,7 +521,7 @@ u32 coef_48to16[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* output gain */
 };
 
-u32 coef_48to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_48to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x000c6102, /* header */
 	0x0001d029, /* input gain */
 	0x00f2a98b, 0xff92aa71, 0x001fcd16,
@@ -554,7 +554,7 @@ u32 coef_48to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* output gain */
 };
 
-u32 coef_48to96[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_48to96[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00006102, /* header */
 	0x0001d727, /* input gain */
 	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
@@ -563,7 +563,7 @@ u32 coef_48to96[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000002 /* output gain */
 };
 
-u32 coef_48to192[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_48to192[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x000c6102, /* header */
 	0x0001d727, /* input gain */
 	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
@@ -578,7 +578,7 @@ u32 coef_48to192[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000002 /* output gain */
 };
 
-u32 coef_88to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_88to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00005102, /* header */
 	0x0001d727, /* input gain */
 	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
@@ -587,7 +587,7 @@ u32 coef_88to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* output gain */
 };
 
-u32 coef_88to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_88to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x000c6102, /* header */
 	0x00001685, /* input gain */
 	0x00f53ae9, 0xff52f196, 0x003e3e08,
@@ -613,7 +613,7 @@ u32 coef_88to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* output gain */
 };
 
-u32 coef_96to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_96to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x000f6103, /* header */
 	0x000001e0, /* input gain */
 	0x00de44c0, 0xff380b7f, 0x004ffc73,
@@ -640,7 +640,7 @@ u32 coef_96to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* output gain */
 };
 
-u32 coef_96to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_96to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00005102, /* header */
 	0x0001d727, /* input gain */
 	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
@@ -649,7 +649,7 @@ u32 coef_96to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* output gain */
 };
 
-u32 coef_176to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_176to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x000c5102, /* header */
 	0x000013d9, /* input gain */
 	0x00ebd477, 0xff4ce383, 0x0042049d,
@@ -664,7 +664,7 @@ u32 coef_176to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* output gain */
 };
 
-u32 coef_176to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_176to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x000c0102, /* header */
 	0x00001685, /* input gain */
 	0x00f53ae9, 0xff52f196, 0x003e3e08,
@@ -690,7 +690,7 @@ u32 coef_176to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* output gain */
 };
 
-u32 coef_192to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_192to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x000c6102, /* header */
 	0x000000af, /* input gain */
 	0x00c65663, 0xff23d2ce, 0x005f97d6,
@@ -722,7 +722,7 @@ u32 coef_192to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000001 /* output gain */
 };
 
-u32 coef_192to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+static u32 coef_192to48[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x000c5102, /* header */
 	0x000013d9, /* input gain */
 	0x00ebd477, 0xff4ce383, 0x0042049d,

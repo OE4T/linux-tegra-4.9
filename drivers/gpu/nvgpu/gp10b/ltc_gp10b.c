@@ -80,8 +80,11 @@ static int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 		max_comptag_lines = hw_max_comptag_lines;
 
 	compbit_backing_size =
-		DIV_ROUND_UP(max_comptag_lines, comptags_per_cacheline) *
-		cacheline_size * slices_per_ltc * g->ltc_count;
+		roundup(max_comptag_lines * gobs_per_comptagline_per_slice,
+			cacheline_size);
+	compbit_backing_size =
+		roundup(compbit_backing_size * slices_per_ltc * g->ltc_count,
+			g->ops.fb.compressible_page_size(g));
 
 	/* aligned to 2KB * ltc_count */
 	compbit_backing_size +=
@@ -89,13 +92,6 @@ static int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	/* must be a multiple of 64KB */
 	compbit_backing_size = roundup(compbit_backing_size, 64*1024);
-
-	max_comptag_lines =
-		(compbit_backing_size * comptags_per_cacheline) /
-		(cacheline_size * slices_per_ltc * g->ltc_count);
-
-	if (max_comptag_lines > hw_max_comptag_lines)
-		max_comptag_lines = hw_max_comptag_lines;
 
 	gk20a_dbg_info("compbit backing store size : %d",
 		compbit_backing_size);

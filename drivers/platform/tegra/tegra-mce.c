@@ -103,11 +103,12 @@ EXPORT_SYMBOL(tegra_mce_enter_cstate);
  * @system:		deepest system-wide state
  * @force:		forced system state
  * @wake_mask:	wake mask to be updated
+ * @valid:		is wake_mask applicable?
  *
  * Returns 0 if success.
  */
 int tegra_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
-	u8 force, u32 wake_mask)
+	u8 force, u32 wake_mask, bool valid)
 {
 	struct mce_regs regs;
 	regs.args[0] = cluster;
@@ -115,6 +116,7 @@ int tegra_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
 	regs.args[2] = system;
 	regs.args[3] = force;
 	regs.args[4] = wake_mask;
+	regs.args[5] = valid;
 	return send_smc(MCE_SMC_UPDATE_CSTATE_INFO, &regs);
 }
 EXPORT_SYMBOL(tegra_mce_update_cstate_info);

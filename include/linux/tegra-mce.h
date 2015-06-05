@@ -88,7 +88,7 @@ enum {
 
 int tegra_mce_enter_cstate(u32 state, u32 wake_time);
 int tegra_mce_update_cstate_info(u32 cluster, u32 ccplex,
-	u32 system, u8 force, u32 wake_mask);
+	u32 system, u8 force, u32 wake_mask, bool valid);
 int tegra_mce_update_crossover_time(u32 type, u32 time);
 int tegra_mce_read_cstate_stats(u32 state, u32 *stats);
 int tegra_mce_write_cstate_stats(u32 state, u32 stats);

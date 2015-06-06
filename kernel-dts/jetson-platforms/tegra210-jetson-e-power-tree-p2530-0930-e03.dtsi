@@ -133,9 +133,6 @@
 		};
 
 		regulator@2 {
-			regulator-always-on;
-			regulator-min-microvolt = <1200000>;
-			regulator-max-microvolt = <1200000>;
 			regulator-enable-ramp-delay = <240>;
 			regulator-disable-ramp-delay = <11340>;
 		};

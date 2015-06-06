@@ -96,15 +96,13 @@ static struct nvmap_platform_carveout *nvmap_get_carveout_pdata(const char *name
 	for (co = nvmap_carveouts;
 	     co < nvmap_carveouts + ARRAY_SIZE(nvmap_carveouts); co++) {
 		int i = strcspn(name, "_");
-		if (!strncmp("ivm", name, min(i, 3)) && co->name)
-			continue;
-
+		/* handle IVC carveouts */
 		if (!co->name)
-			break;
+			goto found;
 
 		if (strncmp(co->name, name, i))
 			continue;
-
+found:
 		co->dma_dev = co->dma_dev ? co->dma_dev : &co->dev;
 		return co;
 	}
@@ -176,7 +174,7 @@ int nvmap_populate_ivm_carveout(phandle handle)
 	 */
 	co->usage_mask = NVMAP_HEAP_CARVEOUT_IVM;
 
-	nvmap_dev->nr_carveouts++;
+	nvmap_data.nr_carveouts++;
 
 	of_node_put(hvn);
 	return 0;
@@ -228,6 +226,10 @@ static int nvmap_co_device_init(struct reserved_mem *rmem, struct device *dev)
 	if (!co)
 		return -ENODEV;
 
+	/* IVM carveouts */
+	if (!co->name)
+		return nvmap_populate_ivm_carveout(rmem->phandle);
+
 	/* if co size is 0, => co is not present. So, skip init. */
 	if (!co->size)
 		return 0;
@@ -278,7 +280,7 @@ static int __init nvmap_co_setup(struct reserved_mem *rmem)
 
 	/* IVM carveouts */
 	if (!co->name)
-		return nvmap_populate_ivm_carveout(rmem->phandle);
+		return ret;
 
 	co->base = rmem->base;
 	co->size = rmem->size;
@@ -346,14 +348,6 @@ int nvmap_init(struct platform_device *pdev)
 			return err;
 	}
 
-	if (!tegra_vpr_resize)
-		goto end;
-
-	vpr_dma_info.name = "vpr";
-	vpr_dma_info.size = SZ_32M;
-	vpr_dma_info.cma_dev = nvmap_carveouts[2].cma_dev;
-	vpr_dma_info.notifier.ops = &vpr_dev_ops;
-
 	err = of_reserved_mem_device_init(&pdev->dev);
 	if (err)
 		pr_err("reserved_mem_device_init fails, try legacy init\n");
@@ -365,6 +359,14 @@ int nvmap_init(struct platform_device *pdev)
 		if (err)
 			goto end;
 	}
+
+	if (!tegra_vpr_resize)
+		goto end;
+
+	vpr_dma_info.name = "vpr";
+	vpr_dma_info.size = SZ_32M;
+	vpr_dma_info.cma_dev = nvmap_carveouts[2].cma_dev;
+	vpr_dma_info.notifier.ops = &vpr_dev_ops;
 
 	if (nvmap_carveouts[2].size) {
 		err = dma_declare_coherent_resizable_cma_memory(

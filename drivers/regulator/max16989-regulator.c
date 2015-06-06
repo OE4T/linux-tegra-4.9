@@ -399,6 +399,7 @@ static const struct regmap_config max16989_regmap_config = {
 
 static const struct of_device_id max16989_of_match[] = {
 	{ .compatible = "maxim,max16989", },
+	{ .compatible = "maxim,max16989-new", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, max16989_of_match);
@@ -537,6 +538,7 @@ static int max16989_probe(struct i2c_client *client,
 
 static const struct i2c_device_id max16989_id[] = {
 	{.name = "max16989",},
+	{.name = "max16989-new",},
 	{},
 };
 MODULE_DEVICE_TABLE(i2c, max16989_id);

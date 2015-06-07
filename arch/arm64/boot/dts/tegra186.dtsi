@@ -840,20 +840,12 @@
 		reset-names = "i2c";
 	};
 
-	i2c5: i2c@31a0000 {
+	i2c5: bpmp_i2c {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		compatible = "nvidia,tegra210-i2c";
-		reg = <0x0 0x31a0000 0x0 0x100>;
-		interrupts = <0 29 0x04>;
-		scl-gpio = <&gpio 144 0>;
-		sda-gpio = <&gpio 145 0>;
-		status = "disabled";
-		clock-frequency = <400000>;
-		clocks = <&tegra_car TEGRA186_CLK_I2C5>;
-		clock-names = "div-clk";
-		resets = <&tegra_car TEGRA186_RESET_I2C5>;
-		reset-names = "i2c";
+		compatible = "nvidia,tegra186-bpmp-i2c";
+		status = "okay";
+		adapter = <5>;
 	};
 
 	i2c6: i2c@31b0000 {

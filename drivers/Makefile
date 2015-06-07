@@ -10,3 +10,4 @@ obj-y += gpio/
 obj-y += reset/
 obj-y += thermal/
 obj-$(CONFIG_STAGING) += staging/
+obj-y += i2c/

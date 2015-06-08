@@ -114,35 +114,62 @@ static int calc_ref_to_sync(struct tegra_dc_mode *mode)
 static bool check_ref_to_sync(struct tegra_dc_mode *mode)
 {
 	/* Constraint 1: H_REF_TO_SYNC + H_SYNC_WIDTH + H_BACK_PORCH > 11. */
-	if (mode->h_ref_to_sync + mode->h_sync_width + mode->h_back_porch <= 11)
+	if (mode->h_ref_to_sync + mode->h_sync_width +
+		mode->h_back_porch <= 11) {
+		pr_err("H_REF_TO_SYNC + H_SYNC_WIDTH + H_BACK_PORCH <= 11\n");
 		return false;
+	}
 
 	/* Constraint 2: V_REF_TO_SYNC + V_SYNC_WIDTH + V_BACK_PORCH > 1. */
-	if (mode->v_ref_to_sync + mode->v_sync_width + mode->v_back_porch <= 1)
+	if (mode->v_ref_to_sync + mode->v_sync_width +
+		mode->v_back_porch <= 1) {
+		pr_err("V_REF_TO_SYNC + V_SYNC_WIDTH + V_BACK_PORCH <= 1\n");
 		return false;
+	}
 
 	/* Constraint 3: V_FRONT_PORCH + V_SYNC_WIDTH + V_BACK_PORCH > 1
 	 * (vertical blank). */
-	if (mode->v_front_porch + mode->v_sync_width + mode->v_back_porch <= 1)
+	if (mode->v_front_porch + mode->v_sync_width +
+		mode->v_back_porch <= 1) {
+		pr_err("V_FRONT_PORCH + V_SYNC_WIDTH + V_BACK_PORCH <= 1\n");
 		return false;
+	}
 
 	/* Constraint 4: V_SYNC_WIDTH >= 1; H_SYNC_WIDTH >= 1. */
-	if (mode->v_sync_width < 1 || mode->h_sync_width < 1)
+	if (mode->v_sync_width < 1 || mode->h_sync_width < 1) {
+		pr_err("V_SYNC_WIDTH >= 1; H_SYNC_WIDTH < 1\n");
 		return false;
+	}
 
 	/* Constraint 5: V_REF_TO_SYNC >= 1; H_REF_TO_SYNC >= 0. */
-	if (mode->v_ref_to_sync < 1 || mode->h_ref_to_sync < 0)
+	if (mode->v_ref_to_sync < 1 || mode->h_ref_to_sync < 0) {
+		pr_err("V_REF_TO_SYNC >= 1; H_REF_TO_SYNC < 0");
 		return false;
+	}
 
-	/* Constraint 6: V_FRONT_PORT >= (V_REF_TO_SYNC + 1);
-	 * H_FRONT_PORT >= (H_REF_TO_SYNC + 1). */
-	if (mode->v_front_porch < mode->v_ref_to_sync + 1 ||
-		mode->h_front_porch < mode->h_ref_to_sync + 1)
+	/* Constraint 6: V_FRONT_PORCH >= (V_REF_TO_SYNC + 1) */
+	if (mode->v_front_porch < mode->v_ref_to_sync + 1) {
+		pr_err("V_FRONT_PORCH < (V_REF_TO_SYNC + 1)\n");
 		return false;
+	}
 
-	/* Constraint 7: H_DISP_ACTIVE >= 16; V_DISP_ACTIVE >= 16. */
-	if (mode->h_active < 16 || mode->v_active < 16)
+	/* Constraint 7: H_FRONT_PORCH >= (H_REF_TO_SYNC + 1) */
+	if (mode->h_front_porch < mode->h_ref_to_sync + 1) {
+		pr_err("H_FRONT_PORCH < (H_REF_TO_SYNC + 1)\n");
 		return false;
+	}
+
+	/* Constraint 8: H_DISP_ACTIVE >= 16 */
+	if (mode->h_active < 16) {
+		pr_err("H_DISP_ACTIVE < 16\n");
+		return false;
+	}
+
+	/* Constraint 9: V_DISP_ACTIVE >= 16 */
+	if (mode->v_active < 16) {
+		pr_err("V_DISP_ACTIVE < 16\n");
+		return false;
+	}
 
 	return true;
 }
@@ -325,6 +352,12 @@ static bool check_mode_timings(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 	} else {
 		calc_ref_to_sync(mode);
 	}
+
+	if (dc->out->type == TEGRA_DC_OUT_DP) {
+		mode->h_ref_to_sync = 1;
+		mode->v_ref_to_sync = 1;
+	}
+
 	if (!check_ref_to_sync(mode)) {
 		dev_err(&dc->ndev->dev,
 				"Display timing doesn't meet restrictions.\n");

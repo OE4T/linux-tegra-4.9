@@ -714,7 +714,7 @@ void tegra_sor_tpg(struct tegra_dc_sor_data *sor, u32 tp, u32 n_lanes)
 {
 	u32 const tbl[][2] = {
 		/* ansi8b/10b encoded, scrambled */
-		{1, 1}, /* no pattern */
+		{1, 1}, /* no pattern, training not in progress */
 		{1, 0}, /* training pattern 1 */
 		{1, 0}, /* training pattern 2 */
 		{1, 0}, /* training pattern 3 */
@@ -1522,6 +1522,9 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 	struct tegra_dc *dc = sor->dc;
 	u32 reg_val;
 
+	if (sor->sor_state == SOR_ATTACHED)
+		return;
+
 	tegra_dc_get(dc);
 
 	reg_val = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
@@ -1765,6 +1768,9 @@ void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
 	struct tegra_dc *dc = sor->dc;
 	unsigned long dc_int_mask;
 
+	if (sor->sor_state == SOR_DETACHED)
+		return;
+
 	tegra_dc_get(dc);
 
 	/* Mask DC interrupts during the 2 dummy frames required for detach */
@@ -1993,9 +1999,14 @@ void tegra_dc_sor_read_link_config(struct tegra_dc_sor_data *sor, u8 *link_bw,
 
 void tegra_dc_sor_set_link_bandwidth(struct tegra_dc_sor_data *sor, u8 link_bw)
 {
+	WARN_ON(sor->sor_state == SOR_ATTACHED);
+
 	tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
 		NV_SOR_CLK_CNTRL_DP_LINK_SPEED_MASK,
 		link_bw << NV_SOR_CLK_CNTRL_DP_LINK_SPEED_SHIFT);
+
+	/* It can take upto 200us for PLLs in analog macro to settle */
+	udelay(300);
 }
 
 void tegra_dc_sor_set_lane_count(struct tegra_dc_sor_data *sor, u8 lane_count)
@@ -2074,10 +2085,15 @@ void tegra_sor_precharge_lanes(struct tegra_dc_sor_data *sor)
 		return;
 	}
 
+	/* force lanes to output common mode voltage */
 	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
 		(0xf << NV_SOR_DP_PADCTL_COMODE_TXD_0_DP_TXD_2_SHIFT),
 		(val << NV_SOR_DP_PADCTL_COMODE_TXD_0_DP_TXD_2_SHIFT));
-	usleep_range(15, 100);
+
+	/* precharge for atleast 10us */
+	usleep_range(20, 100);
+
+	/* fallback to normal operation */
 	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
 		(0xf << NV_SOR_DP_PADCTL_COMODE_TXD_0_DP_TXD_2_SHIFT), 0);
 }

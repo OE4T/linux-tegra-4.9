@@ -111,7 +111,7 @@ struct tegra_dc_sor_data {
 };
 
 #define TEGRA_SOR_TIMEOUT_MS		1000
-#define TEGRA_SOR_ATTACH_TIMEOUT_MS	100000
+#define TEGRA_SOR_ATTACH_TIMEOUT_MS	50
 #define TEGRA_SOR_SEQ_BUSY_TIMEOUT_MS	10000
 #define TEGRA_DC_POLL_TIMEOUT_MS       50
 
@@ -213,6 +213,18 @@ static inline void tegra_sor_clk_disable(struct tegra_dc_sor_data *sor)
 {
 	if (tegra_platform_is_silicon() || tegra_bpmp_running())
 		clk_disable_unprepare(sor->sor_clk);
+}
+
+static inline void tegra_sor_safe_clk_enable(struct tegra_dc_sor_data *sor)
+{
+	if (tegra_platform_is_silicon() || tegra_bpmp_running())
+		clk_prepare_enable(sor->safe_clk);
+}
+
+static inline void tegra_sor_safe_clk_disable(struct tegra_dc_sor_data *sor)
+{
+	if (tegra_platform_is_silicon() || tegra_bpmp_running())
+		clk_disable_unprepare(sor->safe_clk);
 }
 
 static inline int lt_param_idx(int link_bw)

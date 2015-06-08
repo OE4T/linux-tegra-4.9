@@ -2396,6 +2396,25 @@ static ssize_t hdmi_ddc_power_show(struct kobject *kobj,
 	return sprintf(buf, "%d\n", dc_hdmi->ddc_refcount);
 }
 
+static bool tegra_dc_hdmi_hpd_state(struct tegra_dc *dc)
+{
+	int sense;
+	int level;
+	bool hpd;
+
+	if (WARN_ON(!dc || !dc->out))
+		return false;
+
+	level = gpio_get_value_cansleep(dc->out->hotplug_gpio);
+
+	sense = dc->out->flags & TEGRA_DC_OUT_HOTPLUG_MASK;
+
+	hpd = (sense == TEGRA_DC_OUT_HOTPLUG_HIGH && level) ||
+		(sense == TEGRA_DC_OUT_HOTPLUG_LOW && !level);
+
+	return hpd;
+}
+
 struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.init = tegra_dc_hdmi_init,
 	.destroy = tegra_dc_hdmi_destroy,
@@ -2408,4 +2427,5 @@ struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.ddc_disable = tegra_dc_hdmi_ddc_disable,
 	.modeset_notifier = tegra_dc_hdmi_modeset_notifier,
 	.mode_filter = tegra_hdmi_fb_mode_filter,
+	.hpd_state = tegra_dc_hdmi_hpd_state,
 };

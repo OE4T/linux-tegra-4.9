@@ -1978,9 +1978,7 @@ EXPORT_SYMBOL(tegra_dc_get_connected);
 
 bool tegra_dc_hpd(struct tegra_dc *dc)
 {
-	int sense;
-	int level;
-	int hpd;
+	int hpd = false;
 
 	if (WARN_ON(!dc || !dc->out))
 		return false;
@@ -1995,12 +1993,8 @@ bool tegra_dc_hpd(struct tegra_dc *dc)
 	if (!tegra_dc_hotplug_supported(dc))
 		return true;
 
-	level = gpio_get_value_cansleep(dc->out->hotplug_gpio);
-
-	sense = dc->out->flags & TEGRA_DC_OUT_HOTPLUG_MASK;
-
-	hpd = (sense == TEGRA_DC_OUT_HOTPLUG_HIGH && level) ||
-		(sense == TEGRA_DC_OUT_HOTPLUG_LOW && !level);
+	if (dc->out_ops && dc->out_ops->hpd_state)
+		hpd = dc->out_ops->hpd_state(dc);
 
 	if (dc->out->hotplug_report)
 		dc->out->hotplug_report(hpd);
@@ -3698,13 +3692,15 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 		return false;
 	}
 
-	np_dpaux = of_find_node_by_path(
+	if (dc->out->type != TEGRA_DC_OUT_DP) {
+		np_dpaux = of_find_node_by_path(
 				dc->ndev->id ? DPAUX1_NODE : DPAUX_NODE);
-	if (np_dpaux || !dc->ndev->dev.of_node)
-		tegra_dpaux_pad_power(dc,
-		dc->ndev->id ? TEGRA_DPAUX_INSTANCE_1 : TEGRA_DPAUX_INSTANCE_0,
-		false);
-	of_node_put(np_dpaux);
+		if (np_dpaux || !dc->ndev->dev.of_node)
+			tegra_dpaux_pad_power(dc,
+			dc->ndev->id ? TEGRA_DPAUX_INSTANCE_1 :
+			TEGRA_DPAUX_INSTANCE_0, false);
+		of_node_put(np_dpaux);
+	}
 
 	if (dc->out_ops && dc->out_ops->enable)
 		dc->out_ops->enable(dc);
@@ -3865,7 +3861,9 @@ static bool _tegra_dc_enable(struct tegra_dc *dc)
 
 	pm_runtime_get_sync(&dc->ndev->dev);
 
-	if (dc->out->type == TEGRA_DC_OUT_HDMI && !tegra_dc_hpd(dc))
+	if ((dc->out->type == TEGRA_DC_OUT_HDMI ||
+		dc->out->type == TEGRA_DC_OUT_DP) &&
+		!tegra_dc_hpd(dc))
 		return false;
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
@@ -4778,6 +4776,10 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			udelay(10);
 			tegra_disp_clk_disable_unprepare(dc->clk);
 		}
+
+		if (dc->out_ops && dc->out_ops->hotplug_init)
+			dc->out_ops->hotplug_init(dc);
+
 		_tegra_dc_set_default_videomode(dc);
 		dc->enabled = _tegra_dc_enable(dc);
 

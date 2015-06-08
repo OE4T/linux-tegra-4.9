@@ -127,6 +127,10 @@ struct tegra_dc_out_ops {
 	int (*ddc_disable)(struct tegra_dc *dc);
 	/* Enable/disable VRR */
 	void (*vrr_enable)(struct tegra_dc *dc, bool enable);
+	/* return if hpd asserted or deasserted */
+	bool (*hpd_state)(struct tegra_dc *dc);
+	/* Configure controller to receive hotplug events */
+	int (*hotplug_init)(struct tegra_dc *dc);
 };
 
 struct tegra_dc_shift_clk_div {

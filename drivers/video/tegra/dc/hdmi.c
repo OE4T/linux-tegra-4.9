@@ -2418,6 +2418,25 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 }
 
+static bool tegra_dc_hdmi_hpd_state(struct tegra_dc *dc)
+{
+	int sense;
+	int level;
+	bool hpd;
+
+	if (WARN_ON(!dc || !dc->out))
+		return false;
+
+	level = gpio_get_value_cansleep(dc->out->hotplug_gpio);
+
+	sense = dc->out->flags & TEGRA_DC_OUT_HOTPLUG_MASK;
+
+	hpd = (sense == TEGRA_DC_OUT_HOTPLUG_HIGH && level) ||
+		(sense == TEGRA_DC_OUT_HOTPLUG_LOW && !level);
+
+	return hpd;
+}
+
 struct tegra_dc_out_ops tegra_dc_hdmi_ops = {
 	.init = tegra_dc_hdmi_init,
 	.destroy = tegra_dc_hdmi_destroy,
@@ -2428,6 +2447,7 @@ struct tegra_dc_out_ops tegra_dc_hdmi_ops = {
 	.resume = tegra_dc_hdmi_resume,
 	.mode_filter = tegra_dc_hdmi_mode_filter,
 	.setup_clk = tegra_dc_hdmi_setup_clk,
+	.hpd_state = tegra_dc_hdmi_hpd_state,
 };
 
 struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_dc_hdmi_data *hdmi)

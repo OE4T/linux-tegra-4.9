@@ -278,6 +278,7 @@ static __initdata struct tegra_bpmp_clk_init tegra186_clocks[] = {
 	{ .clk_num = TEGRA186_CLK_XUSB_FALCON, .name = "xusb_falcon" },
 	{ .clk_num = TEGRA186_CLK_XUSB_FS, .name = "xusb_fs" },
 	{ .clk_num = TEGRA186_CLK_PLL_A_OUT0, .name = "pll_a_out0" },
+	{ .clk_num = TEGRA186_CLK_PLL_A_OUT1, .name = "pll_a_out1" },
 	{ .clk_num = TEGRA186_CLK_SYNC_I2S1, .name = "sync_i2s1" },
 	{ .clk_num = TEGRA186_CLK_SYNC_I2S2, .name = "sync_i2s2" },
 	{ .clk_num = TEGRA186_CLK_SYNC_I2S3, .name = "sync_i2s3" },

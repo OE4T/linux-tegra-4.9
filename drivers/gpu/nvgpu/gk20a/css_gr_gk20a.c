@@ -656,8 +656,6 @@ int gr_gk20a_css_attach(struct gk20a *g,
 	int ret = 0;
 	struct gr_gk20a *gr;
 
-	if (!g->allow_all)
-		return -EACCES;
 	/* we must have a placeholder to store pointer to client structure */
 	if (!cs_client)
 		return -EINVAL;
@@ -713,9 +711,6 @@ int gr_gk20a_css_detach(struct gk20a *g,
 	int ret = 0;
 	struct gr_gk20a *gr;
 
-	if (!g->allow_all)
-		return -EACCES;
-
 	if (!cs_client)
 		return -EINVAL;
 
@@ -740,9 +735,6 @@ int gr_gk20a_css_flush(struct gk20a *g,
 {
 	int ret = 0;
 	struct gr_gk20a *gr;
-
-	if (!g->allow_all)
-		return -EACCES;
 
 	if (!cs_client)
 		return -EINVAL;

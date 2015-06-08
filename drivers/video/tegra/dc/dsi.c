@@ -3384,12 +3384,16 @@ static int tegra_dsi_write_data_nosync(struct tegra_dc *dc,
 	}
 
 	err = _tegra_dsi_write_data(dsi, cmd);
+	if (err < 0)
+		dev_err(&dc->ndev->dev, "Failed DSI write\n");
+
 	mdelay(delay_ms);
-fail:
+
 	err = tegra_dsi_restore_state(dc, dsi, init_status);
 	if (err < 0)
 		dev_err(&dc->ndev->dev, "Failed to restore prev state\n");
 
+fail:
 	return err;
 }
 

@@ -678,23 +678,24 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 					 handle_simple_irq);
 		set_irq_flags(irq, IRQF_VALID);
 	}
-	/* program SCR reg to get the interrupts */
-	for (i = 0; i < (tegra_gpio_bank_count - 1); i++) {
-		u32 val;
-		int k;
-		val = 0x1000 * i;
-		/* 64 since 8 ports * 8 pins */
-		for (k = 0; k < 64; k++) {
-			val = 0;
-			val = readl(tegra_gpio->regs[0] + (k * GPIO_SCR_DIFF)
-			+ GPIO_SCR_REG);
-			/* program bit 1 and bit 27 */
-			val |= (1 << 1) | (1 << 27);
-			writel(val, tegra_gpio->regs[0] + (k * GPIO_SCR_DIFF)
-			+ GPIO_SCR_REG);
+	if (0) {
+		/* program SCR reg to get the interrupts */
+		for (i = 0; i < (tegra_gpio_bank_count - 1); i++) {
+			u32 val;
+			int k;
+			val = 0x1000 * i;
+			/* 64 since 8 ports * 8 pins */
+			for (k = 0; k < 64; k++) {
+				val = 0;
+				val = readl(tegra_gpio->regs[0] +
+				(k * GPIO_SCR_DIFF) + GPIO_SCR_REG);
+				/* program bit 1 and bit 27 */
+				val |= (1 << 1) | (1 << 27);
+				writel(val, tegra_gpio->regs[0] +
+				(k * GPIO_SCR_DIFF) + GPIO_SCR_REG);
+			}
 		}
 	}
-
 	for (i = 0; i < tegra_gpio_bank_count; i++) {
 		controller = &tegra_gpio_controllers[i];
 

@@ -364,10 +364,15 @@ struct clk **tegra_bpmp_clk_init(struct tegra_bpmp_clk_init *init_clks,
 			}
 
 			num_parents = parents.num_of_parents;
-			for (j = 0; j < num_parents; j++)
+			for (j = 0; j < num_parents; j++) {
 				parent_names[j] =
 				clk_bpmp_lookup_name(parents.clk_ids[j],
 						     init_clks, num_clks);
+				if (!parent_names[j])
+					pr_err("%s: no name for parent %d\n",
+						clk_init->name,
+						parents.clk_ids[j]);
+			}
 		} else {
 			num_parents = 1;
 			parent_names[0]  = clk_bpmp_lookup_name(parent,

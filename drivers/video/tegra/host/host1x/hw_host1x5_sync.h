@@ -314,4 +314,8 @@ static inline u32 host1x_sync_common_mlock_locked_v(u32 r)
 {
 	return (r >> 0) & 0x1;
 }
+static inline u32 host1x_thost_common_icg_en_override_0_r(void)
+{
+	return 0x2aa8;
+}
 #endif

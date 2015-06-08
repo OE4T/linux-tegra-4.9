@@ -60,4 +60,13 @@
 			cpu-idle-states = <&A57_C7>;
 		};
 	};
+
+	arm-pmu {
+		compatible = "arm,armv8-pmuv3";
+		interrupts = <0 320 0x4>,
+			     <0 321 0x4>,
+			     /* The boot loader may override these two. */
+			     <0 296 0x4>,
+			     <0 297 0x4>;
+	};
 };

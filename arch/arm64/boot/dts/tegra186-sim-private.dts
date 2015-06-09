@@ -308,7 +308,7 @@
 			compatible = "nvidia,tegra186-dspk";
 			reg = <0x02905000 0x100>;
 			nvidia,ahub-dspk-id = <0>;
-			status = "disabled";
+			status = "okay";
 		};
 
 		spdif_dit0: spdif-dit.0@0 {
@@ -348,7 +348,7 @@
 		compatible = "nvidia,tegra-audio-t186ref";
 		iommus = <&smmu TEGRA_SWGROUP_APE>;
 		nvidia,model = "tegra-snd-t186ref";
-		nvidia,num-codec-link = <4>;
+		nvidia,num-codec-link = <5>;
 		nvidia,num-amx = <1>;
 		nvidia,num-adx = <1>;
 		nvidia,amx-slot-size = <32 32>;
@@ -504,6 +504,19 @@
 			num-channel = <2>;
 			name-prefix = "dmic-x";
 		};
+		nvidia,dai-link-5 {
+			link-name = "spdif-dit-4";
+			cpu-dai = <&tegra_dspk1>;
+			codec-dai = <&spdif_dit0>;
+			cpu-dai-name = "DSPK1";
+			codec-dai-name = "dit-hifi";
+			format = "i2s";
+			bit-format = "s16_le";
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "dspk-x";
+		};
+
 	};
 
 	host1x {

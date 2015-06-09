@@ -4,6 +4,12 @@ config SND_SOC_TEGRA_ALT_186
         depends on ARCH_TEGRA_APE
 	depends on ARCH_TEGRA_18x_SOC
 
+config SND_SOC_TEGRA186_DSPK_ALT
+	tristate "Tegra186 DSPK driver"
+	depends on SND_SOC_TEGRA_ALT && SND_SOC_TEGRA_ALT_186
+	help
+	  Say Y or M if you want to add support for Tegra186 DSPK module.
+
 config SND_SOC_TEGRA186_ASRC_ALT
 	tristate "Tegra186 ASRC driver"
 	depends on SND_SOC_TEGRA_ALT && SND_SOC_TEGRA_ALT_186
@@ -36,6 +42,7 @@ config SND_SOC_TEGRA_T186REF_ALT
 	select SND_SOC_TEGRA210_SPDIF_ALT
 	select SND_SOC_TEGRA186_ASRC_ALT
 	select SND_SOC_TEGRA186_ARAD_ALT
+	select SND_SOC_TEGRA186_DSPK_ALT
 	select SND_SOC_TEGRA_ASOC_HWDEP_ALT
 	select SND_SOC_SPDIF
 	select SND_SOC_AD193X

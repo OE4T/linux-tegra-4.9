@@ -27,4 +27,9 @@
 #endif
 
 #define NV_ADDRESS_MAP_APE_I2S5_BASE		0x02901400
+
+#define APE_FPGA_MISC_CLK_SOURCE_DSPK1_0 0x6c
+#define APE_FPGA_MISC_CLK_SOURCE_DSPK2_0 0x70
+
+void program_dspk_clk(int dspk_clk);
 #endif

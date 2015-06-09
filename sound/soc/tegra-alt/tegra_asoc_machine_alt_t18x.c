@@ -721,6 +721,10 @@ static struct snd_soc_codec_conf
 		.dev_name = "tegra210-spdif",
 		.name_prefix = "SPDIF",
 	},
+	[TEGRA186_CODEC_DSPK1_CONF] = {
+		.dev_name = "tegra186-dspk.0",
+		.name_prefix = "DSPK1",
+	},
 	[TEGRA186_CODEC_ASRC1_CONF] = {
 		.dev_name = "tegra186-asrc",
 		.name_prefix = "ASRC1",

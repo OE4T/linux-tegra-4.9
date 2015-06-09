@@ -528,7 +528,7 @@ static void gr_gm20b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 	}
 }
 
-static int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
+int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 tpc_index, gpc_index;

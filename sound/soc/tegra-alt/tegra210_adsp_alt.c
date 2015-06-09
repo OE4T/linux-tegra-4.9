@@ -2413,8 +2413,8 @@ static int tegra210_adsp_apm_get(struct snd_kcontrol *kcontrol,
 {
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
-	struct snd_soc_platform *platform = snd_kcontrol_chip(kcontrol);
-	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
+	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
+	struct tegra210_adsp *adsp = snd_soc_component_get_drvdata(cmpnt);
 	struct tegra210_adsp_app *app = &adsp->apps[mc->reg];
 
 	ucontrol->value.integer.value[0] = app->priority;
@@ -2426,8 +2426,8 @@ static int tegra210_adsp_apm_put(struct snd_kcontrol *kcontrol,
 {
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
-	struct snd_soc_platform *platform = snd_kcontrol_chip(kcontrol);
-	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
+	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
+	struct tegra210_adsp *adsp = snd_soc_component_get_drvdata(cmpnt);
 	struct tegra210_adsp_app *app = &adsp->apps[mc->reg];
 	apm_msg_t apm_msg;
 	int ret = 0;

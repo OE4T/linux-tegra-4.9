@@ -350,6 +350,7 @@ int nvhost_init_t186_support(struct nvhost_master *host,
 		op->syncpt.mark_used = t186_syncpt_mark_used;
 		op->syncpt.mark_unused = t186_syncpt_mark_unused;
 	}
+	op->syncpt.mutex_owner = t186_syncpt_mutex_owner;
 
 	op->remove_support = t186_remove_support;
 

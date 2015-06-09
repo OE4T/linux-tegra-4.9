@@ -64,8 +64,6 @@ struct camera_common_power_rail {
 	struct regulator *dvdd;
 	struct regulator *avdd;
 	struct regulator *iovdd;
-	struct regulator *ext_reg1;
-	struct regulator *ext_reg2;
 	struct clk *mclk;
 	unsigned int pwdn_gpio;
 	unsigned int reset_gpio;
@@ -154,7 +152,6 @@ struct camera_common_data {
 	struct v4l2_subdev			subdev;
 
 	void	*priv;
-	int	ident;
 	int	mode;
 	int	numfmts;
 	int	def_mode, def_width, def_height;
@@ -197,8 +194,6 @@ int camera_common_try_fmt(struct v4l2_subdev *sd,
 			   struct v4l2_mbus_framefmt *mf);
 int camera_common_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf);
 int camera_common_g_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf);
-int camera_common_g_chip_ident(struct v4l2_subdev *sd,
-			     struct v4l2_dbg_chip_ident *id);
 int camera_common_s_power(struct v4l2_subdev *sd, int on);
 int camera_common_g_mbus_config(struct v4l2_subdev *sd,
 			      struct v4l2_mbus_config *cfg);

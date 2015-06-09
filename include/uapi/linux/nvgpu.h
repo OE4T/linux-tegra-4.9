@@ -332,7 +332,7 @@ struct nvgpu_gpu_vsms_mapping {
 #define NVGPU_GPU_IOCTL_OPEN_CHANNEL \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 11, struct nvgpu_gpu_open_channel_args)
 #define NVGPU_GPU_IOCTL_FLUSH_L2 \
-	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 12, struct nvgpu_gpu_l2_fb_args)
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 12, struct nvgpu_gpu_l2_fb_args)
 #define NVGPU_GPU_IOCTL_INVAL_ICACHE \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 13, struct nvgpu_gpu_inval_icache_args)
 #define NVGPU_GPU_IOCTL_SET_MMUDEBUG_MODE \

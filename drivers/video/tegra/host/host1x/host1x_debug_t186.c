@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Hardware Debug Functions
  *
- * Copyright (c) 2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -119,6 +119,19 @@ static void debug_show_channel_fifo(struct nvhost_master *m,
 
 static void debug_show_mlocks(struct nvhost_master *m, struct output *o)
 {
+	int i;
+
+	nvhost_debug_output(o, "---- mlocks ----\n");
+	for (i = 0; i < NV_HOST1X_NB_MLOCKS; i++) {
+		u32 owner = host1x_hypervisor_readl(m->dev,
+				host1x_sync_mlock_owner_0_r() + i * 4);
+		if (host1x_sync_mlock_owner_0_mlock_ch_owns_0_v(owner))
+			nvhost_debug_output(o, "%d: locked by channel %d\n",
+				i,
+				host1x_sync_mlock_owner_0_mlock_owner_chid_0_v(
+					owner));
+	}
+	nvhost_debug_output(o, "\n");
 }
 
 static const struct nvhost_debug_ops host1x_debug_ops = {

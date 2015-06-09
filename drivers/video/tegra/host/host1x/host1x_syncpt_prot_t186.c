@@ -67,3 +67,18 @@ static int t186_syncpt_mark_unused(struct nvhost_syncpt *sp, u32 syncptid)
 		host1x_sync_syncpt_ch_app_0_syncpt_ch_f(0xff));
 	return 0;
 }
+
+
+static void t186_syncpt_mutex_owner(struct nvhost_syncpt *sp,
+				unsigned int idx,
+				bool *cpu, bool *ch,
+				unsigned int *chid)
+{
+	struct nvhost_master *dev = syncpt_to_dev(sp);
+	u32 owner = host1x_sync_readl(dev->dev,
+		host1x_sync_common_mlock_r() + idx * 4);
+
+	*chid = host1x_sync_common_mlock_ch_v(owner);
+	*cpu = false;
+	*ch = host1x_sync_common_mlock_locked_v(owner);
+}

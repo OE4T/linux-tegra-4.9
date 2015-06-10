@@ -32,8 +32,8 @@
 #include "flcn/flcn.h"
 #include "isp/isp.h"
 #include "isp/isp_isr_v2.h"
-#include "vi/vi.h"
 #include "nvcsi/nvcsi.h"
+#include "vi/vi4.h"
 #include "nvdec/nvdec.h"
 #include "hardware_t186.h"
 
@@ -171,10 +171,12 @@ struct nvhost_device_data t18_vi_info = {
 		{"emc", HOST_EMC_FLOOR,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
 	},
-	.ctrl_ops		= &tegra_vi_ctrl_ops,
 	.num_channels		= 12,
-	.prepare_poweroff = nvhost_vi_prepare_poweroff,
-	.finalize_poweron = nvhost_vi_finalize_poweron,
+#ifdef CONFIG_TEGRA_VI_NOTIFY
+	.ctrl_ops		= &tegra_vi_notify_ctrl_ops,
+	.prepare_poweroff	= nvhost_vi_notify_prepare_poweroff,
+	.finalize_poweron	= nvhost_vi_notify_finalize_poweron,
+#endif
 	.vm_regs		= {{0x4000 * 4, true},
 				   {0x8000 * 4, true},
 				   {0xc000 * 4, true},

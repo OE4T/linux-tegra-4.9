@@ -22,6 +22,7 @@
 #include <dt-bindings/memory/tegra186-swgroup.h>
 #include <dt-bindings/display/tegra-dc.h>
 #include "../../../../include/dt-bindings/clock/tegra186-clock.h"
+#include "../../../../include/dt-bindings/reset/tegra186-reset.h"
 #include "tegra186-pinmux-fpga.dtsi"
 #include "tegra186-fpga-fixed.dtsi"
 #include "tegra186-sdhci.dtsi"
@@ -551,6 +552,7 @@
 		compatible = "nvidia,tegra18x-car";
 		reg = <0x0 0x25000000 0x0 0x01000000>;
 		#clock-cells = <1>;
+		#reset-cells = <1>;
 	};
 
 	ufshci@02450000 {

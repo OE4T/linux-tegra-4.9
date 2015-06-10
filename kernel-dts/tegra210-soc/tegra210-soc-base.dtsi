@@ -1507,6 +1507,9 @@
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x7d000000 0x0 0x4000>;
 		interrupts = <0 20 0x04>;
+		iommus = <&smmu TEGRA_SWGROUP_PPCS>,
+			 <&smmu TEGRA_SWGROUP_PPCS1>,
+			 <&smmu TEGRA_SWGROUP_PPCS2>;
 		nvidia,port-otg;
 		nvidia,has-hostpc;
 		nvidia,unaligned-dma-buf-supported;
@@ -1718,6 +1721,9 @@
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x7d004000 0x0 0x4000>;
 		interrupts = <0 21 0x04>;
+		iommus = <&smmu TEGRA_SWGROUP_PPCS>,
+			 <&smmu TEGRA_SWGROUP_PPCS1>,
+			 <&smmu TEGRA_SWGROUP_PPCS2>;
 		nvidia,has-hostpc;
 		nvidia,power-off-on-suspend;
 		nvidia,remote-wakeup-supported;

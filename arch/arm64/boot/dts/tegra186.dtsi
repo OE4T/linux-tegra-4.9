@@ -946,7 +946,7 @@
 			device_type = "pci";
 			assigned-addresses = <0x82001000 0 0x10001000 0 0x1000>;
 			reg = <0x001000 0 0 0 0>;
-			status = "disabled";
+			status = "okay";
 
 			#address-cells = <3>;
 			#size-cells = <2>;
@@ -957,8 +957,8 @@
 
 		pci@3,0 {
 			device_type = "pci";
-			assigned-addresses = <0x82001000 0 0x10004000 0 0x1000>;
-			reg = <0x001000 0 0 0 0>;
+			assigned-addresses = <0x82001800 0 0x10004000 0 0x1000>;
+			reg = <0x001800 0 0 0 0>;
 			status = "disabled";
 
 			#address-cells = <3>;

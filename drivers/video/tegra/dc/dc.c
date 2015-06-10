@@ -3305,7 +3305,8 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status,
 	}
 
 	if (status & FRAME_END_INT) {
-		struct timespec tm = CURRENT_TIME;
+		struct timespec tm;
+		ktime_get_ts(&tm);
 		dc->frame_end_timestamp = timespec_to_ns(&tm);
 		wake_up(&dc->timestamp_wq);
 

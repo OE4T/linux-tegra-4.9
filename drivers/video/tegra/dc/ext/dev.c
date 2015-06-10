@@ -24,6 +24,7 @@
 #include <linux/slab.h>
 #include <linux/workqueue.h>
 #include <linux/export.h>
+#include <linux/delay.h>
 #include <mach/fb.h>
 #include <linux/fb.h>
 #include <video/tegra_dc_ext.h>
@@ -43,6 +44,9 @@
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 #include "../../../staging/android/sync.h"
 #endif
+
+#define TEGRA_DC_TS_MAX_DELAY_US 1000000
+#define TEGRA_DC_TS_SLACK_US 2000
 
 #ifdef CONFIG_COMPAT
 /* compat versions that happen to be the same size as the uapi version. */
@@ -404,6 +408,7 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 	int err = 0;
 	struct tegra_dc_ext_win *ext_win = &ext->win[win->idx];
 	s64 timestamp_ns;
+	struct tegra_vrr *vrr = ext->dc->out->vrr;
 
 	if (flip_win->handle[TEGRA_DC_Y] == NULL) {
 		win->flags = 0;
@@ -488,10 +493,29 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 		if (timestamp_ns) {
 			/* XXX: Should timestamping be overridden by "no_vsync"
 			 * flag */
-			tegra_dc_config_frame_end_intr(win->dc, true);
-			err = wait_event_interruptible(win->dc->timestamp_wq,
-				tegra_dc_is_within_n_vsync(win->dc, timestamp_ns));
-			tegra_dc_config_frame_end_intr(win->dc, false);
+			if (vrr && vrr->enable) {
+				struct timespec tm;
+				s64 now_ns = 0;
+				s32 sleep_us = 0;
+				ktime_get_ts(&tm);
+				now_ns = timespec_to_ns(&tm);
+				sleep_us = (s32)div_s64(timestamp_ns -
+					now_ns, 1000ll);
+
+				if (sleep_us > TEGRA_DC_TS_MAX_DELAY_US)
+					sleep_us = TEGRA_DC_TS_MAX_DELAY_US;
+
+				if (sleep_us > 0)
+					usleep_range(sleep_us, sleep_us +
+						TEGRA_DC_TS_SLACK_US);
+			} else {
+				tegra_dc_config_frame_end_intr(win->dc, true);
+				err = wait_event_interruptible(
+					win->dc->timestamp_wq,
+					tegra_dc_is_within_n_vsync(win->dc,
+						timestamp_ns));
+				tegra_dc_config_frame_end_intr(win->dc, false);
+			}
 		}
 	}
 

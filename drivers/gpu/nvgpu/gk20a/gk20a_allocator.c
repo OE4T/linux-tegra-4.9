@@ -357,8 +357,8 @@ void gk20a_allocator_destroy(struct gk20a_allocator *a)
 		falloc = container_of(node,
 				      struct gk20a_fixed_alloc, alloced_entry);
 
-		__balloc_do_free_fixed(a, falloc);
 		rb_erase(node, &a->fixed_allocs);
+		__balloc_do_free_fixed(a, falloc);
 	}
 
 	/*

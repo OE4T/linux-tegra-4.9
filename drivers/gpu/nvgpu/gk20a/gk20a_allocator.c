@@ -604,10 +604,11 @@ static struct gk20a_buddy *__balloc_find_buddy(struct gk20a_allocator *a,
 static u64 __balloc_do_alloc(struct gk20a_allocator *a, u64 order, int pte_size)
 {
 	u64 split_order;
-	struct gk20a_buddy *bud;
+	struct gk20a_buddy *bud = NULL;
 
 	split_order = order;
-	while (!(bud = __balloc_find_buddy(a, split_order, pte_size)))
+	while (split_order <= a->max_order &&
+	       !(bud = __balloc_find_buddy(a, split_order, pte_size)))
 		split_order++;
 
 	/* Out of memory! */

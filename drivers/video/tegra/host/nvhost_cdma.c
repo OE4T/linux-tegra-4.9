@@ -376,7 +376,7 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 	list_for_each_entry(job, &cdma->sync_queue, list) {
 		int i;
 		for (i = 0; i < job->num_syncpts; ++i) {
-			u32 id = cdma->timeout.sp[i].id;
+			u32 id = job->sp[i].id;
 
 			if (!test_bit(id, syncpt_used))
 				nvhost_syncpt_update_min(syncpt, id);

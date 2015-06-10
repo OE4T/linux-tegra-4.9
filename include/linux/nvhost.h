@@ -392,6 +392,7 @@ int nvhost_check_bondout(unsigned int id);
 
 /* common runtime pm and power domain APIs */
 int nvhost_module_init(struct platform_device *ndev);
+void nvhost_module_deinit(struct platform_device *dev);
 int nvhost_module_add_domain(struct generic_pm_domain *domain,
 	struct platform_device *pdev);
 extern const struct dev_pm_ops nvhost_module_pm_ops;

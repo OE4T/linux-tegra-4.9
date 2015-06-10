@@ -31,7 +31,6 @@
 
 /* Sets clocks and powergating state for a module */
 int nvhost_clk_get(struct platform_device *dev, char *name, struct clk **clk);
-void nvhost_module_deinit(struct platform_device *dev);
 
 void nvhost_module_busy_noresume(struct platform_device *dev);
 void nvhost_module_reset(struct platform_device *dev, bool reboot);

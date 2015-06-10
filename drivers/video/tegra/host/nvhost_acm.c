@@ -837,6 +837,7 @@ void nvhost_module_deinit(struct platform_device *dev)
 		kobject_put(pdata->power_kobj);
 	}
 }
+EXPORT_SYMBOL(nvhost_module_deinit);
 
 const struct dev_pm_ops nvhost_module_pm_ops = {
 #if defined(CONFIG_PM_RUNTIME) && !defined(CONFIG_PM_GENERIC_DOMAINS)

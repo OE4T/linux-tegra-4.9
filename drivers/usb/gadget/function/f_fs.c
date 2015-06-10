@@ -7,6 +7,7 @@
  * Based on inode.c (GadgetFS) which was:
  * Copyright (C) 2003-2004 David Brownell
  * Copyright (C) 2003 Agilent Technologies
+ * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1857,6 +1858,7 @@ static int ffs_func_eps_enable(struct ffs_function *func)
 
 		ep->ep->driver_data = ep;
 		ep->ep->desc = ds;
+		config_ep_by_speed(ffs->gadget, &func->function, ep->ep);
 
 		if (needs_comp_desc) {
 			comp_desc = (struct usb_ss_ep_comp_descriptor *)(ds +

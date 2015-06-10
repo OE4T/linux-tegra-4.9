@@ -946,7 +946,7 @@ static bool gk20a_fifo_handle_mmu_fault(
 		struct fifo_mmu_fault_info_gk20a f;
 		struct channel_gk20a *ch = NULL;
 		struct tsg_gk20a *tsg = NULL;
-		struct channel_gk20a *referenced_channel = 0;
+		struct channel_gk20a *referenced_channel = NULL;
 		/* read and parse engine status */
 		u32 status = gk20a_readl(g, fifo_engine_status_r(engine_id));
 		u32 ctx_status = fifo_engine_status_ctx_status_v(status);

@@ -1,0 +1,7 @@
+config TEGRA_VI_NOTIFY
+	bool "Tegra VI Notify FIFO driver"
+	depends on TEGRA_GRHOST_VI && ARCH_TEGRA_18x_SOC
+	default y
+	help
+	  Enables support for draining the Tegra Video Input block Notify FIFO.
+	  Say N here if either SCE or APE drains the FIFO instead.

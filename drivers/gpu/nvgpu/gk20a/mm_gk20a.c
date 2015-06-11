@@ -3209,10 +3209,10 @@ void gk20a_init_inst_block(struct mem_desc *inst_block, struct vm_gk20a *vm,
 	g->ops.mm.init_pdb(g, inst_ptr, pde_addr);
 
 	gk20a_mem_wr32(inst_ptr, ram_in_adr_limit_lo_w(),
-		 u64_lo32(vm->va_limit) | 0xFFF);
+		u64_lo32(vm->va_limit - 1) & ~0xfff);
 
 	gk20a_mem_wr32(inst_ptr, ram_in_adr_limit_hi_w(),
-		ram_in_adr_limit_hi_f(u64_hi32(vm->va_limit)));
+		ram_in_adr_limit_hi_f(u64_hi32(vm->va_limit - 1)));
 
 	if (big_page_size && g->ops.mm.set_big_page_size)
 		g->ops.mm.set_big_page_size(g, inst_ptr, big_page_size);

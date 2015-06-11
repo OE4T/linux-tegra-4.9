@@ -60,11 +60,12 @@
 extern void printascii(char *);
 #endif
 
-int console_printk[4] = {
+int console_printk[5] = {
 	CONSOLE_LOGLEVEL_DEFAULT,	/* console_loglevel */
 	MESSAGE_LOGLEVEL_DEFAULT,	/* default_message_loglevel */
 	CONSOLE_LOGLEVEL_MIN,		/* minimum_console_loglevel */
 	CONSOLE_LOGLEVEL_DEFAULT,	/* default_console_loglevel */
+	MESSAGE_LOGLEVEL_DEFAULT,	/* default_devkmsg_loglevel */
 };
 
 /*
@@ -727,7 +728,7 @@ struct devkmsg_user {
 static ssize_t devkmsg_write(struct kiocb *iocb, struct iov_iter *from)
 {
 	char *buf, *line;
-	int level = default_message_loglevel;
+	int level = default_devkmsg_loglevel;
 	int facility = 1;	/* LOG_USER */
 	struct file *file = iocb->ki_filp;
 	struct devkmsg_user *user = file->private_data;

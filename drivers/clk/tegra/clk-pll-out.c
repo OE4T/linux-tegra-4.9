@@ -125,8 +125,8 @@ struct clk *tegra_clk_register_pll_out(const char *name,
 #if defined(CONFIG_PM_SLEEP)
 void tegra_clk_pll_out_resume(struct clk *clk, unsigned long rate)
 {
-	struct clk *parent = clk_get_parent(clk);
 	struct clk_hw *hw = __clk_get_hw(clk);
+	struct clk_hw *parent = clk_hw_get_parent(hw);
 
 	if (IS_ERR(parent)) {
 		WARN_ON(1);

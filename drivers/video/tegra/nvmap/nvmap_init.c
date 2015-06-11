@@ -189,8 +189,6 @@ int nvmap_populate_ivm_carveout(phandle handle)
 static int __nvmap_init_legacy(struct device *dev);
 static int __nvmap_init_dt(struct platform_device *pdev)
 {
-	struct device_node *node, *n;
-
 	if (!of_match_device(nvmap_of_ids, &pdev->dev)) {
 		pr_err("Missing DT entry!\n");
 		return -EINVAL;
@@ -198,20 +196,6 @@ static int __nvmap_init_dt(struct platform_device *pdev)
 
 	/* For VM_2 we need carveout. So, enabling it here */
 	__nvmap_init_legacy(&pdev->dev);
-	/* Parse and setup inter VM carveouts */
-	node = of_get_child_by_name(pdev->dev.of_node, "ivm_carveouts");
-	if (node) {
-		int ret;
-
-		for_each_child_of_node(node, n) {
-			/* NOTE: take care in DT not to have same ivm carveout in both
-			 * reserved-memory and ivm_carveouts node
-			 */
-			ret = nvmap_populate_ivm_carveout(n->phandle);
-			if (ret)
-				return ret;
-		}
-	}
 
 	pdev->dev.platform_data = &nvmap_data;
 

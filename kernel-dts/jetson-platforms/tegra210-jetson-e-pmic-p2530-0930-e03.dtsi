@@ -205,7 +205,8 @@
 					regulator-name = "vdd-pex";
 					regulator-min-microvolt = <1050000>;
 					regulator-max-microvolt = <1050000>;
-					maxim,fps-source = <FPS_SRC_NONE>;
+					regulator-always-on;
+					maxim,fps-source = <FPS_SRC_1>;
 				};
 
 				max77620_ldo2: ldo2 {
@@ -267,7 +268,8 @@
 					regulator-name = "vdd-hdmi-dp";
 					regulator-min-microvolt = <1050000>;
 					regulator-max-microvolt = <1050000>;
-					maxim,fps-source = <FPS_SRC_NONE>;
+					regulator-always-on;
+					maxim,fps-source = <FPS_SRC_1>;
 				};
 			};
 		};

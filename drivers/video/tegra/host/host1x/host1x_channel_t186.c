@@ -196,7 +196,7 @@ static inline u32 gather_count(u32 word)
 
 static inline int get_streamid(struct nvhost_job *job)
 {
-	struct platform_device *pdev = platform_get_drvdata(job->ch->dev);
+	struct platform_device *pdev = job->ch->dev;
 	int streamid;
 
 	/* set channel streamid */

@@ -308,6 +308,7 @@ static void t186_remove_support(struct nvhost_chip_support *op)
 #include "host1x/host1x_intr_t186.c"
 #include "host1x/host1x_debug_t186.c"
 #include "host1x/host1x_vm_t186.c"
+#include "host1x/host1x_actmon_t186.c"
 
 int nvhost_init_t186_support(struct nvhost_master *host,
 			     struct nvhost_chip_support *op)
@@ -341,6 +342,7 @@ int nvhost_init_t186_support(struct nvhost_master *host,
 	op->syncpt = host1x_syncpt_ops;
 	op->intr = host1x_intr_ops;
 	op->vm = host1x_vm_ops;
+	op->actmon = host1x_actmon_ops;
 
 	/* WAR to bugs 200094901 and 200082771: enable protection
 	 * only on silicon/emulation */

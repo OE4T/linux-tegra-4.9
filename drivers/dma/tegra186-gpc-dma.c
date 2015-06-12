@@ -170,6 +170,7 @@ struct tegra_dma_channel_regs {
 	unsigned long	csr;
 	unsigned long	src_ptr;
 	unsigned long	dst_ptr;
+	unsigned long	high_addr_ptr;
 	unsigned long	mc_seq;
 	unsigned long	mmio_seq;
 	unsigned long	wcount;
@@ -429,7 +430,7 @@ static void tegra_dma_start(struct tegra_dma_channel *tdc,
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSR, 0);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_SRC_PTR, ch_regs->src_ptr);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_DST_PTR, ch_regs->dst_ptr);
-	tdc_write(tdc, TEGRA_GPCDMA_CHAN_HIGH_ADDR_PTR, 0);
+	tdc_write(tdc, TEGRA_GPCDMA_CHAN_HIGH_ADDR_PTR, ch_regs->high_addr_ptr);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_FIXED_PATTERN, ch_regs->fixed_pattern);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_MMIOSEQ, ch_regs->mmio_seq);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_MCSEQ, ch_regs->mc_seq);
@@ -875,6 +876,9 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_dma_memset(
 	dma_desc->bytes_requested += len;
 	sg_req->ch_regs.src_ptr = 0;
 	sg_req->ch_regs.dst_ptr = dest;
+	sg_req->ch_regs.high_addr_ptr = ((dest >> 32) &
+			TEGRA_GPCDMA_HIGH_ADDR_DST_PTR_MASK) <<
+			TEGRA_GPCDMA_HIGH_ADDR_DST_PTR_SHIFT;
 	sg_req->ch_regs.fixed_pattern = value;
 	/* Word count reg takes value as (N +1) words */
 	sg_req->ch_regs.wcount = ((len - 4) >> 2);
@@ -964,6 +968,11 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_dma_memcpy(
 	dma_desc->bytes_requested += len;
 	sg_req->ch_regs.src_ptr = src;
 	sg_req->ch_regs.dst_ptr = dest;
+	sg_req->ch_regs.high_addr_ptr = (src >> 32) &
+		TEGRA_GPCDMA_HIGH_ADDR_SCR_PTR_MASK;
+	sg_req->ch_regs.high_addr_ptr |= ((dest >> 32) &
+		TEGRA_GPCDMA_HIGH_ADDR_DST_PTR_MASK) <<
+		TEGRA_GPCDMA_HIGH_ADDR_DST_PTR_SHIFT;
 	/* Word count reg takes value as (N +1) words */
 	sg_req->ch_regs.wcount = ((len - 4) >> 2);
 	sg_req->ch_regs.csr = csr;
@@ -1059,7 +1068,8 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_slave_sg(
 
 	/* Make transfer requests */
 	for_each_sg(sgl, sg, sg_len, i) {
-		u32 len, mem;
+		u32 len;
+		dma_addr_t mem;
 
 		mem = sg_dma_address(sg);
 		len = sg_dma_len(sg);
@@ -1085,10 +1095,16 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_slave_sg(
 		if (direction == DMA_MEM_TO_DEV) {
 			sg_req->ch_regs.src_ptr = mem;
 			sg_req->ch_regs.dst_ptr = apb_ptr;
+			sg_req->ch_regs.high_addr_ptr = (mem >> 32) &
+				TEGRA_GPCDMA_HIGH_ADDR_SCR_PTR_MASK;
 		} else if (direction == DMA_DEV_TO_MEM) {
 			sg_req->ch_regs.src_ptr = apb_ptr;
 			sg_req->ch_regs.dst_ptr = mem;
+			sg_req->ch_regs.high_addr_ptr = ((mem >> 32) &
+				TEGRA_GPCDMA_HIGH_ADDR_DST_PTR_MASK) <<
+				TEGRA_GPCDMA_HIGH_ADDR_DST_PTR_SHIFT;
 		}
+
 		/*
 		 * Word count register takes input in words. Writing a value
 		 * of N into word count register means a req of (N+1) words.
@@ -1420,6 +1436,8 @@ static int tegra_dma_pm_suspend(struct device *dev)
 		ch_reg->csr = tdc_read(tdc, TEGRA_GPCDMA_CHAN_CSR);
 		ch_reg->src_ptr = tdc_read(tdc, TEGRA_GPCDMA_CHAN_SRC_PTR);
 		ch_reg->dst_ptr = tdc_read(tdc, TEGRA_GPCDMA_CHAN_DST_PTR);
+		ch_reg->high_addr_ptr = tdc_read(tdc,
+				TEGRA_GPCDMA_CHAN_HIGH_ADDR_PTR);
 		ch_reg->mc_seq = tdc_read(tdc, TEGRA_GPCDMA_CHAN_MCSEQ);
 		ch_reg->mmio_seq = tdc_read(tdc, TEGRA_GPCDMA_CHAN_MMIOSEQ);
 		ch_reg->wcount = tdc_read(tdc, TEGRA_GPCDMA_CHAN_WCOUNT);
@@ -1437,10 +1455,12 @@ static int tegra_dma_pm_resume(struct device *dev)
 		struct tegra_dma_channel_regs *ch_reg = &tdc->channel_reg;
 
 		tdc_write(tdc, TEGRA_GPCDMA_CHAN_WCOUNT, ch_reg->wcount);
-		tdc_write(tdc, TEGRA_GPCDMA_CHAN_MMIOSEQ, ch_reg->mmio_seq);
 		tdc_write(tdc, TEGRA_GPCDMA_CHAN_DST_PTR, ch_reg->dst_ptr);
-		tdc_write(tdc, TEGRA_GPCDMA_CHAN_MCSEQ, ch_reg->mc_seq);
 		tdc_write(tdc, TEGRA_GPCDMA_CHAN_SRC_PTR, ch_reg->src_ptr);
+		tdc_write(tdc, TEGRA_GPCDMA_CHAN_HIGH_ADDR_PTR,
+			ch_reg->high_addr_ptr);
+		tdc_write(tdc, TEGRA_GPCDMA_CHAN_MMIOSEQ, ch_reg->mmio_seq);
+		tdc_write(tdc, TEGRA_GPCDMA_CHAN_MCSEQ, ch_reg->mc_seq);
 		tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSR,
 			(ch_reg->csr & ~TEGRA_GPCDMA_CSR_ENB));
 	}

@@ -454,6 +454,10 @@ static inline u32 pbdma_allowed_syncpoints_0_index_f(u32 v)
 {
 	return (v & 0x7fff) << 16;
 }
+static inline u32 pbdma_allowed_syncpoints_0_index_v(u32 r)
+{
+	return (r >> 16) & 0x7fff;
+}
 static inline u32 pbdma_allowed_syncpoints_1_valid_f(u32 v)
 {
 	return (v & 0x1) << 15;

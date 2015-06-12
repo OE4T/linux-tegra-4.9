@@ -150,31 +150,34 @@ static u32 gp10b_fifo_get_pbdma_signature(struct gk20a *g)
 
 static int gp10b_fifo_resetup_ramfc(struct channel_gk20a *c)
 {
-	int syncpt_id;
+	u32 new_syncpt = 0, old_syncpt;
 	void *inst_ptr;
+	u32 v;
 
 	gk20a_dbg_fn("");
 
 	inst_ptr = c->inst_block.cpu_va;
 
-	/* disable channel */
-	c->g->ops.fifo.disable_channel(c);
+	v = gk20a_mem_rd32(inst_ptr, ram_fc_allowed_syncpoints_w());
+	old_syncpt = pbdma_allowed_syncpoints_0_index_v(v);
+	if (c->sync)
+		new_syncpt = c->sync->syncpt_id(c->sync);
 
-	/* preempt the channel */
-	WARN_ON(c->g->ops.fifo.preempt_channel(c->g, c->hw_chid));
+	if (new_syncpt && new_syncpt != old_syncpt) {
+		/* disable channel */
+		c->g->ops.fifo.disable_channel(c);
 
-	if (c->sync) {
-		u32 v = pbdma_allowed_syncpoints_0_valid_f(1);
+		/* preempt the channel */
+		WARN_ON(c->g->ops.fifo.preempt_channel(c->g, c->hw_chid));
 
-		syncpt_id = c->sync->syncpt_id(c->sync);
+		v = pbdma_allowed_syncpoints_0_valid_f(1);
+
 		gk20a_dbg_info("Channel %d, syncpt id %d\n",
-				c->hw_chid, syncpt_id);
+				c->hw_chid, new_syncpt);
 
-		v |= pbdma_allowed_syncpoints_0_index_f(syncpt_id);
+		v |= pbdma_allowed_syncpoints_0_index_f(new_syncpt);
 
 		gk20a_mem_wr32(inst_ptr, ram_fc_allowed_syncpoints_w(), v);
-	} else {
-		gk20a_mem_wr32(inst_ptr, ram_fc_allowed_syncpoints_w(), 0);
 	}
 
 	/* enable channel */

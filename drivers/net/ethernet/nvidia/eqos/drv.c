@@ -27,10 +27,20 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
  * ========================================================================= */
-
-/*!@file: drv.c
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+/*!@file: DWC_ETH_QOS_drv.c
  * @brief: Driver functions.
  */
 
@@ -38,9 +48,9 @@
 #include "yapphdr.h"
 #include "drv.h"
 
-extern ULONG dwc_eth_qos_pci_base_addr;
-
+extern ULONG dwc_eth_qos_base_addr;
 #include "yregacc.h"
+#include <linux/inet_lro.h>
 
 static INT DWC_ETH_QOS_GStatus;
 
@@ -51,15 +61,16 @@ unsigned char mac_addr1[6] = { 0x00, 0x66, 0x77, 0x88, 0x99, 0xaa };
 /* module parameters for configuring the queue modes
  * set default mode as GENERIC
  * */
+/* Value of "2" enables mtl tx q */
 static int q_op_mode[DWC_ETH_QOS_MAX_TX_QUEUE_CNT] = {
-	DWC_ETH_QOS_Q_GENERIC,
-	DWC_ETH_QOS_Q_GENERIC,
-	DWC_ETH_QOS_Q_GENERIC,
-	DWC_ETH_QOS_Q_GENERIC,
-	DWC_ETH_QOS_Q_GENERIC,
-	DWC_ETH_QOS_Q_GENERIC,
-	DWC_ETH_QOS_Q_GENERIC,
-	DWC_ETH_QOS_Q_GENERIC
+	2,
+	2,
+	2,
+	2,
+	2,
+	2,
+	2,
+	2
 };
 module_param_array(q_op_mode, int, NULL, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(q_op_mode,
@@ -225,11 +236,11 @@ static void DWC_ETH_QOS_tx_desc_mang_ds_dump(struct DWC_ETH_QOS_prv_data *pdata)
 		printk(KERN_ALERT "\ttx_pbl           = %d\n",
 			tx_desc_data->tx_pbl);
 
-		printk(KERN_ALERT "\t[<desc_add> <index >] = <TDES0> : <TDES1> : <TDES2> : <TDES3>\n");
+		printk(KERN_ALERT "\t[<desc_add>  <dma_add> <index >] = <TDES0> : <TDES1> : <TDES2> : <TDES3>\n");
 		for (i = 0; i < TX_DESC_CNT; i++) {
 			tx_desc = GET_TX_DESC_PTR(qInx, i);
-			printk(KERN_ALERT "\t[%4p %03d] = %#x : %#x : %#x : %#x\n",
-				tx_desc, i, tx_desc->TDES0, tx_desc->TDES1,
+			printk(KERN_ALERT "\t[%4p %4p %03d] = %#x : %#x : %#x : %#x\n",
+				tx_desc, (void *)(GET_TX_DESC_DMA_ADDR(qInx, i)), i, tx_desc->TDES0, tx_desc->TDES1,
 				tx_desc->TDES2, tx_desc->TDES3);
 		}
 	}
@@ -278,11 +289,11 @@ static void DWC_ETH_QOS_rx_desc_mang_ds_dump(struct DWC_ETH_QOS_prv_data *pdata)
 		printk(KERN_ALERT "\trx_pbl                = %d\n",
 			rx_desc_data->rx_pbl);
 
-		printk(KERN_ALERT "\t[<desc_add> <index >] = <RDES0> : <RDES1> : <RDES2> : <RDES3>\n");
+		printk(KERN_ALERT "\t[<desc_add> <dma_add> <index >] = <RDES0> : <RDES1> : <RDES2> : <RDES3>\n");
 		for (i = 0; i < RX_DESC_CNT; i++) {
 			rx_desc = GET_RX_DESC_PTR(qInx, i);
-			printk(KERN_ALERT "\t[%4p %03d] = %#x : %#x : %#x : %#x\n",
-				rx_desc, i, rx_desc->RDES0, rx_desc->RDES1,
+			printk(KERN_ALERT "\t[%4p %4p %03d] = %#x : %#x : %#x : %#x\n",
+				rx_desc, (void *)(GET_RX_DESC_DMA_ADDR(qInx, i)), i, rx_desc->RDES0, rx_desc->RDES1,
 				rx_desc->RDES2, rx_desc->RDES3);
 		}
 	}
@@ -352,7 +363,10 @@ static void DWC_ETH_QOS_start_dev(struct DWC_ETH_QOS_prv_data *pdata)
 
 	DWC_ETH_QOS_restart_phy(pdata);
 
+#ifdef HWA_NV_1618922
+#else
 	pdata->eee_enabled = DWC_ETH_QOS_eee_init(pdata);
+#endif
 
 	netif_tx_wake_all_queues(pdata->dev);
 
@@ -472,7 +486,9 @@ irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS(int irq, void *device_id)
 	struct DWC_ETH_QOS_prv_data *pdata =
 	    (struct DWC_ETH_QOS_prv_data *)device_id;
 	struct net_device *dev = pdata->dev;
+#ifndef HWA_NV_1637630
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
+#endif
 	UINT qInx;
 	int napi_sched = 0;
 	struct DWC_ETH_QOS_rx_queue *rx_queue = NULL;
@@ -494,12 +510,14 @@ irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS(int irq, void *device_id)
 		rx_queue = GET_RX_QUEUE_PTR(qInx);
 
 		DMA_SR_RgRd(qInx, varDMA_SR);
-		/* clear interrupts */
-		DMA_SR_RgWr(qInx, varDMA_SR);
 
 		DMA_IER_RgRd(qInx, varDMA_IER);
-		/* handle only those DMA interrupts which are enabled */
+
+		/* clear and process only those interrupts which we
+		 * have enabled.
+		 */
 		varDMA_SR = (varDMA_SR & varDMA_IER);
+		DMA_SR_RgWr(qInx, varDMA_SR);
 
 		DBGPR("DMA_SR[%d] = %#lx\n", qInx, varDMA_SR);
 
@@ -557,11 +575,16 @@ irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS(int irq, void *device_id)
 		MAC_IMR_RgRd(varMAC_IMR);
 		varMAC_ISR = (varMAC_ISR & varMAC_IMR);
 
-		/* PMT interrupt */
+		/* PMT interrupt
+		 * RemoteWake and MagicPacket events will be received by PHY supporting
+		 * these features on silicon and can be used to wake up Tegra.
+		 * Still let the below code be here in case we ever get this interrupt.
+		 */
 		if (GET_VALUE(varMAC_ISR, MAC_ISR_PMTIS_LPOS, MAC_ISR_PMTIS_HPOS) & 1) {
 			pdata->xstats.pmt_irq_n++;
 			DWC_ETH_QOS_GStatus = S_MAC_ISR_PMTIS;
 			MAC_PMTCSR_RgRd(varMAC_PMTCSR);
+			pr_info("commonisr: PMTCSR : %#lx\n", varMAC_PMTCSR);
 			if (pdata->power_down)
 				DWC_ETH_QOS_powerup(pdata->dev, DWC_ETH_QOS_IOCTL_CONTEXT);
 		}
@@ -570,6 +593,12 @@ irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS(int irq, void *device_id)
 		if (GET_VALUE(varMAC_ISR, MAC_ISR_RGSMIIS_LPOS, MAC_ISR_RGSMIIS_HPOS) & 1) {
 			MAC_PCS_RgRd(varMAC_PCS);
 			printk(KERN_ALERT "RGMII/SMII interrupt: MAC_PCS = %#lx\n", varMAC_PCS);
+#ifdef HWA_NV_1637630
+
+#else
+			/* Comment out this block of code(1637630)
+	 		 * as it was preventing 10mb to work.
+			 */
 			if ((varMAC_PCS & 0x80000) == 0x80000) {
 				pdata->pcs_link = 1;
 				netif_carrier_on(dev);
@@ -598,6 +627,7 @@ irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS(int irq, void *device_id)
 				pdata->pcs_link = 0;
 				netif_carrier_off(dev);
 			}
+#endif
 		}
 
 		/* PCS Link Status interrupt */
@@ -1020,32 +1050,6 @@ void DWC_ETH_QOS_print_all_hw_features(struct DWC_ETH_QOS_prv_data *pdata)
 	DBGPR("<--DWC_ETH_QOS_print_all_hw_features\n");
 }
 
-
-static const struct net_device_ops DWC_ETH_QOS_netdev_ops = {
-	.ndo_open = DWC_ETH_QOS_open,
-	.ndo_stop = DWC_ETH_QOS_close,
-	.ndo_start_xmit = DWC_ETH_QOS_start_xmit,
-	.ndo_get_stats = DWC_ETH_QOS_get_stats,
-	.ndo_set_multicast_list = DWC_ETH_QOS_set_rx_mode,
-#ifdef CONFIG_NET_POLL_CONTROLLER
-	.ndo_poll_controller = DWC_ETH_QOS_poll_controller,
-#endif				/*end of CONFIG_NET_POLL_CONTROLLER */
-	.ndo_set_features = DWC_ETH_QOS_set_features,
-	.ndo_fix_features = DWC_ETH_QOS_fix_features,
-	.ndo_do_ioctl = DWC_ETH_QOS_ioctl,
-	.ndo_change_mtu = DWC_ETH_QOS_change_mtu,
-#ifdef DWC_ETH_QOS_QUEUE_SELECT_ALGO
-	.ndo_select_queue = DWC_ETH_QOS_select_queue,
-#endif
-	.ndo_vlan_rx_add_vid = DWC_ETH_QOS_vlan_rx_add_vid,
-	.ndo_vlan_rx_kill_vid = DWC_ETH_QOS_vlan_rx_kill_vid,
-};
-
-struct net_device_ops *DWC_ETH_QOS_get_netdev_ops(void)
-{
-	return (struct net_device_ops *)&DWC_ETH_QOS_netdev_ops;
-}
-
 /*!
  * \brief allcation of Rx skb's for split header feature.
  *
@@ -1423,8 +1427,34 @@ static int DWC_ETH_QOS_open(struct net_device *dev)
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 	struct desc_if_struct *desc_if = &pdata->desc_if;
 
+#ifdef HWA_NV_1617267
+	ULONG lo, hi;
+#endif
 	DBGPR("-->DWC_ETH_QOS_open\n");
 
+#ifdef HWA_NV_1617267
+
+	/* temp code for bringup only.  Ensure mac address is not default */
+	MAC_MA0LR_RgRd(lo);
+	MAC_MA0HR_RgRd(hi);
+	if ((lo == 0xffffffff) && (hi == 0x8000ffff)) {
+		printk(KERN_ALERT
+	       		"%s(): ERROR-MAC address needs to be changed\n",
+			 __func__);
+		return  -EINVAL;
+	}
+
+	/* save mac addr in sw copy.  Later in this execution thread
+	 * configure_mac() is called, and it will program hw mac_addr0 with 
+	 * dev_addr[].
+	 */
+	pdata->dev->dev_addr[0] = (lo & 0xff);
+	pdata->dev->dev_addr[1] = ((lo >> 8) & 0xff);
+	pdata->dev->dev_addr[2] = ((lo >> 16) & 0xff);
+	pdata->dev->dev_addr[3] = ((lo >> 24) & 0xff);
+	pdata->dev->dev_addr[4] = (hi & 0xff);
+	pdata->dev->dev_addr[5] = ((hi >> 8) & 0xff);
+#endif
 	pdata->irq_number = dev->irq;
 #ifdef DWC_ETH_QOS_CONFIG_PGTEST
 	ret = request_irq(pdata->irq_number, DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_pg,
@@ -1481,7 +1511,11 @@ static int DWC_ETH_QOS_open(struct net_device *dev)
 	if (pdata->phydev)
 		phy_start(pdata->phydev);
 
+#ifdef HWA_NV_1618922
+	pdata->eee_enabled = false;
+#else
 	pdata->eee_enabled = DWC_ETH_QOS_eee_init(pdata);
+#endif
 
 #ifndef DWC_ETH_QOS_CONFIG_PGTEST
 	if (pdata->phydev)
@@ -1537,6 +1571,19 @@ static int DWC_ETH_QOS_close(struct net_device *dev)
 
 	/* issue software reset to device */
 	hw_if->exit();
+
+#ifdef HWA_NV_1617267
+	/* Temp hack.  Preserve MAC address so user does not have to 
+  	 * reprogram it.
+	 */
+	MAC_MA0HR_RgWr(((pdata->dev->dev_addr[5] << 8) |
+			(pdata->dev->dev_addr[4])));
+	MAC_MA0LR_RgWr(((pdata->dev->dev_addr[3] << 24) |
+			(pdata->dev->dev_addr[2] << 16) |
+			(pdata->dev->dev_addr[1] << 8) |
+			(pdata->dev->dev_addr[0])));
+#endif
+
 	desc_if->tx_free_mem(pdata);
 	desc_if->rx_free_mem(pdata);
 	if (pdata->irq_number != 0) {
@@ -1844,6 +1891,7 @@ static void DWC_ETH_QOS_set_rx_mode(struct net_device *dev)
 		}
 	}
 
+	if (!SIM_WORLD)
 	hw_if->config_mac_pkt_filter_reg(pr_mode, huc_mode,
 		hmc_mode, pm_mode, hpf_mode);
 
@@ -1872,10 +1920,12 @@ UINT DWC_ETH_QOS_get_total_desc_cnt(struct DWC_ETH_QOS_prv_data *pdata,
 {
 	UINT count = 0, size = 0;
 	INT length = 0;
+#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR;
 	struct DWC_ETH_QOS_tx_wrapper_descriptor *desc_data =
 	    GET_TX_WRAPPER_DESC(qInx);
+#endif
 
 	/* SG fragment count */
 	count += skb_shinfo(skb)->nr_frags;
@@ -1956,7 +2006,9 @@ static int DWC_ETH_QOS_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 	struct desc_if_struct *desc_if = &pdata->desc_if;
 	INT retval = NETDEV_TX_OK;
+#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
 	UINT varvlan_pkt;
+#endif
 	int tso;
 
 	DBGPR("-->DWC_ETH_QOS_start_xmit: skb->len = %d, qInx = %u\n",
@@ -2566,7 +2618,7 @@ static inline void DWC_ETH_QOS_get_rx_vlan(struct DWC_ETH_QOS_prv_data *pdata,
 {
 	USHORT vlan_tag = 0;
 
-	if ((pdata->dev_state & NETIF_F_HW_VLAN_RX) == NETIF_F_HW_VLAN_RX) {
+	if ((pdata->dev_state & NETIF_F_HW_VLAN_CTAG_RX) == NETIF_F_HW_VLAN_CTAG_RX) {
 		/* Receive Status RDES0 Valid ? */
 		if ((rx_normal_desc->RDES3 & DWC_ETH_QOS_RDESC3_RS0V)) {
 			/* device received frame with VLAN Tag or
@@ -2575,7 +2627,7 @@ static inline void DWC_ETH_QOS_get_rx_vlan(struct DWC_ETH_QOS_prv_data *pdata,
 				|| ((rx_normal_desc->RDES3 & DWC_ETH_QOS_RDESC3_LT) == 0x50000)) {
 				vlan_tag = rx_normal_desc->RDES0 & 0xffff;
 				/* insert VLAN tag into skb */
-				__vlan_hwaccel_put_tag(skb, vlan_tag);
+				__vlan_hwaccel_put_tag(skb, htons(ETH_P_8021Q), vlan_tag);
 				pdata->xstats.rx_vlan_pkt_n++;
 			}
 		}
@@ -2639,6 +2691,9 @@ static int DWC_ETH_QOS_clean_split_hdr_rx_irq(
 	unsigned char buf2_used = 0;
 	int ret;
 
+#ifdef HWA_NV_1618922
+	UINT ErrBits = 0x1200000;
+#endif
 	DBGPR("-->DWC_ETH_QOS_clean_split_hdr_rx_irq: qInx = %u, quota = %d\n",
 		qInx, quota);
 
@@ -2683,8 +2738,13 @@ static int DWC_ETH_QOS_clean_split_hdr_rx_irq(
 			/* check for bad packet,
 			 * error is valid only for last descriptor(OWN + LD bit set).
 			 * */
+#ifdef HWA_NV_1618922
+			if ((RX_NORMAL_DESC->RDES3 & ErrBits) &&
+			    (RX_NORMAL_DESC->RDES3 & DWC_ETH_QOS_RDESC3_LD)) {
+#else
 			if ((RX_NORMAL_DESC->RDES3 & DWC_ETH_QOS_RDESC3_ES) &&
 			    (RX_NORMAL_DESC->RDES3 & DWC_ETH_QOS_RDESC3_LD)) {
+#endif
 				DBGPR("Error in rcved pkt, failed to pass it to upper layer\n");
 				dump_rx_desc(qInx, RX_NORMAL_DESC, desc_data->cur_rx);
 				dev->stats.rx_errors++;
@@ -2916,7 +2976,9 @@ static int DWC_ETH_QOS_clean_jumbo_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
 	UCHAR intermediate_desc_cnt = 0;
 	unsigned int buf2_used;
 	int ret;
-
+#ifdef HWA_NV_1618922
+	UINT ErrBits = 0x1200000;
+#endif
 	DBGPR("-->DWC_ETH_QOS_clean_jumbo_rx_irq: qInx = %u, quota = %d\n",
 		qInx, quota);
 
@@ -2950,8 +3012,13 @@ static int DWC_ETH_QOS_clean_jumbo_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
 			/* check for bad packet,
 			 * error is valid only for last descriptor (OWN + LD bit set).
 			 * */
+#ifdef HWA_NV_1618922
+			if ((RX_NORMAL_DESC->RDES3 & ErrBits) &&
+			    (RX_NORMAL_DESC->RDES3 & DWC_ETH_QOS_RDESC3_LD)) {
+#else
 			if ((RX_NORMAL_DESC->RDES3 & DWC_ETH_QOS_RDESC3_ES) &&
 			    (RX_NORMAL_DESC->RDES3 & DWC_ETH_QOS_RDESC3_LD)) {
+#endif
 				DBGPR("Error in rcved pkt, failed to pass it to upper layer\n");
 				dump_rx_desc(qInx, RX_NORMAL_DESC, desc_data->cur_rx);
 				dev->stats.rx_errors++;
@@ -3046,12 +3113,10 @@ static int DWC_ETH_QOS_clean_jumbo_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
 					    && (skb_tailroom(skb) >= pkt_len)) {
 						u8 *vaddr;
 						vaddr =
-						    kmap_atomic(buffer->page,
-								KM_SKB_DATA_SOFTIRQ);
+						    kmap_atomic(buffer->page);
 						memcpy(skb_tail_pointer(skb),
 						       vaddr, pkt_len);
-						kunmap_atomic(vaddr,
-							      KM_SKB_DATA_SOFTIRQ);
+						kunmap_atomic(vaddr);
 						/* re-use the page, so don't erase buffer->page/page2 */
 						skb_put(skb, pkt_len);
 					} else {
@@ -3188,6 +3253,9 @@ static int DWC_ETH_QOS_clean_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
 	struct DWC_ETH_QOS_rx_buffer *buffer = NULL;
 	struct s_RX_NORMAL_DESC *RX_NORMAL_DESC = NULL;
 	UINT pkt_len;
+#ifdef HWA_NV_1618922
+	UINT ErrBits = 0x1200000;
+#endif
 	int ret;
 
 	DBGPR("-->DWC_ETH_QOS_clean_rx_irq: qInx = %u, quota = %d\n",
@@ -3219,8 +3287,13 @@ static int DWC_ETH_QOS_clean_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
 			/* check for bad/oversized packet,
 			 * error is valid only for last descriptor (OWN + LD bit set).
 			 * */
+#ifdef HWA_NV_1618922
+			if (!(RX_NORMAL_DESC->RDES3 & ErrBits) &&
+			    (RX_NORMAL_DESC->RDES3 & DWC_ETH_QOS_RDESC3_LD)) {
+#else
 			if (!(RX_NORMAL_DESC->RDES3 & DWC_ETH_QOS_RDESC3_ES) &&
 			    (RX_NORMAL_DESC->RDES3 & DWC_ETH_QOS_RDESC3_LD)) {
+#endif
 				/* pkt_len = pkt_len - 4; */ /* CRC stripping */
 
 				/* code added for copybreak, this should improve
@@ -3491,12 +3564,14 @@ static void DWC_ETH_QOS_poll_controller(struct net_device *dev)
  * \retval 0
  */
 
-static int DWC_ETH_QOS_set_features(struct net_device *dev, u32 features)
+static int DWC_ETH_QOS_set_features(struct net_device *dev, netdev_features_t features)
 {
 	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	UINT dev_rxcsum_enable;
+#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
 	UINT dev_rxvlan_enable, dev_txvlan_enable;
+#endif
 
 	if (pdata->hw_feat.rx_coe_sel) {
 		dev_rxcsum_enable = !!(pdata->dev_state & NETIF_F_RXCSUM);
@@ -3514,27 +3589,27 @@ static int DWC_ETH_QOS_set_features(struct net_device *dev, u32 features)
 		}
 	}
 #ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
-	dev_rxvlan_enable = !!(pdata->dev_state & NETIF_F_HW_VLAN_RX);
-	if (((features & NETIF_F_HW_VLAN_RX) == NETIF_F_HW_VLAN_RX)
+	dev_rxvlan_enable = !!(pdata->dev_state & NETIF_F_HW_VLAN_CTAG_RX);
+	if (((features & NETIF_F_HW_VLAN_CTAG_RX) == NETIF_F_HW_VLAN_CTAG_RX)
 	    && !dev_rxvlan_enable) {
-		pdata->dev_state |= NETIF_F_HW_VLAN_RX;
+		pdata->dev_state |= NETIF_F_HW_VLAN_CTAG_RX;
 		hw_if->config_rx_outer_vlan_stripping(DWC_ETH_QOS_RX_VLAN_STRIP_ALWAYS);
 		printk(KERN_ALERT "State change - rxvlan enable\n");
-	} else if (((features & NETIF_F_HW_VLAN_RX) == 0) &&
+	} else if (((features & NETIF_F_HW_VLAN_CTAG_RX) == 0) &&
 			dev_rxvlan_enable) {
-		pdata->dev_state &= ~NETIF_F_HW_VLAN_RX;
+		pdata->dev_state &= ~NETIF_F_HW_VLAN_CTAG_RX;
 		hw_if->config_rx_outer_vlan_stripping(DWC_ETH_QOS_RX_NO_VLAN_STRIP);
 		printk(KERN_ALERT "State change - rxvlan disable\n");
 	}
 
-	dev_txvlan_enable = !!(pdata->dev_state & NETIF_F_HW_VLAN_TX);
-	if (((features & NETIF_F_HW_VLAN_TX) == NETIF_F_HW_VLAN_TX)
+	dev_txvlan_enable = !!(pdata->dev_state & NETIF_F_HW_VLAN_CTAG_TX);
+	if (((features & NETIF_F_HW_VLAN_CTAG_TX) == NETIF_F_HW_VLAN_CTAG_TX)
 	    && !dev_txvlan_enable) {
-		pdata->dev_state |= NETIF_F_HW_VLAN_TX;
+		pdata->dev_state |= NETIF_F_HW_VLAN_CTAG_TX;
 		printk(KERN_ALERT "State change - txvlan enable\n");
-	} else if (((features & NETIF_F_HW_VLAN_TX) == 0) &&
+	} else if (((features & NETIF_F_HW_VLAN_CTAG_TX) == 0) &&
 			dev_txvlan_enable) {
-		pdata->dev_state &= ~NETIF_F_HW_VLAN_TX;
+		pdata->dev_state &= ~NETIF_F_HW_VLAN_CTAG_TX;
 		printk(KERN_ALERT "State change - txvlan disable\n");
 	}
 #endif	/* DWC_ETH_QOS_ENABLE_VLAN_TAG */
@@ -3560,10 +3635,11 @@ static int DWC_ETH_QOS_set_features(struct net_device *dev, u32 features)
  * \retval modified flag
  */
 
-static u32 DWC_ETH_QOS_fix_features(struct net_device *dev, u32 features)
+static netdev_features_t DWC_ETH_QOS_fix_features(struct net_device *dev, netdev_features_t features)
 {
+#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
 	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
-
+#endif
 	DBGPR("-->DWC_ETH_QOS_fix_features: %#llx\n", features);
 
 #ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
@@ -3574,7 +3650,7 @@ static u32 DWC_ETH_QOS_fix_features(struct net_device *dev, u32 features)
 		 * received, the QOS must be programmed such that the VLAN
 		 * tags are deleted/stripped from the received packets.
 		 * */
-		features |= NETIF_F_HW_VLAN_RX;
+		features |= NETIF_F_HW_VLAN_CTAG_RX;
 	}
 #endif /* end of DWC_ETH_QOS_ENABLE_VLAN_TAG */
 
@@ -4810,6 +4886,15 @@ static int DWC_ETH_QOS_handle_prv_ioctl(struct DWC_ETH_QOS_prv_data *pdata,
 		ret = DWC_ETH_QOS_handle_pg_ioctl(pdata, (void *)req);
 		break;
 #endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
+	case DWC_ETH_QOS_PHY_LOOPBACK:
+		ret = DWC_ETH_QOS_handle_phy_loopback(pdata, (void *)req);
+		break;
+	case DWC_ETH_QOS_MEM_ISO_TEST:
+		ret = DWC_ETH_QOS_handle_mem_iso_ioctl(pdata, (void *)req);
+		break;
+	case DWC_ETH_QOS_CSR_ISO_TEST:
+		ret = DWC_ETH_QOS_handle_csr_iso_ioctl(pdata, (void *)req);
+		break;
 	default:
 		ret = -EOPNOTSUPP;
 		printk(KERN_ALERT "Unsupported command call\n");
@@ -5087,7 +5172,11 @@ static int DWC_ETH_QOS_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 	DBGPR("-->DWC_ETH_QOS_ioctl\n");
 
 #ifndef DWC_ETH_QOS_CONFIG_PGTEST
+#ifdef AR_XXX
 	if ((!netif_running(dev)) || (!pdata->phydev)) {
+#else //Else for AR_XXX - We do not have PHY for now
+	if (!netif_running(dev)) {
+#endif
 		DBGPR("<--DWC_ETH_QOS_ioctl - error\n");
 		return -EINVAL;
 	}
@@ -5256,7 +5345,7 @@ unsigned int crc32_snps_le(unsigned int initval, unsigned char *data, unsigned i
 *
 * \return void
 */
-static void DWC_ETH_QOS_vlan_rx_kill_vid(struct net_device *dev, u16 vid)
+static int DWC_ETH_QOS_vlan_rx_kill_vid(struct net_device *dev, __be16 proto, u16 vid)
 {
 	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
@@ -5290,6 +5379,9 @@ static void DWC_ETH_QOS_vlan_rx_kill_vid(struct net_device *dev, u16 vid)
 	}
 
 	printk(KERN_ALERT "<--DWC_ETH_QOS_vlan_rx_kill_vid\n");
+
+	//FIXME: Check if any errors need to be returned in case of a failure.
+	return 0;
 }
 
 
@@ -5306,7 +5398,7 @@ static void DWC_ETH_QOS_vlan_rx_kill_vid(struct net_device *dev, u16 vid)
 *
 * \return void
 */
-static void DWC_ETH_QOS_vlan_rx_add_vid(struct net_device *dev, u16 vid)
+static int DWC_ETH_QOS_vlan_rx_add_vid(struct net_device *dev, __be16 proto, u16 vid)
 {
 	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
@@ -5344,6 +5436,9 @@ static void DWC_ETH_QOS_vlan_rx_add_vid(struct net_device *dev, u16 vid)
 	}
 
 	printk(KERN_ALERT "<--DWC_ETH_QOS_vlan_rx_add_vid\n");
+
+	//FIXME: Check if any errors need to be returned in case of a failure.
+	return 0;
 }
 
 /*!
@@ -6813,4 +6908,30 @@ phy_interface_t DWC_ETH_QOS_get_phy_interface(struct DWC_ETH_QOS_prv_data *pdata
 
 	return ret;
 }
+
+static const struct net_device_ops DWC_ETH_QOS_netdev_ops = {
+	.ndo_open = DWC_ETH_QOS_open,
+	.ndo_stop = DWC_ETH_QOS_close,
+	.ndo_start_xmit = DWC_ETH_QOS_start_xmit,
+	.ndo_get_stats = DWC_ETH_QOS_get_stats,
+	.ndo_set_rx_mode = DWC_ETH_QOS_set_rx_mode,
+#ifdef CONFIG_NET_POLL_CONTROLLER
+	.ndo_poll_controller = DWC_ETH_QOS_poll_controller,
+#endif				/*end of CONFIG_NET_POLL_CONTROLLER */
+	.ndo_set_features = DWC_ETH_QOS_set_features,
+	.ndo_fix_features = DWC_ETH_QOS_fix_features,
+	.ndo_do_ioctl = DWC_ETH_QOS_ioctl,
+	.ndo_change_mtu = DWC_ETH_QOS_change_mtu,
+#ifdef DWC_ETH_QOS_QUEUE_SELECT_ALGO
+	.ndo_select_queue = DWC_ETH_QOS_select_queue,
+#endif
+	.ndo_vlan_rx_add_vid = DWC_ETH_QOS_vlan_rx_add_vid,
+	.ndo_vlan_rx_kill_vid = DWC_ETH_QOS_vlan_rx_kill_vid,
+};
+
+struct net_device_ops *DWC_ETH_QOS_get_netdev_ops(void)
+{
+	return (struct net_device_ops *)&DWC_ETH_QOS_netdev_ops;
+}
+
 

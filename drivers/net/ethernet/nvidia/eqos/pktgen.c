@@ -27,10 +27,20 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
  * ========================================================================= */
-
-/*!@file: drv.c
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+/*!@file: DWC_ETH_QOS_drv.c
  * @brief: Driver functions.
  */
 
@@ -38,8 +48,7 @@
 #include "yapphdr.h"
 #include "pktgen.h"
 
-extern ULONG dwc_eth_qos_pci_base_addr;
-
+extern ULONG dwc_eth_qos_base_addr;
 #include "yregacc.h"
 
 static INT DWC_ETH_QOS_GStatus;
@@ -1288,8 +1297,7 @@ static void DWC_ETH_QOS_pg_get_result(struct DWC_ETH_QOS_prv_data *pdata,
 
 	DBGPR_PG("-->DWC_ETH_QOS_pg_get_result\n");
 	copy_PGStruct_members(&l_pg_struct, pg_struct);
-    	l_pg_struct.speed_100M_1G = pdata->speed;/* Update the speed information */
-    	printk(KERN_CRIT "l_pg_struct->speed_100M_1G: %d\n",l_pg_struct.speed_100M_1G);
+    l_pg_struct.speed_100M_1G = pdata->speed;/* Update the speed information */
 	for (qInx = 0; qInx < DWC_ETH_QOS_TX_QUEUE_CNT; qInx++) {
 		copy_pg_ch_input_members(&(l_pg_struct.pg_ch_input[qInx]), &(pg_ch_input[qInx]));
 	}

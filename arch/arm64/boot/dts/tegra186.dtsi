@@ -605,6 +605,20 @@
 		status = "disabled";
 	};
 
+        ether_qos@02490000 {
+                compatible = "synopsys,dwc_eth_qos";
+                reg = <0x0 0x02490000 0x0 0x10000>;
+		interrupts = 	<0 194 0x4>,
+				<0 195 0x4>;
+		/*iommus = <&smmu TEGRA_SWGROUP_EQOS>;*/
+        };
+
+        ether_qos_virt_test {
+		compatible = "synopsys,dwc_eqos_virt_test";
+		reg = <0x0 0x02490000 0x0 0x10000
+			0x0 0x024a0000 0x0 0x10000>;
+        };
+
 	hsp_top: tegra-hsp {
 		compatible = "nvidia,tegra186-hsp";
 		reg = <0x0 0x03c00000 0x0 0x000a0000>;

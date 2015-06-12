@@ -27,12 +27,22 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
  * ========================================================================= */
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+#ifndef __DWC_ETH_QOS_ETHTOOL_H__
 
-#ifndef __ETHTOOL_H__
-
-#define __ETHTOOL_H__
+#define __DWC_ETH_QOS_ETHTOOL_H__
 
 static void DWC_ETH_QOS_get_pauseparam(struct net_device *dev,
 				       struct ethtool_pauseparam *pause);
@@ -59,8 +69,9 @@ static void DWC_ETH_QOS_get_strings(struct net_device *dev, u32 stringset, u8 *d
 
 static void DWC_ETH_QOS_get_ethtool_stats(struct net_device *dev,
 	struct ethtool_stats *dummy, u64 *data);
-
+#if 0
 static int DWC_ETH_QOS_set_tso(struct net_device *dev, u32 data);
 static u32 DWC_ETH_QOS_get_tso(struct net_device *dev);
+#endif
 
 #endif

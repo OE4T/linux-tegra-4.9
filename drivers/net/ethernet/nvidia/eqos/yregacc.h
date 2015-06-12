@@ -27,12 +27,22 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
  * ========================================================================= */
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+#ifndef __DWC_ETH_QOS__REGACC__H__
 
-#ifndef __YREGACC__H__
-
-#define __YREGACC__H__
+#define __DWC_ETH_QOS__REGACC__H__
 
 
 #define MAKE_MASK_32(e, s) (((e)-(s))==31?0xffffffffUL:((1UL<<((e)-(s)+1))-1))
@@ -1518,9 +1528,8 @@
 	ptr = data; \
 } while(0)
 
+#define  BASE_ADDRESS dwc_eth_qos_base_addr
 
-
-#define  BASE_ADDRESS dwc_eth_qos_pci_base_addr
 #ifdef DWC_ETH_QOS_VER_4_0
 #define MAC_ARPA_RgOffAddr ((volatile ULONG *)(BASE_ADDRESS + 0x0ae0))
 #else

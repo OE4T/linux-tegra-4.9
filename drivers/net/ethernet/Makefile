@@ -9,17 +9,4 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
 
-KBUILD_CFLAGS += -I$(srctree)/../kernel-t18x/include
-obj-y += platform/
-obj-y += video/
-obj-y += clk/
-obj-$(CONFIG_CRYPTO) += crypto/
-obj-y += dma/
-obj-$(CONFIG_TEGRA_BPMP) += firmware/tegra/
-obj-y += pinctrl/
-obj-y += gpio/
-obj-y += reset/
-obj-y += thermal/
-obj-$(CONFIG_STAGING) += staging/
-obj-y += i2c/
-obj-y += net/
+obj-y += nvidia/

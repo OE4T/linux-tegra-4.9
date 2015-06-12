@@ -9,17 +9,16 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
 
-KBUILD_CFLAGS += -I$(srctree)/../kernel-t18x/include
-obj-y += platform/
-obj-y += video/
-obj-y += clk/
-obj-$(CONFIG_CRYPTO) += crypto/
-obj-y += dma/
-obj-$(CONFIG_TEGRA_BPMP) += firmware/tegra/
-obj-y += pinctrl/
-obj-y += gpio/
-obj-y += reset/
-obj-y += thermal/
-obj-$(CONFIG_STAGING) += staging/
-obj-y += i2c/
-obj-y += net/
+config EQOS
+	tristate "NVIDIA Tegra Ethernet QOS driver"
+	default n
+
+	---help---
+	  If you have a network (Ethernet) card belonging to this class, say Y
+	  and read the Ethernet-HOWTO, available from
+	  <http://www.tldp.org/docs.html#howto>.
+
+	  Note that the answer to this question doesn't directly affect the
+	  kernel: saying N will just cause the configurator to skip all
+	  the questions about NVIDIA cards. If you say Y, you will be asked for
+	  your specific card in the following questions.

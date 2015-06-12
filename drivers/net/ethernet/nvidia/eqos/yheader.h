@@ -27,12 +27,22 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
  * ========================================================================= */
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+#ifndef __DWC_ETH_QOS__YHEADER__
 
-#ifndef __YHEADER__
-
-#define __YHEADER__
+#define __DWC_ETH_QOS__YHEADER__
 
 /* OS Specific declarations and definitions */
 
@@ -42,7 +52,7 @@
 #include <linux/string.h>
 #include <linux/cdev.h>
 
-#include <linux/pci.h>
+#include <linux/init.h>
 #include <linux/timer.h>
 #include <linux/sched.h>
 #include <linux/highmem.h>
@@ -84,11 +94,13 @@
 #define DWC_ETH_QOS_ENABLE_VLAN_TAG
 #include <linux/if_vlan.h>
 #endif
+#include <linux/if_vlan.h>
 /* for PPT */
 #include <linux/net_tstamp.h>
 #include <linux/ptp_clock_kernel.h>
 #include <linux/clocksource.h>
-#include <linux/timecompare.h>
+//#include <linux/timecompare.h>
+#include <linux/platform_device.h>
 
 /* QOS Version Control Macros */
 //#define DWC_ETH_QOS_VER_4_0  /* Default Configuration is for QOS version 4.1 and above */
@@ -167,12 +179,14 @@
 #endif
 
 /* NOTE: Uncomment below line for function trace log messages in KERNEL LOG */
+#define SIM_WORLD 0
 //#define YDEBUG
 //#define YDEBUG_PG
 //#define YDEBUG_MDIO
 //#define YDEBUG_PTP
 //#define YDEBUG_FILTER
 //#define YDEBUG_EEE
+//#define YDEBUG_DMSG
 
 #define Y_TRUE 1
 #define Y_FALSE 0
@@ -206,8 +220,15 @@
 #define MASK (0x1ULL << 0 | \
 	0x13c7ULL << 32)
 #define MAC_MASK (0x10ULL << 0)
-#define TX_DESC_CNT 256
-#define RX_DESC_CNT 256
+#ifndef AR_XXX
+  #define TX_DESC_CNT 256
+  #define RX_DESC_CNT 256
+#else
+  #define TX_DESC_CNT 16
+  #define RX_DESC_CNT 16
+#endif
+
+
 #define MIN_RX_DESC_CNT 16
 #define TX_BUF_SIZE 1536
 #define RX_BUF_SIZE 1568
@@ -243,15 +264,11 @@
 #define DEV_ADDRESS 0xffffffff
 #define DEV_REG_MMAP_SIZE 0x14e8
 
-#define VENDOR_ID 0x700
-#define DEVICE_ID 0x1018
-#define PCI_BAR_NO 0
-#define COMPLETE_BAR 0
-
 /* MII/GMII register offset */
 #define DWC_ETH_QOS_AUTO_NEGO_NP    0x0007
 #define DWC_ETH_QOS_PHY_CTL     0x0010
 #define DWC_ETH_QOS_PHY_STS     0x0011
+#define DWC_ETH_QOS_AUX_CTL     0x0018
 
 /* Default MTL queue operation mode values */
 #define DWC_ETH_QOS_Q_DISABLED	0x0
@@ -1169,11 +1186,14 @@ struct DWC_ETH_QOS_extra_stats {
 	/* Tx/Rx frames per channels/queues */
 	unsigned long q_tx_pkt_n[8];
 	unsigned long q_rx_pkt_n[8];
+
+	unsigned long link_disconnect_count;
+	unsigned long link_connect_count;
 };
 
 struct DWC_ETH_QOS_prv_data {
 	struct net_device *dev;
-	struct pci_dev *pdev;
+	struct platform_device *pdev;
 
 	spinlock_t lock;
 	spinlock_t tx_lock;
@@ -1181,6 +1201,8 @@ struct DWC_ETH_QOS_prv_data {
 	UINT mem_start_addr;
 	UINT mem_size;
 	INT irq_number;
+	INT power_irq;
+	INT phyirq;
 	struct hw_if_struct hw_if;
 	struct desc_if_struct desc_if;
 
@@ -1416,6 +1438,10 @@ int DWC_ETH_QOS_alloc_tx_buf_pg(struct DWC_ETH_QOS_prv_data *pdata,
 				gfp_t gfp);
 #endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
 
+int DWC_ETH_QOS_handle_mem_iso_ioctl(struct DWC_ETH_QOS_prv_data *pdata, void *ptr);
+int DWC_ETH_QOS_handle_csr_iso_ioctl(struct DWC_ETH_QOS_prv_data *pdata, void *ptr);
+int DWC_ETH_QOS_handle_phy_loopback(struct DWC_ETH_QOS_prv_data *pdata, void *ptr);
+
 /* For debug prints*/
 #define DRV_NAME "DWC_ETH_QOS_drv.c"
 
@@ -1457,6 +1483,12 @@ int DWC_ETH_QOS_alloc_tx_buf_pg(struct DWC_ETH_QOS_prv_data *pdata,
 #define DBGPR_EEE(x...) printk(KERN_ALERT x)
 #else
 #define DBGPR_EEE(x...) do {} while (0)
+#endif
+
+#ifdef YDEBUG_DMSG
+#define DBGPR_DMSG(x...) printk(KERN_ALERT x)
+#else
+#define DBGPR_DMSG(x...) do {} while (0)
 #endif
 
 #endif

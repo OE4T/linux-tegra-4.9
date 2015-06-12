@@ -27,23 +27,110 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
  * ========================================================================= */
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
 
-/*!@file: pci.c
+
+/*!@file: DWC_ETH_QOS_init.c
  * @brief: Driver functions.
  */
 #include "yheader.h"
-#include "pci.h"
+#include "init.h"
+#include "yregacc.h"
+#include "nvregacc.h"
+#include <linux/platform_device.h>
+#include <linux/of_device.h>
 
+#define LP_SUPPORTED 1
 static UCHAR dev_addr[6] = {0, 0x55, 0x7b, 0xb5, 0x7d, 0xf7};
+static const struct of_device_id dwc_eth_qos_of_match[] = {
+	{ .compatible = "synopsys,dwc_eth_qos" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, dwc_eth_qos_of_match);
 
-ULONG dwc_eth_qos_pci_base_addr;
+ULONG dwc_eth_qos_base_addr;
 
 void DWC_ETH_QOS_init_all_fptrs(struct DWC_ETH_QOS_prv_data *pdata)
 {
 	DWC_ETH_QOS_init_function_ptrs_dev(&pdata->hw_if);
 	DWC_ETH_QOS_init_function_ptrs_desc(&pdata->desc_if);
+}
+
+/*!
+* \brief POWER Interrupt Service Routine
+* \details POWER Interrupt Service Routine
+*
+* \param[in] irq         - interrupt number for particular device
+* \param[in] device_id   - pointer to device structure
+* \return returns positive integer
+* \retval IRQ_HANDLED
+*/
+irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_POWER(int irq, void *device_id)
+{
+	struct DWC_ETH_QOS_prv_data *pdata = (struct DWC_ETH_QOS_prv_data *)device_id;
+	ULONG varMAC_ISR;
+	ULONG varMAC_IMR;
+	ULONG varMAC_PMTCSR;
+
+#ifdef HWA_FPGA_ONLY
+	ULONG varCLK_CTRL;
+	CLK_CRTL0_RgRd(varCLK_CTRL);
+	if (varCLK_CTRL & BIT(31)) {
+		pr_info("power_isr: phy_intr received\n");
+		return IRQ_NONE;
+	} else {
+#endif
+		MAC_ISR_RgRd(varMAC_ISR);
+		MAC_IMR_RgRd(varMAC_IMR);
+		pr_info("power_isr: power_intr received, MAC_ISR =%#lx, MAC_IMR =%#lx\n",
+				varMAC_ISR, varMAC_IMR);
+
+		varMAC_ISR = (varMAC_ISR & varMAC_IMR);
+
+		/* RemoteWake and MagicPacket events will be received by PHY supporting
+		 * these features on silicon and can be used to wake up Tegra.
+		 * Still let the below code be there in case we ever get this interrupt.
+		 */
+		if (GET_VALUE(varMAC_ISR, MAC_ISR_PMTIS_LPOS, MAC_ISR_PMTIS_HPOS) & 1) {
+			pdata->xstats.pmt_irq_n++;
+			MAC_PMTCSR_RgRd(varMAC_PMTCSR);
+			pr_info("power_isr: PMTCSR : %#lx\n", varMAC_PMTCSR);
+			if (pdata->power_down)
+				DWC_ETH_QOS_powerup(pdata->dev, DWC_ETH_QOS_IOCTL_CONTEXT);
+		}
+
+		/* RxLPI exit EEE interrupts */
+		if (GET_VALUE(varMAC_ISR, MAC_ISR_LPI_LPOS, MAC_ISR_LPI_HPOS) & 1) {
+			pr_info("power_isr: LPI intr received\n");
+			DWC_ETH_QOS_handle_eee_interrupt(pdata);
+#ifdef HWA_NV_1650337
+		/* FIXME: remove this once root cause of HWA_NV_1650337 is known */
+		} else {
+			/* We have seen power_intr flood without LPIIS set in MAC_ISR
+			 * and need to still read MAC_LPI_CONTROL_STS register to
+			 * get rid of interrupt storm issue.
+			 */
+			pr_info("power_isr: LPIIS not set in MAC_ISR but still reading MAC_LPI_CONTROL_STS\n");
+			DWC_ETH_QOS_handle_eee_interrupt(pdata);
+#endif
+		}
+
+		return IRQ_HANDLED;
+#ifdef HWA_FPGA_ONLY
+	}
+#endif
 }
 
 /*!
@@ -66,78 +153,107 @@ void DWC_ETH_QOS_init_all_fptrs(struct DWC_ETH_QOS_prv_data *pdata)
 * \retval 0 on success & -ve number on failure.
 */
 
-int __devinit DWC_ETH_QOS_probe(struct pci_dev *pdev,
-				const struct pci_device_id *id)
+int DWC_ETH_QOS_probe(struct platform_device *pdev)
 {
 
 	struct DWC_ETH_QOS_prv_data *pdata = NULL;
-	struct net_device *dev = NULL;
+	struct net_device *ndev = NULL;
 	int i, ret = 0;
+	int irq, power_irq;
+	int phyirq;
 	struct hw_if_struct *hw_if = NULL;
 	struct desc_if_struct *desc_if = NULL;
 	UCHAR tx_q_count = 0, rx_q_count = 0;
+	struct resource *res;
+	const struct of_device_id *match;
 
-	DBGPR("--> DWC_ETH_QOS_probe\n");
+	DBGPR("***EQOS DRIVER COMPILED ON %s AT %s***\n", __DATE__, __TIME__);
 
-	ret = pci_enable_device(pdev);
-	if (ret) {
-		printk(KERN_ALERT "%s:Unable to enable device\n", DEV_NAME);
-		goto err_out_enb_failed;
-	}
-	if (pci_request_regions(pdev, DEV_NAME)) {
-		printk(KERN_ALERT "%s:Failed to get PCI regions\n", DEV_NAME);
-		ret = -ENODEV;
-		goto err_out_req_reg_failed;
-	}
-	pci_set_master(pdev);
+	match = of_match_device(dwc_eth_qos_of_match, &pdev->dev);
+	if(!match)
+		return -EINVAL;
 
-	for (i = 0; i <= 5; i++) {
-		if (pci_resource_len(pdev, i) == 0)
-			continue;
-		dwc_eth_qos_pci_base_addr =
-			(ULONG) pci_iomap(pdev, i, COMPLETE_BAR);
-		if ((void __iomem *)dwc_eth_qos_pci_base_addr == NULL) {
-			printk(KERN_ALERT
-			       "%s: cannot map register memory, aborting",
-			       pci_name(pdev));
-			ret = -EIO;
-			goto err_out_map_failed;
-		}
-		break;
+  /* get base addr */
+  res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+
+	if (unlikely(res == NULL)) {
+  	dev_err(&pdev->dev, "invalid resource\n");
+  	return -EINVAL;
 	}
 
-	DBGPR("dwc_eth_qos_pci_base_addr = %#lx\n", dwc_eth_qos_pci_base_addr);
+	/*get IRQ*/
+	irq = platform_get_irq(pdev, 0);
+	if (irq < 0)
+		return irq;
+
+	power_irq = platform_get_irq(pdev, 1);
+	if (power_irq < 0)
+		return power_irq;
+
+#if defined(CONFIG_PHYS_ADDR_T_64BIT)
+	DBGPR("res->start = 0x%lx \n", (unsigned long)res->start);
+	DBGPR("res->end = 0x%lx \n", (unsigned long)res->end);
+#else
+	DBGPR("res->start = 0x%x \n", (unsigned int)res->start);
+	DBGPR("res->end = 0x%x \n", (unsigned int)res->end);
+#endif
+	DBGPR("irq = %d \n", irq);
+	DBGPR("power_irq = %d \n", power_irq);
+
+#ifdef HWA_FPGA_ONLY
+	/* PMT and PHY irqs are shared on FPGA system */
+	phyirq = power_irq;
+#else
+	/* On silicon the phy_intr line is handled through a wake capable
+	 * GPIO input. DMIC4_CLK is the GPIO input port.
+	 * Refer Bug 1626763
+	 */
+#endif
+	DBGPR("phyirq = %d\n", phyirq);
+
+	DBGPR("==========================================================\n");
+	DBGPR("Sizeof rx context desc is %lu\n", sizeof(struct s_RX_CONTEXT_DESC));
+	DBGPR("Sizeof tx context desc is %lu\n", sizeof(struct s_TX_CONTEXT_DESC));
+	DBGPR("Sizeof rx normal desc is %lu\n", sizeof(struct s_RX_NORMAL_DESC));
+	DBGPR("Sizeof tx normal desc is %lu\n\n", sizeof(struct s_TX_NORMAL_DESC));
+	DBGPR("==========================================================\n");
+
+	/*remap base address*/
+	dwc_eth_qos_base_addr = (ULONG)ioremap_nocache(res->start, (res->end - res->start) + 1);
 
 	/* queue count */
 	tx_q_count = get_tx_queue_count();
 	rx_q_count = get_rx_queue_count();
 
-	dev = alloc_etherdev_mqs(sizeof(struct DWC_ETH_QOS_prv_data),
+	/* allocate and set up the ethernet device*/
+	ndev = alloc_etherdev_mqs(sizeof(struct DWC_ETH_QOS_prv_data),
 				tx_q_count, rx_q_count);
-	if (dev == NULL) {
+	if (ndev == NULL) {
 		printk(KERN_ALERT "%s:Unable to alloc new net device\n",
 		    DEV_NAME);
 		ret = -ENOMEM;
 		goto err_out_dev_failed;
 	}
-	dev->dev_addr[0] = dev_addr[0];
-	dev->dev_addr[1] = dev_addr[1];
-	dev->dev_addr[2] = dev_addr[2];
-	dev->dev_addr[3] = dev_addr[3];
-	dev->dev_addr[4] = dev_addr[4];
-	dev->dev_addr[5] = dev_addr[5];
 
-	dev->base_addr = dwc_eth_qos_pci_base_addr;
-	SET_NETDEV_DEV(dev, &pdev->dev);
-	pdata = netdev_priv(dev);
+	/* Set up MAC address */
+	ndev->dev_addr[0] = dev_addr[0];
+	ndev->dev_addr[1] = dev_addr[1];
+	ndev->dev_addr[2] = dev_addr[2];
+	ndev->dev_addr[3] = dev_addr[3];
+	ndev->dev_addr[4] = dev_addr[4];
+	ndev->dev_addr[5] = dev_addr[5];
+
+	ndev->base_addr = dwc_eth_qos_base_addr;
+	SET_NETDEV_DEV(ndev, &pdev->dev);
+	pdata = netdev_priv(ndev);
 	DWC_ETH_QOS_init_all_fptrs(pdata);
 	hw_if = &(pdata->hw_if);
 	desc_if = &(pdata->desc_if);
 
-	pci_set_drvdata(pdev, dev);
+	platform_set_drvdata(pdev, ndev);
 	pdata->pdev = pdev;
 
-	pdata->dev = dev;
+	pdata->dev = ndev;
 	pdata->tx_queue_cnt = tx_q_count;
 	pdata->rx_queue_cnt = rx_q_count;
 
@@ -147,11 +263,17 @@ int __devinit DWC_ETH_QOS_probe(struct pci_dev *pdev,
 #endif
 
 	/* issue software reset to device */
-	hw_if->exit();
-	dev->irq = pdev->irq;
+	if (!SIM_WORLD)
+		hw_if->exit();
 
-	DWC_ETH_QOS_get_all_hw_features(pdata);
-	DWC_ETH_QOS_print_all_hw_features(pdata);
+	ndev->irq = irq;
+	pdata->power_irq = power_irq;
+	pdata->phyirq = phyirq;
+
+	if (!SIM_WORLD) {
+		DWC_ETH_QOS_get_all_hw_features(pdata);
+		DWC_ETH_QOS_print_all_hw_features(pdata);
+	}
 
 	ret = desc_if->alloc_queue_struct(pdata);
 	if (ret < 0) {
@@ -159,16 +281,20 @@ int __devinit DWC_ETH_QOS_probe(struct pci_dev *pdev,
 		goto err_out_q_alloc_failed;
 	}
 
-	dev->netdev_ops = DWC_ETH_QOS_get_netdev_ops();
+	ndev->netdev_ops = DWC_ETH_QOS_get_netdev_ops();
 
 	pdata->interface = DWC_ETH_QOS_get_phy_interface(pdata);
 	/* Bypass PHYLIB for TBI, RTBI and SGMII interface */
 	if (1 == pdata->hw_feat.sma_sel) {
-		ret = DWC_ETH_QOS_mdio_register(dev);
+		ret = DWC_ETH_QOS_mdio_register(ndev);
 		if (ret < 0) {
 			printk(KERN_ALERT "MDIO bus (id %d) registration failed\n",
 			       pdata->bus_id);
+#ifndef AR_XXX
+			printk(KERN_ALERT "********** CAUTION:IGNORING ERRORS FROM MDIO BUS REGISTRATION FOR NOW *********\n");
+#else
 			goto err_out_mdio_reg;
+#endif
 		}
 	} else {
 		printk(KERN_ALERT "%s: MDIO is not present\n\n", DEV_NAME);
@@ -179,49 +305,50 @@ int __devinit DWC_ETH_QOS_probe(struct pci_dev *pdev,
 	if (1 == pdata->hw_feat.mgk_sel) {
 		device_set_wakeup_capable(&pdev->dev, 1);
 		pdata->wolopts = WAKE_MAGIC;
-		enable_irq_wake(dev->irq);
+		enable_irq_wake(ndev->irq);
 	}
 
 	for (i = 0; i < DWC_ETH_QOS_RX_QUEUE_CNT; i++) {
 		struct DWC_ETH_QOS_rx_queue *rx_queue = GET_RX_QUEUE_PTR(i);
 
-		netif_napi_add(dev, &rx_queue->napi, DWC_ETH_QOS_poll_mq,
+		netif_napi_add(ndev, &rx_queue->napi, DWC_ETH_QOS_poll_mq,
 				(64 * DWC_ETH_QOS_RX_QUEUE_CNT));
 	}
 
-	SET_ETHTOOL_OPS(dev, DWC_ETH_QOS_get_ethtool_ops());
+	ndev->ethtool_ops = (DWC_ETH_QOS_get_ethtool_ops());
+
 	if (pdata->hw_feat.tso_en) {
-		dev->hw_features = NETIF_F_TSO;
-		dev->hw_features |= NETIF_F_SG;
-		dev->hw_features |= NETIF_F_IP_CSUM;
-		dev->hw_features |= NETIF_F_IPV6_CSUM;
+		ndev->hw_features = NETIF_F_TSO;
+		ndev->hw_features |= NETIF_F_SG;
+		ndev->hw_features |= NETIF_F_IP_CSUM;
+		ndev->hw_features |= NETIF_F_IPV6_CSUM;
 		printk(KERN_ALERT "Supports TSO, SG and TX COE\n");
 	}
 	else if (pdata->hw_feat.tx_coe_sel) {
-		dev->hw_features = NETIF_F_IP_CSUM ;
-		dev->hw_features |= NETIF_F_IPV6_CSUM;
+		ndev->hw_features = NETIF_F_IP_CSUM ;
+		ndev->hw_features |= NETIF_F_IPV6_CSUM;
 		printk(KERN_ALERT "Supports TX COE\n");
 	}
 
 	if (pdata->hw_feat.rx_coe_sel) {
-		dev->hw_features |= NETIF_F_RXCSUM;
-		dev->hw_features |= NETIF_F_LRO;
+		ndev->hw_features |= NETIF_F_RXCSUM;
+		ndev->hw_features |= NETIF_F_LRO;
 		printk(KERN_ALERT "Supports RX COE and LRO\n");
 	}
 #ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
-	dev->vlan_features |= dev->hw_features;
-	dev->hw_features |= NETIF_F_HW_VLAN_RX;
+	ndev->vlan_features |= ndev->hw_features;
+	ndev->hw_features |= NETIF_F_HW_VLAN_CTAG_RX;
 	if (pdata->hw_feat.sa_vlan_ins) {
-		dev->hw_features |= NETIF_F_HW_VLAN_TX;
+		ndev->hw_features |= NETIF_F_HW_VLAN_CTAG_TX;
 		printk(KERN_ALERT "VLAN Feature enabled\n");
 	}
 	if (pdata->hw_feat.vlan_hash_en) {
-		dev->hw_features |= NETIF_F_HW_VLAN_FILTER;
+		ndev->hw_features |= NETIF_F_HW_VLAN_CTAG_FILTER;
 		printk(KERN_ALERT "VLAN HASH Filtering enabled\n");
 	}
 #endif /* end of DWC_ETH_QOS_ENABLE_VLAN_TAG */
-	dev->features |= dev->hw_features;
-	pdata->dev_state |= dev->features;
+	ndev->features |= ndev->hw_features;
+	pdata->dev_state |= ndev->features;
 
 	DWC_ETH_QOS_init_rx_coalesce(pdata);
 
@@ -250,7 +377,7 @@ int __devinit DWC_ETH_QOS_probe(struct pci_dev *pdev,
 	printk(KERN_ALERT "\n");
 #endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
 
-	ret = register_netdev(dev);
+	ret = register_netdev(ndev);
 	if (ret) {
 		printk(KERN_ALERT "%s: Net device registration failed\n",
 		    DEV_NAME);
@@ -260,8 +387,19 @@ int __devinit DWC_ETH_QOS_probe(struct pci_dev *pdev,
 	DBGPR("<-- DWC_ETH_QOS_probe\n");
 
 	if (pdata->hw_feat.pcs_sel) {
-		netif_carrier_off(dev);
+		netif_carrier_off(ndev);
 		printk(KERN_ALERT "carrier off till LINK is up\n");
+	}
+	else
+		printk(KERN_ALERT "Net device registration sucessful\n");
+
+	ret = request_irq(power_irq, DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_POWER,
+		IRQF_SHARED, DEV_NAME, pdata);
+
+	if (ret != 0) {
+		printk(KERN_ALERT "Unable to register PMT IRQ %d\n", power_irq);
+		ret = -EBUSY;
+		goto err_out_netdev_failed;
 	}
 
 	return 0;
@@ -276,25 +414,21 @@ int __devinit DWC_ETH_QOS_probe(struct pci_dev *pdev,
  err_out_pg_failed:
 #endif
 	if (1 == pdata->hw_feat.sma_sel)
-		DWC_ETH_QOS_mdio_unregister(dev);
+		DWC_ETH_QOS_mdio_unregister(ndev);
 
+#ifndef AR_XXX
+#else
  err_out_mdio_reg:
+#endif
 	desc_if->free_queue_struct(pdata);
 
  err_out_q_alloc_failed:
-	free_netdev(dev);
-	pci_set_drvdata(pdev, NULL);
+	free_netdev(ndev);
+	platform_set_drvdata(pdev, NULL);
 
- err_out_dev_failed:
-	pci_iounmap(pdev, (void __iomem *)dwc_eth_qos_pci_base_addr);
+err_out_dev_failed:
+	iounmap((void *)dwc_eth_qos_base_addr);
 
- err_out_map_failed:
-	pci_release_regions(pdev);
-
- err_out_req_reg_failed:
-	pci_disable_device(pdev);
-
- err_out_enb_failed:
 	return ret;
 }
 
@@ -312,14 +446,24 @@ int __devinit DWC_ETH_QOS_probe(struct pci_dev *pdev,
 * \return void
 */
 
-void __devexit DWC_ETH_QOS_remove(struct pci_dev *pdev)
+int DWC_ETH_QOS_remove(struct platform_device *pdev)
 {
-	struct net_device *dev = pci_get_drvdata(pdev);
+	struct net_device *dev = platform_get_drvdata(pdev);
 	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
 	struct desc_if_struct *desc_if = &(pdata->desc_if);
+	int ret_val = 0;
 
 	DBGPR("--> DWC_ETH_QOS_remove\n");
 
+	if (pdev == NULL) {
+		DBGPR("Remove called on invalid device\n");
+		return -1;
+	}
+
+	if (pdata->power_irq != 0) {
+		free_irq(pdata->power_irq, pdata);
+		pdata->power_irq = 0;
+	}
 	if (pdata->irq_number != 0) {
 		free_irq(pdata->irq_number, pdata);
 		pdata->irq_number = 0;
@@ -342,31 +486,23 @@ void __devexit DWC_ETH_QOS_remove(struct pci_dev *pdev)
 
 	free_netdev(dev);
 
-	pci_set_drvdata(pdev, NULL);
-	pci_iounmap(pdev, (void __iomem *)dwc_eth_qos_pci_base_addr);
-
-	pci_release_regions(pdev);
-	pci_disable_device(pdev);
+	platform_set_drvdata(pdev, NULL);
+	iounmap((void *)dwc_eth_qos_base_addr);
 
 	DBGPR("<-- DWC_ETH_QOS_remove\n");
 
-	return;
+	return ret_val;
 }
 
-static struct pci_device_id DWC_ETH_QOS_id = {
-	PCI_DEVICE(VENDOR_ID, DEVICE_ID)
-};
+static struct platform_driver DWC_ETH_QOS_driver = {
 
-struct pci_dev *DWC_ETH_QOS_pcidev;
-
-static struct pci_driver DWC_ETH_QOS_pci_driver = {
-	.name = "DWC_ETH_QOS",
-	.id_table = &DWC_ETH_QOS_id,
 	.probe = DWC_ETH_QOS_probe,
 	.remove = DWC_ETH_QOS_remove,
 	.shutdown = DWC_ETH_QOS_shutdown,
+#if 0
 	.suspend_late = DWC_ETH_QOS_suspend_late,
 	.resume_early = DWC_ETH_QOS_resume_early,
+#endif
 #ifdef CONFIG_PM
 	.suspend = DWC_ETH_QOS_suspend,
 	.resume = DWC_ETH_QOS_resume,
@@ -374,10 +510,11 @@ static struct pci_driver DWC_ETH_QOS_pci_driver = {
 	.driver = {
 		   .name = DEV_NAME,
 		   .owner = THIS_MODULE,
+			 .of_match_table = dwc_eth_qos_of_match,
 	},
 };
 
-static void DWC_ETH_QOS_shutdown(struct pci_dev *pdev)
+static void DWC_ETH_QOS_shutdown(struct platform_device *pdev)
 {
 	printk(KERN_ALERT "-->DWC_ETH_QOS_shutdown\n");
 	printk(KERN_ALERT "Handle the shutdown\n");
@@ -386,7 +523,8 @@ static void DWC_ETH_QOS_shutdown(struct pci_dev *pdev)
 	return;
 }
 
-static INT DWC_ETH_QOS_suspend_late(struct pci_dev *pdev, pm_message_t state)
+#if 0
+static INT DWC_ETH_QOS_suspend_late(struct platform_device *pdev, pm_message_t state)
 {
 	printk(KERN_ALERT "-->DWC_ETH_QOS_suspend_late\n");
 	printk(KERN_ALERT "Handle the suspend_late\n");
@@ -395,7 +533,7 @@ static INT DWC_ETH_QOS_suspend_late(struct pci_dev *pdev, pm_message_t state)
 	return 0;
 }
 
-static INT DWC_ETH_QOS_resume_early(struct pci_dev *pdev)
+static INT DWC_ETH_QOS_resume_early(struct platform_device *pdev)
 {
 	printk(KERN_ALERT "-->DWC_ETH_QOS_resume_early\n");
 	printk(KERN_ALERT "Handle the resume_early\n");
@@ -403,6 +541,8 @@ static INT DWC_ETH_QOS_resume_early(struct pci_dev *pdev)
 
 	return 0;
 }
+
+#endif
 
 #ifdef CONFIG_PM
 
@@ -428,9 +568,9 @@ static INT DWC_ETH_QOS_resume_early(struct pci_dev *pdev)
  * \retval 0
  */
 
-static INT DWC_ETH_QOS_suspend(struct pci_dev *pdev, pm_message_t state)
+static INT DWC_ETH_QOS_suspend(struct platform_device *pdev, pm_message_t state)
 {
-	struct net_device *dev = pci_get_drvdata(pdev);
+	struct net_device *dev = platform_get_drvdata(pdev);
 	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	INT ret, pmt_flags = 0;
@@ -480,8 +620,10 @@ static INT DWC_ETH_QOS_suspend(struct pci_dev *pdev, pm_message_t state)
 		pmt_flags |= DWC_ETH_QOS_MAGIC_WAKEUP;
 
 	ret = DWC_ETH_QOS_powerdown(dev, pmt_flags, DWC_ETH_QOS_DRIVER_CONTEXT);
+#if (LP_SUPPORTED)
 	pci_save_state(pdev);
 	pci_set_power_state(pdev, pci_choose_state(pdev, state));
+#endif
 
 	DBGPR("<--DWC_ETH_QOS_suspend\n");
 
@@ -510,9 +652,9 @@ static INT DWC_ETH_QOS_suspend(struct pci_dev *pdev, pm_message_t state)
  * \retval 0
  */
 
-static INT DWC_ETH_QOS_resume(struct pci_dev *pdev)
+static INT DWC_ETH_QOS_resume(struct platform_device *pdev)
 {
-	struct net_device *dev = pci_get_drvdata(pdev);
+	struct net_device *dev = platform_get_drvdata(pdev);
 	INT ret;
 
 	DBGPR("-->DWC_ETH_QOS_resume\n");
@@ -521,9 +663,10 @@ static INT DWC_ETH_QOS_resume(struct pci_dev *pdev)
 		DBGPR("<--DWC_ETH_QOS_dev_resume\n");
 		return -EINVAL;
 	}
-
+#if (LP_SUPPORTED)
 	pci_set_power_state(pdev, PCI_D0);
 	pci_restore_state(pdev);
+#endif
 
 	ret = DWC_ETH_QOS_powerup(dev, DWC_ETH_QOS_DRIVER_CONTEXT);
 
@@ -549,11 +692,12 @@ static int DWC_ETH_QOS_init_module(void)
 
 	DBGPR("-->DWC_ETH_QOS_init_module\n");
 
-	ret = pci_register_driver(&DWC_ETH_QOS_pci_driver);
+	ret = platform_driver_register(&DWC_ETH_QOS_driver);
 	if (ret < 0) {
 		printk(KERN_ALERT "DWC_ETH_QOS:driver registration failed");
 		return ret;
 	}
+	printk(KERN_ALERT "DWC_ETH_QOS:driver registration sucessful");
 
 #ifdef DWC_ETH_QOS_CONFIG_DEBUGFS
 	create_debug_files();
@@ -581,7 +725,7 @@ static void __exit DWC_ETH_QOS_exit_module(void)
 	remove_debug_files();
 #endif
 
-	pci_unregister_driver(&DWC_ETH_QOS_pci_driver);
+	platform_driver_unregister(&DWC_ETH_QOS_driver);
 
 	DBGPR("<--DWC_ETH_QOS_exit_module\n");
 }

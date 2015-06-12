@@ -27,10 +27,21 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
  * ========================================================================= */
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
 
-/*!@file: mdio.c
+/*!@file: DWC_ETH_QOS_mdio.c
  * @brief: Driver functions.
  */
 #include "yheader.h"
@@ -408,12 +419,14 @@ static void DWC_ETH_QOS_adjust_link(struct net_device *dev)
 		if (!pdata->oldlink) {
 			new_state = 1;
 			pdata->oldlink = 1;
+			pdata->xstats.link_connect_count++;
 		}
 	} else if (pdata->oldlink) {
 		new_state = 1;
 		pdata->oldlink = 0;
 		pdata->speed = 0;
 		pdata->oldduplex = -1;
+		pdata->xstats.link_disconnect_count++;
 	}
 
 	if (new_state)
@@ -422,7 +435,10 @@ static void DWC_ETH_QOS_adjust_link(struct net_device *dev)
 	/* At this stage, it could be need to setup the EEE or adjust some
 	 * MAC related HW registers.
 	 * */
+#ifdef HWA_NV_1618922
+#else
 	pdata->eee_enabled = DWC_ETH_QOS_eee_init(pdata);
+#endif
 
 	spin_unlock_irqrestore(&pdata->lock, flags);
 
@@ -462,7 +478,7 @@ static int DWC_ETH_QOS_init_phy(struct net_device *dev)
 
 	DBGPR_MDIO("trying to attach to %s\n", phy_id_fmt);
 
-	phydev = phy_connect(dev, phy_id_fmt, &DWC_ETH_QOS_adjust_link, 0,
+	phydev = phy_connect(dev, phy_id_fmt, &DWC_ETH_QOS_adjust_link,
 			     pdata->interface);
 	if (IS_ERR(phydev)) {
 		printk(KERN_ALERT "%s: Could not attach to PHY\n", dev->name);
@@ -474,7 +490,8 @@ static int DWC_ETH_QOS_init_phy(struct net_device *dev)
 		return -ENODEV;
 	}
 
-	if (pdata->interface == PHY_INTERFACE_MODE_GMII) {
+	if ((pdata->interface == PHY_INTERFACE_MODE_GMII) ||
+		(pdata->interface == PHY_INTERFACE_MODE_RGMII)) {
 		phydev->supported = PHY_GBIT_FEATURES;
 #ifdef DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
 		phydev->supported &= ~SUPPORTED_1000baseT_Full;
@@ -523,7 +540,7 @@ int DWC_ETH_QOS_mdio_register(struct net_device *dev)
 	struct mii_bus *new_bus = NULL;
 	int phyaddr = 0;
 	unsigned short phy_detected = 0;
-	int ret = Y_SUCCESS;
+	int ret = Y_SUCCESS, i;
 
 	DBGPR_MDIO("-->DWC_ETH_QOS_mdio_register\n");
 
@@ -569,8 +586,24 @@ int DWC_ETH_QOS_mdio_register(struct net_device *dev)
 	snprintf(new_bus->id, MII_BUS_ID_SIZE, "%s-%x", new_bus->name,
 		 pdata->bus_id);
 	new_bus->priv = dev;
-	new_bus->phy_mask = 0;
+	new_bus->phy_mask = ~(1 << pdata->phyaddr);
 	new_bus->parent = &pdata->pdev->dev;
+	new_bus->irq = devm_kzalloc(&pdata->pdev->dev, sizeof(int) * PHY_MAX_ADDR,
+					GFP_KERNEL);
+	if (!new_bus->irq) {
+		ret = -ENOMEM;
+		printk(KERN_ALERT "devm_kzalloc for new_bus->irq failed\n");
+		mdiobus_free(new_bus);
+		return ret;
+	}
+
+	for (i = 0; i < PHY_MAX_ADDR; ++i) {
+		if (i == pdata->phyaddr)
+			new_bus->irq[i] = pdata->phyirq;
+		else
+			new_bus->irq[i] = PHY_POLL;
+	}
+
 	ret = mdiobus_register(new_bus);
 	if (ret != 0) {
 		printk(KERN_ALERT "%s: Cannot register as MDIO bus\n",

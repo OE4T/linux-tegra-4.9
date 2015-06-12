@@ -27,9 +27,19 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
  * ========================================================================= */
-
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
 /*!@file: ptp.c
  * @brief: Driver functions.
  */
@@ -287,7 +297,7 @@ int DWC_ETH_QOS_ptp_init(struct DWC_ETH_QOS_prv_data *pdata)
 
 	pdata->ptp_clock_ops = DWC_ETH_QOS_ptp_clock_ops;
 
-	pdata->ptp_clock = ptp_clock_register(&pdata->ptp_clock_ops);
+	pdata->ptp_clock = ptp_clock_register(&pdata->ptp_clock_ops, &pdata->pdev->dev);
 	if (IS_ERR(pdata->ptp_clock)) {
 		pdata->ptp_clock = NULL;
 		printk(KERN_ALERT "ptp_clock_register() failed\n");

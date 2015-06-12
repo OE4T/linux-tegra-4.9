@@ -27,27 +27,40 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
  * ========================================================================= */
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+#ifndef __DWC_ETH_QOS__INIT_H__
 
-#ifndef __PCI_H__
+#define __DWC_ETH_QOS__INIT_H__
+#include <linux/platform_device.h>
 
-#define __PCI_H__
+int DWC_ETH_QOS_probe(struct platform_device *);
 
-int __devinit DWC_ETH_QOS_probe(struct pci_dev *, const struct pci_device_id *);
+int DWC_ETH_QOS_remove(struct platform_device *);
 
-void __devexit DWC_ETH_QOS_remove(struct pci_dev *);
+static void DWC_ETH_QOS_shutdown(struct platform_device *);
 
-static void DWC_ETH_QOS_shutdown(struct pci_dev *);
+#if 0
+static INT DWC_ETH_QOS_suspend_late(struct platform_device *, pm_message_t);
 
-static INT DWC_ETH_QOS_suspend_late(struct pci_dev *, pm_message_t);
-
-static INT DWC_ETH_QOS_resume_early(struct pci_dev *);
+static INT DWC_ETH_QOS_resume_early(struct platform_device *);
+#endif
 
 #ifdef CONFIG_PM
-static INT DWC_ETH_QOS_suspend(struct pci_dev *, pm_message_t);
+static INT DWC_ETH_QOS_suspend(struct platform_device *, pm_message_t);
 
-static INT DWC_ETH_QOS_resume(struct pci_dev *);
+static INT DWC_ETH_QOS_resume(struct platform_device *);
 #endif				/* end of CONFIG_PM */
 
 #endif

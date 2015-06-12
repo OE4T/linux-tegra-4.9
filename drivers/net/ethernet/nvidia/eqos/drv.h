@@ -27,12 +27,22 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
  * ========================================================================= */
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+#ifndef __DWC_ETH_QOS_DRV_H__
 
-#ifndef __DRV_H__
-
-#define __DRV_H__
+#define __DWC_ETH_QOS_DRV_H__
 
 static int DWC_ETH_QOS_open(struct net_device *);
 
@@ -52,9 +62,9 @@ static struct net_device_stats *DWC_ETH_QOS_get_stats(struct net_device *);
 static void DWC_ETH_QOS_poll_controller(struct net_device *);
 #endif				/*end of CONFIG_NET_POLL_CONTROLLER */
 
-static int DWC_ETH_QOS_set_features(struct net_device *dev, u32 features);
+static int DWC_ETH_QOS_set_features(struct net_device *dev, netdev_features_t features);
 
-static u32 DWC_ETH_QOS_fix_features(struct net_device *dev, u32 features);
+static netdev_features_t DWC_ETH_QOS_fix_features(struct net_device *dev, netdev_features_t features);
 
 INT DWC_ETH_QOS_configure_remotewakeup(struct net_device *,
 				       struct ifr_data_struct *);
@@ -131,7 +141,6 @@ inline unsigned int DWC_ETH_QOS_reg_read(volatile ULONG *ptr);
 u16	DWC_ETH_QOS_select_queue(struct net_device *dev, struct sk_buff *skb);
 #endif
 
-static void DWC_ETH_QOS_vlan_rx_add_vid(struct net_device *dev, u16 vid);
-static void DWC_ETH_QOS_vlan_rx_kill_vid(struct net_device *dev, u16 vid);
-
+static int DWC_ETH_QOS_vlan_rx_add_vid(struct net_device *dev, __be16 proto, u16 vid);
+static int DWC_ETH_QOS_vlan_rx_kill_vid(struct net_device *dev, __be16 proto, u16 vid);
 #endif

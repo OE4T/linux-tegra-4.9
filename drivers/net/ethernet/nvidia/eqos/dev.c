@@ -27,18 +27,31 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
  * ========================================================================= */
-
-/*!@file: dev.c
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+/*!@file: DWC_ETH_QOS_dev.c
  * @brief: Driver functions.
  */
 #include "yheader.h"
 #include "yapphdr.h"
 
-extern ULONG dwc_eth_qos_pci_base_addr;
-
+extern ULONG dwc_eth_qos_base_addr;
 #include "yregacc.h"
+
+#ifdef HWA_FPGA_ONLY
+#include "nvregacc.h"
+#endif
 
 #ifdef DWC_ETH_QOS_CONFIG_PGTEST
 
@@ -1793,10 +1806,6 @@ static INT config_idle_slope(UINT qInx,
 static INT config_low_credit(UINT qInx,
 			UINT lowCredit)
 {
-	INT lowCredit_neg = lowCredit;
-	printk(KERN_CRIT "lowCreidt = %08x lowCredit_neg:%08x\n",
-			lowCredit, lowCredit_neg);
-	MTL_QLCR_LC_UdfWr(qInx, lowCredit_neg);
 
   MTL_QLCR_LC_UdfWr(qInx, lowCredit);
 
@@ -1925,7 +1934,11 @@ UCHAR get_tx_queue_count(void)
   ULONG varMAC_HFR2;
 
   MAC_HFR2_RgRd(varMAC_HFR2);
+#ifdef AR_XXX //For now Keep the number of channels to 1
   count = GET_VALUE(varMAC_HFR2, MAC_HFR2_TXQCNT_LPOS, MAC_HFR2_TXQCNT_HPOS);
+#else
+  count = 0;
+#endif
 
   return (count + 1);
 }
@@ -1947,7 +1960,11 @@ UCHAR get_rx_queue_count(void)
   ULONG varMAC_HFR2;
 
   MAC_HFR2_RgRd(varMAC_HFR2);
+#ifdef AR_XXX //For now Keep the number of channels to 1
   count = GET_VALUE(varMAC_HFR2, MAC_HFR2_RXQCNT_LPOS, MAC_HFR2_RXQCNT_HPOS);
+#else
+  count = 0;
+#endif
 
   return (count + 1);
 }
@@ -2014,10 +2031,14 @@ static INT config_mmc_counters(void)
 static INT disable_rx_interrupt(UINT qInx)
 {
 
-  DMA_IER_RBUE_UdfWr(qInx, 0);
-  DMA_IER_RIE_UdfWr(qInx, 0);
+	u32 dmaIer;
 
-  return Y_SUCCESS;
+	DMA_IER_RgRd(qInx, dmaIer);
+	dmaIer &= DMA_IER_RBUE_Wr_Mask;
+	dmaIer &= DMA_IER_RIE_Wr_Mask;
+	DMA_IER_RgWr(qInx, dmaIer);
+
+  	return Y_SUCCESS;
 }
 
 
@@ -2033,11 +2054,14 @@ static INT disable_rx_interrupt(UINT qInx)
 
 static INT enable_rx_interrupt(UINT qInx)
 {
+	u32 dmaIer;
 
-  DMA_IER_RBUE_UdfWr(qInx, 0x1);
-  DMA_IER_RIE_UdfWr(qInx, 0x1);
+	DMA_IER_RgRd(qInx, dmaIer);
+	dmaIer |= ~DMA_IER_RBUE_Wr_Mask;
+	dmaIer |= ~DMA_IER_RIE_Wr_Mask;
+	DMA_IER_RgWr(qInx, dmaIer);
 
-  return Y_SUCCESS;
+  	return Y_SUCCESS;
 }
 
 
@@ -2095,7 +2119,7 @@ static VOID configure_desc_vlan_control(struct DWC_ETH_QOS_prv_data *pdata)
 * \retval  0 Success
 * \retval -1 Failure
 */
-
+#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
 static INT configure_mac_for_vlan_pkt(void)
 {
 
@@ -2118,7 +2142,7 @@ static INT configure_mac_for_vlan_pkt(void)
 
 	return Y_SUCCESS;
 }
-
+#endif
 /*!
 * \return Success or Failure
 * \retval  0 Success
@@ -2911,25 +2935,30 @@ static INT enable_dma_interrupts(UINT qInx)
 	tmp = varDMA_SR;
 	DMA_SR_RgWr(qInx, tmp);
 	/* Enable following interrupts for Queue 0 */
-	/* TXSE - Transmit Stoppped Enable */
 	/* RIE - Receive Interrupt Enable */
 	/* RBUE - Receive Buffer Unavailable Enable  */
-	/* RSE - Receive Stoppped Enable */
 	/* AIE - Abnormal Interrupt Summary Enable */
 	/* NIE - Normal Interrupt Summary Enable */
 	/* FBE - Fatal Bus Error Enable */
 	DMA_IER_RgRd(qInx, varDMA_IER);
 	varDMA_IER = varDMA_IER & (ULONG) (0x2e00);
 #ifdef DWC_ETH_QOS_VER_4_0    
-	varDMA_IER = varDMA_IER | ((0x1) << 1) |
-	    ((0x1) << 6) | ((0x1) << 7) | ((0x1) << 8) | ((0x1) << 15) |
+	varDMA_IER = varDMA_IER |
+	    ((0x1) << 6) | ((0x1) << 7) | ((0x1) << 15) |
 	    ((0x1) << 16) | ((0x1) << 12);
 #else
-	varDMA_IER = varDMA_IER | ((0x1) << 1) | ((0x1) << 2) |
-	    ((0x1) << 6) | ((0x1) << 7) | ((0x1) << 8) | ((0x1) << 14) |
+	varDMA_IER = varDMA_IER |
+	    ((0x1) << 6) | ((0x1) << 7) |  ((0x1) << 14) |
 	    ((0x1) << 15) | ((0x1) << 12);
 #endif 
-#ifndef DWC_ETH_QOS_TXPOLLING_MODE_ENABLE
+
+#ifdef DWC_ETH_QOS_TXPOLLING_MODE_ENABLE
+	/* Disable TIE and TBUE */
+	/* TIE - Transmit Interrupt Enable */
+	/* TBUE - Transmit Buffer Unavailable Enable */
+	varDMA_IER &= ~(((0x1) << 0) | ((0x1) << 2));
+#else
+	/* Enable TIE and TBUE */
 	/* TIE - Transmit Interrupt Enable */
 	/* TBUE - Transmit Buffer Unavailable Enable */
 	varDMA_IER |= ((0x1) << 0) | ((0x1) << 2);
@@ -2953,6 +2982,9 @@ static INT set_gmii_speed(void)
 
 	MAC_MCR_PS_UdfWr(0);
 	MAC_MCR_FES_UdfWr(0);
+#ifdef HWA_FPGA_ONLY
+	CLK_CRTL0_TX_CLK_UdfWr(0);
+#endif
 
 	return Y_SUCCESS;
 }
@@ -2970,6 +3002,9 @@ static INT set_mii_speed_10(void)
 
 	MAC_MCR_PS_UdfWr(0x1);
 	MAC_MCR_FES_UdfWr(0);
+#ifdef HWA_FPGA_ONLY
+	CLK_CRTL0_TX_CLK_UdfWr(1);
+#endif
 
 	return Y_SUCCESS;
 }
@@ -2987,6 +3022,9 @@ static INT set_mii_speed_100(void)
 
 	MAC_MCR_PS_UdfWr(0x1);
 	MAC_MCR_FES_UdfWr(0x1);
+#ifdef HWA_FPGA_ONLY
+	CLK_CRTL0_TX_CLK_UdfWr(0);
+#endif
 
 	return Y_SUCCESS;
 }
@@ -3502,12 +3540,15 @@ static void rx_descriptor_init(struct DWC_ETH_QOS_prv_data *pdata, UINT qInx)
 		buffer = GET_RX_BUF_PTR(qInx, rx_desc_data->cur_rx);
 	}
 	/* update the total no of Rx descriptors count */
-	DMA_RDRLR_RgWr(qInx, (RX_DESC_CNT - 1));
+	if (!SIM_WORLD)
+		DMA_RDRLR_RgWr(qInx, (RX_DESC_CNT - 1));
 	/* update the Rx Descriptor Tail Pointer */
 	last_index = GET_CURRENT_RCVD_LAST_DESC_INDEX(start_index, 0);
-	DMA_RDTP_RPDR_RgWr(qInx, GET_RX_DESC_DMA_ADDR(qInx, last_index));
+	if (!SIM_WORLD)
+		DMA_RDTP_RPDR_RgWr(qInx, GET_RX_DESC_DMA_ADDR(qInx, last_index));
 	/* update the starting address of desc chain/ring */
-	DMA_RDLAR_RgWr(qInx, GET_RX_DESC_DMA_ADDR(qInx, start_index));
+	if (!SIM_WORLD)
+		DMA_RDLAR_RgWr(qInx, GET_RX_DESC_DMA_ADDR(qInx, start_index));
 
 	DBGPR("<--rx_descriptor_init\n");
 }
@@ -3572,8 +3613,10 @@ static void pre_transmit(struct DWC_ETH_QOS_prv_data *pdata,
 	struct s_TX_CONTEXT_DESC *TX_CONTEXT_DESC =
 	    GET_TX_DESC_PTR(qInx, tx_desc_data->cur_tx);
 	UINT varcsum_enable;
+#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
 	UINT varvlan_pkt;
 	UINT varvt;
+#endif
 	INT i;
 	INT start_index = tx_desc_data->cur_tx;
 	INT last_index, original_start_index = tx_desc_data->cur_tx;
@@ -3855,9 +3898,11 @@ static void device_read(struct DWC_ETH_QOS_prv_data *pdata, UINT qInx)
 	UINT varIPCB;
 	UINT varIPHE;
 	struct s_rx_pkt_features *rx_pkt_features = GET_RX_PKT_FEATURES_PTR;
+#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
 	UINT varRS0V;
 	UINT varLT;
 	UINT varRDES0;
+#endif
 	UINT varOE;
 	struct s_rx_error_counters *rx_error_counters =
 	    GET_RX_ERROR_COUNTERS_PTR;
@@ -4014,6 +4059,9 @@ static INT DWC_ETH_QOS_yexit(void)
 	vy_count = 0;
 	while (1) {
 		if (vy_count > retryCount) {
+			printk(
+				"%s():%d: Timed out polling on DMA_BMR_SWR\n",
+				__func__, __LINE__);
 			return -Y_FAILURE;
 		} else {
 			vy_count++;
@@ -4030,6 +4078,54 @@ static INT DWC_ETH_QOS_yexit(void)
 	return Y_SUCCESS;
 }
 
+
+/*!
+* \details This API will calculate burst size given
+*           queue FIFO size.
+*
+* \param[in] fifo_size - total fifo size in h/w register
+*
+* \return returns integer
+* \retval - value of pbl
+*/
+static UINT calculate_dma_pbl(ULONG p_fifo)
+{
+	UINT pbl=0;
+
+	/* given fifo size, need to ensure burst is never larger than half
+	 * fifo size.
+	 * ex: for fifo of 4kb, plb=16 and pblx8=1 results in 2kb burst (16*8*16)
+	 * pbl is in granulatiries of 16 bytes
+	 */
+	switch (p_fifo) {
+	case eDWC_ETH_QOS_32k:
+	case eDWC_ETH_QOS_16k:
+	case eDWC_ETH_QOS_8k:
+		/* this is max which can be specified */
+		pbl = 32;
+		break;
+	case eDWC_ETH_QOS_4k:
+		pbl = 16;
+		break;
+	case eDWC_ETH_QOS_2k:
+		pbl = 8;
+		break;
+	case eDWC_ETH_QOS_1k:
+		pbl = 4;
+		break;
+	case eDWC_ETH_QOS_512:
+		pbl = 2;
+		break;
+	case eDWC_ETH_QOS_256:
+		pbl = 1;
+		break;
+	default:
+		printk(KERN_ALERT "%s(): Invalid Fifo Size specified (0x%.8x)\n", __func__, (UINT)p_fifo);
+		break;
+	}
+
+	return pbl;
+}
 
 /*!
 * \details This API will calculate per queue FIFO size.
@@ -4235,6 +4331,7 @@ static INT configure_dma_channel(UINT qInx,
 {
 	struct DWC_ETH_QOS_rx_wrapper_descriptor *rx_desc_data =
 		GET_RX_WRAPPER_DESC(qInx);
+	ULONG p_fifo, pbl;
 
 	DBGPR("-->configure_dma_channel\n");
 
@@ -4269,10 +4366,14 @@ static INT configure_dma_channel(UINT qInx,
 	enable_dma_interrupts(qInx);
 	/* set PBLx8 */
 	DMA_CR_PBLx8_UdfWr(qInx, 0x1);
-	/* set TX PBL = 256 */
-	DMA_TCR_PBL_UdfWr(qInx, 32);
-	/* set RX PBL = 256 */
-	DMA_RCR_PBL_UdfWr(qInx, 32);
+
+	p_fifo = calculate_per_queue_fifo(pdata->hw_feat.tx_fifo_size, DWC_ETH_QOS_TX_QUEUE_CNT);
+	pbl = calculate_dma_pbl(p_fifo);
+	DMA_TCR_PBL_UdfWr(qInx, pbl);
+
+	p_fifo = calculate_per_queue_fifo(pdata->hw_feat.rx_fifo_size, DWC_ETH_QOS_RX_QUEUE_CNT);
+	pbl = calculate_dma_pbl(p_fifo);
+	DMA_RCR_PBL_UdfWr(qInx, pbl);
 
     /* To get Best Performance */
     DMA_SBUS_BLEN16_UdfWr(1);
@@ -4290,6 +4391,10 @@ static INT configure_dma_channel(UINT qInx,
 	DMA_CR_SPH_UdfWr(qInx, pdata->rx_split_hdr);
 	printk(KERN_ALERT "%s Rx Split header mode\n",
 		(pdata->rx_split_hdr ? "Enabled" : "Disabled"));
+
+#ifndef AR_XXX //Add 10us delay as per bug 1611959
+	udelay(10);
+#endif
 
 	/*
 	 * For PG don't start TX DMA now.
@@ -4811,8 +4916,10 @@ void DWC_ETH_QOS_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->update_vlan_hash_table_reg = update_vlan_hash_table_reg;
 	hw_if->update_vlan_id = update_vlan_id;
 	hw_if->config_vlan_filtering = config_vlan_filtering;
-   	hw_if->config_mac_for_vlan_pkt = configure_mac_for_vlan_pkt;
-    hw_if->get_vlan_tag_comparison = get_vlan_tag_comparison;
+#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
+ 	hw_if->config_mac_for_vlan_pkt = configure_mac_for_vlan_pkt;
+#endif
+  hw_if->get_vlan_tag_comparison = get_vlan_tag_comparison;
 
 	/* for differnet PHY interconnect */
 	hw_if->control_an = control_an;

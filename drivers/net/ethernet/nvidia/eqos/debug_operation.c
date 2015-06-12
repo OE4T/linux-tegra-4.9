@@ -27,15 +27,24 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
  * ========================================================================= */
-
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
 #include <linux/fs.h>
 #include <linux/debugfs.h>
 #include "yheader.h"
 
-extern ULONG dwc_eth_qos_pci_base_addr;
-
+extern ULONG dwc_eth_qos_base_addr;
 #include "yregacc.h"
 
 #define DEBUGFS_MAX_SIZE 100
@@ -47,6 +56,25 @@ struct DWC_ETH_QOS_prv_data *pdata;
  * This structure hold information about the /debug file
  */
 static struct dentry *dir;
+
+/* Broadcom phy regs */
+#define BCM_RX_ERR_CNT_REG			0x12
+#define BCM_FALSE_CARR_CNT_REG			0x13
+#define BCM_RX_NOT_OK_CNT_REG			0x14
+#define BCM_EXPANSION_REG			0x15
+#define BCM_EXPANSION_CTRL_REG			0x17
+#define BCM_AUX_CTRL_SHADOW_REG 		0x18
+#define BCM_INT_STATUS_REG			0x1a
+#define BCM_INT_MASK_REG			0x1b
+
+/* Broadcom Shadow regs */
+#define BCM_10BASET_SHADOW_REG			0x1
+#define BCM_POWER_MII_CTRL_SHADOW_REG		0x2
+#define BCM_MISC_TEST_SHADOW_REG		0x4
+#define BCM_MISC_CTRL_SHADOW_REG		0x7
+
+/* Broadcom expansion regs */
+#define BCM_PKT_CNT_EXP_REG			0xf00
 
 /* Variables used to store the register value. */
 static unsigned int REGISTERS_val;
@@ -810,12 +838,30 @@ static unsigned int MII_CTRL1000_REG_val;
 static unsigned int MII_STAT1000_REG_val;
 static unsigned int PHY_CTL_REG_val;
 static unsigned int PHY_STS_REG_val;
+static unsigned int BCM_REGS_val;
+static unsigned int BCM_RX_ERR_CNT_REG_val;
+static unsigned int BCM_FALSE_CARR_CNT_REG_val;
+static unsigned int BCM_RX_NOT_OK_CNT_REG_val;
+static unsigned int BCM_INT_STATUS_REG_val;
+static unsigned int BCM_INT_MASK_REG_val;
+static unsigned int BCM_10BASET_REG_val;
+static unsigned int BCM_PWR_MII_CTRL_REG_val;
+static unsigned int BCM_MISC_TEST_REG_val;
+static unsigned int BCM_MISC_CTRL_REG_val;
+static unsigned int BCM_10BASET_REG_val;
+static unsigned int BCM_POWER_MII_CTRL_REG_val;
+static unsigned int BCM_MISC_TEST_REG_val;
+static unsigned int BCM_MISC_CTRL_REG_val;
+static unsigned int BCM_PKT_CNT_REG_val;
 
 /* For controlling properties/features of the device */
 static unsigned int feature_drop_tx_pktburstcnt_val = 1;
 
 /* for mq */
 static unsigned int qInx_val;
+
+static unsigned int reg_offset_val;
+static unsigned int gen_reg_val;
 
 void DWC_ETH_QOS_get_pdata(struct DWC_ETH_QOS_prv_data *prv_pdata)
 {
@@ -2832,6 +2878,15 @@ static ssize_t DWC_ETH_QOS_write(struct file *file, const char __user * buf,
 				printk(KERN_ALERT "Invalid queue number\n");
 				ret = -EFAULT;
 			}
+		} else if (!strcmp(regName, "reg_offset")) {
+			reg_offset_val = (int)integer_value;
+		} else if (!strcmp(regName, "gen_reg")) {
+			gen_reg_val = (int)integer_value;
+			iowrite32(gen_reg_val, (void *)(volatile ULONG *)(BASE_ADDRESS + reg_offset_val));
+		} else if (!strcmp(regName, "BCM_REGS")) {
+			printk(KERN_ALERT
+			       "Could not complete Write Operation BCM_REGS : ReadOnly Register");
+			ret = -EFAULT;
 		} else {
 			printk(KERN_ALERT
 			       "Could not complete Write Operation to Register. Register not found.\n");
@@ -19202,6 +19257,39 @@ static const struct file_operations qInx_fops = {
 	.write = DWC_ETH_QOS_write,
 };
 
+static ssize_t reg_offset_read(struct file *file,
+			 char __user * userbuf, size_t count, loff_t * ppos)
+{
+	ssize_t ret;
+	sprintf(debugfs_buf, "reg_offset             :%#x\n", reg_offset_val);
+	ret =
+	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
+				    strlen(debugfs_buf));
+	return ret;
+}
+
+static const struct file_operations reg_offset_fops = {
+	.read = reg_offset_read,
+	.write = DWC_ETH_QOS_write,
+};
+
+static ssize_t gen_reg_read(struct file *file, char __user * userbuf,
+			     size_t count, loff_t * ppos)
+{
+	ssize_t ret;
+	gen_reg_val = ioread32((void *)(volatile ULONG *)(BASE_ADDRESS + reg_offset_val));
+	sprintf(debugfs_buf, "reg(%#x) = %#x\n", reg_offset_val, gen_reg_val);
+	ret =
+	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
+				    strlen(debugfs_buf));
+	return ret;
+}
+
+static const struct file_operations gen_reg_fops = {
+	.read = gen_reg_read,
+	.write = DWC_ETH_QOS_write,
+};
+
 static ssize_t RX_NORMAL_DESC_descriptor_read0(struct file *file,
 					       char __user * userbuf,
 					       size_t count, loff_t * ppos)
@@ -20774,6 +20862,145 @@ static const struct file_operations RX_NORMAL_DESC_STATUS_fops = {
 	.read = RX_NORMAL_DESC_STATUS_read,
 };
 
+static ssize_t BCM_REGS_read(struct file *file, char __user * userbuf,
+				     size_t count, loff_t * ppos)
+{
+	ssize_t ret;
+	char *debug_buf = NULL;
+
+	debug_buf = (char *)kmalloc(26820, GFP_KERNEL);
+	if (!debug_buf) {
+		printk(KERN_ERR "Memory allocation failed:\n");
+		return -ENOMEM;
+	}
+
+	/* For MII/GMII register read */
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_BMCR,
+				     &MII_BMCR_REG_val);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_BMSR,
+				     &MII_BMSR_REG_val);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_PHYSID1,
+				     &MII_PHYSID1_REG_val);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_PHYSID2,
+				     &MII_PHYSID2_REG_val);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_ADVERTISE,
+				     &MII_ADVERTISE_REG_val);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_LPA,
+				     &MII_LPA_REG_val);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_EXPANSION,
+				     &MII_EXPANSION_REG_val);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr,
+				     DWC_ETH_QOS_AUTO_NEGO_NP,
+				     &AUTO_NEGO_NP_REG_val);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_CTRL1000,
+				     &MII_CTRL1000_REG_val);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_STAT1000,
+				     &MII_STAT1000_REG_val);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_ESTATUS,
+				     &MII_ESTATUS_REG_val);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, DWC_ETH_QOS_PHY_CTL,
+				     &PHY_CTL_REG_val);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, DWC_ETH_QOS_PHY_STS,
+				     &PHY_STS_REG_val);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, BCM_RX_ERR_CNT_REG,
+					&BCM_RX_ERR_CNT_REG_val);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, BCM_FALSE_CARR_CNT_REG,
+					&BCM_FALSE_CARR_CNT_REG_val);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, BCM_RX_NOT_OK_CNT_REG,
+					&BCM_RX_NOT_OK_CNT_REG_val);
+
+	/* read shadow regs */
+	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, BCM_AUX_CTRL_SHADOW_REG,
+					((BCM_10BASET_SHADOW_REG << 12) | 0x7));
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, BCM_AUX_CTRL_SHADOW_REG,
+				&BCM_10BASET_REG_val);
+	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, BCM_AUX_CTRL_SHADOW_REG,
+					((BCM_POWER_MII_CTRL_SHADOW_REG << 12) | 0x7));
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, BCM_AUX_CTRL_SHADOW_REG,
+				&BCM_POWER_MII_CTRL_REG_val);
+	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, BCM_AUX_CTRL_SHADOW_REG,
+					((BCM_MISC_TEST_SHADOW_REG << 12) | 0x7));
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, BCM_AUX_CTRL_SHADOW_REG,
+				&BCM_MISC_TEST_REG_val);
+	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, BCM_AUX_CTRL_SHADOW_REG,
+					((BCM_MISC_CTRL_SHADOW_REG << 12) | 0x7));
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, BCM_AUX_CTRL_SHADOW_REG,
+				&BCM_MISC_CTRL_REG_val);
+
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, BCM_INT_STATUS_REG,
+					&BCM_INT_STATUS_REG_val);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, BCM_INT_MASK_REG,
+					&BCM_INT_MASK_REG_val);
+
+	/* Read expansion regs */
+	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, BCM_EXPANSION_CTRL_REG,
+					BCM_PKT_CNT_EXP_REG);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, BCM_EXPANSION_REG,
+				     &BCM_PKT_CNT_REG_val);
+	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, BCM_EXPANSION_CTRL_REG, 0x000);
+
+
+	sprintf(debug_buf,
+		"\nBroadCom Phy Regs \n"
+		"Control(0x0)                        : %#x\n"
+		"Status(0x1)                         : %#x\n"
+		"Id1 (0x2)                           : %#x\n"
+		"Id2 (0x3)                           : %#x\n"
+		"Auto Neg Advertisement(0x4)         : %#x\n"
+		"Auto Neg Link Partner Ability(0x5)  : %#x\n"
+		"Auto Neg Expansion(0x6)             : %#x\n"
+		"Auto Neg Next Page(0x7)             : %#x\n"
+		"1000 Base-T Control(0x9)            : %#x\n"
+		"1000 Base-T Status(0xa)             : %#x\n"
+		"IEEE Extended Status(0xf)           : %#x\n"
+		"Extended Control(0x10)              : %#x\n"
+		"Extended Status(0x11)               : %#x\n"
+		"Rx Error Count(0x12)                : %#x\n"
+		"False Carrier Sense Count(0x13)     : %#x\n"
+		"Rx Not Ok Count(0x14)               : %#x\n"
+		"10BASE-T(0x18, Shadow 001)          : %#x\n"
+		"Power/Mii Ctrl(0x18, Shadow 010)    : %#x\n"
+		"Misc Test (0x18, Shadow 100)        : %#x\n"
+		"Misc Ctrl(0x18, Shadow 111)         : %#x\n"
+		"Int Status(0x1a)                    : %#x\n"
+		"Int Mask(0x1b)                      : %#x\n"
+		"Pkt Count(expansion reg 0xf00)      : %#x\n",
+	        MII_BMCR_REG_val,
+		MII_BMSR_REG_val,
+		MII_PHYSID1_REG_val,
+		MII_PHYSID2_REG_val,
+		MII_ADVERTISE_REG_val,
+		MII_LPA_REG_val,
+		MII_EXPANSION_REG_val,
+		AUTO_NEGO_NP_REG_val,
+		MII_CTRL1000_REG_val,
+		MII_STAT1000_REG_val,
+		MII_ESTATUS_REG_val,
+		PHY_CTL_REG_val,
+		PHY_STS_REG_val,
+		BCM_RX_ERR_CNT_REG_val,
+		BCM_FALSE_CARR_CNT_REG_val,
+		BCM_RX_NOT_OK_CNT_REG_val,
+		BCM_10BASET_REG_val,
+		BCM_PWR_MII_CTRL_REG_val,
+		BCM_MISC_TEST_REG_val,
+		BCM_MISC_CTRL_REG_val,
+		BCM_INT_STATUS_REG_val,
+		BCM_INT_MASK_REG_val,
+		BCM_PKT_CNT_REG_val
+		);
+
+	ret =
+	    simple_read_from_buffer(userbuf, count, ppos, debug_buf,
+				    strlen(debug_buf));
+	kfree(debug_buf);
+	return ret;
+}
+
+static const struct file_operations BCM_REGS_fops = {
+	.read = BCM_REGS_read,
+};
+
 /*! 
 *  \brief  API to create debugfs files 
 *
@@ -21552,6 +21779,9 @@ int create_debug_files()
 	struct dentry *feature_drop_tx_pktburstcnt;
 	struct dentry *qInx;
 
+	struct dentry *reg_offset;
+	struct dentry *gen_reg;
+
 	struct dentry *RX_NORMAL_DESC_desc0;
 	struct dentry *RX_NORMAL_DESC_desc1;
 	struct dentry *RX_NORMAL_DESC_desc2;
@@ -21580,6 +21810,7 @@ int create_debug_files()
 	struct dentry *TX_NORMAL_DESC_desc12;
 	struct dentry *TX_NORMAL_DESC_STATUS;
 	struct dentry *RX_NORMAL_DESC_STATUS;
+	struct dentry *BCM_REGS;
 
 	DBGPR("--> create_debug_files\n");
 
@@ -28588,6 +28819,22 @@ int create_debug_files()
 		goto remove_debug_file;
 	}
 
+	reg_offset = debugfs_create_file("reg_offset", 744, dir, &reg_offset_val, &reg_offset_fops);
+	if (reg_offset == NULL) {
+		printk(KERN_INFO "error creating file: reg_offset\n");
+		ret = -ENODEV;
+		goto remove_debug_file;
+	}
+
+	gen_reg =
+	    debugfs_create_file("gen_reg", 744, dir, &gen_reg_val,
+				&gen_reg_fops);
+	if (gen_reg == NULL) {
+		printk(KERN_INFO "error creating file: gen_reg\n");
+		ret = -ENODEV;
+		goto remove_debug_file;
+	}
+
 	RX_NORMAL_DESC_desc0 =
 	    debugfs_create_file("RX_NORMAL_DESC_descriptor0", 744, dir, NULL,
 				&RX_NORMAL_DESC_desc_fops0);
@@ -28864,6 +29111,14 @@ int create_debug_files()
 	if (RX_NORMAL_DESC_STATUS == NULL) {
 		printk(KERN_INFO
 		       "error while creating file: RX_NORMAL_DESC_STATUS\n");
+		ret = -ENODEV;
+		goto remove_debug_file;
+	}
+	BCM_REGS =
+	    debugfs_create_file("BCM_REGS", 744, dir,
+				&BCM_REGS_val, &BCM_REGS_fops);
+	if (BCM_REGS == NULL) {
+		printk(KERN_INFO "error creating file: BCM_REGS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}

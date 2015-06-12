@@ -27,10 +27,20 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
  * ========================================================================= */
-
-/*!@file: ethtool.c
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+/*!@file: DWC_ETH_QOS_ethtool.c
  * @brief: Driver functions.
  */
 #include "yheader.h"
@@ -151,6 +161,8 @@ static const struct DWC_ETH_QOS_stats DWC_ETH_QOS_gstrings_stats[] = {
 	DWC_ETH_QOS_EXTRA_STAT(q_rx_pkt_n[5]),
 	DWC_ETH_QOS_EXTRA_STAT(q_rx_pkt_n[6]),
 	DWC_ETH_QOS_EXTRA_STAT(q_rx_pkt_n[7]),
+	DWC_ETH_QOS_EXTRA_STAT(link_disconnect_count),
+	DWC_ETH_QOS_EXTRA_STAT(link_connect_count),
 };
 #define DWC_ETH_QOS_EXTRA_STAT_LEN ARRAY_SIZE(DWC_ETH_QOS_gstrings_stats)
 
@@ -259,12 +271,41 @@ static const struct DWC_ETH_QOS_stats DWC_ETH_QOS_mmc[] = {
 };
 #define DWC_ETH_QOS_MMC_STATS_LEN ARRAY_SIZE(DWC_ETH_QOS_mmc)
 
+static int DWC_ETH_QOS_get_ts_info(struct net_device *net,
+                                 struct ethtool_ts_info *info)
+{
+        info->so_timestamping =
+                SOF_TIMESTAMPING_TX_SOFTWARE |
+                SOF_TIMESTAMPING_RX_SOFTWARE |
+                SOF_TIMESTAMPING_SOFTWARE |
+                SOF_TIMESTAMPING_TX_HARDWARE |
+                SOF_TIMESTAMPING_RX_HARDWARE |
+                SOF_TIMESTAMPING_RAW_HARDWARE;
+        info->phc_index = 0;
+
+        info->tx_types =
+                (1 << HWTSTAMP_TX_OFF) |
+                (1 << HWTSTAMP_TX_ON);
+
+        info->rx_filters = 1 << HWTSTAMP_FILTER_NONE;
+        info->rx_filters |=
+                (1 << HWTSTAMP_FILTER_PTP_V1_L4_SYNC) |
+                (1 << HWTSTAMP_FILTER_PTP_V1_L4_DELAY_REQ) |
+                (1 << HWTSTAMP_FILTER_PTP_V2_L2_SYNC) |
+                (1 << HWTSTAMP_FILTER_PTP_V2_L4_SYNC) |
+                (1 << HWTSTAMP_FILTER_PTP_V2_L2_DELAY_REQ) |
+                (1 << HWTSTAMP_FILTER_PTP_V2_L4_DELAY_REQ) |
+                (1 << HWTSTAMP_FILTER_PTP_V2_EVENT);
+
+        return 0;
+}
+
 static const struct ethtool_ops DWC_ETH_QOS_ethtool_ops = {
-	.get_tso = DWC_ETH_QOS_get_tso,
-	.set_tso = DWC_ETH_QOS_set_tso,
-	.get_sg = ethtool_op_get_sg,
-	.set_sg = ethtool_op_set_sg,
-	.get_flags = ethtool_op_get_flags,
+	//.get_tso = DWC_ETH_QOS_get_tso,
+	//.set_tso = DWC_ETH_QOS_set_tso,
+	//.get_sg = ethtool_op_get_sg,
+	//.set_sg = ethtool_op_set_sg,
+	//.get_flags = ethtool_op_get_flags,
 	.get_link = ethtool_op_get_link,
 	.get_pauseparam = DWC_ETH_QOS_get_pauseparam,
 	.set_pauseparam = DWC_ETH_QOS_set_pauseparam,
@@ -277,6 +318,7 @@ static const struct ethtool_ops DWC_ETH_QOS_ethtool_ops = {
 	.get_ethtool_stats = DWC_ETH_QOS_get_ethtool_stats,
 	.get_strings = DWC_ETH_QOS_get_strings,
 	.get_sset_count = DWC_ETH_QOS_get_sset_count,
+	.get_ts_info = DWC_ETH_QOS_get_ts_info,
 };
 
 struct ethtool_ops *DWC_ETH_QOS_get_ethtool_ops(void)
@@ -970,7 +1012,7 @@ static int DWC_ETH_QOS_get_sset_count(struct net_device *dev, int sset)
  *
  * \retval 0 on success and -ve on failure.
  */
-
+#if 0
 static int DWC_ETH_QOS_set_tso(struct net_device *dev, u32 data)
 {
 	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
@@ -1015,4 +1057,4 @@ static u32 DWC_ETH_QOS_get_tso(struct net_device *dev)
 
 	return ((dev->features & NETIF_F_TSO) != 0);
 }
-
+#endif

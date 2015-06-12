@@ -27,14 +27,25 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
  * ========================================================================= */
-
-/*!@file: desc.c
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+/*!@file: DWC_ETH_QOS_desc.c
  * @brief: Driver functions.
  */
 #include "yheader.h"
 #include "desc.h"
+extern ULONG dwc_eth_qos_base_addr;
 #include "yregacc.h"
 
 /*!
@@ -898,7 +909,7 @@ static int DWC_ETH_QOS_map_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 			/* fill the first buffer pointer in pre_buffer->dma2 */
 			prev_buffer->dma2 =
 				dma_map_page((&pdata->pdev->dev),
-						frag->page,
+						frag->page.p,
 						(frag->page_offset + offset),
 						DWC_ETH_QOS_MAX_DATA_PER_TX_BUF,
 						DMA_TO_DEVICE);
@@ -912,7 +923,7 @@ static int DWC_ETH_QOS_map_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 
 			/* fill the second buffer pointer in buffer->dma */
 			buffer->dma = dma_map_page((&pdata->pdev->dev),
-						frag->page,
+						frag->page.p,
 						(frag->page_offset + offset + DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
 						(size - DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
 						DMA_TO_DEVICE);
@@ -928,7 +939,7 @@ static int DWC_ETH_QOS_map_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 		} else {
 			/* fill the first buffer pointer in buffer->dma */
 			buffer->dma = dma_map_page((&pdata->pdev->dev),
-						frag->page,
+						frag->page.p,
 						(frag->page_offset + offset),
 						DWC_ETH_QOS_MAX_DATA_PER_TX_BUF,
 						DMA_TO_DEVICE);
@@ -942,7 +953,7 @@ static int DWC_ETH_QOS_map_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 
 			/* fill the second buffer pointer in buffer->dma2 */
 			buffer->dma2 = dma_map_page((&pdata->pdev->dev),
-						frag->page,
+						frag->page.p,
 						(frag->page_offset + offset + DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
 						(size - DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
 						DMA_TO_DEVICE);
@@ -959,7 +970,7 @@ static int DWC_ETH_QOS_map_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 			DBGPR("prev_buffer->dma2 is empty\n");
 			/* fill the first buffer pointer in pre_buffer->dma2 */
 			prev_buffer->dma2 = dma_map_page((&pdata->pdev->dev),
-						frag->page,
+						frag->page.p,
 						frag->page_offset,
 						size, DMA_TO_DEVICE);
 			if (dma_mapping_error((&pdata->pdev->dev),
@@ -978,7 +989,7 @@ static int DWC_ETH_QOS_map_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 		} else {
 			/* fill the first buffer pointer in buffer->dma */
 			buffer->dma = dma_map_page((&pdata->pdev->dev),
-						frag->page,
+						frag->page.p,
 						frag->page_offset,
 						size, DMA_TO_DEVICE);
 			if (dma_mapping_error((&pdata->pdev->dev),
@@ -1135,6 +1146,12 @@ static unsigned int DWC_ETH_QOS_map_skb(struct net_device *dev,
 				count++;
 			}
 		}
+	}
+	/* If current descriptor is not inuse, then adjust pointer to
+	 * last used one. 
+	 */
+	if (buffer->dma == 0) {
+		buffer = prev_buffer;
 	}
 	buffer->skb = skb;
 

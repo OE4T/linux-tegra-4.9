@@ -27,12 +27,22 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
  * ========================================================================= */
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+#ifndef __DWC_ETH_QOS_YAPPHDR_H__
 
-#ifndef __YAPPHDR_H__
-
-#define __YAPPHDR_H__
+#define __DWC_ETH_QOS_YAPPHDR_H__
 
 #define DWC_ETH_QOS_MAX_TX_QUEUE_CNT 8
 #define DWC_ETH_QOS_MAX_RX_QUEUE_CNT 8
@@ -127,6 +137,9 @@
 #define DWC_ETH_QOS_PFC_CMD			41
 /* for PTP OFFLOADING configuration */
 #define DWC_ETH_QOS_PTPOFFLOADING_CMD			42
+#define DWC_ETH_QOS_CSR_ISO_TEST	43
+#define DWC_ETH_QOS_MEM_ISO_TEST	44
+#define DWC_ETH_QOS_PHY_LOOPBACK 45
 
 #define DWC_ETH_QOS_RWK_FILTER_LENGTH	8
 
@@ -242,7 +255,7 @@
 
 #define DWC_ETH_QOS_MAX_WFQ_WEIGHT	0X7FFF /* value for bandwidth calculation */
 
-#define DWC_ETH_QOS_MAX_INT_FRAME_SIZE (1024* 16)
+#define DWC_ETH_QOS_MAX_INT_FRAME_SIZE (1024* 64)
 
 typedef enum {
 	eDWC_ETH_QOS_DMA_TX_FP = 0,

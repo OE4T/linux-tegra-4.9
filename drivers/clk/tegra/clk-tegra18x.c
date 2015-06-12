@@ -357,6 +357,9 @@ static __initdata struct tegra_bpmp_clk_init tegra186_clocks[] = {
 	{ .clk_num = TEGRA186_CLK_DFLLDISP_DIV, .name = "dflldisp_div" },
 	{ .clk_num = TEGRA186_CLK_PLLDISPHUB_DIV, .name = "plldisphub_div" },
 	{ .clk_num = TEGRA186_CLK_PLLP_DIV8, .name = "pllp_div8" },
+	{ .clk_num = TEGRA186_CLK_OSC, .name = "osc" },
+	{ .clk_num = TEGRA186_CLK_EQOS_RX_INPUT, .name = "eqos_rx_input" },
+	{ .clk_num = TEGRA186_CLK_DTV_INPUT, .name = "dtv_input" },
 };
 
 /* Needed for a nvdisp linsim clock hack */

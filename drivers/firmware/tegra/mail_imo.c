@@ -116,7 +116,7 @@ static int imo_channel_init(int ch, uint8_t *obmem, uint8_t *ibmem, size_t sz)
 	tx_base = (uintptr_t)(obmem + frame_off);
 
 	/* init the channel frame */
-	memset((void *)tx_base, 0, frame_sz);
+	memset_io((void *)tx_base, 0, frame_sz);
 
 	ivc = ivc_channels + ch;
 	r = tegra_ivc_init(ivc, rx_base, tx_base,

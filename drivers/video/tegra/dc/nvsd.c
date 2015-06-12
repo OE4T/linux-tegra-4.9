@@ -44,7 +44,8 @@ static ssize_t nvsd_registers_show(struct kobject *kobj,
 static int nvsd_is_enabled(struct tegra_dc_sd_settings *settings);
 
 NVSD_ATTR(enable);
-NVSD_ATTR(enable_threshold);
+NVSD_ATTR(turn_off_brightness);
+NVSD_ATTR(turn_on_brightness);
 NVSD_ATTR(aggressiveness);
 NVSD_ATTR(phase_in_settings);
 NVSD_ATTR(phase_in_adjustments);
@@ -75,7 +76,8 @@ static struct kobj_attribute nvsd_attr_registers =
 
 static struct attribute *nvsd_attrs[] = {
 	NVSD_ATTRS_ENTRY(enable),
-	NVSD_ATTRS_ENTRY(enable_threshold),
+	NVSD_ATTRS_ENTRY(turn_off_brightness),
+	NVSD_ATTRS_ENTRY(turn_on_brightness),
 	NVSD_ATTRS_ENTRY(aggressiveness),
 	NVSD_ATTRS_ENTRY(phase_in_settings),
 	NVSD_ATTRS_ENTRY(phase_in_adjustments),
@@ -829,9 +831,12 @@ static ssize_t nvsd_settings_show(struct kobject *kobj,
 		if (IS_NVSD_ATTR(enable))
 			res = snprintf(buf, PAGE_SIZE, "%d\n",
 				sd_settings->enable);
-		else if (IS_NVSD_ATTR(enable_threshold))
+		else if (IS_NVSD_ATTR(turn_off_brightness))
 			res = snprintf(buf, PAGE_SIZE, "%d\n",
-				sd_settings->enable_threshold);
+				sd_settings->turn_off_brightness);
+		else if (IS_NVSD_ATTR(turn_on_brightness))
+			res = snprintf(buf, PAGE_SIZE, "%d\n",
+				sd_settings->turn_on_brightness);
 		else if (IS_NVSD_ATTR(aggressiveness))
 			res = snprintf(buf, PAGE_SIZE, "%d\n",
 				sd_settings->aggressiveness);
@@ -1018,8 +1023,10 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 					&& !sd_settings->phase_in_settings)
 				settings_updated = true;
 
-		} else if (IS_NVSD_ATTR(enable_threshold)) {
-			nvsd_check_and_update(0, 255, enable_threshold);
+		} else if (IS_NVSD_ATTR(turn_off_brightness)) {
+			nvsd_check_and_update(0, 255, turn_off_brightness);
+		} else if (IS_NVSD_ATTR(turn_on_brightness)) {
+			nvsd_check_and_update(0, 255, turn_on_brightness);
 		} else if (IS_NVSD_ATTR(phase_in_settings)) {
 			nvsd_check_and_update(0, 1, phase_in_settings);
 		} else if (IS_NVSD_ATTR(phase_in_adjustments)) {
@@ -1249,14 +1256,14 @@ void nvsd_enbl_dsbl_prism(struct device *dev, bool status)
 EXPORT_SYMBOL(nvsd_enbl_dsbl_prism);
 
 /* wrapper to enable/disable prism based on brightness */
-void nvsd_check_prism_thresh(struct device *dev, int brightness, int hyst)
+void nvsd_check_prism_thresh(struct device *dev, int brightness)
 {
 	struct tegra_dc *dc = dev_get_drvdata(dev);
 	struct tegra_dc_sd_settings *settings = dc->out->sd_settings;
 
-	if (brightness <= settings->enable_threshold)
+	if (brightness <= settings->turn_off_brightness)
 		nvsd_enbl_dsbl_prism(dev, false);
-	else if (brightness > settings->enable_threshold + hyst)
+	else if (brightness > settings->turn_on_brightness)
 		nvsd_enbl_dsbl_prism(dev, true);
 }
 EXPORT_SYMBOL(nvsd_check_prism_thresh);

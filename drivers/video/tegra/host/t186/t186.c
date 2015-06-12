@@ -37,6 +37,10 @@
 #include "vi/vi4.h"
 #include "nvdec/nvdec.h"
 #include "hardware_t186.h"
+#include "host1x/host1x_actmon_t186.h"
+
+#include "nvhost_scale.h"
+#include "scale_emc.h"
 
 #include "chip_support.h"
 
@@ -117,6 +121,7 @@ static struct host1x_device_info host1x04_info = {
 	.syncpt_policy	= SYNCPT_PER_CHANNEL_INSTANCE,
 	.channel_policy	= MAP_CHANNEL_ON_SUBMIT,
 	.firmware_area_size = SZ_1M,
+	.nb_actmons = 1,
 };
 
 struct nvhost_device_data t18_host1x_info = {
@@ -410,6 +415,15 @@ struct nvhost_device_data t18_vic_info = {
 	.transcfg_addr		= 0x2044,
 	.transcfg_val		= 0x20,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_VIC,
+	.scaling_init		= nvhost_scale_emc_init,
+	.scaling_deinit		= nvhost_scale_emc_deinit,
+	.scaling_post_cb	= &nvhost_scale_emc_callback,
+	.actmon_regs		= HOST1X_THOST_ACTMON_VIC,
+	.actmon_enabled         = true,
+	.actmon_irq		= 3,
+	.devfreq_governor	= "wmark_active",
+	.freqs			= {100000000, 200000000, 300000000,
+					400000000, 500000000, 600000000},
 };
 
 struct nvhost_device_data t18_nvcsi_info = {

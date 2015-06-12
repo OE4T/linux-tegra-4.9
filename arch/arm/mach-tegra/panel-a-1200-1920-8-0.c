@@ -26,8 +26,6 @@
 
 #define DSI_PANEL_RESET		1
 
-#define HYST_VAL		25
-
 static bool reg_requested;
 static struct regulator *avdd_lcd_3v3;
 static struct regulator *vdd_lcd_bl_en;
@@ -170,7 +168,7 @@ static int dsi_a_1200_1920_8_0_bl_notify(struct device *dev, int brightness)
 	pb = (struct pwm_bl_data *)dev_get_drvdata(&bl->dev);
 
 	if (dc_dev)
-		nvsd_check_prism_thresh(dc_dev, brightness, HYST_VAL);
+		nvsd_check_prism_thresh(dc_dev, brightness);
 
 	cur_sd_brightness = atomic_read(&sd_brightness);
 	/* SD brightness is a percentage */

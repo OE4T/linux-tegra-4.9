@@ -32,7 +32,6 @@
 #include <linux/of_dma.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
-#include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/clk/tegra.h>
 #include <linux/tegra_pm_domains.h>
@@ -250,7 +249,6 @@ struct tegra_dma_channel {
 struct tegra_dma {
 	struct dma_device		dma_dev;
 	struct device			*dev;
-	struct clk			*dma_clk;
 	spinlock_t			global_lock;
 	void __iomem			*base_addr;
 	const struct tegra_dma_chip_data *chip_data;
@@ -297,10 +295,6 @@ static inline struct device *tdc2dev(struct tegra_dma_channel *tdc)
 }
 
 static dma_cookie_t tegra_dma_tx_submit(struct dma_async_tx_descriptor *tx);
-#ifdef CONFIG_PM_RUNTIME
-static int tegra_dma_runtime_suspend(struct device *dev);
-static int tegra_dma_runtime_resume(struct device *dev);
-#endif
 
 /* Get DMA desc from free list, if not there then allocate it.  */
 static struct tegra_dma_desc *tegra_dma_desc_get(
@@ -510,12 +504,6 @@ static void handle_once_dma_done(struct tegra_dma_channel *tdc,
 	}
 	list_add_tail(&sgreq->node, &tdc->free_sg_req);
 
-	/* Do not start DMA if it is going to be terminate */
-	if (list_empty(&tdc->pending_sg_req) && (!to_terminate)) {
-		clk_disable(tdc->tdma->dma_clk);
-		pm_runtime_put(tdc->tdma->dev);
-	}
-
 	if (to_terminate || list_empty(&tdc->pending_sg_req))
 		return;
 
@@ -591,19 +579,11 @@ static void tegra_dma_issue_pending(struct dma_chan *dc)
 {
 	struct tegra_dma_channel *tdc = to_tegra_dma_chan(dc);
 	unsigned long flags;
-	int ret;
 
 	spin_lock_irqsave(&tdc->lock, flags);
 	if (list_empty(&tdc->pending_sg_req)) {
 		dev_err(tdc2dev(tdc), "No DMA request\n");
 		goto end;
-	}
-
-	pm_runtime_get(tdc->tdma->dev);
-	ret = clk_enable(tdc->tdma->dma_clk);
-	if (ret < 0) {
-		dev_err(tdc2dev(tdc), "clk_enable failed: %d\n", ret);
-		return;
 	}
 
 	if (!tdc->busy)
@@ -653,8 +633,6 @@ static void tegra_dma_terminate_all(struct dma_chan *dc)
 		sgreq->dma_desc->bytes_transferred += sgreq->req_len - status;
 	}
 	tegra_dma_resume(tdc);
-	clk_disable(tdc->tdma->dma_clk);
-	pm_runtime_put(tdc->tdma->dev);
 
 skip_dma_stop:
 	tegra_dma_abort_all(tdc);
@@ -1144,7 +1122,6 @@ static int tegra_dma_alloc_chan_resources(struct dma_chan *dc)
 {
 	struct tegra_dma_channel *tdc = to_tegra_dma_chan(dc);
 
-	clk_prepare(tdc->tdma->dma_clk);
 	dma_cookie_init(&tdc->dma_chan);
 	tdc->config_init = false;
 	return 0;
@@ -1166,7 +1143,6 @@ static void tegra_dma_free_chan_resources(struct dma_chan *dc)
 
 	if (tdc->busy)
 		tegra_dma_terminate_all(dc);
-	clk_unprepare(tdc->tdma->dma_clk);
 	spin_lock_irqsave(&tdc->lock, flags);
 	list_splice_init(&tdc->pending_sg_req, &sg_req_list);
 	list_splice_init(&tdc->free_sg_req, &sg_req_list);
@@ -1304,39 +1280,18 @@ static int tegra_dma_probe(struct platform_device *pdev)
 	if (IS_ERR(tdma->base_addr))
 		return PTR_ERR(tdma->base_addr);
 
-	tdma->dma_clk = devm_clk_get(&pdev->dev, "gpcdma");
-	if (IS_ERR(tdma->dma_clk)) {
-		dev_err(&pdev->dev, "Error: Missing controller clock\n");
-		return PTR_ERR(tdma->dma_clk);
-	}
 
 	spin_lock_init(&tdma->global_lock);
 
 	dma_device = &pdev->dev;
 
-#ifdef CONFIG_PM_RUNTIME
 	tegra_pd_add_device(&pdev->dev);
-	pm_runtime_enable(&pdev->dev);
-	if (!pm_runtime_enabled(&pdev->dev)) {
-		ret = tegra_dma_runtime_resume(&pdev->dev);
-		if (ret) {
-			dev_err(&pdev->dev, "dma_runtime_resume failed %d\n",
-				ret);
-			goto err_pm_disable;
-		}
-	}
-#endif
-	/* Enable clock before accessing registers */
-	ret = clk_prepare_enable(tdma->dma_clk);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "clk_prepare_enable failed: %d\n", ret);
-		goto err_pm_disable;
-	}
 
-	/* Reset DMA controller */
-	tegra_periph_reset_assert(tdma->dma_clk);
-	udelay(2);
-	tegra_periph_reset_deassert(tdma->dma_clk);
+	/*
+	 * Fix me: There is no separate clock for GPCDMA. It uses AXI clk or
+	 * pclk. Removing old reset APIs. Need to add controller reset
+	 * functionality without dependency on the clk handle.
+	 */
 
 	INIT_LIST_HEAD(&tdma->dma_dev.channels);
 	for (i = 0; i < cdata->nr_channels; i++) {
@@ -1431,14 +1386,7 @@ err_irq:
 		struct tegra_dma_channel *tdc = &tdma->channels[i];
 		tasklet_kill(&tdc->tasklet);
 	}
-
-err_pm_disable:
-#ifdef CONFIG_PM_RUNTIME
-	pm_runtime_disable(&pdev->dev);
-	if (!pm_runtime_status_suspended(&pdev->dev))
-		tegra_dma_runtime_suspend(&pdev->dev);
 	tegra_pd_remove_device(&pdev->dev);
-#endif
 	return ret;
 }
 
@@ -1455,51 +1403,15 @@ static int tegra_dma_remove(struct platform_device *pdev)
 		tasklet_kill(&tdc->tasklet);
 	}
 
-#ifdef CONFIG_PM_RUNTIME
-	pm_runtime_disable(&pdev->dev);
-	if (!pm_runtime_status_suspended(&pdev->dev))
-		tegra_dma_runtime_suspend(&pdev->dev);
-
 	tegra_pd_remove_device(&pdev->dev);
-#endif
 	return 0;
 }
-
-#ifdef CONFIG_PM_RUNTIME
-static int tegra_dma_runtime_suspend(struct device *dev)
-{
-	struct platform_device *pdev = to_platform_device(dev);
-	struct tegra_dma *tdma = platform_get_drvdata(pdev);
-
-	clk_disable(tdma->dma_clk);
-	return 0;
-}
-
-static int tegra_dma_runtime_resume(struct device *dev)
-{
-	struct platform_device *pdev = to_platform_device(dev);
-	struct tegra_dma *tdma = platform_get_drvdata(pdev);
-	int ret;
-
-	ret = clk_enable(tdma->dma_clk);
-	if (ret < 0) {
-		dev_err(dev, "clk_enable failed: %d\n", ret);
-		return ret;
-	}
-	return 0;
-}
-#endif
 
 #ifdef CONFIG_PM_SLEEP
 static int tegra_dma_pm_suspend(struct device *dev)
 {
 	struct tegra_dma *tdma = dev_get_drvdata(dev);
 	int i;
-	int ret;
-
-	ret = tegra_dma_runtime_resume(dev);
-	if (ret < 0)
-		return ret;
 
 	for (i = 0; i < tdma->chip_data->nr_channels; i++) {
 		struct tegra_dma_channel *tdc = &tdma->channels[i];
@@ -1512,7 +1424,6 @@ static int tegra_dma_pm_suspend(struct device *dev)
 		ch_reg->mmio_seq = tdc_read(tdc, TEGRA_GPCDMA_CHAN_MMIOSEQ);
 		ch_reg->wcount = tdc_read(tdc, TEGRA_GPCDMA_CHAN_WCOUNT);
 	}
-	tegra_dma_runtime_suspend(dev);
 	return 0;
 }
 
@@ -1520,11 +1431,6 @@ static int tegra_dma_pm_resume(struct device *dev)
 {
 	struct tegra_dma *tdma = dev_get_drvdata(dev);
 	int i;
-	int ret;
-
-	ret = tegra_dma_runtime_resume(dev);
-	if (ret < 0)
-		return ret;
 
 	for (i = 0; i < tdma->chip_data->nr_channels; i++) {
 		struct tegra_dma_channel *tdc = &tdma->channels[i];
@@ -1538,7 +1444,6 @@ static int tegra_dma_pm_resume(struct device *dev)
 		tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSR,
 			(ch_reg->csr & ~TEGRA_GPCDMA_CSR_ENB));
 	}
-	tegra_dma_runtime_suspend(dev);
 	return 0;
 }
 
@@ -1555,10 +1460,6 @@ int tegra_gpcdma_restore(void)
 
 static const struct dev_pm_ops tegra_dma_dev_pm_ops = {
 #ifdef CONFIG_PM_SLEEP
-#ifdef CONFIG_PM_RUNTIME
-	.runtime_suspend = tegra_dma_runtime_suspend,
-	.runtime_resume = tegra_dma_runtime_resume,
-#endif
 	SET_SYSTEM_SLEEP_PM_OPS(tegra_dma_pm_suspend, tegra_dma_pm_resume)
 #endif
 };

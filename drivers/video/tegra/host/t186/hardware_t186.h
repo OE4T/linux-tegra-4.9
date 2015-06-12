@@ -25,6 +25,7 @@
 #include "host1x/hw_host1x5_sync.h"
 #include "host1x/hw_host1x5_uclass.h"
 #include "host1x/hw_host1x5_channel.h"
+#include "host1x/hw_host1x5_actmon.h"
 
 #define NV_HOST1X_CHANNELS	9
 #define NV_HOST1X_SYNC_MLOCK_NUM 16

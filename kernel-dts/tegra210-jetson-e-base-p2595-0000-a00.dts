@@ -467,6 +467,12 @@
 		status = "disabled";
 	};
 
+	thermal-zones {
+		AO-therm {
+			status = "okay";
+		};
+	};
+
 	thermal-fan-est {
 		compatible = "thermal-fan-est";
 		active_trip_temps = <0 63000 74000 85000 120000

@@ -4296,11 +4296,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	void __iomem *base;
 	int irq;
 	int i;
-#ifndef CONFIG_TEGRA_NVDISPLAY
-#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
-	int partition_id_disa, partition_id_disb;
-#endif
-#endif
 
 #ifdef CONFIG_ARCH_TEGRA_21x_SOC
 	if (tegra_platform_is_linsim()) {

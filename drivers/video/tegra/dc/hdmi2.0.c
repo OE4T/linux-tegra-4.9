@@ -342,10 +342,6 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 		!tegra_edid_is_scdc_present(hdmi->edid)))
 		return false;
 
-	if (!hdmi->dvi && (tegra_hdmi_mode_min_tmds_rate(mode) / 1000 >
-		tegra_edid_get_max_clk_rate(hdmi->edid)))
-		return false;
-
 	if (mode->pixclock && tegra_dc_get_out_max_pixclock(dc) &&
 		mode->pixclock > tegra_dc_get_out_max_pixclock(dc))
 		return false;

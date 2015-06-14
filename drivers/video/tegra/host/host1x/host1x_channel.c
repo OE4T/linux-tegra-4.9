@@ -377,6 +377,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 			nvhost_syncpt_incr_max(sp, job->sp[i].id, incrs);
 
 		/* mark syncpoint used by this channel */
+		nvhost_syncpt_get_ref(sp, job->sp[i].id);
 		nvhost_syncpt_mark_used(sp, ch->chid, job->sp[i].id);
 	}
 

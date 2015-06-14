@@ -32,7 +32,7 @@
 #include <linux/nvs_proximity.h>
 
 
-#define IQS_DRIVER_VERSION		(6)
+#define IQS_DRIVER_VERSION		(7)
 #define IQS_VENDOR			"Azoteq"
 #define IQS_NAME			"iqs2x3"
 #define IQS_NAME_IQS253			"iqs253"
@@ -547,6 +547,31 @@ static int iqs_gpio_rdy(struct iqs_state *st)
 	return ret;
 }
 
+static int iqs_gpio_rdy_stream_wait(struct iqs_state *st)
+{
+	unsigned int i;
+	int ret = 0;
+
+	iqs_disable_irq(st);
+	/* tCOMMS = 5.12ms default max */
+	for (i = 0; i < 6; i++) {
+		usleep_range(1000, 2000);
+		ret = gpio_get_value(st->gpio_rdy);
+		if (ret)
+			break;
+	}
+	return ret;
+}
+
+static int iqs_stream_mode_status(struct iqs_state *st)
+{
+	int rc_i;
+
+	rc_i = st->hal_tbl[st->hal_bit->event_mode.hal_i].ndx + 1;
+	rc_i += st->hal_bit->event_mode.offset;
+	return st->rc[rc_i] & st->hal_bit->event_mode.mask;
+}
+
 static int iqs_i2c(struct iqs_state *st)
 {
 	ssize_t t;
@@ -577,8 +602,19 @@ static int iqs_i2c(struct iqs_state *st)
 			ret = gpio_get_value(st->gpio_rdy);
 			if (ret) {
 				ret = iqs_gpio_rdy(st);
-				if (ret)
+				if (ret) {
+					ret = -EIO;
 					continue;
+				}
+			} else {
+				if (!iqs_stream_mode_status(st)) {
+					/* in streaming mode */
+					/* waiting next RDY cycle */
+					if (iqs_gpio_rdy_stream_wait(st)) {
+						ret = -EIO;
+						continue;
+					}
+				}
 			}
 
 			ret = i2c_transfer(st->i2c->adapter,
@@ -1085,7 +1121,6 @@ static unsigned int iqs_polldelay(struct iqs_state *st)
 
 static void iqs_read(struct iqs_state *st)
 {
-	unsigned int i;
 	unsigned int ms;
 	int ret;
 
@@ -1103,9 +1138,7 @@ static void iqs_read(struct iqs_state *st)
 			/* if IRQ disabled then in irq throttle mode */
 			iqs_enable_irq(st); /* IRQ driven mode */
 		} else {
-			i = st->hal_tbl[st->hal_bit->event_mode.hal_i].ndx + 1;
-			if (st->irq_first && !(st->rc[i] &
-					       st->hal_bit->event_mode.mask)) {
+			if (st->irq_first && !iqs_stream_mode_status(st)) {
 				/* if first IRQ and in streaming mode then skip
 				 * read to sync to the rdy signal.
 				 */

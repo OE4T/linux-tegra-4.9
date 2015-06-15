@@ -160,13 +160,12 @@ static int update_gmmu_pde3_locked(struct vm_gk20a *vm,
 	struct gk20a_mm_entry *pte = parent->entries + i;
 	u32 pde_v[2] = {0, 0};
 	u32 *pde;
-	struct gk20a *g = vm->mm->g;
 
 	gk20a_dbg_fn("");
 
-	pte_addr = g->ops.mm.get_iova_addr(g, pte->sgt->sgl, 0)
+	pte_addr = virt_to_phys(pte->cpu_va)
 		   >> gmmu_new_pde_address_shift_v();
-	pde_addr = g->ops.mm.get_iova_addr(g, parent->sgt->sgl, 0);
+	pde_addr = virt_to_phys(parent->cpu_va);
 
 	pde_v[0] |= gmmu_new_pde_aperture_video_memory_f();
 	pde_v[0] |= gmmu_new_pde_address_sys_f(u64_lo32(pte_addr));
@@ -203,7 +202,6 @@ static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 	struct gk20a_mm_entry *entry = pte->entries + i;
 	u32 pde_v[4] = {0, 0, 0, 0};
 	u32 *pde;
-	struct gk20a *g = vm->mm->g;
 
 	gk20a_dbg_fn("");
 
@@ -211,11 +209,11 @@ static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 	big_valid = entry->size && entry->pgsz == gmmu_page_size_big;
 
 	if (small_valid)
-		pte_addr_small = g->ops.mm.get_iova_addr(g, entry->sgt->sgl, 0)
+		pte_addr_small = virt_to_phys(entry->cpu_va)
 				 >> gmmu_new_dual_pde_address_shift_v();
 
 	if (big_valid)
-		pte_addr_big = g->ops.mm.get_iova_addr(g, entry->sgt->sgl, 0)
+		pte_addr_big = virt_to_phys(entry->cpu_va)
 			       >> gmmu_new_dual_pde_address_big_shift_v();
 
 	if (small_valid) {

@@ -757,8 +757,16 @@ static int tegra_hdmi_controller_disable(struct tegra_hdmi *hdmi)
 
 static int tegra_hdmi_disable(struct tegra_hdmi *hdmi)
 {
-	if (!hdmi->enabled)
+	struct tegra_dc *dc = hdmi->dc;
+
+	if (!hdmi->enabled) {
+		dc->connected = false;
+		tegra_dc_ext_process_hotplug(dc->ndev->id);
+#ifdef CONFIG_SWITCH
+		switch_set_state(&hdmi->hpd_switch, 0);
+#endif
 		return 0;
+	}
 
 	hdmi->enabled = false;
 	hdmi->eld_valid = false;

@@ -92,6 +92,7 @@
 			      <&{/sdhci@3420000}       TEGRA_SWGROUP_SDMMC2A>,
 			      <&{/sdhci@3400000}       TEGRA_SWGROUP_SDMMC1A>,
 			      <&{/bpmp}                 TEGRA_SWGROUP_BPMP>,
+			      <&{/dma@2600000}		TEGRA_SWGROUP_AXIS>,
 			      <&host1x_ctx0		TEGRA_SWGROUP_HOST1X_CTX0>,
 			      <&host1x_ctx1		TEGRA_SWGROUP_HOST1X_CTX1>,
 			      <&host1x_ctx2		TEGRA_SWGROUP_HOST1X_CTX2>,
@@ -642,6 +643,7 @@
 			      0 106 0x04
 			      0 107 0x04>;
 		#dma-cells = <1>;
+		#stream-id-cells = <1>;
 		status = "okay";
 	};
 

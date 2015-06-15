@@ -213,6 +213,7 @@
 			      <&{/sdhci@700b0400}       TEGRA_SWGROUP_SDMMC3A>,
 			      <&{/sdhci@700b0200}       TEGRA_SWGROUP_SDMMC2A>,
 			      <&{/sdhci@700b0000}       TEGRA_SWGROUP_SDMMC1A>,
+			      <&{/dma@2600000}		TEGRA_SWGROUP_AXIS>,
 			      <&{/bpmp}			TEGRA_SWGROUP_BPMP>,
 			      <&host1x_ctx0		TEGRA_SWGROUP_HOST1X_CTX0>,
 			      <&host1x_ctx1		TEGRA_SWGROUP_HOST1X_CTX1>,

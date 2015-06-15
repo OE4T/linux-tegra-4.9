@@ -2025,7 +2025,13 @@ static int _tegra_dc_config_frame_end_intr(struct tegra_dc *dc, bool enable)
 #if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 static struct tegra_dc_cmu *tegra_dc_get_cmu(struct tegra_dc *dc)
 {
-	if (dc->pdata->cmu)
+	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP ||
+		dc->out->type == TEGRA_DC_OUT_FAKE_DSIA ||
+		dc->out->type == TEGRA_DC_OUT_FAKE_DSIB ||
+		dc->out->type == TEGRA_DC_OUT_FAKE_DSI_GANGED ||
+		dc->out->type == TEGRA_DC_OUT_NULL)
+		return &default_cmu;
+	else if (dc->pdata->cmu)
 		return dc->pdata->cmu;
 	else if (dc->out->type == TEGRA_DC_OUT_HDMI)
 		return &default_limited_cmu;

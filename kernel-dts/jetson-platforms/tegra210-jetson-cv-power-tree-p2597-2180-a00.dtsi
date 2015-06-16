@@ -66,8 +66,9 @@
 			gpio = <&tca9539_74 4 0>;
 		};
 
-		en_vdd_ts_1v8: regulator@16 {
+		en_vdd_ts_1v8: regulator@201 {
 			compatible = "regulator-fixed-sync";
+			reg = <201>;
 			regulator-name = "en-vdd-ts-1v8";
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
@@ -75,8 +76,9 @@
 			enable-active-high;
 		};
 
-		en_vdd_ts_hv_3v3: regulator@17 {
+		en_vdd_ts_hv_3v3: regulator@202 {
 			compatible = "regulator-fixed-sync";
+			reg = <202>;
 			regulator-name = "en-vdd-ts-hv-3v3";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
@@ -84,8 +86,9 @@
 			enable-active-high;
 		};
 
-		en_avdd_disp_3v3: regulator@18 {
+		en_avdd_disp_3v3: regulator@203 {
 			compatible = "regulator-fixed-sync";
+			reg = <203>;
 			regulator-name = "en-vdd-disp-3v3";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
@@ -94,8 +97,9 @@
 		};
 
 
-		en_mdm_pwr_3v7: regulator@20 {
+		en_mdm_pwr_3v7: regulator@204 {
 			compatible = "regulator-fixed-sync";
+			reg = <204>;
 			regulator-name = "en-mdm-pwr-3v7";
 			regulator-min-microvol = <3700000>;
 			regulator-max-microvol = <3700000>;
@@ -103,8 +107,9 @@
 			enable-active-high;
 		};
 
-		en_dvdd_disp_1v8: regulator@21 {
+		en_dvdd_disp_1v8: regulator@205 {
 			compatible = "regulator-fixed-sync";
+			reg = <205>;
 			regulator-name = "en-vdd-disp-1v8";
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
@@ -112,8 +117,9 @@
 			enable-active-high;
 		};
 
-		en_vdd_cam_hv_2v8: regulator@22 {
+		en_vdd_cam_hv_2v8: regulator@206 {
 			compatible = "regulator-fixed-sync";
+			reg = <206>;
 			regulator-name = "en-vdd-cam-hv-2v8";
 			regulator-min-microvol = <2800000>;
 			regulator-max-microvol = <2800000>;
@@ -121,8 +127,9 @@
 			enable-active-high;
 		};
 
-		en_vdd_eth_5v0: regulator@23 {
+		en_vdd_eth_5v0: regulator@207 {
 			compatible = "regulator-fixed-sync";
+			reg = <207>;
 			regulator-name = "rtl-5v0";
 			regulator-min-microvol = <5000000>;
 			regulator-max-microvol = <5000000>;
@@ -130,12 +137,24 @@
 			enable-active-high;
 		};
 
-		en_usb_vbus2: regulator@24 {
+		en_usb_vbus2: regulator@208 {
 			compatible = "regulator-fixed-sync";
+			reg = <208>;
 			regulator-name = "en-usb-vbus2";
 			regulator-min-microvol = <5000000>;
 			regulator-max-microvol = <5000000>;
 			gpio = <&gpio TEGRA_GPIO(CC, 5) 0>;
+			enable-active-high;
+		};
+
+		en_vdd_cam_1v2: regulator@209 {
+			compatible = "regulator-fixed-sync";
+			reg = <209>;
+			regulator-name = "en-vdd-cam-1v2";
+			regulator-min-microvol = <1200000>;
+			regulator-max-microvol = <1200000>;
+			vin-supply = <&vdd_3v3>;
+			gpio = <&tca9539_77 3 1>;
 			enable-active-high;
 		};
 	};

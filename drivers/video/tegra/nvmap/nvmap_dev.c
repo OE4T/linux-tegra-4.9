@@ -1554,7 +1554,7 @@ static int nvmap_debug_compress_show(struct seq_file *s, void *unused)
 			rb_entry(n, struct nvmap_handle, node);
 
 		if (!h || !h->alloc || !h->heap_pgalloc)
-			continue;
+			goto end_loop;
 
 		nvmap_handle_get(h);
 		spin_unlock(&dev->handle_lock);
@@ -1583,6 +1583,8 @@ static int nvmap_debug_compress_show(struct seq_file *s, void *unused)
 			num_pages++;
 		}
 		spin_lock(&dev->handle_lock);
+
+end_loop:
 		n = rb_next(n);
 		h_put = h;
 		if (!n)

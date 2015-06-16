@@ -28,12 +28,15 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(209)
+#define NVI_DRIVER_VERSION		(210)
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"MPU6050"
 #define NVI_NAME_MPU6500		"MPU6500"
+#define NVI_NAME_MPU9250		"MPU9250"
 #define NVI_NAME_MPU6515		"MPU6515"
+#define NVI_NAME_MPU9350		"MPU9350"
 #define NVI_NAME_ICM20628		"ICM20628"
+#define NVI_NAME_ICM20632		"ICM20632"
 #define NVI_VENDOR			"Invensense"
 
 enum NVI_INFO {
@@ -3544,7 +3547,6 @@ static unsigned int (*fifo_read_6050[])(struct nvi_state *st,
 
 static const struct nvi_hal nvi_hal_6050 = {
 	.part				= MPU6050,
-	.part_name			= NVI_NAME_MPU6050,
 	.regs_n				= 118,
 	.reg_bank_n			= 1,
 	.fifo_size			= 1024,
@@ -3723,7 +3725,6 @@ static const struct nvi_hal_reg nvi_hal_reg_6500 = {
 
 static const struct nvi_hal nvi_hal_6500 = {
 	.part				= MPU6500,
-	.part_name			= NVI_NAME_MPU6500,
 	.regs_n				= 128,
 	.reg_bank_n			= 1,
 	.fifo_size			= 4096,
@@ -3745,7 +3746,6 @@ static const struct nvi_hal nvi_hal_6500 = {
 
 static const struct nvi_hal nvi_hal_6515 = {
 	.part				= MPU6515,
-	.part_name			= NVI_NAME_MPU6515,
 	.regs_n				= 128,
 	.reg_bank_n			= 1,
 	.fifo_size			= 4096,
@@ -4047,7 +4047,6 @@ static void nvi_por2rc_20628(struct nvi_state *st)
 
 static const struct nvi_hal nvi_hal_20628 = {
 	.part				= ICM20628,
-	.part_name			= NVI_NAME_ICM20628,
 	.regs_n				= 128,
 	.reg_bank_n			= 4,
 	.fifo_size			= 4096,
@@ -4126,25 +4125,43 @@ static void nvi_init_config(struct nvi_state *st)
 
 static int nvi_id_hal(struct nvi_state *st, u8 dev_id)
 {
+	const char *part_name;
 	unsigned int i;
 
 	switch (dev_id) {
 	case MPU6050_ID:
 		st->hal = &nvi_hal_6050;
+		part_name = NVI_NAME_MPU6050;
 		break;
 
 	case MPU6500_ID:
+		st->hal = &nvi_hal_6500;
+		part_name = NVI_NAME_MPU6500;
+		break;
+
 	case MPU9250_ID:
 		st->hal = &nvi_hal_6500;
+		part_name = NVI_NAME_MPU9250;
 		break;
 
 	case MPU6515_ID:
+		st->hal = &nvi_hal_6515;
+		part_name = NVI_NAME_MPU6515;
+		break;
+
 	case MPU9350_ID:
 		st->hal = &nvi_hal_6515;
+		part_name = NVI_NAME_MPU9350;
 		break;
 
 	case ICM20628_ID:
 		st->hal = &nvi_hal_20628;
+		part_name = NVI_NAME_ICM20628;
+		break;
+
+	case ICM20632_ID:
+		st->hal = &nvi_hal_20628;
+		part_name = NVI_NAME_ICM20632;
 		break;
 
 	default:
@@ -4157,7 +4174,7 @@ static int nvi_id_hal(struct nvi_state *st, u8 dev_id)
 	nvi_max_range(st, DEV_TEMP, 0);
 	/* populate the rest of st->cfg */
 	for (i = 0; i < DEV_N; i++) {
-		st->cfg[i].part = st->hal->part_name;
+		st->cfg[i].part = part_name;
 		st->cfg[i].version = st->hal->dev[i]->version;
 		st->cfg[i].milliamp.ival = st->hal->dev[i]->milliamp.ival;
 		st->cfg[i].milliamp.fval = st->hal->dev[i]->milliamp.fval;
@@ -4189,6 +4206,8 @@ static int nvi_id_dev(struct nvi_state *st, const char *name)
 		dev_id = MPU9350_ID;
 	else if (!strcmp(name, "icm20628"))
 		dev_id = ICM20628_ID;
+	else if (!strcmp(name, "icm20632"))
+		dev_id = ICM20632_ID;
 	else
 		return -ENODEV;
 
@@ -4245,7 +4264,7 @@ static int nvi_id_dev(struct nvi_state *st, const char *name)
 		st->input_gyro_offset[i] = 0;
 	}
 	dev_info(&st->i2c->dev, "%s: DT=%s ID=%x USING: %s\n",
-		 __func__, name, dev_id, st->hal->part_name);
+		 __func__, name, dev_id, st->cfg[0].part);
 	return ret;
 }
 
@@ -4427,10 +4446,11 @@ static struct i2c_device_id nvi_i2c_device_id[] = {
 	{ "mpu6050", 0 },
 	{ "mpu6500", 0 },
 	{ "mpu6515", 0 },
-	{ "mpu9250", 0 },
 	{ "mpu9150", 0 },
+	{ "mpu9250", 0 },
 	{ "mpu9350", 0 },
 	{ "icm20628", 0 },
+	{ "icm20632", 0 },
 	{}
 };
 
@@ -4445,6 +4465,7 @@ static const struct of_device_id nvi_of_match[] = {
 	{ .compatible = "invensense,mpu9250", },
 	{ .compatible = "invensense,mpu9350", },
 	{ .compatible = "invensense,icm20628", },
+	{ .compatible = "invensense,icm20632", },
 	{}
 };
 

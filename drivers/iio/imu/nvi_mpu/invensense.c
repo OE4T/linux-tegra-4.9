@@ -488,7 +488,7 @@ int mpu_memory_write(struct nvi_state *st, u8 mpu_addr, u16 mem_addr,
 #if CONFIG_DYNAMIC_DEBUG
 	{
 		char *write = 0;
-		pr_debug("%s WM%02X%02X%02X%s%s - %d\n", st->hal->part_name,
+		pr_debug("%s WM%02X%02X%02X%s%s - %d\n", st->cfg[0].part,
 			 mpu_addr, bank[1], addr[1],
 			 wr_pr_debug_begin(data, len, write),
 			 wr_pr_debug_end(write),
@@ -558,7 +558,7 @@ int mpu_memory_read(struct nvi_state *st, u8 mpu_addr, u16 mem_addr,
 #if CONFIG_DYNAMIC_DEBUG
 	{
 		char *read = 0;
-		pr_debug("%s RM%02X%02X%02X%02X - %s%s\n", st->hal->part_name,
+		pr_debug("%s RM%02X%02X%02X%02X - %s%s\n", st->cfg[0].part,
 			 mpu_addr, bank[1], addr[1], len,
 			 wr_pr_debug_begin(data, len, read),
 			 wr_pr_debug_end(read));
@@ -933,7 +933,7 @@ static int inv_check_6500_gyro_self_test(struct nvi_state *st,
 	if (result)
 		return result;
 	pr_debug("%s self_test gyro shift_code - %02x %02x %02x\n",
-		 st->hal->part_name, regs[0], regs[1], regs[2]);
+		 st->cfg[DEV_ANGLVEL].part, regs[0], regs[1], regs[2]);
 
 	for (i = 0; i < 3; i++) {
 		if (regs[i] != 0) {
@@ -944,7 +944,7 @@ static int inv_check_6500_gyro_self_test(struct nvi_state *st,
 		}
 	}
 	pr_debug("%s self_test gyro st_shift_prod - %+d %+d %+d\n",
-		 st->hal->part_name, st_shift_prod[0], st_shift_prod[1],
+		 st->cfg[DEV_ANGLVEL].part, st_shift_prod[0], st_shift_prod[1],
 		 st_shift_prod[2]);
 
 	for (i = 0; i < 3; i++) {
@@ -963,7 +963,7 @@ static int inv_check_6500_gyro_self_test(struct nvi_state *st,
 		}
 	}
 	pr_debug("%s self_test gyro st_shift_cust - %+d %+d %+d\n",
-		 st->hal->part_name, st_shift_cust[0], st_shift_cust[1],
+		 st->cfg[DEV_ANGLVEL].part, st_shift_cust[0], st_shift_cust[1],
 		 st_shift_cust[2]);
 
 	if (ret_val == 0) {
@@ -1004,7 +1004,7 @@ static int inv_check_6500_accel_self_test(struct nvi_state *st,
 	if (result)
 		return result;
 	pr_debug("%s self_test accel shift_code - %02x %02x %02x\n",
-		 st->hal->part_name, regs[0], regs[1], regs[2]);
+		 st->cfg[DEV_ACCEL].part, regs[0], regs[1], regs[2]);
 
 	for (i = 0; i < 3; i++) {
 		if (regs[i] != 0) {
@@ -1015,7 +1015,7 @@ static int inv_check_6500_accel_self_test(struct nvi_state *st,
 		}
 	}
 	pr_debug("%s self_test accel st_shift_prod - %+d %+d %+d\n",
-		 st->hal->part_name, st_shift_prod[0], st_shift_prod[1],
+		 st->cfg[DEV_ACCEL].part, st_shift_prod[0], st_shift_prod[1],
 		 st_shift_prod[2]);
 
 	if (!otp_value_zero) {
@@ -1037,7 +1037,7 @@ static int inv_check_6500_accel_self_test(struct nvi_state *st,
 		}
 	}
 	pr_debug("%s self_test accel st_shift_cust - %+d %+d %+d\n",
-		 st->hal->part_name, st_shift_cust[0], st_shift_cust[1],
+		 st->cfg[DEV_ACCEL].part, st_shift_cust[0], st_shift_cust[1],
 		 st_shift_cust[2]);
 
 	return ret_val;
@@ -1129,7 +1129,7 @@ static int inv_mpu_do_test(struct nvi_state *st, int self_test_flag,
 			return result;
 		fifo_count = be16_to_cpup((__be16 *)(&data[0]));
 		pr_debug("%s self_test fifo_count - %d\n",
-			 st->hal->part_name, fifo_count);
+			 st->cfg[0].part, fifo_count);
 		packet_count = fifo_count / packet_size;
 		i = 0;
 		while ((i < packet_count) && (s < st->self_test.samples)) {
@@ -1148,7 +1148,7 @@ static int inv_mpu_do_test(struct nvi_state *st, int self_test_flag,
 			ind += BYTES_PER_SENSOR;
 			pr_debug(
 			    "%s self_test accel data - %d %+d %+d %+d",
-				 st->hal->part_name,
+				 st->cfg[DEV_ACCEL].part,
 				 s, vals[0], vals[1], vals[2]);
 
 			for (j = 0; j < AXIS_N; j++) {
@@ -1157,7 +1157,7 @@ static int inv_mpu_do_test(struct nvi_state *st, int self_test_flag,
 				gyro_result[j] += vals[j];
 			}
 			pr_debug("%s self_test gyro data - %d %+d %+d %+d",
-				 st->hal->part_name,
+				 st->cfg[DEV_ANGLVEL].part,
 				 s, vals[0], vals[1], vals[2]);
 
 			s++;
@@ -1211,10 +1211,10 @@ static int inv_mpu_self_test(struct nvi_state *st)
 	if (result)
 		goto test_fail;
 	pr_debug("%s self_test accel bias_regular - %+d %+d %+d\n",
-		 st->hal->part_name, accel_bias_regular[0],
+		 st->cfg[DEV_ACCEL].part, accel_bias_regular[0],
 		 accel_bias_regular[1], accel_bias_regular[2]);
 	pr_debug("%s self_test gyro bias_regular - %+d %+d %+d\n",
-		 st->hal->part_name, gyro_bias_regular[0],
+		 st->cfg[DEV_ANGLVEL].part, gyro_bias_regular[0],
 		 gyro_bias_regular[1], gyro_bias_regular[2]);
 
 	for (i = 0; i < 3; i++) {
@@ -1234,10 +1234,10 @@ static int inv_mpu_self_test(struct nvi_state *st)
 	if (result)
 		goto test_fail;
 	pr_debug("%s self_test accel bias_st - %+d %+d %+d\n",
-		 st->hal->part_name, accel_bias_st[0], accel_bias_st[1],
+		 st->cfg[DEV_ACCEL].part, accel_bias_st[0], accel_bias_st[1],
 		 accel_bias_st[2]);
 	pr_debug("%s self_test gyro bias_st - %+d %+d %+d\n",
-		 st->hal->part_name, gyro_bias_st[0], gyro_bias_st[1],
+		 st->cfg[DEV_ANGLVEL].part, gyro_bias_st[0], gyro_bias_st[1],
 		 gyro_bias_st[2]);
 
 	 if (MPU6050 == st->hal->part) {

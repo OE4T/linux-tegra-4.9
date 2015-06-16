@@ -879,11 +879,8 @@ static int _nvhost_init_domain(struct device_node *np,
 
 	gpd->name = (char *)np->name;
 
-#warning using private generic pm domain function
-#if 0
 	if (pm_genpd_lookup_name(gpd->name))
 		return 0;
-#endif
 
 	if (of_property_read_bool(np, "is_off"))
 		is_off = true;
@@ -905,13 +902,9 @@ static int _nvhost_init_domain(struct device_node *np,
 	}
 
 	of_genpd_add_provider_simple(np, gpd);
-
-#warning genpd_pm_subdomain_attach does not work with upstream
-#if 0
 	gpd->of_node = of_node_get(np);
 
 	genpd_pm_subdomain_attach(gpd);
-#endif
 	return 0;
 }
 

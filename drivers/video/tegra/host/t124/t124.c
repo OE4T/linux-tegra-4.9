@@ -356,6 +356,7 @@ struct nvhost_device_data t124_msenc_info = {
 	.actmon_regs	= HOST1X_CHANNEL_ACTMON1_REG_BASE,
 	.actmon_enabled	= true,
 	.firmware_name	= "nvhost_msenc031.fw",
+	.resource_policy = RESOURCE_PER_CHANNEL_INSTANCE,
 };
 
 static struct platform_device tegra_msenc03_device = {
@@ -395,6 +396,7 @@ struct nvhost_device_data t124_tsec_info = {
 	.moduleid      = NVHOST_MODULE_TSEC,
 	.finalize_poweron = nvhost_tsec_finalize_poweron,
 	.prepare_poweroff = nvhost_tsec_prepare_poweroff,
+	.resource_policy  = RESOURCE_PER_CHANNEL_INSTANCE,
 };
 
 static struct platform_device tegra_tsec01_device = {
@@ -453,6 +455,7 @@ struct nvhost_device_data t124_vic_info = {
 	.firmware_name		= "vic03_ucode.bin",
 	.aggregate_constraints	= nvhost_vic_aggregate_constraints,
 	.num_ppc		= 2,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 };
 
 static struct platform_device tegra_vic03_device = {
@@ -486,6 +489,7 @@ static struct nvhost_device_data t132_msenc_info = {
 	.poweron_reset	= true,
 	.finalize_poweron = nvhost_flcn_finalize_poweron,
 	.firmware_name	= "nvhost_msenc031.fw",
+	.resource_policy = RESOURCE_PER_CHANNEL_INSTANCE,
 };
 
 static struct {

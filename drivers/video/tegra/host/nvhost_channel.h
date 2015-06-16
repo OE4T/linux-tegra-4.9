@@ -45,7 +45,7 @@ struct nvhost_channel_ops {
 
 struct nvhost_channel {
 	struct nvhost_channel_ops ops;
-	int refcount;
+	struct kref refcount;
 	int chid;
 	int dev_chid;
 	struct mutex submitlock;

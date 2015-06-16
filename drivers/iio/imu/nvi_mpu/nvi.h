@@ -29,6 +29,7 @@
 #define MPU9250_ID			(0x71)
 #define MPU9350_ID			(0x72)
 #define ICM20628_ID			(0xA2)
+#define ICM20632_ID			(0xAD)
 
 #define NVI_BYPASS_TIMEOUT_MS		(1000)
 #define POWER_UP_TIME			(100)
@@ -302,7 +303,6 @@ struct nvi_rc {
 
 struct nvi_hal {
 	enum nvi_part part;
-	const char *part_name;
 	unsigned int regs_n;
 	unsigned int reg_bank_n;
 	unsigned int fifo_size;

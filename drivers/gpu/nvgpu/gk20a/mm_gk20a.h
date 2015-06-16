@@ -153,6 +153,7 @@ struct gk20a_mm_entry {
 	int pgsz;
 	struct gk20a_mm_entry *entries;
 	int num_entries;
+	bool sparse;
 };
 
 struct priv_cmd_queue {

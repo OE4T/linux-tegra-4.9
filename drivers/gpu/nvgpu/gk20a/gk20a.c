@@ -1639,13 +1639,9 @@ static int _gk20a_init_domain(struct device_node *np,
 #endif
 
 	of_genpd_add_provider_simple(np, gpd);
-
-#warning genpd_pm_subdomain_attach does not work with upstream
-#if 0
 	gpd->of_node = of_node_get(np);
 
 	genpd_pm_subdomain_attach(gpd);
-#endif
 	return 0;
 }
 

@@ -9,3 +9,15 @@ config TEGRA186_GPC_DMA
 	  are on APB bus.
 	  This DMA controller transfers data from memory to peripheral fifo
 	  or vice versa. It also supports memory to memory data transfer.
+
+config TEGRA186_ADMA
+	bool "NVIDIA Tegra186 ADMA support"
+	depends on PLATFORM_TEGRA && ARCH_TEGRA_APE
+	depends on TEGRA_APE_AGIC && ARCH_TEGRA_18x_SOC
+	select DMA_ENGINE
+	help
+	  Support for the NVIDIA Tegra186 ADMA controller driver. The
+	  DMA controller is having multiple DMA channel and it configured
+	  for audio.This DMA controller transfers data from  memory to
+	  peripheral fifo or vice versa. It does not support memory to
+	  memory data transfer.

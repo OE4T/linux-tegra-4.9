@@ -501,7 +501,7 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 	if (flip_win->pre_syncpt_fence) {
-		sync_fence_wait(flip_win->pre_syncpt_fence, 500);
+		sync_fence_wait(flip_win->pre_syncpt_fence, 5000);
 		sync_fence_put(flip_win->pre_syncpt_fence);
 	} else
 #endif
@@ -509,7 +509,7 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 		nvhost_syncpt_wait_timeout_ext(ext->dc->ndev,
 				flip_win->attr.pre_syncpt_id,
 				flip_win->attr.pre_syncpt_val,
-				msecs_to_jiffies(500), NULL, NULL);
+				msecs_to_jiffies(5000), NULL, NULL);
 	}
 
 	if (err < 0)

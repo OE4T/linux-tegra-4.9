@@ -9,3 +9,4 @@ obj-y += pinctrl/
 obj-y += gpio/
 obj-y += reset/
 obj-y += thermal/
+obj-$(CONFIG_STAGING) += staging/

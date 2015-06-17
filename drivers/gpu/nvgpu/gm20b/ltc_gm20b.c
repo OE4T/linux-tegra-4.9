@@ -284,8 +284,8 @@ u32 gm20b_ltc_cbc_fix_config(struct gk20a *g, int base)
  */
 void gm20b_flush_ltc(struct gk20a *g)
 {
-	u32 op_pending;
 	unsigned long timeout;
+	int ltc;
 
 #define __timeout_init()				\
 	do {						\
@@ -310,19 +310,18 @@ void gm20b_flush_ltc(struct gk20a *g)
 		ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_first_class_true_f());
 
 	/* Wait on each LTC individually. */
-	__timeout_init();
-	do {
-		op_pending = gk20a_readl(g, ltc_ltc0_ltss_tstg_cmgmt1_r());
-		__timeout_check();
-	} while (op_pending &
-		 ltc_ltc0_ltss_tstg_cmgmt1_clean_pending_f());
+	for (ltc = 0; ltc < g->ltc_count; ltc++) {
+		u32 op_pending;
 
-	__timeout_init();
-	do {
-		op_pending = gk20a_readl(g, ltc_ltc1_ltss_tstg_cmgmt1_r());
-		__timeout_check();
-	} while (op_pending &
-		 ltc_ltc1_ltss_tstg_cmgmt1_clean_pending_f());
+		__timeout_init();
+		do {
+			int cmgmt1 = ltc_ltc0_ltss_tstg_cmgmt1_r() +
+				     ltc * proj_ltc_stride_v();
+			op_pending = gk20a_readl(g, cmgmt1);
+			__timeout_check();
+		} while (op_pending &
+			 ltc_ltc0_ltss_tstg_cmgmt1_clean_pending_f());
+	}
 
 	/* And invalidate. */
 	gk20a_writel(g, ltc_ltcs_ltss_tstg_cmgmt0_r(),
@@ -333,19 +332,17 @@ void gm20b_flush_ltc(struct gk20a *g)
 	     ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_first_class_true_f());
 
 	/* Wait on each LTC individually. */
-	__timeout_init();
-	do {
-		op_pending = gk20a_readl(g, ltc_ltc0_ltss_tstg_cmgmt0_r());
-		__timeout_check();
-	} while (op_pending &
-		 ltc_ltc0_ltss_tstg_cmgmt0_invalidate_pending_f());
-
-	__timeout_init();
-	do {
-		op_pending = gk20a_readl(g, ltc_ltc1_ltss_tstg_cmgmt0_r());
-		__timeout_check();
-	} while (op_pending &
-		 ltc_ltc1_ltss_tstg_cmgmt0_invalidate_pending_f());
+	for (ltc = 0; ltc < g->ltc_count; ltc++) {
+		u32 op_pending;
+		__timeout_init();
+		do {
+			int cmgmt0 = ltc_ltc0_ltss_tstg_cmgmt0_r() +
+				     ltc * proj_ltc_stride_v();
+			op_pending = gk20a_readl(g, cmgmt0);
+			__timeout_check();
+		} while (op_pending &
+			 ltc_ltc0_ltss_tstg_cmgmt0_invalidate_pending_f());
+	}
 }
 
 static int gm20b_determine_L2_size_bytes(struct gk20a *g)

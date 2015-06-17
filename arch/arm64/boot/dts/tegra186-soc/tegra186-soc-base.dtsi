@@ -1154,6 +1154,12 @@
 		status = "disabled";
 	};
 
+	tegra_adsp_audio: adsp_audio {
+		compatible = "nvidia,tegra210-adsp-audio";
+		power-domains = <&ape_pd>;
+		status = "disabled";
+        };
+
 	adsp {
 	     compatible = "nvidia,tegra18x-adsp";
 	     power-domains = <&ape_pd>;

@@ -2227,13 +2227,12 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			if (!cacheable)
 				pte_w[1] |=
 					gmmu_pte_vol_true_f();
-			else {
-			/* Store cachable value behind
+		} else {
+			/* Store cacheable value behind
 			 * gmmu_pte_write_disable_true_f */
-				if (!cacheable)
-					pte_w[1] |=
-					gmmu_pte_write_disable_true_f();
-			}
+			if (!cacheable)
+				pte_w[1] |=
+				gmmu_pte_write_disable_true_f();
 		}
 
 		gk20a_dbg(gpu_dbg_pte,

@@ -894,11 +894,8 @@ static int _nvhost_init_domain(struct device_node *np,
 	gpd->dev_ops.save_state = nvhost_module_prepare_poweroff;
 	gpd->dev_ops.restore_state = nvhost_module_finalize_poweron;
 	if (!of_property_read_bool(np, "host1x")) {
-#warning TODO: pm domain suspend ops removed
-#if 0
 		gpd->dev_ops.suspend = nvhost_module_suspend;
 		gpd->dev_ops.resume = nvhost_module_finalize_poweron;
-#endif
 	}
 
 	of_genpd_add_provider_simple(np, gpd);

@@ -648,7 +648,8 @@ static int mc_sid_probe(struct platform_device *pdev)
 	mc_sid_base = addr;
 
 	id = of_match_device(mc_sid_of_match, &pdev->dev);
-	mc_sid_is_cl34000094 = (long)id->data;
+	if (id)
+		mc_sid_is_cl34000094 = (long)id->data;
 
 	for (i = 0; i < ARRAY_SIZE(sid_override_reg); i++)
 		__mc_override_sid(0x7f, i, DONTCARE);

@@ -55,9 +55,7 @@ static int nvhost_module_toggle_slcg(struct notifier_block *nb,
 				     unsigned long action, void *data);
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
-#if 0
 static int nvhost_module_suspend(struct device *dev);
-#endif
 static int nvhost_module_power_on(struct generic_pm_domain *domain);
 static int nvhost_module_power_off(struct generic_pm_domain *domain);
 static int nvhost_module_prepare_poweroff(struct device *dev);
@@ -993,11 +991,8 @@ static int _nvhost_module_add_domain(struct generic_pm_domain *domain,
 		domain->dev_ops.save_state = nvhost_module_prepare_poweroff;
 		domain->dev_ops.restore_state = nvhost_module_finalize_poweron;
 		if (client) {
-#warning TODO: pm domain suspend ops removed
-#if 0
 			domain->dev_ops.suspend = nvhost_module_suspend;
 			domain->dev_ops.resume = nvhost_module_finalize_poweron;
-#endif
 		}
 
 		/* Set only host1x as wakeup capable */
@@ -1110,7 +1105,6 @@ static void nvhost_module_load_regs(struct platform_device *pdev, bool prod)
 }
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
-#if 0
 static int nvhost_module_suspend(struct device *dev)
 {
 	/*
@@ -1124,7 +1118,6 @@ static int nvhost_module_suspend(struct device *dev)
 
 	return nvhost_module_prepare_poweroff(dev);
 }
-#endif
 
 static int nvhost_module_power_on(struct generic_pm_domain *domain)
 {

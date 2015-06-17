@@ -4,7 +4,6 @@ ccflags-y += -Idrivers/devfreq
 ccflags-y += -Wno-multichar
 
 subdir-ccflags-y := -Werror
-subdir-ccflags-y += -Wno-error=cpp
 
 nvhost-objs = \
 	nvhost_acm.o \

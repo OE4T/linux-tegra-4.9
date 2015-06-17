@@ -38,7 +38,7 @@
 		bus-width = <4>;
 		mmc-ocr-mask = <3>;
 		uhs-mask = <0x1C>;
-		power-gpios = <180>;
+		power-gpios = <&gpio 180 0>;
 		nvidia,sd-device;
 		max-clk-limit = <12800000>;
 		status = "okay";

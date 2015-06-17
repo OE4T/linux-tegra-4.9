@@ -1886,6 +1886,7 @@ struct device_node *tegra_get_panel_node_out_type_check
 	struct device_node *np_panel = NULL;
 	struct device_node *np_def_out = NULL;
 	u32 temp;
+	int ret = 0;
 
 	if (dc->ndev->id == 0)
 		np_panel = tegra_primary_panel_get_dt_node(NULL);
@@ -1904,9 +1905,19 @@ struct device_node *tegra_get_panel_node_out_type_check
 	 */
 	np_def_out = of_get_child_by_name(np_panel,
 		"disp-default-out");
-	if (np_def_out)
-		of_property_read_u32(np_def_out,
+
+	if (!np_def_out) {
+		pr_err("No disp_default_out node\n");
+		return NULL;
+	}
+
+	ret = of_property_read_u32(np_def_out,
 			"nvidia,out-type", &temp);
+	if (ret) {
+		pr_err("Not able to read nvidia,out-type\n");
+		return NULL;
+	}
+
 	if (temp == out_type) {
 		of_node_put(np_def_out);
 		return np_panel;
@@ -2135,6 +2146,11 @@ struct tegra_dc_platform_data
 	} else
 		pr_err("Failed to parse out type %d\n",
 			pdata->default_out->type);
+
+	if (!np_target_disp) {
+		pr_err("%s: could not find valid display node\n", __func__);
+		goto fail_parse;
+	}
 
 	default_out_np = of_get_child_by_name(np_target_disp,
 		"disp-default-out");

@@ -4525,6 +4525,10 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	} else {
 		fb_mem = platform_get_resource_byname(ndev,
 			IORESOURCE_MEM, "fbmem");
+		if (fb_mem == NULL) {
+			ret = -ENOMEM;
+			goto err_iounmap_reg;
+		}
 	}
 
 #ifdef CONFIG_TEGRA_NVDISPLAY

@@ -567,12 +567,10 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 
 	return sor;
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 err_src: __maybe_unused
-#ifndef CONFIG_TEGRA_NVDISPLAY
 	clk_put(brick_clk);
-#endif
 err_brick: __maybe_unused
-#ifndef CONFIG_TEGRA_NVDISPLAY
 	clk_put(safe_clk);
 #endif
 err_safe: __maybe_unused

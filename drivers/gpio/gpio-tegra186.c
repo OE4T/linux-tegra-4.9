@@ -388,7 +388,6 @@ static struct irq_chip tegra_gpio_irq_chip = {
 
 static void tegra_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 {
-	struct tegra_gpio_controller *controller;
 	int pin;
 	u32 i;
 	unsigned long val;
@@ -399,7 +398,6 @@ static void tegra_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 
 	chained_irq_enter(chip, desc);
 
-	controller = irq_get_handler_data(irq);
 	switch (irq) {
 	case DEFAULT_IRQ_OFFSET + 47:
 		for (i = 0; i < MAX_GPIO_PORTS; i++) {

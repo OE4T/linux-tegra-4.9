@@ -55,8 +55,11 @@ static u64 nvgpu_bitmap_alloc_end(struct nvgpu_allocator *a)
 	return ba->base + ba->length;
 }
 
+/*
+ * @page_size is ignored.
+ */
 static u64 nvgpu_bitmap_alloc_fixed(struct nvgpu_allocator *__a,
-				    u64 base, u64 len)
+				    u64 base, u64 len, u32 page_size)
 {
 	struct nvgpu_bitmap_allocator *a = bitmap_allocator(__a);
 	u64 blks, offs, ret;

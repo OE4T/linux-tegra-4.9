@@ -227,11 +227,12 @@ static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
 
-	nvgpu_alloc_destroy(&vm->vma[gmmu_page_size_kernel]);
-	if (nvgpu_alloc_initialized(&vm->vma[gmmu_page_size_small]))
-		nvgpu_alloc_destroy(&vm->vma[gmmu_page_size_small]);
-	if (nvgpu_alloc_initialized(&vm->vma[gmmu_page_size_big]))
-		nvgpu_alloc_destroy(&vm->vma[gmmu_page_size_big]);
+	if (nvgpu_alloc_initialized(&vm->kernel))
+		nvgpu_alloc_destroy(&vm->kernel);
+	if (nvgpu_alloc_initialized(&vm->user))
+		nvgpu_alloc_destroy(&vm->user);
+	if (nvgpu_alloc_initialized(&vm->fixed))
+		nvgpu_alloc_destroy(&vm->fixed);
 
 	mutex_unlock(&vm->update_gmmu_lock);
 
@@ -273,8 +274,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 	struct tegra_vgpu_as_share_params *p = &msg.params.as_share;
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm;
-	u64 small_vma_start, small_vma_limit, large_vma_start, large_vma_limit,
-		kernel_vma_start, kernel_vma_limit;
+	u64 user_vma_start, user_vma_limit, kernel_vma_start, kernel_vma_limit;
 	char name[32];
 	int err, i;
 	const bool userspace_managed =
@@ -306,6 +306,11 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 	vm->mm = mm;
 	vm->as_share = as_share;
 
+	/* Set up vma pointers. */
+	vm->vma[0] = &vm->user;
+	vm->vma[1] = &vm->user;
+	vm->vma[2] = &vm->kernel;
+
 	for (i = 0; i < gmmu_nr_page_sizes; i++)
 		vm->gmmu_page_sizes[i] = gmmu_page_sizes[i];
 
@@ -328,93 +333,74 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 	vm->handle = p->handle;
 
 	/* setup vma limits */
-	small_vma_start = vm->va_start;
-
-	if (vm->big_pages) {
-		/* First 16GB of the address space goes towards small
-		 * pages. The kernel reserved pages are at the end.
-		 * What ever remains is allocated to large pages.
-		 */
-		small_vma_limit = __nv_gmmu_va_small_page_limit();
-		large_vma_start = small_vma_limit;
-		large_vma_limit = vm->va_limit - mm->channel.kernel_size;
-	} else {
-		small_vma_limit = vm->va_limit - mm->channel.kernel_size;
-		large_vma_start = 0;
-		large_vma_limit = 0;
-	}
+	user_vma_start = vm->va_start;
+	user_vma_limit = vm->va_limit - mm->channel.kernel_size;
 
 	kernel_vma_start = vm->va_limit - mm->channel.kernel_size;
 	kernel_vma_limit = vm->va_limit;
 
 	gk20a_dbg_info(
-		"small_vma=[0x%llx,0x%llx) large_vma=[0x%llx,0x%llx) kernel_vma=[0x%llx,0x%llx)\n",
-		small_vma_start, small_vma_limit,
-		large_vma_start, large_vma_limit,
+		"user_vma=[0x%llx,0x%llx) kernel_vma=[0x%llx,0x%llx)\n",
+		user_vma_start, user_vma_limit,
 		kernel_vma_start, kernel_vma_limit);
 
-	/* check that starts do not exceed limits */
-	WARN_ON(small_vma_start > small_vma_limit);
-	WARN_ON(large_vma_start > large_vma_limit);
-	/* kernel_vma must also be non-zero */
+	WARN_ON(user_vma_start > user_vma_limit);
 	WARN_ON(kernel_vma_start >= kernel_vma_limit);
 
-	if (small_vma_start > small_vma_limit ||
-	    large_vma_start > large_vma_limit ||
+	if (user_vma_start > user_vma_limit ||
 	    kernel_vma_start >= kernel_vma_limit) {
 		err = -EINVAL;
 		goto clean_up_share;
 	}
 
-	if (small_vma_start < small_vma_limit) {
+	if (user_vma_start < user_vma_limit) {
 		snprintf(name, sizeof(name), "gk20a_as_%d-%dKB", as_share->id,
 			 gmmu_page_sizes[gmmu_page_size_small] >> 10);
+		if (!gk20a_big_pages_possible(vm, user_vma_start,
+					      user_vma_limit - user_vma_start))
+			vm->big_pages = false;
 
 		err = __nvgpu_buddy_allocator_init(
 					g,
-					&vm->vma[gmmu_page_size_small],
+					vm->vma[gmmu_page_size_small],
 					vm, name,
-					small_vma_start,
-					small_vma_limit - small_vma_start,
+					user_vma_start,
+					user_vma_limit - user_vma_start,
 					SZ_4K,
 					GPU_BALLOC_MAX_ORDER,
 					GPU_ALLOC_GVA_SPACE);
 		if (err)
 			goto clean_up_share;
-	}
-
-	if (large_vma_start < large_vma_limit) {
-		snprintf(name, sizeof(name), "gk20a_as_%d-%dKB", as_share->id,
-			gmmu_page_sizes[gmmu_page_size_big] >> 10);
-		err = __nvgpu_buddy_allocator_init(
-					g,
-					&vm->vma[gmmu_page_size_big],
-					vm, name,
-					large_vma_start,
-					large_vma_limit - large_vma_start,
-					big_page_size,
-					GPU_BALLOC_MAX_ORDER,
-					GPU_ALLOC_GVA_SPACE);
-		if (err)
-			goto clean_up_small_allocator;
+	} else {
+		/*
+		 * Make these allocator pointers point to the kernel allocator
+		 * since we still use the legacy notion of page size to choose
+		 * the allocator.
+		 */
+		vm->vma[0] = &vm->kernel;
+		vm->vma[1] = &vm->kernel;
 	}
 
 	snprintf(name, sizeof(name), "gk20a_as_%dKB-sys",
 		 gmmu_page_sizes[gmmu_page_size_kernel] >> 10);
+	if (!gk20a_big_pages_possible(vm, kernel_vma_start,
+				     kernel_vma_limit - kernel_vma_start))
+		vm->big_pages = false;
+
 	/*
 	 * kernel reserved VMA is at the end of the aperture
 	 */
 	err = __nvgpu_buddy_allocator_init(
-				     g,
-				     &vm->vma[gmmu_page_size_kernel],
-				     vm, name,
-				     kernel_vma_start,
-				     kernel_vma_limit - kernel_vma_start,
-				     SZ_4K,
-				     GPU_BALLOC_MAX_ORDER,
-				     GPU_ALLOC_GVA_SPACE);
+				g,
+				vm->vma[gmmu_page_size_kernel],
+				vm, name,
+				kernel_vma_start,
+				kernel_vma_limit - kernel_vma_start,
+				SZ_4K,
+				GPU_BALLOC_MAX_ORDER,
+				GPU_ALLOC_GVA_SPACE);
 	if (err)
-		goto clean_up_big_allocator;
+		goto clean_up_user_allocator;
 
 	vm->mapped_buffers = RB_ROOT;
 
@@ -426,12 +412,9 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 
 	return 0;
 
-clean_up_big_allocator:
-	if (large_vma_start < large_vma_limit)
-		nvgpu_alloc_destroy(&vm->vma[gmmu_page_size_big]);
-clean_up_small_allocator:
-	if (small_vma_start < small_vma_limit)
-		nvgpu_alloc_destroy(&vm->vma[gmmu_page_size_small]);
+clean_up_user_allocator:
+	if (user_vma_start < user_vma_limit)
+		nvgpu_alloc_destroy(&vm->user);
 clean_up_share:
 	msg.cmd = TEGRA_VGPU_CMD_AS_FREE_SHARE;
 	msg.handle = vgpu_get_handle(g);

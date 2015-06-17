@@ -77,10 +77,11 @@ void nvgpu_free(struct nvgpu_allocator *a, u64 addr)
 	a->ops->free(a, addr);
 }
 
-u64 nvgpu_alloc_fixed(struct nvgpu_allocator *a, u64 base, u64 len)
+u64 nvgpu_alloc_fixed(struct nvgpu_allocator *a, u64 base, u64 len,
+		      u32 page_size)
 {
 	if (a->ops->alloc_fixed)
-		return a->ops->alloc_fixed(a, base, len);
+		return a->ops->alloc_fixed(a, base, len, page_size);
 
 	return 0;
 }

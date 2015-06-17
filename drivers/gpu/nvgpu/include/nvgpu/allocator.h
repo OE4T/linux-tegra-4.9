@@ -41,11 +41,15 @@ struct nvgpu_allocator_ops {
 	 * regular and fixed allocations then free_fixed() does not need to
 	 * be implemented. This behavior exists for legacy reasons and should
 	 * not be propagated to new allocators.
+	 *
+	 * For allocators where the @page_size field is not applicable it can
+	 * be left as 0. Otherwise a valid page size should be passed (4k or
+	 * what the large page size is).
 	 */
 	u64  (*alloc_fixed)(struct nvgpu_allocator *allocator,
-			     u64 base, u64 len);
+			    u64 base, u64 len, u32 page_size);
 	void (*free_fixed)(struct nvgpu_allocator *allocator,
-			    u64 base, u64 len);
+			   u64 base, u64 len);
 
 	/*
 	 * Allow allocators to reserve space for carveouts.
@@ -213,7 +217,8 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *a,
 u64  nvgpu_alloc(struct nvgpu_allocator *allocator, u64 len);
 void nvgpu_free(struct nvgpu_allocator *allocator, u64 addr);
 
-u64  nvgpu_alloc_fixed(struct nvgpu_allocator *allocator, u64 base, u64 len);
+u64  nvgpu_alloc_fixed(struct nvgpu_allocator *allocator, u64 base, u64 len,
+		       u32 page_size);
 void nvgpu_free_fixed(struct nvgpu_allocator *allocator, u64 base, u64 len);
 
 int  nvgpu_alloc_reserve_carveout(struct nvgpu_allocator *a,
@@ -298,5 +303,8 @@ void nvgpu_alloc_debugfs_init(struct device *dev);
 	} while (0)
 
 #endif
+#define balloc_pr(alloctor, format, arg...)		\
+	pr_info("%-25s %25s() " format,			\
+		alloctor->name, __func__, ##arg)
 
 #endif /* NVGPU_ALLOCATOR_H */

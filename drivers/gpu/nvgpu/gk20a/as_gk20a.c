@@ -281,7 +281,7 @@ static int gk20a_as_ioctl_get_va_regions(
 		struct nvgpu_as_va_region region;
 		struct nvgpu_allocator *vma =
 			nvgpu_alloc_initialized(&vm->fixed) ?
-			&vm->fixed : &vm->vma[i];
+			&vm->fixed : vm->vma[i];
 
 		memset(&region, 0, sizeof(struct nvgpu_as_va_region));
 

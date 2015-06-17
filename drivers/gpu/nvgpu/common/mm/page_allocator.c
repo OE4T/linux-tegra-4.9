@@ -648,7 +648,7 @@ done:
 }
 
 static struct nvgpu_page_alloc *__nvgpu_alloc_pages_fixed(
-	struct nvgpu_page_allocator *a, u64 base, u64 length)
+	struct nvgpu_page_allocator *a, u64 base, u64 length, u32 unused)
 {
 	struct nvgpu_page_alloc *alloc;
 	struct page_alloc_chunk *c;
@@ -658,7 +658,7 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_pages_fixed(
 	if (!alloc || !c)
 		goto fail;
 
-	alloc->base = nvgpu_alloc_fixed(&a->source_allocator, base, length);
+	alloc->base = nvgpu_alloc_fixed(&a->source_allocator, base, length, 0);
 	if (!alloc->base) {
 		WARN(1, "nvgpu: failed to fixed alloc pages @ 0x%010llx", base);
 		goto fail;
@@ -680,8 +680,11 @@ fail:
 	return ERR_PTR(-ENOMEM);
 }
 
+/*
+ * @page_size is ignored.
+ */
 static u64 nvgpu_page_alloc_fixed(struct nvgpu_allocator *__a,
-				  u64 base, u64 len)
+				  u64 base, u64 len, u32 page_size)
 {
 	struct nvgpu_page_allocator *a = page_allocator(__a);
 	struct nvgpu_page_alloc *alloc = NULL;
@@ -694,7 +697,7 @@ static u64 nvgpu_page_alloc_fixed(struct nvgpu_allocator *__a,
 
 	alloc_lock(__a);
 
-	alloc = __nvgpu_alloc_pages_fixed(a, base, aligned_len);
+	alloc = __nvgpu_alloc_pages_fixed(a, base, aligned_len, 0);
 	if (IS_ERR(alloc)) {
 		alloc_unlock(__a);
 		return 0;

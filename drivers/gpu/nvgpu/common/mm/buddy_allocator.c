@@ -484,8 +484,9 @@ static struct nvgpu_buddy *__balloc_find_buddy(struct nvgpu_buddy_allocator *a,
 		bud = list_first_entry(balloc_get_order_list(a, order),
 				       struct nvgpu_buddy, buddy_entry);
 
-	if (bud->pte_size != BALLOC_PTE_SIZE_ANY &&
-	    bud->pte_size != pte_size)
+	if (pte_size != BALLOC_PTE_SIZE_ANY &&
+	    pte_size != bud->pte_size &&
+	    bud->pte_size != BALLOC_PTE_SIZE_ANY)
 		return NULL;
 
 	return bud;
@@ -643,7 +644,7 @@ static void __balloc_get_parent_range(struct nvgpu_buddy_allocator *a,
  * necessary for this buddy to exist as well.
  */
 static struct nvgpu_buddy *__balloc_make_fixed_buddy(
-	struct nvgpu_buddy_allocator *a, u64 base, u64 order)
+	struct nvgpu_buddy_allocator *a, u64 base, u64 order, int pte_size)
 {
 	struct nvgpu_buddy *bud = NULL;
 	struct list_head *order_list;
@@ -664,6 +665,20 @@ static struct nvgpu_buddy *__balloc_make_fixed_buddy(
 		order_list = balloc_get_order_list(a, cur_order);
 		list_for_each_entry(bud, order_list, buddy_entry) {
 			if (bud->start == cur_base) {
+				/*
+				 * Make sure page size matches if it's smaller
+				 * than a PDE sized buddy.
+				 */
+				if (bud->order <= a->pte_blk_order &&
+				    bud->pte_size != BALLOC_PTE_SIZE_ANY &&
+				    bud->pte_size != pte_size) {
+					/* Welp, that's the end of that. */
+					alloc_dbg(balloc_owner(a),
+						  "Fixed buddy PTE "
+						  "size mismatch!\n");
+					return NULL;
+				}
+
 				found = 1;
 				break;
 			}
@@ -683,7 +698,10 @@ static struct nvgpu_buddy *__balloc_make_fixed_buddy(
 
 	/* Split this buddy as necessary until we get the target buddy. */
 	while (bud->start != base || bud->order != order) {
-		if (balloc_split_buddy(a, bud, BALLOC_PTE_SIZE_ANY)) {
+		if (balloc_split_buddy(a, bud, pte_size)) {
+			alloc_dbg(balloc_owner(a),
+				  "split buddy failed? {0x%llx, %llu}\n",
+				  bud->start, bud->order);
 			balloc_coalesce(a, bud);
 			return NULL;
 		}
@@ -700,7 +718,7 @@ static struct nvgpu_buddy *__balloc_make_fixed_buddy(
 
 static u64 __balloc_do_alloc_fixed(struct nvgpu_buddy_allocator *a,
 				   struct nvgpu_fixed_alloc *falloc,
-				   u64 base, u64 len)
+				   u64 base, u64 len, int pte_size)
 {
 	u64 shifted_base, inc_base;
 	u64 align_order;
@@ -731,7 +749,7 @@ static u64 __balloc_do_alloc_fixed(struct nvgpu_buddy_allocator *a,
 
 		bud = __balloc_make_fixed_buddy(a,
 					balloc_base_unshift(a, inc_base),
-					align_order);
+					align_order, pte_size);
 		if (!bud) {
 			alloc_dbg(balloc_owner(a),
 				  "Fixed buddy failed: {0x%llx, %llu}!\n",
@@ -817,17 +835,8 @@ static u64 nvgpu_buddy_balloc(struct nvgpu_allocator *__a, u64 len)
 		return 0;
 	}
 
-	/*
-	 * For now pass the base address of the allocator's region to
-	 * __get_pte_size(). This ensures we get the right page size for
-	 * the alloc but we don't have to know what the real address is
-	 * going to be quite yet.
-	 *
-	 * TODO: once userspace supports a unified address space pass 0 for
-	 * the base. This will make only 'len' affect the PTE size.
-	 */
 	if (a->flags & GPU_ALLOC_GVA_SPACE)
-		pte_size = __get_pte_size(a->vm, a->base, len);
+		pte_size = __get_pte_size(a->vm, 0, len);
 	else
 		pte_size = BALLOC_PTE_SIZE_ANY;
 
@@ -858,8 +867,9 @@ static u64 nvgpu_buddy_balloc(struct nvgpu_allocator *__a, u64 len)
  * Requires @__a to be locked.
  */
 static u64 __nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
-				      u64 base, u64 len)
+				      u64 base, u64 len, u32 page_size)
 {
+	int pte_size = BALLOC_PTE_SIZE_ANY;
 	u64 ret, real_bytes = 0;
 	struct nvgpu_buddy *bud;
 	struct nvgpu_fixed_alloc *falloc = NULL;
@@ -873,6 +883,16 @@ static u64 __nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
 
 	if (len == 0)
 		goto fail;
+
+	/* Check that the page size is valid. */
+	if (a->flags & GPU_ALLOC_GVA_SPACE && a->vm->big_pages) {
+		if (page_size == a->vm->big_page_size)
+			pte_size = gmmu_page_size_big;
+		else if (page_size == SZ_4K)
+			pte_size = gmmu_page_size_small;
+		else
+			goto fail;
+	}
 
 	falloc = kmalloc(sizeof(*falloc), GFP_KERNEL);
 	if (!falloc)
@@ -889,7 +909,7 @@ static u64 __nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
 		goto fail_unlock;
 	}
 
-	ret = __balloc_do_alloc_fixed(a, falloc, base, len);
+	ret = __balloc_do_alloc_fixed(a, falloc, base, len, pte_size);
 	if (!ret) {
 		alloc_dbg(balloc_owner(a),
 			  "Alloc-fixed failed ?? 0x%llx -> 0x%llx\n",
@@ -927,13 +947,13 @@ fail:
  * Please do not use this function unless _absolutely_ necessary.
  */
 static u64 nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
-				    u64 base, u64 len)
+				    u64 base, u64 len, u32 page_size)
 {
 	u64 alloc;
 	struct nvgpu_buddy_allocator *a = __a->priv;
 
 	alloc_lock(__a);
-	alloc = __nvgpu_balloc_fixed_buddy(__a, base, len);
+	alloc = __nvgpu_balloc_fixed_buddy(__a, base, len, page_size);
 	a->alloc_made = 1;
 	alloc_unlock(__a);
 
@@ -1034,7 +1054,7 @@ static int nvgpu_buddy_reserve_co(struct nvgpu_allocator *__a,
 	}
 
 	/* Should not be possible to fail... */
-	addr = __nvgpu_balloc_fixed_buddy(__a, co->base, co->length);
+	addr = __nvgpu_balloc_fixed_buddy(__a, co->base, co->length, 0);
 	if (!addr) {
 		err = -ENOMEM;
 		pr_warn("%s: Failed to reserve a valid carveout!\n", __func__);
@@ -1310,6 +1330,10 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	alloc_dbg(__a, "               base      0x%llx\n", a->base);
 	alloc_dbg(__a, "               size      0x%llx\n", a->length);
 	alloc_dbg(__a, "               blk_size  0x%llx\n", a->blk_size);
+	if (flags & GPU_ALLOC_GVA_SPACE)
+		alloc_dbg(balloc_owner(a),
+		       "               pde_size  0x%llx\n",
+			  balloc_order_to_len(a, a->pte_blk_order));
 	alloc_dbg(__a, "               max_order %llu\n", a->max_order);
 	alloc_dbg(__a, "               flags     0x%llx\n", a->flags);
 

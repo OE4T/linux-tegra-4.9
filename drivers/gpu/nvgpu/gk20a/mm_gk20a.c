@@ -1001,7 +1001,8 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 	mutex_init(&mm->l2_op_lock);
 
 	/*TBD: make channel vm size configurable */
-	mm->channel.user_size = NV_MM_DEFAULT_USER_SIZE;
+	mm->channel.user_size = NV_MM_DEFAULT_USER_SIZE -
+		NV_MM_DEFAULT_KERNEL_SIZE;
 	mm->channel.kernel_size = NV_MM_DEFAULT_KERNEL_SIZE;
 
 	gk20a_dbg_info("channel vm size: user %dMB  kernel %dMB",
@@ -1626,7 +1627,7 @@ u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
 		      enum gmmu_pgsz_gk20a gmmu_pgsz_idx)
 
 {
-	struct nvgpu_allocator *vma = &vm->vma[gmmu_pgsz_idx];
+	struct nvgpu_allocator *vma = vm->vma[gmmu_pgsz_idx];
 	u64 offset;
 	u64 gmmu_page_size = vm->gmmu_page_sizes[gmmu_pgsz_idx];
 
@@ -1663,7 +1664,7 @@ int gk20a_vm_free_va(struct vm_gk20a *vm,
 		     u64 offset, u64 size,
 		     enum gmmu_pgsz_gk20a pgsz_idx)
 {
-	struct nvgpu_allocator *vma = &vm->vma[pgsz_idx];
+	struct nvgpu_allocator *vma = vm->vma[pgsz_idx];
 
 	gk20a_dbg_info("%s free addr=0x%llx, size=0x%llx",
 			vma->name, offset, size);
@@ -1790,13 +1791,7 @@ struct buffer_attrs {
 static void gmmu_select_page_size(struct vm_gk20a *vm,
 				  struct buffer_attrs *bfr)
 {
-	int i;
-	/*  choose the biggest first (top->bottom) */
-	for (i = gmmu_page_size_kernel - 1; i >= 0; i--)
-		if (!((vm->gmmu_page_sizes[i] - 1) & bfr->align)) {
-			bfr->pgsz_idx = i;
-			break;
-		}
+	bfr->pgsz_idx = __get_pte_size(vm, 0, bfr->size);
 }
 
 static int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
@@ -2497,9 +2492,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	 * the alignment determined by gmmu_select_page_size().
 	 */
 	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
-		int pgsz_idx =
-			__nv_gmmu_va_is_big_page_region(vm, offset_align) ?
-			gmmu_page_size_big : gmmu_page_size_small;
+		int pgsz_idx = __get_pte_size(vm, offset_align, mapping_size);
 		if (pgsz_idx > bfr.pgsz_idx) {
 			gk20a_err(d, "%llx buffer pgsz %d, VA pgsz %d",
 				  offset_align, bfr.pgsz_idx, pgsz_idx);
@@ -3149,7 +3142,7 @@ static u64 __gk20a_gmmu_alloc(struct nvgpu_allocator *allocator, dma_addr_t at,
 	u64 addr = 0;
 
 	if (at)
-		addr = nvgpu_alloc_fixed(allocator, at, size);
+		addr = nvgpu_alloc_fixed(allocator, at, size, 0);
 	else
 		addr = nvgpu_alloc(allocator, size);
 
@@ -4260,12 +4253,13 @@ static int gk20a_init_sema_pool(struct vm_gk20a *vm)
 	 *
 	 * !!! TODO: cleanup.
 	 */
-	sema_sea->gpu_va = nvgpu_alloc_fixed(&vm->vma[gmmu_page_size_kernel],
+	sema_sea->gpu_va = nvgpu_alloc_fixed(&vm->kernel,
 					     vm->va_limit -
 					     mm->channel.kernel_size,
-					     512 * PAGE_SIZE);
+					     512 * PAGE_SIZE,
+					     SZ_4K);
 	if (!sema_sea->gpu_va) {
-		nvgpu_free(&vm->vma[gmmu_page_size_small], sema_sea->gpu_va);
+		nvgpu_free(&vm->kernel, sema_sea->gpu_va);
 		gk20a_vm_put(vm);
 		return -ENOMEM;
 	}
@@ -4273,14 +4267,78 @@ static int gk20a_init_sema_pool(struct vm_gk20a *vm)
 	err = gk20a_semaphore_pool_map(vm->sema_pool, vm);
 	if (err) {
 		gk20a_semaphore_pool_unmap(vm->sema_pool, vm);
-		nvgpu_free(&vm->vma[gmmu_page_size_small],
-			    vm->sema_pool->gpu_va);
+		nvgpu_free(vm->vma[gmmu_page_size_small],
+			   vm->sema_pool->gpu_va);
 		gk20a_vm_put(vm);
 	}
 
 	return 0;
 }
 
+/*
+ * Determine if the passed address space can support big pages or not.
+ */
+int gk20a_big_pages_possible(struct vm_gk20a *vm, u64 base, u64 size)
+{
+	u64 mask = ((u64)vm->big_page_size << 10) - 1;
+
+	if (base & mask || size & mask)
+		return 0;
+	return 1;
+}
+
+/*
+ * Attempt to find a reserved memory area to determine PTE size for the passed
+ * mapping. If no reserved area can be found use small pages but drop a warning.
+ */
+enum gmmu_pgsz_gk20a __get_pte_size_fixed_map(struct vm_gk20a *vm,
+					      u64 base, u64 size)
+{
+	struct vm_reserved_va_node *node;
+
+	node = addr_to_reservation(vm, base);
+	if (!node)
+		return gmmu_page_size_small;
+
+	return node->pgsz_idx;
+}
+
+/**
+ * gk20a_init_vm() - Initialize an address space.
+ *
+ * @mm - Parent MM.
+ * @vm - The VM to init.
+ * @big_page_size - Size of big pages associated with this VM.
+ * @low_hole - The size of the low hole (unaddressable memory at the bottom of
+ *	       the address space.
+ * @kernel_reserved - Space reserved for kernel only allocations.
+ * @aperture_size - Total size of the aperture.
+ * @big_pages - Ignored. Will be set based on other passed params.
+ * @name - Name of the address space.
+ *
+ * This function initializes an address space according to the following map:
+ *
+ *     +--+ 0x0
+ *     |  |
+ *     +--+ @low_hole
+ *     |  |
+ *     ~  ~   This is the "user" section.
+ *     |  |
+ *     +--+ @aperture_size - @kernel_reserved
+ *     |  |
+ *     ~  ~   This is the "kernel" section.
+ *     |  |
+ *     +--+ @aperture_size
+ *
+ * The user section is therefor what ever is left over after the @low_hole and
+ * @kernel_reserved memory have been portioned out. The @kernel_reserved is
+ * always persent at the top of the memory space and the @low_hole is always at
+ * the bottom.
+ *
+ * For certain address spaces a "user" section makes no sense (bar1, etc) so in
+ * such cases the @kernel_reserved and @low_hole should sum to exactly
+ * @aperture_size.
+ */
 int gk20a_init_vm(struct mm_gk20a *mm,
 		struct vm_gk20a *vm,
 		u32 big_page_size,
@@ -4293,19 +4351,22 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 {
 	int err, i;
 	char alloc_name[32];
-	u64 small_vma_start, small_vma_limit, large_vma_start, large_vma_limit,
-		kernel_vma_start, kernel_vma_limit;
+	u64 user_vma_start, user_vma_limit, kernel_vma_start, kernel_vma_limit;
 	u32 pde_lo, pde_hi;
 	struct gk20a *g = mm->g;
 
 	/* note: this must match gmmu_pgsz_gk20a enum */
 	u32 gmmu_page_sizes[gmmu_nr_page_sizes] = { SZ_4K, big_page_size, SZ_4K };
 
-	WARN_ON(kernel_reserved + low_hole > aperture_size);
-	if (kernel_reserved > aperture_size)
+	if (WARN_ON(kernel_reserved + low_hole > aperture_size))
 		return -ENOMEM;
 
 	vm->mm = mm;
+
+	/* Set up vma pointers. */
+	vm->vma[0] = &vm->user;
+	vm->vma[1] = &vm->user;
+	vm->vma[2] = &vm->kernel;
 
 	vm->va_start = low_hole;
 	vm->va_limit = aperture_size;
@@ -4321,10 +4382,8 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 
 	gk20a_dbg_info("small page-size (%dKB)",
 			vm->gmmu_page_sizes[gmmu_page_size_small] >> 10);
-
-	gk20a_dbg_info("big page-size (%dKB)",
-			vm->gmmu_page_sizes[gmmu_page_size_big] >> 10);
-
+	gk20a_dbg_info("big page-size (%dKB) (%s)\n",
+			vm->gmmu_page_sizes[gmmu_page_size_big] >> 10, name);
 	gk20a_dbg_info("kernel page-size (%dKB)",
 			vm->gmmu_page_sizes[gmmu_page_size_kernel] >> 10);
 
@@ -4348,38 +4407,27 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 		goto clean_up_pdes;
 
 	/* setup vma limits */
-	small_vma_start = low_hole;
-
-	if (big_pages) {
-		/* First 16GB of the address space goes towards small
-		 * pages. What ever remains is allocated to large
-		 * pages. */
-		small_vma_limit = __nv_gmmu_va_small_page_limit();
-		large_vma_start = small_vma_limit;
-		large_vma_limit = vm->va_limit - kernel_reserved;
-	} else {
-		small_vma_limit = vm->va_limit - kernel_reserved;
-		large_vma_start = 0;
-		large_vma_limit = 0;
-	}
+	user_vma_start = low_hole;
+	user_vma_limit = vm->va_limit - kernel_reserved;
 
 	kernel_vma_start = vm->va_limit - kernel_reserved;
 	kernel_vma_limit = vm->va_limit;
 
 	gk20a_dbg_info(
-		"small_vma=[0x%llx,0x%llx) large_vma=[0x%llx,0x%llx) kernel_vma=[0x%llx,0x%llx)\n",
-		small_vma_start, small_vma_limit,
-		large_vma_start, large_vma_limit,
+		"user_vma=[0x%llx,0x%llx) kernel_vma=[0x%llx,0x%llx)\n",
+		user_vma_start, user_vma_limit,
 		kernel_vma_start, kernel_vma_limit);
 
-	/* check that starts do not exceed limits */
-	WARN_ON(small_vma_start > small_vma_limit);
-	WARN_ON(large_vma_start > large_vma_limit);
-	/* kernel_vma must also be non-zero */
+	WARN_ON(user_vma_start > user_vma_limit);
 	WARN_ON(kernel_vma_start >= kernel_vma_limit);
 
-	if (small_vma_start > small_vma_limit ||
-	    large_vma_start > large_vma_limit ||
+	/*
+	 * A "user" area only makes sense for the GVA spaces. For VMs where
+	 * there is no "user" area user_vma_start will be equal to
+	 * user_vma_limit (i.e a 0 sized space). In such a situation the kernel
+	 * area must be non-zero in length.
+	 */
+	if (user_vma_start > user_vma_limit ||
 	    kernel_vma_start >= kernel_vma_limit) {
 		err = -EINVAL;
 		goto clean_up_pdes;
@@ -4389,8 +4437,8 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	 * Attempt to make a separate VM for fixed allocations.
 	 */
 	if (g->separate_fixed_allocs &&
-	    small_vma_start < small_vma_limit) {
-		if (g->separate_fixed_allocs >= small_vma_limit)
+	    user_vma_start < user_vma_limit) {
+		if (g->separate_fixed_allocs >= user_vma_limit)
 			goto clean_up_pdes;
 
 		snprintf(alloc_name, sizeof(alloc_name),
@@ -4398,7 +4446,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 
 		err = __nvgpu_buddy_allocator_init(g, &vm->fixed,
 						   vm, alloc_name,
-						   small_vma_start,
+						   user_vma_start,
 						   g->separate_fixed_allocs,
 						   SZ_4K,
 						   GPU_BALLOC_MAX_ORDER,
@@ -4407,47 +4455,41 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 			goto clean_up_ptes;
 
 		/* Make sure to update the user vma size. */
-		small_vma_start = g->separate_fixed_allocs;
+		user_vma_start = g->separate_fixed_allocs;
 	}
 
-	if (small_vma_start < small_vma_limit) {
-		snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s-%dKB", name,
-			 vm->gmmu_page_sizes[gmmu_page_size_small] >> 10);
-		err = __nvgpu_buddy_allocator_init(
-			g,
-			&vm->vma[gmmu_page_size_small],
-			vm, alloc_name,
-			small_vma_start,
-			small_vma_limit - small_vma_start,
-			SZ_4K,
-			GPU_BALLOC_MAX_ORDER,
-			GPU_ALLOC_GVA_SPACE);
+	if (user_vma_start < user_vma_limit) {
+		snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s", name);
+		if (!gk20a_big_pages_possible(vm, user_vma_start,
+					     user_vma_limit - user_vma_start))
+			vm->big_pages = false;
+
+		err = __nvgpu_buddy_allocator_init(g, &vm->user,
+						   vm, alloc_name,
+						   user_vma_start,
+						   user_vma_limit -
+						   user_vma_start,
+						   SZ_4K,
+						   GPU_BALLOC_MAX_ORDER,
+						   GPU_ALLOC_GVA_SPACE);
 		if (err)
 			goto clean_up_ptes;
+	} else {
+		/*
+		 * Make these allocator pointers point to the kernel allocator
+		 * since we still use the legacy notion of page size to choose
+		 * the allocator.
+		 */
+		vm->vma[0] = &vm->kernel;
+		vm->vma[1] = &vm->kernel;
 	}
 
-	if (large_vma_start < large_vma_limit) {
-		snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s-%dKB",
-			 name, vm->gmmu_page_sizes[gmmu_page_size_big] >> 10);
-		err = __nvgpu_buddy_allocator_init(
-			g,
-			&vm->vma[gmmu_page_size_big],
-			vm, alloc_name,
-			large_vma_start,
-			large_vma_limit - large_vma_start,
-			big_page_size,
-			GPU_BALLOC_MAX_ORDER,
-			GPU_ALLOC_GVA_SPACE);
-		if (err)
-			goto clean_up_small_allocator;
-	}
+	snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s-sys", name);
+	if (!gk20a_big_pages_possible(vm, kernel_vma_start,
+				     kernel_vma_limit - kernel_vma_start))
+		vm->big_pages = false;
 
-	snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s-%dKB-sys",
-		 name, vm->gmmu_page_sizes[gmmu_page_size_kernel] >> 10);
-	/*
-	 * kernel reserved VMA is at the end of the aperture
-	 */
-	err = __nvgpu_buddy_allocator_init(g, &vm->vma[gmmu_page_size_kernel],
+	err = __nvgpu_buddy_allocator_init(g, &vm->kernel,
 					   vm, alloc_name,
 					   kernel_vma_start,
 					   kernel_vma_limit - kernel_vma_start,
@@ -4455,7 +4497,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 					   GPU_BALLOC_MAX_ORDER,
 					   GPU_ALLOC_GVA_SPACE);
 	if (err)
-		goto clean_up_big_allocator;
+		goto clean_up_user_allocator;
 
 	vm->mapped_buffers = RB_ROOT;
 
@@ -4471,17 +4513,14 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	if (vm->va_limit > SZ_4G) {
 		err = gk20a_init_sema_pool(vm);
 		if (err)
-			goto clean_up_big_allocator;
+			goto clean_up_user_allocator;
 	}
 
 	return 0;
 
-clean_up_big_allocator:
-	if (large_vma_start < large_vma_limit)
-		nvgpu_alloc_destroy(&vm->vma[gmmu_page_size_big]);
-clean_up_small_allocator:
-	if (small_vma_start < small_vma_limit)
-		nvgpu_alloc_destroy(&vm->vma[gmmu_page_size_small]);
+clean_up_user_allocator:
+	if (user_vma_start < user_vma_limit)
+		nvgpu_alloc_destroy(&vm->user);
 clean_up_ptes:
 	free_gmmu_pages(vm, &vm->pdb);
 clean_up_pdes:
@@ -4523,9 +4562,10 @@ int gk20a_vm_alloc_share(struct gk20a_as_share *as_share, u32 big_page_size,
 	vm->as_share = as_share;
 	vm->enable_ctag = true;
 
-	snprintf(name, sizeof(name), "gk20a_as_%d", as_share->id);
+	snprintf(name, sizeof(name), "as_%d", as_share->id);
 
-	err = gk20a_init_vm(mm, vm, big_page_size, big_page_size << 10,
+	err = gk20a_init_vm(mm, vm, big_page_size,
+			    big_page_size << 10,
 			    mm->channel.kernel_size,
 			    mm->channel.user_size + mm->channel.kernel_size,
 			    !mm->disable_bigpage, userspace_managed, name);
@@ -4586,13 +4626,14 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 		goto clean_up;
 	}
 
-	vma = &vm->vma[pgsz_idx];
+	vma = vm->vma[pgsz_idx];
 	if (args->flags & NVGPU_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET) {
 		if (nvgpu_alloc_initialized(&vm->fixed))
 			vma = &vm->fixed;
 		vaddr_start = nvgpu_alloc_fixed(vma, args->o_a.offset,
 						(u64)args->pages *
-						(u64)args->page_size);
+						(u64)args->page_size,
+						args->page_size);
 	} else {
 		vaddr_start = nvgpu_alloc(vma,
 					  (u64)args->pages *
@@ -4662,13 +4703,13 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 			args->pages, args->offset);
 
 	/* determine pagesz idx */
-	pgsz_idx = __nv_gmmu_va_is_big_page_region(vm, args->offset) ?
-			gmmu_page_size_big : gmmu_page_size_small;
+	pgsz_idx = __get_pte_size(vm, args->offset,
+				  args->page_size * args->pages);
 
 	if (nvgpu_alloc_initialized(&vm->fixed))
 		vma = &vm->fixed;
 	else
-		vma = &vm->vma[pgsz_idx];
+		vma = vm->vma[pgsz_idx];
 	nvgpu_free(vma, args->offset);
 
 	mutex_lock(&vm->update_gmmu_lock);
@@ -4853,11 +4894,10 @@ int gk20a_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset,
 
 void gk20a_deinit_vm(struct vm_gk20a *vm)
 {
-	nvgpu_alloc_destroy(&vm->vma[gmmu_page_size_kernel]);
-	if (nvgpu_alloc_initialized(&vm->vma[gmmu_page_size_big]))
-		nvgpu_alloc_destroy(&vm->vma[gmmu_page_size_big]);
-	if (nvgpu_alloc_initialized(&vm->vma[gmmu_page_size_small]))
-		nvgpu_alloc_destroy(&vm->vma[gmmu_page_size_small]);
+	if (nvgpu_alloc_initialized(&vm->kernel))
+		nvgpu_alloc_destroy(&vm->kernel);
+	if (nvgpu_alloc_initialized(&vm->user))
+		nvgpu_alloc_destroy(&vm->user);
 	if (nvgpu_alloc_initialized(&vm->fixed))
 		nvgpu_alloc_destroy(&vm->fixed);
 
@@ -4908,9 +4948,13 @@ static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 
 	mm->bar1.aperture_size = bar1_aperture_size_mb_gk20a() << 20;
 	gk20a_dbg_info("bar1 vm size = 0x%x", mm->bar1.aperture_size);
-	gk20a_init_vm(mm, vm, big_page_size, SZ_4K,
-		      mm->bar1.aperture_size - SZ_4K,
-		      mm->bar1.aperture_size, false, false, "bar1");
+	gk20a_init_vm(mm, vm,
+		      big_page_size,
+		      SZ_4K,				/* Low hole */
+		      mm->bar1.aperture_size - SZ_4K,	/* Kernel reserved. */
+		      mm->bar1.aperture_size,
+		      true, false,
+		      "bar1");
 
 	err = gk20a_alloc_inst_block(g, inst_block);
 	if (err)
@@ -4932,13 +4976,23 @@ static int gk20a_init_system_vm(struct mm_gk20a *mm)
 	struct gk20a *g = gk20a_from_mm(mm);
 	struct mem_desc *inst_block = &mm->pmu.inst_block;
 	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
+	u32 low_hole, aperture_size;
+
+	/*
+	 * No user region - so we will pass that as zero sized.
+	 */
+	low_hole = SZ_4K * 16;
+	aperture_size = GK20A_PMU_VA_SIZE * 2;
 
 	mm->pmu.aperture_size = GK20A_PMU_VA_SIZE;
 	gk20a_dbg_info("pmu vm size = 0x%x", mm->pmu.aperture_size);
 
 	gk20a_init_vm(mm, vm, big_page_size,
-		      SZ_4K * 16, GK20A_PMU_VA_SIZE,
-		      GK20A_PMU_VA_SIZE * 2, false, false,
+		      low_hole,
+		      aperture_size - low_hole,
+		      aperture_size,
+		      true,
+		      false,
 		      "system");
 
 	err = gk20a_alloc_inst_block(g, inst_block);

@@ -184,17 +184,17 @@ static int dsi_s_wuxga_8_0_disable(struct device *dev)
 	if (vmm_lcd)
 		regulator_disable(vmm_lcd);
 
-	usleep_range(500, 2000);
+	usleep_range(1000, 2000);
 
 	if (vpp_lcd)
 		regulator_disable(vpp_lcd);
 
-	usleep_range(500, 1500);
+	usleep_range(1500, 2000);
 
 	if (avdd_lcd_3v0)
 		regulator_disable(avdd_lcd_3v0);
 
-	usleep_range(500, 1500);
+	usleep_range(1500, 2000);
 
 	if (dvdd_lcd_1v8)
 		regulator_disable(dvdd_lcd_1v8);

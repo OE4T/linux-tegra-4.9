@@ -119,17 +119,17 @@ static void debug_show_channel_fifo(struct nvhost_master *m,
 
 static void debug_show_mlocks(struct nvhost_master *m, struct output *o)
 {
-	int i;
+	struct nvhost_syncpt *sp = &m->syncpt;
+	unsigned int idx;
+	bool cpu, ch;
+	unsigned int chid;
 
 	nvhost_debug_output(o, "---- mlocks ----\n");
-	for (i = 0; i < NV_HOST1X_NB_MLOCKS; i++) {
-		u32 owner = host1x_hypervisor_readl(m->dev,
-				host1x_sync_mlock_owner_0_r() + i * 4);
-		if (host1x_sync_mlock_owner_0_mlock_ch_owns_0_v(owner))
+	for (idx = 0; idx < NV_HOST1X_NB_MLOCKS; idx++) {
+		syncpt_op().mutex_owner(sp, idx, &cpu, &ch, &chid);
+		if (ch)
 			nvhost_debug_output(o, "%d: locked by channel %d\n",
-				i,
-				host1x_sync_mlock_owner_0_mlock_owner_chid_0_v(
-					owner));
+					    idx, chid);
 	}
 	nvhost_debug_output(o, "\n");
 }

@@ -18,6 +18,7 @@
 #include "tegra210-platforms/tegra210-p2530-common.dtsi"
 #include "tegra210-platforms/tegra210-therm-est.dtsi"
 #include "tegra210-platforms/tegra210-modem-common.dtsi"
+#include "tegra210-platforms/tegra210-jetson-e-shim-p2595-0000-a00.dtsi"
 
 / {
 	model = "jetson_e";
@@ -36,30 +37,6 @@
 			compatible = "android,firmware";
 			hardware = "jetson_e";
 		};
-	};
-
-	udc@7d000000 {
-		#extcon-cells = <1>;
-		status = "disabled";
-		dt-override-status-odm-data = <0x01000000 0x00000000>;
-	};
-
-        otg@7d000000 {
-		#extcon-cells = <1>;
-		status = "disabled";
-		dt-override-status-odm-data = <0x01000000 0x00000000>;
-	};
-
-	xudc@700d0000 {
-		#extcon-cells = <1>;
-		status = "disabled";
-		dt-override-status-odm-data = <0x01000000 0x01000000>;
-	};
-
-	xotg {
-		#extcon-cells = <1>;
-		status = "disabled";
-		dt-override-status-odm-data = <0x01000000 0x01000000>;
 	};
 
         modem {

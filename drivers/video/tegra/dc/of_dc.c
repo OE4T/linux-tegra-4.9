@@ -77,6 +77,12 @@ static struct regulator *of_hdmi_vddio;
 static struct regulator *of_hdmi_dp_reg;
 static struct regulator *of_hdmi_pll;
 
+static struct regulator *of_dp_pwr;
+static struct regulator *of_dp_pll;
+static struct regulator *of_edp_sec_mode;
+static struct regulator *of_dp_pad;
+static struct regulator *of_dp_hdmi_5v0;
+
 #ifdef CONFIG_TEGRA_DC_CMU
 static struct tegra_dc_cmu default_cmu = {
 	/* lut1 maps sRGB to linear space. */
@@ -1700,32 +1706,163 @@ static struct device_node *parse_lvds_settings(struct platform_device *ndev,
 
 	return np_lvds_panel;
 }
+
 static int dc_dp_out_enable(struct device *dev)
 {
-	int ret;
-	if (!of_hdmi_dp_reg) {
-		of_hdmi_dp_reg = regulator_get(dev, "avdd_hdmi");
-		if (IS_ERR_OR_NULL(of_hdmi_dp_reg)) {
-			pr_err("dp: couldn't get regulator avdd_hdmi\n");
-			of_hdmi_dp_reg = NULL;
-			return PTR_ERR(of_hdmi_dp_reg);
+	int ret = 0;
+
+	if (!of_dp_pwr) {
+		of_dp_pwr = devm_regulator_get(dev, "vdd-dp-pwr");
+		if (IS_ERR(of_dp_pwr)) {
+			dev_warn(dev,
+				"dp: couldn't get regulator vdd-dp-pwr\n");
+			ret = PTR_ERR(of_dp_pwr);
+			of_dp_pwr = NULL;
 		}
 	}
-	ret = regulator_enable(of_hdmi_dp_reg);
-	if (ret < 0) {
-		pr_err("dp: couldn't enable regulator avdd_hdmi\n");
-		return ret;
+	if (!of_dp_pll) {
+		of_dp_pll = devm_regulator_get(dev, "avdd-dp-pll");
+		if (IS_ERR(of_dp_pll)) {
+			dev_warn(dev,
+				"dp: couldn't get regulator avdd-dp-pll\n");
+			ret = PTR_ERR(of_dp_pll);
+			of_dp_pll = NULL;
+		}
 	}
-	return 0;
+	if (!of_edp_sec_mode) {
+		of_edp_sec_mode = devm_regulator_get(dev, "vdd-edp-sec-mode");
+		if (IS_ERR(of_edp_sec_mode)) {
+			dev_warn(dev,
+				"dp: couldn't get regulator vdd-edp-sec-mode\n");
+			ret = PTR_ERR(of_edp_sec_mode);
+			of_edp_sec_mode = NULL;
+		}
+	}
+	if (!of_dp_pad) {
+		of_dp_pad = devm_regulator_get(dev, "vdd-dp-pad");
+		if (IS_ERR(of_dp_pad)) {
+			dev_warn(dev,
+				"dp: couldn't get regulator vdd-dp-pad\n");
+			ret = PTR_ERR(of_dp_pad);
+			of_dp_pad = NULL;
+		}
+	}
+
+	if (of_dp_pwr) {
+		ret = regulator_enable(of_dp_pwr);
+		if (ret < 0)
+			dev_err(dev,
+			"dp: couldn't enable regulator vdd-dp-pwr\n");
+	}
+	if (of_dp_pll) {
+		ret = regulator_enable(of_dp_pll);
+		if (ret < 0)
+			dev_err(dev,
+			"dp: couldn't enable regulator vdd-dp-pll\n");
+	}
+	if (of_edp_sec_mode) {
+		ret = regulator_enable(of_edp_sec_mode);
+		if (ret < 0)
+			dev_err(dev,
+			"dp: couldn't enable regulator vdd-edp-sec-mode\n");
+	}
+	if (of_dp_pad) {
+		ret = regulator_enable(of_dp_pad);
+		if (ret < 0)
+			dev_err(dev,
+			"dp: couldn't enable regulator vdd-dp-pad\n");
+	}
+
+	return ret;
 }
 
 static int dc_dp_out_disable(struct device *dev)
 {
-	if (of_hdmi_dp_reg) {
-		regulator_disable(of_hdmi_dp_reg);
-		regulator_put(of_hdmi_dp_reg);
-		of_hdmi_dp_reg = NULL;
+	if (of_dp_pwr) {
+		regulator_disable(of_dp_pwr);
+		devm_regulator_put(of_dp_pwr);
+		of_dp_pwr = NULL;
 	}
+	if (of_dp_pll) {
+		regulator_disable(of_dp_pll);
+		devm_regulator_put(of_dp_pll);
+		of_dp_pll = NULL;
+	}
+	if (of_edp_sec_mode) {
+		regulator_disable(of_edp_sec_mode);
+		devm_regulator_put(of_edp_sec_mode);
+		of_edp_sec_mode = NULL;
+	}
+	if (of_dp_pad) {
+		regulator_disable(of_dp_pad);
+		devm_regulator_put(of_dp_pad);
+		of_dp_pad = NULL;
+	}
+	return 0;
+}
+
+static int dc_dp_out_hotplug_init(struct device *dev)
+{
+	int err = 0;
+	const struct platform_device *pdev;
+	struct tegra_dc *dc;
+	int gpio;
+	struct device_node *np_dp =
+		of_find_node_by_path(SOR1_NODE);
+
+	pdev = container_of(dev, struct platform_device, dev);
+	BUG_ON(!pdev);
+	dc = platform_get_drvdata(pdev);
+	BUG_ON(!dc);
+
+	if (!np_dp || !of_device_is_available(np_dp)) {
+		pr_info("%s: no valid DP node\n", __func__);
+		goto fail;
+	}
+
+	/* hotplug pin should be in spio mode */
+	gpio = dc->pdata->default_out->hotplug_gpio;
+	if (gpio_is_valid(gpio)) {
+		err = gpio_request(gpio, "temp_request");
+		if (!err)
+			gpio_free(gpio);
+	}
+
+	/*
+	 * DP doesn't actually need this regulator.
+	 * Instead dp needs gpio coupled with this regulator.
+	 * pmic has already requested this gpio
+	 * Required for level translator logic.
+	 */
+	if (!of_dp_hdmi_5v0) {
+		of_dp_hdmi_5v0 = devm_regulator_get(dev, "vdd_hdmi_5v0");
+		if (IS_ERR(of_dp_hdmi_5v0)) {
+			err = PTR_ERR(of_dp_hdmi_5v0);
+			dev_warn(dev,
+				"dp: couldn't get regulator vdd_hdmi_5v0\n");
+			of_dp_hdmi_5v0 = NULL;
+		}
+	}
+	if (of_dp_hdmi_5v0) {
+		err = regulator_enable(of_dp_hdmi_5v0);
+		if (err < 0)
+			dev_err(dev,
+			"dp: couldn't enable regulator vdd_hdmi_5v0\n");
+	}
+
+fail:
+	of_node_put(np_dp);
+	return err;
+}
+
+static int dc_dp_out_postsuspend(void)
+{
+	if (of_dp_hdmi_5v0) {
+		regulator_disable(of_dp_hdmi_5v0);
+		devm_regulator_put(of_dp_hdmi_5v0);
+		of_dp_hdmi_5v0 = NULL;
+	}
+
 	return 0;
 }
 
@@ -2072,6 +2209,10 @@ struct tegra_dc_platform_data
 				!pdata->default_out->disable) {
 				pdata->default_out->enable = dc_dp_out_enable;
 				pdata->default_out->disable = dc_dp_out_disable;
+				pdata->default_out->hotplug_init =
+							dc_dp_out_hotplug_init;
+				pdata->default_out->postsuspend =
+							dc_dp_out_postsuspend;
 			}
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_HDMI) {

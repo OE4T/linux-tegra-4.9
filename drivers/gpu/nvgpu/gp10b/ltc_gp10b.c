@@ -136,6 +136,20 @@ static void gp10b_ltc_isr(struct gk20a *g)
 			ltc_intr = gk20a_readl(g, ltc_ltc0_lts0_intr_r() +
 					   proj_ltc_stride_v() * ltc +
 					   proj_lts_stride_v() * slice);
+
+			/* Detect and handle ECC errors */
+			if (ltc_intr &
+				ltc_ltcs_ltss_intr_ecc_sec_error_pending_f()) {
+				gk20a_err(dev_from_gk20a(g),
+					"Single bit error detected in GPU L2!");
+				g->ops.mm.l2_flush(g, true);
+			}
+			if (ltc_intr &
+				ltc_ltcs_ltss_intr_ecc_ded_error_pending_f()) {
+				gk20a_err(dev_from_gk20a(g),
+					"Double bit error detected in GPU L2!");
+			}
+
 			gk20a_err(dev_from_gk20a(g), "ltc%d, slice %d: %08x",
 				  ltc, slice, ltc_intr);
 			gk20a_writel(g, ltc_ltc0_lts0_intr_r() +
@@ -148,10 +162,19 @@ static void gp10b_ltc_isr(struct gk20a *g)
 
 static void gp10b_ltc_init_fs_state(struct gk20a *g)
 {
+	u32 ltc_intr;
+
 	gm20b_ltc_init_fs_state(g);
 
 	gk20a_writel(g, ltc_ltca_g_axi_pctrl_r(),
 			ltc_ltca_g_axi_pctrl_user_sid_f(TEGRA_SID_GPUB));
+
+	/* Enable ECC interrupts */
+	ltc_intr = gk20a_readl(g, ltc_ltcs_ltss_intr_r());
+	ltc_intr |= ltc_ltcs_ltss_intr_en_ecc_sec_error_enabled_f() |
+			ltc_ltcs_ltss_intr_en_ecc_ded_error_enabled_f();
+	gk20a_writel(g, ltc_ltcs_ltss_intr_r(),
+			ltc_intr);
 }
 
 void gp10b_init_ltc(struct gpu_ops *gops)

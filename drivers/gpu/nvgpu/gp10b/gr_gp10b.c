@@ -55,6 +55,106 @@ static bool gr_gp10b_is_valid_class(struct gk20a *g, u32 class_num)
 	return valid;
 }
 
+static int gr_gp10b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
+			bool *post_event, struct channel_gk20a *fault_ch)
+{
+	int ret = 0;
+	u32 offset = proj_gpc_stride_v() * gpc +
+			proj_tpc_in_gpc_stride_v() * tpc;
+	u32 lrf_ecc_status, shm_ecc_status;
+
+	gr_gk20a_handle_sm_exception(g, gpc, tpc, post_event, NULL);
+
+	/* Check for LRF ECC errors. */
+        lrf_ecc_status = gk20a_readl(g,
+			gr_pri_gpc0_tpc0_sm_lrf_ecc_status_r() + offset);
+	if ( (lrf_ecc_status &
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp0_pending_f()) ||
+		(lrf_ecc_status &
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp1_pending_f()) ||
+		(lrf_ecc_status &
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp2_pending_f()) ||
+		(lrf_ecc_status &
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp3_pending_f()) ) {
+
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+			"Single bit error detected in SM LRF!");
+	}
+	if ( (lrf_ecc_status &
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp0_pending_f()) ||
+		(lrf_ecc_status &
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp1_pending_f()) ||
+		(lrf_ecc_status &
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp2_pending_f()) ||
+		(lrf_ecc_status &
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp3_pending_f()) ) {
+
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+			"Double bit error detected in SM LRF!");
+	}
+	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_lrf_ecc_status_r() + offset,
+			lrf_ecc_status);
+
+	/* Check for SHM ECC errors. */
+        shm_ecc_status = gk20a_readl(g,
+			gr_pri_gpc0_tpc0_sm_shm_ecc_status_r() + offset);
+	if ((shm_ecc_status &
+		gr_pri_gpc0_tpc0_sm_shm_ecc_status_single_err_corrected_shm0_pending_f()) ||
+		(shm_ecc_status &
+		gr_pri_gpc0_tpc0_sm_shm_ecc_status_single_err_corrected_shm1_pending_f()) ||
+		(shm_ecc_status &
+		gr_pri_gpc0_tpc0_sm_shm_ecc_status_single_err_detected_shm0_pending_f()) ||
+		(shm_ecc_status &
+		gr_pri_gpc0_tpc0_sm_shm_ecc_status_single_err_detected_shm1_pending_f()) ) {
+
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+			"Single bit error detected in SM SHM!");
+	}
+	if ( (shm_ecc_status &
+		gr_pri_gpc0_tpc0_sm_shm_ecc_status_double_err_detected_shm0_pending_f()) ||
+		(shm_ecc_status &
+		gr_pri_gpc0_tpc0_sm_shm_ecc_status_double_err_detected_shm1_pending_f()) ) {
+
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+			"Double bit error detected in SM SHM!");
+	}
+	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_shm_ecc_status_r() + offset,
+			shm_ecc_status);
+
+
+	return ret;
+}
+
+static int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
+		bool *post_event)
+{
+	int ret = 0;
+	u32 offset = proj_gpc_stride_v() * gpc +
+		     proj_tpc_in_gpc_stride_v() * tpc;
+	u32 esr;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
+
+	esr = gk20a_readl(g,
+			 gr_gpc0_tpc0_tex_m_hww_esr_r() + offset);
+	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "0x%08x", esr);
+
+	if (esr & gr_gpc0_tpc0_tex_m_hww_esr_ecc_sec_pending_f()) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+			"Single bit error detected in TEX!");
+	}
+	if (esr & gr_gpc0_tpc0_tex_m_hww_esr_ecc_ded_pending_f()) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+			"Double bit error detected in TEX!");
+	}
+
+	gk20a_writel(g,
+		     gr_gpc0_tpc0_tex_m_hww_esr_r() + offset,
+		     esr);
+
+	return ret;
+}
+
 static int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 			struct channel_gk20a *c, bool patch)
 {
@@ -1154,4 +1254,6 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.init_cyclestats = gr_gp10b_init_cyclestats;
 	gops->gr.set_gpc_tpc_mask = gr_gp10b_set_gpc_tpc_mask;
 	gops->gr.get_access_map = gr_gp10b_get_access_map;
+	gops->gr.handle_sm_exception = gr_gp10b_handle_sm_exception;
+	gops->gr.handle_tex_exception = gr_gp10b_handle_tex_exception;
 }

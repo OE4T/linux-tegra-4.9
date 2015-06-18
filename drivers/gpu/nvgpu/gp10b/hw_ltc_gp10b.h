@@ -286,6 +286,14 @@ static inline u32 ltc_ltcs_ltss_intr_r(void)
 {
 	return 0x0017e20c;
 }
+static inline u32 ltc_ltcs_ltss_intr_ecc_sec_error_pending_f(void)
+{
+	return 0x100;
+}
+static inline u32 ltc_ltcs_ltss_intr_ecc_ded_error_pending_f(void)
+{
+	return 0x200;
+}
 static inline u32 ltc_ltcs_ltss_intr_en_evicted_cb_m(void)
 {
 	return 0x1 << 20;
@@ -293,6 +301,14 @@ static inline u32 ltc_ltcs_ltss_intr_en_evicted_cb_m(void)
 static inline u32 ltc_ltcs_ltss_intr_en_illegal_compstat_access_m(void)
 {
 	return 0x1 << 30;
+}
+static inline u32 ltc_ltcs_ltss_intr_en_ecc_sec_error_enabled_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 ltc_ltcs_ltss_intr_en_ecc_ded_error_enabled_f(void)
+{
+	return 0x2000000;
 }
 static inline u32 ltc_ltc0_lts0_intr_r(void)
 {

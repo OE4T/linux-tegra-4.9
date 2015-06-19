@@ -311,16 +311,22 @@ static int tegra210_amx_suspend(struct device *dev)
 }
 #endif
 
-static int tegra210_amx_set_audio_cif(struct tegra210_amx *amx,
+static int tegra210_amx_set_audio_cif(struct snd_soc_dai *dai,
 				struct snd_pcm_hw_params *params,
 				unsigned int reg)
 {
+	struct tegra210_amx *amx = snd_soc_dai_get_drvdata(dai);
 	int channels, audio_bits;
 	struct tegra210_xbar_cif_conf cif_conf;
 
 	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
 
-	channels = params_channels(params);
+	if (strstr(dai->name, "OUT")) {
+		channels = amx->output_channels > 0 ?
+			amx->output_channels : params_channels(params);
+	} else
+		channels = params_channels(params);
+
 	if (channels < 1 || channels > 16)
 		return -EINVAL;
 
@@ -351,15 +357,13 @@ static int tegra210_amx_set_audio_cif(struct tegra210_amx *amx,
 	return 0;
 }
 
-
 static int tegra210_amx_in_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
 {
-	struct tegra210_amx *amx = snd_soc_dai_get_drvdata(dai);
 	int ret;
 
-	ret = tegra210_amx_set_audio_cif(amx, params,
+	ret = tegra210_amx_set_audio_cif(dai, params,
 				TEGRA210_AMX_AXBAR_RX1_CIF_CTRL +
 				(dai->id * TEGRA210_AMX_AUDIOCIF_CH_STRIDE));
 
@@ -394,17 +398,17 @@ static int tegra210_amx_out_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
 {
-	struct tegra210_amx *amx = snd_soc_dai_get_drvdata(dai);
 	int ret;
 	if (tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()) {
 		/* update map ram */
+		struct tegra210_amx *amx = snd_soc_dai_get_drvdata(dai);
 		tegra210_amx_set_master_stream(amx, 0,
 				TEGRA210_AMX_WAIT_ON_ANY);
 		tegra210_amx_update_map_ram(amx);
 		tegra210_amx_set_out_byte_mask(amx);
 	}
 
-	ret = tegra210_amx_set_audio_cif(amx, params,
+	ret = tegra210_amx_set_audio_cif(dai, params,
 				TEGRA210_AMX_AXBAR_TX_CIF_CTRL);
 
 	return ret;
@@ -493,22 +497,37 @@ static int tegra210_amx_put_byte_map(struct snd_kcontrol *kcontrol,
 	/* update byte map */
 	tegra210_amx_set_map_table(amx, reg, stream, channel, byte);
 
-	/* update byte_mask */
-	if (value) {
-		/* enable slot */
-		if (reg > 31)
-			amx->byte_mask[1] |= (1 << (reg - 32));
-		else
-			amx->byte_mask[0] |= (1 << reg);
-	} else {
-		/* disable slot */
-		if (reg > 31)
-			amx->byte_mask[1] &= ~(1 << (reg - 32));
-		else
-			amx->byte_mask[0] &= ~(1 << reg);
-	}
+	/* update byte_mask to enable slot */
+	if (reg > 31)
+		amx->byte_mask[1] |= (1 << (reg - 32));
+	else
+		amx->byte_mask[0] |= (1 << reg);
 
 	return 0;
+}
+
+static int tegra210_amx_get_output_channels(struct snd_kcontrol *kcontrol,
+					 struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra210_amx *amx = snd_soc_codec_get_drvdata(codec);
+
+	ucontrol->value.integer.value[0] = amx->output_channels;
+	return 0;
+}
+
+static int tegra210_amx_put_output_channels(struct snd_kcontrol *kcontrol,
+					 struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra210_amx *amx = snd_soc_codec_get_drvdata(codec);
+	int value = ucontrol->value.integer.value[0];
+
+	if (value > 0 && value <= 16) {
+		amx->output_channels = value;
+		return 0;
+	} else
+		return -EINVAL;
 }
 
 static int tegra210_amx_codec_probe(struct snd_soc_codec *codec)
@@ -590,7 +609,12 @@ static const struct snd_soc_dapm_route tegra210_amx_routes[] = {
 	SOC_SINGLE_EXT("Byte Map " #reg, reg, 0, 0xFF, 0, \
 		tegra210_amx_get_byte_map, tegra210_amx_put_byte_map)
 
-static struct snd_kcontrol_new tegra210_amx_map_controls[] = {
+#define TEGRA210_AMX_OUTPUT_CHANNELS_CTRL(reg) \
+	SOC_SINGLE_EXT("Output Channels", reg, 0, 16, 0, \
+		tegra210_amx_get_output_channels, \
+		tegra210_amx_put_output_channels)
+
+static struct snd_kcontrol_new tegra210_amx_controls[] = {
 	TEGRA210_AMX_BYTE_MAP_CTRL(0),
 	TEGRA210_AMX_BYTE_MAP_CTRL(1),
 	TEGRA210_AMX_BYTE_MAP_CTRL(2),
@@ -655,6 +679,8 @@ static struct snd_kcontrol_new tegra210_amx_map_controls[] = {
 	TEGRA210_AMX_BYTE_MAP_CTRL(61),
 	TEGRA210_AMX_BYTE_MAP_CTRL(62),
 	TEGRA210_AMX_BYTE_MAP_CTRL(63),
+
+	TEGRA210_AMX_OUTPUT_CHANNELS_CTRL(1),
 };
 
 static struct snd_soc_codec_driver tegra210_amx_codec = {
@@ -663,8 +689,8 @@ static struct snd_soc_codec_driver tegra210_amx_codec = {
 	.num_dapm_widgets = ARRAY_SIZE(tegra210_amx_widgets),
 	.dapm_routes = tegra210_amx_routes,
 	.num_dapm_routes = ARRAY_SIZE(tegra210_amx_routes),
-	.controls = tegra210_amx_map_controls,
-	.num_controls = ARRAY_SIZE(tegra210_amx_map_controls),
+	.controls = tegra210_amx_controls,
+	.num_controls = ARRAY_SIZE(tegra210_amx_controls),
 	.idle_bias_off = 1,
 };
 

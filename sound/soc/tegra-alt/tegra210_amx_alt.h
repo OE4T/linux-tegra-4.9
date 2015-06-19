@@ -144,6 +144,7 @@
 /*
  * Those defines are not in register field.
  */
+#define TEGRA210_AMX_NUM_INPUTS					4
 #define TEGRA210_AMX_RAM_DEPTH					16
 #define TEGRA210_AMX_MAP_STREAM_NUMBER_SHIFT	6
 #define TEGRA210_AMX_MAP_STREAM_NUMBER_MASK		(0x3 << TEGRA210_AMX_MAP_STREAM_NUMBER_SHIFT)
@@ -180,8 +181,9 @@ struct tegra210_amx_soc_data {
 
 struct tegra210_amx {
 	struct regmap *regmap;
-	unsigned int map[16];
+	unsigned int map[TEGRA210_AMX_RAM_DEPTH];
 	unsigned int byte_mask[2];
+	int output_channels;
 	const struct tegra210_amx_soc_data *soc_data;
 };
 

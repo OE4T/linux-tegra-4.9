@@ -1019,6 +1019,25 @@
                 gpio-ranges = <&pinmux 0 0 246>;
                 #gpio-cells = <2>;
                 gpio-controller;
+		clocks = <&tegra_car TEGRA186_CLK_GPIO_CTL0>,
+			 <&tegra_car TEGRA186_CLK_GPIO_CTL1>,
+			 <&tegra_car TEGRA186_CLK_GPIO_CTL2>,
+			 <&tegra_car TEGRA186_CLK_GPIO_CTL3>,
+			 <&tegra_car TEGRA186_CLK_GPIO_CTL4>,
+			 <&tegra_car TEGRA186_CLK_GPIO_CTL5>;
+		clock-names = "gpio0-clk", "gpio1-clk",
+			      "gpio2-clk", "gpio3-clk",
+			      "gpio4-clk", "gpio5-clk";
+		resets = <&tegra_car TEGRA186_RESET_GPIO_CTL0>,
+			<&tegra_car TEGRA186_RESET_GPIO_CTL1>,
+			<&tegra_car TEGRA186_RESET_GPIO_CTL2>,
+			<&tegra_car TEGRA186_RESET_GPIO_CTL3>,
+			<&tegra_car TEGRA186_RESET_GPIO_CTL4>,
+			<&tegra_car TEGRA186_RESET_GPIO_CTL0>;
+		reset-names = "gpio0", "gpio1",
+				"gpio2", "gpio3",
+				"gpio4", "gpio5";
+
                 nvidia,gpio_mapping = < 0 0x12000
                                         0 0x13000
                                         0 0x13200

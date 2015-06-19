@@ -105,6 +105,8 @@ struct tegra210_sfc {
 	struct regmap *regmap;
 	struct snd_pcm_hw_params in_hw_params;
 	struct snd_pcm_hw_params out_hw_params;
+	int stereo_conv_input;
+	int mono_conv_output;
 	const struct tegra210_sfc_soc_data *soc_data;
 };
 

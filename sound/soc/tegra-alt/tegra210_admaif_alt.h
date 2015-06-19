@@ -156,6 +156,7 @@ struct tegra210_admaif {
 	struct tegra_alt_pcm_dma_params *capture_dma_data;
 	struct tegra_alt_pcm_dma_params *playback_dma_data;
 	const struct tegra210_admaif_soc_data *soc_data;
+	int override_channels[TEGRA210_ADMAIF_CHANNEL_COUNT];
 };
 
 #endif

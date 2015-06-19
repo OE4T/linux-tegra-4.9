@@ -366,50 +366,6 @@ static __initdata struct tegra_bpmp_clk_init tegra186_clocks[] = {
 #define CLK_RST_CONTROLLER_RST_DEV_NVDISPLAY0_CLR_0 0x800008
 #define CLK_RST_CONTROLLER_CLK_OUT_ENB_NVDISPLAY0_SET_0 0x80100
 
-void enable_gpio_clk(void)
-{
-	void __iomem *clk_base = ioremap(0x5840000, 0x21000);
-
-	__raw_writel(0x0, clk_base);
-	udelay(2);
-	__raw_writel(0x1, clk_base + 0x1000);
-	udelay(2);
-
-	__raw_writel(0x0, clk_base + 0x10000);
-	udelay(2);
-	__raw_writel(0x1, clk_base + 0x11000);
-
-	udelay(2);
-	iounmap(clk_base);
-
-	clk_base = ioremap(0x5860000, 0x21000);
-	__raw_writel(0x0, clk_base);
-	udelay(2);
-	__raw_writel(0x1, clk_base + 0x1000);
-	udelay(2);
-
-	__raw_writel(0x0, clk_base + 0x10000);
-	udelay(2);
-	__raw_writel(0x1, clk_base + 0x11000);
-	udelay(2);
-	iounmap(clk_base);
-
-	clk_base = ioremap(0x5880000, 0x21000);
-	__raw_writel(0x0, clk_base);
-	udelay(2);
-	__raw_writel(0x1, clk_base + 0x1000);
-	udelay(2);
-	iounmap(clk_base);
-
-	clk_base = ioremap(0x5fc0000, 0x21000);
-
-	__raw_writel(0x0, clk_base);
-	udelay(2);
-	__raw_writel(0x1, clk_base + 0x1000);
-	udelay(2);
-	iounmap(clk_base);
-}
-
 /* Needed for GPCDMA controller reset */
 #define CLK_RST_CONTROLLER_RST_DEV_AXI_CBB_0 0x56A0000
 void reset_gpcdma_controller(void)
@@ -446,7 +402,6 @@ static void __init tegra186_clock_init(struct device_node *np)
 		writel(0x3ff, base + CLK_RST_CONTROLLER_RST_DEV_NVDISPLAY0_CLR_0);
 		writel(0xf, base + CLK_RST_CONTROLLER_CLK_OUT_ENB_NVDISPLAY0_SET_0);
 	}
-	enable_gpio_clk();
 	reset_gpcdma_controller();
 }
 

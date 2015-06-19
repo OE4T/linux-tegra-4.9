@@ -1124,6 +1124,50 @@ static int tegra_dc_ext_set_csc(struct tegra_dc_ext_user *user,
 }
 #endif
 
+#if defined(CONFIG_TEGRA_CSC_V2)
+static int tegra_dc_ext_set_csc(struct tegra_dc_ext_user *user,
+				struct tegra_dc_ext_csc_v2 *new_csc)
+{
+	unsigned int index = new_csc->win_index;
+	struct tegra_dc *dc = user->ext->dc;
+	struct tegra_dc_ext_win *ext_win;
+	struct tegra_dc_csc_v2 *csc;
+	struct tegra_dc_win *win = tegra_dc_get_window(dc, index);
+
+	if (!win)
+		return -EINVAL;
+
+	ext_win = &user->ext->win[index];
+	csc = &win->csc;
+
+	mutex_lock(&ext_win->lock);
+
+	if (ext_win->user != user) {
+		mutex_unlock(&ext_win->lock);
+		return -EACCES;
+	}
+
+	csc->r2r = new_csc->r2r;
+	csc->g2r = new_csc->g2r;
+	csc->b2r = new_csc->b2r;
+	csc->const2r = new_csc->const2r;
+	csc->r2g = new_csc->r2g;
+	csc->g2g = new_csc->g2g;
+	csc->b2g = new_csc->b2g;
+	csc->const2g = new_csc->const2g;
+	csc->r2b = new_csc->r2b;
+	csc->g2b = new_csc->g2b;
+	csc->b2b = new_csc->b2b;
+	csc->const2b = new_csc->const2b;
+
+	tegra_nvdisp_update_csc(dc, index);
+
+	mutex_unlock(&ext_win->lock);
+
+	return 0;
+}
+#endif
+
 #if defined(CONFIG_TEGRA_LUT)
 static int set_lut_channel(u16 __user *channel_from_user,
 			   u8 *channel_to,
@@ -1729,6 +1773,18 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 	case TEGRA_DC_EXT_SET_CSC:
 	{
 		struct tegra_dc_ext_csc args;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		return tegra_dc_ext_set_csc(user, &args);
+	}
+#endif
+
+#ifdef CONFIG_TEGRA_CSC_V2
+	case TEGRA_DC_EXT_SET_CSC_V2:
+	{
+		struct tegra_dc_ext_csc_v2 args;
 
 		if (copy_from_user(&args, user_arg, sizeof(args)))
 			return -EFAULT;

@@ -30,11 +30,14 @@
 #include <linux/delay.h>
 #include <linux/irqdomain.h>
 #include <linux/irqchip/chained_irq.h>
+#include <linux/clk.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/pm.h>
 #include <linux/syscore_ops.h>
 #include <linux/tegra-soc.h>
 #include <linux/irqchip/tegra.h>
+#include <linux/clk/tegra.h>
+#include <linux/reset.h>
 
 #define GPIO_ENB_CONFIG_REG	0x00
 #define  GPIO_ENB_BIT		0x0
@@ -93,6 +96,18 @@ struct tegra_gpio {
 	void __iomem **regs;
 	int *regs_size;
 	unsigned int *reg_base;
+	struct clk *gpio0_clk;
+	struct clk *gpio1_clk;
+	struct clk *gpio2_clk;
+	struct clk *gpio3_clk;
+	struct clk *gpio4_clk;
+	struct clk *gpio5_clk;
+	struct reset_control *gpio0_rst;
+	struct reset_control *gpio1_rst;
+	struct reset_control *gpio2_rst;
+	struct reset_control *gpio3_rst;
+	struct reset_control *gpio4_rst;
+	struct reset_control *gpio5_rst;
 };
 
 static struct tegra_gpio *tegra_gpio;
@@ -573,6 +588,53 @@ static struct of_device_id tegra_gpio_of_match[] = {
 	{ },
 };
 
+static void gpio_clk_reset_enable(struct platform_device *pdev)
+{
+	u32 ret;
+	reset_control_reset(tegra_gpio->gpio0_rst);
+	reset_control_reset(tegra_gpio->gpio1_rst);
+	reset_control_reset(tegra_gpio->gpio2_rst);
+	reset_control_reset(tegra_gpio->gpio3_rst);
+	reset_control_reset(tegra_gpio->gpio4_rst);
+	reset_control_reset(tegra_gpio->gpio5_rst);
+
+	ret = clk_prepare_enable(tegra_gpio->gpio0_clk);
+	if (ret < 0) {
+		dev_err(&pdev->dev,
+			"Enabling gpio0 clk failed, err %d\n", ret);
+	}
+
+	ret = clk_prepare_enable(tegra_gpio->gpio1_clk);
+	if (ret < 0) {
+		dev_err(&pdev->dev,
+			"Enabling gpio1 clk failed, err %d\n", ret);
+	}
+
+	ret = clk_prepare_enable(tegra_gpio->gpio2_clk);
+	if (ret < 0) {
+		dev_err(&pdev->dev,
+			"Enabling gpio2 clk failed, err %d\n", ret);
+	}
+
+	ret = clk_prepare_enable(tegra_gpio->gpio3_clk);
+	if (ret < 0) {
+		dev_err(&pdev->dev,
+			"Enabling gpio3 clk failed, err %d\n", ret);
+	}
+
+	ret = clk_prepare_enable(tegra_gpio->gpio4_clk);
+	if (ret < 0) {
+		dev_err(&pdev->dev,
+			"Enabling gpio4 clk failed, err %d\n", ret);
+	}
+
+	ret = clk_prepare_enable(tegra_gpio->gpio5_clk);
+	if (ret < 0) {
+		dev_err(&pdev->dev,
+			"Enabling gpio5 clk failed, err %d\n", ret);
+	}
+}
+
 static void read_gpio_mapping_data(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -592,7 +654,6 @@ static void read_gpio_mapping_data(struct platform_device *pdev)
 					i * 2 + 1, &a);
 		address_map[i][1] = a;
 	}
-
 }
 
 static int tegra_gpio_probe(struct platform_device *pdev)
@@ -649,6 +710,49 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 	tegra_gpio->dev = &pdev->dev;
+
+	tegra_gpio->gpio0_rst = devm_reset_control_get(&pdev->dev, "gpio0");
+	if (IS_ERR(tegra_gpio->gpio0_rst)) {
+		ret = PTR_ERR(tegra_gpio->gpio0_rst);
+		dev_err(&pdev->dev,
+			"Reset control is not found:gpio0 %d\n", ret);
+		return ret;
+	}
+	tegra_gpio->gpio1_rst = devm_reset_control_get(&pdev->dev, "gpio1");
+	if (IS_ERR(tegra_gpio->gpio1_rst)) {
+		ret = PTR_ERR(tegra_gpio->gpio1_rst);
+		dev_err(&pdev->dev,
+			"Reset control is not found:gpio1 %d\n", ret);
+		return ret;
+	}
+	tegra_gpio->gpio2_rst = devm_reset_control_get(&pdev->dev, "gpio2");
+	if (IS_ERR(tegra_gpio->gpio2_rst)) {
+		ret = PTR_ERR(tegra_gpio->gpio2_rst);
+		dev_err(&pdev->dev,
+			"Reset control is not found: gpio2 %d\n", ret);
+		return ret;
+	}
+	tegra_gpio->gpio3_rst = devm_reset_control_get(&pdev->dev, "gpio3");
+	if (IS_ERR(tegra_gpio->gpio3_rst)) {
+		ret = PTR_ERR(tegra_gpio->gpio3_rst);
+		dev_err(&pdev->dev,
+			"Reset control is not found: gpio3 %d\n", ret);
+		return ret;
+	}
+	tegra_gpio->gpio4_rst = devm_reset_control_get(&pdev->dev, "gpio4");
+	if (IS_ERR(tegra_gpio->gpio4_rst)) {
+		ret = PTR_ERR(tegra_gpio->gpio4_rst);
+		dev_err(&pdev->dev,
+			"Reset control is not found: gpio4 %d\n", ret);
+		return ret;
+	}
+	tegra_gpio->gpio5_rst = devm_reset_control_get(&pdev->dev, "gpio5");
+	if (IS_ERR(tegra_gpio->gpio5_rst)) {
+		ret = PTR_ERR(tegra_gpio->gpio5_rst);
+		dev_err(&pdev->dev,
+			"Reset control is not found: gpio5 %d\n", ret);
+		return ret;
+	}
 
 	for (i = 0;; i++) {
 		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
@@ -726,6 +830,33 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 					 handle_simple_irq);
 		set_irq_flags(irq, IRQF_VALID);
 	}
+
+	tegra_gpio->gpio0_clk = devm_clk_get(&pdev->dev, "gpio0-clk");
+	if (IS_ERR(tegra_gpio->gpio0_clk))
+		dev_err(&pdev->dev, "missing controller gpio0 clock");
+
+	tegra_gpio->gpio1_clk = devm_clk_get(&pdev->dev, "gpio1-clk");
+	if (IS_ERR(tegra_gpio->gpio1_clk))
+		dev_err(&pdev->dev, "missing controller gpio1 clock");
+
+	tegra_gpio->gpio2_clk = devm_clk_get(&pdev->dev, "gpio2-clk");
+	if (IS_ERR(tegra_gpio->gpio2_clk))
+		dev_err(&pdev->dev, "missing controller gpio2 clock");
+
+	tegra_gpio->gpio3_clk = devm_clk_get(&pdev->dev, "gpio3-clk");
+	if (IS_ERR(tegra_gpio->gpio3_clk))
+		dev_err(&pdev->dev, "missing controller gpio3 clock");
+
+	tegra_gpio->gpio4_clk = devm_clk_get(&pdev->dev, "gpio4-clk");
+	if (IS_ERR(tegra_gpio->gpio4_clk))
+		dev_err(&pdev->dev, "missing controller gpio4 clock");
+
+	tegra_gpio->gpio5_clk = devm_clk_get(&pdev->dev, "gpio5-clk");
+	if (IS_ERR(tegra_gpio->gpio5_clk))
+		dev_err(&pdev->dev, "missing controller gpio5 clock");
+
+	gpio_clk_reset_enable(pdev);
+
 	if (0) {
 		/* program SCR reg to get the interrupts */
 		for (i = 0; i < (tegra_gpio_bank_count - 1); i++) {

@@ -23,6 +23,7 @@
 #define T186_NVHOST_NUMCHANNELS 63
 
 extern struct nvhost_device_data t18_host1x_info;
+extern struct nvhost_device_data t18_host1xb_info;
 extern struct nvhost_device_data t18_vic_info;
 extern struct nvhost_device_data t18_nvdec_info;
 extern struct nvhost_device_data t18_nvjpg_info;

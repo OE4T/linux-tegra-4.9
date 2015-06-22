@@ -7,3 +7,10 @@ config TEGRA_IPC
 	bool "Enable Tegra Inter-processor Communication Framework"
 	select TEGRA_IVC
 	default y
+
+config TEGRA186_PMC
+        bool "Tegra Power Management Controller"
+	depends on ARCH_TEGRA_18x_SOC
+        default y
+        help
+          Enable Tegra186 PMC.

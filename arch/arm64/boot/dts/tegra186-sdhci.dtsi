@@ -25,6 +25,7 @@
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC4>;
 		clock-names = "sdmmc4";
 		nvidia,clk-name = "sdmmc4";
+		#stream-id-cells = <1>;
 		status = "disabled";
 	};
 
@@ -35,6 +36,7 @@
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC3>;
 		clock-names = "sdmmc3";
 		nvidia,clk-name = "sdmmc3";
+		#stream-id-cells = <1>;
 		status = "disabled";
 	};
 
@@ -45,6 +47,7 @@
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC2>;
 		clock-names = "sdmmc2";
 		nvidia,clk-name = "sdmmc2";
+		#stream-id-cells = <1>;
 		status = "disabled";
 	};
 
@@ -55,6 +58,7 @@
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC1>;
 		clock-names = "sdmmc1";
 		nvidia,clk-name = "sdmmc1";
+		#stream-id-cells = <1>;
 		status = "disabled";
 	 };
 };

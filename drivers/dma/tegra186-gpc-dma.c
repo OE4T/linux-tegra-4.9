@@ -36,6 +36,7 @@
 #include <linux/clk/tegra.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/version.h>
+#include <linux/reset.h>
 
 #include "dmaengine.h"
 
@@ -252,7 +253,7 @@ struct tegra_dma {
 	spinlock_t			global_lock;
 	void __iomem			*base_addr;
 	const struct tegra_dma_chip_data *chip_data;
-
+	struct reset_control *rst;
 	/* Last member of the structure */
 	struct tegra_dma_channel channels[0];
 };
@@ -1276,22 +1277,21 @@ static int tegra_dma_probe(struct platform_device *pdev)
 	}
 
 	tdma->base_addr = devm_ioremap_resource(&pdev->dev, res);
-
 	if (IS_ERR(tdma->base_addr))
 		return PTR_ERR(tdma->base_addr);
 
+	tdma->rst = devm_reset_control_get(&pdev->dev, "gpcdma");
+	if (IS_ERR(tdma->rst)) {
+		dev_err(&pdev->dev, "Missing controller reset\n");
+		return PTR_ERR(tdma->rst);
+	}
+	reset_control_reset(tdma->rst);
 
 	spin_lock_init(&tdma->global_lock);
 
 	dma_device = &pdev->dev;
 
 	tegra_pd_add_device(&pdev->dev);
-
-	/*
-	 * Fix me: There is no separate clock for GPCDMA. It uses AXI clk or
-	 * pclk. Removing old reset APIs. Need to add controller reset
-	 * functionality without dependency on the clk handle.
-	 */
 
 	INIT_LIST_HEAD(&tdma->dma_dev.channels);
 	for (i = 0; i < cdata->nr_channels; i++) {

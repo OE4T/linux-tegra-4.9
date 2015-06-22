@@ -633,6 +633,8 @@
 	gpcdma: dma@2600000 {
 		compatible = "nvidia,tegra186-gpcdma";
 		reg = <0x0 0x2600000 0x0 0x210000>;
+		resets = <&tegra_car TEGRA186_RESET_GPCDMA>;
+		reset-names = "gpcdma";
 		interrupts = <0 75 0x04
 			      0 76 0x04
 			      0 77 0x04

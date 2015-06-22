@@ -1247,12 +1247,12 @@ static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
 
 	tegra_se_engine = 1;
 	se_dev = sg_tegra_se_dev[tegra_se_engine];
-	ctx->se_dev = se_dev;
 
-	if (!ctx || !ctx->se_dev) {
+	if (!ctx || !se_dev) {
 		pr_err("invalid context or dev");
 		return -EINVAL;
 	}
+	ctx->se_dev = se_dev;
 
 	if ((keylen != TEGRA_SE_KEY_128_SIZE) &&
 		(keylen != TEGRA_SE_KEY_192_SIZE) &&
@@ -1700,21 +1700,23 @@ static int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 	tegra_se_engine = 1;
 	se_dev = sg_tegra_se_dev[tegra_se_engine];
 
-	req_ctx = kzalloc(sizeof(struct tegra_se_req_context), GFP_KERNEL);
-	if (!req_ctx) {
-		dev_err(se_dev->dev,
-			"memory allocation failed for drbg req_ctx\n");
-		return -ENOMEM;
-	}
 	if (!ctx) {
 		dev_err(se_dev->dev, "invalid context");
 		return -EINVAL;
+	}
+
+	req_ctx = kzalloc(sizeof(struct tegra_se_req_context), GFP_KERNEL);
+	if (!req_ctx) {
+		dev_err(se_dev->dev,
+			"memory allocation failed for cmac req_ctx\n");
+		return -ENOMEM;
 	}
 	if ((keylen != TEGRA_SE_KEY_128_SIZE) &&
 		(keylen != TEGRA_SE_KEY_192_SIZE) &&
 		(keylen != TEGRA_SE_KEY_256_SIZE)) {
 		dev_err(se_dev->dev, "invalid key size");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto free_ctx;
 	}
 
 	aes_opcode_start_addr = SE2_AES1_CONFIG_REG_OFFSET;
@@ -1725,7 +1727,8 @@ static int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 			pslot = tegra_se_alloc_key_slot();
 			if (!pslot) {
 				dev_err(se_dev->dev, "no free key slot\n");
-				return -ENOMEM;
+				ret = -ENOMEM;
+				goto free_ctx;
 			}
 			ctx->slot = pslot;
 		}
@@ -1740,7 +1743,8 @@ static int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 		&pbuf_adr, GFP_KERNEL);
 	if (!pbuf) {
 		dev_err(se_dev->dev, "can not allocate dma buffer");
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto free_ctx;
 	}
 	memset(pbuf, 0, TEGRA_SE_AES_BLOCK_SIZE);
 
@@ -1757,6 +1761,11 @@ static int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 	/* load the key */
 	ret = tegra_se_send_key_data((u8 *)key, keylen,
 			ctx->slot->slot_num, SE_KEY_TABLE_TYPE_KEY);
+	if (ret) {
+		dev_err(se_dev->dev,
+			"tegra_se_send_key_data for loading cmac key failed\n");
+		goto out;
+	}
 
 	/* write zero IV */
 	memset(piv, 0, TEGRA_SE_AES_IV_SIZE);
@@ -1764,6 +1773,11 @@ static int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 	/* load IV */
 	ret = tegra_se_send_key_data(piv, TEGRA_SE_AES_IV_SIZE,
 			ctx->slot->slot_num, SE_KEY_TABLE_TYPE_ORGIV);
+	if (ret) {
+		dev_err(se_dev->dev,
+			"tegra_se_send_key_data for loading cmac iv failed\n");
+		goto out;
+	}
 
 	/* config crypto algo */
 	req_ctx->config = tegra_se_get_config(se_dev, SE_AES_OP_MODE_CBC,
@@ -1797,9 +1811,9 @@ out:
 		dma_free_coherent(se_dev->dev, TEGRA_SE_AES_BLOCK_SIZE,
 			pbuf, pbuf_adr);
 	}
-
+free_ctx:
 	kfree(req_ctx);
-	return 0;
+	return ret;
 }
 
 static int tegra_se_aes_cmac_digest(struct ahash_request *req)

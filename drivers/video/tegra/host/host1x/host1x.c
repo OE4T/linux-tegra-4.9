@@ -621,7 +621,8 @@ static int nvhost_user_init(struct nvhost_master *host)
 	dev_t devno;
 	int err;
 
-	host->nvhost_class = class_create(THIS_MODULE, IFACE_NAME);
+	host->nvhost_class = class_create(THIS_MODULE,
+					dev_name(&host->dev->dev));
 	if (IS_ERR(host->nvhost_class)) {
 		err = PTR_ERR(host->nvhost_class);
 		dev_err(&host->dev->dev, "failed to create class\n");

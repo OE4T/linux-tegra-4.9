@@ -30,6 +30,7 @@
 #include "gp10b/gr_ctx_gp10b.h"
 #include "gp10b/fifo_gp10b.h"
 #include "gp10b/gp10b_gating_reglist.h"
+#include "gp10b/regops_gp10b.h"
 
 #include "gm20b/gr_gm20b.h"
 #include "gm20b/fifo_gm20b.h"
@@ -101,6 +102,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_mm(gops);
 	gp10b_init_pmu_ops(gops);
 	gk20a_init_debug_ops(gops);
+	gp10b_init_regops(gops);
 	gops->name = "gp10b";
 
 	c->twod_class = FERMI_TWOD_A;

@@ -446,7 +446,7 @@ parse_channel(struct tegra_ivcc_chan_group *group, struct device_node *qdn)
 		goto free;
 	}
 
-	chan->nframes = tx_size / chan->framesz;
+	chan->nframes = (tx_size - (2 * IVC_ALIGN)) / chan->framesz;
 	if (!chan->nframes) {
 		dev_err(group->dev, "invalid <frame-size> property.\n");
 		goto free;

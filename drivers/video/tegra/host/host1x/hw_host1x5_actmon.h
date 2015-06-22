@@ -78,6 +78,10 @@ static inline u32 actmon_glb_ctrl_sample_period_m(void)
 {
 	return 0xff << 0;
 }
+static inline u32 actmon_glb_intr_en_r(void)
+{
+	return 0x4;
+}
 static inline u32 actmon_glb_intr_status_r(void)
 {
 	return 0x8;
@@ -106,9 +110,37 @@ static inline u32 actmon_local_ctrl_k_val_m(void)
 {
 	return 0x7 << 10;
 }
+static inline u32 actmon_local_intr_en_r(void)
+{
+	return 0x84;
+}
+static inline u32 actmon_local_intr_en_avg_above_wmark_en_f(u32 v)
+{
+	return (v & 0x1) << 29;
+}
+static inline u32 actmon_local_intr_en_avg_below_wmark_en_f(u32 v)
+{
+	return (v & 0x1) << 28;
+}
 static inline u32 actmon_local_intr_status_r(void)
 {
 	return 0x88;
+}
+static inline u32 actmon_local_intr_status_avg_above_wmark_v(u32 r)
+{
+	return (r >> 29) & 0x1;
+}
+static inline u32 actmon_local_intr_status_avg_below_wmark_v(u32 r)
+{
+	return (r >> 28) & 0x1;
+}
+static inline u32 actmon_local_avg_upper_wmark_r(void)
+{
+	return 0x94;
+}
+static inline u32 actmon_local_avg_lower_wmark_r(void)
+{
+	return 0x98;
 }
 static inline u32 actmon_local_init_avg_r(void)
 {

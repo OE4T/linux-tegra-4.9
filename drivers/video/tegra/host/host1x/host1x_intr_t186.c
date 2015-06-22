@@ -215,12 +215,17 @@ static irqreturn_t intr_host1x_isr(int irq, void *dev_id)
 {
 	struct nvhost_intr *intr = dev_id;
 	struct nvhost_master *dev = intr_to_dev(intr);
-	u32 addr;
+	u32 addr, i;
 	unsigned long intstat;
 
 	intstat = host1x_hypervisor_readl(dev->dev,
 			host1x_sync_intstatus_r());
 	intr->intstatus = intstat;
+
+	for_each_set_bit(i, &intstat, 32) {
+		if (intr->host_isr[i])
+			intr->host_isr[i](intstat, intr->host_isr_priv[i]);
+	}
 
 	if (host1x_sync_intstatus_ip_read_int_v(intstat)) {
 		addr = host1x_hypervisor_readl(dev->dev,
@@ -311,6 +316,26 @@ static int free_syncpt_irq(struct nvhost_intr *intr)
 	return 0;
 }
 
+static void intr_enable_host_irq(struct nvhost_intr *intr, int irq)
+{
+	struct nvhost_master *dev = intr_to_dev(intr);
+	unsigned long val;
+
+	val = host1x_hypervisor_readl(dev->dev, host1x_sync_intmask_r());
+	val |= BIT(irq);
+	host1x_hypervisor_writel(dev->dev, host1x_sync_intmask_r(), val);
+}
+
+static void intr_disable_host_irq(struct nvhost_intr *intr, int irq)
+{
+	struct nvhost_master *dev = intr_to_dev(intr);
+	unsigned long val;
+
+	val = host1x_hypervisor_readl(dev->dev, host1x_sync_intmask_r());
+	val &= ~BIT(irq);
+	host1x_hypervisor_writel(dev->dev, host1x_sync_intmask_r(), val);
+}
+
 static int intr_debug_dump(struct nvhost_intr *intr, struct output *o)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
@@ -347,4 +372,6 @@ static const struct nvhost_intr_ops host1x_intr_ops = {
 	.free_host_general_irq = intr_free_host_general_irq,
 	.free_syncpt_irq = free_syncpt_irq,
 	.debug_dump = intr_debug_dump,
+	.disable_host_irq = intr_disable_host_irq,
+	.enable_host_irq = intr_enable_host_irq,
 };

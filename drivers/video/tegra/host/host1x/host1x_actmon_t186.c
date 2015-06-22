@@ -27,6 +27,8 @@
 #include "host1x/host1x_actmon_t186.h"
 #include "bus_client_t186.h"
 
+static void host1x_actmon_process_isr(u32 hintstat, void *priv);
+
 static void actmon_writel(struct host1x_actmon *actmon, u32 val, u32 reg)
 {
 	nvhost_dbg(dbg_reg, " r=0x%x v=0x%x", reg, val);
@@ -38,6 +40,53 @@ static u32 actmon_readl(struct host1x_actmon *actmon, u32 reg)
 	u32 val = readl(actmon->regs + reg);
 	nvhost_dbg(dbg_reg, " r=0x%x v=0x%x", reg, val);
 	return val;
+}
+
+static void host1x_actmon_event_fn(struct work_struct *work)
+{
+	struct host1x_actmon_worker *worker =
+		container_of(work, struct host1x_actmon_worker, work);
+	struct host1x_actmon *actmon = worker->actmon;
+	struct platform_device *pdev = actmon->pdev;
+	struct nvhost_device_data *engine_pdata = platform_get_drvdata(pdev);
+
+	/* ensure that the device remains powered */
+	nvhost_module_busy_noresume(pdev);
+	if (pm_runtime_active(&pdev->dev)) {
+		/* first, handle scaling */
+		nvhost_scale_actmon_irq(pdev, worker->type);
+
+		/* then, rewire the actmon IRQ */
+		nvhost_intr_enable_host_irq(&nvhost_get_host(pdev)->intr,
+					    engine_pdata->actmon_irq,
+					    host1x_actmon_process_isr,
+					    worker->actmon);
+	}
+	nvhost_module_idle(pdev);
+}
+
+static void host1x_actmon_process_isr(u32 hintstat, void *priv)
+{
+	struct host1x_actmon *actmon = priv;
+	struct platform_device *host_pdev = actmon->host->dev;
+	struct nvhost_device_data *engine_pdata =
+		platform_get_drvdata(actmon->pdev);
+	long val;
+
+	/* first, disable the interrupt */
+	nvhost_intr_disable_host_irq(&nvhost_get_host(host_pdev)->intr,
+				     engine_pdata->actmon_irq);
+
+	/* get the event type */
+	val = actmon_readl(actmon, actmon_glb_intr_status_r());
+	actmon_writel(actmon, val, actmon_glb_intr_status_r());
+	val = actmon_readl(actmon, actmon_local_intr_status_r());
+	actmon_writel(actmon, val, actmon_local_intr_status_r());
+
+	if (actmon_local_intr_status_avg_above_wmark_v(val))
+		schedule_work(&actmon->above_wmark_worker.work);
+	else if (actmon_local_intr_status_avg_below_wmark_v(val))
+		schedule_work(&actmon->below_wmark_worker.work);
 }
 
 /*
@@ -93,6 +142,9 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 	struct platform_device *host_pdev = actmon->host->dev;
 	struct nvhost_device_data *host_pdata =
 		platform_get_drvdata(host_pdev);
+	struct nvhost_device_data *engine_pdata =
+		platform_get_drvdata(actmon->pdev);
+
 	u32 val;
 
 	if (actmon->init == ACTMON_READY)
@@ -110,6 +162,8 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 	/* Clear average and control registers */
 	actmon_writel(actmon, 0, actmon_local_init_avg_r());
 	actmon_writel(actmon, 0, actmon_glb_ctrl_r());
+	actmon_writel(actmon, 0, actmon_glb_intr_en_r());
+	actmon_writel(actmon, 0, actmon_local_intr_en_r());
 	actmon_writel(actmon, 0, actmon_local_ctrl_r());
 
 	/* Write (normalised) sample period. */
@@ -126,6 +180,19 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 	val |= actmon_local_ctrl_enb_cumulative_f(1);
 	actmon_writel(actmon, val, actmon_local_ctrl_r());
 
+	/* setup watermark workers */
+	actmon->below_wmark_worker.actmon = actmon;
+	actmon->below_wmark_worker.type = ACTMON_INTR_BELOW_WMARK;
+	INIT_WORK(&actmon->below_wmark_worker.work, host1x_actmon_event_fn);
+	actmon->above_wmark_worker.actmon = actmon;
+	actmon->above_wmark_worker.type = ACTMON_INTR_ABOVE_WMARK;
+	INIT_WORK(&actmon->above_wmark_worker.work, host1x_actmon_event_fn);
+
+	nvhost_intr_enable_host_irq(&nvhost_get_host(host_pdev)->intr,
+				    engine_pdata->actmon_irq,
+				    host1x_actmon_process_isr,
+				    actmon);
+
 	actmon->init = ACTMON_READY;
 
 	return 0;
@@ -133,6 +200,10 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 
 static void host1x_actmon_deinit(struct host1x_actmon *actmon)
 {
+	struct platform_device *host_pdev = actmon->host->dev;
+	struct nvhost_device_data *engine_pdata =
+		platform_get_drvdata(actmon->pdev);
+
 	if (actmon->init != ACTMON_READY)
 		return;
 
@@ -140,6 +211,9 @@ static void host1x_actmon_deinit(struct host1x_actmon *actmon)
 
 	actmon_writel(actmon, 0, actmon_glb_ctrl_r());
 	actmon_writel(actmon, 0xffffffff, actmon_glb_intr_status_r());
+
+	nvhost_intr_disable_host_irq(&nvhost_get_host(host_pdev)->intr,
+				     engine_pdata->actmon_irq);
 }
 
 static int host1x_actmon_avg(struct host1x_actmon *actmon, u32 *val)
@@ -229,6 +303,52 @@ static int host1x_actmon_count_norm(struct host1x_actmon *actmon, u32 *avg)
 	nvhost_module_idle(actmon->host->dev);
 
 	*avg = (val * 1000) / (actmon->clks_per_sample * actmon->divider);
+
+	return 0;
+}
+
+static int host1x_set_high_wmark(struct host1x_actmon *actmon, u32 val_scaled)
+{
+	u32 val = (val_scaled < 1000) ?
+		((val_scaled * actmon->clks_per_sample * actmon->divider) /
+		1000) : actmon->clks_per_sample * actmon->divider;
+
+	if (actmon->init != ACTMON_READY)
+		return 0;
+
+	/* write new watermark */
+	actmon_writel(actmon, val, actmon_local_avg_upper_wmark_r());
+
+	/* enable or disable watermark depending on the values */
+	val = actmon_readl(actmon, actmon_local_intr_en_r());
+	if (val_scaled < 1000)
+		val |= actmon_local_intr_en_avg_above_wmark_en_f(1);
+	else
+		val &= ~actmon_local_intr_en_avg_above_wmark_en_f(1);
+	actmon_writel(actmon, val, actmon_local_intr_en_r());
+
+	return 0;
+}
+
+static int host1x_set_low_wmark(struct host1x_actmon *actmon, u32 val_scaled)
+{
+	u32 val = (val_scaled < 1000) ?
+		((val_scaled * actmon->clks_per_sample * actmon->divider) /
+		1000) : actmon->clks_per_sample * actmon->divider;
+
+	if (actmon->init != ACTMON_READY)
+		return 0;
+
+	/* write new watermark */
+	actmon_writel(actmon, val, actmon_local_avg_lower_wmark_r());
+
+	/* enable or disable watermark depending on the values */
+	val = actmon_readl(actmon, actmon_local_intr_en_r());
+	if (val_scaled)
+		val |= actmon_local_intr_en_avg_below_wmark_en_f(1);
+	else
+		val &= ~actmon_local_intr_en_avg_below_wmark_en_f(1);
+	actmon_writel(actmon, val, actmon_local_intr_en_r());
 
 	return 0;
 }
@@ -584,4 +704,6 @@ static const struct nvhost_actmon_ops host1x_actmon_ops = {
 	.get_k = host1x_actmon_get_k,
 	.set_k = host1x_actmon_set_k,
 	.debug_init = host1x_actmon_debug_init,
+	.set_high_wmark = host1x_set_high_wmark,
+	.set_low_wmark = host1x_set_low_wmark,
 };

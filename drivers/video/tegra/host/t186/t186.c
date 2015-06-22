@@ -322,11 +322,16 @@ int nvhost_init_t186_support(struct nvhost_master *host,
 
 	if ((host->dev->dev.parent != &platform_bus) ||
 	    !strcmp(dev_name(&host->dev->dev), "host1x")) {
-		err = sysfs_create_link(&platform_bus.kobj,
+		err = sysfs_create_link_nowarn(&platform_bus.kobj,
 					&host->dev->dev.kobj,
 					"host1x");
-		if (err)
-			dev_warn(&host->dev->dev, "could not create sysfs links\n");
+		if (err) {
+			err = sysfs_create_link(&platform_bus.kobj,
+						&host->dev->dev.kobj,
+						dev_name(&host->dev->dev));
+			if (err)
+				dev_warn(&host->dev->dev, "could not create sysfs links\n");
+		}
 	}
 
 	/* don't worry about cleaning up on failure... "remove" does it. */

@@ -752,8 +752,12 @@ static struct of_device_id tegra_host1x_of_match[] = {
 		.data = (struct nvhost_device_data *)&t21_host1x_info },
 #endif
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	{ .compatible = "nvidia,tegra186-host1x",
+	{ .name = "host1x",
+		.compatible = "nvidia,tegra186-host1x",
 		.data = (struct nvhost_device_data *)&t18_host1x_info },
+	{ .name = "host1xb",
+		.compatible = "nvidia,tegra186-host1x",
+		.data = (struct nvhost_device_data *)&t18_host1xb_info },
 	{ .compatible = "nvidia,tegra186-host1x-cl34000094",
 		.data = (struct nvhost_device_data *)&t18_host1x_info },
 #endif

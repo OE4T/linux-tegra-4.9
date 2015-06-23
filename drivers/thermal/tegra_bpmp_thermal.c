@@ -36,6 +36,9 @@
 
 #include "tegra_bpmp_thermal_mrq.h"
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/bpmp_thermal.h>
+
 struct tegra_bpmp_thermal_zone {
 	struct tegra_bpmp_thermal *tegra;
 	struct thermal_zone_device *tzd;
@@ -160,6 +163,8 @@ static void tz_device_update_work_fn(struct work_struct *work)
 			atomic_read(&zone->needs_update));
 		if (atomic_cmpxchg(&zone->needs_update, true, false)) {
 			thermal_zone_device_update(zone->tzd);
+			trace_bpmp_thermal_zone_trip(zone->tzd,
+						     zone->tzd->temperature);
 			tegra_bpmp_thermal_trip_update(zone, 0);
 		}
 	}

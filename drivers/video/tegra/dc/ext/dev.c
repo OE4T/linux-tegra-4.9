@@ -1574,7 +1574,7 @@ static int tegra_dc_ext_negotiate_bw(struct tegra_dc_ext_user *user,
 							  &wins[i]);
 		}
 		else {
-			dc->tmp_wins[i].flags = 0;
+			dc->tmp_wins[idx].flags = 0;
 		}
 		dc_wins[i] = &dc->tmp_wins[idx];
 	}

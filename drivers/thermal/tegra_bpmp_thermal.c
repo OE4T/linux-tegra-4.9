@@ -327,9 +327,21 @@ static int tegra_bpmp_thermal_probe(struct platform_device *pdev)
 		}
 
 		tegra->zones[i].tzd = tzd;
+		atomic_set(&tegra->zones[i].needs_update, true);
 	}
 
 	platform_set_drvdata(pdev, tegra);
+
+	/* now that all the zones are set up, force a zone-update to set the
+	* initial limits correctly
+	* one such use case is where BPMP side thermal driver (that comes up
+	* before host thermal driver) gets its limits set as THERMAL_MIN_LOW
+	* and THERMAL_MAX_HIGH and stays at those limits, generating no
+	* IRQs. Because of this there is no trigger to zone-update on host
+	* side (CMD_THERMAL_HOST_TRIP_REACHED is never received on host);
+	* and no meaningful limits are ever set.
+	*/
+	schedule_work(&tegra->tz_device_update_work);
 
 	return 0;
 

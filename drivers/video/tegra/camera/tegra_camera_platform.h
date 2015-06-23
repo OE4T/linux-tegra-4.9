@@ -20,15 +20,15 @@
 
 #define TEGRA_CAMERA_IOCTL_SET_BW _IOW('o', 1, struct bw_info)
 
-/* TODO: Add ISO_EMC */
 enum clock_id {
 	EMC,
+	ISO_EMC,
 	NUM_CLKS
 };
 
-/* TODO: Add iso.emc */
 static char *clk_names[NUM_CLKS] = {
 	"emc",
+	"iso.emc"
 };
 
 struct tegra_camera_info {

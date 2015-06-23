@@ -35,7 +35,7 @@ static int tegra_camera_open(struct inode *inode, struct file *file)
 {
 	struct tegra_camera_info *info;
 	struct miscdevice *mdev;
-	int i, ret;
+	int i, ret, index_put, index_disable;
 
 	mdev = file->private_data;
 	info = dev_get_drvdata(mdev->parent);
@@ -46,29 +46,43 @@ static int tegra_camera_open(struct inode *inode, struct file *file)
 		if (IS_ERR(info->clks[i])) {
 			dev_err(info->dev, "clk_get_sys failed for %s:%s\n",
 				info->devname, clk_names[i]);
+			index_put = i-1;
 			goto err_get_clk;
+		}
+
+		ret = clk_set_rate(info->clks[i], 0);
+		if (ret) {
+			dev_err(info->dev, "Cannot init %s\n", clk_names[i]);
+			index_put = i;
+			goto err_set_clk;
 		}
 
 		ret = clk_prepare_enable(info->clks[i]);
 		if (ret) {
 			dev_err(info->dev, "Cannot enable %s\n", clk_names[i]);
-			goto err_get_clk;
+			index_put = i;
+			index_disable = i-1;
+			goto err_prep_clk;
 		}
 	}
 	return 0;
 
-err_get_clk:
-
-	for (; i >= 0; i--) {
-		if (!IS_ERR_OR_NULL(info->clks[i])) {
+err_prep_clk:
+	for (i = index_disable; i >= 0; i--) {
+		if (!IS_ERR_OR_NULL(info->clks[i]))
 			clk_disable_unprepare(info->clks[i]);
+	}
+
+err_set_clk:
+err_get_clk:
+	for (i = index_put; i >= 0; i--) {
+		if (!IS_ERR_OR_NULL(info->clks[i]))
 			clk_put(info->clks[i]);
-		}
 		info->clks[i] = NULL;
 	}
 	return -ENOENT;
-
 }
+
 static int tegra_camera_release(struct inode *inode, struct file *file)
 {
 
@@ -97,21 +111,29 @@ static long tegra_camera_ioctl(struct file *file,
 	switch (_IOC_NR(cmd)) {
 	case _IOC_NR(TEGRA_CAMERA_IOCTL_SET_BW):
 	{
+		unsigned long mc_khz = 0;
 		if (copy_from_user(&kcopy, (const void __user *)arg,
 			sizeof(struct bw_info))) {
 			dev_err(info->dev, "%s:Failed to get data from user\n",
 				__func__);
 			return -EFAULT;
 		}
-		if (kcopy.is_iso) {
-			dev_err(info->dev, "%s: ISO bw not implemented\n",
-				__func__);
-		} else {
 
-			dev_dbg(info->dev, "%s:set bw %llu\n",
-				__func__, kcopy.bw);
-			ret = clk_set_rate(info->clks[EMC],
-				tegra_emc_bw_to_freq_req(kcopy.bw));
+		/* Use Khz to prevent overflow */
+		mc_khz = tegra_emc_bw_to_freq_req(kcopy.bw);
+		mc_khz = min(ULONG_MAX / 1000, mc_khz);
+
+		if (kcopy.is_iso) {
+			dev_dbg(info->dev, "%s:Set iso bw %llu at %lu KHz\n",
+				__func__, kcopy.bw, mc_khz);
+			ret = clk_set_rate(info->clks[ISO_EMC], mc_khz * 1000);
+			if (ret)
+				dev_err(info->dev, "%s:Failed to set iso bw\n",
+					__func__);
+		} else {
+			dev_dbg(info->dev, "%s:Set bw %llu at %lu KHz\n",
+				__func__, kcopy.bw, mc_khz);
+			ret = clk_set_rate(info->clks[EMC], mc_khz * 1000);
 			if (ret)
 				dev_err(info->dev, "%s:Failed to set bw\n",
 					__func__);

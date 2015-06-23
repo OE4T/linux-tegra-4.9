@@ -242,6 +242,7 @@ config SND_SOC_TEGRA_T210REF_MOBILE_ALT
 	select SND_SOC_TEGRA210_ADSP_ALT
 	select SND_SOC_SPDIF
 	select SND_SOC_RT5639
+	select SND_SOC_RT5659
 	help
 	  Say Y or M here.
 

@@ -175,6 +175,7 @@ struct gk20a_platform {
 	int (*reset_assert)(struct platform_device *pdev);
 	int (*reset_deassert)(struct platform_device *pdev);
 	struct clk *clk_reset;
+	struct dvfs_rail *gpu_rail;
 
 	bool virtual_dev;
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION

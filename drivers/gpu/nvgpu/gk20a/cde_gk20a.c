@@ -1126,7 +1126,8 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	vaddr = gk20a_gmmu_map(ch->vm, &gr->compbit_store.mem.sgt,
 			       g->gr.compbit_store.mem.size,
 			       NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-			       gk20a_mem_flag_read_only);
+			       gk20a_mem_flag_read_only,
+			       false);
 
 	if (!vaddr) {
 		gk20a_warn(&cde_ctx->pdev->dev, "cde: cannot map compression bit backing store");

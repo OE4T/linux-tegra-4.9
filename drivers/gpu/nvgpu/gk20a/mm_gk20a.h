@@ -221,7 +221,7 @@ struct gk20a_mmu_level {
 			   u64 *iova,
 			   u32 kind_v, u32 *ctag,
 			   bool cacheable, bool unmapped_pte,
-			   int rw_flag, bool sparse, u32 flags);
+			   int rw_flag, bool sparse, bool priv);
 	size_t entry_size;
 };
 
@@ -441,7 +441,8 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 		struct sg_table **sgt,
 		u64 size,
 		u32 flags,
-		int rw_flag);
+		int rw_flag,
+		bool priv);
 
 int gk20a_gmmu_alloc_map(struct vm_gk20a *vm,
 		size_t size,
@@ -498,6 +499,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			int rw_flag,
 			bool clear_ctags,
 			bool sparse,
+			bool priv,
 			struct vm_gk20a_mapping_batch *batch);
 
 void gk20a_gmmu_unmap(struct vm_gk20a *vm,

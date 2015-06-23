@@ -333,7 +333,7 @@ int prepare_ucode_blob(struct gk20a *g)
 	sg_dma_address(sgt->sgl) = 0;
 
 	g->pmu.wpr_buf.gpu_va = gk20a_gmmu_map(vm, &sgt, wprsize,
-						0, gk20a_mem_flag_none);
+						0, gk20a_mem_flag_none, false);
 	gm20b_dbg_pmu("wpr mapped gpu va :%llx\n", g->pmu.wpr_buf.gpu_va);
 
 	/* Discover all managed falcons*/
@@ -1323,7 +1323,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 		acr->hsbl_ucode.gpu_va = gk20a_gmmu_map(vm, &acr->hsbl_ucode.sgt,
 				bl_sz,
 				0, /* flags */
-				gk20a_mem_flag_read_only);
+				gk20a_mem_flag_read_only, false);
 		if (!acr->hsbl_ucode.gpu_va) {
 			gk20a_err(d, "failed to map pmu ucode memory!!");
 			goto err_free_ucode;

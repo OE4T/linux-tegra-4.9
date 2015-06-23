@@ -67,6 +67,7 @@ static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 				int rw_flag,
 				bool clear_ctags,
 				bool sparse,
+				bool priv,
 				struct vm_gk20a_mapping_batch *batch)
 {
 	int err = 0;

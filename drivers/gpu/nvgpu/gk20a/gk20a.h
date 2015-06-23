@@ -350,6 +350,7 @@ struct gpu_ops {
 				int rw_flag,
 				bool clear_ctags,
 				bool sparse,
+				bool priv,
 				struct vm_gk20a_mapping_batch *batch);
 		void (*gmmu_unmap)(struct vm_gk20a *vm,
 				u64 vaddr,

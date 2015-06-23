@@ -111,7 +111,8 @@ int gk20a_semaphore_pool_map(struct gk20a_semaphore_pool *p,
 	map->vm = vm;
 	map->rw_flag = rw_flag;
 	map->gpu_va = gk20a_gmmu_map(vm, &p->sgt, p->size,
-				     0/*uncached*/, rw_flag);
+				     0/*uncached*/, rw_flag,
+				     false);
 	if (!map->gpu_va) {
 		kfree(map);
 		return -ENOMEM;

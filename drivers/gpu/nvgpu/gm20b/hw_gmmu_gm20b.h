@@ -146,6 +146,18 @@ static inline u32 gmmu_pte_valid_false_f(void)
 {
 	return 0x0;
 }
+static inline u32 gmmu_pte_privilege_w(void)
+{
+	return 0;
+}
+static inline u32 gmmu_pte_privilege_true_f(void)
+{
+	return 0x2;
+}
+static inline u32 gmmu_pte_privilege_false_f(void)
+{
+	return 0x0;
+}
 static inline u32 gmmu_pte_address_sys_f(u32 v)
 {
 	return (v & 0xfffffff) << 4;

@@ -101,7 +101,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   u8 kind_v, u32 ctag_offset, bool cacheable,
 				   bool umapped_pte, int rw_flag,
 				   bool sparse,
-				   u32 flags);
+				   bool priv);
 static int __must_check gk20a_init_system_vm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_bar1_vm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_hwpm(struct mm_gk20a *mm);
@@ -1168,6 +1168,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			int rw_flag,
 			bool clear_ctags,
 			bool sparse,
+			bool priv,
 			struct vm_gk20a_mapping_batch *batch)
 {
 	int err = 0;
@@ -1208,7 +1209,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 				      NVGPU_AS_MAP_BUFFER_FLAGS_UNMAPPED_PTE,
 				      rw_flag,
 				      sparse,
-				      flags);
+				      priv);
 	if (err) {
 		gk20a_err(d, "failed to update ptes on map");
 		goto fail_validate;
@@ -1559,6 +1560,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 					flags, rw_flag,
 					clear_ctags,
 					false,
+					false,
 					batch);
 	if (!map_offset)
 		goto clean_up;
@@ -1779,6 +1781,7 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 				gk20a_mem_flag_read_only,
 				false, /* clear_ctags */
 				false, /* sparse */
+				false, /* priv */
 				NULL); /* mapping_batch handle */
 
 		if (!mapped_buffer->ctag_map_win_addr) {
@@ -1802,7 +1805,8 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 		struct sg_table **sgt,
 		u64 size,
 		u32 flags,
-		int rw_flag)
+		int rw_flag,
+		bool priv)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	u64 vaddr;
@@ -1818,6 +1822,7 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 				flags, rw_flag,
 				false, /* clear_ctags */
 				false, /* sparse */
+				priv, /* priv */
 				NULL); /* mapping_batch handle */
 	mutex_unlock(&vm->update_gmmu_lock);
 	if (!vaddr) {
@@ -1932,7 +1937,8 @@ int gk20a_gmmu_alloc_map_attr(struct vm_gk20a *vm,
 	if (err)
 		return err;
 
-	mem->gpu_va = gk20a_gmmu_map(vm, &mem->sgt, size, 0, gk20a_mem_flag_none);
+	mem->gpu_va = gk20a_gmmu_map(vm, &mem->sgt, size, 0,
+				     gk20a_mem_flag_none, false);
 	if (!mem->gpu_va) {
 		err = -ENOMEM;
 		goto fail_free;
@@ -2126,7 +2132,7 @@ static int update_gmmu_pde_locked(struct vm_gk20a *vm,
 			   u64 *iova,
 			   u32 kind_v, u32 *ctag,
 			   bool cacheable, bool unammped_pte,
-			   int rw_flag, bool sparse, u32 flags)
+			   int rw_flag, bool sparse, bool priv)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	bool small_valid, big_valid;
@@ -2176,7 +2182,7 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			   u64 *iova,
 			   u32 kind_v, u32 *ctag,
 			   bool cacheable, bool unmapped_pte,
-			   int rw_flag, bool sparse, u32 flags)
+			   int rw_flag, bool sparse, bool priv)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	u32 ctag_granularity = g->ops.fb.compression_page_size(g);
@@ -2192,6 +2198,9 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			pte_w[0] = gmmu_pte_valid_true_f() |
 				gmmu_pte_address_sys_f(*iova
 				>> gmmu_pte_address_shift_v());
+
+		if (priv)
+			pte_w[0] |= gmmu_pte_privilege_true_f();
 
 		pte_w[1] = gmmu_pte_aperture_video_memory_f() |
 			gmmu_pte_kind_f(kind_v) |
@@ -2270,7 +2279,7 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 				    int rw_flag,
 				    bool sparse,
 				    int lvl,
-				    u32 flags)
+				    bool priv)
 {
 	const struct gk20a_mmu_level *l = &vm->mmu_levels[lvl];
 	const struct gk20a_mmu_level *next_l = &vm->mmu_levels[lvl+1];
@@ -2318,7 +2327,7 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 		err = l->update_entry(vm, pte, pde_i, pgsz_idx,
 				sgl, offset, iova,
 				kind_v, ctag, cacheable, unmapped_pte,
-				rw_flag, sparse, flags);
+				rw_flag, sparse, priv);
 		if (err)
 			return err;
 
@@ -2339,7 +2348,7 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 				gpu_va,
 				next,
 				kind_v, ctag, cacheable, unmapped_pte,
-				rw_flag, sparse, lvl+1, flags);
+				rw_flag, sparse, lvl+1, priv);
 			unmap_gmmu_pages(next_pte);
 
 			if (err)
@@ -2364,7 +2373,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   bool cacheable, bool unmapped_pte,
 				   int rw_flag,
 				   bool sparse,
-				   u32 flags)
+				   bool priv)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	int ctag_granularity = g->ops.fb.compression_page_size(g);
@@ -2377,7 +2386,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 
 	gk20a_dbg(gpu_dbg_pte, "size_idx=%d, iova=%llx, buffer offset %lld, nents %d",
 		   pgsz_idx,
-		   sgt ? g->ops.mm.get_iova_addr(vm->mm->g, sgt->sgl, flags)
+		   sgt ? g->ops.mm.get_iova_addr(vm->mm->g, sgt->sgl, 0)
 		       : 0ULL,
 		   buffer_offset,
 		   sgt ? sgt->nents : 0);
@@ -2386,7 +2395,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 		return -EINVAL;
 
 	if (sgt) {
-		iova = g->ops.mm.get_iova_addr(vm->mm->g, sgt->sgl, flags);
+		iova = g->ops.mm.get_iova_addr(vm->mm->g, sgt->sgl, 0);
 		if (!vm->mm->bypass_smmu && iova) {
 			iova += space_to_skip;
 		} else {
@@ -2422,7 +2431,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 			&iova,
 			gpu_va, gpu_end,
 			kind_v, &ctag,
-			cacheable, unmapped_pte, rw_flag, sparse, 0, flags);
+			cacheable, unmapped_pte, rw_flag, sparse, 0, priv);
 	unmap_gmmu_pages(&vm->pdb);
 
 	smp_mb();
@@ -2835,6 +2844,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 					 gk20a_mem_flag_none,
 					 false,
 					 true,
+					 false,
 					 NULL);
 		if (!map_offset) {
 			mutex_unlock(&vm->update_gmmu_lock);

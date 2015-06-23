@@ -1748,7 +1748,8 @@ static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
 					&ucode_info->surface_desc.sgt,
 					ucode_info->surface_desc.size,
 					0, /* flags */
-					gk20a_mem_flag_read_only);
+					gk20a_mem_flag_read_only,
+					false);
 	if (!ucode_info->surface_desc.gpu_va) {
 		gk20a_err(d, "failed to update gmmu ptes\n");
 		return -ENOMEM;
@@ -2375,7 +2376,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 
 	gpu_va = gk20a_gmmu_map(ch_vm, &sgt, size,
 				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-				gk20a_mem_flag_none);
+				gk20a_mem_flag_none, true);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[CIRCULAR_VA] = gpu_va;
@@ -2392,7 +2393,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 
 	gpu_va = gk20a_gmmu_map(ch_vm, &sgt, size,
 				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-				gk20a_mem_flag_none);
+				gk20a_mem_flag_none, false);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[ATTRIBUTE_VA] = gpu_va;
@@ -2409,7 +2410,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 
 	gpu_va = gk20a_gmmu_map(ch_vm, &sgt, size,
 				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-				gk20a_mem_flag_none);
+				gk20a_mem_flag_none, true);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[PAGEPOOL_VA] = gpu_va;
@@ -2419,7 +2420,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	sgt = gr->global_ctx_buffer[GOLDEN_CTX].mem.sgt;
 	size = gr->global_ctx_buffer[GOLDEN_CTX].mem.size;
 	gpu_va = gk20a_gmmu_map(ch_vm, &sgt, size, 0,
-				gk20a_mem_flag_none);
+				gk20a_mem_flag_none, true);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[GOLDEN_CTX_VA] = gpu_va;
@@ -2429,7 +2430,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	sgt = gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem.sgt;
 	size = gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem.size;
 	gpu_va = gk20a_gmmu_map(ch_vm, &sgt, size, 0,
-				gk20a_mem_flag_none);
+				gk20a_mem_flag_none, true);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[PRIV_ACCESS_MAP_VA] = gpu_va;
@@ -2501,7 +2502,7 @@ int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 
 	gr_ctx->mem.gpu_va = gk20a_gmmu_map(vm, &gr_ctx->mem.sgt, gr_ctx->mem.size,
 					NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-					gk20a_mem_flag_none);
+					gk20a_mem_flag_none, true);
 	if (!gr_ctx->mem.gpu_va)
 		goto err_free_mem;
 

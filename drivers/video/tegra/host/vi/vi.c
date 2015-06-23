@@ -127,7 +127,7 @@ static int vi_out_show(struct seq_file *s, void *unused)
 {
 	struct vi *vi = s->private;
 
-	seq_printf(s, "vi[%d] overflow: %u\n", vi->ndev->id,
+	seq_printf(s, "vi overflow: %u\n",
 		atomic_read(&(vi->vi_out.overflow)));
 
 	return 0;
@@ -158,8 +158,7 @@ static void vi_create_debugfs(struct vi *vi)
 	char debugfs_file_name[20];
 
 
-	snprintf(tegra_vi_name, sizeof(tegra_vi_name),
-			"%s_%u", TEGRA_VI_NAME, vi->ndev->id);
+	snprintf(tegra_vi_name, sizeof(tegra_vi_name), "%s", TEGRA_VI_NAME);
 
 	vi->debugdir = debugfs_create_dir(tegra_vi_name, NULL);
 	if (!vi->debugdir) {
@@ -169,8 +168,7 @@ static void vi_create_debugfs(struct vi *vi)
 		goto create_debugfs_fail;
 	}
 
-	snprintf(debugfs_file_name, sizeof(debugfs_file_name),
-			"%s_%u", "vi_out", vi->ndev->id);
+	snprintf(debugfs_file_name, sizeof(debugfs_file_name), "%s", "vi_out");
 
 	ret = debugfs_create_file(debugfs_file_name, S_IRUGO,
 			vi->debugdir, vi, &vi_out_fops);

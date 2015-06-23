@@ -155,9 +155,6 @@ static int vi_isomgr_register(struct vi *tegra_vi)
 	if (WARN_ONCE(pdata == NULL, "pdata not found, %s failed\n", __func__))
 		return -ENODEV;
 
-	if (tegra_vi->ndev->id)
-		iso_client_id = TEGRA_ISO_CLIENT_VI_1;
-
 	/* Get max VI BW */
 	vi_clk = pdata->clk[0];
 	tegra_vi->max_bw =

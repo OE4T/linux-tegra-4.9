@@ -141,6 +141,9 @@ static int nvhdcp_i2c_read(struct tegra_nvhdcp *nvhdcp, u8 reg,
 	};
 	struct tegra_dc *dc = tegra_dc_hdmi_get_dc(nvhdcp->hdmi);
 
+	if (dc->vedid)
+		goto skip_hdcp_i2c;
+
 	tegra_dc_ddc_enable(dc, true);
 	do {
 		mutex_lock(&nvhdcp->lock);
@@ -164,6 +167,10 @@ static int nvhdcp_i2c_read(struct tegra_nvhdcp *nvhdcp, u8 reg,
 	}
 
 	return 0;
+
+skip_hdcp_i2c:
+	nvhdcp_err("vedid active\n");
+	return -EIO;
 }
 
 static int nvhdcp_i2c_write(struct tegra_nvhdcp *nvhdcp, u8 reg,
@@ -181,6 +188,9 @@ static int nvhdcp_i2c_write(struct tegra_nvhdcp *nvhdcp, u8 reg,
 	};
 	int retries = 15;
 	struct tegra_dc *dc = tegra_dc_hdmi_get_dc(nvhdcp->hdmi);
+
+	if (dc->vedid)
+		goto skip_hdcp_i2c;
 
 	buf[0] = reg;
 	memcpy(buf + 1, data, len);
@@ -208,6 +218,10 @@ static int nvhdcp_i2c_write(struct tegra_nvhdcp *nvhdcp, u8 reg,
 	}
 
 	return 0;
+
+skip_hdcp_i2c:
+	nvhdcp_err("vedid active\n");
+	return -EIO;
 }
 
 static inline int nvhdcp_i2c_read8(struct tegra_nvhdcp *nvhdcp, u8 reg, u8 *val)

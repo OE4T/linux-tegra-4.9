@@ -1693,10 +1693,14 @@ static int tegra_hdmi_v2_x_mon_config(struct tegra_hdmi *hdmi, bool enable)
 		},
 	};
 
+	if (hdmi->dc->vedid)
+		goto skip_scdc_i2c;
+
 	tegra_hdmi_scdc_write(hdmi,
 			enable ? tmds_config_en : tmds_config_dis,
 			ARRAY_SIZE(tmds_config_en));
 
+skip_scdc_i2c:
 	return 0;
 }
 
@@ -1753,6 +1757,9 @@ static void tegra_hdmi_scdc_worker(struct work_struct *work)
 	if (!hdmi->enabled || hdmi->dc->mode.pclk <= 340000000)
 		return;
 
+	if (hdmi->dc->vedid)
+		goto skip_scdc_i2c;
+
 	mutex_lock(&hdmi->ddc_lock);
 
 	tegra_hdmi_scdc_read(hdmi, rd_tmds_config, ARRAY_SIZE(rd_tmds_config));
@@ -1761,6 +1768,7 @@ static void tegra_hdmi_scdc_worker(struct work_struct *work)
 
 	mutex_unlock(&hdmi->ddc_lock);
 
+skip_scdc_i2c:
 	/* reschedule the worker */
 	cancel_delayed_work(&hdmi->scdc_work);
 	schedule_delayed_work(&hdmi->scdc_work,

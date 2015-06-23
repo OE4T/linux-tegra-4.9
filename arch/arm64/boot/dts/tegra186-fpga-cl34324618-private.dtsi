@@ -28,9 +28,11 @@
 	};
 
 	sdhci@3460000 {
-		uhs-mask = <0x0>;
 		nvidia,enable-strobe-mode;
 		max-clk-limit = <6400000>;
+		non-removable;
+		cap-mmc-highspeed;
+		mmc-ddr-1_8v;
 		status = "okay";
         };
 
@@ -41,6 +43,8 @@
 		power-gpios = <&gpio 180 0>;
 		nvidia,sd-device;
 		max-clk-limit = <12800000>;
+		power-gpios = <&gpio 180 0>;
+		cap-sd-highspeed;
 		status = "okay";
         };
 

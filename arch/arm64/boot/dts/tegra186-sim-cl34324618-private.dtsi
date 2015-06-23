@@ -222,8 +222,6 @@
 			      <&host1x_ctx5		TEGRA_SWGROUP_HOST1X_CTX5>,
 			      <&host1x_ctx6		TEGRA_SWGROUP_HOST1X_CTX6>,
 			      <&host1x_ctx7		TEGRA_SWGROUP_HOST1X_CTX7>;
-
-		calxeda,smmu-secure-config-access;
 	};
 
 	tegra_car: clock {

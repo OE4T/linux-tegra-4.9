@@ -207,16 +207,6 @@
 			      <&{/sdhci@3420000}       TEGRA_SWGROUP_SDMMC2A>,
 			      <&{/sdhci@3400000}       TEGRA_SWGROUP_SDMMC1A>,
 			      <&{/bpmp}			TEGRA_SWGROUP_BPMP>;
-
-		/*
-		 * Valid only for broken linsim.
-		 *
-		 * Pls override by "-calxeda,smmu-secure-config-access"
-		 * for QT/VSP/FPGA DT when kernel runs at non-secure
-		 * EL1(normal).
-		 */
-		calxeda,smmu-secure-config-access;
-
 		linsim,smmu-broken-sim-irq;
 	};
 

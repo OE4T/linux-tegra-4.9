@@ -635,18 +635,20 @@ static int tegra_dc_dp_i2c_xfer(struct tegra_dc *dc, struct i2c_msg *msgs,
 	u32 aux_stat;
 	int status = 0;
 	u32 len = 0;
-	u32 start_addr;
+	u32 start_addr = 0;
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 
 	for (i = 0; i < num; ++i) {
 		pmsg = &msgs[i];
 
-		if (!pmsg->flags) { /* write */
-			/* Ignore the write-for-read command now as it is
-			   already handled in the read operations */
+		if (!pmsg->flags && pmsg->addr == 0x50) { /* write */
+			/*
+			 * Ignore writes to I2C addr 0x30 for now.
+			 * This means we can't access 256-byte chunks.
+			 */
+			start_addr = pmsg->buf[0];
 		} else if (pmsg->flags & I2C_M_RD) { /* Read */
 			len = pmsg->len;
-			start_addr = 0;
 			status = tegra_dc_i2c_read(dp, pmsg->addr, start_addr,
 				pmsg->buf, &len, &aux_stat);
 			if (status) {

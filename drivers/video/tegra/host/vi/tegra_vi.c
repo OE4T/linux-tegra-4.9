@@ -227,49 +227,20 @@ static int vi_isomgr_release(struct vi *tegra_vi)
 }
 #endif
 
-static int vi_set_la(struct vi *tegra_vi1, uint vi_bw)
+static int vi_set_la(struct vi *tegra_vi, uint vi_bw)
 {
-	struct nvhost_device_data *pdata_vi1, *pdata_vi2;
-	struct vi *tegra_vi2;
-	struct clk *clk_vi;
+	struct nvhost_device_data *pdata_vi;
 	int ret = 0;
 	uint total_vi_bw;
 
-	pdata_vi1 =
-		(struct nvhost_device_data *)tegra_vi1->ndev->dev.platform_data;
+	pdata_vi =
+		(struct nvhost_device_data *)tegra_vi->ndev->dev.platform_data;
 
-	if (!pdata_vi1)
+	if (!pdata_vi)
 		return -ENODEV;
 
-	/* Copy device data for other vi device */
-	mutex_lock(&la_lock);
-
-	tegra_vi1->vi_bw = vi_bw / 1000;
-	total_vi_bw = tegra_vi1->vi_bw;
-	if (pdata_vi1->master)
-		pdata_vi2 = (struct nvhost_device_data *)
-			pdata_vi1->master->dev.platform_data;
-	else
-		pdata_vi2 = (struct nvhost_device_data *)
-			pdata_vi1->slave->dev.platform_data;
-
-	if (!pdata_vi2) {
-		mutex_unlock(&la_lock);
-		return -ENODEV;
-	}
-
-	tegra_vi2 = (struct vi *)pdata_vi2->private_data;
-
-	if (!tegra_vi2) {
-		mutex_unlock(&la_lock);
-		return -ENODATA;
-	}
-
-	clk_vi = clk_get(&tegra_vi2->ndev->dev, "emc");
-	if (tegra_is_clk_enabled(clk_vi))
-		total_vi_bw += tegra_vi2->vi_bw;
-
-	mutex_unlock(&la_lock);
+	tegra_vi->vi_bw = vi_bw / 1000;
+	total_vi_bw = tegra_vi->vi_bw;
 
 #ifdef CONFIG_TEGRA_MC
 	ret = tegra_set_camera_ptsa(TEGRA_LA_VI_W, total_vi_bw, 1);

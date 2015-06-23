@@ -438,16 +438,6 @@ static int __exit vi_remove(struct platform_device *dev)
 
 	pdata->private_data = i2c_ctrl;
 
-	/* Set "master deinitialized" flag on the slave device */
-	if (pdata->slave) {
-		struct nvhost_device_data *slave_pdata =
-			platform_get_drvdata(pdata->slave);
-		if (slave_pdata) {
-			struct vi *slave_vi = slave_pdata->private_data;
-			slave_vi->master_deinitialized = true;
-		}
-	}
-
 	return 0;
 }
 

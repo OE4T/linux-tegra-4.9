@@ -136,7 +136,6 @@ struct nvhost_device_data t21_ispb_info = {
 #endif
 
 #if defined(CONFIG_TEGRA_GRHOST_VI) || defined(CONFIG_TEGRA_GRHOST_VI_MODULE)
-#ifdef CONFIG_VI_ONE_DEVICE
 struct nvhost_device_data t21_vi_info = {
 	.modulemutexes		= {NVMODMUTEX_VI_0},
 	.devfs_name		= "vi",
@@ -170,71 +169,6 @@ struct nvhost_device_data t21_vi_info = {
 	.finalize_poweron = nvhost_vi_finalize_poweron,
 };
 EXPORT_SYMBOL(t21_vi_info);
-#else
-struct nvhost_device_data t21_vib_info = {
-	.modulemutexes		= {NVMODMUTEX_VI_1},
-	.devfs_name		= "vi",
-	.class			= NV_VIDEO_STREAMING_VI_CLASS_ID,
-	.exclusive		= true,
-	/* HACK: Mark as keepalive until 1188795 is fixed */
-	.keepalive		= true,
-	.clocks	= {
-		{"vi", UINT_MAX},
-		{"csi", UINT_MAX},
-		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
-#ifdef TEGRA_POWERGATE_VE
-	.powergate_id		= TEGRA_POWERGATE_VE,
-#else
-	NVHOST_MODULE_NO_POWERGATE_ID,
-#endif
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.powergate_delay	= 500,
-	.can_powergate		= true,
-	.moduleid		= NVHOST_MODULE_VI,
-	.ctrl_ops		= &tegra_vi_ctrl_ops,
-	.num_channels		= 1,
-	.bond_out_id		= BOND_OUT_VI,
-};
-
-static struct platform_device tegra_vi01b_device = {
-	.name		= "vi",
-	.id		= 1, /* .1 on the dev node */
-	.dev		= {
-		.platform_data = &t21_vib_info,
-	},
-};
-
-struct nvhost_device_data t21_vi_info = {
-	.modulemutexes		= {NVMODMUTEX_VI_0},
-	.devfs_name		= "vi",
-	.class			= NV_VIDEO_STREAMING_VI_CLASS_ID,
-	.exclusive		= true,
-	/* HACK: Mark as keepalive until 1188795 is fixed */
-	.keepalive		= true,
-#ifdef TEGRA_POWERGATE_VE
-	.powergate_id		= TEGRA_POWERGATE_VE,
-#else
-	NVHOST_MODULE_NO_POWERGATE_ID,
-#endif
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.powergate_delay	= 500,
-	.can_powergate		= true,
-	.moduleid		= NVHOST_MODULE_VI,
-	.clocks = {
-		{"vi", UINT_MAX},
-		{"csi", 0},
-		{"cilab", 102000000},
-		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
-	.ctrl_ops		= &tegra_vi_ctrl_ops,
-	.slave			= &tegra_vi01b_device,
-	.num_channels		= 1,
-	.bond_out_id		= BOND_OUT_VI,
-	.prepare_poweroff = nvhost_vi_prepare_poweroff,
-	.finalize_poweron = nvhost_vi_finalize_poweron,
-};
-EXPORT_SYMBOL(t21_vi_info);
-#endif
-
 #endif
 
 struct nvhost_device_data t21_msenc_info = {

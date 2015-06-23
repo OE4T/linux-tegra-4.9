@@ -708,33 +708,6 @@ fail:
 	return err;
 }
 
-static int (*tegra_hdmi_plug_func[])(struct tegra_hdmi *) = {
-	tegra_hdmi_edid_eld_setup,
-};
-
-enum tegra_hdmi_plug_states {
-	TEGRA_EDID_ELD_SETUP,
-	TEGRA_HDMI_MONITOR_ENABLE,
-};
-
-static int tegra_hdmi_plugged(struct tegra_hdmi *hdmi,
-				enum tegra_hdmi_plug_states state_level)
-{
-	int err;
-
-	if (state_level >= TEGRA_HDMI_MONITOR_ENABLE)
-		return state_level;
-
-	err = tegra_hdmi_plug_func[state_level](hdmi);
-
-	/*
-	 * If error return failing state level,
-	 * otherwise goto next state level
-	 */
-	return (err < 0) ? state_level :
-		tegra_hdmi_plugged(hdmi, state_level + 1);
-}
-
 static int tegra_hdmi_controller_disable(struct tegra_hdmi *hdmi)
 {
 	struct tegra_dc_sor_data *sor = hdmi->sor;
@@ -779,58 +752,123 @@ static int tegra_hdmi_disable(struct tegra_hdmi *hdmi)
 	return 0;
 }
 
-static int (*tegra_hdmi_unplug_func[])(struct tegra_hdmi *) = {
+static int (*tegra_hdmi_state_func[])(struct tegra_hdmi *) = {
 	tegra_hdmi_disable,
+	tegra_hdmi_edid_eld_setup,
 };
 
-enum tegra_hdmi_unplug_states {
-	TEGRA_HDMI_DISABLE,
+enum tegra_hdmi_plug_states {
 	TEGRA_HDMI_MONITOR_DISABLE,
+	TEGRA_HDMI_MONITOR_ENABLE,
 };
 
-static int tegra_hdmi_unplugged(struct tegra_hdmi *hdmi,
-				enum tegra_hdmi_unplug_states state_level)
+static int read_edid_into_buffer(struct tegra_hdmi *hdmi,
+				 u8 *edid_data, size_t edid_data_len)
 {
-	int err;
+	int err, i;
+	int extension_blocks;
+	int max_ext_blocks = (edid_data_len / 128) - 1;
 
-	if (state_level >= TEGRA_HDMI_MONITOR_DISABLE)
-		return state_level;
-
-	err = tegra_hdmi_unplug_func[state_level](hdmi);
-
-	/*
-	 * If error return failing state level,
-	 * otherwise goto next state level
-	 */
-	return (err < 0) ? state_level :
-		tegra_hdmi_unplugged(hdmi, state_level + 1);
+	err = tegra_edid_read_block(hdmi->edid, 0, edid_data);
+	if (err) {
+		dev_info(&hdmi->dc->ndev->dev, "hdmi: tegra_edid_read_block(0) returned err %d\n",
+			err);
+		return err;
+	}
+	extension_blocks = edid_data[0x7e];
+	dev_info(&hdmi->dc->ndev->dev, "%s: extension_blocks = %d, max_ext_blocks = %d\n",
+		__func__, extension_blocks, max_ext_blocks);
+	if (extension_blocks > max_ext_blocks)
+		extension_blocks = max_ext_blocks;
+	for (i = 1; i <= extension_blocks; i++) {
+		err = tegra_edid_read_block(hdmi->edid, i, edid_data + i * 128);
+		if (err) {
+			dev_info(&hdmi->dc->ndev->dev, "hdmi: tegra_edid_read_block(%d) returned err %d\n",
+				i, err);
+			return err;
+		}
+	}
+	return i * 128;
 }
 
+static int hdmi_recheck_edid(struct tegra_hdmi *hdmi, int *match)
+{
+	int ret;
+	u8 tmp[HDMI_EDID_MAX_LENGTH] = {0};
+	ret = read_edid_into_buffer(hdmi, tmp, sizeof(tmp));
+	dev_info(&hdmi->dc->ndev->dev, "%s: read_edid_into_buffer() returned %d\n",
+		__func__, ret);
+	if (ret > 0) {
+		struct tegra_dc_edid *data = tegra_edid_get_data(hdmi->edid);
+		dev_info(&hdmi->dc->ndev->dev, "old edid len = %ld\n",
+			(long int)data->len);
+		*match = ((ret == data->len) &&
+			  !memcmp(tmp, data->buf, data->len));
+		if (*match == 0) {
+			print_hex_dump(KERN_INFO, "tmp :", DUMP_PREFIX_ADDRESS,
+				       16, 4, tmp, ret, true);
+			print_hex_dump(KERN_INFO, "data:", DUMP_PREFIX_ADDRESS,
+				       16, 4, data->buf, data->len, true);
+		}
+		tegra_edid_put_data(data);
+		ret = 0;
+	}
+
+	return ret;
+}
 static void tegra_hdmi_hpd_worker(struct work_struct *work)
 {
 	struct tegra_hdmi *hdmi = container_of(to_delayed_work(work),
 				struct tegra_hdmi, hpd_worker);
-	int level;
+	int err;
+	bool connected;
+	enum tegra_hdmi_plug_states orig_state;
+	int match = 0;
 
 	mutex_lock(&hdmi->hpd_lock);
 
-	if (tegra_dc_hpd(hdmi->dc)) {
-		level = tegra_hdmi_plugged(hdmi, TEGRA_EDID_ELD_SETUP);
-		if (level >= TEGRA_HDMI_MONITOR_ENABLE)
-			dev_info(&hdmi->dc->ndev->dev, "hdmi: plugged\n");
-		else
-			dev_info(&hdmi->dc->ndev->dev,
-				"hdmi state %d failed during plug\n", level);
-	} else {
-		level = tegra_hdmi_unplugged(hdmi, TEGRA_HDMI_DISABLE);
-		if (level >= TEGRA_HDMI_MONITOR_DISABLE)
-			dev_info(&hdmi->dc->ndev->dev, "hdmi: unplugged\n");
-		else
-			dev_info(&hdmi->dc->ndev->dev,
-				"hdmi state %d failed during unplug\n", level);
+	connected = tegra_dc_hpd(hdmi->dc);
+	orig_state = hdmi->plug_state;
+
+	if ((connected && orig_state == TEGRA_HDMI_MONITOR_ENABLE)) {
+		if (hdmi_recheck_edid(hdmi, &match)) {
+			dev_info(&hdmi->dc->ndev->dev, "hdmi: unable to read EDID\n");
+			goto fail;
+		} else {
+			if (match) {
+				dev_info(&hdmi->dc->ndev->dev, "hdmi: No EDID change after HPD bounce, taking no action.\n");
+				goto fail;
+			} else
+				dev_info(&hdmi->dc->ndev->dev, "hdmi: EDID change after HPD bounce, resetting\n");
+		}
 	}
 
+	if ((!connected && orig_state == TEGRA_HDMI_MONITOR_DISABLE)) {
+		dev_info(&hdmi->dc->ndev->dev, "hdmi: spurious interrupt\n");
+		mutex_unlock(&hdmi->hpd_lock);
+		return;
+	}
+
+	if (connected)
+		hdmi->plug_state = TEGRA_HDMI_MONITOR_ENABLE;
+	else
+		hdmi->plug_state = TEGRA_HDMI_MONITOR_DISABLE;
+
+	err = tegra_hdmi_state_func[hdmi->plug_state](hdmi);
+
+	if (err < 0) {
+			dev_info(&hdmi->dc->ndev->dev,
+				"hdmi state %d failed during %splug\n",
+				hdmi->plug_state, connected ? "" : "un");
+			hdmi->plug_state = orig_state;
+		} else {
+			dev_info(&hdmi->dc->ndev->dev, "hdmi: %splugged\n",
+					connected ? "" : "un");
+		}
+
+fail:
 	mutex_unlock(&hdmi->hpd_lock);
+	return;
 }
 
 static irqreturn_t tegra_hdmi_hpd_irq_handler(int irq, void *ptr)

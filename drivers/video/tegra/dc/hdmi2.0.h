@@ -19,6 +19,7 @@
 
 #define HDMI_HPD_DEBOUNCE_DELAY_MS	(100)
 #define HDMI_SCDC_MONITOR_TIMEOUT_MS	(5000)
+#define HDMI_EDID_MAX_LENGTH 512
 
 /* SCDC block */
 #define HDMI_SCDC_TMDS_CONFIG_OFFSET	(0x20)
@@ -322,6 +323,7 @@ struct tegra_hdmi {
 	struct tegra_prod_list *prod_list;
 	int ddc_refcount;
 	bool device_shutdown;
+	int plug_state;
 };
 
 #define HDMI_ELD_BUF 96

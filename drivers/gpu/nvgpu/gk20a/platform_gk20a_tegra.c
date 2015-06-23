@@ -42,7 +42,6 @@
 #define TEGRA_DDR4_BW_PER_FREQ 16
 
 extern struct device tegra_vpr_dev;
-static struct gk20a_platform t132_gk20a_tegra_platform;
 
 struct gk20a_emc_params {
 	long bw_ratio;
@@ -499,11 +498,6 @@ static int gk20a_tegra_probe(struct platform_device *dev)
 
 	platform->g->host1x_dev = host1x_pdev;
 
-	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA13) {
-		t132_gk20a_tegra_platform.g = platform->g;
-		*platform = t132_gk20a_tegra_platform;
-	}
-
 	/* WAR for bug 1547668: Disable railgating and scaling irrespective of
 	 * platform data if the rework has not been made. */
 
@@ -547,50 +541,6 @@ static int gk20a_tegra_suspend(struct device *dev)
 	tegra_edp_notify_gpu_load(0, 0);
 	return 0;
 }
-
-static struct gk20a_platform t132_gk20a_tegra_platform = {
-	.has_syncpoints = true,
-
-	/* power management configuration */
-	.railgate_delay		= 500,
-	.clockgate_delay	= 50,
-	.can_railgate		= true,
-	.enable_slcg            = true,
-	.enable_blcg            = true,
-	.enable_elcg            = true,
-	.enable_elpg            = true,
-	.enable_aelpg           = true,
-
-	.force_reset_in_do_idle = false,
-
-	.default_big_page_size	= SZ_128K,
-
-	.probe = gk20a_tegra_probe,
-	.late_probe = gk20a_tegra_late_probe,
-	.remove = gk20a_tegra_remove,
-
-	/* power management callbacks */
-	.suspend = gk20a_tegra_suspend,
-	.railgate = gk20a_tegra_railgate,
-	.unrailgate = gk20a_tegra_unrailgate,
-	.is_railgated = gk20a_tegra_is_railgated,
-
-	.busy = gk20a_tegra_busy,
-	.idle = gk20a_tegra_idle,
-
-	.reset_assert = gk20a_tegra_reset_assert,
-	.reset_deassert = gk20a_tegra_reset_deassert,
-
-	/* frequency scaling configuration */
-	.prescale = gk20a_tegra_prescale,
-	.postscale = gk20a_tegra_postscale,
-	.devfreq_governor = "nvhost_podgov",
-	.qos_id = PM_QOS_GPU_FREQ_MIN,
-
-	.secure_alloc = gk20a_tegra_secure_alloc,
-	.secure_page_alloc = gk20a_tegra_secure_page_alloc,
-	.dump_platform_dependencies = gk20a_tegra_debug_dump,
-};
 
 struct gk20a_platform gk20a_tegra_platform = {
 	.has_syncpoints = true,

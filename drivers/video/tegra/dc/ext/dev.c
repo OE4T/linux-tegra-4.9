@@ -1112,6 +1112,9 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 		ret = -EINVAL;
 		goto unlock;
 	}
+#ifdef CONFIG_ANDROID
+	work_index = 0;
+#endif
 
 	if (syncpt_fd) {
 		if (post_sync_id != NVSYNCPT_INVALID) {
@@ -1137,9 +1140,6 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 		list_add_tail(&data->timestamp_node, &ext->win[work_index].timestamp_queue);
 		mutex_unlock(&ext->win[work_index].queue_lock);
 	}
-#ifdef CONFIG_ANDROID
-	work_index = 0;
-#endif
 	data->flags = flip_flags;
 	queue_work(ext->win[work_index].flip_wq, &data->work);
 

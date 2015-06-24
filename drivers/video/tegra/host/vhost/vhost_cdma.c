@@ -99,7 +99,7 @@ static void vhost_cdma_start(struct nvhost_cdma *cdma)
 		return;
 	}
 
-	cdma->last_put = cdma_pb_op().putptr(&cdma->push_buffer);
+	cdma->last_put = nvhost_push_buffer_putptr(&cdma->push_buffer);
 	cdma->running = true;
 }
 
@@ -131,7 +131,7 @@ static void vhost_cdma_kick(struct nvhost_cdma *cdma)
 
 	job = list_entry(cdma->sync_queue.prev, struct nvhost_job, list);
 
-	put = cdma_pb_op().putptr(&cdma->push_buffer);
+	put = nvhost_push_buffer_putptr(&cdma->push_buffer);
 
 	if (put != cdma->last_put) {
 		u32 start = cdma->last_put - cdma->push_buffer.dma_addr;

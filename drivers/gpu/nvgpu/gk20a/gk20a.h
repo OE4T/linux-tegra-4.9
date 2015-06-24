@@ -333,6 +333,7 @@ struct gpu_ops {
 	struct {
 		int (*get_netlist_name)(int index, char *name);
 		bool (*is_fw_defined)(void);
+		bool use_dma_for_fw_bootstrap;
 	} gr_ctx;
 	struct {
 		bool (*support_sparse)(struct gk20a *g);
@@ -383,7 +384,9 @@ struct gpu_ops {
 		int (*pmu_setup_hw_and_bootstrap)(struct gk20a *g);
 		int (*pmu_setup_elpg)(struct gk20a *g);
 		int (*init_wpr_region)(struct gk20a *g);
+		int (*load_lsfalcon_ucode)(struct gk20a *g, u32 falconidmask);
 		u32  lspmuwprinitdone;
+		u32  lsfloadedfalconid;
 		bool fecsbootstrapdone;
 	} pmu;
 	struct {

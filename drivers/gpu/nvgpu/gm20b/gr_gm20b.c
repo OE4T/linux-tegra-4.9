@@ -688,29 +688,9 @@ static void gr_gm20b_load_gpccs_with_bootloader(struct gk20a *g)
 		gr_fecs_falcon_hwcfg_r());
 }
 
-static int gr_gm20b_ctx_wait_lsf_ready(struct gk20a *g, u32 timeout, u32 val)
-{
-	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
-	unsigned long delay = GR_FECS_POLL_INTERVAL;
-	u32 reg;
-
-	gk20a_dbg_fn("");
-	reg = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(0));
-	do {
-		reg = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(0));
-		if (reg == val)
-			return 0;
-		udelay(delay);
-	} while (time_before(jiffies, end_jiffies) ||
-			!tegra_platform_is_silicon());
-
-	return -ETIMEDOUT;
-}
-
 static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 {
-	u32 err;
-	unsigned long timeout = gk20a_get_gr_idle_timeout(g);
+	u32 err, flags;
 	u32 reg_offset = gr_gpcs_gpccs_falcon_hwcfg_r() -
 	  gr_fecs_falcon_hwcfg_r();
 
@@ -723,63 +703,57 @@ static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 			gr_gpccs_ctxsw_mailbox_value_f(0xc0de7777));
 	}
 
+	flags = PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_YES;
+	g->ops.pmu.lsfloadedfalconid = 0;
 	if (g->ops.pmu.fecsbootstrapdone) {
-		gk20a_writel(g, gr_fecs_ctxsw_mailbox_clear_r(0), ~0x0);
-		gm20b_pmu_load_lsf(g, LSF_FALCON_ID_FECS);
-		err = gr_gm20b_ctx_wait_lsf_ready(g, timeout, 0x55AA55AA);
-		if (err) {
-			gk20a_err(dev_from_gk20a(g), "Unable to recover FECS");
-			return err;
+		/* this must be recovery so bootstrap fecs and gpccs */
+		if (!g->ops.securegpccs) {
+			gr_gm20b_load_gpccs_with_bootloader(g);
+			err = g->ops.pmu.load_lsfalcon_ucode(g,
+					(1 << LSF_FALCON_ID_FECS));
 		} else {
-			if (!g->ops.securegpccs) {
-				gr_gm20b_load_gpccs_with_bootloader(g);
-				gk20a_writel(g, gr_gpccs_dmactl_r(),
-					gr_gpccs_dmactl_require_ctx_f(0));
-				gk20a_writel(g, gr_gpccs_cpuctl_r(),
-					gr_gpccs_cpuctl_startcpu_f(1));
-			} else {
-				gk20a_writel(g,
-					gr_fecs_ctxsw_mailbox_clear_r(0), ~0x0);
-				gm20b_pmu_load_lsf(g, LSF_FALCON_ID_GPCCS);
-				err = gr_gm20b_ctx_wait_lsf_ready(g, timeout,
-						0x55AA55AA);
-				gk20a_writel(g, reg_offset +
-					gr_fecs_cpuctl_alias_r(),
-					gr_gpccs_cpuctl_startcpu_f(1));
-			}
+			/* bind WPR VA inst block */
+			gr_gk20a_load_falcon_bind_instblk(g);
+			err = g->ops.pmu.load_lsfalcon_ucode(g,
+				(1 << LSF_FALCON_ID_FECS) |
+				(1 << LSF_FALCON_ID_GPCCS));
 		}
+		if (err) {
+			gk20a_err(dev_from_gk20a(g),
+				"Unable to recover GR falcon");
+			return err;
+		}
+
 	} else {
+		/* cold boot or rg exit */
 		g->ops.pmu.fecsbootstrapdone = true;
 		if (!g->ops.securegpccs) {
 			gr_gm20b_load_gpccs_with_bootloader(g);
-			gk20a_writel(g, gr_gpccs_dmactl_r(),
-			       gr_gpccs_dmactl_require_ctx_f(0));
-			gk20a_writel(g, gr_gpccs_cpuctl_r(),
-			       gr_gpccs_cpuctl_startcpu_f(1));
 		} else {
-			pmu_wait_message_cond(&g->pmu,
-					gk20a_get_gr_idle_timeout(g),
-					&g->ops.pmu.lspmuwprinitdone, 1);
-			if (!g->ops.pmu.lspmuwprinitdone) {
-				gk20a_err(dev_from_gk20a(g),
-					"PMU WPR needed but not ready yet");
-				return -ETIMEDOUT;
-			}
-			gk20a_writel(g, gr_fecs_ctxsw_mailbox_clear_r(0), ~0x0);
-			gm20b_pmu_load_lsf(g, LSF_FALCON_ID_GPCCS);
-			err = gr_gm20b_ctx_wait_lsf_ready(g, timeout,
-							0x55AA55AA);
+			/* bind WPR VA inst block */
+			gr_gk20a_load_falcon_bind_instblk(g);
+			err = g->ops.pmu.load_lsfalcon_ucode(g,
+					(1 << LSF_FALCON_ID_GPCCS));
 			if (err) {
 				gk20a_err(dev_from_gk20a(g),
 						"Unable to boot GPCCS\n");
 				return err;
 			}
-			gk20a_writel(g, reg_offset +
-				gr_fecs_cpuctl_alias_r(),
-				gr_gpccs_cpuctl_startcpu_f(1));
 		}
 	}
 
+	/*start gpccs */
+	if (g->ops.securegpccs) {
+		gk20a_writel(g, reg_offset +
+			gr_fecs_cpuctl_alias_r(),
+			gr_gpccs_cpuctl_startcpu_f(1));
+	} else {
+		gk20a_writel(g, gr_gpccs_dmactl_r(),
+			gr_gpccs_dmactl_require_ctx_f(0));
+		gk20a_writel(g, gr_gpccs_cpuctl_r(),
+			gr_gpccs_cpuctl_startcpu_f(1));
+	}
+	/* start fecs */
 	gk20a_writel(g, gr_fecs_ctxsw_mailbox_clear_r(0), ~0x0);
 	gk20a_writel(g, gr_fecs_ctxsw_mailbox_r(1), 0x1);
 	gk20a_writel(g, gr_fecs_ctxsw_mailbox_clear_r(6), 0xffffffff);

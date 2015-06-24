@@ -2647,6 +2647,7 @@ void gk20a_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_setup_hw_and_bootstrap = gk20a_init_pmu_setup_hw1;
 	gops->pmu.pmu_setup_elpg = NULL;
 	gops->pmu.init_wpr_region = NULL;
+	gops->pmu.load_lsfalcon_ucode = NULL;
 }
 
 int gk20a_init_pmu_support(struct gk20a *g)

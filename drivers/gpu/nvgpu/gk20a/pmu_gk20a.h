@@ -304,6 +304,11 @@ enum {
 	GK20A_PMU_DMAIDX_END		= 7
 };
 
+struct falc_u64 {
+	u32 lo;
+	u32 hi;
+};
+
 struct falc_dma_addr {
 	u32 dma_base;
 	/*dma_base1 is 9-bit MSB for FB Base
@@ -708,6 +713,8 @@ struct pmu_pg_cmd {
 enum {
 	PMU_ACR_CMD_ID_INIT_WPR_REGION = 0x0          ,
 	PMU_ACR_CMD_ID_BOOTSTRAP_FALCON,
+	PMU_ACR_CMD_ID_RESERVED,
+	PMU_ACR_CMD_ID_BOOTSTRAP_MULTIPLE_FALCONS,
 };
 
 /*
@@ -729,14 +736,27 @@ struct pmu_acr_cmd_bootstrap_falcon {
 	u32 falconid;
 };
 
+/*
+ * falcon ID to bootstrap
+ */
+struct pmu_acr_cmd_bootstrap_multiple_falcons {
+	u8 cmd_type;
+	u32 flags;
+	u32 falconidmask;
+	u32 usevamask;
+	struct falc_u64 wprvirtualbase;
+};
+
 #define PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_NO  1
 #define PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_YES 0
+
 
 struct pmu_acr_cmd {
 	union {
 		u8 cmd_type;
 		struct pmu_acr_cmd_bootstrap_falcon bootstrap_falcon;
 		struct pmu_acr_cmd_init_wpr_details init_wpr;
+		struct pmu_acr_cmd_bootstrap_multiple_falcons boot_falcons;
 	};
 };
 
@@ -1177,6 +1197,7 @@ struct pmu_gk20a {
 	/* TBD: remove this if ZBC seq is fixed */
 	struct mem_desc seq_buf;
 	struct mem_desc trace_buf;
+	struct mem_desc wpr_buf;
 	bool buf_loaded;
 
 	struct pmu_sha1_gid gid_info;
@@ -1294,4 +1315,6 @@ int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id);
 void pmu_enable_irq(struct pmu_gk20a *pmu, bool enable);
 int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout,
 				 u32 *var, u32 val);
+void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
+				void *param, u32 handle, u32 status);
 #endif /*__PMU_GK20A_H__*/

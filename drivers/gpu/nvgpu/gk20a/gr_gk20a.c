@@ -2128,7 +2128,7 @@ int gr_gk20a_load_ctxsw_ucode(struct gk20a *g)
 	 * In case bootloader is not supported, revert to the old way of
 	 * loading gr ucode, without the faster bootstrap routine.
 	 */
-	if (g->gpu_characteristics.arch > NVGPU_GPU_ARCH_GM200) {
+	if (!g->ops.gr_ctx.use_dma_for_fw_bootstrap) {
 		gr_gk20a_load_falcon_dmem(g);
 		gr_gk20a_load_falcon_imem(g);
 		gr_gk20a_start_falcon_ucode(g);
@@ -2161,7 +2161,7 @@ static int gr_gk20a_wait_ctxsw_ready(struct gk20a *g)
 		return ret;
 	}
 
-	if (!(g->gpu_characteristics.arch > NVGPU_GPU_ARCH_GM200))
+	if (g->ops.gr_ctx.use_dma_for_fw_bootstrap || g->ops.securegpccs)
 		gk20a_writel(g, gr_fecs_current_ctx_r(),
 			gr_fecs_current_ctx_valid_false_f());
 

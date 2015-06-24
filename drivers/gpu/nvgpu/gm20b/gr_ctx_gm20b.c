@@ -3,7 +3,7 @@
  *
  * GM20B Graphics Context
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -69,4 +69,5 @@ static bool gr_gm20b_is_firmware_defined(void)
 void gm20b_init_gr_ctx(struct gpu_ops *gops) {
 	gops->gr_ctx.get_netlist_name = gr_gm20b_get_netlist_name;
 	gops->gr_ctx.is_fw_defined = gr_gm20b_is_firmware_defined;
+	gops->gr_ctx.use_dma_for_fw_bootstrap = true;
 }

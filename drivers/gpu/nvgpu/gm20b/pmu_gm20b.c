@@ -18,6 +18,7 @@
 #include "gk20a/pmu_gk20a.h"
 #include "acr_gm20b.h"
 #include "pmu_gm20b.h"
+#include "hw_gr_gm20b.h"
 
 /*!
  * Structure/object which single register write need to be done during PG init
@@ -190,21 +191,40 @@ int gm20b_pmu_init_acr(struct gk20a *g)
 	return 0;
 }
 
-static void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
+void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
 
 	gk20a_dbg_fn("");
 
 
-	if (msg->msg.acr.acrmsg.falconid == LSF_FALCON_ID_FECS)
-		gm20b_dbg_pmu("reply PMU_ACR_CMD_ID_BOOTSTRAP_FALCON");
+	gm20b_dbg_pmu("reply PMU_ACR_CMD_ID_BOOTSTRAP_FALCON");
 
 	gm20b_dbg_pmu("response code = %x\n", msg->msg.acr.acrmsg.falconid);
+	g->ops.pmu.lsfloadedfalconid = msg->msg.acr.acrmsg.falconid;
 	gk20a_dbg_fn("done");
 }
 
-void gm20b_pmu_load_lsf(struct gk20a *g, u8 falcon_id)
+static int pmu_gm20b_ctx_wait_lsf_ready(struct gk20a *g, u32 timeout, u32 val)
+{
+	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
+	unsigned long delay = GR_FECS_POLL_INTERVAL;
+	u32 reg;
+
+	gk20a_dbg_fn("");
+	reg = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(0));
+	do {
+		reg = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(0));
+		if (reg == val)
+			return 0;
+		udelay(delay);
+	} while (time_before(jiffies, end_jiffies) ||
+			!tegra_platform_is_silicon());
+
+	return -ETIMEDOUT;
+}
+
+void gm20b_pmu_load_lsf(struct gk20a *g, u32 falcon_id, u32 flags)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_cmd cmd;
@@ -221,8 +241,7 @@ void gm20b_pmu_load_lsf(struct gk20a *g, u8 falcon_id)
 		  sizeof(struct pmu_acr_cmd_bootstrap_falcon);
 		cmd.cmd.acr.bootstrap_falcon.cmd_type =
 		  PMU_ACR_CMD_ID_BOOTSTRAP_FALCON;
-		cmd.cmd.acr.bootstrap_falcon.flags =
-		  PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_YES;
+		cmd.cmd.acr.bootstrap_falcon.flags = flags;
 		cmd.cmd.acr.bootstrap_falcon.falconid = falcon_id;
 		gm20b_dbg_pmu("cmd post PMU_ACR_CMD_ID_BOOTSTRAP_FALCON: %x\n",
 				falcon_id);
@@ -234,13 +253,45 @@ void gm20b_pmu_load_lsf(struct gk20a *g, u8 falcon_id)
 	return;
 }
 
+int gm20b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
+{
+	u32  err = 0;
+	u32 flags = PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_YES;
+	unsigned long timeout = gk20a_get_gr_idle_timeout(g);
+
+	/* GM20B PMU supports loading FECS only */
+	if (!(falconidmask == (1 << LSF_FALCON_ID_FECS)))
+		return -EINVAL;
+	/* check whether pmu is ready to bootstrap lsf if not wait for it */
+	if (!g->ops.pmu.lspmuwprinitdone) {
+		pmu_wait_message_cond(&g->pmu,
+				gk20a_get_gr_idle_timeout(g),
+				&g->ops.pmu.lspmuwprinitdone, 1);
+		/* check again if it still not ready indicate an error */
+		if (!g->ops.pmu.lspmuwprinitdone) {
+			gk20a_err(dev_from_gk20a(g),
+				"PMU not ready to load LSF");
+			return -ETIMEDOUT;
+		}
+	}
+	/* load FECS */
+	gk20a_writel(g,
+		gr_fecs_ctxsw_mailbox_clear_r(0), ~0x0);
+	gm20b_pmu_load_lsf(g, LSF_FALCON_ID_FECS, flags);
+	err = pmu_gm20b_ctx_wait_lsf_ready(g, timeout,
+			0x55AA55AA);
+	return err;
+}
+
 void gm20b_init_pmu_ops(struct gpu_ops *gops)
 {
 	if (gops->privsecurity) {
 		gm20b_init_secure_pmu(gops);
 		gops->pmu.init_wpr_region = gm20b_pmu_init_acr;
+		gops->pmu.load_lsfalcon_ucode = gm20b_load_falcon_ucode;
 	} else {
 		gk20a_init_pmu_ops(gops);
+		gops->pmu.load_lsfalcon_ucode = NULL;
 		gops->pmu.init_wpr_region = NULL;
 	}
 	gops->pmu.pmu_setup_elpg = gm20b_pmu_setup_elpg;

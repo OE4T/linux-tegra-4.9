@@ -284,9 +284,17 @@ rel_sig:
 
 int prepare_ucode_blob(struct gk20a *g)
 {
+
 	int err;
 	struct ls_flcn_mgr lsfm_l, *plsfm;
 	struct pmu_gk20a *pmu = &g->pmu;
+	phys_addr_t wpr_addr;
+	u32 wprsize;
+	struct mm_gk20a *mm = &g->mm;
+	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct mc_carveout_info inf;
+	struct sg_table *sgt;
+	struct page *page;
 
 	if (g->acr.ucode_blob.cpu_va) {
 		/*Recovery case, we do not need to form
@@ -304,22 +312,46 @@ int prepare_ucode_blob(struct gk20a *g)
 	gm20b_mm_mmu_vpr_info_fetch(g);
 	gr_gk20a_init_ctxsw_ucode(g);
 
+	mc_get_carveout_info(&inf, NULL, MC_SECURITY_CARVEOUT2);
+	gm20b_dbg_pmu("wpr carveout base:%llx\n", inf.base);
+	wpr_addr = (phys_addr_t)inf.base;
+	gm20b_dbg_pmu("wpr carveout size :%llx\n", inf.size);
+	wprsize = (u32)inf.size;
+	sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
+	if (!sgt) {
+		gk20a_err(dev_from_gk20a(g), "failed to allocate memory\n");
+		return -ENOMEM;
+	}
+	err = sg_alloc_table(sgt, 1, GFP_KERNEL);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "failed to allocate sg_table\n");
+		goto free_sgt;
+	}
+	page = phys_to_page(wpr_addr);
+	sg_set_page(sgt->sgl, page, wprsize, 0);
+	/* This bypasses SMMU for WPR during gmmu_map. */
+	sg_dma_address(sgt->sgl) = 0;
+
+	g->pmu.wpr_buf.gpu_va = gk20a_gmmu_map(vm, &sgt, wprsize,
+						0, gk20a_mem_flag_none);
+	gm20b_dbg_pmu("wpr mapped gpu va :%llx\n", g->pmu.wpr_buf.gpu_va);
+
 	/* Discover all managed falcons*/
 	err = lsfm_discover_ucode_images(g, plsfm);
 	gm20b_dbg_pmu(" Managed Falcon cnt %d\n", plsfm->managed_flcn_cnt);
 	if (err)
-		return err;
+		goto free_sgt;
 
 	if (plsfm->managed_flcn_cnt && !g->acr.ucode_blob.cpu_va) {
 		/* Generate WPR requirements*/
 		err = lsf_gen_wpr_requirements(g, plsfm);
 		if (err)
-			return err;
+			goto free_sgt;
 
 		/*Alloc memory to hold ucode blob contents*/
 		err = gk20a_gmmu_alloc(g, plsfm->wpr_size, &g->acr.ucode_blob);
 		if (err)
-			return err;
+			goto free_sgt;
 
 		gm20b_dbg_pmu("managed LS falcon %d, WPR size %d bytes.\n",
 			plsfm->managed_flcn_cnt, plsfm->wpr_size);
@@ -329,7 +361,9 @@ int prepare_ucode_blob(struct gk20a *g)
 	}
 	gm20b_dbg_pmu("prepare ucode blob return 0\n");
 	free_acr_resources(g, plsfm);
-	return 0;
+ free_sgt:
+	kfree(sgt);
+	return err;
 }
 
 static u8 lsfm_falcon_disabled(struct gk20a *g, struct ls_flcn_mgr *plsfm,
@@ -495,7 +529,8 @@ static int pmu_populate_loader_cfg(struct gk20a *g,
 
 static int flcn_populate_bl_dmem_desc(struct gk20a *g,
 	struct lsfm_managed_ucode_img *lsfm,
-	union flcn_bl_generic_desc *p_bl_gen_desc, u32 *p_bl_gen_desc_size)
+	union flcn_bl_generic_desc *p_bl_gen_desc, u32 *p_bl_gen_desc_size,
+	u32 falconid)
 {
 	struct mc_carveout_info inf;
 	struct flcn_ucode_img *p_img = &(lsfm->ucode_img);
@@ -520,7 +555,10 @@ static int flcn_populate_bl_dmem_desc(struct gk20a *g,
 	*/
 	addr_base = lsfm->lsb_header.ucode_off;
 	mc_get_carveout_info(&inf, NULL, MC_SECURITY_CARVEOUT2);
-	addr_base += inf.base;
+	if (falconid == LSF_FALCON_ID_GPCCS)
+		addr_base += g->pmu.wpr_buf.gpu_va;
+	else
+		addr_base += inf.base;
 	gm20b_dbg_pmu("gen loader cfg %x u32 addrbase %x ID\n", (u32)addr_base,
 		lsfm->wpr_header.falcon_id);
 	addr_code = u64_lo32((addr_base +
@@ -555,7 +593,8 @@ static int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 	if (pnode->wpr_header.falcon_id != pmu->falcon_id) {
 		gm20b_dbg_pmu("non pmu. write flcn bl gen desc\n");
 		flcn_populate_bl_dmem_desc(g, pnode, &pnode->bl_gen_desc,
-				&pnode->bl_gen_desc_size);
+					&pnode->bl_gen_desc_size,
+					pnode->wpr_header.falcon_id);
 		return 0;
 	}
 
@@ -797,7 +836,7 @@ static void lsfm_fill_static_lsb_hdr_info(struct gk20a *g,
 		}
 		if (falcon_id == LSF_FALCON_ID_GPCCS) {
 			pnode->lsb_header.flags |=
-				NV_FLCN_ACR_LSF_FLAG_FORCE_PRIV_LOAD_TRUE;
+				NV_FLCN_ACR_LSF_FLAG_FORCE_PRIV_LOAD_FALSE;
 		}
 	}
 }

@@ -153,7 +153,7 @@ static int update_gmmu_pde3_locked(struct vm_gk20a *vm,
 			   u64 *iova,
 			   u32 kind_v, u32 *ctag,
 			   bool cacheable, bool unmapped_pte,
-			   int rw_flag, bool sparse, u32 flags)
+			   int rw_flag, bool sparse, bool priv)
 {
 	u64 pte_addr = 0;
 	u64 pde_addr = 0;
@@ -195,7 +195,7 @@ static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 			   u64 *iova,
 			   u32 kind_v, u32 *ctag,
 			   bool cacheable, bool unmapped_pte,
-			   int rw_flag, bool sparse, u32 flags)
+			   int rw_flag, bool sparse, bool priv)
 {
 	bool small_valid, big_valid;
 	u32 pte_addr_small = 0, pte_addr_big = 0;
@@ -251,7 +251,7 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			   u64 *iova,
 			   u32 kind_v, u32 *ctag,
 			   bool cacheable, bool unmapped_pte,
-			   int rw_flag, bool sparse, u32 flags)
+			   int rw_flag, bool sparse, bool priv)
 {
 	struct gk20a *g = vm->mm->g;
 	u32 page_size  = vm->gmmu_page_sizes[gmmu_pgsz_idx];
@@ -268,6 +268,9 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 		pte_w[0] |= gmmu_new_pte_aperture_video_memory_f() |
 			    gmmu_new_pte_address_sys_f(*iova
 			      >> gmmu_new_pte_address_shift_v());
+
+		if (priv)
+			pte_w[0] |= gmmu_new_pte_privilege_true_f();
 
 		pte_w[1] = *iova >> (24 + gmmu_new_pte_address_shift_v()) |
 			   gmmu_new_pte_kind_f(kind_v) |

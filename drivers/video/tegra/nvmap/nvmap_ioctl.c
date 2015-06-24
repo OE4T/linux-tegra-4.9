@@ -334,7 +334,7 @@ int nvmap_ioctl_vpr_floor_size(struct file *filp, void __user *arg)
 	return err;
 }
 
-int nvmap_create_fd(struct nvmap_client *client, struct nvmap_handle *h)
+static int nvmap_create_fd(struct nvmap_client *client, struct nvmap_handle *h)
 {
 	int fd;
 

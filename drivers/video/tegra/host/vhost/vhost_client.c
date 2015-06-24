@@ -85,19 +85,6 @@ static int vhost_client_probe(struct platform_device *dev)
 			}
 		}
 #endif
-	} else {
-		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
-
-		/* If this is a slave device, verify that the master is
-		 * virtual. If it isn't, return -ENODEV to indicate no match.
-		 */
-		if (pdata && pdata->master) {
-			struct nvhost_device_data *master_dev =
-				(struct nvhost_device_data *)
-					pdata->master->dev.platform_data;
-			if (master_dev && !master_dev->virtual_dev)
-				return -ENODEV;
-		}
 	}
 
 	if (!pdata) {

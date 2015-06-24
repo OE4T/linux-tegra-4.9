@@ -69,10 +69,8 @@ static int validate_reg(struct platform_device *ndev, u32 offset, int count)
 {
 	int err = 0;
 	struct resource *r;
-	struct nvhost_device_data *pdata = platform_get_drvdata(ndev);
 
-	r = platform_get_resource(pdata->master ? pdata->master : ndev,
-			IORESOURCE_MEM, 0);
+	r = platform_get_resource(ndev, IORESOURCE_MEM, 0);
 	if (!r) {
 		dev_err(&ndev->dev, "failed to get memory resource\n");
 		return -ENODEV;
@@ -88,9 +86,6 @@ static int validate_reg(struct platform_device *ndev, u32 offset, int count)
 void __iomem *get_aperture(struct platform_device *pdev, int index)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-
-	if (pdata->master)
-		pdata = platform_get_drvdata(pdata->master);
 
 	return pdata->aperture[index];
 }

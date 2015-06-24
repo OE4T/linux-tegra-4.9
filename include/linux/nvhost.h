@@ -183,9 +183,6 @@ struct nvhost_device_data {
 	/* Clock gating registers */
 	struct nvhost_gating_register *engine_cg_regs;
 
-
-	struct platform_device *master;	/* Master of a slave device */
-
 	int		num_clks;	/* Number of clocks opened for dev */
 	struct clk	*clk[NVHOST_MODULE_MAX_CLOCKS];
 	struct mutex	lock;		/* Power management lock */

@@ -237,7 +237,6 @@ static int nvhost_vi_slcg_handler(struct notifier_block *nb,
 static int vi_probe(struct platform_device *dev)
 {
 	int err = 0;
-	int ret;
 	struct vi *tegra_vi;
 	struct nvhost_device_data *pdata = NULL;
 
@@ -342,14 +341,6 @@ static int vi_probe(struct platform_device *dev)
 
 		slcg_register_notifier(pdata->powergate_id,
 			&pdata->toggle_slcg_notifier);
-	}
-
-	if (pdata->master) {
-		ret = genpd_dev_pm_add(tegra_vi_of_match,
-					 &pdata->pdev->dev);
-		if (ret)
-			pr_err("Could not add %s to power-domain using device tree\n",
-						dev_name(&pdata->pdev->dev));
 	}
 
 	nvhost_module_init(dev);

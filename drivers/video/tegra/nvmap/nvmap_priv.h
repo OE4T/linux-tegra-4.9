@@ -474,14 +474,20 @@ static inline bool nvmap_page_dirty(struct page *page)
 	return (unsigned long)page & 1UL;
 }
 
-static inline void nvmap_page_mkdirty(struct page **page)
+static inline bool nvmap_page_mkdirty(struct page **page)
 {
+	if (nvmap_page_dirty(*page))
+		return false;
 	*page = (struct page *)((unsigned long)*page | 1UL);
+	return true;
 }
 
-static inline void nvmap_page_mkclean(struct page **page)
+static inline bool nvmap_page_mkclean(struct page **page)
 {
+	if (!nvmap_page_dirty(*page))
+		return false;
 	*page = (struct page *)((unsigned long)*page & ~1UL);
+	return true;
 }
 
 static inline bool nvmap_page_reserved(struct page *page)
@@ -489,38 +495,49 @@ static inline bool nvmap_page_reserved(struct page *page)
 	return !!((unsigned long)page & 2UL);
 }
 
-static inline void nvmap_page_mkreserved(struct page **page)
+static inline bool nvmap_page_mkreserved(struct page **page)
 {
+	if (nvmap_page_reserved(*page))
+		return false;
 	*page = (struct page *)((unsigned long)*page | 2UL);
+	return true;
 }
 
-static inline void nvmap_page_mkunreserved(struct page **page)
+static inline bool nvmap_page_mkunreserved(struct page **page)
 {
+	if (!nvmap_page_reserved(*page))
+		return false;
 	*page = (struct page *)((unsigned long)*page & ~2UL);
+	return true;
 }
 
 /*
  * FIXME: assume user space requests for reserve operations
  * are page aligned
  */
-static inline void nvmap_handle_mk(struct nvmap_handle *h,
-				   u32 offset, u32 size,
-				   void (*fn)(struct page **))
+static inline int nvmap_handle_mk(struct nvmap_handle *h,
+				  u32 offset, u32 size,
+				  bool (*fn)(struct page **))
 {
-	int i;
+	int i, nchanged = 0;
 	int start_page = PAGE_ALIGN(offset) >> PAGE_SHIFT;
 	int end_page = (offset + size) >> PAGE_SHIFT;
 
+	mutex_lock(&h->lock);
 	if (h->heap_pgalloc) {
 		for (i = start_page; i < end_page; i++)
-			fn(&h->pgalloc.pages[i]);
+			nchanged += fn(&h->pgalloc.pages[i]) ? 1 : 0;
 	}
+	mutex_unlock(&h->lock);
+	return nchanged;
 }
 
 static inline void nvmap_handle_mkclean(struct nvmap_handle *h,
 					u32 offset, u32 size)
 {
-	nvmap_handle_mk(h, offset, size, nvmap_page_mkclean);
+	int nchanged = nvmap_handle_mk(h, offset, size, nvmap_page_mkclean);
+	if (h->heap_pgalloc)
+		atomic_sub(nchanged, &h->pgalloc.ndirty);
 }
 
 static inline void nvmap_handle_mkunreserved(struct nvmap_handle *h,
@@ -612,6 +629,14 @@ static inline void nvmap_lru_reset(struct nvmap_handle *h)
 	list_del(&h->lru);
 	list_add_tail(&h->lru, &nvmap_dev->lru_handles);
 	spin_unlock(&nvmap_dev->lru_lock);
+}
+
+static inline bool nvmap_handle_track_dirty(struct nvmap_handle *h)
+{
+	if (!h->heap_pgalloc)
+		return false;
+
+	return h->userflags & NVMAP_HANDLE_CACHE_SYNC;
 }
 
 void nvmap_dmabuf_release_stashed_maps(struct dma_buf *dmabuf);

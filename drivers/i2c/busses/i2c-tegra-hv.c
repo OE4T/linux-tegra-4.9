@@ -184,6 +184,7 @@ static struct tegra_hv_i2c_platform_data *parse_i2c_tegra_dt(
 /* Match table for of_platform binding */
 static const struct of_device_id tegra_hv_i2c_of_match[] = {
 	{ .compatible = "nvidia,tegra124-i2c-hv", .data = NULL},
+	{ .compatible = "nvidia,tegra210-i2c-hv", .data = NULL},
 	{},
 };
 MODULE_DEVICE_TABLE(of, tegra_hv_i2c_of_match);

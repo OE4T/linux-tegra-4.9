@@ -122,6 +122,18 @@ static inline u32 host1x_channel_rdata_r(void)
 {
 	return 0x28;
 }
+static inline u32 host1x_channel_cmdp_offset_r(void)
+{
+	return 0x30;
+}
+static inline u32 host1x_channel_cmdp_class_r(void)
+{
+	return 0x34;
+}
+static inline u32 host1x_channel_cmdp_channelstat_r(void)
+{
+	return 0x38;
+}
 static inline u32 host1x_channel_mlock_en_r(void)
 {
 	return 0x2000;

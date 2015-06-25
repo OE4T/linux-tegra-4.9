@@ -206,7 +206,15 @@
 			      <&{/sdhci@3440000}       TEGRA_SWGROUP_SDMMC3A>,
 			      <&{/sdhci@3420000}       TEGRA_SWGROUP_SDMMC2A>,
 			      <&{/sdhci@3400000}       TEGRA_SWGROUP_SDMMC1A>,
-			      <&{/bpmp}			TEGRA_SWGROUP_BPMP>;
+			      <&{/bpmp}			TEGRA_SWGROUP_BPMP>,
+			      <&host1x_ctx0		TEGRA_SWGROUP_HOST1X_CTX0>,
+			      <&host1x_ctx1		TEGRA_SWGROUP_HOST1X_CTX1>,
+			      <&host1x_ctx2		TEGRA_SWGROUP_HOST1X_CTX2>,
+			      <&host1x_ctx3		TEGRA_SWGROUP_HOST1X_CTX3>,
+			      <&host1x_ctx4		TEGRA_SWGROUP_HOST1X_CTX4>,
+			      <&host1x_ctx5		TEGRA_SWGROUP_HOST1X_CTX5>,
+			      <&host1x_ctx6		TEGRA_SWGROUP_HOST1X_CTX6>,
+			      <&host1x_ctx7		TEGRA_SWGROUP_HOST1X_CTX7>;
 		linsim,smmu-broken-sim-irq;
 	};
 

@@ -3996,6 +3996,7 @@ static void gk20a_gr_enable_gpc_exceptions(struct gk20a *g)
 	u32 tpc_mask;
 
 	gk20a_writel(g, gr_gpcs_tpcs_tpccs_tpc_exception_en_r(),
+			gr_gpcs_tpcs_tpccs_tpc_exception_en_tex_enabled_f() |
 			gr_gpcs_tpcs_tpccs_tpc_exception_en_sm_enabled_f());
 
 	tpc_mask =
@@ -5241,7 +5242,7 @@ u32 gk20a_mask_hww_warp_esr(u32 hww_warp_esr)
 	return hww_warp_esr;
 }
 
-static int gk20a_gr_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
+int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		bool *post_event, struct channel_gk20a *fault_ch)
 {
 	int ret = 0;
@@ -5322,6 +5323,27 @@ static int gk20a_gr_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	return ret;
 }
 
+int gr_gk20a_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
+		bool *post_event)
+{
+	int ret = 0;
+	u32 offset = proj_gpc_stride_v() * gpc +
+		     proj_tpc_in_gpc_stride_v() * tpc;
+	u32 esr;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
+
+	esr = gk20a_readl(g,
+			 gr_gpc0_tpc0_tex_m_hww_esr_r() + offset);
+	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "0x%08x", esr);
+
+	gk20a_writel(g,
+		     gr_gpc0_tpc0_tex_m_hww_esr_r() + offset,
+		     esr);
+
+	return ret;
+}
+
 static int gk20a_gr_handle_tpc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		bool *post_event, struct channel_gk20a *fault_ch)
 {
@@ -5338,8 +5360,16 @@ static int gk20a_gr_handle_tpc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			gr_gpc0_tpc0_tpccs_tpc_exception_sm_pending_v()) {
 		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
 				"GPC%d TPC%d: SM exception pending", gpc, tpc);
-		ret = gk20a_gr_handle_sm_exception(g, gpc, tpc,
-					post_event, fault_ch);
+		ret = g->ops.gr.handle_sm_exception(g, gpc, tpc,
+							post_event, fault_ch);
+	}
+
+	/* check if a tex exeption is pending */
+	if (gr_gpc0_tpc0_tpccs_tpc_exception_tex_v(tpc_exception) ==
+			gr_gpc0_tpc0_tpccs_tpc_exception_tex_pending_v()) {
+		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+				"GPC%d TPC%d: TEX exception pending", gpc, tpc);
+		ret = g->ops.gr.handle_tex_exception(g, gpc, tpc, post_event);
 	}
 
 	return ret;
@@ -7595,4 +7625,6 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.get_access_map = gr_gk20a_get_access_map;
 	gops->gr.handle_fecs_error = gk20a_gr_handle_fecs_error;
 	gops->gr.mask_hww_warp_esr = gk20a_mask_hww_warp_esr;
+	gops->gr.handle_sm_exception = gr_gk20a_handle_sm_exception;
+	gops->gr.handle_tex_exception = gr_gk20a_handle_tex_exception;
 }

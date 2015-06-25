@@ -528,6 +528,10 @@ int gr_gk20a_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 			   struct zbc_entry *depth_val, u32 index);
 int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
 		       u32 expect_delay);
+int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
+		bool *post_event, struct channel_gk20a *fault_ch);
+int gr_gk20a_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
+					bool *post_event);
 int gr_gk20a_init_ctx_state(struct gk20a *g);
 int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
 				   struct fecs_method_op_gk20a op,

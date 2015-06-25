@@ -74,3 +74,15 @@ config ARM_MVEBU_V7_CPUIDLE
 	depends on ARCH_MVEBU && !ARM64
 	help
 	  Select this to enable cpuidle on Armada 370, 38x and XP processors.
+
+config CPU_IDLE_TEGRA18X
+	bool "CPU Idle Driver for NVIDIA Tegra18x SoCs"
+	depends on ARCH_TEGRA_18x_SOC
+	default y
+	select CPU_IDLE_MULTIPLE_DRIVERS
+	select DT_IDLE_STATES
+	help
+	  Support for entering different power states on NVIDIA Tegra18x
+	  SoCs when CPUs become idle.
+
+	  Select this to enable cpuidle on NVIDIA Tegra18x SoCs.

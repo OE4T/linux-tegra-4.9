@@ -396,7 +396,11 @@ static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc)
 
 static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
 {
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	return true;
+#else
 	return tegra_powergate_is_powered(dc->powergate_id);
+#endif
 }
 
 static inline void tegra_dc_set_edid(struct tegra_dc *dc,

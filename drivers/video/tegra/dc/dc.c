@@ -1588,6 +1588,33 @@ static const struct file_operations dbg_vrr_fluct_avg_pct_ops = {
 	.release = single_release,
 };
 
+static int dbg_tegrahw_type_show(struct seq_file *m, void *unused)
+{
+	struct tegra_dc *dc = m->private;
+
+	if (WARN_ON(!dc || !dc->out))
+		return -EINVAL;
+
+	/* All platforms other than real silicon are taken
+		as simulation */
+	seq_printf(m,
+		"real_silicon: %d\n",
+		tegra_platform_is_silicon());
+
+	return 0;
+}
+
+static int dbg_tegrahw_type_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_tegrahw_type_show, inode->i_private);
+}
+
+static const struct file_operations dbg_tegrahw_type_ops = {
+	.open = dbg_tegrahw_type_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
 static void tegra_dc_remove_debugfs(struct tegra_dc *dc)
 {
 	if (dc->debugdir)
@@ -1664,6 +1691,11 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 
 	retval = debugfs_create_file("fluct_avg_pct", S_IRUGO, vrrdir,
 				dc->out->vrr, &dbg_vrr_fluct_avg_pct_ops);
+	if (!retval)
+		goto remove_out;
+
+	retval = debugfs_create_file("tegrahw_type", S_IRUGO, dc->debugdir,
+				dc, &dbg_tegrahw_type_ops);
 	if (!retval)
 		goto remove_out;
 

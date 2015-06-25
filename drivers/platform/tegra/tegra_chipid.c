@@ -22,7 +22,6 @@
 #include <linux/tegra-soc.h>
 
 #define MISCREG_HIDREV		0x4
-#define MISCREG_EMU_REVID	0x120
 
 static struct of_device_id tegra_chipid_of_match[] = {
 	{ .compatible = "nvidia,tegra186-chipid" },
@@ -33,7 +32,6 @@ void tegra_get_tegraid_from_hw(void)
 {
 	struct device_node *np;
 	u32 cid;
-	u32 nlist;
 	char *priv = NULL;
 	struct resource r;
 	void __iomem *chipid_base;
@@ -53,14 +51,13 @@ void tegra_get_tegraid_from_hw(void)
 		BUG_ON("tegra-id: invalid chipid offset\n");
 
 	cid = readl(chipid_base + offset);
-	nlist = readl(chipid_base + MISCREG_EMU_REVID);
 
-	pr_info("tegra-id: chipid=%x, netlist=%d.\n", cid, nlist);
+	pr_info("tegra-id: chipid=%x.\n", cid);
 
 	tegra_set_tegraid((cid >> 8) & 0xff,
 					  (cid >> 4) & 0xf,
 					  (cid >> 16) & 0xf,
-					  (nlist >> 0) & 0xffff,
-					  (nlist >> 16) & 0xffff,
+					  0,
+					  0,
 					  priv);
 }

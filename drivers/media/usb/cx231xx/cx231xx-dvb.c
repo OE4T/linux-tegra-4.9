@@ -373,11 +373,11 @@ static int cx231xx_dvb_bus_ctrl(struct dvb_frontend *fe, int acquire)
 	struct cx231xx_dvb *dvb = dev->dvb;
 
 	if (acquire) {
-		if (is_model_avermedia_h837_series(dev->model))
+		if (dvb != NULL && is_model_avermedia_h837_series(dev->model))
 			++dvb->power_on;
 		return cx231xx_set_mode(dev, CX231XX_DIGITAL_MODE);
 	}
-	if (is_model_avermedia_h837_series(dev->model)) {
+	if (dvb != NULL && is_model_avermedia_h837_series(dev->model)) {
 		--dvb->power_on;
 		if (dvb->power_on)
 			return 0;

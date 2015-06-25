@@ -103,11 +103,33 @@ static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 	}
 }
 
+static void show_channel_regs(struct output *o, struct nvhost_channel *ch,
+	struct nvhost_cdma *cdma)
+{
+	u32 val;
+
+	nvhost_debug_output(o, "NvHost basic channel registers:\n");
+	val = host1x_channel_readl(ch, host1x_channel_fifostat_r());
+	nvhost_debug_output(o, "CMDFIFO_STAT_0:  %08x\n", val);
+	val = host1x_channel_readl(ch, host1x_channel_rdata_r());
+	nvhost_debug_output(o, "CMDFIFO_RDATA_0: %08x\n", val);
+	if (!tegra_platform_is_linsim()) {
+		val = host1x_channel_readl(ch, host1x_channel_cmdp_offset_r());
+		nvhost_debug_output(o, "CMDP_OFFSET_0:   %08x\n", val);
+		val = host1x_channel_readl(ch, host1x_channel_cmdp_class_r());
+		nvhost_debug_output(o, "CMDP_CLASS_0:    %08x\n", val);
+	}
+	val = host1x_channel_readl(ch, host1x_channel_cmdp_channelstat_r());
+	nvhost_debug_output(o, "CHANNELSTAT_0:   %08x\n", val);
+
+}
+
 static void debug_show_channel_cdma(struct nvhost_master *m,
 	struct nvhost_channel *ch, struct output *o, int chid)
 {
 	struct nvhost_cdma *cdma = &ch->cdma;
 
+	show_channel_regs(o, ch, cdma);
 	show_channel_gathers(o, cdma);
 	nvhost_debug_output(o, "\n");
 }

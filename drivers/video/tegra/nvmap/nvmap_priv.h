@@ -70,6 +70,7 @@ extern u32 nvmap_max_handle_count;
 
 /* If set force zeroed memory to userspace. */
 extern bool zero_memory;
+extern struct vm_operations_struct nvmap_vma_ops;
 
 #ifdef CONFIG_ARM64
 #define PG_PROT_KERNEL PAGE_KERNEL

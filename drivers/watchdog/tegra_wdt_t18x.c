@@ -50,8 +50,8 @@ struct tegra_wdt_t18x {
 	unsigned long		users;
 	void __iomem		*wdt_source;
 	void __iomem		*wdt_timer;
+	u32			config;
 	int			irq;
-	int			tmrsrc;
 	unsigned long		status;
 	int			cpu_id;
 	bool			enable_on_init;
@@ -94,7 +94,8 @@ static inline struct tegra_wdt_t18x *to_tegra_wdt_t18x(
 #define WDT_CFG_PERIOD			(1 << 4)
 #define WDT_CFG_INT_EN			(1 << 12)
 #define WDT_CFG_FINT_EN			(1 << 13)
-#define WDT_CFG_SYS_RST_EN		(1 << 14)
+#define WDT_CFG_REMOTE_INT_EN		(1 << 14)
+#define WDT_CFG_DBG_RST_EN		(1 << 15)
 #define WDT_CFG_SYS_PORST_EN		(1 << 16)
 #define WDT_CFG_ERR_THRESHOLD		(7 << 20)
 #define WDT_STATUS			(0x4)
@@ -157,6 +158,21 @@ static void tegra_wdt_t18x_ref(struct watchdog_device *wdt)
 	}
 }
 
+static inline void tegra_wdt_t18x_skip(struct tegra_wdt_t18x *tegra_wdt_t18x)
+{
+	u32 val;
+
+	/* Skip the 2nd expiry of Atlas WDT */
+	if (tegra_wdt_t18x->cpu_id == 0)
+		val = WDT_SKIP_VAL(1, 1);
+
+	/* Skip the 4th expiry if debug reset is disabled */
+	if (!(tegra_wdt_t18x->config & WDT_CFG_DBG_RST_EN))
+		val |= WDT_SKIP_VAL(3, 1);
+
+	writel(val, tegra_wdt_t18x->wdt_source + WDT_SKIP);
+}
+
 static int __tegra_wdt_t18x_enable(struct tegra_wdt_t18x *tegra_wdt_t18x)
 {
 	u32 val;
@@ -167,12 +183,9 @@ static int __tegra_wdt_t18x_enable(struct tegra_wdt_t18x *tegra_wdt_t18x)
 	val |= (TOP_TKE_TMR_EN | TOP_TKE_TMR_PERIODIC);
 	writel(val, tegra_wdt_t18x->wdt_timer + TOP_TKE_TMR_PTV);
 
-	val = WDT_SKIP_VAL(1, 3); /* skip level 1 to level 5 */
-	writel(val, tegra_wdt_t18x->wdt_source + WDT_SKIP);
+	tegra_wdt_t18x_skip(tegra_wdt_t18x);
 
-	val = tegra_wdt_t18x->tmrsrc;
-	val |= WDT_CFG_PERIOD | WDT_CFG_INT_EN | WDT_CFG_SYS_PORST_EN;
-	writel(val, tegra_wdt_t18x->wdt_source + WDT_CFG);
+	writel(tegra_wdt_t18x->config, tegra_wdt_t18x->wdt_source + WDT_CFG);
 	writel(WDT_CMD_START_COUNTER, tegra_wdt_t18x->wdt_source + WDT_CMD);
 	set_bit(WDT_ENABLED, &tegra_wdt_t18x->status);
 
@@ -299,43 +312,56 @@ static int dump_registers_show(void *data, u64 *val)
 	return 0;
 }
 
-static int disable_wdt_reset_show(void *data, u64 *val)
+static inline int tegra_wdt_t18x_update_config(struct tegra_wdt_t18x
+	*tegra_wdt_t18x, u32 mask, bool clear)
 {
-	struct tegra_wdt_t18x *tegra_wdt_t18x = data;
-
-	*val = readl(tegra_wdt_t18x->wdt_source + WDT_CFG) &
-			(WDT_CFG_SYS_RST_EN | WDT_CFG_SYS_PORST_EN)
-			? 0 : 1;
-	return 0;
-}
-
-static int disable_wdt_reset_store(void *data, u64 val)
-{
-	struct tegra_wdt_t18x *tegra_wdt_t18x = data;
-	u32 cfg;
-
-	cfg = readl(tegra_wdt_t18x->wdt_source + WDT_CFG);
-	if (val)
-		cfg &= ~(WDT_CFG_SYS_RST_EN | WDT_CFG_SYS_PORST_EN);
+	if (clear)
+		tegra_wdt_t18x->config &= ~mask;
 	else
-		cfg |= WDT_CFG_SYS_PORST_EN;
+		tegra_wdt_t18x->config |= mask;
 
-	writel(WDT_UNLOCK_PATTERN, tegra_wdt_t18x->wdt_source + WDT_UNLOCK);
-	writel(WDT_CMD_DISABLE_COUNTER, tegra_wdt_t18x->wdt_source + WDT_CMD);
-
-	writel(TOP_TKE_TMR_PCR_INTR, tegra_wdt_t18x->wdt_timer +
-							TOP_TKE_TMR_PCR);
-
-	writel(cfg, tegra_wdt_t18x->wdt_source + WDT_CFG);
-	writel(WDT_CMD_START_COUNTER, tegra_wdt_t18x->wdt_source + WDT_CMD);
-
+	/* Apply the config only if WDT is enabled */
+	if (test_bit(WDT_ENABLED, &tegra_wdt_t18x->status)) {
+		__tegra_wdt_t18x_disable(tegra_wdt_t18x);
+		__tegra_wdt_t18x_enable(tegra_wdt_t18x);
+	}
 	return 0;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(disable_wdt_reset_fops, disable_wdt_reset_show,
-	disable_wdt_reset_store, "%lld\n");
+static int disable_dbg_reset_show(void *data, u64 *val)
+{
+	struct tegra_wdt_t18x *tegra_wdt_t18x = data;
+
+	*val = tegra_wdt_t18x->config & WDT_CFG_DBG_RST_EN ? 0 : 1;
+	return 0;
+}
+
+static int disable_dbg_reset_store(void *data, u64 val)
+{
+	return tegra_wdt_t18x_update_config((struct tegra_wdt_t18x*)data,
+			WDT_CFG_DBG_RST_EN, !!val);
+}
+
+static int disable_por_reset_show(void *data, u64 *val)
+{
+	struct tegra_wdt_t18x *tegra_wdt_t18x = data;
+
+	*val = tegra_wdt_t18x->config &	WDT_CFG_SYS_PORST_EN ? 0 : 1;
+	return 0;
+}
+
+static int disable_por_reset_store(void *data, u64 val)
+{
+	return tegra_wdt_t18x_update_config((struct tegra_wdt_t18x*)data,
+			WDT_CFG_SYS_PORST_EN, !!val);
+}
+
 DEFINE_SIMPLE_ATTRIBUTE(dump_regs_fops, dump_registers_show,
 	NULL, "%lld\n");
+DEFINE_SIMPLE_ATTRIBUTE(disable_dbg_reset_fops, disable_dbg_reset_show,
+	disable_dbg_reset_store, "%lld\n");
+DEFINE_SIMPLE_ATTRIBUTE(disable_por_reset_fops, disable_por_reset_show,
+	disable_por_reset_store, "%lld\n");
 
 static void tegra_wdt_t18x_debugfs_init(struct tegra_wdt_t18x *tegra_wdt_t18x)
 {
@@ -348,13 +374,17 @@ static void tegra_wdt_t18x_debugfs_init(struct tegra_wdt_t18x *tegra_wdt_t18x)
 		goto clean;
 
 	retval = debugfs_create_file("dump_regs", S_IRUGO | S_IWUSR,
-				root, (void *)tegra_wdt_t18x, &dump_regs_fops);
+			root, (void *)tegra_wdt_t18x, &dump_regs_fops);
 	if (IS_ERR_OR_NULL(retval))
 		goto clean;
 
-	retval = debugfs_create_file("disable_wdt_reset", S_IRUGO | S_IWUSR,
-				root, (void *)tegra_wdt_t18x,
-				&disable_wdt_reset_fops);
+	retval = debugfs_create_file("disable_dbg_reset", S_IRUGO | S_IWUSR,
+			root, (void *)tegra_wdt_t18x, &disable_dbg_reset_fops);
+	if (IS_ERR_OR_NULL(retval))
+		goto clean;
+
+	retval = debugfs_create_file("disable_por_reset", S_IRUGO | S_IWUSR,
+			root, (void *)tegra_wdt_t18x, &disable_por_reset_fops);
 	if (IS_ERR_OR_NULL(retval))
 		goto clean;
 
@@ -487,8 +517,17 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 		return PTR_ERR(tegra_wdt_t18x->wdt_timer);
 	}
 
-	/* tmrsrc will be used to set WDT_CFG */
-	tegra_wdt_t18x->tmrsrc = ((res_wdt->start >> 16) & (0xf)) - 2;
+	/* Configure timer source and period */
+	tegra_wdt_t18x->config = (((res_wdt->start >> 16) & (0xf)) - 2 ) |
+								WDT_CFG_PERIOD;
+	/* Enable local interrupt for WDT petting */
+	tegra_wdt_t18x->config |= WDT_CFG_INT_EN;
+
+	/* Enable debug and POR reset if not explicitly disabled */
+	if(!of_property_read_bool(np, "nvidia,disable-debug-reset"))
+	        tegra_wdt_t18x->config |= WDT_CFG_DBG_RST_EN;
+	if(!of_property_read_bool(np, "nvidia,disable-por-reset"))
+	        tegra_wdt_t18x->config |= WDT_CFG_SYS_PORST_EN;
 
 	tegra_wdt_t18x_disable(&tegra_wdt_t18x->wdt);
 	writel(TOP_TKE_TMR_PCR_INTR, tegra_wdt_t18x->wdt_timer +

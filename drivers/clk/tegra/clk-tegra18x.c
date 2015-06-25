@@ -385,7 +385,7 @@ void enable_gpio_clk(void)
 	clk_base = ioremap(0x5860000, 0x21000);
 	__raw_writel(0x0, clk_base);
 	udelay(2);
-	__raw_writel(0x1, clk_base + 1000);
+	__raw_writel(0x1, clk_base + 0x1000);
 	udelay(2);
 
 	__raw_writel(0x0, clk_base + 0x10000);
@@ -405,7 +405,7 @@ void enable_gpio_clk(void)
 
 	__raw_writel(0x0, clk_base);
 	udelay(2);
-	__raw_writel(0x1, clk_base + 1000);
+	__raw_writel(0x1, clk_base + 0x1000);
 	udelay(2);
 	iounmap(clk_base);
 }

@@ -109,7 +109,6 @@ static int tegra_crypto_dev_open(struct inode *inode, struct file *filp)
 		kfree(ctx);
 		return ret;
 	}
-
 	filp->private_data = ctx;
 	return ret;
 }
@@ -118,7 +117,8 @@ static int tegra_crypto_dev_release(struct inode *inode, struct file *filp)
 {
 	struct tegra_crypto_ctx *ctx = filp->private_data;
 
-	crypto_free_ablkcipher(ctx->aes_tfm[TEGRA_CRYPTO_CBC]);
+	if (ctx->aes_tfm[TEGRA_CRYPTO_CBC])
+		crypto_free_ablkcipher(ctx->aes_tfm[TEGRA_CRYPTO_CBC]);
 	kfree(ctx);
 	filp->private_data = NULL;
 	return 0;
@@ -494,6 +494,10 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 {
 	struct tegra_crypto_ctx *ctx = filp->private_data;
 	struct crypto_rng *tfm = NULL;
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	struct tegra_se_elp_pka_request elp_rsa_req;
+	struct tegra_se_elp_pka_request ecc_req;
+#endif
 	struct tegra_crypt_req crypt_req;
 	struct tegra_rng_req rng_req;
 	struct tegra_sha_req sha_req;
@@ -774,6 +778,58 @@ rng_out:
 		ret = tegra_crypt_rsa(filp, ctx, &rsa_req);
 		break;
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	case TEGRA_CRYPTO_IOCTL_ELP_RSA_REQ:
+		if (copy_from_user(&elp_rsa_req, (void __user *)arg,
+			sizeof(elp_rsa_req))) {
+			ret = -EFAULT;
+			pr_err("%s: copy_from_user fail(%d) for elp_rsa_req\n",
+					__func__, ret);
+			return ret;
+		}
+
+		ret = tegra_se_elp_pka_op(&elp_rsa_req);
+		if (ret) {
+			pr_debug("\ntegra_se_elp_pka_op failed(%d) for RSA\n",
+				ret);
+			return ret;
+		}
+
+		ret = copy_to_user((void __user *)arg, &elp_rsa_req,
+					sizeof(elp_rsa_req));
+		if (ret) {
+			ret = -EFAULT;
+			pr_debug("%s: copy_to_user failed (%d)\n", __func__,
+					ret);
+			return ret;
+		}
+		break;
+
+	case TEGRA_CRYPTO_IOCTL_ELP_ECC_REQ:
+		if (copy_from_user(&ecc_req, (void __user *)arg,
+			sizeof(ecc_req))) {
+			ret = -EFAULT;
+			pr_err("%s: copy_from_user fail(%d) for ecc_req\n",
+					__func__, ret);
+			return ret;
+		}
+		ret = tegra_se_elp_pka_op(&ecc_req);
+		if (ret) {
+			pr_debug("\ntegra_se_elp_pka_op failed(%d) for ECC\n",
+					ret);
+			return ret;
+		}
+
+		ret = copy_to_user((void __user *)arg, &ecc_req,
+					sizeof(ecc_req));
+		if (ret) {
+			ret = -EFAULT;
+			pr_debug("%s: copy_to_user failed (%d)\n", __func__,
+					ret);
+			return ret;
+		}
+		break;
+#endif
 	default:
 		pr_debug("invalid ioctl code(%d)", ioctl_num);
 		return -EINVAL;

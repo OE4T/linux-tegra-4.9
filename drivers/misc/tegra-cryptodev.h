@@ -26,6 +26,13 @@
 /* ioctl arg = 1 if you want to use ssk. arg = 0 to use normal key */
 #define TEGRA_CRYPTO_IOCTL_NEED_SSK		_IOWR(0x98, 100, int)
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#define TEGRA_CRYPTO_IOCTL_ELP_RSA_REQ	\
+		_IOWR(0x98, 106, struct tegra_se_elp_pka_request)
+#define TEGRA_CRYPTO_IOCTL_ELP_ECC_REQ	\
+		_IOWR(0x98, 107, struct tegra_se_elp_pka_request)
+#endif
+
 #define TEGRA_CRYPTO_MAX_KEY_SIZE	AES_MAX_KEY_SIZE
 #define RSA_KEY_SIZE		512
 #define TEGRA_CRYPTO_IV_SIZE	AES_BLOCK_SIZE
@@ -39,6 +46,35 @@
 #define TEGRA_CRYPTO_CBC	1
 #define TEGRA_CRYPTO_OFB	2
 #define TEGRA_CRYPTO_CTR	3
+
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+struct tegra_se_elp_pka_request {
+	struct tegra_se_elp_dev *se_dev;	/* Security Engine device */
+	struct tegra_se_slot *slot;	/* Security Engine key slot */
+	char *message;
+	char *result;
+	char *exponent;
+	char *modulus;
+	char *m;
+	char *r2;
+	char *rinv;
+	int op_mode;
+	int size;
+	int ecc_type;
+	int rsa_type;
+	char *curve_param_a;
+	char *curve_param_b;
+	char *order;
+	char *base_pt_x;
+	char *base_pt_y;
+	char *res_pt_x;
+	char *res_pt_y;
+	char *key;
+	bool pv_ok;
+};
+
+int tegra_se_elp_pka_op(struct tegra_se_elp_pka_request *req);
+#endif
 
 /* a pointer to this struct needs to be passed to:
  * TEGRA_CRYPTO_IOCTL_PROCESS_REQ

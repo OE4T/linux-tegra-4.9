@@ -1,7 +1,7 @@
 /*
  * arch/arm/boot/dts/panel-sim.dtsi
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -55,6 +55,40 @@
 						nvidia,v-ref-to-sync = <1>;
 					};
 				};
+			};
+
+			dp-ufpga-panel {
+				compatible = "nvidia,dp-ufpga-panel";
+				nvidia,tx-pu-disable = <1>;
+				disp-default-out {
+					nvidia,out-type = <TEGRA_DC_OUT_DP>;
+					nvidia,out-align = <TEGRA_DC_ALIGN_MSB>;
+					nvidia,out-order = <TEGRA_DC_ORDER_RED_BLUE>;
+					nvidia,out-flags = <TEGRA_DC_OUT_CONTINUOUS_MODE>;
+					nvidia,out-pins = <TEGRA_DC_OUT_PIN_H_SYNC TEGRA_DC_OUT_PIN_POL_LOW
+							   TEGRA_DC_OUT_PIN_V_SYNC TEGRA_DC_OUT_PIN_POL_LOW
+							   TEGRA_DC_OUT_PIN_PIXEL_CLOCK TEGRA_DC_OUT_PIN_POL_LOW
+							   TEGRA_DC_OUT_PIN_DATA_ENABLE TEGRA_DC_OUT_PIN_POL_HIGH>;
+					nvidia,out-depth = <18>;
+					nvidia,out-parent-clk = "pll_d_out0";
+					nvidia,out-xres = <720>;
+					nvidia,out-yres = <480>;
+				};
+				display-timings {
+					720x480-32 {
+						clock-frequency = <27000000>;
+						hactive = <720>;
+						vactive = <480>;
+						hfront-porch = <48>;
+						hback-porch = <80>;
+						hsync-len = <32>;
+						vfront-porch = <24>;
+						vback-porch = <126>;
+						vsync-len = <10>;
+						nvidia,h-ref-to-sync = <1>;
+						nvidia,v-ref-to-sync = <1>;
+					};
+				};
 				dp-lt-settings {
 					lt-setting@0 {
 						nvidia,drive-current = <DRIVE_CURRENT_L0 DRIVE_CURRENT_L0 DRIVE_CURRENT_L0 DRIVE_CURRENT_L0>;
@@ -77,41 +111,6 @@
 						nvidia,tx-pu = <0>;
 						nvidia,load-adj = <0x6>;
 					};
-				};
-				smartdimmer {
-					status = "okay";
-					nvidia,use-auto-pwm = <0>;
-					nvidia,hw-update-delay = <0>;
-					nvidia,bin-width = <0xffffffff>;
-					nvidia,aggressiveness = <5>;
-					nvidia,use-vid-luma = <0>;
-					nvidia,phase-in-settings = <0>;
-					nvidia,phase-in-adjustments = <0>;
-					nvidia,k-limit-enable = <1>;
-					nvidia,k-limit = <200>;
-					nvidia,sd-window-enable = <0>;
-					nvidia,soft-clipping-enable= <1>;
-					nvidia,soft-clipping-threshold = <128>;
-					nvidia,smooth-k-enable = <0>;
-					nvidia,smooth-k-incr = <64>;
-					nvidia,coeff = <5 9 2>;
-					nvidia,fc = <0 0>;
-					nvidia,blp = <1024 255>;
-					nvidia,bltf = <57 65 73 82
-						       92 103 114 125
-						       138 150 164 178
-						       193 208 224 241>;
-					nvidia,lut = <255 255 255
-						      199 199 199
-						      153 153 153
-						      116 116 116
-						      85 85 85
-						      59 59 59
-						      36 36 36
-						      17 17 17
-						      0 0 0>;
-					nvidia,use-vpulse2 = <1>;
-					nvidia,bl-device-name = "pwm-backlight";
 				};
 			};
 		};
@@ -172,43 +171,118 @@
 						nvidia,load-adj = <0x6>;
 					};
 				};
-				smartdimmer {
-					status = "okay";
-					nvidia,use-auto-pwm = <0>;
-					nvidia,hw-update-delay = <0>;
-					nvidia,bin-width = <0xffffffff>;
-					nvidia,aggressiveness = <5>;
-					nvidia,use-vid-luma = <0>;
-					nvidia,phase-in-settings = <0>;
-					nvidia,phase-in-adjustments = <0>;
-					nvidia,k-limit-enable = <1>;
-					nvidia,k-limit = <200>;
-					nvidia,sd-window-enable = <0>;
-					nvidia,soft-clipping-enable= <1>;
-					nvidia,soft-clipping-threshold = <128>;
-					nvidia,smooth-k-enable = <0>;
-					nvidia,smooth-k-incr = <64>;
-					nvidia,coeff = <5 9 2>;
-					nvidia,fc = <0 0>;
-					nvidia,blp = <1024 255>;
-					nvidia,bltf = <57 65 73 82
-						       92 103 114 125
-						       138 150 164 178
-						       193 208 224 241>;
-					nvidia,lut = <255 255 255
-						      199 199 199
-						      153 153 153
-						      116 116 116
-						      85 85 85
-						      59 59 59
-						      36 36 36
-						      17 17 17
-						      0 0 0>;
-					nvidia,use-vpulse2 = <1>;
-					nvidia,bl-device-name = "pwm-backlight";
-				};
 			};
 		};
+		dsi {
+                        panel-s-wqxga-10-1 {
+                                status = "okay";
+                                compatible = "s,wqxga-10-1";
+                                nvidia,dsi-instance = <DSI_INSTANCE_0>;
+                                nvidia,dsi-n-data-lanes = <8>;
+                                nvidia,dsi-pixel-format = <TEGRA_DSI_PIXEL_FORMAT_24BIT_P>;
+                                nvidia,dsi-refresh-rate = <61>;
+                                nvidia,dsi-rated-refresh-rate = <60>;
+                                nvidia,dsi-te-polarity-low = <TEGRA_DSI_ENABLE>;
+                                nvidia,dsi-video-data-type = <TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE>;
+                                nvidia,dsi-video-clock-mode = <TEGRA_DSI_VIDEO_CLOCK_TX_ONLY>;
+                                nvidia,dsi-ganged-type = <TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT>;
+                                nvidia,dsi-controller-vs = <DSI_VS_1>;
+                                nvidia,dsi-virtual-channel = <TEGRA_DSI_VIRTUAL_CHANNEL_0>;
+                                nvidia,dsi-panel-reset = <TEGRA_DSI_ENABLE>;
+                                nvidia,dsi-power-saving-suspend = <TEGRA_DSI_ENABLE>;
+                                nvidia,dsi-lp00-pre-panel-wakeup = <TEGRA_DSI_ENABLE>;
+                                nvidia,dsi-ulpm-not-support = <TEGRA_DSI_ENABLE>;
+                                nvidia,dsi-suspend-aggr = <DSI_HOST_SUSPEND_LV2>;
+                                nvidia,dsi-bl-name = "pwm-backlight";
+                                nvidia,dsi-init-cmd =
+                                                        /* Long  Packet: <PACKETTYPE[u8] COMMANDID[u8] PAYLOADCOUNT[u16] ECC[u8] PAYLOAD[..] CHECKSUM[u16]> */
+                                                        /* Short Packet: <PACKETTYPE[u8] COMMANDID[u8] DATA0[u8] DATA1[u8] ECC[u8]> */
+                                                        /* For DSI packets each DT cell is interpreted as u8 not u32 */
+
+                                                        <TEGRA_DSI_PACKET_CMD DSI_GENERIC_LONG_WRITE 0x3 0x0 0x0 0x10 0x00 0x2A 0x0 0x0>,
+                                                        <TEGRA_DSI_DELAY_MS 20>,
+                                                        <TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_0_PARAM DSI_DCS_NO_OP 0x0 0x0>,
+                                                        <TEGRA_DSI_DELAY_MS 20>,
+                                                        <TEGRA_DSI_PACKET_CMD DSI_GENERIC_LONG_WRITE 0x3 0x0 0x0 0x10 0x01 0x01 0x0 0x0>,
+                                                        <TEGRA_DSI_DELAY_MS 20>,
+                                                        <TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_0_PARAM DSI_DCS_NO_OP 0x0 0x0>,
+                                                        <TEGRA_DSI_DELAY_MS 20>,
+                                                        <TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_0_PARAM DSI_DCS_SET_TEARING_EFFECT_ON 0x0 0x0>,
+                                                        <TEGRA_DSI_DELAY_MS 20>,
+                                                        <TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_0_PARAM DSI_DCS_EXIT_SLEEP_MODE 0x0 0x0>,
+                                                        <TEGRA_DSI_DELAY_MS 120>,
+                                                        <TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_0_PARAM DSI_DCS_SET_DISPLAY_ON 0x0 0x0>,
+                                                        <TEGRA_DSI_DELAY_MS 20>;
+                                nvidia,dsi-n-init-cmd = <14>;
+                                nvidia,dsi-suspend-cmd =
+                                                        <TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_0_PARAM DSI_DCS_SET_DISPLAY_OFF 0x0 0x0>,
+                                                        <TEGRA_DSI_DELAY_MS 50>,
+                                                        <TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_0_PARAM DSI_DCS_ENTER_SLEEP_MODE 0x0 0x0>,
+                                                        <TEGRA_DSI_DELAY_MS 200>,
+                                                        <TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_0_PARAM DSI_DCS_SET_TEARING_EFFECT_OFF 0x0 0x0>,
+                                                        <TEGRA_DSI_DELAY_MS 20>;
+                                nvidia,dsi-n-suspend-cmd = <6>;
+                                disp-default-out {
+                                        nvidia,out-type = <TEGRA_DC_OUT_DSI>;
+                                        nvidia,out-width = <216>;
+                                        nvidia,out-height = <135>;
+                                        nvidia,out-flags = <TEGRA_DC_OUT_CONTINUOUS_MODE>;
+                                        nvidia,out-parent-clk = "pll_d_out0";
+					nvidia,out-xres = <2560>;
+                                        nvidia,out-yres = <1600>;
+                                };
+                                display-timings {
+                                        2560x1600-32 {
+                                                clock-frequency = <294264000>;
+                                                hactive = <2560>;
+                                                vactive = <1600>;
+                                                hfront-porch = <328>;
+                                                hback-porch = <80>;
+                                                hsync-len = <32>;
+                                                vfront-porch = <2>;
+                                                vback-porch = <5>;
+                                                vsync-len = <1>;
+                                                nvidia,h-ref-to-sync = <0>;
+                                                nvidia,v-ref-to-sync = <1>;
+                                        };
+                                };
+                                smartdimmer {
+                                        status = "okay";
+                                        nvidia,use-auto-pwm = <0>;
+                                        nvidia,hw-update-delay = <0>;
+                                        nvidia,bin-width = <0xffffffff>;
+                                        nvidia,aggressiveness = <5>;
+                                        nvidia,use-vid-luma = <0>;
+                                        nvidia,phase-in-settings = <0>;
+                                        nvidia,phase-in-adjustments = <0>;
+                                        nvidia,k-limit-enable = <1>;
+                                        nvidia,k-limit = <200>;
+                                        nvidia,sd-window-enable = <0>;
+                                        nvidia,soft-clipping-enable= <1>;
+                                        nvidia,soft-clipping-threshold = <128>;
+                                        nvidia,smooth-k-enable = <1>;
+                                        nvidia,smooth-k-incr = <4>;
+                                        nvidia,coeff = <5 9 2>;
+                                        nvidia,fc = <0 0>;
+                                        nvidia,blp = <1024 255>;
+                                        nvidia,bltf = <57 65 73 82
+                                                       92 103 114 125
+                                                       138 150 164 178
+                                                       193 208 224 241>;
+                                        nvidia,lut = <255 255 255
+                                                      199 199 199
+                                                      153 153 153
+                                                      116 116 116
+                                                      85 85 85
+                                                      59 59 59
+                                                      36 36 36
+                                                      17 17 17
+                                                      0 0 0>;
+                                        nvidia,use-vpulse2 = <1>;
+                                        nvidia,bl-device-name = "pwm-backlight";
+                                };
+                        };
+                };
 	};
 	backlight {
 		panel-a-edp-1080p-14-0-bl {

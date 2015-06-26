@@ -302,6 +302,7 @@ skip_cma:
 }
 RESERVEDMEM_OF_DECLARE(nvmap_co, "nvidia,generic_carveout", nvmap_co_setup);
 RESERVEDMEM_OF_DECLARE(nvmap_ivc_co, "nvidia,ivm_carveout", nvmap_co_setup);
+RESERVEDMEM_OF_DECLARE(nvmap_iram_co, "nvidia,iram-carveout", nvmap_co_setup);
 
 /*
  * This requires proper kernel arguments to have been passed.
@@ -309,8 +310,12 @@ RESERVEDMEM_OF_DECLARE(nvmap_ivc_co, "nvidia,ivm_carveout", nvmap_co_setup);
 static int __nvmap_init_legacy(struct device *dev)
 {
 	/* IRAM. */
-	nvmap_carveouts[0].base = TEGRA_IRAM_BASE + TEGRA_RESET_HANDLER_SIZE;
-	nvmap_carveouts[0].size = TEGRA_IRAM_SIZE - TEGRA_RESET_HANDLER_SIZE;
+	if (!nvmap_carveouts[0].base) {
+		nvmap_carveouts[0].base =
+				TEGRA_IRAM_BASE + TEGRA_RESET_HANDLER_SIZE;
+		nvmap_carveouts[0].size =
+				TEGRA_IRAM_SIZE - TEGRA_RESET_HANDLER_SIZE;
+	}
 
 	/* Carveout. */
 	if (!nvmap_carveouts[1].base) {

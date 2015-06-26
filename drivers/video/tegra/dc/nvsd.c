@@ -1242,7 +1242,7 @@ void nvsd_enbl_dsbl_prism(struct device *dev, bool status)
 	struct tegra_dc_sd_settings *settings;
 	struct platform_device *ndev = to_platform_device(dev);
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
-	if (!dc)
+	if (!dc || !dc->enabled)
 		return;
 
 	settings = dc->out->sd_settings;

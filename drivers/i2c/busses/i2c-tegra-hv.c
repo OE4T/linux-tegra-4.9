@@ -25,6 +25,7 @@
 #include <linux/completion.h>
 #include <linux/device.h>
 #include <linux/jiffies.h>
+#include <linux/ioport.h>
 
 #include "i2c-tegra-hv-common.h"
 
@@ -39,7 +40,7 @@
  * struct tegra_hv_i2c_dev - per device i2c context
  * @dev: device reference
  * @adapter: core i2c layer adapter information
- * @cont_id: i2c controller id
+ * @base: i2c controller base
  * @comm_chan: context for the logical channel over which this
  * device communicates with the i2c server
  * @msg_complete: transfer completion notifier
@@ -50,7 +51,7 @@
 struct tegra_hv_i2c_dev {
 	struct device *dev;
 	struct i2c_adapter adapter;
-	int cont_id;
+	phys_addr_t base;
 	void *comm_chan;
 	struct completion msg_complete;
 	u32 max_payload_size;
@@ -89,7 +90,7 @@ static int tegra_hv_i2c_xfer_msg(struct tegra_hv_i2c_dev *i2c_dev,
 	if (msg->flags & I2C_M_TEN)
 		flags |= HV_I2C_FLAGS_10BIT_ADDR;
 
-	ret = hv_i2c_transfer(i2c_dev->comm_chan, i2c_dev->cont_id, msg->addr,
+	ret = hv_i2c_transfer(i2c_dev->comm_chan, i2c_dev->base, msg->addr,
 			msg_read, msg->buf, msg->len, &msg_err, sno, flags);
 	if (ret < 0) {
 		dev_err(i2c_dev->dev, "unable to send message (%d)\n", ret);
@@ -117,7 +118,7 @@ static int tegra_hv_i2c_xfer_msg(struct tegra_hv_i2c_dev *i2c_dev,
 	rv = -EIO;
 error:
 	reinit_completion(&i2c_dev->msg_complete);
-	ret = hv_i2c_comm_chan_cleanup(i2c_dev->comm_chan, i2c_dev->cont_id);
+	ret = hv_i2c_comm_chan_cleanup(i2c_dev->comm_chan, i2c_dev->base);
 
 	if (ret < 0) {
 		dev_err(i2c_dev->dev, "Failed to send cleanup message\n");
@@ -196,6 +197,7 @@ static int tegra_hv_i2c_probe(struct platform_device *pdev)
 	int bus_num = -1;
 	void *chan;
 	int err;
+	struct resource *res;
 
 	if (pdev->dev.of_node) {
 		match = of_match_device(of_match_ptr(tegra_hv_i2c_of_match),
@@ -208,6 +210,12 @@ static int tegra_hv_i2c_probe(struct platform_device *pdev)
 			pdata = parse_i2c_tegra_dt(pdev);
 	} else {
 		WARN(1, "Only device tree based init is supported\n");
+		return -EINVAL;
+	}
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(&pdev->dev, "no mem resource\n");
 		return -EINVAL;
 	}
 
@@ -254,13 +262,13 @@ static int tegra_hv_i2c_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Failed to add I2C adapter\n");
 		return ret;
 	}
-	i2c_dev->cont_id = i2c_dev->adapter.nr;
+	i2c_dev->base = res->start;
 	init_completion(&i2c_dev->msg_complete);
 
 	/* Send a cleanup message in case this is a reboot and we had a
 	 * transaction in progress
 	 */
-	ret = hv_i2c_comm_chan_cleanup(i2c_dev->comm_chan, i2c_dev->cont_id);
+	ret = hv_i2c_comm_chan_cleanup(i2c_dev->comm_chan, i2c_dev->base);
 	if (ret < 0) {
 		dev_warn(&pdev->dev, "Cleanup after (re)boot failed\n");
 	} else {
@@ -272,7 +280,7 @@ static int tegra_hv_i2c_probe(struct platform_device *pdev)
 
 	reinit_completion(&i2c_dev->msg_complete);
 
-	ret = hv_i2c_get_max_payload(i2c_dev->comm_chan, i2c_dev->cont_id,
+	ret = hv_i2c_get_max_payload(i2c_dev->comm_chan, i2c_dev->base,
 				     &(i2c_dev->max_payload_size), &err);
 	if (ret < 0) {
 		dev_warn(&pdev->dev, "Could not get max payload, defaulting to 4096\n");

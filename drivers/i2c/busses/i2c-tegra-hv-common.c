@@ -87,12 +87,14 @@ static void _hv_i2c_comm_chan_cleanup(struct tegra_hv_i2c_comm_chan *comm_chan)
 	spin_unlock_irqrestore(&comm_chan->lock, flags);
 }
 
-static void _hv_i2c_prep_msg_generic(int comm_chan_id, int cont_id,
+static void _hv_i2c_prep_msg_generic(int comm_chan_id, phys_addr_t base,
 		struct i2c_ivc_msg *msg)
 {
 	i2c_ivc_start_marker(msg) = 0xf005ba11;
 	i2c_ivc_chan_id(msg) = comm_chan_id;
-	i2c_ivc_controller_instance(msg) = cont_id + 1;
+	BUG_ON(base >= SZ_4G);
+
+	i2c_ivc_controller_instance(msg) = (u32)base;
 	i2c_ivc_msg_type(msg) = 0;
 	i2c_ivc_error_field(msg) = 0;
 	i2c_ivc_end_marker(msg) = 0x11ab500f;
@@ -135,7 +137,7 @@ fail:
 }
 
 int hv_i2c_comm_chan_cleanup(struct tegra_hv_i2c_comm_chan *comm_chan,
-		int cont_id)
+		phys_addr_t base)
 {
 	/* Using skbs for fast allocation  and deallocation */
 	struct sk_buff *tx_msg_skb = NULL;
@@ -153,7 +155,7 @@ int hv_i2c_comm_chan_cleanup(struct tegra_hv_i2c_comm_chan *comm_chan,
 
 	tx_msg = (struct i2c_ivc_msg *)skb_put(tx_msg_skb,
 					       I2C_IVC_COMMON_HEADER_LEN);
-	_hv_i2c_prep_msg_generic(comm_chan->id, cont_id, tx_msg);
+	_hv_i2c_prep_msg_generic(comm_chan->id, base, tx_msg);
 
 	i2c_ivc_msg_type(tx_msg) = I2C_CLEANUP;
 	rv = _hv_i2c_send_msg(dev, comm_chan, tx_msg, NULL, NULL, 0,
@@ -167,7 +169,7 @@ int hv_i2c_comm_chan_cleanup(struct tegra_hv_i2c_comm_chan *comm_chan,
  * Send a message to the i2c server, caller is expected to wait for response
  * and handle possible timeout
  */
-int hv_i2c_transfer(struct tegra_hv_i2c_comm_chan *comm_chan, int cont_id,
+int hv_i2c_transfer(struct tegra_hv_i2c_comm_chan *comm_chan, phys_addr_t base,
 		int addr, int read, uint8_t *buf, size_t len, int *err,
 		int seq_no, uint32_t flags)
 {
@@ -186,7 +188,7 @@ int hv_i2c_transfer(struct tegra_hv_i2c_comm_chan *comm_chan, int cont_id,
 	}
 
 	tx_msg = (struct i2c_ivc_msg *)skb_put(tx_msg_skb, msg_len);
-	_hv_i2c_prep_msg_generic(comm_chan->id, cont_id, tx_msg);
+	_hv_i2c_prep_msg_generic(comm_chan->id, base, tx_msg);
 
 	if (read)
 		i2c_ivc_msg_type(tx_msg) = I2C_READ;
@@ -206,7 +208,7 @@ int hv_i2c_transfer(struct tegra_hv_i2c_comm_chan *comm_chan, int cont_id,
 }
 
 int hv_i2c_get_max_payload(struct tegra_hv_i2c_comm_chan *comm_chan,
-		int cont_id, uint32_t *max_payload, int *err)
+		phys_addr_t base, uint32_t *max_payload, int *err)
 {
 	/* Using skbs for fast allocation  and deallocation */
 	struct sk_buff *tx_msg_skb = NULL;
@@ -222,7 +224,7 @@ int hv_i2c_get_max_payload(struct tegra_hv_i2c_comm_chan *comm_chan,
 	}
 
 	tx_msg = (struct i2c_ivc_msg *)skb_put(tx_msg_skb, msg_len);
-	_hv_i2c_prep_msg_generic(comm_chan->id, cont_id, tx_msg);
+	_hv_i2c_prep_msg_generic(comm_chan->id, base, tx_msg);
 
 	i2c_ivc_msg_type(tx_msg) = I2C_GET_MAX_PAYLOAD;
 	i2c_ivc_max_payload_field(tx_msg) = 0;

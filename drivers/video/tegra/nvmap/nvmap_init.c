@@ -27,6 +27,8 @@
 #include <linux/tegra-ivc.h>
 #include <linux/dma-contiguous.h>
 
+#include <asm/dma-contiguous.h>
+
 #include "nvmap_priv.h"
 #include "iomap.h"
 #include "board.h"
@@ -260,11 +262,9 @@ static const struct reserved_mem_ops nvmap_co_ops = {
 };
 static int __init nvmap_co_setup(struct reserved_mem *rmem)
 {
-	int resizable;
 	struct nvmap_platform_carveout *co;
 	int ret = 0;
-	const __be32 *prop;
-	int len;
+	struct cma *cma;
 
 	co = nvmap_get_carveout_pdata(rmem->name);
 	if (!co)
@@ -280,21 +280,19 @@ static int __init nvmap_co_setup(struct reserved_mem *rmem)
 	co->base = rmem->base;
 	co->size = rmem->size;
 
-	prop = of_get_flat_dt_prop(rmem->fdt_node, "nvidia,resizable", &len);
-	if (!prop)
-		goto skip_cma;
-
-	resizable = of_read_number(prop, len/4);
-	if (!resizable)
+	if (!of_get_flat_dt_prop(rmem->fdt_node, "reusable", NULL) ||
+	    of_get_flat_dt_prop(rmem->fdt_node, "no-map", NULL))
 		goto skip_cma;
 
 	WARN_ON(!rmem->base);
-	ret = dma_declare_contiguous(co->cma_dev, rmem->size, rmem->base, 0);
+	ret = cma_init_reserved_mem(rmem->size, rmem->base, 0, &cma);
 	if (ret) {
-		pr_info("dma_declare_contiguous fails for %s\n", rmem->name);
+		pr_info("cma_init_reserved_mem fails for %s\n", rmem->name);
 		return ret;
 	}
 
+	dma_contiguous_early_fixup(rmem->base, rmem->size);
+	dev_set_cma_area(co->cma_dev, cma);
 	pr_debug("tegra-carveouts carveout=%s %pa@%pa\n",
 		 rmem->name, &rmem->size, &rmem->base);
 	return ret;

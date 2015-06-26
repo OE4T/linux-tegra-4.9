@@ -320,12 +320,19 @@
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
+
+		iram: iram-carveout {
+			compatible = "nvidia,iram-carveout";
+			reg = <0x0 0x40001000 0x0 0x3F000>;
+			no-map;
+		};
 	};
 
 	tegra-carveouts {
 		compatible = "nvidia,carveouts";
 		iommus = <&smmu TEGRA_SWGROUP_HC>,
 			 <&smmu TEGRA_SWGROUP_AVPC>;
+		memory-region = <&iram>;
 		status = "okay";
 	};
 

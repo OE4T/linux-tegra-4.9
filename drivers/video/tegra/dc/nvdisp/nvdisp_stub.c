@@ -34,11 +34,6 @@ const struct disp_client *tegra_la_disp_clients_info;
 atomic_t sd_brightness = ATOMIC_INIT(255);
 EXPORT_SYMBOL(sd_brightness);
 
-bool tegra_powergate_is_powered(int id)
-{
-	return true;
-}
-
 int tegra_is_clk_enabled(struct clk *c)
 {
 	return 1;
@@ -115,19 +110,28 @@ struct device_node *tegra_primary_panel_get_dt_node(
 {
 	struct device_node *np_panel = NULL;
 	struct tegra_dc_out *dc_out = NULL;
-	/* struct board_info display_board; */
-
-	/* tegra_get_display_board_info(&display_board); */
+	struct device_node *np_sor =
+			of_find_node_by_path(SOR_NODE);
 
 	if (pdata)
 		dc_out = pdata->default_out;
 
 	if (pdata && dc_out)
 		tegra_panel_register_ops(dc_out, &panel_sim_ops);
-	np_panel = of_find_compatible_node(NULL, NULL, "nvidia,sim-panel");
+
+	if (tegra_platform_is_silicon()) {
+		/* Take from new DTS file */
+	} else if (tegra_platform_is_fpga()) {
+		/* Using Hdmi in sor 0 node */
+		np_panel =
+			of_get_child_by_name(np_sor, "hdmi-display");
+	} else if (tegra_platform_is_unit_fpga())
+		np_panel = of_get_child_by_name(np_sor, "dp-ufpga-panel");
+	else if (tegra_platform_is_linsim())
+		np_panel = of_get_child_by_name(np_sor, "panel-nvidia-sim");
 
 	if (!np_panel)
-		pr_err("Could not find node nvidia,sim-panel\n");
+		pr_err("Could not find node sim-panel\n");
 	return of_device_is_available(np_panel) ? np_panel : NULL;
 }
 
@@ -137,6 +141,8 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 	struct device_node *np_panel = NULL;
 	struct tegra_dc_out *dc_out = NULL;
 
+	struct device_node *np_hdmi =
+			of_find_node_by_path(HDMI_NODE);
 	if (pdata)
 		dc_out = pdata->default_out;
 
@@ -149,18 +155,15 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 	np_panel = of_get_child_by_name(np_dsi, "panel-s-wqxga-10-1");
 #endif
 
-	if (tegra_platform_is_linsim()) {
-
-		if (pdata && dc_out)
-			tegra_panel_register_ops(dc_out, &panel_sim_ops);
-		np_panel = of_find_compatible_node(NULL, NULL, "nvidia,sim-panel");
-
-	} else {
-		struct device_node *np_hdmi =
-			of_find_node_by_path(HDMI_NODE);
-
+	if (tegra_platform_is_unit_fpga()) {
 		np_panel =
 			of_get_child_by_name(np_hdmi, "hdmi-display");
+	}
+	else if (tegra_platform_is_linsim()) {
+		if (pdata && dc_out)
+			tegra_panel_register_ops(dc_out, &panel_sim_ops);
+
+		np_panel = of_get_child_by_name(np_hdmi, "panel-nvidia-sim");
 	}
 
 	if (!np_panel)

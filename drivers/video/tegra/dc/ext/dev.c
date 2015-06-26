@@ -1114,6 +1114,8 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	}
 #ifdef CONFIG_ANDROID
 	work_index = 0;
+	/* Avoid queueing timestamps, to disable skipping flips */
+	has_timestamp = false;
 #endif
 
 	if (syncpt_fd) {

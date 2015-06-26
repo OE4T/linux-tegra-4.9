@@ -25,13 +25,13 @@ typedef void (*i2c_isr_handler)(void *context);
 
 struct tegra_hv_i2c_comm_chan;
 
-int hv_i2c_transfer(struct tegra_hv_i2c_comm_chan *comm_chan, int cont_id,
+int hv_i2c_transfer(struct tegra_hv_i2c_comm_chan *comm_chan, phys_addr_t base,
 		int addr, int read, uint8_t *buf, size_t len, int *err,
 		int seq_no, uint32_t flags);
 int hv_i2c_get_max_payload(struct tegra_hv_i2c_comm_chan *comm_chan,
-		int cont_id, uint32_t *max_payload, int *err);
+		phys_addr_t base, uint32_t *max_payload, int *err);
 int hv_i2c_comm_chan_cleanup(struct tegra_hv_i2c_comm_chan *comm_chan,
-		int cont_id);
+		phys_addr_t base);
 void hv_i2c_comm_chan_free(struct tegra_hv_i2c_comm_chan *comm_chan);
 void *hv_i2c_comm_init(struct device *dev, i2c_isr_handler handler,
 		void *data);

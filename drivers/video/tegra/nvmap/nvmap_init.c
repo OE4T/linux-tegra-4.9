@@ -96,7 +96,7 @@ static struct nvmap_platform_carveout *nvmap_get_carveout_pdata(const char *name
 	struct nvmap_platform_carveout *co;
 	for (co = nvmap_carveouts;
 	     co < nvmap_carveouts + ARRAY_SIZE(nvmap_carveouts); co++) {
-		int i = strcspn(name, "_");
+		int i = min_t(int, strcspn(name, "_"), strcspn(name, "-"));
 		/* handle IVC carveouts */
 		if (!co->name)
 			goto found;

@@ -96,6 +96,7 @@ struct tegra_dc_dp_data {
 
 	struct mutex dpaux_lock;
 
+	struct tegra_prod_list *prod_list;
 #ifdef CONFIG_DEBUG_FS
 	struct tegra_dp_test_settings test_settings;
 };

@@ -831,7 +831,6 @@ static int tegra_hdmi_tmds_init(struct tegra_hdmi *hdmi)
 		return -EINVAL;
 	}
 
-
 	hdmi->prod_list =
 		tegra_prod_init((const struct device_node *)np_prod);
 	if (IS_ERR(hdmi->prod_list)) {

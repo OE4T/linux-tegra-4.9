@@ -24,6 +24,7 @@
 #include <linux/debugfs.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/tegra_prod.h>
 
 #include <mach/dc.h>
 #include <mach/io_dpd.h>
@@ -889,9 +890,7 @@ void tegra_dc_sor_termination_cal(struct tegra_dc_sor_data *sor)
 	termadj = cur_try = 0x8;
 
 	tegra_sor_write_field(sor, NV_SOR_PLL1,
-		NV_SOR_PLL1_TMDS_TERMADJ_DEFAULT_MASK |
-		NV_SOR_PLL1_TMDS_TERM_ENABLE,
-		NV_SOR_PLL1_TMDS_TERM_ENABLE |
+		NV_SOR_PLL1_TMDS_TERMADJ_DEFAULT_MASK,
 		termadj << NV_SOR_PLL1_TMDS_TERMADJ_SHIFT);
 
 	while (cur_try) {
@@ -1398,23 +1397,38 @@ static void tegra_dc_sor_attach_lvds(struct tegra_dc_sor_data *sor)
 
 }
 
+static int tegra_sor_config_dp_prods(struct tegra_dc_dp_data *dp)
+{
+	int err = 0;
+
+	if (!IS_ERR(dp->prod_list)) {
+		err = tegra_prod_set_by_name(&dp->sor->base, "prod_c_dp",
+							dp->prod_list);
+		if (err) {
+			dev_warn(&dp->dc->ndev->dev,
+				"dp: prod set failed\n");
+			return -EINVAL;
+		}
+	}
+
+	return err;
+}
+
 static void tegra_sor_dp_cal(struct tegra_dc_sor_data *sor)
 {
 	tegra_sor_pad_cal_power(sor, true);
+
+	tegra_sor_config_dp_prods(tegra_dc_get_outdata(sor->dc));
 
 	tegra_sor_write_field(sor, NV_SOR_PLL2,
 		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_MASK,
 		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_DISABLE);
 	usleep_range(20, 100);
 
-	tegra_sor_write_field(sor, NV_SOR_PLL3,
-		NV_SOR_PLL3_PLLVDD_MODE_MASK,
-		NV_SOR_PLL3_PLLVDD_MODE_V3_3);
-	tegra_sor_writel(sor, NV_SOR_PLL0,
-		0x1 << NV_SOR_PLL0_ICHPMP_SHFIT |
-		0x3 << NV_SOR_PLL0_VCOCAP_SHIFT |
+	tegra_sor_write_field(sor, NV_SOR_PLL0,
+		NV_SOR_PLL0_PLLREG_LEVEL_DEFAULT_MASK |
+		NV_SOR_PLL0_PWR_MASK | NV_SOR_PLL0_VCOPD_MASK,
 		NV_SOR_PLL0_PLLREG_LEVEL_V45 |
-		NV_SOR_PLL0_RESISTORSEL_EXT |
 		NV_SOR_PLL0_PWR_ON | NV_SOR_PLL0_VCOPD_RESCIND);
 	tegra_sor_write_field(sor, NV_SOR_PLL2,
 		NV_SOR_PLL2_AUX1_SEQ_MASK | NV_SOR_PLL2_AUX9_LVDSEN_OVERRIDE |
@@ -1422,9 +1436,9 @@ static void tegra_sor_dp_cal(struct tegra_dc_sor_data *sor)
 		NV_SOR_PLL2_AUX1_SEQ_PLLCAPPD_OVERRIDE |
 		NV_SOR_PLL2_AUX9_LVDSEN_OVERRIDE |
 		NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_DISABLE);
-	tegra_sor_writel(sor, NV_SOR_PLL1,
-		NV_SOR_PLL1_TERM_COMPOUT_HIGH | NV_SOR_PLL1_TMDS_TERM_ENABLE |
-		0x0 << NV_SOR_PLL1_LVDSCM_SHIFT);
+	tegra_sor_write_field(sor, NV_SOR_PLL1,
+		NV_SOR_PLL1_TERM_COMPOUT_HIGH,
+		NV_SOR_PLL1_TERM_COMPOUT_HIGH);
 
 	if (tegra_dc_sor_poll_register(sor, NV_SOR_PLL2,
 			NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_MASK,
@@ -1966,8 +1980,7 @@ void tegra_dc_sor_set_internal_panel(struct tegra_dc_sor_data *sor, bool is_int)
 	else
 		reg_val &= ~NV_SOR_DP_SPARE_PANEL_INTERNAL;
 
-	reg_val |= NV_SOR_DP_SPARE_SOR_CLK_SEL_MACRO_SORCLK |
-		NV_SOR_DP_SPARE_SEQ_ENABLE_YES;
+	reg_val |= NV_SOR_DP_SPARE_SOR_CLK_SEL_MACRO_SORCLK;
 
 	tegra_sor_writel(sor, NV_SOR_DP_SPARE(sor->portnum), reg_val);
 

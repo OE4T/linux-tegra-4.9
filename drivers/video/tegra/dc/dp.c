@@ -56,6 +56,10 @@
 #include "fake_panel.h"
 #endif /*CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT*/
 
+#include <linux/tegra_prod.h>
+
+#define PROD_NODE	"/host1x/sor1"
+
 static bool tegra_dp_debug = true;
 module_param(tegra_dp_debug, bool, 0644);
 MODULE_PARM_DESC(tegra_dp_debug, "Enable to print all link configs");
@@ -1842,6 +1846,30 @@ static int tegra_dc_dp_hotplug_init(struct tegra_dc *dc)
 	return 0;
 }
 
+static int tegra_dp_prods_init(struct tegra_dc_dp_data *dp)
+{
+	struct device_node *np_prod = of_find_node_by_path(PROD_NODE);
+
+	if (!np_prod) {
+		dev_warn(&dp->dc->ndev->dev,
+			"dp: find prod node failed\n");
+		return -EINVAL;
+	}
+
+	dp->prod_list =
+		tegra_prod_init((const struct device_node *)np_prod);
+	if (IS_ERR(dp->prod_list)) {
+		dev_warn(&dp->dc->ndev->dev,
+			"dp: prod list init failed with error %ld\n",
+			PTR_ERR(dp->prod_list));
+		of_node_put(np_prod);
+		return -EINVAL;
+	}
+
+	of_node_put(np_prod);
+	return 0;
+}
+
 static int tegra_dc_dp_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp;
@@ -1975,6 +2003,8 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		dp->sor = NULL;
 		goto err_get_clk;
 	}
+
+	tegra_dp_prods_init(dp);
 
 	init_completion(&dp->aux_tx);
 	init_completion(&dp->hpd_plug);
@@ -2295,8 +2325,6 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	tegra_dc_dp_dpcd_write(dp, NV_DPCD_MAIN_LINK_CHANNEL_CODING_SET,
 			NV_DPCD_MAIN_LINK_CHANNEL_CODING_SET_ANSI_8B10B);
 
-	tegra_sor_writel(sor, NV_SOR_LVDS, 0);
-
 	tegra_sor_write_field(sor, NV_SOR_DP_CONFIG(sor->portnum),
 				NV_SOR_DP_CONFIG_IDLE_BEFORE_ATTACH_ENABLE,
 				NV_SOR_DP_CONFIG_IDLE_BEFORE_ATTACH_ENABLE);
@@ -2382,6 +2410,8 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 	if (!np_dp || !of_device_is_available(np_dp))
 		release_resource(dp->res);
 	devm_kfree(&dc->ndev->dev, dp);
+	if (!IS_ERR(dp->prod_list))
+		tegra_prod_release(&dp->prod_list);
 	of_node_put(np_dp);
 }
 

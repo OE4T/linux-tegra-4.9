@@ -53,8 +53,8 @@
 #define NV_SE3_CLASS_ID		0x3C
 #define NV_SE4_CLASS_ID		0x3D
 #include "../video/tegra/host/t186/hardware_t186.h"
-#include "../../../kernel/drivers/video/tegra/host/nvhost_job.h"
-#include "../../../kernel/drivers/video/tegra/host/nvhost_channel.h"
+#include "nvhost_job.h"
+#include "nvhost_channel.h"
 
 #define DRIVER_NAME	"tegra-se-nvhost"
 

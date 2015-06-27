@@ -17,7 +17,7 @@
 #ifndef __TEGRA186_CLK_H
 #define __TEGRA186_CLK_H
 
-#include "../../../../kernel/drivers/clk/tegra/clk.h"
+#include "clk.h"
 
 /**
  * struct tegra_bpmp_clk

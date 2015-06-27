@@ -20,7 +20,7 @@
 #include <linux/pinctrl/pinmux.h>
 #include <linux/tegra-pmc.h>
 
-#include "../../../kernel/drivers/pinctrl/pinctrl-tegra.h"
+#include "pinctrl-tegra.h"
 
 /*
  * Most pins affected by the pinmux can also be GPIOs. Define these first.

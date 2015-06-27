@@ -32,12 +32,13 @@
 #include <linux/regulator/machine.h>
 #include <linux/regulator/of_regulator.h>
 #include <linux/slab.h>
+#include <linux/delay.h>
 
 #define tps65132_rails(_name)	"tps65132-"#_name
 
 #define TPS65132_REG_VPOS		0x00
 #define TPS65132_REG_VNEG		0x01
-#define TPS65132_REG_APPS_DISP_DISN	0x02
+#define TPS65132_REG_APPS_DISP_DISN	0x03
 #define TPS65132_REG_CONTROL		0x0FF
 
 #define TPS65132_VOUT_MASK		0x1F
@@ -53,10 +54,14 @@
 #define TPS65132_REGULATOR_ID_VNEG	1
 #define TPS65132_MAX_REGULATORS		2
 
+#define TPS65132_ACT_DIS_TIME_SLACK		1000
+
 struct tps65132_regulator_pdata {
 	int enable_gpio;
 	bool disable_active_discharge;
 	struct regulator_init_data *ridata;
+	int active_discharge_gpio;
+	unsigned int active_discharge_time;
 };
 
 struct tps65132_regulator {
@@ -89,8 +94,26 @@ static int tps65132_post_enable(struct regulator_dev *rdev)
 	return 0;
 }
 
+static int tps65132_post_disable(struct regulator_dev *rdev)
+{
+	struct tps65132_regulator *tps = rdev_get_drvdata(rdev);
+	int id = rdev_get_id(rdev);
+	int act_dis_gpio = tps->reg_pdata[id].active_discharge_gpio;
+	unsigned int act_dis_time_us = tps->reg_pdata[id].active_discharge_time;
+
+	if (gpio_is_valid(act_dis_gpio)) {
+		gpio_set_value_cansleep(act_dis_gpio, 1);
+		usleep_range(act_dis_time_us,
+			act_dis_time_us + TPS65132_ACT_DIS_TIME_SLACK);
+		gpio_set_value_cansleep(act_dis_gpio, 0);
+	}
+
+	return 0;
+}
+
 static struct regulator_ops tps65132_regulator_ops = {
 	.post_enable = tps65132_post_enable,
+	.post_disable = tps65132_post_disable,
 	.list_voltage = regulator_list_voltage_linear,
 	.map_voltage = regulator_map_voltage_linear,
 	.get_voltage_sel = regulator_get_voltage_sel_regmap,
@@ -152,7 +175,23 @@ static int tps65132_get_regulator_dt_data(struct device *dev,
 
 		rpdata->disable_active_discharge = of_property_read_bool(rnode,
 						"ti,disable-active-discharge");
+
+		rpdata->active_discharge_gpio = of_get_named_gpio(rnode,
+						"ti,active-discharge-gpio", 0);
+		if (rpdata->active_discharge_gpio == -EPROBE_DEFER) {
+			return -EPROBE_DEFER;
+		} else if (gpio_is_valid(rpdata->active_discharge_gpio)) {
+			ret = of_property_read_u32(rnode,
+				"ti,active-discharge-time",
+				&rpdata->active_discharge_time);
+			if (ret < 0) {
+				dev_err(dev, "Discharge time read failed: %d\n",
+					ret);
+				return ret;
+			}
+		}
 	}
+
 	return 0;
 }
 
@@ -196,6 +235,9 @@ static int tps65132_probe(struct i2c_client *client,
 	if (ret == -EPROBE_DEFER) {
 		dev_err(dev, "Probe deffered\n");
 		return ret;
+	} else if (ret < 0) {
+		dev_err(dev, "Reading data from DT failed: %d\n", ret);
+		return ret;
 	}
 
 	tps->rmap = devm_regmap_init_i2c(client, &tps65132_regmap_config);
@@ -225,6 +267,21 @@ static int tps65132_probe(struct i2c_client *client,
 				(rpdata->ridata->constraints.always_on ||
 					rpdata->ridata->constraints.boot_on))
 				config.ena_gpio_flags = GPIOF_OUT_INIT_HIGH;
+		}
+
+		if (gpio_is_valid(rpdata->active_discharge_gpio)) {
+			ret = devm_gpio_request_one(dev,
+				rpdata->active_discharge_gpio,
+				GPIOF_OUT_INIT_LOW, rdesc->name);
+			if (ret < 0) {
+				dev_err(dev,
+					"act dis gpio req failed for %s: %d\n",
+					rdesc->name, ret);
+				return ret;
+			}
+		} else {
+			dev_info(dev, "No active discharge gpio for regulator %s\n",
+				rdesc->name);
 		}
 
 		tps->rdev[id] = devm_regulator_register(dev, rdesc, &config);

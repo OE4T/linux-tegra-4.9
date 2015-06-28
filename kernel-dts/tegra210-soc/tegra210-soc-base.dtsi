@@ -1520,6 +1520,7 @@
 			<0x0 0x7009f000 0x0 0x1000>;
 		interrupts = <0 44 0x4
 				0 49 0x4>;
+		iommus = <&smmu TEGRA_SWGROUP_XUSB_DEV>;
 		status = "disable";
 	};
 

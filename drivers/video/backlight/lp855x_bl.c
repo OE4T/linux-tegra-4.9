@@ -43,7 +43,7 @@
 
 #define DEFAULT_BL_NAME		"lcd-backlight"
 #define MAX_BRIGHTNESS		255
-
+#define DC_INSTANCE_0 0
 static int lp855x_write_byte(struct lp855x *lp, u8 reg, u8 data)
 {
 	return i2c_smbus_write_byte_data(lp->client, reg, data);
@@ -156,7 +156,8 @@ static int lp855x_configure(struct lp855x *lp)
 		return -EINVAL;
 	}
 
-	if (lp->cfg->pre_init_device) {
+	if (lp->cfg->pre_init_device &&
+			!tegra_is_bl_display_initialized(DC_INSTANCE_0)) {
 		ret = lp->cfg->pre_init_device(lp);
 		if (ret) {
 			dev_err(lp->dev, "pre init device err: %d\n", ret);

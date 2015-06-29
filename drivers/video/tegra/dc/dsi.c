@@ -4253,7 +4253,7 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 	 * Do not program this panel as the bootloader as has already
 	 * initialized it. This avoids periods of blanking during boot.
 	 */
-	if (dc->out->flags & TEGRA_DC_OUT_INITIALIZED_MODE) {
+	if (dc->initialized) {
 		tegra_dsi_setup_initialized_panel(dsi);
 		goto fail;
 	}
@@ -4359,7 +4359,7 @@ static void tegra_dc_dsi_postpoweron(struct tegra_dc *dc)
 	 * Do not configure. Use bootloader configuration.
 	 * This avoids periods of blanking during boot.
 	 */
-	if (dc->out->flags & TEGRA_DC_OUT_INITIALIZED_MODE)
+	if (dc->initialized)
 		return;
 
 	mutex_lock(&dsi->lock);
@@ -5326,7 +5326,7 @@ static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	rate *= 1000;
 	dc->mode.pclk *= 1000;
 
-	if (dc->out->flags & TEGRA_DC_OUT_INITIALIZED_MODE)
+	if (dc->initialized)
 		goto skip_setup;
 
 	if (clk == dc->clk) {

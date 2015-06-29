@@ -557,6 +557,22 @@ unsigned tegra_dc_out_flags_from_dev(struct device *dev)
 }
 EXPORT_SYMBOL(tegra_dc_out_flags_from_dev);
 
+bool tegra_dc_initialized(struct device *dev)
+{
+	struct platform_device *ndev = NULL;
+	struct tegra_dc *dc = NULL;
+
+	if (dev)
+		ndev = to_platform_device(dev);
+	if (ndev)
+		dc = platform_get_drvdata(ndev);
+	if (dc)
+		return dc->initialized;
+	else
+		return false;
+}
+EXPORT_SYMBOL(tegra_dc_initialized);
+
 void tegra_dc_hold_dc_out(struct tegra_dc *dc)
 {
 	if (1 == atomic_inc_return(&dc->holding)) {
@@ -2440,7 +2456,12 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 	 */
 	if (dc->out->type == TEGRA_DC_OUT_DSI &&
 			!tegra_is_bl_display_initialized(dc->ndev->id)) {
-		dc->out->flags &= ~TEGRA_DC_OUT_INITIALIZED_MODE;
+		dc->initialized = false;
+		if (dc->out->flags & TEGRA_DC_OUT_INITIALIZED_MODE)
+			dc->initialized = true;
+	} else if (dc->out->type == TEGRA_DC_OUT_DSI &&
+			tegra_is_bl_display_initialized(dc->ndev->id)) {
+		dc->initialized = true;
 	}
 
 	mode = tegra_dc_get_override_mode(dc);
@@ -3721,11 +3742,6 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 		dc->out_ops->postpoweron(dc);
 
 	tegra_log_resume_time();
-	/*
-	 * We will need to reinitialize the display the next time panel
-	 * is enabled.
-	 */
-	dc->out->flags &= ~TEGRA_DC_OUT_INITIALIZED_MODE;
 
 	tegra_dc_put(dc);
 

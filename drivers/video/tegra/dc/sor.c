@@ -1732,8 +1732,6 @@ void tegra_dc_sor_pre_detach(struct tegra_dc_sor_data *sor)
 		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
 		NV_SOR_SUPER_STATE1_ATTACHED_YES);
 	tegra_dc_sor_super_update(sor);
-
-	tegra_dc_sor_disable_win_short_raster(dc, sor->dc_reg_ctx);
 #else
 	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
 		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
@@ -1746,9 +1744,18 @@ void tegra_dc_sor_pre_detach(struct tegra_dc_sor_data *sor)
 		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
 		NV_SOR_SUPER_STATE1_ATTACHED_YES);
 	tegra_dc_sor_super_update(sor);
+#endif
+
+	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
+		NV_SOR_TEST_ACT_HEAD_OPMODE_DEFAULT_MASK,
+		NV_SOR_TEST_ACT_HEAD_OPMODE_SLEEP,
+		100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
+		dev_err(&dc->ndev->dev,
+			"dc timeout waiting for OPMOD = SLEEP\n");
+	}
 
 	tegra_dc_sor_disable_win_short_raster(dc, sor->dc_reg_ctx);
-#endif
+
 	sor->sor_state = SOR_DETACHING;
 	tegra_dc_put(dc);
 }
@@ -1767,24 +1774,11 @@ void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
 	if (sor->sor_state != SOR_DETACHING)
 		tegra_dc_sor_pre_detach(sor);
 
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_13x_SOC)
-	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
-		NV_SOR_TEST_ACT_HEAD_OPMODE_DEFAULT_MASK,
-		NV_SOR_TEST_ACT_HEAD_OPMODE_SLEEP,
-		100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
-		dev_err(&dc->ndev->dev,
-			"dc timeout waiting for OPMOD = SLEEP\n");
-	}
-
 	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
 		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
 		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
 		NV_SOR_SUPER_STATE1_ATTACHED_NO);
-#else
-	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
-		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
-		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
-		NV_SOR_SUPER_STATE1_ATTACHED_NO);
+	tegra_dc_sor_super_update(sor);
 
 	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
 		NV_SOR_TEST_ATTACHED_DEFAULT_MASK,
@@ -1799,7 +1793,7 @@ void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
 		NV_SOR_STATE1_ASY_SUBOWNER_NONE |
 		NV_SOR_STATE1_ASY_PROTOCOL_LVDS_CUSTOM);
 	tegra_dc_sor_update(sor);
-#endif
+
 	tegra_sor_stop_dc(sor);
 
 	tegra_dc_sor_restore_win_and_raster(dc, sor->dc_reg_ctx);

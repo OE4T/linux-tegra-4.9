@@ -1782,25 +1782,6 @@ static struct snd_soc_dai_ops tegra210_adsp_admaif_dai_ops = {
 };
 
 static struct snd_soc_dai_driver tegra210_adsp_dai[] = {
-#ifndef CONFIG_SND_SOC_TEGRA_T210REF_ALT
-	{
-		.name = "ADSP PCM",
-		.playback = {
-			.stream_name = "ADSP PCM Receive",
-			.channels_min = 1,
-			.channels_max = 2,
-			.rates = SNDRV_PCM_RATE_8000_48000,
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
-		},
-		.capture = {
-			.stream_name = "ADSP PCM Transmit",
-			.channels_min = 1,
-			.channels_max = 2,
-			.rates = SNDRV_PCM_RATE_8000_48000,
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
-		},
-	},
-#else
 	{
 		.name = "ADSP PCM1",
 		.playback = {
@@ -1835,7 +1816,6 @@ static struct snd_soc_dai_driver tegra210_adsp_dai[] = {
 			.formats = SNDRV_PCM_FMTBIT_S16_LE,
 		},
 	},
-#endif
 	{
 		.name = "ADSP COMPR1",
 		.compress_dai = 1,

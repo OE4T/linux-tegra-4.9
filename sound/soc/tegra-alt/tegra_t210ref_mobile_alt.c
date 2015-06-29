@@ -619,7 +619,7 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		&tegra_t210ref_sfc_init);
 
 	/* set ADSP PCM/COMPR */
-	for (i = TEGRA210_DAI_LINK_ADSP_PCM;
+	for (i = TEGRA210_DAI_LINK_ADSP_PCM1;
 		i <= TEGRA210_DAI_LINK_ADSP_COMPR2; i++) {
 		tegra_machine_set_dai_ops(i,
 			&tegra_t210ref_ops);

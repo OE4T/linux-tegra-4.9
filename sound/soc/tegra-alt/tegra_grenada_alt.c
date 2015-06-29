@@ -1,7 +1,7 @@
 /*
  * tegra_grenada.c - Tegra grenada Machine driver
  *
- * Copyright (c) 2013-2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -545,7 +545,7 @@ static int tegra_grenada_driver_probe(struct platform_device *pdev)
 		&tegra_grenada_sfc_init);
 
 	/* set ADSP PCM/COMPR */
-	for (i = TEGRA210_DAI_LINK_ADSP_PCM;
+	for (i = TEGRA210_DAI_LINK_ADSP_PCM1;
 		i <= TEGRA210_DAI_LINK_ADSP_COMPR2; i++) {
 		tegra_machine_set_dai_ops(i,
 			&tegra_grenada_ops);

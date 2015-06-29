@@ -662,7 +662,7 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		&tegra_t210ref_amx1_dai_init);
 
 	/* set ADSP PCM */
-	tegra_machine_set_dai_ops(TEGRA210_DAI_LINK_ADSP_PCM,
+	tegra_machine_set_dai_ops(TEGRA210_DAI_LINK_ADSP_PCM1,
 			&tegra_t210ref_ops);
 
 	/* set ADSP COMPR */

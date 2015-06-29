@@ -155,17 +155,23 @@ config SND_SOC_TEGRA210_OPE_ALT
 	  Say Y or M if you want to add support for Tegra210 OPE module.
 
 config SND_SOC_TEGRA210_ADSP_ALT
-        tristate "Tegra210 ADSP driver"
-        depends on SND_SOC_TEGRA_ALT && SND_SOC_TEGRA_ALT_210 && TEGRA_NVADSP
-        help
-          Say Y or M if you want to add support for Tegra210 ADSP module.
+	tristate "Tegra210 ADSP driver"
+	depends on SND_SOC_TEGRA_ALT && SND_SOC_TEGRA_ALT_210 && TEGRA_NVADSP
+	help
+	  Say Y or M if you want to add support for Tegra210 ADSP module.
 
 config SND_SOC_TEGRA_ASOC_HWDEP_ALT
-	tristate "Tegra asoc hwdep driver"
+	tristate "Tegra ASoC hwdep driver"
 	depends on SND_SOC_TEGRA_ALT
 	select SND_HWDEP
 	help
 	  Say Y or M if you want to add support for Tegra ASoC HWDEP module.
+
+config SND_SOC_TEGRA_ASOC_MACHINE_ALT
+	tristate "Tegra ASoC machine driver"
+	depends on SND_SOC_TEGRA_ALT
+	help
+	  Say Y or M if you want to add support for Tegra ASoC machine driver
 
 config SND_SOC_TEGRA_VCM30T124_ALT
 	tristate "SoC Audio support for VCM30_T124"
@@ -184,6 +190,7 @@ config SND_SOC_TEGRA_VCM30T124_ALT
 	select SND_SOC_SPDIF
 	select SND_SOC_AK4618
 	select SND_SOC_TEGRA_ASOC_HWDEP_ALT
+	select SND_SOC_TEGRA_ASOC_MACHINE_ALT
 	help
 	  Say Y or M here if you want to add support for SoC audio on the
 	  TEGRA VCM30_T124 using wm8731 and ad1937 codecs or using ak4618
@@ -210,6 +217,7 @@ config SND_SOC_TEGRA_GRENADA_ALT
 	select SND_SOC_TEGRA210_SPDIF_ALT
 	select SND_SOC_TEGRA210_ADSP_ALT
 	select SND_SOC_SPDIF
+	select SND_SOC_TEGRA_ASOC_MACHINE_ALT
 	help
 	  Say Y or M here.
 
@@ -259,6 +267,7 @@ config SND_SOC_TEGRA_T210REF_MOBILE_ES755_ALT
 	select SND_SOC_SPDIF
 	select SND_SOC_ES755
 	select SND_SOC_TAS2552
+	select SND_SOC_TEGRA_ASOC_MACHINE_ALT
 	help
 	  Say Y or M here.
 
@@ -284,6 +293,7 @@ config SND_SOC_TEGRA_T210REF_ALT
 	select SND_SOC_TEGRA_ASOC_HWDEP_ALT
 	select SND_SOC_SPDIF
 	select SND_SOC_AD193X_I2C
+	select SND_SOC_TEGRA_ASOC_MACHINE_ALT
 	help
 	  Say Y or M here.
 
@@ -301,5 +311,29 @@ config SND_SOC_TEGRA_P1889REF_ALT
 	select SND_SOC_TEGRA124_AFC_ALT
 	select SND_SOC_SPDIF
 	select SND_SOC_TEGRA_ASOC_HWDEP_ALT
+	select SND_SOC_TEGRA_ASOC_MACHINE_ALT
+	help
+	  Say Y or M here
+
+config SND_SOC_TEGRA_T210REF_P2382_ALT
+	tristate "SoC Audio support for P2382Ref T210"
+	depends on SND_SOC_TEGRA_ALT
+	depends on ARCH_TEGRA_21x_SOC
+	select SND_SOC_TEGRA210_XBAR_ALT
+	select SND_SOC_TEGRA210_PCM_ALT
+	select SND_SOC_TEGRA210_ADMA_ALT
+	select SND_SOC_TEGRA210_ADMAIF_ALT
+	select SND_SOC_TEGRA210_I2S_ALT
+	select SND_SOC_TEGRA210_AMX_ALT
+	select SND_SOC_TEGRA210_ADX_ALT
+	select SND_SOC_TEGRA210_MIXER_ALT
+	select SND_SOC_TEGRA210_SFC_ALT
+	select SND_SOC_TEGRA210_AFC_ALT
+	select SND_SOC_TEGRA210_MVC_ALT
+	select SND_SOC_TEGRA210_OPE_ALT
+	select SND_SOC_TEGRA210_ADSP_ALT
+	select SND_SOC_TEGRA_ASOC_HWDEP_ALT
+	select SND_SOC_SPDIF
+	select SND_SOC_TEGRA_ASOC_MACHINE_ALT
 	help
 	  Say Y or M here

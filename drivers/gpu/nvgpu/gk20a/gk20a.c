@@ -1198,7 +1198,6 @@ static int gk20a_pm_unrailgate(struct generic_pm_domain *domain)
 	return _gk20a_pm_unrailgate(g->dev);
 }
 
-#if 0
 static int gk20a_pm_suspend(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
@@ -1223,7 +1222,6 @@ static int gk20a_pm_resume(struct device *dev)
 {
 	return gk20a_pm_finalize_poweron(dev);
 }
-#endif
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS_OF
 static int gk20a_pm_initialise_domain(struct platform_device *pdev)
@@ -1276,11 +1274,8 @@ static int gk20a_pm_initialise_domain(struct platform_device *pdev)
 	domain->dev_ops.stop = gk20a_pm_disable_clk;
 	domain->dev_ops.save_state = gk20a_pm_prepare_poweroff;
 	domain->dev_ops.restore_state = gk20a_pm_finalize_poweron;
-#warning domain suspend/resume ops have been removed upstream
-#if 0
 	domain->dev_ops.suspend = gk20a_pm_suspend;
 	domain->dev_ops.resume = gk20a_pm_resume;
-#endif
 
 	device_set_wakeup_capable(&pdev->dev, 0);
 	ret = pm_genpd_add_device(domain, &pdev->dev);
@@ -1347,6 +1342,7 @@ static int gk20a_secure_page_alloc(struct platform_device *pdev)
 }
 
 static struct of_device_id tegra_gpu_domain_match[] = {
+	{.compatible = "nvidia,tegra132-gpu-pd"},
 	{.compatible = "nvidia,tegra210-gpu-pd"},
 	{},
 };
@@ -1632,20 +1628,13 @@ static int _gk20a_init_domain(struct device_node *np,
 	gpd->dev_ops.stop = gk20a_pm_disable_clk;
 	gpd->dev_ops.save_state = gk20a_pm_prepare_poweroff;
 	gpd->dev_ops.restore_state = gk20a_pm_finalize_poweron;
-#warning domain suspend/resume ops have been removed upstream
-#if 0
 	gpd->dev_ops.suspend = gk20a_pm_suspend;
 	gpd->dev_ops.resume = gk20a_pm_resume;
-#endif
 
 	of_genpd_add_provider_simple(np, gpd);
-
-#warning genpd_pm_subdomain_attach does not work with upstream
-#if 0
 	gpd->of_node = of_node_get(np);
 
 	genpd_pm_subdomain_attach(gpd);
-#endif
 	return 0;
 }
 

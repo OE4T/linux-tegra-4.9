@@ -114,8 +114,7 @@
 			   &host1x_ctx_as TEGRA_SWGROUP_CELLS(HOST1X_CTX5)
 			   &host1x_ctx_as TEGRA_SWGROUP_CELLS(HOST1X_CTX6)
 			   &host1x_ctx_as TEGRA_SWGROUP_CELLS(HOST1X_CTX7)
-			   &common_as TEGRA_SWGROUP_CELLS(AFI)
-			   &common_as 0xFFFFFFFF 0xFFFFFFFF>;
+			   &common_as TEGRA_SWGROUP_CELLS(AFI)>;
 
 		address-space-prop {
 			host1x_as: host1x {

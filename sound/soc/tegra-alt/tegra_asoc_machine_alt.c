@@ -1579,41 +1579,6 @@ static struct snd_soc_dai_link
 		.params = &default_link_params,
 		.ignore_suspend = 1,
 	},
-#ifndef CONFIG_SND_SOC_TEGRA_T210REF_ALT
-	[TEGRA210_DAI_LINK_ADSP_PCM] = {
-		.name = "ADSP PCM",
-		.stream_name = "ADSP PCM",
-		.cpu_dai_name = "ADSP PCM",
-		.codec_dai_name = "ADSP-FE1",
-		.cpu_name = "adsp_audio.3",
-		.codec_name = "adsp_audio.3",
-		.platform_name = "adsp_audio.3",
-		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
-	},
-	[TEGRA210_DAI_LINK_ADSP_COMPR1] = {
-		.name = "ADSP COMPR1",
-		.stream_name = "ADSP COMPR1",
-		.cpu_dai_name = "ADSP COMPR1",
-		.codec_dai_name = "ADSP-FE2",
-		.cpu_name = "adsp_audio.3",
-		.codec_name = "adsp_audio.3",
-		.platform_name = "adsp_audio.3",
-		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
-	},
-	[TEGRA210_DAI_LINK_ADSP_COMPR2] = {
-		.name = "ADSP COMPR2",
-		.stream_name = "ADSP COMPR2",
-		.cpu_dai_name = "ADSP COMPR2",
-		.codec_dai_name = "ADSP-FE3",
-		.cpu_name = "adsp_audio.3",
-		.codec_name = "adsp_audio.3",
-		.platform_name = "adsp_audio.3",
-		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
-	},
-#else
 	[TEGRA210_DAI_LINK_ADSP_PCM1] = {
 		.name = "ADSP PCM1",
 		.stream_name = "ADSP PCM1",
@@ -1658,7 +1623,6 @@ static struct snd_soc_dai_link
 		.ignore_pmdown_time = 1,
 		.ignore_suspend = 1,
 	},
-#endif
 };
 
 static struct snd_soc_codec_conf
@@ -2132,7 +2096,7 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 
 			str = devm_kzalloc(&pdev->dev,
 				sizeof(tegra_codec_links[j].cpu_dai_name) +
-				1 + sizeof(tegra_codec_links[j].cpu_dai_name),
+				1 + sizeof(tegra_codec_links[j].codec_dai_name),
 				GFP_KERNEL);
 			str = strcat(str, tegra_codec_links[j].cpu_dai_name);
 			str = strcat(str, " ");

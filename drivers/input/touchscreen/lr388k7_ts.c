@@ -41,6 +41,9 @@
 #define INPUT_ENABLE
 /* ACTIVE */
 /* #define ACTIVE_ENABLE */
+/* UDEV */
+#define UDEV_ENABLE
+
 
 #ifdef __min
 #undef __min
@@ -83,7 +86,7 @@
 #define K7_CMD_DATA_OFFSET (0x030400)
 #define K7_CMD_DATA_SIZE (251 + K7_RD_HEADER_SIZE)
 #define K7_Q_SIZE (8)
-#define K7_DRIVER_VERSION (8)
+#define K7_DRIVER_VERSION (9)
 #define K7_INT_STATUS_MASK_DATA (0x01)
 #define K7_INT_STATUS_MASK_BOOT (0x02)
 #define K7_INT_STATUS_MASK_CMD  (0x04)
@@ -118,6 +121,7 @@ struct lr388k7_ts_parameter {
 	bool b_is_init_finish;
 	bool b_is_calc_finish;
 	bool b_is_suspended;
+	bool b_is_reset;
 	u32 u32SCK;
 	u16 u16fw_ver;
 	u16 u16module_ver;
@@ -183,6 +187,38 @@ struct lr388k7_active_report {
 };
 #endif
 
+
+#if defined(UDEV_ENABLE)
+struct lr388k7_udev_event {
+	u8 str[512];
+};
+#endif
+
+static int dev_open(struct inode *inode, struct file *filp);
+static int dev_release(struct inode *inode, struct file *filp);
+static ssize_t
+dev_read(struct file *filp, char __user *buf, size_t count, loff_t *pos);
+static ssize_t
+dev_write(struct file *filp, const char __user *buf,
+	  size_t count, loff_t *pos);
+static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
+
+static const struct file_operations dev_fops = {
+	.owner = THIS_MODULE,
+	.open = dev_open,
+	.release = dev_release,
+	.read = dev_read,
+	.write = dev_write,
+	.unlocked_ioctl = dev_ioctl,
+	.compat_ioctl = dev_ioctl,
+};
+
+static struct miscdevice lr388k7_ts_miscdev = {
+	.minor = MISC_DYNAMIC_MINOR,
+	.name = "touch",
+	.fops = &dev_fops,
+};
+
 static struct spi_device *g_spi;
 static struct lr388k7_ts_parameter g_st_state;
 static struct lr388k7_queue_info g_st_q;
@@ -218,8 +254,10 @@ static int lr388k7_hardreset(unsigned long wait)
 		return false;
 
 	gpio_set_value(ts->gpio_reset, 0);
+	g_st_state.b_is_reset = true;
 	usleep_range(wait * 1000, wait * 1000 + 1000);
 	gpio_set_value(ts->gpio_reset, 1);
+	g_st_state.b_is_reset = false;
 	return true;
 }
 
@@ -417,6 +455,9 @@ static u8 lr388k7_clear_irq(void)
 	u8 u8_tx_buf[K7_RD_HEADER_SIZE + 1], u8_rx_buf[K7_RD_HEADER_SIZE + 1];
 	u8 u8Ret = 0;
 	size_t count = 1;
+
+	if (g_st_state.b_is_reset)
+		return u8Ret;
 
 	u8_tx_buf[0] = K7_RD_OPCODE;
 	u8_tx_buf[1] = (K7_INT_STATUS_ADDR >> 16) & 0xFF;
@@ -703,7 +744,7 @@ static void lr388k7_work_handler(struct work_struct *work)
 		 * Check if irq is already cleared.
 		 */
 		irq_value = gpio_get_value(ts->gpio_irq);
-		/*      if(irq_value) // for high-active */
+
 		if (!irq_value)
 			u8_status = lr388k7_clear_irq();
 		else
@@ -757,10 +798,9 @@ static irqreturn_t lr388k7_wakeup_thread(int irq, void *_ts)
 		lr388k7_read_spec_size();
 	}
 
-#if 1
 	if (g_st_state.b_is_suspended)
 		g_st_state.b_is_suspended = false;
-#endif
+
 	dev_info(&g_spi->dev, "[EXIT] Wakeup thread\n");
 
 	return IRQ_HANDLED;
@@ -787,13 +827,6 @@ static irqreturn_t lr388k7_irq_thread(int irq, void *_ts)
 	queue_work(g_st_state.st_wq_k7, &g_st_state.st_work_k7);
 	return IRQ_HANDLED;
 }
-
-#if 0
-static void lr388k7_timer(unsigned long handle)
-{
-	struct lr388k7 *ts = (void *)handle;
-}
-#endif
 
 static void lr388k7_start_scan(struct lr388k7 *ts)
 {
@@ -1034,7 +1067,126 @@ static ssize_t lr388k7_ts_wakeup_enable_show(struct device *dev,
 		       g_st_dbg.wakeup.num_tap);
 }
 
-static DEVICE_ATTR(force_cap, 0660, lr388k7_ts_force_cap_show,
+#if defined(DEBUG_LR388K7)
+static ssize_t lr388k7_ts_check_state_store(struct device *dev,
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	ssize_t ret;
+	ret = (ssize_t) count;
+	return ret;
+}
+
+static ssize_t lr388k7_ts_check_state_show(struct device *dev,
+	struct device_attribute *attr,
+	char *buf)
+{
+	struct lr388k7 *ts = spi_get_drvdata(g_spi);
+	u8 u8_tx_buf[K7_RD_HEADER_SIZE + 5], u8_rx_buf[K7_RD_HEADER_SIZE + 5];
+	u8 u8Ret;
+	u8 u8HWR;
+	u32 u32RES, u32FWR;
+	size_t count = 0;
+
+	u8_tx_buf[count++] = K7_RD_OPCODE;
+	u8_tx_buf[count++] = (K7_STATE_CTL_ADDR >> 16) & 0xFF;
+	u8_tx_buf[count++] = (K7_STATE_CTL_ADDR >>  8) & 0xFF;
+	u8_tx_buf[count++] = (K7_STATE_CTL_ADDR >>  0) & 0xFF;
+	u8_tx_buf[count++] = 0x00;
+
+	g_st_state.u32SCK = 0;
+
+	if (lr388k7_spi_read(u8_tx_buf, u8_rx_buf, count)) {
+		u8Ret = u8_rx_buf[K7_RD_HEADER_SIZE];
+	} else {
+		return sprintf(buf, "status :IRQ(%s) Failed to read\n",
+		       gpio_get_value(ts->gpio_irq) ?
+		       "High" : "Low"
+		       );
+	}
+
+	count = 0;
+	u8_tx_buf[count++] = K7_RD_OPCODE;
+	u8_tx_buf[count++] = 0x00;
+	u8_tx_buf[count++] = 0x02;
+	u8_tx_buf[count++] = 0xAC;
+	u8_tx_buf[count++] = 0x00;
+
+	g_st_state.u32SCK = 0;
+
+	if (lr388k7_spi_read(u8_tx_buf, u8_rx_buf, count)) {
+		u8HWR = u8_rx_buf[K7_RD_HEADER_SIZE];
+	} else {
+		return sprintf(buf, "status :IRQ(%s) Failed to read\n",
+		       gpio_get_value(ts->gpio_irq) ?
+		       "High" : "Low"
+		       );
+	}
+
+	count = 0;
+	u8_tx_buf[count++] = K7_RD_OPCODE;
+	u8_tx_buf[count++] = 0x00;
+	u8_tx_buf[count++] = 0x02;
+	u8_tx_buf[count++] = 0xB0;
+	u8_tx_buf[count++] = 0x00;
+	u8_tx_buf[count++] = 0x00;
+	u8_tx_buf[count++] = 0x00;
+	u8_tx_buf[count++] = 0x00;
+
+	g_st_state.u32SCK = 0;
+
+	if (lr388k7_spi_read(u8_tx_buf, u8_rx_buf, count)) {
+		u32FWR = u8_rx_buf[K7_RD_HEADER_SIZE] |
+			u8_rx_buf[K7_RD_HEADER_SIZE + 1] << 8 |
+			u8_rx_buf[K7_RD_HEADER_SIZE + 2] << 16 |
+			u8_rx_buf[K7_RD_HEADER_SIZE + 3] << 24;
+	} else {
+		return sprintf(buf, "status :IRQ(%s) Failed to read\n",
+		       gpio_get_value(ts->gpio_irq) ?
+		       "High" : "Low"
+		       );
+	}
+
+	count = 0;
+	u8_tx_buf[count++] = K7_RD_OPCODE;
+	u8_tx_buf[count++] = 0x00;
+	u8_tx_buf[count++] = 0x00;
+	u8_tx_buf[count++] = 0x40;
+	u8_tx_buf[count++] = 0x00;
+	u8_tx_buf[count++] = 0x00;
+	u8_tx_buf[count++] = 0x00;
+	u8_tx_buf[count++] = 0x00;
+
+	g_st_state.u32SCK = 0;
+
+	if (lr388k7_spi_read(u8_tx_buf, u8_rx_buf, count)) {
+		u32RES = u8_rx_buf[K7_RD_HEADER_SIZE] |
+			u8_rx_buf[K7_RD_HEADER_SIZE + 1] << 8 |
+			u8_rx_buf[K7_RD_HEADER_SIZE + 2] << 16 |
+			u8_rx_buf[K7_RD_HEADER_SIZE + 3] << 24;
+	} else {
+		return sprintf(buf, "status :IRQ(%s) Failed to read\n",
+		       gpio_get_value(ts->gpio_irq) ?
+		       "High" : "Low"
+		       );
+	}
+
+	g_st_state.u32SCK = g_spi->max_speed_hz;
+
+	return sprintf(
+		       buf,
+		       "IRQ(%s) status=0x%02X, HWRev=%d, FWRev=0x%0X, Res=0x%04X\n",
+		       gpio_get_value(ts->gpio_irq) ?
+		       "High" : "Low",
+		       u8Ret,
+		       u8HWR,
+		       u32FWR,
+		       u32RES
+		       );
+}
+#endif
+
+static DEVICE_ATTR(force_cap, 0666, lr388k7_ts_force_cap_show,
 			lr388k7_ts_force_cap_store);
 static DEVICE_ATTR(dump, 0660, lr388k7_ts_dump_show,
 			lr388k7_ts_dump_store);
@@ -1049,7 +1201,11 @@ static DEVICE_ATTR(slowscan_enable, 0640,
 static DEVICE_ATTR(wakeup_enable, 0640,
 		   lr388k7_ts_wakeup_enable_show,
 		   lr388k7_ts_wakeup_enable_store);
-
+#if defined(DEBUG_LR388K7)
+static DEVICE_ATTR(check_state, 0666,
+		   lr388k7_ts_check_state_show,
+		   lr388k7_ts_check_state_store);
+#endif
 
 
 static struct attribute *lr388k7_ts_attributes[] = {
@@ -1059,6 +1215,9 @@ static struct attribute *lr388k7_ts_attributes[] = {
 	&dev_attr_version.attr,
 	&dev_attr_slowscan_enable.attr,
 	&dev_attr_wakeup_enable.attr,
+#if defined(DEBUG_LR388K7)
+	&dev_attr_check_state.attr,
+#endif
 	NULL
 };
 
@@ -1095,6 +1254,44 @@ static void lr388k7_close(struct input_dev *input)
 
 	mutex_unlock(&ts->mutex);
 }
+
+
+#if defined(UDEV_ENABLE)
+static void lr388k7_send_udev_event(void *p)
+{
+	struct lr388k7_udev_event *p_udev_event;
+	char *envp[2];
+	char *event;
+
+	if (!p)
+		return;
+
+	p_udev_event = kmalloc(
+			       sizeof(struct lr388k7_udev_event),
+			       GFP_KERNEL);
+
+	if (!p_udev_event)
+		return;
+
+	if (copy_from_user(p_udev_event,
+			  p,
+			  sizeof(struct lr388k7_udev_event))) {
+		kfree(p_udev_event);
+		return;
+	}
+
+	event = kasprintf(GFP_KERNEL, "TRIGGER=%s", p_udev_event->str);
+	if (event) {
+		envp[0] = event;
+		envp[1] = NULL;
+		kobject_uevent_env(&lr388k7_ts_miscdev.this_device->kobj,
+				   KOBJ_CHANGE,
+				   envp);
+		kfree(event);
+	}
+	kfree(p_udev_event);
+}
+#endif
 
 #if defined(ACTIVE_ENABLE)
 static void lr388k7_active_report(void *p)
@@ -1178,7 +1375,6 @@ static void lr388k7_touch_report(void *p)
 	struct lr388k7 *ts = spi_get_drvdata(g_spi);
 	struct input_dev *input_dev = ts->idev;
 	bool b_is_eraser = false;
-	/*  struct input_dev *input_dev_pen = ts->idev_pen; */
 
 	if (!p)
 		return;
@@ -1278,7 +1474,6 @@ static void lr388k7_touch_report(void *p)
 	struct lr388k7_touch_report *p_touch_report;
 	struct lr388k7 *ts = spi_get_drvdata(g_spi);
 	struct input_dev *input_dev = ts->idev;
-	/*  struct input_dev *input_dev_pen = ts->idev_pen; */
 
 	if (!p)
 		return;
@@ -1748,6 +1943,9 @@ static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case LR388K7_IOCTL_CLEAR_BUFFER:
 		lr388k7_queue_reset();
 		g_st_state.b_is_init_finish = arg;
+		if (g_st_state.b_is_init_finish)
+			lr388k7_send_signal(g_st_state.u32_pid,
+					    LR388K7_SIGNAL_MODE);
 		break;
 
 	case LR388K7_IOCTL_ACTIVE_REPORT:
@@ -1770,6 +1968,12 @@ static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		g_u8_scan = (u8)arg;
 		break;
 
+#if defined(UDEV_ENABLE)
+	case LR388K7_IOCTL_SEND_UDEV:
+		lr388k7_send_udev_event((void *)arg);
+		break;
+#endif
+
 	default:
 		ret = false;
 		break;
@@ -1778,22 +1982,6 @@ static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	return ret;
 }
 
-static const struct file_operations dev_fops = {
-	.owner = THIS_MODULE,
-	.open = dev_open,
-	.release = dev_release,
-	.read = dev_read,
-	.write = dev_write,
-	.unlocked_ioctl = dev_ioctl,
-	.compat_ioctl = dev_ioctl,
-};
-
-static struct miscdevice lr388k7_ts_miscdev = {
-	.minor = MISC_DYNAMIC_MINOR,
-	.name = "touch",
-	.fops = &dev_fops,
-};
-
 static void lr388k7_init_parameter(void)
 {
 	g_u8_mode = K7_DEFAULT_MODE;
@@ -1801,6 +1989,7 @@ static void lr388k7_init_parameter(void)
 	g_st_state.u32_pid = 0;
 	g_st_state.b_is_init_finish = false;
 	g_st_state.b_is_suspended = false;
+	g_st_state.b_is_reset = false;
 	g_st_state.u32SCK = 0;
 	lr388k7_queue_reset();
 
@@ -2011,7 +2200,6 @@ static int lr388k7_probe(struct spi_device *spi)
 	mutex_init(&ts->mutex);
 
 	spin_lock_init(&ts->lock);
-	/* setup_timer(&ts->timer, lr388k7_timer, (unsigned long)ts); */
 
 	snprintf(ts->phys,
 		 sizeof(ts->phys),
@@ -2041,8 +2229,8 @@ static int lr388k7_probe(struct spi_device *spi)
 #endif
 	/* Reset assert */
 	gpio_set_value(ts->gpio_reset, 0);
+	g_st_state.b_is_reset = true;
 
-#if 1
 	/* regulator */
 	ts->regulator_3v3 = devm_regulator_get(&g_spi->dev, "avdd");
 	if (IS_ERR(ts->regulator_3v3)) {
@@ -2072,7 +2260,7 @@ static int lr388k7_probe(struct spi_device *spi)
 		dev_err(dev,
 			"LR388K7 TS: regulator enable failed: %d\n",
 			error);
-#endif
+
 	/* clk */
 	if (pdata->name_of_clock || pdata->name_of_clock_con) {
 		ts->clk =
@@ -2311,7 +2499,7 @@ static int lr388k7_remove(struct spi_device *spi)
 	gpio_free(ts->gpio_clk_sel);
 #endif
 	input_unregister_device(ts->idev);
-	/* input_unregister_device(ts->idev_pen); */
+
 	kfree(ts);
 
 	spi_set_drvdata(spi, NULL);
@@ -2346,17 +2534,22 @@ static void lr388k7_ctrl_resume(struct lr388k7 *ts)
 
 static void lr388k7_start(struct lr388k7 *ts)
 {
-	/*
-	  int error;
-
-	  if(g_st_state.b_is_suspended)
-	  return;
-	*/
+	int error;
 
 	g_st_state.b_is_suspended = false;
 
 	mutex_lock(&ts->mutex);
-#if 0
+
+	if (g_st_dbg.wakeup.enable == 1) {
+		lr388k7_ctrl_resume(ts);
+		mutex_unlock(&ts->mutex);
+		return;
+	}
+
+	/* Reset assert */
+	gpio_set_value(ts->gpio_reset, 0);
+	g_st_state.b_is_reset = true;
+
 	/*
 	 * Enable regulator, if necessary
 	 */
@@ -2366,13 +2559,12 @@ static void lr388k7_start(struct lr388k7 *ts)
 		dev_err(&g_spi->dev,
 			"LR388K7 TS: regulator enable failed: %d\n", error);
 
-	usleep_range(15000, 20000);
-
 	error = regulator_enable(ts->regulator_3v3);
 	if (error < 0)
 		dev_err(&g_spi->dev,
 			"LR388K7 TS: regulator enable failed: %d\n", error);
-	usleep_range(15000, 20000);
+
+	usleep_range(5000, 6000);
 
 	/*
 	 * Enable clock, if necessary
@@ -2380,10 +2572,11 @@ static void lr388k7_start(struct lr388k7 *ts)
 	if (ts->clk)
 		clk_enable(ts->clk);
 
-	msleep(20);
-#endif
+	/* Reset deassert */
+	gpio_set_value(ts->gpio_reset, 1);
+	g_st_state.b_is_reset = false;
 
-	lr388k7_ctrl_resume(ts);
+	usleep_range(12000, 13000);
 
 	mutex_unlock(&ts->mutex);
 }
@@ -2392,33 +2585,33 @@ static void lr388k7_ctrl_suspend(struct lr388k7 *ts)
 {
 	u8 u8_buf[5];
 	size_t count = 0;
-	/*  int error; */
+	int error;
+	u8 u8_status = 0;
+	int irq_value;
 
 	mutex_lock(&ts->mutex);
 
-#if 0
-	if (IS_DBG) {
-		g_st_dbg.u8ForceCap = 0;
-		g_st_dbg.u8Dump = 0;
-		g_st_dbg.slowscan.enable = 0;
-
-		lr388k7_send_signal(g_st_state.u32_pid, LR388K7_SIGNAL_CTRL);
-	}
-#endif
-
-	u8_buf[count++] = K7_WR_OPCODE;
-	u8_buf[count++] = (K7_STATE_CTL_ADDR >> 16) & 0xFF;
-	u8_buf[count++] = (K7_STATE_CTL_ADDR >>  8) & 0xFF;
-	u8_buf[count++] = (K7_STATE_CTL_ADDR >>  0) & 0xFF;
-	if (g_st_dbg.wakeup.enable == 1)
+	if (g_st_dbg.wakeup.enable == 1) {
+		u8_buf[count++] = K7_WR_OPCODE;
+		u8_buf[count++] = (K7_STATE_CTL_ADDR >> 16) & 0xFF;
+		u8_buf[count++] = (K7_STATE_CTL_ADDR >>  8) & 0xFF;
+		u8_buf[count++] = (K7_STATE_CTL_ADDR >>  0) & 0xFF;
 		u8_buf[count++] = K7_POWER_CTL_TAP_WAKEUP;
-	else
-		u8_buf[count++] = K7_POWER_CTL_SLEEP;
-	lr388k7_spi_write(u8_buf, count);
+		lr388k7_spi_write(u8_buf, count);
 
-	msleep(100);
+		irq_value = gpio_get_value(ts->gpio_irq);
 
-#if 0
+		if (!irq_value) {
+			u8_status = lr388k7_clear_irq();
+
+			lr388k7_event_handler(u8_status);
+		}
+
+		mutex_unlock(&ts->mutex);
+		return;
+	}
+
+
 	/* Disable (3.3V) */
 	if (ts->regulator_3v3) {
 		error = regulator_disable(ts->regulator_3v3);
@@ -2429,7 +2622,7 @@ static void lr388k7_ctrl_suspend(struct lr388k7 *ts)
 	}
 	/* handle platforms w/ and w/out regulator switches */
 	/* 2) delay for platforms w/ regulator switches */
-	usleep_range(15000, 20000);	/*msleep(15); */
+	/* usleep_range(15000, 20000);	*/ /*msleep(15); */
 	/* 3) disable clock */
 	if (ts->clk)
 		clk_disable(ts->clk);
@@ -2441,18 +2634,12 @@ static void lr388k7_ctrl_suspend(struct lr388k7 *ts)
 				"lr388k7 1.8V disable failed: %d\n",
 				error);
 	}
-#endif
 
 	mutex_unlock(&ts->mutex);
 }
 
 static void lr388k7_stop(struct lr388k7 *ts)
 {
-	if (g_st_state.b_is_suspended)
-		return;
-
-	g_st_state.b_is_suspended = true;
-
 	flush_workqueue(g_st_state.st_wq_k7);
 
 	lr388k7_ctrl_suspend(ts);
@@ -2462,11 +2649,17 @@ static void lr388k7_stop(struct lr388k7 *ts)
 static int lr388k7_suspend(struct device *dev)
 {
 	struct lr388k7 *ts = dev_get_drvdata(dev);
+
+	if (g_st_state.b_is_suspended)
+		return 0;
+
+	lr388k7_disable_irq(ts);
+
 	lr388k7_stop(ts);
 
 	lr388k7_send_signal(g_st_state.u32_pid, LR388K7_SIGNAL_SLEP);
 
-	lr388k7_disable_irq(ts);
+	g_st_state.b_is_suspended = true;
 
 	return 0;
 }
@@ -2490,6 +2683,9 @@ static int lr388k7_resume(struct device *dev)
 		lr388k7_send_signal(g_st_state.u32_pid, LR388K7_SIGNAL_CTRL);
 	}
 
+	if (g_st_dbg.wakeup.enable == 0)
+		return 0;
+
 	/* check irq */
 	irq_value = gpio_get_value(ts->gpio_irq);
 	if (!irq_value) {
@@ -2500,7 +2696,7 @@ static int lr388k7_resume(struct device *dev)
 
 			lr388k7_event_handler(u8_status);
 			irq_value = gpio_get_value(ts->gpio_irq);
-			/*      if(irq_value) // for high-active */
+
 			if (!irq_value)
 				u8_status = lr388k7_clear_irq();
 			else

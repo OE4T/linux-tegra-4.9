@@ -31,6 +31,7 @@
 #include <linux/switch.h>
 #endif
 #include <linux/of_address.h>
+#include <linux/tegra_pm_domains.h>
 
 #include <mach/dc.h>
 #include <video/tegra_hdmi_audio.h>
@@ -53,6 +54,14 @@
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
 #define TMDS_NODE	"/host1x/sor1"
+
+#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
+static struct of_device_id tegra_sor_pd[] = {
+	{ .compatible = "nvidia, tegra210-sor-pd", },
+	{ .compatible = "nvidia, tegra132-sor-pd", },
+	{},
+};
+#endif
 
 /* Possibly should be moved to hdmi_common.h */
 static struct fb_videomode tegra_dc_vga_mode = {
@@ -524,14 +533,23 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 
 static void tegra_hdmi_ddc_power_toggle(int value)
 {
+	int partition_id;
 	if (dc_hdmi == NULL)
 		return;
 
+#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
+	partition_id = tegra_pd_get_powergate_id(tegra_sor_pd);
+	if (partition_id < 0)
+		return;
+#else
+	partition_id = TEGRA_POWERGATE_SOR;
+#endif
+
 	if (value == 0) {
 		_tegra_hdmi_ddc_disable(dc_hdmi);
-		tegra_powergate_partition(TEGRA_POWERGATE_SOR);
+		tegra_powergate_partition(partition_id);
 	} else if (value == 1) {
-		tegra_unpowergate_partition(TEGRA_POWERGATE_SOR);
+		tegra_unpowergate_partition(partition_id);
 		_tegra_hdmi_ddc_enable(dc_hdmi);
 	}
 

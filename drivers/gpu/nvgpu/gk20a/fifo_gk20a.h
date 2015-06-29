@@ -164,7 +164,7 @@ void gk20a_fifo_recover(struct gk20a *g,
 			u32 engine_ids, /* if zero, will be queried from HW */
 			u32 hw_id, /* if ~0, will be queried from HW */
 			bool hw_id_is_tsg, /* ignored if hw_id == ~0 */
-			bool verbose);
+			bool id_is_known, bool verbose);
 void gk20a_fifo_recover_ch(struct gk20a *g, u32 hw_chid, bool verbose);
 void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose);
 int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch, bool verbose);

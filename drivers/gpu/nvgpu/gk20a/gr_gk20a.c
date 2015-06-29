@@ -5581,7 +5581,7 @@ int gk20a_gr_isr(struct gk20a *g)
 
 	if (need_reset)
 		gk20a_fifo_recover(g, BIT(ENGINE_GR_GK20A),
-				   ~(u32)0, false, true);
+				   ~(u32)0, false, false, true);
 
 clean_up:
 	if (gr_intr && !ch) {

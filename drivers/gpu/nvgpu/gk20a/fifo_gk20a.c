@@ -34,6 +34,7 @@
 #include "hw_top_gk20a.h"
 #include "hw_mc_gk20a.h"
 #include "hw_gr_gk20a.h"
+#define FECS_METHOD_WFI_RESTORE 0x80000
 
 static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 					    u32 hw_chid, bool add,
@@ -1177,7 +1178,6 @@ static u32 gk20a_fifo_engines_on_id(struct gk20a *g, u32 id, bool is_tsg)
 			fifo_engine_status_id_type_v(status);
 		bool busy = fifo_engine_status_engine_v(status) ==
 			fifo_engine_status_engine_busy_v();
-
 		if (busy && ctx_id == id) {
 			if ((is_tsg && type ==
 					fifo_engine_status_id_type_tsgid_v()) ||
@@ -1202,7 +1202,7 @@ void gk20a_fifo_recover_ch(struct gk20a *g, u32 hw_chid, bool verbose)
 	engines = gk20a_fifo_engines_on_id(g, hw_chid, false);
 
 	if (engines)
-		gk20a_fifo_recover(g, engines, hw_chid, false, verbose);
+		gk20a_fifo_recover(g, engines, hw_chid, false, true, verbose);
 	else {
 		struct channel_gk20a *ch = &g->fifo.channel[hw_chid];
 
@@ -1232,7 +1232,7 @@ void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose)
 	engines = gk20a_fifo_engines_on_id(g, tsgid, true);
 
 	if (engines)
-		gk20a_fifo_recover(g, engines, tsgid, true, verbose);
+		gk20a_fifo_recover(g, engines, tsgid, true, true, verbose);
 	else {
 		struct tsg_gk20a *tsg = &g->fifo.tsg[tsgid];
 
@@ -1248,13 +1248,16 @@ void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose)
 
 void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 			u32 hw_id, bool id_is_tsg,
-			bool verbose)
+			bool id_is_known, bool verbose)
 {
 	unsigned long engine_id, i;
 	unsigned long _engine_ids = __engine_ids;
 	unsigned long engine_ids = 0;
 	u32 val;
 	u32 mmu_fault_engines = 0;
+	u32 ref_type;
+	u32 ref_id;
+	u32 ref_id_is_tsg = false;
 
 	if (verbose)
 		gk20a_debug_dump(g->dev);
@@ -1262,44 +1265,65 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 	if (g->ops.ltc.flush)
 		g->ops.ltc.flush(g);
 
-	/* store faulted engines in advance */
-	for_each_set_bit(engine_id, &_engine_ids, 32) {
-		u32 ref_type;
-		u32 ref_id;
-		gk20a_fifo_get_faulty_id_type(g, engine_id, &ref_id,
-					      &ref_type);
+	if (id_is_known) {
+		engine_ids = gk20a_fifo_engines_on_id(g, hw_id, id_is_tsg);
+		ref_id = hw_id;
+		ref_type = id_is_tsg ?
+			fifo_engine_status_id_type_tsgid_v() :
+			fifo_engine_status_id_type_chid_v();
+		ref_id_is_tsg = id_is_tsg;
+		/* atleast one engine will get passed during sched err*/
+		engine_ids |= __engine_ids;
+		for_each_set_bit(engine_id, &engine_ids, 32) {
+			mmu_fault_engines |=
+				BIT(gk20a_engine_id_to_mmu_id(engine_id));
+		}
+	} else {
+		/* store faulted engines in advance */
+		for_each_set_bit(engine_id, &_engine_ids, 32) {
+			gk20a_fifo_get_faulty_id_type(g, engine_id, &ref_id,
+						      &ref_type);
+			if (ref_type == fifo_engine_status_id_type_tsgid_v())
+				ref_id_is_tsg = true;
+			else
+				ref_id_is_tsg = false;
+			/* Reset *all* engines that use the
+			 * same channel as faulty engine */
+			for (i = 0; i < g->fifo.max_engines; i++) {
+				u32 type;
+				u32 id;
 
-		/* Reset *all* engines that use the
-		 * same channel as faulty engine */
-		for (i = 0; i < g->fifo.max_engines; i++) {
-			u32 type;
-			u32 id;
-			gk20a_fifo_get_faulty_id_type(g, i, &id, &type);
-			if (ref_type == type && ref_id == id) {
-				engine_ids |= BIT(i);
-				mmu_fault_engines |=
+				gk20a_fifo_get_faulty_id_type(g, i, &id, &type);
+				if (ref_type == type && ref_id == id) {
+					engine_ids |= BIT(i);
+					mmu_fault_engines |=
 					BIT(gk20a_engine_id_to_mmu_id(i));
+				}
 			}
 		}
 	}
 
-	/*
-	 * sched error prevents recovery, and ctxsw error will retrigger
-	 * every 100ms. Disable the sched error to allow recovery.
-	 */
-	val = gk20a_readl(g, fifo_intr_en_0_r());
-	val &= ~(fifo_intr_en_0_sched_error_m() | fifo_intr_en_0_mmu_fault_m());
-	gk20a_writel(g, fifo_intr_en_0_r(), val);
-	gk20a_writel(g, fifo_intr_0_r(),
-			fifo_intr_0_sched_error_reset_f());
+	if (mmu_fault_engines) {
+		/*
+		 * sched error prevents recovery, and ctxsw error will retrigger
+		 * every 100ms. Disable the sched error to allow recovery.
+		 */
+		val = gk20a_readl(g, fifo_intr_en_0_r());
+		val &= ~(fifo_intr_en_0_sched_error_m() |
+			fifo_intr_en_0_mmu_fault_m());
+		gk20a_writel(g, fifo_intr_en_0_r(), val);
+		gk20a_writel(g, fifo_intr_0_r(),
+				fifo_intr_0_sched_error_reset_f());
 
-	g->ops.fifo.trigger_mmu_fault(g, engine_ids);
-	gk20a_fifo_handle_mmu_fault(g, engine_ids, hw_id, id_is_tsg);
+		g->ops.fifo.trigger_mmu_fault(g, engine_ids);
+		gk20a_fifo_handle_mmu_fault(g, mmu_fault_engines, ref_id,
+				ref_id_is_tsg);
 
-	val = gk20a_readl(g, fifo_intr_en_0_r());
-	val |= fifo_intr_en_0_mmu_fault_f(1)
-		| fifo_intr_en_0_sched_error_f(1);
-	gk20a_writel(g, fifo_intr_en_0_r(), val);
+		val = gk20a_readl(g, fifo_intr_en_0_r());
+		val |= fifo_intr_en_0_mmu_fault_f(1)
+			| fifo_intr_en_0_sched_error_f(1);
+		gk20a_writel(g, fifo_intr_en_0_r(), val);
+	}
 }
 
 /* force reset channel and tsg (if it's part of one) */
@@ -1340,7 +1364,7 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 	int id = -1;
 	bool non_chid = false;
 	bool ret = false;
-
+	u32 mailbox2;
 	/* read the scheduler error register */
 	sched_error = gk20a_readl(g, fifo_intr_sched_error_r());
 
@@ -1362,15 +1386,24 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 			|| ctx_status ==
 				fifo_engine_status_ctx_status_ctxsw_load_v());
 
-		if (failing_engine) {
-			id = (ctx_status ==
-				fifo_engine_status_ctx_status_ctxsw_load_v()) ?
-				fifo_engine_status_next_id_v(status) :
-				fifo_engine_status_id_v(status);
-			non_chid = fifo_pbdma_status_id_type_v(status) !=
-				fifo_pbdma_status_id_type_chid_v();
-			break;
+		if (!failing_engine)
+			continue;
+		if (ctx_status ==
+		fifo_engine_status_ctx_status_ctxsw_load_v()) {
+			id = fifo_engine_status_next_id_v(status);
+			non_chid = fifo_pbdma_status_id_type_v(status)
+				!= fifo_pbdma_status_id_type_chid_v();
+		} else if (ctx_status ==
+		fifo_engine_status_ctx_status_ctxsw_switch_v()) {
+			mailbox2 = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(2));
+			if (mailbox2 & FECS_METHOD_WFI_RESTORE)
+				id = fifo_engine_status_next_id_v(status);
+			else
+				id = fifo_engine_status_id_v(status);
+		} else {
+			id = fifo_engine_status_id_v(status);
 		}
+		break;
 	}
 
 	/* could not find the engine - should never happen */
@@ -1387,7 +1420,8 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 		struct channel_gk20a *ch = &f->channel[id];
 
 		if (non_chid) {
-			gk20a_fifo_recover(g, BIT(engine_id), id, true, true);
+			gk20a_fifo_recover(g, BIT(engine_id), id, true,
+					true, true);
 			ret = true;
 			goto err;
 		}
@@ -1404,7 +1438,7 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 				"engine = %u, ch = %d", engine_id, id);
 			gk20a_gr_debug_dump(g->dev);
 			gk20a_fifo_recover(g, BIT(engine_id), id, false,
-				ch->timeout_debug_dump);
+				true, ch->timeout_debug_dump);
 			ret = true;
 		} else {
 			gk20a_dbg_info(
@@ -1899,7 +1933,7 @@ static void gk20a_fifo_runlist_reset_engines(struct gk20a *g, u32 runlist_id)
 	}
 
 	if (engines)
-		gk20a_fifo_recover(g, engines, ~(u32)0, false, true);
+		gk20a_fifo_recover(g, engines, ~(u32)0, false, false, true);
 }
 
 static int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)

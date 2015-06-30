@@ -1205,7 +1205,7 @@ static struct dma_chan *tegra_dma_of_xlate(struct of_phandle_args *dma_spec,
 static const struct tegra_dma_chip_data tegra186_dma_chip_data = {
 	.nr_channels = 32,
 	.channel_reg_size = 0x10000,
-	.max_dma_count = 1024UL * 64,
+	.max_dma_count = 1024UL * 1024UL * 1024UL,
 };
 
 static const struct of_device_id tegra_dma_of_match[] = {

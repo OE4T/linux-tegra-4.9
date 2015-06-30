@@ -105,6 +105,7 @@
 			   &gpu_as TEGRA_SWGROUP_CELLS(GPUB)
 			   &ape_as TEGRA_SWGROUP_CELLS(APE)
 			   &dc_as TEGRA_SWGROUP_CELLS3(DC, DC12, DCB)
+			   &host1x_as 0x008c0940 0x6002225a /* HC,ISP,NVENC,VI,VIC,TSEC,NVDEC,SE,NVJPG,SE1,TSECB,NVCSI,NVDISPLAY,SE2,SE3 */
 			   &host1x_ctx_as TEGRA_SWGROUP_CELLS(HOST1X_CTX0)
 			   &host1x_ctx_as TEGRA_SWGROUP_CELLS(HOST1X_CTX1)
 			   &host1x_ctx_as TEGRA_SWGROUP_CELLS(HOST1X_CTX2)
@@ -117,6 +118,13 @@
 			   &common_as 0xFFFFFFFF 0xFFFFFFFF>;
 
 		address-space-prop {
+			host1x_as: host1x {
+				iova-start = <0x0 0x5a500000>;
+				iova-size = <0x0 0x7FF00000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
 			host1x_ctx_as: host1x_ctx {
 				iova-start = <0x0 0x5a500000>;
 				iova-size = <0x0 0x7FF00000>;

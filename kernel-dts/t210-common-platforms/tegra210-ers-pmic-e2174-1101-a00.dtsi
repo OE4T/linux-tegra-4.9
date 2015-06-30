@@ -41,7 +41,7 @@
 			maxim,externally-enable;
 			maxim,sleep-on-dvs;
 			maxim,dvs-default-state = <1>;
-			maxim,external-enable-gpio = <&max77620 5 0>;
+			maxim,enable-gpio = <&max77620 5 0>;
 		};
 
 		gpu_max77621_reg: max77621@1c {
@@ -60,9 +60,9 @@
 			regulator-ramp-delay = <12000>;
 			#thermal-sensor-cells = <0>;
 			maxim,enable-active-discharge;
-			maxim,enable-bias;
+			maxim,enable-bias-control;
 			maxim,dvs-default-state = <1>;
-			maxim,external-enable-gpio = <&max77620 6 0>;
+			maxim,enable-gpio = <&max77620 6 0>;
 		};
 
 		max77620: max77620@3c {

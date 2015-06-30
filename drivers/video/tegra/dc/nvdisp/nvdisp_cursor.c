@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisp/nvdisp_cursor.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -50,6 +50,10 @@ int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y)
 	u16 point_in_x;
 	u16 point_in_y;
 
+	if (!dc) {
+		dev_err(&dc->ndev->dev, "Invalid *dc\n");
+		return -EINVAL;
+	}
 	switch (dc->cursor.size) {
 	case TEGRA_DC_CURSOR_SIZE_32X32:
 		cursor_width = 32;
@@ -130,3 +134,40 @@ int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y)
 	return 0;
 }
 
+int nvdisp_set_cursor_colorfmt(struct tegra_dc *dc)
+{
+	u32 val, nval;
+	u32 newfmt = 0;
+	int ret = -EINVAL;
+
+	if (!dc) {
+		dev_err(&dc->ndev->dev, "Invalid *dc\n");
+		return ret;
+	}
+
+	switch (dc->cursor.colorfmt) {
+	case legacy:
+		return ret;
+	case r8g8b8a8:
+		return ret;
+	case a1r5g5b5:
+		newfmt = CURSOR_FORMAT_T_A1R5G5B5;
+		break;
+	case a8r8g8b8:
+		newfmt = CURSOR_FORMAT_T_A8R8G8B8;
+		break;
+	default:
+		return ret;
+	}
+
+	val = tegra_dc_readl(dc, DC_DISP_CORE_HEAD_SET_CONTROL_CURSOR);
+	nval = (val & ~SET_CONTROL_CURSOR_FORMAT_MASK) |
+			(SET_CONTROL_CURSOR_FORMAT(newfmt));
+
+	if (val != nval) {
+		tegra_dc_writel(dc, nval, DC_DISP_CORE_HEAD_SET_CONTROL_CURSOR);
+		val = tegra_dc_readl(dc, DC_DISP_CORE_HEAD_SET_CONTROL_CURSOR);
+	}
+
+	return 0;
+}

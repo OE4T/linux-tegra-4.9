@@ -40,6 +40,9 @@
 #include <linux/cpu.h>
 #include <linux/cpumask.h>
 
+#define ATLAS_CPU_ID		0
+#define DENVER_CPU_ID		4
+
 /* minimum and maximum watchdog trigger periods, in seconds */
 #define MIN_WDT_PERIOD	5
 #define MAX_WDT_PERIOD	1000
@@ -163,7 +166,7 @@ static inline void tegra_wdt_t18x_skip(struct tegra_wdt_t18x *tegra_wdt_t18x)
 	u32 val;
 
 	/* Skip the 2nd expiry of Atlas WDT */
-	if (tegra_wdt_t18x->cpu_id == 0)
+	if (tegra_wdt_t18x->cpu_id == ATLAS_CPU_ID)
 		val = WDT_SKIP_VAL(1, 1);
 
 	/* Skip the 4th expiry if debug reset is disabled */
@@ -522,6 +525,11 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 								WDT_CFG_PERIOD;
 	/* Enable local interrupt for WDT petting */
 	tegra_wdt_t18x->config |= WDT_CFG_INT_EN;
+
+	/* Enable local FIQ and remote interrupt for debug dump */
+	if (tegra_wdt_t18x->cpu_id == DENVER_CPU_ID)
+		tegra_wdt_t18x->config |= WDT_CFG_FINT_EN;
+	tegra_wdt_t18x->config |= WDT_CFG_REMOTE_INT_EN;
 
 	/* Enable debug and POR reset if not explicitly disabled */
 	if(!of_property_read_bool(np, "nvidia,disable-debug-reset"))

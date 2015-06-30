@@ -162,7 +162,7 @@ int nvdisp_set_cursor_colorfmt(struct tegra_dc *dc)
 
 	val = tegra_dc_readl(dc, DC_DISP_CORE_HEAD_SET_CONTROL_CURSOR);
 	nval = (val & ~SET_CONTROL_CURSOR_FORMAT_MASK) |
-			(SET_CONTROL_CURSOR_FORMAT(newfmt));
+		(SET_CONTROL_CURSOR_FORMAT(newfmt));
 
 	if (val != nval) {
 		tegra_dc_writel(dc, nval, DC_DISP_CORE_HEAD_SET_CONTROL_CURSOR);

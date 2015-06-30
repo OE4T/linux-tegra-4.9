@@ -5,6 +5,7 @@
  * (C) Copyright 1999 Johannes Erdfelt
  * (C) Copyright 1999 Gregory P. Smith
  * (C) Copyright 2001 Brad Hards (bhards@bigpond.net.au)
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  */
 
@@ -1252,7 +1253,7 @@ static void hub_quiesce(struct usb_hub *hub, enum hub_quiescing_type type)
 	if (type != HUB_SUSPEND) {
 		/* Disconnect all the children */
 		for (i = 0; i < hdev->maxchild; ++i) {
-			if (hub->ports[i]->child)
+			if (hub->ports[i] && hub->ports[i]->child)
 				usb_disconnect(&hub->ports[i]->child);
 		}
 	}

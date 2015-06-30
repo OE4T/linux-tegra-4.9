@@ -1,6 +1,7 @@
 /*
  * usb port device code
  *
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  * Copyright (C) 2012 Intel Corp
  *
  * Author: Lan Tianyu <tianyu.lan@intel.com>
@@ -566,6 +567,9 @@ void usb_hub_remove_port_device(struct usb_hub *hub, int port1)
 {
 	struct usb_port *port_dev = hub->ports[port1 - 1];
 	struct usb_port *peer;
+
+	if (port_dev == NULL)
+		return;
 
 	peer = port_dev->peer;
 	if (peer)

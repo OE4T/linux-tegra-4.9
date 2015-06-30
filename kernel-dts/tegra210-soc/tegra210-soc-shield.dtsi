@@ -475,11 +475,11 @@
 	};
 
 	xudc@700d0000 {
-		status = "disable";
+		status = "disabled";
 	};
 
 	xotg {
-		status = "disable";
+		status = "disabled";
 	};
 
 	soctherm@0x700E2000 {
@@ -526,7 +526,7 @@
 	};
 
 	mselect {
-		status = "disable";
+		status = "disabled";
 	};
 
 	bthrot_cdev {

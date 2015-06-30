@@ -12,7 +12,8 @@
  *
  */
 
-#include "tegra210-jetson-e-power-tree-p2530-0930-e03.dtsi"
+#include <dt-bindings/padctrl/tegra210-pads.h>
+#include "tegra210-jetson-common-power-tree-p2530-0930-e03.dtsi"
 
 / {
 
@@ -186,7 +187,7 @@
 		io-pad-defaults {
 			audio-hv {
 				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
-			};  
+			};
 
 			spi-hv {
 				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;

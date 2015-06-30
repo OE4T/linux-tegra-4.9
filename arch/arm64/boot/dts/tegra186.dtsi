@@ -248,6 +248,12 @@
 		status = "disabled";
 	};
 
+	tegra_pmc: pmc@c360000 {
+		compatible = "nvidia,tegra186-pmc";
+		reg = <0x0 0xC360000 0x0 0x400>;
+		#padcontroller-cells = <1>;
+	};
+
 	host1x: host1x {
 		compatible = "nvidia,tegra186-host1x", "simple-bus";
 		reg = <0x0 0x3de00000 0x0 0x00040000>;

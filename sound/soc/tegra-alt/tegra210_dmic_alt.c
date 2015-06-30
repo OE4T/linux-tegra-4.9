@@ -123,18 +123,24 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 {
 	struct device *dev = dai->dev;
 	struct tegra210_dmic *dmic = snd_soc_dai_get_drvdata(dai);
-	int channels, srate, dmic_clk, osr = TEGRA210_DMIC_OSR_64;
+	int channels, srate, dmic_clk, osr = TEGRA210_DMIC_OSR_64, ret;
 	struct tegra210_xbar_cif_conf cif_conf;
 
 	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
 
 	channels = params_channels(params);
 	srate = params_rate(params);
-	dmic_clk = (1 << (6+osr)) * (srate/2);
+	dmic_clk = (1 << (6+osr)) * srate;
 
-	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+	if ((tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		program_dmic_gpio();
 		program_dmic_clk(dmic_clk);
+	} else {
+		ret = clk_set_rate(dmic->clk_dmic, dmic_clk);
+		if (ret) {
+			dev_err(dev, "Can't set dmic clock rate: %d\n", ret);
+			return ret;
+		}
 	}
 
 	regmap_update_bits(dmic->regmap,
@@ -362,13 +368,25 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 			ret = PTR_ERR(dmic->clk_dmic);
 			goto err;
 		}
+		dmic->clk_pll_a_out0 = clk_get_sys(NULL, "pll_a_out0");
+		if (IS_ERR_OR_NULL(dmic->clk_pll_a_out0)) {
+			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
+			ret = -ENOENT;
+			goto err_clk_put;
+		}
+
+		ret = clk_set_parent(dmic->clk_dmic, dmic->clk_pll_a_out0);
+		if (ret) {
+			dev_err(&pdev->dev, "Can't set parent of dmic clock\n");
+			goto err_plla_clk_put;
+		}
 	}
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
 		dev_err(&pdev->dev, "No memory resource\n");
 		ret = -ENODEV;
-		goto err_clk_put;
+		goto err_plla_clk_put;
 	}
 
 	memregion = devm_request_mem_region(&pdev->dev, mem->start,
@@ -376,14 +394,14 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 	if (!memregion) {
 		dev_err(&pdev->dev, "Memory region already claimed\n");
 		ret = -EBUSY;
-		goto err_clk_put;
+		goto err_plla_clk_put;
 	}
 
 	regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
 	if (!regs) {
 		dev_err(&pdev->dev, "ioremap failed\n");
 		ret = -ENOMEM;
-		goto err_clk_put;
+		goto err_plla_clk_put;
 	}
 
 	dmic->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
@@ -391,7 +409,7 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 	if (IS_ERR(dmic->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
 		ret = PTR_ERR(dmic->regmap);
-		goto err_clk_put;
+		goto err_plla_clk_put;
 	}
 	regcache_cache_only(dmic->regmap, true);
 
@@ -400,7 +418,7 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"Missing property nvidia,ahub-dmic-id\n");
 		ret = -ENODEV;
-		goto err_clk_put;
+		goto err_plla_clk_put;
 	}
 
 	pm_runtime_enable(&pdev->dev);
@@ -428,6 +446,8 @@ err_suspend:
 		tegra210_dmic_runtime_suspend(&pdev->dev);
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
+err_plla_clk_put:
+	devm_clk_put(&pdev->dev, dmic->clk_pll_a_out0);
 err_clk_put:
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
 		devm_clk_put(&pdev->dev, dmic->clk_dmic);
@@ -446,6 +466,7 @@ static int tegra210_dmic_platform_remove(struct platform_device *pdev)
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_dmic_runtime_suspend(&pdev->dev);
 
+	devm_clk_put(&pdev->dev, dmic->clk_pll_a_out0);
 	devm_clk_put(&pdev->dev, dmic->clk_dmic);
 	return 0;
 }

@@ -15,6 +15,17 @@
 #include "tegra210-jetson-e-power-tree-p2530-0930-e03.dtsi"
 
 / {
+
+	i2c@7000d000 {
+		max77620@3c {
+			regulators {
+				ldo2 {
+					regulator-name = "vddio-sdmmc1";
+				};
+			};
+		};
+	};
+
 	regulators {
 		compatible = "simple-bus";
 		device_type = "fixed-regulators";

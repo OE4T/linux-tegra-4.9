@@ -274,6 +274,7 @@
 		tegra_arad: arad@0290E400 {
 			compatible = "nvidia,tegra186-arad";
 			reg = <0x0290E400 0x400>;
+			interrupts = <0 56 0x4>;
 			nvidia,ahub-arad-id = <0>;
 			status = "disabled";
 		};

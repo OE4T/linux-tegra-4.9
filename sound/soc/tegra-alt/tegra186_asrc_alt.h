@@ -124,7 +124,10 @@
 
 #define TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK		0x1F
 #define TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK			0xFFFFFFFF
-
+enum task_event {
+	STREAM_DISABLE,
+	STREAM_ENABLE,
+};
 struct tegra186_asrc_soc_data {
 	void (*set_audio_cif)(struct regmap *map,
 			unsigned int reg,
@@ -141,6 +144,11 @@ struct tegra186_asrc {
 	struct regmap *regmap;
 	struct tegra186_asrc_lane lane[6];
 	const struct tegra186_asrc_soc_data *soc_data;
+	struct tasklet_struct   tasklet;
+	struct list_head task_desc;
+	int active_dai_count;
 };
-
+int tegra186_asrc_set_source(int id, int source);
+int tegra186_asrc_event(int id, enum task_event event, int status);
+int tegra186_asrc_update_ratio(int id, int inte, int frac);
 #endif

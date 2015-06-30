@@ -60,6 +60,14 @@
 	{ ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_INSAMPLEBUF_CONFIG, id), 0x64}, \
 	{ ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_OUTSAMPLEBUF_ADDR, id), 0x4b0}, \
 	{ ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_OUTSAMPLEBUF_CONFIG, id), 0x64}
+static struct device *asrc_dev;
+
+static struct asrc_task_desc {
+	int stream_id;
+	enum task_event event;
+	int action;
+	struct list_head node;
+};
 
 static const struct reg_default tegra186_asrc_reg_defaults[] = {
 	ASRC_STREAM_REG_DEFAULTS(0),
@@ -89,6 +97,35 @@ static const struct reg_default tegra186_asrc_reg_defaults[] = {
 	{ TEGRA186_ASRC_GLOBAL_RATIO_WR_ACCESS_CTRL, 0x0},
 	{ TEGRA186_ASRC_CYA, 0x0},
 };
+
+
+static int tegra186_asrc_get_stream_enable_status(struct tegra186_asrc *asrc,
+				unsigned int lane_id)
+{
+	int val;
+
+	regmap_read(asrc->regmap,
+		ASRC_STREAM_REG(
+			TEGRA186_ASRC_STREAM1_STATUS, lane_id),
+		&val);
+
+	return val & 0x01;
+
+}
+
+int tegra186_asrc_event(int id, enum task_event event, int action)
+{
+	struct tegra186_asrc *asrc = dev_get_drvdata(asrc_dev);
+	struct asrc_task_desc *task = kzalloc(sizeof(*task), GFP_ATOMIC);
+	task->stream_id = id;
+	task->event = event;
+	task->action = action;
+
+	list_add_tail(&task->node, &asrc->task_desc);
+	tasklet_schedule(&asrc->tasklet);
+
+	return 0;
+}
 
 static int tegra186_asrc_get_ratio_lock_status(struct tegra186_asrc *asrc,
 				unsigned int lane_id)
@@ -120,6 +157,33 @@ static void tegra186_asrc_set_ratio_lock_status(struct tegra186_asrc *asrc,
 			TEGRA186_ASRC_STREAM1_RATIO_LOCK_STATUS, lane_id), 1);
 }
 
+int tegra186_asrc_set_source(int id, int source)
+{
+	struct tegra186_asrc *asrc = dev_get_drvdata(asrc_dev);
+
+	regmap_update_bits(asrc->regmap,
+		ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_CONFIG, id),
+		TEGRA186_ASRC_STREAM_RATIO_TYPE_MASK, (source & 1));
+
+	return 0;
+}
+
+int tegra186_asrc_update_ratio(int id, int inte, int frac)
+{
+	struct tegra186_asrc *asrc = dev_get_drvdata(asrc_dev);
+
+	regmap_write(asrc->regmap, ASRC_STREAM_REG(
+		TEGRA186_ASRC_STREAM1_RATIO_INTEGER_PART, id),
+		inte);
+	regmap_write(asrc->regmap, ASRC_STREAM_REG(
+		TEGRA186_ASRC_STREAM1_RATIO_FRAC_PART, id),
+		frac);
+
+	tegra186_asrc_set_ratio_lock_status(asrc, (unsigned int)id);
+
+	return 0;
+}
+
 static int tegra186_asrc_runtime_suspend(struct device *dev)
 {
 	struct tegra186_asrc *asrc = dev_get_drvdata(dev);
@@ -149,8 +213,8 @@ static int tegra186_asrc_runtime_resume(struct device *dev)
 		if (asrc->lane[lane_id].ratio_source == RATIO_SW) {
 			regmap_write(asrc->regmap,
 				ASRC_STREAM_REG(
-					TEGRA186_ASRC_STREAM1_RATIO_INTEGER_PART,
-					lane_id),
+				TEGRA186_ASRC_STREAM1_RATIO_INTEGER_PART,
+				lane_id),
 				asrc->lane[lane_id].int_part);
 			regmap_write(asrc->regmap,
 				ASRC_STREAM_REG(
@@ -203,7 +267,6 @@ static int tegra186_asrc_set_audio_cif(struct tegra186_asrc *asrc,
 	cif_conf.client_channels = channels;
 	cif_conf.audio_bits = audio_bits;
 	cif_conf.client_bits = audio_bits;
-
 	asrc->soc_data->set_audio_cif(asrc->regmap, reg, &cif_conf);
 
 	return 0;
@@ -221,7 +284,6 @@ static int tegra186_asrc_in_hw_params(struct snd_pcm_substream *substream,
 	regmap_write(asrc->regmap,
 		ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_RX_THRESHOLD, dai->id),
 		0x00201002);
-
 	ret = tegra186_asrc_set_audio_cif(asrc, params,
 		ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_RX_CIF_CTRL, dai->id));
 	if (ret) {
@@ -763,6 +825,34 @@ static bool tegra186_asrc_volatile_reg(struct device *dev, unsigned int reg)
 		return false;
 	};
 }
+static void tegra_asrc_tasklet(unsigned long data)
+{
+	struct tegra186_asrc *asrc =
+		(struct tegra186_asrc *)data;
+	struct asrc_task_desc *desc;
+
+	while (!list_empty(&asrc->task_desc)) {
+		int dcnt = 10;
+		desc = list_first_entry(&asrc->task_desc,
+				typeof(*desc), node);
+		/* Currently we have event for stream enable/disable
+		, so bypassing event check. In future if more events gets
+		added this should be handled in switch */
+		regmap_write(asrc->regmap, ASRC_STREAM_REG
+			(TEGRA186_ASRC_STREAM1_ENABLE, desc->stream_id),
+			desc->action);
+		if (!desc->action)
+			udelay(2000);
+
+		while ((tegra186_asrc_get_stream_enable_status(
+				asrc, desc->stream_id)
+			!= desc->action) && dcnt--)
+			udelay(100);
+
+		list_del(&desc->node);
+		kfree(desc);
+	}
+}
 
 static const struct regmap_config tegra186_asrc_regmap_config = {
 	.reg_bits = 32,
@@ -785,7 +875,6 @@ static const struct of_device_id tegra186_asrc_of_match[] = {
 	{ .compatible = "nvidia,tegra186-asrc", .data = &soc_data_tegra186 },
 	{},
 };
-
 static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 {
 	struct tegra186_asrc *asrc;
@@ -803,7 +892,7 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 	soc_data = (struct tegra186_asrc_soc_data *)match->data;
-
+	asrc_dev = &pdev->dev;
 	asrc = devm_kzalloc(&pdev->dev,
 		sizeof(struct tegra186_asrc), GFP_KERNEL);
 	if (!asrc) {
@@ -883,6 +972,11 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 			ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_CONFIG, i), 1, 1);
 	}
 
+	INIT_LIST_HEAD(&asrc->task_desc);
+
+	tasklet_init(&asrc->tasklet, tegra_asrc_tasklet,
+			(unsigned long)asrc);
+
 	ret = snd_soc_register_codec(&pdev->dev, &tegra186_asrc_codec,
 				     tegra186_asrc_dais,
 				     ARRAY_SIZE(tegra186_asrc_dais));
@@ -904,6 +998,10 @@ err:
 
 static int tegra186_asrc_platform_remove(struct platform_device *pdev)
 {
+	struct tegra186_asrc *asrc =
+		dev_get_drvdata(&pdev->dev);
+	tasklet_kill(&asrc->tasklet);
+
 	snd_soc_unregister_codec(&pdev->dev);
 
 	pm_runtime_disable(&pdev->dev);

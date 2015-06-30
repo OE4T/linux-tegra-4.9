@@ -30,7 +30,12 @@
 #define TEGRA186_ARAD_LANE_INT_STATUS		0xc
 #define TEGRA186_ARAD_LANE_INT_MASK			0x10
 #define TEGRA186_ARAD_LANE_INT_SET			0x14
-#define TEGRA186_ARAD_LANE_INT_CLEAR		0x18
+#define TEGRA186_ARAD_LANE_INT_CLEAR			0x18
+#define TEGRA186_ARAD_LANE_INT_RATIO_CHANGE_MASK	(0x3f<<16)
+#define TEGRA186_ARAD_LANE_INT_LOCK_CHANGE_MASK		0x3f
+#define TEGRA186_ARAD_LANE_INT_RATIO_CHANGE_SHIFT	16
+#define TEGRA186_ARAD_LANE_INT_LOCK_CHANGE_SHIFT	0
+
 #define TEGRA186_ARAD_GLOBAL_SOFT_RESET		0x1c
 #define TEGRA186_ARAD_CG					0x20
 #define TEGRA186_ARAD_STATUS				0x24
@@ -103,7 +108,9 @@ struct tegra186_arad_soc_data {
 
 struct tegra186_arad {
 	struct regmap *regmap;
+	int irq;
 	const struct tegra186_arad_soc_data *soc_data;
+	spinlock_t int_lock;
 };
 
 #endif

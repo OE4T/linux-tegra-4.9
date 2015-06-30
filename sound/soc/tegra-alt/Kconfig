@@ -49,3 +49,12 @@ config SND_SOC_TEGRA_T186REF_ALT
 	select SND_SOC_AD193X
 	help
 	  Say Y or M here.
+
+config SND_SOC_TEGRA186_ARAD_WAR
+	def_bool y
+	depends on SND_SOC_TEGRA186_ARAD_ALT
+
+config SND_SOC_TEGRA186_ASRC_WAR
+	def_bool n
+	depends on SND_SOC_TEGRA186_ASRC_ALT
+	depends on SND_SOC_TEGRA186_ARAD_WAR

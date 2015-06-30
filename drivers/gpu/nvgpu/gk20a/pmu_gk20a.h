@@ -680,9 +680,11 @@ struct pmu_pg_cmd_eng_buf_load_v1 {
 	u8 engine_id;
 	u8 buf_idx;
 	u8 pad;
-	u16 buf_size;
-	struct falc_dma_addr dma_addr;	/* 256-byte block address */
-	u8 dma_idx;
+	struct flcn_mem_desc {
+		struct falc_u64 dma_addr;
+		u16 dma_size;
+		u8 dma_idx;
+	} dma_desc;
 };
 
 enum {

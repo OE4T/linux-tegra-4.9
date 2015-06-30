@@ -839,7 +839,7 @@ static void pg_cmd_eng_buf_load_set_buf_size_v0(struct pmu_pg_cmd *pg,
 static void pg_cmd_eng_buf_load_set_buf_size_v1(struct pmu_pg_cmd *pg,
 	u16 value)
 {
-	pg->eng_buf_load_v1.buf_size = value;
+	pg->eng_buf_load_v1.dma_desc.dma_size = value;
 }
 
 static void pg_cmd_eng_buf_load_set_dma_base_v0(struct pmu_pg_cmd *pg,
@@ -850,8 +850,8 @@ static void pg_cmd_eng_buf_load_set_dma_base_v0(struct pmu_pg_cmd *pg,
 static void pg_cmd_eng_buf_load_set_dma_base_v1(struct pmu_pg_cmd *pg,
 	u32 value)
 {
-	pg->eng_buf_load_v1.dma_addr.dma_base = value;
-	pg->eng_buf_load_v1.dma_addr.dma_base1 = 0;
+	pg->eng_buf_load_v1.dma_desc.dma_addr.lo |= u64_lo32(value << 8);
+	pg->eng_buf_load_v1.dma_desc.dma_addr.hi |= u64_hi32(value << 8);
 }
 
 static void pg_cmd_eng_buf_load_set_dma_offset_v0(struct pmu_pg_cmd *pg,
@@ -862,7 +862,7 @@ static void pg_cmd_eng_buf_load_set_dma_offset_v0(struct pmu_pg_cmd *pg,
 static void pg_cmd_eng_buf_load_set_dma_offset_v1(struct pmu_pg_cmd *pg,
 	u8 value)
 {
-	pg->eng_buf_load_v1.dma_addr.dma_offset = value;
+	pg->eng_buf_load_v1.dma_desc.dma_addr.lo |= value;
 }
 
 static void pg_cmd_eng_buf_load_set_dma_idx_v0(struct pmu_pg_cmd *pg,
@@ -873,7 +873,7 @@ static void pg_cmd_eng_buf_load_set_dma_idx_v0(struct pmu_pg_cmd *pg,
 static void pg_cmd_eng_buf_load_set_dma_idx_v1(struct pmu_pg_cmd *pg,
 	u8 value)
 {
-	pg->eng_buf_load_v1.dma_idx = value;
+	pg->eng_buf_load_v1.dma_desc.dma_idx = value;
 }
 
 

@@ -121,11 +121,9 @@ struct device_node *tegra_primary_panel_get_dt_node(
 
 	if (tegra_platform_is_silicon()) {
 		/* Take from new DTS file */
-	} else if (tegra_platform_is_fpga()) {
-		/* Using Hdmi in sor 0 node */
-		np_panel =
-			of_get_child_by_name(np_sor, "hdmi-display");
-	} else if (tegra_platform_is_unit_fpga())
+	} else if (tegra_platform_is_fpga()) /* Using Hdmi in sor 0 node */
+		np_panel = of_get_child_by_name(np_sor, "hdmi-display");
+	else if (tegra_platform_is_unit_fpga())
 		np_panel = of_get_child_by_name(np_sor, "dp-ufpga-panel");
 	else if (tegra_platform_is_linsim())
 		np_panel = of_get_child_by_name(np_sor, "panel-nvidia-sim");
@@ -159,7 +157,7 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 		np_panel =
 			of_get_child_by_name(np_hdmi, "hdmi-display");
 	}
-	else if (tegra_platform_is_linsim()) {
+	else if (tegra_platform_is_linsim() || tegra_platform_is_fpga()) {
 		if (pdata && dc_out)
 			tegra_panel_register_ops(dc_out, &panel_sim_ops);
 

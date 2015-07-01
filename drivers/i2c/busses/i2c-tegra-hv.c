@@ -257,11 +257,6 @@ static int tegra_hv_i2c_probe(struct platform_device *pdev)
 	else
 		i2c_dev->completion_timeout = TEGRA_I2C_TIMEOUT;
 
-	ret = i2c_add_numbered_adapter(&i2c_dev->adapter);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to add I2C adapter\n");
-		return ret;
-	}
 	i2c_dev->base = res->start;
 	init_completion(&i2c_dev->msg_complete);
 
@@ -295,6 +290,12 @@ static int tegra_hv_i2c_probe(struct platform_device *pdev)
 			dev_warn(&pdev->dev, "Error getting max payload, defaulting to 4096\n");
 			i2c_dev->max_payload_size = 4096;
 		}
+	}
+
+	ret = i2c_add_numbered_adapter(&i2c_dev->adapter);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to add I2C adapter\n");
+		return ret;
 	}
 
 	return 0;

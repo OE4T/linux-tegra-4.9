@@ -132,7 +132,7 @@ static struct pg_init_sequence_list _pginitseq_gp10b[] = {
 		{0x0010e004, 0x0000008E},
 };
 
-void gp10b_pmu_load_multiple_falcons(struct gk20a *g, u32 falconidmask,
+static void gp10b_pmu_load_multiple_falcons(struct gk20a *g, u32 falconidmask,
 					 u32 flags)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
@@ -169,7 +169,7 @@ void gp10b_pmu_load_multiple_falcons(struct gk20a *g, u32 falconidmask,
 	return;
 }
 
-int gp10b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
+static int gp10b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 {
 	u32 flags = PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_YES;
 

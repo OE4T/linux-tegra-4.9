@@ -153,6 +153,10 @@ void nvmap_zap_handle(struct nvmap_handle *handle, u32 offset, u32 size)
 	if (!handle->heap_pgalloc)
 		return;
 
+	/* if no dirty page is present, no need to zap */
+	if (nvmap_handle_track_dirty(handle) && !atomic_read(&handle->pgalloc.ndirty))
+		return;
+
 	if (!size) {
 		offset = 0;
 		size = handle->size;

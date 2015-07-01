@@ -412,7 +412,13 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
 #endif
 
 	for (i = 0; i < nr; i++)
-		total += sizes[i] ? sizes[i] : handles[i]->size;
+		if ((op == NVMAP_CACHE_OP_WB) && nvmap_handle_track_dirty(handles[i]))
+			total += atomic_read(&handles[i]->pgalloc.ndirty);
+		else
+			total += sizes[i] ? sizes[i] : handles[i]->size;
+
+	if (!total)
+		return 0;
 
 	/* Full flush in the case the passed list is bigger than our
 	 * threshold. */

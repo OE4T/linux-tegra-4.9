@@ -16,4 +16,5 @@
 struct gk20a;
 
 void gk20a_init_fb(struct gpu_ops *gops);
+void fb_gk20a_reset(struct gk20a *g);
 #endif

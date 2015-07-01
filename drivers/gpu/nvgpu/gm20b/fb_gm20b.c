@@ -17,6 +17,7 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/kind_gk20a.h"
+#include "gk20a/fb_gk20a.h"
 
 #include "hw_fb_gm20b.h"
 #include "hw_top_gm20b.h"
@@ -131,6 +132,7 @@ static void gm20b_fb_dump_vpr_wpr_info(struct gk20a *g)
 
 void gm20b_init_fb(struct gpu_ops *gops)
 {
+	gops->fb.reset = fb_gk20a_reset;
 	gops->fb.init_fs_state = fb_gm20b_init_fs_state;
 	gops->fb.set_mmu_page_size = gm20b_fb_set_mmu_page_size;
 	gops->fb.compression_page_size = gm20b_fb_compression_page_size;

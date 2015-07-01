@@ -20,7 +20,7 @@
 #include "hw_mc_gk20a.h"
 #include "hw_fb_gk20a.h"
 
-static void fb_gk20a_reset(struct gk20a *g)
+void fb_gk20a_reset(struct gk20a *g)
 {
 	u32 val;
 

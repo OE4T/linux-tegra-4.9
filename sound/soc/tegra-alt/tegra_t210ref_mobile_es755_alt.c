@@ -326,12 +326,14 @@ static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 
 	if (atomic_inc_return(&machine->qos_req_count) == 1) {
 		if (machine->fast_cpu_cores > 1)
-			pm_qos_add_request(&machine->min_cpu_core,
-				PM_QOS_MIN_ONLINE_CPUS,
+			pm_qos_add_min_bound_req(&machine->min_cpu_core,
+				PM_QOS_PRIO_DEFAULT_UNTRUSTED,
+				PM_QOS_ONLINE_CPUS_BOUNDS,
 				machine->fast_cpu_cores);
 		if (machine->fast_cpu_rate)
-			pm_qos_add_request(&machine->min_cpu_rate,
-				PM_QOS_CPU_FREQ_MIN,
+			pm_qos_add_min_bound_req(&machine->min_cpu_rate,
+				PM_QOS_PRIO_DEFAULT_UNTRUSTED,
+				PM_QOS_CPU_FREQ_BOUNDS,
 				machine->fast_cpu_rate);
 	}
 

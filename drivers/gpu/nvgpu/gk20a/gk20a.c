@@ -780,6 +780,9 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 			        bus_intr_en_0_pri_fecserr_m() |
 			        bus_intr_en_0_pri_timeout_m());
 
+	if (g->ops.clk.disable_slowboot)
+		g->ops.clk.disable_slowboot(g);
+
 	gk20a_reset_priv_ring(g);
 
 	/* TBD: move this after graphics init in which blcg/slcg is enabled.

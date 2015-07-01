@@ -22,20 +22,11 @@
 #include "hw_mc_gk20a.h"
 #include "hw_pri_ringmaster_gk20a.h"
 #include "hw_pri_ringstation_sys_gk20a.h"
-#include "hw_trim_gk20a.h"
 
 void gk20a_reset_priv_ring(struct gk20a *g)
 {
-	u32 data;
-
 	if (tegra_platform_is_linsim())
 		return;
-
-	data = gk20a_readl(g, trim_sys_gpc2clk_out_r());
-	data = set_field(data,
-			trim_sys_gpc2clk_out_bypdiv_m(),
-			trim_sys_gpc2clk_out_bypdiv_f(0));
-	gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
 
 	gk20a_reset(g, mc_enable_priv_ring_enabled_f());
 

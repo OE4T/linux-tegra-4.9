@@ -629,6 +629,17 @@ static int gk20a_clk_register_export_ops(struct gk20a *g)
 	return ret;
 }
 
+static void gk20a_clk_disable_slowboot(struct gk20a *g)
+{
+	u32 data;
+
+	data = gk20a_readl(g, trim_sys_gpc2clk_out_r());
+	data = set_field(data,
+			trim_sys_gpc2clk_out_bypdiv_m(),
+			trim_sys_gpc2clk_out_bypdiv_f(0));
+	gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
+}
+
 static int gk20a_init_clk_support(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
@@ -695,6 +706,7 @@ static int gk20a_suspend_clk_support(struct gk20a *g)
 
 void gk20a_init_clk_ops(struct gpu_ops *gops)
 {
+	gops->clk.disable_slowboot = gk20a_clk_disable_slowboot;
 	gops->clk.init_clk_support = gk20a_init_clk_support;
 	gops->clk.suspend_clk_support = gk20a_suspend_clk_support;
 }

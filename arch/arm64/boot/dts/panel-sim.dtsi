@@ -37,21 +37,21 @@
 							   TEGRA_DC_OUT_PIN_DATA_ENABLE TEGRA_DC_OUT_PIN_POL_HIGH>;
 					nvidia,out-depth = <18>;
 					nvidia,out-parent-clk = "pll_d_out0";
-					nvidia,out-xres = <420>;
-					nvidia,out-yres = <280>;
+					nvidia,out-xres = <128>;
+					nvidia,out-yres = <96>;
 				};
 				display-timings {
-					420x280-32 {
+					128x96-32 {
 						clock-frequency = <27000000>;
-						hactive = <420>;
-						vactive = <280>;
-						hfront-porch = <16>;
-						hback-porch = <12>;
-						hsync-len = <16>;
+						hactive = <128>;
+						vactive = <96>;
+						hfront-porch = <8>;
+						hback-porch = <16>;
+						hsync-len = <8>;
 						vfront-porch = <3>;
-						vback-porch = <19>;
-						vsync-len = <14>;
-						nvidia,h-ref-to-sync = <11>;
+						vback-porch = <3>;
+						vsync-len = <4>;
+						nvidia,h-ref-to-sync = <1>;
 						nvidia,v-ref-to-sync = <1>;
 					};
 				};

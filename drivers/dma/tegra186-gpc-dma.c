@@ -1360,6 +1360,7 @@ static int tegra_dma_probe(struct platform_device *pdev)
 	 * alignment shift.
 	 */
 	tdma->dma_dev.copy_align = 2;
+	tdma->dma_dev.fill_align = 2;
 	tdma->dma_dev.device_alloc_chan_resources =
 					tegra_dma_alloc_chan_resources;
 	tdma->dma_dev.device_free_chan_resources =

@@ -35,5 +35,6 @@ obj-$(CONFIG_TEGRA_LVDS) += lvds.o
 obj-$(CONFIG_TEGRA_NVSR) += nvsr.o
 obj-$(CONFIG_TEGRA_DC_EXTENSIONS) += ext/
 obj-$(CONFIG_TEGRA_HDMI2_0) += hdmi2.0.o
+obj-$(CONFIG_TEGRA_HDA_DC) += hda_dc.o
 obj-$(CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT) += fake_panel.o null_or.o
 obj-$(CONFIG_TEGRA_VRR) += vrr.o

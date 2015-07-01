@@ -43,6 +43,10 @@
 #include "edid.h"
 #include "dp_lt.h"
 
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#include "hda_dc.h"
+#endif
+
 #ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
 #include "fake_panel.h"
 #endif /*CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT*/
@@ -2078,6 +2082,11 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	/* Host is ready. Start link training. */
 	dp->enabled = true;
 
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	if (tegra_dc_is_ext_dp_panel(dc))
+		tegra_hda_set_data(dp, SINK_DP);
+#endif
+
 	if (likely(dc->out->type != TEGRA_DC_OUT_FAKE_DP)) {
 		tegra_dp_lt_set_pending_evt(&dp->lt_data);
 		ret = tegra_dp_lt_wait_for_completion(&dp->lt_data,
@@ -2171,6 +2180,11 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 	tegra_dp_clk_disable(dp);
 
 	tegra_dc_io_end(dc);
+
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	if (tegra_dc_is_ext_dp_panel(dc))
+		tegra_hda_reset_data();
+#endif
 }
 
 void tegra_dc_dp_pre_disable_link(struct tegra_dc_dp_data *dp)

@@ -301,11 +301,6 @@ struct tegra_hdmi {
 	struct delayed_work scdc_work;
 
 	struct hdmi_audio_infoframe audio;
-	bool null_sample_inject;
-	u32 audio_freq;
-	struct clk *hda_clk;
-	struct clk *hda2codec_clk;
-	struct clk *hda2hdmi_clk;
 #ifdef CONFIG_SWITCH
 	struct switch_dev hpd_switch;
 	struct switch_dev audio_switch;
@@ -351,5 +346,13 @@ enum {
 	TEGRA_HDMI_BPP_36 = 6,
 	TEGRA_HDMI_BPP_48 = 7,
 };
+
+void tegra_hdmi_get(struct tegra_dc *dc);
+void tegra_hdmi_put(struct tegra_dc *dc);
+void tegra_hdmi_infoframe_pkt_write(struct tegra_hdmi *hdmi,
+						u32 header_reg, u8 pkt_type,
+						u8 pkt_vs, u8 pkt_len,
+						void *reg_payload,
+						u32 reg_payload_len);
 
 #endif

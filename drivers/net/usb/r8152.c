@@ -23,6 +23,7 @@
 #include <linux/list.h>
 #include <linux/ip.h>
 #include <linux/ipv6.h>
+#include <linux/of.h>
 #include <net/ip6_checksum.h>
 #include <linux/usb/cdc.h>
 #include <linux/suspend.h>
@@ -1136,6 +1137,66 @@ void write_mii_word(struct net_device *netdev, int phy_id, int reg, int val)
 static int
 r8152_submit_rx(struct r8152 *tp, struct rx_agg *agg, gfp_t mem_flags);
 
+/*
+ * Only modify mac_addr if a valid address is found.
+ */
+static int r8152_get_mac_address_from_dtb(struct r8152 *tp,
+					const char *node_name,
+					const char *property_name,
+					u8 *mac_addr)
+{
+	struct device_node *np = of_find_node_by_path(node_name);
+	const char *mac_str = NULL;
+	int values[6] = {0};
+	u8 mac_temp[6] = {0};
+	int i, ret = 0;
+
+	if (!np)
+		return -EADDRNOTAVAIL;
+
+	/*
+	 * If the property is present but contains an invalid value,
+	 * then something is wrong. Log the error in that case.
+	 */
+	if (of_property_read_string(np, property_name, &mac_str)) {
+		ret = -EADDRNOTAVAIL;
+		goto err_out;
+	}
+
+	/*
+	 * The DTB property is a string of the form xx:xx:xx:xx:xx:xx
+	 * Convert to an array of bytes.
+	 */
+	if (sscanf(mac_str, "%x:%x:%x:%x:%x:%x",
+		&values[0], &values[1], &values[2],
+		&values[3], &values[4], &values[5]) != 6) {
+		ret = -EINVAL;
+		goto err_out;
+	}
+
+	for (i = 0; i < 6; ++i)
+		mac_temp[i] = (unsigned char)values[i];
+
+	if (!is_valid_ether_addr(mac_temp)) {
+		ret = -EINVAL;
+		goto err_out;
+	}
+
+	memcpy(mac_addr, mac_temp, 6);
+
+	of_node_put(np);
+
+	return ret;
+
+err_out:
+	netif_err(tp, probe, tp->netdev, "bad mac address at %s/%s: %s.\n",
+		node_name, property_name, mac_str ? mac_str : "missing");
+
+	of_node_put(np);
+
+	return ret;
+}
+
 static int rtl8152_set_mac_address(struct net_device *netdev, void *p)
 {
 	struct r8152 *tp = netdev_priv(netdev);
@@ -1167,16 +1228,46 @@ out1:
 	return ret;
 }
 
-static int set_ethernet_addr(struct r8152 *tp)
+static bool usb_dev_is_jetson_cvm(const struct usb_device_id *id)
+{
+	return ((id->idVendor == VENDOR_ID_NVIDIA) &&
+		(id->idProduct == 0x09ff));
+}
+
+static int set_ethernet_addr(struct r8152 *tp, const struct usb_device_id *id)
 {
 	struct net_device *dev = tp->netdev;
 	struct sockaddr sa;
-	int ret;
+	int ret = -EADDRNOTAVAIL;
 
-	if (tp->version == RTL_VER_01)
-		ret = pla_ocp_read(tp, PLA_IDR, 8, sa.sa_data);
+	/*
+	 * MAC address search order is:
+	 * For built-in device:
+	 * 1. DTB (from EEPROM)
+	 * 2. OTP
+	 * For add-on device:
+	 * Just OTP
+	 */
+
+	memset(sa.sa_data, 0, 8);
+	if (usb_dev_is_jetson_cvm(id))
+		/* Look under /chosen/nvidia,ethernet-mac */
+		ret = r8152_get_mac_address_from_dtb(tp, "/chosen",
+						"nvidia,ethernet-mac",
+						sa.sa_data);
 	else
-		ret = pla_ocp_read(tp, PLA_BACKUP, 8, sa.sa_data);
+		ret = -EADDRNOTAVAIL;
+
+	/*
+	 * DTB either got skipped or contains invalid address.
+	 * Fall back on OTP.
+	 */
+	if (ret < 0) {
+		if (tp->version == RTL_VER_01)
+			ret = pla_ocp_read(tp, PLA_IDR, 8, sa.sa_data);
+		else
+			ret = pla_ocp_read(tp, PLA_BACKUP, 8, sa.sa_data);
+	}
 
 	if (ret < 0) {
 		netif_err(tp, probe, dev, "Get ether addr fail\n");
@@ -7333,7 +7424,7 @@ static int rtl8152_probe(struct usb_interface *intf,
 
 	tp->rtl_ops.init(tp);
 	queue_delayed_work(system_long_wq, &tp->hw_phy_work, 0);
-	set_ethernet_addr(tp);
+	set_ethernet_addr(tp, id);
 
 	usb_set_intfdata(intf, tp);
 	netif_napi_add(netdev, &tp->napi, r8152_poll, RTL8152_NAPI_WEIGHT);

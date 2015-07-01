@@ -1354,9 +1354,8 @@ static int tegra_dma_probe(struct platform_device *pdev)
 	dma_cap_set(DMA_SLAVE, tdma->dma_dev.cap_mask);
 	dma_cap_set(DMA_PRIVATE, tdma->dma_dev.cap_mask);
 	dma_cap_set(DMA_MEMCPY, tdma->dma_dev.cap_mask);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
 	dma_cap_set(DMA_MEMSET, tdma->dma_dev.cap_mask);
-#endif
+
 	tdma->dma_dev.dev = &pdev->dev;
 	/*
 	 * Only word aligned transfers are supported. Set the copy
@@ -1369,9 +1368,7 @@ static int tegra_dma_probe(struct platform_device *pdev)
 					tegra_dma_free_chan_resources;
 	tdma->dma_dev.device_prep_slave_sg = tegra_dma_prep_slave_sg;
 	tdma->dma_dev.device_prep_dma_memcpy = tegra_dma_prep_dma_memcpy;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
 	tdma->dma_dev.device_prep_dma_memset = tegra_dma_prep_dma_memset;
-#endif
 	tdma->dma_dev.device_control = tegra_dma_device_control;
 	tdma->dma_dev.device_tx_status = tegra_dma_tx_status;
 	tdma->dma_dev.device_issue_pending = tegra_dma_issue_pending;

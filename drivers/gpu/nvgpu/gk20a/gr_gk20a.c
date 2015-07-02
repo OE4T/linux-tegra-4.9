@@ -5891,8 +5891,8 @@ int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,
 	u32 *priv_registers;
 	u32 num_registers = 0;
 	int err = 0;
-	u32 potential_offsets = proj_scal_litter_num_gpcs_v() *
-		proj_scal_litter_num_tpc_per_gpc_v();
+	struct gr_gk20a *gr = &g->gr;
+	u32 potential_offsets = gr->max_gpc_count * gr->max_tpc_per_gpc_count;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
 
@@ -6190,6 +6190,7 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 	u32 marker_size = 0;
 	u32 control_register_stride = 0;
 	u32 perf_register_stride = 0;
+	struct gr_gk20a *gr = &g->gr;
 
 	/* Only have TPC registers in extended region, so if not a TPC reg,
 	   then return error so caller can look elsewhere. */
@@ -6329,7 +6330,7 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 	 * max tpc count for the gpcs,in 256b chunks.
 	 */
 
-	max_tpc_count = proj_scal_litter_num_tpc_per_gpc_v();
+	max_tpc_count = gr->max_tpc_per_gpc_count;
 
 	num_ext_gpccs_ext_buffer_segments = (u32)((max_tpc_count + 1) / 2);
 
@@ -6731,8 +6732,8 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 	void *ctx_ptr = NULL;
 	bool ch_is_curr_ctx, restart_gr_ctxsw = false;
 	u32 i, j, offset, v;
-	u32 max_offsets = proj_scal_litter_num_gpcs_v() *
-		proj_scal_litter_num_tpc_per_gpc_v();
+	struct gr_gk20a *gr = &g->gr;
+	u32 max_offsets = gr->max_gpc_count * gr->max_tpc_per_gpc_count;
 	u32 *offsets = NULL;
 	u32 *offset_addrs = NULL;
 	u32 ctx_op_nr, num_ctx_ops[2] = {num_ctx_wr_ops, num_ctx_rd_ops};

@@ -129,6 +129,7 @@ static struct fb_videomode tegra_dc_vga_mode = {
 static struct tegra_dc_mode override_disp_mode[TEGRA_DC_OUT_NULL + 1];
 
 static void _tegra_dc_controller_disable(struct tegra_dc *dc);
+static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq);
 
 static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out);
 #ifdef PM
@@ -3407,7 +3408,7 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 	mutex_unlock(&dc->lock);
 
 	if (need_disable)
-		tegra_dc_disable(dc);
+		tegra_dc_disable_irq_ops(dc, true);
 	return IRQ_HANDLED;
 }
 
@@ -4100,6 +4101,11 @@ static void _tegra_dc_disable(struct tegra_dc *dc)
 
 void tegra_dc_disable(struct tegra_dc *dc)
 {
+	tegra_dc_disable_irq_ops(dc, false);
+}
+
+static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq)
+{
 	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
 		return;
 
@@ -4139,7 +4145,8 @@ void tegra_dc_disable(struct tegra_dc *dc)
 	mutex_unlock(&dc->lp_lock);
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		mutex_unlock(&dc->one_shot_lock);
-	synchronize_irq(dc->irq);
+	if (!from_irq)
+		synchronize_irq(dc->irq);
 	trace_display_mode(dc, &dc->mode);
 
 	/* disable pending clks due to uncompleted frames */

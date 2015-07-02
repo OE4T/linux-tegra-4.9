@@ -56,6 +56,7 @@
 #define NVMAP_HANDLE_ZEROED_PAGES    (0x1ul << 5)
 #define NVMAP_HANDLE_PHYS_CONTIG     (0x1ul << 6)
 #define NVMAP_HANDLE_CACHE_SYNC      (0x1ul << 7)
+#define NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE      (0x1ul << 8)
 
 #if defined(__KERNEL__)
 

@@ -376,6 +376,9 @@ struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 			struct nvmap_client *client, int fd);
 
+void inner_cache_maint(unsigned int op, void *vaddr, size_t size);
+void outer_cache_maint(unsigned int op, phys_addr_t paddr, size_t size);
+
 int nvmap_alloc_handle(struct nvmap_client *client,
 		       struct nvmap_handle *h, unsigned int heap_mask,
 		       size_t align, u8 kind,
@@ -636,7 +639,8 @@ static inline bool nvmap_handle_track_dirty(struct nvmap_handle *h)
 	if (!h->heap_pgalloc)
 		return false;
 
-	return h->userflags & NVMAP_HANDLE_CACHE_SYNC;
+	return h->userflags & (NVMAP_HANDLE_CACHE_SYNC |
+			       NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE);
 }
 
 void nvmap_dmabuf_release_stashed_maps(struct dma_buf *dmabuf);

@@ -210,6 +210,20 @@ int nvmap_reserve_pages(struct nvmap_handle **handles, u32 *offsets, u32 *sizes,
 
 	if (op == NVMAP_PAGES_RESERVE)
 		nvmap_zap_handles(handles, offsets, sizes, nr);
+
+	if (!(handles[0]->userflags & NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE))
+		return 0;
+
+	if (op == NVMAP_PAGES_RESERVE) {
+		nvmap_do_cache_maint_list(handles, offsets, sizes,
+					  NVMAP_CACHE_OP_WB, nr);
+		for (i = 0; i < nr; i++)
+			nvmap_handle_mkclean(handles[i], offsets[i],
+					     sizes[i] ? sizes[i] : handles[i]->size);
+	} else if (!handles[0]->heap_pgalloc) {
+		nvmap_do_cache_maint_list(handles, offsets, sizes,
+					  NVMAP_CACHE_OP_WB_INV, nr);
+	}
 	return 0;
 }
 

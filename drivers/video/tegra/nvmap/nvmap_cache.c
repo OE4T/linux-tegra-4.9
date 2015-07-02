@@ -27,7 +27,7 @@
 
 #include "nvmap_priv.h"
 
-static void inner_cache_maint(unsigned int op, void *vaddr, size_t size)
+void inner_cache_maint(unsigned int op, void *vaddr, size_t size)
 {
 	if (op == NVMAP_CACHE_OP_WB_INV)
 		__dma_flush_range(vaddr, vaddr + size);
@@ -37,7 +37,7 @@ static void inner_cache_maint(unsigned int op, void *vaddr, size_t size)
 		__dma_map_area(vaddr, size, DMA_TO_DEVICE);
 }
 
-static void outer_cache_maint(unsigned int op, phys_addr_t paddr, size_t size)
+void outer_cache_maint(unsigned int op, phys_addr_t paddr, size_t size)
 {
 	if (op == NVMAP_CACHE_OP_WB_INV)
 		outer_flush_range(paddr, paddr + size);
@@ -354,6 +354,9 @@ int __nvmap_cache_maint(struct nvmap_client *client,
 	if (!handle)
 		return -EINVAL;
 
+	if (handle->userflags & NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE)
+		goto put_handle;
+
 	down_read(&current->mm->mmap_sem);
 
 	vma = find_vma(current->active_mm, (unsigned long)op->addr);
@@ -380,6 +383,7 @@ int __nvmap_cache_maint(struct nvmap_client *client,
 				     false);
 out:
 	up_read(&current->mm->mmap_sem);
+put_handle:
 	nvmap_handle_put(handle);
 	return err;
 }

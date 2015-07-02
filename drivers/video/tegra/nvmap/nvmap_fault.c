@@ -21,6 +21,7 @@
 #define pr_fmt(fmt)	"%s: " fmt, __func__
 
 #include <trace/events/nvmap.h>
+#include <linux/highmem.h>
 
 #include "nvmap_priv.h"
 
@@ -192,19 +193,41 @@ static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 		/* CMA memory would get here */
 		page = pfn_to_page(pfn);
 	} else {
+		void *kaddr;
+
 		offs >>= PAGE_SHIFT;
 		if (nvmap_page_reserved(priv->handle->pgalloc.pages[offs]))
 			return VM_FAULT_SIGBUS;
 		page = nvmap_to_page(priv->handle->pgalloc.pages[offs]);
 
-		if (nvmap_handle_track_dirty(priv->handle)) {
-			mutex_lock(&priv->handle->lock);
-			if (nvmap_page_mkdirty(&priv->handle->pgalloc.pages[offs]))
-				atomic_inc(&priv->handle->pgalloc.ndirty);
+		if (!nvmap_handle_track_dirty(priv->handle))
+			goto finish;
+
+		mutex_lock(&priv->handle->lock);
+		if (nvmap_page_dirty(priv->handle->pgalloc.pages[offs])) {
 			mutex_unlock(&priv->handle->lock);
+			goto finish;
 		}
+
+		/* inner cache maint */
+		kaddr  = kmap(page);
+		BUG_ON(!kaddr);
+		inner_cache_maint(NVMAP_CACHE_OP_WB_INV, kaddr, PAGE_SIZE);
+		kunmap(page);
+
+		if (priv->handle->flags & NVMAP_HANDLE_INNER_CACHEABLE)
+			goto make_dirty;
+
+		/* outer cache maint */
+		outer_cache_maint(NVMAP_CACHE_OP_WB_INV, page_to_phys(page),
+				  PAGE_SIZE);
+make_dirty:
+		nvmap_page_mkdirty(&priv->handle->pgalloc.pages[offs]);
+		atomic_inc(&priv->handle->pgalloc.ndirty);
+		mutex_unlock(&priv->handle->lock);
 	}
 
+finish:
 	if (page)
 		get_page(page);
 	vmf->page = page;

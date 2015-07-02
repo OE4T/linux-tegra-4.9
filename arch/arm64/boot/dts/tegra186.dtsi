@@ -105,14 +105,14 @@
 			   &gpu_as TEGRA_SWGROUP_CELLS(GPUB)
 			   &ape_as TEGRA_SWGROUP_CELLS(APE)
 			   &dc_as TEGRA_SWGROUP_CELLS3(DC, DC12, DCB)
-			   &ctx0_as 0x00000000 0x00100000
-			   &ctx1_as 0x00000000 0x00200000
-			   &ctx2_as 0x00000000 0x00400000
-			   &ctx3_as 0x00000000 0x00800000
-			   &ctx4_as 0x00000000 0x01000000
-			   &ctx5_as 0x00000000 0x02000000
-			   &ctx6_as 0x00000000 0x04000000
-			   &ctx7_as 0x00000000 0x08000000
+			   &ctx0_as 0x00000000 0x00200000
+			   &ctx1_as 0x00000000 0x00400000
+			   &ctx2_as 0x00000000 0x00800000
+			   &ctx3_as 0x00000000 0x01000000
+			   &ctx4_as 0x00000000 0x02000000
+			   &ctx5_as 0x00000000 0x04000000
+			   &ctx6_as 0x00000000 0x08000000
+			   &ctx7_as 0x00000000 0x10000000
 			   &common_as TEGRA_SWGROUP_CELLS(AFI)
 			   &common_as 0xFFFFFFFF 0xFFFFFFFF>;
 

@@ -105,68 +105,19 @@
 			   &gpu_as TEGRA_SWGROUP_CELLS(GPUB)
 			   &ape_as TEGRA_SWGROUP_CELLS(APE)
 			   &dc_as TEGRA_SWGROUP_CELLS3(DC, DC12, DCB)
-			   &ctx0_as 0x00000000 0x00200000
-			   &ctx1_as 0x00000000 0x00400000
-			   &ctx2_as 0x00000000 0x00800000
-			   &ctx3_as 0x00000000 0x01000000
-			   &ctx4_as 0x00000000 0x02000000
-			   &ctx5_as 0x00000000 0x04000000
-			   &ctx6_as 0x00000000 0x08000000
-			   &ctx7_as 0x00000000 0x10000000
+			   &host1x_ctx_as TEGRA_SWGROUP_CELLS(HOST1X_CTX0)
+			   &host1x_ctx_as TEGRA_SWGROUP_CELLS(HOST1X_CTX1)
+			   &host1x_ctx_as TEGRA_SWGROUP_CELLS(HOST1X_CTX2)
+			   &host1x_ctx_as TEGRA_SWGROUP_CELLS(HOST1X_CTX3)
+			   &host1x_ctx_as TEGRA_SWGROUP_CELLS(HOST1X_CTX4)
+			   &host1x_ctx_as TEGRA_SWGROUP_CELLS(HOST1X_CTX5)
+			   &host1x_ctx_as TEGRA_SWGROUP_CELLS(HOST1X_CTX6)
+			   &host1x_ctx_as TEGRA_SWGROUP_CELLS(HOST1X_CTX7)
 			   &common_as TEGRA_SWGROUP_CELLS(AFI)
 			   &common_as 0xFFFFFFFF 0xFFFFFFFF>;
 
 		address-space-prop {
-			ctx0_as: ctx0 {
-				iova-start = <0x0 0x5a500000>;
-				iova-size = <0x0 0x7FF00000>;
-				alignment = <0xFFFFF>;
-				num-pf-page = <0>;
-				gap-page = <1>;
-			};
-			ctx1_as: ctx1 {
-				iova-start = <0x0 0x5a500000>;
-				iova-size = <0x0 0x7FF00000>;
-				alignment = <0xFFFFF>;
-				num-pf-page = <0>;
-				gap-page = <1>;
-			};
-			ctx2_as: ctx2 {
-				iova-start = <0x0 0x5a500000>;
-				iova-size = <0x0 0x7FF00000>;
-				alignment = <0xFFFFF>;
-				num-pf-page = <0>;
-				gap-page = <1>;
-			};
-			ctx3_as: ctx3 {
-				iova-start = <0x0 0x5a500000>;
-				iova-size = <0x0 0x7FF00000>;
-				alignment = <0xFFFFF>;
-				num-pf-page = <0>;
-				gap-page = <1>;
-			};
-			ctx4_as: ctx4 {
-				iova-start = <0x0 0x5a500000>;
-				iova-size = <0x0 0x7FF00000>;
-				alignment = <0xFFFFF>;
-				num-pf-page = <0>;
-				gap-page = <1>;
-			};
-			ctx5_as: ctx5 {
-				iova-start = <0x0 0x5a500000>;
-				iova-size = <0x0 0x7FF00000>;
-				alignment = <0xFFFFF>;
-				num-pf-page = <0>;
-				gap-page = <1>;
-			};
-			ctx6_as: ctx6 {
-				iova-start = <0x0 0x5a500000>;
-				iova-size = <0x0 0x7FF00000>;
-				alignment = <0xFFFFF>;
-				num-pf-page = <0>;
-				gap-page = <1>;
-			};
-			ctx7_as: ctx7 {
+			host1x_ctx_as: host1x_ctx {
 				iova-start = <0x0 0x5a500000>;
 				iova-size = <0x0 0x7FF00000>;
 				alignment = <0xFFFFF>;

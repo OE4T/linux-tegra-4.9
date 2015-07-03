@@ -150,7 +150,7 @@ extern int tegra_dc_ext_cursor_clip(struct tegra_dc_ext_user *user,
 extern int tegra_dc_ext_control_init(void);
 
 extern int tegra_dc_ext_queue_hotplug(struct tegra_dc_ext_control *,
-				      int output);
+				      int output, bool connected);
 extern int tegra_dc_ext_queue_vblank(struct tegra_dc_ext_control *,
 				      int output, ktime_t timestamp);
 extern int tegra_dc_ext_queue_bandwidth_renegotiate(

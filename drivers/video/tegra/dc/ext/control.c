@@ -42,9 +42,9 @@ struct tegra_dc_ext_control_output_edid32 {
 
 static struct tegra_dc_ext_control g_control;
 
-int tegra_dc_ext_process_hotplug(int output)
+int tegra_dc_ext_process_hotplug(int output, bool connected)
 {
-	return tegra_dc_ext_queue_hotplug(&g_control, output);
+	return tegra_dc_ext_queue_hotplug(&g_control, output, connected);
 }
 
 int tegra_dc_ext_process_vblank(int output, ktime_t timestamp)

@@ -185,9 +185,6 @@ static void hdmi_disable_l(struct tegra_dc_hdmi_data *hdmi)
 	if (hdmi->dc->connected) {
 		pr_info("HDMI from connected to disconnected\n");
 		tegra_dc_disable(hdmi->dc);
-#ifdef CONFIG_TEGRA_DC_EXTENSIONS
-		tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
-#endif
 	}
 	hdmi->dc->connected = false;
 #ifdef CONFIG_ADF_TEGRA
@@ -196,7 +193,7 @@ static void hdmi_disable_l(struct tegra_dc_hdmi_data *hdmi)
 	tegra_fb_update_monspecs(hdmi->dc->fb, NULL, NULL);
 #endif
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
-	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
+	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id, false);
 #endif
 }
 
@@ -299,7 +296,7 @@ static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 	hdmi->dc->connected = true;
 
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
-	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
+	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id, true);
 #endif
 
 	if (unlikely(tegra_is_clk_enabled(hdmi->clk))) {

@@ -36,6 +36,8 @@
 
 #include "chip_support.h"
 
+#include "cg_regs.c"
+
 static struct host1x_device_info host1x04_info = {
 	.nb_channels	= T186_NVHOST_NUMCHANNELS,
 	.ch_base	= 0,
@@ -163,6 +165,7 @@ struct nvhost_device_data t18_msenc_info = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.clocks			= {{"nvenc", UINT_MAX, 0},
 				   {"emc", UINT_MAX} },
+	.engine_cg_regs		= t18x_nvenc_gating_registers,
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_flcn_finalize_poweron,
 	.moduleid		= NVHOST_MODULE_MSENC,
@@ -186,6 +189,7 @@ struct nvhost_device_data t18_nvdec_info = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.clocks			= {{"nvdec", UINT_MAX, 0},
 				   {"emc", UINT_MAX} },
+	.engine_cg_regs		= t18x_nvdec_gating_registers,
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_nvdec_finalize_poweron,
 	.moduleid		= NVHOST_MODULE_NVDEC,
@@ -211,6 +215,7 @@ struct nvhost_device_data t18_nvjpg_info = {
 	.can_powergate		= true,
 	.clocks			= { {"nvjpg", UINT_MAX, 0},
 				    {"emc", UINT_MAX} },
+	.engine_cg_regs		= t18x_nvjpg_gating_registers,
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_flcn_finalize_poweron,
 	.moduleid		= NVHOST_MODULE_NVJPG,
@@ -229,6 +234,7 @@ struct nvhost_device_data t18_tsec_info = {
 	.class			= NV_TSEC_CLASS_ID,
 	.clocks			= {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
 				   {"emc"} },
+	.engine_cg_regs		= t18x_tsec_gating_registers,
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.keepalive		= true,
@@ -249,6 +255,7 @@ struct nvhost_device_data t18_tsecb_info = {
 	.class			= NV_TSECB_CLASS_ID,
 	.clocks			= {{"tsecb", UINT_MAX, 0, TEGRA_MC_CLIENT_TSECB},
 				   {"emc"} },
+	.engine_cg_regs		= t18x_tsec_gating_registers,
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.keepalive		= true,
@@ -271,6 +278,7 @@ struct nvhost_device_data t18_vic_info = {
 				   NVHOST_MODULE_ID_CBUS_FLOOR},
 				   {"emc_shared", 0,
 				   NVHOST_MODULE_ID_EMC_SHARED}, {} },
+	.engine_cg_regs		= t18x_vic_gating_registers,
 	.version		= NVHOST_ENCODE_FLCN_VER(4, 0),
 #ifdef TEGRA_POWERGATE_VIC
 	.powergate_id	= TEGRA_POWERGATE_VIC,

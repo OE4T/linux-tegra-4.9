@@ -209,6 +209,8 @@
 			      <&{/sdhci@3400000}       TEGRA_SWGROUP_SDMMC1A>,
 			      <&{/bpmp}			TEGRA_SWGROUP_BPMP>,
 			      <&{/dma@2600000}		TEGRA_SWGROUP_AXIS>,
+			      <&{/xhci@0x03530000}      TEGRA_SWGROUP_XUSB_HOST>,
+			      <&{/xudc@0x03550000}      TEGRA_SWGROUP_XUSB_DEV>,
 			      <&host1x_ctx0		TEGRA_SWGROUP_HOST1X_CTX0>,
 			      <&host1x_ctx1		TEGRA_SWGROUP_HOST1X_CTX1>,
 			      <&host1x_ctx2		TEGRA_SWGROUP_HOST1X_CTX2>,

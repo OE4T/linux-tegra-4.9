@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -114,7 +114,7 @@ static void tegra_dc_rgb_enable(struct tegra_dc *dc)
 	if (tegra_platform_is_fpga())
 		out_sel_pintable[3*2+1] = 0x00200000;
 
-	if (dc->out && dc->out->out_sel_configs) {
+	if (dc->out->out_sel_configs) {
 		u8 *out_sels = dc->out->out_sel_configs;
 		for (i = 0; i < dc->out->n_out_sel_configs; i++) {
 			switch (out_sels[i]) {

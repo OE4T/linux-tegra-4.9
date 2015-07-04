@@ -253,7 +253,7 @@ void gm20b_pmu_load_lsf(struct gk20a *g, u32 falcon_id, u32 flags)
 	return;
 }
 
-int gm20b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
+static int gm20b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 {
 	u32  err = 0;
 	u32 flags = PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_YES;

@@ -39,6 +39,7 @@
 		spi0 = &spi0;
 		spi2 = &spi2;
 		spi3 = &spi3;
+		qspi6 = &qspi6;
 	};
 
 	reserved-memory {
@@ -859,6 +860,22 @@
 		dmas = <&gpcdma 18>, <&gpcdma 18>;
 		dma-names = "rx", "tx";
 		nvidia,clk-parents = "pll_p", "clk_m";
+		status = "disabled";
+	};
+	qspi6: spi@0x3270000 {
+		compatible = "nvidia,tegra186-qspi";
+		reg = <0x0 0x3270000 0x0 0x10000>;
+		interrupts = < 0 35 0x04 >;
+		#address-cells = <1>;
+		#size-cells = <0>;
+                nvidia,dma-request-selector = <&gpcdma 5>;
+		iommus = <&smmu TEGRA_SWGROUP_AXIS>;
+		dmas = <&gpcdma 5>, <&gpcdma 5>;
+		dma-names = "rx", "tx";
+		clocks = <&tegra_car TEGRA186_CLK_QSPI>;
+		clock-names = "qspi";
+		resets = <&tegra_car TEGRA186_RESET_QSPI>;
+		reset-names = "qspi";
 		status = "disabled";
 	};
 

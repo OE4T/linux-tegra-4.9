@@ -189,6 +189,10 @@
 		status = "okay";
 	};
 
+	spi@0x3270000 {
+		status = "okay";
+	};
+
 	serial@3100000 {
 		status = "okay";
 	};

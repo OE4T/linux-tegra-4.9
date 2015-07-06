@@ -41,6 +41,8 @@
 		serial4 = &uarte;
 		serial5 = &uartf;
 		serial6 = &uartg;
+		qspi6 = &qspi6;
+
 	};
 
 	cpus {
@@ -216,6 +218,10 @@
 	};
 
 	dma@2600000 {
+		status = "okay";
+	};
+
+	spi@0x3270000 {
 		status = "okay";
 	};
 

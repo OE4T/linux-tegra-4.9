@@ -31,7 +31,7 @@
 #include <sound/tegra_audio.h>
 #endif
 
-struct ahub_unit_fpga ahub_unit_fpga_private;
+static struct ahub_unit_fpga ahub_unit_fpga_private;
 
 static void __iomem *pinmux_base = IO_ADDRESS(NV_ADDRESS_MAP_APB_PP_BASE);
 static void __iomem *ahub_gpio_base = IO_ADDRESS(NV_ADDRESS_MAP_APE_AHUB_GPIO_BASE);

@@ -454,6 +454,13 @@
 #define  CURSOR_DST_BLEND_FACTOR_SELECT(x) ((x) << 16)
 #define  CURSOR_SRC_BLEND_FACTOR_SELECT(x) ((x) << 8)
 #define  CURSOR_ALPHA(a)		((a) & 0xff)
+#define DC_DISP_CORE_HEAD_SET_CONTROL_CURSOR	0x43b
+#define  CURSOR_FORMAT_T_A1R5G5B5		(233)
+#define  CURSOR_FORMAT_T_A8R8G8B8		(207)
+#define  SET_CONTROL_CURSOR_FORMAT(x)		(((x) & 0xFF) << 1)
+#define  SET_CONTROL_CURSOR_FORMAT_MASK		(0xFF << 1)
+#define  SET_CONTROL_CURSOR_DE_GAMMA(x)		(((x) & 0x3) << 27)
+#define  SET_CONTROL_CURSOR_DE_GAMMA_MASK	(0x3 << 27)
 
 #define DC_WIN_COLOR_PALETTE(x)			(0x500 + (x))
 

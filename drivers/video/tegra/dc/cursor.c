@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/cursor.c
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * Author:
  *  Robert Morell <rmorell@nvidia.com>
@@ -32,6 +32,7 @@
 static inline int cursor_size_value(enum tegra_dc_cursor_size size, u32 *val)
 {
 	u32 scratch = 0;
+
 	if (!val)
 		val = &scratch;
 	switch (size) {
@@ -54,16 +55,17 @@ static inline int cursor_size_value(enum tegra_dc_cursor_size size, u32 *val)
 	return -EINVAL;
 }
 
-/* modify val with cursor format.
+/* modify val with cursor blend format.
  * ignore val if it is NULL.
  * return non-zero on error, and clear val. */
-static inline u32 cursor_format_value(enum tegra_dc_cursor_format format,
-	u32 *val)
+static inline u32 cursor_blendfmt_value
+	(enum tegra_dc_cursor_blend_format blendfmt, u32 *val)
 {
 	u32 scratch = 0;
+
 	if (!val)
 		val = &scratch;
-	switch (format) {
+	switch (blendfmt) {
 	case TEGRA_DC_CURSOR_FORMAT_2BIT_LEGACY:
 		/* MODE_SELECT_LEGACY */
 		*val |= CURSOR_MODE_SELECT(0);
@@ -76,8 +78,8 @@ static inline u32 cursor_format_value(enum tegra_dc_cursor_format format,
 		*val |= CURSOR_MODE_SELECT(1);
 #endif
 # if !defined(CONFIG_ARCH_TEGRA_11x_SOC)
-		/* CURSOR_ALPHA, K1_TIMES_SRC, NEG_K1_TIMES_SRC */
-		*val |= CURSOR_ALPHA(255) | CURSOR_DST_BLEND_FACTOR_SELECT(2);
+		/* K1_TIMES_SRC, NEG_K1_TIMES_SRC */
+		*val |= CURSOR_DST_BLEND_FACTOR_SELECT(2);
 		*val |= CURSOR_SRC_BLEND_FACTOR_SELECT(1);
 # endif
 		return 0;
@@ -87,7 +89,7 @@ static inline u32 cursor_format_value(enum tegra_dc_cursor_format format,
 	!defined(CONFIG_ARCH_TEGRA_11x_SOC)
 	case TEGRA_DC_CURSOR_FORMAT_RGBA_PREMULT_ALPHA:
 		*val |= CURSOR_MODE_SELECT(1);
-		*val |= CURSOR_ALPHA(255) | CURSOR_DST_BLEND_FACTOR_SELECT(2);
+		*val |= CURSOR_DST_BLEND_FACTOR_SELECT(2);
 		*val |= CURSOR_SRC_BLEND_FACTOR_SELECT(0);
 		return 0;
 #endif
@@ -95,18 +97,40 @@ static inline u32 cursor_format_value(enum tegra_dc_cursor_format format,
 	case TEGRA_DC_CURSOR_FORMAT_RGBA_XOR:
 		/* MODE_SELECT_NORMAL */
 		*val |= CURSOR_COMP_MODE(1);
-		/* CURSOR_ALPHA, K1, NEG_K1_TIMES_SRC */
-		*val |= CURSOR_ALPHA(255) | CURSOR_DST_BLEND_FACTOR_SELECT(1);
+		/* K1, NEG_K1_TIMES_SRC */
+		*val |= CURSOR_DST_BLEND_FACTOR_SELECT(1);
 		*val |= CURSOR_SRC_BLEND_FACTOR_SELECT(1);
 		return 0;
 #endif
 	default:
-		pr_err("%s: invalid format 0x%x\n", __func__, format);
+		pr_err("%s: invalid blend format 0x%08x\n", __func__, blendfmt);
 		break;
 	}
 	*val = 0;
 	return -EINVAL;
 }
+
+static inline u32 cursor_alpha_value(struct tegra_dc *dc, u32 *val)
+{
+	u32 retval = 0;
+	u32 data;
+
+	data = *val & (~TEGRA_DC_EXT_CURSOR_FORMAT_ALPHA_MSK);
+	if (!val | !dc)
+		return -EINVAL;
+	if (dc->cursor.alpha > TEGRA_DC_EXT_CURSOR_FORMAT_ALPHA_MAX)
+		return -EINVAL;
+
+# if defined(CONFIG_TEGRA_NVDISPLAY)
+	data |= dc->cursor.alpha;
+# else  /* CONFIG_TEGRA_NVDISPLAY */
+	data |= CURSOR_ALPHA(TEGRA_DC_EXT_CURSOR_FORMAT_ALPHA_MAX);
+# endif /* CONFIG_TEGRA_NVDISPLAY */
+
+	*val = data;
+	return retval;
+}
+
 
 static unsigned int set_cursor_start_addr(struct tegra_dc *dc,
 	enum tegra_dc_cursor_size size, dma_addr_t phys_addr)
@@ -195,6 +219,7 @@ static int set_cursor_activation_control(struct tegra_dc *dc)
 static int set_cursor_enable(struct tegra_dc *dc, bool enable)
 {
 	u32 val = tegra_dc_readl(dc, DC_DISP_DISP_WIN_OPTIONS);
+
 	if (!!(val & CURSOR_ENABLE) != enable) {
 		val &= ~CURSOR_ENABLE;
 		if (enable)
@@ -206,23 +231,30 @@ static int set_cursor_enable(struct tegra_dc *dc, bool enable)
 	return 0;
 }
 
-static int set_cursor_blend(struct tegra_dc *dc, u32 format)
+static int set_cursor_blend(struct tegra_dc *dc, u32 blendfmt)
 {
 	u32 val = tegra_dc_readl(dc, DC_DISP_BLEND_CURSOR_CONTROL);
-
 	u32 newval = WINH_CURS_SELECT(0);
+	int ret = 0;
 
 	/* this should not fail, as tegra_dc_cursor_image() checks the format */
-	if (WARN(cursor_format_value(format, &newval), "invalid cursor format"))
+	if (WARN(cursor_blendfmt_value(blendfmt, &newval),
+		"invalid cursor blend format"))
+		return 0;
+	if (WARN(cursor_alpha_value(dc, &newval),
+		"invalid cursor alpha"))
 		return 0;
 
 	if (val != newval) {
 		tegra_dc_writel(dc, newval, DC_DISP_BLEND_CURSOR_CONTROL);
-		return 1;
+		ret = 1;
 	}
-	dc->cursor.format = format;
+	dc->cursor.blendfmt = blendfmt;
 
-	return 0;
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+/*	nvdisp_set_cursor_colorfmt(dc);*/ /* color fmt */
+#endif
+	return ret;
 }
 
 static int set_cursor_fg_bg(struct tegra_dc *dc, u32 fg, u32 bg)
@@ -274,7 +306,7 @@ static int tegra_dc_cursor_program(struct tegra_dc *dc)
 	/* these checks are redundant */
 	if (cursor_size_value(dc->cursor.size, NULL))
 		return -EINVAL;
-	if (cursor_format_value(dc->cursor.format, NULL))
+	if (cursor_blendfmt_value(dc->cursor.blendfmt, NULL))
 		return -EINVAL;
 
 	mutex_lock(&dc->lock);
@@ -290,7 +322,7 @@ static int tegra_dc_cursor_program(struct tegra_dc *dc)
 	need_general_update |= set_cursor_fg_bg(dc,
 		dc->cursor.fg, dc->cursor.bg);
 
-	need_general_update |= set_cursor_blend(dc, dc->cursor.format);
+	need_general_update |= set_cursor_blend(dc, dc->cursor.blendfmt);
 
 	need_general_update |= set_cursor_enable(dc, dc->cursor.enabled);
 
@@ -309,22 +341,35 @@ static int tegra_dc_cursor_program(struct tegra_dc *dc)
 }
 
 int tegra_dc_cursor_image(struct tegra_dc *dc,
-	enum tegra_dc_cursor_format format, enum tegra_dc_cursor_size size,
-	u32 fg, u32 bg, dma_addr_t phys_addr)
+	enum tegra_dc_cursor_blend_format blendfmt,
+	enum tegra_dc_cursor_size size,
+	u32 fg, u32 bg, dma_addr_t phys_addr,
+	enum tegra_dc_cursor_color_format colorfmt, u32 alpha, u32 flags)
 {
 	if (cursor_size_value(size, NULL))
 		return -EINVAL;
-
-	if (cursor_format_value(format, NULL))
+	if (cursor_blendfmt_value(blendfmt, NULL))
 		return -EINVAL;
 
 	mutex_lock(&dc->lock);
 	dc->cursor.fg = fg;
 	dc->cursor.bg = bg;
 	dc->cursor.size = size;
-	dc->cursor.format = format;
+	dc->cursor.blendfmt = blendfmt;
+	dc->cursor.colorfmt = colorfmt;
 	dc->cursor.phys_addr = phys_addr;
 	dc->cursor.dirty = true;
+
+	if (TEGRA_DC_EXT_CURSOR_COLORFMT_FLAGS(flags) ==
+		TEGRA_DC_EXT_CURSOR_COLORFMT_LEGACY) {
+		alpha    = TEGRA_DC_EXT_CURSOR_FORMAT_ALPHA_MAX;
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+		dc->cursor.colorfmt = TEGRA_DC_EXT_CURSOR_COLORFMT_A8R8G8B8;
+#else  /*CONFIG_TEGRA_NVDISPLAY*/
+		dc->cursor.colorfmt = TEGRA_DC_EXT_CURSOR_COLORFMT_R8G8B8A8;
+#endif /*CONFIG_TEGRA_NVDISPLAY*/
+	}
+	dc->cursor.alpha = alpha;
 	mutex_unlock(&dc->lock);
 
 	return tegra_dc_cursor_program(dc);

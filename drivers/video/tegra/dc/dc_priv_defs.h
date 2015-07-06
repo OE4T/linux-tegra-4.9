@@ -150,12 +150,20 @@ enum tegra_dc_cursor_size {
 	TEGRA_DC_CURSOR_SIZE_256X256 = 3,
 };
 
-enum tegra_dc_cursor_format {
+enum tegra_dc_cursor_blend_format {
 	TEGRA_DC_CURSOR_FORMAT_2BIT_LEGACY = 0,
 	TEGRA_DC_CURSOR_FORMAT_RGBA_NON_PREMULT_ALPHA = 1,
 	TEGRA_DC_CURSOR_FORMAT_RGBA_PREMULT_ALPHA = 3,
 	TEGRA_DC_CURSOR_FORMAT_RGBA_XOR = 4,
 };
+
+enum tegra_dc_cursor_color_format {
+	TEGRA_DC_CURSOR_COLORFMT_LEGACY,   /* 2bpp   */
+	TEGRA_DC_CURSOR_COLORFMT_R8G8B8A8, /* normal */
+	TEGRA_DC_CURSOR_COLORFMT_A1R5G5B5,
+	TEGRA_DC_CURSOR_COLORFMT_A8R8G8B8,
+};
+
 
 struct tegra_dc {
 	struct platform_device		*ndev;
@@ -306,7 +314,9 @@ struct tegra_dc {
 		int x;
 		int y;
 		enum tegra_dc_cursor_size size;
-		enum tegra_dc_cursor_format format;
+		enum tegra_dc_cursor_blend_format blendfmt;
+		enum tegra_dc_cursor_color_format colorfmt;
+		u32 alpha;
 	} cursor;
 
 	int	ctrl_num;

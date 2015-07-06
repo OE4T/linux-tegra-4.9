@@ -612,8 +612,10 @@ s32 tegra_dc_calc_v_front_porch(struct tegra_dc_mode *mode,
 
 /* defined in cursor.c, used in dc.c and ext/cursor.c */
 int tegra_dc_cursor_image(struct tegra_dc *dc,
-	enum tegra_dc_cursor_format format, enum tegra_dc_cursor_size size,
-	u32 fg, u32 bg, dma_addr_t phys_addr);
+	enum tegra_dc_cursor_blend_format blendfmt,
+	enum tegra_dc_cursor_size size,
+	u32 fg, u32 bg, dma_addr_t phys_addr,
+	enum tegra_dc_cursor_color_format colorfmt, u32 alpha, u32 flags);
 int tegra_dc_cursor_set(struct tegra_dc *dc, bool enable, int x, int y);
 int tegra_dc_cursor_clip(struct tegra_dc *dc, unsigned clip);
 int tegra_dc_cursor_suspend(struct tegra_dc *dc);
@@ -655,6 +657,7 @@ struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
 
 void nvdisp_dc_feature_register(struct tegra_dc *dc);
 int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y);
+int nvdisp_set_cursor_colorfmt(struct tegra_dc *dc);
 int tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
 					struct tegra_dc_lut *lut);
 int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *lut);

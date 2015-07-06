@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/cursor.c
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -66,6 +66,7 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 	dma_addr_t phys_addr;
 	int ret;
 	u32 extformat = TEGRA_DC_EXT_CURSOR_FORMAT_FLAGS(args->flags);
+	u32 clrformat = TEGRA_DC_EXT_CURSOR_COLORFMT_FLAGS(args->flags);
 	u32 fg = CURSOR_COLOR(args->foreground.r,
 			      args->foreground.g,
 			      args->foreground.b);
@@ -74,7 +75,8 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 			      args->background.b);
 	unsigned extsize = TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE(args->flags);
 	enum tegra_dc_cursor_size size;
-	enum tegra_dc_cursor_format format;
+	enum tegra_dc_cursor_blend_format blendfmt;
+	enum tegra_dc_cursor_color_format colorfmt;
 
 	switch (extsize) {
 	case TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_32x32:
@@ -95,13 +97,32 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 
 	switch (extformat) {
 	case TEGRA_DC_EXT_CURSOR_FORMAT_2BIT_LEGACY:
-		format = TEGRA_DC_CURSOR_FORMAT_2BIT_LEGACY;
+		blendfmt = TEGRA_DC_CURSOR_FORMAT_2BIT_LEGACY;
 		break;
 	case TEGRA_DC_EXT_CURSOR_FORMAT_RGBA_NON_PREMULT_ALPHA:
-		format = TEGRA_DC_CURSOR_FORMAT_RGBA_NON_PREMULT_ALPHA;
+		blendfmt = TEGRA_DC_CURSOR_FORMAT_RGBA_NON_PREMULT_ALPHA;
 		break;
 	case TEGRA_DC_EXT_CURSOR_FORMAT_RGBA_PREMULT_ALPHA:
-		format = TEGRA_DC_CURSOR_FORMAT_RGBA_PREMULT_ALPHA;
+		blendfmt = TEGRA_DC_CURSOR_FORMAT_RGBA_PREMULT_ALPHA;
+		break;
+	case TEGRA_DC_EXT_CURSOR_FORMAT_RGBA_XOR:
+		blendfmt = TEGRA_DC_CURSOR_FORMAT_RGBA_XOR;
+		break;
+	default:
+		return -EINVAL;
+	}
+	switch (clrformat) {
+	case TEGRA_DC_CURSOR_COLORFMT_LEGACY:
+		colorfmt = legacy;
+		break;
+	case TEGRA_DC_CURSOR_COLORFMT_R8G8B8A8: /* normal */
+		colorfmt = r8g8b8a8;
+		break;
+	case  TEGRA_DC_CURSOR_COLORFMT_A1R5G5B5:
+		colorfmt = a1r5g5b5;
+		break;
+	case TEGRA_DC_CURSOR_COLORFMT_A8R8G8B8:
+		colorfmt = a8r8g8b8;
 		break;
 	default:
 		return -EINVAL;
@@ -127,7 +148,8 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 
 	ext->cursor.cur_handle = handle;
 
-	ret = tegra_dc_cursor_image(dc, format, size, fg, bg, phys_addr);
+	ret = tegra_dc_cursor_image(dc, blendfmt, size, fg, bg, phys_addr,
+				colorfmt, args->alpha, args->flags);
 
 	mutex_unlock(&ext->cursor.lock);
 

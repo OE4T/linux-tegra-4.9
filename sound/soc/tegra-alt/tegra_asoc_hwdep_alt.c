@@ -80,7 +80,7 @@ static int tegra_asoc_hwdep_update_mapping_table(struct snd_soc_card *card,
 		if (amx_adx_dai->driver->ops->set_channel_map)
 			err = amx_adx_dai->driver->ops->set_channel_map(
 				amx_adx_dai, map_info->num_byte_map, map,
-				0, 0);
+				0, NULL);
 
 		/* update dai_idx to set the CIF of AMX INPUT DAI */
 		dai_idx = AMX_ADX_LINK_IDX(amx_in_dai_link,
@@ -92,7 +92,7 @@ static int tegra_asoc_hwdep_update_mapping_table(struct snd_soc_card *card,
 
 		if (amx_adx_dai->driver->ops->set_channel_map)
 			err = amx_adx_dai->driver->ops->set_channel_map(
-				amx_adx_dai, 0, 0,
+				amx_adx_dai, 0, NULL,
 				map_info->num_byte_map, map);
 
 		/* update dai_idx to set the CIF of ADX OUTPUT DAI */

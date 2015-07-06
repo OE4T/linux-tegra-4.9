@@ -27,11 +27,6 @@
 
 extern const struct file_operations tegra_nvdec_ctrl_ops;
 
-#define MC_BASE_ADDR				0x70019000
-#define MC_SECURITY_CARVEOUT1_BOM_0		0xc0c
-#define MC_SECURITY_CARVEOUT1_BOM_HI_0		0xc10
-#define MC_SECURITY_CARVEOUT1_SIZE_128KB_0	0xc14
-
 int nvhost_nvdec_finalize_poweron(struct platform_device *dev);
 int nvhost_nvdec_prepare_poweroff(struct platform_device *dev);
 int nvhost_nvdec_t210_finalize_poweron(struct platform_device *dev);

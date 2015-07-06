@@ -35,6 +35,8 @@
 #include <linux/tegra_pm_domains.h>
 #include <linux/nvhost_nvdec_ioctl.h>
 
+#include <linux/platform/tegra/mc.h>
+
 #include "dev.h"
 #include "nvdec.h"
 #include "nvhost_vm.h"
@@ -247,22 +249,18 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 
 		/* no wpr firmware does not need these */
 		if (!skip_wpr_settings) {
-			u32 wpr_addr_lo = readl(IO_TO_VIRT((
-					MC_BASE_ADDR +
-					MC_SECURITY_CARVEOUT1_BOM_0)));
-			u32 wpr_addr_hi = readl(IO_TO_VIRT((
-					MC_BASE_ADDR +
-					MC_SECURITY_CARVEOUT1_BOM_HI_0)));
+			struct mc_carveout_info inf;
+			int ret;
+
+			ret = mc_get_carveout_info(&inf, NULL,
+						   MC_SECURITY_CARVEOUT1);
+			if (ret)
+				return -ENOMEM;
 
 			/* Put the 40-bit addr formed by wpr_addr_hi and
 			   wpr_addr_lo divided by 256 into 32-bit wpr_addr */
-			shared_data.wpr_addr =
-							(wpr_addr_hi << 24) +
-							(wpr_addr_lo >> 8);
-			shared_data.wpr_size = readl(IO_TO_VIRT((
-					MC_BASE_ADDR +
-					MC_SECURITY_CARVEOUT1_SIZE_128KB_0)));
-			shared_data.wpr_size *= 128*1024; /* multiply 128k */
+			shared_data.wpr_addr = inf.base >> 8;
+			shared_data.wpr_size = inf.size; /* Already in bytes. */
 		}
 		memcpy(&(m[0]->mapped[fb_data_offset + initial_dmem_offset]),
 			&shared_data, sizeof(shared_data));

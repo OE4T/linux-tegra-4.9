@@ -403,7 +403,6 @@
 		nvidia,ulpicap = <0>; /* No ulpi support. can we remove */
 		nvidia,portmap = <0x0e03>;
 		nvidia,common_padctl = <&xusb_pad_ctl>;
-		nvidia,boost_cpu_frequency = <1600>;
 		status = "okay";
 	};
 

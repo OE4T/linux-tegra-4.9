@@ -36,7 +36,7 @@
 #include "tegra186_asrc_alt.h"
 
 #define DRV_NAME "tegra186-asrc"
-
+#define ASRC_ARAM_START_ADDR 0x3F800000
 #define RATIO_ARAD	0
 #define RATIO_SW	1
 
@@ -867,7 +867,8 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 
 	/* Set global starting address of the buffer in ARAM */
 	regmap_write(asrc->regmap,
-		TEGRA186_ASRC_GLOBAL_SCRATCH_ADDR, 0x3F808000);
+		TEGRA186_ASRC_GLOBAL_SCRATCH_ADDR,
+		ASRC_ARAM_START_ADDR);
 
 	/* set global enable */
 	regmap_write(asrc->regmap,

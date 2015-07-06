@@ -411,6 +411,63 @@ fs_initcall(mce_debugfs_init);
 
 #endif
 
+static phys_addr_t sregdump_phys; /* secure register addr to access */
+
+u32 __weak secure_readl(u32 addr)
+{
+	pr_info("%s() Not implemented\n", __func__);
+	return 0;
+}
+void __weak secure_writel(u32 val, u32 addr)
+{
+	pr_info("%s() Not implemented\n", __func__);
+}
+
+static ssize_t sregdump_write(struct file *file,
+			      const char __user *user_buf,
+			      size_t count, loff_t *ppos)
+{
+	u32 val;
+
+	if (kstrtou32_from_user(user_buf, count, 16, &val))
+		return -EINVAL;
+	pr_debug("%s() val=%x pa=%pa\n", __func__, val, &sregdump_phys);
+	secure_writel(val, sregdump_phys);
+	return count;
+}
+
+static int sregdump_show(struct seq_file *s, void *unused)
+{
+	seq_printf(s, "%x\n", secure_readl(sregdump_phys));
+	return 0;
+}
+
+static int sregdump_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, sregdump_show, inode->i_private);
+}
+
+static const struct file_operations sregdump_fops = {
+	.open		= sregdump_open,
+	.read		= seq_read,
+	.write		= sregdump_write,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static __init int debugfs_create_sregdump(void)
+{
+	struct dentry *root;
+
+	root = debugfs_create_dir("sregdump", NULL);
+	if (!root)
+		return -ENOMEM;
+	debugfs_create_x64("addr", 0666, root, &sregdump_phys);
+	debugfs_create_file("data", 0666, root, NULL, &sregdump_fops);
+	return 0;
+}
+late_initcall(debugfs_create_sregdump);
+
 static __init int tegra_mce_init(void)
 {
 	u32 major = 0;

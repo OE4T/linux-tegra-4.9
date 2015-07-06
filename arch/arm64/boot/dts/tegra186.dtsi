@@ -771,7 +771,7 @@
 	i2c1: i2c@3160000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		compatible = "nvidia,tegra210-i2c";
+		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x3160000 0x0 0x100>;
 		interrupts = <0 25 0x04>;
 		scl-gpio = <&gpio 21 0>;
@@ -787,7 +787,7 @@
 	i2c3: i2c@3180000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		compatible = "nvidia,tegra210-i2c";
+		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x3180000 0x0 0x100>;
 		interrupts = <0 27 0x04>;
 		scl-gpio = <&gpio 114 0>;
@@ -803,7 +803,7 @@
 	i2c4: i2c@3190000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		compatible = "nvidia,tegra210-i2c";
+		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x3190000 0x0 0x100>;
 		interrupts = <0 28 0x04>;
 		status = "okay";
@@ -825,7 +825,7 @@
 	i2c6: i2c@31b0000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		compatible = "nvidia,tegra210-i2c";
+		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x31b0000 0x0 0x100>;
 		interrupts = <0 30 0x04>;
 		status = "disabled";
@@ -839,7 +839,7 @@
 	i2c7: i2c@31c0000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		compatible = "nvidia,tegra210-i2c";
+		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x31c0000 0x0 0x100>;
 		interrupts = <0 31 0x04>;
 		scl-gpio = <&gpio 88 0>;
@@ -855,7 +855,7 @@
 	i2c9: i2c@31e0000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		compatible = "nvidia,tegra210-i2c";
+		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x31e0000 0x0 0x100>;
 		interrupts = <0 33 0x04>;
 		scl-gpio = <&gpio 90 0>;

@@ -1043,6 +1043,9 @@ static int fiq_debugger_probe(struct platform_device *pdev)
 	if (pdev->id >= MAX_FIQ_DEBUGGER_PORTS)
 		return -EINVAL;
 
+	if (!pdata)
+		return -EINVAL;
+
 	if (!pdata->uart_getc || !pdata->uart_putc)
 		return -EINVAL;
 	if ((pdata->uart_enable && !pdata->uart_disable) ||

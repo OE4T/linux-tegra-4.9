@@ -529,13 +529,22 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 
 	for (i = 0; i < n; i++) {
 		struct tegra_dc_win *win = windows[i];
-		struct tegra_dc_win *dc_win = tegra_dc_get_window(dc, win->idx);
+		struct tegra_dc_win *dc_win;
 
-		if (!win || !dc_win) {
-			dev_err(&dc->ndev->dev, "Invalid window %d to update\n",
-				n);
+		if (!win) {
+			dev_err(&dc->ndev->dev,
+				"Invalid window %d to update\n", i);
 			return -EINVAL;
 		}
+
+		dc_win = tegra_dc_get_window(dc, win->idx);
+
+		if (!dc_win) {
+			dev_err(&dc->ndev->dev,
+				"Cannot get window %d to update\n", i);
+			return -EINVAL;
+		}
+
 		if (!WIN_IS_ENABLED(win)) {
 			dc_win->dirty = no_vsync ? 0 : 1;
 			/* TODO: disable this window */

@@ -654,20 +654,20 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, mixer);
 
 	mixer->soc_data = soc_data;
-	mixer->gain_coeff[0] = 0x2003EEC;
-	mixer->gain_coeff[1] = 0x38EBC;
-	mixer->gain_coeff[2] = 0xFFFFFEBB;
-	mixer->gain_coeff[3] = 0x1414253;
-	mixer->gain_coeff[4] = 0xF6CEC;
-	mixer->gain_coeff[5] = 0xFFFFC9DE;
-	mixer->gain_coeff[6] = 0xC4B873;
-	mixer->gain_coeff[7] = 0x422F76;
-	mixer->gain_coeff[8] = 0xFFFA021C;
+	mixer->gain_coeff[0] = 0;
+	mixer->gain_coeff[1] = 0;
+	mixer->gain_coeff[2] = 0;
+	mixer->gain_coeff[3] = 0;
+	mixer->gain_coeff[4] = 0;
+	mixer->gain_coeff[5] = 0;
+	mixer->gain_coeff[6] = 0;
+	mixer->gain_coeff[7] = 0x1000000;
+	mixer->gain_coeff[8] = 0;
 	mixer->gain_coeff[9] = 0x10000;
-	mixer->gain_coeff[10] = 0x1A1;
-	mixer->gain_coeff[11] = 0x823;
-	mixer->gain_coeff[12] = 0x3e80;
-	mixer->gain_coeff[13] = 0x83126E;
+	mixer->gain_coeff[10] = 0;
+	mixer->gain_coeff[11] = 0;
+	mixer->gain_coeff[12] = 0x400;
+	mixer->gain_coeff[13] = 0x8000000;
 
 	for (i = 0; i < TEGRA210_MIXER_AXBAR_RX_MAX; i++)
 		mixer->gain_value[i] = 0x10000;

@@ -1325,10 +1325,12 @@ static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
 	tegra_dc_writel(dc, reg_val | WRITE_MUX_ASSEMBLY, DC_CMD_STATE_ACCESS);
 #endif /* CONFIG_TEGRA_NVDISPLAY */
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	if (tegra_platform_is_fpga()) {
 		tegra_dc_writel(dc, 0, DC_DISP_DISP_CLOCK_CONTROL);
 		tegra_dc_writel(dc, 0xe, DC_DISP_DC_MCCIF_FIFOCTRL);
 	}
+#endif
 
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_dc_writel(dc, VSYNC_H_POSITION(1), DC_DISP_DISP_TIMING_OPTIONS);

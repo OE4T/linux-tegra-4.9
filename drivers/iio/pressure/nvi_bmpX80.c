@@ -1259,7 +1259,7 @@ struct sensor_cfg bmp_cfg_dflt[] = {
 		},
 		.delay_us_min		= 10000,
 		.delay_us_max		= 255000,
-		.flags			= 1,
+		.flags			= SENSOR_FLAG_ON_CHANGE_MODE,
 	},
 };
 

@@ -19,6 +19,7 @@
 #include <asm/cpu.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include <linux/uaccess.h>
 #include <linux/cpufreq.h>
 #include <linux/slab.h>
 #include <linux/of.h>
@@ -384,6 +385,56 @@ static int freq_set(void *data, u64 val)
 }
 DEFINE_SIMPLE_ATTRIBUTE(freq_fops, freq_get, freq_set, "%llu\n");
 
+/* Set ndiv / vindex hint for a cpu */
+static int set_hint(void *data, u64 val)
+{
+	uint64_t cpu = (uint64_t)data;
+	enum cluster cur_cl;
+	unsigned long flags;
+	spinlock_t *slock;
+	uint32_t hint = val;
+
+	if (!val)
+		goto end;
+	if (cpu_online(cpu)) {
+		slock = &per_cpu(pcpu_slock, cpu);
+		spin_lock_irqsave(slock, flags);
+
+		cur_cl = get_cpu_cluster(cpu);
+		cpu = logical_to_phys_map(cpu);
+		tcpufreq_writel(hint, tfreq_data.pcluster[cur_cl].edvd_pub +
+			EDVD_CL_NDIV_VHINT_OFFSET, cpu);
+
+		spin_unlock_irqrestore(slock, flags);
+	}
+end:
+	return 0;
+}
+
+/* get ndiv / vindex hint for a cpu */
+static int get_hint(void *data, u64 *hint)
+{
+	uint64_t cpu = (uint64_t)data;
+	enum cluster cur_cl;
+	unsigned long flags;
+	spinlock_t *slock;
+
+	if (cpu_online(cpu)) {
+		slock = &per_cpu(pcpu_slock, cpu);
+		spin_lock_irqsave(slock, flags);
+
+		cur_cl = get_cpu_cluster(cpu);
+		cpu = logical_to_phys_map(cpu);
+		*hint = tcpufreq_readl(tfreq_data.pcluster[cur_cl].edvd_pub +
+			EDVD_CL_NDIV_VHINT_OFFSET, cpu);
+
+		spin_unlock_irqrestore(slock, flags);
+	}
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(ndiv_vindex_fops, get_hint, set_hint, "%llu\n");
+
 static void dump_lut(struct seq_file *s, struct cpu_vhint_table *vht)
 {
 	uint16_t i, j;
@@ -456,6 +507,9 @@ static int __init tegra_cpufreq_debug_init(void)
 			goto err_out;
 		if (!debugfs_create_file("freq", RW_MODE, dir, (void *)cpu,
 			&freq_fops))
+			goto err_out;
+		if (!debugfs_create_file("ndiv_vindex_hint", RW_MODE, dir,
+			(void *)cpu, &ndiv_vindex_fops))
 			goto err_out;
 	}
 	return 0;

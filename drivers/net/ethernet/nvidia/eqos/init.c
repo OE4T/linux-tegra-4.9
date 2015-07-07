@@ -166,6 +166,8 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	UCHAR tx_q_count = 0, rx_q_count = 0;
 	struct resource *res;
 	const struct of_device_id *match;
+	struct device_node *node = pdev->dev.of_node;
+	u32 csr_clock_speed;
 
 	DBGPR("***EQOS DRIVER COMPILED ON %s AT %s***\n", __DATE__, __TIME__);
 
@@ -304,6 +306,13 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	} else {
 		printk(KERN_ALERT "%s: MDIO is not present\n\n", DEV_NAME);
 	}
+
+	ret = of_property_read_u32(node, "nvidia,csr_clock_speed",
+			&csr_clock_speed);
+	if (ret < 0)
+		printk(KERN_ALERT "csr_clock_speed read failed %d\n", ret);
+
+	MAC_1US_TIC_RgWr(csr_clock_speed - 1);
 
 #ifndef DWC_ETH_QOS_CONFIG_PGTEST
 	/* enabling and registration of irq with magic wakeup */

@@ -5857,6 +5857,16 @@
 } while(0)
 
 
+#define MAC_1US_TIC_RgOffAddr ((volatile ULONG *)(BASE_ADDRESS + 0xdc))
+
+#define MAC_1US_TIC_RgWr(data) do {\
+		iowrite32(data, (void *)MAC_1US_TIC_RgOffAddr);\
+} while(0)
+
+#define MAC_1US_TIC_RgRd(data) do {\
+		(data) = ioread32((void *)MAC_1US_TIC_RgOffAddr);\
+} while(0)
+
 #define MAC_LPC_RgOffAddr ((volatile ULONG *)(BASE_ADDRESS + 0xd4))
 
 #define MAC_LPC_RgWr(data) do {\

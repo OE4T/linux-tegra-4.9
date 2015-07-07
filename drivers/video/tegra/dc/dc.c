@@ -3335,9 +3335,10 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 	u32 val;
 	int need_disable = 0;
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	if (tegra_platform_is_fpga())
 		return IRQ_NONE;
-
+#endif
 	mutex_lock(&dc->lock);
 	if (!tegra_dc_is_powered(dc)) {
 		mutex_unlock(&dc->lock);

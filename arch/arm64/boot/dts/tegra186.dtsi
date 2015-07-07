@@ -466,6 +466,7 @@
 		       0x0 0x03b41000 0x0 0x00001000>;
 		interrupts = <0 70 0x04
 			      0 71 0x04>;
+		interrupt-names = "stall", "nonstall";
 		nvidia,host1x = <&host1x>;
 		#stream-id-cells = <1>;
 		access-vpr-phys;

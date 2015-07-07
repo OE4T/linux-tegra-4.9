@@ -184,7 +184,7 @@
 		int_count  = <8>;
 		int_mask   = <0xf3140>;
 
-		channels   = <1>; /* Until support for quad channel is available. */
+		channels   = <4>;
         };
 
 	host1x: host1x {

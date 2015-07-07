@@ -588,8 +588,11 @@
 
 		dsi@15300000 {
 			compatible = "nvidia,tegra186-dsi";
-                        reg = <0x0 0x15300000 0x0 0x00040000
-                               0x0 0x15400000 0x0 0x00040000>;
+			reg = <0x0 0x15300000 0x0 0x00040000>, /* DSIA */
+			      <0x0 0x15400000 0x0 0x00040000>, /* DSIB */
+			      <0x0 0x15900000 0x0 0x00040000>, /* DSIC */
+			      <0x0 0x15940000 0x0 0x00040000>, /* DSID */
+			      <0x0 0x15880000 0x0 0x00010000>; /* PADCTL REG */
 			clocks = <&clk32k_in>;
 			clock-names = "clk32k_in";
 			status = "disabled";

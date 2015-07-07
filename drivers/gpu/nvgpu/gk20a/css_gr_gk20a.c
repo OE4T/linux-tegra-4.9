@@ -569,8 +569,10 @@ static int css_gr_free_client_data(struct gk20a_cs_snapshot *data,
 				client->perfmon_start, client->perfmon_count))
 			ret = -EINVAL;
 	}
+
 	if (client->dma_handler) {
-		dma_buf_vunmap(client->dma_handler, client->snapshot);
+		if (client->snapshot)
+			dma_buf_vunmap(client->dma_handler, client->snapshot);
 		dma_buf_put(client->dma_handler);
 	}
 

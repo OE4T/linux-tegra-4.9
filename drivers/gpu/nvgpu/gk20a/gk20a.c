@@ -2008,7 +2008,12 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 
 	if (IS_ENABLED(CONFIG_GK20A_CYCLE_STATS)) {
 		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS;
-		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT;
+		/* the snapshots must be supported only for t210 */
+		if (NVGPU_GPU_ARCH_GM200 == gpu->arch &&
+				NVGPU_GPU_IMPL_GM20B == gpu->impl) {
+			gpu->flags |=
+				NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT;
+		}
 	}
 
 	gpu->gpc_mask = 1;

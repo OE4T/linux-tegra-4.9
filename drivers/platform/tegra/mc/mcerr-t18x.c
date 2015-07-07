@@ -29,8 +29,44 @@ struct mc_client mc_clients[] = {
 };
 int mc_client_last = ARRAY_SIZE(mc_clients) - 1;
 
+static const char *t186_intr_info[] = {
+	NULL,		/* Bit 0 */
+	NULL,
+	NULL,
+	NULL,
+	NULL,		/* Bit 4 */
+	NULL,
+	"decerr-emem",
+	NULL,
+	"secerr",	/* Bit 8 */
+	"arb-emem",
+	"smmu-err",
+	"apb_err",
+	"decerr-vpr",	/* Bit 12 */
+	"decerr-sec",
+	NULL,
+	NULL,
+	"decerr-mts",	/* Bit 16 */
+	"decerr-gsc",
+	"scrub-ecc",
+	"wcam-err",
+	NULL,		/* Bit 20 */
+	NULL,
+	NULL,
+	NULL,
+	NULL,		/* Bit 24 */
+	NULL,
+	NULL,
+	NULL,
+	NULL,		/* Bit 28 */
+	NULL,
+	NULL,
+	NULL,
+};
+
 void mcerr_chip_specific_setup(struct mcerr_chip_specific *spec)
 {
 	spec->nr_clients = ARRAY_SIZE(mc_clients);
+	spec->intr_descriptions = t186_intr_info;
 	return;
 }

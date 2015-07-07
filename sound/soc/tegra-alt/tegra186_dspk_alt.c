@@ -31,6 +31,7 @@
 #include <linux/of_device.h>
 #include <linux/debugfs.h>
 #include <linux/tegra-soc.h>
+#include <linux/pinctrl/pinconf-tegra.h>
 
 #include "tegra210_xbar_alt.h"
 #include "tegra186_xbar_alt.h"
@@ -311,11 +312,13 @@ static const struct of_device_id tegra186_dspk_of_match[] = {
 static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 {
 	struct tegra186_dspk *dspk;
+	struct device_node *np = pdev->dev.of_node;
 	struct resource *mem, *memregion;
 	void __iomem *regs;
 	int ret = 0;
 	const struct of_device_id *match;
 	struct tegra186_dspk_soc_data *soc_data;
+	const char *prod_name;
 
 	match = of_match_device(tegra186_dspk_of_match, &pdev->dev);
 	if (!match) {
@@ -389,8 +392,7 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 	}
 	regcache_cache_only(dspk->regmap, true);
 
-	if (of_property_read_u32(pdev->dev.of_node,
-				"nvidia,ahub-dspk-id",
+	if (of_property_read_u32(np, "nvidia,ahub-dspk-id",
 				&pdev->dev.id) < 0) {
 		dev_err(&pdev->dev,
 			"Missing property nvidia,ahub-dspk-id\n");
@@ -412,6 +414,9 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
 		goto err_suspend;
 	}
+
+	if (of_property_read_string(np, "prod-name", &prod_name) == 0)
+		tegra_pinctrl_config_prod(&pdev->dev, prod_name);
 
 	return 0;
 

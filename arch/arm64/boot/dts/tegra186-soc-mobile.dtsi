@@ -1,0 +1,277 @@
+/*
+ * tegra186-soc-mobile.dtsi: Mobile family SoC specific DTSI file with required node enabled.
+ *
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ */
+
+#include "tegra186-soc-base.dtsi"
+
+/ {
+
+	aliases {
+		i2c0 = &i2c1;
+		i2c2 = &i2c3;
+		i2c3 = &i2c4;
+		i2c4 = &i2c5;
+		i2c5 = &i2c6;
+		i2c6 = &i2c7;
+		i2c8 = &i2c9;
+		spi0 = &spi0;
+		spi2 = &spi2;
+		spi3 = &spi3;
+		serial0 = &uarta;
+		serial1 = &uartb;
+		serial3 = &uartd;
+		serial4 = &uarte;
+		serial5 = &uartf;
+	};
+
+	cpus {
+		status = "okay";
+
+		cpu@0 {
+			status = "okay";
+		};
+
+		cpu@1 {
+			status = "okay";
+		};
+
+		cpu@2 {
+			status = "okay";
+		};
+
+		cpu@3 {
+			status = "okay";
+		};
+
+		cpu@4 {
+			status = "okay";
+		};
+
+		cpu@5 {
+			status = "okay";
+		};
+	};
+
+	mc {
+		status = "okay";
+	};
+
+	host1x {
+		status = "okay";
+		ctx0 {
+			status = "okay";
+		};
+
+		ctx1 {
+			status = "okay";
+		};
+
+		ctx2 {
+			status = "okay";
+		};
+
+		ctx3 {
+			status = "okay";
+		};
+
+		ctx4 {
+			status = "okay";
+		};
+
+		ctx5 {
+			status = "okay";
+		};
+
+		ctx6 {
+			status = "okay";
+		};
+
+		ctx7 {
+			status = "okay";
+		};
+
+		nvcsi {
+			status = "okay";
+		};
+
+		vi {
+			status = "okay";
+		};
+
+		isp@54600000 {
+			status = "okay";
+		};
+
+		vii2c {
+			status = "okay";
+		};
+
+
+		dsi {
+			status = "okay";
+		};
+
+		vic {
+			status = "okay";
+		};
+
+		nvenc {
+			status = "okay";
+		};
+
+		nvdec {
+			status = "okay";
+		};
+
+		nvjpg {
+			status = "okay";
+		};
+
+		tsec {
+			status = "okay";
+		};
+
+		tsecb {
+			status = "okay";
+		};
+
+		se1 {
+			status = "okay";
+		};
+
+		se2 {
+			status = "okay";
+		};
+
+		se3 {
+			status = "okay";
+		};
+
+		se4 {
+			status = "okay";
+		};
+	};
+
+	gp10b {
+		status = "okay";
+	};
+
+	psci {
+		status = "okay";
+	};
+
+	interrupt-controller {
+		status = "okay";
+	};
+
+	interrupt-controller@60004000 {
+		status = "okay";
+	};
+
+	timer@60005000 {
+		status = "okay";
+	};
+
+	clock {
+		status = "okay";
+	};
+
+	ether_qos@02490000 {
+		status = "okay";
+	};
+
+	ether_qos_virt_test {
+		status = "okay";
+	};
+
+	tegra-hsp {
+		status = "okay";
+	};
+
+	chipid {
+		status = "okay";
+	};
+
+	bpmp {
+		status = "okay";
+	};
+
+	dma@2600000 {
+		status = "okay";
+	};
+
+	serial@70006000 {
+		status = "okay";
+	};
+
+	pinmux@2430000 {
+		status = "okay";
+	};
+
+	gpio@2200000 {
+		status = "okay";
+	};
+
+	i2c@3160000 {
+		status = "okay";
+	};
+
+	i2c@3180000 {
+		status = "okay";
+	};
+
+	i2c@3190000 {
+		status = "okay";
+	};
+
+	bpmp_i2c {
+		status = "okay";
+	};
+
+	pcie-controller {
+		status = "okay";
+		pci@1,0 {
+			status = "okay";
+		};
+
+		pci@2,0 {
+			status = "okay";
+		};
+	};
+
+	roc-flush {
+		status = "okay";
+	};
+
+	clocks {
+		status = "okay";
+
+		clk32k_in@0 {
+			status = "okay";
+		};
+	};
+
+	mttcan@0x0c310000 {
+		status = "okay";
+	};
+
+	mttcan@0x0c320000 {
+		status = "okay";
+	};
+};

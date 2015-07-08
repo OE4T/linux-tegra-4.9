@@ -1835,7 +1835,6 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		return tegra_dc_ext_get_cursor(user);
 	case TEGRA_DC_EXT_PUT_CURSOR:
 		return tegra_dc_ext_put_cursor(user);
-	case TEGRA_DC_EXT_SET_CURSOR_IMAGE_LOW_LATENCY:
 	case TEGRA_DC_EXT_SET_CURSOR_IMAGE:
 	{
 		struct tegra_dc_ext_cursor_image args;
@@ -1845,7 +1844,6 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 		return tegra_dc_ext_set_cursor_image(user, &args);
 	}
-	case TEGRA_DC_EXT_SET_CURSOR_LOW_LATENCY:
 	case TEGRA_DC_EXT_SET_CURSOR:
 	{
 		struct tegra_dc_ext_cursor args;

@@ -501,14 +501,6 @@ struct tegra_dc_ext_feature {
 #define TEGRA_DC_EXT_GET_CUSTOM_CMU \
 	_IOR('D', 0x10, struct tegra_dc_ext_cmu)
 
-/* obsolete - do not use */
-#define TEGRA_DC_EXT_SET_CURSOR_IMAGE_LOW_LATENCY \
-	_IOW('D', 0x11, struct tegra_dc_ext_cursor_image)
-
-/* obsolete - do not use */
-#define TEGRA_DC_EXT_SET_CURSOR_LOW_LATENCY \
-	_IOW('D', 0x12, struct tegra_dc_ext_cursor_image)
-
 #define TEGRA_DC_EXT_SET_PROPOSED_BW \
 	_IOR('D', 0x13, struct tegra_dc_ext_flip_2)
 

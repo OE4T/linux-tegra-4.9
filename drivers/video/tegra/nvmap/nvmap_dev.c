@@ -1403,26 +1403,27 @@ static int nvmap_debug_compress_show(struct seq_file *s, void *unused)
 	u64 total_uncompressed_mem = 0;
 	u64 total_compressed_non_zero_mem = 0;
 	u64 total_uncompressed_non_zero_mem = 0;
-	struct nvmap_handle *h_put = NULL;
 	struct nvmap_device *dev = nvmap_dev;
+	struct nvmap_handle *h = NULL, *h_next;
 
 	if (!dev)
 		return 0;
 
 	spin_lock(&dev->handle_lock);
 	n = rb_first(&dev->handles);
-	while (n != NULL) {
-		struct nvmap_handle *h =
-			rb_entry(n, struct nvmap_handle, node);
 
-		if (!h || !h->alloc || !h->heap_pgalloc)
+	/* Get the valid handle and take the ref count on first valid handle */
+	while (h == NULL && n) {
+		h = rb_entry(n, struct nvmap_handle, node);
+		h = nvmap_handle_get(h);
+		n = rb_next(n);
+	}
+	spin_unlock(&dev->handle_lock);
+
+	while (h) {
+		if (!h->alloc || !h->heap_pgalloc)
 			goto end_loop;
 
-		nvmap_handle_get(h);
-		n = rb_next(n);
-		spin_unlock(&dev->handle_lock);
-		if (h_put)
-			nvmap_handle_put(h_put);
 		for (i = 0; i < h->size >> PAGE_SHIFT; i++) {
 			struct page *page = nvmap_to_page(h->pgalloc.pages[i]);
 
@@ -1446,11 +1447,20 @@ static int nvmap_debug_compress_show(struct seq_file *s, void *unused)
 			num_pages++;
 		}
 end_loop:
-		h_put = h;
-		if (!n)
-			nvmap_handle_put(h_put);
-
 		spin_lock(&dev->handle_lock);
+		/* get rb node of handle and continue traversal */
+		n = &h->node;
+		n = rb_next(n);
+		h_next = NULL;
+
+		while (h_next == NULL && n) {
+			h_next = rb_entry(n, struct nvmap_handle, node);
+			h_next = nvmap_handle_get(h_next);
+			n = rb_next(n);
+		}
+		spin_unlock(&dev->handle_lock);
+		nvmap_handle_put(h);
+		h = h_next;
 	}
 
 	min_clen = max_clen ? min_clen : 0;
@@ -1476,7 +1486,6 @@ end_loop:
 	seq_printf(s, "min compress bytes: \t%zu\n", min_clen);
 	seq_printf(s, "max compress bytes: \t%zu\n", max_clen);
 	seq_printf(s, "average compress bytes: \t%d\n", all_clen / num_pages);
-	spin_unlock(&dev->handle_lock);
 	return 0;
 }
 

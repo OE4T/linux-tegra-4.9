@@ -929,8 +929,13 @@ static void tegra_dpaux_enable(struct tegra_dc_dp_data *dp)
 	tegra_dpaux_writel(dp, DPAUX_INTR_AUX, 0xffffffff);
 
 	tegra_dpaux_writel(dp, DPAUX_HYBRID_PADCTL,
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+		DPAUX_HYBRID_PADCTL_AUX_DRVZ_OHM_56_49 |
+		DPAUX_HYBRID_PADCTL_AUX_CMH_V1_10 |
+#else
 		DPAUX_HYBRID_PADCTL_AUX_DRVZ_OHM_50 |
 		DPAUX_HYBRID_PADCTL_AUX_CMH_V0_70 |
+#endif
 		0x18 << DPAUX_HYBRID_PADCTL_AUX_DRVI_SHIFT |
 		DPAUX_HYBRID_PADCTL_AUX_INPUT_RCV_ENABLE);
 

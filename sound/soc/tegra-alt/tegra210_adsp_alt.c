@@ -88,6 +88,7 @@ struct tegra210_adsp_app {
 	uint32_t connect:1; /* if app is connected to a source */
 	uint32_t priority; /* Valid for only APM app */
 	uint32_t min_adsp_clock; /* Min ADSP clock required in MHz */
+	spinlock_t lock;
 	void *private_data;
 	int (*msg_handler)(struct tegra210_adsp_app *, apm_msg_t *);
 };
@@ -543,6 +544,8 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 		return -ENODEV;
 	}
 
+	spin_lock_init(&app->lock);
+
 	app->plugin = PLUGIN_SHARED_MEM(app->info->mem.shared);
 	if (IS_APM_IN(app->reg)) {
 		uint32_t apm_out_reg = APM_OUT_START +
@@ -819,8 +822,11 @@ static int tegra210_adsp_remove_connection(struct tegra210_adsp *adsp,
 static status_t tegra210_adsp_msg_handler(uint32_t msg, void *data)
 {
 	struct tegra210_adsp_app *app = data;
+	unsigned long flags;
 	apm_msg_t apm_msg;
 	int ret = 0;
+
+	spin_lock_irqsave(&app->lock, flags);
 
 	switch (msg) {
 	case apm_cmd_msg_ready: {
@@ -831,13 +837,15 @@ static status_t tegra210_adsp_msg_handler(uint32_t msg, void *data)
 		}
 
 		if (app->msg_handler)
-			return app->msg_handler(app, &apm_msg);
+			ret = app->msg_handler(app, &apm_msg);
 	}
 	break;
 	default:
 		pr_err("Unsupported mailbox msg %d.", msg);
 	}
-	return 0;
+
+	spin_unlock_irqrestore(&app->lock, flags);
+	return ret;
 }
 
 static int tegra210_adsp_pcm_msg_handler(struct tegra210_adsp_app *app,
@@ -943,6 +951,7 @@ static int tegra210_adsp_compr_open(struct snd_compr_stream *cstream)
 static int tegra210_adsp_compr_free(struct snd_compr_stream *cstream)
 {
 	struct tegra210_adsp_compr_rtd *prtd = cstream->runtime->private_data;
+	unsigned long flags;
 
 	if (!prtd)
 		return -ENODEV;
@@ -953,6 +962,13 @@ static int tegra210_adsp_compr_free(struct snd_compr_stream *cstream)
 	pm_runtime_put(prtd->dev);
 
 	tegra210_adsp_deallocate_dma_buffer(&prtd->buf);
+
+	spin_lock_irqsave(&prtd->fe_apm->lock, flags);
+
+	/* Reset msg handler to disable msg processing */
+	prtd->fe_apm->msg_handler = NULL;
+
+	spin_unlock_irqrestore(&prtd->fe_apm->lock, flags);
 
 	prtd->fe_apm->fe = 0;
 	cstream->runtime->private_data = NULL;
@@ -1276,12 +1292,20 @@ static int tegra210_adsp_pcm_open(struct snd_pcm_substream *substream)
 static int tegra210_adsp_pcm_close(struct snd_pcm_substream *substream)
 {
 	struct tegra210_adsp_pcm_rtd *prtd = substream->runtime->private_data;
+	unsigned long flags;
 
 	dev_vdbg(prtd->dev, "%s", __func__);
 
 	if (prtd) {
 		tegra210_adsp_send_reset_msg(prtd->fe_apm,
 			TEGRA210_ADSP_MSG_FLAG_SEND);
+
+		spin_lock_irqsave(&prtd->fe_apm->lock, flags);
+
+		/* Reset msg handler to disable msg processing */
+		prtd->fe_apm->msg_handler = NULL;
+
+		spin_unlock_irqrestore(&prtd->fe_apm->lock, flags);
 
 		prtd->fe_apm->fe = 1;
 		substream->runtime->private_data = NULL;

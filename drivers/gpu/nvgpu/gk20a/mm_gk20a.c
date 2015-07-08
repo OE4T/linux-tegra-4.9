@@ -3225,6 +3225,12 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
+	gk20a_busy_noresume(g->dev);
+	if (!g->power_on) {
+		pm_runtime_put_noidle(&g->dev->dev);
+		return 0;
+	}
+
 	mutex_lock(&mm->l2_op_lock);
 
 	/* Make sure all previous writes are committed to the L2. There's no
@@ -3261,6 +3267,8 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 	trace_gk20a_mm_fb_flush_done(g->dev->name);
 
 	mutex_unlock(&mm->l2_op_lock);
+
+	pm_runtime_put_noidle(&g->dev->dev);
 
 	return ret;
 }

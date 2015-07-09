@@ -450,7 +450,7 @@ static int tegra210_sfc_put_srate(struct snd_kcontrol *kcontrol,
 static int tegra210_sfc_get_format(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_sfc *sfc = snd_soc_codec_get_drvdata(codec);
 
 	/* get the format control flag */
@@ -463,7 +463,7 @@ static int tegra210_sfc_get_format(struct snd_kcontrol *kcontrol,
 static int tegra210_sfc_put_format(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_sfc *sfc = snd_soc_codec_get_drvdata(codec);
 
 	/* set the format control flag */
@@ -482,7 +482,7 @@ static int tegra210_sfc_init_get(struct snd_kcontrol *kcontrol,
 static int tegra210_sfc_init_put(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_sfc *sfc = snd_soc_codec_get_drvdata(codec);
 	int init = ucontrol->value.enumerated.item[0];
 	int ret = 0;

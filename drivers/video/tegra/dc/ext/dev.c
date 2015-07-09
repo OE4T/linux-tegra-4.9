@@ -130,9 +130,21 @@ static inline s64 tegra_timespec_to_ns(const struct tegra_timespec *ts)
 	return ((s64) ts->tv_sec * NSEC_PER_SEC) + ts->tv_nsec;
 }
 
-static inline int test_bit_u32(int nr, const u32 *addr)
+static inline int test_bit_u32(int bitnum, const u32 *data, int entries)
 {
-	return 1UL & (addr[nr / 32] >> (nr & 31));
+	int i;
+
+	for (i = 0; i < entries; i++) {
+		if (bitnum < 32) {
+			if (1UL & (data[bitnum / 32] >> (bitnum & 31)))
+				return 1;
+		} else {
+			bitnum -= 32;
+			data++;
+		}
+	}
+
+	return 0;
 }
 
 int tegra_dc_ext_get_num_outputs(void)
@@ -158,10 +170,10 @@ static int tegra_dc_ext_get_window(struct tegra_dc_ext_user *user,
 	if (!win->user) {
 		win->user = user;
 		win->enabled = false;
+	} else {
+		if (win->user != user)
+			ret = -EBUSY;
 	}
-	else if (win->user != user)
-		ret = -EBUSY;
-
 	mutex_unlock(&win->lock);
 
 	return ret;
@@ -282,27 +294,27 @@ int tegra_dc_ext_disable(struct tegra_dc_ext *ext)
 static int tegra_dc_ext_check_windowattr(struct tegra_dc_ext *ext,
 						struct tegra_dc_win *win)
 {
-	u32 *addr;
+	u32 *p_data;
 	struct tegra_dc *dc = ext->dc;
 
-	addr = tegra_dc_parse_feature(dc, win->idx, GET_WIN_FORMATS);
+	p_data = tegra_dc_parse_feature(dc, win->idx, GET_WIN_FORMATS);
 	/* Check if the window exists */
-	if (!addr) {
-		dev_err(&dc->ndev->dev, "window %d feature is not found.\n"
-								, win->idx);
+	if (!p_data) {
+		dev_err(&dc->ndev->dev,
+			"window %d feature is not found.\n", win->idx);
 		goto fail;
 	}
 	/* Check the window format */
-	if (!test_bit_u32(win->fmt, addr)) {
+	if (!test_bit_u32(win->fmt, p_data, ENTRY_SIZE)) {
 		dev_err(&dc->ndev->dev,
 			"Color format of window %d is invalid.\n", win->idx);
 		goto fail;
 	}
 
 	/* Check window size */
-	addr = tegra_dc_parse_feature(dc, win->idx, GET_WIN_SIZE);
-	if (CHECK_SIZE(win->out_w, addr[MIN_WIDTH], addr[MAX_WIDTH]) ||
-		CHECK_SIZE(win->out_h, addr[MIN_HEIGHT], addr[MAX_HEIGHT])) {
+	p_data = tegra_dc_parse_feature(dc, win->idx, GET_WIN_SIZE);
+	if (CHECK_SIZE(win->out_w, p_data[MIN_WIDTH], p_data[MAX_WIDTH]) ||
+		CHECK_SIZE(win->out_h, p_data[MIN_HEIGHT], p_data[MAX_HEIGHT])) {
 		dev_err(&dc->ndev->dev,
 			"Size of window %d is invalid with %d wide %d high.\n",
 			win->idx, win->out_w, win->out_h);
@@ -1381,7 +1393,7 @@ static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
 	      set_lut_channel(new_lut->b, lut->b, start, len);
 
 #elif defined(CONFIG_TEGRA_LUT_V2)
-	memset(lut->rgb, 0, sizeof(u64)* len);
+	memset(lut->rgb, 0, sizeof(u64) * len);
 	err = set_lut_channel(new_lut, lut->rgb);
 
 #endif
@@ -1572,8 +1584,7 @@ static int tegra_dc_ext_negotiate_bw(struct tegra_dc_ext_user *user,
 		if (wins[i].buff_id > 0) {
 			tegra_dc_ext_set_windowattr_basic(&dc->tmp_wins[idx],
 							  &wins[i]);
-		}
-		else {
+		} else {
 			dc->tmp_wins[idx].flags = 0;
 		}
 		dc_wins[i] = &dc->tmp_wins[idx];

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dc_config.c
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,13 +28,16 @@
 
 #define ENTRY_SIZE	4	/* Size of feature entry args */
 
-/* adjust large bit shift for an individual 32-bit word */
+/* adjust >32 bit shift for an individual 32-bit word */
 #define BIT_FOR_WORD(word, x) ( \
 		(x) >= (word) * 32 && \
 		(x) < 32 + (word) * 32 \
-		? BIT((x) - 32) : 0)
+		? BIT((x) - (word) * 32) : 0)
+#define BITWORD3(x) BIT_FOR_WORD(3, x)
+#define BITWORD2(x) BIT_FOR_WORD(2, x)
+#define BITWORD1(x) BIT_FOR_WORD(1, x)
+#define BITWORD0(x) BIT_FOR_WORD(0, x)
 #define HIGHBIT(x) BIT_FOR_WORD(1, x)
-#define LOWBIT(x) BIT_FOR_WORD(0, x)
 
 /* Define the supported formats. TEGRA_WIN_FMT_WIN_x macros are defined
  * based on T20/T30 formats. */

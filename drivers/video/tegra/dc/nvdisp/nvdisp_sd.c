@@ -207,7 +207,7 @@ static int const pixel_gain_tables[ADAPTATION_FACTOR_MAX_LEVELS]
 	}
 };
 
-int const sd_backlight_table[SD3_MAX_HIST_BINS] = {
+static int const sd_backlight_table[SD3_MAX_HIST_BINS] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 	1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6,
 	6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 11, 11, 11, 12, 12, 13, 13, 14,
@@ -284,7 +284,7 @@ static int tegra_sd_poll_register(struct tegra_dc *dc,
  * 1. Calculate the upper and lower bounds
  * 2. Select correct gain & backlight based on oversaturated bin
  */
-void tegra_dc_calc_params(struct tegra_dc_sd_settings *sd)
+static void tegra_dc_calc_params(struct tegra_dc_sd_settings *sd)
 {
 	unsigned pixel_k = 100;
 	unsigned pixel_adaptation;
@@ -605,7 +605,7 @@ sd_fail:
  * 2. Disable interrupt bounds
  * 3. Disable the histogram function
  * */
-void tegra_sd_stop(struct tegra_dc *dc)
+static void tegra_sd_stop(struct tegra_dc *dc)
 {
 	struct tegra_dc_sd_settings *sd = dc->out->sd_settings;
 

@@ -466,7 +466,7 @@
 		status = "disabled";
 	};
 
-	power-detect {
+	pmc-iopower {
 		status = "okay";
 	};
 

@@ -1529,8 +1529,8 @@
 		status = "disabled";
 	};
 
-	power-detect {
-		compatible = "nvidia,tegra210-pwr-detect";
+	pmc-iopower {
+		compatible = "nvidia,tegra210-pmc-iopower";
 		pad-controllers = <&tegra_pmc TEGRA210_PAD_SYS
 					&tegra_pmc TEGRA210_PAD_UART
 					&tegra_pmc TEGRA210_PAD_AUDIO

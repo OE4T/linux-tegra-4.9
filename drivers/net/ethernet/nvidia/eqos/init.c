@@ -52,7 +52,7 @@
 #include <linux/platform_device.h>
 #include <linux/of_device.h>
 
-#define LP_SUPPORTED 1
+#define LP_SUPPORTED 0
 static UCHAR dev_addr[6] = {0, 0x55, 0x7b, 0xb5, 0x7d, 0xf7};
 static const struct of_device_id dwc_eth_qos_of_match[] = {
 	{ .compatible = "synopsys,dwc_eth_qos" },

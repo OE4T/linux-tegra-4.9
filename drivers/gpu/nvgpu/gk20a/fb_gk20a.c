@@ -1,7 +1,7 @@
 /*
  * GK20A memory interface
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,6 +19,7 @@
 #include "kind_gk20a.h"
 #include "hw_mc_gk20a.h"
 #include "hw_fb_gk20a.h"
+#include "fb_gk20a.h"
 
 void fb_gk20a_reset(struct gk20a *g)
 {

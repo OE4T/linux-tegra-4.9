@@ -518,7 +518,6 @@ static void tegra_dc_vrr_flip_time(struct tegra_dc *dc)
 		getnstimeofday(&time_now);
 		vrr->curr_flip_us = (s64)time_now.tv_sec * 1000000 +
 				time_now.tv_nsec / 1000;
-
 		vrr->flip = 1;
 	} else {
 		vrr->curr_flip_us = 0;
@@ -534,7 +533,10 @@ static void tegra_dc_vrr_cancel_vfp(struct tegra_dc *dc)
 		return;
 
 	if (vrr->enable) {
-		tegra_dc_set_act_vfp(dc, vrr->vfp_shrink);
+		if (dc->out->type == TEGRA_DC_OUT_DSI)
+			tegra_dc_set_act_vfp(dc, vrr->vfp_shrink);
+		else
+			tegra_dc_set_act_vfp(dc, dc->mode.v_front_porch);
 	} else {
 		if (vrr->lastenable && vrr->dcb <= vrr->db_tolerance) {
 			tegra_dc_set_act_vfp(dc, dc->mode.v_front_porch);
@@ -1124,7 +1126,9 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 	if (WARN_ONCE(e, "horrible failure")) /* horrible failure */
 		goto done;
 
-	tegra_dc_vrr_flip_time(dc);
+	if (dc->out->type == TEGRA_DC_OUT_DSI)
+		tegra_dc_vrr_flip_time(dc);
+
 	tegra_dc_vrr_cancel_vfp(dc);
 done:
 	mutex_unlock(&dc->lock);

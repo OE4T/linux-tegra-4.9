@@ -96,6 +96,8 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #define DC_COM_PIN_OUTPUT_POLARITY1_INIT_VAL	0x01000000
 #define DC_COM_PIN_OUTPUT_POLARITY3_INIT_VAL	0x0
 
+#define MAX_VRR_V_FRONT_PORCH			0x1000
+
 #ifndef CONFIG_TEGRA_NVDISPLAY
 static struct of_device_id tegra_disa_pd[] = {
 	{ .compatible = "nvidia, tegra186-disa-pd", },
@@ -2921,6 +2923,16 @@ void tegra_dc_set_act_vfp(struct tegra_dc *dc, int vfp)
 			DC_CMD_STATE_ACCESS);
 }
 
+static void tegra_dc_vrr_extend_vfp(struct tegra_dc *dc)
+{
+	struct tegra_vrr *vrr  = dc->out->vrr;
+
+	if (!vrr || !vrr->enable)
+		return;
+
+	tegra_dc_set_act_vfp(dc, MAX_VRR_V_FRONT_PORCH);
+}
+
 int tegra_dc_get_v_count(struct tegra_dc *dc)
 {
 	u32     value;
@@ -3360,8 +3372,11 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status,
 		wake_up(&dc->timestamp_wq);
 
 		if (!tegra_dc_windows_are_dirty(dc, WIN_ALL_ACT_REQ)) {
-			tegra_dc_vrr_get_ts(dc);
-			tegra_dc_vrr_sec(dc);
+			if (dc->out->type == TEGRA_DC_OUT_DSI) {
+				tegra_dc_vrr_get_ts(dc);
+				tegra_dc_vrr_sec(dc);
+			} else
+				tegra_dc_vrr_extend_vfp(dc);
 		}
 
 		/* Mark the frame_end as complete. */

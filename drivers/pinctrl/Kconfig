@@ -3,3 +3,11 @@ config PINCTRL_TEGRA186
 	select PINCTRL_TEGRA
 	help
 	Support for the NVIDIA Tegra186 PINCTRL controller driver.
+
+config PINCTRL_TEGRA186_PADCTL_UPHY
+	bool "Tegra186 XUSB PADCTL and UPHY PLL/Lane Driver"
+	depends on ARCH_TEGRA_18x_SOC
+	depends on MAILBOX
+	select GENERIC_PHY
+	select PINCONF
+	select PINMUX

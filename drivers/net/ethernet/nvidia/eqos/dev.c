@@ -2152,6 +2152,9 @@ static INT configure_mac_for_vlan_pkt(void)
 
 static INT config_pblx8(UINT qInx, UINT val)
 {
+#ifdef HWA_FPGA_ONLY
+	val = 0;
+#endif
 	DMA_CR_PBLx8_UdfWr(qInx, val);
 
 	return Y_SUCCESS;
@@ -2179,6 +2182,10 @@ static INT get_tx_pbl_val(UINT qInx)
 
 static INT config_tx_pbl_val(UINT qInx, UINT tx_pbl)
 {
+#ifdef HWA_FPGA_ONLY
+	if (tx_pbl > 2)
+		tx_pbl = 2;
+#endif
 	DMA_TCR_PBL_UdfWr(qInx, tx_pbl);
 
 	return Y_SUCCESS;
@@ -2206,6 +2213,10 @@ static INT get_rx_pbl_val(UINT qInx)
 
 static INT config_rx_pbl_val(UINT qInx, UINT rx_pbl)
 {
+#ifdef HWA_FPGA_ONLY
+	if (rx_pbl > 2)
+		rx_pbl = 2;
+#endif
 	DMA_RCR_PBL_UdfWr(qInx, rx_pbl);
 
 	return Y_SUCCESS;
@@ -4379,14 +4390,26 @@ static INT configure_dma_channel(UINT qInx,
 
 	enable_dma_interrupts(qInx);
 	/* set PBLx8 */
+#ifdef HWA_FPGA_ONLY
+	DMA_CR_PBLx8_UdfWr(qInx, 0x0);
+#else
 	DMA_CR_PBLx8_UdfWr(qInx, 0x1);
+#endif
 
 	p_fifo = calculate_per_queue_fifo(pdata->hw_feat.tx_fifo_size, DWC_ETH_QOS_TX_QUEUE_CNT);
 	pbl = calculate_dma_pbl(p_fifo);
+#ifdef HWA_FPGA_ONLY
+	if (pbl > 2)
+		pbl = 2;
+#endif
 	DMA_TCR_PBL_UdfWr(qInx, pbl);
 
 	p_fifo = calculate_per_queue_fifo(pdata->hw_feat.rx_fifo_size, DWC_ETH_QOS_RX_QUEUE_CNT);
 	pbl = calculate_dma_pbl(p_fifo);
+#ifdef HWA_FPGA_ONLY
+	if (pbl > 2)
+		pbl = 2;
+#endif
 	DMA_RCR_PBL_UdfWr(qInx, pbl);
 
 	/* To get Best Performance */

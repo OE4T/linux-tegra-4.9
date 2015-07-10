@@ -85,6 +85,7 @@ struct tegra_dc_dp_data {
 	struct tegra_dphdcp *dphdcp;
 
 	struct completion aux_tx;
+	struct completion hpd_plug;
 
 	struct tegra_dp_out *pdata;
 

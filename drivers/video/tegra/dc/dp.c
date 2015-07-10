@@ -138,6 +138,22 @@ static inline void tegra_dp_disable_irq(u32 irq)
 	disable_irq(irq);
 }
 
+#define is_hotplug_supported(dp) \
+({ \
+	!tegra_platform_is_fpga() && \
+	!tegra_platform_is_linsim() && \
+	tegra_dc_is_ext_dp_panel(dp->dc) && \
+	dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP; \
+})
+
+static inline void tegra_dp_pending_hpd(struct tegra_dc_dp_data *dp)
+{
+	if (!is_hotplug_supported(dp))
+		return;
+
+	tegra_hpd_set_pending_evt(&dp->hpd_data);
+}
+
 static inline unsigned long
 tegra_dc_dpaux_poll_register(struct tegra_dc_dp_data *dp,
 				u32 reg, u32 mask, u32 exp_val,
@@ -946,7 +962,7 @@ static ssize_t dbg_hotplug_write(struct file *file, const char __user *addr,
 
 	dc->out->hotplug_state = new_state;
 
-	tegra_hpd_set_pending_evt(&dp->hpd_data);
+	tegra_dp_pending_hpd(dp);
 
 	return len;
 }
@@ -979,10 +995,14 @@ static void tegra_dc_dp_debug_create(struct tegra_dc_dp_data *dp)
 		&link_speed_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("hotplug", S_IRUGO, dpdir, dp,
-		&dbg_hotplug_fops);
-	if (!retval)
-		goto free_out;
+
+	/* hotplug not allowed for eDP */
+	if (is_hotplug_supported(dp)) {
+		retval = debugfs_create_file("hotplug", S_IRUGO, dpdir, dp,
+			&dbg_hotplug_fops);
+		if (!retval)
+			goto free_out;
+	}
 
 	return;
 free_out:
@@ -1504,14 +1524,17 @@ static irqreturn_t tegra_dp_irq(int irq, void *ptr)
 	tegra_dc_io_end(dc);
 
 	if (status & (DPAUX_INTR_AUX_PLUG_EVENT_PENDING |
-			DPAUX_INTR_AUX_UNPLUG_EVENT_PENDING)) {
-		if (status & DPAUX_INTR_AUX_PLUG_EVENT_PENDING)
+		DPAUX_INTR_AUX_UNPLUG_EVENT_PENDING)) {
+		if (status & DPAUX_INTR_AUX_PLUG_EVENT_PENDING) {
 			dev_info(&dp->dc->ndev->dev,
 				"dp: plug event received\n");
-		else
+			complete_all(&dp->hpd_plug);
+		} else {
 			dev_info(&dp->dc->ndev->dev,
 				"dp: unplug event received\n");
-		tegra_hpd_set_pending_evt(&dp->hpd_data);
+			INIT_COMPLETION(dp->hpd_plug);
+		}
+		tegra_dp_pending_hpd(dp);
 	} else if (status & DPAUX_INTR_AUX_IRQ_EVENT_PENDING) {
 		dev_info(&dp->dc->ndev->dev, "dp: irq event received%s\n",
 			dp->enabled ? "" : ", ignoring");
@@ -1712,11 +1735,17 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	}
 
 	init_completion(&dp->aux_tx);
+	init_completion(&dp->hpd_plug);
 
 	mutex_init(&dp->dpaux_lock);
 
 	tegra_dc_set_outdata(dc, dp);
 
+	/*
+	 * We don't really need hpd driver for eDP.
+	 * Nevertheless, go ahead and init hpd driver.
+	 * eDP uses some of its fields to interact with panel.
+	 */
 	tegra_hpd_init(&dp->hpd_data, dc, dp, &hpd_ops);
 
 	tegra_dp_lt_init(&dp->lt_data, dp);
@@ -1912,6 +1941,53 @@ static inline void tegra_dp_default_int(struct tegra_dc_dp_data *dp,
 		tegra_dp_int_dis(dp, DPAUX_INTR_EN_AUX_IRQ_EVENT);
 }
 
+static int tegra_edp_edid_read(struct tegra_dc_dp_data *dp)
+{
+	struct tegra_hpd_data *data = &dp->hpd_data;
+
+	BUG_ON(!data);
+
+	memset(&data->mon_spec, 0, sizeof(data->mon_spec));
+
+	return tegra_edid_get_monspecs(data->edid, &data->mon_spec);
+}
+
+static void tegra_edp_mode_set(struct tegra_dc_dp_data *dp)
+{
+	struct fb_videomode *best_edp_fbmode = dp->hpd_data.mon_spec.modedb;
+
+	if (best_edp_fbmode)
+		tegra_dc_set_fb_mode(dp->dc, best_edp_fbmode, false);
+	else
+		tegra_dc_set_default_videomode(dp->dc);
+}
+
+static int tegra_edp_wait_plug_hpd(struct tegra_dc_dp_data *dp)
+{
+#define TEGRA_DP_HPD_PLUG_TIMEOUT_MS	1000
+
+	u32 val;
+	int err = 0;
+
+	might_sleep();
+
+	if (!tegra_platform_is_silicon()) {
+		msleep(TEGRA_DP_HPD_PLUG_TIMEOUT_MS);
+		return 0;
+	}
+
+	val = tegra_dpaux_readl(dp, DPAUX_DP_AUXSTAT);
+	if (likely(val & DPAUX_DP_AUXSTAT_HPD_STATUS_PLUGGED))
+		err = 0;
+	else if (!wait_for_completion_timeout(&dp->hpd_plug,
+		msecs_to_jiffies(TEGRA_DP_HPD_PLUG_TIMEOUT_MS)))
+		err = -ENODEV;
+
+	return err;
+
+#undef TEGRA_DP_HPD_PLUG_TIMEOUT_MS
+}
+
 static void tegra_dc_dp_enable(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
@@ -1923,6 +1999,33 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		return;
 
 	tegra_dc_io_start(dc);
+
+	/* For eDP, driver gets to decide the best mode. */
+	if (!tegra_dc_is_ext_dp_panel(dc) &&
+		dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
+		int err;
+
+		/*
+		 * Hotplug for internal panels is not supported.
+		 * Wait till the panel asserts hpd
+		 */
+		err = tegra_edp_wait_plug_hpd(dp);
+		if (err < 0) {
+			tegra_dc_io_end(dc);
+			dc->connected = false;
+			dev_err(&dc->ndev->dev,
+				"edp: plug hpd wait timeout\n");
+			return;
+		}
+
+		err = tegra_edp_edid_read(dp);
+		if (err < 0)
+			dev_warn(&dc->ndev->dev, "edp: edid read failed\n");
+		else
+			tegra_dp_hpd_op_edid_ready(dp);
+		tegra_edp_mode_set(dp);
+		tegra_dc_setup_clk(dc, dc->clk);
+	}
 
 	ret = tegra_dp_panel_power_state(dp, NV_DPCD_SET_POWER_VAL_D0_NORMAL);
 	if (ret < 0) {
@@ -1986,8 +2089,11 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		tegra_dc_sor_attach(dp->sor);
 	}
 
-	tegra_dphdcp_set_plug(dp->dphdcp, true);
+	if (tegra_dc_is_ext_dp_panel(dc) &&
+		dc->out->type != TEGRA_DC_OUT_FAKE_DP)
+		tegra_dphdcp_set_plug(dp->dphdcp, true);
 
+	dc->connected = true;
 	tegra_dc_io_end(dc);
 
 	return;
@@ -2038,7 +2144,10 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 	dp->enabled = false;
 
 	tegra_dc_io_start(dc);
-	tegra_dphdcp_set_plug(dp->dphdcp, false);
+
+	if (tegra_dc_is_ext_dp_panel(dc) &&
+		dc->out->type != TEGRA_DC_OUT_FAKE_DP)
+		tegra_dphdcp_set_plug(dp->dphdcp, false);
 
 	cancel_delayed_work_sync(&dp->irq_evt_dwork);
 
@@ -2101,8 +2210,7 @@ static bool tegra_dc_dp_hpd_state(struct tegra_dc *dc)
 		return false;
 
 	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP ||
-		tegra_platform_is_linsim() ||
-		!tegra_dc_is_ext_dp_panel(dc))
+		tegra_platform_is_linsim())
 		return true;
 
 	tegra_dpaux_clk_enable(dp);
@@ -2121,7 +2229,7 @@ static bool tegra_dc_dp_detect(struct tegra_dc *dc)
 	if (tegra_platform_is_linsim())
 		return true;
 
-	tegra_hpd_set_pending_evt(&dp->hpd_data);
+	tegra_dp_pending_hpd(dp);
 
 	return tegra_dc_hpd(dc);
 }
@@ -2159,7 +2267,7 @@ static void tegra_dc_dp_resume(struct tegra_dc *dc)
 	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP)
 		tegra_dp_enable_irq(dp->irq);
 
-	tegra_hpd_set_pending_evt(&dp->hpd_data);
+	tegra_dp_pending_hpd(dp);
 
 	dp->suspended = false;
 }
@@ -2232,7 +2340,7 @@ static bool tegra_dp_hpd_op_get_hpd_state(void *drv_data)
 
 static void tegra_dp_hpd_op_init(void *drv_data)
 {
-	struct tegra_dc_dp_data *dp __maybe_unused = drv_data;
+	struct tegra_dc_dp_data *dp = drv_data;
 
 #ifdef CONFIG_SWITCH
 	dp->hpd_data.hpd_switch_name = "dp";

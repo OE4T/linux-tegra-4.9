@@ -672,22 +672,22 @@ static unsigned int DMA_TDTP_TPDR3_val;
 static unsigned int DMA_TDTP_TPDR2_val;
 static unsigned int DMA_TDTP_TPDR1_val;
 static unsigned int DMA_TDTP_TPDR0_val;
-static unsigned int DMA_RDLAR7_val;
-static unsigned int DMA_RDLAR6_val;
-static unsigned int DMA_RDLAR5_val;
-static unsigned int DMA_RDLAR4_val;
-static unsigned int DMA_RDLAR3_val;
-static unsigned int DMA_RDLAR2_val;
-static unsigned int DMA_RDLAR1_val;
-static unsigned int DMA_RDLAR0_val;
-static unsigned int DMA_TDLAR7_val;
-static unsigned int DMA_TDLAR6_val;
-static unsigned int DMA_TDLAR5_val;
-static unsigned int DMA_TDLAR4_val;
-static unsigned int DMA_TDLAR3_val;
-static unsigned int DMA_TDLAR2_val;
-static unsigned int DMA_TDLAR1_val;
-static unsigned int DMA_TDLAR0_val;
+static uint64_t DMA_RDLAR7_val;
+static uint64_t DMA_RDLAR6_val;
+static uint64_t DMA_RDLAR5_val;
+static uint64_t DMA_RDLAR4_val;
+static uint64_t DMA_RDLAR3_val;
+static uint64_t DMA_RDLAR2_val;
+static uint64_t DMA_RDLAR1_val;
+static uint64_t DMA_RDLAR0_val;
+static uint64_t DMA_TDLAR7_val;
+static uint64_t DMA_TDLAR6_val;
+static uint64_t DMA_TDLAR5_val;
+static uint64_t DMA_TDLAR4_val;
+static uint64_t DMA_TDLAR3_val;
+static uint64_t DMA_TDLAR2_val;
+static uint64_t DMA_TDLAR1_val;
+static uint64_t DMA_TDLAR0_val;
 static unsigned int DMA_IER7_val;
 static unsigned int DMA_IER6_val;
 static unsigned int DMA_IER5_val;
@@ -4291,22 +4291,22 @@ static ssize_t registers_read(struct file *file, char __user * userbuf,
 		"DMA_TDTP_TPDR2             :%#x\n"
 		"DMA_TDTP_TPDR1             :%#x\n"
 		"DMA_TDTP_TPDR0             :%#x\n"
-		"DMA_RDLAR7                 :%#x\n"
-		"DMA_RDLAR6                 :%#x\n"
-		"DMA_RDLAR5                 :%#x\n"
-		"DMA_RDLAR4                 :%#x\n"
-		"DMA_RDLAR3                 :%#x\n"
-		"DMA_RDLAR2                 :%#x\n"
-		"DMA_RDLAR1                 :%#x\n"
-		"DMA_RDLAR0                 :%#x\n"
-		"DMA_TDLAR7                 :%#x\n"
-		"DMA_TDLAR6                 :%#x\n"
-		"DMA_TDLAR5                 :%#x\n"
-		"DMA_TDLAR4                 :%#x\n"
-		"DMA_TDLAR3                 :%#x\n"
-		"DMA_TDLAR2                 :%#x\n"
-		"DMA_TDLAR1                 :%#x\n"
-		"DMA_TDLAR0                 :%#x\n"
+		"DMA_RDLAR7                 :%#llx\n"
+		"DMA_RDLAR6                 :%#llx\n"
+		"DMA_RDLAR5                 :%#llx\n"
+		"DMA_RDLAR4                 :%#llx\n"
+		"DMA_RDLAR3                 :%#llx\n"
+		"DMA_RDLAR2                 :%#llx\n"
+		"DMA_RDLAR1                 :%#llx\n"
+		"DMA_RDLAR0                 :%#llx\n"
+		"DMA_TDLAR7                 :%#llx\n"
+		"DMA_TDLAR6                 :%#llx\n"
+		"DMA_TDLAR5                 :%#llx\n"
+		"DMA_TDLAR4                 :%#llx\n"
+		"DMA_TDLAR3                 :%#llx\n"
+		"DMA_TDLAR2                 :%#llx\n"
+		"DMA_TDLAR1                 :%#llx\n"
+		"DMA_TDLAR0                 :%#llx\n"
 		"DMA_IER7                   :%#x\n"
 		"DMA_IER6                   :%#x\n"
 		"DMA_IER5                   :%#x\n"
@@ -16403,7 +16403,7 @@ static ssize_t DMA_RDLAR7_read(struct file *file, char __user * userbuf,
 {
 	ssize_t ret;
 	DMA_RDLAR7_RgRd(DMA_RDLAR7_val);
-	sprintf(debugfs_buf, "DMA_RDLAR7      :%#x\n", DMA_RDLAR7_val);
+	sprintf(debugfs_buf, "DMA_RDLAR7      :%#llx\n", DMA_RDLAR7_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -16420,7 +16420,7 @@ static ssize_t DMA_RDLAR6_read(struct file *file, char __user * userbuf,
 {
 	ssize_t ret;
 	DMA_RDLAR6_RgRd(DMA_RDLAR6_val);
-	sprintf(debugfs_buf, "DMA_RDLAR6      :%#x\n", DMA_RDLAR6_val);
+	sprintf(debugfs_buf, "DMA_RDLAR6      :%#llx\n", DMA_RDLAR6_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -16437,7 +16437,7 @@ static ssize_t DMA_RDLAR5_read(struct file *file, char __user * userbuf,
 {
 	ssize_t ret;
 	DMA_RDLAR5_RgRd(DMA_RDLAR5_val);
-	sprintf(debugfs_buf, "DMA_RDLAR5      :%#x\n", DMA_RDLAR5_val);
+	sprintf(debugfs_buf, "DMA_RDLAR5      :%#llx\n", DMA_RDLAR5_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -16454,7 +16454,7 @@ static ssize_t DMA_RDLAR4_read(struct file *file, char __user * userbuf,
 {
 	ssize_t ret;
 	DMA_RDLAR4_RgRd(DMA_RDLAR4_val);
-	sprintf(debugfs_buf, "DMA_RDLAR4      :%#x\n", DMA_RDLAR4_val);
+	sprintf(debugfs_buf, "DMA_RDLAR4      :%#llx\n", DMA_RDLAR4_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -16471,7 +16471,7 @@ static ssize_t DMA_RDLAR3_read(struct file *file, char __user * userbuf,
 {
 	ssize_t ret;
 	DMA_RDLAR3_RgRd(DMA_RDLAR3_val);
-	sprintf(debugfs_buf, "DMA_RDLAR3      :%#x\n", DMA_RDLAR3_val);
+	sprintf(debugfs_buf, "DMA_RDLAR3      :%#llx\n", DMA_RDLAR3_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -16488,7 +16488,7 @@ static ssize_t DMA_RDLAR2_read(struct file *file, char __user * userbuf,
 {
 	ssize_t ret;
 	DMA_RDLAR2_RgRd(DMA_RDLAR2_val);
-	sprintf(debugfs_buf, "DMA_RDLAR2      :%#x\n", DMA_RDLAR2_val);
+	sprintf(debugfs_buf, "DMA_RDLAR2      :%#llx\n", DMA_RDLAR2_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -16505,7 +16505,7 @@ static ssize_t DMA_RDLAR1_read(struct file *file, char __user * userbuf,
 {
 	ssize_t ret;
 	DMA_RDLAR1_RgRd(DMA_RDLAR1_val);
-	sprintf(debugfs_buf, "DMA_RDLAR1      :%#x\n", DMA_RDLAR1_val);
+	sprintf(debugfs_buf, "DMA_RDLAR1      :%#llx\n", DMA_RDLAR1_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -16522,7 +16522,7 @@ static ssize_t DMA_RDLAR0_read(struct file *file, char __user * userbuf,
 {
 	ssize_t ret;
 	DMA_RDLAR0_RgRd(DMA_RDLAR0_val);
-	sprintf(debugfs_buf, "DMA_RDLAR0      :%#x\n", DMA_RDLAR0_val);
+	sprintf(debugfs_buf, "DMA_RDLAR0      :%#llx\n", DMA_RDLAR0_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -16539,7 +16539,7 @@ static ssize_t DMA_TDLAR7_read(struct file *file, char __user * userbuf,
 {
 	ssize_t ret;
 	DMA_TDLAR7_RgRd(DMA_TDLAR7_val);
-	sprintf(debugfs_buf, "DMA_TDLAR7      :%#x\n", DMA_TDLAR7_val);
+	sprintf(debugfs_buf, "DMA_TDLAR7      :%#llx\n", DMA_TDLAR7_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -16556,7 +16556,7 @@ static ssize_t DMA_TDLAR6_read(struct file *file, char __user * userbuf,
 {
 	ssize_t ret;
 	DMA_TDLAR6_RgRd(DMA_TDLAR6_val);
-	sprintf(debugfs_buf, "DMA_TDLAR6      :%#x\n", DMA_TDLAR6_val);
+	sprintf(debugfs_buf, "DMA_TDLAR6      :%#llx\n", DMA_TDLAR6_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -16573,7 +16573,7 @@ static ssize_t DMA_TDLAR5_read(struct file *file, char __user * userbuf,
 {
 	ssize_t ret;
 	DMA_TDLAR5_RgRd(DMA_TDLAR5_val);
-	sprintf(debugfs_buf, "DMA_TDLAR5      :%#x\n", DMA_TDLAR5_val);
+	sprintf(debugfs_buf, "DMA_TDLAR5      :%#llx\n", DMA_TDLAR5_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -16590,7 +16590,7 @@ static ssize_t DMA_TDLAR4_read(struct file *file, char __user * userbuf,
 {
 	ssize_t ret;
 	DMA_TDLAR4_RgRd(DMA_TDLAR4_val);
-	sprintf(debugfs_buf, "DMA_TDLAR4      :%#x\n", DMA_TDLAR4_val);
+	sprintf(debugfs_buf, "DMA_TDLAR4      :%#llx\n", DMA_TDLAR4_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -16607,7 +16607,7 @@ static ssize_t DMA_TDLAR3_read(struct file *file, char __user * userbuf,
 {
 	ssize_t ret;
 	DMA_TDLAR3_RgRd(DMA_TDLAR3_val);
-	sprintf(debugfs_buf, "DMA_TDLAR3      :%#x\n", DMA_TDLAR3_val);
+	sprintf(debugfs_buf, "DMA_TDLAR3      :%#llx\n", DMA_TDLAR3_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -16624,7 +16624,7 @@ static ssize_t DMA_TDLAR2_read(struct file *file, char __user * userbuf,
 {
 	ssize_t ret;
 	DMA_TDLAR2_RgRd(DMA_TDLAR2_val);
-	sprintf(debugfs_buf, "DMA_TDLAR2      :%#x\n", DMA_TDLAR2_val);
+	sprintf(debugfs_buf, "DMA_TDLAR2      :%#llx\n", DMA_TDLAR2_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -16641,7 +16641,7 @@ static ssize_t DMA_TDLAR1_read(struct file *file, char __user * userbuf,
 {
 	ssize_t ret;
 	DMA_TDLAR1_RgRd(DMA_TDLAR1_val);
-	sprintf(debugfs_buf, "DMA_TDLAR1      :%#x\n", DMA_TDLAR1_val);
+	sprintf(debugfs_buf, "DMA_TDLAR1      :%#llx\n", DMA_TDLAR1_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -16658,7 +16658,7 @@ static ssize_t DMA_TDLAR0_read(struct file *file, char __user * userbuf,
 {
 	ssize_t ret;
 	DMA_TDLAR0_RgRd(DMA_TDLAR0_val);
-	sprintf(debugfs_buf, "DMA_TDLAR0      :%#x\n", DMA_TDLAR0_val);
+	sprintf(debugfs_buf, "DMA_TDLAR0      :%#llx\n", DMA_TDLAR0_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -20786,9 +20786,9 @@ static ssize_t RX_NORMAL_DESC_STATUS_read(struct file *file,
 	ssize_t ret = 0;
 	char *tmpBuf = NULL;
 	char *debug_buf = NULL;
-	UINT varDMA_CHRDR;	/* head ptr */
-	UINT varDMA_RDTP_RPDR;	/* tail ptr */
-	UINT varDMA_RDLAR;	/* tail ptr */
+	uint64_t varDMA_CHRDR;	/* head ptr */
+	uint64_t varDMA_RDTP_RPDR;	/* tail ptr */
+	uint64_t varDMA_RDLAR = 0;	/* tail ptr */
 	UINT tail_idx;
 	UINT head_idx;
 	UINT drv_desc_cnt = 0;
@@ -20823,7 +20823,7 @@ static ssize_t RX_NORMAL_DESC_STATUS_read(struct file *file,
 	if (tail_idx == head_idx) {
 		dev_desc_cnt = 0;
 		drv_desc_cnt = RX_DESC_CNT;
-		printk(KERN_ALERT "\nhead:[%d]%#x tail:[%d]%#x cur-rx:%d\n",
+		printk(KERN_ALERT "\nhead:[%d]%#llx tail:[%d]%#llx cur-rx:%d\n",
 		       head_idx, varDMA_CHRDR, tail_idx,
 		       varDMA_RDTP_RPDR, cur_rx);
 	} else if (head_idx > tail_idx) {	/* tail ptr is above head ptr */

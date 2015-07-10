@@ -435,8 +435,7 @@ static void DWC_ETH_QOS_adjust_link(struct net_device *dev)
 	/* At this stage, it could be need to setup the EEE or adjust some
 	 * MAC related HW registers.
 	 * */
-#ifdef HWA_NV_1618922
-#else
+#ifdef DWC_ETH_QOS_ENABLE_EEE
 	pdata->eee_enabled = DWC_ETH_QOS_eee_init(pdata);
 #endif
 

@@ -90,6 +90,12 @@
 #include <linux/ioport.h>
 #include <linux/phy.h>
 #include <linux/mdio.h>
+#if defined(CONFIG_ARCH_DMA_ADDR_T_64BIT)
+#define L32(data) ((data)&0xFFFFFFFF)
+#define H32(data) (((data)&0xFFFFFFFF00000000)>>32)
+#else
+#define DWC_ETH_QOS_DMA_32BIT
+#endif
 #if defined(CONFIG_VLAN_8021Q) || defined(CONFIG_VLAN_8021Q_MODULE)
 #define DWC_ETH_QOS_ENABLE_VLAN_TAG
 #include <linux/if_vlan.h>
@@ -160,6 +166,7 @@
  * no EEE supported PHY card
  * */
 //#define DWC_ETH_QOS_CUSTOMIZED_EEE_TEST
+#define DWC_ETH_QOS_ENABLE_EEE
 
 #ifdef DWC_ETH_QOS_CUSTOMIZED_EEE_TEST
 #undef DWC_ETH_QOS_TXPOLLING_MODE_ENABLE
@@ -296,7 +303,11 @@
 
 //#define DWC_ETH_QOS_MAX_DATA_PER_TX_BUF (1 << 13)     /* 8 KB Maximum data per buffer pointer(in Bytes) */
 #define DWC_ETH_QOS_MAX_DATA_PER_TX_BUF (1 << 12)	/* for testing purpose: 4 KB Maximum data per buffer pointer(in Bytes) */
+#if defined(DWC_ETH_QOS_DMA_32BIT)
 #define DWC_ETH_QOS_MAX_DATA_PER_TXD (DWC_ETH_QOS_MAX_DATA_PER_TX_BUF * 2)	/* Maxmimum data per descriptor(in Bytes) */
+#else
+#define DWC_ETH_QOS_MAX_DATA_PER_TXD (DWC_ETH_QOS_MAX_DATA_PER_TX_BUF)
+#endif
 
 #define DWC_ETH_QOS_MAX_SUPPORTED_MTU 16380
 #define DWC_ETH_QOS_MAX_GPSL 9000 /* Default maximum Gaint Packet Size Limit */

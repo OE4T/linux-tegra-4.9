@@ -363,9 +363,10 @@ static void DWC_ETH_QOS_start_dev(struct DWC_ETH_QOS_prv_data *pdata)
 
 	DWC_ETH_QOS_restart_phy(pdata);
 
-#ifdef HWA_NV_1618922
-#else
+#ifdef DWC_ETH_QOS_ENABLE_EEE
 	pdata->eee_enabled = DWC_ETH_QOS_eee_init(pdata);
+#else
+	pdata->eee_enabled = false;
 #endif
 
 	netif_tx_wake_all_queues(pdata->dev);
@@ -1169,7 +1170,7 @@ static int DWC_ETH_QOS_alloc_jumbo_rx_buf(struct DWC_ETH_QOS_prv_data *pdata,
 					   buffer->page, 0,
 					   PAGE_SIZE, DMA_FROM_DEVICE);
 	buffer->len = PAGE_SIZE;
-
+#ifdef DWC_ETH_QOS_DMA_32BIT
 	if (buffer->page2 == NULL) {
 		buffer->page2 = alloc_page(gfp);
 		if (unlikely(!buffer->page2)) {
@@ -1183,6 +1184,9 @@ static int DWC_ETH_QOS_alloc_jumbo_rx_buf(struct DWC_ETH_QOS_prv_data *pdata,
 					    buffer->page2, 0,
 					    PAGE_SIZE, DMA_FROM_DEVICE);
 	buffer->len2 = PAGE_SIZE;
+#else
+	buffer->len2 = 0;
+#endif
 
 	buffer->mapped_as_page = Y_TRUE;
 
@@ -1511,10 +1515,10 @@ static int DWC_ETH_QOS_open(struct net_device *dev)
 	if (pdata->phydev)
 		phy_start(pdata->phydev);
 
-#ifdef HWA_NV_1618922
-	pdata->eee_enabled = false;
-#else
+#ifdef DWC_ETH_QOS_ENABLE_EEE
 	pdata->eee_enabled = DWC_ETH_QOS_eee_init(pdata);
+#else
+	pdata->eee_enabled = false;
 #endif
 
 #ifndef DWC_ETH_QOS_CONFIG_PGTEST
@@ -2974,7 +2978,7 @@ static int DWC_ETH_QOS_clean_jumbo_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
 	struct s_RX_NORMAL_DESC *RX_NORMAL_DESC = NULL;
 	u16 pkt_len;
 	UCHAR intermediate_desc_cnt = 0;
-	unsigned int buf2_used;
+	unsigned int buf2_used = 0;
 	int ret;
 #ifdef HWA_NV_1618922
 	UINT ErrBits = 0x1200000;
@@ -3000,11 +3004,12 @@ static int DWC_ETH_QOS_clean_jumbo_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
 				       PAGE_SIZE, DMA_FROM_DEVICE);
 			buffer->dma = 0;
 
+#ifdef DWC_ETH_QOS_DMA_32BIT
 			/* second buffer pointer */
 			dma_unmap_page(&pdata->pdev->dev, buffer->dma2,
 				       PAGE_SIZE, DMA_FROM_DEVICE);
 			buffer->dma2 = 0;
-
+#endif
 			/* get the packet length */
 			pkt_len =
 				(RX_NORMAL_DESC->RDES3 & DWC_ETH_QOS_RDESC3_PL);
@@ -3045,12 +3050,14 @@ static int DWC_ETH_QOS_clean_jumbo_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
 						buffer->page, 0,
 						pdata->rx_buffer_len);
 
+#ifdef DWC_ETH_QOS_DMA_32BIT
 					DBGPR("RX: pkt in second buffer pointer\n");
 					skb_fill_page_desc(
 						desc_data->skb_top,
 						skb_shinfo(desc_data->skb_top)->nr_frags,
 						buffer->page2, 0,
 						pdata->rx_buffer_len);
+#endif
 				} else {
 					/* this is the middle of a chain */
 					skb_fill_page_desc(desc_data->skb_top,
@@ -3058,11 +3065,13 @@ static int DWC_ETH_QOS_clean_jumbo_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
 						buffer->page, 0,
 						pdata->rx_buffer_len);
 
+#ifdef DWC_ETH_QOS_DMA_32BIT
 					DBGPR("RX: pkt in second buffer pointer\n");
 					skb_fill_page_desc(desc_data->skb_top,
 						skb_shinfo(desc_data->skb_top)->nr_frags,
 						buffer->page2, 0,
 						pdata->rx_buffer_len);
+#endif
 					/* re-use this skb, as consumed only the page */
 					buffer->skb = skb;
 				}
@@ -3082,12 +3091,14 @@ static int DWC_ETH_QOS_clean_jumbo_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
 							buffer->page, 0,
 							pdata->rx_buffer_len);
 
+#ifdef DWC_ETH_QOS_DMA_32BIT
 						DBGPR("RX: pkt in second buffer pointer\n");
 						skb_fill_page_desc(desc_data->skb_top,
 							skb_shinfo(desc_data->skb_top)->nr_frags,
 							buffer->page2, 0,
 							(pkt_len - pdata->rx_buffer_len));
 						buf2_used = 1;
+#endif
 					} else {
 						skb_fill_page_desc(desc_data->skb_top,
 							skb_shinfo(desc_data->skb_top)->nr_frags,
@@ -3126,12 +3137,14 @@ static int DWC_ETH_QOS_clean_jumbo_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
 								0,
 								pdata->rx_buffer_len);
 
+#ifdef DWC_ETH_QOS_DMA_32BIT
 							DBGPR ("RX: pkt in second buffer pointer\n");
 							skb_fill_page_desc(skb,
 								skb_shinfo(skb)->nr_frags, buffer->page2,
 								0,
 								(pkt_len - pdata->rx_buffer_len));
 							buf2_used = 1;
+#endif
 						} else {
 							skb_fill_page_desc(skb,
 								0, buffer->page,

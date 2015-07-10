@@ -448,6 +448,7 @@ static u32 get_lpi_status(void)
 static int set_eee_mode(void)
 {
 
+  DBGPR_EEE("set_eee_mode\n");
   MAC_LPS_LPIEN_UdfWr(0x1);
 
   return Y_SUCCESS;
@@ -3500,19 +3501,22 @@ static void rx_descriptor_init(struct DWC_ETH_QOS_prv_data *pdata, UINT qInx)
 	for (i = 0; i < RX_DESC_CNT; i++) {
 		memset(RX_NORMAL_DESC, 0, sizeof(struct s_RX_NORMAL_DESC));
 		/* update buffer 1 address pointer */
-		RX_NORMAL_DESC_RDES0_Ml_Wr(RX_NORMAL_DESC->RDES0, buffer->dma);
+		RX_NORMAL_DESC_RDES0_Ml_Wr(RX_NORMAL_DESC->RDES0, (L32(buffer->dma)));
 		/* set to zero  */
-		RX_NORMAL_DESC_RDES1_Ml_Wr(RX_NORMAL_DESC->RDES1, 0);
+		RX_NORMAL_DESC_RDES1_Ml_Wr(RX_NORMAL_DESC->RDES1, (H32(buffer->dma)));
 
+#ifdef DWC_ETH_QOS_DMA_32BIT
 		if ((pdata->dev->mtu > DWC_ETH_QOS_ETH_FRAME_LEN) ||
 			(pdata->rx_split_hdr == 1)) {
 			/* update buffer 2 address pointer */
 			RX_NORMAL_DESC_RDES2_Ml_Wr(RX_NORMAL_DESC->RDES2,
-						   buffer->dma2);
+						   L32(buffer->dma2));
 			/* set control bits - OWN, INTE, BUF1V and BUF2V */
 			RX_NORMAL_DESC_RDES3_Ml_Wr(RX_NORMAL_DESC->RDES3,
-						   (0xc3000000));
-		} else {
+						   (0xc3000000)|(H32(buffer->dma2)));
+		} else 
+#endif
+		{
 			/* set buffer 2 address pointer to zero */
 			RX_NORMAL_DESC_RDES2_Ml_Wr(RX_NORMAL_DESC->RDES2, 0);
 			/* set control bits - OWN, INTE and BUF1V */
@@ -3726,7 +3730,12 @@ static void pre_transmit(struct DWC_ETH_QOS_prv_data *pdata,
 	}
 
 	/* update the first buffer pointer and length */
+#if defined(DWC_ETH_QOS_DMA_32BIT)
 	TX_NORMAL_DESC_TDES0_Ml_Wr(TX_NORMAL_DESC->TDES0, buffer->dma);
+#else
+	TX_NORMAL_DESC_TDES0_Ml_Wr(TX_NORMAL_DESC->TDES0, (buffer->dma)&0xFFFFFFFF);
+	TX_NORMAL_DESC_TDES1_Ml_Wr(TX_NORMAL_DESC->TDES1, (((buffer->dma)&0xFFFFFFFF00000000)>>32)&0xFFFFFFFF);
+#endif
 	TX_NORMAL_DESC_TDES2_HL_B1L_Mlf_Wr(TX_NORMAL_DESC->TDES2, buffer->len);
 	if (buffer->dma2 != 0) {
 		/* update the second buffer pointer and length */
@@ -3806,7 +3815,12 @@ static void pre_transmit(struct DWC_ETH_QOS_prv_data *pdata,
 
 	for (i = 1; i < GET_CURRENT_XFER_DESC_CNT(qInx); i++) {
 		/* update the first buffer pointer and length */
+#if defined(DWC_ETH_QOS_DMA_32BIT)
 		TX_NORMAL_DESC_TDES0_Ml_Wr(TX_NORMAL_DESC->TDES0, buffer->dma);
+#else
+		TX_NORMAL_DESC_TDES0_Ml_Wr(TX_NORMAL_DESC->TDES0, (buffer->dma)&0xFFFFFFFF);
+		TX_NORMAL_DESC_TDES1_Ml_Wr(TX_NORMAL_DESC->TDES1, (((buffer->dma)&0xFFFFFFFF00000000)>>32)&0xFFFFFFFF);
+#endif
 		TX_NORMAL_DESC_TDES2_HL_B1L_Mlf_Wr(TX_NORMAL_DESC->TDES2, buffer->len);
 		if (buffer->dma2 != 0) {
 			/* update the second buffer pointer and length */
@@ -4375,11 +4389,14 @@ static INT configure_dma_channel(UINT qInx,
 	pbl = calculate_dma_pbl(p_fifo);
 	DMA_RCR_PBL_UdfWr(qInx, pbl);
 
-    /* To get Best Performance */
-    DMA_SBUS_BLEN16_UdfWr(1);
-    DMA_SBUS_BLEN8_UdfWr(1);
-    DMA_SBUS_BLEN4_UdfWr(1);
-    DMA_SBUS_RD_OSR_LMT_UdfWr(2);
+	/* To get Best Performance */
+	DMA_SBUS_BLEN16_UdfWr(1);
+	DMA_SBUS_BLEN8_UdfWr(1);
+	DMA_SBUS_BLEN4_UdfWr(1);
+	DMA_SBUS_RD_OSR_LMT_UdfWr(2);
+#ifndef DWC_ETH_QOS_DMA_32BIT
+	DMA_SBUS_EAME_UdfWr(1);
+#endif
 
 	/* enable TSO if HW supports */
 	if (pdata->hw_feat.tso_en)

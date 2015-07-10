@@ -793,6 +793,38 @@ static int DWC_ETH_QOS_handle_tso(struct net_device *dev,
 }
 
 /* returns 0 on success and -ve on failure */
+#ifndef DWC_ETH_QOS_DMA_32BIT
+static int DWC_ETH_QOS_map_non_page_buffs_64(struct DWC_ETH_QOS_prv_data *pdata,
+                                struct DWC_ETH_QOS_tx_buffer *buffer,
+                                struct sk_buff *skb,
+                                unsigned int offset,
+                                unsigned int size)
+{
+	DBGPR("-->DWC_ETH_QOS_map_non_page_buffs_64");
+
+	if (size > DWC_ETH_QOS_MAX_DATA_PER_TX_BUF) {
+		printk(KERN_ALERT "failed to allocate buffer(size = %d) with %d size\n",
+				DWC_ETH_QOS_MAX_DATA_PER_TX_BUF,
+				size);
+		return - ENOMEM;
+	}
+
+	buffer->dma = dma_map_single((&pdata->pdev->dev),
+			(skb->data + offset),
+			size, DMA_TO_DEVICE);
+	if (dma_mapping_error((&pdata->pdev->dev), buffer->dma)) {
+		printk(KERN_ALERT "failed to do the dma map\n");
+		return - ENOMEM;
+	}
+	buffer->len = size;
+	buffer->buf1_mapped_as_page = Y_FALSE;
+	buffer->dma2 = 0;
+	buffer->len2 = 0;
+
+	DBGPR("<--DWC_ETH_QOS_map_non_page_buffs_64");
+	return 0;
+}
+#else
 static int DWC_ETH_QOS_map_non_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 				struct DWC_ETH_QOS_tx_buffer *buffer,
 				struct DWC_ETH_QOS_tx_buffer *prev_buffer,
@@ -892,7 +924,34 @@ static int DWC_ETH_QOS_map_non_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 
 	return 0;
 }
+#endif
 
+#ifndef DWC_ETH_QOS_DMA_32BIT
+static int DWC_ETH_QOS_map_page_buffs_64(struct DWC_ETH_QOS_prv_data *pdata,
+			struct DWC_ETH_QOS_tx_buffer *buffer,
+			struct skb_frag_struct *frag,
+			unsigned int offset,
+			unsigned int size)
+{
+	DBGPR("-->DWC_ETH_QOS_map_page_buffs_64\n");
+	/* fill the first buffer pointer in buffer->dma */
+	buffer->dma = dma_map_page((&pdata->pdev->dev),
+				frag->page.p,
+				frag->page_offset + offset,
+				size, DMA_TO_DEVICE);
+	if (dma_mapping_error((&pdata->pdev->dev),
+				buffer->dma)) {
+		printk(KERN_ALERT "failed to do the dma map\n");
+		return -ENOMEM;
+	}
+	buffer->len = size;
+	buffer->buf1_mapped_as_page = Y_TRUE;
+	buffer->dma2 = 0;
+
+	DBGPR("<--DWC_ETH_QOS_map_page_buffs_64\n");
+	return 0;
+}
+#else
 /* returns 0 on success and -ve on failure */
 static int DWC_ETH_QOS_map_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 			struct DWC_ETH_QOS_tx_buffer *buffer,
@@ -1008,6 +1067,7 @@ static int DWC_ETH_QOS_map_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 
 	return 0;
 }
+#endif
 
 
 /*!
@@ -1086,9 +1146,14 @@ static unsigned int DWC_ETH_QOS_map_skb(struct net_device *dev,
 		size = min(len, DWC_ETH_QOS_MAX_DATA_PER_TXD);
 
 		buffer = GET_TX_BUF_PTR(qInx, index);
+#if defined(DWC_ETH_QOS_DMA_32BIT)
 		ret = DWC_ETH_QOS_map_non_page_buffs(pdata, buffer,
 						prev_buffer,
 						skb, offset, size);
+#else
+		ret = DWC_ETH_QOS_map_non_page_buffs_64(pdata, buffer,
+						skb, offset, size);
+#endif
 		if (ret < 0)
 			goto err_out_dma_map_fail;
 
@@ -1106,9 +1171,14 @@ static unsigned int DWC_ETH_QOS_map_skb(struct net_device *dev,
 			size = min(len, DWC_ETH_QOS_MAX_DATA_PER_TXD);
 
 			buffer = GET_TX_BUF_PTR(qInx, index);
+#if defined(DWC_ETH_QOS_DMA_32BIT)
 			ret = DWC_ETH_QOS_map_non_page_buffs(pdata, buffer,
-							prev_buffer,
-							skb, offset, size);
+						prev_buffer,
+						skb, offset, size);
+#else
+			ret = DWC_ETH_QOS_map_non_page_buffs_64(pdata, buffer,
+						skb, offset, size);
+#endif
 			if (ret < 0)
 				goto err_out_dma_map_fail;
 
@@ -1132,9 +1202,14 @@ static unsigned int DWC_ETH_QOS_map_skb(struct net_device *dev,
 			size = min(len, DWC_ETH_QOS_MAX_DATA_PER_TXD);
 
 			buffer = GET_TX_BUF_PTR(qInx, index);
+#if defined(DWC_ETH_QOS_DMA_32BIT)
 			ret = DWC_ETH_QOS_map_page_buffs(pdata, buffer,
 							prev_buffer, frag,
 							offset, size);
+#else
+			ret = DWC_ETH_QOS_map_page_buffs_64(pdata, buffer,
+							frag, offset, size);
+#endif
 			if (ret < 0)
 				goto err_out_dma_map_fail;
 
@@ -1155,8 +1230,8 @@ static unsigned int DWC_ETH_QOS_map_skb(struct net_device *dev,
 	}
 	buffer->skb = skb;
 
-	DBGPR("<--DWC_ETH_QOS_map_skb: buffer->dma = %#x\n",
-	      (UINT) buffer->dma);
+	DBGPR("<--DWC_ETH_QOS_map_skb: buffer->dma = %#llx\n",
+	      (ULONG_LONG) buffer->dma);
 
 	return count;
 

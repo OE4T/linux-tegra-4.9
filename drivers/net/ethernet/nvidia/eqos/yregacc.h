@@ -21313,14 +21313,29 @@
 } while(0)
 
 
+#define DMA_RDLARH0_RgOffAddr ((volatile ULONG *)(BASE_ADDRESS + 0x1118))
+
 #define DMA_RDLAR0_RgOffAddr ((volatile ULONG *)(BASE_ADDRESS + 0x111c))
 
 #define DMA_RDLAR0_RgWr(data) do {\
+		iowrite32((((data) >> 32) & 0xFF), (void *)DMA_RDLARH0_RgOffAddr);\
 		iowrite32(data, (void *)DMA_RDLAR0_RgOffAddr);\
 } while(0)
 
+#define DMA_RDLARH0_RgRd(data) do {\
+		data = ioread32((void *)DMA_RDLARH0_RgOffAddr);\
+} while(0)
+
+#define DMA_RDLARL0_RgRd(data) do {\
+		data = ioread32((void *)DMA_RDLAR0_RgOffAddr);\
+} while (0)
+
 #define DMA_RDLAR0_RgRd(data) do {\
-		(data) = ioread32((void *)DMA_RDLAR0_RgOffAddr);\
+		uint64_t lRead;\
+		uint64_t hRead;\
+		DMA_RDLARH0_RgRd(hRead);\
+		DMA_RDLARL0_RgRd(lRead);\
+		data = (hRead << 32) | lRead;\
 } while(0)
 
 #define DMA_RDLAR0_RDESLA_UdfWr(data) do {\
@@ -21465,14 +21480,19 @@
 } while(0)
 
 
+#define DMA_TDLARH0_RgOffAddr ((volatile ULONG *)(BASE_ADDRESS + 0x1110))
+
 #define DMA_TDLAR0_RgOffAddr ((volatile ULONG *)(BASE_ADDRESS + 0x1114))
 
 #define DMA_TDLAR0_RgWr(data) do {\
+		iowrite32((((data)>>32)&0xFF), (void *) DMA_TDLARH0_RgOffAddr);\
 		iowrite32(data, (void *)DMA_TDLAR0_RgOffAddr);\
 } while(0)
 
 #define DMA_TDLAR0_RgRd(data) do {\
-		(data) = ioread32((void *)DMA_TDLAR0_RgOffAddr);\
+		uint64_t hRead = ioread32((void *)DMA_TDLARH0_RgOffAddr);\
+		uint64_t lRead = ioread32((void *)DMA_TDLAR0_RgOffAddr);\
+		data = (hRead << 32) | lRead;\
 } while(0)
 
 #define DMA_TDLAR0_TDESLA_UdfWr(data) do {\
@@ -23999,7 +24019,30 @@
 
 /*#define DMA_SBUS_RES_Wr_Mask_8 (ULONG)(~((~(~0<<(4)))<<(8)))*/
 
-#define DMA_SBUS_RES_Wr_Mask_8 (ULONG)(0xfffff0ff)
+/*#define DMA_SBUS_RES_Wr_Mask_8 (ULONG)(0xfffff0ff)*/
+
+/* For DMA addressing modes greater than 32 bit, 11th bit is not RO.
+   Instead of using 4bit mask, use 3bit mask to reset 8th bit */
+/*#define DMA_SBUS_RES_Wr_Mask_8 (ULONG)(~((~(~0<<(3)))<<(8)))*/
+
+#define DMA_SBUS_RES_Wr_Mask_8 (ULONG)(0xfffff8ff)
+
+/*#define DMA_SBUS_EAME_MASK (ULONG)(~(~0<<(1)))*/
+
+#define DMA_SBUS_EAME_Mask (ULONG)(0x1)
+
+#define DMA_SBUS_EAME_Wr_Mask (ULONG)(0xfffff7ff)
+
+#define DMA_SBUS_EAME_UdfWr(data) do {\
+		ULONG v;\
+		DMA_SBUS_RgRd(v);\
+		v = (v & (DMA_SBUS_RES_Wr_Mask_25))|((( 0) & (DMA_SBUS_Mask_25))<<25);\
+		v = (v & (DMA_SBUS_RES_Wr_Mask_20))|((( 0) & (DMA_SBUS_Mask_20))<<20);\
+		v = (v & (DMA_SBUS_RES_Wr_Mask_15))|((( 0) & (DMA_SBUS_Mask_15))<<15);\
+		v = (v & (DMA_SBUS_RES_Wr_Mask_8))|((( 0) & (DMA_SBUS_Mask_8))<<8);\
+		v = ((v & DMA_SBUS_EAME_Wr_Mask) | ((data & DMA_SBUS_EAME_Mask)<<11));\
+		DMA_SBUS_RgWr(v);\
+} while(0)
 
 /*#define DMA_SBUS_EN_LPI_Mask (ULONG)(~(~0<<(1)))*/
 
@@ -35900,16 +35943,23 @@
 } while(0)
 
 
+#define DMA_RDLAR_HRgOffAddr (BASE_ADDRESS + 0x1118)
+
 #define DMA_RDLAR_RgOffAddr (BASE_ADDRESS + 0x111c)
+
+#define DMA_RDLAR_HRgOffAddress(i) ((volatile ULONG *)(DMA_RDLAR_HRgOffAddr + ((i-0)*128)))
 
 #define DMA_RDLAR_RgOffAddress(i) ((volatile ULONG *)(DMA_RDLAR_RgOffAddr + ((i-0)*128)))
 
 #define DMA_RDLAR_RgWr(i,data) do {\
-		iowrite32(data, (void *)DMA_RDLAR_RgOffAddress(i));\
+		iowrite32((data>>32)&0xFFFF, (void *)DMA_RDLAR_HRgOffAddress(i));\
+		iowrite32(data&0xFFFFFFFF, (void *)DMA_RDLAR_RgOffAddress(i));\
 } while(0)
 
 #define DMA_RDLAR_RgRd(i,data) do {\
-		(data) = ioread32((void *)DMA_RDLAR_RgOffAddress(i));\
+		uint64_t hread = ioread32((void *)DMA_RDLAR_HRgOffAddress(i));\
+		uint64_t lread = ioread32((void *)DMA_RDLAR_RgOffAddress(i));\
+		(data) |= (hread << 32) | lread;\
 } while(0)
 
 #define DMA_RDLAR_RDESLA_UdfWr(i,data) do {\
@@ -35921,16 +35971,22 @@
 } while(0)
 
 
+#define DMA_TDLAR_HRgOffAddr (BASE_ADDRESS + 0x1110)
+
 #define DMA_TDLAR_RgOffAddr (BASE_ADDRESS + 0x1114)
 
 #define DMA_TDLAR_RgOffAddress(i) ((volatile ULONG *)(DMA_TDLAR_RgOffAddr + ((i-0)*128)))
 
+#define DMA_TDLAR_HRgOffAddress(i) ((volatile ULONG *)(DMA_TDLAR_HRgOffAddr + ((i-0)*128)))
+
 #define DMA_TDLAR_RgWr(i,data) do {\
+		iowrite32((((data) >> 32) &0xFFFF), (void*)DMA_TDLAR_HRgOffAddress(i));\
 		iowrite32(data, (void *)DMA_TDLAR_RgOffAddress(i));\
 } while(0)
 
 #define DMA_TDLAR_RgRd(i,data) do {\
-		(data) = ioread32((void *)DMA_TDLAR_RgOffAddress(i));\
+		(data) = (ioread32((void *)DMA_TDLAR_HRgOffAddress(i)) << 32);\
+		(data) |= ioread32((void *)DMA_TDLAR_RgOffAddress(i));\
 } while(0)
 
 #define DMA_TDLAR_TDESLA_UdfWr(i,data) do {\
@@ -36885,12 +36941,17 @@
 } while(0)
 
 
+#define DMA_CHRBARH_RgOffAddr (BASE_ADDRESS + 0x1158)
+
 #define DMA_CHRBAR_RgOffAddr (BASE_ADDRESS + 0x115c)
+
+#define DMA_CHRBARH_RgOffAddress(i) ((volatile ULONG *)(DMA_CHRBARH_RgOffAddr + ((i-0)*128)))
 
 #define DMA_CHRBAR_RgOffAddress(i) ((volatile ULONG *)(DMA_CHRBAR_RgOffAddr + ((i-0)*128)))
 
 #define DMA_CHRBAR_RgRd(i,data) do {\
-		(data) = ioread32((void *)DMA_CHRBAR_RgOffAddress(i));\
+		(data) = ioread32((void *)DMA_CHRBARH_RgOffAddress(i)) << 32;\
+		(data) |= ioread32((void *)DMA_CHRBAR_RgOffAddress(i));\
 } while(0)
 
 #define DMA_CHRBAR_CURRBUFAPTR_UdfRd(i,data) do {\
@@ -36898,12 +36959,17 @@
 } while(0)
 
 
+#define DMA_CHTBARH_RgOffAddr (BASE_ADDRESS + 0x1150)
+
 #define DMA_CHTBAR_RgOffAddr (BASE_ADDRESS + 0x1154)
+
+#define DMA_CHTBARH_RgOffAddress(i) ((volatile ULONG *)(DMA_CHTBARH_RgOffAddr + ((i-0)*128)))
 
 #define DMA_CHTBAR_RgOffAddress(i) ((volatile ULONG *)(DMA_CHTBAR_RgOffAddr + ((i-0)*128)))
 
 #define DMA_CHTBAR_RgRd(i,data) do {\
-		(data) = ioread32((void *)DMA_CHTBAR_RgOffAddress(i));\
+		(data) = ioread32((void *)DMA_CHTBARH_RgOffAddress(i)) << 32;\
+		(data) |= ioread32((void *)DMA_CHTBAR_RgOffAddress(i));\
 } while(0)
 
 #define DMA_CHTBAR_CURTBUFAPTR_UdfRd(i,data) do {\

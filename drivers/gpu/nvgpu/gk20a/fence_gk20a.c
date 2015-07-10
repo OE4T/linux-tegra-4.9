@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -71,7 +71,10 @@ int gk20a_fence_wait(struct gk20a_fence *f, int timeout)
 
 bool gk20a_fence_is_expired(struct gk20a_fence *f)
 {
-	return f->ops->is_expired(f);
+	if (f && f->ops)
+		return f->ops->is_expired(f);
+	else
+		return true;
 }
 
 int gk20a_fence_install_fd(struct gk20a_fence *f)

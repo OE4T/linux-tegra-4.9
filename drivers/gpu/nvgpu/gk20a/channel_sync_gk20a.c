@@ -313,7 +313,7 @@ static struct gk20a_channel_sync *
 gk20a_channel_syncpt_create(struct channel_gk20a *c)
 {
 	struct gk20a_channel_syncpt *sp;
-	char syncpt_name[16];
+	char syncpt_name[32];
 
 	sp = kzalloc(sizeof(*sp), GFP_KERNEL);
 	if (!sp)
@@ -322,7 +322,8 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 	sp->c = c;
 	sp->host1x_pdev = c->g->host1x_dev;
 
-	sprintf(syncpt_name, "%s_%d", dev_name(&c->g->dev->dev), c->hw_chid);
+	snprintf(syncpt_name, sizeof(syncpt_name),
+		"%s_%d", dev_name(&c->g->dev->dev), c->hw_chid);
 
 	sp->id = nvhost_get_syncpt_host_managed(sp->host1x_pdev,
 						c->hw_chid, syncpt_name);

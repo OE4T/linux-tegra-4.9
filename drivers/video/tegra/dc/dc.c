@@ -2449,6 +2449,13 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		 */
 		tegra_dc_get(dc);
 	}
+/*
+ * This config enables seamless feature only for
+ * android usecase as a WAR for improper DSI initialization
+ * in bootloader for L4T usecase.
+ * Bug 200122858
+ */
+#ifdef CONFIG_ANDROID
 	/*
 	 * Seamless supporting panels can work in seamless mode
 	 * only if BL initializes DC/DSI. If not, panel should
@@ -2461,7 +2468,7 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 			tegra_is_bl_display_initialized(dc->ndev->id)) {
 		dc->initialized = true;
 	}
-
+#endif
 	mode = tegra_dc_get_override_mode(dc);
 
 	if (mode) {

@@ -130,6 +130,7 @@
 #define SLEEP_S5H1432    30
 #define CX23417_OSC_EN   8
 #define CX23417_RESET    9
+#define AVERMEDIA_H837_LED_PIN 27
 
 struct cx23417_fmt {
 	char  *name;

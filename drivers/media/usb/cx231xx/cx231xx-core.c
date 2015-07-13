@@ -723,6 +723,7 @@ int cx231xx_set_mode(struct cx231xx *dev, enum cx231xx_mode set_mode)
 			cx231xx_set_agc_analog_digital_mux_select(dev, 0);
 			cx231xx_set_power_mode(dev, POLARIS_AVMODE_DIGITAL);
 			msleep(50);
+			cx231xx_set_gpio_value(dev, AVERMEDIA_H837_LED_PIN, 0);
 			return 0;
 			}
 			break;
@@ -747,6 +748,7 @@ int cx231xx_set_mode(struct cx231xx *dev, enum cx231xx_mode set_mode)
 		case CX231XX_BOARD_AVERMEDIA_H837M:
 			cx231xx_set_agc_analog_digital_mux_select(dev, 1);
 			cx231xx_set_power_mode(dev, POLARIS_AVMODE_DEFAULT);
+			cx231xx_set_gpio_value(dev, AVERMEDIA_H837_LED_PIN, 1);
 			return 0;
 		case CX231XX_BOARD_CNXT_CARRAERA:
 		case CX231XX_BOARD_CNXT_RDE_250:

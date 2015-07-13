@@ -32,13 +32,14 @@
 #include <linux/nvs_proximity.h>
 
 
-#define IQS_DRIVER_VERSION		(9)
+#define IQS_DRIVER_VERSION		(11)
 #define IQS_VENDOR			"Azoteq"
 #define IQS_NAME			"iqs2x3"
 #define IQS_NAME_IQS253			"iqs253"
 #define IQS_NAME_IQS263			"iqs263"
 #define IQS_NAME_SAR_PROXIMITY		"SAR_proximity"
-#define IQS_NAME_TOUCH_PROXIMITY	"touch_proximity"
+#define IQS_NAME_SAR_TOUCH		"SAR_touch"
+#define IQS_GPIO_SAR_DBG_I2C_STR	"debug_i2c"
 #define IQS_DEVID_IQS253		(0x29)
 #define IQS_DEVID_IQS263		(0x3C)
 #define IQS_PART_253			(0)
@@ -53,6 +54,7 @@
 #define IQS_POLL_DLY_MS_MIN		(1000)
 #define IQS_POLL_DLY_MS_MAX		(1000)
 #define IQS_POLL_DLY_MS_WATCHDOG	(30000)
+#define IQS_I2C_STOP_DLY_NS		(1000000) /* must be >= 1ms */
 #define IQS_I2C_RETRY_N			(10)
 #define IQS_RDY_RETRY_N			(25)
 /* proximity defines */
@@ -72,7 +74,8 @@
 
 enum IQS_INFO {
 	IQS_INFO_STS = 0,
-	IQS_INFO_GPIO_RDY_INPUT = 0x10,
+	IQS_INFO_GPIO_SAR_DBG = 15,
+	IQS_INFO_GPIO_RDY_INPUT,
 	IQS_INFO_GPIO_RDY_OUTPUT,
 	IQS_INFO_GPIO_SAR_OUTPUT,
 	IQS_INFO_REG_WR,
@@ -84,7 +87,15 @@ enum IQS_DB_CMD {
 	IQS_DB_CMD_EN,
 	IQS_DB_CMD_DIS,
 	IQS_DB_CMD_EVNT,
+	IQS_DB_CMD_SUSPND,
 	IQS_DB_CMD_N,
+};
+
+enum IQS_STREAM {
+	IQS_STREAM_OFF = 0,
+	IQS_STREAM_ALWAYS,
+	IQS_STREAM_AUTO,
+	IQS_STREAM_N,
 };
 
 /* regulator names in order of powering on */
@@ -97,6 +108,27 @@ static unsigned short iqs_i2c_addrs[] = {
 	0x45,
 	0x46,
 	0x47,
+};
+
+static const struct i2c_device_id iqs_i2c_device_id[] = {
+	{ IQS_NAME_IQS253, 0 },
+	{ IQS_NAME_IQS263, 0 },
+	{ IQS_NAME, 0 },
+	{}
+};
+
+static const char * const iqs_sensor_cfg_name[] = {
+	IQS_NAME_SAR_PROXIMITY,
+	IQS_NAME_SAR_TOUCH,
+	IQS_GPIO_SAR_DBG_I2C_STR,
+};
+
+enum IQS_GPIO_SAR_DBG {
+	IQS_GPIO_SAR_DBG_I2C = IQS_DEV_N, /* IQS_GPIO_SAR_DBG_I2C_STR align */
+	/* Additional debug uses for the SAR GPIO can be added here.  Be sure
+	 * to add the gpio_sar_dev enable string to iqs_sensor_cfg_name.
+	 */
+	IQS_GPIO_SAR_DBG_N,
 };
 
 static unsigned char iqs263_wr_stream[] = {
@@ -123,6 +155,18 @@ static unsigned char iqs253_wr_events[] = {
 	0 /* end - done - exit */
 };
 
+static unsigned char iqs263_wr_ati_redo[] = {
+	1, 0x09, 0x10, /* data */
+		 0x18, /* mask */
+	0 /* end - done - exit */
+};
+
+static unsigned char iqs253_wr_ati_redo[] = {
+	14, 0xC4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x10, /* data */
+		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x18, /* mask */
+	0 /* end - done - exit */
+};
+
 static unsigned char iqs263_wr_reseed[] = {
 	1, 0x09, 0x08, /* data */
 		 0x18, /* mask */
@@ -131,7 +175,7 @@ static unsigned char iqs263_wr_reseed[] = {
 
 static unsigned char iqs253_wr_reseed[] = {
 	14, 0xC4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x08, /* data */
-		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x08, /* mask */
+		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x18, /* mask */
 	0 /* end - done - exit */
 };
 
@@ -263,9 +307,10 @@ static const struct iqs_hal const iqs253_hal_tbl[] = {
 	{ 0xC4, IQS253_RL_SETTINGS, IQS253_BI_SETTINGS, true, },
 };
 
-#define IQS_DT_INIT_N			(128) /* max DT init bytes */
-#define IQS_DT_ABLE_N			(64) /* max DT en/dis-able bytes */
+#define IQS_DT_INIT_N			(96) /* max DT init bytes */
+#define IQS_DT_ABLE_N			(32) /* max DT en/dis-able bytes */
 #define IQS_DT_EVNT_N			(32) /* max DT en/dis-able bytes */
+#define IQS_DT_SUSPND_N			(64) /* max DT suspend bytes */
 #define IQS263_MSG_N			(14)
 #define IQS253_MSG_N			(9)
 
@@ -284,6 +329,8 @@ struct iqs_hal_iom {
 struct iqs_hal_bit {
 	struct iqs_hal_iom devinf_id;
 	struct iqs_hal_iom sysflag_reset;
+	struct iqs_hal_iom ati_err;
+	struct iqs_hal_iom ati_busy;
 	struct iqs_hal_iom event_mode;
 	struct iqs_hal_iom ati_partial;
 	struct iqs_hal_iom active_ch;
@@ -307,6 +354,16 @@ static const struct iqs_hal_bit iqs263_hal_bit = {
 		.hal_i			= 1,
 		.offset			= 0,
 		.mask			= 0x80,
+	},
+	.ati_err			= {
+		.hal_i			= 1,
+		.offset			= 0,
+		.mask			= 0x20,
+	},
+	.ati_busy			= {
+		.hal_i			= 1,
+		.offset			= 0,
+		.mask			= 0x04,
 	},
 	.event_mode			= {
 		.hal_i			= 9,
@@ -341,7 +398,7 @@ static const struct iqs_hal_bit iqs263_hal_bit = {
 	.touch_tch			= {
 		.hal_i			= 3,
 		.offset			= 0,
-		.mask			= 0xE0,
+		.mask			= 0x0E,
 	},
 	.count_prx			= {
 		.hal_i			= 4,
@@ -401,7 +458,6 @@ static const struct iqs_hal_bit iqs253_hal_bit = {
 struct iqs_state {
 	struct i2c_client *i2c;
 	struct nvs_fn_if *nvs;
-	void *nvs_st[IQS_DEV_N];
 	struct sensor_cfg cfg[IQS_DEV_N];
 	struct delayed_work dw;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(iqs_vregs)];
@@ -412,34 +468,38 @@ struct iqs_state {
 	u16 i2c_addr;			/* I2C address */
 	u8 dev_id;			/* device ID */
 	bool irq_dis;			/* interrupt disable flag */
-	bool irq_first;			/* first interrupt flag */
-	bool reseed;			/* do reseed flag */
 	int op_i;			/* operational index */
 	int op_read_n;			/* operational register read count */
 	int op_read_reg[IQS_DEV_N + 2];	/* operational registers to read */
+	unsigned int part_i;		/* part index */
 	unsigned int dbg;		/* nvs debug interface */
 	unsigned int os;		/* OS options */
 	unsigned int stream;		/* configured for stream mode only */
+	unsigned int ati_redo_n;	/* ATI redo count */
 	unsigned int wd_to_ms;		/* watchdog timeout ms */
-	unsigned int i2c_retry;
-	unsigned int gpio_rdy_retry;	/* GPIO RDY assert timeout */
-	int gpio_rdy;
-	int gpio_sar;
-	int gpio_sar_val;
+	unsigned int i2c_retry;		/* I2C transaction loop limit */
+	unsigned int gpio_rdy_retry;	/* GPIO RDY assert loop limit */
+	s64 i2c_stop_ts;		/* see IQS_I2C_STOP_DLY_NS */
+	int gpio_rdy;			/* GPIO */
+	int gpio_sar;			/* GPIO */
+	int gpio_sar_val;		/* current GPIO state */
 	unsigned int sar_assert_pol;	/* sar assert polarity */
+	unsigned int gpio_sar_dev;	/* device that controls SAR GPIO */
 	unsigned int msg_n;		/* I2C transaction count */
 	struct i2c_msg msg[IQS_MSG_N];	/* max possible I2C transactions */
 	const struct iqs_hal *hal_tbl;	/* HAL register table */
 	unsigned int hal_tbl_n;		/* HAL register table count */
-	const struct iqs_hal_bit *hal_bit;
-	unsigned char *wr_disable;
-	unsigned char *wr_stream;
-	unsigned char *wr_events;
-	unsigned char *wr_reseed;
-	unsigned char dt_init[IQS_PART_N][IQS_DT_INIT_N];
-	unsigned char dt_en[IQS_PART_N][IQS_DEV_N][IQS_DT_ABLE_N];
-	unsigned char dt_dis[IQS_PART_N][IQS_DEV_N][IQS_DT_ABLE_N];
-	unsigned char dt_evnt[IQS_PART_N][IQS_DT_EVNT_N];
+	const struct iqs_hal_bit *hal_bit; /* HAL for specific bits */
+	unsigned char *wr_disable;	/* byte stream to disable device */
+	unsigned char *wr_stream;	/* byte stream for stream mode */
+	unsigned char *wr_events;	/* byte stream for event mode */
+	unsigned char *wr_ati_redo;	/* byte stream to do ATI redo */
+	unsigned char *wr_reseed;	/* byte stream to do reseed */
+	unsigned char dt_init[IQS_PART_N][IQS_DT_INIT_N]; /* DT byte stream */
+	unsigned char dt_en[IQS_PART_N][IQS_DEV_N][IQS_DT_ABLE_N]; /* " */
+	unsigned char dt_dis[IQS_PART_N][IQS_DEV_N][IQS_DT_ABLE_N]; /* " */
+	unsigned char dt_evnt[IQS_PART_N][IQS_DT_EVNT_N]; /* DT byte stream */
+	unsigned char dt_suspnd[IQS_PART_N][IQS_DT_SUSPND_N]; /* " */
 	u8 rc[IQS_BI_N];		/* register cache */
 };
 
@@ -465,8 +525,8 @@ static void iqs_mutex_lock(struct iqs_state *st)
 
 	if (st->nvs) {
 		for (i = 0; i < IQS_DEV_N; i++) {
-			if (st->nvs_st[i])
-				st->nvs->nvs_mutex_lock(st->nvs_st[i]);
+			if (st->prox[i].nvs_st)
+				st->nvs->nvs_mutex_lock(st->prox[i].nvs_st);
 		}
 	}
 }
@@ -477,119 +537,167 @@ static void iqs_mutex_unlock(struct iqs_state *st)
 
 	if (st->nvs) {
 		for (i = 0; i < IQS_DEV_N; i++) {
-			if (st->nvs_st[i])
-				st->nvs->nvs_mutex_unlock(st->nvs_st[i]);
+			if (st->prox[i].nvs_st)
+				st->nvs->nvs_mutex_unlock(st->prox[i].nvs_st);
 		}
+	}
+}
+
+static unsigned int iqs_i2c_stop_ms(struct iqs_state *st)
+{
+	s64 i2c_stop_t;
+	unsigned int ms = 0;
+
+	i2c_stop_t = iqs_get_time_ns() - st->i2c_stop_ts;
+	if (i2c_stop_t < IQS_I2C_STOP_DLY_NS) {
+		i2c_stop_t = IQS_I2C_STOP_DLY_NS - i2c_stop_t;
+		do_div(i2c_stop_t, 1000000); /* ns => ms */
+		ms = i2c_stop_t;
+		if (!ms)
+			ms = 1;
+	}
+	return ms;
+}
+
+static void iqs_enable_irq(struct iqs_state *st)
+{
+	unsigned int ms;
+	unsigned int i;
+
+	if (st->irq_dis && st->i2c->irq) {
+		/* ensure IRQ is high after I2C STOP when enabling */
+		ms = iqs_i2c_stop_ms(st);
+		if (ms) {
+			ms <<= 1; /* *2 */
+			for (i = 0; i < ms; i++) {
+				if (gpio_get_value(st->gpio_rdy))
+					break;
+
+				usleep_range(500, 1000);
+			}
+		}
+
+		enable_irq(st->i2c->irq);
+		st->irq_dis = false;
+		if (st->sts & NVS_STS_SPEW_IRQ)
+			dev_info(&st->i2c->dev, "%s delay=%ums\n", __func__, ms >> 1);
 	}
 }
 
 static void iqs_disable_irq(struct iqs_state *st)
 {
-	if (st->i2c->irq && !st->irq_dis) {
+	if ((!st->irq_dis) && st->i2c->irq) {
 		disable_irq_nosync(st->i2c->irq);
 		st->irq_dis = true;
-		if (st->sts & NVS_STS_SPEW_MSG)
-			dev_info(&st->i2c->dev, "%s IRQ disabled\n", __func__);
+		if (st->sts & NVS_STS_SPEW_IRQ)
+			dev_info(&st->i2c->dev, "%s\n", __func__);
 	}
 }
 
-static void iqs_enable_irq(struct iqs_state *st)
-{
-	if (st->i2c->irq && st->irq_dis) {
-		enable_irq(st->i2c->irq);
-		st->irq_dis = false;
-		st->irq_first = true;
-		if (st->sts & NVS_STS_SPEW_MSG)
-			dev_info(&st->i2c->dev, "%s IRQ enabled\n", __func__);
-	}
-}
-
-static int iqs_gpio_sar(struct iqs_state *st, int prox)
+static int iqs_gpio_sar(struct iqs_state *st, int assert)
 {
 	int gpio_sar_val;
-	int ret = -EINVAL;
+	int ret = 0;
 
 	if (st->gpio_sar >= 0) {
-		gpio_sar_val = st->sar_assert_pol;
-		gpio_sar_val ^= prox;
+		/* polarity   assertion   GPIO
+		 *     0          0        1
+		 *     0          1        0
+		 *     1          0        0
+		 *     1          1        1
+		 */
+		gpio_sar_val = !(st->sar_assert_pol ^ assert);
 		if (st->gpio_sar_val != gpio_sar_val) {
 			ret = gpio_direction_output(st->gpio_sar,
 						    gpio_sar_val);
 			if (ret) {
 				dev_err(&st->i2c->dev,
-					"%s prox=%d gpio_sar %d=%d  err=%d\n",
-					 __func__, prox, st->gpio_sar,
-					 gpio_sar_val, ret);
+					"%s assert=%d gpio_sar %d=%d err=%d\n",
+					__func__, assert, st->gpio_sar,
+					gpio_sar_val, ret);
 			} else {
 				st->gpio_sar_val = gpio_sar_val;
 				if (st->sts & NVS_STS_SPEW_MSG)
 					dev_info(&st->i2c->dev,
-						 "%s prox=%d gpio_sar %d=%d\n",
-						 __func__, prox, st->gpio_sar,
-						 gpio_sar_val);
+					       "%s assert=%d gpio_sar %d=%d\n",
+						 __func__, assert,
+						 st->gpio_sar, gpio_sar_val);
 			}
 		}
+	} else {
+		ret = -EINVAL;
 	}
 	return ret;
 }
 
-static int iqs_gpio_rdy(struct iqs_state *st)
+static int iqs_gpio_rdy_poll(struct iqs_state *st)
 {
 	unsigned int i;
-	unsigned int j;
 	int ret = 0;
 
-	iqs_disable_irq(st);
-	for (i = 0; i < st->gpio_rdy_retry; i++) {
-		gpio_direction_output(st->gpio_rdy, 0);
-		usleep_range(10000, 12000);
-		/* put to tristate */
-		gpio_direction_input(st->gpio_rdy);
-		for (j = 0; j < 2000; j++) {
-			usleep_range(500, 1000);
-			ret = gpio_get_value(st->gpio_rdy);
+	for (i = 0; i < 2000; i++) {
+		ret = gpio_get_value(st->gpio_rdy);
+		if (!ret)
+			break;
+
+		usleep_range(500, 1000);
+	}
+	return ret;
+}
+
+static int iqs_gpio_rdy(struct iqs_state *st, bool poll)
+{
+	bool force = false;
+	unsigned int i = 0;
+	int ret;
+
+	if (poll)
+		ret = iqs_gpio_rdy_poll(st);
+	else
+		ret = gpio_get_value(st->gpio_rdy);
+	if (ret) {
+		force = true;
+		iqs_disable_irq(st);
+		for (; i < st->gpio_rdy_retry; i++) {
+			gpio_direction_output(st->gpio_rdy, 0);
+			usleep_range(10000, 12000);
+			/* put to tristate */
+			gpio_direction_input(st->gpio_rdy);
+			ret = iqs_gpio_rdy_poll(st);
 			if (!ret)
 				break;
 		}
-		if (!ret)
-			break;
 	}
 	if (st->sts & NVS_STS_SPEW_MSG)
-		dev_info(&st->i2c->dev, "%s gpio_rdy=%d  retries=%u\n",
-			 __func__, ret, i);
+		dev_info(&st->i2c->dev,
+			 "%s gpio_rdy=%d poll=%x force=%x retries=%u\n",
+			 __func__, ret, poll, force, i);
 	return ret;
 }
 
-static int iqs_gpio_rdy_stream_wait(struct iqs_state *st)
+static unsigned int iqs_rc_i(struct iqs_state *st,
+			       const struct iqs_hal_iom *iom)
 {
-	unsigned int i;
-	int ret = 0;
+	unsigned int rc_i;
 
-	iqs_disable_irq(st);
-	/* tCOMMS = 5.12ms default max */
-	for (i = 0; i < 6; i++) {
-		usleep_range(1000, 2000);
-		ret = gpio_get_value(st->gpio_rdy);
-		if (ret)
-			break;
-	}
-	return ret;
+	rc_i = st->hal_tbl[iom->hal_i].ndx + 1;
+	rc_i += iom->offset;
+	return rc_i;
 }
 
-static int iqs_stream_mode_status(struct iqs_state *st)
+static unsigned int iqs_bits_rd(struct iqs_state *st,
+				const struct iqs_hal_iom *iom,
+				unsigned int additional_offset)
 {
-	int rc_i;
-
-	rc_i = st->hal_tbl[st->hal_bit->event_mode.hal_i].ndx + 1;
-	rc_i += st->hal_bit->event_mode.offset;
-	return st->rc[rc_i] & st->hal_bit->event_mode.mask;
+	return st->rc[iqs_rc_i(st, iom) + additional_offset] & iom->mask;
 }
 
-static int iqs_i2c(struct iqs_state *st)
+static int iqs_i2c(struct iqs_state *st, bool poll)
 {
 	ssize_t t;
 	char spew[128];
 	unsigned int i;
+	unsigned int ms;
 	unsigned int n = 0;
 	int ret = -ENODEV;
 
@@ -610,28 +718,31 @@ static int iqs_i2c(struct iqs_state *st)
 				st->msg[i].flags |= I2C_M_NO_RD_ACK;
 		}
 #endif /* IQS_I2C_M_NO_RD_ACK */
-
 		for (i = 0; i < st->i2c_retry; i++) {
-			ret = gpio_get_value(st->gpio_rdy);
-			if (ret) {
-				ret = iqs_gpio_rdy(st);
-				if (ret) {
-					ret = -EIO;
-					continue;
-				}
-			} else {
-				if (!iqs_stream_mode_status(st)) {
-					/* in streaming mode */
-					/* waiting next RDY cycle */
-					if (iqs_gpio_rdy_stream_wait(st)) {
-						ret = -EIO;
-						continue;
-					}
-				}
+			/* I2C transactions must be separated by a delay after
+			 * the STOP is issued.  Here we just ensure that the
+			 * delay time has passed before issueing another
+			 * transaction.
+			 */
+			ms = iqs_i2c_stop_ms(st);
+			if (ms)
+				msleep(ms);
+			if (iqs_gpio_rdy(st, poll)) {
+				ret = -EIO;
+				break;
 			}
 
+			/* Since this device has so many I2C issues, a debug
+			 * feature is to use the SAR GPIO as a signal for when
+			 * I2C transactions are actually done.
+			 */
+			if (st->gpio_sar_dev == IQS_GPIO_SAR_DBG_I2C)
+				iqs_gpio_sar(st, 1);
 			ret = i2c_transfer(st->i2c->adapter,
 					   &st->msg[n], st->msg_n);
+			if (st->gpio_sar_dev == IQS_GPIO_SAR_DBG_I2C)
+				iqs_gpio_sar(st, 0);
+			st->i2c_stop_ts = iqs_get_time_ns();
 			if (ret == st->msg_n) {
 				ret = 0;
 				break;
@@ -653,8 +764,8 @@ static int iqs_i2c(struct iqs_state *st)
 			st->msg_n += n;
 			if (i || ret)
 				dev_info(&st->i2c->dev,
-					 "%s retries=%u err=%d\n",
-					 __func__, i, ret);
+					 "%s retries=%u poll=%x err=%d\n",
+					 __func__, i, poll, ret);
 			for (i = 0; i < st->msg_n; i++) {
 				n = 0;
 				if (st->msg[i].flags & I2C_M_RD) {
@@ -709,10 +820,10 @@ static int iqs_i2c_rd(struct iqs_state *st, int hal_i, u16 len)
 	return -EINVAL;
 };
 
-static int iqs_i2c_read(struct iqs_state *st, int hal_i, u16 len)
+static int iqs_i2c_read(struct iqs_state *st, int hal_i, u16 len, bool poll)
 {
 	iqs_i2c_rd(st, hal_i, len);
-	return iqs_i2c(st);
+	return iqs_i2c(st, poll);
 };
 
 static int iqs_i2c_wr(struct iqs_state *st, int hal_i, u16 len)
@@ -731,15 +842,17 @@ static int iqs_i2c_wr(struct iqs_state *st, int hal_i, u16 len)
 	return -EINVAL;
 };
 
-static int iqs_i2c_write(struct iqs_state *st, int hal_i, u16 len)
+static int iqs_i2c_write(struct iqs_state *st, int hal_i, u16 len, bool poll)
 {
 	iqs_i2c_wr(st, hal_i, len);
-	return iqs_i2c(st);
+	return iqs_i2c(st, poll);
 };
 
 static int iqs_wr(struct iqs_state *st, unsigned char *wr)
 {
 	u8 ndx = 0;
+	unsigned int msg_n = st->msg_n;
+	bool irq_dis;
 	unsigned int i;
 	unsigned int j;
 	unsigned int k;
@@ -758,9 +871,14 @@ static int iqs_wr(struct iqs_state *st, unsigned char *wr)
 		i++;
 		if (len == 0xFF) {
 			/* if length == FF then do an I2C write now */
-			ret |= iqs_i2c(st);
+			if (st->msg_n) {
+				irq_dis = st->irq_dis;
+				ret |= iqs_i2c(st, false);
+				if (!irq_dis)
+					iqs_enable_irq(st);
+			}
 			if (wr[i])
-				mdelay(wr[i]);
+				msleep(wr[i]);
 			i++;
 			continue;
 		}
@@ -774,6 +892,12 @@ static int iqs_wr(struct iqs_state *st, unsigned char *wr)
 				if (st->hal_tbl[hal_i].len >= len) {
 					ndx = st->hal_tbl[hal_i].ndx + 1;
 					break;
+				} else {
+					dev_err(&st->i2c->dev,
+						"%s reg=%hhx ERR: len=%hhu\n",
+						__func__, reg, len);
+					/* length too long and need to exit */
+					return -EFAULT;
 				}
 			}
 		}
@@ -789,6 +913,10 @@ static int iqs_wr(struct iqs_state *st, unsigned char *wr)
 			i += len;
 		} else {
 			/* if register not found we're lost and need to exit */
+			dev_err(&st->i2c->dev,
+				"%s ERR: reg=%hhx not found.  FYI: len=%hhu\n",
+				__func__, reg, len);
+			st->msg_n = msg_n;
 			return -EFAULT;
 		}
 	}
@@ -796,13 +924,13 @@ static int iqs_wr(struct iqs_state *st, unsigned char *wr)
 	return ret;
 };
 
-static int iqs_write(struct iqs_state *st, unsigned char *wr)
+static int iqs_write(struct iqs_state *st, unsigned char *wr, bool poll)
 {
 	int ret;
 
 	ret = iqs_wr(st, wr);
-	if (st->msg_n && !ret)
-		ret = iqs_i2c(st);
+	if (st->msg_n)
+		ret |= iqs_i2c(st, poll);
 	return ret;
 }
 
@@ -814,9 +942,7 @@ static void iqs_op_rd(struct iqs_state *st)
 
 	st->op_read_n = 0;
 	/* add multi_comp if ATI partial is enabled */
-	i = st->hal_tbl[st->hal_bit->ati_partial.hal_i].ndx + 1;
-	i += st->hal_bit->ati_partial.offset;
-	if (st->rc[i] & st->hal_bit->ati_partial.mask) {
+	if (iqs_bits_rd(st, &st->hal_bit->ati_partial, 0)) {
 		st->op_read_reg[st->op_read_n] = st->hal_bit->multi_comp.hal_i;
 		st->op_read_n++;
 	}
@@ -844,35 +970,52 @@ static void iqs_op_rd(struct iqs_state *st)
 	st->op_i = st->op_read_n; /* force new read cycle */
 }
 
-static int iqs_init(struct iqs_state *st)
+static int iqs_stream(struct iqs_state *st, bool stream)
 {
-	unsigned char *wr;
+	unsigned int event_mode = iqs_bits_rd(st, &st->hal_bit->event_mode, 0);
 	int ret = 0;
 
-	if (st->dev_id == IQS_DEVID_IQS253)
-		wr = st->dt_init[IQS_PART_253];
+	if (stream && event_mode)
+		ret = iqs_wr(st, st->wr_stream);
+	else if ((!stream) && (!event_mode))
+		ret = iqs_wr(st, st->wr_events);
 	else
-		wr = st->dt_init[IQS_PART_263];
-	if (st->hal_tbl_n)
+		ret = 1; /* no op */
+	return ret;
+}
+
+static int iqs_init(struct iqs_state *st)
+{
+	bool stream = (st->stream == IQS_STREAM_ALWAYS) ? true : false;
+	int ret = 0;
+
+	if (st->hal_tbl_n) {
 		/* only if HAL initialized */
-		ret = iqs_write(st, wr);
+		ret = iqs_wr(st, st->dt_init[st->part_i]);
+		ret |= iqs_stream(st, stream);
+		if (ret < 0) {
+			/* if an error then write separately */
+			ret = iqs_write(st, st->dt_init[st->part_i], false);
+			if (!ret) {
+				ret = iqs_stream(st, stream);
+				if (!ret)
+					ret = iqs_i2c(st, false);
+			}
+		} else {
+			ret = iqs_i2c(st, false);
+		}
+	}
 	return ret;
 }
 
 static int iqs_en(struct iqs_state *st, int snsr_id)
 {
-	unsigned char *wr;
 	int ret;
 
 	if (snsr_id >= IQS_DEV_N)
 		return -EINVAL;
 
-	if (st->dev_id == IQS_DEVID_IQS253)
-		wr = st->dt_en[IQS_PART_253][snsr_id];
-	else
-		wr = st->dt_en[IQS_PART_263][snsr_id];
-	/* if sensor enabled */
-	ret = iqs_write(st, wr);
+	ret = iqs_write(st, st->dt_en[st->part_i][snsr_id], false);
 	if (!ret)
 		ret = nvs_proximity_enable(&st->prox[snsr_id]);
 	return ret;
@@ -880,6 +1023,7 @@ static int iqs_en(struct iqs_state *st, int snsr_id)
 
 static int iqs_dis(struct iqs_state *st, int snsr_id)
 {
+	bool irq_dis;
 	unsigned char *wr;
 	int ret = 0;
 
@@ -888,14 +1032,37 @@ static int iqs_dis(struct iqs_state *st, int snsr_id)
 
 	if (snsr_id < 0)
 		wr = st->wr_disable;
-	else if (st->dev_id == IQS_DEVID_IQS253)
-		wr = st->dt_dis[IQS_PART_253][snsr_id];
 	else
-		wr = st->dt_dis[IQS_PART_263][snsr_id];
-	if (st->hal_tbl_n)
+		wr = st->dt_dis[st->part_i][snsr_id];
+	if (st->hal_tbl_n) {
 		/* only if HAL initialized */
-		ret = iqs_write(st, wr);
+		irq_dis = st->irq_dis;
+		ret = iqs_write(st, wr, false);
+		if (!irq_dis)
+			iqs_enable_irq(st);
+	}
 	return ret;
+}
+
+static int iqs_reenable(struct iqs_state *st)
+{
+	unsigned int i;
+	int ret;
+
+	ret = iqs_init(st);
+	for (i = 0; i < IQS_DEV_N; i++) {
+		if (st->enabled & (1 << i))
+			ret |= iqs_en(st, i);
+	}
+	iqs_op_rd(st);
+	return ret;
+}
+
+static int iqs_reenable_err(struct iqs_state *st)
+{
+	iqs_err(st);
+	iqs_reenable(st);
+	return RET_POLL_NEXT;
 }
 
 static int iqs_pm(struct iqs_state *st, bool enable)
@@ -907,7 +1074,8 @@ static int iqs_pm(struct iqs_state *st, bool enable)
 				       ARRAY_SIZE(iqs_vregs));
 		if (ret > 0)
 			mdelay(IQS_HW_DELAY_MS);
-		ret = iqs_init(st);
+		if (!st->enabled)
+			ret = iqs_init(st);
 	} else {
 		ret = nvs_vregs_sts(st->vreg, ARRAY_SIZE(iqs_vregs));
 		if ((ret < 0) || (ret == ARRAY_SIZE(iqs_vregs))) {
@@ -955,18 +1123,13 @@ static int iqs_pm_init(struct iqs_state *st)
 static int iqs_rd_touch(struct iqs_state *st, s64 ts)
 {
 	u16 hw;
-	unsigned int i;
 	int ret;
 
-	if (st->prox[IQS_DEV_TOUCH].proximity_binary_hw) {
-		i = st->hal_tbl[st->hal_bit->touch_tch.hal_i].ndx + 1;
-		i += st->hal_bit->touch_tch.offset;
-		hw = !!(st->rc[i] & st->hal_bit->touch_tch.mask);
-	} else {
-		i = st->hal_tbl[st->hal_bit->count_tch.hal_i].ndx + 1;
-		i += st->hal_bit->count_tch.offset;
-		hw = (u16)st->rc[i];
-	}
+	if (st->prox[IQS_DEV_TOUCH].proximity_binary_hw)
+		/* reverse polarity for Android (0=close 1=far) */
+		hw = !(iqs_bits_rd(st, &st->hal_bit->touch_tch, 0));
+	else
+		hw = (u16)st->rc[iqs_rc_i(st, &st->hal_bit->count_tch)];
 	if (st->sts & NVS_STS_SPEW_DATA)
 		dev_info(&st->i2c->dev, "touch hw %hu %lld  diff=%d %lldns\n",
 			 hw, ts, hw - st->prox[IQS_DEV_TOUCH].hw,
@@ -980,19 +1143,13 @@ static int iqs_rd_touch(struct iqs_state *st, s64 ts)
 static int iqs_rd_proximity(struct iqs_state *st, s64 ts)
 {
 	u16 hw;
-	unsigned int i;
 	int ret;
 
-	if (st->prox[IQS_DEV_PROX].proximity_binary_hw) {
-		i = st->hal_tbl[st->hal_bit->touch_prx.hal_i].ndx + 1;
-		i += st->hal_bit->touch_prx.offset;
+	if (st->prox[IQS_DEV_PROX].proximity_binary_hw)
 		/* reverse polarity for Android (0=close 1=far) */
-		hw = !(st->rc[i] & st->hal_bit->touch_prx.mask);
-	} else {
-		i = st->hal_tbl[st->hal_bit->count_prx.hal_i].ndx + 1;
-		i += st->hal_bit->count_prx.offset;
-		hw = (u16)st->rc[i];
-	}
+		hw = !(iqs_bits_rd(st, &st->hal_bit->touch_prx, 0));
+	else
+		hw = (u16)st->rc[iqs_rc_i(st, &st->hal_bit->count_prx)];
 	if (st->sts & NVS_STS_SPEW_DATA)
 		dev_info(&st->i2c->dev, "prox hw %hu %lld  diff=%d %lldns\n",
 			 hw, ts, hw - st->prox[IQS_DEV_PROX].hw,
@@ -1000,16 +1157,10 @@ static int iqs_rd_proximity(struct iqs_state *st, s64 ts)
 	st->prox[IQS_DEV_PROX].hw = hw;
 	st->prox[IQS_DEV_PROX].timestamp = ts;
 	ret = nvs_proximity_read(&st->prox[IQS_DEV_PROX]);
-	if (st->prox[IQS_DEV_PROX].proximity_binary_hw)
-		/* TODO: Expect the PO pin used for proximity_binary_hw.
-		 *       Use a proximity threshold for SAR GPIO so that
-		 *       proximity doesn't have to be in HW binary mode.
-		 */
-		iqs_gpio_sar(st, st->prox[IQS_DEV_PROX].proximity);
 	return ret;
 }
 
-static int iqs_rd(struct iqs_state *st)
+static int iqs_rd(struct iqs_state *st, bool poll)
 {
 	s64 ts;
 	unsigned int i;
@@ -1022,65 +1173,86 @@ static int iqs_rd(struct iqs_state *st)
 	/* I2C message stacking */
 	for (i = 0; i < st->op_read_n; i++)
 		iqs_i2c_rd(st, st->op_read_reg[i], 0);
-	ret = iqs_i2c(st);
-#else
+	ret = iqs_i2c(st, true);
+#else /* IQS_I2C_M_NO_RD_ACK */
 	st->op_i++;
 	if (st->op_i >= st->op_read_n) {
-		/* restart read cycle */
-		st->op_i = 0;
-		if (!st->stream)
-			/* enter stream mode on first I2C transaction */
-			iqs_wr(st, st->wr_stream);
-		if (st->dev_id == IQS_DEVID_IQS253)
-			iqs_wr(st, st->dt_evnt[IQS_PART_253]);
-		else
-			iqs_wr(st, st->dt_evnt[IQS_PART_263]);
+		st->op_i = 0; /* restart read cycle */
+		/* when slider is enabled then device automatically goes into
+		 * and stays in stream mode during the slider event.  The DT
+		 * stream_mode should be set to (IQS_STREAM_AUTO) for this.
+		 */
+		if ((st->stream == IQS_STREAM_OFF) || !poll) {
+			/* enter stream mode on first I2C transaction if DT
+			 * stream_mode IQS_STREAM_OFF OR not polling
+			 */
+			ret = iqs_stream(st, true);
+			if (!ret)
+				/* was in event mode */
+				poll = false; /* need to force mode switch */
+		}
+	} else if (st->op_i == 1) {
+		iqs_wr(st, st->dt_evnt[st->part_i]); /* DT additional action */
 	}
-	if ((st->op_i == st->op_read_n - 1) && !st->stream)
-		iqs_wr(st, st->wr_events); /* event mode at end of reads */
-	if (st->reseed) {
-		iqs_wr(st, st->wr_reseed);
-		st->reseed = false;
+	if (st->op_i == st->op_read_n - 1) {
+		/* at the end of read cycle */
+		if (st->stream != IQS_STREAM_ALWAYS)
+			iqs_stream(st, false); /* event mode at end of reads */
 	}
 	iqs_i2c_rd(st, st->op_read_reg[st->op_i], 0);
-	ret = iqs_i2c(st);
+	ret = iqs_i2c(st, poll);
 #endif /* IQS_I2C_M_NO_RD_ACK */
-	if (!ret) {
+	if (ret) {
+#if 0
+		/* device needs to be power cycled */
+		iqs_pm(st, false);
+		iqs_pm(st, true);
+		return iqs_reenable_err(st);
+#endif /* 0 */
+	} else {
 		/* test for device reset */
-		i = st->hal_bit->sysflag_reset.hal_i;
-		if (st->op_read_reg[st->op_i] == i) {
-			i = st->hal_tbl[i].ndx + 1;
-			i += st->hal_bit->sysflag_reset.offset;
-			if (st->rc[i] & st->hal_bit->sysflag_reset.mask) {
-				iqs_err(st);
-				iqs_init(st);
-				for (i = 0; i < IQS_DEV_N; i++) {
-					if (st->enabled & (1 << i))
-						iqs_en(st, i);
-				}
-				iqs_op_rd(st);
-				return RET_POLL_NEXT;
+		if (st->op_read_reg[st->op_i] ==
+					    st->hal_bit->sysflag_reset.hal_i) {
+			if (iqs_bits_rd(st, &st->hal_bit->sysflag_reset, 0))
+				/* an error occurred so reinitialization */
+				return iqs_reenable_err(st);
+
+			if (iqs_bits_rd(st, &st->hal_bit->ati_busy, 0)) {
+				/* restart read cycle to get status */
+				st->op_i = st->op_read_n;
+				return RET_NO_CHANGE;
+			}
+
+			if (iqs_bits_rd(st, &st->hal_bit->ati_err, 0)) {
+				/* ATI redo on next I2C access */
+				iqs_wr(st, st->wr_ati_redo);
+				st->ati_redo_n++;
+				if (!st->ati_redo_n)
+					st->ati_redo_n--;
+				/* restart read cycle to get status */
+				st->op_i = st->op_read_n;
+				return RET_NO_CHANGE;
 			}
 		}
 
-		i = st->hal_bit->multi_comp.hal_i;
-		if (st->op_read_reg[st->op_i] == i) {
+		/* test for partial ATI */
+		if (st->op_read_reg[st->op_i] ==
+					       st->hal_bit->multi_comp.hal_i) {
 			/* check if reseed needed */
-			i = st->hal_bit->active_ch.hal_i;
-			ch = st->hal_tbl[i].ndx + 1;
+			ch = iqs_bits_rd(st, &st->hal_bit->active_ch, 0);
 			for (i = 0; i < IQS_CH_N; i++) {
-				if (st->rc[ch] & (1 << i)) {
-					mc = st->hal_bit->multi_comp.hal_i;
-					mc = st->hal_tbl[mc].ndx + 1;
-					mc += i;
-					mc = st->rc[mc];
-					mc &= st->hal_bit->multi_comp.mask;
+				if (ch & (1 << i)) {
+					mc = iqs_bits_rd(st,
+						  &st->hal_bit->multi_comp, i);
 					if (i)
 						k = IQS_DEV_TOUCH;
 					else
 						k = IQS_DEV_PROX;
 					if (mc > st->cfg[k].thresh_hi) {
-						st->reseed = true;
+						/* reseed on next I2C access */
+						iqs_wr(st, st->wr_reseed);
+						/* restart cycle for status */
+						st->op_i = st->op_read_n;
 						break;
 					}
 				}
@@ -1092,8 +1264,16 @@ static int iqs_rd(struct iqs_state *st)
 			ret |= iqs_rd_proximity(st, ts);
 		if (st->enabled & (1 << IQS_DEV_TOUCH))
 			ret |= iqs_rd_touch(st, ts);
+		/* TODO: Expect the PO pin used for proximity_binary_hw.
+		 *       Use a proximity threshold for SAR GPIO so that
+		 *       proximity doesn't have to be in HW binary mode.
+		 */
+		if (st->gpio_sar_dev < IQS_DEV_N)
+			iqs_gpio_sar(st,
+				     !st->prox[st->gpio_sar_dev].proximity);
 	}
-	if (st->stream) {
+	if (st->stream == IQS_STREAM_ALWAYS) {
+		/* with stream always on we want to control the IRQ rate */
 		if (ret != RET_NO_CHANGE) {
 			/* keep IRQ enabled if anything but no change */
 			ret = RET_HW_UPDATE;
@@ -1120,7 +1300,7 @@ static unsigned int iqs_polldelay(struct iqs_state *st)
 	return poll_delay_ms;
 }
 
-static void iqs_read(struct iqs_state *st)
+static void iqs_read(struct iqs_state *st, bool poll)
 {
 	unsigned int ms;
 	int ret;
@@ -1129,28 +1309,21 @@ static void iqs_read(struct iqs_state *st)
 	if (st->enabled) {
 		ms = st->wd_to_ms;
 #ifdef IQS_I2C_M_NO_RD_ACK
-		ret = iqs_rd(st);
+		ret = iqs_rd(st, poll);
 		if (ret > RET_POLL_NEXT)
 			iqs_enable_irq(st);
 		else
 			ms = iqs_polldelay(st);
-#else
+#else /* IQS_I2C_M_NO_RD_ACK */
 		if (st->irq_dis) {
 			/* if IRQ disabled then in irq throttle mode */
 			iqs_enable_irq(st); /* IRQ driven mode */
 		} else {
-			if (st->irq_first && !iqs_stream_mode_status(st)) {
-				/* if first IRQ and in streaming mode then skip
-				 * read to sync to the rdy signal.
-				 */
-				st->irq_first = false;
-			} else {
-				ret = iqs_rd(st);
-				if (ret > RET_POLL_NEXT)
-					iqs_enable_irq(st);
-				else
-					ms = iqs_polldelay(st);
-			}
+			ret = iqs_rd(st, poll);
+			if (ret > RET_POLL_NEXT)
+				iqs_enable_irq(st);
+			else
+				ms = iqs_polldelay(st);
 		}
 #endif /* IQS_I2C_M_NO_RD_ACK */
 		/* always start a delayed work thread as a watchdog */
@@ -1168,17 +1341,24 @@ static void iqs_work(struct work_struct *ws)
 	struct iqs_state *st = container_of((struct delayed_work *)ws,
 					    struct iqs_state, dw);
 
-	iqs_read(st);
+	iqs_read(st, false);
 }
 
 static irqreturn_t iqs_irq_thread(int irq, void *dev_id)
 {
 	struct iqs_state *st = (struct iqs_state *)dev_id;
 
+	iqs_read(st, true);
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t iqs_irq_handler(int irq, void *dev_id)
+{
+	struct iqs_state *st = (struct iqs_state *)dev_id;
+
 	if (st->sts & NVS_STS_SPEW_IRQ)
 		dev_info(&st->i2c->dev, "%s\n", __func__);
-	iqs_read(st);
-	return IRQ_HANDLED;
+	return IRQ_WAKE_THREAD;
 }
 
 static int iqs_disable(struct iqs_state *st, int snsr_id)
@@ -1269,6 +1449,7 @@ static int iqs_batch(void *client, int snsr_id, int flags,
 static	int iqs_thresh(void *client, int snsr_id, int thresh)
 {
 	struct iqs_state *st = (struct iqs_state *)client;
+	bool irq_dis;
 	unsigned int hal_i;
 	unsigned int i;
 	unsigned int n;
@@ -1287,7 +1468,10 @@ static	int iqs_thresh(void *client, int snsr_id, int thresh)
 		st->rc[st->hal_tbl[hal_i].ndx + i] = thresh & 0xFF;
 		thresh >>= 8;
 	}
-	ret = iqs_i2c_write(st, hal_i, 0);
+	irq_dis = st->irq_dis;
+	ret = iqs_i2c_write(st, hal_i, 0, false);
+	if (!irq_dis)
+		iqs_enable_irq(st);
 	if (!ret)
 		st->cfg[snsr_id].thresh_lo = thresh;
 	return ret;
@@ -1309,7 +1493,7 @@ static int iqs_regs(void *client, int snsr_id, char *buf)
 	/* I2C message stacking */
 	for (i = 0; i < st->hal_tbl_n; i++)
 		iqs_i2c_rd(st, i, 0);
-	ret = iqs_i2c(st);
+	ret = iqs_i2c(st, false);
 	t = sprintf(buf, "registers: (ERR=%d)\n", ret);
 	for (i = 0; i < st->hal_tbl_n; i++) {
 		n = st->hal_tbl[i].ndx;
@@ -1319,10 +1503,10 @@ static int iqs_regs(void *client, int snsr_id, char *buf)
 			t += sprintf(buf + t, "0x%hhx ", st->rc[j]);
 		t += sprintf(buf + t, "\n");
 	}
-#else
+#else /* IQS_I2C_M_NO_RD_ACK */
 	t = sprintf(buf, "registers:\n");
 	for (i = 0; i < st->hal_tbl_n; i++) {
-		ret = iqs_i2c_read(st, i, 0);
+		ret = iqs_i2c_read(st, i, 0, false);
 		n = st->hal_tbl[i].ndx;
 		if (ret) {
 			t += sprintf(buf + t, "0x%hhx=ERR %d",
@@ -1346,6 +1530,7 @@ static int iqs_nvs_write(void *client, int snsr_id, unsigned int nvs)
 {
 	struct iqs_state *st = (struct iqs_state *)client;
 	u8 val = (nvs >> 8) & 0xFF;
+	bool irq_dis;
 	unsigned int offset;
 	unsigned int reg;
 	unsigned int i;
@@ -1356,6 +1541,16 @@ static int iqs_nvs_write(void *client, int snsr_id, unsigned int nvs)
 	case IQS_INFO_DBG:
 		st->dbg = nvs;
 		return 0;
+
+	case IQS_INFO_GPIO_SAR_DBG:
+		if (val < IQS_GPIO_SAR_DBG_N) {
+			st->gpio_sar_dev = val;
+			dev_info(&st->i2c->dev, "%s gpio_sar_dev=%s\n",
+				 __func__,
+				 iqs_sensor_cfg_name[st->gpio_sar_dev]);
+			return 0;
+		}
+		return ret;
 
 	case IQS_INFO_GPIO_RDY_INPUT:
 		ret = gpio_direction_input(st->gpio_rdy);
@@ -1393,8 +1588,11 @@ static int iqs_nvs_write(void *client, int snsr_id, unsigned int nvs)
 					break;
 
 				iqs_mutex_lock(st);
+				irq_dis = st->irq_dis;
 				st->rc[st->hal_tbl[i].ndx + offset] = val;
-				ret = iqs_i2c_write(st, i, 0);
+				ret = iqs_i2c_write(st, i, 0, false);
+				if (!irq_dis)
+					iqs_enable_irq(st);
 				iqs_mutex_unlock(st);
 				dev_info(&st->i2c->dev,
 					 "%s %x => %x + %u err=%d\n",
@@ -1450,8 +1648,6 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 	u8 cmd = (st->dbg >> 16) & 0xFF;
 	u8 dev = (st->dbg >> 8) & 0xFF;
 	ssize_t t = 0;
-	const char *part;
-	const char *device;
 	int i;
 	int j;
 	int n;
@@ -1463,14 +1659,12 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 			break;
 		}
 
-		if (!prt)
-			prt = st->dev_id;
-		if (prt == IQS_DEVID_IQS253) {
+		if (!prt) {
+			i = st->part_i;
+		} else if (prt == IQS_DEVID_IQS253) {
 			i = IQS_PART_253;
-			part = IQS_NAME_IQS253;
 		} else if (prt == IQS_DEVID_IQS263) {
 			i = IQS_PART_263;
-			part = IQS_NAME_IQS263;
 		} else {
 			t = sprintf(buf, "ERR: UNKNOWN PART\n");
 			break;
@@ -1479,50 +1673,52 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 		if (dev > IQS_DEV_N) {
 			t = sprintf(buf, "ERR: UNKNOWN DEVICE\n");
 			break;
-		}
-
-		if (dev) {
+		} else if (dev) {
 			n = dev;
 			dev--;
 		} else {
 			n = IQS_DEV_N;
 		}
+
 		if (cmd == IQS_DB_CMD_INIT || !cmd) {
-			t += sprintf(buf + t, "%s initialization:\n", part);
+			t += sprintf(buf + t, "%s initialization:\n",
+				     iqs_i2c_device_id[i].name);
 			t += iqs_nvs_dbg_db(st, buf, t, st->dt_init[i]);
 		}
 		if (cmd == IQS_DB_CMD_EN || !cmd) {
 			for (j = dev; j < n; j++) {
-				if (j)
-					device = IQS_NAME_TOUCH_PROXIMITY;
-				else
-					device = IQS_NAME_SAR_PROXIMITY;
 				t += sprintf(buf + t, "%s %s enable:\n",
-					     part, device);
+					     iqs_i2c_device_id[i].name,
+					     iqs_sensor_cfg_name[j]);
 				t += iqs_nvs_dbg_db(st, buf, t,
 						    st->dt_en[i][j]);
 			}
 		}
 		if (cmd == IQS_DB_CMD_DIS || !cmd) {
 			for (j = dev; j < n; j++) {
-				if (j)
-					device = IQS_NAME_TOUCH_PROXIMITY;
-				else
-					device = IQS_NAME_SAR_PROXIMITY;
 				t += sprintf(buf + t, "%s %s disable:\n",
-					     part, device);
+					     iqs_i2c_device_id[i].name,
+					     iqs_sensor_cfg_name[j]);
 				t += iqs_nvs_dbg_db(st, buf, t,
 						    st->dt_dis[i][j]);
 			}
 		}
 		if (cmd == IQS_DB_CMD_EVNT || !cmd) {
-			t += sprintf(buf + t, "%s event:\n", part);
+			t += sprintf(buf + t, "%s event:\n",
+				     iqs_i2c_device_id[i].name);
 			t += iqs_nvs_dbg_db(st, buf, t, st->dt_evnt[i]);
+		}
+		if (cmd == IQS_DB_CMD_SUSPND || !cmd) {
+			t += sprintf(buf + t, "%s suspend:\n",
+				     iqs_i2c_device_id[i].name);
+			t += iqs_nvs_dbg_db(st, buf, t, st->dt_suspnd[i]);
 		}
 		break;
 
 	default:
 		t = sprintf(buf, "IQS driver v. %u\n", IQS_DRIVER_VERSION);
+		t += sprintf(buf + t, "ATI redo count=%u\n", st->ati_redo_n);
+		st->ati_redo_n = 0;
 		t += sprintf(buf + t, "os_options=%x\n", st->os);
 		t += sprintf(buf + t, "stream_mode=%x\n", st->stream);
 		t += sprintf(buf + t, "watchdog_timeout_ms=%u\n",
@@ -1540,12 +1736,14 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 		else
 			t += sprintf(buf + t, "gpio_sar %d=%d\n", st->gpio_sar,
 				     gpio_get_value(st->gpio_sar));
+		t += sprintf(buf + t, "gpio_sar_dev=%s\n",
+			     iqs_sensor_cfg_name[st->gpio_sar_dev]);
 		t += sprintf(buf + t, "irq=%d\n", st->i2c->irq);
 		t += sprintf(buf + t, "irq_disable=%x\n", st->irq_dis);
-		t += sprintf(buf + t, "SAR_proximity_binary_hw=%x\n",
-			     st->prox[IQS_DEV_PROX].proximity_binary_hw);
-		t += sprintf(buf + t, "touch_proximity_binary_hw=%x\n",
-			     st->prox[IQS_DEV_TOUCH].proximity_binary_hw);
+		for (i = 0; i < IQS_DEV_N; i++)
+			t += sprintf(buf + t, "%s_binary_hw=%x\n",
+				     iqs_sensor_cfg_name[i],
+				     st->prox[i].proximity_binary_hw);
 	}
 
 	st->dbg = IQS_INFO_STS;
@@ -1570,14 +1768,18 @@ static int iqs_suspend(struct device *dev)
 
 	st->sts |= NVS_STS_SUSPEND;
 	if (st->nvs) {
+		iqs_mutex_lock(st);
+		/* DT additional action for suspend */
+		ret = iqs_write(st, st->dt_suspnd[st->part_i], false);
+		iqs_mutex_unlock(st);
 		for (i = 0; i < IQS_DEV_N; i++) {
-			if (st->nvs_st[i])
-				ret |= st->nvs->suspend(st->nvs_st[i]);
+			if (st->prox[i].nvs_st)
+				ret |= st->nvs->suspend(st->prox[i].nvs_st);
 		}
 	}
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s err=%d\n", __func__, ret);
-	return ret;
+	return 0;
 }
 
 static int iqs_resume(struct device *dev)
@@ -1589,17 +1791,14 @@ static int iqs_resume(struct device *dev)
 
 	if (st->nvs) {
 		for (i = 0; i < IQS_DEV_N; i++) {
-			if (st->nvs_st[i])
-				ret |= st->nvs->resume(st->nvs_st[i]);
+			if (st->prox[i].nvs_st)
+				ret |= st->nvs->resume(st->prox[i].nvs_st);
 		}
+		iqs_mutex_lock(st);
+		ret |= iqs_reenable(st);
+		iqs_mutex_unlock(st);
 	}
 	st->sts &= ~NVS_STS_SUSPEND;
-	if (!st->os) {
-		for (i = 0; i < IQS_DEV_N; i++) {
-			if (!(st->enabled & (1 << i)))
-				iqs_enable(st, i, 1);
-		}
-	}
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s err=%d\n", __func__, ret);
 	return 0;
@@ -1617,8 +1816,8 @@ static void iqs_shutdown(struct i2c_client *client)
 		iqs_disable(st, -1);
 	if (st->nvs) {
 		for (i = 0; i < IQS_DEV_N; i++) {
-			if (st->nvs_st[i])
-				st->nvs->shutdown(st->nvs_st[i]);
+			if (st->prox[i].nvs_st)
+				st->nvs->shutdown(st->prox[i].nvs_st);
 		}
 	}
 	if (st->sts & NVS_STS_SPEW_MSG)
@@ -1634,8 +1833,8 @@ static int iqs_remove(struct i2c_client *client)
 		iqs_shutdown(client);
 		if (st->nvs) {
 			for (i = 0; i < IQS_DEV_N; i++) {
-				if (st->nvs_st[i])
-					st->nvs->remove(st->nvs_st[i]);
+				if (st->prox[i].nvs_st)
+					st->nvs->remove(st->prox[i].nvs_st);
 			}
 		}
 		iqs_pm_exit(st);
@@ -1671,7 +1870,7 @@ static int iqs_id_dev(struct iqs_state *st, const char *name)
 	if (!st->dev_id) {
 		hal_i = st->hal_bit->devinf_id.hal_i;
 		i = st->hal_bit->devinf_id.offset + 1;
-		ret = iqs_i2c_read(st, hal_i, i);
+		ret = iqs_i2c_read(st, hal_i, i, false);
 		if (ret) {
 			st->hal_tbl_n = 0; /* disable PM I2C */
 			return ret;
@@ -1685,21 +1884,25 @@ static int iqs_id_dev(struct iqs_state *st, const char *name)
 	case IQS_DEVID_IQS263:
 		BUG_ON(IQS263_MSG_N != ARRAY_SIZE(iqs263_hal_tbl));
 		iqs_id_part(st, IQS_NAME_IQS263);
+		st->part_i = IQS_PART_263;
 		st->wr_disable = iqs263_wr_disable;
 		st->wr_stream = iqs263_wr_stream;
 		st->wr_events = iqs263_wr_events;
+		st->wr_ati_redo = iqs263_wr_ati_redo;
 		st->wr_reseed = iqs263_wr_reseed;
 		break;
 
 	case IQS_DEVID_IQS253:
 		BUG_ON(IQS253_MSG_N != ARRAY_SIZE(iqs253_hal_tbl));
 		iqs_id_part(st, IQS_NAME_IQS253);
+		st->part_i = IQS_PART_253;
 		st->hal_tbl = iqs253_hal_tbl;
 		st->hal_tbl_n = ARRAY_SIZE(iqs253_hal_tbl);
 		st->hal_bit = &iqs253_hal_bit;
 		st->wr_disable = iqs253_wr_disable;
 		st->wr_stream = iqs253_wr_stream;
 		st->wr_events = iqs253_wr_events;
+		st->wr_ati_redo = iqs253_wr_ati_redo;
 		st->wr_reseed = iqs253_wr_reseed;
 		break;
 
@@ -1742,11 +1945,6 @@ static int iqs_id_i2c(struct iqs_state *st, const char *name)
 		st->i2c_addr = 0;
 	return ret;
 }
-
-static const char *iqs_sensor_cfg_name[] = {
-	IQS_NAME_SAR_PROXIMITY,
-	IQS_NAME_TOUCH_PROXIMITY,
-};
 
 static const struct sensor_cfg iqs_cfg_dflt = {
 	.snsr_id			= SENSOR_TYPE_PROXIMITY,
@@ -1820,11 +2018,17 @@ static int iqs_of_dt_db(struct iqs_state *st, struct device_node *dn,
 static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 {
 	char str[16];
+	char const *pchar;
 	const char *dev;
 	unsigned int part;
 	unsigned int i;
 	unsigned int j;
 	int ret;
+
+	/* just test if global disable */
+	ret = nvs_of_dt(dn, NULL, NULL);
+	if (ret == -ENODEV)
+		return -ENODEV;
 
 	/* default device specific parameters */
 	for (i = 0; i < IQS_DEV_N; i++) {
@@ -1845,6 +2049,12 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 		/* device specific parameters */
 		of_property_read_u32(dn, "os_options", &st->os);
 		of_property_read_u32(dn, "stream_mode", &st->stream);
+		if (st->stream >= IQS_STREAM_N) {
+			dev_err(&st->i2c->dev,
+				"%s ERR: stream_mode %u > %u limit\n",
+				__func__, st->stream, IQS_STREAM_N - 1);
+			st->stream = IQS_STREAM_OFF;
+		}
 		of_property_read_u32(dn, "watchdog_timeout_ms", &st->wd_to_ms);
 		of_property_read_u32(dn, "i2c_retry", &st->i2c_retry);
 		of_property_read_u32(dn, "gpio_rdy_retry",
@@ -1854,6 +2064,16 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 		st->sar_assert_pol = !!st->sar_assert_pol;
 		st->gpio_rdy = of_get_named_gpio(dn, "gpio_rdy", 0);
 		st->gpio_sar = of_get_named_gpio(dn, "gpio_sar", 0);
+		if (!(of_property_read_string(dn, "gpio_sar_dev", &pchar))) {
+			for (i = 0; i < ARRAY_SIZE(iqs_sensor_cfg_name); i++) {
+				if (!strcasecmp(pchar,
+						iqs_sensor_cfg_name[i])) {
+					st->gpio_sar_dev = i;
+					break;
+				}
+			}
+		}
+
 		ret = 0;
 		for (i = 0; i < IQS_PART_N; i++) {
 			if (i == 0)
@@ -1866,6 +2086,9 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 			sprintf(str, "%uevent", part);
 			ret |= iqs_of_dt_db(st, dn, str, st->dt_evnt[i],
 					    IQS_DT_EVNT_N);
+			sprintf(str, "%ususpend", part);
+			ret |= iqs_of_dt_db(st, dn, str, st->dt_suspnd[i],
+					    IQS_DT_SUSPND_N);
 			for (j = 0; j < IQS_DEV_N; j++) {
 				if (j == 0)
 					dev = "prox";
@@ -1914,9 +2137,9 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 				"%s gpio_request(%d %s) ERR:%d\n",
 				__func__, st->gpio_sar, IQS_NAME, ret);
 		} else {
-			/* start with SAR asserted (proximity==0) */
+			/* start with SAR GPIO asserted */
 			st->gpio_sar_val = -1;
-			iqs_gpio_sar(st, 0);
+			iqs_gpio_sar(st, 1);
 		}
 	}
 	return 0;
@@ -1969,16 +2192,11 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	n = 0;
 	for (i = 0; i < IQS_DEV_N; i++) {
-		ret = nvs_of_dt(client->dev.of_node, &st->cfg[i], NULL);
-		if (ret == -ENODEV)
-			/* the entire device has been disabled */
-			goto iqs_probe_exit;
-
-		ret = st->nvs->probe(&st->nvs_st[i], st, &client->dev,
+		nvs_of_dt(client->dev.of_node, &st->cfg[i], NULL);
+		ret = st->nvs->probe(&st->prox[i].nvs_st, st, &client->dev,
 				     &iqs_fn_dev, &st->cfg[i]);
 		st->cfg[i].snsr_id = i;
 		if (!ret) {
-			st->prox[i].nvs_st = st->nvs_st[i];
 			st->prox[i].handler = st->nvs->handler;
 			n++;
 		}
@@ -1993,14 +2211,15 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (st->gpio_rdy > 0)
 		st->i2c->irq = gpio_to_irq(st->gpio_rdy);
 	if (client->irq) {
-		irqflags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT;
+		irqflags = IRQF_TRIGGER_LOW | IRQF_ONESHOT | IRQF_NO_THREAD;
 		for (i = 0; i < IQS_DEV_N; i++) {
 			if (st->cfg[i].snsr_id >= 0) {
 				if (st->cfg[i].flags & SENSOR_FLAG_WAKE_UP)
 					irqflags |= IRQF_NO_SUSPEND;
 			}
 		}
-		ret = request_threaded_irq(client->irq, NULL, iqs_irq_thread,
+		ret = request_threaded_irq(client->irq,
+					   iqs_irq_handler, iqs_irq_thread,
 					   irqflags, IQS_NAME, st);
 		if (ret) {
 			dev_err(&client->dev, "%s req_threaded_irq ERR %d\n",
@@ -2015,10 +2234,10 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		iqs_disable(st, -1);
 	} else {
 		ret = 0;
-		if (st->nvs_st[IQS_DEV_PROX])
-			ret |= iqs_enable(st, IQS_DEV_PROX, 1);
-		if (st->nvs_st[IQS_DEV_TOUCH])
-			ret |= iqs_enable(st, IQS_DEV_TOUCH, 1);
+		for (i = 0; i < IQS_DEV_N; i++) {
+			if (st->prox[i].nvs_st)
+				ret |= iqs_enable(st, i, 1);
+		}
 		if (ret) {
 			iqs_err(st);
 			/* if an error then switch to OS controlled */
@@ -2037,13 +2256,6 @@ iqs_probe_exit:
 	iqs_remove(client);
 	return ret;
 }
-
-static const struct i2c_device_id iqs_i2c_device_id[] = {
-	{ IQS_NAME, 0 },
-	{ IQS_NAME_IQS253, 0 },
-	{ IQS_NAME_IQS263, 0 },
-	{}
-};
 
 MODULE_DEVICE_TABLE(i2c, iqs_i2c_device_id);
 

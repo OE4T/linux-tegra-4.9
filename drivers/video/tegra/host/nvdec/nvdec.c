@@ -687,9 +687,15 @@ const struct file_operations tegra_nvdec_ctrl_ops = {
 	.release = nvdec_release,
 };
 
-static struct of_device_id tegra21x_nvdec_domain_match[] = {
+static struct of_device_id tegra_nvdec_domain_match[] = {
+#ifdef TEGRA_21X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra210-nvdec-pd",
 	.data = (struct nvhost_device_data *)&t21_nvdec_info},
+#endif
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	{ .compatible = "nvidia,tegra186-nvdec-pd",
+	.data = (struct nvhost_device_data *)&t18_nvdec_info},
+#endif
 	{},
 };
 
@@ -697,7 +703,7 @@ static int __init nvdec_init(void)
 {
 	int ret;
 
-	ret = nvhost_domain_init(tegra21x_nvdec_domain_match);
+	ret = nvhost_domain_init(tegra_nvdec_domain_match);
 	if (ret)
 		return ret;
 

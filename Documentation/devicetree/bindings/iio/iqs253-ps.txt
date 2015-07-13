@@ -67,10 +67,10 @@ An example for initialization of the IQS263 part in the DT is as follows:
 	263init_4 = [08 0A 08 10 10 02 04 08 14 3F FF FF FF FF FF FF FF FF];
 	263init_5 = [03 0B 00 64 80 FF FF FF]; // 3 bytes written to reg 0x0B
 
-The IQS parts have two "virtual" sensors: SAR_proximity and touch_proximity.
+The IQS parts have two "virtual" sensors: SAR_proximity and SAR_touch.
 The "virtual" means that the NVS framework will split these two sensors so that
 the system will see two individual sensors.
-The SAR_proximity detects objects near the platform whereas the touch_proximity
+The SAR_proximity detects objects near the platform whereas the SAR_touch
 detects actual touches with the platform (assuming it's the screen).
 Because there are two sensors, there are two enable labels: <part>en_prox and
 <part>en_touch.
@@ -94,6 +94,10 @@ event:
 	263event_?
 	253event_?
 If partial ATI is enabled, the driver will automatically handle the reseeding.
+The suspend command allows any necessary action whenever the driver receives
+notification of a suspend:
+	263suspend_?
+	253suspend_?
 
 Due to the IQS device's design for communicating with the device, each entry,
 which represents an I2C transaction, is actually stacked so that the entire
@@ -119,22 +123,28 @@ The error can be due to truly out of buffer memory to non-existent register or
 incorrect register length.  Once the driver has loaded, a debug feature that
 will dump the parsed byte stream can be done by doing the following at the
 device's sysfs directory in an adb terminal prompt:
-$echo 10 > nvs
-$cat nvs
-The results will be something like:
-	IQS driver v. 6
-	os_options=0
-	stream_mode=0
-	watchdog_timeout_ms=30000
-	i2c_retry=10
-	gpio_rdy_retry=25
-	gpio_rdy 1=1
-	gpio_sar 173=1
-	irq=2
-	irq_disable=0
-	SAR_proximity_binary_hw=1
-	touch_proximity_binary_hw=1
-	IQS263 initialization:
+#echo 0xXXYYZZ1E > nvs
+where XX = part device ID (0x29=IQS253, 0x3C=IQS263)
+           If XX is 0, then the part in use will be used.
+      YY = command
+           Possible commands are:
+	   1: initialization
+	   2: enable
+	   3: disable
+	   4: event
+	   5: suspend
+	   If YY is 0, then all the commands will be displayed.
+      ZZ = device
+	   Possible devices are:
+	   1: SAR_proximiy
+	   2: SAR_touch
+	   If ZZ is 0, then all the devices will be displayed.
+Ideally, the 0x1E command would always be used.  However, if not all the data
+or corruption is displayed due to an undersized buffer (out of the driver's
+control) then the above formatting allows less data to be shown at once.
+#cat nvs
+The results for 0x1001E will be something like:
+	iqs263 initialization:
 	len=5 reg=9 data/mask=40/ff 3/ff 0/ff 1/ff 3/ff
 	len=1 reg=d data/mask=9/ff
 	len=1 reg=1 data/mask=0/ff
@@ -145,11 +155,9 @@ The results will be something like:
 	len=1 reg=9 data/mask=10/18
 	flush write and mdelay=0
 	len=1 reg=9 data/mask=8/18
-	IQS263 touch enable:
-	len=1 reg=9 data/mask=10/18
-	flush write and mdelay=0
-	len=1 reg=9 data/mask=8/18
-	IQS253 initialization:
+	iqs263 SAR_touch enable:
+	<empty>
+
 Also, a register dump can be done:
 $echo 4 > nvs
 $cat nvs
@@ -165,6 +173,28 @@ $echo 0x??1B > nvs
 writes ?? to the gpio_rdy GPIO.
 $echo 0x1A > nvs
 switches the gpio_rdy GPIO to input.
+#echo 0xZZ19 > nvs
+sets the gpio_sar_dev option where ZZ is the zero based index of the option
+(see gpio_sar_dev below).
+
+For overall status information:
+#echo 10 > nvs
+#cat nvs
+The results will be something like:
+	IQS driver v. 11
+	ATI redo count=0
+	os_options=0
+	stream_mode=2
+	watchdog_timeout_ms=30000
+	i2c_retry=10
+	gpio_rdy_retry=25
+	gpio_rdy 1=1
+	gpio_sar 173=1
+	irq=2
+	irq_disable=0
+	SAR_proximity_binary_hw=1
+	SAR_touch_binary_hw=1
+When this status is read, the ATI redo count will reset to 0.
 
 In the case the part populated could be either IQS253 or IQS263, both the 253
 and 263 commands can be defined in the DT.  The driver will use the one
@@ -181,12 +211,12 @@ Optional properties:
 	sleep state, then use the individual sensor disable mechanism below.
 - SAR_proximity_disable: Setting this property to <1> will disable the
                          SAR proximity.
-- touch_proximity_disable: Setting this property to <1> will disable the
+- SAR_touch_disable: Setting this property to <1> will disable the
                            touch sensor.
   Note: To disable the entire device so that the driver unloads, all sensors
         must be disabled:
 	SAR_proximity_disable = <1>;
-	touch_proximity_disable = <1>;
+	SAR_touch_disable = <1>;
 - vddhi-supply: regulator supply for the chip
   Note: This is required if the driver is to control the regulator.
 - gpio_sar: GPIO to be used for sending proximity event for SAR sensor.
@@ -194,13 +224,29 @@ Optional properties:
 	- The device's PO pin is wired to the device requiring the SAR event.
 	- The assert level is high.
 	- The IQS SAR_proximity is configured as a binary value.
-- sar_assert_polarity: assert level of the GPIO for the SAR proximity event.
-  Note: sar_assert_polarity is ONLY for the SAR GPIO and is not needed if the
-	GPIO assert value is low since low is the SAR GPIO assert default.  It
-	may still be defined as low (sar_assert_polarity = <0>;) however.
+- gpio_sar_assert_polarity: assert level of the GPIO for the SAR event.
+  Note: gpio_sar_assert_polarity is ONLY for the SAR GPIO and is not needed if
+	the GPIO assert value is low since low is the SAR GPIO assert default.
+	It may still be defined as low (gpio_sar_assert_polarity = <0>;)
+	however.
+- gpio_sar_dev: Which IQS device controls the SAR GPIO.  In other words, the
+		SAR GPIO will assert according to the gpio_sar_assert_polarity
+		when the sensor specified in gpio_sar_dev asserts.
+  Note: The SAR GPIO can also be used for debug purposes.  When set to one of
+        the debug options, the SAR GPIO will not be controlled by one of the
+	SAR sensors but instead the debug function.
+	The gpio_sar_dev options are:
+	- SAR_proximity
+	- SAR_touch
+	- debug_i2c
+	SAR_proximity is the default if no entry is made.
+	Due to this device's I2C "issues", the debug_i2c option will assert the
+	SAR GPIO (according to the gpio_sar_assert_polarity) when an I2C
+	transaction is about to start and deasserts when the I2C transaction
+	finishes.
 - os_options: If the IQS device is to be controlled by the OS then set this
 	      value to 1.  The default is 0.
-  Note: The SAR_proximity and touch_proximity sensors can still be exposed to
+  Note: The SAR_proximity and SAR_touch sensors can still be exposed to
 	the OS via the NVS framework's NvspDriver structure.  However, unless
 	os_options is > 0, the OS will be tricked into thinking is has control.
 	In other words, when os_options is 0 (the default), the device will
@@ -217,6 +263,21 @@ Optional properties:
 	However, depending on how the device is configured by the DT commands,
 	it may be desirable to disable this feature and continually stream the
 	data instead.
+	If the IQS has the slider enabled the device will stream automatically
+	during a slider event.  In this case, the disabling/enabling stream
+	mode mechanism above may not be needed and can be disabled by entering
+	the auto value for steam_mode.
+	Possible stream_mode values are:
+	0 = OFF: Event mode will automatically be enabled by the driver and the
+	         above communication mechanism described above used.
+	1 = ON:  Streaming mode is enabled.  No special communication mechanism
+	         is needed since driver gets constantly interrupted with a comm
+		 window.  However, the interrupts may be throttled (disabled
+		 for a period).
+	2 = AUTO: Event mode is enabled but the special communication mechanism
+	          described above is not used.  Instead, it is expected and
+		  required that the device be configured with the slider
+		  enabled to allow for automatic device initiated streaming.
 - watchdog_timeout_ms: When streaming mode is disabled, a watchdog can
 		       periodically stream the data to confirm the device's
 		       status.
@@ -249,18 +310,22 @@ Example:
 		reg = <0x44>;
 		gpio_rdy = <&gpio TEGRA_GPIO(A, 1) GPIO_ACTIVE_LOW>;
 		gpio_sar = <&gpio TEGRA_GPIO(V, 5) GPIO_ACTIVE_LOW>;
-		sar_assert_polarity = <0>;
+		gpio_sar_assert_polarity = <0>;
+		gpio_sar_dev = "SAR_touch";
+		stream_mode = <2>;
 		os_options = <0>;
-		263init_0 = [05 09 40 03 00 01 03 FF FF FF FF FF];
-		263init_1 = [01 0D 09 FF];
-		263init_2 = [01 01 00 FF];
-		263init_3 = [05 07 1B 08 08 00 11 FF FF FF FF FF];
-		263init_4 = [08 0A 08 10 10 02 04 08 14 3F FF FF FF FF FF FF FF FF];
-		263init_5 = [03 0B 00 64 80 FF FF FF];
-		263en_prox_0 = [01 09 10 18];
-		263en_prox_1 = [FF 00];
-		263en_prox_2 = [01 09 08 18];
-		263en_touch_0 = [01 09 10 18];
-		263en_touch_1 = [FF 00];
-		263en_touch_2 = [01 09 08 18];
+                263init_0 = [02 01 00 03 FF FF];
+                263init_1 = [05 09 80 5D 00 17 0F FF FF FF FF FF];
+                263init_2 = [01 0D 0F FF];
+                263init_3 = [01 01 00 FF];
+                263init_4 = [05 07 1D 0D 0E 0C 22 FF FF FF FF FF];
+                263init_5 = [08 0A 0C 05 05 05 0C 00 64 14 FF FF FF FF FF FF FF FF];
+                263init_6 = [03 0B 00 7D 87 FF FF FF];
+                263en_prox_0 = [01 09 10 FF];
+                263en_prox_1 = [FF FF];
+                263en_prox_2 = [FF FF];
+                263en_prox_3 = [FF FF];
+                263en_prox_4 = [FF FF];
+                263en_prox_5 = [02 09 00 5D FF FF];
+                263en_prox_6 = [FF FF];
 	};

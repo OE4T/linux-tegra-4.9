@@ -16,6 +16,7 @@
 
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
+#include <linux/clkdev.h>
 #include <linux/export.h>
 #include <linux/slab.h>
 #include <linux/err.h>
@@ -362,7 +363,7 @@ struct clk **tegra_bpmp_clk_init(struct tegra_bpmp_clk_init *init_clks,
 
 	for (i = 0; i < num_clks; i++) {
 		struct tegra_bpmp_clk_init *clk_init = init_clks + i;
-		int flags, parent, num_parents, clk_num;
+		int flags, parent, num_parents, clk_num, err;
 		unsigned long rate;
 
 		clk_num = clk_init->clk_num;
@@ -380,8 +381,7 @@ struct clk **tegra_bpmp_clk_init(struct tegra_bpmp_clk_init *init_clks,
 		}
 
 		if (flags & BPMP_CLK_HAS_MUX) {
-			int err = clk_bpmp_get_possible_parents(clk_num,
-								&parents);
+			err = clk_bpmp_get_possible_parents(clk_num, &parents);
 			if (err < 0) {
 				pr_err("bpmp returned %d for clk %d possible parents\n",
 					err, clk_num);
@@ -419,6 +419,12 @@ struct clk **tegra_bpmp_clk_init(struct tegra_bpmp_clk_init *init_clks,
 					parent_names, &parents.clk_ids[0],
 					num_parents, 0, clk_num, flags);
 		}
+
+		err = clk_register_clkdev(clk, clk_init->name,
+					  "tegra-clk-debug");
+		if (err)
+			pr_err("clk_register_clkdev() returned %d for clk %s\n",
+			       err, clk_init->name);
 
 		clks[clk_num] = clk;
 	}

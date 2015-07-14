@@ -73,13 +73,13 @@ __must_hold(&cde_app->mutex)
 
 	trace_gk20a_cde_remove_ctx(cde_ctx);
 
-	/* free the channel */
-	gk20a_channel_close(ch);
-
-	/* ..then release mapped memory */
+	/* release mapped memory */
 	gk20a_deinit_cde_img(cde_ctx);
 	gk20a_gmmu_unmap(vm, cde_ctx->backing_store_vaddr,
 			 g->gr.compbit_store.mem.size, 1);
+
+	/* free the channel */
+	gk20a_channel_close(ch);
 
 	/* housekeeping on app */
 	list_del(&cde_ctx->list);

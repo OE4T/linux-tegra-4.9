@@ -1214,6 +1214,11 @@ struct DWC_ETH_QOS_prv_data {
 	INT irq_number;
 	INT power_irq;
 	INT phyirq;
+
+#define PROFILE_AUTO 1
+#define PROFILE_MOBILE 2
+	unsigned int profile;
+
 	struct hw_if_struct hw_if;
 	struct desc_if_struct desc_if;
 

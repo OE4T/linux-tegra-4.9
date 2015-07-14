@@ -5315,7 +5315,7 @@ u16	DWC_ETH_QOS_select_queue(struct net_device *dev,
 
 	DBGPR("-->DWC_ETH_QOS_select_queue\n");
 
-	txqueue_select = skb_tx_hash(dev, skb);
+	txqueue_select = (skb->priority < DWC_ETH_QOS_TX_QUEUE_CNT) ? skb->priority : 0;
 
 	DBGPR("<--DWC_ETH_QOS_select_queue txqueue-select:%d\n",
 		txqueue_select);

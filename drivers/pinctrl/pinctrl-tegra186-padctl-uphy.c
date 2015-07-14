@@ -806,7 +806,7 @@ static struct init_data sata_pll_g1_g2_g3_init_data[] = {
 	},
 };
 
-static void sata_pll_init(struct tegra_padctl_uphy *uphy)
+static void sata_pll_defaults(struct tegra_padctl_uphy *uphy)
 {
 	u32 reg;
 	int i;
@@ -846,7 +846,8 @@ static struct init_data ufs_pll_g1_g2_g3_A_B_init_data[] = {
 		.cfg_wdata = CFG_MGMT_CLK_SEL(1),
 	},
 };
-static void ufs_pll_init(struct tegra_padctl_uphy *uphy)
+
+static void ufs_pll_defaults(struct tegra_padctl_uphy *uphy)
 {
 	u32 reg;
 	int i;
@@ -1201,7 +1202,7 @@ static struct init_data sata_lane_g1_g2_init_data[] = {
 	},
 };
 
-static void sata_lane_init(struct tegra_padctl_uphy *uphy, int lane)
+static void sata_lane_defaults(struct tegra_padctl_uphy *uphy, int lane)
 {
 	u32 reg;
 	int i;
@@ -1295,7 +1296,7 @@ static struct init_data ufs_lane_g1_g2_g3_init_data[] = {
 	},
 };
 
-static void ufs_lane_init(struct tegra_padctl_uphy *uphy, int lane)
+static void ufs_lane_defaults(struct tegra_padctl_uphy *uphy, int lane)
 {
 	u32 reg;
 	int i;
@@ -1308,13 +1309,14 @@ static void ufs_lane_init(struct tegra_padctl_uphy *uphy, int lane)
 
 }
 
-static int __uphy_pll_init(struct tegra_padctl_uphy *uphy, int pll)
+static int __uphy_pll_init(struct tegra_padctl_uphy *uphy, int pll,
+			enum tegra186_function func)
 {
 	struct device *dev = uphy->dev;
 	u32 reg;
 	int i;
 
-	/* FIXME: Need to see needed ??? */
+	/* pll defaults */
 	reg = uphy_pll_readl(uphy, pll, UPHY_PLL_CTL_1);
 	reg |= PWR_OVRD;
 	uphy_pll_writel(uphy, pll, reg, UPHY_PLL_CTL_1);
@@ -1364,7 +1366,7 @@ static int __uphy_pll_init(struct tegra_padctl_uphy *uphy, int pll)
 		return -ETIMEDOUT;
 	}
 
-	if (pll == 1) {
+	if (pll == 1 && func == TEGRA186_FUNC_MPHY) {
 		/* perform PLL rate change for UPHY_PLL_1, used by UFS */
 		reg = uphy_pll_readl(uphy, pll, UPHY_PLL_CTL_1);
 		reg &= ~RATE_ID(~0);
@@ -1452,7 +1454,7 @@ static int __uphy_pll_init(struct tegra_padctl_uphy *uphy, int pll)
 	/* remove SW overrides to allow HW sequencer to run */
 	reg = uphy_pll_readl(uphy, pll, UPHY_PLL_CTL_1);
 	reg &= ~PWR_OVRD;
-	if (pll == 1)
+	if (pll == 1 && func == TEGRA186_FUNC_MPHY)
 		reg &= ~RATE_ID_OVRD;
 	uphy_pll_writel(uphy, pll, reg, UPHY_PLL_CTL_1);
 	reg = uphy_pll_readl(uphy, pll, UPHY_PLL_CTL_2);
@@ -1463,7 +1465,8 @@ static int __uphy_pll_init(struct tegra_padctl_uphy *uphy, int pll)
 	return 0;
 }
 
-static int uphy_pll_init(struct tegra_padctl_uphy *uphy, int pll)
+static int uphy_pll_init(struct tegra_padctl_uphy *uphy, int pll,
+		enum tegra186_function func)
 {
 	struct device *dev = uphy->dev;
 	int rc = 0;
@@ -1477,7 +1480,7 @@ static int uphy_pll_init(struct tegra_padctl_uphy *uphy, int pll)
 	if (uphy->uphy_pll_state[pll] != PLL_POWER_DOWN)
 		goto done;
 
-	rc = __uphy_pll_init(uphy, pll);
+	rc = __uphy_pll_init(uphy, pll, func);
 
 done:
 	mutex_unlock(&uphy->lock);
@@ -2159,16 +2162,21 @@ static int tegra186_pcie_phy_power_on(struct phy *phy)
 	dev_dbg(uphy->dev, "power on PCIE controller %d uphy-lanes 0x%lx\n",
 		controller, uphy_lane_bitmap);
 
+	/* Remove iddq and clamp */
 	for_each_set_bit(uphy_lane, &uphy_lane_bitmap, T186_UPHY_LANES) {
 		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
-		reg &= SEL(~0);
-		reg |= SEL_PCIE;
 		reg |= FORCE_IDDQ_DISABLE;
+		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
+	}
+
+	udelay(100);
+
+	for_each_set_bit(uphy_lane, &uphy_lane_bitmap, T186_UPHY_LANES) {
+		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
 		reg &= ~CLAMP_EN_EARLY;
 		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
 	}
 
-	dev_info(uphy->dev, "%s FIXME: implement!\n", __func__); /* TODO */
 	return 0;
 }
 
@@ -2187,14 +2195,20 @@ static int tegra186_pcie_phy_power_off(struct phy *phy)
 	dev_dbg(uphy->dev, "power off PCIE controller %d uphy-lanes 0x%lx\n",
 		controller, uphy_lane_bitmap);
 
+	/* Enable clamp */
 	for_each_set_bit(uphy_lane, &uphy_lane_bitmap, T186_UPHY_LANES) {
 		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
-		reg &= ~FORCE_IDDQ_DISABLE;
 		reg |= CLAMP_EN_EARLY;
 		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
 	}
 
-	dev_info(uphy->dev, "%s FIXME: implement!\n", __func__); /* TODO */
+	/* Enable force IDDQ on lanes */
+	for_each_set_bit(uphy_lane, &uphy_lane_bitmap, T186_UPHY_LANES) {
+		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
+		reg &= ~FORCE_IDDQ_DISABLE;
+		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
+	}
+
 	return 0;
 }
 
@@ -2204,22 +2218,38 @@ static int tegra186_pcie_phy_init(struct phy *phy)
 	int controller = pcie_phy_to_controller(phy);
 	unsigned long uphy_lane_bitmap;
 	unsigned int uphy_lane;
+	u32 reg;
 
 	if (controller < 0)
 		return controller;
-
 	uphy_lane_bitmap = uphy->pcie_controllers[controller].uphy_lane_bitmap;
 	dev_dbg(uphy->dev, "phy init PCIE controller %d uphy-lanes 0x%lx\n",
 		controller, uphy_lane_bitmap);
 
+	/* Enable pllp(102M) and plle(100M) */
+
+	/* Program lane ownership by selecting mux to PCIE */
+	for_each_set_bit(uphy_lane, &uphy_lane_bitmap, T186_UPHY_LANES) {
+		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
+		reg &= SEL(~0);
+		reg |= SEL_PCIE;
+		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
+	}
+
+	/* Reset release of lanes and PLL1 */
 	uphy_pll_reset_deassert(uphy, 0);
 	for_each_set_bit(uphy_lane, &uphy_lane_bitmap, T186_UPHY_LANES) {
 		uphy_lane_reset_deassert(uphy, uphy_lane);
-		pcie_lane_defaults(uphy, uphy_lane);
-		pcie_usb3_pll_defaults(uphy);
 	}
 
-	uphy_pll_init(uphy, 0);
+	/* Program pll defaults */
+	pcie_usb3_pll_defaults(uphy);
+
+	/* Program lane defaults */
+	pcie_lane_defaults(uphy, uphy_lane);
+
+	uphy_pll_init(uphy, 0, TEGRA186_FUNC_PCIE);
+
 	return tegra_padctl_uphy_enable(phy);
 }
 
@@ -2238,10 +2268,14 @@ static int tegra186_pcie_phy_exit(struct phy *phy)
 		controller, uphy_lane_bitmap);
 
 	uphy_pll_deinit(uphy, 0);
+
+	/* Assert reset on lanes and pll */
+	uphy_pll_reset_assert(uphy, 0);
 	for_each_set_bit(uphy_lane, &uphy_lane_bitmap, T186_UPHY_LANES) {
 		uphy_lane_reset_assert(uphy, uphy_lane);
 	}
-	uphy_pll_reset_assert(uphy, 0);
+
+	/* Disable plle and pllp */
 
 	return tegra_padctl_uphy_disable(phy);
 }
@@ -2262,16 +2296,21 @@ static int tegra186_sata_phy_power_on(struct phy *phy)
 	u32 reg;
 
 	dev_dbg(dev, "power on SATA uphy-lanes 0x%lx\n", uphy->sata_lanes);
+
+	/* Remove iddq and clamp */
 	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES) {
 		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
-		reg &= SEL(~0);
-		reg |= SEL_SATA;
 		reg |= FORCE_IDDQ_DISABLE;
-		reg &= ~CLAMP_EN_EARLY;
 		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
 	}
 
-	dev_info(dev, "%s FIXME: implement!\n", __func__); /* TODO */
+	udelay(100);
+
+	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES) {
+		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
+		reg &= ~CLAMP_EN_EARLY;
+		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
+	}
 	return 0;
 }
 
@@ -2283,14 +2322,21 @@ static int tegra186_sata_phy_power_off(struct phy *phy)
 	u32 reg;
 
 	dev_dbg(dev, "power off SATA uphy-lanes 0x%lx\n", uphy->sata_lanes);
+
+	/* Enable clamp */
 	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES) {
 		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
-		reg &= ~FORCE_IDDQ_DISABLE;
 		reg |= CLAMP_EN_EARLY;
 		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
 	}
 
-	dev_info(dev, "%s FIXME: implement!\n", __func__); /* TODO */
+	/* Enable force IDDQ on lanes */
+	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES) {
+		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
+		reg &= ~FORCE_IDDQ_DISABLE;
+		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
+	}
+
 	return 0;
 }
 
@@ -2352,18 +2398,37 @@ static int tegra186_sata_phy_init(struct phy *phy)
 	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
 	struct device *dev = uphy->dev;
 	unsigned uphy_lane;
-
-	uphy_pll_reset_deassert(uphy, 1);
-	sata_pll_init(uphy);
+	u32 reg;
 
 	dev_dbg(dev, "phy init SATA uphy-lanes 0x%lx\n", uphy->sata_lanes);
+	/* Enable pllp(102M) and plle(100M) */
+
+	/* Program lane ownership by selecting mux to SATA */
+	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES) {
+		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
+		reg &= SEL(~0);
+		reg |= SEL_SATA;
+		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
+	}
+
+	/* Reset release of lanes and PLL0/PLL1 */
+	uphy_pll_reset_deassert(uphy, 0);
+	uphy_pll_reset_deassert(uphy, 1);
 	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES) {
 		uphy_lane_reset_deassert(uphy, uphy_lane);
-		sata_lane_init(uphy, uphy_lane);
+	}
+
+	/* Program pll defaults */
+	sata_pll_defaults(uphy);
+
+	/* Program lane defaults */
+	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES) {
+		sata_lane_defaults(uphy, uphy_lane);
 	}
 
 	tegra186_sata_fuse_calibration(uphy, uphy->sata_lanes);
-	uphy_pll_init(uphy, 1);
+	uphy_pll_init(uphy, 1, TEGRA186_FUNC_SATA);
+
 	return tegra_padctl_uphy_enable(phy);
 }
 
@@ -2371,8 +2436,21 @@ static int tegra186_sata_phy_exit(struct phy *phy)
 {
 	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
 	struct device *dev = uphy->dev;
+	unsigned int uphy_lane;
 
 	dev_dbg(dev, "phy exit SATA uphy-lanes 0x%lx\n", uphy->sata_lanes);
+
+	/* Assert reset on lanes and pll */
+	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES) {
+		uphy_lane_reset_assert(uphy, uphy_lane);
+	}
+
+	uphy_pll_reset_assert(uphy, 1);
+
+	/* Disable plle and pllp */
+
+	uphy_pll_deinit(uphy, 1);
+
 	return tegra_padctl_uphy_disable(phy);
 }
 
@@ -2383,33 +2461,6 @@ static const struct phy_ops sata_phy_ops = {
 	.power_off = tegra186_sata_phy_power_off,
 	.owner = THIS_MODULE,
 };
-
-
-static int tegra186_ufs_phy_power_on(struct phy *phy)
-{
-	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
-
-	dev_dbg(uphy->dev, "power on UFS uphy-lanes 0x%lx\n", uphy->ufs_lanes);
-	return 0;
-}
-
-static int tegra186_ufs_phy_power_off(struct phy *phy)
-{
-	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
-	unsigned int uphy_lane;
-	u32 reg;
-
-	dev_dbg(uphy->dev, "power off UFS uphy-lanes 0x%lx\n", uphy->ufs_lanes);
-
-	for_each_set_bit(uphy_lane, &uphy->ufs_lanes, T186_UPHY_LANES) {
-		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
-		reg &= ~FORCE_IDDQ_DISABLE;
-		reg |= CLAMP_EN_EARLY;
-		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
-	}
-
-	return 0;
-}
 
 static int tegra186_ufs_fuse_calibration(struct tegra_padctl_uphy *uphy,
 						int lane)
@@ -2427,10 +2478,8 @@ static int tegra186_ufs_fuse_calibration(struct tegra_padctl_uphy *uphy,
 	/* Update based on fuse_mphy_nv_calib[3:2] value TBD */
 	idx = MPHY_NV_CALIB_2_3(uphy->fuse_calib.mphy_nv);
 
-
 	/* Update based on fuse_mphy_nv_calib[5:4] value TBD */
 	idx = MPHY_NV_CALIB_4_5(uphy->fuse_calib.mphy_nv);
-
 
 	/* Update based on fuse_sata_mphy_odm_calib[1:0] value */
 	idx = SATA_MPHY_ODM_CALIB_0_1(uphy->fuse_calib.sata_mphy_odm);
@@ -2468,58 +2517,112 @@ static int tegra186_ufs_fuse_calibration(struct tegra_padctl_uphy *uphy,
 	return 0;
 }
 
-static int tegra186_ufs_phy_init(struct phy *phy)
+static int tegra186_ufs_phy_power_on(struct phy *phy)
 {
 	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
-	unsigned uphy_lane;
+	unsigned int uphy_lane;
 	u32 reg;
 
-	dev_dbg(uphy->dev, "phy init UFS uphy-lanes 0x%lx\n", uphy->ufs_lanes);
-	/* FIXME: step 1: Enable refplle to 208M and pllp 102M */
+	dev_dbg(uphy->dev, "power on UFS uphy-lanes 0x%lx\n", uphy->ufs_lanes);
 
-	/* step 2: De-assert UPHY LANE PAD Macro, already done in .probe() */
+	/* step 1.5: Enable pllp(102M) and pllrefe(208M)*/
 
-	/* Bring the lanes out of IDDQ, remove clamps, select MPHY for mux */
+	/* step 2.1: De-assert UPHY LANE PAD Macro, already done in .probe() */
+
+	/* step 2.2: Program lane ownership by selecting mux to MPHY */
 	for_each_set_bit(uphy_lane, &uphy->ufs_lanes, T186_UPHY_LANES) {
 		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
 		reg &= SEL(~0);
 		reg |= SEL_MPHY;
+		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
+	}
+
+	/* step 2.3: Bring refPLLE to under HW control (optional). */
+
+	/* step 5.3: Reset release of lanes and PLL1. */
+	for_each_set_bit(uphy_lane, &uphy->ufs_lanes, T186_UPHY_LANES) {
+		uphy_lane_reset_deassert(uphy, uphy_lane);
+	}
+	uphy_pll_reset_deassert(uphy, 0);
+	uphy_pll_reset_deassert(uphy, 1);
+
+	/* step 6.1: Program pll defaults */
+	ufs_pll_defaults(uphy);
+
+	/* step 6.2: Program lane defaults */
+	for_each_set_bit(uphy_lane, &uphy->ufs_lanes, T186_UPHY_LANES) {
+		TRACE(uphy->dev, "uphy_lane %u", uphy_lane);
+		ufs_lane_defaults(uphy, uphy_lane);
+	}
+
+	/* step 6.3: Electrical parameters programming based on fuses */
+	for_each_set_bit(uphy_lane, &uphy->ufs_lanes, T186_UPHY_LANES)
+		tegra186_ufs_fuse_calibration(uphy, uphy_lane);
+
+	/* step 7: Rate id programming */
+	ufs_pll_rateid_init(uphy);
+	ufs_lane_rateid_init(uphy, uphy->ufs_lanes);
+
+	/* step 8: Uphy pll1 calibration */
+	uphy_pll_init(uphy, 1, TEGRA186_FUNC_MPHY);
+
+	/* step 9: Remove iddq and clamp */
+	for_each_set_bit(uphy_lane, &uphy->ufs_lanes, T186_UPHY_LANES) {
+		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
 		reg |= FORCE_IDDQ_DISABLE;
+		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
+	}
+
+	udelay(100);
+
+	for_each_set_bit(uphy_lane, &uphy->ufs_lanes, T186_UPHY_LANES) {
+		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
 		reg &= ~CLAMP_EN_EARLY;
 		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
 	}
 
-	/* FIXME: bring refPLLE to under HW control. Needed ? */
+	return 0;
+}
 
+static int tegra186_ufs_phy_power_off(struct phy *phy)
+{
+	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
+	unsigned int uphy_lane;
+	u32 reg;
 
-	/* step 3: Enable PLL1 and lane by releasing resets */
-	uphy_pll_reset_deassert(uphy, 1);
+	dev_dbg(uphy->dev, "power off UFS uphy-lanes 0x%lx\n", uphy->ufs_lanes);
+
+	/* Enable clamp */
 	for_each_set_bit(uphy_lane, &uphy->ufs_lanes, T186_UPHY_LANES) {
-		uphy_lane_reset_deassert(uphy, uphy_lane);
+		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
+		reg |= CLAMP_EN_EARLY;
+		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
 	}
 
-	/* pll parameters init */
-	ufs_pll_init(uphy);
-
-	/* lane parameters init */
+	/* Enable force IDDQ on lanes */
 	for_each_set_bit(uphy_lane, &uphy->ufs_lanes, T186_UPHY_LANES) {
-		TRACE(uphy->dev, "uphy_lane %u", uphy_lane);
-		ufs_lane_init(uphy, uphy_lane);
+		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
+		reg &= ~FORCE_IDDQ_DISABLE;
+		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
 	}
 
-	/* step 4: electrical parameters programming based on fuses */
-	for_each_set_bit(uphy_lane, &uphy->ufs_lanes, T186_UPHY_LANES)
-		tegra186_ufs_fuse_calibration(uphy, uphy_lane);
+	/* Assert reset on lanes and pll */
+	for_each_set_bit(uphy_lane, &uphy->ufs_lanes, T186_UPHY_LANES) {
+		uphy_lane_reset_assert(uphy, uphy_lane);
+	}
+	uphy_pll_reset_assert(uphy, 0);
+	uphy_pll_reset_assert(uphy, 1);
 
-	/* step 5: rate id programming */
-	ufs_pll_rateid_init(uphy);
-	ufs_lane_rateid_init(uphy, uphy->ufs_lanes);
+	/* Disable pllrefe and pllp */
 
-	/* step 6: uphy pll1 calibration */
-	uphy_pll_init(uphy, 1);
+	return 0;
+}
 
-	/* FIXME: Need to add MPHY programming in above step ? */
+static int tegra186_ufs_phy_init(struct phy *phy)
+{
+	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
 
+	dev_dbg(uphy->dev, "phy init UFS uphy-lanes 0x%lx\n", uphy->ufs_lanes);
 	return tegra_padctl_uphy_enable(phy);
 }
 
@@ -2663,7 +2766,7 @@ static int tegra186_usb3_phy_init(struct phy *phy)
 	uphy_lane_reset_deassert(uphy, uphy_lane);
 	usb3_lane_defaults(uphy, uphy_lane);
 	pcie_usb3_pll_defaults(uphy);
-	uphy_pll_init(uphy, 0);
+	uphy_pll_init(uphy, 0, TEGRA186_FUNC_USB3);
 
 	return tegra_padctl_uphy_enable(phy);
 }
@@ -3257,7 +3360,7 @@ static int tegra_xusb_read_fuse_calibration(struct tegra_padctl_uphy *uphy)
 	return 0;
 }
 
-static int tegra_mphy_stata_fuse_calibration(struct tegra_padctl_uphy *padctl)
+static int tegra_mphy_sata_fuse_calibration(struct tegra_padctl_uphy *padctl)
 {
 	u32 value;
 
@@ -3377,7 +3480,7 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 		if (err < 0)
 			return err;
 
-		err = tegra_mphy_stata_fuse_calibration(uphy);
+		err = tegra_mphy_sata_fuse_calibration(uphy);
 		if (err < 0)
 			return err;
 	}

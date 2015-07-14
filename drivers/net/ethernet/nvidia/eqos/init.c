@@ -257,6 +257,11 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	pdata->tx_queue_cnt = tx_q_count;
 	pdata->rx_queue_cnt = rx_q_count;
 
+	if (tx_q_count > 1)
+		pdata->profile = PROFILE_AUTO;
+	else
+		pdata->profile = PROFILE_MOBILE;
+
 #ifdef DWC_ETH_QOS_CONFIG_DEBUGFS
 	/* to give prv data to debugfs */
 	DWC_ETH_QOS_get_pdata(pdata);

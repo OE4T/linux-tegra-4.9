@@ -389,6 +389,7 @@ static void tegra_pwm_bl_ops_reg_based_on_disp_board_id(struct device *dev)
 	bool is_dsi_a_1200_800_8_0 = false;
 	bool is_edp_i_1080p_11_6 = false;
 	bool is_edp_a_1080p_14_0 = false;
+	bool is_edp_s_2160p_15_6 = false;
 
 	tegra_get_display_board_info(&display_board);
 
@@ -440,7 +441,9 @@ static void tegra_pwm_bl_ops_reg_based_on_disp_board_id(struct device *dev)
 		break;
 	case BOARD_PM363:
 	case BOARD_E1824:
-		if (display_board.sku == 1200)
+		if (of_machine_is_compatible("nvidia,jetson-cv"))
+			is_edp_s_2160p_15_6 = true;
+		else if (display_board.sku == 1200)
 			is_edp_i_1080p_11_6 = true;
 		else
 			is_edp_a_1080p_14_0 = true;
@@ -464,6 +467,8 @@ static void tegra_pwm_bl_ops_reg_based_on_disp_board_id(struct device *dev)
 		dev_set_drvdata(dev, edp_i_1080p_11_6_ops.pwm_bl_ops);
 	if (is_edp_a_1080p_14_0)
 		dev_set_drvdata(dev, edp_a_1080p_14_0_ops.pwm_bl_ops);
+	if (is_edp_s_2160p_15_6)
+		dev_set_drvdata(dev, edp_s_uhdtv_15_6_ops.pwm_bl_ops);
 }
 
 void tegra_pwm_bl_ops_register(struct device *dev)
@@ -626,6 +631,7 @@ static struct device_node
 	bool is_dsi_a_1200_800_8_0 = false;
 	bool is_edp_i_1080p_11_6 = false;
 	bool is_edp_a_1080p_14_0 = false;
+	bool is_edp_s_2160p_15_6 = false;
 
 	tegra_get_display_board_info(&display_board);
 	pr_info("display board info: id 0x%x, fab 0x%x\n",
@@ -711,7 +717,9 @@ static struct device_node
 		break;
 	case BOARD_PM363:
 	case BOARD_E1824:
-		if (display_board.sku == 1200)
+		if (of_machine_is_compatible("nvidia,jetson-cv"))
+			is_edp_s_2160p_15_6 = true;
+		else if (display_board.sku == 1200)
 			is_edp_i_1080p_11_6 = true;
 		else
 			is_edp_a_1080p_14_0 = true;
@@ -758,6 +766,13 @@ static struct device_node
 		if (np_panel && pdata && dc_out)
 			tegra_panel_register_ops(dc_out,
 				&edp_a_1080p_14_0_ops);
+	}
+	if (is_edp_s_2160p_15_6) {
+		np_panel = of_find_compatible_node(NULL, NULL,
+				"s-edp,uhdtv-15-6");
+		if (np_panel && pdata && dc_out)
+			tegra_panel_register_ops(dc_out,
+				&edp_s_uhdtv_15_6_ops);
 	}
 	if (np_panel)
 		return np_panel;

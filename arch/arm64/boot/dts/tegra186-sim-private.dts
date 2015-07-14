@@ -26,7 +26,6 @@
 #include "tegra186-cpus-2D4A.dtsi"
 #include "panel-sim.dtsi"
 #include "tegra186-sim-hdmi.dtsi"
-#include "tegra186-sdhci.dtsi"
 #include <dt-bindings/sound/tegra-asoc-alt.h>
 
 / {

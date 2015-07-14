@@ -967,6 +967,7 @@ static ssize_t lr388k7_ts_slowscan_enable_store(struct device *dev,
 	struct device_attribute *attr,
 	const char *buf, size_t count)
 {
+#ifdef ENABLE_SLOW_SCAN
 	unsigned long val;
 	ssize_t err;
 	ssize_t ret;
@@ -1009,16 +1010,23 @@ static ssize_t lr388k7_ts_slowscan_enable_store(struct device *dev,
 	}
 
 	return ret;
+#else
+	return count;
+#endif
 }
 
 static ssize_t lr388k7_ts_slowscan_enable_show(struct device *dev,
 	struct device_attribute *attr,
 	char *buf)
 {
+#ifdef ENABLE_SLOW_SCAN
 	return sprintf(buf, "Slow Scan:%s Scan Rate:%dHz\n",
 		       g_st_dbg.slowscan.enable ?
 		       "Enabled" : "Disabled",
 		       g_st_dbg.slowscan.scan_rate);
+#else
+	return sprintf(buf, "Not implemented yet\n");
+#endif
 }
 
 static ssize_t lr388k7_ts_wakeup_enable_store(struct device *dev,

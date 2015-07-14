@@ -24,8 +24,6 @@
 #include "../../../../include/dt-bindings/pinctrl/pinctrl-tegra-padctl-uphy.h"
 #include "../../../../include/dt-bindings/clock/tegra186-clock.h"
 #include "../../../../include/dt-bindings/reset/tegra186-reset.h"
-#include "tegra186-pinmux-fpga.dtsi"
-#include "tegra186-fpga-fixed.dtsi"
 #include "tegra186-sdhci.dtsi"
 
 / {

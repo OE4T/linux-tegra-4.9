@@ -4512,17 +4512,22 @@ static INT configure_mac(struct DWC_ETH_QOS_prv_data *pdata)
 			break;
 		}
 
-		if ((pdata->flow_ctrl & DWC_ETH_QOS_FLOW_CTRL_TX) == DWC_ETH_QOS_FLOW_CTRL_TX)
-			enable_tx_flow_ctrl(qInx);
-		else
-			disable_tx_flow_ctrl(qInx);
+		if (pdata->profile != PROFILE_AUTO) {
+			if ((pdata->flow_ctrl & DWC_ETH_QOS_FLOW_CTRL_TX) 
+				== DWC_ETH_QOS_FLOW_CTRL_TX)
+				enable_tx_flow_ctrl(qInx);
+			else
+				disable_tx_flow_ctrl(qInx);
+		}
 	}
 
 	/* Set Rx flow control parameters */
-	if ((pdata->flow_ctrl & DWC_ETH_QOS_FLOW_CTRL_RX) == DWC_ETH_QOS_FLOW_CTRL_RX)
-		enable_rx_flow_ctrl();
-	else
-		disable_rx_flow_ctrl();
+	if (pdata->profile != PROFILE_AUTO) {
+		if ((pdata->flow_ctrl & DWC_ETH_QOS_FLOW_CTRL_RX) == DWC_ETH_QOS_FLOW_CTRL_RX)
+			enable_rx_flow_ctrl();
+		else
+			disable_rx_flow_ctrl();
+	}
 
 	/* Configure for Jumbo frame in MAC */
 	if (pdata->dev->mtu > DWC_ETH_QOS_ETH_FRAME_LEN) {

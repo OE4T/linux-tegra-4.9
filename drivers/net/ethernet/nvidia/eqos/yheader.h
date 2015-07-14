@@ -1239,7 +1239,7 @@ struct DWC_ETH_QOS_prv_data {
 	int oldduplex;
 	int phyaddr;
 	int bus_id;
-	u32 dev_state;
+	netdev_features_t dev_state;
 	u32 interface;
 
 	/* saving state for Wake-on-LAN */

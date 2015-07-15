@@ -1148,6 +1148,9 @@ static void gk20a_pm_shutdown(struct platform_device *pdev)
 			break;
 	}
 #endif
+
+	/* Be ready for rail-gate after this point */
+	gk20a_pm_prepare_poweroff(&pdev->dev);
 }
 
 #ifdef CONFIG_PM

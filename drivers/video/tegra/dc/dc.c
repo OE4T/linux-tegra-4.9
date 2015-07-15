@@ -96,18 +96,22 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #define DC_COM_PIN_OUTPUT_POLARITY1_INIT_VAL	0x01000000
 #define DC_COM_PIN_OUTPUT_POLARITY3_INIT_VAL	0x0
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 #ifdef CONFIG_PM_GENERIC_DOMAINS_OF
 static struct of_device_id tegra_disa_pd[] = {
+	{ .compatible = "nvidia, tegra186-disa-pd", },
 	{ .compatible = "nvidia, tegra210-disa-pd", },
 	{ .compatible = "nvidia, tegra132-disa-pd", },
 	{},
 };
 
 static struct of_device_id tegra_disb_pd[] = {
+	{ .compatible = "nvidia, tegra186-disb-pd", },
 	{ .compatible = "nvidia, tegra210-disb-pd", },
 	{ .compatible = "nvidia, tegra132-disb-pd", },
 	{},
 };
+#endif
 #endif
 
 static struct fb_videomode tegra_dc_vga_mode = {

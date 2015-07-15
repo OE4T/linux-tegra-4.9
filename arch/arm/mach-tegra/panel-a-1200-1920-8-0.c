@@ -71,7 +71,6 @@ fail:
 
 static int dsi_a_1200_1920_8_0_enable(struct device *dev)
 {
-	unsigned flags = tegra_dc_out_flags_from_dev(dev);
 	int err = 0;
 
 	err = dsi_a_1200_1920_8_0_regulator_get(dev);
@@ -118,7 +117,7 @@ static int dsi_a_1200_1920_8_0_enable(struct device *dev)
 
 	msleep(20);
 #if DSI_PANEL_RESET
-	if (!(flags & TEGRA_DC_OUT_INITIALIZED_MODE)) {
+	if (!tegra_dc_initialized(dev)) {
 		gpio_direction_output(en_panel_rst, 1);
 		usleep_range(1000, 5000);
 		gpio_set_value(en_panel_rst, 0);

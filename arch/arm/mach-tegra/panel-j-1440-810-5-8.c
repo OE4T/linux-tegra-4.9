@@ -477,7 +477,6 @@ static struct tegra_dsi_cmd dsi_j_1440_810_5_8_suspend_cmd[] = {
 static int dsi_j_1440_810_5_8_enable(struct device *dev)
 {
 	int err = 0;
-	unsigned flags = tegra_dc_out_flags_from_dev(dev);
 
 	err = dsi_j_1440_810_5_8_reg_get(dev);
 	if (err < 0) {
@@ -507,7 +506,7 @@ static int dsi_j_1440_810_5_8_enable(struct device *dev)
 	else
 		en_panel = DSI_PANEL_EN_GPIO;
 
-	if (!(flags & TEGRA_DC_OUT_INITIALIZED_MODE)) {
+	if (!tegra_dc_initialized(dev)) {
 		gpio_direction_output(en_panel_rst, 0);
 		gpio_direction_output(en_panel, 0);
 	}
@@ -549,7 +548,7 @@ static int dsi_j_1440_810_5_8_enable(struct device *dev)
 	}
 	usleep_range(3000, 5000);
 
-	if (!(flags & TEGRA_DC_OUT_INITIALIZED_MODE)) {
+	if (!tegra_dc_initialized(dev)) {
 		gpio_direction_output(en_panel_rst, 1);
 		msleep(20);
 		gpio_set_value(en_panel, 1);

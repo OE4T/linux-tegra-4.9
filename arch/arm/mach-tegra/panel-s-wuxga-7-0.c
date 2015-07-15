@@ -84,7 +84,6 @@ fail:
 
 static int dsi_s_wuxga_7_0_enable(struct device *dev)
 {
-	unsigned flags = tegra_dc_out_flags_from_dev(dev);
 	int err = 0;
 
 	err = dsi_s_wuxga_7_0_regulator_get(dev);
@@ -160,7 +159,7 @@ static int dsi_s_wuxga_7_0_enable(struct device *dev)
 	usleep_range(7000, 8000);
 
 #if DSI_PANEL_RESET
-	if (!(flags & TEGRA_DC_OUT_INITIALIZED_MODE)) {
+	if (!tegra_dc_initialized(dev)) {
 		err = gpio_direction_output(en_panel_rst, 1);
 		if (err < 0) {
 			pr_err("setting display reset gpio value failed\n");

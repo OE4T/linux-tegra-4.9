@@ -24,6 +24,7 @@
 #include "tegra210-platforms/tegra210-jetson-cv-pinmux-p2597-2180-a00.dtsi"
 #include "tegra210-platforms/tegra210-jetson-cv-sdmmc-drv-p2597-2180-a00.dtsi"
 #include "tegra210-platforms/tegra210-comms-p2530-0930.dtsi"
+#include "tegra210-platforms/tegra210-jetson-cv-camera-e3326-a00.dtsi"
 #include "tegra210-platforms/tegra210-pwm-fan-p2530-0930.dtsi"
 #include "panel-a-wuxga-8-0.dtsi"
 #include "tegra210-platforms/tegra210-ers-hdmi-e2190-1100-a00.dtsi"
@@ -938,6 +939,20 @@
 				iso_abbrev = "IN";
 				custom_locale = "Q2";
 				custom_locale_rev = <998>;
+			};
+		};
+	};
+
+	camera-pcl {
+		profiles {
+			ov5693-pcl@2_0036 {
+				use_of_node = "yes";
+				dev_name = "ov5693";
+				num = <1>;
+				vana-supply = <&en_vdd_cam_hv_2v8>;
+				vif-supply = <&en_vdd_cam>;
+				cam2-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
+				reset-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
 			};
 		};
 	};

@@ -138,13 +138,17 @@ static int bpmp_channel_init(void)
 
 static int bpmp_handshake(void)
 {
-	if (!tegra_hsp_db_can_ring(HSP_DB_BPMP)) {
+	/* FIXME: short-term WAR */
+	if (!tegra_hsp_db_can_ring(HSP_DB_BPMP) &&
+			!bpmp_readl(HSP_SHRD_SEM_1_STA)) {
 		pr_err("bpmp db not enabled\n");
 		return -ENODEV;
 	}
 
+	/* FIXME: remove HSP_SHRD_SEM_0_STA */
 	pr_info("bpmp: waiting for handshake\n");
-	while (!bpmp_readl(HSP_SHRD_SEM_0_STA))
+	while (!bpmp_readl(HSP_SHRD_SEM_0_STA) ||
+			!tegra_hsp_db_can_ring(HSP_DB_BPMP))
 		;
 
 	pr_info("bpmp: handshake completed\n");

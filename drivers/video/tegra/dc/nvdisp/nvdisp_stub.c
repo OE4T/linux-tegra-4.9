@@ -38,6 +38,7 @@ int tegra_is_clk_enabled(struct clk *c)
 {
 	return 1;
 }
+EXPORT_SYMBOL(tegra_is_clk_enabled);
 
 /* Update this after carve out is defined */
 void tegra_get_fb_resource(struct resource *fb_res)

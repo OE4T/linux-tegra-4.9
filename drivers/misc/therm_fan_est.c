@@ -107,7 +107,7 @@ static void therm_fan_est_work_func(struct work_struct *work)
 		if (!((trip_index - 1) % 2) || (!est->current_trip_index) ||
 			((trip_index - est->current_trip_index) >= 2) ||
 			((trip_index - est->current_trip_index) <= -2)) {
-			pr_info("%s, cur_temp:%ld, cur_trip_index:%d\n",
+			pr_debug("%s, cur_temp:%ld, cur_trip_index:%d\n",
 			__func__, est->cur_temp, est->current_trip_index);
 			thermal_zone_device_update(est->thz);
 		}
@@ -635,7 +635,7 @@ static int therm_fan_est_suspend(struct platform_device *pdev,
 	if (!est)
 		return -EINVAL;
 
-	pr_info("therm-fan-est: %s, cur_temp:%ld", __func__, est->cur_temp);
+	pr_debug("therm-fan-est: %s, cur_temp:%ld", __func__, est->cur_temp);
 	cancel_delayed_work(&est->therm_fan_est_work);
 	est->current_trip_index = 0;
 
@@ -648,7 +648,7 @@ static int therm_fan_est_resume(struct platform_device *pdev)
 
 	if (!est)
 		return -EINVAL;
-	pr_info("therm-fan-est: %s, cur_temp:%ld", __func__, est->cur_temp);
+	pr_debug("therm-fan-est: %s, cur_temp:%ld", __func__, est->cur_temp);
 
 	queue_delayed_work(est->workqueue,
 				&est->therm_fan_est_work,

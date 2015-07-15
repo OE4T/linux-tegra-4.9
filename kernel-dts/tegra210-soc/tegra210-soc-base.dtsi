@@ -357,7 +357,8 @@
 		domains = <&ppcs_as TEGRA_SWGROUP_CELLS5(PPCS, PPCS1, PPCS2, SE, SE1)
 			   &gpu_as TEGRA_SWGROUP_CELLS(GPUB)
 			   &ape_as TEGRA_SWGROUP_CELLS(APE)
-			   &dc_as TEGRA_SWGROUP_CELLS3(DC, DC12, DCB)
+			   &dc_as TEGRA_SWGROUP_CELLS2(DC, DC12)
+			   &dc_as TEGRA_SWGROUP_CELLS(DCB)
 			   &common_as TEGRA_SWGROUP_CELLS(AFI)
 			   &common_as TEGRA_SWGROUP_CELLS(SDMMC1A)
 			   &common_as TEGRA_SWGROUP_CELLS(SDMMC2A)
@@ -796,8 +797,7 @@
 			reg = <0x0 0x54200000 0x0 0x00040000>;
 			interrupts = <0 73 0x04>;
 			iommus = <&smmu TEGRA_SWGROUP_DC>,
-				 <&smmu TEGRA_SWGROUP_DC12>,
-				 <&smmu TEGRA_SWGROUP_DCB>;
+				 <&smmu TEGRA_SWGROUP_DC12>;
 			status = "disabled";
 
 			rgb {
@@ -810,9 +810,7 @@
 			power-domains = <&mc_clk_pd>;
 			reg = <0x0 0x54240000 0x0 0x00040000>;
 			interrupts = <0 74 0x04>;
-			iommus = <&smmu TEGRA_SWGROUP_DC>,
-				 <&smmu TEGRA_SWGROUP_DC12>,
-				 <&smmu TEGRA_SWGROUP_DCB>;
+			iommus = <&smmu TEGRA_SWGROUP_DCB>;
 			status = "disabled";
 
 			rgb {

@@ -99,10 +99,12 @@ static int imo_channel_init(int ch, uint8_t *obmem, uint8_t *ibmem, size_t sz)
 	uintptr_t tx_base;
 	size_t msg_sz;
 	size_t frame_sz;
+	size_t hdr_sz;
 	size_t frame_off;
 	int r;
 
 	msg_sz = tegra_ivc_align(MSG_SZ);
+	hdr_sz = tegra_ivc_total_queue_size(0);
 	frame_sz = tegra_ivc_total_queue_size(msg_sz);
 	frame_off = ch * frame_sz;
 
@@ -116,7 +118,7 @@ static int imo_channel_init(int ch, uint8_t *obmem, uint8_t *ibmem, size_t sz)
 	tx_base = (uintptr_t)(obmem + frame_off);
 
 	/* init the channel frame */
-	memset_io((void *)tx_base, 0, frame_sz);
+	memset_io((void *)tx_base, 0, hdr_sz);
 
 	ivc = ivc_channels + ch;
 	r = tegra_ivc_init(ivc, rx_base, tx_base,

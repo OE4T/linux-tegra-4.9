@@ -1935,11 +1935,7 @@ UCHAR get_tx_queue_count(void)
   ULONG varMAC_HFR2;
 
   MAC_HFR2_RgRd(varMAC_HFR2);
-#ifdef AR_XXX //For now Keep the number of channels to 1
   count = GET_VALUE(varMAC_HFR2, MAC_HFR2_TXQCNT_LPOS, MAC_HFR2_TXQCNT_HPOS);
-#else
-  count = 0;
-#endif
 
   return (count + 1);
 }
@@ -1961,11 +1957,7 @@ UCHAR get_rx_queue_count(void)
   ULONG varMAC_HFR2;
 
   MAC_HFR2_RgRd(varMAC_HFR2);
-#ifdef AR_XXX //For now Keep the number of channels to 1
   count = GET_VALUE(varMAC_HFR2, MAC_HFR2_RXQCNT_LPOS, MAC_HFR2_RXQCNT_HPOS);
-#else
-  count = 0;
-#endif
 
   return (count + 1);
 }

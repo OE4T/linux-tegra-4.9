@@ -202,13 +202,13 @@ void tegra186_pmc_pwr_e33V_update(unsigned long mask, unsigned long val)
 }
 EXPORT_SYMBOL(tegra186_pmc_pwr_e33V_update);
 
-unsigned long tegra186_pmc_pwr_e18V_get()
+unsigned long tegra186_pmc_pwr_e18V_get(void)
 {
 	return tegra186_pmc_readl(PMC_E_18V_PWR);
 }
 EXPORT_SYMBOL(tegra186_pmc_pwr_e18V_get);
 
-unsigned long tegra186_pmc_pwr_e33V_get()
+unsigned long tegra186_pmc_pwr_e33V_get(void)
 {
 	return tegra186_pmc_readl(PMC_E_33V_PWR);
 }

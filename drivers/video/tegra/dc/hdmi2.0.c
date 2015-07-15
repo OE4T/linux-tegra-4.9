@@ -1212,8 +1212,9 @@ static void tegra_hdmi_get_cea_fb_videomode(struct fb_videomode *m,
 	memcpy(&dc_mode, &dc->mode, sizeof(dc->mode));
 
 	/* get CEA video timings */
-	yuv_flag = dc_mode.vmode & FB_VMODE_SET_YUV_MASK;
-	if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y24)) {
+	yuv_flag = dc_mode.vmode & FB_VMODE_YUV_MASK;
+	if (yuv_flag == (FB_VMODE_Y420      | FB_VMODE_Y24) ||
+	    yuv_flag == (FB_VMODE_Y420_ONLY | FB_VMODE_Y24)) {
 		dc_mode.h_back_porch *= 2;
 		dc_mode.h_front_porch *= 2;
 		dc_mode.h_sync_width *= 2;
@@ -1328,7 +1329,7 @@ static u32 tegra_hdmi_get_aspect_ratio(struct tegra_hdmi *hdmi)
 
 static u32 tegra_hdmi_get_rgb_ycc(struct tegra_hdmi *hdmi)
 {
-	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_SET_YUV_MASK;
+	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_YUV_MASK;
 
 	/*
 	 * For seamless HDMI, read YUV flag parameters from bootloader
@@ -1350,7 +1351,7 @@ static u32 tegra_hdmi_get_rgb_ycc(struct tegra_hdmi *hdmi)
 		}
 	}
 
-	if (yuv_flag & FB_VMODE_Y420)
+	if (yuv_flag & (FB_VMODE_Y420 | FB_VMODE_Y420_ONLY))
 		return HDMI_AVI_YCC_420;
 	else if (yuv_flag & FB_VMODE_Y422)
 		return HDMI_AVI_YCC_422;
@@ -1883,7 +1884,7 @@ static void tegra_hdmi_put(struct tegra_dc *dc)
 /* TODO: add support for other deep colors */
 static inline u32 tegra_hdmi_get_bpp(struct tegra_hdmi *hdmi)
 {
-	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_SET_YUV_MASK;
+	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_YUV_MASK;
 
 	if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30))
 		return 30;
@@ -1920,7 +1921,7 @@ static u32 tegra_hdmi_gcp_color_depth(struct tegra_hdmi *hdmi)
 /* return packing phase of last pixel in preceding video data period */
 static u32 tegra_hdmi_gcp_packing_phase(struct tegra_hdmi *hdmi)
 {
-	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_SET_YUV_MASK;
+	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_YUV_MASK;
 
 	if (!tegra_hdmi_gcp_color_depth(hdmi))
 		return 0;
@@ -1934,7 +1935,7 @@ static u32 tegra_hdmi_gcp_packing_phase(struct tegra_hdmi *hdmi)
 
 static bool tegra_hdmi_gcp_default_phase_en(struct tegra_hdmi *hdmi)
 {
-	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_SET_YUV_MASK;
+	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_YUV_MASK;
 
 	if (!tegra_hdmi_gcp_color_depth(hdmi))
 		return false;

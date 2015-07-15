@@ -4018,7 +4018,7 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 	int nr_win = 0;
 
 	/* YUV420 10bpc variables */
-	int yuv_flag = dc->mode.vmode & FB_VMODE_SET_YUV_MASK;
+	int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
 	bool yuv_420_10b_path = false;
 	int fb_win_idx = -1;
 	int fb_win_pos = -1;

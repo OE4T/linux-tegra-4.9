@@ -1878,7 +1878,7 @@ static void tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 	avi.vic = tegra_dc_find_cea_vic(&dc->mode);
 	avi.m = dc->mode.avi_m;
 	/*Enable YUV format for 4k support*/
-	if (dc->mode.vmode & FB_VMODE_Y420)
+	if (dc->mode.vmode & (FB_VMODE_Y420 | FB_VMODE_Y420_ONLY))
 		avi.y = 3;
 	else if (dc->mode.vmode & FB_VMODE_Y422)
 		avi.y = 1;

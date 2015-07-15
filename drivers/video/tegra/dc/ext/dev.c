@@ -527,7 +527,7 @@ static int tegra_dc_ext_should_show_background(
 		int win_num)
 {
 	struct tegra_dc *dc = data->ext->dc;
-	int yuv_flag = dc->mode.vmode & FB_VMODE_SET_YUV_MASK;
+	int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
 	int i;
 
 	if (!dc->yuv_bypass || yuv_flag != (FB_VMODE_Y420 | FB_VMODE_Y30))
@@ -1741,7 +1741,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 		bypass = !!(args.flags & TEGRA_DC_EXT_FLIP_HEAD_FLAG_YUVBYPASS);
 
-		if (!!(user->ext->dc->mode.vmode & FB_VMODE_SET_YUV_MASK) !=
+		if (!!(user->ext->dc->mode.vmode & FB_VMODE_YUV_MASK) !=
 		    bypass)
 			return -EINVAL;
 

@@ -505,6 +505,11 @@ static int parse_vrr_settings(struct platform_device *ndev,
 		OF_DC_LOG("vrr_min_fps %d\n", vrr_min_fps);
 	}
 
+	if (!of_property_read_u32(np, "nvidia,frame_len_fluct", &temp)) {
+		vrr->frame_len_fluct = (unsigned) temp;
+		OF_DC_LOG("frame_len_fluct %d\n", frame_len_fluct);
+	} else
+		vrr->frame_len_fluct = 2000;
 
 	/*
 	 * VRR capability is set when we have vrr_settings section in DT

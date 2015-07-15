@@ -1805,7 +1805,6 @@ static void tegra_dc_setup_vrr(struct tegra_dc *dc)
 	vrr->vfp_extend = vrr->v_front_porch_max;
 	vrr->vfp_shrink = vrr->v_front_porch_min;
 
-	vrr->frame_len_fluct = 2000;
 	vrr->frame_type = 0;
 	vrr->frame_delta_us = 0;
 

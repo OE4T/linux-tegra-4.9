@@ -214,7 +214,7 @@
 				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
 				nvidia,panel-bl-pwm-gpio = <&gpio TEGRA_GPIO(V, 0) 0>; /* PV0 */
 				disp-default-out {
-					nvidia,out-flags = <TEGRA_DC_OUT_CONTINUOUS_MODE TEGRA_DC_OUT_INITIALIZED_MODE>;
+					nvidia,out-flags = <TEGRA_DC_OUT_CONTINUOUS_MODE>;
 				};
 			};
 		};

@@ -102,7 +102,8 @@ static int t18x_denver_enter_state(
 {
 	u32 wake_time;
 	struct timespec t;
-	int latency_req = pm_qos_request(PM_QOS_CPU_DMA_LATENCY);
+	/* Todo: Based on future need, we might need the var latency_req. */
+	/* int latency_req = pm_qos_request(PM_QOS_CPU_DMA_LATENCY);*/
 
 	t = ktime_to_timespec(tick_nohz_get_sleep_length());
 	wake_time = t.tv_sec * TSC_PER_SEC + t.tv_nsec / NSEC_PER_TSC_TICK;
@@ -137,7 +138,8 @@ static int t18x_a57_enter_state(
 {
 	u32 wake_time;
 	struct timespec t;
-	int latency_req = pm_qos_request(PM_QOS_CPU_DMA_LATENCY);
+	/* Todo: Based on future need, we might need the var latency_req. */
+	/* int latency_req = pm_qos_request(PM_QOS_CPU_DMA_LATENCY);*/
 
 	t = ktime_to_timespec(tick_nohz_get_sleep_length());
 	wake_time = t.tv_sec * TSC_PER_SEC + t.tv_nsec / NSEC_PER_TSC_TICK;

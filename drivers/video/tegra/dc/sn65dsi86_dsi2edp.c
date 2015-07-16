@@ -56,39 +56,14 @@ static const struct regmap_config sn65dsi86_regmap_config = {
 
 static int sn65dsi86_dsi2edp_init(struct tegra_dc_dsi_data *dsi)
 {
-	int err = 0;
-
-	if (sn65dsi86_dsi2edp) {
-		tegra_dsi_set_outdata(dsi, sn65dsi86_dsi2edp);
-		return err;
-	}
-
-	sn65dsi86_dsi2edp = devm_kzalloc(&dsi->dc->ndev->dev,
-					sizeof(*sn65dsi86_dsi2edp),
-					GFP_KERNEL);
 	if (!sn65dsi86_dsi2edp)
-		return -ENOMEM;
+		return -ENODEV;
 
 	sn65dsi86_dsi2edp->dsi = dsi;
-
-	sn65dsi86_dsi2edp->client_i2c = sn65dsi86_i2c_client;
-
-	sn65dsi86_dsi2edp->regmap = devm_regmap_init_i2c(sn65dsi86_i2c_client,
-						&sn65dsi86_regmap_config);
-	if (IS_ERR(sn65dsi86_dsi2edp->regmap)) {
-		err = PTR_ERR(sn65dsi86_dsi2edp->regmap);
-		dev_err(&dsi->dc->ndev->dev,
-				"sn65dsi86_dsi2edp: regmap init failed\n");
-		goto fail;
-	}
-
 	sn65dsi86_dsi2edp->mode = &dsi->dc->mode;
-
 	tegra_dsi_set_outdata(dsi, sn65dsi86_dsi2edp);
 
-	mutex_init(&sn65dsi86_dsi2edp->lock);
-fail:
-	return err;
+	return 0;
 }
 
 static void sn65dsi86_dsi2edp_destroy(struct tegra_dc_dsi_data *dsi)
@@ -102,6 +77,7 @@ static void sn65dsi86_dsi2edp_destroy(struct tegra_dc_dsi_data *dsi)
 	sn65dsi86_dsi2edp = NULL;
 	mutex_destroy(&dsi2edp->lock);
 }
+
 static void sn65dsi86_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 {
 	struct tegra_dc_dsi2edp_data *dsi2edp = tegra_dsi_get_outdata(dsi);
@@ -109,23 +85,35 @@ static void sn65dsi86_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 
 	if (dsi2edp && dsi2edp->dsi2edp_enabled)
 		return;
+
 	mutex_lock(&dsi2edp->lock);
 	/* REFCLK 19.2MHz */
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_PLL_REFCLK_CFG, 0x02);
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_PLL_REFCLK_CFG,
+			dsi2edp->pll_refclk_cfg);
 	usleep_range(10000, 12000);
 	/* Single 4 DSI lanes */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DSI_CFG1, 0x26);
 	usleep_range(10000, 12000);
 	/* DSI CLK FREQ 422.5MHz */
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DSI_CHA_CLK_RANGE, 0x55);
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DSI_CHA_CLK_RANGE,
+			dsi2edp->dsi_cha_clk_range);
 	usleep_range(10000, 12000);
 	sn65dsi86_reg_read(dsi2edp, SN65DSI86_DSI_CHA_CLK_RANGE, &val);
 	sn65dsi86_reg_read(dsi2edp, SN65DSI86_DSI_CHA_CLK_RANGE, &val);
+
+	/* disable ASSR via TEST2 PULL UP */
+	if (dsi2edp->disable_assr) {
+		sn65dsi86_reg_write(dsi2edp, 0xFF, 0x07);
+		sn65dsi86_reg_write(dsi2edp, 0x16, 0x01);
+		sn65dsi86_reg_write(dsi2edp, 0xFF, 0x00);
+	}
+
 	/* enhanced framing */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_FRAMING_CFG, 0x04);
 	usleep_range(10000, 12000);
 	/* Pre0dB 2 lanes no SSC */
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DP_SSC_CFG, 0x20);
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DP_SSC_CFG,
+			dsi2edp->dp_ssc_cfg);
 	usleep_range(10000, 12000);
 	/* L0mV HBR */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DP_CFG, 0x80);
@@ -154,27 +142,32 @@ static void sn65dsi86_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VERT_DISP_SIZE_HIGH, 0x04);
 	usleep_range(10000, 12000);
 	/* CHA_HSYNC_PULSE_WIDTH */
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_HSYNC_PULSE_WIDTH_LOW, 0x10);
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_HSYNC_PULSE_WIDTH_LOW,
+			dsi2edp->h_pulse_width_low);
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_HSYNC_PULSE_WIDTH_HIGH,
-			0x80);
+			dsi2edp->h_pulse_width_high);
 	usleep_range(10000, 12000);
 	/* CHA_VSYNC_PULSE_WIDTH */
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VSYNC_PULSE_WIDTH_LOW, 0x0e);
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VSYNC_PULSE_WIDTH_LOW,
+			dsi2edp->v_pulse_width_low);
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VSYNC_PULSE_WIDTH_HIGH,
 			0x80);
 	usleep_range(10000, 12000);
 	/* CHA_HORIZONTAL_BACK_PORCH */
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_HORIZONTAL_BACK_PORCH, 0x98);
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_HORIZONTAL_BACK_PORCH,
+			dsi2edp->h_back_porch);
 	usleep_range(10000, 12000);
 	/* CHA_VERTICAL_BACK_PORCH */
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VERTICAL_BACK_PORCH, 0x13);
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VERTICAL_BACK_PORCH,
+			dsi2edp->v_back_porch);
 	usleep_range(10000, 12000);
 	/* CHA_HORIZONTAL_FRONT_PORCH */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_HORIZONTAL_FRONT_PORCH,
-			0x10);
+			dsi2edp->h_front_porch);
 	usleep_range(10000, 12000);
 	/* CHA_VERTICAL_FRONT_PORCH */
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VERTICAL_FRONT_PORCH, 0x03);
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VERTICAL_FRONT_PORCH,
+			dsi2edp->v_front_porch);
 	usleep_range(10000, 12000);
 	/* DP-18BPP Enable */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DP_18BPP_EN, 0x00);
@@ -237,6 +230,85 @@ struct tegra_dsi_out_ops tegra_dsi2edp_ops = {
 #endif
 };
 
+static int of_dsi2edp_parse_platform_data(struct i2c_client *client)
+{
+	struct device_node *np = client->dev.of_node;
+	struct tegra_dc_dsi2edp_data *dsi2edp = sn65dsi86_dsi2edp;
+	int err = 0;
+	u32 temp;
+
+	if (!np) {
+		dev_err(&client->dev, "dsi2edp: device node not defined\n");
+		err = -EINVAL;
+		goto err;
+	}
+
+	if (!of_property_read_u32(np, "ti,pll-refclk-cfg", &temp)) {
+		dsi2edp->pll_refclk_cfg = temp;
+	} else {
+		/* TBC: default setting for backward compatibility */
+		dsi2edp->pll_refclk_cfg = 0x02;
+		dsi2edp->dsi_cha_clk_range = 0x55;
+		dsi2edp->disable_assr = 0;
+		dsi2edp->dp_ssc_cfg = 0x20;
+		dsi2edp->h_pulse_width_low = 0x10;
+		dsi2edp->h_pulse_width_high = 0x80;
+		dsi2edp->v_pulse_width_low = 0x0e;
+		dsi2edp->v_pulse_width_high = 0x80;
+		dsi2edp->h_back_porch = 0x98;
+		dsi2edp->v_back_porch = 0x13;
+		dsi2edp->h_front_porch = 0x10;
+		dsi2edp->v_front_porch = 0x03;
+	}
+
+	if (!of_property_read_u32(np, "ti,dsi-cha-clk-range", &temp)) {
+		dsi2edp->dsi_cha_clk_range = temp;
+	}
+
+	if (!of_property_read_u32(np, "ti,disable-assr", &temp)) {
+		dsi2edp->disable_assr = temp;
+	}
+
+	if (!of_property_read_u32(np, "ti,dp-ssc-cfg", &temp)) {
+		dsi2edp->dp_ssc_cfg = temp;
+	}
+
+	if (!of_property_read_u32(np, "ti,h-pulse-width-low", &temp)) {
+		dsi2edp->h_pulse_width_low = temp;
+	}
+
+	if (!of_property_read_u32(np, "ti,h-pulse-width-high", &temp)) {
+		dsi2edp->h_pulse_width_high = temp;
+	}
+
+	if (!of_property_read_u32(np, "ti,v-pulse-width-low", &temp)) {
+		dsi2edp->v_pulse_width_low = temp;
+	}
+
+	if (!of_property_read_u32(np, "ti,v-pulse-width-high", &temp)) {
+		dsi2edp->v_pulse_width_high = temp;
+	}
+
+	if (!of_property_read_u32(np, "ti,h-back-porch", &temp)) {
+		dsi2edp->h_back_porch = temp;
+	}
+
+	if (!of_property_read_u32(np, "ti,v-back-porch", &temp)) {
+		dsi2edp->v_back_porch = temp;
+	}
+
+	if (!of_property_read_u32(np, "ti,h-front-porch", &temp)) {
+		dsi2edp->h_front_porch = temp;
+	}
+
+	if (!of_property_read_u32(np, "ti,v-front-porch", &temp)) {
+		dsi2edp->v_front_porch = temp;
+	}
+
+err:
+	return err;
+}
+
 static int sn65dsi86_i2c_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)
 {
@@ -245,6 +317,30 @@ static int sn65dsi86_i2c_probe(struct i2c_client *client,
 	struct device_node *sec_pn = NULL;
 	bool pri_bridge = 0;
 	bool sec_bridge = 0;
+	int err = 0;
+
+	sn65dsi86_i2c_client = client;
+	sn65dsi86_dsi2edp = devm_kzalloc(&client->dev,
+					sizeof(*sn65dsi86_dsi2edp),
+					GFP_KERNEL);
+	if (!sn65dsi86_dsi2edp)
+		return -ENOMEM;
+
+	mutex_init(&sn65dsi86_dsi2edp->lock);
+	sn65dsi86_dsi2edp->client_i2c = client;
+
+	sn65dsi86_dsi2edp->regmap = devm_regmap_init_i2c(client,
+						&sn65dsi86_regmap_config);
+	if (IS_ERR(sn65dsi86_dsi2edp->regmap)) {
+		err = PTR_ERR(sn65dsi86_dsi2edp->regmap);
+		dev_err(&client->dev,
+				"sn65dsi86_dsi2edp: regmap init failed\n");
+		return err;
+	}
+
+	err = of_dsi2edp_parse_platform_data(client);
+	if (err)
+		return err;
 
 	if (np) {
 		/* TODO. We don't want probe itself for
@@ -275,7 +371,6 @@ static int sn65dsi86_i2c_probe(struct i2c_client *client,
 		if (!pri_bridge && !sec_bridge)
 			return 0;
 	}
-	sn65dsi86_i2c_client = client;
 
 	return 0;
 }

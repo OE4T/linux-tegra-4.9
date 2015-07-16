@@ -27,6 +27,18 @@ struct tegra_dc_dsi2edp_data {
 	struct tegra_dc_mode *mode;
 	bool dsi2edp_enabled;
 	struct mutex lock;
+	int pll_refclk_cfg;
+	int dsi_cha_clk_range;
+	int disable_assr;
+	int dp_ssc_cfg;
+	int h_pulse_width_low;
+	int h_pulse_width_high;
+	int v_pulse_width_low;
+	int v_pulse_width_high;
+	int h_back_porch;
+	int v_back_porch;
+	int h_front_porch;
+	int v_front_porch;
 };
 
 #define  SN65DSI86_DEVICE_ID			0x00

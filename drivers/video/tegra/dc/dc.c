@@ -2457,8 +2457,6 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 	if (dc->out->type == TEGRA_DC_OUT_DSI &&
 			!tegra_is_bl_display_initialized(dc->ndev->id)) {
 		dc->initialized = false;
-		if (dc->out->flags & TEGRA_DC_OUT_INITIALIZED_MODE)
-			dc->initialized = true;
 	} else if (dc->out->type == TEGRA_DC_OUT_DSI &&
 			tegra_is_bl_display_initialized(dc->ndev->id)) {
 		dc->initialized = true;

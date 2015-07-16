@@ -13,7 +13,7 @@
  * more details.
  */
 
-#include "tegra186-platforms/tegra186-sunstreaker-p3340-common.dtsi"
+#include "tegra186-platforms/tegra186-sunstreaker-common-p3340-0000-a00.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

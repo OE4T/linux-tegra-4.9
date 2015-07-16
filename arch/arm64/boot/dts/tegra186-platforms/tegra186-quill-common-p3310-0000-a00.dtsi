@@ -1,5 +1,5 @@
 /*
- * tegra186-quill-p3301-1000-a00-00-base.dts Quill-PB A00 Board
+ * tegra186-quill-common-p3310-0000-a00.dtsi: Quill common dtsi.
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,10 +13,14 @@
  * more details.
  */
 
-#include "tegra186-platforms/tegra186-quill-p3301-common.dtsi"
+#include "tegra186-quill-common.dtsi"
 
 / {
-	nvidia,dtsfilename = __FILE__;
-	nvidia,boardids = "3301:1000:A0";
-	nvidia,proc-boardid = "3301:1000:A0";
+        model = "ql3310";
+        compatible = "nvidia,ql3310", "nvidia,tegra186";
+
+        #address-cells = <2>;
+        #size-cells = <2>;
+
 };
+

@@ -1,5 +1,5 @@
 /*
- * tegra186-quill-p3301-1099-a00-00-base.dts Quill-SLT A00 Board
+ * tegra186-priv-sunstreaker-slt-p3340-1099-a00-00.dts: Android Sunstreaker board
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,10 +13,9 @@
  * more details.
  */
 
-#include "tegra186-platforms/tegra186-quill-p3301-common.dtsi"
+#include "tegra186-priv-sunstreaker-slt-p3340-1099-a00-00-base.dts"
+#include "tegra186-platforms/tegra186-quill-shim-p3310-0000-a00-00.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;
-	nvidia,boardids = "3301:1099:A0";
-	nvidia,proc-boardid = "3301:1099:A0";
 };

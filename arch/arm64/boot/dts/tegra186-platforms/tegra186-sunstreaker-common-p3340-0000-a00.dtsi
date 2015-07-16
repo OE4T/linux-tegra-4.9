@@ -1,5 +1,5 @@
 /*
- * tegra186-sunstreaker-p3340-1080-a00-00-base.dts Sunstreaker-CHAR A00 Board
+ * tegra186-sunstreaker-common-p3340-0000-a00.dtsi: Sunstreaker common dtsi.
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,10 +13,20 @@
  * more details.
  */
 
-#include "tegra186-platforms/tegra186-sunstreaker-common-p3340-0000-a00.dtsi"
+#include <dt-bindings/types.h>
+/dts-v1/;
+
+/memreserve/ 0x80000000 0x00010000;
+
+#include "tegra186-soc-mobile.dtsi"
 
 / {
-	nvidia,dtsfilename = __FILE__;
-	nvidia,boardids = "3340:1080:A0";
-	nvidia,proc-boardid = "3340:1080:A0";
+        model = "ss3340";
+        compatible = "nvidia,ss3340", "nvidia,tegra186";
+
+        nvidia,dtbbuildtime = __DATE__, __TIME__;
+        #address-cells = <2>;
+        #size-cells = <2>;
+
 };
+

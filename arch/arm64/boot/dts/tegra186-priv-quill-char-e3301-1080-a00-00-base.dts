@@ -1,5 +1,5 @@
 /*
- * tegra186-quill-p3310-a00-00-base.dts Quill A00 Board
+ * tegra186-quill-e3301-1080-a00-00-base.dts Quill-CHAR A00 Board
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,10 +13,10 @@
  * more details.
  */
 
-#include "tegra186-platforms/tegra186-quill-p3310-common.dtsi"
+#include "tegra186-platforms/tegra186-quill-common-e3301-0000-a00.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;
-	nvidia,boardids = "3310:0000:A0";
-	nvidia,proc-boardid = "3310:0000:A0";
+	nvidia,boardids = "3301:1080:A0";
+	nvidia,proc-boardid = "3301:1080:A0";
 };

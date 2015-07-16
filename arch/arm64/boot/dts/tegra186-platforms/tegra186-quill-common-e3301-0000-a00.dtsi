@@ -1,5 +1,5 @@
 /*
- * tegra186-sunstreaker-p3340-1080-a00-00-base.dts Sunstreaker-CHAR A00 Board
+ * tegra186-quill-comon-e3301-0000-a00.dtsi: Quill common dtsi.
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,10 +13,14 @@
  * more details.
  */
 
-#include "tegra186-platforms/tegra186-sunstreaker-common-p3340-0000-a00.dtsi"
+#include "tegra186-quill-common.dtsi"
 
 / {
-	nvidia,dtsfilename = __FILE__;
-	nvidia,boardids = "3340:1080:A0";
-	nvidia,proc-boardid = "3340:1080:A0";
+        model = "ql3301";
+        compatible = "nvidia,ql3301", "nvidia,tegra186";
+
+        #address-cells = <2>;
+        #size-cells = <2>;
+
 };
+

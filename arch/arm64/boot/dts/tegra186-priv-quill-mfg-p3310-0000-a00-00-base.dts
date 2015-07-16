@@ -1,5 +1,5 @@
 /*
- * tegra186-sunstreaker-p3340-common.dtsi: Sunstreaker common dtsi.
+ * tegra186-quill-p3310-a00-00-base.dts Quill-MFG A00 Board
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,20 +13,10 @@
  * more details.
  */
 
-#include <dt-bindings/types.h>
-/dts-v1/;
-
-/memreserve/ 0x80000000 0x00010000;
-
-#include "tegra186-soc-mobile.dtsi"
+#include "tegra186-platforms/tegra186-quill-common-p3310-0000-a00.dtsi"
 
 / {
-        model = "ss3340";
-        compatible = "nvidia,ss3340", "nvidia,tegra186";
-
-        nvidia,dtbbuildtime = __DATE__, __TIME__;
-        #address-cells = <2>;
-        #size-cells = <2>;
-
+	nvidia,dtsfilename = __FILE__;
+	nvidia,boardids = "3310:0000:A0";
+	nvidia,proc-boardid = "3310:0000:A0";
 };
-

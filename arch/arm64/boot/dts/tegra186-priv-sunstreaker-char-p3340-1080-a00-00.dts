@@ -1,5 +1,5 @@
 /*
- * tegra186-sunstreaker-p3340-1080-a00-00-base.dts Sunstreaker-CHAR A00 Board
+ * tegra186-priv-sunstreaker-char-p3340-1080-a00-00.dts: Androdi Sunstreaker board
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,10 +13,9 @@
  * more details.
  */
 
-#include "tegra186-platforms/tegra186-sunstreaker-common-p3340-0000-a00.dtsi"
+#include "tegra186-priv-sunstreaker-char-p3340-1080-a00-00-base.dts"
+#include "tegra186-platforms/tegra186-quill-shim-p3310-0000-a00-00.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;
-	nvidia,boardids = "3340:1080:A0";
-	nvidia,proc-boardid = "3340:1080:A0";
 };

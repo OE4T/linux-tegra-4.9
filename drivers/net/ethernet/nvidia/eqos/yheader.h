@@ -159,9 +159,9 @@
 //#define DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
 #define DWC_ETH_QOS_TXPOLLING_MODE_ENABLE
 
-#ifdef DWC_ETH_QOS_CONFIG_PTP
-#undef DWC_ETH_QOS_TXPOLLING_MODE_ENABLE
-#endif
+//#ifdef DWC_ETH_QOS_CONFIG_PTP
+//#undef DWC_ETH_QOS_TXPOLLING_MODE_ENABLE
+//#endif
 
 /* Enable this to have support for only 1588 V2 VLAN un-TAGGED ptp packets */
 //#define DWC_1588_VLAN_UNTAGGED
@@ -244,6 +244,9 @@
 #define DWC_ETH_QOS_MAX_LRO_AGGR 32
 
 #define MIN_PACKET_SIZE 60
+
+/* Max number of chans supported */
+#define MAX_CHANS	4
 
 /*
 #ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
@@ -539,6 +542,19 @@
 #define S_DMA_SR_RWT        2
 #define E_DMA_SR_FBE       10
 #define S_MAC_ISR_PMTIS     11
+
+/* IRQs for eqos device.  This must match what is in our DT. */
+#define IRQ_COMMON_IDX		0
+#define IRQ_POWER_IDX		1
+#define IRQ_CHAN0_RX_IDX	2
+#define IRQ_CHAN0_TX_IDX	3
+#define IRQ_CHAN1_RX_IDX	4
+#define IRQ_CHAN1_TX_IDX	5
+#define IRQ_CHAN2_RX_IDX	6
+#define IRQ_CHAN2_TX_IDX	7
+#define IRQ_CHAN3_RX_IDX	8
+#define IRQ_CHAN3_TX_IDX	9
+#define IRQ_MAX_IDX		9
 
 /* C data types typedefs */
 
@@ -1020,6 +1036,7 @@ struct DWC_ETH_QOS_rx_queue {
 	struct DWC_ETH_QOS_rx_wrapper_descriptor rx_desc_data;
 	struct napi_struct napi;
 	struct DWC_ETH_QOS_prv_data *pdata;
+	uint	chan_num;
 
 	struct net_lro_mgr lro_mgr;
 	struct net_lro_desc lro_arr[DWC_ETH_QOS_MAX_LRO_DESC];
@@ -1248,6 +1265,64 @@ struct DWC_ETH_QOS_extra_stats {
 	unsigned long link_connect_count;
 };
 
+#define ALL_POLLING 1
+
+typedef enum {
+	MODE_COMMON_IRQ,
+	MODE_MULTI_IRQ,
+#ifdef ALL_POLLING
+	MODE_ALL_POLLING,
+#endif
+	MODE_MAX,
+} intr_mode_e;
+#define INTR_MODE_DEFAULT MODE_COMMON_IRQ
+
+
+typedef enum {
+	CHAN_MODE_NONE,
+	CHAN_MODE_NAPI,
+	CHAN_MODE_INTR,
+	CHAN_MODE_POLLING,
+	CHAN_MODE_MAX,
+} chan_mode_e;
+#define CHAN_MODE_DEFAULT CHAN_MODE_NAPI
+
+typedef enum {
+	RXQ_CTRL_NOT_ENABLED,
+	RXQ_CTRL_AV,
+	RXQ_CTRL_LEGACY,
+	RXQ_CTRL_RSVRD,
+	RXQ_CTRL_MAX,
+} rxq_ctrl_e;
+
+#define RXQ_CTRL_DEFAULT RXQ_CTRL_LEGACY
+
+typedef enum {
+	PAUSE_FRAMES_ENABLED,
+	PAUSE_FRAMES_DISABLED,
+	PAUSE_FRAMES_MAX
+} pause_frames_e;
+#define PAUSE_FRAMES_DEFAULT PAUSE_FRAMES_ENABLED
+
+#define CHAN_NAPI_QUOTA_DEFAULT	64
+#define CHAN_NAPI_QUOTA_MAX	CHAN_NAPI_QUOTA_DEFAULT
+struct eqos_cfg {
+	intr_mode_e	intr_mode;
+	chan_mode_e	chan_mode[MAX_CHANS];
+	rxq_ctrl_e	rxq_ctrl[MAX_CHANS];
+	uint		chan_napi_quota[MAX_CHANS];
+	pause_frames_e	pause_frames;
+};
+
+struct chan_data {
+	uint	chan_num;
+	uint	poll_interval;  /* only for type_polled */
+	uint	cpu;
+	spinlock_t chan_tx_lock;
+	spinlock_t chan_lock;
+	struct	timer_list	poll_timer;
+};
+
 struct DWC_ETH_QOS_prv_data {
 	struct net_device *dev;
 	struct platform_device *pdev;
@@ -1260,10 +1335,16 @@ struct DWC_ETH_QOS_prv_data {
 	INT irq_number;
 	INT power_irq;
 	INT phyirq;
+	INT common_irq;
+	INT rx_irqs[MAX_CHANS];
+	INT tx_irqs[MAX_CHANS];
 
-#define PROFILE_AUTO 1
-#define PROFILE_MOBILE 2
-	unsigned int profile;
+	struct eqos_cfg dt_cfg;
+	struct chan_data chinfo[MAX_CHANS];
+	uint	napi_quota_all_chans;
+
+	uint rx_irq_alloc_mask;
+	uint tx_irq_alloc_mask;
 
 	struct hw_if_struct hw_if;
 	struct desc_if_struct desc_if;
@@ -1385,6 +1466,8 @@ struct DWC_ETH_QOS_prv_data {
 	unsigned int lp_pause;
 	unsigned int lp_duplex;
 
+	struct timer_list all_chans_timer;
+
 	/* for handling EEE */
 	struct timer_list eee_ctrl_timer;
 	bool tx_path_in_lpi_mode;
@@ -1444,6 +1527,7 @@ void DWC_ETH_QOS_init_function_ptrs_dev(struct hw_if_struct *);
 void DWC_ETH_QOS_init_function_ptrs_desc(struct desc_if_struct *);
 struct net_device_ops *DWC_ETH_QOS_get_netdev_ops(void);
 struct ethtool_ops *DWC_ETH_QOS_get_ethtool_ops(void);
+int DWC_ETH_QOS_poll_mq_napi(struct napi_struct *, int);
 int DWC_ETH_QOS_poll_mq(struct napi_struct *, int);
 
 void DWC_ETH_QOS_get_pdata(struct DWC_ETH_QOS_prv_data *pdata);

@@ -2915,7 +2915,8 @@ static INT start_mac_tx_rx(void)
 * \retval -1 Failure
 */
 
-static INT enable_dma_interrupts(UINT qInx)
+static INT enable_dma_interrupts(UINT qInx,
+			struct DWC_ETH_QOS_prv_data *pdata)
 {
 	UINT tmp;
 	ULONG varDMA_SR;
@@ -2954,6 +2955,24 @@ static INT enable_dma_interrupts(UINT qInx)
 	/* TBUE - Transmit Buffer Unavailable Enable */
 	varDMA_IER |= ((0x1) << 0) | ((0x1) << 2);
 #endif
+	/* For multi-irqs to work nie needs to be disabled.
+	 * And disable tx ints for now
+	 */
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
+		varDMA_IER &= ~((0x1) << 15);
+
+#ifdef ALL_POLLING
+	if (pdata->dt_cfg.intr_mode == MODE_ALL_POLLING) {
+		varDMA_IER &= ~((0x1) << 0) | ((0x1) << 2);
+		varDMA_IER &= ~((0x1) << 6) | ((0x1) << 7);
+	}
+
+#endif
+	if (pdata->dt_cfg.chan_mode[qInx] == CHAN_MODE_POLLING) {
+		varDMA_IER &= ~((0x1) << 0) | ((0x1) << 2);
+		varDMA_IER &= ~((0x1) << 6) | ((0x1) << 7);
+	}
+
 	DMA_IER_RgWr(qInx, varDMA_IER);
 
 	return Y_SUCCESS;
@@ -4045,6 +4064,7 @@ static INT DWC_ETH_QOS_yexit(void)
 	ULONG retryCount = 1000;
 	ULONG vy_count;
 	volatile ULONG varDMA_BMR;
+	int i, j;
 
 	DBGPR("-->DWC_ETH_QOS_yexit\n");
 
@@ -4069,6 +4089,13 @@ static INT DWC_ETH_QOS_yexit(void)
 		if (GET_VALUE(varDMA_BMR, DMA_BMR_SWR_LPOS, DMA_BMR_SWR_HPOS) == 0) {
 			break;
 		}
+	}
+	/* FIXME: code is not needed as CAR reset should handle it */
+	/* ack and disable all wrapper ints */
+	i = (VIRT_INTR_CH_CRTL_RX_Wr_Mask | VIRT_INTR_CH_CRTL_TX_Wr_Mask);
+	for (j = 0; j < MAX_CHANS; j++) {
+		VIRT_INTR_CH_CRTL_RgWr(j, ~i);
+		VIRT_INTR_CH_STAT_RgWr(j, i);
 	}
 
 	DBGPR("<--DWC_ETH_QOS_yexit\n");
@@ -4361,7 +4388,7 @@ static INT configure_dma_channel(UINT qInx,
 	printk(KERN_ALERT "%s Rx watchdog timer\n",
 		(rx_desc_data->use_riwt ? "Enabled" : "Disabled"));
 
-	enable_dma_interrupts(qInx);
+	enable_dma_interrupts(qInx, pdata);
 	/* set PBLx8 */
 	DMA_CR_PBLx8_UdfWr(qInx, 0x1);
 
@@ -4451,7 +4478,7 @@ static INT configure_mac(struct DWC_ETH_QOS_prv_data *pdata)
 	DBGPR("-->configure_mac\n");
 
 	for (qInx = 0; qInx < DWC_ETH_QOS_RX_QUEUE_CNT; qInx++) {
-		MAC_RQC0R_RXQEN_UdfWr(qInx, pdata->rxq_enable_ctrl[qInx] & 0x3);
+		MAC_RQC0R_RXQEN_UdfWr(qInx, pdata->dt_cfg.rxq_ctrl[qInx] & 0x3);
 	}
 
 	/* Set Tx flow control parameters */
@@ -4495,7 +4522,7 @@ static INT configure_mac(struct DWC_ETH_QOS_prv_data *pdata)
 			break;
 		}
 
-		if (pdata->profile != PROFILE_AUTO) {
+		if (pdata->dt_cfg.pause_frames == PAUSE_FRAMES_ENABLED) {
 			if ((pdata->flow_ctrl & DWC_ETH_QOS_FLOW_CTRL_TX) 
 				== DWC_ETH_QOS_FLOW_CTRL_TX)
 				enable_tx_flow_ctrl(qInx);
@@ -4505,7 +4532,7 @@ static INT configure_mac(struct DWC_ETH_QOS_prv_data *pdata)
 	}
 
 	/* Set Rx flow control parameters */
-	if (pdata->profile != PROFILE_AUTO) {
+	if (pdata->dt_cfg.pause_frames == PAUSE_FRAMES_ENABLED) {
 		if ((pdata->flow_ctrl & DWC_ETH_QOS_FLOW_CTRL_RX) == DWC_ETH_QOS_FLOW_CTRL_RX)
 			enable_rx_flow_ctrl();
 		else
@@ -4592,6 +4619,7 @@ static INT configure_mac(struct DWC_ETH_QOS_prv_data *pdata)
 static INT DWC_ETH_QOS_yinit(struct DWC_ETH_QOS_prv_data *pdata)
 {
 	UINT qInx;
+	int i, j;
 
 	DBGPR("-->DWC_ETH_QOS_yinit\n");
 
@@ -4609,6 +4637,19 @@ static INT DWC_ETH_QOS_yinit(struct DWC_ETH_QOS_prv_data *pdata)
 	MTL_OMR_DTXSTS_UdfWr(0x1);
 #endif
 
+	i = (VIRT_INTR_CH_CRTL_RX_Wr_Mask | VIRT_INTR_CH_CRTL_TX_Wr_Mask);
+	for (j = 0; j < MAX_CHANS; j++) {
+
+		if ((pdata->dt_cfg.chan_mode[j] == CHAN_MODE_NAPI) ||
+			(pdata->dt_cfg.chan_mode[j] == CHAN_MODE_INTR)) {
+			VIRT_INTR_CH_STAT_RgWr(j, i);
+			VIRT_INTR_CH_CRTL_RgWr(j, VIRT_INTR_CH_CRTL_RX_Wr_Mask);
+		} else {
+			/* ensure wrapper ints are disabled */
+			VIRT_INTR_CH_CRTL_RgWr(j, 0);
+			VIRT_INTR_CH_STAT_RgWr(j, i);
+		}
+	}
 	configure_mac(pdata);
 
 	/* Setting INCRx */

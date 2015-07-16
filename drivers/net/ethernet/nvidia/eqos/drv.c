@@ -50,9 +50,15 @@
 
 extern ULONG dwc_eth_qos_base_addr;
 #include "yregacc.h"
+#include "nvregacc.h"
 #include <linux/inet_lro.h>
+#include <linux/tegra-soc.h>
 
 static INT DWC_ETH_QOS_GStatus;
+static void DWC_ETH_QOS_poll_timer(unsigned long data);
+static void DWC_ETH_QOS_all_chans_timer(unsigned long data);
+static int handle_txrx_completions(struct DWC_ETH_QOS_prv_data *pdata,
+					int qInx);
 
 /* SA(Source Address) operations on TX */
 unsigned char mac_addr0[6] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55 };
@@ -168,14 +174,14 @@ static void DWC_ETH_QOS_all_ch_napi_disable(struct DWC_ETH_QOS_prv_data *pdata)
 	struct DWC_ETH_QOS_rx_queue *rx_queue = NULL;
 	int qInx;
 
-	DBGPR("-->DWC_ETH_QOS_napi_enable\n");
+	DBGPR("-->DWC_ETH_QOS_napi_disable\n");
 
 	for (qInx = 0; qInx < DWC_ETH_QOS_RX_QUEUE_CNT; qInx++) {
 		rx_queue = GET_RX_QUEUE_PTR(qInx);
 		napi_disable(&rx_queue->napi);
 	}
 
-	DBGPR("<--DWC_ETH_QOS_napi_enable\n");
+	DBGPR("<--DWC_ETH_QOS_napi_disable\n");
 }
 
 /*!
@@ -486,69 +492,95 @@ void DWC_ETH_QOS_enable_all_ch_rx_interrpt(
 }
 
 
-/*!
-* \brief Interrupt Service Routine
-* \details Interrupt Service Routine
-*
-* \param[in] irq         - interrupt number for particular device
-* \param[in] device_id   - pointer to device structure
-* \return returns positive integer
-* \retval IRQ_HANDLED
-*/
-
-irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS(int irq, void *device_id)
+/* pnapi_sched is only needed for intr_mode=COMMON_IRQ.  In COMMON_IRQ,
+ * there is one napi handler to process all queues.  So we need to ensure
+ * we only schedule napi once.
+ * For MULTI_IRQ, each IRQ has own napi handler.
+ */
+void handle_chan_intrs(struct DWC_ETH_QOS_prv_data *pdata,
+			int qInx, int *pnapi_sched)
 {
-	ULONG varDMA_ISR;
 	ULONG varDMA_SR;
-	ULONG varMAC_ISR;
-	ULONG varMAC_IMR;
-	ULONG varMAC_PMTCSR;
 	ULONG varDMA_IER;
-	struct DWC_ETH_QOS_prv_data *pdata =
-	    (struct DWC_ETH_QOS_prv_data *)device_id;
 	struct net_device *dev = pdata->dev;
-#ifndef HWA_NV_1637630
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
-#endif
-	UINT qInx;
-	int napi_sched = 0;
+
 	struct DWC_ETH_QOS_rx_queue *rx_queue = NULL;
-	ULONG varMAC_ANS = 0;
-	ULONG varMAC_PCS = 0;
 
-	DBGPR("-->DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS\n");
+	DBGPR("-->%s(), chan=%d\n", __func__, qInx);
 
-	DMA_ISR_RgRd(varDMA_ISR);
-	if (varDMA_ISR == 0x0)
-		return IRQ_NONE;
+	rx_queue = GET_RX_QUEUE_PTR(qInx);
 
-	MAC_ISR_RgRd(varMAC_ISR);
+	DMA_SR_RgRd(qInx, varDMA_SR);
 
-	DBGPR("DMA_ISR = %#lx, MAC_ISR = %#lx\n", varDMA_ISR, varMAC_ISR);
+	DMA_IER_RgRd(qInx, varDMA_IER);
 
-	/* Handle DMA interrupts */
-	for (qInx = 0; qInx < DWC_ETH_QOS_TX_QUEUE_CNT; qInx++) {
-		rx_queue = GET_RX_QUEUE_PTR(qInx);
+	DBGPR("DMA_SR[%d] = %#lx, DMA_IER= %#lx\n", qInx, varDMA_SR,
+		varDMA_IER);
 
-		DMA_SR_RgRd(qInx, varDMA_SR);
-
-		DMA_IER_RgRd(qInx, varDMA_IER);
-
-		/* clear and process only those interrupts which we
-		 * have enabled.
-		 */
+	/*on ufpga, update of DMA_IER is really slow, such that interrupt
+	 * would happen, but read of IER returns old value.  This would
+	 * cause driver to return when there really was an interrupt asserted.
+	 * so for now, comment this out.
+	 */
+	/* process only those interrupts which we
+	 * have enabled.
+	 */
+	if (!(tegra_platform_is_unit_fpga()))
 		varDMA_SR = (varDMA_SR & varDMA_IER);
-		DMA_SR_RgWr(qInx, varDMA_SR);
 
-		DBGPR("DMA_SR[%d] = %#lx\n", qInx, varDMA_SR);
 
-		if (varDMA_SR == 0)
-			continue;
+	if (varDMA_SR == 0)
+		return;
 
-		if ((GET_VALUE(varDMA_SR, DMA_SR_RI_LPOS, DMA_SR_RI_HPOS) & 1) ||
-			(GET_VALUE(varDMA_SR, DMA_SR_RBU_LPOS, DMA_SR_RBU_HPOS) & 1)) {
-			if (!napi_sched) {
-				napi_sched = 1;
+	if ((GET_VALUE(varDMA_SR, DMA_SR_RI_LPOS, DMA_SR_RI_HPOS) & 1) ||
+		(GET_VALUE(varDMA_SR, DMA_SR_RBU_LPOS, DMA_SR_RBU_HPOS) & 1)) {
+
+		/* ack RI and RBU */
+		DMA_SR_RgWr(qInx, ((0x1) << 6) | ((0x1) << 7));
+		VIRT_INTR_CH_STAT_RgWr(qInx, VIRT_INTR_CH_CRTL_RX_Wr_Mask);
+
+		if (!*pnapi_sched) {
+			if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
+				if (pdata->dt_cfg.chan_mode[qInx] ==
+					CHAN_MODE_NAPI) {
+					*pnapi_sched = 1;
+					if (likely(napi_schedule_prep(
+						&rx_queue->napi))) {
+						hw_if->disable_rx_interrupt(
+							qInx);
+						__napi_schedule(
+							&rx_queue->napi);
+					} else {
+						printk(KERN_ALERT
+						"driver bug! Rx interrupt while in poll\n");
+						hw_if->disable_rx_interrupt(
+							qInx);
+					}
+				} else if (pdata->dt_cfg.chan_mode[qInx] ==
+						CHAN_MODE_INTR) {
+					/* this won't work....since napi did not
+					 * call us, we don't have napi to
+					 * complete.
+					 * will this work?  Since we are
+					 * processing from int then we should
+					 * never disable ints so any completions
+					 * we processed, we tell napi to
+					 * complete it. Worry is we are calling
+					 * napi from ih
+					 */
+					handle_txrx_completions(pdata, qInx);
+#if 0
+					if (pdata->dev->features & NETIF_F_GRO)
+						napi_complete(napi);
+					else
+						__napi_complete(napi);
+#endif
+				} else
+					printk(KERN_ALERT "driver bug! rx interrupt when chan mode is polling\n");
+
+			} else {
+				*pnapi_sched = 1;
 				if (likely(napi_schedule_prep(&rx_queue->napi))) {
 					DWC_ETH_QOS_disable_all_ch_rx_interrpt(pdata);
 					__napi_schedule(&rx_queue->napi);
@@ -556,39 +588,59 @@ irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS(int irq, void *device_id)
 					printk(KERN_ALERT "driver bug! Rx interrupt while in poll\n");
 					DWC_ETH_QOS_disable_all_ch_rx_interrpt(pdata);
 				}
-
-				if ((GET_VALUE(varDMA_SR, DMA_SR_RI_LPOS, DMA_SR_RI_HPOS) & 1))
-					pdata->xstats.rx_normal_irq_n[qInx]++;
-				else
-					pdata->xstats.rx_buf_unavailable_irq_n[qInx]++;
 			}
-		}
-		if (GET_VALUE(varDMA_SR, DMA_SR_TI_LPOS, DMA_SR_TI_HPOS) & 1) {
-			pdata->xstats.tx_normal_irq_n[qInx]++;
-			DWC_ETH_QOS_tx_interrupt(dev, pdata, qInx);
-		}
-		if (GET_VALUE(varDMA_SR, DMA_SR_TPS_LPOS, DMA_SR_TPS_HPOS) & 1) {
-			pdata->xstats.tx_process_stopped_irq_n[qInx]++;
-			DWC_ETH_QOS_GStatus = -E_DMA_SR_TPS;
-		}
-		if (GET_VALUE(varDMA_SR, DMA_SR_TBU_LPOS, DMA_SR_TBU_HPOS) & 1) {
-			pdata->xstats.tx_buf_unavailable_irq_n[qInx]++;
-			DWC_ETH_QOS_GStatus = -E_DMA_SR_TBU;
-		}
-		if (GET_VALUE(varDMA_SR, DMA_SR_RPS_LPOS, DMA_SR_RPS_HPOS) & 1) {
-			pdata->xstats.rx_process_stopped_irq_n[qInx]++;
-			DWC_ETH_QOS_GStatus = -E_DMA_SR_RPS;
-		}
-		if (GET_VALUE(varDMA_SR, DMA_SR_RWT_LPOS, DMA_SR_RWT_HPOS) & 1) {
-			pdata->xstats.rx_watchdog_irq_n++;
-			DWC_ETH_QOS_GStatus = S_DMA_SR_RWT;
-		}
-		if (GET_VALUE(varDMA_SR, DMA_SR_FBE_LPOS, DMA_SR_FBE_HPOS) & 1) {
-			pdata->xstats.fatal_bus_error_irq_n++;
-			DWC_ETH_QOS_GStatus = -E_DMA_SR_FBE;
-			DWC_ETH_QOS_restart_dev(pdata, qInx);
+			if ((GET_VALUE(varDMA_SR, DMA_SR_RI_LPOS,
+					DMA_SR_RI_HPOS) & 1))
+				pdata->xstats.rx_normal_irq_n[qInx]++;
+			else
+				pdata->xstats.rx_buf_unavailable_irq_n[qInx]++;
 		}
 	}
+	if (tegra_platform_is_unit_fpga())
+		varDMA_SR = (varDMA_SR & varDMA_IER);
+
+	if (GET_VALUE(varDMA_SR, DMA_SR_TI_LPOS, DMA_SR_TI_HPOS) & 1) {
+		pdata->xstats.tx_normal_irq_n[qInx]++;
+		DWC_ETH_QOS_tx_interrupt(dev, pdata, qInx);
+	}
+	if (GET_VALUE(varDMA_SR, DMA_SR_TPS_LPOS, DMA_SR_TPS_HPOS) & 1) {
+		pdata->xstats.tx_process_stopped_irq_n[qInx]++;
+		DWC_ETH_QOS_GStatus = -E_DMA_SR_TPS;
+	}
+	if (GET_VALUE(varDMA_SR, DMA_SR_TBU_LPOS, DMA_SR_TBU_HPOS) & 1) {
+		pdata->xstats.tx_buf_unavailable_irq_n[qInx]++;
+		DWC_ETH_QOS_GStatus = -E_DMA_SR_TBU;
+	}
+	if (GET_VALUE(varDMA_SR, DMA_SR_RPS_LPOS, DMA_SR_RPS_HPOS) & 1) {
+		pdata->xstats.rx_process_stopped_irq_n[qInx]++;
+		DWC_ETH_QOS_GStatus = -E_DMA_SR_RPS;
+	}
+	if (GET_VALUE(varDMA_SR, DMA_SR_RWT_LPOS, DMA_SR_RWT_HPOS) & 1) {
+		pdata->xstats.rx_watchdog_irq_n++;
+		DWC_ETH_QOS_GStatus = S_DMA_SR_RWT;
+	}
+	if (GET_VALUE(varDMA_SR, DMA_SR_FBE_LPOS, DMA_SR_FBE_HPOS) & 1) {
+		pdata->xstats.fatal_bus_error_irq_n++;
+		DWC_ETH_QOS_GStatus = -E_DMA_SR_FBE;
+		DWC_ETH_QOS_restart_dev(pdata, qInx);
+	}
+
+	DBGPR("<--%s()\n", __func__);
+}
+
+void handle_mac_intrs(struct DWC_ETH_QOS_prv_data *pdata,
+			ULONG varDMA_ISR)
+{
+	ULONG varMAC_IMR;
+	ULONG varMAC_PMTCSR;
+	ULONG varMAC_ANS = 0;
+	ULONG varMAC_PCS = 0;
+	ULONG varMAC_ISR;
+	struct net_device *dev = pdata->dev;
+
+	DBGPR("-->%s()\n", __func__);
+
+	MAC_ISR_RgRd(varMAC_ISR);
 
 	/* Handle MAC interrupts */
 	if (GET_VALUE(varDMA_ISR, DMA_ISR_MACIS_LPOS, DMA_ISR_MACIS_HPOS) & 1) {
@@ -678,7 +730,100 @@ irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS(int irq, void *device_id)
 		}
 	}
 
+	DBGPR("<--%s()\n", __func__);
+}
+
+/*!
+* \brief Interrupt Service Routine
+* \details Interrupt Service Routine
+*
+* \param[in] irq         - interrupt number for particular device
+* \param[in] device_id   - pointer to device structure
+* \return returns positive integer
+* \retval IRQ_HANDLED
+*/
+
+irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS(int irq, void *device_id)
+{
+	ULONG varDMA_ISR;
+	struct DWC_ETH_QOS_prv_data *pdata =
+	    (struct DWC_ETH_QOS_prv_data *)device_id;
+	UINT qInx;
+	int napi_sched = 0;
+
+	DBGPR("-->DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS\n");
+
+	DMA_ISR_RgRd(varDMA_ISR);
+	if (varDMA_ISR == 0x0)
+		return IRQ_NONE;
+
+
+	DBGPR("DMA_ISR = %#lx\n", varDMA_ISR);
+
+	/* Handle DMA interrupts */
+#ifdef ALL_POLLING
+	if (pdata->dt_cfg.intr_mode != MODE_ALL_POLLING)
+#endif
+		if (varDMA_ISR & 0xf)
+			for (qInx = 0; qInx < DWC_ETH_QOS_TX_QUEUE_CNT; qInx++)
+				handle_chan_intrs(pdata, qInx, &napi_sched);
+
+	handle_mac_intrs(pdata, varDMA_ISR);
+
 	DBGPR("<--DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS\n");
+
+	return IRQ_HANDLED;
+
+}
+
+
+/*!
+* Only used when multi irq is enabled
+*/
+
+irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_common(int irq, void *device_id)
+{
+	ULONG varDMA_ISR;
+	struct DWC_ETH_QOS_prv_data *pdata =
+	    (struct DWC_ETH_QOS_prv_data *)device_id;
+
+	DBGPR("-->%s()\n", __func__);
+
+	DMA_ISR_RgRd(varDMA_ISR);
+	if (varDMA_ISR == 0x0)
+		return IRQ_NONE;
+
+	DBGPR("DMA_ISR = %#lx\n", varDMA_ISR);
+
+	handle_mac_intrs(pdata, varDMA_ISR);
+
+	DBGPR("<--%s()\n", __func__);
+
+	return IRQ_HANDLED;
+
+}
+
+
+/* Only used when multi irq is enabled.
+ * Will only handle tx/rx for one channel.
+ */
+irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_ChX(int irq, void *device_id)
+{
+	struct DWC_ETH_QOS_prv_data *pdata =
+	    (struct DWC_ETH_QOS_prv_data *)device_id;
+	uint i;
+	UINT qInx;
+	int napi_sched = 0;
+
+	i = smp_processor_id();
+
+	qInx = irq - pdata->rx_irqs[0];
+
+	DBGPR("-->%s(): cpu=%d, chan=%d\n", __func__, i, qInx);
+
+	handle_chan_intrs(pdata, qInx, &napi_sched);
+
+	DBGPR("<--%s()\n", __func__);
 
 	return IRQ_HANDLED;
 
@@ -1437,6 +1582,133 @@ static void DWC_ETH_QOS_default_rx_confs(struct DWC_ETH_QOS_prv_data *pdata)
 }
 
 
+void free_multi_irqs(struct DWC_ETH_QOS_prv_data *pdata)
+{
+	uint i;
+
+	DBGPR("-->%s()\n", __func__);
+
+	free_irq(pdata->common_irq, pdata);
+
+	for (i = 0; i < MAX_CHANS; i++) {
+		if (pdata->rx_irq_alloc_mask & (1 << i))
+			free_irq(pdata->rx_irqs[i], pdata);
+		if (pdata->tx_irq_alloc_mask & (1 << i))
+			free_irq(pdata->tx_irqs[i], pdata);
+	}
+	DBGPR("<--%s()\n", __func__);
+}
+
+int request_multi_irqs(struct DWC_ETH_QOS_prv_data *pdata)
+{
+	int ret = Y_SUCCESS;
+	uint i;
+	struct chan_data *pchinfo;
+
+	DBGPR("-->%s()\n", __func__);
+
+	ret = request_irq(pdata->common_irq,
+			DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_common,
+			IRQF_SHARED, DEV_NAME, pdata);
+	if (ret != Y_SUCCESS) {
+		printk(KERN_ALERT "Unable to register  %d\n",
+			pdata->common_irq);
+		ret = -EBUSY;
+		goto err_common_irq;
+	}
+	for (i = 0; i < MAX_CHANS; i++) {
+		if ((pdata->dt_cfg.chan_mode[i] == CHAN_MODE_POLLING) ||
+			(pdata->dt_cfg.chan_mode[i] == CHAN_MODE_NONE))
+			continue;
+
+		ret = request_irq(pdata->rx_irqs[i],
+				DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_ChX,
+				0, DEV_NAME, pdata);
+		if (ret != 0) {
+			printk(KERN_ALERT "Unable to register  %d\n",
+				pdata->rx_irqs[i]);
+			ret = -EBUSY;
+			goto err_chan_irq;
+		}
+		pchinfo = &pdata->chinfo[i];
+		irq_set_affinity_hint(pdata->rx_irqs[i],
+			cpumask_of(pchinfo->cpu));
+		pdata->rx_irq_alloc_mask |= (1 << i);
+	}
+	DBGPR("<--%s()\n", __func__);
+
+	return ret;
+
+ err_chan_irq:
+	free_multi_irqs(pdata);
+	free_irq(pdata->common_irq, pdata);
+
+ err_common_irq:
+	DBGPR("<--%s(): error\n", __func__);
+	return ret;
+}
+
+
+void alloc_poll_timers(struct DWC_ETH_QOS_prv_data *pdata)
+{
+	uint i;
+	struct chan_data *pchinfo;
+
+	DBGPR("-->%s()\n", __func__);
+
+#ifdef ALL_POLLING
+	if (pdata->dt_cfg.intr_mode == MODE_ALL_POLLING) {
+		init_timer(&pdata->all_chans_timer);
+		pdata->all_chans_timer.function = DWC_ETH_QOS_all_chans_timer;
+		pdata->all_chans_timer.data = (unsigned long)pdata;
+		pdata->all_chans_timer.expires =
+			jiffies + msecs_to_jiffies(1000);  /* 1 s */
+		add_timer(&pdata->all_chans_timer);
+	}
+#endif
+	if (pdata->dt_cfg.intr_mode != MODE_MULTI_IRQ)
+		return;
+
+	for (i = 0; i < MAX_CHANS; i++) {
+		pchinfo = &pdata->chinfo[i];
+
+		if (pdata->dt_cfg.chan_mode[i] == CHAN_MODE_POLLING) {
+			init_timer(&pchinfo->poll_timer);
+			pchinfo->poll_timer.function = DWC_ETH_QOS_poll_timer;
+			pchinfo->poll_timer.data = (unsigned long) pchinfo;
+			pchinfo->poll_timer.expires =
+				jiffies +
+				msecs_to_jiffies(pchinfo->poll_interval);
+			add_timer(&pchinfo->poll_timer);
+		}
+	}
+	DBGPR("<--%s()\n", __func__);
+}
+
+
+void free_poll_timers(struct DWC_ETH_QOS_prv_data *pdata)
+{
+	uint i;
+	struct chan_data *pchinfo;
+
+	DBGPR("-->%s()\n", __func__);
+#ifdef ALL_POLLING
+	if (pdata->dt_cfg.intr_mode == MODE_ALL_POLLING)
+		del_timer_sync(&pdata->all_chans_timer);
+#endif
+	if (pdata->dt_cfg.intr_mode != MODE_MULTI_IRQ)
+		return;
+
+	for (i = 0; i < MAX_CHANS; i++) {
+		pchinfo = &pdata->chinfo[i];
+
+		if (pdata->dt_cfg.chan_mode[i] == CHAN_MODE_POLLING)
+			del_timer_sync(&pchinfo->poll_timer);
+	}
+	DBGPR("<--%s()\n", __func__);
+}
+
+
 /*!
 * \brief API to open a deivce for data transmission & reception.
 *
@@ -1462,18 +1734,26 @@ static int DWC_ETH_QOS_open(struct net_device *dev)
 	DBGPR("-->DWC_ETH_QOS_open\n");
 
 	pdata->irq_number = dev->irq;
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
+		ret = request_multi_irqs(pdata);
+		if (ret != Y_SUCCESS)
+			goto err_irq_0;
+	} else {
 #ifdef DWC_ETH_QOS_CONFIG_PGTEST
-	ret = request_irq(pdata->irq_number, DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_pg,
-			  IRQF_SHARED, DEV_NAME, pdata);
+		ret = request_irq(pdata->irq_number,
+				DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_pg,
+				IRQF_SHARED, DEV_NAME, pdata);
 #else
-	ret = request_irq(pdata->irq_number, DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS,
-			  IRQF_SHARED, DEV_NAME, pdata);
+		ret = request_irq(pdata->irq_number,
+				DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS,
+				IRQF_SHARED, DEV_NAME, pdata);
 #endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
-	if (ret != 0) {
-		printk(KERN_ALERT "Unable to register IRQ %d\n",
-		       pdata->irq_number);
-		ret = -EBUSY;
-		goto err_irq_0;
+		if (ret != 0) {
+			printk(KERN_ALERT "Unable to register IRQ %d\n",
+				pdata->irq_number);
+			ret = -EBUSY;
+			goto err_irq_0;
+		}
 	}
 	ret = desc_if->alloc_buff_and_desc(pdata);
 	if (ret < 0) {
@@ -1530,13 +1810,19 @@ static int DWC_ETH_QOS_open(struct net_device *dev)
 	netif_tx_disable(dev);
 #endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
 
+	alloc_poll_timers(pdata);
 	DBGPR("<--DWC_ETH_QOS_open\n");
 
 	return ret;
 
  err_out_desc_buf_alloc_failed:
-	free_irq(pdata->irq_number, pdata);
-	pdata->irq_number = 0;
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
+		free_multi_irqs(pdata);
+	else {
+		free_irq(pdata->irq_number, pdata);
+		pdata->irq_number = 0;
+
+	}
 
  err_irq_0:
 	DBGPR("<--DWC_ETH_QOS_open\n");
@@ -1567,6 +1853,8 @@ static int DWC_ETH_QOS_close(struct net_device *dev)
 	if (pdata->eee_enabled)
 		del_timer_sync(&pdata->eee_ctrl_timer);
 
+	free_poll_timers(pdata);
+
 	if (pdata->phydev)
 		phy_stop(pdata->phydev);
 
@@ -1580,10 +1868,13 @@ static int DWC_ETH_QOS_close(struct net_device *dev)
 
 	desc_if->tx_free_mem(pdata);
 	desc_if->rx_free_mem(pdata);
-	if (pdata->irq_number != 0) {
-		free_irq(pdata->irq_number, pdata);
-		pdata->irq_number = 0;
-	}
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
+		free_multi_irqs(pdata);
+	else
+		if (pdata->irq_number != 0) {
+			free_irq(pdata->irq_number, pdata);
+			pdata->irq_number = 0;
+		}
 #ifdef DWC_ETH_QOS_CONFIG_PGTEST
 	del_timer(&pdata->pg_timer);
 #endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
@@ -2007,7 +2298,10 @@ static int DWC_ETH_QOS_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	DBGPR("-->DWC_ETH_QOS_start_xmit: skb->len = %d, qInx = %u\n",
 		skb->len, qInx);
 
-	spin_lock_irqsave(&pdata->tx_lock, flags);
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
+		spin_lock_irqsave(&pdata->chinfo[qInx].chan_tx_lock, flags);
+	else
+		spin_lock_irqsave(&pdata->tx_lock, flags);
 
 #ifdef DWC_ETH_QOS_CONFIG_PGTEST
 	retval = NETDEV_TX_BUSY;
@@ -2119,7 +2413,11 @@ static int DWC_ETH_QOS_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	hw_if->pre_xmit(pdata, qInx);
 
 tx_netdev_return:
-	spin_unlock_irqrestore(&pdata->tx_lock, flags);
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
+		spin_unlock_irqrestore(&pdata->chinfo[qInx].chan_tx_lock,
+					flags);
+	else
+		spin_unlock_irqrestore(&pdata->tx_lock, flags);
 
 	DBGPR("<--DWC_ETH_QOS_start_xmit\n");
 
@@ -2387,7 +2685,10 @@ static void DWC_ETH_QOS_tx_interrupt(struct net_device *dev,
 		" dirty_tx = %d, qInx = %u\n",
 		desc_data->tx_pkt_queued, desc_data->dirty_tx, qInx);
 
-	spin_lock_irqsave(&pdata->tx_lock, flags);
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
+		spin_lock_irqsave(&pdata->chinfo[qInx].chan_tx_lock, flags);
+	else
+		spin_lock_irqsave(&pdata->tx_lock, flags);
 
 	pdata->xstats.tx_clean_n[qInx]++;
 	while (desc_data->tx_pkt_queued > 0) {
@@ -2505,7 +2806,10 @@ static void DWC_ETH_QOS_tx_interrupt(struct net_device *dev,
 			DWC_ETH_QOS_LPI_TIMER(DWC_ETH_QOS_DEFAULT_LPI_TIMER));
 	}
 
-	spin_unlock_irqrestore(&pdata->tx_lock, flags);
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
+		spin_unlock_irqrestore(&pdata->chinfo[qInx].chan_tx_lock, flags);
+	else
+		spin_unlock_irqrestore(&pdata->tx_lock, flags);
 
 	DBGPR("<--DWC_ETH_QOS_tx_interrupt: desc_data->tx_pkt_queued = %d\n",
 	      desc_data->tx_pkt_queued);
@@ -3401,7 +3705,8 @@ rx_tstmp_failed:
 	if (desc_data->dirty_rx)
 		desc_if->realloc_skb(pdata, qInx);
 
-	DBGPR("<--DWC_ETH_QOS_clean_rx_irq: received = %d\n", received);
+	DBGPR("<--DWC_ETH_QOS_clean_rx_irq: received = %d, qInx=%d\n",
+		received, qInx);
 
 	return received;
 }
@@ -3438,6 +3743,87 @@ void DWC_ETH_QOS_update_rx_errors(struct net_device *dev,
 	DBGPR("<--DWC_ETH_QOS_update_rx_errors\n");
 }
 
+
+int handle_txrx_completions(struct DWC_ETH_QOS_prv_data *pdata, int qInx)
+{
+	struct DWC_ETH_QOS_rx_queue *rx_queue;
+	int received = 0;
+	int budget = pdata->dt_cfg.chan_napi_quota[qInx];
+
+	DBGPR("-->%s(): chan=%d\n", __func__, qInx);
+
+	rx_queue = GET_RX_QUEUE_PTR(qInx);
+
+	/* check for tx descriptor status */
+	DWC_ETH_QOS_tx_interrupt(pdata->dev, pdata, qInx);
+	rx_queue->lro_flush_needed = 0;
+
+#ifdef RX_OLD_CODE
+	received = DWC_ETH_QOS_poll(pdata, budget, qInx);
+#else
+	received = pdata->clean_rx(pdata, budget, qInx);
+#endif
+	pdata->xstats.rx_pkt_n += received;
+	pdata->xstats.q_rx_pkt_n[qInx] += received;
+
+	if (rx_queue->lro_flush_needed)
+		lro_flush_all(&rx_queue->lro_mgr);
+
+	DBGPR("<--%s():\n", __func__);
+
+	return received;
+}
+
+
+static void do_txrx_post_processing(struct DWC_ETH_QOS_prv_data *pdata,
+				struct napi_struct *napi,
+				int received,  int budget)
+{
+	struct DWC_ETH_QOS_rx_queue *rx_queue;
+	int qInx = 0;
+	struct hw_if_struct *hw_if = &(pdata->hw_if);
+
+	DBGPR("-->%s():\n", __func__);
+
+	/* If we processed all pkts, we are done;
+	 * tell the kernel & re-enable interrupt
+	 */
+	if (received < budget) {
+		if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
+			rx_queue =
+				container_of(napi,
+					struct DWC_ETH_QOS_rx_queue, napi);
+			qInx = rx_queue->chan_num;
+			hw_if = &(pdata->hw_if);
+		}
+		if (pdata->dev->features & NETIF_F_GRO) {
+			/* to turn off polling */
+			napi_complete(napi);
+
+			/* Enable RX interrupt */
+			if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
+				hw_if->enable_rx_interrupt(qInx);
+			else
+				DWC_ETH_QOS_enable_all_ch_rx_interrpt(pdata);
+		} else {
+			unsigned long flags;
+
+			spin_lock_irqsave(&pdata->lock, flags);
+			__napi_complete(napi);
+
+			/* Enable RX interrupt */
+			if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
+				hw_if->enable_rx_interrupt(qInx);
+			else
+				DWC_ETH_QOS_enable_all_ch_rx_interrpt(pdata);
+
+			spin_unlock_irqrestore(&pdata->lock, flags);
+		}
+	}
+	DBGPR("<--%s():\n", __func__);
+}
+
+
 /*!
 * \brief API to pass the received packets to stack
 *
@@ -3458,59 +3844,93 @@ int DWC_ETH_QOS_poll_mq(struct napi_struct *napi, int budget)
 	struct DWC_ETH_QOS_rx_queue *rx_queue =
 		container_of(napi, struct DWC_ETH_QOS_rx_queue, napi);
 	struct DWC_ETH_QOS_prv_data *pdata = rx_queue->pdata;
-	/* divide the budget evenly among all the queues */
-	int per_q_budget = budget / DWC_ETH_QOS_RX_QUEUE_CNT;
 	int qInx = 0;
-	int received = 0, per_q_received = 0;
+	int received = 0;
 
-	DBGPR("-->DWC_ETH_QOS_poll_mq: budget = %d\n", budget);
+	DBGPR("-->DWC_ETH_QOS_poll_mq:\n");
 
 	pdata->xstats.napi_poll_n++;
 	for (qInx = 0; qInx < DWC_ETH_QOS_RX_QUEUE_CNT; qInx++) {
-		rx_queue = GET_RX_QUEUE_PTR(qInx);
-
-#ifdef DWC_ETH_QOS_TXPOLLING_MODE_ENABLE
-		/* check for tx descriptor status */
-		DWC_ETH_QOS_tx_interrupt(pdata->dev, pdata, qInx);
-#endif
-		rx_queue->lro_flush_needed = 0;
-
-#ifdef RX_OLD_CODE
-		per_q_received = DWC_ETH_QOS_poll(pdata, per_q_budget, qInx);
-#else
-		per_q_received = pdata->clean_rx(pdata, per_q_budget, qInx);
-#endif
-		received += per_q_received;
-		pdata->xstats.rx_pkt_n += per_q_received;
-		pdata->xstats.q_rx_pkt_n[qInx] += per_q_received;
-
-		if (rx_queue->lro_flush_needed)
-			lro_flush_all(&rx_queue->lro_mgr);
+		received += handle_txrx_completions(pdata, qInx);
 	}
 
-	/* If we processed all pkts, we are done;
-	 * tell the kernel & re-enable interrupt */
-	if (received < budget) {
-		if (pdata->dev->features & NETIF_F_GRO) {
-			/* to turn off polling */
-			napi_complete(napi);
-			/* Enable all ch RX interrupt */
-			DWC_ETH_QOS_enable_all_ch_rx_interrpt(pdata);
-		} else {
-			unsigned long flags;
-
-			spin_lock_irqsave(&pdata->lock, flags);
-			__napi_complete(napi);
-			/* Enable all ch RX interrupt */
-			DWC_ETH_QOS_enable_all_ch_rx_interrpt(pdata);
-			spin_unlock_irqrestore(&pdata->lock, flags);
-		}
-	}
+	do_txrx_post_processing(pdata, napi, received,
+		pdata->napi_quota_all_chans);
 
 	DBGPR("<--DWC_ETH_QOS_poll_mq\n");
 
 	return received;
 }
+
+/* Used only when multi-irq is disabled and all channels are being polled.
+ * TYPE_POLL.  Main difference is that is will not enable interrupts.
+ */
+void DWC_ETH_QOS_poll_mq_all_chans(struct DWC_ETH_QOS_prv_data *pdata)
+{
+	int qInx = 0;
+
+	DBGPR("-->%s():\n", __func__);
+
+	pdata->xstats.napi_poll_n++;
+	for (qInx = 0; qInx < DWC_ETH_QOS_RX_QUEUE_CNT; qInx++) {
+		handle_txrx_completions(pdata, qInx);
+	}
+
+	DBGPR("<--%s():\n", __func__);
+}
+
+
+/* Used only when multi-irq is enablded.  Used in two cases
+ * 1) when one or more channels are configured for TYPE_POLL.
+ * 2) Napi handler will call this function for TYPE_NAPI.
+ *
+ * Main difference is that is will not enable interrupts.  And it
+ * will only handle tx/rx completions for one channel.
+ */
+void DWC_ETH_QOS_poll_chan_mq_nv(struct chan_data *pchinfo)
+{
+
+	struct DWC_ETH_QOS_prv_data *pdata =
+			container_of((pchinfo - pchinfo->chan_num),
+			struct DWC_ETH_QOS_prv_data, chinfo[0]);
+
+	int qInx = pchinfo->chan_num;
+
+	DBGPR("-->%s(): chan=%d\n", __func__, qInx);
+
+	pdata->xstats.napi_poll_n++;
+
+	handle_txrx_completions(pdata, qInx);
+
+	DBGPR("<--%s():\n", __func__);
+}
+
+/* Used only when multi-irq is enabled and one or more channel is configured for
+ * TYPE_NAPI.
+ */
+int DWC_ETH_QOS_poll_mq_napi(struct napi_struct *napi, int budget)
+{
+	struct DWC_ETH_QOS_rx_queue *rx_queue =
+		container_of(napi, struct DWC_ETH_QOS_rx_queue, napi);
+	struct DWC_ETH_QOS_prv_data *pdata = rx_queue->pdata;
+
+	int qInx = rx_queue->chan_num;
+	int received = 0;
+
+
+	DBGPR("-->%s(): budget = %d\n", __func__, budget);
+
+	pdata->xstats.napi_poll_n++;
+	received = handle_txrx_completions(pdata, qInx);
+
+	do_txrx_post_processing(pdata, napi, received,
+			pdata->dt_cfg.chan_napi_quota[qInx]);
+
+	DBGPR("<--%s()\n", __func__);
+
+	return received;
+}
+
 
 /*!
 * \brief API to return the device/interface status.
@@ -3583,6 +4003,7 @@ static int DWC_ETH_QOS_set_features(struct net_device *dev, netdev_features_t fe
 #ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
 	UINT dev_rxvlan_enable, dev_txvlan_enable;
 #endif
+	DBGPR("-->DWC_ETH_QOS_set_features\n");
 
 	if (pdata->hw_feat.rx_coe_sel) {
 		dev_rxcsum_enable = !!(pdata->dev_state & NETIF_F_RXCSUM);
@@ -6947,3 +7368,33 @@ struct net_device_ops *DWC_ETH_QOS_get_netdev_ops(void)
 }
 
 
+/* Wrapper timer handler.  Only used when configured for multi irq and at least
+ * one channel is being polled.
+ */
+static void DWC_ETH_QOS_poll_timer(unsigned long data)
+{
+	struct chan_data *pchinfo = (struct chan_data *) data;
+
+	DBGPR("-->%s(): chan=%d\n", __func__, pchinfo->chan_num);
+
+	DWC_ETH_QOS_poll_chan_mq_nv(pchinfo);
+	add_timer(&pchinfo->poll_timer);
+
+	DBGPR("<--%s():\n", __func__);
+}
+
+
+/* Wrapper timer handler.  Only used when configured for single irq
+ * and all chans are being polled
+ */
+static void DWC_ETH_QOS_all_chans_timer(unsigned long data)
+{
+	struct DWC_ETH_QOS_prv_data *pdata =
+		(struct DWC_ETH_QOS_prv_data *)data;
+
+	DWC_ETH_QOS_poll_mq_all_chans(pdata);
+
+	pdata->all_chans_timer.expires = jiffies +
+					msecs_to_jiffies(1000);  /* 1s */
+	add_timer(&pdata->all_chans_timer);
+}

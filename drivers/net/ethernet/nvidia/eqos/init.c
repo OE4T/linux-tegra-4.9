@@ -131,6 +131,54 @@ irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_POWER(int irq, void *device_id)
 	}
 }
 
+void get_dt_u32(struct device_node *pnode, char *pdt_prop, u32 *pval,
+		u32 val_def, u32 val_max)
+{
+	int ret = 0;
+
+	ret = of_property_read_u32(pnode, pdt_prop, pval);
+
+	if (ret < 0)
+		printk(KERN_ALERT "%s(): \"%s\" read failed %d. Using default\n",
+			__func__, pdt_prop, ret);
+
+	if (*pval > val_max) {
+		printk(KERN_ALERT
+			"%s(): %d is invalid value for \"%s\".  Using default.\n",
+			__func__, *pval, pdt_prop);
+		*pval = val_def;
+	}
+	printk(KERN_ALERT "%s(): \"%s\"=%d\n", __func__,
+			pdt_prop, *pval);
+}
+
+
+void get_dt_u32_array(struct device_node *pnode, char *pdt_prop, u32 *pval,
+			u32 val_def, u32 val_max, u32 num_entries)
+{
+	int i, ret = 0;
+
+	ret = of_property_read_u32_array(pnode, pdt_prop, pval, num_entries);
+
+	if (ret < 0) {
+		printk(KERN_ALERT "%s(): \"%s\" read failed %d. Using default\n",
+			__func__, pdt_prop, ret);
+		for (i = 0; i < num_entries; i++)
+			pval[i] = val_def;
+	}
+	for (i = 0; i < num_entries; i++) {
+		if (pval[i] > val_max) {
+			printk(KERN_ALERT "%d is invalid value for \"%s[%d]\"."
+				"  Using default.\n",
+				pval[i], pdt_prop, i);
+			pval[i] = val_def;
+		}
+	}
+	printk(KERN_ALERT "%s(): \"%s\" = 0x%x 0x%x 0x%x 0x%x\n", __func__,
+		pdt_prop, pval[0], pval[1], pval[2], pval[3]);
+}
+
+
 /*!
 * \brief API to initialize the device.
 *
@@ -156,9 +204,11 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 
 	struct DWC_ETH_QOS_prv_data *pdata = NULL;
 	struct net_device *ndev = NULL;
-	int i, ret = 0;
+	int i, j, ret = 0;
 	int irq, power_irq;
 	int phyirq;
+	int rx_irqs[MAX_CHANS];
+	int tx_irqs[MAX_CHANS];
 	struct hw_if_struct *hw_if = NULL;
 	struct desc_if_struct *desc_if = NULL;
 	UCHAR tx_q_count = 0, rx_q_count = 0;
@@ -168,14 +218,17 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	u32 csr_clock_speed;
 	u32 mac_addr[6];
 
-	DBGPR("***EQOS DRIVER COMPILED ON %s AT %s***\n", __DATE__, __TIME__);
+	struct eqos_cfg *pdt_cfg;
+	struct chan_data *pchinfo;
+
+	DBGPR("-->%s()\n", __func__);
 
 	match = of_match_device(dwc_eth_qos_of_match, &pdev->dev);
 	if(!match)
 		return -EINVAL;
 
-  /* get base addr */
-  res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	/* get base addr */
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 
 	if (unlikely(res == NULL)) {
   	dev_err(&pdev->dev, "invalid resource\n");
@@ -191,15 +244,29 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	if (power_irq < 0)
 		return power_irq;
 
+	for (i = IRQ_CHAN0_RX_IDX, j = 0; i <= IRQ_MAX_IDX; i += 2, j++) {
+		rx_irqs[j] = platform_get_irq(pdev, i);
+		if (rx_irqs[j] < 0)
+			return rx_irqs[j];
+
+		tx_irqs[j] = platform_get_irq(pdev, i+1);
+		if (tx_irqs[j] < 0)
+			return tx_irqs[j];
+	}
+
 #if defined(CONFIG_PHYS_ADDR_T_64BIT)
-	DBGPR("res->start = 0x%lx \n", (unsigned long)res->start);
-	DBGPR("res->end = 0x%lx \n", (unsigned long)res->end);
+	DBGPR("res->start = 0x%lx\n", (unsigned long)res->start);
+	DBGPR("res->end = 0x%lx\n", (unsigned long)res->end);
 #else
-	DBGPR("res->start = 0x%x \n", (unsigned int)res->start);
-	DBGPR("res->end = 0x%x \n", (unsigned int)res->end);
+	DBGPR("res->start = 0x%x\n", (unsigned int)res->start);
+	DBGPR("res->end = 0x%x\n", (unsigned int)res->end);
 #endif
-	DBGPR("irq = %d \n", irq);
-	DBGPR("power_irq = %d \n", power_irq);
+	DBGPR("irq = %d\n", irq);
+	DBGPR("power_irq = %d\n", power_irq);
+
+	for (j = 0; j < MAX_CHANS; j++)
+		DBGPR("rx_irq[%d]=%d, tx_irq[%d]=%d\n",
+			j, rx_irqs[j], j, tx_irqs[j]);
 
 	/* PMT and PHY irqs are shared on FPGA system */
 	if (tegra_platform_is_unit_fpga()) {
@@ -255,10 +322,6 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	pdata->tx_queue_cnt = tx_q_count;
 	pdata->rx_queue_cnt = rx_q_count;
 
-	if (tx_q_count > 1)
-		pdata->profile = PROFILE_AUTO;
-	else
-		pdata->profile = PROFILE_MOBILE;
 
 #ifdef DWC_ETH_QOS_CONFIG_DEBUGFS
 	/* to give prv data to debugfs */
@@ -268,9 +331,24 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	/* issue software reset to device */
 	hw_if->exit();
 
+	/* ack and disable wrapper tx/rx irq ints */
+	i = (VIRT_INTR_CH_CRTL_RX_Wr_Mask | VIRT_INTR_CH_CRTL_TX_Wr_Mask);
+
+	for (j = 0; j < MAX_CHANS; j++) {
+		VIRT_INTR_CH_STAT_RgWr(j, i);
+		VIRT_INTR_CH_CRTL_RgWr(j, ~i);
+	}
+
 	ndev->irq = irq;
+	pdata->common_irq = irq;
+
 	pdata->power_irq = power_irq;
 	pdata->phyirq = phyirq;
+
+	for (j = 0; j < MAX_CHANS; j++) {
+		pdata->rx_irqs[j] = rx_irqs[j];
+		pdata->tx_irqs[j] = tx_irqs[j];
+	}
 
 	DWC_ETH_QOS_get_all_hw_features(pdata);
 	DWC_ETH_QOS_print_all_hw_features(pdata);
@@ -296,21 +374,34 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		printk(KERN_ALERT "%s: MDIO is not present\n\n", DEV_NAME);
 	}
 
-	ret = of_property_read_u32_array(node, "nvidia,rxq_enable_ctrl",
-		pdata->rxq_enable_ctrl,
-		sizeof(pdata->rxq_enable_ctrl)/sizeof(u32));
-	if (ret < 0) {
-		printk(KERN_ALERT "rxq_enable_ctrl read failed %d\n", ret);
-		/* use default value of enabling legacy on all channels */
-		pdata->rxq_enable_ctrl[0] = 0x1;
-		pdata->rxq_enable_ctrl[1] = 0x1;
-		pdata->rxq_enable_ctrl[2] = 0x1;
-		pdata->rxq_enable_ctrl[3] = 0x1;
-	} else {
-		printk(KERN_ALERT "rxq_enable_ctrl 0x%x 0x%x 0x%x 0x%x\n",
-			pdata->rxq_enable_ctrl[0], pdata->rxq_enable_ctrl[1],
-			pdata->rxq_enable_ctrl[2], pdata->rxq_enable_ctrl[3]);
+	pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
+	get_dt_u32(node, "nvidia,intr_mode", &pdt_cfg->intr_mode,
+			INTR_MODE_DEFAULT, MODE_MAX);
+	get_dt_u32(node, "nvidia,pause_frames", &pdt_cfg->pause_frames,
+			PAUSE_FRAMES_DEFAULT, PAUSE_FRAMES_MAX);
+	get_dt_u32_array(node, "nvidia,chan_mode", pdt_cfg->chan_mode,
+			CHAN_MODE_DEFAULT, CHAN_MODE_MAX, 4);
+	get_dt_u32_array(node, "nvidia,chan_napi_quota",
+			pdt_cfg->chan_napi_quota,
+			CHAN_NAPI_QUOTA_DEFAULT, CHAN_NAPI_QUOTA_MAX, 4);
+	get_dt_u32_array(node, "nvidia,rxq_enable_ctrl", pdt_cfg->rxq_ctrl,
+			RXQ_CTRL_DEFAULT, RXQ_CTRL_MAX, 4);
+
+	for (i = 0; i < MAX_CHANS; i++) {
+		pchinfo = &pdata->chinfo[i];
+		pchinfo->chan_num = i;
+		pchinfo->poll_interval = 1000;
 	}
+
+	if (pdata->dt_cfg.intr_mode == MODE_COMMON_IRQ) {
+		pdata->dt_cfg.chan_mode[0] = CHAN_MODE_NONE;
+		pdata->dt_cfg.chan_mode[1] = CHAN_MODE_NONE;
+		pdata->dt_cfg.chan_mode[2] = CHAN_MODE_NONE;
+		pdata->dt_cfg.chan_mode[3] = CHAN_MODE_NONE;
+	}
+
+	for (i = 0; i < MAX_CHANS; i++)
+		pdata->napi_quota_all_chans += pdt_cfg->chan_napi_quota[i];
 
 	ret = of_property_read_u32(node, "nvidia,csr_clock_speed",
 			&csr_clock_speed);
@@ -353,8 +444,15 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	for (i = 0; i < DWC_ETH_QOS_RX_QUEUE_CNT; i++) {
 		struct DWC_ETH_QOS_rx_queue *rx_queue = GET_RX_QUEUE_PTR(i);
 
-		netif_napi_add(ndev, &rx_queue->napi, DWC_ETH_QOS_poll_mq,
-				(64 * DWC_ETH_QOS_RX_QUEUE_CNT));
+		if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
+			netif_napi_add(ndev, &rx_queue->napi,
+					DWC_ETH_QOS_poll_mq_napi,
+					pdata->napi_quota_all_chans);
+		} else
+			netif_napi_add(ndev, &rx_queue->napi,
+					DWC_ETH_QOS_poll_mq,
+					pdata->napi_quota_all_chans);
+		rx_queue->chan_num = i;
 	}
 
 	ndev->ethtool_ops = (DWC_ETH_QOS_get_ethtool_ops());
@@ -403,6 +501,9 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	spin_lock_init(&pdata->lock);
 	spin_lock_init(&pdata->tx_lock);
 	spin_lock_init(&pdata->pmt_lock);
+
+	for (i = 0; i < MAX_CHANS; i++)
+		spin_lock_init(&pdata->chinfo[i].chan_lock);
 
 #ifdef DWC_ETH_QOS_CONFIG_PGTEST
 	ret = DWC_ETH_QOS_alloc_pg(pdata);
@@ -506,11 +607,11 @@ int DWC_ETH_QOS_remove(struct platform_device *pdev)
 		free_irq(pdata->power_irq, pdata);
 		pdata->power_irq = 0;
 	}
+
 	if (pdata->irq_number != 0) {
 		free_irq(pdata->irq_number, pdata);
 		pdata->irq_number = 0;
 	}
-
 	if (1 == pdata->hw_feat.sma_sel)
 		DWC_ETH_QOS_mdio_unregister(dev);
 

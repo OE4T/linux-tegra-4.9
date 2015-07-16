@@ -22,9 +22,9 @@
 #include <dt-bindings/memory/tegra186-swgroup.h>
 #include "../../../../include/dt-bindings/clock/tegra186-clock.h"
 #include "../../../../include/dt-bindings/reset/tegra186-reset.h"
-#include "tegra186-a57-cpuidle.dtsi"
-#include "tegra186-denver-cpuidle.dtsi"
-#include "tegra186-sdhci.dtsi"
+#include "tegra186-soc/tegra186-a57-cpuidle.dtsi"
+#include "tegra186-soc/tegra186-denver-cpuidle.dtsi"
+#include "tegra186-soc/tegra186-sdhci.dtsi"
 
 / {
 	compatible = "nvidia,tegra186";

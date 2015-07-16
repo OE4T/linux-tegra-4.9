@@ -2235,15 +2235,16 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+	unsigned long delay = msecs_to_jiffies(HDMI_HPD_DEBOUNCE_DELAY_MS);
 
 	if (tegra_platform_is_linsim())
 		return true;
 
-	if (tegra_dc_hpd(dc)) {
-		cancel_delayed_work(&hdmi->hpd_worker);
-		schedule_delayed_work(&hdmi->hpd_worker,
-				msecs_to_jiffies(HDMI_HPD_DEBOUNCE_DELAY_MS));
-	}
+	if (dc->out->hotplug_state != TEGRA_HPD_STATE_NORMAL)
+		delay = 0;
+
+	cancel_delayed_work(&hdmi->hpd_worker);
+	schedule_delayed_work(&hdmi->hpd_worker, delay);
 
 	return tegra_dc_hpd(dc);
 }

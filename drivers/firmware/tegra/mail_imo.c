@@ -92,6 +92,19 @@ static void imo_notify(struct ivc *ivc)
 {
 }
 
+static void imo_resume(int ch)
+{
+	size_t sz;
+
+	if (ch >= NR_CHANNELS) {
+		WARN_ON(1);
+		return;
+	}
+
+	sz = tegra_ivc_total_queue_size(0);
+	memset_io((void *)ivc_channels[ch].tx_channel, 0, sz);
+}
+
 static int imo_channel_init(int ch, uint8_t *obmem, uint8_t *ibmem, size_t sz)
 {
 	struct ivc *ivc;
@@ -137,6 +150,7 @@ const struct mail_ops mail_ops = {
 	.free_master = imo_free_master,
 	.master_acked = imo_rx_ready,
 	.master_free = imo_tx_ready,
+	.resume = imo_resume,
 	.return_data = imo_return_data,
 	.signal_slave = imo_signal_slave,
 	.slave_signalled = imo_rx_ready

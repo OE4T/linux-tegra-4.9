@@ -185,6 +185,22 @@ static int bpmp_iomem_init(void)
 	return 0;
 }
 
+void tegra_bpmp_resume(void)
+{
+	int i;
+
+	if (!mail_ops.resume)
+		return;
+
+	pr_info("bpmp: waiting for handshake\n");
+	while (!tegra_hsp_db_can_ring(HSP_DB_BPMP))
+		;
+
+	pr_info("bpmp: resuming channels\n");
+	for (i = 0; i < NR_CHANNELS; i++)
+		mail_ops.resume(i);
+}
+
 int bpmp_connect(void)
 {
 	int ret;

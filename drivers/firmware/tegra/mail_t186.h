@@ -31,6 +31,7 @@ struct mail_ops {
 	bool (*slave_signalled)(int ch);
 	int (*channel_init)(int ch, uint8_t *obmem, uint8_t *ibmem, size_t sz);
 	void (*free_master)(int ch);
+	void (*resume)(int ch);
 	void (*return_data)(int ch, int code, void *data, int sz);
 	void (*signal_slave)(int ch);
 };

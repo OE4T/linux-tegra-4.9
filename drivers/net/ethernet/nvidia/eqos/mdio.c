@@ -395,8 +395,7 @@ static void DWC_ETH_QOS_adjust_link(struct net_device *dev)
 		}
 
 		/* FLOW ctrl operation */
-		/* auto profile always has flow ctrl disabled */
-		if (pdata->profile != PROFILE_AUTO)
+		if (pdata->dt_cfg.pause_frames == PAUSE_FRAMES_ENABLED)
 			if (phydev->pause || phydev->asym_pause) {
 				if (pdata->flow_ctrl != pdata->oldflow_ctrl)
 					DWC_ETH_QOS_configure_flow_ctrl(pdata);
@@ -505,7 +504,7 @@ static int DWC_ETH_QOS_init_phy(struct net_device *dev)
 #ifndef DWC_ETH_QOS_CONFIG_PGTEST
 	phydev->supported |= (SUPPORTED_Pause | SUPPORTED_Asym_Pause);
 #endif
-	if (pdata->profile == PROFILE_AUTO)
+	if (pdata->dt_cfg.pause_frames == PAUSE_FRAMES_DISABLED)
 		phydev->supported &= ~(SUPPORTED_Pause | SUPPORTED_Asym_Pause);
 
     /* Lets Make the code support for both 100M and Giga bit */

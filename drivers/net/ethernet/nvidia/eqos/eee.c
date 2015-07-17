@@ -45,29 +45,6 @@
  */
 #include "yheader.h"
 
-/* Clause 22 registers to access clause 45 register set */
-#define MMD_CTRL_REG		0x0D	/* MMD Access Control Register */
-#define MMD_ADDR_DATA_REG	0x0E	/* MMD Access Address Data Register */
-
-/* MMD Access Control register fields */
-#define MMD_CTRL_FUNC_ADDR		0x0000	/* address */
-#define MMD_CTRL_FUNC_DATA_NOINCR	0x4000	/* data, no post increment */
-#define MMD_CTRL_FUNC_DATA_INCR_ON_RDWT	0x8000	/* data, post increment on
-						   reads & writes */
-#define MMD_CTRL_FUNC_DATA_INCR_ON_WT	0xC000	/* data, post increment on
-						   writes only */
-/* Clause 45 expansion register */
-#define CL45_PCS_EEE_ABLE 0x14	/* EEE Capability register */
-#define CL45_ADV_EEE_REG 0x3C   /* EEE advertisement */
-#define CL45_AN_EEE_LPABLE_REG	0x3D	/* EEE Link Partner ability reg */
-#define CL45_CLK_STOP_EN_REG 0x0 /* Clock Stop enable reg */
-
-/* Clause 45 expansion registers fields */
-#define CL45_LP_ADV_EEE_STATS_1000BASE_T 0x0004	/* LP EEE capabilities
-						   status */
-#define CL45_CLK_STOP_EN	0x400 /* Enable xMII Clock Stop */
-
-
 void DWC_ETH_QOS_enable_eee_mode(struct DWC_ETH_QOS_prv_data *pdata)
 {
 	struct DWC_ETH_QOS_tx_wrapper_descriptor *tx_desc_data = NULL;
@@ -386,6 +363,7 @@ bool DWC_ETH_QOS_eee_init(struct DWC_ETH_QOS_prv_data *pdata)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	bool ret = false;
+	unsigned int val;
 
 	DBGPR_EEE("-->DWC_ETH_QOS_eee_init\n");
 
@@ -422,6 +400,16 @@ bool DWC_ETH_QOS_eee_init(struct DWC_ETH_QOS_prv_data *pdata)
 
 		ret = true;
 	}
+
+	/* disable AUTOEEEgr in TOP level expansion register 0x40 */
+	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr,
+		BCM_EXPANSION_CTRL_REG,
+		BCM_EXP_REG_SEL_TOPL | BCM_TOPL_E40);
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr,
+		BCM_EXPANSION_REG, &val);
+	DBGPR_EEE("Default value in top-level exp reg 0x40h : 0x%x\n", val);
+	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr,
+		BCM_EXPANSION_REG, val & ~(BCM_TOPL_E40_AUTOGREEE_EN));
 
 	DBGPR_EEE("<--DWC_ETH_QOS_eee_init\n");
 

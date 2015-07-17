@@ -230,8 +230,14 @@ static void cdma_start_timer_locked(struct nvhost_cdma *cdma,
 	cdma->timeout.timeout = job->timeout;
 	cdma->timeout.allow_dependency = true;
 
+	/* vhost local timeout handler better run later than RM server
+	 * timeout handler
+	 */
+	if (nvhost_dev_is_virtual(cdma_to_dev(cdma)->dev))
+		cdma->timeout.timeout += 500;
+
 	schedule_delayed_work(&cdma->timeout.wq,
-			msecs_to_jiffies(job->timeout));
+			msecs_to_jiffies(cdma->timeout.timeout));
 }
 
 /**
@@ -336,7 +342,7 @@ static void update_cdma_locked(struct nvhost_cdma *cdma)
 }
 
 
-static void nvhost_cdma_finalize_job_incrs(struct nvhost_syncpt *syncpt,
+void nvhost_cdma_finalize_job_incrs(struct nvhost_syncpt *syncpt,
 					struct nvhost_job_syncpt *sp)
 {
 	u32 id = sp->id;

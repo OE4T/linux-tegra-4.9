@@ -618,10 +618,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	if (err)
 		goto fail;
 
-	/* For now, no timeout support if virtualized */
-	if (nvhost_dev_is_virtual(ctx->pdev))
-		job->timeout = 0;
-	else if (args->timeout)
+	if (args->timeout)
 		job->timeout = min(ctx->timeout, args->timeout);
 	else
 		job->timeout = ctx->timeout;

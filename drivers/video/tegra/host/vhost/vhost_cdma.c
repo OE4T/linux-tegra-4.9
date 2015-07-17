@@ -20,6 +20,7 @@
 #include "vhost.h"
 #include "../host1x/host1x.h"
 #include "../nvhost_cdma.h"
+#include "../nvhost_job.h"
 
 static int vhost_pb_sendrecv(struct tegra_vhost_cmd_msg *msg, size_t size_in,
 		size_t size_out)
@@ -150,18 +151,58 @@ static void vhost_cdma_kick(struct nvhost_cdma *cdma)
 	}
 }
 
-/* Timeout functions are placeholders for now
- * Note: since the init function is a no-op, job->timeout
- * must be set to 0 (done in bus_client.c)
+static void vhost_cdma_timeout_local(struct work_struct *work)
+{
+	struct nvhost_cdma *cdma;
+	struct nvhost_master *dev;
+	struct nvhost_job *job;
+	int i;
+
+	cdma = container_of(to_delayed_work(work), struct nvhost_cdma,
+			    timeout.wq);
+	dev = cdma_to_dev(cdma);
+
+	mutex_lock(&cdma->lock);
+
+	job = list_first_entry_or_null(&cdma->sync_queue,
+					struct nvhost_job, list);
+	if (!job)
+		goto out;
+	/* set notifier to userspace about submit timeout */
+	nvhost_job_set_notifier(job, NVHOST_CHANNEL_SUBMIT_TIMEOUT);
+
+	for (i = 0; i < job->num_syncpts; ++i) {
+		struct nvhost_job_syncpt *sp = job->sp + i;
+		nvhost_syncpt_update_min(&dev->syncpt, sp->id);
+		if (nvhost_syncpt_is_expired(&dev->syncpt, sp->id, sp->fence))
+			continue;
+		nvhost_cdma_finalize_job_incrs(&dev->syncpt, sp);
+	}
+out:
+	mutex_unlock(&cdma->lock);
+}
+
+/*
+ * Timeout functions are only to detect the case that push buffer finished
+ * running, but sync points did not all get incremented.
  */
 static int vhost_cdma_timeout_init(struct nvhost_cdma *cdma,
 				 u32 syncpt_id)
 {
+	if (syncpt_id == NVSYNCPT_INVALID)
+		return -EINVAL;
+
+	INIT_DELAYED_WORK(&cdma->timeout.wq, vhost_cdma_timeout_local);
+	cdma->timeout.initialized = true;
+
 	return 0;
 }
 
 static void vhost_cdma_timeout_destroy(struct nvhost_cdma *cdma)
 {
+	if (cdma->timeout.initialized)
+		cancel_delayed_work(&cdma->timeout.wq);
+	cdma->timeout.initialized = false;
 }
 
 static void vhost_cdma_timeout_pb_cleanup(struct nvhost_cdma *cdma, u32 getptr,

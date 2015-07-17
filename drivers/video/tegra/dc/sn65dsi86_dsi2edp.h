@@ -30,9 +30,17 @@ struct tegra_dc_dsi2edp_data {
 	int en_gpio; /* GPIO */
 	int en_gpio_flags;
 	int pll_refclk_cfg;
+	int dsi_cfg1;
 	int dsi_cha_clk_range;
+	int dsi_chb_clk_range;
 	int disable_assr;
 	int dp_ssc_cfg;
+	int video_cha_line_low;
+	int video_cha_line_high;
+	int video_chb_line_low;
+	int video_chb_line_high;
+	int cha_vert_disp_size_low;
+	int cha_vert_disp_size_high;
 	int h_pulse_width_low;
 	int h_pulse_width_high;
 	int v_pulse_width_low;

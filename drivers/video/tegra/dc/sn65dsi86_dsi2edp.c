@@ -114,14 +114,17 @@ static void sn65dsi86_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 			dsi2edp->pll_refclk_cfg);
 	usleep_range(10000, 12000);
 	/* Single 4 DSI lanes */
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DSI_CFG1, 0x26);
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DSI_CFG1,
+			dsi2edp->dsi_cfg1);
 	usleep_range(10000, 12000);
 	/* DSI CLK FREQ 422.5MHz */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DSI_CHA_CLK_RANGE,
 			dsi2edp->dsi_cha_clk_range);
 	usleep_range(10000, 12000);
 	sn65dsi86_reg_read(dsi2edp, SN65DSI86_DSI_CHA_CLK_RANGE, &val);
-	sn65dsi86_reg_read(dsi2edp, SN65DSI86_DSI_CHA_CLK_RANGE, &val);
+	if (dsi2edp->dsi_chb_clk_range)
+		sn65dsi86_reg_write(dsi2edp, SN65DSI86_DSI_CHB_CLK_RANGE,
+				dsi2edp->dsi_chb_clk_range);
 
 	/* disable ASSR via TEST2 PULL UP */
 	if (dsi2edp->disable_assr) {
@@ -156,12 +159,24 @@ static void sn65dsi86_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 	sn65dsi86_reg_read(dsi2edp, SN65DSI86_ML_TX_MODE, &val);
 	msleep(20);
 	/* CHA_ACTIVE_LINE_LENGTH */
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_VIDEO_CHA_LINE_LOW, 0x80);
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_VIDEO_CHA_LINE_HIGH, 0x07);
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_VIDEO_CHA_LINE_LOW,
+			dsi2edp->video_cha_line_low);
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_VIDEO_CHA_LINE_HIGH,
+			dsi2edp->video_cha_line_high);
+	usleep_range(10000, 12000);
+	/* CHB_ACTIVE_LINE_LENGTH */
+	if (dsi2edp->video_chb_line_low >= 0)
+		sn65dsi86_reg_write(dsi2edp, SN65DSI86_VIDEO_CHB_LINE_LOW,
+				dsi2edp->video_chb_line_low);
+	if (dsi2edp->video_chb_line_high)
+		sn65dsi86_reg_write(dsi2edp, SN65DSI86_VIDEO_CHB_LINE_HIGH,
+				dsi2edp->video_chb_line_high);
 	usleep_range(10000, 12000);
 	/* CHA_VERTICAL_DISPLAY_SIZE */
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VERT_DISP_SIZE_LOW, 0x38);
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VERT_DISP_SIZE_HIGH, 0x04);
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VERT_DISP_SIZE_LOW,
+			dsi2edp->cha_vert_disp_size_low);
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VERT_DISP_SIZE_HIGH,
+			dsi2edp->cha_vert_disp_size_high);
 	usleep_range(10000, 12000);
 	/* CHA_HSYNC_PULSE_WIDTH */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_HSYNC_PULSE_WIDTH_LOW,
@@ -173,7 +188,7 @@ static void sn65dsi86_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VSYNC_PULSE_WIDTH_LOW,
 			dsi2edp->v_pulse_width_low);
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VSYNC_PULSE_WIDTH_HIGH,
-			0x80);
+			dsi2edp->v_pulse_width_high);
 	usleep_range(10000, 12000);
 	/* CHA_HORIZONTAL_BACK_PORCH */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_HORIZONTAL_BACK_PORCH,
@@ -272,67 +287,105 @@ static int of_dsi2edp_parse_platform_data(struct i2c_client *client)
 	if (!dsi2edp->en_gpio)
 		dev_err(&client->dev, "dsi2edp: gpio number not provided\n");
 
-	if (!of_property_read_u32(np, "ti,pll-refclk-cfg", &temp)) {
+	if (!of_property_read_u32(np, "ti,pll-refclk-cfg", &temp))
 		dsi2edp->pll_refclk_cfg = temp;
-	} else {
-		/* TBC: default setting for backward compatibility */
+	else
 		dsi2edp->pll_refclk_cfg = 0x02;
-		dsi2edp->dsi_cha_clk_range = 0x55;
-		dsi2edp->disable_assr = 0;
-		dsi2edp->dp_ssc_cfg = 0x20;
-		dsi2edp->h_pulse_width_low = 0x10;
-		dsi2edp->h_pulse_width_high = 0x80;
-		dsi2edp->v_pulse_width_low = 0x0e;
-		dsi2edp->v_pulse_width_high = 0x80;
-		dsi2edp->h_back_porch = 0x98;
-		dsi2edp->v_back_porch = 0x13;
-		dsi2edp->h_front_porch = 0x10;
-		dsi2edp->v_front_porch = 0x03;
-	}
 
-	if (!of_property_read_u32(np, "ti,dsi-cha-clk-range", &temp)) {
+	if (!of_property_read_u32(np, "ti,dsi-cfg1", &temp))
+		dsi2edp->dsi_cfg1 = temp;
+	else
+		dsi2edp->dsi_cfg1 = 0x26;
+
+	if (!of_property_read_u32(np, "ti,dsi-cha-clk-range", &temp))
 		dsi2edp->dsi_cha_clk_range = temp;
-	}
+	else
+		dsi2edp->dsi_cha_clk_range = 0x55;
 
-	if (!of_property_read_u32(np, "ti,disable-assr", &temp)) {
+	if (!of_property_read_u32(np, "ti,dsi-chb-clk-range", &temp))
+		dsi2edp->dsi_chb_clk_range = temp;
+	else
+		dsi2edp->dsi_chb_clk_range = 0x0;
+
+	if (!of_property_read_u32(np, "ti,disable-assr", &temp))
 		dsi2edp->disable_assr = temp;
-	}
+	else
+		dsi2edp->disable_assr = 0;
 
-	if (!of_property_read_u32(np, "ti,dp-ssc-cfg", &temp)) {
+	if (!of_property_read_u32(np, "ti,dp-ssc-cfg", &temp))
 		dsi2edp->dp_ssc_cfg = temp;
-	}
+	else
+		dsi2edp->dp_ssc_cfg = 0x20;
 
-	if (!of_property_read_u32(np, "ti,h-pulse-width-low", &temp)) {
+	if (!of_property_read_u32(np, "ti,video-cha-line-low", &temp))
+		dsi2edp->video_cha_line_low = temp;
+	else
+		dsi2edp->video_cha_line_low = 0x80;
+
+	if (!of_property_read_u32(np, "ti,video-cha-line-high", &temp))
+		dsi2edp->video_cha_line_high = temp;
+	else
+		dsi2edp->video_cha_line_high = 0x07;
+
+	if (!of_property_read_u32(np, "ti,video-chb-line-low", &temp))
+		dsi2edp->video_chb_line_low = temp;
+	else
+		dsi2edp->video_chb_line_low = -1;
+
+	if (!of_property_read_u32(np, "ti,video-chb-line-high", &temp))
+		dsi2edp->video_chb_line_high = temp;
+	else
+		dsi2edp->video_chb_line_high = 0x0;
+
+	if (!of_property_read_u32(np, "ti,cha-vert-disp-size-low", &temp))
+		dsi2edp->cha_vert_disp_size_low = temp;
+	else
+		dsi2edp->cha_vert_disp_size_low = 0x38;
+
+	if (!of_property_read_u32(np, "ti,cha-vert-disp-size-high", &temp))
+		dsi2edp->cha_vert_disp_size_high = temp;
+	else
+		dsi2edp->cha_vert_disp_size_high = 0x04;
+
+	if (!of_property_read_u32(np, "ti,h-pulse-width-low", &temp))
 		dsi2edp->h_pulse_width_low = temp;
-	}
+	else
+		dsi2edp->h_pulse_width_low = 0x10;
 
-	if (!of_property_read_u32(np, "ti,h-pulse-width-high", &temp)) {
+	if (!of_property_read_u32(np, "ti,h-pulse-width-high", &temp))
 		dsi2edp->h_pulse_width_high = temp;
-	}
+	else
+		dsi2edp->h_pulse_width_high = 0x80;
 
-	if (!of_property_read_u32(np, "ti,v-pulse-width-low", &temp)) {
+	if (!of_property_read_u32(np, "ti,v-pulse-width-low", &temp))
 		dsi2edp->v_pulse_width_low = temp;
-	}
+	else
+		dsi2edp->v_pulse_width_low = 0x0e;
 
-	if (!of_property_read_u32(np, "ti,v-pulse-width-high", &temp)) {
+	if (!of_property_read_u32(np, "ti,v-pulse-width-high", &temp))
 		dsi2edp->v_pulse_width_high = temp;
-	}
+	else
+		dsi2edp->v_pulse_width_high = 0x80;
 
-	if (!of_property_read_u32(np, "ti,h-back-porch", &temp)) {
+	if (!of_property_read_u32(np, "ti,h-back-porch", &temp))
 		dsi2edp->h_back_porch = temp;
-	}
+	else
+		dsi2edp->h_back_porch = 0x98;
 
-	if (!of_property_read_u32(np, "ti,v-back-porch", &temp)) {
+	if (!of_property_read_u32(np, "ti,v-back-porch", &temp))
 		dsi2edp->v_back_porch = temp;
-	}
+	else
+		dsi2edp->v_back_porch = 0x13;
 
-	if (!of_property_read_u32(np, "ti,h-front-porch", &temp)) {
+	if (!of_property_read_u32(np, "ti,h-front-porch", &temp))
 		dsi2edp->h_front_porch = temp;
-	}
+	else
+		dsi2edp->h_front_porch = 0x10;
 
-	if (!of_property_read_u32(np, "ti,v-front-porch", &temp)) {
+	if (!of_property_read_u32(np, "ti,v-front-porch", &temp))
 		dsi2edp->v_front_porch = temp;
-	}
+	else
+		dsi2edp->v_front_porch = 0x03;
 
 err:
 	return err;
@@ -355,6 +408,7 @@ static int sn65dsi86_i2c_probe(struct i2c_client *client,
 	if (!sn65dsi86_dsi2edp)
 		return -ENOMEM;
 
+	memset(sn65dsi86_dsi2edp, 0, sizeof(struct tegra_dc_dsi2edp_data));
 	mutex_init(&sn65dsi86_dsi2edp->lock);
 	sn65dsi86_dsi2edp->client_i2c = client;
 

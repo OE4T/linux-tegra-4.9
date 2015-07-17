@@ -2455,7 +2455,7 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 		return false;
 
 	if (mode->pixclock && tegra_dc_get_out_max_pixclock(dc) &&
-		mode->pixclock > tegra_dc_get_out_max_pixclock(dc))
+		mode->pixclock < tegra_dc_get_out_max_pixclock(dc))
 		return false;
 
 	/*

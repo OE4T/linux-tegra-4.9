@@ -57,25 +57,6 @@ struct DWC_ETH_QOS_prv_data *pdata;
  */
 static struct dentry *dir;
 
-/* Broadcom phy regs */
-#define BCM_RX_ERR_CNT_REG			0x12
-#define BCM_FALSE_CARR_CNT_REG			0x13
-#define BCM_RX_NOT_OK_CNT_REG			0x14
-#define BCM_EXPANSION_REG			0x15
-#define BCM_EXPANSION_CTRL_REG			0x17
-#define BCM_AUX_CTRL_SHADOW_REG 		0x18
-#define BCM_INT_STATUS_REG			0x1a
-#define BCM_INT_MASK_REG			0x1b
-
-/* Broadcom Shadow regs */
-#define BCM_10BASET_SHADOW_REG			0x1
-#define BCM_POWER_MII_CTRL_SHADOW_REG		0x2
-#define BCM_MISC_TEST_SHADOW_REG		0x4
-#define BCM_MISC_CTRL_SHADOW_REG		0x7
-
-/* Broadcom expansion regs */
-#define BCM_PKT_CNT_EXP_REG			0xf00
-
 /* Variables used to store the register value. */
 static unsigned int REGISTERS_val;
 static unsigned int MAC_MA32_127LR127_val;
@@ -853,6 +834,9 @@ static unsigned int BCM_POWER_MII_CTRL_REG_val;
 static unsigned int BCM_MISC_TEST_REG_val;
 static unsigned int BCM_MISC_CTRL_REG_val;
 static unsigned int BCM_PKT_CNT_REG_val;
+static unsigned int BCM_EEE_ADV_REG_val;
+static unsigned int BCM_EEE_RES_STS_REG_val;
+static unsigned int BCM_LPI_COUNTER_REG_val;
 
 /* For controlling properties/features of the device */
 static unsigned int feature_drop_tx_pktburstcnt_val = 1;
@@ -20862,6 +20846,24 @@ static const struct file_operations RX_NORMAL_DESC_STATUS_fops = {
 	.read = RX_NORMAL_DESC_STATUS_read,
 };
 
+static void BCM_REGS_CLAUSE45_read(int dev, int reg, unsigned int *data)
+{
+	/* Write the desired MMD devAddr */
+	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, MMD_CTRL_REG, dev);
+
+	/* Write the desired MMD regAddr */
+	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, MMD_ADDR_DATA_REG,
+		reg);
+
+	/* Select the Function : DATA with no post increment */
+	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, MMD_CTRL_REG,
+		dev | MMD_CTRL_FUNC_DATA_NOINCR);
+
+	/* read the content of the MMD's selected register */
+	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MMD_ADDR_DATA_REG,
+		data);
+}
+
 static ssize_t BCM_REGS_read(struct file *file, char __user * userbuf,
 				     size_t count, loff_t * ppos)
 {
@@ -20939,9 +20941,20 @@ static ssize_t BCM_REGS_read(struct file *file, char __user * userbuf,
 				     &BCM_PKT_CNT_REG_val);
 	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, BCM_EXPANSION_CTRL_REG, 0x000);
 
+	/* EEE advertisement regs */
+	BCM_REGS_CLAUSE45_read(MDIO_MMD_AN, CL45_ADV_EEE_REG,
+		&BCM_EEE_ADV_REG_val);
+
+	/* EEE resolution status regs */
+	BCM_REGS_CLAUSE45_read(MDIO_MMD_AN, CL45_RES_EEE_REG,
+		&BCM_EEE_RES_STS_REG_val);
+
+	/* EEE resolution status regs */
+	BCM_REGS_CLAUSE45_read(MDIO_MMD_AN, CL45_LPI_COUNTER_REG,
+		&BCM_LPI_COUNTER_REG_val);
 
 	sprintf(debug_buf,
-		"\nBroadCom Phy Regs \n"
+		"\nBroadCom Phy Regs\n"
 		"Control(0x0)                        : %#x\n"
 		"Status(0x1)                         : %#x\n"
 		"Id1 (0x2)                           : %#x\n"
@@ -20964,7 +20977,10 @@ static ssize_t BCM_REGS_read(struct file *file, char __user * userbuf,
 		"Misc Ctrl(0x18, Shadow 111)         : %#x\n"
 		"Int Status(0x1a)                    : %#x\n"
 		"Int Mask(0x1b)                      : %#x\n"
-		"Pkt Count(expansion reg 0xf00)      : %#x\n",
+		"Pkt Count(expansion reg 0xf00)      : %#x\n"
+		"EEE advertisement(C45, Dev7, 0x3C)  : %#x\n"
+		"EEE resolution (C45, Dev7, 0x803E)  : %#x\n"
+		"LPI Mode Counter(C45, Dev7, 0x803F) : %#x\n",
 	        MII_BMCR_REG_val,
 		MII_BMSR_REG_val,
 		MII_PHYSID1_REG_val,
@@ -20987,7 +21003,10 @@ static ssize_t BCM_REGS_read(struct file *file, char __user * userbuf,
 		BCM_MISC_CTRL_REG_val,
 		BCM_INT_STATUS_REG_val,
 		BCM_INT_MASK_REG_val,
-		BCM_PKT_CNT_REG_val
+		BCM_PKT_CNT_REG_val,
+		BCM_EEE_ADV_REG_val,
+		BCM_EEE_RES_STS_REG_val,
+		BCM_LPI_COUNTER_REG_val
 		);
 
 	ret =

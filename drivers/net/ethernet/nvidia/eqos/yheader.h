@@ -277,6 +277,51 @@
 #define DWC_ETH_QOS_PHY_STS     0x0011
 #define DWC_ETH_QOS_AUX_CTL     0x0018
 
+/* Broadcom phy regs */
+#define BCM_RX_ERR_CNT_REG			0x12
+#define BCM_FALSE_CARR_CNT_REG			0x13
+#define BCM_RX_NOT_OK_CNT_REG			0x14
+#define BCM_EXPANSION_REG			0x15
+#define BCM_EXPANSION_CTRL_REG			0x17
+#define BCM_AUX_CTRL_SHADOW_REG			0x18
+#define BCM_INT_STATUS_REG			0x1a
+#define BCM_INT_MASK_REG			0x1b
+
+/* Broadcom Shadow regs */
+#define BCM_10BASET_SHADOW_REG			0x1
+#define BCM_POWER_MII_CTRL_SHADOW_REG		0x2
+#define BCM_MISC_TEST_SHADOW_REG		0x4
+#define BCM_MISC_CTRL_SHADOW_REG		0x7
+
+/* Broadcom expansion regs */
+#define BCM_PKT_CNT_EXP_REG			0xf00
+#define BCM_TOPL_E40				0x40
+#define BCM_EXP_REG_SEL_TOPL			0xd00
+#define BCM_TOPL_E40_AUTOGREEE_EN		(1 << 0)
+
+/* Clause 22 registers to access clause 45 register set */
+#define MMD_CTRL_REG		0x0D	/* MMD Access Control Register */
+#define MMD_ADDR_DATA_REG	0x0E	/* MMD Access Address Data Register */
+
+/* MMD Access Control register fields */
+#define MMD_CTRL_FUNC_ADDR		0x0000	/* address */
+#define MMD_CTRL_FUNC_DATA_NOINCR	0x4000	/* data, no post increment */
+/* data, post increment on reads & writes */
+#define MMD_CTRL_FUNC_DATA_INCR_ON_RDWT	0x8000
+/* data, post increment on writes only */
+#define MMD_CTRL_FUNC_DATA_INCR_ON_WT	0xC000
+/* Clause 45 expansion register */
+#define CL45_PCS_EEE_ABLE 0x14	/* EEE Capability register */
+#define CL45_ADV_EEE_REG 0x3C   /* EEE advertisement */
+#define CL45_RES_EEE_REG 0x803E   /* EEE resolution */
+#define CL45_LPI_COUNTER_REG 0x803F   /* LPI Mode Counter */
+#define CL45_AN_EEE_LPABLE_REG	0x3D	/* EEE Link Partner ability reg */
+#define CL45_CLK_STOP_EN_REG 0x0 /* Clock Stop enable reg */
+
+/* Clause 45 expansion registers fields */
+#define CL45_LP_ADV_EEE_STATS_1000BASE_T 0x0004	/* LP EEE capabilities status */
+#define CL45_CLK_STOP_EN	0x400 /* Enable xMII Clock Stop */
+
 /* Default MTL queue operation mode values */
 #define DWC_ETH_QOS_Q_DISABLED	0x0
 #define DWC_ETH_QOS_Q_AVB 			0x1

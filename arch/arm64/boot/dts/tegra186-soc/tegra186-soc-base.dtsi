@@ -59,21 +59,21 @@
 			size = <0 0x20000000>;
 			alignment = <0 0x100000>;
 			no-map;
-			status = "okay";
+			status = "disabled";
 		};
 	};
 
 	tegra-carveouts {
 		compatible = "nvidia,carveouts";
 		memory-region = <&generic_reserved>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	mc_sid {
 		compatible = "nvidia,tegra-mc-sid";
  		reg = <0x0 0x02c00000 0x0 0x00010000>, /* MC_SID_BASE */
  		      <0x0 0x02c10000 0x0 0x00010000>; /* MC_BASE */
-		status = "okay";
+		status = "disabled";
 	};
 
 	/* HACK: Populate earlier than other device */
@@ -141,7 +141,7 @@
 			  <&common_as TEGRA_SWGROUP_CELLS(BPMP)>,
 			  <&common_as TEGRA_SWGROUP_CELLS(AFI)>;
 
-		status = "okay";
+		status = "disabled";
 
 		address-space-prop {
 			host1x_as: host1x {
@@ -204,7 +204,7 @@
 		int_mask   = <0xf3140>;
 
 		channels   = <4>;
-		status = "okay";
+		status = "disabled";
         };
 
 	xusb_mbox: mailbox@0x03538000 {
@@ -268,7 +268,7 @@
 		compatible = "nvidia,tegra186-pmc";
 		reg = <0x0 0xC360000 0x0 0x400>;
 		#padcontroller-cells = <1>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	host1x: host1x {
@@ -284,54 +284,54 @@
 		#size-cells = <2>;
 
 		ranges;
-		status = "okay";
+		status = "disabled";
 
 		host1x_ctx0: ctx0 {
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		host1x_ctx1: ctx1 {
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		host1x_ctx2: ctx2 {
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		host1x_ctx3: ctx3 {
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		host1x_ctx4: ctx4 {
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		host1x_ctx5: ctx5 {
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		host1x_ctx6: ctx6 {
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		host1x_ctx7: ctx7 {
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		nvcsi {
@@ -341,7 +341,7 @@
 			clocks = <&clk32k_in>;
 			clock-names = "nvcsi";
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		vi {
@@ -353,7 +353,7 @@
 			clock-names = "vi", "csi", "cilab",
 				      "cilcd", "cile", "emc";
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		isp@54600000 {
@@ -363,13 +363,13 @@
 			clocks = <&clk32k_in>;
 			clock-names = "isp";
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		vii2c {
 			compatible = "nvidia,tegra186-vii2c";
 			reg = <0x0 0x546c0000 0x0 0x00040000>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		nvdisplay@0x54200000 {
@@ -435,7 +435,7 @@
 			      <0x0 0x54400000 0x0 0x00040000>;
 			clocks = <&clk32k_in>;
 			clock-names = "clk32k_in";
-			status = "okay";
+			status = "disabled";
 		};
 
 		vic {
@@ -446,7 +446,7 @@
 			clock-names = "vic", "emc",
 				      "vic_floor", "emc_shared";
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		nvenc {
@@ -455,7 +455,7 @@
 			clocks = <&clk32k_in>, <&clk32k_in>;
 			clock-names = "nvenc", "emc";
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		nvdec {
@@ -464,7 +464,7 @@
 			clocks = <&clk32k_in>, <&clk32k_in>;
 			clock-names = "nvdec", "emc";
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		nvjpg {
@@ -473,7 +473,7 @@
 			clocks = <&clk32k_in>, <&clk32k_in>;
 			clock-names = "nvjpg", "emc";
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		tsec {
@@ -482,7 +482,7 @@
 			clocks = <&clk32k_in>, <&clk32k_in>;
 			clock-names = "tsec", "emc";
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		tsecb {
@@ -491,7 +491,7 @@
 			clocks = <&clk32k_in>, <&clk32k_in>;
 			clock-names = "tsecb", "emc";
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		sor {
@@ -542,28 +542,28 @@
 			compatible = "nvidia,tegra186-se-nvhost";
 			reg = <0x0 0x15810000 0x0 0x10000>;
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		se2 {
 			compatible = "nvidia,tegra186-se-nvhost";
 			reg = <0x0 0x15820000 0x0 0x10000>;
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		se3 {
 			compatible = "nvidia,tegra186-se-nvhost";
 			reg = <0x0 0x15830000 0x0 0x10000>;
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		se4 {
 			compatible = "nvidia,tegra186-se-nvhost";
 			reg = <0x0 0x15840000 0x0 0x10000>;
 			#stream-id-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 	};
 
@@ -578,7 +578,7 @@
 		nvidia,host1x = <&host1x>;
 		#stream-id-cells = <1>;
 		access-vpr-phys;
-		status = "okay";
+		status = "disabled";
 	};
 
 	psci {
@@ -587,7 +587,7 @@
 		cpu_off = <0x84000002>;
 		cpu_on = <0xC4000003>;
 		cpu_suspend = <0xC4000001>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	intc: interrupt-controller {
@@ -596,7 +596,7 @@
 		interrupt-controller;
 		reg = <0x0 0x50041000 0x0 0x1000
 		       0x0 0x50042000 0x0 0x0100>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	lic: interrupt-controller@60004000 {
@@ -608,7 +608,7 @@
 		      <0x0 0x60004300 0x0 0x40>,
 		      <0x0 0x60004400 0x0 0x40>,
 		      <0x0 0x60004500 0x0 0x40>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	timer@60005000 {
@@ -619,7 +619,7 @@
 			     <0 178 4>,
 			     <0 179 4>;
 		clock-frequency = <38400000>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	tegra_car: clock {
@@ -627,14 +627,14 @@
 		reg = <0x0 0x25000000 0x0 0x01000000>;
 		#clock-cells = <1>;
 		#reset-cells = <1>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	ufshci@02450000 {
 		compatible = "jedec,ufs-1.1";
 		reg = <0x0 0x02450000 0x0 0x4000>;
 		interrupts = < 0 44 0x04 >;
-		status = "diasbled";
+		status = "disabled";
 	};
 
 
@@ -686,14 +686,14 @@
 		interrupts = 	<0 194 0x4>,
 				<0 195 0x4>;
 		/*iommus = <&smmu TEGRA_SWGROUP_EQOS>;*/
-		status = "okay";
+		status = "disabled";
         };
 
         ether_qos_virt_test {
 		compatible = "synopsys,dwc_eqos_virt_test";
 		reg = <0x0 0x02490000 0x0 0x10000
 			0x0 0x024a0000 0x0 0x10000>;
-		status = "okay";
+		status = "disabled";
         };
 
 	hsp_top: tegra-hsp {
@@ -705,13 +705,13 @@
 		nvidia,num-SS = <0x2>;
 		nvidia,num-DB = <0x7>;
 		nvidia,num-SI = <0x8>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	chipid {
 		compatible = "nvidia,tegra186-chipid";
 		reg = <0x0 0x00100000 0x0 0x10000>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	bpmp {
@@ -720,12 +720,12 @@
 		reg = <0x0 0x0d000000 0x0 0x00800000>,
 		      <0x0 0x3004e000 0x0 0x00001000>,
 		      <0x0 0x3004f000 0x0 0x00001000>;
-		status = "okay";
+		status = "disabled";
 
 		bpmpthermal: bpmpthermal {
 			compatible = "nvidia,tegra186-bpmp-thermal";
 			#thermal-sensor-cells = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 	};
 
@@ -769,7 +769,7 @@
 			      0 107 0x04>;
 		#dma-cells = <1>;
 		#stream-id-cells = <1>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	uarta: serial@70006000 {
@@ -783,7 +783,7 @@
 		dmas = <&gpcdma 8>, <&gpcdma 8>;
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTA>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	uartb: serial@3110000 {
@@ -843,7 +843,7 @@
                 reg = <0x0 0x2430000 0x0 0x15000
 			0x0 0xC300000 0x0 0x4000>;
 		#gpio-range-cells = <3>;
-                status = "okay";
+                status = "disabled";
         };
 
         gpio: gpio@2200000 {
@@ -857,7 +857,7 @@
                         0 59 0x04
                         0 180 0x04
                         0 60 0x04>; /*AON GPIO */
-                status = "okay";
+                status = "disabled";
                 gpio-ranges = <&pinmux 0 0 246>;
                 #gpio-cells = <2>;
                 gpio-controller;
@@ -903,7 +903,7 @@
 		interrupts = <0 25 0x04>;
 		scl-gpio = <&gpio 21 0>;
 		sda-gpio = <&gpio 22 0>;
-		status = "okay";
+		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C1>;
 		clock-names = "div-clk";
@@ -919,7 +919,7 @@
 		interrupts = <0 27 0x04>;
 		scl-gpio = <&gpio 114 0>;
 		sda-gpio = <&gpio 115 0>;
-		status = "okay";
+		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C3>;
 		clock-names = "div-clk";
@@ -933,7 +933,7 @@
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x3190000 0x0 0x100>;
 		interrupts = <0 28 0x04>;
-		status = "okay";
+		status = "disabled";
 		clock-frequency = <100000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C4>;
 		clock-names = "div-clk";
@@ -945,7 +945,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "nvidia,tegra186-bpmp-i2c";
-		status = "okay";
+		status = "disabled";
 		adapter = <5>;
 	};
 
@@ -1022,13 +1022,13 @@
 			  0xc2000000 0 0x58000000 0x0 0x58000000 0 0x28000000>; /* prefetchable memory (640 MiB) */
 
 		nvidia,lane-map = <0x04>;
-		status = "okay";
+		status = "disabled";
 
 		pci@1,0 {
 			device_type = "pci";
 			assigned-addresses = <0x82000800 0 0x10000000 0 0x1000>;
 			reg = <0x000800 0 0 0 0>;
-			status = "okay";
+			status = "disabled";
 
 			#address-cells = <3>;
 			#size-cells = <2>;
@@ -1041,7 +1041,7 @@
 			device_type = "pci";
 			assigned-addresses = <0x82001000 0 0x10001000 0 0x1000>;
 			reg = <0x001000 0 0 0 0>;
-			status = "okay";
+			status = "disabled";
 
 			#address-cells = <3>;
 			#size-cells = <2>;
@@ -1096,7 +1096,7 @@
 	roc-flush {
 		compatible = "nvidia,tegra186-roc-flush";
 		reg = <0x0 0x0e080000 0x0 0x10000>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	clocks {
@@ -1109,7 +1109,7 @@
 		reg = <0>;
 		#clock-cells = <0>;
 		clock-frequency = <32768>;
-		status = "okay";
+		status = "disabled";
 	     };
 	};
 
@@ -1121,7 +1121,7 @@
 		      <0x00 0x05b10004 0x00 0x08>;
 		reg-names = "can-regs", "glue-regs", "msg-ram", "car-reg";
 		interrupts = <0 40 0x04 >;
-		status = "okay";
+		status = "disabled";
 	};
 
 	mttcan1: mttcan@0x0c320000 {
@@ -1132,11 +1132,11 @@
 		      <0x00 0x05b20004 0x00 0x08>;
 		reg-names = "can-regs", "glue-regs", "msg-ram", "car-reg";
 		interrupts = <0 42 0x04 >;
-		status = "okay";
+		status = "disabled";
 	};
 
 	cpuidle {
 		compatible = "nvidia,tegra18x-cpuidle";
-		status = "okay";
+		status = "disabled";
 	};
 };

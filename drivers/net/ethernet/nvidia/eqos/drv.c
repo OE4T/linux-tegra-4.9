@@ -1363,7 +1363,11 @@ static void DWC_ETH_QOS_default_tx_confs_single_q(
 	desc_data->osf_on = DWC_ETH_QOS_OSF_ENABLE;
 	desc_data->tx_pbl = DWC_ETH_QOS_PBL_16;
 	desc_data->tx_vlan_tag_via_reg = Y_FALSE;
+#ifdef ENABLE_VLAN_TAG_INSERTION
 	desc_data->tx_vlan_tag_ctrl = DWC_ETH_QOS_TX_VLAN_TAG_INSERT;
+#else
+	desc_data->tx_vlan_tag_ctrl = DWC_ETH_QOS_TX_VLAN_TAG_NONE;
+#endif
 	desc_data->vlan_tag_present = 0;
 	desc_data->context_setup = 0;
 	desc_data->default_mss = 0;

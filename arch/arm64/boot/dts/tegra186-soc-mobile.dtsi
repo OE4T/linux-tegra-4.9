@@ -18,7 +18,7 @@
  *
  */
 
-#include "tegra186-soc-base.dtsi"
+#include "tegra186-soc/tegra186-soc-base.dtsi"
 
 / {
 

@@ -21,7 +21,6 @@
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include <dt-bindings/memory/tegra186-swgroup.h>
 #include <dt-bindings/display/tegra-dc.h>
-#include "../../../../include/dt-bindings/pinctrl/pinctrl-tegra-padctl-uphy.h"
 #include "../../../../include/dt-bindings/clock/tegra186-clock.h"
 #include "../../../../include/dt-bindings/reset/tegra186-reset.h"
 #include "tegra186-soc/tegra186-sdhci.dtsi"

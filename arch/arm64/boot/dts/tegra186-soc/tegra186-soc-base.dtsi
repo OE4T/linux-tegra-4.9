@@ -688,6 +688,7 @@
 				<0 188 0x4>,	/* tx2 */
 				<0 193 0x4>,	/* rx3 */
 				<0 189 0x4>;	/* tx3 */
+		nvidia,csr_clock_speed = <0x19>; /* CSR clock speed 25MHz */
 		/*iommus = <&smmu TEGRA_SWGROUP_EQOS>;*/
 		status = "disabled";
         };

@@ -77,7 +77,7 @@
 #include <linux/nvs.h>
 
 
-#define NVS_IIO_DRIVER_VERSION		(202)
+#define NVS_IIO_DRIVER_VERSION		(205)
 #define NVS_ATTRS_ARRAY_SIZE		(12)
 
 enum NVS_ATTR {
@@ -121,10 +121,13 @@ struct nvs_state {
 	bool shutdown;
 	bool suspend;
 	bool flush;
+	int enabled;
 	int batch_flags;
 	unsigned int batch_period_us;
 	unsigned int batch_timeout_us;
 	unsigned int dbg;
+	unsigned int fn_dev_sts;
+	unsigned int fn_dev_errs;
 	long dbg_data_lock;
 	s64 ts_diff;
 	s64 ts;
@@ -365,6 +368,12 @@ static ssize_t nvs_dbg_cfg(struct iio_dev *indio_dev, char *buf)
 	return t;
 }
 
+/* dummy enable function to support client's NULL function pointer */
+static int nvs_fn_dev_enable(void *client, int snsr_id, int enable)
+{
+	return 0;
+}
+
 static unsigned int nvs_buf_index(unsigned int size, unsigned int *bytes)
 {
 	unsigned int index;
@@ -535,6 +544,8 @@ static int nvs_enable(struct iio_dev *indio_dev, bool en)
 	}
 
 	ret = st->fn_dev->enable(st->client, st->cfg->snsr_id, enable);
+	if (!ret)
+		st->enabled = enable;
 	if (*st->fn_dev->sts & NVS_STS_SPEW_MSG)
 		dev_info(st->dev, "%s %d ret=%d", __func__, enable, ret);
 	return ret;
@@ -574,6 +585,14 @@ static ssize_t nvs_attr_store(struct device *dev,
 		ret = nvs_enable(indio_dev, (bool)new);
 		if (ret > 0)
 			ret = 0;
+		break;
+
+	case NVS_ATTR_FLAGS:
+		old = st->cfg->flags;
+		st->cfg->flags &= SENSOR_FLAG_READONLY_MASK;
+		new &= ~SENSOR_FLAG_READONLY_MASK;
+		st->cfg->flags |= new;
+		new = st->cfg->flags;
 		break;
 
 	case NVS_ATTR_MATRIX:
@@ -630,7 +649,7 @@ static ssize_t nvs_attr_show(struct device *dev,
 
 	switch (this_attr->address) {
 	case NVS_ATTR_ENABLE:
-		if (st->fn_dev->enable) {
+		if (st->fn_dev->enable != nvs_fn_dev_enable) {
 			mutex_lock(&indio_dev->mlock);
 			ret = sprintf(buf, "%x\n",
 				      st->fn_dev->enable(st->client,
@@ -845,8 +864,8 @@ static IIO_DEVICE_ATTR(fifo_reserved_event_count, S_IRUGO,
 		       nvs_attr_show, NULL, NVS_ATTR_FIFO_RSRV_EVNT_CNT);
 static IIO_DEVICE_ATTR(fifo_max_event_count, S_IRUGO,
 		       nvs_attr_show, NULL, NVS_ATTR_FIFO_MAX_EVNT_CNT);
-static IIO_DEVICE_ATTR(flags, S_IRUGO,
-		       nvs_attr_show, NULL, NVS_ATTR_FLAGS);
+static IIO_DEVICE_ATTR(flags, S_IRUGO | S_IWUSR | S_IWGRP,
+		       nvs_attr_show, nvs_attr_store, NVS_ATTR_FLAGS);
 /* matrix permissions are read only - writes are for debug */
 static IIO_DEVICE_ATTR(matrix, S_IRUGO,
 		       nvs_attr_show, nvs_attr_store, NVS_ATTR_MATRIX);
@@ -936,9 +955,14 @@ static int nvs_read_raw(struct iio_dev *indio_dev,
 		return IIO_VAL_INT;
 
 	case IIO_CHAN_INFO_BATCH_PERIOD:
-		ret = st->fn_dev->enable(st->client, st->cfg->snsr_id, -1);
-		if (ret < 0)
-			return ret;
+		if (st->fn_dev->enable == nvs_fn_dev_enable) {
+			ret = st->enabled;
+		} else {
+			ret = st->fn_dev->enable(st->client,
+						 st->cfg->snsr_id, -1);
+			if (ret < 0)
+				return ret;
+		}
 
 		if (ret)
 			*val = st->batch_period_us;
@@ -947,9 +971,14 @@ static int nvs_read_raw(struct iio_dev *indio_dev,
 		return IIO_VAL_INT;
 
 	case IIO_CHAN_INFO_BATCH_TIMEOUT:
-		ret = st->fn_dev->enable(st->client, st->cfg->snsr_id, -1);
-		if (ret < 0)
-			return ret;
+		if (st->fn_dev->enable == nvs_fn_dev_enable) {
+			ret = st->enabled;
+		} else {
+			ret = st->fn_dev->enable(st->client,
+						 st->cfg->snsr_id, -1);
+			if (ret < 0)
+				return ret;
+		}
 
 		if (ret)
 			*val = st->batch_timeout_us;
@@ -1450,6 +1479,8 @@ static int nvs_suspend(void *handle)
 	st->suspend = true;
 	if (!(st->cfg->flags & SENSOR_FLAG_WAKE_UP)) {
 		ret = st->fn_dev->enable(st->client, st->cfg->snsr_id, -1);
+		if (ret >= 0)
+			st->enabled = ret;
 		if (ret > 0)
 			ret = st->fn_dev->enable(st->client,
 						 st->cfg->snsr_id, 0);
@@ -1464,11 +1495,17 @@ static int nvs_resume(void *handle)
 {
 	struct iio_dev *indio_dev = (struct iio_dev *)handle;
 	struct nvs_state *st = iio_priv(indio_dev);
+	int ret = 0;
 
 	mutex_lock(&indio_dev->mlock);
+	if (!(st->cfg->flags & SENSOR_FLAG_WAKE_UP)) {
+		if (st->enabled)
+			ret = st->fn_dev->enable(st->client,
+						st->cfg->snsr_id, st->enabled);
+	}
 	st->suspend = false;
 	mutex_unlock(&indio_dev->mlock);
-	return 0;
+	return ret;
 }
 
 static void nvs_shutdown(void *handle)
@@ -1527,6 +1564,15 @@ static int nvs_probe(void **handle, void *dev_client, struct device *dev,
 	st->client = dev_client;
 	st->dev = dev;
 	st->fn_dev = fn_dev;
+	/* protect ourselves from NULL pointers */
+	if (st->fn_dev->enable == NULL)
+		/* hook a dummy benign function */
+		st->fn_dev->enable = nvs_fn_dev_enable;
+	if (st->fn_dev->sts == NULL)
+		st->fn_dev->sts = &st->fn_dev_sts;
+	if (st->fn_dev->errs == NULL)
+		st->fn_dev->errs = &st->fn_dev_errs;
+	/* all other pointers are tested for NULL in this code */
 	st->cfg = snsr_cfg;
 	ret = nvs_attr(indio_dev);
 	if (ret) {

@@ -66,8 +66,8 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 	if (ret > 0) {
 		ret = of_property_read_u32(np, str, (u32 *)&i);
 		if (!ret) {
-			cfg->flags &= SENSOR_FLAG_NO_CFG_MASK;
-			i &= ~SENSOR_FLAG_NO_CFG_MASK;
+			cfg->flags &= SENSOR_FLAG_READONLY_MASK;
+			i &= ~SENSOR_FLAG_READONLY_MASK;
 			cfg->flags |= i;
 		}
 	}

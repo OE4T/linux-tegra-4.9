@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/sn65dsi86_dsi2edp.h
  *
- * Copyright (c) 2013, NVIDIA Corporation.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Bibek Basu <bbasu@nvidia.com>
@@ -27,6 +27,8 @@ struct tegra_dc_dsi2edp_data {
 	struct tegra_dc_mode *mode;
 	bool dsi2edp_enabled;
 	struct mutex lock;
+	int en_gpio; /* GPIO */
+	int en_gpio_flags;
 	int pll_refclk_cfg;
 	int dsi_cha_clk_range;
 	int disable_assr;

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/sn65dsi86_dsi2edp.c
  *
- * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Bibek Basu <bbasu@nvidia.com>
@@ -24,6 +24,8 @@
 #include <linux/regmap.h>
 #include <linux/swab.h>
 #include <linux/module.h>
+#include <linux/gpio.h>
+#include <linux/of_gpio.h>
 #include <mach/dc.h>
 #include "dc_priv.h"
 #include "sn65dsi86_dsi2edp.h"
@@ -56,12 +58,26 @@ static const struct regmap_config sn65dsi86_regmap_config = {
 
 static int sn65dsi86_dsi2edp_init(struct tegra_dc_dsi_data *dsi)
 {
+	int err = 0;
+	struct tegra_dc_dsi2edp_data *dsi2edp = sn65dsi86_dsi2edp;
 	if (!sn65dsi86_dsi2edp)
 		return -ENODEV;
 
-	sn65dsi86_dsi2edp->dsi = dsi;
-	sn65dsi86_dsi2edp->mode = &dsi->dc->mode;
-	tegra_dsi_set_outdata(dsi, sn65dsi86_dsi2edp);
+	dsi2edp->dsi = dsi;
+	dsi2edp->mode = &dsi->dc->mode;
+	tegra_dsi_set_outdata(dsi, dsi2edp);
+
+	if (dsi2edp->en_gpio) {
+		err = gpio_request(dsi2edp->en_gpio, "dsi2dp");
+		if (err < 0) {
+			pr_err("err %d: dsi2dp GPIO request failed\n", err);
+		} else {
+			if (dsi2edp->en_gpio_flags & OF_GPIO_ACTIVE_LOW)
+				gpio_direction_output(dsi2edp->en_gpio, 0);
+			else
+				gpio_direction_output(dsi2edp->en_gpio, 1);
+		}
+	}
 
 	return 0;
 }
@@ -74,6 +90,12 @@ static void sn65dsi86_dsi2edp_destroy(struct tegra_dc_dsi_data *dsi)
 	if (!dsi2edp)
 		return;
 
+	if (dsi2edp->en_gpio) {
+		if (dsi2edp->en_gpio_flags & OF_GPIO_ACTIVE_LOW)
+			gpio_set_value(dsi2edp->en_gpio, 1);
+		else
+			gpio_set_value(dsi2edp->en_gpio, 0);
+	}
 	sn65dsi86_dsi2edp = NULL;
 	mutex_destroy(&dsi2edp->lock);
 }
@@ -234,6 +256,7 @@ static int of_dsi2edp_parse_platform_data(struct i2c_client *client)
 {
 	struct device_node *np = client->dev.of_node;
 	struct tegra_dc_dsi2edp_data *dsi2edp = sn65dsi86_dsi2edp;
+	enum of_gpio_flags flags;
 	int err = 0;
 	u32 temp;
 
@@ -242,6 +265,12 @@ static int of_dsi2edp_parse_platform_data(struct i2c_client *client)
 		err = -EINVAL;
 		goto err;
 	}
+
+	dsi2edp->en_gpio = of_get_named_gpio_flags(np,
+			"ti,enable-gpio", 0, &flags);
+	dsi2edp->en_gpio_flags = flags;
+	if (!dsi2edp->en_gpio)
+		dev_err(&client->dev, "dsi2edp: gpio number not provided\n");
 
 	if (!of_property_read_u32(np, "ti,pll-refclk-cfg", &temp)) {
 		dsi2edp->pll_refclk_cfg = temp;

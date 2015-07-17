@@ -89,6 +89,26 @@ void DWC_ETH_QOS_stop_all_ch_tx_dma(struct DWC_ETH_QOS_prv_data *pdata)
 	DBGPR("<--DWC_ETH_QOS_stop_all_ch_tx_dma\n");
 }
 
+/*Check if Channel 0 is PTP and has data 0xee
+  Check if Channel 1 is AV and has data 0xbb or 0xcc
+  Check if Channel 2 is AV and has data 0xdd*/
+#ifdef ENABLE_CHANNEL_DATA_CHECK
+static void check_channel_data(struct sk_buff *skb, unsigned int qInx, int is_rx)
+{
+	if (((qInx == 0) && ((*(((short *)skb->data) + 6)  & 0xFFFF) == 0xF788) &&
+				((*(((char *)skb->data) + 80) & 0xFF) != 0xee)) ||
+	   ((qInx == 1) && ((*(((short *)skb->data) + 6)  & 0xFFFF) == 0xF022) &&
+			(((*(((char *)skb->data) + 80) & 0xFF) != 0xbb) &&
+			 ((*(((char *)skb->data) + 80) & 0xFF) != 0xcc))) ||
+	   ((qInx == 2) && ((*(((short *)skb->data) + 6) & 0xFFFF) == 0xF022) &&
+			((*(((char *)skb->data) + 80) & 0xFF) != 0xdd))) {
+			while (1)
+				printk(KERN_ALERT "Incorrect %s data 0x%x in Q %d\n",
+						((is_rx) ? "RX" : "TX"),*(((char *)skb->data) + 80), qInx);
+	}
+}
+#endif
+
 static void DWC_ETH_QOS_stop_all_ch_rx_dma(struct DWC_ETH_QOS_prv_data *pdata)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
@@ -2117,6 +2137,10 @@ static int DWC_ETH_QOS_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	print_pkt(skb, skb->len, 1, (desc_data->cur_tx - 1));
 #endif
 
+#ifdef ENABLE_CHANNEL_DATA_CHECK
+	check_channel_data(skb, qInx, 0);
+#endif
+
 	/* fallback to software time stamping if core doesn't
 	 * support hardware time stamping */
 	if ((pdata->hw_feat.tsstssel == 0) || (pdata->hwts_tx_en == 0))
@@ -3297,6 +3321,11 @@ static int DWC_ETH_QOS_clean_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
 #ifdef DWC_ETH_QOS_ENABLE_RX_PKT_DUMP
 			print_pkt(skb, pkt_len, 0, (desc_data->cur_rx));
 #endif
+
+#ifdef ENABLE_CHANNEL_DATA_CHECK
+	check_channel_data(skb, qInx, 1);
+#endif
+
 			/* check for bad/oversized packet,
 			 * error is valid only for last descriptor (OWN + LD bit set).
 			 * */

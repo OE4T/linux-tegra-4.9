@@ -149,6 +149,8 @@
 //#define DWC_ETH_QOS_ENABLE_TX_PKT_DUMP
 //#define DWC_ETH_QOS_ENABLE_RX_PKT_DUMP
 
+//#define ENABLE_CHANNEL_DATA_CHECK
+
 /* Uncomment below macro definitions for testing corresponding IP features in driver */
 //#define DWC_ETH_QOS_QUEUE_SELECT_ALGO
 //#define DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT

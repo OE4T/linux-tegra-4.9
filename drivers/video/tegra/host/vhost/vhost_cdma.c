@@ -21,6 +21,8 @@
 #include "../host1x/host1x.h"
 #include "../nvhost_cdma.h"
 #include "../nvhost_job.h"
+#include "../dev.h"
+#include "../bus_client.h"
 
 static int vhost_pb_sendrecv(struct tegra_vhost_cmd_msg *msg, size_t size_in,
 		size_t size_out)
@@ -43,7 +45,7 @@ static int vhost_pb_sendrecv(struct tegra_vhost_cmd_msg *msg, size_t size_in,
 }
 
 static int vhost_channel_submit(u64 handle, u32 client_id, u32 timeout,
-		u32 *pb_base, u32 start, u32 end)
+		u32 *pb_base, u32 start, u32 end, u32 job_id)
 {
 	struct tegra_vhost_cmd_msg *msg;
 	struct tegra_vhost_channel_submit_params *p;
@@ -65,6 +67,7 @@ static int vhost_channel_submit(u64 handle, u32 client_id, u32 timeout,
 	msg->ret = 0;
 	p = &msg->params.cdma_submit;
 	p->clientid = client_id;
+	p->job_id = job_id;
 	p->timeout = timeout;
 	p->num_entries = num_entries;
 
@@ -122,8 +125,11 @@ static void vhost_cdma_stop(struct nvhost_cdma *cdma)
  */
 static void vhost_cdma_kick(struct nvhost_cdma *cdma)
 {
+	struct nvhost_job *job;
 	u32 put;
 	int err;
+
+	job = list_entry(cdma->sync_queue.prev, struct nvhost_job, list);
 
 	put = cdma_pb_op().putptr(&cdma->push_buffer);
 
@@ -139,10 +145,10 @@ static void vhost_cdma_kick(struct nvhost_cdma *cdma)
 		 */
 		mutex_unlock(&cdma->lock);
 		err = vhost_channel_submit(virt_ctx->handle,
-					ch->virt_clientid,
-					cdma->timeout.timeout,
+					(u32)job->clientid,
+					job->timeout,
 					cdma->push_buffer.mapped,
-					start, end);
+					start, end, cdma->last_put);
 		mutex_lock(&cdma->lock);
 		if (err)
 			pr_err("%s: error return from host1x_cdma_kick\n",
@@ -230,4 +236,61 @@ void vhost_init_host1x_cdma_ops(struct nvhost_cdma_ops *ops)
 	ops->timeout_teardown_begin = vhost_cdma_timeout_teardown_begin;
 	ops->timeout_teardown_end = vhost_cdma_timeout_teardown_end;
 	ops->timeout_pb_cleanup = vhost_cdma_timeout_pb_cleanup;
+}
+
+void vhost_cdma_timeout(struct nvhost_master *dev,
+			struct tegra_vhost_chan_timeout_intr_info *info)
+{
+	struct nvhost_channel *chan;
+	struct nvhost_cdma *cdma;
+	struct nvhost_job *job, *start_job = NULL, *end_job = NULL;
+	struct platform_device *pdev;
+	int moduleid = vhost_moduleid_virt_to_hw((int)info->module_id);
+
+	pdev = nvhost_device_list_match_by_id(moduleid);
+	if (unlikely(!pdev)) {
+		dev_err(&dev->dev->dev, "chan timeout: invlid module id %d\n",
+					(int)info->module_id);
+		return;
+	}
+	chan = nvhost_find_chan_by_clientid(pdev, (int)info->client_id);
+	if (unlikely(!chan)) {
+		dev_err(&dev->dev->dev, "chan timeout: invalid client id %d\n",
+					info->client_id);
+		return;
+	}
+
+	cdma = &chan->cdma;
+	mutex_lock(&cdma->lock);
+
+	/* whether all timeout jobs have been unpined */
+	list_for_each_entry(job, &cdma->sync_queue, list) {
+		if (job->first_get == info->job_id_start)
+			start_job = job;
+		if (job->first_get == info->job_id_end) {
+			end_job = job;
+			break;
+		}
+	}
+
+	if (!end_job)
+		goto out;
+
+	job = start_job;
+	list_for_each_entry_from(job, &cdma->sync_queue, list) {
+		int i;
+
+		/* set notifier to userspace about submit timeout */
+		nvhost_job_set_notifier(job, NVHOST_CHANNEL_SUBMIT_TIMEOUT);
+
+		for (i = 0; i < job->num_syncpts; ++i)
+			nvhost_cdma_finalize_job_incrs(&dev->syncpt,
+							job->sp + i);
+
+		if (job == end_job)
+			break;
+	}
+
+out:
+	mutex_unlock(&cdma->lock);
 }

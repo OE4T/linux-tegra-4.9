@@ -49,10 +49,15 @@ void vhost_init_host1x_debug_ops(struct nvhost_debug_ops *ops);
 int vhost_syncpt_get_range(u64 handle, u32 *base, u32 *size);
 int vhost_sendrecv(struct tegra_vhost_cmd_msg *msg);
 int vhost_virt_moduleid(int moduleid);
+int vhost_moduleid_virt_to_hw(int moduleid);
 u32 vhost_channel_alloc_clientid(u64 handle, u32 moduleid);
+struct nvhost_channel *vhost_find_chan_by_clientid(struct nvhost_master *dev,
+			u32 clientid);
 int vhost_rdwr_module_regs(struct platform_device *ndev, u32 count,
 	u32 block_size, u32 __user *offsets, u32 __user *values, u32 write);
 
 int nvhost_virt_init(struct platform_device *dev, int moduleid);
 void nvhost_virt_deinit(struct platform_device *dev);
+void vhost_cdma_timeout(struct nvhost_master *dev,
+			struct tegra_vhost_chan_timeout_intr_info *info);
 #endif

@@ -95,6 +95,10 @@ static int vhost_intr_handler(void *dev_id)
 			syncpt_thresh_cascade_handler(dev,
 				&msg->info.syncpt_intr);
 			break;
+		case TEGRA_VHOST_EVENT_CHAN_TIMEOUT_INTR:
+			vhost_cdma_timeout(dev,
+				&msg->info.chan_timeout);
+			break;
 		default:
 			dev_warn(&dev->dev->dev,
 				"Unknown interrupt event %d\n", msg->event);

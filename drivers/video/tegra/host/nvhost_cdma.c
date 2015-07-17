@@ -247,6 +247,7 @@ static void cdma_start_timer_locked(struct nvhost_cdma *cdma,
 static void stop_cdma_timer_locked(struct nvhost_cdma *cdma)
 {
 	bool ret = true;
+
 	while (ret)
 		ret = cancel_delayed_work_sync(&cdma->timeout.wq);
 
@@ -587,12 +588,12 @@ void nvhost_cdma_end(struct nvhost_cdma *cdma,
 {
 	bool was_idle = list_empty(&cdma->sync_queue);
 
-	cdma_op().kick(cdma);
-
 	add_to_sync_queue(cdma,
 			job,
 			cdma->slots_used,
 			cdma->first_get);
+
+	cdma_op().kick(cdma);
 
 	/* start timer on idle -> active transitions */
 	if (job->timeout && was_idle)

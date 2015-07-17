@@ -225,6 +225,9 @@ struct nvhost_channel_userctx {
 
 	/* context address space */
 	struct nvhost_vm *vm;
+
+	/* used for attaching to ctx list in device pdata */
+	struct list_head node;
 };
 
 static int nvhost_channelrelease(struct inode *inode, struct file *filp)
@@ -235,6 +238,10 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	int i = 0;
 
 	trace_nvhost_channel_release(dev_name(&priv->pdev->dev));
+
+	mutex_lock(&pdata->userctx_list_lock);
+	list_del(&priv->node);
+	mutex_unlock(&pdata->userctx_list_lock);
 
 	/* remove this client from acm */
 	nvhost_module_remove_client(priv->pdev, priv);
@@ -327,10 +334,36 @@ static int __nvhost_channelopen(struct inode *inode,
 		goto fail_power_on;
 	nvhost_module_idle(pdev);
 
-	/* Get client id */
-	priv->clientid = atomic_add_return(1, &host->clientid);
-	if (!priv->clientid)
+	if (nvhost_dev_is_virtual(pdev)) {
+		/* If virtual, allocate a client id on the server side. This is
+		 * needed for channel recovery, to distinguish which clients
+		 * own which gathers.
+		 */
+
+		int virt_moduleid = vhost_virt_moduleid(pdata->moduleid);
+		struct nvhost_virt_ctx *virt_ctx =
+					nvhost_get_virt_data(pdev);
+
+		if (virt_moduleid < 0) {
+			ret = -EINVAL;
+			goto fail_virt_clientid;
+		}
+
+		priv->clientid =
+			vhost_channel_alloc_clientid(virt_ctx->handle,
+							virt_moduleid);
+		if (priv->clientid == 0) {
+			dev_err(&pdev->dev,
+				"vhost_channel_alloc_clientid failed\n");
+			ret = -ENOMEM;
+			goto fail_virt_clientid;
+		}
+	} else {
+		/* Get client id */
 		priv->clientid = atomic_add_return(1, &host->clientid);
+		if (!priv->clientid)
+			priv->clientid = atomic_add_return(1, &host->clientid);
+	}
 
 	/* Initialize private structure */
 	priv->timeout = host1x_pdata->nvhost_timeout_default;
@@ -360,11 +393,17 @@ static int __nvhost_channelopen(struct inode *inode,
 		}
 	}
 
+	INIT_LIST_HEAD(&priv->node);
+	mutex_lock(&pdata->userctx_list_lock);
+	list_add_tail(&priv->node, &pdata->userctx_list);
+	mutex_unlock(&pdata->userctx_list_lock);
+
 	return 0;
 
 fail_get_channel:
 	nvhost_vm_put(priv->vm);
 fail_alloc_vm:
+fail_virt_clientid:
 fail_power_on:
 	if (pdata->keepalive)
 		nvhost_module_enable_poweroff(pdev);
@@ -1556,6 +1595,9 @@ int nvhost_client_device_init(struct platform_device *dev)
 	struct nvhost_master *nvhost_master = nvhost_get_host(dev);
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
+	mutex_init(&pdata->userctx_list_lock);
+	INIT_LIST_HEAD(&pdata->userctx_list);
+
 	/* Create debugfs directory for the device */
 	nvhost_device_debug_init(dev);
 
@@ -1716,3 +1758,23 @@ nvhost_client_request_firmware(struct platform_device *dev, const char *fw_name)
 	return fw;
 }
 EXPORT_SYMBOL(nvhost_client_request_firmware);
+
+struct nvhost_channel *nvhost_find_chan_by_clientid(
+				struct platform_device *pdev,
+				int clientid)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_channel_userctx *ctx;
+	struct nvhost_channel *ch = NULL;
+
+	mutex_lock(&pdata->userctx_list_lock);
+	list_for_each_entry(ctx, &pdata->userctx_list, node) {
+		if (ctx->clientid == clientid) {
+			ch = ctx->ch;
+			break;
+		}
+	}
+	mutex_unlock(&pdata->userctx_list_lock);
+
+	return ch;
+}

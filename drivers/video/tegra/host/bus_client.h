@@ -38,4 +38,7 @@ void __iomem *get_aperture(struct platform_device *pdev, int index);
 
 int nvhost_device_get_resources(struct platform_device *dev);
 
+struct nvhost_channel *nvhost_find_chan_by_clientid(
+				struct platform_device *pdev,
+				int clientid);
 #endif

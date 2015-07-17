@@ -62,6 +62,30 @@ int vhost_virt_moduleid(int moduleid)
 	}
 }
 
+int vhost_moduleid_virt_to_hw(int moduleid)
+{
+	switch (moduleid) {
+	case TEGRA_VHOST_MODULE_HOST:
+		return NVHOST_MODULE_NONE;
+	case TEGRA_VHOST_MODULE_ISP:
+		return NVHOST_MODULE_ISP;
+	case (1 << 16) | TEGRA_VHOST_MODULE_ISP:
+		return (1 << 16) | NVHOST_MODULE_ISP;
+	case TEGRA_VHOST_MODULE_VI:
+		return NVHOST_MODULE_VI;
+	case (1 << 16) | TEGRA_VHOST_MODULE_VI:
+		return (1 << 16) | NVHOST_MODULE_VI;
+	case TEGRA_VHOST_MODULE_MSENC:
+		return NVHOST_MODULE_MSENC;
+	case TEGRA_VHOST_MODULE_VIC:
+		return NVHOST_MODULE_VIC;
+	default:
+		pr_err("unknown virtualized module %d\n", moduleid);
+		return -1;
+
+	}
+}
+
 static u64 vhost_virt_connect(int moduleid)
 {
 	struct tegra_vhost_cmd_msg msg;

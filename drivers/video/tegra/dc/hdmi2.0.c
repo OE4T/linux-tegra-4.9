@@ -302,6 +302,29 @@ static u32 tegra_hdmi_mode_min_tmds_rate(const struct fb_videomode *mode)
 }
 
 __maybe_unused
+static void tegra_hdmi_update_vrr_mode(const struct tegra_dc *dc,
+						struct fb_videomode *mode)
+{
+	struct tegra_hdmi *hdmi = dc->out_data;
+	struct tegra_vrr *vrr  = dc->out->vrr;
+
+	if (!tegra_edid_is_vrr_capable(hdmi->edid))
+		return;
+
+	if (!vrr->authenticated)
+		return;
+
+	/*
+	 * Inform VRR monitor to turn on VRR mode by increase vertical
+	 * backporch by 2, and decrease vertical front porch by 2 to keep
+	 * vertical total the same
+	 */
+	mode->upper_margin += 2;
+	if (mode->lower_margin >= 4)
+		mode->lower_margin -= 2;
+}
+
+__maybe_unused
 static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 					struct fb_videomode *mode)
 {
@@ -485,7 +508,8 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 #else
 	if (dc->fb) {
 		tegra_fb_update_monspecs(hdmi->dc->fb, mon_spec,
-					tegra_hdmi_fb_mode_filter);
+					tegra_hdmi_fb_mode_filter,
+					tegra_hdmi_update_vrr_mode);
 		tegra_fb_update_fix(hdmi->dc->fb, mon_spec);
 	}
 #endif
@@ -496,6 +520,35 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 #ifdef CONFIG_SWITCH
 	switch_set_state(&hdmi->hpd_switch, is_asserted ? 1 : 0);
 #endif
+}
+
+static int tegra_hdmi_vrr_authentication(struct tegra_hdmi *hdmi)
+{
+	int err = 0;
+	struct tegra_dc *dc = hdmi->dc;
+	struct tegra_vrr *vrr  = dc->out->vrr;
+
+	/*
+	 * vrr panel authentication, the estimated time delay is about 200ms
+	 * will be replaced with actual authentication code with subsequent
+	 * change.
+	 */
+	mdelay(200);
+	vrr->authenticated = 1;
+
+	return err;
+}
+
+static int tegra_hdmi_vrr_setup(struct tegra_hdmi *hdmi)
+{
+	int err = 0;
+
+	if (!tegra_edid_is_vrr_capable(hdmi->edid))
+		return -EINVAL;
+
+	err = tegra_hdmi_vrr_authentication(hdmi);
+
+	return err;
 }
 
 static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
@@ -511,6 +564,10 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 	err = tegra_hdmi_eld_read(hdmi);
 	if (err < 0)
 		goto fail;
+
+	err = tegra_hdmi_vrr_setup(hdmi);
+	if (err < 0)
+		dev_info(&hdmi->dc->ndev->dev, "vrr_setup failed\n");
 
 	tegra_dc_powergate_locked(hdmi->dc);
 
@@ -753,6 +810,17 @@ fail:
 	return err;
 }
 
+static int tegra_hdmi_vrr_init(struct tegra_hdmi *hdmi)
+{
+	struct tegra_dc *dc = hdmi->dc;
+	struct tegra_vrr *vrr  = dc->out->vrr;
+
+	if (!vrr || !vrr->capability)
+		return -EINVAL;
+
+	return 0;
+}
+
 static int tegra_hdmi_tmds_init(struct tegra_hdmi *hdmi)
 {
 	struct device_node *np_prod = of_find_node_by_path(TMDS_NODE);
@@ -787,8 +855,7 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 	/* Select mode with smallest clk freq > pclk */
 	tmds_len = ARRAY_SIZE(tmds_config_modes);
 	for (i = 0; i < tmds_len - 1 &&
-		tmds_config_modes[i].clk < hdmi->dc->mode.pclk; i++)
-		;
+		tmds_config_modes[i].clk < hdmi->dc->mode.pclk; i++);
 
 	if (tegra_platform_is_linsim())
 		return 0;
@@ -878,6 +945,8 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	tegra_hdmi_scdc_init(hdmi);
 
 	tegra_hdmi_hpd_init(hdmi);
+
+	tegra_hdmi_vrr_init(hdmi);
 
 	tegra_hdmi_debugfs_init(hdmi);
 
@@ -2131,4 +2200,5 @@ struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.mode_filter = tegra_hdmi_fb_mode_filter,
 	.hpd_state = tegra_dc_hdmi_hpd_state,
 	.vrr_enable = tegra_dc_hdmi_vrr_enable,
+	.vrr_mode = tegra_hdmi_update_vrr_mode,
 };

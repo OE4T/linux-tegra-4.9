@@ -627,7 +627,10 @@ void tegra_fb_pan_display_reset(struct tegra_fb_info *fb_info)
 void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 			      struct fb_monspecs *specs,
 			      bool (*mode_filter)(const struct tegra_dc *dc,
+						  struct fb_videomode *mode),
+			      void (*vrr_mode)(const struct tegra_dc *dc,
 						  struct fb_videomode *mode))
+
 {
 	struct fb_event event;
 	int i;
@@ -674,6 +677,9 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 	fb_info->info->mode = specs->modedb;
 
 	for (i = 0; i < specs->modedb_len; i++) {
+		if (vrr_mode)
+			vrr_mode(fb_info->win.dc, &specs->modedb[i]);
+
 		if (mode_filter) {
 			if (mode_filter(fb_info->win.dc, &specs->modedb[i]))
 				fb_add_videomode(&specs->modedb[i],

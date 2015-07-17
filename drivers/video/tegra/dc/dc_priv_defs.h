@@ -131,6 +131,9 @@ struct tegra_dc_out_ops {
 	bool (*hpd_state)(struct tegra_dc *dc);
 	/* Configure controller to receive hotplug events */
 	int (*hotplug_init)(struct tegra_dc *dc);
+	/* Set up VRR mode */
+	void (*vrr_mode)(const struct tegra_dc *dc,
+			struct fb_videomode *mode);
 };
 
 struct tegra_dc_shift_clk_div {

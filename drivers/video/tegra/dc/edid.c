@@ -231,6 +231,16 @@ int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data)
 	return 0;
 }
 
+bool tegra_edid_is_vrr_capable(struct tegra_edid *edid)
+{
+	if (!edid || !edid->data) {
+		pr_warn("edid invalid\n");
+		return -EFAULT;
+	}
+
+	return edid->data->min_vrr_fps;
+}
+
 static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 			       struct tegra_edid_pvt *edid)
 {

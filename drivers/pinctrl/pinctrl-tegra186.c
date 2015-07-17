@@ -3271,6 +3271,19 @@ static const struct tegra_function tegra186_functions[] = {
 		.drvtype_bank = bank,				\
 		.drvtype_bit = 13,				\
 		.drvtype_width = 2,				\
+		.lpdr_reg = PINGROUP_REG_Y(r),		\
+		.lpdr_bank = bank,				\
+		.lpdr_bit = e_lpdr,				\
+		.pbias_buf_reg = PINGROUP_REG_Y(r),		\
+		.pbias_buf_bank = bank,				\
+		.pbias_buf_bit = e_io_hv,				\
+		.preemp_reg = PINGROUP_REG_Y(r),		\
+		.preemp_bank = bank,				\
+		.preemp_bit = e_io_hv,				\
+		.rfu_in_reg = PINGROUP_REG_##rfu_in(r),	\
+		.rfu_in_bank = bank,				\
+		.rfu_in_bit = 20,				\
+		.rfu_in_width = 4,				\
 	}
 
 #define DRV_PINGROUP_Y(r) ((r))

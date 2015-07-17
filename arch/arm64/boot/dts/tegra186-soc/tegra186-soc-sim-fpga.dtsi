@@ -1,0 +1,255 @@
+/*
+ * tegra186-soc-sim-fpga.dtsi: Tegra186 soc dtsi for sim/FPGA
+ *
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+#include "tegra186-soc-base.dtsi"
+/ {
+	reserved-memory {
+		generic_carveout {
+			status = "okay";
+		};
+	};
+
+	tegra-carveouts {
+		status = "okay";
+	};
+
+	mc_sid {
+		status = "okay";
+	};
+
+	iommu {
+		status = "okay";
+	};
+
+	mc {
+		status = "okay";
+        };
+
+
+	pmc@c360000 {
+		status = "okay";
+	};
+
+	host1x {
+		status = "okay";
+		ctx0 {
+			status = "okay";
+		};
+
+		ctx1 {
+			status = "okay";
+		};
+
+		ctx2 {
+			status = "okay";
+		};
+
+		ctx3 {
+			status = "okay";
+		};
+
+		ctx4 {
+			status = "okay";
+		};
+
+		ctx5 {
+			status = "okay";
+		};
+
+		ctx6 {
+			status = "okay";
+		};
+
+		ctx7 {
+			status = "okay";
+		};
+
+		nvcsi {
+			status = "okay";
+		};
+
+		vi {
+			status = "okay";
+		};
+
+		isp@54600000 {
+			status = "okay";
+		};
+
+		vii2c {
+			status = "okay";
+		};
+
+		dsi {
+			status = "okay";
+		};
+
+		vic {
+			status = "okay";
+		};
+
+		nvenc {
+			status = "okay";
+		};
+
+		nvdec {
+			status = "okay";
+		};
+
+		nvjpg {
+			status = "okay";
+		};
+
+		tsec {
+			status = "okay";
+		};
+
+		tsecb {
+			status = "okay";
+		};
+
+		se1 {
+			status = "okay";
+		};
+
+		se2 {
+			status = "okay";
+		};
+
+		se3 {
+			status = "okay";
+		};
+
+		se4 {
+			status = "okay";
+		};
+	};
+
+	gp10b {
+		status = "okay";
+	};
+
+	psci {
+		status = "okay";
+	};
+
+	interrupt-controller {
+		status = "okay";
+	};
+
+	interrupt-controller@60004000 {
+		status = "okay";
+	};
+
+	timer@60005000 {
+		status = "okay";
+	};
+
+	clock {
+		status = "okay";
+	};
+
+        ether_qos@02490000 {
+		status = "okay";
+        };
+
+        ether_qos_virt_test {
+		status = "okay";
+        };
+
+	tegra-hsp {
+		status = "okay";
+	};
+
+	chipid {
+		status = "okay";
+	};
+
+	bpmp {
+		status = "okay";
+
+		bpmpthermal {
+			status = "okay";
+		};
+	};
+
+	dma@2600000 {
+		status = "okay";
+	};
+
+	serial@70006000 {
+		status = "okay";
+	};
+
+	pinmux@2430000 {
+                status = "okay";
+        };
+
+        gpio@2200000 {
+                status = "okay";
+        };
+
+	i2c@3160000 {
+		status = "okay";
+	};
+
+	i2c@3180000 {
+		status = "okay";
+	};
+
+	i2c@3190000 {
+		status = "okay";
+	};
+
+	bpmp_i2c {
+		status = "okay";
+	};
+
+	pcie-controller {
+		status = "okay";
+
+		pci@1,0 {
+			status = "okay";
+		};
+
+		pci@2,0 {
+			status = "okay";
+		};
+
+	};
+
+	roc-flush {
+		status = "okay";
+	};
+
+	clocks {
+	     clk32k_in@0 {
+		status = "okay";
+	     };
+	};
+
+	mttcan@0x0c310000 {
+		status = "okay";
+	};
+
+	mttcan@0x0c320000 {
+		status = "okay";
+	};
+
+	cpuidle {
+		compatible = "nvidia,tegra18x-cpuidle";
+		status = "okay";
+	};
+};

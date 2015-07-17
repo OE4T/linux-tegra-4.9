@@ -49,6 +49,19 @@
 		serial5 = &uartf;
 	};
 
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		generic_reserved: generic_carveout {
+			compatible = "nvidia,generic_carveout";
+			size = <0 0x20000000>;
+			alignment = <0 0x100000>;
+			no-map;
+		};
+	};
+
 	tegra-carveouts {
 		compatible = "nvidia,carveouts";
 		memory-region = <&generic_reserved>;

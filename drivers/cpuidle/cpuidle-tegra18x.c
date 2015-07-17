@@ -545,7 +545,7 @@ static void crossover_init(struct device_node *of_states) {
 			if (of_property_read_u32(child,
 				table1[i].name, &value) == 0)
 				tegra_mce_update_crossover_time
-					(value, table1[i].index);
+					(table1[i].index, value);
 	}
 }
 
@@ -556,7 +556,7 @@ static int tegra_mce_cpu_notify(struct notifier_block *nb,
 	struct device_node *a57_xover;
         int cpu = (long)pcpu;
 
-	printk("cpuidle: Init Power Crossover thresholds for core %d", cpu);
+	printk("cpuidle: Init Power Crossover thresholds for core %d\n", cpu);
 	denver_xover = of_find_node_by_name(NULL, "denver_crossover_thresholds");
 	a57_xover = of_find_node_by_name(NULL, "a57_crossover_thresholds");
 

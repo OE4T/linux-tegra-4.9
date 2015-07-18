@@ -585,7 +585,7 @@ static int tegra_dc_i2c_read(struct tegra_dc_dp_data *dp, u32 i2c_addr,
 
 		len = 1;
 		ret = tegra_dc_dpaux_write_chunk_locked(dp,
-			DPAUX_DP_AUXCTL_CMD_I2CWR,
+			DPAUX_DP_AUXCTL_CMD_MOTWR,
 			i2c_addr, &iaddr, &len, aux_stat);
 		if (!ret) {
 			ret = tegra_dc_dpaux_read_chunk_locked(dp,

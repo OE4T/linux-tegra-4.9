@@ -463,6 +463,7 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 		gk20a_err(dev_from_gk20a(g),
 			   "timeout waiting on ucode response");
 		gk20a_fecs_dump_falcon_stats(g);
+		gk20a_gr_debug_dump(g->dev);
 		return -1;
 	} else if (check == WAIT_UCODE_ERROR) {
 		gk20a_err(dev_from_gk20a(g),

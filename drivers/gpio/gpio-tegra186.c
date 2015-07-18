@@ -58,6 +58,10 @@
 #define GPIO_SCR_DIFF	0x08
 
 #define GPIO_CONTROLLERS_DIFF 0x1000
+#define GPIO_SCR_SEC_WEN		(1 << 28)
+#define GPIO_SCR_SEC_REN		(1 << 27)
+#define GPIO_SCR_SEC_G1R		(1 << 1)
+#define GPIO_SCR_SEC_G1W		(1 << 9)
 
 #define DEFAULT_IRQ_OFFSET 32
 
@@ -145,6 +149,45 @@ static inline void tegra_gpio_writel(u32 val, u32 gpio, u32 reg_offset)
 		+ temp_addr);
 }
 
+static inline bool is_gpio_accessible(u32 offset)
+{
+	/*This function will return if the GPIO is accessible by CPU */
+	bool ret;
+	u32 controller;
+	u32 val;
+	u32 port;
+	u32 i, j;
+	int pin;
+	controller = controller_index(offset);
+	ret = false;
+
+	if (controller == -1)
+		printk("\n invalid gpio number\n");
+	else {
+		port = offset / 8;
+		pin = offset % 8;
+		for (i = 0; i < MAX_GPIO_CONTROLLERS; i++) {
+			for (j = 0; j < MAX_GPIO_PORTS; j++) {
+				if (tegra186_gpio_map[i][j] == port)
+					break;
+			}
+		}
+		if(controller != (MAX_GPIO_CONTROLLERS -1))
+			i = 0;
+		else
+			i = 1;
+		val = __raw_readl(tegra_gpio->regs[i] +
+			(controller * GPIO_CONTROLLERS_DIFF) +
+			(j * GPIO_SCR_DIFF) + (pin * GPIO_SCR_REG));
+
+		if (val & (GPIO_SCR_SEC_WEN | GPIO_SCR_SEC_REN |
+			GPIO_SCR_SEC_G1R | GPIO_SCR_SEC_G1W))
+			ret = true;
+		else
+			ret = false;
+	}
+	return ret;
+}
 
 static void tegra_gpio_enable(int gpio)
 {
@@ -161,7 +204,14 @@ static void tegra_gpio_disable(int gpio)
 
 static int tegra_gpio_request(struct gpio_chip *chip, unsigned offset)
 {
-	return pinctrl_request_gpio(chip->base + offset);
+	bool accessible;
+	accessible = is_gpio_accessible(offset);
+	/* overwriting accessible */
+	accessible = true;
+	if (accessible)
+		return pinctrl_request_gpio(chip->base + offset);
+	else
+		return -EBUSY;
 }
 
 static void tegra_gpio_free(struct gpio_chip *chip, unsigned offset)

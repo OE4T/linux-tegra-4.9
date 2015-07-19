@@ -201,8 +201,7 @@
 
 	tegra-carveouts {
 		compatible = "nvidia,carveouts";
-		iommus = <&smmu TEGRA_SWGROUP_HC>,
-			 <&smmu TEGRA_SWGROUP_AVPC>;
+		iommus = <&smmu TEGRA_SWGROUP_HC>;
 		memory-region = <&iram>;
 		status = "okay";
 	};

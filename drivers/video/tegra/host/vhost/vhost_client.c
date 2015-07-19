@@ -27,6 +27,8 @@
 
 #include "vhost.h"
 #include "t124/t124.h"
+#include "t210/t210.h"
+#include "../../../../arch/arm/mach-tegra/iomap.h"
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "t186/t186.h"
 #endif
@@ -40,17 +42,29 @@ static struct of_device_id tegra_client_of_match[] = {
 #ifdef CONFIG_ARCH_TEGRA_VIC
 	{ .compatible = "nvidia,tegra124-vhost-vic",
 		.data = (struct nvhost_device_data *)&t124_vic_info },
+	{ .compatible = "nvidia,tegra210-vhost-vic",
+		.data = (struct nvhost_device_data *)&t21_vic_info },
 #endif
 #if defined(CONFIG_TEGRA_GRHOST_VI) || defined(CONFIG_TEGRA_GRHOST_VI_MODULE)
 	{ .compatible = "nvidia,tegra124-vhost-vi",
 		.data = (struct nvhost_device_data *)&t124_vi_info },
+	{ .compatible = "nvidia,tegra210-vhost-vi",
+		.data = (struct nvhost_device_data *)&t21_vi_info },
 #endif
 #ifdef CONFIG_TEGRA_GRHOST_ISP
 	{ .compatible = "nvidia,tegra124-vhost-isp",
 		.data = (struct nvhost_device_data *)&t124_isp_info },
+	{ .compatible = "nvidia,tegra210-vhost-isp",
+		.data = (struct nvhost_device_data *)&t21_isp_info },
 #endif
 	{ .compatible = "nvidia,tegra124-vhost-msenc",
 		.data = (struct nvhost_device_data *)&t124_msenc_info },
+	{ .compatible = "nvidia,tegra210-vhost-nvenc",
+		.data = (struct nvhost_device_data *)&t21_msenc_info },
+	{ .compatible = "nvidia,tegra210-vhost-nvdec",
+		.data = (struct nvhost_device_data *)&t21_nvdec_info },
+	{ .compatible = "nvidia,tegra210-vhost-nvjpg",
+		.data = (struct nvhost_device_data *)&t21_nvjpg_info },
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	{ .compatible = "nvidia,tegra186-vhost-vic",
 		.data = (struct nvhost_device_data *)&t18_vic_info },
@@ -89,16 +103,24 @@ static int vhost_client_probe(struct platform_device *dev)
 		/* If ISP, need to differentiate ISP.0 from ISP.1 */
 		if (!IS_ENABLED(CONFIG_ARCH_TEGRA_18x_SOC)) {
 			int dev_id = 0;
-			if (sscanf(dev->name, "%x.isp", &dev_id) == 1) {
+			char engine[4];
+
+			if ((sscanf(dev->name, "%x.%3s", &dev_id, engine) == 2)
+				&& (strcmp(engine, "isp") == 0)) {
 				switch (tegra_get_chipid()) {
 				case TEGRA_CHIPID_TEGRA12:
-					if (dev_id == 0x54600000)
+					if (dev_id == TEGRA_ISP_BASE)
 						pdata = &t124_isp_info;
-					if (dev_id == 0x54680000)
+					else if (dev_id == TEGRA_ISPB_BASE)
 						pdata = &t124_ispb_info;
 					break;
+				case TEGRA_CHIPID_TEGRA21:
+					if (dev_id == TEGRA_ISP_BASE)
+						pdata = &t21_isp_info;
+					else if (dev_id == TEGRA_ISPB_BASE)
+						pdata = &t21_ispb_info;
+					break;
 				default:
-					/* Only T124 is virtualized, for now */
 					return -EINVAL;
 				}
 			}

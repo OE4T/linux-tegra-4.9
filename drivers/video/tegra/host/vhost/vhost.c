@@ -64,6 +64,10 @@ int vhost_virt_moduleid(int moduleid)
 		return TEGRA_VHOST_MODULE_MSENC;
 	case NVHOST_MODULE_VIC:
 		return TEGRA_VHOST_MODULE_VIC;
+	case NVHOST_MODULE_NVDEC:
+		return TEGRA_VHOST_MODULE_NVDEC;
+	case NVHOST_MODULE_NVJPG:
+		return TEGRA_VHOST_MODULE_NVJPG;
 	default:
 		pr_err("module %d not virtualized\n", moduleid);
 		return -1;
@@ -87,6 +91,10 @@ int vhost_moduleid_virt_to_hw(int moduleid)
 		return NVHOST_MODULE_MSENC;
 	case TEGRA_VHOST_MODULE_VIC:
 		return NVHOST_MODULE_VIC;
+	case TEGRA_VHOST_MODULE_NVDEC:
+		return NVHOST_MODULE_NVDEC;
+	case TEGRA_VHOST_MODULE_NVJPG:
+		return NVHOST_MODULE_NVJPG;
 	default:
 		pr_err("unknown virtualized module %d\n", moduleid);
 		return -1;

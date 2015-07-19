@@ -44,6 +44,7 @@
 
 #include "chip_support.h"
 #include "nvhost_scale.h"
+#include "vhost/vhost.h"
 
 #include "cg_regs.c"
 
@@ -367,6 +368,7 @@ int nvhost_init_t210_support(struct nvhost_master *host,
 {
 	int err;
 	struct t124 *t210 = NULL;
+	struct nvhost_device_data *data = platform_get_drvdata(host->dev);
 
 	op->soc_name = "tegra21x";
 
@@ -382,6 +384,14 @@ int nvhost_init_t210_support(struct nvhost_master *host,
 	op->syncpt = host1x_syncpt_ops;
 	op->intr = host1x_intr_ops;
 	op->actmon = host1x_actmon_ops;
+
+	if (nvhost_dev_is_virtual(host->dev)) {
+		data->can_powergate = false;
+		vhost_init_host1x_syncpt_ops(&op->syncpt);
+		vhost_init_host1x_intr_ops(&op->intr);
+		vhost_init_host1x_cdma_ops(&op->cdma);
+		vhost_init_host1x_debug_ops(&op->debug);
+	}
 
 	t210 = kzalloc(sizeof(struct t124), GFP_KERNEL);
 	if (!t210) {

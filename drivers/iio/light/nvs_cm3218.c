@@ -24,10 +24,13 @@
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
+#include <linux/gpio.h>
+#include <linux/of_gpio.h>
 #include <linux/of.h>
 #include <linux/nvs.h>
 #include <linux/nvs_light.h>
 
+#define CM_DRIVER_VERSION		(300)
 #define CM_VENDOR			"Capella Microsystems, Inc."
 #define CM_NAME				"cm3218x"
 #define CM_NAME_CM3218			"cm3218"
@@ -37,8 +40,7 @@
 #define CM_DEVID_CM32180		(0x02)
 #define CM_DEVID_CM32181		(0x03)
 #define CM_HW_DELAY_MS			(10)
-#define CM_ALS_SM_DFLT			(0x01)
-#define CM_ALS_PERS_DFLT		(0x00)
+#define CM_ALS_CFG_DFLT			(0x0800)
 #define CM_ALS_PSM_DFLT			(0x07)
 #define CM_R_SET_DFLT			(604)
 #define CM_LIGHT_VERSION		(1)
@@ -55,6 +57,9 @@
 #define CM_REG_CFG_RSRV_ID		(2)
 #define CM_REG_CFG_ALS_INT_EN		(1)
 #define CM_REG_CFG_ALS_SD		(0)
+#define CM_REG_CFG_USER_MSK_CM3218	(0x08F0)
+#define CM_REG_CFG_USER_MSK_CM32180	(0x18F0)
+#define CM_REG_CFG_USER_MSK_CM32181	(0x1BF0)
 #define CM_REG_WH			(0x01)
 #define CM_REG_WL			(0x02)
 #define CM_REG_PSM			(0x03)
@@ -65,6 +70,19 @@
 #define CM_REG_ALS_IF			(0x06)
 #define CM_REG_ALS_IF_L			(15)
 #define CM_REG_ALS_IF_H			(14)
+#define CM_REG_N			(8)
+/* the CM3218 & CM32180 device uses the CM_I2C_ARA to clear the INT pin */
+#define CM_I2C_ARA			(0x0C) /* I2C Alert Response Address */
+
+enum CM_DBG {
+	CM_DBG_STS = 0,
+	/* skip sequence to "hide" debug features */
+	CM_DBG_CFG = 2,
+	CM_DBG_PSM,
+	CM_DBG_REG,
+	CM_DBG_ARA,
+	CM_DBG_RD,
+};
 
 
 /* regulator names in order of powering on */
@@ -78,17 +96,17 @@ static unsigned short cm_i2c_addrs[] = {
 };
 
 static struct nvs_light_dynamic cm3218_nld_tbl[] = {
-	{ {0, 3571},  {234,  25485},  {0, 130000}, 1000, 0x08C0 },
-	{ {0, 7140},  {467,  919900}, {0, 130000}, 500,  0x0880 },
-	{ {0, 14280}, {935,  839800}, {0, 130000}, 250,  0x0840 },
-	{ {0, 28570}, {1872, 334950}, {0, 130000}, 125,  0x0800 }
+	{ {0, 3571},  {234,  25485},  {0, 130000}, 1000, 0x08C4 },
+	{ {0, 7140},  {467,  919900}, {0, 130000}, 500,  0x0884 },
+	{ {0, 14280}, {935,  839800}, {0, 130000}, 250,  0x0844 },
+	{ {0, 28570}, {1872, 334950}, {0, 130000}, 125,  0x0804 }
 };
 
 static struct nvs_light_dynamic cm32180_nld_tbl[] = {
-	{ {0, 3571},  {234,  25485},  {0, 130000}, 1000, 0x08C0 },
-	{ {0, 7140},  {467,  919900}, {0, 130000}, 500,  0x0880 },
-	{ {0, 14280}, {935,  839800}, {0, 130000}, 250,  0x0840 },
-	{ {0, 28570}, {1872, 334950}, {0, 130000}, 125,  0x0800 }
+	{ {0, 3571},  {234,  25485},  {0, 130000}, 1000, 0x08C4 },
+	{ {0, 7140},  {467,  919900}, {0, 130000}, 500,  0x0884 },
+	{ {0, 14280}, {935,  839800}, {0, 130000}, 250,  0x0844 },
+	{ {0, 28570}, {1872, 334950}, {0, 130000}, 125,  0x0804 }
 };
 
 static struct nvs_light_dynamic cm32181_nld_tbl[] = {
@@ -114,8 +132,8 @@ static struct cm_psm cm_psm_tbl[] = {
 
 struct cm_state {
 	struct i2c_client *i2c;
+	struct i2c_client *ara;
 	struct nvs_fn_if *nvs;
-	void *nvs_st;
 	struct sensor_cfg cfg;
 	struct delayed_work dw;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(cm_vregs)];
@@ -124,12 +142,14 @@ struct cm_state {
 	unsigned int sts;		/* debug flags */
 	unsigned int errs;		/* error count */
 	unsigned int enabled;		/* enable status */
-	bool hw_change;			/* HW changed so drop first sample */
+	int gpio_irq;			/* interrupt GPIO */
 	u16 i2c_addr;			/* I2C address */
 	u8 dev_id;			/* device ID */
-	u16 als_cfg;			/* ALS register 0 defaults */
+	u16 als_cfg_mask;		/* ALS register 0 user mask */
+	u16 als_cfg;			/* ALS register 0 user settings */
 	u16 als_psm;			/* ALS Power Save Mode */
 	u32 r_set;			/* Rset resistor value */
+	u16 rc[CM_REG_N];		/* register cache for reg dump */
 };
 
 
@@ -148,10 +168,39 @@ static void cm_err(struct cm_state *st)
 		st->errs--;
 }
 
+/* CM3218 & CM32180 don't respond to I2C until the IRQ is ACK'd with the ARA.
+ * The problem is that ARA may be needed regardless of whether the IRQ is
+ * enabled or not so we test the IRQ GPIO before each I2C transaction as a WAR.
+ */
+static int cm_irq_ack(struct cm_state *st, bool force)
+{
+	int gpio_sts;
+	int ret = 0;
+
+	if (st->ara && st->gpio_irq >= 0) {
+		if (!force)
+			gpio_sts = gpio_get_value(st->gpio_irq);
+		else
+			gpio_sts = false;
+		if (!gpio_sts)
+			ret = i2c_smbus_read_byte(st->ara);
+		if (st->sts & NVS_STS_SPEW_IRQ)
+			dev_info(&st->i2c->dev, "%s GPIO ARA %d=%d ret=%d\n",
+				 __func__, st->gpio_irq, gpio_sts, ret);
+	}
+	/* ret < 0: error
+	 * ret = 0: no action
+	 * ret > 0: ACK
+	 */
+	return ret;
+}
+
 static int cm_i2c_rd(struct cm_state *st, u8 reg, u16 *val)
 {
 	struct i2c_msg msg[2];
+	int ret;
 
+	cm_irq_ack(st, false);
 	msg[0].addr = st->i2c_addr;
 	msg[0].flags = 0;
 	msg[0].len = 1;
@@ -160,21 +209,32 @@ static int cm_i2c_rd(struct cm_state *st, u8 reg, u16 *val)
 	msg[1].flags = I2C_M_RD;
 	msg[1].len = 2;
 	msg[1].buf = (__u8 *)val;
-	if (i2c_transfer(st->i2c->adapter, msg, 2) != 2) {
-		cm_err(st);
-		return -EIO;
+	ret = i2c_transfer(st->i2c->adapter, msg, 2);
+	if (ret != 2 && st->ara) {
+		cm_irq_ack(st, true);
+		ret = i2c_transfer(st->i2c->adapter, msg, 2);
 	}
-
-	*val = le16_to_cpup(val);
-	return 0;
+	if (ret == 2) {
+		*val = le16_to_cpup(val);
+		ret = 0;
+	} else {
+		cm_err(st);
+		ret = -EIO;
+	}
+	if (st->sts & NVS_STS_SPEW_MSG)
+		dev_info(&st->i2c->dev, "%s reg=%hhx val=%hx err=%d\n",
+			 __func__, reg, *val, ret);
+	return ret;
 }
 
 static int cm_i2c_wr(struct cm_state *st, u8 reg, u16 val)
 {
 	struct i2c_msg msg;
 	u8 buf[3];
+	int ret = 0;
 
 	if (st->i2c_addr) {
+		cm_irq_ack(st, false);
 		buf[0] = reg;
 		val = cpu_to_le16(val);
 		buf[1] = val & 0xFF;
@@ -183,13 +243,23 @@ static int cm_i2c_wr(struct cm_state *st, u8 reg, u16 val)
 		msg.flags = 0;
 		msg.len = sizeof(buf);
 		msg.buf = buf;
-		if (i2c_transfer(st->i2c->adapter, &msg, 1) != 1) {
-			cm_err(st);
-			return -EIO;
+		ret = i2c_transfer(st->i2c->adapter, &msg, 1);
+		if (ret != 1 && st->ara) {
+			cm_irq_ack(st, true);
+			ret = i2c_transfer(st->i2c->adapter, &msg, 1);
 		}
+		if (ret == 1) {
+			st->rc[reg] = val;
+			ret = 0;
+		} else {
+			cm_err(st);
+			ret = -EIO;
+		}
+		if (st->sts & NVS_STS_SPEW_MSG)
+			dev_info(&st->i2c->dev, "%s reg=%hhx val=%hx err=%d\n",
+				 __func__, reg, val, ret);
 	}
-
-	return 0;
+	return ret;
 }
 
 static int cm_pm(struct cm_state *st, bool enable)
@@ -199,21 +269,20 @@ static int cm_pm(struct cm_state *st, bool enable)
 	if (enable) {
 		ret = nvs_vregs_enable(&st->i2c->dev, st->vreg,
 				       ARRAY_SIZE(cm_vregs));
-		if (ret) {
+		if (ret)
 			mdelay(CM_HW_DELAY_MS);
-			if (st->dev_id == CM_DEVID_CM32181)
-				cm_i2c_wr(st, CM_REG_PSM, st->als_psm);
-		}
+		if (st->dev_id == CM_DEVID_CM32181)
+			cm_i2c_wr(st, CM_REG_PSM, st->als_psm);
 	} else {
 		ret = nvs_vregs_sts(st->vreg, ARRAY_SIZE(cm_vregs));
 		if ((ret < 0) || (ret == ARRAY_SIZE(cm_vregs))) {
-			ret = cm_i2c_wr(st, CM_REG_CFG,
+			ret = cm_i2c_wr(st, CM_REG_CFG, st->rc[CM_REG_CFG] |
 					1 << CM_REG_CFG_ALS_SD);
 		} else if (ret > 0) {
 			nvs_vregs_enable(&st->i2c->dev, st->vreg,
 					 ARRAY_SIZE(cm_vregs));
 			mdelay(CM_HW_DELAY_MS);
-			ret = cm_i2c_wr(st, CM_REG_CFG,
+			ret = cm_i2c_wr(st, CM_REG_CFG, st->rc[CM_REG_CFG] |
 					1 << CM_REG_CFG_ALS_SD);
 		}
 		ret |= nvs_vregs_disable(&st->i2c->dev, st->vreg,
@@ -256,41 +325,32 @@ static int cm_cmd_wr(struct cm_state *st, bool irq_en)
 
 	als_cfg = st->als_cfg;
 	als_cfg |= st->nld_tbl[st->light.nld_i].driver_data;
+	cm_i2c_wr(st, CM_REG_CFG, als_cfg); /* disable IRQ */
 	if (irq_en && st->i2c->irq) {
 		ret = cm_i2c_wr(st, CM_REG_WL, st->light.hw_thresh_lo);
 		ret |= cm_i2c_wr(st, CM_REG_WH, st->light.hw_thresh_hi);
 		if (!ret) {
 			als_cfg |= (1 << CM_REG_CFG_ALS_INT_EN);
-			ret = RET_HW_UPDATE; /* flag IRQ enabled */
+			ret = cm_i2c_wr(st, CM_REG_CFG, als_cfg);
+			if (!ret)
+				ret = RET_HW_UPDATE; /* flag IRQ enabled */
 		}
 	}
-	ret |= cm_i2c_wr(st, CM_REG_CFG, als_cfg);
-	if (ret >= 0)
-		st->hw_change = true;
-	if (st->sts & NVS_STS_SPEW_MSG)
-		dev_info(&st->i2c->dev, "%s als_cfg=%hx\n",
-			 __func__, als_cfg);
 	return ret;
 }
 
 static int cm_rd(struct cm_state *st)
 {
-	u16 sts;
 	u16 hw;
 	s64 ts;
-	int ret;
+	int ret = 0;
 
-	/* spec is vague so one of these should clear the IRQ */
-	ret = cm_i2c_rd(st, CM_REG_ALS, &hw);
-	ret |= cm_i2c_rd(st, CM_REG_ALS_IF, &sts);
+	/* spec is vague so one of these should clear the IRQ for CM32181 */
+	if (st->dev_id == CM_DEVID_CM32181)
+		ret = cm_i2c_rd(st, CM_REG_ALS_IF, &hw);
+	ret |= cm_i2c_rd(st, CM_REG_ALS, &hw);
 	if (ret)
 		return ret;
-
-	if (st->hw_change) {
-		/* drop first sample after HW change */
-		st->hw_change = false;
-		return 0;
-	}
 
 	ts = cm_get_time_ns();
 	if (st->sts & NVS_STS_SPEW_DATA)
@@ -327,14 +387,18 @@ static void cm_read(struct cm_state *st)
 {
 	int ret;
 
-	st->nvs->nvs_mutex_lock(st->nvs_st);
+	st->nvs->nvs_mutex_lock(st->light.nvs_st);
 	if (st->enabled) {
 		ret = cm_rd(st);
-		if (ret < RET_HW_UPDATE)
+		if (ret < RET_HW_UPDATE) {
 			schedule_delayed_work(&st->dw,
 				    msecs_to_jiffies(st->light.poll_delay_ms));
+			if (st->sts & NVS_STS_SPEW_MSG)
+				dev_info(&st->i2c->dev, "%s poll delay=%ums\n",
+					 __func__, st->light.poll_delay_ms);
+		}
 	}
-	st->nvs->nvs_mutex_unlock(st->nvs_st);
+	st->nvs->nvs_mutex_unlock(st->light.nvs_st);
 }
 
 static void cm_work(struct work_struct *ws)
@@ -414,10 +478,17 @@ static int cm_regs(void *client, int snsr_id, char *buf)
 	ssize_t t;
 	u16 val;
 	u8 i;
+	u8 n;
 	int ret;
 
+	if (st->dev_id == CM_DEVID_CM32181)
+		n = CM_REG_ALS_IF;
+	else
+		n = CM_REG_ALS;
 	t = sprintf(buf, "registers:\n");
-	for (i = 0; i <= CM_REG_ALS_IF; i++) {
+	for (i = 0; i < CM_REG_ALS; i++)
+		t += sprintf(buf + t, "%#2x=%#4x\n", i, st->rc[i]);
+	for (; i <= n; i++) {
 		ret = cm_i2c_rd(st, i, &val);
 		if (ret)
 			t += sprintf(buf + t, "%#2x=ERR: %d\n", i, ret);
@@ -427,10 +498,92 @@ static int cm_regs(void *client, int snsr_id, char *buf)
 	return t;
 }
 
+static int cm_nvs_write(void *client, int snsr_id, unsigned int nvs)
+{
+	struct cm_state *st = (struct cm_state *)client;
+	u16 val;
+	u8 reg;
+	int ret;
+
+	switch (nvs & 0xFF) {
+	case CM_DBG_STS:
+		return 0;
+
+	case CM_DBG_CFG:
+		st->als_cfg = (nvs >> 8) & st->als_cfg_mask;
+		dev_info(&st->i2c->dev, "%s als_cfg=%hx\n",
+			 __func__, st->als_cfg);
+		return 0;
+
+	case CM_DBG_PSM:
+		if (st->dev_id == CM_DEVID_CM32181) {
+			st->als_psm = (nvs >> 8) & CM_REG_PSM_MASK;
+			dev_info(&st->i2c->dev,
+				 "%s als_psm=%hx (applied when enabled)\n",
+				 __func__, st->als_psm);
+		} else {
+			dev_info(&st->i2c->dev, "%s N/A\n", __func__);
+		}
+		return 0;
+
+	case CM_DBG_REG:
+		reg = (nvs >> 24) & 0xFF;
+		val = (nvs >> 8) & 0xFFFF;
+		st->nvs->nvs_mutex_lock(st->light.nvs_st);
+		ret = cm_i2c_wr(st, reg, val);
+		st->nvs->nvs_mutex_unlock(st->light.nvs_st);
+		dev_info(&st->i2c->dev, "%s %hx=>%hhx  err=%d\n",
+			 __func__, val, reg, ret);
+		return ret;
+
+	case CM_DBG_ARA:
+		if (st->ara) {
+			st->nvs->nvs_mutex_lock(st->light.nvs_st);
+			ret = i2c_smbus_read_byte(st->ara);
+			st->nvs->nvs_mutex_unlock(st->light.nvs_st);
+			dev_info(&st->i2c->dev, "%s ARA=%d\n", __func__, ret);
+		} else {
+			dev_info(&st->i2c->dev, "%s N/A\n", __func__);
+		}
+		return 0;
+
+	case CM_DBG_RD:
+		cm_read(st);
+		dev_info(&st->i2c->dev, "%s cm_read done\n", __func__);
+		return 0;
+
+	default:
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret;
+}
+
+static int cm_nvs_read(void *client, int snsr_id, char *buf)
+{
+	struct cm_state *st = (struct cm_state *)client;
+	ssize_t t;
+	int ret;
+
+	t = sprintf(buf, "driver v. %u\n", CM_DRIVER_VERSION);
+	if (st->ara && st->gpio_irq >= 0) {
+		ret = gpio_get_value(st->gpio_irq);
+		t += sprintf(buf + t, "gpio_irq %d=%d\n", st->gpio_irq, ret);
+	}
+	t += sprintf(buf + t, "irq=%d\n", st->i2c->irq);
+	t += sprintf(buf + t, "als_cfg=%hx\n", st->als_cfg);
+	if (st->dev_id == CM_DEVID_CM32181)
+		t += sprintf(buf + t, "als_psm=%hx\n", st->als_psm);
+	return t;
+}
+
 static struct nvs_fn_dev cm_fn_dev = {
 	.enable				= cm_enable,
 	.batch				= cm_batch,
 	.regs				= cm_regs,
+	.nvs_write			= cm_nvs_write,
+	.nvs_read			= cm_nvs_read,
 };
 
 static int cm_suspend(struct device *dev)
@@ -439,9 +592,8 @@ static int cm_suspend(struct device *dev)
 	struct cm_state *st = i2c_get_clientdata(client);
 	int ret = 0;
 
-	st->sts |= NVS_STS_SUSPEND;
-	if (st->nvs && st->nvs_st)
-		ret = st->nvs->suspend(st->nvs_st);
+	if (st->nvs && st->light.nvs_st)
+		ret = st->nvs->suspend(st->light.nvs_st);
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
 	return ret;
@@ -453,9 +605,8 @@ static int cm_resume(struct device *dev)
 	struct cm_state *st = i2c_get_clientdata(client);
 	int ret = 0;
 
-	if (st->nvs && st->nvs_st)
-		ret = st->nvs->resume(st->nvs_st);
-	st->sts &= ~NVS_STS_SUSPEND;
+	if (st->nvs && st->light.nvs_st)
+		ret = st->nvs->resume(st->light.nvs_st);
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
 	return ret;
@@ -467,9 +618,8 @@ static void cm_shutdown(struct i2c_client *client)
 {
 	struct cm_state *st = i2c_get_clientdata(client);
 
-	st->sts |= NVS_STS_SHUTDOWN;
-	if (st->nvs && st->nvs_st)
-		st->nvs->shutdown(st->nvs_st);
+	if (st->nvs && st->light.nvs_st)
+		st->nvs->shutdown(st->light.nvs_st);
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
 }
@@ -480,11 +630,13 @@ static int cm_remove(struct i2c_client *client)
 
 	if (st != NULL) {
 		cm_shutdown(client);
-		if (st->nvs && st->nvs_st)
-			st->nvs->remove(st->nvs_st);
+		if (st->nvs && st->light.nvs_st)
+			st->nvs->remove(st->light.nvs_st);
 		if (st->dw.wq)
 			destroy_workqueue(st->dw.wq);
 		cm_pm_exit(st);
+		if (st->ara)
+			i2c_unregister_device(st->ara);
 	}
 	dev_info(&client->dev, "%s\n", __func__);
 	return 0;
@@ -493,6 +645,7 @@ static int cm_remove(struct i2c_client *client)
 static int cm_id_dev(struct cm_state *st, const char *name)
 {
 	u16 val = 0;
+	bool ara = false;
 	unsigned int i;
 	unsigned int j;
 	int ret = 1;
@@ -508,9 +661,7 @@ static int cm_id_dev(struct cm_state *st, const char *name)
 		if (ret) {
 			return ret;
 		} else {
-			val &= (1 << CM_REG_CFG_RSRV_ID);
-			st->als_cfg |= val;
-			if (val) {
+			if (val & (1 << CM_REG_CFG_RSRV_ID)) {
 				if (st->i2c_addr == 0x10)
 					st->dev_id = CM_DEVID_CM3218;
 				else
@@ -524,16 +675,19 @@ static int cm_id_dev(struct cm_state *st, const char *name)
 	switch (st->dev_id) {
 	case CM_DEVID_CM3218:
 		st->cfg.part = CM_NAME_CM3218;
+		st->als_cfg_mask = CM_REG_CFG_USER_MSK_CM3218;
 		memcpy(&st->nld_tbl, &cm3218_nld_tbl, sizeof(cm3218_nld_tbl));
 		i = ARRAY_SIZE(cm3218_nld_tbl) - 1;
 		if (st->light.nld_i_hi > i)
 			st->light.nld_i_hi = i;
 		if (st->light.nld_i_lo > i)
 			st->light.nld_i_lo = i;
+		ara = true;
 		break;
 
 	case CM_DEVID_CM32180:
 		st->cfg.part = CM_NAME_CM32180;
+		st->als_cfg_mask = CM_REG_CFG_USER_MSK_CM32180;
 		memcpy(&st->nld_tbl, &cm32180_nld_tbl,
 		       sizeof(cm32180_nld_tbl));
 		i = ARRAY_SIZE(cm32180_nld_tbl) - 1;
@@ -541,10 +695,12 @@ static int cm_id_dev(struct cm_state *st, const char *name)
 			st->light.nld_i_hi = i;
 		if (st->light.nld_i_lo > i)
 			st->light.nld_i_lo = i;
+		ara = true;
 		break;
 
 	case CM_DEVID_CM32181:
 		st->cfg.part = CM_NAME_CM32181;
+		st->als_cfg_mask = CM_REG_CFG_USER_MSK_CM32181;
 		memcpy(&st->nld_tbl, &cm32181_nld_tbl, sizeof(st->nld_tbl));
 		if (st->als_psm & (1 << CM_REG_PSM_EN)) {
 			j = st->als_psm >> 1;
@@ -560,7 +716,20 @@ static int cm_id_dev(struct cm_state *st, const char *name)
 		break;
 	}
 
-	if (!ret)
+	st->als_cfg &= st->als_cfg_mask;
+	if (ara) {
+		st->ara = i2c_new_dummy(st->i2c->adapter, CM_I2C_ARA);
+		if (!st->ara) {
+			/* must have ARA control for IRQ acknowledge */
+			dev_err(&st->i2c->dev,
+				"%s ERR: i2c_new_dummy\n",
+				__func__);
+			return -ENODEV;
+		}
+	} else {
+		st->ara = NULL;
+	}
+	if (ret != 1)
 		dev_info(&st->i2c->dev, "%s found %s\n",
 			 __func__, st->cfg.part);
 	i = st->light.nld_i_lo;
@@ -621,13 +790,10 @@ static struct sensor_cfg cm_cfg_dflt = {
 
 static int cm_of_dt(struct cm_state *st, struct device_node *dn)
 {
-	u16 als_sm;
-	u16 als_pers;
 	int ret;
 
 	/* default device specific parameters */
-	als_sm = CM_ALS_SM_DFLT;
-	als_pers = CM_ALS_PERS_DFLT;
+	st->als_cfg = CM_ALS_CFG_DFLT;
 	st->als_psm = CM_ALS_PSM_DFLT;
 	st->r_set = CM_R_SET_DFLT;
 	/* default NVS ALS programmable parameters */
@@ -635,6 +801,7 @@ static int cm_of_dt(struct cm_state *st, struct device_node *dn)
 	st->light.cfg = &st->cfg;
 	st->light.hw_mask = 0xFFFF;
 	st->light.nld_tbl = st->nld_tbl;
+	st->gpio_irq = -1;
 	/* device tree parameters */
 	if (dn) {
 		/* common NVS parameters */
@@ -643,10 +810,33 @@ static int cm_of_dt(struct cm_state *st, struct device_node *dn)
 			return -ENODEV;
 
 		/* device specific parameters */
-		of_property_read_u16(dn, "als_sm", &als_sm);
-		of_property_read_u16(dn, "als_pers", &als_pers);
+		of_property_read_u16(dn, "als_cfg", &st->als_cfg);
 		of_property_read_u16(dn, "als_psm", &st->als_psm);
+		st->als_psm &= CM_REG_PSM_MASK;
 		of_property_read_u32(dn, "Rset", &st->r_set);
+		st->gpio_irq = of_get_named_gpio(dn, "gpio_irq", 0);
+	}
+
+	if (st->gpio_irq >= 0) {
+		if (gpio_is_valid(st->gpio_irq)) {
+			ret = gpio_request(st->gpio_irq, CM_NAME);
+			if (ret) {
+				dev_err(&st->i2c->dev,
+					"%s gpio_request(%d %s) ERR:%d\n",
+					__func__, st->gpio_irq, CM_NAME, ret);
+				return -EPROBE_DEFER;
+			} else {
+				ret = gpio_direction_input(st->gpio_irq);
+				if (ret < 0) {
+					dev_err(&st->i2c->dev,
+						"%s gpio_dir_inp(%d) ERR:%d\n",
+						__func__, st->gpio_irq, ret);
+					return -ENODEV;
+				}
+			}
+		} else {
+			return -EPROBE_DEFER;
+		}
 	}
 
 	/* this device supports these programmable parameters */
@@ -654,9 +844,6 @@ static int cm_of_dt(struct cm_state *st, struct device_node *dn)
 		st->light.nld_i_lo = 0;
 		st->light.nld_i_hi = ARRAY_SIZE(cm32181_nld_tbl) - 1;
 	}
-	st->als_psm &= CM_REG_PSM_MASK;
-	st->als_cfg = als_pers << CM_REG_CFG_ALS_PERS;
-	st->als_cfg |= als_sm << CM_REG_CFG_ALS_SM;
 	return 0;
 }
 
@@ -705,7 +892,7 @@ static int cm_probe(struct i2c_client *client,
 	}
 
 	st->light.handler = st->nvs->handler;
-	ret = st->nvs->probe(&st->nvs_st, st, &client->dev,
+	ret = st->nvs->probe(&st->light.nvs_st, st, &client->dev,
 			     &cm_fn_dev, &st->cfg);
 	if (ret) {
 		dev_err(&client->dev, "%s nvs_probe ERR\n", __func__);
@@ -713,8 +900,9 @@ static int cm_probe(struct i2c_client *client,
 		goto cm_probe_exit;
 	}
 
-	st->light.nvs_st = st->nvs_st;
 	INIT_DELAYED_WORK(&st->dw, cm_work);
+	if (st->gpio_irq >= 0 && !client->irq)
+		client->irq = gpio_to_irq(st->gpio_irq);
 	if (client->irq) {
 		ret = request_threaded_irq(client->irq, NULL, cm_irq_thread,
 					   IRQF_TRIGGER_FALLING | IRQF_ONESHOT,

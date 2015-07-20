@@ -2750,7 +2750,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 	/* RNG register only exists in se0/se1 */
-	if (se_num <= 1) {
+	if (se_num == 0) {
 		se_writel(se_dev,
 			SE_RNG_SRC_CONFIG_RO_ENT_SRC(DRBG_RO_ENT_SRC_ENABLE)
 			|SE_RNG_SRC_CONFIG_RO_ENT_SRC_LOCK(DRBG_RO_ENT_SRC_LOCK_ENABLE),

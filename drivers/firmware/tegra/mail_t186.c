@@ -23,6 +23,7 @@
 #include <linux/of_address.h>
 #include <linux/platform_device.h>
 #include <linux/tegra-hsp.h>
+#include <linux/tegra-soc.h>
 #include "bpmp.h"
 #include "mail_t186.h"
 
@@ -138,6 +139,10 @@ static int bpmp_channel_init(void)
 
 static int bpmp_handshake(void)
 {
+	/* HSP_SHRD_SEM_1_STA is not modelled in all unit FPGAs*/
+	if (tegra_platform_is_unit_fpga())
+		return -ENODEV;
+
 	/* FIXME: short-term WAR */
 	if (!tegra_hsp_db_can_ring(HSP_DB_BPMP) &&
 			!bpmp_readl(HSP_SHRD_SEM_1_STA)) {

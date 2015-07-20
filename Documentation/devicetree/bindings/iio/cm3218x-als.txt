@@ -22,6 +22,12 @@ Required properties:
 	the device is not found, the driver will unload itself.  This requires
 	regulators to be setup correctly for the probe function.
 - reg: i2c address of the device. It should be 0x10 or 0x48.
+- gpio_irq: GPIO to be used for the interrupt.
+  Note: This is required for the CM3218 & CM32180 since these devices require
+        an ACK of the interrupt (regardless of whether the interrupt is used or
+	not) using the I2C ARA (Alert Response Address).  Defining the GPIO
+	allows the driver the device's INT pin visibility for the action
+	required.
 
 Optional properties:
 - status: set to "ok" or "okay" for normal operation.  Set to anything else
@@ -39,11 +45,19 @@ Optional properties:
 - interrupt-parent:  GPIO number
 - interrupts:  GPIO macro
   Note: The driver will operate in poll mode if an interrupt is not specified.
+	The interrupt-parent/interrupts properties can only be specified with
+	the CM32181 device.  If the cm3218x is used for the compatibility
+	(defined above) then the gpio_irq (defined above) can be used instead.
+- als_cfg: User selection of the configuration register (register 0).
+  Note: This allows selection of the ALS_SM and ALS_PERS fields.
+- als_psm: User selection of the PSM register.
+  Note: This only applies to the CM32181 device.
 
 Example:
 	cm3218x@48 {
-		compatible = "capella,cm3218x";
-		reg = <0x10>;
-		vdd-supply = <&palmas_smps9>;
+		compatible = "capella,cm32180";
+		reg = <0x48>;
+		vdd-supply = <&vdd_3v3>;
+		gpio_irq = <&gpio TEGRA_GPIO(X, 3) GPIO_ACTIVE_LOW>;
 	};
 

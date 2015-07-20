@@ -405,6 +405,11 @@ void oz_pd_stop(struct oz_pd *pd)
 	u16 stop_apps = 0;
 	oz_trace_msg(M, "oz_pd_stop() State = 0x%x\n", pd->state);
 	oz_polling_lock_bh();
+	if (pd->state == OZ_PD_S_STOPPED) {
+		pr_info("%s: pd already stopped, return\n", __func__);
+		oz_polling_unlock_bh();
+		return;
+	}
 	oz_pd_indicate_farewells(pd);
 	stop_apps = pd->total_apps;
 	pd->total_apps = 0;

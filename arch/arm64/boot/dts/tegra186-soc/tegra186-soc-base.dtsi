@@ -857,7 +857,13 @@
 		dmas = <&gpcdma 15>, <&gpcdma 15>;
 		dma-names = "rx", "tx";
 		nvidia,clk-parents = "pll_p", "clk_m";
-		status = "disabled";
+		clocks = <&tegra_car TEGRA186_CLK_SPI1>,
+			<&tegra_car TEGRA186_CLK_PLLP_GRTBA>,
+			<&tegra_car TEGRA186_CLK_CLK_M>;
+		clock-names = "spi", "pll_p", "clk_m";
+		resets = <&tegra_car TEGRA186_RESET_SPI1>;
+		reset-names = "spi";
+		status = "okay";
 	};
 
 	spi2: spi@3230000 {
@@ -870,7 +876,13 @@
 		dmas = <&gpcdma 17>, <&gpcdma 17>;
 		dma-names = "rx", "tx";
 		nvidia,clk-parents = "pll_p", "clk_m";
-		status = "disabled";
+		clocks = <&tegra_car TEGRA186_CLK_SPI3>,
+			<&tegra_car TEGRA186_CLK_PLLP_GRTBA>,
+			<&tegra_car TEGRA186_CLK_CLK_M>;
+		clock-names = "spi", "pll_p", "clk_m";
+		resets = <&tegra_car TEGRA186_RESET_SPI3>;
+		reset-names = "spi";
+		status = "okay";
 	};
 
 	spi3: spi@3240000 {
@@ -883,7 +895,13 @@
 		dmas = <&gpcdma 18>, <&gpcdma 18>;
 		dma-names = "rx", "tx";
 		nvidia,clk-parents = "pll_p", "clk_m";
-		status = "disabled";
+		clocks = <&tegra_car TEGRA186_CLK_SPI4>,
+			<&tegra_car TEGRA186_CLK_PLLP_GRTBA>,
+			<&tegra_car TEGRA186_CLK_CLK_M>;
+		clock-names = "spi", "pll_p", "clk_m";
+		resets = <&tegra_car TEGRA186_RESET_SPI4>;
+		reset-names = "spi";
+		status = "okay";
 	};
 	qspi6: spi@3270000 {
 		compatible = "nvidia,tegra186-qspi";

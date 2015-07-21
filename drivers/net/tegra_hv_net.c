@@ -199,7 +199,7 @@ static void tegra_hv_net_xmit_work(struct work_struct *work)
 {
 	struct tegra_hv_net *hvn =
 		container_of(work, struct tegra_hv_net, xmit_work);
-	struct tegra_hv_net_stats *stats = this_cpu_ptr(hvn->stats);
+	struct tegra_hv_net_stats *stats = raw_cpu_ptr(hvn->stats);
 	struct net_device *ndev = hvn->ndev;
 	struct sk_buff *skb;
 	int ret, max_frame, count, first, last, orig_len;
@@ -373,18 +373,18 @@ tegra_hv_net_get_stats64(struct net_device *ndev,
 		stats = per_cpu_ptr(hvn->stats, cpu);
 
 		do {
-			start = u64_stats_fetch_begin_bh(&stats->tx_syncp);
+			start = u64_stats_fetch_begin_irq(&stats->tx_syncp);
 			tx_packets = stats->tx_packets;
 			tx_bytes = stats->tx_bytes;
 			tx_drops = stats->tx_drops;
-		} while (u64_stats_fetch_retry_bh(&stats->tx_syncp, start));
+		} while (u64_stats_fetch_retry_irq(&stats->tx_syncp, start));
 
 		do {
-			start = u64_stats_fetch_begin_bh(&stats->rx_syncp);
+			start = u64_stats_fetch_begin_irq(&stats->rx_syncp);
 			rx_packets = stats->rx_packets;
 			rx_bytes = stats->rx_bytes;
 			rx_drops = stats->rx_drops;
-		} while (u64_stats_fetch_retry_bh(&stats->rx_syncp, start));
+		} while (u64_stats_fetch_retry_irq(&stats->rx_syncp, start));
 
 		tot->tx_packets += tx_packets;
 		tot->tx_bytes += tx_bytes;
@@ -687,7 +687,7 @@ static int tegra_hv_net_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, ndev);
 	ether_setup(ndev);
 	ndev->netdev_ops = &tegra_hv_netdev_ops;
-	SET_ETHTOOL_OPS(ndev, &tegra_hv_ethtool_ops);
+	ndev->ethtool_ops = &tegra_hv_ethtool_ops;
 	skb_queue_head_init(&hvn->tx_q);
 	INIT_WORK(&hvn->xmit_work, tegra_hv_net_xmit_work);
 
@@ -709,7 +709,7 @@ static int tegra_hv_net_probe(struct platform_device *pdev)
 	}
 
 	hvn->xmit_wq = alloc_workqueue("tgvnet-wq-%d",
-			WQ_NON_REENTRANT | WQ_UNBOUND | WQ_MEM_RECLAIM,
+			WQ_UNBOUND | WQ_MEM_RECLAIM,
 			1,	/* FIXME: from DT? */
 			pdev->id);
 	if (hvn->xmit_wq == NULL) {

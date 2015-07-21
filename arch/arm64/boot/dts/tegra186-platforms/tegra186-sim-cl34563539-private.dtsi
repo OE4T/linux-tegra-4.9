@@ -225,6 +225,10 @@
 		reg = <0x0 0x05000000 0x0 0x01000000>;
 	};
 
+	tegra_edvd {
+		status = "okay";
+	};
+
 	uarta: serial@70006000 {
 		reg = <0x0 0x03100000 0x0 0x00010000>;
 		interrupts = <0 112 0x04>;

@@ -1086,4 +1086,12 @@
 		compatible = "nvidia,tegra186-ast";
 		reg = <0 0x0c050000 0 0x10000>;
 	};
+
+	tegra_edvd {
+		compatible = "nvidia,tegra18x-edvd";
+		reg = <0x0 0x0e070000 0x0 0x1000>, /* M/Denver cluster */
+		      <0x0 0x0e060000 0x0 0x1000>; /* B/ARM cluster */
+		status = "disabled";
+	};
+
 };

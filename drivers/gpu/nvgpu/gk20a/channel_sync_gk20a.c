@@ -155,22 +155,11 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 static void gk20a_channel_syncpt_update(void *priv, int nr_completed)
 {
 	struct channel_gk20a *ch = priv;
-	struct gk20a *g = ch->g;
 
-	/* need busy for possible channel deletion */
-	if (gk20a_busy(ch->g->dev)) {
-		gk20a_err(dev_from_gk20a(ch->g),
-				"failed to busy while syncpt update");
-		/* Last gk20a_idle()s are in channel_update, so we shouldn't
-		 * get here. If we do, the channel is badly broken now */
-		return;
-	}
+	gk20a_channel_update(ch, nr_completed);
 
 	/* note: channel_get() is in __gk20a_channel_syncpt_incr() */
-	gk20a_channel_update(ch, nr_completed);
 	gk20a_channel_put(ch);
-
-	gk20a_idle(g->dev);
 }
 
 static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,

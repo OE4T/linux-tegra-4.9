@@ -1523,6 +1523,10 @@ static int tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 			&dpcd_data));
 
 		cfg->max_lane_count = dpcd_data & NV_DPCD_MAX_LANE_COUNT_MASK;
+		if (dp->pdata && dp->pdata->lanes &&
+			dp->pdata->lanes < cfg->max_lane_count)
+			cfg->max_lane_count = dp->pdata->lanes;
+
 		cfg->tps3_supported =
 		(dpcd_data & NV_DPCD_MAX_LANE_COUNT_TPS3_SUPPORTED_YES) ?
 		true : false;
@@ -1546,6 +1550,9 @@ static int tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 
 		CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LINK_BANDWIDTH,
 			&cfg->max_link_bw));
+		if (dp->pdata && dp->pdata->link_bw &&
+			dp->pdata->link_bw < cfg->max_link_bw)
+			cfg->max_link_bw = dp->pdata->link_bw;
 
 		CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_EDP_CONFIG_CAP,
 			&dpcd_data));
@@ -1565,8 +1572,7 @@ static int tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 
 	cfg->lane_count = cfg->max_lane_count;
 
-	cfg->link_bw = (dp->pdata && dp->pdata->link_bw) ?
-			dp->pdata->link_bw : cfg->max_link_bw;
+	cfg->link_bw = cfg->max_link_bw;
 
 	cfg->enhanced_framing = cfg->support_enhanced_framing;
 

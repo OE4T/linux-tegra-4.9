@@ -364,7 +364,9 @@
 	pinctrl@0x03520000 {
 		compatible = "nvidia,tegra186-padctl-uphy";
 		reg = <0x0 0x03520000 0x0 0x1000>,
+			<0x0 0x03540000 0x0 0x1000>,
 			<0x0 0x02500000 0x0 0xa0000>;
+		reg-names = "padctl", "ao", "uphy";
 		resets = <&tegra_car TEGRA186_RESET_UPHY>,
 			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY>,
 			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_PLL0>,

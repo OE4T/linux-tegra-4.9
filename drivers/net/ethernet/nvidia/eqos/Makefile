@@ -9,7 +9,6 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
 
-ccflags-y += -DHWA_NV_1617267
 ccflags-y += -DHWA_NV_1618922
 ccflags-y += -DHWA_NV_1640420
 ccflags-y += -DHWA_NV_1637630

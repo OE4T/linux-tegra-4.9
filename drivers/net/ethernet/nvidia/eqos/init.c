@@ -53,7 +53,6 @@
 #include <linux/of_device.h>
 
 #define LP_SUPPORTED 0
-static UCHAR dev_addr[6] = {0, 0x55, 0x7b, 0xb5, 0x7d, 0xf7};
 static const struct of_device_id dwc_eth_qos_of_match[] = {
 	{ .compatible = "synopsys,dwc_eth_qos" },
 	{},
@@ -168,6 +167,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	struct device_node *node = pdev->dev.of_node;
 	u32 csr_clock_speed;
+	u32 mac_addr[6];
 
 	DBGPR("***EQOS DRIVER COMPILED ON %s AT %s***\n", __DATE__, __TIME__);
 
@@ -236,14 +236,6 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_out_dev_failed;
 	}
-
-	/* Set up MAC address */
-	ndev->dev_addr[0] = dev_addr[0];
-	ndev->dev_addr[1] = dev_addr[1];
-	ndev->dev_addr[2] = dev_addr[2];
-	ndev->dev_addr[3] = dev_addr[3];
-	ndev->dev_addr[4] = dev_addr[4];
-	ndev->dev_addr[5] = dev_addr[5];
 
 	ndev->base_addr = dwc_eth_qos_base_addr;
 	SET_NETDEV_DEV(ndev, &pdev->dev);
@@ -314,6 +306,29 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 
 	MAC_1US_TIC_RgWr(csr_clock_speed - 1);
 
+	ret = of_property_read_u32_array(node, "nvidia,local-mac-address",
+			mac_addr, sizeof(mac_addr)/sizeof(u32));
+	if (ret < 0) {
+		printk(KERN_ALERT "local-mac-address read failed %d\n", ret);
+		goto err_out_mac_read_failed;
+	} else if (mac_addr[0] == 0x0 && mac_addr[1] == 0x0 &&
+		mac_addr[2] == 0x0 && mac_addr[3] == 0x0 &&
+		mac_addr[4] == 0x0 && mac_addr[5] == 0x0) {
+		printk(KERN_ALERT "ERROR!! local-mac-address is all zeros.\n");
+		printk(KERN_ALERT "Update DT with unique MAC address\n");
+		goto err_out_mac_read_failed;
+	} else {
+		printk(KERN_ALERT "Setting local MAC: %x %x %x %x %x %x\n",
+			mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3],
+			mac_addr[4], mac_addr[5]);
+		/* Set up MAC address */
+		ndev->dev_addr[0] = mac_addr[0];
+		ndev->dev_addr[1] = mac_addr[1];
+		ndev->dev_addr[2] = mac_addr[2];
+		ndev->dev_addr[3] = mac_addr[3];
+		ndev->dev_addr[4] = mac_addr[4];
+		ndev->dev_addr[5] = mac_addr[5];
+	}
 #ifndef DWC_ETH_QOS_CONFIG_PGTEST
 	/* enabling and registration of irq with magic wakeup */
 	if (1 == pdata->hw_feat.mgk_sel) {
@@ -427,6 +442,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	DWC_ETH_QOS_free_pg(pdata);
  err_out_pg_failed:
 #endif
+ err_out_mac_read_failed:
 	if (1 == pdata->hw_feat.sma_sel)
 		DWC_ETH_QOS_mdio_unregister(ndev);
 

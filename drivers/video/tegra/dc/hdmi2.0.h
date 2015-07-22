@@ -282,6 +282,7 @@ struct tegra_hdmi {
 	struct hdmi_avi_infoframe avi;
 	bool enabled;
 	int clock_refcount;
+	struct mutex clock_refcount_lock;
 
 	bool dvi;
 
@@ -295,7 +296,6 @@ struct tegra_hdmi {
 
 	struct tegra_edid *edid;
 	struct i2c_client *ddc_i2c_client;
-	struct mutex ddc_lock;
 
 	struct i2c_client *scdc_i2c_client;
 	struct delayed_work scdc_work;
@@ -317,6 +317,7 @@ struct tegra_hdmi {
 	int irq;
 	struct tegra_prod_list *prod_list;
 	int ddc_refcount;
+	struct mutex ddc_refcount_lock;
 	bool device_shutdown;
 	int plug_state;
 };

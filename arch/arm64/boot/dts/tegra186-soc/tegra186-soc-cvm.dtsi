@@ -36,9 +36,11 @@
 		spi3 = &spi3;
 		serial0 = &uarta;
 		serial1 = &uartb;
+		serial2 = &uartc;
 		serial3 = &uartd;
 		serial4 = &uarte;
 		serial5 = &uartf;
+		serial6 = &uartg;
 	};
 
 	cpus {
@@ -217,7 +219,7 @@
 		status = "okay";
 	};
 
-	serial@70006000 {
+	serial@3100000 {
 		status = "okay";
 	};
 

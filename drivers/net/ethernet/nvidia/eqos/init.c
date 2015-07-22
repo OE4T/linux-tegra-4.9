@@ -299,6 +299,22 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		printk(KERN_ALERT "%s: MDIO is not present\n\n", DEV_NAME);
 	}
 
+	ret = of_property_read_u32_array(node, "nvidia,rxq_enable_ctrl",
+		pdata->rxq_enable_ctrl,
+		sizeof(pdata->rxq_enable_ctrl)/sizeof(u32));
+	if (ret < 0) {
+		printk(KERN_ALERT "rxq_enable_ctrl read failed %d\n", ret);
+		/* use default value of enabling legacy on all channels */
+		pdata->rxq_enable_ctrl[0] = 0x1;
+		pdata->rxq_enable_ctrl[1] = 0x1;
+		pdata->rxq_enable_ctrl[2] = 0x1;
+		pdata->rxq_enable_ctrl[3] = 0x1;
+	} else {
+		printk(KERN_ALERT "rxq_enable_ctrl 0x%x 0x%x 0x%x 0x%x\n",
+			pdata->rxq_enable_ctrl[0], pdata->rxq_enable_ctrl[1],
+			pdata->rxq_enable_ctrl[2], pdata->rxq_enable_ctrl[3]);
+	}
+
 	ret = of_property_read_u32(node, "nvidia,csr_clock_speed",
 			&csr_clock_speed);
 	if (ret < 0)

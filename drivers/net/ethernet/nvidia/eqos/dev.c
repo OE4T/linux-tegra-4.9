@@ -4460,7 +4460,7 @@ static INT configure_mac(struct DWC_ETH_QOS_prv_data *pdata)
 	DBGPR("-->configure_mac\n");
 
 	for (qInx = 0; qInx < DWC_ETH_QOS_RX_QUEUE_CNT; qInx++) {
-		MAC_RQC0R_RXQEN_UdfWr(qInx, 0x2);
+		MAC_RQC0R_RXQEN_UdfWr(qInx, pdata->rxq_enable_ctrl[qInx] & 0x3);
 	}
 
 	/* Set Tx flow control parameters */

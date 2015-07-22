@@ -1321,6 +1321,9 @@ struct DWC_ETH_QOS_prv_data {
 	u32 power_down;
 	u32 power_down_type;
 
+	/* RXQ enable control */
+	u32 rxq_enable_ctrl[4];
+
 	/* AXI parameters */
 	UINT incr_incrx;
 	UINT axi_pbl;

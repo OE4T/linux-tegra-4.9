@@ -840,6 +840,11 @@
 		nvidia,csr_clock_speed = <0x19>; /* CSR clock speed 25MHz */
 		/* bootloader should update MAC address */
 		nvidia,local-mac-address = <0x0 0x0 0x0 0x0 0x0 0x0>;
+		/* rxq_enable_ctrl = <rx0 rx1 rx2 rx3>
+		 * 0x0 = Not enabled, 0x1 = Enabled for AV
+		 * 0x2 = Enabled for Legacy, 0x3 = Reserved
+		 */
+		nvidia,rxq_enable_ctrl = <2 1 1 1>;
 		status = "disabled";
         };
 

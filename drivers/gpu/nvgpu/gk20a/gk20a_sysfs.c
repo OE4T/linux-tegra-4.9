@@ -262,6 +262,19 @@ static ssize_t railgate_delay_show(struct device *dev,
 static DEVICE_ATTR(railgate_delay, ROOTRW, railgate_delay_show,
 		   railgate_delay_store);
 
+static ssize_t is_railgated_show(struct device *dev,
+			   struct device_attribute *attr, char *buf)
+{
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	bool is_railgated = 0;
+
+	if (platform->is_railgated)
+		is_railgated = platform->is_railgated(platform->g->dev);
+
+	return snprintf(buf, PAGE_SIZE, "%s\n", is_railgated ? "yes" : "no");
+}
+static DEVICE_ATTR(is_railgated, S_IRUGO, is_railgated_show, NULL);
+
 static ssize_t clockgate_delay_store(struct device *dev,
 				     struct device_attribute *attr,
 				     const char *buf, size_t count)
@@ -691,6 +704,7 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_counters_reset);
 	device_remove_file(dev, &dev_attr_load);
 	device_remove_file(dev, &dev_attr_railgate_delay);
+	device_remove_file(dev, &dev_attr_is_railgated);
 	device_remove_file(dev, &dev_attr_clockgate_delay);
 #ifdef CONFIG_PM_RUNTIME
 	device_remove_file(dev, &dev_attr_force_idle);
@@ -720,6 +734,7 @@ void gk20a_create_sysfs(struct platform_device *dev)
 	error |= device_create_file(&dev->dev, &dev_attr_counters_reset);
 	error |= device_create_file(&dev->dev, &dev_attr_load);
 	error |= device_create_file(&dev->dev, &dev_attr_railgate_delay);
+	error |= device_create_file(&dev->dev, &dev_attr_is_railgated);
 	error |= device_create_file(&dev->dev, &dev_attr_clockgate_delay);
 #ifdef CONFIG_PM_RUNTIME
 	error |= device_create_file(&dev->dev, &dev_attr_force_idle);

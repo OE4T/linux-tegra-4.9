@@ -1455,34 +1455,8 @@ static int DWC_ETH_QOS_open(struct net_device *dev)
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 	struct desc_if_struct *desc_if = &pdata->desc_if;
 
-#ifdef HWA_NV_1617267
-	ULONG lo, hi;
-#endif
 	DBGPR("-->DWC_ETH_QOS_open\n");
 
-#ifdef HWA_NV_1617267
-
-	/* temp code for bringup only.  Ensure mac address is not default */
-	MAC_MA0LR_RgRd(lo);
-	MAC_MA0HR_RgRd(hi);
-	if ((lo == 0xffffffff) && (hi == 0x8000ffff)) {
-		printk(KERN_ALERT
-	       		"%s(): ERROR-MAC address needs to be changed\n",
-			 __func__);
-		return  -EINVAL;
-	}
-
-	/* save mac addr in sw copy.  Later in this execution thread
-	 * configure_mac() is called, and it will program hw mac_addr0 with 
-	 * dev_addr[].
-	 */
-	pdata->dev->dev_addr[0] = (lo & 0xff);
-	pdata->dev->dev_addr[1] = ((lo >> 8) & 0xff);
-	pdata->dev->dev_addr[2] = ((lo >> 16) & 0xff);
-	pdata->dev->dev_addr[3] = ((lo >> 24) & 0xff);
-	pdata->dev->dev_addr[4] = (hi & 0xff);
-	pdata->dev->dev_addr[5] = ((hi >> 8) & 0xff);
-#endif
 	pdata->irq_number = dev->irq;
 #ifdef DWC_ETH_QOS_CONFIG_PGTEST
 	ret = request_irq(pdata->irq_number, DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_pg,
@@ -1599,18 +1573,6 @@ static int DWC_ETH_QOS_close(struct net_device *dev)
 
 	/* issue software reset to device */
 	hw_if->exit();
-
-#ifdef HWA_NV_1617267
-	/* Temp hack.  Preserve MAC address so user does not have to 
-  	 * reprogram it.
-	 */
-	MAC_MA0HR_RgWr(((pdata->dev->dev_addr[5] << 8) |
-			(pdata->dev->dev_addr[4])));
-	MAC_MA0LR_RgWr(((pdata->dev->dev_addr[3] << 24) |
-			(pdata->dev->dev_addr[2] << 16) |
-			(pdata->dev->dev_addr[1] << 8) |
-			(pdata->dev->dev_addr[0])));
-#endif
 
 	desc_if->tx_free_mem(pdata);
 	desc_if->rx_free_mem(pdata);

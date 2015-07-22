@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Init for T186 Architecture Chips
  *
- * Copyright (c) 2014-2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -31,6 +31,7 @@
 #include "isp/isp.h"
 #include "isp/isp_isr_v2.h"
 #include "vi/vi.h"
+#include "nvcsi/nvcsi.h"
 #include "nvdec/nvdec.h"
 #include "hardware_t186.h"
 
@@ -333,6 +334,7 @@ struct nvhost_device_data t18_nvcsi_info = {
 #ifdef TEGRA186_POWER_DOMAIN_VE
 	.powergate_id		= TEGRA186_POWER_DOMAIN_VE,
 #else
+	.ctrl_ops		= &tegra_nvcsi_ctrl_ops,
 	NVHOST_MODULE_NO_POWERGATE_ID,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,

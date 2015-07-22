@@ -19,19 +19,30 @@
 #include <linux/export.h>
 #include <linux/module.h>
 #include <linux/pm_runtime.h>
+#include <linux/fs.h>
+#include <asm/ioctls.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
+#include <linux/platform_device.h>
+#include <linux/nvhost_nvcsi_ioctl.h>
+#include <linux/uaccess.h>
+#include <linux/slab.h>
 
 #include "dev.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
 #include "t186/t186.h"
+#include "nvcsi.h"
 
 static struct of_device_id tegra_nvcsi_of_match[] = {
 	{ .compatible = "nvidia,tegra186-nvcsi",
 		.data = (struct nvhost_device_data *)&t18_nvcsi_info },
 	{ },
+};
+
+struct nvcsi_private {
+	struct platform_device *pdev;
 };
 
 static int nvcsi_probe(struct platform_device *dev)
@@ -45,8 +56,9 @@ static int nvcsi_probe(struct platform_device *dev)
 		match = of_match_device(tegra_nvcsi_of_match, &dev->dev);
 		if (match)
 			pdata = (struct nvhost_device_data *)match->data;
-	} else
+	} else {
 		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
+	}
 
 	WARN_ON(!pdata);
 	if (!pdata) {
@@ -103,6 +115,71 @@ static struct of_device_id tegra_nvcsi_domain_match[] = {
 	{.compatible = "nvidia,tegra186-ve-pd",
 	.data = (struct nvhost_device_data *)&t18_nvcsi_info},
 	{},
+};
+
+static long nvcsi_ioctl(struct file *file, unsigned int cmd,
+			unsigned long arg)
+{
+	struct nvcsi_private *priv = file->private_data;
+	struct platform_device *pdev = priv->pdev;
+
+	switch (cmd) {
+	case NVHOST_NVCSI_IOCTL_SET_NVCSI_CLK: {
+		long rate;
+
+		if (!(file->f_mode & FMODE_WRITE))
+			return -EINVAL;
+		if (get_user(rate, (long __user *)arg))
+			return -EFAULT;
+
+		return nvhost_module_set_rate(pdev, priv, rate, 0,
+						NVHOST_CLOCK);
+	}
+	}
+	return -ENOIOCTLCMD;
+}
+
+static int nvcsi_open(struct inode *inode, struct file *file)
+{
+	struct nvhost_device_data *pdata = container_of(inode->i_cdev,
+					struct nvhost_device_data, ctrl_cdev);
+	struct platform_device *pdev = pdata->pdev;
+	struct nvcsi_private *priv;
+
+	priv = kmalloc(sizeof(*priv), GFP_KERNEL);
+	if (unlikely(priv == NULL))
+		return -ENOMEM;
+
+	priv->pdev = pdev;
+
+	if (nvhost_module_add_client(pdev, priv)) {
+		kfree(priv);
+		return -ENOMEM;
+	}
+	file->private_data = priv;
+
+	return nonseekable_open(inode, file);
+}
+
+static int nvcsi_release(struct inode *inode, struct file *file)
+{
+	struct nvcsi_private *priv = file->private_data;
+	struct platform_device *pdev = priv->pdev;
+
+	nvhost_module_remove_client(pdev, priv);
+	kfree(priv);
+	return 0;
+}
+
+const struct file_operations tegra_nvcsi_ctrl_ops = {
+	.owner = THIS_MODULE,
+	.llseek = no_llseek,
+	.unlocked_ioctl = nvcsi_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = nvcsi_ioctl,
+#endif
+	.open = nvcsi_open,
+	.release = nvcsi_release,
 };
 
 static int __init nvcsi_init(void)

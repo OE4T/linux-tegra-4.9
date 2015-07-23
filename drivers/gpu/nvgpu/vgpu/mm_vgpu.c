@@ -282,6 +282,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 	msg.cmd = TEGRA_VGPU_CMD_AS_ALLOC_SHARE;
 	msg.handle = platform->virt_handle;
 	p->size = vm->va_limit;
+	p->big_page_size = vm->big_page_size;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	if (err || msg.ret) {
 		err = -ENOMEM;

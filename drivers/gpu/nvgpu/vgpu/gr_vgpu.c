@@ -601,36 +601,18 @@ static int vgpu_gr_get_zcull_info(struct gk20a *g, struct gr_gk20a *gr,
 	return 0;
 }
 
-static void vgpu_gr_detect_sm_arch(struct gk20a *g)
-{
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
-	u32 v = 0, raw_version, version = 0;
-
-	gk20a_dbg_fn("");
-
-	if (vgpu_get_attribute(platform->virt_handle,
-			TEGRA_VGPU_ATTRIB_GPC0_TPC0_SM_ARCH, &v))
-		gk20a_err(dev_from_gk20a(g), "failed to retrieve SM arch");
-
-	raw_version = gr_gpc0_tpc0_sm_arch_spa_version_v(v);
-	if (raw_version == gr_gpc0_tpc0_sm_arch_spa_version_smkepler_lp_v())
-		version = 0x320; /* SM 3.2 */
-	else
-		gk20a_err(dev_from_gk20a(g), "Unknown SM version 0x%x",
-			  raw_version);
-
-	/* on Kepler, SM version == SPA version */
-	g->gpu_characteristics.sm_arch_spa_version = version;
-	g->gpu_characteristics.sm_arch_sm_version = version;
-
-	g->gpu_characteristics.sm_arch_warp_count =
-		gr_gpc0_tpc0_sm_arch_warp_count_v(v);
-}
-
 static u32 vgpu_gr_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
-	/* One TPC for gk20a */
-	return 0x1;
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	u32 data;
+
+	WARN_ON(gpc_index > 0);
+
+	if (vgpu_get_attribute(platform->virt_handle,
+			TEGRA_VGPU_ATTRIB_GPC0_TPC_MASK, &data))
+		gk20a_err(dev_from_gk20a(g), "failed to retrieve gpc0_tpc_mask");
+
+	return data;
 }
 
 static u32 vgpu_gr_get_max_fbps_count(struct gk20a *g)
@@ -659,6 +641,40 @@ static u32 vgpu_gr_get_fbp_en_mask(struct gk20a *g)
 		gk20a_err(dev_from_gk20a(g), "failed to retrieve fbp en mask");
 
 	return fbp_en_mask;
+}
+
+static u32 vgpu_gr_get_max_ltc_per_fbp(struct gk20a *g)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	u32 val = 0;
+
+	gk20a_dbg_fn("");
+
+	if (vgpu_get_attribute(platform->virt_handle,
+			TEGRA_VGPU_ATTRIB_MAX_LTC_PER_FBP, &val))
+		gk20a_err(dev_from_gk20a(g), "failed to retrieve max ltc per fbp");
+
+	return val;
+}
+
+static u32 vgpu_gr_get_max_lts_per_ltc(struct gk20a *g)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	u32 val = 0;
+
+	gk20a_dbg_fn("");
+
+	if (vgpu_get_attribute(platform->virt_handle,
+			TEGRA_VGPU_ATTRIB_MAX_LTS_PER_LTC, &val))
+		gk20a_err(dev_from_gk20a(g), "failed to retrieve lts per ltc");
+
+	return val;
+}
+
+static u32 *vgpu_gr_rop_l2_en_mask(struct gk20a *g)
+{
+	/* no one use it yet */
+	return NULL;
 }
 
 static int vgpu_gr_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
@@ -875,10 +891,12 @@ void vgpu_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.free_obj_ctx = vgpu_gr_free_obj_ctx;
 	gops->gr.bind_ctxsw_zcull = vgpu_gr_bind_ctxsw_zcull;
 	gops->gr.get_zcull_info = vgpu_gr_get_zcull_info;
-	gops->gr.detect_sm_arch = vgpu_gr_detect_sm_arch;
 	gops->gr.get_gpc_tpc_mask = vgpu_gr_get_gpc_tpc_mask;
 	gops->gr.get_max_fbps_count = vgpu_gr_get_max_fbps_count;
 	gops->gr.get_fbp_en_mask = vgpu_gr_get_fbp_en_mask;
+	gops->gr.get_max_ltc_per_fbp = vgpu_gr_get_max_ltc_per_fbp;
+	gops->gr.get_max_lts_per_ltc = vgpu_gr_get_max_lts_per_ltc;
+	gops->gr.get_rop_l2_en_mask = vgpu_gr_rop_l2_en_mask;
 	gops->gr.zbc_set_table = vgpu_gr_add_zbc;
 	gops->gr.zbc_query_table = vgpu_gr_query_zbc;
 }

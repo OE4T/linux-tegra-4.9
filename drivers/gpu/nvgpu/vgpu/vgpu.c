@@ -22,6 +22,8 @@
 #include "gk20a/hal_gk20a.h"
 #include "gk20a/hw_mc_gk20a.h"
 
+#include "gm20b/hal_gm20b.h"
+
 static inline int vgpu_comm_init(struct platform_device *pdev)
 {
 	size_t queue_sizes[] = { TEGRA_VGPU_QUEUE_SIZES };
@@ -243,27 +245,38 @@ static void vgpu_detect_chip(struct gk20a *g)
 			g->gpu_characteristics.rev);
 }
 
+void vgpu_init_hal_common(struct gk20a *g)
+{
+	struct gpu_ops *gops = &g->ops;
+
+	vgpu_init_fifo_ops(gops);
+	vgpu_init_gr_ops(gops);
+	vgpu_init_ltc_ops(gops);
+	vgpu_init_mm_ops(gops);
+	vgpu_init_debug_ops(gops);
+}
+
 static int vgpu_init_hal(struct gk20a *g)
 {
 	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
+	int err;
 
 	switch (ver) {
 	case GK20A_GPUID_GK20A:
 		gk20a_dbg_info("gk20a detected");
-		/* init gk20a ops then override with virt extensions */
-		gk20a_init_hal(g);
-		vgpu_init_fifo_ops(&g->ops);
-		vgpu_init_gr_ops(&g->ops);
-		vgpu_init_ltc_ops(&g->ops);
-		vgpu_init_mm_ops(&g->ops);
-		vgpu_init_debug_ops(&g->ops);
+		err = vgpu_gk20a_init_hal(g);
+		break;
+	case GK20A_GPUID_GM20B:
+		gk20a_dbg_info("gm20b detected");
+		err = vgpu_gm20b_init_hal(g);
 		break;
 	default:
 		gk20a_err(&g->dev->dev, "no support for %x", ver);
-		return -ENODEV;
+		err = -ENODEV;
+		break;
 	}
 
-	return 0;
+	return err;
 }
 
 int vgpu_pm_finalize_poweron(struct device *dev)

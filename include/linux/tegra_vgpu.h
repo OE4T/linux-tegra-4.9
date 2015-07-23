@@ -89,7 +89,14 @@ enum {
 	TEGRA_VGPU_ATTRIB_L2_SIZE,
 	TEGRA_VGPU_ATTRIB_GPC0_TPC0_SM_ARCH,
 	TEGRA_VGPU_ATTRIB_NUM_FBPS,
-	TEGRA_VGPU_ATTRIB_FBP_EN_MASK
+	TEGRA_VGPU_ATTRIB_FBP_EN_MASK,
+	TEGRA_VGPU_ATTRIB_MAX_LTC_PER_FBP,
+	TEGRA_VGPU_ATTRIB_MAX_LTS_PER_LTC,
+	TEGRA_VGPU_ATTRIB_GPC0_TPC_MASK,
+	TEGRA_VGPU_ATTRIB_CACHELINE_SIZE,
+	TEGRA_VGPU_ATTRIB_COMPTAGS_PER_CACHELINE,
+	TEGRA_VGPU_ATTRIB_SLICES_PER_LTC,
+	TEGRA_VGPU_ATTRIB_LTC_COUNT
 };
 
 struct tegra_vgpu_attrib_params {
@@ -100,6 +107,7 @@ struct tegra_vgpu_attrib_params {
 struct tegra_vgpu_as_share_params {
 	u64 size;
 	u64 handle;
+	u32 big_page_size;
 };
 
 struct tegra_vgpu_as_bind_share_params {

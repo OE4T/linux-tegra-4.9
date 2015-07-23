@@ -125,6 +125,7 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 	struct tegra210_dmic *dmic = snd_soc_dai_get_drvdata(dai);
 	int channels, srate, dmic_clk, osr = TEGRA210_DMIC_OSR_64, ret;
 	struct tegra210_xbar_cif_conf cif_conf;
+	unsigned long long boost_gain;
 
 	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
 
@@ -154,10 +155,58 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 				TEGRA210_DMIC_DBG_CTRL_SC_ENABLE);
 
 	regmap_update_bits(dmic->regmap,
+				TEGRA210_DMIC_DBG_CTRL,
+				TEGRA210_DMIC_DBG_CTRL_DCR_ENABLE,
+				TEGRA210_DMIC_DBG_CTRL_DCR_ENABLE);
+
+	regmap_update_bits(dmic->regmap,
 				TEGRA210_DMIC_CTRL,
 				TEGRA210_DMIC_CTRL_CHANNEL_SELECT_MASK,
 				((1 << channels) - 1) <<
 				   TEGRA210_DMIC_CTRL_CHANNEL_SELECT_SHIFT);
+
+	/* Configure LPF for passthrough and use */
+	/* its gain register for applying boost; */
+	/* Boost Gain control has 100x factor    */
+	boost_gain = 0x00800000;
+	if (dmic->boost_gain > 0) {
+		boost_gain = ((boost_gain * dmic->boost_gain) / 100);
+		if (boost_gain > 0x7FFFFFFF) {
+			dev_warn(dev, "Boost Gain overflow\n");
+			boost_gain = 0x7FFFFFFF;
+		}
+	}
+	regmap_write(dmic->regmap,
+				TEGRA210_DMIC_LP_FILTER_GAIN,
+				(unsigned int)boost_gain);
+
+	regmap_update_bits(dmic->regmap,
+				TEGRA210_DMIC_DBG_CTRL,
+				TEGRA210_DMIC_DBG_CTRL_LP_ENABLE,
+				TEGRA210_DMIC_DBG_CTRL_LP_ENABLE);
+
+	/* Configure the two biquads for passthrough, */
+	/* i.e. b0=1, b1=0, b2=0, a1=0, a2=0          */
+	regmap_write(dmic->regmap,
+				TEGRA210_DMIC_LP_BIQUAD_0_COEF_0, 0x00800000);
+	regmap_write(dmic->regmap,
+				TEGRA210_DMIC_LP_BIQUAD_0_COEF_1, 0x00000000);
+	regmap_write(dmic->regmap,
+				TEGRA210_DMIC_LP_BIQUAD_0_COEF_2, 0x00000000);
+	regmap_write(dmic->regmap,
+				TEGRA210_DMIC_LP_BIQUAD_0_COEF_3, 0x00000000);
+	regmap_write(dmic->regmap,
+				TEGRA210_DMIC_LP_BIQUAD_0_COEF_4, 0x00000000);
+	regmap_write(dmic->regmap,
+				TEGRA210_DMIC_LP_BIQUAD_1_COEF_0, 0x00800000);
+	regmap_write(dmic->regmap,
+				TEGRA210_DMIC_LP_BIQUAD_1_COEF_1, 0x00000000);
+	regmap_write(dmic->regmap,
+				TEGRA210_DMIC_LP_BIQUAD_1_COEF_2, 0x00000000);
+	regmap_write(dmic->regmap,
+				TEGRA210_DMIC_LP_BIQUAD_1_COEF_3, 0x00000000);
+	regmap_write(dmic->regmap,
+				TEGRA210_DMIC_LP_BIQUAD_1_COEF_4, 0x00000000);
 
 	cif_conf.audio_channels = channels;
 	cif_conf.client_channels = channels;
@@ -178,6 +227,28 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 
 	dmic->soc_data->set_audio_cif(dmic->regmap, TEGRA210_DMIC_TX_CIF_CTRL,
 		&cif_conf);
+
+	return 0;
+}
+
+static int tegra210_dmic_get_boost_gain(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra210_dmic *dmic = snd_soc_codec_get_drvdata(codec);
+
+	ucontrol->value.integer.value[0] = dmic->boost_gain;
+
+	return 0;
+}
+
+static int tegra210_dmic_put_boost_gain(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra210_dmic *dmic = snd_soc_codec_get_drvdata(codec);
+
+	dmic->boost_gain = ucontrol->value.integer.value[0];
 
 	return 0;
 }
@@ -235,12 +306,19 @@ static const struct snd_soc_dapm_route tegra210_dmic_routes[] = {
 	{ "DMIC Transmit", NULL, "DMIC TX" },
 };
 
+static const struct snd_kcontrol_new tegra210_dmic_controls[] = {
+	SOC_SINGLE_EXT("Boost Gain", 0, 0, 25600, 0,
+		tegra210_dmic_get_boost_gain, tegra210_dmic_put_boost_gain),
+};
+
 static struct snd_soc_codec_driver tegra210_dmic_codec = {
 	.probe = tegra210_dmic_codec_probe,
 	.dapm_widgets = tegra210_dmic_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(tegra210_dmic_widgets),
 	.dapm_routes = tegra210_dmic_routes,
 	.num_dapm_routes = ARRAY_SIZE(tegra210_dmic_routes),
+	.controls = tegra210_dmic_controls,
+	.num_controls = ARRAY_SIZE(tegra210_dmic_controls),
 	.idle_bias_off = 1,
 };
 

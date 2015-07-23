@@ -119,6 +119,7 @@ struct tegra210_dmic {
 	struct clk *clk_pll_a_out0;
 	struct regmap *regmap;
 	const struct tegra210_dmic_soc_data *soc_data;
+	int boost_gain; /* with 100x factor */
 };
 
 #endif

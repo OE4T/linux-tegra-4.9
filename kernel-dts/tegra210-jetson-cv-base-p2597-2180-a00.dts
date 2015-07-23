@@ -537,10 +537,11 @@
 
 	sysedp_reactive_capping@1 {
 		compatible = "nvidia,tegra124-sysedp_reactive_capping";
-		nvidia,max_capping_mw = <15000>;
-		nvidia,step_alarm_mw = <1000>;
-		nvidia,step_relax_mw = <500>;
-		nvidia,relax_ms = <250>;
+		nvidia,max_capping_mw = <0>;
+		nvidia,step_alarm_mw = <0>;
+		nvidia,step_relax_mw = <0>;
+		nvidia,relax_ms = <0>;
+		nvidia,threshold_warning = "WARNING - SYSTEM Voltage Droop detected, please refer to the Jetson Power management application note";
 		interrupt-parent = <&soctherm>;
 		interrupts = <1 0x2002>;
 		sysedpc {
@@ -550,10 +551,11 @@
 
 	sysedp_reactive_capping@3 {
 		compatible = "nvidia,tegra124-sysedp_reactive_capping";
-		nvidia,max_capping_mw = <15000>;
-		nvidia,step_alarm_mw = <1000>;
-		nvidia,step_relax_mw = <500>;
-		nvidia,relax_ms = <250>;
+		nvidia,max_capping_mw = <0>;
+		nvidia,step_alarm_mw = <0>;
+		nvidia,step_relax_mw = <0>;
+		nvidia,relax_ms = <0>;
+		nvidia,threshold_warning = "WARNING - Battery Over Current Limit hit, please refer to the Jetson Power management application note";
 		interrupt-parent = <&soctherm>;
 		interrupts = <3 0x2002>;
 		sysedpc {
@@ -597,14 +599,23 @@
 		throttle@oc3 {
 			device_type = "throttlectl";
 			oc-alarm-id = <3>;
-			priority = <50>;
+			priority = <40>;
 			mode = "brief";
 			intr;
 			active_low;
-			count_threshold = <15>;
+			count_threshold = <5>;
 			filter = <5100000>;
-			throttle_dev = <&{/soctherm@0x700E2000/throttle_dev@cpu_medium}
-					&{/soctherm@0x700E2000/throttle_dev@gpu_medium}>;
+			throttle_dev = <&{/soctherm@0x700E2000/throttle_dev@cpu_none}
+					&{/soctherm@0x700E2000/throttle_dev@gpu_none}>;
+		};
+		throttle_dev@cpu_none {
+			dividend = <255>;
+			divisor = <255>;
+			duration = <0>;
+			step = <0>;
+		};
+		throttle_dev@gpu_none {
+			level = "no_throttling";
 		};
 		throttle_dev@cpu_medium {
 			dividend = <63>;

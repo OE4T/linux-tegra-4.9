@@ -311,7 +311,7 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 		dev_err(&dev->dev, "boot failed due to timeout");
 		return err;
 	}
-	dev_info(&dev->dev, "nvdec_boot: success\n");
+	dev_dbg(&dev->dev, "nvdec_boot: success\n");
 
 #ifdef CONFIG_TRUSTED_LITTLE_KERNEL
 	te_restore_keyslots();

@@ -1,5 +1,5 @@
 /*
- * tegra186-soc-mobile.dtsi: Mobile family SoC specific DTSI file with required node enabled.
+ * tegra186-soc-cvm.dtsi: Mobile family SoC specific DTSI file with required node enabled.
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *

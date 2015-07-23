@@ -960,6 +960,10 @@
 #define NV_SOR_DP_TPG_LANE0_PATTERN_PRBS7			(6)
 #define NV_SOR_DP_TPG_LANE0_PATTERN_CSTM			(7)
 #define NV_SOR_DP_TPG_LANE0_PATTERN_HBR2_COMPLIANCE		(8)
+#define NV_SOR_DP_TPG_CONFIG					(0x6e)
+#define NV_SOR_DP_LQ_CSTM_0					(0x6f)
+#define NV_SOR_DP_LQ_CSTM_1					(0x70)
+#define NV_SOR_DP_LQ_CSTM_2					(0x71)
 
 #define NV_SOR_DP_INT_ENABLE			0x171
 

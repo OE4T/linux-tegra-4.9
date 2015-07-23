@@ -27,6 +27,11 @@
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 #include "dp_lt.h"
 
+#ifdef CONFIG_DEBUG_FS
+#include "dp_debug.h"
+extern struct tegra_dp_test_settings default_dp_test_settings;
+#endif
+
 #define DP_AUX_MAX_BYTES 16
 #define DP_AUX_TIMEOUT_MS 1000
 #define DP_DPCP_RETRY_SLEEP_NS 400
@@ -90,8 +95,18 @@ struct tegra_dc_dp_data {
 	struct tegra_dp_out *pdata;
 
 	struct mutex dpaux_lock;
+
+#ifdef CONFIG_DEBUG_FS
+	struct tegra_dp_test_settings test_settings;
 };
 
+extern const struct file_operations test_settings_fops;
+#else
+};
+#endif
+
+int tegra_dp_dpcd_write_field(struct tegra_dc_dp_data *dp, u32 cmd,
+	u8 mask, u8 data);
 int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 	u8 *data, u32 *size, u32 *aux_stat);
 int tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,

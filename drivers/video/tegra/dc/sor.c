@@ -722,6 +722,11 @@ void tegra_sor_tpg(struct tegra_dc_sor_data *sor, u32 tp, u32 n_lanes)
 		{1, 0}, /* training pattern 1 */
 		{1, 0}, /* training pattern 2 */
 		{1, 0}, /* training pattern 3 */
+		{1, 0}, /* D102 */
+		{1, 1}, /* SBLERRRATE */
+		{0, 0}, /* PRBS7 */
+		{0, 0}, /* CSTM */
+		{1, 1}, /* HBR2_COMPLIANCE */
 	};
 	u32 cnt;
 	u32 val = 0;

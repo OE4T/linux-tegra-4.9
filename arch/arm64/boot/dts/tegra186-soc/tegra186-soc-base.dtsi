@@ -399,10 +399,12 @@
 		power-domains = <&host1x_pd>;
 		wakeup_capable;
 		reg = <0x0 0x3de00000 0x0 0x00040000>;
+		resets = <&tegra_car TEGRA186_RESET_HOST1X>;
+		clocks = <&tegra_car TEGRA186_CLK_HOST1X>,
+			 <&tegra_car TEGRA186_CLK_ACTMON>;
+		clock-names = "host1x", "actmon";
 		interrupts = <0 65 0x04   /* mpcore syncpt */
 			      0 67 0x04>; /* mpcore general */
-		clocks = <&clk32k_in>, <&clk32k_in>;
-		clock-names = "host1x", "actmon";
 		#stream-id-cells = <1>;
 
 		#address-cells = <2>;
@@ -463,9 +465,10 @@
 			compatible = "nvidia,tegra186-nvcsi";
 			power-domains = <&nvcsi_pd>;
 			reg = <0x0 0x150c0000 0x0 0x00040000>;
-			interrupts = <0 119 0x04>;
-			clocks = <&clk32k_in>;
+			resets = <&tegra_car TEGRA186_RESET_NVCSI>;
+			clocks = <&tegra_car TEGRA186_CLK_NVCSI>;
 			clock-names = "nvcsi";
+			interrupts = <0 119 0x04>;
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -474,11 +477,11 @@
 			compatible = "nvidia,tegra186-vi";
 			power-domains = <&ve_pd>;
 			reg = <0x0 0x54700000 0x0 0x00100000>;
+			resets = <&tegra_car TEGRA186_RESET_VI>;
+			clocks = <&tegra_car TEGRA186_CLK_VI>,
+				 <&tegra_car TEGRA186_CLK_EMC>;
+			clock-names = "vi", "emc";
 			interrupts = <0 69 0x04>;
-			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>,
-				 <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
-			clock-names = "vi", "csi", "cilab",
-				      "cilcd", "cile", "emc";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -487,9 +490,10 @@
 			compatible = "nvidia,tegra186-isp";
 			power-domains = <&ve_pd>;
 			reg = <0x0 0x54600000 0x0 0x00040000>;
-			interrupts = <0 71 0x04>;
-			clocks = <&clk32k_in>;
+			resets = <&tegra_car TEGRA186_RESET_ISP>;
+			clocks = <&tegra_car TEGRA186_CLK_ISP>;
 			clock-names = "isp";
+			interrupts = <0 71 0x04>;
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -573,10 +577,12 @@
 			compatible = "nvidia,tegra186-vic";
 			power-domains = <&vic03_pd>;
 			reg = <0x0 0x54340000 0x0 0x00040000>;
-			clocks = <&clk32k_in>, <&clk32k_in>,
-				 <&clk32k_in>, <&clk32k_in>;
-			clock-names = "vic", "emc",
-				      "vic_floor", "emc_shared";
+			resets = <&tegra_car TEGRA186_RESET_VIC>;
+			clocks = <&tegra_car TEGRA186_CLK_VIC>,
+				 <&tegra_car TEGRA186_CLK_EMC>,
+				 <&clk32k_in>,
+				 <&clk32k_in>;
+			clock-names = "vic", "emc", "vic_floor", "emc_shared";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -585,7 +591,9 @@
 			compatible = "nvidia,tegra186-nvenc";
 			power-domains = <&msenc_pd>;
 			reg = <0x0 0x544c0000 0x0 0x00040000>;
-			clocks = <&clk32k_in>, <&clk32k_in>;
+			resets = <&tegra_car TEGRA186_RESET_NVENC>;
+			clocks = <&tegra_car TEGRA186_CLK_NVENC>,
+				 <&tegra_car TEGRA186_CLK_EMC>;
 			clock-names = "nvenc", "emc";
 			#stream-id-cells = <1>;
 			status = "disabled";
@@ -595,7 +603,9 @@
 			compatible = "nvidia,tegra186-nvdec";
 			power-domains = <&nvdec_pd>;
 			reg = <0x0 0x54480000 0x0 0x00040000>;
-			clocks = <&clk32k_in>, <&clk32k_in>;
+			resets = <&tegra_car TEGRA186_RESET_NVDEC>;
+			clocks = <&tegra_car TEGRA186_CLK_NVDEC>,
+				 <&tegra_car TEGRA186_CLK_EMC>;
 			clock-names = "nvdec", "emc";
 			#stream-id-cells = <1>;
 			status = "disabled";
@@ -605,7 +615,9 @@
 			compatible = "nvidia,tegra186-nvjpg";
 			power-domains = <&nvjpg_pd>;
 			reg = <0x0 0x54380000 0x0 0x00040000>;
-			clocks = <&clk32k_in>, <&clk32k_in>;
+			resets = <&tegra_car TEGRA186_RESET_NVJPG>;
+			clocks = <&tegra_car TEGRA186_CLK_NVJPG>,
+				 <&tegra_car TEGRA186_CLK_EMC>;
 			clock-names = "nvjpg", "emc";
 			#stream-id-cells = <1>;
 			status = "disabled";
@@ -615,7 +627,9 @@
 			compatible = "nvidia,tegra186-tsec";
 			power-domains = <&tsec_pd>;
 			reg = <0x0 0x54500000 0x0 0x00040000>;
-			clocks = <&clk32k_in>, <&clk32k_in>;
+			resets = <&tegra_car TEGRA186_RESET_TSEC>;
+			clocks = <&tegra_car TEGRA186_CLK_TSEC>,
+				 <&tegra_car TEGRA186_CLK_EMC>;
 			clock-names = "tsec", "emc";
 			#stream-id-cells = <1>;
 			status = "disabled";
@@ -625,7 +639,9 @@
 			compatible = "nvidia,tegra186-tsec";
 			power-domains = <&tsec_pd>;
 			reg = <0x0 0x54100000 0x0 0x00040000>;
-			clocks = <&clk32k_in>, <&clk32k_in>;
+			resets = <&tegra_car TEGRA186_RESET_TSECB>;
+			clocks = <&tegra_car TEGRA186_CLK_TSECB>,
+				 <&tegra_car TEGRA186_CLK_EMC>;
 			clock-names = "tsecb", "emc";
 			#stream-id-cells = <1>;
 			status = "disabled";
@@ -679,6 +695,11 @@
 			compatible = "nvidia,tegra186-se-nvhost";
 			power-domains = <&mc_clk_pd>;
 			reg = <0x0 0x15810000 0x0 0x10000>;
+			resets = <&tegra_car TEGRA186_RESET_SE>;
+			clocks = <&tegra_car TEGRA186_CLK_SE>,
+				 <&tegra_car TEGRA186_CLK_EMC>,
+				 <&tegra_car TEGRA186_CLK_ENTROPY>;
+			clock-names = "se", "emc", "entropy";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -687,6 +708,11 @@
 			compatible = "nvidia,tegra186-se-nvhost";
 			power-domains = <&mc_clk_pd>;
 			reg = <0x0 0x15820000 0x0 0x10000>;
+			resets = <&tegra_car TEGRA186_RESET_SE>;
+			clocks = <&tegra_car TEGRA186_CLK_SE>,
+				 <&tegra_car TEGRA186_CLK_EMC>,
+				 <&tegra_car TEGRA186_CLK_ENTROPY>;
+			clock-names = "se", "emc", "entropy";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -695,6 +721,11 @@
 			compatible = "nvidia,tegra186-se-nvhost";
 			power-domains = <&mc_clk_pd>;
 			reg = <0x0 0x15830000 0x0 0x10000>;
+			resets = <&tegra_car TEGRA186_RESET_SE>;
+			clocks = <&tegra_car TEGRA186_CLK_SE>,
+				 <&tegra_car TEGRA186_CLK_EMC>,
+				 <&tegra_car TEGRA186_CLK_ENTROPY>;
+			clock-names = "se", "emc", "entropy";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -703,6 +734,11 @@
 			compatible = "nvidia,tegra186-se-nvhost";
 			power-domains = <&mc_clk_pd>;
 			reg = <0x0 0x15840000 0x0 0x10000>;
+			resets = <&tegra_car TEGRA186_RESET_SE>;
+			clocks = <&tegra_car TEGRA186_CLK_SE>,
+				 <&tegra_car TEGRA186_CLK_EMC>,
+				 <&tegra_car TEGRA186_CLK_ENTROPY>;
+			clock-names = "se", "emc", "entropy";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};

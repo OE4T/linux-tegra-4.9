@@ -281,6 +281,18 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 	h->kind = kind;
 	h->peer = peer;
 
+	if (client && !client->tag_warned) {
+		char task_comm[TASK_COMM_LEN];
+		client->tag_warned = 1;
+		get_task_comm(task_comm, client->task);
+		pr_err("PID %d: %s: WARNING: "
+			"All NvMap Allocations must have a tag "
+			"to identify the subsystem allocating memory."
+			"Plase pass the tag to the API call"
+			" NvRmMemHanldeAllocAttr() or relevant. \n",
+			client->task->pid, task_comm);
+	}
+
 	/* convert iovmm requests to generic carveout. */
 	if (heap_mask & NVMAP_HEAP_IOVMM) {
 		heap_mask = (heap_mask & ~NVMAP_HEAP_IOVMM) |

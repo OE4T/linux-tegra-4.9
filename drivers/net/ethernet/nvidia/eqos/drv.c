@@ -712,8 +712,12 @@ void DWC_ETH_QOS_get_all_hw_features(struct DWC_ETH_QOS_prv_data *pdata)
 	pdata->hw_feat.gmii_sel = ((varMAC_HFR0 >> 1) & MAC_HFR0_GMIISEL_Mask);
 	pdata->hw_feat.hd_sel = ((varMAC_HFR0 >> 2) & MAC_HFR0_HDSEL_Mask);
 	pdata->hw_feat.pcs_sel = ((varMAC_HFR0 >> 3) & MAC_HFR0_PCSSEL_Mask);
+#ifdef ENABLE_VLAN_FILTER
 	pdata->hw_feat.vlan_hash_en =
 	    ((varMAC_HFR0 >> 4) & MAC_HFR0_VLANHASEL_Mask);
+#else
+	pdata->hw_feat.vlan_hash_en = 0;
+#endif
 	pdata->hw_feat.sma_sel = ((varMAC_HFR0 >> 5) & MAC_HFR0_SMASEL_Mask);
 	pdata->hw_feat.rwk_sel = ((varMAC_HFR0 >> 6) & MAC_HFR0_RWKSEL_Mask);
 	pdata->hw_feat.mgk_sel = ((varMAC_HFR0 >> 7) & MAC_HFR0_MGKSEL_Mask);

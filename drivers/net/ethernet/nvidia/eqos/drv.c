@@ -5303,7 +5303,8 @@ static INT DWC_ETH_QOS_change_mtu(struct net_device *dev, INT new_mtu)
 
 #ifdef DWC_ETH_QOS_QUEUE_SELECT_ALGO
 u16	DWC_ETH_QOS_select_queue(struct net_device *dev,
-			struct sk_buff *skb)
+		struct sk_buff *skb, void *accel_priv,
+		select_queue_fallback_t fallback)
 {
 	static u16 txqueue_select = 0;
 	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);

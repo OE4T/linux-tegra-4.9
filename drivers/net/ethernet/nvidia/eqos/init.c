@@ -51,6 +51,7 @@
 #include "nvregacc.h"
 #include <linux/platform_device.h>
 #include <linux/of_device.h>
+#include <linux/tegra-soc.h>
 
 #define LP_SUPPORTED 0
 static const struct of_device_id dwc_eth_qos_of_match[] = {
@@ -82,15 +83,15 @@ irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_POWER(int irq, void *device_id)
 	ULONG varMAC_ISR;
 	ULONG varMAC_IMR;
 	ULONG varMAC_PMTCSR;
+	ULONG varCLK_CTRL = 0;
 
-#ifdef HWA_FPGA_ONLY
-	ULONG varCLK_CTRL;
-	CLK_CRTL0_RgRd(varCLK_CTRL);
+	if (tegra_platform_is_unit_fpga())
+		CLK_CRTL0_RgRd(varCLK_CTRL);
+
 	if (varCLK_CTRL & BIT(31)) {
 		pr_info("power_isr: phy_intr received\n");
 		return IRQ_NONE;
 	} else {
-#endif
 		MAC_ISR_RgRd(varMAC_ISR);
 		MAC_IMR_RgRd(varMAC_IMR);
 		pr_info("power_isr: power_intr received, MAC_ISR =%#lx, MAC_IMR =%#lx\n",
@@ -127,9 +128,7 @@ irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_POWER(int irq, void *device_id)
 		}
 
 		return IRQ_HANDLED;
-#ifdef HWA_FPGA_ONLY
 	}
-#endif
 }
 
 /*!
@@ -202,15 +201,20 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	DBGPR("irq = %d \n", irq);
 	DBGPR("power_irq = %d \n", power_irq);
 
-#ifdef HWA_FPGA_ONLY
 	/* PMT and PHY irqs are shared on FPGA system */
-	phyirq = power_irq;
-#else
-	/* On silicon the phy_intr line is handled through a wake capable
-	 * GPIO input. DMIC4_CLK is the GPIO input port.
-	 * Refer Bug 1626763
-	 */
-#endif
+	if (tegra_platform_is_unit_fpga()) {
+		phyirq = power_irq;
+	} else {
+		/* On silicon the phy_intr line is handled through a wake
+		 * capable GPIO input. DMIC4_CLK is the GPIO input port.
+		 * Refer Bug 1626763
+		 * DT should have phyirq at IRQ_RESOURCE index-2
+		 */
+		phyirq = platform_get_irq(pdev, 2);
+		if (phyirq < 0)
+			return phyirq;
+	}
+
 	DBGPR("phyirq = %d\n", phyirq);
 
 	DBGPR("==========================================================\n");

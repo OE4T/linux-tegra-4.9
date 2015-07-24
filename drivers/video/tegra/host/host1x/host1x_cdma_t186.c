@@ -80,6 +80,28 @@ fail:
 	return err;
 }
 
+/**
+ * Guarantees that the next N slots (2 words each ) pushed to the buffer will be
+ * adjacent and not split across pushbuffer wraparound boundaries. Pushes no-ops
+ * to pushbuffer until the boundary has been avoided. The number of words must
+ * be less than (PUSH_BUFFER_SIZE - 1)/2.
+ */
+static void cdma_make_adjacent_space(struct nvhost_cdma *cdma, u32 slots)
+{
+	int i;
+	u32 slots_before_wrap = (PUSH_BUFFER_SIZE - 1 - cdma->push_buffer.cur)/8;
+
+	if (WARN_ON(slots >= (NVHOST_GATHER_QUEUE_SIZE)/2))
+		return;
+
+	if (slots_before_wrap >= slots)
+		return;
+
+	/* fill the end of the buffer with noops */
+	for (i = 0; i < slots_before_wrap; i++)
+		nvhost_cdma_push(cdma, NVHOST_OPCODE_NOOP, NVHOST_OPCODE_NOOP);
+}
+
 /*
  * The syncpt incr buffer is filled with methods to increment syncpts, which
  * is later GATHER-ed into the mainline PB. It's used when a timed out context
@@ -581,6 +603,7 @@ static const struct nvhost_cdma_ops host1x_cdma_ops = {
 	.timeout_teardown_begin = cdma_timeout_teardown_begin,
 	.timeout_teardown_end = cdma_timeout_teardown_end,
 	.timeout_pb_cleanup = cdma_timeout_pb_cleanup,
+	.make_adjacent_space = cdma_make_adjacent_space,
 };
 
 static const struct nvhost_pushbuffer_ops host1x_pushbuffer_ops = {

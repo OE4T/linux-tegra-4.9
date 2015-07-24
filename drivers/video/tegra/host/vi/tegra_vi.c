@@ -102,7 +102,6 @@ int nvhost_vi_finalize_poweron(struct platform_device *dev)
 	}
 #endif
 
-
 	ret = vi_enable_irq(tegra_vi);
 	if (ret)
 		dev_err(&tegra_vi->ndev->dev, "%s: vi_enable_irq failed\n",
@@ -224,27 +223,16 @@ static int vi_isomgr_release(struct vi *tegra_vi)
 }
 #endif
 
-static int vi_set_la(struct vi *tegra_vi, uint vi_bw)
+static int vi_set_la(u32 vi_bw)
 {
-	struct nvhost_device_data *pdata_vi;
 	int ret = 0;
-	uint total_vi_bw;
-
-	pdata_vi =
-		(struct nvhost_device_data *)tegra_vi->ndev->dev.platform_data;
-
-	if (!pdata_vi)
-		return -ENODEV;
-
-	tegra_vi->vi_bw = vi_bw / 1000;
-	total_vi_bw = tegra_vi->vi_bw;
 
 #ifdef CONFIG_TEGRA_MC
-	ret = tegra_set_camera_ptsa(TEGRA_LA_VI_W, total_vi_bw, 1);
+	ret = tegra_set_camera_ptsa(TEGRA_LA_VI_W, vi_bw, 1);
 
 	if (!ret) {
 		ret = tegra_set_latency_allowance(TEGRA_LA_VI_W,
-			total_vi_bw);
+			vi_bw);
 
 		if (ret)
 			pr_err("%s: set latency failed: %d\n",
@@ -292,6 +280,52 @@ static long vi_ioctl(struct file *file,
 
 		return ret;
 	}
+	case _IOC_NR(NVHOST_VI_IOCTL_GET_VI_CLK): {
+		int ret;
+		u64 vi_clk_rate = 0;
+
+		ret = nvhost_module_get_rate(tegra_vi->ndev,
+			(unsigned long *)&vi_clk_rate, 0);
+		if (ret) {
+			dev_err(&tegra_vi->ndev->dev,
+			"%s: failed to get vi clk\n",
+			__func__);
+			return ret;
+		}
+
+		if (copy_to_user((void __user *)arg,
+			&vi_clk_rate, sizeof(vi_clk_rate))) {
+			dev_err(&tegra_vi->ndev->dev,
+			"%s:Failed to copy vi clk rate to user\n",
+			__func__);
+			return -EFAULT;
+		}
+
+		return 0;
+	}
+	case _IOC_NR(NVHOST_VI_IOCTL_SET_VI_LA_BW): {
+		u32 ret = 0;
+		u32 vi_la_bw;
+
+		if (copy_from_user(&vi_la_bw,
+			(const void __user *)arg,
+				sizeof(vi_la_bw))) {
+			dev_err(&tegra_vi->ndev->dev,
+				"%s: Failed to copy arg from user\n", __func__);
+			return -EFAULT;
+			}
+
+		/* Set latency allowance for VI, BW is in MBps */
+		ret = vi_set_la(vi_la_bw);
+		if (ret) {
+			dev_err(&tegra_vi->ndev->dev,
+			"%s: failed to set la vi_bw %u MBps\n",
+			__func__, vi_la_bw);
+			return -ENOMEM;
+		}
+
+		return 0;
+	}
 	case _IOC_NR(NVHOST_VI_IOCTL_SET_EMC_INFO): {
 		uint vi_bw;
 		int ret;
@@ -302,7 +336,7 @@ static long vi_ioctl(struct file *file,
 			return -EFAULT;
 		}
 
-		ret = vi_set_la(tegra_vi, vi_bw);
+		ret = vi_set_la(vi_bw/1000);
 		if (ret) {
 			dev_err(&tegra_vi->ndev->dev,
 			"%s: failed to set la for vi_bw %u MBps\n",

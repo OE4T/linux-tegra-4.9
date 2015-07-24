@@ -39,6 +39,13 @@ struct isp_emc {
 	uint bpp_output;
 };
 
+struct isp_la_bw {
+	/* Total ISP write BW in MBps, either ISO peak BW or non-ISO avg BW */
+	u32 isp_la_bw;
+	/* is ISO or non-ISO */
+	bool is_iso;
+};
+
 #define NVHOST_ISP_IOCTL_MAGIC 'I'
 
 /*
@@ -52,8 +59,11 @@ struct isp_emc {
  * isp device.
  */
 
-#define NVHOST_ISP_IOCTL_SET_EMC _IOW(NVHOST_ISP_IOCTL_MAGIC, 1, struct isp_emc)
+#define NVHOST_ISP_IOCTL_SET_EMC \
+		_IOW(NVHOST_ISP_IOCTL_MAGIC, 1, struct isp_emc)
 #define NVHOST_ISP_IOCTL_SET_ISP_CLK _IOW(NVHOST_ISP_IOCTL_MAGIC, 2, long)
-
+#define NVHOST_ISP_IOCTL_GET_ISP_CLK _IOW(NVHOST_ISP_IOCTL_MAGIC, 3, u64)
+#define NVHOST_ISP_IOCTL_SET_ISP_LA_BW \
+		_IOW(NVHOST_ISP_IOCTL_MAGIC, 4, struct isp_la_bw)
 #endif
 

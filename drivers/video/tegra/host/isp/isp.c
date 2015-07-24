@@ -419,48 +419,31 @@ static struct platform_driver isp_driver = {
 };
 
 #ifdef CONFIG_TEGRA_MC
-
-static int isp_set_la(struct isp *tegra_isp, uint isp_bw, uint la_client)
+static int isp_set_la(struct isp *tegra_isp, u32 isp_bw, u32 la_client)
 {
 	int ret = 0;
+	int la_id;
 
-	if (tegra_isp->dev_id == ISPB_DEV_ID) {
-		ret = tegra_set_camera_ptsa(TEGRA_LA_ISP_WAB,
-				isp_bw, la_client);
+	if (tegra_isp->dev_id == ISPB_DEV_ID)
+		la_id = TEGRA_LA_ISP_WAB;
+	else
+		la_id = TEGRA_LA_ISP_WA;
 
-		if (!ret) {
-			ret = tegra_set_latency_allowance(TEGRA_LA_ISP_WAB,
-				isp_bw);
-
-			if (ret)
-				pr_err("%s: set latency failed for %d: %d\n",
-					__func__, tegra_isp->dev_id, ret);
-		} else {
-			pr_err("%s: set ptsa failed for %d: %d\n", __func__,
-				tegra_isp->dev_id, ret);
-		}
+	ret = tegra_set_camera_ptsa(la_id, isp_bw, la_client);
+	if (!ret) {
+		ret = tegra_set_latency_allowance(la_id, isp_bw);
+		if (ret)
+			pr_err("%s: set latency failed for ISP %d: %d\n",
+				__func__, tegra_isp->dev_id, ret);
 	} else {
-		ret = tegra_set_camera_ptsa(TEGRA_LA_ISP_WA,
-				isp_bw, la_client);
-
-		if (!ret) {
-			ret = tegra_set_latency_allowance(TEGRA_LA_ISP_WA,
-				isp_bw);
-
-			if (ret)
-				pr_err("%s: set latency failed for %d: %d\n",
-					__func__, tegra_isp->dev_id, ret);
-		} else {
-			pr_err("%s: set ptsa failed for %d: %d\n", __func__,
-				tegra_isp->dev_id, ret);
-		}
+		pr_err("%s: set ptsa failed for ISP %d: %d\n", __func__,
+			tegra_isp->dev_id, ret);
 	}
 
 	return ret;
 }
-
 #else
-static int isp_set_la(struct isp *tegra_isp, uint isp_bw, uint la_client)
+static int isp_set_la(struct isp *tegra_isp, u32 isp_bw, u32 la_client)
 {
 	return 0;
 }
@@ -475,6 +458,56 @@ static long isp_ioctl(struct file *file,
 		return -EFAULT;
 
 	switch (_IOC_NR(cmd)) {
+	case _IOC_NR(NVHOST_ISP_IOCTL_GET_ISP_CLK): {
+		int ret;
+		u64 isp_clk_rate = 0;
+
+		ret = nvhost_module_get_rate(tegra_isp->ndev,
+			(unsigned long *)&isp_clk_rate, 0);
+		if (ret) {
+			dev_err(&tegra_isp->ndev->dev,
+			"%s: failed to get isp clk\n",
+			__func__);
+			return ret;
+		}
+
+		if (copy_to_user((void __user *)arg,
+			&isp_clk_rate, sizeof(isp_clk_rate))) {
+			dev_err(&tegra_isp->ndev->dev,
+			"%s:Failed to copy isp clk rate to user\n",
+			__func__);
+			return -EFAULT;
+		}
+
+		return 0;
+	}
+	case _IOC_NR(NVHOST_ISP_IOCTL_SET_ISP_LA_BW): {
+		u32 ret = 0;
+		struct isp_la_bw isp_info;
+
+		if (copy_from_user(&isp_info,
+			(const void __user *)arg,
+				sizeof(struct isp_la_bw))) {
+			dev_err(&tegra_isp->ndev->dev,
+				"%s: Failed to copy arg from user\n", __func__);
+			return -EFAULT;
+			}
+
+		/* Set latency allowance for ISP, BW is in MBps */
+		ret = isp_set_la(tegra_isp,
+			isp_info.isp_la_bw,
+			(isp_info.is_iso) ?
+				ISP_HARD_ISO_CLIENT : ISP_SOFT_ISO_CLIENT);
+		if (ret) {
+			dev_err(&tegra_isp->ndev->dev,
+			"%s: failed to set la isp_bw %u MBps\n",
+			__func__, isp_info.isp_la_bw);
+			return -ENOMEM;
+		}
+
+		return 0;
+
+	}
 	case _IOC_NR(NVHOST_ISP_IOCTL_SET_EMC): {
 		int ret;
 		uint la_client = 0;

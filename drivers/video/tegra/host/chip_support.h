@@ -60,6 +60,7 @@ struct nvhost_cdma_ops {
 				     u32 getptr);
 	void (*timeout_pb_cleanup)(struct nvhost_cdma *,
 				 u32 getptr, u32 nr_slots);
+	void (*make_adjacent_space)(struct nvhost_cdma *, u32 words);
 };
 
 struct nvhost_vm_ops {

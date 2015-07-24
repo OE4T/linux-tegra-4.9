@@ -98,6 +98,7 @@
 #endif
 #if defined(CONFIG_VLAN_8021Q) || defined(CONFIG_VLAN_8021Q_MODULE)
 #define DWC_ETH_QOS_ENABLE_VLAN_TAG
+//#define ENABLE_VLAN_FILTER
 #include <linux/if_vlan.h>
 #endif
 #include <linux/if_vlan.h>

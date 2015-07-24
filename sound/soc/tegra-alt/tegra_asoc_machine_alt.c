@@ -1720,15 +1720,15 @@ static struct snd_soc_codec_conf
 		.name_prefix = "I2S5",
 	},
 	[TEGRA210_CODEC_DMIC1_CONF] = {
-		.dev_name = "tegra210-dmic.1",
+		.dev_name = "tegra210-dmic.0",
 		.name_prefix = "DMIC1",
 	},
 	[TEGRA210_CODEC_DMIC2_CONF] = {
-		.dev_name = "tegra210-dmic.2",
+		.dev_name = "tegra210-dmic.1",
 		.name_prefix = "DMIC2",
 	},
 	[TEGRA210_CODEC_DMIC3_CONF] = {
-		.dev_name = "tegra210-dmic.3",
+		.dev_name = "tegra210-dmic.2",
 		.name_prefix = "DMIC3",
 	},
 	[TEGRA210_CODEC_SPDIF_CONF] = {

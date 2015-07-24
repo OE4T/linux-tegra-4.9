@@ -1881,7 +1881,6 @@ static void DWC_ETH_QOS_set_rx_mode(struct net_device *dev)
 		}
 	}
 
-	if (!SIM_WORLD)
 	hw_if->config_mac_pkt_filter_reg(pr_mode, huc_mode,
 		hmc_mode, pm_mode, hpf_mode);
 
@@ -5180,11 +5179,7 @@ static int DWC_ETH_QOS_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 	DBGPR("-->DWC_ETH_QOS_ioctl\n");
 
 #ifndef DWC_ETH_QOS_CONFIG_PGTEST
-#ifdef AR_XXX
 	if ((!netif_running(dev)) || (!pdata->phydev)) {
-#else //Else for AR_XXX - We do not have PHY for now
-	if (!netif_running(dev)) {
-#endif
 		DBGPR("<--DWC_ETH_QOS_ioctl - error\n");
 		return -EINVAL;
 	}
@@ -5307,6 +5302,7 @@ u16	DWC_ETH_QOS_select_queue(struct net_device *dev,
 			struct sk_buff *skb)
 {
 	static u16 txqueue_select = 0;
+	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
 
 	DBGPR("-->DWC_ETH_QOS_select_queue\n");
 

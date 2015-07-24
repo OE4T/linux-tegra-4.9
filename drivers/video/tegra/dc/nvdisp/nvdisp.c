@@ -732,3 +732,55 @@ int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *cmu)
 }
 EXPORT_SYMBOL(tegra_nvdisp_update_cmu);
 #endif
+
+void reg_dump(struct tegra_dc *dc, void *data,
+		       void (* print)(void *data, const char *str))
+{
+	int i;
+	char buff[256];
+	const char winname[] = "ABCDEFT";
+	#if 0
+	/* If gated, quietly return. */
+	if (!tegra_powergate_is_powered(dc->powergate_id)){
+		return;
+	}
+	#endif
+
+	mutex_lock(&dc->lock);
+	tegra_dc_get(dc);
+
+#define DUMP_REG(a) do {			\
+	snprintf(buff, sizeof(buff), "%-32s\t%03x\t%08lx\n",  \
+		 #a, a, tegra_dc_readl(dc, a));		      \
+	print(data, buff);				      \
+	} while (0)
+
+#include "hw_nvdisp_nvdisp_regdump.c"
+
+#undef DUMP_REG
+
+#define DUMP_REG(a) do {				\
+	snprintf(buff, sizeof(buff), "%-32s\t%03x\t%08x\n",  \
+		 #a, a, nvdisp_win_read(win, a));	      \
+	print(data, buff);				      \
+	} while (0)
+
+
+	for (i = 0; i < DC_N_WINDOWS; ++i) {
+		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
+		if (!win)
+			continue;
+
+		print(data, "\n");
+		snprintf(buff, sizeof(buff), "WINDOW %c:\n", winname[i]);
+		print(data, buff);
+
+#include "hw_nvdisp_win_regdump.c"
+
+#undef DUMP_REG
+	}
+
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
+}
+

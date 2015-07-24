@@ -136,11 +136,6 @@ int DWC_ETH_QOS_poll(struct DWC_ETH_QOS_prv_data *pdata, int budget, int qInx);
 
 static void DWC_ETH_QOS_mmc_setup(struct DWC_ETH_QOS_prv_data *pdata);
 inline unsigned int DWC_ETH_QOS_reg_read(volatile ULONG *ptr);
-
-#ifdef DWC_ETH_QOS_QUEUE_SELECT_ALGO
-u16	DWC_ETH_QOS_select_queue(struct net_device *dev, struct sk_buff *skb);
-#endif
-
 static int DWC_ETH_QOS_vlan_rx_add_vid(struct net_device *dev, __be16 proto, u16 vid);
 static int DWC_ETH_QOS_vlan_rx_kill_vid(struct net_device *dev, __be16 proto, u16 vid);
 #endif

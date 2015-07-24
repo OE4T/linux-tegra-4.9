@@ -1,10 +1,10 @@
 /*
  * Cryptographic API.
- * drivers/crypto/tegra-se.c
+ * drivers/crypto/tegra-se-nvhost.c
  *
  * Support for Tegra Security Engine hardware crypto algorithms.
  *
- * Copyright (c) 2011-2015, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2015, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -843,6 +843,8 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 	int err = 0;
 	u32 total;
 	int restart_op;
+	struct tegra_se_ll *src_ll = se_dev->src_ll;
+	struct tegra_se_ll *dst_ll = se_dev->dst_ll;
 
 	i = cmdbuf_cnt;
 	total = nbytes;
@@ -871,14 +873,14 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 			__nvhost_opcode_incr(aes_opcode_start_addr + 8, 4);
 		}
 
-		aes_cmdbuf_cpuvaddr[i++] = (u32)(se_dev->src_ll->addr);
+		aes_cmdbuf_cpuvaddr[i++] = (u32)(src_ll->addr);
 		aes_cmdbuf_cpuvaddr[i++] =
-			(u32)(SE_ADDR_HI_MSB(MSB(se_dev->src_ll->addr))
-				| SE_ADDR_HI_SZ(se_dev->src_ll->data_len));
-		aes_cmdbuf_cpuvaddr[i++] = (u32)(se_dev->dst_ll->addr);
+			(u32)(SE_ADDR_HI_MSB(MSB(src_ll->addr))
+				| SE_ADDR_HI_SZ(src_ll->data_len));
+		aes_cmdbuf_cpuvaddr[i++] = (u32)(dst_ll->addr);
 		aes_cmdbuf_cpuvaddr[i++] =
-			(u32)(SE_ADDR_HI_MSB(MSB(se_dev->dst_ll->addr))
-				| SE_ADDR_HI_SZ(se_dev->dst_ll->data_len));
+			(u32)(SE_ADDR_HI_MSB(MSB(dst_ll->addr))
+				| SE_ADDR_HI_SZ(dst_ll->data_len));
 		if (total == nbytes) {
 			aes_cmdbuf_cpuvaddr[i++] =
 			__nvhost_opcode_nonincr(aes_opcode_start_addr + 0x28,
@@ -894,7 +896,7 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 			restart_op = OP_RESTART_INOUT;
 
 		if (host1x_submit_sz == 0 && total == nbytes) {
-			if (total == se_dev->src_ll->data_len) {
+			if (total == src_ll->data_len) {
 				aes_cmdbuf_cpuvaddr[i++] =
 			__nvhost_opcode_nonincr(aes_opcode_start_addr + 0x34,
 					1);
@@ -910,7 +912,7 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 					| SE_OPERATION_OP(OP_START);
 			}
 		} else {
-			if (total == se_dev->src_ll->data_len) {
+			if (total == src_ll->data_len) {
 				aes_cmdbuf_cpuvaddr[i++] =
 			__nvhost_opcode_nonincr(aes_opcode_start_addr + 0x34,
 					1);
@@ -927,9 +929,9 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 			}
 		}
 
-		total -= se_dev->src_ll->data_len;
-		se_dev->src_ll++;
-		se_dev->dst_ll++;
+		total -= src_ll->data_len;
+		src_ll++;
+		dst_ll++;
 	}
 
 	cmdbuf_num_words = i;
@@ -1551,6 +1553,8 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 	tegra_se_engine = 1;
 	se_dev = sg_tegra_se_dev[tegra_se_engine];
 
+	req_ctx->op_mode = SE_AES_OP_MODE_CMAC;
+
 	blocks_to_process = req->nbytes / TEGRA_SE_AES_BLOCK_SIZE;
 	/* num of bytes less than block size */
 	if ((req->nbytes % TEGRA_SE_AES_BLOCK_SIZE) || !blocks_to_process) {
@@ -1599,6 +1603,8 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 
 		ret = tegra_se_send_data(se_dev, req_ctx, NULL, total);
 
+		tegra_se_read_cmac_result(se_dev, piv,
+				TEGRA_SE_AES_CMAC_DIGEST_SIZE, false);
 		src_sg = req->src;
 		tegra_unmap_sg(se_dev->dev, src_sg,  DMA_TO_DEVICE, total);
 		use_orig_iv = false;
@@ -1664,11 +1670,16 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 		ret = tegra_se_send_key_data(piv, TEGRA_SE_AES_IV_SIZE,
 			cmac_ctx->slot->slot_num, SE_KEY_TABLE_TYPE_ORGIV);
 	}
+	else {
+		ret = tegra_se_send_key_data(piv, TEGRA_SE_AES_IV_SIZE,
+			cmac_ctx->slot->slot_num, SE_KEY_TABLE_TYPE_UPDTDIV);
+	}
 
 	req_ctx->config = tegra_se_get_config(se_dev, req_ctx->op_mode,
 			true, cmac_ctx->keylen);
 	req_ctx->crypto_config = tegra_se_get_crypto_config(se_dev,
 		req_ctx->op_mode, true, cmac_ctx->slot->slot_num, use_orig_iv);
+
 	ret = tegra_se_send_data(se_dev,
 			req_ctx, NULL, TEGRA_SE_AES_BLOCK_SIZE);
 	tegra_se_read_cmac_result(se_dev, req->result,

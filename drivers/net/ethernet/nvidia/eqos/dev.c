@@ -3531,15 +3531,12 @@ static void rx_descriptor_init(struct DWC_ETH_QOS_prv_data *pdata, UINT qInx)
 		buffer = GET_RX_BUF_PTR(qInx, rx_desc_data->cur_rx);
 	}
 	/* update the total no of Rx descriptors count */
-	if (!SIM_WORLD)
-		DMA_RDRLR_RgWr(qInx, (RX_DESC_CNT - 1));
+	DMA_RDRLR_RgWr(qInx, (RX_DESC_CNT - 1));
 	/* update the Rx Descriptor Tail Pointer */
 	last_index = GET_CURRENT_RCVD_LAST_DESC_INDEX(start_index, 0);
-	if (!SIM_WORLD)
-		DMA_RDTP_RPDR_RgWr(qInx, GET_RX_DESC_DMA_ADDR(qInx, last_index));
+	DMA_RDTP_RPDR_RgWr(qInx, GET_RX_DESC_DMA_ADDR(qInx, last_index));
 	/* update the starting address of desc chain/ring */
-	if (!SIM_WORLD)
-		DMA_RDLAR_RgWr(qInx, GET_RX_DESC_DMA_ADDR(qInx, start_index));
+	DMA_RDLAR_RgWr(qInx, GET_RX_DESC_DMA_ADDR(qInx, start_index));
 
 	DBGPR("<--rx_descriptor_init\n");
 }
@@ -4396,9 +4393,8 @@ static INT configure_dma_channel(UINT qInx,
 	printk(KERN_ALERT "%s Rx Split header mode\n",
 		(pdata->rx_split_hdr ? "Enabled" : "Disabled"));
 
-#ifndef AR_XXX //Add 10us delay as per bug 1611959
+	/* Add 10us delay as per bug 1611959 */
 	udelay(10);
-#endif
 
 	/*
 	 * For PG don't start TX DMA now.

@@ -266,17 +266,14 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 #endif
 
 	/* issue software reset to device */
-	if (!SIM_WORLD)
-		hw_if->exit();
+	hw_if->exit();
 
 	ndev->irq = irq;
 	pdata->power_irq = power_irq;
 	pdata->phyirq = phyirq;
 
-	if (!SIM_WORLD) {
-		DWC_ETH_QOS_get_all_hw_features(pdata);
-		DWC_ETH_QOS_print_all_hw_features(pdata);
-	}
+	DWC_ETH_QOS_get_all_hw_features(pdata);
+	DWC_ETH_QOS_print_all_hw_features(pdata);
 
 	ret = desc_if->alloc_queue_struct(pdata);
 	if (ret < 0) {
@@ -293,11 +290,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		if (ret < 0) {
 			printk(KERN_ALERT "MDIO bus (id %d) registration failed\n",
 			       pdata->bus_id);
-#ifndef AR_XXX
-			printk(KERN_ALERT "********** CAUTION:IGNORING ERRORS FROM MDIO BUS REGISTRATION FOR NOW *********\n");
-#else
 			goto err_out_mdio_reg;
-#endif
 		}
 	} else {
 		printk(KERN_ALERT "%s: MDIO is not present\n\n", DEV_NAME);
@@ -448,11 +441,13 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	if (ret != 0) {
 		printk(KERN_ALERT "Unable to register PMT IRQ %d\n", power_irq);
 		ret = -EBUSY;
-		goto err_out_netdev_failed;
+		goto err_out_pmt_irq_failed;
 	}
 
 	return 0;
 
+ err_out_pmt_irq_failed:
+	unregister_netdev(ndev);
  err_out_netdev_failed:
 #ifdef DWC_ETH_QOS_CONFIG_PTP
 	DWC_ETH_QOS_ptp_remove(pdata);
@@ -466,10 +461,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	if (1 == pdata->hw_feat.sma_sel)
 		DWC_ETH_QOS_mdio_unregister(ndev);
 
-#ifndef AR_XXX
-#else
  err_out_mdio_reg:
-#endif
 	desc_if->free_queue_struct(pdata);
 
  err_out_q_alloc_failed:

@@ -202,6 +202,8 @@
 #define RP_VEND_XP_OPPORTUNISTIC_UPDATEFC			(1 << 28)
 #define RP_VEND_XP_DL_UP					(1 << 30)
 #define RP_VEND_XP_UPDATE_FC_THRESHOLD				(0xFF << 18)
+#define RP_VEND_XP_PRBS_STAT					(0xFFFF << 2)
+#define RP_VEND_XP_PRBS_EN					(1 << 1)
 
 #define RP_LINK_CONTROL_STATUS					0x00000090
 #define RP_LINK_CONTROL_STATUS_DL_LINK_ACTIVE	0x20000000
@@ -247,6 +249,13 @@
 #define PCIE2_RP_TIMEOUT1_RCVRY_SPD_SUCCESS_EIDLE		(0x10 << 16)
 #define PCIE2_RP_TIMEOUT1_RCVRY_SPD_UNSUCCESS_EIDLE_MASK	(0xFF << 24)
 #define PCIE2_RP_TIMEOUT1_RCVRY_SPD_UNSUCCESS_EIDLE		(0x74 << 24)
+
+#define NV_PCIE2_RP_PRBS						0x00000E34
+#define PCIE2_RP_PRBS_LOCKED					(1 << 16)
+
+#define NV_PCIE2_RP_LANE_PRBS_ERR_COUNT				0x00000E38
+#define PCIE2_RP_LANE_PRBS_ERR_COUNT				(1 << 16)
+#define PCIE2_RP_LANE_PRBS_ERR_SELECT				(1 << 0)
 
 #define NV_PCIE2_RP_LTSSM_DBGREG			0x00000E44
 #define PCIE2_RP_LTSSM_DBGREG_LINKFSM15		(1 << 15)
@@ -313,6 +322,7 @@
 #define NV_PCIE2_RP_PRIV_XP_DURATION_IN_LOW_PWR_100NS	0x00000FB0
 
 #define NV_PCIE2_RP_XP_CTL_1					0x00000FEC
+#define PCIE2_RP_XP_CTL_1_OLD_IOBIST_EN_BIT25				(1 << 25)
 #define PCIE2_RP_XP_CTL_1_SPARE_BIT29				(1 << 29)
 
 #define NV_PCIE2_RP_L1_PM_SUBSTATES_CYA				0x00000C00
@@ -461,6 +471,8 @@ struct tegra_pcie_port {
 	void __iomem *base;
 	unsigned int index;
 	unsigned int lanes;
+	unsigned int loopback_stat;
+	unsigned int loopback_err;
 	int gpio_presence_detection;
 	bool disable_clock_request;
 	bool ep_status;
@@ -3510,6 +3522,65 @@ out:
 	return 0;
 }
 
+static int loopback(struct seq_file *s, void *data)
+{
+	struct tegra_pcie_port *port = (struct tegra_pcie_port *)(s->private);
+	unsigned int new;
+
+	new = rp_readl(port, RP_LINK_CONTROL_STATUS);
+
+	if (!(new & RP_LINK_CONTROL_STATUS_DL_LINK_ACTIVE)) {
+		pr_info("PCIE port %d not active\n", port->index);
+		return -EINVAL;
+	}
+
+	port->loopback_stat = 0;
+	port->loopback_err = 0;
+
+	rp_writel(port, 0x90800011, NV_PCIE2_RP_VEND_XP_BIST);
+	new = rp_readl(port, NV_PCIE2_RP_VEND_XP_BIST);
+
+	new = rp_readl(port, NV_PCIE2_RP_XP_CTL_1);
+	new |= PCIE2_RP_XP_CTL_1_OLD_IOBIST_EN_BIT25;
+	rp_writel(port, new, NV_PCIE2_RP_XP_CTL_1);
+
+	new = rp_readl(port, RP_VEND_XP);
+	new |= RP_VEND_XP_PRBS_EN;
+	rp_writel(port, new, RP_VEND_XP);
+
+	mdelay(10);
+
+	new = rp_readl(port, NV_PCIE2_RP_PRBS);
+	pr_info("loopback locked bit %x\n", (new & PCIE2_RP_PRBS_LOCKED) >> 16);
+
+	new = rp_readl(port, RP_VEND_XP);
+	port->loopback_stat = (new & RP_VEND_XP_PRBS_STAT) >> 2;
+	pr_info("loopback status %x\n", port->loopback_stat);
+
+	new |= PCIE2_RP_XP_CTL_1_OLD_IOBIST_EN_BIT25;
+	rp_writel(port, new, NV_PCIE2_RP_XP_CTL_1);
+
+	rp_writel(port, port->index - 1, NV_PCIE2_RP_LANE_PRBS_ERR_COUNT);
+
+	new = rp_readl(port, NV_PCIE2_RP_LANE_PRBS_ERR_COUNT);
+	port->loopback_err = new >> 16;
+	pr_info("loopback error %x\n", port->loopback_err);
+
+	rp_writel(port, 0x90000001, NV_PCIE2_RP_VEND_XP_BIST);
+
+	new = rp_readl(port, RP_VEND_XP);
+	new &= ~RP_VEND_XP_PRBS_EN;
+	rp_writel(port, new, RP_VEND_XP);
+
+	mdelay(1);
+
+	rp_writel(port, 0x92000001, NV_PCIE2_RP_VEND_XP_BIST);
+	rp_writel(port, 0x90000001, NV_PCIE2_RP_VEND_XP_BIST);
+	pr_info("pcie loopback  test is done\n");
+
+	return 0;
+}
+
 static int apply_lane_width(struct seq_file *s, void *data)
 {
 	unsigned int new;
@@ -3845,6 +3916,7 @@ DEFINE_ENTRY(aspm_l1ss)
 DEFINE_ENTRY(power_down)
 
 /* Port specific */
+DEFINE_ENTRY(loopback)
 DEFINE_ENTRY(apply_lane_width)
 DEFINE_ENTRY(aspm_state_cnt)
 DEFINE_ENTRY(list_aspm_states)
@@ -3866,6 +3938,24 @@ static int tegra_pcie_port_debugfs_init(struct tegra_pcie_port *port)
 	d = debugfs_create_u32("lane_width", S_IWUGO | S_IRUGO,
 					port->port_debugfs,
 					&(port->lanes));
+	if (!d)
+		goto remove;
+
+	d = debugfs_create_x32("loopback_status", S_IWUGO | S_IRUGO,
+					port->port_debugfs,
+					&(port->loopback_stat));
+	if (!d)
+		goto remove;
+
+	d = debugfs_create_x32("loopback_error", S_IWUGO | S_IRUGO,
+					port->port_debugfs,
+					&(port->loopback_err));
+	if (!d)
+		goto remove;
+
+	d = debugfs_create_file("loopback", S_IRUGO,
+					port->port_debugfs, (void *)port,
+					&loopback_fops);
 	if (!d)
 		goto remove;
 

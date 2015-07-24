@@ -102,6 +102,7 @@
 			      <&{/sdhci@3400000}       TEGRA_SWGROUP_SDMMC1A>,
 			      <&{/xhci@0x03530000}	TEGRA_SWGROUP_XUSB_HOST>,
 			      <&{/xudc@0x03550000}	TEGRA_SWGROUP_XUSB_DEV>,
+			      <&{/sata-controller}      TEGRA_SWGROUP_SATA2>,
 			      <&{/bpmp}                 TEGRA_SWGROUP_BPMP>,
 			      <&{/dma@2600000}		TEGRA_SWGROUP_AXIS>,
 			      <&host1x_ctx0		TEGRA_SWGROUP_HOST1X_CTX0>,
@@ -898,6 +899,25 @@
                                         1 0x1600
                                         1 0x1000>;
         };
+
+	sata-controller {
+		compatible = "nvidia,tegra186-ahci";
+		reg = <0x0 0x03507000 0x0 0x00002000>, /* SATA AHCI */
+			<0x0 0x03501000 0x0 0x00006000>, /* SATA Config */
+			<0x0 0x03500000 0x0 0x00001000>, /* SATA IPFS */
+			<0x0 0x03A90000 0x0 0x00010000>; /* SATA AUX */
+		interrupts = <0 197 0x04>;
+		#stream-id-cells = <1>;
+		clocks = <&tegra_car TEGRA186_CLK_SATA>,
+			<&tegra_car TEGRA186_CLK_SATA_OOB>,
+			<&tegra_car TEGRA186_CLK_PLLP>,
+			<&tegra_car TEGRA186_CLK_PLLP_UPHY>;
+		clock-names = "sata", "sata_oob", "pllp", "pllp_uphy";
+		resets = <&tegra_car TEGRA186_RESET_SATA>,
+			<&tegra_car TEGRA186_RESET_SATACOLD>;
+		reset-names = "sata", "satacold";
+		status = "disabled";
+	};
 
 	pcie-controller {
 		compatible = "nvidia,tegra186-pcie";

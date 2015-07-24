@@ -690,7 +690,6 @@
 				<0 193 0x4>,	/* rx3 */
 				<0 189 0x4>;	/* tx3 */
 		nvidia,csr_clock_speed = <0x19>; /* CSR clock speed 25MHz */
-		/*iommus = <&smmu TEGRA_SWGROUP_EQOS>;*/
 		status = "disabled";
         };
 
@@ -1008,7 +1007,6 @@
 		   <0x0 0x0290C800 0x0 0x1>, /* FPGA RESET REG */
 		   <0x0 0x40000000 0x0 0xC0000000>, /* DRAM MAP1 */
 		   <0x0 0x0 0x0 0x1>; /* DRAM MAP2 */
-	     iommus = <&smmu TEGRA_SWGROUP_APE>;
 	     nvidia,adsp_unit_fpga;
 	     nvidia,adsp_unit_fpga_reset = <0x07F00040 0x00000040>;
 	     nvidia,adsp_mem = <0x8f000000 0x01000000>, /* ADSP OS */

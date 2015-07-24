@@ -332,7 +332,6 @@
 
 	sound_ref {
 		compatible = "nvidia,tegra-audio-t186ref";
-		iommus = <&smmu TEGRA_SWGROUP_APE>;
 		nvidia,model = "tegra-snd-t186ref";
 		nvidia,num-codec-link = <5>;
 		nvidia,num-amx = <1>;

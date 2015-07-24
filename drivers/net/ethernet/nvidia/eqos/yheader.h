@@ -153,7 +153,7 @@
 //#define ENABLE_VLAN_TAG_INSERTION
 
 /* Uncomment below macro definitions for testing corresponding IP features in driver */
-//#define DWC_ETH_QOS_QUEUE_SELECT_ALGO
+#define DWC_ETH_QOS_QUEUE_SELECT_ALGO
 //#define DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT
 //#define DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
 #define DWC_ETH_QOS_TXPOLLING_MODE_ENABLE
@@ -189,7 +189,6 @@
 #endif
 
 /* NOTE: Uncomment below line for function trace log messages in KERNEL LOG */
-#define SIM_WORLD 0
 //#define YDEBUG
 //#define YDEBUG_PG
 //#define YDEBUG_MDIO
@@ -230,13 +229,8 @@
 #define MASK (0x1ULL << 0 | \
 	0x13c7ULL << 32)
 #define MAC_MASK (0x10ULL << 0)
-#ifndef AR_XXX
-  #define TX_DESC_CNT 256
-  #define RX_DESC_CNT 256
-#else
-  #define TX_DESC_CNT 16
-  #define RX_DESC_CNT 16
-#endif
+#define TX_DESC_CNT 256
+#define RX_DESC_CNT 256
 
 
 #define MIN_RX_DESC_CNT 16

@@ -43,15 +43,13 @@
 /*!@file: DWC_ETH_QOS_dev.c
  * @brief: Driver functions.
  */
+#include <linux/tegra-soc.h>
 #include "yheader.h"
 #include "yapphdr.h"
 
 extern ULONG dwc_eth_qos_base_addr;
 #include "yregacc.h"
-
-#ifdef HWA_FPGA_ONLY
 #include "nvregacc.h"
-#endif
 
 #ifdef DWC_ETH_QOS_CONFIG_PGTEST
 
@@ -2975,9 +2973,8 @@ static INT set_gmii_speed(void)
 
 	MAC_MCR_PS_UdfWr(0);
 	MAC_MCR_FES_UdfWr(0);
-#ifdef HWA_FPGA_ONLY
-	CLK_CRTL0_TX_CLK_UdfWr(0);
-#endif
+	if (tegra_platform_is_unit_fpga())
+		CLK_CRTL0_TX_CLK_UdfWr(0);
 
 	return Y_SUCCESS;
 }
@@ -2995,9 +2992,8 @@ static INT set_mii_speed_10(void)
 
 	MAC_MCR_PS_UdfWr(0x1);
 	MAC_MCR_FES_UdfWr(0);
-#ifdef HWA_FPGA_ONLY
-	CLK_CRTL0_TX_CLK_UdfWr(1);
-#endif
+	if (tegra_platform_is_unit_fpga())
+		CLK_CRTL0_TX_CLK_UdfWr(1);
 
 	return Y_SUCCESS;
 }
@@ -3015,9 +3011,8 @@ static INT set_mii_speed_100(void)
 
 	MAC_MCR_PS_UdfWr(0x1);
 	MAC_MCR_FES_UdfWr(0x1);
-#ifdef HWA_FPGA_ONLY
-	CLK_CRTL0_TX_CLK_UdfWr(0);
-#endif
+	if (tegra_platform_is_unit_fpga())
+		CLK_CRTL0_TX_CLK_UdfWr(0);
 
 	return Y_SUCCESS;
 }

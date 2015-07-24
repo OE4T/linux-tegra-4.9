@@ -126,10 +126,6 @@ struct nvhost_device_data t18_vi_info = {
 	.moduleid		= NVHOST_MODULE_VI,
 	.clocks = {
 		{"vi", UINT_MAX},
-		{"csi", 0},
-		{"cilab", 102000000},
-		{"cilcd", 102000000},
-		{"cile", 102000000},
 		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
 	.num_channels		= 6,

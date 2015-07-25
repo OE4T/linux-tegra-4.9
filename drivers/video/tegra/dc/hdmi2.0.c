@@ -962,11 +962,12 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 {
 	struct tegra_dc_sor_data *sor = hdmi->sor;
-#ifndef CONFIG_TEGRA_NVDISPLAY
 	struct tegra_dc *dc = hdmi->dc;
-	u32 h_pulse_start, h_pulse_end, hblank, max_ac, rekey;
-	unsigned long val;
+#ifndef CONFIG_TEGRA_NVDISPLAY
+	u32 h_pulse_start, h_pulse_end;
 #endif
+	u32 hblank, max_ac, rekey;
+	unsigned long val;
 	u32 dispclk_div_8_2;
 
 	if (tegra_platform_is_linsim())

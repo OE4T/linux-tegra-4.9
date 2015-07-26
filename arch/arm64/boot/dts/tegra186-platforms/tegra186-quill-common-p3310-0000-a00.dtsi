@@ -16,8 +16,8 @@
 #include "tegra186-quill-common.dtsi"
 
 / {
-        model = "ql3310";
-        compatible = "nvidia,ql3310", "nvidia,tegra186";
+        model = "quill-3310";
+        compatible = "nvidia,quill-3310", "nvidia,tegra186";
 
         #address-cells = <2>;
         #size-cells = <2>;

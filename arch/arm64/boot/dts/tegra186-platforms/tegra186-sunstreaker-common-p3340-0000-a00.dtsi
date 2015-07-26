@@ -21,8 +21,8 @@
 #include "tegra186-soc/tegra186-soc-cvm.dtsi"
 
 / {
-        model = "ss3340";
-        compatible = "nvidia,ss3340", "nvidia,tegra186";
+        model = "sunstreaker-3340";
+        compatible = "nvidia,sunstreaker-3340", "nvidia,tegra186";
 
         nvidia,dtbbuildtime = __DATE__, __TIME__;
         #address-cells = <2>;

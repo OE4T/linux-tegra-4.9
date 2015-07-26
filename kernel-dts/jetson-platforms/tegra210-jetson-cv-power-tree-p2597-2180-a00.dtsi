@@ -180,5 +180,24 @@
 		iopower-spi-hv-supply = <&max77620_sd3>;
 		iopower-sdmmc2-supply = <&max77620_sd3>;
 		iopower-dp-supply = <&max77620_sd3>;
-	};  
+	};
+
+	pmc@7000e400 {
+		io-pad-defaults {
+			audio-hv {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
+			};  
+
+			spi-hv {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
+			};
+
+			gpio {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
+			};
+			sdmmc3 {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
+			};
+		};
+	};
 };

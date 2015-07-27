@@ -1433,13 +1433,14 @@ static void tegra_dp_irq_evt_worker(struct work_struct *work)
 #define LANE0_1_CR_CE_SL_MASK (0x7 | (0x7 << 4))
 #define LANE0_CR_CE_SL_MASK (0x7)
 #define INTERLANE_ALIGN_MASK (0x1)
+#define DPCD_LINK_SINK_STATUS_REGS 6
 
 	struct tegra_dc_dp_data *dp = container_of(to_delayed_work(work),
 					struct tegra_dc_dp_data,
 					irq_evt_dwork);
 	u32 aux_stat = tegra_dpaux_readl(dp, DPAUX_DP_AUXSTAT);
 	bool link_stable = !!true;
-	u8 dpcd_200h_205h[6];
+	u8 dpcd_200h_205h[DPCD_LINK_SINK_STATUS_REGS] = {0, 0, 0, 0, 0, 0};
 	u32 n_lanes = dp->lt_data.n_lanes;
 
 	tegra_dc_io_start(dp->dc);
@@ -1451,8 +1452,8 @@ static void tegra_dp_irq_evt_worker(struct work_struct *work)
 		 * HW failed to automatically read DPCD
 		 * offsets 0x200-0x205. Initiate SW transaction.
 		 */
-		for (cnt = 0; cnt < 6; cnt++) {
-			tegra_dc_dp_dpcd_read(dp, 0x200 + cnt,
+		for (cnt = 0; cnt < DPCD_LINK_SINK_STATUS_REGS; cnt++) {
+			tegra_dc_dp_dpcd_read(dp, NV_DPCD_SINK_COUNT + cnt,
 						&dpcd_200h_205h[cnt]);
 		}
 	} else  {
@@ -1474,14 +1475,17 @@ static void tegra_dp_irq_evt_worker(struct work_struct *work)
 		link_stable &= !!((dpcd_200h_205h[3] &
 				LANE0_1_CR_CE_SL_MASK) ==
 				LANE0_1_CR_CE_SL_MASK);
+		/* fall through */
 	case 2:
 		link_stable &= !!((dpcd_200h_205h[2] &
 				LANE0_1_CR_CE_SL_MASK) ==
 				LANE0_1_CR_CE_SL_MASK);
+		/* fall through */
 	case 1:
 		link_stable &= !!((dpcd_200h_205h[2] &
 				LANE0_CR_CE_SL_MASK) ==
 				LANE0_CR_CE_SL_MASK);
+		/* fall through */
 	default:
 		link_stable &= !!(dpcd_200h_205h[4] &
 				INTERLANE_ALIGN_MASK);
@@ -1498,6 +1502,8 @@ static void tegra_dp_irq_evt_worker(struct work_struct *work)
 #undef LANE0_1_CR_CE_SL_MASK
 #undef LANE0_CR_CE_SL_MASK
 #undef INTERLANE_ALIGN_MASK
+#undef DPCD_LINK_SINK_STATUS_REGS
+
 }
 
 static irqreturn_t tegra_dp_irq(int irq, void *ptr)

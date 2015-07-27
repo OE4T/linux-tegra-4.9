@@ -48,6 +48,9 @@
 	};
 
 	host1x: host1x {
+		clocks = <&clk32k_in>, <&clk32k_in>;
+		clock-names = "host1x", "actmon";
+
 		reg = <0x0 0x13e10000 0x0 0x00010000
 		       0x0 0x13e00000 0x0 0x00010000
 		       0x0 0x13ec0000 0x0 0x00040000>;
@@ -56,7 +59,15 @@
 
 		nvidia,vmid = <1>;
 
+		nvcsi {
+			clocks = <&clk32k_in>;
+			clock-names = "nvcsi";
+		};
+
 		vi {
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "vi", "emc";
+
 			reg = <0x0 0x15700000 0x0 0x00100000>;
 			interrupts = <0 201 0x04
 				      0 202 0x04
@@ -64,6 +75,9 @@
 		};
 
 		isp@54600000 {
+			clocks = <&clk32k_in>;
+			clock-names = "isp";
+
 			reg = <0x0 0x15600000 0x0 0x00040000>;
 			interrupts = <0 205 0x04>;
 		};
@@ -88,31 +102,53 @@
 		};
 
 		dsi {
+			clocks = <&clk32k_in>;
+			clock-names = "clk32k_in";
+
 			reg = <0x0 0x15300000 0x0 0x00040000
 			       0x0 0x15400000 0x0 0x00040000>;
 		};
 
 		vic {
+			clocks = <&clk32k_in>, <&clk32k_in>,
+				 <&clk32k_in>, <&clk32k_in>;
+			clock-names = "vic", "emc", "vic_floor", "emc_shared";
+
 			reg = <0x0 0x15340000 0x0 0x00040000>;
 		};
 
 		nvenc {
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "nvenc", "emc";
+
 			reg = <0x0 0x154c0000 0x0 0x00040000>;
 		};
 
 		nvdec {
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "nvdec", "emc";
+
 			reg = <0x0 0x15480000 0x0 0x00040000>;
 		};
 
 		nvjpg {
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "nvjpg", "emc";
+
 			reg = <0x0 0x15380000 0x0 0x00040000>;
 		};
 
 		tsec {
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "tsec", "emc";
+
 			reg = <0x0 0x15500000 0x0 0x00040000>;
 		};
 
 		tsecb {
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "tsecb", "emc";
+
 			reg = <0x0 0x15100000 0x0 0x00040000>;
 		};
 
@@ -135,6 +171,25 @@
 			interrupts = <0 160 0x04>;
 		};
 
+		se1 {
+			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
+			clock-names = "se", "emc", "entropy";
+		};
+
+		se2 {
+			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
+			clock-names = "se", "emc", "entropy";
+		};
+
+		se3 {
+			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
+			clock-names = "se", "emc", "entropy";
+		};
+
+		se4 {
+			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
+			clock-names = "se", "emc", "entropy";
+		};
 	};
 
 	hsp_top {

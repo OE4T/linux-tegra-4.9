@@ -633,6 +633,11 @@
 		status = "disabled";
 	};
 
+	se: se_elp {
+		compatible = "nvidia,tegra186-se-elp";
+		reg = <0x0 0x03AD0000 0x0 0x10000>,
+		      <0x0 0x03AE0000 0x0 0x10000>;
+	};
 
 	spi0: spi@03210000 {
 		compatible = "nvidia,tegra186-spi";

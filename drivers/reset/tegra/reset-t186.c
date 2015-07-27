@@ -49,7 +49,18 @@ static struct platform_driver tegra18x_reset_driver = {
 	},
 };
 
-module_platform_driver(tegra18x_reset_driver);
+static int __init tegra18x_reset_driver_init(void)
+{
+	return platform_driver_register(&tegra18x_reset_driver);
+}
+
+static void __exit tegra18x_reset_driver_exit(void)
+{
+	platform_driver_unregister(&tegra18x_reset_driver);
+}
+
+arch_initcall(tegra18x_reset_driver_init);
+module_exit(tegra18x_reset_driver_exit);
 
 MODULE_AUTHOR("Peter De Schrijver <pdeschrijver@nvidia.com>");
 MODULE_DESCRIPTION("Tegra18x Controller Driver");

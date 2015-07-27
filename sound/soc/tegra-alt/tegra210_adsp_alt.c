@@ -87,6 +87,7 @@ struct tegra210_adsp_app {
 	uint32_t fe:1; /* Whether the app is used as a FE APM */
 	uint32_t connect:1; /* if app is connected to a source */
 	uint32_t priority; /* Valid for only APM app */
+	uint32_t min_adsp_clock; /* Min ADSP clock required in MHz */
 	void *private_data;
 	int (*msg_handler)(struct tegra210_adsp_app *, apm_msg_t *);
 };
@@ -1749,7 +1750,8 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 			/* Request higher ADSP clock when starting stream.
 			 * Actmon takes care of adjusting frequency later. */
 			pm_runtime_get_sync(adsp->dev);
-			adsp_update_dfs(500000, 1);
+			if (app->min_adsp_clock)
+				adsp_update_dfs_min_rate(app->min_adsp_clock * 1000);
 			pm_runtime_put(adsp->dev);
 			tegra210_adsp_send_state_msg(app, nvfx_state_active,
 			TEGRA210_ADSP_MSG_FLAG_SEND);
@@ -1760,6 +1762,8 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 				TEGRA210_ADSP_MSG_FLAG_HOLD);
 			tegra210_adsp_send_reset_msg(app,
 				TEGRA210_ADSP_MSG_FLAG_SEND);
+			if (app->min_adsp_clock)
+				adsp_update_dfs_min_rate(0);
 		}
 	}
 
@@ -2386,7 +2390,11 @@ static int tegra210_adsp_apm_get(struct snd_kcontrol *kcontrol,
 	struct tegra210_adsp *adsp = snd_soc_component_get_drvdata(cmpnt);
 	struct tegra210_adsp_app *app = &adsp->apps[mc->reg];
 
-	ucontrol->value.integer.value[0] = app->priority;
+	if (strstr(kcontrol->id.name, "Priority")) {
+		ucontrol->value.integer.value[0] = app->priority;
+	} else if (strstr(kcontrol->id.name, "Min ADSP Clock")) {
+		ucontrol->value.integer.value[0] = app->min_adsp_clock;
+	}
 	return 0;
 }
 
@@ -2421,6 +2429,9 @@ static int tegra210_adsp_apm_put(struct snd_kcontrol *kcontrol,
 		ret = tegra210_adsp_send_msg(app->apm, &apm_msg,
 				TEGRA210_ADSP_MSG_FLAG_SEND);
 		pm_runtime_put(adsp->dev);
+		app->priority = ucontrol->value.integer.value[0];
+	} else if (strstr(kcontrol->id.name, "Min ADSP Clock")) {
+		app->min_adsp_clock = ucontrol->value.integer.value[0];
 	}
 
 	return ret;
@@ -2480,6 +2491,7 @@ static const struct snd_kcontrol_new tegra210_adsp_controls[] = {
 	SND_SOC_PARAM_EXT("PLUGIN10 set params",
 		TEGRA210_ADSP_PLUGIN10),
 	APM_CONTROL("Priority", APM_PRIORITY_MAX),
+	APM_CONTROL("Min ADSP Clock", INT_MAX),
 };
 
 static const struct snd_soc_component_driver tegra210_adsp_component = {
@@ -2578,8 +2590,11 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	tegra_adsp_pd_remove_device(&pdev->dev);
 	/* HACK end */
 
-	for (i = 0; i < TEGRA210_ADSP_VIRT_REG_MAX; i++)
+	for (i = 0; i < TEGRA210_ADSP_VIRT_REG_MAX; i++) {
 		adsp->apps[i].reg = i;
+		adsp->apps[i].priority = 0;
+		adsp->apps[i].min_adsp_clock = 0;
+	}
 
 	/* get the plugin count */
 	if (of_property_read_u32(pdev->dev.of_node,

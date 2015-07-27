@@ -20,6 +20,12 @@
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x3460000 0x0 0x210>;
 		interrupts = < 0 65 0x04 >;
+		tap-delay = <9>;
+		trim-delay = <5>;
+		nvidia,ddr-tap-delay = <9>;
+		ddr-trim-delay = <5>;
+		dqs-trim-delay = <63>;
+		dqs-trim-delay-hs533 = <40>;
 		bus-width = <8>;
 		uhs-mask = <0x60>;
 		nvidia,is-emmc;
@@ -35,6 +41,10 @@
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x3440000 0x0 0x210>;
 		interrupts = < 0 64 0x04 >;
+		tap-delay = <11>;
+		trim-delay = <5>;
+		nvidia,ddr-tap-delay = <11>;
+		ddr-trim-delay = <5>;
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC3>;
 		clock-names = "sdmmc3";
 		nvidia,clk-name = "sdmmc3";
@@ -47,6 +57,10 @@
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x3420000 0x0 0x210>;
 		interrupts = < 0 63 0x04 >;
+		tap-delay = <11>;
+		trim-delay = <5>;
+		nvidia,ddr-tap-delay = <11>;
+		ddr-trim-delay = <5>;
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC2>;
 		clock-names = "sdmmc2";
 		nvidia,clk-name = "sdmmc2";
@@ -59,6 +73,10 @@
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x3400000 0x0 0x210>;
 		interrupts = < 0 62 0x04 >;
+		tap-delay = <11>;
+		trim-delay = <5>;
+		nvidia,ddr-tap-delay = <11>;
+		ddr-trim-delay = <5>;
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC1>;
 		clock-names = "sdmmc1";
 		nvidia,clk-name = "sdmmc1";

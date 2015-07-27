@@ -28,6 +28,14 @@
 
 	chosen {
 		fastboot-instructions = "Press <PWR> to select, <VOL D/REC> for selection move\n";
+		bootargs = "earlycon=uart8250,mmio32,0x70006000";
+	};
+
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "jetson_cv";
+		};
 	};
 
 	modem {

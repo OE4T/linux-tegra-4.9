@@ -24,13 +24,13 @@ config EQOS
 	  your specific card in the following questions.
 
 config DISABLE_VLAN_FWD_TO_REAL_IF
-	bool "VLAN RX Packet forwarding to Real ethernet Interface"
+	bool "Disable VLAN RX Packet forwarding to Real ethernet Interface"
 	depends on EQOS
 	default n
 
 	---help---
-		This disables support to forward VLAN tagged packets to both the
-		Virtual as well as the Real interface. If enabled, VLAN tagged packets
-		are only forwarded to the Virtual interface.
+		This disables support to forward VLAN tagged packets to the
+		Real interface. If enabled, VLAN tagged packets are only forwarded
+		to the Virtual interface.
 
 		If unsure, say n.

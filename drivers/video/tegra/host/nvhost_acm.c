@@ -30,6 +30,7 @@
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>
 #include <linux/clk/tegra.h>
+#include <linux/reset.h>
 #include <linux/tegra-powergate.h>
 #include <linux/tegra-soc.h>
 #include <trace/events/nvhost.h>
@@ -117,6 +118,11 @@ static void do_module_reset_locked(struct platform_device *dev)
 		return;
 	}
 
+	if (pdata->reset_control) {
+		reset_control_reset(pdata->reset_control);
+		return;
+	}
+
 	/* assert module and mc client reset */
 	if (pdata->clocks[0].reset) {
 		ret = tegra_mc_flush(pdata->clocks[0].reset);
@@ -175,6 +181,9 @@ static void do_module_reset_locked(struct platform_device *dev)
 		pdata->reset(dev);
 		return;
 	}
+
+	if (pdata->reset_control)
+		reset_control_reset(pdata->reset_control);
 }
 static unsigned long nvhost_emc_bw_to_freq_req(unsigned long rate)
 {
@@ -701,6 +710,12 @@ int nvhost_module_init(struct platform_device *dev)
 		i++;
 	}
 	pdata->num_clks = i;
+
+	/* try to get reset control - if it fails, we use Tegra specific
+	 * control as fall-back */
+	pdata->reset_control = devm_reset_control_get(&dev->dev, NULL);
+	if (IS_ERR(pdata->reset_control))
+		pdata->reset_control = NULL;
 
 	/* reset the module */
 	mutex_lock(&pdata->lock);

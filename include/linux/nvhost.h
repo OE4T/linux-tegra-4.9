@@ -323,6 +323,9 @@ struct nvhost_device_data {
 	/* channel user context list */
 	struct mutex userctx_list_lock;
 	struct list_head userctx_list;
+
+	/* reset control for this device */
+	struct reset_control *reset_control;
 };
 
 

@@ -352,6 +352,38 @@ static int set_delay(void *data, u64 val)
 DEFINE_SIMPLE_ATTRIBUTE(freq_compute_fops, get_delay, set_delay,
 	"%llu\n");
 
+static int freq_get(void *data, u64 *val)
+{
+	uint64_t cpu = (uint64_t)data;
+	struct mutex *mlock;
+
+	mlock = &per_cpu(pcpu_mlock, cpu);
+	mutex_lock(mlock);
+
+	*val = tegra_get_speed(cpu);
+
+	mutex_unlock(mlock);
+	return 0;
+}
+
+/* Set freq in Khz for a cpu  */
+static int freq_set(void *data, u64 val)
+{
+	uint64_t cpu = (uint64_t)data;
+	unsigned int freq = val;
+	struct mutex *mlock;
+
+	mlock = &per_cpu(pcpu_mlock, cpu);
+	mutex_lock(mlock);
+
+	if (val)
+		tegra_update_cpu_speed(freq, cpu);
+
+	mutex_unlock(mlock);
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(freq_fops, freq_get, freq_set, "%llu\n");
+
 static void dump_lut(struct seq_file *s, struct cpu_vhint_table *vht)
 {
 	uint16_t i, j;
@@ -397,6 +429,10 @@ static const struct file_operations lut_fops = {
 static struct dentry *tegra_cpufreq_debugfs_root;
 static int __init tegra_cpufreq_debug_init(void)
 {
+	struct dentry *dir;
+	uint8_t buff[15];
+	uint64_t cpu;
+
 	tegra_cpufreq_debugfs_root = debugfs_create_dir("tegra_cpufreq", NULL);
 	if (!tegra_cpufreq_debugfs_root)
 		return -ENOMEM;
@@ -413,6 +449,15 @@ static int __init tegra_cpufreq_debug_init(void)
 					&freq_compute_fops))
 		goto err_out;
 
+	for_each_possible_cpu(cpu) {
+		sprintf(buff, "cpu%llu", cpu);
+		dir = debugfs_create_dir(buff, tegra_cpufreq_debugfs_root);
+		if (!dir)
+			goto err_out;
+		if (!debugfs_create_file("freq", RW_MODE, dir, (void *)cpu,
+			&freq_fops))
+			goto err_out;
+	}
 	return 0;
 err_out:
 	debugfs_remove_recursive(tegra_cpufreq_debugfs_root);

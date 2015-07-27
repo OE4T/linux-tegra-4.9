@@ -181,7 +181,7 @@ For overall status information:
 #echo 10 > nvs
 #cat nvs
 The results will be something like:
-	IQS driver v. 11
+	IQS driver v. 12
 	ATI redo count=0
 	os_options=0
 	stream_mode=2
@@ -251,6 +251,7 @@ Optional properties:
 	os_options is > 0, the OS will be tricked into thinking is has control.
 	In other words, when os_options is 0 (the default), the device will
 	always be enabled.
+- irq_set_irq_wake: Set to 1 if driver is to call this for suspend/resume.
 - stream_mode: The device triggers an interrupt on every device data cycle.
   Note: As mentioned above, the IQS devices have an, um, interesting mechanism
         for communication where there is a small window of time where the
@@ -308,24 +309,33 @@ Example:
 	iqs253@44 {
 		compatible = "azoteq,iqs253";
 		reg = <0x44>;
+		vddhi-supply = <&vdd_3v3>;
 		gpio_rdy = <&gpio TEGRA_GPIO(A, 1) GPIO_ACTIVE_LOW>;
-		gpio_sar = <&gpio TEGRA_GPIO(V, 5) GPIO_ACTIVE_LOW>;
-		gpio_sar_assert_polarity = <0>;
+		gpio_sar = <&gpio TEGRA_GPIO(V, 5) GPIO_ACTIVE_HIGH>;
 		gpio_sar_dev = "SAR_touch";
 		stream_mode = <2>;
 		os_options = <0>;
-                263init_0 = [02 01 00 03 FF FF];
-                263init_1 = [05 09 80 5D 00 17 0F FF FF FF FF FF];
-                263init_2 = [01 0D 0F FF];
-                263init_3 = [01 01 00 FF];
-                263init_4 = [05 07 1D 0D 0E 0C 22 FF FF FF FF FF];
-                263init_5 = [08 0A 0C 05 05 05 0C 00 64 14 FF FF FF FF FF FF FF FF];
-                263init_6 = [03 0B 00 7D 87 FF FF FF];
-                263en_prox_0 = [01 09 10 FF];
-                263en_prox_1 = [FF FF];
-                263en_prox_2 = [FF FF];
-                263en_prox_3 = [FF FF];
-                263en_prox_4 = [FF FF];
-                263en_prox_5 = [02 09 00 5D FF FF];
-                263en_prox_6 = [FF FF];
+                263suspend_0 = [01 0D 01 FF];
+                263suspend_1 = [03 0B 00 0A 0A FF FF FF];
+                263suspend_2 = [01 09 10 FF];
+                263suspend_3 = [FF FF];
+                263suspend_4 = [FF FF];
+                263suspend_5 = [05 09 80 40 00 00 00 FF FF FF FF FF];
+                263suspend_6 = [03 0A FF FF FF FF FF FF];
+                263suspend_7 = [01 0B 0F FF];
+                263suspend_8 = [FF FF];
+		263init_0 = [05 09 80 04 10 07 0F FF FF FF FF FF];
+		263init_1 = [01 0D 07 FF];
+		263init_2 = [01 01 00 FF];
+		263init_3 = [05 07 1D 0A 0C 00 11 FF FF FF FF FF];
+		263init_4 = [04 08 B2 D9 D8 00 FF FF FF FF];
+		263init_5 = [08 0A 08 03 03 03 0C 00 64 14 FF FF FF FF FF FF FF FF];
+		263init_6 = [03 0B 00 A5 B4 FF FF FF];
+		263en_prox_0 = [01 09 10 FF];
+		263en_prox_1 = [FF FF];
+		263en_prox_2 = [FF FF];
+		263en_prox_3 = [FF FF];
+		263en_prox_4 = [FF FF];
+		263en_prox_5 = [02 09 00 54 FF FF];
+		263en_prox_6 = [FF FF];
 	};

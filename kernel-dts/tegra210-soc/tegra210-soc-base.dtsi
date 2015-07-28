@@ -1737,11 +1737,11 @@
 		status = "disabled";
 	};
 
-        fiq_debugger {
+	tegra_fiq_debugger {
 		compatible = "nvidia,fiq-debugger";
 		use-console-port;
 		interrupts = <1 12 0x0108>;
-        };
+	};
 
 	ptm {
 		compatible = "nvidia,ptm";

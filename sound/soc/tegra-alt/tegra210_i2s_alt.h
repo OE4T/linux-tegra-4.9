@@ -213,6 +213,7 @@ struct tegra210_i2s {
 	struct notifier_block slgc_notifier;
 	int num_supplies;
 	int bclk_ratio;
+	int format_in;
 	unsigned int fsync_width;
 	unsigned int tx_mask;
 	unsigned int rx_mask;

@@ -464,28 +464,28 @@ static int get_est_timing(unsigned char *block, struct fb_videomode *mode)
 		DPRINTK("      832x624@75Hz\n");
 	}
 	if (c&0x10) {
-		mode[num++] = vesa_modes[12];
+		mode[num++] = vesa_modes[14];
 		DPRINTK("      1024x768@87Hz Interlaced\n");
 	}
 	if (c&0x08) {
-		mode[num++] = vesa_modes[13];
+		mode[num++] = vesa_modes[15];
 		DPRINTK("      1024x768@60Hz\n");
 	}
 	if (c&0x04) {
-		mode[num++] = vesa_modes[14];
+		mode[num++] = vesa_modes[16];
 		DPRINTK("      1024x768@70Hz\n");
 	}
 	if (c&0x02) {
-		mode[num++] = vesa_modes[15];
+		mode[num++] = vesa_modes[17];
 		DPRINTK("      1024x768@75Hz\n");
 	}
 	if (c&0x01) {
-		mode[num++] = vesa_modes[21];
+		mode[num++] = vesa_modes[35];
 		DPRINTK("      1280x1024@75Hz\n");
 	}
 	c = block[2];
 	if (c&0x80) {
-		mode[num++] = vesa_modes[17];
+		mode[num++] = vesa_modes[20];
 		DPRINTK("      1152x870@75Hz\n");
 	}
 	DPRINTK("      Manufacturer's mask: %x\n",c&0x7F);

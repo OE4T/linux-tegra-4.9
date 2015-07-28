@@ -57,6 +57,17 @@
 #define TEGRA186_DENVER_CPUIDLE_C6	1
 #define TEGRA186_A57_CPUIDLE_C7		1
 
+static bool check_mce_version(void)
+{
+	u32 mce_version_major, mce_version_minor;
+
+	tegra_mce_read_versions(&mce_version_major, &mce_version_minor);
+	if (mce_version_major >= 2)
+		return true;
+	else
+		return false;
+}
+
 static void tegra186_denver_enter_c6(u32 wake_time)
 {
 	tegra_mce_enter_cstate(TEGRA186_CPUIDLE_C6, wake_time);
@@ -439,6 +450,12 @@ static int tegra18x_cpuidle_probe(struct platform_device *pdev)
 	struct cpumask a57_cpumask;
 	int err;
 
+	if (!check_mce_version()) {
+		pr_err("cpuidle: failed to register."
+			" Incompatible MCE version.\n");
+		return -ENODEV;
+	}
+
 	cpumask_clear(&denver_cpumask);
 	cpumask_clear(&a57_cpumask);
 
@@ -555,6 +572,12 @@ static int tegra_mce_cpu_notify(struct notifier_block *nb,
 	struct device_node *denver_xover;
 	struct device_node *a57_xover;
         int cpu = (long)pcpu;
+
+	if (!check_mce_version()) {
+		pr_err("cpuidle: skipping crossover programming."
+			" Incompatible MCE version.\n");
+		return NOTIFY_OK;
+	}
 
 	printk("cpuidle: Init Power Crossover thresholds for core %d\n", cpu);
 	denver_xover = of_find_node_by_name(NULL, "denver_crossover_thresholds");

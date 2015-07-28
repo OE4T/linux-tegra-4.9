@@ -420,6 +420,49 @@ static int tegra210_i2s_set_dai_bclk_ratio(struct snd_soc_dai *dai,
 	return 0;
 }
 
+static int tegra210_i2s_get_format(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra210_i2s *i2s = snd_soc_codec_get_drvdata(codec);
+
+	/* get the format control flag */
+	if (strstr(kcontrol->id.name, "input"))
+		ucontrol->value.integer.value[0] = i2s->format_in;
+
+	return 0;
+}
+
+static int tegra210_i2s_put_format(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tegra210_i2s *i2s = snd_soc_codec_get_drvdata(codec);
+
+	/* set the format control flag */
+	if (strstr(kcontrol->id.name, "input"))
+		i2s->format_in = ucontrol->value.integer.value[0];
+
+	return 0;
+}
+
+static const char * const tegra210_i2s_format_text[] = {
+	"None",
+	"16",
+	"32",
+};
+
+static const int tegra210_i2s_fmt_values[] = {
+	0,
+	TEGRA210_AUDIOCIF_BITS_16,
+	TEGRA210_AUDIOCIF_BITS_32,
+};
+
+static const struct soc_enum tegra210_i2s_format_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
+		ARRAY_SIZE(tegra210_i2s_format_text),
+		tegra210_i2s_format_text);
+
 static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
@@ -523,8 +566,12 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 	/* As a COCEC DAI, CAPTURE is transmit */
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
 		reg = TEGRA210_I2S_AXBAR_RX_CIF_CTRL;
-	else
+	else {
+		if (i2s->format_in)
+			cif_conf.audio_bits =
+				tegra210_i2s_fmt_values[i2s->format_in];
 		reg = TEGRA210_I2S_AXBAR_TX_CIF_CTRL;
+	}
 
 	i2s->soc_data->set_audio_cif(i2s->regmap, reg, &cif_conf);
 
@@ -661,6 +708,8 @@ static int tegra210_i2s_loopback_put(struct snd_kcontrol *kcontrol,
 static const struct snd_kcontrol_new tegra210_i2s_controls[] = {
 	SOC_SINGLE_EXT("Loopback", SND_SOC_NOPM, 0, 1, 0,
 		tegra210_i2s_loopback_get, tegra210_i2s_loopback_put),
+	SOC_ENUM_EXT("input bit format", tegra210_i2s_format_enum,
+		tegra210_i2s_get_format, tegra210_i2s_put_format),
 };
 
 static const struct snd_soc_dapm_widget tegra210_i2s_widgets[] = {

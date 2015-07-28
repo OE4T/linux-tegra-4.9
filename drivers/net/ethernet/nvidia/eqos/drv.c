@@ -5060,7 +5060,10 @@ static int DWC_ETH_QOS_handle_hwtstamp_ioctl(struct DWC_ETH_QOS_prv_data *pdata,
 		ptp_over_ipv4_udp = MAC_TCR_TSIPV4ENA;
 		ptp_over_ipv6_udp = MAC_TCR_TSIPV6ENA;
 		ptp_over_ethernet = MAC_TCR_TSIPENA;
+		/* for VLAN tagged PTP, AV8021ASMEN bit should not be set */
+#ifdef DWC_1588_VLAN_UNTAGGED
 		av_8021asm_en = MAC_TCR_AV8021ASMEN;
+#endif
 		break;
 
 	/* PTP v2/802.AS1, any layer, Sync packet */

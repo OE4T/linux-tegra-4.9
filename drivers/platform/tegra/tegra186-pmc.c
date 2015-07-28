@@ -50,6 +50,8 @@
 #define PMC_SCRATCH_WRITE_MASK			BIT(2)
 #define PMC_ENABLE_RST_MASK		BIT(1)
 
+#define PMC_SATA_PWRGT_0		0x68
+
 #define PMC_RST_STATUS			0x70
 #define PMC_RST_LEVEL_MASK		0x3
 #define PMC_RST_SOURCE			0x3C
@@ -127,6 +129,12 @@ void tegra186_pmc_register_update(int offset,
 }
 EXPORT_SYMBOL(tegra186_pmc_register_update);
 
+unsigned long tegra_pmc_register_get(u32 offset)
+{
+	return tegra186_pmc_readl(offset);
+}
+EXPORT_SYMBOL(tegra_pmc_register_get);
+
 int tegra186_pmc_io_dpd_enable(int reg, int bit_pos)
 {
 	unsigned int enable_mask;
@@ -198,7 +206,7 @@ void tegra186_pmc_pwr_e33V_update(unsigned long mask, unsigned long val)
 
 	spin_lock_irqsave(&tegra186_pmc_access_lock, flags);
 	_tegra186_pmc_register_update(PMC_E_33V_PWR, mask, val);
-	spin_unlock(&tegra186_pmc_access_lock);
+	spin_unlock_irqrestore(&tegra186_pmc_access_lock, flags);
 }
 EXPORT_SYMBOL(tegra186_pmc_pwr_e33V_update);
 
@@ -268,6 +276,22 @@ int tegra186_pmc_iopower_get_status(int reg, u32 bit_mask)
 		return 1;
 }
 EXPORT_SYMBOL(tegra186_pmc_iopower_get_status);
+
+void tegra_pmc_sata_pwrgt_update(unsigned long mask, unsigned long val)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&tegra186_pmc_access_lock, flags);
+	_tegra186_pmc_register_update(PMC_SATA_PWRGT_0, mask, val);
+	spin_unlock_irqrestore(&tegra186_pmc_access_lock, flags);
+}
+EXPORT_SYMBOL(tegra_pmc_sata_pwrgt_update);
+
+unsigned long tegra_pmc_sata_pwrgt_get(void)
+{
+	return tegra186_pmc_readl(PMC_SATA_PWRGT_0);
+}
+EXPORT_SYMBOL(tegra_pmc_sata_pwrgt_get);
 
 static const struct of_device_id tegra186_pmc[] __initconst = {
 	{ .compatible = "nvidia,tegra186-pmc" },

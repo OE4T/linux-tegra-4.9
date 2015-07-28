@@ -163,6 +163,9 @@
 #undef DWC_ETH_QOS_TXPOLLING_MODE_ENABLE
 #endif
 
+/* Enable this to have support for only 1588 V2 VLAN un-TAGGED ptp packets */
+//#define DWC_1588_VLAN_UNTAGGED
+
 /* Uncomment below macro to enable Double VLAN support. */
 //#define DWC_ETH_QOS_ENABLE_DVLAN
 

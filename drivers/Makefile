@@ -17,6 +17,7 @@ obj-$(CONFIG_CRYPTO) += crypto/
 obj-y += dma/
 obj-y += spi/
 obj-$(CONFIG_TEGRA_BPMP) += firmware/tegra/
+obj-$(CONFIG_CPU_FREQ)   += cpufreq/
 obj-y += pinctrl/
 obj-y += gpio/
 obj-y += reset/

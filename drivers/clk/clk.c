@@ -23,7 +23,6 @@
 #include <linux/init.h>
 #include <linux/sched.h>
 #include <linux/clkdev.h>
-
 #include "clk.h"
 
 static DEFINE_SPINLOCK(enable_lock);
@@ -463,6 +462,7 @@ int __clk_mux_determine_rate_closest(struct clk_hw *hw,
 	return clk_mux_determine_rate_flags(hw, req, CLK_MUX_ROUND_CLOSEST);
 }
 EXPORT_SYMBOL_GPL(__clk_mux_determine_rate_closest);
+
 
 /***        clk api        ***/
 
@@ -2234,6 +2234,19 @@ static void clk_debug_unregister(struct clk_core *core)
 	core->dentry = NULL;
 	mutex_unlock(&clk_debug_lock);
 }
+
+struct dentry *__clk_debugfs_add_file(struct clk *clk, char *name,
+	umode_t mode, void *data, const struct file_operations *fops)
+{
+	struct dentry *d = NULL;
+
+	if (clk->core->dentry)
+		d = debugfs_create_file(name, mode, clk->core->dentry, data,
+			fops);
+
+	return d;
+}
+EXPORT_SYMBOL_GPL(__clk_debugfs_add_file);
 
 struct dentry *clk_debugfs_add_file(struct clk_hw *hw, char *name, umode_t mode,
 				void *data, const struct file_operations *fops)

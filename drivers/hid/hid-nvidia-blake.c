@@ -1,7 +1,7 @@
 /*
  * HID driver for NVIDIA Shield Wireless Joystick
  *
- * Copyright (c) 2013-2014, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2013-2015, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -556,7 +556,6 @@ static void nvidia_remove(struct hid_device *hdev)
 	device_remove_file(&hdev->dev, &dev_attr_mode);
 
 	hid_hw_stop(hdev);
-	kfree(loc);
 }
 
 static int nvidia_input_mapped(struct hid_device *hdev, struct hid_input *hi,

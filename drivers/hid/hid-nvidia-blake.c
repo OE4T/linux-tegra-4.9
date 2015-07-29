@@ -452,13 +452,8 @@ static int nvidia_init_ff(struct hid_device *hdev, struct nvidia_tp_loc *loc)
 			continue;
 		}
 
-		if (report->field[0]->application != (HID_UP_CUSTOM | 0x02)) {
-			hid_warn(hdev, "application usage doesn't match expected\n");
-			continue;
-		}
-
-		if (report->field[0]->report_count < 3) {
-			hid_warn(hdev, "not enough values in the field\n");
+		if (report->field[0]->report_count != 3) {
+			hid_warn(hdev, "not right number of values in the field\n");
 			continue;
 		}
 

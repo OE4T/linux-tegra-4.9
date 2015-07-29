@@ -183,44 +183,6 @@
 		#stream-id-cells = <1>;
 	};
 
-	smmu: iommu {
-		reg = <0x0 0x12000000 0x0 0x01000000>;
-		mmu-masters = <&{/gp10b}		TEGRA_SWGROUP_GPUB>,
-			      <&host1x                  TEGRA_SWGROUP_HC>,
-			      <&{/host1x/nvcsi}		TEGRA_SWGROUP_NVCSI>,
-			      <&{/host1x/vic}           TEGRA_SWGROUP_VIC>,
-			      <&{/host1x/vi}            TEGRA_SWGROUP_VI>,
-			      <&{/host1x/isp@54600000}  TEGRA_SWGROUP_ISP>,
-			      <&{/host1x/nvdec}         TEGRA_SWGROUP_NVDEC>,
-			      <&{/host1x/nvenc}         TEGRA_SWGROUP_NVENC>,
-			      <&{/host1x/nvjpg}         TEGRA_SWGROUP_NVJPG>,
-			      <&{/host1x/nvdisplay@0x54200000}	TEGRA_SWGROUP_NVDISPLAY>,
-			      <&{/host1x/nvdisplay@0x54210000}	TEGRA_SWGROUP_NVDISPLAY>,
-			      <&{/host1x/nvdisplay@0x54220000}	TEGRA_SWGROUP_NVDISPLAY>,
-			      <&{/host1x/tsec}		TEGRA_SWGROUP_TSEC>,
-			      <&{/host1x/tsecb}		TEGRA_SWGROUP_TSECB>,
-			      <&{/host1x/se1}		TEGRA_SWGROUP_SE>,
-			      <&{/host1x/se2}		TEGRA_SWGROUP_SE1>,
-			      <&{/host1x/se3}		TEGRA_SWGROUP_SE2>,
-			      <&{/host1x/se4}		TEGRA_SWGROUP_SE3>,
-			      <&{/sdhci@3460000}       TEGRA_SWGROUP_SDMMC4A>,
-			      <&{/sdhci@3440000}       TEGRA_SWGROUP_SDMMC3A>,
-			      <&{/sdhci@3420000}       TEGRA_SWGROUP_SDMMC2A>,
-			      <&{/sdhci@3400000}       TEGRA_SWGROUP_SDMMC1A>,
-			      <&{/bpmp}			TEGRA_SWGROUP_BPMP>,
-			      <&{/dma@2600000}		TEGRA_SWGROUP_AXIS>,
-			      <&{/xhci@0x03530000}      TEGRA_SWGROUP_XUSB_HOST>,
-			      <&{/xudc@0x03550000}      TEGRA_SWGROUP_XUSB_DEV>,
-			      <&host1x_ctx0		TEGRA_SWGROUP_HOST1X_CTX0>,
-			      <&host1x_ctx1		TEGRA_SWGROUP_HOST1X_CTX1>,
-			      <&host1x_ctx2		TEGRA_SWGROUP_HOST1X_CTX2>,
-			      <&host1x_ctx3		TEGRA_SWGROUP_HOST1X_CTX3>,
-			      <&host1x_ctx4		TEGRA_SWGROUP_HOST1X_CTX4>,
-			      <&host1x_ctx5		TEGRA_SWGROUP_HOST1X_CTX5>,
-			      <&host1x_ctx6		TEGRA_SWGROUP_HOST1X_CTX6>,
-			      <&host1x_ctx7		TEGRA_SWGROUP_HOST1X_CTX7>;
-	};
-
 	tegra_car: clock {
 		reg = <0x0 0x05000000 0x0 0x01000000>;
 	};

@@ -87,7 +87,7 @@
 #define PMC_DSI_SEL_DPD			0xD0
 
 #define PMC_TSC_MULT0			0xD4
-
+#define PMC_UFSHC_PWR_CNTRL_0		0xF4
 
 #define PMC_THERMTRIP_CFG		0x104
 #define PMC_THERMTRIP_CFG_LOCK_MASK		BIT(5)
@@ -268,6 +268,22 @@ void tegra186_pmc_disable_nvcsi_brick_dpd(void)
 	tegra186_pmc_writel(val, PMC_IO_DPD2_REQ);
 }
 EXPORT_SYMBOL(tegra186_pmc_disable_nvcsi_brick_dpd);
+
+void tegra_pmc_ufs_pwrcntrl_update(unsigned long mask, unsigned long val)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&tegra186_pmc_access_lock, flags);
+	_tegra186_pmc_register_update(PMC_UFSHC_PWR_CNTRL_0, mask, val);
+	spin_unlock_irqrestore(&tegra186_pmc_access_lock, flags);
+}
+EXPORT_SYMBOL(tegra_pmc_ufs_pwrcntrl_update);
+
+unsigned long tegra_pmc_ufs_pwrcntrl_get(void)
+{
+	return tegra186_pmc_readl(PMC_UFSHC_PWR_CNTRL_0);
+}
+EXPORT_SYMBOL(tegra_pmc_ufs_pwrcntrl_get);
 
 void tegra186_pmc_iopower_enable(int reg, u32 bit_mask)
 {

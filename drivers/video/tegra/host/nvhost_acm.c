@@ -72,7 +72,6 @@ struct nvhost_module_client {
 	void *priv;
 };
 
-#ifdef CONFIG_ARCH_TEGRA
 static void do_powergate_locked(int id)
 {
 	nvhost_dbg_fn("%d", id);
@@ -160,36 +159,6 @@ static unsigned long nvhost_emc_bw_to_freq_req(unsigned long rate)
 {
 	return tegra_emc_bw_to_freq_req((unsigned long)(rate));
 }
-#else
-static void do_powergate_locked(int id)
-{
-	nvhost_dbg_fn("%d", id);
-}
-
-static void do_unpowergate_locked(int id)
-{
-	nvhost_dbg_fn("");
-}
-
-static void do_module_reset_locked(struct platform_device *dev)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-
-	nvhost_dbg_fn("");
-
-	if (pdata->reset) {
-		pdata->reset(dev);
-		return;
-	}
-
-	if (pdata->reset_control)
-		reset_control_reset(pdata->reset_control);
-}
-static unsigned long nvhost_emc_bw_to_freq_req(unsigned long rate)
-{
-	return 0;
-}
-#endif
 
 void nvhost_module_reset(struct platform_device *dev, bool reboot)
 {

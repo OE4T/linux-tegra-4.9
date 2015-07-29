@@ -839,12 +839,6 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 		goto free_mem;
 	}
 
-	/* skip cache op when NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE is specified */
-	if (count && !is_reserve_ioctl) {
-		err = 0;
-		goto free_mem;
-	}
-
 	/*
 	 * when NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE is specified mix can cause
 	 * cache WB_INV at unreserve op on iovmm handles increasing overhead.

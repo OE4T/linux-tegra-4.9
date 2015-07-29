@@ -359,9 +359,6 @@ int __nvmap_cache_maint(struct nvmap_client *client,
 	if (!handle)
 		return -EINVAL;
 
-	if (handle->userflags & NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE)
-		goto put_handle;
-
 	down_read(&current->mm->mmap_sem);
 
 	vma = find_vma(current->active_mm, (unsigned long)op->addr);
@@ -388,7 +385,6 @@ int __nvmap_cache_maint(struct nvmap_client *client,
 				     false);
 out:
 	up_read(&current->mm->mmap_sem);
-put_handle:
 	nvmap_handle_put(handle);
 	return err;
 }

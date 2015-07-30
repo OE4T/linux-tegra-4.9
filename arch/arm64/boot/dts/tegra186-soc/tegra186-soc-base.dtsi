@@ -390,6 +390,19 @@
 		status = "disabled";
 	};
 
+	tachometer@39c0000 {
+		compatible = "nvidia,tegra186-tachometer";
+		reg = <0x0 0x039c0000 0x0 0x10>;
+		#stream-id-cells = <1>;
+		clocks = <&tegra_car TEGRA186_CLK_TACH>;
+		clock-names = "tach";
+		resets = <&tegra_car TEGRA186_RESET_TACH>;
+		reset-names = "tach";
+		pulse-per-rev = <1>;
+		sampling-window = <1>;
+		status = "disabled";
+	};
+
 	tegra_pmc: pmc@c360000 {
 		compatible = "nvidia,tegra186-pmc";
 		reg = <0x0 0xC360000 0x0 0x400>;

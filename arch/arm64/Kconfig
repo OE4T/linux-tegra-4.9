@@ -1092,6 +1092,12 @@ config ARCH_SUSPEND_POSSIBLE
 
 endmenu
 
+config SERROR_HANDLER
+	bool "Platform specific SError handler support"
+	help
+	  This option configures the arm64 kernel to call a platform specific
+	  SError (system error) handler.
+
 menu "CPU Power Management"
 
 source "drivers/cpuidle/Kconfig"

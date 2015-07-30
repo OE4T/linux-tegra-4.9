@@ -52,6 +52,7 @@ static const char *handler[]= {
 
 int show_unhandled_signals = 1;
 
+#ifdef CONFIG_DEBUG_VERBOSE_OOPS
 /*
  * Dump out the contents of some kernel memory nicely...
  */
@@ -94,6 +95,7 @@ static void dump_mem(const char *lvl, const char *str, unsigned long bottom,
 
 	set_fs(fs);
 }
+#endif
 
 static void dump_backtrace_entry(unsigned long where)
 {
@@ -101,6 +103,11 @@ static void dump_backtrace_entry(unsigned long where)
 	 * Note that 'where' can have a physical address, but it's not handled.
 	 */
 	print_ip_sym(where);
+#ifdef CONFIG_DEBUG_VERBOSE_OOPS
+	if (in_exception_text(where))
+		dump_mem("", "Exception stack", stack,
+			 stack + sizeof(struct pt_regs));
+#endif
 }
 
 static void __dump_instr(const char *lvl, struct pt_regs *regs)
@@ -197,6 +204,7 @@ static void dump_backtrace(struct pt_regs *regs, struct task_struct *tsk)
 		if (ret < 0)
 			break;
 		stack = frame.sp;
+#ifdef CONFIG_DEBUG_VERBOSE_OOPS
 		if (in_exception_text(where)) {
 			/*
 			 * If we switched to the irq_stack before calling this
@@ -211,6 +219,7 @@ static void dump_backtrace(struct pt_regs *regs, struct task_struct *tsk)
 			dump_mem("", "Exception stack", stack,
 				 stack + sizeof(struct pt_regs));
 		}
+#endif
 	}
 }
 
@@ -248,10 +257,15 @@ static int __die(const char *str, int err, struct thread_info *thread,
 		 TASK_COMM_LEN, tsk->comm, task_pid_nr(tsk), thread + 1);
 
 	if (!user_mode(regs)) {
+#ifdef CONFIG_DEBUG_VERBOSE_OOPS
 		dump_mem(KERN_EMERG, "Stack: ", regs->sp,
 			 THREAD_SIZE + (unsigned long)task_stack_page(tsk));
+#endif
 		dump_backtrace(regs, tsk);
+
+#ifdef CONFIG_DEBUG_VERBOSE_OOPS
 		dump_instr(KERN_EMERG, regs);
+#endif
 	}
 
 	return ret;
@@ -266,10 +280,13 @@ void die(const char *str, struct pt_regs *regs, int err)
 {
 	struct thread_info *thread = current_thread_info();
 	int ret;
+	unsigned long flags;
+
+	local_irq_save(flags);
 
 	oops_enter();
 
-	raw_spin_lock_irq(&die_lock);
+	raw_spin_lock(&die_lock);
 	console_verbose();
 	bust_spinlocks(1);
 	ret = __die(str, err, thread, regs);
@@ -279,13 +296,16 @@ void die(const char *str, struct pt_regs *regs, int err)
 
 	bust_spinlocks(0);
 	add_taint(TAINT_DIE, LOCKDEP_NOW_UNRELIABLE);
-	raw_spin_unlock_irq(&die_lock);
+	raw_spin_unlock(&die_lock);
 	oops_exit();
 
 	if (in_interrupt())
 		panic("Fatal exception in interrupt");
 	if (panic_on_oops)
 		panic("Fatal exception");
+
+	local_irq_restore(flags);
+
 	if (ret != NOTIFY_STOP)
 		do_exit(SIGSEGV);
 }
@@ -597,6 +617,31 @@ const char *esr_get_class_string(u32 esr)
 	return esr_class_str[ESR_ELx_EC(esr)];
 }
 
+#ifdef CONFIG_SERROR_HANDLER
+static LIST_HEAD(serr_hook);
+static DEFINE_RAW_SPINLOCK(serr_lock);
+
+void register_serr_hook(struct serr_hook *hook)
+{
+	unsigned long flags;
+
+	raw_spin_lock_irqsave(&serr_lock, flags);
+	list_add(&hook->node, &serr_hook);
+	raw_spin_unlock_irqrestore(&serr_lock, flags);
+}
+EXPORT_SYMBOL(register_serr_hook);
+
+void unregister_serr_hook(struct serr_hook *hook)
+{
+	unsigned long flags;
+
+	raw_spin_lock_irqsave(&serr_lock, flags);
+	list_del(&hook->node);
+	raw_spin_unlock_irqrestore(&serr_lock, flags);
+}
+EXPORT_SYMBOL(unregister_serr_hook);
+#endif
+
 /*
  * bad_mode handles the impossible case in the exception vector. This is always
  * fatal.
@@ -622,11 +667,14 @@ asmlinkage void bad_el0_sync(struct pt_regs *regs, int reason, unsigned int esr)
 {
 	siginfo_t info;
 	void __user *pc = (void __user *)instruction_pointer(regs);
+
 	console_verbose();
 
 	pr_crit("Bad EL0 synchronous exception detected on CPU%d, code 0x%08x -- %s\n",
 		smp_processor_id(), esr, esr_get_class_string(esr));
+#ifdef CONFIG_DEBUG_VERBOSE_OOPS
 	__show_regs(regs);
+#endif
 
 	info.si_signo = SIGILL;
 	info.si_errno = 0;
@@ -637,6 +685,34 @@ asmlinkage void bad_el0_sync(struct pt_regs *regs, int reason, unsigned int esr)
 	current->thread.fault_code = 0;
 
 	force_sig_info(info.si_signo, &info, current);
+}
+
+asmlinkage void handle_serr(unsigned long daif, unsigned long spsr,
+                            struct pt_regs *regs)
+{
+#ifdef CONFIG_SERROR_HANDLER
+	struct serr_hook *hook;
+	unsigned long flags;
+#endif
+	ulong mpidr;
+	ulong esr;
+	bool enter_bad_mode = false;
+
+	asm volatile("mrs %0, mpidr_el1" : "=r"(mpidr));
+	asm volatile ("mrs %0, esr_el1" : "=r"(esr));
+
+	pr_crit("CPU%d: SError detected, daif=%lx, "
+	        "spsr=0x%lx, mpidr=%lx, esr=%lx\n",
+	        smp_processor_id(), daif, spsr, mpidr, esr);
+#ifdef CONFIG_SERROR_HANDLER
+	raw_spin_lock_irqsave(&serr_lock, flags);
+	list_for_each_entry(hook, &serr_hook, node)
+		if (!hook->fn(regs, 3, esr, hook->priv))
+			enter_bad_mode = true;
+	raw_spin_unlock_irqrestore(&serr_lock, flags);
+#endif
+	if (enter_bad_mode)
+		bad_mode(regs, 3, esr);
 }
 
 void __pte_error(const char *file, int line, unsigned long val)

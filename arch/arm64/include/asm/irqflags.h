@@ -20,6 +20,12 @@
 
 #include <asm/ptrace.h>
 
+#ifdef CONFIG_SERROR_HANDLER
+#define SERROR_BITS "4"
+#else
+#define SERROR_BITS "0"
+#endif
+
 /*
  * CPU interrupt mask handling.
  */
@@ -38,7 +44,7 @@ static inline unsigned long arch_local_irq_save(void)
 static inline void arch_local_irq_enable(void)
 {
 	asm volatile(
-		"msr	daifclr, #2		// arch_local_irq_enable"
+		"msr	daifclr, #(2 |" SERROR_BITS ") // arch_local_irq_enable"
 		:
 		:
 		: "memory");

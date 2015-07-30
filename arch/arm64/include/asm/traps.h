@@ -50,6 +50,22 @@ static inline int __in_irqentry_text(unsigned long ptr)
 }
 #endif
 
+#ifdef CONFIG_SERROR_HANDLER
+struct serr_hook {
+	struct list_head node;
+	void *priv;
+	/* returns 0, if the MCA error needs reboot.
+	 * returns 1, if the MCA error doesn't need reboot or
+	 *	      no MCA Error is detected.
+	 */
+	int (*fn)(struct pt_regs *regs, int reason,
+		unsigned int esr, void *priv);
+};
+
+void register_serr_hook(struct serr_hook *hook);
+void unregister_serr_hook(struct serr_hook *hook);
+#endif
+
 static inline int in_exception_text(unsigned long ptr)
 {
 	int in;

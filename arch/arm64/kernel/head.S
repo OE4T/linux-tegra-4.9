@@ -451,6 +451,9 @@ __primary_switched:
 	bl	__pi_memset
 	dsb	ishst				// Make zero page visible to PTW
 
+#ifdef CONFIG_SERROR_HANDLER
+	msr	daifclr, #4
+#endif
 #ifdef CONFIG_KASAN
 	bl	kasan_early_init
 #endif

@@ -323,18 +323,18 @@ ENTRY(vectors)
 	ventry	el1_sync			// Synchronous EL1h
 	ventry	el1_irq				// IRQ EL1h
 	ventry	el1_fiq_invalid			// FIQ EL1h
-	ventry	el1_error_invalid		// Error EL1h
+	ventry	el1_serr			// Error EL1h
 
 	ventry	el0_sync			// Synchronous 64-bit EL0
 	ventry	el0_irq				// IRQ 64-bit EL0
 	ventry	el0_fiq_invalid			// FIQ 64-bit EL0
-	ventry	el0_error_invalid		// Error 64-bit EL0
+	ventry	el0_serr			// Error 64-bit EL0
 
 #ifdef CONFIG_COMPAT
 	ventry	el0_sync_compat			// Synchronous 32-bit EL0
 	ventry	el0_irq_compat			// IRQ 32-bit EL0
 	ventry	el0_fiq_invalid_compat		// FIQ 32-bit EL0
-	ventry	el0_error_invalid_compat	// Error 32-bit EL0
+	ventry	el0_serr			// Error 32-bit EL0
 #else
 	ventry	el0_sync_invalid		// Synchronous 32-bit EL0
 	ventry	el0_irq_invalid			// IRQ 32-bit EL0
@@ -508,6 +508,34 @@ el1_preempt:
 	tbnz	x0, #TIF_NEED_RESCHED, 1b	// needs rescheduling?
 	ret	x24
 #endif
+
+el1_serr:
+	kernel_entry 1
+	enable_dbg
+	// re-enable interrupts if they were enabled in the aborted context
+	tbnz	x23, #7, 1f			// PSR_I_BIT
+	enable_irq
+1:
+	mrs	x0, daif
+	mrs	x1, spsr_el1
+	mov	x2, sp				// struct pt_regs
+	bl	handle_serr
+	// disable interrupts before pulling preserved data off the stack
+	disable_irq
+	kernel_exit 1
+ENDPROC(el1_serr)
+
+el0_serr:
+	kernel_entry 0
+	// enable interrupts before calling the main handler
+	enable_dbg_and_irq
+	ct_user_exit
+	mrs	x0, daif
+	mrs	x1, spsr_el1
+	mov	x2, sp
+	bl	handle_serr
+	b	ret_to_user
+ENDPROC(el0_serr)
 
 /*
  * EL0 mode handlers.

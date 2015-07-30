@@ -237,6 +237,11 @@ void __show_regs(struct pt_regs *regs)
 {
 	int i, top_reg;
 	u64 lr, sp;
+#ifdef CONFIG_DEBUG_VERBOSE_OOPS
+	int verbose_oops = 1;
+#else
+	int verbose_oops = 0;
+#endif
 
 	if (compat_user_mode(regs)) {
 		lr = regs->compat_lr;
@@ -268,8 +273,10 @@ void __show_regs(struct pt_regs *regs)
 
 		pr_cont("\n");
 	}
-	if (!user_mode(regs))
+
+	if (!user_mode(regs) && verbose_oops)
 		show_extra_register_data(regs, 128);
+
 	printk("\n");
 }
 

@@ -20,6 +20,8 @@ snd-soc-tegra-alt-t186ref-objs := tegra_t186ref_alt.o tegra_asoc_machine_alt_t18
 	../../../../$(lastword $(subst /, ,$(srctree)))/sound/soc/tegra-alt/tegra_asoc_machine_alt.o
 snd-soc-tegra-alt-t186ref-mobile-objs := tegra_t186ref_mobile_rt565x.o tegra_asoc_machine_alt_t18x.o \
         ../../../../$(lastword $(subst /, ,$(srctree)))/sound/soc/tegra-alt/tegra_asoc_machine_alt.o
-
+snd-soc-tegra-alt-t186ref-auto-objs := tegra_t186ref_p2382_alt.o tegra_asoc_machine_alt_t18x.o \
+	../../../../$(lastword $(subst /, ,$(srctree)))/sound/soc/tegra-alt/tegra_asoc_machine_alt.o
 obj-$(CONFIG_SND_SOC_TEGRA_T186REF_ALT) += snd-soc-tegra-alt-t186ref.o
 obj-$(CONFIG_SND_SOC_TEGRA_T186REF_MOBILE_ALT) += snd-soc-tegra-alt-t186ref-mobile.o
+obj-$(CONFIG_SND_SOC_TEGRA_T186REF_AUTO_ALT) += snd-soc-tegra-alt-t186ref-auto.o

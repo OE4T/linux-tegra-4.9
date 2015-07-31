@@ -2018,7 +2018,12 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 			}
 
 			/* DAP configuration */
-			of_property_read_string(subnp, "name-prefix", &prefix);
+			if (of_property_read_string(subnp, "name-prefix",
+				&prefix)) {
+				dev_err(&pdev->dev,
+					"Property 'name-prefix' missing or invalid\n");
+				goto err;
+			}
 
 			if (of_property_read_string(subnp, "link-name",
 				&tegra_codec_links[i].name)) {
@@ -2158,9 +2163,12 @@ struct snd_soc_codec_conf *tegra_machine_new_codec_conf(
 			of_node = of_parse_phandle(subnp, "codec-dai", 0);
 			tegra_codec_conf[i].dev_name = of_node->name;
 
-			of_property_read_string(subnp,
-				"name-prefix",
-				&tegra_codec_conf[i].name_prefix);
+			if (of_property_read_string(subnp, "name-prefix",
+				&tegra_codec_conf[i].name_prefix)) {
+				dev_err(&pdev->dev,
+					"Property 'name-prefix' missing or invalid\n");
+				goto err;
+			}
 		}
 	}
 

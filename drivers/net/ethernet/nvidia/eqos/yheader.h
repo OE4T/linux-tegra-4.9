@@ -516,6 +516,9 @@
 #define DWC_ETH_QOS_VLAN_PERFECT_FILTERING 0
 #define DWC_ETH_QOS_VLAN_HASH_FILTERING 1
 
+/* Enabling perfect filter for L2. If disabled has filter will be used */
+#define ENABLE_PERFECT_L2_FILTER
+
 /* For handling differnet PHY interfaces */
 #define DWC_ETH_QOS_GMII_MII	0x0
 #define DWC_ETH_QOS_RGMII	0x1

@@ -19,16 +19,13 @@
 
 #include <asm/cputype.h>
 
-#define ARM_CPU_IMP_NVIDIA	0x4E /* 'N' */
-
-static int tegra_cpu_is_denver(void)
+static inline int tegra_is_this_cpu_denver(void)
 {
 	return read_cpuid_implementor() == ARM_CPU_IMP_NVIDIA;
 }
 
-static int tegra_cpu_is_arm(void)
+static inline int tegra_is_this_cpu_arm(void)
 {
 	return read_cpuid_implementor() == ARM_CPU_IMP_ARM;
 }
-
 #endif

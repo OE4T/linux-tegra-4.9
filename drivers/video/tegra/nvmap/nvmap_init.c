@@ -41,7 +41,10 @@ phys_addr_t __weak tegra_vpr_size;
 bool __weak tegra_vpr_resize;
 
 struct device __weak tegra_generic_dev;
+
 struct device __weak tegra_vpr_dev;
+EXPORT_SYMBOL(tegra_vpr_dev);
+
 struct device __weak tegra_iram_dev;
 struct device __weak tegra_generic_cma_dev;
 struct device __weak tegra_vpr_cma_dev;

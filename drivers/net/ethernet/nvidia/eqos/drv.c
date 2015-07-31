@@ -908,8 +908,12 @@ void DWC_ETH_QOS_get_all_hw_features(struct DWC_ETH_QOS_prv_data *pdata)
 	pdata->hw_feat.av_sel = ((varMAC_HFR1 >> 20) & MAC_HFR1_AVSEL_Mask);
 	pdata->hw_feat.lp_mode_en =
 	    ((varMAC_HFR1 >> 23) & MAC_HFR1_LPMODEEN_Mask);
+#ifdef ENABLE_PERFECT_L2_FILTER
+	pdata->hw_feat.hash_tbl_sz = 0;
+#else
 	pdata->hw_feat.hash_tbl_sz =
 	    ((varMAC_HFR1 >> 24) & MAC_HFR1_HASHTBLSZ_Mask);
+#endif
 	pdata->hw_feat.l3l4_filter_num =
 	    ((varMAC_HFR1 >> 27) & MAC_HFR1_L3L4FILTERNUM_Mask);
 
@@ -2135,8 +2139,12 @@ static void DWC_ETH_QOS_set_rx_mode(struct net_device *dev)
 	if (dev->flags & IFF_PROMISC) {
 		DBGPR_FILTER("PROMISCUOUS MODE (Accept all packets irrespective of DA)\n");
 		pr_mode = 1;
+#ifdef ENABLE_PERFECT_L2_FILTER
+	} else if ((dev->flags & IFF_ALLMULTI)) {
+#else
 	} else if ((dev->flags & IFF_ALLMULTI) ||
 			(netdev_mc_count(dev) > (pdata->max_hash_table_size))) {
+#endif
 		DBGPR_FILTER("pass all multicast pkt\n");
 		pm_mode = 1;
 		if (pdata->max_hash_table_size) {

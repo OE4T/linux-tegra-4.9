@@ -68,6 +68,7 @@
  })
 
 #define ARM_CPU_IMP_ARM			0x41
+#define ARM_CPU_IMP_NVIDIA		0x4e
 #define ARM_CPU_IMP_APM			0x50
 #define ARM_CPU_IMP_CAVIUM		0x43
 #define ARM_CPU_IMP_BRCM		0x42

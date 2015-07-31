@@ -1898,19 +1898,23 @@ void gk20a_gmmu_free_attr(struct gk20a *g, enum dma_attr attr,
 		if (attr) {
 			DEFINE_DMA_ATTRS(attrs);
 			dma_set_attr(attr, &attrs);
-			if (attr == DMA_ATTR_NO_KERNEL_MAPPING)
-				dma_free_attrs(d, mem->size, mem->pages,
-					       sg_dma_address(mem->sgt->sgl),
-					       &attrs);
-			else
-				dma_free_attrs(d, mem->size, mem->cpu_va,
-					       sg_dma_address(mem->sgt->sgl),
-					       &attrs);
+			if (attr == DMA_ATTR_NO_KERNEL_MAPPING) {
+				if (mem->pages)
+					dma_free_attrs(d, mem->size, mem->pages,
+						sg_dma_address(mem->sgt->sgl),
+						&attrs);
+			} else {
+				if (mem->cpu_va)
+					dma_free_attrs(d, mem->size,
+						mem->cpu_va,
+						sg_dma_address(mem->sgt->sgl),
+						&attrs);
+			}
 		} else {
-			dma_free_coherent(d, mem->size, mem->cpu_va,
-				  sg_dma_address(mem->sgt->sgl));
+			if (mem->cpu_va)
+				dma_free_coherent(d, mem->size, mem->cpu_va,
+						sg_dma_address(mem->sgt->sgl));
 		}
-
 		mem->cpu_va = NULL;
 		mem->pages = NULL;
 	}

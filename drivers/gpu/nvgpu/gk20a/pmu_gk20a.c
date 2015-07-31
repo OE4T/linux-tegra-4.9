@@ -2286,7 +2286,8 @@ void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
 {
 	gk20a_dbg_fn("");
 
-	gk20a_allocator_destroy(&pmu->dmem);
+	if (pmu->dmem.init)
+		gk20a_allocator_destroy(&pmu->dmem);
 }
 
 static int gk20a_init_pmu_reset_enable_hw(struct gk20a *g)

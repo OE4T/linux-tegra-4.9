@@ -33,7 +33,12 @@
 #include <linux/time.h>
 #include <linux/fence.h>
 
+#ifdef CONFIG_TEGRA_HOST1X
+#include <linux/host1x.h>
+#endif
+
 struct tegra_bwmgr_client;
+
 struct nvhost_channel;
 struct nvhost_master;
 struct nvhost_cdma;
@@ -363,11 +368,249 @@ struct nvhost_device_power_attr {
 	struct kobj_attribute power_attr[NVHOST_POWER_SYSFS_ATTRIB_MAX];
 };
 
+#ifdef CONFIG_TEGRA_HOST1X
+
+static inline struct host1x *nvhost_get_host1x(struct platform_device *pdev)
+{
+	if (pdev->dev.parent && pdev->dev.parent != &platform_bus)
+		pdev = to_platform_device(pdev->dev.parent);
+
+	return platform_get_drvdata(pdev);
+}
+
+static inline bool nvhost_module_powered_ext(struct platform_device *dev)
+{
+	return true;
+}
+
+static inline int nvhost_module_busy_ext(struct platform_device *dev)
+{
+	return 0;
+}
+
+static inline void nvhost_module_idle_ext(struct platform_device *dev)
+{
+}
+
+static inline u32 nvhost_syncpt_incr_max_ext(struct platform_device *dev,
+					     u32 id, u32 incrs)
+{
+	struct host1x *host = nvhost_get_host1x(dev);
+	struct host1x_syncpt *syncpt = host1x_syncpt_get(host, id);
+
+	return host1x_syncpt_incr_max(syncpt, incrs);
+}
+
+static inline void nvhost_syncpt_cpu_incr_ext(struct platform_device *dev,
+					      u32 id)
+{
+	struct host1x *host = nvhost_get_host1x(dev);
+	struct host1x_syncpt *syncpt = host1x_syncpt_get(host, id);
+
+	host1x_syncpt_incr(syncpt);
+}
+
+static inline int nvhost_syncpt_wait_timeout_ext(
+			struct platform_device *dev, u32 id, u32 thresh,
+			u32 timeout, u32 *value, struct timespec *ts)
+{
+	struct host1x *host = nvhost_get_host1x(dev);
+	struct host1x_syncpt *syncpt = host1x_syncpt_get(host, id);
+
+	return host1x_syncpt_wait(syncpt, thresh, timeout, value);
+}
+
+static inline u32 nvhost_get_syncpt_host_managed(
+				struct platform_device *pdev,
+				u32 param,
+				const char *syncpt_name)
+{
+	struct host1x_syncpt *syncpt;
+
+	syncpt = host1x_syncpt_request(&pdev->dev, 0);
+
+	return host1x_syncpt_id(syncpt);
+}
+
+static inline u32 nvhost_get_syncpt_client_managed(
+				struct platform_device *pdev,
+				const char *syncpt_name)
+{
+	struct host1x_syncpt *syncpt;
+
+	syncpt = host1x_syncpt_request(&pdev->dev,
+				       HOST1X_SYNCPT_CLIENT_MANAGED);
+	return host1x_syncpt_id(syncpt);
+}
+
+static inline int nvhost_syncpt_read_ext_check(struct platform_device *dev,
+					       u32 id, u32 *val)
+{
+	struct host1x *host = nvhost_get_host1x(dev);
+	struct host1x_syncpt *syncpt = host1x_syncpt_get(host, id);
+
+	host1x_syncpt_update_min(syncpt);
+	*val = host1x_syncpt_read_min(syncpt);
+
+	return 0;
+}
+
+static inline const char *nvhost_syncpt_get_name(struct platform_device *dev,
+						 int id)
+{
+	return "";
+}
+
+static inline void nvhost_syncpt_put_ref_ext(struct platform_device *pdev,
+					     u32 id)
+{
+	struct host1x *host = nvhost_get_host1x(pdev);
+	struct host1x_syncpt *syncpt = host1x_syncpt_get(host, id);
+
+	host1x_syncpt_free(syncpt);
+}
+
+static inline bool nvhost_syncpt_is_valid_pt_ext(struct platform_device *dev,
+						 u32 id)
+{
+	if (id < 192)
+		return true;
+
+	return false;
+}
+
+static inline int nvhost_syncpt_is_expired_ext(struct platform_device *dev,
+					       u32 id, u32 thresh)
+{
+	struct host1x *host = nvhost_get_host1x(dev);
+	struct host1x_syncpt *syncpt = host1x_syncpt_get(host, id);
+
+	if (!syncpt)
+		return -EINVAL;
+
+	return host1x_syncpt_is_expired(syncpt, thresh);
+}
+
+static inline void nvhost_syncpt_set_min_eq_max_ext(
+				struct platform_device *dev, u32 id)
+{
+	struct host1x *host = nvhost_get_host1x(dev);
+	struct host1x_syncpt *syncpt = host1x_syncpt_get(host, id);
+
+	host1x_syncpt_reset(syncpt);
+}
+
+static inline const struct firmware *
+nvhost_client_request_firmware(struct platform_device *dev,
+	const char *fw_name)
+{
+	return NULL;
+}
+
+static inline int nvhost_intr_register_notifier(struct platform_device *pdev,
+						u32 id, u32 thresh,
+						void (*callback)(void *, int),
+						void *private_data)
+{
+	struct host1x *host = nvhost_get_host1x(pdev);
+	struct host1x_syncpt *syncpt = host1x_syncpt_get(host, id);
+
+	return host1x_intr_register_notifier(syncpt, thresh, callback,
+					     private_data);
+}
+
+/* public api to register/unregister a subdomain */
+static inline void nvhost_register_client_domain(
+		struct generic_pm_domain *domain)
+{
+}
+
+static inline void nvhost_unregister_client_domain(
+		struct generic_pm_domain *domain)
+{
+}
+
+static inline void nvhost_debug_dump_device(struct platform_device *pdev)
+{
+}
+
+static inline struct sync_fence *nvhost_sync_create_fence(
+		struct platform_device *pdev,
+		struct nvhost_ctrl_sync_fence_info *pts,
+		u32 num_pts,
+		const char *name)
+{
+	struct host1x *host = nvhost_get_host1x(pdev);
+
+	return host1x_sync_create_fence(host, (void *)pts, num_pts, name);
+}
+
+static inline int nvhost_sync_create_fence_fd(
+		struct platform_device *pdev,
+		struct nvhost_ctrl_sync_fence_info *pts,
+		u32 num_pts,
+		const char *name,
+		s32 *fence_fd)
+{
+	struct host1x *host = nvhost_get_host1x(pdev);
+
+	return host1x_sync_create_fence_fd(host, (void *)pts, num_pts,
+					   name, fence_fd);
+}
+
+static inline struct sync_fence *nvhost_sync_fdget(int fd)
+{
+	return host1x_sync_fdget(fd);
+}
+
+static inline int nvhost_sync_num_pts(struct sync_fence *fence)
+{
+	return host1x_sync_num_fences(fence);
+}
+
+static inline u32 nvhost_sync_pt_id(struct sync_pt *pt)
+{
+	return host1x_sync_pt_id(pt);
+}
+
+static inline u32 nvhost_sync_pt_thresh(struct sync_pt *pt)
+{
+	return host1x_sync_pt_thresh(pt);
+}
+
+static inline int nvhost_sync_fence_set_name(int fence_fd, const char *name)
+{
+	return host1x_sync_fence_set_name(fence_fd, name);
+}
+
+static inline int nvhost_syncpt_create_fence_single_ext(
+				struct platform_device *dev,
+				u32 id, u32 thresh, const char *name,
+				int *fence_fd)
+{
+	struct host1x *host = nvhost_get_host1x(dev);
+
+	return host1x_sync_create_fence_single(host, id, thresh,
+					       name, fence_fd);
+}
+
+
+static inline void nvhost_register_dump_device(
+		struct platform_device *dev,
+		void (*nvgpu_debug_dump_device)(struct platform_device *))
+{
+}
+
+static inline void nvhost_unregister_dump_device(struct platform_device *dev)
+{
+}
+
+#else
+
 void nvhost_register_dump_device(
 		struct platform_device *dev,
 		void (*nvgpu_debug_dump_device)(struct platform_device *));
 void nvhost_unregister_dump_device(struct platform_device *dev);
-
 void host1x_writel(struct platform_device *dev, u32 r, u32 v);
 u32 host1x_readl(struct platform_device *dev, u32 r);
 
@@ -463,7 +706,9 @@ const struct firmware *
 nvhost_client_request_firmware(struct platform_device *dev,
 	const char *fw_name);
 #else
-static inline void nvhost_debug_dump_device(struct platform_device *pdev) {}
+static inline void nvhost_debug_dump_device(struct platform_device *pdev)
+{
+}
 
 static inline const struct firmware *
 nvhost_client_request_firmware(struct platform_device *dev,
@@ -543,5 +788,7 @@ extern struct nvhost_device_data t20_vi_info;
 extern struct nvhost_device_data t30_vi_info;
 extern struct nvhost_device_data t11_vi_info;
 extern struct nvhost_device_data t14_vi_info;
+
+#endif
 
 #endif

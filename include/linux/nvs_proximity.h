@@ -83,5 +83,7 @@ int nvs_proximity_enable(struct nvs_proximity *np);
 int nvs_proximity_read(struct nvs_proximity *np);
 int nvs_proximity_of_dt(struct nvs_proximity *np, const struct device_node *dn,
 			const char *dev_name);
+void nvs_proximity_threshold_calibrate_lo(struct nvs_proximity *np, int lo);
+void nvs_proximity_threshold_calibrate_hi(struct nvs_proximity *np, int hi);
 
 #endif /* _NVS_PROXIMITY_H_ */

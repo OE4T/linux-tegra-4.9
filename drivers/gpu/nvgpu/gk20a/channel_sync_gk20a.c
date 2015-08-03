@@ -213,36 +213,28 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 	thresh = nvhost_syncpt_incr_max_ext(sp->host1x_pdev, sp->id, 2);
 
 	if (register_irq) {
-		err = gk20a_busy(c->g->dev);
-		if (err)
-			gk20a_err(dev_from_gk20a(c->g),
-				  "failed to add syncpt interrupt notifier for channel %d",
-				  c->hw_chid);
-		else {
-			struct channel_gk20a *referenced = gk20a_channel_get(c);
+		struct channel_gk20a *referenced = gk20a_channel_get(c);
 
-			WARN_ON(!referenced);
-			gk20a_idle(c->g->dev);
+		WARN_ON(!referenced);
 
-			if (referenced) {
-				/* note: channel_put() is in
-				 * gk20a_channel_syncpt_update() */
+		if (referenced) {
+			/* note: channel_put() is in
+			 * gk20a_channel_syncpt_update() */
 
-				err = nvhost_intr_register_notifier(
-					sp->host1x_pdev,
-					sp->id, thresh,
-					gk20a_channel_syncpt_update, c);
-				if (err)
-					gk20a_channel_put(referenced);
+			err = nvhost_intr_register_notifier(
+				sp->host1x_pdev,
+				sp->id, thresh,
+				gk20a_channel_syncpt_update, c);
+			if (err)
+				gk20a_channel_put(referenced);
 
-				/* Adding interrupt action should
-				 * never fail. A proper error handling
-				 * here would require us to decrement
-				 * the syncpt max back to its original
-				 * value. */
-				WARN(err,
-				     "failed to set submit complete interrupt");
-			}
+			/* Adding interrupt action should
+			 * never fail. A proper error handling
+			 * here would require us to decrement
+			 * the syncpt max back to its original
+			 * value. */
+			WARN(err,
+			     "failed to set submit complete interrupt");
 		}
 	}
 

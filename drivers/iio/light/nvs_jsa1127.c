@@ -389,6 +389,22 @@ static int jsa_batch(void *client, int snsr_id, int flags,
 	return 0;
 }
 
+static int jsa_thresh_lo(void *client, int snsr_id, int thresh_lo)
+{
+	struct jsa_state *st = (struct jsa_state *)client;
+
+	nvs_light_threshold_calibrate_lo(&st->light, thresh_lo);
+	return 0;
+}
+
+static int jsa_thresh_hi(void *client, int snsr_id, int thresh_hi)
+{
+	struct jsa_state *st = (struct jsa_state *)client;
+
+	nvs_light_threshold_calibrate_hi(&st->light, thresh_hi);
+	return 0;
+}
+
 static int jsa_regs(void *client, int snsr_id, char *buf)
 {
 	struct jsa_state *st = (struct jsa_state *)client;
@@ -421,6 +437,8 @@ static int jsa_nvs_read(void *client, int snsr_id, char *buf)
 static struct nvs_fn_dev jsa_fn_dev = {
 	.enable				= jsa_enable,
 	.batch				= jsa_batch,
+	.thresh_lo			= jsa_thresh_lo,
+	.thresh_hi			= jsa_thresh_hi,
 	.regs				= jsa_regs,
 	.nvs_write			= jsa_nvs_write,
 	.nvs_read			= jsa_nvs_read,

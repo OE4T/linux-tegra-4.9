@@ -579,6 +579,29 @@ static int isl_batch(void *client, int snsr_id, int flags,
 	return 0;
 }
 
+static int isl_thresh_lo(void *client, int snsr_id, int thresh_lo)
+{
+	struct isl_state *st = (struct isl_state *)client;
+
+	if (snsr_id == ISL_DEV_LIGHT)
+		nvs_light_threshold_calibrate_lo(&st->light, thresh_lo);
+	else if (snsr_id == ISL_DEV_PROX)
+		nvs_proximity_threshold_calibrate_lo(&st->prox, thresh_lo);
+
+	return 0;
+}
+
+static int isl_thresh_hi(void *client, int snsr_id, int thresh_hi)
+{
+	struct isl_state *st = (struct isl_state *)client;
+
+	if (snsr_id == ISL_DEV_LIGHT)
+		nvs_light_threshold_calibrate_hi(&st->light, thresh_hi);
+	else if (snsr_id == ISL_DEV_PROX)
+		nvs_proximity_threshold_calibrate_hi(&st->prox, thresh_hi);
+	return 0;
+}
+
 static int isl_regs(void *client, int snsr_id, char *buf)
 {
 	struct isl_state *st = (struct isl_state *)client;
@@ -600,6 +623,8 @@ static int isl_regs(void *client, int snsr_id, char *buf)
 static struct nvs_fn_dev isl_fn_dev = {
 	.enable				= isl_enable,
 	.batch				= isl_batch,
+	.thresh_lo			= isl_thresh_lo,
+	.thresh_hi			= isl_thresh_hi,
 	.regs				= isl_regs,
 };
 

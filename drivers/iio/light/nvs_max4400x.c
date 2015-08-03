@@ -670,6 +670,29 @@ static int mx_batch(void *client, int snsr_id, int flags,
 	return 0;
 }
 
+static int mx_thresh_lo(void *client, int snsr_id, int thresh_lo)
+{
+	struct mx_state *st = (struct mx_state *)client;
+
+	if (snsr_id == MX_DEV_LIGHT)
+		nvs_light_threshold_calibrate_lo(&st->light, thresh_lo);
+	else if (snsr_id == MX_DEV_PROX)
+		nvs_proximity_threshold_calibrate_lo(&st->prox, thresh_lo);
+
+	return 0;
+}
+
+static int mx_thresh_hi(void *client, int snsr_id, int thresh_hi)
+{
+	struct mx_state *st = (struct mx_state *)client;
+
+	if (snsr_id == MX_DEV_LIGHT)
+		nvs_light_threshold_calibrate_hi(&st->light, thresh_hi);
+	else if (snsr_id == MX_DEV_PROX)
+		nvs_proximity_threshold_calibrate_hi(&st->prox, thresh_hi);
+	return 0;
+}
+
 static int mx_regs(void *client, int snsr_id, char *buf)
 {
 	struct mx_state *st = (struct mx_state *)client;
@@ -713,6 +736,8 @@ static int mx_regs(void *client, int snsr_id, char *buf)
 static struct nvs_fn_dev mx_fn_dev = {
 	.enable				= mx_enable,
 	.batch				= mx_batch,
+	.thresh_lo			= mx_thresh_lo,
+	.thresh_hi			= mx_thresh_hi,
 	.regs				= mx_regs,
 };
 

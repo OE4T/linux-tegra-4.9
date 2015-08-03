@@ -472,6 +472,22 @@ static int cm_batch(void *client, int snsr_id, int flags,
 	return 0;
 }
 
+static int cm_thresh_lo(void *client, int snsr_id, int thresh_lo)
+{
+	struct cm_state *st = (struct cm_state *)client;
+
+	nvs_light_threshold_calibrate_lo(&st->light, thresh_lo);
+	return 0;
+}
+
+static int cm_thresh_hi(void *client, int snsr_id, int thresh_hi)
+{
+	struct cm_state *st = (struct cm_state *)client;
+
+	nvs_light_threshold_calibrate_hi(&st->light, thresh_hi);
+	return 0;
+}
+
 static int cm_regs(void *client, int snsr_id, char *buf)
 {
 	struct cm_state *st = (struct cm_state *)client;
@@ -581,6 +597,8 @@ static int cm_nvs_read(void *client, int snsr_id, char *buf)
 static struct nvs_fn_dev cm_fn_dev = {
 	.enable				= cm_enable,
 	.batch				= cm_batch,
+	.thresh_lo			= cm_thresh_lo,
+	.thresh_hi			= cm_thresh_hi,
 	.regs				= cm_regs,
 	.nvs_write			= cm_nvs_write,
 	.nvs_read			= cm_nvs_read,

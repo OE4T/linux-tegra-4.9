@@ -674,6 +674,29 @@ static int ltr_batch(void *client, int snsr_id, int flags,
 	return 0;
 }
 
+static int ltr_thresh_lo(void *client, int snsr_id, int thresh_lo)
+{
+	struct ltr_state *st = (struct ltr_state *)client;
+
+	if (snsr_id == LTR_DEV_LIGHT)
+		nvs_light_threshold_calibrate_lo(&st->light, thresh_lo);
+	else if (snsr_id == LTR_DEV_PROX)
+		nvs_proximity_threshold_calibrate_lo(&st->prox, thresh_lo);
+
+	return 0;
+}
+
+static int ltr_thresh_hi(void *client, int snsr_id, int thresh_hi)
+{
+	struct ltr_state *st = (struct ltr_state *)client;
+
+	if (snsr_id == LTR_DEV_LIGHT)
+		nvs_light_threshold_calibrate_hi(&st->light, thresh_hi);
+	else if (snsr_id == LTR_DEV_PROX)
+		nvs_proximity_threshold_calibrate_hi(&st->prox, thresh_hi);
+	return 0;
+}
+
 static int ltr_regs(void *client, int snsr_id, char *buf)
 {
 	struct ltr_state *st = (struct ltr_state *)client;
@@ -767,6 +790,8 @@ static int ltr_regs(void *client, int snsr_id, char *buf)
 static struct nvs_fn_dev ltr_fn_dev = {
 	.enable				= ltr_enable,
 	.batch				= ltr_batch,
+	.thresh_lo			= ltr_thresh_lo,
+	.thresh_hi			= ltr_thresh_hi,
 	.regs				= ltr_regs,
 };
 

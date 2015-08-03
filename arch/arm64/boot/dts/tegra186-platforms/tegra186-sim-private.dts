@@ -79,6 +79,11 @@
 		reg = < 0x0 0x03b41000 0x0 0x00001000 >;
 	};
 
+	adma@2930000 {
+		dma-channels = <10>;
+		status = "disabled";
+	};
+
         adsp_audio {
                 compr-ops = <1>;
                 num-plugin = <4>;
@@ -128,11 +133,6 @@
 		i2s@02901500 {
 			fsync-width = <31>;
 		};
-	};
-
-	adma@2930000 {
-		dma-channels = <10>;
-		status = "disabled";
 	};
 
 	sound_ref {

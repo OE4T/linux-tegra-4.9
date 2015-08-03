@@ -1,0 +1,182 @@
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+/ {
+	ahub {
+		status = "okay";
+
+		admaif@0290F000 {
+			status = "okay";
+		};
+
+		sfc@02902000 {
+			status = "okay";
+		};
+
+		sfc@02902200 {
+			status = "okay";
+		};
+
+		sfc@02902400 {
+			status = "okay";
+		};
+
+		sfc@02902600 {
+			status = "okay";
+		};
+
+		spkprot@702d8c00 {
+			status = "okay";
+		};
+
+		amixer@0290BB00 {
+			status = "okay";
+		};
+
+		i2s@02901000 {
+			status = "okay";
+		};
+
+		i2s@02901100 {
+			status = "okay";
+		};
+
+		i2s@02901200 {
+			status = "okay";
+		};
+
+		i2s@02901300 {
+			status = "okay";
+		};
+
+		i2s@02901400 {
+			status = "okay";
+		};
+
+		i2s@02901500 {
+			status = "okay";
+		};
+
+		amx@02903000 {
+			status = "okay";
+		};
+
+		amx@02903100 {
+			status = "okay";
+		};
+
+		amx@02903200 {
+			status = "okay";
+		};
+
+		amx@02903300 {
+			status = "okay";
+		};
+
+		adx@02903800 {
+			status = "okay";
+		};
+
+		adx@02903900 {
+			status = "okay";
+		};
+
+		adx@02903A00 {
+			status = "okay";
+		};
+
+		adx@02903B00 {
+			status = "okay";
+		};
+
+		dmic@02904000 {
+			status = "okay";
+		};
+
+		afc@02907000 {
+			status = "okay";
+		};
+
+		afc@02907100 {
+			status = "okay";
+		};
+
+		afc@02907200 {
+			status = "okay";
+		};
+
+		afc@02907300 {
+			status = "okay";
+		};
+
+		afc@02907400 {
+			status = "okay";
+		};
+
+		afc@02907500 {
+			status = "okay";
+		};
+
+		mvc@0290A000 {
+			status = "okay";
+		};
+
+		mvc@0290A200 {
+			status = "okay";
+		};
+
+		spdif@02906000 {
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			status = "okay";
+		};
+
+		iqc@2290E000 {
+			status = "okay";
+		};
+
+		asrc@02910000 {
+			status = "okay";
+		};
+
+		arad@0290E400 {
+			status = "okay";
+		};
+
+		ope@02908000 {
+			status = "okay";
+
+			peq@02908100 {
+				status = "okay";
+			};
+
+			mbdrc@02908200 {
+				status = "okay";
+			};
+		};
+
+		dspk@02905000 {
+			status = "okay";
+		};
+	};
+
+        adsp_audio {
+                status = "okay";
+        };
+};

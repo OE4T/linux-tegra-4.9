@@ -77,6 +77,39 @@
  *     proximity_uncalibrated_hi
  *     proximity_calibrated_hi
  *
+ * An NVS proximity driver may support a simplified version of method 1 that
+ * can be used in realtime:
+ * At step 8, write the calibrated value to the in_proximity_threshold_low
+ * attribute.  When in calibration mode this value will be written to the
+ * proximity_calibrated_lo and the current proximity written to
+ * proximity_uncalibrated_lo internal to the driver.
+ * If this is after step 9, then use the in_proximity_threshold_high
+ * attribute.
+ * Note that the calibrated value must be the value before the scale and offset
+ * is applied.  For example, if the calibrated proximity reading is 123.4 cm,
+ * and the in_proximity_scale is normally 0.01, then the value entered is 12340
+ * which will be 123.4 cm when the scale is applied at the HAL layer.
+ * To confirm the realtime values and see what the driver used for uncalibrated
+ * values, do the following at the adb prompt in the driver space:
+ * # echo 5 > nvs
+ * # cat nvs
+ * This will be a partial dump of the sensor's configuration structure that
+ * will show the calibrated and uncalibrated values.  For example:
+ * ...
+ * uncal_lo=1
+ * uncal_hi=96346
+ * cal_lo=230
+ * cal_hi=1888000
+ * thresh_lo=10
+ * thresh_hi=10
+ * ...
+ * If the thresholds have changed instead of the calibration settings, then
+ * the driver doesn't support this feature.
+ * In order to display raw values, interpolation, that uses the calibration
+ * values, is not executed by the driver when in calibration mode, so to test,
+ * disable and reenable the device to exit calibration mode and test the new
+ * calibration values.
+ *
  * Method 2:
  * 1. Disable device.
  * 2. Write 1 to the scale sysfs attribute.
@@ -483,5 +516,43 @@ int nvs_proximity_of_dt(struct nvs_proximity *np, const struct device_node *dn,
 	else if (!binary_hw)
 		np->proximity_binary_hw = false;
 	return 0;
+}
+
+/**
+ * nvs_proximity_threshold_calibrate_lo - runtime mechanism to
+ * modify calibrated/uncalibrated low value.
+ * @np: the common structure between driver and common module.
+ *
+ * NOTE: If not in calibration mode then thresholds are modified
+ * instead.
+ */
+void nvs_proximity_threshold_calibrate_lo(struct nvs_proximity *np, int lo)
+{
+
+	if (np->calibration_en) {
+		np->cfg->uncal_lo = np->proximity;
+		np->cfg->cal_lo = lo;
+	} else {
+		np->cfg->thresh_lo = lo;
+	}
+}
+
+/**
+ * nvs_proximity_threshold_calibrate_hi - runtime mechanism to
+ * modify calibrated/uncalibrated high value.
+ * @nl: the common structure between driver and common module.
+ *
+ * NOTE: If not in calibration mode then thresholds are modified
+ * instead.
+ */
+void nvs_proximity_threshold_calibrate_hi(struct nvs_proximity *np, int hi)
+{
+
+	if (np->calibration_en) {
+		np->cfg->uncal_hi = np->proximity;
+		np->cfg->cal_hi = hi;
+	} else {
+		np->cfg->thresh_hi = hi;
+	}
 }
 

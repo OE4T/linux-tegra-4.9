@@ -14,12 +14,14 @@
 #include <linux/nvs.h>
 #include <linux/of.h>
 #include <linux/string.h>
+#include <linux/export.h>
 
 
-static const char * const float_significance[] = {
+const char * const nvs_float_significances[] = {
 	"micro",
 	"nano",
 };
+EXPORT_SYMBOL(nvs_float_significances);
 
 int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 	      const char *dev_name)
@@ -53,9 +55,10 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 	if (ret > 0) {
 		if (!(of_property_read_string((struct device_node *)np,
 					      str, &charp))) {
-			for (i = 0; i < ARRAY_SIZE(float_significance); i++) {
+			for (i = 0; i < ARRAY_SIZE(nvs_float_significances);
+									 i++) {
 				if (!strcasecmp(charp,
-						float_significance[i])) {
+						nvs_float_significances[i])) {
 					cfg->float_significance = i;
 					break;
 				}

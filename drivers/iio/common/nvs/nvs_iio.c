@@ -76,8 +76,7 @@
 #include <linux/iio/trigger.h>
 #include <linux/nvs.h>
 
-
-#define NVS_IIO_DRIVER_VERSION		(205)
+#define NVS_IIO_DRIVER_VERSION		(206)
 #define NVS_ATTRS_ARRAY_SIZE		(12)
 
 enum NVS_ATTR {
@@ -363,8 +362,8 @@ static ssize_t nvs_dbg_cfg(struct iio_dev *indio_dev, char *buf)
 	t += sprintf(buf + t, "thresh_lo=%d\n", st->cfg->thresh_lo);
 	t += sprintf(buf + t, "thresh_hi=%d\n", st->cfg->thresh_hi);
 	t += sprintf(buf + t, "report_n=%d\n", st->cfg->report_n);
-	t += sprintf(buf + t, "float_significance=%d\n",
-		     st->cfg->float_significance);
+	t += sprintf(buf + t, "float_significance=%s\n",
+		     nvs_float_significances[st->cfg->float_significance]);
 	return t;
 }
 
@@ -1194,7 +1193,7 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 
 	case IIO_CHAN_INFO_THRESHOLD_HIGH:
 		msg = "IIO_CHAN_INFO_THRESHOLD_HIGH";
-		old = st->cfg->thresh_lo;
+		old = st->cfg->thresh_hi;
 		if (st->fn_dev->thresh_hi)
 			ret = st->fn_dev->thresh_hi(st->client,
 						    st->cfg->snsr_id, val);

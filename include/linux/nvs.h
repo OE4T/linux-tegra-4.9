@@ -340,8 +340,9 @@ struct nvs_fn_if {
 	int (*handler)(void *handle, void *buffer, s64 ts);
 };
 
-struct nvs_fn_if *nvs_iio(void);
+extern const char * const nvs_float_significances[];
 
+struct nvs_fn_if *nvs_iio(void);
 int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 	      const char *dev_name);
 int nvs_vreg_dis(struct device *dev, struct regulator_bulk_data *vreg);

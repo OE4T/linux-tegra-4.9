@@ -114,6 +114,8 @@ int nvs_light_read(struct nvs_light *nl);
 int nvs_light_enable(struct nvs_light *nl);
 int nvs_light_of_dt(struct nvs_light *nl, const struct device_node *np,
 		    const char *dev_name);
+void nvs_light_threshold_calibrate_lo(struct nvs_light *nl, int lo);
+void nvs_light_threshold_calibrate_hi(struct nvs_light *nl, int hi);
 ssize_t nvs_light_dbg(struct nvs_light *nl, char *buf);
 
 #endif /* _NVS_LIGHT_H_ */

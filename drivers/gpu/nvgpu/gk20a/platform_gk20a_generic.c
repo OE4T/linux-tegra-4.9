@@ -1,9 +1,9 @@
 /*
- * drivers/video/tegra/host/gk20a/platform_gk20a_generic.c
+ * drivers/gpu/nvgpu/gk20a/platform_gk20a_generic.c
  *
  * GK20A Generic Platform Interface
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,49 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/tegra-powergate.h>
-#include <linux/tegra_pm_domains.h>
 #include <linux/clk.h>
 
 #include "platform_gk20a.h"
 #include "hal_gk20a.h"
 #include "gk20a.h"
-
-/*
- * gk20a_generic_is_railgated()
- *
- * Check status of gk20a power rail
- */
-
-static bool gk20a_generic_is_railgated(struct platform_device *pdev)
-{
-	return !tegra_powergate_is_powered(TEGRA_POWERGATE_GPU);
-}
-
-/*
- * gk20a_generic_railgate()
- *
- * Gate (disable) gk20a power rail
- */
-
-static int gk20a_generic_railgate(struct platform_device *pdev)
-{
-	if (tegra_powergate_is_powered(TEGRA_POWERGATE_GPU))
-		tegra_powergate_partition(TEGRA_POWERGATE_GPU);
-	return 0;
-}
-
-/*
- * gk20a_generic_unrailgate()
- *
- * Ungate (enable) gk20a power rail
- */
-
-static int gk20a_generic_unrailgate(struct platform_device *pdev)
-{
-	tegra_unpowergate_partition(TEGRA_POWERGATE_GPU);
-	return 0;
-}
 
 /*
  * gk20a_generic_get_clocks()
@@ -112,28 +74,15 @@ static int gk20a_generic_probe(struct platform_device *dev)
 
 static int gk20a_generic_late_probe(struct platform_device *dev)
 {
-	struct generic_pm_domain *gpd = dev_to_genpd(&dev->dev);
-
-	/* Make gk20a power domain a subdomain of host1x */
-	tegra_pd_add_sd(gpd);
-
 	return 0;
 }
 
 static int gk20a_generic_remove(struct platform_device *dev)
 {
-	struct generic_pm_domain *gpd = dev_to_genpd(&dev->dev);
-
-	tegra_pd_remove_sd(gpd);
-
 	return 0;
 }
 
 struct gk20a_platform gk20a_generic_platform = {
-	.railgate = gk20a_generic_railgate,
-	.unrailgate = gk20a_generic_unrailgate,
-	.is_railgated = gk20a_generic_is_railgated,
-
 	.probe = gk20a_generic_probe,
 	.late_probe = gk20a_generic_late_probe,
 	.remove = gk20a_generic_remove,

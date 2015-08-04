@@ -1054,6 +1054,16 @@
 		       0x0 0x10003800 0x0 0x00000800   /* AFI registers */
 		       0x0 0x40000000 0x0 0x10000000>; /* configuration space */
 		reg-names = "pads", "afi", "cs";
+
+		clocks = <&tegra_car TEGRA186_CLK_AFI>,
+			<&tegra_car TEGRA186_CLK_PCIE>;
+		clock-names = "afi", "pcie";
+
+		resets = <&tegra_car TEGRA186_RESET_AFI>,
+			<&tegra_car TEGRA186_RESET_PCIE>,
+			<&tegra_car TEGRA186_RESET_PCIEXCLK>;
+		reset-names = "afi", "pcie", "pciex";
+
 		interrupts = <0 72 0x04>, /* controller interrupt */
 			     <0 73 0x04>; /* MSI interrupt */
 		interrupt-names = "intr", "msi";

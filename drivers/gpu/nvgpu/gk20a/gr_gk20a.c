@@ -4320,12 +4320,6 @@ static int gr_gk20a_init_ctxsw(struct gk20a *g)
 	if (err)
 		goto out;
 
-	/* this appears query for sw states but fecs actually init
-	   ramchain, etc so this is hw init */
-	err = g->ops.gr.init_ctx_state(g);
-	if (err)
-		goto out;
-
 out:
 	if (err)
 		gk20a_err(dev_from_gk20a(g), "fail");
@@ -4553,6 +4547,12 @@ int gk20a_init_gr_support(struct gk20a *g)
 	if (err)
 		return err;
 
+	/* this appears query for sw states but fecs actually init
+	   ramchain, etc so this is hw init */
+	err = g->ops.gr.init_ctx_state(g);
+	if (err)
+		return err;
+
 	err = gk20a_init_gr_setup_sw(g);
 	if (err)
 		return err;
@@ -4776,6 +4776,8 @@ int gk20a_gr_reset(struct gk20a *g)
 	int err;
 	u32 size;
 
+	mutex_lock(&g->gr.fecs_mutex);
+
 	err = gk20a_enable_gr_hw(g);
 	if (err)
 		return err;
@@ -4785,6 +4787,14 @@ int gk20a_gr_reset(struct gk20a *g)
 		return err;
 
 	err = gr_gk20a_init_ctxsw(g);
+	if (err)
+		return err;
+
+	mutex_unlock(&g->gr.fecs_mutex);
+
+	/* this appears query for sw states but fecs actually init
+	   ramchain, etc so this is hw init */
+	err = g->ops.gr.init_ctx_state(g);
 	if (err)
 		return err;
 

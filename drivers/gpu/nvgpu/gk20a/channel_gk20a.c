@@ -719,7 +719,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch)
 	struct vm_gk20a *ch_vm = ch->vm;
 	unsigned long timeout = gk20a_get_gr_idle_timeout(g);
 	struct dbg_session_gk20a *dbg_s;
-
+	bool was_reset;
 	gk20a_dbg_fn("");
 
 	WARN_ON(ch->g == NULL);
@@ -764,7 +764,15 @@ static void gk20a_free_channel(struct channel_gk20a *ch)
 	if (g->fifo.deferred_reset_pending) {
 		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "engine reset was"
 			   " deferred, running now");
-		gk20a_fifo_reset_engine(g, g->fifo.deferred_fault_engines);
+		was_reset = mutex_is_locked(&g->fifo.gr_reset_mutex);
+		mutex_lock(&g->fifo.gr_reset_mutex);
+		/* if lock is already taken, a reset is taking place
+		so no need to repeat */
+		if (!was_reset) {
+			gk20a_fifo_reset_engine(g,
+				g->fifo.deferred_fault_engines);
+		}
+		mutex_unlock(&g->fifo.gr_reset_mutex);
 		g->fifo.deferred_fault_engines = 0;
 		g->fifo.deferred_reset_pending = false;
 	}

@@ -476,6 +476,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	f->g = g;
 
 	mutex_init(&f->intr.isr.mutex);
+	mutex_init(&f->gr_reset_mutex);
 	gk20a_init_fifo_pbdma_intr_descs(f); /* just filling in data/tables */
 
 	f->num_channels = g->ops.fifo.get_num_fifos(g);
@@ -767,12 +768,15 @@ void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 	gk20a_dbg_fn("");
 
 	if (engine_id == top_device_info_type_enum_graphics_v()) {
-		/*HALT_PIPELINE method, halt GR engine*/
-		if (gr_gk20a_halt_pipe(g))
-			gk20a_err(dev_from_gk20a(g), "failed to HALT gr pipe");
-		/* resetting engine using mc_enable_r() is not enough,
-		 * we do full init sequence */
-		gk20a_gr_reset(g);
+		if (support_gk20a_pmu(g->dev) && g->elpg_enabled)
+			gk20a_pmu_disable_elpg(g);
+			/*HALT_PIPELINE method, halt GR engine*/
+			if (gr_gk20a_halt_pipe(g))
+				gk20a_err(dev_from_gk20a(g),
+					"failed to HALT gr pipe");
+			/* resetting engine using mc_enable_r() is not
+			enough, we do full init sequence */
+			gk20a_gr_reset(g);
 	}
 	if (engine_id == top_device_info_type_enum_copy0_v())
 		gk20a_reset(g, mc_enable_ce2_m());
@@ -950,6 +954,7 @@ static bool gk20a_fifo_handle_mmu_fault(
 		struct channel_gk20a *ch = NULL;
 		struct tsg_gk20a *tsg = NULL;
 		struct channel_gk20a *referenced_channel = NULL;
+		bool was_reset;
 		/* read and parse engine status */
 		u32 status = gk20a_readl(g, fifo_engine_status_r(engine_id));
 		u32 ctx_status = fifo_engine_status_ctx_status_v(status);
@@ -1029,9 +1034,15 @@ static bool gk20a_fifo_handle_mmu_fault(
 
 			/* handled during channel free */
 			g->fifo.deferred_reset_pending = true;
-		} else if (engine_id != ~0)
-			gk20a_fifo_reset_engine(g, engine_id);
-
+		} else if (engine_id != ~0) {
+			was_reset = mutex_is_locked(&g->fifo.gr_reset_mutex);
+			mutex_lock(&g->fifo.gr_reset_mutex);
+			/* if lock is already taken, a reset is taking place
+			so no need to repeat */
+			if (!was_reset)
+				gk20a_fifo_reset_engine(g, engine_id);
+			mutex_unlock(&g->fifo.gr_reset_mutex);
+		}
 		/* disable the channel/TSG from hw and increment
 		 * syncpoints */
 
@@ -2120,12 +2131,10 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 			gk20a_fifo_runlist_reset_engines(g, runlist_id);
 
 			/* engine reset needs the lock. drop it */
-			mutex_unlock(&runlist->mutex);
 			/* wait until the runlist is active again */
 			ret = gk20a_fifo_runlist_wait_pending(g, runlist_id);
 			/* get the lock back. at this point everything should
 			 * should be fine */
-			mutex_lock(&runlist->mutex);
 
 			if (ret)
 				gk20a_err(dev_from_gk20a(g),

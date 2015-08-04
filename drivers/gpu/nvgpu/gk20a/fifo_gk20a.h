@@ -109,6 +109,7 @@ struct fifo_gk20a {
 	/* zero-kref'd channels here */
 	struct list_head free_chs;
 	struct mutex free_chs_mutex;
+	struct mutex gr_reset_mutex;
 
 	struct tsg_gk20a *tsg;
 	struct mutex tsg_inuse_mutex;

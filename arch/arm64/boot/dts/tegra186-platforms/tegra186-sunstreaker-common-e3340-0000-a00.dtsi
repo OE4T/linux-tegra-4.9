@@ -159,10 +159,6 @@
 			status = "disabled";
 		};
 
-		vii2c@156c0000 {
-			status = "disabled";
-		};
-
 		dsi {	/* dsi@15300000 */
 			nvidia,dsi-controller-vs = <DSI_VS_1>;
 			status = "disabled";

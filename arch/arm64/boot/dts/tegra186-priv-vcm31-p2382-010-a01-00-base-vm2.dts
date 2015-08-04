@@ -153,10 +153,6 @@
 			status = "disabled";
 		};
 
-		vii2c@156c0000 {
-			status = "disabled";
-		};
-
 		nvdisplay@15200000 {
 			status = "disabled";
 		};

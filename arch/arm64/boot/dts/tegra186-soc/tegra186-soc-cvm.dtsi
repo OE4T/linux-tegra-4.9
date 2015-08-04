@@ -1,7 +1,7 @@
 /*
  * tegra186-soc-cvm.dtsi: Mobile family SoC specific DTSI file with required node enabled.
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -132,11 +132,6 @@
 		isp@15600000 {
 			status = "okay";
 		};
-
-		vii2c@156c0000 {
-			status = "okay";
-		};
-
 
 		dsi {	/* dsi@15300000 */
 			status = "okay";

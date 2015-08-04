@@ -165,10 +165,6 @@
 			status = "disabled";
 		};
 
-		vii2c@156c0000 {
-			status = "disabled";
-		};
-
 		vic@15340000 {
 				compatible = "nvidia,tegra186-vhost-vic";
 			status = "okay";

@@ -722,12 +722,6 @@
 			status = "disabled";
 		};
 
-		vii2c@156c0000 {
-			compatible = "nvidia,tegra186-vii2c";
-			reg = <0x0 0x156c0000 0x0 0x00040000>;
-			status = "disabled";
-		};
-
 		nvdisplay@15200000 {
 			compatible = "nvidia,tegra186-dc";
 			power-domains = <&mc_clk_pd>;

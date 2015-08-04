@@ -753,17 +753,6 @@
 		status = "disabled";
 	};
 
-	host1x {
-
-		vii2c@156c0000 {
-			status = "disabled";
-		};
-
-		vii2c {
-			status = "disabled";
-		};
-	};
-
 	bpmp {
 		bpmpthermal {
 			status = "disabled";

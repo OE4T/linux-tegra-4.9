@@ -19,6 +19,16 @@
 
 	i2c@7000d000 {
 		max77620@3c {
+			fps {
+				fps@0 {
+					maxim,fps-time-period = <5120>;
+				};
+
+				fps@1 {
+					maxim,fps-time-period = <5120>;
+				};
+			};
+
 			regulators {
 				ldo2 {
 					regulator-name = "vddio-sdmmc1";

@@ -1,5 +1,5 @@
 /*
- * tegra186-priv-quill-p3310-1000-a00-00.dts: Quill product board for android
+ * tegra186-jetson-super-module-e2614-0000-a00.dtsi: Jetson super module E2614
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,10 +13,6 @@
  * more details.
  */
 
-#include "tegra186-priv-quill-p3310-1000-a00-00-base.dts"
-#include "tegra186-platforms/tegra186-jetson-super-module-e2614-0000-a00.dtsi"
-#include "tegra186-platforms/tegra186-quill-shim-p3310-1000-a00-00.dtsi"
-
 / {
-	nvidia,dtsfilename = __FILE__;
+
 };

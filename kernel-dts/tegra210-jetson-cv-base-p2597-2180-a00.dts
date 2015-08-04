@@ -19,6 +19,7 @@
 /memreserve/ 0x80000000 0x00020000;
 
 #include "tegra210-common.dtsi"
+#include "tegra210-platforms/tegra210-audio.dtsi"
 #include "tegra210-platforms/tegra210-jetson-cv-power-tree-p2597-2180-a00.dtsi"
 #include "tegra210-platforms/tegra210-jetson-cv-pinmux-p2597-2180-a00.dtsi"
 #include "tegra210-platforms/tegra210-jetson-cv-sdmmc-drv-p2597-2180-a00.dtsi"
@@ -105,6 +106,35 @@
 			      0 33 0x04>;
 		dma-channels = <10>;
 		status = "okay";
+	};
+
+	ahub {
+		i2s@702d1000 {
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			regulator-supplies = "vdd-1v8-audio-hv", "vdd-1v8-audio-hv-bias";
+			vdd-1v8-audio-hv-supply = <&max77620_sd3>;
+			vdd-1v8-audio-hv-bias-supply = <&max77620_sd3>;
+		};
+
+		i2s@702d1300 {
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			regulator-supplies = "vddio-dmic";
+			vddio-dmic-supply = <&max77620_sd3>;
+		};
+
+		i2s@702d1100 {
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			regulator-supplies = "vdd-1v8-spi-hv", "vdd-1v8-spi-hv-bias";
+			vdd-1v8-spi-hv-supply = <&max77620_sd3>;
+			vdd-1v8-spi-hv-bias-supply = <&max77620_sd3>;
+			fsync-width = <0>;
+		};
 	};
 
 	sata@70020000 {
@@ -202,6 +232,79 @@
 		status = "okay";
 	};
 
+	sound {
+		compatible = "nvidia,tegra-audio-t210ref-mobile-rt565x";
+		nvidia,model = "tegra-snd-t210ref-mobile-rt565x";
+		nvidia,hp-det-gpios = <&gpio TEGRA_GPIO(E, 6) GPIO_ACTIVE_HIGH>;
+
+		/* used when no audio codec on board */
+		nvidia,dummy-codec-dai = <&spdif_dit3>;
+		nvidia,dummy-codec-dai-name = "dit-hifi";
+
+		nvidia,num-codec-link = <3>;
+
+		nvidia,audio-routing =
+			"x Headphone Jack",	"x HPO L Playback",
+			"x Headphone Jack",	"x HPO R Playback",
+			"x MICBIAS1",		"x Mic Jack",
+			"x IN1P",		"x Mic Jack",
+			"x Mic Det Power",	"x Mic Jack",
+			"x Int Spk",		"x SPO Playback",
+			"y Headphone",		"y OUT",
+			"y IN",			"y Mic";
+
+		nvidia,xbar = <&tegra_axbar>;
+
+		nvidia,dai-link-1 {
+			link-name = "rt565x-playback";
+			cpu-dai = <&tegra_i2s1>;
+			codec-dai = <&rt5659>;
+			cpu-dai-name = "I2S1";
+			codec-dai-name = "rt5659-aif1";
+			format = "i2s";
+			bitclock-slave;
+			frame-slave;
+			bitclock-noninversion;
+			frame-noninversion;
+			bit-format = "s16_le";
+			bclk_ratio = <0>;
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "x";
+		};
+
+		nvidia,dai-link-2 {
+			link-name = "spdif-dit-1";
+			cpu-dai = <&tegra_i2s2>;
+			codec-dai = <&spdif_dit1>;
+			cpu-dai-name = "I2S2";
+			codec-dai-name = "dit-hifi";
+			format = "dsp_a";
+			bitclock-slave;
+			frame-slave;
+			bitclock-inversion;
+			frame-inversion;
+			bit-format = "s16_le";
+			bclk_ratio = <4>;
+			srate = <8000>;
+			num-channel = <1>;
+			name-prefix = "y";
+		};
+
+		nvidia,dai-link-3 {
+			link-name = "spdif-dit-2";
+			cpu-dai = <&tegra_dmic3>;
+			codec-dai = <&spdif_dit2>;
+			cpu-dai-name = "DMIC3";
+			codec-dai-name = "dit-hifi";
+			format = "i2s";
+			bit-format = "s16_le";
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "z";
+		};
+	};
+
 	extcon {
 		extcon@0 {
 			status = "disabled";
@@ -273,10 +376,10 @@
 	};
 
 	i2c@7000c000 {
-		rt5639: rt5639.0-001c@1c {
-			compatible = "realtek,rt5639";
-			reg = <0x1c>;
-		};
+		rt5659: rt5659.0-001b@1b {
+                        compatible = "realtek,rt5659";
+                        reg = <0x1b>;
+                };
 	};
 
 	i2c@7000c400 {

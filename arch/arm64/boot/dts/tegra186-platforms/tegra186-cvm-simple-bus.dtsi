@@ -1,5 +1,6 @@
 /*
- * tegra186-quill-common.dtsi: Quill common dtsi.
+ * tegra186-cvm-simple-bus.dtsi: Simple bus for CVM modules.
+ * The buses are like fixed regulators, extcon etc.
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,20 +14,21 @@
  * more details.
  */
 
-#include <dt-bindings/types.h>
-/dts-v1/;
-
-/memreserve/ 0x80000000 0x00010000;
-
-#include "tegra186-soc/tegra186-soc-cvm.dtsi"
-#include "tegra186-cvm-simple-bus.dtsi"
-
 / {
-        compatible = "nvidia,tegra186";
 
-        nvidia,dtbbuildtime = __DATE__, __TIME__;
-        #address-cells = <2>;
-        #size-cells = <2>;
+	/* Fixed regulators simple bus */
+	fixed-regulators {
+			compatible = "simple-bus";
+			device_type = "fixed-regulators";
+			#address-cells = <1>;
+			#size-cells = <0>;
+	};
 
+	/* Extcon simple bus */
+	external-connection {
+		compatible = "simple-bus";
+		device_type = "external-connection";
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
 };
-

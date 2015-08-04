@@ -118,6 +118,22 @@ static inline u32 ctxsw_prog_main_image_num_save_ops_o(void)
 {
 	return 0x000000f4;
 }
+static inline u32 ctxsw_prog_main_image_num_wfi_save_ops_o(void)
+{
+	return 0x000000d0;
+}
+static inline u32 ctxsw_prog_main_image_num_cta_save_ops_o(void)
+{
+	return 0x000000d4;
+}
+static inline u32 ctxsw_prog_main_image_num_gfxp_save_ops_o(void)
+{
+	return 0x000000d8;
+}
+static inline u32 ctxsw_prog_main_image_num_cilp_save_ops_o(void)
+{
+	return 0x000000dc;
+}
 static inline u32 ctxsw_prog_main_image_num_restore_ops_o(void)
 {
 	return 0x000000f8;

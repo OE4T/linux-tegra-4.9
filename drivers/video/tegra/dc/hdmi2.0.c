@@ -1947,7 +1947,7 @@ static void tegra_dc_hdmi_resume(struct tegra_dc *dc)
 
 	cancel_delayed_work(&hdmi->hpd_worker);
 	schedule_delayed_work(&hdmi->hpd_worker,
-				msecs_to_jiffies(HDMI_HPD_DEBOUNCE_DELAY_MS));
+				msecs_to_jiffies(HDMI_HPD_DEBOUNCE_DELAY_MS + HDMI_HPD_DROP_TIMEOUT_MS));
 }
 
 static int tegra_dc_hdmi_ddc_enable(struct tegra_dc *dc)

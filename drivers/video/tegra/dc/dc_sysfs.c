@@ -128,11 +128,10 @@ static ssize_t enable_store(struct device *dev,
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
-	if (val) {
+	if (val)
 		tegra_dc_enable(dc);
-	} else {
+	else
 		tegra_dc_disable(dc);
-	}
 
 	return count;
 }
@@ -296,6 +295,7 @@ static ssize_t orientation_3d_show(struct device *dev,
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	struct tegra_dc_out *dc_out = dc->out;
 	const char *orientation;
+
 	switch (dc_out->stereo->orientation) {
 	case TEGRA_DC_STEREO_LANDSCAPE:
 		orientation = ORIENTATION_LANDSCAPE;
@@ -347,6 +347,7 @@ static ssize_t mode_3d_show(struct device *dev,
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	struct tegra_dc_out *dc_out = dc->out;
 	const char *mode;
+
 	switch (dc_out->stereo->mode_2d_3d) {
 	case TEGRA_DC_STEREO_MODE_2D:
 		mode = MODE_2D;
@@ -720,6 +721,99 @@ static struct attribute_group hdmi_config_attr_group = {
 	.name = "hdmi_config"
 };
 
+/* display current window assignment bitmask in
+ * hexadecimal for the given dc device->dev */
+static ssize_t win_mask_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	ssize_t res;
+
+	mutex_lock(&dc->lock);
+	if ((!dc) || (!dc->ndev) || (!dc->pdata)) {
+		dev_err(&dc->ndev->dev, "%s: dc|device err\n", __func__);
+		res = -EINVAL;
+		goto exit;
+	}
+	res = snprintf(buf, PAGE_SIZE, "0x%lx\n", dc->pdata->win_mask);
+exit:
+	mutex_unlock(&dc->lock);
+	return res;
+}
+
+static ssize_t win_mask_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct platform_device *ndev = to_platform_device(dev);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	struct tegra_dc *dc_other;
+	struct tegra_dc_win *win;
+	unsigned long requested_winmask = 0;
+	int i, j;
+
+#ifndef CONFIG_TEGRA_NVDISPLAY
+	return -EINVAL;
+#endif /* CONFIG_TEGRA_NVDISPLAY */
+
+	/* try first as decimal, then as hexadecimal */
+	if ((kstrtoul(buf, 10, &requested_winmask) < 0) &&
+		(kstrtoul(buf, 0, &requested_winmask) < 0))
+			return -EINVAL;
+	/* do range check */
+	if (requested_winmask >= (1 << DC_N_WINDOWS))
+		return -EINVAL;
+
+	mutex_lock(&dc->lock);
+	if ((!dc->ndev) || (dc->enabled)) {
+		count = -EINVAL;
+		goto exit;
+	}
+	/* check requested=enabled windows NOT owned by other dcs */
+	for_each_set_bit(i, &requested_winmask, DC_N_WINDOWS) {
+		j = dc->ndev->id;
+		win = tegra_dc_get_window(dc, i);
+		/* is window already owned by this dc? */
+		if (win && win->dc && (win->dc == dc))
+			continue;
+		/* is window already owned by other dc? */
+		for (j = 0; j < TEGRA_MAX_DC; j++) {
+			dc_other = tegra_dc_get_dc(j);
+			if (!dc_other)
+				continue;
+			if (!dc_other->pdata) {
+				count = -EINVAL;
+				goto exit;
+			}
+			/* found valid dc, does it own window=i? */
+			if ((dc_other->pdata->win_mask >> i) & 0x1) {
+				dev_err(&dc->ndev->dev,
+					"win[%d] already on fb%d\n", i, j);
+				count = -EINVAL;
+				goto exit;
+			}
+		}
+	}
+	/* attach/detach per all requested bits for current head */
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		if (test_bit(i, &requested_winmask)) {
+			if (tegra_dc_attach_win(dc, i)) {
+				count = -EINVAL;
+				goto exit;
+			}
+		} else {
+			if (test_bit(i, &dc->pdata->win_mask))
+				tegra_dc_dettach_win(dc, i);
+		}
+	}
+	dc->pdata->win_mask = requested_winmask;
+exit:
+	mutex_unlock(&dc->lock);
+	return count;
+}
+
+static DEVICE_ATTR(win_mask, S_IRUSR | S_IWUSR, win_mask_show, win_mask_store);
+
 void tegra_dc_remove_sysfs(struct device *dev)
 {
 	struct platform_device *ndev = to_platform_device(dev);
@@ -731,6 +825,8 @@ void tegra_dc_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_enable);
 	device_remove_file(dev, &dev_attr_stats_enable);
 	device_remove_file(dev, &dev_attr_crc_checksum_latched);
+	device_remove_file(dev, &dev_attr_win_mask);
+
 #ifdef CONFIG_TEGRA_DC_WIN_H
 	device_remove_file(dev, &dev_attr_win_h);
 #endif
@@ -748,7 +844,7 @@ void tegra_dc_remove_sysfs(struct device *dev)
 
 	if (sd_settings)
 #ifdef CONFIG_TEGRA_NVSD
-	nvsd_remove_sysfs(dev);
+		nvsd_remove_sysfs(dev);
 #endif
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	tegra_sd_remove_sysfs(dev);
@@ -783,6 +879,8 @@ void tegra_dc_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_enable);
 	error |= device_create_file(dev, &dev_attr_stats_enable);
 	error |= device_create_file(dev, &dev_attr_crc_checksum_latched);
+	error |= device_create_file(dev, &dev_attr_win_mask);
+
 #ifdef CONFIG_TEGRA_DC_WIN_H
 	error |= device_create_file(dev, &dev_attr_win_h);
 #endif

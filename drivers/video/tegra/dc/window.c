@@ -74,7 +74,7 @@ static u32 blend_topwin(u32 flags)
 }
 
 static u32 blend_2win(int idx, unsigned long behind_mask,
-						u32* flags, int xy, int win_num)
+						u32 *flags, int xy, int win_num)
 {
 	int other;
 
@@ -91,7 +91,7 @@ static u32 blend_2win(int idx, unsigned long behind_mask,
 }
 
 static u32 blend_3win(int idx, unsigned long behind_mask,
-						u32* flags, int win_num)
+						u32 *flags, int win_num)
 {
 	unsigned long infront_mask;
 	int first, second;
@@ -349,6 +349,7 @@ static inline void tegra_dc_update_scaling(struct tegra_dc *dc,
 {
 	u32 h_dda, h_dda_init;
 	u32 v_dda, v_dda_init;
+
 	h_dda_init = compute_initial_dda(win->x);
 	v_dda_init = compute_initial_dda(win->y);
 
@@ -508,7 +509,8 @@ static void tegra_dc_vrr_flip_time(struct tegra_dc *dc)
 	struct timespec time_now;
 	struct tegra_vrr *vrr  = dc->out->vrr;
 
-	if (!vrr) return;
+	if (!vrr)
+		return;
 
 	if (vrr->enable) {
 		vrr->lastenable = 1;
@@ -517,8 +519,7 @@ static void tegra_dc_vrr_flip_time(struct tegra_dc *dc)
 				time_now.tv_nsec / 1000;
 
 		vrr->flip = 1;
-	}
-	else {
+	} else {
 		vrr->curr_flip_us = 0;
 		vrr->last_flip_us = 0;
 	}
@@ -528,13 +529,13 @@ static void tegra_dc_vrr_cancel_vfp(struct tegra_dc *dc)
 {
 	struct tegra_vrr *vrr  = dc->out->vrr;
 
-	if (!vrr) return;
+	if (!vrr)
+		return;
 
 	if (vrr->enable) {
 		tegra_dc_set_act_vfp(dc, vrr->vfp_shrink);
-	}
-	else {
- 		if(vrr->lastenable) {
+	} else {
+		if (vrr->lastenable) {
 			tegra_dc_set_act_vfp(dc, dc->mode.v_front_porch);
 			vrr->lastenable = 0;
 			vrr->frame_type = 0;
@@ -589,6 +590,7 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 	   the requested wait_for_vblank, and also the no_vsync global. */
 	for (i = 0; i < n; i++) {
 		struct tegra_dc_win *win = windows[i];
+
 		if ((!wait_for_vblank &&
 		    !update_is_hsync_safe(&dc->shadow_windows[win->idx],
 					  win)) || do_partial_update)
@@ -988,6 +990,7 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 
 		for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
 			struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
+
 			win->dirty = 1;
 			update_mask |= WIN_A_ACT_REQ << i;
 		}
@@ -1046,6 +1049,7 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 		   scanline. */
 
 		unsigned int winmask = update_mask & WIN_ALL_ACT_REQ;
+
 		while (tegra_dc_windows_are_dirty(dc, winmask))
 			udelay(1);
 
@@ -1148,6 +1152,7 @@ void tegra_dc_trigger_windows(struct tegra_dc *dc)
 	val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
 	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
+
 		if (tegra_platform_is_linsim()) {
 			/* FIXME: this is not needed when
 			   the simulator clears WIN_x_UPDATE
@@ -1176,3 +1181,28 @@ void tegra_dc_trigger_windows(struct tegra_dc *dc)
 		wake_up(&dc->wq);
 }
 
+/* Dynamically attach window idx to head dc */
+int tegra_dc_attach_win(struct tegra_dc *dc, unsigned idx)
+{
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	return tegra_nvdisp_assign_win(dc, idx);
+#else
+	if (dc)
+		dev_warn(&dc->ndev->dev, "%s: unsupported\n", __func__);
+	return -EINVAL;
+#endif
+}
+EXPORT_SYMBOL(tegra_dc_attach_win);
+
+/* Dynamically dettach window idx from head dc */
+int tegra_dc_dettach_win(struct tegra_dc *dc, unsigned idx)
+{
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	return tegra_nvdisp_detach_win(dc, idx);
+#else
+	if (dc)
+		dev_warn(&dc->ndev->dev, "%s: unsupported\n", __func__);
+	return -EINVAL;
+#endif
+}
+EXPORT_SYMBOL(tegra_dc_dettach_win);

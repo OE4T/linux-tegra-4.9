@@ -603,6 +603,8 @@ int tegra_nvdisp_init(struct tegra_dc *dc);
 int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	struct tegra_dc_win *windows[], int n,
 	u16 *dirty_rect, bool wait_for_vblank);
+int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx);
+int tegra_nvdisp_detach_win(struct tegra_dc *dc, unsigned idx);
 int tegra_nvdisp_head_enable(struct tegra_dc *dc);
 int tegra_nvdisp_head_disable(struct tegra_dc *dc);
 int tegra_nvdisp_get_linestride(struct tegra_dc *dc, int win);

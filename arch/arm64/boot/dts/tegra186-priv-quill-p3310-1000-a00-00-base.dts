@@ -1,5 +1,5 @@
 /*
- * tegra186-quill-shim-p3310-0000-a00-00.dtsi: SHIM layer override files.
+ * tegra186-quill-p3310-a00-00-base.dts Quill A00 Board
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,6 +13,10 @@
  * more details.
  */
 
-/ {
+#include "tegra186-platforms/tegra186-quill-common-p3310-1000-a00.dtsi"
 
+/ {
+	nvidia,dtsfilename = __FILE__;
+	nvidia,boardids = "3310:0000:A0";
+	nvidia,proc-boardid = "3310:0000:A0";
 };

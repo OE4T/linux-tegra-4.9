@@ -1,5 +1,5 @@
 /*
- * tegra186-priv-quill-mfg-p3310-0000-a00-00.dts: Android Quill-MFG A00 Board
+ * tegra186-quill-common-p3310-1000-a00.dtsi: Quill common dtsi.
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,9 +13,14 @@
  * more details.
  */
 
-#include "tegra186-priv-quill-mfg-p3310-0000-a00-00-base.dts"
-#include "tegra186-platforms/tegra186-quill-shim-p3310-0000-a00-00.dtsi"
+#include "tegra186-quill-common.dtsi"
 
 / {
-	nvidia,dtsfilename = __FILE__;
+        model = "quill-3310";
+        compatible = "nvidia,quill-3310", "nvidia,tegra186";
+
+        #address-cells = <2>;
+        #size-cells = <2>;
+
 };
+

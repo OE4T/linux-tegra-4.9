@@ -14,7 +14,7 @@
  */
 
 #include "tegra186-priv-quill-pb-e3301-1000-a00-00-base.dts"
-#include "tegra186-platforms/tegra186-quill-shim-p3310-0000-a00-00.dtsi"
+#include "tegra186-platforms/tegra186-quill-shim-p3310-1000-a00-00.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

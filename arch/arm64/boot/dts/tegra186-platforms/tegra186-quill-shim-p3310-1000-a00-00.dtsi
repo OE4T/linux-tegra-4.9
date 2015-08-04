@@ -1,5 +1,5 @@
 /*
- * tegra186-quill-common-p3310-0000-a00.dtsi: Quill common dtsi.
+ * tegra186-quill-shim-p3310-1000-a00-00.dtsi: SHIM layer override files.
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,14 +13,6 @@
  * more details.
  */
 
-#include "tegra186-quill-common.dtsi"
-
 / {
-        model = "quill-3310";
-        compatible = "nvidia,quill-3310", "nvidia,tegra186";
-
-        #address-cells = <2>;
-        #size-cells = <2>;
 
 };
-

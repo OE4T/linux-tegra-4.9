@@ -1,0 +1,40 @@
+/*
+ * tegra186-cvb-prod-p2597-b00-p3310-1000-a00-00.dtsi: CVB-PROD P2597-B00 with
+ *				P3310-1000
+ *
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include <dt-bindings/gpio/tegra-gpio.h>
+
+/ {
+
+	i2c@3160000 {
+		gpio_i2c_0_74: gpio@74 {
+			compatible = "ti,tca9539";
+			reg = <0x74>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			interrupt-parent = <&tegra_gpio>;
+			interrupts = <TEGRA_GPIO(Y, 0) 0x0>;
+		};
+
+		gpio_i2c_0_77: gpio@77 {
+			compatible = "ti,tca9539";
+			reg = <0x74>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			interrupt-parent = <&tegra_gpio>;
+			interrupts = <TEGRA_GPIO(Y, 7) 0x0>;
+		};
+	};
+};

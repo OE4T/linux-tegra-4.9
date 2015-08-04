@@ -92,10 +92,6 @@
 			status = "okay";
 		};
 
-		vii2c@156c0000 {
-			status = "okay";
-		};
-
 		dsi {	/* dsi@15300000 */
 			status = "okay";
 		};

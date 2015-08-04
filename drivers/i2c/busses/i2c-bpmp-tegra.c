@@ -220,18 +220,11 @@ struct tegra_bpmp_i2c_chipdata {
 
 /**
  * struct tegra_i2c_dev	- per device i2c context
- * @dev: device reference for power management
  * @adapter: core i2c layer adapter information
- * @cont_id: i2c controller id, used for for packet header
- * @msg_complete: transfer completion notifier
  */
 struct tegra_bpmp_i2c_dev {
-	struct device *dev;
 	struct i2c_adapter adapter;
 	u32 bpmp_adapter_id;
-	int cont_id;
-	const struct tegra_bpmp_i2c_chipdata *chipdata;
-	bool is_shutdown;
 };
 
 static int tegra_bpmp_i2c_init(struct tegra_bpmp_i2c_dev *i2c_dev)
@@ -245,17 +238,18 @@ static void dump_i2c_msgs(struct tegra_bpmp_i2c_dev *i2c_dev,
 			  struct i2c_msg msgs[], int num)
 {
 	int i, j;
-	dev_err(i2c_dev->dev, "--- message dump for debugging ----\n");
+
+	dev_err(&i2c_dev->adapter.dev, "--- message dump for debugging ---\n");
 	for (i = 0; i < num; i++) {
 		struct i2c_msg *msg = &msgs[i];
-		dev_err(i2c_dev->dev,
+		dev_err(&i2c_dev->adapter.dev,
 			"addr 0x%x flags 0x%x len %d data:",
 			(unsigned)msg->addr,
 			(unsigned)msg->flags,
 			(int)msg->len);
 		for (j = 0; j < (int)msg->len; j++)
-			dev_err(i2c_dev->dev, " %.2x", msg->buf[j]);
-		dev_err(i2c_dev->dev, "\n");
+			dev_err(&i2c_dev->adapter.dev, " %.2x", msg->buf[j]);
+		dev_err(&i2c_dev->adapter.dev, "\n");
 	}
 }
 
@@ -291,7 +285,8 @@ static int tegra_bpmp_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 
 	ret = tegra_bpmp_i2c_preverify(msgs, num);
 	if (ret != 0) {
-		dev_err(i2c_dev->dev, "msg len : %d not supported\n", ret);
+		dev_err(&i2c_dev->adapter.dev, "msg len : %d not supported\n",
+			ret);
 		return -EINVAL;
 	}
 
@@ -299,21 +294,23 @@ static int tegra_bpmp_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 			TEGRA_I2C_IPC_MAX_IN_BUF_SIZE,
 			msgs, num);
 	if (size < 0) {
-		dev_err(i2c_dev->dev, "serialize_i2c ret %d\n", size);
+		dev_err(&i2c_dev->adapter.dev, "serialize_i2c ret %d\n", size);
 		dump_i2c_msgs(i2c_dev, msgs, num);
 		return size;
 	}
 
 	ret = tegra_bpmp_i2c_req(i2c_dev->bpmp_adapter_id, &in, size, &out);
 	if (ret < 0) {
-		dev_err(i2c_dev->dev, "tegra_bpmp_i2c_req ret %d", ret);
+		dev_err(&i2c_dev->adapter.dev, "tegra_bpmp_i2c_req ret %d\n",
+			ret);
 		dump_i2c_msgs(i2c_dev, msgs, num);
 		return ret;
 	}
 
 	ret = deserialize_i2c(out.data.i2c_req.data_out_buf, ret, msgs, num);
 	if (ret < 0) {
-		dev_err(i2c_dev->dev, "deserialize_i2c ret %d\n", ret);
+		dev_err(&i2c_dev->adapter.dev, "deserialize_i2c ret %d\n",
+			ret);
 		dump_i2c_msgs(i2c_dev, msgs, num);
 		return ret;
 	}
@@ -406,11 +403,6 @@ static int tegra_bpmp_i2c_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	i2c_dev->chipdata = chip_data;
-
-	i2c_dev->cont_id = pdev->id;
-	i2c_dev->dev = &pdev->dev;
-
 	platform_set_drvdata(pdev, i2c_dev);
 
 	ret = tegra_bpmp_i2c_init(i2c_dev);
@@ -461,9 +453,8 @@ static void tegra_bpmp_i2c_shutdown(struct platform_device *pdev)
 {
 	struct tegra_bpmp_i2c_dev *i2c_dev = platform_get_drvdata(pdev);
 
-	dev_info(i2c_dev->dev, "Bus is shutdown down..\n");
+	dev_info(&i2c_dev->adapter.dev, "Bus is shutdown down...\n");
 	i2c_shutdown_adapter(&i2c_dev->adapter);
-	i2c_dev->is_shutdown = true;
 }
 
 static struct platform_driver tegra_bpmp_i2c_driver = {

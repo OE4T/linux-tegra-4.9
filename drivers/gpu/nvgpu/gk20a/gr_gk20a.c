@@ -703,12 +703,9 @@ static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 	return ret;
 }
 
-static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c,
-				    bool disable_fifo)
+static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c)
 {
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
-	struct fifo_gk20a *f = &g->fifo;
-	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
 	u32 va_lo, va_hi, va;
 	int ret = 0;
 	void *ctx_ptr = NULL;
@@ -732,30 +729,21 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c,
 	va_hi = u64_hi32(ch_ctx->zcull_ctx.gpu_va);
 	va = ((va_lo >> 8) & 0x00FFFFFF) | ((va_hi << 24) & 0xFF000000);
 
-	if (disable_fifo) {
-		ret = gk20a_fifo_disable_engine_activity(g, gr_info, true);
-		if (ret) {
-			gk20a_err(dev_from_gk20a(g),
-				"failed to disable gr engine activity\n");
-			goto clean_up;
-		}
+	c->g->ops.fifo.disable_channel(c);
+	ret = c->g->ops.fifo.preempt_channel(c->g, c->hw_chid);
+	if (ret) {
+		c->g->ops.fifo.enable_channel(c);
+		gk20a_err(dev_from_gk20a(g),
+			"failed to disable gr engine activity\n");
+		goto clean_up;
 	}
-
-	g->ops.mm.fb_flush(g);
 
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_zcull_o(), 0,
 		 ch_ctx->zcull_ctx.ctx_sw_mode);
 
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_zcull_ptr_o(), 0, va);
 
-	if (disable_fifo) {
-		ret = gk20a_fifo_enable_engine_activity(g, gr_info);
-		if (ret) {
-			gk20a_err(dev_from_gk20a(g),
-				"failed to enable gr engine activity\n");
-			goto clean_up;
-		}
-	}
+	c->g->ops.fifo.enable_channel(c);
 
 clean_up:
 	vunmap(ctx_ptr);
@@ -3343,7 +3331,7 @@ int gr_gk20a_bind_ctxsw_zcull(struct gk20a *g, struct gr_gk20a *gr,
 	zcull_ctx->gpu_va = zcull_va;
 
 	/* TBD: don't disable channel in sw method processing */
-	return gr_gk20a_ctx_zcull_setup(g, c, true);
+	return gr_gk20a_ctx_zcull_setup(g, c);
 }
 
 int gr_gk20a_get_zcull_info(struct gk20a *g, struct gr_gk20a *gr,

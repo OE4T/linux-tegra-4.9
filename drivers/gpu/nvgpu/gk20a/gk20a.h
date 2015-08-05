@@ -222,6 +222,7 @@ struct gpu_ops {
 		void (*bind_channel)(struct channel_gk20a *ch_gk20a);
 		void (*unbind_channel)(struct channel_gk20a *ch_gk20a);
 		void (*disable_channel)(struct channel_gk20a *ch);
+		void (*enable_channel)(struct channel_gk20a *ch);
 		int (*alloc_inst)(struct gk20a *g, struct channel_gk20a *ch);
 		void (*free_inst)(struct gk20a *g, struct channel_gk20a *ch);
 		int (*setup_ramfc)(struct channel_gk20a *c, u64 gpfifo_base,

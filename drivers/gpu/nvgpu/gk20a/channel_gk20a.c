@@ -2538,6 +2538,7 @@ void gk20a_init_channel(struct gpu_ops *gops)
 	gops->fifo.bind_channel = channel_gk20a_bind;
 	gops->fifo.unbind_channel = channel_gk20a_unbind;
 	gops->fifo.disable_channel = channel_gk20a_disable;
+	gops->fifo.enable_channel = channel_gk20a_enable;
 	gops->fifo.alloc_inst = channel_gk20a_alloc_inst;
 	gops->fifo.free_inst = channel_gk20a_free_inst;
 	gops->fifo.setup_ramfc = channel_gk20a_setup_ramfc;

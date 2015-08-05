@@ -190,6 +190,22 @@ int tegra186_pmc_io_dpd_get_status(int reg, int bit_pos)
 }
 EXPORT_SYMBOL(tegra186_pmc_io_dpd_get_status);
 
+void tegra186_pmc_pwr_ddr_update(unsigned long mask, unsigned long val)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&tegra186_pmc_access_lock, flags);
+	_tegra186_pmc_register_update(PMC_DDR_PWR, mask, val);
+	spin_unlock_irqrestore(&tegra186_pmc_access_lock, flags);
+}
+EXPORT_SYMBOL(tegra186_pmc_pwr_ddr_update);
+
+unsigned long tegra186_pmc_pwr_ddr_get(void)
+{
+	return tegra186_pmc_readl(PMC_DDR_PWR);
+}
+EXPORT_SYMBOL(tegra186_pmc_pwr_ddr_get);
+
 void tegra186_pmc_pwr_e18V_update(unsigned long mask, unsigned long val)
 {
 	unsigned long flags;

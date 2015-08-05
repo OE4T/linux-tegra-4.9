@@ -74,6 +74,7 @@ struct lr388k7_ts_dbg {
 	struct lr388k7_wakeup wakeup;
 	u8 u8ForceCap;
 	u8 u8Dump;
+	u8 u8Test;
 };
 
 enum {

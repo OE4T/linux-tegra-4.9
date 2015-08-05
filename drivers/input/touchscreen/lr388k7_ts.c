@@ -86,7 +86,7 @@
 #define K7_CMD_DATA_OFFSET (0x030400)
 #define K7_CMD_DATA_SIZE (251 + K7_RD_HEADER_SIZE)
 #define K7_Q_SIZE (8)
-#define K7_DRIVER_VERSION (10)
+#define K7_DRIVER_VERSION (12)
 #define K7_INT_STATUS_MASK_DATA (0x01)
 #define K7_INT_STATUS_MASK_BOOT (0x02)
 #define K7_INT_STATUS_MASK_CMD  (0x04)
@@ -1083,6 +1083,38 @@ static ssize_t lr388k7_ts_wakeup_enable_show(struct device *dev,
 		       g_st_dbg.wakeup.num_tap);
 }
 
+static ssize_t lr388k7_ts_test_store(struct device *dev,
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	ssize_t ret;
+
+	if (count != 2)
+		return -EINVAL;
+
+	ret = (ssize_t) count;
+
+	if (buf[0] == '1') {
+		g_st_dbg.u8Test = 1;
+		lr388k7_send_signal(g_st_state.u32_pid,
+				    LR388K7_SIGNAL_CTRL);
+	} else if (buf[0] == '0') {
+		g_st_dbg.u8Test = 0;
+		lr388k7_send_signal(g_st_state.u32_pid,
+				    LR388K7_SIGNAL_CTRL);
+	}
+
+	return ret;
+}
+
+static ssize_t lr388k7_ts_test_show(struct device *dev,
+	struct device_attribute *attr,
+	char *buf)
+{
+	return sprintf(buf, "%s\n", g_st_dbg.u8Test == 1 ?
+		       "Enabled" : "Disabled");
+}
+
 #if defined(DEBUG_LR388K7)
 static ssize_t lr388k7_ts_check_state_store(struct device *dev,
 	struct device_attribute *attr,
@@ -1217,12 +1249,14 @@ static DEVICE_ATTR(slowscan_enable, 0640,
 static DEVICE_ATTR(wakeup_enable, 0640,
 		   lr388k7_ts_wakeup_enable_show,
 		   lr388k7_ts_wakeup_enable_store);
+static DEVICE_ATTR(test, 0640,
+		   lr388k7_ts_test_show,
+		   lr388k7_ts_test_store);
 #if defined(DEBUG_LR388K7)
 static DEVICE_ATTR(check_state, 0660,
 		   lr388k7_ts_check_state_show,
 		   lr388k7_ts_check_state_store);
 #endif
-
 
 static struct attribute *lr388k7_ts_attributes[] = {
 	&dev_attr_force_cap.attr,
@@ -1231,6 +1265,7 @@ static struct attribute *lr388k7_ts_attributes[] = {
 	&dev_attr_version.attr,
 	&dev_attr_slowscan_enable.attr,
 	&dev_attr_wakeup_enable.attr,
+	&dev_attr_test.attr,
 #if defined(DEBUG_LR388K7)
 	&dev_attr_check_state.attr,
 #endif
@@ -2015,6 +2050,7 @@ static void lr388k7_init_parameter(void)
 	g_st_dbg.wakeup.num_tap = K7_NUM_TAP_2;
 	g_st_dbg.u8ForceCap = 0;
 	g_st_dbg.u8Dump = 0;
+	g_st_dbg.u8Test = 0;
 	g_u16_wakeup_enable = 0;
 }
 
@@ -2023,7 +2059,7 @@ static void lr388k7_init_ts(void)
 	lr388k7_init_parameter();
 	memset(&g_st_state, 0, sizeof(struct lr388k7_ts_parameter));
 
-	g_st_state.st_wq_k7 = create_singlethread_workqueue("lr388k7_work");
+	g_st_state.st_wq_k7 = alloc_workqueue("lr388k7_work", WQ_HIGHPRI, 1);
 	INIT_WORK(&g_st_state.st_work_k7, lr388k7_work_handler);
 }
 
@@ -2331,6 +2367,12 @@ static int lr388k7_probe(struct spi_device *spi)
 				     0,
 				     0);
 	}
+#if 0
+	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR,
+			     0, 0xff, 0, 0);
+	input_set_abs_params(input_dev, ABS_MT_TOUCH_MINOR,
+			     0, 0xff, 0, 0);
+#endif
 	input_set_abs_params(input_dev,
 			     ABS_MT_PRESSURE,
 			     0,
@@ -2557,7 +2599,7 @@ static void lr388k7_start(struct lr388k7 *ts)
 
 	mutex_lock(&ts->mutex);
 
-	if (g_st_dbg.wakeup.enable == 1 || g_st_dbg.wakeup.enable == 2) {
+	if (g_st_dbg.wakeup.enable == 1) {
 		lr388k7_ctrl_resume(ts);
 		mutex_unlock(&ts->mutex);
 		return;
@@ -2626,26 +2668,7 @@ static void lr388k7_ctrl_suspend(struct lr388k7 *ts)
 
 		mutex_unlock(&ts->mutex);
 		return;
-	} else if (g_st_dbg.wakeup.enable == 2) {
-		u8_buf[count++] = K7_WR_OPCODE;
-		u8_buf[count++] = (K7_STATE_CTL_ADDR >> 16) & 0xFF;
-		u8_buf[count++] = (K7_STATE_CTL_ADDR >>  8) & 0xFF;
-		u8_buf[count++] = (K7_STATE_CTL_ADDR >>  0) & 0xFF;
-		u8_buf[count++] = K7_POWER_CTL_SLEEP;
-		lr388k7_spi_write(u8_buf, count);
-
-		irq_value = gpio_get_value(ts->gpio_irq);
-
-		if (!irq_value) {
-			u8_status = lr388k7_clear_irq();
-
-			lr388k7_event_handler(u8_status);
-		}
-
-		mutex_unlock(&ts->mutex);
-		return;
 	}
-
 
 	/* Disable (3.3V) */
 	if (ts->regulator_3v3) {

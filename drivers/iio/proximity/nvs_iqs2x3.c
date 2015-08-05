@@ -32,7 +32,7 @@
 #include <linux/nvs_proximity.h>
 
 
-#define IQS_DRIVER_VERSION		(12)
+#define IQS_DRIVER_VERSION		(13)
 #define IQS_VENDOR			"Azoteq"
 #define IQS_NAME			"iqs2x3"
 #define IQS_NAME_IQS253			"iqs253"
@@ -465,12 +465,13 @@ struct iqs_state {
 	unsigned int sts;		/* status flags */
 	unsigned int errs;		/* error count */
 	unsigned int enabled;		/* enable status */
+	unsigned int susrsm_en;		/* suspend/resume enable status */
 	u16 i2c_addr;			/* I2C address */
 	u8 dev_id;			/* device ID */
 	bool irq_dis;			/* interrupt disable flag */
 	bool irq_set_irq_wake;		/* if irq_set_irq_wake is needed */
-	bool suspend_defer;		/* suspend action execution deferred */
-	bool susrsm;			/* suspend/resume action needed */
+	bool susrsm;			/* suspend/resume - exit I2C early */
+	bool resume;			/* resume action needed */
 	int op_i;			/* operational index */
 	int op_read_n;			/* operational register read count */
 	int op_read_reg[IQS_DEV_N + 2];	/* operational registers to read */
@@ -643,11 +644,11 @@ static int iqs_gpio_sar(struct iqs_state *st, int assert)
 static int iqs_gpio_rdy_poll(struct iqs_state *st)
 {
 	unsigned int i;
-	int ret = 0;
+	int ret;
 
 	for (i = 0; i < 2000; i++) {
 		ret = gpio_get_value(st->gpio_rdy);
-		if (!ret)
+		if (st->susrsm || !ret)
 			break;
 
 		usleep_range(500, 1000);
@@ -665,7 +666,7 @@ static int iqs_gpio_rdy(struct iqs_state *st, bool poll)
 		ret = iqs_gpio_rdy_poll(st);
 	else
 		ret = gpio_get_value(st->gpio_rdy);
-	if (ret) {
+	if (ret && !st->susrsm) {
 		force = true;
 		iqs_disable_irq(st);
 		for (; i < st->gpio_rdy_retry; i++) {
@@ -674,14 +675,14 @@ static int iqs_gpio_rdy(struct iqs_state *st, bool poll)
 			/* put to tristate */
 			gpio_direction_input(st->gpio_rdy);
 			ret = iqs_gpio_rdy_poll(st);
-			if (!ret)
+			if (st->susrsm || !ret)
 				break;
 		}
 	}
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&st->i2c->dev,
-			 "%s gpio_rdy=%d poll=%x force=%x retries=%u\n",
-			 __func__, ret, poll, force, i);
+			 "%s gpio_rdy=%d poll=%x force=%x retry=%u exit=%x\n",
+			 __func__, ret, poll, force, i, st->susrsm);
 	return ret;
 }
 
@@ -768,14 +769,14 @@ static int iqs_i2c(struct iqs_state *st, bool poll)
 				ret = -EIO;
 			}
 		}
-		if (ret)
+		if (ret && !st->susrsm)
 			iqs_err(st);
 		if (st->sts & NVS_STS_SPEW_MSG) {
 			st->msg_n += n;
 			if (i || ret)
 				dev_info(&st->i2c->dev,
-					 "%s retries=%u poll=%x err=%d\n",
-					 __func__, i, poll, ret);
+					"%s retry=%u poll=%x err=%d exit=%x\n",
+					 __func__, i, poll, ret, st->susrsm);
 			for (i = 0; i < st->msg_n; i++) {
 				n = 0;
 				if (st->msg[i].flags & I2C_M_RD) {
@@ -1082,26 +1083,6 @@ static int iqs_reenable_err(struct iqs_state *st)
 	return RET_POLL_NEXT;
 }
 
-static int iqs_susrsm(struct iqs_state *st)
-{
-	int ret;
-
-	if (st->sts & NVS_STS_SUSPEND) {
-		/* DT additional action for suspend */
-		ret = iqs_write(st, st->dt_suspnd[st->part_i], false, false);
-		iqs_enable_irq(st);
-		if (st->irq_set_irq_wake)
-			irq_set_irq_wake(st->i2c->irq, 1);
-	} else { /* resuming */
-		if (st->irq_set_irq_wake)
-			irq_set_irq_wake(st->i2c->irq, 0);
-		ret = iqs_reenable(st);
-	}
-	if (!ret)
-		st->susrsm = false;
-	return ret;
-}
-
 static int iqs_pm(struct iqs_state *st, bool enable)
 {
 	int ret = 0;
@@ -1111,8 +1092,6 @@ static int iqs_pm(struct iqs_state *st, bool enable)
 				       ARRAY_SIZE(iqs_vregs));
 		if (ret > 0)
 			mdelay(IQS_HW_DELAY_MS);
-		if (!st->enabled)
-			ret = iqs_init(st);
 	} else {
 		ret = nvs_vregs_sts(st->vreg, ARRAY_SIZE(iqs_vregs));
 		if ((ret < 0) || (ret == ARRAY_SIZE(iqs_vregs))) {
@@ -1121,8 +1100,7 @@ static int iqs_pm(struct iqs_state *st, bool enable)
 			nvs_vregs_enable(&st->i2c->dev, st->vreg,
 					 ARRAY_SIZE(iqs_vregs));
 			mdelay(IQS_HW_DELAY_MS);
-			ret = iqs_init(st);
-			ret |= iqs_dis(st, -1);
+			ret = iqs_dis(st, -1);
 		}
 		ret |= nvs_vregs_disable(&st->i2c->dev, st->vreg,
 					 ARRAY_SIZE(iqs_vregs));
@@ -1323,6 +1301,73 @@ static int iqs_rd(struct iqs_state *st, bool poll)
 	return ret;
 }
 
+static int iqs_disable(struct iqs_state *st, int snsr_id)
+{
+	bool disable = true;
+	unsigned int i;
+	int ret = 0;
+
+	if (snsr_id >= 0) {
+		ret = iqs_dis(st, snsr_id);
+		if (!ret)
+			st->enabled &= ~(1 << snsr_id);
+		if (st->enabled)
+			disable = false;
+	} else {
+		for (i = 0; i < IQS_DEV_N; i++) {
+			if (st->enabled & (1 << i))
+				iqs_dis(st, i);
+		}
+	}
+	if (disable) {
+		iqs_disable_irq(st);
+		if (st->dw.work.func)
+			cancel_delayed_work(&st->dw);
+		ret = iqs_pm(st, false);
+		if (!ret)
+			st->enabled = 0;
+	}
+	return ret;
+}
+
+static int iqs_enable(struct iqs_state *st, int snsr_id, int enable)
+{
+	int ret;
+
+	if (enable) {
+		enable = st->enabled | (1 << snsr_id);
+		ret = iqs_pm(st, true);
+		if (!ret) {
+			if (!st->enabled)
+				ret = iqs_init(st);
+			ret |= iqs_en(st, snsr_id);
+			if (ret < 0) {
+				iqs_disable(st, snsr_id);
+			} else {
+				st->enabled = enable;
+				iqs_op_rd(st);
+				mod_delayed_work(system_freezable_wq, &st->dw,
+					 msecs_to_jiffies(IQS_START_DELAY_MS));
+			}
+		}
+	} else {
+		ret = iqs_disable(st, snsr_id);
+	}
+	return ret;
+}
+
+static int iqs_enables(struct iqs_state *st, unsigned int en_mask)
+{
+	unsigned int i;
+	int ret = 0;
+
+	for (i = 0; i < IQS_DEV_N; i++) {
+		if (en_mask & (1 << i))
+			ret |= iqs_enable(st, i, 1);
+	}
+	return ret;
+}
+
 static unsigned int iqs_polldelay(struct iqs_state *st)
 {
 	unsigned int poll_delay_ms = IQS_POLL_DLY_MS_MAX;
@@ -1339,14 +1384,33 @@ static unsigned int iqs_polldelay(struct iqs_state *st)
 
 static void iqs_read(struct iqs_state *st, bool poll)
 {
-	unsigned int ms;
+	unsigned int ms = st->wd_to_ms;
 	int ret;
 
 	iqs_mutex_lock(st);
-	if (st->enabled) {
-		if (st->susrsm)
-			iqs_susrsm(st);
-		ms = st->wd_to_ms;
+	if (st->resume) {
+		if (st->cfg->flags & SENSOR_FLAG_WAKE_UP) {
+			ret = iqs_reenable(st);
+		} else {
+			ret = iqs_enables(st, st->susrsm_en);
+			st->susrsm_en &= ~st->enabled;
+		}
+		if (ret) {
+			if (st->sts & NVS_STS_SPEW_MSG)
+				dev_err(&st->i2c->dev,
+					"%s resume ERR=%d Try again in %ums\n",
+					__func__, ret, ms);
+		} else {
+			st->resume = false;
+			st->susrsm_en = 0;
+			iqs_enable_irq(st);
+			if (st->sts & NVS_STS_SPEW_MSG)
+				dev_info(&st->i2c->dev, "%s resume complete\n",
+					 __func__);
+		}
+		mod_delayed_work(system_freezable_wq, &st->dw,
+				 msecs_to_jiffies(ms));
+	} else if (st->enabled) {
 #ifdef IQS_I2C_M_NO_RD_ACK
 		ret = iqs_rd(st, poll);
 		if (ret > RET_POLL_NEXT)
@@ -1400,72 +1464,15 @@ static irqreturn_t iqs_irq_handler(int irq, void *dev_id)
 	return IRQ_WAKE_THREAD;
 }
 
-static int iqs_disable(struct iqs_state *st, int snsr_id)
-{
-	bool disable = true;
-	unsigned int i;
-	int ret = 0;
-
-	if (snsr_id >= 0) {
-		ret = iqs_dis(st, snsr_id);
-		if (!ret)
-			st->enabled &= ~(1 << snsr_id);
-		if (st->enabled)
-			disable = false;
-	} else {
-		for (i = 0; i < IQS_DEV_N; i++) {
-			if (st->enabled & (1 << i))
-				iqs_dis(st, snsr_id);
-		}
-	}
-	if (disable) {
-		iqs_disable_irq(st);
-		if (st->dw.work.func)
-			cancel_delayed_work(&st->dw);
-		ret = iqs_pm(st, false);
-		if (!ret)
-			st->enabled = 0;
-	}
-	return ret;
-}
-
-static int iqs_enable(void *client, int snsr_id, int enable)
-{
-	struct iqs_state *st = (struct iqs_state *)client;
-	int ret;
-
-	if (enable < 0)
-		return st->enabled & (1 << snsr_id);
-
-	if (enable) {
-		enable = st->enabled | (1 << snsr_id);
-		ret = iqs_pm(st, true);
-		if (!ret) {
-			ret = iqs_en(st, snsr_id);
-			if (ret < 0) {
-				iqs_disable(st, snsr_id);
-			} else {
-				st->enabled = enable;
-				iqs_op_rd(st);
-				mod_delayed_work(system_freezable_wq, &st->dw,
-					 msecs_to_jiffies(IQS_START_DELAY_MS));
-			}
-		}
-	} else {
-		ret = iqs_disable(st, snsr_id);
-	}
-	return ret;
-}
-
 static int iqs_enable_os(void *client, int snsr_id, int enable)
 {
 	struct iqs_state *st = (struct iqs_state *)client;
 
-	if (st->os || st->sts & (NVS_STS_SHUTDOWN | NVS_STS_SUSPEND))
-		return iqs_enable(st, snsr_id, enable);
-
 	if (enable < 0)
 		return st->enabled & (1 << snsr_id);
+
+	if (st->os || st->sts & (NVS_STS_SHUTDOWN | NVS_STS_SUSPEND))
+		return iqs_enable(st, snsr_id, enable);
 
 	if (enable)
 		st->prox[snsr_id].report = st->cfg[snsr_id].report_n;
@@ -1772,7 +1779,8 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 		t += sprintf(buf + t, "irq_disable=%x\n", st->irq_dis);
 		t += sprintf(buf + t, "irq_set_irq_wake=%x\n",
 			     st->irq_set_irq_wake);
-		t += sprintf(buf + t, "suspend_defer=%x\n", st->suspend_defer);
+		t += sprintf(buf + t, "susrsm=%x\n", st->susrsm);
+		t += sprintf(buf + t, "resume=%x\n", st->resume);
 		for (i = 0; i < IQS_DEV_N; i++)
 			t += sprintf(buf + t, "%s_binary_hw=%x\n",
 				     iqs_sensor_cfg_name[i],
@@ -1792,56 +1800,39 @@ static struct nvs_fn_dev iqs_fn_dev = {
 	.nvs_read			= iqs_nvs_read,
 };
 
-/* Due to the device's horrendous communication protocol that causes
- * unacceptable delays, the suspend/resume is modified according to the
- * following table:
- * OS = st->os
- * WU = st->cfg->flags & SENSOR_FLAG_WAKE_UP
- * OS WU ACTION
- * 0  0  disable sensors (NVS way)
- * 0  1  st->susrsm = true
- * 1  0  disable sensors (NVS way)
- * 1  1  st->susrsm = true
- * Disabling the sensors the NVS way requires the mutex that can take a long
- * time to acquire and then an even longer time to disable.  Not our favorite
- * choice but the device typically is not configured this way.
- * Setting the st->susrsm and forcing an immediate poll to defer the execution
- * of the suspend/resume action is our best choice.
- */
 static int iqs_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct iqs_state *st = i2c_get_clientdata(client);
 	s64 ts = 0; /* = 0 to fix compile */
 	int ret = 0;
-	unsigned int i;
 
 	if (st->sts & NVS_STS_SPEW_MSG)
 		ts = iqs_get_time_ns();
+	/* Due to the device's horrendous communication protocol that causes
+	 * unacceptable delays, suspend flag is used to exit pending actions.
+	 */
+	st->susrsm = true;
+	iqs_mutex_lock(st);
+	st->susrsm = false;
 	st->sts |= NVS_STS_SUSPEND;
-	if (st->cfg->flags & SENSOR_FLAG_WAKE_UP) {
-		if (st->suspend_defer) {
-			st->susrsm = true;
-			mod_delayed_work(system_freezable_wq, &st->dw, 0);
-		} else {
-			iqs_mutex_lock(st);
+	st->susrsm_en |= st->enabled;
+	if (st->enabled) {
+		if (st->cfg->flags & SENSOR_FLAG_WAKE_UP) {
 			/* DT additional action for suspend */
 			ret = iqs_write(st, st->dt_suspnd[st->part_i],
 					false, false);
 			iqs_enable_irq(st);
 			if (st->irq_set_irq_wake)
 				irq_set_irq_wake(st->i2c->irq, 1);
-			iqs_mutex_unlock(st);
-		}
-	} else { /* the device will be getting disabled */
-		if (st->nvs) {
-			for (i = 0; i < IQS_DEV_N; i++) {
-				if (st->prox[i].nvs_st)
-					ret |= st->nvs->suspend(st->prox[i].
-								nvs_st);
-			}
+			if (st->dw.work.func)
+				/* turn off watchdog during suspend */
+				cancel_delayed_work(&st->dw);
+		} else {
+			iqs_disable(st, -1);
 		}
 	}
+	iqs_mutex_unlock(st);
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s elapsed t=%lldns  err=%d\n",
 			 __func__, iqs_get_time_ns() - ts, ret);
@@ -1854,24 +1845,26 @@ static int iqs_resume(struct device *dev)
 	struct iqs_state *st = i2c_get_clientdata(client);
 	s64 ts = 0; /* = 0 to fix compile */
 	int ret = 0;
-	unsigned int i;
 
 	if (st->sts & NVS_STS_SPEW_MSG)
 		ts = iqs_get_time_ns();
-	if (st->cfg->flags & SENSOR_FLAG_WAKE_UP) {
-		st->sts &= ~NVS_STS_SUSPEND; /* first so iqs_susrsm works */
-		st->susrsm = true;
-		mod_delayed_work(system_freezable_wq, &st->dw, 0);
-	} else { /* the device will be re-enabled */
-		if (st->nvs) {
-			for (i = 0; i < IQS_DEV_N; i++) {
-				if (st->prox[i].nvs_st)
-					ret |= st->nvs->resume(st->prox[i].
-							       nvs_st);
-			}
+	st->susrsm = true;
+	iqs_mutex_lock(st);
+	st->susrsm = false;
+	st->sts &= ~NVS_STS_SUSPEND;
+	if (st->susrsm_en) {
+		if (st->cfg->flags & SENSOR_FLAG_WAKE_UP) {
+			if (st->irq_set_irq_wake)
+				irq_set_irq_wake(st->i2c->irq, 0);
 		}
-		st->sts &= ~NVS_STS_SUSPEND; /* last so enable works */
+		/* Due to the device's horrendous communication protocol that
+		 * causes unacceptable delays, resume is deferred.
+		 */
+		st->resume = true;
+		mod_delayed_work(system_freezable_wq, &st->dw,
+				 msecs_to_jiffies(IQS_START_DELAY_MS));
 	}
+	iqs_mutex_unlock(st);
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s elapsed t=%lldns  err=%d\n",
 			 __func__, iqs_get_time_ns() - ts, ret);
@@ -1883,17 +1876,11 @@ static SIMPLE_DEV_PM_OPS(iqs_pm_ops, iqs_suspend, iqs_resume);
 static void iqs_shutdown(struct i2c_client *client)
 {
 	struct iqs_state *st = i2c_get_clientdata(client);
-	unsigned int i;
 
+	iqs_mutex_lock(st);
 	st->sts |= NVS_STS_SHUTDOWN;
-	if (!st->os)
-		iqs_disable(st, -1);
-	if (st->nvs) {
-		for (i = 0; i < IQS_DEV_N; i++) {
-			if (st->prox[i].nvs_st)
-				st->nvs->shutdown(st->prox[i].nvs_st);
-		}
-	}
+	iqs_disable(st, -1);
+	iqs_mutex_unlock(st);
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s\n", __func__);
 }
@@ -2134,9 +2121,6 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 		if (i)
 			st->irq_set_irq_wake = true;
 		i = 0;
-		of_property_read_u32(dn, "suspend_defer", &i);
-		if (i)
-			st->suspend_defer = true;
 		of_property_read_u32(dn, "watchdog_timeout_ms", &st->wd_to_ms);
 		of_property_read_u32(dn, "i2c_retry", &st->i2c_retry);
 		of_property_read_u32(dn, "gpio_rdy_retry",
@@ -2231,8 +2215,8 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct iqs_state *st;
 	unsigned long irqflags;
+	unsigned int en;
 	unsigned int i;
-	unsigned int n;
 	int ret;
 
 	dev_info(&client->dev, "%s\n", __func__);
@@ -2272,7 +2256,7 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto iqs_probe_exit;
 	}
 
-	n = 0;
+	en = 0;
 	for (i = 0; i < IQS_DEV_N; i++) {
 		nvs_of_dt(client->dev.of_node, &st->cfg[i], NULL);
 		ret = st->nvs->probe(&st->prox[i].nvs_st, st, &client->dev,
@@ -2280,10 +2264,10 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		st->cfg[i].snsr_id = i;
 		if (!ret) {
 			st->prox[i].handler = st->nvs->handler;
-			n++;
+			en |= 1 << i;
 		}
 	}
-	if (!n) {
+	if (!en) {
 		dev_err(&client->dev, "%s nvs_probe ERR\n", __func__);
 		ret = -ENODEV;
 		goto iqs_probe_exit;
@@ -2315,19 +2299,17 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (st->os) {
 		iqs_disable(st, -1);
 	} else {
-		ret = 0;
-		for (i = 0; i < IQS_DEV_N; i++) {
-			if (st->prox[i].nvs_st)
-				ret |= iqs_enable(st, i, 1);
-		}
+		ret = iqs_enables(st, en);
 		if (ret) {
-			iqs_err(st);
-			/* if an error then switch to OS controlled */
-			dev_err(&client->dev,
-				"%s auto enable ERR=%d (now OS controlled)\n",
+			dev_err(&client->dev, "%s auto enable ERR=%d\n",
 				__func__, ret);
-			st->os = 3;
-			iqs_disable(st, -1);
+			/* use the resume execution to keep trying */
+			iqs_pm(st, true);
+			st->enabled = en;
+			st->susrsm_en = en;
+			st->resume = true;
+			mod_delayed_work(system_freezable_wq, &st->dw,
+					 msecs_to_jiffies(IQS_START_DELAY_MS));
 		}
 	}
 	iqs_mutex_unlock(st);

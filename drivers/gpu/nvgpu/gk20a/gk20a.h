@@ -863,4 +863,6 @@ void gk20a_pbus_isr(struct gk20a *g);
 int gk20a_user_init(struct platform_device *dev);
 void gk20a_user_deinit(struct platform_device *dev);
 
+extern void gk20a_debug_dump_device(struct platform_device *pdev);
+
 #endif /* GK20A_H */

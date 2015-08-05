@@ -747,6 +747,10 @@ static int gk20a_tegra_probe(struct platform_device *dev)
 
 	platform->g->host1x_dev = host1x_pdev;
 
+	if (platform->g->host1x_dev)
+		nvhost_register_dump_device(platform->g->host1x_dev,
+					gk20a_debug_dump_device);
+
 	/* WAR for bug 1547668: Disable railgating and scaling irrespective of
 	 * platform data if the rework has not been made. */
 
@@ -776,6 +780,11 @@ static int gk20a_tegra_late_probe(struct platform_device *dev)
 
 static int gk20a_tegra_remove(struct platform_device *dev)
 {
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+
+	if (platform->g->host1x_dev)
+		nvhost_unregister_dump_device(platform->g->host1x_dev);
+
 	/* remove gk20a power subdomain from host1x */
 	nvhost_unregister_client_domain(dev_to_genpd(&dev->dev));
 

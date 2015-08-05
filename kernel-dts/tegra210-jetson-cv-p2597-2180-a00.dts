@@ -16,6 +16,7 @@
 
 #include "tegra210-jetson-cv-base-p2597-2180-a00.dts"
 #include "tegra210-platforms/tegra210-modem-common.dtsi"
+#include "tegra210-platforms/tegra210-jetson-cv-super-module-e2614-a00.dtsi"
 #include "tegra210-platforms/tegra210-jetson-cv-shim-p2597-2180-a00.dtsi"
 
 / {

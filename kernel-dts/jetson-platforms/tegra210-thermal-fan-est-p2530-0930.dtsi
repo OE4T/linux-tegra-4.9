@@ -21,24 +21,25 @@
 		tzp_governor_name = "pid_thermal_gov";
 
 		dev1 {
-			dev_data = "Tboard_tegra";
+			dev_data = "CPU-therm";
 			coeffs = <50 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0>;
 		};
 
 		dev2 {
-			dev_data = "Tdiode_tegra";
+			dev_data = "GPU-therm";
 			coeffs = <50 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0>;
 		};
 	};
 
 	thermal-fan-est {
 		name = "thermal-fan-est";
+		compatible = "thermal-fan-est";
 		num_resources = <0>;
 		shared_data = <&thermal_fan_est_shared_data>;
 		trip_length = <10>;
-		active_trip_temps = <0 57000 63000 74000 85000
+		active_trip_temps = <0 51000 61000 71000 82000
 				140000 150000 160000 170000 180000>;
-		active_hysteresis = <0 20000 7000 10000 10000
+		active_hysteresis = <0 15000 9000 9000 10000
 				0 0 0 0 0>;
 	};
 };

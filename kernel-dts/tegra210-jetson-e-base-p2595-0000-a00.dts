@@ -482,30 +482,25 @@
 		status = "disabled";
 	};
 
-	thermal-zones {
-		AO-therm {
-			status = "okay";
-		};
-	};
-
-	thermal-fan-est {
-		compatible = "thermal-fan-est";
-		active_trip_temps = <0 63000 74000 85000 120000
-				140000 150000 160000 170000 180000>;
-		active_hysteresis = <0 15000 11000 6000 4000
-				0 0 0 0 0>;
-	};
-
 	regulators {
 		vdd_fan: regulator@13 {
 			enable-active-high;
 		};
 	};
 
+	thermal-zones {
+		AO-therm {
+			status = "okay";
+		};
+		CPU-therm {
+			status="okay";
+		};
+	};
+
 	pwm-fan {
 		compatible = "pwm-fan";
 		shared_data = <&pwm_fan_shared_data>;
-		active_pwm = <0 70 115 135 135 240 245 250 252 255>;
+		active_pwm = <0 80 120 160 255 255 255 255 255 255>;
 	};
 
 	i2c@7000c000 {

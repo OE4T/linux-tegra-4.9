@@ -60,11 +60,6 @@
 		clock-frequency = <38400000>;
 	};
 
-	serial@70006200 {
-		compatible = "nvidia,tegra114-hsuart";
-		status = "okay";
-	};
-
 	ethernet@0x7ffff000 {
 		compatible = "smsc,lan9115";
 		reg = <0x0 0x03b40000 0x0 0x00000100>;

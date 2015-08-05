@@ -953,10 +953,6 @@ static int nvhost_probe(struct platform_device *dev)
 	if (err)
 		goto fail;
 
-	err = nvhost_alloc_channels(host);
-	if (err)
-		goto fail;
-
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
@@ -964,6 +960,10 @@ static int nvhost_probe(struct platform_device *dev)
 	mutex_init(&host->timeout_mutex);
 
 	err = nvhost_module_busy(dev);
+	if (err)
+		goto fail;
+
+	err = nvhost_alloc_channels(host);
 	if (err)
 		goto fail;
 

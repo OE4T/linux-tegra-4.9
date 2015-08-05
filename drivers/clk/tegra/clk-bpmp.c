@@ -75,10 +75,16 @@ static int clk_bpmp_is_enabled(struct clk_hw *hw)
 {
 	struct tegra_clk_bpmp *bpmp_clk = to_clk_bpmp(hw);
 	struct bpmp_clk_req req;
+	int err;
+	u8 reply[4];
 
 	req.cmd = BPMP_CLK_CMD(MRQ_CLK_IS_ENABLED, bpmp_clk->clk_num);
 
-	return bpmp_send_clk_message(&req, sizeof(req), NULL, 0);
+	err = bpmp_send_clk_message(&req, sizeof(req), reply, sizeof(reply));
+	if (err < 0)
+		return err;
+
+	return ((s32 *)reply)[0];
 }
 
 static int clk_bpmp_get_parent_num(int clk_num)

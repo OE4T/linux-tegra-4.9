@@ -256,4 +256,8 @@
 		compatible = "nvidia,tegra18x-cpuidle";
 		status = "okay";
 	};
+
+	tegra_edvd {
+		status = "okay";
+	};
 };

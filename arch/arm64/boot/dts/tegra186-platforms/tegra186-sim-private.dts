@@ -67,7 +67,7 @@
 
 	ethernet@0x7ffff000 {
 		compatible = "smsc,lan9115";
-		reg = < 0x0 0x7ffff000 0x0 0x00000100 >;
+		reg = <0x0 0x03b40000 0x0 0x00000100>;
 		interrupts = <0 218 0x4>;
 		reg-io-width = <4>;
 		smsc,irq-active-high;
@@ -76,7 +76,7 @@
 
 	asim {
 		compatible = "nvidia,tegra210-asim";
-		reg = < 0x0 0x7e101000 0x0 0x00001000 >;
+		reg = < 0x0 0x03b41000 0x0 0x00001000 >;
 	};
 
 	adma: adma@2930000 {
@@ -548,6 +548,81 @@
 	};
 
 	host1x {
+		clocks = <&clk32k_in>, <&clk32k_in>;
+		clock-names = "host1x", "actmon";
+
+		nvcsi {
+			clocks = <&clk32k_in>;
+			clock-names = "nvcsi";
+		};
+
+		vi {
+
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "vi", "emc";
+		};
+
+		isp@54600000 {
+			clocks = <&clk32k_in>;
+			clock-names = "isp";
+		};
+
+		dsi {
+			clocks = <&clk32k_in>;
+			clock-names = "clk32k_in";
+		};
+
+		vic {
+			clocks = <&clk32k_in>, <&clk32k_in>,
+				 <&clk32k_in>, <&clk32k_in>;
+			clock-names = "vic", "emc", "vic_floor", "emc_shared";
+		};
+
+		nvenc {
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "nvenc", "emc";
+		};
+
+		nvdec {
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "nvdec", "emc";
+		};
+
+		nvjpg {
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "nvjpg", "emc";
+		};
+
+		tsec {
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "tsec", "emc";
+		};
+
+		tsecb {
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "tsecb", "emc";
+		};
+
+		se1 {
+			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
+			clock-names = "se", "emc", "entropy";
+		};
+
+		se2 {
+			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
+			clock-names = "se", "emc", "entropy";
+		};
+
+		se3 {
+			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
+			clock-names = "se", "emc", "entropy";
+		};
+
+		se4 {
+			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
+			clock-names = "se", "emc", "entropy";
+		};
+
 
 		nvdisplay@0x54200000 {
 			status = "okay";

@@ -19,7 +19,7 @@
 		compatible = "nvidia,tegra186-sdhci";
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x3460000 0x0 0x210>;
-		interrupts = < 0 65 0x04 >;
+		interrupts = < 0 65 0x04>;
 		tap-delay = <9>;
 		trim-delay = <5>;
 		nvidia,ddr-tap-delay = <9>;
@@ -40,7 +40,7 @@
 		compatible = "nvidia,tegra186-sdhci";
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x3440000 0x0 0x210>;
-		interrupts = < 0 64 0x04 >;
+		interrupts = < 0 64 0x04>;
 		tap-delay = <11>;
 		trim-delay = <5>;
 		nvidia,ddr-tap-delay = <11>;
@@ -56,7 +56,7 @@
 		compatible = "nvidia,tegra186-sdhci";
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x3420000 0x0 0x210>;
-		interrupts = < 0 63 0x04 >;
+		interrupts = < 0 63 0x04>;
 		tap-delay = <11>;
 		trim-delay = <5>;
 		nvidia,ddr-tap-delay = <11>;
@@ -72,7 +72,7 @@
 		compatible = "nvidia,tegra186-sdhci";
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x3400000 0x0 0x210>;
-		interrupts = < 0 62 0x04 >;
+		interrupts = < 0 62 0x04>;
 		tap-delay = <11>;
 		trim-delay = <5>;
 		nvidia,ddr-tap-delay = <11>;

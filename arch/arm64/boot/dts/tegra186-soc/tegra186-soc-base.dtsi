@@ -399,15 +399,20 @@
 
 	host1x: host1x {
 		compatible = "nvidia,tegra186-host1x", "simple-bus";
+		reg = <0x0 0x13e10000 0x0 0x00010000
+			0x0 0x13e00000 0x0 0x00010000
+			0x0 0x13ec0000 0x0 0x00040000>;
+		interrupts = <0 265 0x04
+				0 263 0x04>;
+
 		power-domains = <&host1x_pd>;
 		wakeup_capable;
-		reg = <0x0 0x3de00000 0x0 0x00040000>;
 		resets = <&tegra_car TEGRA186_RESET_HOST1X>;
 		clocks = <&tegra_car TEGRA186_CLK_HOST1X>,
 			 <&tegra_car TEGRA186_CLK_ACTMON>;
 		clock-names = "host1x", "actmon";
-		interrupts = <0 65 0x04   /* mpcore syncpt */
-			      0 67 0x04>; /* mpcore general */
+		nvidia,vmid = <1>;
+
 		#stream-id-cells = <1>;
 
 		#address-cells = <2>;
@@ -479,12 +484,14 @@
 		vi {
 			compatible = "nvidia,tegra186-vi";
 			power-domains = <&ve_pd>;
-			reg = <0x0 0x54700000 0x0 0x00100000>;
+                        reg = <0x0 0x15700000 0x0 0x00100000>;
+                        interrupts = <0 201 0x04
+                                      0 202 0x04
+                                      0 203 0x04>;
 			resets = <&tegra_car TEGRA186_RESET_VI>;
 			clocks = <&tegra_car TEGRA186_CLK_VI>,
 				 <&tegra_car TEGRA186_CLK_EMC>;
 			clock-names = "vi", "emc";
-			interrupts = <0 69 0x04>;
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -492,25 +499,25 @@
 		isp@54600000 {
 			compatible = "nvidia,tegra186-isp";
 			power-domains = <&ve_pd>;
-			reg = <0x0 0x54600000 0x0 0x00040000>;
+                        reg = <0x0 0x15600000 0x0 0x00040000>;
+                        interrupts = <0 205 0x04>;
 			resets = <&tegra_car TEGRA186_RESET_ISP>;
 			clocks = <&tegra_car TEGRA186_CLK_ISP>;
 			clock-names = "isp";
-			interrupts = <0 71 0x04>;
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
 
 		vii2c {
 			compatible = "nvidia,tegra186-vii2c";
-			reg = <0x0 0x546c0000 0x0 0x00040000>;
+			reg = <0x0 0x156c0000 0x0 0x00040000>;
 			status = "disabled";
 		};
 
 		nvdisplay@0x54200000 {
 			compatible = "nvidia,tegra186-dc";
 			power-domains = <&mc_clk_pd>;
-			reg = <0x0 0x54200000 0x0 0x00010000>;
+			reg = <0x0 0x15200000 0x0 0x10000>;
 			interrupts = <0 153 0x04>;
 			win-mask = <0x7>;
 			#stream-id-cells = <1>;
@@ -530,8 +537,8 @@
 		nvdisplay@0x54210000 {
 			compatible = "nvidia,tegra186-dc";
 			power-domains = <&mc_clk_pd>;
-			reg = <0x0 0x54210000 0x0 0x00010000>;
-			interrupts = <0 154 0x04>;
+                        reg = <0x0 0x15210000 0x0 0x10000>;
+                        interrupts = <0 154 0x04>;
 			win-mask = <0x38>;
 			#stream-id-cells = <1>;
 			status = "disabled";
@@ -550,8 +557,8 @@
 		nvdisplay@0x54220000 {
 			compatible = "nvidia,tegra186-dc";
 			power-domains = <&mc_clk_pd>;
-			reg = <0x0 0x54220000 0x0 0x00010000>;
-			interrupts = <0 155 0x04>;
+                        reg = <0x0 0x15220000 0x0 0x10000>;
+                        interrupts = <0 155 0x04>;
 			win-mask = <0x0>;
 			#stream-id-cells = <1>;
 			status = "disabled";
@@ -569,8 +576,8 @@
 
 		dsi {
 			compatible = "nvidia,tegra186-dsi";
-			reg = <0x0 0x54300000 0x0 0x00040000>,
-			      <0x0 0x54400000 0x0 0x00040000>;
+                        reg = <0x0 0x15300000 0x0 0x00040000
+                               0x0 0x15400000 0x0 0x00040000>;
 			clocks = <&clk32k_in>;
 			clock-names = "clk32k_in";
 			status = "disabled";
@@ -579,7 +586,7 @@
 		vic {
 			compatible = "nvidia,tegra186-vic";
 			power-domains = <&vic03_pd>;
-			reg = <0x0 0x54340000 0x0 0x00040000>;
+			reg = <0x0 0x15340000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_VIC>;
 			clocks = <&tegra_car TEGRA186_CLK_VIC>,
 				 <&tegra_car TEGRA186_CLK_EMC>,
@@ -593,7 +600,7 @@
 		nvenc {
 			compatible = "nvidia,tegra186-nvenc";
 			power-domains = <&msenc_pd>;
-			reg = <0x0 0x544c0000 0x0 0x00040000>;
+			reg = <0x0 0x154c0000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_NVENC>;
 			clocks = <&tegra_car TEGRA186_CLK_NVENC>,
 				 <&tegra_car TEGRA186_CLK_EMC>;
@@ -605,7 +612,7 @@
 		nvdec {
 			compatible = "nvidia,tegra186-nvdec";
 			power-domains = <&nvdec_pd>;
-			reg = <0x0 0x54480000 0x0 0x00040000>;
+			reg = <0x0 0x15480000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_NVDEC>;
 			clocks = <&tegra_car TEGRA186_CLK_NVDEC>,
 				 <&tegra_car TEGRA186_CLK_EMC>;
@@ -617,7 +624,7 @@
 		nvjpg {
 			compatible = "nvidia,tegra186-nvjpg";
 			power-domains = <&nvjpg_pd>;
-			reg = <0x0 0x54380000 0x0 0x00040000>;
+			reg = <0x0 0x15380000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_NVJPG>;
 			clocks = <&tegra_car TEGRA186_CLK_NVJPG>,
 				 <&tegra_car TEGRA186_CLK_EMC>;
@@ -629,7 +636,7 @@
 		tsec {
 			compatible = "nvidia,tegra186-tsec";
 			power-domains = <&tsec_pd>;
-			reg = <0x0 0x54500000 0x0 0x00040000>;
+			reg = <0x0 0x15500000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_TSEC>;
 			clocks = <&tegra_car TEGRA186_CLK_TSEC>,
 				 <&tegra_car TEGRA186_CLK_EMC>;
@@ -641,7 +648,7 @@
 		tsecb {
 			compatible = "nvidia,tegra186-tsec";
 			power-domains = <&tsec_pd>;
-			reg = <0x0 0x54100000 0x0 0x00040000>;
+			reg = <0x0 0x15100000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_TSECB>;
 			clocks = <&tegra_car TEGRA186_CLK_TSECB>,
 				 <&tegra_car TEGRA186_CLK_EMC>;
@@ -652,7 +659,7 @@
 
 		sor {
 			compatible = "nvidia,tegra186-sor";
-			reg = <0x0 0x54540000 0x0 0x00040000>;
+			reg = <0x0 0x15540000 0x0 0x00040000>;
 			status = "disabled";
 			clocks = <&clk32k_in>,
 				 <&tegra_car TEGRA186_CLK_SOR0>,
@@ -662,8 +669,8 @@
 
 		sor1 {
 			compatible = "nvidia,tegra186-sor1";
-			reg = <0x0 0x54580000 0x0 0x00040000>;
-			interrupts = <0 76 0x4>; /* INT_SOR_1 */
+			reg = <0x0 0x15580000 0x0 0x00040000>;
+			interrupts = <0 158 0x4>; /* INT_SOR_1 */
 			status = "disabled";
 			clocks = <&clk32k_in>,
 				 <&tegra_car TEGRA186_CLK_SOR1>,
@@ -673,7 +680,7 @@
 
 		dpaux {
 			compatible = "nvidia,tegra186-dpaux";
-			reg = <0x0 0x545c0000 0x0 0x00040000>;
+			reg = <0x0 0x155c0000 0x0 0x00040000>;
 			interrupts = <0 159 0x4>; /* INT_DPAUX */
 			status = "disabled";
 			clocks = <&clk32k_in>,
@@ -684,8 +691,8 @@
 
 		dpaux1 {
 			compatible = "nvidia,tegra186-dpaux1";
-			reg = <0x0 0x54040000 0x0 0x00040000>;
-			interrupts = <0 11 0x4>; /* INT_DPAUX_1 */
+			reg = <0x0 0x15040000 0x0 0x00040000>;
+			interrupts = <0 160 0x4>; /* INT_DPAUX_1 */
 			status = "disabled";
 			clocks = <&clk32k_in>,
 				 <&tegra_car TEGRA186_CLK_DPAUX1>,
@@ -775,20 +782,23 @@
 		compatible = "arm,cortex-a15-gic";
 		#interrupt-cells = <3>;
 		interrupt-controller;
-		reg = <0x0 0x50041000 0x0 0x1000
-		       0x0 0x50042000 0x0 0x0100>;
+		reg = <0x0 0x03881000 0x0 0x00001000
+		       0x0 0x03882000 0x0 0x00002000>;
 		status = "disabled";
 	};
 
 	lic: interrupt-controller@60004000 {
 		compatible = "nvidia,tegra-gic";
 		interrupt-controller;
-		reg = <0x0 0x60004000 0x0 0x40>,
-		      <0x0 0x60004100 0x0 0x40>,
-		      <0x0 0x60004200 0x0 0x40>,
-		      <0x0 0x60004300 0x0 0x40>,
-		      <0x0 0x60004400 0x0 0x40>,
-		      <0x0 0x60004500 0x0 0x40>;
+		reg = <0x0 0x03000000 0x0 0x00000800
+			0x0 0x03000800 0x0 0x00000800
+			0x0 0x03001000 0x0 0x00000800
+			0x0 0x03001800 0x0 0x00000800
+			0x0 0x03002000 0x0 0x00000800
+			0x0 0x03002800 0x0 0x00000800
+			0x0 0x03003000 0x0 0x00000800
+			0x0 0x03003800 0x0 0x00000800
+			0x0 0x0300f800 0x0 0x00000800>;
 		status = "disabled";
 	};
 
@@ -805,7 +815,7 @@
 
 	tegra_car: clock {
 		compatible = "nvidia,tegra18x-car";
-		reg = <0x0 0x25000000 0x0 0x01000000>;
+		reg = <0x0 0x05000000 0x0 0x01000000>;
 		#clock-cells = <1>;
 		#reset-cells = <1>;
 		status = "disabled";
@@ -913,7 +923,7 @@
 	hsp_top: tegra-hsp {
 		compatible = "nvidia,tegra186-hsp";
 		reg = <0x0 0x03c00000 0x0 0x000a0000>;
-		interrupts = <0 176 4>;
+		interrupts = <0 176 0x4>;
 		nvidia,num-SM = <0x8>;
 		nvidia,num-AS = <0x2>;
 		nvidia,num-SS = <0x2>;

@@ -702,8 +702,8 @@ int nvhost_module_init(struct platform_device *dev)
 
 
 	gpd = dev_to_genpd(&dev->dev);
-	if (!gpd)
-		return -EINVAL;
+	if (IS_ERR(gpd))
+		return PTR_ERR(gpd);
 
 	dn = gpd->of_node;
 	of_property_read_u32(dn, "partition-id", &partition_id);

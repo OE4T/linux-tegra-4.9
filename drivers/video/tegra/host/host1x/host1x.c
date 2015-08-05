@@ -622,8 +622,11 @@ static inline int nvhost_set_sysfs_capability_node(
 
 static int nvhost_user_init(struct nvhost_master *host)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(host->dev);
 	dev_t devno;
 	int err;
+
+	pdata->debug_dump_device = NULL;
 
 	host->nvhost_class = class_create(THIS_MODULE,
 					dev_name(&host->dev->dev));

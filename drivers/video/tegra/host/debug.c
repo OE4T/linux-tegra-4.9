@@ -21,6 +21,7 @@
 #include <linux/seq_file.h>
 #include <linux/uaccess.h>
 #include <linux/gk20a.h>
+#include <linux/nvhost.h>
 
 #include <linux/io.h>
 
@@ -278,22 +279,54 @@ void nvhost_debug_init(struct nvhost_master *master)
 			&nvhost_debug_trace_actmon);
 }
 
+void nvhost_register_dump_device(
+		struct platform_device *dev,
+		void (*nvgpu_debug_dump_device)(struct platform_device *))
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	if (pdata == NULL)
+		pr_warn("%s: Invalid device\n", __func__);
+
+	pdata->debug_dump_device = nvgpu_debug_dump_device;
+}
+EXPORT_SYMBOL(nvhost_register_dump_device);
+
+void nvhost_unregister_dump_device(struct platform_device *dev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	if (pdata == NULL)
+		pr_warn("%s: Invalid device\n", __func__);
+
+	pdata->debug_dump_device = NULL;
+}
+EXPORT_SYMBOL(nvhost_unregister_dump_device);
+
 void nvhost_debug_dump_locked(struct nvhost_master *master, int locked_id)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(master->dev);
+
 	struct output o = {
 		.fn = write_to_printk
 	};
 	show_all_no_fifo(master, &o, locked_id);
-	gk20a_debug_dump_device(NULL);
+
+	if (pdata->debug_dump_device)
+		pdata->debug_dump_device(NULL);
 }
 
 void nvhost_debug_dump(struct nvhost_master *master)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(master->dev);
+
 	struct output o = {
 		.fn = write_to_printk
 	};
 	show_all_no_fifo(master, &o, -1);
-	gk20a_debug_dump_device(NULL);
+
+	if (pdata->debug_dump_device)
+		pdata->debug_dump_device(NULL);
 }
 
 void nvhost_debug_dump_device(struct platform_device *pdev)

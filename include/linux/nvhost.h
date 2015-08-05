@@ -321,6 +321,10 @@ struct nvhost_device_data {
 
 	/* reset control for this device */
 	struct reset_control *reset_control;
+
+	/* For loadable nvgpu module, we dynamically assign function
+	 * pointer of gk20a_debug_dump_device once the module loads */
+	void (*debug_dump_device)(struct platform_device *pdev);
 };
 
 
@@ -341,6 +345,11 @@ struct nvhost_device_power_attr {
 	struct platform_device *ndev;
 	struct kobj_attribute power_attr[NVHOST_POWER_SYSFS_ATTRIB_MAX];
 };
+
+void nvhost_register_dump_device(
+		struct platform_device *dev,
+		void (*nvgpu_debug_dump_device)(struct platform_device *));
+void nvhost_unregister_dump_device(struct platform_device *dev);
 
 void host1x_writel(struct platform_device *dev, u32 r, u32 v);
 u32 host1x_readl(struct platform_device *dev, u32 r);

@@ -377,6 +377,13 @@ static int __init tegra186_pmc_init(void)
 		}
 	}
 
+	/* Register as pad controller */
+	ret = tegra_pmc_padctrl_init(&tegra186_pmc_dev, np);
+	if (ret) {
+		pr_err("ERROR: Pad control driver init failed: %d\n",
+				ret);
+	}
+
 	return 0;
 }
 postcore_initcall_sync(tegra186_pmc_init);

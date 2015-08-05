@@ -439,6 +439,12 @@ struct gpu_ops {
 		void (*get_program_numbers)(struct gk20a *g,
 					    u32 block_height_log2,
 					    int *hprog, int *vprog);
+		bool (*need_scatter_buffer)(struct gk20a *g);
+		int (*populate_scatter_buffer)(struct gk20a *g,
+					       struct sg_table *sgt,
+					       size_t surface_size,
+					       void *scatter_buffer_ptr,
+					       size_t scatter_buffer_size);
 	} cde;
 };
 

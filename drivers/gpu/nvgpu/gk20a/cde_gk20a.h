@@ -1,7 +1,7 @@
 /*
  * GK20A color decompression engine support
  *
- * Copyright (c) 2014, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -129,6 +129,8 @@ enum {
 	TYPE_PARAM_SOURCE_SMMU_ADDR,
 	TYPE_PARAM_BACKINGSTORE_BASE_HW,
 	TYPE_PARAM_GOBS_PER_COMPTAGLINE_PER_SLICE,
+	TYPE_PARAM_SCATTERBUFFER,
+	TYPE_PARAM_SCATTERBUFFER_SIZE,
 	NUM_RESERVED_PARAMS = 1024,
 };
 
@@ -237,6 +239,9 @@ struct gk20a_cde_ctx {
 	u64 compbit_vaddr;
 	u64 compbit_size;
 
+	u64 scatterbuffer_vaddr;
+	u64 scatterbuffer_size;
+
 	u64 backing_store_vaddr;
 
 	struct nvgpu_gpfifo *init_convert_cmd;
@@ -276,16 +281,19 @@ void gk20a_cde_destroy(struct gk20a *g);
 void gk20a_cde_suspend(struct gk20a *g);
 int gk20a_init_cde_support(struct gk20a *g);
 int gk20a_cde_reload(struct gk20a *g);
-int gk20a_cde_convert(struct gk20a *g, struct dma_buf *compbits_buf,
-		      s32 compbits_kind, u64 compbits_word_offset,
-		      u32 compbits_size, struct nvgpu_fence *fence,
-		      u32 __flags, struct gk20a_cde_param *params,
-		      int num_params, struct gk20a_fence **fence_out);
+int gk20a_cde_convert(struct gk20a *g,
+		struct dma_buf *compbits_buf,
+		u64 compbits_byte_offset,
+		u64 scatterbuffer_byte_offset,
+		struct nvgpu_fence *fence,
+		u32 __flags, struct gk20a_cde_param *params,
+		int num_params, struct gk20a_fence **fence_out);
 void gk20a_cde_debugfs_init(struct platform_device *dev);
 
 int gk20a_prepare_compressible_read(
 		struct gk20a *g, u32 buffer_fd, u32 request, u64 offset,
 		u64 compbits_hoffset, u64 compbits_voffset,
+		u64 scatterbuffer_offset,
 		u32 width, u32 height, u32 block_height_log2,
 		u32 submit_flags, struct nvgpu_fence *fence,
 		u32 *valid_compbits, u32 *zbc_color,

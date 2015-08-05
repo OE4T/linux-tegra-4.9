@@ -406,6 +406,12 @@ static int gk20a_cde_patch_params(struct gk20a_cde_ctx *cde_ctx)
 		case TYPE_PARAM_GOBS_PER_COMPTAGLINE_PER_SLICE:
 			new_data = g->gr.gobs_per_comptagline_per_slice;
 			break;
+		case TYPE_PARAM_SCATTERBUFFER:
+			new_data = cde_ctx->scatterbuffer_vaddr;
+			break;
+		case TYPE_PARAM_SCATTERBUFFER_SIZE:
+			new_data = cde_ctx->scatterbuffer_size;
+			break;
 		default:
 			user_id = param->id - NUM_RESERVED_PARAMS;
 			if (user_id < 0 || user_id >= MAX_CDE_USER_PARAMS)
@@ -899,9 +905,10 @@ static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct gk20a *g)
 }
 
 int gk20a_cde_convert(struct gk20a *g,
-		      struct dma_buf *compbits_buf,
-		      s32 compbits_kind, u64 compbits_byte_offset,
-		      u32 compbits_size, struct nvgpu_fence *fence,
+		      struct dma_buf *compbits_scatter_buf,
+		      u64 compbits_byte_offset,
+		      u64 scatterbuffer_byte_offset,
+		      struct nvgpu_fence *fence,
 		      u32 __flags, struct gk20a_cde_param *params,
 		      int num_params, struct gk20a_fence **fence_out)
 __acquires(&cde_app->mutex)
@@ -909,13 +916,26 @@ __releases(&cde_app->mutex)
 {
 	struct gk20a_cde_ctx *cde_ctx = NULL;
 	struct gk20a_comptags comptags;
-	u64 compbits_offset = 0;
+	u64 mapped_compbits_offset = 0;
+	u64 compbits_size = 0;
+	u64 mapped_scatterbuffer_offset = 0;
+	u64 scatterbuffer_size = 0;
 	u64 map_vaddr = 0;
 	u64 map_offset = 0;
-	u32 map_size = 0;
+	u64 map_size = 0;
+	u8 *surface = NULL;
 	u64 big_page_mask = 0;
 	u32 flags;
 	int err, i;
+	const s32 compbits_kind = 0;
+
+	gk20a_dbg(gpu_dbg_cde, "compbits_byte_offset=%llu scatterbuffer_byte_offset=%llu",
+		  compbits_byte_offset, scatterbuffer_byte_offset);
+
+	/* scatter buffer must be after compbits buffer */
+	if (scatterbuffer_byte_offset &&
+	    scatterbuffer_byte_offset < compbits_byte_offset)
+		return -EINVAL;
 
 	mutex_lock(&g->cde_app.mutex);
 
@@ -928,7 +948,7 @@ __releases(&cde_app->mutex)
 	/* First, map the buffer to local va */
 
 	/* ensure that the compbits buffer has drvdata */
-	err = gk20a_dmabuf_alloc_drvdata(compbits_buf, &g->dev->dev);
+	err = gk20a_dmabuf_alloc_drvdata(compbits_scatter_buf, &g->dev->dev);
 	if (err)
 		goto exit_unlock;
 
@@ -936,32 +956,88 @@ __releases(&cde_app->mutex)
 	   the region to be mapped */
 	big_page_mask = cde_ctx->vm->big_page_size - 1;
 	map_offset = compbits_byte_offset & ~big_page_mask;
+	map_size = compbits_scatter_buf->size - map_offset;
+
 
 	/* compute compbit start offset from the beginning of the mapped
 	   area */
-	compbits_offset = compbits_byte_offset & big_page_mask;
-
-	if (!compbits_size) {
-		compbits_size = compbits_buf->size - compbits_byte_offset;
-		map_size = compbits_buf->size - map_offset;
+	mapped_compbits_offset = compbits_byte_offset - map_offset;
+	if (scatterbuffer_byte_offset) {
+		compbits_size = scatterbuffer_byte_offset -
+				compbits_byte_offset;
+		mapped_scatterbuffer_offset = scatterbuffer_byte_offset -
+					      map_offset;
+		scatterbuffer_size = compbits_scatter_buf->size -
+				     scatterbuffer_byte_offset;
+	} else {
+		compbits_size = compbits_scatter_buf->size -
+				compbits_byte_offset;
 	}
 
+	gk20a_dbg(gpu_dbg_cde, "map_offset=%llu map_size=%llu",
+		  map_offset, map_size);
+	gk20a_dbg(gpu_dbg_cde, "mapped_compbits_offset=%llu compbits_size=%llu",
+		  mapped_compbits_offset, compbits_size);
+	gk20a_dbg(gpu_dbg_cde, "mapped_scatterbuffer_offset=%llu scatterbuffer_size=%llu",
+		  mapped_scatterbuffer_offset, scatterbuffer_size);
+
+
 	/* map the destination buffer */
-	get_dma_buf(compbits_buf); /* a ref for gk20a_vm_map */
-	map_vaddr = gk20a_vm_map(cde_ctx->vm, compbits_buf, 0,
+	get_dma_buf(compbits_scatter_buf); /* a ref for gk20a_vm_map */
+	map_vaddr = gk20a_vm_map(cde_ctx->vm, compbits_scatter_buf, 0,
 				 NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				 compbits_kind, NULL, true,
 				 gk20a_mem_flag_none,
 				 map_offset, map_size,
 				 NULL);
 	if (!map_vaddr) {
-		dma_buf_put(compbits_buf);
+		dma_buf_put(compbits_scatter_buf);
 		err = -EINVAL;
 		goto exit_unlock;
 	}
 
+	if (scatterbuffer_byte_offset &&
+	    g->ops.cde.need_scatter_buffer &&
+	    g->ops.cde.need_scatter_buffer(g)) {
+		struct sg_table *sgt;
+		void *scatter_buffer;
+
+		surface = dma_buf_vmap(compbits_scatter_buf);
+		if (IS_ERR(surface)) {
+			gk20a_warn(&g->dev->dev,
+				   "dma_buf_vmap failed");
+			err = -EINVAL;
+			goto exit_unlock;
+		}
+
+		scatter_buffer = surface + scatterbuffer_byte_offset;
+
+		gk20a_dbg(gpu_dbg_cde, "surface=0x%p scatterBuffer=0x%p",
+			  surface, scatter_buffer);
+		sgt = gk20a_mm_pin(&g->dev->dev, compbits_scatter_buf);
+		if (IS_ERR(sgt)) {
+			gk20a_warn(&g->dev->dev,
+				   "mm_pin failed");
+			err = -EINVAL;
+			goto exit_unlock;
+		} else {
+			err = g->ops.cde.populate_scatter_buffer(g, sgt,
+					compbits_byte_offset, scatter_buffer,
+					scatterbuffer_size);
+			WARN_ON(err);
+
+			gk20a_mm_unpin(&g->dev->dev, compbits_scatter_buf,
+				       sgt);
+			if (err)
+				goto exit_unlock;
+		}
+
+		dma_buf_vunmap(compbits_scatter_buf, surface);
+		surface = NULL;
+	}
+
 	/* store source buffer compression tags */
-	gk20a_get_comptags(&g->dev->dev, compbits_buf, &comptags);
+	gk20a_get_comptags(&g->dev->dev, compbits_scatter_buf, &comptags);
 	cde_ctx->surf_param_offset = comptags.offset;
 	cde_ctx->surf_param_lines = comptags.lines;
 
@@ -971,8 +1047,11 @@ __releases(&cde_app->mutex)
 	cde_ctx->surf_vaddr = map_vaddr;
 
 	/* store information about destination */
-	cde_ctx->compbit_vaddr = map_vaddr + compbits_offset;
+	cde_ctx->compbit_vaddr = map_vaddr + mapped_compbits_offset;
 	cde_ctx->compbit_size = compbits_size;
+
+	cde_ctx->scatterbuffer_vaddr = map_vaddr + mapped_scatterbuffer_offset;
+	cde_ctx->scatterbuffer_size = scatterbuffer_size;
 
 	/* remove existing argument data */
 	memset(cde_ctx->user_param_values, 0,
@@ -1002,6 +1081,8 @@ __releases(&cde_app->mutex)
 		 g->gr.compbit_store.mem.size, cde_ctx->backing_store_vaddr);
 	gk20a_dbg(gpu_dbg_cde, "cde: buffer=compbits, size=%llu, gpuva=%llx\n",
 		 cde_ctx->compbit_size, cde_ctx->compbit_vaddr);
+	gk20a_dbg(gpu_dbg_cde, "cde: buffer=scatterbuffer, size=%llu, gpuva=%llx\n",
+		 cde_ctx->scatterbuffer_size, cde_ctx->scatterbuffer_vaddr);
 
 
 	/* take always the postfence as it is needed for protecting the
@@ -1023,6 +1104,9 @@ exit_unlock:
 	/* unmap the buffers - channel holds references to them now */
 	if (map_vaddr)
 		gk20a_vm_unmap(cde_ctx->vm, map_vaddr);
+
+	if (surface)
+		dma_buf_vunmap(compbits_scatter_buf, surface);
 
 	mutex_unlock(&g->cde_app.mutex);
 	return err;
@@ -1266,6 +1350,7 @@ static int gk20a_buffer_convert_gpu_to_cde_v1(
 		struct gk20a *g,
 		struct dma_buf *dmabuf, u32 consumer,
 		u64 offset, u64 compbits_hoffset, u64 compbits_voffset,
+		u64 scatterbuffer_offset,
 		u32 width, u32 height, u32 block_height_log2,
 		u32 submit_flags, struct nvgpu_fence *fence_in,
 		struct gk20a_buffer_state *state)
@@ -1310,9 +1395,9 @@ static int gk20a_buffer_convert_gpu_to_cde_v1(
 		gk20a_warn(&g->dev->dev, "cde: surface is exceptionally large (xtiles=%d, ytiles=%d)",
 			   xtiles, ytiles);
 
-	gk20a_dbg(gpu_dbg_cde, "w=%d, h=%d, bh_log2=%d, compbits_hoffset=0x%llx, compbits_voffset=0x%llx",
+	gk20a_dbg(gpu_dbg_cde, "w=%d, h=%d, bh_log2=%d, compbits_hoffset=0x%llx, compbits_voffset=0x%llx, scatterbuffer_offset=0x%llx",
 		  width, height, block_height_log2,
-		  compbits_hoffset, compbits_voffset);
+		  compbits_hoffset, compbits_voffset, scatterbuffer_offset);
 	gk20a_dbg(gpu_dbg_cde, "resolution (%d, %d) tiles (%d, %d)",
 		  width, height, xtiles, ytiles);
 	gk20a_dbg(gpu_dbg_cde, "group (%d, %d) gridH (%d, %d) gridV (%d, %d)",
@@ -1386,9 +1471,8 @@ static int gk20a_buffer_convert_gpu_to_cde_v1(
 #undef WRITE_PATCH
 
 	err = gk20a_cde_convert(g, dmabuf,
-				0, /* dst kind */
 				compbits_hoffset,
-				0, /* dst_size, 0 = auto */
+				scatterbuffer_offset,
 				fence_in, submit_flags,
 				params, param, &new_fence);
 	if (err)
@@ -1406,6 +1490,7 @@ out:
 static int gk20a_buffer_convert_gpu_to_cde(
 		struct gk20a *g, struct dma_buf *dmabuf, u32 consumer,
 		u64 offset, u64 compbits_hoffset, u64 compbits_voffset,
+		u64 scatterbuffer_offset,
 		u32 width, u32 height, u32 block_height_log2,
 		u32 submit_flags, struct nvgpu_fence *fence_in,
 		struct gk20a_buffer_state *state)
@@ -1425,7 +1510,8 @@ static int gk20a_buffer_convert_gpu_to_cde(
 	if (g->cde_app.firmware_version == 1) {
 		err = gk20a_buffer_convert_gpu_to_cde_v1(
 		    g, dmabuf, consumer, offset, compbits_hoffset,
-		    compbits_voffset, width, height, block_height_log2,
+		    compbits_voffset, scatterbuffer_offset,
+		    width, height, block_height_log2,
 		    submit_flags, fence_in, state);
 	} else {
 		dev_err(dev_from_gk20a(g), "unsupported CDE firmware version %d",
@@ -1440,6 +1526,7 @@ static int gk20a_buffer_convert_gpu_to_cde(
 int gk20a_prepare_compressible_read(
 		struct gk20a *g, u32 buffer_fd, u32 request, u64 offset,
 		u64 compbits_hoffset, u64 compbits_voffset,
+		u64 scatterbuffer_offset,
 		u32 width, u32 height, u32 block_height_log2,
 		u32 submit_flags, struct nvgpu_fence *fence,
 		u32 *valid_compbits, u32 *zbc_color,
@@ -1482,7 +1569,7 @@ int gk20a_prepare_compressible_read(
 					g, dmabuf,
 					missing_cde_bits,
 					offset, compbits_hoffset,
-					compbits_voffset,
+					compbits_voffset, scatterbuffer_offset,
 					width, height, block_height_log2,
 					submit_flags, fence,
 					state);

@@ -223,7 +223,9 @@ struct nvgpu_gpu_prepare_compressible_read_args {
 		__s32 fd;
 	} fence;			/* in/out */
 	__u32 zbc_color;		/* out */
-	__u32 reserved[5];		/* must be zero */
+	__u32 reserved;		/* must be zero */
+	__u64 scatterbuffer_offset;	/* in, within handle */
+	__u32 reserved2[2];		/* must be zero */
 };
 
 struct nvgpu_gpu_mark_compressible_write_args {

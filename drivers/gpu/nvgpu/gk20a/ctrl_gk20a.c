@@ -92,6 +92,7 @@ static int gk20a_ctrl_prepare_compressible_read(
 	ret = gk20a_prepare_compressible_read(g, args->handle,
 			args->request_compbits, args->offset,
 			args->compbits_hoffset, args->compbits_voffset,
+			args->scatterbuffer_offset,
 			args->width, args->height, args->block_height_log2,
 			flags, &fence, &args->valid_compbits,
 			&args->zbc_color, &fence_out);

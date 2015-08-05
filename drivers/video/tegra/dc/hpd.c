@@ -82,7 +82,7 @@ static void hpd_disable(struct tegra_hpd_data *data)
 		data->ops->disable(data->drv_data);
 
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
-	tegra_dc_ext_process_hotplug(data->dc->ndev->id);
+	tegra_dc_ext_process_hotplug(data->dc->ndev->id, false);
 #endif
 }
 
@@ -211,7 +211,7 @@ static void edid_read_notify(struct tegra_hpd_data *data)
 	data->dc->connected = true;
 
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
-	tegra_dc_ext_process_hotplug(data->dc->ndev->id);
+	tegra_dc_ext_process_hotplug(data->dc->ndev->id, true);
 #endif
 
 	if (data->ops->edid_notify)
@@ -470,7 +470,7 @@ static void sched_hpd_work(struct tegra_hpd_data *data, int resched_time)
 	 * never executed parallelly by multiple CPUs
 	 */
 	if ((resched_time >= 0) && !data->shutdown)
-		queue_delayed_work(system_nrt_wq,
+		queue_delayed_work(system_wq,
 				&data->dwork,
 				msecs_to_jiffies(resched_time));
 }

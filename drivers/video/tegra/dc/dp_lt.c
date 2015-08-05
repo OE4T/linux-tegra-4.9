@@ -908,13 +908,8 @@ static void sched_lt_work(struct tegra_dp_lt_data *lt_data, int delay_ms)
 {
 	cancel_delayed_work(&lt_data->dwork);
 
-	/*
-	 * system_nrt_wq is non-reentrant
-	 * and guarantees that any given work is
-	 * never executed parallelly by multiple CPUs
-	 */
 	if ((delay_ms >= 0) && !lt_data->shutdown)
-		queue_delayed_work(system_nrt_wq, &lt_data->dwork,
+		schedule_delayed_work(&lt_data->dwork,
 					msecs_to_jiffies(delay_ms));
 }
 
@@ -977,7 +972,7 @@ long tegra_dp_lt_wait_for_completion(struct tegra_dp_lt_data *lt_data,
 	might_sleep();
 
 	mutex_lock(&lt_data->lock);
-	INIT_COMPLETION(lt_data->lt_complete);
+	reinit_completion(&lt_data->lt_complete);
 	mutex_unlock(&lt_data->lock);
 
 	return wait_for_completion_timeout(&lt_data->lt_complete,

@@ -261,7 +261,7 @@ fail:
 	return -EINVAL;
 }
 
-static int tegra_dc_dpaux_write_chunk_locked(struct tegra_dc_dp_data *dp,
+int tegra_dc_dpaux_write_chunk_locked(struct tegra_dc_dp_data *dp,
 	u32 cmd, u32 addr, u8 *data, u32 *size, u32 *aux_stat)
 {
 	int err = 0;
@@ -408,7 +408,7 @@ int tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 	return ret;
 }
 
-static int tegra_dc_dpaux_read_chunk_locked(struct tegra_dc_dp_data *dp,
+int tegra_dc_dpaux_read_chunk_locked(struct tegra_dc_dp_data *dp,
 	u32 cmd, u32 addr, u8 *data, u32 *size, u32 *aux_stat)
 {
 	int err = 0;
@@ -1532,7 +1532,7 @@ static irqreturn_t tegra_dp_irq(int irq, void *ptr)
 		} else {
 			dev_info(&dp->dc->ndev->dev,
 				"dp: unplug event received\n");
-			INIT_COMPLETION(dp->hpd_plug);
+			reinit_completion(&dp->hpd_plug);
 		}
 		tegra_dp_pending_hpd(dp);
 	} else if (status & DPAUX_INTR_AUX_IRQ_EVENT_PENDING) {

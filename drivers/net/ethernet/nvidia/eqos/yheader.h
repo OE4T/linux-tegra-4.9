@@ -1344,6 +1344,7 @@ struct DWC_ETH_QOS_prv_data {
 	struct clk *rx_clk;
 	struct clk *ptp_ref_clk;
 	struct clk *tx_clk;
+	struct reset_control *eqos_rst;
 
 	struct eqos_cfg dt_cfg;
 	struct chan_data chinfo[MAX_CHANS];

@@ -37,4 +37,168 @@
 			interrupts = <TEGRA_GPIO(Y, 7) 0x0>;
 		};
 	};
+
+	fixed-regulators {
+		compatible = "simple-bus";
+		device_type = "fixed-regulators";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		battery_reg: regulator@0 {
+			compatible = "regulator-fixed";
+			reg = <0>;
+			regulator-name = "vdd-ac-bat";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			regulator-always-on;
+		};
+
+		en_vdd_sd: regulator@1 {
+			compatible = "regulator-fixed-sync";
+			reg = <1>;
+			regulator-name = "en-vdd-sd";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&gpio_i2c_0_77 1 1>;
+			enable-active-high;
+		};
+
+		en_vdd_cam: regulator@2 {
+			compatible = "regulator-fixed-sync";
+			reg = <2>;
+			regulator-name = "en-vdd-cam";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			gpio = <&gpio_i2c_0_77 9 1>;
+			enable-active-high;
+		};
+
+		vdd_hdmi: regulator@3 {
+			compatible = "regulator-fixed-sync";
+			reg = <3>;
+			regulator-name = "vdd-hdmi";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio_i2c_0_74 12 1>;
+			enable-active-high;
+		};
+
+		vdd_usb0_5v: regulator@4 {
+			compatible = "regulator-fixed-sync";
+			reg = <4>;
+			regulator-name = "vdd-usb0-5v";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&tegra_gpio TEGRA_GPIO(L, 4) 0>;
+			enable-active-high;
+		};
+
+		vdd_usb1_5v: regulator@5 {
+			compatible = "regulator-fixed-sync";
+			reg = <5>;
+			regulator-name = "vdd-usb1-5v";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&tegra_gpio TEGRA_GPIO(L, 5) 0>;
+			enable-active-high;
+		};
+
+		en_vdd_ts_1v8: regulator@6 {
+			compatible = "regulator-fixed-sync";
+			reg = <6>;
+			regulator-name = "en-vdd-ts-1v8";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			gpio = <&gpio_i2c_0_74 1 1>;
+			enable-active-high;
+		};
+
+		en_vdd_ts_hv_3v3: regulator@7 {
+			compatible = "regulator-fixed-sync";
+			reg = <7>;
+			regulator-name = "en-vdd-ts-hv-3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&gpio_i2c_0_74 2 1>;
+			enable-active-high;
+		};
+
+		en_avdd_disp_3v3: regulator@8 {
+			compatible = "regulator-fixed-sync";
+			reg = <8>;
+			regulator-name = "en-vdd-disp-3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&gpio_i2c_0_74 3 1>;
+			enable-active-high;
+		};
+
+		en_mdm_pwr_3v7: regulator@9 {
+			compatible = "regulator-fixed-sync";
+			reg = <9>;
+			regulator-name = "en-mdm-pwr-3v7";
+			regulator-min-microvol = <3700000>;
+			regulator-max-microvol = <3700000>;
+			gpio = <&gpio_i2c_0_74 7 1>;
+			enable-active-high;
+		};
+
+		en_vdd_disp_1v8: regulator@10 {
+			compatible = "regulator-fixed-sync";
+			reg = <10>;
+			regulator-name = "en-vdd-disp-1v8";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			gpio = <&gpio_i2c_0_74 9 1>;
+			enable-active-high;
+		};
+
+		en_vdd_cam_hv_2v8: regulator@11 {
+			compatible = "regulator-fixed-sync";
+			reg = <11>;
+			regulator-name = "en-vdd-cam-hv-2v8";
+			regulator-min-microvol = <2800000>;
+			regulator-max-microvol = <2800000>;
+			gpio = <&gpio_i2c_0_74 13 1>;
+			enable-active-high;
+		};
+
+		en_vdd_cam_1v2: regulator@12 {
+			compatible = "regulator-fixed-sync";
+			reg = <12>;
+			regulator-name = "en-vdd-cam-1v2";
+			regulator-min-microvol = <1200000>;
+			regulator-max-microvol = <1200000>;
+			gpio = <&gpio_i2c_0_77 10 1>;
+			enable-active-high;
+		};
+
+		vdd_fan: regulator@13 {
+			compatible = "regulator-fixed-sync";
+			reg = <13>;
+			regulator-name = "vdd-fan";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio_i2c_0_74 4 0>;
+			regulator-always-on;
+		};
+
+		vdd_3v3: regulator@14 {
+			compatible = "regulator-fixed-sync";
+			reg = <14>;
+			regulator-name = "vdd-3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+		};
+
+		dis_vdd_1v2: regulator@15 {
+			compatible = "regulator-fixed-sync";
+			reg = <15>;
+			regulator-name = "dis-vdd-1v2";
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			gpio = <&gpio_i2c_0_74 10 1>;
+			enable-active-high;
+		};
+	};
 };

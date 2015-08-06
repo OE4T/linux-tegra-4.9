@@ -82,10 +82,17 @@
 #define MAX_GPIO_CONTROLLERS 7
 #define MAX_GPIO_PORTS 8
 
+#define MAX_PORTS 32
+#define MAX_PINS_PER_PORT	8
+
 struct tegra_gpio_controller {
 	int controller;
 	int irq;
 	spinlock_t lvl_lock[4];
+	u32 cnf[MAX_PORTS * MAX_PINS_PER_PORT];
+	u32 dbc[MAX_PORTS * MAX_PINS_PER_PORT];
+	u32 out_ctrl[MAX_PORTS * MAX_PINS_PER_PORT];
+	u32 out_val[MAX_PORTS * MAX_PINS_PER_PORT];
 };
 
 struct tegra_gpio {
@@ -688,7 +695,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 
 	tegra_gpio_chip.dev = &pdev->dev;
 
-	tegra_gpio_chip.ngpio = 32 * 8; /* 32 total number of gpio ports */
+	tegra_gpio_chip.ngpio = MAX_PORTS * MAX_PINS_PER_PORT;
 
 	tegra_gpio_controllers = devm_kzalloc(&pdev->dev,
 			tegra_gpio_bank_count * sizeof(*tegra_gpio_controllers),
@@ -885,9 +892,57 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		irq_set_chained_handler(controller->irq,
 			tegra_gpio_irq_handler);
 	}
-
 	return 0;
 }
+
+static void tegra_gpio_resume(void)
+{
+
+	unsigned long flags;
+	int pin;
+
+	local_irq_save(flags);
+
+	for (pin = 0; pin < tegra_gpio_chip.ngpio; pin++) {
+		tegra_gpio_writel(tegra_gpio_controllers->cnf[pin], pin,
+				GPIO_ENB_CONFIG_REG);
+		tegra_gpio_writel(tegra_gpio_controllers->dbc[pin], pin,
+				GPIO_DBC_THRES_REG);
+		tegra_gpio_writel(tegra_gpio_controllers->out_ctrl[pin], pin,
+				GPIO_OUT_CTRL_REG);
+		tegra_gpio_writel(tegra_gpio_controllers->out_val[pin], pin,
+				GPIO_OUT_VAL_REG);
+	}
+	local_irq_restore(flags);
+}
+
+static int tegra_gpio_suspend(void)
+{
+	unsigned long flags;
+	int pin;
+	local_irq_save(flags);
+	for (pin = 0; pin < tegra_gpio_chip.ngpio; pin++) {
+		tegra_gpio_controllers->cnf[pin] =
+			tegra_gpio_readl(pin, GPIO_ENB_CONFIG_REG);
+		tegra_gpio_controllers->dbc[pin] =
+			tegra_gpio_readl(pin, GPIO_DBC_THRES_REG);
+		tegra_gpio_controllers->out_ctrl[pin] =
+			tegra_gpio_readl(pin, GPIO_OUT_CTRL_REG);
+		tegra_gpio_controllers->out_val[pin] =
+			tegra_gpio_readl(pin, GPIO_OUT_VAL_REG);
+	}
+	local_irq_restore(flags);
+
+	of_gpiochip_suspend(&tegra_gpio_chip);
+	return 0;
+}
+
+static struct syscore_ops tegra_gpio_syscore_ops = {
+	.suspend = tegra_gpio_suspend,
+	.resume = tegra_gpio_resume,
+	.save = tegra_gpio_suspend,
+	.restore = tegra_gpio_resume,
+};
 
 static struct platform_driver tegra_gpio_driver = {
 	.driver		= {
@@ -900,6 +955,7 @@ static struct platform_driver tegra_gpio_driver = {
 
 static int __init tegra_gpio_init(void)
 {
+	register_syscore_ops(&tegra_gpio_syscore_ops);
 	return platform_driver_register(&tegra_gpio_driver);
 }
 postcore_initcall(tegra_gpio_init);

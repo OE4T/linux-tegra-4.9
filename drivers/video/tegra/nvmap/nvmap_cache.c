@@ -93,10 +93,11 @@ static void heap_page_cache_maint(
 			/* Skip per-page inner maintenance in loop below */
 			inner = false;
 		}
-	}
+
 per_page_cache_maint:
-	if (!h->vaddr)
-		nvmap_kmaps_dec(h);
+		if (!h->vaddr)
+			nvmap_kmaps_dec(h);
+	}
 #endif
 
 	while (start < end) {

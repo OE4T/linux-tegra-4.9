@@ -710,7 +710,11 @@ static void lt_channel_equalization_state(struct tegra_dp_lt_data *lt_data)
 
 	cr_done = get_clock_recovery_status(lt_data);
 	if (!cr_done) {
-		lt_data_reset(lt_data);
+		/*
+		 * No HW reset here. CTS waits on write to
+		 * reduced(where applicable) link BW dpcd offset.
+		 */
+		lt_data_sw_reset(lt_data);
 		tgt_state = STATE_REDUCE_BIT_RATE;
 		timeout = 0;
 		pr_info("dp lt: CR lost\n");

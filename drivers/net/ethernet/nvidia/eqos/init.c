@@ -53,6 +53,7 @@
 #include <linux/of_device.h>
 #include <linux/tegra-soc.h>
 #include <linux/clk.h>
+#include <linux/reset.h>
 
 #define LP_SUPPORTED 0
 static const struct of_device_id dwc_eth_qos_of_match[] = {
@@ -477,8 +478,20 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 
 	pdata->dev = ndev;
 
-	/* clock initialization */
 	if (!tegra_platform_is_unit_fpga()) {
+		/* reset */
+		pdata->eqos_rst =
+			devm_reset_control_get(&pdev->dev, "eqos_rst");
+		if (IS_ERR_OR_NULL(pdata->eqos_rst)) {
+			ret = PTR_ERR(pdata->eqos_rst);
+			dev_err(&pdev->dev,
+				"failed to get eqos reset %d\n", ret);
+			goto err_out_reset_get_failed;
+		} else {
+			reset_control_deassert(pdata->eqos_rst);
+		}
+
+		/* clock initialization */
 		ret = eqos_clock_init(pdata);
 		if (ret < 0) {
 			dev_err(&pdev->dev, "eqos_clock_init failed\n");
@@ -737,13 +750,17 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	desc_if->free_queue_struct(pdata);
 
  err_out_q_alloc_failed:
+	if (!tegra_platform_is_unit_fpga())
+		eqos_clock_deinit(pdata);
+ err_out_clock_init_failed:
+	if (!tegra_platform_is_unit_fpga() &&
+		!IS_ERR_OR_NULL(pdata->eqos_rst))
+		reset_control_assert(pdata->eqos_rst);
+ err_out_reset_get_failed:
 	free_netdev(ndev);
 	platform_set_drvdata(pdev, NULL);
 
-err_out_dev_failed:
-	if (!tegra_platform_is_unit_fpga())
-		eqos_clock_deinit(pdata);
-err_out_clock_init_failed:
+ err_out_dev_failed:
 	iounmap((void *)dwc_eth_qos_base_addr);
 
 	return ret;
@@ -808,6 +825,9 @@ int DWC_ETH_QOS_remove(struct platform_device *pdev)
 	free_netdev(dev);
 
 	platform_set_drvdata(pdev, NULL);
+	if (!tegra_platform_is_unit_fpga() &&
+		!IS_ERR_OR_NULL(pdata->eqos_rst))
+		reset_control_assert(pdata->eqos_rst);
 	iounmap((void *)dwc_eth_qos_base_addr);
 
 	DBGPR("<-- DWC_ETH_QOS_remove\n");

@@ -39,8 +39,8 @@
 			<&tegra_car TEGRA186_CLK_EQOS_RX>,
 			<&tegra_car TEGRA186_CLK_EQOS_PTP_REF>,
 			<&tegra_car TEGRA186_CLK_EQOS_TX>,
-			<&tegra_car TEGRA186_CLK_EQOS_RX_INPUT>;
-		clock-names = "eqos_axi", "eqos_rx", "eqos_ptp_ref", "eqos_tx", "eqos_rx_input";
+			<&tegra_car TEGRA186_CLK_AXI_CBB>;
+		clock-names = "eqos_axi", "eqos_rx", "eqos_ptp_ref", "eqos_tx", "axi_cbb";
 		resets = <&tegra_car TEGRA186_RESET_EQOS>;
 		reset-names = "eqos_rst";
 		status = "disabled";

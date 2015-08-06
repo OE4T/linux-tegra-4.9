@@ -1369,7 +1369,7 @@ struct DWC_ETH_QOS_prv_data {
 	int phy_reset_gpio;
 
 	struct clk *axi_clk;
-	struct clk *rx_input_clk;
+	struct clk *axi_cbb_clk;
 	struct clk *rx_clk;
 	struct clk *ptp_ref_clk;
 	struct clk *tx_clk;

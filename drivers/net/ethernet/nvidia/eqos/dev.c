@@ -44,6 +44,7 @@
  * @brief: Driver functions.
  */
 #include <linux/tegra-soc.h>
+#include <linux/clk.h>
 #include "yheader.h"
 #include "yapphdr.h"
 
@@ -2987,13 +2988,24 @@ static INT enable_dma_interrupts(UINT qInx,
 * \retval -1 Failure
 */
 
-static INT set_gmii_speed(void)
+static INT set_gmii_speed(struct DWC_ETH_QOS_prv_data *pdata)
 {
 
 	MAC_MCR_PS_UdfWr(0);
 	MAC_MCR_FES_UdfWr(0);
 	if (tegra_platform_is_unit_fpga())
 		CLK_CRTL0_TX_CLK_UdfWr(0);
+
+	/* set eqos_tx clock to 125MHz */
+	if (tegra_platform_is_silicon()) {
+		struct platform_device *pdev = pdata->pdev;
+		int ret;
+		ret = clk_set_rate(pdata->tx_clk, 125000 * 1000);
+		if (ret) {
+			dev_err(&pdev->dev, "failed to set tx_clk to 125Mhz\n");
+			return Y_FAILURE;
+		}
+	}
 
 	return Y_SUCCESS;
 }
@@ -3006,13 +3018,24 @@ static INT set_gmii_speed(void)
 * \retval -1 Failure
 */
 
-static INT set_mii_speed_10(void)
+static INT set_mii_speed_10(struct DWC_ETH_QOS_prv_data *pdata)
 {
 
 	MAC_MCR_PS_UdfWr(0x1);
 	MAC_MCR_FES_UdfWr(0);
 	if (tegra_platform_is_unit_fpga())
 		CLK_CRTL0_TX_CLK_UdfWr(1);
+
+	/* set eqos_tx clock to 2.5MHz */
+	if (tegra_platform_is_silicon()) {
+		struct platform_device *pdev = pdata->pdev;
+		int ret;
+		ret = clk_set_rate(pdata->tx_clk, 2500 * 1000);
+		if (ret) {
+			dev_err(&pdev->dev, "failed to set tx_clk to 2.5Mhz\n");
+			return Y_FAILURE;
+		}
+	}
 
 	return Y_SUCCESS;
 }
@@ -3025,13 +3048,24 @@ static INT set_mii_speed_10(void)
 * \retval -1 Failure
 */
 
-static INT set_mii_speed_100(void)
+static INT set_mii_speed_100(struct DWC_ETH_QOS_prv_data *pdata)
 {
 
 	MAC_MCR_PS_UdfWr(0x1);
 	MAC_MCR_FES_UdfWr(0x1);
 	if (tegra_platform_is_unit_fpga())
 		CLK_CRTL0_TX_CLK_UdfWr(0);
+
+	/* set eqos_tx clock to 25MHz */
+	if (tegra_platform_is_silicon()) {
+		struct platform_device *pdev = pdata->pdev;
+		int ret;
+		ret = clk_set_rate(pdata->tx_clk, 25000 * 1000);
+		if (ret) {
+			dev_err(&pdev->dev, "failed to set tx_clk to 25Mhz\n");
+			return Y_FAILURE;
+		}
+	}
 
 	return Y_SUCCESS;
 }

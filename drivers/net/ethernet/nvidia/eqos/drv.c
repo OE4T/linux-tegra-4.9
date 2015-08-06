@@ -685,13 +685,16 @@ void handle_mac_intrs(struct DWC_ETH_QOS_prv_data *pdata,
 
 				if ((varMAC_PCS & 0x60000) == 0x0) {
 					pdata->pcs_speed = SPEED_10;
-					hw_if->set_mii_speed_10(); //TODO: may not be required
+					/* TODO: may not be required */
+					hw_if->set_mii_speed_10(pdata);
 				} else if ((varMAC_PCS & 0x60000) == 0x20000) {
 					pdata->pcs_speed = SPEED_100;
-					hw_if->set_mii_speed_100(); //TODO: may not be required
+					/* TODO: may not be required */
+					hw_if->set_mii_speed_100(pdata);
 				} else if ((varMAC_PCS & 0x60000) == 0x30000) {
 					pdata->pcs_speed = SPEED_1000;
-					hw_if->set_gmii_speed(); //TODO: may not be required
+					/* TODO: may not be required */
+					hw_if->set_gmii_speed(pdata);
 				}
 				printk(KERN_ALERT "Link is UP:%dMbps & %s duplex\n",
 					pdata->pcs_speed, pdata->pcs_duplex ? "Full" : "Half");

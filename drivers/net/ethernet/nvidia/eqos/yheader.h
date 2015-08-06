@@ -709,9 +709,9 @@ struct hw_if_struct {
 	INT(*write_phy_regs) (INT, INT, INT);
 	INT(*set_full_duplex) (VOID);
 	INT(*set_half_duplex) (VOID);
-	INT(*set_mii_speed_100) (VOID);
-	INT(*set_mii_speed_10) (VOID);
-	INT(*set_gmii_speed) (VOID);
+	INT(*set_mii_speed_100) (struct DWC_ETH_QOS_prv_data *);
+	INT(*set_mii_speed_10) (struct DWC_ETH_QOS_prv_data *);
+	INT(*set_gmii_speed) (struct DWC_ETH_QOS_prv_data *);
 	/* for PMT */
 	INT(*start_dma_rx) (UINT);
 	INT(*stop_dma_rx) (UINT);
@@ -1338,6 +1338,12 @@ struct DWC_ETH_QOS_prv_data {
 	INT common_irq;
 	INT rx_irqs[MAX_CHANS];
 	INT tx_irqs[MAX_CHANS];
+
+	struct clk *axi_clk;
+	struct clk *rx_input_clk;
+	struct clk *rx_clk;
+	struct clk *ptp_ref_clk;
+	struct clk *tx_clk;
 
 	struct eqos_cfg dt_cfg;
 	struct chan_data chinfo[MAX_CHANS];

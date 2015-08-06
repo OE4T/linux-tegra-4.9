@@ -52,6 +52,7 @@
 #include <linux/platform_device.h>
 #include <linux/of_device.h>
 #include <linux/tegra-soc.h>
+#include <linux/clk.h>
 
 #define LP_SUPPORTED 0
 static const struct of_device_id dwc_eth_qos_of_match[] = {
@@ -179,6 +180,166 @@ void get_dt_u32_array(struct device_node *pnode, char *pdt_prop, u32 *pval,
 }
 
 
+static void eqos_clock_check(void)
+{
+#define NV_ADDRESS_MAP_EQOS_CAR_BASE 0x58A0000
+	void __iomem *base = ioremap(NV_ADDRESS_MAP_EQOS_CAR_BASE, 0x21000);
+
+	printk("CLK_RST_CONTROLLER_RST_DEV_EQOS_0: 0x%x",
+		__raw_readl(base));
+	printk("CLK_RST_CONTROLLER_RST_DEV_EQOS_SET_0: 0x%x",
+		__raw_readl(base + 0x4));
+	printk("CLK_RST_CONTROLLER_RST_DEV_EQOS_CLR_0: 0x%x",
+		__raw_readl(base + 0x8));
+
+	printk("CLK_RST_CONTROLLER_CLK_OUT_ENB_EQOS_0: 0x%x",
+		__raw_readl(base + 0x1000));
+	printk("CLK_RST_CONTROLLER_CLK_OUT_ENB_EQOS_SET_0: 0x%x",
+		__raw_readl(base + 0x1004));
+	printk("CLK_RST_CONTROLLER_CLK_OUT_ENB_EQOS_CLR_0: 0x%x",
+		__raw_readl(base + 0x1008));
+
+	printk("CLK_RST_CONTROLLER_BOND_OUT_IP_EQOS_0: 0x%x",
+		__raw_readl(base + 0x2000));
+	printk("CLK_RST_CONTROLLER_CLK_SOURCE_EQOS_AXI_CLK_0: 0x%x",
+		__raw_readl(base + 0x3000));
+	printk("CLK_RST_CONTROLLER_CLK_SOURCE_EQOS_PTP_REF_CLK_0: 0x%x",
+		__raw_readl(base + 0x3004));
+	printk("CLK_RST_CONTROLLER_CLK_SOURCE_EQOS_TX_CLK_0: 0x%x",
+		__raw_readl(base + 0x3008));
+
+	printk("CLK_RST_CONTROLLER_CLK_OUT_ENB_EQOS_RX_0: 0x%x",
+		__raw_readl(base + 0x10000));
+	printk("CLK_RST_CONTROLLER_CLK_OUT_ENB_EQOS_RX_SET_0: 0x%x",
+		__raw_readl(base + 0x10004));
+	printk("CLK_RST_CONTROLLER_CLK_OUT_ENB_EQOS_RX_CLR_0: 0x%x",
+		__raw_readl(base + 0x10008));
+
+	printk("CLK_RST_CONTROLLER_BOND_OUT_IP_EQOS_RX_0: 0x%x",
+		__raw_readl(base + 0x11000));
+	iounmap(base);
+}
+static void eqos_clock_deinit(struct DWC_ETH_QOS_prv_data *pdata)
+{
+	struct platform_device *pdev = pdata->pdev;
+
+	clk_disable(pdata->tx_clk);
+	clk_disable(pdata->ptp_ref_clk);
+	clk_disable(pdata->rx_clk);
+	clk_disable(pdata->axi_clk);
+	clk_disable(pdata->rx_input_clk);
+
+	devm_clk_put(&pdev->dev, pdata->tx_clk);
+	devm_clk_put(&pdev->dev, pdata->ptp_ref_clk);
+	devm_clk_put(&pdev->dev, pdata->rx_clk);
+	devm_clk_put(&pdev->dev, pdata->axi_clk);
+	devm_clk_put(&pdev->dev, pdata->rx_input_clk);
+}
+
+static int eqos_clock_init(struct DWC_ETH_QOS_prv_data *pdata)
+{
+	struct platform_device *pdev = pdata->pdev;
+	struct device_node *node = pdev->dev.of_node;
+	u32 ptp_ref_clock_speed;
+	int ret;
+
+	pdata->rx_input_clk = devm_clk_get(&pdev->dev, "eqos_rx_input");
+	if (IS_ERR(pdata->rx_input_clk)) {
+		ret = PTR_ERR(pdata->rx_input_clk);
+		dev_err(&pdev->dev, "can't get eqos_rx_input clk (%d)\n", ret);
+		return ret;
+	}
+	pdata->axi_clk = devm_clk_get(&pdev->dev, "eqos_axi");
+	if (IS_ERR(pdata->axi_clk)) {
+		ret = PTR_ERR(pdata->axi_clk);
+		dev_err(&pdev->dev, "can't get eqos_axi clk (%d)\n", ret);
+		goto axi_get_fail;
+	}
+	pdata->rx_clk = devm_clk_get(&pdev->dev, "eqos_rx");
+	if (IS_ERR(pdata->rx_clk)) {
+		ret = PTR_ERR(pdata->rx_clk);
+		dev_err(&pdev->dev, "can't get eqos_rx clk (%d)\n", ret);
+		goto rx_get_fail;
+	}
+	pdata->ptp_ref_clk = devm_clk_get(&pdev->dev, "eqos_ptp_ref");
+	if (IS_ERR(pdata->ptp_ref_clk)) {
+		ret = PTR_ERR(pdata->ptp_ref_clk);
+		dev_err(&pdev->dev, "can't get eqos_ptp_ref clk (%d)\n", ret);
+		goto ptp_ref_get_fail;
+	}
+	pdata->tx_clk = devm_clk_get(&pdev->dev, "eqos_tx");
+	if (IS_ERR(pdata->tx_clk)) {
+		ret = PTR_ERR(pdata->tx_clk);
+		dev_err(&pdev->dev, "can't get eqos_tx clk (%d)\n", ret);
+		goto tx_get_fail;
+	}
+
+	ret = clk_enable(pdata->rx_input_clk);
+	if (ret < 0)
+		goto rx_input_en_fail;
+
+	ret = clk_enable(pdata->axi_clk);
+	if (ret < 0)
+		goto axi_en_fail;
+
+	ret = clk_enable(pdata->rx_clk);
+	if (ret < 0)
+		goto rx_en_fail;
+
+	ret = clk_enable(pdata->ptp_ref_clk);
+	if (ret < 0)
+		goto ptp_ref_en_fail;
+
+	/* set ptp_ref_clk freq default 62.5Mhz */
+	ret = of_property_read_u32(node, "nvidia,ptp_ref_clock_speed",
+			&ptp_ref_clock_speed);
+	if (ret < 0) {
+		dev_err(&pdev->dev,
+		"ptp_ref_clk read failed %d, setting default to 125MHz\n", ret);
+		/* take default as 125MHz */
+		ptp_ref_clock_speed = 125;
+	}
+
+	ret = clk_set_rate(pdata->ptp_ref_clk, ptp_ref_clock_speed * 1000000);
+	if (ret) {
+		dev_err(&pdev->dev, "ptp_ref clk set rate failed (%d)\n", ret);
+		goto ptp_ref_set_rate_failed;
+	}
+
+	ret = clk_enable(pdata->tx_clk);
+	if (ret < 0)
+		goto tx_en_fail;
+
+	eqos_clock_check();
+	dev_info(&pdev->dev, "rx_input/axi/rx/ptp/tx = %ld/%ld/%ld/%ld/%ld\n",
+		clk_get_rate(pdata->rx_input_clk),
+		clk_get_rate(pdata->axi_clk), clk_get_rate(pdata->rx_clk),
+		clk_get_rate(pdata->ptp_ref_clk), clk_get_rate(pdata->tx_clk));
+
+	return 0;
+
+tx_en_fail:
+ptp_ref_set_rate_failed:
+	clk_disable(pdata->ptp_ref_clk);
+ptp_ref_en_fail:
+	clk_disable(pdata->rx_clk);
+rx_en_fail:
+	clk_disable(pdata->axi_clk);
+axi_en_fail:
+	clk_disable(pdata->rx_input_clk);
+rx_input_en_fail:
+	devm_clk_put(&pdev->dev, pdata->tx_clk);
+tx_get_fail:
+	devm_clk_put(&pdev->dev, pdata->ptp_ref_clk);
+ptp_ref_get_fail:
+	devm_clk_put(&pdev->dev, pdata->rx_clk);
+rx_get_fail:
+	devm_clk_put(&pdev->dev, pdata->axi_clk);
+axi_get_fail:
+	devm_clk_put(&pdev->dev, pdata->rx_input_clk);
+	return ret;
+}
+
 /*!
 * \brief API to initialize the device.
 *
@@ -294,13 +455,9 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	/*remap base address*/
 	dwc_eth_qos_base_addr = (ULONG)ioremap_nocache(res->start, (res->end - res->start) + 1);
 
-	/* queue count */
-	tx_q_count = get_tx_queue_count();
-	rx_q_count = get_rx_queue_count();
-
 	/* allocate and set up the ethernet device*/
 	ndev = alloc_etherdev_mqs(sizeof(struct DWC_ETH_QOS_prv_data),
-				tx_q_count, rx_q_count);
+				MAX_CHANS, MAX_CHANS);
 	if (ndev == NULL) {
 		printk(KERN_ALERT "%s:Unable to alloc new net device\n",
 		    DEV_NAME);
@@ -319,6 +476,20 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	pdata->pdev = pdev;
 
 	pdata->dev = ndev;
+
+	/* clock initialization */
+	if (!tegra_platform_is_unit_fpga()) {
+		ret = eqos_clock_init(pdata);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "eqos_clock_init failed\n");
+			goto err_out_clock_init_failed;
+		}
+	}
+
+	/* queue count */
+	tx_q_count = get_tx_queue_count();
+	rx_q_count = get_rx_queue_count();
+
 	pdata->tx_queue_cnt = tx_q_count;
 	pdata->rx_queue_cnt = rx_q_count;
 
@@ -570,6 +741,9 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 
 err_out_dev_failed:
+	if (!tegra_platform_is_unit_fpga())
+		eqos_clock_deinit(pdata);
+err_out_clock_init_failed:
 	iounmap((void *)dwc_eth_qos_base_addr);
 
 	return ret;
@@ -612,6 +786,10 @@ int DWC_ETH_QOS_remove(struct platform_device *pdev)
 		free_irq(pdata->irq_number, pdata);
 		pdata->irq_number = 0;
 	}
+
+	if (!tegra_platform_is_unit_fpga())
+		eqos_clock_deinit(pdata);
+
 	if (1 == pdata->hw_feat.sma_sel)
 		DWC_ETH_QOS_mdio_unregister(dev);
 

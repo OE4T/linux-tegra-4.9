@@ -31,6 +31,10 @@
 #include "hw_pwr_gk20a.h"
 #include "hw_top_gk20a.h"
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#include "nvgpu_gpuid_t18x.h"
+#endif
+
 #define GK20A_PMU_UCODE_IMAGE	"gpmu_ucode.bin"
 
 #define gk20a_dbg_pmu(fmt, arg...) \
@@ -2810,6 +2814,30 @@ static int pmu_init_powergating(struct gk20a *g)
 	return 0;
 }
 
+static u8 get_perfmon_id(struct pmu_gk20a *pmu)
+{
+	struct gk20a *g = gk20a_from_pmu(pmu);
+	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
+	u8 unit_id;
+
+	switch (ver) {
+	case GK20A_GPUID_GK20A:
+	case GK20A_GPUID_GM20B:
+		unit_id = PMU_UNIT_PERFMON;
+		break;
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	case TEGRA_18x_GPUID:
+		unit_id = PMU_UNIT_PERFMON_T18X;
+		break;
+#endif
+	default:
+		gk20a_err(&g->dev->dev, "no support for %x", ver);
+		BUG();
+	}
+
+	return unit_id;
+}
+
 static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -2878,7 +2906,7 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 
 	/* init PERFMON */
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
-	cmd.hdr.unit_id = PMU_UNIT_PERFMON;
+	cmd.hdr.unit_id = get_perfmon_id(pmu);
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + pv->get_pmu_perfmon_cmd_init_size();
 	cmd.cmd.perfmon.cmd_type = PMU_PERFMON_CMD_ID_INIT;
 	/* buffer to save counter values for pmu perfmon */
@@ -3185,7 +3213,7 @@ static int pmu_perfmon_start_sampling(struct pmu_gk20a *pmu)
 
 	/* PERFMON Start */
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
-	cmd.hdr.unit_id = PMU_UNIT_PERFMON;
+	cmd.hdr.unit_id = get_perfmon_id(pmu);
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + pv->get_pmu_perfmon_cmd_start_size();
 	pv->perfmon_start_set_cmd_type(&cmd.cmd.perfmon,
 		PMU_PERFMON_CMD_ID_START);
@@ -3227,7 +3255,7 @@ static int pmu_perfmon_stop_sampling(struct pmu_gk20a *pmu)
 
 	/* PERFMON Stop */
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
-	cmd.hdr.unit_id = PMU_UNIT_PERFMON;
+	cmd.hdr.unit_id = get_perfmon_id(pmu);
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_perfmon_cmd_stop);
 	cmd.cmd.perfmon.stop.cmd_type = PMU_PERFMON_CMD_ID_STOP;
 
@@ -3278,6 +3306,7 @@ static int pmu_handle_event(struct pmu_gk20a *pmu, struct pmu_msg *msg)
 
 	switch (msg->hdr.unit_id) {
 	case PMU_UNIT_PERFMON:
+	case PMU_UNIT_PERFMON_T18X:
 		err = pmu_handle_perfmon_event(pmu, &msg->msg.perfmon);
 		break;
 	default:

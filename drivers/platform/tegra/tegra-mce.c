@@ -42,6 +42,8 @@ enum {
 	MCE_SMC_READ_VERSIONS,
 	MCE_SMC_ENUM_FEATURES,
 	MCE_SMC_ROC_FLUSH_CACHE,
+	MCE_SMC_ENUM_READ_MCA,
+	MCE_SMC_ENUM_WRITE_MCA,
 };
 
 struct mce_regs {
@@ -288,6 +290,46 @@ int tegra_roc_flush_cache(void)
 	return send_smc(MCE_SMC_ROC_FLUSH_CACHE, &regs);
 }
 EXPORT_SYMBOL(tegra_roc_flush_cache);
+
+/**
+ * Read uncore MCA errors.
+ *
+ * @cmd: MCA command
+ * @data: output data for the command
+ * @error: error from MCA
+ *
+ * Returns 0 if success.
+ */
+int tegra_mce_read_uncore_mca(mca_cmd_t cmd, u64 *data, u32 *error)
+{
+	struct mce_regs regs;
+	regs.args[0] = cmd.data;
+	send_smc(MCE_SMC_ENUM_READ_MCA, &regs);
+	*data = regs.args[1];
+	*error = (u32)regs.args[2];
+	return 0;
+}
+EXPORT_SYMBOL(tegra_mce_read_uncore_mca);
+
+/**
+ * Write uncore MCA errors.
+ *
+ * @cmd: MCA command
+ * @data: input data for the command
+ * @error: error from MCA
+ *
+ * Returns 0 if success.
+ */
+int tegra_mce_write_uncore_mca(mca_cmd_t cmd, u64 data, u32 *error)
+{
+	struct mce_regs regs;
+	regs.args[0] = cmd.data;
+	regs.args[1] = data;
+	send_smc(MCE_SMC_ENUM_WRITE_MCA, &regs);
+	*error = (u32)regs.args[2];
+	return 0;
+}
+EXPORT_SYMBOL(tegra_mce_write_uncore_mca);
 
 #ifdef CONFIG_DEBUG_FS
 

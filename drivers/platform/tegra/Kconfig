@@ -25,3 +25,10 @@ config TEGRA_AON
 	depends on ARCH_TEGRA_18x_SOC
 	select TEGRA_IVC
 	select TEGRA_HSP
+
+config TEGRA_ARI_MCA
+	tristate "Tegra Abstract Request Interface (ARI) Machine Check"
+	select SERROR_HANDLER
+	help
+	  The Tegra Abstract Request Interface (ARI) Machine Check handler. This
+	  handles the Machine Check registers that are accessible via ARI.

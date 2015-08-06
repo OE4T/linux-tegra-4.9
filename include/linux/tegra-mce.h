@@ -86,6 +86,20 @@ enum {
 	TEGRA_MCE_FEATURE_CCP3,
 };
 
+/* MCA support */
+typedef union {
+	struct {
+		u8 cmd;
+		u8 idx;
+		u8 subidx;
+	};
+	struct {
+		u32 low;
+		u32 high;
+	};
+	u64 data;
+} mca_cmd_t;
+
 int tegra_mce_enter_cstate(u32 state, u32 wake_time);
 int tegra_mce_update_cstate_info(u32 cluster, u32 ccplex,
 	u32 system, u8 force, u32 wake_mask, bool valid);
@@ -99,5 +113,7 @@ int tegra_mce_echo_data(u32 data, int *matched);
 int tegra_mce_read_versions(u32 *major, u32 *minor);
 int tegra_mce_enum_features(u64 *features);
 int tegra_roc_flush_cache(void);
+int tegra_mce_read_uncore_mca(mca_cmd_t cmd, u64 *data, u32 *error);
+int tegra_mce_write_uncore_mca(mca_cmd_t cmd, u64 data, u32 *error);
 
 #endif

@@ -370,6 +370,7 @@ static bool tegra_available_pwm_bl_ops_register(struct device *dev)
 	} else if (of_device_is_compatible(np_bl, "o,720-1280-6-0-bl")) {
 		dev_set_drvdata(dev, dsi_o_720p_6_0_ops.pwm_bl_ops);
 	} else if (of_device_is_compatible(np_bl, "dsi,1080p-bl")) {
+	} else if (of_device_is_compatible(np_bl, "dsi,25x16-bl")) {
 	} else {
 		pr_info("invalid compatible for backlight node\n");
 		goto end;
@@ -607,6 +608,7 @@ static struct device_node *available_internal_panel_select(
 		tegra_panel_register_ops(dc_out,
 			&dsi_o_720p_6_0_ops);
 	} else if (of_device_is_compatible(np_panel, "dsi,1080p")) {
+	} else if (of_device_is_compatible(np_panel, "dsi,25x16")) {
 	} else {
 		pr_info("invalid panel compatible\n");
 		of_node_put(np_panel);

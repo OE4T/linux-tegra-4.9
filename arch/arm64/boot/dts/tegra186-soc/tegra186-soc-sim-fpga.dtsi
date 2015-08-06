@@ -76,63 +76,63 @@
 			status = "okay";
 		};
 
-		nvcsi {
+		nvcsi@150c0000 {
 			status = "okay";
 		};
 
-		vi {
+		vi@15700000 {
 			status = "okay";
 		};
 
-		isp@54600000 {
+		isp@15600000 {
 			status = "okay";
 		};
 
-		vii2c {
+		vii2c@156c0000 {
 			status = "okay";
 		};
 
-		dsi {
+		dsi@15300000 {
 			status = "okay";
 		};
 
-		vic {
+		vic@15340000 {
 			status = "okay";
 		};
 
-		nvenc {
+		nvenc@154c0000 {
 			status = "okay";
 		};
 
-		nvdec {
+		nvdec@15480000 {
 			status = "okay";
 		};
 
-		nvjpg {
+		nvjpg@15380000 {
 			status = "okay";
 		};
 
-		tsec {
+		tsec@15500000 {
 			status = "okay";
 		};
 
-		tsecb {
+		tsecb@15100000 {
 			status = "okay";
 		};
 
-		se1 {
+		se@15810000 {
 			status = "okay";
 		};
 
-		se2 {
+		se@15820000 {
 			status = "okay";
 		};
 
-		se3 {
+		se@15830000 {
 			status = "okay";
 		};
 
-		se4 {
+		se@15840000 {
 			status = "okay";
 		};
 	};

@@ -106,63 +106,63 @@
 	};
 
 	host1x: host1x {
-		dpaux {
+		dpaux@155c0000 {
 			status = "disabled";
 		};
 
-		dpaux1 {
+		dpaux@15040000 {
 			status = "disabled";
 		};
 
-		dsi {
+		dsi@15300000 {
 			status = "disabled";
 		};
 
-		isp@54600000 {
+		isp@15600000 {
 			status = "disabled";
 		};
 
-		nvcsi {
+		nvcsi@150c0000 {
 			status = "disabled";
 		};
 
-		nvdec {
+		nvdec@15480000 {
 			status = "disabled";
 		};
 
-		nvdisplay@0x54200000 {
+		nvdisplay@15200000 {
 			status = "disabled";
 		};
 
-		nvdisplay@0x54210000 {
+		nvdisplay@15210000 {
 			status = "disabled";
 		};
 
-		nvdisplay@0x54220000 {
+		nvdisplay@15220000 {
 			status = "disabled";
 		};
 
-		nvenc {
+		nvenc@154c0000 {
 			status = "disabled";
 		};
 
-		nvjpg {
+		nvjpg@15380000 {
 			status = "disabled";
 		};
 
-		sor {
+		sor@15540000 {
 			status = "disabled";
 		};
 
-		sor1 {
+		sor1@15580000 {
 			status = "disabled";
 		};
 
-		vi {
+		vi@15700000 {
 			status = "disabled";
 		};
 
-		vic {
+		vic@15340000 {
 			status = "disabled";
 		};
 	};

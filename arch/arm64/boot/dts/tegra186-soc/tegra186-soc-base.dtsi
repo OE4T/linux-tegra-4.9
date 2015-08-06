@@ -208,22 +208,22 @@
 
 		mmu-masters = <&{/gp10b}		TEGRA_SWGROUP_GPUB>,
 			      <&host1x			TEGRA_SWGROUP_HC>,
-			      <&{/host1x/nvcsi}		TEGRA_SWGROUP_NVCSI>,
-			      <&{/host1x/vic}		TEGRA_SWGROUP_VIC>,
-			      <&{/host1x/vi}		TEGRA_SWGROUP_VI>,
-			      <&{/host1x/isp@54600000}	TEGRA_SWGROUP_ISP>,
-			      <&{/host1x/nvdec}		TEGRA_SWGROUP_NVDEC>,
-			      <&{/host1x/nvenc}		TEGRA_SWGROUP_NVENC>,
-			      <&{/host1x/nvjpg}		TEGRA_SWGROUP_NVJPG>,
-			      <&{/host1x/nvdisplay@0x54200000}	TEGRA_SWGROUP_NVDISPLAY>,
-			      <&{/host1x/nvdisplay@0x54210000}	TEGRA_SWGROUP_NVDISPLAY>,
-			      <&{/host1x/nvdisplay@0x54220000}	TEGRA_SWGROUP_NVDISPLAY>,
-			      <&{/host1x/tsec}		TEGRA_SWGROUP_TSEC>,
-			      <&{/host1x/tsecb}		TEGRA_SWGROUP_TSECB>,
-			      <&{/host1x/se1}		TEGRA_SWGROUP_SE>,
-			      <&{/host1x/se2}		TEGRA_SWGROUP_SE1>,
-			      <&{/host1x/se3}		TEGRA_SWGROUP_SE2>,
-			      <&{/host1x/se4}		TEGRA_SWGROUP_SE3>,
+			      <&{/host1x/nvcsi@150c0000}	TEGRA_SWGROUP_NVCSI>,
+			      <&{/host1x/vic@15340000}		TEGRA_SWGROUP_VIC>,
+			      <&{/host1x/vi@15700000}		TEGRA_SWGROUP_VI>,
+			      <&{/host1x/isp@15600000}		TEGRA_SWGROUP_ISP>,
+			      <&{/host1x/nvdec@15480000}	TEGRA_SWGROUP_NVDEC>,
+			      <&{/host1x/nvenc@154c0000}	TEGRA_SWGROUP_NVENC>,
+			      <&{/host1x/nvjpg@15380000}		TEGRA_SWGROUP_NVJPG>,
+			      <&{/host1x/nvdisplay@15200000}	TEGRA_SWGROUP_NVDISPLAY>,
+			      <&{/host1x/nvdisplay@15210000}	TEGRA_SWGROUP_NVDISPLAY>,
+			      <&{/host1x/nvdisplay@15220000}	TEGRA_SWGROUP_NVDISPLAY>,
+			      <&{/host1x/tsec@15500000}		TEGRA_SWGROUP_TSEC>,
+			      <&{/host1x/tsecb@15100000}	TEGRA_SWGROUP_TSECB>,
+			      <&{/host1x/se@15810000}		TEGRA_SWGROUP_SE>,
+			      <&{/host1x/se@15820000}		TEGRA_SWGROUP_SE1>,
+			      <&{/host1x/se@15830000}		TEGRA_SWGROUP_SE2>,
+			      <&{/host1x/se@15840000}		TEGRA_SWGROUP_SE3>,
 			      <&{/sdhci@3460000}	TEGRA_SWGROUP_SDMMC4A>,
 			      <&{/sdhci@3440000}	TEGRA_SWGROUP_SDMMC3A>,
 			      <&{/sdhci@3420000}	TEGRA_SWGROUP_SDMMC2A>,
@@ -469,7 +469,7 @@
 			status = "disabled";
 		};
 
-		nvcsi {
+		nvcsi@150c0000 {
 			compatible = "nvidia,tegra186-nvcsi";
 			power-domains = <&nvcsi_pd>;
 			reg = <0x0 0x150c0000 0x0 0x00040000>;
@@ -481,7 +481,7 @@
 			status = "disabled";
 		};
 
-		vi {
+		vi@15700000 {
 			compatible = "nvidia,tegra186-vi";
 			power-domains = <&ve_pd>;
                         reg = <0x0 0x15700000 0x0 0x00100000>;
@@ -496,7 +496,7 @@
 			status = "disabled";
 		};
 
-		isp@54600000 {
+		isp@15600000 {
 			compatible = "nvidia,tegra186-isp";
 			power-domains = <&ve_pd>;
                         reg = <0x0 0x15600000 0x0 0x00040000>;
@@ -508,13 +508,13 @@
 			status = "disabled";
 		};
 
-		vii2c {
+		vii2c@156c0000 {
 			compatible = "nvidia,tegra186-vii2c";
 			reg = <0x0 0x156c0000 0x0 0x00040000>;
 			status = "disabled";
 		};
 
-		nvdisplay@0x54200000 {
+		nvdisplay@15200000 {
 			compatible = "nvidia,tegra186-dc";
 			power-domains = <&mc_clk_pd>;
 			reg = <0x0 0x15200000 0x0 0x10000>;
@@ -534,7 +534,7 @@
 				      "emc", "emc_latency";
 		};
 
-		nvdisplay@0x54210000 {
+		nvdisplay@15210000 {
 			compatible = "nvidia,tegra186-dc";
 			power-domains = <&mc_clk_pd>;
                         reg = <0x0 0x15210000 0x0 0x10000>;
@@ -554,7 +554,7 @@
 				      "emc", "emc_latency";
 		};
 
-		nvdisplay@0x54220000 {
+		nvdisplay@15220000 {
 			compatible = "nvidia,tegra186-dc";
 			power-domains = <&mc_clk_pd>;
                         reg = <0x0 0x15220000 0x0 0x10000>;
@@ -574,7 +574,7 @@
 				      "emc", "emc_latency";
 		};
 
-		dsi {
+		dsi@15300000 {
 			compatible = "nvidia,tegra186-dsi";
                         reg = <0x0 0x15300000 0x0 0x00040000
                                0x0 0x15400000 0x0 0x00040000>;
@@ -583,7 +583,7 @@
 			status = "disabled";
 		};
 
-		vic {
+		vic@15340000 {
 			compatible = "nvidia,tegra186-vic";
 			power-domains = <&vic03_pd>;
 			reg = <0x0 0x15340000 0x0 0x00040000>;
@@ -597,7 +597,7 @@
 			status = "disabled";
 		};
 
-		nvenc {
+		nvenc@154c0000 {
 			compatible = "nvidia,tegra186-nvenc";
 			power-domains = <&msenc_pd>;
 			reg = <0x0 0x154c0000 0x0 0x00040000>;
@@ -609,7 +609,7 @@
 			status = "disabled";
 		};
 
-		nvdec {
+		nvdec@15480000 {
 			compatible = "nvidia,tegra186-nvdec";
 			power-domains = <&nvdec_pd>;
 			reg = <0x0 0x15480000 0x0 0x00040000>;
@@ -621,7 +621,7 @@
 			status = "disabled";
 		};
 
-		nvjpg {
+		nvjpg@15380000 {
 			compatible = "nvidia,tegra186-nvjpg";
 			power-domains = <&nvjpg_pd>;
 			reg = <0x0 0x15380000 0x0 0x00040000>;
@@ -633,7 +633,7 @@
 			status = "disabled";
 		};
 
-		tsec {
+		tsec@15500000 {
 			compatible = "nvidia,tegra186-tsec";
 			power-domains = <&tsec_pd>;
 			reg = <0x0 0x15500000 0x0 0x00040000>;
@@ -645,7 +645,7 @@
 			status = "disabled";
 		};
 
-		tsecb {
+		tsecb@15100000 {
 			compatible = "nvidia,tegra186-tsec";
 			power-domains = <&tsec_pd>;
 			reg = <0x0 0x15100000 0x0 0x00040000>;
@@ -657,7 +657,7 @@
 			status = "disabled";
 		};
 
-		sor {
+		sor@15540000 {
 			compatible = "nvidia,tegra186-sor";
 			reg = <0x0 0x15540000 0x0 0x00040000>;
 			status = "disabled";
@@ -667,7 +667,7 @@
 			clock-names = "clk32k_in", "sor0", "sor_safe";
 		};
 
-		sor1 {
+		sor1@15580000 {
 			compatible = "nvidia,tegra186-sor1";
 			reg = <0x0 0x15580000 0x0 0x00040000>;
 			interrupts = <0 158 0x4>; /* INT_SOR_1 */
@@ -678,7 +678,7 @@
 			clock-names = "clk32k_in", "sor1", "sor_safe";
 		};
 
-		dpaux {
+		dpaux@155c0000 {
 			compatible = "nvidia,tegra186-dpaux";
 			reg = <0x0 0x155c0000 0x0 0x00040000>;
 			interrupts = <0 159 0x4>; /* INT_DPAUX */
@@ -689,7 +689,7 @@
 			clock-names = "clk32k_in", "dpaux", "plldp";
 		};
 
-		dpaux1 {
+		dpaux@15040000 {
 			compatible = "nvidia,tegra186-dpaux1";
 			reg = <0x0 0x15040000 0x0 0x00040000>;
 			interrupts = <0 160 0x4>; /* INT_DPAUX_1 */
@@ -701,7 +701,7 @@
 
 		};
 
-		se1 {
+		se@15810000 {
 			compatible = "nvidia,tegra186-se-nvhost";
 			power-domains = <&mc_clk_pd>;
 			reg = <0x0 0x15810000 0x0 0x10000>;
@@ -714,7 +714,7 @@
 			status = "disabled";
 		};
 
-		se2 {
+		se@15820000 {
 			compatible = "nvidia,tegra186-se-nvhost";
 			power-domains = <&mc_clk_pd>;
 			reg = <0x0 0x15820000 0x0 0x10000>;
@@ -727,7 +727,7 @@
 			status = "disabled";
 		};
 
-		se3 {
+		se@15830000 {
 			compatible = "nvidia,tegra186-se-nvhost";
 			power-domains = <&mc_clk_pd>;
 			reg = <0x0 0x15830000 0x0 0x10000>;
@@ -740,7 +740,7 @@
 			status = "disabled";
 		};
 
-		se4 {
+		se@15840000 {
 			compatible = "nvidia,tegra186-se-nvhost";
 			power-domains = <&mc_clk_pd>;
 			reg = <0x0 0x15840000 0x0 0x10000>;

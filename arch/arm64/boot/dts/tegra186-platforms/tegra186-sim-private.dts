@@ -546,80 +546,80 @@
 		clocks = <&clk32k_in>, <&clk32k_in>;
 		clock-names = "host1x", "actmon";
 
-		nvcsi {
+		nvcsi@150c0000 {
 			clocks = <&clk32k_in>;
 			clock-names = "nvcsi";
 		};
 
-		vi {
+		vi@15700000 {
 
 			clocks = <&clk32k_in>, <&clk32k_in>;
 			clock-names = "vi", "emc";
 		};
 
-		isp@54600000 {
+		isp@15600000 {
 			clocks = <&clk32k_in>;
 			clock-names = "isp";
 		};
 
-		dsi {
+		dsi@15300000 {
 			clocks = <&clk32k_in>;
 			clock-names = "clk32k_in";
 		};
 
-		vic {
+		vic@15340000 {
 			clocks = <&clk32k_in>, <&clk32k_in>,
 				 <&clk32k_in>, <&clk32k_in>;
 			clock-names = "vic", "emc", "vic_floor", "emc_shared";
 		};
 
-		nvenc {
+		nvenc@154c0000 {
 			clocks = <&clk32k_in>, <&clk32k_in>;
 			clock-names = "nvenc", "emc";
 		};
 
-		nvdec {
+		nvdec@15480000 {
 			clocks = <&clk32k_in>, <&clk32k_in>;
 			clock-names = "nvdec", "emc";
 		};
 
-		nvjpg {
+		nvjpg@15380000 {
 			clocks = <&clk32k_in>, <&clk32k_in>;
 			clock-names = "nvjpg", "emc";
 		};
 
-		tsec {
+		tsec@15500000 {
 			clocks = <&clk32k_in>, <&clk32k_in>;
 			clock-names = "tsec", "emc";
 		};
 
-		tsecb {
+		tsecb@15100000 {
 			clocks = <&clk32k_in>, <&clk32k_in>;
 			clock-names = "tsecb", "emc";
 		};
 
-		se1 {
+		se@15810000 {
 			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
 			clock-names = "se", "emc", "entropy";
 		};
 
-		se2 {
+		se@15820000 {
 			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
 			clock-names = "se", "emc", "entropy";
 		};
 
-		se3 {
+		se@15830000 {
 			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
 			clock-names = "se", "emc", "entropy";
 		};
 
-		se4 {
+		se@15840000 {
 			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
 			clock-names = "se", "emc", "entropy";
 		};
 
 
-		nvdisplay@0x54200000 {
+		nvdisplay@15200000 {
 			status = "okay";
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
@@ -627,7 +627,7 @@
 			nvidia,dc-ctrlnum = <0>;
 		};
 
-		nvdisplay@0x54210000 {
+		nvdisplay@15210000 {
 			status = "okay";
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
@@ -635,7 +635,7 @@
 			nvidia,dc-ctrlnum = <1>;
 		};
 
-		nvdisplay@0x54220000 {
+		nvdisplay@15220000 {
 			status = "disabled";
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
@@ -643,19 +643,19 @@
 			nvidia,dc-ctrlnum = <2>;
 		};
 
-		sor {
+		sor@15540000 {
 			status = "okay";
 		};
 
-		sor1 {
+		sor1@15580000 {
 			status = "okay";
 		};
 
-		dpaux {
+		dpaux@155c0000 {
 			status = "okay";
 		};
 
-		dpaux1 {
+		dpaux@15040000 {
 			status = "okay";
 		};
 	};

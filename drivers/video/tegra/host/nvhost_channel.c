@@ -81,6 +81,30 @@ int nvhost_alloc_channels(struct nvhost_master *host)
 	return 0;
 }
 
+int nvhost_channel_remove_identifier(struct nvhost_device_data *pdata,
+			void *identifier)
+{
+	struct nvhost_master *host = nvhost_get_host(pdata->pdev);
+	struct nvhost_channel *ch = NULL;
+	int index, max_channels;
+
+	mutex_lock(&host->chlist_mutex);
+
+	max_channels = nvhost_channel_nb_channels(host);
+
+	for (index = 0; index < max_channels; index++) {
+		ch = host->chlist[index];
+		if (ch->identifier == identifier) {
+			ch->identifier = NULL;
+			mutex_unlock(&host->chlist_mutex);
+			return 0;
+		}
+	}
+
+	mutex_unlock(&host->chlist_mutex);
+	return 0;
+}
+
 /* Unmap channel from device and free all resources, deinit device */
 static void nvhost_channel_unmap_locked(struct kref *ref)
 {

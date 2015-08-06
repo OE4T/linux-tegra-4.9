@@ -235,6 +235,7 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	struct nvhost_channel_userctx *priv = filp->private_data;
 	struct nvhost_device_data *pdata = platform_get_drvdata(priv->pdev);
 	struct nvhost_master *host = nvhost_get_host(pdata->pdev);
+	void *identifier;
 	int i = 0;
 
 	trace_nvhost_channel_release(dev_name(&priv->pdev->dev));
@@ -251,6 +252,14 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 		dma_buf_put(priv->error_notifier_ref);
 
 	nvhost_vm_put(priv->vm);
+
+	/* Clear the identifier */
+	if (pdata->resource_policy == RESOURCE_PER_DEVICE &&
+	    !pdata->exclusive)
+		identifier = (void *)pdata;
+	else
+		identifier = (void *)priv;
+	nvhost_channel_remove_identifier(pdata, identifier);
 
 	/* If the device is in exclusive mode, drop the reference */
 	if (pdata->exclusive)

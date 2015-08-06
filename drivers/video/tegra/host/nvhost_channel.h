@@ -71,6 +71,8 @@ struct nvhost_channel {
 #define channel_op(ch)		(ch->ops)
 
 int nvhost_alloc_channels(struct nvhost_master *host);
+int nvhost_channel_remove_identifier(struct nvhost_device_data *pdata,
+			void *identifier);
 int nvhost_channel_unmap(struct nvhost_channel *ch);
 int nvhost_channel_release(struct nvhost_device_data *pdata);
 int nvhost_channel_list_free(struct nvhost_master *host);

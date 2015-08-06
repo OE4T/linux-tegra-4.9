@@ -2315,8 +2315,6 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 	tegra_dc_sor_enable_dp(dp->sor);
 
-	tegra_dp_set_enhanced_framing(dp, cfg->enhanced_framing);
-
 	if (cfg->alt_scramber_reset_cap)
 		tegra_dc_dp_set_assr(dp, true);
 	else
@@ -2330,7 +2328,16 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 				NV_SOR_DP_CONFIG_IDLE_BEFORE_ATTACH_ENABLE);
 
 	tegra_dp_set_link_bandwidth(dp, cfg->link_bw);
+
+	/*
+	 * enhanced framing enable field shares DPCD offset
+	 * with lane count set field. Make sure lane count is set
+	 * before enhanced framing enable. CTS waits on first
+	 * write to this offset to check for lane count set.
+	 */
 	tegra_dp_set_lane_count(dp, cfg->lane_count);
+	tegra_dp_set_enhanced_framing(dp, cfg->enhanced_framing);
+
 	tegra_dp_link_cal(dp);
 	tegra_dp_tu_config(dp, cfg);
 

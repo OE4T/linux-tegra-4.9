@@ -282,6 +282,9 @@ static void set_lt_config(struct tegra_dp_lt_data *lt_data)
 	u32 *vs = lt_data->drive_current;
 	u32 *pe = lt_data->pre_emphasis;
 	u32 *pc = lt_data->post_cursor2;
+	u32 aux_stat = 0;
+	u8 training_lanex_set[4] = {0, 0, 0, 0};
+	u32 training_lanex_set_size = sizeof(training_lanex_set);
 
 	/* support for 1 lane */
 	u32 loopcnt = (n_lanes == 1) ? 1 : n_lanes >> 1;
@@ -361,9 +364,12 @@ static void set_lt_config(struct tegra_dp_lt_data *lt_data)
 			(max_pe_flag ?
 			NV_DPCD_TRAINING_LANEX_SET_PE_MAX_REACHED_T :
 			NV_DPCD_TRAINING_LANEX_SET_PE_MAX_REACHED_F);
-		tegra_dc_dp_dpcd_write(dp,
-			(NV_DPCD_TRAINING_LANE0_SET + cnt), val);
+
+		training_lanex_set[cnt] = val;
 	}
+	tegra_dc_dpaux_write(dp, DPAUX_DP_AUXCTL_CMD_AUXWR,
+			NV_DPCD_TRAINING_LANE0_SET, training_lanex_set,
+			&training_lanex_set_size, &aux_stat);
 
 	/* apply postcursor2 levels to panel for each lane */
 	if (pc_supported) {
@@ -412,9 +418,9 @@ static int do_fast_lt_handshake(struct tegra_dp_lt_data *lt_data)
 
 	BUG_ON(!lt_data->lt_config_valid);
 
-	set_lt_config(lt_data);
-
 	set_lt_tpg(lt_data, TRAINING_PATTERN_1);
+
+	set_lt_config(lt_data);
 	wait_aux_training(lt_data, true);
 	cr_done = get_clock_recovery_status(lt_data);
 	if (!cr_done)
@@ -466,8 +472,12 @@ static void lt_data_reset(struct tegra_dp_lt_data *lt_data)
 
 	/* reset LT data on controller and panel only if hpd is asserted */
 	if (tegra_dc_hpd(dp->dc)) {
+		/*
+		 * Training pattern is disabled here. Do not HW reset
+		 * lt config i.e. vs, pe, pc2. CTS mandates modifying these
+		 * only when training pattern is enabled.
+		 */
 		tegra_dp_update_link_config(dp);
-		set_lt_config(lt_data);
 	}
 }
 

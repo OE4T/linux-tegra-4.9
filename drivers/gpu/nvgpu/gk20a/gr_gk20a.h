@@ -324,6 +324,10 @@ struct gk20a_ctxsw_ucode_segments {
 /* sums over the ucode files as sequences of u32, computed to the
  * boot_signature field in the structure above */
 
+/* T18X FECS remains same as T21X,
+ * so FALCON_UCODE_SIG_T21X_FECS_WITH_RESERVED used
+ * for T18X*/
+#define FALCON_UCODE_SIG_T18X_GPCCS_WITH_RESERVED	0x68edab34
 #define FALCON_UCODE_SIG_T21X_FECS_WITH_RESERVED	0x9125ab5c
 #define FALCON_UCODE_SIG_T12X_FECS_WITH_RESERVED	0x8a621f78
 #define FALCON_UCODE_SIG_T12X_FECS_WITHOUT_RESERVED	0x67e5344b

@@ -35,6 +35,12 @@
 		nvidia,csr_clock_speed = <0x19>; /* CSR clock speed 25MHz */
 		/* bootloader should update MAC address */
 		nvidia,local-mac-address = <0x00 0x00 0x00 0x00 0x00 0x00>;
+		clocks = <&tegra_car TEGRA186_CLK_EQOS_AXI>,
+			<&tegra_car TEGRA186_CLK_EQOS_RX>,
+			<&tegra_car TEGRA186_CLK_EQOS_PTP_REF>,
+			<&tegra_car TEGRA186_CLK_EQOS_TX>,
+			<&tegra_car TEGRA186_CLK_EQOS_RX_INPUT>;
+		clock-names = "eqos_axi", "eqos_rx", "eqos_ptp_ref", "eqos_tx", "eqos_rx_input";
 		status = "disabled";
         };
 

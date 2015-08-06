@@ -22,7 +22,7 @@
 
 / {
 	host1x {
-		sor {
+		sor@15540000 {
 			panel-nvidia-sim {
 				compatible = "nvidia,sim-panel";
 				nvidia,tx-pu-disable = <1>;
@@ -115,7 +115,7 @@
 			};
 		};
 
-		sor1 {
+		sor1@15580000 {
 			panel-nvidia-sim {
 				compatible = "nvidia,sim-panel";
 				nvidia,tx-pu-disable = <1>;
@@ -186,7 +186,7 @@
 				};
 			};
 		};
-		dsi {
+		dsi@15300000 {
                         panel-s-wqxga-10-1 {
                                 status = "okay";
                                 compatible = "s,wqxga-10-1";

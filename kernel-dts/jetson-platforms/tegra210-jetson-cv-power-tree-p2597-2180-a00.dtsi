@@ -92,6 +92,7 @@
 			regulator-name = "en-vdd-disp-3v3";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
+			regulator-boot-on;
 			gpio = <&tca9539_74 3 1>;
 			enable-active-high;
 		};
@@ -113,6 +114,7 @@
 			regulator-name = "en-vdd-disp-1v8";
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
+			regulator-boot-on;
 			gpio = <&tca9539_74 9 1>;
 			enable-active-high;
 		};

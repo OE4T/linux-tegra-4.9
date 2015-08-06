@@ -257,45 +257,6 @@ calibration_failed:
 	return ret;
 }
 
-static void eqos_clock_check(void)
-{
-#define NV_ADDRESS_MAP_EQOS_CAR_BASE 0x58A0000
-	void __iomem *base = ioremap(NV_ADDRESS_MAP_EQOS_CAR_BASE, 0x21000);
-
-	printk("CLK_RST_CONTROLLER_RST_DEV_EQOS_0: 0x%x",
-		__raw_readl(base));
-	printk("CLK_RST_CONTROLLER_RST_DEV_EQOS_SET_0: 0x%x",
-		__raw_readl(base + 0x4));
-	printk("CLK_RST_CONTROLLER_RST_DEV_EQOS_CLR_0: 0x%x",
-		__raw_readl(base + 0x8));
-
-	printk("CLK_RST_CONTROLLER_CLK_OUT_ENB_EQOS_0: 0x%x",
-		__raw_readl(base + 0x1000));
-	printk("CLK_RST_CONTROLLER_CLK_OUT_ENB_EQOS_SET_0: 0x%x",
-		__raw_readl(base + 0x1004));
-	printk("CLK_RST_CONTROLLER_CLK_OUT_ENB_EQOS_CLR_0: 0x%x",
-		__raw_readl(base + 0x1008));
-
-	printk("CLK_RST_CONTROLLER_BOND_OUT_IP_EQOS_0: 0x%x",
-		__raw_readl(base + 0x2000));
-	printk("CLK_RST_CONTROLLER_CLK_SOURCE_EQOS_AXI_CLK_0: 0x%x",
-		__raw_readl(base + 0x3000));
-	printk("CLK_RST_CONTROLLER_CLK_SOURCE_EQOS_PTP_REF_CLK_0: 0x%x",
-		__raw_readl(base + 0x3004));
-	printk("CLK_RST_CONTROLLER_CLK_SOURCE_EQOS_TX_CLK_0: 0x%x",
-		__raw_readl(base + 0x3008));
-
-	printk("CLK_RST_CONTROLLER_CLK_OUT_ENB_EQOS_RX_0: 0x%x",
-		__raw_readl(base + 0x10000));
-	printk("CLK_RST_CONTROLLER_CLK_OUT_ENB_EQOS_RX_SET_0: 0x%x",
-		__raw_readl(base + 0x10004));
-	printk("CLK_RST_CONTROLLER_CLK_OUT_ENB_EQOS_RX_CLR_0: 0x%x",
-		__raw_readl(base + 0x10008));
-
-	printk("CLK_RST_CONTROLLER_BOND_OUT_IP_EQOS_RX_0: 0x%x",
-		__raw_readl(base + 0x11000));
-	iounmap(base);
-}
 static void eqos_clock_deinit(struct DWC_ETH_QOS_prv_data *pdata)
 {
 	struct platform_device *pdev = pdata->pdev;
@@ -304,13 +265,13 @@ static void eqos_clock_deinit(struct DWC_ETH_QOS_prv_data *pdata)
 	clk_disable(pdata->ptp_ref_clk);
 	clk_disable(pdata->rx_clk);
 	clk_disable(pdata->axi_clk);
-	clk_disable(pdata->rx_input_clk);
+	clk_disable(pdata->axi_cbb_clk);
 
 	devm_clk_put(&pdev->dev, pdata->tx_clk);
 	devm_clk_put(&pdev->dev, pdata->ptp_ref_clk);
 	devm_clk_put(&pdev->dev, pdata->rx_clk);
 	devm_clk_put(&pdev->dev, pdata->axi_clk);
-	devm_clk_put(&pdev->dev, pdata->rx_input_clk);
+	devm_clk_put(&pdev->dev, pdata->axi_cbb_clk);
 }
 
 static int eqos_clock_init(struct DWC_ETH_QOS_prv_data *pdata)
@@ -320,10 +281,10 @@ static int eqos_clock_init(struct DWC_ETH_QOS_prv_data *pdata)
 	u32 ptp_ref_clock_speed;
 	int ret;
 
-	pdata->rx_input_clk = devm_clk_get(&pdev->dev, "eqos_rx_input");
-	if (IS_ERR(pdata->rx_input_clk)) {
-		ret = PTR_ERR(pdata->rx_input_clk);
-		dev_err(&pdev->dev, "can't get eqos_rx_input clk (%d)\n", ret);
+	pdata->axi_cbb_clk = devm_clk_get(&pdev->dev, "axi_cbb");
+	if (IS_ERR(pdata->axi_cbb_clk)) {
+		ret = PTR_ERR(pdata->axi_cbb_clk);
+		dev_err(&pdev->dev, "can't get axi_cbb clk (%d)\n", ret);
 		return ret;
 	}
 	pdata->axi_clk = devm_clk_get(&pdev->dev, "eqos_axi");
@@ -351,9 +312,9 @@ static int eqos_clock_init(struct DWC_ETH_QOS_prv_data *pdata)
 		goto tx_get_fail;
 	}
 
-	ret = clk_enable(pdata->rx_input_clk);
+	ret = clk_enable(pdata->axi_cbb_clk);
 	if (ret < 0)
-		goto rx_input_en_fail;
+		goto axi_cbb_en_fail;
 
 	ret = clk_enable(pdata->axi_clk);
 	if (ret < 0)
@@ -387,9 +348,8 @@ static int eqos_clock_init(struct DWC_ETH_QOS_prv_data *pdata)
 	if (ret < 0)
 		goto tx_en_fail;
 
-	eqos_clock_check();
-	dev_info(&pdev->dev, "rx_input/axi/rx/ptp/tx = %ld/%ld/%ld/%ld/%ld\n",
-		clk_get_rate(pdata->rx_input_clk),
+	dev_info(&pdev->dev, "axi_cbb/axi/rx/ptp/tx = %ld/%ld/%ld/%ld/%ld\n",
+		clk_get_rate(pdata->axi_cbb_clk),
 		clk_get_rate(pdata->axi_clk), clk_get_rate(pdata->rx_clk),
 		clk_get_rate(pdata->ptp_ref_clk), clk_get_rate(pdata->tx_clk));
 
@@ -403,8 +363,8 @@ ptp_ref_en_fail:
 rx_en_fail:
 	clk_disable(pdata->axi_clk);
 axi_en_fail:
-	clk_disable(pdata->rx_input_clk);
-rx_input_en_fail:
+	clk_disable(pdata->axi_cbb_clk);
+axi_cbb_en_fail:
 	devm_clk_put(&pdev->dev, pdata->tx_clk);
 tx_get_fail:
 	devm_clk_put(&pdev->dev, pdata->ptp_ref_clk);
@@ -413,7 +373,7 @@ ptp_ref_get_fail:
 rx_get_fail:
 	devm_clk_put(&pdev->dev, pdata->axi_clk);
 axi_get_fail:
-	devm_clk_put(&pdev->dev, pdata->rx_input_clk);
+	devm_clk_put(&pdev->dev, pdata->axi_cbb_clk);
 	return ret;
 }
 

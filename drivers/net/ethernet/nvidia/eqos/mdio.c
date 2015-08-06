@@ -405,13 +405,13 @@ static void DWC_ETH_QOS_adjust_link(struct net_device *dev)
 			new_state = 1;
 			switch (phydev->speed) {
 			case SPEED_1000:
-				hw_if->set_gmii_speed();
+				hw_if->set_gmii_speed(pdata);
 				break;
 			case SPEED_100:
-				hw_if->set_mii_speed_100();
+				hw_if->set_mii_speed_100(pdata);
 				break;
 			case SPEED_10:
-				hw_if->set_mii_speed_10();
+				hw_if->set_mii_speed_10(pdata);
 				break;
 			}
 			pdata->speed = phydev->speed;

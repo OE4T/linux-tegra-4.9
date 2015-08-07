@@ -2088,11 +2088,11 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 				dp->link_cfg.lane_count);
 		tegra_dc_sor_attach(dp->sor);
 	}
-
+	#if 0
 	if (tegra_dc_is_ext_dp_panel(dc) &&
 		dc->out->type != TEGRA_DC_OUT_FAKE_DP)
 		tegra_dphdcp_set_plug(dp->dphdcp, true);
-
+	#endif
 	dc->connected = true;
 	tegra_dc_io_end(dc);
 
@@ -2144,11 +2144,11 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 	dp->enabled = false;
 
 	tegra_dc_io_start(dc);
-
+	#if 0
 	if (tegra_dc_is_ext_dp_panel(dc) &&
 		dc->out->type != TEGRA_DC_OUT_FAKE_DP)
 		tegra_dphdcp_set_plug(dp->dphdcp, false);
-
+	#endif
 	cancel_delayed_work_sync(&dp->irq_evt_dwork);
 
 	if (dc->out->type != TEGRA_DC_OUT_FAKE_DP) {

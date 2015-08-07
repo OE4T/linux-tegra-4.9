@@ -70,15 +70,16 @@ struct tegra_dp_lt_data {
 	u32 ce_retry;
 };
 
+/* CTS approved list. Do not alter. */
 static const u8 tegra_dp_link_config_priority[][2] = {
 	/* link bandwidth, lane count */
 	{SOR_LINK_SPEED_G5_4, 4}, /* 21.6Gbps */
 	{SOR_LINK_SPEED_G2_7, 4}, /* 10.8Gbps */
-	{SOR_LINK_SPEED_G5_4, 2}, /* 10.8Gbps */
 	{SOR_LINK_SPEED_G1_62, 4}, /* 6.48Gbps */
-	{SOR_LINK_SPEED_G5_4, 1}, /* 5.4Gbps */
+	{SOR_LINK_SPEED_G5_4, 2}, /* 10.8Gbps */
 	{SOR_LINK_SPEED_G2_7, 2}, /* 5.4Gbps */
 	{SOR_LINK_SPEED_G1_62, 2}, /* 3.24Gbps */
+	{SOR_LINK_SPEED_G5_4, 1}, /* 5.4Gbps */
 	{SOR_LINK_SPEED_G2_7, 1}, /* 2.7Gbps */
 	{SOR_LINK_SPEED_G1_62, 1}, /* 1.62Gbps */
 };

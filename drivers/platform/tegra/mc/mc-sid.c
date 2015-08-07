@@ -539,18 +539,23 @@ static void __mc_override_sid(int sid, int oid, enum mc_overrides ord)
 		if ((val & SCEW_NS) == 0)
 			pr_info("SECURE for MC_SID_STRAMID_SECURITY_CONFIG_%s(%x) %x\n",
 				name, offs, val);
+
 		/*
 		 * Only valid when kernel runs in secure mode.
 		 * Otherwise, no effect on MC_SID_STRAMID_SECURITY_CONFIG_*.
 		 */
-		val = SCEW_STREAMID_OVERRIDE | SCEW_NS;
+		val = (ord == OVERRIDE) ?
+			(SCEW_STREAMID_OVERRIDE | SCEW_NS) :
+			SCEW_NS;
+
 		writel_relaxed(val, addr);
 
 		addr = mc_sid_base + offs;
 		writel_relaxed(sid, addr);
 	}
 
-	pr_debug("override sid=%d oid=%d at offset=%x\n", sid, oid, offs);
+	pr_debug("override sid=%d oid=%d ord=%d at offset=%x\n",
+		 sid, oid, ord, offs);
 }
 
 void platform_override_streamid(int sid)

@@ -31,6 +31,7 @@
 #include "tegra186-soc/tegra186-soc-pwm.dtsi"
 #include "../../../../include/dt-bindings/soc/nvidia,tegra186-powergate.h"
 #include "tegra186-soc/tegra186-soc-uart.dtsi"
+#include "tegra186-soc/tegra186-soc-eqos.dtsi"
 
 / {
 	compatible = "nvidia,tegra186";
@@ -873,37 +874,6 @@
 		reset-names = "qspi";
 		status = "disabled";
 	};
-
-        ether_qos@2490000 {
-                compatible = "synopsys,dwc_eth_qos";
-                reg = <0x0 0x02490000 0x0 0x10000>;
-		interrupts = 	<0 194 0x4>,	/* common */
-				<0 195 0x4>,	/* power */
-				<0 190 0x4>,	/* rx0 */
-				<0 186 0x4>,	/* tx0 */
-				<0 191 0x4>,	/* rx1 */
-				<0 187 0x4>,	/* tx1 */
-				<0 192 0x4>,	/* rx2 */
-				<0 188 0x4>,	/* tx2 */
-				<0 193 0x4>,	/* rx3 */
-				<0 189 0x4>;	/* tx3 */
-		nvidia,csr_clock_speed = <0x19>; /* CSR clock speed 25MHz */
-		/* bootloader should update MAC address */
-		nvidia,local-mac-address = <0x0 0x0 0x0 0x0 0x0 0x0>;
-		/* rxq_enable_ctrl = <rx0 rx1 rx2 rx3>
-		 * 0x0 = Not enabled, 0x1 = Enabled for AV
-		 * 0x2 = Enabled for Legacy, 0x3 = Reserved
-		 */
-		nvidia,rxq_enable_ctrl = <2 1 1 1>;
-		status = "disabled";
-        };
-
-        ether_qos_virt_test@2490000 {
-		compatible = "synopsys,dwc_eqos_virt_test";
-		reg = <0x0 0x02490000 0x0 0x10000
-			0x0 0x024a0000 0x0 0x10000>;
-		status = "disabled";
-        };
 
 	hsp_top: tegra-hsp@3c00000 {
 		compatible = "nvidia,tegra186-hsp";

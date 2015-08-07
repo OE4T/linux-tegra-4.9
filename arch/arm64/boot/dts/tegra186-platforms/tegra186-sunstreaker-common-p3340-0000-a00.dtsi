@@ -23,6 +23,7 @@
 #include "tegra186-cvm-simple-bus.dtsi"
 #include "panel-s-wuxga-8-0.dtsi"
 #include "tegra186-sunstreaker-p3340-powermon.dtsi"
+#include "tegra186-platforms/tegra186-sunstreaker-eqos.dtsi"
 
 / {
         model = "sunstreaker-3340";

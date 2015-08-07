@@ -230,7 +230,7 @@
 			      <&{/sdhci@3400000}	TEGRA_SWGROUP_SDMMC1A>,
 			      <&{/xhci@3530000}		TEGRA_SWGROUP_XUSB_HOST>,
 			      <&{/xudc@3550000}		TEGRA_SWGROUP_XUSB_DEV>,
-			      <&{/sata-controller}	TEGRA_SWGROUP_SATA2>,
+			      <&{/ahci-sata@3507000}	TEGRA_SWGROUP_SATA2>,
 			      <&{/bpmp}			TEGRA_SWGROUP_BPMP>,
 			      <&{/dma@2600000}		TEGRA_SWGROUP_AXIS>,
 			      <&host1x_ctx0		TEGRA_SWGROUP_HOST1X_CTX0>,
@@ -1053,8 +1053,8 @@
                                         1 0x1000>;
         };
 
-	sata-controller {
-		compatible = "nvidia,tegra186-ahci";
+	ahci-sata@3507000 {
+		compatible = "nvidia,tegra186-ahci-sata";
 		reg = <0x0 0x03507000 0x0 0x00002000>, /* SATA AHCI */
 			<0x0 0x03501000 0x0 0x00006000>, /* SATA Config */
 			<0x0 0x03500000 0x0 0x00001000>, /* SATA IPFS */

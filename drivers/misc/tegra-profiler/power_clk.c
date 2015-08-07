@@ -439,14 +439,16 @@ static void
 read_all_sources_work_func(struct work_struct *work)
 {
 	int cpu_id;
+	struct power_clk_source *s = &power_ctx.cpu;
 
 	for_each_possible_cpu(cpu_id)
-		read_source(&power_ctx.cpu, cpu_id);
+		read_source(s, cpu_id);
 
 	read_source(&power_ctx.gpu, -1);
 	read_source(&power_ctx.emc, -1);
 
 	check_clks();
+	check_source(s);
 }
 
 static DECLARE_WORK(read_all_sources_work, read_all_sources_work_func);

@@ -228,8 +228,8 @@
 			      <&{/sdhci@3440000}	TEGRA_SWGROUP_SDMMC3A>,
 			      <&{/sdhci@3420000}	TEGRA_SWGROUP_SDMMC2A>,
 			      <&{/sdhci@3400000}	TEGRA_SWGROUP_SDMMC1A>,
-			      <&{/xhci@0x03530000}	TEGRA_SWGROUP_XUSB_HOST>,
-			      <&{/xudc@0x03550000}	TEGRA_SWGROUP_XUSB_DEV>,
+			      <&{/xhci@3530000}		TEGRA_SWGROUP_XUSB_HOST>,
+			      <&{/xudc@3550000}		TEGRA_SWGROUP_XUSB_DEV>,
 			      <&{/sata-controller}	TEGRA_SWGROUP_SATA2>,
 			      <&{/bpmp}			TEGRA_SWGROUP_BPMP>,
 			      <&{/dma@2600000}		TEGRA_SWGROUP_AXIS>,
@@ -331,7 +331,7 @@
 		status = "disabled";
         };
 
-	xusb_mbox: mailbox@0x03538000 {
+	xusb_mbox: mailbox@3538000 {
 		compatible = "nvidia,tegra186-xusb-mbox";
 		reg = <0x0 0x03538000 0x0 0x1000>;
 		interrupts = <0 164 0x4>;
@@ -340,7 +340,7 @@
 		status = "disabled";
 	};
 
-	xhci@0x03530000 {
+	xhci@3530000 {
 		compatible = "nvidia,tegra186-xhci";
 		reg = <0x0 0x03530000 0x0 0x8000>,
 			<0x0 0x03538000 0x0 0x1000>,
@@ -352,7 +352,7 @@
 		status = "disabled";
 	};
 
-	xudc@0x03550000 {
+	xudc@3550000 {
 		compatible = "nvidia,tegra186-xudc";
 		reg = <0x0 0x03550000 0x0 0x8000>,
 			<0x0 0x03558000 0x0 0x1000>,
@@ -362,7 +362,7 @@
 		status = "disabled";
 	};
 
-	pinctrl@0x03520000 {
+	pinctrl@3520000 {
 		compatible = "nvidia,tegra186-padctl-uphy";
 		reg = <0x0 0x03520000 0x0 0x1000>,
 			<0x0 0x03540000 0x0 0x1000>,

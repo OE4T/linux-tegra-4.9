@@ -45,11 +45,11 @@
 		status = "okay";
         };
 
-	mailbox@0x03538000 {
+	mailbox@3538000 {
 		status = "okay";
 	};
 
-	xudc@0x03550000 {
+	xudc@3550000 {
 		status = "okay";
 
 		phys = <&sysfpga_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>,
@@ -57,7 +57,7 @@
 		phy-names = "usb3", "usb2";
 	};
 
-	xhci@0x03530000 {
+	xhci@3530000 {
 		status = "okay";
 
 		phys = 	<&sysfpga_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
@@ -67,7 +67,7 @@
 		phy-names = "usb3-1", "utmi-1", "utmi-2";
 	};
 
-	sysfpga_padctl_uphy: pinctrl@0x03520000 {
+	sysfpga_padctl_uphy: pinctrl@3520000 {
 		status = "okay";
 
 		vbus-1-supply = <&battery_reg>;

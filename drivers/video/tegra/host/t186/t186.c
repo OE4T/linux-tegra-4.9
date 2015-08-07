@@ -377,10 +377,16 @@ int nvhost_init_t186_support(struct nvhost_master *host,
 	op->vm = host1x_vm_ops;
 	op->actmon = host1x_actmon_ops;
 
+	/* Disable syncpoint protection by default on all platforms */
+
+#if 0
 	/* WAR to bugs 200094901 and 200082771: enable protection
 	 * only on silicon/emulation */
 
 	if (!tegra_platform_is_linsim()) {
+#else
+	if (false) {
+#endif
 		op->syncpt.reset = t186_syncpt_reset;
 		op->syncpt.mark_used = t186_syncpt_mark_used;
 		op->syncpt.mark_unused = t186_syncpt_mark_unused;

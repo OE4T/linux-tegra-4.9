@@ -327,7 +327,7 @@ int vgpu_pm_finalize_poweron(struct device *dev)
 		goto done;
 	}
 
-	err = gk20a_init_gpu_characteristics(g);
+	err = g->ops.chip_init_gpu_characteristics(g);
 	if (err) {
 		gk20a_err(dev, "failed to init gk20a gpu characteristics");
 		goto done;

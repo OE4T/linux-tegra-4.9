@@ -511,6 +511,8 @@ struct gpu_ops {
 					       void *scatter_buffer_ptr,
 					       size_t scatter_buffer_size);
 	} cde;
+
+	int (*chip_init_gpu_characteristics)(struct gk20a *g);
 };
 
 struct gk20a {

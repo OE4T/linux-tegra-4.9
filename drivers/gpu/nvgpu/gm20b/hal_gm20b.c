@@ -1,7 +1,7 @@
 /*
  * GM20B Graphics
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -139,6 +139,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gm20b_init_cde_ops(gops);
 	gm20b_init_therm_ops(gops);
 	gops->name = "gm20b";
+	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;
 
 	c->twod_class = FERMI_TWOD_A;
 	c->threed_class = MAXWELL_B;

@@ -291,6 +291,8 @@ void gm20b_init_pmu_ops(struct gpu_ops *gops)
 		gops->pmu.load_lsfalcon_ucode = gm20b_load_falcon_ucode;
 	} else {
 		gk20a_init_pmu_ops(gops);
+		gops->pmu.pmu_setup_hw_and_bootstrap =
+			gm20b_init_nspmu_setup_hw1;
 		gops->pmu.load_lsfalcon_ucode = NULL;
 		gops->pmu.init_wpr_region = NULL;
 	}

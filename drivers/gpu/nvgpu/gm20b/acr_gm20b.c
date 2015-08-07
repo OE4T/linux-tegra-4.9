@@ -1213,6 +1213,39 @@ static int bl_bootstrap(struct pmu_gk20a *pmu,
 	return 0;
 }
 
+int gm20b_init_nspmu_setup_hw1(struct gk20a *g)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	int err = 0;
+
+	gk20a_dbg_fn("");
+
+	mutex_lock(&pmu->isr_mutex);
+	pmu_reset(pmu);
+	pmu->isr_enabled = true;
+	mutex_unlock(&pmu->isr_mutex);
+
+	/* setup apertures - virtual */
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_UCODE),
+		pwr_fbif_transcfg_mem_type_virtual_f());
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_VIRT),
+		pwr_fbif_transcfg_mem_type_virtual_f());
+	/* setup apertures - physical */
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_VID),
+		pwr_fbif_transcfg_mem_type_physical_f() |
+		pwr_fbif_transcfg_target_local_fb_f());
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_SYS_COH),
+		pwr_fbif_transcfg_mem_type_physical_f() |
+		pwr_fbif_transcfg_target_coherent_sysmem_f());
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_SYS_NCOH),
+		pwr_fbif_transcfg_mem_type_physical_f() |
+		pwr_fbif_transcfg_target_noncoherent_sysmem_f());
+
+	err = g->ops.pmu.pmu_nsbootstrap(pmu);
+
+	return err;
+}
+
 static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 		struct flcn_bl_dmem_desc *desc, u32 bl_sz)
 {

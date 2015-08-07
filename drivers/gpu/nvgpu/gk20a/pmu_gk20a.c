@@ -2476,7 +2476,7 @@ static void pmu_handle_pg_buf_config_msg(struct gk20a *g, struct pmu_msg *msg,
 static int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
-	int err;
+	int err = 0;
 
 	gk20a_dbg_fn("");
 
@@ -2501,12 +2501,9 @@ static int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 		pwr_fbif_transcfg_mem_type_physical_f() |
 		pwr_fbif_transcfg_target_noncoherent_sysmem_f());
 
-	/* TBD: load pmu ucode */
-	err = pmu_bootstrap(pmu);
-	if (err)
-		return err;
+	err = g->ops.pmu.pmu_nsbootstrap(pmu);
 
-	return 0;
+	return err;
 
 }
 
@@ -2650,6 +2647,7 @@ void gk20a_init_pmu_ops(struct gpu_ops *gops)
 {
 	gops->pmu.prepare_ucode = gk20a_prepare_ucode;
 	gops->pmu.pmu_setup_hw_and_bootstrap = gk20a_init_pmu_setup_hw1;
+	gops->pmu.pmu_nsbootstrap = pmu_bootstrap;
 	gops->pmu.pmu_setup_elpg = NULL;
 	gops->pmu.init_wpr_region = NULL;
 	gops->pmu.load_lsfalcon_ucode = NULL;

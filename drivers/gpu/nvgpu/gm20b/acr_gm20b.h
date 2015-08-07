@@ -407,4 +407,5 @@ int gm20b_pmu_setup_sw(struct gk20a *g);
 int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt);
 int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout_us);
 int clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout);
+int gm20b_init_nspmu_setup_hw1(struct gk20a *g);
 #endif /*__ACR_GM20B_H_*/

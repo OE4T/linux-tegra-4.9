@@ -211,6 +211,15 @@ static int clk_bpmp_get_properties(int clk_num)
 	return  ((int *)reply)[0];
 }
 
+static int clk_bpmp_reset_refcount(void)
+{
+	struct bpmp_clk_req req;
+
+	req.cmd = BPMP_CLK_CMD(MRQ_CLK_RESET_REFCOUNTS, 0);
+
+	return  bpmp_send_clk_message(&req, sizeof(req), NULL, 0);
+}
+
 const struct clk_ops tegra_clk_bpmp_gate_ops = {
 	.is_enabled = clk_bpmp_is_enabled,
 	.prepare = clk_bpmp_enable,
@@ -325,6 +334,9 @@ struct clk **tegra_bpmp_clk_init(struct tegra_bpmp_clk_init *init_clks,
 	struct clk *clk;
 	static const char *parent_names[MAX_PARENTS];
 	struct possible_parents parents;
+
+	if (clk_bpmp_reset_refcount() < 0)
+		pr_warn("clk-bpmp: unable to reset refcounts!\n");
 
 	/* find highest clock id */
 	for (i = 0; i < num_clks; i++) {

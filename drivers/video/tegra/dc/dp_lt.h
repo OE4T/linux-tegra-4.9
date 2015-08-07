@@ -267,17 +267,17 @@ static const u32 tegra_dp_tx_pu[][4][4] = {
 
 static inline int tegra_dp_is_max_vs(u32 pe, u32 vs)
 {
-	return (vs < (DRIVE_CURRENT_L3 - pe)) ? 0 : 1;
+	return vs >= DRIVE_CURRENT_L3;
 }
 
 static inline int tegra_dp_is_max_pe(u32 pe, u32 vs)
 {
-	return (pe < (PRE_EMPHASIS_L3 - vs)) ? 0 : 1;
+	return pe >= PRE_EMPHASIS_L3;
 }
 
 static inline int tegra_dp_is_max_pc(u32 pc)
 {
-	return (pc < POST_CURSOR2_L3) ? 0 : 1;
+	return pc >= POST_CURSOR2_L3;
 }
 
 void tegra_dp_lt_init(struct tegra_dp_lt_data *lt_data,

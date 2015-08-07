@@ -41,6 +41,7 @@ enum {
 	MCE_SMC_ECHO_DATA,
 	MCE_SMC_READ_VERSIONS,
 	MCE_SMC_ENUM_FEATURES,
+	MCE_SMC_ROC_FLUSH_CACHE,
 };
 
 struct mce_regs {
@@ -280,6 +281,13 @@ int tegra_mce_enum_features(u64 *features)
 	return 0;
 }
 EXPORT_SYMBOL(tegra_mce_enum_features);
+
+int tegra_roc_flush_cache(void)
+{
+	struct mce_regs regs;
+	return send_smc(MCE_SMC_ROC_FLUSH_CACHE, &regs);
+}
+EXPORT_SYMBOL(tegra_roc_flush_cache);
 
 #ifdef CONFIG_DEBUG_FS
 

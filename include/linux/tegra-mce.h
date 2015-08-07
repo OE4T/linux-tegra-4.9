@@ -98,5 +98,6 @@ int tegra_mce_cc3_ctrl(u32 freq, u32 volt, u8 enable);
 int tegra_mce_echo_data(u32 data, int *matched);
 int tegra_mce_read_versions(u32 *major, u32 *minor);
 int tegra_mce_enum_features(u64 *features);
+int tegra_roc_flush_cache(void);
 
 #endif

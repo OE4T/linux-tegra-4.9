@@ -1072,7 +1072,7 @@
 		status = "disabled";
 	};
 
-	pcie-controller {
+	pcie-controller@10003000 {
 		compatible = "nvidia,tegra186-pcie";
 		power-domains = <&mc_clk_pd>;
 		device_type = "pci";

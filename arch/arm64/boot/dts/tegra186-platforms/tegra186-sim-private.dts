@@ -526,7 +526,7 @@
 
 	};
 
-	spi6: spi@0x3270000{
+	spi6: spi@3270000{
 		status = "okay";
 		spi@0 {
 			compatible = "spidev";

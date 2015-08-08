@@ -25,11 +25,11 @@
 		status = "okay";
 	};
 
-	mc_sid {
+	mc_sid@2c00000 {
 		status = "okay";
 	};
 
-	iommu {
+	iommu@12000000 {
 		status = "okay";
 	};
 
@@ -145,11 +145,11 @@
 		status = "okay";
 	};
 
-	interrupt-controller {
+	interrupt-controller@3881000 {
 		status = "okay";
 	};
 
-	interrupt-controller@60004000 {
+	interrupt-controller@3000000 {
 		status = "okay";
 	};
 
@@ -157,23 +157,23 @@
 		status = "okay";
 	};
 
-	clock {
+	clock@500000 {
 		status = "okay";
 	};
 
-        ether_qos@02490000 {
+        ether_qos@2490000 {
 		status = "okay";
         };
 
-        ether_qos_virt_test {
+        ether_qos_virt_test@2490000 {
 		status = "okay";
         };
 
-	tegra-hsp {
+	tegra-hsp@3c00000 {
 		status = "okay";
 	};
 
-	chipid {
+	chipid@100000 {
 		status = "okay";
 	};
 
@@ -189,7 +189,7 @@
 		status = "okay";
 	};
 
-	spi@0x3270000 {
+	spi@3270000 {
 		status = "okay";
 	};
 
@@ -234,7 +234,7 @@
 
 	};
 
-	roc-flush {
+	roc-flush@e080000 {
 		status = "okay";
 	};
 
@@ -244,11 +244,11 @@
 	     };
 	};
 
-	mttcan@0x0c310000 {
+	mttcan@c310000 {
 		status = "okay";
 	};
 
-	mttcan@0x0c320000 {
+	mttcan@c320000 {
 		status = "okay";
 	};
 
@@ -257,7 +257,7 @@
 		status = "okay";
 	};
 
-	tegra_edvd {
+	tegra_edvd@e070000 {
 		status = "okay";
 	};
 };

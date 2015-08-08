@@ -191,7 +191,7 @@
 		status = "disabled";
 	};
 
-	mc_sid {
+	mc_sid@2c00000 {
 		compatible = "nvidia,tegra-mc-sid";
  		reg = <0x0 0x02c00000 0x0 0x00010000>, /* MC_SID_BASE */
  		      <0x0 0x02c10000 0x0 0x00010000>; /* MC_BASE */
@@ -199,7 +199,7 @@
 	};
 
 	/* HACK: Populate earlier than other device */
-	smmu: iommu {
+	smmu: iommu@12000000{
 		compatible = "arm,mmu-500";
 		reg = <0x0 0x12000000 0x0 0x01000000>; /* 16MB */
 		#global-interrupts = <2>;
@@ -778,7 +778,7 @@
 		status = "disabled";
 	};
 
-	intc: interrupt-controller {
+	intc: interrupt-controller@3881000 {
 		compatible = "arm,cortex-a15-gic";
 		#interrupt-cells = <3>;
 		interrupt-controller;
@@ -787,7 +787,7 @@
 		status = "disabled";
 	};
 
-	lic: interrupt-controller@60004000 {
+	lic: interrupt-controller@3000000 {
 		compatible = "nvidia,tegra-gic";
 		interrupt-controller;
 		reg = <0x0 0x03000000 0x0 0x00000800
@@ -813,7 +813,7 @@
 		status = "disabled";
 	};
 
-	tegra_car: clock {
+	tegra_car: clock@5000000 {
 		compatible = "nvidia,tegra18x-car";
 		reg = <0x0 0x05000000 0x0 0x01000000>;
 		#clock-cells = <1>;
@@ -828,10 +828,10 @@
 		status = "disabled";
 	};
 
-	se: se_elp {
+	se: se_elp@3ad0000 {
 		compatible = "nvidia,tegra186-se-elp";
-		reg = <0x0 0x03AD0000 0x0 0x10000>,
-		      <0x0 0x03AE0000 0x0 0x10000>;
+		reg = <0x0 0x03ad0000 0x0 0x10000>,
+		      <0x0 0x03ae0000 0x0 0x10000>;
 	};
 
 	spi0: spi@3210000 {
@@ -872,7 +872,7 @@
 		nvidia,clk-parents = "pll_p", "clk_m";
 		status = "disabled";
 	};
-	qspi6: spi@0x3270000 {
+	qspi6: spi@3270000 {
 		compatible = "nvidia,tegra186-qspi";
 		reg = <0x0 0x3270000 0x0 0x10000>;
 		interrupts = < 0 35 0x04 >;
@@ -889,7 +889,7 @@
 		status = "disabled";
 	};
 
-        ether_qos@02490000 {
+        ether_qos@2490000 {
                 compatible = "synopsys,dwc_eth_qos";
                 reg = <0x0 0x02490000 0x0 0x10000>;
 		interrupts = 	<0 194 0x4>,	/* common */
@@ -913,14 +913,14 @@
 		status = "disabled";
         };
 
-        ether_qos_virt_test {
+        ether_qos_virt_test@2490000 {
 		compatible = "synopsys,dwc_eqos_virt_test";
 		reg = <0x0 0x02490000 0x0 0x10000
 			0x0 0x024a0000 0x0 0x10000>;
 		status = "disabled";
         };
 
-	hsp_top: tegra-hsp {
+	hsp_top: tegra-hsp@3c00000 {
 		compatible = "nvidia,tegra186-hsp";
 		reg = <0x0 0x03c00000 0x0 0x000a0000>;
 		interrupts = <0 176 0x4>;
@@ -932,7 +932,7 @@
 		status = "disabled";
 	};
 
-	chipid {
+	chipid@100000 {
 		compatible = "nvidia,tegra186-chipid";
 		reg = <0x0 0x00100000 0x0 0x10000>;
 		status = "disabled";
@@ -999,7 +999,7 @@
 	pinmux: pinmux@2430000 {
                 compatible = "nvidia,tegra186-pinmux";
                 reg = <0x0 0x2430000 0x0 0x15000
-			0x0 0xC300000 0x0 0x4000>;
+			0x0 0xc300000 0x0 0x4000>;
 		#gpio-range-cells = <3>;
                 status = "disabled";
         };
@@ -1007,7 +1007,7 @@
         tegra_gpio: gpio@2200000 {
                 compatible = "nvidia,tegra186-gpio";
                 reg = <0x0 0x2200000 0x0 0x15700
-                        0x0 0xC2F0000 0x0 0x2000>;
+                        0x0 0xc2f0000 0x0 0x2000>;
                 interrupts = <0 47 0x04
                         0 50 0x04
                         0 53 0x04
@@ -1143,13 +1143,13 @@
 
 	};
 
-	agic-controller {
+	agic-controller@2a41000 {
 		compatible = "nvidia,tegra18x-agic";
 		interrupt-controller;
 		no-gic-extension;
 		not-per-cpu;
-		reg = <0x0 0x02A41000 0x0 0x1000>,
-		      <0x0 0x02A42000 0x0 0x2000>;
+		reg = <0x0 0x02a41000 0x0 0x1000>,
+		      <0x0 0x02a42000 0x0 0x2000>;
 		interrupts = <0 145 0xf04>;
 		status = "disabled";
 	};
@@ -1160,7 +1160,7 @@
 		status = "disabled";
         };
 
-	adsp {
+	adsp@2993000 {
 	     compatible = "nvidia,tegra18x-adsp";
 	     power-domains = <&ape_pd>;
 	     reg = <0x0 0x02993000 0x0 0x1000>, /* AMC */
@@ -1177,7 +1177,7 @@
 	     status = "disabled";
 	};
 
-	roc-flush {
+	roc-flush@e080000 {
 		compatible = "nvidia,tegra186-roc-flush";
 		reg = <0x0 0x0e080000 0x0 0x10000>;
 		status = "disabled";
@@ -1197,7 +1197,7 @@
 	     };
 	};
 
-	mttcan0: mttcan@0x0c310000 {
+	mttcan0: mttcan@c310000 {
 		compatible = "bosch,mttcan";
 		reg = <0x00 0x0c310000 0x00 0x400>,
 		      <0x00 0x0c311000 0x00 0x32>,
@@ -1208,7 +1208,7 @@
 		status = "disabled";
 	};
 
-	mttcan1: mttcan@0x0c320000 {
+	mttcan1: mttcan@c320000 {
 		compatible = "bosch,mttcan";
 		reg = <0x00 0x0c320000 0x00 0x400>,
 		      <0x00 0x0c321000 0x00 0x32>,
@@ -1244,7 +1244,7 @@
 		reg = <0 0x0c050000 0 0x10000>;
 	};
 
-	tegra_edvd {
+	tegra_edvd@e070000 {
 		compatible = "nvidia,tegra18x-edvd";
 		reg = <0x0 0x0e070000 0x0 0x1000>, /* M/Denver cluster */
 		      <0x0 0x0e060000 0x0 0x1000>; /* B/ARM cluster */

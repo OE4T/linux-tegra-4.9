@@ -25,6 +25,9 @@
 		dmas = <&gpcdma 8>, <&gpcdma 8>;
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTA>;
+		clock-names = "serial";
+		resets = <&tegra_car TEGRA186_RESET_UARTA>;
+		reset-names = "serial";
 		status = "disabled";
 	};
 
@@ -38,6 +41,9 @@
 		dmas = <&gpcdma 9>, <&gpcdma 9>;
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTB>;
+		clock-names = "serial";
+		resets = <&tegra_car TEGRA186_RESET_UARTB>;
+		reset-names = "serial";
 		status = "disabled";
 	};
 
@@ -51,6 +57,9 @@
 		dmas = <&gpcdma 3>, <&gpcdma 3>;
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTC>;
+		clock-names = "serial";
+		resets = <&tegra_car TEGRA186_RESET_UARTC>;
+		reset-names = "serial";
 		status = "disabled";
 	};
 
@@ -64,6 +73,9 @@
 		dmas = <&gpcdma 19>, <&gpcdma 19>;
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTD>;
+		clock-names = "serial";
+		resets = <&tegra_car TEGRA186_RESET_UARTD>;
+		reset-names = "serial";
 		status = "disabled";
 	};
 
@@ -77,6 +89,9 @@
 		dmas = <&gpcdma 20>, <&gpcdma 20>;
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTE>;
+		clock-names = "serial";
+		resets = <&tegra_car TEGRA186_RESET_UARTE>;
+		reset-names = "serial";
 		status = "disabled";
 	};
 
@@ -90,6 +105,9 @@
 		dmas = <&gpcdma 12>, <&gpcdma 12>;
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTF>;
+		clock-names = "serial";
+		resets = <&tegra_car TEGRA186_RESET_UARTF>;
+		reset-names = "serial";
 		status = "disabled";
 	};
 
@@ -103,6 +121,9 @@
 		dmas = <&gpcdma 2>, <&gpcdma 2>;
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTG>;
+		clock-names = "serial";
+		resets = <&tegra_car TEGRA186_RESET_UARTG>;
+		reset-names = "serial";
 		status = "disabled";
 	};
 };

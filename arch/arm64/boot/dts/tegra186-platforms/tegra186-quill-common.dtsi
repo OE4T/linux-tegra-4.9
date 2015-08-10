@@ -44,5 +44,13 @@
 		compatible = "nvidia,tegra186-hsuart";
 		status = "okay";
 	};
+
+	watchdog@30c0000 {
+		status = "okay";
+	};
+
+	watchdog@30d0000 {
+		status = "okay";
+	};
 };
 

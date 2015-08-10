@@ -29,5 +29,12 @@
         #address-cells = <2>;
         #size-cells = <2>;
 
+	watchdog@30c0000 {
+		status = "okay";
+	};
+
+	watchdog@30d0000 {
+		status = "okay";
+	};
 };
 

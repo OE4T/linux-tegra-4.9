@@ -18,7 +18,7 @@
 
 /memreserve/ 0x80000000 0x00010000;
 
-#include "tegra186-soc/tegra186-soc-cvm.dtsi"
+#include "tegra186-soc/tegra186-soc-vcm.dtsi"
 #include "tegra186-cvm-simple-bus.dtsi"
 
 / {

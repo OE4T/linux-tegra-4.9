@@ -59,10 +59,12 @@ static void set_hpd_state(struct tegra_hpd_data *data,
 static void hpd_disable(struct tegra_hpd_data *data)
 {
 #ifdef CONFIG_SWITCH
-	switch_set_state(&data->audio_switch, 0);
-	pr_info("hpd: audio_switch 0\n");
-	switch_set_state(&data->hpd_switch, 0);
-	pr_info("hpd: hpd_switch 0\n");
+	if (data->hpd_switch.name) {
+		switch_set_state(&data->audio_switch, 0);
+		pr_info("hpd: audio_switch 0\n");
+		switch_set_state(&data->hpd_switch, 0);
+		pr_info("hpd: hpd_switch 0\n");
+	}
 #endif
 	if (data->dc->connected) {
 		pr_info("hpd: DC from connected to disconnected\n");
@@ -92,12 +94,7 @@ static const char *get_hpd_switch_name(struct tegra_hpd_data *data)
 
 	if (data->hpd_switch_name)
 		name = data->hpd_switch_name;
-	else if (data->dc->out->type == TEGRA_DC_OUT_HDMI)
-		name = "hdmi";
-	else if (data->dc->out->type == TEGRA_DC_OUT_DP)
-		name = "dp";
 
-	BUG_ON(!name);
 	return name;
 }
 
@@ -107,12 +104,7 @@ static const char *get_audio_switch_name(struct tegra_hpd_data *data)
 
 	if (data->audio_switch_name)
 		name = data->audio_switch_name;
-	else if (data->dc->out->type == TEGRA_DC_OUT_HDMI)
-		name = "hdmi_audio";
-	else if (data->dc->out->type == TEGRA_DC_OUT_DP)
-		name = "dp_audio";
 
-	BUG_ON(!name);
 	return name;
 }
 
@@ -202,11 +194,12 @@ static void edid_read_notify(struct tegra_hpd_data *data)
 #endif
 #ifdef CONFIG_SWITCH
 	state = !!tegra_edid_audio_supported(data->edid);
-	switch_set_state(&data->audio_switch, state);
-	pr_info("hpd: audio_switch %d\n", state);
-
-	switch_set_state(&data->hpd_switch, 1);
-	pr_info("hpd: Display connected, hpd_switch 1\n");
+	if (data->hpd_switch.name) {
+		switch_set_state(&data->audio_switch, state);
+		pr_info("hpd: audio_switch %d\n", state);
+		switch_set_state(&data->hpd_switch, 1);
+		pr_info("hpd: Display connected, hpd_switch 1\n");
+	}
 #endif
 	data->dc->connected = true;
 
@@ -508,6 +501,15 @@ void tegra_hpd_shutdown(struct tegra_hpd_data *data)
 	data->shutdown = 1;
 	cancel_delayed_work_sync(&data->dwork);
 	tegra_edid_destroy(data->edid);
+
+#ifdef CONFIG_SWITCH
+	data->hpd_switch.name = get_hpd_switch_name(data);
+
+	if (data->hpd_switch.name) {
+		switch_dev_unregister(&data->hpd_switch);
+		switch_dev_unregister(&data->audio_switch);
+	}
+#endif
 }
 
 int tegra_hpd_get_state(struct tegra_hpd_data *data)
@@ -567,12 +569,15 @@ void tegra_hpd_init(struct tegra_hpd_data *data,
 
 #ifdef CONFIG_SWITCH
 	data->hpd_switch.name = get_hpd_switch_name(data);
-	err = switch_dev_register(&data->hpd_switch);
-	BUG_ON(err);
 
-	data->audio_switch.name = get_audio_switch_name(data);
-	err = switch_dev_register(&data->audio_switch);
-	BUG_ON(err);
+	if (data->hpd_switch.name) {
+		err = switch_dev_register(&data->hpd_switch);
+		BUG_ON(err);
+
+		data->audio_switch.name = get_audio_switch_name(data);
+		err = switch_dev_register(&data->audio_switch);
+		BUG_ON(err);
+	}
 #endif
 
 	rt_mutex_init(&data->lock);

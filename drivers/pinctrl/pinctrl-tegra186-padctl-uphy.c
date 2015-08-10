@@ -2928,7 +2928,7 @@ static int utmi_phy_to_port(struct phy *phy)
 	return -EINVAL;
 }
 
-int tegra186_utmi_phy_enable_sleepwalk(struct tegra_padctl_uphy *uphy,
+static int tegra186_utmi_phy_enable_sleepwalk(struct tegra_padctl_uphy *uphy,
 				       int port, enum usb_device_speed speed)
 {
 	u32 reg;

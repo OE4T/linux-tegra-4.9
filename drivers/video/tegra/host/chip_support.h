@@ -74,15 +74,7 @@ struct nvhost_vm_ops {
 };
 
 struct nvhost_pushbuffer_ops {
-	void (*reset)(struct push_buffer *);
 	int (*init)(struct push_buffer *);
-	void (*destroy)(struct push_buffer *);
-	void (*push_to)(struct push_buffer *,
-			u32 op1, u32 op2);
-	void (*pop_from)(struct push_buffer *,
-			 unsigned int slots);
-	u32 (*space)(struct push_buffer *);
-	u32 (*putptr)(struct push_buffer *);
 };
 
 struct nvhost_debug_ops {

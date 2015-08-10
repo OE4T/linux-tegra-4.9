@@ -44,7 +44,7 @@
 #define CLK_STATE_ON		0x1
 #define CLK_STATE_OFF		0x0
 
-const char *partition_names[] = {
+static const char *partition_names[] = {
 	[TEGRA_POWERGATE_APE] = "audio",
 	[TEGRA_POWERGATE_DFD] = "dfd",
 	[TEGRA_POWERGATE_DISA] = "disp",
@@ -64,14 +64,14 @@ const char *partition_names[] = {
 	[TEGRA_POWERGATE_GPU] = "gpu",
 };
 
-struct powergate_request {
+static struct powergate_request {
 	uint32_t partition_id;
 	uint32_t logic_state;
 	uint32_t sram_state;
 	uint32_t clk_state;
 };
 
-struct powergate_state {
+static struct powergate_state {
 	uint32_t logic_state;
 	uint32_t sram_state;
 };

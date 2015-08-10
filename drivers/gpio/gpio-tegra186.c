@@ -194,7 +194,7 @@ static inline bool is_gpio_accessible(u32 offset)
 					break;
 			}
 		}
-		if(controller != (MAX_GPIO_CONTROLLERS -1))
+		if (controller != (MAX_GPIO_CONTROLLERS - 1))
 			i = 0;
 		else
 			i = 1;
@@ -226,7 +226,7 @@ static void tegra_gpio_disable(int gpio)
 
 static int tegra_gpio_request(struct gpio_chip *chip, unsigned offset)
 {
-	bool accessible;
+	volatile bool accessible;
 	accessible = is_gpio_accessible(offset);
 	/* overwriting accessible */
 	accessible = true;

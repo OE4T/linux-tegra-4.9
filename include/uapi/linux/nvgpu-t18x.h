@@ -1,7 +1,7 @@
 /*
  * NVGPU Public Interface Header
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -42,6 +42,21 @@
 /* Flags in nvgpu_alloc_obj_ctx_args.flags */
 #define NVGPU_ALLOC_OBJ_FLAGS_GFXP		(1 << 1)
 #define NVGPU_ALLOC_OBJ_FLAGS_CILP		(1 << 2)
+
+/* SM LRF ECC is enabled */
+#define NVGPU_GPU_FLAGS_ECC_ENABLED_SM_LRF	(1ULL << 60)
+/* SM SHM ECC is enabled */
+#define NVGPU_GPU_FLAGS_ECC_ENABLED_SM_SHM	(1ULL << 61)
+/* TEX ECC is enabled */
+#define NVGPU_GPU_FLAGS_ECC_ENABLED_TEX		(1ULL << 62)
+/* L2 ECC is enabled */
+#define NVGPU_GPU_FLAGS_ECC_ENABLED_LTC		(1ULL << 63)
+/* All types of ECC are enabled */
+#define NVGPU_GPU_FLAGS_ALL_ECC_ENABLED	\
+				(NVGPU_GPU_FLAGS_ECC_ENABLED_SM_LRF |	\
+				NVGPU_GPU_FLAGS_ECC_ENABLED_SM_SHM |	\
+				NVGPU_GPU_FLAGS_ECC_ENABLED_TEX    |	\
+				NVGPU_GPU_FLAGS_ECC_ENABLED_LTC)
 
 #endif /* _UAPI__LINUX_NVGPU_T18X_IOCTL_H_ */
 

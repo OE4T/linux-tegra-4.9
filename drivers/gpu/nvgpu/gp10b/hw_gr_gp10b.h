@@ -1486,6 +1486,38 @@ static inline u32 gr_fecs_feature_override_ecc_r(void)
 {
 	return 0x00409658;
 }
+static inline u32 gr_fecs_feature_override_ecc_sm_lrf_override_v(u32 r)
+{
+	return (r >> 3) & 0x1;
+}
+static inline u32 gr_fecs_feature_override_ecc_sm_shm_override_v(u32 r)
+{
+	return (r >> 7) & 0x1;
+}
+static inline u32 gr_fecs_feature_override_ecc_tex_override_v(u32 r)
+{
+	return (r >> 11) & 0x1;
+}
+static inline u32 gr_fecs_feature_override_ecc_ltc_override_v(u32 r)
+{
+	return (r >> 15) & 0x1;
+}
+static inline u32 gr_fecs_feature_override_ecc_sm_lrf_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 gr_fecs_feature_override_ecc_sm_shm_v(u32 r)
+{
+	return (r >> 4) & 0x1;
+}
+static inline u32 gr_fecs_feature_override_ecc_tex_v(u32 r)
+{
+	return (r >> 8) & 0x1;
+}
+static inline u32 gr_fecs_feature_override_ecc_ltc_v(u32 r)
+{
+	return (r >> 12) & 0x1;
+}
 static inline u32 gr_gpc0_gpccs_ctxsw_idlestate_r(void)
 {
 	return 0x00502420;

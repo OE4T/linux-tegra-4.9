@@ -41,6 +41,8 @@
 #include "gm20b/clk_gm20b.h"
 #include <linux/tegra-fuse.h>
 
+#include "gp10b.h"
+
 #define FUSE_OPT_PRIV_SEC_EN_0 0x264
 #define PRIV_SECURITY_ENABLED 0x01
 
@@ -153,6 +155,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_cde_ops(gops);
 	gp10b_init_therm_ops(gops);
 	gops->name = "gp10b";
+	gops->chip_init_gpu_characteristics = gp10b_init_gpu_characteristics;
 
 	c->twod_class = FERMI_TWOD_A;
 	c->threed_class = PASCAL_A;

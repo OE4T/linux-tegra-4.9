@@ -18,5 +18,8 @@ obj-$(CONFIG_SND_SOC_TEGRA186_DSPK_ALT) += snd-soc-tegra186-alt-dspk.o
 # the kernel root dir.
 snd-soc-tegra-alt-t186ref-objs := tegra_t186ref_alt.o tegra_asoc_machine_alt_t18x.o \
 	../../../../$(lastword $(subst /, ,$(srctree)))/sound/soc/tegra-alt/tegra_asoc_machine_alt.o
+snd-soc-tegra-alt-t186ref-mobile-objs := tegra_t186ref_mobile_rt565x.o tegra_asoc_machine_alt_t18x.o \
+        ../../../../$(lastword $(subst /, ,$(srctree)))/sound/soc/tegra-alt/tegra_asoc_machine_alt.o
 
 obj-$(CONFIG_SND_SOC_TEGRA_T186REF_ALT) += snd-soc-tegra-alt-t186ref.o
+obj-$(CONFIG_SND_SOC_TEGRA_T186REF_MOBILE_ALT) += snd-soc-tegra-alt-t186ref-mobile.o

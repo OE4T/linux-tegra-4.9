@@ -434,6 +434,14 @@ static inline u32 win_win_set_params_cs_range_yuv_709_f(void)
 {
 	return 0x200;
 }
+static inline u32 win_win_set_params_cs_range_yuv_2020_f(void)
+{
+	return 0x300;
+}
+static inline u32 win_win_set_params_cs_range_yuv_601_f(void)
+{
+	return 0x100;
+}
 static inline u32 win_win_set_params_cs_range_rgb_f(void)
 {
 	return 0x0;
@@ -442,7 +450,35 @@ static inline u32 win_win_set_params_in_range_bypass_f(void)
 {
 	return 0x0;
 }
+static inline u32 win_win_set_params_in_range_limited_f(void)
+{
+	return 0x400;
+}
+static inline u32 win_win_set_params_in_range_full_f(void)
+{
+	return 0x800;
+}
 static inline u32 win_win_set_params_degamma_range_none_f(void)
+{
+	return 0x0;
+}
+static inline u32 win_win_set_params_degamma_range_srgb_f(void)
+{
+	return 0x2000;
+}
+static inline u32 win_win_set_params_degamma_range_yuv8_10_f(void)
+{
+	return 0x4000;
+}
+static inline u32 win_win_set_params_degamma_range_yuv12_f(void)
+{
+	return 0x6000;
+}
+static inline u32 win_win_set_params_clamp_before_blend_enable_f(void)
+{
+	return 0x8000;
+}
+static inline u32 win_win_set_params_clamp_before_blend_disable_f(void)
 {
 	return 0x0;
 }

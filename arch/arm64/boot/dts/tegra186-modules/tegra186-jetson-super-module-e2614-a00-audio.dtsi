@@ -1,0 +1,90 @@
+/*
+ * tegra186-jetson-super-module-e2614-audio.dtsi: Jetson super module E2614
+ *
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+/ {
+
+	i2c@3170000 {
+		i2cmux@70 {
+			i2c@0 {
+				tas2552: dspk_amp_l@40 {
+					compatible = "ti,tas2552";
+					reg = <0x40>;
+					vbat = <&battery_reg>;
+					iovdd = <&vdd_3v3>;
+					avdd = <&battery_reg>;
+				};
+			};
+		};
+		rt5658: audio-codec@1a {
+			compatible = "realtek,rt5658";
+			reg = <0x1a>;
+		};
+	};
+
+	sound {
+		nvidia,hp-det-gpios = <&gpio TEGRA_GPIO(J , 5) GPIO_ACTIVE_HIGH>;
+		nvidia,num-codec-link = <6>;
+
+		nvidia,audio-routing =
+			"y Headphone",		"y OUT",
+			"y IN",			"y Mic",
+			"z Headphone",		"z OUT",
+			"z IN",			"z Mic",
+			"m Headphone",		"m OUT",
+			"m IN",			"m Mic",
+			"n Headphone",		"n OUT",
+			"n IN",			"n Mic",
+			"x Headphone Jack",	"x HPO L Playback",
+			"x Headphone Jack",	"x HPO R Playback",
+			"x MICBIAS1",		"x Mic Jack",
+			"x IN1P",		"x Mic Jack",
+			"x Mic Det Power",	"x Mic Jack",
+			"x Int Spk",		"x SPO Playback",
+			"l Headphone",		"l OUT",
+			"l IN",			"l Mic";
+
+		nvidia,dai-link-5 {
+			link-name = "rt565x-playback";
+			cpu-dai = <&tegra_i2s1>;
+			codec-dai = <&rt5658>;
+			cpu-dai-name = "I2S1";
+			codec-dai-name = "rt5658-aif1";
+			tx-mask = <0xFF>;
+			rx-mask = <0xFF>;
+			format = "i2s";
+			bitclock-slave;
+			frame-slave;
+			bitclock-noninversion;
+			frame-noninversion;
+			bit-format = "s16_le";
+			bclk_ratio = <0>;
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "x";
+		};
+		nvidia,dai-link-6 {
+			link-name = "dspk-playback";
+			cpu-dai = <&tegra_dspk1>;
+			codec-dai = <&tas2552>;
+			cpu-dai-name = "DSPK1";
+			codec-dai-name = "tas2552-amplifier";
+			format = "i2s";
+			bit-format = "s16_le";
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "l";
+		};
+	};
+};

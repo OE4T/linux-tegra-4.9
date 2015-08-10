@@ -13,6 +13,8 @@
  * more details.
  */
 
+#include "tegra186-jetson-super-module-e2614-a00-audio.dtsi"
+
 / {
 	i2c@3170000 {
 		i2cmux@70 {

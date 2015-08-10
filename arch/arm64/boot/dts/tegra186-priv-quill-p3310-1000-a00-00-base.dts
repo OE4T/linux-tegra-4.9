@@ -23,4 +23,147 @@
 	nvidia,dtsfilename = __FILE__;
 	nvidia,boardids = "3310:0000:A0";
 	nvidia,proc-boardid = "3310:0000:A0";
+
+	adsp_audio {
+		compr-ops = <1>;
+		num-plugin = <4>;
+		plugin-info-1 {
+			plugin-name = "mp3-dec1";
+			firmware-name = "nvmp3dec.elf";
+			widget-name = "MP3-DEC1";
+		};
+		plugin-info-2 {
+			plugin-name = "spkprot";
+			firmware-name = "nvspkprot.elf";
+			widget-name = "SPKPROT-SW";
+		};
+		plugin-info-3 {
+			plugin-name = "src";
+			firmware-name = "nvsrc.elf";
+			widget-name = "SRC";
+		};
+		plugin-info-4 {
+			plugin-name = "aac-dec1";
+			firmware-name = "nvaacdec.elf";
+			widget-name = "AAC-DEC1";
+		};
+	};
+
+	ahub {
+		i2s@02901000 {
+			fsync-width = <31>;
+		};
+
+		i2s@02901100 {
+			fsync-width = <31>;
+		};
+
+		i2s@02901200 {
+			fsync-width = <31>;
+		};
+
+		i2s@02901300 {
+			fsync-width = <31>;
+		};
+
+		i2s@02901400 {
+			fsync-width = <31>;
+		};
+
+		i2s@02901500 {
+			fsync-width = <31>;
+		};
+	};
+
+	adma@2930000 {
+		dma-channels = <10>;
+	};
+
+	tegra_sound: sound {
+		compatible = "nvidia,tegra-audio-t186ref-mobile-rt565x";
+		nvidia,model = "tegra-snd-t186ref-mobile-rt565x";
+		nvidia,num-codec-link = <4>;
+
+		nvidia,audio-routing =
+			"y Headphone",		"y OUT",
+			"y IN",			"y Mic",
+			"z Headphone",		"z OUT",
+			"z IN",			"z Mic",
+			"m Headphone",		"m OUT",
+			"m IN",			"m Mic",
+			"n Headphone",		"n OUT",
+			"n IN",			"n Mic";
+
+		nvidia,xbar = <&tegra_axbar>;
+
+		nvidia,dai-link-1 {
+			link-name = "spdif-dit-0";
+			cpu-dai = <&tegra_i2s2>;
+			codec-dai = <&spdif_dit0>;
+			cpu-dai-name = "I2S2";
+			codec-dai-name = "dit-hifi";
+			tx-mask = <0xFF>;
+			rx-mask = <0xFF>;
+			format = "dsp_a";
+			bitclock-slave;
+			frame-slave;
+			bitclock-inversion;
+			frame-inversion;
+			bit-format = "s16_le";
+			bclk_ratio = <4>;
+			srate = <48000>;
+			num-channel = <1>;
+			name-prefix = "y";
+		};
+		nvidia,dai-link-2 {
+			link-name = "spdif-dit-1";
+			cpu-dai = <&tegra_i2s3>;
+			codec-dai = <&spdif_dit1>;
+			cpu-dai-name = "I2S3";
+			codec-dai-name = "dit-hifi";
+			tx-mask = <0xFF>;
+			rx-mask = <0xFF>;
+			format = "dsp_a";
+			bitclock-slave;
+			frame-slave;
+			bitclock-noninversion;
+			frame-noninversion;
+			bit-format = "s32_le";
+			bclk_ratio = <1>;
+			srate = <48000>;
+			num-channel = <8>;
+			name-prefix = "z";
+		};
+		nvidia,dai-link-3 {
+			link-name = "spdif-dit-2";
+			cpu-dai = <&tegra_dmic3>;
+			codec-dai = <&spdif_dit2>;
+			cpu-dai-name = "DMIC3";
+			codec-dai-name = "dit-hifi";
+			format = "i2s";
+			bit-format = "s16_le";
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "m";
+		};
+		nvidia,dai-link-4 {
+			link-name = "spdif-dit-3";
+			cpu-dai = <&tegra_i2s4>;
+			codec-dai = <&spdif_dit3>;
+			cpu-dai-name = "I2S4";
+			codec-dai-name = "dit-hifi";
+			tx-mask = <0xFF>;
+			rx-mask = <0xFF>;
+			format = "i2s";
+			bitclock-slave;
+			frame-slave;
+			bitclock-noninversion;
+			frame-noninversion;
+			bit-format = "s16_le";
+			bclk_ratio = <2>;
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "n";
+		};
+	};
 };

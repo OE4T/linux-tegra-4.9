@@ -60,13 +60,6 @@
 	#size-cells = <2>;
 
 	chosen {
-        };
-
-	firmware {
-		android {
-			compatible = "android,firmware";
-			hardware = "jetson_e";
-		};
 	};
 
 	pmc@7000e400 {
@@ -491,9 +484,6 @@
 	thermal-zones {
 		AO-therm {
 			status = "okay";
-		};
-		CPU-therm {
-			status="okay";
 		};
 	};
 

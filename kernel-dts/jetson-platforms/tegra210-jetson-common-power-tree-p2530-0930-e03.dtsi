@@ -198,21 +198,6 @@
 			vin-supply = <&vdd_3v3>;
 		};
 	};
-	i2c@7000c000 {
-		icm20628@68 {
-			vlogic-supply = <&max77620_sd3>;
-			vdd-supply = <&max77620_sd3>;
-		};
-
-		ak8963c@0c {
-			vid-supply = <&max77620_sd3>;
-			vdd-supply = <&vdd_3v3>;
-		};
-
-		jsa1127@39 {
-			vdd-supply = <&vdd_3v3>;
-		};
-	};
 
 	i2c@546c0000 {
 		bus-pullup-supply = <&battery_reg>;

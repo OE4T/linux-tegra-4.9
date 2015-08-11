@@ -36,9 +36,4 @@
 			hardware = "jetson_e";
 		};
 	};
-
-	modem {
-		/* using XHCI UTMI */
-		nvidia,phy-type = <2>;
-	};
 };

@@ -531,11 +531,6 @@
 		nvidia,edp_limit = <25000>;
 	};
 
-	modem {
-		/* using XHCI UTMI */
-		nvidia,phy-type = <2>;
-	};
-
 	soctherm@0x700E2000 {
 		throttle@oc1 {
 			device_type = "throttlectl";

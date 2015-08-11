@@ -1,5 +1,16 @@
-#ifndef _DT_BINDINGS_RESET_TEGRA186_CAR_H
-#define _DT_BINDINGS_RESET_TEGRA186_CAR_H
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * NVIDIA CORPORATION and its licensors retain all intellectual property
+ * and proprietary rights in and to this software, related documentation
+ * and any modifications thereto.  Any use, reproduction, disclosure or
+ * distribution of this software and related documentation without an express
+ * license agreement from NVIDIA CORPORATION is strictly prohibited.
+ */
+
+#ifndef _ABI_MACH_T186_RESET_T186_H_
+#define _ABI_MACH_T186_RESET_T186_H_
+
 
 #define TEGRA186_RESET_ACTMON			0
 #define TEGRA186_RESET_AFI			1

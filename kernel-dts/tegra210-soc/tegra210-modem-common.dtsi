@@ -23,13 +23,23 @@
 		compatible = "nvidia,icera-i500";
 		status = "disabled";
 
-		/* use EHCI HSIC */
-		nvidia,phy-type = <0>;
-
 		nvidia,boot-gpio = <&gpio TEGRA_GPIO(K, 6) GPIO_ACTIVE_LOW>;
 		nvidia,mdm-power-report-gpio = <&gpio TEGRA_GPIO(L, 1) GPIO_ACTIVE_LOW>;
 		nvidia,reset-gpio = <&gpio TEGRA_GPIO(L, 0) GPIO_ACTIVE_LOW>;
 		nvidia,mdm-en-gpio = <&gpio TEGRA_GPIO(K, 7) GPIO_ACTIVE_HIGH>;
 		nvidia,num-temp-sensors = <3>;
+
+		/* modem interface child nodes */
+		nvidia,phy-ehci-hsic {
+			status = "disabled";
+		};
+
+		nvidia,phy-xhci-hsic {
+			status = "disabled";
+		};
+
+		nvidia,phy-xhci-utmi {
+			status = "disabled";
+		};
 	};
 };

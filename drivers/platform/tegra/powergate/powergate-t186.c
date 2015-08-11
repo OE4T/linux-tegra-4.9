@@ -26,6 +26,7 @@
 #include <linux/err.h>
 #include <linux/tegra-powergate.h>
 #include <dt-bindings/soc/tegra186-powergate.h>
+#include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
 
 #include "powergate-priv.h"
@@ -79,12 +80,12 @@ struct powergate_state {
 static int tegra186_pg_powergate_partition(int id)
 {
 	int ret;
-	struct powergate_request req;
+	struct mrq_pg_update_state_request req;
 
 	req.partition_id = id;
 	req.logic_state = UPDATE_LOGIC_STATE | (1 << LOGIC_STATE_OFF);
 	req.sram_state = UPDATE_SRAM_STATE | (1 << SRAM_STATE_SD);
-	req.clk_state = 0;
+	req.clock_state = 0;
 
 	ret = tegra_bpmp_send_receive(MRQ_PG_UPDATE_STATE, &req, sizeof(req), NULL, 0);
 	if (ret)
@@ -96,12 +97,12 @@ static int tegra186_pg_powergate_partition(int id)
 static int tegra186_pg_unpowergate_partition(int id)
 {
 	int ret;
-	struct powergate_request req;
+	struct mrq_pg_update_state_request req;
 
 	req.partition_id = id;
 	req.logic_state = UPDATE_LOGIC_STATE | (1 << LOGIC_STATE_ON);
 	req.sram_state = UPDATE_SRAM_STATE | (1 << SRAM_STATE_ON);
-	req.clk_state = 0;
+	req.clock_state = 0;
 
 	ret = tegra_bpmp_send_receive(MRQ_PG_UPDATE_STATE, &req, sizeof(req), NULL, 0);
 	if (ret)
@@ -113,12 +114,12 @@ static int tegra186_pg_unpowergate_partition(int id)
 static int tegra186_pg_powergate_clk_off(int id)
 {
 	int ret;
-	struct powergate_request req;
+	struct mrq_pg_update_state_request req;
 
 	req.partition_id = id;
 	req.logic_state = UPDATE_LOGIC_STATE | (1 << LOGIC_STATE_OFF);
 	req.sram_state = UPDATE_SRAM_STATE | (1 << SRAM_STATE_SD);
-	req.clk_state = UPDATE_CLK_STATE | (1 << CLK_STATE_OFF);
+	req.clock_state = UPDATE_CLK_STATE | (1 << CLK_STATE_OFF);
 
 	ret = tegra_bpmp_send_receive(MRQ_PG_UPDATE_STATE, &req, sizeof(req), NULL, 0);
 	if (ret)
@@ -130,12 +131,12 @@ static int tegra186_pg_powergate_clk_off(int id)
 static int tegra186_pg_unpowergate_clk_on(int id)
 {
 	int ret;
-	struct powergate_request req;
+	struct mrq_pg_update_state_request req;
 
 	req.partition_id = id;
 	req.logic_state = UPDATE_LOGIC_STATE | (1 << LOGIC_STATE_ON);
 	req.sram_state = UPDATE_SRAM_STATE | (1 << SRAM_STATE_ON);
-	req.clk_state = UPDATE_CLK_STATE | (1 << CLK_STATE_ON);
+	req.clock_state = UPDATE_CLK_STATE | (1 << CLK_STATE_ON);
 
 	ret = tegra_bpmp_send_receive(MRQ_PG_UPDATE_STATE, &req, sizeof(req), NULL, 0);
 	if (ret)
@@ -152,9 +153,11 @@ static const char *tegra186_pg_get_name(int id)
 static bool tegra186_pg_is_powered(int id)
 {
 	int ret;
-	struct powergate_state msg;
+	struct mrq_pg_read_state_response msg;
+	struct mrq_pg_read_state_request req;
 
-	ret = tegra_bpmp_send_receive(MRQ_PG_READ_STATE, &id, sizeof(id), &msg, sizeof(msg));
+	req.partition_id = id;
+	ret = tegra_bpmp_send_receive(MRQ_PG_READ_STATE, &req, sizeof(req), &msg, sizeof(msg));
 	if (ret)
 		return 0;
 

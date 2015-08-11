@@ -68,13 +68,24 @@ static unsigned long tegra_tachometer_read_winlen(struct tachometer_dev *tach)
 static int tegra_tachometer_set_winlen(struct tachometer_dev *tach, u8 win_len)
 {
 	struct tegra_tachometer_device *tegra_tach;
-	u8 tach0;
+	u8 tach0, wlen;
+
+	if (hweight8(win_len) != 1) {
+		pr_err("Tachometer: Select winlen from {1, 2, 4 or 8} only\n");
+		return -1;
+	} else if (tach->pulse_per_rev > win_len) {
+		pr_err("Tachometer: winlen should be >= PPR value for accurate RPM value\n");
+		pr_err("Tachometer: PPR (pulse per revolution) value is: %d\n",
+				tach->pulse_per_rev);
+		return -1;
+	}
 
 	tegra_tach = (struct tegra_tachometer_device *)tachometer_get_drvdata(tach);
 
+	wlen = ffs(win_len) - 1;
 	tach0 = tachometer_readb(tegra_tach, TACH_FAN_TACH0_OVERFLOW);
 	tach0 &= ~TACH_FAN_TACH0_OVERFLOW_WIN_LEN_MASK;
-	tach0 |= (win_len << 1);
+	tach0 |= (wlen << 1);
 	tachometer_writeb(tegra_tach, tach0, TACH_FAN_TACH0_OVERFLOW);
 	tach->win_len = win_len;
 	return 0;
@@ -85,7 +96,6 @@ static unsigned long tegra_tachometer_read_rpm(struct tachometer_dev *tach)
 	struct tegra_tachometer_device *tegra_tach;
 	u32 tach0;
 	unsigned long period, rpm, denominator, numerator;
-	u8 win_len;
 
 	tegra_tach = (struct tegra_tachometer_device *)tachometer_get_drvdata(tach);
 
@@ -98,11 +108,9 @@ static unsigned long tegra_tachometer_read_rpm(struct tachometer_dev *tach)
 		return 0;
 	}
 
-	win_len = (tach0 >> TACH_FAN_TACH0_WIN_LENGTH_SHIFT) &
-		TACH_FAN_TACH0_WIN_LENGTH_MASK;
 	period = (tach0 & TACH_FAN_TACH0_PERIOD_MASK) + 1; /* Bug 200046190 */
 
-	numerator = 60 * counter_clock * win_len;
+	numerator = 60 * counter_clock * tach->win_len;
 	denominator = period * tach->pulse_per_rev;
 
 	rpm = numerator / denominator;
@@ -138,7 +146,6 @@ static int tegra_tachometer_probe(struct platform_device *pdev)
 	struct tachometer_config config = { };
 	struct resource *r;
 	int ret;
-	u32 tach0;
 
 	tegra_tach = devm_kzalloc(&pdev->dev, sizeof(*tegra_tach), GFP_KERNEL);
 	if (!tegra_tach) {
@@ -160,7 +167,9 @@ static int tegra_tachometer_probe(struct platform_device *pdev)
 
 	tegra_tach->rstc = devm_reset_control_get(dev, "tach");
 	if (IS_ERR(tegra_tach->rstc)) {
-		dev_err(dev, "Reset control is not found\n");
+		dev_err(dev, "Reset control is not found, err: %ld\n",
+				PTR_ERR(tegra_tach->rstc));
+		return PTR_ERR(tegra_tach->rstc);
 	}
 
 	tegra_tach->clk = devm_clk_get(&pdev->dev, "tach");
@@ -189,11 +198,9 @@ static int tegra_tachometer_probe(struct platform_device *pdev)
 	 */
 	if (tach_dev->pulse_per_rev > tach_dev->win_len)
 		tach_dev->win_len = tach_dev->pulse_per_rev;
-	tach0 = tachometer_readl(tegra_tach, TACH_FAN_TACH0);
-	tach0 &= ~(TACH_FAN_TACH0_WIN_LENGTH_MASK <<
-			TACH_FAN_TACH0_WIN_LENGTH_SHIFT);
-	tach0 |= (tach_dev->win_len << TACH_FAN_TACH0_WIN_LENGTH_SHIFT);
-	tachometer_writel(tegra_tach, tach0, TACH_FAN_TACH0);
+	ret = tegra_tachometer_set_winlen(tach_dev, tach_dev->win_len);
+	if (ret)
+		dev_info(&pdev->dev, "win len setting is failed\n");
 
 	pr_info("Tachometer driver initialized with pulse_per_rev: %d and win_len: %d\n",
 			tach_dev->pulse_per_rev, tach_dev->win_len);

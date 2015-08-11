@@ -12,7 +12,7 @@ config	TEGRA_VIRTUALIZATION
 	  that support it.
 
 config TEGRA_HV_MANAGER
-	tristate "Nvidia Tegra hypervisor management & IVC"
+	bool "Nvidia Tegra hypervisor management & IVC"
 	depends on TEGRA_VIRTUALIZATION
 	select TEGRA_IVC
 	help

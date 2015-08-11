@@ -12,45 +12,33 @@
  */
 
 #include <linux/kernel.h>
-#include <linux/module.h>
 #include <linux/init.h>
 #include <linux/types.h>
 #include <linux/errno.h>
-#include <linux/fcntl.h>
 #include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/seq_file.h>
 #include <linux/spinlock.h>
-#include <linux/uaccess.h>
 #include <linux/mutex.h>
-#include <linux/device.h>
-#include <linux/cdev.h>
 #include <linux/sched.h>
-#include <linux/poll.h>
 #include <linux/interrupt.h>
 #include <linux/of.h>
-#include <linux/of_platform.h>
-#include <linux/platform_device.h>
-#include <linux/delay.h>
-#include <linux/err.h>
-#include <linux/list.h>
-#include <linux/workqueue.h>
+#include <linux/module.h>
 
 #include <linux/tegra-soc.h>
 #include <linux/tegra-ivc.h>
 
 #include "syscalls.h"
+#include "tegra_hv.h"
 #include <linux/tegra-ivc-instance.h>
+
+#define ERR(...) pr_err("tegra_hv: " __VA_ARGS__)
+#define INFO(...) pr_info("tegra_hv: " __VA_ARGS__)
 
 struct tegra_hv_data;
 
-struct ivc_dev {
+struct hv_ivc {
 	struct tegra_hv_data	*hvd;
-	int			minor;
-	dev_t			dev;
-	struct cdev		cdev;
-	struct device		*device;
-	char			name[32];
 
 	/*
 	 * ivc_devs are stored in an id-indexed array; this field indicates
@@ -64,24 +52,18 @@ struct ivc_dev {
 	const struct guest_ivc_info *givci;
 	int			other_guestid;
 
+	const struct tegra_hv_ivc_ops *cookie_ops;
+	struct tegra_hv_ivc_cookie cookie;
+
 	/* This lock synchronizes the reserved flag. */
 	struct mutex		lock;
 	int			reserved;
 
-	const struct tegra_hv_ivc_ops *cookie_ops;
-	struct tegra_hv_ivc_cookie cookie;
-
-	/* File mode */
-	wait_queue_head_t	wq;
-	/*
-	 * Lock for synchronizing access to the IVC channel between the threaded
-	 * IRQ handler's notification processing and file ops.
-	 */
-	struct mutex		file_lock;
+	char			name[16];
 };
 
 #define cookie_to_ivc_dev(_cookie) \
-	container_of(_cookie, struct ivc_dev, cookie)
+	container_of(_cookie, struct hv_ivc, cookie)
 
 /* Describe all info needed to do IVC to one particular guest */
 struct guest_ivc_info {
@@ -98,22 +80,18 @@ struct hv_mempool {
 
 struct tegra_hv_data {
 	const struct ivc_info_page *info;
-	struct platform_device *pdev;
 	int guestid;
 
 	struct guest_ivc_info *guest_ivc_info;
 
 	/* ivc_devs is indexed by queue id */
-	struct ivc_dev *ivc_devs;
+	struct hv_ivc *ivc_devs;
 	uint32_t max_qid;
 
 	/* array with length info->nr_mempools */
 	struct hv_mempool *mempools;
 
-	struct class *ivc_class;
-	int ivc_major;
-
-	dev_t ivc_dev;
+	struct class *hv_class;
 };
 
 /*
@@ -125,20 +103,42 @@ static const struct tegra_hv_data *tegra_hv_data;
 
 static void ivc_raise_irq(struct ivc *ivc_channel)
 {
-	struct ivc_dev *ivc = container_of(ivc_channel, struct ivc_dev, ivc);
+	struct hv_ivc *ivc = container_of(ivc_channel, struct hv_ivc, ivc);
 	hyp_raise_irq(ivc->qd->raise_irq, ivc->other_guestid);
 }
 
 static const struct tegra_hv_data *get_hvd(void)
 {
 	if (!tegra_hv_data) {
-		pr_err("%s: tegra_hv: not initialized yet\n", __func__);
+		ERR("%s: not initialized yet\n", __func__);
 		return ERR_PTR(-EPROBE_DEFER);
 	} else
 		return tegra_hv_data;
 }
 
-static void ivc_handle_notification(struct ivc_dev *ivc)
+const struct ivc_info_page *tegra_hv_get_ivc_info(void)
+{
+	const struct tegra_hv_data *hvd = get_hvd();
+
+	if (IS_ERR(hvd))
+		return (void *)hvd;
+	else
+		return tegra_hv_data->info;
+}
+EXPORT_SYMBOL(tegra_hv_get_ivc_info);
+
+int tegra_hv_get_vmid(void)
+{
+	const struct tegra_hv_data *hvd = get_hvd();
+
+	if (IS_ERR(hvd))
+		return -1;
+	else
+		return hvd->guestid;
+}
+EXPORT_SYMBOL(tegra_hv_get_vmid);
+
+static void ivc_handle_notification(struct hv_ivc *ivc)
 {
 	struct tegra_hv_ivc_cookie *ivck = &ivc->cookie;
 
@@ -156,324 +156,28 @@ static void ivc_handle_notification(struct ivc_dev *ivc)
 
 static irqreturn_t ivc_dev_cookie_irq_handler(int irq, void *data)
 {
-	struct ivc_dev *ivcd = data;
+	struct hv_ivc *ivcd = data;
 	ivc_handle_notification(ivcd);
 	return IRQ_HANDLED;
 }
 
-static irqreturn_t ivc_threaded_irq_handler(int irq, void *dev_id)
-{
-	/*
-	 * Virtual IRQs are known to be edge-triggered, so no action is needed
-	 * to acknowledge them.
-	 */
-	return IRQ_WAKE_THREAD;
-}
-
-static irqreturn_t ivc_dev_handler(int irq, void *data)
-{
-	struct ivc_dev *ivc = data;
-
-	mutex_lock(&ivc->file_lock);
-	tegra_ivc_channel_notified(&ivc->ivc);
-	mutex_unlock(&ivc->file_lock);
-
-	/* simple implementation, just kick all waiters */
-	wake_up_interruptible_all(&ivc->wq);
-
-	return IRQ_HANDLED;
-}
-
-static void ivc_release_irq(struct ivc_dev *ivc)
+static void ivc_release_irq(struct hv_ivc *ivc)
 {
 	BUG_ON(!ivc);
 
-	devm_free_irq(ivc->device, ivc->qd->irq, ivc);
+	free_irq(ivc->qd->irq, ivc);
 }
 
-static int ivc_request_cookie_irq(struct ivc_dev *ivcd)
+static int ivc_request_cookie_irq(struct hv_ivc *ivcd)
 {
-	return devm_request_irq(ivcd->device, ivcd->qd->irq,
-			ivc_dev_cookie_irq_handler, 0, dev_name(ivcd->device),
-			ivcd);
+	return request_irq(ivcd->qd->irq, ivc_dev_cookie_irq_handler, 0,
+			ivcd->name, ivcd);
 }
-
-static int ivc_dev_open(struct inode *inode, struct file *filp)
-{
-	struct cdev *cdev = inode->i_cdev;
-	struct ivc_dev *ivc = container_of(cdev, struct ivc_dev, cdev);
-	int ret;
-
-	mutex_lock(&ivc->lock);
-	if (ivc->reserved) {
-		ret = -EBUSY;
-	} else {
-		ivc->reserved = 1;
-		ret = 0;
-	}
-	mutex_unlock(&ivc->lock);
-
-	if (ret)
-		return ret;
-
-	ivc->cookie_ops = NULL;
-	mutex_lock(&ivc->file_lock);
-	tegra_ivc_channel_reset(&ivc->ivc);
-	mutex_unlock(&ivc->file_lock);
-
-	/* request our irq */
-	ret = devm_request_threaded_irq(ivc->device, ivc->qd->irq,
-			ivc_threaded_irq_handler, ivc_dev_handler, 0,
-			dev_name(ivc->device), ivc);
-	if (ret < 0) {
-		dev_err(ivc->device, "Failed to request irq %d\n",
-				ivc->qd->irq);
-		mutex_lock(&ivc->lock);
-		BUG_ON(!ivc->reserved);
-		ivc->reserved = 0;
-		mutex_unlock(&ivc->lock);
-		return ret;
-	}
-
-	/* all done */
-	filp->private_data = ivc;
-
-	return 0;
-}
-
-static int ivc_dev_release(struct inode *inode, struct file *filp)
-{
-	struct ivc_dev *ivc = filp->private_data;
-
-	if (ivc == NULL)
-		return 0;
-	filp->private_data = NULL;
-
-	ivc_release_irq(ivc);
-
-	mutex_lock(&ivc->lock);
-	BUG_ON(!ivc->reserved);
-	ivc->reserved = 0;
-	mutex_unlock(&ivc->lock);
-
-	return 0;
-}
-
-static int ivc_dump(struct ivc_dev *ivc)
-{
-	struct tegra_hv_data *hvd = ivc->hvd;
-	struct platform_device *pdev = hvd->pdev;
-	struct device *dev = &pdev->dev;
-
-	dev_info(dev, "IVC#%d: IRQ=%d nframes=%d frame_size=%d offset=%d\n",
-			ivc->qd->id, ivc->qd->irq,
-			ivc->qd->nframes, ivc->qd->frame_size, ivc->qd->offset);
-
-	return 0;
-}
-
-static ssize_t ivc_dev_read(struct file *filp, char __user *buf,
-		size_t count, loff_t *ppos)
-{
-	struct ivc_dev *ivcd = filp->private_data;
-	struct ivc *ivc = &ivcd->ivc;
-	int left = count, ret = 0, chunk;
-
-	if (!tegra_ivc_can_read(ivc)) {
-		if (filp->f_flags & O_NONBLOCK)
-			return -EAGAIN;
-
-		ret = wait_event_interruptible(ivcd->wq,
-				tegra_ivc_can_read(ivc));
-		if (ret)
-			return ret;
-	}
-
-	while (left > 0 && tegra_ivc_can_read(ivc)) {
-
-		chunk = ivcd->qd->frame_size;
-		if (chunk > left)
-			chunk = left;
-		mutex_lock(&ivcd->file_lock);
-		ret = tegra_ivc_read_user(ivc, buf, chunk);
-		mutex_unlock(&ivcd->file_lock);
-		if (ret < 0)
-			break;
-
-		buf += chunk;
-		left -= chunk;
-	}
-
-	if (left >= count)
-		return ret;
-
-	return count - left;
-}
-
-static ssize_t ivc_dev_write(struct file *filp, const char __user *buf,
-		size_t count, loff_t *pos)
-{
-	struct ivc_dev *ivcd = filp->private_data;
-	struct ivc *ivc;
-	ssize_t done;
-	size_t left, chunk;
-	int ret = 0;
-
-	BUG_ON(!ivcd);
-	ivc = &ivcd->ivc;
-
-	done = 0;
-	while (done < count) {
-
-		left = count - done;
-
-		if (left < ivcd->qd->frame_size)
-			chunk = left;
-		else
-			chunk = ivcd->qd->frame_size;
-
-		/* is queue full? */
-		if (!tegra_ivc_can_write(ivc)) {
-
-			/* check non-blocking mode */
-			if (filp->f_flags & O_NONBLOCK) {
-				ret = -EAGAIN;
-				break;
-			}
-
-			ret = wait_event_interruptible(ivcd->wq,
-					tegra_ivc_can_write(ivc));
-			if (ret)
-				break;
-		}
-
-		mutex_lock(&ivcd->file_lock);
-		ret = tegra_ivc_write_user(ivc, buf, chunk);
-		mutex_unlock(&ivcd->file_lock);
-		if (ret < 0)
-			break;
-
-		buf += chunk;
-
-		done += chunk;
-		*pos += chunk;
-	}
-
-
-	if (done == 0)
-		return ret;
-
-	return done;
-}
-
-static unsigned int ivc_dev_poll(struct file *filp, poll_table *wait)
-{
-	struct ivc_dev *ivcd = filp->private_data;
-	struct ivc *ivc;
-	int mask = 0;
-
-	BUG_ON(!ivcd);
-	ivc = &ivcd->ivc;
-
-	poll_wait(filp, &ivcd->wq, wait);
-
-	if (tegra_ivc_can_read(ivc))
-		mask = POLLIN | POLLRDNORM;
-
-	if (tegra_ivc_can_write(ivc))
-		mask |= POLLOUT | POLLWRNORM;
-
-	/* no exceptions */
-
-	return mask;
-}
-
-static const struct file_operations ivc_fops = {
-	.owner		= THIS_MODULE,
-	.open		= ivc_dev_open,
-	.release	= ivc_dev_release,
-	.llseek		= noop_llseek,
-	.read		= ivc_dev_read,
-	.write		= ivc_dev_write,
-	.poll		= ivc_dev_poll,
-};
-
-static ssize_t vmid_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	const struct tegra_hv_data *hvd = get_hvd();
-	BUG_ON(!hvd);
-	return snprintf(buf, PAGE_SIZE, "%d\n", hvd->guestid);
-}
-
-static ssize_t id_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	struct ivc_dev *ivc = dev_get_drvdata(dev);
-
-	return snprintf(buf, PAGE_SIZE, "%d\n", ivc->qd->id);
-}
-
-static ssize_t frame_size_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	struct ivc_dev *ivc = dev_get_drvdata(dev);
-
-	return snprintf(buf, PAGE_SIZE, "%d\n", ivc->qd->frame_size);
-}
-
-static ssize_t nframes_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	struct ivc_dev *ivc = dev_get_drvdata(dev);
-
-	return snprintf(buf, PAGE_SIZE, "%d\n", ivc->qd->nframes);
-}
-
-static ssize_t reserved_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	struct ivc_dev *ivc = dev_get_drvdata(dev);
-	int reserved;
-
-	mutex_lock(&ivc->lock);
-	reserved = ivc->reserved;
-	mutex_unlock(&ivc->lock);
-
-	return snprintf(buf, PAGE_SIZE, "%d\n", reserved);
-}
-
-static ssize_t peer_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	struct ivc_dev *ivc = dev_get_drvdata(dev);
-
-	return snprintf(buf, PAGE_SIZE, "%d\n", ivc->other_guestid);
-}
-
-static const struct device_attribute hv_vmid_attr = __ATTR_RO(vmid);
-
-static DEVICE_ATTR_RO(id);
-static DEVICE_ATTR_RO(frame_size);
-static DEVICE_ATTR_RO(nframes);
-static DEVICE_ATTR_RO(reserved);
-static DEVICE_ATTR_RO(peer);
-
-struct attribute *ivc_attrs[] = {
-	&dev_attr_id.attr,
-	&dev_attr_frame_size.attr,
-	&dev_attr_nframes.attr,
-	&dev_attr_reserved.attr,
-	&dev_attr_peer.attr,
-	NULL,
-};
-ATTRIBUTE_GROUPS(ivc);
 
 static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 		const struct tegra_hv_queue_data *qd)
 {
-	struct device *dev = &hvd->pdev->dev;
-	struct ivc_dev *ivc;
+	struct hv_ivc *ivc;
 	int ret;
 	int rx_first;
 	uintptr_t rx_base, tx_base;
@@ -508,27 +212,6 @@ static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 	BUG_ON(ivc->givci->shmem == 0);
 
 	mutex_init(&ivc->lock);
-	init_waitqueue_head(&ivc->wq);
-	mutex_init(&ivc->file_lock);
-
-	ivc->minor = qd->id;
-	ivc->dev = MKDEV(hvd->ivc_major, ivc->minor);
-	cdev_init(&ivc->cdev, &ivc_fops);
-	snprintf(ivc->name, sizeof(ivc->name) - 1, "ivc%d", qd->id);
-	ret = cdev_add(&ivc->cdev, ivc->dev, 1);
-	if (ret != 0) {
-		dev_err(dev, "cdev_add() failed\n");
-		return ret;
-	}
-	/* parent is this hvd dev */
-	ivc->device = device_create(hvd->ivc_class, dev, ivc->dev, ivc,
-			ivc->name);
-	if (IS_ERR(ivc->device)) {
-		dev_err(dev, "device_create() failed for %s\n", ivc->name);
-		return PTR_ERR(ivc->device);
-	}
-	/* point to ivc */
-	dev_set_drvdata(ivc->device, ivc);
 
 	if (qd->peers[0] == qd->peers[1]) {
 		/*
@@ -551,7 +234,9 @@ static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 		rx_base = ivc->givci->shmem + qd->offset + qd->size;
 	}
 
-	dev_info(dev, "adding ivc%u: rx_base=%lx tx_base = %lx size=%x\n",
+	snprintf(ivc->name, sizeof(ivc->name), "ivc%u", qd->id);
+
+	INFO("adding ivc%u: rx_base=%lx tx_base = %lx size=%x\n",
 			qd->id, rx_base, tx_base, qd->size);
 	tegra_ivc_init(&ivc->ivc, rx_base, tx_base, qd->nframes, qd->frame_size,
 			NULL, ivc_raise_irq);
@@ -561,17 +246,17 @@ static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 	if (ret != 0)
 		return  ret;
 
-	dev_info(dev, "added %s\n", ivc->name);
+	INFO("added %s\n", ivc->name);
 
 	return 0;
 }
 
-struct ivc_dev *ivc_device_by_id(const struct tegra_hv_data *hvd, uint32_t id)
+struct hv_ivc *ivc_device_by_id(const struct tegra_hv_data *hvd, uint32_t id)
 {
 	if (id > hvd->max_qid)
 		return NULL;
 	else {
-		struct ivc_dev *ivc = &hvd->ivc_devs[id];
+		struct hv_ivc *ivc = &hvd->ivc_devs[id];
 		if (ivc->valid)
 			return ivc;
 		else
@@ -581,25 +266,14 @@ struct ivc_dev *ivc_device_by_id(const struct tegra_hv_data *hvd, uint32_t id)
 
 static void tegra_hv_ivc_cleanup(struct tegra_hv_data *hvd)
 {
-	uint32_t i;
-
 	if (!hvd->ivc_devs)
 		return;
-
-	for (i = 0; i < hvd->info->nr_queues; i++) {
-		struct ivc_dev *ivc = &hvd->ivc_devs[i];
-		if (ivc->device) {
-			BUG_ON(!ivc->valid);
-			cdev_del(&ivc->cdev);
-			device_del(ivc->device);
-		}
-	}
 
 	kfree(hvd->ivc_devs);
 	hvd->ivc_devs = NULL;
 }
 
-static void tegra_hv_cleanup(struct tegra_hv_data *hvd)
+static void __init tegra_hv_cleanup(struct tegra_hv_data *hvd)
 {
 	/*
 	 * Destroying IVC channels in use is not supported. Once it's possible
@@ -610,19 +284,11 @@ static void tegra_hv_cleanup(struct tegra_hv_data *hvd)
 	kfree(hvd->mempools);
 	hvd->mempools = NULL;
 
-	device_remove_file(&hvd->pdev->dev, &hv_vmid_attr);
 	tegra_hv_ivc_cleanup(hvd);
-
-	if (hvd->ivc_dev) {
-		unregister_chrdev_region(hvd->ivc_dev, hvd->max_qid);
-		hvd->ivc_dev = 0;
-	}
-
-	if (!hvd->info)
-		return;
 
 	if (hvd->guest_ivc_info) {
 		uint32_t i;
+		BUG_ON(!hvd->info);
 		for (i = 0; i < hvd->info->nr_areas; i++) {
 			if (hvd->guest_ivc_info[i].shmem) {
 				iounmap((void *)hvd->guest_ivc_info[i].shmem);
@@ -632,56 +298,68 @@ static void tegra_hv_cleanup(struct tegra_hv_data *hvd)
 
 		kfree(hvd->guest_ivc_info);
 		hvd->guest_ivc_info = NULL;
+
+		iounmap((void *)hvd->info);
+		hvd->info = NULL;
 	}
 
-	iounmap((void *)hvd->info);
-	hvd->info = NULL;
-
-	if (hvd->ivc_class) {
-		class_destroy(hvd->ivc_class);
-		hvd->ivc_class = NULL;
+	if (hvd->hv_class) {
+		class_destroy(hvd->hv_class);
+		hvd->hv_class = NULL;
 	}
 }
 
-static int tegra_hv_setup(struct tegra_hv_data *hvd)
+static ssize_t vmid_show(struct class *class,
+	struct class_attribute *attr, char *buf)
+{
+	const struct tegra_hv_data *hvd = get_hvd();
+
+	BUG_ON(!hvd);
+	return snprintf(buf, PAGE_SIZE, "%d\n", hvd->guestid);
+}
+static CLASS_ATTR_RO(vmid);
+
+static int __init tegra_hv_setup(struct tegra_hv_data *hvd)
 {
 	uint64_t info_page;
 	uint32_t i;
 	int ret;
-	struct device *dev = &hvd->pdev->dev;
 
 	ret = hyp_read_gid(&hvd->guestid);
 	if (ret != 0) {
-		dev_err(dev, "Failed to read guest id\n");
+		ERR("Failed to read guest id\n");
 		return -ENODEV;
 	}
 
-	hvd->ivc_class = class_create(THIS_MODULE, "ivc");
-	if (IS_ERR(hvd->ivc_class)) {
-		dev_err(dev, "class_create() failed\n");
-		return PTR_ERR(hvd->ivc_class);
+	hvd->hv_class = class_create(THIS_MODULE, "tegra_hv");
+	if (IS_ERR(hvd->hv_class)) {
+		ERR("class_create() failed\n");
+		return PTR_ERR(hvd->hv_class);
 	}
 
-	/* set class attributes */
-	hvd->ivc_class->dev_groups = ivc_groups;
+	ret = class_create_file(hvd->hv_class, &class_attr_vmid);
+	if (ret != 0) {
+		ERR("failed to create vmid file: %d\n", ret);
+		return ret;
+	}
 
 	ret = hyp_read_ivc_info(&info_page);
 	if (ret != 0) {
-		dev_err(dev, "failed to obtain IVC info page: %d\n", ret);
+		ERR("failed to obtain IVC info page: %d\n", ret);
 		return ret;
 	}
 
 	hvd->info = (struct ivc_info_page *)ioremap_cache(info_page,
 			PAGE_SIZE);
 	if (hvd->info == NULL) {
-		dev_err(dev, "failed to map IVC info page (%llx)\n", info_page);
+		ERR("failed to map IVC info page (%llx)\n", info_page);
 		return -ENOMEM;
 	}
 
 	hvd->guest_ivc_info = kzalloc(hvd->info->nr_areas *
 			sizeof(*hvd->guest_ivc_info), GFP_KERNEL);
 	if (hvd->guest_ivc_info == NULL) {
-		dev_err(dev, "failed to allocate %u-entry givci\n",
+		ERR("failed to allocate %u-entry givci\n",
 				hvd->info->nr_areas);
 		return -ENOMEM;
 	}
@@ -691,7 +369,7 @@ static int tegra_hv_setup(struct tegra_hv_data *hvd)
 				hvd->info->areas[i].pa,
 				hvd->info->areas[i].size);
 		if (hvd->guest_ivc_info[i].shmem == 0) {
-			dev_err(dev, "can't map area for guest %u (%llx)\n",
+			ERR("can't map area for guest %u (%llx)\n",
 					hvd->info->areas[i].guest,
 					hvd->info->areas[i].pa);
 			return -ENOMEM;
@@ -711,18 +389,10 @@ static int tegra_hv_setup(struct tegra_hv_data *hvd)
 			hvd->max_qid = qd->id;
 	}
 
-	/* allocate the whole chardev range */
-	ret = alloc_chrdev_region(&hvd->ivc_dev, 0, hvd->max_qid, "ivc");
-	if (ret < 0) {
-		dev_err(dev, "alloc_chrdev_region() failed\n");
-		return ret;
-	}
-	hvd->ivc_major = MAJOR(hvd->ivc_dev);
-
 	hvd->ivc_devs = kzalloc((hvd->max_qid + 1) * sizeof(*hvd->ivc_devs),
 			GFP_KERNEL);
 	if (hvd->ivc_devs == NULL) {
-		dev_err(dev, "failed to allocate %u-entry ivc_devs array\n",
+		ERR("failed to allocate %u-entry ivc_devs array\n",
 				hvd->info->nr_queues);
 		return -ENOMEM;
 	}
@@ -733,23 +403,16 @@ static int tegra_hv_setup(struct tegra_hv_data *hvd)
 				&ivc_info_queue_array(hvd->info)[i];
 		ret = tegra_hv_add_ivc(hvd, qd);
 		if (ret != 0) {
-			dev_err(dev, "failed to add queue #%u\n", qd->id);
+			ERR("failed to add queue #%u\n", qd->id);
 			return ret;
 		}
-	}
-
-	ret = device_create_file(dev, &hv_vmid_attr);
-	if (ret != 0) {
-		dev_err(dev, "failed to create vmid sysfs attribute: %d\n",
-			ret);
-		return ret;
 	}
 
 	hvd->mempools =
 		kzalloc(hvd->info->nr_mempools * sizeof(*hvd->mempools),
 								GFP_KERNEL);
 	if (hvd->mempools == NULL) {
-		dev_err(dev, "failed to allocate %u-entry mempools array\n",
+		ERR("failed to allocate %u-entry mempools array\n",
 				hvd->info->nr_mempools);
 		return -ENOMEM;
 	}
@@ -767,35 +430,31 @@ static int tegra_hv_setup(struct tegra_hv_data *hvd)
 		ivmk->size = mpd->size;
 		ivmk->peer_vmid = mpd->peer_vmid;
 
-		dev_info(dev, "added mempool %u: ipa=%llx size=%llx peer=%u\n",
+		INFO("added mempool %u: ipa=%llx size=%llx peer=%u\n",
 				mpd->id, mpd->pa, mpd->size, mpd->peer_vmid);
 	}
 
 	return 0;
 }
 
-static int tegra_hv_probe(struct platform_device *pdev)
+static int __init tegra_hv_init(void)
 {
-	struct device *dev = &pdev->dev;
 	struct tegra_hv_data *hvd;
 	int ret;
-
-	BUG_ON(tegra_hv_data != NULL);
 
 	if (!is_tegra_hypervisor_mode())
 		return -ENODEV;
 
-	hvd = devm_kzalloc(dev, sizeof(*hvd), GFP_KERNEL);
-	if (hvd == NULL) {
-		dev_err(dev, "Failed to allocate hvd structure\n");
+	hvd = kzalloc(sizeof(*hvd), GFP_KERNEL);
+	if (!hvd) {
+		ERR("failed to allocate hvd\n");
 		return -ENOMEM;
 	}
-
-	hvd->pdev = pdev;
 
 	ret = tegra_hv_setup(hvd);
 	if (ret != 0) {
 		tegra_hv_cleanup(hvd);
+		kfree(hvd);
 		return ret;
 	}
 
@@ -805,51 +464,27 @@ static int tegra_hv_probe(struct platform_device *pdev)
 	 */
 	smp_wmb();
 
+	BUG_ON(tegra_hv_data);
 	tegra_hv_data = hvd;
-	dev_info(dev, "initialized\n");
+	INFO("initialized\n");
 
 	return 0;
 }
 
-static int tegra_hv_release(struct platform_device *pdev)
+static int ivc_dump(struct hv_ivc *ivc)
 {
-	struct tegra_hv_data *hvd = platform_get_drvdata(pdev);
-
-	/*
-	 * Once IVC channels are available to the kernel, there is no supported
-	 * way to remove them.
-	 */
-	if (tegra_hv_data != NULL)
-		return -EINVAL;
-
-	if (hvd != NULL)
-		tegra_hv_cleanup(hvd);
+	INFO("IVC#%d: IRQ=%d nframes=%d frame_size=%d offset=%d\n",
+			ivc->qd->id, ivc->qd->irq,
+			ivc->qd->nframes, ivc->qd->frame_size, ivc->qd->offset);
 
 	return 0;
 }
-
-static const struct of_device_id tegra_hv_of_match[] = {
-	{ .compatible = "nvidia,tegra-hv", },
-	{},
-};
-
-MODULE_DEVICE_TABLE(of, tegra_hv_of_match);
-
-static struct platform_driver tegra_hv_driver = {
-	.probe	= tegra_hv_probe,
-	.remove = tegra_hv_release,
-	.driver = {
-		.owner	= THIS_MODULE,
-		.name	= "tegra_hv",
-		.of_match_table = of_match_ptr(tegra_hv_of_match),
-	},
-};
 
 struct tegra_hv_ivc_cookie *tegra_hv_ivc_reserve(struct device_node *dn,
 		int id, const struct tegra_hv_ivc_ops *ops)
 {
 	const struct tegra_hv_data *hvd = get_hvd();
-	struct ivc_dev *ivc;
+	struct hv_ivc *ivc;
 	struct tegra_hv_ivc_cookie *ivck;
 	int ret;
 
@@ -900,7 +535,7 @@ EXPORT_SYMBOL(tegra_hv_ivc_reserve);
 
 int tegra_hv_ivc_unreserve(struct tegra_hv_ivc_cookie *ivck)
 {
-	struct ivc_dev *ivc;
+	struct hv_ivc *ivc;
 	int ret;
 
 	if (ivck == NULL)
@@ -984,7 +619,7 @@ EXPORT_SYMBOL(tegra_hv_ivc_tx_frames_available);
 
 int tegra_hv_ivc_dump(struct tegra_hv_ivc_cookie *ivck)
 {
-	struct ivc_dev *ivc = cookie_to_ivc_dev(ivck);
+	struct hv_ivc *ivc = cookie_to_ivc_dev(ivck);
 	return ivc_dump(ivc);
 }
 EXPORT_SYMBOL(tegra_hv_ivc_dump);
@@ -1020,6 +655,12 @@ int tegra_hv_ivc_read_advance(struct tegra_hv_ivc_cookie *ivck)
 	return tegra_ivc_read_advance(ivc);
 }
 EXPORT_SYMBOL(tegra_hv_ivc_read_advance);
+
+struct ivc *tegra_hv_ivc_convert_cookie(struct tegra_hv_ivc_cookie *ivck)
+{
+	return &cookie_to_ivc_dev(ivck)->ivc;
+}
+EXPORT_SYMBOL(tegra_hv_ivc_convert_cookie);
 
 struct tegra_hv_ivm_cookie *tegra_hv_mempool_reserve(struct device_node *dn,
 		unsigned id)
@@ -1075,10 +716,10 @@ EXPORT_SYMBOL(tegra_hv_ivc_channel_notified);
 
 void tegra_hv_ivc_channel_reset(struct tegra_hv_ivc_cookie *ivck)
 {
-	struct ivc_dev *ivc = cookie_to_ivc_dev(ivck);
+	struct hv_ivc *ivc = cookie_to_ivc_dev(ivck);
 
 	if (ivc->cookie_ops) {
-		dev_err(ivc->device, "reset unsupported with callbacks");
+		ERR("reset unsupported with callbacks");
 		BUG();
 	}
 
@@ -1086,17 +727,6 @@ void tegra_hv_ivc_channel_reset(struct tegra_hv_ivc_cookie *ivck)
 }
 EXPORT_SYMBOL(tegra_hv_ivc_channel_reset);
 
-static int __init tegra_hv_mod_init(void)
-{
-	return platform_driver_register(&tegra_hv_driver);
-}
-
-static void __exit tegra_hv_mod_exit(void)
-{
-	platform_driver_unregister(&tegra_hv_driver);
-}
-
-core_initcall(tegra_hv_mod_init);
-module_exit(tegra_hv_mod_exit);
+core_initcall(tegra_hv_init);
 
 MODULE_LICENSE("GPL");

@@ -244,12 +244,6 @@ static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 		pr_err("%s: invalid argument\n", __func__);
 		return -EINVAL;
 	}
-	edid->support_audio = 0;
-	edid->hdmi_vic_len = 0;
-	edid->scdc_present = false;
-	edid->hfvsdb_present = false;
-	edid->db420_present = false;
-	edid->colorimetry = 0;
 	ptr = &raw[0];
 
 	/* If CEA 861 block get info for eld struct */
@@ -527,16 +521,11 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 	u8 checksum = 0;
 	u8 *data;
 
-	new_data = vmalloc(SZ_32K + sizeof(struct tegra_edid_pvt));
+	new_data = vzalloc(SZ_32K + sizeof(struct tegra_edid_pvt));
 	if (!new_data)
 		return -ENOMEM;
 
 	kref_init(&new_data->refcnt);
-
-	new_data->support_stereo = 0;
-	new_data->color_depth_flag = 0;
-	new_data->max_tmds_char_rate_hf_mhz = 0;
-	new_data->max_tmds_char_rate_hllc_mhz = 0;
 
 	data = new_data->dc_edid.buf;
 

@@ -1348,6 +1348,10 @@ struct DWC_ETH_QOS_prv_data {
 	struct clk *tx_clk;
 	struct reset_control *eqos_rst;
 
+	struct regulator *phy_vdd_1v8;
+	struct regulator *phy_ovdd_rgmii;
+	struct regulator *phy_pllvdd;
+
 	struct eqos_cfg dt_cfg;
 	struct chan_data chinfo[MAX_CHANS];
 	uint	napi_quota_all_chans;

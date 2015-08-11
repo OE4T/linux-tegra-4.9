@@ -253,6 +253,18 @@
 		status = "okay";
 	};
 
+	i2c@31b0000 {
+		status = "okay";
+	};
+
+	i2c@31c0000 {
+		status = "okay";
+	};
+
+	i2c@31e0000 {
+		status = "okay";
+	};
+
 	pcie-controller {
 		status = "okay";
 		pci@1,0 {

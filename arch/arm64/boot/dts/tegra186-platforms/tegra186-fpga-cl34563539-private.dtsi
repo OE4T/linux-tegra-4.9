@@ -24,6 +24,10 @@
 		status = "disabled";
 	};
 
+	clock@5000000 {
+		status = "okay";
+	};
+
 	ethernet@0x7ffff000 {
 		status = "disabled";
 	};

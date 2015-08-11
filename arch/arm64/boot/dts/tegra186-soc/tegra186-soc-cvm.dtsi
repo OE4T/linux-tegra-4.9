@@ -193,7 +193,7 @@
 		status = "okay";
 	};
 
-	clock@500000 {
+	clock@5000000 {
 		status = "okay";
 	};
 

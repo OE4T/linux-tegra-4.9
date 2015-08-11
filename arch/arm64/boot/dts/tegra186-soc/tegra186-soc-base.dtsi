@@ -1539,25 +1539,29 @@
 
 	watchdog@30c0000 {
 		compatible = "nvidia,tegra-wdt-t18x";
-		reg = <0x0 0x030c0000 0x0 0x10000
-		0x0 0x03090000 0x0 0x10000>;
+		reg = <0x0 0x030c0000 0x0 0x10000>, /* WDT0 */
+		      <0x0 0x03090000 0x0 0x10000>; /* TMR7 */
 		interrupts = <1 15 0xf01>;
-		/* uncomment to enable on boot */
-		/* nvidia,enable-on-init; */
 		nvidia,wdt-cpu-id = <4>; /* denver cpu */
 		nvidia,expiry-count = <5>;
+		nvidia,enable-on-init;
+		nvidia,heartbeat-init = <120>;
+		nvidia,disable-debug-reset;
+		nvidia,disable-por-reset;
 		status = "disabled";
 	};
 
 	watchdog@30d0000 {
 		compatible = "nvidia,tegra-wdt-t18x";
-		reg = <0x0 0x030d0000 0x0 0x10000
-		0x0 0x030a0000 0x0 0x10000>;
+		reg = <0x0 0x030d0000 0x0 0x10000>, /* WDT1 */
+		      <0x0 0x030a0000 0x0 0x10000>; /* TMR8 */
 		interrupts = <1 15 0xf01>;
-		/* uncomment to enable on boot */
-		/* nvidia,enable-on-init; */
 		nvidia,wdt-cpu-id = <0>; /* ARM cpu */
 		nvidia,expiry-count = <5>;
+		nvidia,enable-on-init;
+		nvidia,heartbeat-init = <120>;
+		nvidia,disable-debug-reset;
+		nvidia,disable-por-reset;
 		status = "disabled";
 	};
 

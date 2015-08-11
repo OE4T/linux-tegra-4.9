@@ -277,7 +277,7 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	}
 
 	if (pdata->keepalive)
-		nvhost_module_enable_poweroff(priv->pdev);
+		nvhost_module_idle(priv->pdev);
 
 	kfree(priv);
 	return 0;
@@ -324,15 +324,14 @@ static int __nvhost_channelopen(struct inode *inode,
 	if (nvhost_module_add_client(pdev, priv))
 		goto fail_add_client;
 
-	/* Keep devices with keepalive flag powered */
-	if (pdata->keepalive)
-		nvhost_module_disable_poweroff(pdev);
-
 	/* Check that the device can be powered */
 	ret = nvhost_module_busy(pdev);
 	if (ret)
 		goto fail_power_on;
-	nvhost_module_idle(pdev);
+
+	/* Turn off the device if we do not need to keep it powered */
+	if (!pdata->keepalive)
+		nvhost_module_idle(pdev);
 
 	if (nvhost_dev_is_virtual(pdev)) {
 		/* If virtual, allocate a client id on the server side. This is
@@ -404,9 +403,9 @@ fail_get_channel:
 	nvhost_vm_put(priv->vm);
 fail_alloc_vm:
 fail_virt_clientid:
-fail_power_on:
 	if (pdata->keepalive)
-		nvhost_module_enable_poweroff(pdev);
+		nvhost_module_idle(pdev);
+fail_power_on:
 	nvhost_module_remove_client(pdev, priv);
 fail_add_client:
 	kfree(priv);

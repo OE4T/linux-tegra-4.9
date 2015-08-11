@@ -1338,6 +1338,8 @@ struct DWC_ETH_QOS_prv_data {
 	INT common_irq;
 	INT rx_irqs[MAX_CHANS];
 	INT tx_irqs[MAX_CHANS];
+	int phy_intr_gpio;
+	int phy_reset_gpio;
 
 	struct clk *axi_clk;
 	struct clk *rx_input_clk;

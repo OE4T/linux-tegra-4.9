@@ -51,9 +51,11 @@
 #include "nvregacc.h"
 #include <linux/platform_device.h>
 #include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/tegra-soc.h>
 #include <linux/clk.h>
 #include <linux/reset.h>
+#include <linux/gpio.h>
 
 #define LP_SUPPORTED 0
 static const struct of_device_id dwc_eth_qos_of_match[] = {
@@ -341,6 +343,75 @@ axi_get_fail:
 	return ret;
 }
 
+static int eqos_get_phyreset_from_gpio(struct DWC_ETH_QOS_prv_data *pdata)
+{
+	struct platform_device *pdev = pdata->pdev;
+	struct device_node *node = pdev->dev.of_node;
+	int ret;
+
+	pdata->phy_reset_gpio =
+		of_get_named_gpio(node, "nvidia,phy-reset-gpio", 0);
+	if (pdata->phy_reset_gpio < 0) {
+		dev_err(&pdev->dev, "failed to read phy_reset_gpio\n");
+		return -ENODEV;
+	}
+	if (gpio_is_valid(pdata->phy_reset_gpio)) {
+		ret = devm_gpio_request(&pdev->dev,
+			pdata->phy_reset_gpio, "eqos_phy_reset");
+		if (ret < 0) {
+			dev_err(&pdev->dev, "phy_reset gpio_request failed\n");
+			return ret;
+		}
+		ret = gpio_direction_output(pdata->phy_reset_gpio, 1);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "gpio_direction_output failed\n");
+			return ret;
+		}
+	} else {
+		dev_err(&pdev->dev, "invalid phy_reset_gpio\n");
+		return -ENODEV;
+	}
+	return 0;
+}
+
+static int eqos_get_phyirq_from_gpio(struct DWC_ETH_QOS_prv_data *pdata)
+{
+	struct platform_device *pdev = pdata->pdev;
+	struct device_node *node = pdev->dev.of_node;
+	int ret;
+
+	pdata->phy_intr_gpio =
+			of_get_named_gpio(node, "nvidia,phy-intr-gpio", 0);
+	if (pdata->phy_intr_gpio < 0) {
+		dev_err(&pdev->dev, "failed to read phy_intr_gpio\n");
+		return -ENODEV;
+	}
+	if (gpio_is_valid(pdata->phy_intr_gpio)) {
+		ret = devm_gpio_request(&pdev->dev,
+			pdata->phy_intr_gpio, "eqos_phy_intr");
+		if (ret < 0) {
+			dev_err(&pdev->dev, "gpio_request failed\n");
+			return ret;
+		}
+		ret = gpio_direction_input(pdata->phy_intr_gpio);
+		if (ret < 0) {
+			dev_err(&pdev->dev,
+				"gpio_direction_input failed\n");
+			return ret;
+		}
+		ret = gpio_to_irq(pdata->phy_intr_gpio);
+		if (ret < 0) {
+			dev_err(&pdev->dev,
+				"gpio_to_irq failed for phy_intr\n");
+			return ret;
+		}
+	} else {
+		dev_err(&pdev->dev, "invalid phy_intr_gpio\n");
+		return -ENODEV;
+	}
+	return ret;
+}
+
 /*!
 * \brief API to initialize the device.
 *
@@ -430,22 +501,6 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		DBGPR("rx_irq[%d]=%d, tx_irq[%d]=%d\n",
 			j, rx_irqs[j], j, tx_irqs[j]);
 
-	/* PMT and PHY irqs are shared on FPGA system */
-	if (tegra_platform_is_unit_fpga()) {
-		phyirq = power_irq;
-	} else {
-		/* On silicon the phy_intr line is handled through a wake
-		 * capable GPIO input. DMIC4_CLK is the GPIO input port.
-		 * Refer Bug 1626763
-		 * DT should have phyirq at IRQ_RESOURCE index-2
-		 */
-		phyirq = platform_get_irq(pdev, 2);
-		if (phyirq < 0)
-			return phyirq;
-	}
-
-	DBGPR("phyirq = %d\n", phyirq);
-
 	DBGPR("==========================================================\n");
 	DBGPR("Sizeof rx context desc is %lu\n", sizeof(struct s_RX_CONTEXT_DESC));
 	DBGPR("Sizeof tx context desc is %lu\n", sizeof(struct s_TX_CONTEXT_DESC));
@@ -478,8 +533,32 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 
 	pdata->dev = ndev;
 
-	if (!tegra_platform_is_unit_fpga()) {
-		/* reset */
+	/* PMT and PHY irqs are shared on FPGA system */
+	if (tegra_platform_is_unit_fpga()) {
+		phyirq = power_irq;
+	} else {
+		/* On silicon the phy_intr line is handled through a wake
+		 * capable GPIO input. DMIC4_CLK is the GPIO input port.
+		 */
+		phyirq = eqos_get_phyirq_from_gpio(pdata);
+		if (phyirq < 0) {
+			dev_err(&pdev->dev, "get_phyirq_from_gpio failed\n");
+			goto err_out_phyirq_failed;
+		}
+
+		/* setup PHY reset gpio */
+		ret = eqos_get_phyreset_from_gpio(pdata);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "get_phyreset_from_gpio failed\n");
+			goto err_out_phyreset_failed;
+		}
+
+		/* reset the PHY Broadcom PHY needs minimum of 2us delay */
+		gpio_set_value(pdata->phy_reset_gpio, 0);
+		usleep_range(10, 11);
+		gpio_set_value(pdata->phy_reset_gpio, 1);
+
+		/* CAR reset */
 		pdata->eqos_rst =
 			devm_reset_control_get(&pdev->dev, "eqos_rst");
 		if (IS_ERR_OR_NULL(pdata->eqos_rst)) {
@@ -498,6 +577,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 			goto err_out_clock_init_failed;
 		}
 	}
+	DBGPR("phyirq = %d\n", phyirq);
 
 	/* queue count */
 	tx_q_count = get_tx_queue_count();
@@ -757,6 +837,8 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		!IS_ERR_OR_NULL(pdata->eqos_rst))
 		reset_control_assert(pdata->eqos_rst);
  err_out_reset_get_failed:
+ err_out_phyreset_failed:
+ err_out_phyirq_failed:
 	free_netdev(ndev);
 	platform_set_drvdata(pdev, NULL);
 

@@ -18,6 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  */
+#include <dt-bindings/gpio/tegra-gpio.h>
 
 / {
         ether_qos@2490000 {
@@ -36,6 +37,8 @@
 
 		nvidia,chan_napi_quota = <64 64 64 64>;
 		nvidia,pause_frames = <1>; /*0=enable, 1=disable */
+		nvidia,phy-reset-gpio = <&tegra_gpio TEGRA_GPIO(M, 4) 0>;
+		nvidia,phy-intr-gpio = <&tegra_gpio TEGRA_GPIO(M, 5) 0>;
         };
 
 };

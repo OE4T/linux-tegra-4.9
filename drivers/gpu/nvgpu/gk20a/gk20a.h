@@ -179,6 +179,7 @@ struct gpu_ops {
 		void (*init_sm_dsm_reg_info)(void);
 		int (*wait_empty)(struct gk20a *g, unsigned long end_jiffies,
 		       u32 expect_delay);
+		void (*init_cyclestats)(struct gk20a *g);
 	} gr;
 	const char *name;
 	struct {

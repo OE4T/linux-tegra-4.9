@@ -7333,6 +7333,16 @@ int gr_gk20a_debugfs_init(struct gk20a *g)
 	return 0;
 }
 
+static void gr_gk20a_init_cyclestats(struct gk20a *g)
+{
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	g->gpu_characteristics.flags |=
+		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS;
+#else
+	(void)g;
+#endif
+}
+
 void gk20a_init_gr_ops(struct gpu_ops *gops)
 {
 	gops->gr.access_smpc_reg = gr_gk20a_access_smpc_reg;
@@ -7383,4 +7393,5 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.get_rop_l2_en_mask = gr_gk20a_rop_l2_en_mask;
 	gops->gr.init_sm_dsm_reg_info = gr_gk20a_init_sm_dsm_reg_info;
 	gops->gr.wait_empty = gr_gk20a_wait_idle;
+	gops->gr.init_cyclestats = gr_gk20a_init_cyclestats;
 }

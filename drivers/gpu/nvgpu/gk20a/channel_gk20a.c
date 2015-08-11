@@ -467,6 +467,11 @@ static int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 	struct dma_buf *dmabuf;
 	void *virtual_address;
 
+	/* is it allowed to handle calls for current GPU? */
+	if (0 == (ch->g->gpu_characteristics.flags &
+			NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS))
+		return -ENOSYS;
+
 	if (args->dmabuf_fd && !ch->cyclestate.cyclestate_buffer_handler) {
 
 		/* set up new cyclestats buffer */
@@ -555,6 +560,11 @@ static int gk20a_channel_cycle_stats_snapshot(struct channel_gk20a *ch,
 			struct nvgpu_cycle_stats_snapshot_args *args)
 {
 	int ret;
+
+	/* is it allowed to handle calls for current GPU? */
+	if (0 == (ch->g->gpu_characteristics.flags &
+			NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT))
+		return -ENOSYS;
 
 	if (!args->dmabuf_fd)
 		return -EINVAL;

@@ -1040,6 +1040,18 @@ static u32 gr_gm20b_get_max_fbps_count(struct gk20a *g)
 	return max_fbps_count;
 }
 
+static void gr_gm20b_init_cyclestats(struct gk20a *g)
+{
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	g->gpu_characteristics.flags |=
+		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS;
+	g->gpu_characteristics.flags |=
+		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT;
+#else
+	(void)g;
+#endif
+}
+
 void gm20b_init_gr(struct gpu_ops *gops)
 {
 	gops->gr.init_gpc_mmu = gr_gm20b_init_gpc_mmu;
@@ -1094,4 +1106,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.get_max_fbps_count = gr_gm20b_get_max_fbps_count;
 	gops->gr.init_sm_dsm_reg_info = gr_gm20b_init_sm_dsm_reg_info;
 	gops->gr.wait_empty = gr_gk20a_wait_idle;
+	gops->gr.init_cyclestats = gr_gm20b_init_cyclestats;
 }

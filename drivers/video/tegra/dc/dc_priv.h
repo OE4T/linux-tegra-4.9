@@ -192,6 +192,8 @@ static inline int tegra_dc_fmt_bpp(int fmt)
 	case TEGRA_WIN_FMT_YUV420SP:
 	case TEGRA_WIN_FMT_YCbCr420SP:
 	case TEGRA_WIN_FMT_YCbCr422SP:
+		return 8;
+
 	case TEGRA_WIN_FMT_T_Y10___U10___V10_N420:
 	case TEGRA_WIN_FMT_T_Y10___U10___V10_N444:
 	case TEGRA_WIN_FMT_T_Y10___V10U10_N420:
@@ -204,7 +206,7 @@ static inline int tegra_dc_fmt_bpp(int fmt)
 	case TEGRA_WIN_FMT_T_Y12___U12V12_N422:
 	case TEGRA_WIN_FMT_T_Y12___U12V12_N422R:
 	case TEGRA_WIN_FMT_T_Y12___U12V12_N444:
-		return 8;
+		return 16;
 
 	/* YUV packed into 32-bits */
 	case TEGRA_WIN_FMT_YCbCr422:

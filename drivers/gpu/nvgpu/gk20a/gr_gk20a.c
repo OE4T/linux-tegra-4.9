@@ -5612,16 +5612,16 @@ clean_up:
 int gk20a_gr_nonstall_isr(struct gk20a *g)
 {
 	u32 gr_intr = gk20a_readl(g, gr_intr_nonstall_r());
-	u32 clear_intr = 0;
 
 	gk20a_dbg(gpu_dbg_intr, "pgraph nonstall intr %08x", gr_intr);
 
 	if (gr_intr & gr_intr_nonstall_trap_pending_f()) {
+		/* Clear the interrupt */
+		gk20a_writel(g, gr_intr_nonstall_r(),
+			gr_intr_nonstall_trap_pending_f());
+		/* Wakeup all the waiting channels */
 		gk20a_channel_semaphore_wakeup(g);
-		clear_intr |= gr_intr_nonstall_trap_pending_f();
 	}
-
-	gk20a_writel(g, gr_intr_nonstall_r(), clear_intr);
 
 	return 0;
 }

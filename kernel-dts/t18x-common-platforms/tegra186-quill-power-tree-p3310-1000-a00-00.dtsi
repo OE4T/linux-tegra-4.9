@@ -18,4 +18,9 @@
 
 / {
 
+	ether_qos@2490000 {
+		phy_vdd_1v8-supply = <&spmic_sd2>;
+		phy_ovdd_rgmii-supply = <&spmic_sd3>;
+		phy_pllvdd-supply = <&spmic_sd1>;
+	};
 };

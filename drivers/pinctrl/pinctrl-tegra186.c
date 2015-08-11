@@ -230,18 +230,8 @@
 #define TEGRA_PIN_CLK_REQ			_PIN(6)
 #define TEGRA_PIN_SHUTDOWN			_PIN(7)
 
-#define SDMMC1_CLK_LPBK_CTRL_OFFSET	0
-#define SDMMC3_CLK_LPBK_CTRL_OFFSET	4
-
-#define EMMC2_PAD_CFGPADCTRL_OFFSET	0x1C8
-#define EMMC4_PAD_CFGPADCTRL_OFFSET	0x1E0
 #define DRV_BANK	0
 #define MUX_BANK	1
-
-#define EMMC_DPD_PARKING(x)	(x << EMMC_PARKING_BIT)
-#define EMMC_PARKING_BIT	0xE
-#define PARKING_SET	0x1FFF
-#define PARKING_CLEAR	0x0
 
 static const struct pinctrl_pin_desc  tegra186_pins[] = {
 	PINCTRL_PIN(TEGRA_PIN_PEX_L0_RST_N_PA0, "PEX_L0_RST_N_PA0"),
@@ -533,6 +523,10 @@ static const unsigned sdmmc1_cmd_pd1_pins[] = {
 	TEGRA_PIN_SDMMC1_CMD_PD1,
 };
 
+static const unsigned sdmmc1_comp_pins[] = {
+	TEGRA_PIN_SDMMC1_CMD_PD1,
+};
+
 static const unsigned sdmmc1_dat0_pd2_pins[] = {
 	TEGRA_PIN_SDMMC1_DAT0_PD2,
 };
@@ -605,6 +599,9 @@ static const unsigned eqos_mdc_pf5_pins[] = {
 	TEGRA_PIN_EQOS_MDC_PF5,
 };
 
+static const unsigned eqos_comp_pins[] = {
+};
+
 static const unsigned sdmmc4_clk_pcc4_pins[] = {};
 
 static const unsigned sdmmc4_cmd_pt7_pins[] = {};
@@ -637,6 +634,9 @@ static const unsigned sdmmc3_cmd_pg1_pins[] = {
 
 static const unsigned sdmmc3_dat0_pg2_pins[] = {
 	TEGRA_PIN_SDMMC3_DAT0_PG2,
+};
+
+static const unsigned sdmmc3_comp_pins[] = {
 };
 
 static const unsigned sdmmc3_dat1_pg3_pins[] = {
@@ -879,6 +879,9 @@ static const unsigned directdc1_clk_pq0_pins[] = {
 	TEGRA_PIN_DIRECTDC1_CLK_PQ0,
 };
 
+static const unsigned directdc_comp_pins[] = {
+};
+
 static const unsigned directdc1_in_pq1_pins[] = {
 	TEGRA_PIN_DIRECTDC1_IN_PQ1,
 };
@@ -923,6 +926,9 @@ static const unsigned qspi_cs_n_pr5_pins[] = {
 	TEGRA_PIN_QSPI_CS_N_PR5,
 };
 
+static const unsigned qspi_comp_pins[] = {
+};
+
 static const unsigned pwr_i2c_scl_ps0_pins[] = {
 	TEGRA_PIN_PWR_I2C_SCL_PS0,
 };
@@ -941,6 +947,9 @@ static const unsigned safe_state_ps3_pins[] = {
 
 static const unsigned vcomp_alert_ps4_pins[] = {
 	TEGRA_PIN_VCOMP_ALERT_PS4,
+};
+
+static const unsigned soc_pwr_req_pins[] = {
 };
 
 static const unsigned uart1_tx_pt0_pins[] = {
@@ -1244,6 +1253,9 @@ static const unsigned shutdown_pins[] = {
 	TEGRA_PIN_SHUTDOWN,
 };
 
+static const unsigned pmu_int_pins[] = {
+};
+
 static const unsigned drive_ufs0_rst_pins[] = {
 	TEGRA_PIN_UFS0_RST_PBB1,
 };
@@ -1392,12 +1404,18 @@ static const unsigned drive_shutdown_pins[] = {
 	TEGRA_PIN_SHUTDOWN,
 };
 
+static const unsigned drive_pmu_int_pins[] = {
+};
+
 static const unsigned drive_safe_state_pins[] = {
 	TEGRA_PIN_SAFE_STATE_PS3,
 };
 
 static const unsigned drive_vcomp_alert_pins[] = {
 	TEGRA_PIN_VCOMP_ALERT_PS4,
+};
+
+static const unsigned drive_soc_pwr_req_pins[] = {
 };
 
 static const unsigned drive_batt_oc_pins[] = {
@@ -2011,6 +2029,7 @@ enum tegra_mux_dt {
 	TEGRA_MUX_UARTG,
 	TEGRA_MUX_SPI2,
 	TEGRA_MUX_GP,
+	TEGRA_MUX_DCA,
 	TEGRA_MUX_WDT,
 	TEGRA_MUX_I2C2,
 	TEGRA_MUX_CAN1,
@@ -2132,6 +2151,7 @@ static const char * const rsvd0_groups[] = {
 	"gpio_sw2_pff2",
 	"gpio_sw3_pff3",
 	"gpio_sw4_pff4",
+	"shutdown",
 	"power_on_pff0",
 	"gpio_dis0_pu0",
 	"gpio_dis1_pu1",
@@ -2238,6 +2258,7 @@ static const char * const rsvd1_groups[] = {
 	"sdmmc3_dat2_pg4",
 	"sdmmc3_dat1_pg3",
 	"sdmmc3_dat0_pg2",
+	"sdmmc3_comp",
 	"sdmmc3_cmd_pg1",
 	"sdmmc3_clk_pg0",
 	"sdmmc4_clk_pcc4",
@@ -2257,10 +2278,12 @@ static const char * const rsvd1_groups[] = {
 	"qspi_io0_pr1",
 	"qspi_sck_pr0",
 	"qspi_cs_n_pr5",
+	"qspi_comp",
 	"gpio_sw1_pff1",
 	"gpio_sw2_pff2",
 	"gpio_sw3_pff3",
 	"gpio_sw4_pff4",
+	"shutdown",
 	"safe_state_ps3",
 	"vcomp_alert_ps4",
 	"batt_oc_ps2",
@@ -2399,6 +2422,7 @@ static const char * const rsvd2_groups[] = {
 	"eqos_mdio_pf4",
 	"eqos_rd0_pe6",
 	"eqos_mdc_pf5",
+	"eqos_comp",
 	"eqos_txc_pe0",
 	"eqos_rxc_pf3",
 	"eqos_tx_ctl_pe5",
@@ -2407,6 +2431,7 @@ static const char * const rsvd2_groups[] = {
 	"sdmmc3_dat2_pg4",
 	"sdmmc3_dat1_pg3",
 	"sdmmc3_dat0_pg2",
+	"sdmmc3_comp",
 	"sdmmc3_cmd_pg1",
 	"sdmmc3_clk_pg0",
 	"sdmmc4_clk_pcc4",
@@ -2426,10 +2451,12 @@ static const char * const rsvd2_groups[] = {
 	"qspi_io0_pr1",
 	"qspi_sck_pr0",
 	"qspi_cs_n_pr5",
+	"qspi_comp",
 	"gpio_sw1_pff1",
 	"gpio_sw2_pff2",
 	"gpio_sw3_pff3",
 	"gpio_sw4_pff4",
+	"shutdown",
 	"safe_state_ps3",
 	"vcomp_alert_ps4",
 	"batt_oc_ps2",
@@ -2624,6 +2651,7 @@ static const char * const rsvd3_groups[] = {
 	"gpio_sw2_pff2",
 	"gpio_sw3_pff3",
 	"gpio_sw4_pff4",
+	"shutdown",
 	"safe_state_ps3",
 	"vcomp_alert_ps4",
 	"batt_oc_ps2",
@@ -2707,6 +2735,11 @@ static const char * const gp_groups[] = {
 	"uart5_rx_px5",
 	"gp_pwm7_pl7",
 	"gp_pwm6_pl6",
+};
+
+static const char * const dca_groups[] = {
+	"gpio_dis2_pu2",
+	"gpio_dis4_pu4",
 };
 
 static const char * const wdt_groups[] = {
@@ -3403,6 +3436,7 @@ static const struct tegra_pingroup tegra186_groups[] = {
 	PINGROUP(directdc1_out0_pq2,        DIRECTDC1,        RSVD1,        RSVD2,        RSVD3,         0x5040,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    15,    17,    Y),
 	PINGROUP(directdc1_in_pq1,        DIRECTDC1,        RSVD1,        RSVD2,        RSVD3,         0x5048,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    15,    17,    Y),
 	PINGROUP(directdc1_clk_pq0,        DIRECTDC1,        RSVD1,        RSVD2,        RSVD3,         0x5050,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    15,    17,    Y),
+	PINGROUP(directdc_comp,        DIRECTDC,        RSVD1,        RSVD2,        RSVD3,         0x5058,        -1,        Y,    -1,    -1,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(gpio_pq0_pi0,        RSVD0,        IQC0,        I2S6,        RSVD3,          0x3000,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(gpio_pq1_pi1,        RSVD0,        IQC0,        I2S6,        RSVD3,          0x3008,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(gpio_pq2_pi2,        RSVD0,        IQC0,        I2S6,        RSVD3,         0x3010,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
@@ -3427,6 +3461,7 @@ static const struct tegra_pingroup tegra186_groups[] = {
 	PINGROUP(pex_l2_rst_n_pa5,        PE2,        SOC,        SATA,        RSVD3,         0x702c,        0,        Y,	5,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(sdmmc1_clk_pd0,        SDMMC1,        RSVD1,        RSVD2,        RSVD3,          0x8000,        0,        Y,    5,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(sdmmc1_cmd_pd1,        SDMMC1,        RSVD1,        RSVD2,        RSVD3,          0x8008,        0,        Y,    5,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,   Y),
+	PINGROUP(sdmmc1_comp,        SDMMC1,        RSVD1,        RSVD2,        RSVD3,          0x8010,        -1,        Y,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    N,    -1,    -1,   N),
 	PINGROUP(sdmmc1_dat3_pd5,        SDMMC1,        RSVD1,        RSVD2,        RSVD3,         0x8014,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(sdmmc1_dat2_pd4,        SDMMC1,        RSVD1,        RSVD2,        RSVD3,         0x801c,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(sdmmc1_dat1_pd3,        SDMMC1,        RSVD1,        RSVD2,        RSVD3,         0x8024,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
@@ -3441,6 +3476,7 @@ static const struct tegra_pingroup tegra186_groups[] = {
 	PINGROUP(eqos_mdio_pf4,        EQOS,        SOC,        RSVD2,        RSVD3,         0x9038,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(eqos_rd0_pe6,        EQOS,        SDMMC2,        RSVD2,        RSVD3,         0x9040,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(eqos_mdc_pf5,        EQOS,        RSVD1,        RSVD2,        RSVD3,         0x9048,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
+	PINGROUP(eqos_comp,        EQOS,        SDMMC2,        RSVD2,        RSVD3,         0x9050,        -1,        Y,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    N,    -1,    -1,    N),
 	PINGROUP(eqos_txc_pe0,        EQOS,        SDMMC2,        RSVD2,        RSVD3,         0x9054,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(eqos_rxc_pf3,        EQOS,        SDMMC2,        RSVD2,        RSVD3,         0x905c,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(eqos_tx_ctl_pe5,        EQOS,        SDMMC2,        RSVD2,        RSVD3,         0x9064,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
@@ -3449,6 +3485,7 @@ static const struct tegra_pingroup tegra186_groups[] = {
 	PINGROUP(sdmmc3_dat2_pg4,        SDMMC3,        RSVD1,        RSVD2,        RSVD3,          0xa008,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(sdmmc3_dat1_pg3,        SDMMC3,        RSVD1,        RSVD2,        RSVD3,         0xa010,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(sdmmc3_dat0_pg2,        SDMMC3,        RSVD1,        RSVD2,        RSVD3,         0xa018,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
+	PINGROUP(sdmmc3_comp,        SDMMC3,        RSVD1,        RSVD2,        RSVD3,          0xa020,        -1,        Y,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    N,    -1,    -1,   N),
 	PINGROUP(sdmmc3_cmd_pg1,        SDMMC3,        RSVD1,        RSVD2,        RSVD3,         0xa024,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(sdmmc3_clk_pg0,        SDMMC3,        RSVD1,        RSVD1,        RSVD3,         0xa02c,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(sdmmc4_clk_pcc4,        RSVD0,        RSVD1,        RSVD2,        RSVD3,          0x6004,        0,        Y,    5,    6,    -1,    9,    -1,    -1,    12,    Y,    -1,    -1,    Y),
@@ -3468,21 +3505,26 @@ static const struct tegra_pingroup tegra186_groups[] = {
 	PINGROUP(qspi_io0_pr1,        QSPI,        RSVD1,        RSVD2,        RSVD3,         0xB018,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    15,   17,    Y),
 	PINGROUP(qspi_sck_pr0,        QSPI,        RSVD1,        RSVD2,        RSVD3,         0xB020,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    15,	17,    Y),
 	PINGROUP(qspi_cs_n_pr5,        QSPI,        RSVD1,        RSVD2,        RSVD3,         0xB028,        0,       Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    15,	17,    Y),
+	PINGROUP(qspi_comp,        QSPI,        RSVD1,        RSVD2,        RSVD3,         0xB030,        0,       Y,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    Y,    -1,	-1,    Y),
 	PINGROUP(gpio_sw1_pff1,        RSVD0,        RSVD1,        RSVD2,        RSVD3,         0x1000,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(gpio_sw2_pff2,        RSVD0,        RSVD1,        RSVD2,        RSVD3,         0x1008,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(gpio_sw3_pff3,        RSVD0,        RSVD1,        RSVD2,        RSVD3,        0x1010,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(gpio_sw4_pff4,        RSVD0,        RSVD1,        RSVD2,        RSVD3,        0x1018,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
+	PINGROUP(shutdown,        RSVD0,        RSVD1,        RSVD2,        RSVD3,        0x1020,        1,        Y,	-1,    6,    8,    -1,    -1,    -1,    12,    N,    -1,    -1,    N),
+	PINGROUP(pmu_int,        RSVD0,        RSVD1,        RSVD2,        RSVD3,        0x1028,        1,        Y,	-1,    6,    8,    -1,    -1,    -1,    12,    N,    -1,    -1,    N),
 	PINGROUP(safe_state_ps3,        SCE,        RSVD1,        RSVD2,        RSVD3,        0x1030,        1,        Y,		-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(vcomp_alert_ps4,        SOC,        RSVD1,        RSVD2,        RSVD3,        0x1038,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,   -1,    N),
+	PINGROUP(soc_pwr_req,        RSVD0,        RSVD1,        RSVD2,        RSVD3,        0x1040,        1,        Y,	-1,    6,    8,    -1,    -1,    -1,    12,    N,    -1,   -1,    N),
 	PINGROUP(batt_oc_ps2,        SOC,        RSVD1,        RSVD2,        RSVD3,        0x1048,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
+	PINGROUP(clk_32k_in,        RSVD0,        RSVD1,        RSVD2,        RSVD3,        0x1050,        1,        Y,	-1,    6,    8,    -1,    -1,    -1,    -1,    N,    -1,    -1,    N),
 	PINGROUP(power_on_pff0,        RSVD0,        RSVD1,        RSVD2,        RSVD3,        0x1058,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(pwr_i2c_scl_ps0,        I2C5,        RSVD1,        RSVD2,        RSVD3,        0x1060,        1,        Y,	5,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(pwr_i2c_sda_ps1,        I2C5,        RSVD1,        RSVD2,        RSVD3,        0x1068,        1,        Y,	5,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(gpio_dis0_pu0,        RSVD0,        GP,        RSVD2,        RSVD3,        0x1080,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(gpio_dis1_pu1,        RSVD0,        RSVD1,        DISPLAYA,        RSVD3,        0x1088,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
-	PINGROUP(gpio_dis2_pu2,        RSVD0,        GP,        RSVD2,        RSVD3,        0x1090,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
+	PINGROUP(gpio_dis2_pu2,        RSVD0,        GP,        DCA,        RSVD3,        0x1090,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(gpio_dis3_pu3,        RSVD0,        RSVD1,        DISPLAYB,        RSVD3,        0x1098,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
-	PINGROUP(gpio_dis4_pu4,        RSVD0,        SOC,        RSVD2,        RSVD3,        0x10a0,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
+	PINGROUP(gpio_dis4_pu4,        RSVD0,        SOC,        DCA,        RSVD3,        0x10a0,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(gpio_dis5_pu5,        RSVD0,        GP,        DCC,        RSVD3,        0x10a8,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(gpio_wan8_ph3,        RSVD0,        RSVD1,        SPI1,        RSVD3,          0xd000,        0,        Y,		-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(gpio_wan7_ph2,        RSVD0,        RSVD1,        SPI1,        RSVD3,          0xd008,        0,        Y,		-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
@@ -3650,24 +3692,32 @@ static const struct tegra_pingroup tegra186_groups[] = {
 	DRV_PINGROUP(sdmmc3_dat0,     0xa01c,    -1,    -1,    -1,    -1,    28,    2,    30,    2,	0),
 	DRV_PINGROUP(sdmmc3_cmd,     0xa028,    -1,    -1,    -1,    -1,    28,    2,    30,    2,	0),
 	DRV_PINGROUP(sdmmc3_clk,     0xa030,    -1,    -1,    -1,    -1,    28,    2,    30,    2,	0),
-	DRV_PINGROUP(gpio_sw1,     0x6004,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
-	DRV_PINGROUP(gpio_sw2,     0x600c,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
-	DRV_PINGROUP(gpio_sw3,     0x6014,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
-	DRV_PINGROUP(gpio_sw4,     0x601c,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
-	DRV_PINGROUP(shutdown,     0x6024,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
-	DRV_PINGROUP(safe_state,     0x6034,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
-	DRV_PINGROUP(vcomp_alert,     0x603c,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
-	DRV_PINGROUP(batt_oc,     0x604c,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
-	DRV_PINGROUP(clk_32k_in,     0x6054,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
-	DRV_PINGROUP(power_on,     0x605c,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
-	DRV_PINGROUP(pwr_i2c_scl,     0x6064,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
-	DRV_PINGROUP(pwr_i2c_sda,     0x606c,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
-	DRV_PINGROUP(gpio_dis0,     0x6084,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
-	DRV_PINGROUP(gpio_dis1,     0x608c,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
-	DRV_PINGROUP(gpio_dis2,     0x6094,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
-	DRV_PINGROUP(gpio_dis3,     0x609c,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
-	DRV_PINGROUP(gpio_dis4,     0x60a4,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
-	DRV_PINGROUP(gpio_dis5,     0x60ac,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
+	DRV_PINGROUP(qspi_io3,     0xB004,    -1,    -1,    -1,    -1,    28,    2,    30,    2,	0),
+	DRV_PINGROUP(qspi_io2,     0xB00C,    -1,    -1,    -1,    -1,    28,    2,    30,    2,	0),
+	DRV_PINGROUP(qspi_io1,     0xB014,    -1,    -1,    -1,    -1,    28,    2,    30,    2,	0),
+	DRV_PINGROUP(qspi_io0,     0xB01C,    -1,    -1,    -1,    -1,    28,    2,    30,    2,	0),
+	DRV_PINGROUP(qspi_sck,     0xB024,    -1,    -1,    -1,    -1,    28,    2,    30,    2,	0),
+	DRV_PINGROUP(qspi_cs_n,     0xB02C,    -1,    -1,    -1,    -1,    28,    2,    30,    2,	0),
+	DRV_PINGROUP(gpio_sw1,     0x1004,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(gpio_sw2,     0x100c,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(gpio_sw3,     0x1014,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(gpio_sw4,     0x101c,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(shutdown,     0x1024,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(pmu_int,     0x102C,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(safe_state,     0x1034,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(vcomp_alert,     0x103c,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(soc_pwr_req,     0x1044,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(batt_oc,     0x104c,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(clk_32k_in,     0x1054,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(power_on,     0x105c,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(pwr_i2c_scl,     0x1064,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(pwr_i2c_sda,     0x106c,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(gpio_dis0,     0x1084,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(gpio_dis1,     0x108c,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(gpio_dis2,     0x1094,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(gpio_dis3,     0x109c,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(gpio_dis4,     0x10a4,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
+	DRV_PINGROUP(gpio_dis5,     0x10ac,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	1),
 	DRV_PINGROUP(gpio_wan8,     0xd004,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
 	DRV_PINGROUP(gpio_wan7,     0xd00c,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),
 	DRV_PINGROUP(gpio_wan6,     0xd014,    12,    5,    20,    5,    -1,    -1,    -1,    -1,	0),

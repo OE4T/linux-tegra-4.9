@@ -428,15 +428,10 @@ static int eqos_get_phyreset_from_gpio(struct DWC_ETH_QOS_prv_data *pdata)
 		return -ENODEV;
 	}
 	if (gpio_is_valid(pdata->phy_reset_gpio)) {
-		ret = devm_gpio_request(&pdev->dev,
-			pdata->phy_reset_gpio, "eqos_phy_reset");
+		ret = devm_gpio_request_one(&pdev->dev, pdata->phy_reset_gpio,
+				GPIOF_OUT_INIT_HIGH, "eqos_phy_reset");
 		if (ret < 0) {
 			dev_err(&pdev->dev, "phy_reset gpio_request failed\n");
-			return ret;
-		}
-		ret = gpio_direction_output(pdata->phy_reset_gpio, 1);
-		if (ret < 0) {
-			dev_err(&pdev->dev, "gpio_direction_output failed\n");
 			return ret;
 		}
 	} else {
@@ -459,16 +454,10 @@ static int eqos_get_phyirq_from_gpio(struct DWC_ETH_QOS_prv_data *pdata)
 		return -ENODEV;
 	}
 	if (gpio_is_valid(pdata->phy_intr_gpio)) {
-		ret = devm_gpio_request(&pdev->dev,
-			pdata->phy_intr_gpio, "eqos_phy_intr");
+		ret = devm_gpio_request_one(&pdev->dev, pdata->phy_intr_gpio,
+				GPIOF_IN, "eqos_phy_intr");
 		if (ret < 0) {
-			dev_err(&pdev->dev, "gpio_request failed\n");
-			return ret;
-		}
-		ret = gpio_direction_input(pdata->phy_intr_gpio);
-		if (ret < 0) {
-			dev_err(&pdev->dev,
-				"gpio_direction_input failed\n");
+			dev_err(&pdev->dev, "phy_intr gpio_request failed\n");
 			return ret;
 		}
 		ret = gpio_to_irq(pdata->phy_intr_gpio);

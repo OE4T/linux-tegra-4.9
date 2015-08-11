@@ -379,9 +379,13 @@ axi_get_fail:
 
 static void eqos_regulator_deinit(struct DWC_ETH_QOS_prv_data *pdata)
 {
+	regulator_disable(pdata->vddio_sys_enet_bias);
+	regulator_disable(pdata->vddio_enet);
 	regulator_disable(pdata->phy_pllvdd);
 	regulator_disable(pdata->phy_ovdd_rgmii);
 	regulator_disable(pdata->phy_vdd_1v8);
+	devm_regulator_put(pdata->vddio_sys_enet_bias);
+	devm_regulator_put(pdata->vddio_enet);
 	devm_regulator_put(pdata->phy_pllvdd);
 	devm_regulator_put(pdata->phy_ovdd_rgmii);
 	devm_regulator_put(pdata->phy_vdd_1v8);
@@ -415,6 +419,21 @@ static int eqos_regulator_init(struct DWC_ETH_QOS_prv_data *pdata)
 		goto phy_pllvdd_get_failed;
 	}
 
+	pdata->vddio_enet = devm_regulator_get(&pdev->dev, "vddio_enet");
+	if (IS_ERR(pdata->vddio_enet)) {
+		ret = PTR_ERR(pdata->vddio_enet);
+		dev_err(&pdev->dev, "vddio_enet get failed %d\n", ret);
+		goto vddio_enet_get_failed;
+	}
+
+	pdata->vddio_sys_enet_bias = devm_regulator_get(&pdev->dev,
+		"vddio_sys_enet_bias");
+	if (IS_ERR(pdata->vddio_sys_enet_bias)) {
+		ret = PTR_ERR(pdata->vddio_sys_enet_bias);
+		dev_err(&pdev->dev, "vddio_sys_enet_bias get failed %d\n", ret);
+		goto vddio_sys_enet_bias_get_failed;
+	}
+
 	ret = regulator_enable(pdata->phy_vdd_1v8);
 	if (ret) {
 		dev_err(&pdev->dev, "phy_vdd_1v8 enable failed %d\n", ret);
@@ -433,13 +452,34 @@ static int eqos_regulator_init(struct DWC_ETH_QOS_prv_data *pdata)
 		goto phy_pllvdd_enable_failed;
 	}
 
+	ret = regulator_enable(pdata->vddio_enet);
+	if (ret) {
+		dev_err(&pdev->dev, "vddio_enet enable failed %d\n", ret);
+		goto vddio_enet_enable_failed;
+	}
+
+	ret = regulator_enable(pdata->vddio_sys_enet_bias);
+	if (ret) {
+		dev_err(&pdev->dev, "vddio_sys_enet_bias enable failed %d\n",
+			ret);
+		goto vddio_sys_enet_bias_enable_failed;
+	}
+
 	return 0;
 
+vddio_sys_enet_bias_enable_failed:
+	regulator_disable(pdata->vddio_enet);
+vddio_enet_enable_failed:
+	regulator_disable(pdata->phy_pllvdd);
 phy_pllvdd_enable_failed:
 	regulator_disable(pdata->phy_ovdd_rgmii);
 phy_ovdd_rgmii_enable_failed:
 	regulator_disable(pdata->phy_vdd_1v8);
 phy_vdd_1v8_enable_failed:
+	devm_regulator_put(pdata->vddio_sys_enet_bias);
+vddio_sys_enet_bias_get_failed:
+	devm_regulator_put(pdata->vddio_enet);
+vddio_enet_get_failed:
 	devm_regulator_put(pdata->phy_pllvdd);
 phy_pllvdd_get_failed:
 	devm_regulator_put(pdata->phy_ovdd_rgmii);

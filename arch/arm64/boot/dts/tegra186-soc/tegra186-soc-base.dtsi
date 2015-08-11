@@ -1573,6 +1573,12 @@
 		status = "disabled";
 	};
 
+	tegra_fiq_debugger {
+		compatible = "nvidia,fiq-debugger";
+		use-console-port;
+		interrupts = <0 17 0x4>;
+	};
+
 	roc-flush@e080000 {
 		compatible = "nvidia,tegra186-roc-flush";
 		reg = <0x0 0x0e080000 0x0 0x10000>;

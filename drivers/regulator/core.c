@@ -1832,7 +1832,11 @@ found:
  */
 struct regulator *regulator_get(struct device *dev, const char *id)
 {
+#ifdef CONFIG_REGULATOR_DUMMY
 	return _regulator_get(dev, id, false, true);
+#else
+	return _regulator_get(dev, id, false, false);
+#endif
 }
 EXPORT_SYMBOL_GPL(regulator_get);
 

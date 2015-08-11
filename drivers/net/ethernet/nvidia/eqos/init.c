@@ -50,6 +50,7 @@
 #include "yregacc.h"
 #include "nvregacc.h"
 #include <linux/platform_device.h>
+#include <linux/regulator/consumer.h>
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #include <linux/tegra-soc.h>
@@ -343,6 +344,77 @@ axi_get_fail:
 	return ret;
 }
 
+static void eqos_regulator_deinit(struct DWC_ETH_QOS_prv_data *pdata)
+{
+	regulator_disable(pdata->phy_pllvdd);
+	regulator_disable(pdata->phy_ovdd_rgmii);
+	regulator_disable(pdata->phy_vdd_1v8);
+	devm_regulator_put(pdata->phy_pllvdd);
+	devm_regulator_put(pdata->phy_ovdd_rgmii);
+	devm_regulator_put(pdata->phy_vdd_1v8);
+}
+
+static int eqos_regulator_init(struct DWC_ETH_QOS_prv_data *pdata)
+{
+	struct platform_device *pdev = pdata->pdev;
+	int ret = 0;
+
+	pdata->phy_vdd_1v8 = devm_regulator_get(&pdev->dev, "phy_vdd_1v8");
+	if (IS_ERR(pdata->phy_vdd_1v8)) {
+		ret = PTR_ERR(pdata->phy_vdd_1v8);
+		dev_err(&pdev->dev, "phy_vdd_1v8 get failed %d\n", ret);
+		return ret;
+	}
+
+	pdata->phy_ovdd_rgmii =
+		devm_regulator_get(&pdev->dev, "phy_ovdd_rgmii");
+	if (IS_ERR(pdata->phy_ovdd_rgmii)) {
+		ret = PTR_ERR(pdata->phy_ovdd_rgmii);
+		dev_err(&pdev->dev, "phy_ovdd_rgmii get failed %d\n", ret);
+		goto phy_ovdd_rgmii_get_failed;
+	}
+
+	pdata->phy_pllvdd = devm_regulator_get(&pdev->dev,
+		"phy_pllvdd");
+	if (IS_ERR(pdata->phy_pllvdd)) {
+		ret = PTR_ERR(pdata->phy_pllvdd);
+		dev_err(&pdev->dev, "phy_pllvdd get failed %d\n", ret);
+		goto phy_pllvdd_get_failed;
+	}
+
+	ret = regulator_enable(pdata->phy_vdd_1v8);
+	if (ret) {
+		dev_err(&pdev->dev, "phy_vdd_1v8 enable failed %d\n", ret);
+		goto phy_vdd_1v8_enable_failed;
+	}
+
+	ret = regulator_enable(pdata->phy_ovdd_rgmii);
+	if (ret) {
+		dev_err(&pdev->dev, "phy_ovdd_rgmii enable failed %d\n", ret);
+		goto phy_ovdd_rgmii_enable_failed;
+	}
+
+	ret = regulator_enable(pdata->phy_pllvdd);
+	if (ret) {
+		dev_err(&pdev->dev, "phy_pllvdd enable failed %d\n", ret);
+		goto phy_pllvdd_enable_failed;
+	}
+
+	return 0;
+
+phy_pllvdd_enable_failed:
+	regulator_disable(pdata->phy_ovdd_rgmii);
+phy_ovdd_rgmii_enable_failed:
+	regulator_disable(pdata->phy_vdd_1v8);
+phy_vdd_1v8_enable_failed:
+	devm_regulator_put(pdata->phy_pllvdd);
+phy_pllvdd_get_failed:
+	devm_regulator_put(pdata->phy_ovdd_rgmii);
+phy_ovdd_rgmii_get_failed:
+	devm_regulator_put(pdata->phy_vdd_1v8);
+	return ret;
+}
+
 static int eqos_get_phyreset_from_gpio(struct DWC_ETH_QOS_prv_data *pdata)
 {
 	struct platform_device *pdev = pdata->pdev;
@@ -537,6 +609,14 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	if (tegra_platform_is_unit_fpga()) {
 		phyirq = power_irq;
 	} else {
+		/* regulator init */
+		ret = eqos_regulator_init(pdata);
+		if (ret < 0) {
+			dev_err(&pdev->dev,
+				"failed to enable regulator %d\n", ret);
+			goto err_out_regulator_en_failed;
+		}
+
 		/* On silicon the phy_intr line is handled through a wake
 		 * capable GPIO input. DMIC4_CLK is the GPIO input port.
 		 */
@@ -839,6 +919,9 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
  err_out_reset_get_failed:
  err_out_phyreset_failed:
  err_out_phyirq_failed:
+	if (!tegra_platform_is_unit_fpga())
+		eqos_regulator_deinit(pdata);
+ err_out_regulator_en_failed:
 	free_netdev(ndev);
 	platform_set_drvdata(pdev, NULL);
 
@@ -910,6 +993,8 @@ int DWC_ETH_QOS_remove(struct platform_device *pdev)
 	if (!tegra_platform_is_unit_fpga() &&
 		!IS_ERR_OR_NULL(pdata->eqos_rst))
 		reset_control_assert(pdata->eqos_rst);
+	if (!tegra_platform_is_unit_fpga())
+		eqos_regulator_deinit(pdata);
 	iounmap((void *)dwc_eth_qos_base_addr);
 
 	DBGPR("<-- DWC_ETH_QOS_remove\n");

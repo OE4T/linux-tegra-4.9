@@ -146,9 +146,6 @@
 	backlight {
 		compatible = "pwm-backlight";
 		status = "okay";
-		panel-s-wqxga-10-1-bl {
-			pwms = <&tegra_pwm 0 1000000>;
-		};
 		panel-a-wuxga-8-0-bl {
 			pwms = <&tegra_pwm 0 40161>;
 		};

@@ -19,6 +19,8 @@
 / {
 
 	ether_qos@2490000 {
+		vddio_sys_enet_bias-supply = <&spmic_sd2>;
+		vddio_enet-supply = <&spmic_sd3>;
 		phy_vdd_1v8-supply = <&spmic_sd2>;
 		phy_ovdd_rgmii-supply = <&spmic_sd3>;
 		phy_pllvdd-supply = <&spmic_sd1>;

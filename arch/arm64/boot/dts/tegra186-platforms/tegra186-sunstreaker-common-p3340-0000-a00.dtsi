@@ -36,5 +36,22 @@
 	watchdog@30d0000 {
 		status = "okay";
 	};
+
+	serial@3100000 {
+		compatible = "nvidia,tegra210-uart", "nvidia,tegra186-hsuart";
+		console-port;
+		sqa-automation-port;
+		status = "okay";
+	};
+
+	serial@3110000 {
+		compatible = "nvidia,tegra186-hsuart";
+		status = "okay";
+	};
+
+	serial@3130000 {
+		compatible = "nvidia,tegra186-hsuart";
+		status = "okay";
+	};
 };
 

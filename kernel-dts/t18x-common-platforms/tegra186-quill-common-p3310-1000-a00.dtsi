@@ -24,5 +24,13 @@
         #address-cells = <2>;
         #size-cells = <2>;
 
+	spi@3210000 {
+		status = "okay";
+	};
+
+	spi@3240000 {
+		status = "okay";
+	};
+
 };
 

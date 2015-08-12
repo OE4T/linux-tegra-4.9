@@ -14,6 +14,7 @@
  */
 
 #include <dt-bindings/types.h>
+#include <dt-bindings/gpio/tegra-gpio.h>
 /dts-v1/;
 
 /memreserve/ 0x80000000 0x00010000;
@@ -50,6 +51,24 @@
 	};
 
 	watchdog@30d0000 {
+		status = "okay";
+	};
+
+	sdhci@3460000 {
+		status = "okay";
+	};
+
+	sdhci@3440000 {
+		status = "disabled";
+	};
+
+	sdhci@3420000 {
+		status = "disabled";
+	};
+
+	sdhci@3400000 {
+		cd-gpios = <&tegra_gpio TEGRA_GPIO(P, 6) 0>;
+		wp-gpios = <&tegra_gpio TEGRA_GPIO(P, 4) 0>;
 		status = "okay";
 	};
 };

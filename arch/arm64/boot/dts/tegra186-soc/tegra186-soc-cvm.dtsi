@@ -295,4 +295,8 @@
 	mttcan@c320000 {
 		status = "okay";
 	};
+
+	pmc@c360000 {
+		status = "okay";
+	};
 };

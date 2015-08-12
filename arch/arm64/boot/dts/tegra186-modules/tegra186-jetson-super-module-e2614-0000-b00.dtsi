@@ -47,4 +47,40 @@
 			};
 		};
 	};
+
+        i2c@7000c000 {
+                icm20628@68 {
+                        compatible = "invensense,mpu6xxx";
+                        reg = <0x68>;
+                        interrupt-parent = <&gpio>;
+                        interrupts = <TEGRA_GPIO(X, 2) 0x01>;
+                        accelerometer_matrix = [00 ff 00 01 00 00 00 00 01];
+                        gyroscope_matrix = [00 ff 00 01 00 00 00 00 01];
+                };
+
+                ak8963@0d {
+                        compatible = "ak,ak89xx";
+                        reg = <0x0d>;
+                        magnetic_field_matrix = [00 ff 00 01 00 00 00 00 01];
+                };
+
+                bmp280@77 {
+                        compatible = "bmp,bmpX80";
+                        reg = <0x77>;
+                };
+
+                cm32180@48 {
+                        compatible = "capella,cm32180";
+                        reg = <0x48>;
+                        gpio_irq = <&gpio TEGRA_GPIO(X, 3) GPIO_ACTIVE_LOW>;
+                        light_uncalibrated_lo = <1>;
+                        light_calibrated_lo = <150>;
+                        light_uncalibrated_hi = <95000>;
+                        light_calibrated_hi = <1750000>;
+                };
+
+                iqs263@44 {
+			status = "disabled";
+                };
+	};
 };

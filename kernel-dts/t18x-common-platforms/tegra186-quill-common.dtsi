@@ -23,6 +23,7 @@
 #include "tegra186-cvm-simple-bus.dtsi"
 #include "panel-s-wuxga-8-0.dtsi"
 #include "tegra186-platforms/tegra186-quill-eqos.dtsi"
+#include "tegra186-hdmi.dtsi"
 
 / {
         compatible = "nvidia,tegra186";

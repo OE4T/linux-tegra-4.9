@@ -17,3 +17,4 @@ endif
 obj-y += mc/
 obj-$(CONFIG_TEGRA_AST) += tegra_ast.o
 obj-y += powergate/
+obj-$(CONFIG_TEGRA_AON) += tegra-aon.o

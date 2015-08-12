@@ -19,3 +19,11 @@ config TEGRA_AST
 	bool "Enable Tegra Address Space Translation Driver"
 	depends on ARCH_TEGRA_18x_SOC
 	default y
+
+config TEGRA_AON
+	bool "Tegra AON driver"
+	depends on ARCH_TEGRA_18x_SOC
+	select TEGRA_IVC
+	select TEGRA_HSP
+	select TEGRA_AST
+	default y

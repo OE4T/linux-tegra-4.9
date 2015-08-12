@@ -16,6 +16,9 @@
 #include "tegra186-platforms/tegra186-quill-common-p3310-1000-a00.dtsi"
 #include "tegra186-platforms/tegra186-quill-power-tree-p3310-1000-a00-00.dtsi"
 
+/* comms dtsi file should be included after gpio dtsi file */
+#include "tegra186-platforms/tegra186-quill-comms.dtsi"
+
 / {
 	nvidia,dtsfilename = __FILE__;
 	nvidia,boardids = "3310:0000:A0";

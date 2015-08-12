@@ -35,6 +35,9 @@
 		/*0=none, 1=napi, 2=intr , 3=polling*/
 		nvidia,chan_mode = <1 1 1 1>; /*0=none, 1=napi, 2=intr , 3=polling*/
 
+		nvidia,use_tagged_ptp;
+		nvidia,ptp_dma_ch = <3>;
+
 		nvidia,chan_napi_quota = <64 64 64 64>;
 		nvidia,pause_frames = <0>; /*0=enable, 1=disable */
 		nvidia,phy-reset-gpio = <&tegra_gpio TEGRA_GPIO(M, 4) 0>;

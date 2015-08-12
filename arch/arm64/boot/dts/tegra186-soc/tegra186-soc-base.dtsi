@@ -26,6 +26,7 @@
 #include "../../../../include/dt-bindings/interrupt/tegra186-irq.h"
 #include "tegra186-soc/tegra186-sdhci.dtsi"
 #include "tegra186-soc/tegra186-soc-i2c.dtsi"
+#include "tegra186-soc/tegra186-soc-pwm.dtsi"
 #include "../../../../include/dt-bindings/soc/nvidia,tegra186-powergate.h"
 #include "tegra186-soc/tegra186-soc-uart.dtsi"
 

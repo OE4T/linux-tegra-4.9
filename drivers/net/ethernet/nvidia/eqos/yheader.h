@@ -275,6 +275,25 @@
 #define DEV_ADDRESS 0xffffffff
 #define DEV_REG_MMAP_SIZE 0x14e8
 
+/*PTP Multicast MAC addresses*/
+#define PTP1_MAC0 0x01
+#define PTP1_MAC1 0x1B
+#define PTP1_MAC2 0x19
+#define PTP1_MAC3 0x00
+#define PTP1_MAC4 0x00
+#define PTP1_MAC5 0x00
+
+#define PTP2_MAC0 0x01
+#define PTP2_MAC1 0x80
+#define PTP2_MAC2 0xC2
+#define PTP2_MAC3 0x00
+#define PTP2_MAC4 0x00
+#define PTP2_MAC5 0x0E
+
+#define PTP_DMA_CH_DEFAULT 0
+#define PTP_DMA_CH_MAX 3
+
+
 /* MII/GMII register offset */
 #define DWC_ETH_QOS_AUTO_NEGO_NP    0x0007
 #define DWC_ETH_QOS_PHY_CTL     0x0010
@@ -913,7 +932,8 @@ struct hw_if_struct {
     /* for PTP offloading */
 	VOID(*config_ptpoffload_engine)(UINT, UINT);
 
-
+	/* for PTP channel configuration */
+	VOID(*config_ptp_channel)(UINT, UINT);
 };
 
 /* wrapper buffer structure to hold transmit pkt details */
@@ -1280,6 +1300,10 @@ typedef enum {
 } intr_mode_e;
 #define INTR_MODE_DEFAULT MODE_COMMON_IRQ
 
+struct ptp_cfg_params {
+	bool use_tagged_ptp;
+	unsigned int ptp_dma_ch_id;
+};
 
 typedef enum {
 	CHAN_MODE_NONE,
@@ -1419,13 +1443,16 @@ struct DWC_ETH_QOS_prv_data {
 	/* RXQ enable control */
 	u32 rxq_enable_ctrl[4];
 
+	/* ptp configuration options */
+	struct ptp_cfg_params ptp_cfg;
+
 	/* AXI parameters */
 	UINT incr_incrx;
 	UINT axi_pbl;
 	UINT axi_worl;
 	UINT axi_rorl;
 
-	/* for hanlding jumbo frames and split header feature on rx path */
+	/* for handling jumbo frames and split header feature on rx path */
 	int (*clean_rx) (struct DWC_ETH_QOS_prv_data *pdata, int quota, UINT qInx);
 	int (*alloc_rx_buf) (struct DWC_ETH_QOS_prv_data *pdata,
 			     struct DWC_ETH_QOS_rx_buffer *buffer, gfp_t gfp);

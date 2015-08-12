@@ -693,6 +693,7 @@
 			compatible = "nvidia,tegra186-sor";
 			reg = <0x0 0x15540000 0x0 0x00040000>;
 			status = "disabled";
+			nvidia,xbar-ctrl = <2 1 0 3 4>;
 			clocks = <&clk32k_in>,
 				 <&tegra_car TEGRA186_CLK_SOR0>,
 				 <&tegra_car TEGRA186_CLK_SOR_SAFE>;
@@ -704,6 +705,7 @@
 			reg = <0x0 0x15580000 0x0 0x00040000>;
 			interrupts = <0 158 0x4>; /* INT_SOR_1 */
 			status = "disabled";
+			nvidia,xbar-ctrl = <2 1 0 3 4>;
 			clocks = <&clk32k_in>,
 				 <&tegra_car TEGRA186_CLK_SOR1>,
 				 <&tegra_car TEGRA186_CLK_SOR_SAFE>;

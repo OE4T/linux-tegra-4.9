@@ -24,6 +24,7 @@
 #include "panel-s-wuxga-8-0.dtsi"
 #include "tegra186-sunstreaker-e3340-powermon.dtsi"
 #include "tegra186-platforms/tegra186-sunstreaker-eqos.dtsi"
+#include "tegra186-hdmi.dtsi"
 
 / {
         model = "sunstreaker-3340";

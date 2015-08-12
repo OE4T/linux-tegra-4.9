@@ -514,6 +514,53 @@ static struct tegra_dc_cmu default_limited_cmu = {
 };
 #endif
 
+#define DSC_MAX_RC_BUF_THRESH_REGS	4
+static int dsc_rc_buf_thresh_regs[DSC_MAX_RC_BUF_THRESH_REGS] = {
+	DC_COM_DSC_RC_BUF_THRESH_0,
+	DC_COM_DSC_RC_BUF_THRESH_1,
+	DC_COM_DSC_RC_BUF_THRESH_2,
+	DC_COM_DSC_RC_BUF_THRESH_3,
+};
+
+/*
+ * Always set the first two values to 0. This is to ensure that RC threshold
+ * values are programmed in the correct registers.
+ */
+static int dsc_rc_buf_thresh[] = {
+	0, 0, 14, 28, 42, 56, 70, 84, 98, 105, 112, 119, 121,
+	123, 125, 126,
+};
+
+#define DSC_MAX_RC_RANGE_CFG_REGS	8
+static int dsc_rc_range_config[DSC_MAX_RC_RANGE_CFG_REGS] = {
+	DC_COM_DSC_RC_RANGE_CFG_0,
+	DC_COM_DSC_RC_RANGE_CFG_1,
+	DC_COM_DSC_RC_RANGE_CFG_2,
+	DC_COM_DSC_RC_RANGE_CFG_3,
+	DC_COM_DSC_RC_RANGE_CFG_4,
+	DC_COM_DSC_RC_RANGE_CFG_5,
+	DC_COM_DSC_RC_RANGE_CFG_6,
+	DC_COM_DSC_RC_RANGE_CFG_7,
+};
+
+static int dsc_rc_ranges_8bpp_8bpc[16][3] = {
+	{0, 4, 2},
+	{0, 4, 0},
+	{1, 5, 0},
+	{1, 6, -2},
+	{3, 7, -4},
+	{3, 7, -6},
+	{3, 7, -8},
+	{3, 8, -8},
+	{3, 9, -8},
+	{3, 10, -10},
+	{5, 11, -10},
+	{5, 12, -12},
+	{5, 13, -12},
+	{7, 13, -12},
+	{13, 15, -12},
+	{0, 0, 0},
+};
 void tegra_dc_clk_enable(struct tegra_dc *dc)
 {
 	tegra_disp_clk_prepare_enable(dc->clk);
@@ -3806,6 +3853,223 @@ void tegra_dc_set_color_control(struct tegra_dc *dc)
 	tegra_dc_writel(dc, color_control, DC_DISP_DISP_COLOR_CONTROL);
 }
 
+
+/*
+ * Due to the limitations in DSC architecture, program DSC block with predefined
+ * values.
+*/
+void tegra_dc_dsc_init(struct tegra_dc *dc)
+{
+	struct tegra_dc_mode *mode = &dc->mode;
+	u32 val;
+	u32 slice_width, slice_height, chunk_size, hblank;
+	u32 min_rate_buf_size, num_xtra_mux_bits, hrdelay;
+	u32 initial_offset, final_offset;
+	u32 initial_xmit_delay, initial_dec_delay;
+	u32 initial_scale_value, final_scale;
+	u32 scale_dec_interval, scale_inc_interval;
+	u32 groups_per_line, total_groups, first_line_bpg_offset;
+	u32 nfl_bpg_offset, slice_bpg_offset;
+	u32 rc_model_size = DSC_DEF_RC_MODEL_SIZE;
+	u32 delay_in_slice, output_delay, wrap_output_delay;
+	u8 i, j;
+	u8 bpp;
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+	u32 check_flatness;
+#endif
+
+	/* Link compression is only supported for DSI panels */
+	if ((dc->out->type != TEGRA_DC_OUT_DSI) || !dc->out->dsc_en) {
+		dev_info(&dc->ndev->dev,
+			"Link compression not supported by the panel\n");
+		return;
+	}
+
+	dev_info(&dc->ndev->dev, "Configuring DSC\n");
+	/*
+	 * Slice height and width are in pixel. When the whole picture is one
+	 * slice, slice height and width should be equal to picture height or
+	 * width.
+	*/
+	bpp = dc->out->dsc_bpp;
+	slice_height = dc->out->slice_height;
+	slice_width = (mode->h_active / dc->out->num_of_slices);
+	val = DSC_VALID_SLICE_HEIGHT(slice_height) |
+		DSC_VALID_SLICE_WIDTH(slice_width);
+	tegra_dc_writel(dc, val, DSC_COM_DSC_SLICE_INFO);
+
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+	/*
+	 * Use RC overflow solution 2. Program overflow threshold values and
+	 * enable flatness checking.
+	 */
+	check_flatness = ((3 - (slice_width % 3)) != 2);
+	val = DC_DISP_SPARE0_VALID_OVERFLOW_THRES(DC_DISP_DEF_OVERFLOW_THRES) |
+		DC_DISP_SPARE0_RC_SOLUTION_MODE(DC_SPARE0_RC_SOLUTION_2) |
+		(check_flatness << 1) | 0x1;
+	tegra_dc_writel(dc, val, DC_DISP_DISPLAY_SPARE0);
+#endif
+	/*
+	 * Calculate chunk size based on slice width. Enable block prediction
+	 * and set compressed bpp rate.
+	 */
+	chunk_size = DIV_ROUND_UP((slice_width * bpp), 8);
+	val = DSC_VALID_BITS_PER_PIXEL(bpp << 4) |
+		DSC_VALID_CHUNK_SIZE(chunk_size);
+	if (dc->out->en_block_pred)
+		val |= DSC_BLOCK_PRED_ENABLE;
+	tegra_dc_writel(dc, val, DSC_COM_DSC_COMMON_CTRL);
+
+	/* Set output delay */
+	initial_xmit_delay = (4096 / bpp);
+	if (slice_height == mode->v_active)
+		initial_xmit_delay = 475;
+	delay_in_slice = DIV_ROUND_UP(DSC_ENC_FIFO_SIZE * 8 * 3, bpp) +
+		slice_width + initial_xmit_delay + DSC_START_PIXEL_POS;
+	hblank = mode->h_sync_width + mode->h_front_porch + mode->h_back_porch;
+	output_delay = ((delay_in_slice / slice_width) *
+		(mode->h_active + hblank)) + (delay_in_slice % slice_width);
+	wrap_output_delay = output_delay + 20;
+	val = DSC_VALID_OUTPUT_DELAY(output_delay);
+	val |= DSC_VALID_WRAP_OUTPUT_DELAY(wrap_output_delay);
+	tegra_dc_writel(dc, val, DC_COM_DSC_DELAY);
+
+	/* Set RC flatness info and bpg offset for first line of slice */
+	first_line_bpg_offset = (bpp == 8) ? DSC_DEF_8BPP_FIRST_LINE_BPG_OFFS :
+		DSC_DEF_12BPP_FIRST_LINE_BPG_OFFS;
+	val = DSC_VALID_FLATNESS_MAX_QP(12) | DSC_VALID_FLATNESS_MIN_QP(3) |
+		DSC_VALID_FIRST_LINE_BPG_OFFS(first_line_bpg_offset);
+	tegra_dc_writel(dc, val, DC_COM_DSC_RC_FLATNESS_INFO);
+
+
+	/* Set RC model offset values to be used at slice start and end */
+	initial_offset = (bpp == 8) ? DSC_DEF_8BPP_INITIAL_OFFSET :
+		DSC_DEF_12BPP_INITIAL_OFFSET;
+	num_xtra_mux_bits = 198 + ((chunk_size * slice_height * 8 - 246) % 48);
+	final_offset = rc_model_size - (initial_xmit_delay * bpp) +
+		num_xtra_mux_bits;
+	val = DSC_VALID_INITIAL_OFFSET(initial_offset) |
+		DSC_VALID_FINAL_OFFSET(final_offset);
+	tegra_dc_writel(dc, val, DC_COM_DSC_RC_OFFSET_INFO);
+
+	/*
+	 * DSC_SLICE_BPG_OFFSET:Bpg offset used to enforce slice bit constraint
+	 * DSC_NFL_BPG_OFFSET:Non-first line bpg offset to use
+	 */
+	nfl_bpg_offset = DIV_ROUND_UP((first_line_bpg_offset << 11),
+		(slice_height - 1));
+	slice_bpg_offset = (rc_model_size - initial_offset +
+		num_xtra_mux_bits) * (1 << 11);
+	groups_per_line = slice_width / 3;
+	total_groups = slice_height * groups_per_line;
+	slice_bpg_offset = DIV_ROUND_UP(slice_bpg_offset, total_groups);
+	val = DSC_VALID_SLICE_BPG_OFFSET(slice_bpg_offset) |
+		DSC_VALID_NFL_BPG_OFFSET(nfl_bpg_offset);
+	tegra_dc_writel(dc, val, DC_COM_DSC_RC_BPGOFF_INFO);
+
+	/*
+	 * INITIAL_DEC_DELAY:Num of pixels to delay the VLD on the decoder
+	 * INITIAL_XMIT_DELAY:Num of pixels to delay the initial transmission
+	 */
+	min_rate_buf_size = rc_model_size - initial_offset +
+		(initial_xmit_delay * bpp) +
+		(groups_per_line * first_line_bpg_offset);
+	hrdelay = DIV_ROUND_UP(min_rate_buf_size, bpp);
+	initial_dec_delay = hrdelay - initial_xmit_delay;
+	val = DSC_VALID_INITIAL_XMIT_DELAY(initial_xmit_delay) |
+		DSC_VALID_INITIAL_DEC_DELAY(initial_dec_delay);
+	tegra_dc_writel(dc, val, DSC_COM_DSC_RC_RELAY_INFO);
+
+	/*
+	 * SCALE_DECR_INTERVAL:Decrement scale factor every scale_decr_interval
+	 * groups.
+	 * INITIAL_SCALE_VALUE:Initial value for scale factor
+	 * SCALE_INCR_INTERVAL:Increment scale factor every scale_incr_interval
+	 * groups.
+	 */
+	initial_scale_value = (8 * rc_model_size) / (rc_model_size -
+		initial_offset);
+	scale_dec_interval = groups_per_line / (initial_scale_value - 8);
+	val = DSC_VALID_SCALE_DECR_INTERVAL(scale_dec_interval) |
+		DSC_VALID_INITIAL_SCALE_VALUE(initial_scale_value);
+	tegra_dc_writel(dc, val, DC_COM_DSC_RC_SCALE_INFO);
+
+	final_scale = (8 * rc_model_size) / (rc_model_size - final_offset);
+	scale_inc_interval = (2048 * final_offset) /
+		((final_scale - 9) * (slice_bpg_offset + nfl_bpg_offset));
+	val = DSC_VALID_SCALE_INCR_INTERVAL(scale_inc_interval);
+	tegra_dc_writel(dc, val, DC_COM_DSC_RC_SCALE_INFO_2);
+
+	/* Set the RC parameters */
+	val = DSC_VALID_RC_TGT_OFFSET_LO(3) | DSC_VALID_RC_TGT_OFFSET_HI(3) |
+		DSC_VALID_RC_EDGE_FACTOR(6) |
+		DSC_VALID_RC_QUANT_INCR_LIMIT1(11) |
+		DSC_VALID_RC_QUANT_INCR_LIMIT0(11);
+	tegra_dc_writel(dc, val, DC_COM_DSC_RC_PARAM_SET);
+
+	for (i = 0, j = 0; j < DSC_MAX_RC_BUF_THRESH_REGS; j++) {
+		val = DSC_VALID_RC_BUF_THRESH_0(dsc_rc_buf_thresh[i++]);
+		val |= DSC_VALID_RC_BUF_THRESH_1(dsc_rc_buf_thresh[i++]);
+		val |= DSC_VALID_RC_BUF_THRESH_2(dsc_rc_buf_thresh[i++]);
+		val |= DSC_VALID_RC_BUF_THRESH_3(dsc_rc_buf_thresh[i++]);
+
+		if (dsc_rc_buf_thresh_regs[j] == DC_COM_DSC_RC_BUF_THRESH_0)
+			val |= DSC_VALID_RC_MODEL_SIZE(rc_model_size);
+		tegra_dc_writel(dc, val, dsc_rc_buf_thresh_regs[j]);
+	}
+
+	for (i = 0, j = 0; j < DSC_MAX_RC_RANGE_CFG_REGS; j++) {
+		val = DSC_VALID_RC_RANGE_PARAM_LO(
+			SET_RC_RANGE_MIN_QP(dsc_rc_ranges_8bpp_8bpc[i][0]) |
+			SET_RC_RANGE_MAX_QP(dsc_rc_ranges_8bpp_8bpc[i][1]) |
+			SET_RC_RANGE_BPG_OFFSET(dsc_rc_ranges_8bpp_8bpc[i][2]));
+		i++;
+		val |= DSC_VALID_RC_RANGE_PARAM_HI(
+			SET_RC_RANGE_MIN_QP(dsc_rc_ranges_8bpp_8bpc[i][0]) |
+			SET_RC_RANGE_MAX_QP(dsc_rc_ranges_8bpp_8bpc[i][1]) |
+			SET_RC_RANGE_BPG_OFFSET(dsc_rc_ranges_8bpp_8bpc[i][2]));
+		i++;
+		tegra_dc_writel(dc, val, dsc_rc_range_config[j]);
+	}
+
+	val = tegra_dc_readl(dc, DC_COM_DSC_UNIT_SET);
+	val &= ~DSC_LINEBUF_DEPTH_8_BIT;
+	val |= DSC_VALID_SLICE_NUM_MINUS1_IN_LINE(dc->out->num_of_slices - 1);
+	val |= DSC_CHECK_FLATNESS2;
+	val |= DSC_FLATNESS_FIX_EN;
+	tegra_dc_writel(dc, val, DC_COM_DSC_UNIT_SET);
+
+	dev_info(&dc->ndev->dev, "DSC configured\n");
+}
+
+void tegra_dc_en_dis_dsc(struct tegra_dc *dc, bool enable)
+{
+	u32 val;
+	bool is_enabled = false, set_reg = false;
+
+	if ((dc->out->type != TEGRA_DC_OUT_DSI) || !dc->out->dsc_en)
+		return;
+
+	val = tegra_dc_readl(dc, DC_COM_DSC_TOP_CTL);
+	if (val & DSC_ENABLE)
+		is_enabled = true;
+
+	if (enable && !is_enabled) {
+		val |= DSC_ENABLE;
+		set_reg = true;
+	} else if (!enable && is_enabled) {
+		val &= ~DSC_ENABLE;
+		set_reg = true;
+	}
+
+	if (set_reg) {
+		dev_info(&dc->ndev->dev, "Link compression %s\n",
+			enable ? "enabled" : "disabled");
+		val &= ~DSC_AUTO_RESET;
+		tegra_dc_writel(dc, val, DC_COM_DSC_TOP_CTL);
+	}
+}
+
 #ifndef CONFIG_TEGRA_NVDISPLAY
 static void tegra_dc_init_vpulse2_int(struct tegra_dc *dc)
 {
@@ -4045,6 +4309,8 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 	tegra_dc_writel(dc, CURSOR_ACT_REQ, DC_CMD_STATE_CONTROL);
 #endif
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+
+	tegra_dc_dsc_init(dc);
 
 	if (dc->out->postpoweron)
 		dc->out->postpoweron(&dc->ndev->dev);

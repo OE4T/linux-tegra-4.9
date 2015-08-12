@@ -64,6 +64,38 @@ static struct resource all_disp1_resources[] = {
 		.end	= TEGRA_DSIB_BASE + TEGRA_DSIB_SIZE - 1,
 		.flags	= IORESOURCE_MEM,
 	},
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	{
+		.name   = "split_dsia_regs",
+		.start  = TEGRA_DSI_BASE,
+		.end    = TEGRA_DSI_BASE + TEGRA_DSI_SIZE - 1,
+		.flags  = IORESOURCE_MEM,
+	},
+	{
+		.name   = "split_dsib_regs",
+		.start  = TEGRA_DSIB_BASE,
+		.end    = TEGRA_DSIB_BASE + TEGRA_DSIB_SIZE - 1,
+		.flags  = IORESOURCE_MEM,
+	},
+	{
+		.name   = "split_dsic_regs",
+		.start  = TEGRA_DSIC_BASE,
+		.end    = TEGRA_DSIC_BASE + TEGRA_DSIC_SIZE - 1,
+		.flags  = IORESOURCE_MEM,
+	},
+	{
+		.name   = "split_disd_regs",
+		.start  = TEGRA_DSID_BASE,
+		.end    = TEGRA_DSID_BASE + TEGRA_DSID_SIZE - 1,
+		.flags  = IORESOURCE_MEM,
+	},
+	{
+		.name   = "dsi_pad_reg",
+		.start  = TEGRA_DSI_PADCTL_BASE,
+		.end    = TEGRA_DSI_PADCTL_BASE + TEGRA_DSI_PADCTL_SIZE - 1,
+		.flags  = IORESOURCE_MEM,
+	},
+#endif
 	{
 		/* init with dispa reg base*/
 		.name	= "dsi_regs",

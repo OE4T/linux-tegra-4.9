@@ -336,6 +336,7 @@ static const u32 init_reg_vs1_ext[] = {
 	DSI_GANGED_MODE_CONTROL,
 	DSI_GANGED_MODE_START,
 	DSI_GANGED_MODE_SIZE,
+	DSI_PADCTL_GLOBAL_CNTRLS,
 };
 
 static int tegra_dsi_host_suspend(struct tegra_dc *dc);
@@ -396,6 +397,27 @@ void tegra_dsi_writel(struct tegra_dc_dsi_data *dsi, u32 val, u32 reg)
 	}
 }
 EXPORT_SYMBOL(tegra_dsi_writel);
+
+unsigned long tegra_dsi_pad_control_readl(struct tegra_dc_dsi_data *dsi,
+									u32 reg)
+{
+	unsigned long ret;
+
+	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
+	ret = readl((int *)dsi->pad_control_base + reg * 4);
+	trace_display_readl(dsi->dc, ret, (int *)dsi->pad_control_base +
+								reg * 4);
+	return ret;
+}
+
+void tegra_dsi_pad_control_writel(struct tegra_dc_dsi_data *dsi, u32 val,
+									u32 reg)
+{
+	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
+	trace_display_writel(dsi->dc, val, (int *)dsi->pad_control_base +
+								reg * 4);
+	writel(val, (int *)dsi->pad_control_base + reg * 4);
+}
 
 inline void tegra_dsi_reset_deassert(struct tegra_dc_dsi_data *dsi)
 {
@@ -701,8 +723,12 @@ void tegra_dsi_init_clock_param(struct tegra_dc *dc)
 	if (dsi->info.ganged_type == TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT ||
 		dsi->info.ganged_type == TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD ||
 		dsi->info.ganged_type ==
-			TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT_OVERLAP)
+			TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT_OVERLAP ||
+		dsi->info.split_link_type == TEGRA_DSI_SPLIT_LINK_A_B ||
+		dsi->info.split_link_type == TEGRA_DSI_SPLIT_LINK_C_D)
 		n_data_lanes /= 2;
+	if (dsi->info.split_link_type == TEGRA_DSI_SPLIT_LINK_A_B_C_D)
+		n_data_lanes /= 4;
 
 	dsi->dsi_control_val =
 			DSI_CONTROL_VIRTUAL_CHANNEL(dsi->info.virtual_channel) |
@@ -710,7 +736,7 @@ void tegra_dsi_init_clock_param(struct tegra_dc *dc)
 			DSI_CONTROL_VID_SOURCE(dc->ctrl_num) |
 			DSI_CONTROL_DATA_FORMAT(dsi->info.pixel_format);
 
-	if (dsi->info.ganged_type)
+	if (dsi->info.ganged_type || dsi->info.split_link_type)
 		tegra_dsi_pix_correction(dc, dsi);
 
 	/* Below we are going to calculate dsi and dc clock rate.
@@ -1423,8 +1449,8 @@ static void tegra_dsi_set_timeout(struct tegra_dc_dsi_data *dsi)
 	tegra_dsi_writel(dsi, val, DSI_TO_TALLY);
 }
 
-static void tegra_dsi_setup_ganged_mode_pkt_length(struct tegra_dc *dc,
-						struct tegra_dc_dsi_data *dsi)
+static void tegra_dsi_setup_ganged_split_link_mode_pkt_length(
+			struct tegra_dc *dc, struct tegra_dc_dsi_data *dsi)
 {
 	u32 hact_pkt_len_pix_orig = dc->mode.h_active;
 	u32 hact_pkt_len_pix = 0;
@@ -1458,6 +1484,20 @@ static void tegra_dsi_setup_ganged_mode_pkt_length(struct tegra_dc *dc,
 		break;
 	default:
 		dev_err(&dc->ndev->dev, "dsi: invalid ganged type\n");
+	}
+
+	switch (dsi->info.split_link_type) {
+	case TEGRA_DSI_SPLIT_LINK_A_B: /* fall through */
+	case TEGRA_DSI_SPLIT_LINK_C_D:
+		hact_pkt_len_pix = DIV_ROUND_UP(hact_pkt_len_pix_orig, 2);
+		pix_per_line = DIV_ROUND_UP(pix_per_line_orig, 2);
+		break;
+	case TEGRA_DSI_SPLIT_LINK_A_B_C_D:
+		hact_pkt_len_pix = DIV_ROUND_UP(hact_pkt_len_pix_orig, 4);
+		pix_per_line = DIV_ROUND_UP(pix_per_line_orig, 4);
+		break;
+	default:
+		dev_err(&dc->ndev->dev, "dsi: invalid split link type\n");
 	}
 
 	for (i = 0; i < dsi->max_instances; i++) {
@@ -1566,8 +1606,9 @@ static void tegra_dsi_set_pkt_length(struct tegra_dc *dc,
 		return;
 
 	if (dsi->info.video_data_type == TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE) {
-		if (dsi->info.ganged_type)
-			tegra_dsi_setup_ganged_mode_pkt_length(dc, dsi);
+		if (dsi->info.ganged_type || dsi->info.split_link_type)
+			tegra_dsi_setup_ganged_split_link_mode_pkt_length(dc,
+									dsi);
 		else
 			tegra_dsi_setup_video_mode_pkt_length(dc, dsi);
 	} else {
@@ -1633,7 +1674,8 @@ static void tegra_dsi_set_pkt_seq(struct tegra_dc *dc,
 			break;
 		case TEGRA_DSI_VIDEO_NONE_BURST_MODE:
 		default:
-			if (dsi->info.ganged_type) {
+			if (dsi->info.ganged_type ||
+						dsi->info.split_link_type) {
 				pkt_seq_3_5_rgb_lo =
 					DSI_PKT_SEQ_3_LO_PKT_31_ID(rgb_info);
 				pkt_seq =
@@ -1866,7 +1908,7 @@ static void tegra_dsi_set_dc_clk(struct tegra_dc *dc,
 
 	if (tegra_platform_is_fpga()) {
 		shift_clk_div_register = 1;
-		if (dsi->info.ganged_type)
+		if (dsi->info.ganged_type || dsi->info.split_link_type)
 			shift_clk_div_register = 0;
 	}
 
@@ -2276,7 +2318,7 @@ void tegra_dsi_mipi_calibration_13x(struct tegra_dc_dsi_data *dsi)
 }
 #endif
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_ARCH_TEGRA_18x_SOC)
 static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val = 0;
@@ -2719,7 +2761,8 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 		tegra_dsi_mipi_calibration_13x(dsi);
 #elif defined(CONFIG_ARCH_TEGRA_12x_SOC)
 		tegra_dsi_mipi_calibration_12x(dsi);
-#elif defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#elif defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_ARCH_TEGRA_18x_SOC)
+/* Temporarily reusing T210 mipi configuration for T186 */
 		tegra_dsi_mipi_calibration_21x(dsi);
 #endif
 		/* disable mipi bias pad */
@@ -2967,6 +3010,101 @@ static void tegra_dsi_ganged(struct tegra_dc *dc,
 						DSI_GANGED_MODE_CONTROL);
 }
 
+static void tegra_dsi_split_link(struct tegra_dc *dc,
+					struct tegra_dc_dsi_data *dsi)
+{
+	u32 low_width = 0;
+	u32 high_width = 0;
+	u32 h_active = dc->out->modes->h_active;
+	u32 val = 0, i;
+	u16 ganged_pointer = 0;
+	u16 frame_width;
+	u16 num_frames;
+	u16 dsi_instances[2] = {0};
+
+	if (dsi->info.split_link_type == TEGRA_DSI_SPLIT_LINK_A_B) {
+		dsi_instances[0] = 0;
+		dsi_instances[1] = 1;
+	} else if (dsi->info.split_link_type == TEGRA_DSI_SPLIT_LINK_C_D) {
+		dsi_instances[0] = 2;
+		dsi_instances[1] = 3;
+	}
+
+	if (dsi->info.split_link_type == TEGRA_DSI_SPLIT_LINK_A_B ||
+		dsi->info.split_link_type == TEGRA_DSI_SPLIT_LINK_C_D)
+		num_frames = 2;
+	else if (dsi->info.split_link_type == TEGRA_DSI_SPLIT_LINK_A_B_C_D)
+		num_frames = 4;
+	else {
+		dev_err(&dc->ndev->dev,
+				"dsi: split link type not recognied\n");
+		return;
+	}
+
+	frame_width = DIV_ROUND_UP(h_active, num_frames);
+
+	if (dsi->info.split_link_type == TEGRA_DSI_SPLIT_LINK_A_B ||
+		dsi->info.split_link_type == TEGRA_DSI_SPLIT_LINK_C_D) {
+		ganged_pointer = frame_width;
+		/* DSI 0 */
+		tegra_dsi_controller_writel(dsi,
+			DSI_GANGED_MODE_START_POINTER(0),
+			DSI_GANGED_MODE_START, dsi_instances[0]);
+		/* DSI 1 */
+		tegra_dsi_controller_writel(dsi,
+			DSI_GANGED_MODE_START_POINTER(ganged_pointer),
+			DSI_GANGED_MODE_START, dsi_instances[1]);
+
+		low_width = ganged_pointer;
+		high_width = h_active - low_width;
+		val = DSI_GANGED_MODE_SIZE_VALID_LOW_WIDTH(low_width) |
+			DSI_GANGED_MODE_SIZE_VALID_HIGH_WIDTH(high_width);
+
+		tegra_dsi_writel(dsi, val, DSI_GANGED_MODE_SIZE);
+	} else if (dsi->info.split_link_type == TEGRA_DSI_SPLIT_LINK_A_B_C_D) {
+		for (i = 0; i < dsi->max_instances; i++) {
+			ganged_pointer = i * frame_width;
+			tegra_dsi_controller_writel(dsi,
+				DSI_GANGED_MODE_START_POINTER(ganged_pointer),
+				DSI_GANGED_MODE_START, i);
+			high_width = frame_width;
+			low_width = h_active - (ganged_pointer + high_width);
+			val = DSI_GANGED_MODE_SIZE_VALID_LOW_WIDTH(low_width) |
+			DSI_GANGED_MODE_SIZE_VALID_HIGH_WIDTH(high_width);
+
+			tegra_dsi_controller_writel(dsi, val,
+						DSI_GANGED_MODE_SIZE, i);
+		}
+	} else {
+		dev_err(&dc->ndev->dev,
+				"dsi: split link type not recognied\n");
+		return;
+	}
+
+	switch (dsi->info.split_link_type) {
+	case TEGRA_DSI_SPLIT_LINK_A_B:
+		dev_info(&dc->ndev->dev, "Activating Split Link DISA-DSIB\n");
+		val = DSI_PADCTL_GLOBAL_CNTRLS_ENABLE_DSIB_LINK(1) |
+			DSI_PADCTL_GLOBAL_CNTRLS_ENABLE_DSID_LINK(0);
+		break;
+	case TEGRA_DSI_SPLIT_LINK_C_D:
+		dev_info(&dc->ndev->dev, "Activating Split Link DISC-DSID\n");
+		val = DSI_PADCTL_GLOBAL_CNTRLS_ENABLE_DSIB_LINK(0) |
+			DSI_PADCTL_GLOBAL_CNTRLS_ENABLE_DSID_LINK(1);
+		break;
+	case TEGRA_DSI_SPLIT_LINK_A_B_C_D:
+		dev_info(&dc->ndev->dev, "Activating Split Link DISC-DSID\n");
+		val = DSI_PADCTL_GLOBAL_CNTRLS_ENABLE_DSIB_LINK(1) |
+			DSI_PADCTL_GLOBAL_CNTRLS_ENABLE_DSID_LINK(1);
+		break;
+	}
+
+	tegra_dsi_pad_control_writel(dsi, val, DSI_PADCTL_GLOBAL_CNTRLS);
+
+	tegra_dsi_writel(dsi, DSI_GANGED_MODE_CONTROL_EN(TEGRA_DSI_ENABLE),
+						DSI_GANGED_MODE_CONTROL);
+}
+
 static int tegra_dsi_set_to_hs_mode(struct tegra_dc *dc,
 					struct tegra_dc_dsi_data *dsi,
 					u8 driven_mode)
@@ -3009,6 +3147,9 @@ static int tegra_dsi_set_to_hs_mode(struct tegra_dc *dc,
 
 	if (dsi->info.ganged_type)
 		tegra_dsi_ganged(dc, dsi);
+
+	if (dsi->info.split_link_type)
+		tegra_dsi_split_link(dc, dsi);
 
 	if (dsi->status.clk_out == DSI_PHYCLK_OUT_DIS ||
 		dsi->info.enable_hs_clock_on_lp_cmd_mode)
@@ -4578,8 +4719,10 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	int err = 0, i;
 	int dsi_instance;
 	char *ganged_reg_name[2] = {"ganged_dsia_regs", "ganged_dsib_regs"};
-	char *dsi_clk_name[2] = {"dsia", "dsib"};
-	char *dsi_lp_clk_name[2] = {"dsialp", "dsiblp"};
+	char *split_link_reg_name[4] = {"split_dsia_regs", "split_disb_regs",
+					"split_dsic_regs", "split_dsid_regs"};
+	char *dsi_clk_name[4] = {"dsia", "dsib", "dsic", "dsid"};
+	char *dsi_lp_clk_name[4] = {"dsialp", "dsiblp", "dsiclp", "dsidlp"};
 	struct device_node *np = dc->ndev->dev.of_node;
 #ifdef CONFIG_OF
 	struct device_node *np_dsi =
@@ -4594,15 +4737,17 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		return -ENOMEM;
 	}
 
-	dsi->max_instances = dc->out->dsi->ganged_type ? MAX_DSI_INSTANCE : 1;
+	dsi->max_instances = (dc->out->dsi->ganged_type ||
+			dc->out->dsi->split_link_type) ? MAX_DSI_INSTANCE : 1;
 	dsi_instance = (int)dc->out->dsi->dsi_instance;
 	for (i = 0; i < dsi->max_instances; i++) {
 		if (np) {
 			if (np_dsi && of_device_is_available(np_dsi)) {
-				if (!dc->out->dsi->ganged_type)
+				if (!dc->out->dsi->ganged_type &&
+						!dc->out->dsi->split_link_type)
 					of_address_to_resource(np_dsi,
 						dsi_instance, &dsi_res);
-				else /* ganged type */
+				else /* ganged type OR split link*/
 					of_address_to_resource(np_dsi,
 						i, &dsi_res);
 				res = &dsi_res;
@@ -4614,7 +4759,9 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 			res = platform_get_resource_byname(dc->ndev,
 					IORESOURCE_MEM,
 					dc->out->dsi->ganged_type ?
-					ganged_reg_name[i] : "dsi_regs");
+					ganged_reg_name[i] :
+					dc->out->dsi->split_link_type ?
+					split_link_reg_name[i] : "dsi_regs");
 		}
 		if (!res) {
 			dev_err(&dc->ndev->dev, "dsi: no mem resource\n");
@@ -4664,6 +4811,49 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		dsi->base_res[i] = base_res;
 		dsi->dsi_clk[i] = dsi_clk;
 		dsi->dsi_lp_clk[i] = dsi_lp_clk;
+	}
+
+	/* Initialise pad registers needed for split link */
+	if (dc->out->dsi->split_link_type) {
+		if (np) {
+			if (np_dsi && of_device_is_available(np_dsi)) {
+				of_address_to_resource(np_dsi,
+					4, &dsi_res); /*PADCTL REG index is 4*/
+				res = &dsi_res;
+			} else {
+				err = -EINVAL;
+				goto err_free_dsi;
+			}
+		} else {
+			res = platform_get_resource_byname(dc->ndev,
+					IORESOURCE_MEM, "dsi_pad_reg");
+		}
+		if (!res) {
+			dev_err(&dc->ndev->dev,
+					"dsi: pad control no mem resource\n");
+			err = -ENOENT;
+			goto err_free_dsi;
+		}
+
+		base_res = request_mem_region(res->start, resource_size(res),
+					dc->ndev->name);
+		if (!base_res) {
+			dev_err(&dc->ndev->dev,
+				"dsi: request_mem_region failed\n");
+			err = -EBUSY;
+			goto err_free_dsi;
+		}
+
+		base = ioremap(res->start, resource_size(res));
+		if (!base) {
+			dev_err(&dc->ndev->dev,
+				"dsi: registers can't be mapped\n");
+			err = -EBUSY;
+			goto err_release_regs;
+		}
+
+		dsi->pad_control_base = base;
+		dsi->pad_control_base_res = base_res;
 	}
 
 	dsi_fixed_clk = clk_get(&dc->ndev->dev, "dsi-fixed");

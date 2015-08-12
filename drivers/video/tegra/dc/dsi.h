@@ -58,12 +58,19 @@ struct dsi_status {
 
 	unsigned dc_stream:1;
 };
+
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 #define MAX_DSI_INSTANCE	2
+#else
+#define MAX_DSI_INSTANCE	4
+#endif
 
 struct tegra_dc_dsi_data {
 	struct tegra_dc *dc;
 	void __iomem *base[MAX_DSI_INSTANCE];
 	struct resource *base_res[MAX_DSI_INSTANCE];
+	void __iomem *pad_control_base;
+	struct resource *pad_control_base_res;
 
 	struct clk *dc_clk;
 	struct clk *dsi_clk[MAX_DSI_INSTANCE];
@@ -459,9 +466,13 @@ void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi);
 unsigned long tegra_dsi_controller_readl(struct tegra_dc_dsi_data *dsi,
 							u32 reg, int index);
 unsigned long tegra_dsi_readl(struct tegra_dc_dsi_data *dsi, u32 reg);
+unsigned long tegra_dsi_pad_control_readl(struct tegra_dc_dsi_data *dsi,
+								u32 reg);
 void tegra_dsi_controller_writel(struct tegra_dc_dsi_data *dsi,
 						u32 val, u32 reg, int index);
 void tegra_dsi_writel(struct tegra_dc_dsi_data *dsi, u32 val, u32 reg);
+void tegra_dsi_pad_control_writel(struct tegra_dc_dsi_data *dsi,
+							u32 val, u32 reg);
 int tegra_dsi_read_data(struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi,
 				u16 max_ret_payload_size,

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dsi_regs.h
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -399,5 +399,8 @@ enum {
 #define DSI_GANGED_MODE_SIZE_VALID_LOW_WIDTH(x)		(((x) & 0x1fff) << 16)
 #define DSI_GANGED_MODE_SIZE_VALID_HIGH_WIDTH(x)	(((x) & 0x1fff) << 0)
 
-#endif
+#define DSI_PADCTL_GLOBAL_CNTRLS 0x02
+#define DSI_PADCTL_GLOBAL_CNTRLS_ENABLE_DSID_LINK(x)    (((x) & 0x1) << 2)
+#define DSI_PADCTL_GLOBAL_CNTRLS_ENABLE_DSIB_LINK(x)    (((x) & 0x1) << 1)
 
+#endif

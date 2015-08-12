@@ -269,6 +269,15 @@ static int nvhost_sync_fill_driver_data(struct sync_pt *sync_pt,
 	return sizeof(info);
 }
 
+static void nvhost_sync_platform_debug_dump(struct sync_pt *pt)
+{
+	struct nvhost_sync_pt *__pt = to_nvhost_sync_pt(pt);
+	struct nvhost_sync_timeline *obj = __pt->obj;
+	struct nvhost_syncpt *sp = obj->sp;
+
+	nvhost_debug_dump(syncpt_to_dev(sp));
+}
+
 static const struct sync_timeline_ops nvhost_sync_timeline_ops = {
 	.driver_name = "nvhost_sync",
 	.dup = nvhost_sync_pt_dup_inst,
@@ -279,6 +288,7 @@ static const struct sync_timeline_ops nvhost_sync_timeline_ops = {
 	.timeline_value_str = nvhost_sync_timeline_value_str,
 	.pt_value_str = nvhost_sync_pt_value_str,
 	.get_pt_name = nvhost_sync_get_pt_name,
+	.platform_debug_dump = nvhost_sync_platform_debug_dump
 };
 
 struct sync_fence *nvhost_sync_fdget(int fd)

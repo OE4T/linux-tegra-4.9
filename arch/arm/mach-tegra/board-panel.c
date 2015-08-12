@@ -76,6 +76,34 @@ void tegra_dsi_resources_init(u8 dsi_instance,
 			r->start = TEGRA_DSIB_BASE;
 			r->end = TEGRA_DSIB_BASE + TEGRA_DSIB_SIZE - 1;
 		}
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+		if (resource_type(r) == IORESOURCE_MEM &&
+			!strcmp(r->name, "split_dsia_regs")) {
+			r->start = TEGRA_DSI_BASE;
+			r->end = TEGRA_DSI_BASE + TEGRA_DSI_SIZE - 1;
+		}
+		if (resource_type(r) == IORESOURCE_MEM &&
+			!strcmp(r->name, "split_dsib_regs")) {
+			r->start = TEGRA_DSIB_BASE;
+			r->end = TEGRA_DSIB_BASE + TEGRA_DSIB_SIZE - 1;
+		}
+		if (resource_type(r) == IORESOURCE_MEM &&
+			!strcmp(r->name, "split_dsic_regs")) {
+			r->start = TEGRA_DSIC_BASE;
+			r->end = TEGRA_DSIC_BASE + TEGRA_DSIC_SIZE - 1;
+		}
+		if (resource_type(r) == IORESOURCE_MEM &&
+			!strcmp(r->name, "split_dsid_regs")) {
+			r->start = TEGRA_DSID_BASE;
+			r->end = TEGRA_DSID_BASE + TEGRA_DSID_SIZE - 1;
+		}
+		if (resource_type(r) == IORESOURCE_MEM &&
+			!strcmp(r->name, "dsi_pad_reg")) {
+			r->start = TEGRA_DSI_PADCTL_BASE;
+			r->end = TEGRA_DSI_PADCTL_BASE +
+						TEGRA_DSI_PADCTL_SIZE - 1;
+		}
+#endif
 	}
 }
 

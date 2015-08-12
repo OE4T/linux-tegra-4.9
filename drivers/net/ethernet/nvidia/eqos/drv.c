@@ -2241,7 +2241,7 @@ UINT DWC_ETH_QOS_get_total_desc_cnt(struct DWC_ETH_QOS_prv_data *pdata,
 	desc_data->vlan_tag_present = 0;
 	if (vlan_tx_tag_present(skb)) {
 		USHORT vlan_tag = vlan_tx_tag_get(skb);
-		vlan_tag |= (qInx << 13);
+		vlan_tag |= (skb->priority << 13);
 		desc_data->vlan_tag_present = 1;
 		if (vlan_tag != desc_data->vlan_tag_id ||
 				desc_data->context_setup == 1) {

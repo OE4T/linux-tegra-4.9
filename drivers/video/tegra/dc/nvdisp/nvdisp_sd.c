@@ -688,29 +688,28 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 				sd->aggressiveness = result;
 				settings_updated = true;
 		}
-	}
 
-	if (settings_updated) {
-		mutex_lock(&dc->lock);
-		if (!dc->enabled) {
+		if (settings_updated) {
+			mutex_lock(&dc->lock);
+			if (!dc->enabled) {
+				mutex_unlock(&dc->lock);
+				return -ENODEV;
+			}
+			tegra_dc_get(dc);
+			if (sd->enable) {
+				tegra_dc_unmask_interrupt(dc, SMARTDIM_INT);
+				tegra_sd_stop(dc);
+				tegra_sd_init(dc);
+			} else {
+				tegra_sd_stop(dc);
+			}
+			tegra_dc_put(dc);
 			mutex_unlock(&dc->lock);
-			return -ENODEV;
 		}
-		tegra_dc_get(dc);
-		if (sd->enable) {
-			tegra_dc_unmask_interrupt(dc, SMARTDIM_INT);
-			tegra_sd_stop(dc);
-			tegra_sd_init(dc);
-		} else {
-			tegra_sd_stop(dc);
-		}
-		tegra_dc_put(dc);
-		mutex_unlock(&dc->lock);
+
+		if (!sd->enable && sd->bl_device)
+			backlight_update_status(sd->bl_device);
 	}
-
-	if (!sd->enable && sd->bl_device)
-		backlight_update_status(sd->bl_device);
-
 	return res;
 }
 

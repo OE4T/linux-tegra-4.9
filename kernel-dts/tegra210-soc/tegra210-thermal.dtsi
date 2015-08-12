@@ -30,7 +30,7 @@
 			 */
 			trips {
 				trip_shutdown {
-					temperature = <102000>;
+					temperature = <110000>;
 					hysteresis = <0>;
 					type = "critical";
 					writable;

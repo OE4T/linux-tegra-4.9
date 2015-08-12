@@ -25,16 +25,12 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <soc/tegra/tegra_bpmp.h>
+#include <soc/tegra/bpmp_abi.h>
 #include <linux/delay.h>
 
 #define MAX_NDIV		512 /* No of NDIV */
-#define MAX_VINDEX		80 /*No of voltage index */
-#define NUM_TEMP_RANGE		4
-#define NUM_TEMP_MIN		NUM_TEMP_RANGE
-#define NUM_TEMP_MAX		NUM_TEMP_RANGE
-#define NUM_RESERVE		((MAX_VINDEX * NUM_TEMP_RANGE) \
-				+ NUM_TEMP_MIN + NUM_TEMP_MAX)
- /* cpufreq transisition latency */
+#define MAX_VINDEX		80 /* No of voltage index */
+/* cpufreq transisition latency */
 #define TEGRA_CPUFREQ_TRANSITION_LATENCY	(300 * 1000)
 
 #define KHZ_TO_HZ		1000
@@ -77,16 +73,6 @@ enum cluster {
 	MAX_CLUSTERS,
 };
 
-/* cluster freq params */
-struct cl_lut {
-	uint32_t ref_clk_hz; /* reference clock */
-	uint16_t pdiv; /* post divider */
-	uint16_t mdiv; /* input divider */
-	uint16_t ndiv_max; /* fMAX expressed with max NDIV */
-	uint16_t ndiv[MAX_VINDEX];
-	uint16_t reserved[NUM_RESERVE]; /* space reserved for future use */
-};
-
 /**
  * Cpu side dvfs table
  * This table needs to be constructed at boot up time
@@ -95,7 +81,7 @@ struct cl_lut {
  * freq = (ndiv * refclk) / (pdiv * mdiv)
 */
 struct cpu_vhint_table {
-	struct cl_lut *lut; /* virtual address of NDIV[VINDEX] */
+	struct cpu_vhint_data *lut; /* virtual address of NDIV[VINDEX] */
 	dma_addr_t phys;
 	uint32_t ref_clk_hz;
 	uint16_t pdiv; /* post divider */
@@ -114,11 +100,6 @@ struct tegra_cpufreq_data {
 	struct mutex mlock; /* lock protecting below params */
 	uint32_t freq_compute_delay; /* delay in reading clock counters */
 };
-
-struct msg_data {
-	uint32_t addr;
-	uint8_t cl; /* cluster ID */
-} __packed;
 
 static struct tegra_cpufreq_data tfreq_data;
 static struct freq_attr *tegra_cpufreq_attr[] = {
@@ -582,7 +563,7 @@ static struct cpufreq_driver tegra_cpufreq_driver = {
 /* Free lut space shared beteen CPU and BPMP */
 static void __init free_shared_lut(void)
 {
-	uint16_t size = sizeof(struct cl_lut);
+	uint16_t size = sizeof(struct cpu_vhint_data);
 	struct cpu_vhint_table *vhtbl;
 	enum cluster cl;
 
@@ -677,8 +658,8 @@ err_out:
 static int __init create_ndiv_to_vindex_table(void)
 {
 	struct cpu_vhint_table *vhtbl;
+	struct cpu_vhint_data *lut;
 	uint16_t mid_ndiv, i;
-	struct cl_lut *lut;
 	enum cluster cl;
 	uint8_t vindx;
 	int ret = 0;
@@ -716,18 +697,18 @@ err_out:
 
 static int __init get_lut_from_bpmp(void)
 {
-	const size_t size = sizeof(struct cl_lut);
+	const size_t size = sizeof(struct cpu_vhint_data);
+	struct mrq_cpu_vhint_request md;
 	struct cpu_vhint_table *vhtbl;
-	struct msg_data md;
-	struct cl_lut *virt;
+	struct cpu_vhint_data *virt;
 	dma_addr_t phys;
 	enum cluster cl;
 	int ret = 0;
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
 		vhtbl = &tfreq_data.pcluster[cl].dvfs_tbl;
-		virt = (struct cl_lut *)tegra_bpmp_alloc_coherent(size, &phys,
-				 GFP_KERNEL);
+		virt = (struct cpu_vhint_data *)tegra_bpmp_alloc_coherent(size,
+			&phys, GFP_KERNEL);
 		if (!virt) {
 			ret = -ENOMEM;
 			while (cl--) {
@@ -741,10 +722,10 @@ static int __init get_lut_from_bpmp(void)
 		vhtbl->phys = phys;
 
 		md.addr = cpu_to_le32(phys);
-		md.cl = cpu_to_le32(cl);
+		md.cluster_id = cpu_to_le32(cl);
 
 		ret = tegra_bpmp_send_receive(MRQ_CPU_VHINT, &md,
-				sizeof(struct msg_data), NULL, 0);
+				sizeof(struct mrq_cpu_vhint_request), NULL, 0);
 		if (ret) {
 			pr_err("CPU_to_BPMP send receive failure %d\n",
 				ret);

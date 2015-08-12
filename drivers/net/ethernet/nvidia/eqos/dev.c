@@ -2092,6 +2092,30 @@ static VOID config_ptpoffload_engine(UINT pto_cr, UINT mc_uc)
     MAC_TCR_TSENMACADDR_UdfWr(mc_uc);
 }
 
+static VOID config_ptp_channel(UINT ptp_ch_id, UINT addr_index)
+{
+	u32 dynamic_map_on;
+
+	DBGPR_FILTER("-->config_ptp_channel\n");
+
+	/* Set Q0 to do DA MAC based DMA Channel selection if not already set */
+	MTL_RQDCM0R_RXQ0DADMACH_UdfRd(dynamic_map_on);
+	if (!dynamic_map_on)
+		MTL_RQDCM0R_RXQ0DADMACH_UdfWr(0x1);
+
+	/* We do not need to explictly set the MAC DA based DMA Channel select
+	 * bit (DCS) in all otherMAC Address filter registers. the reset value
+	 * of this field is 0 and the driver does not touch this bit.
+	 */
+
+	/* Set the DMA channel selection for the PTP addresses */
+	if (addr_index < 32)
+		MAC_MA1_31HR_DCS_UdfWr(addr_index, ptp_ch_id);
+	else
+		MAC_MA32_127HR_DCS_UdfWr(addr_index, ptp_ch_id);
+
+	DBGPR_FILTER("<--config_ptp_channel\n");
+}
 
 static VOID configure_reg_vlan_control(struct DWC_ETH_QOS_tx_wrapper_descriptor *desc_data)
 {
@@ -4877,11 +4901,9 @@ void DWC_ETH_QOS_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->disable_remote_pmt = disable_remote_pmt_operation;
 	hw_if->configure_rwk_filter = configure_rwk_filter_registers;
 
-    /* for TX vlan control */
-    hw_if->enable_vlan_reg_control = configure_reg_vlan_control;
-    hw_if->enable_vlan_desc_control = configure_desc_vlan_control;
-
-
+	/* for TX vlan control */
+	hw_if->enable_vlan_reg_control = configure_reg_vlan_control;
+	hw_if->enable_vlan_desc_control = configure_desc_vlan_control;
 
 	/* for rx vlan stripping */
 	hw_if->config_rx_outer_vlan_stripping =
@@ -5038,7 +5060,8 @@ void DWC_ETH_QOS_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	/* for PTP Offloading */
 	hw_if->config_ptpoffload_engine = config_ptpoffload_engine;
 
-
+	/*for PTP channel routingi*/
+	hw_if->config_ptp_channel = config_ptp_channel;
 
 	DBGPR("<--DWC_ETH_QOS_init_function_ptrs_dev\n");
 }

@@ -95,6 +95,26 @@ void DWC_ETH_QOS_stop_all_ch_tx_dma(struct DWC_ETH_QOS_prv_data *pdata)
 	DBGPR("<--DWC_ETH_QOS_stop_all_ch_tx_dma\n");
 }
 
+static int is_ptp_addr(char *addr)
+{
+	if ((addr[0] == PTP1_MAC0) &&
+		(addr[1] == PTP1_MAC1) &&
+		(addr[2] == PTP1_MAC2) &&
+		(addr[3] == PTP1_MAC3) &&
+		(addr[4] == PTP1_MAC4) &&
+		(addr[5] == PTP1_MAC5))
+		return 1;
+	else if ((addr[0] == PTP2_MAC0) &&
+		(addr[1] == PTP2_MAC1) &&
+		(addr[2] == PTP2_MAC2) &&
+		(addr[3] == PTP2_MAC3) &&
+		(addr[4] == PTP2_MAC4) &&
+		(addr[5] == PTP2_MAC5))
+		return 1;
+	else
+		return 0;
+}
+
 /*Check if Channel 0 is PTP and has data 0xee
   Check if Channel 1 is AV and has data 0xbb or 0xcc
   Check if Channel 2 is AV and has data 0xdd*/
@@ -1987,13 +2007,22 @@ static int DWC_ETH_QOS_prepare_mc_list(struct net_device *dev)
 				netdev_mc_count(dev), pdata->max_addr_reg_cnt);
 
 		netdev_for_each_mc_addr(ha, dev) {
-			DBGPR_FILTER("mc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n", i,
+			DBGPR_FILTER("mc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n",
+					i,
 					ha->addr[0], ha->addr[1], ha->addr[2],
 					ha->addr[3], ha->addr[4], ha->addr[5]);
 			if (i < 32)
-				hw_if->update_mac_addr1_31_low_high_reg(i, ha->addr);
+				hw_if->update_mac_addr1_31_low_high_reg(i,
+					ha->addr);
 			else
-				hw_if->update_mac_addr32_127_low_high_reg(i, ha->addr);
+				hw_if->update_mac_addr32_127_low_high_reg(i,
+					ha->addr);
+
+			if ((pdata->ptp_cfg.use_tagged_ptp) &&
+					(is_ptp_addr(ha->addr)))
+				hw_if->config_ptp_channel(
+					pdata->ptp_cfg.ptp_dma_ch_id, i);
+
 			i++;
 		}
 	}

@@ -707,6 +707,12 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		printk(KERN_ALERT "%s: MDIO is not present\n\n", DEV_NAME);
 	}
 
+	pdata->ptp_cfg.use_tagged_ptp = of_property_read_bool(node,
+			"nvidia,use_tagged_ptp");
+	get_dt_u32(node, "nvidia,ptp_dma_ch",
+		&(pdata->ptp_cfg.ptp_dma_ch_id),
+		PTP_DMA_CH_DEFAULT, PTP_DMA_CH_MAX);
+
 	pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
 	get_dt_u32(node, "nvidia,intr_mode", &pdt_cfg->intr_mode,
 			INTR_MODE_DEFAULT, MODE_MAX);

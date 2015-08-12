@@ -1,0 +1,189 @@
+/*
+ * tegra186-cvb-p2598-a00-1000-00.dtsi
+ *
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include <dt-bindings/gpio/tegra-gpio.h>
+
+/ {
+	i2c@3160000 {
+		gpio_i2c_0_34: gpio@34 {
+			compatible = "ti,tca9539";
+			reg = <0x34>;
+			gpio-controller;
+			#gpio-cells = <2>;
+		};
+
+		gpio_i2c_0_37: gpio@37 {
+			compatible = "ti,tca9539";
+			reg = <0x37>;
+			gpio-controller;
+			#gpio-cells = <2>;
+		};
+
+		gpio_i2c_0_38: gpio@38 {
+			compatible = "ti,tca9539";
+			reg = <0x38>;
+			gpio-controller;
+			#gpio-cells = <2>;
+		};
+	};
+
+	fixed-regulators {
+		en_vdd_cam: regulator@101 {
+			compatible = "regulator-fixed-sync";
+			reg = <101>;
+			regulator-name = "en-vdd-cam";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			gpio = <&gpio_i2c_0_37 9 0>;
+			enable-active-high;
+		};
+
+		en_vdd_cam_1v2: regulator@102 {
+			compatible = "regulator-fixed-sync";
+			reg = <102>;
+			regulator-name = "en-vdd-cam-1v2";
+			regulator-min-microvol = <1200000>;
+			regulator-max-microvol = <1200000>;
+			gpio = <&gpio_i2c_0_37 10 0>;
+			enable-active-high;
+		};
+
+		en_vdd_ts_1v8: regulator@103 {
+			compatible = "regulator-fixed-sync";
+			reg = <103>;
+			regulator-name = "en-vdd-ts-1v8";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			gpio = <&gpio_i2c_0_38 1 0>;
+			enable-active-high;
+		};
+
+		en_vdd_ts_hv_3v3: regulator@104 {
+			compatible = "regulator-fixed-sync";
+			reg = <104>;
+			regulator-name = "en-vdd-ts-hv-3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&gpio_i2c_0_38 2 0>;
+			enable-active-high;
+		};
+
+		en_avdd_disp_3v3: regulator@105 {
+			compatible = "regulator-fixed-sync";
+			reg = <105>;
+			regulator-name = "en-vdd-disp-3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&gpio_i2c_0_38 3 0>;
+			enable-active-high;
+		};
+
+		vdd_3v7: regulator@106 {
+			compatible = "regulator-fixed-sync";
+			reg = <106>;
+			regulator-name = "en-vdd-disp-3v3";
+			regulator-min-microvolt = <3700000>;
+			regulator-max-microvolt = <3700000>;
+			gpio = <&gpio_i2c_0_38 7 0>;
+			enable-active-high;
+		};
+
+		en_vdd_disp_1v8: regulator@107 {
+			compatible = "regulator-fixed-sync";
+			reg = <107>;
+			regulator-name = "en-vdd-disp-1v8";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			gpio = <&gpio_i2c_0_38 9 0>;
+			enable-active-high;
+		};
+
+		dis_vdd_1v2: regulator@108 {
+			compatible = "regulator-fixed-sync";
+			reg = <108>;
+			regulator-name = "dis-vdd-1v2";
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			gpio = <&gpio_i2c_0_38 10 0>;
+			enable-active-high;
+		};
+
+		vdd_hdmi: regulator@109 {
+			compatible = "regulator-fixed-sync";
+			reg = <109>;
+			regulator-name = "vdd-hdmi";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio_i2c_0_38 12 0>;
+			enable-active-high;
+		};
+
+		en_vdd_cam_hv_2v8: regulator@110 {
+			compatible = "regulator-fixed-sync";
+			reg = <110>;
+			regulator-name = "en-vdd-cam-hv-2v8";
+			regulator-min-microvol = <2800000>;
+			regulator-max-microvol = <2800000>;
+			gpio = <&gpio_i2c_0_38 13 0>;
+			enable-active-high;
+		};
+
+		vdd_sdcard3_3v3_sw: regulator@111 {
+			compatible = "regulator-fixed";
+			reg = <111>;
+			regulator-name = "vdd-sdcard3-3v3-sw";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&tegra_gpio TEGRA_GPIO(P, 5) 0>;
+			enable-active-high;
+		};
+
+		vdd_sdcard1_3v3_sw: regulator@112 {
+			compatible = "regulator-fixed";
+			reg = <112>;
+			regulator-name = "vdd-sdcard1-3v3-sw";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&tegra_gpio TEGRA_GPIO(P, 5) 0>;
+			enable-active-high;
+		};
+
+		vdd_usb0_5v_con: regulator@113 {
+			compatible = "regulator-fixed";
+			reg = <113>;
+			regulator-name = "vdd-usb0-5v-con";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&tegra_gpio TEGRA_GPIO(L, 4) 0>;
+			enable-active-high;
+		};
+
+		vdd_usb1_5v_con: regulator@114 {
+			compatible = "regulator-fixed";
+			reg = <114>;
+			regulator-name = "vdd-usb1-5v-con";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+		};
+
+		vdd_usb2_5v_con: regulator@115 {
+			compatible = "regulator-fixed";
+			reg = <115>;
+			regulator-name = "vdd-usb2-5v-con";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+		};
+	};
+};

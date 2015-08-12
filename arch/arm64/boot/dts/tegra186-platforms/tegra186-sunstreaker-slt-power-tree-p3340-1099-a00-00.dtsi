@@ -1,23 +1,22 @@
 /*
- * tegra186-sunstreaker-p3340-1099-a00-00-base.dts Sunstreaker-SLT A00 Board
- *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; version 2 of the License.
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
+ *
  */
 
-#include "tegra186-platforms/tegra186-sunstreaker-common-p3340-0000-a00.dtsi"
-#include "tegra186-platforms/tegra186-sunstreaker-slt-power-tree-p3340-1099-a00-00.dtsi"
+#include "tegra186-sunsteaker-slt-spmic-p3340-1099-a00-00.dtsi"
+#include "tegra186-sunsteaker-slt-fixed-p3340-1099-a00-00.dtsi"
+#include "tegra186-cvb-slt-p2598-a00-e3340-1099-a00-00.dtsi"
 
 / {
-	nvidia,dtsfilename = __FILE__;
-	nvidia,boardids = "3340:1099:A0";
-	nvidia,proc-boardid = "3340:1099:A0";
+
 };

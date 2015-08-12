@@ -537,15 +537,6 @@ static void __mc_override_sid(int sid, int oid, enum mc_overrides ord)
 		addr = TO_MC_SID_STREAMID_SECURITY_CONFIG(mc_sid_base + offs);
 		val = readl_relaxed(addr);
 
-		if (ord != DONTCARE) {
-			int ord_in_reg = (val & SCEW_STREAMID_OVERRIDE) ?
-				OVERRIDE : NO_OVERRIDE;
-
-			if (WARN_ON(ord_in_reg != ord))
-				pr_warning("Incompatible MC_SID_STRAMID_SECURITY_CONFIG_%s(%x) %x\n",
-					   name, offs, val);
-		}
-
 		if (val & SCEW_STREAMID_OVERRIDE) {
 			/* OK */;
 		} else if (val & SCEW_STREAMID_WRITE_ACCESS_DISABLED) {

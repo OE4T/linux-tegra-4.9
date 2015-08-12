@@ -58,6 +58,14 @@
 			no-map;
 			status = "disabled";
 		};
+
+		aon_reserved_ivc_buf: aon-ivc {
+			compatible = "nvidia,aon-ipc-carveout";
+			size = <0x0 0x1000000>;
+			alignment = <0x0 0x1000>;
+			alloc-ranges = <0x0 0x0 0x1 0x0>;
+			status = "disabled";
+		};
 	};
 
 	mc_clk_pd: mc-clk-pd {

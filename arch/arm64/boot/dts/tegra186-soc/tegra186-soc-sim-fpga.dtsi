@@ -19,6 +19,10 @@
 		generic_carveout {
 			status = "okay";
 		};
+
+		aon-ivc {
+			status = "okay";
+		};
 	};
 
 	tegra-carveouts {

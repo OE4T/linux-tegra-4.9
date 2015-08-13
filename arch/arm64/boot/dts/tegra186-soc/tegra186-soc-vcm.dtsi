@@ -70,6 +70,14 @@
 		};
 	};
 
+	mc_sid@2c00000 {
+		status = "okay";
+	};
+
+	iommu@12000000 {
+		status = "okay";
+	};
+
 	mc {
 		status = "okay";
 	};

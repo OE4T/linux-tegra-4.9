@@ -3317,6 +3317,18 @@ static const struct tegra_function tegra186_functions[] = {
 		.rfu_in_bank = bank,				\
 		.rfu_in_bit = 20,				\
 		.rfu_in_width = 4,				\
+		.drv_reg = -1,					\
+		.drvtype_reg = -1,				\
+		.ioreset_bit = -1,				\
+		.rcv_sel_bit = -1,				\
+		.lpdr_reg = -1,				\
+		.pbias_buf_reg = -1,			\
+		.preemp_reg = -1,				\
+		.rfu_in_reg = -1,				\
+		.lpdr_bit = -1,					\
+		.pbias_buf_bit = -1,			\
+		.preemp_bit = -1,				\
+		.rfu_in_bit = -1,				\
 	}
 
 #define DRV_PINGROUP_Y(r) ((r))
@@ -3436,7 +3448,7 @@ static const struct tegra_pingroup tegra186_groups[] = {
 	PINGROUP(directdc1_out0_pq2,        DIRECTDC1,        RSVD1,        RSVD2,        RSVD3,         0x5040,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    15,    17,    Y),
 	PINGROUP(directdc1_in_pq1,        DIRECTDC1,        RSVD1,        RSVD2,        RSVD3,         0x5048,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    15,    17,    Y),
 	PINGROUP(directdc1_clk_pq0,        DIRECTDC1,        RSVD1,        RSVD2,        RSVD3,         0x5050,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    15,    17,    Y),
-	PINGROUP(directdc_comp,        DIRECTDC,        RSVD1,        RSVD2,        RSVD3,         0x5058,        -1,        Y,    -1,    -1,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
+	PINGROUP(directdc_comp,        DIRECTDC,        RSVD1,        RSVD2,        RSVD3,         0x5058,        0,        Y,    -1,    -1,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(gpio_pq0_pi0,        RSVD0,        IQC0,        I2S6,        RSVD3,          0x3000,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(gpio_pq1_pi1,        RSVD0,        IQC0,        I2S6,        RSVD3,          0x3008,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(gpio_pq2_pi2,        RSVD0,        IQC0,        I2S6,        RSVD3,         0x3010,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
@@ -3461,7 +3473,7 @@ static const struct tegra_pingroup tegra186_groups[] = {
 	PINGROUP(pex_l2_rst_n_pa5,        PE2,        SOC,        SATA,        RSVD3,         0x702c,        0,        Y,	5,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(sdmmc1_clk_pd0,        SDMMC1,        RSVD1,        RSVD2,        RSVD3,          0x8000,        0,        Y,    5,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(sdmmc1_cmd_pd1,        SDMMC1,        RSVD1,        RSVD2,        RSVD3,          0x8008,        0,        Y,    5,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,   Y),
-	PINGROUP(sdmmc1_comp,        SDMMC1,        RSVD1,        RSVD2,        RSVD3,          0x8010,        -1,        Y,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    N,    -1,    -1,   N),
+	PINGROUP(sdmmc1_comp,        SDMMC1,        RSVD1,        RSVD2,        RSVD3,          0x8010,        0,        Y,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    N,    -1,    -1,   N),
 	PINGROUP(sdmmc1_dat3_pd5,        SDMMC1,        RSVD1,        RSVD2,        RSVD3,         0x8014,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(sdmmc1_dat2_pd4,        SDMMC1,        RSVD1,        RSVD2,        RSVD3,         0x801c,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(sdmmc1_dat1_pd3,        SDMMC1,        RSVD1,        RSVD2,        RSVD3,         0x8024,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
@@ -3476,7 +3488,7 @@ static const struct tegra_pingroup tegra186_groups[] = {
 	PINGROUP(eqos_mdio_pf4,        EQOS,        SOC,        RSVD2,        RSVD3,         0x9038,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(eqos_rd0_pe6,        EQOS,        SDMMC2,        RSVD2,        RSVD3,         0x9040,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(eqos_mdc_pf5,        EQOS,        RSVD1,        RSVD2,        RSVD3,         0x9048,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
-	PINGROUP(eqos_comp,        EQOS,        SDMMC2,        RSVD2,        RSVD3,         0x9050,        -1,        Y,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    N,    -1,    -1,    N),
+	PINGROUP(eqos_comp,        EQOS,        SDMMC2,        RSVD2,        RSVD3,         0x9050,        0,        Y,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    N,    -1,    -1,    N),
 	PINGROUP(eqos_txc_pe0,        EQOS,        SDMMC2,        RSVD2,        RSVD3,         0x9054,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(eqos_rxc_pf3,        EQOS,        SDMMC2,        RSVD2,        RSVD3,         0x905c,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(eqos_tx_ctl_pe5,        EQOS,        SDMMC2,        RSVD2,        RSVD3,         0x9064,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
@@ -3485,7 +3497,7 @@ static const struct tegra_pingroup tegra186_groups[] = {
 	PINGROUP(sdmmc3_dat2_pg4,        SDMMC3,        RSVD1,        RSVD2,        RSVD3,          0xa008,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(sdmmc3_dat1_pg3,        SDMMC3,        RSVD1,        RSVD2,        RSVD3,         0xa010,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(sdmmc3_dat0_pg2,        SDMMC3,        RSVD1,        RSVD2,        RSVD3,         0xa018,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
-	PINGROUP(sdmmc3_comp,        SDMMC3,        RSVD1,        RSVD2,        RSVD3,          0xa020,        -1,        Y,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    N,    -1,    -1,   N),
+	PINGROUP(sdmmc3_comp,        SDMMC3,        RSVD1,        RSVD2,        RSVD3,          0xa020,        0,        Y,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    N,    -1,    -1,   N),
 	PINGROUP(sdmmc3_cmd_pg1,        SDMMC3,        RSVD1,        RSVD2,        RSVD3,         0xa024,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(sdmmc3_clk_pg0,        SDMMC3,        RSVD1,        RSVD1,        RSVD3,         0xa02c,        0,        Y,    -1,    6,    -1,    9,    10,    -1,    12,    Y,    -1,    -1,    Y),
 	PINGROUP(sdmmc4_clk_pcc4,        RSVD0,        RSVD1,        RSVD2,        RSVD3,          0x6004,        0,        Y,    5,    6,    -1,    9,    -1,    -1,    12,    Y,    -1,    -1,    Y),

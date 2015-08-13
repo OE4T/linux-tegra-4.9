@@ -27,6 +27,7 @@
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/bpmp_abi.h>
 #include <linux/delay.h>
+#include <linux/clk-provider.h>
 
 #define MAX_NDIV		512 /* No of NDIV */
 #define MAX_VINDEX		80 /* No of voltage index */
@@ -66,10 +67,12 @@
 					(REG_OFFSET * cpu))
 #define logical_to_phys_map(cpu)	(MPIDR_AFFINITY_LEVEL \
 					(cpu_logical_map(cpu), 0))
-
+#define logical_to_phys_cluster(cl)	(cl == B_CLUSTER ? \
+					ARM_CPU_IMP_ARM : \
+					ARM_CPU_IMP_NVIDIA)
 enum cluster {
-	M_CLUSTER, /* DENEVER cluster */
-	B_CLUSTER, /* ARM cluster */
+	M_CLUSTER, /* Denver cluster */
+	B_CLUSTER, /* A57 cluster */
 	MAX_CLUSTERS,
 };
 
@@ -93,12 +96,15 @@ struct per_cluster_data {
 	struct cpufreq_frequency_table *clft;
 	void __iomem *edvd_pub;
 	struct cpu_vhint_table dvfs_tbl;
+	struct clk *emc_clk;
 };
 
 struct tegra_cpufreq_data {
 	struct per_cluster_data pcluster[MAX_CLUSTERS];
 	struct mutex mlock; /* lock protecting below params */
 	uint32_t freq_compute_delay; /* delay in reading clock counters */
+	uint32_t cpu_freq[CONFIG_NR_CPUS];
+	unsigned long emc_max_rate; /* Hz */
 };
 
 static struct tegra_cpufreq_data tfreq_data;
@@ -200,11 +206,77 @@ static unsigned int tegra_get_speed(uint32_t cpu)
 	return rate_khz; /* in KHz */
 }
 
-
-/* TBDL: Set emc clock by looking up the cpu_to_emc look up table */
-static void tegra_set_cpufreq_to_emcfreq(unsigned int cpu_freq)
+/* Denver cluster cpu_to_emc freq */
+unsigned long m_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
 {
-	return;
+	unsigned long emc_rate;
+
+	if (cpu_rate > 1020000)
+		emc_rate = 600000000;	/* cpu > 1.02GHz, emc 600MHz */
+	else
+		emc_rate = 300000000;	/* 300MHz floor always */
+
+	return emc_rate;
+}
+
+/* Arm cluster cpu_to_emc freq */
+unsigned long b_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
+{
+	if (cpu_rate >= 1300000)
+		return tfreq_data.emc_max_rate;	/* cpu >= 1.3GHz, emc max */
+	else if (cpu_rate >= 975000)
+		return 400000000;	/* cpu >= 975 MHz, emc 400 MHz */
+	else if (cpu_rate >= 725000)
+		return  200000000;	/* cpu >= 725 MHz, emc 200 MHz */
+	else if (cpu_rate >= 500000)
+		return  100000000;	/* cpu >= 500 MHz, emc 100 MHz */
+	else if (cpu_rate >= 275000)
+		return  50000000;	/* cpu >= 275 MHz, emc 50 MHz */
+	else
+		return 0;		/* emc min */
+}
+
+/**
+ * get_cluster_freq - returns max freq among all the cpus in a cluster.
+ *
+ * @cl - cluster whose freq to be returned
+ * @freq - cpu freq in kHz
+ * Returns:
+ *         cluster freq as max freq among all the cpu's freq in
+ *         a cluster
+ */
+static uint32_t get_cluster_freq(enum cluster cl, uint32_t cpu_freq)
+{
+	struct cpuinfo_arm64 *cpuinfo;
+	uint32_t i, phy_cl;
+
+	phy_cl = logical_to_phys_cluster(cl);
+	for_each_online_cpu(i) {
+		cpuinfo = &per_cpu(cpu_data, i);
+		if (MIDR_IMPLEMENTOR(cpuinfo->reg_midr) == phy_cl)
+			cpu_freq = max(cpu_freq,
+					tfreq_data.cpu_freq[i]);
+	}
+
+	return cpu_freq;
+}
+
+/* Set emc clock by referring cpu_to_emc freq mapping */
+static void set_cpufreq_to_emcfreq(enum cluster cl,
+	struct cpufreq_policy *policy)
+{
+	unsigned long emc_freq;
+	uint32_t cluster_freq;
+
+	tfreq_data.emc_max_rate =
+		clk_round_rate(tfreq_data.pcluster[cl].emc_clk, ULONG_MAX);
+	cluster_freq = get_cluster_freq(cl, policy->cur);
+	if (M_CLUSTER == cl)
+		emc_freq = m_cluster_cpu_to_emc_freq(cluster_freq);
+	else
+		emc_freq = b_cluster_cpu_to_emc_freq(cluster_freq);
+
+	clk_set_rate(tfreq_data.pcluster[cl].emc_clk, emc_freq);
 }
 
 static struct cpufreq_frequency_table *get_freqtable(uint8_t cpu)
@@ -272,7 +344,7 @@ static int tegra_setspeed(struct cpufreq_policy *policy, unsigned int index)
 	struct cpufreq_freqs freqs;
 	struct mutex *mlock;
 	uint32_t tgt_freq;
-
+	enum cluster cl;
 	int ret = 0;
 
 	if (!policy || (!cpu_online(policy->cpu)))
@@ -295,8 +367,12 @@ static int tegra_setspeed(struct cpufreq_policy *policy, unsigned int index)
 
 	policy->cur = tegra_get_speed(policy->cpu);
 	freqs.new = policy->cur;
-	/* TBDLater set emc freq for this cpu freq */
-	tegra_set_cpufreq_to_emcfreq(policy->cur);
+
+	tfreq_data.cpu_freq[policy->cpu] = policy->cur;
+
+	cl = get_cpu_cluster(policy->cpu);
+	set_cpufreq_to_emcfreq(cl, policy);
+
 	cpufreq_freq_transition_end(policy, &freqs, ret);
 out:
 	pr_debug("cpu: %d, oldfreq(kHz): %d, req freq(kHz): %d final freq(kHz): %d tgt_index %u\n",
@@ -508,12 +584,17 @@ static void __exit tegra_cpufreq_debug_exit(void)
 static int tegra_cpu_init(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *ftbl;
+	struct mutex *mlock;
+	enum cluster cl;
 	uint32_t freq;
 	int ret = 0;
 	int idx;
 
 	if (policy->cpu >= CONFIG_NR_CPUS)
 		return -EINVAL;
+
+	mlock = &per_cpu(pcpu_mlock, policy->cpu);
+	mutex_lock(mlock);
 
 	freq = tegra_get_speed(policy->cpu); /* boot freq */
 
@@ -528,23 +609,45 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 		freq = ftbl[idx].frequency;
 		tegra_update_cpu_speed(freq, policy->cpu);
 	}
+
 	policy->cur = tegra_get_speed(policy->cpu);
 
-	/* TBDLater set emc freq for this cpu freq */
-	tegra_set_cpufreq_to_emcfreq(policy->cur);
+	tfreq_data.cpu_freq[policy->cpu] = policy->cur;
+
+	cl = get_cpu_cluster(policy->cpu);
+	if (tfreq_data.pcluster[cl].emc_clk) {
+		clk_prepare_enable(tfreq_data.pcluster[cl].emc_clk);
+		set_cpufreq_to_emcfreq(cl, policy);
+	}
 
 	policy->cpuinfo.transition_latency =
 	TEGRA_CPUFREQ_TRANSITION_LATENCY;
 	cpumask_copy(policy->cpus, cpu_possible_mask);
+	mutex_unlock(mlock);
+
 	return ret;
 }
 
 static int tegra_cpu_exit(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *ftbl;
+	struct clk *emc_clk;
+	struct mutex *mlock;
+	enum cluster cl;
+
+	mlock = &per_cpu(pcpu_mlock, policy->cpu);
+	mutex_lock(mlock);
 
 	ftbl = get_freqtable(policy->cpu);
 	cpufreq_frequency_table_cpuinfo(policy, ftbl);
+	cl = get_cpu_cluster(policy->cpu);
+	emc_clk = tfreq_data.pcluster[cl].emc_clk;
+	if (emc_clk) {
+		clk_disable_unprepare(emc_clk);
+		clk_put(emc_clk);
+	}
+
+	mutex_unlock(mlock);
 	return 0;
 }
 
@@ -736,19 +839,11 @@ err_out:
 	return ret;
 }
 
-static int __init mem_map_device(void)
+static int __init mem_map_device(struct device_node *dn)
 {
 	void __iomem *base = NULL;
-	struct device_node *dn;
 	enum cluster cl;
 	int ret = 0;
-
-	dn = of_find_compatible_node(NULL, NULL, "nvidia,tegra18x-edvd");
-	if (dn == NULL) {
-		pr_err("tegra18x-edvd: dt node not found\n");
-		ret = -EINVAL;
-		goto err_out;
-	}
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
 		base = of_iomap(dn, cl);
@@ -767,12 +862,48 @@ err_out:
 	return ret;
 }
 
+static int __init get_emc_clk(struct device_node *dn)
+{
+	struct clk *emc_clk;
+	enum cluster cl;
+	int ret = 0;
+
+	LOOP_FOR_EACH_CLUSTER(cl) {
+		emc_clk = of_clk_get(dn, cl);
+		if (IS_ERR(emc_clk)) {
+			pr_warn("Failed to get emc clk for %s\n",
+			CLUSTER_STR(cl));
+			ret = -ENODEV;
+			while (cl--)
+				clk_put(tfreq_data.pcluster[cl].emc_clk);
+			goto err_out;
+		}
+
+		tfreq_data.pcluster[cl].emc_clk = emc_clk;
+	}
+err_out:
+	return ret;
+}
 static int __init tegra_cpufreq_init(void)
 {
+	struct device_node *dn;
 	uint32_t cpu;
 	int ret = 0;
 
-	ret = mem_map_device();
+	dn = of_find_compatible_node(NULL, NULL, "nvidia,tegra18x-cpufreq");
+	if (dn == NULL) {
+		pr_err("tegra18x-cpufreq: dt node not found\n");
+		ret = -ENODEV;
+		goto err_out;
+	}
+
+	ret = get_emc_clk(dn);
+	if (ret) {
+		pr_err("tegra18x-cpufreq: unable to get emc clk\n");
+		goto err_out;
+	}
+
+	ret = mem_map_device(dn);
 	if (ret)
 		return ret;
 
@@ -809,6 +940,7 @@ err_free_res:
 	free_allocated_res_init();
 exit_out:
 	free_shared_lut();
+err_out:
 	pr_info("cpufreq: platform driver Initialization: %s\n",
 		(ret ? "fail" : "pass"));
 	return ret;

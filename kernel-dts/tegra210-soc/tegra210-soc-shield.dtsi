@@ -402,7 +402,7 @@
 		status = "okay";
 	};
 
-	pcie-controller {
+	pcie-controller@1003000 {
 		status = "disabled";
 	};
 

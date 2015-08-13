@@ -587,7 +587,7 @@
 			};
 		};
 	};
-	pcie-controller {
+	pcie-controller@1003000 {
 		prod-settings {
 			prod_c_pad {
 				prod = <

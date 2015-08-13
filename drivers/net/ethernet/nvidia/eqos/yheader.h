@@ -151,7 +151,7 @@
 //#define DWC_ETH_QOS_ENABLE_RX_PKT_DUMP
 
 //#define ENABLE_CHANNEL_DATA_CHECK
-//#define ENABLE_VLAN_TAG_INSERTION
+#define ENABLE_VLAN_TAG_INSERTION
 
 /* Uncomment below macro definitions for testing corresponding IP features in driver */
 #define DWC_ETH_QOS_QUEUE_SELECT_ALGO

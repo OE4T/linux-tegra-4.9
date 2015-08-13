@@ -13,7 +13,7 @@
  *
  */
 
-#include "tegra186-quill-pmic-p3310-1000-a00-00.dtsi"
+#include "tegra186-quill-spmic-p3310-1000-a00-00.dtsi"
 #include "tegra186-cvb-prod-p2597-b00-p3310-1000-a00-00.dtsi"
 
 / {

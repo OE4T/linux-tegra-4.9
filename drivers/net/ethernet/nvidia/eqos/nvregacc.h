@@ -309,4 +309,51 @@
 		(data) = ioread32((void *)(volatile ULONG*)(BASE_ADDRESS+0x8604 + (chan * 8)));\
 } while(0)
 
+
+/* pad related regs */
+#define PAD_CRTL_RgOffAddr ((volatile ULONG*)(BASE_ADDRESS + 0x8800))
+#define PAD_CRTL_RgWr(data) do {\
+		iowrite32(data, (void *)PAD_CRTL_RgOffAddr);\
+} while (0)
+
+#define PAD_CRTL_RgRd(data) do {\
+		(data) = ioread32((void *)PAD_CRTL_RgOffAddr);\
+} while (0)
+
+#define PAD_CRTL_E_INPUT_OR_E_PWRD_MASK BIT(31)
+
+#define PAD_CRTL_E_INPUT_OR_E_PWRD_UdfWr(data) do {\
+		ULONG v;\
+		PAD_CRTL_RgRd(v);\
+		v = ((v & ~PAD_CRTL_E_INPUT_OR_E_PWRD_MASK) | \
+			((data & 1) << 31));\
+		PAD_CRTL_RgWr(v);\
+} while (0)
+
+#define PAD_AUTO_CAL_CFG_RgOffAddr ((volatile ULONG *)(BASE_ADDRESS + 0x8804))
+
+#define PAD_AUTO_CAL_CFG_RgWr(data) do {\
+		iowrite32(data, (void *)PAD_AUTO_CAL_CFG_RgOffAddr);\
+} while (0)
+
+#define PAD_AUTO_CAL_CFG_RgRd(data) do {\
+		(data) = ioread32((void *)PAD_AUTO_CAL_CFG_RgOffAddr);\
+} while (0)
+
+#define PAD_AUTO_CAL_CFG_START_MASK BIT(31)
+#define PAD_AUTO_CAL_CFG_ENABLE_MASK BIT(29)
+
+#define PAD_AUTO_CAL_STAT_RgOffAddr ((volatile ULONG *)(BASE_ADDRESS + 0x880c))
+
+#define PAD_AUTO_CAL_STAT_RgWr(data) do {\
+		iowrite32(data, (void *)PAD_AUTO_CAL_STAT_RgOffAddr);\
+} while (0)
+
+#define PAD_AUTO_CAL_STAT_RgRd(data) do {\
+		(data) = ioread32((void *)PAD_AUTO_CAL_STAT_RgOffAddr);\
+} while (0)
+
+
+#define PAD_AUTO_CAL_STAT_ACTIVE_MASK BIT(31)
+
 #endif

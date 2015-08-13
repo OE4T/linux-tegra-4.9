@@ -57,6 +57,7 @@
 #include <linux/clk.h>
 #include <linux/reset.h>
 #include <linux/gpio.h>
+#include <linux/delay.h>
 
 #define LP_SUPPORTED 0
 static const struct of_device_id dwc_eth_qos_of_match[] = {
@@ -183,6 +184,78 @@ void get_dt_u32_array(struct device_node *pnode, char *pdt_prop, u32 *pval,
 		pdt_prop, pval[0], pval[1], pval[2], pval[3]);
 }
 
+static int eqos_pad_calibrate(struct DWC_ETH_QOS_prv_data *pdata)
+{
+	struct platform_device *pdev = pdata->pdev;
+	int ret;
+	uint i;
+	u32 hwreg;
+
+	DBGPR("-->%s()\n", __func__);
+
+	/* 1. Set field PAD_E_INPUT_OR_E_PWRD in
+	 * reg ETHER_QOS_SDMEMCOMPPADCTRL_0
+	 */
+	PAD_CRTL_E_INPUT_OR_E_PWRD_UdfWr(1);
+
+	/* 2. delay for 1 usec */
+	usleep_range(1, 3);
+
+	/* 3. Set AUTO_CAL_ENABLE and AUTO_CAL_START in
+	 * reg ETHER_QOS_AUTO_CAL_CONFIG_0.
+	 */
+	PAD_AUTO_CAL_CFG_RgRd(hwreg);
+	hwreg |=
+		((PAD_AUTO_CAL_CFG_START_MASK) |
+			(PAD_AUTO_CAL_CFG_ENABLE_MASK));
+
+	PAD_AUTO_CAL_CFG_RgWr(hwreg);
+
+	/* 4. Wait on AUTO_CAL_ACTIVE until it is 1. 10us timeout */
+	i = 10;
+	while (i--) {
+		usleep_range(1, 3);
+		PAD_AUTO_CAL_STAT_RgRd(hwreg);
+
+		/* calibration started when CAL_STAT_ACTIVE is set */
+		if (hwreg & PAD_AUTO_CAL_STAT_ACTIVE_MASK)
+			break;
+	}
+	if (!i) {
+		ret = -1;
+		dev_err(&pdev->dev,
+			"eqos pad calibration took too long to start\n");
+		goto calibration_failed;
+	}
+
+	/* 5. Wait on AUTO_CAL_ACTIVE until it is 0. 200us timeout */
+	i = 10;
+	while (i--) {
+		usleep_range(20, 30);
+		PAD_AUTO_CAL_STAT_RgRd(hwreg);
+
+		/* calibration done when CAL_STAT_ACTIVE is zero */
+		if (!(hwreg & PAD_AUTO_CAL_STAT_ACTIVE_MASK))
+			break;
+	}
+	if (!i) {
+		ret = -1;
+		dev_err(&pdev->dev,
+			"eqos pad calibration took too long to complete\n");
+		goto calibration_failed;
+	}
+	ret = 0;
+
+calibration_failed:
+	/* 6. Disable field PAD_E_INPUT_OR_E_PWRD in
+	 * reg ETHER_QOS_SDMEMCOMPPADCTRL_0 to save power.
+	 */
+	PAD_CRTL_E_INPUT_OR_E_PWRD_UdfWr(0);
+
+	DBGPR("<--%s()\n", __func__);
+
+	return ret;
+}
 
 static void eqos_clock_check(void)
 {
@@ -648,6 +721,8 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	}
 	DBGPR("phyirq = %d\n", phyirq);
 
+
+
 	/* queue count */
 	tx_q_count = get_tx_queue_count();
 	rx_q_count = get_rx_queue_count();
@@ -655,6 +730,12 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	pdata->tx_queue_cnt = tx_q_count;
 	pdata->rx_queue_cnt = rx_q_count;
 
+	/* calibrate pad */
+	if (!tegra_platform_is_unit_fpga()) {
+		ret = eqos_pad_calibrate(pdata);
+		if (ret < 0)
+			goto err_out_dev_failed;
+	}
 
 #ifdef DWC_ETH_QOS_CONFIG_DEBUGFS
 	/* to give prv data to debugfs */

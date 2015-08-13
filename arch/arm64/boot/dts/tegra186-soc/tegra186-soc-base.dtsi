@@ -1714,4 +1714,10 @@
 		status = "disabled";
 	};
 
+	rtc@c2a0000 {
+		compatible = "nvidia,tegra-rtc";
+		reg = <0x0 0x0c2a0000 0x0 0x100>;
+		interrupts = <0 18 0x04>;
+		status = "disabled";
+	};
 };

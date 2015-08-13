@@ -28,6 +28,13 @@ config SND_SOC_TEGRA_ALT_210
 	depends on SND_SOC_TEGRA_ALT
 	depends on ARCH_TEGRA_APE
 
+config SND_SOC_TEGRA_ALT_FORCE_CARD_REG
+	tristate "Enable sound card even if audio codec is missing on board"
+	depends on SND_SOC_TEGRA_ALT
+	help
+	  Say Y or M if you want to register the sound card even if audio codec
+	  is not connected/present on board.
+
 config SND_SOC_TEGRA30_XBAR_ALT
 	tristate "Tegra30 XBAR driver"
 	depends on SND_SOC_TEGRA_ALT && SND_SOC_TEGRA_ALT_30_OR_LATER

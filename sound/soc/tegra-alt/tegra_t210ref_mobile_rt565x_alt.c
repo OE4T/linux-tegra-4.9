@@ -875,8 +875,10 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 
 	ret = snd_soc_register_card(card);
 	if (ret) {
+#ifdef CONFIG_SND_SOC_TEGRA_ALT_FORCE_CARD_REG
 		dai_link_setup(pdev, 1);
 		ret = snd_soc_register_card(card);
+#endif
 
 		if (ret) {
 			dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n",

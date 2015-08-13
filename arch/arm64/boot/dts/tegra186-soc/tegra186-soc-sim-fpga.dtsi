@@ -257,7 +257,7 @@
 		status = "okay";
 	};
 
-	tegra_edvd@e070000 {
+	cpufreq@e070000 {
 		status = "okay";
 	};
 

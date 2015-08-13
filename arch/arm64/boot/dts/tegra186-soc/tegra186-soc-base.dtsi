@@ -1637,10 +1637,13 @@
 		status = "disabled";
 	};
 
-	tegra_edvd@e070000 {
-		compatible = "nvidia,tegra18x-edvd";
+	cpufreq@e070000 {
+		compatible = "nvidia,tegra18x-cpufreq";
 		reg = <0x0 0x0e070000 0x0 0x1000>, /* M/Denver cluster */
 		      <0x0 0x0e060000 0x0 0x1000>; /* B/ARM cluster */
+		clocks = <&tegra_car TEGRA186_CLK_EMC>,
+			 <&tegra_car TEGRA186_CLK_EMC>;
+		clock-names = "emc0", "emc1";
 		status = "disabled";
 	};
 

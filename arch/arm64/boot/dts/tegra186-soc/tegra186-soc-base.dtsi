@@ -865,7 +865,7 @@
 		clock-names = "spi", "pll_p", "clk_m";
 		resets = <&tegra_car TEGRA186_RESET_SPI1>;
 		reset-names = "spi";
-		status = "okay";
+		status = "disabled";
 	};
 
 	spi2: spi@3230000 {
@@ -884,7 +884,7 @@
 		clock-names = "spi", "pll_p", "clk_m";
 		resets = <&tegra_car TEGRA186_RESET_SPI3>;
 		reset-names = "spi";
-		status = "okay";
+		status = "disabled";
 	};
 
 	spi3: spi@3240000 {
@@ -903,7 +903,7 @@
 		clock-names = "spi", "pll_p", "clk_m";
 		resets = <&tegra_car TEGRA186_RESET_SPI4>;
 		reset-names = "spi";
-		status = "okay";
+		status = "disabled";
 	};
 	qspi6: spi@3270000 {
 		compatible = "nvidia,tegra186-qspi";

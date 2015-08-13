@@ -20,7 +20,7 @@
 
 / {
 	bpmp_i2c {
-		max77620: max77620@3c {
+		spmic: spmic@3c {
 			compatible = "maxim,max77620";
 			reg = <0x3c>;
 			interrupts = <0 86 IRQ_TYPE_NONE>;
@@ -39,12 +39,12 @@
 			#thermal-sensor-cells = <0>;
 
 			pinctrl-names = "default";
-			pinctrl-0 = <&max77620_default>;
+			pinctrl-0 = <&spmic_default>;
 
 			gpio-init-names = "default";
-			gpio-init-0 = <&max77620_gpio_default>;
+			gpio-init-0 = <&spmic_gpio_default>;
 
-			max77620_default: pinmux@0 {
+			spmic_default: pinmux@0 {
 				pin_gpio0 {
 					pins = "gpio0";
 					function = "gpio";
@@ -78,7 +78,7 @@
 				};
 			};
 
-			max77620_gpio_default:gpio_default {
+			spmic_gpio_default:gpio_default {
 				gpio-output-high = <2>;
 			};
 
@@ -86,7 +86,6 @@
 				maxim,wdt-timeout = <16>;
 				maxim,wdt-clear-time = <13>;
 				status = "okay";
-				dt-override-status-odm-data = <0x00020000 0x00020000>;
 			};
 
 			backup-battery {
@@ -96,18 +95,18 @@
 			};
 
 			regulators {
-				in-ldo4-supply = <&max77620_sd2>;
-				in-ldo6-supply = <&max77620_sd2>;
-				in-ldo7-8-supply = <&max77620_sd1>;
+				in-ldo4-supply = <&spmic_sd2>;
+				in-ldo6-supply = <&spmic_sd2>;
+				in-ldo7-8-supply = <&spmic_sd1>;
 
-				max77620_sd0: sd0 {
+				spmic_sd0: sd0 {
 					regulator-name = "vddio-ddr";
 					regulator-boot-on;
 					regulator-always-on;
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
 				};
 
-				max77620_sd1: sd1 {
+				spmic_sd1: sd1 {
 					regulator-name = "avdd_dsi_csi";
 					regulator-min-microvolt = <1200000>;
 					regulator-max-microvolt = <1200000>;
@@ -116,7 +115,7 @@
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
 				};
 
-				max77620_sd2: sd2 {
+				spmic_sd2: sd2 {
 					regulator-name = "vdd-1v8";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <1800000>;
@@ -125,7 +124,7 @@
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
 				};
 
-				max77620_sd3: sd3 {
+				spmic_sd3: sd3 {
 					regulator-name = "vdd-3v3-sys";
 					regulator-min-microvolt = <3300000>;
 					regulator-max-microvolt = <3300000>;
@@ -133,27 +132,27 @@
 					regulator-boot-on;
 				};
 
-				max77620_ldo0: ldo0 {
-					regulator-name = "not-used";
+				spmic_ldo0: ldo0 {
+					regulator-name = "spmic-ldo0";
 				};
 
-				max77620_ldo1: ldo1 {
-					regulator-name = "not-used1";
+				spmic_ldo1: ldo1 {
+					regulator-name = "spmic-ldo1";
 				};
 
-				max77620_ldo2: ldo2 {
+				spmic_ldo2: ldo2 {
 					regulator-name = "vddio-3v3";
 					regulator-min-microvolt = <3300000>;
 					regulator-max-microvolt = <3300000>;
 				};
 
-				max77620_ldo3: ldo3 {
+				spmic_ldo3: ldo3 {
 					regulator-name = "vddio-sdmmc1";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <3300000>;
 				};
 
-				max77620_ldo4: ldo4 {
+				spmic_ldo4: ldo4 {
 					regulator-name = "vdd-rtc";
 					regulator-min-microvolt = <1000000>;
 					regulator-max-microvolt = <1000000>;
@@ -161,24 +160,24 @@
 					regulator-boot-on;
 				};
 
-				max77620_ldo5: ldo5 {
+				spmic_ldo5: ldo5 {
 					regulator-name = "avdd-ts-hv";
 					regulator-min-microvolt = <2800000>;
 					regulator-max-microvolt = <2800000>;
 				};
 
-				max77620_ldo6: ldo6 {
-					regulator-name = "not-used2";
+				spmic_ldo6: ldo6 {
+					regulator-name = "spmic-ldo6";
 				};
 
-				max77620_ldo7: ldo7 {
+				spmic_ldo7: ldo7 {
 					regulator-name = "vdd-pex-1v05";
 					regulator-min-microvolt = <1050000>;
 					regulator-max-microvolt = <1050000>;
 				};
 
-				max77620_ldo8: ldo8 {
-					regulator-name = "not-used3";
+				spmic_ldo8: ldo8 {
+					regulator-name = "spmic-ldo8";
 				};
 			};
 		};
@@ -194,7 +193,7 @@
 			polling-delay = <0>; /* milliseconds */
 			polling-delay-passive = <0>; /* milliseconds */
 
-			thermal-sensors = <&max77620>;
+			thermal-sensors = <&spmic>;
 			trips {
 				die_temp_thresh: hot-die {
 					temperature = <120000>;
@@ -213,12 +212,5 @@
 				};
 			};
 		};
-	};
-
-	external-connection {
-		compatible = "simple-bus";
-		device_type = "external-connection";
-		#address-cells = <1>;
-		#size-cells = <0>;
 	};
 };

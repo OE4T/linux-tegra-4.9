@@ -346,6 +346,23 @@ static void tegra_dsi_send_dc_frames(struct tegra_dc *dc,
 				     struct tegra_dc_dsi_data *dsi,
 				     int no_of_frames);
 
+/*
+ * In T186, DSI_CTXSW register is split into two separate registers -
+ * DSI_CTXSW_NEXT and DSI_CTXSW. Due to this change, the offsets of
+ * all registers have been shifted by 1. To avoid duplication of
+ * register definition, handling this shift inside the dsi
+ * readl/writel accessory functions.
+ * Fix me: Reg at offset 0x8 should be treated as a special case
+ * and information from both registers should be concatenated
+ * while reading/writing. As the register is not used currently,
+ * skipping this change.
+ */
+#if defined CONFIG_ARCH_TEGRA_18x_SOC
+#define GET_BYTE_OFFSET(reg)	((reg > 8) ? ((reg + 1) * 4) : (reg * 4))
+#else
+#define GET_BYTE_OFFSET(reg)	(reg * 4)
+#endif
+
 unsigned long tegra_dsi_controller_readl(struct tegra_dc_dsi_data *dsi,
 							u32 reg, int index)
 {
@@ -357,8 +374,8 @@ unsigned long tegra_dsi_controller_readl(struct tegra_dc_dsi_data *dsi,
 		"DSI is clock gated!"))
 			return 0;
 	}
-	ret = readl(dsi->base[index] + reg * 4);
-	trace_display_readl(dsi->dc, ret, dsi->base[index] + reg * 4);
+	ret = readl(dsi->base[index] + GET_BYTE_OFFSET(reg));
+	trace_display_readl(dsi->dc, ret, dsi->base[index] + GET_BYTE_OFFSET(reg));
 	return ret;
 }
 EXPORT_SYMBOL(tegra_dsi_controller_readl);
@@ -372,8 +389,8 @@ void tegra_dsi_controller_writel(struct tegra_dc_dsi_data *dsi,
 		"DSI is clock gated!"))
 			return;
 	}
-	trace_display_writel(dsi->dc, val, dsi->base[index] + reg * 4);
-	writel(val, dsi->base[index] + reg * 4);
+	trace_display_writel(dsi->dc, val, dsi->base[index] + GET_BYTE_OFFSET(reg));
+	writel(val, dsi->base[index] + GET_BYTE_OFFSET(reg));
 }
 EXPORT_SYMBOL(tegra_dsi_controller_writel);
 
@@ -381,8 +398,8 @@ unsigned long tegra_dsi_readl(struct tegra_dc_dsi_data *dsi, u32 reg)
 {
 	unsigned long ret;
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
-	ret = readl(dsi->base[DSI_INSTANCE_0] + reg * 4);
-	trace_display_readl(dsi->dc, ret, dsi->base[DSI_INSTANCE_0] + reg * 4);
+	ret = readl(dsi->base[DSI_INSTANCE_0] + GET_BYTE_OFFSET(reg));
+	trace_display_readl(dsi->dc, ret, dsi->base[DSI_INSTANCE_0] + GET_BYTE_OFFSET(reg));
 	return ret;
 }
 EXPORT_SYMBOL(tegra_dsi_readl);
@@ -392,8 +409,8 @@ void tegra_dsi_writel(struct tegra_dc_dsi_data *dsi, u32 val, u32 reg)
 	int  i = 0;
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
 	for (i = 0; i < dsi->max_instances; i++) {
-		trace_display_writel(dsi->dc, val, dsi->base[i] + reg * 4);
-		writel(val, dsi->base[i] + reg * 4);
+		trace_display_writel(dsi->dc, val, dsi->base[i] + GET_BYTE_OFFSET(reg));
+		writel(val, dsi->base[i] + GET_BYTE_OFFSET(reg));
 	}
 }
 EXPORT_SYMBOL(tegra_dsi_writel);

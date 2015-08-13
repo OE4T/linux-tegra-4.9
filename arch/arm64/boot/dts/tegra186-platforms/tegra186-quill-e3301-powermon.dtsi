@@ -63,7 +63,7 @@
 			};
 		};
 
-		pca9546@71 {
+		i2cmux@71 {
 			compatible = "nxp,pca9546";
 			reg = <0x71>;
 			#address-cells = <1>;
@@ -326,6 +326,19 @@
 					compatible = "ti,ina226x";
 					reg = <0x41>;
 					ti,rail-name = "VDD_1V1_SD0_OUT";
+					ti,continuous-config = <0x0407>;
+					ti,trigger-config = <0x0403>;
+					ti,resistor = <1>;
+					ti,calibration-data = <0x7FFF>;
+					ti,power-lsb = <6866>;
+					ti,divisor = <25>;
+					ti,precision-multiplier = <1000>;
+				};
+
+				ina226@42 {
+					compatible = "ti,ina226x";
+					reg = <0x42>;
+					ti,rail-name = "VDD_GPU";
 					ti,continuous-config = <0x0407>;
 					ti,trigger-config = <0x0403>;
 					ti,resistor = <1>;

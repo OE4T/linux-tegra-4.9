@@ -46,6 +46,19 @@ static inline void tegra_mipi_cal_clk_disable(struct tegra_mipi_cal *mipi_cal)
 		tegra_disp_clk_disable_unprepare(mipi_cal->fixed_clk);
 }
 
+/*
+ * MIPI_CAL_MODE register is introduced in T18x and the actual offset of the
+ * register is 0x0. Due to this, all other registers are shifted by 1 word.
+ * Handling this inside mipi cal readl/writel accessories. To handle
+ * read/writes to MIPI_CAL_MODE register, setting a virtual offset of 0xFF and
+ * handling it as a special case.
+ */
+#if defined CONFIG_TEGRA_ARCH_T18x_SOC
+#define GET_REG_OFFSET(reg)	((reg == 0xFF) ? 0x0 : (reg + 4))
+#else
+#define GET_REG_OFFSET(reg)	(reg)
+#endif
+
 /* reg is word offset */
 static inline unsigned long tegra_mipi_cal_read(
 					struct tegra_mipi_cal *mipi_cal,
@@ -53,7 +66,7 @@ static inline unsigned long tegra_mipi_cal_read(
 {
 	BUG_ON(IS_ERR_OR_NULL(mipi_cal) ||
 		!tegra_is_clk_enabled(mipi_cal->clk));
-	return readl(mipi_cal->base + reg);
+	return readl(mipi_cal->base + GET_REG_OFFSET(reg));
 }
 
 /* reg is word offset */
@@ -63,7 +76,7 @@ static inline void tegra_mipi_cal_write(struct tegra_mipi_cal *mipi_cal,
 {
 	BUG_ON(IS_ERR_OR_NULL(mipi_cal) ||
 		!tegra_is_clk_enabled(mipi_cal->clk));
-	writel(val, mipi_cal->base + reg);
+	writel(val, mipi_cal->base + GET_REG_OFFSET(reg));
 }
 
 extern struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc);

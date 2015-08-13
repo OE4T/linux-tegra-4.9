@@ -29,6 +29,15 @@
 	#define MIPI_VALID_REG_LIMIT  MIPI_CAL_CSIE_MIPI_CAL_CONFIG_2_0
 #endif
 
+/*
+ * MIPI_CAL_MODE register is introduced in T18x and the actual offset of the
+ * register is 0x0. Due to this, all other registers are shifted by 1 word.
+ * Handling this inside mipi cal readl/writel accessories. To handle
+ * read/writes to MIPI_CAL_MODE register, setting a virtual offset of 0xFF and
+ * handling it as a special case in the driver.
+ */
+#define MIPI_CAL_MIPI_CAL_MODE		0xFF
+
 #define MIPI_CAL_MIPI_CAL_CTRL_0	0x0
 #define MIPI_CAL_NOISE_FLT(x)		(((x) & 0xf) << 26)
 #define MIPI_CAL_PRESCALE(x)		(((x) & 0x3) << 24)

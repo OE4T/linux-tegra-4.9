@@ -342,17 +342,19 @@ static void cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 
 static void cdma_timeout_release_mlock(struct nvhost_cdma *cdma)
 {
-	struct nvhost_channel *ch = cdma_to_channel(cdma);
+	struct nvhost_channel *orig_ch = cdma_to_channel(cdma);
 	struct nvhost_master *dev = cdma_to_dev(cdma);
 	struct nvhost_syncpt *syncpt = &dev->syncpt;
-	struct platform_device *pdev = ch->dev;
+	struct platform_device *pdev = orig_ch->dev;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_job *job = NULL;
+	struct nvhost_channel *ch;
 	dma_addr_t dma_handle = 0;
 	DEFINE_DMA_ATTRS(attrs);
 	u32 *cpuvaddr = NULL;
 	bool ch_own, cpu_own;
 	unsigned int owner;
+	u32 syncpt_id;
 	int err = 0;
 
 	/* nothing to do if resource policy is per device */
@@ -364,17 +366,41 @@ static void cdma_timeout_release_mlock(struct nvhost_cdma *cdma)
 				&cpu_own, &ch_own, &owner);
 
 	/* if this channel does not own the mlock, quit */
-	if (!(ch_own && owner == ch->chid))
+	if (!(ch_own && owner == orig_ch->chid))
 		return;
 
+	/* allocate a new channel to execute recovery. use a stack variable
+	 * as an identifier to ensure that no-one else can get the same
+	 * channel */
+
+	err = nvhost_channel_map(pdata, &ch, &ch);
+	if (err) {
+		nvhost_err(&pdev->dev, "mlock release failed: failed to allocate recovery channel (%d)\n",
+			   err);
+		return;
+	}
+
+	/* wipe-out the identifier - no-one gets this channel before
+	 * the job is done */
+	nvhost_channel_remove_identifier(pdata, &ch);
+
+	/* allocate a command buffer */
 	cpuvaddr = dma_alloc_attrs(&pdev->dev, SZ_4K, &dma_handle, GFP_KERNEL,
 				   &attrs);
 	if (!cpuvaddr) {
 		nvhost_err(&pdev->dev, "mlock release failed: failed to allocate release buffer\n");
-		return;
+		goto err_alloc_buffer;
 	}
 
-	*cpuvaddr = nvhost_opcode_imm_incr_syncpt(0, ch->syncpts[0]);
+	/* allocate syncpoint */
+	syncpt_id = nvhost_get_syncpt_host_managed(pdata->pdev, 0, NULL);
+	if (!syncpt_id) {
+		nvhost_err(&pdev->dev, "mlock release failed: failed to allocate syncpoint\n");
+		goto err_alloc_syncpt;
+	}
+
+	/* make a single increment for the command buffer */
+	*cpuvaddr = nvhost_opcode_imm_incr_syncpt(0, syncpt_id);
 
 	job = nvhost_job_alloc(ch, 1, 0, 0, 1);
 	if (!job) {
@@ -383,7 +409,8 @@ static void cdma_timeout_release_mlock(struct nvhost_cdma *cdma)
 		goto err_job_alloc;
 	}
 
-	job->sp->id = ch->syncpts[0];
+	ch->syncpts[0] = syncpt_id;
+	job->sp->id = syncpt_id;
 	job->sp->incrs = 1;
 	job->num_syncpts = 1;
 
@@ -415,7 +442,7 @@ static void cdma_timeout_release_mlock(struct nvhost_cdma *cdma)
 		/* If MLOCK is no longer assigned for this channel, quit */
 		syncpt_op().mutex_owner(syncpt, pdata->modulemutexes[0],
 					&cpu_own, &ch_own, &owner);
-		if (!(ch_own && owner == ch->chid))
+		if (!ch_own || (owner != orig_ch->chid && owner != ch->chid))
 			break;
 
 		/* ..otherwise, reassign MLOCK for this channel */
@@ -433,7 +460,11 @@ err_submit:
 err_add_gather:
 	nvhost_job_put(job);
 err_job_alloc:
+	nvhost_syncpt_put_ref(syncpt, syncpt_id);
+err_alloc_syncpt:
 	dma_free_attrs(&pdev->dev, SZ_4K, cpuvaddr, dma_handle, &attrs);
+err_alloc_buffer:
+	nvhost_putchannel(ch, 1);
 }
 
 /**
@@ -529,9 +560,6 @@ static void cdma_timeout_handler(struct work_struct *work)
 			cdma->timeout.sp[i].fence);
 	}
 
-	/* get reference to the channel that is going to be destroyed */
-	nvhost_getchannel(ch);
-
 	/* stop HW, resetting channel/module */
 	cdma_op().timeout_teardown_begin(cdma);
 
@@ -541,9 +569,6 @@ static void cdma_timeout_handler(struct work_struct *work)
 
 	/* ensure that mlocks get released */
 	cdma_timeout_release_mlock(cdma);
-
-	/* channel can be released now */
-	nvhost_putchannel(ch, 1);
 }
 
 static const struct nvhost_cdma_ops host1x_cdma_ops = {

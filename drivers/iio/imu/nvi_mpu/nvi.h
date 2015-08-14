@@ -29,6 +29,7 @@
 #define MPU9250_ID			(0x71)
 #define MPU9350_ID			(0x72)
 #define ICM20628_ID			(0xA2)
+#define ICM20630_ID			(0xAB)
 #define ICM20632_ID			(0xAD)
 
 #define NVI_BYPASS_TIMEOUT_MS		(1000)

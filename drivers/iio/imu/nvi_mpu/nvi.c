@@ -36,6 +36,7 @@
 #define NVI_NAME_MPU6515		"MPU6515"
 #define NVI_NAME_MPU9350		"MPU9350"
 #define NVI_NAME_ICM20628		"ICM20628"
+#define NVI_NAME_ICM20630		"ICM20630"
 #define NVI_NAME_ICM20632		"ICM20632"
 #define NVI_VENDOR			"Invensense"
 
@@ -4159,6 +4160,11 @@ static int nvi_id_hal(struct nvi_state *st, u8 dev_id)
 		part_name = NVI_NAME_ICM20628;
 		break;
 
+	case ICM20630_ID:
+		st->hal = &nvi_hal_20628;
+		part_name = NVI_NAME_ICM20630;
+		break;
+
 	case ICM20632_ID:
 		st->hal = &nvi_hal_20628;
 		part_name = NVI_NAME_ICM20632;
@@ -4206,6 +4212,8 @@ static int nvi_id_dev(struct nvi_state *st, const char *name)
 		dev_id = MPU9350_ID;
 	else if (!strcmp(name, "icm20628"))
 		dev_id = ICM20628_ID;
+	else if (!strcmp(name, "icm20630"))
+		dev_id = ICM20630_ID;
 	else if (!strcmp(name, "icm20632"))
 		dev_id = ICM20632_ID;
 	else

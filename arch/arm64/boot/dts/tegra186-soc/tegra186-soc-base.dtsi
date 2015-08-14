@@ -594,8 +594,24 @@
 			      <0x0 0x15900000 0x0 0x00040000>, /* DSIC */
 			      <0x0 0x15940000 0x0 0x00040000>, /* DSID */
 			      <0x0 0x15880000 0x0 0x00010000>; /* PADCTL REG */
-			clocks = <&clk32k_in>;
-			clock-names = "clk32k_in";
+			clocks = <&clk32k_in>,
+				 <&tegra_car TEGRA186_CLK_DSI>,
+				 <&tegra_car TEGRA186_CLK_DSIA_LP>,
+				 <&tegra_car TEGRA186_CLK_DSIB>,
+				 <&tegra_car TEGRA186_CLK_DSIB_LP>,
+				 <&tegra_car TEGRA186_CLK_DSIC>,
+				 <&tegra_car TEGRA186_CLK_DSIC_LP>,
+				 <&tegra_car TEGRA186_CLK_DSID>,
+				 <&tegra_car TEGRA186_CLK_DSID_LP>;
+			clock-names = "clk32k_in", "dsi", "dsia_lp",
+					"dsib", "dsib_lp", "dsic", "dsic_lp",
+					"dsid", "dsid_lp";
+			resets = <&tegra_car TEGRA186_RESET_DSI>,
+				<&tegra_car TEGRA186_RESET_DSIB>,
+				<&tegra_car TEGRA186_RESET_DSIC>,
+				<&tegra_car TEGRA186_RESET_DSID>,
+				<&tegra_car TEGRA186_RESET_DSIPADCTL>;
+			reset-names = "dsi";
 			status = "disabled";
 		};
 

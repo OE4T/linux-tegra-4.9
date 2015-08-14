@@ -1,7 +1,7 @@
 /*
  * kernel-t18x/drivers/video/tegra/nvdisp/nvdisp_priv.h
  *
- * Copyright (c) 2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014 - 2015, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -23,6 +23,7 @@
 #include <trace/events/display.h>
 #include <linux/tegra-powergate.h>
 #include <hw_win_nvdisp.h>
+#include "dc_priv.h"
 
 /* TODO: move to device tree */
 
@@ -148,6 +149,22 @@ static inline void nvdisp_win_write(struct tegra_dc_win *win, u32 val, u32 off)
 	writel(val, dc->base + reg);
 }
 
+static inline bool tegra_dc_is_yuv_12bpc(int fmt)
+{
+	switch (tegra_dc_fmt(fmt)) {
+	case TEGRA_WIN_FMT_T_Y12___U12___V12_N420:
+	case TEGRA_WIN_FMT_T_Y12___U12___V12_N444:
+	case TEGRA_WIN_FMT_T_Y12___V12U12_N420:
+	case TEGRA_WIN_FMT_T_Y12___U12V12_N422:
+	case TEGRA_WIN_FMT_T_Y12___U12V12_N422R:
+	case TEGRA_WIN_FMT_T_Y12___U12V12_N444:
+		return true;
+	default:
+		return false;
+	}
+
+	return false;
+}
 
 void nvdisp_clock_init(struct tegra_dc *dc);
 

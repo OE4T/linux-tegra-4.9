@@ -20,10 +20,9 @@
 #include "nvdisp.h"
 #include "nvdisp_priv.h"
 #include "hw_nvdisp_nvdisp.h"
-#include "hw_win_nvdisp.h"
 
 #include "dc_config.h"
-#include "dc_priv.h"
+
 
 /* Num Fractional Bits in 8.24 fixed point phase and phase increment values */
 #define NFB 24
@@ -320,7 +319,7 @@ static int tegra_nvdisp_enable_cde(struct tegra_dc_win *win)
 
 static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 {
-	u32 win_options;
+	u32 win_options, win_params;
 	fixed20_12 h_offset, v_offset;
 
 	bool yuv = tegra_dc_is_yuv(win->fmt);
@@ -406,17 +405,46 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 			win_set_planar_storage_uv_r());
 	}
 
+	win_params = win_win_set_params_in_range_full_f();
+
+	/* setting input-range */
+	if (win->flags & TEGRA_WIN_FLAG_INPUT_RANGE_BYPASS)
+		win_params = win_win_set_params_in_range_bypass_f();
+	else if (win->flags & TEGRA_WIN_FLAG_INPUT_RANGE_LIMITED)
+		win_params = win_win_set_params_in_range_limited_f();
+
 	if (yuv) {
-		nvdisp_win_write(win, win_win_set_params_cs_range_yuv_709_f() |
-			win_win_set_params_in_range_bypass_f() |
-			win_win_set_params_degamma_range_none_f(),
-			win_win_set_params_r());
+		/* yuv8_10 for rec601/709/2020-10 and
+		 * yuv12 for rec2020-12 yuv inputs
+		 */
+		if (tegra_dc_is_yuv_12bpc(win->fmt))
+			win_params |=
+				win_win_set_params_degamma_range_yuv12_f();
+		else
+			win_params |=
+				win_win_set_params_degamma_range_yuv8_10_f();
+
+		/* color_space settings */
+		if (win->flags & TEGRA_WIN_FLAG_CS_REC601)
+			win_params |= win_win_set_params_cs_range_yuv_601_f();
+		else if (win->flags & TEGRA_WIN_FLAG_CS_REC2020)
+			win_params |= win_win_set_params_cs_range_yuv_2020_f();
+		else
+			win_params |= win_win_set_params_cs_range_yuv_709_f();
+
 	} else {
-		nvdisp_win_write(win, win_win_set_params_cs_range_rgb_f() |
-			win_win_set_params_in_range_bypass_f() |
-			win_win_set_params_degamma_range_none_f(),
-			win_win_set_params_r());
+		/* srgb for rgb, none for I8 */
+		if (win->fmt == TEGRA_WIN_FMT_P8)
+			win_params |=
+				win_win_set_params_degamma_range_none_f();
+		else
+			win_params |=
+				win_win_set_params_degamma_range_srgb_f();
+
+		win_params |= win_win_set_params_cs_range_rgb_f();
 	}
+
+	nvdisp_win_write(win, win_params, win_win_set_params_r());
 
 	/* In T186 - Relative offset of the image is displayed w.r.t the
 	 * Source image on rotation. So With HD/VD -> 0 or 1 Cropped_pt.x/y

@@ -21,6 +21,7 @@
 
 #include "tegra186-soc/tegra186-soc-vcm.dtsi"
 #include "tegra186-cvm-simple-bus.dtsi"
+#include "panel-s-wuxga-8-0.dtsi"
 
 / {
         model = "sunstreaker-3340";
@@ -85,6 +86,44 @@
 		cd-gpios = <&tegra_gpio TEGRA_GPIO(P, 6) 0>;
 		wp-gpios = <&tegra_gpio TEGRA_GPIO(P, 4) 0>;
 		status = "okay";
+	};
+
+	host1x {
+		dsi@15300000 {
+			nvidia,dsi-controller-vs = <DSI_VS_1>;
+			status = "okay";
+			panel-s-wuxga-8-0 {
+				nvidia,dsi-refresh-rate = <75>;
+				disp-default-out {
+					nvidia,out-rotation = <180>;
+				};
+				vrr-settings {
+					nvidia,vrr_min_fps = <30>;
+					nvidia,frame_len_fluct = <6667>;
+				};
+				display-timings {
+					1200x1920-32-75Hz {
+						clock-frequency = <193224000>;
+						hactive = <1200>;
+						vactive = <1920>;
+						hfront-porch = <107>;
+						hback-porch = <20>;
+						hsync-len = <1>;
+						vfront-porch = <12>;
+						vback-porch = <7>;
+						vsync-len = <1>;
+						nvidia,h-ref-to-sync = <1>;
+						nvidia,v-ref-to-sync = <11>;
+					};
+				};
+			};
+		};
+	};
+
+	backlight {
+		panel-s-wuxga-8-0-bl {
+			pwms = <&tegra_pwm1 0 40161>;
+		};
 	};
 };
 

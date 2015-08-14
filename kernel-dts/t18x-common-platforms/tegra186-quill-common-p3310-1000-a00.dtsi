@@ -32,5 +32,8 @@
 		status = "okay";
 	};
 
+	ahci-sata@3507000 {
+		status = "okay";
+	};
 };
 

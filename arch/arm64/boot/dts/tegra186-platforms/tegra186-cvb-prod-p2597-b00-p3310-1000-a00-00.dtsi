@@ -15,6 +15,7 @@
  */
 
 #include <dt-bindings/gpio/tegra-gpio.h>
+#include <dt-bindings/input/input.h>
 
 / {
 
@@ -199,6 +200,24 @@
 			regulator-max-microvolt = <1200000>;
 			gpio = <&gpio_i2c_0_74 10 1>;
 			enable-active-high;
+		};
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		gpio-keys,name = "gpio-keys";
+
+		power {
+			label = "Power";
+			gpios = <&tegra_gpio TEGRA_GPIO(FF, 0) 0>;
+			linux,code = <KEY_POWER>;
+			gpio-key,wakeup;
+		};
+
+		volume_down {
+			label = "Volume Down";
+			gpios = <&tegra_gpio TEGRA_GPIO(FF, 2) 0>;
+			linux,code = <KEY_VOLUMEDOWN>;
 		};
 	};
 };

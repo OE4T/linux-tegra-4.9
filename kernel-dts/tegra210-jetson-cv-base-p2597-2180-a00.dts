@@ -18,7 +18,7 @@
 
 /memreserve/ 0x80000000 0x00020000;
 
-#include "tegra210-common.dtsi"
+#include "tegra210-jetson-common.dtsi"
 #include "tegra210-platforms/tegra210-audio.dtsi"
 #include "tegra210-platforms/tegra210-jetson-cv-power-tree-p2597-2180-a00.dtsi"
 #include "tegra210-platforms/tegra210-jetson-cv-pinmux-p2597-2180-a00.dtsi"

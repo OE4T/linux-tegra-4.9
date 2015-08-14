@@ -17,6 +17,13 @@
  */
 
 static struct nvhost_gating_register __attribute__((__unused__))
+	t18x_host1x_gating_registers[] = {
+	/* HOST1X_THOST_COMMON_ICG_EN_OVERRIDE_0 */
+	{ .addr = 0x00002aa8, .prod = 0x00000000, .disable = 0x00000001 },
+	{}
+};
+
+static struct nvhost_gating_register __attribute__((__unused__))
 	t18x_nvenc_gating_registers[] = {
 	/* NV_PNVENC_THI_CLK_OVERRIDE */
 	{ .addr = 0x00000e00, .prod = 0x00000000, .disable = 0xffffffff },

@@ -221,14 +221,15 @@
 #define _PIN(offset)	(NUM_GPIOS + (offset))
 
 /* Non-GPIO pins */
-#define TEGRA_PIN_CORE_PWR_REQ			_PIN(0)
-#define TEGRA_PIN_CPU_PWR_REQ			_PIN(1)
-#define TEGRA_PIN_PWR_INT_N			_PIN(2)
-#define TEGRA_PIN_CLK_32K_IN			_PIN(3)
-#define TEGRA_PIN_JTAG_RTCK			_PIN(4)
-#define TEGRA_PIN_BATT_BCL			_PIN(5)
-#define TEGRA_PIN_CLK_REQ			_PIN(6)
-#define TEGRA_PIN_SHUTDOWN			_PIN(7)
+#define TEGRA_PIN_DIRECTDC_COMP 		_PIN(0)
+#define TEGRA_PIN_SDMMC1_COMP		_PIN(1)
+#define TEGRA_PIN_EQOS_COMP			_PIN(2)
+#define TEGRA_PIN_SDMMC3_COMP		_PIN(3)
+#define TEGRA_PIN_QSPI_COMP			_PIN(4)
+#define TEGRA_PIN_SHUTDOWN			_PIN(5)
+#define TEGRA_PIN_PMU_INT				_PIN(6)
+#define TEGRA_PIN_SOC_PWR_REQ			_PIN(7)
+#define TEGRA_PIN_CLK_32K_IN			_PIN(8)
 
 #define DRV_BANK	0
 #define MUX_BANK	1
@@ -421,14 +422,16 @@ static const struct pinctrl_pin_desc  tegra186_pins[] = {
 	PINCTRL_PIN(TEGRA_PIN_GPIO_SW2_PFF2, "GPIO_SW2_PFF2"),
 	PINCTRL_PIN(TEGRA_PIN_GPIO_SW3_PFF3, "GPIO_SW3_PFF3"),
 	PINCTRL_PIN(TEGRA_PIN_GPIO_SW4_PFF4, "GPIO_SW4_PFF4"),
-	PINCTRL_PIN(TEGRA_PIN_CORE_PWR_REQ, "CORE_PWR_REQ"),
-	PINCTRL_PIN(TEGRA_PIN_CPU_PWR_REQ, "CPU_PWR_REQ"),
-	PINCTRL_PIN(TEGRA_PIN_PWR_INT_N, "PWR_INT_N"),
-	PINCTRL_PIN(TEGRA_PIN_CLK_32K_IN, "CLK_32K_IN"),
-	PINCTRL_PIN(TEGRA_PIN_JTAG_RTCK, "JTAG_RTCK"),
-	PINCTRL_PIN(TEGRA_PIN_BATT_BCL, "BATT_BCL"),
-	PINCTRL_PIN(TEGRA_PIN_CLK_REQ, "CLK_REQ"),
+	PINCTRL_PIN(TEGRA_PIN_DIRECTDC_COMP, "DIRECTDC_COMP"),
+	PINCTRL_PIN(TEGRA_PIN_SDMMC1_COMP,	"SDMMC1_COMP"),
+	PINCTRL_PIN(TEGRA_PIN_EQOS_COMP, "EQOS_COMP"),
+	PINCTRL_PIN(TEGRA_PIN_SDMMC3_COMP, "SDMMC3_COMP"),
+	PINCTRL_PIN(TEGRA_PIN_QSPI_COMP, "QSPI_COMP"),
 	PINCTRL_PIN(TEGRA_PIN_SHUTDOWN, "SHUTDOWN"),
+	PINCTRL_PIN(TEGRA_PIN_PMU_INT, "PMU_INT"),
+	PINCTRL_PIN(TEGRA_PIN_SOC_PWR_REQ, "SOC_PWR_REQ"),
+	PINCTRL_PIN(TEGRA_PIN_CLK_32K_IN, "CLK_32K_IN"),
+
 };
 
 static const unsigned pex_l0_rst_n_pa0_pins[] = {
@@ -524,7 +527,7 @@ static const unsigned sdmmc1_cmd_pd1_pins[] = {
 };
 
 static const unsigned sdmmc1_comp_pins[] = {
-	TEGRA_PIN_SDMMC1_CMD_PD1,
+	TEGRA_PIN_SDMMC1_COMP,
 };
 
 static const unsigned sdmmc1_dat0_pd2_pins[] = {
@@ -600,6 +603,7 @@ static const unsigned eqos_mdc_pf5_pins[] = {
 };
 
 static const unsigned eqos_comp_pins[] = {
+	TEGRA_PIN_EQOS_COMP,
 };
 
 static const unsigned sdmmc4_clk_pcc4_pins[] = {};
@@ -637,6 +641,7 @@ static const unsigned sdmmc3_dat0_pg2_pins[] = {
 };
 
 static const unsigned sdmmc3_comp_pins[] = {
+	TEGRA_PIN_SDMMC3_COMP,
 };
 
 static const unsigned sdmmc3_dat1_pg3_pins[] = {
@@ -880,6 +885,7 @@ static const unsigned directdc1_clk_pq0_pins[] = {
 };
 
 static const unsigned directdc_comp_pins[] = {
+	TEGRA_PIN_DIRECTDC_COMP,
 };
 
 static const unsigned directdc1_in_pq1_pins[] = {
@@ -927,6 +933,7 @@ static const unsigned qspi_cs_n_pr5_pins[] = {
 };
 
 static const unsigned qspi_comp_pins[] = {
+	TEGRA_PIN_QSPI_COMP,
 };
 
 static const unsigned pwr_i2c_scl_ps0_pins[] = {
@@ -950,6 +957,7 @@ static const unsigned vcomp_alert_ps4_pins[] = {
 };
 
 static const unsigned soc_pwr_req_pins[] = {
+	TEGRA_PIN_SOC_PWR_REQ,
 };
 
 static const unsigned uart1_tx_pt0_pins[] = {
@@ -1221,32 +1229,8 @@ static const unsigned gpio_sw4_pff4_pins[] = {
 	TEGRA_PIN_GPIO_SW4_PFF4,
 };
 
-static const unsigned core_pwr_req_pins[] = {
-	TEGRA_PIN_CORE_PWR_REQ,
-};
-
-static const unsigned cpu_pwr_req_pins[] = {
-	TEGRA_PIN_CPU_PWR_REQ,
-};
-
-static const unsigned pwr_int_n_pins[] = {
-	TEGRA_PIN_PWR_INT_N,
-};
-
 static const unsigned clk_32k_in_pins[] = {
 	TEGRA_PIN_CLK_32K_IN,
-};
-
-static const unsigned jtag_rtck_pins[] = {
-	TEGRA_PIN_JTAG_RTCK,
-};
-
-static const unsigned batt_bcl_pins[] = {
-	TEGRA_PIN_BATT_BCL,
-};
-
-static const unsigned clk_req_pins[] = {
-	TEGRA_PIN_CLK_REQ,
 };
 
 static const unsigned shutdown_pins[] = {
@@ -1254,6 +1238,7 @@ static const unsigned shutdown_pins[] = {
 };
 
 static const unsigned pmu_int_pins[] = {
+	TEGRA_PIN_PMU_INT,
 };
 
 static const unsigned drive_ufs0_rst_pins[] = {
@@ -1416,6 +1401,7 @@ static const unsigned drive_vcomp_alert_pins[] = {
 };
 
 static const unsigned drive_soc_pwr_req_pins[] = {
+	TEGRA_PIN_SOC_PWR_REQ,
 };
 
 static const unsigned drive_batt_oc_pins[] = {
@@ -1423,7 +1409,7 @@ static const unsigned drive_batt_oc_pins[] = {
 };
 
 static const unsigned drive_clk_32k_in_pins[] = {
-
+	TEGRA_PIN_CLK_32K_IN,
 };
 
 static const unsigned drive_power_on_pins[] = {

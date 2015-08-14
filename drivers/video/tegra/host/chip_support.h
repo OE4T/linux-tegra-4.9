@@ -140,6 +140,7 @@ struct nvhost_dev_ops {
 			struct platform_device *dev);
 	void (*free_nvhost_channel)(struct nvhost_channel *ch);
 	void (*set_nvhost_chanops)(struct nvhost_channel *ch);
+	void (*load_gating_regs)(struct platform_device *pdev, bool enable);
 };
 
 struct nvhost_actmon_ops {

@@ -523,6 +523,10 @@ static const struct file_operations nvhost_ctrlops = {
 static int power_on_host(struct platform_device *dev)
 {
 	struct nvhost_master *host = nvhost_get_private_data(dev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	if (host_device_op().load_gating_regs)
+		host_device_op().load_gating_regs(dev, pdata->engine_can_cg);
 
 	nvhost_syncpt_reset(&host->syncpt);
 	return 0;
@@ -962,6 +966,9 @@ static int nvhost_probe(struct platform_device *dev)
 	err = nvhost_module_busy(dev);
 	if (err)
 		goto fail;
+
+	if (host_device_op().load_gating_regs)
+		host_device_op().load_gating_regs(dev, pdata->engine_can_cg);
 
 	err = nvhost_alloc_channels(host);
 	if (err)

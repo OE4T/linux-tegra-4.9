@@ -168,6 +168,10 @@
 			dvdd_lcd-supply = <&en_dvdd_disp_1v8>;
 			vdd_lcd_bl_en-supply = <&lcd_bl_en>;
 			vdd_lcd_bl-supply = <&vdd_3v3>;
+
+			/* eDP */
+			vdd_ds_1v8-supply  = <&en_dvdd_disp_1v8>;
+			avdd_io_edp-supply = <&max77620_gpio7>;
 		};
 
 		vi {

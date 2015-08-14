@@ -97,7 +97,6 @@ struct nvhost_device_data t18_isp_info = {
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay	= 500,
-	.can_powergate		= true,
 	.clocks			= {{ "isp", UINT_MAX, 0 }},
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
@@ -214,7 +213,6 @@ struct nvhost_device_data t18_nvjpg_info = {
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay	= 500,
-	.can_powergate		= true,
 	.clocks			= { {"nvjpg", UINT_MAX, 0},
 				    {"emc", UINT_MAX} },
 	.engine_cg_regs		= t18x_nvjpg_gating_registers,

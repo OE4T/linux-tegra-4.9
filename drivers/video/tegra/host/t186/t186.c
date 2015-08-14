@@ -338,6 +338,20 @@ static void t186_remove_support(struct nvhost_chip_support *op)
 	op->priv = NULL;
 }
 
+static void t186_load_gating_regs(struct platform_device *pdev, bool prod)
+{
+	struct nvhost_gating_register *regs = t18x_host1x_gating_registers;
+
+	while (regs->addr) {
+		if (prod)
+			host1x_hypervisor_writel(pdev, regs->addr, regs->prod);
+		else
+			host1x_hypervisor_writel(pdev, regs->addr,
+						 regs->disable);
+		regs++;
+	}
+}
+
 #include "host1x/host1x_cdma_t186.c"
 #include "host1x/host1x_syncpt.c"
 #include "host1x/host1x_syncpt_prot_t186.c"
@@ -378,6 +392,7 @@ int nvhost_init_t186_support(struct nvhost_master *host,
 	op->cdma = host1x_cdma_ops;
 	op->push_buffer = host1x_pushbuffer_ops;
 	op->debug = host1x_debug_ops;
+	op->nvhost_dev.load_gating_regs = t186_load_gating_regs;
 
 	host->sync_aperture = host->aperture;
 	op->syncpt = host1x_syncpt_ops;

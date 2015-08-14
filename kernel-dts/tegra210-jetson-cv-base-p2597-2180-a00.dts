@@ -27,6 +27,7 @@
 #include "tegra210-platforms/tegra210-jetson-cv-camera-e3326-a00.dtsi"
 #include "tegra210-platforms/tegra210-pwm-fan-p2530-0930.dtsi"
 #include "panel-a-wuxga-8-0.dtsi"
+#include "panel-s-edp-uhdtv-15-6.dtsi"
 #include "tegra210-platforms/tegra210-ers-hdmi-e2190-1100-a00.dtsi"
 #include "tegra210-platforms/tegra210-sdhci.dtsi"
 #include "tegra210-platforms/tegra210-p2180-common.dtsi"
@@ -150,6 +151,9 @@
 		panel-a-wuxga-8-0-bl {
 			pwms = <&tegra_pwm 0 40161>;
 		};
+		panel-s-edp-uhdtv-15-6-bl {
+			pwms = <&tegra_pwm 0 1000000>;
+		};
 	};
 
 	pcie-controller@1003000 {
@@ -214,6 +218,14 @@
 				disp-default-out {
 					nvidia,out-flags = <TEGRA_DC_OUT_CONTINUOUS_MODE>;
 				};
+			};
+		};
+
+		sor {
+			nvidia,hpd-gpio = <&gpio TEGRA_GPIO(CC, 6) 0>; /* PCC6 */
+			panel-s-edp-uhdtv-15-6 {
+				nvidia,panel-bl-pwm-gpio = <&gpio TEGRA_GPIO(V, 0) 0>; /* PV0 */
+				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
 			};
 		};
 	};

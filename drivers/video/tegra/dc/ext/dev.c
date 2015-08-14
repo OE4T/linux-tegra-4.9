@@ -395,6 +395,22 @@ static void tegra_dc_ext_set_windowattr_basic(struct tegra_dc_win *win,
 	}
 #endif
 
+	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_INPUT_RANGE_LIMITED)
+		win->flags |= TEGRA_WIN_FLAG_INPUT_RANGE_LIMITED;
+	else if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_INPUT_RANGE_BYPASS)
+		win->flags |= TEGRA_WIN_FLAG_INPUT_RANGE_BYPASS;
+	else
+		win->flags |= TEGRA_WIN_FLAG_INPUT_RANGE_FULL;
+
+	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_CS_REC601)
+		win->flags |= TEGRA_WIN_FLAG_CS_REC601;
+	else if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_CS_REC709)
+		win->flags |= TEGRA_WIN_FLAG_CS_REC709;
+	else if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_CS_REC2020)
+		win->flags |= TEGRA_WIN_FLAG_CS_REC2020;
+	else
+		win->flags |= TEGRA_WIN_FLAG_CS_DEFAULT;
+
 	win->fmt = flip_win->pixformat;
 	win->x.full = flip_win->x;
 	win->y.full = flip_win->y;

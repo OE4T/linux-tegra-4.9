@@ -19,6 +19,7 @@
 #include <linux/slab.h>
 #include <linux/io.h>
 #include <linux/tegra-soc.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 
 #include <linux/platform/tegra/tegra18_kfuse.h>
 
@@ -169,7 +170,8 @@ struct nvhost_device_data t18_isp_info = {
 	.clocks			= {
 		{"isp", 408000000},
 		{"emc", HOST_EMC_FLOOR,
-		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
+		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO}
 	},
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
@@ -178,6 +180,7 @@ struct nvhost_device_data t18_isp_info = {
 	.serialize		= 1,
 	.push_work_done		= 1,
 	.vm_regs		= {{0x50, true} },
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_ISPA,
 };
 #endif
 
@@ -197,7 +200,8 @@ struct nvhost_device_data t18_vi_info = {
 		{"nvcsi", 102000000},
 		{"nvcsilp", 204000000},
 		{"emc", HOST_EMC_FLOOR,
-		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
+		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO}
 	},
 	.num_channels		= 12,
 #ifdef CONFIG_TEGRA_VI_NOTIFY
@@ -217,6 +221,7 @@ struct nvhost_device_data t18_vi_info = {
 				   {0x28000 * 4, true},
 				   {0x2c000 * 4, true},
 				   {0x30000 * 4, true} },
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_VI,
 };
 #endif
 
@@ -229,7 +234,8 @@ struct nvhost_device_data t18_msenc_info = {
 	.clocks			= {
 		{"nvenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
 		{"emc", HOST_EMC_FLOOR,
-		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
+		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW}
 	},
 	.engine_cg_regs		= t18x_nvenc_gating_registers,
 	.engine_can_cg		= true,
@@ -244,6 +250,7 @@ struct nvhost_device_data t18_msenc_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.transcfg_addr		= 0x1844,
 	.transcfg_val		= 0x20,
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_MSENC,
 };
 
 struct nvhost_device_data t18_nvdec_info = {
@@ -256,7 +263,8 @@ struct nvhost_device_data t18_nvdec_info = {
 		{"nvdec", UINT_MAX, 0, TEGRA_MC_CLIENT_NVDEC},
 		{"kfuse", 0, 0},
 		{"emc", HOST_NVDEC_EMC_FLOOR,
-		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
+		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO}
 	},
 	.engine_cg_regs		= t18x_nvdec_gating_registers,
 	.engine_can_cg		= true,
@@ -272,6 +280,7 @@ struct nvhost_device_data t18_nvdec_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.transcfg_addr		= 0x2c44,
 	.transcfg_val		= 0x20,
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVDEC,
 };
 
 struct nvhost_device_data t18_nvjpg_info = {
@@ -284,7 +293,8 @@ struct nvhost_device_data t18_nvjpg_info = {
 	.clocks			= {
 		{"nvjpg", UINT_MAX, 0, TEGRA_MC_CLIENT_NVJPG},
 		{"emc", HOST_EMC_FLOOR,
-		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
+		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW}
 	},
 	.engine_cg_regs		= t18x_nvjpg_gating_registers,
 	.engine_can_cg		= true,
@@ -299,6 +309,7 @@ struct nvhost_device_data t18_nvjpg_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.transcfg_addr		= 0x1444,
 	.transcfg_val		= 0x20,
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVJPG,
 };
 
 struct nvhost_device_data t18_tsec_info = {
@@ -310,7 +321,8 @@ struct nvhost_device_data t18_tsec_info = {
 	.clocks			= {
 		{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
 		{"emc", HOST_EMC_FLOOR,
-		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
+		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
 	},
 	.engine_cg_regs		= t18x_tsec_gating_registers,
 	.engine_can_cg		= true,
@@ -329,6 +341,7 @@ struct nvhost_device_data t18_tsec_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.transcfg_addr		= 0x1644,
 	.transcfg_val		= 0x20,
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_TSEC,
 };
 
 struct nvhost_device_data t18_tsecb_info = {
@@ -340,7 +353,8 @@ struct nvhost_device_data t18_tsecb_info = {
 	.clocks			= {
 		{"tsecb", UINT_MAX, 0, TEGRA_MC_CLIENT_TSECB},
 		{"emc", HOST_EMC_FLOOR,
-		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
+		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
 	},
 	.engine_cg_regs		= t18x_tsec_gating_registers,
 	.engine_can_cg		= true,
@@ -358,6 +372,7 @@ struct nvhost_device_data t18_tsecb_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.transcfg_addr		= 0x1644,
 	.transcfg_val		= 0x20,
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_TSECB,
 };
 
 struct nvhost_device_data t18_vic_info = {
@@ -365,9 +380,11 @@ struct nvhost_device_data t18_vic_info = {
 	.devfs_name		= "vic",
 	.clocks			= {
 		{"vic", UINT_MAX, 0},
-		{"emc", UINT_MAX, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},
+		{"emc", UINT_MAX, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW},
 		{"vic_floor", 0, NVHOST_MODULE_ID_CBUS_FLOOR},
-		{"emc_shared", 0, NVHOST_MODULE_ID_EMC_SHARED},
+		{"emc_shared", 0, NVHOST_MODULE_ID_EMC_SHARED,
+		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW},
 	},
 	.engine_cg_regs		= t18x_vic_gating_registers,
 	.engine_can_cg		= true,
@@ -388,6 +405,7 @@ struct nvhost_device_data t18_vic_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.transcfg_addr		= 0x2044,
 	.transcfg_val		= 0x20,
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_VIC,
 };
 
 struct nvhost_device_data t18_nvcsi_info = {

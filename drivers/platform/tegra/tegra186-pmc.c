@@ -238,6 +238,38 @@ unsigned long tegra186_pmc_pwr_e33V_get(void)
 }
 EXPORT_SYMBOL(tegra186_pmc_pwr_e33V_get);
 
+void tegra_pmc_nvcsi_ab_brick_update(unsigned long mask, unsigned long val)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&tegra186_pmc_access_lock, flags);
+	_tegra186_pmc_register_update(PMC_IO_DPD_REQ, mask, val);
+	spin_unlock_irqrestore(&tegra186_pmc_access_lock, flags);
+}
+EXPORT_SYMBOL(tegra_pmc_nvcsi_ab_brick_update);
+
+unsigned long tegra_pmc_nvcsi_ab_brick_getstatus(void)
+{
+	return tegra186_pmc_readl(PMC_IO_DPD_REQ);
+}
+EXPORT_SYMBOL(tegra_pmc_nvcsi_ab_brick_getstatus);
+
+void tegra_pmc_nvcsi_cdef_brick_update(unsigned long mask, unsigned long val)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&tegra186_pmc_access_lock, flags);
+	_tegra186_pmc_register_update(PMC_IO_DPD2_REQ, mask, val);
+	spin_unlock_irqrestore(&tegra186_pmc_access_lock, flags);
+}
+EXPORT_SYMBOL(tegra_pmc_nvcsi_cdef_brick_update);
+
+unsigned long tegra_pmc_nvcsi_cdef_brick_getstatus(void)
+{
+	return tegra186_pmc_readl(PMC_IO_DPD2_REQ);
+}
+EXPORT_SYMBOL(tegra_pmc_nvcsi_cdef_brick_getstatus);
+
 void tegra186_pmc_enable_nvcsi_brick_dpd(void)
 {
 	u32 val;

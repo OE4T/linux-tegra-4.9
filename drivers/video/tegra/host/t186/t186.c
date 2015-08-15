@@ -38,6 +38,9 @@
 
 #include "cg_regs.c"
 
+#define HOST_EMC_FLOOR 204000000
+#define HOST_NVDEC_EMC_FLOOR 102000000
+
 static struct host1x_device_info host1x04_info = {
 	.nb_channels	= T186_NVHOST_NUMCHANNELS,
 	.ch_base	= 0,
@@ -53,8 +56,10 @@ static struct host1x_device_info host1x04_info = {
 };
 
 struct nvhost_device_data t18_host1x_info = {
-	.clocks			= {{"host1x", UINT_MAX},
-				   {"actmon", UINT_MAX}, {} },
+	.clocks			= {
+		{"host1x", UINT_MAX},
+		{"actmon", UINT_MAX}
+	},
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	.private_data		= &host1x04_info,
 };
@@ -74,8 +79,10 @@ static struct host1x_device_info host1xb04_info = {
 };
 
 struct nvhost_device_data t18_host1xb_info = {
-	.clocks			= {{"host1x", UINT_MAX},
-				   {"actmon", UINT_MAX}, {} },
+	.clocks			= {
+		{"host1x", UINT_MAX},
+		{"actmon", UINT_MAX}
+	},
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	.private_data		= &host1xb04_info,
 };
@@ -97,7 +104,10 @@ struct nvhost_device_data t18_isp_info = {
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay	= 500,
-	.clocks			= {{ "isp", UINT_MAX, 0 }},
+	.clocks			= {
+		{"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP},
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
+	},
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
 	.hw_init		= nvhost_isp_register_isr_v2,
@@ -127,7 +137,8 @@ struct nvhost_device_data t18_vi_info = {
 	.moduleid		= NVHOST_MODULE_VI,
 	.clocks = {
 		{"vi", UINT_MAX},
-		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
+	},
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
 	.num_channels		= 6,
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,
@@ -161,8 +172,10 @@ struct nvhost_device_data t18_msenc_info = {
 	NVHOST_MODULE_NO_POWERGATE_ID,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.clocks			= {{"nvenc", UINT_MAX, 0},
-				   {"emc", UINT_MAX} },
+	.clocks			= {
+		{"nvenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
+		{"emc", HOST_EMC_FLOOR}
+	},
 	.engine_cg_regs		= t18x_nvenc_gating_registers,
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_flcn_finalize_poweron,
@@ -186,9 +199,12 @@ struct nvhost_device_data t18_nvdec_info = {
 	NVHOST_MODULE_NO_POWERGATE_ID,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.clocks			= {{"nvdec", UINT_MAX, 0},
-				   {"kfuse", 0, 0},
-				   {"emc", UINT_MAX} },
+	.clocks			= {
+		{"nvdec", UINT_MAX, 0, TEGRA_MC_CLIENT_NVDEC},
+		{"kfuse", 0, 0},
+		{"emc", HOST_NVDEC_EMC_FLOOR,
+		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
+	},
 	.engine_cg_regs		= t18x_nvdec_gating_registers,
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_nvdec_finalize_poweron,
@@ -213,8 +229,10 @@ struct nvhost_device_data t18_nvjpg_info = {
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay	= 500,
-	.clocks			= { {"nvjpg", UINT_MAX, 0},
-				    {"emc", UINT_MAX} },
+	.clocks			= {
+		{"nvjpg", UINT_MAX, 0, TEGRA_MC_CLIENT_NVJPG},
+		{"emc", HOST_EMC_FLOOR}
+	},
 	.engine_cg_regs		= t18x_nvjpg_gating_registers,
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_flcn_finalize_poweron,
@@ -233,8 +251,10 @@ struct nvhost_device_data t18_tsec_info = {
 	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_TSEC},
 	.class			= NV_TSEC_CLASS_ID,
-	.clocks			= {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
-				   {"emc"} },
+	.clocks			= {
+		{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
+		{"emc", HOST_EMC_FLOOR}
+	},
 	.engine_cg_regs		= t18x_tsec_gating_registers,
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -255,8 +275,10 @@ struct nvhost_device_data t18_tsecb_info = {
 	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_TSECB},
 	.class			= NV_TSECB_CLASS_ID,
-	.clocks			= {{"tsecb", UINT_MAX, 0, TEGRA_MC_CLIENT_TSECB},
-				   {"emc"} },
+	.clocks			= {
+		{"tsecb", UINT_MAX, 0, TEGRA_MC_CLIENT_TSECB},
+		{"emc", HOST_EMC_FLOOR}
+	},
 	.engine_cg_regs		= t18x_tsec_gating_registers,
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -273,13 +295,12 @@ struct nvhost_device_data t18_tsecb_info = {
 struct nvhost_device_data t18_vic_info = {
 	.num_channels		= 1,
 	.devfs_name		= "vic",
-	.clocks			= {{"vic", UINT_MAX, 0},
-				   {"emc", UINT_MAX,
-				   NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},
-				   {"vic_floor", 0,
-				   NVHOST_MODULE_ID_CBUS_FLOOR},
-				   {"emc_shared", 0,
-				   NVHOST_MODULE_ID_EMC_SHARED}, {} },
+	.clocks			= {
+		{"vic", UINT_MAX, 0},
+		{"emc", UINT_MAX, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},
+		{"vic_floor", 0, NVHOST_MODULE_ID_CBUS_FLOOR},
+		{"emc_shared", 0, NVHOST_MODULE_ID_EMC_SHARED},
+	},
 	.engine_cg_regs		= t18x_vic_gating_registers,
 	.version		= NVHOST_ENCODE_FLCN_VER(4, 0),
 #ifdef TEGRA186_POWER_DOMAIN_VIC
@@ -302,7 +323,9 @@ struct nvhost_device_data t18_vic_info = {
 
 struct nvhost_device_data t18_nvcsi_info = {
 	.num_channels		= 1,
-	.clocks			= {{"nvcsi", UINT_MAX, 0} },
+	.clocks			= {
+		{"nvcsi", UINT_MAX, 0}
+	},
 	.devfs_name		= "nvcsi",
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVCSI},
 	.class			= NV_VIDEO_STREAMING_NVCSI_CLASS_ID,

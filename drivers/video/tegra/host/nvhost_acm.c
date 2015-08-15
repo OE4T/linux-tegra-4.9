@@ -39,6 +39,7 @@
 #include <linux/nvhost_ioctl.h>
 
 #include <linux/platform/tegra/mc.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 
 #include "nvhost_acm.h"
 #include "nvhost_vm.h"
@@ -374,15 +375,10 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 	unsigned long bw_constraint = 0, floor_rate = 0, pixelrate = 0;
 	unsigned long rate = 0;
 	struct nvhost_module_client *m;
-	int ret;
+	int ret = -EINVAL;
 
 	if (!pdata->clk[index])
 		return -EINVAL;
-
-	/* WAR to bug 1667061: Do not handle EMC requests on CCF */
-	if (IS_ENABLED(CONFIG_COMMON_CLK) &&
-	    nvhost_module_emc_clock(&pdata->clocks[index]))
-		return 0;
 
 	/* aggregate client constraints */
 	list_for_each_entry(m, &pdata->client_list, node) {
@@ -429,7 +425,14 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 	trace_nvhost_module_update_rate(dev->name, pdata->clocks[index].name,
 					rate);
 
-	ret = clk_set_rate(pdata->clk[index], rate);
+	if (IS_ENABLED(CONFIG_COMMON_CLK) &&
+	    nvhost_module_emc_clock(&pdata->clocks[index])) {
+		if (pdata->bwmgr_handle)
+			ret = tegra_bwmgr_set_emc(pdata->bwmgr_handle, rate,
+				pdata->clocks[index].bwmgr_request_type);
+	} else {
+		ret = clk_set_rate(pdata->clk[index], rate);
+	}
 
 	return ret;
 
@@ -695,10 +698,16 @@ int nvhost_module_init(struct platform_device *dev)
 		return err;
 	}
 
+	/* get bandwidth manager handle if needed */
+	if (pdata->bwmgr_client_id)
+		pdata->bwmgr_handle =
+			tegra_bwmgr_register(pdata->bwmgr_client_id);
+
 	while (i < NVHOST_MODULE_MAX_CLOCKS && pdata->clocks[i].name) {
 		char devname[MAX_DEVID_LENGTH];
 		long rate = pdata->clocks[i].default_rate;
 		struct clk *c;
+		int bwmgr_request_type = pdata->clocks[i].bwmgr_request_type;
 
 		snprintf(devname, MAX_DEVID_LENGTH,
 			 (dev->id <= 0) ? "tegra_%s" : "tegra_%s.%d",
@@ -719,6 +728,7 @@ int nvhost_module_init(struct platform_device *dev)
 			i++;
 			continue;
 		}
+
 		nvhost_dbg_fn("%s->clk[%d] -> %s:%s:%p",
 			      dev->name, pdata->num_clks,
 			      devname, pdata->clocks[i].name,
@@ -733,10 +743,12 @@ int nvhost_module_init(struct platform_device *dev)
 		rate = clk_round_rate(c, rate);
 		clk_prepare_enable(c);
 
-		/* WAR to bug 1667061: Do not handle EMC requests on CCF */
 		if (!IS_ENABLED(CONFIG_COMMON_CLK) ||
 		    !nvhost_module_emc_clock(&pdata->clocks[i]))
 			clk_set_rate(c, rate);
+		else if (pdata->bwmgr_handle)
+			tegra_bwmgr_set_emc(pdata->bwmgr_handle, rate,
+					bwmgr_request_type);
 
 		pdata->clk[pdata->num_clks++] = c;
 		i++;
@@ -913,6 +925,9 @@ void nvhost_module_deinit(struct platform_device *dev)
 		/* ..and turn off the module */
 		do_powergate_locked(pdata->powergate_id);
 	}
+
+	if (pdata->bwmgr_handle)
+		tegra_bwmgr_unregister(pdata->bwmgr_handle);
 
 	if (!IS_ENABLED(CONFIG_COMMON_CLK))
 		for (i = 0; i < pdata->num_clks; i++)

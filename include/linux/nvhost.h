@@ -33,6 +33,7 @@
 #include <linux/time.h>
 #include <linux/fence.h>
 
+struct tegra_bwmgr_client;
 struct nvhost_channel;
 struct nvhost_master;
 struct nvhost_cdma;
@@ -110,6 +111,7 @@ struct nvhost_clock {
 	unsigned long default_rate;
 	u32 moduleid;
 	int reset;
+	int bwmgr_request_type;
 	unsigned long devfreq_rate;
 };
 
@@ -334,6 +336,12 @@ struct nvhost_device_data {
 	/* For loadable nvgpu module, we dynamically assign function
 	 * pointer of gk20a_debug_dump_device once the module loads */
 	void (*debug_dump_device)(struct platform_device *pdev);
+
+	/* bandwidth manager client id for emc requests */
+	int bwmgr_client_id;
+
+	/* bandwidth manager handle */
+	struct tegra_bwmgr_client *bwmgr_handle;
 };
 
 

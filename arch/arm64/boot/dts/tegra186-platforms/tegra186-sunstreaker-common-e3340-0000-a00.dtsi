@@ -139,5 +139,18 @@
 	tegra_pwm4: pwm@c340000 {
 		status = "okay";
 	};
+
+	external-connection {
+		vbus_id_extcon: extcon@1 {
+			compatible = "extcon-gpio-states";
+			reg = <0x1>;
+			extcon-gpio,name = "VBUS";
+			extcon-gpio,out-cable-names = "USB", "USB-Host";
+			extcon-gpio,cable-states = <0x0 0x2
+						    0x1 0x1>;
+			gpios = <&spmic 0 0>;
+			#extcon-cells = <1>;
+		};
+	};
 };
 

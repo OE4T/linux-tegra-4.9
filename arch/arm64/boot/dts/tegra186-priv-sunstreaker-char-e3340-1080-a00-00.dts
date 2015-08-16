@@ -1,5 +1,5 @@
 /*
- * tegra186-priv-sunstreaker-char-p3340-1080-a00-00.dts: Androdi Sunstreaker board
+ * tegra186-priv-sunstreaker-char-e3340-1080-a00-00.dts: Androdi Sunstreaker board
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,7 +13,7 @@
  * more details.
  */
 
-#include "tegra186-priv-sunstreaker-char-p3340-1080-a00-00-base.dts"
+#include "tegra186-priv-sunstreaker-char-e3340-1080-a00-00-base.dts"
 #include "tegra186-platforms/tegra186-quill-shim-p3310-1000-a00-00.dtsi"
 
 / {

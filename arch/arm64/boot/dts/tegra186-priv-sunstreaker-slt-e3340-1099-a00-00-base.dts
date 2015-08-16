@@ -1,5 +1,5 @@
 /*
- * tegra186-sunstreaker-p3340-1099-a00-00-base.dts Sunstreaker-SLT A00 Board
+ * tegra186-sunstreaker-e3340-1099-a00-00-base.dts Sunstreaker-SLT A00 Board
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,8 +13,8 @@
  * more details.
  */
 
-#include "tegra186-platforms/tegra186-sunstreaker-common-p3340-0000-a00.dtsi"
-#include "tegra186-platforms/tegra186-sunstreaker-slt-power-tree-p3340-1099-a00-00.dtsi"
+#include "tegra186-platforms/tegra186-sunstreaker-common-e3340-0000-a00.dtsi"
+#include "tegra186-platforms/tegra186-sunstreaker-slt-power-tree-e3340-1099-a00-00.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

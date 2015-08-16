@@ -1,5 +1,5 @@
 /*
- * tegra186-priv-sunstreaker-slt-p3340-1099-a00-00.dts: Android Sunstreaker board
+ * tegra186-sunstreaker-e3340-powermon.dtsi: Tegra186 power monitor dtsi file on Sunstreaker P3340
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,9 +13,4 @@
  * more details.
  */
 
-#include "tegra186-priv-sunstreaker-slt-p3340-1099-a00-00-base.dts"
-#include "tegra186-platforms/tegra186-quill-shim-p3310-1000-a00-00.dtsi"
-
-/ {
-	nvidia,dtsfilename = __FILE__;
-};
+#include "tegra186-quill-e3301-powermon.dtsi"

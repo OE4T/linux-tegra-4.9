@@ -1,5 +1,5 @@
 /*
- * tegra186-sunstreaker-common-p3340-0000-a00.dtsi: Sunstreaker common dtsi.
+ * tegra186-sunstreaker-common-e3340-0000-a00.dtsi: Sunstreaker common dtsi.
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -22,7 +22,7 @@
 #include "tegra186-soc/tegra186-soc-vcm.dtsi"
 #include "tegra186-cvm-simple-bus.dtsi"
 #include "panel-s-wuxga-8-0.dtsi"
-#include "tegra186-sunstreaker-p3340-powermon.dtsi"
+#include "tegra186-sunstreaker-e3340-powermon.dtsi"
 #include "tegra186-platforms/tegra186-sunstreaker-eqos.dtsi"
 
 / {

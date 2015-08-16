@@ -280,7 +280,7 @@
 		status = "okay";
 	};
 
-	pcie-controller {
+	pcie-controller@10003000 {
 		status = "okay";
 		pci@1,0 {
 			status = "okay";

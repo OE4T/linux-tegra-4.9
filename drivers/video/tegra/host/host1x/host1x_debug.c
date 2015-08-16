@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2011-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2015, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -78,15 +78,14 @@ static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 
 	job = list_first_entry(&cdma->sync_queue, struct nvhost_job, list);
 
-	nvhost_debug_output(o, "\n%p: JOB, syncpt_id=%d, syncpt_val=%d,"
-			" first_get=%08x, timeout=%d,"
-			" num_slots=%d\n",
+	nvhost_debug_output(o, "\n%p: JOB, syncpt_id=%d, syncpt_val=%d, first_get=%08x, timeout=%d, num_slots=%d, num_handles=%d\n",
 			job,
 			job->sp ? job->sp->id : -1,
 			job->sp ? job->sp->fence : -1,
 			job->first_get,
 			job->timeout,
-			job->num_slots);
+			job->num_slots,
+			job->num_unpins);
 
 	for (i = 0; i < job->num_gathers; i++) {
 		struct nvhost_job_gather *g = &job->gathers[i];

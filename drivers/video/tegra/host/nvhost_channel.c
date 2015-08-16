@@ -22,6 +22,7 @@
 #include "dev.h"
 #include "nvhost_acm.h"
 #include "nvhost_job.h"
+#include "nvhost_vm.h"
 #include "chip_support.h"
 #include "vhost/vhost.h"
 
@@ -177,6 +178,10 @@ static void nvhost_channel_unmap_locked(struct kref *ref)
 	nvhost_module_idle(host->dev);
 
 err_module_busy:
+
+	/* drop reference to the vm */
+	nvhost_vm_put(ch->vm);
+
 	mutex_lock(&host->chlist_mutex);
 	index = nvhost_channel_get_index_from_id(host, ch->chid);
 	clear_bit(index, host->allocated_channels);
@@ -237,6 +242,11 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 	ch->identifier = identifier;
 	kref_init(&ch->refcount);
 
+	/* allocate vm */
+	ch->vm = nvhost_vm_allocate(pdata->pdev);
+	if (!ch->vm)
+		goto err_alloc_vm;
+
 	/* Handle logging */
 	trace_nvhost_channel_map(pdata->pdev->name, ch->chid,
 				 pdata->num_mapped_chs);
@@ -245,7 +255,17 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 	mutex_unlock(&host->chlist_mutex);
 
 	*channel = ch;
+
 	return 0;
+
+err_alloc_vm:
+	clear_bit(index, host->allocated_channels);
+	ch->dev = NULL;
+	ch->identifier = NULL;
+
+	mutex_unlock(&host->chlist_mutex);
+
+	return -ENOMEM;
 }
 EXPORT_SYMBOL(nvhost_channel_map);
 

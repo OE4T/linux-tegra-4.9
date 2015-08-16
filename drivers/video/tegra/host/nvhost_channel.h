@@ -53,10 +53,8 @@ struct nvhost_channel {
 	struct platform_device *dev;
 	struct nvhost_cdma cdma;
 
-	/* the address space block here
-	 * belongs to the module. but for
-	 * now just keep it here */
-	struct nvhost_as *as;
+	/* pointer to channel address space */
+	struct nvhost_vm *vm;
 
 	/* channel syncpoints */
 	struct mutex syncpts_lock;

@@ -76,7 +76,6 @@ struct host1x_device_info {
 	int		nb_mlocks;	/* host1x: number of mlocks */
 	int		(*initialize_chip_support)(struct nvhost_master *,
 						struct nvhost_chip_support *);
-	bool		allow_user_mappings; /* allow userspace mappings? */
 	int		nb_actmons;
 	size_t		firmware_area_size;
 };

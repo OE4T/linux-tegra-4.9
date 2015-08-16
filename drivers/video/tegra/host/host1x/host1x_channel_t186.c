@@ -213,9 +213,9 @@ static inline int get_streamid(struct nvhost_job *job)
 	int streamid;
 
 	/* set channel streamid */
-	if (job->vm) {
+	if (job->ch->vm) {
 		/* if vm is defined, take vm specific */
-		streamid = nvhost_vm_get_id(job->vm);
+		streamid = nvhost_vm_get_id(job->ch->vm);
 	} else {
 		/* ..otherwise assume that the buffers are mapped to device
 		 * own address space */
@@ -382,6 +382,7 @@ static int host1x_channel_update_priority(struct nvhost_job *job)
 static int host1x_channel_submit(struct nvhost_job *job)
 {
 	struct nvhost_channel *ch = job->ch;
+	struct platform_device *host_dev = nvhost_get_host(job->ch->dev)->dev;
 	struct nvhost_syncpt *sp = &nvhost_get_host(job->ch->dev)->syncpt;
 	u32 prev_max = 0;
 	int err, i;
@@ -431,8 +432,17 @@ static int host1x_channel_submit(struct nvhost_job *job)
 				__func__, job->sp[i].id);
 	}
 
+	/* get host1x streamid */
+	if (host_dev->dev.archdata.iommu) {
+		streamid = iommu_get_hwid(host_dev->dev.archdata.iommu,
+					  &host_dev->dev, 0);
+		if (streamid < 0)
+			streamid = tegra_mc_get_smmu_bypass_sid();
+	} else {
+		streamid = tegra_mc_get_smmu_bypass_sid();
+	}
+
 	/* set channel streamid */
-	streamid = get_streamid(job);
 	host1x_channel_writel(ch, host1x_channel_smmu_streamid_r(), streamid);
 
 	/* begin a CDMA submit */

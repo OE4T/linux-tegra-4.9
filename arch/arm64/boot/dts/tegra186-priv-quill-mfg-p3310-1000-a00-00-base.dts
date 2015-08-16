@@ -14,6 +14,7 @@
  */
 
 #include "tegra186-platforms/tegra186-quill-common-p3310-1000-a00.dtsi"
+#include "tegra186-platforms/tegra186-quill-mfg-power-tree-p3310-1000-a00-00.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

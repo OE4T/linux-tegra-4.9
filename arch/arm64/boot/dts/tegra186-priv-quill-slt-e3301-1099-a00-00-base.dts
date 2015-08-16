@@ -14,6 +14,7 @@
  */
 
 #include "tegra186-platforms/tegra186-quill-common-e3301-0000-a00.dtsi"
+#include "tegra186-platforms/tegra186-quill-slt-power-tree-e3301-1099-a00-00.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

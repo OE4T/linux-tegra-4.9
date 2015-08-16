@@ -1,23 +1,19 @@
 /*
- * tegra186-quill-e3301-1080-a00-00-base.dts Quill-CHAR A00 Board
- *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; version 2 of the License.
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
+ *
  */
 
-#include "tegra186-platforms/tegra186-quill-common-e3301-0000-a00.dtsi"
-#include "tegra186-platforms/tegra186-quill-char-power-tree-e3301-1080-a00-00.dtsi"
+#include "tegra186-quill-spmic-p3310-1000-a00-00.dtsi"
 
 / {
-	nvidia,dtsfilename = __FILE__;
-	nvidia,boardids = "3301:1080:A0";
-	nvidia,proc-boardid = "3301:1080:A0";
 };

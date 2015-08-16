@@ -31,6 +31,12 @@
 		status = "okay";
 	};
 
+	gpio@2200000 {
+		wifi_over_pcie {
+			gpio-output-high = <TEGRA_GPIO(R, 4)>;
+		};
+	};
+
 	ahci-sata@3507000 {
 		status = "okay";
 	};

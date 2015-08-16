@@ -13,8 +13,8 @@
  *
  */
 
-#include "tegra186-quill-pb-spmic-p3301-1000-a00-00.dtsi"
-#include "tegra186-quill-pb-fixed-p3301-1000-a00-00.dtsi"
+#include "tegra186-quill-pb-spmic-e3301-1000-a00-00.dtsi"
+#include "tegra186-quill-pb-fixed-e3301-1000-a00-00.dtsi"
 #include "tegra186-cvb-pb-p2598-a00-e3301-1000-a00-00.dtsi"
 
 / {

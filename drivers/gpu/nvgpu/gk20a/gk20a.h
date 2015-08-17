@@ -839,6 +839,8 @@ void gk20a_idle(struct platform_device *pdev);
 void gk20a_disable(struct gk20a *g, u32 units);
 void gk20a_enable(struct gk20a *g, u32 units);
 void gk20a_reset(struct gk20a *g, u32 units);
+int gk20a_do_idle(void);
+int gk20a_do_unidle(void);
 int __gk20a_do_idle(struct platform_device *pdev, bool force_reset);
 int __gk20a_do_unidle(struct platform_device *pdev);
 

@@ -39,6 +39,7 @@
 #include <linux/tegra_pm_domains.h>
 #include <linux/clk/tegra.h>
 #include <linux/kthread.h>
+#include <linux/platform/tegra/common.h>
 
 #include <linux/sched.h>
 
@@ -584,6 +585,10 @@ static void gk20a_remove_support(struct platform_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 
+#ifdef CONFIG_TEGRA_COMMON
+	tegra_unregister_idle_unidle();
+#endif
+
 	if (g->pmu.remove_support)
 		g->pmu.remove_support(&g->pmu);
 
@@ -617,6 +622,10 @@ static int gk20a_init_support(struct platform_device *dev)
 {
 	int err = 0;
 	struct gk20a *g = get_gk20a(dev);
+
+#ifdef CONFIG_TEGRA_COMMON
+	tegra_register_idle_unidle(gk20a_do_idle, gk20a_do_unidle);
+#endif
 
 	g->regs = gk20a_ioremap_resource(dev, GK20A_BAR0_IORESOURCE_MEM,
 					 &g->reg_mem);

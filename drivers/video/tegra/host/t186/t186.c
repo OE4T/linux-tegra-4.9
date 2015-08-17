@@ -188,6 +188,7 @@ struct nvhost_device_data t18_nvdec_info = {
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.clocks			= {{"nvdec", UINT_MAX, 0},
+				   {"kfuse", 0, 0},
 				   {"emc", UINT_MAX} },
 	.engine_cg_regs		= t18x_nvdec_gating_registers,
 	.poweron_reset		= true,

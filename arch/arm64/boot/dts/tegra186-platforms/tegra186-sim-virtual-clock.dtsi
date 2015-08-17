@@ -39,7 +39,7 @@
 			clock-names = "isp";
 		};
 
-		dsi@15300000 {
+		dsi {
 			clocks = <&clk32k_in>;
 			clock-names = "clk32k_in";
 		};

@@ -92,7 +92,7 @@
 			status = "okay";
 		};
 
-		dsi@15300000 {
+		dsi {	/* dsi@15300000 */
 			status = "okay";
 		};
 

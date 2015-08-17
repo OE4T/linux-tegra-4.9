@@ -586,7 +586,7 @@
 				      "emc", "emc_latency";
 		};
 
-		dsi@15300000 {
+		dsi {	/* dsi@15300000 */
 			compatible = "nvidia,tegra186-dsi";
 			reg = <0x0 0x15300000 0x0 0x00040000>, /* DSIA */
 			      <0x0 0x15400000 0x0 0x00040000>, /* DSIB */

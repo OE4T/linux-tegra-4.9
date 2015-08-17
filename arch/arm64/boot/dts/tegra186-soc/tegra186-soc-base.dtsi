@@ -646,8 +646,9 @@
 			reg = <0x0 0x15480000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_NVDEC>;
 			clocks = <&tegra_car TEGRA186_CLK_NVDEC>,
+				 <&tegra_car TEGRA186_CLK_KFUSE>,
 				 <&tegra_car TEGRA186_CLK_EMC>;
-			clock-names = "nvdec", "emc";
+			clock-names = "nvdec", "kfuse", "emc";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};

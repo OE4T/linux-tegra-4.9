@@ -56,8 +56,8 @@
 		};
 
 		nvdec@15480000 {
-			clocks = <&clk32k_in>, <&clk32k_in>;
-			clock-names = "nvdec", "emc";
+			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
+			clock-names = "nvdec", "kfuse", "emc";
 		};
 
 		nvjpg@15380000 {

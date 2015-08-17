@@ -423,7 +423,7 @@ static int tegra210_i2s_set_dai_bclk_ratio(struct snd_soc_dai *dai,
 static int tegra210_i2s_get_format(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_i2s *i2s = snd_soc_codec_get_drvdata(codec);
 
 	/* get the format control flag */
@@ -436,7 +436,7 @@ static int tegra210_i2s_get_format(struct snd_kcontrol *kcontrol,
 static int tegra210_i2s_put_format(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_i2s *i2s = snd_soc_codec_get_drvdata(codec);
 
 	/* set the format control flag */

@@ -164,6 +164,7 @@
 			      <&tegra_adsp_audio	TEGRA_SID_APE>,
 			      <&{/sound}		TEGRA_SID_APE>,
 			      <&{/sound_ref}		TEGRA_SID_APE>,
+			      <&{/pcie-controller@10003000} TEGRA_SID_AFI>,
 			      <&{/ahci-sata@3507000}	TEGRA_SID_SATA2>,
 			      <&{/aon@c160000}		TEGRA_SID_AON>,
 			      <&{/bpmp}			TEGRA_SID_BPMP>,
@@ -1342,6 +1343,8 @@
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 72 0x04>;// check this
+
+		#stream-id-cells = <1>;
 
 		bus-range = <0x00 0xff>;
 		#address-cells = <3>;

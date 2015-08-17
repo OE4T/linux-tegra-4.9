@@ -36,16 +36,12 @@ static bool tegra_dc_windows_are_clean(struct tegra_dc_win *windows[],
 					     int n)
 {
 	int i;
-	struct tegra_dc *dc = windows[0]->dc;
 
-	mutex_lock(&dc->lock);
 	for (i = 0; i < n; i++) {
 		if (windows[i]->dirty) {
-			mutex_unlock(&dc->lock);
 			return false;
 		}
 	}
-	mutex_unlock(&dc->lock);
 
 	return true;
 }
@@ -270,7 +266,7 @@ static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 /* does not support syncing windows on multiple dcs in one call */
 int tegra_dc_sync_windows(struct tegra_dc_win *windows[], int n)
 {
-	int ret;
+	int ret = 0;
 	struct tegra_dc *dc = windows[0]->dc;
 
 	if (n < 1 || n > DC_N_WINDOWS)
@@ -280,14 +276,19 @@ int tegra_dc_sync_windows(struct tegra_dc_win *windows[], int n)
 		return -EFAULT;
 
 	trace_sync_windows(dc);
-	if (tegra_platform_is_linsim())
+	mutex_lock(&dc->lock);
+	if (tegra_platform_is_linsim()) {
 		/* Don't want to timeout on simulator */
-		ret = wait_event_interruptible(dc->wq,
-			tegra_dc_windows_are_clean(windows, n));
-	else
-		ret = wait_event_interruptible_timeout(dc->wq,
-			tegra_dc_windows_are_clean(windows, n),
-			HZ);
+		ret = ___wait_event(dc->wq, tegra_dc_windows_are_clean(windows, n),
+			TASK_INTERRUPTIBLE, 0, 0,
+			mutex_unlock(&dc->lock); schedule(); mutex_lock(&dc->lock));
+	} else {
+		ret = ___wait_event(dc->wq,
+			___wait_cond_timeout(tegra_dc_windows_are_clean(windows, n)),
+			TASK_INTERRUPTIBLE, 0, HZ,
+			mutex_unlock(&dc->lock); __ret = schedule_timeout(__ret); mutex_lock(&dc->lock));
+	}
+	mutex_unlock(&dc->lock);
 
 	if (dc->out_ops && dc->out_ops->release)
 		dc->out_ops->release(dc);

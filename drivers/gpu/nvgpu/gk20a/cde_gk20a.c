@@ -1259,17 +1259,6 @@ enum cde_launch_patch_id {
 	PATCH_V_QMD_REGISTER_COUNT_ID       = 1056,
 };
 
-enum programs {
-	PROG_HPASS              = 0,
-	PROG_VPASS_LARGE        = 1,
-	PROG_VPASS_SMALL        = 2,
-	PROG_HPASS_DEBUG        = 3,
-	PROG_VPASS_LARGE_DEBUG  = 4,
-	PROG_VPASS_SMALL_DEBUG  = 5,
-	PROG_PASSTHROUGH        = 6,
-	NUM_PROGRAMS            = 7
-};
-
 /* maximum number of WRITE_PATCHes in the below function */
 #define MAX_CDE_LAUNCH_PATCHES		  32
 
@@ -1301,17 +1290,20 @@ static int gk20a_buffer_convert_gpu_to_cde_v1(
 	const int xblocks = (xtiles + 1) >> 1;
 	const int voffset = compbits_voffset - compbits_hoffset;
 
-	int hprog = PROG_HPASS;
-	int vprog = (block_height_log2 >= 2) ?
-		PROG_VPASS_LARGE : PROG_VPASS_SMALL;
-	if (g->cde_app.shader_parameter == 1) {
-		hprog = PROG_PASSTHROUGH;
-		vprog = PROG_PASSTHROUGH;
-	} else if (g->cde_app.shader_parameter == 2) {
-		hprog = PROG_HPASS_DEBUG;
-		vprog = (block_height_log2 >= 2) ?
-			PROG_VPASS_LARGE_DEBUG :
-			PROG_VPASS_SMALL_DEBUG;
+	int hprog = -1;
+	int vprog = -1;
+
+	if (g->ops.cde.get_program_numbers)
+		g->ops.cde.get_program_numbers(g, block_height_log2,
+					       &hprog, &vprog);
+	else {
+		gk20a_warn(&g->dev->dev, "cde: chip not supported");
+		return -ENOSYS;
+	}
+
+	if (hprog < 0 || vprog < 0) {
+		gk20a_warn(&g->dev->dev, "cde: could not determine programs");
+		return -ENOSYS;
 	}
 
 	if (xtiles > 8192 / 8 || ytiles > 8192 / 8)

@@ -61,7 +61,8 @@ nvgpu-y := \
 	gm20b/mm_gm20b.o \
 	gm20b/regops_gm20b.o \
 	gm20b/mc_gm20b.o \
-	gm20b/debug_gm20b.o
+	gm20b/debug_gm20b.o \
+	gm20b/cde_gm20b.o
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += gk20a/platform_gk20a_tegra.o
 nvgpu-$(CONFIG_SYNC) += gk20a/sync_gk20a.o

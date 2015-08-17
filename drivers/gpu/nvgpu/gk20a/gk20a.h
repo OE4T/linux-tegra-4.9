@@ -432,6 +432,11 @@ struct gpu_ops {
 		void (*show_dump)(struct gk20a *g,
 				struct gk20a_debug_output *o);
 	} debug;
+	struct {
+		void (*get_program_numbers)(struct gk20a *g,
+					    u32 block_height_log2,
+					    int *hprog, int *vprog);
+	} cde;
 };
 
 struct gk20a {

@@ -33,6 +33,9 @@ struct tegra_hpd_ops {
 	 */
 	void (*disable)(void *drv_data);
 
+	/* prepare to initiate edid read tx */
+	bool (*edid_read_prepare)(void *drv_data);
+
 	/* edid is available but no notification sent yet. */
 	void (*edid_ready)(void *drv_data);
 

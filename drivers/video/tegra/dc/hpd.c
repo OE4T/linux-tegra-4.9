@@ -258,6 +258,9 @@ static void edid_check_state(struct tegra_hpd_data *data)
 		goto end_disabled;
 	}
 
+	if (data->ops->edid_read_prepare)
+		data->ops->edid_read_prepare(data->drv_data);
+
 	if (tegra_edid_get_monspecs(data->edid, &data->mon_spec)) {
 		/*
 		 * Failed to read EDID. If we still have retry attempts left,

@@ -1285,7 +1285,8 @@ static int tegra_dp_panel_power_state(struct tegra_dc_dp_data *dp, u8 state)
 
 	do {
 		ret = tegra_dc_dp_dpcd_write(dp, NV_DPCD_SET_POWER, state);
-	} while ((retry++ < DP_POWER_ON_MAX_TRIES) && ret);
+	} while ((state != NV_DPCD_SET_POWER_VAL_D3_PWRDWN) &&
+		(retry++ < DP_POWER_ON_MAX_TRIES) && ret);
 
 	return ret;
 }
@@ -2276,6 +2277,14 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 	tegra_dc_io_start(dc);
 
+	ret = tegra_dp_panel_power_state(dp, NV_DPCD_SET_POWER_VAL_D0_NORMAL);
+	if (ret < 0) {
+		dev_err(&dp->dc->ndev->dev,
+		"dp: failed to exit panel power save mode (0x%x)\n", ret);
+		tegra_dc_io_end(dp->dc);
+		return;
+	}
+
 	/* For eDP, driver gets to decide the best mode. */
 	if (!tegra_dc_is_ext_dp_panel(dc) &&
 		dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
@@ -2301,14 +2310,6 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 			tegra_dp_hpd_op_edid_ready(dp);
 		tegra_edp_mode_set(dp);
 		tegra_dc_setup_clk(dc, dc->clk);
-	}
-
-	ret = tegra_dp_panel_power_state(dp, NV_DPCD_SET_POWER_VAL_D0_NORMAL);
-	if (ret < 0) {
-		dev_err(&dp->dc->ndev->dev,
-			"dp: failed to power on panel (0x%x)\n", ret);
-		tegra_dc_io_end(dc);
-		return;
 	}
 
 	tegra_dp_dpcd_init(dp);
@@ -2445,6 +2446,14 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 		ret = tegra_dp_lt_wait_for_completion(&dp->lt_data,
 							LT_TIMEOUT_MS);
 		WARN_ON(!ret);
+	}
+
+	if (tegra_dc_hpd(dc)) {
+		ret = tegra_dp_panel_power_state(dp,
+			NV_DPCD_SET_POWER_VAL_D3_PWRDWN);
+		if (ret < 0)
+			dev_info(&dp->dc->ndev->dev,
+				"dp: failed to enter panel power save mode\n");
 	}
 
 	tegra_dc_sor_detach(dp->sor);
@@ -2681,6 +2690,26 @@ static void tegra_dp_hpd_op_init(void *drv_data)
 #endif
 }
 
+static bool tegra_dp_hpd_op_edid_read_prepare(void *drv_data)
+{
+	struct tegra_dc_dp_data *dp = drv_data;
+	int ret;
+
+	tegra_dc_io_start(dp->dc);
+
+	ret = tegra_dp_panel_power_state(dp, NV_DPCD_SET_POWER_VAL_D0_NORMAL);
+	if (ret < 0) {
+		dev_err(&dp->dc->ndev->dev,
+		"dp: failed to exit panel power save mode (0x%x)\n", ret);
+		tegra_dc_io_end(dp->dc);
+		return false;
+	}
+
+	tegra_dc_io_end(dp->dc);
+
+	return true;
+}
+
 static struct tegra_hpd_ops hpd_ops = {
 	.edid_read = tegra_dp_hpd_op_edid_read,
 	.edid_ready = tegra_dp_hpd_op_edid_ready,
@@ -2688,6 +2717,7 @@ static struct tegra_hpd_ops hpd_ops = {
 	.get_mode_filter = tegra_dp_op_get_mode_filter,
 	.get_hpd_state = tegra_dp_hpd_op_get_hpd_state,
 	.init = tegra_dp_hpd_op_init,
+	.edid_read_prepare = tegra_dp_hpd_op_edid_read_prepare,
 };
 
 struct tegra_dc_out_ops tegra_dc_dp_ops = {

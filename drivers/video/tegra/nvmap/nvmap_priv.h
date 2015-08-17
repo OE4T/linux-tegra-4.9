@@ -419,8 +419,9 @@ extern void v7_clean_kern_cache_all(void *);
 extern void __flush_dcache_all(void *arg);
 extern void __clean_dcache_all(void *arg);
 
-void inner_flush_cache_all(void);
-void inner_clean_cache_all(void);
+extern void (*inner_flush_cache_all)(void);
+extern void (*inner_clean_cache_all)(void);
+static inline void nvmap_override_cache_ops(void) { };
 void nvmap_clean_cache(struct page **pages, int numpages);
 void nvmap_clean_cache_page(struct page *page);
 void nvmap_flush_cache(struct page **pages, int numpages);

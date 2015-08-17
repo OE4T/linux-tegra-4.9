@@ -45,7 +45,7 @@ inline static void nvmap_flush_dcache_all(void *dummy)
 	__flush_dcache_all(NULL);
 }
 
-void inner_flush_cache_all(void)
+static void nvmap_inner_flush_cache_all(void)
 {
 #if defined(CONFIG_ARM64) && defined(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS_ON_ONE_CPU)
 	nvmap_flush_dcache_all(NULL);
@@ -57,10 +57,11 @@ void inner_flush_cache_all(void)
 	on_each_cpu(v7_flush_kern_cache_all, NULL, 1);
 #endif
 }
+void (*inner_flush_cache_all)(void) = nvmap_inner_flush_cache_all;
 
 extern void __clean_dcache_louis(void *);
 extern void v7_clean_kern_cache_louis(void *);
-void inner_clean_cache_all(void)
+static void nvmap_inner_clean_cache_all(void)
 {
 #if defined(CONFIG_ARM64) && \
 	defined(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS_ON_ONE_CPU)
@@ -75,6 +76,7 @@ void inner_clean_cache_all(void)
 	on_each_cpu(v7_clean_kern_cache_all, NULL, 1);
 #endif
 }
+void (*inner_clean_cache_all)(void) = nvmap_inner_clean_cache_all;
 
 /*
  * FIXME:

@@ -1557,6 +1557,8 @@ int nvmap_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	nvmap_override_cache_ops();
+
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev) {
 		dev_err(&pdev->dev, "out of memory for device\n");

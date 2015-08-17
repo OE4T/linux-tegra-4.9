@@ -64,14 +64,14 @@ static const char *partition_names[] = {
 	[TEGRA_POWERGATE_GPU] = "gpu",
 };
 
-static struct powergate_request {
+struct powergate_request {
 	uint32_t partition_id;
 	uint32_t logic_state;
 	uint32_t sram_state;
 	uint32_t clk_state;
 };
 
-static struct powergate_state {
+struct powergate_state {
 	uint32_t logic_state;
 	uint32_t sram_state;
 };

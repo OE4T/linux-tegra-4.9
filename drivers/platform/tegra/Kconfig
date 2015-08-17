@@ -58,3 +58,10 @@ config TEGRA_18X_SERROR
         help
           The Tegra18 SError handler. This handles Denver SErrors, A57 SErrors,
 	  CCPLEX errors, and fabric slave errors.
+
+config TEGRA_CAMERA_RTCPU
+	bool "Enable Tegra Camera RTCPU Driver"
+	depends on ARCH_TEGRA_18x_SOC
+	select TEGRA_IVC
+	select TEGRA_HSP
+	select TEGRA_AST

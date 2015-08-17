@@ -27,6 +27,7 @@
 #include <linux/reset.h>
 #include <scsi/scsi_device.h>
 #include <linux/tegra-powergate.h>
+#include <linux/tegra-pmc.h>
 #include <linux/tegra-soc.h>
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>
@@ -122,12 +123,18 @@
 
 /* AHCI Port Registers */
 #define T_AHCI_PORT_PXSSTS				0x128
+#define T_AHCI_PORT_PXSSTS_IPM_MASK			(0xF00)
+#define T_AHCI_PORT_PXSSTS_IPM_SHIFT			(8)
 
 #define TEGRA_SATA_CORE_CLOCK_FREQ_HZ			(102*1000*1000)
 #define TEGRA_SATA_OOB_CLOCK_FREQ_HZ			(204*1000*1000)
 
+/* PMC registers */
+#define PMC_IMPL_SATA_PWRGT_0_PG_INFO			BIT(6)
+
 #define TEGRA_AHCI_MAX_CLKS				2
 #define TEGRA_AHCI_DEFAULT_IDLE_TIME			10000
+#define TEGRA_AHCI_SLUMBER_TIMEOUT			50
 
 enum tegra_sata_bars {
 	TEGRA_SATA_IPFS = 0,
@@ -176,6 +183,7 @@ struct tegra_ahci_soc_data {
 };
 
 #ifdef CONFIG_PM
+#ifndef _AHCI_TEGRA_DEBUG_H
 static u32 pg_save_bar5_registers[] = {
 	0x018,  /* T_AHCI_HBA_CCC_PORTS */
 	0x004,  /* T_AHCI_HBA_GHC */
@@ -339,6 +347,7 @@ static inline void tegra_ahci_restore_regs(void **save_addr,
 		writel(*src, reg_base + reg_array[i]);
 	*save_addr = src;
 }
+#endif
 #endif
 static inline u32 tegra_ahci_bar5_readl(struct ahci_host_priv *hpriv,
 								u32 offset)

@@ -39,8 +39,8 @@
 
 #define TEGRA_SE_ELP_PKA_FSTACK_PTR_OFFSET		0xC010
 
-#define ENABLE		0
-#define DISABLE		1
+#define ENABLE		1
+#define DISABLE		0
 #define FALSE		0
 #define TRUE		1
 

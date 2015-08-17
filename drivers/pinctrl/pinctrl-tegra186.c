@@ -3173,6 +3173,7 @@ static const struct tegra_function tegra186_functions[] = {
 	FUNCTION(uartg),
 	FUNCTION(spi2),
 	FUNCTION(gp),
+	FUNCTION(dca),
 	FUNCTION(wdt),
 	FUNCTION(i2c2),
 	FUNCTION(can1),

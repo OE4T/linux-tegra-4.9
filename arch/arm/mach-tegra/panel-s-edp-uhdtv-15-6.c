@@ -32,6 +32,7 @@ static struct regulator *vdd_lcd_bl_en; /* VDD_LCD_BL_EN */
 static struct regulator *vdd_ds_1v8; /* VDD_1V8_AON */
 static struct regulator *avdd_3v3_dp; /* EDP_3V3_IN: LCD_RST_GPIO */
 static struct regulator *avdd_lcd; /* VDD_LCD_HV */
+static u16 en_panel_rst;
 
 /*
  * In platform dts side, followings need to be defined
@@ -73,13 +74,22 @@ static int shield_edp_regulator_get(struct device *dev)
 		goto fail;
 	}
 
-	/* LCD_RST */
-	avdd_3v3_dp = regulator_get(dev, "avdd_3v3_dp");
-	if (IS_ERR(avdd_3v3_dp)) {
-		pr_err("avdd_3v3_dp regulator get failed\n");
-		err = PTR_ERR(avdd_3v3_dp);
-		avdd_3v3_dp = NULL;
-		goto fail;
+	/* LCD_RST
+	 *
+	 * If the panel reset gpio is explicitly specified in DT,
+	 * prefer using it over the avdd_3v3_dp regulator.
+	 */
+	err = tegra_panel_gpio_get_dt("s-edp,uhdtv-15-6", &panel_of);
+	if (err < 0 || !gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_RESET])) {
+		avdd_3v3_dp = regulator_get(dev, "avdd_3v3_dp");
+		if (IS_ERR(avdd_3v3_dp)) {
+			pr_err("avdd_3v3_dp regulator get failed\n");
+			err = PTR_ERR(avdd_3v3_dp);
+			avdd_3v3_dp = NULL;
+			goto fail;
+		}
+	} else {
+		en_panel_rst = panel_of.panel_gpio[TEGRA_GPIO_RESET];
 	}
 
 	reg_requested = true;
@@ -115,6 +125,14 @@ static int edp_s_uhdtv_15_6_enable(struct device *dev)
 	}
 
 	/* LCD_RST */
+	if (gpio_is_valid(en_panel_rst)) {
+		gpio_direction_output(en_panel_rst, 1);
+		usleep_range(1000, 5000);
+		gpio_set_value(en_panel_rst, 0);
+		usleep_range(1000, 5000);
+		gpio_set_value(en_panel_rst, 1);
+	}
+
 	if (avdd_3v3_dp) {
 		err = regulator_enable(avdd_3v3_dp);
 		if (err < 0) {
@@ -143,6 +161,11 @@ static int edp_s_uhdtv_15_6_disable(struct device *dev)
 {
 	if (vdd_lcd_bl_en)
 		regulator_disable(vdd_lcd_bl_en);
+
+	if (gpio_is_valid(en_panel_rst)) {
+		gpio_set_value(en_panel_rst, 0);
+		usleep_range(1000, 5000);
+	}
 
 	if (avdd_3v3_dp)
 		regulator_disable(avdd_3v3_dp);

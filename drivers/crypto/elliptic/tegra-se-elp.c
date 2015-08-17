@@ -306,20 +306,17 @@ static u32 tegra_se_acquire_pka_mutex(struct tegra_se_elp_dev *se_dev)
 	u32 val = 0;
 	u32 err = 0;
 
+	/* TODO: Add timeout for while loop */
 	/* Acquire pka mutex */
 	val = se_elp_readl(se_dev, PKA1, TEGRA_SE_ELP_PKA_MUTEX_OFFSET);
 	while (val != 0x01)
 		val = se_elp_readl(se_dev, PKA1, TEGRA_SE_ELP_PKA_MUTEX_OFFSET);
 
 	/* One unit is 256 SE Cycles */
-	if (val == 1) {
-		tegra_se_restart_pka_mutex_wdt(se_dev);
-		se_elp_writel(se_dev, PKA1,
-			TEGRA_SE_ELP_PKA_MUTEX_TIMEOUT_ACTION,
+	tegra_se_restart_pka_mutex_wdt(se_dev);
+	se_elp_writel(se_dev, PKA1, TEGRA_SE_ELP_PKA_MUTEX_TIMEOUT_ACTION,
 			TEGRA_SE_ELP_PKA_MUTEX_TIMEOUT_ACTION_OFFSET);
-	} else {
-		err = -EINVAL;
-	}
+
 	return err;
 }
 
@@ -833,8 +830,8 @@ static void tegra_se_set_pka_key(struct tegra_se_elp_dev *se_dev,
 				TEGRA_SE_ELP_PKA_KEYSLOT_ADDR_OFFSET(slot_num));
 			se_elp_writel(se_dev, PKA1, *R2++,
 				TEGRA_SE_ELP_PKA_KEYSLOT_DATA_OFFSET(slot_num));
-		break;
 		}
+		break;
 	}
 }
 
@@ -1031,13 +1028,13 @@ int tegra_se_elp_pka_op(struct tegra_se_elp_pka_request *req)
 		"\ntegra_se_elp_pka_precomp Failed(%d) for RINV\n", ret);
 		goto exit;
 	}
-	tegra_se_elp_pka_precomp(se_dev, req, PRECOMP_M);
+	ret = tegra_se_elp_pka_precomp(se_dev, req, PRECOMP_M);
 	if (ret) {
 		dev_err(se_dev->dev,
 			"\ntegra_se_elp_pka_precomp Failed(%d) for M\n", ret);
 		goto exit;
 	}
-	tegra_se_elp_pka_precomp(se_dev, req, PRECOMP_R2);
+	ret = tegra_se_elp_pka_precomp(se_dev, req, PRECOMP_R2);
 	if (ret) {
 		dev_err(se_dev->dev,
 			"\ntegra_se_elp_pka_precomp Failed(%d) for R2\n", ret);

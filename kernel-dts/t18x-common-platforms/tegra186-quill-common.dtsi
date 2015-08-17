@@ -75,7 +75,7 @@
 	};
 
 	host1x {
-		dsi@15300000 {
+		dsi {	/* dsi@15300000 */
 			nvidia,dsi-controller-vs = <DSI_VS_1>;
 			status = "okay";
 			panel-s-wuxga-8-0 {

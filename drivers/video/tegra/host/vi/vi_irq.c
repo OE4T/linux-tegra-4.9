@@ -122,8 +122,8 @@ static irqreturn_t vi_isr(int irq, void *dev_id)
 	if (val & PPA_FIFO_OVRF)
 		atomic_inc(&(tegra_vi->vi_out.overflow));
 
-	/* Reset interrupt status register */
-	host1x_writel(tegra_vi->ndev, CSI_CSI_PIXEL_PARSER_A_STATUS_0, val);
+	/* Disable IRQ */
+	vi_disable_irq(tegra_vi);
 
 	schedule_work(&tegra_vi->stats_work);
 
@@ -139,6 +139,9 @@ void vi_stats_worker(struct work_struct *work)
 	dev_dbg(&tegra_vi->ndev->dev,
 		"%s: vi_out dropped data %u times", __func__,
 		atomic_read(&(tegra_vi->vi_out.overflow)));
+
+	/* Enable IRQ's */
+	vi_enable_irq(tegra_vi);
 }
 EXPORT_SYMBOL(vi_stats_worker);
 

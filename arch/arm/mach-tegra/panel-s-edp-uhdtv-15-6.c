@@ -29,6 +29,8 @@ static bool reg_requested;
 
 static struct regulator *vdd_lcd_bl_en; /* VDD_LCD_BL_EN */
 
+static struct regulator *avdd_io_edp; /* AVDD_IO_EDP */
+
 static struct regulator *vdd_ds_1v8; /* VDD_1V8_AON */
 static struct regulator *avdd_3v3_dp; /* EDP_3V3_IN: LCD_RST_GPIO */
 static struct regulator *avdd_lcd; /* VDD_LCD_HV */
@@ -92,6 +94,14 @@ static int shield_edp_regulator_get(struct device *dev)
 		en_panel_rst = panel_of.panel_gpio[TEGRA_GPIO_RESET];
 	}
 
+	avdd_io_edp = regulator_get(dev, "avdd_io_edp");
+	if (IS_ERR(avdd_io_edp)) {
+		pr_err("avdd_io_edp regulator get failed\n");
+		err = PTR_ERR(avdd_io_edp);
+		avdd_io_edp = NULL;
+		goto fail;
+	}
+
 	reg_requested = true;
 	return 0;
 fail:
@@ -152,6 +162,14 @@ static int edp_s_uhdtv_15_6_enable(struct device *dev)
 	}
 	msleep(180);
 
+	if (avdd_io_edp) {
+		err = regulator_enable(avdd_io_edp);
+		if (err < 0) {
+			pr_err("avdd_io_edp regulator enable failed\n");
+			goto fail;
+		}
+	}
+
 	return 0;
 fail:
 	return err;
@@ -175,6 +193,9 @@ static int edp_s_uhdtv_15_6_disable(struct device *dev)
 
 	if (vdd_ds_1v8)
 		regulator_disable(vdd_ds_1v8);
+
+	if (avdd_io_edp)
+		regulator_disable(avdd_io_edp);
 
 	msleep(500);
 

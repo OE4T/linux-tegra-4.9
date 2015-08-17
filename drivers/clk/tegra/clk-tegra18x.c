@@ -315,6 +315,7 @@ static __initdata struct tegra_bpmp_clk_init tegra186_clocks[] = {
 	{ .clk_num = TEGRA186_CLK_EMCSB_SAFE, .name = "emcsb_safe" },
 	{ .clk_num = TEGRA186_CLK_MC, .name = "mc" },
 	{ .clk_num = TEGRA186_CLK_MCSB, .name = "mcsb" },
+	{ .clk_num = TEGRA186_CLK_KFUSE, .name = "kfuse" },
 	{ .clk_num = TEGRA186_CLK_PLLE, .name = "plle" },
 	{ .clk_num = TEGRA186_CLK_PLLC, .name = "pllc" },
 	{ .clk_num = TEGRA186_CLK_PLLM, .name = "pllm" },

@@ -27,6 +27,10 @@
 
 #include "nvmap_priv.h"
 
+__weak void nvmap_override_cache_ops(void)
+{
+}
+
 void inner_cache_maint(unsigned int op, void *vaddr, size_t size)
 {
 	if (op == NVMAP_CACHE_OP_WB_INV)

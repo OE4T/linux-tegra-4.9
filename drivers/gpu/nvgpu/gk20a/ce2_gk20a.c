@@ -41,8 +41,6 @@ static u32 ce2_nonblockpipe_isr(struct gk20a *g, u32 fifo_intr)
 {
 	gk20a_dbg(gpu_dbg_intr, "ce2 non-blocking pipe interrupt\n");
 
-	/* wake theads waiting in this channel */
-	gk20a_channel_semaphore_wakeup(g);
 	return ce2_intr_status_nonblockpipe_pending_f();
 }
 
@@ -81,14 +79,16 @@ void gk20a_ce2_isr(struct gk20a *g)
 void gk20a_ce2_nonstall_isr(struct gk20a *g)
 {
 	u32 ce2_intr = gk20a_readl(g, ce2_intr_status_r());
-	u32 clear_intr = 0;
 
 	gk20a_dbg(gpu_dbg_intr, "ce2 nonstall isr %08x\n", ce2_intr);
 
-	if (ce2_intr & ce2_intr_status_nonblockpipe_pending_f())
-		clear_intr |= ce2_nonblockpipe_isr(g, ce2_intr);
+	if (ce2_intr & ce2_intr_status_nonblockpipe_pending_f()) {
+		gk20a_writel(g, ce2_intr_status_r(),
+			ce2_nonblockpipe_isr(g, ce2_intr));
 
-	gk20a_writel(g, ce2_intr_status_r(), clear_intr);
+		/* wake threads waiting in this channel */
+		gk20a_channel_semaphore_wakeup(g);
+	}
 
 	return;
 }

@@ -15,7 +15,6 @@
  */
 
 #include "ahci_tegra.h"
-
 #ifdef CONFIG_DEBUG_FS
 #include "ahci_tegra_debug.h"
 #endif
@@ -32,11 +31,11 @@ static int tegra_ahci_runtime_suspend(struct device *dev);
 static int tegra_ahci_runtime_resume(struct device *dev);
 #endif
 
-static char * const t186_rail_names[] = { };
+static char * const tegra_rail_names[] = {"vdd-3v3-sata"};
 
-static const struct tegra_ahci_soc_data tegra186_ahci_data = {
-	.sata_regulator_names = t186_rail_names,
-	.num_sata_regulators = ARRAY_SIZE(t186_rail_names),
+static const struct tegra_ahci_soc_data tegra_ahci_data = {
+	.sata_regulator_names = tegra_rail_names,
+	.num_sata_regulators = ARRAY_SIZE(tegra_rail_names),
 	.ops = {
 		.tegra_ahci_power_on = tegra_ahci_power_on,
 		.tegra_ahci_power_off = tegra_ahci_power_off,
@@ -48,7 +47,7 @@ static const struct tegra_ahci_soc_data tegra186_ahci_data = {
 
 static const struct of_device_id tegra_ahci_of_match[] = {
 	{ .compatible = "nvidia,tegra186-ahci-sata",
-		.data = &tegra186_ahci_data,
+		.data = &tegra_ahci_data,
 	},
 	{}
 };
@@ -70,7 +69,6 @@ static int tegra_ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 	struct ata_device *dev;
 	int ret = 0;
 	u32 port_status = 0;
-	int enter_slumber_timeout = 50;
 	int i;
 
 	ata_for_each_link(link, ap, PMP_FIRST) {
@@ -84,11 +82,14 @@ static int tegra_ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 				(!(link->ap->flags & ATA_FLAG_NO_DIPM));
 
 			if (hipm || dipm) {
-				for (i = 0; i < enter_slumber_timeout; i++) {
+				for (i = 0; i < TEGRA_AHCI_SLUMBER_TIMEOUT;
+									i++) {
 					port_status = tegra_ahci_bar5_readl(
 						hpriv, T_AHCI_PORT_PXSSTS);
 					port_status =
-						(port_status & 0xF00) >> 8;
+						(port_status &
+						T_AHCI_PORT_PXSSTS_IPM_MASK)
+						>> T_AHCI_PORT_PXSSTS_IPM_SHIFT;
 					if (port_status <
 						TEGRA_AHCI_PORT_RUNTIME_SLUMBER)
 						mdelay(10);
@@ -406,6 +407,8 @@ static int tegra_ahci_elpg_enter(struct ata_host *host)
 	 *    entering power gating. This shall drive the pmc2sata_pg_info
 	 *    signal
 	 */
+	tegra_pmc_sata_pwrgt_update(PMC_IMPL_SATA_PWRGT_0_PG_INFO,
+						PMC_IMPL_SATA_PWRGT_0_PG_INFO);
 
 	/*
 	 * 3. Do the context save procedure for SATA
@@ -451,6 +454,8 @@ static int tegra_ahci_elpg_exit(struct ata_host *host)
 	 *    entering power gating. This shall drive the pmc2sata_pg_info
 	 *    signal
 	 */
+	tegra_pmc_sata_pwrgt_update(PMC_IMPL_SATA_PWRGT_0_PG_INFO,
+						~PMC_IMPL_SATA_PWRGT_0_PG_INFO);
 
 	/*
 	 * 5. Program the UPHY_LANE registers to bring up UPHY from IDDQ

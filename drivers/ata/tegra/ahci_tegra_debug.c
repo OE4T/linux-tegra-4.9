@@ -14,8 +14,8 @@
  *
  */
 
-#include "ahci_tegra.h"
 #include "ahci_tegra_debug.h"
+#include "ahci_tegra.h"
 
 #define	TEGRA_AHCI_DUMP_REGS(s, fmt, args...) { if (s != NULL)\
 			seq_printf(s, fmt, ##args); else  printk(fmt, ##args); }

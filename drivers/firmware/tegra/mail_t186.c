@@ -20,41 +20,9 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of.h>
-#include <linux/of_address.h>
-#include <linux/platform_device.h>
 #include <linux/tegra-hsp.h>
-#include <linux/tegra-soc.h>
 #include "bpmp.h"
 #include "mail_t186.h"
-
-#define CPU_0_TO_BPMP_CH		0
-#define CPU_1_TO_BPMP_CH		1
-#define CPU_2_TO_BPMP_CH		2
-#define CPU_3_TO_BPMP_CH		3
-#define CPU_4_TO_BPMP_CH		4
-#define CPU_5_TO_BPMP_CH		5
-#define CPU_NA_0_TO_BPMP_CH		6
-#define CPU_NA_1_TO_BPMP_CH		7
-#define CPU_NA_2_TO_BPMP_CH		8
-#define CPU_NA_3_TO_BPMP_CH		9
-#define CPU_NA_4_TO_BPMP_CH		10
-#define CPU_NA_5_TO_BPMP_CH		11
-#define CPU_NA_6_TO_BPMP_CH		12
-#define BPMP_TO_CPU_CH			13
-
-static void __iomem *bpmp_base;
-static void __iomem *cpu_ma_page;
-static void __iomem *cpu_sl_page;
-
-uint32_t bpmp_readl(uint32_t reg)
-{
-	return __raw_readl(bpmp_base + reg);
-}
-
-void bpmp_writel(uint32_t val, uint32_t reg)
-{
-	__raw_writel(val, bpmp_base + reg);
-}
 
 bool bpmp_master_acked(int ch)
 {
@@ -94,7 +62,8 @@ EXPORT_SYMBOL(tegra_bpmp_mail_return_data);
 
 void bpmp_ring_doorbell(void)
 {
-	tegra_hsp_db_ring(HSP_DB_BPMP);
+	if (mail_ops.ring_doorbell)
+		mail_ops.ring_doorbell();
 }
 
 int bpmp_thread_ch_index(int ch)
@@ -114,15 +83,11 @@ int bpmp_ob_channel(void)
 	return smp_processor_id() + CPU_0_TO_BPMP_CH;
 }
 
-static void bpmp_inbox_irq(int master, void *data)
-{
-	bpmp_handle_irq(BPMP_TO_CPU_CH);
-}
-
 int bpmp_init_irq(void)
 {
-	tegra_hsp_db_add_handler(HSP_MASTER_BPMP, bpmp_inbox_irq, NULL);
-	tegra_hsp_db_enable_master(HSP_MASTER_BPMP);
+	if (mail_ops.init_irq)
+		return mail_ops.init_irq();
+
 	return 0;
 }
 
@@ -131,90 +96,37 @@ static int bpmp_channel_init(void)
 	int e = 0;
 	int i;
 
+	if (!mail_ops.channel_init)
+		return 0;
+
 	for (i = 0; i < NR_CHANNELS && !e; i++)
-		e = mail_ops.channel_init(i, cpu_ma_page, cpu_sl_page, SZ_4K);
+		e = mail_ops.channel_init(i);
 
 	return e;
 }
 
-static int bpmp_handshake(void)
-{
-	/* HSP_SHRD_SEM_1_STA is not modelled in all unit FPGAs*/
-	if (tegra_platform_is_unit_fpga())
-		return -ENODEV;
-
-	/* FIXME: short-term WAR */
-	if (!tegra_hsp_db_can_ring(HSP_DB_BPMP) &&
-			!bpmp_readl(HSP_SHRD_SEM_1_STA)) {
-		pr_err("bpmp db not enabled\n");
-		return -ENODEV;
-	}
-
-	/* FIXME: remove HSP_SHRD_SEM_0_STA */
-	pr_info("bpmp: waiting for handshake\n");
-	while (!bpmp_readl(HSP_SHRD_SEM_0_STA) ||
-			!tegra_hsp_db_can_ring(HSP_DB_BPMP))
-		;
-
-	pr_info("bpmp: handshake completed\n");
-	return 0;
-}
-
-static int bpmp_iomem_init(void)
-{
-	struct device_node *of_node;
-
-	of_node = of_find_node_by_path("/bpmp");
-	if (!of_node) {
-		WARN_ON(!of_node);
-		return -ENODEV;
-	}
-
-	bpmp_base = of_iomap(of_node, 0);
-	if (!bpmp_base)
-		return -ENODEV;
-
-	cpu_ma_page = of_iomap(of_node, 1);
-	if (!cpu_ma_page)
-		return -ENODEV;
-
-	cpu_sl_page = of_iomap(of_node, 2);
-	if (!cpu_sl_page)
-		return -ENODEV;
-
-	return 0;
-}
-
 void tegra_bpmp_resume(void)
 {
-	int i;
-
-	if (!mail_ops.resume)
-		return;
-
-	pr_info("bpmp: waiting for handshake\n");
-	while (!tegra_hsp_db_can_ring(HSP_DB_BPMP))
-		;
-
-	pr_info("bpmp: resuming channels\n");
-	for (i = 0; i < NR_CHANNELS; i++)
-		mail_ops.resume(i);
+	if (mail_ops.resume)
+		mail_ops.resume();
 }
 
 int bpmp_connect(void)
 {
-	int ret;
+	int ret = 0;
 
 	if (connected)
 		return 0;
 
-	ret = bpmp_iomem_init();
+	if (mail_ops.iomem_init)
+		ret = mail_ops.iomem_init();
+
 	if (ret) {
 		pr_err("bpmp iomem init failed (%d)\n", ret);
 		return ret;
 	}
 
-	ret = bpmp_handshake();
+	ret = mail_ops.handshake();
 	if (ret) {
 		pr_err("bpmp handshake failed (%d)\n", ret);
 		return ret;
@@ -227,7 +139,16 @@ int bpmp_connect(void)
 
 int bpmp_mail_init_prepare(void)
 {
-	return tegra_hsp_init();
+	int r;
+
+	r = mail_ops.probe();
+	if (r)
+		return r;
+
+	if (mail_ops.init_prepare)
+		return mail_ops.init_prepare();
+
+	return 0;
 }
 
 early_initcall(bpmp_mail_init);

@@ -18,5 +18,11 @@
 #include "tegra186-cvb-pb-p2598-a00-e3301-1000-a00-00.dtsi"
 
 / {
-
+	host1x {
+		nvdisplay@15200000 {
+			avdd_lcd-supply = <&en_avdd_disp_3v3>;
+			dvdd_lcd-supply = <&en_vdd_disp_1v8>;
+			avdd_dsi_csi-supply = <&spmic_sd1>;
+		};
+	};
 };

@@ -79,6 +79,8 @@
 			nvidia,dsi-controller-vs = <DSI_VS_1>;
 			status = "okay";
 			panel-s-wuxga-8-0 {
+				nvidia,panel-rst-gpio = <&tegra_gpio TEGRA_GPIO(P, 3) 1>; /* PP3 */
+				nvidia,panel-bl-pwm-gpio = <&tegra_gpio TEGRA_GPIO(U, 0) 1>; /* PU0 */
 				nvidia,dsi-refresh-rate = <75>;
 				disp-default-out {
 					nvidia,out-rotation = <180>;

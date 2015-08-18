@@ -2865,7 +2865,7 @@ static const char * const extperiph4_groups[] = {
 
 static const char * const spi4_groups[] = {
 	"gpio_cam4_pn3",
-	"gpio_cam5_pn4s",
+	"gpio_cam5_pn4",
 	"gpio_cam6_pn5",
 	"gpio_cam7_pn6",
 };

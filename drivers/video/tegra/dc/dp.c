@@ -2220,6 +2220,11 @@ static void tegra_dp_hpd_op_edid_ready(void *drv_data)
 	dc->out->height = dc->out->height ? : dc->out->v_size;
 
 	tegra_dp_read_sink_cap(dp);
+
+	tegra_dc_io_start(dc);
+	tegra_dc_dp_dpcd_read(dp, NV_DPCD_SINK_COUNT,
+				&dp->sink_cnt_cp_ready);
+	tegra_dc_io_end(dc);
 }
 
 static void tegra_dp_hpd_op_edid_recheck(void *drv_data)

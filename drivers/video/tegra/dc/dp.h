@@ -107,6 +107,7 @@ struct tegra_dc_dp_data {
 
 	u8 sink_cap[DP_DPCD_SINK_CAP_SIZE];
 	bool sink_cap_valid;
+	u8 sink_cnt_cp_ready;
 
 #ifdef CONFIG_DEBUG_FS
 	struct tegra_dp_test_settings test_settings;

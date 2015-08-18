@@ -27,7 +27,6 @@
                         dp-display {
                                 status = "disabled";
                                 compatible = "dp, display";
-                                nvidia,hpd-gpio = <&tegra_gpio 121 1>; /* PN121 */
                                 disp-default-out {
                                         nvidia,out-type = <TEGRA_DC_OUT_DP>;
                                         nvidia,out-align = <TEGRA_DC_ALIGN_MSB>;

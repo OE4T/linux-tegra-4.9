@@ -25,8 +25,7 @@
         host1x {
                 sor1@15580000 {
                         status = "okay";
-                        nvidia,ddc-i2c-bus = <&hdmi_ddc>;
-                        nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 1) 1>; /* PN121 */
+                        nvidia,ddc-i2c-bus = <&i2c4>;
                         hdmi-display {
                                 status = "okay";
                                 compatible = "hdmi,display";
@@ -39,9 +38,6 @@
                                 };
                         };
                 };
-        };
-        hdmi_ddc: i2c@7000c700 {
-                clock-frequency = <100000>;
         };
 };
 

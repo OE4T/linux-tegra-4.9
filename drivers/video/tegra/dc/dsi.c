@@ -1848,9 +1848,15 @@ static void tegra_dsi_stop_dc_stream_at_frame_end(struct tegra_dc *dc,
 						struct tegra_dc_dsi_data *dsi,
 						u32 timeout_n_frames)
 {
+	u32 frame_period = DIV_ROUND_UP(S_TO_MS(1), dsi->info.refresh_rate);
+
 	tegra_dsi_stop_dc_stream(dc, dsi);
 
-	tegra_dsi_wait_frame_end(dc, dsi, timeout_n_frames);
+	if (tegra_dc_poll_register(dc, DC_CMD_STATE_CONTROL,
+		GENERAL_ACT_REQ, 0, 100,
+		timeout_n_frames * frame_period))
+		dev_err(&dsi->dc->ndev->dev,
+			"dc timeout waiting for DC to stop\n");
 
 	tegra_dsi_soft_reset(dsi);
 

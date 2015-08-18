@@ -92,8 +92,8 @@
 			};
 
 			regulators {
-				in-ldo4-supply = <&spmic_sd2>;
-				in-ldo6-supply = <&spmic_sd2>;
+				in-ldo3-supply = <&spmic_sd3>;
+				in-ldo5-supply = <&spmic_sd3>;
 				in-ldo7-8-supply = <&spmic_sd1>;
 
 				spmic_sd0: sd0 {

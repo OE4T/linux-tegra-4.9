@@ -297,6 +297,48 @@ static struct notifier_block tegra_wdt_t18x_cpu_nb = {
 	.notifier_call = tegra_wdt_t18x_cpu_notify,
 };
 
+static inline int tegra_wdt_t18x_update_config_bit(struct tegra_wdt_t18x
+	*tegra_wdt_t18x, u32 bitmask, bool set)
+{
+	if (set)
+		tegra_wdt_t18x->config |= bitmask;
+	else
+		tegra_wdt_t18x->config &= ~bitmask;
+
+	/* Apply the config only if WDT is enabled */
+	if (test_bit(WDT_ENABLED, &tegra_wdt_t18x->status)) {
+		__tegra_wdt_t18x_disable(tegra_wdt_t18x);
+		__tegra_wdt_t18x_enable(tegra_wdt_t18x);
+	}
+	return 0;
+}
+
+void tegra_wdt_t18x_debug_reset(bool on)
+{
+	struct tegra_wdt_t18x *tegra_wdt_t18x;
+	int i = 0;
+
+	for_each_possible_cpu(i) {
+		tegra_wdt_t18x = *per_cpu_ptr(devid, i);
+		if (tegra_wdt_t18x)
+			tegra_wdt_t18x_update_config_bit(tegra_wdt_t18x,
+					WDT_CFG_DBG_RST_EN, on);
+	}
+}
+
+void tegra_wdt_t18x_por_reset(bool on)
+{
+	struct tegra_wdt_t18x *tegra_wdt_t18x;
+	int i = 0;
+
+	for_each_possible_cpu(i) {
+		tegra_wdt_t18x = *per_cpu_ptr(devid, i);
+		if (tegra_wdt_t18x)
+			tegra_wdt_t18x_update_config_bit(tegra_wdt_t18x,
+					WDT_CFG_SYS_PORST_EN, on);
+	}
+}
+
 #ifdef CONFIG_DEBUG_FS
 
 static int dump_registers_show(void *data, u64 *val)
@@ -321,22 +363,6 @@ static int dump_registers_show(void *data, u64 *val)
 	return 0;
 }
 
-static inline int tegra_wdt_t18x_update_config(struct tegra_wdt_t18x
-	*tegra_wdt_t18x, u32 mask, bool clear)
-{
-	if (clear)
-		tegra_wdt_t18x->config &= ~mask;
-	else
-		tegra_wdt_t18x->config |= mask;
-
-	/* Apply the config only if WDT is enabled */
-	if (test_bit(WDT_ENABLED, &tegra_wdt_t18x->status)) {
-		__tegra_wdt_t18x_disable(tegra_wdt_t18x);
-		__tegra_wdt_t18x_enable(tegra_wdt_t18x);
-	}
-	return 0;
-}
-
 static int disable_dbg_reset_show(void *data, u64 *val)
 {
 	struct tegra_wdt_t18x *tegra_wdt_t18x = data;
@@ -347,8 +373,8 @@ static int disable_dbg_reset_show(void *data, u64 *val)
 
 static int disable_dbg_reset_store(void *data, u64 val)
 {
-	return tegra_wdt_t18x_update_config((struct tegra_wdt_t18x*)data,
-			WDT_CFG_DBG_RST_EN, !!val);
+	return tegra_wdt_t18x_update_config_bit((struct tegra_wdt_t18x*)data,
+			WDT_CFG_DBG_RST_EN, !val);
 }
 
 static int disable_por_reset_show(void *data, u64 *val)
@@ -361,8 +387,8 @@ static int disable_por_reset_show(void *data, u64 *val)
 
 static int disable_por_reset_store(void *data, u64 val)
 {
-	return tegra_wdt_t18x_update_config((struct tegra_wdt_t18x*)data,
-			WDT_CFG_SYS_PORST_EN, !!val);
+	return tegra_wdt_t18x_update_config_bit((struct tegra_wdt_t18x*)data,
+			WDT_CFG_SYS_PORST_EN, !val);
 }
 
 DEFINE_SIMPLE_ATTRIBUTE(dump_regs_fops, dump_registers_show,
@@ -547,7 +573,7 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	writel(TOP_TKE_TMR_PCR_INTR, tegra_wdt_t18x->wdt_timer +
 					TOP_TKE_TMR_PCR);
 
-	/* Init and enable watchdog on WDT0 with timer 8 during probe */
+	/* Setup routing for WDT petting and enable it if core online */
 	tegra_wdt_t18x_setup_pet(tegra_wdt_t18x);
 
 	watchdog_init_timeout(&tegra_wdt_t18x->wdt, heartbeat,  &pdev->dev);

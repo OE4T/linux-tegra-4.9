@@ -13,4 +13,25 @@
  *
  */
 
-#include "tegra186-quill-pb-power-tree-e3301-1000-a00-00.dtsi"
+#include "tegra186-quill-pb-spmic-e3301-1000-a00-00.dtsi"
+#include "tegra186-quill-pb-fixed-e3301-1000-a00-00.dtsi"
+#include "tegra186-cvb-slt-p2598-a00-e3340-1099-a00-00.dtsi"
+
+/ {
+	bpmp_i2c {
+		spmic@3c {
+			regulators {
+				in-ldo3-supply = <&spmic_sd3>;
+				in-ldo5-supply = <&spmic_sd3>;
+			};
+		};
+	};
+
+	host1x {
+		nvdisplay@15200000 {
+			avdd_lcd-supply = <&vdd_dis_3v3_lcd>;
+			dvdd_lcd-supply = <&vdd_lcd_1v8_dis>;
+			avdd_dsi_csi-supply = <&spmic_sd1>;
+		};
+	};
+};

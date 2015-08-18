@@ -49,7 +49,7 @@
 		};
 	};
 
-        i2c@7000c000 {
+        i2c@3170000 {
                 icm20628@68 {
                         compatible = "invensense,mpu6xxx";
                         reg = <0x68>;

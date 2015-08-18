@@ -28,6 +28,49 @@
 #include "gk20a/gk20a.h"
 #include "platform_tegra.h"
 
+static struct {
+	char *name;
+	unsigned long default_rate;
+} tegra_gp10b_clocks[] = {
+	{"gpu", 1900000000},
+	{"gpu_sys", 204000000} };
+
+/*
+ * gp10b_tegra_get_clocks()
+ *
+ * This function finds clocks in tegra platform and populates
+ * the clock information to gp10b platform data.
+ */
+
+static int gp10b_tegra_get_clocks(struct platform_device *pdev)
+{
+	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a *g = get_gk20a(pdev);
+	struct device *dev = dev_from_gk20a(g);
+	int i;
+
+	if (tegra_platform_is_linsim())
+		return 0;
+
+	platform->num_clks = 0;
+	for (i = 0; i < ARRAY_SIZE(tegra_gp10b_clocks); i++) {
+		long rate = tegra_gp10b_clocks[i].default_rate;
+		struct clk *c;
+
+		c = clk_get(dev, tegra_gp10b_clocks[i].name);
+		if (IS_ERR(c)) {
+			gk20a_err(&pdev->dev, "cannot get clock %s",
+					tegra_gp10b_clocks[i].name);
+		} else {
+			clk_set_rate(c, rate);
+			platform->clk[i] = c;
+		}
+	}
+	platform->num_clks = i;
+
+	return 0;
+}
+
 static int gp10b_tegra_probe(struct platform_device *pdev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(pdev);
@@ -77,6 +120,9 @@ static int gp10b_tegra_probe(struct platform_device *pdev)
 			platform->debugfs,
 			&platform->g->gr.t18x.
 				ctx_vars.dump_ctxsw_stats_on_channel_close);
+
+	gp10b_tegra_get_clocks(pdev);
+
 	return 0;
 }
 
@@ -97,17 +143,33 @@ static bool gp10b_tegra_is_railgated(struct platform_device *pdev)
 
 static int gp10b_tegra_railgate(struct platform_device *pdev)
 {
+	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+
 	if (!tegra_platform_is_linsim() &&
-	    tegra_powergate_is_powered(TEGRA_POWERGATE_GPU))
+	    tegra_powergate_is_powered(TEGRA_POWERGATE_GPU)) {
+		int i;
+		for (i = 0; i < platform->num_clks; i++) {
+			if (platform->clk[i])
+				clk_disable_unprepare(platform->clk[i]);
+		}
 		tegra_powergate_partition(TEGRA_POWERGATE_GPU);
+	}
 	return 0;
 }
 
 static int gp10b_tegra_unrailgate(struct platform_device *pdev)
 {
 	int ret = 0;
-	if (!tegra_platform_is_linsim())
+	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+
+	if (!tegra_platform_is_linsim()) {
+		int i;
 		ret = tegra_unpowergate_partition(TEGRA_POWERGATE_GPU);
+		for (i = 0; i < platform->num_clks; i++) {
+			if (platform->clk[i])
+				clk_prepare_enable(platform->clk[i]);
+		}
+	}
 	return ret;
 }
 

@@ -300,7 +300,9 @@ struct fb_bitfield {
 #define FB_VMODE_EC_BT2020_YCC_RGB	((0x6 << FB_VMODE_EC_SHIFT) & \
 					FB_VMODE_EC_MASK)
 
-#define FB_VMODE_MASK		0x7fff
+#define FB_VMODE_1000DIV1001	(0x8000)
+
+#define FB_VMODE_MASK		0xffff
 
 #define FB_VMODE_YWRAP		0x10000	/* ywrap instead of panning     */
 #define FB_VMODE_SMOOTH_XPAN	0x20000	/* smooth xpan possible (internally used) */

@@ -34,7 +34,7 @@
 #define to_hdmi(DATA)	((struct tegra_hdmi *)DATA)
 #define to_dp(DATA)	((struct tegra_dc_dp_data *)DATA)
 
-struct tegra_dc_hda_data *hda;
+static struct tegra_dc_hda_data *hda;
 
 static void tegra_hda_get_eld_header(u8 *eld_mem_block)
 {
@@ -327,7 +327,7 @@ int tegra_hdmi_audio_null_sample_inject(bool on)
 }
 EXPORT_SYMBOL(tegra_hdmi_audio_null_sample_inject);
 
-void tegra_dc_hda_get_clocks(void)
+static void tegra_dc_hda_get_clocks(void)
 {
 	if (!hda)
 		return;
@@ -383,7 +383,7 @@ err_get_clk:
 	}
 }
 
-void tegra_dc_hda_put_clocks(void)
+static void tegra_dc_hda_put_clocks(void)
 {
 	if (!hda)
 		return;
@@ -403,7 +403,7 @@ void tegra_dc_hda_put_clocks(void)
 	}
 }
 
-void tegra_dc_hda_enable_clocks(void)
+static void tegra_dc_hda_enable_clocks(void)
 {
 	if (!hda)
 		return;
@@ -418,7 +418,7 @@ void tegra_dc_hda_enable_clocks(void)
 	}
 }
 
-void tegra_dc_hda_disable_clocks(void)
+static void tegra_dc_hda_disable_clocks(void)
 {
 	if (!hda)
 		return;

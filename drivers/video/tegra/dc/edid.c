@@ -735,6 +735,37 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 		}
 	}
 
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+	/* T210 supports fractional divider and hence can support the * 1000 / 1001 modes.
+	   For now, only enable support for 24, 30 and 60 Hz modes */
+	{
+		struct fb_videomode *m;
+		struct fb_videomode frac_modes[10];
+		u8 frac_n = 0;
+
+		for (j = 0; j < specs->modedb_len; ++j) {
+			if ((tegra_dc_calc_fb_refresh(&specs->modedb[j]) == 24000 ||
+			    tegra_dc_calc_fb_refresh(&specs->modedb[j]) == 30000 ||
+			    tegra_dc_calc_fb_refresh(&specs->modedb[j]) == 60000) &&
+		        frac_n < ARRAY_SIZE(frac_modes)) {
+				memcpy(&frac_modes[frac_n], &specs->modedb[j], sizeof(struct fb_videomode));
+				frac_modes[frac_n].pixclock = frac_modes[frac_n].pixclock * 1000 / 1001;
+				frac_modes[frac_n].vmode |= FB_VMODE_1000DIV1001;
+				frac_n++;
+			}
+		}
+
+		m = kzalloc((specs->modedb_len + frac_n) * sizeof(struct fb_videomode), GFP_KERNEL);
+		if (m) {
+			memcpy(m, specs->modedb, specs->modedb_len * sizeof(struct fb_videomode));
+			memcpy(&m[specs->modedb_len], frac_modes, frac_n * sizeof(struct fb_videomode));
+			kfree(specs->modedb);
+			specs->modedb = m;
+			specs->modedb_len += frac_n;
+		}
+	}
+#endif
+
 	new_data->dc_edid.len = i * 128;
 
 	mutex_lock(&edid->lock);

@@ -21,6 +21,12 @@
 			reg = <0x76>;
 			gpio-controller;
 			#gpio-cells = <2>;
+			pcie_default_mux {
+				gpio-output-high = <9 10 12>;
+			};
+			sata_default_mux {
+				gpio-output-high = <14>;
+			};
 		};
 	};
 

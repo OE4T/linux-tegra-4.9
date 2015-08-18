@@ -217,6 +217,8 @@ int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data)
 	if (last_checksum != 0) {
 		u8 checksum = 0;
 
+		edid->checksum_corrupted = 1;
+
 		for (i = 0; i < 127; i++)
 			checksum += data[i];
 
@@ -546,6 +548,8 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 		return -ENOMEM;
 
 	kref_init(&new_data->refcnt);
+
+	edid->checksum_corrupted = 0;
 
 	data = new_data->dc_edid.buf;
 

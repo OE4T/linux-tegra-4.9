@@ -93,6 +93,15 @@ struct tegra_edid {
 	struct mutex		lock;
 	struct tegra_dc_i2c_ops i2c_ops;
 	struct tegra_dc		*dc;
+
+	/*
+	 * flag panel edid checksum is corrupted.
+	 * SW fixes checksum before passing on the
+	 * edid block to parser. For now just represent checksum
+	 * corruption on any of the edid blocks.
+	 * Field can be extended as bitmap in future.
+	 */
+	u8 checksum_corrupted;
 };
 
 /*

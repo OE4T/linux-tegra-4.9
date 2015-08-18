@@ -2676,6 +2676,14 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 	if (!tegra_dp_check_dc_constraint(mode))
 		return false;
 
+	/*
+	 * CTS mandates that if edid is corrupted
+	 * use fail-safe mode i.e. VGA 640x480@60
+	 */
+	if (dc->edid->checksum_corrupted)
+		return (mode->xres == 640 && mode->yres == 480
+			&& mode->refresh == 60) ? true : false;
+
 	return true;
 }
 

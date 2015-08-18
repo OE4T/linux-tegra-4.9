@@ -212,13 +212,17 @@ static int tegra_tachometer_probe(struct platform_device *pdev)
 static int tegra_tachometer_remove(struct platform_device *pdev)
 {
 	struct tachometer_dev *tach = platform_get_drvdata(pdev);
-	struct tegra_tachometer_device *tegra_tach =
-		(struct tegra_tachometer_device *)tachometer_get_drvdata(tach);
+	struct tegra_tachometer_device *tegra_tach;
 	struct resource *iomem = platform_get_resource(pdev,
 			IORESOURCE_MEM, 0);
 
+	if (!tach)
+		return 0;
+
+	tegra_tach = (struct tegra_tachometer_device *)tachometer_get_drvdata(tach);
 	iounmap(tegra_tach->mmio_base);
-	release_mem_region(iomem->start, resource_size(iomem));
+	if (iomem)
+		release_mem_region(iomem->start, resource_size(iomem));
 	kfree(tach);
 	platform_set_drvdata(pdev, NULL);
 	return 0;

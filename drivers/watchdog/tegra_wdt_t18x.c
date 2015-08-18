@@ -80,7 +80,7 @@ static int expiry_count = 1;
  * Must be greater than expiry_count*MIN_WDT_PERIOD and lower than
  * expiry_count*MAX_WDT_PERIOD.
  */
-static int heartbeat = 10;
+static int heartbeat = 120;
 
 static inline struct tegra_wdt_t18x *to_tegra_wdt_t18x(
 					struct watchdog_device *wdt)
@@ -124,7 +124,7 @@ static int __tegra_wdt_t18x_ping(struct tegra_wdt_t18x *tegra_wdt_t18x)
 
 	writel(TOP_TKE_TMR_PCR_INTR, tegra_wdt_t18x->wdt_timer +
 							TOP_TKE_TMR_PCR);
-	val = tegra_wdt_t18x->wdt.timeout * USEC_PER_SEC;
+	val = (tegra_wdt_t18x->wdt.timeout * USEC_PER_SEC) / expiry_count;
 	val |= (TOP_TKE_TMR_EN | TOP_TKE_TMR_PERIODIC);
 	writel(val, tegra_wdt_t18x->wdt_timer + TOP_TKE_TMR_PTV);
 
@@ -182,7 +182,13 @@ static int __tegra_wdt_t18x_enable(struct tegra_wdt_t18x *tegra_wdt_t18x)
 
 	writel(TOP_TKE_TMR_PCR_INTR, tegra_wdt_t18x->wdt_timer +
 							TOP_TKE_TMR_PCR);
-	val = tegra_wdt_t18x->wdt.timeout * USEC_PER_SEC;
+	/*
+	 * The timeout needs to be divided by expiry_count here so as to
+	 * keep the ultimate watchdog reset timeout the same as the program
+	 * timeout requested by application. The program timeout should make
+	 * sure WDT FIQ will never be asserted in a valid use case.
+	 */
+	val = (tegra_wdt_t18x->wdt.timeout * USEC_PER_SEC) / expiry_count;
 	val |= (TOP_TKE_TMR_EN | TOP_TKE_TMR_PERIODIC);
 	writel(val, tegra_wdt_t18x->wdt_timer + TOP_TKE_TMR_PTV);
 

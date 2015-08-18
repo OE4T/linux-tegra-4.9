@@ -13,8 +13,4 @@
  *
  */
 
-#include "tegra186-sunsteaker-slt-spmic-e3340-1099-a00-00.dtsi"
-
-/ {
-
-};
+#include "tegra186-sunstreaker-slt-power-tree-e3340-1099-a00-00.dtsi"

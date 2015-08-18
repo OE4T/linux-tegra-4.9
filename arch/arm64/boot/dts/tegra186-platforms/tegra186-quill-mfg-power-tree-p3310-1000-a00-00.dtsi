@@ -13,7 +13,4 @@
  *
  */
 
-#include "tegra186-quill-spmic-p3310-1000-a00-00.dtsi"
-
-/ {
-};
+#include "tegra186-quill-power-tree-p3310-1000-a00-00.dtsi"

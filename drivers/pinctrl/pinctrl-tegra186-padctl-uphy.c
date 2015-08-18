@@ -3860,22 +3860,22 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "padctl");
 	uphy->padctl_regs = devm_ioremap_resource(dev, res);
-	dev_info(dev, "padctl mmio start %pa end %pa\n",
-		 &res->start, &res->end);
 	if (IS_ERR(uphy->padctl_regs))
 		return PTR_ERR(uphy->padctl_regs);
+	dev_info(dev, "padctl mmio start %pa end %pa\n",
+		 &res->start, &res->end);
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "ao");
 	uphy->ao_regs = devm_ioremap_resource(dev, res);
-	dev_info(dev, "ao mmio start %pa end %pa\n", &res->start, &res->end);
 	if (IS_ERR(uphy->ao_regs))
 		return PTR_ERR(uphy->ao_regs);
+	dev_info(dev, "ao mmio start %pa end %pa\n", &res->start, &res->end);
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "uphy");
 	uphy->uphy_regs = devm_ioremap_resource(dev, res);
-	dev_info(dev, "uphy mmio start %pa end %pa\n", &res->start, &res->end);
 	if (IS_ERR(uphy->uphy_regs))
 		return PTR_ERR(uphy->uphy_regs);
+	dev_info(dev, "uphy mmio start %pa end %pa\n", &res->start, &res->end);
 
 	uphy->uphy_pll_regs[0] = uphy->uphy_regs;
 	uphy->uphy_lane_regs[0] = uphy->uphy_regs + 0x20000;

@@ -22,6 +22,7 @@ obj-$(CONFIG_GK20A)  += \
 	hal_gp10b.o \
 	rpfb_gp10b.o \
 	gp10b_gating_reglist.o \
-	regops_gp10b.o
+	regops_gp10b.o \
+	cde_gp10b.o
 
 obj-$(CONFIG_TEGRA_GK20A) += platform_gp10b_tegra.o

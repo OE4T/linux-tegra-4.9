@@ -165,12 +165,12 @@
 			vin-supply = <&spmic_sd3>;
 		};
 
-		vdd_hdmi0_5v5: regulator@13 {
+		vdd_hdmi0_5v0: regulator@13 {
 			compatible = "regulator-fixed";
 			reg = <13>;
-			regulator-name = "vdd-hdmi0-5v5";
-			regulator-min-microvolt = <5500000>;
-			regulator-max-microvolt = <5500000>;
+			regulator-name = "vdd-hdmi0-5v0";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
 			gpio = <&tegra_gpio TEGRA_GPIO(FF, 3) 0>;
 			enable-active-high;
 			vin-supply = <&vdd_sys_5v>;

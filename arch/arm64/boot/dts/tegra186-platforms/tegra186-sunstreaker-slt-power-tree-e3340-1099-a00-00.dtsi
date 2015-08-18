@@ -24,5 +24,10 @@
 			dvdd_lcd-supply = <&vdd_lcd_1v8_dis>;
 			avdd_dsi_csi-supply = <&spmic_sd1>;
 		};
+                nvdisplay@15210000 {
+                        avdd_hdmi-supply = <&spmic_ldo7>;
+                        avdd_hdmi_pll-supply = <&spmic_sd2>;
+                        vdd_hdmi_5v0-supply = <&vdd_hdmi0_5v0>;
+                };
 	};
 };

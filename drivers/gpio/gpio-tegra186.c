@@ -59,6 +59,7 @@
 
 #define GPIO_SCR_REG	0x04
 #define GPIO_SCR_DIFF	0x08
+#define GPIO_SCR_BASE_DIFF 0x40
 
 #define GPIO_CONTROLLERS_DIFF 0x1000
 #define GPIO_SCR_SEC_WEN		(1 << 28)
@@ -198,10 +199,12 @@ static inline bool is_gpio_accessible(u32 offset)
 			i = 0;
 		else
 			i = 1;
+		if (i == 1)
+			controller = 0; /*AON offset is same as base*/
 		val = __raw_readl(tegra_gpio->regs[i] +
 			(controller * GPIO_CONTROLLERS_DIFF) +
-			(j * GPIO_SCR_DIFF) + (pin * GPIO_SCR_REG));
-
+			(j * GPIO_SCR_BASE_DIFF) + (pin * GPIO_SCR_DIFF) +
+			GPIO_SCR_REG);
 		if (val & (GPIO_SCR_SEC_WEN | GPIO_SCR_SEC_REN |
 			GPIO_SCR_SEC_G1R | GPIO_SCR_SEC_G1W))
 			ret = true;

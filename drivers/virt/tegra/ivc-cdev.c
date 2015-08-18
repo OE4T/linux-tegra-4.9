@@ -451,7 +451,7 @@ static int __init ivc_init(void)
 	int result;
 
 	info = tegra_hv_get_ivc_info();
-	if (!info)
+	if (IS_ERR(info))
 		return -ENODEV;
 
 	result = setup_ivc();

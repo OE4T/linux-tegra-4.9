@@ -20,6 +20,54 @@
 / {
 
 	i2c@3160000 {
+		ina3221x@42 {
+			compatible = "ti,ina3221x";
+			reg = <0x42>;
+			ti,trigger-config = <0x7003>;
+			ti,continuous-config = <0x7c07>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			channel@0 {
+				reg = <0x0>;
+				ti,rail-name = "VDD_MUX";
+				ti,shunt-resistor-mohm = <20>;
+			};
+			channel@1 {
+				reg = <0x1>;
+				ti,rail-name = "VDD_5V0_IO_SYS";
+				ti,shunt-resistor-mohm = <5>;
+			};
+			channel@2 {
+				reg = <0x2>;
+				ti,rail-name = "VDD_3V3_SYS";
+				ti,shunt-resistor-mohm = <10>;
+			};
+		};
+
+		ina3221x@43 {
+			compatible = "ti,ina3221x";
+			reg = <0x43>;
+			ti,trigger-config = <0x7003>;
+			ti,continuous-config = <0x7c07>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			channel@0 {
+				reg = <0x0>;
+				ti,rail-name = "VDD_3V3_IO_SLP";
+				ti,shunt-resistor-mohm = <10>;
+			};
+			channel@1 {
+				reg = <0x1>;
+				ti,rail-name = "VDD_1V8_IO";
+				ti,shunt-resistor-mohm = <10>;
+			};
+			channel@2 {
+				reg = <0x2>;
+				ti,rail-name = "VDD_3V3_SYS_M2";
+				ti,shunt-resistor-mohm = <10>;
+			};
+		};
+
 		gpio_i2c_0_74: gpio@74 {
 			compatible = "ti,tca9539";
 			reg = <0x74>;

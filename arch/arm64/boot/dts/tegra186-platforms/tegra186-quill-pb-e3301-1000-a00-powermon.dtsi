@@ -1,5 +1,6 @@
 /*
- * tegra186-quill-e3301-powermon.dtsi: Tegra186 power monitor dtsi file on Quill e3301
+ * tegra186-quill-pb-e3301-1000-a00-powermon.dtsi: Tegra186 power monitor dtsi
+ *			file on Quill e3301
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *

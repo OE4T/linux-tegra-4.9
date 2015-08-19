@@ -14,7 +14,7 @@
  */
 
 #include "tegra186-quill-common.dtsi"
-#include "tegra186-quill-e3301-powermon.dtsi"
+#include "tegra186-quill-pb-e3301-1000-a00-powermon.dtsi"
 
 / {
         model = "quill-3301";

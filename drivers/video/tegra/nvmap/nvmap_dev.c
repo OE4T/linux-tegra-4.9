@@ -1226,10 +1226,16 @@ static void nvmap_iovmm_get_client_mss(struct nvmap_client *client, u64 *pss,
 		.private = &mss,
 	};
 	struct mm_struct *mm;
-	bool is_mm_accessed = false;
 
 	memset(&mss, 0, sizeof(mss));
 	*pss = *total = 0;
+
+	mm = mm_access(client->task,
+			PTRACE_MODE_READ);
+	if (!mm || IS_ERR(mm)) return;
+
+	down_read(&mm->mmap_sem);
+	procrank_walk.mm = mm;
 
 	nvmap_ref_lock(client);
 	n = rb_first(&client->handle_refs);
@@ -1244,20 +1250,6 @@ static void nvmap_iovmm_get_client_mss(struct nvmap_client *client, u64 *pss,
 		mutex_lock(&h->lock);
 		list_for_each_entry(tmp, &h->vmas, list) {
 			if (client->task->pid == tmp->pid) {
-
-				if (!is_mm_accessed) {
-					is_mm_accessed = true;
-					mm = mm_access(client->task,
-							PTRACE_MODE_READ);
-					if (!mm || IS_ERR(mm)) {
-						mutex_unlock(&h->lock);
-						nvmap_ref_unlock(client);
-						return;
-					}
-					down_read(&mm->mmap_sem);
-					procrank_walk.mm = tmp->vma->vm_mm;
-				}
-
 				mss.vma = tmp->vma;
 				walk_page_range(tmp->vma->vm_start,
 						tmp->vma->vm_end,
@@ -1265,15 +1257,12 @@ static void nvmap_iovmm_get_client_mss(struct nvmap_client *client, u64 *pss,
 			}
 		}
 		mutex_unlock(&h->lock);
-
 		*total += h->size / atomic_read(&h->share_count);
 	}
 
-	if (is_mm_accessed) {
-		up_read(&mm->mmap_sem);
-		mmput(mm);
-		*pss = (mss.pss >> PSS_SHIFT);
-	}
+	up_read(&mm->mmap_sem);
+	mmput(mm);
+	*pss = (mss.pss >> PSS_SHIFT);
 	nvmap_ref_unlock(client);
 }
 

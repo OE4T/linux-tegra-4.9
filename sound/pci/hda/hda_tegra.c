@@ -31,6 +31,7 @@
 #include <linux/of_device.h>
 #include <linux/slab.h>
 #include <linux/time.h>
+#include <linux/pm_runtime.h>
 #include <linux/tegra-powergate.h>
 #include <linux/tegra_pm_domains.h>
 
@@ -39,6 +40,14 @@
 
 #include "hda_codec.h"
 #include "hda_controller.h"
+
+
+static struct of_device_id tegra_disb_pd[] = {
+	{ .compatible = "nvidia,tegra210-disb-pd", },
+	{ .compatible = "nvidia,tegra132-disb-pd", },
+	{ .compatible = "nvidia,tegra124-disb-pd", },
+	{},
+};
 
 /* Defines for Nvidia Tegra HDA support */
 #define HDA_BAR0           0x8000
@@ -74,6 +83,7 @@ struct hda_tegra {
 	struct clk *hda_clk;
 	struct clk *hda2codec_2x_clk;
 	struct clk *hda2hdmi_clk;
+	int partition_id;
 	void __iomem *regs;
 	struct work_struct probe_work;
 };
@@ -216,7 +226,7 @@ static int hda_tegra_enable_clocks(struct hda_tegra *data)
 {
 	int rc;
 
-	tegra_unpowergate_partition(TEGRA_POWERGATE_DISB);
+	tegra_unpowergate_partition(data->partition_id);
 
 	rc = clk_prepare_enable(data->hda_clk);
 	if (rc)
@@ -234,7 +244,7 @@ disable_codec_2x:
 	clk_disable_unprepare(data->hda2codec_2x_clk);
 disable_hda:
 	clk_disable_unprepare(data->hda_clk);
-	tegra_powergate_partition(TEGRA_POWERGATE_DISB);
+	tegra_powergate_partition(data->partition_id);
 	return rc;
 }
 
@@ -245,7 +255,7 @@ static void hda_tegra_disable_clocks(struct hda_tegra *data)
 	clk_disable_unprepare(data->hda2codec_2x_clk);
 	clk_disable_unprepare(data->hda_clk);
 
-	tegra_powergate_partition(TEGRA_POWERGATE_DISB);
+	tegra_powergate_partition(data->partition_id);
 }
 
 /*
@@ -256,6 +266,8 @@ static int hda_tegra_suspend(struct device *dev)
 	struct snd_card *card = dev_get_drvdata(dev);
 	struct azx *chip = card->private_data;
 	struct hda_tegra *hda = container_of(chip, struct hda_tegra, chip);
+
+	hda_tegra_enable_clocks(hda);
 
 	snd_power_change_state(card, SNDRV_CTL_POWER_D3hot);
 
@@ -274,18 +286,63 @@ static int hda_tegra_resume(struct device *dev)
 
 	hda_tegra_enable_clocks(hda);
 
+	if (hda->dev) {
+		pm_runtime_disable(hda->dev);
+		pm_runtime_set_active(hda->dev);
+		pm_runtime_get_noresume(hda->dev);
+		pm_runtime_enable(hda->dev);
+	}
 	hda_tegra_init(hda);
 
 	azx_init_chip(chip, 1);
 
 	snd_power_change_state(card, SNDRV_CTL_POWER_D0);
 
+	pm_runtime_put(hda->dev);
+
 	return 0;
 }
 #endif /* CONFIG_PM_SLEEP */
 
+#ifdef CONFIG_PM_RUNTIME
+static int hda_tegra_runtime_suspend(struct device *dev)
+{
+	struct snd_card *card = dev_get_drvdata(dev);
+	struct azx *chip = card->private_data;
+	struct hda_tegra *hda = container_of(chip, struct hda_tegra, chip);
+
+	if (!(chip->driver_caps & AZX_DCAPS_PM_RUNTIME))
+		return 0;
+
+	azx_stop_chip(chip);
+	hda_tegra_disable_clocks(hda);
+
+	return 0;
+}
+
+static int hda_tegra_runtime_resume(struct device *dev)
+{
+	struct snd_card *card = dev_get_drvdata(dev);
+	struct azx *chip = card->private_data;
+	struct hda_tegra *hda = container_of(chip, struct hda_tegra, chip);
+
+	if (!(chip->driver_caps & AZX_DCAPS_PM_RUNTIME))
+		return 0;
+
+	hda_tegra_enable_clocks(hda);
+
+	hda_tegra_init(hda);
+
+	azx_init_chip(chip, 1);
+
+	return 0;
+}
+#endif /* CONFIG_PM_RUNTIME */
+
 static const struct dev_pm_ops hda_tegra_pm = {
 	SET_SYSTEM_SLEEP_PM_OPS(hda_tegra_suspend, hda_tegra_resume)
+	SET_RUNTIME_PM_OPS(hda_tegra_runtime_suspend,
+				hda_tegra_runtime_resume, NULL)
 };
 
 static int hda_tegra_dev_disconnect(struct snd_device *device)
@@ -313,6 +370,8 @@ static int hda_tegra_dev_free(struct snd_device *device)
 	azx_free_stream_pages(chip);
 	azx_free_streams(chip);
 	snd_hdac_bus_exit(azx_bus(chip));
+	hda_tegra_disable_clocks(hda);
+	pm_runtime_put(hda->dev);
 
 	return 0;
 }
@@ -450,6 +509,14 @@ static int hda_tegra_create(struct snd_card *card,
 	struct azx *chip;
 	int err;
 
+	if (hda->dev) {
+		err = pm_runtime_set_active(hda->dev);
+		if (err < 0)
+			return err;
+		pm_runtime_get_noresume(hda->dev);
+		pm_runtime_enable(hda->dev);
+	}
+
 	chip = &hda->chip;
 
 	mutex_init(&chip->open_mutex);
@@ -488,17 +555,25 @@ MODULE_DEVICE_TABLE(of, hda_tegra_match);
 
 static int hda_tegra_probe(struct platform_device *pdev)
 {
-	const unsigned int driver_flags = AZX_DCAPS_CORBRP_SELF_CLEAR;
+	const unsigned int driver_flags = AZX_DCAPS_CORBRP_SELF_CLEAR |
+									AZX_DCAPS_PM_RUNTIME;
 	struct snd_card *card;
 	struct azx *chip;
 	struct hda_tegra *hda;
 	int err;
+	const unsigned int driver_flags = 0;
 
 	hda = devm_kzalloc(&pdev->dev, sizeof(*hda), GFP_KERNEL);
 	if (!hda)
 		return -ENOMEM;
 	hda->dev = &pdev->dev;
 	chip = &hda->chip;
+
+	hda->partition_id = tegra_pd_get_powergate_id(tegra_disb_pd);
+	if (hda->partition_id < 0) {
+		dev_err(&pdev->dev, "Failed to get hda power domain id\n");
+		return -EINVAL;
+	}
 
 	err = snd_card_new(&pdev->dev, SNDRV_DEFAULT_IDX1, SNDRV_DEFAULT_STR1,
 			   THIS_MODULE, 0, &card);
@@ -533,6 +608,8 @@ static void hda_tegra_probe_work(struct work_struct *work)
 	if (err < 0)
 		goto out_free;
 
+	tegra_pd_add_device(hda->dev);
+
 	/* create codec instances */
 	err = azx_probe_codecs(chip, 0);
 	if (err < 0)
@@ -549,12 +626,15 @@ static void hda_tegra_probe_work(struct work_struct *work)
 	chip->running = 1;
 	snd_hda_set_power_save(&chip->bus, power_save * 1000);
 
+	pm_runtime_put(hda->dev);
+
  out_free:
 	return; /* no error return from async probe */
 }
 
 static int hda_tegra_remove(struct platform_device *pdev)
 {
+	pm_runtime_get_noresume(&pdev->dev);
 	return snd_card_free(dev_get_drvdata(&pdev->dev));
 }
 

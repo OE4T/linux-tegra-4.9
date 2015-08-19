@@ -15,7 +15,7 @@
  */
 
 #include "tegra186-priv-quill-p3310-1000-a00-00-base.dts"
-#include "tegra186-modules/tegra186-jetson-super-module-e2614-0000-a00.dtsi"
+#include "tegra186-modules/tegra186-super-module-e2614-a00-p2597-1000-a00.dtsi"
 / {
 	nvidia,dtsfilename = __FILE__;
 	nvidia,super-module = "2614:0000:A00";

@@ -1,6 +1,5 @@
 /*
- * tegra186-priv-quill-p3310-1000-a00-00-base-sm-2614-b00.dts:
- * 			Quill A00 Board with super module E2614
+ * tegra186-super-module-e2614-a00-p2597-1000-a00.dtsi: Jetson super module E2614
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -14,9 +13,5 @@
  * more details.
  */
 
-#include "tegra186-priv-quill-p3310-1000-a00-00-base.dts"
-#include "tegra186-modules/tegra186-super-module-e2614-b00-p2597-1000-a00.dtsi"
-/ {
-	nvidia,dtsfilename = __FILE__;
-	nvidia,super-module = "2614:0000:B00";
-};
+#include "tegra186-super-module-e2614-a00-p2597-1000-a00-common.dtsi"
+#include "tegra186-super-module-e2614-a00-p2597-1000-a00-audio.dtsi"

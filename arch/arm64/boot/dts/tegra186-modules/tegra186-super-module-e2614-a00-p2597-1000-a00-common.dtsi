@@ -1,6 +1,5 @@
 /*
- * tegra186-jetson-super-module-e2614-0000-b00.dtsi:
- *		Jetson super module E2614
+ * tegra186-super-module-e2614-a00-p2597-1000-a00-common.dtsi: Jetson super module E2614
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,8 +12,6 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
-
-#include "tegra186-jetson-super-module-e2614-a00-audio.dtsi"
 
 / {
 	i2c@3170000 {
@@ -34,6 +31,75 @@
 				i2c-mux,deselect-on-exit;
 				#address-cells = <1>;
 				#size-cells = <0>;
+				ina3221x@40 {
+					compatible = "ti,ina3221x";
+					reg = <0x40>;
+					ti,trigger-config = <0x7003>;
+					ti,continuous-config = <0x7c07>;
+					#address-cells = <1>;
+					#size-cells = <0>;
+					channel@0 {
+						reg = <0x0>;
+						ti,rail-name = "VDD_5V";
+						ti,shunt-resistor-mohm = <10>;
+					};
+					channel@1 {
+						reg = <0x1>;
+						ti,rail-name = "VDD_3V3";
+						ti,shunt-resistor-mohm = <10>;
+					};
+					channel@2 {
+						reg = <0x2>;
+						ti,rail-name = "VDD_1V8";
+						ti,shunt-resistor-mohm = <1>;
+					};
+				};
+				ina3221x@41 {
+					compatible = "ti,ina3221x";
+					reg = <0x41>;
+					ti,trigger-config = <0x7003>;
+					ti,continuous-config = <0x7c07>;
+					#address-cells = <1>;
+					#size-cells = <0>;
+					channel@0 {
+						reg = <0x0>;
+						ti,rail-name = "VDD_5V_AUD";
+						ti,shunt-resistor-mohm = <1>;
+					};
+					channel@1 {
+						reg = <0x1>;
+						ti,rail-name = "VDD_3V3_AUD";
+						ti,shunt-resistor-mohm = <10>;
+					};
+					channel@2 {
+						reg = <0x2>;
+						ti,rail-name = "VDD_1V8_AUD";
+						ti,shunt-resistor-mohm = <10>;
+					};
+				};
+				ina3221x@42 {
+					compatible = "ti,ina3221x";
+					reg = <0x42>;
+					ti,trigger-config = <0x7003>;
+					ti,continuous-config = <0x7c07>;
+					#address-cells = <1>;
+					#size-cells = <0>;
+					channel@0 {
+						reg = <0x0>;
+						ti,rail-name = "VDD_3V3_GPS";
+						ti,shunt-resistor-mohm = <10>;
+					};
+					channel@1 {
+						reg = <0x1>;
+						ti,rail-name = "VDD_3V3_NFC";
+						ti,shunt-resistor-mohm = <10>;
+					};
+					channel@2 {
+						reg = <0x2>;
+						ti,rail-name = "VDD_3V3_GYRO";
+						ti,shunt-resistor-mohm = <10>;
+					};
+				};
 			};
 			i2c@2 {
 				reg = <2>;
@@ -47,6 +113,13 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 			};
+		};
+
+		gpio_i2c_1_20: gpio@20 {
+			compatible = "ti,tca6416";
+			reg = <0x20>;
+			gpio-controller;
+			#gpio-cells = <2>;
 		};
 	};
 

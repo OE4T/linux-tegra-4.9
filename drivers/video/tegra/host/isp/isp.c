@@ -646,7 +646,7 @@ static struct of_device_id tegra_isp_domain_match[] = {
 	 .data = (struct nvhost_device_data *)&t21_ispb_info},
 #endif
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	{.compatible = "nvidia,tegra186-ve-pd",
+	{.compatible = "nvidia,tegra186-ispa-pd",
 	 .data = (struct nvhost_device_data *)&t18_isp_info},
 #endif
 	{},

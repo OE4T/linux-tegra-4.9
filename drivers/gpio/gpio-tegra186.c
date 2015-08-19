@@ -963,6 +963,57 @@ static int __init tegra_gpio_init(void)
 }
 postcore_initcall(tegra_gpio_init);
 
+#ifdef	CONFIG_DEBUG_FS
+
+#define TOTAL_GPIOS 253
+
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
+
+static int dbg_gpio_show(struct seq_file *s, void *unused)
+{
+	int i;
+	volatile bool accessible;
+	seq_printf(s, "Pin:ENB DBC IN OUT_CTRL OUT_VAL INT_CLR \n");
+
+	for (i = 0; i < TOTAL_GPIOS; i++) {
+		accessible = is_gpio_accessible(i);
+		if (accessible) {
+			seq_printf(s,
+				"%d   0x%x 0x%x 0x%x 0x%x 0x%x 0x%x \n",
+				i,
+				tegra_gpio_readl(i, GPIO_ENB_CONFIG_REG),
+				tegra_gpio_readl(i, GPIO_DBC_THRES_REG),
+				tegra_gpio_readl(i, GPIO_INPUT_REG),
+				tegra_gpio_readl(i, GPIO_OUT_CTRL_REG),
+				tegra_gpio_readl(i, GPIO_OUT_VAL_REG),
+				tegra_gpio_readl(i, GPIO_INT_CLEAR_REG));
+		}
+	}
+	return 0;
+}
+
+static int dbg_gpio_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_gpio_show, &inode->i_private);
+}
+
+static const struct file_operations debug_fops = {
+	.open		= dbg_gpio_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int __init tegra_gpio_debuginit(void)
+{
+	(void) debugfs_create_file("tegra_gpio", S_IRUGO,
+					NULL, NULL, &debug_fops);
+	return 0;
+}
+late_initcall(tegra_gpio_debuginit);
+#endif
+
 MODULE_AUTHOR("Suresh Mangipudi <smangipudi@nvidia.com>");
 MODULE_DESCRIPTION("NVIDIA Tegra186 GPIO driver");
 MODULE_LICENSE("GPL v2");

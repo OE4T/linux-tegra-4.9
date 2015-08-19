@@ -871,8 +871,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		/* TODO: seamless boot mode needs initialize the state */
 	} else {
 		hdmi->enabled = false;
-		hdmi->clock_refcount = 0;
-		mutex_init(&hdmi->clock_refcount_lock);
+		atomic_set(&hdmi->clock_refcount, 0);
 	}
 	atomic_set(&hdmi->suspended, 0);
 
@@ -1528,30 +1527,19 @@ void tegra_hdmi_get(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 
-	mutex_lock(&hdmi->clock_refcount_lock);
-
-	if (hdmi->clock_refcount++)
-		goto fail;
-	_tegra_hdmi_clock_enable(hdmi);
-
-fail:
-	mutex_unlock(&hdmi->clock_refcount_lock);
+	if (atomic_inc_return(&hdmi->clock_refcount) == 1)
+		_tegra_hdmi_clock_enable(hdmi);
 }
 
 void tegra_hdmi_put(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 
-	if (WARN_ONCE(hdmi->clock_refcount <= 0,
+	if (WARN_ONCE(atomic_read(&hdmi->clock_refcount) <= 0,
 		"hdmi: clock refcount imbalance"))
-		goto fail;
-	if (--hdmi->clock_refcount != 0)
-		goto fail;
-
-	_tegra_hdmi_clock_disable(hdmi);
-
-fail:
-	mutex_unlock(&hdmi->clock_refcount_lock);
+		return;
+	if (atomic_dec_return(&hdmi->clock_refcount) == 0)
+		_tegra_hdmi_clock_disable(hdmi);
 }
 
 /* TODO: add support for other deep colors */

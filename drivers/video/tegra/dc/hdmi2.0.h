@@ -282,8 +282,7 @@ struct tegra_hdmi {
 	struct tegra_dc_sor_data *sor;
 	struct hdmi_avi_infoframe avi;
 	bool enabled;
-	int clock_refcount;
-	struct mutex clock_refcount_lock;
+	atomic_t clock_refcount;
 
 	bool dvi;
 

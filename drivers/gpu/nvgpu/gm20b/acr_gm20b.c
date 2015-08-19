@@ -362,7 +362,7 @@ int prepare_ucode_blob(struct gk20a *g)
 	gm20b_dbg_pmu("prepare ucode blob return 0\n");
 	free_acr_resources(g, plsfm);
  free_sgt:
-	kfree(sgt);
+	gk20a_free_sgtable(&sgt);
 	return err;
 }
 

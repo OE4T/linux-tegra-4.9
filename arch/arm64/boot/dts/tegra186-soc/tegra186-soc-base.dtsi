@@ -29,7 +29,7 @@
 #include "tegra186-soc/tegra186-soc-i2c.dtsi"
 #include "tegra186-soc/tegra186-soc-spi.dtsi"
 #include "tegra186-soc/tegra186-soc-pwm.dtsi"
-#include "../../../../include/dt-bindings/soc/nvidia,tegra186-powergate.h"
+#include "../../../../include/dt-bindings/soc/tegra186-powergate.h"
 #include "tegra186-soc/tegra186-soc-uart.dtsi"
 #include "tegra186-soc/tegra186-soc-eqos.dtsi"
 
@@ -88,6 +88,15 @@
 		is_off;
 		#power-domain-cells = <0>;
 		power-domains = <&host1x_pd>;
+		partition-id = <TEGRA186_POWER_DOMAIN_NVDEC>;
+	};
+
+	ispa_pd: ispa-pd {
+		compatible = "nvidia,tegra186-ispa-pd";
+		is_off;
+		#power-domain-cells = <0>;
+		power-domains = <&host1x_pd>;
+		partition-id = <TEGRA186_POWER_DOMAIN_ISPA>;
 	};
 
 	ve_pd: ve-pd {
@@ -95,6 +104,7 @@
 		is_off;
 		#power-domain-cells = <0>;
 		power-domains = <&host1x_pd>;
+		partition-id = <TEGRA186_POWER_DOMAIN_VE>;
 	};
 
 	vic03_pd: vic03-pd {
@@ -102,6 +112,7 @@
 		is_off;
 		#power-domain-cells = <0>;
 		power-domains = <&host1x_pd>;
+		partition-id = <TEGRA186_POWER_DOMAIN_VIC>;
 	};
 
 	msenc_pd: msenc-pd {
@@ -109,6 +120,7 @@
 		is_off;
 		#power-domain-cells = <0>;
 		power-domains = <&host1x_pd>;
+		partition-id = <TEGRA186_POWER_DOMAIN_MPE>;
 	};
 
 	nvjpg_pd: nvjpg-pd {
@@ -116,6 +128,7 @@
 		is_off;
 		#power-domain-cells = <0>;
 		power-domains = <&host1x_pd>;
+		partition-id = <TEGRA186_POWER_DOMAIN_NVJPG>;
 	};
 
 	gpu_pd: gpu-pd {
@@ -123,67 +136,55 @@
 		is_off;
 		#power-domain-cells = <0>;
 		power-domains = <&host1x_pd>;
-	};
-
-	nvcsi_pd: nvcsi-pd {
-		compatible = "nvidia,tegra186-nvcsi-pd";
-		is_off;
-		#power-domain-cells = <0>;
-		power-domains = <&host1x_pd>;
+		partition-id = <TEGRA186_POWER_DOMAIN_GPU>;
 	};
 
 	pcie_pd: pcie-pd {
 		compatible = "nvidia, tegra186-pcie-pd";
 		#power-domain-cells = <0>;
-		partition-id = <TEGRA_POWERGATE_PCIE>;
+		partition-id = <TEGRA186_POWER_DOMAIN_PCX>;
 	};
 
 	sata_pd: sata-pd {
 		compatible = "nvidia, tegra186-sata-pd";
 		#power-domain-cells = <0>;
-		partition-id = <TEGRA_POWERGATE_SATA>;
-	};
-
-	sor_pd: sor-pd {
-		compatible = "nvidia, tegra186-sor-pd";
-		#power-domain-cells = <0>;
-		partition-id = <TEGRA_POWERGATE_SOR>;
+		partition-id = <TEGRA186_POWER_DOMAIN_SAX>;
 	};
 
 	disa_pd: disa-pd {
 		compatible = "nvidia, tegra186-disa-pd";
 		#power-domain-cells = <0>;
-		partition-id = <TEGRA_POWERGATE_DISA>;
+		partition-id = <TEGRA186_POWER_DOMAIN_DISP>;
 	};
 
 	disb_pd: disb-pd {
 		compatible = "nvidia, tegra186-disb-pd";
 		#power-domain-cells = <0>;
-		partition-id = <TEGRA_POWERGATE_DISB>;
+		partition-id = <TEGRA186_POWER_DOMAIN_DISPB>;
 	};
 
 	disc_pd: disc-pd {
 		compatible = "nvidia, tegra186-disc-pd";
 		#power-domain-cells = <0>;
-		partition-id = <TEGRA_POWERGATE_DISC>;
+		partition-id = <TEGRA186_POWER_DOMAIN_DISPC>;
 	};
 
 	xusba_pd: xusba-pd {
 		compatible = "nvidia, tegra186-xusba-pd";
 		#power-domain-cells = <0>;
-		partition-id = <TEGRA_POWERGATE_XUSBA>;
+		partition-id = <TEGRA186_POWER_DOMAIN_XUSBA>;
 	};
 
 	xusbb_pd: xusbb-pd {
 		compatible = "nvidia, tegra186-xusbb-pd";
 		#power-domain-cells = <0>;
-		partition-id = <TEGRA_POWERGATE_XUSBB>;
+		partition-id = <TEGRA186_POWER_DOMAIN_XUSBB>;
 	};
 
 	xusbc_pd: xusbc-pd {
 		compatible = "nvidia, tegra186-xusbc-pd";
 		#power-domain-cells = <0>;
-		partition-id = <TEGRA_POWERGATE_XUSBC>;
+		partition-id = <TEGRA186_POWER_DOMAIN_XUSBC>;
 	};
 
 	tegra-carveouts {
@@ -483,7 +484,7 @@
 
 		nvcsi@150c0000 {
 			compatible = "nvidia,tegra186-nvcsi";
-			power-domains = <&nvcsi_pd>;
+			power-domains = <&ve_pd>;
 			reg = <0x0 0x150c0000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_NVCSI>;
 			clocks = <&tegra_car TEGRA186_CLK_NVCSI>;
@@ -510,7 +511,7 @@
 
 		isp@15600000 {
 			compatible = "nvidia,tegra186-isp";
-			power-domains = <&ve_pd>;
+			power-domains = <&ispa_pd>;
                         reg = <0x0 0x15600000 0x0 0x00040000>;
                         interrupts = <0 205 0x04>;
 			resets = <&tegra_car TEGRA186_RESET_ISP>;

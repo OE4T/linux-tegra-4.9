@@ -979,6 +979,92 @@ static const struct file_operations dbg_hotplug_fops = {
 	.release = single_release,
 };
 
+static int bits_per_pixel_show(struct seq_file *s, void *unused)
+{
+	struct tegra_dc_dp_data *dp = s->private;
+	struct tegra_dc_dp_link_config *cfg = NULL;
+
+	if (WARN_ON(!dp || !dp->dc || !dp->dc->out))
+		return -EINVAL;
+	cfg = &dp->link_cfg;
+
+	if (WARN_ON(!cfg))
+		return -EINVAL;
+
+	seq_puts(s, "\n");
+	seq_printf(s, "DP Bits Per Pixel: %u\n", cfg->bits_per_pixel);
+	return 0;
+}
+
+static ssize_t bits_per_pixel_set(struct file *file, const char __user *buf,
+						size_t count, loff_t *off)
+{
+	struct seq_file *s = file->private_data;
+	struct tegra_dc_dp_data *dp = s->private;
+	struct tegra_dc_dp_link_config *cfg = NULL;
+	u32 bits_per_pixel = 0, previous_bpp = 0;
+	int ret = 0;
+
+	if (WARN_ON(!dp || !dp->dc || !dp->dc->out))
+		return -EINVAL;
+
+	ret = kstrtouint_from_user(buf, count, 10, &bits_per_pixel);
+	if (ret < 0)
+		return ret;
+
+	cfg = &dp->link_cfg;
+
+	if (WARN_ON(!cfg))
+		return -EINVAL;
+
+	if (cfg->bits_per_pixel == bits_per_pixel)
+		return count;
+	previous_bpp = cfg->bits_per_pixel;
+
+	/* disable the dc and output controllers */
+	if (dp->dc->enabled)
+		tegra_dc_disable(dp->dc);
+
+	if ((bits_per_pixel == 18) || (bits_per_pixel == 24))
+		dev_info(&dp->dc->ndev->dev, "Setting the bits per pixel from %u to %u\n",
+			cfg->bits_per_pixel, bits_per_pixel);
+	else {
+		dev_info(&dp->dc->ndev->dev, "%ubpp is not supported. Restoring to %ubpp\n",
+		bits_per_pixel, cfg->bits_per_pixel);
+		bits_per_pixel = previous_bpp;
+	}
+
+	dp->dc->out->depth = bits_per_pixel;
+	cfg->bits_per_pixel = bits_per_pixel;
+
+	ret = tegra_dc_dp_calc_config(dp, dp->mode, cfg);
+	if (!ret) {
+		dev_info(&dp->dc->ndev->dev, "Unable to set %ubpp properly. Restoring to %ubpp\n",
+			cfg->bits_per_pixel, previous_bpp);
+		dp->dc->out->depth = previous_bpp;
+		cfg->bits_per_pixel = previous_bpp;
+	}
+
+	/* enable the dc and output controllers */
+	if (!dp->dc->enabled)
+		tegra_dc_enable(dp->dc);
+
+	return count;
+}
+
+static int bits_per_pixel_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, bits_per_pixel_show, inode->i_private);
+}
+
+static const struct file_operations bits_per_pixel_fops = {
+	.open		= bits_per_pixel_open,
+	.read		= seq_read,
+	.write		= bits_per_pixel_set,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static struct dentry *dpdir;
 
 static void tegra_dc_dp_debug_create(struct tegra_dc_dp_data *dp)
@@ -997,6 +1083,10 @@ static void tegra_dc_dp_debug_create(struct tegra_dc_dp_data *dp)
 		goto free_out;
 	retval = debugfs_create_file("linkspeed", S_IRUGO, dpdir, dp,
 		&link_speed_fops);
+	if (!retval)
+		goto free_out;
+	retval = debugfs_create_file("bitsperpixel", S_IRUGO, dpdir, dp,
+		&bits_per_pixel_fops);
 	if (!retval)
 		goto free_out;
 
@@ -1132,7 +1222,6 @@ bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 	unsigned long rate;
 
 	cfg->is_valid = false;
-
 	rate = tegra_dc_pclk_round_rate(dp->sor->dc, dp->sor->dc->mode.pclk);
 
 	if (!link_rate || !cfg->lane_count || !rate ||

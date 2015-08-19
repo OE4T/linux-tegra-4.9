@@ -418,6 +418,10 @@ int nvhost_intr_register_notifier(struct platform_device *pdev,
 				  void (*callback)(void *, int),
 				  void *private_data);
 
+int nvhost_intr_register_fast_notifier(struct platform_device *pdev,
+				  u32 id, u32 thresh,
+				  void (*callback)(void *, int),
+				  void *private_data);
 
 #ifdef CONFIG_TEGRA_GRHOST
 void nvhost_debug_dump_device(struct platform_device *pdev);

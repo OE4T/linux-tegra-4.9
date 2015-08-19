@@ -229,6 +229,7 @@ static action_handler action_handlers[NVHOST_INTR_ACTION_COUNT] = {
 	action_signal_sync_pt,
 	action_wakeup,
 	action_wakeup_interruptible,
+	action_notify,
 	action_submit_complete,
 	action_notify,
 };
@@ -451,8 +452,9 @@ void *nvhost_intr_alloc_waiter(void)
 			GFP_KERNEL|__GFP_REPEAT);
 }
 
-int nvhost_intr_register_notifier(struct platform_device *pdev,
+static int __nvhost_intr_register_notifier(struct platform_device *pdev,
 				  u32 id, u32 thresh,
+				  enum nvhost_intr_action action,
 				  void (*callback)(void *, int),
 				  void *private_data)
 {
@@ -486,7 +488,7 @@ int nvhost_intr_register_notifier(struct platform_device *pdev,
 
 	err = nvhost_intr_add_action(&master->intr,
 				     id, thresh,
-				     NVHOST_INTR_ACTION_NOTIFY,
+				     action,
 				     notifier,
 				     waiter,
 				     NULL);
@@ -500,7 +502,28 @@ err_alloc_notifier:
 err_alloc_waiter:
 	return err;
 }
+
+int nvhost_intr_register_notifier(struct platform_device *pdev,
+				  u32 id, u32 thresh,
+				  void (*callback)(void *, int),
+				  void *private_data)
+{
+	return __nvhost_intr_register_notifier(pdev, id, thresh,
+				  NVHOST_INTR_ACTION_NOTIFY,
+				  callback, private_data);
+}
 EXPORT_SYMBOL(nvhost_intr_register_notifier);
+
+int nvhost_intr_register_fast_notifier(struct platform_device *pdev,
+				  u32 id, u32 thresh,
+				  void (*callback)(void *, int),
+				  void *private_data)
+{
+	return __nvhost_intr_register_notifier(pdev, id, thresh,
+				  NVHOST_INTR_ACTION_FAST_NOTIFY,
+				  callback, private_data);
+}
+EXPORT_SYMBOL(nvhost_intr_register_fast_notifier);
 
 void nvhost_intr_put_ref(struct nvhost_intr *intr, u32 id, void *ref)
 {

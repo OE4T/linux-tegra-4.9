@@ -49,6 +49,13 @@ enum nvhost_intr_action {
 	NVHOST_INTR_ACTION_WAKEUP_INTERRUPTIBLE,
 
 	/**
+	 * Fast notifier event
+	 * 'data' points to a callback and private data through internal
+	 * structure
+	 */
+	NVHOST_INTR_ACTION_FAST_NOTIFY,
+
+	/**
 	 * Perform cleanup after a submit has completed.
 	 * 'data' points to a channel
 	 */

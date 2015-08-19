@@ -28,6 +28,7 @@
 #include <linux/vmalloc.h>
 
 #include "debug_gk20a.h"
+#include "ctxsw_trace_gk20a.h"
 
 #include "gk20a.h"
 #include "dbg_gpu_gk20a.h"
@@ -919,6 +920,9 @@ static void gk20a_free_channel(struct channel_gk20a *ch)
 			timeout);
 
 	gk20a_free_error_notifiers(ch);
+
+	if (g->ops.fecs_trace.unbind_channel)
+		g->ops.fecs_trace.unbind_channel(g, ch);
 
 	/* release channel ctx */
 	g->ops.gr.free_channel_ctx(ch);

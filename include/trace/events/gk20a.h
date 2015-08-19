@@ -387,7 +387,7 @@ TRACE_EVENT(gk20a_as_ioctl_get_va_regions,
 TRACE_EVENT(gk20a_mmu_fault,
 	    TP_PROTO(u32 fault_hi, u32 fault_lo,
 		     u32 fault_info,
-		     u32 instance,
+		     u64 instance,
 		     u32 engine_id,
 		     const char *engine,
 		     const char *client,
@@ -398,7 +398,7 @@ TRACE_EVENT(gk20a_mmu_fault,
 			 __field(u32, fault_hi)
 			 __field(u32, fault_lo)
 			 __field(u32, fault_info)
-			 __field(u32, instance)
+			 __field(u64, instance)
 			 __field(u32, engine_id)
 			 __field(const char *, engine)
 			 __field(const char *, client)
@@ -414,7 +414,7 @@ TRACE_EVENT(gk20a_mmu_fault,
 		       __entry->client = client;
 		       __entry->fault_type = fault_type;
 		       ),
-	    TP_printk("fault=0x%x,%08x info=0x%x instance=0x%x engine_id=%d engine=%s client=%s type=%s",
+	    TP_printk("fault=0x%x,%08x info=0x%x instance=0x%llx engine_id=%d engine=%s client=%s type=%s",
 		      __entry->fault_hi, __entry->fault_lo,
 		      __entry->fault_info, __entry->instance, __entry->engine_id,
 		      __entry->engine, __entry->client, __entry->fault_type)

@@ -18,6 +18,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/pm_runtime.h>
 #include "vgpu/vgpu.h"
+#include "vgpu/fecs_trace_vgpu.h"
 #include "gk20a/debug_gk20a.h"
 #include "gk20a/hal_gk20a.h"
 #include "gk20a/hw_mc_gk20a.h"
@@ -259,6 +260,7 @@ void vgpu_init_hal_common(struct gk20a *g)
 	vgpu_init_ltc_ops(gops);
 	vgpu_init_mm_ops(gops);
 	vgpu_init_debug_ops(gops);
+	vgpu_init_fecs_trace_ops(gops);
 }
 
 static int vgpu_init_hal(struct gk20a *g)

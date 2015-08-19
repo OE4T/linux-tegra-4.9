@@ -56,6 +56,7 @@
 #include "debug_gk20a.h"
 #include "semaphore_gk20a.h"
 #include "platform_gk20a.h"
+#include "ctxsw_trace_gk20a.h"
 
 #define BLK_SIZE (256)
 
@@ -2854,6 +2855,13 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 			gk20a_err(dev_from_gk20a(g),
 				"fail to load golden ctx image");
 			goto out;
+		}
+		if (g->ops.fecs_trace.bind_channel) {
+			err = g->ops.fecs_trace.bind_channel(g, c);
+			if (err) {
+				gk20a_warn(dev_from_gk20a(g),
+					"fail to bind channel for ctxsw trace");
+			}
 		}
 		c->first_init = true;
 	}

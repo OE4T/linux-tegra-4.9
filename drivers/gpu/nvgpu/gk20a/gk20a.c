@@ -60,6 +60,7 @@
 #include "hw_gr_gk20a.h"
 #include "hw_fb_gk20a.h"
 #include "gk20a_scale.h"
+#include "ctxsw_trace_gk20a.h"
 #include "dbg_gpu_gk20a.h"
 #include "gk20a_allocator.h"
 #include "hal.h"
@@ -80,7 +81,7 @@
 /* TODO: Change to e.g. "nvidia-gpu%s" once we have symlinks in place. */
 #define INTERFACE_NAME "nvhost%s-gpu"
 
-#define GK20A_NUM_CDEVS 6
+#define GK20A_NUM_CDEVS 7
 
 #define EMC3D_DEFAULT_RATIO 750
 
@@ -167,6 +168,19 @@ static const struct file_operations gk20a_tsg_ops = {
 	.compat_ioctl = gk20a_tsg_dev_ioctl,
 #endif
 	.unlocked_ioctl = gk20a_tsg_dev_ioctl,
+};
+
+static const struct file_operations gk20a_ctxsw_ops = {
+	.owner = THIS_MODULE,
+	.release = gk20a_ctxsw_dev_release,
+	.open = gk20a_ctxsw_dev_open,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = gk20a_ctxsw_dev_ioctl,
+#endif
+	.unlocked_ioctl = gk20a_ctxsw_dev_ioctl,
+	.poll = gk20a_ctxsw_dev_poll,
+	.read = gk20a_ctxsw_dev_read,
+	.mmap = gk20a_ctxsw_dev_mmap,
 };
 
 static inline void sim_writel(struct gk20a *g, u32 r, u32 v)
@@ -881,6 +895,10 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 		goto done;
 	}
 
+	err = gk20a_ctxsw_trace_init(g);
+	if (err)
+		gk20a_warn(dev, "could not initialize ctxsw tracing");
+
 	/* Restore the debug setting */
 	g->ops.mm.set_debug_mode(g, g->mmu_debug_ctrl);
 
@@ -1009,6 +1027,11 @@ void gk20a_user_deinit(struct platform_device *dev)
 		cdev_del(&g->tsg.cdev);
 	}
 
+	if (g->ctxsw.node) {
+		device_destroy(g->class, g->ctxsw.cdev.dev);
+		cdev_del(&g->ctxsw.cdev);
+	}
+
 	if (g->cdev_region)
 		unregister_chrdev_region(g->cdev_region, GK20A_NUM_CDEVS);
 
@@ -1073,6 +1096,15 @@ int gk20a_user_init(struct platform_device *dev)
 				  &gk20a_tsg_ops);
 	if (err)
 		goto fail;
+
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+	err = gk20a_create_device(dev, devno++, "-ctxsw",
+				  &g->ctxsw.cdev, &g->ctxsw.node,
+				  &gk20a_ctxsw_ops);
+	if (err)
+		goto fail;
+#endif
+
 
 	return 0;
 fail:
@@ -1553,6 +1585,8 @@ static int __exit gk20a_remove(struct platform_device *dev)
 
 	if (platform->has_cde)
 		gk20a_cde_destroy(g);
+
+	gk20a_ctxsw_trace_cleanup(g);
 
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
 		gk20a_scale_exit(dev);
@@ -2090,6 +2124,19 @@ gk20a_request_firmware(struct gk20a *g, const char *fw_name)
 
 	return fw;
 }
+
+
+u64 gk20a_read_ptimer(struct gk20a *g)
+{
+	u32 time_hi0 = gk20a_readl(g, timer_time_1_r());
+	u32 time_lo = gk20a_readl(g, timer_time_0_r());
+	u32 time_hi1 = gk20a_readl(g, timer_time_1_r());
+	u32 time_hi = (time_lo & (1L << 31)) ? time_hi0 : time_hi1;
+	u64 time = ((u64)time_hi << 32) | time_lo;
+
+	return time;
+}
+
 
 MODULE_LICENSE("GPL v2");
 module_init(gk20a_init);

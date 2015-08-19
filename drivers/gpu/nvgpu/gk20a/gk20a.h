@@ -25,6 +25,8 @@ struct channel_gk20a;
 struct gr_gk20a;
 struct sim_gk20a;
 struct gk20a_ctxsw_ucode_segments;
+struct gk20a_fecs_trace;
+struct gk20a_ctxsw_trace;
 struct acr_gm20b;
 
 #include <linux/sched.h>
@@ -373,6 +375,19 @@ struct gpu_ops {
 		bool use_dma_for_fw_bootstrap;
 	} gr_ctx;
 	struct {
+		int (*init)(struct gk20a *g);
+		int (*max_entries)(struct gk20a *,
+			struct nvgpu_ctxsw_trace_filter *);
+		int (*flush)(struct gk20a *g);
+		int (*poll)(struct gk20a *g);
+		int (*enable)(struct gk20a *g);
+		int (*disable)(struct gk20a *g);
+		int (*reset)(struct gk20a *g);
+		int (*bind_channel)(struct gk20a *, struct channel_gk20a *);
+		int (*unbind_channel)(struct gk20a *, struct channel_gk20a *);
+		int (*deinit)(struct gk20a *g);
+	} fecs_trace;
+	struct {
 		bool (*support_sparse)(struct gk20a *g);
 		bool (*is_debug_mode_enabled)(struct gk20a *g);
 		void (*set_debug_mode)(struct gk20a *g, bool enable);
@@ -613,6 +628,11 @@ struct gk20a {
 		struct device *node;
 	} tsg;
 
+	struct {
+		struct cdev cdev;
+		struct device *node;
+	} ctxsw;
+
 	struct mutex client_lock;
 	int client_refcount; /* open channels and ctrl nodes */
 
@@ -638,6 +658,9 @@ struct gk20a {
 	struct devfreq *devfreq;
 
 	struct gk20a_scale_profile *scale_profile;
+
+	struct gk20a_ctxsw_trace *ctxsw_trace;
+	struct gk20a_fecs_trace *fecs_trace;
 
 	struct device_dma_parameters dma_parms;
 
@@ -716,6 +739,7 @@ enum gk20a_dbg_categories {
 	gpu_dbg_gpu_dbg = BIT(9),  /* gpu debugger/profiler */
 	gpu_dbg_cde     = BIT(10), /* cde info messages */
 	gpu_dbg_cde_ctx = BIT(11), /* cde context usage messages */
+	gpu_dbg_ctxsw   = BIT(12), /* ctxsw tracing */
 	gpu_dbg_mem     = BIT(31), /* memory accesses, very verbose */
 };
 
@@ -962,4 +986,6 @@ static inline u32 scale_ptimer(u32 timeout , u32 scale10x)
 	else
 		return (timeout * 10) / scale10x;
 }
+
+u64 gk20a_read_ptimer(struct gk20a *g);
 #endif /* GK20A_H */

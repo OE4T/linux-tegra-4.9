@@ -22,6 +22,7 @@
 #include "gk20a_gating_reglist.h"
 #include "channel_gk20a.h"
 #include "gr_ctx_gk20a.h"
+#include "fecs_trace_gk20a.h"
 #include "mm_gk20a.h"
 #include "mc_gk20a.h"
 #include "pmu_gk20a.h"
@@ -57,6 +58,7 @@ int gk20a_init_hal(struct gk20a *g)
 	gk20a_init_mc(gops);
 	gk20a_init_ltc(gops);
 	gk20a_init_gr_ops(gops);
+	gk20a_init_fecs_trace_ops(gops);
 	gk20a_init_fb(gops);
 	gk20a_init_fifo(gops);
 	gk20a_init_ce2(gops);

@@ -1215,4 +1215,94 @@ struct nvgpu_as_map_buffer_batch_args {
 #define NVGPU_AS_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_as_map_buffer_ex_args)
 
+
+/*
+ * /dev/nvhost-ctxsw-gpu device
+ *
+ * Opening a '/dev/nvhost-ctxsw-gpu' device node creates a way to trace
+ * context switches on GR engine
+ */
+
+#define NVGPU_CTXSW_IOCTL_MAGIC 'C'
+
+#define NVGPU_CTXSW_TAG_SOF			0x00
+#define NVGPU_CTXSW_TAG_CTXSW_REQ_BY_HOST	0x01
+#define NVGPU_CTXSW_TAG_FE_ACK			0x02
+#define NVGPU_CTXSW_TAG_FE_ACK_WFI		0x0a
+#define NVGPU_CTXSW_TAG_FE_ACK_GFXP		0x0b
+#define NVGPU_CTXSW_TAG_FE_ACK_CTAP		0x0c
+#define NVGPU_CTXSW_TAG_FE_ACK_CILP		0x0d
+#define NVGPU_CTXSW_TAG_SAVE_END		0x03
+#define NVGPU_CTXSW_TAG_RESTORE_START		0x04
+#define NVGPU_CTXSW_TAG_CONTEXT_START		0x05
+#define NVGPU_CTXSW_TAG_INVALID_TIMESTAMP	0xff
+#define NVGPU_CTXSW_TAG_LAST			\
+	NVGPU_CTXSW_TAG_INVALID_TIMESTAMP
+
+struct nvgpu_ctxsw_trace_entry {
+	__u8 tag;
+	__u8 vmid;
+	__u16 seqno;		/* sequence number to detect drops */
+	__u32 context_id;	/* context_id as allocated by FECS */
+	__u64 pid;		/* 64-bit is max bits of different OS pid */
+	__u64 timestamp;	/* 64-bit time */
+};
+
+#define NVGPU_CTXSW_RING_HEADER_MAGIC 0x7000fade
+#define NVGPU_CTXSW_RING_HEADER_VERSION 0
+
+struct nvgpu_ctxsw_ring_header {
+	__u32 magic;
+	__u32 version;
+	__u32 num_ents;
+	__u32 ent_size;
+	volatile __u32 drop_count;	/* excluding filtered out events */
+	volatile __u32 write_seqno;
+	volatile __u32 write_idx;
+	volatile __u32 read_idx;
+};
+
+struct nvgpu_ctxsw_ring_setup_args {
+	__u32 size;	/* [in/out] size of ring buffer in bytes (including
+			   header). will be rounded page size. this parameter
+			   is updated with actual allocated size. */
+};
+
+#define NVGPU_CTXSW_FILTER_SIZE	(NVGPU_CTXSW_TAG_LAST + 1)
+#define NVGPU_CTXSW_FILTER_SET(n, p) \
+	((p)->tag_bits[(n) / 64] |=  (1 << ((n) & 63)))
+#define NVGPU_CTXSW_FILTER_CLR(n, p) \
+	((p)->tag_bits[(n) / 64] &= ~(1 << ((n) & 63)))
+#define NVGPU_CTXSW_FILTER_ISSET(n, p) \
+	((p)->tag_bits[(n) / 64] &   (1 << ((n) & 63)))
+#define NVGPU_CTXSW_FILTER_CLR_ALL(p)    memset((void *)(p), 0, sizeof(*(p)))
+#define NVGPU_CTXSW_FILTER_SET_ALL(p)    memset((void *)(p), ~0, sizeof(*(p)))
+
+struct nvgpu_ctxsw_trace_filter {
+	__u64 tag_bits[(NVGPU_CTXSW_FILTER_SIZE + 63) / 64];
+};
+
+struct nvgpu_ctxsw_trace_filter_args {
+	struct nvgpu_ctxsw_trace_filter filter;
+};
+
+#define NVGPU_CTXSW_IOCTL_TRACE_ENABLE \
+	_IO(NVGPU_CTXSW_IOCTL_MAGIC, 1)
+#define NVGPU_CTXSW_IOCTL_TRACE_DISABLE \
+	_IO(NVGPU_CTXSW_IOCTL_MAGIC, 2)
+#define NVGPU_CTXSW_IOCTL_RING_SETUP \
+	_IOWR(NVGPU_CTXSW_IOCTL_MAGIC, 3, struct nvgpu_ctxsw_ring_setup_args)
+#define NVGPU_CTXSW_IOCTL_SET_FILTER \
+	_IOW(NVGPU_CTXSW_IOCTL_MAGIC, 4, struct nvgpu_ctxsw_trace_filter_args)
+#define NVGPU_CTXSW_IOCTL_GET_FILTER \
+	_IOR(NVGPU_CTXSW_IOCTL_MAGIC, 5, struct nvgpu_ctxsw_trace_filter_args)
+#define NVGPU_CTXSW_IOCTL_POLL \
+	_IO(NVGPU_CTXSW_IOCTL_MAGIC, 6)
+
+#define NVGPU_CTXSW_IOCTL_LAST            \
+	_IOC_NR(NVGPU_CTXSW_IOCTL_POLL)
+
+#define NVGPU_CTXSW_IOCTL_MAX_ARG_SIZE	\
+	sizeof(struct nvgpu_ctxsw_trace_filter_args)
+
 #endif

@@ -46,6 +46,8 @@ nvgpu-y := \
 	gk20a/cde_gk20a.o \
 	gk20a/platform_gk20a_generic.o \
 	gk20a/tsg_gk20a.o \
+	gk20a/ctxsw_trace_gk20a.o \
+	gk20a/fecs_trace_gk20a.o \
 	gk20a/mc_gk20a.o \
 	gm20b/hal_gm20b.o \
 	gm20b/ltc_gm20b.o \
@@ -64,7 +66,6 @@ nvgpu-y := \
 	gm20b/debug_gm20b.o \
 	gm20b/cde_gm20b.o \
 	gm20b/therm_gm20b.o
-
 nvgpu-$(CONFIG_TEGRA_GK20A) += gk20a/platform_gk20a_tegra.o
 nvgpu-$(CONFIG_SYNC) += gk20a/sync_gk20a.o
 
@@ -78,6 +79,7 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/debug_vgpu.o \
 	vgpu/vgpu.o \
 	vgpu/dbg_vgpu.o \
+	vgpu/fecs_trace_vgpu.o \
 	vgpu/gk20a/vgpu_hal_gk20a.o \
 	vgpu/gk20a/vgpu_gr_gk20a.o \
 	vgpu/gm20b/vgpu_hal_gm20b.o \

@@ -35,7 +35,7 @@ static const struct gating_desc gp10b_slcg_bus[] = {
 
 /* slcg ce2 */
 static const struct gating_desc gp10b_slcg_ce2[] = {
-	{.addr = 0x00106f28, .prod = 0x00000000, .disable = 0x000007fe},
+	{.addr = 0x00104204, .prod = 0x00000000, .disable = 0x000007fe},
 };
 
 /* slcg chiplet */
@@ -59,7 +59,7 @@ static const struct gating_desc gp10b_slcg_fifo[] = {
 
 /* slcg gr */
 static const struct gating_desc gp10b_slcg_gr[] = {
-	{.addr = 0x004041f4, .prod = 0x00000000, .disable = 0x03fffffe},
+	{.addr = 0x004041f4, .prod = 0x00000002, .disable = 0x03fffffe},
 	{.addr = 0x0040917c, .prod = 0x00020008, .disable = 0x0003fffe},
 	{.addr = 0x00409894, .prod = 0x00000040, .disable = 0x03fffffe},
 	{.addr = 0x004078c4, .prod = 0x00000000, .disable = 0x000001fe},
@@ -136,14 +136,14 @@ static const struct gating_desc gp10b_slcg_priring[] = {
 static const struct gating_desc gp10b_slcg_pwr_csb[] = {
 	{.addr = 0x00000134, .prod = 0x00020008, .disable = 0x0003fffe},
 	{.addr = 0x00000e74, .prod = 0x00000000, .disable = 0x0000000f},
-	{.addr = 0x00000a74, .prod = 0x00000000, .disable = 0x00007ffe},
+	{.addr = 0x00000a74, .prod = 0x00004000, .disable = 0x00007ffe},
 	{.addr = 0x000016b8, .prod = 0x00000000, .disable = 0x0000000f},
 };
 
 /* slcg pmu */
 static const struct gating_desc gp10b_slcg_pmu[] = {
 	{.addr = 0x0010a134, .prod = 0x00020008, .disable = 0x0003fffe},
-	{.addr = 0x0010aa74, .prod = 0x00000000, .disable = 0x00007ffe},
+	{.addr = 0x0010aa74, .prod = 0x00004000, .disable = 0x00007ffe},
 	{.addr = 0x0010ae74, .prod = 0x00000000, .disable = 0x0000000f},
 };
 
@@ -192,7 +192,7 @@ static const struct gating_desc gp10b_blcg_gr[] = {
 	{.addr = 0x00405860, .prod = 0x0000c242, .disable = 0x00000000},
 	{.addr = 0x0040590c, .prod = 0x0000c444, .disable = 0x00000000},
 	{.addr = 0x00408040, .prod = 0x0000c444, .disable = 0x00000000},
-	{.addr = 0x00407000, .prod = 0x4000c141, .disable = 0x00000000},
+	{.addr = 0x00407000, .prod = 0x4000c242, .disable = 0x00000000},
 	{.addr = 0x00405bf0, .prod = 0x0000c444, .disable = 0x00000000},
 	{.addr = 0x0041a890, .prod = 0x0000427f, .disable = 0x00000000},
 	{.addr = 0x0041a8b0, .prod = 0x0000007f, .disable = 0x00000000},

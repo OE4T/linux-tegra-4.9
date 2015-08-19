@@ -25,7 +25,7 @@
 #include <linux/init.h>
 #include <linux/err.h>
 #include <linux/tegra-powergate.h>
-#include <dt-bindings/soc/nvidia,tegra186-powergate.h>
+#include <dt-bindings/soc/tegra186-powergate.h>
 #include <soc/tegra/tegra_bpmp.h>
 
 #include "powergate-priv.h"
@@ -45,23 +45,23 @@
 #define CLK_STATE_OFF		0x0
 
 static const char *partition_names[] = {
-	[TEGRA_POWERGATE_APE] = "audio",
-	[TEGRA_POWERGATE_DFD] = "dfd",
-	[TEGRA_POWERGATE_DISA] = "disp",
-	[TEGRA_POWERGATE_DISB] = "dispb",
-	[TEGRA_POWERGATE_DISC] = "dispc",
-	[TEGRA_POWERGATE_ISPA] = "ispa",
-	[TEGRA_POWERGATE_NVDEC] = "nvdec",
-	[TEGRA_POWERGATE_NVJPG] = "nvjpg",
-	[TEGRA_POWERGATE_NVENC] = "nvenc",
-	[TEGRA_POWERGATE_PCIE] = "pcie",
-	[TEGRA_POWERGATE_SATA] = "sata",
-	[TEGRA_POWERGATE_VE] = "ve",
-	[TEGRA_POWERGATE_VIC] = "vic",
-	[TEGRA_POWERGATE_XUSBA] = "xusba",
-	[TEGRA_POWERGATE_XUSBB] = "xusbb",
-	[TEGRA_POWERGATE_XUSBC] = "xusbc",
-	[TEGRA_POWERGATE_GPU] = "gpu",
+	[TEGRA186_POWER_DOMAIN_AUD] = "audio",
+	[TEGRA186_POWER_DOMAIN_DFD] = "dfd",
+	[TEGRA186_POWER_DOMAIN_DISP] = "disp",
+	[TEGRA186_POWER_DOMAIN_DISPB] = "dispb",
+	[TEGRA186_POWER_DOMAIN_DISPC] = "dispc",
+	[TEGRA186_POWER_DOMAIN_ISPA] = "ispa",
+	[TEGRA186_POWER_DOMAIN_NVDEC] = "nvdec",
+	[TEGRA186_POWER_DOMAIN_NVJPG] = "nvjpg",
+	[TEGRA186_POWER_DOMAIN_MPE] = "nvenc",
+	[TEGRA186_POWER_DOMAIN_PCX] = "pcie",
+	[TEGRA186_POWER_DOMAIN_SAX] = "sata",
+	[TEGRA186_POWER_DOMAIN_VE] = "ve",
+	[TEGRA186_POWER_DOMAIN_VIC] = "vic",
+	[TEGRA186_POWER_DOMAIN_XUSBA] = "xusba",
+	[TEGRA186_POWER_DOMAIN_XUSBB] = "xusbb",
+	[TEGRA186_POWER_DOMAIN_XUSBC] = "xusbc",
+	[TEGRA186_POWER_DOMAIN_GPU] = "gpu",
 };
 
 struct powergate_request {

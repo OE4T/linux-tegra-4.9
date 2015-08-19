@@ -1,7 +1,7 @@
 /*
  * NVCSI driver for T186
  *
- * Copyright (c) 2014, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -100,7 +100,7 @@ static struct platform_driver nvcsi_driver = {
 };
 
 static struct of_device_id tegra_nvcsi_domain_match[] = {
-	{.compatible = "nvidia,tegra186-nvcsi-pd",
+	{.compatible = "nvidia,tegra186-ve-pd",
 	.data = (struct nvhost_device_data *)&t18_nvcsi_info},
 	{},
 };

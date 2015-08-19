@@ -19,7 +19,7 @@ ccflags-y += -DHWA_FPGA_ONLY
 ccflags-y += -DCONFIG_DEBUGFS_OBJ
 ccflags-y += -DCONFIG_PTPSUPPORT_OBJ
 
-obj-m  += eqos.o
+obj-$(CONFIG_EQOS)  += eqos.o
 
 eqos-y += dev.o
 eqos-y += drv.o

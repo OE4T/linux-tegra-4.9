@@ -188,11 +188,11 @@ static void eqos_clock_deinit(struct DWC_ETH_QOS_prv_data *pdata)
 {
 	struct platform_device *pdev = pdata->pdev;
 
-	clk_disable(pdata->tx_clk);
-	clk_disable(pdata->ptp_ref_clk);
-	clk_disable(pdata->rx_clk);
-	clk_disable(pdata->axi_clk);
-	clk_disable(pdata->axi_cbb_clk);
+	clk_disable_unprepare(pdata->tx_clk);
+	clk_disable_unprepare(pdata->ptp_ref_clk);
+	clk_disable_unprepare(pdata->rx_clk);
+	clk_disable_unprepare(pdata->axi_clk);
+	clk_disable_unprepare(pdata->axi_cbb_clk);
 
 	devm_clk_put(&pdev->dev, pdata->tx_clk);
 	devm_clk_put(&pdev->dev, pdata->ptp_ref_clk);
@@ -239,19 +239,19 @@ static int eqos_clock_init(struct DWC_ETH_QOS_prv_data *pdata)
 		goto tx_get_fail;
 	}
 
-	ret = clk_enable(pdata->axi_cbb_clk);
+	ret = clk_prepare_enable(pdata->axi_cbb_clk);
 	if (ret < 0)
 		goto axi_cbb_en_fail;
 
-	ret = clk_enable(pdata->axi_clk);
+	ret = clk_prepare_enable(pdata->axi_clk);
 	if (ret < 0)
 		goto axi_en_fail;
 
-	ret = clk_enable(pdata->rx_clk);
+	ret = clk_prepare_enable(pdata->rx_clk);
 	if (ret < 0)
 		goto rx_en_fail;
 
-	ret = clk_enable(pdata->ptp_ref_clk);
+	ret = clk_prepare_enable(pdata->ptp_ref_clk);
 	if (ret < 0)
 		goto ptp_ref_en_fail;
 
@@ -271,7 +271,7 @@ static int eqos_clock_init(struct DWC_ETH_QOS_prv_data *pdata)
 		goto ptp_ref_set_rate_failed;
 	}
 
-	ret = clk_enable(pdata->tx_clk);
+	ret = clk_prepare_enable(pdata->tx_clk);
 	if (ret < 0)
 		goto tx_en_fail;
 
@@ -284,13 +284,13 @@ static int eqos_clock_init(struct DWC_ETH_QOS_prv_data *pdata)
 
 tx_en_fail:
 ptp_ref_set_rate_failed:
-	clk_disable(pdata->ptp_ref_clk);
+	clk_disable_unprepare(pdata->ptp_ref_clk);
 ptp_ref_en_fail:
-	clk_disable(pdata->rx_clk);
+	clk_disable_unprepare(pdata->rx_clk);
 rx_en_fail:
-	clk_disable(pdata->axi_clk);
+	clk_disable_unprepare(pdata->axi_clk);
 axi_en_fail:
-	clk_disable(pdata->axi_cbb_clk);
+	clk_disable_unprepare(pdata->axi_cbb_clk);
 axi_cbb_en_fail:
 	devm_clk_put(&pdev->dev, pdata->tx_clk);
 tx_get_fail:

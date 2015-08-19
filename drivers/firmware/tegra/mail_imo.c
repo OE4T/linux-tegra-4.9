@@ -45,13 +45,8 @@ static bool imo_rx_ready(int ch)
 
 static void imo_signal_slave(int ch)
 {
-	if (tegra_ivc_write_advance(ivc_channels + ch)) {
+	if (tegra_ivc_write_advance(ivc_channels + ch))
 		WARN_ON(1);
-		return;
-	}
-
-	/* hint to the firmware mail probe */
-	bpmp_writel(1 << ch, HSP_SHRD_SEM_1_SET);
 }
 
 static void imo_free_master(int ch)

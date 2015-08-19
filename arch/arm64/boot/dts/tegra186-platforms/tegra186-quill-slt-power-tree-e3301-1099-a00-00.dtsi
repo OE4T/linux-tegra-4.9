@@ -13,4 +13,4 @@
  *
  */
 
-#include "tegra186-quill-pb-power-tree-e3301-1000-a00-00.dtsi"
+#include "tegra186-quill-char-power-tree-e3301-1080-a00-00.dtsi"

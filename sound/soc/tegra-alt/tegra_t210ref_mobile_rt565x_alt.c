@@ -237,8 +237,8 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 				clk_rate, mclk, clk_out_rate);
 	if (err < 0) {
 		dev_err(card->dev,
-		"Can't configure clocks pll_a = %d Hz clk_out = %d Hz\n",
-		mclk, clk_out_rate);
+		"Can't configure clocks clk_rate %dHz pll_a %dHz clk_out %dHz\n",
+		clk_rate, mclk, clk_out_rate);
 		return err;
 	}
 
@@ -325,6 +325,37 @@ static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 	err = tegra_t210ref_dai_init(rtd, params_rate(params),
 			params_channels(params),
 			(1ULL << (params_format(params))));
+	if (err < 0) {
+		dev_err(card->dev, "Failed dai init\n");
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra_t210ref_compr_set_params(struct snd_compr_stream *cstream)
+{
+	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
+	struct snd_soc_card *card = rtd->card;
+	struct snd_soc_platform *platform = rtd->platform;
+	struct snd_codec codec_params;
+	int err;
+
+	if (platform->driver->compr_ops &&
+		platform->driver->compr_ops->get_params) {
+		err = platform->driver->compr_ops->get_params(cstream,
+			&codec_params);
+		if (err < 0) {
+			dev_err(card->dev, "Failed to get compr params\n");
+			return err;
+		}
+	} else {
+		dev_err(card->dev, "compr ops not set\n");
+		return -EINVAL;
+	}
+
+	err = tegra_t210ref_dai_init(rtd, codec_params.sample_rate,
+			codec_params.ch_out, SNDRV_PCM_FMTBIT_S16_LE);
 	if (err < 0) {
 		dev_err(card->dev, "Failed dai init\n");
 		return err;
@@ -484,6 +515,10 @@ static struct snd_soc_ops tegra_t210ref_ops = {
 	.hw_params = tegra_t210ref_hw_params,
 	.startup = tegra_t210ref_startup,
 	.shutdown = tegra_t210ref_shutdown,
+};
+
+static struct snd_soc_compr_ops tegra_t210ref_compr_ops = {
+	.set_params = tegra_t210ref_compr_set_params,
 };
 
 static const struct snd_soc_dapm_widget tegra_t210ref_dapm_widgets[] = {
@@ -720,11 +755,18 @@ static void dai_link_setup(struct platform_device *pdev, int dummy)
 	tegra_machine_set_dai_init(TEGRA210_DAI_LINK_SFC1_RX,
 		&tegra_t210ref_sfc_init);
 
-	/* set ADSP PCM/COMPR */
+	/* set ADSP PCM */
 	for (i = TEGRA210_DAI_LINK_ADSP_PCM1;
-		i <= TEGRA210_DAI_LINK_ADSP_COMPR2; i++) {
+		i <= TEGRA210_DAI_LINK_ADSP_PCM2; i++) {
 		tegra_machine_set_dai_ops(i,
 			&tegra_t210ref_ops);
+	}
+
+	/* set ADSP COMPR */
+	for (i = TEGRA210_DAI_LINK_ADSP_COMPR1;
+		i <= TEGRA210_DAI_LINK_ADSP_COMPR2; i++) {
+		tegra_machine_set_dai_compr_ops(i,
+			&tegra_t210ref_compr_ops);
 	}
 
 	/* append t210ref specific dai_links */

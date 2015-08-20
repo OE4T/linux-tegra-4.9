@@ -13,6 +13,8 @@
  * more details.
  */
 
+#include "tegra186-super-module-e2614-gps.dtsi"
+
 / {
 	i2c@c240000 {
 		i2cmux@70 {

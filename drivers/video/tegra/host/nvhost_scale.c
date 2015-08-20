@@ -121,8 +121,6 @@ static int nvhost_scale_target(struct device *dev, unsigned long *freq,
 		*freq = profile->devfreq_profile.freq_table[0];
 		return 0;
 	}
-#else
-	return 0;
 #endif
 
 	*freq = clk_round_rate(clk_get_parent(profile->clk), *freq);

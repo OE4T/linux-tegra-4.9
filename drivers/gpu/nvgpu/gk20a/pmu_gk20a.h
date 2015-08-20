@@ -49,7 +49,7 @@
 /* Mapping between AP_CTRLs and Idle counters */
 #define PMU_AP_IDLE_MASK_GRAPHICS	(PMU_AP_IDLE_MASK_HIST_IDX_1)
 
-#define APP_VERSION_T186_0	19816464
+#define APP_VERSION_T186_0	19842227
 #define APP_VERSION_GM20B_4 19008461
 #define APP_VERSION_GM20B_3 18935575
 #define APP_VERSION_GM20B_2 18694072
@@ -337,6 +337,22 @@ struct pmu_mem_v2 {
 	u16 fb_size;
 };
 
+struct pmu_mem_desc_v0 {
+    /*!
+     * Start address of memory surface that is being communicated to the falcon.
+     */
+	u64 dma_addr;
+    /*!
+     * Max allowed DMA transfer size (size of the memory surface). Accesses past
+     * this point may result in page faults and/or memory corruptions.
+     */
+	u16       dma_sizemax;
+    /*!
+     * DMA channel index to be used when accessing this surface.
+     */
+	u8        dma_idx;
+};
+
 struct pmu_dmem {
 	u16 size;
 	u32 offset;
@@ -392,7 +408,7 @@ struct pmu_cmdline_args_v4 {
 	u8 secure_mode;
 	u8 raise_priv_sec;     /*Raise priv level required for desired
 					registers*/
-	struct pmu_mem_v2 gc6_ctx;		/* dmem offset of gc6 context */
+	struct pmu_mem_desc_v0 gc6_ctx;		/* dmem offset of gc6 context */
 	u8 pad;
 };
 
@@ -483,7 +499,7 @@ struct pmu_allocation_v1 {
 struct pmu_allocation_v2 {
 	struct {
 		struct pmu_dmem dmem;
-		struct pmu_mem_v2 fb;
+		struct pmu_mem_desc_v0 fb;
 	} alloc;
 };
 
@@ -1074,10 +1090,12 @@ struct pmu_sequence {
 	union {
 		struct pmu_allocation_v0 in_v0;
 		struct pmu_allocation_v1 in_v1;
+		struct pmu_allocation_v2 in_v2;
 	};
 	union {
 		struct pmu_allocation_v0 out_v0;
 		struct pmu_allocation_v1 out_v1;
+		struct pmu_allocation_v2 out_v2;
 	};
 	u8 *out_payload;
 	pmu_callback callback;

@@ -26,9 +26,13 @@ static void tegra_ahci_controller_deinit(struct ahci_host_priv *hpriv);
 static int tegra_ahci_quirks(struct ahci_host_priv *hpriv);
 static struct ahci_host_priv *
 tegra_ahci_platform_get_resources(struct tegra_ahci_priv *);
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM_RUNTIME
 static int tegra_ahci_runtime_suspend(struct device *dev);
 static int tegra_ahci_runtime_resume(struct device *dev);
+#endif
+#ifdef CONFIG_PM_SLEEP
+static int tegra_ahci_suspend(struct device *dev);
+static int tegra_ahci_resume(struct device *dev);
 #endif
 
 static char * const tegra_rail_names[] = {"vdd-3v3-sata"};
@@ -180,7 +184,7 @@ static const struct ata_port_info ahci_tegra_port_info = {
 	.port_ops	= &ahci_tegra_port_ops,
 };
 
-#ifdef CONFIG_PM
+#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM_RUNTIME)
 static void tegra_ahci_pg_save_registers(struct ata_host *host)
 {
 	struct ahci_host_priv *hpriv =  host->private_data;
@@ -190,33 +194,6 @@ static void tegra_ahci_pg_save_registers(struct ata_host *host)
 	int i;
 
 	pg_save = tegra->pg_save;
-
-	/*
-	 * Driver should save/restore the registers in the order of
-	 * IPFS, CFG, Ext CFG, BAR5.
-	 */
-
-	/* save IPFS registers */
-	regs = ARRAY_SIZE(pg_save_ipfs_registers);
-	tegra_ahci_save_regs(&pg_save, tegra->base_list[TEGRA_SATA_IPFS],
-			pg_save_ipfs_registers, regs);
-	/* after the call, pg_save should point to the next address to save */
-
-	/* save CONFIG registers */
-	regs = ARRAY_SIZE(pg_save_config_registers);
-	tegra_ahci_save_regs(&pg_save, tegra->base_list[TEGRA_SATA_CONFIG],
-			pg_save_config_registers, regs);
-
-	/* save CONFIG per port registers */
-	for (i = 0; i < hpriv->nports; ++i) {
-		tegra_ahci_scfg_writel(hpriv, (1 << i), T_SATA0_INDEX);
-		regs = ARRAY_SIZE(pg_save_config_port_registers);
-		tegra_ahci_save_regs(
-			&pg_save, tegra->base_list[TEGRA_SATA_CONFIG],
-				pg_save_config_port_registers, regs);
-	}
-	tegra_ahci_scfg_writel(hpriv, T_SATA0_INDEX_NONE_SELECTED,
-							T_SATA0_INDEX);
 
 	/* save BAR5 registers */
 	regs = ARRAY_SIZE(pg_save_bar5_registers);
@@ -253,39 +230,12 @@ static void tegra_ahci_pg_restore_registers(struct ata_host *host)
 	struct ahci_host_priv *hpriv =  host->private_data;
 	struct tegra_ahci_priv *tegra = hpriv->plat_data;
 	void *pg_save;
-	u32 regs, val;
-	u32 mask;
+	u32 regs;
 	int i;
 
 	pg_save = tegra->pg_save;
 
-	/*
-	 * Driver should restore the registers in the order of
-	 * IPFS, CFG, Ext CFG, BAR5.
-	 */
-
-	/* restore IPFS registers */
-	regs = ARRAY_SIZE(pg_save_ipfs_registers);
-	tegra_ahci_restore_regs(&pg_save, tegra->base_list[TEGRA_SATA_IPFS],
-			pg_save_ipfs_registers, regs);
-	/* after the call, pg_save should point to the next addr to restore */
-
-	/* restore CONFIG registers */
-	regs = ARRAY_SIZE(pg_save_config_registers);
-	tegra_ahci_restore_regs(&pg_save, tegra->base_list[TEGRA_SATA_CONFIG],
-			pg_save_config_registers, regs);
-
-	/* restore CONFIG per port registers */
-	for (i = 0; i < hpriv->nports; ++i) {
-		tegra_ahci_scfg_writel(hpriv, (1 << i), T_SATA0_INDEX);
-		regs = ARRAY_SIZE(pg_save_config_port_registers);
-		tegra_ahci_restore_regs(&pg_save,
-				tegra->base_list[TEGRA_SATA_CONFIG],
-				pg_save_config_port_registers,
-				regs);
-	}
-	tegra_ahci_scfg_writel(hpriv, T_SATA0_INDEX_NONE_SELECTED,
-							T_SATA0_INDEX);
+	tegra_ahci_controller_init(hpriv);
 
 	/* restore BAR5 registers */
 	regs = ARRAY_SIZE(pg_save_bar5_registers);
@@ -315,18 +265,6 @@ static void tegra_ahci_pg_restore_registers(struct ata_host *host)
 	}
 	tegra_ahci_scfg_writel(hpriv, T_SATA0_INDEX_NONE_SELECTED,
 								T_SATA0_INDEX);
-
-	/* Program Class Code and Programming interface for SATA */
-	val = T_SATA_CFG_SATA_BACKDOOR_PROG_IF_EN;
-	tegra_ahci_scfg_update(hpriv, val, val, T_SATA_CFG_SATA);
-
-	mask = T_SATA_BKDOOR_CC_CLASS_CODE_MASK | T_SATA_BKDOOR_CC_PROG_IF_MASK;
-	val = T_SATA_BKDOOR_CC_CLASS_CODE | T_SATA_BKDOOR_CC_PROG_IF;
-	tegra_ahci_scfg_update(hpriv, val, mask, T_SATA_BKDOOR_CC);
-
-	mask = T_SATA_CFG_SATA_BACKDOOR_PROG_IF_EN;
-	val = (u32) ~T_SATA_CFG_SATA_BACKDOOR_PROG_IF_EN;
-	tegra_ahci_scfg_update(hpriv, val, mask, T_SATA_CFG_SATA);
 }
 
 static int tegra_ahci_pg_save_restore_init(struct ahci_host_priv *hpriv)
@@ -335,21 +273,17 @@ static int tegra_ahci_pg_save_restore_init(struct ahci_host_priv *hpriv)
 	struct platform_device *pdev = tegra->pdev;
 	struct device *dev = &pdev->dev;
 	u32 save_size;
-	int rc = 0;
+	int ret = 0;
 
 	/* Setup PG save/restore area: */
 
 	/* calculate the size */
-	save_size = ARRAY_SIZE(pg_save_ipfs_registers) +
-		ARRAY_SIZE(pg_save_config_registers) +
-		ARRAY_SIZE(pg_save_bar5_registers) +
+	save_size = ARRAY_SIZE(pg_save_bar5_registers) +
 		ARRAY_SIZE(pg_save_bar5_bkdr_registers);
 
 	/* and add save port_registers for all the ports */
-	save_size += hpriv->nports *
-		(ARRAY_SIZE(pg_save_config_port_registers) +
-		 ARRAY_SIZE(pg_save_bar5_port_registers) +
-		 ARRAY_SIZE(pg_save_bar5_bkdr_port_registers));
+	save_size += ARRAY_SIZE(pg_save_bar5_port_registers) +
+		 ARRAY_SIZE(pg_save_bar5_bkdr_port_registers);
 
 	/*
 	 * save_size is number of registers times number of bytes per
@@ -358,7 +292,7 @@ static int tegra_ahci_pg_save_restore_init(struct ahci_host_priv *hpriv)
 	save_size *= sizeof(u32);
 	tegra->pg_save = devm_kzalloc(dev, save_size, GFP_KERNEL);
 	if (!tegra->pg_save)
-		rc = -ENOMEM;
+		ret = -ENOMEM;
 
 	return 0;
 }
@@ -391,7 +325,7 @@ static int tegra_ahci_elpg_enter(struct ata_host *host)
 {
 	struct ahci_host_priv *hpriv =  host->private_data;
 	struct tegra_ahci_priv *tegra = hpriv->plat_data;
-	int rc = 0;
+	int ret = 0;
 	int i;
 
 	/*
@@ -426,25 +360,35 @@ static int tegra_ahci_elpg_enter(struct ata_host *host)
 		tegra_ahci_override_devslp(hpriv, true);
 
 	/* 5. Powergate */
-	rc = tegra_powergate_partition_with_clk_off(TEGRA_POWERGATE_SATA);
+	ret = tegra_powergate_partition_with_clk_off(TEGRA_POWERGATE_SATA);
 
-	return rc;
+	return ret;
 }
 
 static int tegra_ahci_elpg_exit(struct ata_host *host)
 {
 	struct ahci_host_priv *hpriv =  host->private_data;
 	struct tegra_ahci_priv *tegra = hpriv->plat_data;
-	int rc = 0;
+	int ret = 0;
 	int i;
 
 	/* 1. unpowergate */
-	rc = tegra_unpowergate_partition_with_clk_on(TEGRA_POWERGATE_SATA);
-	if (rc)
-		return rc;
+	ret = tegra_unpowergate_partition_with_clk_on(TEGRA_POWERGATE_SATA);
+	if (ret)
+		return ret;
 
 	/* 2. Restore SATA Registers */
 	tegra_ahci_pg_restore_registers(host);
+	/*
+	 * During the restoration of the registers, the driver would now need to
+	 * restore the register T_SATA0_CFG_POWER_GATE_SSTS_RESTORED after the
+	 * ssts_det, ssts_spd are restored. This register is used to tell the
+	 * controller whether a drive existed earlier or not and move the PHY
+	 * state machines into either HR_slumber or not.
+	 */
+	tegra_ahci_scfg_update(hpriv, T_SATA0_CFG_POWER_GATE_SSTS_RESTORED,
+			T_SATA0_CFG_POWER_GATE_SSTS_RESTORED,
+			T_SATA0_CFG_POWER_GATE);
 
 	/* 3. If devslp asserted, de-assert devslp */
 	if (tegra->devslp_override)
@@ -463,8 +407,8 @@ static int tegra_ahci_elpg_exit(struct ata_host *host)
 	for (i = 0; i < hpriv->nports; i++) {
 		if (!hpriv->phys[i])
 			continue;
-		rc = phy_power_on(hpriv->phys[i]);
-		if (rc) {
+		ret = phy_power_on(hpriv->phys[i]);
+		if (ret) {
 			phy_exit(hpriv->phys[i]);
 			goto disable_phys;
 		}
@@ -476,32 +420,127 @@ disable_phys:
 		phy_power_off(hpriv->phys[i]);
 		phy_exit(hpriv->phys[i]);
 	}
-	return rc;
+	return ret;
 }
+#endif
 
+#ifdef CONFIG_PM_RUNTIME
 static int tegra_ahci_runtime_suspend(struct device *dev)
 {
 	struct ata_host *host = dev_get_drvdata(dev);
-	int rc = 0;
+	int ret = 0;
 
-	rc = tegra_ahci_elpg_enter(host);
-	return rc;
+	ret = tegra_ahci_elpg_enter(host);
+	return ret;
 }
 
 static int tegra_ahci_runtime_resume(struct device *dev)
 {
 	struct ata_host *host = dev_get_drvdata(dev);
-	int rc = 0;
+	int ret = 0;
 
-	rc = tegra_ahci_elpg_exit(host);
-	return rc;
+	ret = tegra_ahci_elpg_exit(host);
+	return ret;
+}
+#endif
+
+#ifdef CONFIG_PM_SLEEP
+static int tegra_ahci_suspend(struct device *dev)
+{
+	struct ata_host *host = dev_get_drvdata(dev);
+	struct ahci_host_priv *hpriv = host->private_data;
+	struct tegra_ahci_priv *tegra = hpriv->plat_data;
+	int ret;
+	int i;
+
+	if (!pm_runtime_suspended(dev)) {
+		ret = ahci_platform_suspend_host(dev);
+		if (ret)
+			return ret;
+
+		ret = tegra_ahci_elpg_enter(host);
+		if (ret)
+			return ret;
+	}
+
+	/*
+	 * If DEVSLP is asserted, PAD driver should enable the pull-up
+	 * of the GPIO pin by programming the following register before
+	 * entering LP0.
+	 */
+
+	if (tegra->devslp_override) {
+		/* Yet to add the code - http://nvbugs/200132422 */
+		tegra->devslp_pinmux_override = true;
+	}
+
+	/* Place uphy to reset */
+	for (i = 0; i < hpriv->nports; i++) {
+		if (!hpriv->phys[i])
+			continue;
+		phy_exit(hpriv->phys[i]);
+	}
+
+	return 0;
 }
 
+static int tegra_ahci_resume(struct device *dev)
+{
+	struct ata_host *host = dev_get_drvdata(dev);
+	struct ahci_host_priv *hpriv = host->private_data;
+	struct tegra_ahci_priv *tegra = hpriv->plat_data;
+	int ret;
+	int i;
+
+	for (i = 0; i < hpriv->nports; i++) {
+		if (!hpriv->phys[i])
+			continue;
+		ret = phy_init(hpriv->phys[i]);
+		if (ret)
+			goto disable_phys;
+	}
+
+	ret = tegra_ahci_elpg_exit(host);
+	if (ret)
+		goto disable_phys;
+
+	/*
+	 * If DEVSLP is supported and GPIO pin is assigned to SATA,
+	 * PAD driver should disable the pull-up of the GPIO pin
+	 * by programming the following register after exiting LP0
+	 * and the DEVSLP override in SATA AUX register has been set.
+	 */
+
+	if (tegra->devslp_pinmux_override) {
+		/* Yet to add the code - http://nvbugs/200132422 */
+
+		tegra->devslp_pinmux_override = false;
+	}
+
+	ret = ahci_platform_resume_host(dev);
+	if (ret)
+		goto elpg_entry;
+
+	/* We resumed so update PM runtime state */
+	pm_runtime_disable(dev);
+	pm_runtime_set_active(dev);
+	pm_runtime_enable(dev);
+
+	return 0;
+elpg_entry:
+	tegra_ahci_elpg_enter(host);
+disable_phys:
+	while (--i >= 0)
+		phy_exit(hpriv->phys[i]);
+	return ret;
+}
+#endif
+
 static const struct dev_pm_ops tegra_ahci_dev_rt_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(tegra_ahci_suspend, tegra_ahci_resume)
 	SET_RUNTIME_PM_OPS(tegra_ahci_runtime_suspend,
 			tegra_ahci_runtime_resume, NULL)
 };
-#endif
 
 static int tegra_ahci_power_on(struct ahci_host_priv *hpriv)
 {
@@ -585,7 +624,7 @@ static int tegra_ahci_controller_init(struct ahci_host_priv *hpriv)
 	struct tegra_ahci_priv *tegra = hpriv->plat_data;
 	unsigned int val;
 	unsigned int mask;
-	int rc = 0;
+	int ret = 0;
 
 	/* Program the following  SATA IPFS registers
 	 * to allow SW accesses to SATA.s MMIO Register */
@@ -609,9 +648,9 @@ static int tegra_ahci_controller_init(struct ahci_host_priv *hpriv)
 			T_SATA_CHX_PHY_CTRL21);
 
 	/* tegra ahci quirks */
-	rc = tegra->soc_data->ops.tegra_ahci_quirks(hpriv);
-	if (rc)
-		return rc;
+	ret = tegra->soc_data->ops.tegra_ahci_quirks(hpriv);
+	if (ret)
+		return ret;
 
 	/* Configure SATA Configuration registers*/
 
@@ -705,53 +744,53 @@ static int
 tegra_ahci_platform_get_clks_resets(struct tegra_ahci_priv *tegra)
 {
 	struct platform_device *pdev = tegra->pdev;
-	int rc = 0;
+	int ret = 0;
 
 	tegra->sata_clk = devm_clk_get(&pdev->dev, "sata");
 	if (IS_ERR(tegra->sata_clk)) {
 		dev_err(&pdev->dev, "Failed to get sata clock\n");
-		rc = PTR_ERR(tegra->sata_clk);
+		ret = PTR_ERR(tegra->sata_clk);
 		goto err_out;
 	}
 
 	tegra->sata_oob_clk = devm_clk_get(&pdev->dev, "sata_oob");
 	if (IS_ERR(tegra->sata_oob_clk)) {
 		dev_err(&pdev->dev, "Failed to get sata_oob clock\n");
-		rc = PTR_ERR(tegra->sata_oob_clk);
+		ret = PTR_ERR(tegra->sata_oob_clk);
 		goto err_out;
 	}
 
 	tegra->pllp_clk = devm_clk_get(&pdev->dev, "pllp");
 	if (IS_ERR(tegra->pllp_clk)) {
 		dev_err(&pdev->dev, "Failed to get pllp clock\n");
-		rc = PTR_ERR(tegra->pllp_clk);
+		ret = PTR_ERR(tegra->pllp_clk);
 		goto err_out;
 	}
 
 	tegra->pllp_uphy_clk = devm_clk_get(&pdev->dev, "pllp_uphy");
 	if (IS_ERR(tegra->pllp_uphy_clk)) {
 		dev_err(&pdev->dev, "Failed to get pllp_uphy clock\n");
-		rc = PTR_ERR(tegra->pllp_uphy_clk);
+		ret = PTR_ERR(tegra->pllp_uphy_clk);
 		goto err_out;
 	}
 
 	tegra->sata_rst = devm_reset_control_get(&pdev->dev, "sata");
 	if (IS_ERR(tegra->sata_rst)) {
 		dev_err(&pdev->dev, "Failed to get sata reset\n");
-		rc = PTR_ERR(tegra->sata_rst);
+		ret = PTR_ERR(tegra->sata_rst);
 		goto err_out;
 	}
 
 	tegra->sata_cold_rst = devm_reset_control_get(&pdev->dev, "satacold");
 	if (IS_ERR(tegra->sata_cold_rst)) {
 		dev_err(&pdev->dev, "Failed to get sata-cold reset\n");
-		rc = PTR_ERR(tegra->sata_cold_rst);
+		ret = PTR_ERR(tegra->sata_cold_rst);
 		goto err_out;
 	}
 
 	return 0;
 err_out:
-	return rc;
+	return ret;
 }
 
 static int
@@ -759,13 +798,13 @@ tegra_ahci_platform_get_memory_resources(struct tegra_ahci_priv *tegra)
 {
 	struct platform_device *pdev = tegra->pdev;
 	struct resource *res;
-	int rc = 0;
+	int ret = 0;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	tegra->base_list[TEGRA_SATA_AHCI] = devm_ioremap_resource(&pdev->dev,
 			res);
 	if (IS_ERR(tegra->base_list[TEGRA_SATA_AHCI])) {
-		rc = PTR_ERR(tegra->base_list[TEGRA_SATA_AHCI]);
+		ret = PTR_ERR(tegra->base_list[TEGRA_SATA_AHCI]);
 		goto err_out;
 	}
 	tegra->res[TEGRA_SATA_AHCI] = res;
@@ -774,7 +813,7 @@ tegra_ahci_platform_get_memory_resources(struct tegra_ahci_priv *tegra)
 	tegra->base_list[TEGRA_SATA_CONFIG] =
 		devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(tegra->base_list[TEGRA_SATA_CONFIG])) {
-		rc = PTR_ERR(tegra->base_list[TEGRA_SATA_CONFIG]);
+		ret = PTR_ERR(tegra->base_list[TEGRA_SATA_CONFIG]);
 		goto err_out;
 	}
 	tegra->res[TEGRA_SATA_CONFIG] = res;
@@ -783,7 +822,7 @@ tegra_ahci_platform_get_memory_resources(struct tegra_ahci_priv *tegra)
 	tegra->base_list[TEGRA_SATA_IPFS] = devm_ioremap_resource(&pdev->dev,
 			res);
 	if (IS_ERR(tegra->base_list[TEGRA_SATA_IPFS])) {
-		rc = PTR_ERR(tegra->base_list[TEGRA_SATA_IPFS]);
+		ret = PTR_ERR(tegra->base_list[TEGRA_SATA_IPFS]);
 		goto err_out;
 	}
 	tegra->res[TEGRA_SATA_IPFS] = res;
@@ -792,7 +831,7 @@ tegra_ahci_platform_get_memory_resources(struct tegra_ahci_priv *tegra)
 	tegra->base_list[TEGRA_SATA_AUX] = devm_ioremap_resource(&pdev->dev,
 			res);
 	if (IS_ERR(tegra->base_list[TEGRA_SATA_AUX])) {
-		rc = PTR_ERR(tegra->base_list[TEGRA_SATA_AUX]);
+		ret = PTR_ERR(tegra->base_list[TEGRA_SATA_AUX]);
 		goto err_out;
 	}
 	tegra->res[TEGRA_SATA_AUX] = res;
@@ -800,7 +839,7 @@ tegra_ahci_platform_get_memory_resources(struct tegra_ahci_priv *tegra)
 	return 0;
 
 err_out:
-	return rc;
+	return ret;
 }
 
 static	struct ahci_host_priv *
@@ -810,7 +849,7 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 	struct platform_device *pdev = tegra->pdev;
 	struct device *dev = &pdev->dev;
 	struct phy *phy = NULL;
-	int rc = -ENOMEM;
+	int ret = -ENOMEM;
 	int i;
 
 	hpriv = devm_kzalloc(dev, sizeof(*hpriv), GFP_KERNEL);
@@ -819,22 +858,22 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 
 	hpriv->plat_data = tegra;
 
-	rc = tegra_ahci_platform_get_memory_resources(tegra);
-	if (rc)
+	ret = tegra_ahci_platform_get_memory_resources(tegra);
+	if (ret)
 		goto err_out;
 	else
 		hpriv->mmio = tegra->base_list[TEGRA_SATA_AHCI];
 
 	hpriv->target_pwr = devm_regulator_get_optional(dev, "target-3v3");
 	if (IS_ERR(hpriv->target_pwr)) {
-		rc = PTR_ERR(hpriv->target_pwr);
-		if (rc == -EPROBE_DEFER)
+		ret = PTR_ERR(hpriv->target_pwr);
+		if (ret == -EPROBE_DEFER)
 			goto err_out;
 		hpriv->target_pwr = NULL;
 	}
 
-	rc = tegra_ahci_platform_get_clks_resets(tegra);
-	if (rc)
+	ret = tegra_ahci_platform_get_clks_resets(tegra);
+	if (ret)
 		goto err_out;
 
 	if (tegra_platform_is_silicon()) {
@@ -843,13 +882,13 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 			hpriv->phys = devm_kzalloc(dev, sizeof(*hpriv->phys),
 					GFP_KERNEL);
 			if (!hpriv->phys) {
-				rc = -ENOMEM;
+				ret = -ENOMEM;
 				goto err_out;
 			}
 			hpriv->phys[0] = phy;
 			hpriv->nports = 1;
 		} else {
-			rc = PTR_ERR(phy);
+			ret = PTR_ERR(phy);
 			goto err_out;
 		}
 	} else {
@@ -862,7 +901,7 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 			GFP_KERNEL);
 	if (IS_ERR(tegra->supplies)) {
 		dev_err(dev, "memory allocation failed for tegra supplies\n");
-		rc = PTR_ERR(tegra->supplies);
+		ret = PTR_ERR(tegra->supplies);
 		goto err_out;
 	}
 
@@ -870,16 +909,16 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 		tegra->supplies[i].supply =
 			tegra->soc_data->sata_regulator_names[i];
 
-	rc = devm_regulator_bulk_get(dev, tegra->soc_data->num_sata_regulators,
+	ret = devm_regulator_bulk_get(dev, tegra->soc_data->num_sata_regulators,
 			tegra->supplies);
-	if (rc) {
+	if (ret) {
 		dev_err(&pdev->dev, "Failed to get regulators\n");
 		goto err_out;
 	}
 
 #ifdef CONFIG_PM
-	rc = tegra_ahci_pg_save_restore_init(hpriv);
-	if (rc) {
+	ret = tegra_ahci_pg_save_restore_init(hpriv);
+	if (ret) {
 		dev_err(&pdev->dev,
 		"Failed to allocate memory for save and restore\n");
 		goto err_out;
@@ -888,7 +927,7 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 
 	return hpriv;
 err_out:
-	return ERR_PTR(rc);
+	return ERR_PTR(ret);
 }
 
 static int tegra_ahci_probe(struct platform_device *pdev)

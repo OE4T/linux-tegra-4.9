@@ -600,7 +600,7 @@ static struct of_device_id tegra_gpio_of_match[] = {
 
 static void gpio_clk_reset_enable(struct platform_device *pdev)
 {
-	u32 ret;
+	int ret;
 	reset_control_reset(tegra_gpio->gpio0_rst);
 	reset_control_reset(tegra_gpio->gpio1_rst);
 	reset_control_reset(tegra_gpio->gpio2_rst);

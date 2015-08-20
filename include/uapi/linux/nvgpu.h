@@ -547,8 +547,20 @@ struct nvgpu_dbg_gpu_pc_sampling_args {
 #define NVGPU_DBG_GPU_IOCTL_PC_SAMPLING \
 	_IOW(NVGPU_DBG_GPU_IOCTL_MAGIC,  9, struct nvgpu_dbg_gpu_pc_sampling_args)
 
+/* Enable/Disable timeouts */
+#define NVGPU_DBG_GPU_IOCTL_TIMEOUT_ENABLE                                   1
+#define NVGPU_DBG_GPU_IOCTL_TIMEOUT_DISABLE                                  0
+
+struct nvgpu_dbg_gpu_timeout_args {
+	__u32 enable;
+	__u32 padding;
+};
+
+#define NVGPU_DBG_GPU_IOCTL_TIMEOUT \
+	_IOW(NVGPU_DBG_GPU_IOCTL_MAGIC, 10, struct nvgpu_dbg_gpu_timeout_args)
+
 #define NVGPU_DBG_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_DBG_GPU_IOCTL_PC_SAMPLING)
+	_IOC_NR(NVGPU_DBG_GPU_IOCTL_TIMEOUT)
 #define NVGPU_DBG_GPU_IOCTL_MAX_ARG_SIZE		\
 	sizeof(struct nvgpu_dbg_gpu_perfbuf_map_args)
 

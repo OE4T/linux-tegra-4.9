@@ -1,7 +1,7 @@
 /*
  * Tegra GK20A GPU Debugger Driver
  *
- * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -52,6 +52,9 @@ struct dbg_session_gk20a {
 
 	/* power enabled or disabled */
 	bool is_pg_disabled;
+
+	/* timeouts enabled or disabled */
+	bool is_timeout_disabled;
 
 	/*
 	 * There can be different versions of the whitelists

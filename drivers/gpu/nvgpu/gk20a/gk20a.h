@@ -532,6 +532,7 @@ struct gk20a {
 	struct mutex dbg_sessions_lock;
 	int dbg_sessions; /* number attached */
 	int dbg_powergating_disabled_refcount; /*refcount for pg disable */
+	int dbg_timeout_disabled_refcount; /*refcount for timeout disable */
 
 	void (*remove_support)(struct platform_device *);
 

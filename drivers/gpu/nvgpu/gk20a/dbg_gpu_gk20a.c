@@ -91,6 +91,7 @@ static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 	dbg_session->g     = g;
 	dbg_session->is_profiler = is_profiler;
 	dbg_session->is_pg_disabled = false;
+	dbg_session->is_timeout_disabled = false;
 	/* For vgpu, all power-gating features are currently disabled
 	 * in the server. Set is_pg_disable to true to reflect this
 	 * on the client side. */
@@ -264,6 +265,46 @@ void gk20a_dbg_gpu_post_events(struct channel_gk20a *ch)
 static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 				__u32  powermode);
 
+static int nvgpu_dbg_timeout_enable(struct dbg_session_gk20a *dbg_s,
+			  int timeout_mode)
+{
+	struct gk20a *g = dbg_s->g;
+	int err = 0;
+
+	gk20a_dbg(gpu_dbg_gpu_dbg, "Timeouts mode requested : %d",
+			timeout_mode);
+
+	switch (timeout_mode) {
+	case NVGPU_DBG_GPU_IOCTL_TIMEOUT_ENABLE:
+		if (dbg_s->is_timeout_disabled &&
+		    --g->dbg_timeout_disabled_refcount == 0) {
+			g->timeouts_enabled = true;
+		}
+		dbg_s->is_timeout_disabled = false;
+		break;
+
+	case NVGPU_DBG_GPU_IOCTL_TIMEOUT_DISABLE:
+		if ((dbg_s->is_timeout_disabled == false) &&
+		    (g->dbg_timeout_disabled_refcount++ == 0)) {
+			g->timeouts_enabled = false;
+		}
+		dbg_s->is_timeout_disabled = true;
+		break;
+
+	default:
+		gk20a_err(dev_from_gk20a(g),
+			   "unrecognized dbg gpu timeout mode : 0x%x",
+			   timeout_mode);
+		err = -EINVAL;
+		break;
+	}
+
+	gk20a_dbg(gpu_dbg_gpu_dbg, "Timeouts enabled : %s",
+			g->timeouts_enabled ? "Yes" : "No");
+
+	return err;
+}
+
 static int dbg_unbind_channel_gk20a(struct dbg_session_gk20a *dbg_s)
 {
 	struct channel_gk20a *ch_gk20a = dbg_s->ch;
@@ -305,12 +346,13 @@ int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp)
 	if (dbg_s->ch)
 		dbg_unbind_channel_gk20a(dbg_s);
 
-	/* Powergate enable is called here as possibility of dbg_session
-	 * which called powergate disable ioctl, to be killed without calling
-	 * powergate enable ioctl
+	/* Powergate/Timeout enable is called here as possibility of dbg_session
+	 * which called powergate/timeout disable ioctl, to be killed without
+	 * calling powergate/timeout enable ioctl
 	 */
 	mutex_lock(&g->dbg_sessions_lock);
 	dbg_set_powergate(dbg_s, NVGPU_DBG_GPU_POWERGATE_MODE_ENABLE);
+	nvgpu_dbg_timeout_enable(dbg_s, NVGPU_DBG_GPU_IOCTL_TIMEOUT_ENABLE);
 	mutex_unlock(&g->dbg_sessions_lock);
 
 	kfree(dbg_s);
@@ -391,6 +433,22 @@ static int gk20a_dbg_pc_sampling(struct dbg_session_gk20a *dbg_s,
 	return g->ops.gr.update_pc_sampling ?
 		g->ops.gr.update_pc_sampling(ch, args->enable) : -EINVAL;
 }
+
+static int nvgpu_dbg_gpu_ioctl_timeout(struct dbg_session_gk20a *dbg_s,
+			 struct nvgpu_dbg_gpu_timeout_args *args)
+{
+	int err;
+	struct gk20a *g = get_gk20a(dbg_s->pdev);
+
+	gk20a_dbg_fn("powergate mode = %d", args->enable);
+
+	mutex_lock(&g->dbg_sessions_lock);
+	err = nvgpu_dbg_timeout_enable(dbg_s, args->enable);
+	mutex_unlock(&g->dbg_sessions_lock);
+
+	return err;
+}
+
 long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
 {
@@ -466,6 +524,11 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 	case NVGPU_DBG_GPU_IOCTL_PC_SAMPLING:
 		err = gk20a_dbg_pc_sampling(dbg_s,
 			   (struct nvgpu_dbg_gpu_pc_sampling_args *)buf);
+		break;
+
+	case NVGPU_DBG_GPU_IOCTL_TIMEOUT:
+		err = nvgpu_dbg_gpu_ioctl_timeout(dbg_s,
+			   (struct nvgpu_dbg_gpu_timeout_args *)buf);
 		break;
 
 	default:

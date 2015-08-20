@@ -14,7 +14,7 @@
  */
 
 / {
-	i2c@3170000 {
+	i2c@c240000 {
 		i2cmux@70 {
 			compatible = "nxp,pca9546";
 			reg = <0x70>;
@@ -123,7 +123,7 @@
 		};
 	};
 
-        i2c@3170000 {
+        i2c@c240000 {
                 icm20628@68 {
                         compatible = "invensense,mpu6xxx";
                         reg = <0x68>;

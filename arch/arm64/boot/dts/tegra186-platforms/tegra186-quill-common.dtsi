@@ -154,10 +154,6 @@
 		status = "okay";
 	};
 
-	i2c4: i2c@3190000 {
-		clock-frequency = <100000>;
-	};
-
 	external-connection {
 		vbus_id_extcon: extcon@1 {
 			compatible = "extcon-gpio-states";

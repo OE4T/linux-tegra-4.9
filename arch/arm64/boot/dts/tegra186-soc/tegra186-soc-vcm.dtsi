@@ -21,13 +21,6 @@
 / {
 
 	aliases {
-		i2c0 = &i2c1;
-		i2c2 = &i2c3;
-		i2c3 = &i2c4;
-		i2c4 = &i2c5;
-		i2c5 = &i2c6;
-		i2c6 = &i2c7;
-		i2c8 = &i2c9;
 		spi0 = &spi0;
 		spi2 = &spi2;
 		spi3 = &spi3;
@@ -243,6 +236,10 @@
 	};
 
 	i2c@3160000 {
+		status = "okay";
+	};
+
+	i2c@c240000 {
 		status = "okay";
 	};
 

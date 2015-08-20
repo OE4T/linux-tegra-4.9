@@ -17,7 +17,19 @@
  */
 
 / {
-	i2c1: i2c@3160000 {
+	aliases {
+		i2c0 = &gen1_i2c;
+		i2c1 = &gen2_i2c;
+		i2c2 = &cam_i2c;
+		i2c3 = &dp_aux_ch1_i2c;
+		i2c4 = &pwr_i2c;
+		i2c5 = &dp_aux_ch0_i2c;
+		i2c6 = &gen7_i2c;
+		i2c7 = &gen8_i2c;
+		i2c8 = &gen9_i2c;
+	};
+
+	gen1_i2c: i2c@3160000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "nvidia,tegra186-i2c";
@@ -33,11 +45,11 @@
 		reset-names = "i2c";
 	};
 
-	i2c2: i2c@3170000 {
+	gen2_i2c: i2c@c240000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "nvidia,tegra186-i2c";
-		reg = <0x0 0x3170000 0x0 0x100>;
+		reg = <0x0 0xc240000 0x0 0x100>;
 		interrupts = <0 TEGRA186_IRQ_I2C2 0x04>;
 		status = "disabled";
 		clock-frequency = <100000>;
@@ -47,7 +59,7 @@
 		reset-names = "i2c";
 	};
 
-	i2c3: i2c@3180000 {
+	cam_i2c: i2c@3180000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "nvidia,tegra186-i2c";
@@ -63,7 +75,7 @@
 		reset-names = "i2c";
 	};
 
-	i2c4: i2c@3190000 {
+	dp_aux_ch1_i2c: i2c@3190000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "nvidia,tegra186-i2c";
@@ -77,7 +89,7 @@
 		reset-names = "i2c";
 	};
 
-	i2c5: bpmp_i2c {
+	pwr_i2c: bpmp_i2c {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "nvidia,tegra186-bpmp-i2c";
@@ -85,7 +97,7 @@
 		adapter = <5>;
 	};
 
-	i2c6: i2c@31b0000 {
+	dp_aux_ch0_i2c: i2c@31b0000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "nvidia,tegra186-i2c";
@@ -99,7 +111,7 @@
 		reset-names = "i2c";
 	};
 
-	i2c7: i2c@31c0000 {
+	gen7_i2c: i2c@31c0000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "nvidia,tegra186-i2c";
@@ -115,11 +127,11 @@
 		reset-names = "i2c";
 	};
 
-	i2c8: i2c@31d0000 {
+	gen8_i2c: i2c@c250000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "nvidia,tegra186-i2c";
-		reg = <0x0 0x31d0000 0x0 0x100>;
+		reg = <0x0 0xc250000 0x0 0x100>;
 		interrupts = <0 TEGRA186_IRQ_I2C8 0x04>;
 		scl-gpio = <&tegra_gpio 176 0>;
 		sda-gpio = <&tegra_gpio 177 0>;
@@ -131,7 +143,7 @@
 		reset-names = "i2c";
 	};
 
-	i2c9: i2c@31e0000 {
+	gen9_i2c: i2c@31e0000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "nvidia,tegra186-i2c";

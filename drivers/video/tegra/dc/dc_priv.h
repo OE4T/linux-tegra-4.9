@@ -42,9 +42,20 @@
 #define WIN_ALL_ACT_REQ (WIN_A_ACT_REQ | WIN_B_ACT_REQ | WIN_C_ACT_REQ)
 #endif
 
+/*
+ * Second definition is needed to prevent inadvertent sanity failures
+ * on p1859 for now.
+ */
+#ifndef CONFIG_ARCH_TEGRA_VCM30T124
+#define tegra_dc_hotplug_supported(dc) (dc && dc->out ? \
+		(dc->out->hotplug_gpio >= 0 && \
+		!(dc->out->type == TEGRA_DC_OUT_DP && \
+		!tegra_dc_is_ext_dp_panel(dc))) : 0)
+#else
 #define tegra_dc_hotplug_supported(dc) (dc && dc->out ? \
 		(dc->out->hotplug_gpio >= 0 || \
 		dc->out->type == TEGRA_DC_OUT_DP) : 0)
+#endif
 
 static inline int tegra_dc_io_start(struct tegra_dc *dc)
 {

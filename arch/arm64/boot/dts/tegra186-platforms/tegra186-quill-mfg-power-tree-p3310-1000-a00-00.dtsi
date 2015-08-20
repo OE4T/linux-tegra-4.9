@@ -13,4 +13,55 @@
  *
  */
 
-#include "tegra186-quill-power-tree-p3310-1000-a00-00.dtsi"
+#include "tegra186-quill-spmic-p3310-1000-a00-00.dtsi"
+#include "tegra186-cvb-slt-p2598-a00-e3340-1099-a00-00.dtsi"
+
+/ {
+
+	fixed-regulators {
+		vdd_usb1_5v_con: regulator@113 {
+			compatible = "regulator-fixed";
+			reg = <113>;
+			regulator-name = "vdd-usb0-5v-con";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&tegra_gpio TEGRA_GPIO(L, 5) 0>;
+			enable-active-high;
+		};
+	};
+
+	ether_qos@2490000 {
+		vddio_sys_enet_bias-supply = <&spmic_sd2>;
+		vddio_enet-supply = <&spmic_sd3>;
+		phy_vdd_1v8-supply = <&spmic_sd2>;
+		phy_ovdd_rgmii-supply = <&spmic_sd3>;
+		phy_pllvdd-supply = <&spmic_sd1>;
+	};
+
+	host1x {
+		nvdisplay@15200000 {
+			avdd_lcd-supply = <&vdd_dis_3v3_lcd>;
+			dvdd_lcd-supply = <&vdd_lcd_1v8_dis>;
+			avdd_dsi_csi-supply = <&spmic_sd1>;
+		};
+	};
+
+	sdhci@3460000 {
+		vddio_sdmmc-supply = <&spmic_sd2>;
+		vddio_sd_slot-supply = <&spmic_sd3>;
+	};
+
+	sdhci@3440000 {
+		vddio_sdmmc-supply = <&spmic_ldo5>;
+		vddio_sd_slot-supply = <&spmic_sd2>;
+	};
+
+	sdhci@3420000 {
+		vddio_sdmmc-supply = <&spmic_sd2>;
+		vddio_sd_slot-supply = <&spmic_sd3>;
+	};
+
+	sdhci@3400000 {
+		vddio_sdmmc-supply = <&spmic_ldo3>;
+	};
+};

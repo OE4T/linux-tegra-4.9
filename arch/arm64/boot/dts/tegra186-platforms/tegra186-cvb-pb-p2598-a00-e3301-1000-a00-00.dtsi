@@ -17,23 +17,51 @@
 
 / {
 	i2c@3160000 {
-		gpio_i2c_0_34: gpio@34 {
+		gpio_i2c_0_20: gpio@20 {
 			compatible = "ti,tca9539";
-			reg = <0x34>;
+			reg = <0x20>;
 			gpio-controller;
 			#gpio-cells = <2>;
 		};
 
-		gpio_i2c_0_37: gpio@37 {
+		gpio_i2c_0_21: gpio@21 {
 			compatible = "ti,tca9539";
-			reg = <0x37>;
+			reg = <0x21>;
 			gpio-controller;
 			#gpio-cells = <2>;
 		};
 
-		gpio_i2c_0_38: gpio@38 {
+		gpio_i2c_0_22: gpio@22 {
 			compatible = "ti,tca9539";
-			reg = <0x38>;
+			reg = <0x22>;
+			gpio-controller;
+			#gpio-cells = <2>;
+		};
+
+		gpio_i2c_0_23: gpio@23 {
+			compatible = "ti,tca9539";
+			reg = <0x23>;
+			gpio-controller;
+			#gpio-cells = <2>;
+		};
+
+		gpio_i2c_0_24: gpio@24 {
+			compatible = "ti,tca9539";
+			reg = <0x24>;
+			gpio-controller;
+			#gpio-cells = <2>;
+		};
+
+		gpio_i2c_0_77: gpio@77 {
+			compatible = "ti,tca9539";
+			reg = <0x77>;
+			gpio-controller;
+			#gpio-cells = <2>;
+		};
+
+		gpio_i2c_0_74: gpio@74 {
+			compatible = "ti,tca9539";
+			reg = <0x74>;
 			gpio-controller;
 			#gpio-cells = <2>;
 		};
@@ -46,7 +74,7 @@
 			regulator-name = "en-vdd-cam";
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
-			gpio = <&gpio_i2c_0_37 9 0>;
+			gpio = <&gpio_i2c_0_77 9 0>;
 			enable-active-high;
 		};
 
@@ -56,7 +84,7 @@
 			regulator-name = "en-vdd-cam-1v2";
 			regulator-min-microvol = <1200000>;
 			regulator-max-microvol = <1200000>;
-			gpio = <&gpio_i2c_0_37 10 0>;
+			gpio = <&gpio_i2c_0_77 10 0>;
 			enable-active-high;
 		};
 
@@ -66,7 +94,7 @@
 			regulator-name = "en-vdd-ts-1v8";
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
-			gpio = <&gpio_i2c_0_38 1 0>;
+			gpio = <&gpio_i2c_0_74 1 0>;
 			enable-active-high;
 		};
 
@@ -76,7 +104,7 @@
 			regulator-name = "en-vdd-ts-hv-3v3";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
-			gpio = <&gpio_i2c_0_38 2 0>;
+			gpio = <&gpio_i2c_0_74 2 0>;
 			enable-active-high;
 		};
 
@@ -86,7 +114,7 @@
 			regulator-name = "en-vdd-disp-3v3";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
-			gpio = <&gpio_i2c_0_38 3 0>;
+			gpio = <&gpio_i2c_0_74 3 0>;
 			enable-active-high;
 		};
 
@@ -96,7 +124,7 @@
 			regulator-name = "en-vdd-disp-3v3";
 			regulator-min-microvolt = <3700000>;
 			regulator-max-microvolt = <3700000>;
-			gpio = <&gpio_i2c_0_38 7 0>;
+			gpio = <&gpio_i2c_0_74 7 0>;
 			enable-active-high;
 		};
 
@@ -106,7 +134,7 @@
 			regulator-name = "en-vdd-disp-1v8";
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
-			gpio = <&gpio_i2c_0_38 9 0>;
+			gpio = <&gpio_i2c_0_74 9 0>;
 			enable-active-high;
 		};
 
@@ -116,7 +144,7 @@
 			regulator-name = "dis-vdd-1v2";
 			regulator-min-microvolt = <1200000>;
 			regulator-max-microvolt = <1200000>;
-			gpio = <&gpio_i2c_0_38 10 0>;
+			gpio = <&gpio_i2c_0_74 10 0>;
 			enable-active-high;
 		};
 
@@ -126,7 +154,7 @@
 			regulator-name = "vdd-hdmi";
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
-			gpio = <&gpio_i2c_0_38 12 0>;
+			gpio = <&gpio_i2c_0_74 12 0>;
 			enable-active-high;
 		};
 
@@ -136,7 +164,7 @@
 			regulator-name = "en-vdd-cam-hv-2v8";
 			regulator-min-microvol = <2800000>;
 			regulator-max-microvol = <2800000>;
-			gpio = <&gpio_i2c_0_38 13 0>;
+			gpio = <&gpio_i2c_0_74 13 0>;
 			enable-active-high;
 		};
 

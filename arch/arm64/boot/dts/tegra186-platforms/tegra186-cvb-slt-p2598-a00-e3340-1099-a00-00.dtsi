@@ -33,9 +33,37 @@
 			#gpio-cells = <2>;
 		};
 
-		gpio_i2c_0_34: gpio@34 {
+		gpio_i2c_0_20: gpio@20 {
 			compatible = "ti,tca9539";
-			reg = <0x34>;
+			reg = <0x20>;
+			gpio-controller;
+			#gpio-cells = <2>;
+		};
+
+		gpio_i2c_0_21: gpio@21 {
+			compatible = "ti,tca9539";
+			reg = <0x21>;
+			gpio-controller;
+			#gpio-cells = <2>;
+		};
+
+		gpio_i2c_0_22: gpio@22 {
+			compatible = "ti,tca9539";
+			reg = <0x22>;
+			gpio-controller;
+			#gpio-cells = <2>;
+		};
+
+		gpio_i2c_0_23: gpio@23 {
+			compatible = "ti,tca9539";
+			reg = <0x23>;
+			gpio-controller;
+			#gpio-cells = <2>;
+		};
+
+		gpio_i2c_0_24: gpio@24 {
+			compatible = "ti,tca9539";
+			reg = <0x24>;
 			gpio-controller;
 			#gpio-cells = <2>;
 		};
@@ -138,7 +166,7 @@
 			regulator-name = "vdd-sdcard1-sw";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
-			gpio = <&gpio_i2c_0_34 6 0>;
+			gpio = <&gpio_i2c_0_22 6 0>;
 			enable-active-high;
 		};
 
@@ -148,7 +176,7 @@
 			regulator-name = "vdd-sdcard3-sw";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
-			gpio = <&gpio_i2c_0_34 6 0>;
+			gpio = <&gpio_i2c_0_22 6 0>;
 			enable-active-high;
 		};
 

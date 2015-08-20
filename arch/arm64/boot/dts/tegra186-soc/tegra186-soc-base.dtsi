@@ -30,6 +30,7 @@
 #include "tegra186-soc/tegra186-soc-spi.dtsi"
 #include "tegra186-soc/tegra186-soc-pwm.dtsi"
 #include "../../../../include/dt-bindings/soc/tegra186-powergate.h"
+#include "../../../../include/dt-bindings/pinctrl/pinctrl-tegra-padctl-uphy.h"
 #include "tegra186-soc/tegra186-soc-uart.dtsi"
 #include "tegra186-soc/tegra186-soc-eqos.dtsi"
 

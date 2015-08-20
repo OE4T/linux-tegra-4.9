@@ -131,7 +131,7 @@ static int tegra_edid_i2c_divide_rate(struct tegra_edid *edid)
 int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data)
 {
 	u8 block_buf[] = {block >> 1};
-	u8 cmd_buf[] = {(block & 0x1) * 128};
+	u8 cmd_buf[] = {(block % 0x2) * 128};
 	u8 i;
 	u8 last_checksum = 0;
 	size_t attempt_cnt = 0;

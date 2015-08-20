@@ -590,17 +590,38 @@ int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 	return ret;
 }
 
-/* I2C read over DPAUX cannot handle more than 16B per transaction due to
- * DPAUX transaction limitation.
- * This requires breaking each read into multiple i2c write/read transaction */
-static int tegra_dc_i2c_read(struct tegra_dc_dp_data *dp, u32 i2c_addr,
-	u32 addr, u8 *data, u32 *size, u32 *aux_stat)
+/* TODO: Handle update status scenario and size > 16 bytes*/
+static int tegra_dc_dp_i2c_write(struct tegra_dc_dp_data *dp, u32 i2c_addr,
+				u8 *data, u32 *size, u32 *aux_stat)
 {
-	u32	finished = 0;
-	u32	cur_size;
-	int	ret	 = 0;
-	u32	len;
-	u8	iaddr	 = (u8)addr;
+	int ret = 0;
+
+	if (*size == 0) {
+		dev_err(&dp->dc->ndev->dev,
+			"dp: i2c write size can't be 0\n");
+		return -EINVAL;
+	}
+
+	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+		return ret;
+
+	mutex_lock(&dp->dpaux_lock);
+
+	ret = tegra_dc_dpaux_write_chunk_locked(dp,
+			DPAUX_DP_AUXCTL_CMD_MOTWR,
+			i2c_addr, data, size, aux_stat);
+
+	mutex_unlock(&dp->dpaux_lock);
+
+	return ret;
+}
+
+static int tegra_dc_dp_i2c_read(struct tegra_dc_dp_data *dp, u32 i2c_addr,
+				u8 *data, u32 *size, u32 *aux_stat)
+{
+	u32 finished = 0;
+	u32 cur_size;
+	int ret = 0;
 
 	if (*size == 0) {
 		dev_err(&dp->dc->ndev->dev,
@@ -612,30 +633,32 @@ static int tegra_dc_i2c_read(struct tegra_dc_dp_data *dp, u32 i2c_addr,
 		return ret;
 
 	mutex_lock(&dp->dpaux_lock);
+
 	do {
 		cur_size = *size - finished;
+
 		if (cur_size > DP_AUX_MAX_BYTES)
 			cur_size = DP_AUX_MAX_BYTES;
 
-		len = 1;
-		ret = tegra_dc_dpaux_write_chunk_locked(dp,
-			DPAUX_DP_AUXCTL_CMD_MOTWR,
-			i2c_addr, &iaddr, &len, aux_stat);
-		if (!ret) {
-			ret = tegra_dc_dpaux_read_chunk_locked(dp,
-				DPAUX_DP_AUXCTL_CMD_I2CRD,
-				i2c_addr, data, &cur_size, aux_stat);
-		}
+		ret = tegra_dc_dpaux_read_chunk_locked(dp,
+			DPAUX_DP_AUXCTL_CMD_MOTRD,
+			i2c_addr, data, &cur_size, aux_stat);
 		if (ret)
 			break;
 
-		iaddr += cur_size;
 		data += cur_size;
 		finished += cur_size;
 	} while (*size > finished);
+
+	cur_size = 0;
+	tegra_dc_dpaux_read_chunk_locked(dp,
+			DPAUX_DP_AUXCTL_CMD_I2CRD,
+			i2c_addr, data, &cur_size, aux_stat);
+
 	mutex_unlock(&dp->dpaux_lock);
 
 	*size = finished;
+
 	return ret;
 }
 
@@ -669,22 +692,28 @@ static int tegra_dc_dp_i2c_xfer(struct tegra_dc *dc, struct i2c_msg *msgs,
 	u32 aux_stat;
 	int status = 0;
 	u32 len = 0;
-	u32 start_addr = 0;
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 
 	for (i = 0; i < num; ++i) {
 		pmsg = &msgs[i];
 
-		if (!pmsg->flags && pmsg->addr == 0x50) { /* write */
-			/*
-			 * Ignore writes to I2C addr 0x30 for now.
-			 * This means we can't access 256-byte chunks.
-			 */
-			start_addr = pmsg->buf[0];
-		} else if (pmsg->flags & I2C_M_RD) { /* Read */
+		if (!pmsg->flags) {
 			len = pmsg->len;
-			status = tegra_dc_i2c_read(dp, pmsg->addr, start_addr,
-				pmsg->buf, &len, &aux_stat);
+
+			status = tegra_dc_dp_i2c_write(dp, pmsg->addr,
+						pmsg->buf, &len, &aux_stat);
+			if (status) {
+				dev_err(&dp->dc->ndev->dev,
+					"dp: Failed for I2C write"
+					" addr:%d, size:%d, stat:0x%x\n",
+					pmsg->addr, len, aux_stat);
+				return status;
+			}
+		} else if (pmsg->flags & I2C_M_RD) {
+			len = pmsg->len;
+
+			status = tegra_dc_dp_i2c_read(dp, pmsg->addr,
+						pmsg->buf, &len, &aux_stat);
 			if (status) {
 				dev_err(&dp->dc->ndev->dev,
 					"dp: Failed for I2C read"
@@ -693,13 +722,13 @@ static int tegra_dc_dp_i2c_xfer(struct tegra_dc *dc, struct i2c_msg *msgs,
 				return status;
 			}
 		} else {
-			/* No other functionalities are supported for now */
 			dev_err(&dp->dc->ndev->dev,
-				"dp: i2x_xfer: Unknown flag 0x%x\n",
+				"dp: i2x_xfer: Invalid i2c flag 0x%x\n",
 				pmsg->flags);
 			return -EINVAL;
 		}
 	}
+
 	return i;
 }
 

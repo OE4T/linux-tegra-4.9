@@ -34,6 +34,7 @@
 #include "../../../../include/dt-bindings/pinctrl/pinctrl-tegra-padctl-uphy.h"
 #include "tegra186-soc/tegra186-soc-uart.dtsi"
 #include "tegra186-soc/tegra186-soc-eqos.dtsi"
+#include <../../../../include/dt-bindings/hsp/tegra-hsp.h>
 
 / {
 	compatible = "nvidia,tegra186";
@@ -1723,5 +1724,24 @@
 		reg = <0x0 0x0c2a0000 0x0 0x100>;
 		interrupts = <0 18 0x04>;
 		status = "disabled";
+	};
+
+	aon: aon@c160000 {
+		compatible = "nvidia,tegra186-aon";
+		reg = <0x0 0x0c160000 0x0 0x10000>;
+		nvidia,notifications = <TEGRA_HSP_PROC_SPE TEGRA_HSP_DB_SPE>;
+		nvidia,ast0 = <&aon_ast0>;
+		nvidia,ast1 = <&aon_ast1>;
+		#address-cells = <2>;
+		#size-cells = <2>;
+		#mbox-cells = <1>;
+		ranges;
+		ivc_aon_echo {
+			ivc-tx = <0x0 0x1000>;
+			ivc-rx = <0x0 0x0>;
+			ivc-channel-size = <0 0x480>;
+			ivc-num-frames = <0x10>;
+			ivc-frame-size = <64>;
+		};
 	};
 };

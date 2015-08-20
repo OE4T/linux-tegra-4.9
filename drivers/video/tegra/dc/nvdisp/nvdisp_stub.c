@@ -33,24 +33,6 @@
 const struct disp_client *tegra_la_disp_clients_info;
 atomic_t sd_brightness = ATOMIC_INIT(255);
 EXPORT_SYMBOL(sd_brightness);
-
-#ifndef CONFIG_TEGRA_POWERGATE
-bool tegra_powergate_is_powered(int id)
-{
-	return true;
-}
-
-int tegra_powergate_partition(int id)
-{
-	return 0;
-}
-
-int tegra_unpowergate_partition(int id)
-{
-	return 0;
-}
-#endif
-
 int tegra_is_clk_enabled(struct clk *c)
 {
 	return 1;
@@ -87,7 +69,6 @@ void tegra_io_dpd_enable(struct tegra_io_dpd *hnd)
 void tegra_io_dpd_disable(struct tegra_io_dpd *hnd)
 {
 }
-
 
 static void tegra_panel_register_ops(struct tegra_dc_out *dc_out,
 				struct tegra_panel_ops *p_ops)

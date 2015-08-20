@@ -19,6 +19,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_address.h>
 #include <linux/dma-mapping.h>
+#include <linux/tegra_pm_domains.h>
 
 #include <mach/dc.h>
 #include <mach/fb.h>
@@ -31,11 +32,25 @@
 #include "hw_nvdisp_nvdisp.h"
 #include "hw_win_nvdisp.h"
 
-/* static struct tegra_dc_nvdisp	tegra_nvdisp; */
 DEFINE_MUTEX(tegra_nvdisp_lock);
 
 #define NVDISP_INPUT_LUT_SIZE   257
 #define NVDISP_OUTPUT_LUT_SIZE  1025
+
+static struct of_device_id nvdisp_disa_pd[] = {
+	{ .compatible = "nvidia, tegra186-disa-pd", },
+	{},
+};
+
+static struct of_device_id nvdisp_disb_pd[] = {
+	{ .compatible = "nvidia, tegra186-disb-pd", },
+	{},
+};
+
+static struct of_device_id nvdisp_disc_pd[] = {
+	{ .compatible = "nvidia, tegra186-disc-pd", },
+	{},
+};
 
 int tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
 					struct tegra_dc_lut *lut)
@@ -271,6 +286,19 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 	if (!(dc->cmu.rgb)) {
 		if (nvdisp_alloc_output_lut(dc))
 			return -ENOMEM;
+	}
+
+	/* Assign powergate id for each partition*/
+	switch (dc->ctrl_num) {
+	case 0:
+		dc->powergate_id = tegra_pd_get_powergate_id(nvdisp_disa_pd);
+		break;
+	case 1:
+		dc->powergate_id = tegra_pd_get_powergate_id(nvdisp_disb_pd);
+		break;
+	case 2:
+		dc->powergate_id = tegra_pd_get_powergate_id(nvdisp_disc_pd);
+		break;
 	}
 
 	/* Only need init once no matter how many dc objects */

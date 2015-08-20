@@ -205,10 +205,10 @@ static int tegra210_admaif_get_status(struct snd_soc_dai *dai,
 	unsigned int status_reg, val;
 
 	if (direction == SNDRV_PCM_STREAM_PLAYBACK) {
-		status_reg = TEGRA210_ADMAIF_XBAR_RX_STATUS +
+		status_reg = TEGRA210_ADMAIF_XBAR_TX_STATUS +
 			(dai->id * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
 	} else {
-		status_reg = TEGRA210_ADMAIF_XBAR_TX_STATUS +
+		status_reg = TEGRA210_ADMAIF_XBAR_RX_STATUS +
 			(dai->id * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
 	}
 	regmap_read(admaif->regmap, status_reg, &val);

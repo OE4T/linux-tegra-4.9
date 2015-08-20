@@ -22,7 +22,8 @@
 			gpio-controller;
 			#gpio-cells = <2>;
 			pcie_default_mux {
-				gpio-output-high = <9 10 12>;
+				gpio-output-high = <9 10>;
+				gpio-output-low = <12>;
 			};
 			sata_default_mux {
 				gpio-output-high = <14>;

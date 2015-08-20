@@ -544,7 +544,7 @@ static irqreturn_t gk20a_intr_isr_nonstall(int irq, void *dev_id)
 
 void gk20a_pbus_isr(struct gk20a *g)
 {
-	u32 val;
+	u32 val, err_code;
 	val = gk20a_readl(g, bus_intr_0_r());
 	if (val & (bus_intr_0_pri_squash_m() |
 			bus_intr_0_pri_fecserr_m() |
@@ -557,9 +557,15 @@ void gk20a_pbus_isr(struct gk20a *g)
 		gk20a_err(&g->dev->dev,
 			"NV_PTIMER_PRI_TIMEOUT_SAVE_1: 0x%x\n",
 			gk20a_readl(g, timer_pri_timeout_save_1_r()));
+		err_code = gk20a_readl(g, timer_pri_timeout_fecs_errcode_r());
 		gk20a_err(&g->dev->dev,
 			"NV_PTIMER_PRI_TIMEOUT_FECS_ERRCODE: 0x%x\n",
-			gk20a_readl(g, timer_pri_timeout_fecs_errcode_r()));
+			err_code);
+		if (err_code == 0xbadf13)
+			gk20a_err(&g->dev->dev,
+			"NV_PGRAPH_PRI_GPC0_GPCCS_FS_GPC: 0x%x\n",
+			gk20a_readl(g, gr_gpc0_fs_gpc_r()));
+
 	}
 
 	if (val)

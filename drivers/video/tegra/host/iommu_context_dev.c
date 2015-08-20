@@ -43,6 +43,7 @@ struct iommu_static_mapping {
 struct iommu_ctx {
 	struct platform_device *pdev;
 	struct list_head list;
+	struct device_dma_parameters dma_parms;
 	bool allocated;
 };
 
@@ -176,6 +177,9 @@ static int iommu_context_dev_probe(struct platform_device *pdev)
 	mutex_unlock(&iommu_ctx_list_mutex);
 
 	platform_set_drvdata(pdev, ctx);
+
+	pdev->dev.dma_parms = &ctx->dma_parms;
+	dma_set_max_seg_size(&pdev->dev, UINT_MAX);
 
 	dev_info(&pdev->dev, "initialized (streamid=%d)",
 		 iommu_get_hwid(pdev->dev.archdata.iommu, &pdev->dev, 0));

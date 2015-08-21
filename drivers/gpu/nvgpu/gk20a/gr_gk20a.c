@@ -6973,8 +6973,8 @@ static u32 gr_gk20a_get_tpc_num(u32 addr)
 static int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 		u32 global_esr_mask, bool check_errors)
 {
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+	bool locked_down;
+	bool no_error_pending;
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	bool mmu_debug_mode_enabled = g->ops.mm.is_debug_mode_enabled(g);
 	u32 offset =
@@ -6991,10 +6991,10 @@ static int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 				gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset);
 		u32 dbgr_status0 = gk20a_readl(g,
 				gr_gpc0_tpc0_sm_dbgr_status0_r() + offset);
-		bool locked_down =
+		locked_down =
 		    (gr_gpc0_tpc0_sm_dbgr_status0_locked_down_v(dbgr_status0) ==
 		     gr_gpc0_tpc0_sm_dbgr_status0_locked_down_true_v());
-		bool no_error_pending =
+		no_error_pending =
 			check_errors &&
 			(gr_gpc0_tpc0_sm_hww_warp_esr_error_v(warp_esr) ==
 			 gr_gpc0_tpc0_sm_hww_warp_esr_error_none_v()) &&
@@ -7018,9 +7018,7 @@ static int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-
-	} while (time_before(jiffies, end_jiffies)
-			|| !tegra_platform_is_silicon());
+	} while (!locked_down);
 
 	gk20a_err(dev_from_gk20a(g),
 		  "GPC%d TPC%d: timed out while trying to lock down SM",
@@ -7273,6 +7271,52 @@ static void gr_gk20a_init_cyclestats(struct gk20a *g)
 #endif
 }
 
+void gr_gk20a_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
+{
+	/* Check if we have at least one valid warp */
+	struct gr_gk20a *gr = &g->gr;
+	u32 gpc, tpc, sm_id;
+	u32  tpc_offset, gpc_offset, reg_offset;
+	u64 warps_valid = 0, warps_paused = 0, warps_trapped = 0;
+
+	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
+		gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
+		tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
+
+		tpc_offset = proj_tpc_in_gpc_stride_v() * tpc;
+		gpc_offset = proj_gpc_stride_v() * gpc;
+		reg_offset = tpc_offset + gpc_offset;
+
+		/* 64 bit read */
+		warps_valid = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_warp_valid_mask_r() + reg_offset + 4) << 32;
+		warps_valid |= gk20a_readl(g, gr_gpc0_tpc0_sm_warp_valid_mask_r() + reg_offset);
+
+
+		/* 64 bit read */
+		warps_paused = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_r() + reg_offset + 4) << 32;
+		warps_paused |= gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_r() + reg_offset);
+
+		/* 64 bit read */
+		warps_trapped = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_r() + reg_offset + 4) << 32;
+		warps_trapped |= gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_r() + reg_offset);
+
+		w_state[sm_id].valid_warps[0] = warps_valid;
+		w_state[sm_id].trapped_warps[0] = warps_trapped;
+		w_state[sm_id].paused_warps[0] = warps_paused;
+	}
+
+	/* Only for debug purpose */
+	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
+		gk20a_dbg_fn("w_state[%d].valid_warps[0]: %llx\n",
+						sm_id, w_state[sm_id].valid_warps[0]);
+		gk20a_dbg_fn("w_state[%d].trapped_warps[0]: %llx\n",
+						sm_id, w_state[sm_id].trapped_warps[0]);
+		gk20a_dbg_fn("w_state[%d].paused_warps[0]:  %llx\n",
+						sm_id, w_state[sm_id].paused_warps[0]);
+	}
+}
+
+
 void gk20a_init_gr_ops(struct gpu_ops *gops)
 {
 	gops->gr.access_smpc_reg = gr_gk20a_access_smpc_reg;
@@ -7324,4 +7368,5 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.init_sm_dsm_reg_info = gr_gk20a_init_sm_dsm_reg_info;
 	gops->gr.wait_empty = gr_gk20a_wait_idle;
 	gops->gr.init_cyclestats = gr_gk20a_init_cyclestats;
+	gops->gr.bpt_reg_info = gr_gk20a_bpt_reg_info;
 }

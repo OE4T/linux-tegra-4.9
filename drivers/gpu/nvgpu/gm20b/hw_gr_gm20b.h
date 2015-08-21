@@ -3130,15 +3130,15 @@ static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_sm_disable_f(void)
 {
 	return 0x0;
 }
-static inline u32 gr_gpc0_tpc0_sm_warp_valid_mask_r(void)
+static inline u32 gr_gpc0_tpc0_sm_warp_valid_mask_0_r(void)
 {
 	return 0x00504614;
 }
-static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_r(void)
+static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_0_r(void)
 {
 	return 0x00504624;
 }
-static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_r(void)
+static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_0_r(void)
 {
 	return 0x00504634;
 }
@@ -3149,6 +3149,18 @@ static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_stop_on_any_warp_disable_v(
 static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_stop_on_any_sm_disable_v(void)
 {
 	return 0x00000000;
+}
+static inline u32 gr_gpc0_tpc0_sm_warp_valid_mask_2_r(void)
+{
+		return 0x0050461c;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_2_r(void)
+{
+		return 0x00504750;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_2_r(void)
+{
+		return 0x00504758;
 }
 static inline u32 gr_gpc0_tpc0_sm_dbgr_status0_r(void)
 {
@@ -3625,6 +3637,18 @@ static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_enable_f(void)
 static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_disable_f(void)
 {
 	return 0x0;
+}
+static inline u32 gr_gpc0_tpc0_sm_warp_valid_mask_r(void)
+{
+	return 0x00504614;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_r(void)
+{
+	return 0x00504624;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_r(void)
+{
+	return 0x00504634;
 }
 static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_run_trigger_m(void)
 {

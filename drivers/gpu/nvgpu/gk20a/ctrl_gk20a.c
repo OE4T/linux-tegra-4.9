@@ -30,7 +30,6 @@
 #include "hw_fb_gk20a.h"
 #include "hw_proj_gk20a.h"
 
-
 int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 {
 	struct gk20a *g;
@@ -389,64 +388,48 @@ static int nvgpu_gpu_ioctl_set_debug_mode(
 	return err;
 }
 
-static int nvgpu_gpu_ioctl_wait_for_pause(
-		struct gk20a *g,
+static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 		struct nvgpu_gpu_wait_pause_args *args)
 {
-	int err = 0, gpc, tpc;
-	u32 sm_count, sm_id, size;
+	int err = 0;
 	struct warpstate *w_state;
 	struct gr_gk20a *gr = &g->gr;
-	u32  tpc_offset, gpc_offset, reg_offset, global_mask;
-	u64 warps_valid = 0, warps_paused = 0, warps_trapped = 0;
+	u32 gpc, tpc, sm_count, sm_id, size;
+	u32 global_mask;
 
 	sm_count = g->gr.gpc_count * g->gr.tpc_count;
 	size = sm_count * sizeof(struct warpstate);
 	w_state = kzalloc(size, GFP_KERNEL);
 
+    /* Wait for the SMs to reach full stop. This condition is:
+     * 1) All SMs with valid warps must be in the trap handler (SM_IN_TRAP_MODE)
+     * 2) All SMs in the trap handler must have equivalent VALID and PAUSED warp
+     *    masks.
+     */
 	global_mask = gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f()   |
 			  gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f() |
 			  gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f();
 
 	mutex_lock(&g->dbg_sessions_lock);
 
+	/* Lock down all SMs */
 	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
 
 		gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
 		tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
 
-		tpc_offset = proj_tpc_in_gpc_stride_v() * tpc;
-		gpc_offset = proj_gpc_stride_v() * gpc;
-		reg_offset = tpc_offset + gpc_offset;
-
-		/* Wait until all valid warps on the sm are paused. The valid warp mask
-		 * must be re-read with the paused mask because new warps may become
-		 * valid as the sm is pausing.
-		 */
-
 		err = gk20a_gr_lock_down_sm(g, gpc, tpc, global_mask);
+
 		if (err) {
 			gk20a_err(dev_from_gk20a(g), "sm did not lock down!\n");
 			goto end;
 		}
-
-		/* 64 bit read */
-		warps_valid = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_warp_valid_mask_r() + reg_offset + 4) << 32;
-		warps_valid |= gk20a_readl(g, gr_gpc0_tpc0_sm_warp_valid_mask_r() + reg_offset);
-
-		/* 64 bit read */
-		warps_paused = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_r() + reg_offset + 4) << 32;
-		warps_paused |= gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_r() + reg_offset);
-
-		/* 64 bit read */
-		warps_trapped = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_r() + reg_offset + 4) << 32;
-		warps_trapped |= gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_r() + reg_offset);
-
-		w_state[sm_id].valid_warps = warps_valid;
-		w_state[sm_id].trapped_warps = warps_trapped;
-		w_state[sm_id].paused_warps = warps_paused;
 	}
 
+	/* Read the warp status */
+	g->ops.gr.bpt_reg_info(g, w_state);
+
+	/* Copy to user space - pointed by "args->pwarpstate" */
 	if (copy_to_user((void __user *)(uintptr_t)args->pwarpstate, w_state, size)) {
 		gk20a_dbg_fn("copy_to_user failed!");
 		err = -EFAULT;

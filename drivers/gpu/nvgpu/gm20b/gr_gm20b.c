@@ -1050,6 +1050,83 @@ static void gr_gm20b_enable_cde_in_fecs(void *ctx_ptr)
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_ctl_o(), 0, cde_v);
 }
 
+void gr_gm20b_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
+{
+	/* Check if we have at least one valid warp */
+	/* get paused state on maxwell */
+	struct gr_gk20a *gr = &g->gr;
+	u32 gpc, tpc, sm_id;
+	u32  tpc_offset, gpc_offset, reg_offset;
+	u64 warps_valid = 0, warps_paused = 0, warps_trapped = 0;
+
+	/* for maxwell & kepler */
+	u32 numSmPerTpc = 1;
+	u32 numWarpPerTpc = g->gpu_characteristics.sm_arch_warp_count * numSmPerTpc;
+
+	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
+		gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
+		tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
+
+		tpc_offset = proj_tpc_in_gpc_stride_v() * tpc;
+		gpc_offset = proj_gpc_stride_v() * gpc;
+		reg_offset = tpc_offset + gpc_offset;
+
+		/* 64 bit read */
+		warps_valid = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_warp_valid_mask_r() + reg_offset + 4) << 32;
+		warps_valid |= gk20a_readl(g, gr_gpc0_tpc0_sm_warp_valid_mask_r() + reg_offset);
+
+		/* 64 bit read */
+		warps_paused = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_r() + reg_offset + 4) << 32;
+		warps_paused |= gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_r() + reg_offset);
+
+		/* 64 bit read */
+		warps_trapped = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_r() + reg_offset + 4) << 32;
+		warps_trapped |= gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_r() + reg_offset);
+
+		w_state[sm_id].valid_warps[0] = warps_valid;
+		w_state[sm_id].trapped_warps[0] = warps_trapped;
+		w_state[sm_id].paused_warps[0] = warps_paused;
+
+
+		if (numWarpPerTpc > 64) {
+			/* 64 bit read */
+			warps_valid = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_warp_valid_mask_2_r() + reg_offset + 4) << 32;
+			warps_valid |= gk20a_readl(g, gr_gpc0_tpc0_sm_warp_valid_mask_2_r() + reg_offset);
+
+			/* 64 bit read */
+			warps_paused = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_2_r() + reg_offset + 4) << 32;
+			warps_paused |= gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_2_r() + reg_offset);
+
+			/* 64 bit read */
+			warps_trapped = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_2_r() + reg_offset + 4) << 32;
+			warps_trapped |= gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_2_r() + reg_offset);
+
+			w_state[sm_id].valid_warps[1] = warps_valid;
+			w_state[sm_id].trapped_warps[1] = warps_trapped;
+			w_state[sm_id].paused_warps[1] = warps_paused;
+		}
+	}
+
+
+	/* Only for debug purpose */
+	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
+		gk20a_dbg_fn("w_state[%d].valid_warps[0]: %llx\n",
+						sm_id, w_state[sm_id].valid_warps[0]);
+		gk20a_dbg_fn("w_state[%d].valid_warps[1]: %llx\n",
+						sm_id, w_state[sm_id].valid_warps[1]);
+
+		gk20a_dbg_fn("w_state[%d].trapped_warps[0]: %llx\n",
+							sm_id, w_state[sm_id].trapped_warps[0]);
+		gk20a_dbg_fn("w_state[%d].trapped_warps[1]: %llx\n",
+						sm_id, w_state[sm_id].trapped_warps[1]);
+
+		gk20a_dbg_fn("w_state[%d].paused_warps[0]: %llx\n",
+						sm_id, w_state[sm_id].paused_warps[0]);
+		gk20a_dbg_fn("w_state[%d].paused_warps[1]: %llx\n",
+						sm_id, w_state[sm_id].paused_warps[1]);
+	}
+}
+
 void gm20b_init_gr(struct gpu_ops *gops)
 {
 	gops->gr.init_gpc_mmu = gr_gm20b_init_gpc_mmu;
@@ -1106,4 +1183,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.wait_empty = gr_gk20a_wait_idle;
 	gops->gr.init_cyclestats = gr_gm20b_init_cyclestats;
 	gops->gr.enable_cde_in_fecs = gr_gm20b_enable_cde_in_fecs;
+	gops->gr.bpt_reg_info = gr_gm20b_bpt_reg_info;
 }

@@ -185,6 +185,8 @@ struct gpu_ops {
 		       u32 expect_delay);
 		void (*init_cyclestats)(struct gk20a *g);
 		void (*enable_cde_in_fecs)(void *ctx_ptr);
+		void (*bpt_reg_info)(struct gk20a *g,
+				struct warpstate *w_state);
 	} gr;
 	const char *name;
 	struct {

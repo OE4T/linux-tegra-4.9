@@ -309,9 +309,9 @@ struct nvgpu_gpu_sm_debug_mode_args {
 } __packed;
 
 struct warpstate {
-	__u64 valid_warps;
-	__u64 trapped_warps;
-	__u64 paused_warps;
+	__u64 valid_warps[2];
+	__u64 trapped_warps[2];
+	__u64 paused_warps[2];
 };
 
 struct nvgpu_gpu_wait_pause_args {

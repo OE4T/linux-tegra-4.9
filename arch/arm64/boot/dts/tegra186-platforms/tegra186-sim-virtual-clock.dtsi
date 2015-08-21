@@ -24,8 +24,8 @@
 		clock-names = "host1x", "actmon";
 
 		nvcsi@150c0000 {
-			clocks = <&clk32k_in>;
-			clock-names = "nvcsi";
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "nvcsi", "nvcsilp";
 		};
 
 		vi@15700000 {

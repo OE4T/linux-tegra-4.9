@@ -495,8 +495,9 @@
 			power-domains = <&ve_pd>;
 			reg = <0x0 0x150c0000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_NVCSI>;
-			clocks = <&tegra_car TEGRA186_CLK_NVCSI>;
-			clock-names = "nvcsi";
+			clocks = <&tegra_car TEGRA186_CLK_NVCSI>,
+				 <&tegra_car TEGRA186_CLK_NVCSILP>;
+			clock-names = "nvcsi", "nvcsilp";
 			interrupts = <0 119 0x04>;
 			#stream-id-cells = <1>;
 			status = "disabled";

@@ -292,6 +292,24 @@ fail:
 	return err;
 }
 
+int tegra_panel_check_regulator_dt_support(const char *comp_str,
+				struct tegra_panel_of *panel)
+{
+	int err = 0;
+	struct device_node *node =
+		of_find_compatible_node(NULL, NULL, comp_str);
+
+	if (!node) {
+		pr_info("%s panel dt support not available\n", comp_str);
+		err = -ENOENT;
+	}
+
+	panel->en_vmm_vpp_i2c_config =
+		of_property_read_bool(node, "nvidia,en-vmm-vpp-with-i2c-config");
+
+	return err;
+}
+
 void tegra_set_fixed_panel_ops(bool is_primary,
 	struct tegra_panel_ops *p_ops, char *panel_compatible)
 {

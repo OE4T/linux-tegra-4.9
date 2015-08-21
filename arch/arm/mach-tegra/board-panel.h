@@ -50,6 +50,7 @@ enum {
 struct tegra_panel_of {
 	int panel_gpio[TEGRA_N_GPIO_PANEL];
 	bool panel_gpio_populated;
+	bool en_vmm_vpp_i2c_config;
 };
 static struct tegra_panel_of __maybe_unused panel_of = {
 	/* TEGRA_N_GPIO_PANEL counts of gpio should be
@@ -117,6 +118,9 @@ void tegra_dsi_resources_init(u8 dsi_instance,
 void tegra_dsi_update_init_cmd_gpio_rst(struct tegra_dc_out *dsi_disp1_out);
 
 int tegra_panel_gpio_get_dt(const char *comp_str,
+				struct tegra_panel_of *panel);
+
+int tegra_panel_check_regulator_dt_support(const char *comp_str,
 				struct tegra_panel_of *panel);
 
 int tegra_panel_reset(struct tegra_panel_of *panel, unsigned int delay_ms);

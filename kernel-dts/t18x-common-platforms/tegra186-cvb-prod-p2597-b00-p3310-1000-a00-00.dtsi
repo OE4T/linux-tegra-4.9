@@ -108,7 +108,7 @@
 			regulator-name = "en-vdd-sd";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
-			gpio = <&gpio_i2c_0_77 1 1>;
+			gpio = <&tegra_gpio TEGRA_GPIO(P, 5) 0>;
 			enable-active-high;
 		};
 

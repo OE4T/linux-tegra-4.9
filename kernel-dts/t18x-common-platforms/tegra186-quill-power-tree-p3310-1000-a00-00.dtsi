@@ -32,12 +32,12 @@
 			dvdd_lcd-supply = <&en_vdd_disp_1v8>;
 			avdd_dsi_csi-supply = <&spmic_sd1>;
 		};
-                nvdisplay@15210000 {
-                        avdd_hdmi-supply = <&spmic_ldo7>;
-                        avdd_hdmi_pll-supply = <&spmic_sd2>;
-                        vdd_hdmi_5v0-supply = <&vdd_hdmi>;
-                };
-        };
+		nvdisplay@15210000 {
+			avdd_hdmi-supply = <&spmic_ldo7>;
+			avdd_hdmi_pll-supply = <&spmic_sd2>;
+			vdd_hdmi_5v0-supply = <&vdd_hdmi>;
+		};
+	};
 
 	sdhci@3460000 {
 		vddio_sdmmc-supply = <&spmic_sd2>;
@@ -56,6 +56,7 @@
 
 	sdhci@3400000 {
 		vddio_sdmmc-supply = <&spmic_ldo3>;
+		vddio_sd_slot-supply = <&en_vdd_sd>;
 	};
 
 	pinctrl@3520000 {

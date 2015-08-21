@@ -24,6 +24,7 @@
 #include <linux/debugfs.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/tegra-soc.h>
 #include <linux/platform_device.h>
 
 #include <dt-bindings/memory/tegra-swgroup.h>
@@ -203,6 +204,9 @@ enum mc_overrides {
 	DONTCARE,
 	OVERRIDE,
 	NO_OVERRIDE,
+
+	/* Enable override in linsim; Keep override disabled elsewhere. */
+	SIM_OVERRIDE,
 };
 
 #define MAX_OIDS_IN_SID 5
@@ -466,7 +470,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			NVDECSRD,
 			NVDECSWR,
 		},
-		.ord = OVERRIDE,
+		.ord = SIM_OVERRIDE,
 	},
 	{
 		.sid	= TEGRA_SWGROUP_NVENC,
@@ -544,9 +548,11 @@ static void __mc_override_sid(int sid, int oid, enum mc_overrides ord)
 		 * Only valid when kernel runs in secure mode.
 		 * Otherwise, no effect on MC_SID_STRAMID_SECURITY_CONFIG_*.
 		 */
-		val = (ord == OVERRIDE) ?
-			(SCEW_STREAMID_OVERRIDE | SCEW_NS) :
-			SCEW_NS;
+		if ((ord == OVERRIDE) ||
+		    (tegra_platform_is_linsim() && ord == SIM_OVERRIDE))
+			val = SCEW_STREAMID_OVERRIDE | SCEW_NS;
+		else
+			val = SCEW_NS;
 
 		writel_relaxed(val, addr);
 

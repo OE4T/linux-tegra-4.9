@@ -59,7 +59,7 @@ static const struct gating_desc gm20b_slcg_fifo[] = {
 
 /* slcg gr */
 static const struct gating_desc gm20b_slcg_gr[] = {
-	{.addr = 0x004041f4, .prod = 0x00000000, .disable = 0x03fffffe},
+	{.addr = 0x004041f4, .prod = 0x00000002, .disable = 0x03fffffe},
 	{.addr = 0x0040917c, .prod = 0x00020008, .disable = 0x0003fffe},
 	{.addr = 0x00409894, .prod = 0x00000040, .disable = 0x0003fffe},
 	{.addr = 0x004078c4, .prod = 0x00000000, .disable = 0x000001fe},

@@ -260,9 +260,6 @@ int isc_mgr_power_up(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 	}
 
 pwr_up_end:
-	if (isc_mgr->err_irq)
-		enable_irq(isc_mgr->err_irq);
-
 	return 0;
 }
 
@@ -279,8 +276,6 @@ int isc_mgr_power_down(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 		return 0;
 	}
 
-	if (isc_mgr->err_irq)
-		disable_irq(isc_mgr->err_irq);
 	if (!pd->num_pwr_gpios)
 		goto pwr_dn_end;
 
@@ -353,6 +348,12 @@ static long isc_mgr_ioctl(
 		err = isc_mgr_power_up(isc_mgr, arg);
 		break;
 	case ISC_MGR_IOCTL_SET_PID:
+		/* first enable irq to clear pending interrupt
+		 * and then register PID
+		 */
+		if (isc_mgr->err_irq && !atomic_xchg(&isc_mgr->irq_in_use, 1))
+			enable_irq(isc_mgr->err_irq);
+
 		err = isc_mgr_write_pid(file, (const void __user *)arg);
 		break;
 	case ISC_MGR_IOCTL_SIGNAL:
@@ -404,6 +405,10 @@ static int isc_mgr_open(struct inode *inode, struct file *file)
 	dev_dbg(isc_mgr->dev, "%s\n", __func__);
 	file->private_data = isc_mgr;
 
+	/* if runtime_pwrctrl_off is not true, power on all here */
+	if (!isc_mgr->pdata->runtime_pwrctrl_off)
+		isc_mgr_power_up(isc_mgr, 0xffffffff);
+
 	isc_mgr_misc_ctrl(isc_mgr, true);
 	return 0;
 }
@@ -414,7 +419,14 @@ static int isc_mgr_release(struct inode *inode, struct file *file)
 	unsigned long flags;
 
 	isc_mgr_misc_ctrl(isc_mgr, false);
-	isc_mgr_power_down(isc_mgr, (unsigned long)-1);
+
+	/* disable irq if irq is in use, when device is closed */
+	if (atomic_xchg(&isc_mgr->irq_in_use, 0))
+		disable_irq(isc_mgr->err_irq);
+
+	/* if runtime_pwrctrl_off is not true, power off all here */
+	if (!isc_mgr->pdata->runtime_pwrctrl_off)
+		isc_mgr_power_down(isc_mgr, 0xffffffff);
 
 	/* clear sinfo to prevent report error after handler is closed */
 	spin_lock_irqsave(&isc_mgr->spinlock, flags);
@@ -572,6 +584,8 @@ struct isc_mgr_platform_data *of_isc_mgr_pdata(struct platform_device *pdev)
 		return ERR_PTR(pd->num_misc_gpios);
 
 	pd->default_pwr_on = of_property_read_bool(np, "default-power-on");
+	pd->runtime_pwrctrl_off =
+		of_property_read_bool(np, "runtime-pwrctrl-off");
 
 	return pd;
 }
@@ -657,6 +671,7 @@ static int isc_mgr_probe(struct platform_device *pdev)
 			goto err_probe;
 		}
 		disable_irq(isc_mgr->err_irq);
+		atomic_set(&isc_mgr->irq_in_use, 0);
 	}
 
 	isc_mgr->dev = &pdev->dev;

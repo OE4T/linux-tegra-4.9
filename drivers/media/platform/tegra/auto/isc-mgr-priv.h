@@ -31,6 +31,7 @@ struct isc_mgr_priv {
 	int err_irq;
 	char devname[32];
 	u32 pwr_state;
+	atomic_t irq_in_use;
 };
 
 int isc_mgr_power_up(struct isc_mgr_priv *isc_mgr, unsigned long arg);

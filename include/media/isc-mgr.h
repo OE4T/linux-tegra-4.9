@@ -68,6 +68,7 @@ struct isc_mgr_platform_data {
 	u32 misc_flags[MAX_ISC_GPIOS];
 	int csi_port;
 	bool default_pwr_on;
+	bool runtime_pwrctrl_off;
 	char *drv_name;
 };
 

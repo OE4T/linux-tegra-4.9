@@ -1329,6 +1329,7 @@
 			ranges;
 
 			nvidia,num-lanes = <4>;
+			nvidia,afi-ctl-offset = <0x110>;
 		};
 
 		pci@2,0 {
@@ -1342,6 +1343,7 @@
 			ranges;
 
 			nvidia,num-lanes = <1>;
+			nvidia,afi-ctl-offset = <0x118>;
 		};
 
 	};

@@ -103,7 +103,7 @@ struct nvhost_device_data t18_isp_info = {
 	NVHOST_MODULE_NO_POWERGATE_ID,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.powergate_delay	= 500,
+	.poweron_reset		= true,
 	.clocks			= {
 		{"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP},
 		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
@@ -133,7 +133,7 @@ struct nvhost_device_data t18_vi_info = {
 	NVHOST_MODULE_NO_POWERGATE_ID,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.powergate_delay	= 500,
+	.poweron_reset		= true,
 	.moduleid		= NVHOST_MODULE_VI,
 	.clocks = {
 		{"vi", UINT_MAX},
@@ -324,7 +324,8 @@ struct nvhost_device_data t18_vic_info = {
 struct nvhost_device_data t18_nvcsi_info = {
 	.num_channels		= 1,
 	.clocks			= {
-		{"nvcsi", UINT_MAX, 0}
+		{"nvcsi", UINT_MAX, 0},
+		{"nvcsilp", UINT_MAX, 0}
 	},
 	.devfs_name		= "nvcsi",
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVCSI},
@@ -335,6 +336,8 @@ struct nvhost_device_data t18_nvcsi_info = {
 	NVHOST_MODULE_NO_POWERGATE_ID,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.poweron_reset		= true,
+	.keepalive		= true,
 	.serialize		= 1,
 	.push_work_done		= 1,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,

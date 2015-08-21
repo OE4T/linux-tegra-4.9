@@ -32,7 +32,7 @@
 #include <linux/nvs_proximity.h>
 
 
-#define IQS_DRIVER_VERSION		(13)
+#define IQS_DRIVER_VERSION		(14)
 #define IQS_VENDOR			"Azoteq"
 #define IQS_NAME			"iqs2x3"
 #define IQS_NAME_IQS253			"iqs253"
@@ -470,6 +470,7 @@ struct iqs_state {
 	u8 dev_id;			/* device ID */
 	bool irq_dis;			/* interrupt disable flag */
 	bool irq_set_irq_wake;		/* if irq_set_irq_wake is needed */
+	bool irq_trigger_edge;		/* if irq set for edge trigger */
 	bool susrsm;			/* suspend/resume - exit I2C early */
 	bool resume;			/* resume action needed */
 	int op_i;			/* operational index */
@@ -574,7 +575,7 @@ static void iqs_enable_irq(struct iqs_state *st)
 		if (ms) {
 			ms <<= 1; /* *2 */
 			for (i = 0; i < ms; i++) {
-				if (gpio_get_value(st->gpio_rdy))
+				if (gpio_get_value_cansleep(st->gpio_rdy))
 					break;
 
 				usleep_range(500, 1000);
@@ -647,7 +648,7 @@ static int iqs_gpio_rdy_poll(struct iqs_state *st)
 	int ret;
 
 	for (i = 0; i < 2000; i++) {
-		ret = gpio_get_value(st->gpio_rdy);
+		ret = gpio_get_value_cansleep(st->gpio_rdy);
 		if (st->susrsm || !ret)
 			break;
 
@@ -665,7 +666,7 @@ static int iqs_gpio_rdy(struct iqs_state *st, bool poll)
 	if (poll)
 		ret = iqs_gpio_rdy_poll(st);
 	else
-		ret = gpio_get_value(st->gpio_rdy);
+		ret = gpio_get_value_cansleep(st->gpio_rdy);
 	if (ret && !st->susrsm) {
 		force = true;
 		iqs_disable_irq(st);
@@ -1767,16 +1768,18 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 			t += sprintf(buf + t, "NO gpio_rdy\n");
 		else
 			t += sprintf(buf + t, "gpio_rdy %d=%d\n", st->gpio_rdy,
-				     gpio_get_value(st->gpio_rdy));
+				     gpio_get_value_cansleep(st->gpio_rdy));
 		if (st->gpio_sar < 0)
 			t += sprintf(buf + t, "NO gpio_sar\n");
 		else
 			t += sprintf(buf + t, "gpio_sar %d=%d\n", st->gpio_sar,
-				     gpio_get_value(st->gpio_sar));
+				     gpio_get_value_cansleep(st->gpio_sar));
 		t += sprintf(buf + t, "gpio_sar_dev=%s\n",
 			     iqs_sensor_cfg_name[st->gpio_sar_dev]);
 		t += sprintf(buf + t, "irq=%d\n", st->i2c->irq);
 		t += sprintf(buf + t, "irq_disable=%x\n", st->irq_dis);
+		t += sprintf(buf + t, "irq_trigger_edge=%x\n",
+			     st->irq_trigger_edge);
 		t += sprintf(buf + t, "irq_set_irq_wake=%x\n",
 			     st->irq_set_irq_wake);
 		t += sprintf(buf + t, "susrsm=%x\n", st->susrsm);
@@ -2121,6 +2124,9 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 		if (i)
 			st->irq_set_irq_wake = true;
 		i = 0;
+		of_property_read_u32(dn, "irq_trigger_edge", &i);
+		if (i)
+			st->irq_trigger_edge = true;
 		of_property_read_u32(dn, "watchdog_timeout_ms", &st->wd_to_ms);
 		of_property_read_u32(dn, "i2c_retry", &st->i2c_retry);
 		of_property_read_u32(dn, "gpio_rdy_retry",
@@ -2277,7 +2283,11 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (st->gpio_rdy > 0)
 		st->i2c->irq = gpio_to_irq(st->gpio_rdy);
 	if (client->irq) {
-		irqflags = IRQF_TRIGGER_LOW | IRQF_ONESHOT | IRQF_NO_THREAD;
+		irqflags = IRQF_ONESHOT | IRQF_NO_THREAD;
+		if (st->irq_trigger_edge)
+			irqflags |= IRQF_TRIGGER_FALLING;
+		else
+			irqflags |= IRQF_TRIGGER_LOW;
 		for (i = 0; i < IQS_DEV_N; i++) {
 			if (st->cfg[i].snsr_id >= 0) {
 				if (st->cfg[i].flags & SENSOR_FLAG_WAKE_UP)

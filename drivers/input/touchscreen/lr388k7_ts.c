@@ -2,6 +2,7 @@
  * LR388K7 touchscreen driver
  *
  * Copyright (C) 2014, Sharp Corporation
+ * Copyright (c) 2015, NVIDIA CORPORATION. All rights reserved.
  *
  * Author: Makoto Itsuki <itsuki.makoto@sharp.co.jp>
  *
@@ -133,6 +134,10 @@ struct lr388k7 {
 	struct spi_device	*spi;
 	struct device           *dev;
 	struct input_dev	*idev;
+	struct pinctrl		*pinctrl;
+	struct pinctrl_state	*spi_intf_en;
+	struct pinctrl_state	*spi_intf_dis;
+
 #if defined(ACTIVE_ENABLE)
 	struct input_dev	*idev_active;
 	int                     tool;
@@ -2183,6 +2188,38 @@ static struct lr388k7_platform_data *lr388k7_parse_dt(struct device *dev,
 	return ERR_PTR(ret);
 }
 
+static void init_spi_pinctrl(struct lr388k7 *ts, struct device *dev)
+{
+	struct pinctrl *pin = NULL;
+	struct pinctrl_state *active, *inactive;
+
+	pin = devm_pinctrl_get(dev);
+	if (IS_ERR(pin)) {
+		dev_err(dev, "missing pinctrl device\n");
+		return;
+	}
+	ts->pinctrl = pin;
+
+	active = pinctrl_lookup_state(pin, "spi_intf_normal");
+	if (IS_ERR_OR_NULL(active)) {
+		dev_err(dev, "missing spi_intf_normal state\n");
+		goto out;
+	}
+	ts->spi_intf_en = active;
+	inactive = pinctrl_lookup_state(pin, "spi_intf_lowpower");
+	if (IS_ERR_OR_NULL(active)) {
+		dev_err(dev, "missing spi_intf_lowpower state\n");
+		goto out;
+	}
+	ts->spi_intf_dis = inactive;
+
+	return;
+out:
+	if (ts->pinctrl)
+		ts->pinctrl = NULL;
+
+}
+
 static int lr388k7_probe(struct spi_device *spi)
 {
 	struct lr388k7_platform_data *pdata;/* = spi->dev.platform_data;*/
@@ -2303,6 +2340,8 @@ static int lr388k7_probe(struct spi_device *spi)
 	/* Reset assert */
 	gpio_set_value(ts->gpio_reset, 0);
 	g_st_state.b_is_reset = true;
+
+	init_spi_pinctrl(ts, dev);
 
 	/* regulator */
 	ts->regulator_3v3 = devm_regulator_get(&g_spi->dev, "avdd");
@@ -2627,6 +2666,10 @@ static void lr388k7_start(struct lr388k7 *ts)
 
 	usleep_range(5000, 6000);
 
+	if (ts->spi_intf_en)
+		pinctrl_select_state(ts->pinctrl,
+			ts->spi_intf_en);
+
 	/*
 	 * Enable clock, if necessary
 	 */
@@ -2671,6 +2714,12 @@ static void lr388k7_ctrl_suspend(struct lr388k7 *ts)
 		mutex_unlock(&ts->mutex);
 		return;
 	}
+
+	gpio_set_value(ts->gpio_reset, 0);
+
+	if (ts->spi_intf_dis)
+		pinctrl_select_state(ts->pinctrl,
+				ts->spi_intf_dis);
 
 	/* Disable (3.3V) */
 	if (ts->regulator_3v3) {

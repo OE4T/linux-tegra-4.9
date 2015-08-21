@@ -1,0 +1,334 @@
+/*
+ * eqos_ape_ioctl.c -- EQOS APE Clock Synchronization driver IO control
+ *
+ * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+#include <asm/mach-types.h>
+#include <linux/clk.h>
+#include <linux/module.h>
+#include <linux/err.h>
+#include <linux/slab.h>
+#include <linux/pm_runtime.h>
+#include <linux/tegra_pm_domains.h>
+#include <mach/clk.h>
+
+#include "eqos_ape_ioctl.h"
+#include <../../platform/tegra/nvadsp/amisc.h>
+
+
+static int eqos_ape_ioctl_major;
+static struct cdev eqos_ape_ioctl_cdev;
+static struct device *dev_eqos_ape;
+static struct class *eqos_ape_ioctl_class;
+struct eqos_drvdata *eqos_ape_drvdata;
+
+
+static void sync_snapshot(void)
+{
+	struct eqos_drvdata *data = eqos_ape_drvdata;
+
+	/* trigger and store snapsnot */
+	amisc_writel((AMISC_APE_TSC_CTRL_3_0_ENABLE |
+				AMISC_APE_TSC_CTRL_3_0_TRIGGER),
+				AMISC_APE_TSC_CTRL_3_0);
+	data->ape_sec_snap = amisc_readl(AMISC_APE_SNAP_TSC_SEC_0);
+	data->ape_ns_snap = amisc_readl(AMISC_APE_SNAP_TSC_NS_0);
+	data->eavb_sec_snap = amisc_readl(AMISC_EAVB_SNAP_TSC_SEC_0);
+	data->eavb_ns_snap = amisc_readl(AMISC_EAVB_SNAP_TSC_NS_0);
+}
+
+static long eqos_ape_hw_ioctl(struct file *file,
+unsigned int cmd, unsigned long arg)
+{
+	struct eqos_ape_cmd __user *_eqos_ape = (struct eqos_ape_cmd *)arg;
+	struct eqos_ape_cmd eqos_ape;
+	unsigned int n_modulo = 0, n_fract = 0, n_int = 0;
+	u64 ape_sec_snap_prev = 0, ape_ns_snap_prev = 0;
+	u64 eavb_sec_snap_prev = 0, eavb_ns_snap_prev = 0;
+	struct eqos_drvdata *data = eqos_ape_drvdata;
+	struct device *dev = &data->pdev->dev;
+	u64 num = 0;
+	u64 den = 0;
+	int cur_rate;
+	int new_rate;
+	int set_rate;
+
+	switch (cmd) {
+	case EQOS_APE_AMISC_INIT:
+		amisc_writel(0, AMISC_IDLE_0);
+		amisc_writel(AMISC_APE_TSC_CTRL_3_0_ENABLE,
+					AMISC_APE_TSC_CTRL_3_0);
+
+		/* configuring n_fract/n_modulo for 24.576Mhz*/
+		n_modulo = 100; n_fract = 69; n_int = 40;
+		amisc_writel((AMISC_APE_TSC_CTRL_NMODULE_0_0_MASK(n_modulo) |
+			AMISC_APE_TSC_CTRL_NFRACT_0_0_MASK(n_fract)),
+			AMISC_APE_TSC_CTRL_0_0);
+		amisc_writel(AMISC_APE_TSC_CTRL_NINT_1_0_MASK(n_int),
+			AMISC_APE_TSC_CTRL_1_0);
+		amisc_writel((AMISC_APE_TSC_CTRL_3_0_ENABLE |
+			AMISC_APE_TSC_CTRL_3_0_COPY),
+			AMISC_APE_TSC_CTRL_3_0);
+
+		ape_sec_snap_prev = amisc_readl(AMISC_APE_RT_TSC_SEC_0);
+		ape_ns_snap_prev = amisc_readl(AMISC_APE_RT_TSC_NS_0);
+		dev_dbg(dev, "APE Time Sec %lld NSec %lld\n",
+			ape_sec_snap_prev, ape_ns_snap_prev);
+		dev_dbg(dev, "APE Time Sec %llx NSec %llx\n",
+			ape_sec_snap_prev, ape_ns_snap_prev);
+		break;
+
+	case EQOS_APE_AMISC_SYNC:
+		if (data->first_sync) {
+			sync_snapshot();
+			data->first_sync = 0;
+			dev_dbg(dev, "EAVB sec %lld nsec %lld\n",
+				data->eavb_sec_snap, data->eavb_ns_snap);
+			dev_dbg(dev, "APE sec %lld nsec %lld\n",
+				data->ape_sec_snap, data->ape_ns_snap);
+			break;
+		}
+		/* Store previous timestamp*/
+		eavb_sec_snap_prev = data->eavb_sec_snap;
+		eavb_ns_snap_prev = data->eavb_ns_snap;
+		ape_sec_snap_prev = data->ape_sec_snap;
+		ape_ns_snap_prev = data->ape_ns_snap;
+
+		sync_snapshot();
+
+		/* TODO: implementation for clock change logic */
+		den = (data->ape_sec_snap - ape_sec_snap_prev) * (1000000000)
+		+ (data->ape_ns_snap - ape_ns_snap_prev);
+		num = (data->eavb_sec_snap - eavb_sec_snap_prev) * (1000000000)
+		+ (data->eavb_ns_snap - eavb_ns_snap_prev);
+		dev_dbg(dev, "num %lld den %lld\n", num, den);
+
+		cur_rate = amisc_plla_get_rate(data);
+		dev_dbg(dev, "current rate %d\n", cur_rate);
+
+		new_rate = (int)((num * cur_rate)/den);
+		dev_dbg(dev, "new rate %d\n", new_rate);
+		amisc_plla_set_rate(data, new_rate);
+
+		set_rate = amisc_plla_get_rate(data);
+		dev_dbg(dev, "applied rate %d\n", set_rate);
+
+
+		break;
+	case EQOS_APE_TEST_FREQ_ADJ:
+		if (arg && copy_from_user(&eqos_ape,
+			_eqos_ape,
+			sizeof(eqos_ape)))
+			return -EFAULT;
+
+		dev_dbg(dev, "Applied freq adj %d\n", eqos_ape.ppm);
+		cur_rate = amisc_plla_get_rate(data);
+		dev_dbg(dev, "current rate %d\n", cur_rate);
+
+		num = 1000000 + eqos_ape.ppm;
+		den = 1000000;
+
+		new_rate = (int)((num * cur_rate)/den);
+
+		dev_dbg(dev, "new rate %d\n", new_rate);
+		amisc_plla_set_rate(data, new_rate);
+
+		set_rate = amisc_plla_get_rate(data);
+		dev_dbg(dev, "applied rate %d\n", set_rate);
+
+		break;
+	case EQOS_APE_AMISC_RESET:
+
+		amisc_writel((AMISC_APE_TSC_CTRL_3_0_ENABLE |
+			AMISC_APE_TSC_CTRL_3_0_RESET),
+			AMISC_APE_TSC_CTRL_3_0);
+		data->first_sync = 1;
+		break;
+
+	case EQOS_APE_AMISC_DEINIT:
+
+		amisc_writel((AMISC_APE_TSC_CTRL_NMODULE_0_0_MASK(0) |
+			AMISC_APE_TSC_CTRL_NFRACT_0_0_MASK(0)),
+			AMISC_APE_TSC_CTRL_0_0);
+		amisc_writel(AMISC_APE_TSC_CTRL_NINT_1_0_MASK(n_int),
+			AMISC_APE_TSC_CTRL_1_0);
+		amisc_writel(AMISC_APE_TSC_CTRL_3_0_DISABLE,
+			AMISC_APE_TSC_CTRL_3_0);
+		amisc_writel(1 , AMISC_IDLE_0);
+		data->first_sync = 1;
+		break;
+	}
+
+	return 0;
+}
+
+static int eqos_ape_ioctl_open(struct inode *inp, struct file *filep)
+{
+	int ret = 0;
+
+#ifdef CONFIG_PM_RUNTIME
+	ret = pm_runtime_get_sync(&eqos_ape_drvdata->pdev->dev);
+	if (ret < 0)
+		return ret;
+#endif
+	dev_dbg(&eqos_ape_drvdata->pdev->dev, "eqos ape opened\n");
+	amisc_clk_init(eqos_ape_drvdata);
+	return ret;
+}
+
+static int eqos_ape_ioctl_release(struct inode *inp, struct file *filep)
+{
+	int ret = 0;
+
+#ifdef CONFIG_PM_RUNTIME
+	ret = pm_runtime_put_sync(&eqos_ape_drvdata->pdev->dev);
+	if (ret < 0) {
+		dev_err(&eqos_ape_drvdata->pdev->dev, "pm_runtime_put_sync failed\n");
+		return ret;
+	}
+#endif
+	dev_dbg(&eqos_ape_drvdata->pdev->dev, "eqos ape closed\n");
+	amisc_clk_deinit(eqos_ape_drvdata);
+	return ret;
+}
+
+static const struct file_operations eqos_ape_ioctl_fops = {
+	.owner = THIS_MODULE,
+	.open = eqos_ape_ioctl_open,
+	.release = eqos_ape_ioctl_release,
+	.unlocked_ioctl = eqos_ape_hw_ioctl,
+};
+
+static void eqos_ape_ioctl_cleanup(void)
+{
+	cdev_del(&eqos_ape_ioctl_cdev);
+	device_destroy(eqos_ape_ioctl_class, MKDEV(eqos_ape_ioctl_major, 0));
+
+	if (eqos_ape_ioctl_class)
+		class_destroy(eqos_ape_ioctl_class);
+
+	unregister_chrdev_region(
+		MKDEV(eqos_ape_ioctl_major, 0), 1);
+}
+
+static int  eqos_ape_init(void)
+{
+	struct device *dev = &eqos_ape_drvdata->pdev->dev;
+	dev_t eqos_ape_ioctl_dev;
+	int ret = -ENODEV;
+	int result;
+
+
+	result = alloc_chrdev_region(&eqos_ape_ioctl_dev, 0,
+		1, "eqos_ape_hw");
+	if (result < 0)
+		goto fail_err;
+
+	eqos_ape_ioctl_major = MAJOR(eqos_ape_ioctl_dev);
+	cdev_init(&eqos_ape_ioctl_cdev, &eqos_ape_ioctl_fops);
+	eqos_ape_ioctl_cdev.owner = THIS_MODULE;
+	eqos_ape_ioctl_cdev.ops = &eqos_ape_ioctl_fops;
+
+	result = cdev_add(&eqos_ape_ioctl_cdev, eqos_ape_ioctl_dev, 1);
+	if (result < 0)
+		goto fail_chrdev;
+
+	eqos_ape_ioctl_class = class_create(THIS_MODULE, "eqos_ape_hw");
+	if (IS_ERR(eqos_ape_ioctl_class)) {
+		pr_err(KERN_ERR "eqos_ape_hwdep: device class file already in use.\n");
+		eqos_ape_ioctl_cleanup();
+		return PTR_ERR(eqos_ape_ioctl_class);
+	}
+
+	dev_eqos_ape = device_create(eqos_ape_ioctl_class, NULL,
+		MKDEV(eqos_ape_ioctl_major, 0),
+		NULL, "%s", "eqos_ape_hw");
+
+	dev_dbg(dev, "eqos ape init\n");
+	return 0;
+
+fail_chrdev:
+	unregister_chrdev_region(eqos_ape_ioctl_dev, 1);
+
+fail_err:
+	return ret;
+}
+
+static void  eqos_ape_exit(void)
+{
+	eqos_ape_ioctl_cleanup();
+}
+
+static int eqos_ape_probe(struct platform_device *pdev)
+{
+	struct eqos_drvdata *drv_data;
+	struct device *dev = &pdev->dev;
+	int ret = 0;
+
+
+	drv_data = devm_kzalloc(dev, sizeof(*drv_data),
+				GFP_KERNEL);
+	drv_data->first_sync = 1;
+	dev_set_drvdata(dev, drv_data);
+
+	platform_set_drvdata(pdev, drv_data);
+	drv_data->pdev = pdev;
+
+	eqos_ape_drvdata = drv_data;
+	eqos_ape_init();
+
+#ifdef CONFIG_PM_RUNTIME
+	tegra_ape_pd_add_device(&eqos_ape_drvdata->pdev->dev);
+	pm_runtime_enable(&eqos_ape_drvdata->pdev->dev);
+#endif
+
+	return ret;
+}
+
+static int eqos_ape_remove(struct platform_device *pdev)
+{
+	eqos_ape_exit();
+
+#ifdef CONFIG_PM_RUNTIME
+	pm_runtime_disable(&eqos_ape_drvdata->pdev->dev);
+#endif
+	return 0;
+}
+
+static const struct of_device_id eqos_ape_of_match[] = {
+	{ .compatible = "nvidia,tegra18x-eqos-ape", .data = NULL, },
+};
+
+static struct platform_driver eqos_ape_driver = {
+	.driver = {
+		.name = "eqos_ape",
+		.owner = THIS_MODULE,
+		.of_match_table = of_match_ptr(eqos_ape_of_match),
+	},
+	.probe = eqos_ape_probe,
+	.remove = eqos_ape_remove,
+};
+
+static int __init eqos_ape_modinit(void)
+{
+	return platform_driver_register(&eqos_ape_driver);
+}
+module_init(eqos_ape_modinit);
+
+static void __exit eqos_ape_modexit(void)
+{
+	platform_driver_unregister(&eqos_ape_driver);
+}
+module_exit(eqos_ape_modexit);

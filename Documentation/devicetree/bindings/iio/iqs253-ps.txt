@@ -181,7 +181,7 @@ For overall status information:
 #echo 10 > nvs
 #cat nvs
 The results will be something like:
-	IQS driver v. 12
+	IQS driver v. 14
 	ATI redo count=0
 	os_options=0
 	stream_mode=2
@@ -192,6 +192,10 @@ The results will be something like:
 	gpio_sar 173=1
 	irq=2
 	irq_disable=0
+	irq_trigger_edge=0
+	irq_set_irq_wake=0
+	susrsm=0
+	resume=0
 	SAR_proximity_binary_hw=1
 	SAR_touch_binary_hw=1
 When this status is read, the ATI redo count will reset to 0.
@@ -251,6 +255,11 @@ Optional properties:
 	os_options is > 0, the OS will be tricked into thinking is has control.
 	In other words, when os_options is 0 (the default), the device will
 	always be enabled.
+- irq_trigger_edge: Set to 1 if interrupt is to configured as
+		    IRQF_TRIGGER_FALLING.  Otherwise the interrupt will be
+		    configured as IRQF_TRIGGER_LOW.  Using IRQF_TRIGGER_LOW
+		    addresses false triggers while the interrupt is disabled
+		    during the forced communication protocol.
 - irq_set_irq_wake: Set to 1 if driver is to call this for suspend/resume.
 - stream_mode: The device triggers an interrupt on every device data cycle.
   Note: As mentioned above, the IQS devices have an, um, interesting mechanism

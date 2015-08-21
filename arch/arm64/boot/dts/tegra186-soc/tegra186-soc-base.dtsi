@@ -370,7 +370,7 @@
 		status = "disabled";
 	};
 
-	pinctrl@3520000 {
+	padctl_uphy: pinctrl@3520000 {
 		compatible = "nvidia,tegra186-padctl-uphy";
 		reg = <0x0 0x03520000 0x0 0x1000>,
 			<0x0 0x03540000 0x0 0x1000>,
@@ -1093,6 +1093,8 @@
 		resets = <&tegra_car TEGRA186_RESET_SATA>,
 			<&tegra_car TEGRA186_RESET_SATACOLD>;
 		reset-names = "sata", "satacold";
+		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_SATA_P(0)>;
+		phy-names = "sata-phy";
 		status = "disabled";
 	};
 

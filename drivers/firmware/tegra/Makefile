@@ -20,3 +20,4 @@ obj-y		+= bpmp_t186.o
 obj-y		+= mail_t186.o
 obj-y		+= mail_imo.o
 obj-y		+= mail_native_ivc.o
+obj-$(CONFIG_TEGRA_HV_MANAGER)		+= mail_virt_ivc.o

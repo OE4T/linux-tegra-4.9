@@ -338,9 +338,10 @@ static uint32_t max_qid;
 static struct ivc_dev *ivc_dev_array;
 static struct class *ivc_class;
 
-static int __init add_ivc(const struct tegra_hv_queue_data *qd)
+static int __init add_ivc(int i)
 {
-	struct ivc_dev *ivc = &ivc_dev_array[qd->id];
+	const struct tegra_hv_queue_data *qd = &ivc_info_queue_array(info)[i];
+	struct ivc_dev *ivc = &ivc_dev_array[i];
 	int ret;
 
 	ivc->minor = qd->id;
@@ -410,7 +411,7 @@ static int __init setup_ivc(void)
 	 * corresponding to existent queues.
 	 */
 	for (i = 0; i < info->nr_queues; i++) {
-		result = add_ivc(&ivc_info_queue_array(info)[i]);
+		result = add_ivc(i);
 		if (result != 0)
 			return result;
 	}

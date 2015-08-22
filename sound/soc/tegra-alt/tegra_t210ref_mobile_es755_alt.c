@@ -621,7 +621,6 @@ static const struct snd_kcontrol_new tegra_t210ref_controls[] = {
 
 static int tegra_t210ref_suspend_pre(struct snd_soc_card *card)
 {
-	struct snd_soc_jack_gpio *gpio = &tegra_t210ref_hp_jack_gpio;
 	unsigned int idx;
 
 	/* DAPM dai link stream work for non pcm links */
@@ -629,9 +628,6 @@ static int tegra_t210ref_suspend_pre(struct snd_soc_card *card)
 		if (card->rtd[idx].dai_link->params)
 			INIT_DELAYED_WORK(&card->rtd[idx].delayed_work, NULL);
 	}
-
-	if (gpio_is_valid(gpio->gpio))
-		disable_irq(gpio_to_irq(gpio->gpio));
 
 	return 0;
 }
@@ -654,19 +650,10 @@ static int tegra_t210ref_suspend_post(struct snd_soc_card *card)
 static int tegra_t210ref_resume_pre(struct snd_soc_card *card)
 {
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
-	struct snd_soc_jack_gpio *gpio = &tegra_t210ref_hp_jack_gpio;
-	int ret, val;
+	int ret;
 
 	if (machine->digital_reg)
 		ret = regulator_enable(machine->digital_reg);
-
-	if (gpio_is_valid(gpio->gpio)) {
-		val = gpio_get_value(gpio->gpio);
-		val = gpio->invert ? !val : val;
-		if (gpio->jack)
-			snd_soc_jack_report(gpio->jack, val, gpio->report);
-		enable_irq(gpio_to_irq(gpio->gpio));
-	}
 
 	if (!machine->clock_enabled) {
 		machine->clock_enabled = 1;

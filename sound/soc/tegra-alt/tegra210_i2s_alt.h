@@ -214,6 +214,7 @@ struct tegra210_i2s {
 	int num_supplies;
 	int bclk_ratio;
 	int format_in;
+	int codec_bit_format;
 	unsigned int fsync_width;
 	unsigned int tx_mask;
 	unsigned int rx_mask;

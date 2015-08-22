@@ -436,7 +436,8 @@ static int tegra210_i2s_get_format(struct snd_kcontrol *kcontrol,
 	/* get the format control flag */
 	if (strstr(kcontrol->id.name, "input"))
 		ucontrol->value.integer.value[0] = i2s->format_in;
-
+	else if (strstr(kcontrol->id.name, "codec"))
+		ucontrol->value.integer.value[0] = i2s->codec_bit_format;
 	return 0;
 }
 
@@ -449,6 +450,8 @@ static int tegra210_i2s_put_format(struct snd_kcontrol *kcontrol,
 	/* set the format control flag */
 	if (strstr(kcontrol->id.name, "input"))
 		i2s->format_in = ucontrol->value.integer.value[0];
+	else if (strstr(kcontrol->id.name, "codec"))
+		i2s->codec_bit_format = ucontrol->value.integer.value[0];
 
 	return 0;
 }
@@ -463,6 +466,12 @@ static const int tegra210_i2s_fmt_values[] = {
 	0,
 	TEGRA210_AUDIOCIF_BITS_16,
 	TEGRA210_AUDIOCIF_BITS_32,
+};
+
+static const int tegra210_i2s_sample_size[] = {
+	0,
+	16,
+	32,
 };
 
 static const struct soc_enum tegra210_i2s_format_enum =
@@ -517,6 +526,12 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 	default:
 		dev_err(dev, "Wrong format!\n");
 		return -EINVAL;
+	}
+
+	if (i2s->codec_bit_format) {
+		val = tegra210_i2s_fmt_values[i2s->codec_bit_format];
+		sample_size = tegra210_i2s_sample_size[i2s->codec_bit_format];
+		cif_conf.client_bits = tegra210_i2s_fmt_values[i2s->codec_bit_format];
 	}
 
 	regmap_update_bits(i2s->regmap, TEGRA210_I2S_CTRL, mask, val);
@@ -716,6 +731,8 @@ static const struct snd_kcontrol_new tegra210_i2s_controls[] = {
 	SOC_SINGLE_EXT("Loopback", SND_SOC_NOPM, 0, 1, 0,
 		tegra210_i2s_loopback_get, tegra210_i2s_loopback_put),
 	SOC_ENUM_EXT("input bit format", tegra210_i2s_format_enum,
+		tegra210_i2s_get_format, tegra210_i2s_put_format),
+	SOC_ENUM_EXT("codec bit format", tegra210_i2s_format_enum,
 		tegra210_i2s_get_format, tegra210_i2s_put_format),
 };
 

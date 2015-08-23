@@ -77,8 +77,7 @@ int tegra_ahci_dbg_dump_show(struct seq_file *s, void *data)
 	return 0;
 }
 
-
-int tegra_ahci_dbg_dump_open(struct inode *inode, struct file *file)
+static int tegra_ahci_dbg_dump_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, tegra_ahci_dbg_dump_show, inode->i_private);
 }
@@ -88,7 +87,7 @@ void tegra_ahci_dbg_dump_regs(void)
 	tegra_ahci_dbg_dump_show(NULL, tegra_ahci_data);
 }
 
-const struct file_operations debug_fops = {
+static const struct file_operations debug_fops = {
 	.open           = tegra_ahci_dbg_dump_open,
 	.read           = seq_read,
 	.llseek         = seq_lseek,

@@ -207,7 +207,7 @@ static unsigned int tegra_get_speed(uint32_t cpu)
 }
 
 /* Denver cluster cpu_to_emc freq */
-unsigned long m_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
+static unsigned long m_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
 {
 	unsigned long emc_rate;
 
@@ -220,7 +220,7 @@ unsigned long m_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
 }
 
 /* Arm cluster cpu_to_emc freq */
-unsigned long b_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
+static unsigned long b_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
 {
 	if (cpu_rate >= 1300000)
 		return tfreq_data.emc_max_rate;	/* cpu >= 1.3GHz, emc max */

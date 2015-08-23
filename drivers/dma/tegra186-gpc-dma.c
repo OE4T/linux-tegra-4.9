@@ -1765,15 +1765,6 @@ static int tegra_dma_pm_resume(struct device *dev)
 	return 0;
 }
 
-int tegra_gpcdma_save(void)
-{
-	return tegra_dma_pm_suspend(dma_device);
-}
-
-int tegra_gpcdma_restore(void)
-{
-	return tegra_dma_pm_resume(dma_device);
-}
 #endif
 
 static const struct dev_pm_ops tegra_dma_dev_pm_ops = {

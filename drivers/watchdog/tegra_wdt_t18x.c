@@ -278,7 +278,7 @@ static int tegra_wdt_t18x_cpu_notify(struct notifier_block *self,
 	if (!cpumask_test_cpu(cpu, &wdt_cpumask))
 		return NOTIFY_OK;
 
-	if (*this_cpu_ptr(devid) == 0)
+	if (*this_cpu_ptr(devid) == NULL)
 		return NOTIFY_OK;
 
 	switch (action & ~CPU_TASKS_FROZEN) {
@@ -313,7 +313,7 @@ static inline int tegra_wdt_t18x_update_config_bit(struct tegra_wdt_t18x
 	return 0;
 }
 
-void tegra_wdt_t18x_debug_reset(bool on)
+static void tegra_wdt_t18x_debug_reset(bool on)
 {
 	struct tegra_wdt_t18x *tegra_wdt_t18x;
 	int i = 0;
@@ -326,7 +326,7 @@ void tegra_wdt_t18x_debug_reset(bool on)
 	}
 }
 
-void tegra_wdt_t18x_por_reset(bool on)
+static void tegra_wdt_t18x_por_reset(bool on)
 {
 	struct tegra_wdt_t18x *tegra_wdt_t18x;
 	int i = 0;
@@ -454,7 +454,7 @@ static int tegra_wdt_t18x_setup_pet(struct tegra_wdt_t18x *tegra_wdt_t18x)
 			return -ENOMEM;
 		}
 		for_each_possible_cpu(i) {
-			*per_cpu_ptr(devid, i) = 0;
+			*per_cpu_ptr(devid, i) = NULL;
 		}
 		ret = register_cpu_notifier(&tegra_wdt_t18x_cpu_nb);
 		if (ret) {
@@ -485,7 +485,6 @@ static int tegra_wdt_t18x_setup_pet(struct tegra_wdt_t18x *tegra_wdt_t18x)
 
 	return 0;
 }
-
 
 static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 {

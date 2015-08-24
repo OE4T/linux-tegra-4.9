@@ -299,7 +299,7 @@ int tegra_dc_dpaux_write_chunk_locked(struct tegra_dc_dp_data *dp,
 		}
 	}
 
-	while ((timeout_retries > 0) && (defer_retries > 0)) {
+	while (1) {
 		if ((timeout_retries != DP_AUX_TIMEOUT_MAX_TRIES) ||
 		    (defer_retries != DP_AUX_DEFER_MAX_TRIES))
 			usleep_range(DP_DPCP_RETRY_SLEEP_NS,
@@ -448,7 +448,7 @@ int tegra_dc_dpaux_read_chunk_locked(struct tegra_dc_dp_data *dp,
 		}
 	}
 
-	while ((timeout_retries > 0) && (defer_retries > 0)) {
+	while (1) {
 		if ((timeout_retries != DP_AUX_TIMEOUT_MAX_TRIES) ||
 		    (defer_retries != DP_AUX_DEFER_MAX_TRIES))
 			usleep_range(DP_DPCP_RETRY_SLEEP_NS,

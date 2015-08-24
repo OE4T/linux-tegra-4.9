@@ -22,3 +22,4 @@ obj-y += mc/
 obj-$(CONFIG_TEGRA_AST) += tegra_ast.o
 obj-y += powergate/
 obj-$(CONFIG_TEGRA_AON) += tegra-aon.o
+obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra18_cpu_debugfs.o

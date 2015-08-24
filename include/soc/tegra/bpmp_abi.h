@@ -1,15 +1,25 @@
 /*
  * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
- * NVIDIA CORPORATION and its licensors retain all intellectual property
- * and proprietary rights in and to this software, related documentation
- * and any modifications thereto.  Any use, reproduction, disclosure or
- * distribution of this software and related documentation without an express
- * license agreement from NVIDIA CORPORATION is strictly prohibited.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef _ABI_BPMP_ABI_H_
 #define _ABI_BPMP_ABI_H_
+
+#ifdef LK
+#include <stdint.h>
+#endif
 
 #ifndef __PACKED
 #define __PACKED __attribute__((packed))
@@ -53,6 +63,7 @@
  *   3.27 Thermal (MRQ_THERMAL)
  *   3.28 CPU DVFS voltage hint (MRQ_CPU_VHINT)
  *   3.29 ABI ratchet (MRQ_ABI_RATCHET)
+ *   3.30 Reset IPC channel (MRQ_IPC_RESET)
  *   3.32 Waypoint2 (MRQ_SC7_WAYPOINT2)
  *   3.33 Start deep sleep entry (MRQ_SC7_ENTRY_START)
  *   3.34 MRQ_SC7_ENTRY_READY
@@ -69,6 +80,8 @@
  *   3.45 AVFS init (MRQ_AVFS_INIT)
  *   3.46 AVFS frequency caps (MRQ_AVFS_FREQ_CAPS)
  *   3.47 AVFS temp index (MRQ_AVFS_TEMP_IDX)
+ *   3.48 firmware booted (MRQ_FW_BOOTED)
+ *   3.49 System shutdown (MRQ_SHUTDOWN)
  *  4. Enumerations
  *   4.1 CPU enumerations
  *   4.2 CPU Cluster enumerations
@@ -151,6 +164,7 @@ struct mrq_response {
 #define MRQ_THERMAL		27
 #define MRQ_CPU_VHINT		28
 #define MRQ_ABI_RATCHET		29
+#define MRQ_IPC_RESET		30
 
 #define MRQ_SC7_WAYPOINT2	32
 #define MRQ_SC7_ENTRY_START	33
@@ -168,8 +182,8 @@ struct mrq_response {
 #define MRQ_AVFS_INIT		45
 #define MRQ_AVFS_FREQ_CAPS	46
 #define MRQ_AVFS_TEMP_IDX	47
-#define MRQ_DMCE_48		48
-#define MRQ_DMCE_49		49
+#define MRQ_FW_BOOTED		48
+#define MRQ_SHUTDOWN		49
 #define MRQ_DMCE_50		50
 #define MRQ_DMCE_51		51
 #define MRQ_DMCE_52		52
@@ -1374,6 +1388,24 @@ struct mrq_abi_ratchet_response {
   uint16_t ratchet;
 };
 
+/*
+ * 3.30 Reset IPC channel (MRQ_IPC_RESET)
+ *
+ * Platforms: T186 onwards
+ * Initiators: Anyone except BPMP
+ * Targets: BPMP
+ *
+ * Resets all IPC channels between the initiator and BPMP.  This MRQ is
+ * intended to be used when the peer entity is going through a role
+ * transition (such as when CCPLEX is finishing execution of bootloader
+ * and starting Kernel).
+ *
+ * @channel: placeholder for extention; must be set to -1
+ */
+struct mrq_ipc_reset {
+	int32_t channel;
+} __PACKED;
+
 /**
  * 3.32 Waypoint2 (MRQ_SC7_WAYPOINT2)
  *
@@ -1663,7 +1695,8 @@ struct mrq_scx_wake {
  * @cluster_id: cluster of which SiMon to be enabled
  *
  * Used by %MRQ_SIMON_ENABLE call by DMCE to indicate BPMP that SiMon
- * and Vmin sensors are initialized and can be enabled.
+ * and Vmin sensors are initialized and can be enabled. See also
+ * MRQ_FW_BOOTED.
  */
 struct mrq_simon_enable_request {
 	uint32_t cluster_id; /* enum cluster_id */
@@ -1799,6 +1832,60 @@ struct mrq_avfs_temp_index_request {
  * DMCE responds to %MRQ_AVFS_TEMP_IDX message without additional
  * payload data
  */
+
+/**
+ * 3.48 Firmware booted (MRQ_FW_BOOTED)
+ *
+ * Platforms: T186
+ * Initiators: BPMP
+ * Targets: DMCE
+ */
+
+/**
+ * This message indicates that BPMP Firmware has been loaded and
+ * booted and that it is ready to respond to messages from the
+ * DMCE. There is no request payload data associated. In response
+ * to this message DMCE will send present cpus and bsp.
+ * BPMP firmware will enable SiMon for the present clusters. Also,
+ * BPMP firmware assumes that CPU rail is enabled for all present
+ * clusters.
+
+ * @cpus_present[0] - Denver Core 0
+ * @cpus_present[1] - Denver Core 1
+ * @cpus_present[4] - A57 Core 0
+ * @cpus_present[5] - A57 Core 1
+ * @cpus_present[6] - A57 Core 2
+ * @cpus_present[7] - A57 Core 3
+ * @bsp - Boot CPU
+ */
+struct mrq_fw_booted_response {
+	uint32_t cpus_present;
+	uint32_t bsp;
+} __PACKED;
+
+/**
+ * 3.49 System shutdown
+ *
+ * Platforms: T186
+ * Initiators: DMCE
+ * Targets: BPMP
+ */
+
+/**
+ * This message indicates system shutdown request. ARM SW requests
+ * system shutdown/reboot to DMCE through ARI. DMCE has no action
+ * but just to forward this message to BPMP. BPMP will initiate
+ * system shutdown/reboot after receiving this message, it may
+ * include turning  off some rails in sequence and programming
+ * PMIC. There is no response data associated with this message.
+ * @state:
+ *       0 - Power off
+ *       1 - Reboot
+ */
+
+struct mrq_shutdown_request {
+	uint32_t state;
+} __PACKED;
 
 /**
  *  4. Enumerations

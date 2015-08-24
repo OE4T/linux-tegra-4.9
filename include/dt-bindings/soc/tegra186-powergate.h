@@ -1,11 +1,17 @@
 /*
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
- * NVIDIA CORPORATION and its licensors retain all intellectual property
- * and proprietary rights in and to this software, related documentation
- * and any modifications thereto.  Any use, reproduction, disclosure or
- * distribution of this software and related documentation without an express
- * license agreement from NVIDIA CORPORATION is strictly prohibited.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __ABI_MACH_T186_POWERGATE_T186_H_
@@ -55,6 +61,6 @@
 #define TEGRA186_POWER_DOMAIN_AOPG_CAN0	41
 #define TEGRA186_POWER_DOMAIN_AOPG_CAN1	42
 #define TEGRA186_POWER_DOMAIN_GPU	43
-#define TEGRA186_POWER_DOMAIN_MAX	43
+#define TEGRA186_POWER_DOMAIN_MAX	44
 
 #endif

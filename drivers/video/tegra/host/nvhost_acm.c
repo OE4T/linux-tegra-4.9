@@ -609,25 +609,6 @@ static ssize_t clockgate_delay_show(struct kobject *kobj,
 	return ret;
 }
 
-int nvhost_module_set_devfreq_rate(struct platform_device *dev, int index,
-		unsigned long rate)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	int ret;
-
-	rate = clk_round_rate(pdata->clk[index], rate);
-	pdata->clocks[index].devfreq_rate = rate;
-
-	trace_nvhost_module_set_devfreq_rate(dev->name,
-			pdata->clocks[index].name, rate);
-
-	mutex_lock(&client_list_lock);
-	ret = nvhost_module_update_rate(dev, index);
-	mutex_unlock(&client_list_lock);
-
-	return ret;
-}
-
 int nvhost_clk_get(struct platform_device *dev, char *name, struct clk **clk)
 {
 	int i;

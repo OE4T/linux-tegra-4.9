@@ -35,6 +35,7 @@
 #include <linux/tegra_pm_domains.h>
 #include <linux/version.h>
 #include <linux/reset.h>
+#include <dt-bindings/memory/tegra186-swgroup.h>
 
 #include "dmaengine.h"
 
@@ -98,6 +99,7 @@
 #define TEGRA_GPCDMA_MCSEQ_MC_PROT_SHIFT	14
 #define TEGRA_GPCDMA_MCSEQ_STREAM_ID1_SHIFT	7
 #define TEGRA_GPCDMA_MCSEQ_STREAM_ID0_SHIFT	0
+#define TEGRA_GPCDMA_MCSEQ_STREAM_ID_MASK	0x7F
 
 
 /* MMIO sequence register */
@@ -129,6 +131,15 @@
 
 /* Error Status Register */
 #define TEGRA_GPCDMA_CHAN_ERR_STATUS		0x30
+#define TEGRA_GPCDMA_CHAN_ERR_TYPE_SHIFT	(8)
+#define TEGRA_GPCDMA_CHAN_ERR_TYPE_MASK		(0xF)
+#define TEGRA_GPCDMA_CHAN_ERR_TYPE(err)		((err >> TEGRA_GPCDMA_CHAN_ERR_TYPE_SHIFT) & TEGRA_GPCDMA_CHAN_ERR_TYPE_MASK)
+#define TEGRA_DMA_BM_FIFO_FULL_ERR		(0xF)
+#define TEGRA_DMA_PERIPH_FIFO_FULL_ERR		(0xE)
+#define TEGRA_DMA_PERIPH_ID_ERR			(0xD)
+#define TEGRA_DMA_STREAM_ID_ERR			(0xC)
+#define TEGRA_DMA_MC_SLAVE_ERR			(0xB)
+#define TEGRA_DMA_MMIO_SLAVE_ERR		(0xA)
 
 /* Fixed Pattern */
 #define TEGRA_GPCDMA_CHAN_FIXED_PATTERN		0x34
@@ -642,15 +653,49 @@ static void tegra_dma_tasklet(unsigned long data)
 	spin_unlock_irqrestore(&tdc->lock, flags);
 }
 
+static void tegra_dma_chan_decode_error(struct tegra_dma_channel *tdc, unsigned int err_status)
+{
+	switch(TEGRA_GPCDMA_CHAN_ERR_TYPE(err_status)) {
+		case TEGRA_DMA_BM_FIFO_FULL_ERR:
+			dev_info(tdc2dev(tdc), "bm fifo full\n");
+		break;
+		case TEGRA_DMA_PERIPH_FIFO_FULL_ERR:
+			dev_info(tdc2dev(tdc), "peripheral fifo full\n");
+		break;
+		case TEGRA_DMA_PERIPH_ID_ERR:
+			dev_info(tdc2dev(tdc), "illegal peripheral id\n");
+		break;
+		case TEGRA_DMA_STREAM_ID_ERR:
+			dev_info(tdc2dev(tdc), "illegal stream id\n");
+		break;
+		case TEGRA_DMA_MC_SLAVE_ERR:
+			dev_info(tdc2dev(tdc), "mc slave error\n");
+		break;
+		case TEGRA_DMA_MMIO_SLAVE_ERR:
+			dev_info(tdc2dev(tdc), "mmio slave error\n");
+		break;
+		default:
+			dev_info(tdc2dev(tdc), "security violation %x\n", err_status);
+	}
+}
+
 static irqreturn_t tegra_dma_isr(int irq, void *dev_id)
 {
 	struct tegra_dma_channel *tdc = dev_id;
 	unsigned long status;
 	unsigned long flags;
+	unsigned int err_status;
 
 	spin_lock_irqsave(&tdc->lock, flags);
 
 	status = tdc_read(tdc, TEGRA_GPCDMA_CHAN_STATUS);
+	err_status = tdc_read(tdc, TEGRA_GPCDMA_CHAN_ERR_STATUS);
+
+	if (err_status) {
+		tegra_dma_chan_decode_error(tdc, err_status);
+		tdc_write(tdc, TEGRA_GPCDMA_CHAN_ERR_STATUS, 0xFFFFFFFF);
+	}
+
 	if (status & TEGRA_GPCDMA_STATUS_ISE_EOC) {
 		tdc_write(tdc, TEGRA_GPCDMA_CHAN_STATUS, TEGRA_GPCDMA_STATUS_ISE_EOC);
 		tdc->isr_handler(tdc, false);
@@ -960,10 +1005,15 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_dma_memset(
 	/* Configure default priority weight for the channel */
 	csr |= (1 << TEGRA_GPCDMA_CSR_WEIGHT_SHIFT);
 
+	mc_seq =  tdc_read(tdc, TEGRA_GPCDMA_CHAN_MCSEQ);
+	/* retain stream-id and clean rest */
+	mc_seq &= (TEGRA_GPCDMA_MCSEQ_STREAM_ID_MASK <<
+			TEGRA_GPCDMA_MCSEQ_STREAM_ID0_SHIFT);
+
 	/* Set the address wrapping */
-	mc_seq = TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
+	mc_seq |= TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
 			TEGRA_GPCDMA_MCSEQ_WRAP0_SHIFT;
-	mc_seq = TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
+	mc_seq |= TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
 			TEGRA_GPCDMA_MCSEQ_WRAP1_SHIFT;
 
 	/* Program outstanding MC requests */
@@ -1051,10 +1101,15 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_dma_memcpy(
 	/* Configure default priority weight for the channel */
 	csr |= (1 << TEGRA_GPCDMA_CSR_WEIGHT_SHIFT);
 
+	mc_seq =  tdc_read(tdc, TEGRA_GPCDMA_CHAN_MCSEQ);
+	/* retain stream-id and clean rest */
+	mc_seq &= (TEGRA_GPCDMA_MCSEQ_STREAM_ID_MASK <<
+			TEGRA_GPCDMA_MCSEQ_STREAM_ID0_SHIFT);
+
 	/* Set the address wrapping */
-	mc_seq = TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
+	mc_seq |= TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
 			TEGRA_GPCDMA_MCSEQ_WRAP0_SHIFT;
-	mc_seq = TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
+	mc_seq |= TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
 			TEGRA_GPCDMA_MCSEQ_WRAP1_SHIFT;
 
 	/* Program outstanding MC requests */
@@ -1165,9 +1220,13 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_slave_sg(
 	if (flags & DMA_PREP_INTERRUPT)
 		csr |= TEGRA_GPCDMA_CSR_IE_EOC;
 
+	mc_seq =  tdc_read(tdc, TEGRA_GPCDMA_CHAN_MCSEQ);
+	/* retain stream-id and clean rest */
+	mc_seq &= (TEGRA_GPCDMA_MCSEQ_STREAM_ID_MASK <<
+			TEGRA_GPCDMA_MCSEQ_STREAM_ID0_SHIFT);
 
 	/* Set the address wrapping on both MC and MMIO side */
-	mc_seq = TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
+	mc_seq |= TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
 			TEGRA_GPCDMA_MCSEQ_WRAP0_SHIFT;
 	mc_seq |= TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
 			TEGRA_GPCDMA_MCSEQ_WRAP1_SHIFT;
@@ -1523,6 +1582,19 @@ static struct platform_device_id tegra_dma_devtype[] = {
 	},
 };
 
+static int tegra_dma_program_sid(struct tegra_dma_channel *tdc, int chan, int stream_id)
+{
+	unsigned int reg_val =  tdc_read(tdc, TEGRA_GPCDMA_CHAN_MCSEQ);
+
+	reg_val &= ~(TEGRA_GPCDMA_MCSEQ_STREAM_ID_MASK << TEGRA_GPCDMA_MCSEQ_STREAM_ID0_SHIFT);
+	reg_val &= ~(TEGRA_GPCDMA_MCSEQ_STREAM_ID_MASK << TEGRA_GPCDMA_MCSEQ_STREAM_ID1_SHIFT);
+
+	reg_val |= (stream_id << TEGRA_GPCDMA_MCSEQ_STREAM_ID0_SHIFT);
+
+	tdc_write(tdc, TEGRA_GPCDMA_CHAN_MCSEQ, reg_val);
+	return 0;
+}
+
 static struct device *dma_device;
 
 static int tegra_dma_probe(struct platform_device *pdev)
@@ -1534,7 +1606,7 @@ static int tegra_dma_probe(struct platform_device *pdev)
 	const struct tegra_dma_chip_data *cdata = NULL;
 	struct tegra_dma_chip_data *chip_data = NULL;
 	int start_chan_idx;
-	int nr_chans;
+	int nr_chans, stream_id;
 
 	if (pdev->dev.of_node) {
 		const struct of_device_id *match;
@@ -1568,9 +1640,16 @@ static int tegra_dma_probe(struct platform_device *pdev)
 						&start_chan_idx);
 		if (ret)
 			start_chan_idx = 0;
+
+		ret = of_property_read_u32(pdev->dev.of_node, "nvidia,stream-id",
+							&stream_id);
+		if (ret)
+			stream_id = TEGRA_SID_GPCDMA_0;
+
 	} else {
 		/* If no device tree then fallback to tegra186 data */
 		cdata = (struct tegra_dma_chip_data *)pdev->id_entry->driver_data;
+		stream_id = TEGRA_SID_GPCDMA_0;
 	}
 
 	tdma = devm_kzalloc(&pdev->dev, sizeof(*tdma) + cdata->nr_channels *
@@ -1632,6 +1711,7 @@ static int tegra_dma_probe(struct platform_device *pdev)
 			goto err_irq;
 		}
 
+
 		tdc->dma_chan.device = &tdma->dma_dev;
 		dma_cookie_init(&tdc->dma_chan);
 		list_add_tail(&tdc->dma_chan.device_node,
@@ -1647,6 +1727,9 @@ static int tegra_dma_probe(struct platform_device *pdev)
 		INIT_LIST_HEAD(&tdc->free_sg_req);
 		INIT_LIST_HEAD(&tdc->free_dma_desc);
 		INIT_LIST_HEAD(&tdc->cb_desc);
+
+		/* program stream-id for this channel */
+		tegra_dma_program_sid(tdc, i, stream_id);
 	}
 
 	dma_cap_set(DMA_SLAVE, tdma->dma_dev.cap_mask);

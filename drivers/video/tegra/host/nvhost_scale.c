@@ -127,7 +127,8 @@ static int nvhost_scale_target(struct device *dev, unsigned long *freq,
 	if (clk_get_rate(profile->clk) == *freq)
 		return 0;
 
-	nvhost_module_set_devfreq_rate(profile->pdev, 0, *freq);
+	nvhost_module_set_rate(profile->pdev, pdata->power_manager,
+				*freq, 0, NVHOST_CLOCK);
 	if (pdata->scaling_post_cb)
 		pdata->scaling_post_cb(profile, *freq);
 
@@ -396,6 +397,10 @@ void nvhost_scale_init(struct platform_device *pdev)
 			devfreq = NULL;
 
 		pdata->power_manager = devfreq;
+		if (nvhost_module_add_client(pdev, devfreq)) {
+			nvhost_err(&pdev->dev,
+				"failed to register devfreq as acm client");
+		}
 	}
 
 	/* Should we register QoS callback for this device? */
@@ -436,6 +441,9 @@ void nvhost_scale_deinit(struct platform_device *pdev)
 
 	if (!profile)
 		return;
+
+	/* Remove devfreq from acm client list */
+	nvhost_module_remove_client(pdev, pdata->power_manager);
 
 	if (pdata->power_manager)
 		devfreq_remove_device(pdata->power_manager);

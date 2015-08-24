@@ -260,6 +260,10 @@
 			"x IN1P",		"x Mic Jack",
 			"x Mic Det Power",	"x Mic Jack",
 			"x Int Spk",		"x SPO Playback",
+			"x DMIC L1",		"x Int Mic",
+			"x DMIC L2",		"x Int Mic",
+			"x DMIC R1",		"x Int Mic",
+			"x DMIC R2",		"x Int Mic",
 			"y Headphone",		"y OUT",
 			"y IN",			"y Mic",
 			"l IN",			"l OUT";

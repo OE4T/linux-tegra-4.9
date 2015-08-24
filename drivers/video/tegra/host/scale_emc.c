@@ -107,8 +107,8 @@ void nvhost_scale_emc_callback(struct nvhost_device_profile *profile,
 	/* Set EMC clockrate */
 	after = (long) clk_get_rate(clk(profile, gr3d_params->clk_3d));
 	hz = nvhost_scale_emc_get_emc_rate(emc_params, after);
-	nvhost_module_set_devfreq_rate(profile->pdev, gr3d_params->clk_3d_emc,
-				       hz);
+	nvhost_module_set_rate(profile->pdev, gr3d_params, hz,
+				gr3d_params->clk_3d_emc, NVHOST_CLOCK);
 }
 
 /*
@@ -241,6 +241,9 @@ void nvhost_scale_emc_init(struct platform_device *pdev)
 				     clk(profile, gr3d_params->clk_3d_emc),
 				     pdata->linear_emc);
 
+	if (nvhost_module_add_client(pdev, gr3d_params))
+		nvhost_err(&pdev->dev, "failed to register as a acm client");
+
 	return;
 
 err_allocate_gr3d_params:
@@ -258,6 +261,9 @@ void nvhost_scale_emc_deinit(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	if (!pdata->power_profile)
 		return;
+
+	/* Remove devfreq from acm client list */
+	nvhost_module_remove_client(pdev, pdata->power_profile->private_data);
 
 	kfree(pdata->power_profile->private_data);
 	pdata->power_profile->private_data = NULL;

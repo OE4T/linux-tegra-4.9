@@ -27,20 +27,20 @@
 			channel@0 {
 				reg = <0x0>;
 				ti,rail-name = "VDD_IN";
-				ti,shunt-resistor-mohm = <3>;
+				ti,shunt-resistor-mohm = <20>;
 				ti,current-critical-limit-ma = <2105>;
 			};
 
 			channel@1 {
 				reg = <0x1>;
-				ti,rail-name = "VDD_5V0_SYS";
-				ti,shunt-resistor-mohm = <5>;
+				ti,rail-name = "VDD_GPU";
+				ti,shunt-resistor-mohm = <10>;
 			};
 
 			channel@2 {
 				reg = <0x2>;
 				ti,rail-name = "VDD_CPU";
-				ti,shunt-resistor-mohm = <5>;
+				ti,shunt-resistor-mohm = <10>;
 			};
 		};
 	};

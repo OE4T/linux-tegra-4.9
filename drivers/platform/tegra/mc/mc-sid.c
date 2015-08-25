@@ -383,7 +383,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			AXISR,
 			AXISW,
 		},
-		.ord = OVERRIDE,
+		.ord = NO_OVERRIDE,
 		.name = "GPCDMA",
 	},
 	{

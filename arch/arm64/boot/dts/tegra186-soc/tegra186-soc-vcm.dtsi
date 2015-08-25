@@ -222,6 +222,10 @@
 
 	bpmp {
 		status = "okay";
+
+		bpmpthermal {
+			status = "okay";
+		};
 	};
 
 	dma@2600000 {

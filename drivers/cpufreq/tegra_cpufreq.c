@@ -48,8 +48,8 @@
 #define EDVD_CL_NDIV_VHINT_OFFSET	0x20
 #define EDVD_COREX_NDIV_VAL_SHIFT	(0)
 #define EDVD_COREX_NDIV_MASK		(0x1ff << 0)
-#define EDVD_COREX_VINDEX_VAL_SHIFT	(26)
-#define EDVD_COREX_VINDEX_MASK		(0xff << 26)
+#define EDVD_COREX_VINDEX_VAL_SHIFT	(16)
+#define EDVD_COREX_VINDEX_MASK		(0xff << 16)
 
 /* ACTMON counter register details */
 #define CORECLK_OFFSET			(0x0)

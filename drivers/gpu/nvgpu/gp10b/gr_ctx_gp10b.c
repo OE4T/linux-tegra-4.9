@@ -59,7 +59,7 @@ static int gr_gp10b_get_netlist_name(int index, char *name)
 
 static bool gr_gp10b_is_firmware_defined(void)
 {
-#ifdef GM20B_NETLIST_IMAGE_FW_NAME
+#ifdef GP10B_NETLIST_IMAGE_FW_NAME
 	return true;
 #else
 	return false;

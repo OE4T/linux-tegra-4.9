@@ -64,6 +64,18 @@ static bool tegra_dp_debug = true;
 module_param(tegra_dp_debug, bool, 0644);
 MODULE_PARM_DESC(tegra_dp_debug, "Enable to print all link configs");
 
+/*
+ * WAR for DPR-120 firmware v1.9[r6] limitation for CTS 400.3.2.*
+ * The analyzer issues IRQ_EVENT while we are still link training.
+ * Not expected but analyzer limitation.
+ * Ongoing link training confuses the analyzer leading to false failure.
+ * The WAR eludes link training during unblank. This keeps the purpose
+ * of CTS intact within analyzer limitation.
+ */
+static bool no_lt_at_unblank = false;
+module_param(no_lt_at_unblank, bool, 0644);
+MODULE_PARM_DESC(no_lt_at_unblank, "DP enabled but link not trained");
+
 static struct tegra_hpd_ops hpd_ops;
 
 static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp);
@@ -2359,7 +2371,8 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		tegra_hda_set_data(dp, SINK_DP);
 #endif
 
-	if (likely(dc->out->type != TEGRA_DC_OUT_FAKE_DP)) {
+	if (likely(dc->out->type != TEGRA_DC_OUT_FAKE_DP) &&
+		!no_lt_at_unblank) {
 		tegra_dp_lt_set_pending_evt(&dp->lt_data);
 		ret = tegra_dp_lt_wait_for_completion(&dp->lt_data,
 							LT_TIMEOUT_MS);

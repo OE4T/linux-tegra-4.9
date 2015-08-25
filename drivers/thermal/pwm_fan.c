@@ -1,7 +1,7 @@
 /*
  * pwm_fan.c fan driver that is controlled by pwm
  *
- * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Anshul Jain <anshulj@nvidia.com>
  *
@@ -930,6 +930,7 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	/*turn temp control on*/
 	fan_data->fan_temp_control_flag = 1;
 	set_pwm_duty_cycle(fan_data->fan_pwm[0], fan_data);
+	fan_data->fan_cur_pwm = fan_data->fan_pwm[0];
 
 	if (add_sysfs_entry(&pdev->dev) < 0) {
 		dev_err(&pdev->dev, "FAN:Can't create syfs node");

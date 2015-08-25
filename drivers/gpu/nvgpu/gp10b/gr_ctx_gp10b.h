@@ -21,7 +21,7 @@
 #include "gk20a/gr_ctx_gk20a.h"
 
 /* production netlist, one and only one from below */
-/*#undef GM20B_NETLIST_IMAGE_FW_NAME*/
+#define GP10B_NETLIST_IMAGE_FW_NAME GK20A_NETLIST_IMAGE_A
 
 void gp10b_init_gr_ctx(struct gpu_ops *gops);
 

@@ -730,15 +730,15 @@ static ssize_t win_mask_show(struct device *device,
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	ssize_t res;
 
-	mutex_lock(&dc->lock);
 	if ((!dc) || (!dc->ndev) || (!dc->pdata)) {
-		dev_err(&dc->ndev->dev, "%s: dc|device err\n", __func__);
+		pr_err("%s: dc|device err\n", __func__);
 		res = -EINVAL;
 		goto exit;
 	}
+	mutex_lock(&dc->lock);
 	res = snprintf(buf, PAGE_SIZE, "0x%lx\n", dc->pdata->win_mask);
-exit:
 	mutex_unlock(&dc->lock);
+exit:
 	return res;
 }
 

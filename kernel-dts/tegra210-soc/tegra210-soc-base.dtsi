@@ -103,7 +103,7 @@
 
 			CC6: cc6 {
 				compatible = "nvidia,idle-state";
-				arm,psci-suspend-param = <0x10010>;
+				arm,psci-suspend-param = <0x1010010>;
 				wakeup-latency-us = <230>;
 				min-residency-us = <10000>;
 				idle-state-name = "cc6-cluster-powergated";
@@ -112,7 +112,7 @@
 
 			CC7: cc7 {
 				compatible = "nvidia,idle-state";
-				arm,psci-suspend-param = <0x10011>;
+				arm,psci-suspend-param = <0x1010011>;
 				wakeup-latency-us = <500>;
 				min-residency-us = <1000>;
 				idle-state-name = "cc7-cluster-railgated";
@@ -148,7 +148,7 @@
 
 			SC7: sc7 {
 				compatible = "nvidia,idle-state";
-				arm,psci-suspend-param = <0x1001B>;
+				arm,psci-suspend-param = <0x201001B>;
 				wakeup-latency-us = <5000>;
 				min-residency-us = <10000>;
 				idle-state-name = "sc7-vdd-soc-off";

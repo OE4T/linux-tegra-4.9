@@ -35,6 +35,8 @@ int nvhost_clk_get(struct platform_device *dev, char *name, struct clk **clk);
 void nvhost_module_busy_noresume(struct platform_device *dev);
 void nvhost_module_reset(struct platform_device *dev, bool reboot);
 int nvhost_module_busy(struct platform_device *dev);
+void nvhost_module_disable_poweroff(struct platform_device *dev);
+void nvhost_module_enable_poweroff(struct platform_device *dev);
 void nvhost_module_idle_mult(struct platform_device *dev, int refs);
 int nvhost_module_add_client(struct platform_device *dev,
 		void *priv);

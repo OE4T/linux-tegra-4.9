@@ -254,6 +254,46 @@ int nvhost_module_busy(struct platform_device *dev)
 	return 0;
 }
 
+void nvhost_module_disable_poweroff(struct platform_device *dev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	mutex_lock(&pdata->no_poweroff_req_mutex);
+	pdata->no_poweroff_req_count++;
+	if (!dev_pm_qos_request_active(&pdata->no_poweroff_req)) {
+		int ret;
+
+		dev_pm_qos_add_request(&dev->dev, &pdata->no_poweroff_req,
+				DEV_PM_QOS_FLAGS, PM_QOS_FLAG_NO_POWER_OFF);
+
+		/* Flush the request */
+		ret = nvhost_module_busy(dev);
+		if (!ret)
+			nvhost_module_idle(dev);
+	}
+	mutex_unlock(&pdata->no_poweroff_req_mutex);
+}
+
+void nvhost_module_enable_poweroff(struct platform_device *dev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	mutex_lock(&pdata->no_poweroff_req_mutex);
+	pdata->no_poweroff_req_count--;
+	if (!pdata->no_poweroff_req_count &&
+	    dev_pm_qos_request_active(&pdata->no_poweroff_req)) {
+		int ret;
+
+		dev_pm_qos_remove_request(&pdata->no_poweroff_req);
+
+		/* Flush the request */
+		ret = nvhost_module_busy(dev);
+		if (!ret)
+			nvhost_module_idle(dev);
+	}
+	mutex_unlock(&pdata->no_poweroff_req_mutex);
+}
+
 void nvhost_module_idle_mult(struct platform_device *dev, int refs)
 {
 	int original_refs = refs;

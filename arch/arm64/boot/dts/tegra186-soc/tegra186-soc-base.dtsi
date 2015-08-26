@@ -24,6 +24,7 @@
 #include "../../../../include/dt-bindings/clock/tegra186-clock.h"
 #include "../../../../include/dt-bindings/reset/tegra186-reset.h"
 #include "../../../../include/dt-bindings/interrupt/tegra186-irq.h"
+#include "../../../../include/dt-bindings/padctrl/tegra186-pads.h"
 #include "tegra186-soc/tegra186-sdhci.dtsi"
 #include "tegra186-soc/tegra186-soc-ufshc.dtsi"
 #include "tegra186-soc/tegra186-soc-i2c.dtsi"
@@ -415,6 +416,43 @@
 		compatible = "nvidia,tegra186-pmc";
 		reg = <0x0 0xC360000 0x0 0x400>;
 		#padcontroller-cells = <1>;
+		status = "disabled";
+	};
+
+	pmc-iopower {
+		compatible = "nvidia,tegra186-pmc-iopower";
+		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SYS
+					TEGRA_IO_PAD_GROUP_UART
+					TEGRA_IO_PAD_GROUP_CONN
+					TEGRA_IO_PAD_GROUP_EDP
+					TEGRA_IO_PAD_GROUP_AUDIO
+					TEGRA_IO_PAD_GROUP_UFS
+					TEGRA_IO_PAD_GROUP_MEM
+					TEGRA_IO_PAD_GROUP_MEM1
+					TEGRA_IO_PAD_GROUP_MIPI
+					TEGRA_IO_PAD_GROUP_CAM
+					TEGRA_IO_PAD_GROUP_PEX_CTRL
+					TEGRA_IO_PAD_GROUP_SDMMC4
+					TEGRA_IO_PAD_GROUP_SDMMC1_HV
+					TEGRA_IO_PAD_GROUP_MEM_COMP
+					TEGRA_IO_PAD_GROUP_MEM1_COMP
+					TEGRA_IO_PAD_GROUP_AUDIO_HV
+					TEGRA_IO_PAD_GROUP_DBG
+					TEGRA_IO_PAD_GROUP_SPI
+					TEGRA_IO_PAD_GROUP_SDMMC2
+					TEGRA_IO_PAD_GROUP_DP
+					TEGRA_IO_PAD_GROUP_AO
+					TEGRA_IO_PAD_GROUP_AO_HV
+					TEGRA_IO_PAD_GROUP_DMIC_HV
+					TEGRA_IO_PAD_GROUP_GPIO_HV
+					TEGRA_IO_PAD_GROUP_SDMMC2_HV
+					TEGRA_IO_PAD_GROUP_SDMMC3_HV>;
+		pad-names = "sys", "uart", "conn", "edp", "audio",
+			"ufs", "mem", "mem1", "mipi", "cam",
+			"pex-ctrl", "sdmmc4", "sdmmc1-hv", "mem-comp",
+			"mem1-comp", "audio-hv", "dbg", "spi", "sdmmc2",
+			"dp", "ao", "ao-hv", "dmic-hv", "gpio-hv",
+			"sdmmc2-hv", "sdmmc3-hv";
 		status = "disabled";
 	};
 

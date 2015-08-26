@@ -305,4 +305,8 @@
 	pmc@c360000 {
 		status = "okay";
 	};
+
+	pmc-iopower {
+		status = "okay";
+	};
 };

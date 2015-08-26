@@ -45,6 +45,8 @@ enum apm_mbx_cmd {
  * APM methods
  *
  */
+#define NVFX_APM_METHOD_ACK_BIT		(1 << 31) /* Flag to request ACK */
+
 enum {
 	/* NVFX APM params */
 	nvfx_apm_method_fx_connect = nvfx_method_external_start,
@@ -63,7 +65,9 @@ enum {
 	 * ADSP to CPU : Used to notify that all input data is consumed
 	 */
 	nvfx_apm_method_set_eos,
-	nvfx_apm_method_set_priority
+	nvfx_apm_method_set_priority,
+	/* ADSP to CPU : To send acknowledgement */
+	nvfx_apm_method_ack
 };
 
 /* For method nvfx_apm_method_set_io_buffer */

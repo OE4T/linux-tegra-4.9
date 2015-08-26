@@ -65,7 +65,7 @@ static inline unsigned long tegra_mipi_cal_read(
 					unsigned long reg)
 {
 	BUG_ON(IS_ERR_OR_NULL(mipi_cal) ||
-		!tegra_is_clk_enabled(mipi_cal->clk));
+		!tegra_dc_is_clk_enabled(mipi_cal->clk));
 	return readl(mipi_cal->base + GET_REG_OFFSET(reg));
 }
 
@@ -75,7 +75,7 @@ static inline void tegra_mipi_cal_write(struct tegra_mipi_cal *mipi_cal,
 							unsigned long reg)
 {
 	BUG_ON(IS_ERR_OR_NULL(mipi_cal) ||
-		!tegra_is_clk_enabled(mipi_cal->clk));
+		!tegra_dc_is_clk_enabled(mipi_cal->clk));
 	writel(val, mipi_cal->base + GET_REG_OFFSET(reg));
 }
 

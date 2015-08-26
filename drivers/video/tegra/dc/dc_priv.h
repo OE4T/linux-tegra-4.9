@@ -29,6 +29,10 @@
 #include <video/tegra_dc_ext.h>
 #include <soc/tegra/tegra_bpmp.h>
 
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#include <linux/clk-provider.h>
+#endif
+
 #define WIN_IS_TILED(win)	((win)->flags & TEGRA_WIN_FLAG_TILED)
 #define WIN_IS_ENABLED(win)	((win)->flags & TEGRA_WIN_FLAG_ENABLED)
 #define WIN_IS_FB(win)		((win)->flags & TEGRA_WIN_FLAG_FB)
@@ -73,19 +77,38 @@ static inline void tegra_dc_io_end(struct tegra_dc *dc)
 	nvhost_module_idle_ext(dc->ndev);
 }
 
+static int tegra_dc_is_clk_enabled(struct clk *clk)
+{
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	if (!tegra_platform_is_silicon())
+		return 1;
+	else
+		return __clk_is_enabled(clk);
+#endif
+	return tegra_is_clk_enabled(clk);
+}
+
+static inline unsigned long tegra_dc_is_accessible(struct tegra_dc *dc)
+{
+	if (likely(tegra_platform_is_silicon())) {
+		BUG_ON(!nvhost_module_powered_ext(dc->ndev));
+		if (WARN(!tegra_dc_is_clk_enabled(dc->clk),
+			"DC is clock-gated.\n") ||
+			WARN(!tegra_powergate_is_powered(
+			dc->powergate_id), "DC is power-gated.\n"))
+			return 1;
+	}
+
+	return 0;
+}
+
 static inline unsigned long tegra_dc_readl(struct tegra_dc *dc,
 					   unsigned long reg)
 {
 	unsigned long ret;
 
-	if (likely(tegra_platform_is_silicon())) {
-		BUG_ON(!nvhost_module_powered_ext(dc->ndev));
-		if (WARN(!tegra_is_clk_enabled(dc->clk),
-			"DC is clock-gated.\n") ||
-			WARN(!tegra_powergate_is_powered(
-			dc->powergate_id), "DC is power-gated.\n"))
-			return 0;
-	}
+	if (tegra_dc_is_accessible(dc))
+		return 0;
 
 	ret = readl(dc->base + reg * 4);
 	trace_display_readl(dc, ret, dc->base + reg * 4);
@@ -95,14 +118,8 @@ static inline unsigned long tegra_dc_readl(struct tegra_dc *dc,
 static inline void tegra_dc_writel(struct tegra_dc *dc, unsigned long val,
 				   unsigned long reg)
 {
-	if (likely(tegra_platform_is_silicon())) {
-		BUG_ON(!nvhost_module_powered_ext(dc->ndev));
-		if (WARN(!tegra_is_clk_enabled(dc->clk),
-			"DC is clock-gated.\n") ||
-			WARN(!tegra_powergate_is_powered(
-			dc->powergate_id), "DC is power-gated.\n"))
-			return;
-	}
+	if (tegra_dc_is_accessible(dc))
+		return;
 
 	trace_display_writel(dc, val, dc->base + reg * 4);
 	writel(val, dc->base + reg * 4);

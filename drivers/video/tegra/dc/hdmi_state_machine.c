@@ -299,7 +299,7 @@ static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id, true);
 #endif
 
-	if (unlikely(tegra_is_clk_enabled(hdmi->clk))) {
+	if (unlikely(tegra_dc_is_clk_enabled(hdmi->clk))) {
 		/* the only time this should happen is on boot, where the
 		 * sequence is that hdmi is enabled before EDID is read.
 		 * hdmi_enable() doesn't have EDID information yet so can't
@@ -414,7 +414,7 @@ static void handle_recheck_edid_l(struct tegra_dc_hdmi_data *hdmi)
 		if (match) {
 			pr_info("No EDID change after HPD bounce, taking no action.\n");
 			tgt_state = HDMI_STATE_DONE_ENABLED;
-			if (tegra_is_clk_enabled(hdmi->dc->clk)) {
+			if (tegra_dc_is_clk_enabled(hdmi->dc->clk)) {
 				tegra_nvhdcp_set_plug(hdmi->nvhdcp, 0);
 				tegra_nvhdcp_set_plug(hdmi->nvhdcp, 1);
 			} else {

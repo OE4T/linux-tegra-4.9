@@ -4228,7 +4228,7 @@ static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq)
 	trace_display_mode(dc, &dc->mode);
 
 	/* disable pending clks due to uncompleted frames */
-	while (!tegra_platform_is_linsim() && tegra_is_clk_enabled(dc->clk))
+	while (tegra_platform_is_silicon() && tegra_dc_is_clk_enabled(dc->clk))
 		tegra_dc_put(dc);
 }
 

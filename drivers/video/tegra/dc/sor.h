@@ -21,6 +21,7 @@
 #include <linux/tegra-soc.h>
 #include <linux/clk/tegra.h>
 #include <soc/tegra/tegra_bpmp.h>
+#include "dc_priv.h"
 
 enum {
 	TRAINING_PATTERN_DISABLE = 0,
@@ -180,7 +181,7 @@ static inline u32 tegra_sor_readl(struct tegra_dc_sor_data *sor, u32 reg)
 {
 	u32 reg_val;
 	if (likely(tegra_platform_is_silicon())) {
-		if (WARN(!tegra_is_clk_enabled(sor->sor_clk),
+		if (WARN(!tegra_dc_is_clk_enabled(sor->sor_clk),
 		"SOR is clock gated!"))
 			return 0;
 	}
@@ -192,7 +193,7 @@ static inline void tegra_sor_writel(struct tegra_dc_sor_data *sor,
 	u32 reg, u32 val)
 {
 	if (likely(tegra_platform_is_silicon())) {
-		if (WARN(!tegra_is_clk_enabled(sor->sor_clk),
+		if (WARN(!tegra_dc_is_clk_enabled(sor->sor_clk),
 		"SOR is clock gated!"))
 			return;
 	}

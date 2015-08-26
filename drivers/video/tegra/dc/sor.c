@@ -79,7 +79,7 @@ tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 
 void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
 {
-	int flag = tegra_is_clk_enabled(sor->sor_clk);
+	int flag = tegra_dc_is_clk_enabled(sor->sor_clk);
 
 	if (sor->clk_type == TEGRA_SOR_SAFE_CLK)
 		return;
@@ -103,7 +103,7 @@ void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
 
 void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor)
 {
-	int flag = tegra_is_clk_enabled(sor->sor_clk);
+	int flag = tegra_dc_is_clk_enabled(sor->sor_clk);
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(sor->dc);
 
 	if (sor->clk_type == TEGRA_SOR_MACRO_CLK)
@@ -1104,7 +1104,7 @@ void tegra_sor_hdmi_pad_power_down(struct tegra_dc_sor_data *sor)
 
 void tegra_sor_config_hdmi_clk(struct tegra_dc_sor_data *sor)
 {
-	int flag = tegra_is_clk_enabled(sor->sor_clk);
+	int flag = tegra_dc_is_clk_enabled(sor->sor_clk);
 
 	if (sor->clk_type == TEGRA_SOR_MACRO_CLK)
 		return;
@@ -1820,7 +1820,7 @@ void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
 
 static void tegra_sor_config_lvds_clk(struct tegra_dc_sor_data *sor)
 {
-	int flag = tegra_is_clk_enabled(sor->sor_clk);
+	int flag = tegra_dc_is_clk_enabled(sor->sor_clk);
 
 	if (sor->clk_type == TEGRA_SOR_MACRO_CLK)
 		return;

@@ -368,9 +368,9 @@ unsigned long tegra_dsi_controller_readl(struct tegra_dc_dsi_data *dsi,
 {
 	unsigned long ret;
 
-	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
 	if (likely(tegra_platform_is_silicon())) {
-		if (WARN(!tegra_is_clk_enabled(dsi->dsi_clk[index]),
+		BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
+		if (WARN(!tegra_dc_is_clk_enabled(dsi->dsi_clk[index]),
 		"DSI is clock gated!"))
 			return 0;
 	}
@@ -383,9 +383,9 @@ EXPORT_SYMBOL(tegra_dsi_controller_readl);
 void tegra_dsi_controller_writel(struct tegra_dc_dsi_data *dsi,
 						u32 val, u32 reg, int index)
 {
-	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
 	if (likely(tegra_platform_is_silicon())) {
-		if (WARN(!tegra_is_clk_enabled(dsi->dsi_clk[index]),
+		BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
+		if (WARN(!tegra_dc_is_clk_enabled(dsi->dsi_clk[index]),
 		"DSI is clock gated!"))
 			return;
 	}
@@ -5229,7 +5229,7 @@ static int tegra_dsi_host_suspend(struct tegra_dc *dc)
 	}
 
 	/* Shutting down. Drop any reference to dc clk */
-	while (tegra_is_clk_enabled(dc->clk))
+	while (tegra_platform_is_silicon() && tegra_dc_is_clk_enabled(dc->clk))
 		tegra_dc_put(dc);
 
 	pm_runtime_put_sync(&dc->ndev->dev);

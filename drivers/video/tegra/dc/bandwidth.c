@@ -828,7 +828,7 @@ void tegra_dc_clear_bandwidth(struct tegra_dc *dc)
 void tegra_dc_clear_bandwidth(struct tegra_dc *dc)
 {
 	trace_clear_bandwidth(dc);
-	if (tegra_is_clk_enabled(dc->emc_clk))
+	if (tegra_dc_is_clk_enabled(dc->emc_clk))
 		tegra_disp_clk_disable_unprepare(dc->emc_clk);
 	dc->bw_kbps = 0;
 }
@@ -893,7 +893,7 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 
 		/* going from 0 to non-zero */
 		if (!dc->bw_kbps && dc->new_bw_kbps &&
-			!tegra_is_clk_enabled(dc->emc_clk))
+			!tegra_dc_is_clk_enabled(dc->emc_clk))
 			tegra_disp_clk_prepare_enable(dc->emc_clk);
 
 		emc_freq = tegra_dc_kbps_to_emc(bw);
@@ -901,7 +901,7 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 
 		/* going from non-zero to 0 */
 		if (dc->bw_kbps && !dc->new_bw_kbps &&
-			tegra_is_clk_enabled(dc->emc_clk))
+			tegra_dc_is_clk_enabled(dc->emc_clk))
 			tegra_disp_clk_disable_unprepare(dc->emc_clk);
 #endif
 		dc->bw_kbps = dc->new_bw_kbps;

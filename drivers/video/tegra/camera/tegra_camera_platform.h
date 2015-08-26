@@ -21,22 +21,30 @@
 
 #define TEGRA_CAMERA_IOCTL_SET_BW _IOW('o', 1, struct bw_info)
 
+#if defined(CONFIG_TEGRA_BWMGR)
+#include <linux/platform/tegra/emc_bwmgr.h>
+#else
 enum clock_id {
 	EMC,
 	ISO_EMC,
 	NUM_CLKS
 };
-
 static char *clk_names[NUM_CLKS] = {
 	"emc",
 	"iso.emc"
 };
+#endif
 
 struct tegra_camera_info {
 	char devname[64];
 	atomic_t in_use;
 	struct device *dev;
+#if defined(CONFIG_TEGRA_BWMGR)
+	/* bandwidth manager handle */
+	struct tegra_bwmgr_client *bwmgr_handle;
+#else
 	struct clk *clks[NUM_CLKS];
+#endif
 	tegra_isomgr_handle isomgr_handle;
 	u64 max_bw;
 };

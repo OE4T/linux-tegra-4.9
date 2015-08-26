@@ -185,12 +185,27 @@ static int tegra_camera_open(struct inode *inode, struct file *file)
 {
 	struct tegra_camera_info *info;
 	struct miscdevice *mdev;
+#if !defined(CONFIG_TEGRA_BWMGR)
 	int i, ret, index_put, index_disable;
+#endif
 
 	mdev = file->private_data;
 	info = dev_get_drvdata(mdev->parent);
-
 	file->private_data = info;
+#if defined(CONFIG_TEGRA_BWMGR)
+	/* get bandwidth manager handle if needed */
+	info->bwmgr_handle =
+		tegra_bwmgr_register(TEGRA_BWMGR_CLIENT_CAMERA);
+
+	/* set the initial rate */
+	if (IS_ERR_OR_NULL(info->bwmgr_handle)) {
+		info->bwmgr_handle = NULL;
+		return -ENODEV;
+	}
+	tegra_bwmgr_set_emc(info->bwmgr_handle, 0,
+			TEGRA_BWMGR_SET_EMC_SHARED_BW);
+	return 0;
+#else
 	for (i = 0; i < NUM_CLKS; i++) {
 		info->clks[i] = clk_get_sys(info->devname, clk_names[i]);
 		if (IS_ERR(info->clks[i])) {
@@ -231,16 +246,22 @@ err_get_clk:
 		info->clks[i] = NULL;
 	}
 	return -ENOENT;
+#endif
 }
 
 static int tegra_camera_release(struct inode *inode, struct file *file)
 {
 
 	struct tegra_camera_info *info;
+#if !defined(CONFIG_TEGRA_BWMGR)
 	int i;
+#endif
 	int ret;
 
 	info = file->private_data;
+#if defined(CONFIG_TEGRA_BWMGR)
+	tegra_bwmgr_unregister(info->bwmgr_handle);
+#else
 	for (i = 0; i < NUM_CLKS; i++) {
 		if (!IS_ERR_OR_NULL(info->clks[i])) {
 			clk_disable_unprepare(info->clks[i]);
@@ -248,6 +269,7 @@ static int tegra_camera_release(struct inode *inode, struct file *file)
 		}
 		info->clks[i] = NULL;
 	}
+#endif
 
 	/* nullify isomgr request */
 	if (info->isomgr_handle) {
@@ -293,11 +315,6 @@ static long tegra_camera_ioctl(struct file *file,
 		if (kcopy.is_iso) {
 			dev_dbg(info->dev, "%s:Set iso bw %llu at %lu KHz\n",
 				__func__, kcopy.bw, mc_khz);
-			ret = clk_set_rate(info->clks[ISO_EMC], mc_khz * 1000);
-			if (ret)
-				dev_err(info->dev, "%s:Failed to set iso bw\n",
-					__func__);
-
 			/*
 			 * Request to ISOMGR.
 			 * 3 usec is minimum time to switch PLL source.
@@ -310,10 +327,21 @@ static long tegra_camera_ioctl(struct file *file,
 				__func__, kcopy.bw);
 				return -ENOMEM;
 			}
+#if !defined(CONFIG_TEGRA_BWMGR)
+			ret = clk_set_rate(info->clks[ISO_EMC], mc_khz * 1000);
+			if (ret)
+				dev_err(info->dev, "%s:Failed to set iso bw\n",
+					__func__);
+#endif
 		} else {
 			dev_dbg(info->dev, "%s:Set bw %llu at %lu KHz\n",
 				__func__, kcopy.bw, mc_khz);
+#if defined(CONFIG_TEGRA_BWMGR)
+			ret = tegra_bwmgr_set_emc(info->bwmgr_handle,
+				mc_khz*1000, TEGRA_BWMGR_SET_EMC_SHARED_BW);
+#else
 			ret = clk_set_rate(info->clks[EMC], mc_khz * 1000);
+#endif
 			if (ret)
 				dev_err(info->dev, "%s:Failed to set bw\n",
 					__func__);

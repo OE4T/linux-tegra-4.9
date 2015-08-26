@@ -317,19 +317,19 @@ unsigned long tegra_pmc_ufs_pwrcntrl_get(void)
 }
 EXPORT_SYMBOL(tegra_pmc_ufs_pwrcntrl_get);
 
-void tegra186_pmc_iopower_enable(int reg, u32 bit_mask)
+void tegra_pmc_iopower_enable(int reg, u32 bit_mask)
 {
 	tegra186_pmc_register_update(reg, bit_mask, 0);
 }
-EXPORT_SYMBOL(tegra186_pmc_iopower_enable);
+EXPORT_SYMBOL(tegra_pmc_iopower_enable);
 
-void  tegra186_pmc_iopower_disable(int reg, u32 bit_mask)
+void  tegra_pmc_iopower_disable(int reg, u32 bit_mask)
 {
 	tegra186_pmc_register_update(reg, bit_mask, bit_mask);
 }
-EXPORT_SYMBOL(tegra186_pmc_iopower_disable);
+EXPORT_SYMBOL(tegra_pmc_iopower_disable);
 
-int tegra186_pmc_iopower_get_status(int reg, u32 bit_mask)
+int tegra_pmc_iopower_get_status(int reg, u32 bit_mask)
 {
 	unsigned int no_iopower;
 
@@ -339,7 +339,7 @@ int tegra186_pmc_iopower_get_status(int reg, u32 bit_mask)
 	else
 		return 1;
 }
-EXPORT_SYMBOL(tegra186_pmc_iopower_get_status);
+EXPORT_SYMBOL(tegra_pmc_iopower_get_status);
 
 void tegra_pmc_sata_pwrgt_update(unsigned long mask, unsigned long val)
 {

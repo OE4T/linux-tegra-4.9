@@ -142,7 +142,6 @@ struct nvhost_device_data t18_isp_info = {
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
 	.serialize		= 1,
 	.push_work_done		= 1,
-	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x50, true} },
 };
 #endif
@@ -168,12 +167,11 @@ struct nvhost_device_data t18_vi_info = {
 		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
 	},
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
-	.num_channels		= 6,
+	.num_channels		= 12,
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,
 	.finalize_poweron = nvhost_vi_finalize_poweron,
 	.serialize		= 1,
 	.push_work_done		= 1,
-	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x4000 * 4, true},
 				   {0x8000 * 4, true},
 				   {0xc000 * 4, true},
@@ -372,7 +370,6 @@ struct nvhost_device_data t18_nvcsi_info = {
 	.keepalive		= true,
 	.serialize		= 1,
 	.push_work_done		= 1,
-	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 };
 
 #include "host1x/host1x_channel_t186.c"

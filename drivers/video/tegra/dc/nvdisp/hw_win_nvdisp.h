@@ -610,6 +610,14 @@ static inline u32 win_input_lut_ctl_r(void)
 {
 	return 0x00000723;
 }
+static inline u32 win_wgrp_params_r(void)
+{
+	return 0x00000724;
+}
+static inline u32 win_wgrp_params_swap_uv_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
 static inline u32 win_window_set_control_r(void)
 {
 	return 0x00000730;

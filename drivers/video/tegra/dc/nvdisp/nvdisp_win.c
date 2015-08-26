@@ -318,9 +318,41 @@ static int tegra_nvdisp_enable_cde(struct tegra_dc_win *win)
 	return 0;
 }
 
+static inline u32 tegra_nvdisp_win_swap_uv(struct tegra_dc_win *win)
+{
+
+	u32 swap_uv;
+
+	switch (tegra_dc_fmt(win->fmt)) {
+	case TEGRA_WIN_FMT_YCrCb420SP:
+		swap_uv = 1;
+		win->fmt = TEGRA_WIN_FMT_YCbCr420SP;
+		break;
+
+	case TEGRA_WIN_FMT_YCbCr422SP:
+		swap_uv = 1;
+		win->fmt = TEGRA_WIN_FMT_YCrCb422SP;
+		break;
+
+	case TEGRA_WIN_FMT_YCbCr422RSP:
+		swap_uv = 1;
+		win->fmt = TEGRA_WIN_FMT_YCrCb422RSP;
+		break;
+
+	case TEGRA_WIN_FMT_YCbCr444SP:
+		swap_uv = 1;
+		win->fmt = TEGRA_WIN_FMT_YCrCb444SP;
+		break;
+	default:
+		swap_uv = 0;
+		break;
+	}
+	return swap_uv;
+}
+
 static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 {
-	u32 win_options, win_params;
+	u32 win_options, win_params, swap_uv;
 	fixed20_12 h_offset, v_offset;
 
 	bool yuv = tegra_dc_is_yuv(win->fmt);
@@ -330,7 +362,11 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 
 	struct tegra_dc *dc = win->dc;
 
+	swap_uv = tegra_nvdisp_win_swap_uv(win);
 	nvdisp_win_write(win, tegra_dc_fmt(win->fmt), win_color_depth_r());
+	nvdisp_win_write(win, win_wgrp_params_swap_uv_f(swap_uv),
+		 win_wgrp_params_r());
+
 	nvdisp_win_write(win,
 		win_position_v_position_f(win->out_y) |
 		win_position_h_position_f(win->out_x),

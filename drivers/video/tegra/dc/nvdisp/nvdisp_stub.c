@@ -33,9 +33,13 @@
 const struct disp_client *tegra_la_disp_clients_info;
 atomic_t sd_brightness = ATOMIC_INIT(255);
 EXPORT_SYMBOL(sd_brightness);
+
 int tegra_is_clk_enabled(struct clk *c)
 {
-	return 1;
+	dump_stack();
+	pr_info(" WARNING!!! OBSOLETE FUNCTION CALL!!! \
+			DON'T USE %s FUNCTION \n", __func__);
+	return 0;
 }
 EXPORT_SYMBOL(tegra_is_clk_enabled);
 

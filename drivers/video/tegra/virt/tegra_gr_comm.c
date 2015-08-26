@@ -27,28 +27,13 @@
 #include <linux/sched.h>
 #include <linux/wait.h>
 #include <linux/kthread.h>
-#include <linux/list.h>
-#include <linux/idr.h>
+#include <linux/io.h>
 #include <linux/interrupt.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra_gr_comm.h>
 
 #define NUM_QUEUES   5
-#define NUM_CONTEXTS 2
-
-#define ID_PEER_ID_SHIFT 4
-#define ID_QUEUE_ID_SHIFT 1
-#define ID_QUEUE_ID_MASK 7
-#define ID_VCTX_SHIFT 0
-#define ID_VCTX_MASK 1
-
-/* used to generate an id for id -> ivc-context lookups */
-#define GEN_ID(vctx, queue_id, peer_id)		\
-	((peer_id << ID_PEER_ID_SHIFT) |	\
-	(queue_id << ID_QUEUE_ID_SHIFT) |	\
-	(vctx << ID_VCTX_SHIFT))
-#define VCTX_FROM_ID(id) ((id >> ID_VCTX_SHIFT) & ID_VCTX_MASK)
-#define QUEUE_ID_FROM_ID(id) ((id >> ID_QUEUE_ID_SHIFT) & ID_QUEUE_ID_MASK)
+#define NUM_CONTEXTS 1
 
 struct gr_comm_ivc_context {
 	u32 peer;
@@ -57,6 +42,11 @@ struct gr_comm_ivc_context {
 	struct gr_comm_queue *queue;
 	struct platform_device *pdev;
 	bool irq_requested;
+};
+
+struct gr_comm_mempool_context {
+	struct tegra_hv_ivm_cookie *cookie;
+	void *ptr;
 };
 
 struct gr_comm_element {
@@ -71,9 +61,12 @@ struct gr_comm_queue {
 	struct semaphore sem;
 	struct mutex lock;
 	struct mutex resp_lock;
+	struct mutex mempool_lock;
 	struct list_head pending;
 	struct list_head free;
 	size_t size;
+	struct gr_comm_ivc_context *ivc_ctx;
+	struct gr_comm_mempool_context *mempool_ctx;
 	struct kmem_cache *element_cache;
 	bool valid;
 };
@@ -88,8 +81,13 @@ enum {
 	NUM_PROP
 };
 
+enum {
+	PROP_MEMPOOL_NODE = 0,
+	PROP_MEMPOOL_INST,
+	NUM_MEMPOOL_PROP
+};
+
 static struct gr_comm_context contexts[NUM_CONTEXTS];
-static DEFINE_IDR(ivc_ctx_idr);
 static u32 server_vmid;
 
 u32 tegra_gr_comm_get_server_vmid(void)
@@ -97,23 +95,48 @@ u32 tegra_gr_comm_get_server_vmid(void)
 	return server_vmid;
 }
 
+static void free_mempool(u32 virt_ctx, u32 queue_start, u32 queue_end)
+{
+	int i;
+
+	for (i = queue_start; i < queue_end; ++i) {
+		struct gr_comm_queue *queue =
+					&contexts[virt_ctx].queue[i];
+		struct gr_comm_mempool_context *tmp = queue->mempool_ctx;
+
+		if (!tmp)
+			continue;
+
+		if (tmp->ptr)
+			iounmap(tmp->ptr);
+
+		if (tmp->cookie)
+			tegra_hv_mempool_unreserve(tmp->cookie);
+
+		kfree(tmp);
+		queue->mempool_ctx = NULL;
+	}
+}
+
 static void free_ivc(u32 virt_ctx, u32 queue_start, u32 queue_end)
 {
-	struct gr_comm_ivc_context *tmp;
-	int id;
+	int i;
 
-	idr_for_each_entry(&ivc_ctx_idr, tmp, id) {
-		if (VCTX_FROM_ID(id) == virt_ctx &&
-			QUEUE_ID_FROM_ID(id) >= queue_start &&
-			QUEUE_ID_FROM_ID(id) < queue_end) {
-			idr_remove(&ivc_ctx_idr, id);
-			if (tmp->irq_requested)
-				free_irq(tmp->cookie->irq, tmp);
+	for (i = queue_start; i < queue_end; ++i) {
+		struct gr_comm_queue *queue =
+					&contexts[virt_ctx].queue[i];
+		struct gr_comm_ivc_context *tmp = queue->ivc_ctx;
 
-			if (tmp->cookie)
-				tegra_hv_ivc_unreserve(tmp->cookie);
-			kfree(tmp);
-		}
+		if (!tmp)
+			continue;
+
+		if (tmp->irq_requested)
+			free_irq(tmp->cookie->irq, tmp);
+
+		if (tmp->cookie)
+			tegra_hv_ivc_unreserve(tmp->cookie);
+		kfree(tmp);
+		queue->ivc_ctx = NULL;
 	}
 }
 
@@ -184,29 +207,83 @@ static irqreturn_t ivc_intr_thread(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static int setup_mempool(u32 virt_ctx, struct platform_device *pdev,
+		u32 queue_start, u32 queue_end)
+{
+	struct device *dev = &pdev->dev;
+	int i, ret = -EINVAL;
+
+	for (i = queue_start; i < queue_end; ++i) {
+		char name[20];
+		u32 inst;
+
+		snprintf(name, sizeof(name), "mempool%d", i);
+		if (of_property_read_u32_index(dev->of_node, name,
+				PROP_MEMPOOL_INST, &inst) == 0) {
+			struct device_node *hv_dn;
+			struct gr_comm_mempool_context *ctx;
+			struct gr_comm_queue *queue =
+					&contexts[virt_ctx].queue[i];
+
+			hv_dn = of_parse_phandle(dev->of_node, name,
+						PROP_MEMPOOL_NODE);
+			if (!hv_dn)
+				goto fail;
+
+			ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
+			if (!ctx) {
+				ret = -ENOMEM;
+				goto fail;
+			}
+
+			ctx->cookie =
+				tegra_hv_mempool_reserve(hv_dn, inst);
+			if (IS_ERR_OR_NULL(ctx->cookie)) {
+				ret = PTR_ERR(ctx->cookie);
+				kfree(ctx);
+				goto fail;
+			}
+
+			queue->mempool_ctx = ctx;
+			ctx->ptr = ioremap_cached(ctx->cookie->ipa,
+						ctx->cookie->size);
+			if (!ctx->ptr) {
+				ret = -ENOMEM;
+				/* free_mempool will take care of
+				   clean-up */
+				goto fail;
+			}
+		}
+	}
+
+	return 0;
+
+fail:
+	free_mempool(virt_ctx, queue_start, queue_end);
+	return ret;
+}
+
 static int setup_ivc(u32 virt_ctx, struct platform_device *pdev,
 		u32 queue_start, u32 queue_end)
 {
 	struct device *dev = &pdev->dev;
-	int i, j, ret = -EINVAL;
+	int i, ret = -EINVAL;
 
 	for (i = queue_start; i < queue_end; ++i) {
 		char name[20];
 		u32 inst;
 
 		snprintf(name, sizeof(name), "ivc-queue%d", i);
-		for (j = 0;
-			of_property_read_u32_index(dev->of_node, name,
-				j * NUM_PROP + PROP_IVC_INST, &inst) == 0;
-				j++) {
+		if (of_property_read_u32_index(dev->of_node, name,
+				PROP_IVC_INST, &inst) == 0) {
 			struct device_node *hv_dn;
 			struct gr_comm_ivc_context *ctx;
 			struct gr_comm_queue *queue =
 					&contexts[virt_ctx].queue[i];
-			int id, err;
+			int err;
 
 			hv_dn = of_parse_phandle(dev->of_node, name,
-						j * NUM_PROP + PROP_IVC_NODE);
+						PROP_IVC_NODE);
 			if (!hv_dn)
 				goto fail;
 
@@ -236,15 +313,7 @@ static int setup_ivc(u32 virt_ctx, struct platform_device *pdev,
 			}
 
 			ctx->peer = ctx->cookie->peer_vmid;
-
-			id = GEN_ID(virt_ctx, i, ctx->peer);
-			err = idr_alloc(&ivc_ctx_idr, ctx, id, id + 1,
-					GFP_KERNEL);
-			if (err != id) {
-				tegra_hv_ivc_unreserve(ctx->cookie);
-				kfree(ctx);
-				goto fail;
-			}
+			queue->ivc_ctx = ctx;
 
 			/* ctx->peer will have same value for all queues */
 			server_vmid = ctx->peer;
@@ -263,10 +332,10 @@ static int setup_ivc(u32 virt_ctx, struct platform_device *pdev,
 				goto fail;
 			}
 			ctx->irq_requested = true;
-		}
-		/* no entries in DT? */
-		if (j == 0)
+		} else {
+			/* no entry in DT? */
 			goto fail;
+		}
 	}
 
 	return 0;
@@ -311,6 +380,7 @@ int tegra_gr_comm_init(struct platform_device *pdev, u32 virt_ctx, u32 elems,
 		sema_init(&queue->sem, 0);
 		mutex_init(&queue->lock);
 		mutex_init(&queue->resp_lock);
+		mutex_init(&queue->mempool_lock);
 		INIT_LIST_HEAD(&queue->free);
 		INIT_LIST_HEAD(&queue->pending);
 		queue->size = size;
@@ -339,6 +409,12 @@ int tegra_gr_comm_init(struct platform_device *pdev, u32 virt_ctx, u32 elems,
 		goto fail;
 	}
 
+	ret = setup_mempool(virt_ctx, pdev, queue_start, queue_end);
+	if (ret) {
+		dev_err(dev, "mempool setup failed\n");
+		goto fail;
+	}
+
 	return 0;
 
 fail:
@@ -357,6 +433,7 @@ fail:
 	}
 
 	free_ivc(virt_ctx, queue_start, queue_end);
+	free_mempool(virt_ctx, queue_start, queue_end);
 	dev_err(dev, "%s insufficient memory\n", __func__);
 	return ret;
 }
@@ -392,6 +469,7 @@ void tegra_gr_comm_deinit(u32 virt_ctx, u32 queue_start, u32 num_queues)
 		queue->valid = false;
 	}
 	free_ivc(virt_ctx, queue_start, queue_end);
+	free_mempool(virt_ctx, queue_start, queue_end);
 }
 
 int tegra_gr_comm_send(u32 virt_ctx, u32 peer, u32 index, void *data,
@@ -399,21 +477,23 @@ int tegra_gr_comm_send(u32 virt_ctx, u32 peer, u32 index, void *data,
 {
 	struct gr_comm_context *ctx;
 	struct gr_comm_ivc_context *ivc_ctx;
+	struct gr_comm_queue *queue;
 	int ret;
 
 	if (virt_ctx >= NUM_CONTEXTS || index >= NUM_QUEUES)
 		return -EINVAL;
 
 	ctx = &contexts[virt_ctx];
-	if (!ctx->queue[index].valid)
+	queue = &ctx->queue[index];
+	if (!queue->valid)
 		return -EINVAL;
 
 	/* local msg is enqueued directly */
 	if (peer == TEGRA_GR_COMM_ID_SELF)
-		return queue_add(&ctx->queue[index], data, peer, NULL);
+		return queue_add(queue, data, peer, NULL);
 
-	ivc_ctx = idr_find(&ivc_ctx_idr, GEN_ID(virt_ctx, index, peer));
-	if (!ivc_ctx)
+	ivc_ctx = queue->ivc_ctx;
+	if (!ivc_ctx || ivc_ctx->peer != peer)
 		return -EINVAL;
 
 	if (!tegra_hv_ivc_can_write(ivc_ctx->cookie)) {
@@ -442,10 +522,10 @@ int tegra_gr_comm_recv(u32 virt_ctx, u32 index, void **handle, void **data,
 		return -EINVAL;
 
 	ctx = &contexts[virt_ctx];
-	if (!ctx->queue[index].valid)
+	queue = &ctx->queue[index];
+	if (!queue->valid)
 		return -EINVAL;
 
-	queue = &ctx->queue[index];
 	down(&queue->sem);
 	mutex_lock(&queue->lock);
 	element = list_first_entry(&queue->pending,
@@ -472,10 +552,10 @@ int tegra_gr_comm_sendrecv(u32 virt_ctx, u32 peer, u32 index, void **handle,
 		return -EINVAL;
 
 	ctx = &contexts[virt_ctx];
-	if (!ctx->queue[index].valid)
+	queue = &ctx->queue[index];
+	if (!queue->valid)
 		return -EINVAL;
 
-	queue = &ctx->queue[index];
 	mutex_lock(&queue->resp_lock);
 	err = tegra_gr_comm_send(virt_ctx, peer, index, *data, *size);
 	if (err)
@@ -494,4 +574,34 @@ void tegra_gr_comm_release(void *handle)
 	mutex_lock(&element->queue->lock);
 	list_add(&element->list, &element->queue->free);
 	mutex_unlock(&element->queue->lock);
+}
+
+void *tegra_gr_comm_oob_get_ptr(u32 virt_ctx, u32 peer, u32 index,
+				void **ptr, size_t *size)
+{
+	struct gr_comm_mempool_context *mempool_ctx;
+	struct gr_comm_queue *queue;
+
+	if (virt_ctx >= NUM_CONTEXTS || index >= NUM_QUEUES)
+		return NULL;
+
+	queue = &contexts[virt_ctx].queue[index];
+	if (!queue->valid)
+		return NULL;
+
+	mempool_ctx = queue->mempool_ctx;
+	if (!mempool_ctx || mempool_ctx->cookie->peer_vmid != peer)
+		return NULL;
+
+	mutex_lock(&queue->mempool_lock);
+	*size = mempool_ctx->cookie->size;
+	*ptr = mempool_ctx->ptr;
+	return queue;
+}
+
+void tegra_gr_comm_oob_put_ptr(void *handle)
+{
+	struct gr_comm_queue *queue = (struct gr_comm_queue *)handle;
+
+	mutex_unlock(&queue->mempool_lock);
 }

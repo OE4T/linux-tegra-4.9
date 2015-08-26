@@ -70,6 +70,7 @@
 #define LOC_THERM_LIMIT              0x20
 #define THERM_HYSTERESIS             0x21
 #define COSECUTIVE_ALERT             0x22
+#define MANUFACTURER_ID              0xFE
 
 /* Set of register types that are sensor dependant. */
 enum nct1008_sensor_reg_types {
@@ -572,6 +573,8 @@ static ssize_t nct1008_show_regs(struct device *dev,
 		"Ext Temp Offset Lo  ", OFFSET_QUARTER_WR);
 	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz,
 		"Ext Therm Limit     ", EXT_THERM_LIMIT_WR);
+	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz,
+		"ManufacturerID      ", MANUFACTURER_ID);
 
 	return sz;
 }

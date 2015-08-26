@@ -88,6 +88,8 @@ struct nvhost_device_data t18_host1x_info = {
 	},
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	.private_data		= &host1x04_info,
+	.finalize_poweron = nvhost_host1x_finalize_poweron,
+	.prepare_poweroff = nvhost_host1x_prepare_poweroff,
 };
 
 static struct host1x_device_info host1xb04_info = {

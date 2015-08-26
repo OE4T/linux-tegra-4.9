@@ -17,9 +17,17 @@
 #include <linux/slab.h>
 #include <dt-bindings/padctrl/tegra186-pads.h>
 
+
+#define PMC_DDR_PWR	0x38
+#define PMC_E_18V_PWR	0x3C
+#define PMC_E_33V_PWR	0x40
+
 struct tegra186_pmc_pads {
 	const char *pad_name;
 	int pad_id;
+	int pad_reg;
+	int lo_volt;
+	int hi_volt;
 	int bit_position;
 };
 
@@ -27,30 +35,33 @@ struct tegra186_pmc_padcontrl {
 	struct padctrl_dev *pad_dev;
 };
 
-#define TEGRA_186_PADS(_name, _id, _bit)		\
-{							\
-	.pad_name = _name,				\
-	.pad_id = TEGRA186_IO_PAD_##_id,		\
-	.bit_position = _bit,				\
+#define TEGRA_186_PADS(_name, _id, _reg, _bit, _lvolt, _hvolt)	\
+{								\
+	.pad_name = _name,					\
+	.pad_id = TEGRA_IO_PAD_GROUP_##_id,			\
+	.pad_reg = _reg,					\
+	.lo_volt = _lvolt * 1000,				\
+	.hi_volt = _hvolt * 1000,				\
+	.bit_position = _bit,					\
 }
 
 static struct tegra186_pmc_pads tegra186_pads[] = {
-	TEGRA_186_PADS("ddr-dvi", DDR_DVI, 0),
-	TEGRA_186_PADS("ddr-gmi", DDR_GMI, 1),
-	TEGRA_186_PADS("ddr-sdmmc2", DDR_SDMMC2, 2),
-	TEGRA_186_PADS("ddr-spi", DDR_SPI, 3),
-	TEGRA_186_PADS("ufs", UFS, 1),
-	TEGRA_186_PADS("mem", MEM, 2),
-	TEGRA_186_PADS("mem1", MEM1, 3),
-	TEGRA_186_PADS("dbg", DBG, 4),
-	TEGRA_186_PADS("spi", SPI, 5),
-	TEGRA_186_PADS("ao-hv", AO_HV, 0),
-	TEGRA_186_PADS("audio-hv", AUDIO_HV, 1),
-	TEGRA_186_PADS("dmic-hv", DMIC_HV, 2),
-	TEGRA_186_PADS("gpio-hv", GPIO_HV, 3),
-	TEGRA_186_PADS("sdmmc1-hv", SDMMC1_HV, 4),
-	TEGRA_186_PADS("sdmmc2-hv", SDMMC2_HV, 5),
-	TEGRA_186_PADS("sdmmc3-hv", SDMMC3_HV, 6),
+	TEGRA_186_PADS("ddr-dvi", DDR_DVI, PMC_DDR_PWR, 0, 1200, 1800),
+	TEGRA_186_PADS("ddr-gmi", DDR_GMI, PMC_DDR_PWR, 1, 1200, 1800),
+	TEGRA_186_PADS("ddr-sdmmc2", DDR_SDMMC2, PMC_DDR_PWR, 2, 1200, 1800),
+	TEGRA_186_PADS("ddr-spi", DDR_SPI, PMC_DDR_PWR, 3, 1200, 1800),
+	TEGRA_186_PADS("ufs", UFS, PMC_E_18V_PWR, 1, 1200, 1800),
+	TEGRA_186_PADS("mem", MEM, PMC_E_18V_PWR, 2, 1200, 1800),
+	TEGRA_186_PADS("mem1", MEM1, PMC_E_18V_PWR, 3, 1200, 1800),
+	TEGRA_186_PADS("dbg", DBG, PMC_E_18V_PWR, 4, 1200, 1800),
+	TEGRA_186_PADS("spi", SPI, PMC_E_18V_PWR, 5, 1200, 1800),
+	TEGRA_186_PADS("ao-hv", AO_HV, PMC_E_33V_PWR, 0, 1800, 3300),
+	TEGRA_186_PADS("audio-hv", AUDIO_HV, PMC_E_33V_PWR, 1, 1800, 3300),
+	TEGRA_186_PADS("dmic-hv", DMIC_HV, PMC_E_33V_PWR, 2, 1800, 3300),
+	TEGRA_186_PADS("gpio-hv", GPIO_HV, PMC_E_33V_PWR, 3, 1800, 3300),
+	TEGRA_186_PADS("sdmmc1-hv", SDMMC1_HV, PMC_E_33V_PWR, 4, 1800, 3300),
+	TEGRA_186_PADS("sdmmc2-hv", SDMMC2_HV, PMC_E_33V_PWR, 5, 1800, 3300),
+	TEGRA_186_PADS("sdmmc3-hv", SDMMC3_HV, PMC_E_33V_PWR, 6, 1800, 3300),
 };
 
 static int tegra186_pmc_padctrl_set_voltage(struct padctrl_dev *pad_dev,
@@ -72,17 +83,16 @@ static int tegra186_pmc_padctrl_set_voltage(struct padctrl_dev *pad_dev,
 	if (i == ARRAY_SIZE(tegra186_pads))
 		return -EINVAL;
 
-	offset = BIT(tegra186_pads[i].bit_position);
-	if (i <= TEGRA186_IO_PAD_DDR_SPI) {
-		val = (voltage == 1800000) ? offset : 0;
-		tegra186_pmc_pwr_ddr_update(offset, val);
-	} else if (i <= TEGRA186_IO_PAD_SPI) {
-		val = (voltage == 1800000) ? offset : 0;
-		tegra186_pmc_pwr_e18V_update(offset, val);
-	} else {
-		val = (voltage == 3300000) ? offset : 0;
-		tegra186_pmc_pwr_e33V_update(offset, val);
+	if ((voltage < tegra186_pads[i].lo_volt) ||
+		(voltage > tegra186_pads[i].hi_volt)) {
+		pr_err("Voltage %d is not supported for pad %s\n",
+			voltage, tegra186_pads[i].pad_name);
+		return -EINVAL;
 	}
+
+	offset = BIT(tegra186_pads[i].bit_position);
+	val = (voltage == tegra186_pads[i].hi_volt) ? offset : 0;
+	tegra_pmc_pad_voltage_update(tegra186_pads[i].pad_reg, offset, val);
 	udelay(100);
 	return 0;
 }
@@ -90,7 +100,7 @@ static int tegra186_pmc_padctrl_set_voltage(struct padctrl_dev *pad_dev,
 static int tegra186_pmc_padctl_get_voltage(struct padctrl_dev *pad_dev,
 		int pad_id, u32 *voltage)
 {
-	unsigned int pwrdet_mask;
+	unsigned int pad_mask;
 	u32 offset;
 	int i;
 
@@ -103,26 +113,9 @@ static int tegra186_pmc_padctl_get_voltage(struct padctrl_dev *pad_dev,
 		return -EINVAL;
 
 	offset = BIT(tegra186_pads[i].bit_position);
-	if (i <= TEGRA186_IO_PAD_DDR_SPI) {
-		pwrdet_mask = tegra186_pmc_pwr_ddr_get();
-		if (pwrdet_mask & offset)
-			*voltage = 1800000UL;
-		else
-			*voltage = 1200000UL;
-	} else if (i <= TEGRA186_IO_PAD_SPI) {
-		pwrdet_mask = tegra186_pmc_pwr_e18V_get();
-		if (pwrdet_mask & offset)
-			*voltage = 1800000UL;
-		else
-			*voltage = 1200000UL;
-	} else {
-		pwrdet_mask = tegra186_pmc_pwr_e33V_get();
-		if (pwrdet_mask & offset)
-			*voltage = 3300000UL;
-		else
-			*voltage = 1800000UL;
-	}
-
+	pad_mask = tegra_pmc_pad_voltage_get(tegra186_pads[i].pad_reg);
+	*voltage = (pad_mask & offset) ? tegra186_pads[i].hi_volt :
+						tegra186_pads[i].lo_volt;
 	return 0;
 }
 
@@ -237,39 +230,22 @@ int tegra186_pmc_padctrl_init(struct device *dev, struct device_node *np)
 	return 0;
 }
 
-#ifdef  CONFIG_DEBUG_FS
-
+#ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 
 static int dbg_io_pad_show(struct seq_file *s, void *unused)
 {
-	unsigned int pwrdet_mask;
+	unsigned int pad_mask;
 	u32 offset;
 	int i;
 	unsigned long voltage;
 
 	for (i = 0; i < ARRAY_SIZE(tegra186_pads); ++i) {
 		offset = BIT(tegra186_pads[i].bit_position);
-		if (i <= TEGRA186_IO_PAD_DDR_SPI) {
-			pwrdet_mask = tegra186_pmc_pwr_ddr_get();
-			if (pwrdet_mask & offset)
-				voltage = 1800000UL;
-			else
-				voltage = 1200000UL;
-		} else if (i <= TEGRA186_IO_PAD_SPI) {
-			pwrdet_mask = tegra186_pmc_pwr_e18V_get();
-			if (pwrdet_mask & offset)
-				voltage = 1800000UL;
-			else
-				voltage = 1200000UL;
-		} else {
-			pwrdet_mask = tegra186_pmc_pwr_e33V_get();
-			if (pwrdet_mask & offset)
-				voltage = 3300000UL;
-			else
-				voltage = 1800000UL;
-		}
+		pad_mask = tegra_pmc_pad_voltage_get(tegra186_pads[i].pad_reg);
+		voltage = (pad_mask & offset) ? tegra186_pads[i].hi_volt :
+						tegra186_pads[i].lo_volt;
 		seq_printf(s, "PMC: IO pad %s voltage %lu\n",
 			tegra186_pads[i].pad_name, voltage);
 	}

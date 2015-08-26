@@ -57,6 +57,8 @@
 /* Flag to enable/disable loading of ADSP firmware */
 #define ENABLE_ADSP 1
 
+#define ADSP_RESPONSE_TIMEOUT	1000 /* in ms */
+
 static struct tegra210_adsp_app_desc {
 	const char *name;
 	const char *fw_name;
@@ -82,6 +84,7 @@ struct tegra210_adsp_app {
 	plugin_shared_mem_t *plugin;
 	apm_shared_state_t *apm; /* For a plugin it stores parent apm data */
 	struct nvadsp_mbox apm_mbox;
+	struct completion msg_complete; /* For ADSP ack wait */
 	uint32_t reg;
 	uint32_t adma_chan; /* Valid for only ADMA app */
 	uint32_t fe:1; /* Whether the app is used as a FE APM */
@@ -360,6 +363,18 @@ static int tegra210_adsp_send_msg(struct tegra210_adsp_app *app,
 {
 	int ret = 0;
 
+	if (flags & TEGRA210_ADSP_MSG_FLAG_NEED_ACK) {
+		if (flags & TEGRA210_ADSP_MSG_FLAG_HOLD) {
+			pr_err("%s: ACK requires FLAG_SEND, ignoring\n",
+				__func__);
+			flags &= ~TEGRA210_ADSP_MSG_FLAG_NEED_ACK;
+		} else {
+			reinit_completion(&app->msg_complete);
+			apm_msg->msg.call_params.method |=
+				NVFX_APM_METHOD_ACK_BIT;
+		}
+	}
+
 	ret = msgq_queue_message(&app->apm->msgq_recv.msgq, &apm_msg->msgq_msg);
 	if (ret < 0)
 		return ret;
@@ -373,6 +388,16 @@ static int tegra210_adsp_send_msg(struct tegra210_adsp_app *app,
 		pr_err("Failed to send mailbox message id %d ret %d\n",
 			app->apm->mbox_id, ret);
 	}
+
+	if (!(flags & TEGRA210_ADSP_MSG_FLAG_NEED_ACK))
+		return ret;
+
+	ret = wait_for_completion_interruptible_timeout(
+		&app->msg_complete,
+		msecs_to_jiffies(ADSP_RESPONSE_TIMEOUT));
+	if (WARN_ON(ret <= 0))
+		pr_err("%s: Failed to reset app %d\n", __func__, app->reg);
+
 	return ret;
 }
 
@@ -567,6 +592,8 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 				app->desc->name, app->desc->fw_name);
 			goto err_app_exit;
 		}
+
+		init_completion(&app->msg_complete);
 
 		ret = nvadsp_app_start(app->info);
 		if (ret < 0) {
@@ -864,6 +891,9 @@ static int tegra210_adsp_pcm_msg_handler(struct tegra210_adsp_app *app,
 	case nvfx_apm_method_set_position:
 		snd_pcm_period_elapsed(prtd->substream);
 		break;
+	case nvfx_apm_method_ack:
+		complete(&app->msg_complete);
+		break;
 	default:
 		dev_err(prtd->dev, "Unsupported cmd %d.",
 			apm_msg->msg.call_params.method);
@@ -884,15 +914,17 @@ static int tegra210_adsp_compr_msg_handler(struct tegra210_adsp_app *app,
 	case nvfx_apm_method_set_position:
 		snd_compr_fragment_elapsed(prtd->cstream);
 		break;
-	case nvfx_apm_method_set_eos: {
+	case nvfx_apm_method_set_eos:
 		if (!prtd->is_draining) {
 			dev_warn(prtd->dev, "EOS reached before drain");
 			break;
 		}
 		snd_compr_drain_notify(prtd->cstream);
 		prtd->is_draining = 0;
-	}
-	break;
+		break;
+	case nvfx_apm_method_ack:
+		complete(&app->msg_complete);
+		break;
 	default:
 		dev_err(prtd->dev, "Unsupported cmd %d.",
 			apm_msg->msg.call_params.method);
@@ -969,7 +1001,7 @@ static int tegra210_adsp_compr_free(struct snd_compr_stream *cstream)
 		return -ENODEV;
 
 	tegra210_adsp_send_reset_msg(prtd->fe_apm,
-		TEGRA210_ADSP_MSG_FLAG_SEND);
+		TEGRA210_ADSP_MSG_FLAG_SEND | TEGRA210_ADSP_MSG_FLAG_NEED_ACK);
 
 	pm_runtime_put(prtd->dev);
 
@@ -982,7 +1014,6 @@ static int tegra210_adsp_compr_free(struct snd_compr_stream *cstream)
 
 	spin_unlock_irqrestore(&prtd->fe_apm->lock, flags);
 
-	prtd->fe_apm->fe = 0;
 	cstream->runtime->private_data = NULL;
 	devm_kfree(prtd->dev, prtd);
 
@@ -1800,6 +1831,7 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 		if (IS_APM_IN(w->reg)) {
 			/* Request higher ADSP clock when starting stream.
 			 * Actmon takes care of adjusting frequency later. */
+			app->msg_handler = tegra210_adsp_pcm_msg_handler;
 			ret = pm_runtime_get_sync(adsp->dev);
 			if (ret < 0) {
 				dev_err(adsp->dev, "%s pm_runtime_get_sync error 0x%x\n",
@@ -1827,12 +1859,14 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 			if (ret < 0)
 				dev_err(adsp->dev, "Failed to set state inactive.");
 			ret = tegra210_adsp_send_reset_msg(app,
-				TEGRA210_ADSP_MSG_FLAG_SEND);
+				(TEGRA210_ADSP_MSG_FLAG_SEND |
+				TEGRA210_ADSP_MSG_FLAG_NEED_ACK));
 			if (ret < 0)
 				dev_err(adsp->dev, "Failed to reset.");
 			if (app->min_adsp_clock)
 				adsp_update_dfs_min_rate(0);
 			pm_runtime_put(adsp->dev);
+			app->msg_handler = NULL;
 		}
 	}
 

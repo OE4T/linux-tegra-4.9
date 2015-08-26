@@ -333,8 +333,7 @@ static void gr_gp10b_cb_size_default(struct gk20a *g)
 	struct gr_gk20a *gr = &g->gr;
 
 	if (!gr->attrib_cb_default_size)
-		gr->attrib_cb_default_size =
-			gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v();
+		gr->attrib_cb_default_size = 0x800;
 	gr->alpha_cb_default_size =
 		gr_gpc0_ppc0_cbm_alpha_cb_size_v_default_v();
 }
@@ -928,6 +927,9 @@ static int gr_gp10b_init_fs_state(struct gk20a *g)
 	data = set_field(data, gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_m(),
 			 gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_disable_f());
 	gk20a_writel(g, gr_gpcs_tpcs_sm_disp_ctrl_r(), data);
+
+	/* disable deep binning */
+	gk20a_writel(g, gr_fe_go_idle_timeout_r(), 0x800);
 
 	return gr_gm20b_ctx_state_floorsweep(g);
 }

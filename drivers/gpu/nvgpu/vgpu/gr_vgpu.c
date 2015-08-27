@@ -99,7 +99,7 @@ static int vgpu_gr_alloc_global_ctx_buffers(struct gk20a *g)
 	u32 cb_buffer_size = gr->bundle_cb_default_size *
 		gr_scc_bundle_cb_size_div_256b_byte_granularity_v();
 
-	u32 pagepool_buffer_size = gr_scc_pagepool_total_pages_hwmax_value_v() *
+	u32 pagepool_buffer_size = g->ops.gr.pagepool_default_size(g) *
 		gr_scc_pagepool_total_pages_byte_granularity_v();
 
 	gk20a_dbg_fn("");
@@ -528,6 +528,11 @@ static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	if (vgpu_get_attribute(platform->virt_handle,
 			TEGRA_VGPU_ATTRIB_MAX_TPC_COUNT,
 			&gr->max_tpc_count))
+		return -ENOMEM;
+
+	if (vgpu_get_attribute(platform->virt_handle,
+			TEGRA_VGPU_ATTRIB_TPC_COUNT,
+			&gr->tpc_count))
 		return -ENOMEM;
 
 	gr->gpc_tpc_mask = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);

@@ -53,9 +53,18 @@ static int vgpu_init_mm_setup_sw(struct gk20a *g)
 
 int vgpu_init_mm_support(struct gk20a *g)
 {
+	int err;
+
 	gk20a_dbg_fn("");
 
-	return vgpu_init_mm_setup_sw(g);
+	err = vgpu_init_mm_setup_sw(g);
+	if (err)
+		return err;
+
+	if (g->ops.mm.init_mm_setup_hw)
+		err = g->ops.mm.init_mm_setup_hw(g);
+
+	return err;
 }
 
 static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
@@ -275,7 +284,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 	for (i = 0; i < gmmu_nr_page_sizes; i++)
 		vm->gmmu_page_sizes[i] = gmmu_page_sizes[i];
 
-	vm->big_pages = true;
+	vm->big_pages = !mm->disable_bigpage;
 	vm->big_page_size = big_page_size;
 
 	vm->va_start  = big_page_size << 10;   /* create a one pde hole */
@@ -450,4 +459,5 @@ void vgpu_init_mm_ops(struct gpu_ops *gops)
 	gops->mm.tlb_invalidate = vgpu_mm_tlb_invalidate;
 	gops->mm.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits;
 	gops->mm.get_iova_addr = gk20a_mm_iova_addr;
+	gops->mm.init_mm_setup_hw = NULL;
 }

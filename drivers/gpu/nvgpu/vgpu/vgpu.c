@@ -21,8 +21,11 @@
 #include "gk20a/debug_gk20a.h"
 #include "gk20a/hal_gk20a.h"
 #include "gk20a/hw_mc_gk20a.h"
-
 #include "gm20b/hal_gm20b.h"
+
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#include "nvgpu_gpuid_t18x.h"
+#endif
 
 static inline int vgpu_comm_init(struct platform_device *pdev)
 {
@@ -270,6 +273,11 @@ static int vgpu_init_hal(struct gk20a *g)
 		gk20a_dbg_info("gm20b detected");
 		err = vgpu_gm20b_init_hal(g);
 		break;
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	case TEGRA_18x_GPUID:
+		err = TEGRA_18x_GPUID_VGPU_HAL(g);
+		break;
+#endif
 	default:
 		gk20a_err(&g->dev->dev, "no support for %x", ver);
 		err = -ENODEV;

@@ -517,7 +517,78 @@ void DWC_ETH_QOS_enable_all_ch_rx_interrpt(
  * we only schedule napi once.
  * For MULTI_IRQ, each IRQ has own napi handler.
  */
-void handle_chan_intrs(struct DWC_ETH_QOS_prv_data *pdata,
+void handle_non_ti_ri_chan_intrs(struct DWC_ETH_QOS_prv_data *pdata, int qInx)
+{
+	ULONG varDMA_SR;
+	ULONG varDMA_IER;
+
+	DBGPR("-->%s(), chan=%d\n", __func__, qInx);
+
+	DMA_SR_RgRd(qInx, varDMA_SR);
+
+	DMA_IER_RgRd(qInx, varDMA_IER);
+
+	DBGPR("DMA_SR[%d] = %#lx, DMA_IER= %#lx\n", qInx, varDMA_SR,
+		varDMA_IER);
+
+	/*on ufpga, update of DMA_IER is really slow, such that interrupt
+	 * would happen, but read of IER returns old value.  This would
+	 * cause driver to return when there really was an interrupt asserted.
+	 * so for now, comment this out.
+	 */
+	/* process only those interrupts which we
+	 * have enabled.
+	 */
+	if (!(tegra_platform_is_unit_fpga()))
+		varDMA_SR = (varDMA_SR & varDMA_IER);
+
+	/* mask off ri and ti */
+	varDMA_SR &= ~(((0x1) << 6) | 1);
+
+	if (varDMA_SR == 0)
+		return;
+
+	/* ack non ti/ri ints */
+	DMA_SR_RgWr(qInx, varDMA_SR);
+
+	if ((GET_VALUE(varDMA_SR, DMA_SR_RBU_LPOS, DMA_SR_RBU_HPOS) & 1))
+		pdata->xstats.rx_buf_unavailable_irq_n[qInx]++;
+
+	if (tegra_platform_is_unit_fpga())
+		varDMA_SR = (varDMA_SR & varDMA_IER);
+
+	if (GET_VALUE(varDMA_SR, DMA_SR_TPS_LPOS, DMA_SR_TPS_HPOS) & 1) {
+		pdata->xstats.tx_process_stopped_irq_n[qInx]++;
+		DWC_ETH_QOS_GStatus = -E_DMA_SR_TPS;
+	}
+	if (GET_VALUE(varDMA_SR, DMA_SR_TBU_LPOS, DMA_SR_TBU_HPOS) & 1) {
+		pdata->xstats.tx_buf_unavailable_irq_n[qInx]++;
+		DWC_ETH_QOS_GStatus = -E_DMA_SR_TBU;
+	}
+	if (GET_VALUE(varDMA_SR, DMA_SR_RPS_LPOS, DMA_SR_RPS_HPOS) & 1) {
+		pdata->xstats.rx_process_stopped_irq_n[qInx]++;
+		DWC_ETH_QOS_GStatus = -E_DMA_SR_RPS;
+	}
+	if (GET_VALUE(varDMA_SR, DMA_SR_RWT_LPOS, DMA_SR_RWT_HPOS) & 1) {
+		pdata->xstats.rx_watchdog_irq_n++;
+		DWC_ETH_QOS_GStatus = S_DMA_SR_RWT;
+	}
+	if (GET_VALUE(varDMA_SR, DMA_SR_FBE_LPOS, DMA_SR_FBE_HPOS) & 1) {
+		pdata->xstats.fatal_bus_error_irq_n++;
+		DWC_ETH_QOS_GStatus = -E_DMA_SR_FBE;
+		DWC_ETH_QOS_restart_dev(pdata, qInx);
+	}
+
+	DBGPR("<--%s()\n", __func__);
+}
+
+
+/* pnapi_sched is only needed for intr_mode=COMMON_IRQ.  In COMMON_IRQ,
+ * there is one napi handler to process all queues.  So we need to ensure
+ * we only schedule napi once.
+ * For MULTI_IRQ, each IRQ has own napi handler.
+ */
+void handle_ti_ri_chan_intrs(struct DWC_ETH_QOS_prv_data *pdata,
 			int qInx, int *pnapi_sched)
 {
 	ULONG varDMA_SR;
@@ -549,15 +620,12 @@ void handle_chan_intrs(struct DWC_ETH_QOS_prv_data *pdata,
 	if (!(tegra_platform_is_unit_fpga()))
 		varDMA_SR = (varDMA_SR & varDMA_IER);
 
-
 	if (varDMA_SR == 0)
 		return;
 
-	if ((GET_VALUE(varDMA_SR, DMA_SR_RI_LPOS, DMA_SR_RI_HPOS) & 1) ||
-		(GET_VALUE(varDMA_SR, DMA_SR_RBU_LPOS, DMA_SR_RBU_HPOS) & 1)) {
-
-		/* ack RI and RBU */
-		DMA_SR_RgWr(qInx, ((0x1) << 6) | ((0x1) << 7));
+	if (GET_VALUE(varDMA_SR, DMA_SR_RI_LPOS, DMA_SR_RI_HPOS) & 1) {
+		/* ack RI */
+		DMA_SR_RgWr(qInx, ((0x1) << 6) | ((0x1) << 15));
 		VIRT_INTR_CH_STAT_RgWr(qInx, VIRT_INTR_CH_CRTL_RX_Wr_Mask);
 
 		if (!*pnapi_sched) {
@@ -579,23 +647,8 @@ void handle_chan_intrs(struct DWC_ETH_QOS_prv_data *pdata,
 					}
 				} else if (pdata->dt_cfg.chan_mode[qInx] ==
 						CHAN_MODE_INTR) {
-					/* this won't work....since napi did not
-					 * call us, we don't have napi to
-					 * complete.
-					 * will this work?  Since we are
-					 * processing from int then we should
-					 * never disable ints so any completions
-					 * we processed, we tell napi to
-					 * complete it. Worry is we are calling
-					 * napi from ih
-					 */
-					handle_txrx_completions(pdata, qInx);
-#if 0
-					if (pdata->dev->features & NETIF_F_GRO)
-						napi_complete(napi);
-					else
-						__napi_complete(napi);
-#endif
+						handle_txrx_completions(
+							pdata, qInx);
 				} else
 					printk(KERN_ALERT "driver bug! rx interrupt when chan mode is polling\n");
 
@@ -609,40 +662,16 @@ void handle_chan_intrs(struct DWC_ETH_QOS_prv_data *pdata,
 					DWC_ETH_QOS_disable_all_ch_rx_interrpt(pdata);
 				}
 			}
-			if ((GET_VALUE(varDMA_SR, DMA_SR_RI_LPOS,
-					DMA_SR_RI_HPOS) & 1))
-				pdata->xstats.rx_normal_irq_n[qInx]++;
-			else
-				pdata->xstats.rx_buf_unavailable_irq_n[qInx]++;
+			pdata->xstats.rx_normal_irq_n[qInx]++;
 		}
 	}
 	if (tegra_platform_is_unit_fpga())
 		varDMA_SR = (varDMA_SR & varDMA_IER);
 
 	if (GET_VALUE(varDMA_SR, DMA_SR_TI_LPOS, DMA_SR_TI_HPOS) & 1) {
+		DMA_SR_RgWr(qInx, ((0x1) << 0) | ((0x1) << 15));
 		pdata->xstats.tx_normal_irq_n[qInx]++;
 		DWC_ETH_QOS_tx_interrupt(dev, pdata, qInx);
-	}
-	if (GET_VALUE(varDMA_SR, DMA_SR_TPS_LPOS, DMA_SR_TPS_HPOS) & 1) {
-		pdata->xstats.tx_process_stopped_irq_n[qInx]++;
-		DWC_ETH_QOS_GStatus = -E_DMA_SR_TPS;
-	}
-	if (GET_VALUE(varDMA_SR, DMA_SR_TBU_LPOS, DMA_SR_TBU_HPOS) & 1) {
-		pdata->xstats.tx_buf_unavailable_irq_n[qInx]++;
-		DWC_ETH_QOS_GStatus = -E_DMA_SR_TBU;
-	}
-	if (GET_VALUE(varDMA_SR, DMA_SR_RPS_LPOS, DMA_SR_RPS_HPOS) & 1) {
-		pdata->xstats.rx_process_stopped_irq_n[qInx]++;
-		DWC_ETH_QOS_GStatus = -E_DMA_SR_RPS;
-	}
-	if (GET_VALUE(varDMA_SR, DMA_SR_RWT_LPOS, DMA_SR_RWT_HPOS) & 1) {
-		pdata->xstats.rx_watchdog_irq_n++;
-		DWC_ETH_QOS_GStatus = S_DMA_SR_RWT;
-	}
-	if (GET_VALUE(varDMA_SR, DMA_SR_FBE_LPOS, DMA_SR_FBE_HPOS) & 1) {
-		pdata->xstats.fatal_bus_error_irq_n++;
-		DWC_ETH_QOS_GStatus = -E_DMA_SR_FBE;
-		DWC_ETH_QOS_restart_dev(pdata, qInx);
 	}
 
 	DBGPR("<--%s()\n", __func__);
@@ -705,16 +734,13 @@ void handle_mac_intrs(struct DWC_ETH_QOS_prv_data *pdata,
 
 				if ((varMAC_PCS & 0x60000) == 0x0) {
 					pdata->pcs_speed = SPEED_10;
-					/* TODO: may not be required */
-					hw_if->set_mii_speed_10(pdata);
+					hw_if->set_mii_speed_10(); //TODO: may not be required
 				} else if ((varMAC_PCS & 0x60000) == 0x20000) {
 					pdata->pcs_speed = SPEED_100;
-					/* TODO: may not be required */
-					hw_if->set_mii_speed_100(pdata);
+					hw_if->set_mii_speed_100(); //TODO: may not be required
 				} else if ((varMAC_PCS & 0x60000) == 0x30000) {
 					pdata->pcs_speed = SPEED_1000;
-					/* TODO: may not be required */
-					hw_if->set_gmii_speed(pdata);
+					hw_if->set_gmii_speed(); //TODO: may not be required
 				}
 				printk(KERN_ALERT "Link is UP:%dMbps & %s duplex\n",
 					pdata->pcs_speed, pdata->pcs_duplex ? "Full" : "Half");
@@ -788,8 +814,12 @@ irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS(int irq, void *device_id)
 	if (pdata->dt_cfg.intr_mode != MODE_ALL_POLLING)
 #endif
 		if (varDMA_ISR & 0xf)
-			for (qInx = 0; qInx < DWC_ETH_QOS_TX_QUEUE_CNT; qInx++)
-				handle_chan_intrs(pdata, qInx, &napi_sched);
+			for (qInx = 0; qInx < DWC_ETH_QOS_TX_QUEUE_CNT;
+					qInx++) {
+				handle_ti_ri_chan_intrs(pdata, qInx,
+					&napi_sched);
+				handle_non_ti_ri_chan_intrs(pdata, qInx);
+			}
 
 	handle_mac_intrs(pdata, varDMA_ISR);
 
@@ -809,6 +839,7 @@ irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_common(int irq, void *device_id)
 	ULONG varDMA_ISR;
 	struct DWC_ETH_QOS_prv_data *pdata =
 	    (struct DWC_ETH_QOS_prv_data *)device_id;
+	UINT qInx;
 
 	DBGPR("-->%s()\n", __func__);
 
@@ -817,6 +848,10 @@ irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_common(int irq, void *device_id)
 		return IRQ_NONE;
 
 	DBGPR("DMA_ISR = %#lx\n", varDMA_ISR);
+
+	if (varDMA_ISR & 0xf)
+		for (qInx = 0; qInx < DWC_ETH_QOS_TX_QUEUE_CNT; qInx++)
+			handle_non_ti_ri_chan_intrs(pdata, qInx);
 
 	handle_mac_intrs(pdata, varDMA_ISR);
 
@@ -844,7 +879,7 @@ irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_ChX(int irq, void *device_id)
 
 	DBGPR("-->%s(): cpu=%d, chan=%d\n", __func__, i, qInx);
 
-	handle_chan_intrs(pdata, qInx, &napi_sched);
+	handle_ti_ri_chan_intrs(pdata, qInx, &napi_sched);
 
 	DBGPR("<--%s()\n", __func__);
 
@@ -3912,9 +3947,8 @@ void DWC_ETH_QOS_poll_mq_all_chans(struct DWC_ETH_QOS_prv_data *pdata)
 	DBGPR("-->%s():\n", __func__);
 
 	pdata->xstats.napi_poll_n++;
-	for (qInx = 0; qInx < DWC_ETH_QOS_RX_QUEUE_CNT; qInx++) {
+	for (qInx = 0; qInx < DWC_ETH_QOS_RX_QUEUE_CNT; qInx++)
 		handle_txrx_completions(pdata, qInx);
-	}
 
 	DBGPR("<--%s():\n", __func__);
 }

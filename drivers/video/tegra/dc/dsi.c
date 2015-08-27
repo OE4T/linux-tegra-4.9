@@ -1488,33 +1488,42 @@ static void tegra_dsi_setup_ganged_split_link_mode_pkt_length(
 		DSI_PKT_LEN_0_1_LENGTH_1(0);
 	tegra_dsi_writel(dsi, val, DSI_PKT_LEN_0_1);
 
-	switch (dsi->info.ganged_type) {
-	case TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT: /* fall through */
-	case TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD: /* fall through */
-		hact_pkt_len_pix = DIV_ROUND_UP(hact_pkt_len_pix_orig, 2);
-		pix_per_line = DIV_ROUND_UP(pix_per_line_orig, 2);
-		break;
-	case TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT_OVERLAP:
-		hact_pkt_len_pix = DIV_ROUND_UP(hact_pkt_len_pix_orig, 2) +
-			dsi->info.ganged_overlap;
-		pix_per_line = DIV_ROUND_UP(pix_per_line_orig, 2);
-		break;
-	default:
-		dev_err(&dc->ndev->dev, "dsi: invalid ganged type\n");
+	if (dsi->info.ganged_type) {
+		switch (dsi->info.ganged_type) {
+		case TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT: /* fall through */
+		case TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD: /* fall through */
+			hact_pkt_len_pix =
+					DIV_ROUND_UP(hact_pkt_len_pix_orig, 2);
+			pix_per_line = DIV_ROUND_UP(pix_per_line_orig, 2);
+			break;
+		case TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT_OVERLAP:
+			hact_pkt_len_pix =
+					DIV_ROUND_UP(hact_pkt_len_pix_orig, 2) +
+					dsi->info.ganged_overlap;
+			pix_per_line = DIV_ROUND_UP(pix_per_line_orig, 2);
+			break;
+		default:
+			dev_err(&dc->ndev->dev, "dsi: invalid ganged type\n");
+		}
 	}
 
-	switch (dsi->info.split_link_type) {
-	case TEGRA_DSI_SPLIT_LINK_A_B: /* fall through */
-	case TEGRA_DSI_SPLIT_LINK_C_D:
-		hact_pkt_len_pix = DIV_ROUND_UP(hact_pkt_len_pix_orig, 2);
-		pix_per_line = DIV_ROUND_UP(pix_per_line_orig, 2);
-		break;
-	case TEGRA_DSI_SPLIT_LINK_A_B_C_D:
-		hact_pkt_len_pix = DIV_ROUND_UP(hact_pkt_len_pix_orig, 4);
-		pix_per_line = DIV_ROUND_UP(pix_per_line_orig, 4);
-		break;
-	default:
-		dev_err(&dc->ndev->dev, "dsi: invalid split link type\n");
+	if (dsi->info.split_link_type) {
+		switch (dsi->info.split_link_type) {
+		case TEGRA_DSI_SPLIT_LINK_A_B: /* fall through */
+		case TEGRA_DSI_SPLIT_LINK_C_D:
+			hact_pkt_len_pix =
+					DIV_ROUND_UP(hact_pkt_len_pix_orig, 2);
+			pix_per_line = DIV_ROUND_UP(pix_per_line_orig, 2);
+			break;
+		case TEGRA_DSI_SPLIT_LINK_A_B_C_D:
+			hact_pkt_len_pix =
+					DIV_ROUND_UP(hact_pkt_len_pix_orig, 4);
+			pix_per_line = DIV_ROUND_UP(pix_per_line_orig, 4);
+			break;
+		default:
+			dev_err(&dc->ndev->dev,
+					"dsi: invalid split link type\n");
+		}
 	}
 
 	for (i = 0; i < dsi->max_instances; i++) {

@@ -89,6 +89,10 @@
 #define PMC_TSC_MULT0			0xD4
 #define PMC_UFSHC_PWR_CNTRL_0		0xF4
 
+#define PMC_FUSE_CTRL			0x100
+#define PMC_FUSE_CTRL_PS18_LATCH_SET	(1 << 8)
+#define PMC_FUSE_CTRL_PS18_LATCH_CLEAR	(1 << 9)
+
 #define PMC_THERMTRIP_CFG		0x104
 #define PMC_THERMTRIP_CFG_LOCK_MASK		BIT(5)
 
@@ -325,6 +329,34 @@ unsigned long tegra_pmc_sata_pwrgt_get(void)
 	return tegra186_pmc_readl(PMC_SATA_PWRGT_0);
 }
 EXPORT_SYMBOL(tegra_pmc_sata_pwrgt_get);
+
+void tegra_pmc_fuse_control_ps18_latch_set(void)
+{
+	u32 val;
+
+	val = tegra186_pmc_readl(PMC_FUSE_CTRL);
+	val &= ~(PMC_FUSE_CTRL_PS18_LATCH_CLEAR);
+	tegra186_pmc_writel(val, PMC_FUSE_CTRL);
+	mdelay(1);
+	val |= PMC_FUSE_CTRL_PS18_LATCH_SET;
+	tegra186_pmc_writel(val, PMC_FUSE_CTRL);
+	mdelay(1);
+}
+EXPORT_SYMBOL(tegra_pmc_fuse_control_ps18_latch_set);
+
+void tegra_pmc_fuse_control_ps18_latch_clear(void)
+{
+	u32 val;
+
+	val = tegra186_pmc_readl(PMC_FUSE_CTRL);
+	val &= ~(PMC_FUSE_CTRL_PS18_LATCH_SET);
+	tegra186_pmc_writel(val, PMC_FUSE_CTRL);
+	mdelay(1);
+	val |= PMC_FUSE_CTRL_PS18_LATCH_CLEAR;
+	tegra186_pmc_writel(val, PMC_FUSE_CTRL);
+	mdelay(1);
+}
+EXPORT_SYMBOL(tegra_pmc_fuse_control_ps18_latch_clear);
 
 static const struct of_device_id tegra186_pmc[] __initconst = {
 	{ .compatible = "nvidia,tegra186-pmc" },

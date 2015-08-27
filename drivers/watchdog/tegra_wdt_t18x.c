@@ -163,7 +163,7 @@ static void tegra_wdt_t18x_ref(struct watchdog_device *wdt)
 
 static inline void tegra_wdt_t18x_skip(struct tegra_wdt_t18x *tegra_wdt_t18x)
 {
-	u32 val;
+	u32 val = 0;
 
 	/* Skip the 2nd expiry of Atlas WDT */
 	if (tegra_wdt_t18x->cpu_id == ATLAS_CPU_ID)
@@ -173,7 +173,8 @@ static inline void tegra_wdt_t18x_skip(struct tegra_wdt_t18x *tegra_wdt_t18x)
 	if (!(tegra_wdt_t18x->config & WDT_CFG_DBG_RST_EN))
 		val |= WDT_SKIP_VAL(3, 1);
 
-	writel(val, tegra_wdt_t18x->wdt_source + WDT_SKIP);
+	if (val)
+		writel(val, tegra_wdt_t18x->wdt_source + WDT_SKIP);
 }
 
 static int __tegra_wdt_t18x_enable(struct tegra_wdt_t18x *tegra_wdt_t18x)

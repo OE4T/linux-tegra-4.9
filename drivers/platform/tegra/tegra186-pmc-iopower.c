@@ -35,6 +35,7 @@ struct tegra186_io_power_cell {
 	const char		*pad_name;
 	u32			pwrio_mask;
 	u32			package_mask;
+	bool			ignore;
 
 	struct notifier_block	regulator_nb;
 	int			min_uv;
@@ -47,41 +48,42 @@ static u32 pwrio_disabled_mask;
 
 static DEFINE_SPINLOCK(pwr_lock);
 
-#define POWER_CELL(_reg_id, _pwrio_mask, _package_mask)			\
+#define POWER_CELL(_reg_id, _pwrio_mask, _package_mask, _ignore)	\
 	{								\
 		.reg_id = "iopower-"#_reg_id,				\
 		.pad_name = #_reg_id,					\
 		.pwrio_mask = _pwrio_mask,				\
 		.package_mask = _package_mask,				\
+		.ignore = _ignore,					\
 	}
 
 static struct tegra186_io_power_cell tegra186_io_power_cells[] = {
-	POWER_CELL(sys,		BIT(0), 0xFFFFFFFF),
-	POWER_CELL(uart,	BIT(2), 0xFFFFFFFF),
-	POWER_CELL(conn,	BIT(3), 0xFFFFFFFF),
-	POWER_CELL(edp,		BIT(4), 0xFFFFFFFF),
-	POWER_CELL(audio,	BIT(5), 0xFFFFFFFF),
-	POWER_CELL(ufs,		BIT(6), 0xFFFFFFFF),
-	POWER_CELL(mem,		BIT(7), 0xFFFFFFFF),
-	POWER_CELL(mem1,	BIT(8), 0xFFFFFFFF),
-	POWER_CELL(mipi,	BIT(9), 0xFFFFFFFF),
-	POWER_CELL(cam,		BIT(10), 0xFFFFFFFF),
-	POWER_CELL(pex-ctrl,	BIT(11), 0xFFFFFFFF),
-	POWER_CELL(sdmmc4,	BIT(12), 0xFFFFFFFF),
-	POWER_CELL(sdmmc1-hv,	BIT(15), 0xFFFFFFFF),
-	POWER_CELL(mem-comp,	BIT(16), 0xFFFFFFFF),
-	POWER_CELL(mem1-comp,	BIT(17), 0xFFFFFFFF),
-	POWER_CELL(audio-hv,	BIT(18), 0xFFFFFFFF),
-	POWER_CELL(dbg,		BIT(19), 0xFFFFFFFF),
-	POWER_CELL(spi,		BIT(22), 0xFFFFFFFF),
-	POWER_CELL(sdmmc2,	BIT(24), 0xFFFFFFFF),
-	POWER_CELL(dp,		BIT(25), 0xFFFFFFFF),
-	POWER_CELL(ao,		BIT(26), 0xFFFFFFFF),
-	POWER_CELL(ao-hv,	BIT(27), 0xFFFFFFFF),
-	POWER_CELL(dmic-hv,	BIT(28), 0xFFFFFFFF),
-	POWER_CELL(gpio-hv,	BIT(29), 0xFFFFFFFF),
-	POWER_CELL(sdmmc2-hv,	BIT(30), 0xFFFFFFFF),
-	POWER_CELL(sdmmc3-hv,	BIT(31), 0xFFFFFFFF),
+	POWER_CELL(sys,		BIT(0), 0xFFFFFFFF, 0),
+	POWER_CELL(uart,	BIT(2), 0xFFFFFFFF, 0),
+	POWER_CELL(conn,	BIT(3), 0xFFFFFFFF, 0),
+	POWER_CELL(edp,		BIT(4), 0xFFFFFFFF, 0),
+	POWER_CELL(audio,	BIT(5), 0xFFFFFFFF, 1),
+	POWER_CELL(ufs,		BIT(6), 0xFFFFFFFF, 0),
+	POWER_CELL(mem,		BIT(7), 0xFFFFFFFF, 1),
+	POWER_CELL(mem1,	BIT(8), 0xFFFFFFFF, 1),
+	POWER_CELL(mipi,	BIT(9), 0xFFFFFFFF, 1),
+	POWER_CELL(cam,		BIT(10), 0xFFFFFFFF, 0),
+	POWER_CELL(pex-ctrl,	BIT(11), 0xFFFFFFFF, 0),
+	POWER_CELL(sdmmc4,	BIT(12), 0xFFFFFFFF, 0),
+	POWER_CELL(sdmmc1-hv,	BIT(15), 0xFFFFFFFF, 0),
+	POWER_CELL(mem-comp,	BIT(16), 0xFFFFFFFF, 1),
+	POWER_CELL(mem1-comp,	BIT(17), 0xFFFFFFFF, 1),
+	POWER_CELL(audio-hv,	BIT(18), 0xFFFFFFFF, 0),
+	POWER_CELL(dbg,		BIT(19), 0xFFFFFFFF, 0),
+	POWER_CELL(spi,		BIT(22), 0xFFFFFFFF, 0),
+	POWER_CELL(sdmmc2,	BIT(24), 0xFFFFFFFF, 1),
+	POWER_CELL(dp,		BIT(25), 0xFFFFFFFF, 1),
+	POWER_CELL(ao,		BIT(26), 0xFFFFFFFF, 0),
+	POWER_CELL(ao-hv,	BIT(27), 0xFFFFFFFF, 0),
+	POWER_CELL(dmic-hv,	BIT(28), 0xFFFFFFFF, 0),
+	POWER_CELL(gpio-hv,	BIT(29), 0xFFFFFFFF, 1),
+	POWER_CELL(sdmmc2-hv,	BIT(30), 0xFFFFFFFF, 0),
+	POWER_CELL(sdmmc3-hv,	BIT(31), 0xFFFFFFFF, 0),
 };
 
 static const struct of_device_id tegra186_pmc_iopower_of_match[] = {
@@ -220,6 +222,9 @@ static int tegra186_pmc_iopower_probe(struct platform_device *pdev)
 
 	for (i = 0; i < ARRAY_SIZE(tegra186_io_power_cells); i++) {
 		cell = &tegra186_io_power_cells[i];
+
+		if (cell->ignore)
+			continue;
 
 		ret = tegra186_io_power_cell_init_one(dev, cell,
 				&pwrio_disabled_mask, enable_pad_volt_config);

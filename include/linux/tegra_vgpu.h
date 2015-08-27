@@ -64,7 +64,8 @@ enum {
 	TEGRA_VGPU_CMD_SUBMIT_RUNLIST,
 	TEGRA_VGPU_CMD_GET_ZCULL_INFO,
 	TEGRA_VGPU_CMD_ZBC_SET_TABLE,
-	TEGRA_VGPU_CMD_ZBC_QUERY_TABLE
+	TEGRA_VGPU_CMD_ZBC_QUERY_TABLE,
+	TEGRA_VGPU_CMD_AS_MAP_EX
 };
 
 struct tegra_vgpu_connect_params {
@@ -134,6 +135,25 @@ struct tegra_vgpu_as_map_params {
 	u8 clear_ctags;
 	u8 prot;
 	u32 ctag_offset;
+};
+
+struct tegra_vgpu_as_map_ex_params {
+	u64 handle;
+	u64 gpu_va;
+	u64 size;
+	u32 mem_desc_count;
+	u8 pgsz_idx;
+	u8 iova;
+	u8 kind;
+	u8 cacheable;
+	u8 clear_ctags;
+	u8 prot;
+	u32 ctag_offset;
+};
+
+struct tegra_vgpu_mem_desc {
+	u64 addr;
+	u64 length;
 };
 
 struct tegra_vgpu_as_invalidate_params {
@@ -236,6 +256,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_as_share_params as_share;
 		struct tegra_vgpu_as_bind_share_params as_bind_share;
 		struct tegra_vgpu_as_map_params as_map;
+		struct tegra_vgpu_as_map_ex_params as_map_ex;
 		struct tegra_vgpu_as_invalidate_params as_invalidate;
 		struct tegra_vgpu_channel_config_params channel_config;
 		struct tegra_vgpu_ramfc_params ramfc;

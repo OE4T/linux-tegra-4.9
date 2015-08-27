@@ -873,6 +873,12 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 		mutex_lock(&vm->update_gmmu_lock);
 	}
 
+	if (mapped_buffer->user_mapped == 0) {
+		mutex_unlock(&vm->update_gmmu_lock);
+		gk20a_err(d, "addr already unmapped from user 0x%llx", offset);
+		return;
+	}
+
 	mapped_buffer->user_mapped--;
 	if (mapped_buffer->user_mapped == 0)
 		vm->num_user_mapped_buffers--;

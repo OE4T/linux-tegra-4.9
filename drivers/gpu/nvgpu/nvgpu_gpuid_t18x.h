@@ -1,7 +1,7 @@
 /*
  * NVIDIA GPU ID functions, definitions.
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -28,4 +28,9 @@
 struct gpu_ops;
 extern int gp10b_init_hal(struct gk20a *);
 extern struct gk20a_platform t18x_gpu_tegra_platform;
+
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+#define TEGRA_18x_GPUID_VGPU_HAL vgpu_gp10b_init_hal
+extern int vgpu_gp10b_init_hal(struct gk20a *);
+#endif
 #endif

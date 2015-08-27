@@ -2531,19 +2531,15 @@ static struct nvhost_device_data nvhost_se4_info = {
 
 static struct of_device_id tegra_se_of_match[] = {
 	{
-		.name = "se1",
 		.compatible = "nvidia,tegra186-se-nvhost",
 		.data = &nvhost_se1_info,
 	}, {
-		.name = "se2",
 		.compatible = "nvidia,tegra186-se-nvhost",
 		.data = &nvhost_se2_info,
 	}, {
-		.name = "se3",
 		.compatible = "nvidia,tegra186-se-nvhost",
 		.data = &nvhost_se3_info,
 	}, {
-		.name = "se4",
 		.compatible = "nvidia,tegra186-se-nvhost",
 		.data = &nvhost_se4_info,
 	},

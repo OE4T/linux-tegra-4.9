@@ -7,4 +7,4 @@ ccflags-$(CONFIG_GK20A) += -Wno-multichar
 ccflags-$(CONFIG_GK20A) += -Werror
 
 obj-$(CONFIG_GK20A)	+= gp10b/
-
+obj-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += vgpu/gp10b/

@@ -37,6 +37,10 @@
 #include "gm20b/fifo_gm20b.h"
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/clk_gm20b.h"
+#include <linux/tegra-fuse.h>
+
+#define FUSE_OPT_PRIV_SEC_EN_0 0x264
+#define PRIV_SECURITY_ENABLED 0x01
 
 static struct gpu_ops gp10b_ops = {
 	.clock_gating = {
@@ -91,7 +95,40 @@ int gp10b_init_hal(struct gk20a *g)
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
 
 	*gops = gp10b_ops;
-	gops->privsecurity = 0;
+
+#ifdef CONFIG_TEGRA_ACR
+	if (tegra_platform_is_linsim()) {
+		gops->privsecurity = 1;
+		gops->securegpccs = 1;
+	} else {
+		if (tegra_fuse_readl(FUSE_OPT_PRIV_SEC_EN_0) &
+				PRIV_SECURITY_ENABLED) {
+			gops->privsecurity = 1;
+			gops->securegpccs =1;
+		} else {
+			gk20a_dbg_info("priv security is disabled in HW");
+			gops->privsecurity = 0;
+			gops->securegpccs = 0;
+		}
+	}
+#else
+	if (tegra_platform_is_linsim()) {
+		gk20a_dbg_info("running ASIM with PRIV security disabled");
+		gops->privsecurity = 0;
+		gops->securegpccs = 0;
+	} else {
+		if (tegra_fuse_readl(FUSE_OPT_PRIV_SEC_EN_0) &
+				PRIV_SECURITY_ENABLED) {
+			gk20a_dbg_info("priv security is not supported but enabled");
+			gops->privsecurity = 1;
+			gops->securegpccs =1;
+			return -EPERM;
+		} else {
+			gops->privsecurity = 0;
+			gops->securegpccs = 0;
+		}
+	}
+#endif
 
 	gp10b_init_mc(gops);
 	gp10b_init_gr(gops);

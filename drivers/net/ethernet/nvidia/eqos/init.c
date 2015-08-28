@@ -572,6 +572,12 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	/*remap base address*/
 	dwc_eth_qos_base_addr = (ULONG)ioremap_nocache(res->start, (res->end - res->start) + 1);
 
+	/* Set DMA addressing limitations */
+	if (dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32))) {
+		dev_err(&pdev->dev, "dma_set_mask_and_coherent failed\n");
+		goto err_out_dev_failed;
+	}
+
 	/* allocate and set up the ethernet device*/
 	ndev = alloc_etherdev_mqs(sizeof(struct DWC_ETH_QOS_prv_data),
 				MAX_CHANS, MAX_CHANS);

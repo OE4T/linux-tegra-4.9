@@ -257,6 +257,7 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 	const unsigned int *alloc_policy;
 	int nr_page;
 	int err = -ENOMEM;
+	int tag;
 
 	h = nvmap_handle_get(h);
 
@@ -280,8 +281,9 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 	h->align = max_t(size_t, align, L1_CACHE_BYTES);
 	h->kind = kind;
 	h->peer = peer;
+	tag = flags >> 16;
 
-	if (client && !client->tag_warned) {
+	if (!tag && client && !client->tag_warned) {
 		char task_comm[TASK_COMM_LEN];
 		client->tag_warned = 1;
 		get_task_comm(task_comm, client->task);

@@ -1495,7 +1495,7 @@ static int DWC_ETH_QOS_alloc_rx_buf(struct DWC_ETH_QOS_prv_data *pdata,
  * \return void
  */
 
-static void DWC_ETH_QOS_configure_rx_fun_ptr(struct DWC_ETH_QOS_prv_data *pdata)
+void DWC_ETH_QOS_configure_rx_fun_ptr(struct DWC_ETH_QOS_prv_data *pdata)
 {
 	DBGPR("-->DWC_ETH_QOS_configure_rx_fun_ptr\n");
 
@@ -1660,8 +1660,10 @@ void free_multi_irqs(struct DWC_ETH_QOS_prv_data *pdata)
 	free_irq(pdata->common_irq, pdata);
 
 	for (i = 0; i < MAX_CHANS; i++) {
-		if (pdata->rx_irq_alloc_mask & (1 << i))
+		if (pdata->rx_irq_alloc_mask & (1 << i)) {
+			irq_set_affinity_hint(pdata->rx_irqs[i], NULL);
 			free_irq(pdata->rx_irqs[i], pdata);
+		}
 		if (pdata->tx_irq_alloc_mask & (1 << i))
 			free_irq(pdata->tx_irqs[i], pdata);
 	}
@@ -1798,7 +1800,6 @@ static int DWC_ETH_QOS_open(struct net_device *dev)
 	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
 	int ret = Y_SUCCESS;
 	struct hw_if_struct *hw_if = &pdata->hw_if;
-	struct desc_if_struct *desc_if = &pdata->desc_if;
 
 	DBGPR("-->DWC_ETH_QOS_open\n");
 
@@ -1827,14 +1828,8 @@ static int DWC_ETH_QOS_open(struct net_device *dev)
 			goto err_irq_0;
 		}
 	}
-	ret = desc_if->alloc_buff_and_desc(pdata);
-	if (ret < 0) {
-		printk(KERN_ALERT
-		       "failed to allocate buffer/descriptor memory\n");
-		ret = -ENOMEM;
-		goto err_out_desc_buf_alloc_failed;
-	}
 
+	alloc_poll_timers(pdata);
 	/* default configuration */
 #ifdef DWC_ETH_QOS_CONFIG_PGTEST
 	DWC_ETH_QOS_default_confs(pdata);
@@ -1848,12 +1843,6 @@ static int DWC_ETH_QOS_open(struct net_device *dev)
 #endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
 
 	DWC_ETH_QOS_set_rx_mode(dev);
-	desc_if->wrapper_tx_desc_init(pdata);
-	desc_if->wrapper_rx_desc_init(pdata);
-
-	DWC_ETH_QOS_tx_desc_mang_ds_dump(pdata);
-	DWC_ETH_QOS_rx_desc_mang_ds_dump(pdata);
-
 	DWC_ETH_QOS_mmc_setup(pdata);
 
 	/* initializes MAC and DMA */
@@ -1882,19 +1871,9 @@ static int DWC_ETH_QOS_open(struct net_device *dev)
 	netif_tx_disable(dev);
 #endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
 
-	alloc_poll_timers(pdata);
 	DBGPR("<--DWC_ETH_QOS_open\n");
 
 	return ret;
-
- err_out_desc_buf_alloc_failed:
-	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
-		free_multi_irqs(pdata);
-	else {
-		free_irq(pdata->irq_number, pdata);
-		pdata->irq_number = 0;
-
-	}
 
  err_irq_0:
 	DBGPR("<--DWC_ETH_QOS_open\n");
@@ -1917,36 +1896,33 @@ static int DWC_ETH_QOS_open(struct net_device *dev)
 static int DWC_ETH_QOS_close(struct net_device *dev)
 {
 	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
-	struct hw_if_struct *hw_if = &pdata->hw_if;
-	struct desc_if_struct *desc_if = &pdata->desc_if;
 
 	DBGPR("-->DWC_ETH_QOS_close\n");
 
-	if (pdata->eee_enabled)
-		del_timer_sync(&pdata->eee_ctrl_timer);
-
-	free_poll_timers(pdata);
-
 	if (pdata->phydev)
 		phy_stop(pdata->phydev);
+
+	/* FIXME don't issue software reset to device
+	 * but make sure DMA is stopped correctly
+	 */
+	/* hw_if->exit(); */
 
 #ifndef DWC_ETH_QOS_CONFIG_PGTEST
 	netif_tx_disable(dev);
 	DWC_ETH_QOS_all_ch_napi_disable(pdata);
 #endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
 
-	/* issue software reset to device */
-	hw_if->exit();
+	free_poll_timers(pdata);
 
-	desc_if->tx_free_mem(pdata);
-	desc_if->rx_free_mem(pdata);
-	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
+	if (pdata->eee_enabled)
+		del_timer_sync(&pdata->eee_ctrl_timer);
+
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
 		free_multi_irqs(pdata);
-	else
-		if (pdata->irq_number != 0) {
-			free_irq(pdata->irq_number, pdata);
-			pdata->irq_number = 0;
-		}
+	} else if (pdata->irq_number != 0) {
+		free_irq(pdata->irq_number, pdata);
+		pdata->irq_number = 0;
+	}
 #ifdef DWC_ETH_QOS_CONFIG_PGTEST
 	del_timer(&pdata->pg_timer);
 #endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */

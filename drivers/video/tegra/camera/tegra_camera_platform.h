@@ -17,6 +17,7 @@
 #define _TEGRA_CAMERA_PLATFORM_H_
 
 #include <linux/ioctl.h>
+#include "camera_priv_defs.h"
 
 #define TEGRA_CAMERA_IOCTL_SET_BW _IOW('o', 1, struct bw_info)
 
@@ -36,6 +37,8 @@ struct tegra_camera_info {
 	atomic_t in_use;
 	struct device *dev;
 	struct clk *clks[NUM_CLKS];
+	tegra_isomgr_handle isomgr_handle;
+	u64 max_bw;
 };
 
 struct bw_info {

@@ -24,12 +24,155 @@
 #include "tegra_camera_platform.h"
 
 #define CAMDEV_NAME "tegra_camera_ctrl"
+
+/* Peak BPP for any of the YUV/Bayer formats */
+#define CAMERA_PEAK_BPP 2
+
+#define LANE_SPEED_1_GBPS 0x40000000
+#define LANE_SPEED_1_5_GBPS 0x60000000
+
 static const struct of_device_id tegra_camera_of_ids[] = {
 	{ .compatible = "nvidia, tegra-camera-platform" },
 	{ },
 };
 
 static struct miscdevice tegra_camera_misc;
+
+static int tegra_camera_isomgr_register(struct tegra_camera_info *info)
+{
+#if defined(CONFIG_TEGRA_ISOMGR)
+	u32 num_csi_lanes;
+	u32 max_num_streams;
+	u32 max_lane_speed;
+	u32 min_bits_per_pixel;
+
+	dev_dbg(info->dev, "%s++\n", __func__);
+
+	/* TODO: Extract these values from DT */
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+	num_csi_lanes = 2;
+	max_num_streams = 6;
+	max_lane_speed = LANE_SPEED_1_5_GBPS;
+	min_bits_per_pixel = 10;
+#elif defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_13x_SOC)
+	num_csi_lanes = 2;
+	max_num_streams = 2;
+	max_lane_speed = LANE_SPEED_1_GBPS;
+	min_bits_per_pixel = 10;
+#else
+	dev_err(info->dev, "%s Invalid chip-id\n", __func__);
+	return -EINVAL;
+#endif
+	/*
+	 * Let's go with simple registering max dedicated BW
+	 * approach for now.
+	 *
+	 * The formula is:
+	 * Camera's max total ISO BW =
+	 * ((max_num_streams *
+	 * num_csi_lanes * max_lane_speed) /
+	 * min_bits_per_pixel) * max_peak_BPP
+	 *
+	 * Above considered cap is CSI link cap, but we need to
+	 * consider real sensor-on-board cap also, DT based approach
+	 * should handle it.
+	 *
+	 * Only VI out is considered, because in case of
+	 * max # of cameras running, only VI is in ISO mode.
+	 *
+	 * TODO: Try renegotiate approach later.
+	 */
+	info->max_bw = (((num_csi_lanes * max_lane_speed * max_num_streams) /
+				min_bits_per_pixel) * CAMERA_PEAK_BPP) / 1000;
+
+	/* Register with max possible BW for CAMERA usecases.*/
+	info->isomgr_handle = tegra_isomgr_register(
+					TEGRA_ISO_CLIENT_TEGRA_CAMERA,
+					info->max_bw,
+					NULL,	/* tegra_isomgr_renegotiate */
+					NULL);	/* *priv */
+
+	if (!info->isomgr_handle) {
+		dev_err(info->dev,
+			"%s: unable to register to isomgr\n",
+				__func__);
+		return -ENOMEM;
+	}
+#endif
+
+	return 0;
+}
+
+static int tegra_camera_isomgr_unregister(struct tegra_camera_info *info)
+{
+#if defined(CONFIG_TEGRA_ISOMGR)
+	tegra_isomgr_unregister(info->isomgr_handle);
+	info->isomgr_handle = NULL;
+#endif
+
+	return 0;
+}
+
+static int tegra_camera_isomgr_request(
+		struct tegra_camera_info *info, uint iso_bw, uint lt)
+{
+#if defined(CONFIG_TEGRA_ISOMGR)
+	int ret = 0;
+
+	dev_dbg(info->dev,
+		"%s++ bw=%u, lt=%u\n", __func__, iso_bw, lt);
+
+	if (!info->isomgr_handle) {
+		dev_err(info->dev,
+		"%s: isomgr_handle is NULL\n",
+		__func__);
+		return -EINVAL;
+	}
+
+	/* return value of tegra_isomgr_reserve is dvfs latency in usec */
+	ret = tegra_isomgr_reserve(info->isomgr_handle,
+				iso_bw,	/* KB/sec */
+				lt);	/* usec */
+	if (!ret) {
+		dev_err(info->dev,
+		"%s: failed to reserve %u KBps\n", __func__, iso_bw);
+		return -ENOMEM;
+	}
+
+	/* return value of tegra_isomgr_realize is dvfs latency in usec */
+	ret = tegra_isomgr_realize(info->isomgr_handle);
+	if (ret)
+		dev_dbg(info->dev,
+		"%s: tegra_camera isomgr latency is %d usec",
+		__func__, ret);
+	else {
+		dev_err(info->dev,
+		"%s: failed to realize %u KBps\n", __func__, iso_bw);
+			return -ENOMEM;
+	}
+#endif
+
+	return 0;
+}
+
+static int tegra_camera_isomgr_release(struct tegra_camera_info *info)
+{
+#if defined(CONFIG_TEGRA_ISOMGR)
+	int ret = 0;
+	dev_dbg(info->dev, "%s++\n", __func__);
+
+	/* deallocate isomgr bw */
+	ret = tegra_camera_isomgr_request(info, 0, 4);
+	if (ret) {
+		dev_err(info->dev,
+		"%s: failed to deallocate memory in isomgr\n",
+		__func__);
+		return -ENOMEM;
+	}
+#endif
+
+	return 0;
+}
 
 static int tegra_camera_open(struct inode *inode, struct file *file)
 {
@@ -88,6 +231,8 @@ static int tegra_camera_release(struct inode *inode, struct file *file)
 
 	struct tegra_camera_info *info;
 	int i;
+	int ret;
+
 	info = file->private_data;
 	for (i = 0; i < NUM_CLKS; i++) {
 		if (!IS_ERR_OR_NULL(info->clks[i])) {
@@ -97,21 +242,36 @@ static int tegra_camera_release(struct inode *inode, struct file *file)
 		info->clks[i] = NULL;
 	}
 
+	/* nullify isomgr request */
+	if (info->isomgr_handle) {
+		ret = tegra_camera_isomgr_release(info);
+		if (ret) {
+			dev_err(info->dev,
+			"%s: failed to deallocate memory in isomgr\n",
+			__func__);
+			return -ENOMEM;
+		}
+	}
+
 	return 0;
 }
 
 static long tegra_camera_ioctl(struct file *file,
 	unsigned int cmd, unsigned long arg)
 {
-	int ret;
-	struct bw_info kcopy;
+	int ret = 0;
 	struct tegra_camera_info *info;
+
 	info = file->private_data;
 
 	switch (_IOC_NR(cmd)) {
 	case _IOC_NR(TEGRA_CAMERA_IOCTL_SET_BW):
 	{
+		struct bw_info kcopy;
 		unsigned long mc_khz = 0;
+
+		memset(&kcopy, 0, sizeof(kcopy));
+
 		if (copy_from_user(&kcopy, (const void __user *)arg,
 			sizeof(struct bw_info))) {
 			dev_err(info->dev, "%s:Failed to get data from user\n",
@@ -130,6 +290,19 @@ static long tegra_camera_ioctl(struct file *file,
 			if (ret)
 				dev_err(info->dev, "%s:Failed to set iso bw\n",
 					__func__);
+
+			/*
+			 * Request to ISOMGR.
+			 * 3 usec is minimum time to switch PLL source.
+			 * Let's put 4 usec as latency for now.
+			 */
+			ret = tegra_camera_isomgr_request(info, kcopy.bw, 4);
+			if (ret) {
+				dev_err(info->dev,
+				"%s: failed to reserve %llu KBps with isomgr\n",
+				__func__, kcopy.bw);
+				return -ENOMEM;
+			}
 		} else {
 			dev_dbg(info->dev, "%s:Set bw %llu at %lu KHz\n",
 				__func__, kcopy.bw, mc_khz);
@@ -143,6 +316,7 @@ static long tegra_camera_ioctl(struct file *file,
 	default:
 		break;
 	}
+
 	return 0;
 }
 
@@ -185,13 +359,29 @@ static int tegra_camera_probe(struct platform_device *pdev)
 
 	strcpy(info->devname, tegra_camera_misc.name);
 	info->dev = tegra_camera_misc.this_device;
+
+	/* Register Camera as isomgr client. */
+	ret = tegra_camera_isomgr_register(info);
+	if (ret) {
+		dev_err(info->dev,
+		"%s: failed to register CAMERA as isomgr client\n",
+		__func__);
+		return -ENOMEM;
+	}
+
 	platform_set_drvdata(pdev, info);
+
 	return 0;
 
 }
 static int tegra_camera_remove(struct platform_device *pdev)
 {
+	struct tegra_camera_info *info = platform_get_drvdata(pdev);
 	dev_info(&pdev->dev, "%s:camera_platform_driver remove\n", __func__);
+
+	if (info->isomgr_handle)
+		tegra_camera_isomgr_unregister(info);
+
 	return misc_deregister(&tegra_camera_misc);
 }
 

@@ -225,6 +225,8 @@ static INT allocate_buffer_and_desc(struct DWC_ETH_QOS_prv_data *pdata)
 			ret = -ENOMEM;
 			goto err_out_tx_desc;
 		}
+		/* Check if address is greater than 32 bit */
+		BUG_ON((uint64_t)GET_TX_DESC_DMA_ADDR(qInx, 0) >> 32);
 	}
 
 	for (qInx = 0; qInx < DWC_ETH_QOS_TX_QUEUE_CNT; qInx++) {
@@ -249,6 +251,8 @@ static INT allocate_buffer_and_desc(struct DWC_ETH_QOS_prv_data *pdata)
 			ret = -ENOMEM;
 			goto rx_alloc_failure;
 		}
+		/* Check if address is greater than 32 bit */
+		BUG_ON((uint64_t)GET_RX_DESC_DMA_ADDR(qInx, 0) >> 32);
 	}
 
 	for (qInx = 0; qInx < DWC_ETH_QOS_RX_QUEUE_CNT; qInx++) {

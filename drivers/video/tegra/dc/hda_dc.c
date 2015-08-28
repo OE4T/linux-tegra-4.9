@@ -259,6 +259,12 @@ static void tegra_hda_audio_config(u32 audio_freq, u32 audio_src)
 		val = NV_SOR_DP_AUDIO_CTRL_ENABLE |
 			NV_SOR_DP_AUDIO_CTRL_NEW_SETTINGS_TRIGGER;
 		tegra_sor_writel(hda->sor, NV_SOR_DP_AUDIO_CTRL, val);
+
+		/* make sure to disable overriding channel data */
+		tegra_sor_write_field(hda->sor,
+			NV_SOR_DP_OUTPUT_CHANNEL_STATUS2,
+			NV_SOR_DP_OUTPUT_CHANNEL_STATUS2_OVERRIDE_EN,
+			NV_SOR_DP_OUTPUT_CHANNEL_STATUS2_OVERRIDE_DIS);
 	}
 
 	if (hda->sink == SINK_HDMI) {

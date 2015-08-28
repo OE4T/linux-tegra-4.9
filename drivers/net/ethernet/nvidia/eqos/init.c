@@ -694,6 +694,14 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		goto err_out_q_alloc_failed;
 	}
 
+	ret = desc_if->alloc_buff_and_desc(pdata);
+	if (ret < 0) {
+		printk(KERN_ALERT
+		       "failed to allocate buffer/descriptor memory\n");
+		ret = -ENOMEM;
+		goto err_out_desc_buf_alloc_failed;
+	}
+
 	ndev->netdev_ops = DWC_ETH_QOS_get_netdev_ops();
 
 	pdata->interface = DWC_ETH_QOS_get_phy_interface(pdata);
@@ -880,6 +888,9 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		goto err_out_pmt_irq_failed;
 	}
 
+	DWC_ETH_QOS_configure_rx_fun_ptr(pdata);
+	desc_if->wrapper_tx_desc_init(pdata);
+	desc_if->wrapper_rx_desc_init(pdata);
 	return 0;
 
  err_out_pmt_irq_failed:
@@ -898,6 +909,10 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		DWC_ETH_QOS_mdio_unregister(ndev);
 
  err_out_mdio_reg:
+	desc_if->tx_free_mem(pdata);
+	desc_if->rx_free_mem(pdata);
+
+ err_out_desc_buf_alloc_failed:
 	desc_if->free_queue_struct(pdata);
 
  err_out_pad_calibrate_failed:
@@ -980,6 +995,9 @@ int DWC_ETH_QOS_remove(struct platform_device *pdev)
 #ifdef DWC_ETH_QOS_CONFIG_PGTEST
 	DWC_ETH_QOS_free_pg(pdata);
 #endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
+
+	desc_if->tx_free_mem(pdata);
+	desc_if->rx_free_mem(pdata);
 
 	desc_if->free_queue_struct(pdata);
 

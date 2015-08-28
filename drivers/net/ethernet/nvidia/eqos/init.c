@@ -734,7 +734,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	if (!tegra_platform_is_unit_fpga()) {
 		ret = eqos_pad_calibrate(pdata);
 		if (ret < 0)
-			goto err_out_dev_failed;
+			goto err_out_pad_calibrate_failed;
 	}
 
 #ifdef DWC_ETH_QOS_CONFIG_DEBUGFS
@@ -985,6 +985,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
  err_out_mdio_reg:
 	desc_if->free_queue_struct(pdata);
 
+ err_out_pad_calibrate_failed:
  err_out_q_alloc_failed:
 	if (!tegra_platform_is_unit_fpga())
 		eqos_clock_deinit(pdata);
@@ -1023,9 +1024,9 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 
 int DWC_ETH_QOS_remove(struct platform_device *pdev)
 {
-	struct net_device *dev = platform_get_drvdata(pdev);
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
-	struct desc_if_struct *desc_if = &(pdata->desc_if);
+	struct net_device *dev;
+	struct DWC_ETH_QOS_prv_data *pdata;
+	struct desc_if_struct *desc_if;
 	int ret_val = 0;
 
 	DBGPR("--> DWC_ETH_QOS_remove\n");
@@ -1034,6 +1035,10 @@ int DWC_ETH_QOS_remove(struct platform_device *pdev)
 		DBGPR("Remove called on invalid device\n");
 		return -1;
 	}
+
+	dev = platform_get_drvdata(pdev);
+	pdata = netdev_priv(dev);
+	desc_if = &(pdata->desc_if);
 
 	if (pdata->power_irq != 0) {
 		free_irq(pdata->power_irq, pdata);

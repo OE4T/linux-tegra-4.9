@@ -744,6 +744,8 @@ struct hw_if_struct {
 
 	INT(*init) (struct DWC_ETH_QOS_prv_data *);
 	INT(*exit) (void);
+	INT(*car_reset) (struct DWC_ETH_QOS_prv_data *);
+	INT(*pad_calibrate) (struct DWC_ETH_QOS_prv_data *);
 	INT(*enable_int) (e_DWC_ETH_QOS_int_id);
 	INT(*disable_int) (e_DWC_ETH_QOS_int_id);
 	void (*pre_xmit) (struct DWC_ETH_QOS_prv_data *, UINT qInx);

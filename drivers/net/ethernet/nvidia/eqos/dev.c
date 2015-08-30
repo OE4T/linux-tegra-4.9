@@ -45,6 +45,7 @@
  */
 #include <linux/tegra-soc.h>
 #include <linux/clk.h>
+#include <linux/reset.h>
 #include "yheader.h"
 #include "yapphdr.h"
 
@@ -4107,6 +4108,119 @@ static INT get_tx_descriptor_last(t_TX_NORMAL_DESC *txdesc)
 	}
 }
 
+static INT DWC_ETH_QOS_pad_calibrate(struct DWC_ETH_QOS_prv_data *pdata)
+{
+	struct platform_device *pdev = pdata->pdev;
+	int ret;
+	uint i;
+	u32 hwreg;
+
+	if (tegra_platform_is_unit_fpga())
+		return 0;
+
+	DBGPR("-->%s()\n", __func__);
+
+	/* 1. Set field PAD_E_INPUT_OR_E_PWRD in
+	 * reg ETHER_QOS_SDMEMCOMPPADCTRL_0
+	 */
+	PAD_CRTL_E_INPUT_OR_E_PWRD_UdfWr(1);
+
+	/* 2. delay for 1 usec */
+	usleep_range(1, 3);
+
+	/* 3. Set AUTO_CAL_ENABLE and AUTO_CAL_START in
+	 * reg ETHER_QOS_AUTO_CAL_CONFIG_0.
+	 */
+	PAD_AUTO_CAL_CFG_RgRd(hwreg);
+	hwreg |=
+		((PAD_AUTO_CAL_CFG_START_MASK) |
+			(PAD_AUTO_CAL_CFG_ENABLE_MASK));
+
+	PAD_AUTO_CAL_CFG_RgWr(hwreg);
+
+	/* 4. Wait on AUTO_CAL_ACTIVE until it is 1. 10us timeout */
+	i = 10;
+	while (i--) {
+		usleep_range(1, 3);
+		PAD_AUTO_CAL_STAT_RgRd(hwreg);
+
+		/* calibration started when CAL_STAT_ACTIVE is set */
+		if (hwreg & PAD_AUTO_CAL_STAT_ACTIVE_MASK)
+			break;
+	}
+	if (!i) {
+		ret = -1;
+		dev_err(&pdev->dev,
+			"eqos pad calibration took too long to start\n");
+		goto calibration_failed;
+	}
+
+	/* 5. Wait on AUTO_CAL_ACTIVE until it is 0. 200us timeout */
+	i = 10;
+	while (i--) {
+		usleep_range(20, 30);
+		PAD_AUTO_CAL_STAT_RgRd(hwreg);
+
+		/* calibration done when CAL_STAT_ACTIVE is zero */
+		if (!(hwreg & PAD_AUTO_CAL_STAT_ACTIVE_MASK))
+			break;
+	}
+	if (!i) {
+		ret = -1;
+		dev_err(&pdev->dev,
+			"eqos pad calibration took too long to complete\n");
+		goto calibration_failed;
+	}
+	ret = 0;
+
+calibration_failed:
+	/* 6. Disable field PAD_E_INPUT_OR_E_PWRD in
+	 * reg ETHER_QOS_SDMEMCOMPPADCTRL_0 to save power.
+	 */
+	PAD_CRTL_E_INPUT_OR_E_PWRD_UdfWr(0);
+
+	DBGPR("<--%s()\n", __func__);
+
+	return ret;
+}
+
+static INT DWC_ETH_QOS_car_reset(struct DWC_ETH_QOS_prv_data *pdata)
+{
+	ULONG retryCount = 1000;
+	ULONG vy_count;
+	volatile ULONG varDMA_BMR;
+
+	DBGPR("-->DWC_ETH_QOS_car_reset\n");
+
+	/* Issue a CAR reset */
+	if (!IS_ERR_OR_NULL(pdata->eqos_rst))
+		reset_control_reset(pdata->eqos_rst);
+
+	/* add delay of 10 usec */
+	udelay(10);
+
+	/* Poll Until Poll Condition */
+	vy_count = 0;
+	while (1) {
+		if (vy_count > retryCount) {
+			printk(
+				"%s():%d: Timed out polling on DMA_BMR_SWR\n",
+				__func__, __LINE__);
+			return -Y_FAILURE;
+		} else {
+			vy_count++;
+			mdelay(1);
+		}
+		DMA_BMR_RgRd(varDMA_BMR);
+		if (GET_VALUE(varDMA_BMR, DMA_BMR_SWR_LPOS, DMA_BMR_SWR_HPOS) == 0) {
+			break;
+		}
+	}
+
+	DBGPR("<--DWC_ETH_QOS_car_reset\n");
+
+	return Y_SUCCESS;
+}
 
 /*!
 * \brief Exit routine
@@ -4126,8 +4240,9 @@ static INT DWC_ETH_QOS_yexit(void)
 
 	DBGPR("-->DWC_ETH_QOS_yexit\n");
 
-	/*issue a software reset */
+	/* issue a software reset */
 	DMA_BMR_SWR_UdfWr(0x1);
+
 	/*DELAY IMPLEMENTATION USING udelay() */
 	udelay(10);
 
@@ -4148,7 +4263,7 @@ static INT DWC_ETH_QOS_yexit(void)
 			break;
 		}
 	}
-	/* FIXME: code is not needed as CAR reset should handle it */
+
 	/* ack and disable all wrapper ints */
 	i = (VIRT_INTR_CH_CRTL_RX_Wr_Mask | VIRT_INTR_CH_CRTL_TX_Wr_Mask);
 	for (j = 0; j < MAX_CHANS; j++) {
@@ -4879,6 +4994,8 @@ void DWC_ETH_QOS_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->dev_read = device_read;
 	hw_if->init = DWC_ETH_QOS_yinit;
 	hw_if->exit = DWC_ETH_QOS_yexit;
+	hw_if->car_reset = DWC_ETH_QOS_car_reset;
+	hw_if->pad_calibrate = DWC_ETH_QOS_pad_calibrate;
 	/* Descriptor related Sequences have to be initialized here */
 	hw_if->tx_desc_init = tx_descriptor_init;
 	hw_if->rx_desc_init = rx_descriptor_init;

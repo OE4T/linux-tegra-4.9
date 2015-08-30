@@ -184,79 +184,6 @@ void get_dt_u32_array(struct device_node *pnode, char *pdt_prop, u32 *pval,
 		pdt_prop, pval[0], pval[1], pval[2], pval[3]);
 }
 
-static int eqos_pad_calibrate(struct DWC_ETH_QOS_prv_data *pdata)
-{
-	struct platform_device *pdev = pdata->pdev;
-	int ret;
-	uint i;
-	u32 hwreg;
-
-	DBGPR("-->%s()\n", __func__);
-
-	/* 1. Set field PAD_E_INPUT_OR_E_PWRD in
-	 * reg ETHER_QOS_SDMEMCOMPPADCTRL_0
-	 */
-	PAD_CRTL_E_INPUT_OR_E_PWRD_UdfWr(1);
-
-	/* 2. delay for 1 usec */
-	usleep_range(1, 3);
-
-	/* 3. Set AUTO_CAL_ENABLE and AUTO_CAL_START in
-	 * reg ETHER_QOS_AUTO_CAL_CONFIG_0.
-	 */
-	PAD_AUTO_CAL_CFG_RgRd(hwreg);
-	hwreg |=
-		((PAD_AUTO_CAL_CFG_START_MASK) |
-			(PAD_AUTO_CAL_CFG_ENABLE_MASK));
-
-	PAD_AUTO_CAL_CFG_RgWr(hwreg);
-
-	/* 4. Wait on AUTO_CAL_ACTIVE until it is 1. 10us timeout */
-	i = 10;
-	while (i--) {
-		usleep_range(1, 3);
-		PAD_AUTO_CAL_STAT_RgRd(hwreg);
-
-		/* calibration started when CAL_STAT_ACTIVE is set */
-		if (hwreg & PAD_AUTO_CAL_STAT_ACTIVE_MASK)
-			break;
-	}
-	if (!i) {
-		ret = -1;
-		dev_err(&pdev->dev,
-			"eqos pad calibration took too long to start\n");
-		goto calibration_failed;
-	}
-
-	/* 5. Wait on AUTO_CAL_ACTIVE until it is 0. 200us timeout */
-	i = 10;
-	while (i--) {
-		usleep_range(20, 30);
-		PAD_AUTO_CAL_STAT_RgRd(hwreg);
-
-		/* calibration done when CAL_STAT_ACTIVE is zero */
-		if (!(hwreg & PAD_AUTO_CAL_STAT_ACTIVE_MASK))
-			break;
-	}
-	if (!i) {
-		ret = -1;
-		dev_err(&pdev->dev,
-			"eqos pad calibration took too long to complete\n");
-		goto calibration_failed;
-	}
-	ret = 0;
-
-calibration_failed:
-	/* 6. Disable field PAD_E_INPUT_OR_E_PWRD in
-	 * reg ETHER_QOS_SDMEMCOMPPADCTRL_0 to save power.
-	 */
-	PAD_CRTL_E_INPUT_OR_E_PWRD_UdfWr(0);
-
-	DBGPR("<--%s()\n", __func__);
-
-	return ret;
-}
-
 static void eqos_clock_deinit(struct DWC_ETH_QOS_prv_data *pdata)
 {
 	struct platform_device *pdev = pdata->pdev;
@@ -670,6 +597,8 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	/* PMT and PHY irqs are shared on FPGA system */
 	if (tegra_platform_is_unit_fpga()) {
 		phyirq = power_irq;
+		/* issue sw reset to device */
+		hw_if->exit();
 	} else {
 		/* regulator init */
 		ret = eqos_regulator_init(pdata);
@@ -708,8 +637,6 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev,
 				"failed to get eqos reset %d\n", ret);
 			goto err_out_reset_get_failed;
-		} else {
-			reset_control_deassert(pdata->eqos_rst);
 		}
 
 		/* clock initialization */
@@ -718,10 +645,16 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "eqos_clock_init failed\n");
 			goto err_out_clock_init_failed;
 		}
+
+		/* issue CAR reset to device */
+		hw_if->car_reset(pdata);
 	}
 	DBGPR("phyirq = %d\n", phyirq);
 
-
+	/* calibrate pad */
+	ret = hw_if->pad_calibrate(pdata);
+	if (ret < 0)
+		goto err_out_pad_calibrate_failed;
 
 	/* queue count */
 	tx_q_count = get_tx_queue_count();
@@ -730,28 +663,10 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	pdata->tx_queue_cnt = tx_q_count;
 	pdata->rx_queue_cnt = rx_q_count;
 
-	/* calibrate pad */
-	if (!tegra_platform_is_unit_fpga()) {
-		ret = eqos_pad_calibrate(pdata);
-		if (ret < 0)
-			goto err_out_pad_calibrate_failed;
-	}
-
 #ifdef DWC_ETH_QOS_CONFIG_DEBUGFS
 	/* to give prv data to debugfs */
 	DWC_ETH_QOS_get_pdata(pdata);
 #endif
-
-	/* issue software reset to device */
-	hw_if->exit();
-
-	/* ack and disable wrapper tx/rx irq ints */
-	i = (VIRT_INTR_CH_CRTL_RX_Wr_Mask | VIRT_INTR_CH_CRTL_TX_Wr_Mask);
-
-	for (j = 0; j < MAX_CHANS; j++) {
-		VIRT_INTR_CH_STAT_RgWr(j, i);
-		VIRT_INTR_CH_CRTL_RgWr(j, ~i);
-	}
 
 	ndev->irq = irq;
 	pdata->common_irq = irq;

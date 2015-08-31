@@ -27,3 +27,4 @@ obj-y += powergate/
 obj-$(CONFIG_TEGRA_AON) += tegra-aon.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra18_cpu_debugfs.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += reboot-t18x.o
+obj-$(CONFIG_TEGRA_AON) += tegra186_aondbg.o

@@ -2114,7 +2114,18 @@
 			ivc-num-frames = <0x10>;
 			ivc-frame-size = <64>;
 		};
+		ivc_aon_aondbg {
+			ivc-tx = <0x0 0x1480>;
+			ivc-rx = <0x0 0x480>;
+			ivc-channel-size = <0 0x180>;
+			ivc-num-frames = <0x02>;
+			ivc-frame-size = <128>;
+		};
+	};
 
+	aondbg {
+		compatible = "nvidia,tegra186-aondbg";
+		mboxes = <&aon 1>;
 	};
 
 	cluster_clk_priv@e0a0000 {

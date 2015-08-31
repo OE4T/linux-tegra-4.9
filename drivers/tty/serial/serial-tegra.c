@@ -1324,6 +1324,7 @@ static int tegra_uart_probe(struct platform_device *pdev)
 	struct tegra_uart_port *tup;
 	struct uart_port *u;
 	struct resource *resource;
+	struct clk *parent_clk;
 	int ret;
 	const struct tegra_uart_chip_data *cdata;
 	const struct of_device_id *match;
@@ -1374,6 +1375,17 @@ static int tegra_uart_probe(struct platform_device *pdev)
 	if (IS_ERR(tup->rst)) {
 		dev_err(&pdev->dev, "Couldn't get the reset\n");
 		return PTR_ERR(tup->rst);
+	}
+
+	parent_clk = devm_clk_get(&pdev->dev, "parent");
+	if (IS_ERR(parent_clk))
+		dev_err(&pdev->dev, "Unable to get parent_clk err: %ld\n",
+				PTR_ERR(parent_clk));
+	else {
+		ret = clk_set_parent(tup->uart_clk, parent_clk);
+		if (ret < 0)
+			dev_warn(&pdev->dev,
+				"Couldn't set the parent clock - %d\n", ret);
 	}
 
 	u->iotype = UPIO_MEM32;

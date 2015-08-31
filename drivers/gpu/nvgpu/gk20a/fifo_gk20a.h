@@ -183,5 +183,10 @@ u32 gk20a_fifo_engine_interrupt_mask(struct gk20a *g);
 u32 gk20a_fifo_get_pbdma_signature(struct gk20a *g);
 u32 gk20a_fifo_get_failing_engine_data(struct gk20a *g,
 		int *__id, bool *__is_tsg);
+bool gk20a_fifo_set_ctx_mmu_error_tsg(struct gk20a *g,
+		struct tsg_gk20a *tsg);
+void gk20a_fifo_abort_tsg(struct gk20a *g, u32 tsgid);
+bool gk20a_fifo_set_ctx_mmu_error_ch(struct gk20a *g,
+		struct channel_gk20a *ch);
 
 #endif /*__GR_GK20A_H__*/

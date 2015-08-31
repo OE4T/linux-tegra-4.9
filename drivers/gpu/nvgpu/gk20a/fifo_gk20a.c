@@ -852,7 +852,7 @@ static bool gk20a_fifo_set_ctx_mmu_error(struct gk20a *g,
 	return verbose;
 }
 
-static bool gk20a_fifo_set_ctx_mmu_error_ch(struct gk20a *g,
+bool gk20a_fifo_set_ctx_mmu_error_ch(struct gk20a *g,
 		struct channel_gk20a *ch)
 {
 	gk20a_err(dev_from_gk20a(g),
@@ -861,7 +861,7 @@ static bool gk20a_fifo_set_ctx_mmu_error_ch(struct gk20a *g,
 	return gk20a_fifo_set_ctx_mmu_error(g, ch);
 }
 
-static bool gk20a_fifo_set_ctx_mmu_error_tsg(struct gk20a *g,
+bool gk20a_fifo_set_ctx_mmu_error_tsg(struct gk20a *g,
 		struct tsg_gk20a *tsg)
 {
 	bool ret = true;
@@ -883,7 +883,7 @@ static bool gk20a_fifo_set_ctx_mmu_error_tsg(struct gk20a *g,
 	return ret;
 }
 
-static void gk20a_fifo_abort_tsg(struct gk20a *g, u32 tsgid)
+void gk20a_fifo_abort_tsg(struct gk20a *g, u32 tsgid)
 {
 	struct tsg_gk20a *tsg = &g->fifo.tsg[tsgid];
 	struct channel_gk20a *ch;

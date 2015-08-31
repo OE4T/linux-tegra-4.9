@@ -38,6 +38,8 @@ struct gk20a_fence;
 #include "gr_gk20a.h"
 #include "fence_gk20a.h"
 
+#define NVGPU_CHANNEL_WATCHDOG_DEFAULT_TIMEOUT_MS	5000
+
 struct gpfifo {
 	u32 entry0;
 	u32 entry1;
@@ -68,6 +70,13 @@ struct channel_gk20a_job {
 	struct gk20a_fence *pre_fence;
 	struct gk20a_fence *post_fence;
 	struct list_head list;
+};
+
+struct channel_gk20a_timeout {
+	struct delayed_work wq;
+	struct mutex lock;
+	bool initialized;
+	struct channel_gk20a_job *job;
 };
 
 struct channel_gk20a_poll_events {
@@ -125,6 +134,8 @@ struct channel_gk20a {
 
 	u32 timeout_accumulated_ms;
 	u32 timeout_gpfifo_get;
+
+	struct channel_gk20a_timeout timeout;
 
 	bool cmds_pending;
 	struct {

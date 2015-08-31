@@ -667,6 +667,7 @@ static int gk20a_init_support(struct platform_device *dev)
 
 	mutex_init(&g->dbg_sessions_lock);
 	mutex_init(&g->client_lock);
+	mutex_init(&g->ch_wdt_lock);
 
 	g->remove_support = gk20a_remove_support;
 	return 0;
@@ -1449,6 +1450,7 @@ static int gk20a_probe(struct platform_device *dev)
 			CONFIG_GK20A_DEFAULT_TIMEOUT;
 	if (tegra_platform_is_silicon())
 		gk20a->timeouts_enabled = true;
+	gk20a->ch_wdt_enabled = true;
 
 	/* Set up initial power settings. For non-slicon platforms, disable *
 	 * power features and for silicon platforms, read from platform data */

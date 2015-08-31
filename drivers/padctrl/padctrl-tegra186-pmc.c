@@ -29,6 +29,7 @@ struct tegra186_pmc_pads {
 	int lo_volt;
 	int hi_volt;
 	int bit_position;
+	bool dynamic_pad_voltage;
 };
 
 struct tegra186_pmc_padcontrl {
@@ -68,6 +69,8 @@ static int tegra186_pmc_padctrl_set_voltage(struct padctrl_dev *pad_dev,
 		int pad_id, u32 voltage)
 {
 	u32 offset;
+	unsigned int pad_mask;
+	u32 curr_volt;
 	int val;
 	int i;
 
@@ -82,6 +85,20 @@ static int tegra186_pmc_padctrl_set_voltage(struct padctrl_dev *pad_dev,
 
 	if (i == ARRAY_SIZE(tegra186_pads))
 		return -EINVAL;
+
+	if (!tegra186_pads[i].dynamic_pad_voltage) {
+		offset = BIT(tegra186_pads[i].bit_position);
+		pad_mask = tegra_pmc_pad_voltage_get(tegra186_pads[i].pad_reg);
+		curr_volt = (pad_mask & offset) ? tegra186_pads[i].hi_volt :
+					tegra186_pads[i].lo_volt;
+		if (voltage == curr_volt)
+			return 0;
+
+		pr_err("Pad %s: Dynamic pad voltage is not supported\n",
+			tegra186_pads[i].pad_name);
+
+		return -EINVAL;
+	}
 
 	if ((voltage < tegra186_pads[i].lo_volt) ||
 		(voltage > tegra186_pads[i].hi_volt)) {
@@ -139,6 +156,8 @@ static int tegra186_pmc_parse_io_pad_init(struct device_node *np,
 	int n_config;
 	u32 *volt_configs;
 	int i, index, vcount;
+	bool dyn_pad_volt;
+	int pindex;
 	int ret;
 
 	pad_np = of_get_child_by_name(np, "io-pad-defaults");
@@ -175,6 +194,9 @@ static int tegra186_pmc_parse_io_pad_init(struct device_node *np,
 				volt_configs[vcount + 1] = pval;
 				vcount += 2;
 			}
+			tegra186_pads[i].dynamic_pad_voltage =
+				of_property_read_bool(child,
+					"nvidia,enable-dynamic-pad-voltage");
 		}
 	}
 
@@ -182,9 +204,12 @@ static int tegra186_pmc_parse_io_pad_init(struct device_node *np,
 		index = i * 2;
 		if (!volt_configs[index + 1])
 			continue;
-		pad_id = tegra186_pads[volt_configs[index]].pad_id;
-		pad_name = tegra186_pads[volt_configs[index]].pad_name;
+		pindex = volt_configs[index];
+		pad_id = tegra186_pads[pindex].pad_id;
+		pad_name = tegra186_pads[pindex].pad_name;
 
+		dyn_pad_volt = tegra186_pads[pindex].dynamic_pad_voltage;
+		tegra186_pads[pindex].dynamic_pad_voltage = true;
 		ret = tegra186_pmc_padctrl_set_voltage(pad_dev,
 				pad_id, volt_configs[index + 1]);
 		if (ret < 0) {
@@ -195,6 +220,7 @@ static int tegra186_pmc_parse_io_pad_init(struct device_node *np,
 			pr_info("PMC: IO pad %s voltage is %d\n",
 					pad_name, volt_configs[index + 1]);
 		}
+		tegra186_pads[pindex].dynamic_pad_voltage = dyn_pad_volt;
 	}
 
 	kfree(volt_configs);

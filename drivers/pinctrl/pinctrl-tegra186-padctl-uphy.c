@@ -92,10 +92,13 @@
 
 #define UPHY_LANE_DIRECT_CTL_2			(0x14)
 #define   CFG_WDATA(x)				(((x) & 0xffff) << 0)
+#define   CFG_WDATA_0(x)			(((x) & 0x1) << 0)
+#define   CFG_WDATA_1_2(x)			(((x) & 0x2) << 1)
+#define   CFG_WDATA_3_4(x)			(((x) & 0x2) << 3)
 #define   CFG_ADDR(x)				(((x) & 0xff) << 16)
-#define   CFG_WDS(x)                            (((x) & 0x1) << 24)
-#define   CFG_RDS(x)                            (((x) & 0x1) << 25)
-#define   CFG_RESET(x)                          (((x) & 0x1) << 27)
+#define   CFG_WDS                            (1 << 24)
+#define   CFG_RDS                            (1 << 25)
+#define   CFG_RESET                          (1 << 27)
 
 #define UPHY_LANE_MUX				(0x284)
 #define   SEL(x)				(((x) & 0x7) << 0)
@@ -160,7 +163,7 @@
 #define FUSE_MPHY_NV_CALIB_0		(0x4a0)
 #define    MPHY_NV_CALIB_0_1(x)			(((x) & (0x3 << 0)) >> 0)
 #define    MPHY_NV_CALIB_2_3(x)			(((x) & (0x3 << 2)) >> 2)
-#define    MPHY_NV_CALIB_4_5(x)			(((x) & (0x3 << 4)) >> 4)
+#define    MPHY_NV_CALIB_4(x)			(((x) & (0x1 << 4)) >> 4)
 
 /* XUSB PADCTL registers */
 #define XUSB_PADCTL_USB2_PAD_MUX		(0x4)
@@ -881,17 +884,11 @@ static struct tegra_mphy_sata_calib sata_data[] = {
 struct init_data {
 	u8 cfg_addr;
 	u16 cfg_wdata;
-	bool cfg_wds;
-	bool cfg_rds;
-	bool cfg_rst;
 };
 
 static struct init_data usb3_pll_g1_init_data[] = {
-	{
-		.cfg_addr = MGMT_CORECLK_CTRL_ID0,
-		.cfg_wdata = CFG_TXCLKREF_EN(1) |
-			     CFG_TXCLKREF_SEL(DIVIDE_TX_BY_5),
-	},
+	{.cfg_addr = 0x2,  .cfg_wdata = 0x0000},
+	{.cfg_addr = 0x3,  .cfg_wdata = 0x7051},
 };
 
 static void pcie_usb3_pll_defaults(struct tegra_padctl_uphy *uphy)
@@ -902,6 +899,8 @@ static void pcie_usb3_pll_defaults(struct tegra_padctl_uphy *uphy)
 	for (i = 0; i < ARRAY_SIZE(usb3_pll_g1_init_data); i++) {
 		reg = CFG_ADDR(usb3_pll_g1_init_data[i].cfg_addr);
 		reg |= CFG_WDATA(usb3_pll_g1_init_data[i].cfg_wdata);
+		reg |= CFG_RESET;
+		reg |= CFG_WDS;
 		uphy_pll_writel(uphy, 0, reg, UPHY_PLL_CTL_4);
 	}
 }
@@ -909,15 +908,9 @@ static void pcie_usb3_pll_defaults(struct tegra_padctl_uphy *uphy)
 #define pcie_pll_init pcie_usb3_pll_defaults
 
 static struct init_data sata_pll_g1_g2_g3_init_data[] = {
-	{
-		.cfg_addr = MGMT_FREQ_CTRL_ID0,
-		.cfg_wdata = CFG_FREQ_NDIV(30),
-	},
-	{
-		.cfg_addr = MGMT_CORECLK_CTRL_ID0,
-		.cfg_wdata = CFG_TXCLKREF_EN(1) |
-			     CFG_TXCLKREF_SEL(DIVIDE_TX_BY_10),
-	},
+	{.cfg_addr = 0x0,  .cfg_wdata = 0x001E},
+	{.cfg_addr = 0x2,  .cfg_wdata = 0x0000},
+	{.cfg_addr = 0x3,  .cfg_wdata = 0x7001},
 };
 
 static void sata_pll_defaults(struct tegra_padctl_uphy *uphy)
@@ -928,37 +921,24 @@ static void sata_pll_defaults(struct tegra_padctl_uphy *uphy)
 	for (i = 0; i < ARRAY_SIZE(sata_pll_g1_g2_g3_init_data); i++) {
 		reg = CFG_ADDR(sata_pll_g1_g2_g3_init_data[i].cfg_addr);
 		reg |= CFG_WDATA(sata_pll_g1_g2_g3_init_data[i].cfg_wdata);
+		reg |= CFG_RESET;
+		reg |= CFG_WDS;
 		uphy_pll_writel(uphy, 1, reg, UPHY_PLL_CTL_4);
 	}
 }
 
 static struct init_data ufs_pll_g1_g2_g3_A_B_init_data[] = {
-	{
-		.cfg_addr = MGMT_FREQ_CTRL_ID0,
-		.cfg_wdata = CFG_FREQ_NDIV(24) | CFG_FREQ_MDIV(1),
-	},
-	{
-		.cfg_addr = MGMT_FREQ_CTRL_ID1,
-		.cfg_wdata = CFG_FREQ_NDIV(28) | CFG_FREQ_MDIV(1),
-	},
-	{
-		.cfg_addr = MGMT_CORECLK_CTRL_ID0,
-		.cfg_wdata = CFG_TXCLKREF_EN(1) |
-			     CFG_TXCLKREF_SEL(DIVIDE_TX_BY_10),
-	},
-	{
-		.cfg_addr = MGMT_CORECLK_CTRL_ID1,
-		.cfg_wdata = CFG_TXCLKREF_EN(1) |
-			     CFG_TXCLKREF_SEL(DIVIDE_TX_BY_10),
-	},
-	{
-		.cfg_addr = PLLC_CRSWRD_OVRD_ID1,
-		.cfg_wdata = 0,
-	},
-	{
-		.cfg_addr = MGMT_CYA_CTRL,
-		.cfg_wdata = CFG_MGMT_CLK_SEL(1),
-	},
+	{.cfg_addr = 0x0,  .cfg_wdata = 0x0041},
+	{.cfg_addr = 0x1,  .cfg_wdata = 0x004C},
+	{.cfg_addr = 0x2,  .cfg_wdata = 0x0001},
+	{.cfg_addr = 0x3,  .cfg_wdata = 0x7001},
+	{.cfg_addr = 0x4,  .cfg_wdata = 0x3001},
+	{.cfg_addr = 0x13, .cfg_wdata = 0x0002},
+	{.cfg_addr = 0x16, .cfg_wdata = 0x162A},
+	{.cfg_addr = 0x17, .cfg_wdata = 0x162A},
+	{.cfg_addr = 0x19, .cfg_wdata = 0x001F},
+	{.cfg_addr = 0x1C, .cfg_wdata = 0x160E},
+	{.cfg_addr = 0x1D, .cfg_wdata = 0x160E},
 };
 
 static void ufs_pll_defaults(struct tegra_padctl_uphy *uphy)
@@ -969,49 +949,34 @@ static void ufs_pll_defaults(struct tegra_padctl_uphy *uphy)
 	for (i = 0; i < ARRAY_SIZE(ufs_pll_g1_g2_g3_A_B_init_data); i++) {
 		reg = CFG_ADDR(ufs_pll_g1_g2_g3_A_B_init_data[i].cfg_addr);
 		reg |= CFG_WDATA(ufs_pll_g1_g2_g3_A_B_init_data[i].cfg_wdata);
+		reg |= CFG_RESET;
+		reg |= CFG_WDS;
 		uphy_pll_writel(uphy, 1, reg, UPHY_PLL_CTL_4);
 	}
 }
 
 static struct init_data ufs_pll_rateid_init_data[] = {
-	{
-		.cfg_addr = MGMT_FREQ_CTRL_ID0,
-		.cfg_wdata = CFG_FREQ_NDIV(0x18) | CFG_FREQ_MDIV(0x1),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = MGMT_FREQ_CTRL_ID1,
-		.cfg_wdata = CFG_FREQ_NDIV(0x1c) | CFG_FREQ_MDIV(0x1),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = MGMT_REFCLK_CTRL,
-		.cfg_wdata = 0x0,
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = MGMT_CORECLK_CTRL_ID0,
-		.cfg_wdata = CFG_XDIGCLK_SEL(0x7) | CFG_XDIGCLK_EN(0x1)
-			| CFG_TXCLKREF_SEL(0x2) | CFG_TXCLKREF_EN(1),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = MGMT_TX_RATE_CTRL_ID1,
-		.cfg_wdata = CFG_XDIGCLK_SEL(0x7) | CFG_XDIGCLK_EN(0x1)
-			| CFG_TXCLKREF_SEL(0x2) | CFG_TXCLKREF_EN(1),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = PLLC_CRSWRD_OVRD_ID0,
-		.cfg_wdata = 0x3e,
-		.cfg_wds = true,
-		.cfg_rst = true,
-	}
+	{.cfg_addr = 0x00, .cfg_wdata = 0x0041},
+	{.cfg_addr = 0x01, .cfg_wdata = 0x004c},
+	{.cfg_addr = 0x02, .cfg_wdata = 0x0001},
+	{.cfg_addr = 0x03, .cfg_wdata = 0x7001},
+	{.cfg_addr = 0x04, .cfg_wdata = 0x3001},
+	{.cfg_addr = 0x05, .cfg_wdata = 0x6454},
+	{.cfg_addr = 0x06, .cfg_wdata = 0x6454},
+	{.cfg_addr = 0x0a, .cfg_wdata = 0x0487},
+	{.cfg_addr = 0x13, .cfg_wdata = 0x0002},
+	{.cfg_addr = 0x14, .cfg_wdata = 0x0002},
+	{.cfg_addr = 0x15, .cfg_wdata = 0x0070},
+	{.cfg_addr = 0x16, .cfg_wdata = 0x162a},
+	{.cfg_addr = 0x17, .cfg_wdata = 0x162a},
+	{.cfg_addr = 0x18, .cfg_wdata = 0x001f},
+	{.cfg_addr = 0x19, .cfg_wdata = 0x001f},
+	{.cfg_addr = 0x1c, .cfg_wdata = 0x160e},
+	{.cfg_addr = 0x1d, .cfg_wdata = 0x160e},
+	{.cfg_addr = 0x1e, .cfg_wdata = 0x0037},
+	{.cfg_addr = 0x1f, .cfg_wdata = 0x0037},
+	{.cfg_addr = 0x25, .cfg_wdata = 0x0730},
+	{.cfg_addr = 0x26, .cfg_wdata = 0x0730},
 };
 
 static void ufs_pll_rateid_init(struct tegra_padctl_uphy *uphy)
@@ -1022,164 +987,70 @@ static void ufs_pll_rateid_init(struct tegra_padctl_uphy *uphy)
 	for (i = 0; i < ARRAY_SIZE(ufs_pll_rateid_init_data); i++) {
 		reg = CFG_ADDR(ufs_pll_rateid_init_data[i].cfg_addr);
 		reg |= CFG_WDATA(ufs_pll_rateid_init_data[i].cfg_wdata);
-		reg |= CFG_WDS(ufs_pll_rateid_init_data[i].cfg_wds);
-		reg |= CFG_RDS(ufs_pll_rateid_init_data[i].cfg_rds);
-		reg |= CFG_RESET(ufs_pll_rateid_init_data[i].cfg_rst);
+		reg |= CFG_RESET;
+		reg |= CFG_WDS;
 		uphy_pll_writel(uphy, 1, reg, UPHY_PLL_CTL_4);
 	}
 }
 
 static struct init_data ufs_lane_rateid_init_data[] = {
-	{
-		.cfg_addr = MGMT_TX_RATE_CTRL_ID0,
-		.cfg_wdata = TX_RATE_SDIV(SDIV4),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = MGMT_TX_RATE_CTRL_ID1,
-		.cfg_wdata = TX_RATE_SDIV(SDIV2),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = MGMT_TX_RATE_CTRL_ID2,
-		.cfg_wdata = TX_RATE_SDIV(SDIV1),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = MGMT_TX_RATE_CTRL_ID3,
-		.cfg_wdata = TX_RATE_SDIV(SDIV1),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = MGMT_RX_RATE_CTRL_ID0,
-		.cfg_wdata = RX_RATE_SDIV(CDIV1),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = MGMT_RX_RATE_CTRL_ID1,
-		.cfg_wdata = RX_RATE_SDIV(CDIV2),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = MGMT_RX_RATE_CTRL_ID2,
-		.cfg_wdata = RX_RATE_SDIV(CDIV4),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = MGMT_RX_RATE_CTRL_ID0,
-		.cfg_wdata = RX_RATE_SDIV(CDIV4),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = MGMT_TX_CTRL,
-		.cfg_wdata = TX_TERM_MODE(0x1),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = AE_CDR_CTRL_ID0,
-		.cfg_wdata = FRLOOP_EN(0x1) | FRGAIN(0x3) | PHGAIN(0x7),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = AE_CDR_CTRL_ID1,
-		.cfg_wdata = FRLOOP_EN(0x1) | FRGAIN(0x6) | PHGAIN(0x7),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = AE_CDR_CTRL_ID2,
-		.cfg_wdata = FRLOOP_EN(0x1) | FRGAIN(0xc) | PHGAIN(0x7),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = AE_CDR_CTRL_ID3,
-		.cfg_wdata = FRLOOP_EN(0x1) | FRGAIN(0xc) | PHGAIN(0x7),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = AE_CTLE_CTRL_ID0,
-		.cfg_wdata = HF_UBIN(0x0) | LF_UGRAY(0xf),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = AE_CTLE_CTRL_ID1,
-		.cfg_wdata = HF_UBIN(0x0) | LF_UGRAY(0xf),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = AE_CTLE_CTRL_ID2,
-		.cfg_wdata = HF_UBIN(0x8) | LF_UGRAY(0xf),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = AE_CTLE_CTRL_ID3,
-		.cfg_wdata = HF_UBIN(0xf) | LF_UGRAY(0xd),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = AE_EQ1_CTRL_ID0,
-		.cfg_wdata = CTLE_HF_MODE(0x1),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = AE_EQ1_CTRL_ID1,
-		.cfg_wdata = CTLE_HF_MODE(0x1),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = AE_EQ1_CTRL_ID2,
-		.cfg_wdata = CTLE_HF_MODE(0x1),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = AE_EQ1_CTRL_ID3,
-		.cfg_wdata = CTLE_HF_MODE(0x0),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = AE_EQ2_CTRL_ID0,
-		.cfg_wdata = H0_MODE(0x1),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = AE_EQ2_CTRL_ID0,
-		.cfg_wdata = H0_MODE(0x1),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = AE_EQ2_CTRL_ID0,
-		.cfg_wdata = H0_MODE(0x1),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
-	{
-		.cfg_addr = AE_EQ2_CTRL_ID0,
-		.cfg_wdata = H0_MODE(0x0),
-		.cfg_wds = true,
-		.cfg_rst = true,
-	},
+	{.cfg_addr = 0x01, .cfg_wdata = 0x0004},
+	{.cfg_addr = 0x03, .cfg_wdata = 0x0012},
+	{.cfg_addr = 0x04, .cfg_wdata = 0x0030},
+	{.cfg_addr = 0x05, .cfg_wdata = 0x0031},
+	{.cfg_addr = 0x06, .cfg_wdata = 0x0032},
+	{.cfg_addr = 0x07, .cfg_wdata = 0x0800},
+	{.cfg_addr = 0x08, .cfg_wdata = 0x0811},
+	{.cfg_addr = 0x09, .cfg_wdata = 0x0022},
+	{.cfg_addr = 0x0a, .cfg_wdata = 0x0227},
+	{.cfg_addr = 0x0b, .cfg_wdata = 0x0009},
+	{.cfg_addr = 0x1e, .cfg_wdata = 0x0002},
+	{.cfg_addr = 0x28, .cfg_wdata = 0x0022},
+	{.cfg_addr = 0x29, .cfg_wdata = 0x0022},
+	{.cfg_addr = 0x2a, .cfg_wdata = 0x0022},
+	{.cfg_addr = 0x2e, .cfg_wdata = 0x0070},
+	{.cfg_addr = 0x2f, .cfg_wdata = 0x0070},
+	{.cfg_addr = 0x30, .cfg_wdata = 0x0070},
+	{.cfg_addr = 0x35, .cfg_wdata = 0x070f},
+	{.cfg_addr = 0x36, .cfg_wdata = 0x070f},
+	{.cfg_addr = 0x37, .cfg_wdata = 0x070f},
+	{.cfg_addr = 0x38, .cfg_wdata = 0x0734},
+	{.cfg_addr = 0x39, .cfg_wdata = 0x0052},
+	{.cfg_addr = 0x3a, .cfg_wdata = 0x8000},
+	{.cfg_addr = 0x3b, .cfg_wdata = 0x8000},
+	{.cfg_addr = 0x3c, .cfg_wdata = 0x8000},
+	{.cfg_addr = 0x3d, .cfg_wdata = 0x2213},
+	{.cfg_addr = 0x3e, .cfg_wdata = 0x2213},
+	{.cfg_addr = 0x3f, .cfg_wdata = 0x2213},
+	{.cfg_addr = 0x49, .cfg_wdata = 0x0f37},
+	{.cfg_addr = 0x4a, .cfg_wdata = 0x0f67},
+	{.cfg_addr = 0x4b, .cfg_wdata = 0x0fc7},
+	{.cfg_addr = 0x4f, .cfg_wdata = 0x0c33},
+	{.cfg_addr = 0x50, .cfg_wdata = 0x1767},
+	{.cfg_addr = 0x53, .cfg_wdata = 0x0c00},
+	{.cfg_addr = 0x54, .cfg_wdata = 0x0c00},
+	{.cfg_addr = 0x55, .cfg_wdata = 0x0c00},
+	{.cfg_addr = 0x56, .cfg_wdata = 0x0c00},
+	{.cfg_addr = 0x57, .cfg_wdata = 0x0c00},
+	{.cfg_addr = 0x58, .cfg_wdata = 0x0c00},
+	{.cfg_addr = 0x59, .cfg_wdata = 0x0733},
+	{.cfg_addr = 0x5a, .cfg_wdata = 0x0703},
+	{.cfg_addr = 0x5b, .cfg_wdata = 0x1c90},
+	{.cfg_addr = 0x5c, .cfg_wdata = 0x00ac},
+	{.cfg_addr = 0x5d, .cfg_wdata = 0xff00},
+	{.cfg_addr = 0x5e, .cfg_wdata = 0x0813},
+	{.cfg_addr = 0x5f, .cfg_wdata = 0xc004},
+	{.cfg_addr = 0x60, .cfg_wdata = 0x4456},
+	{.cfg_addr = 0x61, .cfg_wdata = 0xa869},
+	{.cfg_addr = 0x62, .cfg_wdata = 0x0082},
+	{.cfg_addr = 0x63, .cfg_wdata = 0x010c},
+	{.cfg_addr = 0x64, .cfg_wdata = 0x003c},
+	{.cfg_addr = 0x67, .cfg_wdata = 0x0534},
+	{.cfg_addr = 0x68, .cfg_wdata = 0x0200},
+	{.cfg_addr = 0x69, .cfg_wdata = 0x0534},
+	{.cfg_addr = 0x6a, .cfg_wdata = 0x0200},
+	{.cfg_addr = 0x6b, .cfg_wdata = 0x0534},
+	{.cfg_addr = 0x96, .cfg_wdata = 0x0001},
 };
 
 static void ufs_lane_rateid_init(struct tegra_padctl_uphy *uphy, int lane)
@@ -1190,13 +1061,11 @@ static void ufs_lane_rateid_init(struct tegra_padctl_uphy *uphy, int lane)
 	for (i = 0; i < ARRAY_SIZE(ufs_lane_rateid_init_data); i++) {
 		reg = CFG_ADDR(ufs_lane_rateid_init_data[i].cfg_addr);
 		reg |= CFG_WDATA(ufs_lane_rateid_init_data[i].cfg_wdata);
-		reg |= CFG_WDS(ufs_lane_rateid_init_data[i].cfg_wds);
-		reg |= CFG_RDS(ufs_lane_rateid_init_data[i].cfg_rds);
-		reg |= CFG_RESET(ufs_lane_rateid_init_data[i].cfg_rst);
+		reg |= CFG_WDS;
+		reg |= CFG_RESET;
 		uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DIRECT_CTL_2);
 	}
 }
-
 
 static struct init_data pcie_lane_g1_g2_init_data[] = {
 };
@@ -1209,63 +1078,23 @@ static void pcie_lane_defaults(struct tegra_padctl_uphy *uphy, int lane)
 	for (i = 0; i < ARRAY_SIZE(pcie_lane_g1_g2_init_data); i++) {
 		reg = CFG_ADDR(pcie_lane_g1_g2_init_data[i].cfg_addr);
 		reg |= CFG_WDATA(pcie_lane_g1_g2_init_data[i].cfg_wdata);
+		reg |= CFG_RESET;
+		reg |= CFG_WDS;
 		uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DIRECT_CTL_2);
 	}
 }
 
 static struct init_data usb3_lane_g1_init_data[] = {
-	{
-		.cfg_addr = MGMT_TX_RATE_CTRL_ID0,
-		.cfg_wdata = TX_RATE_SDIV(SDIV1),
-	},
-	{
-		.cfg_addr = MGMT_RX_RATE_CTRL_ID0,
-		.cfg_wdata = RX_RATE_SDIV(SDIV1) | RX_RATE_CDIV(CDIV4),
-	},
-	{
-		.cfg_addr = MGMT_TX_CTRL,
-		.cfg_wdata = TX_TERM_MODE(0),
-	},
-	{
-		.cfg_addr = AE_CTLE_CTRL_ID0,
-		.cfg_wdata = LF_UGRAY(0xd) | HF_UBIN(0xf),
-	},
-	{
-		.cfg_addr = AE_DFE0_CTRL_ID0,
-		.cfg_wdata = LF_UGRAY(0xd) | HF_UBIN(0xf),
-	},
-	{
-		.cfg_addr = AE_DFE1_CTRL_ID0,
-		.cfg_wdata = H0_SBIN(48) | H4_SBIN(-1),
-	},
-	{
-		.cfg_addr = AE_CDR_CTRL_ID0,
-		.cfg_wdata = PHGAIN(0x7) | FRGAIN(0xc) | FRLOOP_EN(1),
-	},
-	{
-		.cfg_addr = AE_EQ0_CTRL_ID0,
-		.cfg_wdata = EQ0_SEQ_MODE(SEQ_MODE_HF_Z_H0_HN_Z) |
-			     H0INIT_ITERS(0x3),
-	},
-	{
-		.cfg_addr = AE_EQ1_CTRL_ID0,
-		.cfg_wdata = CTLE_HF_MODE(VAR_MODE_AUTO) |
-			     CTLE_HF_GRAD(CTLE_HF_GRAD_1P5) |
-			     H1_MODE(VAR_MODE_AUTO) |
-			     H2_MODE(VAR_MODE_AUTO) |
-			     H3_MODE(VAR_MODE_AUTO) |
-			     H4_MODE(VAR_MODE_AUTO),
-	},
-	{
-		.cfg_addr = AE_EQ2_CTRL_ID0,
-		.cfg_wdata = H1_MODE(VAR_MODE_AUTO) | H0_DAC_TIME(0x2) |
-			     H0_TIME(0x6) | H0_ITERS(0x3) | HN_ITERS(0x1),
-	},
-	{
-		.cfg_addr = AE_EQ3_CTRL_ID0,
-		.cfg_wdata = HN_GAIN(0Xf) | CTLE_HF_TIME(0xc) |
-			     CTLE_HF_GAIN(0xf),
-	},
+	{.cfg_addr = 0x1,  .cfg_wdata = 0x0002},
+	{.cfg_addr = 0x4,  .cfg_wdata = 0x0032},
+	{.cfg_addr = 0x7,  .cfg_wdata = 0x0022},
+	{.cfg_addr = 0x35, .cfg_wdata = 0x2587},
+	{.cfg_addr = 0x49, .cfg_wdata = 0x0FC7},
+	{.cfg_addr = 0x52, .cfg_wdata = 0x0001},
+	{.cfg_addr = 0x53, .cfg_wdata = 0x3C0F},
+	{.cfg_addr = 0x56, .cfg_wdata = 0xC00F},
+	{.cfg_addr = 0x5D, .cfg_wdata = 0xFF07},
+	{.cfg_addr = 0x5E, .cfg_wdata = 0x141A},
 };
 
 static void usb3_lane_defaults(struct tegra_padctl_uphy *uphy, int lane)
@@ -1276,44 +1105,26 @@ static void usb3_lane_defaults(struct tegra_padctl_uphy *uphy, int lane)
 	for (i = 0; i < ARRAY_SIZE(usb3_lane_g1_init_data); i++) {
 		reg = CFG_ADDR(usb3_lane_g1_init_data[i].cfg_addr);
 		reg |= CFG_WDATA(usb3_lane_g1_init_data[i].cfg_wdata);
+		reg |= CFG_RESET;
+		reg |= CFG_WDS;
 		uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DIRECT_CTL_2);
 	}
 
 }
 
 static struct init_data sata_lane_g1_g2_init_data[] = {
-	{
-		.cfg_addr = MGMT_TX_RATE_CTRL_ID0,
-		.cfg_wdata = TX_RATE_SDIV(SDIV4),
-	},
-	{
-		.cfg_addr = MGMT_TX_RATE_CTRL_ID1,
-		.cfg_wdata = TX_RATE_SDIV(SDIV2),
-	},
-	{
-		.cfg_addr = MGMT_RX_RATE_CTRL_ID0,
-		.cfg_wdata = RX_RATE_SDIV(SDIV4) | RX_RATE_CDIV(CDIV1),
-	},
-	{
-		.cfg_addr = MGMT_RX_RATE_CTRL_ID1,
-		.cfg_wdata = RX_RATE_SDIV(SDIV2) | RX_RATE_CDIV(CDIV2),
-	},
-	{
-		.cfg_addr = MGMT_TX_CTRL,
-		.cfg_wdata = TX_TERM_MODE(0),
-	},
-	{
-		.cfg_addr = AE_CTLE_CTRL_ID0,
-		.cfg_wdata = LF_UGRAY(0x8),
-	},
-	{
-		.cfg_addr = AE_CDR_CTRL_ID0,
-		.cfg_wdata = PHGAIN(0x7) | FRGAIN(0x3) | FRLOOP_EN(1),
-	},
-	{
-		.cfg_addr = AE_CDR_CTRL_ID1,
-		.cfg_wdata = PHGAIN(0x7) | FRGAIN(0x6) | FRLOOP_EN(1),
-	},
+	{.cfg_addr = 0x1,  .cfg_wdata = 0x0003},
+	{.cfg_addr = 0x3,  .cfg_wdata = 0x0010},
+	{.cfg_addr = 0x4,  .cfg_wdata = 0x0030},
+	{.cfg_addr = 0x5,  .cfg_wdata = 0x0031},
+	{.cfg_addr = 0x7,  .cfg_wdata = 0x0800},
+	{.cfg_addr = 0x8,  .cfg_wdata = 0x0811},
+	{.cfg_addr = 0x28, .cfg_wdata = 0x0022},
+	{.cfg_addr = 0x29, .cfg_wdata = 0x0022},
+	{.cfg_addr = 0x2E, .cfg_wdata = 0x0050},
+	{.cfg_addr = 0x2F, .cfg_wdata = 0x0050},
+	{.cfg_addr = 0x49, .cfg_wdata = 0x0F37},
+	{.cfg_addr = 0x4A, .cfg_wdata = 0x0F67},
 };
 
 static void sata_lane_defaults(struct tegra_padctl_uphy *uphy, int lane)
@@ -1324,90 +1135,35 @@ static void sata_lane_defaults(struct tegra_padctl_uphy *uphy, int lane)
 	for (i = 0; i < ARRAY_SIZE(sata_lane_g1_g2_init_data); i++) {
 		reg = CFG_ADDR(sata_lane_g1_g2_init_data[i].cfg_addr);
 		reg |= CFG_WDATA(sata_lane_g1_g2_init_data[i].cfg_wdata);
+		reg |= CFG_RESET;
+		reg |= CFG_WDS;
 		uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DIRECT_CTL_2);
 	}
 
 }
 
 static struct init_data ufs_lane_g1_g2_g3_init_data[] = {
-	{
-		.cfg_addr = MGMT_TX_RATE_CTRL_ID0,
-		.cfg_wdata = TX_RATE_SDIV(SDIV4),
-	},
-	{
-		.cfg_addr = MGMT_TX_RATE_CTRL_ID1,
-		.cfg_wdata = TX_RATE_SDIV(SDIV2),
-	},
-	{
-		.cfg_addr = MGMT_RX_RATE_CTRL_ID0,
-		.cfg_wdata = RX_RATE_SDIV(SDIV4) | RX_RATE_CDIV(CDIV1),
-	},
-	{
-		.cfg_addr = MGMT_RX_RATE_CTRL_ID1,
-		.cfg_wdata = RX_RATE_SDIV(SDIV2) | RX_RATE_CDIV(CDIV2),
-	},
-	{
-		.cfg_addr = MGMT_TX_CTRL,
-		.cfg_wdata = TX_TERM_MODE(1),
-	},
-	{
-		.cfg_addr = AE_CTLE_CTRL_ID0,
-		.cfg_wdata = LF_UGRAY(0xf),
-	},
-	{
-		.cfg_addr = AE_CTLE_CTRL_ID1,
-		.cfg_wdata = LF_UGRAY(0xf),
-	},
-	{
-		.cfg_addr = AE_CTLE_CTRL_ID2,
-		.cfg_wdata = LF_UGRAY(0xf) | HF_UBIN(8),
-	},
-
-	{
-		.cfg_addr = AE_DFE0_CTRL_ID2,
-		.cfg_wdata = 0,
-	},
-	{
-		.cfg_addr = AE_DFE1_CTRL_ID2,
-		.cfg_wdata = 0,
-	},
-	{
-		.cfg_addr = AE_CDR_CTRL_ID0,
-		.cfg_wdata = PHGAIN(0x7) | FRGAIN(0x3) | FRLOOP_EN(1),
-	},
-	{
-		.cfg_addr = AE_CDR_CTRL_ID1,
-		.cfg_wdata = PHGAIN(0x7) | FRGAIN(0x6) | FRLOOP_EN(1),
-	},
-	{
-		.cfg_addr = AE_CDR_CTRL_ID2,
-		.cfg_wdata = PHGAIN(0x7) | FRGAIN(0xc) | FRLOOP_EN(1),
-	},
-	{
-		.cfg_addr = AE_EQ0_CTRL_ID2,
-		.cfg_wdata = EQ0_SEQ_MODE(SEQ_MODE_HF_Z_H0_HN_Z),
-	},
-	{
-		.cfg_addr = AE_EQ1_CTRL_ID2,
-		.cfg_wdata = CTLE_HF_MODE(VAR_MODE_OFF) |
-			     CTLE_HF_GRAD(CTLE_HF_GRAD_1P5) |
-			     H1_MODE(VAR_MODE_OFF) |
-			     H2_MODE(VAR_MODE_OFF) |
-			     H3_MODE(VAR_MODE_OFF) |
-			     H4_MODE(VAR_MODE_OFF),
-	},
-	{
-		.cfg_addr = AE_EQ2_CTRL_ID2,
-		.cfg_wdata = H1_MODE(VAR_MODE_OFF),
-	},
-	{
-		.cfg_addr = AE_EQ3_CTRL_ID2,
-		.cfg_wdata = 0,
-	},
-	{
-		.cfg_addr = MGMT_RX_PI_CTRL_ID2,
-		.cfg_wdata = 0,
-	},
+	{.cfg_addr = 0x0,  .cfg_wdata = 0x0004},
+	{.cfg_addr = 0x3,  .cfg_wdata = 0x0012},
+	{.cfg_addr = 0x4,  .cfg_wdata = 0x0030},
+	{.cfg_addr = 0x5,  .cfg_wdata = 0x0031},
+	{.cfg_addr = 0x6,  .cfg_wdata = 0x0032},
+	{.cfg_addr = 0x7,  .cfg_wdata = 0x0800},
+	{.cfg_addr = 0x8,  .cfg_wdata = 0x0811},
+	{.cfg_addr = 0xA,  .cfg_wdata = 0x0227},
+	{.cfg_addr = 0xB,  .cfg_wdata = 0x0009},
+	{.cfg_addr = 0x1E, .cfg_wdata = 0x0002},
+	{.cfg_addr = 0x28, .cfg_wdata = 0x0022},
+	{.cfg_addr = 0x29, .cfg_wdata = 0x0022},
+	{.cfg_addr = 0x2A, .cfg_wdata = 0x0022},
+	{.cfg_addr = 0x30, .cfg_wdata = 0x0070},
+	{.cfg_addr = 0x37, .cfg_wdata = 0x070F},
+	{.cfg_addr = 0x49, .cfg_wdata = 0x0F37},
+	{.cfg_addr = 0x4A, .cfg_wdata = 0x0F67},
+	{.cfg_addr = 0x4B, .cfg_wdata = 0x0FC7},
+	{.cfg_addr = 0x55, .cfg_wdata = 0x0C00},
+	{.cfg_addr = 0x58, .cfg_wdata = 0xC000},
+	{.cfg_addr = 0x96, .cfg_wdata = 0x0001},
 };
 
 static void ufs_lane_defaults(struct tegra_padctl_uphy *uphy, int lane)
@@ -1418,6 +1174,8 @@ static void ufs_lane_defaults(struct tegra_padctl_uphy *uphy, int lane)
 	for (i = 0; i < ARRAY_SIZE(ufs_lane_g1_g2_g3_init_data); i++) {
 		reg = CFG_ADDR(ufs_lane_g1_g2_g3_init_data[i].cfg_addr);
 		reg |= CFG_WDATA(ufs_lane_g1_g2_g3_init_data[i].cfg_wdata);
+		reg |= CFG_RESET;
+		reg |= CFG_WDS;
 		uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DIRECT_CTL_2);
 	}
 
@@ -2589,11 +2347,14 @@ static int tegra186_ufs_fuse_calibration(struct tegra_padctl_uphy *uphy,
 	reg |= AUX_RX_IDLE_TH(mphy_data[idx].aux_rx_idle_th);
 	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_AUX_CTL_1);
 
-	/* Update based on fuse_mphy_nv_calib[3:2] value TBD */
-	idx = MPHY_NV_CALIB_2_3(uphy->fuse_calib.mphy_nv);
-
-	/* Update based on fuse_mphy_nv_calib[5:4] value TBD */
-	idx = MPHY_NV_CALIB_4_5(uphy->fuse_calib.mphy_nv);
+	/* Update based on fuse_mphy_nv_calib[4:2] value */
+	reg = CFG_ADDR(0x35);
+	reg |= CFG_WDATA_0(MPHY_NV_CALIB_4(uphy->fuse_calib.mphy_nv));
+	reg |= CFG_WDATA_1_2(MPHY_NV_CALIB_2_3(uphy->fuse_calib.mphy_nv));
+	reg |= CFG_WDATA_3_4(MPHY_NV_CALIB_2_3(uphy->fuse_calib.mphy_nv));
+	reg |= CFG_RESET;
+	reg |= CFG_WDS;
+	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DIRECT_CTL_2);
 
 	/* Update based on fuse_sata_mphy_odm_calib[1:0] value */
 	idx = SATA_MPHY_ODM_CALIB_0_1(uphy->fuse_calib.sata_mphy_odm);

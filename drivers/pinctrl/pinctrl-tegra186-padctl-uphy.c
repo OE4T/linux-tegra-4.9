@@ -150,7 +150,7 @@
 
 /* FUSE_USB_CALIB_EXT_0 */
 #define RPD_CTRL_SHIFT				(0)
-#define RPD_CTRL_MASK				(0xf)
+#define RPD_CTRL_MASK				(0x1f)
 
 /* FUSE SATA MPHY registers */
 #define FUSE_SATA_MPHY_ODM_CALIB_0	(0x224)
@@ -2534,10 +2534,12 @@ static int usb3_phy_to_port(struct phy *phy)
 static int tegra186_usb3_phy_power_on(struct phy *phy)
 {
 	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
+	struct device *dev = uphy->dev;
 	int port = usb3_phy_to_port(phy);
 	char prod_name[] = "prod_c_ssX";
 	unsigned int uphy_lane;
 	u32 reg;
+	int err;
 
 	if (port < 0)
 		return port;
@@ -2546,8 +2548,13 @@ static int tegra186_usb3_phy_power_on(struct phy *phy)
 	dev_dbg(uphy->dev, "power on USB3 port %d uphy-lane-%u\n",
 		port, uphy_lane);
 
-	sprintf(prod_name, "prod_c_ssX%d", port);
-	tegra_prod_set_by_name(&uphy->padctl_regs, prod_name, uphy->prod_list);
+	sprintf(prod_name, "prod_c_ss%d", port);
+	err = tegra_prod_set_by_name(uphy->uphy_lane_regs, prod_name,
+				     uphy->prod_list);
+	if (err) {
+		dev_info(dev, "failed to apply prod for ss pad%d (%d)\n",
+			port, err);
+	}
 
 	reg = padctl_readl(uphy, XUSB_PADCTL_SS_PORT_CAP);
 	reg &= ~(PORT_CAP_MASK << PORTX_CAP_SHIFT(port));
@@ -2844,6 +2851,7 @@ static int tegra186_utmi_phy_disable_sleepwalk(struct tegra_padctl_uphy *uphy,
 static int tegra186_utmi_phy_power_on(struct phy *phy)
 {
 	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
+	struct device *dev = uphy->dev;
 	int port = utmi_phy_to_port(phy);
 	char prod_name[] = "prod_c_utmiX";
 	int err;
@@ -2855,7 +2863,19 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 	dev_dbg(uphy->dev, "power on UTMI port %d\n",  port);
 
 	sprintf(prod_name, "prod_c_utmi%d", port);
-	tegra_prod_set_by_name(&uphy->padctl_regs, prod_name, uphy->prod_list);
+	err = tegra_prod_set_by_name(&uphy->padctl_regs, prod_name,
+		uphy->prod_list);
+	if (err) {
+		dev_info(dev, "failed to apply prod for utmi pad%d (%d)\n",
+			port, err);
+	}
+
+	sprintf(prod_name, "prod_c_bias");
+	err = tegra_prod_set_by_name(&uphy->padctl_regs, prod_name,
+		uphy->prod_list);
+	if (err)
+		dev_info(dev, "failed to apply prod for bias pad (%d)\n", err);
+
 
 	reg = padctl_readl(uphy, XUSB_PADCTL_USB2_PORT_CAP);
 	reg &= ~(PORT_CAP_MASK << PORTX_CAP_SHIFT(port));
@@ -2879,6 +2899,8 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 	reg &= ~USB2_OTG_PD_DR;
 	reg &= ~TERM_RANGE_ADJ(~0);
 	reg |= TERM_RANGE_ADJ(uphy->calib.hs_term_range_adj);
+	reg &= ~RPD_CTRL(~0);
+	reg |= RPD_CTRL(uphy->calib.rpd_ctrl);
 	padctl_writel(uphy, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL1(port));
 
 	err = regulator_enable(uphy->vbus[port]);

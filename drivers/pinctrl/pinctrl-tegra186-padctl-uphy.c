@@ -231,6 +231,9 @@
 
 #define USB2_VBUS_ID				(0x360)
 #define   VBUS_OVERRIDE				(1 << 14)
+#define   ID_OVERRIDE(x)			(((x) & 0xf) << 18)
+#define   ID_OVERRIDE_FLOATING			ID_OVERRIDE(8)
+#define   ID_OVERRIDE_GROUNDED			ID_OVERRIDE(0)
 
 /* XUSB AO registers */
 #define XUSB_AO_USB_DEBOUNCE_DEL		(0x4)
@@ -621,6 +624,10 @@ struct tegra_padctl_uphy {
 	struct reset_control *uphy_lane_rst[T186_UPHY_LANES];
 	struct reset_control *uphy_master_rst;
 
+	/* vbus/id based OTG */
+	struct work_struct otg_vbus_work;
+	bool otg_vbus_on;
+	struct phy *otg_phy;
 };
 
 #ifdef VERBOSE_DEBUG
@@ -1864,6 +1871,14 @@ static int tegra_padctl_uphy_pinconf_group_set(struct pinctrl_dev *pinctrl,
 				uphy->utmi_ports[port].port_cap = value;
 				TRACE(dev, "UTMI port %d cap %lu",
 				      port, value);
+				if (value == OTG) {
+					dev_info(dev, "using utmi port %d for otg\n",
+						 port);
+					if (uphy->otg_phy)
+						dev_info(dev, "more than one otg phy?\n");
+
+					uphy->otg_phy = uphy->utmi_phys[port];
+				}
 			} else {
 				dev_err(dev, "port-cap not applicable for pin %d\n",
 					group);
@@ -2682,6 +2697,10 @@ static const struct phy_ops usb3_phy_ops = {
 	.power_off = tegra186_usb3_phy_power_off,
 	.owner = THIS_MODULE,
 };
+static inline bool is_usb3_phy(struct phy *phy)
+{
+	return phy->ops == &usb3_phy_ops;
+}
 
 static int utmi_phy_to_port(struct phy *phy)
 {
@@ -2894,13 +2913,7 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 	reg &= ~(USB2_OTG_PD | USB2_OTG_PD_ZI);
 	reg |= TERM_SEL;
 	reg &= ~HS_CURR_LEVEL(~0);
-#if 1
 	reg |= HS_CURR_LEVEL(uphy->calib.hs_curr_level[port]);
-#else
-	pr_warn("%s override FUSE HS_CURR_LEVEL (0x%x) with 0x14\n",
-		__func__, uphy->calib.hs_curr_level[port]);
-	reg |= HS_CURR_LEVEL(0x14);
-#endif
 	padctl_writel(uphy, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL0(port));
 
 	reg = padctl_readl(uphy, XUSB_PADCTL_USB2_OTG_PADX_CTL1(port));
@@ -2911,11 +2924,13 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 	reg |= RPD_CTRL(uphy->calib.rpd_ctrl);
 	padctl_writel(uphy, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL1(port));
 
-	err = regulator_enable(uphy->vbus[port]);
-	if (err) {
-		dev_err(uphy->dev, "enable port %d vbus failed %d\n",
-			port, err);
-		return err;
+	if (uphy->vbus[port] && uphy->utmi_ports[port].port_cap == HOST_ONLY) {
+		err = regulator_enable(uphy->vbus[port]);
+		if (err) {
+			dev_err(uphy->dev, "enable port %d vbus failed %d\n",
+				port, err);
+			return err;
+		}
 	}
 
 	mutex_lock(&uphy->lock);
@@ -2925,7 +2940,7 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 
 	/* BIAS PAD */
 	if (uphy->usb2_trk_clk)
-		clk_enable(uphy->usb2_trk_clk);
+		clk_prepare_enable(uphy->usb2_trk_clk);
 
 	reg = padctl_readl(uphy, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
 	reg &= ~USB2_TRK_START_TIMER(~0);
@@ -2949,7 +2964,7 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 	usleep_range(50, 60);
 
 	if (uphy->usb2_trk_clk)
-		clk_disable(uphy->usb2_trk_clk);
+		clk_disable_unprepare(uphy->usb2_trk_clk);
 out:
 	mutex_unlock(&uphy->lock);
 
@@ -2968,11 +2983,14 @@ static int tegra186_utmi_phy_power_off(struct phy *phy)
 
 	dev_dbg(uphy->dev, "power off UTMI port %d\n", port);
 
-	rc = regulator_disable(uphy->vbus[port]);
-	if (rc) {
-		dev_err(uphy->dev, "disable port %d vbus failed %d\n",
-			port, rc);
+	if (uphy->vbus[port] && uphy->utmi_ports[port].port_cap == HOST_ONLY) {
+		rc = regulator_disable(uphy->vbus[port]);
+		if (rc) {
+			dev_err(uphy->dev, "disable port %d vbus failed %d\n",
+				port, rc);
+		}
 	}
+
 	mutex_lock(&uphy->lock);
 
 	if (WARN_ON(uphy->utmi_enable == 0))
@@ -3029,7 +3047,7 @@ static const struct phy_ops utmi_phy_ops = {
 
 static inline bool is_utmi_phy(struct phy *phy)
 {
-	return (phy->ops == &utmi_phy_ops);
+	return phy->ops == &utmi_phy_ops;
 }
 
 static int hsic_phy_to_port(struct phy *phy)
@@ -3198,7 +3216,7 @@ static int tegra186_hsic_phy_power_on(struct phy *phy)
 	}
 
 	if (uphy->hsic_trk_clk)
-		clk_enable(uphy->hsic_trk_clk);
+		clk_prepare_enable(uphy->hsic_trk_clk);
 
 	reg = padctl_readl(uphy, XUSB_PADCTL_HSIC_PAD_TRK_CTL0);
 	reg &= ~HSIC_TRK_START_TIMER(~0);
@@ -3222,7 +3240,7 @@ static int tegra186_hsic_phy_power_on(struct phy *phy)
 	usleep_range(50, 60);
 
 	if (uphy->hsic_trk_clk)
-		clk_disable(uphy->hsic_trk_clk);
+		clk_disable_unprepare(uphy->hsic_trk_clk);
 
 	return 0;
 }
@@ -3293,7 +3311,7 @@ static const struct phy_ops hsic_phy_ops = {
 
 static inline bool is_hsic_phy(struct phy *phy)
 {
-	return (phy->ops == &hsic_phy_ops);
+	return phy->ops == &hsic_phy_ops;
 }
 
 static void tegra_xusb_phy_mbox_work(struct work_struct *work)
@@ -3572,6 +3590,46 @@ static int tegra_mphy_sata_fuse_calibration(struct tegra_padctl_uphy *padctl)
 	return 0;
 }
 
+static void tegra_xusb_otg_vbus_work(struct work_struct *work)
+{
+	struct tegra_padctl_uphy *uphy =
+		container_of(work, struct tegra_padctl_uphy, otg_vbus_work);
+	struct device *dev = uphy->dev;
+	int port;
+	u32 reg;
+	int rc;
+
+	if (!uphy->otg_phy)
+		return; /* no otg phy */
+
+	port = utmi_phy_to_port(uphy->otg_phy);
+	if (port < 0)
+		return; /* invalid phy */
+
+	reg = padctl_readl(uphy, USB2_VBUS_ID);
+	if ((reg & ID_OVERRIDE(~0)) == ID_OVERRIDE_GROUNDED) {
+		/* entering host mode role */
+		if (uphy->vbus[port] && !uphy->otg_vbus_on) {
+			rc = regulator_enable(uphy->vbus[port]);
+			if (rc) {
+				dev_err(dev, "failed to enable otg port vbus %d\n"
+					, rc);
+			}
+			uphy->otg_vbus_on = true;
+		}
+	} else if ((reg & ID_OVERRIDE(~0)) == ID_OVERRIDE_FLOATING) {
+		/* leaving host mode role */
+		if (uphy->vbus[port] && uphy->otg_vbus_on) {
+			rc = regulator_disable(uphy->vbus[port]);
+			if (rc) {
+				dev_err(dev, "failed to enable otg port vbus %d\n"
+					, rc);
+			}
+			uphy->otg_vbus_on = false;
+		}
+	}
+}
+
 static int tegra_xusb_setup_usb(struct tegra_padctl_uphy *uphy)
 {
 	struct phy *phy;
@@ -3590,9 +3648,14 @@ static int tegra_xusb_setup_usb(struct tegra_padctl_uphy *uphy)
 		char reg_name[sizeof("vbus-N")];
 
 		sprintf(reg_name, "vbus-%d", i);
-		uphy->vbus[i] = devm_regulator_get(uphy->dev, reg_name);
-		if (IS_ERR(uphy->vbus[i]))
-			return PTR_ERR(uphy->vbus[i]);
+		uphy->vbus[i] = devm_regulator_get_optional(uphy->dev,
+			reg_name);
+		if (IS_ERR(uphy->vbus[i])) {
+			if (PTR_ERR(uphy->vbus[i]) == -EPROBE_DEFER)
+				return -EPROBE_DEFER;
+
+			uphy->vbus[i] = NULL;
+		}
 
 		phy = devm_phy_create(uphy->dev, NULL, &utmi_phy_ops, NULL);
 		if (IS_ERR(phy))
@@ -3778,6 +3841,7 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 	uphy->ufs_phys[0] = phy;
 	phy_set_drvdata(phy, uphy);
 
+	INIT_WORK(&uphy->otg_vbus_work, tegra_xusb_otg_vbus_work);
 	INIT_WORK(&uphy->mbox_req_work, tegra_xusb_phy_mbox_work);
 	uphy->mbox_client.dev = dev;
 	uphy->mbox_client.tx_block = true;
@@ -3894,6 +3958,46 @@ int tegra_phy_xusb_disable_sleepwalk(struct phy *phy)
 		return -EINVAL;
 }
 EXPORT_SYMBOL_GPL(tegra_phy_xusb_disable_sleepwalk);
+
+static int tegra186_padctl_vbus_override(struct tegra_padctl_uphy *uphy,
+					 bool on)
+{
+	u32 reg;
+
+	reg = padctl_readl(uphy, USB2_VBUS_ID);
+	if (on)
+		reg |= VBUS_OVERRIDE;
+	else
+		reg &= ~VBUS_OVERRIDE;
+	padctl_writel(uphy, reg, USB2_VBUS_ID);
+
+	schedule_work(&uphy->otg_vbus_work);
+
+	return 0;
+}
+
+int tegra_phy_xusb_set_vbus_override(struct phy *phy)
+{
+	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
+
+	if (!phy)
+		return 0;
+
+	return tegra186_padctl_vbus_override(uphy, true);
+}
+EXPORT_SYMBOL_GPL(tegra_phy_xusb_set_vbus_override);
+
+int tegra_phy_xusb_clear_vbus_override(struct phy *phy)
+{
+	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
+
+	if (!phy)
+		return 0;
+
+	return tegra186_padctl_vbus_override(uphy, false);
+}
+EXPORT_SYMBOL_GPL(tegra_phy_xusb_clear_vbus_override);
+
 
 MODULE_AUTHOR("JC Kuo <jckuo@nvidia.com>");
 MODULE_DESCRIPTION("Tegra 186 XUSB PADCTL and UPHY PLL/Lane driver");

@@ -243,7 +243,8 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 	kref_init(&ch->refcount);
 
 	/* allocate vm */
-	ch->vm = nvhost_vm_allocate(pdata->pdev);
+	ch->vm = nvhost_vm_allocate(pdata->pdev,
+				    (void *)(uintptr_t)current->pid);
 	if (!ch->vm)
 		goto err_alloc_vm;
 

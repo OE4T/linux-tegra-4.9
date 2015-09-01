@@ -36,6 +36,12 @@ struct nvhost_vm {
 	/* used by hardware layer */
 	void *private_data;
 
+	/* used for combining different users with same identifier */
+	void *identifier;
+
+	/* to track all vms in the system */
+	struct list_head vm_list;
+
 	/* marks if hardware isolation is enabled */
 	bool enable_hw;
 };
@@ -142,12 +148,14 @@ void nvhost_vm_get(struct nvhost_vm *vm);
 /**
  * nvhost_vm_allocate - Allocate vm to hold buffers
  *	@pdev: pointer to the host1x client device
+ *	@identifier: used for combining different users
  *
  * This function allocates IOMMU domain to hold buffers and makes
  * initializations to lists, mutexes, bitmaps, etc. to keep track of mappings.
  *
  * Returns pointer to nvhost_vm on success, 0 otherwise.
  */
-struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev);
+struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev,
+				     void *identifier);
 
 #endif

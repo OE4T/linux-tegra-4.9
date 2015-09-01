@@ -130,6 +130,12 @@ int nvhost_vm_map_static(struct platform_device *pdev,
 static void nvhost_vm_deinit(struct kref *kref)
 {
 	struct nvhost_vm *vm = container_of(kref, struct nvhost_vm, kref);
+	struct nvhost_master *host = nvhost_get_host(vm->pdev);
+
+	/* remove this vm from the vms list */
+	mutex_lock(&host->vm_mutex);
+	list_del(&vm->vm_list);
+	mutex_unlock(&host->vm_mutex);
 
 	if (vm_op().deinit && vm->enable_hw)
 		vm_op().deinit(vm);
@@ -148,20 +154,38 @@ void nvhost_vm_get(struct nvhost_vm *vm)
 	kref_get(&vm->kref);
 }
 
-struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev)
+struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev,
+				     void *identifier)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_master *host = nvhost_get_host(pdev);
 	struct nvhost_vm *vm;
 	int err;
+
+	mutex_lock(&host->vm_mutex);
+
+	if (identifier) {
+		list_for_each_entry(vm, &host->vm_list, vm_list) {
+			if (vm->identifier == identifier) {
+				/* skip entries that are going to be removed */
+				if (!kref_get_unless_zero(&vm->kref))
+					continue;
+				mutex_unlock(&host->vm_mutex);
+				return vm;
+			}
+		}
+	}
 
 	/* get room to keep vm */
 	vm = kzalloc(sizeof(*vm), GFP_KERNEL);
 	if (!vm)
-		return NULL;
+		goto err_alloc_vm;
 
 	kref_init(&vm->kref);
+	INIT_LIST_HEAD(&vm->vm_list);
 	vm->pdev = pdev;
 	vm->enable_hw = pdata->isolate_contexts;
+	vm->identifier = identifier;
 
 	if (vm_op().init && vm->enable_hw) {
 		err = vm_op().init(vm);
@@ -169,10 +193,17 @@ struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev)
 			goto err_init;
 	}
 
+	/* add this vm into list of vms */
+	list_add_tail(&vm->vm_list, &host->vm_list);
+
+	/* release the vm mutex */
+	mutex_unlock(&host->vm_mutex);
+
 	return vm;
 
 err_init:
 	kfree(vm);
+err_alloc_vm:
 
 	return NULL;
 }

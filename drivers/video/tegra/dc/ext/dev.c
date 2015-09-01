@@ -1186,8 +1186,6 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	}
 #ifdef CONFIG_ANDROID
 	work_index = 0;
-	/* Avoid queueing timestamps, to disable skipping flips */
-	has_timestamp = false;
 #endif
 
 	if (syncpt_fd) {
@@ -1209,11 +1207,14 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 
 	trace_flip_rcvd_syncpt_upd(post_sync_val);
 
+	/* Avoid queueing timestamps on Android, to disable skipping flips */
+#ifndef CONFIG_ANDROID
 	if (has_timestamp) {
 		mutex_lock(&ext->win[work_index].queue_lock);
 		list_add_tail(&data->timestamp_node, &ext->win[work_index].timestamp_queue);
 		mutex_unlock(&ext->win[work_index].queue_lock);
 	}
+#endif
 	data->flags = flip_flags;
 	queue_work(ext->win[work_index].flip_wq, &data->work);
 

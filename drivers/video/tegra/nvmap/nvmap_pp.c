@@ -82,7 +82,8 @@ static void pp_clean_cache(struct nvmap_page_pool *pool)
 
 	if (!dirty_pages)
 		return;
-	if (dirty_pages >= (cache_maint_inner_threshold >> PAGE_SHIFT)) {
+	if (IS_ENABLED(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS) &&
+		(dirty_pages >= (cache_maint_inner_threshold >> PAGE_SHIFT))) {
 		inner_clean_cache_all();
 		outer_clean_all();
 	} else {

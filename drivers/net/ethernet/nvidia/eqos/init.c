@@ -756,12 +756,6 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		printk(KERN_ALERT "local-mac-address read failed %d\n", ret);
 		goto err_out_mac_read_failed;
-	} else if (mac_addr[0] == 0x0 && mac_addr[1] == 0x0 &&
-		mac_addr[2] == 0x0 && mac_addr[3] == 0x0 &&
-		mac_addr[4] == 0x0 && mac_addr[5] == 0x0) {
-		printk(KERN_ALERT "ERROR!! local-mac-address is all zeros.\n");
-		printk(KERN_ALERT "Update DT with unique MAC address\n");
-		goto err_out_mac_read_failed;
 	} else {
 		printk(KERN_ALERT "Setting local MAC: %x %x %x %x %x %x\n",
 			mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3],

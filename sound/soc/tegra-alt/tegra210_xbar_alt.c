@@ -896,14 +896,22 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 			goto err;
 		}
 
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 		xbar->clk_parent = clk_get_sys(NULL, "pll_a_out0");
+#else
+		xbar->clk_parent = devm_clk_get(&pdev->dev, "pll_a_out0");
+#endif
 		if (IS_ERR(xbar->clk)) {
 			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
 			ret = PTR_ERR(xbar->clk_parent);
 			goto err_clk_put;
 		}
 
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 		xbar->clk_ape = clk_get_sys(NULL, "xbar.ape");
+#else
+		xbar->clk_ape = devm_clk_get(&pdev->dev, "xbar.ape");
+#endif
 		if (IS_ERR(xbar->clk_ape)) {
 			dev_err(&pdev->dev, "Can't retrieve ape clock\n");
 			ret = PTR_ERR(xbar->clk_ape);

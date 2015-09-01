@@ -20,3 +20,7 @@ obj-y += nvmap_ioctl.o
 obj-y += nvmap_init.o
 obj-y += nvmap_mm.o
 obj-$(CONFIG_NVMAP_PAGE_POOLS) += nvmap_pp.o
+
+ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
+obj-y += ../../../../../kernel-t18x/drivers/video/tegra/nvmap/
+endif

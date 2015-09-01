@@ -43,6 +43,11 @@
 #include "edid.h"
 #include "dp_lt.h"
 
+#ifdef CONFIG_MODS
+#include <linux/ctype.h>
+#include <asm/uaccess.h>
+#endif
+
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_ARCH_TEGRA_18x_SOC)
 #include "hda_dc.h"
 #endif
@@ -1065,6 +1070,132 @@ static const struct file_operations bits_per_pixel_fops = {
 	.release	= single_release,
 };
 
+#ifdef CONFIG_MODS
+static u16 dp_i2c_addr;
+static u32 dp_i2c_num_bytes;
+
+static int dpaux_i2c_data_show(struct seq_file *s, void *unused)
+{
+	struct tegra_dc_dp_data *dp = s->private;
+	u32 size = dp_i2c_num_bytes;
+	u32 i, j, aux_stat;
+	u8 row_size = 16;
+	u8 *data;
+
+	data = kzalloc(size, GFP_KERNEL);
+	if (!data)
+		return -ENOMEM;
+
+	tegra_dc_dp_i2c_read(dp, dp_i2c_addr, data, &size, &aux_stat);
+	for (i = 0; i < size; i += row_size) {
+		for (j = i; j < i + row_size && j < size; j++)
+			seq_printf(s, "%02x ", data[j]);
+		seq_puts(s, "\n");
+	}
+
+	kfree(data);
+	return 0;
+}
+
+static ssize_t dpaux_i2c_data_set(struct file *file,
+	const char __user *user_buf, size_t count, loff_t *off)
+{
+	struct seq_file *s = file->private_data;
+	struct tegra_dc_dp_data *dp = s->private;
+	u32 i = 0, size = 0;
+	u32 aux_stat;
+	u8 *data;
+	char tmp[3];
+	char *buf;
+	int ret = count;
+
+	buf = kzalloc(count, GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
+
+	data = kzalloc(count, GFP_KERNEL);
+	if (!data) {
+		ret = -ENOMEM;
+		goto free_mem;
+	}
+
+	if (copy_from_user(buf, user_buf, count)) {
+		ret = -EINVAL;
+		goto free_mem;
+	}
+
+	/*
+	 * Assumes each line of input is of the form: XX XX XX XX ...,
+	 * where X represents one hex digit. You can have an arbitrary
+	 * amount of whitespace between each XX.
+	 */
+	while (i + 1 < count) {
+		if (isspace(buf[i])) {
+			i += 1;
+			continue;
+		}
+
+		tmp[0] = buf[i]; tmp[1] = buf[i + 1]; tmp[2] = '\0';
+		if (kstrtou8(tmp, 16, data + size)) {
+			ret = -EINVAL;
+			goto free_mem;
+		}
+
+		size += 1;
+		i += 2;
+	}
+
+	tegra_dc_dp_i2c_write(dp, dp_i2c_addr, data, &size, &aux_stat);
+
+free_mem:
+	kfree(buf);
+	kfree(data);
+
+	return ret;
+}
+
+static int dpaux_i2c_data_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dpaux_i2c_data_show, inode->i_private);
+}
+
+static const struct file_operations dpaux_i2c_data_fops = {
+	.open		= dpaux_i2c_data_open,
+	.read		= seq_read,
+	.write		= dpaux_i2c_data_set,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static struct dentry *tegra_dpaux_i2c_dir_create(struct tegra_dc_dp_data *dp,
+	struct dentry *parent)
+{
+	struct dentry *dpaux_i2c_dir;
+	struct dentry *retval = NULL;
+
+	dpaux_i2c_dir = debugfs_create_dir("dpaux_i2c", parent);
+	if (!dpaux_i2c_dir)
+		return retval;
+	retval = debugfs_create_u16("addr", S_IRUGO | S_IWUGO, dpaux_i2c_dir,
+			&dp_i2c_addr);
+	if (!retval)
+		goto free_out;
+	retval = debugfs_create_u32("num_bytes", S_IRUGO | S_IWUGO,
+			dpaux_i2c_dir, &dp_i2c_num_bytes);
+	if (!retval)
+		goto free_out;
+	retval = debugfs_create_file("data", S_IRUGO, dpaux_i2c_dir, dp,
+			&dpaux_i2c_data_fops);
+	if (!retval)
+		goto free_out;
+
+	return retval;
+free_out:
+	debugfs_remove_recursive(dpaux_i2c_dir);
+	return retval;
+}
+#endif
+
 static struct dentry *dpdir;
 
 static void tegra_dc_dp_debug_create(struct tegra_dc_dp_data *dp)
@@ -1101,6 +1232,12 @@ static void tegra_dc_dp_debug_create(struct tegra_dc_dp_data *dp)
 		if (!retval)
 			goto free_out;
 	}
+
+#ifdef CONFIG_MODS
+	retval = tegra_dpaux_i2c_dir_create(dp, dpdir);
+	if (!retval)
+		goto free_out;
+#endif
 
 	return;
 free_out:

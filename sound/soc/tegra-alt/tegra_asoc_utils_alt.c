@@ -277,6 +277,7 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 		/* DT boot, but unknown SoC */
 		return -EINVAL;
 
+	/* pll_p_out1 is not used for ahub for T210,T186 */
 	if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA210) {
 		data->clk_pll_p_out1 = clk_get_sys(NULL, "pll_p_out1");
 		if (IS_ERR(data->clk_pll_p_out1)) {
@@ -286,21 +287,33 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 		}
 	}
 
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	data->clk_pll_a = clk_get_sys(NULL, "pll_a");
+#else
+	data->clk_pll_a = devm_clk_get(dev, "pll_a");
+#endif
 	if (IS_ERR(data->clk_pll_a)) {
 		dev_err(data->dev, "Can't retrieve clk pll_a\n");
 		ret = PTR_ERR(data->clk_pll_a);
 		goto err_put_pll_p_out1;
 	}
 
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	data->clk_pll_a_out0 = clk_get_sys(NULL, "pll_a_out0");
+#else
+	data->clk_pll_a_out0 = devm_clk_get(dev, "pll_a_out0");
+#endif
 	if (IS_ERR(data->clk_pll_a_out0)) {
 		dev_err(data->dev, "Can't retrieve clk pll_a_out0\n");
 		ret = PTR_ERR(data->clk_pll_a_out0);
 		goto err_put_pll_a;
 	}
 
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	data->clk_m = clk_get_sys(NULL, "clk_m");
+#else
+	data->clk_m = devm_clk_get(dev, "clk_m");
+#endif
 	if (IS_ERR(data->clk_m)) {
 		dev_err(data->dev, "Can't retrieve clk clk_m\n");
 		ret = PTR_ERR(data->clk_m);
@@ -363,7 +376,8 @@ err_put_pll_a_out0:
 err_put_pll_a:
 	clk_put(data->clk_pll_a);
 err_put_pll_p_out1:
-	clk_put(data->clk_pll_p_out1);
+	if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA210)
+		clk_put(data->clk_pll_p_out1);
 err:
 	return ret;
 }
@@ -449,8 +463,9 @@ void tegra_alt_asoc_utils_fini(struct tegra_asoc_audio_clock_info *data)
 	if (!IS_ERR(data->clk_pll_a))
 		clk_put(data->clk_pll_a);
 
-	if (!IS_ERR(data->clk_pll_p_out1))
-		clk_put(data->clk_pll_p_out1);
+	if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA210)
+		if (!IS_ERR(data->clk_pll_p_out1))
+			clk_put(data->clk_pll_p_out1);
 }
 EXPORT_SYMBOL_GPL(tegra_alt_asoc_utils_fini);
 

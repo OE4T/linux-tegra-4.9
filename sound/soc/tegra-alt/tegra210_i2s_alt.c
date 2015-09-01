@@ -926,7 +926,11 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 			goto err_i2s_sync_clk_put;
 		}
 
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 		i2s->clk_pll_a_out0 = clk_get_sys(NULL, "pll_a_out0");
+#else
+		i2s->clk_pll_a_out0 = devm_clk_get(&pdev->dev, "pll_a_out0");
+#endif
 		if (IS_ERR(i2s->clk_pll_a_out0)) {
 			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
 			ret = PTR_ERR(i2s->clk_pll_a_out0);

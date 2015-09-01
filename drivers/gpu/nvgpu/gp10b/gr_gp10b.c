@@ -902,7 +902,7 @@ static void gr_gp10b_commit_global_attrib_cb(struct gk20a *g,
 	int attrBufferSize;
 
 	if (gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va)
-		attrBufferSize = gr_ctx->t18x.preempt_ctxsw_buffer.size;
+		attrBufferSize = gr_ctx->t18x.betacb_ctxsw_buffer.size;
 	else
 		attrBufferSize = g->ops.gr.calc_global_ctx_buffer_size(g);
 

@@ -1795,6 +1795,9 @@ static int DWC_ETH_QOS_open(struct net_device *dev)
 
 	DBGPR("-->DWC_ETH_QOS_open\n");
 
+	if (!is_valid_ether_addr(dev->dev_addr))
+		return -EADDRNOTAVAIL;
+
 	pdata->irq_number = dev->irq;
 	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
 		ret = request_multi_irqs(pdata);
@@ -5892,6 +5895,14 @@ static int DWC_ETH_QOS_vlan_rx_kill_vid(struct net_device *dev, __be16 proto, u1
 }
 
 
+static int DWC_ETH_QOS_set_mac_address(struct net_device *dev, void *p)
+{
+	if (is_valid_ether_addr(dev->dev_addr))
+		return -EOPNOTSUPP;
+	else
+		return eth_mac_addr(dev, p);
+}
+
 /*!
 * \brief API to add vid to HW filter.
 *
@@ -7434,6 +7445,7 @@ static const struct net_device_ops DWC_ETH_QOS_netdev_ops = {
 #endif
 	.ndo_vlan_rx_add_vid = DWC_ETH_QOS_vlan_rx_add_vid,
 	.ndo_vlan_rx_kill_vid = DWC_ETH_QOS_vlan_rx_kill_vid,
+	.ndo_set_mac_address = DWC_ETH_QOS_set_mac_address,
 };
 
 struct net_device_ops *DWC_ETH_QOS_get_netdev_ops(void)

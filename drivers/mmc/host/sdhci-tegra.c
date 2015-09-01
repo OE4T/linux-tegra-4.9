@@ -30,6 +30,7 @@
 #include <linux/gpio/consumer.h>
 #include <linux/debugfs.h>
 #include <linux/stat.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/padctrl/padctrl.h>
 #include <linux/regulator/consumer.h>
 #include <linux/gpio.h>
@@ -126,6 +127,15 @@
 
 #define SDHOST_LOW_VOLT_MIN	1800000
 
+#define SDMMC_EMC_MAX_FREQ	150000000
+
+static unsigned int sdmmc_emc_clinet_id[] = {
+	TEGRA_BWMGR_CLIENT_SDMMC1,
+	TEGRA_BWMGR_CLIENT_SDMMC2,
+	TEGRA_BWMGR_CLIENT_SDMMC3,
+	TEGRA_BWMGR_CLIENT_SDMMC4
+};
+
 /* uhs mask can be used to mask any of the UHS modes support */
 #define MMC_UHS_MASK_SDR12	0x1
 #define MMC_UHS_MASK_SDR25	0x2
@@ -176,6 +186,7 @@ struct sdhci_tegra {
 	struct tegra_prod *prods;
 	u8 tuned_tap_delay;
 	bool rate_change_needs_clk;
+	struct tegra_bwmgr_client *emc_clk;
 	unsigned int tuning_status;
 	#define TUNING_STATUS_DONE	1
 	#define TUNING_STATUS_RETUNE	2
@@ -196,6 +207,7 @@ struct sdhci_tegra {
 	struct pinctrl_state *e_33v_disable;
 	bool en_periodic_cflush; /* Enable periodic cache flush for eMMC */
 	u8 uhs_mask;
+	unsigned int instance;
 };
 
 /* Module params */
@@ -833,6 +845,15 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 				SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
 			/* power up / active state */
 			tegra_sdhci_vendor_trim_clear_sel_vreg(host, true);
+			if (tegra_host->emc_clk) {
+				rc = tegra_bwmgr_set_emc(tegra_host->emc_clk,
+						SDMMC_EMC_MAX_FREQ,
+						TEGRA_BWMGR_SET_EMC_SHARED_BW);
+				if (rc)
+					dev_err(mmc_dev(host->mmc),
+					"enabling eMC clock failed, err: %d\n",
+					rc);
+			}
 		}
 
 		/* Set the desired clk freq rate */
@@ -868,6 +889,14 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 				SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
 			clk_disable_unprepare(pltfm_host->clk);
 			tegra_host->is_clk_enabled = false;
+			if (tegra_host->emc_clk) {
+				rc = tegra_bwmgr_set_emc(tegra_host->emc_clk, 0,
+						TEGRA_BWMGR_SET_EMC_SHARED_BW);
+				if (rc)
+					dev_err(mmc_dev(host->mmc),
+					"disabling eMC clock failed, err: %d\n",
+					rc);
+			}
 		}
 
 	}
@@ -1476,6 +1505,7 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 	tegra_host->enable_hwcq = of_property_read_bool(np, "nvidia,enable-hwcq");
 #endif
 	host->ocr_mask = MMC_VDD_27_36 | MMC_VDD_165_195;
+	tegra_host->instance = of_alias_get_id(np, "sdhci");
 	if (!of_property_read_u32(np, "mmc-ocr-mask", &val)) {
 		if (val == 1)
 			host->ocr_mask &= ~(MMC_VDD_26_27 | MMC_VDD_27_28);
@@ -1577,6 +1607,17 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 		goto err_clk_get;
 	}
 	clk_prepare_enable(clk);
+
+	tegra_host->emc_clk =
+		tegra_bwmgr_register(sdmmc_emc_clinet_id[tegra_host->instance]);
+
+	if (IS_ERR_OR_NULL(tegra_host->emc_clk))
+		dev_err(mmc_dev(host->mmc),
+			"Client registration for eMC failed\n");
+	else
+		dev_info(mmc_dev(host->mmc),
+			"Client registration for eMC Successful\n");
+
 
 	tegra_host->rst = devm_reset_control_get(&pdev->dev, "sdmmc");
 	if (IS_ERR(tegra_host->rst))

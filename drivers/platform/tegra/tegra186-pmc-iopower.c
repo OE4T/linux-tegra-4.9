@@ -35,7 +35,7 @@ struct tegra186_io_power_cell {
 	const char		*pad_name;
 	u32			pwrio_mask;
 	u32			package_mask;
-	bool			ignore;
+	bool			pad_voltage;
 
 	struct notifier_block	regulator_nb;
 	int			min_uv;
@@ -48,49 +48,41 @@ static u32 pwrio_disabled_mask;
 
 static DEFINE_SPINLOCK(pwr_lock);
 
-#define POWER_CELL(_reg_id, _pwrio_mask, _package_mask, _ignore)	\
+#define POWER_CELL(_reg_id, _pwrio_mask, _package_mask, _pad_voltage)	\
 	{								\
 		.reg_id = "iopower-"#_reg_id,				\
 		.pad_name = #_reg_id,					\
 		.pwrio_mask = _pwrio_mask,				\
 		.package_mask = _package_mask,				\
-		.ignore = _ignore,					\
+		.pad_voltage = _pad_voltage,				\
 	}
 
 static struct tegra186_io_power_cell tegra186_io_power_cells[] = {
-	POWER_CELL(sys,		BIT(0), 0xFFFFFFFF, 0),
-	POWER_CELL(uart,	BIT(2), 0xFFFFFFFF, 0),
-	POWER_CELL(conn,	BIT(3), 0xFFFFFFFF, 0),
-	POWER_CELL(edp,		BIT(4), 0xFFFFFFFF, 0),
-	POWER_CELL(audio,	BIT(5), 0xFFFFFFFF, 1),
-	POWER_CELL(ufs,		BIT(6), 0xFFFFFFFF, 0),
-	POWER_CELL(mem,		BIT(7), 0xFFFFFFFF, 1),
-	POWER_CELL(mem1,	BIT(8), 0xFFFFFFFF, 1),
-	POWER_CELL(mipi,	BIT(9), 0xFFFFFFFF, 1),
+	POWER_CELL(sys,			BIT(0), 0xFFFFFFFF, 0),
+	POWER_CELL(uart,		BIT(2), 0xFFFFFFFF, 0),
+	POWER_CELL(conn,		BIT(3), 0xFFFFFFFF, 0),
+	POWER_CELL(edp,			BIT(4), 0xFFFFFFFF, 0),
+	POWER_CELL(pex-ctrl-audio,	BIT(5) | BIT(11), 0xFFFFFFFF, 0),
+	POWER_CELL(ufs,		BIT(6), 0xFFFFFFFF, 1),
+	POWER_CELL(ddr0,	BIT(7) | BIT(16), 0xFFFFFFFF, 0),
+	POWER_CELL(ddr1,	BIT(8) | BIT(17), 0xFFFFFFFF, 0),
+	POWER_CELL(csi-dsi,	BIT(9), 0xFFFFFFFF, 0),
 	POWER_CELL(cam,		BIT(10), 0xFFFFFFFF, 0),
-	POWER_CELL(pex-ctrl,	BIT(11), 0xFFFFFFFF, 0),
-	POWER_CELL(sdmmc4,	BIT(12), 0xFFFFFFFF, 0),
-	POWER_CELL(sdmmc1-hv,	BIT(15), 0xFFFFFFFF, 0),
-	POWER_CELL(mem-comp,	BIT(16), 0xFFFFFFFF, 1),
-	POWER_CELL(mem1-comp,	BIT(17), 0xFFFFFFFF, 1),
-	POWER_CELL(audio-hv,	BIT(18), 0xFFFFFFFF, 0),
-	POWER_CELL(dbg,		BIT(19), 0xFFFFFFFF, 0),
-	POWER_CELL(spi,		BIT(22), 0xFFFFFFFF, 0),
-	POWER_CELL(sdmmc2,	BIT(24), 0xFFFFFFFF, 1),
-	POWER_CELL(dp,		BIT(25), 0xFFFFFFFF, 1),
+	POWER_CELL(sdmmc4,	BIT(14), 0xFFFFFFFF, 0),
+	POWER_CELL(sdmmc1-hv,	BIT(15), 0xFFFFFFFF, 1),
+	POWER_CELL(audio-hv,	BIT(18), 0xFFFFFFFF, 1),
+	POWER_CELL(dbg,		BIT(19), 0xFFFFFFFF, 1),
+	POWER_CELL(spi,		BIT(22), 0xFFFFFFFF, 1),
 	POWER_CELL(ao,		BIT(26), 0xFFFFFFFF, 0),
-	POWER_CELL(ao-hv,	BIT(27), 0xFFFFFFFF, 0),
-	POWER_CELL(dmic-hv,	BIT(28), 0xFFFFFFFF, 0),
-	POWER_CELL(gpio-hv,	BIT(29), 0xFFFFFFFF, 1),
-	POWER_CELL(sdmmc2-hv,	BIT(30), 0xFFFFFFFF, 0),
-	POWER_CELL(sdmmc3-hv,	BIT(31), 0xFFFFFFFF, 0),
+	POWER_CELL(ao-hv,	BIT(27), 0xFFFFFFFF, 1),
+	POWER_CELL(dmic-hv,	BIT(28), 0xFFFFFFFF, 1),
+	POWER_CELL(sdmmc2-hv,	BIT(30), 0xFFFFFFFF, 1),
+	POWER_CELL(sdmmc3-hv,	BIT(31), 0xFFFFFFFF, 1),
 };
 
 static const struct of_device_id tegra186_pmc_iopower_of_match[] = {
-	{
-		.compatible = "nvidia,tegra186-pmc-iopower",
-	}, {
-	},
+	{ .compatible = "nvidia,tegra186-pmc-iopower", },
+	{ },
 };
 MODULE_DEVICE_TABLE(of, tegra186_pmc_iopower_of_match);
 
@@ -175,7 +167,7 @@ static int tegra186_io_power_cell_init_one(struct device *dev,
 	cell->regulator = regulator;
 	cell->min_uv = min_uv;
 	cell->max_uv = max_uv;
-	if (enable_pad_volt_config && (min_uv == max_uv)) {
+	if (enable_pad_volt_config && (min_uv == max_uv) && cell->pad_voltage) {
 		padctrl = devm_padctrl_get(dev, cell->pad_name);
 		if (!IS_ERR(padctrl)) {
 			ret = padctrl_set_voltage(padctrl, min_uv);
@@ -222,9 +214,6 @@ static int tegra186_pmc_iopower_probe(struct platform_device *pdev)
 
 	for (i = 0; i < ARRAY_SIZE(tegra186_io_power_cells); i++) {
 		cell = &tegra186_io_power_cells[i];
-
-		if (cell->ignore)
-			continue;
 
 		ret = tegra186_io_power_cell_init_one(dev, cell,
 				&pwrio_disabled_mask, enable_pad_volt_config);

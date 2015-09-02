@@ -3670,6 +3670,101 @@ static int hsic_phy_to_port(struct phy *phy)
 	return -EINVAL;
 }
 
+enum hsic_pad_pupd {
+	PUPD_DISABLE = 0,
+	PUPD_IDLE,
+	PUPD_RESET
+};
+
+static int tegra186_hsic_phy_pupd_set(struct tegra_padctl_uphy *uphy, int pad,
+				      enum hsic_pad_pupd pupd)
+{
+	struct device *dev = uphy->dev;
+	u32 reg;
+
+	if (pad >= 1) {
+		dev_err(dev, "%s invalid HSIC pad number %u\n", __func__, pad);
+		return -EINVAL;
+	}
+
+	dev_dbg(dev, "%s pad %u pupd %d\n", __func__, pad, pupd);
+
+	reg = padctl_readl(uphy, XUSB_PADCTL_HSIC_PADX_CTL0(pad));
+	reg &= ~(HSIC_RPD_DATA0 | HSIC_RPU_DATA0);
+	reg &= ~(HSIC_RPU_STROBE | HSIC_RPD_STROBE);
+	if (pupd == PUPD_IDLE) {
+		reg |= (HSIC_RPD_DATA0 | HSIC_RPU_STROBE);
+	} else if (pupd == PUPD_RESET) {
+		reg |= (HSIC_RPD_DATA0 | HSIC_RPD_STROBE);
+	} else if (pupd != PUPD_DISABLE) {
+		dev_err(dev, "%s invalid pupd %d\n", __func__, pupd);
+		return -EINVAL;
+	}
+	padctl_writel(uphy, reg, XUSB_PADCTL_HSIC_PADX_CTL0(pad));
+
+	return 0;
+}
+
+static ssize_t hsic_power_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct tegra_padctl_uphy *uphy = platform_get_drvdata(pdev);
+	int pad = 0;
+	u32 reg;
+	int on;
+
+	reg = padctl_readl(uphy, XUSB_PADCTL_HSIC_PADX_CTL0(pad));
+
+	if (reg & (HSIC_RPD_DATA0 | HSIC_RPD_STROBE))
+		on = 0; /* bus in reset */
+	else
+		on = 1;
+
+	return sprintf(buf, "%d\n", on);
+}
+
+static ssize_t hsic_power_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t n)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct tegra_padctl_uphy *uphy = platform_get_drvdata(pdev);
+	struct tegra_xusb_mbox_msg msg;
+	unsigned int on;
+	int port;
+	int rc;
+
+	if (kstrtouint(buf, 10, &on))
+		return -EINVAL;
+
+	if (on)
+		msg.cmd = MBOX_CMD_AIRPLANE_MODE_DISABLED;
+	else
+		msg.cmd = MBOX_CMD_AIRPLANE_MODE_ENABLED;
+
+	port = uphy->soc->hsic_port_offset;
+	msg.data = BIT(port + 1);
+	rc = mbox_send_message(uphy->mbox_chan, &msg);
+	if (rc < 0)
+		dev_err(dev, "failed to send message to firmware %d\n", rc);
+
+	if (on)
+		rc = tegra186_hsic_phy_pupd_set(uphy, 0, PUPD_IDLE);
+	else
+		rc = tegra186_hsic_phy_pupd_set(uphy, 0, PUPD_RESET);
+
+	return n;
+}
+DEVICE_ATTR(hsic_power, S_IRUGO | S_IWUSR, hsic_power_show, hsic_power_store);
+
+static struct attribute *padctl_uphy_attrs[] = {
+	&dev_attr_hsic_power.attr,
+	NULL,
+};
+static struct attribute_group padctl_uphy_attr_group = {
+	.attrs = padctl_uphy_attrs,
+};
+
 static int tegra186_hsic_phy_enable_sleepwalk(struct tegra_padctl_uphy *uphy,
 					      int port)
 {
@@ -3812,7 +3907,12 @@ static int tegra186_hsic_phy_power_on(struct phy *phy)
 		return port;
 
 	sprintf(prod_name, "prod_c_hsic%d", port);
-	tegra_prod_set_by_name(&uphy->padctl_regs, prod_name, uphy->prod_list);
+	rc = tegra_prod_set_by_name(&uphy->padctl_regs, prod_name,
+				    uphy->prod_list);
+	if (rc) {
+		dev_info(uphy->dev, "failed to apply prod for hsic pad%d (%d)\n",
+			port, rc);
+	}
 
 	rc = regulator_enable(uphy->vddio_hsic);
 	if (rc) {
@@ -3820,6 +3920,10 @@ static int tegra186_hsic_phy_power_on(struct phy *phy)
 			port, rc);
 		return rc;
 	}
+
+	rc = clk_prepare_enable(uphy->utmipll);
+	if (rc)
+		dev_err(uphy->dev, "failed to enable UTMIPLL %d\n", rc);
 
 	rc = clk_prepare_enable(uphy->hsic_trk_clk);
 	if (rc) {
@@ -3879,14 +3983,9 @@ static int tegra186_hsic_phy_power_off(struct phy *phy)
 	reg |= HSIC_PD_TRK;
 	padctl_writel(uphy, reg, XUSB_PADCTL_HSIC_PAD_TRK_CTL0);
 
-	return 0;
-}
+	clk_disable_unprepare(uphy->utmipll);
 
-static void hsic_phy_set_idle(struct tegra_padctl_uphy *uphy,
-			      unsigned int port, bool idle)
-{
-	dev_dbg(uphy->dev, "set idle HSIC port %d\n", port);
-	dev_info(uphy->dev, "%s FIXME: implement!\n", __func__); /* TODO */
+	return 0;
 }
 
 static int tegra186_hsic_phy_init(struct phy *phy)
@@ -3894,9 +3993,13 @@ static int tegra186_hsic_phy_init(struct phy *phy)
 	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
 	int port = hsic_phy_to_port(phy);
 
+	mutex_lock(&uphy->lock);
+
 	dev_dbg(uphy->dev, "phy init HSIC port %d\n", port);
-	dev_info(uphy->dev, "%s FIXME: implement!\n", __func__); /* TODO */
-	return tegra_padctl_uphy_enable(phy);
+	tegra_padctl_uphy_enable(phy);
+
+	mutex_unlock(&uphy->lock);
+	return 0;
 }
 
 static int tegra186_hsic_phy_exit(struct phy *phy)
@@ -3904,9 +4007,13 @@ static int tegra186_hsic_phy_exit(struct phy *phy)
 	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
 	int port = hsic_phy_to_port(phy);
 
-	dev_dbg(uphy->dev, "phy init HSIC port %d\n", port);
-	dev_info(uphy->dev, "%s FIXME: implement!\n", __func__); /* TODO */
-	return tegra_padctl_uphy_disable(phy);
+	mutex_lock(&uphy->lock);
+
+	dev_dbg(uphy->dev, "phy exit HSIC port %d\n", port);
+	tegra_padctl_uphy_disable(phy);
+
+	mutex_unlock(&uphy->lock);
+	return 0;
 }
 
 static const struct phy_ops hsic_phy_ops = {
@@ -3927,7 +4034,6 @@ static void tegra_xusb_phy_mbox_work(struct work_struct *work)
 	struct tegra_padctl_uphy *uphy = mbox_work_to_uphy(work);
 	struct tegra_xusb_mbox_msg *msg = &uphy->mbox_req;
 	struct tegra_xusb_mbox_msg resp;
-	unsigned int i;
 	u32 ports;
 
 	dev_dbg(uphy->dev, "mailbox command %d\n", msg->cmd);
@@ -3938,14 +4044,10 @@ static void tegra_xusb_phy_mbox_work(struct work_struct *work)
 		ports = msg->data >> (uphy->soc->hsic_port_offset + 1);
 		resp.data = msg->data;
 		resp.cmd = MBOX_CMD_ACK;
-		for (i = 0; i < TEGRA_HSIC_PHYS; i++) {
-			if (!(ports & BIT(i)))
-				continue;
-			if (msg->cmd == MBOX_CMD_START_HSIC_IDLE)
-				hsic_phy_set_idle(uphy, i, true);
-			else
-				hsic_phy_set_idle(uphy, i, false);
-		}
+		if (msg->cmd == MBOX_CMD_START_HSIC_IDLE)
+			tegra186_hsic_phy_pupd_set(uphy, 0, PUPD_IDLE);
+		else
+			tegra186_hsic_phy_pupd_set(uphy, 0, PUPD_DISABLE);
 		break;
 	default:
 		break;
@@ -4583,7 +4685,13 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 	if (IS_ERR(uphy->provider)) {
 		err = PTR_ERR(uphy->provider);
 		dev_err(&pdev->dev, "failed to register PHYs: %d\n", err);
-		goto unregister;
+		goto free_mailbox;
+	}
+
+	err = sysfs_create_group(&pdev->dev.kobj, &padctl_uphy_attr_group);
+	if (err) {
+		dev_err(&pdev->dev, "cannot create sysfs group: %d\n", err);
+		goto free_mailbox;
 	}
 
 	uphy->prod_list = tegra_prod_init(pdev->dev.of_node);
@@ -4597,6 +4705,11 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 
 	return 0;
 
+free_mailbox:
+	if (!IS_ERR(uphy->mbox_chan)) {
+		cancel_work_sync(&uphy->mbox_req_work);
+		mbox_free_channel(uphy->mbox_chan);
+	}
 unregister:
 	pinctrl_unregister(uphy->pinctrl);
 assert_uphy_reset:
@@ -4613,6 +4726,8 @@ disable_regulators:
 static int tegra186_padctl_uphy_remove(struct platform_device *pdev)
 {
 	struct tegra_padctl_uphy *uphy = platform_get_drvdata(pdev);
+
+	sysfs_remove_group(&pdev->dev.kobj, &padctl_uphy_attr_group);
 
 	if (!IS_ERR(uphy->mbox_chan)) {
 		cancel_work_sync(&uphy->mbox_req_work);

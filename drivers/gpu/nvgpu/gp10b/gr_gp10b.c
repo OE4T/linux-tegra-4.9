@@ -977,6 +977,18 @@ static int gr_gp10b_init_fs_state(struct gk20a *g)
 	return gr_gm20b_ctx_state_floorsweep(g);
 }
 
+static void gr_gp10b_init_cyclestats(struct gk20a *g)
+{
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	g->gpu_characteristics.flags |=
+		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS;
+	g->gpu_characteristics.flags |=
+		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT;
+#else
+	(void)g;
+#endif
+}
+
 void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
@@ -1004,4 +1016,5 @@ void gp10b_init_gr(struct gpu_ops *gops)
 		gr_gp10b_update_ctxsw_preemption_mode;
 	gops->gr.dump_gr_regs = gr_gp10b_dump_gr_status_regs;
 	gops->gr.wait_empty = gr_gp10b_wait_empty;
+	gops->gr.init_cyclestats = gr_gp10b_init_cyclestats;
 }

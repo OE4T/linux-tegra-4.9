@@ -192,6 +192,7 @@
 
 #define XUSB_PADCTL_USB2_OTG_PADX_CTL0(x)	(0x88 + (x) * 0x40)
 #define   HS_CURR_LEVEL(x)			((x) & 0x3f)
+#define   TERM_SEL				(1 << 25)
 #define   USB2_OTG_PD				(1 << 26)
 #define   USB2_OTG_PD2				(1 << 27)
 #define   USB2_OTG_PD2_OVRD_EN			(1 << 28)
@@ -2891,8 +2892,15 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 
 	reg = padctl_readl(uphy, XUSB_PADCTL_USB2_OTG_PADX_CTL0(port));
 	reg &= ~(USB2_OTG_PD | USB2_OTG_PD_ZI);
+	reg |= TERM_SEL;
 	reg &= ~HS_CURR_LEVEL(~0);
+#if 1
 	reg |= HS_CURR_LEVEL(uphy->calib.hs_curr_level[port]);
+#else
+	pr_warn("%s override FUSE HS_CURR_LEVEL (0x%x) with 0x14\n",
+		__func__, uphy->calib.hs_curr_level[port]);
+	reg |= HS_CURR_LEVEL(0x14);
+#endif
 	padctl_writel(uphy, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL0(port));
 
 	reg = padctl_readl(uphy, XUSB_PADCTL_USB2_OTG_PADX_CTL1(port));

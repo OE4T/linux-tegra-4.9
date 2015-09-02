@@ -759,6 +759,11 @@ void tegra_dsi_init_clock_param(struct tegra_dc *dc)
 		dsi->pixel_scaler_mul = 3;
 		dsi->pixel_scaler_div = 1;
 		break;
+	case TEGRA_DSI_PIXEL_FORMAT_8BIT_DSC:
+		/* 1 byte per pixel compressed data */
+		dsi->pixel_scaler_mul = 1;
+		dsi->pixel_scaler_div = 1;
+		break;
 	default:
 		break;
 	}
@@ -777,8 +782,14 @@ void tegra_dsi_init_clock_param(struct tegra_dc *dc)
 	dsi->dsi_control_val =
 			DSI_CONTROL_VIRTUAL_CHANNEL(dsi->info.virtual_channel) |
 			DSI_CONTROL_NUM_DATA_LANES(n_data_lanes - 1) |
-			DSI_CONTROL_VID_SOURCE(dc->ctrl_num) |
-			DSI_CONTROL_DATA_FORMAT(dsi->info.pixel_format);
+			DSI_CONTROL_VID_SOURCE(dc->ctrl_num);
+
+	/*
+	 * When link compression is enabled, use COMPRESS_RATE in DSI_DSC_CONTROL
+	 * register instead of DATA_FORMAT.
+	*/
+	if (!dc->out->dsc_en)
+		dsi->dsi_control_val |= DSI_CONTROL_DATA_FORMAT(dsi->info.pixel_format);
 
 	if (dsi->info.ganged_type || dsi->info.split_link_type)
 		tegra_dsi_pix_correction(dc, dsi);
@@ -1617,6 +1628,12 @@ static void tegra_dsi_setup_video_mode_pkt_length(struct tegra_dc *dc,
 	u32 hsa_pkt_len;
 	u32 hbp_pkt_len;
 	u32 hfp_pkt_len;
+	u32 num_of_slices;
+
+	if (dc->out->dsc_en)
+		num_of_slices = dc->out->num_of_slices;
+	else
+		num_of_slices = 1;
 
 	hact_pkt_len = dc->mode.h_active * dsi->pixel_scaler_mul /
 							dsi->pixel_scaler_div;
@@ -1626,14 +1643,18 @@ static void tegra_dsi_setup_video_mode_pkt_length(struct tegra_dc *dc,
 							dsi->pixel_scaler_div;
 	hfp_pkt_len = dc->mode.h_front_porch * dsi->pixel_scaler_mul /
 							dsi->pixel_scaler_div;
-
 	if (dsi->info.video_burst_mode !=
 				TEGRA_DSI_VIDEO_NONE_BURST_MODE_WITH_SYNC_END)
 		hbp_pkt_len += hsa_pkt_len;
-
 	hsa_pkt_len -= DSI_HSYNC_BLNK_PKT_OVERHEAD;
 	hbp_pkt_len -= DSI_HBACK_PORCH_PKT_OVERHEAD;
-	hfp_pkt_len -= DSI_HFRONT_PORCH_PKT_OVERHEAD;
+	hact_pkt_len /= num_of_slices;
+
+	if (!dc->out->dsc_en)
+		hfp_pkt_len -= DSI_HFRONT_PORCH_PKT_OVERHEAD;
+	else
+		hfp_pkt_len = (hfp_pkt_len - DSI_CHECKSUM_OVERHEAD -
+			(num_of_slices * DSI_VIDEO_MODE_COMP_PKT_OVERHEAD));
 
 	val = DSI_PKT_LEN_0_1_LENGTH_0(0) |
 			DSI_PKT_LEN_0_1_LENGTH_1(hsa_pkt_len);
@@ -1656,19 +1677,48 @@ static void tegra_dsi_setup_cmd_mode_pkt_length(struct tegra_dc *dc,
 {
 	unsigned long	val;
 	unsigned long	act_bytes;
+	u32 hbp_pkt_len;
+	u32 hact_pkt_len;
+	u32 hsa_pkt_len;
+	u32 hfp_pkt_len;
+	u32 num_of_slices;
+
+	if (dc->out->dsc_en)
+		num_of_slices = dc->out->num_of_slices;
+	else
+		num_of_slices = 1;
+
+	hact_pkt_len = dc->mode.h_active * dsi->pixel_scaler_mul /
+							dsi->pixel_scaler_div;
+	hsa_pkt_len = dc->mode.h_sync_width * dsi->pixel_scaler_mul /
+							dsi->pixel_scaler_div;
+	hbp_pkt_len = dc->mode.h_back_porch * dsi->pixel_scaler_mul /
+							dsi->pixel_scaler_div;
+	hfp_pkt_len = dc->mode.h_front_porch * dsi->pixel_scaler_mul /
+							dsi->pixel_scaler_div;
 
 	if (dsi->info.ganged_type) {
 		act_bytes = DIV_ROUND_UP(dc->mode.h_active, 2);
 		act_bytes = (act_bytes) * dsi->pixel_scaler_mul /
 				dsi->pixel_scaler_div + 1;
 	} else {
-		act_bytes = dc->mode.h_active * dsi->pixel_scaler_mul /
-				dsi->pixel_scaler_div + 1;
+		act_bytes = hact_pkt_len + 1;
 	}
+
+	if (dc->out->dsc_en) {
+		hbp_pkt_len = ((hsa_pkt_len + hbp_pkt_len + hfp_pkt_len) -
+			((num_of_slices * DSI_CMD_MODE_COMP_PKT_OVERHEAD) +
+			DSI_BLNK_PKT_OVERHEAD));
+		act_bytes = ((act_bytes - 1) / num_of_slices) + 1;
+	} else {
+		hbp_pkt_len = 0;
+	}
+
 	val = DSI_PKT_LEN_0_1_LENGTH_0(0) | DSI_PKT_LEN_0_1_LENGTH_1(0);
 	tegra_dsi_writel(dsi, val, DSI_PKT_LEN_0_1);
 
-	val = DSI_PKT_LEN_2_3_LENGTH_2(0) | DSI_PKT_LEN_2_3_LENGTH_3(act_bytes);
+	val = DSI_PKT_LEN_2_3_LENGTH_2(hbp_pkt_len) |
+			DSI_PKT_LEN_2_3_LENGTH_3(act_bytes);
 	tegra_dsi_writel(dsi, val, DSI_PKT_LEN_2_3);
 
 	val = DSI_PKT_LEN_4_5_LENGTH_4(0) | DSI_PKT_LEN_4_5_LENGTH_5(act_bytes);
@@ -1910,6 +1960,9 @@ static void tegra_dsi_stop_dc_stream_at_frame_end(struct tegra_dc *dc,
 		dev_err(&dsi->dc->ndev->dev,
 			"dc timeout waiting for DC to stop\n");
 
+	if (dc->out->dsc_en)
+		tegra_dc_en_dis_dsc(dc, false);
+
 	tegra_dsi_soft_reset(dsi);
 
 	tegra_dsi_reset_underflow_overflow(dsi);
@@ -1943,6 +1996,9 @@ static void tegra_dsi_start_dc_stream(struct tegra_dc *dc,
 	tegra_dc_writel(dc, PW0_ENABLE | PW1_ENABLE | PW2_ENABLE | PW3_ENABLE |
 			PW4_ENABLE | PM0_ENABLE | PM1_ENABLE,
 			DC_CMD_DISPLAY_POWER_CONTROL);
+
+	if (dc->out->dsc_en)
+		tegra_dc_en_dis_dsc(dc, true);
 
 	/* Configure one-shot mode or continuous mode */
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
@@ -2156,11 +2212,13 @@ static void tegra_dsi_set_control_reg_hs(struct tegra_dc_dsi_data *dsi,
 	u32 host_dsi_control;
 	u32 max_threshold;
 	u32 dcs_cmd;
+	u32 dsc_control;
 
 	dsi_control = dsi->dsi_control_val;
 	host_dsi_control = HOST_DSI_CTRL_COMMON;
 	max_threshold = 0;
 	dcs_cmd = 0;
+	dsc_control = 0;
 
 	if (driven_mode == TEGRA_DSI_DRIVEN_BY_HOST) {
 		dsi_control |= DSI_CTRL_HOST_DRIVEN;
@@ -2189,8 +2247,22 @@ static void tegra_dsi_set_control_reg_hs(struct tegra_dc_dsi_data *dsi,
 		}
 	}
 
+	if (dsi->dc->out->dsc_en) {
+		/*
+		 * Lower 4 bits in COMPRESS_RATE field are for fractional
+		 * compression rates and are not supported. So, ignore them.
+		 * Number of compressed packets per row is equal to number of
+		 * slices.
+		 */
+		dsc_control = DSI_DSC_CONTROL_VALID_COMPRESS_RATE(
+			(dsi->dc->out->dsc_bpp << 4));
+		dsc_control |= DSI_DSC_CONROL_VALID_NUM_COMPRESS_PKTS_PER_ROW(
+			(dsi->dc->out->num_of_slices - 1));
+		dsc_control |= DSI_DSC_CONTROL_COMPRESS_MODE_EN;
+	}
 	tegra_dsi_writel(dsi, max_threshold, DSI_MAX_THRESHOLD);
 	tegra_dsi_writel(dsi, dcs_cmd, DSI_DCS_CMDS);
+	tegra_dsi_writel(dsi, dsc_control, DSI_DSC_CONTROL);
 	tegra_dsi_writel(dsi, dsi_control, DSI_CONTROL);
 	tegra_dsi_writel(dsi, host_dsi_control, DSI_HOST_DSI_CONTROL);
 }

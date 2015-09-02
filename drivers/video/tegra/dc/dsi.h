@@ -239,6 +239,30 @@ enum {
  */
 #define DSI_HBACK_PORCH_PKT_OVERHEAD  14
 
+/*
+ * Compressed packet overhead in video mode
+ * DSI overhead = size_of(packet header) + size_of(checksum)
+ * DSI_overhead = 4 + 2 = 6
+ */
+#define DSI_VIDEO_MODE_COMP_PKT_OVERHEAD 6
+
+/*
+ * Compressed packet overhead in cmd mode
+ * DSI overhead = size_of(packet header) + size_of(checksum) +
+ *            + size_of(CMD_BYTE)
+ * DSI_overhead = 4 + 2 + 1 = 7
+ */
+#define DSI_CMD_MODE_COMP_PKT_OVERHEAD 7
+
+/* Checksum overhead = 2 bytes */
+#define DSI_CHECKSUM_OVERHEAD 2
+
+/* DSI blank pkt overhead
+ * DSI overhead = size_of(BLANK packet header) + size_of(checksum)
+ * DSI_overhead = 4 + 2 = 6
+ */
+#define DSI_BLNK_PKT_OVERHEAD 6
+
 /* Additional Hs TX timeout margin */
 #define DSI_HTX_TO_MARGIN   720
 

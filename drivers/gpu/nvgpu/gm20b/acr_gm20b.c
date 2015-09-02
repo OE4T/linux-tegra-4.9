@@ -219,7 +219,7 @@ int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	if (g->ops.securegpccs == false)
 		return -ENOENT;
 
-	gpccs_sig = gk20a_request_firmware(g, GM20B_FECS_UCODE_SIG);
+	gpccs_sig = gk20a_request_firmware(g, T18x_GPCCS_UCODE_SIG);
 	if (!gpccs_sig) {
 		gk20a_err(dev_from_gk20a(g), "failed to load gpccs sig");
 		return -ENOENT;

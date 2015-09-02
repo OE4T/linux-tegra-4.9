@@ -30,6 +30,7 @@
 #define GM20B_HSBIN_PMU_BL_UCODE_IMAGE "pmu_bl.bin"
 #define GM20B_PMU_UCODE_SIG "pmu_sig.bin"
 #define GM20B_FECS_UCODE_SIG "fecs_sig.bin"
+#define T18x_GPCCS_UCODE_SIG "gpccs_sig.bin"
 
 #define LSFM_DISABLE_MASK_NONE (0x00000000) /*Disable all LS falcons*/
 #define LSFM_DISABLE_MASK_ALL (0xFFFFFFFF) /*Enable all LS falcons*/

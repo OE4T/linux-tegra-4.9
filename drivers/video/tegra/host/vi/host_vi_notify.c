@@ -117,11 +117,18 @@ static void vi_notify_classify(struct vi_notify_dev *dev)
 	struct platform_device *pdev = dev->pdev;
 	struct vi_notify_private *priv;
 	u32 ign_mask = 0xffffffff, pri_mask = 0;
+	int ret;
 
 	priv = rcu_access_pointer(dev->priv);
 	if (priv != NULL) {
 		ign_mask &= priv->ign_mask;
 		pri_mask |= priv->pri_mask;
+	}
+
+	ret = nvhost_module_busy(pdev);
+	if (ret) {
+		WARN_ON(1);
+		return;
 	}
 
 	WARN_ON(ign_mask & pri_mask);
@@ -131,6 +138,8 @@ static void vi_notify_classify(struct vi_notify_dev *dev)
 	host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_TEST_0, 0);
 	host1x_writel(pdev, VI_NOTIFY_OCCUPANCY_URGENT_0, 512);
 	vi_notify_dump_classify(dev);
+
+	nvhost_module_idle(pdev);
 }
 
 static void vi_notify_dump_status(struct vi_notify_dev *dev)

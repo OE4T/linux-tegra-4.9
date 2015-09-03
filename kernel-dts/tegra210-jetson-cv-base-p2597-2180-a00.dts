@@ -25,7 +25,7 @@
 #include "tegra210-platforms/tegra210-jetson-cv-sdmmc-drv-p2597-2180-a00.dtsi"
 #include "tegra210-platforms/tegra210-jetson-cv-prods.dtsi"
 #include "tegra210-platforms/tegra210-comms-p2530-0930.dtsi"
-#include "tegra210-platforms/tegra210-jetson-cv-camera-e3326-a00.dtsi"
+#include "tegra210-platforms/tegra210-jetson-cv-camera-e3323-a00.dtsi"
 #include "tegra210-platforms/tegra210-pwm-fan-p2530-0930.dtsi"
 #include "panel-a-wuxga-8-0.dtsi"
 #include "panel-s-edp-uhdtv-15-6.dtsi"

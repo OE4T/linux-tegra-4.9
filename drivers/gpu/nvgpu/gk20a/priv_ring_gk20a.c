@@ -28,8 +28,6 @@ void gk20a_reset_priv_ring(struct gk20a *g)
 	if (tegra_platform_is_linsim())
 		return;
 
-	gk20a_reset(g, mc_enable_priv_ring_enabled_f());
-
 	if (g->ops.clock_gating.slcg_priring_load_gating_prod)
 		g->ops.clock_gating.slcg_priring_load_gating_prod(g,
 				g->slcg_enabled);

@@ -3306,17 +3306,6 @@ static const struct tegra_function tegra186_functions[] = {
 		.rfu_in_bit = 20,				\
 		.rfu_in_width = 4,				\
 		.drv_reg = -1,					\
-		.drvtype_reg = -1,				\
-		.ioreset_bit = -1,				\
-		.rcv_sel_bit = -1,				\
-		.lpdr_reg = -1,				\
-		.pbias_buf_reg = -1,			\
-		.preemp_reg = -1,				\
-		.rfu_in_reg = -1,				\
-		.lpdr_bit = -1,					\
-		.pbias_buf_bit = -1,			\
-		.preemp_bit = -1,				\
-		.rfu_in_bit = -1,				\
 	}
 
 #define DRV_PINGROUP_Y(r) ((r))

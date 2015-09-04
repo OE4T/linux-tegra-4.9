@@ -641,6 +641,4 @@ static inline bool nvmap_handle_track_dirty(struct nvmap_handle *h)
 			       NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE);
 }
 
-void nvmap_dmabuf_release_stashed_maps(struct dma_buf *dmabuf);
-
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

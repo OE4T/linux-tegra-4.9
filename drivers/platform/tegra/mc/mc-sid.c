@@ -27,6 +27,8 @@
 #include <linux/tegra-soc.h>
 #include <linux/platform_device.h>
 
+#include <linux/platform/tegra/tegra-mc-sid.h>
+
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include <dt-bindings/memory/tegra186-swgroup.h>
 
@@ -497,6 +499,9 @@ static struct sid_to_oids sid_to_oids[] = {
 static void __iomem *mc_sid_base;
 static void __iomem *mc_base;
 
+/* Start with a default of 0x7f. However, allow the DTB to override this. */
+static int smmu_bypass_sid = 0x7f;
+
 static struct of_device_id mc_sid_of_match[] = {
 	{ .compatible = "nvidia,tegra-mc-sid", .data = (void *)0, },
 	{ .compatible = "nvidia,tegra-mc-sid-cl34000094", .data = (void *)1, },
@@ -505,6 +510,15 @@ static struct of_device_id mc_sid_of_match[] = {
 MODULE_DEVICE_TABLE(of, mc_sid_of_match);
 
 static long mc_sid_is_cl34000094; /* support for obsolete cl34000094 */
+
+/*
+ * Return the by-pass-smmu StreamID.
+ */
+int tegra_mc_get_smmu_bypass_sid(void)
+{
+	return smmu_bypass_sid;
+}
+EXPORT_SYMBOL(tegra_mc_get_smmu_bypass_sid);
 
 static void __mc_override_sid(int sid, int oid, enum mc_overrides ord)
 {
@@ -662,8 +676,12 @@ static int mc_sid_probe(struct platform_device *pdev)
 	if (id)
 		mc_sid_is_cl34000094 = (long)id->data;
 
+	/* Read the override SID, if any. */
+	of_property_read_u32(pdev->dev.of_node, "nvidia,by-pass-smmu-streamid",
+			     &smmu_bypass_sid);
+
 	for (i = 0; i < ARRAY_SIZE(sid_override_reg); i++)
-		__mc_override_sid(0x7f, i, DONTCARE);
+		__mc_override_sid(smmu_bypass_sid, i, DONTCARE);
 
 	/* FIXME: wait for MC driver */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);

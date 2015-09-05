@@ -59,7 +59,9 @@ struct tegra_vi_stats {
 struct vi {
 	struct tegra_camera *camera;
 	struct platform_device *ndev;
+#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	struct regulator *reg;
+#endif
 	uint vi_bw;
 	uint max_bw;
 #ifndef CONFIG_ARCH_TEGRA_18x_SOC

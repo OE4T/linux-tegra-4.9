@@ -317,6 +317,7 @@ static int vi_probe(struct platform_device *dev)
 	if (i2c_ctrl && i2c_ctrl->new_devices)
 		i2c_ctrl->new_devices(dev);
 
+#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	tegra_vi->reg = regulator_get(&tegra_vi->ndev->dev, "avdd_dsi_csi");
 	if (IS_ERR(tegra_vi->reg)) {
 		err = PTR_ERR(tegra_vi->reg);
@@ -330,6 +331,7 @@ static int vi_probe(struct platform_device *dev)
 		if (tegra_platform_is_silicon())
 			goto camera_i2c_unregister;
 	}
+#endif
 
 #ifdef CONFIG_TEGRA_CAMERA
 	tegra_vi->camera = tegra_camera_register(dev);
@@ -368,10 +370,13 @@ camera_unregister:
 	tegra_camera_unregister(tegra_vi->camera);
 vi_regulator_put:
 #endif
+
+#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	regulator_put(tegra_vi->reg);
 	tegra_vi->reg = NULL;
 
 camera_i2c_unregister:
+#endif
 	if (i2c_ctrl && i2c_ctrl->remove_devices)
 		i2c_ctrl->remove_devices(dev);
 	pdata->private_data = i2c_ctrl;
@@ -386,7 +391,9 @@ static int __exit vi_remove(struct platform_device *dev)
 	int err = 0;
 #endif
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	struct vi *tegra_vi = (struct vi *)pdata->private_data;
+#endif
 
 #ifdef CONFIG_PM_RUNTIME
 	if (atomic_read(&dev->dev.power.usage_count) > 0)
@@ -430,8 +437,10 @@ static int __exit vi_remove(struct platform_device *dev)
 	tegra_pd_remove_device(&dev->dev);
 #endif
 
+#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	regulator_put(tegra_vi->reg);
 	tegra_vi->reg = NULL;
+#endif
 
 	/* Remove I2C Devices according to settings from board file */
 	if (i2c_ctrl && i2c_ctrl->remove_devices)

@@ -40,39 +40,39 @@
 #include <linux/reset.h>
 
 #define GPIO_ENB_CONFIG_REG	0x00
-#define  GPIO_ENB_BIT		0x0
-#define  GPIO_INOUT_BIT		0x1
-#define  GPIO_TRG_TYPE_BIT(x)	(0x3 & x)
-#define  GPIO_TRG_LVL_BIT	0x4
-#define  GPIO_DEB_FUNC_BIT	0x5
-#define  GPIO_INT_FUNC_BIT	0x6
-#define  GPIO_TIMESTMP_FUNC_BIT 0x7
+#define GPIO_ENB_BIT		BIT(0)
+#define GPIO_INOUT_BIT		BIT(1)
+#define GPIO_TRG_TYPE_BIT(x)	(0x3 & (x))
+#define GPIO_TRG_LVL_BIT	0x4
+#define GPIO_DEB_FUNC_BIT	BIT(5)
+#define GPIO_INT_FUNC_BIT	BIT(6)
+#define GPIO_TIMESTMP_FUNC_BIT	0x7
 
 #define GPIO_DBC_THRES_REG	0x04
-#define  GPIO_DBC_THRES_BIT(val) (val & 0xFF)
+#define GPIO_DBC_THRES_BIT(val)	((val) & 0xFF)
 #define GPIO_INPUT_REG		0x08
 #define GPIO_OUT_CTRL_REG	0x0c
 #define GPIO_OUT_VAL_REG	0x10
 #define GPIO_INT_CLEAR_REG	0x14
 
-#define GPIO_REG_DIFF	0x20
+#define GPIO_REG_DIFF		0x20
 
-#define GPIO_SCR_REG	0x04
-#define GPIO_SCR_DIFF	0x08
-#define GPIO_SCR_BASE_DIFF 0x40
+#define GPIO_SCR_REG		0x04
+#define GPIO_SCR_DIFF		0x08
+#define GPIO_SCR_BASE_DIFF	0x40
 
-#define GPIO_CONTROLLERS_DIFF 0x1000
-#define GPIO_SCR_SEC_WEN		(1 << 28)
-#define GPIO_SCR_SEC_REN		(1 << 27)
-#define GPIO_SCR_SEC_G1R		(1 << 1)
-#define GPIO_SCR_SEC_G1W		(1 << 9)
+#define GPIO_CONTROLLERS_DIFF	0x1000
+#define GPIO_SCR_SEC_WEN	BIT(28)
+#define GPIO_SCR_SEC_REN	BIT(27)
+#define GPIO_SCR_SEC_G1R	BIT(1)
+#define GPIO_SCR_SEC_G1W	BIT(9)
 
-#define DEFAULT_IRQ_OFFSET 32
+#define DEFAULT_IRQ_OFFSET	32
 
-#define GPIO_INT_LVL_NO_TRIGGER	0x0
-#define GPIO_INT_LVL_LEVEL_TRIGGER	0x1
+#define GPIO_INT_LVL_NO_TRIGGER			0x0
+#define GPIO_INT_LVL_LEVEL_TRIGGER		0x1
 #define GPIO_INT_LVL_SINGLE_EDGE_TRIGGER	0x2
-#define GPIO_INT_LVL_BOTH_EDGE_TRIGGER	0x3
+#define GPIO_INT_LVL_BOTH_EDGE_TRIGGER		0x3
 
 #define TRIGGER_LEVEL_LOW		0x0
 #define TRIGGER_LEVEL_HIGH		0x1
@@ -80,11 +80,18 @@
 #define GPIO_INT_STATUS_OFFSET		0x100
 #define GPIO_STATUS_G1			0x04
 
-#define MAX_GPIO_CONTROLLERS 7
-#define MAX_GPIO_PORTS 8
+#define GPIO_FULL_ACCESS	(GPIO_SCR_SEC_WEN | GPIO_SCR_SEC_REN |	\
+					GPIO_SCR_SEC_G1R | GPIO_SCR_SEC_G1W)
 
-#define MAX_PORTS 32
-#define MAX_PINS_PER_PORT	8
+#define MAX_GPIO_CONTROLLERS		7
+#define MAX_GPIO_PORTS			8
+#define MAX_GPIO_CAR_CTRL		6
+
+#define MAX_PORTS			32
+#define MAX_PINS_PER_PORT		8
+
+#define GPIO_PORT(g)			((g) >> 3)
+#define GPIO_PIN(g)			((g) & 0x7)
 
 struct tegra_gpio_controller {
 	int controller;
@@ -104,27 +111,17 @@ struct tegra_gpio {
 	void __iomem **regs;
 	int *regs_size;
 	unsigned int *reg_base;
-	struct clk *gpio0_clk;
-	struct clk *gpio1_clk;
-	struct clk *gpio2_clk;
-	struct clk *gpio3_clk;
-	struct clk *gpio4_clk;
-	struct clk *gpio5_clk;
-	struct reset_control *gpio0_rst;
-	struct reset_control *gpio1_rst;
-	struct reset_control *gpio2_rst;
-	struct reset_control *gpio3_rst;
-	struct reset_control *gpio4_rst;
-	struct reset_control *gpio5_rst;
+	struct clk *gpio_clk[MAX_GPIO_CAR_CTRL];
+	struct reset_control *gpio_rst[MAX_GPIO_CAR_CTRL];
 };
 
 static struct tegra_gpio *tegra_gpio;
 
-/* Below table is mapping for contoller and ports contained
+/*
+ * Below table is mapping for contoller and ports contained
  * in each port of the give gpio controller
  */
-static int tegra186_gpio_map
-	[MAX_GPIO_CONTROLLERS][MAX_GPIO_PORTS] = {
+static int tegra186_gpio_map[MAX_GPIO_CONTROLLERS][MAX_GPIO_PORTS] = {
 	{13, 14, 16, 19, 8, 17, -1, -1}, /* gpio cntrlr 0 */
 	{7, 11, 23, 24, -1, -1, -1, -1}, /* gpio cntrlr 1 */
 	{0, 4, 5, 27, -1, -1, -1, -1,}, /* gpio cntrlr 2 */
@@ -136,18 +133,19 @@ static int tegra186_gpio_map
 
 static u32 address_map[32][2];
 static u32 tegra_gpio_bank_count;
-static struct tegra_gpio_controller *tegra_gpio_controllers;
+static struct tegra_gpio_controller
+		tegra_gpio_controllers[MAX_GPIO_CONTROLLERS];
 
 static struct irq_domain *irq_domain;
 
 static inline u32 controller_index(u32 gpio)
 {
 	int i, j;
-	u32 temp;
-	temp = gpio/8;
+	u32 gp = GPIO_PORT(gpio);
+
 	for (i = 0; i < MAX_GPIO_CONTROLLERS; i++) {
 		for (j = 0; j < MAX_GPIO_PORTS; j++) {
-			if (tegra186_gpio_map[i][j] == temp)
+			if (tegra186_gpio_map[i][j] == gp)
 				return i;
 		}
 	}
@@ -156,87 +154,102 @@ static inline u32 controller_index(u32 gpio)
 
 static inline u32 tegra_gpio_readl(u32 gpio, u32 reg_offset)
 {
-	u32 temp_addr;
-	temp_addr = address_map[gpio / 8][1] + (GPIO_REG_DIFF * (gpio % 8))
-				+ reg_offset;
-	return __raw_readl((tegra_gpio->regs[address_map[gpio / 8][0]])
-		+ temp_addr);
+	int port = GPIO_PORT(gpio);
+	int pin = GPIO_PIN(gpio);
+	u32 addr;
+
+	addr = address_map[port][1] + (GPIO_REG_DIFF * pin) + reg_offset;
+	return __raw_readl((tegra_gpio->regs[address_map[port][0]]) + addr);
 }
 
 static inline void tegra_gpio_writel(u32 val, u32 gpio, u32 reg_offset)
 {
-	u32 temp_addr;
-	temp_addr = address_map[gpio / 8][1] + (GPIO_REG_DIFF * (gpio % 8))
-				+ reg_offset;
-	__raw_writel(val, (tegra_gpio->regs[address_map[gpio / 8][0]])
-		+ temp_addr);
+	int port = GPIO_PORT(gpio);
+	int pin = GPIO_PIN(gpio);
+	u32 addr;
+
+	addr = address_map[port][1] + (GPIO_REG_DIFF * pin) + reg_offset;
+	__raw_writel(val, (tegra_gpio->regs[address_map[port][0]]) + addr);
 }
 
+static inline void tegra_gpio_update(u32 gpio, u32 reg_offset,
+		u32 mask, u32 val)
+{
+	int port = GPIO_PORT(gpio);
+	int pin = GPIO_PIN(gpio);
+	u32 addr;
+	u32 rval;
+
+	addr = address_map[port][1] + (GPIO_REG_DIFF * pin) + reg_offset;
+	rval = __raw_readl((tegra_gpio->regs[address_map[port][0]]) + addr);
+	rval = (rval & ~mask) | (val & mask);
+	__raw_writel(rval, (tegra_gpio->regs[address_map[port][0]]) + addr);
+}
+
+/*
+ * This function will return if the GPIO is accessible by CPU
+ */
 static inline bool is_gpio_accessible(u32 offset)
 {
-	/*This function will return if the GPIO is accessible by CPU */
-	bool ret;
-	u32 controller;
+	u32 controller = controller_index(offset);
+	int port = GPIO_PORT(offset);
+	int pin = GPIO_PIN(offset);
 	u32 val;
-	u32 port;
 	u32 i, j;
-	int pin;
-	controller = controller_index(offset);
-	ret = false;
+	bool found = false;
 
-	if (controller == -1)
-		printk("\n invalid gpio number\n");
-	else {
-		port = offset / 8;
-		pin = offset % 8;
-		for (i = 0; i < MAX_GPIO_CONTROLLERS; i++) {
-			for (j = 0; j < MAX_GPIO_PORTS; j++) {
-				if (tegra186_gpio_map[i][j] == port)
-					break;
+	if (controller == -1) {
+		pr_err("Invalid gpio number %d\n", offset);
+		return false;
+	}
+
+	for (i = 0; i < MAX_GPIO_CONTROLLERS; i++) {
+		for (j = 0; j < MAX_GPIO_PORTS; j++) {
+			if (tegra186_gpio_map[i][j] == port) {
+				found = true;
+				break;
 			}
 		}
-		if (controller != (MAX_GPIO_CONTROLLERS - 1))
-			i = 0;
-		else
-			i = 1;
-		if (i == 1)
-			controller = 0; /*AON offset is same as base*/
-		val = __raw_readl(tegra_gpio->regs[i] +
-			(controller * GPIO_CONTROLLERS_DIFF) +
-			(j * GPIO_SCR_BASE_DIFF) + (pin * GPIO_SCR_DIFF) +
-			GPIO_SCR_REG);
-		if (val & (GPIO_SCR_SEC_WEN | GPIO_SCR_SEC_REN |
-			GPIO_SCR_SEC_G1R | GPIO_SCR_SEC_G1W))
-			ret = true;
-		else
-			ret = false;
+		if (found)
+			break;
 	}
-	return ret;
+
+	if (!found)
+		return false;
+
+	i = (controller == (MAX_GPIO_CONTROLLERS - 1)) ? 1 : 0;
+	if (i == 1)
+		controller = 0; /*AON offset is same as base*/
+
+	val = __raw_readl(tegra_gpio->regs[i] +
+		(controller * GPIO_CONTROLLERS_DIFF) +
+		(j * GPIO_SCR_BASE_DIFF) + (pin * GPIO_SCR_DIFF) +
+			GPIO_SCR_REG);
+
+	if ((val & GPIO_FULL_ACCESS) == GPIO_FULL_ACCESS)
+		return true;
+
+	return true;
 }
 
 static void tegra_gpio_enable(int gpio)
 {
-	u32 val;
-	val = tegra_gpio_readl(gpio, GPIO_ENB_CONFIG_REG);
-	val |= 0x1;
-	tegra_gpio_writel(val, gpio, GPIO_ENB_CONFIG_REG);
+	tegra_gpio_update(gpio, GPIO_ENB_CONFIG_REG, 0x1, 0x1);
 }
 
 static void tegra_gpio_disable(int gpio)
 {
-	tegra_gpio_writel(0, gpio, GPIO_ENB_CONFIG_REG);
+	tegra_gpio_update(gpio, GPIO_ENB_CONFIG_REG, 0x1, 0x0);
 }
 
 static int tegra_gpio_request(struct gpio_chip *chip, unsigned offset)
 {
-	volatile bool accessible;
+	bool accessible;
+
 	accessible = is_gpio_accessible(offset);
-	/* overwriting accessible */
-	accessible = true;
 	if (accessible)
 		return pinctrl_request_gpio(chip->base + offset);
-	else
-		return -EBUSY;
+	return -EBUSY;
 }
 
 static void tegra_gpio_free(struct gpio_chip *chip, unsigned offset)
@@ -247,24 +260,18 @@ static void tegra_gpio_free(struct gpio_chip *chip, unsigned offset)
 
 static void tegra_gpio_set(struct gpio_chip *chip, unsigned offset, int value)
 {
-	u32 val;
+	u32 val = (value) ? 0x1 : 0x0;
 
-	val = tegra_gpio_readl(offset, GPIO_ENB_CONFIG_REG);
-	if (val & ((1 << GPIO_INOUT_BIT) | (1 << GPIO_ENB_BIT))) {
-		if (value)
-				val = 0x1;
-			else
-				val = 0x0;
-		tegra_gpio_writel(val, offset, GPIO_OUT_VAL_REG);
-		tegra_gpio_writel(0, offset, GPIO_OUT_CTRL_REG);
-	}
+	tegra_gpio_writel(val, offset, GPIO_OUT_VAL_REG);
+	tegra_gpio_writel(0, offset, GPIO_OUT_CTRL_REG);
 }
 
 static int tegra_gpio_get(struct gpio_chip *chip, unsigned offset)
 {
 	u32 val;
+
 	val = tegra_gpio_readl(offset, GPIO_ENB_CONFIG_REG);
-	if (val & ((1 << GPIO_INOUT_BIT)))
+	if (val & GPIO_INOUT_BIT)
 		return tegra_gpio_readl(offset, GPIO_OUT_VAL_REG) & 0x1;
 
 	return tegra_gpio_readl(offset, GPIO_INPUT_REG) & 0x1;
@@ -273,27 +280,22 @@ static int tegra_gpio_get(struct gpio_chip *chip, unsigned offset)
 static void set_gpio_direction_mode(unsigned offset, bool mode)
 {
 	u32 val;
+
 	val = tegra_gpio_readl(offset, GPIO_ENB_CONFIG_REG);
 	if (mode)
-		val |= 1 << GPIO_INOUT_BIT;
+		val |= GPIO_INOUT_BIT;
 	else
-		val &= ~(1 << GPIO_INOUT_BIT);
+		val &= ~GPIO_INOUT_BIT;
 	tegra_gpio_writel(val, offset, GPIO_ENB_CONFIG_REG);
-
-	val = tegra_gpio_readl(offset, GPIO_INPUT_REG);
-
 }
 
 static int tegra_gpio_direction_input(struct gpio_chip *chip, unsigned offset)
 {
-
 	int ret;
 
-	tegra_gpio_enable(offset);
 	set_gpio_direction_mode(offset, 0);
-
+	tegra_gpio_enable(offset);
 	ret = pinctrl_gpio_direction_input(chip->base + offset);
-
 	if (ret < 0)
 		dev_err(chip->dev,
 			"Tegra gpio input: pinctrl input failed: %d\n", ret);
@@ -305,16 +307,13 @@ static int tegra_gpio_direction_output(struct gpio_chip *chip, unsigned offset,
 {
 	int ret;
 
-	tegra_gpio_enable(offset);
-
+	tegra_gpio_set(chip, offset, value);
 	set_gpio_direction_mode(offset, 1);
-
+	tegra_gpio_enable(offset);
 	ret = pinctrl_gpio_direction_output(chip->base + offset);
 	if (ret < 0)
 		dev_err(chip->dev,
 			"Tegra gpio output: pinctrl output failed: %d\n", ret);
-
-	tegra_gpio_set(chip, offset, value);
 	return 0;
 }
 
@@ -326,8 +325,8 @@ static int tegra_gpio_set_debounce(struct gpio_chip *chip, unsigned offset,
 	unsigned debounce_ms = DIV_ROUND_UP(debounce, 1000);
 
 	val = tegra_gpio_readl(offset, GPIO_ENB_CONFIG_REG);
-	if (val & (1 << GPIO_ENB_BIT)) {
-		val |= (1 << GPIO_DEB_FUNC_BIT);
+	if (val & GPIO_ENB_BIT) {
+		val |= GPIO_DEB_FUNC_BIT;
 		tegra_gpio_writel(val, offset, GPIO_ENB_CONFIG_REG);
 
 		debounce_ms = max(debounce_ms, 255U);
@@ -342,41 +341,29 @@ static int tegra_gpio_set_debounce(struct gpio_chip *chip, unsigned offset,
 
 static int tegra_gpio_to_irq(struct gpio_chip *chip, unsigned offset)
 {
-
 	return irq_find_mapping(irq_domain, offset);
 }
 
 static void tegra_gpio_irq_ack(struct irq_data *d)
 {
 	int gpio = d->hwirq;
+
 	tegra_gpio_writel(1, gpio, GPIO_INT_CLEAR_REG);
-	/* FPGA platforms have a serializer between the GPIO
-	   block and interrupt controller. Allow time for
-	   clearing of the GPIO interrupt to propagate to the
-	   interrupt controller before re-enabling the IRQ
-	   to prevent double interrupts. */
-	if (tegra_platform_is_fpga())
-		udelay(15);
 }
 
 static void tegra_gpio_irq_mask(struct irq_data *d)
 {
 	int gpio = d->hwirq;
-	u32 val;
 
-	val = tegra_gpio_readl(gpio, GPIO_ENB_CONFIG_REG);
-	val &= ~(1 << GPIO_INT_FUNC_BIT);
-	tegra_gpio_writel(val, gpio, GPIO_ENB_CONFIG_REG);
+	tegra_gpio_update(gpio, GPIO_ENB_CONFIG_REG, GPIO_INT_FUNC_BIT, 0);
 }
 
 static void tegra_gpio_irq_unmask(struct irq_data *d)
 {
 	int gpio = d->hwirq;
-	u32 val;
 
-	val = tegra_gpio_readl(gpio, GPIO_ENB_CONFIG_REG);
-	val |= 1 << GPIO_INT_FUNC_BIT;
-	tegra_gpio_writel(val, gpio, GPIO_ENB_CONFIG_REG);
+	tegra_gpio_update(gpio, GPIO_ENB_CONFIG_REG, GPIO_INT_FUNC_BIT,
+				GPIO_INT_FUNC_BIT);
 }
 
 static int tegra_gpio_irq_set_type(struct irq_data *d, unsigned int type)
@@ -419,7 +406,7 @@ static int tegra_gpio_irq_set_type(struct irq_data *d, unsigned int type)
 	trg_type = trg_type << 0x4;
 	lvl_type = lvl_type << 0x2;
 
-	/* Program the values */
+	/* TBD: Program the values */
 	val = tegra_gpio_readl(gpio, GPIO_ENB_CONFIG_REG);
 	val |= trg_type | lvl_type;
 	tegra_gpio_writel(val, gpio, GPIO_ENB_CONFIG_REG);
@@ -449,147 +436,66 @@ static struct gpio_chip tegra_gpio_chip = {
 	.base			= 0,
 };
 
-#define tegra_gpio_irq_set_wake NULL
-
 static struct irq_chip tegra_gpio_irq_chip = {
 	.name		= "GPIO",
 	.irq_ack	= tegra_gpio_irq_ack,
 	.irq_mask	= tegra_gpio_irq_mask,
 	.irq_unmask	= tegra_gpio_irq_unmask,
 	.irq_set_type	= tegra_gpio_irq_set_type,
-	.irq_set_wake	= tegra_gpio_irq_set_wake,
 	.flags		= IRQCHIP_MASK_ON_SUSPEND,
 };
 
 static void tegra_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 {
+	struct irq_chip *chip = irq_desc_get_chip(desc);
+	int map_index;
 	int pin;
 	u32 i;
 	unsigned long val;
 	u32 gpio;
 	u32 temp;
 	u32 reg;
-	struct irq_chip *chip = irq_desc_get_chip(desc);
-
-	chained_irq_enter(chip, desc);
 
 	switch (irq) {
 	case DEFAULT_IRQ_OFFSET + 47:
-		for (i = 0; i < MAX_GPIO_PORTS; i++) {
-			if (tegra186_gpio_map[0][i] != -1) {
-				temp = address_map[tegra186_gpio_map[0][i]][1];
-				reg = tegra186_gpio_map[0][i];
-				val = __raw_readl(
-					tegra_gpio->regs[address_map[reg][0]] +
-					temp + GPIO_INT_STATUS_OFFSET +
-					GPIO_STATUS_G1);
-				gpio = tegra186_gpio_map[0][i] * 8;
-				for_each_set_bit(pin, &val, 8)
-					generic_handle_irq(
-						gpio_to_irq(gpio + pin));
-			}
-		}
+		map_index = 0;
 		break;
 	case DEFAULT_IRQ_OFFSET + 50:
-		for (i = 0; i < MAX_GPIO_PORTS; i++) {
-			if (tegra186_gpio_map[1][i] != -1) {
-				temp = address_map[tegra186_gpio_map[1][i]][1];
-				reg = tegra186_gpio_map[1][i];
-				val = __raw_readl(
-					tegra_gpio->regs[address_map[reg][0]] +
-					temp + GPIO_INT_STATUS_OFFSET +
-					GPIO_STATUS_G1);
-				gpio = tegra186_gpio_map[1][i] * 8;
-				for_each_set_bit(pin, &val, 8)
-					generic_handle_irq(
-						gpio_to_irq(gpio + pin));
-			}
-		}
+		map_index = 1;
 		break;
 	case DEFAULT_IRQ_OFFSET + 53:
-		for (i = 0; i < MAX_GPIO_PORTS; i++) {
-			if (tegra186_gpio_map[2][i] != -1) {
-				temp = address_map[tegra186_gpio_map[2][i]][1];
-				reg = tegra186_gpio_map[2][i];
-				val = __raw_readl(
-					tegra_gpio->regs[address_map[reg][0]] +
-					temp + GPIO_INT_STATUS_OFFSET +
-					GPIO_STATUS_G1);
-				gpio = tegra186_gpio_map[2][i] * 8;
-				for_each_set_bit(pin, &val, 8)
-					generic_handle_irq(
-						gpio_to_irq(gpio + pin));
-			}
-		}
+		map_index = 2;
 		break;
 	case DEFAULT_IRQ_OFFSET + 56:
-		for (i = 0; i < MAX_GPIO_PORTS; i++) {
-			if (tegra186_gpio_map[3][i] != -1) {
-				temp = address_map[tegra186_gpio_map[3][i]][1];
-				reg = tegra186_gpio_map[3][i];
-				val = __raw_readl(
-					tegra_gpio->regs[address_map[reg][0]] +
-					temp + GPIO_INT_STATUS_OFFSET +
-					GPIO_STATUS_G1);
-				gpio = tegra186_gpio_map[3][i] * 8;
-				for_each_set_bit(pin, &val, 8)
-					generic_handle_irq(
-						gpio_to_irq(gpio + pin));
-			}
-		}
+		map_index = 3;
 		break;
 	case DEFAULT_IRQ_OFFSET + 59:
-		for (i = 0; i < MAX_GPIO_PORTS; i++) {
-			if (tegra186_gpio_map[4][i] != -1) {
-				temp = address_map[tegra186_gpio_map[4][i]][1];
-				reg = tegra186_gpio_map[4][i];
-				val = __raw_readl(
-					tegra_gpio->regs[address_map[reg][0]] +
-					temp + GPIO_INT_STATUS_OFFSET +
-					GPIO_STATUS_G1);
-				gpio = tegra186_gpio_map[4][i] * 8;
-				for_each_set_bit(pin, &val, 8)
-					generic_handle_irq(
-						gpio_to_irq(gpio + pin));
-			}
-		}
+		map_index = 4;
 		break;
 	case DEFAULT_IRQ_OFFSET + 61:
-		/* AON */
-		for (i = 0; i < MAX_GPIO_PORTS; i++) {
-			if (tegra186_gpio_map[6][i] != -1) {
-				temp = address_map[tegra186_gpio_map[6][i]][1];
-				reg = tegra186_gpio_map[6][i];
-				val = __raw_readl(
-					tegra_gpio->regs[address_map[reg][0]] +
-					temp + GPIO_INT_STATUS_OFFSET +
-					GPIO_STATUS_G1);
-				gpio = tegra186_gpio_map[6][i] * 8;
-				for_each_set_bit(pin, &val, 8)
-					generic_handle_irq(
-						gpio_to_irq(gpio + pin));
-			}
-		}
+		map_index = 6;
 		break;
 	case DEFAULT_IRQ_OFFSET + 180:
-		for (i = 0; i < MAX_GPIO_PORTS; i++) {
-			if (tegra186_gpio_map[5][i] != -1) {
-				temp = address_map[tegra186_gpio_map[5][i]][1];
-				reg = tegra186_gpio_map[5][i];
-				val = __raw_readl(
-					tegra_gpio->regs[address_map[reg][0]] +
-					temp + GPIO_INT_STATUS_OFFSET +
-					GPIO_STATUS_G1);
-				gpio = tegra186_gpio_map[5][i] * 8;
-				for_each_set_bit(pin, &val, 8)
-					generic_handle_irq(
-						gpio_to_irq(gpio + pin));
-			}
-		}
+		map_index = 5;
 		break;
 	default:
-		break;
+		return;
 	}
+
+	chained_irq_enter(chip, desc);
+	for (i = 0; i < MAX_GPIO_PORTS; i++) {
+		if (tegra186_gpio_map[map_index][i] == -1)
+			continue;
+
+		temp = address_map[tegra186_gpio_map[map_index][i]][1];
+		reg = tegra186_gpio_map[map_index][i];
+		val = __raw_readl(tegra_gpio->regs[address_map[reg][0]] +
+				temp + GPIO_INT_STATUS_OFFSET + GPIO_STATUS_G1);
+		gpio = tegra186_gpio_map[map_index][i] * 8;
+		for_each_set_bit(pin, &val, 8)
+			generic_handle_irq(gpio_to_irq(gpio + pin));
+	}
+
 	chained_irq_exit(chip, desc);
 }
 
@@ -601,54 +507,28 @@ static struct of_device_id tegra_gpio_of_match[] = {
 static void gpio_clk_reset_enable(struct platform_device *pdev)
 {
 	int ret;
-	reset_control_reset(tegra_gpio->gpio0_rst);
-	reset_control_reset(tegra_gpio->gpio1_rst);
-	reset_control_reset(tegra_gpio->gpio2_rst);
-	reset_control_reset(tegra_gpio->gpio3_rst);
-	reset_control_reset(tegra_gpio->gpio4_rst);
-	reset_control_reset(tegra_gpio->gpio5_rst);
+	int i;
 
-	ret = clk_prepare_enable(tegra_gpio->gpio0_clk);
-	if (ret < 0) {
-		dev_err(&pdev->dev,
-			"Enabling gpio0 clk failed, err %d\n", ret);
+	for (i = 0; i < MAX_GPIO_CAR_CTRL; ++i) {
+		if (tegra_gpio->gpio_rst[i])
+			reset_control_reset(tegra_gpio->gpio_rst[i]);
 	}
 
-	ret = clk_prepare_enable(tegra_gpio->gpio1_clk);
-	if (ret < 0) {
-		dev_err(&pdev->dev,
-			"Enabling gpio1 clk failed, err %d\n", ret);
-	}
+	for (i = 0; i < MAX_GPIO_CAR_CTRL; ++i) {
+		if (!tegra_gpio->gpio_clk[i])
+			continue;
 
-	ret = clk_prepare_enable(tegra_gpio->gpio2_clk);
-	if (ret < 0) {
-		dev_err(&pdev->dev,
-			"Enabling gpio2 clk failed, err %d\n", ret);
-	}
-
-	ret = clk_prepare_enable(tegra_gpio->gpio3_clk);
-	if (ret < 0) {
-		dev_err(&pdev->dev,
-			"Enabling gpio3 clk failed, err %d\n", ret);
-	}
-
-	ret = clk_prepare_enable(tegra_gpio->gpio4_clk);
-	if (ret < 0) {
-		dev_err(&pdev->dev,
-			"Enabling gpio4 clk failed, err %d\n", ret);
-	}
-
-	ret = clk_prepare_enable(tegra_gpio->gpio5_clk);
-	if (ret < 0) {
-		dev_err(&pdev->dev,
-			"Enabling gpio5 clk failed, err %d\n", ret);
+		ret = clk_prepare_enable(tegra_gpio->gpio_clk[i]);
+		if (ret < 0)
+			dev_err(&pdev->dev, "GPIO %d clock enable failed: %d\n",
+				i, ret);
 	}
 }
 
 static void read_gpio_mapping_data(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
-	int a;
+	u32 pval;
 	int nstates;
 	int i;
 
@@ -658,61 +538,37 @@ static void read_gpio_mapping_data(struct platform_device *pdev)
 	nstates = nstates / 2;
 	for (i = 0; i < nstates; i++) {
 		of_property_read_u32_index(np, "nvidia,gpio_mapping",
-					i * 2, &a);
-		address_map[i][0] = a;
+					i * 2, &pval);
+		address_map[i][0] = pval;
 		of_property_read_u32_index(np, "nvidia,gpio_mapping",
-					i * 2 + 1, &a);
-		address_map[i][1] = a;
+					i * 2 + 1, &pval);
+		address_map[i][1] = pval;
 	}
 }
 
 static int tegra_gpio_probe(struct platform_device *pdev)
 {
-	const struct of_device_id *match;
 	struct resource *res;
-	struct tegra_gpio_controller *controller;
+	struct tegra_gpio_controller *tg_cont;
+	void __iomem *base;
+	char car_name[32];
 	u32 i, j;
 	int gpio;
 	u32 ret;
 
-	match = of_match_device(tegra_gpio_of_match, &pdev->dev);
-	if (!match) {
-		dev_err(&pdev->dev, "Error: No device match found\n");
-		return -ENODEV;
-	}
-
 	read_gpio_mapping_data(pdev);
 
-	for (;;) {
+	for (tegra_gpio_bank_count = 0;; tegra_gpio_bank_count++) {
 		res = platform_get_resource(pdev, IORESOURCE_IRQ,
 					tegra_gpio_bank_count);
 		if (!res)
 			break;
-		tegra_gpio_bank_count++;
 	}
 
 	if (!tegra_gpio_bank_count) {
-		dev_err(&pdev->dev, "Missing IRQ resource\n");
+		dev_err(&pdev->dev, "No GPIO Controller found\n");
 		return -ENODEV;
 	}
-
-	tegra_gpio_chip.dev = &pdev->dev;
-
-	tegra_gpio_chip.ngpio = MAX_PORTS * MAX_PINS_PER_PORT;
-
-	tegra_gpio_controllers = devm_kzalloc(&pdev->dev,
-			tegra_gpio_bank_count * sizeof(*tegra_gpio_controllers),
-			GFP_KERNEL);
-	if (!tegra_gpio_controllers) {
-		dev_err(&pdev->dev, "Couldn't allocate bank structure\n");
-		return -ENODEV;
-	}
-
-	irq_domain = irq_domain_add_linear(pdev->dev.of_node,
-					   tegra_gpio_chip.ngpio,
-					   &irq_domain_simple_ops, NULL);
-	if (!irq_domain)
-		return -ENODEV;
 
 	tegra_gpio = devm_kzalloc(&pdev->dev, sizeof(*tegra_gpio), GFP_KERNEL);
 	if (!tegra_gpio) {
@@ -721,47 +577,24 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	}
 	tegra_gpio->dev = &pdev->dev;
 
-	tegra_gpio->gpio0_rst = devm_reset_control_get(&pdev->dev, "gpio0");
-	if (IS_ERR(tegra_gpio->gpio0_rst)) {
-		ret = PTR_ERR(tegra_gpio->gpio0_rst);
-		dev_err(&pdev->dev,
-			"Reset control is not found:gpio0 %d\n", ret);
-		return ret;
-	}
-	tegra_gpio->gpio1_rst = devm_reset_control_get(&pdev->dev, "gpio1");
-	if (IS_ERR(tegra_gpio->gpio1_rst)) {
-		ret = PTR_ERR(tegra_gpio->gpio1_rst);
-		dev_err(&pdev->dev,
-			"Reset control is not found:gpio1 %d\n", ret);
-		return ret;
-	}
-	tegra_gpio->gpio2_rst = devm_reset_control_get(&pdev->dev, "gpio2");
-	if (IS_ERR(tegra_gpio->gpio2_rst)) {
-		ret = PTR_ERR(tegra_gpio->gpio2_rst);
-		dev_err(&pdev->dev,
-			"Reset control is not found: gpio2 %d\n", ret);
-		return ret;
-	}
-	tegra_gpio->gpio3_rst = devm_reset_control_get(&pdev->dev, "gpio3");
-	if (IS_ERR(tegra_gpio->gpio3_rst)) {
-		ret = PTR_ERR(tegra_gpio->gpio3_rst);
-		dev_err(&pdev->dev,
-			"Reset control is not found: gpio3 %d\n", ret);
-		return ret;
-	}
-	tegra_gpio->gpio4_rst = devm_reset_control_get(&pdev->dev, "gpio4");
-	if (IS_ERR(tegra_gpio->gpio4_rst)) {
-		ret = PTR_ERR(tegra_gpio->gpio4_rst);
-		dev_err(&pdev->dev,
-			"Reset control is not found: gpio4 %d\n", ret);
-		return ret;
-	}
-	tegra_gpio->gpio5_rst = devm_reset_control_get(&pdev->dev, "gpio5");
-	if (IS_ERR(tegra_gpio->gpio5_rst)) {
-		ret = PTR_ERR(tegra_gpio->gpio5_rst);
-		dev_err(&pdev->dev,
-			"Reset control is not found: gpio5 %d\n", ret);
-		return ret;
+	for (i = 0; i < MAX_GPIO_CAR_CTRL; ++i) {
+		snprintf(car_name, 32, "gpio%d", i);
+		tegra_gpio->gpio_rst[i] = devm_reset_control_get(
+						&pdev->dev, car_name);
+		if (IS_ERR(tegra_gpio->gpio_rst[i])) {
+			ret = PTR_ERR(tegra_gpio->gpio_rst[i]);
+			dev_err(&pdev->dev, "Reset control for %s failed: %d\n",
+				car_name, ret);
+			return ret;
+		}
+		snprintf(car_name, 32, "gpio%d_clk", i);
+		tegra_gpio->gpio_clk[i] = devm_clk_get(&pdev->dev, car_name);
+		if (IS_ERR(tegra_gpio->gpio_clk[i])) {
+			ret = PTR_ERR(tegra_gpio->gpio_clk[i]);
+			dev_err(&pdev->dev, "Clock control for %s failed: %d\n",
+				car_name, ret);
+			return ret;
+		}
 	}
 
 	for (i = 0;; i++) {
@@ -771,37 +604,21 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	}
 	tegra_gpio->nbanks = i;
 
-	tegra_gpio->regs = devm_kzalloc(&pdev->dev,
-				tegra_gpio->nbanks * sizeof(*tegra_gpio->regs),
-				 GFP_KERNEL);
+	tegra_gpio->regs = devm_kzalloc(&pdev->dev, tegra_gpio->nbanks *
+				sizeof(*tegra_gpio->regs), GFP_KERNEL);
 	if (!tegra_gpio->regs) {
 		dev_err(&pdev->dev, "Can't alloc regs pointer\n");
 		return -ENODEV;
 	}
 
-	tegra_gpio->reg_base = devm_kzalloc(
-			&pdev->dev,
-			tegra_gpio->nbanks * sizeof(*tegra_gpio->reg_base),
-			GFP_KERNEL);
+	tegra_gpio->reg_base = devm_kzalloc(&pdev->dev, tegra_gpio->nbanks *
+				sizeof(*tegra_gpio->reg_base), GFP_KERNEL);
 	if (!tegra_gpio->reg_base) {
 		dev_err(&pdev->dev, "Can't alloc reg_base pointer\n");
 		return -ENOMEM;
 	}
 
-	for (i = 0; i < tegra_gpio_bank_count; i++) {
-		res = platform_get_resource(pdev, IORESOURCE_IRQ, i);
-		if (!res) {
-			dev_err(&pdev->dev, "Missing IRQ resource\n");
-			return -ENODEV;
-		}
-		controller = &tegra_gpio_controllers[i];
-		controller->controller = i;
-		controller->irq = res->start;
-	}
-
 	for (i = 0; i < tegra_gpio->nbanks; i++) {
-		void __iomem *base;
-
 		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
 		if (!res) {
 			dev_err(&pdev->dev, "Missing MEM resource\n");
@@ -820,69 +637,55 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		tegra_gpio->regs[i] = base;
 	}
 
-	if (!res) {
-		dev_err(&pdev->dev, "Missing MEM resource\n");
-		return -ENODEV;
+	for (i = 0; i < tegra_gpio_bank_count; i++) {
+		res = platform_get_resource(pdev, IORESOURCE_IRQ, i);
+		if (!res) {
+			dev_err(&pdev->dev, "Missing IRQ resource\n");
+			return -ENODEV;
+		}
+		tg_cont = &tegra_gpio_controllers[i];
+		tg_cont->controller = i;
+		tg_cont->irq = res->start;
 	}
 
+	gpio_clk_reset_enable(pdev);
+
+	tegra_gpio_chip.dev = &pdev->dev;
 	tegra_gpio_chip.of_node = pdev->dev.of_node;
-	gpiochip_add(&tegra_gpio_chip);
+	tegra_gpio_chip.ngpio = MAX_PORTS * MAX_PINS_PER_PORT;
+
+	irq_domain = irq_domain_add_linear(pdev->dev.of_node,
+			   tegra_gpio_chip.ngpio, &irq_domain_simple_ops, NULL);
+	if (!irq_domain)
+		return -ENODEV;
 
 	for (gpio = 0; gpio < tegra_gpio_chip.ngpio; gpio++) {
 		int irq = irq_create_mapping(irq_domain, gpio);
-		/* No validity check; all Tegra GPIOs are valid IRQs */
-		/* Map pin to the GPIO controller*/
 
-		controller = &tegra_gpio_controllers[controller_index(gpio)];
+		tg_cont = &tegra_gpio_controllers[controller_index(gpio)];
 
-		irq_set_chip_data(irq, controller);
+		irq_set_chip_data(irq, tg_cont);
 		irq_set_chip_and_handler(irq, &tegra_gpio_irq_chip,
 					 handle_simple_irq);
 		set_irq_flags(irq, IRQF_VALID);
 	}
 
-	tegra_gpio->gpio0_clk = devm_clk_get(&pdev->dev, "gpio0-clk");
-	if (IS_ERR(tegra_gpio->gpio0_clk))
-		dev_err(&pdev->dev, "missing controller gpio0 clock");
-
-	tegra_gpio->gpio1_clk = devm_clk_get(&pdev->dev, "gpio1-clk");
-	if (IS_ERR(tegra_gpio->gpio1_clk))
-		dev_err(&pdev->dev, "missing controller gpio1 clock");
-
-	tegra_gpio->gpio2_clk = devm_clk_get(&pdev->dev, "gpio2-clk");
-	if (IS_ERR(tegra_gpio->gpio2_clk))
-		dev_err(&pdev->dev, "missing controller gpio2 clock");
-
-	tegra_gpio->gpio3_clk = devm_clk_get(&pdev->dev, "gpio3-clk");
-	if (IS_ERR(tegra_gpio->gpio3_clk))
-		dev_err(&pdev->dev, "missing controller gpio3 clock");
-
-	tegra_gpio->gpio4_clk = devm_clk_get(&pdev->dev, "gpio4-clk");
-	if (IS_ERR(tegra_gpio->gpio4_clk))
-		dev_err(&pdev->dev, "missing controller gpio4 clock");
-
-	tegra_gpio->gpio5_clk = devm_clk_get(&pdev->dev, "gpio5-clk");
-	if (IS_ERR(tegra_gpio->gpio5_clk))
-		dev_err(&pdev->dev, "missing controller gpio5 clock");
-
-	gpio_clk_reset_enable(pdev);
-
 	for (i = 0; i < tegra_gpio_bank_count; i++) {
-		controller = &tegra_gpio_controllers[i];
+		tg_cont = &tegra_gpio_controllers[i];
 
 		for (j = 0; j < 4; j++)
-			spin_lock_init(&controller->lvl_lock[j]);
+			spin_lock_init(&tg_cont->lvl_lock[j]);
 
-		irq_set_handler_data(controller->irq, controller);
-		irq_set_chained_handler(controller->irq,
-			tegra_gpio_irq_handler);
+		irq_set_handler_data(tg_cont->irq, tg_cont);
+		irq_set_chained_handler(tg_cont->irq, tegra_gpio_irq_handler);
 	}
+
+	gpiochip_add(&tegra_gpio_chip);
 	return 0;
 }
 
 static void tegra_gpio_resume(void)
 {
-
 	unsigned long flags;
 	int pin;
 
@@ -905,6 +708,7 @@ static int tegra_gpio_suspend(void)
 {
 	unsigned long flags;
 	int pin;
+
 	local_irq_save(flags);
 	for (pin = 0; pin < tegra_gpio_chip.ngpio; pin++) {
 		tegra_gpio_controllers->cnf[pin] =
@@ -955,14 +759,14 @@ postcore_initcall(tegra_gpio_init);
 static int dbg_gpio_show(struct seq_file *s, void *unused)
 {
 	int i;
-	volatile bool accessible;
-	seq_printf(s, "Pin:ENB DBC IN OUT_CTRL OUT_VAL INT_CLR \n");
+	bool accessible;
+
+	seq_puts(s, "Pin:ENB DBC IN OUT_CTRL OUT_VAL INT_CLR\n");
 
 	for (i = 0; i < TOTAL_GPIOS; i++) {
 		accessible = is_gpio_accessible(i);
 		if (accessible) {
-			seq_printf(s,
-				"%d   0x%x 0x%x 0x%x 0x%x 0x%x 0x%x \n",
+			seq_printf(s, "%d   0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
 				i,
 				tegra_gpio_readl(i, GPIO_ENB_CONFIG_REG),
 				tegra_gpio_readl(i, GPIO_DBC_THRES_REG),

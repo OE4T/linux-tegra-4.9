@@ -19,6 +19,8 @@
 #include <linux/iommu.h>
 #include <linux/sizes.h>
 
+#include <linux/platform/tegra/tegra-mc-sid.h>
+
 #include "nvhost_vm.h"
 #include "iommu_context_dev.h"
 
@@ -41,14 +43,14 @@ static int host1x_vm_init(struct nvhost_vm *vm)
 static u32 host1x_vm_get_id_dev(struct platform_device *pdev)
 {
 	/* default to physical StreamID */
-	int streamid = 0x7f;
+	int streamid = tegra_mc_get_smmu_bypass_sid();
 
 	/* If SMMU is available for this device, query sid */
 	if (pdev->dev.archdata.iommu) {
 		streamid = iommu_get_hwid(pdev->dev.archdata.iommu,
 					  &pdev->dev, 0);
 		if (streamid < 0)
-			streamid = 0x7f;
+			streamid = tegra_mc_get_smmu_bypass_sid();
 	}
 
 	return streamid;

@@ -188,8 +188,8 @@
 /* 164 */
 /* 165 */
 #define TEGRA210_CLK_I2C6 166
-/* 167 */
-/* 168 */
+#define TEGRA210_CLK_MC_CAPA 167
+#define TEGRA210_CLK_MC_CBPA 168
 /* 169 */
 /* 170 */
 #define TEGRA210_CLK_VIM2_CLK 171
@@ -222,8 +222,8 @@
 #define TEGRA210_CLK_DMIC3 197
 #define TEGRA210_CLK_APE 198
 #define TEGRA210_CLK_ADSP 199
-/* 200 */
-/* 201 */
+#define TEGRA210_CLK_MC_CDPA 200
+#define TEGRA210_CLK_MC_CCPA 201
 #define TEGRA210_CLK_MAUD 202
 /* 203 */
 /* 204 */

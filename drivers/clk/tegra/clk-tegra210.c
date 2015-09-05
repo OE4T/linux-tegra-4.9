@@ -2417,6 +2417,10 @@ static struct tegra_clk tegra210_clks[tegra_clk_max] __initdata = {
 	[tegra_clk_adsp_neon] = { .dt_id = TEGRA210_CLK_ADSP_NEON, .present = true },
 	[tegra_clk_se_8] = { .dt_id = TEGRA210_CLK_SE, .present = true },
 	[tegra_clk_la] = { .dt_id = TEGRA210_CLK_LA, .present = true },
+	[tegra_clk_mc_capa] = { .dt_id = TEGRA210_CLK_MC_CAPA, .present = true },
+	[tegra_clk_mc_cbpa] = { .dt_id = TEGRA210_CLK_MC_CBPA, .present = true },
+	[tegra_clk_mc_ccpa] = { .dt_id = TEGRA210_CLK_MC_CCPA, .present = true },
+	[tegra_clk_mc_cdpa] = { .dt_id = TEGRA210_CLK_MC_CDPA, .present = true },
 };
 
 static struct tegra_devclk devclks[] __initdata = {
@@ -3134,6 +3138,10 @@ static struct tegra_clk_init_table init_table[] __initdata = {
 	{ TEGRA210_CLK_PLL_P_OUT4, TEGRA210_CLK_CLK_MAX, 102000000, 0 },
 	{ TEGRA210_CLK_PLL_P_OUT5, TEGRA210_CLK_CLK_MAX, 204000000, 0 },
 	{ TEGRA210_CLK_PLL_D2, TEGRA210_CLK_CLK_MAX, 594000000, 0 },
+	{ TEGRA210_CLK_MC_CAPA, TEGRA210_CLK_CLK_MAX, 0, 1},
+	{ TEGRA210_CLK_MC_CBPA, TEGRA210_CLK_CLK_MAX, 0, 1},
+	{ TEGRA210_CLK_MC_CCPA, TEGRA210_CLK_CLK_MAX, 0, 1},
+	{ TEGRA210_CLK_MC_CDPA, TEGRA210_CLK_CLK_MAX, 0, 1},
 	/* This MUST be the last entry. */
 	{ TEGRA210_CLK_CLK_MAX, TEGRA210_CLK_CLK_MAX, 0, 0 },
 };

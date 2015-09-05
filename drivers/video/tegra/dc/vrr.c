@@ -115,13 +115,33 @@ static ssize_t vrr_settings_store(struct kobject *kobj,
 	if (!vrr)
 		return -EINVAL;
 
+	mutex_lock(&dc->lock);
+
 	if (IS_VRR_ATTR(capability))
 		vrr_check_and_update(0, 1, capability)
 	else if (IS_VRR_ATTR(max_fps))
 		vrr_check_and_update(60, 120, vrr_max_fps)
-	else if (IS_VRR_ATTR(min_fps))
-		vrr_check_and_update(20, 60, vrr_min_fps)
-	else if (IS_VRR_ATTR(max_adj_pct))
+	else if (IS_VRR_ATTR(min_fps)) {
+		int val;
+
+		if (kstrtol(buf, 10, (long *)&val) != -EINVAL) {
+			if (val >= 20 && val <= vrr->vrr_max_fps) {
+				int lines_per_frame_max;
+				struct tegra_dc_mode *m = &dc->mode;
+
+				vrr->vrr_min_fps = val;
+				vrr->v_front_porch_max =
+					tegra_dc_calc_v_front_porch(m,
+						vrr->vrr_min_fps);
+				lines_per_frame_max =
+					vrr->lines_per_frame_common +
+					vrr->v_front_porch_max;
+				vrr->frame_len_max = vrr->line_width *
+					lines_per_frame_max /
+					(m->pclk / 1000000);
+			}
+		}
+	} else if (IS_VRR_ATTR(max_adj_pct))
 		vrr_check_and_update(0, 100, max_adj_pct)
 	else if (IS_VRR_ATTR(max_flip_pct))
 		vrr_check_and_update(0, 100, max_flip_pct)
@@ -132,6 +152,7 @@ static ssize_t vrr_settings_store(struct kobject *kobj,
 	else
 		res = -EINVAL;
 
+	mutex_unlock(&dc->lock);
 	return res;
 }
 

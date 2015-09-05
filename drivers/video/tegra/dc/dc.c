@@ -1792,7 +1792,7 @@ static inline void tegra_dc_create_debugfs(struct tegra_dc *dc) { };
 static inline void tegra_dc_remove_debugfs(struct tegra_dc *dc) { };
 #endif /* CONFIG_DEBUGFS */
 
-static s32 tegra_dc_calc_v_front_porch(struct tegra_dc_mode *mode,
+s32 tegra_dc_calc_v_front_porch(struct tegra_dc_mode *mode,
 				int desired_fps)
 {
 	int vfp = 0;

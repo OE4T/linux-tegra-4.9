@@ -589,6 +589,10 @@ void tegra_dc_set_act_vfp(struct tegra_dc *dc, int vfp);
 bool tegra_dc_windows_are_dirty(struct tegra_dc *dc, u32 win_act_req_mask);
 int tegra_dc_get_v_count(struct tegra_dc *dc);
 
+/* defined in dc.c, used in vrr.c */
+s32 tegra_dc_calc_v_front_porch(struct tegra_dc_mode *mode,
+				int desired_fps);
+
 /* defined in cursor.c, used in dc.c and ext/cursor.c */
 int tegra_dc_cursor_image(struct tegra_dc *dc,
 	enum tegra_dc_cursor_format format, enum tegra_dc_cursor_size size,

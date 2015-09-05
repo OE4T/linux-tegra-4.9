@@ -31,6 +31,8 @@
 #include <linux/version.h>
 #include "nvhost_sync.h"
 
+#include <linux/platform/tegra/tegra-mc-sid.h>
+
 #include "nvhost_intr.h"
 #include "nvhost_vm.h"
 #include "class_ids.h"
@@ -220,9 +222,8 @@ static inline int get_streamid(struct nvhost_job *job)
 		streamid = iommu_get_hwid(pdev->dev.archdata.iommu,
 					  &pdev->dev, 0);
 		if (streamid < 0)
-			streamid = 0x7f;
+			streamid = tegra_mc_get_smmu_bypass_sid();
 	}
-
 	return streamid;
 }
 

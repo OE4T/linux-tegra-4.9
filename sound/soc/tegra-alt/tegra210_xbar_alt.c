@@ -60,8 +60,8 @@ static int tegra210_xbar_runtime_suspend(struct device *dev)
 	regcache_cache_only(xbar->regmap, true);
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		clk_disable(xbar->clk);
-		clk_disable(xbar->clk_ape);
+		clk_disable_unprepare(xbar->clk);
+		clk_disable_unprepare(xbar->clk_ape);
 	}
 
 	return 0;
@@ -72,15 +72,15 @@ static int tegra210_xbar_runtime_resume(struct device *dev)
 	int ret;
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		ret = clk_enable(xbar->clk_ape);
+		ret = clk_prepare_enable(xbar->clk_ape);
 		if (ret) {
-			dev_err(dev, "clk_enable failed: %d\n", ret);
+			dev_err(dev, "clk_prepare_enable failed: %d\n", ret);
 			return ret;
 		}
 
-		ret = clk_enable(xbar->clk);
+		ret = clk_prepare_enable(xbar->clk);
 		if (ret) {
-			dev_err(dev, "clk_enable failed: %d\n", ret);
+			dev_err(dev, "clk_prepare_enable failed: %d\n", ret);
 			return ret;
 		}
 	}

@@ -364,6 +364,8 @@ struct nvhost_device_data t18_nvcsi_info = {
 	NVHOST_MODULE_NO_POWERGATE_ID,
 #endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.finalize_poweron	= nvcsi_finalize_poweron,
+	.prepare_poweroff	= nvcsi_prepare_poweroff,
 	.poweron_reset		= true,
 	.keepalive		= true,
 	.serialize		= 1,

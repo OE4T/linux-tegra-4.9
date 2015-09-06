@@ -27,6 +27,7 @@
 #include <linux/platform_device.h>
 #include <linux/nvhost_nvcsi_ioctl.h>
 #include <linux/uaccess.h>
+#include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 
 #include "dev.h"
@@ -41,14 +42,71 @@ static struct of_device_id tegra_nvcsi_of_match[] = {
 	{ },
 };
 
+struct nvcsi {
+	struct platform_device *pdev;
+	struct regulator *regulator;
+};
+
 struct nvcsi_private {
 	struct platform_device *pdev;
 };
+
+int nvcsi_finalize_poweron(struct platform_device *pdev)
+{
+	struct nvcsi *nvcsi = nvhost_get_private_data(pdev);
+	int ret;
+
+	if (nvcsi->regulator) {
+		ret = regulator_enable(nvcsi->regulator);
+		if (ret) {
+			dev_err(&pdev->dev, "failed to enable csi regulator failed.");
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
+int nvcsi_prepare_poweroff(struct platform_device *pdev)
+{
+	struct nvcsi *nvcsi = nvhost_get_private_data(pdev);
+	int ret;
+
+	if (nvcsi->regulator) {
+		ret = regulator_disable(nvcsi->regulator);
+		if (ret)
+			dev_err(&pdev->dev, "failed to disabled csi regulator failed.");
+	}
+
+	return 0;
+}
+
+static int nvcsi_probe_regulator(struct nvcsi *nvcsi)
+{
+	struct device *dev = &nvcsi->pdev->dev;
+	struct regulator *regulator;
+	const char *regulator_name;
+	int err;
+
+	err = of_property_read_string(dev->of_node, "nvidia,csi_regulator",
+				      &regulator_name);
+	if (err)
+		return err;
+
+	regulator = devm_regulator_get(dev, regulator_name);
+	if (IS_ERR(regulator))
+		return PTR_ERR(regulator);
+
+	nvcsi->regulator = regulator;
+
+	return 0;
+}
 
 static int nvcsi_probe(struct platform_device *dev)
 {
 	int err = 0;
 	struct nvhost_device_data *pdata = NULL;
+	struct nvcsi *nvcsi = NULL;
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
@@ -63,26 +121,55 @@ static int nvcsi_probe(struct platform_device *dev)
 	WARN_ON(!pdata);
 	if (!pdata) {
 		dev_info(&dev->dev, "no platform data\n");
-		return -ENODATA;
+		err = -ENODATA;
+		goto err_get_pdata;
 	}
 
+	nvcsi = devm_kzalloc(&dev->dev, sizeof(*nvcsi), GFP_KERNEL);
+	if (!nvcsi) {
+		err = -ENOMEM;
+		goto err_alloc_nvcsi;
+	}
+
+	nvcsi->pdev = dev;
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
+	pdata->private_data = nvcsi;
+
+	err = nvcsi_probe_regulator(nvcsi);
+	if (err)
+		dev_info(&dev->dev, "failed to get regulator (%d)\n", err);
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
-		return err;
+		goto err_get_resources;
 
-	nvhost_module_init(dev);
+	err = nvhost_module_init(dev);
+	if (err)
+		goto err_module_init;
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 	err = nvhost_module_add_domain(&pdata->pd, dev);
+	if (err)
+		goto err_add_domain;
 #endif
 
 	err = nvhost_client_device_init(dev);
+	if (err)
+		goto err_client_device_init;
 
 	return 0;
+
+err_client_device_init:
+err_add_domain:
+	nvhost_module_deinit(dev);
+err_module_init:
+err_get_resources:
+err_alloc_nvcsi:
+err_get_pdata:
+
+	return err;
 }
 
 static int __exit nvcsi_remove(struct platform_device *dev)

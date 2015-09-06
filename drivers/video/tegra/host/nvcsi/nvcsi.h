@@ -23,4 +23,7 @@
 
 extern const struct file_operations tegra_nvcsi_ctrl_ops;
 
+int nvcsi_finalize_poweron(struct platform_device *pdev);
+int nvcsi_prepare_poweroff(struct platform_device *pdev);
+
 #endif

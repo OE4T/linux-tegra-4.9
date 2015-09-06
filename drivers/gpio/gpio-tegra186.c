@@ -551,7 +551,6 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct tegra_gpio_controller *tg_cont;
 	void __iomem *base;
-	char car_name[32];
 	u32 i, j;
 	int gpio;
 	u32 ret;
@@ -577,7 +576,13 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	}
 	tegra_gpio->dev = &pdev->dev;
 
+	/* Bypass the control of reset and clock as this
+	 * is enabled by default on BL and not to disable
+	 * throughout of system.
+	 */
+#if 0
 	for (i = 0; i < MAX_GPIO_CAR_CTRL; ++i) {
+		char car_name[32];
 		snprintf(car_name, 32, "gpio%d", i);
 		tegra_gpio->gpio_rst[i] = devm_reset_control_get(
 						&pdev->dev, car_name);
@@ -596,6 +601,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 			return ret;
 		}
 	}
+#endif
 
 	for (i = 0;; i++) {
 		res = platform_get_resource(pdev, IORESOURCE_MEM, i);

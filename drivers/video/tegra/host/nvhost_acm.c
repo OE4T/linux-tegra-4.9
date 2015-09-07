@@ -49,7 +49,7 @@
 
 #define ACM_SUSPEND_WAIT_FOR_IDLE_TIMEOUT	(2 * HZ)
 #define POWERGATE_DELAY 			10
-#define MAX_DEVID_LENGTH			16
+#define MAX_DEVID_LENGTH			32
 
 static void nvhost_module_load_regs(struct platform_device *pdev, bool prod);
 static int nvhost_module_toggle_slcg(struct notifier_block *nb,
@@ -629,6 +629,29 @@ int nvhost_clk_get(struct platform_device *dev, char *name, struct clk **clk)
 	return -EINVAL;
 }
 
+int nvhost_module_set_parent(struct platform_device *dev,
+			     struct nvhost_clock *clock, struct clk *clk)
+{
+	struct clk *parent_clk;
+	char parent_name[MAX_DEVID_LENGTH];
+	int err;
+
+	snprintf(parent_name, sizeof(parent_name), "%s_parent", clock->name);
+
+	/* if parent is not available, assume that
+	 * we do not need to change it.
+	 */
+	parent_clk = devm_clk_get(&dev->dev, parent_name);
+	if (IS_ERR(parent_clk))
+		return 0;
+
+	err = clk_set_parent(clk, parent_clk);
+
+	devm_clk_put(&dev->dev, parent_clk);
+
+	return err;
+}
+
 int nvhost_module_init(struct platform_device *dev)
 {
 	int i = 0, err = 0;
@@ -675,6 +698,13 @@ int nvhost_module_init(struct platform_device *dev)
 			      dev->name, pdata->num_clks,
 			      devname, pdata->clocks[i].name,
 			      c);
+
+		/* Update parent */
+		err = nvhost_module_set_parent(dev, &pdata->clocks[i], c);
+		if (err)
+			dev_warn(&dev->dev, "failed to set parent clock %s (err=%d)",
+				 pdata->clocks[i].name, err);
+
 		rate = clk_round_rate(c, rate);
 		clk_prepare_enable(c);
 		clk_set_rate(c, rate);

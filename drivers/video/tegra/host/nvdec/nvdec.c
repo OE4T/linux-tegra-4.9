@@ -57,7 +57,7 @@
 #include "t186/t186.h"
 #endif
 
-#define NVDEC_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
+#define NVDEC_IDLE_TIMEOUT_DEFAULT	100000	/* 100 milliseconds */
 #define NVDEC_IDLE_CHECK_PERIOD		10	/* 10 usec */
 
 #define get_nvdec(ndev) ((struct nvdec **)(ndev)->dev.platform_data)

@@ -21,6 +21,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/tegra-hsp.h>
+#include <soc/tegra/bpmp_abi.h>
 #include "bpmp.h"
 #include "mail_t186.h"
 
@@ -113,6 +114,7 @@ void tegra_bpmp_resume(void)
 
 int bpmp_connect(void)
 {
+	unsigned long flags;
 	int ret = 0;
 
 	if (connected)
@@ -134,7 +136,14 @@ int bpmp_connect(void)
 
 	bpmp_channel_init();
 	connected = 1;
-	return 0;
+
+	local_irq_save(flags);
+	ret = __bpmp_do_ping();
+	local_irq_restore(flags);
+	pr_info("bpmp: ping status is %d\n", ret);
+	WARN_ON(ret);
+
+	return ret;
 }
 
 int bpmp_mail_init_prepare(void)

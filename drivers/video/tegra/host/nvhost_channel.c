@@ -114,6 +114,7 @@ static void nvhost_channel_unmap_locked(struct kref *ref)
 	struct nvhost_master *host;
 	int i = 0;
 	int index;
+	int err;
 
 	if (!ch->dev) {
 		pr_err("%s: freeing unmapped channel\n", __func__);
@@ -122,6 +123,12 @@ static void nvhost_channel_unmap_locked(struct kref *ref)
 
 	pdata = platform_get_drvdata(ch->dev);
 	host = nvhost_get_host(pdata->pdev);
+
+	err = nvhost_module_busy(host->dev);
+	if (err) {
+		WARN(1, "failed to power-up host1x. leaking syncpts");
+		goto err_module_busy;
+	}
 
 	/* turn off channel cdma */
 	channel_cdma_op().stop(&ch->cdma);
@@ -167,6 +174,9 @@ static void nvhost_channel_unmap_locked(struct kref *ref)
 		ch->client_managed_syncpt = 0;
 	}
 
+	nvhost_module_idle(host->dev);
+
+err_module_busy:
 	mutex_lock(&host->chlist_mutex);
 	index = nvhost_channel_get_index_from_id(host, ch->chid);
 	clear_bit(index, host->allocated_channels);

@@ -1423,7 +1423,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 			sgl = sg_next(sgl);
 		}
 	} else
-		bfr.align = 1 << __ffs(buf_addr | bfr.size);
+		bfr.align = 1 << __ffs(buf_addr);
 
 	bfr.pgsz_idx = -1;
 	mapping_size = mapping_size ? mapping_size : bfr.size;

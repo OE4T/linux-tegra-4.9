@@ -113,7 +113,7 @@ static int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_r() + temp +
 				proj_ppc_in_gpc_stride_v() * ppc_index,
-				gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_v_default_v(),
+				gr->attrib_cb_default_size,
 				patch);
 
 			attrib_offset_in_chunk += gr->attrib_cb_size *

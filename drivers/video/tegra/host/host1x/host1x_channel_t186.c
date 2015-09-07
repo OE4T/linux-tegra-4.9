@@ -371,8 +371,6 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	void *completed_waiters[job->num_syncpts];
 	int streamid;
 
-	host1x_channel_update_priority(job);
-
 	memset(completed_waiters, 0, sizeof(void *) * job->num_syncpts);
 
 	/* Turn on the client module and host1x */
@@ -386,6 +384,8 @@ static int host1x_channel_submit(struct nvhost_job *job)
 
 		nvhost_getchannel(ch);
 	}
+
+	host1x_channel_update_priority(job);
 
 	/* before error checks, return current max */
 	prev_max = job->sp->fence = nvhost_syncpt_read_max(sp, job->sp->id);

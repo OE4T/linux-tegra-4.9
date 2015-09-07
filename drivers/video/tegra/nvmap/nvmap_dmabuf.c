@@ -838,7 +838,7 @@ static int __nvmap_dmabuf_stashes_show(struct seq_file *s, void *data)
 		seq_printf(s, "  device = %s\n",
 			   dev_name(handle->attachment->dev));
 		addr = sg_dma_address(nvmap_sgt->sgt->sgl);
-		seq_printf(s, "  IO addr = 0x%pa + 0x%zx\n",
+		seq_printf(s, "  IO addr = %pa + 0x%zx\n",
 			&addr, handle->size);
 
 		/* Cleanup. */

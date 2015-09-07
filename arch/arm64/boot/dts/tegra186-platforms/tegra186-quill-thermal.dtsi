@@ -64,6 +64,14 @@
 			thermal-zone-params {
 				governor-name = "pid_thermal_gov";
 			};
+
+			trips {
+				trip_critical {
+					type = "critical";
+					temperature = <108000>;
+					hysteresis = <1>;
+				};
+			};
 		};
 
 		Tdiode_tegra {

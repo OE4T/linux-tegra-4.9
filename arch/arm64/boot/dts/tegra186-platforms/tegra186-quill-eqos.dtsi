@@ -29,6 +29,7 @@
 		 * 0x2 = Enabled for Legacy, 0x3 = Reserved
 		 */
 		nvidia,rxq_enable_ctrl = <2 2 2 2>;
+		nvidia,queue_prio = <0 1 2 3>;
 
 		nvidia,intr_mode = <1>;   /* 0=common irq, 1=multi irq*/
 

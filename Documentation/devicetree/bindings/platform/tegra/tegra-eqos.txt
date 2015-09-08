@@ -20,6 +20,8 @@ Required properties:
 - nvidia,ptp_ref_clock_speed: Specified in microseconds.
 - nvidia,rxq_enable_ctrl: An array where each entry specifies operating
 	mode for rx queue.
+- nvidia,queue_prio: An array where each entry specifies priority of
+	tx and rx queue.
 - nvidia,phy-reset-gpio: Specifies gpio pin for resetting PHY.
 - nvidia,phy-intr-gpio: Specifies gpio pin for PHY interrupts.
 

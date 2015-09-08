@@ -817,8 +817,8 @@ struct hw_if_struct {
 	 VOID(*configure_sa_via_reg) (u32);
 
 	/* for handling multi-queue */
-	INT(*disable_rx_interrupt)(UINT);
-	INT(*enable_rx_interrupt)(UINT);
+	INT(*disable_rx_interrupt)(UINT, struct DWC_ETH_QOS_prv_data *);
+	INT(*enable_rx_interrupt)(UINT, struct DWC_ETH_QOS_prv_data *);
 
 	/* for handling MMC */
 	INT(*disable_mmc_interrupts)(VOID);

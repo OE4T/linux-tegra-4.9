@@ -229,7 +229,7 @@ static inline bool is_gpio_accessible(u32 offset)
 	if ((val & GPIO_FULL_ACCESS) == GPIO_FULL_ACCESS)
 		return true;
 
-	return true;
+	return false;
 }
 
 static void tegra_gpio_enable(int gpio)

@@ -37,6 +37,7 @@
 
 #include "chip_support.h"
 
+#include "streamid_regs.c"
 #include "cg_regs.c"
 
 #define HOST_EMC_FLOOR 204000000
@@ -370,9 +371,10 @@ static void t186_remove_support(struct nvhost_chip_support *op)
 	op->priv = NULL;
 }
 
-static void t186_load_gating_regs(struct platform_device *pdev, bool prod)
+static void t186_init_regs(struct platform_device *pdev, bool prod)
 {
 	struct nvhost_gating_register *regs = t18x_host1x_gating_registers;
+	struct nvhost_streamid_mapping *map_regs = t18x_host1x_streamid_mapping;
 
 	while (regs->addr) {
 		if (prod)
@@ -381,6 +383,20 @@ static void t186_load_gating_regs(struct platform_device *pdev, bool prod)
 			host1x_hypervisor_writel(pdev, regs->addr,
 						 regs->disable);
 		regs++;
+	}
+
+	/* simulator cannot handle following writes - skip them */
+	if (tegra_platform_is_linsim())
+		return;
+
+	while (map_regs->host1x_offset) {
+		host1x_hypervisor_writel(pdev,
+					 map_regs->host1x_offset,
+					 map_regs->client_offset);
+		host1x_hypervisor_writel(pdev,
+					 map_regs->host1x_offset + sizeof(u32),
+					 map_regs->client_limit);
+		map_regs++;
 	}
 }
 
@@ -424,7 +440,7 @@ int nvhost_init_t186_support(struct nvhost_master *host,
 	op->cdma = host1x_cdma_ops;
 	op->push_buffer = host1x_pushbuffer_ops;
 	op->debug = host1x_debug_ops;
-	op->nvhost_dev.load_gating_regs = t186_load_gating_regs;
+	op->nvhost_dev.load_gating_regs = t186_init_regs;
 
 	host->sync_aperture = host->aperture;
 	op->syncpt = host1x_syncpt_ops;

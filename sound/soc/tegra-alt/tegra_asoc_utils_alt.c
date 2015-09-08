@@ -28,7 +28,7 @@
 #include <linux/of.h>
 
 #include <mach/clk.h>
-
+#include <linux/reset.h>
 #include <sound/soc.h>
 
 #include <linux/pinctrl/pinctrl.h>
@@ -218,6 +218,9 @@ int tegra_alt_asoc_utils_clk_enable(struct tegra_asoc_audio_clock_info *data)
 {
 	int err;
 
+#if !defined(CONFIG_ARCH_TEGRA_21x_SOC)
+	reset_control_reset(data->clk_cdev1_rst);
+#endif
 	err = clk_prepare_enable(data->clk_cdev1);
 	if (err) {
 		dev_err(data->dev, "Can't enable cdev1: %d\n", err);
@@ -323,7 +326,19 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 	if (data->soc == TEGRA_ASOC_UTILS_SOC_TEGRA20)
 		data->clk_cdev1 = clk_get_sys(NULL, "cdev1");
 	else
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 		data->clk_cdev1 = clk_get_sys("extern1", NULL);
+#else
+		data->clk_cdev1 = devm_clk_get(dev, "extern1");
+
+		data->clk_cdev1_rst = devm_reset_control_get(dev,
+						"extern1_rst");
+		if (IS_ERR(data->clk_cdev1_rst)) {
+			dev_err(dev, "Reset control is not found, err: %ld\n",
+					PTR_ERR(data->clk_cdev1_rst));
+			return PTR_ERR(data->clk_cdev1_rst);
+		}
+#endif
 
 	if (IS_ERR(data->clk_cdev1)) {
 		dev_err(data->dev, "Can't retrieve clk cdev1\n");
@@ -331,44 +346,22 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 		goto err_put_pll_a_out0;
 	}
 
-	if (data->soc == TEGRA_ASOC_UTILS_SOC_TEGRA20)
-		data->clk_out1 = ERR_PTR(-ENOENT);
-	else {
-		data->clk_out1 = clk_get_sys("clk_out_1", "extern1");
-		if (IS_ERR(data->clk_out1)) {
-			dev_err(data->dev, "Can't retrieve clk out1\n");
-			ret = PTR_ERR(data->clk_out1);
-			goto err_put_cdev1;
-		}
-	}
-
 	ret = clk_prepare_enable(data->clk_cdev1);
 	if (ret) {
 		dev_err(data->dev, "Can't enable clk cdev1/extern1");
-		goto err_put_out1;
+		goto err_put_cdev1;
 	}
 	data->clk_cdev1_state = 1;
-
-	if (!IS_ERR(data->clk_out1)) {
-		ret = clk_prepare_enable(data->clk_out1);
-		if (ret) {
-			dev_err(data->dev, "Can't enable clk out1");
-			goto err_put_out1;
-		}
-	}
 
 	if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA210) {
 		ret = tegra_alt_asoc_utils_set_rate(data, 48000,
 					256 * 48000, 256 * 48000);
 		if (ret)
-			goto err_put_out1;
+			goto err_put_cdev1;
 	}
 
 	return 0;
 
-err_put_out1:
-	if (!IS_ERR(data->clk_out1))
-		clk_put(data->clk_out1);
 err_put_cdev1:
 	clk_put(data->clk_cdev1);
 err_put_pll_a_out0:
@@ -453,9 +446,6 @@ void tegra_alt_asoc_utils_fini(struct tegra_asoc_audio_clock_info *data)
 {
 	if (data->clk_cdev1_state)
 		clk_disable(data->clk_cdev1);
-
-	if (!IS_ERR(data->clk_out1))
-		clk_put(data->clk_out1);
 
 	if (!IS_ERR(data->clk_pll_a_out0))
 		clk_put(data->clk_pll_a_out0);

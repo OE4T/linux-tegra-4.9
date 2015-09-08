@@ -106,6 +106,15 @@ static int tegra210_i2s_set_clock_rate(struct device *dev, int clock_rate)
 				return ret;
 			}
 
+#if !defined(CONFIG_ARCH_TEGRA_21x_SOC)
+			ret = clk_set_parent(i2s->clk_audio_sync,
+						i2s->clk_i2s_sync);
+			if (ret) {
+				dev_err(dev,
+				"Can't set parent of i2s audio sync clock\n");
+				return ret;
+			}
+#endif
 			ret = clk_set_parent(i2s->clk_i2s, i2s->clk_audio_sync);
 			if (ret) {
 				dev_err(dev, "Can't set parent of i2s clock\n");

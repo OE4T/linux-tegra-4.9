@@ -183,6 +183,9 @@ void nvhost_module_reset(struct platform_device *dev, bool reboot)
 		/* Load clockgating registers */
 		nvhost_module_load_regs(dev, pdata->engine_can_cg);
 
+		/* initialize device vm */
+		nvhost_vm_init_device(dev);
+
 		/* ..and execute engine specific operations (i.e. boot) */
 		if (pdata->finalize_poweron)
 			pdata->finalize_poweron(dev);

@@ -45,8 +45,8 @@
 #include "dc/edid.h"
 #include "dc/dc_config.h"
 
-/* Pad pitch to 256-byte boundary. */
-#define TEGRA_LINEAR_PITCH_ALIGNMENT 256
+/* Pad pitch to 64-byte boundary. */
+#define TEGRA_LINEAR_PITCH_ALIGNMENT 64
 
 #ifdef CONFIG_COMPAT
 #define user_ptr(p) ((void __user *)(uintptr_t)(p))

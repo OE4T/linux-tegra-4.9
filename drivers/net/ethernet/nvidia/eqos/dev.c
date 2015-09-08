@@ -2021,15 +2021,22 @@ static INT config_mmc_counters(void)
 * \retval -1 Failure
 */
 
-static INT disable_rx_interrupt(UINT qInx)
+static INT disable_rx_interrupt(
+	UINT qInx, struct DWC_ETH_QOS_prv_data *pdata)
 {
+	u32 reg;
 
-	u32 dmaIer;
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
+		VIRT_INTR_CH_CRTL_RgRd(qInx, reg);
+		reg &= ~VIRT_INTR_CH_CRTL_RX_Wr_Mask;
+		VIRT_INTR_CH_CRTL_RgWr(qInx, reg);
 
-	DMA_IER_RgRd(qInx, dmaIer);
-	dmaIer &= DMA_IER_RBUE_Wr_Mask;
-	dmaIer &= DMA_IER_RIE_Wr_Mask;
-	DMA_IER_RgWr(qInx, dmaIer);
+	} else {
+		DMA_IER_RgRd(qInx, reg);
+		reg &= DMA_IER_RBUE_Wr_Mask;
+		reg &= DMA_IER_RIE_Wr_Mask;
+		DMA_IER_RgWr(qInx, reg);
+	}
 
   	return Y_SUCCESS;
 }
@@ -2045,14 +2052,21 @@ static INT disable_rx_interrupt(UINT qInx)
 * \retval -1 Failure
 */
 
-static INT enable_rx_interrupt(UINT qInx)
+static INT enable_rx_interrupt(
+	UINT qInx, struct DWC_ETH_QOS_prv_data *pdata)
 {
-	u32 dmaIer;
+	u32 reg;
 
-	DMA_IER_RgRd(qInx, dmaIer);
-	dmaIer |= ~DMA_IER_RBUE_Wr_Mask;
-	dmaIer |= ~DMA_IER_RIE_Wr_Mask;
-	DMA_IER_RgWr(qInx, dmaIer);
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
+		VIRT_INTR_CH_CRTL_RgRd(qInx, reg);
+		reg |= VIRT_INTR_CH_CRTL_RX_Wr_Mask;
+		VIRT_INTR_CH_CRTL_RgWr(qInx, reg);
+	} else {
+		DMA_IER_RgRd(qInx, reg);
+		reg |= ~DMA_IER_RBUE_Wr_Mask;
+		reg |= ~DMA_IER_RIE_Wr_Mask;
+		DMA_IER_RgWr(qInx, reg);
+	}
 
   	return Y_SUCCESS;
 }

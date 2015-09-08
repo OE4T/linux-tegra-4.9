@@ -492,7 +492,7 @@ void DWC_ETH_QOS_disable_all_ch_rx_interrpt(
 	DBGPR("-->DWC_ETH_QOS_disable_all_ch_rx_interrpt\n");
 
 	for (qInx = 0; qInx < DWC_ETH_QOS_RX_QUEUE_CNT; qInx++)
-		hw_if->disable_rx_interrupt(qInx);
+		hw_if->disable_rx_interrupt(qInx, pdata);
 
 	DBGPR("<--DWC_ETH_QOS_disable_all_ch_rx_interrpt\n");
 }
@@ -506,7 +506,7 @@ void DWC_ETH_QOS_enable_all_ch_rx_interrpt(
 	DBGPR("-->DWC_ETH_QOS_enable_all_ch_rx_interrpt\n");
 
 	for (qInx = 0; qInx < DWC_ETH_QOS_RX_QUEUE_CNT; qInx++)
-		hw_if->enable_rx_interrupt(qInx);
+		hw_if->enable_rx_interrupt(qInx, pdata);
 
 	DBGPR("<--DWC_ETH_QOS_enable_all_ch_rx_interrpt\n");
 }
@@ -593,6 +593,8 @@ void handle_ti_ri_chan_intrs(struct DWC_ETH_QOS_prv_data *pdata,
 {
 	ULONG varDMA_SR;
 	ULONG varDMA_IER;
+	u32 ch_crtl_reg;
+	u32 ch_stat_reg;
 	struct net_device *dev = pdata->dev;
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 
@@ -605,9 +607,14 @@ void handle_ti_ri_chan_intrs(struct DWC_ETH_QOS_prv_data *pdata,
 	DMA_SR_RgRd(qInx, varDMA_SR);
 
 	DMA_IER_RgRd(qInx, varDMA_IER);
+	VIRT_INTR_CH_STAT_RgRd(qInx, ch_stat_reg);
+	VIRT_INTR_CH_CRTL_RgRd(qInx, ch_crtl_reg);
 
 	DBGPR("DMA_SR[%d] = %#lx, DMA_IER= %#lx\n", qInx, varDMA_SR,
 		varDMA_IER);
+
+	DBGPR("VIRT_INTR_CH_STAT[%d] = %#lx, VIRT_INTR_CH_CRTL= %#lx\n",
+		qInx, ch_stat_reg, ch_crtl_reg);
 
 	/*on ufpga, update of DMA_IER is really slow, such that interrupt
 	 * would happen, but read of IER returns old value.  This would
@@ -618,13 +625,12 @@ void handle_ti_ri_chan_intrs(struct DWC_ETH_QOS_prv_data *pdata,
 	 * have enabled.
 	 */
 	if (!(tegra_platform_is_unit_fpga()))
-		varDMA_SR = (varDMA_SR & varDMA_IER);
+		ch_stat_reg &= ch_crtl_reg;
 
-	if (varDMA_SR == 0)
+	if (ch_stat_reg == 0)
 		return;
 
-	if (GET_VALUE(varDMA_SR, DMA_SR_RI_LPOS, DMA_SR_RI_HPOS) & 1) {
-		/* ack RI */
+	if (ch_stat_reg & VIRT_INTR_CH_CRTL_RX_Wr_Mask) {
 		DMA_SR_RgWr(qInx, ((0x1) << 6) | ((0x1) << 15));
 		VIRT_INTR_CH_STAT_RgWr(qInx, VIRT_INTR_CH_CRTL_RX_Wr_Mask);
 
@@ -636,14 +642,14 @@ void handle_ti_ri_chan_intrs(struct DWC_ETH_QOS_prv_data *pdata,
 					if (likely(napi_schedule_prep(
 						&rx_queue->napi))) {
 						hw_if->disable_rx_interrupt(
-							qInx);
+							qInx, pdata);
 						__napi_schedule(
 							&rx_queue->napi);
 					} else {
 						printk(KERN_ALERT
 						"driver bug! Rx interrupt while in poll\n");
 						hw_if->disable_rx_interrupt(
-							qInx);
+							qInx, pdata);
 					}
 				} else if (pdata->dt_cfg.chan_mode[qInx] ==
 						CHAN_MODE_INTR) {
@@ -666,10 +672,11 @@ void handle_ti_ri_chan_intrs(struct DWC_ETH_QOS_prv_data *pdata,
 		}
 	}
 	if (tegra_platform_is_unit_fpga())
-		varDMA_SR = (varDMA_SR & varDMA_IER);
+		ch_stat_reg &= ch_crtl_reg;
 
-	if (GET_VALUE(varDMA_SR, DMA_SR_TI_LPOS, DMA_SR_TI_HPOS) & 1) {
+	if (ch_stat_reg & VIRT_INTR_CH_CRTL_TX_Wr_Mask) {
 		DMA_SR_RgWr(qInx, ((0x1) << 0) | ((0x1) << 15));
+		VIRT_INTR_CH_STAT_RgWr(qInx, VIRT_INTR_CH_CRTL_TX_Wr_Mask);
 		pdata->xstats.tx_normal_irq_n[qInx]++;
 		DWC_ETH_QOS_tx_interrupt(dev, pdata, qInx);
 	}
@@ -3880,7 +3887,7 @@ static void do_txrx_post_processing(struct DWC_ETH_QOS_prv_data *pdata,
 
 			/* Enable RX interrupt */
 			if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
-				hw_if->enable_rx_interrupt(qInx);
+				hw_if->enable_rx_interrupt(qInx, pdata);
 			else
 				DWC_ETH_QOS_enable_all_ch_rx_interrpt(pdata);
 		} else {
@@ -3891,7 +3898,7 @@ static void do_txrx_post_processing(struct DWC_ETH_QOS_prv_data *pdata,
 
 			/* Enable RX interrupt */
 			if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
-				hw_if->enable_rx_interrupt(qInx);
+				hw_if->enable_rx_interrupt(qInx, pdata);
 			else
 				DWC_ETH_QOS_enable_all_ch_rx_interrpt(pdata);
 

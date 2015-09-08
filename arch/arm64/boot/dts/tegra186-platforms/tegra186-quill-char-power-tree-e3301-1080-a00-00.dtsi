@@ -27,6 +27,14 @@
 		};
 	};
 
+	ether_qos@2490000 {
+		vddio_sys_enet_bias-supply = <&spmic_ldo6>;
+		vddio_enet-supply = <&spmic_ldo6>;
+		phy_vdd_1v8-supply = <&spmic_ldo6>;
+		phy_ovdd_rgmii-supply = <&spmic_sd3>;
+		phy_pllvdd-supply = <&spmic_sd3>;
+	};
+
 	host1x {
 		nvdisplay@15200000 {
 			avdd_lcd-supply = <&vdd_dis_3v3_lcd>;

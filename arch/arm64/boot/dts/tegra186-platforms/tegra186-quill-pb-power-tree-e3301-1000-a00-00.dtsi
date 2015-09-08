@@ -34,6 +34,14 @@
 		};
 	};
 
+	ether_qos@2490000 {
+		vddio_sys_enet_bias-supply = <&spmic_ldo6>;
+		vddio_enet-supply = <&spmic_ldo6>;
+		phy_vdd_1v8-supply = <&spmic_ldo6>;
+		phy_ovdd_rgmii-supply = <&spmic_sd3>;
+		phy_pllvdd-supply = <&spmic_sd3>;
+	};
+
 	sdhci@3460000 {
 		vddio_sdmmc-supply = <&spmic_sd2>;
 		vddio_sd_slot-supply = <&spmic_sd3>;

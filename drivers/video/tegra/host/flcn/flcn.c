@@ -209,7 +209,6 @@ static int flcn_read_ucode(struct platform_device *dev, const char *fw_name)
 	struct flcn *v = get_flcn(dev);
 	const struct firmware *ucode_fw;
 	int err;
-	DEFINE_DMA_ATTRS(attrs);
 
 	nvhost_dbg_fn("");
 
@@ -225,11 +224,9 @@ static int flcn_read_ucode(struct platform_device *dev, const char *fw_name)
 	}
 
 	v->size = ucode_fw->size;
-	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
 
-	v->mapped = dma_alloc_attrs(&dev->dev,
-				v->size, &v->dma_addr,
-				GFP_KERNEL, &attrs);
+	v->mapped = nvhost_vm_allocate_firmware_area(dev, v->size,
+						     &v->dma_addr);
 	if (!v->mapped) {
 		dev_err(&dev->dev, "dma memory allocation failed");
 		err = -ENOMEM;
@@ -244,17 +241,14 @@ static int flcn_read_ucode(struct platform_device *dev, const char *fw_name)
 
 	v->valid = true;
 
-	nvhost_vm_map_static(dev, v->mapped, v->dma_addr, v->size);
-
 	release_firmware(ucode_fw);
 
 	return 0;
 
  clean_up:
 	if (v->mapped) {
-		dma_free_attrs(&dev->dev,
-			v->size, v->mapped,
-			v->dma_addr, &attrs);
+		nvhost_vm_release_firmware_area(dev, v->size,
+						v->dma_addr);
 		v->mapped = NULL;
 		v->dma_addr = 0;
 	}

@@ -41,6 +41,7 @@
 
 #include "debug.h"
 #include "bus_client.h"
+#include "nvhost_vm.h"
 #include "nvhost_acm.h"
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
@@ -992,6 +993,8 @@ static int nvhost_probe(struct platform_device *dev)
 	nvhost_module_idle(dev);
 
 	nvhost_update_characteristics(dev);
+
+	nvhost_vm_init(dev);
 
 	dev_info(&dev->dev, "initialized\n");
 	return 0;

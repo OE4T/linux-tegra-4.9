@@ -84,6 +84,38 @@ struct nvhost_vm_static_buffer {
 };
 
 /**
+ * nvhost_vm_release_firmware_area - releases area from firmware pool
+ *	@pdev: Pointer to platform device
+ *	@size: Size of the area
+ *	@dma_addr: Address given by nvhost_vm_allocate_firmware_area()
+ *
+ * This function releases a firmware area.
+ */
+void nvhost_vm_release_firmware_area(struct platform_device *pdev,
+				     size_t size, dma_addr_t dma_addr);
+
+/**
+ * nvhost_vm_allocate_firmware_area - allocate area from firmware pool
+ *	@pdev: Pointer to platform device
+ *	@size: Size of the area
+ *	@dma_addr: Address to the beginning of iova address
+ *
+ * This function allocates a firmware area. The return value indicates
+ * the cpu virtual address. Return value is NULL if the allocation
+ * failed.
+ */
+void *nvhost_vm_allocate_firmware_area(struct platform_device *pdev,
+				       size_t size, dma_addr_t *dma_addr);
+
+/**
+ * nvhost_vm_init - initialize vm
+ *	@pdev: Pointer to host1x platform device
+ *
+ * This function initializes vm operations for host1x.
+ */
+int nvhost_vm_init(struct platform_device *pdev);
+
+/**
  * nvhost_vm_init_device - initialize device vm
  *	@pdev: Pointer to platform device
  *

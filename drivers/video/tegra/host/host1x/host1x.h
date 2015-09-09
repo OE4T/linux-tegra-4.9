@@ -78,6 +78,18 @@ struct host1x_device_info {
 						struct nvhost_chip_support *);
 	bool		allow_user_mappings; /* allow userspace mappings? */
 	int		nb_actmons;
+	size_t		firmware_area_size;
+};
+
+struct nvhost_vm_firmware_area {
+	void *vaddr;
+	dma_addr_t dma_addr;
+
+	unsigned long *bitmap;
+	unsigned long bitmap_size_bits;
+	unsigned long bitmap_size_bytes;
+
+	struct mutex mutex;
 };
 
 struct nvhost_master {
@@ -102,6 +114,7 @@ struct nvhost_master {
 	struct mutex priority_lock;	/* mutex for priority update */
 
 	/* nvhost vm specific structures */
+	struct nvhost_vm_firmware_area firmware_area;
 	struct list_head static_mappings_list;
 	struct list_head vm_list;
 	struct mutex vm_mutex;

@@ -897,6 +897,12 @@ static int __init tegra_cpufreq_init(void)
 		goto err_out;
 	}
 
+	if (!of_device_is_available(dn)) {
+		ret = -ENODEV;
+		pr_err("tegra18x-cpufreq: device is disabled\n");
+		goto err_out;
+	}
+
 	ret = get_emc_clk(dn);
 	if (ret) {
 		pr_err("tegra18x-cpufreq: unable to get emc clk\n");

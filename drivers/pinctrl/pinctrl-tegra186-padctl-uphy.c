@@ -1506,7 +1506,7 @@ static int uphy_pll_init_partial(struct tegra_padctl_uphy *uphy, int pll,
 
 	reg = uphy_pll_readl(uphy, pll, UPHY_PLL_CTL_1);
 	reg &= ~PLL_SLEEP(~0);
-	reg |= ~PLL_SLEEP(2);
+	reg |= PLL_SLEEP(2);
 	uphy_pll_writel(uphy, pll, reg, UPHY_PLL_CTL_1);
 
 	ndelay(100);
@@ -2979,6 +2979,7 @@ static int tegra186_ufs_phy_power_on(struct phy *phy)
 		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
 	}
 
+	/* step 5.3: Reset release of lanes and PLL1. */
 	rc = uphy_pll_reset_deassert(uphy, 0);
 	if (rc)
 		goto unlock_out;

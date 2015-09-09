@@ -144,4 +144,7 @@ static inline long tegra_emc_round_rate_updown(unsigned long rate, bool up)
 
 int tegra_super_cdiv_use_therm_controls(bool);
 
+extern void tegra210_csi_source_from_brick(void);
+extern void tegra210_csi_source_from_plld(void);
+
 #endif /* __LINUX_CLK_TEGRA_H_ */

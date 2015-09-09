@@ -675,6 +675,9 @@ static int tegra_nvdisp_set_color_control(struct tegra_dc *dc)
 
 	switch (dc->out->depth) {
 
+	case 36:
+		color_control = nvdisp_color_ctl_base_color_size_36bits_f();
+		break;
 	case 30:
 		color_control = nvdisp_color_ctl_base_color_size_30bits_f();
 		break;
@@ -685,7 +688,7 @@ static int tegra_nvdisp_set_color_control(struct tegra_dc *dc)
 		color_control = nvdisp_color_ctl_base_color_size_18bits_f();
 		break;
 	default:
-		color_control = nvdisp_color_ctl_base_color_size_6bits_f();
+		color_control = nvdisp_color_ctl_base_color_size_24bits_f();
 		break;
 	}
 

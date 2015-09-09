@@ -663,13 +663,15 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 		    --g->dbg_powergating_disabled_refcount == 0) {
 
 			g->elcg_enabled = true;
-			gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
 			gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_CE2_GK20A);
+			gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
 			gr_gk20a_init_blcg_mode(g, BLCG_AUTO, ENGINE_GR_GK20A);
 
-			g->ops.clock_gating.slcg_gr_load_gating_prod(g,
+			g->ops.clock_gating.slcg_ltc_load_gating_prod(g,
 					g->slcg_enabled);
 			g->ops.clock_gating.slcg_perf_load_gating_prod(g,
+					g->slcg_enabled);
+			g->ops.clock_gating.slcg_gr_load_gating_prod(g,
 					g->slcg_enabled);
 
 			if (support_gk20a_pmu(g->dev))

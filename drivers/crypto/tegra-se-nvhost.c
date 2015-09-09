@@ -55,6 +55,7 @@
 #include "../video/tegra/host/t186/hardware_t186.h"
 #include "nvhost_job.h"
 #include "nvhost_channel.h"
+#include "nvhost_acm.h"
 
 #define DRIVER_NAME	"tegra-se-nvhost"
 
@@ -2744,6 +2745,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 			reg_hash_alg[k] = i;
 		}
 	}
+
+	nvhost_module_enable_clk(&pdev->dev);
 
 	/* RNG register only exists in se0/se1 */
 	if (se_num == 0) {

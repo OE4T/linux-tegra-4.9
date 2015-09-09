@@ -1408,6 +1408,8 @@ static int gk20a_probe(struct platform_device *dev)
 
 	spin_lock_init(&gk20a->mc_enable_lock);
 
+	gk20a_debug_init(dev);
+
 	/* Initialize the platform interface. */
 	err = platform->probe(dev);
 	if (err) {
@@ -1439,8 +1441,6 @@ static int gk20a_probe(struct platform_device *dev)
 	if (err)
 		dev_err(&dev->dev,
 			"failed to allocate secure buffer %d\n", err);
-
-	gk20a_debug_init(dev);
 
 	/* Set DMA parameters to allow larger sgt lists */
 	dev->dev.dma_parms = &gk20a->dma_parms;

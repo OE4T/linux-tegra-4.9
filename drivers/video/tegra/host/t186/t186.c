@@ -20,6 +20,8 @@
 #include <linux/io.h>
 #include <linux/tegra-soc.h>
 
+#include <linux/platform/tegra/tegra18_kfuse.h>
+
 #include "dev.h"
 #include "class_ids.h"
 #include "class_ids_t186.h"
@@ -42,6 +44,28 @@
 
 #define HOST_EMC_FLOOR 204000000
 #define HOST_NVDEC_EMC_FLOOR 102000000
+
+int nvhost_nvdec_t186_finalize_poweron(struct platform_device *dev)
+{
+	int ret;
+
+	ret = tegra_kfuse_enable_sensing();
+	if (ret)
+		return ret;
+
+	ret = nvhost_nvdec_finalize_poweron(dev);
+	if (ret)
+		tegra_kfuse_disable_sensing();
+
+	return ret;
+}
+
+int nvhost_nvdec_t186_prepare_poweroff(struct platform_device *dev)
+{
+	tegra_kfuse_disable_sensing();
+
+	return 0;
+}
 
 static struct host1x_device_info host1x04_info = {
 	.nb_channels	= T186_NVHOST_NUMCHANNELS,
@@ -209,7 +233,8 @@ struct nvhost_device_data t18_nvdec_info = {
 	},
 	.engine_cg_regs		= t18x_nvdec_gating_registers,
 	.poweron_reset		= true,
-	.finalize_poweron	= nvhost_nvdec_finalize_poweron,
+	.finalize_poweron	= nvhost_nvdec_t186_finalize_poweron,
+	.prepare_poweroff	= nvhost_nvdec_t186_prepare_poweroff,
 	.moduleid		= NVHOST_MODULE_NVDEC,
 	.ctrl_ops		= &tegra_nvdec_ctrl_ops,
 	.num_channels		= 1,

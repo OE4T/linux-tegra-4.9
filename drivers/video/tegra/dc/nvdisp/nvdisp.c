@@ -544,8 +544,12 @@ struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
 
 	/* Allocate FBMem if not already allocated */
 	if (!fb_mem->start || !fb_mem->end) {
-		int fb_size = fb_data->xres * fb_data->yres *
-			fb_data->bits_per_pixel / 8;
+		/* lines must be 64B aligned */
+		int stride = round_up(fb_data->xres *
+					fb_data->bits_per_pixel / 8, 64);
+		/* Add space to permit adjustment of start of buffer.
+		 * start of buffer requires 256B alignment. */
+		int fb_size = stride * fb_data->yres + 256;
 
 		if (!fb_size)
 			return ERR_PTR(-ENOENT);

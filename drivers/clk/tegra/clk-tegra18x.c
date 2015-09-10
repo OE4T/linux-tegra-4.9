@@ -363,6 +363,10 @@ static __initdata struct tegra_bpmp_clk_init tegra186_clocks[] = {
 	{ .clk_num = TEGRA186_CLK_EQOS_RX_INPUT, .name = "eqos_rx_input" },
 	{ .clk_num = TEGRA186_CLK_DTV_INPUT, .name = "dtv_input" },
 	{ .clk_num = TEGRA186_CLK_GPC2CLK, .name = "gpc2clk" },
+	{ .clk_num = TEGRA186_CLK_SOR0_PAD_CLKOUT, .name = "sor0_pad_clkout" },
+	{ .clk_num = TEGRA186_CLK_SOR1_PAD_CLKOUT, .name = "sor1_pad_clkout" },
+	{ .clk_num = TEGRA186_CLK_SOR0_OUT, .name = "sor0_out" },
+	{ .clk_num = TEGRA186_CLK_SOR1_OUT, .name = "sor1_out" },
 };
 
 /* Needed for a nvdisp linsim clock hack */

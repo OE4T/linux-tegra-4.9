@@ -474,9 +474,6 @@ static void DWC_ETH_QOS_rx_free_mem(struct DWC_ETH_QOS_prv_data *pdata)
 	/* free RX descriptor */
 	DWC_ETH_QOS_rx_desc_free_mem(pdata, DWC_ETH_QOS_RX_QUEUE_CNT);
 
-	/* free RX skb's */
-	DWC_ETH_QOS_rx_skb_free_mem(pdata, DWC_ETH_QOS_RX_QUEUE_CNT);
-
 	/* free RX wrapper buffer */
 	DWC_ETH_QOS_rx_buf_free_mem(pdata, DWC_ETH_QOS_RX_QUEUE_CNT);
 

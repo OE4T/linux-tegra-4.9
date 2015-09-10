@@ -24,6 +24,7 @@
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
 #include <linux/tegra_pm_domains.h>
+#include <linux/reset.h>
 #include "gk20a/platform_gk20a.h"
 #include "gk20a/gk20a.h"
 #include "platform_tegra.h"
@@ -178,6 +179,32 @@ static int gp10b_tegra_suspend(struct device *dev)
 	return 0;
 }
 
+static int gp10b_tegra_reset_assert(struct platform_device *dev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	int ret = 0;
+
+	if (!platform->reset_control)
+		return -EINVAL;
+
+	ret = reset_control_assert(platform->reset_control);
+
+	return ret;
+}
+
+static int gp10b_tegra_reset_deassert(struct platform_device *dev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	int ret = 0;
+
+	if (!platform->reset_control)
+		return -EINVAL;
+
+	ret = reset_control_deassert(platform->reset_control);
+
+	return ret;
+}
+
 struct gk20a_platform t18x_gpu_tegra_platform = {
 	.has_syncpoints = true,
 
@@ -209,4 +236,9 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 
 	.secure_alloc = gk20a_tegra_secure_alloc,
 	.secure_page_alloc = gk20a_tegra_secure_page_alloc,
+
+	.reset_assert = gp10b_tegra_reset_assert,
+	.reset_deassert = gp10b_tegra_reset_deassert,
+
+	.force_reset_in_do_idle = true,
 };

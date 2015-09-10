@@ -370,6 +370,8 @@ void gk20a_channel_abort(struct channel_gk20a *ch)
 	/* make sure new kickoffs are prevented */
 	ch->has_timedout = true;
 
+	ch->g->ops.fifo.disable_channel(ch);
+
 	/* ensure no fences are pending */
 	mutex_lock(&ch->submit_lock);
 	if (ch->sync)
@@ -386,8 +388,6 @@ void gk20a_channel_abort(struct channel_gk20a *ch)
 		}
 	}
 	mutex_unlock(&ch->jobs_lock);
-
-	ch->g->ops.fifo.disable_channel(ch);
 
 	if (released_job_semaphore) {
 		wake_up_interruptible_all(&ch->semaphore_wq);

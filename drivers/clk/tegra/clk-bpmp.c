@@ -249,6 +249,9 @@ const struct clk_ops tegra_clk_bpmp_rate_ops = {
 const struct clk_ops  tegra_clk_bpmp_mux_ops = {
 	.get_parent = clk_bpmp_get_parent,
 	.set_parent = clk_bpmp_set_parent,
+	.is_enabled = clk_bpmp_is_enabled,
+	.prepare = clk_bpmp_enable,
+	.unprepare = clk_bpmp_disable,
 };
 
 struct clk *tegra_clk_register_bpmp(const char *name, int parent,

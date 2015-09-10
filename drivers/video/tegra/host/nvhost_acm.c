@@ -351,6 +351,13 @@ int nvhost_module_get_rate(struct platform_device *dev, unsigned long *rate,
 	return 0;
 }
 
+static bool nvhost_module_emc_clock(struct nvhost_clock *clock)
+{
+	return (clock->moduleid ==
+		NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER) ||
+	       (clock->moduleid == NVHOST_MODULE_ID_EMC_SHARED);
+}
+
 static int nvhost_module_update_rate(struct platform_device *dev, int index)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
@@ -361,6 +368,11 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 
 	if (!pdata->clk[index])
 		return -EINVAL;
+
+	/* WAR to bug 1667061: Do not handle EMC requests on CCF */
+	if (IS_ENABLED(CONFIG_COMMON_CLK) &&
+	    nvhost_module_emc_clock(&pdata->clocks[index]))
+		return 0;
 
 	/* aggregate client constraints */
 	list_for_each_entry(m, &pdata->client_list, node) {
@@ -711,7 +723,12 @@ int nvhost_module_init(struct platform_device *dev)
 
 		rate = clk_round_rate(c, rate);
 		clk_prepare_enable(c);
-		clk_set_rate(c, rate);
+
+		/* WAR to bug 1667061: Do not handle EMC requests on CCF */
+		if (!IS_ENABLED(CONFIG_COMMON_CLK) ||
+		    !nvhost_module_emc_clock(&pdata->clocks[i]))
+			clk_set_rate(c, rate);
+
 		pdata->clk[pdata->num_clks++] = c;
 		i++;
 	}

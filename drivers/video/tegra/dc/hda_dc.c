@@ -464,5 +464,8 @@ void tegra_hda_reset_data(void)
 {
 	tegra_dc_hda_disable_clocks();
 	tegra_dc_hda_put_clocks();
+
 	kfree(hda);
+	if (hda)
+		hda = NULL;
 }

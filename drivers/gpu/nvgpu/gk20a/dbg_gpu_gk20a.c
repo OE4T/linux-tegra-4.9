@@ -282,12 +282,6 @@ static int dbg_unbind_channel_gk20a(struct dbg_session_gk20a *dbg_s)
 
 	--g->dbg_sessions;
 
-	/* Powergate enable is called here as possibility of dbg_session
-	 * which called powergate disable ioctl, to be killed without calling
-	 * powergate enable ioctl
-	 */
-	dbg_set_powergate(dbg_s, NVGPU_DBG_GPU_POWERGATE_MODE_ENABLE);
-
 	dbg_s->ch = NULL;
 	fput(dbg_s->ch_f);
 	dbg_s->ch_f = NULL;
@@ -303,12 +297,21 @@ static int dbg_unbind_channel_gk20a(struct dbg_session_gk20a *dbg_s)
 int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp)
 {
 	struct dbg_session_gk20a *dbg_s = filp->private_data;
+	struct gk20a *g = dbg_s->g;
 
 	gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn, "%s", dev_name(dbg_s->dev));
 
 	/* unbind if it was bound */
 	if (dbg_s->ch)
 		dbg_unbind_channel_gk20a(dbg_s);
+
+	/* Powergate enable is called here as possibility of dbg_session
+	 * which called powergate disable ioctl, to be killed without calling
+	 * powergate enable ioctl
+	 */
+	mutex_lock(&g->dbg_sessions_lock);
+	dbg_set_powergate(dbg_s, NVGPU_DBG_GPU_POWERGATE_MODE_ENABLE);
+	mutex_unlock(&g->dbg_sessions_lock);
 
 	kfree(dbg_s);
 	return 0;

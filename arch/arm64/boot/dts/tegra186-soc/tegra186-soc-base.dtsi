@@ -141,6 +141,7 @@
 			      <&host1x_ctx7			TEGRA_SWGROUP_HOST1X_CTX7>,
 
 			      /* Non-host devices. */
+			      <&{/adsp@2993000}		TEGRA_SWGROUP_APE>,
 			      <&{/sdhci@3460000}	TEGRA_SWGROUP_SDMMC4A>,
 			      <&{/sdhci@3440000}	TEGRA_SWGROUP_SDMMC3A>,
 			      <&{/sdhci@3420000}	TEGRA_SWGROUP_SDMMC2A>,
@@ -1826,6 +1827,7 @@
 		clock-names = "adsp.ape", "adsp.apb2ape", "adspneon", "adsp", "adsp.emc";
 		resets = <&tegra_car TEGRA186_RESET_ADSP_ALL>;
 		reset-names = "adspall";
+		#stream-id-cells = <1>;
 	};
 
 	tegra_denver_wdt:watchdog@30c0000 {

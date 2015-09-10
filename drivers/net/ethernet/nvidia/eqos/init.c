@@ -306,16 +306,26 @@ axi_get_fail:
 
 static void eqos_regulator_deinit(struct DWC_ETH_QOS_prv_data *pdata)
 {
-	regulator_disable(pdata->vddio_sys_enet_bias);
-	regulator_disable(pdata->vddio_enet);
-	regulator_disable(pdata->phy_pllvdd);
-	regulator_disable(pdata->phy_ovdd_rgmii);
-	regulator_disable(pdata->phy_vdd_1v8);
-	devm_regulator_put(pdata->vddio_sys_enet_bias);
-	devm_regulator_put(pdata->vddio_enet);
-	devm_regulator_put(pdata->phy_pllvdd);
-	devm_regulator_put(pdata->phy_ovdd_rgmii);
-	devm_regulator_put(pdata->phy_vdd_1v8);
+	if (!IS_ERR_OR_NULL(pdata->vddio_sys_enet_bias)) {
+		regulator_disable(pdata->vddio_sys_enet_bias);
+		devm_regulator_put(pdata->vddio_sys_enet_bias);
+	}
+	if (!IS_ERR_OR_NULL(pdata->vddio_enet)) {
+		regulator_disable(pdata->vddio_enet);
+		devm_regulator_put(pdata->vddio_enet);
+	}
+	if (!IS_ERR_OR_NULL(pdata->phy_pllvdd)) {
+		regulator_disable(pdata->phy_pllvdd);
+		devm_regulator_put(pdata->phy_pllvdd);
+	}
+	if (!IS_ERR_OR_NULL(pdata->phy_ovdd_rgmii)) {
+		regulator_disable(pdata->phy_ovdd_rgmii);
+		devm_regulator_put(pdata->phy_ovdd_rgmii);
+	}
+	if (!IS_ERR_OR_NULL(pdata->phy_vdd_1v8)) {
+		regulator_disable(pdata->phy_vdd_1v8);
+		devm_regulator_put(pdata->phy_vdd_1v8);
+	}
 }
 
 static int eqos_regulator_init(struct DWC_ETH_QOS_prv_data *pdata)
@@ -505,7 +515,6 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	int tx_irqs[MAX_CHANS];
 	struct hw_if_struct *hw_if = NULL;
 	struct desc_if_struct *desc_if = NULL;
-	UCHAR tx_q_count = 0, rx_q_count = 0;
 	struct resource *res;
 	const struct of_device_id *match;
 	struct device_node *node = pdev->dev.of_node;
@@ -569,8 +578,9 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	DBGPR("Sizeof tx normal desc is %lu\n\n", sizeof(struct s_TX_NORMAL_DESC));
 	DBGPR("==========================================================\n");
 
-	/*remap base address*/
-	dwc_eth_qos_base_addr = (ULONG)ioremap_nocache(res->start, (res->end - res->start) + 1);
+	/* remap base address */
+	dwc_eth_qos_base_addr = (ULONG) devm_ioremap_nocache(&pdev->dev,
+		res->start, (res->end - res->start) + 1);
 
 	/* Set DMA addressing limitations */
 	if (dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32))) {
@@ -578,7 +588,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		goto err_out_dev_failed;
 	}
 
-	/* allocate and set up the ethernet device*/
+	/* allocate and set up the ethernet device */
 	ndev = alloc_etherdev_mqs(sizeof(struct DWC_ETH_QOS_prv_data),
 				MAX_CHANS, MAX_CHANS);
 	if (ndev == NULL) {
@@ -663,11 +673,8 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		goto err_out_pad_calibrate_failed;
 
 	/* queue count */
-	tx_q_count = get_tx_queue_count();
-	rx_q_count = get_rx_queue_count();
-
-	pdata->tx_queue_cnt = tx_q_count;
-	pdata->rx_queue_cnt = rx_q_count;
+	pdata->tx_queue_cnt = get_tx_queue_count();
+	pdata->rx_queue_cnt = get_rx_queue_count();
 
 #ifdef DWC_ETH_QOS_CONFIG_DEBUGFS
 	/* to give prv data to debugfs */
@@ -891,18 +898,32 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	DWC_ETH_QOS_configure_rx_fun_ptr(pdata);
 	desc_if->wrapper_tx_desc_init(pdata);
 	desc_if->wrapper_rx_desc_init(pdata);
+
 	return 0;
 
  err_out_pmt_irq_failed:
+	if (pdata->power_irq != 0) {
+		free_irq(pdata->power_irq, pdata);
+		pdata->power_irq = 0;
+	}
 	unregister_netdev(ndev);
  err_out_netdev_failed:
-#ifdef DWC_ETH_QOS_CONFIG_PTP
-	DWC_ETH_QOS_ptp_remove(pdata);
-#endif	/* end of DWC_ETH_QOS_CONFIG_PTP */
 
 #ifdef DWC_ETH_QOS_CONFIG_PGTEST
 	DWC_ETH_QOS_free_pg(pdata);
  err_out_pg_failed:
+#endif
+
+#ifndef DWC_ETH_QOS_CONFIG_PGTEST
+#ifdef DWC_ETH_QOS_CONFIG_PTP
+	DWC_ETH_QOS_ptp_remove(pdata);
+#endif	/* end of DWC_ETH_QOS_CONFIG_PTP */
+
+	/* remove rx napi */
+	for (i = 0; i < DWC_ETH_QOS_RX_QUEUE_CNT; i++) {
+		struct DWC_ETH_QOS_rx_queue *rx_queue = GET_RX_QUEUE_PTR(i);
+		netif_napi_del(&rx_queue->napi);
+	}
 #endif
  err_out_mac_read_failed:
 	if (1 == pdata->hw_feat.sma_sel)
@@ -915,16 +936,21 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
  err_out_desc_buf_alloc_failed:
 	desc_if->free_queue_struct(pdata);
 
- err_out_pad_calibrate_failed:
  err_out_q_alloc_failed:
+ err_out_pad_calibrate_failed:
 	if (!tegra_platform_is_unit_fpga())
 		eqos_clock_deinit(pdata);
  err_out_clock_init_failed:
 	if (!tegra_platform_is_unit_fpga() &&
-		!IS_ERR_OR_NULL(pdata->eqos_rst))
+		!IS_ERR_OR_NULL(pdata->eqos_rst)) {
 		reset_control_assert(pdata->eqos_rst);
+	}
  err_out_reset_get_failed:
+	if (!tegra_platform_is_unit_fpga())
+		devm_gpio_free(&pdev->dev, pdata->phy_reset_gpio);
  err_out_phyreset_failed:
+	if (!tegra_platform_is_unit_fpga())
+		devm_gpio_free(&pdev->dev, pdata->phy_intr_gpio);
  err_out_phyirq_failed:
 	if (!tegra_platform_is_unit_fpga())
 		eqos_regulator_deinit(pdata);
@@ -933,7 +959,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 
  err_out_dev_failed:
-	iounmap((void *)dwc_eth_qos_base_addr);
+	devm_iounmap(&pdev->dev, (void *) dwc_eth_qos_base_addr);
 
 	return ret;
 }
@@ -954,10 +980,10 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 
 int DWC_ETH_QOS_remove(struct platform_device *pdev)
 {
-	struct net_device *dev;
+	struct net_device *ndev;
 	struct DWC_ETH_QOS_prv_data *pdata;
 	struct desc_if_struct *desc_if;
-	int ret_val = 0;
+	int i, ret_val = 0;
 
 	DBGPR("--> DWC_ETH_QOS_remove\n");
 
@@ -966,50 +992,61 @@ int DWC_ETH_QOS_remove(struct platform_device *pdev)
 		return -1;
 	}
 
-	dev = platform_get_drvdata(pdev);
-	pdata = netdev_priv(dev);
+	ndev = platform_get_drvdata(pdev);
+	pdata = netdev_priv(ndev);
 	desc_if = &(pdata->desc_if);
+
+	/* free tx skb's */
+	desc_if->tx_skb_free_mem(pdata, DWC_ETH_QOS_TX_QUEUE_CNT);
+	/* free rx skb's */
+	desc_if->rx_skb_free_mem(pdata, DWC_ETH_QOS_RX_QUEUE_CNT);
 
 	if (pdata->power_irq != 0) {
 		free_irq(pdata->power_irq, pdata);
 		pdata->power_irq = 0;
 	}
 
-	if (pdata->irq_number != 0) {
-		free_irq(pdata->irq_number, pdata);
-		pdata->irq_number = 0;
-	}
-
-	if (!tegra_platform_is_unit_fpga())
-		eqos_clock_deinit(pdata);
-
-	if (1 == pdata->hw_feat.sma_sel)
-		DWC_ETH_QOS_mdio_unregister(dev);
-
-#ifdef DWC_ETH_QOS_CONFIG_PTP
-	DWC_ETH_QOS_ptp_remove(pdata);
-#endif /* end of DWC_ETH_QOS_CONFIG_PTP */
-
-	unregister_netdev(dev);
+	unregister_netdev(ndev);
 
 #ifdef DWC_ETH_QOS_CONFIG_PGTEST
 	DWC_ETH_QOS_free_pg(pdata);
 #endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
+
+#ifndef DWC_ETH_QOS_CONFIG_PGTEST
+#ifdef DWC_ETH_QOS_CONFIG_PTP
+	DWC_ETH_QOS_ptp_remove(pdata);
+#endif	/* end of DWC_ETH_QOS_CONFIG_PTP */
+
+	/* remove rx napi */
+	for (i = 0; i < DWC_ETH_QOS_RX_QUEUE_CNT; i++) {
+		struct DWC_ETH_QOS_rx_queue *rx_queue = GET_RX_QUEUE_PTR(i);
+		netif_napi_del(&rx_queue->napi);
+	}
+#endif
+
+	if (1 == pdata->hw_feat.sma_sel)
+		DWC_ETH_QOS_mdio_unregister(ndev);
 
 	desc_if->tx_free_mem(pdata);
 	desc_if->rx_free_mem(pdata);
 
 	desc_if->free_queue_struct(pdata);
 
-	free_netdev(dev);
+	if (!tegra_platform_is_unit_fpga()) {
+		eqos_clock_deinit(pdata);
+
+		if (!IS_ERR_OR_NULL(pdata->eqos_rst))
+			reset_control_assert(pdata->eqos_rst);
+		devm_gpio_free(&pdev->dev, pdata->phy_reset_gpio);
+		devm_gpio_free(&pdev->dev, pdata->phy_intr_gpio);
+		eqos_regulator_deinit(pdata);
+	}
+
+	free_netdev(ndev);
 
 	platform_set_drvdata(pdev, NULL);
-	if (!tegra_platform_is_unit_fpga() &&
-		!IS_ERR_OR_NULL(pdata->eqos_rst))
-		reset_control_assert(pdata->eqos_rst);
-	if (!tegra_platform_is_unit_fpga())
-		eqos_regulator_deinit(pdata);
-	iounmap((void *)dwc_eth_qos_base_addr);
+
+	devm_iounmap(&pdev->dev, (void *) dwc_eth_qos_base_addr);
 
 	DBGPR("<-- DWC_ETH_QOS_remove\n");
 

@@ -1930,7 +1930,6 @@
 
 	adsp@2993000 {
 		status = "disabled";
-		memory-region = <&adsp_reserved_mem>;
 		compatible = "nvidia,tegra18x-adsp";
 		power-domains = <&ape_pd>;
 		reg = <0x0 0x02993000 0x0 0x1000>, /* AMC */
@@ -1950,7 +1949,7 @@
 			<&tegra_car TEGRA186_CLK_ADSP>,
 			<&tegra_car TEGRA186_CLK_EMC>;
 		clock-names = "adsp.ape", "adsp.apb2ape", "adspneon", "adsp", "adsp.emc";
-		resets = <&tegra_car TEGRA186_RESET_ADSP>;
+		resets = <&tegra_car TEGRA186_RESET_ADSP_ALL>;
 		reset-names = "adspall";
 	};
 

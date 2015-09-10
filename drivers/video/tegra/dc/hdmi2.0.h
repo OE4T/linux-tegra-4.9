@@ -365,6 +365,8 @@ struct tegra_hdmi {
 	struct i2c_client *scdc_i2c_client;
 	struct delayed_work scdc_work;
 
+	struct i2c_client *ddcci_i2c_client;
+
 	struct hdmi_audio_infoframe audio;
 #ifdef CONFIG_SWITCH
 	struct switch_dev hpd_switch;

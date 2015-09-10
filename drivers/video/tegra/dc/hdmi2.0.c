@@ -49,6 +49,7 @@
 #include "tegra_adf.h"
 #endif
 #include "hda_dc.h"
+#include "hdmivrr.h"
 
 #include <linux/tegra_prod.h>
 #include "../../../../arch/arm/mach-tegra/iomap.h"
@@ -326,29 +327,6 @@ static u32 tegra_hdmi_mode_min_tmds_rate(const struct fb_videomode *mode)
 }
 
 __maybe_unused
-static void tegra_hdmi_update_vrr_mode(const struct tegra_dc *dc,
-						struct fb_videomode *mode)
-{
-	struct tegra_hdmi *hdmi = dc->out_data;
-	struct tegra_vrr *vrr  = dc->out->vrr;
-
-	if (!tegra_edid_is_vrr_capable(hdmi->edid))
-		return;
-
-	if (!vrr->authenticated)
-		return;
-
-	/*
-	 * Inform VRR monitor to turn on VRR mode by increase vertical
-	 * backporch by 2, and decrease vertical front porch by 2 to keep
-	 * vertical total the same
-	 */
-	mode->upper_margin += 2;
-	if (mode->lower_margin >= 4)
-		mode->lower_margin -= 2;
-}
-
-__maybe_unused
 static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 					struct fb_videomode *mode)
 {
@@ -568,36 +546,6 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 	tegra_dc_ext_process_hotplug(dc->ndev->id, is_asserted);
 
 	switch_set_state(&hdmi->hpd_switch, is_asserted ? 1 : 0);
-
-}
-
-static int tegra_hdmi_vrr_authentication(struct tegra_hdmi *hdmi)
-{
-	int err = 0;
-	struct tegra_dc *dc = hdmi->dc;
-	struct tegra_vrr *vrr  = dc->out->vrr;
-
-	/*
-	 * TODO: vrr panel authentication, the estimated time delay is
-	 * about 200ms will be replaced with actual authentication code
-	 * with subsequent change.
-	 */
-	mdelay(200);
-	vrr->authenticated = 0;
-
-	return err;
-}
-
-static int tegra_hdmi_vrr_setup(struct tegra_hdmi *hdmi)
-{
-	int err = 0;
-
-	if (!tegra_edid_is_vrr_capable(hdmi->edid))
-		return -EINVAL;
-
-	err = tegra_hdmi_vrr_authentication(hdmi);
-
-	return err;
 }
 
 static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
@@ -614,7 +562,7 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 	if (err < 0)
 		goto fail;
 
-	err = tegra_hdmi_vrr_setup(hdmi);
+	err = tegra_hdmivrr_setup(hdmi);
 	if (err < 0)
 		dev_info(&hdmi->dc->ndev->dev, "vrr_setup failed\n");
 
@@ -855,17 +803,6 @@ static int tegra_hdmi_hpd_init(struct tegra_hdmi *hdmi)
 fail:
 	gpio_free(hotplug_gpio);
 	return err;
-}
-
-static int tegra_hdmi_vrr_init(struct tegra_hdmi *hdmi)
-{
-	struct tegra_dc *dc = hdmi->dc;
-	struct tegra_vrr *vrr  = dc->out->vrr;
-
-	if (!vrr || !vrr->capability)
-		return -EINVAL;
-
-	return 0;
 }
 
 static int tegra_hdmi_tmds_init(struct tegra_hdmi *hdmi)

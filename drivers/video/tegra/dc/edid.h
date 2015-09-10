@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -177,5 +177,4 @@ int tegra_edid_underscan_supported(struct tegra_edid *edid);
 int tegra_edid_i2c_adap_change_rate(struct i2c_adapter *i2c_adap, int rate);
 int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data);
 int tegra_edid_audio_supported(struct tegra_edid *edid);
-bool tegra_edid_is_vrr_capable(struct tegra_edid *edid);
 #endif

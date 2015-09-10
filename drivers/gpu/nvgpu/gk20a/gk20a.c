@@ -40,6 +40,7 @@
 #include <linux/clk/tegra.h>
 #include <linux/kthread.h>
 #include <linux/platform/tegra/common.h>
+#include <linux/reset.h>
 
 #include <linux/sched.h>
 
@@ -1297,6 +1298,10 @@ static int gk20a_pm_init(struct platform_device *dev)
 	/* genpd will take care of runtime power management if it is enabled */
 	if (IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
 		err = gk20a_pm_initialise_domain(dev);
+
+	platform->reset_control = devm_reset_control_get(&dev->dev, NULL);
+	if (IS_ERR(platform->reset_control))
+		platform->reset_control = NULL;
 
 	return err;
 }

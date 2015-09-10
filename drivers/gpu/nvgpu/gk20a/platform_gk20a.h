@@ -3,7 +3,7 @@
  *
  * GK20A Platform (SoC) Interface
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -54,6 +54,9 @@ struct gk20a_platform {
 	 * for filling this data. */
 	struct clk *clk[3];
 	int num_clks;
+
+	/* Reset control for device */
+	struct reset_control *reset_control;
 
 	/* Delay before rail gated */
 	int railgate_delay;

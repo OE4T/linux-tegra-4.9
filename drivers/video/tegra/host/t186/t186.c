@@ -194,6 +194,7 @@ struct nvhost_device_data t18_msenc_info = {
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
 	},
 	.engine_cg_regs		= t18x_nvenc_gating_registers,
+	.engine_can_cg		= true,
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_flcn_finalize_poweron,
 	.moduleid		= NVHOST_MODULE_MSENC,
@@ -220,6 +221,7 @@ struct nvhost_device_data t18_nvdec_info = {
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
 	},
 	.engine_cg_regs		= t18x_nvdec_gating_registers,
+	.engine_can_cg		= true,
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_nvdec_t186_finalize_poweron,
 	.prepare_poweroff	= nvhost_nvdec_t186_prepare_poweroff,
@@ -247,6 +249,7 @@ struct nvhost_device_data t18_nvjpg_info = {
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
 	},
 	.engine_cg_regs		= t18x_nvjpg_gating_registers,
+	.engine_can_cg		= true,
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_flcn_finalize_poweron,
 	.moduleid		= NVHOST_MODULE_NVJPG,

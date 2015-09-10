@@ -537,15 +537,27 @@ static int parse_vrr_settings(struct platform_device *ndev,
 	u32 temp;
 
 	if (!of_property_read_u32(np, "nvidia,vrr_min_fps", &temp)) {
-		vrr->vrr_min_fps = (unsigned) temp;
-		OF_DC_LOG("vrr_min_fps %d\n", vrr_min_fps);
+		vrr->vrr_min_fps = temp;
+		OF_DC_LOG("vrr_min_fps %u\n", temp);
 	}
 
 	if (!of_property_read_u32(np, "nvidia,frame_len_fluct", &temp)) {
-		vrr->frame_len_fluct = (unsigned) temp;
-		OF_DC_LOG("frame_len_fluct %d\n", frame_len_fluct);
+		vrr->frame_len_fluct = temp;
+		OF_DC_LOG("frame_len_fluct %u\n", temp);
 	} else
 		vrr->frame_len_fluct = 2000;
+
+	if (!of_property_read_u32(np, "nvidia,db_correct_cap", &temp)) {
+		vrr->db_correct_cap = temp;
+		OF_DC_LOG("db_correct_cap %u\n", temp);
+	} else
+		vrr->db_correct_cap = 0;
+
+	if (!of_property_read_u32(np, "nvidia,db_hist_cap", &temp)) {
+		vrr->db_hist_cap = temp;
+		OF_DC_LOG("db_hist_cap %u\n", temp);
+	} else
+		vrr->db_hist_cap = 0;
 
 	/*
 	 * VRR capability is set when we have vrr_settings section in DT

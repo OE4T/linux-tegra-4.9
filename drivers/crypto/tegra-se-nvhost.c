@@ -738,6 +738,9 @@ static u32 tegra_se_get_crypto_config(struct tegra_se_dev *se_dev,
 		val |= SE_CRYPTO_HASH(HASH_ENABLE);
 
 	if (mode == SE_AES_OP_MODE_RNG_DRBG) {
+		/* Make sure engine is powered ON*/
+		nvhost_module_busy(se_dev->pdev);
+
 		if (force_reseed_count <= 0) {
 			se_writel(se_dev,
 				SE_RNG_CONFIG_MODE(DRBG_MODE_FORCE_RESEED)|
@@ -754,6 +757,9 @@ static u32 tegra_se_get_crypto_config(struct tegra_se_dev *se_dev,
 
 		se_writel(se_dev, RNG_RESEED_INTERVAL,
 			SE_RNG_RESEED_INTERVAL_REG_OFFSET);
+
+		/* Power off device after register access done */
+		nvhost_module_idle(se_dev->pdev);
 	}
 	return val;
 }
@@ -813,12 +819,17 @@ static void tegra_se_read_cmac_result(struct tegra_se_dev *se_dev,
 	u32 *result = (u32 *)pdata;
 	u32 i;
 
+	/* Make SE engine is powered ON */
+	nvhost_module_busy(se_dev->pdev);
+
 	for (i = 0; i < nbytes/4; i++) {
 		result[i] = se_readl(se_dev, SE_CMAC_RESULT_REG_OFFSET +
 				(i * sizeof(u32)));
 		if (swap32)
 			result[i] = be32_to_cpu(result[i]);
 	}
+
+	nvhost_module_idle(se_dev->pdev);
 }
 
 
@@ -828,12 +839,17 @@ static void tegra_se_read_hash_result(struct tegra_se_dev *se_dev,
 	u32 *result = (u32 *)pdata;
 	u32 i;
 
+	/* Make SE engine is powered ON */
+	nvhost_module_busy(se_dev->pdev);
+
 	for (i = 0; i < nbytes/4; i++) {
 		result[i] = se_readl(se_dev, SE_HASH_RESULT_REG_OFFSET +
 				(i * sizeof(u32)));
 		if (swap32)
 			result[i] = be32_to_cpu(result[i]);
 	}
+
+	nvhost_module_idle(se_dev->pdev);
 }
 
 static int tegra_se_send_data(struct tegra_se_dev *se_dev,
@@ -2094,9 +2110,14 @@ static void tegra_se_read_rsa_result(struct tegra_se_dev *se_dev,
 	u32 *result = (u32 *)pdata;
 	u32 i;
 
+	/* Make SE is powered ON*/
+	nvhost_module_busy(se_dev->pdev);
+
 	for (i = 0; i < nbytes / 4; i++)
 		result[i] = se_readl(se_dev, SE_RSA_OUTPUT +
 				(i * sizeof(u32)));
+
+	nvhost_module_idle(se_dev->pdev);
 }
 
 static int tegra_se_rsa_digest(struct ahash_request *req)
@@ -2745,7 +2766,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 		}
 	}
 
-	nvhost_module_enable_clk(&pdev->dev);
+	/* Make sure engine is powered ON with clk enabled */
+	nvhost_module_busy(pdev);
 
 	/* RNG register only exists in se0/se1 */
 	if (se_num == 0) {
@@ -2754,6 +2776,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 			|SE_RNG_SRC_CONFIG_RO_ENT_SRC_LOCK(DRBG_RO_ENT_SRC_LOCK_ENABLE),
 				SE_RNG_SRC_CONFIG_REG_OFFSET);
 	}
+	/* Power OFF after SE register update */
+	nvhost_module_idle(pdev);
 
 	se_dev->syncpt_ids[se_num] =
 			nvhost_get_syncpt_host_managed(pdev, 0, "se");
@@ -2763,8 +2787,6 @@ static int tegra_se_probe(struct platform_device *pdev)
 				se_num + 1);
 		goto syncpt_fail;
 	}
-
-	nvhost_module_busy_ext(pdev);
 
 	se_dev->src_ll = kzalloc(sizeof(struct tegra_se_ll), GFP_KERNEL);
 	se_dev->dst_ll = kzalloc(sizeof(struct tegra_se_ll), GFP_KERNEL);

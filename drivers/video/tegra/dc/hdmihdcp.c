@@ -29,7 +29,7 @@
 #include <linux/delay.h>
 
 #include <mach/dc.h>
-#include <mach/kfuse.h>
+#include <linux/platform/tegra/tegra_kfuse.h>
 
 #include <video/nvhdcp.h>
 

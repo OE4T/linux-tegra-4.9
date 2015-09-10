@@ -26,8 +26,9 @@
 #include <linux/workqueue.h>
 #include <asm/atomic.h>
 
+#include <linux/platform/tegra/tegra_kfuse.h>
+
 #include <mach/dc.h>
-#include <mach/kfuse.h>
 
 #include <video/nvhdcp.h>
 

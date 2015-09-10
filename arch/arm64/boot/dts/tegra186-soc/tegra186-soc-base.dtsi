@@ -408,6 +408,13 @@
 		status = "disabled";
 	};
 
+	kfuse@0x3830000 {
+		compatible = "nvidia,tegra186-kfuse";
+		reg = <0x0 0x3830000 0x0 0x10000>;
+		clocks = <&tegra_car TEGRA186_CLK_KFUSE>;
+		clock-names = "kfuse";
+	};
+
 	tachometer@39c0000 {
 		compatible = "nvidia,tegra186-tachometer";
 		reg = <0x0 0x039c0000 0x0 0x10>;

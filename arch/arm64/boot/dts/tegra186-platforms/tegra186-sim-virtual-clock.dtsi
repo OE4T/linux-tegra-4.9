@@ -19,6 +19,11 @@
  */
 
 / {
+	kfuse@0x3830000 {
+		clocks = <&clk32k_in>;
+		clock-names = "kfuse";
+	};
+
 	host1x {
 		clocks = <&clk32k_in>, <&clk32k_in>;
 		clock-names = "host1x", "actmon";

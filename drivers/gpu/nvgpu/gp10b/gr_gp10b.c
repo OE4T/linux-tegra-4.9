@@ -15,6 +15,7 @@
 
 #include "gk20a/gk20a.h" /* FERMI and MAXWELL classes defined here */
 #include <linux/delay.h>
+#include <linux/tegra-fuse.h>
 
 #include "gk20a/gr_gk20a.h"
 
@@ -1006,6 +1007,19 @@ static void gr_gp10b_init_cyclestats(struct gk20a *g)
 #endif
 }
 
+static void gr_gp10b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
+{
+	tegra_fuse_writel(0x1, FUSE_FUSEBYPASS_0);
+	tegra_fuse_writel(0x0, FUSE_WRITE_ACCESS_SW_0);
+
+	if (g->gr.gpc_tpc_mask[gpc_index] == 0x1)
+		tegra_fuse_writel(0x2, FUSE_OPT_GPU_TPC0_DISABLE_0);
+	else if (g->gr.gpc_tpc_mask[gpc_index] == 0x2)
+		tegra_fuse_writel(0x1, FUSE_OPT_GPU_TPC0_DISABLE_0);
+	else
+		tegra_fuse_writel(0x0, FUSE_OPT_GPU_TPC0_DISABLE_0);
+}
+
 void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
@@ -1034,4 +1048,5 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.dump_gr_regs = gr_gp10b_dump_gr_status_regs;
 	gops->gr.wait_empty = gr_gp10b_wait_empty;
 	gops->gr.init_cyclestats = gr_gp10b_init_cyclestats;
+	gops->gr.set_gpc_tpc_mask = gr_gp10b_set_gpc_tpc_mask;
 }

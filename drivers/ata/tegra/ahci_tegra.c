@@ -817,6 +817,8 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 	if (!hpriv)
 		goto err_out;
 
+	hpriv->plat_data = tegra;
+
 	rc = tegra_ahci_platform_get_memory_resources(tegra);
 	if (rc)
 		goto err_out;
@@ -913,8 +915,6 @@ static int tegra_ahci_probe(struct platform_device *pdev)
 	hpriv = tegra->soc_data->ops.tegra_ahci_platform_get_resources(tegra);
 	if (IS_ERR(hpriv))
 		return PTR_ERR(hpriv);
-
-	hpriv->plat_data = tegra;
 
 	if (tegra_platform_is_silicon()) {
 		ret = tegra->soc_data->ops.tegra_ahci_power_on(hpriv);

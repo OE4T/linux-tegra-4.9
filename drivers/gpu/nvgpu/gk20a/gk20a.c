@@ -1275,8 +1275,6 @@ static int gk20a_pm_init(struct platform_device *dev)
 
 	gk20a_dbg_fn("");
 
-	mutex_init(&platform->railgate_lock);
-
 	/* Initialise pm runtime */
 	if (platform->clockgate_delay) {
 		pm_runtime_set_autosuspend_delay(&dev->dev,
@@ -1299,10 +1297,6 @@ static int gk20a_pm_init(struct platform_device *dev)
 	if (IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
 		err = gk20a_pm_initialise_domain(dev);
 
-	platform->reset_control = devm_reset_control_get(&dev->dev, NULL);
-	if (IS_ERR(platform->reset_control))
-		platform->reset_control = NULL;
-
 	return err;
 }
 
@@ -1312,16 +1306,10 @@ static int gk20a_secure_page_alloc(struct platform_device *pdev)
 	int err = 0;
 
 	if (platform->secure_page_alloc) {
-		if (platform->num_clks > 0)
-			tegra_periph_reset_assert(platform->clk[0]);
-		udelay(10);
 		err = platform->secure_page_alloc(pdev);
-		if (platform->num_clks > 0)
-			tegra_periph_reset_deassert(platform->clk[0]);
+		if (!err)
+			platform->secure_alloc_ready = true;
 	}
-
-	if (!err)
-		platform->secure_alloc_ready = true;
 
 	return err;
 }
@@ -1413,8 +1401,13 @@ static int gk20a_probe(struct platform_device *dev)
 	gk20a_init_support(dev);
 
 	init_rwsem(&gk20a->busy_lock);
+	mutex_init(&platform->railgate_lock);
 
 	spin_lock_init(&gk20a->mc_enable_lock);
+
+	platform->reset_control = devm_reset_control_get(&dev->dev, NULL);
+	if (IS_ERR(platform->reset_control))
+		platform->reset_control = NULL;
 
 	gk20a_debug_init(dev);
 
@@ -1424,6 +1417,11 @@ static int gk20a_probe(struct platform_device *dev)
 		dev_err(&dev->dev, "platform probe failed");
 		return err;
 	}
+
+	err = gk20a_secure_page_alloc(dev);
+	if (err)
+		dev_err(&dev->dev,
+			"failed to allocate secure buffer %d\n", err);
 
 	err = gk20a_pm_init(dev);
 	if (err) {
@@ -1444,11 +1442,6 @@ static int gk20a_probe(struct platform_device *dev)
 			return err;
 		}
 	}
-
-	err = gk20a_secure_page_alloc(dev);
-	if (err)
-		dev_err(&dev->dev,
-			"failed to allocate secure buffer %d\n", err);
 
 	/* Set DMA parameters to allow larger sgt lists */
 	dev->dev.dma_parms = &gk20a->dma_parms;

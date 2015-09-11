@@ -1728,6 +1728,196 @@ static const struct file_operations dbg_tegrahw_type_ops = {
 	.llseek = seq_lseek,
 	.release = single_release,
 };
+
+static ssize_t dbg_background_write(struct file *file,
+		const char __user *addr, size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data;
+	struct tegra_dc *dc = m->private;
+	unsigned long background;
+	u32 old_state;
+
+	if (!dc)
+		return -EINVAL;
+
+	if (kstrtoul_from_user(addr, len, 0, &background) < 0)
+		return -EINVAL;
+
+	if (!dc->enabled)
+		return -EBUSY;
+
+	tegra_dc_get(dc);
+	mutex_lock(&dc->lock);
+	old_state = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
+	/* write active version */
+	tegra_dc_writel(dc, WRITE_MUX_ACTIVE | READ_MUX_ACTIVE,
+			DC_CMD_STATE_ACCESS);
+	tegra_dc_readl(dc, DC_CMD_STATE_ACCESS); /* flush */
+	tegra_dc_writel(dc, background, DC_DISP_BLEND_BACKGROUND_COLOR);
+	/* write assembly version */
+	tegra_dc_writel(dc, WRITE_MUX_ASSEMBLY | READ_MUX_ASSEMBLY,
+			DC_CMD_STATE_ACCESS);
+	tegra_dc_readl(dc, DC_CMD_STATE_ACCESS); /* flush */
+	tegra_dc_writel(dc, background, DC_DISP_BLEND_BACKGROUND_COLOR);
+	/* cycle the values through assemby -> arm -> active */
+	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
+	tegra_dc_readl(dc, DC_CMD_STATE_CONTROL); /* flush */
+	tegra_dc_writel(dc, NC_HOST_TRIG | GENERAL_ACT_REQ,
+			DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, old_state, DC_CMD_STATE_ACCESS);
+	tegra_dc_readl(dc, DC_CMD_STATE_ACCESS); /* flush */
+	mutex_unlock(&dc->lock);
+	tegra_dc_put(dc);
+
+	return len;
+}
+
+static int dbg_background_show(struct seq_file *m, void *unused)
+{
+	struct tegra_dc *dc = m->private;
+	u32 old_state;
+	u32 background;
+
+	if (WARN_ON(!dc || !dc->out))
+		return -EINVAL;
+
+	if (!dc->enabled)
+		return -EBUSY;
+
+	tegra_dc_get(dc);
+	mutex_lock(&dc->lock);
+	old_state = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
+	tegra_dc_writel(dc, WRITE_MUX_ACTIVE | READ_MUX_ACTIVE,
+			DC_CMD_STATE_ACCESS);
+	background = tegra_dc_readl(dc, DC_DISP_BLEND_BACKGROUND_COLOR);
+	tegra_dc_writel(dc, old_state, DC_CMD_STATE_ACCESS);
+	mutex_unlock(&dc->lock);
+	tegra_dc_put(dc);
+
+	seq_printf(m, "%#x\n", (unsigned)background);
+
+	return 0;
+}
+
+static int dbg_background_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_background_show, inode->i_private);
+}
+
+static const struct file_operations dbg_background_ops = {
+	.open = dbg_background_open,
+	.write = dbg_background_write,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+/* toggly the enable/disable for any windows with 1 bit set */
+static ssize_t dbg_window_toggle_write(struct file *file,
+		const char __user *addr, size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data;
+	struct tegra_dc *dc = m->private;
+	unsigned long windows;
+	int i;
+	u32 status;
+	int retries;
+
+	if (!dc)
+		return -EINVAL;
+
+	if (kstrtoul_from_user(addr, len, 0, &windows) < 0)
+		return -EINVAL;
+
+	if (!dc->enabled)
+		return 0;
+
+	mutex_lock(&dc->lock);
+	tegra_dc_get(dc);
+
+	/* limit the request only to valid windows */
+	windows &= dc->valid_windows;
+	for_each_set_bit(i, &windows, DC_N_WINDOWS) {
+		u32 val;
+		/* select the assembly registers for window i */
+		tegra_dc_writel(dc, WRITE_MUX_ASSEMBLY | READ_MUX_ASSEMBLY,
+				DC_CMD_STATE_ACCESS);
+		tegra_dc_writel(dc, WINDOW_A_SELECT << i,
+				DC_CMD_DISPLAY_WINDOW_HEADER);
+
+		/* toggle the enable bit */
+		val = tegra_dc_readl(dc, DC_WIN_WIN_OPTIONS);
+		val ^= WIN_ENABLE;
+		dev_dbg(&dc->ndev->dev, "%s window #%d\n",
+			(val & WIN_ENABLE) ? "enabling" : "disabling", i);
+		tegra_dc_writel(dc, val, DC_WIN_WIN_OPTIONS);
+
+		/* post the update */
+		tegra_dc_writel(dc, WIN_A_UPDATE << i, DC_CMD_STATE_CONTROL);
+		retries = 8;
+		do {
+			status = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
+			retries--;
+		} while (retries && (status & (WIN_A_UPDATE << i)));
+		tegra_dc_writel(dc, WIN_A_ACT_REQ << i, DC_CMD_STATE_CONTROL);
+
+	}
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
+
+	return len;
+}
+
+/* reading shows the enabled windows */
+static int dbg_window_toggle_show(struct seq_file *m, void *unused)
+{
+	struct tegra_dc *dc = m->private;
+	int i;
+	unsigned long windows;
+
+	if (WARN_ON(!dc || !dc->out))
+		return -EINVAL;
+
+	mutex_lock(&dc->lock);
+	tegra_dc_get(dc);
+	/* limit the request only to valid windows */
+	windows = 0;
+	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+		u32 val;
+
+		/* select the active registers for window i */
+		tegra_dc_writel(dc, WRITE_MUX_ACTIVE | READ_MUX_ACTIVE,
+				DC_CMD_STATE_ACCESS);
+		tegra_dc_writel(dc, WINDOW_A_SELECT << i,
+				DC_CMD_DISPLAY_WINDOW_HEADER);
+
+		/* add i to a bitmap if WIN_ENABLE is set */
+		val = tegra_dc_readl(dc, DC_WIN_WIN_OPTIONS);
+		if (val & WIN_ENABLE)
+			set_bit(i, &windows);
+
+	}
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
+
+	seq_printf(m, "%#lx %#lx\n", dc->valid_windows, windows);
+
+	return 0;
+}
+
+static int dbg_window_toggle_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_window_toggle_show, inode->i_private);
+}
+
+static const struct file_operations dbg_window_toggle_ops = {
+	.open = dbg_window_toggle_open,
+	.write = dbg_window_toggle_write,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static void tegra_dc_remove_debugfs(struct tegra_dc *dc)
 {
 	if (dc->debugdir)
@@ -1812,6 +2002,15 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 	if (!retval)
 		goto remove_out;
 
+	retval = debugfs_create_file("background", S_IRUGO, dc->debugdir,
+				dc, &dbg_background_ops);
+	if (!retval)
+		goto remove_out;
+
+	retval = debugfs_create_file("window_toggle", S_IRUGO, dc->debugdir,
+				dc, &dbg_window_toggle_ops);
+	if (!retval)
+		goto remove_out;
 	return;
 remove_out:
 	dev_err(&dc->ndev->dev, "could not create debugfs\n");
@@ -2103,13 +2302,13 @@ static void tegra_dc_set_scaling_filter(struct tegra_dc *dc)
 
 static int _tegra_dc_config_frame_end_intr(struct tegra_dc *dc, bool enable)
 {
-	tegra_dc_io_start(dc);
+	tegra_dc_get(dc);
 	if (enable) {
 		atomic_inc(&dc->frame_end_ref);
 		tegra_dc_unmask_interrupt(dc, FRAME_END_INT);
 	} else if (!atomic_dec_return(&dc->frame_end_ref))
 		tegra_dc_mask_interrupt(dc, FRAME_END_INT);
-	tegra_dc_io_end(dc);
+	tegra_dc_put(dc);
 
 	return 0;
 }
@@ -4231,9 +4430,9 @@ static void _tegra_dc_disable(struct tegra_dc *dc)
 	 * causes CMU to be restored in tegra_dc_init(). */
 	dc->cmu_dirty = true;
 #endif
-	tegra_dc_io_start(dc);
+	tegra_dc_get(dc);
 	_tegra_dc_controller_disable(dc);
-	tegra_dc_io_end(dc);
+	tegra_dc_put(dc);
 
 	tegra_dc_powergate_locked(dc);
 
@@ -4994,7 +5193,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		}
 #endif
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
-		tegra_dc_io_start(dc);
+		tegra_dc_get(dc);
 #ifdef CONFIG_TEGRA_NVDISPLAY
 		dc->fb = tegra_nvdisp_fb_register(ndev, dc, dc->pdata->fb,
 			fb_mem);
@@ -5002,7 +5201,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->fb = tegra_fb_register(ndev, dc, dc->pdata->fb, fb_mem,
 			NULL);
 #endif
-		tegra_dc_io_end(dc);
+		tegra_dc_put(dc);
 		if (IS_ERR_OR_NULL(dc->fb)) {
 			dc->fb = NULL;
 			dev_err(&ndev->dev, "failed to register fb\n");

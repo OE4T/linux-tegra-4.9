@@ -17,6 +17,7 @@
 
 #include <linux/interrupt.h>
 #include <linux/of_irq.h>
+#include <linux/io.h>
 #include <linux/of_address.h>
 #include <linux/dma-mapping.h>
 #include <linux/tegra_pm_domains.h>
@@ -36,6 +37,8 @@ DEFINE_MUTEX(tegra_nvdisp_lock);
 
 #define NVDISP_INPUT_LUT_SIZE   257
 #define NVDISP_OUTPUT_LUT_SIZE  1025
+
+static int tegra_nvdisp_set_color_control(struct tegra_dc *dc);
 
 static struct of_device_id nvdisp_disa_pd[] = {
 	{ .compatible = "nvidia,tegra186-disa-pd", },
@@ -92,8 +95,13 @@ static int nvdisp_alloc_output_lut(struct tegra_dc *dc)
 	if (nvdisp_allocate_lut(dc, lut))
 		return -ENOMEM;
 
-	/* Set the LUT address in HW register */
-	tegra_nvdisp_set_output_lut(dc, lut);
+	/*
+	 * Fix me: Setting output lut causes a hang as clocks
+	 * are not enabled by this time. This needs to be
+	 * moved to some other place in the driver.
+	 */
+	/* Set the LUT address in HW register
+	tegra_nvdisp_set_output_lut(dc, lut);*/
 
 	return 0;
 
@@ -116,13 +124,114 @@ static int nvdisp_alloc_input_lut(struct tegra_dc *dc,
 	return 0;
 }
 
+/*	Deassert all the common nvdisplay resets.
+ *      Misc and all windows groups are placed in common.
+ *	Window groups can be moved per head based on winmask later
+ *      as needed.
+ */
+static int tegra_nvdisp_common_reset_deassert(struct tegra_dc *dc)
+{
+	u8 i;
+	int err;
+
+	if (!dc->nvdisp_common_rst) {
+		dev_err(&dc->ndev->dev, "%s: No resets available\n", __func__);
+		return -EINVAL;
+	}
+
+	for ( i = 0; i < DC_N_WINDOWS; i++) {
+		err = reset_control_deassert(dc->nvdisp_common_rst[i]);
+		if (err) {
+			dev_err(&dc->ndev->dev, "Unable to reset misc\n");
+			return err;
+		}
+	}
+	return 0;
+}
+
+static int __maybe_unused tegra_nvdisp_common_reset_assert(struct tegra_dc *dc)
+{
+	u8 i;
+	int err;
+
+	if (!dc->nvdisp_common_rst) {
+		dev_err(&dc->ndev->dev, "%s: No resets available\n", __func__);
+		return -EINVAL;
+	}
+
+	for ( i = 0; i < DC_N_WINDOWS; i++) {
+		err = reset_control_assert(dc->nvdisp_common_rst[i]);
+		if (err) {
+			dev_err(&dc->ndev->dev, "Unable to reset misc\n");
+			return err;
+		}
+	}
+	return 0;
+}
+
+static int tegra_nvdisp_reset_prepare(struct tegra_dc *dc)
+{
+	char rst_name[6];
+	int i;
+
+	/* Use only if bpmp is enabled */
+	if (!tegra_bpmp_running())
+		return 0;
+
+	dc->nvdisp_common_rst[0] =
+		devm_reset_control_get(&dc->ndev->dev, "misc");
+	if (IS_ERR(dc->nvdisp_common_rst[0])) {
+		dev_err(&dc->ndev->dev, "Unable to get misc reset\n");
+		return PTR_ERR(dc->nvdisp_common_rst[0]);
+	}
+
+	for ( i = 0; i < DC_N_WINDOWS; i++) {
+		snprintf(rst_name, sizeof(rst_name), "wgrp%u", i);
+		dc->nvdisp_common_rst[i+1] =
+			devm_reset_control_get(&dc->ndev->dev, rst_name);
+		if (IS_ERR(dc->nvdisp_common_rst[i+1])) {
+			dev_err(&dc->ndev->dev,"Unable to get %s reset\n",
+					rst_name);
+			return PTR_ERR(dc->nvdisp_common_rst[i+1]);
+		}
+	}
+
+	return 0;
+}
+
 static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 {
 	int ret = 0;
 	int i;
 	char syncpt_name[] = "disp_a";
 
-	mutex_lock(&tegra_nvdisp_lock);
+//	mutex_lock(&tegra_nvdisp_lock);
+
+	ret = tegra_nvdisp_reset_prepare(dc);
+	if (ret)
+		return ret;
+
+	/* deassert the common reset for misc and window groups */
+	ret = tegra_nvdisp_common_reset_deassert(dc);
+	if (ret)
+		return ret;
+
+	/* Get the nvdisplay_hub and nvdisplay_disp clock and enable
+	 * it by default. Change the rates based on requirement later
+	 */
+	dc->hubclk = tegra_disp_clk_get(&dc->ndev->dev, "nvdisplayhub");
+	if (IS_ERR_OR_NULL(dc->hubclk)) {
+		dev_err(&dc->ndev->dev, "can't get display hub clock\n");
+		ret = -ENOENT;
+		goto INIT_EXIT;
+	}
+
+	dc->compclk = tegra_disp_clk_get(&dc->ndev->dev, "nvdisplay_disp");
+	if (IS_ERR_OR_NULL(dc->compclk)) {
+		dev_err(&dc->ndev->dev, "can't get display comp clock\n");
+		ret = -ENOENT;
+		goto INIT_CLK_ERR;
+	}
 
 	/* Init sycpt ids */
 	dc->valid_windows = 0x3f; /* Assign all windows to this head */
@@ -142,6 +251,12 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 
 	dc->valid_windows = 0;
 
+	/* Enable the hub clock and comp clock by default
+	 * will change to power change code later
+	 */
+	tegra_disp_clk_prepare_enable(dc->compclk);
+	tegra_disp_clk_prepare_enable(dc->hubclk);
+
 	goto INIT_EXIT;
 
 INIT_ERR:
@@ -155,9 +270,14 @@ INIT_ERR:
 			dma_free_coherent(&dc->ndev->dev, lut->size,
 				(void *)lut->rgb, lut->phy_addr);
 	}
+INIT_CLK_ERR:
+	if (dc->hubclk)
+		tegra_disp_clk_put(&dc->ndev->dev, dc->hubclk);
 
+	if (dc->compclk)
+		tegra_disp_clk_put(&dc->ndev->dev, dc->compclk);
 INIT_EXIT:
-	mutex_unlock(&tegra_nvdisp_lock);
+//	mutex_unlock(&tegra_nvdisp_lock);
 	return ret;
 
 }
@@ -276,6 +396,9 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 
 int tegra_nvdisp_init(struct tegra_dc *dc)
 {
+	char rst_name[6];
+	int err;
+
 	/*Lut alloc is needed per dc */
 	if (!dc->fb_lut.rgb) {
 		if (nvdisp_alloc_input_lut(dc, NULL, false))
@@ -299,6 +422,23 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 	case 2:
 		dc->powergate_id = tegra_pd_get_powergate_id(nvdisp_disc_pd);
 		break;
+	}
+
+	/* Take the controller out of reset if bpmp is loaded*/
+	if (tegra_bpmp_running() && tegra_platform_is_silicon()) {
+		snprintf(rst_name, sizeof(rst_name), "head%u", dc->ctrl_num);
+		dc->rst = devm_reset_control_get(&dc->ndev->dev, rst_name);
+		if (IS_ERR(dc->rst)) {
+			dev_err(&dc->ndev->dev,"Unable to get %s reset\n",
+				rst_name);
+			return PTR_ERR(dc->rst);
+		}
+		err = reset_control_deassert(dc->rst);
+		if (err) {
+			dev_err(&dc->ndev->dev,"Unable to reset %s\n",
+					rst_name);
+			return err;
+		}
 	}
 
 	/* Only need init once no matter how many dc objects */
@@ -349,7 +489,7 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 		nvdisp_incr_syncpt_cntrl_r());
 
 	/* Disabled this feature as unit fpga hang on enabling this*/
-	if (!tegra_platform_is_linsim())
+	if (!tegra_bpmp_running())
 		tegra_dc_writel(dc, nvdisp_cont_syncpt_vsync_en_enable_f() |
 			(NVSYNCPT_VBLANK0 + dc->ctrl_num),
 			nvdisp_cont_syncpt_vsync_r());
@@ -403,6 +543,12 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 	/*set display control */
 	tegra_nvdisp_set_control(dc);
 
+
+	tegra_nvdisp_set_color_control(dc);
+	tegra_dc_writel(dc,
+			nvdisp_cmd_state_ctrl_general_act_req_enable_f(),
+			nvdisp_cmd_state_ctrl_r());
+
 	return 0;
 }
 
@@ -444,22 +590,33 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	int i;
 	int res;
 	int idx;
+	int pclk;
 
 	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
 		return false;
 
 	/* TODO: confirm power domains for parker */
-	/* tegra_dc_unpowergate_locked(dc); */
-
-	tegra_dc_get(dc);
+	tegra_dc_unpowergate_locked(dc);
 
 	/* Enable OR -- need to enable the connection first */
 	if (dc->out->enable)
 		dc->out->enable(&dc->ndev->dev);
 
 	/* TODO: clock setup */
-	/*tegra_dc_power_on(dc);*/
+	if (dc->out_ops->setup_clk)
+		pclk = dc->out_ops->setup_clk(dc, dc->clk);
+	//tegra_disp_clk_prepare_enable(dc->clk);
+	tegra_disp_clk_prepare_enable(dc->compclk);
+	tegra_disp_clk_prepare_enable(dc->hubclk);
 
+	/*
+	 * Fix me: Nvdisplay0 clk is missing from clk ids table. This needs
+	 * to be enabled for head0. Directly programming into CAR register
+	 * for now. This needs to be removed once the clock id is added.
+	 */
+	writel(0xf, ioremap(0x05801000, 0x4));
+
+	tegra_dc_get(dc);
 	/* Mask interrupts duirng init */
 	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
 

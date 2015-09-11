@@ -248,6 +248,14 @@ Optional properties:
 	SAR GPIO (according to the gpio_sar_assert_polarity) when an I2C
 	transaction is about to start and deasserts when the I2C transaction
 	finishes.
+- sar_suspend_assert: If the device is not configured to operate during suspend
+                      then this determines the SAR GPIO setting during suspend:
+		      -1 = DISABLE: SAR GPIO remains at current state from when
+		                    device was operational.
+		      0 = !ASSERT: GPIO is not asserted according to
+		                   gpio_sar_assert_polarity.
+		      1 = ASSERT: GPIO is asserted according to
+		                  gpio_sar_assert_polarity.
 - os_options: If the IQS device is to be controlled by the OS then set this
 	      value to 1.  The default is 0.
   Note: The SAR_proximity and SAR_touch sensors can still be exposed to
@@ -293,6 +301,16 @@ Optional properties:
 		       status.
   Note: The watchdog timer is actually recommended by Azoteq.
 	If this is not defined, the default will be 30 seconds.
+- deferred_resume_ms: The delay in milliseconds of when to execute the resume.
+                      Due to the time consumed trying to communicate with the
+		      device, suspend and resume can be adversely affected.
+		      This setting allows resume to be deferred for the amount
+		      of time specified; consider the situation where the
+		      system resumes for a very short period and then suspends
+		      again.  If this situation happened within this deferred
+		      resume time, then the whole process of resuming and
+		      suspending again would not require any communication with
+		      the device thereby not affecting the overall system.
 - i2c_retry: The number of times to try an I2C transaction before bailing.
 - gpio_rdy_retry: The number of times to try forcing a communication window.
   Note: When I2C communication is attempted outside the communication window by

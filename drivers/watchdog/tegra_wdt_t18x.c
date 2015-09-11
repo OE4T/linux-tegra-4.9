@@ -39,9 +39,7 @@
 #include <linux/tegra-soc.h>
 #include <linux/cpu.h>
 #include <linux/cpumask.h>
-
-#define ATLAS_CPU_ID		0
-#define DENVER_CPU_ID		4
+#include <linux/platform/tegra/tegra18_cpu_map.h>
 
 /* minimum and maximum watchdog trigger periods, in seconds */
 #define MIN_WDT_PERIOD	5
@@ -56,7 +54,7 @@ struct tegra_wdt_t18x {
 	u32			config;
 	int			irq;
 	unsigned long		status;
-	int			cpu_id;
+	int			cluster_id;
 	bool			enable_on_init;
 /* Bit numbers for status flags */
 #define WDT_ENABLED		0
@@ -65,7 +63,6 @@ struct tegra_wdt_t18x {
 };
 
 static struct tegra_wdt_t18x  __percpu **devid;
-static cpumask_t wdt_cpumask;
 
 /*
  * The total expiry count of Tegra WDTs is limited to HW design and depends
@@ -130,6 +127,7 @@ static int __tegra_wdt_t18x_ping(struct tegra_wdt_t18x *tegra_wdt_t18x)
 
 	writel(WDT_CMD_START_COUNTER, tegra_wdt_t18x->wdt_source + WDT_CMD);
 
+	dev_dbg(tegra_wdt_t18x->wdt.dev, "wdt cleared\n");
 	return 0;
 }
 
@@ -165,8 +163,8 @@ static inline void tegra_wdt_t18x_skip(struct tegra_wdt_t18x *tegra_wdt_t18x)
 {
 	u32 val = 0;
 
-	/* Skip the 2nd expiry of Atlas WDT */
-	if (tegra_wdt_t18x->cpu_id == ATLAS_CPU_ID)
+	/* Skip the 2nd expiry of WDT for ARM cluster */
+	if (tegra_wdt_t18x->cluster_id == 1)
 		val = WDT_SKIP_VAL(1, 1);
 
 	/* Skip the 4th expiry if debug reset is disabled */
@@ -239,6 +237,8 @@ static int tegra_wdt_t18x_set_timeout(struct watchdog_device *wdt,
 	tegra_wdt_t18x_disable(wdt);
 	wdt->timeout = timeout;
 	tegra_wdt_t18x_enable(wdt);
+
+	dev_info(wdt->dev, "wdt timeout set to %u seconds\n", timeout);
 	return 0;
 }
 
@@ -257,46 +257,14 @@ static const struct watchdog_ops tegra_wdt_t18x_ops = {
 	.ref   = tegra_wdt_t18x_ref,
 };
 
-static void tegra_wdt_t18x_disable_pet(struct tegra_wdt_t18x *tegra_wdt_t18x)
+static void tegra_wdt_t18x_enable_pet(void *info)
 {
-	disable_percpu_irq(tegra_wdt_t18x->irq);
-	__tegra_wdt_t18x_disable(tegra_wdt_t18x);
-	clear_bit(WDOG_ACTIVE, &tegra_wdt_t18x->wdt.status);
-}
+	struct tegra_wdt_t18x *tegra_wdt_t18x = info;
 
-static void tegra_wdt_t18x_enable_pet(struct tegra_wdt_t18x *tegra_wdt_t18x)
-{
 	enable_percpu_irq(tegra_wdt_t18x->irq, 0);
 	__tegra_wdt_t18x_enable(tegra_wdt_t18x);
 	set_bit(WDOG_ACTIVE, &tegra_wdt_t18x->wdt.status);
 }
-
-static int tegra_wdt_t18x_cpu_notify(struct notifier_block *self,
-					   unsigned long action, void *hcpu)
-{
-	unsigned int cpu = (unsigned long)hcpu;
-
-	if (!cpumask_test_cpu(cpu, &wdt_cpumask))
-		return NOTIFY_OK;
-
-	if (*this_cpu_ptr(devid) == NULL)
-		return NOTIFY_OK;
-
-	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_STARTING:
-		tegra_wdt_t18x_enable_pet(*this_cpu_ptr(devid));
-		break;
-	case CPU_DYING:
-		tegra_wdt_t18x_disable_pet(*this_cpu_ptr(devid));
-		break;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block tegra_wdt_t18x_cpu_nb = {
-	.notifier_call = tegra_wdt_t18x_cpu_notify,
-};
 
 static inline int tegra_wdt_t18x_update_config_bit(struct tegra_wdt_t18x
 	*tegra_wdt_t18x, u32 bitmask, bool set)
@@ -439,6 +407,7 @@ static int tegra_wdt_t18x_setup_pet(struct tegra_wdt_t18x *tegra_wdt_t18x)
 {
 	struct platform_device *pdev = tegra_wdt_t18x->pdev;
 	int ret = 0, i = 0;
+	int cpu;
 
 	if (!tegra_wdt_t18x->enable_on_init)
 		return 0;
@@ -454,16 +423,8 @@ static int tegra_wdt_t18x_setup_pet(struct tegra_wdt_t18x *tegra_wdt_t18x)
 			dev_err(&pdev->dev, "failed to allocate mem\n");
 			return -ENOMEM;
 		}
-		for_each_possible_cpu(i) {
-			*per_cpu_ptr(devid, i) = NULL;
-		}
-		ret = register_cpu_notifier(&tegra_wdt_t18x_cpu_nb);
-		if (ret) {
-			dev_err(&pdev->dev,
-				"failed to register notifier err=%d\n",	ret);
-			free_percpu(devid);
-			return ret;
-		}
+		for_each_possible_cpu(i)
+			*per_cpu_ptr(devid, i) = 0;
 	}
 
 	ret = request_percpu_irq(tegra_wdt_t18x->irq, tegra_wdt_t18x_irq,
@@ -471,18 +432,29 @@ static int tegra_wdt_t18x_setup_pet(struct tegra_wdt_t18x *tegra_wdt_t18x)
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to register irq %d err %d\n",
 			tegra_wdt_t18x->irq, ret);
-		unregister_cpu_notifier(&tegra_wdt_t18x_cpu_nb);
 		free_percpu(devid);
 		return ret;
 	}
-	*per_cpu_ptr(devid, tegra_wdt_t18x->cpu_id) = tegra_wdt_t18x;
+
+	/* Bind WDT to the first CPU of target cluster */
+	for_each_possible_cpu(cpu)
+		if (tegra18_logical_to_cluster(cpu) ==
+					tegra_wdt_t18x->cluster_id) {
+			*per_cpu_ptr(devid, cpu) = tegra_wdt_t18x;
+			smp_call_function_single(cpu,
+						tegra_wdt_t18x_enable_pet,
+						tegra_wdt_t18x, 0);
+			break;
+		}
+
+	if (cpu >= nr_cpu_ids) {
+		dev_err(&pdev->dev, "invalid cluster ID\n");
+		return -EINVAL;
+	}
+
 	set_bit(WDT_ENABLED_ON_INIT, &tegra_wdt_t18x->status);
-	cpumask_set_cpu(tegra_wdt_t18x->cpu_id, &wdt_cpumask);
-	pr_info("Tegra WDT setup for cpu %d. Timeout = %u seconds.\n",
-					tegra_wdt_t18x->cpu_id,
-					tegra_wdt_t18x->wdt.timeout);
-	if (tegra_wdt_t18x->cpu_id == smp_processor_id())
-		tegra_wdt_t18x_enable_pet(*this_cpu_ptr(devid));
+	pr_info("Tegra WDT setup for cluster %d. Timeout = %u seconds.\n",
+			tegra_wdt_t18x->cluster_id, tegra_wdt_t18x->wdt.timeout);
 
 	return 0;
 }
@@ -521,13 +493,16 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	tegra_wdt_t18x->wdt.min_timeout = MIN_WDT_PERIOD * expiry_count;
 	tegra_wdt_t18x->wdt.max_timeout = MAX_WDT_PERIOD * expiry_count;
 	tegra_wdt_t18x->wdt.timeout = heartbeat;
-	tegra_wdt_t18x->cpu_id = -1;
+	tegra_wdt_t18x->irq = irq_of_parse_and_map(np, 0);
 	tegra_wdt_t18x->enable_on_init =
 			of_property_read_bool(np, "nvidia,enable-on-init");
-	ret = of_property_read_u32(np, "nvidia,wdt-cpu-id", &pval);
-	if (!ret)
-		tegra_wdt_t18x->cpu_id = pval;
-	tegra_wdt_t18x->irq = irq_of_parse_and_map(np, 0);
+
+	ret = of_property_read_u32(np, "nvidia,wdt-cluster-id", &pval);
+	if (ret) {
+		dev_err(&pdev->dev, "no WDT cluster ID provided!\n");
+		return -EINVAL;
+	}
+	tegra_wdt_t18x->cluster_id = pval;
 
 	res_src = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	res_wdt = platform_get_resource(pdev, IORESOURCE_MEM, 1);
@@ -559,7 +534,7 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	tegra_wdt_t18x->config |= WDT_CFG_INT_EN;
 
 	/* Enable local FIQ and remote interrupt for debug dump */
-	if (tegra_wdt_t18x->cpu_id == DENVER_CPU_ID)
+	if (tegra_wdt_t18x->cluster_id == 0)
 		tegra_wdt_t18x->config |= WDT_CFG_FINT_EN;
 	tegra_wdt_t18x->config |= WDT_CFG_REMOTE_INT_EN;
 
@@ -583,7 +558,6 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to register watchdog device\n");
 		if (devid) {
 			__tegra_wdt_t18x_disable(tegra_wdt_t18x);
-			unregister_cpu_notifier(&tegra_wdt_t18x_cpu_nb);
 			free_percpu_irq(tegra_wdt_t18x->irq, tegra_wdt_t18x);
 			free_percpu(devid);
 		}
@@ -603,7 +577,6 @@ static int tegra_wdt_t18x_remove(struct platform_device *pdev)
 	struct tegra_wdt_t18x *tegra_wdt_t18x = platform_get_drvdata(pdev);
 
 	if (devid) {
-		unregister_cpu_notifier(&tegra_wdt_t18x_cpu_nb);
 		free_percpu_irq(tegra_wdt_t18x->irq, tegra_wdt_t18x);
 		free_percpu(devid);
 	}

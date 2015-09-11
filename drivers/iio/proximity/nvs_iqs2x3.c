@@ -32,7 +32,7 @@
 #include <linux/nvs_proximity.h>
 
 
-#define IQS_DRIVER_VERSION		(14)
+#define IQS_DRIVER_VERSION		(15)
 #define IQS_VENDOR			"Azoteq"
 #define IQS_NAME			"iqs2x3"
 #define IQS_NAME_IQS253			"iqs253"
@@ -466,6 +466,7 @@ struct iqs_state {
 	unsigned int errs;		/* error count */
 	unsigned int enabled;		/* enable status */
 	unsigned int susrsm_en;		/* suspend/resume enable status */
+	unsigned int dfr_rsm_ms;	/* ms to wait before resuming */
 	u16 i2c_addr;			/* I2C address */
 	u8 dev_id;			/* device ID */
 	bool irq_dis;			/* interrupt disable flag */
@@ -488,6 +489,7 @@ struct iqs_state {
 	int gpio_rdy;			/* GPIO */
 	int gpio_sar;			/* GPIO */
 	int gpio_sar_val;		/* current GPIO state */
+	int gpio_sar_sus_assrt;		/* GPIO assertion when suspending */
 	unsigned int sar_assert_pol;	/* sar assert polarity */
 	unsigned int gpio_sar_dev;	/* device that controls SAR GPIO */
 	unsigned int msg_n;		/* I2C transaction count */
@@ -1769,11 +1771,16 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 		else
 			t += sprintf(buf + t, "gpio_rdy %d=%d\n", st->gpio_rdy,
 				     gpio_get_value_cansleep(st->gpio_rdy));
-		if (st->gpio_sar < 0)
+		if (st->gpio_sar < 0) {
 			t += sprintf(buf + t, "NO gpio_sar\n");
-		else
+		} else {
 			t += sprintf(buf + t, "gpio_sar %d=%d\n", st->gpio_sar,
 				     gpio_get_value_cansleep(st->gpio_sar));
+			if (!(st->cfg->flags & SENSOR_FLAG_WAKE_UP))
+				t += sprintf(buf + t,
+					     "gpio_sar suspend assert=%d\n",
+					     st->gpio_sar_sus_assrt);
+		}
 		t += sprintf(buf + t, "gpio_sar_dev=%s\n",
 			     iqs_sensor_cfg_name[st->gpio_sar_dev]);
 		t += sprintf(buf + t, "irq=%d\n", st->i2c->irq);
@@ -1784,6 +1791,8 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 			     st->irq_set_irq_wake);
 		t += sprintf(buf + t, "susrsm=%x\n", st->susrsm);
 		t += sprintf(buf + t, "resume=%x\n", st->resume);
+		t += sprintf(buf + t, "deferred resume delay=%ums\n",
+			     st->dfr_rsm_ms);
 		for (i = 0; i < IQS_DEV_N; i++)
 			t += sprintf(buf + t, "%s_binary_hw=%x\n",
 				     iqs_sensor_cfg_name[i],
@@ -1835,6 +1844,9 @@ static int iqs_suspend(struct device *dev)
 			iqs_disable(st, -1);
 		}
 	}
+	if (st->gpio_sar_sus_assrt >= 0 && !(st->cfg->flags &
+					     SENSOR_FLAG_WAKE_UP))
+		iqs_gpio_sar(st, st->gpio_sar_sus_assrt);
 	iqs_mutex_unlock(st);
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s elapsed t=%lldns  err=%d\n",
@@ -1865,7 +1877,7 @@ static int iqs_resume(struct device *dev)
 		 */
 		st->resume = true;
 		mod_delayed_work(system_freezable_wq, &st->dw,
-				 msecs_to_jiffies(IQS_START_DELAY_MS));
+				 msecs_to_jiffies(st->dfr_rsm_ms));
 	}
 	iqs_mutex_unlock(st);
 	if (st->sts & NVS_STS_SPEW_MSG)
@@ -2104,10 +2116,12 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 		nvs_proximity_of_dt(&st->prox[i], dn, st->cfg[i].name);
 	}
 	st->wd_to_ms = IQS_POLL_DLY_MS_WATCHDOG;
+	st->dfr_rsm_ms = IQS_START_DELAY_MS;
 	st->i2c_retry = IQS_I2C_RETRY_N;
 	st->gpio_rdy_retry = IQS_RDY_RETRY_N;
 	st->gpio_rdy = -1;
 	st->gpio_sar = -1;
+	st->gpio_sar_sus_assrt = -1;
 	/* device tree parameters */
 	if (dn) {
 		/* device specific parameters */
@@ -2119,6 +2133,8 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 				__func__, st->stream, IQS_STREAM_N - 1);
 			st->stream = IQS_STREAM_OFF;
 		}
+		of_property_read_u32(dn, "deferred_resume_ms",
+				     &st->dfr_rsm_ms);
 		i = 0;
 		of_property_read_u32(dn, "irq_set_irq_wake", &i);
 		if (i)
@@ -2133,6 +2149,8 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 				     &st->gpio_rdy_retry);
 		of_property_read_u32(dn, "sar_assert_polarity",
 				     &st->sar_assert_pol);
+		of_property_read_s32(dn, "sar_suspend_assert",
+				     &st->gpio_sar_sus_assrt);
 		st->sar_assert_pol = !!st->sar_assert_pol;
 		st->gpio_rdy = of_get_named_gpio(dn, "gpio_rdy", 0);
 		st->gpio_sar = of_get_named_gpio(dn, "gpio_sar", 0);

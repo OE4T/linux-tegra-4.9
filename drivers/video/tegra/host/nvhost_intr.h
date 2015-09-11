@@ -79,7 +79,7 @@ struct nvhost_intr;
 
 struct nvhost_intr_syncpt {
 	struct nvhost_intr *intr;
-	u8 id;
+	u32 id;
 	struct mutex lock;
 	struct list_head wait_head;
 	char thresh_irq_name[12];

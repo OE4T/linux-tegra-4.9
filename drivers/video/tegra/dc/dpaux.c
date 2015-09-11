@@ -80,8 +80,7 @@ __maybe_unused
 void tegra_dpaux_pad_power(struct tegra_dc *dc,
 				enum tegra_dpaux_instance id, bool on)
 {
-	struct device_node *np_dp =
-		(dc->ndev->id) ? of_find_node_by_path(DPAUX1_NODE)
+	struct device_node *np_dp = id ? of_find_node_by_path(DPAUX1_NODE)
 		: of_find_node_by_path(DPAUX_NODE);
 
 	if (!np_dp) {
@@ -129,8 +128,7 @@ void tegra_dpaux_config_pad_mode(struct tegra_dc *dc,
 					enum tegra_dpaux_instance id,
 					enum tegra_dpaux_pad_mode mode)
 {
-	struct device_node *np_dp =
-		(dc->ndev->id) ? of_find_node_by_path(DPAUX1_NODE)
+	struct device_node *np_dp = id ? of_find_node_by_path(DPAUX1_NODE)
 		: of_find_node_by_path(DPAUX_NODE);
 
 	if (!np_dp) {

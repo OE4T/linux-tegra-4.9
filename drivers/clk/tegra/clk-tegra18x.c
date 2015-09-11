@@ -351,6 +351,7 @@ static __initdata struct tegra_bpmp_clk_init tegra186_clocks[] = {
 	{ .clk_num = TEGRA186_CLK_NAFLL_VI, .name = "nafll_vi" },
 	{ .clk_num = TEGRA186_CLK_NAFLL_VIC, .name = "nafll_vic" },
 	{ .clk_num = TEGRA186_CLK_NAFLL_DISP, .name = "nafll_disp" },
+	{ .clk_num = TEGRA186_CLK_NAFLL_GPU, .name = "nafll_gpu" },
 	{ .clk_num = TEGRA186_CLK_CLK_32K, .name = "clk_32k" },
 	{ .clk_num = TEGRA186_CLK_CLK_M, .name = "clk_m" },
 	{ .clk_num = TEGRA186_CLK_PLL_REF, .name = "pll_ref" },
@@ -361,6 +362,7 @@ static __initdata struct tegra_bpmp_clk_init tegra186_clocks[] = {
 	{ .clk_num = TEGRA186_CLK_OSC, .name = "osc" },
 	{ .clk_num = TEGRA186_CLK_EQOS_RX_INPUT, .name = "eqos_rx_input" },
 	{ .clk_num = TEGRA186_CLK_DTV_INPUT, .name = "dtv_input" },
+	{ .clk_num = TEGRA186_CLK_GPC2CLK, .name = "gpc2clk" },
 };
 
 /* Needed for a nvdisp linsim clock hack */

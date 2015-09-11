@@ -2069,7 +2069,6 @@ static struct lr388k7_platform_data *lr388k7_parse_dt(struct device *dev,
 	struct lr388k7_platform_data *pdata;
 	struct device_node *np = dev->of_node;
 	int ret, val, irq_gpio;
-	const char *str;
 
 	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
 	if (!pdata)
@@ -2122,16 +2121,6 @@ static struct lr388k7_platform_data *lr388k7_parse_dt(struct device *dev,
 		goto exit_release_all_gpio;
 	pdata->ts_touch_num_max = val;
 
-	ret = of_property_read_string(np, "name-of-clock", &str);
-	if (ret < 0)
-		goto exit_release_all_gpio;
-	pdata->name_of_clock = (char *)str;
-
-	ret = of_property_read_string(np, "name-of-clock-con", &str);
-	if (ret < 0)
-		goto exit_release_all_gpio;
-	pdata->name_of_clock_con = (char *)str;
-
 #if defined(ACTIVE_ENABLE)
 	pdata->gpio_clk_sel = of_get_named_gpio_flags(np,
 						      "clock-sel-gpio",
@@ -2182,7 +2171,7 @@ static int lr388k7_probe(struct spi_device *spi)
 	g_spi = spi;
 
 	if (spi->irq <= 0) {
-		dev_dbg(dev, "no irq\n");
+		dev_err(dev, "no irq\n");
 		return -ENODEV;
 	}
 
@@ -2313,24 +2302,6 @@ static int lr388k7_probe(struct spi_device *spi)
 		dev_err(dev,
 			"LR388K7 TS: regulator enable failed: %d\n",
 			error);
-
-	/* clk */
-	if (pdata->name_of_clock || pdata->name_of_clock_con) {
-		ts->clk =
-			clk_get_sys(pdata->name_of_clock,
-				    pdata->name_of_clock_con);
-		if (IS_ERR(ts->clk)) {
-			dev_err(dev,
-				"failed to get touch_clk:(%s, %s)\n",
-				pdata->name_of_clock,
-				pdata->name_of_clock_con);
-			error = -EINVAL;
-			goto err_free_mem;
-		}
-	}
-
-	if (ts->clk)
-		clk_enable(ts->clk);
 
 	input_dev->name = "touch";
 	input_dev->phys = ts->phys;

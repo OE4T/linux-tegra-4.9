@@ -36,6 +36,8 @@ static struct regulator *vpp_lcd;
 static struct regulator *vmm_lcd;
 static struct device *dc_dev;
 static u16 en_panel_rst;
+static u16 en_panel;
+static u16 en_backlight;
 static bool en_vmm_vpp_i2c_config;
 static struct i2c_client *dsi_s_vmm_vpp_i2c_client;
 
@@ -237,6 +239,16 @@ static int dsi_s_wuxga_8_0_enable(struct device *dev)
 		goto fail;
 	}
 
+	if (gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_BL_ENABLE]))
+		en_backlight = panel_of.panel_gpio[TEGRA_GPIO_BL_ENABLE];
+	else
+		pr_err("display backlight enable gpio invalid\n");
+
+	if (gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_PANEL_EN]))
+		en_panel = panel_of.panel_gpio[TEGRA_GPIO_PANEL_EN];
+	else {
+		pr_err("display panel en invalid. enable vmm/vpp with i2c\n");
+	}
 
 	if (dvdd_lcd_1v8) {
 		err = regulator_enable(dvdd_lcd_1v8);
@@ -256,6 +268,9 @@ static int dsi_s_wuxga_8_0_enable(struct device *dev)
 		}
 	}
 
+	usleep_range(500, 1500);
+	if (gpio_is_valid(en_backlight))
+		gpio_direction_output(en_backlight, 1);
 	usleep_range(500, 1500);
 
 	if (en_vmm_vpp_i2c_config) {
@@ -301,6 +316,9 @@ static int dsi_s_wuxga_8_0_enable(struct device *dev)
 			pr_err("e3320: Failed to configure vmm vpp driving %d\n", err);
 			goto fail;
 		}
+
+		if (gpio_is_valid(en_panel))
+			gpio_direction_output(en_panel, 1);
 	} else {
 		if (vpp_lcd) {
 			err = regulator_enable(vpp_lcd);
@@ -369,6 +387,9 @@ static int dsi_s_wuxga_8_0_disable(struct device *dev)
 		usleep_range(500, 1000);
 	} else
 		pr_err("ERROR! display reset gpio invalid\n");
+
+	if (gpio_is_valid(en_panel))
+		gpio_direction_output(en_panel, 0);
 
 	if (vmm_lcd)
 		regulator_disable(vmm_lcd);

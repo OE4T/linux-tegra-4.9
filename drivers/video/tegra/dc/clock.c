@@ -30,16 +30,20 @@ unsigned long tegra_dc_pclk_round_rate(struct tegra_dc *dc, int pclk)
 {
 	unsigned long rate;
 	unsigned long div;
-
+	
 	rate = tegra_dc_clk_get_rate(dc);
 
 	if (TEGRA_DC_OUT_DSI == dc->out->type ||
 		TEGRA_DC_OUT_FAKE_DSIA == dc->out->type ||
 		TEGRA_DC_OUT_FAKE_DSIB == dc->out->type ||
-		TEGRA_DC_OUT_FAKE_DSI_GANGED == dc->out->type)
+		TEGRA_DC_OUT_FAKE_DSI_GANGED == dc->out->type) {
 		div = DIV_ROUND_CLOSEST(rate * 2, pclk);
-	else  /* round-up for divider for other display types */
+#ifdef CONFIG_TEGRA_NVDISPLAY
+			return rate;	/*shift_clk_div is not available*/
+#endif
+	} else { /* round-up for divider for other display types */
 		div = DIV_ROUND_UP(rate * 2, pclk);
+	}
 
 #ifdef CONFIG_ARCH_TEGRA_21x_SOC
 	if (dc->out->type == TEGRA_DC_OUT_HDMI)

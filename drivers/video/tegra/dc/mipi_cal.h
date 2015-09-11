@@ -17,6 +17,7 @@
 #ifndef __DRIVERS_VIDEO_TEGRA_DC_MIPI_CAL_H__
 #define __DRIVERS_VIDEO_TEGRA_DC_MIPI_CAL_H__
 
+#include <linux/reset.h>
 #include "mipi_cal_regs.h"
 
 struct tegra_mipi_cal {
@@ -24,6 +25,8 @@ struct tegra_mipi_cal {
 	struct resource *res;
 	struct resource *base_res;
 	struct clk *clk;
+	struct clk *uart_fs_mipi_clk;
+	struct reset_control *rst;
 	struct clk *fixed_clk;
 	void __iomem *base;
 	struct mutex lock;
@@ -36,11 +39,15 @@ static inline void tegra_mipi_cal_clk_enable(struct tegra_mipi_cal *mipi_cal)
 	if (mipi_cal->fixed_clk)
 		tegra_disp_clk_prepare_enable(mipi_cal->fixed_clk);
 	tegra_disp_clk_prepare_enable(mipi_cal->clk);
+	if (mipi_cal->uart_fs_mipi_clk)
+		tegra_disp_clk_prepare_enable(mipi_cal->uart_fs_mipi_clk);
 }
 
 static inline void tegra_mipi_cal_clk_disable(struct tegra_mipi_cal *mipi_cal)
 {
 	BUG_ON(IS_ERR_OR_NULL(mipi_cal));
+	if (mipi_cal->uart_fs_mipi_clk)
+		tegra_disp_clk_disable_unprepare(mipi_cal->uart_fs_mipi_clk);
 	tegra_disp_clk_disable_unprepare(mipi_cal->clk);
 	if (mipi_cal->fixed_clk)
 		tegra_disp_clk_disable_unprepare(mipi_cal->fixed_clk);
@@ -53,7 +60,7 @@ static inline void tegra_mipi_cal_clk_disable(struct tegra_mipi_cal *mipi_cal)
  * read/writes to MIPI_CAL_MODE register, setting a virtual offset of 0xFF and
  * handling it as a special case.
  */
-#if defined CONFIG_TEGRA_ARCH_T18x_SOC
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 #define GET_REG_OFFSET(reg)	((reg == 0xFF) ? 0x0 : (reg + 4))
 #else
 #define GET_REG_OFFSET(reg)	(reg)

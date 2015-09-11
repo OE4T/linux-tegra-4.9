@@ -30,6 +30,7 @@
 #include <linux/types.h>
 #include <linux/clk/tegra.h>
 #include <linux/tegra-soc.h>
+#include <linux/reset.h>
 
 #include <mach/dc.h>
 
@@ -174,6 +175,12 @@ struct tegra_dc {
 	int				irq;
 
 	struct clk			*clk;
+	struct reset_control		*rst;
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	struct reset_control		*nvdisp_common_rst[DC_N_WINDOWS + 1];
+#endif
+	struct clk			*hubclk;
+	struct clk			*compclk;
 #ifdef CONFIG_TEGRA_ISOMGR
 	tegra_isomgr_handle		isomgr_handle;
 #else

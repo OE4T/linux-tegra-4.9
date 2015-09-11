@@ -27,8 +27,13 @@ enum {
 	OP_DONE = 1,
 };
 #define DSI_INCR_SYNCPT 0x00
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#define DSI_INCR_SYNCPT_COND(x)		(((x) & 0xff) << 10)
+#define DSI_INCR_SYNCPT_INDX(x)		(((x) & 0x2ff) << 0)
+#else
 #define DSI_INCR_SYNCPT_COND(x)		(((x) & 0xff) << 8)
 #define DSI_INCR_SYNCPT_INDX(x)		(((x) & 0xff) << 0)
+#endif
 
 #define DSI_INCR_SYNCPT_CNTRL 0x01
 #define DSI_INCR_SYNCPT_ERROR 0x02

@@ -1895,6 +1895,7 @@ void tegra_dc_enable_general_act(struct tegra_dc *dc)
 {
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
+
 	if (tegra_dc_poll_register(dc, DC_CMD_STATE_CONTROL,
 		GENERAL_ACT_REQ, 0, 1,
 		TEGRA_DC_POLL_TIMEOUT_MS))
@@ -3492,6 +3493,7 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 
 	if (need_disable)
 		tegra_dc_disable_irq_ops(dc, true);
+
 	return IRQ_HANDLED;
 }
 
@@ -3536,6 +3538,9 @@ void tegra_dc_set_color_control(struct tegra_dc *dc)
 		color_control = BASE_COLOR_SIZE888;
 		break;
 	}
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	color_control = BASE_COLOR_SIZE888;
+#endif
 
 	switch (dc->out->dither) {
 	case TEGRA_DC_UNDEFINED_DITHER:
@@ -4416,7 +4421,7 @@ struct clk *tegra_disp_of_clk_get_by_name(struct device_node *np,
 						const char *name)
 {
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	if (!tegra_platform_is_silicon() && !tegra_bpmp_running())
+	if (!tegra_bpmp_running())
 		return of_clk_get_by_name(np, "clk32k_in");
 #endif
 	return of_clk_get_by_name(np, name);
@@ -4425,10 +4430,16 @@ struct clk *tegra_disp_of_clk_get_by_name(struct device_node *np,
 struct clk *tegra_disp_clk_get(struct device *dev, const char *id)
 {
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	if (!tegra_platform_is_silicon() && !tegra_bpmp_running())
+	struct clk *disp_clk;
+
+	if (!tegra_bpmp_running()) {
 		return of_clk_get_by_name(dev->of_node, "clk32k_in");
-	else
-		return devm_clk_get(dev, id);
+	} else {
+		disp_clk = devm_clk_get(dev, id);
+		if (IS_ERR_OR_NULL(disp_clk))
+			pr_err("Failed to get %s clk\n", id);
+		return disp_clk;
+	}
 
 #else
 	return clk_get(dev, id);
@@ -4511,7 +4522,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 		dev_info(&ndev->dev, "Display dc.%08x registered with id=%d\n",
 				(unsigned int)dt_res.start, ndev->id);
-
 		res = &dt_res;
 
 		dt_pdata = of_dc_parse_platform_data(ndev);
@@ -4672,7 +4682,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #endif
 	clk = tegra_disp_clk_get(&ndev->dev, clk_name);
 	if (IS_ERR_OR_NULL(clk)) {
-		dev_err(&ndev->dev, "can't get clock\n");
+		dev_err(&ndev->dev, "can't get clock: %s\n", clk_name);
 		ret = -ENOENT;
 		goto err_iounmap_reg;
 	}

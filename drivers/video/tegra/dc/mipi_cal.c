@@ -137,8 +137,12 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 	struct resource *base_res;
 	struct clk *clk;
 	struct clk *fixed_clk = NULL;
+	struct reset_control *rst = NULL;
 	void __iomem *base;
 	int err = 0;
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	struct clk *uart_fs_mipi_clk;
+#endif
 #ifdef CONFIG_OF
 	struct device_node *np_mipi_cal =
 		of_find_node_by_path("/mipical");
@@ -184,8 +188,11 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 		err = -EBUSY;
 		goto fail_free_res;
 	}
-
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	clk = tegra_disp_of_clk_get_by_name(np_mipi_cal, "mipi_cal");
+#else
 	clk = clk_get_sys("mipi-cal", NULL);
+#endif
 	if (IS_ERR_OR_NULL(clk)) {
 		dev_err(&dc->ndev->dev, "mipi_cal: clk get failed\n");
 		err = PTR_ERR(clk);
@@ -203,6 +210,30 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 		goto fail_free_map;
 	}
 #endif
+
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	uart_fs_mipi_clk = tegra_disp_of_clk_get_by_name(np_mipi_cal,
+		"uart_fs_mipi_cal");
+	if (IS_ERR_OR_NULL(uart_fs_mipi_clk)) {
+		dev_err(&dc->ndev->dev,
+			"mipi_cal: uart fs mipi cal clk get failed\n");
+		err = PTR_ERR(uart_fs_mipi_clk);
+		goto fail_free_map;
+	}
+#endif
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	/*Check bpmp running and real silicon */
+	if (tegra_bpmp_running() && tegra_platform_is_silicon()) {
+		rst = of_reset_control_get(np_mipi_cal, "mipi_cal");
+		if (IS_ERR_OR_NULL(rst)) {
+			dev_err(&dc->ndev->dev,
+				"mipi_cal: reset get control failed\n");
+			err = PTR_ERR(rst);
+			goto fail_free_map;
+		}
+		reset_control_deassert(rst);
+	}
+#endif
 	mutex_init(&mipi_cal->lock);
 	mipi_cal->dc = dc;
 	mipi_cal->res = res;
@@ -210,6 +241,10 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 	mipi_cal->base_res = base_res;
 	mipi_cal->clk = clk;
 	mipi_cal->fixed_clk = fixed_clk;
+	mipi_cal->rst = rst;
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	mipi_cal->uart_fs_mipi_clk = uart_fs_mipi_clk;
+#endif
 	dbg_dsi_mipi_dir_create(mipi_cal);
 	of_node_put(np_mipi_cal);
 	return mipi_cal;
@@ -246,6 +281,14 @@ void tegra_mipi_cal_destroy(struct tegra_dc *dc)
 	BUG_ON(IS_ERR_OR_NULL(mipi_cal));
 
 	mutex_lock(&mipi_cal->lock);
+
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (mipi_cal->rst)
+		reset_control_deassert(mipi_cal->rst);
+
+	if (mipi_cal->uart_fs_mipi_clk)
+		clk_put(mipi_cal->uart_fs_mipi_clk);
+#endif
 
 	clk_put(mipi_cal->clk);
 	devm_iounmap(&dc->ndev->dev, mipi_cal->base);

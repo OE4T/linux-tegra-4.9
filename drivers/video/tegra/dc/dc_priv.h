@@ -80,7 +80,7 @@ static inline void tegra_dc_io_end(struct tegra_dc *dc)
 static int tegra_dc_is_clk_enabled(struct clk *clk)
 {
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	if (!tegra_platform_is_silicon())
+	if (!tegra_bpmp_running())
 		return 1;
 	else
 		return __clk_is_enabled(clk);
@@ -90,12 +90,16 @@ static int tegra_dc_is_clk_enabled(struct clk *clk)
 
 static inline unsigned long tegra_dc_is_accessible(struct tegra_dc *dc)
 {
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	if (likely(tegra_bpmp_running())) {
+#else
 	if (likely(tegra_platform_is_silicon())) {
+#endif
 		BUG_ON(!nvhost_module_powered_ext(dc->ndev));
 		if (WARN(!tegra_dc_is_clk_enabled(dc->clk),
-			"DC is clock-gated.\n") ||
+			"DC is clock-gated.\n")/* ||
 			WARN(!tegra_powergate_is_powered(
-			dc->powergate_id), "DC is power-gated.\n"))
+			dc->powergate_id), "DC is power-gated.\n")*/)
 			return 1;
 	}
 
@@ -387,9 +391,30 @@ static inline void tegra_dc_restore_interrupt(struct tegra_dc *dc, u32 val)
 	tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
 }
 
+static inline int tegra_dc_clk_set_rate(struct clk *clk, unsigned long rate)
+{
+	int err;
+
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	/* Fix me: Enable clk set rate calls once bpmp issues are fixed */
+	if (tegra_bpmp_running())
+#else
+	if (!tegra_platform_is_silicon())
+#endif
+		return 0;
+
+	err = clk_set_rate(clk, rate);
+	if (err)
+		return err;
+}
+
 static inline unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
 {
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	if (!tegra_bpmp_running())
+#else
 	if (!tegra_platform_is_silicon())
+#endif
 		return dc->mode.pclk;
 
 	return clk_get_rate(dc->clk);
@@ -397,14 +422,23 @@ static inline unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
 
 static inline int tegra_disp_clk_prepare_enable(struct clk *clk)
 {
-	if (tegra_platform_is_silicon() || tegra_bpmp_running())
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	if (tegra_bpmp_running())
+#else
+	if (tegra_platform_is_silicon())
+#endif
 		return clk_prepare_enable(clk);
+
 	return 0;
 }
 
 static inline void tegra_disp_clk_disable_unprepare(struct clk *clk)
 {
-	if (tegra_platform_is_silicon() || tegra_bpmp_running())
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	if (tegra_bpmp_running())
+#else
+	if (tegra_platform_is_silicon())
+#endif
 		clk_disable_unprepare(clk);
 }
 

@@ -37,6 +37,7 @@
 #include <linux/tegra-soc.h>
 #include <linux/nvhost.h>
 #include <linux/of_address.h>
+#include <linux/io.h>
 
 #include <mach/dc.h>
 #include <mach/fb.h>
@@ -60,6 +61,7 @@
 	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
 	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
 	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
+
 #define DSI_USE_SYNC_POINTS 1
 #else
 #define DSI_USE_SYNC_POINTS 0
@@ -440,14 +442,22 @@ inline void tegra_dsi_reset_deassert(struct tegra_dc_dsi_data *dsi)
 {
 	int i = 0;
 	for (i = 0; i < dsi->max_instances; i++)
+#ifndef CONFIG_TEGRA_NVDISPLAY
 		tegra_periph_reset_deassert(dsi->dsi_clk[i]);
+#else
+		reset_control_deassert(dsi->dsi_reset[i]);
+#endif
 }
 
 inline void tegra_dsi_reset_assert(struct tegra_dc_dsi_data *dsi)
 {
 	int i = 0;
 	for (i = 0; i < dsi->max_instances; i++)
+#ifndef CONFIG_TEGRA_NVDISPLAY
 		tegra_periph_reset_assert(dsi->dsi_clk[i]);
+#else
+		reset_control_assert(dsi->dsi_reset[i]);
+#endif
 }
 
 static inline void tegra_dsi_lp_clk_enable(struct tegra_dc_dsi_data *dsi);
@@ -456,8 +466,14 @@ static inline void tegra_dsi_lp_clk_disable(struct tegra_dc_dsi_data *dsi);
 void tegra_dsi_clk_enable(struct tegra_dc_dsi_data *dsi)
 {
 	int i = 0;
+	int err;
+
 	for (i = 0; i < dsi->max_instances; i++) {
-		tegra_disp_clk_prepare_enable(dsi->dsi_clk[i]);
+		err = tegra_disp_clk_prepare_enable(dsi->dsi_clk[i]);
+		if (err) {
+			dev_err(&dsi->dc->ndev->dev,
+				"dsi%d clk enable failed. err %d\n", i, err);
+		}
 		udelay(800);
 	}
 }
@@ -606,6 +622,17 @@ static struct tegra_dc_shift_clk_div tegra_dsi_get_shift_clk_div(
 	 * holds the real value of shift_clk_div.
 	 */
 	shift_clk_div = dsi->default_shift_clk_div;
+
+	/*
+	 * There is no shift clock divider in T18x. In order to maintain
+	 * backward compatibility in the driver, just set the shift clock
+	 * divisor and multiplier to 1.
+	 */
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	shift_clk_div.mul = 1;
+	shift_clk_div.div = 1;
+	return shift_clk_div;
+#endif
 
 	/* Calculate shift_clk_div which can match the video_burst_mode. */
 	if (dsi->info.video_burst_mode >=
@@ -967,6 +994,15 @@ static void tegra_dsi_get_phy_timing(struct tegra_dc_dsi_data *dsi,
 	}
 }
 
+static inline int tegra_dsi_ignore_phy_timing_range_violation(void)
+{
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	return 1;
+#else
+	return 0;
+#endif
+}
+
 static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 				struct dsi_phy_timing_inclk *phy_timing,
 				u32 clk_ps, u8 lphs)
@@ -986,10 +1022,12 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 	DSI_CONVERT_T_PHY_TO_T_PHY_PS(
 			phy_timing->t_tlpx, clk_ps, T_TLPX_HW_INC),
 			MIPI_T_TLPX_PS_MIN, MIPI_T_TLPX_PS_MAX);
+
 	if (err < 0) {
 		dev_warn(&dsi->dc->ndev->dev,
 			"dsi: Tlpx mipi range violated\n");
-		goto fail;
+		if (!tegra_dsi_ignore_phy_timing_range_violation())
+			goto fail;
 	}
 
 	if (lphs == DSI_LPHS_IN_HS_MODE) {
@@ -997,10 +1035,12 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 		DSI_CONVERT_T_PHY_TO_T_PHY_PS(
 			phy_timing->t_hsdexit, clk_ps, T_HSEXIT_HW_INC),
 			MIPI_T_HSEXIT_PS_MIN, MIPI_T_HSEXIT_PS_MAX);
+
 		if (err < 0) {
 			dev_warn(&dsi->dc->ndev->dev,
 				"dsi: HsExit mipi range violated\n");
-			goto fail;
+			if (!tegra_dsi_ignore_phy_timing_range_violation())
+				goto fail;
 		}
 
 		err = CHECK_RANGE(
@@ -1010,7 +1050,8 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 		if (err < 0) {
 			dev_warn(&dsi->dc->ndev->dev,
 				"dsi: HsTrail mipi range violated\n");
-			goto fail;
+			if (!tegra_dsi_ignore_phy_timing_range_violation())
+				goto fail;
 		}
 
 		err = CHECK_RANGE(
@@ -1020,7 +1061,8 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 		if (err < 0) {
 			dev_warn(&dsi->dc->ndev->dev,
 				"dsi: HsZero mipi range violated\n");
-			goto fail;
+			if (!tegra_dsi_ignore_phy_timing_range_violation())
+				goto fail;
 		}
 
 		err = CHECK_RANGE(
@@ -1031,7 +1073,8 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 		if (err < 0) {
 			dev_warn(&dsi->dc->ndev->dev,
 				"dsi: HsPrepare mipi range violated\n");
-			goto fail;
+			if (!tegra_dsi_ignore_phy_timing_range_violation())
+				goto fail;
 		}
 
 		err = CHECK_RANGE(
@@ -1044,7 +1087,8 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 		if (err < 0) {
 			dev_warn(&dsi->dc->ndev->dev,
 			"dsi: HsPrepare + HsZero mipi range violated\n");
-			goto fail;
+			if (!tegra_dsi_ignore_phy_timing_range_violation())
+				goto fail;
 		}
 	} else {
 		/* default is LP mode */
@@ -1055,7 +1099,8 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 		if (err < 0) {
 			dev_warn(&dsi->dc->ndev->dev,
 				"dsi: WakeUp mipi range violated\n");
-			goto fail;
+			if (!tegra_dsi_ignore_phy_timing_range_violation())
+				goto fail;
 		}
 
 		err = CHECK_RANGE(
@@ -1068,7 +1113,8 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 		if (err < 0) {
 			dev_warn(&dsi->dc->ndev->dev,
 				"dsi: TaSure mipi range violated\n");
-			goto fail;
+			if (!tegra_dsi_ignore_phy_timing_range_violation())
+				goto fail;
 		}
 	}
 
@@ -1081,7 +1127,8 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 		if (err < 0) {
 			dev_warn(&dsi->dc->ndev->dev,
 				"dsi: ClkTrail mipi range violated\n");
-			goto fail;
+			if (!tegra_dsi_ignore_phy_timing_range_violation())
+				goto fail;
 		}
 
 		err = CHECK_RANGE(
@@ -1091,7 +1138,8 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 		if (err < 0) {
 			dev_warn(&dsi->dc->ndev->dev,
 				"dsi: ClkPost mipi range violated\n");
-			goto fail;
+			if (!tegra_dsi_ignore_phy_timing_range_violation())
+				goto fail;
 		}
 
 		err = CHECK_RANGE(
@@ -1101,7 +1149,8 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 		if (err < 0) {
 			dev_warn(&dsi->dc->ndev->dev,
 				"dsi: ClkZero mipi range violated\n");
-			goto fail;
+			if (!tegra_dsi_ignore_phy_timing_range_violation())
+				goto fail;
 		}
 
 		err = CHECK_RANGE(
@@ -1111,7 +1160,8 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 		if (err < 0) {
 			dev_warn(&dsi->dc->ndev->dev,
 				"dsi: ClkPrepare mipi range violated\n");
-			goto fail;
+			if (!tegra_dsi_ignore_phy_timing_range_violation())
+				goto fail;
 		}
 
 		err = CHECK_RANGE(
@@ -1121,7 +1171,8 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 		if (err < 0) {
 			dev_warn(&dsi->dc->ndev->dev,
 				"dsi: ClkPre mipi range violated\n");
-			goto fail;
+			if (!tegra_dsi_ignore_phy_timing_range_violation())
+				goto fail;
 		}
 
 		err = CHECK_RANGE(
@@ -1134,7 +1185,8 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 		if (err < 0) {
 			dev_warn(&dsi->dc->ndev->dev,
 			"dsi: ClkPrepare + ClkZero mipi range violated\n");
-			goto fail;
+			if (!tegra_dsi_ignore_phy_timing_range_violation())
+				goto fail;
 		}
 	}
 fail:
@@ -1278,6 +1330,7 @@ static void tegra_dsi_set_phy_timing(struct tegra_dc_dsi_data *dsi, u8 lphs)
 		phy_timing.t_tasure += T_TASURE_HW_INC;
 		phy_timing.t_tago += T_TAGO_HW_INC;
 	}
+
 	val = DSI_PHY_TIMING_0_THSDEXIT(phy_timing.t_hsdexit) |
 			DSI_PHY_TIMING_0_THSTRAIL(phy_timing.t_hstrail) |
 			DSI_PHY_TIMING_0_TDATZERO(phy_timing.t_datzero) |
@@ -1775,7 +1828,6 @@ static void tegra_dsi_soft_reset(struct tegra_dc_dsi_data *dsi)
 			break;
 		}
 	}
-
 	tegra_dsi_writel(dsi,
 		DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_DISABLE),
 		DSI_POWER_CONTROL);
@@ -1932,6 +1984,13 @@ static void tegra_dsi_set_dc_clk(struct tegra_dc *dc,
 	u32 shift_clk_div_register;
 	u32 val;
 
+	/*
+	 * Shift clock divider is removed in T18x. There is no display
+	 * clock control register and not shift clk div programming.
+	 */
+#if defined CONFIG_ARCH_TEGRA_18x_SOC
+	return;
+#endif
 	/* formula: (dsi->shift_clk_div - 1) * 2 */
 	shift_clk_div_register = DIV_ROUND_CLOSEST(
 				((dsi->shift_clk_div.mul -
@@ -2000,8 +2059,13 @@ static void tegra_dsi_set_dsi_clk(struct tegra_dc *dc,
 
 	dsi->current_dsi_clk_khz =
 			clk_get_rate(dsi->dsi_clk[0]) / 1000;
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	dsi->current_bit_clk_ps =  DIV_ROUND_CLOSEST((1000 * 1000 * 1000),
+					dsi->current_dsi_clk_khz);
+#else
 	dsi->current_bit_clk_ps =  DIV_ROUND_CLOSEST((1000 * 1000 * 1000),
 					(dsi->current_dsi_clk_khz * 2));
+#endif
 }
 
 static void tegra_dsi_hs_clk_out_enable(struct tegra_dc_dsi_data *dsi)
@@ -2135,6 +2199,9 @@ static void tegra_dsi_pad_disable(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
 
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	return;
+#endif
 	if (dsi->info.controller_vs == DSI_VS_1) {
 		val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_0_VS1);
 		val &= ~(DSI_PAD_CONTROL_0_VS1_PAD_PDIO(0xf) |
@@ -2164,6 +2231,9 @@ static void tegra_dsi_pad_enable(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
 
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	return;
+#endif
 	if (dsi->info.controller_vs == DSI_VS_1) {
 		val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_0_VS1);
 		val &= ~(DSI_PAD_CONTROL_0_VS1_PAD_PDIO(0xf) |
@@ -2354,6 +2424,7 @@ void tegra_dsi_mipi_calibration_13x(struct tegra_dc_dsi_data *dsi)
 static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val = 0;
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	struct clk *clk72mhz = NULL;
 	clk72mhz = clk_get_sys("clk72mhz", NULL);
 	if (IS_ERR_OR_NULL(clk72mhz)) {
@@ -2361,7 +2432,7 @@ static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 		return;
 	}
 	tegra_disp_clk_prepare_enable(clk72mhz);
-
+#endif
 	/* Calibration settings begin */
 	val = tegra_mipi_cal_read(dsi->mipi_cal,
 			MIPI_CAL_MIPI_BIAS_PAD_CFG2_0);
@@ -2447,8 +2518,9 @@ static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 
 		tegra_dsi_mipi_calibration_status(dsi);
 	}
-
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	tegra_disp_clk_disable_unprepare(clk72mhz);
+#endif
 }
 #endif
 
@@ -2773,7 +2845,8 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 
 #if defined(CONFIG_ARCH_TEGRA_11x_SOC) || \
 	defined(CONFIG_ARCH_TEGRA_14x_SOC) || \
-	defined(CONFIG_ARCH_TEGRA_12x_SOC)
+	defined(CONFIG_ARCH_TEGRA_12x_SOC) || \
+	defined(CONFIG_ARCH_TEGRA_18x_SOC)
 		tegra_mipi_cal_write(dsi->mipi_cal,
 			MIPI_BIAS_PAD_E_VCLAMP_REF(0x1),
 			MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
@@ -2800,7 +2873,11 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 		/* disable mipi bias pad */
 		val = tegra_mipi_cal_read(dsi->mipi_cal,
 				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
-		val |= MIPI_BIAS_PAD_PDVCLAMP(0x1);
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		val &= ~MIPI_BIAS_PAD_PDVCLAMP(0x1);
+#else
+		val |= ~MIPI_BIAS_PAD_PDVCLAMP(0x1);
+#endif
 		tegra_mipi_cal_write(dsi->mipi_cal, val,
 				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
 
@@ -2841,7 +2918,7 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 #endif
 	}
 }
-
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 static void tegra_dsi_panelB_enable(void)
 {
 	unsigned int val;
@@ -2850,7 +2927,7 @@ static void tegra_dsi_panelB_enable(void)
 	val |= DSIB_MODE_ENABLE;
 	writel(val, (IO_ADDRESS(APB_MISC_GP_MIPI_PAD_CTRL_0)));
 }
-
+#endif
 static int tegra_dsi_init_hw(struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi)
 {
@@ -2867,6 +2944,9 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	tegra_dsi_clk_enable(dsi);
 	tegra_dsi_set_dsi_clk(dc, dsi, dsi->target_lp_clk_khz);
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	tegra_dsi_pad_calibration(dsi);
+#endif
 	/* Stop DC stream before configuring DSI registers
 	 * to avoid visible glitches on panel during transition
 	 * from bootloader to kernel driver
@@ -2878,10 +2958,10 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 		DSI_POWER_CONTROL);
 	/* stabilization delay */
 	udelay(300);
-
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	if (dsi->info.dsi_instance || dsi->info.ganged_type)
 		tegra_dsi_panelB_enable();
-
+#endif
 	tegra_dsi_set_phy_timing(dsi, DSI_LPHS_IN_LP_MODE);
 
 	/* Initialize DSI registers */
@@ -2902,7 +2982,9 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	}
 #endif
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_dsi_pad_calibration(dsi);
+#endif
 
 	tegra_dsi_writel(dsi,
 		DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_ENABLE),
@@ -4057,7 +4139,8 @@ int tegra_dsi_read_data(struct tegra_dc *dc,
 	tegra_dc_dsi_hold_host(dc);
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
-	tegra_disp_clk_prepare_enable(dsi->dsi_fixed_clk);
+	if (dsi->dsi_fixed_clk)
+		tegra_disp_clk_prepare_enable(dsi->dsi_fixed_clk);
 	tegra_dsi_lp_clk_enable(dsi);
 	init_status = tegra_dsi_prepare_host_transmission(
 				dc, dsi, DSI_LP_OP_WRITE);
@@ -4116,7 +4199,8 @@ fail:
 	if (err < 0)
 		dev_err(&dc->ndev->dev, "Failed to restore prev state\n");
 	tegra_dsi_lp_clk_disable(dsi);
-	tegra_disp_clk_disable_unprepare(dsi->dsi_fixed_clk);
+	if (dsi->dsi_fixed_clk)
+		tegra_disp_clk_disable_unprepare(dsi->dsi_fixed_clk);
 	tegra_dc_io_end(dc);
 	mutex_unlock(&dsi->lock);
 	tegra_dc_dsi_release_host(dc);
@@ -4431,6 +4515,14 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 		goto fail;
 	}
 
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	dsi->pad_ctrl = tegra_dsi_padctrl_init(dc);
+	if (IS_ERR(dsi->pad_ctrl)) {
+		dev_err(&dc->ndev->dev, "dsi: Padctrl init failed\n");
+		err = PTR_ERR(dsi->pad_ctrl);
+		goto fail;
+	}
+#endif
 	/* Stop DC stream before configuring DSI registers
 	 * to avoid visible glitches on panel during transition
 	 * from bootloader to kernel driver
@@ -4747,14 +4839,22 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	struct clk *dsi_clk;
 	struct clk *dsi_fixed_clk = NULL;
 	struct clk *dsi_lp_clk = NULL;
+	struct reset_control *dsi_reset = NULL;
+
 	struct tegra_dsi_out *dsi_pdata = NULL;
 	int err = 0, i;
 	int dsi_instance;
 	char *ganged_reg_name[2] = {"ganged_dsia_regs", "ganged_dsib_regs"};
 	char *split_link_reg_name[4] = {"split_dsia_regs", "split_disb_regs",
 					"split_dsic_regs", "split_dsid_regs"};
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	char *dsi_clk_name[4] = {"dsi", "dsib", "dsic", "dsid"};
+	char *dsi_lp_clk_name[4] = {"dsia_lp", "dsib_lp", "dsic_lp", "dsid_lp"};
+	char *dsi_reset_name[4] = {"dsia", "dsib", "dsic", "dsid"};
+#else
 	char *dsi_clk_name[4] = {"dsia", "dsib", "dsic", "dsid"};
 	char *dsi_lp_clk_name[4] = {"dsialp", "dsiblp", "dsiclp", "dsidlp"};
+#endif
 	struct device_node *np = dc->ndev->dev.of_node;
 #ifdef CONFIG_OF
 	struct device_node *np_dsi =
@@ -4824,6 +4924,19 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 			goto err_release_regs;
 		}
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		dsi_clk = dsi_pdata->dsi_instance ?
+				tegra_disp_of_clk_get_by_name(np_dsi,
+				dsi_clk_name[DSI_INSTANCE_1]) :
+				tegra_disp_of_clk_get_by_name(np_dsi,
+				dsi_clk_name[i]);
+		dsi_lp_clk = dsi_pdata->dsi_instance ?
+				tegra_disp_of_clk_get_by_name(np_dsi,
+				dsi_lp_clk_name[DSI_INSTANCE_1]) :
+				tegra_disp_of_clk_get_by_name(np_dsi,
+				dsi_lp_clk_name[i]);
+
+#else
 		dsi_clk = dsi_pdata->dsi_instance ?
 				clk_get(&dc->ndev->dev,
 				dsi_clk_name[DSI_INSTANCE_1]) :
@@ -4832,6 +4945,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 				clk_get(&dc->ndev->dev,
 				dsi_lp_clk_name[DSI_INSTANCE_1]) :
 				clk_get(&dc->ndev->dev, dsi_lp_clk_name[i]);
+#endif
 
 		if (IS_ERR_OR_NULL(dsi_clk) || IS_ERR_OR_NULL(dsi_lp_clk)) {
 			dev_err(&dc->ndev->dev, "dsi: can't get clock\n");
@@ -4839,10 +4953,24 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 			goto err_dsi_clk_put;
 		}
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		if (tegra_bpmp_running()) {
+			dsi_reset = of_reset_control_get(np_dsi,
+					dsi_reset_name[i]);
+			if (IS_ERR_OR_NULL(dsi_reset)) {
+				dev_err(&dc->ndev->dev,
+					"dsi: can't get reset control\n");
+				err = -EBUSY;
+				goto err_dsi_clk_put;
+			}
+			reset_control_reset(dsi_reset);
+		}
+#endif
 		dsi->base[i] = base;
 		dsi->base_res[i] = base_res;
 		dsi->dsi_clk[i] = dsi_clk;
 		dsi->dsi_lp_clk[i] = dsi_lp_clk;
+		dsi->dsi_reset[i] = dsi_reset;
 	}
 
 	/* Initialise pad registers needed for split link */
@@ -4888,6 +5016,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		dsi->pad_control_base_res = base_res;
 	}
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	dsi_fixed_clk = clk_get(&dc->ndev->dev, "dsi-fixed");
 
 	if (IS_ERR_OR_NULL(dsi_fixed_clk)) {
@@ -4895,8 +5024,19 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		err = -EBUSY;
 		goto err_release_regs;
 	}
+#else
+	dsi_fixed_clk = tegra_disp_clk_get(&dc->ndev->dev, "pllp_display");
+	dsi_fixed_clk = NULL;
+#endif
 
+	/* TO DO - check out which clock is needed here for T186
+	 * Temporarily passing the nvdisplay head0 clock
+	 */
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	dc_clk = tegra_disp_clk_get(&dc->ndev->dev, "nvdisplay_p0");
+#else
 	dc_clk = clk_get_sys(dev_name(&dc->ndev->dev), NULL);
+#endif
 	if (IS_ERR_OR_NULL(dc_clk)) {
 		dev_err(&dc->ndev->dev, "dsi: dc clock %s unavailable\n",
 			dev_name(&dc->ndev->dev));
@@ -5000,6 +5140,7 @@ static void _tegra_dc_dsi_destroy(struct tegra_dc *dc)
 static void tegra_dsi_config_phy_clk(struct tegra_dc_dsi_data *dsi,
 							u32 settings)
 {
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	struct clk *parent_clk = NULL;
 	struct clk *base_clk = NULL;
 	int i = 0;
@@ -5018,11 +5159,12 @@ static void tegra_dsi_config_phy_clk(struct tegra_dc_dsi_data *dsi,
 					TEGRA_CLK_PLLD_DSI_OUT_ENB,
 					settings);
 #else
-		tegra_clk_cfg_ex(base_clk,
+		tegra_clk_cfg_ex(base_clk ? base_clk : parent_clk,
 				TEGRA_CLK_PLLD_DSI_OUT_ENB,
 				settings);
 #endif
 	}
+#endif
 }
 
 static int tegra_dsi_te_on_off(struct tegra_dc_dsi_data *dsi, bool flag)
@@ -5158,7 +5300,6 @@ static int _tegra_dsi_host_resume(struct tegra_dc *dc,
 	}
 
 	tegra_dvfs_set_rate(dc->clk, dc->mode.pclk);
-
 	return 0;
 fail:
 	return err;
@@ -5492,13 +5633,23 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 	}
 
 	dsi = tegra_dc_get_outdata(dc);
-
-	dsi->avdd_dsi_csi =  regulator_get(&dc->ndev->dev, "avdd_dsi_csi");
-	if (IS_ERR_OR_NULL(dsi->avdd_dsi_csi)) {
-		dev_err(&dc->ndev->dev, "dsi: avdd_dsi_csi reg get failed\n");
-		err = -ENODEV;
-		goto err_reg;
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (tegra_bpmp_running()) {
+#endif
+		dsi->avdd_dsi_csi =  regulator_get(&dc->ndev->dev,
+			"avdd_dsi_csi");
+		if (IS_ERR_OR_NULL(dsi->avdd_dsi_csi)) {
+			dev_err(&dc->ndev->dev,
+				"dsi: avdd_dsi_csi reg get failed\n");
+			err = -ENODEV;
+			dsi->avdd_dsi_csi = NULL;
+			goto err_reg;
+		}
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	} else {
+		dsi->avdd_dsi_csi = NULL;
 	}
+#endif
 
 	dsi->mipi_cal = tegra_mipi_cal_init_sw(dc);
 	if (IS_ERR(dsi->mipi_cal)) {
@@ -5528,6 +5679,9 @@ static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
 
 	avdd_dsi_csi = dsi->avdd_dsi_csi;
 
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	tegra_dsi_padctrl_shutdown(dc);
+#endif
 	_tegra_dc_dsi_destroy(dc);
 	regulator_put(avdd_dsi_csi);
 	tegra_mipi_cal_destroy(dc);
@@ -5536,21 +5690,54 @@ static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
 static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	unsigned long rate;
-	struct clk *parent_clk;
-	struct clk *base_clk;
+	struct clk *parent_clk = NULL;
+	struct clk *base_clk = NULL;
+	bool shift_clk_div_avail = true;
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	u8 i;
+	struct clk *hubparent_clk;
+	
+	shift_clk_div_avail = false;
 
+	/* Enable the hubparent clock */
+	hubparent_clk = tegra_disp_clk_get(&dc->ndev->dev,
+		"pllp_display");
+	tegra_disp_clk_prepare_enable(hubparent_clk);
+	for (i = 0; i < dsi->max_instances; i++)
+		tegra_disp_clk_prepare_enable(dsi->dsi_clk[i]);
 
+#endif
 	/* divide by 1000 to avoid overflow */
 	dc->mode.pclk /= 1000;
-	rate = (dc->mode.pclk * dc->shift_clk_div.mul * 2)
-				/ dc->shift_clk_div.div;
+
+	if (shift_clk_div_avail)
+		rate = (dc->mode.pclk * dc->shift_clk_div.mul * 2)
+			/ dc->shift_clk_div.div;
+	else
+		rate = dc->mode.pclk;
+
 	rate *= 1000;
 	dc->mode.pclk *= 1000;
 
 	if (dc->initialized)
 		goto skip_setup;
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (clk == dc->clk) {
+		base_clk = tegra_disp_clk_get(&dc->ndev->dev,
+				"pll_d");
+	} else {
+		if (dc->pdata->default_out->dsi->dsi_instance) {
+			parent_clk = tegra_disp_clk_get(&dc->ndev->dev,
+				dc->out->parent_clk ? : "pll_d");
+		} else {
+			parent_clk = tegra_disp_clk_get(&dc->ndev->dev,
+				"pll_d_out1");
+			base_clk = clk_get_parent(parent_clk);
+		}
+	}
+#else
 	if (clk == dc->clk) {
 		parent_clk = clk_get_sys(NULL,
 				dc->out->parent_clk ? : "pll_d_out0");
@@ -5567,16 +5754,25 @@ static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		}
 	}
 	tegra_dsi_config_phy_clk(dsi, TEGRA_DSI_ENABLE);
+#endif
 
+	/* Fix me: Revert bpmp check once bpmp FW is fixed */
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (!tegra_bpmp_running() && base_clk && rate != clk_get_rate(base_clk))
+#else
 	if (rate != clk_get_rate(base_clk))
+#endif
 		clk_set_rate(base_clk, rate);
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (parent_clk && (clk_get_parent(clk) != parent_clk))
+#else
 	if (clk_get_parent(clk) != parent_clk)
+#endif
 		clk_set_parent(clk, parent_clk);
 
 skip_setup:
 	tegra_dvfs_set_rate(dc->clk, dc->mode.pclk);
-
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 }
 

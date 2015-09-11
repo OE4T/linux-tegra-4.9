@@ -64,7 +64,7 @@
 #include "hdmi2.0.h"
 
 #ifdef CONFIG_OF
-/* #define OF_DC_DEBUG	1 */
+/* #define OF_DC_DEBUG */
 
 #undef OF_DC_LOG
 #ifdef OF_DC_DEBUG
@@ -498,6 +498,7 @@ static int parse_vrr_settings(struct platform_device *ndev,
 		struct device_node *np,
 		struct tegra_vrr *vrr)
 {
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	u32 temp;
 
 	if (!of_property_read_u32(np, "nvidia,vrr_min_fps", &temp)) {
@@ -517,7 +518,7 @@ static int parse_vrr_settings(struct platform_device *ndev,
 	 * set at the same time in DT.
 	 */
 	vrr->capability = 1;
-
+#endif
 	return 0;
 }
 

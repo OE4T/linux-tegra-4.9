@@ -20,6 +20,10 @@
 #define BOARD_P1761   0x06E1
 #include "dc_priv_defs.h"
 #include <linux/sysedp.h>
+#include <linux/reset.h>
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#include "dsi_padctrl.h"
+#endif
 
 /* Defines the DSI phy timing parameters */
 struct dsi_phy_timing_inclk {
@@ -76,6 +80,7 @@ struct tegra_dc_dsi_data {
 	struct clk *dsi_clk[MAX_DSI_INSTANCE];
 	struct clk *dsi_fixed_clk;
 	struct clk *dsi_lp_clk[MAX_DSI_INSTANCE];
+	struct reset_control *dsi_reset[MAX_DSI_INSTANCE];
 	bool clk_ref;
 
 	struct mutex lock;
@@ -128,6 +133,10 @@ struct tegra_dc_dsi_data {
 	u32 device_shutdown;
 
 	struct sysedp_consumer *sysedpc;
+
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	struct tegra_dsi_padctrl *pad_ctrl;
+#endif
 };
 
 /* Max number of data lanes supported */

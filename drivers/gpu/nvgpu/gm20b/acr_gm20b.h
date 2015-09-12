@@ -220,9 +220,9 @@ struct loader_config {
 	u32 overlay_dma_base;  /*<! upper 32-bits of the 40-bit dma address*/
 	u32 argc;
 	u32 argv;
-	u32 code_dma_base1;		/*<! upper 7 bits of 47-bit dma address*/
-	u32 data_dma_base1;		/*<! upper 7 bits of 47-bit dma address*/
-	u32 overlay_dma_base1;	/*<! upper 7 bits of the 47-bit dma address*/
+	u16 code_dma_base1;		/*<! upper 7 bits of 47-bit dma address*/
+	u16 data_dma_base1;		/*<! upper 7 bits of 47-bit dma address*/
+	u16 overlay_dma_base1;	/*<! upper 7 bits of the 47-bit dma address*/
 };
 
 /*!

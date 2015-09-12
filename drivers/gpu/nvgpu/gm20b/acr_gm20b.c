@@ -511,12 +511,15 @@ static int pmu_populate_loader_cfg(struct gk20a *g,
 	/* Populate the loader_config state*/
 	ldr_cfg->dma_idx = GK20A_PMU_DMAIDX_UCODE;
 	ldr_cfg->code_dma_base = addr_code;
+	ldr_cfg->code_dma_base1 = 0x0;
 	ldr_cfg->code_size_total = desc->app_size;
 	ldr_cfg->code_size_to_load = desc->app_resident_code_size;
 	ldr_cfg->code_entry_point = desc->app_imem_entry;
 	ldr_cfg->data_dma_base = addr_data;
+	ldr_cfg->data_dma_base1 = 0;
 	ldr_cfg->data_size = desc->app_resident_data_size;
 	ldr_cfg->overlay_dma_base = addr_code;
+	ldr_cfg->overlay_dma_base1 = 0x0;
 
 	/* Update the argc/argv members*/
 	ldr_cfg->argc = 1;
@@ -836,7 +839,7 @@ static void lsfm_fill_static_lsb_hdr_info(struct gk20a *g,
 		}
 		if (falcon_id == LSF_FALCON_ID_GPCCS) {
 			pnode->lsb_header.flags |=
-				NV_FLCN_ACR_LSF_FLAG_FORCE_PRIV_LOAD_FALSE;
+				NV_FLCN_ACR_LSF_FLAG_FORCE_PRIV_LOAD_TRUE;
 		}
 	}
 }
@@ -1082,6 +1085,7 @@ int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 		bl_dmem_desc->ctx_dma = GK20A_PMU_DMAIDX_VIRT;
 		bl_dmem_desc->code_dma_base =
 			(unsigned int)(((u64)acr->acr_ucode.gpu_va >> 8));
+		bl_dmem_desc->code_dma_base1 = 0x0;
 		bl_dmem_desc->non_sec_code_off  = acr_ucode_header_t210_load[0];
 		bl_dmem_desc->non_sec_code_size = acr_ucode_header_t210_load[1];
 		bl_dmem_desc->sec_code_off = acr_ucode_header_t210_load[5];
@@ -1090,6 +1094,7 @@ int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 		bl_dmem_desc->data_dma_base =
 			bl_dmem_desc->code_dma_base +
 			((acr_ucode_header_t210_load[2]) >> 8);
+		bl_dmem_desc->data_dma_base1 = 0x0;
 		bl_dmem_desc->data_size = acr_ucode_header_t210_load[3];
 	} else
 		acr->acr_dmem_desc->nonwpr_ucode_blob_size = 0;

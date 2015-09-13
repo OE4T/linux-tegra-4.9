@@ -169,6 +169,12 @@ void nvhost_module_reset(struct platform_device *dev, bool reboot)
 		__func__, dev_name(&dev->dev),
 		pdata->powergate_id);
 
+	/* Ensure that the device state is sane (i.e. device specifics
+	 * IRQs get disabled */
+	if (reboot)
+		if (pdata->prepare_poweroff)
+			pdata->prepare_poweroff(dev);
+
 	mutex_lock(&pdata->lock);
 	do_module_reset_locked(dev);
 	mutex_unlock(&pdata->lock);

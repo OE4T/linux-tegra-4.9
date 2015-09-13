@@ -1477,7 +1477,7 @@ void tegra_sor_config_xbar(struct tegra_dc_sor_data *sor)
 	mask = (NV_SOR_XBAR_BYPASS_MASK | NV_SOR_XBAR_LINK_SWAP_MASK);
 	for (i = 0, shift = 2; i < sizeof(sor->xbar_ctrl)/sizeof(u32);
 		shift += 3, i++) {
-		mask |= NV_SOR_XBAR_LINK_SWAP_MASK << shift;
+		mask |= NV_SOR_XBAR_LINK_XSEL_MASK << shift;
 		val |= sor->xbar_ctrl[i] << shift;
 	}
 

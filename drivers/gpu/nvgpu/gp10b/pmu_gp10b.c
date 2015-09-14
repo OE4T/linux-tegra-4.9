@@ -20,6 +20,7 @@
 #include "gm20b/pmu_gm20b.h"
 
 #include "pmu_gp10b.h"
+#include "hw_pwr_gp10b.h"
 
 #define gp10b_dbg_pmu(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
@@ -223,6 +224,14 @@ static int gp10b_pmu_setup_elpg(struct gk20a *g)
 	return ret;
 }
 
+void gp10b_write_dmatrfbase(struct gk20a *g, u32 addr)
+{
+	gk20a_writel(g, pwr_falcon_dmatrfbase_r(),
+				addr);
+	gk20a_writel(g, pwr_falcon_dmatrfbase1_r(),
+				0x0);
+}
+
 void gp10b_init_pmu_ops(struct gpu_ops *gops)
 {
 	if (gops->privsecurity) {
@@ -239,4 +248,5 @@ void gp10b_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_setup_elpg = gp10b_pmu_setup_elpg;
 	gops->pmu.lspmuwprinitdone = false;
 	gops->pmu.fecsbootstrapdone = false;
+	gops->pmu.write_dmatrfbase = gp10b_write_dmatrfbase;
 }

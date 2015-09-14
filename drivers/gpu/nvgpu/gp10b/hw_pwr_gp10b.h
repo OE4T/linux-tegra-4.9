@@ -406,6 +406,10 @@ static inline u32 pwr_falcon_dmatrfbase_r(void)
 {
 	return 0x0010a110;
 }
+static inline u32 pwr_falcon_dmatrfbase1_r(void)
+{
+	return 0x0010a128;
+}
 static inline u32 pwr_falcon_dmatrfmoffs_r(void)
 {
 	return 0x0010a114;

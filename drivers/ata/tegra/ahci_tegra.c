@@ -825,7 +825,7 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 	else
 		hpriv->mmio = tegra->base_list[TEGRA_SATA_AHCI];
 
-	hpriv->target_pwr = devm_regulator_get_optional(dev, "target");
+	hpriv->target_pwr = devm_regulator_get_optional(dev, "target-3v3");
 	if (IS_ERR(hpriv->target_pwr)) {
 		rc = PTR_ERR(hpriv->target_pwr);
 		if (rc == -EPROBE_DEFER)

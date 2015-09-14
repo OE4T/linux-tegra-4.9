@@ -803,7 +803,8 @@ static void tegra_dma_terminate_all(struct dma_chan *dc)
 	if (!list_empty(&tdc->pending_sg_req) && was_busy) {
 		sgreq = list_first_entry(&tdc->pending_sg_req,
 					typeof(*sgreq), node);
-		sgreq->dma_desc->bytes_transferred += sgreq->req_len - wcount;
+		sgreq->dma_desc->bytes_transferred +=
+			sgreq->req_len - (wcount * 4);
 	}
 	tegra_dma_resume(tdc);
 

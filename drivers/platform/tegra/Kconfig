@@ -33,11 +33,19 @@ config TEGRA_ARI_MCA
 	  The Tegra Abstract Request Interface (ARI) Machine Check handler. This
 	  handles the Machine Check registers that are accessible via ARI.
 
+config TEGRA_BRIDGE_MCA
+	tristate "AXI/APB Bridge Machine Check"
+	select SERROR_HANDLER
+	help
+	  The Tegra AXI/APB Bridge Machine Check handler. This
+	  handes the SERRs from failed AXI/APB transactions.
+
 config TEGRA_18X_SERROR
         tristate "Tegra18 SError handler"
         depends on ARCH_TEGRA_18x_SOC
         select DENVER_MCA
 	select TEGRA_ARI_MCA
+	select TEGRA_BRIDGE_MCA
         help
           The Tegra18 SError handler. This handles Denver SErrors, CCPLEX
 	  errors, and fabric slave errors.

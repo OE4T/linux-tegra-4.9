@@ -31,3 +31,4 @@ obj-$(CONFIG_TEGRA_AON) += tegra186_aondbg.o
 obj-$(CONFIG_TEGRA_NVADSP) += nvadsp/
 obj-$(CONFIG_TEGRA_ARI_MCA) += ari_mca.o
 obj-$(CONFIG_TEGRA_18X_SERROR) += tegra18_serr.o
+obj-$(CONFIG_TEGRA_BRIDGE_MCA) += bridge_mca.o

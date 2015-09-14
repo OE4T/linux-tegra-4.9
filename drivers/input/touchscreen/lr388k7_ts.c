@@ -59,11 +59,11 @@
 #define __max(x, y) ((x) > (y) ? (x) : (y))
 #endif
 
-#ifdef __neg_chk
-#undef __neg_chk
-#define __neg_chk(a) ((a) < 0 ? 0 : (a))
+#ifdef __negchk
+#undef __negchk
+#define __negchk(a) ((a) < 0 ? 0 : (a))
 #else
-#define __neg_chk(a) ((a) < 0 ? 0 : (a))
+#define __negchk(a) ((a) < 0 ? 0 : (a))
 #endif
 
 
@@ -1579,6 +1579,20 @@ static void lr388k7_touch_report(void *p)
 			 ((p_touch_report->tc[i] . status & 0x7F) > 12))
 			input_report_abs(input_dev,
 					 ABS_MT_TOOL_TYPE, MT_TOOL_PEN);
+
+		if (ts->flip_x)
+			p_touch_report->tc[i].x =
+				__negchk((ts->max_x - p_touch_report->tc[i].x));
+		if (ts->flip_y)
+			p_touch_report->tc[i].y =
+				__negchk((ts->max_y - p_touch_report->tc[i].y));
+		if (ts->swap_xy) {
+			u16 tmp;
+			tmp = p_touch_report->tc[i].x;
+			p_touch_report->tc[i].x = p_touch_report->tc[i].y;
+			p_touch_report->tc[i].y = tmp;
+		}
+
 		input_report_abs(input_dev,
 				 ABS_MT_TRACKING_ID,
 				 p_touch_report->tc[i] .id);
@@ -1593,6 +1607,8 @@ static void lr388k7_touch_report(void *p)
 				 p_touch_report->tc[i] . z);
 	}
 	input_sync(input_dev);
+
+	kfree(p_touch_report);
 }
 #endif /* #if defined(PROTOCOL_A) */
 
@@ -2101,6 +2117,21 @@ static struct lr388k7_platform_data *lr388k7_parse_dt(struct device *dev,
 	gpio_direction_input(irq_gpio);
 	pdata->gpio_irq = irq_gpio;
 
+	ret = of_property_read_u32(np, "swap-xy", &val);
+	if (ret < 0)
+		val = 0;
+	pdata->ts_swap_xy = val != 0 ? 1 : 0;
+
+	ret = of_property_read_u32(np, "flip-x", &val);
+	if (ret < 0)
+		val = 0;
+	pdata->ts_flip_x = val != 0 ? 1 : 0;
+
+	ret = of_property_read_u32(np, "flip-y", &val);
+	if (ret < 0)
+		val = 0;
+	pdata->ts_flip_y = val != 0 ? 1 : 0;
+
 	ret = of_property_read_u32(np, "x-max", &val);
 	if (ret < 0)
 		goto exit_release_all_gpio;
@@ -2227,9 +2258,9 @@ static int lr388k7_probe(struct spi_device *spi)
 	ts->max_x       = pdata->ts_x_max ? : MAX_16BIT;
 	ts->max_y       = pdata->ts_y_max ? : MAX_16BIT;
 	ts->max_z       = pdata->ts_pressure_max ? : MAX_16BIT;
-	ts->swap_xy     = false;
-	ts->flip_x      = false;
-	ts->flip_y      = false;
+	ts->swap_xy     = pdata->ts_swap_xy ? true : false;
+	ts->flip_x      = pdata->ts_flip_x ? true : false;
+	ts->flip_y      = pdata->ts_flip_y ? true : false;
 	ts->gpio_reset  = pdata->gpio_reset;
 	ts->gpio_irq  = pdata->gpio_irq;
 	ts->b_eraser_active = false;

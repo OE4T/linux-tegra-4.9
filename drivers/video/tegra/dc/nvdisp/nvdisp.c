@@ -205,7 +205,7 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 	int i;
 	char syncpt_name[] = "disp_a";
 
-//	mutex_lock(&tegra_nvdisp_lock);
+/*	mutex_lock(&tegra_nvdisp_lock); */
 
 	ret = tegra_nvdisp_reset_prepare(dc);
 	if (ret)
@@ -277,7 +277,7 @@ INIT_CLK_ERR:
 	if (dc->compclk)
 		tegra_disp_clk_put(&dc->ndev->dev, dc->compclk);
 INIT_EXIT:
-//	mutex_unlock(&tegra_nvdisp_lock);
+/*	mutex_unlock(&tegra_nvdisp_lock); */
 	return ret;
 
 }
@@ -489,7 +489,7 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 		nvdisp_incr_syncpt_cntrl_r());
 
 	/* Disabled this feature as unit fpga hang on enabling this*/
-	if (!tegra_bpmp_running())
+	if (tegra_platform_is_silicon())
 		tegra_dc_writel(dc, nvdisp_cont_syncpt_vsync_en_enable_f() |
 			(NVSYNCPT_VBLANK0 + dc->ctrl_num),
 			nvdisp_cont_syncpt_vsync_r());
@@ -543,11 +543,9 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 	/*set display control */
 	tegra_nvdisp_set_control(dc);
 
-
 	tegra_nvdisp_set_color_control(dc);
-	tegra_dc_writel(dc,
-			nvdisp_cmd_state_ctrl_general_act_req_enable_f(),
-			nvdisp_cmd_state_ctrl_r());
+
+	tegra_dc_enable_general_act(dc);
 
 	return 0;
 }
@@ -589,8 +587,9 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 {
 	int i;
 	int res;
-	int idx;
-	int pclk;
+	int idx, pclk = 0, ret = 0;
+	struct clk *parent_clk = NULL;
+	struct clk *hubparent_clk = NULL;
 
 	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
 		return false;
@@ -602,22 +601,63 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	if (dc->out->enable)
 		dc->out->enable(&dc->ndev->dev);
 
-	/* TODO: clock setup */
 	if (dc->out_ops->setup_clk)
 		pclk = dc->out_ops->setup_clk(dc, dc->clk);
-	//tegra_disp_clk_prepare_enable(dc->clk);
-	tegra_disp_clk_prepare_enable(dc->compclk);
-	tegra_disp_clk_prepare_enable(dc->hubclk);
 
-	/*
-	 * Fix me: Nvdisplay0 clk is missing from clk ids table. This needs
-	 * to be enabled for head0. Directly programming into CAR register
-	 * for now. This needs to be removed once the clock id is added.
+	/* Set HUB CLOCK PARENT as PLLP/ ENABLE */
+	/* Change the HUB to HUBPLL for higher clocks */
+	hubparent_clk = tegra_disp_clk_get(&dc->ndev->dev, "pllp_display");
+	if (IS_ERR_OR_NULL(hubparent_clk)) {
+		dev_err(&dc->ndev->dev, "hub parent clock get failed\n");
+		ret = -ENOENT;
+		return ret; /*TODO: Add proper cleanup later */
+	}
+	clk_set_parent(dc->hubclk, hubparent_clk);
+	tegra_disp_clk_prepare_enable(dc->hubclk);
+	pr_info(" rate get on hub %ld\n", clk_get_rate(dc->hubclk));
+
+	/* Setting clock separately now will cleanup once it
+	 * is stable
 	 */
-	writel(0xf, ioremap(0x05801000, 0x4));
+	if (dc->out->type == TEGRA_DC_OUT_HDMI)	{
+		parent_clk = tegra_disp_clk_get(&dc->ndev->dev,
+						dc->out->parent_clk);
+		if (IS_ERR_OR_NULL(parent_clk)) {
+			dev_err(&dc->ndev->dev,
+				"plld2 parent clock get failed\n");
+			ret = -ENOENT;
+			return ret; /*TODO: Add proper cleanup later */
+		}
+		pr_info("HDMI Parent Clock set for DC %s\n",
+				dc->out->parent_clk);
+		/* Set parent for DC clock */
+		clk_set_parent(dc->clk, parent_clk);
+		/* Set parent for Display clock */
+		clk_set_parent(dc->compclk, dc->clk);
+		/* Set rate on DC rate same pclk */
+		clk_set_rate(dc->clk, dc->mode.pclk);
+		/* Enable DC clock */
+		tegra_disp_clk_prepare_enable(dc->clk);
+		/* Enable Display clock */
+		tegra_disp_clk_prepare_enable(dc->compclk);
+
+	} else if (dc->out->type == TEGRA_DC_OUT_DSI) {
+		/*tegra_disp_clk_prepare_enable(dc->clk);*/
+		tegra_disp_clk_prepare_enable(dc->compclk);
+
+
+		/*
+		 * Fix me: Nvdisplay0 clk is missing from clk ids table.
+		 * This needs to be enabled for head0. Directly programming
+		 * into CAR registerfor now. This needs to be removed
+		 * once the clock id is added.
+		 */
+		writel(0xf, ioremap(0x05801000, 0x4));
+	}
 
 	tegra_dc_get(dc);
-	/* Mask interrupts duirng init */
+
+	/* Mask interrupts during init */
 	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
 
 	enable_irq(dc->irq);

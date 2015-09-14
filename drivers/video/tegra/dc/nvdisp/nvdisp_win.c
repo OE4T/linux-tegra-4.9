@@ -23,6 +23,7 @@
 
 #include "dc_config.h"
 
+#define NVDISP_TEGRA_POLL_TIMEOUT_MS       50
 
 /* Num Fractional Bits in 8.24 fixed point phase and phase increment values */
 #define NFB 24
@@ -547,12 +548,26 @@ int tegra_nvdisp_get_linestride(struct tegra_dc *dc, int win)
 		win_set_planar_storage_r()) << 6;
 }
 
+static void tegra_nvdisp_enable_common_act(struct tegra_dc *dc)
+{
+	tegra_dc_writel(dc,
+		nvdisp_cmd_state_ctrl_common_act_req_enable_f(),
+		nvdisp_cmd_state_ctrl_r());
+
+	if (tegra_dc_poll_register(dc, DC_CMD_STATE_CONTROL,
+		COMMON_ACT_REQ, 0, 1,
+		NVDISP_TEGRA_POLL_TIMEOUT_MS))
+		dev_err(&dc->ndev->dev,
+			"dc timeout waiting for DC to stop\n");
+}
+
 int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	struct tegra_dc_win *windows[], int n,
 	u16 *dirty_rect, bool wait_for_vblank)
 {
 	int i;
-	u32 update_mask = nvdisp_cmd_state_ctrl_general_act_req_enable_f();
+	/*u32 update_mask = nvdisp_cmd_state_ctrl_general_act_req_enable_f();*/
+	u32 update_mask = 0;
 	u32 act_control = 0;
 
 	for (i = 0; i < n; i++) {
@@ -639,12 +654,17 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 			nvdisp_cmd_state_ctrl_common_act_req_enable_f());
 
 	/* setting common active request as default now to
-	   get scan_column feature working */
+	 * get scan_column feature working
+	 * DONOT CALL UPDATE AND REQUEST ON SAME WRITE
+	 */
 	update_mask |= (update_mask << 8) |
-		nvdisp_cmd_state_ctrl_common_act_update_enable_f() |
-		nvdisp_cmd_state_ctrl_common_act_req_enable_f();
+		nvdisp_cmd_state_ctrl_common_act_update_enable_f();
 
 	tegra_dc_writel(dc, update_mask, nvdisp_cmd_state_ctrl_r());
+
+	tegra_nvdisp_enable_common_act(dc);
+
+	tegra_dc_enable_general_act(dc);
 
 	return 0;
 }

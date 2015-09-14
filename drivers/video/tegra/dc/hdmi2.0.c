@@ -911,7 +911,13 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		if (tegra_dc_hpd(dc) && (!dc->initialized)) {
 			if (!tegra_edid_get_monspecs(hdmi->edid, &specs))
 				tegra_dc_set_fb_mode(dc, specs.modedb, false);
+			else {
+			/* if for some reason there is no edid upon hotplug */
+				tegra_dc_set_fb_mode(dc,
+						&tegra_dc_vga_mode, false);
+			}
 		} else
+
 			tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false);
 	}
 

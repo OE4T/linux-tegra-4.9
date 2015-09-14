@@ -723,6 +723,7 @@
 #define NV_SOR_DC_LANE0_DP_LANE2_P1_LEVEL2			(43)
 #define NV_SOR_DC_LANE0_DP_LANE2_P0_LEVEL3			(51)
 #define NV_SOR_LANE_DRIVE_CURRENT(i)				(0x4e + (i))
+#define NV_SOR_LANE4_DRIVE_CURRENT(i)				(0x50 + (i))
 #define NV_SOR_PR(i)						(0x52 + (i))
 #define NV_SOR_PR_LANE3_DP_LANE3_SHIFT				(24)
 #define NV_SOR_PR_LANE3_DP_LANE3_MASK				(0xff << 24)

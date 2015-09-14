@@ -20,6 +20,7 @@
 
 #include <linux/tegra-soc.h>
 #include <linux/clk/tegra.h>
+#include <linux/reset.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include "dc_priv.h"
 
@@ -93,12 +94,14 @@ struct tegra_dc_sor_data {
 	struct tegra_dc	*dc;
 
 	void __iomem	*base;
+	int instance; /* SOR0 or SOR1 */
 	struct resource	*res;
 	struct resource	*base_res;
 	struct clk	*sor_clk;
 	struct clk *safe_clk;
 	struct clk *brick_clk;
 	struct clk *src_switch_clk;
+	struct reset_control *rst;
 
 	u8					 portnum;	/* 0 or 1 */
 	const struct tegra_dc_dp_link_config	*link_cfg;
@@ -253,4 +256,22 @@ static inline int lt_param_idx(int link_bw)
 	return idx;
 }
 
+static inline int tegra_get_sor_reset_ctrl(struct tegra_dc_sor_data *sor,
+	struct device_node *np_sor, const char *res_name)
+{
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	/* Use only if bpmp is enabled */
+	if (!tegra_bpmp_running())
+		return 0;
+
+	sor->rst = of_reset_control_get(np_sor, res_name);
+	if (IS_ERR(sor->rst)) {
+		dev_err(&sor->dc->ndev->dev,
+			"Unable to get %s reset control\n", res_name);
+		return PTR_ERR(sor->rst);
+	}
+	reset_control_deassert(sor->rst);
+#endif
+	return 0;
+}
 #endif

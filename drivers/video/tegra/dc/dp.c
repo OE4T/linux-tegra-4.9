@@ -1297,6 +1297,8 @@ static inline void tegra_dc_dp_debug_create(struct tegra_dc_dp_data *dp)
 
 static void tegra_dpaux_enable(struct tegra_dc_dp_data *dp)
 {
+	int dp_num = tegra_dc_which_sor(dp->dc);
+
 	/* do not enable interrupt for now. */
 	tegra_dpaux_writel(dp, DPAUX_INTR_EN_AUX, 0x0);
 
@@ -1315,7 +1317,7 @@ static void tegra_dpaux_enable(struct tegra_dc_dp_data *dp)
 		DPAUX_HYBRID_PADCTL_AUX_INPUT_RCV_ENABLE);
 
 	tegra_dpaux_pad_power(dp->dc,
-		dp->dc->ndev->id == 0 ? TEGRA_DPAUX_INSTANCE_0 :
+		dp_num == 0 ? TEGRA_DPAUX_INSTANCE_0 :
 		TEGRA_DPAUX_INSTANCE_1, true);
 }
 
@@ -1888,9 +1890,13 @@ static void _tegra_dpaux_init(struct tegra_dc_dp_data *dp)
 
 static void tegra_dpaux_init(struct tegra_dc_dp_data *dp)
 {
+	int dp_num = 0;
+
 	BUG_ON(!dp->dc || !dp);
 
-	tegra_set_dpaux_addr(dp->aux_base, dp->dc->ndev->id);
+	dp_num = tegra_dc_which_sor(dp->dc);
+
+	tegra_set_dpaux_addr(dp->aux_base, dp_num);
 
 	_tegra_dpaux_init(dp);
 
@@ -1951,8 +1957,9 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	u32 irq;
 	struct device_node *np = dc->ndev->dev.of_node;
 
+	int dp_num = tegra_dc_which_sor(dc);
 	struct device_node *np_dp =
-		(dc->ndev->id) ? of_find_node_by_path(DPAUX1_NODE)
+		dp_num ? of_find_node_by_path(DPAUX1_NODE)
 		: of_find_node_by_path(DPAUX_NODE);
 	struct device_node *np_panel = NULL;
 
@@ -2019,9 +2026,9 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	clk = tegra_disp_of_clk_get_by_name(np_dp,
-			dc->ndev->id ? "dpaux1" : "dpaux");
+			dp_num ? "dpaux1" : "dpaux");
 #else
-	clk = clk_get_sys(dc->ndev->id ? "dpaux1" : "dpaux", NULL);
+	clk = clk_get_sys(dp_num ? "dpaux1" : "dpaux", NULL);
 #endif
 	if (IS_ERR_OR_NULL(clk)) {
 		dev_err(&dc->ndev->dev, "dp: dc clock %s.edp unavailable\n",
@@ -2053,6 +2060,22 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 
 	if (dc->out->type != TEGRA_DC_OUT_FAKE_DP)
 		tegra_dp_disable_irq(irq);
+
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	/* check for dpaux clock reset control */
+	if (tegra_bpmp_running()) {
+		dp->dpaux_rst =
+			of_reset_control_get(np,
+				(dp_num) ? "dpaux1" : "dpaux");
+		if (IS_ERR_OR_NULL(dp->dpaux_rst)) {
+			dev_err(&dc->ndev->dev,
+				"Unable to get dpaux%u reset control\n",
+				dp_num);
+			return PTR_ERR(dp->dpaux_rst);
+		}
+		reset_control_deassert(dp->dpaux_rst);
+	}
+#endif
 
 	dp->dc = dc;
 	dp->aux_base = base;
@@ -2293,10 +2316,26 @@ static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp)
 {
 	if (tegra_platform_is_linsim())
 		return;
+
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	/* Use only if bpmp is enabled */
+	/* bpmp is supported in silicon and simulation */
+	if (!tegra_bpmp_running())
+		return;
+
+	if (dp->dpaux_rst) {
+		reset_control_assert(dp->dpaux_rst);
+		mdelay(2);
+		reset_control_deassert(dp->dpaux_rst);
+		mdelay(1);
+	}
+#else
+
 	tegra_periph_reset_assert(dp->dpaux_clk);
 	mdelay(2);
 	tegra_periph_reset_deassert(dp->dpaux_clk);
 	mdelay(1);
+#endif
 }
 
 static inline void tegra_dp_default_int(struct tegra_dc_dp_data *dp,
@@ -2492,10 +2531,10 @@ void tegra_dc_dp_enable_link(struct tegra_dc_dp_data *dp)
 
 static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 {
-	struct device_node *np_dp =
-		(dc->ndev->id) ? of_find_node_by_path(DPAUX1_NODE) :
-		of_find_node_by_path(DPAUX_NODE);
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
+	struct device_node *np_dp =
+		dp->sor->instance ? of_find_node_by_path(DPAUX1_NODE) :
+		of_find_node_by_path(DPAUX_NODE);
 
 	if (dp->sor)
 		tegra_dc_sor_destroy(dp->sor);

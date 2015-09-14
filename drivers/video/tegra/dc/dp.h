@@ -19,6 +19,7 @@
 
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/reset.h>
 
 #include "sor.h"
 #include "dc_priv.h"
@@ -77,6 +78,7 @@ struct tegra_dc_dp_data {
 	void __iomem *aux_base;
 	struct clk *dpaux_clk;
 	struct clk *parent_clk; /* pll_dp clock */
+	struct reset_control *dpaux_rst;
 
 	u8 revision;
 

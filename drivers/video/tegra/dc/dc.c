@@ -134,6 +134,7 @@ static struct tegra_dc_mode override_disp_mode[TEGRA_DC_OUT_NULL + 1];
 
 static void _tegra_dc_controller_disable(struct tegra_dc *dc);
 static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq);
+static void tegra_dc_sor_instance(struct tegra_dc *dc, int out_type);
 
 static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out);
 #ifdef PM
@@ -523,6 +524,38 @@ void tegra_dc_clk_disable(struct tegra_dc *dc)
 {
 	tegra_disp_clk_disable_unprepare(dc->clk);
 	tegra_dvfs_set_rate(dc->clk, 0);
+}
+
+static void tegra_dc_sor_instance(struct tegra_dc *dc, int out_type)
+{
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	/* Better to pass this from DT - move to of_dc later*/
+	/* TODO: fill this in with the proper selection */
+	switch (out_type) {
+	case TEGRA_DC_OUT_HDMI:
+	case TEGRA_DC_OUT_NVSR_DP:
+		dc->sor_instance = 1;
+		break;
+	case TEGRA_DC_OUT_DP:
+	case TEGRA_DC_OUT_FAKE_DP:
+		dc->sor_instance = 0;
+		break;
+	default:
+	case TEGRA_DC_OUT_RGB:
+	case TEGRA_DC_OUT_DSI:
+	case TEGRA_DC_OUT_LVDS:
+	case TEGRA_DC_OUT_FAKE_DSIA:
+	case TEGRA_DC_OUT_FAKE_DSIB:
+	case TEGRA_DC_OUT_FAKE_DSI_GANGED:
+		dc->sor_instance = -1;
+		break;
+	}
+#else
+	dc->sor_instance = dc->ndev->id;
+	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
+		dc->sor_instance = 1;
+	}
+#endif
 }
 
 void tegra_dc_get(struct tegra_dc *dc)
@@ -1894,7 +1927,6 @@ unsigned long tegra_dc_poll_register(struct tegra_dc *dc, u32 reg, u32 mask,
 void tegra_dc_enable_general_act(struct tegra_dc *dc)
 {
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
-
 
 	if (tegra_dc_poll_register(dc, DC_CMD_STATE_CONTROL,
 		GENERAL_ACT_REQ, 0, 1,
@@ -3538,6 +3570,7 @@ void tegra_dc_set_color_control(struct tegra_dc *dc)
 		color_control = BASE_COLOR_SIZE888;
 		break;
 	}
+
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	color_control = BASE_COLOR_SIZE888;
 #endif
@@ -3767,17 +3800,18 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 		return false;
 	}
 
-#if !defined(CONFIG_ARCH_TEGRA_21x_SOC) && !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	tegra_dc_sor_instance(dc, dc->out->type);
+
 	if (dc->out->type != TEGRA_DC_OUT_DP) {
+		int sor_num = tegra_dc_which_sor(dc);
 		np_dpaux = of_find_node_by_path(
-				dc->ndev->id ? DPAUX1_NODE : DPAUX_NODE);
+				sor_num ? DPAUX1_NODE : DPAUX_NODE);
 		if (np_dpaux || !dc->ndev->dev.of_node)
 			tegra_dpaux_pad_power(dc,
 			dc->ndev->id ? TEGRA_DPAUX_INSTANCE_1 :
 			TEGRA_DPAUX_INSTANCE_0, false);
 		of_node_put(np_dpaux);
 	}
-#endif
 
 	if (dc->out_ops && dc->out_ops->enable)
 		dc->out_ops->enable(dc);
@@ -4705,6 +4739,8 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->pdata = dt_pdata;
 
 	dc->bw_kbps = 0;
+
+	tegra_dc_sor_instance(dc, dc->pdata->default_out->type);
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	/* dc variables need to initialized before nvdisp init */

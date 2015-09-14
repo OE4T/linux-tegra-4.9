@@ -117,6 +117,8 @@
 #define  WIN_D_UPDATE		(1 << 12)
 #define  WIN_H_UPDATE		(1 << 13)
 #define  CURSOR_UPDATE		(1 << 15)
+#define  COMMON_ACT_REQ		(1 << 16)
+#define  COMMON_UPDATE		(1 << 17)
 #define  NC_HOST_TRIG		(1 << 24)
 
 #define DC_CMD_DISPLAY_WINDOW_HEADER		0x042

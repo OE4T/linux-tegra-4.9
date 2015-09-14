@@ -149,9 +149,12 @@ int gk20a_fifo_preempt(struct gk20a *g, struct channel_gk20a *ch);
 
 int gk20a_fifo_enable_engine_activity(struct gk20a *g,
 			struct fifo_engine_info_gk20a *eng_info);
+int gk20a_fifo_enable_all_engine_activity(struct gk20a *g);
 int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 			struct fifo_engine_info_gk20a *eng_info,
 			bool wait_for_idle);
+int gk20a_fifo_disable_all_engine_activity(struct gk20a *g,
+				bool wait_for_idle);
 u32 gk20a_fifo_engines_on_ch(struct gk20a *g, u32 hw_chid);
 
 int gk20a_fifo_update_runlist(struct gk20a *g, u32 engine_id, u32 hw_chid,

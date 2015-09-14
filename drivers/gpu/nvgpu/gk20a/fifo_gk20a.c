@@ -1870,6 +1870,24 @@ int gk20a_fifo_enable_engine_activity(struct gk20a *g,
 	return 0;
 }
 
+int gk20a_fifo_enable_all_engine_activity(struct gk20a *g)
+{
+	int i;
+	int err = 0, ret = 0;
+
+	for (i = 0; i < g->fifo.max_engines; i++) {
+		err = gk20a_fifo_enable_engine_activity(g,
+				&g->fifo.engine_info[i]);
+		if (err) {
+			gk20a_err(dev_from_gk20a(g),
+				"failed to enable engine %d activity\n", i);
+			ret = err;
+		}
+	}
+
+	return ret;
+}
+
 int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 				struct fifo_engine_info_gk20a *eng_info,
 				bool wait_for_idle)
@@ -1942,6 +1960,37 @@ clean_up:
 		gk20a_dbg_fn("done");
 	}
 	return err;
+}
+
+int gk20a_fifo_disable_all_engine_activity(struct gk20a *g,
+				bool wait_for_idle)
+{
+	int i;
+	int err = 0, ret = 0;
+
+	for (i = 0; i < g->fifo.max_engines; i++) {
+		err = gk20a_fifo_disable_engine_activity(g,
+				&g->fifo.engine_info[i],
+				wait_for_idle);
+		if (err) {
+			gk20a_err(dev_from_gk20a(g),
+				"failed to disable engine %d activity\n", i);
+			ret = err;
+			break;
+		}
+	}
+
+	if (err) {
+		while (--i >= 0) {
+			err = gk20a_fifo_enable_engine_activity(g,
+						&g->fifo.engine_info[i]);
+			if (err)
+				gk20a_err(dev_from_gk20a(g),
+				 "failed to re-enable engine %d activity\n", i);
+		}
+	}
+
+	return ret;
 }
 
 static void gk20a_fifo_runlist_reset_engines(struct gk20a *g, u32 runlist_id)

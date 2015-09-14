@@ -30,14 +30,11 @@
 #include <linux/delay.h>
 #include <linux/irqdomain.h>
 #include <linux/irqchip/chained_irq.h>
-#include <linux/clk.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/pm.h>
 #include <linux/syscore_ops.h>
 #include <linux/tegra-soc.h>
 #include <linux/irqchip/tegra.h>
-#include <linux/clk/tegra.h>
-#include <linux/reset.h>
 
 #define GPIO_ENB_CONFIG_REG	0x00
 #define GPIO_ENB_BIT		BIT(0)
@@ -139,8 +136,6 @@ struct tegra_gpio {
 	void __iomem **regs;
 	int *regs_size;
 	unsigned int *reg_base;
-	struct clk *gpio_clk[MAX_GPIO_CAR_CTRL];
-	struct reset_control *gpio_rst[MAX_GPIO_CAR_CTRL];
 };
 
 static struct tegra_gpio *tegra_gpio;
@@ -546,27 +541,6 @@ static struct of_device_id tegra_gpio_of_match[] = {
 	{ },
 };
 
-static void gpio_clk_reset_enable(struct platform_device *pdev)
-{
-	int ret;
-	int i;
-
-	for (i = 0; i < MAX_GPIO_CAR_CTRL; ++i) {
-		if (tegra_gpio->gpio_rst[i])
-			reset_control_reset(tegra_gpio->gpio_rst[i]);
-	}
-
-	for (i = 0; i < MAX_GPIO_CAR_CTRL; ++i) {
-		if (!tegra_gpio->gpio_clk[i])
-			continue;
-
-		ret = clk_prepare_enable(tegra_gpio->gpio_clk[i]);
-		if (ret < 0)
-			dev_err(&pdev->dev, "GPIO %d clock enable failed: %d\n",
-				i, ret);
-	}
-}
-
 static void read_gpio_mapping_data(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -618,33 +592,6 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	}
 	tegra_gpio->dev = &pdev->dev;
 
-	/* Bypass the control of reset and clock as this
-	 * is enabled by default on BL and not to disable
-	 * throughout of system.
-	 */
-#if 0
-	for (i = 0; i < MAX_GPIO_CAR_CTRL; ++i) {
-		char car_name[32];
-		snprintf(car_name, 32, "gpio%d", i);
-		tegra_gpio->gpio_rst[i] = devm_reset_control_get(
-						&pdev->dev, car_name);
-		if (IS_ERR(tegra_gpio->gpio_rst[i])) {
-			ret = PTR_ERR(tegra_gpio->gpio_rst[i]);
-			dev_err(&pdev->dev, "Reset control for %s failed: %d\n",
-				car_name, ret);
-			return ret;
-		}
-		snprintf(car_name, 32, "gpio%d_clk", i);
-		tegra_gpio->gpio_clk[i] = devm_clk_get(&pdev->dev, car_name);
-		if (IS_ERR(tegra_gpio->gpio_clk[i])) {
-			ret = PTR_ERR(tegra_gpio->gpio_clk[i]);
-			dev_err(&pdev->dev, "Clock control for %s failed: %d\n",
-				car_name, ret);
-			return ret;
-		}
-	}
-#endif
-
 	for (i = 0;; i++) {
 		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
 		if (!res)
@@ -695,8 +642,6 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		tg_cont->controller = i;
 		tg_cont->irq = res->start;
 	}
-
-	gpio_clk_reset_enable(pdev);
 
 	tegra_gpio_chip.dev = &pdev->dev;
 	tegra_gpio_chip.of_node = pdev->dev.of_node;

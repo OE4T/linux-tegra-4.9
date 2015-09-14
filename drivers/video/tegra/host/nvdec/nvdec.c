@@ -153,6 +153,7 @@ static int nvdec_dma_wait_idle(struct platform_device *dev, u32 *timeout)
 static int nvdec_dma_pa_to_internal_256b(struct platform_device *dev,
 		u32 offset, u32 internal_offset, bool imem)
 {
+	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
 	u32 cmd = nvdec_dmatrfcmd_size_256b_f();
 	u32 pa_offset =  nvdec_dmatrffboffs_offs_f(offset);
 	u32 i_offset = nvdec_dmatrfmoffs_offs_f(internal_offset);
@@ -160,6 +161,9 @@ static int nvdec_dma_pa_to_internal_256b(struct platform_device *dev,
 
 	if (imem)
 		cmd |= nvdec_dmatrfcmd_imem_true_f();
+
+	if (pdata->isolate_contexts)
+		cmd |= nvdec_dmatrfcmd_dmactx_f(1);
 
 	host1x_writel(dev, nvdec_dmatrfmoffs_r(), i_offset);
 	host1x_writel(dev, nvdec_dmatrffboffs_r(), pa_offset);
@@ -214,6 +218,7 @@ static int nvdec_wait_mem_scrubbing(struct platform_device *dev)
 
 int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	u32 timeout;
 	u32 offset;
 	int err = 0;
@@ -229,6 +234,11 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 	err = nvdec_wait_mem_scrubbing(dev);
 	if (err)
 		return err;
+
+	/* load transcfg configuration if defined */
+	if (pdata->transcfg_addr)
+		host1x_writel(dev, pdata->transcfg_addr, pdata->transcfg_val);
+
 	if (IS_ENABLED(CONFIG_NVDEC_BOOTLOADER)) {
 
 		u32 fb_data_offset = 0;

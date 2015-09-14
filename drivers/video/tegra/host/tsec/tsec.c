@@ -518,6 +518,7 @@ static int tsec_load_kfuse(struct platform_device *pdev)
 
 int nvhost_tsec_finalize_poweron(struct platform_device *dev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	u32 timeout;
 	u32 offset;
 	int err = 0;
@@ -535,6 +536,10 @@ int nvhost_tsec_finalize_poweron(struct platform_device *dev)
 	err = flcn_wait_mem_scrubbing(dev);
 	if (err)
 		return err;
+
+	/* load transcfg configuration if defined */
+	if (pdata->transcfg_addr)
+		host1x_writel(dev, pdata->transcfg_addr, pdata->transcfg_val);
 
 	host1x_writel(dev, flcn_dmactl_r(), 0);
 	host1x_writel(dev, flcn_dmatrfbase_r(),

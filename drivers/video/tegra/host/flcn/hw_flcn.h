@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -201,6 +201,10 @@ static inline u32 flcn_dmatrfcmd_size_f(u32 v)
 static inline u32 flcn_dmatrfcmd_size_256b_f(void)
 {
 	return 0x600;
+}
+static inline u32 flcn_dmatrfcmd_dmactx_f(u32 v)
+{
+	return (v & 0x7) << 12;
 }
 static inline u32 flcn_dmatrffboffs_r(void)
 {

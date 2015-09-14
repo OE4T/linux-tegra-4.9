@@ -889,7 +889,7 @@ static int nvhost_probe(struct platform_device *dev)
 	generic_irq = platform_get_irq(dev, 1);
 	if (IS_ERR_VALUE(generic_irq)) {
 		dev_err(&dev->dev, "missing generic irq\n");
-		return -ENXIO;
+		generic_irq = 0;
 	}
 
 	host = devm_kzalloc(&dev->dev, sizeof(*host), GFP_KERNEL);

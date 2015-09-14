@@ -390,6 +390,7 @@ struct gpu_ops {
 		int (*pmu_setup_elpg)(struct gk20a *g);
 		int (*init_wpr_region)(struct gk20a *g);
 		int (*load_lsfalcon_ucode)(struct gk20a *g, u32 falconidmask);
+		void (*write_dmatrfbase)(struct gk20a *g, u32 addr);
 		u32  lspmuwprinitdone;
 		u32  lsfloadedfalconid;
 		bool fecsbootstrapdone;

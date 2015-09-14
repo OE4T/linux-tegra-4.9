@@ -19,6 +19,7 @@
 #include "acr_gm20b.h"
 #include "pmu_gm20b.h"
 #include "hw_gr_gm20b.h"
+#include "hw_pwr_gm20b.h"
 
 /*!
  * Structure/object which single register write need to be done during PG init
@@ -283,6 +284,11 @@ static int gm20b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 	return err;
 }
 
+static void gm20b_write_dmatrfbase(struct gk20a *g, u32 addr)
+{
+	gk20a_writel(g, pwr_falcon_dmatrfbase_r(), addr);
+}
+
 void gm20b_init_pmu_ops(struct gpu_ops *gops)
 {
 	if (gops->privsecurity) {
@@ -299,4 +305,5 @@ void gm20b_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_setup_elpg = gm20b_pmu_setup_elpg;
 	gops->pmu.lspmuwprinitdone = 0;
 	gops->pmu.fecsbootstrapdone = false;
+	gops->pmu.write_dmatrfbase = gm20b_write_dmatrfbase;
 }

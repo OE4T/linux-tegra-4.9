@@ -1763,8 +1763,8 @@ static int pmu_bootstrap(struct pmu_gk20a *pmu)
 	gk20a_writel(g, pwr_falcon_dmemd_r(0), 0x1);
 	gk20a_writel(g, pwr_falcon_dmemd_r(0), addr_args);
 
-	gk20a_writel(g, pwr_falcon_dmatrfbase_r(),
-		addr_load - (desc->bootloader_imem_offset >> 8));
+	g->ops.pmu.write_dmatrfbase(g,
+			addr_load - (desc->bootloader_imem_offset >> 8));
 
 	blocks = ((desc->bootloader_size + 0xFF) & ~0xFF) >> 8;
 
@@ -2643,6 +2643,11 @@ static void pmu_setup_hw_enable_elpg(struct gk20a *g)
 	}
 }
 
+static void gk20a_write_dmatrfbase(struct gk20a *g, u32 addr)
+{
+	gk20a_writel(g, pwr_falcon_dmatrfbase_r(), addr);
+}
+
 void gk20a_init_pmu_ops(struct gpu_ops *gops)
 {
 	gops->pmu.prepare_ucode = gk20a_prepare_ucode;
@@ -2651,6 +2656,7 @@ void gk20a_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_setup_elpg = NULL;
 	gops->pmu.init_wpr_region = NULL;
 	gops->pmu.load_lsfalcon_ucode = NULL;
+	gops->pmu.write_dmatrfbase = gk20a_write_dmatrfbase;
 }
 
 int gk20a_init_pmu_support(struct gk20a *g)

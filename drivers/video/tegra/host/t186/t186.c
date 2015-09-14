@@ -216,6 +216,8 @@ struct nvhost_device_data t18_msenc_info = {
 	.push_work_done		= 1,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
+	.transcfg_addr		= 0x1844,
+	.transcfg_val		= 0x20,
 };
 
 struct nvhost_device_data t18_nvdec_info = {
@@ -246,6 +248,8 @@ struct nvhost_device_data t18_nvdec_info = {
 	.push_work_done		= 1,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
+	.transcfg_addr		= 0x2c44,
+	.transcfg_val		= 0x20,
 };
 
 struct nvhost_device_data t18_nvjpg_info = {
@@ -275,6 +279,8 @@ struct nvhost_device_data t18_nvjpg_info = {
 	.push_work_done		= 1,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
+	.transcfg_addr		= 0x1444,
+	.transcfg_val		= 0x20,
 };
 
 struct nvhost_device_data t18_tsec_info = {
@@ -300,6 +306,8 @@ struct nvhost_device_data t18_tsec_info = {
 	.push_work_done		= 1,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
+	.transcfg_addr		= 0x1644,
+	.transcfg_val		= 0x20,
 };
 
 struct nvhost_device_data t18_tsecb_info = {
@@ -324,6 +332,8 @@ struct nvhost_device_data t18_tsecb_info = {
 	.push_work_done		= 1,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
+	.transcfg_addr		= 0x1644,
+	.transcfg_val		= 0x20,
 };
 
 struct nvhost_device_data t18_vic_info = {
@@ -354,6 +364,8 @@ struct nvhost_device_data t18_vic_info = {
 	.push_work_done		= 1,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
+	.transcfg_addr		= 0x2044,
+	.transcfg_val		= 0x20,
 };
 
 struct nvhost_device_data t18_nvcsi_info = {

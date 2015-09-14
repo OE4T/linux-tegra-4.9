@@ -343,11 +343,11 @@ static bool check_mode_timings(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 #if defined(CONFIG_TEGRA_HDMI2_0)
 	if ((mode->vmode & FB_VMODE_Y420) ||
 	    (mode->vmode & FB_VMODE_Y420_ONLY)) {
-		mode->h_ref_to_sync = 1;
 		mode->v_ref_to_sync = 1;
 	} else {
 		calc_ref_to_sync(mode);
 	}
+	mode->h_ref_to_sync = 1;
 #else
 	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
 			/* HDMI controller requires h_ref=1, v_ref=1 */

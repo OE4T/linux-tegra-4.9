@@ -1732,7 +1732,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	}
 
 	if (!pdata->qspi_max_frequency)
-		pdata->qspi_max_frequency = 10000000; /* 133MHz */
+		pdata->qspi_max_frequency = 133000000; /* 133MHz */
 
 	master = spi_alloc_master(&pdev->dev, sizeof(*tqspi));
 	if (!master) {

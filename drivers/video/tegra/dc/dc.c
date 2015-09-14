@@ -4483,7 +4483,7 @@ struct clk *tegra_disp_clk_get(struct device *dev, const char *id)
 void tegra_disp_clk_put(struct device *dev, struct clk *clk)
 {
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	if (tegra_platform_is_silicon() || tegra_bpmp_running())
+	if (tegra_platform_is_silicon() && tegra_bpmp_running())
 		devm_clk_put(dev, clk);
 #else
 	return clk_put(clk);

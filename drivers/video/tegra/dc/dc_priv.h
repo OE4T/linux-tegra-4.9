@@ -80,7 +80,7 @@ static inline void tegra_dc_io_end(struct tegra_dc *dc)
 static inline int tegra_dc_is_clk_enabled(struct clk *clk)
 {
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	if (!tegra_bpmp_running())
+	if (!tegra_platform_is_silicon() || !tegra_bpmp_running())
 		return 1;
 	else
 		return __clk_is_enabled(clk);
@@ -406,8 +406,7 @@ static inline int tegra_dc_clk_set_rate(struct clk *clk, unsigned long rate)
 	int err;
 
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	/* Fix me: Enable clk set rate calls once bpmp issues are fixed */
-	if (tegra_bpmp_running())
+	if (!tegra_platform_is_silicon() || !tegra_bpmp_running())
 #else
 	if (!tegra_platform_is_silicon())
 #endif
@@ -421,7 +420,7 @@ static inline int tegra_dc_clk_set_rate(struct clk *clk, unsigned long rate)
 static inline unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
 {
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	if (!tegra_bpmp_running())
+	if (!tegra_platform_is_silicon() || !tegra_bpmp_running())
 #else
 	if (!tegra_platform_is_silicon())
 #endif
@@ -433,7 +432,7 @@ static inline unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
 static inline int tegra_disp_clk_prepare_enable(struct clk *clk)
 {
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	if (tegra_bpmp_running())
+	if (tegra_platform_is_silicon() && tegra_bpmp_running())
 #else
 	if (tegra_platform_is_silicon())
 #endif
@@ -445,7 +444,7 @@ static inline int tegra_disp_clk_prepare_enable(struct clk *clk)
 static inline void tegra_disp_clk_disable_unprepare(struct clk *clk)
 {
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	if (tegra_bpmp_running())
+	if (tegra_platform_is_silicon() && tegra_bpmp_running())
 #else
 	if (tegra_platform_is_silicon())
 #endif

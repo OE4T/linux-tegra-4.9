@@ -214,25 +214,41 @@ static inline void tegra_sor_write_field(struct tegra_dc_sor_data *sor,
 
 static inline void tegra_sor_clk_enable(struct tegra_dc_sor_data *sor)
 {
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (tegra_platform_is_silicon() && tegra_bpmp_running())
+#else
 	if (tegra_platform_is_silicon() || tegra_bpmp_running())
+#endif
 		clk_prepare_enable(sor->sor_clk);
 }
 
 static inline void tegra_sor_clk_disable(struct tegra_dc_sor_data *sor)
 {
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (tegra_platform_is_silicon() && tegra_bpmp_running())
+#else
 	if (tegra_platform_is_silicon() || tegra_bpmp_running())
+#endif
 		clk_disable_unprepare(sor->sor_clk);
 }
 
 static inline void tegra_sor_safe_clk_enable(struct tegra_dc_sor_data *sor)
 {
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (tegra_platform_is_silicon() && tegra_bpmp_running())
+#else
 	if (tegra_platform_is_silicon() || tegra_bpmp_running())
+#endif
 		clk_prepare_enable(sor->safe_clk);
 }
 
 static inline void tegra_sor_safe_clk_disable(struct tegra_dc_sor_data *sor)
 {
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (tegra_platform_is_silicon() && tegra_bpmp_running())
+#else
 	if (tegra_platform_is_silicon() || tegra_bpmp_running())
+#endif
 		clk_disable_unprepare(sor->safe_clk);
 }
 

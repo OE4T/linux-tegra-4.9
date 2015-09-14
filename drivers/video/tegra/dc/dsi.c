@@ -4954,7 +4954,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		}
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
-		if (tegra_bpmp_running()) {
+		if (tegra_platform_is_silicon() && tegra_bpmp_running()) {
 			dsi_reset = of_reset_control_get(np_dsi,
 					dsi_reset_name[i]);
 			if (IS_ERR_OR_NULL(dsi_reset)) {
@@ -5633,8 +5633,9 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 	}
 
 	dsi = tegra_dc_get_outdata(dc);
+
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	if (tegra_bpmp_running()) {
+	if (tegra_platform_is_silicon() && tegra_bpmp_running()) {
 #endif
 		dsi->avdd_dsi_csi =  regulator_get(&dc->ndev->dev,
 			"avdd_dsi_csi");

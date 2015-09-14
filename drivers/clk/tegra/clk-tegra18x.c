@@ -367,6 +367,13 @@ static __initdata struct tegra_bpmp_clk_init tegra186_clocks[] = {
 	{ .clk_num = TEGRA186_CLK_SOR1_PAD_CLKOUT, .name = "sor1_pad_clkout" },
 	{ .clk_num = TEGRA186_CLK_SOR0_OUT, .name = "sor0_out" },
 	{ .clk_num = TEGRA186_CLK_SOR1_OUT, .name = "sor1_out" },
+	{ .clk_num = TEGRA186_CLK_I2S1_SYNC_INPUT, .name = "i2s1_sync_input" },
+	{ .clk_num = TEGRA186_CLK_I2S2_SYNC_INPUT, .name = "i2s2_sync_input" },
+	{ .clk_num = TEGRA186_CLK_I2S3_SYNC_INPUT, .name = "i2s3_sync_input" },
+	{ .clk_num = TEGRA186_CLK_I2S4_SYNC_INPUT, .name = "i2s4_sync_input" },
+	{ .clk_num = TEGRA186_CLK_I2S5_SYNC_INPUT, .name = "i2s5_sync_input" },
+	{ .clk_num = TEGRA186_CLK_I2S6_SYNC_INPUT, .name = "i2s6_sync_input" },
+	{ .clk_num = TEGRA186_CLK_SPDIFIN_SYNC_INPUT, .name = "spdifin_sync_input" },
 };
 
 /* Needed for a nvdisp linsim clock hack */

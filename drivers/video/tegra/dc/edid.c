@@ -47,6 +47,13 @@ struct tegra_edid_pvt {
 	u16			max_tmds_char_rate_hllc_mhz;
 	u16			colorimetry;
 	u16			min_vrr_fps;
+	bool			hdr_present;
+	u8			hdr_pckt_len;
+	u8			hdr_eotf;
+	u8			hdr_static_metadata;
+	u16			hdr_desired_max_luma;
+	u16			hdr_desired_max_frame_avg_luma;
+	u16			hdr_desired_min_luma;
 	/* Note: dc_edid must remain the last member */
 	struct tegra_dc_edid		dc_edid;
 };
@@ -442,6 +449,23 @@ static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 				break;
 			case CEA_DATA_BLOCK_EXT_CDB:
 				edid->colorimetry = ptr[2];
+				break;
+			case CEA_DATA_BLOCK_EXT_HDR:
+				edid->hdr_pckt_len = ptr[0] & 0x0f;
+				edid->hdr_present = true;
+				edid->hdr_eotf = ptr[2];
+				edid->hdr_static_metadata = ptr[3];
+				if (edid->hdr_pckt_len > 5) {
+					edid->hdr_desired_max_luma = ptr[4];
+					edid->hdr_desired_max_frame_avg_luma =
+									ptr[5];
+					edid->hdr_desired_min_luma = ptr[6];
+				} else if (edid->hdr_pckt_len > 4) {
+					edid->hdr_desired_max_luma = ptr[4];
+					edid->hdr_desired_max_frame_avg_luma =
+									ptr[5];
+				} else
+					edid->hdr_desired_max_luma = ptr[4];
 				break;
 			};
 

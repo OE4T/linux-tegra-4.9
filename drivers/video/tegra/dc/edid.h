@@ -80,7 +80,8 @@ enum {
 	CEA_DATA_BLOCK_EXT_VESA_VTBE = 3, /* VESA video timing block ext */
 	CEA_DATA_BLOCK_EXT_HDMI_VDB = 4, /* rsvd for HDMI video data block */
 	CEA_DATA_BLOCK_EXT_CDB = 5, /* colorimetry data block */
-	/* 6-12 rsvd for other video related blocks */
+	CEA_DATA_BLOCK_EXT_HDR = 6, /* HDR data block */
+	/* 7-12 rsvd for other video related blocks */
 	CEA_DATA_BLOCK_EXT_VFPDB = 13, /* video format preference data block */
 	CEA_DATA_BLOCK_EXT_Y420VDB = 14, /* YCbCr 4:2:0 video data block */
 	CEA_DATA_BLOCK_EXT_Y420CMDB = 15, /* YCbCr 4:2:0 cap map data block */

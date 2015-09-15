@@ -2161,7 +2161,10 @@ struct snd_soc_codec_conf *tegra_machine_new_codec_conf(
 		subnp = of_get_child_by_name(np, dai_link_name);
 		if (subnp) {
 			of_node = of_parse_phandle(subnp, "codec-dai", 0);
-			tegra_codec_conf[i].dev_name = of_node->name;
+
+			if (of_property_read_string(subnp, "codec",
+				&tegra_codec_conf[i].dev_name) == -EINVAL)
+				tegra_codec_conf[i].dev_name = of_node->name;
 
 			if (of_property_read_string(subnp, "name-prefix",
 				&tegra_codec_conf[i].name_prefix)) {

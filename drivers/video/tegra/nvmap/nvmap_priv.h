@@ -366,6 +366,9 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 					struct nvmap_handle *h, bool skip_val);
 
+struct nvmap_handle *nvmap_validate_get_by_ivmid(struct nvmap_client *client,
+						 unsigned int ivm_id);
+
 struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 			struct nvmap_client *client, int fd);
 

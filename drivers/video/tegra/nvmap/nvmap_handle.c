@@ -139,15 +139,40 @@ ref_alloc_fail:
 	return err;
 }
 
+struct nvmap_handle *nvmap_validate_get_by_ivmid(struct nvmap_client *client,
+						 unsigned int ivm_id)
+{
+	struct nvmap_handle *h = NULL;
+	struct rb_node *n;
+
+	spin_lock(&nvmap_dev->handle_lock);
+
+	n = nvmap_dev->handles.rb_node;
+	for (n = rb_first(&nvmap_dev->handles); n; n = rb_next(n)) {
+		h = rb_entry(n, struct nvmap_handle, node);
+		if (h->ivm_id == ivm_id) {
+			h = nvmap_handle_get(h);
+			spin_unlock(&nvmap_dev->handle_lock);
+			return h;
+		}
+	}
+
+	spin_unlock(&nvmap_dev->handle_lock);
+	return NULL;
+}
+
 struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 					struct nvmap_handle *h, bool skip_val)
 {
 	struct nvmap_handle_ref *ref = NULL;
 
 	BUG_ON(!client);
-	/* on success, the reference count for the handle should be
-	 * incremented, so the success paths will not call nvmap_handle_put */
-	h = nvmap_validate_get(h);
+
+	if (!skip_val)
+		/* on success, the reference count for the handle should be
+		 * incremented, so the success paths will not call
+		 * nvmap_handle_put */
+		h = nvmap_validate_get(h);
 
 	if (!h) {
 		pr_debug("%s duplicate handle failed\n",
@@ -209,7 +234,7 @@ struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 	handle = nvmap_handle_get_from_dmabuf_fd(client, fd);
 	if (IS_ERR(handle))
 		return ERR_CAST(handle);
-	ref = nvmap_duplicate_handle(client, handle, 1);
+	ref = nvmap_duplicate_handle(client, handle, false);
 	nvmap_handle_put(handle);
 	return ref;
 }

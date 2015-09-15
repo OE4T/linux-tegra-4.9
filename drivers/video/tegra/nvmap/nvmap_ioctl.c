@@ -723,6 +723,7 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 	size_t size = 0;
 	int peer;
 	struct nvmap_heap_block *block = NULL;
+	struct nvmap_handle *h;
 
 	/* First create a new handle and then fake carveout allocation */
 	if (copy_from_user(&op, arg, sizeof(op)))
@@ -731,19 +732,41 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 	if (!client)
 		return -ENODEV;
 
-	/*
-	 * offset is SZ_1M aligned.
-	 * See nvmap_heap_alloc() for encoding details.
-	 */
-	offs = ((op.id & ~(0x7 << 29)) >> 21) << 20;
-	size = (op.id & ((1 << 21) - 1)) << PAGE_SHIFT;
-	peer = (op.id >> 29);
+	h = nvmap_validate_get_by_ivmid(client, op.id);
+	if (h) {
+		ref = nvmap_duplicate_handle(client, h, true);
+		if (!ref)
+			return -ENOMEM;
+	} else {
+		/*
+		 * offset is SZ_1M aligned.
+		 * See nvmap_heap_alloc() for encoding details.
+		 */
+		offs = ((op.id & ~(0x7 << 29)) >> 21) << 20;
+		size = (op.id & ((1 << 21) - 1)) << PAGE_SHIFT;
+		peer = (op.id >> 29);
 
-	ref = nvmap_create_handle(client, PAGE_ALIGN(size));
-	if (!IS_ERR(ref))
-		ref->handle->orig_size = size;
-	else
-		return PTR_ERR(ref);
+		ref = nvmap_create_handle(client, PAGE_ALIGN(size));
+		if (!IS_ERR(ref))
+			ref->handle->orig_size = size;
+		else
+			return PTR_ERR(ref);
+
+		ref->handle->peer = peer;
+
+		block = nvmap_carveout_alloc(client, ref->handle,
+				NVMAP_HEAP_CARVEOUT_IVM, &offs);
+		if (!block) {
+			nvmap_free_handle(client, __nvmap_ref_to_handle(ref));
+			return -ENOMEM;
+		}
+
+		ref->handle->heap_type = NVMAP_HEAP_CARVEOUT_IVM;
+		ref->handle->heap_pgalloc = false;
+		ref->handle->ivm_id = op.id;
+		mb();
+		ref->handle->alloc = true;
+	}
 
 	fd = nvmap_create_fd(client, ref->handle);
 	if (fd < 0)
@@ -756,19 +779,6 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 		return -EFAULT;
 	}
 
-	ref->handle->peer = peer;
-
-	block = nvmap_carveout_alloc(client, ref->handle,
-			NVMAP_HEAP_CARVEOUT_IVM, &offs);
-	if (!block) {
-		nvmap_free_handle_fd(client, fd);
-		return -ENOMEM;
-	}
-
-	ref->handle->heap_type = NVMAP_HEAP_CARVEOUT_IVM;
-	ref->handle->heap_pgalloc = false;
-	mb();
-	ref->handle->alloc = true;
 	return err;
 }
 

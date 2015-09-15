@@ -14,6 +14,9 @@
 #include <linux/init.h>
 #include <linux/of.h>
 #include <linux/of_fdt.h>
+#include <linux/of_reserved_mem.h>
+#include <linux/platform_device.h>
+#include <linux/pstore_ram.h>
 
 static __init int display_tegra_dt_info(void)
 {
@@ -45,3 +48,46 @@ static __init int display_tegra_dt_info(void)
 }
 arch_initcall(display_tegra_dt_info);
 
+#ifdef CONFIG_PSTORE_RAM
+#define RECORD_MEM_SIZE SZ_64K
+#define CONSOLE_MEM_SIZE SZ_512K
+#define FTRACE_MEM_SIZE SZ_512K
+#define RTRACE_MEM_SIZE SZ_512K
+
+static struct ramoops_platform_data ramoops_data;
+
+static struct platform_device ramoops_dev  = {
+	.name = "ramoops",
+	.dev = {
+		.platform_data = &ramoops_data,
+	},
+};
+
+static int __init ramoops_init(struct reserved_mem *rmem)
+{
+	ramoops_data.mem_address = rmem->base;
+	ramoops_data.mem_size = rmem->size;
+	ramoops_data.record_size = RECORD_MEM_SIZE;
+#ifdef CONFIG_PSTORE_CONSOLE
+	ramoops_data.console_size = CONSOLE_MEM_SIZE;
+#endif
+#ifdef CONFIG_PSTORE_FTRACE
+	ramoops_data.ftrace_size = FTRACE_MEM_SIZE;
+#endif
+#ifdef CONFIG_PSTORE_RTRACE
+	ramoops_data.rtrace_size = RTRACE_MEM_SIZE;
+#endif
+	ramoops_data.dump_oops = 1;
+	return 0;
+}
+RESERVEDMEM_OF_DECLARE(tegra_ramoops, "nvidia,ramoops", ramoops_init);
+
+static int __init tegra_register_ramoops_device(void)
+{
+	int ret = platform_device_register(&ramoops_dev);
+	if (ret)
+		pr_err("Unable to register ramoops platform device\n");
+	return ret;
+}
+core_initcall(tegra_register_ramoops_device);
+#endif /* CONFIG_PSTORE_RAM */

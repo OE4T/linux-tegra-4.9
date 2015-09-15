@@ -522,6 +522,11 @@ static u16 get_pmu_init_msg_pmu_sw_mg_size_v0(union pmu_init_msg_pmu *init_msg)
 	return init->sw_managed_area_size;
 }
 
+static u32 get_pmu_perfmon_cmd_start_size_v2(void)
+{
+	return sizeof(struct pmu_perfmon_cmd_start_v2);
+}
+
 static u32 get_pmu_perfmon_cmd_start_size_v1(void)
 {
 	return sizeof(struct pmu_perfmon_cmd_start_v1);
@@ -530,6 +535,20 @@ static u32 get_pmu_perfmon_cmd_start_size_v1(void)
 static u32 get_pmu_perfmon_cmd_start_size_v0(void)
 {
 	return sizeof(struct pmu_perfmon_cmd_start_v0);
+}
+
+static int get_perfmon_cmd_start_offsetofvar_v2(
+	enum pmu_perfmon_cmd_start_fields field)
+{
+	switch (field) {
+	case COUNTER_ALLOC:
+		return offsetof(struct pmu_perfmon_cmd_start_v2,
+		counter_alloc);
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
 }
 
 static int get_perfmon_cmd_start_offsetofvar_v1(
@@ -541,8 +560,8 @@ static int get_perfmon_cmd_start_offsetofvar_v1(
 		counter_alloc);
 	default:
 		return -EINVAL;
-		break;
 	}
+
 	return 0;
 }
 
@@ -560,6 +579,11 @@ static int get_perfmon_cmd_start_offsetofvar_v0(
 	return 0;
 }
 
+static u32 get_pmu_perfmon_cmd_init_size_v2(void)
+{
+	return sizeof(struct pmu_perfmon_cmd_init_v2);
+}
+
 static u32 get_pmu_perfmon_cmd_init_size_v1(void)
 {
 	return sizeof(struct pmu_perfmon_cmd_init_v1);
@@ -568,6 +592,20 @@ static u32 get_pmu_perfmon_cmd_init_size_v1(void)
 static u32 get_pmu_perfmon_cmd_init_size_v0(void)
 {
 	return sizeof(struct pmu_perfmon_cmd_init_v0);
+}
+
+static int get_perfmon_cmd_init_offsetofvar_v2(
+	enum pmu_perfmon_cmd_start_fields field)
+{
+	switch (field) {
+	case COUNTER_ALLOC:
+		return offsetof(struct pmu_perfmon_cmd_init_v2,
+		counter_alloc);
+	default:
+		return -EINVAL;
+		break;
+	}
+	return 0;
 }
 
 static int get_perfmon_cmd_init_offsetofvar_v1(
@@ -598,6 +636,12 @@ static int get_perfmon_cmd_init_offsetofvar_v0(
 	return 0;
 }
 
+static void perfmon_start_set_cmd_type_v2(struct pmu_perfmon_cmd *pc, u8 value)
+{
+	struct pmu_perfmon_cmd_start_v2 *start = &pc->start_v2;
+	start->cmd_type = value;
+}
+
 static void perfmon_start_set_cmd_type_v1(struct pmu_perfmon_cmd *pc, u8 value)
 {
 	struct pmu_perfmon_cmd_start_v1 *start = &pc->start_v1;
@@ -608,6 +652,12 @@ static void perfmon_start_set_cmd_type_v0(struct pmu_perfmon_cmd *pc, u8 value)
 {
 	struct pmu_perfmon_cmd_start_v0 *start = &pc->start_v0;
 	start->cmd_type = value;
+}
+
+static void perfmon_start_set_group_id_v2(struct pmu_perfmon_cmd *pc, u8 value)
+{
+	struct pmu_perfmon_cmd_start_v2 *start = &pc->start_v2;
+	start->group_id = value;
 }
 
 static void perfmon_start_set_group_id_v1(struct pmu_perfmon_cmd *pc, u8 value)
@@ -622,6 +672,12 @@ static void perfmon_start_set_group_id_v0(struct pmu_perfmon_cmd *pc, u8 value)
 	start->group_id = value;
 }
 
+static void perfmon_start_set_state_id_v2(struct pmu_perfmon_cmd *pc, u8 value)
+{
+	struct pmu_perfmon_cmd_start_v2 *start = &pc->start_v2;
+	start->state_id = value;
+}
+
 static void perfmon_start_set_state_id_v1(struct pmu_perfmon_cmd *pc, u8 value)
 {
 	struct pmu_perfmon_cmd_start_v1 *start = &pc->start_v1;
@@ -632,6 +688,12 @@ static void perfmon_start_set_state_id_v0(struct pmu_perfmon_cmd *pc, u8 value)
 {
 	struct pmu_perfmon_cmd_start_v0 *start = &pc->start_v0;
 	start->state_id = value;
+}
+
+static void perfmon_start_set_flags_v2(struct pmu_perfmon_cmd *pc, u8 value)
+{
+	struct pmu_perfmon_cmd_start_v2 *start = &pc->start_v2;
+	start->flags = value;
 }
 
 static void perfmon_start_set_flags_v1(struct pmu_perfmon_cmd *pc, u8 value)
@@ -646,6 +708,12 @@ static void perfmon_start_set_flags_v0(struct pmu_perfmon_cmd *pc, u8 value)
 	start->flags = value;
 }
 
+static u8 perfmon_start_get_flags_v2(struct pmu_perfmon_cmd *pc)
+{
+	struct pmu_perfmon_cmd_start_v2 *start = &pc->start_v2;
+	return start->flags;
+}
+
 static u8 perfmon_start_get_flags_v1(struct pmu_perfmon_cmd *pc)
 {
 	struct pmu_perfmon_cmd_start_v1 *start = &pc->start_v1;
@@ -657,6 +725,14 @@ static u8 perfmon_start_get_flags_v0(struct pmu_perfmon_cmd *pc)
 	struct pmu_perfmon_cmd_start_v0 *start = &pc->start_v0;
 	return start->flags;
 }
+
+static void perfmon_cmd_init_set_sample_buffer_v2(struct pmu_perfmon_cmd *pc,
+	u16 value)
+{
+	struct pmu_perfmon_cmd_init_v2 *init = &pc->init_v2;
+	init->sample_buffer = value;
+}
+
 
 static void perfmon_cmd_init_set_sample_buffer_v1(struct pmu_perfmon_cmd *pc,
 	u16 value)
@@ -670,6 +746,13 @@ static void perfmon_cmd_init_set_sample_buffer_v0(struct pmu_perfmon_cmd *pc,
 {
 	struct pmu_perfmon_cmd_init_v0 *init = &pc->init_v0;
 	init->sample_buffer = value;
+}
+
+static void perfmon_cmd_init_set_dec_cnt_v2(struct pmu_perfmon_cmd *pc,
+	u8 value)
+{
+	struct pmu_perfmon_cmd_init_v2 *init = &pc->init_v2;
+	init->to_decrease_count = value;
 }
 
 static void perfmon_cmd_init_set_dec_cnt_v1(struct pmu_perfmon_cmd *pc,
@@ -686,6 +769,13 @@ static void perfmon_cmd_init_set_dec_cnt_v0(struct pmu_perfmon_cmd *pc,
 	init->to_decrease_count = value;
 }
 
+static void perfmon_cmd_init_set_base_cnt_id_v2(struct pmu_perfmon_cmd *pc,
+	u8 value)
+{
+	struct pmu_perfmon_cmd_init_v2 *init = &pc->init_v2;
+	init->base_counter_id = value;
+}
+
 static void perfmon_cmd_init_set_base_cnt_id_v1(struct pmu_perfmon_cmd *pc,
 	u8 value)
 {
@@ -698,6 +788,13 @@ static void perfmon_cmd_init_set_base_cnt_id_v0(struct pmu_perfmon_cmd *pc,
 {
 	struct pmu_perfmon_cmd_init_v0 *init = &pc->init_v0;
 	init->base_counter_id = value;
+}
+
+static void perfmon_cmd_init_set_samp_period_us_v2(struct pmu_perfmon_cmd *pc,
+	u32 value)
+{
+	struct pmu_perfmon_cmd_init_v2 *init = &pc->init_v2;
+	init->sample_period_us = value;
 }
 
 static void perfmon_cmd_init_set_samp_period_us_v1(struct pmu_perfmon_cmd *pc,
@@ -714,6 +811,13 @@ static void perfmon_cmd_init_set_samp_period_us_v0(struct pmu_perfmon_cmd *pc,
 	init->sample_period_us = value;
 }
 
+static void perfmon_cmd_init_set_num_cnt_v2(struct pmu_perfmon_cmd *pc,
+	u8 value)
+{
+	struct pmu_perfmon_cmd_init_v2 *init = &pc->init_v2;
+	init->num_counters = value;
+}
+
 static void perfmon_cmd_init_set_num_cnt_v1(struct pmu_perfmon_cmd *pc,
 	u8 value)
 {
@@ -726,6 +830,13 @@ static void perfmon_cmd_init_set_num_cnt_v0(struct pmu_perfmon_cmd *pc,
 {
 	struct pmu_perfmon_cmd_init_v0 *init = &pc->init_v0;
 	init->num_counters = value;
+}
+
+static void perfmon_cmd_init_set_mov_avg_v2(struct pmu_perfmon_cmd *pc,
+	u8 value)
+{
+	struct pmu_perfmon_cmd_init_v2 *init = &pc->init_v2;
+	init->samples_in_moving_avg = value;
 }
 
 static void perfmon_cmd_init_set_mov_avg_v1(struct pmu_perfmon_cmd *pc,
@@ -961,35 +1072,35 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 		g->ops.pmu_ver.get_pmu_init_msg_pmu_sw_mg_size =
 			get_pmu_init_msg_pmu_sw_mg_size_v1;
 		g->ops.pmu_ver.get_pmu_perfmon_cmd_start_size =
-			get_pmu_perfmon_cmd_start_size_v1;
+			get_pmu_perfmon_cmd_start_size_v2;
 		g->ops.pmu_ver.get_perfmon_cmd_start_offsetofvar =
-			get_perfmon_cmd_start_offsetofvar_v1;
+			get_perfmon_cmd_start_offsetofvar_v2;
 		g->ops.pmu_ver.perfmon_start_set_cmd_type =
-			perfmon_start_set_cmd_type_v1;
+			perfmon_start_set_cmd_type_v2;
 		g->ops.pmu_ver.perfmon_start_set_group_id =
-			perfmon_start_set_group_id_v1;
+			perfmon_start_set_group_id_v2;
 		g->ops.pmu_ver.perfmon_start_set_state_id =
-			perfmon_start_set_state_id_v1;
+			perfmon_start_set_state_id_v2;
 		g->ops.pmu_ver.perfmon_start_set_flags =
-			perfmon_start_set_flags_v1;
+			perfmon_start_set_flags_v2;
 		g->ops.pmu_ver.perfmon_start_get_flags =
-			perfmon_start_get_flags_v1;
+			perfmon_start_get_flags_v2;
 		g->ops.pmu_ver.get_pmu_perfmon_cmd_init_size =
-			get_pmu_perfmon_cmd_init_size_v1;
+			get_pmu_perfmon_cmd_init_size_v2;
 		g->ops.pmu_ver.get_perfmon_cmd_init_offsetofvar =
-			get_perfmon_cmd_init_offsetofvar_v1;
+			get_perfmon_cmd_init_offsetofvar_v2;
 		g->ops.pmu_ver.perfmon_cmd_init_set_sample_buffer =
-			perfmon_cmd_init_set_sample_buffer_v1;
+			perfmon_cmd_init_set_sample_buffer_v2;
 		g->ops.pmu_ver.perfmon_cmd_init_set_dec_cnt =
-			perfmon_cmd_init_set_dec_cnt_v1;
+			perfmon_cmd_init_set_dec_cnt_v2;
 		g->ops.pmu_ver.perfmon_cmd_init_set_base_cnt_id =
-			perfmon_cmd_init_set_base_cnt_id_v1;
+			perfmon_cmd_init_set_base_cnt_id_v2;
 		g->ops.pmu_ver.perfmon_cmd_init_set_samp_period_us =
-			perfmon_cmd_init_set_samp_period_us_v1;
+			perfmon_cmd_init_set_samp_period_us_v2;
 		g->ops.pmu_ver.perfmon_cmd_init_set_num_cnt =
-			perfmon_cmd_init_set_num_cnt_v1;
+			perfmon_cmd_init_set_num_cnt_v2;
 		g->ops.pmu_ver.perfmon_cmd_init_set_mov_avg =
-			perfmon_cmd_init_set_mov_avg_v1;
+			perfmon_cmd_init_set_mov_avg_v2;
 		g->ops.pmu_ver.get_pmu_seq_in_a_ptr =
 			get_pmu_sequence_in_alloc_ptr_v1;
 		g->ops.pmu_ver.get_pmu_seq_out_a_ptr =

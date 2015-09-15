@@ -341,7 +341,7 @@ struct pmu_mem_desc_v0 {
     /*!
      * Start address of memory surface that is being communicated to the falcon.
      */
-	u64 dma_addr;
+	struct falc_u64 dma_addr;
     /*!
      * Max allowed DMA transfer size (size of the memory surface). Accesses past
      * this point may result in page faults and/or memory corruptions.
@@ -679,6 +679,15 @@ enum {
 	PMU_PG_STAT_CMD_ALLOC_DMEM = 0,
 };
 
+#define PMU_PG_FEATURE_GR_SDIV_SLOWDOWN_ENABLED	(1 << 0)
+#define PMU_PG_FEATURE_GR_POWER_GATING_ENABLED	(1 << 2)
+
+struct pmu_pg_cmd_gr_init_param {
+	u8 cmd_type;
+	u16 sub_cmd_id;
+	u8 featuremask;
+};
+
 struct pmu_pg_cmd_stat {
 	u8 cmd_type;
 	u8 engine_id;
@@ -693,6 +702,7 @@ struct pmu_pg_cmd {
 		struct pmu_pg_cmd_eng_buf_load_v0 eng_buf_load_v0;
 		struct pmu_pg_cmd_eng_buf_load_v1 eng_buf_load_v1;
 		struct pmu_pg_cmd_stat stat;
+		struct pmu_pg_cmd_gr_init_param gr_init_param;
 		/* TBD: other pg commands */
 		union pmu_ap_cmd ap_cmd;
 	};
@@ -835,6 +845,14 @@ enum {
 	PMU_PERFMON_CMD_ID_INIT  = 2
 };
 
+struct pmu_perfmon_cmd_start_v2 {
+	u8 cmd_type;
+	u8 group_id;
+	u8 state_id;
+	u8 flags;
+	struct pmu_allocation_v2 counter_alloc;
+};
+
 struct pmu_perfmon_cmd_start_v1 {
 	u8 cmd_type;
 	u8 group_id;
@@ -853,6 +871,17 @@ struct pmu_perfmon_cmd_start_v0 {
 
 struct pmu_perfmon_cmd_stop {
 	u8 cmd_type;
+};
+
+struct pmu_perfmon_cmd_init_v2 {
+	u8 cmd_type;
+	u8 to_decrease_count;
+	u8 base_counter_id;
+	u32 sample_period_us;
+	struct pmu_allocation_v2 counter_alloc;
+	u8 num_counters;
+	u8 samples_in_moving_avg;
+	u16 sample_buffer;
 };
 
 struct pmu_perfmon_cmd_init_v1 {
@@ -882,9 +911,11 @@ struct pmu_perfmon_cmd {
 		u8 cmd_type;
 		struct pmu_perfmon_cmd_start_v0 start_v0;
 		struct pmu_perfmon_cmd_start_v1 start_v1;
+		struct pmu_perfmon_cmd_start_v2 start_v2;
 		struct pmu_perfmon_cmd_stop stop;
 		struct pmu_perfmon_cmd_init_v0 init_v0;
 		struct pmu_perfmon_cmd_init_v1 init_v1;
+		struct pmu_perfmon_cmd_init_v2 init_v2;
 	};
 };
 
@@ -1100,6 +1131,34 @@ struct pmu_sequence {
 	u8 *out_payload;
 	pmu_callback callback;
 	void* cb_params;
+};
+
+struct pmu_pg_stats_v1 {
+    /* Number of time PMU successfully engaged sleep state */
+    u32 entryCount;
+    /* Number of time PMU exit sleep state */
+    u32 exitCount;
+    /* Number of time PMU aborted in entry sequence */
+    u32 abortCount;
+    /*
+     * Time for which GPU was neither in Sleep state not
+     * executing sleep sequence.
+     * */
+    u32 poweredUpTimeUs;
+    /* Entry and exit latency of current sleep cycle */
+    u32 entryLatencyUs;
+    u32 exitLatencyUs;
+    /* Resident time for current sleep cycle. */
+    u32 residentTimeUs;
+    /* Rolling average entry and exit latencies */
+    u32 entryLatencyAvgUs;
+    u32 exitLatencyAvgUs;
+    /* Max entry and exit latencies */
+    u32 entryLatencyMaxUs;
+    u32 exitLatencyMaxUs;
+    /* Total time spent in sleep and non-sleep state */
+    u32 totalSleepTimeUs;
+    u32 totalNonSleepTimeUs;
 };
 
 struct pmu_pg_stats {

@@ -77,6 +77,11 @@ static void DWC_ETH_QOS_tx_desc_free_mem(struct DWC_ETH_QOS_prv_data *pdata,
 			GET_TX_DESC_PTR(qInx, 0) = NULL;
 		}
 	}
+#ifdef DO_TX_ALIGN_TEST
+	if (pdata->ptst_buf)
+		dma_free_coherent(&pdata->pdev->dev, pdata->tst_buf_size,
+		pdata->ptst_buf, (dma_addr_t)pdata->tst_buf_dma_addr);
+#endif
 
 	DBGPR("<--DWC_ETH_QOS_tx_desc_free_mem\n");
 }
@@ -265,6 +270,20 @@ static INT allocate_buffer_and_desc(struct DWC_ETH_QOS_prv_data *pdata)
 			goto err_out_rx_buf;
 		}
 	}
+#ifdef DO_TX_ALIGN_TEST
+	{
+		UINT cnt;
+
+		pdata->tst_buf_size = 2048;
+		pdata->ptst_buf = dma_alloc_coherent(&pdata->pdev->dev,
+			pdata->tst_buf_size,
+			(dma_addr_t *)&pdata->tst_buf_dma_addr,
+			GFP_KERNEL);
+
+		for (cnt = 0; cnt < 2048; cnt++)
+			pdata->ptst_buf[cnt] = cnt;
+	}
+#endif
 
 	DBGPR("<--allocate_buffer_and_desc\n");
 

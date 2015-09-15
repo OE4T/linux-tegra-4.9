@@ -52,6 +52,8 @@ static char debugfs_buf[DEBUGFS_MAX_SIZE];
 
 struct DWC_ETH_QOS_prv_data *pdata;
 
+static void do_transmit_alignment_test(struct DWC_ETH_QOS_prv_data *pdata);
+
 /*
  * This structure hold information about the /debug file
  */
@@ -846,6 +848,7 @@ static unsigned int qInx_val;
 
 static unsigned int reg_offset_val;
 static unsigned int gen_reg_val;
+static unsigned int do_tx_align_tst_val;
 
 void DWC_ETH_QOS_get_pdata(struct DWC_ETH_QOS_prv_data *prv_pdata)
 {
@@ -2867,7 +2870,11 @@ static ssize_t DWC_ETH_QOS_write(struct file *file, const char __user * buf,
 		} else if (!strcmp(regName, "gen_reg")) {
 			gen_reg_val = (int)integer_value;
 			iowrite32(gen_reg_val, (void *)(volatile ULONG *)(BASE_ADDRESS + reg_offset_val));
+		} else if (!strcmp(regName, "do_tx_align_tst")) {
+			do_tx_align_tst_val = (int)integer_value;
+			do_transmit_alignment_test(pdata);
 		} else if (!strcmp(regName, "BCM_REGS")) {
+
 			printk(KERN_ALERT
 			       "Could not complete Write Operation BCM_REGS : ReadOnly Register");
 			ret = -EFAULT;
@@ -19274,6 +19281,23 @@ static const struct file_operations gen_reg_fops = {
 	.write = DWC_ETH_QOS_write,
 };
 
+static ssize_t do_tx_align_tst_read(struct file *file,
+			 char __user *userbuf, size_t count, loff_t *ppos)
+{
+	ssize_t ret;
+	sprintf(debugfs_buf, "do_tx_align_tst        :%#x\n",
+		do_tx_align_tst_val);
+	ret =
+	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
+				    strlen(debugfs_buf));
+	return ret;
+}
+
+static const struct file_operations do_tx_align_tst_fops = {
+	.read = do_tx_align_tst_read,
+	.write = DWC_ETH_QOS_write,
+};
+
 static ssize_t RX_NORMAL_DESC_descriptor_read0(struct file *file,
 					       char __user * userbuf,
 					       size_t count, loff_t * ppos)
@@ -21800,6 +21824,7 @@ int create_debug_files()
 
 	struct dentry *reg_offset;
 	struct dentry *gen_reg;
+	struct dentry *do_tx_align_tst;
 
 	struct dentry *RX_NORMAL_DESC_desc0;
 	struct dentry *RX_NORMAL_DESC_desc1;
@@ -28854,6 +28879,14 @@ int create_debug_files()
 		goto remove_debug_file;
 	}
 
+	do_tx_align_tst = debugfs_create_file("do_tx_align_tst", 744, dir,
+		&do_tx_align_tst_val, &do_tx_align_tst_fops);
+	if (do_tx_align_tst == NULL) {
+		printk(KERN_INFO "error creating file: do_tx_align_tst\n");
+		ret = -ENODEV;
+		goto remove_debug_file;
+	}
+
 	RX_NORMAL_DESC_desc0 =
 	    debugfs_create_file("RX_NORMAL_DESC_descriptor0", 744, dir, NULL,
 				&RX_NORMAL_DESC_desc_fops0);
@@ -29169,4 +29202,83 @@ void remove_debug_files()
 	debugfs_remove_recursive(dir);
 	DBGPR("<-- remove_debug_files\n");
 	return;
+}
+
+/* test function to send a packet with buffer aligned to from 0-63.
+ * To run the test do 1) uncomment DO_TX_ALIGN_TST in yheader.h
+ * 2) start sniffer to capture packets from DUT.
+ * 3) after driver is loaded do "echo do_tx_align_tst 1 > do_tx_align_tst".
+ * 3) sniffer should have 64 packets with pattern.
+ * 4) TX desc is dumped showing buffer address and it's alignment.
+ */
+static void do_transmit_alignment_test(struct DWC_ETH_QOS_prv_data *pdata)
+{
+#ifdef DO_TX_ALIGN_TST
+	uint q_idx = 0;
+	struct DWC_ETH_QOS_tx_wrapper_descriptor *ptx_wr =
+	    GET_TX_WRAPPER_DESC(q_idx);
+
+	struct s_TX_NORMAL_DESC *ptxd = GET_TX_DESC_PTR(q_idx, ptx_wr->cur_tx);
+
+	unsigned long flags;
+	uint i;
+	uint start_index = ptx_wr->cur_tx;
+	uint last_index;
+	u32 *psrc, *pdst;
+	uint pkt_size = 0x40;
+
+	DBGPR("-->%s()\n", __func__);
+	printk(KERN_ALERT "-->%s(): ptxd=%4p\n", __func__, ptxd);
+
+	for (i = 0; i < 2048; i++)
+		pdata->ptst_buf[i] = i;
+
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
+		spin_lock_irqsave(&pdata->chinfo[q_idx].chan_tx_lock, flags);
+	else
+		spin_lock_irqsave(&pdata->tx_lock, flags);
+
+
+	psrc = (u32 *)ptxd;
+	psrc[0] = pdata->tst_buf_dma_addr;
+	psrc[1] = 0;
+	psrc[2] = 0x80000000 | pkt_size;
+	psrc[3] = pkt_size;
+
+	pdst = (u32 *)(ptxd + 1);
+	for (i = 0; i < 64; i++) {
+		pdst[0] = psrc[0];
+		pdst[1] = psrc[1];
+		pdst[2] = psrc[2];
+		pdst[3] = psrc[3] | 0xb0000000;
+
+		pdst[0] += i; /* cycle addr to different boundary */
+
+		pdst += 4;
+	}
+	pdst = (u32 *)(ptxd + 2);
+	for (i = 0; i < 64; i++) {
+		printk(KERN_ALERT
+		"%s():[%d] Dw0=0x%.8x, Dw1=0x%.8x, Dw2=0x%.8x, Dw3=0x%.8x\n",
+			__func__, i, pdst[0], pdst[1], pdst[2], pdst[3]);
+
+		pdst += 4;
+	}
+	last_index = start_index + 64;
+
+	/* set OWN bit on first td */
+	psrc[3] |= 0xb0000000;
+
+	DMA_TDTP_TPDR_RgWr(q_idx,
+			GET_TX_DESC_DMA_ADDR(q_idx, last_index));
+
+
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
+		spin_unlock_irqrestore(&pdata->chinfo[q_idx].chan_tx_lock,
+					flags);
+	else
+		spin_unlock_irqrestore(&pdata->tx_lock, flags);
+
+	DBGPR("<--%s()\n", __func__);
+#endif
 }

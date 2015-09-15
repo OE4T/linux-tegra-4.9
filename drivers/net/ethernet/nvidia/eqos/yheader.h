@@ -175,6 +175,9 @@
 //#define DWC_ETH_QOS_CUSTOMIZED_EEE_TEST
 #define DWC_ETH_QOS_ENABLE_EEE
 
+/* Uncomment below enable tx buffer alignment test code */
+/* #define DO_TX_ALIGN_TEST */
+
 #ifdef DWC_ETH_QOS_CUSTOMIZED_EEE_TEST
 #undef DWC_ETH_QOS_TXPOLLING_MODE_ENABLE
 #endif
@@ -1561,6 +1564,12 @@ struct DWC_ETH_QOS_prv_data {
 	 * set to 1 if skb has TCP payload else set to 0
 	 * */
 	int tcp_pkt;
+
+#ifdef DO_TX_ALIGN_TEST
+	u8 *ptst_buf;
+	u32 tst_buf_dma_addr;
+	int tst_buf_size;
+#endif
 };
 
 typedef enum {

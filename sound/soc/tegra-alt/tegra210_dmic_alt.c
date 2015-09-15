@@ -413,6 +413,10 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 	}
 	regcache_cache_only(dmic->regmap, true);
 
+	/* Below patch is as per latest POR value */
+	regmap_write(dmic->regmap,
+			TEGRA210_DMIC_DCR_BIQUAD_0_COEF_4, 0x00000000);
+
 	if (of_property_read_u32(np, "nvidia,ahub-dmic-id",
 				&pdev->dev.id) < 0) {
 		dev_err(&pdev->dev,

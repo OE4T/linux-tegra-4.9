@@ -389,9 +389,10 @@ static struct sid_to_oids sid_to_oids[] = {
 	},
 	{
 		.sid	= TEGRA_SWGROUP_NVDISPLAY,
-		.noids	= 1,
+		.noids	= 2,
 		.oid	= {
 			NVDISPLAYR,
+			NVDISPLAYR1,
 		},
 		.ord = OVERRIDE,
 	},

@@ -922,6 +922,22 @@ void *dma_mark_declared_memory_occupied(struct device *dev,
 }
 EXPORT_SYMBOL(dma_mark_declared_memory_occupied);
 
+void dma_mark_declared_memory_unoccupied(struct device *dev,
+					 dma_addr_t device_addr, size_t size)
+{
+	struct dma_coherent_mem *mem = dev->dma_mem;
+	int pos;
+
+	if (!mem)
+		return;
+
+	size += device_addr & ~PAGE_MASK;
+
+	pos = (device_addr - mem->device_base) >> PAGE_SHIFT;
+	bitmap_release_region(mem->bitmap, pos, get_order(size));
+}
+EXPORT_SYMBOL(dma_mark_declared_memory_unoccupied);
+
 /**
  * dma_alloc_from_coherent_attr() - try to allocate memory from the per-device
  * coherent area

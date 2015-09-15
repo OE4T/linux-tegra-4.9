@@ -1847,12 +1847,10 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 #endif
 	tegra_hdmi_config(hdmi);
 
-	/* BRINGUP HACK - DISABLE xbar now
-	 * NO LINK SWAP for P3310
-	 */
-#ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_sor_config_xbar(hdmi->sor);
 
+	/* BRINGUP HACK */
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	/* IS THE POWER ENABLE AFTER ATTACH IS VALID*/
 	/* TODO: Confirm sequence with HW */
 	tegra_sor_writel(sor,  NV_SOR_SEQ_INST(0), 0x8080);

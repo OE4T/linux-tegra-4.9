@@ -28,8 +28,8 @@
 /* Peak BPP for any of the YUV/Bayer formats */
 #define CAMERA_PEAK_BPP 2
 
-#define LANE_SPEED_1_GBPS 0x40000000
-#define LANE_SPEED_1_5_GBPS 0x60000000
+#define LANE_SPEED_1_GBPS 1000000000
+#define LANE_SPEED_1_5_GBPS 1500000000
 
 static const struct of_device_id tegra_camera_of_ids[] = {
 	{ .compatible = "nvidia, tegra-camera-platform" },
@@ -43,7 +43,7 @@ static int tegra_camera_isomgr_register(struct tegra_camera_info *info)
 #if defined(CONFIG_TEGRA_ISOMGR)
 	u32 num_csi_lanes;
 	u32 max_num_streams;
-	u32 max_lane_speed;
+	u64 max_lane_speed;
 	u32 min_bits_per_pixel;
 
 	dev_dbg(info->dev, "%s++\n", __func__);
@@ -84,6 +84,13 @@ static int tegra_camera_isomgr_register(struct tegra_camera_info *info)
 	 */
 	info->max_bw = (((num_csi_lanes * max_lane_speed * max_num_streams) /
 				min_bits_per_pixel) * CAMERA_PEAK_BPP) / 1000;
+	if (!info->max_bw) {
+		dev_err(info->dev, "%s: BW must be non-zero\n", __func__);
+		return -EINVAL;
+	}
+
+	dev_info(info->dev, "%s camera's max_iso_bw %llu\n",
+				__func__, info->max_bw);
 
 	/* Register with max possible BW for CAMERA usecases.*/
 	info->isomgr_handle = tegra_isomgr_register(
@@ -92,7 +99,7 @@ static int tegra_camera_isomgr_register(struct tegra_camera_info *info)
 					NULL,	/* tegra_isomgr_renegotiate */
 					NULL);	/* *priv */
 
-	if (!info->isomgr_handle) {
+	if (IS_ERR(info->isomgr_handle)) {
 		dev_err(info->dev,
 			"%s: unable to register to isomgr\n",
 				__func__);
@@ -344,7 +351,8 @@ static int tegra_camera_probe(struct platform_device *pdev)
 
 	ret = misc_register(&tegra_camera_misc);
 	if (ret) {
-		dev_err(tegra_camera_misc.this_device, "register failed for %s\n",
+		dev_err(tegra_camera_misc.this_device,
+			"register failed for %s\n",
 			tegra_camera_misc.name);
 		return ret;
 	}
@@ -356,6 +364,8 @@ static int tegra_camera_probe(struct platform_device *pdev)
 			tegra_camera_misc.name);
 		return -ENOMEM;
 	}
+
+	memset(info, 0, sizeof(*info));
 
 	strcpy(info->devname, tegra_camera_misc.name);
 	info->dev = tegra_camera_misc.this_device;

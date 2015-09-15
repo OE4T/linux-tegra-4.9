@@ -44,9 +44,9 @@
 
 /*
  * Second definition is needed to prevent inadvertent sanity failures
- * on p1859 for now.
+ * on p1859/vcm31t210 for now.
  */
-#ifndef CONFIG_ARCH_TEGRA_VCM30T124
+#if !defined(CONFIG_ARCH_TEGRA_VCM30T124) && !defined(CONFIG_ARCH_TEGRA_VCM31T210)
 #define tegra_dc_hotplug_supported(dc) (dc && dc->out ? \
 		(dc->out->hotplug_gpio >= 0 && \
 		!(dc->out->type == TEGRA_DC_OUT_DP && \

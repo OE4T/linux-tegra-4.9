@@ -177,7 +177,8 @@ void unregister_ari_mca_bank(struct ari_mca_bank *bank)
 EXPORT_SYMBOL(unregister_ari_mca_bank);
 
 /* MCA assert register dump */
-static int ari_serr_hook(struct pt_regs *regs, int reason, unsigned int esr)
+static int ari_serr_hook(struct pt_regs *regs, int reason,
+			unsigned int esr, void *priv)
 {
 	u64 status;
 	struct ari_mca_bank *bank;

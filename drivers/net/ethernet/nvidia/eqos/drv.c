@@ -7098,7 +7098,7 @@ void dump_tx_desc(struct DWC_ETH_QOS_prv_data *pdata, int first_desc_idx,
 
 		TX_NORMAL_DESC_TDES3_CTXT_Mlf_Rd(desc->TDES3, varCTXT);
 
-		printk(KERN_ALERT "\n%s[%02d %4p %03d %s] = %#x:%#x:%#x:%#x",
+		printk(KERN_ALERT "\n%s[%02d %4p %03d %s] = %#x:%#x:%#x:%#x\n",
 		       (varCTXT == 1) ? "TX_CONTXT_DESC" : "TX_NORMAL_DESC",
 		       qInx, desc, first_desc_idx,
 		       ((flag == 1) ? "QUEUED FOR TRANSMISSION" :
@@ -7117,7 +7117,7 @@ void dump_tx_desc(struct DWC_ETH_QOS_prv_data *pdata, int first_desc_idx,
 
 			TX_NORMAL_DESC_TDES3_CTXT_Mlf_Rd(desc->TDES3, varCTXT);
 
-			printk(KERN_ALERT "\n%s[%02d %4p %03d %s] = %#x:%#x:%#x:%#x",
+			printk(KERN_ALERT "\n%s[%02d %4p %03d %s] = %#x:%#x:%#x:%#x\n",
 			       (varCTXT == 1) ? "TX_CONTXT_DESC" : "TX_NORMAL_DESC",
 			       qInx, desc, i,
 			       ((flag == 1) ? "QUEUED FOR TRANSMISSION" :

@@ -25,6 +25,14 @@
 #define __PACKED __attribute__((packed))
 #endif
 
+#ifdef NO_GCC_EXTENSIONS
+#define EMPTY char empty;
+#define EMPTY_ARRAY 1
+#else
+#define EMPTY
+#define EMPTY_ARRAY 0
+#endif
+
 /**
  * This header file documents the Application Binary Interface (ABI)
  * of BPMP processor complex
@@ -495,12 +503,12 @@ struct mrq_threaded_ping_response
 struct mrq_module_mail_request
 {
 	uint32_t base;
-	uint8_t data[0]; /* module mail specific payload */
+	uint8_t data[EMPTY_ARRAY]; /* module mail specific payload */
 } __PACKED;
 
 struct mrq_module_mail_response
 {
-	uint8_t data[0]; /* module mail specific response */
+	uint8_t data[EMPTY_ARRAY]; /* module mail specific response */
 } __PACKED;
 
 /**
@@ -557,7 +565,7 @@ struct mrq_bpmpidle_usage_response
 
 struct mrq_heap_usage_request
 {
-	/* empty */
+	EMPTY
 } __PACKED;
 
 struct mrq_heap_usage_response
@@ -807,7 +815,7 @@ enum {
 };
 
 struct cmd_clk_get_rate_request {
-	/* empty */
+	EMPTY
 } __PACKED;
 
 struct cmd_clk_get_rate_response {
@@ -815,6 +823,7 @@ struct cmd_clk_get_rate_response {
 } __PACKED;
 
 struct cmd_clk_set_rate_request {
+	int32_t unused;
 	int64_t rate;
 } __PACKED;
 
@@ -823,6 +832,7 @@ struct cmd_clk_set_rate_response {
 } __PACKED;
 
 struct cmd_clk_round_rate_request {
+	int32_t unused;
 	int64_t rate;
 } __PACKED;
 
@@ -831,7 +841,7 @@ struct cmd_clk_round_rate_response {
 } __PACKED;
 
 struct cmd_clk_get_parent_request {
-	/* empty */
+	EMPTY
 } __PACKED;
 
 struct cmd_clk_get_parent_response {
@@ -847,7 +857,7 @@ struct cmd_clk_set_parent_response {
 } __PACKED;
 
 struct cmd_clk_is_enabled_request {
-	/* empty */
+	EMPTY
 } __PACKED;
 
 struct cmd_clk_is_enabled_response {
@@ -855,23 +865,23 @@ struct cmd_clk_is_enabled_response {
 } __PACKED;
 
 struct cmd_clk_enable_request {
-	/* empty */
+	EMPTY
 } __PACKED;
 
 struct cmd_clk_enable_response {
-	/* empty */
+	EMPTY
 } __PACKED;
 
 struct cmd_clk_disable_request {
-	/* empty */
+	EMPTY
 } __PACKED;
 
 struct cmd_clk_disable_response {
-	/* empty */
+	EMPTY
 } __PACKED;
 
 struct cmd_clk_properties_request {
-	/* empty */
+	EMPTY
 } __PACKED;
 
 /* TODO: flags need to be spelled out here */
@@ -880,7 +890,7 @@ struct cmd_clk_properties_response {
 } __PACKED;
 
 struct cmd_clk_possible_parents_request {
-	/* empty */
+	EMPTY
 } __PACKED;
 
 struct cmd_clk_possible_parents_response {
@@ -890,7 +900,7 @@ struct cmd_clk_possible_parents_response {
 } __PACKED;
 
 struct cmd_clk_num_possible_parents_request {
-	/* empty */
+	EMPTY
 } __PACKED;
 
 struct cmd_clk_num_possible_parents_response {
@@ -906,7 +916,7 @@ struct cmd_clk_get_possible_parent_response {
 } __PACKED;
 
 struct cmd_clk_reset_refcounts {
-	/* empty */
+	EMPTY
 } __PACKED;
 
 /**
@@ -1346,7 +1356,7 @@ struct cpu_vhint_data {
  *    (or possibly one of its clients) which warrants deprecating that
  *    implementation.
  */
-#define BPMP_ABI_RATCHET_VALUE 2
+#define BPMP_ABI_RATCHET_VALUE 3
 
 /**
  * struct mrq_abi_ratchet_request

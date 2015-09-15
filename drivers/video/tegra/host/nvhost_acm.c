@@ -262,6 +262,13 @@ int nvhost_module_busy(struct platform_device *dev)
 
 	return 0;
 }
+EXPORT_SYMBOL(nvhost_module_busy);
+
+inline void nvhost_module_idle(struct platform_device *dev)
+{
+	nvhost_module_idle_mult(dev, 1);
+}
+EXPORT_SYMBOL(nvhost_module_idle);
 
 void nvhost_module_disable_poweroff(struct platform_device *dev)
 {

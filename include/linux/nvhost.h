@@ -369,8 +369,16 @@ u32 host1x_sync_readl(struct platform_device *pdev, u32 r);
 
 /* public host1x power management APIs */
 bool nvhost_module_powered_ext(struct platform_device *dev);
+/* This power ON only host1x and doesn't power ON module */
 int nvhost_module_busy_ext(struct platform_device *dev);
+/* This power OFF only host1x and doesn't power OFF module */
 void nvhost_module_idle_ext(struct platform_device *dev);
+
+ /* Public PM nvhost APIs. */
+/* This power ON both host1x and module */
+int nvhost_module_busy(struct platform_device *dev);
+/* This power OFF both host1x and module */
+void nvhost_module_idle(struct platform_device *dev);
 
 /* public api to register/unregister a subdomain */
 void nvhost_register_client_domain(struct generic_pm_domain *domain);

@@ -294,6 +294,7 @@ static __initdata struct tegra_bpmp_clk_init tegra186_clocks[] = {
 	{ .clk_num = TEGRA186_CLK_SYNC_SPDIF, .name = "sync_spdif" },
 	{ .clk_num = TEGRA186_CLK_PLLREFE_OUT_GATED, .name = "pllrefe_out_gated" },
 	{ .clk_num = TEGRA186_CLK_PLLREFE_OUT1, .name = "pllrefe_out1" },
+	{ .clk_num = TEGRA186_CLK_PLLREFE_OUT1_DIV5, .name = "pllrefe_out1_div5" },
 	{ .clk_num = TEGRA186_CLK_PLLM_UD, .name = "pllm_ud" },
 	{ .clk_num = TEGRA186_CLK_PLLMB_UD, .name = "pllmb_ud" },
 	{ .clk_num = TEGRA186_CLK_PLLP_UD, .name = "pllp_ud" },

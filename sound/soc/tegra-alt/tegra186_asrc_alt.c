@@ -62,7 +62,7 @@
 	{ ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_OUTSAMPLEBUF_CONFIG, id), 0x64}
 static struct device *asrc_dev;
 
-static struct asrc_task_desc {
+struct asrc_task_desc {
 	int stream_id;
 	enum task_event event;
 	int action;

@@ -365,7 +365,6 @@ static const struct of_device_id tegra186_pmc[] __initconst = {
 
 static int tegra186_pmc_parse_dt(struct device_node *np)
 {
-
 	if (!np)
 		return -EINVAL;
 
@@ -388,6 +387,11 @@ static int __init tegra186_pmc_init(void)
 	np = of_find_matching_node(NULL, tegra186_pmc);
 	if (!np) {
 		pr_info("Failed to find t186pmc node\n");
+		return -ENODEV;
+	}
+
+	if (!of_device_is_available(np)) {
+		pr_info("Node %s is not enabled\n", np->name);
 		return -ENODEV;
 	}
 

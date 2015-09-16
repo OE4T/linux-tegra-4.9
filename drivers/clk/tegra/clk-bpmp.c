@@ -274,7 +274,11 @@ struct clk *tegra_clk_register_bpmp(const char *name, int parent,
 	}
 
 	init.name = name;
+
+	if (bpmp_flags & BPMP_CLK_IS_ROOT)
+		flags |= CLK_IS_ROOT;
 	init.flags = flags;
+
 	init.parent_names = parent_names;
 	init.num_parents = num_parents;
 	if ((bpmp_flags & (BPMP_CLK_HAS_MUX | BPMP_CLK_HAS_SET_RATE))
@@ -400,7 +404,8 @@ struct clk **tegra_bpmp_clk_init(struct tegra_bpmp_clk_init *init_clks,
 						 init_clks, num_clks);
 		}
 
-		if (flags & BPMP_CLK_IS_ROOT) {
+		if (flags & BPMP_CLK_IS_ROOT
+			&& !(flags & BPMP_CLK_HAS_SET_RATE)) {
 			rate = clk_bpmp_get_rate_clk_num(clk_num);
 			clk = clk_register_fixed_rate(NULL, clk_init->name,
 						 NULL, CLK_IS_ROOT, rate);

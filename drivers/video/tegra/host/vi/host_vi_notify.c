@@ -53,6 +53,23 @@
 #define VI_NOTIFY_HIGHPRIO_0			0x601C
 #define VI_NOTIFY_ERROR_0			0x6020
 
+#define VI_CH_REG(n, r)				((n+1) * 0x10000 + (r))
+#define VI_CH_CHANNEL_COMMAND(n)		VI_CH_REG(n, 0x04)
+#define VI_CH_CONTROL(n)			VI_CH_REG(n, 0x1c)
+
+#define VI_CH_CHANNEL_COMMAND_LOAD		0x01
+#define VI_CH_CONTROL_ENABLE			0x01
+
+#define VI_NOTIFY_TAG_FE			0x01
+#define VI_NOTIFY_TAG_CSIMUX_FRAME		0x03
+#define VI_NOTIFY_TAG_CHANSEL_SHORT_FRAME	0x0d
+#define VI_NOTIFY_TAG_CHANSEL_LOAD_FRAMED	0x0e
+#define VI_NOTIFY_TAG_ATOMP_FE			0x11
+#define VI_NOTIFY_TAG_ISPBUF_FE			0x1A
+
+#define VI_NOTIFY_TAG_DATA_FE			0x20
+#define VI_NOTIFY_TAG_DATA_LOAD_FRAMED		0x08000000
+
 struct vi_notify_msg {
 	u32 tag;
 	u32 stamp;
@@ -70,6 +87,7 @@ struct vi_notify_private {
 #ifdef CONFIG_TEGRA_VI_NOTIFY
 	u32 ign_mask;
 	u32 pri_mask;
+	u32 ld_mask;
 
 	wait_queue_head_t readq;
 	struct mutex read_lock;
@@ -217,6 +235,8 @@ static irqreturn_t vi_notify_isr(int irq, void *dev_id)
 	for (;;) {
 		struct vi_notify_private *priv;
 		struct vi_notify_msg msg;
+		u32 v;
+		u8 ch;
 		u8 tag;
 
 		msg.tag = host1x_readl(pdev, VI_NOTIFY_FIFO_TAG_0_0);
@@ -234,7 +254,7 @@ static irqreturn_t vi_notify_isr(int irq, void *dev_id)
 		dev_dbg(&pdev->dev,
 			"Message: tag:%2u channel:%02X frame:%04X\n", tag,
 			VI_NOTIFY_TAG_CHANNEL(msg.tag),
-			VI_NOTIFY_TAG_FRAME(tag));
+			VI_NOTIFY_TAG_FRAME(msg.tag));
 		msg.stamp = host1x_readl(pdev, VI_NOTIFY_FIFO_TIMESTAMP_0_0);
 		msg.data = host1x_readl(pdev, VI_NOTIFY_FIFO_DATA_0_0);
 		msg.reserve = 0;
@@ -243,6 +263,41 @@ static irqreturn_t vi_notify_isr(int irq, void *dev_id)
 
 		rcu_read_lock();
 		priv = rcu_dereference(dev->priv);
+
+		switch (tag) {
+		case VI_NOTIFY_TAG_CHANSEL_LOAD_FRAMED:
+		case VI_NOTIFY_TAG_CHANSEL_SHORT_FRAME:
+			if (!(msg.data & VI_NOTIFY_TAG_DATA_LOAD_FRAMED))
+				break;
+			ch = msg.data >> 28; /* yes, really */
+			priv->ld_mask |= (1 << ch);
+			break;
+
+		case VI_NOTIFY_TAG_CSIMUX_FRAME:
+			if (!(msg.data & VI_NOTIFY_TAG_DATA_FE))
+				break;
+			/* FE - fall through */
+
+		case VI_NOTIFY_TAG_FE:
+		case VI_NOTIFY_TAG_ATOMP_FE:
+		case VI_NOTIFY_TAG_ISPBUF_FE:
+			ch = VI_NOTIFY_TAG_CHANNEL(msg.tag);
+			if (ch >= 32 || !(priv->ld_mask & (1 << ch)))
+				break;
+			priv->ld_mask &= ~(1 << ch);
+			v = host1x_readl(pdev, VI_CH_CHANNEL_COMMAND(ch));
+			v |= VI_CH_CHANNEL_COMMAND_LOAD;
+			host1x_writel(pdev, VI_CH_CHANNEL_COMMAND(ch), v);
+			v = host1x_readl(pdev, VI_CH_CONTROL(ch));
+			v |= VI_CH_CONTROL_ENABLE;
+			host1x_writel(pdev, VI_CH_CONTROL(ch), v);
+			dev_dbg(&pdev->dev, "ch %u enabled: frame %x\n", ch,
+				VI_NOTIFY_TAG_FRAME(msg.tag));
+			break;
+
+		default:
+			break;
+		}
 
 		if (priv != NULL) {
 			if (!kfifo_put(&priv->fifo, msg))

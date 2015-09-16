@@ -491,6 +491,11 @@ struct gk20a {
 	u32 ch_wdt_enabled;
 	struct mutex ch_wdt_lock;
 
+	/* Channel priorities */
+	u32 timeslice_low_priority_us;
+	u32 timeslice_medium_priority_us;
+	u32 timeslice_high_priority_us;
+
 	bool slcg_enabled;
 	bool blcg_enabled;
 	bool elcg_enabled;
@@ -510,6 +515,10 @@ struct gk20a {
 	struct dentry *debugfs_bypass_smmu;
 	struct dentry *debugfs_disable_bigpage;
 	struct dentry *debugfs_gr_default_attrib_cb_size;
+
+	struct dentry * debugfs_timeslice_low_priority_us;
+	struct dentry * debugfs_timeslice_medium_priority_us;
+	struct dentry * debugfs_timeslice_high_priority_us;
 #endif
 	struct gk20a_ctxsw_ucode_info ctxsw_ucode_info;
 

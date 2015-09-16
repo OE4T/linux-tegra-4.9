@@ -1460,6 +1460,10 @@ static int gk20a_probe(struct platform_device *dev)
 		gk20a->timeouts_enabled = true;
 	gk20a->ch_wdt_enabled = true;
 
+	gk20a->timeslice_low_priority_us = 1300;
+	gk20a->timeslice_medium_priority_us = 2600;
+	gk20a->timeslice_high_priority_us = 5200;
+
 	/* Set up initial power settings. For non-slicon platforms, disable *
 	 * power features and for silicon platforms, read from platform data */
 	gk20a->slcg_enabled =
@@ -1512,6 +1516,25 @@ static int gk20a_probe(struct platform_device *dev)
 					S_IRUGO|S_IWUSR,
 					platform->debugfs,
 					&gk20a->mm.disable_bigpage);
+
+	gk20a->debugfs_timeslice_low_priority_us =
+			debugfs_create_u32("timeslice_low_priority_us",
+					S_IRUGO|S_IWUSR,
+					platform->debugfs,
+					&gk20a->timeslice_low_priority_us);
+
+	gk20a->debugfs_timeslice_medium_priority_us =
+			debugfs_create_u32("timeslice_medium_priority_us",
+					S_IRUGO|S_IWUSR,
+					platform->debugfs,
+					&gk20a->timeslice_medium_priority_us);
+
+	gk20a->debugfs_timeslice_high_priority_us =
+			debugfs_create_u32("timeslice_high_priority_us",
+					S_IRUGO|S_IWUSR,
+					platform->debugfs,
+					&gk20a->timeslice_high_priority_us);
+
 	gr_gk20a_debugfs_init(gk20a);
 	gk20a_pmu_debugfs_init(dev);
 	gk20a_cde_debugfs_init(dev);

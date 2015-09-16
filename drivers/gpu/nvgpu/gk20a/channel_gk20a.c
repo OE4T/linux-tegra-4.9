@@ -136,8 +136,10 @@ static int channel_gk20a_set_schedule_params(struct channel_gk20a *c,
 				u32 timeslice_timeout)
 {
 	void *inst_ptr;
+	struct gk20a_platform *platform = platform_get_drvdata(c->g->dev);
 	int shift = 3;
-	int value = timeslice_timeout;
+	int value = scale_ptimer(timeslice_timeout,
+			platform->ptimerscaling10x);
 
 	inst_ptr = c->inst_block.cpu_va;
 	if (!inst_ptr)
@@ -2339,16 +2341,13 @@ static int gk20a_channel_set_priority(struct channel_gk20a *ch,
 	/* set priority of graphics channel */
 	switch (priority) {
 	case NVGPU_PRIORITY_LOW:
-		/* 64 << 3 = 512us */
-		timeslice_timeout = 64;
+		timeslice_timeout = ch->g->timeslice_low_priority_us;
 		break;
 	case NVGPU_PRIORITY_MEDIUM:
-		/* 128 << 3 = 1024us */
-		timeslice_timeout = 128;
+		timeslice_timeout = ch->g->timeslice_medium_priority_us;
 		break;
 	case NVGPU_PRIORITY_HIGH:
-		/* 255 << 3 = 2048us */
-		timeslice_timeout = 255;
+		timeslice_timeout = ch->g->timeslice_high_priority_us;
 		break;
 	default:
 		pr_err("Unsupported priority");

@@ -156,7 +156,10 @@ static int c_show(struct seq_file *m, void *v)
 		seq_printf(m, "CPU architecture: 8\n");
 		seq_printf(m, "CPU variant\t: 0x%x\n", MIDR_VARIANT(midr));
 		seq_printf(m, "CPU part\t: 0x%03x\n", MIDR_PARTNUM(midr));
-		seq_printf(m, "CPU revision\t: %d\n\n", MIDR_REVISION(midr));
+		seq_printf(m, "CPU revision\t: %d\n", MIDR_REVISION(midr));
+		if (MIDR_IMPLEMENTOR(midr) == ARM_CPU_IMP_NVIDIA)
+			seq_printf(m, "MTS version\t: %u\n", cpuinfo->reg_aidr);
+		seq_printf(m, "\n");
 	}
 
 	return 0;
@@ -364,6 +367,10 @@ static void __cpuinfo_store_cpu(struct cpuinfo_arm64 *info)
 	}
 
 	cpuinfo_detect_icache_policy(info);
+
+	/* Denver firmware version */
+	if (MIDR_IMPLEMENTOR(info->reg_midr) == ARM_CPU_IMP_NVIDIA)
+		asm volatile("mrs %0, AIDR_EL1" : "=r" (info->reg_aidr) : );
 }
 
 void cpuinfo_store_cpu(void)

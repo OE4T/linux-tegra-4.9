@@ -340,6 +340,7 @@ static void tegra_se_fill_pka_opmem_addr(struct tegra_se_elp_dev *se_dev,
 		struct tegra_se_elp_pka_request *req)
 {
 	u32 i = 0;
+	int len = req->size;
 	u32 *MOD, *M, *R2, *EXP, *MSG;
 	u32 *A, *B, *PX, *PY, *K, *QX, *QY;
 
@@ -387,12 +388,12 @@ static void tegra_se_fill_pka_opmem_addr(struct tegra_se_elp_dev *se_dev,
 				TEGRA_SE_ELP_PKA_MOD_ID, req->op_mode) + (i*4));
 		}
 
-		for (i = 0; i < req->size/4; i++) {
+		for (i = 0; i < req->size/4; i++)
 			se_elp_writel(se_dev, PKA1, *A++,
 				reg_bank_offset(TEGRA_SE_ELP_PKA_ECC_A_BANK,
 					TEGRA_SE_ELP_PKA_ECC_A_ID,
 					req->op_mode) + (i*4));
-		}
+
 		if (req->ecc_type != ECC_POINT_DOUBLE) {
 			PX = req->base_pt_x;
 			PY = req->base_pt_y;
@@ -411,9 +412,14 @@ static void tegra_se_fill_pka_opmem_addr(struct tegra_se_elp_dev *se_dev,
 
 		if (req->ecc_type == ECC_POINT_VER ||
 				req->ecc_type == ECC_SHAMIR_TRICK) {
-			/* For shamir trick, curve_param_b is paramater k */
+			/* For shamir trick, curve_param_b is paramater k
+			 * and k should be of size CTRL_BASE_RADIX
+			 */
+			if (req->ecc_type == ECC_SHAMIR_TRICK)
+				len = (num_words(req->op_mode)) * 4;
+
 			B = req->curve_param_b;
-			for (i = 0; i < req->size/4; i++)
+			for (i = 0; i < len / 4; i++)
 				se_elp_writel(se_dev, PKA1, *B++,
 				reg_bank_offset(TEGRA_SE_ELP_PKA_ECC_B_BANK,
 					TEGRA_SE_ELP_PKA_ECC_B_ID,
@@ -430,6 +436,7 @@ static void tegra_se_fill_pka_opmem_addr(struct tegra_se_elp_dev *se_dev,
 				reg_bank_offset(TEGRA_SE_ELP_PKA_ECC_XQ_BANK,
 					TEGRA_SE_ELP_PKA_ECC_XQ_ID,
 					req->op_mode) + (i*4));
+
 				se_elp_writel(se_dev, PKA1, *QY++,
 				reg_bank_offset(TEGRA_SE_ELP_PKA_ECC_YQ_BANK,
 					TEGRA_SE_ELP_PKA_ECC_YQ_ID,
@@ -439,14 +446,17 @@ static void tegra_se_fill_pka_opmem_addr(struct tegra_se_elp_dev *se_dev,
 
 		if (req->ecc_type == ECC_POINT_MUL ||
 				req->ecc_type == ECC_SHAMIR_TRICK) {
-			/* For shamir trick, key is paramater l */
+			/* For shamir trick, key is paramater l
+			 * and k for ECC_POINT_MUL and l for ECC_SHAMIR_TRICK
+			* should be of size CTRL_BASE_RADIX
+			*/
+			len = (num_words(req->op_mode)) * 4;
 			K = req->key;
-			for (i = 0; i < 128/4; i++) {
+			for (i = 0; i < len / 4; i++)
 				se_elp_writel(se_dev, PKA1, *K++,
 				reg_bank_offset(TEGRA_SE_ELP_PKA_ECC_K_BANK,
 					TEGRA_SE_ELP_PKA_ECC_K_ID,
 					req->op_mode) + (i*4));
-			}
 		}
 		break;
 	}

@@ -19,7 +19,7 @@
 
 #define NV_SOR_HDMI_INFOFRAME_HEADER_TYPE(x)		((x) & 0xff)
 #define NV_SOR_HDMI_INFOFRAME_HEADER_VERSION(x)		(((x) & 0xff) << 8)
-#define NV_SOR_HDMI_INFOFRAME_HEADER_LEN(x)		(((x) & 0xf) << 16)
+#define NV_SOR_HDMI_INFOFRAME_HEADER_LEN(x)		(((x) & 0x1f) << 16)
 #define NV_SOR_HDMI_BRICK_MUL(x)			(((x) >> 2) & 0x1f)
 #define NV_SOR_HDMI_BRICK_DIV				10
 

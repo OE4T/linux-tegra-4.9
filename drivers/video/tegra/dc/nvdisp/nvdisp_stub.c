@@ -219,13 +219,35 @@ struct device_node *tegra_primary_panel_get_dt_node(
 		dc_out = pdata->default_out;
 
 	if (tegra_platform_is_silicon()) {
-		/* SHARP 19x12 panel is being used */
+
+		/* DSI */
 		np_primary = of_find_node_by_path(DSI_NODE);
-
-		if (dc_out)
-			tegra_panel_register_ops(dc_out, &dsi_s_wuxga_8_0_ops);
-
-		np_panel = of_get_child_by_name(np_primary, "panel-s-wuxga-8-0");
+		if (of_device_is_available(np_primary)) {
+			/* SHARP 19x12 panel is being used */
+			np_panel = of_get_child_by_name(np_primary,
+				"panel-s-wuxga-8-0");
+			if (of_device_is_available(np_panel) && dc_out)
+				tegra_panel_register_ops(dc_out,
+					&dsi_s_wuxga_8_0_ops);
+			/* P2393 DSI2DP Bridge */
+			if (!of_device_is_available(np_panel))
+				np_panel = of_get_child_by_name(np_primary,
+					"panel-dsi-1080p-p2393");
+		}
+		/* HDMI */
+		if (!of_device_is_available(np_panel)) {
+			np_primary = of_find_node_by_path(HDMI_NODE);
+			if (of_device_is_available(np_primary))
+				np_panel = of_get_child_by_name(np_primary,
+					"hdmi-display");
+		}
+		/* DP */
+		if (!of_device_is_available(np_panel)) {
+			np_primary = of_find_node_by_path(SOR_NODE);
+			if (of_device_is_available(np_primary))
+				np_panel = of_get_child_by_name(np_primary,
+					"panel-s-edp-uhdtv-15-6");
+		}
 	} else {/* for linsim or no display panel case */
 		/*  use fake dp or fake dsi */
 		np_primary = of_find_node_by_path(SOR_NODE);
@@ -255,9 +277,19 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 	if (tegra_platform_is_silicon()) {
 		/* HDMI */
 		np_secondary = of_find_node_by_path(HDMI_NODE);
-
-		np_panel = of_get_child_by_name(np_secondary, "hdmi-display");
-
+		if (of_device_is_available(np_secondary))
+			np_panel = of_get_child_by_name(np_secondary,
+				"hdmi-display");
+		/* eDP */
+		if (!of_device_is_available(np_panel)) {
+			np_secondary = of_find_node_by_path(SOR_NODE);
+			if (of_device_is_available(np_secondary))
+				np_panel = of_get_child_by_name(np_secondary,
+					"panel-s-edp-uhdtv-15-6");
+			if (of_device_is_available(np_panel) && dc_out)
+				tegra_panel_register_ops(dc_out,
+					&edp_s_uhdtv_15_6_ops);
+		}
 	} else { /* for linsim or no display panel case */
 
 		np_secondary = of_find_node_by_path(SOR_NODE);

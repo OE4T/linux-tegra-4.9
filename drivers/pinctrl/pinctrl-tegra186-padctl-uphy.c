@@ -1205,6 +1205,7 @@ static struct init_data ufs_lane_g1_g2_g3_init_data[] = {
 	{.cfg_addr = 0x2A, .cfg_wdata = 0x0022},
 	{.cfg_addr = 0x30, .cfg_wdata = 0x0070},
 	{.cfg_addr = 0x37, .cfg_wdata = 0x070F},
+	{.cfg_addr = 0x3c, .cfg_wdata = 0x8000},
 	{.cfg_addr = 0x49, .cfg_wdata = 0x0F37},
 	{.cfg_addr = 0x4A, .cfg_wdata = 0x0F67},
 	{.cfg_addr = 0x4B, .cfg_wdata = 0x0FC7},
@@ -3007,7 +3008,8 @@ static int tegra186_ufs_phy_power_on(struct phy *phy)
 
 	/* step 7: Rate id programming */
 	ufs_pll_rateid_init(uphy);
-	ufs_lane_rateid_init(uphy, uphy->ufs_lanes);
+	for_each_set_bit(uphy_lane, &uphy->ufs_lanes, T186_UPHY_LANES)
+		ufs_lane_rateid_init(uphy, uphy_lane);
 
 	/* step 8: Uphy pll1 calibration */
 	rc = uphy_pll_init(uphy, TEGRA186_FUNC_MPHY);

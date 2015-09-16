@@ -343,23 +343,13 @@ static int tegra_gpio_direction_output(struct gpio_chip *chip, unsigned offset,
 static int tegra_gpio_set_debounce(struct gpio_chip *chip, unsigned offset,
 				unsigned debounce)
 {
-	u32 val;
-	unsigned max_dbc;
-	unsigned debounce_ms = DIV_ROUND_UP(debounce, 1000);
+	unsigned dbc_ms = DIV_ROUND_UP(debounce, 1000);
 
-	val = tegra_gpio_readl(offset, GPIO_ENB_CONFIG_REG);
-	if (val & GPIO_ENB_BIT) {
-		val |= GPIO_DEB_FUNC_BIT;
-		tegra_gpio_writel(val, offset, GPIO_ENB_CONFIG_REG);
-
-		debounce_ms = max(debounce_ms, 255U);
-		max_dbc = tegra_gpio_readl(offset, GPIO_DBC_THRES_REG);
-		max_dbc = (max_dbc < debounce_ms) ? debounce_ms : max_dbc;
-
-		tegra_gpio_writel(max_dbc, offset, GPIO_DBC_THRES_REG);
-		return 0;
-	}
-	return -ENOSYS;
+	tegra_gpio_update(offset, GPIO_ENB_CONFIG_REG, 0x1, 0x1);
+	tegra_gpio_update(offset, GPIO_DEB_FUNC_BIT, 0x5, 0x1);
+	/* Update debounce threshold */
+	tegra_gpio_writel(dbc_ms, offset, GPIO_DBC_THRES_REG);
+	return 0;
 }
 
 static int tegra_gpio_to_irq(struct gpio_chip *chip, unsigned offset)

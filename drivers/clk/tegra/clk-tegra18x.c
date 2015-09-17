@@ -381,6 +381,8 @@ static __initdata struct tegra_bpmp_clk_init tegra186_clocks[] = {
 	{ .clk_num = TEGRA186_CLK_UPHY_PLL0_PWRSEQ, .name = "uphy_pll0_pwrseq" },
 	{ .clk_num = TEGRA186_CLK_UPHY_PLL1_PWRSEQ, .name = "uphy_pll1_pwrseq" },
 	{ .clk_num = TEGRA186_CLK_PLLREFE_REF, .name = "pll_refe_ref" },
+	{ .clk_num = TEGRA186_CLK_PLLREFE_PLLE_PASSTHROUGH, .name = "pll_refe_plle_passthrough" },
+	{ .clk_num = TEGRA186_CLK_PLLREFE_PEX, .name = "pll_refe_pex" },
 };
 
 /* Needed for a nvdisp linsim clock hack */

@@ -35,7 +35,7 @@
 #define TEGRA_CPUFREQ_TRANSITION_LATENCY	(300 * 1000)
 
 #define KHZ_TO_HZ		1000
-#define REF_CLK_KHZ		408000 /* 408 MHz */
+#define REF_CLK_MHZ		408 /* 408 MHz */
 #define US_DELAY		20
 #define CPUFREQ_TBL_STEP_SIZE	4
 
@@ -174,7 +174,7 @@ static unsigned int tegra_get_speed(uint32_t cpu)
 {
 	uint32_t coreclk_cnt, last_coreclk_cnt, delta_ccnt;
 	uint32_t refclk_cnt, last_refclk_cnt, delta_refcnt;
-	unsigned int rate_khz = 0;
+	unsigned long rate_mhz = 0;
 	unsigned long flags;
 	spinlock_t *slock;
 
@@ -198,12 +198,13 @@ static unsigned int tegra_get_speed(uint32_t cpu)
 			(refclk_cnt - last_refclk_cnt) :
 			(last_refclk_cnt - refclk_cnt));
 
-		rate_khz = (delta_ccnt * REF_CLK_KHZ) / delta_refcnt;
+		rate_mhz = ((unsigned long) delta_ccnt * REF_CLK_MHZ)
+				/ delta_refcnt;
 
 		spin_unlock_irqrestore(slock, flags);
 	}
 	/* Do we have to align rate as nearest freq step ? */
-	return rate_khz; /* in KHz */
+	return (unsigned int) (rate_mhz * 1000); /* in KHz */
 }
 
 /* Denver cluster cpu_to_emc freq */

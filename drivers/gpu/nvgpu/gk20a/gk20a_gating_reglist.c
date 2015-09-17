@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2012-2015, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ struct gating_desc {
 };
 /* slcg gr */
 static const struct gating_desc gk20a_slcg_gr[] = {
-	{.addr = 0x004041f4, .prod = 0x00000000, .disable = 0x03fffffe},
+	{.addr = 0x004041f4, .prod = 0x00000002, .disable = 0x03fffffe},
 	{.addr = 0x00409894, .prod = 0x00000040, .disable = 0x0003fffe},
 	{.addr = 0x004078c4, .prod = 0x00000000, .disable = 0x000001fe},
 	{.addr = 0x00406004, .prod = 0x00000000, .disable = 0x0001fffe},

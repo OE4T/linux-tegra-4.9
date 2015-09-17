@@ -365,7 +365,7 @@ static __initdata struct tegra_bpmp_clk_init tegra186_clocks[] = {
 
 /* Needed for a nvdisp linsim clock hack */
 #define CLK_RST_CONTROLLER_RST_DEV_NVDISPLAY0_CLR_0 0x800008
-#define CLK_RST_CONTROLLER_CLK_OUT_ENB_NVDISPLAY0_SET_0 0x80100
+#define CLK_RST_CONTROLLER_CLK_OUT_ENB_NVDISPLAY0_SET_0 0x801004
 
 /* Needed for GPCDMA controller reset */
 #define CLK_RST_CONTROLLER_RST_DEV_AXI_CBB_0 0x56A0000

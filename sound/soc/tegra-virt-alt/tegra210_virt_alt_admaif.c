@@ -274,6 +274,10 @@ int tegra210_virt_admaif_register_component(struct platform_device *pdev)
 {
 	int i = 0;
 	int ret;
+	int admaif_ch_num = 0;
+	unsigned int admaif_ch_list[MAX_ADMAIF_IDS];
+	int adma_count = 0;
+
 
 	admaif = devm_kzalloc(&pdev->dev, sizeof(*admaif), GFP_KERNEL);
 	if (admaif == NULL) {
@@ -307,7 +311,25 @@ int tegra210_virt_admaif_register_component(struct platform_device *pdev)
 		goto err;
 	}
 
+	if (of_property_read_u32(pdev->dev.of_node,
+				"admaif_ch_num", &admaif_ch_num)) {
+		dev_err(&pdev->dev, "number of admaif channels is not set\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_u32_array(pdev->dev.of_node,
+						"admaif_ch_list",
+						admaif_ch_list,
+						admaif_ch_num)) {
+		dev_err(&pdev->dev, "admaif_ch_list is not populated\n");
+		return -EINVAL;
+	}
+
+
 	for (i = 0; i < MAX_ADMAIF_IDS; i++) {
+		if ((i + 1) != admaif_ch_list[adma_count])
+			continue;
+
 		admaif->playback_dma_data[i].addr = TEGRA210_ADMAIF_BASE +
 				TEGRA210_ADMAIF_XBAR_TX_FIFO_WRITE +
 				(i * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
@@ -321,7 +343,7 @@ int tegra210_virt_admaif_register_component(struct platform_device *pdev)
 
 		if (of_property_read_string_index(pdev->dev.of_node,
 				"dma-names",
-				(i * 2) + 1,
+				(adma_count * 2) + 1,
 				&admaif->playback_dma_data[i].chan_name) < 0) {
 			dev_err(&pdev->dev,
 				"Missing property nvidia,dma-names\n");
@@ -334,13 +356,14 @@ int tegra210_virt_admaif_register_component(struct platform_device *pdev)
 		admaif->capture_dma_data[i].req_sel = i + 1;
 		if (of_property_read_string_index(pdev->dev.of_node,
 				"dma-names",
-				(i * 2),
+				(adma_count * 2),
 				&admaif->capture_dma_data[i].chan_name) < 0) {
 			dev_err(&pdev->dev,
 				"Missing property nvidia,dma-names\n");
 			ret = -ENODEV;
 			goto err;
 		}
+		adma_count++;
 	}
 
 	ret = snd_soc_register_component(&pdev->dev,

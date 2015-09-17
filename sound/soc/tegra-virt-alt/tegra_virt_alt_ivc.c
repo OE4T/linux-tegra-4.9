@@ -25,9 +25,6 @@
 #include "tegra_virt_alt_ivc.h"
 #include "tegra_virt_alt_ivc_common.h"
 
-/*
-#define NO_IVC_SERVER
-*/
 static struct nvaudio_ivc_ctxt *saved_ivc_ctxt;
 
 static void nvaudio_ivc_deinit(struct nvaudio_ivc_ctxt *ictxt);
@@ -36,12 +33,6 @@ static int nvaudio_ivc_init(struct nvaudio_ivc_ctxt *ictxt);
 int nvaudio_ivc_send(struct nvaudio_ivc_ctxt *ictxt,
 		struct nvaudio_ivc_msg *msg, int size)
 {
-#ifdef NO_IVC_SERVER
-	dev_err(ictxt->dev, "NO_IVC_SERVER flag set\n");
-	dev_err(ictxt->dev, "%s : cmd: 0x%08x\n", __func__,
-					(unsigned int)msg->cmd);
-	return 0;
-#else
 	int len = 0;
 	unsigned long flags = 0;
 	int err = 0;
@@ -70,7 +61,6 @@ int nvaudio_ivc_send(struct nvaudio_ivc_ctxt *ictxt,
 fail:
 	spin_unlock_irqrestore(&ictxt->ivck_tx_lock, flags);
 	return err;
-#endif
 }
 EXPORT_SYMBOL_GPL(nvaudio_ivc_send);
 
@@ -94,12 +84,6 @@ EXPORT_SYMBOL_GPL(nvaudio_ivc_receive_cmd);
 int nvaudio_ivc_receive(struct nvaudio_ivc_ctxt *ictxt,
 			struct nvaudio_ivc_msg *rx_msg, int size)
 {
-#ifdef NO_IVC_SERVER
-	dev_err(ictxt->dev, "NO_IVC_SERVER flag set\n");
-	dev_err(ictxt->dev, "%s : cmd: 0x%08x\n", __func__,
-					(unsigned int)rx_msg->cmd);
-	return 0;
-#else
 	unsigned long flags;
 	int err = 0;
 	u32 len = 0;
@@ -133,7 +117,6 @@ int nvaudio_ivc_receive(struct nvaudio_ivc_ctxt *ictxt,
 fail:
 	spin_unlock_irqrestore(&ictxt->ivck_rx_lock, flags);
 	return err;
-#endif
 }
 EXPORT_SYMBOL_GPL(nvaudio_ivc_receive);
 
@@ -169,10 +152,6 @@ struct nvaudio_ivc_ctxt *nvaudio_ivc_alloc_ctxt(struct device *dev)
 	init_waitqueue_head(&ictxt->wait);
 	ictxt->timeout = 250; /* Not used in polling */
 	ictxt->rx_state = RX_INIT;
-#ifdef NO_IVC_SERVER
-	dev_err(ictxt->dev, "NO_IVC_SERVER flag set\n");
-	return ictxt;
-#endif
 	if (nvaudio_ivc_init(ictxt) != 0) {
 		dev_err(dev, "nvaudio_ivc_init failed\n");
 		goto fail;

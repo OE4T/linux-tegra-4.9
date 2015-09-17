@@ -1485,8 +1485,8 @@ static void tegra_hdmi_scdc_worker(struct work_struct *work)
 {
 	struct tegra_hdmi *hdmi = container_of(to_delayed_work(work),
 				struct tegra_hdmi, scdc_work);
-	u8 rd_tmds_config[][2] = {
-		{HDMI_SCDC_TMDS_CONFIG_OFFSET, 0x0}
+	u8 rd_status_flags[][2] = {
+		{HDMI_SCDC_STATUS_FLAGS, 0x0}
 	};
 
 	if (!hdmi->enabled || hdmi->dc->mode.pclk <= 340000000)
@@ -1495,9 +1495,12 @@ static void tegra_hdmi_scdc_worker(struct work_struct *work)
 	if (hdmi->dc->vedid)
 		goto skip_scdc_i2c;
 
-	tegra_hdmi_scdc_read(hdmi, rd_tmds_config, ARRAY_SIZE(rd_tmds_config));
-	if (!rd_tmds_config[0][1]  && (hdmi->dc->mode.pclk > 340000000)) {
-		dev_info(&hdmi->dc->ndev->dev, "hdmi: scdc tmds_config lost, "
+	if (!tegra_edid_is_scdc_present(hdmi->dc->edid))
+		return;
+
+	tegra_hdmi_scdc_read(hdmi, rd_status_flags, ARRAY_SIZE(rd_status_flags));
+	if (!rd_status_flags[0][1]  && (hdmi->dc->mode.pclk > 340000000)) {
+		dev_info(&hdmi->dc->ndev->dev, "hdmi: scdc scrambling status is reset, "
 						"trying to reconfigure.\n");
 		_tegra_hdmi_v2_x_config(hdmi);
 	}

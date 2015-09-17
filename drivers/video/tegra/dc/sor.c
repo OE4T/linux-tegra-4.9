@@ -729,12 +729,12 @@ void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 
 	struct device *dev = &sor->dc->ndev->dev;
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	if (sor->dc->out->type == TEGRA_DC_OUT_HDMI) {
 		of_node_put(np_sor);
 		np_sor = of_find_node_by_path(SOR1_NODE);
 	}
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
 	clk_put(sor->sor_clk);
 	if (sor->safe_clk)
 		clk_put(sor->safe_clk);
@@ -1570,8 +1570,10 @@ static void tegra_dc_sor_enable_sor(struct tegra_dc_sor_data *sor, bool enable)
 	if (sor->dc->initialized && !enable)
 		return;
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	if (sor->dc->out->type == TEGRA_DC_OUT_HDMI)
 		enb = SOR1_ENABLE;
+#endif
 
 	if (dc->out->type == TEGRA_DC_OUT_HDMI)
 		enb |= SOR1_TIMING_CYA;

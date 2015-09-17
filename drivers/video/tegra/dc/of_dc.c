@@ -83,6 +83,16 @@ static struct regulator *of_edp_sec_mode;
 static struct regulator *of_dp_pad;
 static struct regulator *of_dp_hdmi_5v0;
 
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+/* The dc_or_node_name should be saved as per
+ * dc id based on probe.
+ * /host1x/sor, /host1x/sor1 and
+ * /host1x/dsi are only valid entries, any
+ * other values should fail
+ */
+char dc_or_node_names[TEGRA_MAX_DC][14];
+#endif
+
 #ifdef CONFIG_TEGRA_DC_CMU
 static struct tegra_dc_cmu default_cmu = {
 	/* lut1 maps sRGB to linear space. */
@@ -271,6 +281,23 @@ static bool is_dc_default_out_flag(u32 flag)
 		return false;
 }
 
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+static struct device_node *dc_get_or_node_name(struct device *dev)
+{
+	struct device_node *np = NULL;
+	const struct platform_device *pdev;
+	struct tegra_dc *dc;
+
+	pdev = container_of(dev, struct platform_device, dev);
+	BUG_ON(!pdev);
+	dc = platform_get_drvdata(pdev);
+	BUG_ON(!dc);
+
+	np = of_find_node_by_path(dc_or_node_names[dc->ndev->id]);
+	return np;
+}
+#endif
+
 static int parse_disp_default_out(struct platform_device *ndev,
 		struct device_node *np,
 		struct tegra_dc_out *default_out,
@@ -280,11 +307,8 @@ static int parse_disp_default_out(struct platform_device *ndev,
 	int hotplug_gpio = 0;
 	enum of_gpio_flags flags;
 	struct device_node *ddc;
-	struct device_node *np_hdmi =
-		of_find_node_by_path(HDMI_NODE);
-	struct device_node *np_sor =
-		(ndev->id) ? of_find_node_by_path(SOR1_NODE) :
-		of_find_node_by_path(SOR_NODE);
+	struct device_node *np_hdmi = NULL;
+	struct device_node *np_sor = NULL;
 	struct property *prop;
 	const __be32 *p;
 	u32 u;
@@ -292,6 +316,15 @@ static int parse_disp_default_out(struct platform_device *ndev,
 	u32 n_outpins = 0;
 	u8 *addr;
 	int err = 0;
+
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	np_hdmi = of_find_node_by_path(dc_or_node_names[ndev->id]);
+	np_sor = of_find_node_by_path(dc_or_node_names[ndev->id]);
+#else
+	np_hdmi = of_find_node_by_path(HDMI_NODE);
+	np_sor = (ndev->id) ? of_find_node_by_path(SOR1_NODE) :
+		of_find_node_by_path(SOR_NODE);
+#endif
 
 	/*
 	 * construct default_out
@@ -1843,8 +1876,13 @@ static int dc_dp_out_hotplug_init(struct device *dev)
 	const struct platform_device *pdev;
 	struct tegra_dc *dc;
 	int gpio;
-	struct device_node *np_dp =
-		of_find_node_by_path(SOR1_NODE);
+	struct device_node *np_dp = NULL;
+
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	np_dp = dc_get_or_node_name(dev);
+#else
+	np_dp =	of_find_node_by_path(SOR1_NODE);
+#endif
 
 	pdev = container_of(dev, struct platform_device, dev);
 	BUG_ON(!pdev);
@@ -1905,10 +1943,13 @@ static int dc_dp_out_postsuspend(void)
 static int dc_hdmi_out_enable(struct device *dev)
 {
 	int err = 0;
+	struct device_node *np_hdmi = NULL;
 
-	struct device_node *np_hdmi =
-		of_find_node_by_path(HDMI_NODE);
-
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	np_hdmi = dc_get_or_node_name(dev);
+#else
+	np_hdmi = of_find_node_by_path(HDMI_NODE);
+#endif
 	if (!np_hdmi || !of_device_is_available(np_hdmi)) {
 		pr_info("%s: no valid hdmi node\n", __func__);
 		goto dc_hdmi_out_en_fail;
@@ -1986,9 +2027,13 @@ static int dc_hdmi_out_disable(struct device *dev)
 static int dc_hdmi_hotplug_init(struct device *dev)
 {
 	int err = 0;
+	struct device_node *np_hdmi = NULL;
 
-	struct device_node *np_hdmi =
-		of_find_node_by_path(HDMI_NODE);
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	np_hdmi = dc_get_or_node_name(dev);
+#else
+	np_hdmi = of_find_node_by_path(HDMI_NODE);
+#endif
 
 	if (!np_hdmi || !of_device_is_available(np_hdmi)) {
 		pr_info("%s: no valid hdmi node\n", __func__);
@@ -2139,7 +2184,9 @@ struct tegra_dc_platform_data
 	const __be32 *p;
 	int err;
 	u32 temp;
-
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	const char *dc_or_node;
+#endif
 	/*
 	 * Memory for pdata, pdata->default_out, pdata->fb
 	 * need to be allocated in default
@@ -2167,6 +2214,32 @@ struct tegra_dc_platform_data
 		goto fail_parse;
 	}
 
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	/* Check the OR node connected to each Display
+	 * Controller. To enable this feature nvidia,dc_or_node
+	 * has to set a valid OR name in the DT file.
+	 */
+	err = of_property_read_string(np, "nvidia,dc-or-node", &dc_or_node);
+	if (err)
+		pr_err("No dc-or-node is defined in DT\n");
+	pr_info("DC OR NODE connected to %s\n", dc_or_node);
+
+	if ((!strcmp(dc_or_node, "/host1x/sor")) ||
+		(!strcmp(dc_or_node, "/host1x/sor1")) ||
+		(!strcmp(dc_or_node, "/host1x/dsi"))) {
+		strcpy(dc_or_node_names[ndev->id], dc_or_node);
+		pr_info("found %s\n", dc_or_node);
+	} else {
+		pr_info("WRONG OR_TYPE - found %s\n", dc_or_node);
+		/* TODO: Faile the parsing here.
+		 * Since this a new change to DT, till it is reflected in all
+		 * needed DT files. Hard Coding the following assumption
+		 */
+		strcpy(dc_or_node_names[0], "/host1x/dsi");
+		strcpy(dc_or_node_names[1], "/host1x/sor1");
+		strcpy(dc_or_node_names[2], "/host1x/sor");
+	}
+#endif
 	/*
 	 * determine dc out type,
 	 * dc node defines nvidia,out-type to indicate
@@ -2222,9 +2295,12 @@ struct tegra_dc_platform_data
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_DP ||
 		pdata->default_out->type == TEGRA_DC_OUT_NVSR_DP ||
 		   pdata->default_out->type == TEGRA_DC_OUT_FAKE_DP) {
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+		np_sor = of_find_node_by_path(dc_or_node_names[ndev->id]);
+#else
 		np_sor = (ndev->id) ? of_find_node_by_path(SOR1_NODE) :
 			of_find_node_by_path(SOR_NODE);
-
+#endif
 		if (!np_sor) {
 			pr_err("%s: could not find sor node\n", __func__);
 			goto fail_parse;
@@ -2254,7 +2330,11 @@ struct tegra_dc_platform_data
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_HDMI) {
 		bool hotplug_report = false;
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+		np_hdmi = of_find_node_by_path(dc_or_node_names[ndev->id]);
+#else
 		np_hdmi = of_find_node_by_path(HDMI_NODE);
+#endif
 
 		if (ndev->id == 0)
 			np_target_disp
@@ -2314,7 +2394,11 @@ struct tegra_dc_platform_data
 				dc_hdmi_hotplug_report;
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_LVDS) {
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+		np_sor = of_find_node_by_path(dc_or_node_names[ndev->id]);
+#else
 		np_sor = of_find_node_by_path(SOR_NODE);
+#endif
 
 		if (!np_sor) {
 			pr_err("%s: could not find sor node\n", __func__);

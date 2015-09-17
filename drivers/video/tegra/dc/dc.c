@@ -529,32 +529,21 @@ void tegra_dc_clk_disable(struct tegra_dc *dc)
 static void tegra_dc_sor_instance(struct tegra_dc *dc, int out_type)
 {
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	/* Better to pass this from DT - move to of_dc later*/
-	/* TODO: fill this in with the proper selection */
-	switch (out_type) {
-	case TEGRA_DC_OUT_HDMI:
-	case TEGRA_DC_OUT_NVSR_DP:
-		dc->sor_instance = 1;
-		break;
-	case TEGRA_DC_OUT_DP:
-	case TEGRA_DC_OUT_FAKE_DP:
+	/* check the dc_or_node to set the instance */
+	/* Fake dp always take SOR0 */
+	if ((!strcmp(dc_or_node_names[dc->ndev->id], "/host1x/sor")) ||
+		(out_type == TEGRA_DC_OUT_FAKE_DP))
 		dc->sor_instance = 0;
-		break;
-	default:
-	case TEGRA_DC_OUT_RGB:
-	case TEGRA_DC_OUT_DSI:
-	case TEGRA_DC_OUT_LVDS:
-	case TEGRA_DC_OUT_FAKE_DSIA:
-	case TEGRA_DC_OUT_FAKE_DSIB:
-	case TEGRA_DC_OUT_FAKE_DSI_GANGED:
+	else if (!strcmp(dc_or_node_names[dc->ndev->id], "/host1x/sor1"))
+		dc->sor_instance = 1;
+	else
 		dc->sor_instance = -1;
-		break;
-	}
 #else
 	dc->sor_instance = dc->ndev->id;
-	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
+
+	if (out_type == TEGRA_DC_OUT_HDMI)
 		dc->sor_instance = 1;
-	}
+
 #endif
 }
 
@@ -3808,7 +3797,7 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 				sor_num ? DPAUX1_NODE : DPAUX_NODE);
 		if (np_dpaux || !dc->ndev->dev.of_node)
 			tegra_dpaux_pad_power(dc,
-			dc->ndev->id ? TEGRA_DPAUX_INSTANCE_1 :
+			sor_num ? TEGRA_DPAUX_INSTANCE_1 :
 			TEGRA_DPAUX_INSTANCE_0, false);
 		of_node_put(np_dpaux);
 	}

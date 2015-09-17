@@ -30,6 +30,7 @@
 #include <linux/kernel.h>
 #include <linux/debugfs.h>
 
+#include <media/tegra_v4l2_camera.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-ctrls.h>
@@ -152,8 +153,11 @@ struct camera_common_data {
 	struct camera_common_power_rail		*power;
 
 	struct v4l2_subdev			subdev;
+	struct v4l2_ctrl			**ctrls;
 
 	void	*priv;
+	int	numctrls;
+	bool	csi_io[TEGRA_CAMERA_NUM_CSI_PORT];
 	int	mode;
 	int	numfmts;
 	int	def_mode, def_width, def_height;
@@ -173,7 +177,9 @@ static inline struct camera_common_data *to_camera_common_data(
 			    struct camera_common_data, subdev);
 }
 
-int camera_common_to_gain(u32 rep, int shift);
+int camera_common_g_ctrl(struct camera_common_data *s_data,
+			 struct v4l2_control *control);
+
 int camera_common_regulator_get(struct i2c_client *client,
 		       struct regulator **vreg, const char *vreg_name);
 

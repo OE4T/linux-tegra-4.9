@@ -483,6 +483,61 @@ static int eqos_get_phyirq_from_gpio(struct DWC_ETH_QOS_prv_data *pdata)
 	return ret;
 }
 
+/* Get MAC address from the specified DTB path */
+static int eqos_get_mac_address_dtb(const char *node_name,
+	const char *property_name, unsigned char *mac_addr)
+{
+	struct device_node *np = of_find_node_by_path(node_name);
+	const char *mac_str = NULL;
+	int values[6] = {0};
+	unsigned char mac_temp[6] = {0};
+	int i, ret = 0;
+
+	if (!np)
+		return -EADDRNOTAVAIL;
+
+	/* If the property is present but contains an invalid value,
+	 * then something is wrong. Log the error in that case.
+	 */
+	if (of_property_read_string(np, property_name, &mac_str)) {
+		ret = -EADDRNOTAVAIL;
+		goto err_out;
+	}
+
+	/* The DTB property is a string of the form xx:xx:xx:xx:xx:xx
+	 * Convert to an array of bytes.
+	 */
+	if (sscanf(mac_str, "%x:%x:%x:%x:%x:%x",
+		&values[0], &values[1], &values[2],
+		&values[3], &values[4], &values[5]) != 6) {
+		ret = -EINVAL;
+		goto err_out;
+	}
+
+	for (i = 0; i < 6; ++i)
+		mac_temp[i] = (unsigned char)values[i];
+
+	if (!is_valid_ether_addr(mac_temp)) {
+		ret = -EINVAL;
+		goto err_out;
+	}
+
+	memcpy(mac_addr, mac_temp, 6);
+
+	of_node_put(np);
+
+	return ret;
+
+err_out:
+	printk(KERN_ALERT "%s: bad mac address at %s/%s: %s.\n",
+		__func__, node_name, property_name,
+		(mac_str) ? mac_str : "null");
+
+	of_node_put(np);
+
+	return ret;
+}
+
 /*!
 * \brief API to initialize the device.
 *
@@ -519,7 +574,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	struct device_node *node = pdev->dev.of_node;
 	u32 csr_clock_speed;
-	u32 mac_addr[6];
+	u8 mac_addr[6];
 
 	struct eqos_cfg *pdt_cfg;
 	struct chan_data *pchinfo;
@@ -766,11 +821,9 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 
 	MAC_1US_TIC_RgWr(csr_clock_speed - 1);
 
-	ret = of_property_read_u32_array(node, "nvidia,local-mac-address",
-			mac_addr, sizeof(mac_addr)/sizeof(u32));
+	ret = eqos_get_mac_address_dtb("/chosen", "nvidia,ether-mac", mac_addr);
 	if (ret < 0) {
-		printk(KERN_ALERT "local-mac-address read failed %d\n", ret);
-		goto err_out_mac_read_failed;
+		printk(KERN_ALERT "ether-mac read from DT failed %d\n", ret);
 	} else {
 		printk(KERN_ALERT "Setting local MAC: %x %x %x %x %x %x\n",
 			mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3],
@@ -925,7 +978,6 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		netif_napi_del(&rx_queue->napi);
 	}
 #endif
- err_out_mac_read_failed:
 	if (1 == pdata->hw_feat.sma_sel)
 		DWC_ETH_QOS_mdio_unregister(ndev);
 

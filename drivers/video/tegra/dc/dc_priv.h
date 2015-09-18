@@ -77,7 +77,7 @@ static inline void tegra_dc_io_end(struct tegra_dc *dc)
 	nvhost_module_idle_ext(dc->ndev);
 }
 
-static int tegra_dc_is_clk_enabled(struct clk *clk)
+static inline int tegra_dc_is_clk_enabled(struct clk *clk)
 {
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	if (!tegra_bpmp_running())
@@ -90,11 +90,8 @@ static int tegra_dc_is_clk_enabled(struct clk *clk)
 
 static inline unsigned long tegra_dc_is_accessible(struct tegra_dc *dc)
 {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	if (likely(tegra_bpmp_running())) {
-#else
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 	if (likely(tegra_platform_is_silicon())) {
-#endif
 		BUG_ON(!nvhost_module_powered_ext(dc->ndev));
 		if (WARN(!tegra_dc_is_clk_enabled(dc->clk),
 			"DC is clock-gated.\n")/* ||
@@ -102,7 +99,7 @@ static inline unsigned long tegra_dc_is_accessible(struct tegra_dc *dc)
 			dc->powergate_id), "DC is power-gated.\n")*/)
 			return 1;
 	}
-
+#endif
 	return 0;
 }
 

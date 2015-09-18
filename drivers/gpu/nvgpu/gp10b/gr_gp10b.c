@@ -684,6 +684,10 @@ static void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 			(u64_hi32(gr_ctx->t18x.pagepool_ctxsw_buffer.gpu_va) <<
 			 (32 - gr_scc_pagepool_base_addr_39_8_align_bits_v()));
 		size = gr_ctx->t18x.pagepool_ctxsw_buffer.size;
+
+		if (size == g->ops.gr.pagepool_default_size(g))
+			size = gr_scc_pagepool_total_pages_hwmax_v();
+
 		g->ops.gr.commit_global_pagepool(g, ch_ctx, addr, size, true);
 
 		addr = (u64_lo32(gr_ctx->t18x.spill_ctxsw_buffer.gpu_va) >>

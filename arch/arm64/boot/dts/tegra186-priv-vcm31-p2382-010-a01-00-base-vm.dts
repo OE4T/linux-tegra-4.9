@@ -70,6 +70,12 @@
 		status = "disabled";
 	};
 
+	tegra_hv_wdt {
+		compatible = "nvidia,tegra-hv-wdt";
+		status = "okay";
+		ivc = <&tegra_hv 32>;
+	};
+
 	host1x: host1x {
 		reg = <0x0 0x13e10000 0x0 0x00010000>;
 		interrupts = <0 265 0x04

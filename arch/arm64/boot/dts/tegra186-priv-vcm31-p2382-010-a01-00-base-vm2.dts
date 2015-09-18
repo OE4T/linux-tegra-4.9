@@ -440,6 +440,12 @@
 		ivc = <&tegra_hv 28>;
 	};
 
+	tegra_hv_wdt {
+		compatible = "nvidia,tegra-hv-wdt";
+		status = "okay";
+		ivc = <&tegra_hv 52>;
+	};
+
 	pmc@c370000 {
 		status = "disabled";
 	};

@@ -102,6 +102,12 @@
 		ivc = <&tegra_hv 28>;
 	};
 
+	tegra_hv_wdt {
+		compatible = "nvidia,tegra-hv-wdt";
+		status = "okay";
+		ivc = <&tegra_hv 51>;
+	};
+
 	mc_sid@2c00000 {
 		nvidia,by-pass-smmu-streamid = <0x7e>;
 		status = "okay";

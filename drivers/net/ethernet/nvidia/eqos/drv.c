@@ -595,7 +595,6 @@ void handle_ti_ri_chan_intrs(struct DWC_ETH_QOS_prv_data *pdata,
 	ULONG varDMA_IER;
 	u32 ch_crtl_reg;
 	u32 ch_stat_reg;
-	struct net_device *dev = pdata->dev;
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 
 	struct DWC_ETH_QOS_rx_queue *rx_queue = NULL;
@@ -633,44 +632,9 @@ void handle_ti_ri_chan_intrs(struct DWC_ETH_QOS_prv_data *pdata,
 	if (ch_stat_reg & VIRT_INTR_CH_CRTL_RX_Wr_Mask) {
 		DMA_SR_RgWr(qInx, ((0x1) << 6) | ((0x1) << 15));
 		VIRT_INTR_CH_STAT_RgWr(qInx, VIRT_INTR_CH_CRTL_RX_Wr_Mask);
-
-		if (!*pnapi_sched) {
-			if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
-				if (pdata->dt_cfg.chan_mode[qInx] ==
-					CHAN_MODE_NAPI) {
-					*pnapi_sched = 1;
-					if (likely(napi_schedule_prep(
-						&rx_queue->napi))) {
-						hw_if->disable_rx_interrupt(
-							qInx, pdata);
-						__napi_schedule(
-							&rx_queue->napi);
-					} else {
-						printk(KERN_ALERT
-						"driver bug! Rx interrupt while in poll\n");
-						hw_if->disable_rx_interrupt(
-							qInx, pdata);
-					}
-				} else if (pdata->dt_cfg.chan_mode[qInx] ==
-						CHAN_MODE_INTR) {
-						handle_txrx_completions(
-							pdata, qInx);
-				} else
-					printk(KERN_ALERT "driver bug! rx interrupt when chan mode is polling\n");
-
-			} else {
-				*pnapi_sched = 1;
-				if (likely(napi_schedule_prep(&rx_queue->napi))) {
-					DWC_ETH_QOS_disable_all_ch_rx_interrpt(pdata);
-					__napi_schedule(&rx_queue->napi);
-				} else {
-					printk(KERN_ALERT "driver bug! Rx interrupt while in poll\n");
-					DWC_ETH_QOS_disable_all_ch_rx_interrpt(pdata);
-				}
-			}
-			pdata->xstats.rx_normal_irq_n[qInx]++;
-		}
+		pdata->xstats.rx_normal_irq_n[qInx]++;
 	}
+
 	if (tegra_platform_is_unit_fpga())
 		ch_stat_reg &= ch_crtl_reg;
 
@@ -678,7 +642,35 @@ void handle_ti_ri_chan_intrs(struct DWC_ETH_QOS_prv_data *pdata,
 		DMA_SR_RgWr(qInx, ((0x1) << 0) | ((0x1) << 15));
 		VIRT_INTR_CH_STAT_RgWr(qInx, VIRT_INTR_CH_CRTL_TX_Wr_Mask);
 		pdata->xstats.tx_normal_irq_n[qInx]++;
-		DWC_ETH_QOS_tx_interrupt(dev, pdata, qInx);
+	}
+
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
+		switch (pdata->dt_cfg.chan_mode[qInx]) {
+		case CHAN_MODE_NAPI:
+			if (likely(napi_schedule_prep(&rx_queue->napi))) {
+				hw_if->disable_chan_interrupts(qInx, pdata);
+				__napi_schedule(&rx_queue->napi);
+			} else {
+				printk(KERN_ALERT
+				"driver bug! Rx interrupt while in poll\n");
+				hw_if->disable_chan_interrupts(qInx, pdata);
+			}
+			break;
+		case CHAN_MODE_INTR:
+			handle_txrx_completions(pdata, qInx);
+			break;
+		default:
+			printk(KERN_ALERT "driver bug! rx interrupt when chan mode is polling\n");
+		}
+	} else {
+		*pnapi_sched = 1;
+		if (likely(napi_schedule_prep(&rx_queue->napi))) {
+			DWC_ETH_QOS_disable_all_ch_rx_interrpt(pdata);
+			__napi_schedule(&rx_queue->napi);
+		} else {
+			printk(KERN_ALERT "driver bug! Rx interrupt while in poll\n");
+			DWC_ETH_QOS_disable_all_ch_rx_interrpt(pdata);
+		}
 	}
 
 	DBGPR("<--%s()\n", __func__);
@@ -882,7 +874,10 @@ irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_ChX(int irq, void *device_id)
 
 	i = smp_processor_id();
 
-	qInx = irq - pdata->rx_irqs[0];
+	if (irq < pdata->rx_irqs[0])
+		qInx = irq - pdata->tx_irqs[0];
+	else
+		qInx = irq - pdata->rx_irqs[0];
 
 	DBGPR("-->%s(): cpu=%d, chan=%d\n", __func__, i, qInx);
 
@@ -1701,10 +1696,24 @@ int request_multi_irqs(struct DWC_ETH_QOS_prv_data *pdata)
 			ret = -EBUSY;
 			goto err_chan_irq;
 		}
+		ret = request_irq(pdata->tx_irqs[i],
+				  DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_ChX,
+				  0, DEV_NAME, pdata);
+		if (ret != 0) {
+			printk(KERN_ALERT "Unable to register  %d\n",
+			       pdata->tx_irqs[i]);
+			ret = -EBUSY;
+			goto err_chan_irq;
+		}
 		pchinfo = &pdata->chinfo[i];
+
 		irq_set_affinity_hint(pdata->rx_irqs[i],
-			cpumask_of(pchinfo->cpu));
+					cpumask_of(pchinfo->cpu));
 		pdata->rx_irq_alloc_mask |= (1 << i);
+
+		irq_set_affinity_hint(pdata->tx_irqs[i],
+				      cpumask_of(pchinfo->cpu));
+		pdata->tx_irq_alloc_mask |= (1 << i);
 	}
 	DBGPR("<--%s()\n", __func__);
 
@@ -3863,7 +3872,7 @@ static void do_txrx_post_processing(struct DWC_ETH_QOS_prv_data *pdata,
 
 			/* Enable RX interrupt */
 			if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
-				hw_if->enable_rx_interrupt(qInx, pdata);
+				hw_if->enable_chan_interrupts(qInx, pdata);
 			else
 				DWC_ETH_QOS_enable_all_ch_rx_interrpt(pdata);
 		} else {
@@ -3874,7 +3883,7 @@ static void do_txrx_post_processing(struct DWC_ETH_QOS_prv_data *pdata,
 
 			/* Enable RX interrupt */
 			if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
-				hw_if->enable_rx_interrupt(qInx, pdata);
+				hw_if->enable_chan_interrupts(qInx, pdata);
 			else
 				DWC_ETH_QOS_enable_all_ch_rx_interrpt(pdata);
 

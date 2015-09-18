@@ -2072,6 +2072,46 @@ static INT enable_rx_interrupt(
 }
 
 
+/*!
+* \brief This sequence is used to disable given DMA channel tx/rx interrupts
+* \param[in] qInx
+* \return Success or Failure
+* \retval  0 Success
+* \retval -1 Failure
+*/
+
+static INT disable_chan_interrupts(
+	UINT qInx, struct DWC_ETH_QOS_prv_data *pdata)
+{
+	u32 reg;
+
+	VIRT_INTR_CH_CRTL_RgRd(qInx, reg);
+	reg &= ~pdata->chinfo[qInx].int_mask;
+	VIRT_INTR_CH_CRTL_RgWr(qInx, reg);
+
+	return Y_SUCCESS;
+}
+
+/*!
+* \brief This sequence is used to enable given DMA channel tx/rx interrupts
+* \param[in] qInx
+* \return Success or Failure
+* \retval  0 Success
+* \retval -1 Failure
+*/
+
+static INT enable_chan_interrupts(
+	UINT qInx, struct DWC_ETH_QOS_prv_data *pdata)
+{
+	u32 reg;
+
+	VIRT_INTR_CH_CRTL_RgRd(qInx, reg);
+	reg |= pdata->chinfo[qInx].int_mask;
+	VIRT_INTR_CH_CRTL_RgWr(qInx, reg);
+
+	return Y_SUCCESS;
+}
+
 static VOID configure_sa_via_reg(u32 cmd)
 {
 	MAC_MCR_SARC_UdfWr(cmd);
@@ -4831,6 +4871,11 @@ static INT DWC_ETH_QOS_yinit(struct DWC_ETH_QOS_prv_data *pdata)
 			(pdata->dt_cfg.chan_mode[j] == CHAN_MODE_INTR)) {
 			VIRT_INTR_CH_STAT_RgWr(j, i);
 			VIRT_INTR_CH_CRTL_RgWr(j, VIRT_INTR_CH_CRTL_RX_Wr_Mask);
+			if (pdata->ptp_cfg.ptp_dma_ch_id == j) {
+				VIRT_INTR_CH_CRTL_RgWr(j,
+				(VIRT_INTR_CH_CRTL_RX_Wr_Mask |
+				VIRT_INTR_CH_CRTL_TX_Wr_Mask));
+			}
 		} else {
 			/* ensure wrapper ints are disabled */
 			VIRT_INTR_CH_CRTL_RgWr(j, 0);
@@ -5079,6 +5124,8 @@ void DWC_ETH_QOS_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 
 	hw_if->disable_rx_interrupt = disable_rx_interrupt;
 	hw_if->enable_rx_interrupt = enable_rx_interrupt;
+	hw_if->disable_chan_interrupts = disable_chan_interrupts;
+	hw_if->enable_chan_interrupts = enable_chan_interrupts;
 
 	/* for handling MMC */
 	hw_if->disable_mmc_interrupts = disable_mmc_interrupts;

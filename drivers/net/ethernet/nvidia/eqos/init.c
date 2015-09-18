@@ -802,6 +802,11 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		pchinfo = &pdata->chinfo[i];
 		pchinfo->chan_num = i;
 		pchinfo->poll_interval = 1000;
+		pchinfo->int_mask = VIRT_INTR_CH_CRTL_RX_Wr_Mask;
+
+		/* enable tx interrupts for ptp chan */
+		if (i == pdata->ptp_cfg.ptp_dma_ch_id)
+			pchinfo->int_mask |= VIRT_INTR_CH_CRTL_TX_Wr_Mask;
 	}
 
 	if (pdata->dt_cfg.intr_mode == MODE_COMMON_IRQ) {

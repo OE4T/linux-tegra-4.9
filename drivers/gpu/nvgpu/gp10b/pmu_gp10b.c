@@ -224,7 +224,7 @@ static int gp10b_pmu_setup_elpg(struct gk20a *g)
 	return ret;
 }
 
-void gp10b_write_dmatrfbase(struct gk20a *g, u32 addr)
+static void gp10b_write_dmatrfbase(struct gk20a *g, u32 addr)
 {
 	gk20a_writel(g, pwr_falcon_dmatrfbase_r(),
 				addr);

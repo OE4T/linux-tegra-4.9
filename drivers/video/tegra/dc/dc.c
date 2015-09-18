@@ -112,7 +112,7 @@ static struct of_device_id tegra_disb_pd[] = {
 };
 #endif
 
-static struct fb_videomode tegra_dc_vga_mode = {
+struct fb_videomode tegra_dc_vga_mode = {
 	.refresh = 60,
 	.xres = 640,
 	.yres = 480,

@@ -62,22 +62,6 @@ static struct of_device_id tegra_sor_pd[] = {
 	{},
 };
 
-/* Possibly should be moved to hdmi_common.h */
-static struct fb_videomode tegra_dc_vga_mode = {
-	.refresh = 60,
-	.xres = 640,
-	.yres = 480,
-	.pixclock = KHZ2PICOS(25200),
-	.hsync_len = 96,	/* h_sync_width */
-	.vsync_len = 2,		/* v_sync_width */
-	.left_margin = 48,	/* h_back_porch */
-	.upper_margin = 33,	/* v_back_porch */
-	.right_margin = 16,	/* h_front_porch */
-	.lower_margin = 10,	/* v_front_porch */
-	.vmode = 0,
-	.sync = 0,
-};
-
 static ssize_t hdmi_ddc_power_toggle(struct kobject *kobj,
 	struct kobj_attribute *attr, const char *buf, size_t count);
 

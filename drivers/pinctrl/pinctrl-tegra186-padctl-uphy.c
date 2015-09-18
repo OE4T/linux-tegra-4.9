@@ -628,6 +628,8 @@ struct tegra_padctl_uphy {
 	struct clk *pllp; /* pllp, uphy management clock */
 	struct clk *plle; /* plle in software control state */
 	struct clk *plle_pwrseq; /* plle in hardware power sequencer control */
+	struct clk *pllrefe_pex;
+	struct clk *plle_passthrough;
 	struct clk *pllrefe; /* alternate pll1 parent */
 	struct clk *utmipll; /* utmi pads */
 	struct clk *usb2_trk_clk; /* utmi tracking circuit clock */
@@ -1384,6 +1386,24 @@ static int uphy_pll_source_clk_enable(struct tegra_padctl_uphy *uphy,
 				return rc;
 			}
 			uphy->plle_state = PLL_POWER_UP_SW_CTL;
+		}
+
+		if ((pll == 1) && (func == TEGRA186_FUNC_SATA)) {
+			dev_dbg(dev, "enable PLLE passthrough\n");
+			rc = clk_prepare_enable(uphy->pllrefe_pex);
+			if (rc) {
+				dev_err(dev, "failed to enable pllrefe_pex %d\n",
+					rc);
+				return rc;
+			}
+
+			rc = clk_set_parent(uphy->pllrefe_pex,
+					    uphy->plle_passthrough);
+			if (rc) {
+				dev_err(dev, "failed to set plle_passthrough as parent %d\n",
+					rc);
+				return rc;
+			}
 		}
 		return 0; /* in this case, needs plle only */
 	}
@@ -4719,6 +4739,18 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 	if (IS_ERR(uphy->rx_byp_clk)) {
 		dev_err(dev, "failed to get rx_byp clock\n");
 		return PTR_ERR(uphy->rx_byp_clk);
+	}
+
+	uphy->pllrefe_pex = devm_clk_get(dev, "pllrefe_pex");
+	if (IS_ERR(uphy->pllrefe_pex)) {
+		dev_err(dev, "failed to get pllrefe_pex clock\n");
+		return PTR_ERR(uphy->pllrefe_pex);
+	}
+
+	uphy->plle_passthrough = devm_clk_get(dev, "plle_passthrough");
+	if (IS_ERR(uphy->plle_passthrough)) {
+		dev_err(dev, "failed to get plle_passthrough clock\n");
+		return PTR_ERR(uphy->plle_passthrough);
 	}
 
 	err = tegra186_padctl_uphy_regulators_init(uphy);

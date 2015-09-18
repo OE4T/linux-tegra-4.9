@@ -2510,6 +2510,10 @@ static inline u32 gr_gpc0_swdx_rm_spill_buffer_size_256b_default_v(void)
 {
 	return 0x00000250;
 }
+static inline u32 gr_gpc0_swdx_rm_spill_buffer_size_256b_byte_granularity_v(void)
+{
+	return 0x00000100;
+}
 static inline u32 gr_gpc0_swdx_rm_spill_buffer_addr_r(void)
 {
 	return 0x00500ee0;

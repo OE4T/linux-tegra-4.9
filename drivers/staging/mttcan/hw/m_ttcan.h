@@ -111,6 +111,23 @@ enum ttcan_rx_type {
 	TX_EVT = 8
 };
 
+
+enum ttcan_mram_item {
+	MRAM_SIDF = 0,
+	MRAM_XIDF,
+	MRAM_RXF0,
+	MRAM_RXF1,
+	MRAM_RXB,
+	MRAM_TXE,
+	MRAM_TXB,
+	MRAM_TMC,
+	MRAM_ELEMS
+};
+
+struct ttcan_mram_elem {
+	u16 off;
+	u16 num;
+};
 /* bit 0 - 28 : CAN identifier
  * bit 29 : type of frame (0 = data, 1 = error)
  * bit 30 : RTR
@@ -131,19 +148,6 @@ struct ttcanfd_frame {
 	u8 resv0;
 	u8 resv1;
 	u8 data[MAX_RX_ENTRIES] __aligned(8);
-};
-
-struct ttcan_msg_ram {
-	u32 base;		/* physical address of the message ram base */
-	void *virt_base;
-	u32 sidfc_flssa;
-	u32 xidfc_flesa;
-	u32 rxf0c_f0sa;
-	u32 rxf1c_f1sa;
-	u32 rxbc_rbsa;
-	u32 txefc_efsa;
-	u32 txbc_tbsa;
-	u32 tmc_tmsa;
 };
 
 struct ttcan_element_size {
@@ -222,7 +226,8 @@ struct ttcan_controller {
 	spinlock_t lock;
 	void __iomem *base;	/* controller regs space should be remapped. */
 	void __iomem *xbase;    /* extra registers are mapped */
-	void __iomem *cbase;    /* CAR registers are mapped */
+	void __iomem *mram_vbase;
+	size_t mram_base;
 	u16 list_status;	/* bit 0: 1=Full; */
 	u16 resv0;
 	u32 id;
@@ -233,12 +238,12 @@ struct ttcan_controller {
 	u32 tt_mem_elements;
 	u64 ts_counter;
 	u8 tx_buf_dlc[MAX_TX_BUFFER_ELEMS];
-	struct ttcan_msg_ram mram_sa;
 	struct ttcan_element_size e_size;
 	struct ttcan_bittiming_fd bt_config;
 	struct ttcan_txbuff_config tx_config;
 	struct ttcan_rxbuff_config rx_config;
 	struct ttcan_filter_config fltr_config;
+	struct ttcan_mram_elem mram_cfg[MRAM_ELEMS];
 	struct list_head rx_q0;
 	struct list_head rx_q1;
 	struct list_head rx_b;
@@ -303,12 +308,6 @@ static inline void ttcan_xwrite32(struct ttcan_controller *ttcan,
 	writel(val, ttcan->xbase + reg);
 }
 
-static inline void ttcan_cwrite32(struct ttcan_controller *ttcan,
-	int reg, u32 val)
-{
-	writel(val, ttcan->cbase + reg);
-}
-
 static inline void ttcan_write32(struct ttcan_controller *ttcan,
 	int reg, u32 val)
 {
@@ -328,7 +327,6 @@ void ttcan_print_version(struct ttcan_controller *ttcan);
 int ttcan_write32_check(struct ttcan_controller *ttcan,
 			int offset, u32 val, u32 mask);
 void ttcan_set_ok(struct ttcan_controller *ttcan);
-void ttcan_reset_controller(struct ttcan_controller *ttcan);
 int ttcan_set_init(struct ttcan_controller *ttcan);
 int ttcan_reset_init(struct ttcan_controller *ttcan);
 int ttcan_power_down(struct ttcan_controller *ttcan, int down);
@@ -404,7 +402,7 @@ void ttcan_set_time_stamp_conf(struct ttcan_controller *ttcan,
 void ttcan_set_txevt_fifo_conf(struct ttcan_controller *ttcan,
 				u8 water_mark, u8 size);
 /* Mesg RAM partition */
-int ttcan_mesg_ram_config(struct ttcan_controller *ttcan);
+int ttcan_mesg_ram_config(struct ttcan_controller *ttcan, u32 *arr);
 int ttcan_controller_init(struct ttcan_controller *ttcan, u32 irq_flag,
 	u32 tt_irq_flag);
 

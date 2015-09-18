@@ -22,23 +22,6 @@
 #include "hw/m_ttcan.h"
 #include <linux/platform_device.h>
 
-#ifndef CONFIG_OF
-#define NV_ADDRESS_MAP_CAN1_0_INTR_ID (40 + 32)
-#define NV_ADDRESS_MAP_CAN2_0_INTR_ID (42 + 32)
-#define NV_ADDRESS_MAP_CAN1_BASE 0x0c310000
-#define NV_ADDRESS_MAP_CAN2_BASE 0x0c320000
-#define NV_ADDRESS_MAP_CAR_BASE 0x05000000
-#define CAN_GLUE_ADDR 0x1000
-#define CAN_MES_RAM_BASE_ADDR 0x2000
-
-#define CAR_CAN1_SET_OFF 0xb10004
-#define CAR_CAN1_CLR_OFF 0xb10008
-#define CAR_CAN2_SET_OFF 0xb20004
-#define CAR_CAN2_CLR_OFF 0xb20008
-
-#endif
-
-#define CAN_HOST_CLK_RATE 20000000
 #define MTTCAN_POLL_TIME 50
 
 #define TX_CONF_BUF 0x1
@@ -54,41 +37,15 @@ static int tx_conf = 0x3;
 module_param(tx_conf, int, 0644);
 MODULE_PARM_DESC(tx_conf, "Tx Buffer config");
 
-static bool tt_en;
-module_param(tt_en, bool, 0644);
-MODULE_PARM_DESC(tt_en, "TT CAN enabled");
-
-static bool mttcan_poll;
-module_param(mttcan_poll, bool, 0444);
-MODULE_PARM_DESC(mttcan_poll, "Poll instead of interrupt");
-
-static bool car_present = 1;
-module_param(car_present, bool, 0444);
-MODULE_PARM_DESC(car_present, "Clock and Reset present in bitstream");
-
-static unsigned int tt_stop;
-module_param(tt_stop, uint, 0644);
-MODULE_PARM_DESC(tt_stop, "Stop after tt_stop TT interrupts");
-
-static unsigned int bs_clock = 10000000;
-module_param(bs_clock, uint, 0644);
-MODULE_PARM_DESC(bs_clock, "Bitstream clock");
-
 static __init int mttcan_hw_init(const struct mttcan_priv *priv)
 {
 	int err = 0;
 	int tx_buf = 0, tx_q = 0, tx_mode = 0;
 	u32 ie = 0, ttie = 0, gfc_reg = 0;
 	struct ttcan_controller *ttcan = priv->ttcan;
-
-	if (car_present)
-		ttcan_reset_controller(ttcan);
-
 	ttcan_set_ok(ttcan);
 
-	ttcan_power_down(ttcan, 0);
-
-	if (!mttcan_poll) {
+	if (!priv->poll) {
 		ie = 0x3BBFF7FF;
 		ttie = 0x50C03;
 	}
@@ -96,7 +53,7 @@ static __init int mttcan_hw_init(const struct mttcan_priv *priv)
 	if (err)
 		return err;
 
-	err = ttcan_mesg_ram_config(ttcan);
+	err = ttcan_mesg_ram_config(ttcan, (u32 *)priv->mram_param);
 	if (err)
 		return err;
 
@@ -144,7 +101,7 @@ static __init int mttcan_hw_init(const struct mttcan_priv *priv)
 	/* All Tx buffers as Tx Fifo (mode 0) Tx Queue (mode 1) */
 	ttcan_set_tx_buffer_addr(ttcan, tx_buf, tx_q, BYTE64, tx_mode);
 
-	if (tt_en) {
+	if (priv->tt_param[0]) {
 		dev_info(priv->device, "TTCAN Enabled\n");
 		ttcan_disable_auto_retransmission(ttcan);
 		ttcan_set_trigger_mem_conf(ttcan, CONF_TRIG_ELEMS);
@@ -184,67 +141,6 @@ static const struct can_bittiming_const mttcan_data_bittiming_const = {
 	.brp_inc = 1,
 };
 
-#if 0
-static const struct ttcan_bittiming data_bt_config = {
-	/* 1Mbit @ 20MHz */
-	.bitrate = 0,
-	.sampling_point = 0,
-	.tq = 0,
-	.brp = 1,
-	.prop_seg = 1,
-	.phase_seg1 = 12,
-	.phase_seg2 = 6,
-	.sjw = 6,
-	.tdc = 0,
-	.tdc_offset = 14,
-	.tdc_filter_window = 0,
-};
-
-static const struct ttcan_bittiming nominal_bt_config = {
-	/* 0.5Mbit @ 10MHz */
-	.bitrate = 0,
-	.sampling_point = 0,
-	.tq = 0,
-	.brp = 1,
-	.prop_seg = 1,
-	.phase_seg1 = 13,
-	.phase_seg2 = 5,
-	.sjw = 5,
-	.tdc = 1,
-	.tdc_offset = 14,
-	.tdc_filter_window = 0,
-};
-
-static const struct ttcan_bittiming data_bt_config = {
-	/* 2Mbit @ 40MHz */
-	.bitrate = 0,
-	.sampling_point = 0,
-	.tq = 0,
-	.brp = 1,
-	.prop_seg = 1,
-	.phase_seg1 = 12,
-	.phase_seg2 = 6,
-	.sjw = 6,
-	.tdc = 0,
-	.tdc_offset = 14,
-	.tdc_filter_window = 0,
-};
-
-static const struct ttcan_bittiming nominal_bt_config = {
-	/* 0.5Mbit @ 40MHz */
-	.bitrate = 0,
-	.sampling_point = 0,
-	.tq = 0,
-	.brp = 1,
-	.prop_seg = 47,
-	.phase_seg1 = 16,
-	.phase_seg2 = 16,
-	.sjw = 16,
-	.tdc = 1,
-	.tdc_offset = 14,
-	.tdc_filter_window = 0,
-};
-#endif
 static struct platform_device_id mttcan_id_table[] = {
 	[0] = {
 	       .name = "mttcan",
@@ -907,6 +803,7 @@ static int mttcan_get_berr_counter(const struct net_device *dev,
 	ecr = ttcan_read_ecr(priv->ttcan);
 	bec->rxerr = (ecr & MTT_ECR_REC_MASK) >> MTT_ECR_REC_SHIFT;
 	bec->txerr = (ecr & MTT_ECR_TEC_MASK) >> MTT_ECR_TEC_SHIFT;
+
 	mttcan_pm_runtime_put_sync(priv);
 
 	return 0;
@@ -1013,10 +910,10 @@ static void mttcan_start(struct net_device *dev)
 	}
 
 	/* start Tx/Rx and enable protected mode */
-	if (!tt_en)
+	if (!priv->tt_param[0])
 		ttcan_reset_init(priv->ttcan);
 
-	if (mttcan_poll)
+	if (priv->poll)
 		schedule_delayed_work(&priv->can_work,
 			msecs_to_jiffies(MTTCAN_POLL_TIME));
 }
@@ -1091,8 +988,8 @@ static irqreturn_t mttcan_isr(int irq, void *dev_id)
 		return IRQ_NONE;
 
 	/* If tt_stop > 0, then stop when TT interrupt count > tt_stop */
-	if (tt_stop && priv->tt_irqstatus)
-		if (priv->tt_intrs++ > tt_stop)
+	if (priv->tt_param[1] && priv->tt_irqstatus)
+		if (priv->tt_intrs++ > priv->tt_param[1])
 			ttcan_set_config_change_enable(priv->ttcan);
 
 	/* disable and clear all interrupts */
@@ -1129,6 +1026,22 @@ static int mttcan_open(struct net_device *dev)
 
 	mttcan_pm_runtime_get_sync(priv);
 
+	if (gpio_is_valid(priv->gpio_can_stb)) {
+		err = gpio_request(priv->gpio_can_stb, "gpio_can_stb");
+		if (err) {
+			netdev_err(dev, "stb gpio request failed\n");
+			goto exit;
+		}
+		gpio_direction_output(priv->gpio_can_stb, 1);
+	}
+	if (gpio_is_valid(priv->gpio_can_en)) {
+		err = gpio_request(priv->gpio_can_en, "gpio_can_en");
+		if (err) {
+			netdev_err(dev, "stb gpio request failed\n");
+			goto exit_free_gpio;
+		}
+		gpio_direction_output(priv->gpio_can_en, 1);
+	}
 	err = open_candev(dev);
 	if (err) {
 		netdev_err(dev, "failed to open can device\n");
@@ -1153,6 +1066,12 @@ static int mttcan_open(struct net_device *dev)
 fail:
 	close_candev(dev);
 exit_open_fail:
+	if (gpio_is_valid(priv->gpio_can_en))
+		gpio_free(priv->gpio_can_en);
+exit_free_gpio:
+	if (gpio_is_valid(priv->gpio_can_stb))
+		gpio_free(priv->gpio_can_stb);
+exit:
 	mttcan_pm_runtime_put_sync(priv);
 	return err;
 }
@@ -1160,12 +1079,18 @@ exit_open_fail:
 static int mttcan_close(struct net_device *dev)
 {
 	struct mttcan_priv *priv = netdev_priv(dev);
-
 	netif_stop_queue(dev);
 	napi_disable(&priv->napi);
 	mttcan_stop(dev);
 	close_candev(dev);
-
+	if (gpio_is_valid(priv->gpio_can_stb)) {
+		gpio_direction_output(priv->gpio_can_stb, 0);
+		gpio_free(priv->gpio_can_stb);
+	}
+	if (gpio_is_valid(priv->gpio_can_en)) {
+		gpio_direction_output(priv->gpio_can_en, 0);
+		gpio_free(priv->gpio_can_en);
+	}
 	mttcan_pm_runtime_put_sync(priv);
 
 	can_led_event(dev, CAN_LED_EVENT_STOP);
@@ -1187,7 +1112,8 @@ static netdev_tx_t mttcan_start_xmit(struct sk_buff *skb,
 
 	if (tx_conf & TX_CONF_BUF)
 		msg_no = ttcan_tx_msg_buffer_write(priv->ttcan,
-				(struct ttcanfd_frame *)frame, tt_en);
+				(struct ttcanfd_frame *)frame,
+				priv->tt_param[0]);
 
 	if ((tx_conf & TX_CONF_Q) && (msg_no < 0))
 		msg_no = ttcan_tx_fifo_queue_msg(priv->ttcan,
@@ -1239,11 +1165,23 @@ int register_mttcan_dev(struct net_device *dev)
 
 	mttcan_pm_runtime_enable(priv);
 
+	err = clk_prepare_enable(priv->hclk);
+	if (err)
+		return err;
+	err = clk_prepare_enable(priv->cclk);
+	if (err) {
+		clk_disable_unprepare(priv->hclk);
+		return err;
+	}
+
 	dev->netdev_ops = &mttcan_netdev_ops;
 
 	err = register_candev(dev);
-	if (err)
+	if (err) {
 		mttcan_pm_runtime_disable(priv);
+		clk_disable_unprepare(priv->hclk);
+		clk_disable_unprepare(priv->cclk);
+	}
 	else
 		devm_can_led_init(dev);
 
@@ -1255,6 +1193,8 @@ void unregister_mttcan_dev(struct net_device *dev)
 	struct mttcan_priv *priv = netdev_priv(dev);
 	unregister_candev(dev);
 	mttcan_pm_runtime_disable(priv);
+	clk_disable_unprepare(priv->hclk);
+	clk_disable_unprepare(priv->cclk);
 }
 
 void free_mttcan_dev(struct net_device *dev)
@@ -1262,6 +1202,15 @@ void free_mttcan_dev(struct net_device *dev)
 	struct mttcan_priv *priv = netdev_priv(dev);
 	netif_napi_del(&priv->napi);
 	free_candev(dev);
+}
+
+static int mttcan_power_up(struct net_device *dev)
+{
+	struct mttcan_priv *priv = netdev_priv(dev);
+
+	mttcan_pm_runtime_get_sync(priv);
+
+	return ttcan_power_down(priv->ttcan, 0);
 }
 
 static int mttcan_power_down(struct net_device *dev)
@@ -1282,42 +1231,44 @@ static int mttcan_power_down(struct net_device *dev)
 static int mttcan_probe(struct platform_device *pdev)
 {
 	int ret = 0;
+	int irq;
 	void __iomem *regs = NULL, *xregs = NULL;
-	void __iomem *car_addr = NULL, *mram_addr = NULL;
+	void __iomem *mram_addr = NULL;
 	struct net_device *dev;
 	struct mttcan_priv *priv;
-	const struct platform_device_id *id;
 	struct pinctrl *pinctrl;
+	struct resource *ext_res;
+	struct clk *hclk, *cclk;
+	struct reset_control *rstc;
 	struct resource *mesg_ram, *ctrl_res;
-	struct resource *car_res, *ext_res;
-	int irq;
-	struct clk *clk;
-#ifdef CONFIG_OF
 	const struct of_device_id *match;
+	struct device_node *np;
 
-	if (pdev->dev.of_node) {
-		match = of_match_device(mttcan_of_table, &pdev->dev);
-		if (!match) {
-			dev_err(&pdev->dev, "Failed to find matching dt id\n");
-			dev_err(&pdev->dev, "probe failed\n");
-			return -EINVAL;
-		}
-		id = match->data;
-	} else
-#endif
-		id = platform_get_device_id(pdev);
 
+	match = of_match_device(mttcan_of_table, &pdev->dev);
+	if (!match) {
+		dev_err(&pdev->dev, "Failed to find matching dt id\n");
+		dev_err(&pdev->dev, "probe failed\n");
+		return -EINVAL;
+	}
+
+	np = pdev->dev.of_node;
+	if (!np) {
+		dev_err(&pdev->dev, "No valid device node, probe failed\n");
+		return -EINVAL;
+	}
 
 	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
 	if (IS_ERR(pinctrl))
 		dev_warn(&pdev->dev, "failed to configure pins from driver\n");
 
 	/* get the appropriate clk */
-	clk = clk_get(&pdev->dev, NULL);
-	if (IS_ERR(clk)) {
+	hclk = devm_clk_get(&pdev->dev, "can_host");
+	cclk = devm_clk_get(&pdev->dev, "can");
+	if (IS_ERR(hclk) || IS_ERR(cclk)) {
 		dev_err(&pdev->dev, "no clock defined\n");
-		/* ret = -ENODEV;
-		goto exit; */
+		ret = -ENODEV;
+		goto exit;
 	}
 
 	/* get the platform data */
@@ -1325,14 +1276,14 @@ static int mttcan_probe(struct platform_device *pdev)
 	if (irq <= 0) {
 		ret = -ENODEV;
 		dev_err(&pdev->dev, "IRQ not defined\n");
-		goto exit_free_clk;
+		goto exit;
 	}
 
 	dev = alloc_mttcan_dev();
 	if (!dev) {
 		ret = -ENOMEM;
 		dev_err(&pdev->dev, "CAN device allocation failed\n");
-		goto exit_free_clk;
+		goto exit;
 	}
 
 	priv = netdev_priv(dev);
@@ -1347,26 +1298,14 @@ static int mttcan_probe(struct platform_device *pdev)
 	if (!ctrl_res || !ext_res || !mesg_ram) {
 		ret = -ENODEV;
 		dev_err(&pdev->dev, "Resource allocation failed\n");
-		goto exit_free_clk;
+		goto exit_free_can;
 	}
-
-	if (car_present) {
-		car_res  = platform_get_resource(pdev, IORESOURCE_MEM, 3);
-		if (!car_res) {
-			ret = -ENODEV;
-			dev_err(&pdev->dev, "Resource allocation failed\n");
-			goto exit_free_clk;
-		}
-		pr_debug("%s: car %llx\n", __func__, car_res->start);
-
-		car_addr = devm_ioremap_resource(&pdev->dev, car_res);
-		if (!car_addr) {
-			dev_err(&pdev->dev, "failed to map can port\n");
-			ret = -ENOMEM;
-			goto exit_free_clk;
-		}
-		pr_debug("remapped : car_addr %p\n", car_addr);
+	rstc = devm_reset_control_get(&pdev->dev, "can");
+	if (IS_ERR(rstc)) {
+		dev_err(&pdev->dev, "Missing controller reset\n");
+		goto exit_free_can;
 	}
+	reset_control_reset(rstc);
 
 	regs = devm_ioremap_resource(&pdev->dev, ctrl_res);
 	xregs = devm_ioremap_resource(&pdev->dev, ext_res);
@@ -1381,19 +1320,23 @@ static int mttcan_probe(struct platform_device *pdev)
 	if (!mram_addr || !xregs || !regs) {
 		dev_err(&pdev->dev, "failed to map can port\n");
 		ret = -ENOMEM;
-		goto exit_free_clk;
+		goto exit;
 	}
 
 	/* allocate the mttcan device */
-	if (pdev->dev.of_node)
-		priv->instance = of_alias_get_id(pdev->dev.of_node, "mttcan");
-	else
-		priv->instance = pdev->id;
 
 	dev->irq = irq;
 	priv->device = &pdev->dev;
-	priv->can.clock.freq = bs_clock;/* clk_get_rate(clk) */;
-	priv->clk = clk;
+	priv->gpio_can_en = of_get_named_gpio(np, "gpio_can_en", 0);
+	priv->gpio_can_stb = of_get_named_gpio(np, "gpio_can_stb", 0);
+	priv->instance = of_alias_get_id(np, "mttcan");
+	priv->poll = of_property_read_bool(np, "use-polling");
+	priv->can.clock.freq = clk_get_rate(cclk);
+	priv->cclk = cclk;
+	priv->hclk = hclk;
+	of_property_read_u32_array(np, "tt-param", priv->tt_param, 2);
+	of_property_read_u32_array(np, "mram-params",
+			priv->mram_param, MRAM_ELEMS);
 	priv->ttcan =
 	    devm_kzalloc(priv->device, sizeof(struct ttcan_controller),
 			 GFP_KERNEL);
@@ -1405,11 +1348,9 @@ static int mttcan_probe(struct platform_device *pdev)
 	memset(priv->ttcan, 0, sizeof(struct ttcan_controller));
 	priv->ttcan->base = regs;
 	priv->ttcan->xbase = xregs;
-	if (car_present)
-		priv->ttcan->cbase = car_addr;
+	priv->ttcan->mram_base = mesg_ram->start;
 	priv->ttcan->id = priv->instance;
-	priv->ttcan->mram_sa.virt_base = mram_addr;
-	priv->ttcan->mram_sa.base = mesg_ram->start;
+	priv->ttcan->mram_vbase = mram_addr;
 	INIT_LIST_HEAD(&priv->ttcan->rx_q0);
 	INIT_LIST_HEAD(&priv->ttcan->rx_q1);
 	INIT_LIST_HEAD(&priv->ttcan->rx_b);
@@ -1418,16 +1359,21 @@ static int mttcan_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, dev);
 	SET_NETDEV_DEV(dev, &pdev->dev);
 
-	if (mttcan_poll) {
+	if (priv->poll) {
 		dev_info(&pdev->dev, "Polling Mode enabled\n");
 		INIT_DELAYED_WORK(&priv->can_work, mttcan_work);
 	}
+
 	ret = register_mttcan_dev(dev);
 	if (ret) {
 		dev_err(&pdev->dev, "registering %s failed (err=%d)\n",
 			KBUILD_MODNAME, ret);
 		goto exit_free_device;
 	}
+
+	ret = mttcan_power_up(dev);
+	if (ret)
+		goto exit_free_device;
 
 	ret = mttcan_hw_init(priv);
 	if (ret)
@@ -1443,9 +1389,9 @@ static int mttcan_probe(struct platform_device *pdev)
 
 exit_free_device:
 	platform_set_drvdata(pdev, NULL);
+exit_free_can:
 	free_mttcan_dev(dev);
-exit_free_clk:
-	clk_put(clk);
+exit:
 	dev_err(&pdev->dev, "probe failed\n");
 	return ret;
 }
@@ -1454,7 +1400,7 @@ static int mttcan_remove(struct platform_device *pdev)
 {
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct mttcan_priv *priv = netdev_priv(dev);
-	if (mttcan_poll)
+	if (priv->poll)
 		cancel_delayed_work_sync(&priv->can_work);
 
 	dev_info(&dev->dev, "%s\n", __func__);
@@ -1470,20 +1416,10 @@ static int mttcan_remove(struct platform_device *pdev)
 
 	free_mttcan_dev(dev);
 
-	clk_put(priv->clk);
 	return 0;
 }
 
 #ifdef CONFIG_PM
-static int mttcan_power_up(struct net_device *dev)
-{
-	struct mttcan_priv *priv = netdev_priv(dev);
-
-	mttcan_pm_runtime_get_sync(priv);
-
-	return ttcan_power_down(priv->ttcan, 0);
-}
-
 static int mttcan_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	int ret;
@@ -1500,7 +1436,7 @@ static int mttcan_suspend(struct platform_device *pdev, pm_message_t state)
 		return ret;
 	}
 
-	mttcan_stop(dev);
+	mttcan_stop(ndev);
 
 	priv->can.state = CAN_STATE_SLEEPING;
 	return 0;
@@ -1512,7 +1448,7 @@ static int mttcan_resume(struct platform_device *pdev)
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct mttcan_priv *priv = netdev_priv(ndev);
 
-	if (!(dev->flags & IFF_UP))
+	if (!(ndev->flags & IFF_UP)) {
 		netdev_err(ndev, "Still in power down mode\n");
 		return -EBUSY;
 	}
@@ -1520,7 +1456,7 @@ static int mttcan_resume(struct platform_device *pdev)
 	ret = mttcan_power_up(ndev);
 	if (ret)
 		return ret;
-	mttcan_start(dev);
+	mttcan_start(ndev);
 
 	priv->can.state = CAN_STATE_ERROR_ACTIVE;
 	if (netif_running(ndev)) {
@@ -1535,9 +1471,7 @@ static struct platform_driver mttcan_plat_driver = {
 	.driver = {
 		   .name = KBUILD_MODNAME,
 		   .owner = THIS_MODULE,
-#ifdef CONFIG_OF
 		   .of_match_table = of_match_ptr(mttcan_of_table),
-#endif
 		   },
 	.probe = mttcan_probe,
 	.remove = mttcan_remove,
@@ -1545,130 +1479,10 @@ static struct platform_driver mttcan_plat_driver = {
 	.suspend = mttcan_suspend,
 	.resume = mttcan_resume,
 #endif
-#ifdef CONFIG_OF
 	.id_table = mttcan_id_table,
-#endif
 };
 
-#ifndef CONFIG_OF
-static struct resource res_can0[] = {
-	[0] = {
-		.start = NV_ADDRESS_MAP_CAN1_0_INTR_ID,
-		.end = NV_ADDRESS_MAP_CAN1_0_INTR_ID,
-		.flags = IORESOURCE_IRQ,
-	},
-	[1] = {
-		/* Map CAN Controller */
-		.start = NV_ADDRESS_MAP_CAN1_BASE,
-		.end = NV_ADDRESS_MAP_CAN1_BASE + 1020,
-		.flags = IORESOURCE_MEM,
-	},
-	[2] = {
-		/* Map CAN Glue */
-		.start = NV_ADDRESS_MAP_CAN1_BASE + CAN_GLUE_ADDR,
-		.end = NV_ADDRESS_MAP_CAN1_BASE + CAN_GLUE_ADDR + 46,
-		.flags = IORESOURCE_MEM,
-	},
-	[3] = {
-		/* Map the size of messege RAM */
-		.start = NV_ADDRESS_MAP_CAN1_BASE + CAN_MES_RAM_BASE_ADDR,
-		.end = NV_ADDRESS_MAP_CAN1_BASE + CAN_MES_RAM_BASE_ADDR + 4092,
-		.flags = IORESOURCE_MEM,
-	},
-	[4] = {
-		/* CAR registers for CAN1 */
-		.start = NV_ADDRESS_MAP_CAR_BASE + CAR_CAN1_SET_OFF,
-		.end = NV_ADDRESS_MAP_CAR_BASE + CAR_CAN1_SET_OFF + 8,
-		.flags = IORESOURCE_MEM,
-	}
-};
-
-static struct resource res_can1[] = {
-	[0] = {
-		.start = NV_ADDRESS_MAP_CAN2_0_INTR_ID,
-		.end = NV_ADDRESS_MAP_CAN2_0_INTR_ID,
-		.flags = IORESOURCE_IRQ,
-	},
-	[1] = {
-		/* Map CAN Controller */
-		.start = NV_ADDRESS_MAP_CAN2_BASE,
-		.end = NV_ADDRESS_MAP_CAN2_BASE + 1020,
-		.flags = IORESOURCE_MEM,
-	},
-	[2] = {
-		/* Map GLUE Controller */
-		.start = NV_ADDRESS_MAP_CAN2_BASE + CAN_GLUE_ADDR,
-		.end = NV_ADDRESS_MAP_CAN2_BASE + CAN_GLUE_ADDR + 46,
-		.flags = IORESOURCE_MEM,
-	},
-	[3] = {
-		/* Map the size of messege RAM */
-		.start = NV_ADDRESS_MAP_CAN2_BASE + CAN_MES_RAM_BASE_ADDR,
-		.end = NV_ADDRESS_MAP_CAN2_BASE + CAN_MES_RAM_BASE_ADDR + 4092,
-		.flags = IORESOURCE_MEM,
-	},
-	[4] = {
-		/* CAR registers for CAN2 */
-		.start = NV_ADDRESS_MAP_CAR_BASE + CAR_CAN2_SET_OFF,
-		.end = NV_ADDRESS_MAP_CAR_BASE + CAR_CAN2_SET_OFF + 8,
-		.flags = IORESOURCE_MEM,
-	}
-};
-
-struct platform_device *mttcan_pdev0 = NULL, *mttcan_pdev1 = NULL;
-
-static int __init mttcan_init(void)
-{
-	int err;
-
-	mttcan_pdev0  = platform_device_alloc("mttcan", 0);
-	if (mttcan_pdev0) {
-		err = platform_device_add_resources(mttcan_pdev0, res_can0,
-					ARRAY_SIZE(res_can0));
-		if (err == 0)
-			err = platform_device_add(mttcan_pdev0);
-	} else {
-		err = -ENOMEM;
-	}
-	if (err) {
-		platform_device_put(mttcan_pdev0);
-		return err;
-	}
-	mttcan_pdev1  = platform_device_alloc("mttcan", 1);
-	if (mttcan_pdev1) {
-		err = platform_device_add_resources(mttcan_pdev1, res_can1,
-					ARRAY_SIZE(res_can1));
-		if (err == 0)
-			err = platform_device_add(mttcan_pdev1);
-	} else {
-		err = -ENOMEM;
-	}
-	if (err) {
-		platform_device_put(mttcan_pdev1);
-		platform_device_unregister(mttcan_pdev0);
-		return err;
-	}
-
-	pr_info("mttcan plat_device registered\n");
-	err = platform_driver_register(&mttcan_plat_driver);
-	if (err) {
-		platform_device_unregister(mttcan_pdev0);
-		platform_device_unregister(mttcan_pdev1);
-	}
-	return err;
-}
-
-static void __exit mttcan_exit(void)
-{
-	platform_device_unregister(mttcan_pdev0);
-	platform_device_unregister(mttcan_pdev1);
-	platform_driver_unregister(&mttcan_plat_driver);
-}
-module_init(mttcan_init);
-module_exit(mttcan_exit);
-#else
 module_platform_driver(mttcan_plat_driver);
-#endif
 MODULE_AUTHOR("Manoj Chourasia <mchourasia@nvidia.com>");
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("Platform CAN bus driver for Bosch M_TTCAN controller");

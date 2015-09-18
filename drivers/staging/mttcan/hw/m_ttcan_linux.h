@@ -30,8 +30,11 @@
 #include <linux/if_arp.h>
 #include <linux/if_ether.h>
 #include <linux/io.h>
+#include <linux/gpio.h>
+#include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
+#include <linux/reset.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/pinctrl/consumer.h>
@@ -53,7 +56,7 @@
 #define MTT_CAN_NAPI_WEIGHT   (CONF_RX_FIFO_0_ELEMS + CONF_RX_FIFO_1_ELEMS \
 				+ CONF_RX_BUFFER_ELEMS)
 #define MTT_CAN_TX_OBJ_NUM    (CONF_TX_BUFFER_ELEMS + CONF_TX_FIFO_ELEMS)
-
+#define MTT_CAN_MAX_MRAM_ELEMS     8
 #define MTTCAN_STOP_WAIT_MS   1000
 #define MTTCAN_START_WAIT_MS   1000
 
@@ -64,7 +67,7 @@ struct mttcan_priv {
 	struct napi_struct napi;
 	struct net_device *dev;
 	struct device *device;
-	struct clk *clk;
+	struct clk *hclk, *cclk;
 	void __iomem *regs;
 	void __iomem *mres;
 	u32 irq_flags;
@@ -78,6 +81,11 @@ struct mttcan_priv {
 	u32 tt_irqstatus;
 	u32 instance;
 	int tt_intrs;
+	int gpio_can_en;
+	int gpio_can_stb;
+	int tt_param[2];
+	u32 mram_param[MTT_CAN_MAX_MRAM_ELEMS];
+	bool poll;
 };
 
 struct net_device *alloc_mttcan_dev(void);

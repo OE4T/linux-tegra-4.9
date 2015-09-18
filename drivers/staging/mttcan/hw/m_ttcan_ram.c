@@ -18,8 +18,7 @@
 int ttcan_read_txevt_ram(struct ttcan_controller *ttcan, u32 read_addr,
 				struct mttcan_tx_evt_element *txevt)
 {
-	void __iomem *msg_addr = read_addr + ttcan->mram_sa.virt_base -
-		ttcan->mram_sa.base;
+	void __iomem *msg_addr = read_addr + ttcan->mram_vbase;
 	if (!txevt)
 		return -1;
 
@@ -34,8 +33,7 @@ int ttcan_read_rx_msg_ram(struct ttcan_controller *ttcan, u32 read_addrs,
 {
 	int i = 0, byte_index;
 	u32 msg_data;
-	void __iomem *addr_in_msg_ram = read_addrs + ttcan->mram_sa.virt_base -
-	    ttcan->mram_sa.base;
+	void __iomem *addr_in_msg_ram = read_addrs + ttcan->mram_vbase;
 	int bytes_to_read = CANFD_MAX_DLEN;
 
 	if (!ttcanfd)
@@ -127,8 +125,7 @@ int ttcan_write_tx_msg_ram(struct ttcan_controller *ttcan, u32 write_addrs,
 {
 	u32 msg_data, idx;
 	int bytes_to_write;
-	void __iomem *addr_in_msg_ram = write_addrs + ttcan->mram_sa.virt_base -
-	    ttcan->mram_sa.base;
+	void __iomem *addr_in_msg_ram = write_addrs + ttcan->mram_vbase;
 
 	/* T0 */
 	if (ttcanfd->can_id & CAN_FMT)
@@ -206,10 +203,9 @@ void ttcan_set_std_id_filter(struct ttcan_controller *ttcan, int filter_index,
 {
 	u32 filter_elem = 0;
 	void __iomem *filter_addr =
-	    ttcan->mram_sa.virt_base + ttcan->mram_sa.sidfc_flssa -
-	    ttcan->mram_sa.base;
+	    ttcan->mram_vbase + ttcan->mram_cfg[MRAM_SIDF].off;
 	u32 filter_offset =
-	    (filter_index * STD_ID_FILTER_ELEM_SIZE_WORD * CAN_WORD_IN_BYTES);
+	    (filter_index * SIDF_ELEM_SIZE);
 
 	filter_elem = (sfid2 << MTT_STD_FLTR_SFID2_SHIFT) &
 		MTT_STD_FLTR_SFID2_MASK;
@@ -226,35 +222,31 @@ void ttcan_set_std_id_filter(struct ttcan_controller *ttcan, int filter_index,
 void ttcan_reset_std_id_filter(struct ttcan_controller *ttcan, u32 list_size)
 {
 	int idx;
-	void __iomem *filter_addr = ttcan->mram_sa.virt_base +
-					ttcan->mram_sa.sidfc_flssa -
-					ttcan->mram_sa.base;
+	void __iomem *filter_addr = ttcan->mram_vbase +
+					ttcan->mram_cfg[MRAM_SIDF].off;
 	for (idx = 0; idx < list_size; idx++) {
-		u32 offset =
-			(idx * STD_ID_FILTER_ELEM_SIZE_WORD) << 2;
+		u32 offset = idx * SIDF_ELEM_SIZE;
 		writel(0, (void __iomem *)(filter_addr + offset));
 	}
 }
 
 u32 ttcan_get_std_id_filter(struct ttcan_controller *ttcan, int idx)
 {
-	void __iomem *filter_addr = ttcan->mram_sa.virt_base +
-					ttcan->mram_sa.sidfc_flssa -
-					ttcan->mram_sa.base;
+	void __iomem *filter_addr = ttcan->mram_vbase +
+					ttcan->mram_cfg[MRAM_SIDF].off;
 
-	u32 filter_offset = idx * STD_ID_FILTER_ELEM_SIZE_WORD << 2;
+	u32 filter_offset = idx * SIDF_ELEM_SIZE;
 	return readl(filter_addr + filter_offset);
 }
 
 void ttcan_reset_xtd_id_filter(struct ttcan_controller *ttcan, u32 list_size)
 {
 	int idx;
-	void __iomem *filter_addr = ttcan->mram_sa.virt_base +
-					ttcan->mram_sa.xidfc_flesa -
-					ttcan->mram_sa.base;
+	void __iomem *filter_addr = ttcan->mram_vbase +
+					ttcan->mram_cfg[MRAM_XIDF].off;
 
 	for (idx = 0; idx < list_size; idx++) {
-		u32 offset = (idx * EXT_ID_FILTER_ELEM_SIZE_WORD) << 2;
+		u32 offset = idx * XIDF_ELEM_SIZE;
 
 		writel(0, (void __iomem *)(filter_addr + offset));
 		writel(0, (void __iomem *)(filter_addr + offset +
@@ -265,12 +257,11 @@ void ttcan_reset_xtd_id_filter(struct ttcan_controller *ttcan, u32 list_size)
 void ttcan_reset_trigger_mem(struct ttcan_controller *ttcan, u32 list_size)
 {
 	int idx;
-	void __iomem *filter_addr = ttcan->mram_sa.virt_base +
-					ttcan->mram_sa.tmc_tmsa -
-					ttcan->mram_sa.base;
+	void __iomem *filter_addr = ttcan->mram_vbase +
+			ttcan->mram_cfg[MRAM_TMC].off;
 
 	for (idx = 0; idx < list_size; idx++) {
-		u32 offset = (idx * TRIG_ELEM_SIZE_WORD) << 2;
+		u32 offset = idx * TRIG_ELEM_SIZE;
 
 		writel(0, (void __iomem *)(filter_addr + offset));
 		writel(0, (void __iomem *)(filter_addr + offset +
@@ -283,10 +274,8 @@ void ttcan_set_xtd_id_filter(struct ttcan_controller *ttcan, int filter_index,
 {
 	struct mttcan_xtd_id_filt_element xfilter_elem;
 	void __iomem *filter_addr =
-	    ttcan->mram_sa.virt_base + ttcan->mram_sa.xidfc_flesa -
-	    ttcan->mram_sa.base;
-	u32 filter_offset =
-	    (filter_index * EXT_ID_FILTER_ELEM_SIZE_WORD * CAN_WORD_IN_BYTES);
+	    ttcan->mram_vbase + ttcan->mram_cfg[MRAM_XIDF].off;
+	u32 filter_offset = filter_index * XIDF_ELEM_SIZE;
 
 	xfilter_elem.f0 = (efec << MTT_XTD_FLTR_F0_EFEC_SHIFT) &
 		MTT_XTD_FLTR_F0_EFEC_MASK;
@@ -311,10 +300,9 @@ void ttcan_set_xtd_id_filter(struct ttcan_controller *ttcan, int filter_index,
 u64 ttcan_get_xtd_id_filter(struct ttcan_controller *ttcan, int idx)
 {
 	u64 xtd;
-	void __iomem *filter_addr =
-	    ttcan->mram_sa.virt_base + ttcan->mram_sa.xidfc_flesa -
-	    ttcan->mram_sa.base;
-	u32 offset = idx * EXT_ID_FILTER_ELEM_SIZE_WORD << 2;
+	void __iomem *filter_addr = ttcan->mram_vbase +
+		ttcan->mram_cfg[MRAM_XIDF].off;
+	u32 offset = idx * XIDF_ELEM_SIZE;
 
 	xtd = ((u64) readl(filter_addr + offset + CAN_WORD_IN_BYTES)) << 32;
 	xtd |= readl(filter_addr + offset);
@@ -324,10 +312,8 @@ u64 ttcan_get_xtd_id_filter(struct ttcan_controller *ttcan, int idx)
 u64 ttcan_get_trigger_mem(struct ttcan_controller *ttcan, int idx)
 {
 	u64 trig;
-	void __iomem *addr =
-	    ttcan->mram_sa.virt_base + ttcan->mram_sa.tmc_tmsa -
-	    ttcan->mram_sa.base;
-	u32 offset = idx * TRIG_ELEM_SIZE_WORD << 2;
+	void __iomem *addr = ttcan->mram_vbase + ttcan->mram_cfg[MRAM_TMC].off;
+	u32 offset = idx * TRIG_ELEM_SIZE;
 
 	trig = ((u64) readl(addr + offset + CAN_WORD_IN_BYTES)) << 32;
 	trig |= readl(addr + offset);
@@ -340,11 +326,9 @@ int ttcan_set_trigger_mem(struct ttcan_controller *ttcan, int trig_index,
 			  u8 mesg_num)
 {
 	struct mttcan_trig_mem_element trig_elem;
-	void __iomem *trig_mem_addr =
-	    ttcan->mram_sa.virt_base + ttcan->mram_sa.tmc_tmsa -
-	    ttcan->mram_sa.base;
-	u32 trig_mem_offset =
-	    (trig_index * TRIG_ELEM_SIZE_WORD * CAN_WORD_IN_BYTES);
+	void __iomem *trig_mem_addr = ttcan->mram_vbase +
+					ttcan->mram_cfg[MRAM_TMC].off;
+	u32 trig_mem_offset = trig_index * TRIG_ELEM_SIZE;
 
 	if (trig_index > 63) {
 		pr_err("%s: Incorrect Index\n", __func__);
@@ -383,33 +367,55 @@ int ttcan_set_trigger_mem(struct ttcan_controller *ttcan, int trig_index,
 	return 0;
 }
 
-int ttcan_mesg_ram_config(struct ttcan_controller *ttcan)
+int ttcan_mesg_ram_config(struct ttcan_controller *ttcan, u32 *arr)
 {
-	u32 base_addr = ttcan->mram_sa.base;
 
+	ttcan->mram_cfg[MRAM_SIDF].off = arr[0];
+	ttcan->mram_cfg[MRAM_SIDF].num = arr[1];
 
-	if ((REL_TMC_END >= RAM_BYTES_PER_MTT_CAN + base_addr)) {
+	ttcan->mram_cfg[MRAM_XIDF].off = ttcan->mram_cfg[MRAM_SIDF].off +
+			ttcan->mram_cfg[MRAM_SIDF].num * SIDF_ELEM_SIZE;
+	ttcan->mram_cfg[MRAM_XIDF].num = arr[2];
+
+	ttcan->mram_cfg[MRAM_RXF0].off = ttcan->mram_cfg[MRAM_XIDF].off +
+			ttcan->mram_cfg[MRAM_XIDF].num * XIDF_ELEM_SIZE;
+	ttcan->mram_cfg[MRAM_RXF0].num = arr[3];
+
+	ttcan->mram_cfg[MRAM_RXF1].off = ttcan->mram_cfg[MRAM_RXF0].off +
+			ttcan->mram_cfg[MRAM_RXF0].num * MAX_RXB_ELEM_SIZE;
+	ttcan->mram_cfg[MRAM_RXF1].num = arr[4];
+
+	ttcan->mram_cfg[MRAM_RXB].off = ttcan->mram_cfg[MRAM_RXF1].off +
+			ttcan->mram_cfg[MRAM_RXF1].num * MAX_RXB_ELEM_SIZE;
+	ttcan->mram_cfg[MRAM_RXB].num = arr[5];
+
+	ttcan->mram_cfg[MRAM_TXE].off = ttcan->mram_cfg[MRAM_RXB].off +
+			ttcan->mram_cfg[MRAM_RXB].num * MAX_RXB_ELEM_SIZE;
+	ttcan->mram_cfg[MRAM_TXE].num = arr[6];
+
+	ttcan->mram_cfg[MRAM_TXB].off = ttcan->mram_cfg[MRAM_TXE].off +
+			ttcan->mram_cfg[MRAM_TXE].num * TX_EVENT_FIFO_ELEM_SIZE;
+	ttcan->mram_cfg[MRAM_TXB].num = arr[7];
+
+	ttcan->mram_cfg[MRAM_TMC].off = ttcan->mram_cfg[MRAM_TXB].off +
+			ttcan->mram_cfg[MRAM_TXB].num * MAX_TXB_ELEM_SIZE;
+	ttcan->mram_cfg[MRAM_TMC].num = arr[8];
+
+	if ((MTTCAN_RAM_BASE + MTTCAN_RAM_SIZE <=
+		ttcan->mram_cfg[MRAM_TMC].off + ttcan->mram_cfg[MRAM_TMC].num *
+		       MAX_TXB_ELEM_SIZE)) {
 		pr_err("%s: Incorrect config for Message RAM\n", __func__);
 		return -EINVAL;
 	}
 
-	ttcan->mram_sa.sidfc_flssa = base_addr + REL_SIDFC_FLSSA;
-	ttcan->mram_sa.xidfc_flesa = base_addr + REL_XIDFC_FLESA;
-	ttcan->mram_sa.rxf0c_f0sa = base_addr + REL_RXF0C_F0SA;
-	ttcan->mram_sa.rxf1c_f1sa = base_addr + REL_RXF1C_F1SA;
-	ttcan->mram_sa.rxbc_rbsa = base_addr + REL_RXBC_RBSA;
-	ttcan->mram_sa.txefc_efsa = base_addr + REL_TXEFC_EFSA;
-	ttcan->mram_sa.txbc_tbsa = base_addr + REL_TXBC_TBSA;
-	ttcan->mram_sa.tmc_tmsa = base_addr + REL_TMC_TMSA;
-
-	pr_info(" Message RAM Configuration\n"
-		"\t| base addr   |%x|\n\t| sidfc_flssa |%x|\n\t| xidfc_flesa |%x|\n"
-		"\t| rxf0c_f0sa  |%x|\n\t| rxf1c_f1sa  |%x|\n\t| rxbc_rbsa   |%x|\n"
-		"\t| txefc_efsa  |%x|\n\t| txbc_tbsa   |%x|\n\t| tmc_tmsa    |%x|\n",
-		base_addr, ttcan->mram_sa.sidfc_flssa,
-		ttcan->mram_sa.xidfc_flesa, ttcan->mram_sa.rxf0c_f0sa,
-		ttcan->mram_sa.rxf1c_f1sa, ttcan->mram_sa.rxbc_rbsa,
-		ttcan->mram_sa.txefc_efsa, ttcan->mram_sa.txbc_tbsa,
-		ttcan->mram_sa.tmc_tmsa);
+	pr_info("\t Message RAM Configuration\n"
+		"\t| base addr   |0x%08lx|\n\t| sidfc_flssa |0x%08x|\n\t| xidfc_flesa |0x%08x|\n"
+		"\t| rxf0c_f0sa  |0x%08x|\n\t| rxf1c_f1sa  |0x%08x|\n\t| rxbc_rbsa   |0x%08x|\n"
+		"\t| txefc_efsa  |0x%08x|\n\t| txbc_tbsa   |0x%08x|\n\t| tmc_tmsa    |0x%08x|\n",
+		ttcan->mram_base, ttcan->mram_cfg[MRAM_SIDF].off,
+		ttcan->mram_cfg[MRAM_XIDF].off, ttcan->mram_cfg[MRAM_RXF0].off,
+		ttcan->mram_cfg[MRAM_RXF1].off, ttcan->mram_cfg[MRAM_RXB].off,
+		ttcan->mram_cfg[MRAM_TXE].off, ttcan->mram_cfg[MRAM_TXB].off,
+		ttcan->mram_cfg[MRAM_TMC].off);
 	return 0;
 }

@@ -58,22 +58,28 @@ static int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 			struct channel_gk20a *c, bool patch)
 {
 	struct gr_gk20a *gr = &g->gr;
-	struct channel_ctx_gk20a *ch_ctx = NULL;
+	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
+	struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
 	u32 attrib_offset_in_chunk = 0;
 	u32 alpha_offset_in_chunk = 0;
 	u32 pd_ab_max_output;
 	u32 gpc_index, ppc_index;
-	u32 temp;
-	u32 cbm_cfg_size1, cbm_cfg_size2;
+	u32 temp, temp2;
+	u32 cbm_cfg_size_beta, cbm_cfg_size_alpha, cbm_cfg_size_steadystate;
+	u32 attrib_size_in_chunk, cb_attrib_cache_size_init;
 
 	gk20a_dbg_fn("");
 
-	if (patch) {
-		int err;
-		ch_ctx = &c->ch_ctx;
-		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
-		if (err)
-			return err;
+	if (gr_ctx->preempt_mode == NVGPU_GR_PREEMPTION_MODE_GFXP) {
+		attrib_size_in_chunk = gr->attrib_cb_default_size +
+				  (gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v() -
+				   gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v());
+		cb_attrib_cache_size_init = gr->attrib_cb_default_size +
+				  (gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v() -
+				   gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v());
+	} else {
+		attrib_size_in_chunk = gr->attrib_cb_size;
+		cb_attrib_cache_size_init = gr->attrib_cb_default_size;
 	}
 
 	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_ds_tga_constraintlogic_beta_r(),
@@ -94,17 +100,20 @@ static int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
 		temp = proj_gpc_stride_v() * gpc_index;
+		temp2 = proj_scal_litter_num_pes_per_gpc_v() * gpc_index;
 		for (ppc_index = 0; ppc_index < gr->gpc_ppc_count[gpc_index];
 		     ppc_index++) {
-			cbm_cfg_size1 = gr->attrib_cb_default_size *
+			cbm_cfg_size_beta = cb_attrib_cache_size_init *
 				gr->pes_tpc_count[ppc_index][gpc_index];
-			cbm_cfg_size2 = gr->alpha_cb_default_size *
+			cbm_cfg_size_alpha = gr->alpha_cb_default_size *
+				gr->pes_tpc_count[ppc_index][gpc_index];
+			cbm_cfg_size_steadystate = gr->attrib_cb_default_size *
 				gr->pes_tpc_count[ppc_index][gpc_index];
 
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_ppc0_cbm_beta_cb_size_r() + temp +
 				proj_ppc_in_gpc_stride_v() * ppc_index,
-				cbm_cfg_size1, patch);
+				cbm_cfg_size_beta, patch);
 
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_ppc0_cbm_beta_cb_offset_r() + temp +
@@ -114,16 +123,16 @@ static int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_r() + temp +
 				proj_ppc_in_gpc_stride_v() * ppc_index,
-				gr->attrib_cb_default_size,
+				cbm_cfg_size_steadystate,
 				patch);
 
-			attrib_offset_in_chunk += gr->attrib_cb_size *
+			attrib_offset_in_chunk += attrib_size_in_chunk *
 				gr->pes_tpc_count[ppc_index][gpc_index];
 
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_ppc0_cbm_alpha_cb_size_r() + temp +
 				proj_ppc_in_gpc_stride_v() * ppc_index,
-				cbm_cfg_size2, patch);
+				cbm_cfg_size_alpha, patch);
 
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_ppc0_cbm_alpha_cb_offset_r() + temp +
@@ -134,14 +143,11 @@ static int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 				gr->pes_tpc_count[ppc_index][gpc_index];
 
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpcs_swdx_tc_beta_cb_size_r(ppc_index + gpc_index),
-				gr_gpcs_swdx_tc_beta_cb_size_v_f(cbm_cfg_size1),
+				gr_gpcs_swdx_tc_beta_cb_size_r(ppc_index + temp2),
+				gr_gpcs_swdx_tc_beta_cb_size_v_f(cbm_cfg_size_steadystate),
 				patch);
 		}
 	}
-
-	if (patch)
-		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
 
 	return 0;
 }

@@ -822,6 +822,8 @@ struct hw_if_struct {
 	/* for handling multi-queue */
 	INT(*disable_rx_interrupt)(UINT, struct DWC_ETH_QOS_prv_data *);
 	INT(*enable_rx_interrupt)(UINT, struct DWC_ETH_QOS_prv_data *);
+	INT (*disable_chan_interrupts)(UINT, struct DWC_ETH_QOS_prv_data *);
+	INT (*enable_chan_interrupts)(UINT, struct DWC_ETH_QOS_prv_data *);
 
 	/* for handling MMC */
 	INT(*disable_mmc_interrupts)(VOID);
@@ -1350,6 +1352,7 @@ struct chan_data {
 	uint	chan_num;
 	uint	poll_interval;  /* only for type_polled */
 	uint	cpu;
+	u32	int_mask;
 	spinlock_t chan_tx_lock;
 	spinlock_t chan_lock;
 	struct	timer_list	poll_timer;

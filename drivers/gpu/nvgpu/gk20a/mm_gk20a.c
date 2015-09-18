@@ -827,6 +827,9 @@ void gk20a_vm_put_buffers(struct vm_gk20a *vm,
 	int i;
 	struct vm_gk20a_mapping_batch batch;
 
+	if (num_buffers == 0)
+		return;
+
 	mutex_lock(&vm->update_gmmu_lock);
 	gk20a_vm_mapping_batch_start(&batch);
 	vm->kref_put_batch = &batch;

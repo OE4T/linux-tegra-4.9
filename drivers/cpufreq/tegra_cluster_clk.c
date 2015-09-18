@@ -19,6 +19,8 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/uaccess.h>
+#include <asm/cputype.h>
+#include <asm/cpu.h>
 
 /*
  * Note: These enums should be aligned to the regs mentioned in the
@@ -54,12 +56,12 @@ enum cluster a57, d;
 struct denver_creg {
 	unsigned long offset;
 	const char *name;
+	u64 val;
 };
 
 struct denver_creg denver_cregs[] = {
-	{0x00000000, "ifu.mcstatinfo"},
-	{0x00001005, "CREG_DPMU_PCLUSTER0_PWR_CTRL"},
-	{0x00001006, "CREG_DPMU_PCLUSTER1_PWR_CTRL"},
+	{0x00001005, "CREG_DPMU_PCLUSTER0_PWR_CTRL", 0},
+	{0x00001006, "CREG_DPMU_PCLUSTER1_PWR_CTRL", 0},
 };
 
 #define NR_CREGS (sizeof(denver_cregs) / sizeof(struct denver_creg))
@@ -68,6 +70,7 @@ enum creg_command {
 	CREG_READ,
 	CREG_WRITE
 };
+struct cpumask denver_cpumask;
 
 static ssize_t cl_clk_write(struct file *file, const char __user *user_buf,
 		size_t count, loff_t *ppos)
@@ -126,29 +129,31 @@ static const struct file_operations cl_clk_fops = {
 	.release = single_release,
 };
 
-static int denver_creg_get(void *data, u64 *val)
+static void __denver_creg_get(void *data)
 {
 	struct denver_creg *reg = (struct denver_creg *)data;
+	struct device *dev = &cl_clk_drv_data->pdev->dev;
 
 	asm volatile (
 	"	sys 0, c11, c0, 1, %1\n"
 	"	sys 0, c11, c0, 0, %2\n"
 	"	sys 0, c11, c0, 0, %3\n"
 	"	sysl %0, 0, c11, c0, 0\n"
-	: "=r" (*val)
+	: "=r" (reg->val)
 	: "r" (reg->offset), "r" (CREG_INDEX), "r" (CREG_READ)
 	);
 
-	return 0;
+	dev_dbg(dev, "CREG: read %s @ 0x%lx =  0x%llx\n",
+			reg->name, reg->offset, reg->val);
 }
 
-static int denver_creg_set(void *data, u64 val)
+static void __denver_creg_set(void *data)
 {
 	struct denver_creg *reg = (struct denver_creg *)data;
 	struct device *dev = &cl_clk_drv_data->pdev->dev;
 
 	dev_dbg(dev, "CREG: write %s @ 0x%lx =  0x%llx\n",
-			reg->name, reg->offset, val);
+			reg->name, reg->offset, reg->val);
 
 	asm volatile (
 	"	sys 0, c11, c0, 1, %0\n"
@@ -157,14 +162,43 @@ static int denver_creg_set(void *data, u64 val)
 	"	sys 0, c11, c0, 0, %3\n"
 	:
 	: "r" (reg->offset), "r" (CREG_INDEX),
-	  "r" (val), "r" (CREG_WRITE)
+	  "r" (reg->val), "r" (CREG_WRITE)
 	);
+}
+
+static int denver_creg_get(void *data, u64 *val)
+{
+	struct denver_creg *reg = (struct denver_creg *)data;
+	smp_call_function_any(&denver_cpumask, __denver_creg_get, reg, 1);
+	*val = reg->val;
+
+	return 0;
+}
+
+static int denver_creg_set(void *data, u64 val)
+{
+	struct denver_creg *reg = (struct denver_creg *)data;
+	reg->val = val;
+	smp_call_function_any(&denver_cpumask, __denver_creg_set, reg, 1);
 
 	return 0;
 }
 
 DEFINE_SIMPLE_ATTRIBUTE(denver_creg_fops, denver_creg_get,
 		denver_creg_set, "%llu\n");
+
+static void set_denver_cpumask(void)
+{
+	int cpu_number;
+	cpumask_clear(&denver_cpumask);
+
+	for_each_possible_cpu(cpu_number) {
+		struct cpuinfo_arm64 *cpuinfo = &per_cpu(cpu_data, cpu_number);
+		u32 midr = cpuinfo->reg_midr;
+		if (MIDR_IMPLEMENTOR(midr) != ARM_CPU_IMP_ARM)
+			cpumask_set_cpu(cpu_number, &denver_cpumask);
+	}
+}
 
 static int __init tcl_clk_debug_init(struct platform_device *pdev)
 {
@@ -187,6 +221,8 @@ static int __init tcl_clk_debug_init(struct platform_device *pdev)
 	if (!debugfs_create_file("denver_cluster", RW_MODE, tcl_clk_root,
 		 &d, &cl_clk_fops))
 		goto err_out;
+
+	set_denver_cpumask();
 
 	for (i = 0; i < NR_CREGS; ++i) {
 		reg = &denver_cregs[i];

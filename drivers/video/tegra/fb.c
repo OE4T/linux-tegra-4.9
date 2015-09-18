@@ -652,6 +652,10 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 		 */
 		fb_info->info->mode = (struct fb_videomode*) NULL;
 
+#ifdef CONFIG_FRAMEBUFFER_CONSOLE
+		fb_add_videomode(&tegra_dc_vga_mode, &fb_info->info->modelist);
+		fb_videomode_to_var(&fb_info->info->var, &tegra_dc_vga_mode);
+#endif
 		/* For L4T - After the next hotplug, framebuffer console will
 		 * use the old variable screeninfo by default, only video-mode
 		 * settings will be overwritten as per monitor connected.

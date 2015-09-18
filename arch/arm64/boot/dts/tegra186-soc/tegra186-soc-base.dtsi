@@ -258,7 +258,15 @@
 			      <&{/host1x/se@15810000}		TEGRA_SWGROUP_SE>,
 			      <&{/host1x/se@15820000}		TEGRA_SWGROUP_SE1>,
 			      <&{/host1x/se@15830000}		TEGRA_SWGROUP_SE2>,
-			      <&{/host1x/se@15840000}		TEGRA_SWGROUP_SE3>;
+			      <&{/host1x/se@15840000}		TEGRA_SWGROUP_SE3>,
+			      <&host1x_ctx0			TEGRA_SWGROUP_HOST1X_CTX0>,
+			      <&host1x_ctx1			TEGRA_SWGROUP_HOST1X_CTX1>,
+			      <&host1x_ctx2			TEGRA_SWGROUP_HOST1X_CTX2>,
+			      <&host1x_ctx3			TEGRA_SWGROUP_HOST1X_CTX3>,
+			      <&host1x_ctx4			TEGRA_SWGROUP_HOST1X_CTX4>,
+			      <&host1x_ctx5			TEGRA_SWGROUP_HOST1X_CTX5>,
+			      <&host1x_ctx6			TEGRA_SWGROUP_HOST1X_CTX6>,
+			      <&host1x_ctx7			TEGRA_SWGROUP_HOST1X_CTX7>;
 			      /*
 			      <&{/gp10b}		TEGRA_SWGROUP_GPUB>,
 			      <&{/sdhci@3460000}	TEGRA_SWGROUP_SDMMC4A>,
@@ -288,15 +296,7 @@
 			      <&{/i2c@3190000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/i2c@31b0000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/i2c@31c0000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/i2c@31e0000}		TEGRA_SID_GPCDMA_0>,
-			      <&host1x_ctx0		TEGRA_SWGROUP_HOST1X_CTX0>,
-			      <&host1x_ctx1		TEGRA_SWGROUP_HOST1X_CTX1>,
-			      <&host1x_ctx2		TEGRA_SWGROUP_HOST1X_CTX2>,
-			      <&host1x_ctx3		TEGRA_SWGROUP_HOST1X_CTX3>,
-			      <&host1x_ctx4		TEGRA_SWGROUP_HOST1X_CTX4>,
-			      <&host1x_ctx5		TEGRA_SWGROUP_HOST1X_CTX5>,
-			      <&host1x_ctx6		TEGRA_SWGROUP_HOST1X_CTX6>,
-			      <&host1x_ctx7		TEGRA_SWGROUP_HOST1X_CTX7>;
+			      <&{/i2c@31e0000}		TEGRA_SID_GPCDMA_0>;
 			      */
 
 		domains = <&ppcs_as TEGRA_SWGROUP_CELLS3(PPCS, PPCS1, PPCS2)>,

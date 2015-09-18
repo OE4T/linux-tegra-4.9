@@ -38,6 +38,16 @@ DEFINE_MUTEX(tegra_nvdisp_lock);
 #define NVDISP_INPUT_LUT_SIZE   257
 #define NVDISP_OUTPUT_LUT_SIZE  1025
 
+/* Global variables provided for clocks
+ * common to all heads
+ */
+static struct clk *compclk_parent;
+static struct clk *hubclk;
+static struct clk *compclk;
+static u32 compclk_rate;
+
+static struct reset_control *nvdisp_common_rst[DC_N_WINDOWS+1];
+
 static int tegra_nvdisp_set_color_control(struct tegra_dc *dc);
 
 static struct of_device_id nvdisp_disa_pd[] = {
@@ -134,13 +144,15 @@ static int tegra_nvdisp_common_reset_deassert(struct tegra_dc *dc)
 	u8 i;
 	int err;
 
-	if (!dc->nvdisp_common_rst) {
-		dev_err(&dc->ndev->dev, "%s: No resets available\n", __func__);
-		return -EINVAL;
-	}
 
 	for ( i = 0; i < DC_N_WINDOWS; i++) {
-		err = reset_control_deassert(dc->nvdisp_common_rst[i]);
+
+		if (!nvdisp_common_rst[i]) {
+			dev_err(&dc->ndev->dev, "No nvdisp resets available\n");
+			return -EINVAL;
+		}
+
+		err = reset_control_deassert(nvdisp_common_rst[i]);
 		if (err) {
 			dev_err(&dc->ndev->dev, "Unable to reset misc\n");
 			return err;
@@ -154,13 +166,14 @@ static int __maybe_unused tegra_nvdisp_common_reset_assert(struct tegra_dc *dc)
 	u8 i;
 	int err;
 
-	if (!dc->nvdisp_common_rst) {
-		dev_err(&dc->ndev->dev, "%s: No resets available\n", __func__);
-		return -EINVAL;
-	}
 
 	for ( i = 0; i < DC_N_WINDOWS; i++) {
-		err = reset_control_assert(dc->nvdisp_common_rst[i]);
+		if (!nvdisp_common_rst[i]) {
+			dev_err(&dc->ndev->dev, "No Nvdisp resets available\n");
+			return -EINVAL;
+		}
+
+		err = reset_control_assert(nvdisp_common_rst[i]);
 		if (err) {
 			dev_err(&dc->ndev->dev, "Unable to reset misc\n");
 			return err;
@@ -178,21 +191,21 @@ static int tegra_nvdisp_reset_prepare(struct tegra_dc *dc)
 	if (!tegra_bpmp_running())
 		return 0;
 
-	dc->nvdisp_common_rst[0] =
+	nvdisp_common_rst[0] =
 		devm_reset_control_get(&dc->ndev->dev, "misc");
-	if (IS_ERR(dc->nvdisp_common_rst[0])) {
+	if (IS_ERR(nvdisp_common_rst[0])) {
 		dev_err(&dc->ndev->dev, "Unable to get misc reset\n");
-		return PTR_ERR(dc->nvdisp_common_rst[0]);
+		return PTR_ERR(nvdisp_common_rst[0]);
 	}
 
 	for ( i = 0; i < DC_N_WINDOWS; i++) {
 		snprintf(rst_name, sizeof(rst_name), "wgrp%u", i);
-		dc->nvdisp_common_rst[i+1] =
+		nvdisp_common_rst[i+1] =
 			devm_reset_control_get(&dc->ndev->dev, rst_name);
-		if (IS_ERR(dc->nvdisp_common_rst[i+1])) {
+		if (IS_ERR(nvdisp_common_rst[i+1])) {
 			dev_err(&dc->ndev->dev,"Unable to get %s reset\n",
 					rst_name);
-			return PTR_ERR(dc->nvdisp_common_rst[i+1]);
+			return PTR_ERR(nvdisp_common_rst[i+1]);
 		}
 	}
 
@@ -219,15 +232,15 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 	/* Get the nvdisplay_hub and nvdisplay_disp clock and enable
 	 * it by default. Change the rates based on requirement later
 	 */
-	dc->hubclk = tegra_disp_clk_get(&dc->ndev->dev, "nvdisplayhub");
-	if (IS_ERR_OR_NULL(dc->hubclk)) {
+	hubclk = tegra_disp_clk_get(&dc->ndev->dev, "nvdisplayhub");
+	if (IS_ERR_OR_NULL(hubclk)) {
 		dev_err(&dc->ndev->dev, "can't get display hub clock\n");
 		ret = -ENOENT;
 		goto INIT_EXIT;
 	}
 
-	dc->compclk = tegra_disp_clk_get(&dc->ndev->dev, "nvdisplay_disp");
-	if (IS_ERR_OR_NULL(dc->compclk)) {
+	compclk = tegra_disp_clk_get(&dc->ndev->dev, "nvdisplay_disp");
+	if (IS_ERR_OR_NULL(compclk)) {
 		dev_err(&dc->ndev->dev, "can't get display comp clock\n");
 		ret = -ENOENT;
 		goto INIT_CLK_ERR;
@@ -251,12 +264,6 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 
 	dc->valid_windows = 0;
 
-	/* Enable the hub clock and comp clock by default
-	 * will change to power change code later
-	 */
-	tegra_disp_clk_prepare_enable(dc->compclk);
-	tegra_disp_clk_prepare_enable(dc->hubclk);
-
 	goto INIT_EXIT;
 
 INIT_ERR:
@@ -271,11 +278,11 @@ INIT_ERR:
 				(void *)lut->rgb, lut->phy_addr);
 	}
 INIT_CLK_ERR:
-	if (dc->hubclk)
-		tegra_disp_clk_put(&dc->ndev->dev, dc->hubclk);
+	if (hubclk)
+		tegra_disp_clk_put(&dc->ndev->dev, hubclk);
 
-	if (dc->compclk)
-		tegra_disp_clk_put(&dc->ndev->dev, dc->compclk);
+	if (compclk)
+		tegra_disp_clk_put(&dc->ndev->dev, compclk);
 INIT_EXIT:
 /*	mutex_unlock(&tegra_nvdisp_lock); */
 	return ret;
@@ -459,7 +466,10 @@ static int tegra_nvdisp_set_control(struct tegra_dc *dc)
 
 	if (dc->out->type == TEGRA_DC_OUT_HDMI)	{
 		protocol = nvdisp_sor1_control_protocol_tmdsa_f();
-		reg = nvdisp_sor1_control_r();
+		if(!strcmp(dc_or_node_names[dc->ndev->id], "/host1x/sor1"))
+			reg = nvdisp_sor1_control_r();
+		else if(!strcmp(dc_or_node_names[dc->ndev->id], "/host1x/sor"))
+			reg = nvdisp_sor_control_r();
 	} else if ((dc->out->type == TEGRA_DC_OUT_DP) ||
 		(dc->out->type == TEGRA_DC_OUT_NVSR_DP) ||
 		(dc->out->type == TEGRA_DC_OUT_FAKE_DP)) {
@@ -612,9 +622,9 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 		ret = -ENOENT;
 		return ret; /*TODO: Add proper cleanup later */
 	}
-	clk_set_parent(dc->hubclk, hubparent_clk);
-	tegra_disp_clk_prepare_enable(dc->hubclk);
-	pr_info(" rate get on hub %ld\n", clk_get_rate(dc->hubclk));
+	clk_set_parent(hubclk, hubparent_clk);
+	tegra_disp_clk_prepare_enable(hubclk);
+	pr_info(" rate get on hub %ld\n", clk_get_rate(hubclk));
 
 	/* Setting clock separately now will cleanup once it
 	 * is stable
@@ -632,18 +642,26 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 				dc->out->parent_clk);
 		/* Set parent for DC clock */
 		clk_set_parent(dc->clk, parent_clk);
-		/* Set parent for Display clock */
-		clk_set_parent(dc->compclk, dc->clk);
+
+		/* comp clk will be maximum of head0/1/2 */
+		if (dc->mode.pclk >= compclk_rate) {
+			compclk_rate = dc->mode.pclk;
+			compclk_parent = dc->clk;
+			pr_info(" rate get on compclk %d\n", compclk_rate);
+			/* Set parent for Display clock */
+			clk_set_parent(compclk, dc->clk);
+		}
+
 		/* Set rate on DC rate same pclk */
 		clk_set_rate(dc->clk, dc->mode.pclk);
 		/* Enable DC clock */
 		tegra_disp_clk_prepare_enable(dc->clk);
 		/* Enable Display clock */
-		tegra_disp_clk_prepare_enable(dc->compclk);
+		tegra_disp_clk_prepare_enable(compclk);
 
 	} else if (dc->out->type == TEGRA_DC_OUT_DSI) {
 		/*tegra_disp_clk_prepare_enable(dc->clk);*/
-		tegra_disp_clk_prepare_enable(dc->compclk);
+		tegra_disp_clk_prepare_enable(compclk);
 
 
 		/*

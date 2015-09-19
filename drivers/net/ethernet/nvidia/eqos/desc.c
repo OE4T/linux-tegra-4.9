@@ -591,7 +591,8 @@ static void DWC_ETH_QOS_unmap_rx_skb_pg(struct DWC_ETH_QOS_prv_data *pdata,
 	/* unmap the first buffer */
 	if (buffer->dma) {
 		dma_unmap_single(&pdata->pdev->dev, buffer->dma,
-				 DWC_ETH_QOS_PG_FRAME_SIZE, DMA_FROM_DEVICE);
+			ALIGN_SIZE(DWC_ETH_QOS_PG_FRAME_SIZE),
+			DMA_FROM_DEVICE);
 		buffer->dma = 0;
 	}
 
@@ -831,7 +832,8 @@ static int DWC_ETH_QOS_map_non_page_buffs_64(struct DWC_ETH_QOS_prv_data *pdata,
 
 	buffer->dma = dma_map_single((&pdata->pdev->dev),
 			(skb->data + offset),
-			size, DMA_TO_DEVICE);
+			ALIGN_SIZE(size), DMA_TO_DEVICE);
+
 	if (dma_mapping_error((&pdata->pdev->dev), buffer->dma)) {
 		printk(KERN_ALERT "failed to do the dma map\n");
 		return - ENOMEM;
@@ -859,8 +861,9 @@ static int DWC_ETH_QOS_map_non_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 			/* fill the first buffer pointer in prev_buffer->dma2 */
 			prev_buffer->dma2 = dma_map_single((&pdata->pdev->dev),
 							(skb->data + offset),
-							DWC_ETH_QOS_MAX_DATA_PER_TX_BUF,
+				ALIGN_SIZE(DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
 							DMA_TO_DEVICE);
+
 			if (dma_mapping_error((&pdata->pdev->dev), prev_buffer->dma2)) {
 				printk(KERN_ALERT "failed to do the dma map\n");
 				return - ENOMEM;
@@ -871,8 +874,10 @@ static int DWC_ETH_QOS_map_non_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 			/* fill the second buffer pointer in buffer->dma */
 			buffer->dma = dma_map_single((&pdata->pdev->dev),
 						(skb->data + offset + DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
-						(size - DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
+						ALIGN_SIZE(size -
+					  DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
 						DMA_TO_DEVICE);
+
 			if (dma_mapping_error((&pdata->pdev->dev), buffer->dma)) {
 				printk(KERN_ALERT "failed to do the dma map\n");
 				return - ENOMEM;
@@ -885,8 +890,10 @@ static int DWC_ETH_QOS_map_non_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 			/* fill the first buffer pointer in buffer->dma */
 			buffer->dma = dma_map_single((&pdata->pdev->dev),
 					(skb->data + offset),
-					DWC_ETH_QOS_MAX_DATA_PER_TX_BUF,
+					ALIGN_SIZE(
+					  DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
 					DMA_TO_DEVICE);
+
 			if (dma_mapping_error((&pdata->pdev->dev), buffer->dma)) {
 				printk(KERN_ALERT "failed to do the dma map\n");
 				return - ENOMEM;
@@ -897,8 +904,10 @@ static int DWC_ETH_QOS_map_non_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 			/* fill the second buffer pointer in buffer->dma2 */
 			buffer->dma2 = dma_map_single((&pdata->pdev->dev),
 					(skb->data + offset + DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
-					(size - DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
+					ALIGN_SIZE(size -
+					  DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
 					DMA_TO_DEVICE);
+
 			if (dma_mapping_error((&pdata->pdev->dev), buffer->dma2)) {
 				printk(KERN_ALERT "failed to do the dma map\n");
 				return - ENOMEM;
@@ -911,7 +920,9 @@ static int DWC_ETH_QOS_map_non_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 			/* fill the first buffer pointer in prev_buffer->dma2 */
 			prev_buffer->dma2 = dma_map_single((&pdata->pdev->dev),
 						(skb->data + offset),
-						size, DMA_TO_DEVICE);
+						ALIGN_SIZE(size),
+						DMA_TO_DEVICE);
+
 			if (dma_mapping_error((&pdata->pdev->dev), prev_buffer->dma2)) {
 				printk(KERN_ALERT "failed to do the dma map\n");
 				return - ENOMEM;
@@ -927,8 +938,10 @@ static int DWC_ETH_QOS_map_non_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 		} else {
 			/* fill the first buffer pointer in buffer->dma */
 			buffer->dma = dma_map_single((&pdata->pdev->dev),
-						(skb->data + offset),
-						size, DMA_TO_DEVICE);
+						skb->data + offset,
+						ALIGN_SIZE(size),
+						DMA_TO_DEVICE);
+
 			if (dma_mapping_error((&pdata->pdev->dev), buffer->dma)) {
 				printk(KERN_ALERT "failed to do the dma map\n");
 				return - ENOMEM;
@@ -958,7 +971,7 @@ static int DWC_ETH_QOS_map_page_buffs_64(struct DWC_ETH_QOS_prv_data *pdata,
 	buffer->dma = dma_map_page((&pdata->pdev->dev),
 				frag->page.p,
 				frag->page_offset + offset,
-				size, DMA_TO_DEVICE);
+				ALIGN_SIZE(size), DMA_TO_DEVICE);
 	if (dma_mapping_error((&pdata->pdev->dev),
 				buffer->dma)) {
 		printk(KERN_ALERT "failed to do the dma map\n");
@@ -990,7 +1003,8 @@ static int DWC_ETH_QOS_map_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 				dma_map_page((&pdata->pdev->dev),
 						frag->page.p,
 						(frag->page_offset + offset),
-						DWC_ETH_QOS_MAX_DATA_PER_TX_BUF,
+						ALIGN_SIZE(
+					  DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
 						DMA_TO_DEVICE);
 			if (dma_mapping_error((&pdata->pdev->dev),
 						prev_buffer->dma2)) {
@@ -1004,7 +1018,8 @@ static int DWC_ETH_QOS_map_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 			buffer->dma = dma_map_page((&pdata->pdev->dev),
 						frag->page.p,
 						(frag->page_offset + offset + DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
-						(size - DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
+						ALIGN_SIZE(size -
+					  DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
 						DMA_TO_DEVICE);
 			if (dma_mapping_error((&pdata->pdev->dev),
 						buffer->dma)) {
@@ -1020,7 +1035,8 @@ static int DWC_ETH_QOS_map_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 			buffer->dma = dma_map_page((&pdata->pdev->dev),
 						frag->page.p,
 						(frag->page_offset + offset),
-						DWC_ETH_QOS_MAX_DATA_PER_TX_BUF,
+						ALIGN_SIZE(
+					  DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
 						DMA_TO_DEVICE);
 			if (dma_mapping_error((&pdata->pdev->dev),
 						buffer->dma)) {
@@ -1034,7 +1050,8 @@ static int DWC_ETH_QOS_map_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 			buffer->dma2 = dma_map_page((&pdata->pdev->dev),
 						frag->page.p,
 						(frag->page_offset + offset + DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
-						(size - DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
+						ALIGN_SIZE(size -
+					  DWC_ETH_QOS_MAX_DATA_PER_TX_BUF),
 						DMA_TO_DEVICE);
 			if (dma_mapping_error((&pdata->pdev->dev),
 						buffer->dma2)) {
@@ -1051,7 +1068,8 @@ static int DWC_ETH_QOS_map_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 			prev_buffer->dma2 = dma_map_page((&pdata->pdev->dev),
 						frag->page.p,
 						frag->page_offset,
-						size, DMA_TO_DEVICE);
+						ALIGN_SIZE(size),
+						DMA_TO_DEVICE);
 			if (dma_mapping_error((&pdata->pdev->dev),
 						prev_buffer->dma2)) {
 				printk(KERN_ALERT "failed to do the dma map\n");
@@ -1070,7 +1088,8 @@ static int DWC_ETH_QOS_map_page_buffs(struct DWC_ETH_QOS_prv_data *pdata,
 			buffer->dma = dma_map_page((&pdata->pdev->dev),
 						frag->page.p,
 						frag->page_offset,
-						size, DMA_TO_DEVICE);
+						ALIGN_SIZE(size),
+						DMA_TO_DEVICE);
 			if (dma_mapping_error((&pdata->pdev->dev),
 						buffer->dma)) {
 				printk(KERN_ALERT "failed to do the dma map\n");
@@ -1291,10 +1310,12 @@ static void DWC_ETH_QOS_unmap_tx_skb(struct DWC_ETH_QOS_prv_data *pdata,
 	if (buffer->dma) {
 		if (buffer->buf1_mapped_as_page == Y_TRUE)
 			dma_unmap_page((&pdata->pdev->dev), buffer->dma,
-				       buffer->len, DMA_TO_DEVICE);
+				       ALIGN_SIZE(buffer->len),
+				       DMA_TO_DEVICE);
 		else
 			dma_unmap_single((&pdata->pdev->dev), buffer->dma,
-					 buffer->len, DMA_TO_DEVICE);
+					 ALIGN_SIZE(buffer->len),
+					 DMA_TO_DEVICE);
 
 		buffer->dma = 0;
 		buffer->len = 0;
@@ -1303,10 +1324,11 @@ static void DWC_ETH_QOS_unmap_tx_skb(struct DWC_ETH_QOS_prv_data *pdata,
 	if (buffer->dma2) {
 		if (buffer->buf2_mapped_as_page == Y_TRUE)
 			dma_unmap_page((&pdata->pdev->dev), buffer->dma2,
-					buffer->len2, DMA_TO_DEVICE);
+					ALIGN_SIZE(buffer->len2),
+					DMA_TO_DEVICE);
 		else
 			dma_unmap_single((&pdata->pdev->dev), buffer->dma2,
-					buffer->len2, DMA_TO_DEVICE);
+				ALIGN_SIZE(buffer->len2), DMA_TO_DEVICE);
 
 		buffer->dma2 = 0;
 		buffer->len2 = 0;
@@ -1340,7 +1362,7 @@ static void DWC_ETH_QOS_unmap_rx_skb(struct DWC_ETH_QOS_prv_data *pdata,
 	if (buffer->dma) {
 		if (pdata->rx_split_hdr) {
 			dma_unmap_single(&pdata->pdev->dev, buffer->dma,
-					 (2*buffer->rx_hdr_size),
+					 ALIGN_SIZE(2*buffer->rx_hdr_size),
 					 DMA_FROM_DEVICE);
 		}
 		else if (pdata->dev->mtu > DWC_ETH_QOS_ETH_FRAME_LEN) {
@@ -1348,7 +1370,8 @@ static void DWC_ETH_QOS_unmap_rx_skb(struct DWC_ETH_QOS_prv_data *pdata,
 				       PAGE_SIZE, DMA_FROM_DEVICE);
 		} else {
 			dma_unmap_single(&pdata->pdev->dev, buffer->dma,
-					 pdata->rx_buffer_len, DMA_FROM_DEVICE);
+					 ALIGN_SIZE(pdata->rx_buffer_len),
+					 DMA_FROM_DEVICE);
 		}
 		buffer->dma = 0;
 	}

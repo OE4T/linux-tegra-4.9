@@ -62,16 +62,34 @@ static struct of_device_id tegra_sor_pd[] = {
 	{},
 };
 
-static ssize_t hdmi_ddc_power_toggle(struct kobject *kobj,
+/* Possibly should be moved to hdmi_common.h */
+static struct fb_videomode tegra_dc_vga_mode = {
+	.refresh = 60,
+	.xres = 640,
+	.yres = 480,
+	.pixclock = KHZ2PICOS(25200),
+	.hsync_len = 96,	/* h_sync_width */
+	.vsync_len = 2,		/* v_sync_width */
+	.left_margin = 48,	/* h_back_porch */
+	.upper_margin = 33,	/* v_back_porch */
+	.right_margin = 16,	/* h_front_porch */
+	.lower_margin = 10,	/* v_front_porch */
+	.vmode = 0,
+	.sync = 0,
+};
+
+__attribute__((unused)) static ssize_t hdmi_ddc_power_toggle(struct kobject *kobj,
 	struct kobj_attribute *attr, const char *buf, size_t count);
 
-static ssize_t hdmi_ddc_power_show(struct kobject *kobj,
+__attribute__((unused)) static ssize_t hdmi_ddc_power_show(struct kobject *kobj,
 	struct kobj_attribute *attr, char *buf);
 
+/*@@
 static struct kobj_attribute hdmi_ddc_power_config =
 	__ATTR(config, 0640, hdmi_ddc_power_show, hdmi_ddc_power_toggle);
 
 static struct kobject *hdmi_ddc;
+*/
 
 struct tmds_prod_pair {
 	int clk;
@@ -406,7 +424,7 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 	return true;
 }
 
-static void tegra_hdmi_ddc_power_toggle(int value)
+__attribute__((unused)) static void tegra_hdmi_ddc_power_toggle(int value)
 {
 	int partition_id;
 	if (dc_hdmi == NULL)
@@ -553,7 +571,7 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 	dc->connected = is_asserted;
 	tegra_dc_ext_process_hotplug(dc->ndev->id, is_asserted);
 
-#ifdef CONFIG_SWITCH
+#if 0//@@ def CONFIG_SWITCH
 	switch_set_state(&hdmi->hpd_switch, is_asserted ? 1 : 0);
 #endif
 }
@@ -647,7 +665,7 @@ static int tegra_hdmi_disable(struct tegra_hdmi *hdmi)
 	if (!hdmi->enabled) {
 		dc->connected = false;
 		tegra_dc_ext_process_hotplug(dc->ndev->id, false);
-#ifdef CONFIG_SWITCH
+#if 0//@@ def CONFIG_SWITCH
 		switch_set_state(&hdmi->hpd_switch, 0);
 #endif
 		return 0;
@@ -1068,7 +1086,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false);
 	}
 
-#ifdef CONFIG_SWITCH
+#if 0//@@ def CONFIG_SWITCH
 	hdmi->hpd_switch.name = "hdmi";
 	err = switch_dev_register(&hdmi->hpd_switch);
 	if (err)
@@ -1082,6 +1100,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			"hdmi: failed to register audio switch %d\n", err);
 #endif
 
+/*@@
 	hdmi_ddc = kobject_create_and_add("hdmi_ddc_power_toggle", kernel_kobj);
 	if (!hdmi_ddc) {
 		pr_warn("kobject create_and_add hdmi_ddc_power_toggle failed\n");
@@ -1092,6 +1111,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		pr_warn("sysfs create file hdmi_ddc_power_toggle failed\n");
 		return 0;
 	}
+*/
 
 	of_node_put(np_hdmi);
 	return 0;
@@ -1113,7 +1133,7 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	devm_kfree(&dc->ndev->dev, hdmi);
 	tegra_prod_release(&hdmi->prod_list);
 
-#ifdef CONFIG_SWITCH
+#if 0//@@ def CONFIG_SWITCH
 	switch_dev_unregister(&hdmi->hpd_switch);
 	switch_dev_unregister(&hdmi->audio_switch);
 #endif
@@ -1882,7 +1902,7 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	/* BRINGUP HACK - Disabling HDA */
 	tegra_hda_set_data(hdmi, SINK_HDMI);
-#ifdef CONFIG_SWITCH
+#if 0//@@ def CONFIG_SWITCH
 	if (!hdmi->dvi)
 		switch_set_state(&hdmi->audio_switch, 1);
 #endif
@@ -2120,7 +2140,7 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 
 	hdmi->enabled = false;
 
-#ifdef CONFIG_SWITCH
+#if 0//@@ def CONFIG_SWITCH
 	switch_set_state(&hdmi->audio_switch, 0);
 #endif
 
@@ -2326,7 +2346,7 @@ static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi)
 }
 #endif
 
-static ssize_t hdmi_ddc_power_toggle(struct kobject *kobj,
+__attribute__((unused)) static ssize_t hdmi_ddc_power_toggle(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int value;
@@ -2335,7 +2355,7 @@ static ssize_t hdmi_ddc_power_toggle(struct kobject *kobj,
 	return count;
 }
 
-static ssize_t hdmi_ddc_power_show(struct kobject *kobj,
+__attribute__((unused)) static ssize_t hdmi_ddc_power_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d\n", dc_hdmi->ddc_refcount);

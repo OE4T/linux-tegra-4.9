@@ -475,33 +475,3 @@ static __init int debugfs_create_sregdump(void)
 	return 0;
 }
 late_initcall(debugfs_create_sregdump);
-
-static __init int tegra_mce_init(void)
-{
-	u32 major = 0;
-	u32 minor = 0;
-
-	/* Skip validation for pre-Si */
-	if (!tegra_platform_is_silicon())
-		return 0;
-
-	/* Validate ARI version */
-	if (tegra_mce_read_versions(&major, &minor))
-		panic("tegra-mce: ARI version query failed.\n");
-
-	pr_info("tegra-mce: ARI versions HW=%d:%d, SW=%d:%d\n",
-		major, minor, CUR_ARI_VER_MAJOR, CUR_ARI_VER_MINOR);
-
-	if (major > CUR_ARI_VER_MAJOR)
-		pr_warn("tegra-mce: ARI HW is newer than SW (%d:%d > %d:%d).\n",
-			CUR_ARI_VER_MAJOR, CUR_ARI_VER_MINOR,
-			major, minor);
-
-	if (major < CUR_ARI_VER_MAJOR || minor < CUR_ARI_VER_MINOR)
-		pr_warn("tegra-mce: ARI HW is older than SW (%d:%d > %d:%d).\n",
-			CUR_ARI_VER_MAJOR, CUR_ARI_VER_MINOR,
-			major, minor);
-
-	return 0;
-}
-early_initcall(tegra_mce_init);

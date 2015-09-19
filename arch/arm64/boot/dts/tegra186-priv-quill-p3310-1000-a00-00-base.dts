@@ -46,9 +46,10 @@
 
 	xhci@3530000 {
 		status = "okay";
-		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
+		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
+			<&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
 			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>;
-		phy-names = "utmi-1", "usb3-1";
+		phy-names = "utmi-0", "utmi-1", "usb3-1";
 	};
 
 	padctl_uphy: pinctrl@3520000 {

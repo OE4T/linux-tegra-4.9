@@ -133,6 +133,7 @@ where XX = part device ID (0x29=IQS253, 0x3C=IQS263)
 	   3: disable
 	   4: event
 	   5: suspend
+	   6: delta (see delta options far below)
 	   If YY is 0, then all the commands will be displayed.
       ZZ = device
 	   Possible devices are:
@@ -173,29 +174,32 @@ $echo 0x??1B > nvs
 writes ?? to the gpio_rdy GPIO.
 $echo 0x1A > nvs
 switches the gpio_rdy GPIO to input.
-#echo 0xZZ19 > nvs
-sets the gpio_sar_dev option where ZZ is the zero based index of the option
-(see gpio_sar_dev below).
 
 For overall status information:
 #echo 10 > nvs
 #cat nvs
 The results will be something like:
-	IQS driver v. 14
+	IQS driver v. 16
 	ATI redo count=0
 	os_options=0
 	stream_mode=2
 	watchdog_timeout_ms=30000
+	i2c_ss_delay_ns=1000000
 	i2c_retry=10
 	gpio_rdy_retry=25
 	gpio_rdy 1=1
-	gpio_sar 173=1
+	gpio_sar 173=0
+	gpio_sar_assert_polarity=0
+	gpio_sar_dev_assert=SAR_proximity
+	gpio_sar_dev_deassert=SAR_proximity
+	gpio_sar_suspend_assert=1
+	deferred_resume_ms=3000
+	resume=0
+	SAR_delta_channel_mask=5
+	SAR_delta_average_count=10
 	irq=2
 	irq_disable=0
 	irq_trigger_edge=0
-	irq_set_irq_wake=0
-	susrsm=0
-	resume=0
 	SAR_proximity_binary_hw=1
 	SAR_touch_binary_hw=1
 When this status is read, the ATI redo count will reset to 0.
@@ -248,14 +252,15 @@ Optional properties:
 	SAR GPIO (according to the gpio_sar_assert_polarity) when an I2C
 	transaction is about to start and deasserts when the I2C transaction
 	finishes.
-- sar_suspend_assert: If the device is not configured to operate during suspend
-                      then this determines the SAR GPIO setting during suspend:
-		      -1 = DISABLE: SAR GPIO remains at current state from when
-		                    device was operational.
-		      0 = !ASSERT: GPIO is not asserted according to
-		                   gpio_sar_assert_polarity.
-		      1 = ASSERT: GPIO is asserted according to
-		                  gpio_sar_assert_polarity.
+- gpio_sar_suspend_assert: If the device is not configured to operate during
+			   suspend then this determines the SAR GPIO setting
+			   during suspend:
+			   -1 = DISABLE: SAR GPIO remains at current state from
+			                 when device was operational.
+		           0 = !ASSERT: GPIO is not asserted according to
+			                gpio_sar_assert_polarity.
+		           1 = ASSERT: GPIO is asserted according to
+		                       gpio_sar_assert_polarity.
 - os_options: If the IQS device is to be controlled by the OS then set this
 	      value to 1.  The default is 0.
   Note: The SAR_proximity and SAR_touch sensors can still be exposed to
@@ -268,7 +273,6 @@ Optional properties:
 		    configured as IRQF_TRIGGER_LOW.  Using IRQF_TRIGGER_LOW
 		    addresses false triggers while the interrupt is disabled
 		    during the forced communication protocol.
-- irq_set_irq_wake: Set to 1 if driver is to call this for suspend/resume.
 - stream_mode: The device triggers an interrupt on every device data cycle.
   Note: As mentioned above, the IQS devices have an, um, interesting mechanism
         for communication where there is a small window of time where the
@@ -331,7 +335,80 @@ Optional properties:
 	a failure.
 	BTW, this is all done according to the Azotec spec.
 
-Example:
+There may a situation where intermittent noise on a channel is causing
+unreliable data.  If this is the case, the delta options below can help
+determine the proximity state.  This is accomplished by creating virtual delta
+SW sensors for each channel.  Each SW sensor created will have the name
+SAR_delta_chX, where X is the channel number and the data acquired is the delta
+data from the HW pertaining to that channel.  By defining a delta algorithm in
+the device tree that can use each SW sensor's data, a global SW delta sensor
+named SAR_delta is used as the final result of the algorithm.  Each algorithm
+entry in device tree uses the following stucture:
+struct iqs_delta_tst {
+	int ch;
+	int lt;
+	int gt;
+};
+The DT algorithm uses two levels of conditionals.  The first level uses the
+label SAR_delta_test_X_Y, where X is the entry number and Y is one of the
+members of the iqs_delta_tst structure.  If all of the first level entrie's
+conditions result as true, then the second level of conditionals named
+SAR_delta_test_true_X_Y are executed.  If any of the first level entrie's
+conditions result in false, then the second level of conditionals named
+SAR_delta_test_false_X_Y are executed.  The result of the second level of
+conditionals is the data for the SAR_delta virtual SW sensor.
+Four entries are allowed for each level of conditionals.  Each entry must not
+use a negative value.  Each entry must have a valid channel (0 - 3) and at
+least one of the conditional values.  Here are how the conditionals are used,
+where d[ch] is the channels SAR_delta_chX delta data which may be a moving
+average if that feature is enabled (see SAR_delta_average_count below):
+Entry:
+	SAR_delta_test_0_ch = <0>;
+	SAR_delta_test_0_lt = <50>;
+Conditional:
+	if (d[0] < 50)
+Entry:
+	SAR_delta_test_0_ch = <1>;
+	SAR_delta_test_0_gt = <50>;
+Conditional:
+	if (d[1] > 50)
+Entry:
+	SAR_delta_test_0_ch = <2>;
+	SAR_delta_test_0_lt = <50>;
+	SAR_delta_test_0_gt = <100>;
+Conditional:
+	if (d[2] < 50 || d[2] > 100)
+Entry:
+	SAR_delta_test_0_ch = <3>;
+	SAR_delta_test_0_lt = <100>;
+	SAR_delta_test_0_gt = <50>;
+Conditional:
+	if (d[3] > 50 && d[3] < 100)
+Note how ranges can be used depending on whether the lt value is less than or
+greater than the gt value.
+The conditionals can be displayed at runtime with the following command in the
+driver space:
+#echo 0x6001E > nvs
+The following are the results from the DT example below:
+#cat nvs
+DELTA conditions:
+SAR_delta_test:
+if (ch2 < 75)
+if SAR_delta_test_true:
+if (ch0 > 5)
+if (ch2 > 5 && ch2 < 50)
+if SAR_delta_test_false:
+if (ch0 > 5)
+if (ch2 > 75 && ch2 < 90)
+
+- SAR_delta_channel_mask: The channel mask of the SW delta sensors to create.
+			  A value of 0 disables the feature.  The default is 0.
+- SAR_delta_average_count: The delta values for each channel can use a moving
+                           average.  This value sets the number of samples to
+			   use for each average calculation.  A value < 2
+			   disables the feature.  The default is 0.
+
+And finally, an example:
 
 	iqs253@44 {
 		compatible = "azoteq,iqs253";
@@ -350,7 +427,6 @@ Example:
                 263suspend_5 = [05 09 80 40 00 00 00 FF FF FF FF FF];
                 263suspend_6 = [03 0A FF FF FF FF FF FF];
                 263suspend_7 = [01 0B 0F FF];
-                263suspend_8 = [FF FF];
 		263init_0 = [05 09 80 04 10 07 0F FF FF FF FF FF];
 		263init_1 = [01 0D 07 FF];
 		263init_2 = [01 01 00 FF];
@@ -364,5 +440,18 @@ Example:
 		263en_prox_3 = [FF FF];
 		263en_prox_4 = [FF FF];
 		263en_prox_5 = [02 09 00 54 FF FF];
-		263en_prox_6 = [FF FF];
+		SAR_delta_channel_mask = <0x5>;
+		SAR_delta_average_count = <10>;
+		SAR_delta_test_0_ch = <2>;
+		SAR_delta_test_0_lt = <75>;
+		SAR_delta_test_true_0_ch = <0>;
+		SAR_delta_test_true_0_gt = <5>;
+		SAR_delta_test_true_1_ch = <2>;
+		SAR_delta_test_true_1_lt = <50>;
+		SAR_delta_test_true_1_gt = <5>;
+		SAR_delta_test_false_0_ch = <0>;
+		SAR_delta_test_false_0_gt = <5>;
+		SAR_delta_test_false_1_ch = <2>;
+		SAR_delta_test_false_1_lt = <90>;
+		SAR_delta_test_false_1_gt = <75>;
 	};

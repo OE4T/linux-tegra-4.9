@@ -1329,7 +1329,7 @@ static int DWC_ETH_QOS_alloc_split_hdr_rx_buf(
 	if (!buffer->dma)
 		buffer->dma = dma_map_single(&pdata->pdev->dev,
 					buffer->skb->data,
-					(2*buffer->rx_hdr_size),
+					ALIGN_SIZE(2*buffer->rx_hdr_size),
 					DMA_FROM_DEVICE);
 	buffer->len = buffer->rx_hdr_size;
 
@@ -1466,7 +1466,9 @@ static int DWC_ETH_QOS_alloc_rx_buf(struct DWC_ETH_QOS_prv_data *pdata,
 	buffer->len = pdata->rx_buffer_len;
  map_skb:
 	buffer->dma = dma_map_single(&pdata->pdev->dev, skb->data,
-				     pdata->rx_buffer_len, DMA_FROM_DEVICE);
+				     ALIGN_SIZE(pdata->rx_buffer_len),
+				     DMA_FROM_DEVICE);
+
 	if (dma_mapping_error(&pdata->pdev->dev, buffer->dma))
 		printk(KERN_ALERT "failed to do the RX dma map\n");
 
@@ -3083,7 +3085,8 @@ static int DWC_ETH_QOS_clean_split_hdr_rx_irq(
 
 			/* first buffer pointer */
 			dma_unmap_single(&pdata->pdev->dev, buffer->dma,
-				       (2*buffer->rx_hdr_size), DMA_FROM_DEVICE);
+				       ALIGN_SIZE(2*buffer->rx_hdr_size),
+				       DMA_FROM_DEVICE);
 			buffer->dma = 0;
 
 			/* second buffer pointer */
@@ -3264,8 +3267,13 @@ static int DWC_ETH_QOS_clean_split_hdr_rx_irq(
 						 * time stamp, hence delay the packet reception
 						 * */
 						buffer->skb = skb;
-						buffer->dma = dma_map_single(&pdata->pdev->dev, skb->data,
-								pdata->rx_buffer_len, DMA_FROM_DEVICE);
+						buffer->dma =
+						  dma_map_single(
+						      &pdata->pdev->dev,
+						      skb->data,
+						      ALIGN_SIZE(
+							pdata->rx_buffer_len),
+						      DMA_FROM_DEVICE);
 						if (dma_mapping_error(&pdata->pdev->dev, buffer->dma))
 							printk(KERN_ALERT "failed to do the RX dma map\n");
 
@@ -3548,8 +3556,13 @@ static int DWC_ETH_QOS_clean_jumbo_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
 						 * time stamp, hence delay the packet reception
 						 * */
 						buffer->skb = skb;
-						buffer->dma = dma_map_single(&pdata->pdev->dev, skb->data,
-								pdata->rx_buffer_len, DMA_FROM_DEVICE);
+						buffer->dma =
+						  dma_map_single(
+						      &pdata->pdev->dev,
+						      skb->data,
+						      ALIGN_SIZE(
+							pdata->rx_buffer_len),
+						      DMA_FROM_DEVICE);
 						if (dma_mapping_error(&pdata->pdev->dev, buffer->dma))
 							printk(KERN_ALERT "failed to do the RX dma map\n");
 
@@ -3653,8 +3666,11 @@ static int DWC_ETH_QOS_clean_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
 			/* assign it to new skb */
 			skb = buffer->skb;
 			buffer->skb = NULL;
+
 			dma_unmap_single(&pdata->pdev->dev, buffer->dma,
-					 pdata->rx_buffer_len, DMA_FROM_DEVICE);
+					 ALIGN_SIZE(
+					   pdata->rx_buffer_len),
+					 DMA_FROM_DEVICE);
 			buffer->dma = 0;
 
 			/* get the packet length */
@@ -3724,8 +3740,14 @@ static int DWC_ETH_QOS_clean_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
 							 * time stamp, hence delay the packet reception
 							 * */
 							buffer->skb = skb;
-							buffer->dma = dma_map_single(&pdata->pdev->dev, skb->data,
-									pdata->rx_buffer_len, DMA_FROM_DEVICE);
+							buffer->dma =
+							  dma_map_single(
+							      &pdata->pdev->dev,
+							      skb->data,
+							      ALIGN_SIZE(
+							pdata->rx_buffer_len),
+							      DMA_FROM_DEVICE);
+
 							if (dma_mapping_error(&pdata->pdev->dev, buffer->dma))
 								printk(KERN_ALERT "failed to do the RX dma map\n");
 

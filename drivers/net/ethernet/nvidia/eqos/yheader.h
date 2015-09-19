@@ -142,6 +142,27 @@
 
 #endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
 
+/* Enable PBLx8 setting */
+#define PBLx8
+
+/* EQOS DMA Burst size in bytes */
+#define EQOS_DMA_BURST_SIZE 128
+
+/* Width of AXI bus in bytes */
+#define AXI_BUS_WIDTH 16
+
+/* Max value of RXPBL */
+#define MAX_RXPBL 32
+
+#define ALIGN_BOUNDARY (EQOS_DMA_BURST_SIZE - 1)
+#define ALIGN_SIZE(size) ((size + ALIGN_BOUNDARY) & (~ALIGN_BOUNDARY))
+
+#ifdef PBLx8
+#define RXPBL (EQOS_DMA_BURST_SIZE / (AXI_BUS_WIDTH * 8))
+#else
+#define RXPBL (EQOS_DMA_BURST_SIZE / (AXI_BUS_WIDTH))
+#endif
+
 /* NOTE: Uncomment below line for TX and RX DESCRIPTOR DUMP in KERNEL LOG */
 //#define DWC_ETH_QOS_ENABLE_TX_DESC_DUMP
 //#define DWC_ETH_QOS_ENABLE_RX_DESC_DUMP

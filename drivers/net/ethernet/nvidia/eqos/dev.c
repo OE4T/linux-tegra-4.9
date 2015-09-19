@@ -4624,8 +4624,7 @@ static INT configure_dma_channel(UINT qInx,
 	DMA_TCR_PBL_UdfWr(qInx, pbl);
 
 	p_fifo = calculate_per_queue_fifo(pdata->hw_feat.rx_fifo_size, DWC_ETH_QOS_RX_QUEUE_CNT);
-	pbl = calculate_dma_pbl(p_fifo);
-	DMA_RCR_PBL_UdfWr(qInx, pbl);
+	DMA_RCR_PBL_UdfWr(qInx, min(RXPBL, MAX_RXPBL));
 
 	/* To get Best Performance */
 	DMA_SBUS_BLEN16_UdfWr(1);

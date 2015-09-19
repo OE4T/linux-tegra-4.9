@@ -591,26 +591,13 @@ int tegra_nvdisp_get_linestride(struct tegra_dc *dc, int win)
 		win_set_planar_storage_r()) << 6;
 }
 
-static void tegra_nvdisp_enable_common_act(struct tegra_dc *dc)
-{
-	tegra_dc_writel(dc,
-		nvdisp_cmd_state_ctrl_common_act_req_enable_f(),
-		nvdisp_cmd_state_ctrl_r());
-
-	if (tegra_dc_poll_register(dc, DC_CMD_STATE_CONTROL,
-		COMMON_ACT_REQ, 0, 1,
-		NVDISP_TEGRA_POLL_TIMEOUT_MS))
-		dev_err(&dc->ndev->dev,
-			"dc timeout waiting for DC to stop\n");
-}
-
 int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	struct tegra_dc_win *windows[], int n,
 	u16 *dirty_rect, bool wait_for_vblank)
 {
 	int i;
-	/*u32 update_mask = nvdisp_cmd_state_ctrl_general_act_req_enable_f();*/
-	u32 update_mask = 0;
+	u32 update_mask = nvdisp_cmd_state_ctrl_general_act_req_enable_f();
+	u32 act_req_mask = 0;
 	u32 act_control = 0;
 
 	for (i = 0; i < n; i++) {
@@ -632,40 +619,55 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 		}
 
 		if (!WIN_IS_ENABLED(win)) {
+			u32 win_options;
+
+			/* TODO: only program if the window was already disabled */
+			update_mask |=
+				nvdisp_cmd_state_ctrl_win_a_update_enable_f()
+				<< win->idx;
+			act_req_mask |=
+				nvdisp_cmd_state_ctrl_a_act_req_enable_f()
+				<< win->idx;
+
+			/* disable the window without altering other flags */
+			win_options = nvdisp_win_read(win, win_options_r());
+			win_options &= ~win_options_win_enable_enable_f();
+			nvdisp_win_write(win, win_options, win_options_r());
+
 			dc_win->dirty = no_vsync ? 0 : 1;
-			/* TODO: disable this window */
-			continue;
+		} else {
+			update_mask |= nvdisp_cmd_state_ctrl_win_a_update_enable_f()
+				<< win->idx;
+			act_req_mask |=  nvdisp_cmd_state_ctrl_a_act_req_enable_f()
+				<< win->idx;
+
+			if (wait_for_vblank)
+				act_control = win_act_control_ctrl_sel_vcounter_f();
+			else
+				act_control = win_act_control_ctrl_sel_hcounter_f();
+
+			nvdisp_win_write(win, act_control, win_act_control_r());
+
+			tegra_nvdisp_blend(win);
+			tegra_nvdisp_scaling(win);
+			tegra_nvdisp_enable_cde(win);
+
+			/* if (do_partial_update) { */
+				/* /\* calculate the xoff, yoff etc values *\/ */
+				/* tegra_dc_win_partial_update(dc, win, xoff, yoff, */
+				/* 	width, height); */
+			/* } */
+
+			tegra_nvdisp_win_attribute(win);
+
+			if (dc_win->csc_dirty) {
+				tegra_nvdisp_set_csc(win, &dc_win->csc);
+				dc_win->csc_dirty = false;
+			}
+
+			dc_win->dirty = 1;
+			win->dirty = 1;
 		}
-
-		update_mask |=
-			nvdisp_cmd_state_ctrl_a_act_req_enable_f() << win->idx;
-
-		if (wait_for_vblank)
-			act_control = win_act_control_ctrl_sel_vcounter_f();
-		else
-			act_control = win_act_control_ctrl_sel_hcounter_f();
-
-		nvdisp_win_write(win, act_control, win_act_control_r());
-
-		tegra_nvdisp_blend(win);
-		tegra_nvdisp_scaling(win);
-		tegra_nvdisp_enable_cde(win);
-
-		/* if (do_partial_update) { */
-			/* /\* calculate the xoff, yoff etc values *\/ */
-			/* tegra_dc_win_partial_update(dc, win, xoff, yoff, */
-			/* 	width, height); */
-		/* } */
-
-		tegra_nvdisp_win_attribute(win);
-
-		if (dc_win->csc_dirty) {
-			tegra_nvdisp_set_csc(win, &dc_win->csc);
-			dc_win->csc_dirty = false;
-		}
-
-		dc_win->dirty = 1;
-		win->dirty = 1;
 
 		trace_window_update(dc, win);
 	}
@@ -693,21 +695,22 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	dc->crc_pending = true;
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
-		update_mask |= (nvdisp_cmd_state_ctrl_host_trig_enable_f() |
+		act_req_mask |= (nvdisp_cmd_state_ctrl_host_trig_enable_f() |
 			nvdisp_cmd_state_ctrl_common_act_req_enable_f());
 
+	update_mask |= nvdisp_cmd_state_ctrl_common_act_update_enable_f();
+
 	/* setting common active request as default now to
-	 * get scan_column feature working
-	 * DONOT CALL UPDATE AND REQUEST ON SAME WRITE
-	 */
-	update_mask |= (update_mask << 8) |
-		nvdisp_cmd_state_ctrl_common_act_update_enable_f();
+	 * get scan_column feature working */
+	act_req_mask |= nvdisp_cmd_state_ctrl_common_act_req_enable_f(),
 
+	/* cannot set fields related to UPDATE and ACT_REQ in the same write */
 	tegra_dc_writel(dc, update_mask, nvdisp_cmd_state_ctrl_r());
-
-	tegra_nvdisp_enable_common_act(dc);
-
-	tegra_dc_enable_general_act(dc);
+	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
+	if (act_req_mask) {
+		tegra_dc_writel(dc, act_req_mask, nvdisp_cmd_state_ctrl_r());
+		tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
+	}
 
 	return 0;
 }

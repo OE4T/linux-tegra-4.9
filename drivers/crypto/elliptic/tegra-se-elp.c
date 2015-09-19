@@ -1,6 +1,6 @@
 /*
  * Cryptographic API.
- * drivers/crypto/tegra-se.c
+ * drivers/crypto/tegra-se-elp.c
  *
  * Support for Tegra Security Engine hardware crypto algorithms.
  *
@@ -53,7 +53,11 @@
 #define PKA1	0
 #define RNG1	1
 
-#define TEGRA_SE_PKA_MUTEX_WDT_UNITS	0x600000
+#define TEGRA_SE_MUTEX_WDT_UNITS	0x600000
+#define RNG1_TIMEOUT			2000	/*micro seconds*/
+#define RAND_128			16	/*bytes*/
+#define RAND_256			32	/*bytes*/
+#define ADV_STATE_FREQ			3
 
 enum tegra_se_pka_rsa_type {
 	RSA_EXP_MOD,
@@ -93,6 +97,24 @@ enum tegra_se_elp_op_mode {
 	SE_ELP_OP_MODE_ECC521,
 };
 
+enum tegra_se_elp_rng1_cmd {
+	RNG1_CMD_NOP,
+	RNG1_CMD_GEN_NOISE,
+	RNG1_CMD_GEN_NONCE,
+	RNG1_CMD_CREATE_STATE,
+	RNG1_CMD_RENEW_STATE,
+	RNG1_CMD_REFRESH_ADDIN,
+	RNG1_CMD_GEN_RANDOM,
+	RNG1_CMD_ADVANCE_STATE,
+	RNG1_CMD_KAT,
+	RNG1_CMD_ZEROIZE = 15,
+};
+
+static char *rng1_cmd[10] = {"RNG1_CMD_NOP", "RNG1_CMD_GEN_NOISE",
+	"RNG1_CMD_GEN_NONCE", "RNG1_CMD_CREATE_STATE", "RNG1_CMD_RENEW_STATE",
+	"RNG1_CMD_REFRESH_ADDIN", "RNG1_CMD_GEN_RANDOM",
+	"RNG1_CMD_ADVANCE_STATE", "RNG1_CMD_KAT", "RNG1_CMD_ZEROIZE"};
+
 struct tegra_se_chipdata {
 	bool use_key_slot;
 };
@@ -107,6 +129,16 @@ struct tegra_se_elp_dev {
 };
 
 static struct tegra_se_elp_dev *elp_dev;
+
+struct tegra_se_elp_rng_request {
+	int size;
+	u32 *rdata;
+	u32 *rdata1;
+	u32 *rdata2;
+	u32 *rdata3;
+	bool test_full_cmd_flow;
+	bool adv_state_on;
+};
 
 struct tegra_se_elp_pka_request {
 	struct tegra_se_elp_dev *se_dev;
@@ -145,6 +177,8 @@ static DEFINE_SPINLOCK(key_slot_lock);
 
 static u32 pka_op_size[16] = {512, 768, 1024, 1536, 2048, 3072, 4096, 160, 192,
 				224, 256, 384, 512, 640};
+struct timeval tv;
+long usec;
 
 static inline u32 num_words(int mode)
 {
@@ -229,8 +263,9 @@ static int tegra_se_pka_init_key_slot(void)
 	struct tegra_se_elp_dev *se_dev = elp_dev;
 	int i;
 
-	se_dev->slot_list = kzalloc(sizeof(struct tegra_se_slot) *
-				TEGRA_SE_PKA_KEYSLOT_COUNT, GFP_KERNEL);
+	se_dev->slot_list = devm_kzalloc(se_dev->dev,
+		sizeof(struct tegra_se_slot) * TEGRA_SE_PKA_KEYSLOT_COUNT,
+			GFP_KERNEL);
 	if (se_dev->slot_list == NULL) {
 		dev_err(se_dev->dev, "slot list memory allocation failed\n");
 		return -ENOMEM;
@@ -297,7 +332,7 @@ static u32 tegra_se_set_trng_op(struct tegra_se_elp_dev *se_dev)
 
 static void tegra_se_restart_pka_mutex_wdt(struct tegra_se_elp_dev *se_dev)
 {
-	se_elp_writel(se_dev, PKA1, TEGRA_SE_PKA_MUTEX_WDT_UNITS,
+	se_elp_writel(se_dev, PKA1, TEGRA_SE_MUTEX_WDT_UNITS,
 			TEGRA_SE_ELP_PKA_MUTEX_WATCHDOG_OFFSET);
 }
 
@@ -973,27 +1008,27 @@ static int tegra_se_elp_pka_init(struct tegra_se_elp_pka_request *req)
 	if (req->op_mode == SE_ELP_OP_MODE_ECC521)
 		return 0;
 
-	req->rinv = kzalloc(req->size, GFP_KERNEL);
+	req->rinv = devm_kzalloc(se_dev->dev, req->size, GFP_KERNEL);
 	if (!req->rinv) {
 		dev_err(se_dev->dev, "\n%s: Memory alloc fail for req->rinv\n",
 					__func__);
 		return -ENOMEM;
 	}
 
-	req->m = kzalloc(req->size, GFP_KERNEL);
+	req->m = devm_kzalloc(se_dev->dev, req->size, GFP_KERNEL);
 	if (!req->m) {
 		dev_err(se_dev->dev, "\n%s: Memory alloc fail for req->m\n",
 					__func__);
-		kfree(req->rinv);
+		devm_kfree(se_dev->dev, req->rinv);
 		return -ENOMEM;
 	}
 
-	req->r2 = kzalloc(req->size, GFP_KERNEL);
+	req->r2 = devm_kzalloc(se_dev->dev, req->size, GFP_KERNEL);
 	if (!req->r2) {
 		dev_err(se_dev->dev, "\n%s: Memory alloc fail for req->r2\n",
 					__func__);
-		kfree(req->m);
-		kfree(req->rinv);
+		devm_kfree(se_dev->dev, req->m);
+		devm_kfree(se_dev->dev, req->rinv);
 		return -ENOMEM;
 	}
 
@@ -1002,12 +1037,505 @@ static int tegra_se_elp_pka_init(struct tegra_se_elp_pka_request *req)
 
 static void tegra_se_elp_pka_exit(struct tegra_se_elp_pka_request *req)
 {
+	struct tegra_se_elp_dev *se_dev = elp_dev;
+
 	if (req->op_mode == SE_ELP_OP_MODE_ECC521)
 		return;
 
-	kfree(req->r2);
-	kfree(req->m);
-	kfree(req->rinv);
+	devm_kfree(se_dev->dev, req->r2);
+	devm_kfree(se_dev->dev, req->m);
+	devm_kfree(se_dev->dev, req->rinv);
+}
+
+static void tegra_se_release_rng_mutex(struct tegra_se_elp_dev *se_dev)
+{
+	se_elp_writel(se_dev, RNG1, 0x01, TEGRA_SE_ELP_RNG_MUTEX_OFFSET);
+}
+
+static u32 tegra_se_acquire_rng_mutex(struct tegra_se_elp_dev *se_dev)
+{
+	u32 val = 0;
+
+	do_gettimeofday(&tv);
+	usec = tv.tv_usec;
+
+	while (val != 0x01) {
+		val = se_elp_readl(se_dev, RNG1, TEGRA_SE_ELP_RNG_MUTEX_OFFSET);
+		do_gettimeofday(&tv);
+		if (tv.tv_usec - usec > RNG1_TIMEOUT) {
+			dev_err(se_dev->dev, "\nAcquire RNG1 Mutex timed out\n");
+			return -EINVAL;
+		}
+	}
+
+	/* One unit is 256 SE Cycles */
+	se_elp_writel(se_dev, RNG1, TEGRA_SE_MUTEX_WDT_UNITS,
+				TEGRA_SE_ELP_RNG_MUTEX_WATCHDOG_OFFSET);
+	se_elp_writel(se_dev, RNG1,
+		TEGRA_SE_ELP_RNG_MUTEX_TIMEOUT_ACTION,
+		TEGRA_SE_ELP_RNG_MUTEX_TIMEOUT_ACTION_OFFSET);
+
+	return 0;
+}
+
+static u32 tegra_se_check_rng_status(struct tegra_se_elp_dev *se_dev)
+{
+	static bool rng1_first = true;
+	u32 ret = 0;
+	u32 val = TEGRA_SE_ELP_RNG_STATUS_BUSY(TRUE);
+
+	do_gettimeofday(&tv);
+	usec = tv.tv_usec;
+
+	/*Wait until RNG is Idle */
+	while (val & TEGRA_SE_ELP_RNG_STATUS_BUSY(TRUE)) {
+		val = se_elp_readl(se_dev, RNG1,
+				TEGRA_SE_ELP_RNG_STATUS_OFFSET);
+		do_gettimeofday(&tv);
+		if (tv.tv_usec - usec > RNG1_TIMEOUT) {
+			dev_err(se_dev->dev, "\nWait for RNG1 Idle timed out\n");
+			return -EINVAL;
+		}
+	}
+
+	if (rng1_first) {
+		/*Check health test is ok*/
+		val = se_elp_readl(se_dev, RNG1,
+					TEGRA_SE_ELP_RNG_ISTATUS_OFFSET);
+		if (!(val &
+			TEGRA_SE_ELP_RNG_ISTATUS_NOISE_RDY(ISTATUS_ACTIVE))) {
+			dev_err(se_dev->dev,
+				"\nWrong Startup value in RNG_ISTATUS Reg\n");
+			return -EINVAL;
+		}
+		rng1_first = false;
+	}
+
+	val = se_elp_readl(se_dev, RNG1, TEGRA_SE_ELP_RNG_ISTATUS_OFFSET);
+	se_elp_writel(se_dev, RNG1, val, TEGRA_SE_ELP_RNG_ISTATUS_OFFSET);
+
+	val = se_elp_readl(se_dev, RNG1, TEGRA_SE_ELP_RNG_ISTATUS_OFFSET);
+	if (val) {
+		dev_err(se_dev->dev, "\nRNG_ISTATUS Reg is not cleared\n");
+		return -EINVAL;
+	}
+
+	return ret;
+}
+
+static void tegra_se_set_rng1_mode(unsigned int mode)
+{
+	struct tegra_se_elp_dev *se_dev = elp_dev;
+	/*no additional input mode*/
+	se_elp_writel(se_dev, RNG1, mode, TEGRA_SE_ELP_RNG_SE_MODE_OFFSET);
+}
+
+static void tegra_se_set_rng1_smode(bool secure, bool nonce)
+{
+	u32 val = 0;
+	struct tegra_se_elp_dev *se_dev = elp_dev;
+
+	if (secure)
+		val |= TEGRA_SE_ELP_RNG_SE_SMODE_SECURE(SMODE_SECURE);
+	if (nonce)
+		val |= TEGRA_SE_ELP_RNG_SE_SMODE_NONCE(ENABLE);
+
+	/* need to write twice, switch secure/promiscuous
+	 * mode would reset other bits
+	 */
+	se_elp_writel(se_dev, RNG1, val, TEGRA_SE_ELP_RNG_SE_SMODE_OFFSET);
+	se_elp_writel(se_dev, RNG1, val, TEGRA_SE_ELP_RNG_SE_SMODE_OFFSET);
+}
+
+static int tegra_se_execute_rng1_ctrl_cmd(unsigned int cmd)
+{
+	u32 val, stat;
+	bool secure_mode;
+	struct tegra_se_elp_dev *se_dev = elp_dev;
+	int ret = 0;
+
+	se_elp_writel(se_dev, RNG1, 0xFFFFFFFF, TEGRA_SE_ELP_RNG_INT_EN_OFFSET);
+	se_elp_writel(se_dev, RNG1, 0xFFFFFFFF, TEGRA_SE_ELP_RNG_IE_OFFSET);
+
+	val = se_elp_readl(se_dev, RNG1, TEGRA_SE_ELP_RNG_STATUS_OFFSET);
+	if (val & TEGRA_SE_ELP_RNG_STATUS_SECURE(STATUS_SECURE))
+		secure_mode = true;
+	else
+		secure_mode = false;
+
+	switch (cmd) {
+	case RNG1_CMD_GEN_NONCE:
+	case RNG1_CMD_CREATE_STATE:
+	case RNG1_CMD_RENEW_STATE:
+	case RNG1_CMD_REFRESH_ADDIN:
+	case RNG1_CMD_GEN_RANDOM:
+	case RNG1_CMD_ADVANCE_STATE:
+		stat = TEGRA_SE_ELP_RNG_ISTATUS_DONE(ISTATUS_ACTIVE);
+		break;
+	case RNG1_CMD_GEN_NOISE:
+		if (secure_mode)
+			stat = TEGRA_SE_ELP_RNG_ISTATUS_DONE(ISTATUS_ACTIVE);
+		else
+			stat = TEGRA_SE_ELP_RNG_ISTATUS_DONE(ISTATUS_ACTIVE) |
+			TEGRA_SE_ELP_RNG_ISTATUS_NOISE_RDY(ISTATUS_ACTIVE);
+		break;
+	case RNG1_CMD_KAT:
+		stat = TEGRA_SE_ELP_RNG_ISTATUS_KAT_COMPLETED(ISTATUS_ACTIVE);
+		break;
+	case RNG1_CMD_ZEROIZE:
+		stat = TEGRA_SE_ELP_RNG_ISTATUS_ZEROIZED(ISTATUS_ACTIVE);
+		break;
+	case RNG1_CMD_NOP:
+	default:
+		dev_err(se_dev->dev,
+			"\nCmd %d has nothing to do (or) invalid\n", cmd);
+		dev_err(se_dev->dev,
+			"\nRNG1 Command Failure: %s\n", rng1_cmd[cmd]);
+		return -EINVAL;
+		break;
+	}
+	se_elp_writel(se_dev, RNG1, cmd, TEGRA_SE_ELP_RNG_CTRL_OFFSET);
+
+	val = se_elp_readl(se_dev, RNG1, TEGRA_SE_ELP_RNG_ISTATUS_OFFSET);
+	while ((val | ~stat) != 0xffffffff)
+		val = se_elp_readl(se_dev, RNG1,
+				TEGRA_SE_ELP_RNG_ISTATUS_OFFSET);
+
+	if (val != stat) {
+		dev_err(se_dev->dev,
+		"\nInvalid ISTAT 0x%x after cmd %d execution\n", stat, cmd);
+		dev_err(se_dev->dev, "\nRNG1 Command Failure: %s\n",
+				rng1_cmd[cmd]);
+		return -EINVAL;
+	}
+
+	val = se_elp_readl(se_dev, RNG1, TEGRA_SE_ELP_RNG_IE_OFFSET);
+	val = se_elp_readl(se_dev, RNG1, TEGRA_SE_ELP_RNG_INT_EN_OFFSET);
+
+	val = se_elp_readl(se_dev, RNG1, TEGRA_SE_ELP_RNG_INT_STATUS_OFFSET);
+	while (!(val & TEGRA_SE_ELP_RNG_INT_STATUS_EIP0(STATUS_ACTIVE)))
+		se_elp_readl(se_dev, RNG1, TEGRA_SE_ELP_RNG_INT_STATUS_OFFSET);
+
+	if (!(val & TEGRA_SE_ELP_RNG_INT_STATUS_EIP0(STATUS_ACTIVE))) {
+		dev_err(se_dev->dev,
+		"\nRNG1 interrupt is not set (0x%x) after cmd %d execution\n",
+			val, cmd);
+		dev_err(se_dev->dev, "\nRNG1 Command Failure: %s\n",
+				rng1_cmd[cmd]);
+		return -EINVAL;
+	}
+
+	se_elp_writel(se_dev, RNG1, stat, TEGRA_SE_ELP_RNG_ISTATUS_OFFSET);
+	val = se_elp_readl(se_dev, RNG1, TEGRA_SE_ELP_RNG_INT_STATUS_OFFSET);
+	if (val & TEGRA_SE_ELP_RNG_INT_STATUS_EIP0(STATUS_ACTIVE)) {
+		dev_err(se_dev->dev,
+		"\nRNG1 interrupt could not be cleared (0x%x) after cmd %d execution\n",
+			val, cmd);
+		dev_err(se_dev->dev, "\nRNG1 Command Failure: %s\n",
+				rng1_cmd[cmd]);
+		return -EINVAL;
+	}
+	return ret;
+}
+
+static u32 *tegra_se_check_rng1_result(struct tegra_se_elp_rng_request *req)
+{
+	u32 i, val;
+	int err = 0;
+	u32 *rand;
+	struct tegra_se_elp_dev *se_dev = elp_dev;
+
+	rand = devm_kzalloc(se_dev->dev, sizeof(rand) * 4, GFP_KERNEL);
+
+	for (i = 0; i < 4; i++) {
+		val = se_elp_readl(se_dev, RNG1,
+			TEGRA_SE_ELP_RNG_RAND0_OFFSET + i*4);
+		if (!val) {
+			devm_kfree(se_dev->dev, rand);
+			return NULL;
+		} else {
+			rand[i] = val;
+		}
+	}
+
+	if (err)
+		dev_err(se_dev->dev, "\nNo rdata read data from RAND\n");
+
+	return rand;
+}
+
+static int tegra_se_check_rng1_alarms(void)
+{
+	u32 val;
+	struct tegra_se_elp_dev *se_dev = elp_dev;
+
+	val = se_elp_readl(se_dev, RNG1, TEGRA_SE_ELP_RNG_ALARMS_OFFSET);
+	if (val) {
+		dev_err(se_dev->dev,
+			"\nRNG Alarms are not clear (0x%x)\n", val);
+		return -EINVAL;
+	}
+	return 0;
+}
+
+static void tegra_se_rng1_feed_npa_data(void)
+{
+	int i = 0;
+	u32 data, r;
+	struct tegra_se_elp_dev *se_dev = elp_dev;
+
+	for (i = 0; i < 16; i++) {
+		get_random_bytes(&r, sizeof(int));
+		data = r & 0xffffffff;
+		se_elp_writel(se_dev, RNG1, data,
+			TEGRA_SE_ELP_RNG_NPA_DATA0_OFFSET + i*4);
+	}
+}
+
+static int tegra_se_elp_rng_do(struct tegra_se_elp_dev *se_dev,
+			struct tegra_se_elp_rng_request *req)
+{
+	u32 *rdata;
+	u32 *rand_num = devm_kzalloc(se_dev->dev,
+			(sizeof(rand_num) * (RAND_256/4)), GFP_KERNEL);
+	int i, j, k, ret = 0;
+	bool adv_state = false;
+
+	tegra_se_set_rng1_smode(true, false);
+	tegra_se_set_rng1_mode(RNG1_MODE_SEC_ALG);
+	/* Generate Noise */
+	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_NOISE);
+	if (ret)
+		goto ret;
+	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_CREATE_STATE);
+	if (ret)
+		goto ret;
+
+	for (i = 0; i < req->size/RAND_128; i++) {
+		if (i && req->adv_state_on && (i % ADV_STATE_FREQ == 0)) {
+			ret =
+			tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_ADVANCE_STATE);
+			if (ret)
+				goto ret;
+			adv_state = true;
+		}
+		ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_RANDOM);
+		if (ret)
+			goto ret;
+		rdata = tegra_se_check_rng1_result(req);
+		if (ret) {
+			dev_err(se_dev->dev, "\nRNG1 Failed for Sub-Step 1\n");
+			goto ret;
+		}
+
+		for (k = (4*i), j = 0; k < 4*(i+1); k++, j++)
+			rand_num[k] = rdata[j];
+
+		if (adv_state) {
+			ret =
+			tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_ADVANCE_STATE);
+			if (ret)
+				goto ret;
+			if ((i+1) < req->size/RAND_128) {
+				ret =
+				tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_NOISE);
+				if (ret)
+					goto ret;
+				ret =
+				tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_RENEW_STATE);
+				if (ret)
+					goto ret;
+			}
+		}
+	}
+
+	for (k = 0; k < (RAND_256/4); k++)
+		req->rdata[k] = rand_num[k];
+
+	tegra_se_check_rng1_alarms();
+
+	if (!req->test_full_cmd_flow)
+		goto ret;
+
+	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_ZEROIZE);
+	if (ret)
+		goto ret;
+
+	tegra_se_set_rng1_smode(true, false);
+	tegra_se_set_rng1_mode(RNG1_MODE_ADDIN_PRESENT);
+
+	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_NOISE);
+	if (ret)
+		goto ret;
+	tegra_se_rng1_feed_npa_data();
+	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_CREATE_STATE);
+	if (ret)
+		goto ret;
+	tegra_se_rng1_feed_npa_data();
+	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_REFRESH_ADDIN);
+	if (ret)
+		goto ret;
+
+	for (i = 0; i < req->size/RAND_128; i++) {
+		if (i && req->adv_state_on && (i % ADV_STATE_FREQ == 0)) {
+			ret =
+			tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_ADVANCE_STATE);
+			if (ret)
+				goto ret;
+			tegra_se_rng1_feed_npa_data();
+			ret =
+			tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_REFRESH_ADDIN);
+			if (ret)
+				goto ret;
+			adv_state = true;
+		}
+		ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_RANDOM);
+		if (ret)
+			goto ret;
+
+		rdata = tegra_se_check_rng1_result(req);
+		if (ret) {
+			dev_err(se_dev->dev, "\nRNG1 Failed for Sub-Step 2\n");
+			goto ret;
+		}
+
+		for (k = (4*i), j = 0; k < 4*(i+1); k++, j++)
+			rand_num[k] = rdata[j];
+
+		if (adv_state) {
+			ret =
+			tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_ADVANCE_STATE);
+			if (ret)
+				goto ret;
+			if ((i+1) < req->size/RAND_128) {
+				ret =
+				tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_NOISE);
+				if (ret)
+					goto ret;
+				tegra_se_rng1_feed_npa_data();
+				ret =
+				tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_RENEW_STATE);
+				if (ret)
+					goto ret;
+				tegra_se_rng1_feed_npa_data();
+				ret =
+				tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_REFRESH_ADDIN);
+				if (ret)
+					goto ret;
+			}
+		}
+	}
+
+	for (k = 0; k < (RAND_256/4); k++)
+		req->rdata1[k] = rand_num[k];
+
+	tegra_se_check_rng1_alarms();
+
+	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_ZEROIZE);
+	if (ret)
+		goto ret;
+
+	tegra_se_set_rng1_smode(true, true);
+	tegra_se_set_rng1_mode(RNG1_MODE_ADDIN_PRESENT);
+
+	tegra_se_rng1_feed_npa_data();
+	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_NONCE);
+	if (ret)
+		goto ret;
+	tegra_se_rng1_feed_npa_data();
+	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_NONCE);
+	if (ret)
+		goto ret;
+	tegra_se_rng1_feed_npa_data();
+	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_CREATE_STATE);
+	if (ret)
+		goto ret;
+	tegra_se_rng1_feed_npa_data();
+	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_REFRESH_ADDIN);
+	if (ret)
+		goto ret;
+
+	for (i = 0; i < req->size/RAND_128; i++) {
+		if (i && req->adv_state_on && (i % ADV_STATE_FREQ == 0)) {
+			ret =
+			tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_ADVANCE_STATE);
+			if (ret)
+				goto ret;
+			tegra_se_rng1_feed_npa_data();
+			ret =
+			tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_REFRESH_ADDIN);
+			if (ret)
+				goto ret;
+			adv_state = true;
+		}
+		ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_RANDOM);
+		if (ret)
+			goto ret;
+		rdata = tegra_se_check_rng1_result(req);
+		if (ret) {
+			dev_err(se_dev->dev, "\nRNG1 Failed for Sub-Step 3\n");
+			goto ret;
+		}
+
+		for (k = (4*i), j = 0; k < 4*(i+1); k++, j++)
+			rand_num[k] = rdata[j];
+
+		if (adv_state) {
+			ret =
+			tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_ADVANCE_STATE);
+			if (ret)
+				goto ret;
+			if ((i+1) < req->size/RAND_128) {
+				ret =
+				tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_NONCE);
+				if (ret)
+					goto ret;
+				tegra_se_rng1_feed_npa_data();
+				ret =
+				tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_RENEW_STATE);
+				if (ret)
+					goto ret;
+				tegra_se_rng1_feed_npa_data();
+				ret =
+				tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_REFRESH_ADDIN);
+				if (ret)
+					goto ret;
+			}
+		}
+	}
+
+	for (k = 0; k < (RAND_256/4); k++)
+		req->rdata2[k] = rand_num[k];
+
+	tegra_se_check_rng1_alarms();
+
+	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_ZEROIZE);
+ret:
+	devm_kfree(se_dev->dev, rand_num);
+	return ret;
+}
+
+int tegra_se_elp_rng_op(struct tegra_se_elp_rng_request *req)
+{
+	struct tegra_se_elp_dev *se_dev = elp_dev;
+	int ret = 0;
+
+	ret = tegra_se_acquire_rng_mutex(se_dev);
+	if (ret) {
+		dev_err(se_dev->dev, "\n RNG Mutex acquire failed\n");
+		return ret;
+	}
+
+	ret = tegra_se_check_rng_status(se_dev);
+	if (ret) {
+		dev_err(se_dev->dev, "\n RNG1 initial state is wrong\n");
+		goto rel_mutex;
+	}
+
+	ret = tegra_se_elp_rng_do(se_dev, req);
+rel_mutex:
+	tegra_se_release_rng_mutex(se_dev);
+	return ret;
 }
 
 int tegra_se_elp_pka_op(struct tegra_se_elp_pka_request *req)
@@ -1078,7 +1606,8 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	int err = 0;
 
-	se_dev = kzalloc(sizeof(struct tegra_se_elp_dev), GFP_KERNEL);
+	se_dev = devm_kzalloc(&pdev->dev, sizeof(struct tegra_se_elp_dev),
+					GFP_KERNEL);
 	if (!se_dev) {
 		dev_err(&pdev->dev, "se_dev memory allocation failed\n");
 		return -ENOMEM;
@@ -1089,7 +1618,7 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 				&pdev->dev);
 		if (!match) {
 			dev_err(&pdev->dev, "Error: No device match found\n");
-			kfree(se_dev);
+			devm_kfree(&pdev->dev, se_dev);
 			return -ENODEV;
 		}
 		se_dev->chipdata = (struct tegra_se_chipdata *)match->data;
@@ -1147,7 +1676,7 @@ res_fail:
 	iounmap(se_dev->io_reg[0]);
 fail:
 	platform_set_drvdata(pdev, NULL);
-	kfree(se_dev);
+	devm_kfree(&pdev->dev, se_dev);
 	elp_dev = NULL;
 
 	return err;
@@ -1162,7 +1691,7 @@ static int tegra_se_elp_remove(struct platform_device *pdev)
 		return -ENODEV;
 	for (i = 0; i < 2; i++)
 		iounmap(se_dev->io_reg[i]);
-	kfree(se_dev);
+	devm_kfree(&pdev->dev, se_dev);
 	elp_dev = NULL;
 
 	return 0;

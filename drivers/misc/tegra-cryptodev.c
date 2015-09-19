@@ -497,6 +497,7 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct tegra_se_elp_pka_request elp_rsa_req;
 	struct tegra_se_elp_pka_request ecc_req;
+	struct tegra_se_elp_rng_request elp_rng_req;
 #endif
 	struct tegra_crypt_req crypt_req;
 	struct tegra_rng_req rng_req;
@@ -826,6 +827,29 @@ rng_out:
 			ret = -EFAULT;
 			pr_debug("%s: copy_to_user failed (%d)\n", __func__,
 					ret);
+			return ret;
+		}
+		break;
+
+	case TEGRA_CRYPTO_IOCTL_ELP_RNG_REQ:
+		if (copy_from_user(&elp_rng_req, (void __user *)arg,
+			sizeof(elp_rng_req))) {
+			ret = -EFAULT;
+			pr_err("%s: copy_from_user fail(%d) for elp_rng_req\n",
+					__func__, ret);
+			return ret;
+		}
+
+		ret = tegra_se_elp_rng_op(&elp_rng_req);
+		if (ret) {
+			pr_debug("\ntegra_se_elp_rng_op failed(%d) for RNG1\n", ret);
+			return ret;
+		}
+
+		ret = copy_to_user((void __user *)arg, &elp_rng_req, sizeof(elp_rng_req));
+		if (ret) {
+			ret = -EFAULT;
+			pr_debug("%s: copy_to_user failed (%d) for elp_rng_req\n", __func__, ret);
 			return ret;
 		}
 		break;

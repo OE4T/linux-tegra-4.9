@@ -31,6 +31,8 @@
 		_IOWR(0x98, 106, struct tegra_se_elp_pka_request)
 #define TEGRA_CRYPTO_IOCTL_ELP_ECC_REQ	\
 		_IOWR(0x98, 107, struct tegra_se_elp_pka_request)
+#define TEGRA_CRYPTO_IOCTL_ELP_RNG_REQ	\
+		_IOWR(0x98, 108, struct tegra_se_elp_rng_request)
 #endif
 
 #define TEGRA_CRYPTO_MAX_KEY_SIZE	AES_MAX_KEY_SIZE
@@ -48,6 +50,17 @@
 #define TEGRA_CRYPTO_CTR	3
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
+
+struct tegra_se_elp_rng_request {
+	int size;
+	u32 *rdata;
+	u32 *rdata1;
+	u32 *rdata2;
+	u32 *rdata3;
+	bool test_full_cmd_flow;
+	bool adv_state_on;
+};
+
 struct tegra_se_elp_pka_request {
 	struct tegra_se_elp_dev *se_dev;	/* Security Engine device */
 	struct tegra_se_slot *slot;	/* Security Engine key slot */
@@ -74,6 +87,7 @@ struct tegra_se_elp_pka_request {
 };
 
 int tegra_se_elp_pka_op(struct tegra_se_elp_pka_request *req);
+int tegra_se_elp_rng_op(struct tegra_se_elp_rng_request *req);
 #endif
 
 /* a pointer to this struct needs to be passed to:

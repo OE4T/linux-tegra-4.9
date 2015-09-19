@@ -629,7 +629,9 @@ struct tegra_padctl_uphy {
 	struct phy *sata_phys[TEGRA_SATA_PHYS];
 	struct phy *ufs_phys[TEGRA_UFS_PHYS];
 	struct tegra_xusb_utmi_port utmi_ports[TEGRA_UTMI_PHYS];
+	int utmi_otg_port_base_1; /* one based utmi port number */
 	struct tegra_xusb_usb3_port usb3_ports[TEGRA_USB3_PHYS];
+	int usb3_otg_port_base_1; /* one based usb3 port number */
 	unsigned long usb3_lanes;
 	struct tegra_pcie_controller pcie_controllers[TEGRA_PCIE_PHYS];
 	unsigned long pcie_lanes;
@@ -664,7 +666,6 @@ struct tegra_padctl_uphy {
 	/* vbus/id based OTG */
 	struct work_struct otg_vbus_work;
 	bool otg_vbus_on;
-	struct phy *otg_phy;
 
 	struct regulator_bulk_data *supplies;
 };
@@ -2352,6 +2353,16 @@ static int tegra_padctl_uphy_pinconf_group_set(struct pinctrl_dev *pinctrl,
 				uphy->usb3_ports[port].port_cap = value;
 				TRACE(dev, "USB3 port %d cap %lu",
 				      port, value);
+				if (value == OTG) {
+					if (uphy->usb3_otg_port_base_1)
+						dev_warn(dev, "enabling OTG on multiple USB3 ports\n");
+
+
+					dev_info(dev, "using USB3 port %d for otg\n",
+						 port);
+					uphy->usb3_otg_port_base_1 =
+								port + 1;
+				}
 			} else if (lane_is_otg(group)) {
 				int port = group - PIN_OTG_0;
 
@@ -2359,12 +2370,14 @@ static int tegra_padctl_uphy_pinconf_group_set(struct pinctrl_dev *pinctrl,
 				TRACE(dev, "UTMI port %d cap %lu",
 				      port, value);
 				if (value == OTG) {
-					dev_info(dev, "using utmi port %d for otg\n",
-						 port);
-					if (uphy->otg_phy)
-						dev_info(dev, "more than one otg phy?\n");
+					if (uphy->utmi_otg_port_base_1)
+						dev_warn(dev, "enabling OTG on multiple UTMI ports\n");
 
-					uphy->otg_phy = uphy->utmi_phys[port];
+					dev_info(dev, "using UTMI port %d for otg\n",
+						 port);
+
+					uphy->utmi_otg_port_base_1 =
+								port + 1;
 				}
 			} else {
 				dev_err(dev, "port-cap not applicable for pin %d\n",
@@ -4303,18 +4316,16 @@ static void tegra_xusb_otg_vbus_work(struct work_struct *work)
 	struct tegra_padctl_uphy *uphy =
 		container_of(work, struct tegra_padctl_uphy, otg_vbus_work);
 	struct device *dev = uphy->dev;
-	int port;
+	int port = uphy->utmi_otg_port_base_1 - 1;
 	u32 reg;
 	int rc;
 
-	if (!uphy->otg_phy)
-		return; /* no otg phy */
-
-	port = utmi_phy_to_port(uphy->otg_phy);
-	if (port < 0)
-		return; /* invalid phy */
+	if (!uphy->utmi_otg_port_base_1)
+		return; /* nothing to do if there is no UTMI otg port */
 
 	reg = padctl_readl(uphy, USB2_VBUS_ID);
+	dev_dbg(dev, "USB2_VBUS_ID 0x%x otg_vbus_on was %d\n", reg,
+		uphy->otg_vbus_on);
 	if ((reg & ID_OVERRIDE(~0)) == ID_OVERRIDE_GROUNDED) {
 		/* entering host mode role */
 		if (uphy->vbus[port] && !uphy->otg_vbus_on) {
@@ -4790,9 +4801,11 @@ static int tegra186_padctl_vbus_override(struct tegra_padctl_uphy *uphy,
 	u32 reg;
 
 	reg = padctl_readl(uphy, USB2_VBUS_ID);
-	if (on)
+	if (on) {
 		reg |= VBUS_OVERRIDE;
-	else
+		reg &= ~ID_OVERRIDE(~0);
+		reg |= ID_OVERRIDE_FLOATING;
+	} else
 		reg &= ~VBUS_OVERRIDE;
 	padctl_writel(uphy, reg, USB2_VBUS_ID);
 
@@ -4803,10 +4816,12 @@ static int tegra186_padctl_vbus_override(struct tegra_padctl_uphy *uphy,
 
 int tegra_phy_xusb_set_vbus_override(struct phy *phy)
 {
-	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
+	struct tegra_padctl_uphy *uphy;
 
 	if (!phy)
 		return 0;
+
+	uphy = phy_get_drvdata(phy);
 
 	return tegra186_padctl_vbus_override(uphy, true);
 }
@@ -4814,14 +4829,96 @@ EXPORT_SYMBOL_GPL(tegra_phy_xusb_set_vbus_override);
 
 int tegra_phy_xusb_clear_vbus_override(struct phy *phy)
 {
-	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
+	struct tegra_padctl_uphy *uphy;
 
 	if (!phy)
 		return 0;
 
+	uphy = phy_get_drvdata(phy);
+
 	return tegra186_padctl_vbus_override(uphy, false);
 }
 EXPORT_SYMBOL_GPL(tegra_phy_xusb_clear_vbus_override);
+
+static int tegra186_padctl_id_override(struct tegra_padctl_uphy *uphy,
+					 bool grounded)
+{
+	u32 reg;
+
+	reg = padctl_readl(uphy, USB2_VBUS_ID);
+	if (grounded) {
+		reg &= ~ID_OVERRIDE(~0);
+		reg |= ID_OVERRIDE_GROUNDED;
+		reg &= ~VBUS_OVERRIDE;
+	} else {
+		reg &= ~ID_OVERRIDE(~0);
+		reg |= ID_OVERRIDE_FLOATING;
+	}
+	padctl_writel(uphy, reg, USB2_VBUS_ID);
+
+	schedule_work(&uphy->otg_vbus_work);
+
+	return 0;
+}
+
+int tegra_phy_xusb_set_id_override(struct phy *phy)
+{
+	struct tegra_padctl_uphy *uphy;
+
+	if (!phy)
+		return 0;
+
+	uphy = phy_get_drvdata(phy);
+
+	return tegra186_padctl_id_override(uphy, true);
+}
+EXPORT_SYMBOL_GPL(tegra_phy_xusb_set_id_override);
+
+int tegra_phy_xusb_clear_id_override(struct phy *phy)
+{
+	struct tegra_padctl_uphy *uphy;
+
+	if (!phy)
+		return 0;
+
+	uphy = phy_get_drvdata(phy);
+
+	return tegra186_padctl_id_override(uphy, false);
+}
+EXPORT_SYMBOL_GPL(tegra_phy_xusb_clear_id_override);
+
+bool tegra_phy_xusb_has_otg_cap(struct phy *phy)
+{
+	struct tegra_padctl_uphy *uphy;
+	int i;
+
+	if (!phy)
+		return false;
+
+	uphy = phy_get_drvdata(phy);
+	if (is_utmi_phy(phy)) {
+		for (i = 0; i < TEGRA_UTMI_PHYS; i++) {
+			if (uphy->utmi_phys[i] == phy) {
+				if ((i + 1) == uphy->utmi_otg_port_base_1)
+					return true;
+				else
+					return false;
+			}
+		}
+	} else if (is_usb3_phy(phy)) {
+		for (i = 0; i < TEGRA_USB3_PHYS; i++) {
+			if (uphy->usb3_phys[i] == phy) {
+				if ((i + 1) == uphy->usb3_otg_port_base_1)
+					return true;
+				else
+					return false;
+			}
+		}
+	}
+
+	return false;
+}
+EXPORT_SYMBOL_GPL(tegra_phy_xusb_has_otg_cap);
 
 
 MODULE_AUTHOR("JC Kuo <jckuo@nvidia.com>");

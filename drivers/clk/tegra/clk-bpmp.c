@@ -44,10 +44,13 @@ static struct clk_onecell_data clk_data;
 static int bpmp_send_clk_message(struct bpmp_clk_req *req, int size,
 				 u8 *reply, int reply_size)
 {
+	unsigned long flags;
 	int err;
 
+	local_irq_save(flags);
 	err = tegra_bpmp_send_receive_atomic(MRQ_CLK, req, size, reply,
 					     reply_size);
+	local_irq_restore(flags);
 
 	return err;
 }

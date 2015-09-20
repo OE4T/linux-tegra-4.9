@@ -17,8 +17,6 @@
 #ifndef _TEGRA_CLK_MRQ_H
 #define _TEGRA_CLK_MRQ_H
 
-#define MRQ_CLK                    (22)
-
 #define BPMP_CLK_HAS_MUX                BIT(0)
 #define BPMP_CLK_HAS_SET_RATE           BIT(1)
 #define BPMP_CLK_IS_ROOT                BIT(2)

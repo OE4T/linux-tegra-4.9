@@ -21,6 +21,7 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <soc/tegra/tegra_bpmp.h>
+#include <soc/tegra/bpmp_abi.h>
 
 #include "clk.h"
 #include "clk-mrq.h"
@@ -31,7 +32,7 @@ struct bpmp_clk_req {
 };
 
 #define BPMP_CLK_CMD(cmd, id) ((id) | ((cmd) << 24))
-#define MAX_PARENTS 16
+#define MAX_PARENTS MRQ_CLK_MAX_PARENTS
 
 struct possible_parents {
 	u8	num_of_parents;
@@ -39,6 +40,8 @@ struct possible_parents {
 };
 
 static struct clk **clks;
+static const char **clk_names;
+static int max_clk_id;
 static struct clk_onecell_data clk_data;
 
 static int bpmp_send_clk_message(struct bpmp_clk_req *req, int size,
@@ -224,6 +227,47 @@ static int clk_bpmp_reset_refcount(void)
 	return  bpmp_send_clk_message(&req, sizeof(req), NULL, 0);
 }
 
+static int clk_bpmp_get_max_clk_id(u32 *max_id)
+{
+	struct bpmp_clk_req req;
+	u8 reply[4];
+	int err;
+
+	req.cmd = BPMP_CLK_CMD(CMD_CLK_GET_MAX_CLK_ID, 0);
+	err = bpmp_send_clk_message(&req, sizeof(req), reply, sizeof(reply));
+	if (err < 0)
+		return err;
+
+	*max_id = ((u32 *)reply)[0];
+	return 0;
+}
+
+static int clk_bpmp_get_all_info(int clk_num,
+				 u32 *flags,
+				 u32 *parent,
+				 struct possible_parents *parents,
+				 char *name)
+{
+	struct bpmp_clk_req req;
+	struct cmd_clk_get_all_info_response resp;
+	int i, err;
+
+	req.cmd = BPMP_CLK_CMD(CMD_CLK_GET_ALL_INFO, clk_num);
+	err = bpmp_send_clk_message((void *)&req, sizeof(req), (void *)&resp,
+				    sizeof(resp));
+	if (err < 0)
+		return err;
+	*flags = resp.flags;
+	*parent = resp.parent;
+	parents->num_of_parents = resp.num_parents;
+	for (i = 0; i < resp.num_parents; ++i)
+		parents->clk_ids[i] = resp.parents[i];
+	strncpy(name, resp.name, MRQ_CLK_NAME_MAXLEN);
+	name[MRQ_CLK_NAME_MAXLEN-1] = 0;
+
+	return 0;
+}
+
 const struct clk_ops tegra_clk_bpmp_gate_ops = {
 	.is_enabled = clk_bpmp_is_enabled,
 	.prepare = clk_bpmp_enable,
@@ -307,7 +351,8 @@ struct clk *tegra_clk_register_bpmp(const char *name, int parent,
 
 	clk = clk_register(NULL, &bpmp_clk->hw);
 	if (IS_ERR(clk)) {
-		pr_err("registration failed for clock %s\n", name);
+		pr_err("registration failed for clock %s (%d)\n", name,
+		       clk_num);
 		kfree(bpmp_clk);
 	}
 
@@ -337,10 +382,135 @@ static int clk_bpmp_get_possible_parents(int clk_num,
 	return bpmp_send_clk_message(&req, sizeof(req), (u8 *)p, sizeof(*p));
 }
 
+static int clk_bpmp_init(int clk_num)
+{
+	struct clk *clk;
+	const char *parent_names[MAX_PARENTS];
+	struct possible_parents parents;
+	u32 flags, parent;
+	int j, num_parents, err;
+	char name[MRQ_CLK_NAME_MAXLEN];
+
+	if (clk_num > max_clk_id || clk_num < 0) {
+		pr_err("clk_bpmp_init: invalid clk_num %d\n", clk_num);
+		return -EINVAL;
+	}
+
+	if (!IS_ERR_OR_NULL(clks[clk_num]))
+		return 0;
+
+	err = clk_bpmp_get_all_info(clk_num, &flags, &parent,
+				    &parents, name);
+	if (err < 0)
+		return 0;
+
+	num_parents = parents.num_of_parents;
+	if (num_parents > 1 && !(flags & BPMP_CLK_HAS_MUX)) {
+		pr_err("clk-bpmp: inconsistent data from BPMP."
+		       " Clock %d has more than one parent but no mux.\n",
+			clk_num);
+		return -EINVAL;
+	}
+	if (num_parents > 0 && (flags & BPMP_CLK_IS_ROOT)) {
+		pr_err("clk-bpmp: inconsistent data from BPMP."
+		       " Clock %d has parents but it's declared as root.\n",
+			clk_num);
+		return -EINVAL;
+	}
+	if (num_parents > MAX_PARENTS || num_parents < 0) {
+		pr_err("clk-bpmp: inconsistent data from BPMP."
+		       " Clock %d has too many parents.\n",
+		       clk_num);
+		return -EINVAL;
+	}
+
+	for (j = 0; j < num_parents; j++) {
+		int p_id = parents.clk_ids[j];
+		err = clk_bpmp_init(p_id);
+		if (err) {
+			pr_err("clk-bpmp: unable to initialize clk %d\n",
+			       p_id);
+			parent_names[j] = "ERR!";
+			continue;
+		}
+		if (IS_ERR_OR_NULL(clks[p_id])) {
+			pr_err("clk-bpmp: clk %d not initialized."
+			       " How did this happen?\n",
+			       p_id);
+			WARN_ON(1);
+			parent_names[j] = "ERR!";
+			continue;
+		}
+		parent_names[j] = clk_names[p_id];
+	}
+
+	if (flags & BPMP_CLK_IS_ROOT && !(flags & BPMP_CLK_HAS_SET_RATE)) {
+		int64_t rate;
+		rate = clk_bpmp_get_rate_clk_num(clk_num);
+		clk = clk_register_fixed_rate(NULL, name, NULL, CLK_IS_ROOT,
+					      rate);
+	} else if (num_parents == 1) {
+		clk = tegra_clk_register_bpmp(name, parent, parent_names, NULL,
+					      num_parents, 0, clk_num, flags);
+	} else {
+		clk = tegra_clk_register_bpmp(name, parent,
+					      parent_names, &parents.clk_ids[0],
+					      num_parents, 0, clk_num, flags);
+	}
+
+	err = clk_register_clkdev(clk, name, "tegra-clk-debug");
+	if (err)
+		pr_err("clk_register_clkdev() returned %d for clk %s\n",
+		       err, name);
+
+	clks[clk_num] = clk;
+	clk_names[clk_num] = kstrdup(name, GFP_KERNEL);
+	return 0;
+}
+
+struct clk **tegra_bpmp_clk_init_query(struct device_node *np)
+{
+	int i, err;
+
+	if (max_clk_id < 0) {
+		pr_err("clk-bpmp: invalid maximum clk_id\n");
+		return ERR_PTR(-EIO);
+	}
+
+	clks = kmalloc((max_clk_id + 1) * sizeof(struct clk *), GFP_KERNEL);
+	if (!clks) {
+		WARN_ON(1);
+		return ERR_PTR(-ENOMEM);
+	}
+
+	clk_names = kmalloc((max_clk_id + 1) * sizeof(char *), GFP_KERNEL);
+	if (!clk_names) {
+		WARN_ON(1);
+		kfree(clks);
+		return ERR_PTR(-ENOMEM);
+	}
+
+	for (i = 0; i < max_clk_id + 1; i++) {
+		clks[i] = ERR_PTR(-EINVAL);
+		clk_names[i] = NULL;
+	}
+
+	for (i = 0; i < max_clk_id + 1; ++i) {
+		err = clk_bpmp_init(i);
+		if (err < 0)
+			pr_err("clk-bpmp: failed to initialize clk %d\n", i);
+	}
+
+	clk_data.clks = clks;
+	clk_data.clk_num = max_clk_id + 1;
+	of_clk_add_provider(np, of_clk_src_onecell_get, &clk_data);
+
+	return clks;
+}
+
 struct clk **tegra_bpmp_clk_init(struct tegra_bpmp_clk_init *init_clks,
 				 int num_clks, struct device_node *np)
 {
-	int max_clk_id = 0;
 	int i, j;
 	struct clk *clk;
 	static const char *parent_names[MAX_PARENTS];
@@ -348,6 +518,13 @@ struct clk **tegra_bpmp_clk_init(struct tegra_bpmp_clk_init *init_clks,
 
 	if (clk_bpmp_reset_refcount() < 0)
 		pr_warn("clk-bpmp: unable to reset refcounts!\n");
+
+	if (!clk_bpmp_get_max_clk_id(&max_clk_id))
+		return tegra_bpmp_clk_init_query(np);
+
+	pr_warn("clk-bpmp: not able to query clocks from bpmp."
+		" Falling back to legacy clock init!\n");
+	max_clk_id = 0;
 
 	/* find highest clock id */
 	for (i = 0; i < num_clks; i++) {

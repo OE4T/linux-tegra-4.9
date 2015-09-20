@@ -323,14 +323,6 @@ RESERVEDMEM_OF_DECLARE(nvmap_vpr_co, "nvidia,vpr-carveout", nvmap_co_setup);
  */
 static int __nvmap_init_legacy(struct device *dev)
 {
-	/* IRAM. */
-	if (!nvmap_carveouts[0].base) {
-		nvmap_carveouts[0].base =
-				TEGRA_IRAM_BASE + TEGRA_RESET_HANDLER_SIZE;
-		nvmap_carveouts[0].size =
-				TEGRA_IRAM_SIZE - TEGRA_RESET_HANDLER_SIZE;
-	}
-
 	/* Carveout. */
 	if (!nvmap_carveouts[1].base) {
 		nvmap_carveouts[1].base = tegra_carveout_start;

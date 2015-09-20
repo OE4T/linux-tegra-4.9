@@ -495,8 +495,8 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 			nvdisp_cont_syncpt_vsync_r());
 
 	/* Init interrupts */
-	/* Setting Int type */
-	tegra_dc_writel(dc, 0x3C001004, nvdisp_int_type_r());
+	/* Setting Int type. EDGE for most, LEVEL for UF related */
+	tegra_dc_writel(dc, 0x3C000000, nvdisp_int_type_r());
 	/* Setting all the Int polarity to high */
 	tegra_dc_writel(dc, 0x3D8010F6, nvdisp_int_polarity_r());
 

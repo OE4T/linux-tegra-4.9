@@ -68,7 +68,6 @@
                 bus-width = <4>;
                 mmc-ocr-mask = <0>;
 		keep-power-in-suspend;
-		non-removable;
 		cap-mmc-highspeed;
 		cap-sd-highspeed;
 		pwrdet-support;

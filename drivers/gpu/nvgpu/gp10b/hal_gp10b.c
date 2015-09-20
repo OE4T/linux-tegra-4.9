@@ -98,8 +98,8 @@ int gp10b_init_hal(struct gk20a *g)
 
 #ifdef CONFIG_TEGRA_ACR
 	if (tegra_platform_is_linsim()) {
-		gops->privsecurity = 1;
-		gops->securegpccs = 1;
+		gops->privsecurity = 0;
+		gops->securegpccs = 0;
 	} else {
 		if (tegra_fuse_readl(FUSE_OPT_PRIV_SEC_EN_0) &
 				PRIV_SECURITY_ENABLED) {

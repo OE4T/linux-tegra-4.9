@@ -170,7 +170,7 @@ static int gr_gm20b_commit_global_cb_manager(struct gk20a *g,
 			struct channel_gk20a *c, bool patch)
 {
 	struct gr_gk20a *gr = &g->gr;
-	struct channel_ctx_gk20a *ch_ctx = NULL;
+	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
 	u32 attrib_offset_in_chunk = 0;
 	u32 alpha_offset_in_chunk = 0;
 	u32 pd_ab_max_output;
@@ -179,14 +179,6 @@ static int gr_gm20b_commit_global_cb_manager(struct gk20a *g,
 	u32 cbm_cfg_size1, cbm_cfg_size2;
 
 	gk20a_dbg_fn("");
-
-	if (patch) {
-		int err;
-		ch_ctx = &c->ch_ctx;
-		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
-		if (err)
-			return err;
-	}
 
 	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_ds_tga_constraintlogic_r(),
 		gr_ds_tga_constraintlogic_beta_cbsize_f(gr->attrib_cb_default_size) |
@@ -246,9 +238,6 @@ static int gr_gm20b_commit_global_cb_manager(struct gk20a *g,
 				patch);
 		}
 	}
-
-	if (patch)
-		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
 
 	return 0;
 }

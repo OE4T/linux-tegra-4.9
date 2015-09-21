@@ -400,7 +400,10 @@ static void t186_set_nvhost_chanops(struct nvhost_channel *ch)
 		return;
 
 	ch->ops = host1x_channel_ops;
-	ch->ops.init_gather_filter = NULL;
+
+	/* Disable gather filter in simulator */
+	if (tegra_platform_is_linsim())
+		ch->ops.init_gather_filter = NULL;
 }
 
 int nvhost_init_t186_channel_support(struct nvhost_master *host,

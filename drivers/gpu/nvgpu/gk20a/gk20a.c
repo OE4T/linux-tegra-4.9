@@ -1166,7 +1166,10 @@ static void gk20a_pm_shutdown(struct platform_device *pdev)
 #endif
 
 	/* Be ready for rail-gate after this point */
-	gk20a_pm_prepare_poweroff(&pdev->dev);
+	if (gk20a_gpu_is_virtual(pdev))
+		vgpu_pm_prepare_poweroff(&pdev->dev);
+	else
+		gk20a_pm_prepare_poweroff(&pdev->dev);
 }
 
 #ifdef CONFIG_PM

@@ -104,6 +104,7 @@ static void sn65dsi86_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 {
 	struct tegra_dc_dsi2edp_data *dsi2edp = tegra_dsi_get_outdata(dsi);
 	unsigned val = 0;
+	unsigned retry = 0;
 
 	if (dsi2edp && dsi2edp->dsi2edp_enabled)
 		return;
@@ -144,19 +145,29 @@ static void sn65dsi86_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DP_CFG, 0x80);
 	usleep_range(10000, 12000);
 	/* PLL ENABLE */
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_PLL_EN, 0x01);
-	usleep_range(10000, 12000);
-	/* DP_PLL_LOCK */
-	sn65dsi86_reg_read(dsi2edp, SN65DSI86_PLL_REFCLK_CFG, &val);
+	do {
+		sn65dsi86_reg_write(dsi2edp, SN65DSI86_PLL_EN, 0x01);
+		usleep_range(10000, 12000);
+		/* DP_PLL_LOCK */
+		sn65dsi86_reg_read(dsi2edp, SN65DSI86_PLL_REFCLK_CFG, &val);
+	} while (((val & 0xFF) >> 7 == 0) && (retry++ < RETRYLOOP));
+	if ((val & 0xFF) >> 7 == 0)
+		pr_err("sn65dsi86_dsi2edp: DP_PLL not locked\n");
 	usleep_range(10000, 12000);
 	/* POST2 0dB */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_TRAINING_CFG, 0x00);
 	usleep_range(10000, 12000);
 	/* Semi-Auto TRAIN */
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_ML_TX_MODE, 0x0a);
-	usleep_range(10000, 12000);
-	/* ADDR 0x96 CFR */
-	sn65dsi86_reg_read(dsi2edp, SN65DSI86_ML_TX_MODE, &val);
+	retry = 0;
+	do {
+		sn65dsi86_reg_write(dsi2edp, SN65DSI86_ML_TX_MODE, 0x0a);
+		usleep_range(10000, 12000);
+		/* ADDR 0x96 CFR */
+		sn65dsi86_reg_read(dsi2edp, SN65DSI86_ML_TX_MODE, &val);
+	} while ((val != 0x1) && (retry++ < RETRYLOOP));
+	/* 0x1 = normal mode (idle pattern or active video) */
+	if (val != 0x1)
+		pr_err("sn65dsi86_dsi2edp: semi-auto link training failed\n");
 	msleep(20);
 	/* CHA_ACTIVE_LINE_LENGTH */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_VIDEO_CHA_LINE_LOW,

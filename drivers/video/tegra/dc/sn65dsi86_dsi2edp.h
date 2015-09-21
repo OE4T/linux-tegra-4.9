@@ -82,5 +82,7 @@ struct tegra_dc_dsi2edp_data {
 #define  SN65DSI86_DP_CFG			0x94
 #define  SN65DSI86_TRAINING_CFG			0x95
 #define  SN65DSI86_ML_TX_MODE			0x96
+
+#define RETRYLOOP 2
 #endif
 

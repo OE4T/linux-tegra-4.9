@@ -2769,6 +2769,8 @@ void gk20a_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.init_wpr_region = NULL;
 	gops->pmu.load_lsfalcon_ucode = NULL;
 	gops->pmu.write_dmatrfbase = gk20a_write_dmatrfbase;
+	gops->pmu.pmu_elpg_statistics = gk20a_pmu_elpg_statistics;
+	gops->pmu.pmu_pg_grinit_param = NULL;
 }
 
 int gk20a_init_pmu_support(struct gk20a *g)
@@ -2883,6 +2885,10 @@ static int pmu_init_powergating(struct gk20a *g)
 	}
 
 	gk20a_gr_wait_initialized(g);
+
+	if (g->ops.pmu.pmu_pg_grinit_param)
+		g->ops.pmu.pmu_pg_grinit_param(g,
+			PMU_PG_FEATURE_GR_POWER_GATING_ENABLED);
 
 	/* init ELPG */
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
@@ -4241,11 +4247,24 @@ void gk20a_pmu_reset_load_counters(struct gk20a *g)
 	gk20a_idle(g->dev);
 }
 
+void gk20a_pmu_elpg_statistics(struct gk20a *g,
+		u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	struct pmu_pg_stats stats;
+
+	pmu_copy_from_dmem(pmu, pmu->stat_dmem_offset,
+				(u8 *)&stats, sizeof(struct pmu_pg_stats), 0);
+
+	*ingating_time = stats.pg_ingating_time_us;
+	*ungating_time = stats.pg_ungating_time_us;
+	*gating_cnt = stats.pg_gating_cnt;
+}
+
 static int gk20a_pmu_get_elpg_residency_gating(struct gk20a *g,
 			u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
-	struct pmu_pg_stats stats;
 
 	if (!pmu->initialized) {
 		*ingating_time = 0;
@@ -4254,12 +4273,8 @@ static int gk20a_pmu_get_elpg_residency_gating(struct gk20a *g,
 		return 0;
 	}
 
-	pmu_copy_from_dmem(pmu, pmu->stat_dmem_offset,
-		(u8 *)&stats, sizeof(struct pmu_pg_stats), 0);
-
-	*ingating_time = stats.pg_ingating_time_us;
-	*ungating_time = stats.pg_ungating_time_us;
-	*gating_cnt = stats.pg_gating_cnt;
+	g->ops.pmu.pmu_elpg_statistics(g, ingating_time,
+				ungating_time, gating_cnt);
 
 	return 0;
 }

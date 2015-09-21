@@ -306,4 +306,6 @@ void gm20b_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.lspmuwprinitdone = 0;
 	gops->pmu.fecsbootstrapdone = false;
 	gops->pmu.write_dmatrfbase = gm20b_write_dmatrfbase;
+	gops->pmu.pmu_elpg_statistics = gk20a_pmu_elpg_statistics;
+	gops->pmu.pmu_pg_grinit_param = NULL;
 }

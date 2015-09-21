@@ -680,6 +680,8 @@ enum {
 	PMU_PG_STAT_CMD_ALLOC_DMEM = 0,
 };
 
+#define PMU_PG_PARAM_CMD_GR_INIT_PARAM  0x0
+
 #define PMU_PG_FEATURE_GR_SDIV_SLOWDOWN_ENABLED	(1 << 0)
 #define PMU_PG_FEATURE_GR_POWER_GATING_ENABLED	(1 << 2)
 
@@ -1135,31 +1137,31 @@ struct pmu_sequence {
 };
 
 struct pmu_pg_stats_v1 {
-    /* Number of time PMU successfully engaged sleep state */
-    u32 entryCount;
-    /* Number of time PMU exit sleep state */
-    u32 exitCount;
-    /* Number of time PMU aborted in entry sequence */
-    u32 abortCount;
-    /*
-     * Time for which GPU was neither in Sleep state not
-     * executing sleep sequence.
-     * */
-    u32 poweredUpTimeUs;
-    /* Entry and exit latency of current sleep cycle */
-    u32 entryLatencyUs;
-    u32 exitLatencyUs;
-    /* Resident time for current sleep cycle. */
-    u32 residentTimeUs;
-    /* Rolling average entry and exit latencies */
-    u32 entryLatencyAvgUs;
-    u32 exitLatencyAvgUs;
-    /* Max entry and exit latencies */
-    u32 entryLatencyMaxUs;
-    u32 exitLatencyMaxUs;
-    /* Total time spent in sleep and non-sleep state */
-    u32 totalSleepTimeUs;
-    u32 totalNonSleepTimeUs;
+	/* Number of time PMU successfully engaged sleep state */
+	u32 entry_count;
+	/* Number of time PMU exit sleep state */
+	u32 exit_count;
+	/* Number of time PMU aborted in entry sequence */
+	u32 abort_count;
+	/*
+	* Time for which GPU was neither in Sleep state not
+	* executing sleep sequence.
+	* */
+	u32 poweredup_timeus;
+	/* Entry and exit latency of current sleep cycle */
+	u32 entry_latency_us;
+	u32 exitlatencyus;
+	/* Resident time for current sleep cycle. */
+	u32 resident_timeus;
+	/* Rolling average entry and exit latencies */
+	u32 entrylatency_avgus;
+	u32 exitlatency_avgus;
+	/* Max entry and exit latencies */
+	u32 entrylatency_maxus;
+	u32 exitlatency_maxus;
+	/* Total time spent in sleep and non-sleep state */
+	u32 total_sleep_timeus;
+	u32 total_nonsleep_timeus;
 };
 
 struct pmu_pg_stats {
@@ -1369,4 +1371,7 @@ int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout,
 				 u32 *var, u32 val);
 void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
 				void *param, u32 handle, u32 status);
+void gk20a_pmu_elpg_statistics(struct gk20a *g,
+		u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt);
+
 #endif /*__PMU_GK20A_H__*/

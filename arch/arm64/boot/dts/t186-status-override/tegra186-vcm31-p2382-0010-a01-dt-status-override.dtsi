@@ -443,7 +443,7 @@
 
 	isc-mgr.1 {
 		compatible = "nvidia,isc-mgr";
-		i2c-bus = <6>;
+		i2c-bus = <2>;
 		csi-port = <2>;
 		pwdn-gpios = < &tegra_gpio TEGRA_GPIO(V, 5) GPIO_ACTIVE_HIGH	/* GMSL_IN2_PDN */
 			&tegra_gpio TEGRA_GPIO(Y, 1) GPIO_ACTIVE_HIGH		/* CSI2_TV_EN1 */
@@ -455,7 +455,7 @@
 
 	isc-mgr.2 {
 		compatible = "nvidia,isc-mgr";
-		i2c-bus = <6>;
+		i2c-bus = <2>;
 		csi-port = <4>;
 		pwdn-gpios = < &tegra_gpio TEGRA_GPIO(A, 5) GPIO_ACTIVE_HIGH >;
 		default-power-on;

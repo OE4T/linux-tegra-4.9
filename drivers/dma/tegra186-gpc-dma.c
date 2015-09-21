@@ -1234,8 +1234,12 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_slave_sg(
 
 	/* Program 2 MC outstanding requests by default. */
 	mc_seq |= (1 << TEGRA_GPCDMA_MCSEQ_REQ_COUNT_SHIFT);
-	/* Setting 16 words burst size on MC side */
-	mc_seq |= TEGRA_GPCDMA_MCSEQ_BURST_16;
+
+	/* Setting MC burst size depending on MMIO burst size */
+	if (burst_size == 64)
+		mc_seq |= TEGRA_GPCDMA_MCSEQ_BURST_16;
+	else
+		mc_seq |= TEGRA_GPCDMA_MCSEQ_BURST_2;
 
 	dma_desc = tegra_dma_desc_get(tdc);
 	if (!dma_desc) {
@@ -1412,8 +1416,12 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_dma_cyclic(
 
 	/* Program 2 MC outstanding requests by default. */
 	mc_seq |= (1 << TEGRA_GPCDMA_MCSEQ_REQ_COUNT_SHIFT);
-	/* Setting 16 words burst size on MC side */
-	mc_seq |= TEGRA_GPCDMA_MCSEQ_BURST_16;
+
+	/* Setting MC burst size depending on MMIO burst size */
+	if (burst_size == 64)
+		mc_seq |= TEGRA_GPCDMA_MCSEQ_BURST_16;
+	else
+		mc_seq |= TEGRA_GPCDMA_MCSEQ_BURST_2;
 
 	dma_desc = tegra_dma_desc_get(tdc);
 	if (!dma_desc) {

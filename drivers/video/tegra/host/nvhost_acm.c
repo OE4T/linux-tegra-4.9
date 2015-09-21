@@ -636,6 +636,10 @@ int nvhost_module_set_parent(struct platform_device *dev,
 	char parent_name[MAX_DEVID_LENGTH];
 	int err;
 
+	/* set parent only if CCF is enabled. TCF handles this otherwise */
+	if (!IS_ENABLED(CONFIG_COMMON_CLK))
+		return 0;
+
 	snprintf(parent_name, sizeof(parent_name), "%s_parent", clock->name);
 
 	/* if parent is not available, assume that

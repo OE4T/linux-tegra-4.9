@@ -290,6 +290,20 @@ static void gr_gp10b_set_go_idle_timeout(struct gk20a *g, u32 data)
 	gk20a_writel(g, gr_fe_go_idle_timeout_r(), data);
 }
 
+static void gr_gp10b_set_coalesce_buffer_size(struct gk20a *g, u32 data)
+{
+	u32 val;
+
+	gk20a_dbg_fn("");
+
+	val = gk20a_readl(g, gr_gpcs_tc_debug0_r());
+	val = set_field(val, gr_gpcs_tc_debug0_limit_coalesce_buffer_size_m(),
+			     gr_gpcs_tc_debug0_limit_coalesce_buffer_size_f(data));
+	gk20a_writel(g, gr_gpcs_tc_debug0_r(), val);
+
+	gk20a_dbg_fn("done");
+}
+
 static int gr_gp10b_handle_sw_method(struct gk20a *g, u32 addr,
 				     u32 class_num, u32 offset, u32 data)
 {
@@ -318,6 +332,9 @@ static int gr_gp10b_handle_sw_method(struct gk20a *g, u32 addr,
 			break;
 		case NVC097_SET_GO_IDLE_TIMEOUT:
 			gr_gp10b_set_go_idle_timeout(g, data);
+			break;
+		case NVC097_SET_COALESCE_BUFFER_SIZE:
+			gr_gp10b_set_coalesce_buffer_size(g, data);
 			break;
 		default:
 			goto fail;

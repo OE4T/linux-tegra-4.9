@@ -24,23 +24,9 @@
 
 #define MTTCAN_POLL_TIME 50
 
-#define TX_CONF_BUF 0x1
-#define TX_CONF_Q 0x2
-#define TX_CONF_MODE 0x4
-/* Tx buffer configuration tx_conf
- * bit(0) = tx_buffer elements enabled
- * bit(1) = tx_fifo/queue elements enabled
- * bit(2) = fifo/queue mode. Fifo = 0, Queue = 1
- * default: Tx buffers and Tx Queue enabled
- */
-static int tx_conf = 0x3;
-module_param(tx_conf, int, 0644);
-MODULE_PARM_DESC(tx_conf, "Tx Buffer config");
-
 static __init int mttcan_hw_init(const struct mttcan_priv *priv)
 {
 	int err = 0;
-	int tx_buf = 0, tx_q = 0, tx_mode = 0;
 	u32 ie = 0, ttie = 0, gfc_reg = 0;
 	struct ttcan_controller *ttcan = priv->ttcan;
 	ttcan_set_ok(ttcan);
@@ -53,18 +39,10 @@ static __init int mttcan_hw_init(const struct mttcan_priv *priv)
 	if (err)
 		return err;
 
-	err = ttcan_mesg_ram_config(ttcan, (u32 *)priv->mram_param);
+	err = ttcan_mesg_ram_config(ttcan, (u32 *)priv->mram_param,
+		(u32 *)priv->tx_conf, (u32 *)priv->rx_conf);
 	if (err)
 		return err;
-
-	if (tx_conf) {
-		if (tx_conf & TX_CONF_BUF)
-			tx_buf = CONF_TX_BUFFER_ELEMS;
-		if (tx_conf & TX_CONF_Q)
-			tx_q = CONF_TX_FIFO_ELEMS;
-		if (tx_conf & TX_CONF_MODE)
-			tx_mode = 1;
-	}
 
 	ttcan_set_config_change_enable(ttcan);
 
@@ -80,32 +58,24 @@ static __init int mttcan_hw_init(const struct mttcan_priv *priv)
 	ttcan_set_xidam(ttcan, DEF_MTTCAN_XIDAM);
 
 	/* Rx buffers set */
-	ttcan_set_rx_buffer_addr(ttcan);
-	ttcan_set_rx_fifo0(ttcan, CONF_RX_FIFO_0_ELEMS,
-		(CONF_RX_FIFO_0_ELEMS/2));
-	ttcan_set_rx_fifo1(ttcan, CONF_RX_FIFO_1_ELEMS,
-		(CONF_RX_FIFO_1_ELEMS/2));
+	ttcan_set_rx_buffers_elements(ttcan);
 
-	ttcan_config_rx_data_elem_sizes(ttcan, BYTE64, BYTE64, BYTE64);
-
-	ttcan_set_std_id_filter_addr(ttcan, CONF_11_BIT_FILTER_ELEMS);
-	ttcan_reset_std_id_filter(ttcan, CONF_11_BIT_FILTER_ELEMS);
-	ttcan_set_xtd_id_filter_addr(ttcan, CONF_29_BIT_FILTER_ELEMS);
-	ttcan_reset_xtd_id_filter(ttcan, CONF_29_BIT_FILTER_ELEMS);
+	ttcan_set_std_id_filter_addr(ttcan);
+	ttcan_reset_std_id_filter(ttcan);
+	ttcan_set_xtd_id_filter_addr(ttcan);
+	ttcan_reset_xtd_id_filter(ttcan);
 
 
 	ttcan_set_time_stamp_conf(ttcan, 9, TS_INTERNAL);
-	ttcan_set_txevt_fifo_conf(ttcan, CONF_TX_EVENT_FIFO_ELEMS/2,
-		CONF_TX_EVENT_FIFO_ELEMS);
+	ttcan_set_txevt_fifo_conf(ttcan);
 
-	/* All Tx buffers as Tx Fifo (mode 0) Tx Queue (mode 1) */
-	ttcan_set_tx_buffer_addr(ttcan, tx_buf, tx_q, BYTE64, tx_mode);
+	ttcan_set_tx_buffer_addr(ttcan);
 
 	if (priv->tt_param[0]) {
 		dev_info(priv->device, "TTCAN Enabled\n");
-		ttcan_disable_auto_retransmission(ttcan);
-		ttcan_set_trigger_mem_conf(ttcan, CONF_TRIG_ELEMS);
-		ttcan_reset_trigger_mem(ttcan, CONF_TRIG_ELEMS);
+		ttcan_disable_auto_retransmission(ttcan, true);
+		ttcan_set_trigger_mem_conf(ttcan);
+		ttcan_reset_trigger_mem(ttcan);
 		ttcan_set_tur_config(ttcan, 0x0800, 0x0000, 1);
 	}
 
@@ -690,24 +660,21 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 							 quota - work_done);
 				pr_info("%s: msg received in Q0\n", __func__);
 			}
-		}
-		/* Handle Tx Event */
-		if (ir & MTTCAN_TX_EV_FIFO_INTR) {
-			/* New Tx Event */
-			if ((ir & MTT_IR_TEFN_MASK) ||
-				(ir & MTT_IR_TEFW_MASK)) {
-				ttcan_read_txevt_fifo(priv->ttcan);
-				mttcan_tx_event(dev);
+
+			if (ir & MTT_IR_RF0L_MASK) {
+				pr_info("%s: some msgs lost on in Q0\n",
+					__func__);
+				ack = MTT_IR_RF0L_MASK;
+				ttcan_ir_write(priv->ttcan, ack);
 			}
 
-			if ((ir & MTT_IR_TEFL_MASK) &&
-				priv->ttcan->tx_config.evt_q_size)
-				pr_err("%s: Tx event lost\n", __func__);
-
-			ack = MTTCAN_TX_EV_FIFO_INTR;
-			ttcan_ir_write(priv->ttcan, ack);
+			if (ir & MTT_IR_RF1L_MASK) {
+				pr_info("%s: some msgs lost on in Q1\n",
+					__func__);
+				ack = MTT_IR_RF1L_MASK;
+				ttcan_ir_write(priv->ttcan, ack);
+			}
 		}
-
 		/* Handle Timer wrap around */
 		if (ir & MTT_IR_TSW_MASK) {
 			/* milliseconds */
@@ -731,6 +698,22 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 				netdev_warn(dev, "Tx Fifo Empty\n"); */
 
 			ack = MTTCAN_TX_INTR;
+			ttcan_ir_write(priv->ttcan, ack);
+		}
+		/* Handle Tx Event */
+		if (ir & MTTCAN_TX_EV_FIFO_INTR) {
+			/* New Tx Event */
+			if ((ir & MTT_IR_TEFN_MASK) ||
+				(ir & MTT_IR_TEFW_MASK)) {
+				ttcan_read_txevt_fifo(priv->ttcan);
+				mttcan_tx_event(dev);
+			}
+
+			if ((ir & MTT_IR_TEFL_MASK) &&
+				priv->ttcan->tx_config.evt_q_num)
+				pr_err("%s: Tx event lost\n", __func__);
+
+			ack = MTTCAN_TX_EV_FIFO_INTR;
 			ttcan_ir_write(priv->ttcan, ack);
 		}
 
@@ -847,10 +830,13 @@ static void mttcan_controller_config(struct net_device *dev)
 	/* set CCCR.INIT and then CCCR.CCE */
 	ttcan_set_config_change_enable(priv->ttcan);
 
-	pr_debug("%s: ctrlmode %x\n", __func__, priv->can.ctrlmode);
+	pr_info("%s: ctrlmode %x\n", __func__, priv->can.ctrlmode);
 	/* enable automatic retransmission */
-	if (priv->can.ctrlmode & CAN_CTRLMODE_ONE_SHOT)
-		ttcan_disable_auto_retransmission(priv->ttcan);
+	if ((priv->can.ctrlmode & CAN_CTRLMODE_ONE_SHOT) ||
+		priv->tt_param[0])
+		ttcan_disable_auto_retransmission(priv->ttcan, true);
+	else
+		ttcan_disable_auto_retransmission(priv->ttcan, false);
 
 	if ((priv->can.ctrlmode & CAN_CTRLMODE_LOOPBACK) &&
 	    (priv->can.ctrlmode & CAN_CTRLMODE_LISTENONLY)) {
@@ -1019,6 +1005,30 @@ static void mttcan_work(struct work_struct *work)
 		msecs_to_jiffies(MTTCAN_POLL_TIME));
 }
 
+static int mttcan_power_up(struct net_device *dev)
+{
+	struct mttcan_priv *priv = netdev_priv(dev);
+
+	mttcan_pm_runtime_get_sync(priv);
+
+	return ttcan_power_down(priv->ttcan, 0);
+}
+
+static int mttcan_power_down(struct net_device *dev)
+{
+	struct mttcan_priv *priv = netdev_priv(dev);
+
+	if (!(dev->flags & IFF_UP))
+		return 0;
+
+	if (ttcan_power_down(priv->ttcan, 1))
+		return -ETIMEDOUT;
+
+	mttcan_pm_runtime_put_sync(priv);
+
+	return 0;
+}
+
 static int mttcan_open(struct net_device *dev)
 {
 	int err;
@@ -1026,6 +1036,11 @@ static int mttcan_open(struct net_device *dev)
 
 	mttcan_pm_runtime_get_sync(priv);
 
+	err = mttcan_power_up(dev);
+	if (err) {
+		netdev_err(dev, "unable to power on\n");
+		goto exit;
+	}
 	if (gpio_is_valid(priv->gpio_can_stb)) {
 		err = gpio_request(priv->gpio_can_stb, "gpio_can_stb");
 		if (err) {
@@ -1081,6 +1096,7 @@ static int mttcan_close(struct net_device *dev)
 	struct mttcan_priv *priv = netdev_priv(dev);
 	netif_stop_queue(dev);
 	napi_disable(&priv->napi);
+	mttcan_power_down(dev);
 	mttcan_stop(dev);
 	close_candev(dev);
 	if (gpio_is_valid(priv->gpio_can_stb)) {
@@ -1110,12 +1126,12 @@ static netdev_tx_t mttcan_start_xmit(struct sk_buff *skb,
 	if (can_is_canfd_skb(skb))
 		frame->flags |= CAN_FD_FLAG;
 
-	if (tx_conf & TX_CONF_BUF)
-		msg_no = ttcan_tx_msg_buffer_write(priv->ttcan,
-				(struct ttcanfd_frame *)frame,
-				priv->tt_param[0]);
+	/* try on buffers first */
+	msg_no = ttcan_tx_msg_buffer_write(priv->ttcan,
+			(struct ttcanfd_frame *)frame,
+			priv->tt_param[0]);
 
-	if ((tx_conf & TX_CONF_Q) && (msg_no < 0))
+	if (msg_no < 0)
 		msg_no = ttcan_tx_fifo_queue_msg(priv->ttcan,
 				(struct ttcanfd_frame *)frame);
 
@@ -1202,30 +1218,6 @@ void free_mttcan_dev(struct net_device *dev)
 	struct mttcan_priv *priv = netdev_priv(dev);
 	netif_napi_del(&priv->napi);
 	free_candev(dev);
-}
-
-static int mttcan_power_up(struct net_device *dev)
-{
-	struct mttcan_priv *priv = netdev_priv(dev);
-
-	mttcan_pm_runtime_get_sync(priv);
-
-	return ttcan_power_down(priv->ttcan, 0);
-}
-
-static int mttcan_power_down(struct net_device *dev)
-{
-	struct mttcan_priv *priv = netdev_priv(dev);
-
-	if (!(dev->flags & IFF_UP))
-		return 0;
-
-	if (ttcan_power_down(priv->ttcan, 1))
-		return -ETIMEDOUT;
-
-	mttcan_pm_runtime_put_sync(priv);
-
-	return 0;
 }
 
 static int mttcan_probe(struct platform_device *pdev)
@@ -1335,8 +1327,21 @@ static int mttcan_probe(struct platform_device *pdev)
 	priv->cclk = cclk;
 	priv->hclk = hclk;
 	of_property_read_u32_array(np, "tt-param", priv->tt_param, 2);
-	of_property_read_u32_array(np, "mram-params",
-			priv->mram_param, MRAM_ELEMS);
+	if (of_property_read_u32_array(np, "tx-config",
+		priv->tx_conf, TX_CONF_MAX)) {
+		dev_err(priv->device, "tx-config missing\n");
+		goto exit_free_device;
+	}
+	if (of_property_read_u32_array(np, "rx-config",
+		priv->rx_conf, RX_CONF_MAX)) {
+		dev_err(priv->device, "rx-config missing\n");
+		goto exit_free_device;
+	}
+	if (of_property_read_u32_array(np, "mram-params",
+			priv->mram_param, MRAM_ELEMS)) {
+		dev_err(priv->device, "mram-param missing\n");
+		goto exit_free_device;
+	}
 	priv->ttcan =
 	    devm_kzalloc(priv->device, sizeof(struct ttcan_controller),
 			 GFP_KERNEL);

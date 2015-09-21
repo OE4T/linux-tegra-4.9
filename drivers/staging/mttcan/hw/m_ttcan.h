@@ -18,8 +18,37 @@
 #define __M_TTCAN_DEF
 
 #include "m_ttcan_regdef.h"
-#include "m_ttcan_conf.h"
 #include "m_ttcan_linux.h"
+
+/*      Message RAM config  */
+/*	+-------------------+
+ *	|   11 bit filter   |
+ *	+-------------------+
+ *	|   29 bit filter   |
+ *	+-------------------+
+ *	|   RX FIFO 0       |
+ *	+-------------------+
+ *	|   RX FIFO 1       |
+ *	+-------------------+
+ *	|   RX BUFFERS      |
+ *	+-------------------+
+ *	|   TX EVENT FIFO   |
+ *	+-------------------+
+ *	|   TX BUFFERS      |
+ *	+-------------------+
+ *	|   MEM TRIGG ELMTS |
+ *	+-------------------+
+ */
+
+#define MAX_RXB_ELEM_SIZE	72
+#define MAX_TXB_ELEM_SIZE	72
+#define TX_EVENT_FIFO_ELEM_SIZE	8
+#define SIDF_ELEM_SIZE		4
+#define XIDF_ELEM_SIZE		8
+#define TXB_ELEM_HEADER_SIZE	8
+#define RXB_ELEM_HEADER_SIZE	8
+#define TRIG_ELEM_SIZE		8
+
 
 #define CAN_STD_ID 11
 #define CAN_EXT_ID 29
@@ -42,7 +71,7 @@
 #define CAN_FD_FLAG  0x04
 #define CAN_DIR_RX   0x08
 
-#define MTTCAN_RAM_SIZE_WORDS 1024
+#define MTTCAN_RAM_SIZE	4096
 #define CAN_WORD_IN_BYTES 4
 
 /* ISO 11898-1 */
@@ -124,6 +153,22 @@ enum ttcan_mram_item {
 	MRAM_ELEMS
 };
 
+enum ttcan_tx_conf {
+	TX_CONF_TXB = 0,
+	TX_CONF_TXQ,
+	TX_CONF_QMODE,
+	TX_CONF_BSIZE,
+	TX_CONF_MAX
+};
+
+enum ttcan_rx_conf {
+	RX_CONF_RXB = 0,
+	RX_CONF_RXF0,
+	RX_CONF_RXF1,
+	RX_CONF_MAX
+};
+
+
 struct ttcan_mram_elem {
 	u16 off;
 	u16 num;
@@ -191,17 +236,17 @@ struct ttcan_bittiming_fd {
 };
 
 struct ttcan_txbuff_config {
-	u32 fifo_q_size;
+	u32 fifo_q_num;
 	u32 ded_buff_num;
-	u32 evt_q_size;
-	enum ttcan_data_field_size data_field_size;
+	u32 evt_q_num;
+	enum ttcan_data_field_size dfs;
 	u32 flags;		/* bit 0: 0=Fifo, 1=Queue */
 };
 
 struct ttcan_rxbuff_config {
-	u32 rxq0_size;
-	u32 rxq1_size;
-	u32 rxb_size;
+	u32 rxq0_dsize;
+	u32 rxq1_dsize;
+	u32 rxb_dsize;
 	u64 rxq0_bmsk;
 	u64 rxq1_bmsk;
 	u64 rxb_bmsk;
@@ -237,7 +282,7 @@ struct ttcan_controller {
 	u32 ts_prescalar;
 	u32 tt_mem_elements;
 	u64 ts_counter;
-	u8 tx_buf_dlc[MAX_TX_BUFFER_ELEMS];
+	u8 tx_buf_dlc[32];
 	struct ttcan_element_size e_size;
 	struct ttcan_bittiming_fd bt_config;
 	struct ttcan_txbuff_config tx_config;
@@ -267,6 +312,30 @@ static inline u8 ttcan_len2dlc(u8 len)
 	return can_len2dlc(len);
 }
 
+static inline enum ttcan_data_field_size
+get_dfs(u32 bytes)
+{
+	switch (bytes) {
+	case 8:
+		return BYTE8;
+	case 12:
+		return BYTE12;
+	case 16:
+		return BYTE16;
+	case 20:
+		return BYTE20;
+	case 24:
+		return BYTE24;
+	case 32:
+		return BYTE32;
+	case 48:
+		return BYTE48;
+	case 64:
+		return BYTE64;
+	default:
+		return 0;
+	}
+}
 static inline int data_in_element(
 	enum ttcan_data_field_size dfs)
 {
@@ -291,7 +360,6 @@ static inline int data_in_element(
 		return 0;
 	}
 }
-
 static inline u32 ttcan_xread32(struct ttcan_controller *ttcan, int reg)
 {
 	return (u32) readl(ttcan->xbase + reg);
@@ -351,18 +419,9 @@ unsigned int ttcan_read_rx_fifo1(struct ttcan_controller *ttcan);
 unsigned int ttcan_read_hp_mesgs(struct ttcan_controller *ttcan,
 					struct ttcanfd_frame *ttcanfd);
 
-void ttcan_set_rx_buffer_addr(struct ttcan_controller *ttcan);
-void ttcan_set_rx_fifo0(struct ttcan_controller *ttcan,
-			int num_elems, int fifo_watermark);
-void ttcan_set_rx_fifo1(struct ttcan_controller *ttcan,
-			int num_elems, int fifo_watermark);
-void ttcan_config_rx_data_elem_sizes(struct ttcan_controller *ttcan,
-	enum ttcan_data_field_size rxbuf_dfs,
-	enum ttcan_data_field_size rxfifo0_dfs,
-	enum ttcan_data_field_size rxfifo1_dfs);
+void ttcan_set_rx_buffers_elements(struct ttcan_controller *ttcan);
 
-int ttcan_set_tx_buffer_addr(struct ttcan_controller *ttcan, int num_buffer,
-	int num_queue, enum ttcan_data_field_size dfs, int mode);
+int ttcan_set_tx_buffer_addr(struct ttcan_controller *ttcan);
 int ttcan_tx_fifo_full(struct ttcan_controller *ttcan);
 int ttcan_tx_fifo_queue_msg(struct ttcan_controller *ttcan,
 			    struct ttcanfd_frame *ttcanfd);
@@ -376,20 +435,18 @@ int ttcan_tx_msg_buffer_write(struct ttcan_controller *ttcan,
 				struct ttcanfd_frame *ttcanfd,
 				bool tt_en);
 
-void ttcan_reset_std_id_filter(struct ttcan_controller *ttcan, u32 list_size);
+void ttcan_reset_std_id_filter(struct ttcan_controller *ttcan);
 void ttcan_set_std_id_filter(struct ttcan_controller *ttcan, int filter_index,
 			     u8 sft, u8 sfec, u32 sfid1, u32 sfid2);
 u32 ttcan_get_std_id_filter(struct ttcan_controller *ttcan, int idx);
 
-void ttcan_reset_xtd_id_filter(struct ttcan_controller *ttcan, u32 list_size);
+void ttcan_reset_xtd_id_filter(struct ttcan_controller *ttcan);
 void ttcan_set_xtd_id_filter(struct ttcan_controller *ttcan, int filter_index,
 			     u8 eft, u8 efec, u32 efid1, u32 efid2);
 u64 ttcan_get_xtd_id_filter(struct ttcan_controller *ttcan, int idx);
 
-void ttcan_set_std_id_filter_addr(struct ttcan_controller *ttcan,
-				  u32 list_size);
-void ttcan_set_xtd_id_filter_addr(struct ttcan_controller *ttcan,
-				  u32 list_size);
+void ttcan_set_std_id_filter_addr(struct ttcan_controller *ttcan);
+void ttcan_set_xtd_id_filter_addr(struct ttcan_controller *ttcan);
 int ttcan_set_gfc(struct ttcan_controller *ttcan, u32 regval);
 u32 ttcan_get_gfc(struct ttcan_controller *ttcan);
 
@@ -399,10 +456,10 @@ u32 ttcan_get_xidam(struct ttcan_controller *ttcan);
 void ttcan_set_time_stamp_conf(struct ttcan_controller *ttcan,
 				u16 timer_prescalar,
 				enum ttcan_timestamp_source time_type);
-void ttcan_set_txevt_fifo_conf(struct ttcan_controller *ttcan,
-				u8 water_mark, u8 size);
+void ttcan_set_txevt_fifo_conf(struct ttcan_controller *ttcan);
 /* Mesg RAM partition */
-int ttcan_mesg_ram_config(struct ttcan_controller *ttcan, u32 *arr);
+int ttcan_mesg_ram_config(struct ttcan_controller *ttcan,
+		u32 *arr, u32 *tx_conf , u32 *rx_conf);
 int ttcan_controller_init(struct ttcan_controller *ttcan, u32 irq_flag,
 	u32 tt_irq_flag);
 
@@ -414,7 +471,9 @@ u32 ttcan_read_psr(struct ttcan_controller *ttcan);
 int ttcan_read_rx_buffer(struct ttcan_controller *ttcan);
 int ttcan_set_bitrate(struct ttcan_controller *ttcan);
 
-void ttcan_disable_auto_retransmission(struct ttcan_controller *ttcan);
+void ttcan_disable_auto_retransmission(
+		struct ttcan_controller *ttcan,
+		bool enable);
 int ttcan_set_bus_monitoring_mode(struct ttcan_controller *ttcan);
 int ttcan_set_loopback(struct ttcan_controller *ttcan);
 int ttcan_set_normal_mode(struct ttcan_controller *ttcan);
@@ -429,7 +488,7 @@ u32 ttcan_read_ttir(struct ttcan_controller *ttcan);
 void ttcan_enable_all_interrupts(struct ttcan_controller *ttcan, int enable);
 
 /* TTCAN APIS */
-void ttcan_set_trigger_mem_conf(struct ttcan_controller *ttcan, u8 elem_num);
+void ttcan_set_trigger_mem_conf(struct ttcan_controller *ttcan);
 int ttcan_set_ttrmc(struct ttcan_controller *ttcan, u32 regval);
 u32 ttcan_get_ttrmc(struct ttcan_controller *ttcan);
 
@@ -460,7 +519,7 @@ int ttcan_set_matrix_limits(struct ttcan_controller *ttcan,
 int ttcan_set_tur_config(struct ttcan_controller *ttcan, u16 denominator,
 	u16 numerator, int local_timing_enable);
 
-void ttcan_reset_trigger_mem(struct ttcan_controller *ttcan, u32 list_size);
+void ttcan_reset_trigger_mem(struct ttcan_controller *ttcan);
 
 /* list APIs */
 int add_msg_controller_list(struct ttcan_controller *ttcan,

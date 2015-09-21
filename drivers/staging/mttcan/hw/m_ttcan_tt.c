@@ -195,10 +195,11 @@ int ttcan_set_tur_config(struct ttcan_controller *ttcan, u16 denominator,
 	return 0;
 }
 
-void ttcan_set_trigger_mem_conf(struct ttcan_controller *ttcan, u8 elem_num)
+void ttcan_set_trigger_mem_conf(struct ttcan_controller *ttcan)
 {
 	u32 tttmc = 0;
 	u32 rel_start_addr = ttcan->mram_cfg[MRAM_TMC].off >> 2;
+	u8 elem_num = ttcan->mram_cfg[MRAM_TMC].num;
 
 	if (elem_num > 64)
 		elem_num = 64;

@@ -186,13 +186,17 @@ void ttcan_reset_config_change_enable(struct ttcan_controller *ttcan)
 	/*CCCR.CCE is automatically reset when CCCR.INIT is reset */
 }
 
-void ttcan_disable_auto_retransmission(struct ttcan_controller *ttcan)
+void ttcan_disable_auto_retransmission(struct ttcan_controller *ttcan,
+		bool enable)
 {
 	u32 cccr_reg;
 
 	/* set DAR bit */
 	cccr_reg = ttcan_read32(ttcan, ADR_MTTCAN_CCCR);
-	cccr_reg |= MTT_CCCR_DAR_MASK;
+	if (enable)
+		cccr_reg |= MTT_CCCR_DAR_MASK;
+	else
+		cccr_reg &= ~MTT_CCCR_DAR_MASK;
 	ttcan_write32_check(ttcan, ADR_MTTCAN_CCCR, cccr_reg, MTTCAN_CCCR_MSK);
 }
 
@@ -403,7 +407,7 @@ void ttcan_tx_ded_msg_write(struct ttcan_controller *ttcan,
 {
 	u32 mask = 1 << index;
 	u32 ram_addr = ttcan->mram_cfg[MRAM_TXB].off +
-	    (index * ttcan->e_size.tx_buffer * CAN_WORD_IN_BYTES);
+	    (index * ttcan->e_size.tx_buffer);
 	ttcan_write_tx_msg_ram(ttcan, ram_addr, ttcanfd, index);
 	if (!tt_en)
 		ttcan_write32(ttcan, ADR_MTTCAN_TXBAR, mask);
@@ -428,34 +432,26 @@ int ttcan_tx_msg_buffer_write(struct ttcan_controller *ttcan,
 		index++;
 		ttcan->buf_idx++;
 	}
-	pr_warn("No Free Tx buffers\n");
 	return -ENOMEM;
 }
 
-int ttcan_set_tx_buffer_addr(struct ttcan_controller *ttcan, int num_buffer,
-			     int num_queue, enum ttcan_data_field_size dfs,
-			     int mode)
+int ttcan_set_tx_buffer_addr(struct ttcan_controller *ttcan)
 {
 	int ret = 0;
 	u32 txbc_reg;
 	u32 txesc_reg;
+	u32 tx_intr_en;
 	u32 rel_start_addr = ttcan->mram_cfg[MRAM_TXB].off >> 2;
+	enum ttcan_data_field_size dfs = ttcan->tx_config.dfs;
 
-	if ((num_buffer + num_queue) > MAX_TX_BUFFER_ELEMS) {
-		pr_err("%s:Conf. Err Tx elements %d > MAX_TX_BUF\n",
-		     __func__, ttcan->tx_config.ded_buff_num);
-		return -EINVAL;
-	}
-	ttcan->tx_config.ded_buff_num = num_buffer;
-	ttcan->tx_config.fifo_q_size = num_queue;
-	ttcan->tx_config.flags = mode;
-	ttcan->tx_config.data_field_size = dfs;
 
 	txbc_reg = (rel_start_addr << MTT_TXBC_TBSA_SHIFT) & MTT_TXBC_TBSA_MASK;
-	txbc_reg |= (num_buffer << MTT_TXBC_NDTB_SHIFT) & MTT_TXBC_NDTB_MASK;
-	txbc_reg |= (num_queue << MTT_TXBC_TFQS_SHIFT) & MTT_TXBC_TFQS_MASK;
+	txbc_reg |= (ttcan->tx_config.ded_buff_num << MTT_TXBC_NDTB_SHIFT) &
+			MTT_TXBC_NDTB_MASK;
+	txbc_reg |= (ttcan->tx_config.fifo_q_num << MTT_TXBC_TFQS_SHIFT) &
+			MTT_TXBC_TFQS_MASK;
 
-	if (mode & 0x1)
+	if (ttcan->tx_config.flags & 0x1)
 		txbc_reg |= MTT_TXBC_TFQM_MASK;	/* Queue mode */
 	else
 		txbc_reg &= ~(MTT_TXBC_TFQM_MASK);	/* FIFO mode */
@@ -476,16 +472,13 @@ int ttcan_set_tx_buffer_addr(struct ttcan_controller *ttcan, int num_buffer,
 		return ret;
 	}
 
+	tx_intr_en = (1 << (ttcan->tx_config.ded_buff_num
+			+ ttcan->tx_config.fifo_q_num)) - 1;
 	/* Enable TC interrupt for tx buffers + queue */
-	ttcan_write32(ttcan, ADR_MTTCAN_TXBTIE,
-		      ((1 << (num_buffer + num_queue)) - 1));
+	ttcan_write32(ttcan, ADR_MTTCAN_TXBTIE, tx_intr_en);
 	/* Enable TCF interrupt for tx buffers */
-	ttcan_write32(ttcan, ADR_MTTCAN_TXBCIE,
-		      ((1 << (num_buffer + num_queue)) - 1));
+	ttcan_write32(ttcan, ADR_MTTCAN_TXBCIE, tx_intr_en);
 
-	/* Populate buffersize in data structure e_size in words */
-	ttcan->e_size.tx_buffer =
-	    TXB_ELEM_HEADER_WORD + (data_in_element(dfs) >> 2);
 	return ret;
 }
 
@@ -521,18 +514,6 @@ int ttcan_tx_fifo_full(struct ttcan_controller *ttcan)
 	return (txfqs_reg & MTT_TXFQS_TFQF_MASK) >> MTT_TXFQS_TFQF_SHIFT;
 }
 
-/* Rx Buff Section */
-void ttcan_set_rx_buffer_addr(struct ttcan_controller *ttcan)
-{
-	u32 rxbc_reg = 0;
-	u32 relative_addr;
-
-	relative_addr = ttcan->mram_cfg[MRAM_RXB].off >> 2;
-	rxbc_reg = (relative_addr << MTT_RXBC_RBSA_SHIFT) & MTT_RXBC_RBSA_MASK;
-
-	ttcan_write32(ttcan, ADR_MTTCAN_RXBC, rxbc_reg);
-}
-
 static int process_rx_mesg(struct ttcan_controller *ttcan, u32 addr)
 {
 	struct ttcanfd_frame ttcanfd;
@@ -554,7 +535,7 @@ int ttcan_read_rx_buffer(struct ttcan_controller *ttcan)
 		u32 bit_set2 = ffs(ndat2) - 1;
 		if (ndat1) {
 			read_addr = ttcan->mram_cfg[MRAM_RXB].off + (bit_set1 *
-				ttcan->e_size.tx_buffer * CAN_WORD_IN_BYTES);
+				ttcan->e_size.rx_buffer);
 			if (process_rx_mesg(ttcan, read_addr))
 				return msgs_read;
 			ttcan_write32(ttcan, ADR_MTTCAN_NDAT1,
@@ -564,7 +545,7 @@ int ttcan_read_rx_buffer(struct ttcan_controller *ttcan)
 
 		if (ndat2) {
 			read_addr = ttcan->mram_cfg[MRAM_RXB].off + (bit_set2 *
-				ttcan->e_size.tx_buffer * CAN_WORD_IN_BYTES);
+				ttcan->e_size.rx_buffer);
 			if (process_rx_mesg(ttcan, read_addr))
 				return msgs_read;
 			ttcan_write32(ttcan, ADR_MTTCAN_NDAT2,
@@ -594,7 +575,7 @@ unsigned int ttcan_read_txevt_fifo(struct ttcan_controller *ttcan)
 		pr_info("%s: Tx Event FIFO empty\n", __func__);
 		return 0;
 	}
-	q_read = ttcan->tx_config.evt_q_size;
+	q_read = ttcan->tx_config.evt_q_num;
 	while ((txefs & MTT_TXEFS_EFFL_MASK) && q_read--) {
 
 		u32 get_idx =
@@ -637,7 +618,7 @@ unsigned int ttcan_read_rx_fifo0(struct ttcan_controller *ttcan)
 	}
 
 	/* Read at max queue size in one attempt */
-	q_read = ttcan->rx_config.rxq0_size;
+	q_read = ttcan->mram_cfg[MRAM_RXF0].num;
 
 	while ((rxf0s_reg & MTT_RXF0S_F0FL_MASK) && q_read--) {
 		u32 get_idx = (rxf0s_reg & MTT_RXF0S_F0GI_MASK) >>
@@ -651,7 +632,7 @@ unsigned int ttcan_read_rx_fifo0(struct ttcan_controller *ttcan)
 		}
 
 		read_addr = ttcan->mram_cfg[MRAM_RXF0].off +
-		    (get_idx * ttcan->e_size.rx_fifo0 * CAN_WORD_IN_BYTES);
+		    (get_idx * ttcan->e_size.rx_fifo0);
 
 		pr_debug("%s:fifo0: read_addr %x FOGI %x\n", __func__,
 			 read_addr, get_idx);
@@ -685,7 +666,7 @@ unsigned int ttcan_read_rx_fifo1(struct ttcan_controller *ttcan)
 	}
 
 	/* Read at max queue size in one attempt */
-	q_read = ttcan->rx_config.rxq1_size;
+	q_read = ttcan->mram_cfg[MRAM_RXF1].num;
 
 	while ((rxf1s_reg & MTT_RXF1S_F1FL_MASK) && q_read--) {
 		u32 get_idx = (rxf1s_reg & MTT_RXF1S_F1GI_MASK) >>
@@ -698,7 +679,7 @@ unsigned int ttcan_read_rx_fifo1(struct ttcan_controller *ttcan)
 			continue;
 		}
 		read_addr = ttcan->mram_cfg[MRAM_RXF1].off +
-		    (get_idx * ttcan->e_size.rx_fifo1 * CAN_WORD_IN_BYTES);
+		    (get_idx * ttcan->e_size.rx_fifo1);
 
 		pr_debug("%s:fifo1: read_addr %x FOGI %x\n", __func__,
 			 read_addr, get_idx);
@@ -723,7 +704,7 @@ unsigned int ttcan_read_rx_fifo(struct ttcan_controller *ttcan)
 
 	msgs_read = ttcan_read_rx_fifo0(ttcan);
 
-	if (ttcan->rx_config.rxq1_size)
+	if (ttcan->mram_cfg[MRAM_RXF1].num)
 		msgs_read += ttcan_read_rx_fifo1(ttcan);
 
 	return msgs_read;
@@ -762,61 +743,62 @@ unsigned int ttcan_read_hp_mesgs(struct ttcan_controller *ttcan,
 		return 0;
 	case 2:
 		read_addr = ttcan->mram_cfg[MRAM_RXF0].off +
-		    buf_idx * (ttcan->e_size.rx_fifo0 << 2);
+		    (buf_idx * ttcan->e_size.rx_fifo0);
 		ttcan_read_rx_msg_ram(ttcan, read_addr, ttcanfd);
 		ttcan->rx_config.rxq0_bmsk |= 1 << buf_idx;
 		break;
 	case 3:
 		read_addr = ttcan->mram_cfg[MRAM_RXF1].off +
-		    buf_idx * (ttcan->e_size.rx_fifo1 << 2);
+		    buf_idx * ttcan->e_size.rx_fifo1;
 		ttcan_read_rx_msg_ram(ttcan, read_addr, ttcanfd);
 		ttcan->rx_config.rxq1_bmsk |= 1 << buf_idx;
 	}
 	return 1;
 }
-
-void ttcan_set_rx_fifo0(struct ttcan_controller *ttcan, int num_elems,
-		       int fifo_watermark)
+/* Rx Buff Section */
+void ttcan_set_rx_buffers_elements(struct ttcan_controller *ttcan)
 {
-	u32 rel_phy_addr;
+	u32 rxbc_reg = 0;
 	u32 rxf0c_reg = 0;
+	u32 rxf1c_reg = 0;
+	u32 rxesc_reg = 0;
+	u32 rel_phy_addr;
+	enum ttcan_data_field_size rxbuf_dfs;
+	enum ttcan_data_field_size rxfifo0_dfs;
+	enum ttcan_data_field_size rxfifo1_dfs;
 
+	u32 rxq0 = ttcan->mram_cfg[MRAM_RXF0].num;
+	u32 rxq1 = ttcan->mram_cfg[MRAM_RXF1].num;
+
+	/* Set Rx Buffer Address */
+	rel_phy_addr = ttcan->mram_cfg[MRAM_RXB].off >> 2;
+	rxbc_reg = (rel_phy_addr << MTT_RXBC_RBSA_SHIFT) & MTT_RXBC_RBSA_MASK;
+
+	ttcan_write32(ttcan, ADR_MTTCAN_RXBC, rxbc_reg);
+
+	/* Set RXFIFO 0 */
 	rel_phy_addr = ttcan->mram_cfg[MRAM_RXF0].off >> 2;
-	rxf0c_reg = (fifo_watermark << MTT_RXF0C_F0WM_SHIFT) &
-	    MTT_RXF0C_F0WM_MASK;
-	rxf0c_reg |= (num_elems << MTT_RXF0C_F0S_SHIFT) & MTT_RXF0C_F0S_MASK;
+	rxf0c_reg = ((rxq0 / 2) << MTT_RXF0C_F0WM_SHIFT) & MTT_RXF0C_F0WM_MASK;
+	rxf0c_reg |= (rxq0 << MTT_RXF0C_F0S_SHIFT) & MTT_RXF0C_F0S_MASK;
 	rxf0c_reg |= (rel_phy_addr << MTT_RXF0C_F0SA_SHIFT) &
 	    MTT_RXF0C_F0SA_MASK;
 
 	ttcan_write32(ttcan, ADR_MTTCAN_RXF0C, rxf0c_reg);
 
-	ttcan->rx_config.rxq0_size = num_elems;
-}
-
-void ttcan_set_rx_fifo1(struct ttcan_controller *ttcan, int num_elems,
-		       int fifo_watermark)
-{
-	u32 rel_phy_addr;
-	u32 rxf1c_reg = 0;
-
+	/* Set RxFIFO 1 */
 	rel_phy_addr = ttcan->mram_cfg[MRAM_RXF1].off >> 2;
-	rxf1c_reg = (fifo_watermark << MTT_RXF1C_F1WM_SHIFT) &
-	    MTT_RXF1C_F1WM_MASK;
-	rxf1c_reg |= (num_elems << MTT_RXF1C_F1S_SHIFT) & MTT_RXF1C_F1S_MASK;
+	rxf1c_reg = ((rxq1 / 2) << MTT_RXF1C_F1WM_SHIFT) & MTT_RXF1C_F1WM_MASK;
+	rxf1c_reg |= (rxq1 << MTT_RXF1C_F1S_SHIFT) & MTT_RXF1C_F1S_MASK;
 	rxf1c_reg |= (rel_phy_addr << MTT_RXF1C_F1SA_SHIFT) &
 	    MTT_RXF1C_F1SA_MASK;
 
 	ttcan_write32(ttcan, ADR_MTTCAN_RXF1C, rxf1c_reg);
 
-	ttcan->rx_config.rxq1_size = num_elems;
-}
 
-void ttcan_config_rx_data_elem_sizes(struct ttcan_controller *ttcan,
-				     enum ttcan_data_field_size rxbuf_dfs,
-				     enum ttcan_data_field_size rxfifo0_dfs,
-				     enum ttcan_data_field_size rxfifo1_dfs)
-{
-	u32 rxesc_reg = 0;
+	/* Set Rx element datasize */
+	rxbuf_dfs = get_dfs(ttcan->rx_config.rxb_dsize);
+	rxfifo0_dfs = get_dfs(ttcan->rx_config.rxq0_dsize);
+	rxfifo1_dfs = get_dfs(ttcan->rx_config.rxq1_dsize);
 
 	rxesc_reg = (rxbuf_dfs << MTT_RXESC_RBDS_SHIFT) & MTT_RXESC_RBDS_MASK;
 	rxesc_reg |= (rxfifo0_dfs << MTT_RXESC_F0DS_SHIFT) &
@@ -827,11 +809,11 @@ void ttcan_config_rx_data_elem_sizes(struct ttcan_controller *ttcan,
 	ttcan_write32(ttcan, ADR_MTTCAN_RXESC, rxesc_reg);
 
 	ttcan->e_size.rx_buffer =
-	    RXB_ELEM_HEADER_WORD + (data_in_element(rxbuf_dfs) >> 2);
+	    RXB_ELEM_HEADER_SIZE + ttcan->rx_config.rxb_dsize;
 	ttcan->e_size.rx_fifo0 =
-	    RXB_ELEM_HEADER_WORD + (data_in_element(rxfifo0_dfs) >> 2);
+	    RXB_ELEM_HEADER_SIZE + ttcan->rx_config.rxq0_dsize;
 	ttcan->e_size.rx_fifo1 =
-	    RXB_ELEM_HEADER_WORD + (data_in_element(rxfifo1_dfs) >> 2);
+	    RXB_ELEM_HEADER_SIZE + ttcan->rx_config.rxq1_dsize;
 }
 
 /*  Filters Section */
@@ -882,11 +864,11 @@ u32 ttcan_get_ttrmc(struct ttcan_controller *ttcan)
 	return ttcan_read32(ttcan, ADR_MTTCAN_TTRMC);
 }
 
-void ttcan_set_std_id_filter_addr(struct ttcan_controller *ttcan,
-	u32 list_size)
+void ttcan_set_std_id_filter_addr(struct ttcan_controller *ttcan)
 {
 	u32 sidfc_reg = 0;
 	u32 rel_start_addr = ttcan->mram_cfg[MRAM_SIDF].off >> 2;
+	u32 list_size = ttcan->mram_cfg[MRAM_SIDF].num;
 
 	if (list_size > 128)
 		list_size = 128;
@@ -897,10 +879,10 @@ void ttcan_set_std_id_filter_addr(struct ttcan_controller *ttcan,
 	ttcan_write32(ttcan, ADR_MTTCAN_SIDFC, sidfc_reg);
 }
 
-void ttcan_set_xtd_id_filter_addr(struct ttcan_controller *ttcan,
-	u32 list_size)
+void ttcan_set_xtd_id_filter_addr(struct ttcan_controller *ttcan)
 {
 	u32 xidfc_reg = 0;
+	u32 list_size = ttcan->mram_cfg[MRAM_XIDF].num;
 	u32 rel_start_addr = ttcan->mram_cfg[MRAM_XIDF].off >> 2;
 
 	if (list_size > 64)
@@ -928,20 +910,19 @@ void ttcan_set_time_stamp_conf(struct ttcan_controller *ttcan,
 	ttcan->ts_prescalar = timer_prescalar + 1;
 }
 
-void ttcan_set_txevt_fifo_conf(struct ttcan_controller *ttcan,
-			       u8 water_mark, u8 size)
+void ttcan_set_txevt_fifo_conf(struct ttcan_controller *ttcan)
 {
 	u32 txefc = 0;
 	u32 rel_addr = ttcan->mram_cfg[MRAM_TXE].off >> 2;
+	u32 evf_size = ttcan->mram_cfg[MRAM_TXE].num;
 
-	if (water_mark < 32)
-		txefc = (water_mark << MTT_TXEFC_EFWM_SHIFT) &
+	txefc = ((evf_size / 2) << MTT_TXEFC_EFWM_SHIFT) &
 				MTT_TXEFC_EFWM_MASK;
 
-	txefc |= size << MTT_TXEFC_EFS_SHIFT & MTT_TXEFC_EFS_MASK;
+	txefc |= evf_size << MTT_TXEFC_EFS_SHIFT & MTT_TXEFC_EFS_MASK;
 	txefc |= rel_addr << MTT_TXEFC_EFSA_SHIFT & MTT_TXEFC_EFSA_MASK;
 	ttcan_write32(ttcan, ADR_MTTCAN_TXEFC, txefc);
-	ttcan->tx_config.evt_q_size = size;
+	ttcan->tx_config.evt_q_num = evf_size;
 }
 
 void ttcan_set_xtd_mask_add(struct ttcan_controller *ttcan, int extid_mask)

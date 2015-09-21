@@ -53,12 +53,11 @@
 #define MTTCAN_ERR_WARN       (1 << 24)
 #define MTTCAN_ERR_PASS       (1 << 23)
 
-#define MTT_CAN_NAPI_WEIGHT   (CONF_RX_FIFO_0_ELEMS + CONF_RX_FIFO_1_ELEMS \
-				+ CONF_RX_BUFFER_ELEMS)
-#define MTT_CAN_TX_OBJ_NUM    (CONF_TX_BUFFER_ELEMS + CONF_TX_FIFO_ELEMS)
-#define MTT_CAN_MAX_MRAM_ELEMS     8
-#define MTTCAN_STOP_WAIT_MS   1000
-#define MTTCAN_START_WAIT_MS   1000
+#define MTT_CAN_NAPI_WEIGHT	64
+#define MTT_CAN_TX_OBJ_NUM	32
+#define MTT_CAN_MAX_MRAM_ELEMS	9
+#define MTT_MAX_TX_CONF		4
+#define MTT_MAX_RX_CONF		3
 
 struct mttcan_priv {
 	struct can_priv can;
@@ -85,6 +84,8 @@ struct mttcan_priv {
 	int gpio_can_stb;
 	int tt_param[2];
 	u32 mram_param[MTT_CAN_MAX_MRAM_ELEMS];
+	u32 tx_conf[MTT_MAX_TX_CONF]; /*<txb, txq, txq_mode, txb_dsize>*/
+	u32 rx_conf[MTT_MAX_RX_CONF]; /*<rxb_dsize, rxq0_dsize, rxq1_dsize>*/
 	bool poll;
 };
 

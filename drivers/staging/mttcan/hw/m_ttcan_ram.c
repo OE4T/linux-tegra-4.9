@@ -141,7 +141,7 @@ int ttcan_write_tx_msg_ram(struct ttcan_controller *ttcan, u32 write_addrs,
 	if (ttcanfd->flags & CAN_ESI_FLAG)
 		msg_data |= TX_BUF_ESI;
 
-	pr_info("T0: addr %p msg %x\n", addr_in_msg_ram, msg_data);
+	pr_debug("T0: addr %p msg %x\n", addr_in_msg_ram, msg_data);
 	writel(msg_data, addr_in_msg_ram);
 
 	/* T1 */
@@ -149,7 +149,7 @@ int ttcan_write_tx_msg_ram(struct ttcan_controller *ttcan, u32 write_addrs,
 	    (ttcan_len2dlc(ttcanfd->d_len) << TX_BUF_DLC_SHIFT) &
 	    TX_BUF_DLC_MASK;
 
-	if (ttcan->tx_config.evt_q_size)
+	if (ttcan->tx_config.evt_q_num)
 		msg_data |= TX_BUF_EFC;
 
 	if (ttcanfd->flags & CAN_FD_FLAG)
@@ -219,9 +219,10 @@ void ttcan_set_std_id_filter(struct ttcan_controller *ttcan, int filter_index,
 	writel(filter_elem, (void __iomem *)(filter_addr + filter_offset));
 }
 
-void ttcan_reset_std_id_filter(struct ttcan_controller *ttcan, u32 list_size)
+void ttcan_reset_std_id_filter(struct ttcan_controller *ttcan)
 {
 	int idx;
+	u32 list_size = ttcan->mram_cfg[MRAM_SIDF].num;
 	void __iomem *filter_addr = ttcan->mram_vbase +
 					ttcan->mram_cfg[MRAM_SIDF].off;
 	for (idx = 0; idx < list_size; idx++) {
@@ -239,9 +240,10 @@ u32 ttcan_get_std_id_filter(struct ttcan_controller *ttcan, int idx)
 	return readl(filter_addr + filter_offset);
 }
 
-void ttcan_reset_xtd_id_filter(struct ttcan_controller *ttcan, u32 list_size)
+void ttcan_reset_xtd_id_filter(struct ttcan_controller *ttcan)
 {
 	int idx;
+	u32 list_size = ttcan->mram_cfg[MRAM_XIDF].num;
 	void __iomem *filter_addr = ttcan->mram_vbase +
 					ttcan->mram_cfg[MRAM_XIDF].off;
 
@@ -254,11 +256,12 @@ void ttcan_reset_xtd_id_filter(struct ttcan_controller *ttcan, u32 list_size)
 	}
 }
 
-void ttcan_reset_trigger_mem(struct ttcan_controller *ttcan, u32 list_size)
+void ttcan_reset_trigger_mem(struct ttcan_controller *ttcan)
 {
 	int idx;
 	void __iomem *filter_addr = ttcan->mram_vbase +
 			ttcan->mram_cfg[MRAM_TMC].off;
+	u32 list_size = ttcan->mram_cfg[MRAM_TMC].num;
 
 	for (idx = 0; idx < list_size; idx++) {
 		u32 offset = idx * TRIG_ELEM_SIZE;
@@ -367,7 +370,8 @@ int ttcan_set_trigger_mem(struct ttcan_controller *ttcan, int trig_index,
 	return 0;
 }
 
-int ttcan_mesg_ram_config(struct ttcan_controller *ttcan, u32 *arr)
+int ttcan_mesg_ram_config(struct ttcan_controller *ttcan,
+	u32 *arr, u32 *tx_conf, u32 *rx_conf)
 {
 
 	ttcan->mram_cfg[MRAM_SIDF].off = arr[0];
@@ -401,12 +405,25 @@ int ttcan_mesg_ram_config(struct ttcan_controller *ttcan, u32 *arr)
 			ttcan->mram_cfg[MRAM_TXB].num * MAX_TXB_ELEM_SIZE;
 	ttcan->mram_cfg[MRAM_TMC].num = arr[8];
 
-	if ((MTTCAN_RAM_BASE + MTTCAN_RAM_SIZE <=
+	if ((MTTCAN_RAM_SIZE <=
 		ttcan->mram_cfg[MRAM_TMC].off + ttcan->mram_cfg[MRAM_TMC].num *
-		       MAX_TXB_ELEM_SIZE)) {
+		       MAX_TXB_ELEM_SIZE - ttcan->mram_cfg[MRAM_SIDF].off)) {
 		pr_err("%s: Incorrect config for Message RAM\n", __func__);
 		return -EINVAL;
 	}
+
+	if ((tx_conf[0] + tx_conf[1] > ttcan->mram_cfg[MRAM_TXB].num)) {
+		pr_err("%s: Incorrect tx-config in dt.\n", __func__);
+		return -EINVAL;
+	}
+	ttcan->tx_config.ded_buff_num = tx_conf[TX_CONF_TXB];
+	ttcan->tx_config.fifo_q_num = tx_conf[TX_CONF_TXQ];
+	ttcan->tx_config.flags = tx_conf[TX_CONF_QMODE];
+	ttcan->e_size.tx_buffer = TXB_ELEM_HEADER_SIZE + tx_conf[TX_CONF_BSIZE];
+	ttcan->tx_config.dfs = get_dfs(tx_conf[TX_CONF_BSIZE]);
+	ttcan->rx_config.rxb_dsize = rx_conf[RX_CONF_RXB];
+	ttcan->rx_config.rxq0_dsize = rx_conf[RX_CONF_RXF0];
+	ttcan->rx_config.rxq1_dsize = rx_conf[RX_CONF_RXF1];
 
 	pr_info("\t Message RAM Configuration\n"
 		"\t| base addr   |0x%08lx|\n\t| sidfc_flssa |0x%08x|\n\t| xidfc_flesa |0x%08x|\n"

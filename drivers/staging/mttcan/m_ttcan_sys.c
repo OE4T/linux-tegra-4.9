@@ -87,10 +87,10 @@ static ssize_t store_gfc_fltr(struct device *dev,
 	}
 
 	gfc = 0;
-	gfc = (anfs & MTT_GFC_ANFS_MASK) >> MTT_GFC_ANFS_SHIFT;
-	gfc |= (anfe & MTT_GFC_ANFE_MASK) >> MTT_GFC_ANFE_SHIFT;
-	gfc |= (rrfs & MTT_GFC_RRFS_MASK) >> MTT_GFC_RRFS_SHIFT;
-	gfc |= (rrfe & MTT_GFC_RRFE_MASK) >> MTT_GFC_RRFE_SHIFT;
+	gfc = (anfs << MTT_GFC_ANFS_SHIFT) & MTT_GFC_ANFS_MASK;
+	gfc |= (anfe << MTT_GFC_ANFE_SHIFT) & MTT_GFC_ANFE_MASK;
+	gfc |= (rrfs << MTT_GFC_RRFS_SHIFT) & MTT_GFC_RRFS_MASK;
+	gfc |= (rrfe << MTT_GFC_RRFE_SHIFT) & MTT_GFC_RRFE_SHIFT;
 
 	ttcan_set_gfc(priv->ttcan, gfc);
 
@@ -155,7 +155,7 @@ static ssize_t store_std_fltr(struct device *dev,
 	cur_filter_size = priv->ttcan->fltr_config.std_fltr_size;
 
 	if ((idx > cur_filter_size) || (idx == -1))
-		if (cur_filter_size == CONF_11_BIT_FILTER_ELEMS) {
+		if (cur_filter_size == priv->ttcan->mram_cfg[MRAM_SIDF].num) {
 			dev_err(dev, "Max Invalid std filter Index\n");
 			return -ENOSPC;
 		}
@@ -203,7 +203,7 @@ static ssize_t store_xtd_fltr(struct device *dev,
 	cur_filter_size = priv->ttcan->fltr_config.xtd_fltr_size;
 
 	if ((idx > cur_filter_size) || (idx == -1))
-		if (cur_filter_size == CONF_29_BIT_FILTER_ELEMS) {
+		if (cur_filter_size == priv->ttcan->mram_cfg[MRAM_XIDF].num) {
 			dev_err(dev, "Max Invalid std filter Index\n");
 			return -ENOSPC;
 		}
@@ -512,7 +512,7 @@ static ssize_t store_trigger_mem(struct device *dev,
 	cur = priv->ttcan->tt_mem_elements;
 
 	if ((idx > cur) || (idx == -1))
-		if (cur == CONF_TRIG_ELEMS) {
+		if (cur == priv->ttcan->mram_cfg[MRAM_TMC].num) {
 			dev_err(dev, "Max Invalid Trigger mem Index\n");
 			return -ENOSPC;
 		}

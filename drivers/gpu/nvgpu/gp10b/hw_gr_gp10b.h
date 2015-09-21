@@ -3786,4 +3786,16 @@ static inline u32 gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_disable_f(void)
 {
 	return 0x1000;
 }
+static inline u32 gr_gpcs_tc_debug0_r(void)
+{
+	return 0x00418708;
+}
+static inline u32 gr_gpcs_tc_debug0_limit_coalesce_buffer_size_f(u32 v)
+{
+	return (v & 0xff) << 0;
+}
+static inline u32 gr_gpcs_tc_debug0_limit_coalesce_buffer_size_m(void)
+{
+	return 0xff << 0;
+}
 #endif

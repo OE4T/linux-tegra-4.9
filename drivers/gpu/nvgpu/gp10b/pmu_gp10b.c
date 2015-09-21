@@ -202,6 +202,60 @@ static int gp10b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 	return 0;
 }
 
+static void pmu_handle_gr_param_msg(struct gk20a *g, struct pmu_msg *msg,
+			void *param, u32 handle, u32 status)
+{
+	gk20a_dbg_fn("");
+
+	if (status != 0) {
+		gk20a_err(dev_from_gk20a(g), "GR PARAM cmd aborted");
+		/* TBD: disable ELPG */
+		return;
+	}
+
+	gp10b_dbg_pmu("GR PARAM is acknowledged from PMU %x \n",
+			msg->msg.pg.msg_type);
+
+	return;
+}
+
+static int gp10b_pg_gr_init(struct gk20a *g, u8 grfeaturemask)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	struct pmu_cmd cmd;
+	u32 seq;
+
+	memset(&cmd, 0, sizeof(struct pmu_cmd));
+	cmd.hdr.unit_id = PMU_UNIT_PG;
+	cmd.hdr.size = PMU_CMD_HDR_SIZE +
+			sizeof(struct pmu_pg_cmd_gr_init_param);
+	cmd.cmd.pg.gr_init_param.cmd_type =
+			PMU_PG_CMD_ID_PG_PARAM;
+	cmd.cmd.pg.gr_init_param.sub_cmd_id =
+			PMU_PG_PARAM_CMD_GR_INIT_PARAM;
+	cmd.cmd.pg.gr_init_param.featuremask =
+			grfeaturemask;
+
+	gp10b_dbg_pmu("cmd post PMU_PG_CMD_ID_PG_PARAM %x", grfeaturemask);
+	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+			pmu_handle_gr_param_msg, pmu, &seq, ~0);
+
+	return 0;
+}
+void gp10b_pmu_elpg_statistics(struct gk20a *g,
+		u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	struct pmu_pg_stats_v1 stats;
+
+	pmu_copy_from_dmem(pmu, pmu->stat_dmem_offset,
+		(u8 *)&stats, sizeof(struct pmu_pg_stats_v1), 0);
+
+	*ingating_time = stats.total_sleep_timeus;
+	*ungating_time = stats.total_nonsleep_timeus;
+	*gating_cnt = stats.entry_count;
+}
+
 static int gp10b_pmu_setup_elpg(struct gk20a *g)
 {
 	int ret = 0;
@@ -249,4 +303,6 @@ void gp10b_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.lspmuwprinitdone = false;
 	gops->pmu.fecsbootstrapdone = false;
 	gops->pmu.write_dmatrfbase = gp10b_write_dmatrfbase;
+	gops->pmu.pmu_elpg_statistics = gp10b_pmu_elpg_statistics;
+	gops->pmu.pmu_pg_grinit_param = gp10b_pg_gr_init;
 }

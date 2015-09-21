@@ -1193,5 +1193,6 @@ struct usb_set_sel_req {
  * http://compliance.usb.org/index.asp?UpdateFile=Electrical&Format=Standard#34
  */
 #define USB_SELF_POWER_VBUS_MAX_DRAW		100
+#define USB_HS_VBUS_MAX_DRAW			500
 
 #endif /* _UAPI__LINUX_USB_CH9_H */

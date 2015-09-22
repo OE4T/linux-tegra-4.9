@@ -689,7 +689,9 @@
                         interrupts = <0 201 0x04
                                       0 202 0x04
                                       0 203 0x04>;
-			resets = <&tegra_car TEGRA186_RESET_VI>;
+			resets = <&tegra_car TEGRA186_RESET_VI>,
+				 <&tegra_car TEGRA186_RESET_TSCTNVI>;
+			reset-names = "vi", "tsctnvi";
 			clocks = <&tegra_car TEGRA186_CLK_VI>,
 				 <&tegra_car TEGRA186_CLK_NVCSI>,
 				 <&tegra_car TEGRA186_CLK_NVCSILP>,

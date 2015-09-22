@@ -4679,7 +4679,7 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 	} else {
 		err = tegra_xusb_setup_usb(uphy);
 		if (err)
-			goto unregister;
+			goto free_mailbox;
 	}
 
 	uphy->provider = devm_of_phy_provider_register(dev,

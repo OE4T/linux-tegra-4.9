@@ -1088,7 +1088,11 @@ err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 err_pll_a_out0_clk_put:
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 		clk_put(i2s->clk_pll_a_out0);
+#else
+		devm_clk_put(&pdev->dev, i2s->clk_pll_a_out0);
+#endif
 err_audio_sync_clk_put:
 	devm_clk_put(&pdev->dev, i2s->clk_audio_sync);
 err_i2s_sync_clk_put:

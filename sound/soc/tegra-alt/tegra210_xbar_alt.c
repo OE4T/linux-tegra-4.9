@@ -901,7 +901,7 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 #else
 		xbar->clk_parent = devm_clk_get(&pdev->dev, "pll_a_out0");
 #endif
-		if (IS_ERR(xbar->clk)) {
+		if (IS_ERR(xbar->clk_parent)) {
 			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
 			ret = PTR_ERR(xbar->clk_parent);
 			goto err_clk_put;
@@ -927,7 +927,7 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 	}
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		ret = clk_set_rate(xbar->clk_parent, 24560000);
+		ret = clk_set_rate(xbar->clk_parent, 24576000);
 		if (ret) {
 			dev_err(&pdev->dev, "Failed to set clock rate of pll_a_out0\n");
 			goto err_clk_put_ape;
@@ -996,11 +996,19 @@ err_pm_disable:
 	tegra_ape_pd_remove_device(&pdev->dev);
 err_clk_set_parent:
 	clk_set_parent(xbar->clk, parent_clk);
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 err_clk_put_ape:
 	clk_put(xbar->clk_ape);
 err_clk_put_parent:
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
 		clk_put(xbar->clk_parent);
+#else
+err_clk_put_ape:
+	devm_clk_put(&pdev->dev, xbar->clk_ape);
+err_clk_put_parent:
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
+		devm_clk_put(&pdev->dev, xbar->clk_parent);
+#endif
 err_clk_put:
 	devm_clk_put(&pdev->dev, xbar->clk);
 err:
@@ -1018,8 +1026,13 @@ static int tegra210_xbar_remove(struct platform_device *pdev)
 	tegra_ape_pd_remove_device(&pdev->dev);
 
 	devm_clk_put(&pdev->dev, xbar->clk);
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	clk_put(xbar->clk_parent);
 	clk_put(xbar->clk_ape);
+#else
+	devm_clk_put(&pdev->dev, xbar->clk_parent);
+	devm_clk_put(&pdev->dev, xbar->clk_ape);
+#endif
 
 	return 0;
 }

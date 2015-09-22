@@ -1,0 +1,141 @@
+NVIDIA Tegra SCE aux CPU, with communication via the "IVC" IPC protocol.
+
+SCE is an aux CPU which talks to CCPLEX over IVC.
+
+Its assumed that the SCE FW implements IVC, and uses HSP DB IRQs as part of IVC.
+Its also assumed that the SCE FW expects AST regions 0/1/2 are already set up
+for the SCE to access FW in DRAM, SYSRAM if applicable, and the IVC memory.
+
+== SCE top-level node ==
+
+The SCE core is represented by the top-level node including direct HW resources
+such as clocks, resets etc.
+
+Required properties:
+- compatible: Should be "nvidia,tegra186-sce-ivc" for T18x.
+- nvidia,hsp-notifications: <HSP-phandle HSP-ID HSP-DB>
+  * HSP is a set of HW synchronization primitives used in Tegra to allow
+    multiple processors to share resources and communicate together.
+  * HSP-ID is NVIDIA Tegra HSP unique source ID for SCE, used in IPC.
+  * HSP-DB is NVIDIA Tegra HSP unique doorbell number alloted to SCE.
+    A HSP doorbell allows a set of source agents in Tegra to request the
+    attention of specified target agent. In general the agents are processors
+    and doorbell used as part of an IPC protocol.
+  * For more HSP details, refer: ../tegra-hsp.txt.
+- reg: Address entries (SCE BASE, SCE CFG BASE, SCE_EVP, SCEPM)
+  Formatted as per standard rules for this property.
+- nvidia,ast0: AST0 phandle
+- nvidia,ast1: AST1 phandle
+  For details refer: ../tegra-ast.txt
+- vidia,ivc-remote-cpu-phys-addr: SCE-visible physical address of IVC memory.
+- nvidia,ivc-size: Total IVC memory.
+- #address-cells: Number of address cells in each subnode.
+  Should be set to <1>.
+- #size-cells: Number of size cells in each subnode.
+  Should be set ot <0>.
+- clocks: Should contain an entry for each entry in clock-names.
+  See ../clock/clock-bindings.txt for details.
+- clock-names: Names of the clocks required by SCE.
+  Must include following entries:
+  - sce_cpu_nic
+  - sce_cpu
+  - sce_apb
+- resets: Should contain an entry for each entry in reset-names.
+  See ../reset/reset.txt for details.
+- reset-names: Names of the resets required for SCE.
+  Must include following entries:
+  - sce_apb
+  - sce_nic
+  - sce_nsysporeset
+  - sce_nreset
+  - sce_dbgresetn
+  - sce_presetdbgn
+  - sce_actmon
+  - sce_pm
+  - sce_dma
+  - sce_hsp
+  - tsctnsce
+  - sce_tke
+  - sce_gte
+  - sce_cfg
+
+Mailbox properties:
+- #mbox-cells
+
+The IVC channels are represented as mailbox channels.
+Hence, this binding makes use of the mailbox binding at ../mailbox/mailbox.txt.
+
+== SCE sub nodes ==
+
+* ivc-channels
+
+Contains a sub-node for each IVC channel implemented by the SCE.
+For IVC channel details, please refer: ../tegra-ivc-channel.txt
+
+Possible example:
+
+remote-cpu@b000000: sce {
+	compatible = "nvidia,tegra186-sce-ivc";
+	reg = <0x0 0xb000000 0x0 0x10000>,
+		<0x0 0xb230000 0x0 0x10000>,
+	nvidia,hsp-notifications = <&hsp_top
+				TEGRA_HSP_PROC_SCE
+				TEGRA_HSP_DB_SCE>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	#mbox-cells = <1>;
+	nvidia,ast0 = <&sce_ast0>;
+	nvidia,ast1 = <&sce_ast1>;
+	nvidia,ivc-rtcpu-phys-addr = <0x80000000>;
+	nvidia,ivc-size = <0x200000>;
+	clocks =
+		<&tegra_car TEGRA186_CLK_SCE_CPU_NIC>,
+		<&tegra_car TEGRA186_CLK_SCE_CPU>,
+		<&tegra_car TEGRA186_CLK_SCE_APB>;
+	clock-names =
+		"sce_cpu_nic",
+		"sce_cpu",
+		"sce_apb";
+	resets =
+		<&tegra_car TEGRA186_RESET_SCE_APB>,
+		<&tegra_car TEGRA186_RESET_SCE_NIC>,
+		<&tegra_car TEGRA186_RESET_SCE_NSYSPORESET>,
+		<&tegra_car TEGRA186_RESET_SCE_NRESET>,
+		<&tegra_car TEGRA186_RESET_SCE_DBGRESETN>,
+		<&tegra_car TEGRA186_RESET_SCE_PRESETDBGN>,
+		<&tegra_car TEGRA186_RESET_SCE_ACTMON>,
+		<&tegra_car TEGRA186_RESET_SCE_PM>,
+		<&tegra_car TEGRA186_RESET_SCE_DMA>,
+		<&tegra_car TEGRA186_RESET_SCE_HSP>,
+		<&tegra_car TEGRA186_RESET_TSCTNSCE>,
+		<&tegra_car TEGRA186_RESET_SCE_TKE>,
+		<&tegra_car TEGRA186_RESET_SCE_GTE>,
+		<&tegra_car TEGRA186_RESET_SCE_CFG>;
+	reset-names =
+		"sce_apb",
+		"sce_nic",
+		"sce_nsysporeset",
+		"sce_nreset",
+		"sce_dbgresetn",
+		"sce_presetdbgn",
+		"sce_actmon",
+		"sce_pm",
+		"sce_dma",
+		"sce_hsp",
+		"tsctnsce",
+		"sce_tke",
+		"sce_gte",
+		"sce_cfg";
+	ivc-channels@0 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0>;
+		ivc-channel@0 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-echo";
+			reg = <0>;
+			nvidia,frame-size = <64>;
+			nvidia,chan-offset = <0x0>;
+			nvidia,frame-count = <16>;
+		};
+	};
+};

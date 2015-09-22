@@ -1,0 +1,128 @@
+NVIDIA Tegra APE aux CPU, with communication via the "IVC" IPC protocol.
+
+APE is an aux CPU which talks to CCPLEX over IVC.
+
+Its assumed that the APE FW implements IVC, and uses HSP DB IRQs as part of IVC.
+Its also assumed that the APE FW expects AST regions 0/1/2 are already set up
+for the APE to access FW in DRAM, SYSRAM if applicable, and the IVC memory.
+
+== APE top-level node ==
+
+The APE core is represented by the top-level node including direct HW resources
+such as clocks, resets etc.
+
+Required properties:
+- compatible: should be "nvidia,tegra186-ape-ivc" for T18x.
+- nvidia,hsp-notifications: <HSP-phandle HSP-ID HSP-DB>
+  * HSP is a set of HW synchronization primitives used in Tegra to allow
+    multiple processors to share resources and communicate together.
+  * HSP-ID is NVIDIA Tegra HSP unique ID for APE, used in IPC.
+  * HSP-DB is NVIDIA Tegra HSP unique doorbell number alloted to APE.
+    A HSP doorbell allows a set of source agents in Tegra to request the
+    attention of specified target agent. In general the agents are processors
+    and doorbell used as part of an IPC protocol.
+  * For more HSP details, refer: ../tegra-hsp.txt.
+- reg: Address entries (APE BASE)
+  Formatted as per standard rules for this property.
+- nvidia,ast0: AST0 phandle
+- nvidia,ast1: AST1 phandle
+  For details refer: ../tegra-ast.txt
+- nvidia,ivc-remote-cpu-phys-addr: APE-visible physical address of IVC memory.
+- nvidia,ivc-size: Total IVC memory.
+- #address-cells: Number of address cells in each subnode.
+  Should be set to <1>.
+- #size-cells: Number of size cells in each subnode.
+  Should be set ot <0>.
+- clocks: Should contain an entry for each entry in clock-names.
+  See ../clock/clock-bindings.txt for details.
+- clock-names: Names of the clocks required by APE.
+  Must include following entries:
+  - ahub
+  - apb2ape
+  - ape
+  - adsp
+  - adspneon
+- resets: Should contain an entry for each entry in reset-names.
+  See ../reset/reset.txt for details.
+- reset-names: Names of the resets required for APE.
+  Must include following entries:
+  - adspdbg
+  - adspintf
+  - adspneon
+  - adspperiph
+  - adspscu
+  - adspwdt
+  - ape
+  - adsp
+
+Mailbox properties:
+- #mbox-cells
+
+The IVC channels are represented as mailbox channels.
+Hence, this binding uses the mailbox binding at ../mailbox/mailbox.txt.
+
+== APE sub nodes ==
+
+* ivc-channels
+
+Contains a sub-node for each IVC channel implemented by the APE.
+For IVC channel details, please refer: ../tegra-ivc-channel.txt
+
+Possible example:
+
+remote-cpu@2993000: ape {
+	compatible = "nvidia,tegra186-ape-ivc";
+	reg = <0x0 0x2993000 0x0 0x10000>;
+	nvidia,hsp-notifications = <&hsp_top
+				TEGRA_HSP_PROC_APE
+				TEGRA_HSP_DB_APE>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	#mbox-cells = <1>;
+	nvidia,ast0 = <&ape_ast0>;
+	nvidia,ast1 = <&ape_ast1>;
+	nvidia,ivc-rtcpu-phys-addr = <0x80000000>;
+	nvidia,ivc-size = <0x200000>;
+	clocks =
+		<&tegra_car TEGRA186_CLK_AHUB>,
+		<&tegra_car TEGRA186_CLK_APB2APE>,
+		<&tegra_car TEGRA186_CLK_APE>,
+		<&tegra_car TEGRA186_CLK_ADSP>,
+		<&tegra_car TEGRA186_CLK_ADSPNEON>;
+	clock-names =
+		"ahub",
+		"apb2ape",
+		"ape",
+		"adsp",
+		"adspneon";
+	resets =
+		<&tegra_car TEGRA186_RESET_ADSPDBG>,
+		<&tegra_car TEGRA186_RESET_ADSPINTF>,
+		<&tegra_car TEGRA186_RESET_ADSPNEON>,
+		<&tegra_car TEGRA186_RESET_ADSPPERIPH>,
+		<&tegra_car TEGRA186_RESET_ADSPSCU>,
+		<&tegra_car TEGRA186_RESET_ADSPWDT>,
+		<&tegra_car TEGRA186_RESET_APE>,
+		<&tegra_car TEGRA186_RESET_ADSP>;
+	reset-names =
+		"adspdbg",
+		"adspintf",
+		"adspneon",
+		"adspperiph",
+		"adspscu",
+		"adspwdt",
+		"ape",
+		"adsp";
+	ivc-channels@0 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0>;
+		ivc-channel@0 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-echo";
+			reg = <0>;
+			nvidia,frame-size = <64>;
+			nvidia,chan-offset = <0x0>;
+			nvidia,frame-count = <16>;
+		};
+	};
+};

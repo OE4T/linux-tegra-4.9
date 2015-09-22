@@ -1,0 +1,62 @@
+NVIDIA Tegra IVC channel bindings
+
+Each IVC channel represents the unique communication protocol defined between
+CCPLEX and remote CPU.
+
+IVC IPC memory layout assumptions:
+Its assumed that this memory will be divided into two halves,
+with this CPU writing to the first half and the remote CPU
+writing to the second half.
+
+Within each "half" of the IPC memory:
+
+IPC memory portion written by A, at "chan-offset", includes:
+write header for A->B transfer
+read header for B->A transfer
+data for A->B transfer.
+
+IPC memory portion written by B, at "chan-offset", includes:
+write header for B->A transfer
+read header for A->B transfer
+data for B->A transfer.
+
+== IVC channel top-level node ==
+
+List of IVC channels implemented by remote core to talk to CCPLEX.
+The node name must be "ivc-channels[@<unit-address>]".
+
+Required properties:
+- #address-cells: Number of address cells in each subnode.
+  * Must be set to <1>.
+- #size-cells: Number of size cells in each subnode.
+  * Must be set ot <0>.
+- reg: Must contain an arbitrary unique ID for the channel list.
+
+== IVC channel sub nodes ==
+
+Each IVC channel implemented by the remote core must be represented as a
+separate child node within the IVC channel top-level node.
+
+Required properties:
+- compatible: Should represent the protocol to be used on this IVC channel.
+  See other binding documents in this directory for potential values.
+  For e.g.:
+  "nvidia,tegra186-ivc-protocol-echo" for ivc echo test channel.
+- nvidia,frame-size: Size of the data frame, should be word-aligned.
+- nvidia,chan-offset: Absolute offset from ivc base addr.
+- nvidia,frame-count: Number of frames in rx/tx buffer.
+- reg: Must contain an arbitrary unique ID for the channel.
+
+Possible example:
+ivc-channels@0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	reg = <0>;
+	ivc-channel@0 {
+		compatible = "nvidia,tegra186-ivc-protocol-echo";
+		reg = <0>;
+		nvidia,frame-size = <64>;
+		nvidia,chan-offset = <0x0>;
+		nvidia,frame-count = <16>;
+	};
+}

@@ -3574,9 +3574,8 @@ static void rx_descriptor_reset(UINT idx,
 
 	memset(RX_NORMAL_DESC, 0, sizeof(struct s_RX_NORMAL_DESC));
 	/* update buffer 1 address pointer */
-	RX_NORMAL_DESC_RDES0_Ml_Wr(RX_NORMAL_DESC->RDES0, buffer->dma);
-	/* set to zero */
-	RX_NORMAL_DESC_RDES1_Ml_Wr(RX_NORMAL_DESC->RDES1, 0);
+	RX_NORMAL_DESC_RDES0_Ml_Wr(RX_NORMAL_DESC->RDES0, L32(buffer->dma));
+	RX_NORMAL_DESC_RDES1_Ml_Wr(RX_NORMAL_DESC->RDES1, H32(buffer->dma));
 
 	if ((pdata->dev->mtu > DWC_ETH_QOS_ETH_FRAME_LEN) ||
 			(pdata->rx_split_hdr == 1)) {

@@ -362,12 +362,21 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 
 	return 0;
 
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 err_put_cdev1:
 	clk_put(data->clk_cdev1);
 err_put_pll_a_out0:
 	clk_put(data->clk_pll_a_out0);
 err_put_pll_a:
 	clk_put(data->clk_pll_a);
+#else
+err_put_cdev1:
+	devm_clk_put(dev, data->clk_cdev1);
+err_put_pll_a_out0:
+	devm_clk_put(dev, data->clk_pll_a_out0);
+err_put_pll_a:
+	devm_clk_put(dev, data->clk_pll_a);
+#endif
 err_put_pll_p_out1:
 	if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA210)
 		clk_put(data->clk_pll_p_out1);
@@ -447,12 +456,19 @@ void tegra_alt_asoc_utils_fini(struct tegra_asoc_audio_clock_info *data)
 	if (data->clk_cdev1_state)
 		clk_disable(data->clk_cdev1);
 
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	if (!IS_ERR(data->clk_pll_a_out0))
 		clk_put(data->clk_pll_a_out0);
 
 	if (!IS_ERR(data->clk_pll_a))
 		clk_put(data->clk_pll_a);
+#else
+	if (!IS_ERR(data->clk_pll_a_out0))
+		devm_clk_put(data->dev, data->clk_pll_a_out0);
 
+	if (!IS_ERR(data->clk_pll_a))
+		devm_clk_put(data->dev, data->clk_pll_a);
+#endif
 	if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA210)
 		if (!IS_ERR(data->clk_pll_p_out1))
 			clk_put(data->clk_pll_p_out1);

@@ -1641,16 +1641,6 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_num_save_ops_o(), 0, 0);
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_num_restore_ops_o(), 0, 0);
 
-	virt_addr_lo = u64_lo32(ch_ctx->patch_ctx.mem.gpu_va);
-	virt_addr_hi = u64_hi32(ch_ctx->patch_ctx.mem.gpu_va);
-
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_count_o(), 0,
-		 ch_ctx->patch_ctx.data_count);
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_adr_lo_o(), 0,
-		 virt_addr_lo);
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_adr_hi_o(), 0,
-		 virt_addr_hi);
-
 	/* no user for client managed performance counter ctx */
 	data = gk20a_mem_rd32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0);
 	data = data & ~ctxsw_prog_main_image_pm_mode_m();
@@ -1685,6 +1675,16 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 
 	if (g->ops.gr.update_ctxsw_preemption_mode)
 		g->ops.gr.update_ctxsw_preemption_mode(g, ch_ctx, ctx_ptr);
+
+	virt_addr_lo = u64_lo32(ch_ctx->patch_ctx.mem.gpu_va);
+	virt_addr_hi = u64_hi32(ch_ctx->patch_ctx.mem.gpu_va);
+
+	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_count_o(), 0,
+		 ch_ctx->patch_ctx.data_count);
+	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_adr_lo_o(), 0,
+		 virt_addr_lo);
+	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_adr_hi_o(), 0,
+		 virt_addr_hi);
 
 	vunmap(ctx_ptr);
 

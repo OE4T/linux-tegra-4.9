@@ -546,6 +546,7 @@ static void crossover_init(struct device_node *of_states) {
 	struct device_node *child;
 	u32 value;
 	int i;
+
 	struct xover_table table1[] = {
 		{"crossover_c1_c6", TEGRA_MCE_XOVER_C1_C6},
 		{"crossover_cc1_cc6", TEGRA_MCE_XOVER_CC1_CC6},
@@ -573,18 +574,13 @@ static int tegra_mce_cpu_notify(struct notifier_block *nb,
 	struct device_node *a57_xover;
         int cpu = (long)pcpu;
 
-	if (!check_mce_version()) {
-		pr_err("cpuidle: skipping crossover programming."
-			" Incompatible MCE version.\n");
-		return NOTIFY_OK;
-	}
-
-	printk("cpuidle: Init Power Crossover thresholds for core %d\n", cpu);
 	denver_xover = of_find_node_by_name(NULL, "denver_crossover_thresholds");
 	a57_xover = of_find_node_by_name(NULL, "a57_crossover_thresholds");
 
         switch (action) {
         case CPU_STARTING:
+		pr_debug("cpuidle: Init Power Crossover thresholds for core %d\n"
+				, cpu);
                 if (read_cpuid_implementor() == ARM_CPU_IMP_ARM) {
 			if (!a57_xover) {
 				pr_err("%s: failed to init xover for core %d\n",
@@ -612,6 +608,13 @@ static struct notifier_block mce_cpu_notifier = {
 
 static int __init tegra_mce_early_init(void)
 {
+
+	if (!check_mce_version()) {
+		pr_err("cpuidle: skipping crossover programming."
+			" Incompatible MCE version.\n");
+		return;
+	}
+
         /* Initialize thresholds for boot cpu now */
         tegra_mce_cpu_notify(NULL, CPU_STARTING, (void *)0);
 	/* Initialize thresholds for rest of the cpu when they start */

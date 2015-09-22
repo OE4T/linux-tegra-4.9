@@ -1612,7 +1612,7 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
 	u32 virt_addr_lo;
 	u32 virt_addr_hi;
-	u32 i, v, data;
+	u32 i, v, data, cde_v;
 	int ret = 0;
 	void *ctx_ptr = NULL;
 
@@ -1630,6 +1630,15 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 			0, pgprot_writecombine(PAGE_KERNEL));
 	if (!ctx_ptr)
 		return -ENOMEM;
+
+	/* Enable CDE in FECS header. Default cde = 0, is disabled,
+	 * so no need to do anything in else {}
+	 */
+	if (c->cde) {
+		cde_v = gk20a_mem_rd32(ctx_ptr + ctxsw_prog_main_image_ctl_o(), 0);
+		cde_v |=  ctxsw_prog_main_image_ctl_cde_enabled_f();
+		gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_ctl_o(), 0, cde_v);
+	}
 
 	for (i = 0; i < gr->ctx_vars.golden_image_size / 4; i++)
 		gk20a_mem_wr32(ctx_ptr, i, gr->ctx_vars.local_golden_image[i]);

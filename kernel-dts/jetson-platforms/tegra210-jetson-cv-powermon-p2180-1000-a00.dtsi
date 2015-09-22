@@ -23,6 +23,7 @@
 			#io-channel-cells = <1>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			status = "disabled";
 
 			channel@0 {
 				reg = <0x0>;

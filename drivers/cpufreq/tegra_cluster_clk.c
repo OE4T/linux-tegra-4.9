@@ -51,6 +51,24 @@ static struct tcl_clk_drv_data *cl_clk_drv_data;
 #define RO_MODE		(S_IRUGO)
 enum cluster a57, d;
 
+struct denver_creg {
+	unsigned long offset;
+	const char *name;
+};
+
+struct denver_creg denver_cregs[] = {
+	{0x00000000, "ifu.mcstatinfo"},
+	{0x00001005, "CREG_DPMU_PCLUSTER0_PWR_CTRL"},
+	{0x00001006, "CREG_DPMU_PCLUSTER1_PWR_CTRL"},
+};
+
+#define NR_CREGS (sizeof(denver_cregs) / sizeof(struct denver_creg))
+enum creg_command {
+	CREG_INDEX = 1,
+	CREG_READ,
+	CREG_WRITE
+};
+
 static ssize_t cl_clk_write(struct file *file, const char __user *user_buf,
 		size_t count, loff_t *ppos)
 {
@@ -108,11 +126,53 @@ static const struct file_operations cl_clk_fops = {
 	.release = single_release,
 };
 
+static int denver_creg_get(void *data, u64 *val)
+{
+	struct denver_creg *reg = (struct denver_creg *)data;
+
+	asm volatile (
+	"	sys 0, c11, c0, 1, %1\n"
+	"	sys 0, c11, c0, 0, %2\n"
+	"	sys 0, c11, c0, 0, %3\n"
+	"	sysl %0, 0, c11, c0, 0\n"
+	: "=r" (*val)
+	: "r" (reg->offset), "r" (CREG_INDEX), "r" (CREG_READ)
+	);
+
+	return 0;
+}
+
+static int denver_creg_set(void *data, u64 val)
+{
+	struct denver_creg *reg = (struct denver_creg *)data;
+	struct device *dev = &cl_clk_drv_data->pdev->dev;
+
+	dev_dbg(dev, "CREG: write %s @ 0x%lx =  0x%llx\n",
+			reg->name, reg->offset, val);
+
+	asm volatile (
+	"	sys 0, c11, c0, 1, %0\n"
+	"	sys 0, c11, c0, 0, %1\n"
+	"	sys 0, c11, c0, 1, %2\n"
+	"	sys 0, c11, c0, 0, %3\n"
+	:
+	: "r" (reg->offset), "r" (CREG_INDEX),
+	  "r" (val), "r" (CREG_WRITE)
+	);
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(denver_creg_fops, denver_creg_get,
+		denver_creg_set, "%llu\n");
+
 static int __init tcl_clk_debug_init(struct platform_device *pdev)
 {
 	struct tcl_clk_drv_data *drv_data = platform_get_drvdata(pdev);
 	struct dentry *tcl_clk_root = drv_data->clk_root;
 	struct device *dev = &pdev->dev;
+	struct denver_creg *reg;
+	int i;
 
 	tcl_clk_root = debugfs_create_dir("tegra_cluster_clk", NULL);
 	if (!tcl_clk_root)
@@ -127,6 +187,15 @@ static int __init tcl_clk_debug_init(struct platform_device *pdev)
 	if (!debugfs_create_file("denver_cluster", RW_MODE, tcl_clk_root,
 		 &d, &cl_clk_fops))
 		goto err_out;
+
+	for (i = 0; i < NR_CREGS; ++i) {
+		reg = &denver_cregs[i];
+		if (!debugfs_create_file(
+			reg->name, S_IRUGO, tcl_clk_root,
+			reg, &denver_creg_fops))
+			goto err_out;
+	}
+
 	return 0;
 err_out:
 	dev_err(dev, "Unable to create debugfs nodes\n");

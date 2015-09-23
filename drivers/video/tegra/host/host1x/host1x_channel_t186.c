@@ -78,8 +78,12 @@ static void serialize(struct nvhost_job *job)
 
 		nvhost_cdma_push(&ch->cdma,
 			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-				host1x_uclass_wait_syncpt_r(), 1),
-			nvhost_class_host_wait_syncpt(id, max));
+				host1x_uclass_load_syncpt_payload_32_r(), 1),
+				max);
+		nvhost_cdma_push(&ch->cdma,
+			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
+				host1x_uclass_wait_syncpt_32_r(), 1),
+				id);
 	}
 }
 
@@ -139,8 +143,12 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 
 		nvhost_cdma_push(&ch->cdma,
 			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-				host1x_uclass_wait_syncpt_r(), 1),
-			nvhost_class_host_wait_syncpt(id, thresh));
+				host1x_uclass_load_syncpt_payload_32_r(), 1),
+				thresh);
+		nvhost_cdma_push(&ch->cdma,
+			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
+				host1x_uclass_wait_syncpt_32_r(), 1),
+				id);
 	}
 	sync_fence_put(fence);
 }
@@ -168,9 +176,12 @@ static void push_waits(struct nvhost_job *job)
 
 		nvhost_cdma_push(&ch->cdma,
 			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-				host1x_uclass_wait_syncpt_r(), 1),
-			nvhost_class_host_wait_syncpt(
-				wait->syncpt_id, wait->thresh));
+				host1x_uclass_load_syncpt_payload_32_r(), 1),
+				wait->thresh);
+		nvhost_cdma_push(&ch->cdma,
+			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
+				host1x_uclass_wait_syncpt_32_r(), 1),
+				wait->syncpt_id);
 	}
 
 	for (i = 0; i < job->num_gathers; i++) {

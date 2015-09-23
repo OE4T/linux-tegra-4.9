@@ -810,8 +810,6 @@ struct tegra_mphy_sata_calib {
 	u8 tx_drv_post_sel2;
 	u8 tx_drv_post_sel3;
 	u8 tx_drv_pre_sel3;
-	u8 ae_ctle_ctrl_id0;
-	u8 ae_ctle_ctrl_id1;
 };
 
 static struct tegra_mphy_sata_calib mphy_data[] = {
@@ -896,8 +894,6 @@ static struct tegra_mphy_sata_calib sata_data[] = {
 		.tx_drv_amp_sel1 = 0x1f,
 		.tx_drv_post_sel0 = 0x7,
 		.tx_drv_post_sel1 = 0xa,
-		.ae_ctle_ctrl_id0 = 0xf,
-		.ae_ctle_ctrl_id1 = 0x8f,
 	},
 	{
 		.aux_rx_idle_th = 0x1,
@@ -905,8 +901,6 @@ static struct tegra_mphy_sata_calib sata_data[] = {
 		.tx_drv_amp_sel1 = 0x1b,
 		.tx_drv_post_sel0 = 0x5,
 		.tx_drv_post_sel1 = 0xa,
-		.ae_ctle_ctrl_id0 = 0xf,
-		.ae_ctle_ctrl_id1 = 0x4f,
 	},
 	{
 		.aux_rx_idle_th = 0x2,
@@ -914,8 +908,6 @@ static struct tegra_mphy_sata_calib sata_data[] = {
 		.tx_drv_amp_sel1 = 0x17,
 		.tx_drv_post_sel0 = 0x4,
 		.tx_drv_post_sel1 = 0xa,
-		.ae_ctle_ctrl_id0 = 0xf,
-		.ae_ctle_ctrl_id1 = 0xf,
 	},
 	{
 		.aux_rx_idle_th = 0x3,
@@ -923,8 +915,6 @@ static struct tegra_mphy_sata_calib sata_data[] = {
 		.tx_drv_amp_sel1 = 0x23,
 		.tx_drv_post_sel0 = 0xa,
 		.tx_drv_post_sel1 = 0xe,
-		.ae_ctle_ctrl_id0 = 0xf,
-		.ae_ctle_ctrl_id1 = 0xcd,
 	},
 };
 
@@ -2761,14 +2751,6 @@ static int tegra186_sata_fuse_calibration(struct tegra_padctl_uphy *uphy,
 	reg |= TX_DRV_POST_SEL1(sata_data[idx].tx_drv_post_sel1);
 	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DYN_CTL_4);
 
-	reg = CFG_ADDR(AE_CTLE_CTRL_ID0);
-	reg |= CFG_WDATA(sata_data[idx].ae_ctle_ctrl_id0);
-	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DIRECT_CTL_2);
-
-	reg = CFG_ADDR(AE_CTLE_CTRL_ID1);
-	reg |= CFG_WDATA(sata_data[idx].ae_ctle_ctrl_id1);
-	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DIRECT_CTL_2);
-
 	return 0;
 }
 
@@ -2845,7 +2827,9 @@ static int tegra186_sata_phy_init(struct phy *phy)
 		sata_lane_defaults(uphy, uphy_lane);
 	}
 
-	tegra186_sata_fuse_calibration(uphy, uphy->sata_lanes);
+	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES) {
+		tegra186_sata_fuse_calibration(uphy, uphy_lane);
+	}
 
 	rc = uphy_pll_init(uphy, TEGRA186_FUNC_SATA);
 	if (rc)

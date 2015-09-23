@@ -325,6 +325,35 @@ struct tegra_dc_ext_flip_3 {
 	__u16 dirty_rect[4]; /* x,y,w,h for partial screen update. 0 ignores */
 };
 
+/* size of the this sturct is 32 bytes */
+struct tegra_dc_ext_flip_user_data {
+	__u8 data_type;
+	__u8 reserved0;
+	__u16 flags;
+	__u16 reserved1;
+	union { /* data to be packed into 26 bytes */
+		__u8 data8[26];
+		__u16 data16[13];
+		/*Add HDR data struct here*/
+	};
+};
+
+/*
+ *tegra_dc_flip_4 : Incorporates a new pointer to an array of 32 bytes of data
+ *to pass head specific info. The new nr_elements carries the number of such
+ *elements. Everything else remains the same as in tegra_dc_ext_flip_3
+ */
+struct tegra_dc_ext_flip_4 {
+	__u64 __user win;
+	__u8 win_num;
+	__u8 flags;
+	__u16 reserved2; /* unused - must be 0 */
+	__s32 post_syncpt_fd;
+	__u16 dirty_rect[4]; /* x,y,w,h for partial screen update. 0 ignores */
+	__u32 nr_elements; /* number of data entities pointed to by data */
+	__u64 __user data; /* pointer to struct tegra_dc_ext_flip_user_data*/
+};
+
 /*
  * vblank control - enable or disable vblank events
  */
@@ -681,6 +710,9 @@ struct tegra_dc_ext_feature {
 
 #define TEGRA_DC_EXT_GET_CMU_ADBRGB\
 	_IOR('D', 0x1C, struct tegra_dc_ext_cmu)
+
+#define TEGRA_DC_EXT_FLIP4\
+	_IOW('D', 0x1D, struct tegra_dc_ext_flip_4)
 
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,

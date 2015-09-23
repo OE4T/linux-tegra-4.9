@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -121,5 +121,13 @@ static inline u32 host1x_uclass_wait_syncpt_indx_f(u32 v)
 static inline u32 host1x_uclass_wait_syncpt_thresh_f(u32 v)
 {
 	return (v & 0xffffff) << 0;
+}
+static inline u32 host1x_uclass_load_syncpt_payload_32_r(void)
+{
+	return 0x4e;
+}
+static inline u32 host1x_uclass_wait_syncpt_32_r(void)
+{
+	return 0x50;
 }
 #endif

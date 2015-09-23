@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoints for HOST1X
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -79,9 +79,22 @@ static void t20_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id)
 static int host1x_syncpt_patch_wait(struct nvhost_syncpt *sp,
 		void __iomem *patch_addr)
 {
-	u32 override = nvhost_class_host_wait_syncpt(
-				nvhost_syncpt_graphics_host_sp(sp), 0);
-	__raw_writel(override, patch_addr);
+	u32 current_value = __raw_readl(patch_addr);
+	bool obsolete = !!((current_value >> 24) & 0xff);
+
+	/* Is wait 16bit or 32bit? */
+	if (obsolete) {
+		/* 16bit. Replace a single word */
+		u32 override = nvhost_class_host_wait_syncpt(
+					nvhost_syncpt_graphics_host_sp(sp), 0);
+
+		__raw_writel(override, patch_addr);
+	} else {
+		/* 32bit. Replace two words */
+		__raw_writel(0, patch_addr - 4);
+		__raw_writel(nvhost_syncpt_graphics_host_sp(sp), patch_addr);
+	}
+
 	return 0;
 }
 

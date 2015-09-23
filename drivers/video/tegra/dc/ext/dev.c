@@ -120,6 +120,8 @@ struct tegra_dc_ext_flip_data {
 	u16 dirty_rect[4];
 	bool dirty_rect_valid;
 	u8 flags;
+	struct tegra_dc_hdr hdr_data;
+	bool hdr_cache_dirty;
 };
 
 static int tegra_dc_ext_set_vblank(struct tegra_dc_ext *ext, bool enable);
@@ -814,6 +816,9 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 
 	trace_sync_wt_ovr_syncpt_upd((data->win[win_num-1]).syncpt_max);
 
+	if (dc->enabled && !skip_flip)
+		tegra_dc_set_hdr(dc, &data->hdr_data, data->hdr_cache_dirty);
+
 	if (dc->enabled && !skip_flip) {
 		dc->blanked = false;
 		if (dc->out_ops && dc->out_ops->vrr_enable)
@@ -1108,9 +1113,36 @@ static void tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 			struct tegra_dc_ext_flip_user_data *flip_user_data,
 			int nr_user_data)
 {
-	/*Add support for reading user data (HDR data for intance) here*/
-}
+	int i = 0;
 
+	for (i = 0; i < nr_user_data; i++) {
+		struct tegra_dc_hdr *hdr;
+		struct tegra_dc_ext_hdr *info;
+		switch (flip_user_data[0].data_type) {
+		case TEGRA_DC_EXT_FLIP_USER_DATA_HDR_DATA:
+			hdr = &data->hdr_data;
+			info = &flip_user_data[i].hdr_info;
+			if (flip_user_data[i].flags &
+				TEGRA_DC_EXT_FLIP_FLAG_HDR_ENABLE)
+				hdr->enabled = true;
+			if (flip_user_data[i].flags &
+				TEGRA_DC_EXT_FLIP_FLAG_HDR_DATA_UPDATED) {
+				data->hdr_cache_dirty = true;
+				hdr->eotf = info->eotf;
+				hdr->static_metadata_id =
+						info->static_metadata_id;
+				memcpy(hdr->static_metadata,
+					info->static_metadata,
+					sizeof(hdr->static_metadata));
+			}
+			break;
+		default:
+			dev_err(&data->ext->dc->ndev->dev,
+				"Invalid FLIP_USER_DATA_TYPE\n");
+		}
+	}
+	return;
+}
 
 static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 			     struct tegra_dc_ext_flip_windowattr_v2 *win,

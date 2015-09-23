@@ -2517,6 +2517,38 @@ EXPORT_SYMBOL(tegra_dc_update_cmu_aligned);
 #define tegra_dc_update_cmu_aligned(dc, cmu)
 #endif
 
+int tegra_dc_set_hdr(struct tegra_dc *dc, struct tegra_dc_hdr *hdr,
+						bool cache_dirty)
+{
+	int ret;
+
+	mutex_lock(&dc->lock);
+
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return 0;
+	}
+	if (cache_dirty) {
+		dc->hdr.eotf = hdr->eotf;
+		dc->hdr.static_metadata_id = hdr->static_metadata_id;
+		memcpy(dc->hdr.static_metadata, hdr->static_metadata,
+					sizeof(dc->hdr.static_metadata));
+	} else if (dc->hdr.enabled == hdr->enabled) {
+		mutex_unlock(&dc->lock);
+		return 0;
+	}
+	dc->hdr.enabled = hdr->enabled;
+	dc->hdr_cache_dirty = true;
+	if (!dc->hdr.enabled)
+		memset(&dc->hdr, 0, sizeof(dc->hdr));
+	_tegra_dc_config_frame_end_intr(dc, true);
+
+	mutex_unlock(&dc->lock);
+
+	return ret;
+}
+EXPORT_SYMBOL(tegra_dc_set_hdr);
+
 /* disable_irq() blocks until handler completes, calling this function while
  * holding dc->lock can deadlock. */
 static inline void disable_dc_irq(const struct tegra_dc *dc)
@@ -3327,11 +3359,30 @@ static void tegra_dc_vblank(struct work_struct *work)
 		} \
 	} while (0)
 
+static void _tegra_dc_handle_hdr(struct tegra_dc *dc)
+{
+	mutex_lock(&dc->lock);
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return;
+	}
+
+	tegra_dc_get(dc);
+
+	if (dc->out_ops->set_hdr)
+		dc->out_ops->set_hdr(dc);
+
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
+
+	return;
+}
+
 static void tegra_dc_frame_end(struct work_struct *work)
 {
-#ifdef CONFIG_TEGRA_DC_CMU
 	struct tegra_dc *dc = container_of(work,
 		struct tegra_dc, frame_end_work);
+#ifdef CONFIG_TEGRA_DC_CMU
 	u32 val;
 	u32 i;
 
@@ -3385,6 +3436,12 @@ static void tegra_dc_frame_end(struct work_struct *work)
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
 #endif
+	if (dc->hdr_cache_dirty) {
+		_tegra_dc_handle_hdr(dc);
+		_tegra_dc_config_frame_end_intr(dc, false);
+		dc->hdr_cache_dirty = false;
+	}
+	return;
 }
 
 static void tegra_dc_one_shot_worker(struct work_struct *work)

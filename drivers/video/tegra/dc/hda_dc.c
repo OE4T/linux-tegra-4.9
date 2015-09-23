@@ -169,7 +169,8 @@ static void tegra_hdmi_audio_infoframe(void)
 				HDMI_INFOFRAME_VS_AUDIO,
 				HDMI_INFOFRAME_LEN_AUDIO,
 				&to_hdmi(hda->client_data)->audio,
-				sizeof(to_hdmi(hda->client_data)->audio));
+				sizeof(to_hdmi(hda->client_data)->audio),
+				false);
 	}
 
 	/* Send infoframe every frame, checksum hw generated */

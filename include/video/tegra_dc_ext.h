@@ -113,7 +113,9 @@
 #define TEGRA_DC_EXT_FLIP_HEAD_FLAG_VRR_MODE	(1 << 1)
 /* Flag to notify attr v2 struct is being used */
 #define TEGRA_DC_EXT_FLIP_HEAD_FLAG_V2_ATTR	(1 << 2)
-
+/* Flag for HDR_DATA handling */
+#define TEGRA_DC_EXT_FLIP_FLAG_HDR_ENABLE	(1 << 0)
+#define TEGRA_DC_EXT_FLIP_FLAG_HDR_DATA_UPDATED (1 << 1)
 
 struct tegra_timespec {
 	__s32	tv_sec; /* seconds */
@@ -325,6 +327,22 @@ struct tegra_dc_ext_flip_3 {
 	__u16 dirty_rect[4]; /* x,y,w,h for partial screen update. 0 ignores */
 };
 
+enum tegra_dc_ext_flip_data_type {
+	TEGRA_DC_EXT_FLIP_USER_DATA_NONE, /* dummy value - do not use */
+	TEGRA_DC_EXT_FLIP_USER_DATA_HDR_DATA,
+};
+
+/*
+ * Static Metadata for HDR
+ * This lets us specify which HDR static metadata to specify in the infoframe.
+ * Please see CEA 861.3 for more information.
+ */
+struct tegra_dc_ext_hdr {
+	__u8 eotf;
+	__u8 static_metadata_id;
+	__u8 static_metadata[24];
+};
+
 /* size of the this sturct is 32 bytes */
 struct tegra_dc_ext_flip_user_data {
 	__u8 data_type;
@@ -335,6 +353,7 @@ struct tegra_dc_ext_flip_user_data {
 		__u8 data8[26];
 		__u16 data16[13];
 		/*Add HDR data struct here*/
+		struct tegra_dc_ext_hdr hdr_info;
 	};
 };
 

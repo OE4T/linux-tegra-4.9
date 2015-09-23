@@ -42,6 +42,7 @@ enum {
 	HDMI_INFOFRAME_TYPE_SPD = 0x83,
 	HDMI_INFOFRAME_TYPE_AUDIO = 0x84,
 	HDMI_INFOFRAME_TYPE_MPEG_SRC = 0x85,
+	HDMI_INFOFRAME_TYPE_HDR = 0x87,
 };
 
 enum {
@@ -50,6 +51,7 @@ enum {
 	HDMI_INFOFRAME_VS_SPD = 0x1,
 	HDMI_INFOFRAME_VS_AUDIO = 0x1,
 	HDMI_INFOFRAME_VS_MPEG_SRC = 0x1,
+	HDMI_INFOFRAME_VS_HDR = 0x1,
 };
 
 /* excluding checksum and header bytes */
@@ -59,6 +61,7 @@ enum {
 	HDMI_INFOFRAME_LEN_SPD = 25,
 	HDMI_INFOFRAME_LEN_AUDIO = 10,
 	HDMI_INFOFRAME_LEN_MPEG_SRC = 10,
+	HDMI_INFOFRAME_LEN_HDR = 26,
 };
 
 enum {
@@ -205,6 +208,60 @@ struct hdmi_avi_infoframe {
 	u32 reg_hole2:8;
 } __packed;
 
+struct hdmi_hdr_infoframe {
+	/* PB0 */
+	u32 csum:8;	/* checksum */
+
+	/* PB1 */
+	u32 eotf:3;	/* The EOTF requested by the source */
+	u32 res1:5;	/* reserved */
+
+	/* PB2 */
+	u32 static_metadata_id:3; /* The id of the following static metadata */
+	u32 res2:5;	/* reserved */
+
+	/* PB3-14 : Group 1 : Static Metadata*/
+	u32 display_primaries_x_0_lsb:8;
+	u32 display_primaries_x_0_msb:8;
+	u32 display_primaries_y_0_lsb:8;
+	u32 display_primaries_y_0_msb:8;
+	u32 reg_hole1:8;
+	u32 display_primaries_x_1_lsb:8;
+	u32 display_primaries_x_1_msb:8;
+	u32 display_primaries_y_1_lsb:8;
+	u32 display_primaries_y_1_msb:8;
+	u32 display_primaries_x_2_lsb:8;
+	u32 display_primaries_x_2_msb:8;
+	u32 display_primaries_y_2_lsb:8;
+	u32 reg_hole2:8;
+	u32 display_primaries_y_2_msb:8;
+
+	/* PB15-18 : Group 2 : Static Metadata*/
+	u32 white_point_x_lsb:8;
+	u32 white_point_x_msb:8;
+	u32 white_point_y_lsb:8;
+	u32 white_point_y_msb:8;
+
+	/* PB19-20 : Group 3 : Static Metadata*/
+	u32 max_display_mastering_luminance_lsb:8;
+	u32 max_display_mastering_luminance_msb:8;
+
+	u32 reg_hole3:8;
+
+	/* PB21-22 : Group 4 : Static Metadata*/
+	u32 min_display_mastering_luminance_lsb:8;
+	u32 min_display_mastering_luminance_msb:8;
+
+	/* PB23-24 : Group 5 : Static Metadata*/
+	u32 max_content_light_level_lsb:8;
+	u32 max_content_light_level_msb:8;
+
+	/* PB25-26 : Group 6 : Static Metadata*/
+	u32 max_frame_avg_light_level_lsb:8;
+	u32 min_frame_avg_light_level_msb:8;
+
+} __packed;
+
 enum {
 	HDMI_AUDIO_CHANNEL_CNT_STREAM,	/* refer to audio stream header */
 	HDMI_AUDIO_CHANNEL_CNT_2,
@@ -288,6 +345,7 @@ struct tegra_hdmi {
 	struct tegra_hdmi_out *pdata;
 	struct tegra_dc_sor_data *sor;
 	struct hdmi_avi_infoframe avi;
+	struct hdmi_hdr_infoframe hdr;
 	bool enabled;
 	atomic_t clock_refcount;
 
@@ -362,6 +420,7 @@ void tegra_hdmi_infoframe_pkt_write(struct tegra_hdmi *hdmi,
 						u32 header_reg, u8 pkt_type,
 						u8 pkt_vs, u8 pkt_len,
 						void *reg_payload,
-						u32 reg_payload_len);
+						u32 reg_payload_len,
+						bool sw_checksum);
 
 #endif

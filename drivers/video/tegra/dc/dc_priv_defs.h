@@ -135,6 +135,7 @@ struct tegra_dc_out_ops {
 	/* Set up VRR mode */
 	void (*vrr_mode)(const struct tegra_dc *dc,
 			struct fb_videomode *mode);
+	int (*set_hdr)(struct tegra_dc *dc);
 };
 
 struct tegra_dc_shift_clk_div {
@@ -216,6 +217,7 @@ struct tegra_dc {
 
 	struct tegra_dc_blend		blend;
 	int				n_windows;
+	struct tegra_dc_hdr		hdr;
 
 #if defined(CONFIG_TEGRA_DC_CMU)
 	struct tegra_dc_cmu		cmu;
@@ -329,7 +331,7 @@ struct tegra_dc {
 	struct notifier_block slgc_notifier;
 	bool	vedid;
 	u8	*vedid_data;
-
 	int	enable_count;
+	bool	hdr_cache_dirty;
 };
 #endif

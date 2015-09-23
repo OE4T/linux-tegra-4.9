@@ -1275,7 +1275,8 @@ void tegra_hdmi_infoframe_pkt_write(struct tegra_hdmi *hdmi,
 						u32 header_reg, u8 pkt_type,
 						u8 pkt_vs, u8 pkt_len,
 						void *reg_payload,
-						u32 reg_payload_len)
+						u32 reg_payload_len,
+						bool sw_checksum)
 {
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 	u32 val;
@@ -1286,6 +1287,17 @@ void tegra_hdmi_infoframe_pkt_write(struct tegra_hdmi *hdmi,
 		NV_SOR_HDMI_INFOFRAME_HEADER_VERSION(pkt_vs) |
 		NV_SOR_HDMI_INFOFRAME_HEADER_LEN(pkt_len);
 	tegra_sor_writel(sor, header_reg, val);
+
+	if (sw_checksum) {
+		u8 checksum = pkt_type + pkt_vs + pkt_len;
+
+		for (val = 1; val <= pkt_len; val++)
+			checksum += ((u8 *)reg_payload)[val];
+
+		/* The first byte of the payload must always be the checksum
+		 * that we are going to calculate in SW */
+		((u8 *)reg_payload)[0] = (256 - checksum);
+	}
 
 	for (val = 0; val < reg_payload_len; val += 4, data_reg++, data++)
 		tegra_sor_writel(sor, data_reg, *data);
@@ -1536,7 +1548,8 @@ static void tegra_hdmi_avi_infoframe(struct tegra_hdmi *hdmi)
 					HDMI_INFOFRAME_TYPE_AVI,
 					HDMI_INFOFRAME_VS_AVI,
 					HDMI_INFOFRAME_LEN_AVI,
-					&hdmi->avi, sizeof(hdmi->avi));
+					&hdmi->avi, sizeof(hdmi->avi),
+					false);
 
 	/* Send infoframe every frame, checksum hw generated */
 	tegra_sor_writel(sor, NV_SOR_HDMI_AVI_INFOFRAME_CTRL,
@@ -1598,7 +1611,8 @@ static void tegra_hdmi_vendor_infoframe(struct tegra_hdmi *hdmi)
 					HDMI_INFOFRAME_TYPE_VENDOR,
 					HDMI_INFOFRAME_VS_VENDOR,
 					HDMI_INFOFRAME_LEN_VENDOR_LLC,
-					&hdmi->vsi, sizeof(hdmi->vsi));
+					&hdmi->vsi, sizeof(hdmi->vsi),
+					false);
 
 	/* Send infoframe every frame, checksum hw generated */
 	tegra_sor_writel(sor, NV_SOR_HDMI_VSI_INFOFRAME_CTRL,
@@ -1608,6 +1622,85 @@ static void tegra_hdmi_vendor_infoframe(struct tegra_hdmi *hdmi)
 		NV_SOR_HDMI_VSI_INFOFRAME_CTRL_CHECKSUM_ENABLE);
 
 #undef HDMI_INFOFRAME_LEN_VENDOR_LLC
+}
+
+static void tegra_hdmi_hdr_infoframe_update(struct tegra_hdmi *hdmi)
+{
+	struct hdmi_hdr_infoframe *hdr = &hdmi->hdr;
+
+	memset(&hdmi->hdr, 0, sizeof(hdmi->hdr));
+
+	if (tegra_platform_is_linsim())
+		return;
+
+	hdr->eotf = hdmi->dc->hdr.eotf;
+	hdr->static_metadata_id = hdmi->dc->hdr.static_metadata_id;
+
+	/* PB3-14 : Group 1 : Static Metadata*/
+	hdr->display_primaries_x_0_lsb = hdmi->dc->hdr.static_metadata[0];
+	hdr->display_primaries_x_0_msb = hdmi->dc->hdr.static_metadata[1];
+	hdr->display_primaries_y_0_lsb = hdmi->dc->hdr.static_metadata[2];
+	hdr->display_primaries_y_0_msb = hdmi->dc->hdr.static_metadata[3];
+	hdr->display_primaries_x_1_lsb = hdmi->dc->hdr.static_metadata[4];
+	hdr->display_primaries_x_1_msb = hdmi->dc->hdr.static_metadata[5];
+	hdr->display_primaries_y_1_lsb = hdmi->dc->hdr.static_metadata[6];
+	hdr->display_primaries_y_1_msb = hdmi->dc->hdr.static_metadata[7];
+	hdr->display_primaries_x_2_lsb = hdmi->dc->hdr.static_metadata[8];
+	hdr->display_primaries_x_2_msb = hdmi->dc->hdr.static_metadata[9];
+	hdr->display_primaries_y_2_lsb = hdmi->dc->hdr.static_metadata[10];
+	hdr->display_primaries_y_2_msb = hdmi->dc->hdr.static_metadata[11];
+
+	/* PB15-18 : Group 2 : Static Metadata*/
+	hdr->white_point_x_lsb = hdmi->dc->hdr.static_metadata[12];
+	hdr->white_point_x_msb = hdmi->dc->hdr.static_metadata[13];
+	hdr->white_point_y_lsb = hdmi->dc->hdr.static_metadata[14];
+	hdr->white_point_y_msb = hdmi->dc->hdr.static_metadata[15];
+
+	/* PB19-20 : Group 3 : Static Metadata*/
+	hdr->max_display_mastering_luminance_lsb =
+					hdmi->dc->hdr.static_metadata[16];
+	hdr->max_display_mastering_luminance_msb =
+					hdmi->dc->hdr.static_metadata[17];
+
+	/* PB21-22 : Group 4 : Static Metadata*/
+	hdr->min_display_mastering_luminance_lsb =
+					hdmi->dc->hdr.static_metadata[18];
+	hdr->min_display_mastering_luminance_msb =
+					hdmi->dc->hdr.static_metadata[19];
+
+	/* PB23-24 : Group 5 : Static Metadata*/
+	hdr->max_content_light_level_lsb = hdmi->dc->hdr.static_metadata[20];
+	hdr->max_content_light_level_msb = hdmi->dc->hdr.static_metadata[21];
+
+	/* PB25-26 : Group 6 : Static Metadata*/
+	hdr->max_frame_avg_light_level_lsb = hdmi->dc->hdr.static_metadata[22];
+	hdr->min_frame_avg_light_level_msb = hdmi->dc->hdr.static_metadata[23];
+
+	return;
+}
+
+static void tegra_hdmi_hdr_infoframe(struct tegra_hdmi *hdmi)
+{
+	struct tegra_dc_sor_data *sor = hdmi->sor;
+
+	/* disable generic infoframe before configuring */
+	tegra_sor_writel(sor, NV_SOR_HDMI_GENERIC_CTRL, 0);
+
+	tegra_hdmi_hdr_infoframe_update(hdmi);
+
+	tegra_hdmi_infoframe_pkt_write(hdmi, NV_SOR_HDMI_GENERIC_HEADER,
+					HDMI_INFOFRAME_TYPE_HDR,
+					HDMI_INFOFRAME_VS_HDR,
+					HDMI_INFOFRAME_LEN_HDR,
+					&hdmi->hdr, sizeof(hdmi->hdr),
+					true);
+
+	/* Send infoframe every frame, checksum hw generated */
+	tegra_sor_writel(sor, NV_SOR_HDMI_GENERIC_CTRL,
+		NV_SOR_HDMI_GENERIC_CTRL_ENABLE_YES |
+		NV_SOR_HDMI_GENERIC_CTRL_OTHER_DISABLE |
+		NV_SOR_HDMI_GENERIC_CTRL_SINGLE_DISABLE);
+	return;
 }
 
 __maybe_unused
@@ -2302,6 +2395,16 @@ static void tegra_dc_hdmi_resume(struct tegra_dc *dc)
 				msecs_to_jiffies(HDMI_HPD_DEBOUNCE_DELAY_MS + HDMI_HPD_DROP_TIMEOUT_MS));
 }
 
+static int tegra_dc_hdmi_set_hdr(struct tegra_dc *dc)
+{
+	u16 ret = 0;
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+	ret = tegra_edid_get_ex_hdr_cap(hdmi->edid);
+	if (ret & FB_CAP_HDR)
+		tegra_hdmi_hdr_infoframe(hdmi);
+	return 0;
+}
+
 static int tegra_dc_hdmi_ddc_enable(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
@@ -2497,4 +2600,5 @@ struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.hpd_state = tegra_dc_hdmi_hpd_state,
 	.vrr_enable = tegra_dc_hdmi_vrr_enable,
 	.vrr_mode = tegra_hdmi_update_vrr_mode,
+	.set_hdr = tegra_dc_hdmi_set_hdr,
 };

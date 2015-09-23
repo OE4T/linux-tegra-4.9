@@ -26,6 +26,8 @@
 #include <linux/irqchip/tegra.h>
 #include <linux/tegra-pmc.h>
 
+#include "tegra186-aowake.h"
+
 /* Per wake registers */
 #define WAKE_AOWAKE_CNTRL_0		0x0	/* ~0x17f */
 #define WAKE_AOWAKE_MASK_W_0		0x180	/* ~0x2ff */
@@ -62,13 +64,11 @@ static u32 wke_wake_level_any[WAKE_NR_VECTORS];
 
 static u32 wke_wake_irq_count[WAKE_NR_EVENTS];
 
-static void __iomem *tegra_wke_base;
-
 /* ensures that sufficient time is passed for a register write to
  * serialize into the 32KHz domain */
 static void wke_32kwritel(u32 val, u32 reg)
 {
-	writel(val, tegra_wke_base + reg);
+	tegra_aowake_write(val, reg);
 	udelay(130);
 }
 
@@ -87,7 +87,7 @@ static void wke_write_wake_masks(u32 *enb)
 	int i;
 	for (i = 0; i < WAKE_NR_EVENTS; i++, reg += 4) {
 		val = test_bit(i, (ulong *)enb);
-		writel(val, tegra_wke_base + reg);
+		tegra_aowake_write(val, reg);
 	}
 	print_vals("enable", enb);
 }
@@ -98,7 +98,7 @@ static void wke_write_tier2_routing(u32 *enb)
 	u32 reg = WAKE_AOWAKE_TIER2_ROUTING_31_0_0;
 
 	for (i = 0; i < WAKE_NR_VECTORS; i++, reg += 4)
-		writel(enb[i], tegra_wke_base + reg);
+		tegra_aowake_write(enb[i], reg);
 	print_vals("route", enb);
 }
 
@@ -111,7 +111,7 @@ static void wke_read_wake_levels(u32 *lvl)
 	for (i = 0; i < WAKE_NR_VECTORS; i++, reg += 4) {
 		lvl[i] = 0;
 		for (j = 0; j < 32; j++) {
-			val = readl(tegra_wke_base + reg);
+			val = tegra_aowake_read(reg);
 			lvl[i] |= (((val >> 3) & 0x1) << j);
 		}
 	}
@@ -124,9 +124,9 @@ static void wke_write_wake_levels(u32 *lvl)
 	u32 reg = WAKE_AOWAKE_CNTRL_0;
 
 	for (i = 0; i < WAKE_NR_EVENTS; i++, reg += 4) {
-		val = readl(tegra_wke_base + reg);
+		val = tegra_aowake_read(reg);
 		val |= test_bit(i, (ulong *)lvl) << 3;
-		writel(val, tegra_wke_base + reg);
+		tegra_aowake_write(val, reg);
 	}
 	print_vals("level", lvl);
 }
@@ -138,8 +138,8 @@ int tegra_read_wake_status(u32 *status)
 	u32 mask = WAKE_AOWAKE_TIER2_ROUTING_31_0_0;
 
 	for (i = 0; i < WAKE_NR_VECTORS; i++, reg += 4, mask += 4) {
-		status[i] = readl(tegra_wke_base + reg);
-		status[i] = status[i] & readl(tegra_wke_base + mask);
+		status[i] = tegra_aowake_read(reg);
+		status[i] = status[i] & tegra_aowake_read(mask);
 	}
 
 	return 0;
@@ -152,8 +152,8 @@ static void wke_read_sw_wake_status(u32 *status)
 	u32 mask = WAKE_AOWAKE_TIER2_ROUTING_31_0_0;
 
 	for (i = 0; i < WAKE_NR_VECTORS; i++, reg += 4, mask += 4) {
-		status[i] = readl(tegra_wke_base + reg);
-		status[i] = status[i] & readl(tegra_wke_base + mask);
+		status[i] = tegra_aowake_read(reg);
+		status[i] = status[i] & tegra_aowake_read(mask);
 	}
 }
 
@@ -175,8 +175,8 @@ static void wke_clear_wake_status(void)
 	u32 mask = WAKE_AOWAKE_TIER2_ROUTING_31_0_0;
 
 	for (i = 0; i < WAKE_NR_EVENTS; i++, reg += 4, mask += 4) {
-		status = readl(tegra_wke_base + reg);
-		status = status & readl(tegra_wke_base + reg);
+		status = tegra_aowake_read(reg);
+		status = status & tegra_aowake_read(reg);
 		regw = WAKE_AOWAKE_STATUS_W_0 + i * 32 * 4;
 		for_each_set_bit(wake, (ulong *)&status, sizeof(u32))
 			wke_32kwritel(1, regw + wake * 4);
@@ -267,8 +267,8 @@ static void tegra_pm_irq_resume(void)
 	u32 mask = WAKE_AOWAKE_TIER2_ROUTING_31_0_0;
 
 	for (i = 0; i < WAKE_NR_VECTORS; i++, reg += 4, mask += 4) {
-		status = readl(tegra_wke_base + reg);
-		status = status & readl(tegra_wke_base + mask);
+		status = tegra_aowake_read(reg);
+		status = status & tegra_aowake_read(mask);
 		process_wake_event(i, status);
 	}
 }
@@ -377,18 +377,10 @@ int tegra_pm_irq_set_wake_type(int wake, int flow_type)
 	return wke_irq_set_wake_level(wake, flow_type);
 }
 
-static __init int pm_irq_init(void)
+int pm_irq_init(void)
 {
-	/* TODO: read DT */
-	tegra_wke_base = ioremap(0x0c370000, 0x10000);
-	if (!tegra_wke_base) {
-		pr_err("pm-irq: failed to map wake engine.\n");
-		return -EINVAL;
-	}
-
 	/* Hook into GIC ops */
 	gic_arch_extn.irq_set_type = pm_irq_set_type;
 	gic_arch_extn.irq_set_wake = pm_irq_set_wake;
 	return 0;
 }
-core_initcall(pm_irq_init);

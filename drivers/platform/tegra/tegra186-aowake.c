@@ -23,6 +23,7 @@
 #include <linux/of_device.h>
 #include <linux/of_address.h>
 #include <iomap.h>
+#include "tegra186-aowake.h"
 
 #define WAKE_AOWAKE_CTRL_0	0x4F4
 
@@ -34,7 +35,48 @@ struct tegra_aowake_info {
 
 static struct tegra_aowake_info *tegra186_aowake;
 
-static void aowake_configure_pmic_poparity(struct device *dev,
+unsigned long tegra_aowake_read(unsigned int reg_offset)
+{
+	if (!tegra186_aowake) {
+		WARN_ON(!tegra186_aowake);
+		return 0;
+	}
+
+	return readl(tegra186_aowake->aobase + reg_offset);
+}
+EXPORT_SYMBOL(tegra_aowake_read);
+
+int tegra_aowake_write(unsigned int reg_offset,
+		unsigned long val)
+{
+	if (!tegra186_aowake) {
+		WARN_ON(!tegra186_aowake);
+		return -EINVAL;
+	}
+
+	writel(val, tegra186_aowake->aobase + reg_offset);
+	return 0;
+}
+EXPORT_SYMBOL(tegra_aowake_write);
+
+int tegra_aowake_update(unsigned int reg_offset,
+		unsigned long mask, unsigned long val)
+{
+	unsigned long rval;
+
+	if (!tegra186_aowake) {
+		WARN_ON(!tegra186_aowake);
+		return -EINVAL;
+	}
+
+	rval = readl(tegra186_aowake->aobase + reg_offset);
+	rval = (rval & ~mask) | (val & mask);
+	writel(rval, tegra186_aowake->aobase + reg_offset);
+	return 0;
+}
+EXPORT_SYMBOL(tegra_aowake_update);
+
+static void aowake_configure_pmic_polarity(struct device *dev,
 		struct tegra_aowake_info *taowake)
 {
 	unsigned long reg;
@@ -78,7 +120,7 @@ static int tegra_aowake_probe(struct platform_device *pdev)
 
 	taowake->dev = dev;
 	taowake->aobase = aobase;
-	aowake_configure_pmic_poparity(dev, taowake);
+	aowake_configure_pmic_polarity(dev, taowake);
 	tegra186_aowake = taowake;
 	return 0;
 }
@@ -99,6 +141,8 @@ static struct platform_driver tegra_aowake_driver = {
 
 static int __init tegra_aowake_init(void)
 {
+	pm_irq_init();
+
 	return platform_driver_register(&tegra_aowake_driver);
 }
 postcore_initcall(tegra_aowake_init);

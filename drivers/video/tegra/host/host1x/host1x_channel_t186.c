@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -210,6 +210,7 @@ static inline u32 gather_count(u32 word)
 static inline int get_streamid(struct nvhost_job *job)
 {
 	struct platform_device *pdev = job->ch->dev;
+	struct platform_device *host_dev = nvhost_get_host(pdev)->dev;
 	int streamid;
 
 	/* set channel streamid */
@@ -220,7 +221,8 @@ static inline int get_streamid(struct nvhost_job *job)
 		/* ..otherwise assume that the buffers are mapped to device
 		 * own address space */
 		streamid = iommu_get_hwid(pdev->dev.archdata.iommu,
-					  &pdev->dev, 0);
+					  &pdev->dev,
+					  nvhost_host1x_get_vmid(host_dev));
 		if (streamid < 0)
 			streamid = tegra_mc_get_smmu_bypass_sid();
 	}
@@ -438,7 +440,8 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	/* get host1x streamid */
 	if (host_dev->dev.archdata.iommu) {
 		streamid = iommu_get_hwid(host_dev->dev.archdata.iommu,
-					  &host_dev->dev, 0);
+					  &host_dev->dev,
+					  nvhost_host1x_get_vmid(host_dev));
 		if (streamid < 0)
 			streamid = tegra_mc_get_smmu_bypass_sid();
 	} else {

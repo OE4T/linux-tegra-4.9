@@ -143,13 +143,13 @@
 			pix_clk_hz = "750000000";
 
 			min_gain_val = "1.0";
-			max_gain_val = "16.0";
+			max_gain_val = "15.5";
 			min_hdr_ratio = "1";
 			max_hdr_ratio = "64";
-			min_framerate = "1.462526";
-			max_framerate = "20";
-			min_exp_time = "13";
-			max_exp_time = "683709";
+			min_framerate = "3.179011";
+			max_framerate = "21";
+			min_exp_time = "20";
+			max_exp_time = "314256";
 		};
 
 		mode1 { // OV23850_MODE_5632X3168
@@ -170,13 +170,13 @@
 			pix_clk_hz = "750000000";
 
 			min_gain_val = "1.0";
-			max_gain_val = "16.0";
+			max_gain_val = "15.5";
 			min_hdr_ratio = "1";
 			max_hdr_ratio = "64";
-			min_framerate = "1.462526";
+			min_framerate = "3.220157";
 			max_framerate = "30";
-			min_exp_time = "13";
-			max_exp_time = "683709";
+			min_exp_time = "19";
+			max_exp_time = "310241";
 		};
 	};
 
@@ -212,13 +212,13 @@
 			pix_clk_hz = "750000000";
 
 			min_gain_val = "1.0";
-			max_gain_val = "16.0";
+			max_gain_val = "15.5";
 			min_hdr_ratio = "1";
 			max_hdr_ratio = "64";
-			min_framerate = "1.462526";
+			min_framerate = "3.179011";
 			max_framerate = "20";
-			min_exp_time = "13";
-			max_exp_time = "683709";
+			min_exp_time = "20";
+			max_exp_time = "314256";
 		};
 
 		mode1 { // OV23850_MODE_5632X3168
@@ -239,13 +239,13 @@
 			pix_clk_hz = "750000000";
 
 			min_gain_val = "1.0";
-			max_gain_val = "16.0";
+			max_gain_val = "15.5";
 			min_hdr_ratio = "1";
 			max_hdr_ratio = "64";
-			min_framerate = "1.462526";
+			min_framerate = "3.220157";
 			max_framerate = "30";
-			min_exp_time = "13";
-			max_exp_time = "683709";
+			min_exp_time = "19";
+			max_exp_time = "310467";
 		};
 	};
 

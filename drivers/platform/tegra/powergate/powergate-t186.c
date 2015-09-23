@@ -164,6 +164,25 @@ static bool tegra186_pg_is_powered(int id)
 	return !!msg.logic_state;
 }
 
+static int tegra186_init_refcount(void)
+{
+	/*
+	 * Ensure reference count is correct before turning off partitions
+	 */
+	if (!tegra_powergate_is_powered(TEGRA186_POWER_DOMAIN_XUSBA))
+		tegra_unpowergate_partition_with_clk_on(TEGRA186_POWER_DOMAIN_XUSBA);
+	if (!tegra_powergate_is_powered(TEGRA186_POWER_DOMAIN_XUSBB))
+		tegra_unpowergate_partition_with_clk_on(TEGRA186_POWER_DOMAIN_XUSBB);
+	if (!tegra_powergate_is_powered(TEGRA186_POWER_DOMAIN_XUSBC))
+		tegra_unpowergate_partition_with_clk_on(TEGRA186_POWER_DOMAIN_XUSBC);
+
+	tegra_powergate_partition_with_clk_off(TEGRA186_POWER_DOMAIN_XUSBA);
+	tegra_powergate_partition_with_clk_off(TEGRA186_POWER_DOMAIN_XUSBB);
+	tegra_powergate_partition_with_clk_off(TEGRA186_POWER_DOMAIN_XUSBC);
+
+	return 0;
+}
+
 static struct powergate_ops tegra186_pg_ops = {
 	.soc_name = "tegra186",
 
@@ -178,6 +197,7 @@ static struct powergate_ops tegra186_pg_ops = {
 	.unpowergate_partition_with_clk_on = tegra186_pg_unpowergate_clk_on,
 
 	.powergate_is_powered = tegra186_pg_is_powered,
+	.powergate_init_refcount = tegra186_init_refcount,
 };
 
 struct powergate_ops *tegra186_powergate_init_chip_support(void)

@@ -115,7 +115,15 @@
 		interrupts = <0 170 4>,
 			     <0 171 4>;
 
-		mmu-masters = <&host1x				TEGRA_SID_HC>,
+		mmu-masters = <&host1x				TEGRA_SID_HC
+								TEGRA_SID_HC_VM0
+								TEGRA_SID_HC_VM1
+								TEGRA_SID_HC_VM2
+								TEGRA_SID_HC_VM3
+								TEGRA_SID_HC_VM4
+								TEGRA_SID_HC_VM5
+								TEGRA_SID_HC_VM6
+								TEGRA_SID_HC_VM7>,
 			      <&{/host1x/nvcsi@150c0000}	TEGRA_SID_NVCSI>,
 			      <&{/host1x/vic@15340000}		TEGRA_SID_VIC>,
 			      <&{/host1x/vi@15700000}		TEGRA_SID_VI>,
@@ -598,7 +606,7 @@
 		clock-names = "host1x", "actmon";
 		nvidia,vmid = <1>;
 
-		#stream-id-cells = <1>;
+		#stream-id-cells = <9>;
 
 		#address-cells = <2>;
 		#size-cells = <2>;

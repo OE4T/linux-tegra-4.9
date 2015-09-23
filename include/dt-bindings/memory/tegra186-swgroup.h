@@ -39,3 +39,13 @@
 #define TEGRA_SID_HOST1X_CTX5	0x3d	/* 61 */
 #define TEGRA_SID_HOST1X_CTX6	0x3e	/* 62 */
 #define TEGRA_SID_HOST1X_CTX7	0x3f	/* 63 */
+
+/* Host1x command buffers */
+#define TEGRA_SID_HC_VM0	0x40
+#define TEGRA_SID_HC_VM1	0x41
+#define TEGRA_SID_HC_VM2	0x42
+#define TEGRA_SID_HC_VM3	0x43
+#define TEGRA_SID_HC_VM4	0x44
+#define TEGRA_SID_HC_VM5	0x45
+#define TEGRA_SID_HC_VM6	0x46
+#define TEGRA_SID_HC_VM7	0x47

@@ -255,9 +255,20 @@ static void tegra_hda_audio_config(u32 audio_freq, u32 audio_src)
 		tegra_sor_readl(hda->sor, NV_PDISP_SOR_AUDIO_SPARE0_0));
 
 	if (hda->sink == SINK_DP) {
-		tegra_dc_sor_set_dp_mode(hda->sor, cfg);
+		/* program h/vblank sym */
+		tegra_sor_write_field(hda->sor, NV_SOR_DP_AUDIO_HBLANK_SYMBOLS,
+			NV_SOR_DP_AUDIO_HBLANK_SYMBOLS_MASK, cfg->hblank_sym);
+
+		tegra_sor_write_field(hda->sor, NV_SOR_DP_AUDIO_VBLANK_SYMBOLS,
+			NV_SOR_DP_AUDIO_VBLANK_SYMBOLS_MASK, cfg->vblank_sym);
+
 		val = NV_SOR_DP_AUDIO_CTRL_ENABLE |
-			NV_SOR_DP_AUDIO_CTRL_NEW_SETTINGS_TRIGGER;
+			NV_SOR_DP_AUDIO_CTRL_NEW_SETTINGS_TRIGGER |
+			NV_SOR_DP_AUDIO_CTRL_CA_SELECT_HW |
+			NV_SOR_DP_AUDIO_CTRL_SS_SELECT_HW |
+			NV_SOR_DP_AUDIO_CTRL_SF_SELECT_HW |
+			NV_SOR_DP_AUDIO_CTRL_CC_SELECT_HW |
+			NV_SOR_DP_AUDIO_CTRL_CT_SELECT_HW;
 		tegra_sor_writel(hda->sor, NV_SOR_DP_AUDIO_CTRL, val);
 
 		/* make sure to disable overriding channel data */

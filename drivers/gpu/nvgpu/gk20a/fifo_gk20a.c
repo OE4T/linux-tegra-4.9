@@ -1561,6 +1561,54 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 	return handled;
 }
 
+static inline void gk20a_fifo_reset_pbdma_header(struct gk20a *g, int pbdma_id)
+{
+	gk20a_writel(g, pbdma_pb_header_r(pbdma_id),
+			pbdma_pb_header_first_true_f() |
+			pbdma_pb_header_type_non_inc_f());
+}
+
+static inline void gk20a_fifo_reset_pbdma_method(struct gk20a *g, int pbdma_id,
+						int pbdma_method_index)
+{
+	u32 pbdma_method_stride;
+	u32 pbdma_method_reg;
+
+	pbdma_method_stride = pbdma_method1_r(pbdma_id) -
+				pbdma_method0_r(pbdma_id);
+
+	pbdma_method_reg = pbdma_method0_r(pbdma_id) +
+		(pbdma_method_index * pbdma_method_stride);
+
+	gk20a_writel(g, pbdma_method_reg,
+			pbdma_method0_valid_true_f() |
+			pbdma_method0_first_true_f() |
+			pbdma_method0_addr_f(
+			     pbdma_udma_nop_r() >> 2));
+}
+
+static bool gk20a_fifo_is_sw_method_subch(struct gk20a *g, int pbdma_id,
+						int pbdma_method_index)
+{
+	u32 pbdma_method_stride;
+	u32 pbdma_method_reg, pbdma_method_subch;
+
+	pbdma_method_stride = pbdma_method1_r(pbdma_id) -
+				pbdma_method0_r(pbdma_id);
+
+	pbdma_method_reg = pbdma_method0_r(pbdma_id) +
+			(pbdma_method_index * pbdma_method_stride);
+
+	pbdma_method_subch = pbdma_method0_subch_v(
+			gk20a_readl(g, pbdma_method_reg));
+
+	if (pbdma_method_subch == 5 || pbdma_method_subch == 6 ||
+				       pbdma_method_subch == 7)
+		return true;
+
+	return false;
+}
+
 static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 					struct gk20a *g,
 					struct fifo_gk20a *f,
@@ -1570,6 +1618,7 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 	u32 pbdma_intr_1 = gk20a_readl(g, pbdma_intr_1_r(pbdma_id));
 	u32 handled = 0;
 	bool reset = false;
+	int i;
 
 	gk20a_dbg_fn("");
 
@@ -1580,11 +1629,15 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 		     f->intr.pbdma.channel_fatal_0 |
 		     f->intr.pbdma.restartable_0) & pbdma_intr_0) {
 			gk20a_err(dev_from_gk20a(g),
-				"pbdma_intr_0(%d):0x%08x PBH: %08x SHADOW: %08x M0: %08x",
+				"pbdma_intr_0(%d):0x%08x PBH: %08x SHADOW: %08x M0: %08x %08x %08x %08x",
 				pbdma_id, pbdma_intr_0,
 				gk20a_readl(g, pbdma_pb_header_r(pbdma_id)),
 				gk20a_readl(g, pbdma_hdr_shadow_r(pbdma_id)),
-				gk20a_readl(g, pbdma_method0_r(pbdma_id)));
+				gk20a_readl(g, pbdma_method0_r(pbdma_id)),
+				gk20a_readl(g, pbdma_method1_r(pbdma_id)),
+				gk20a_readl(g, pbdma_method2_r(pbdma_id)),
+				gk20a_readl(g, pbdma_method3_r(pbdma_id))
+				);
 			reset = true;
 			handled |= ((f->intr.pbdma.device_fatal_0 |
 				     f->intr.pbdma.channel_fatal_0 |
@@ -1592,7 +1645,29 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 				    pbdma_intr_0);
 		}
 
-		gk20a_writel(g, pbdma_method0_r(pbdma_id), 0);
+		if (pbdma_intr_0 & pbdma_intr_0_pbentry_pending_f()) {
+			gk20a_fifo_reset_pbdma_header(g, pbdma_id);
+			gk20a_fifo_reset_pbdma_method(g, pbdma_id, 0);
+			reset = true;
+		}
+
+		if (pbdma_intr_0 & pbdma_intr_0_method_pending_f()) {
+			gk20a_fifo_reset_pbdma_method(g, pbdma_id, 0);
+			reset = true;
+		}
+
+		if (pbdma_intr_0 & pbdma_intr_0_device_pending_f()) {
+			gk20a_fifo_reset_pbdma_header(g, pbdma_id);
+
+			for (i = 0; i < 4; i++) {
+				if (gk20a_fifo_is_sw_method_subch(g,
+						pbdma_id, i))
+					gk20a_fifo_reset_pbdma_method(g,
+							pbdma_id, i);
+			}
+			reset = true;
+		}
+
 		gk20a_writel(g, pbdma_intr_0_r(pbdma_id), pbdma_intr_0);
 	}
 

@@ -675,14 +675,16 @@ static void tegra_gpio_resume(void)
 	local_irq_save(flags);
 
 	for (pin = 0; pin < tegra_gpio_chip.ngpio; pin++) {
-		tegra_gpio_writel(tegra_gpio_controllers->cnf[pin], pin,
-				GPIO_ENB_CONFIG_REG);
-		tegra_gpio_writel(tegra_gpio_controllers->dbc[pin], pin,
-				GPIO_DBC_THRES_REG);
-		tegra_gpio_writel(tegra_gpio_controllers->out_ctrl[pin], pin,
-				GPIO_OUT_CTRL_REG);
-		tegra_gpio_writel(tegra_gpio_controllers->out_val[pin], pin,
-				GPIO_OUT_VAL_REG);
+		if (is_gpio_accessible(pin)) {
+			tegra_gpio_writel(tegra_gpio_controllers->cnf[pin],
+					pin, GPIO_ENB_CONFIG_REG);
+			tegra_gpio_writel(tegra_gpio_controllers->dbc[pin],
+					pin, GPIO_DBC_THRES_REG);
+			tegra_gpio_writel(tegra_gpio_controllers->out_ctrl[pin],
+					pin, GPIO_OUT_CTRL_REG);
+			tegra_gpio_writel(tegra_gpio_controllers->out_val[pin],
+					pin, GPIO_OUT_VAL_REG);
+		}
 	}
 	local_irq_restore(flags);
 }
@@ -694,14 +696,16 @@ static int tegra_gpio_suspend(void)
 
 	local_irq_save(flags);
 	for (pin = 0; pin < tegra_gpio_chip.ngpio; pin++) {
-		tegra_gpio_controllers->cnf[pin] =
-			tegra_gpio_readl(pin, GPIO_ENB_CONFIG_REG);
-		tegra_gpio_controllers->dbc[pin] =
-			tegra_gpio_readl(pin, GPIO_DBC_THRES_REG);
-		tegra_gpio_controllers->out_ctrl[pin] =
-			tegra_gpio_readl(pin, GPIO_OUT_CTRL_REG);
-		tegra_gpio_controllers->out_val[pin] =
-			tegra_gpio_readl(pin, GPIO_OUT_VAL_REG);
+		if (is_gpio_accessible(pin)) {
+			tegra_gpio_controllers->cnf[pin] =
+				tegra_gpio_readl(pin, GPIO_ENB_CONFIG_REG);
+			tegra_gpio_controllers->dbc[pin] =
+				tegra_gpio_readl(pin, GPIO_DBC_THRES_REG);
+			tegra_gpio_controllers->out_ctrl[pin] =
+				tegra_gpio_readl(pin, GPIO_OUT_CTRL_REG);
+			tegra_gpio_controllers->out_val[pin] =
+				tegra_gpio_readl(pin, GPIO_OUT_VAL_REG);
+		}
 	}
 	local_irq_restore(flags);
 

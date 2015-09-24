@@ -418,7 +418,7 @@
 		compatible = "nvidia,tegra186-xhci";
 		reg = <0x0 0x03530000 0x0 0x8000>,
 			<0x0 0x03538000 0x0 0x1000>;
-		interrupts = <0 163 0x4>;
+		interrupts = <0 163 0x4>, <0 167 0x4>;
 		mboxes = <&xusb_mbox>;
 		mbox-names = "xusb";
 		#stream-id-cells = <1>;

@@ -226,6 +226,64 @@ static DEVICE_ATTR(ptimer_scale_factor,
 			ptimer_scale_factor_show,
 			NULL);
 
+#if defined(CONFIG_PM_RUNTIME) && defined(CONFIG_PM_GENERIC_DOMAINS)
+static ssize_t railgate_enable_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	struct generic_pm_domain *genpd = dev_to_genpd(dev);
+	struct platform_device *ndev = to_platform_device(dev);
+	struct gk20a *g = get_gk20a(ndev);
+	unsigned long railgate_enable = 0;
+	int err;
+
+	if (kstrtoul(buf, 10, &railgate_enable) < 0)
+		return -EINVAL;
+	if (railgate_enable && !platform->can_railgate) {
+		mutex_lock(&platform->railgate_lock);
+		platform->can_railgate = true;
+		genpd->gov = NULL;
+		pm_genpd_set_poweroff_delay(genpd, platform->railgate_delay);
+		/* release extra ref count:if power domains not enabled */
+		if ((platform->railgate) && \
+				!IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
+			err = platform->railgate(ndev);
+		mutex_unlock(&platform->railgate_lock);
+	} else if (railgate_enable == 0 && platform->can_railgate) {
+		mutex_lock(&platform->railgate_lock);
+		platform->can_railgate = false;
+		genpd->gov = &pm_domain_always_on_gov;
+		pm_genpd_set_poweroff_delay(genpd, platform->railgate_delay);
+		/* take extra ref count - incase of power domains not enabled */
+		if ((platform->unrailgate) && \
+				!IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
+			err = platform->unrailgate(ndev);
+		mutex_unlock(&platform->railgate_lock);
+	}
+	dev_info(dev, "railgate is %s.\n", platform->can_railgate ?
+		"enabled" : "disabled");
+	/* wake-up system to make railgating_enable effective immediately */
+	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
+	gk20a_idle(g->dev);
+
+	return count;
+}
+
+static ssize_t railgate_enable_read(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct gk20a_platform *platform = dev_get_drvdata(&ndev->dev);
+
+	return sprintf(buf, "%d\n", platform->can_railgate ? 1 : 0);
+}
+
+static DEVICE_ATTR(railgate_enable, ROOTRW, railgate_enable_read,
+			railgate_enable_store);
+#endif
+
 static ssize_t railgate_delay_store(struct device *dev,
 				    struct device_attribute *attr,
 				    const char *buf, size_t count)
@@ -711,6 +769,9 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_clockgate_delay);
 #ifdef CONFIG_PM_RUNTIME
 	device_remove_file(dev, &dev_attr_force_idle);
+#if defined(CONFIG_PM_GENERIC_DOMAINS)
+	device_remove_file(dev, &dev_attr_railgate_enable);
+#endif
 #endif
 	device_remove_file(dev, &dev_attr_aelpg_param);
 	device_remove_file(dev, &dev_attr_aelpg_enable);
@@ -741,6 +802,9 @@ void gk20a_create_sysfs(struct platform_device *dev)
 	error |= device_create_file(&dev->dev, &dev_attr_clockgate_delay);
 #ifdef CONFIG_PM_RUNTIME
 	error |= device_create_file(&dev->dev, &dev_attr_force_idle);
+#if defined(CONFIG_PM_GENERIC_DOMAINS)
+	error |= device_create_file(&dev->dev, &dev_attr_railgate_enable);
+#endif
 #endif
 	error |= device_create_file(&dev->dev, &dev_attr_aelpg_param);
 	error |= device_create_file(&dev->dev, &dev_attr_aelpg_enable);

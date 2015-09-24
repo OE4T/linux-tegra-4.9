@@ -23,7 +23,7 @@
 
 / {
         host1x {
-                sor1@15580000 {
+                sor1 {
                         dp-display {
                                 status = "disabled";
                                 compatible = "dp, display";

@@ -19,7 +19,7 @@
  *
  */
 #include <dt-bindings/gpio/tegra-gpio.h>
-
+#include "tegra186-platforms/tegra186-quill-p2382-010-a01-eqos-pinmux-manual.dtsi"
 / {
         ether_qos@2490000 {
 		/* PTP_ref clock speed in MHz */

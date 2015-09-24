@@ -38,17 +38,17 @@ DEFINE_MUTEX(tegra_nvdisp_lock);
 #define NVDISP_OUTPUT_LUT_SIZE  1025
 
 static struct of_device_id nvdisp_disa_pd[] = {
-	{ .compatible = "nvidia, tegra186-disa-pd", },
+	{ .compatible = "nvidia,tegra186-disa-pd", },
 	{},
 };
 
 static struct of_device_id nvdisp_disb_pd[] = {
-	{ .compatible = "nvidia, tegra186-disb-pd", },
+	{ .compatible = "nvidia,tegra186-disb-pd", },
 	{},
 };
 
 static struct of_device_id nvdisp_disc_pd[] = {
-	{ .compatible = "nvidia, tegra186-disc-pd", },
+	{ .compatible = "nvidia,tegra186-disc-pd", },
 	{},
 };
 

@@ -182,49 +182,49 @@
 	};
 
 	pcie_pd: pcie-pd {
-		compatible = "nvidia, tegra186-pcie-pd";
+		compatible = "nvidia,tegra186-pcie-pd";
 		#power-domain-cells = <0>;
 		partition-id = <TEGRA186_POWER_DOMAIN_PCX>;
 	};
 
 	sata_pd: sata-pd {
-		compatible = "nvidia, tegra186-sata-pd";
+		compatible = "nvidia,tegra186-sata-pd";
 		#power-domain-cells = <0>;
 		partition-id = <TEGRA186_POWER_DOMAIN_SAX>;
 	};
 
 	disa_pd: disa-pd {
-		compatible = "nvidia, tegra186-disa-pd";
+		compatible = "nvidia,tegra186-disa-pd";
 		#power-domain-cells = <0>;
 		partition-id = <TEGRA186_POWER_DOMAIN_DISP>;
 	};
 
 	disb_pd: disb-pd {
-		compatible = "nvidia, tegra186-disb-pd";
+		compatible = "nvidia,tegra186-disb-pd";
 		#power-domain-cells = <0>;
 		partition-id = <TEGRA186_POWER_DOMAIN_DISPB>;
 	};
 
 	disc_pd: disc-pd {
-		compatible = "nvidia, tegra186-disc-pd";
+		compatible = "nvidia,tegra186-disc-pd";
 		#power-domain-cells = <0>;
 		partition-id = <TEGRA186_POWER_DOMAIN_DISPC>;
 	};
 
 	xusba_pd: xusba-pd {
-		compatible = "nvidia, tegra186-xusba-pd";
+		compatible = "nvidia,tegra186-xusba-pd";
 		#power-domain-cells = <0>;
 		partition-id = <TEGRA186_POWER_DOMAIN_XUSBA>;
 	};
 
 	xusbb_pd: xusbb-pd {
-		compatible = "nvidia, tegra186-xusbb-pd";
+		compatible = "nvidia,tegra186-xusbb-pd";
 		#power-domain-cells = <0>;
 		partition-id = <TEGRA186_POWER_DOMAIN_XUSBB>;
 	};
 
 	xusbc_pd: xusbc-pd {
-		compatible = "nvidia, tegra186-xusbc-pd";
+		compatible = "nvidia,tegra186-xusbc-pd";
 		#power-domain-cells = <0>;
 		partition-id = <TEGRA186_POWER_DOMAIN_XUSBC>;
 	};

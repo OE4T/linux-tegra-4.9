@@ -25,5 +25,3 @@ config TEGRA_AON
 	depends on ARCH_TEGRA_18x_SOC
 	select TEGRA_IVC
 	select TEGRA_HSP
-	select TEGRA_AST
-	default y

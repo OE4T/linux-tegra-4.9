@@ -2087,10 +2087,9 @@
 
 	aon: aon@c160000 {
 		compatible = "nvidia,tegra186-aon";
-		reg = <0x0 0x0c160000 0x0 0x10000>;
+		reg = <0x0 0x0c160000 0x0 0x10000>, /* AON shared mailbox */
+		      <0x0 0x0c1a0000 0x0 0x20000>; /* AON shared semaphore */
 		nvidia,notifications = <TEGRA_HSP_PROC_SPE TEGRA_HSP_DB_SPE>;
-		nvidia,ast0 = <&aon_ast0>;
-		nvidia,ast1 = <&aon_ast1>;
 		#address-cells = <2>;
 		#size-cells = <2>;
 		#mbox-cells = <1>;

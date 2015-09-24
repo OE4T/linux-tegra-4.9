@@ -19,16 +19,17 @@
 #include <linux/of_reserved_mem.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
-#include <linux/tegra_ast.h>
 #include <linux/tegra-aon.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-instance.h>
 
-#define AON_SLAVE_ADDR			0x80000000
 #define IVC_MIN_FRAME_SIZE		4
 
 #define SMBOX1_OFFSET			0x8000
 #define SMBOX_IVC_READY_MSG		0xAAAA5555
+
+#define SHRD_SEM_OFFSET	0x10000
+#define SHRD_SEM_SET	0x4
 
 struct tegra_aon {
 	struct mbox_controller mbox;
@@ -209,11 +210,11 @@ static struct mbox_chan_ops tegra_aon_mbox_chan_ops = {
 static int tegra_aon_probe(struct platform_device *pdev)
 {
 	struct tegra_aon *aon;
-	struct tegra_ast *ast0, *ast1;
 	struct device *dev = &pdev->dev;
 	struct device_node *child;
 	struct device_node *dn = dev->of_node;
 	void __iomem *smbox_base;
+	void __iomem *shrdsem_base;
 	u32 hsp_data[2];
 	int i, num_chans;
 	int ret = 0;
@@ -233,6 +234,13 @@ static int tegra_aon_probe(struct platform_device *pdev)
 	smbox_base = of_iomap(dn, 0);
 	if (!smbox_base) {
 		dev_err(dev, "failed to map smbox IO space.\n");
+		return -EINVAL;
+	}
+
+	shrdsem_base = of_iomap(dn, 1);
+	if (!shrdsem_base) {
+		dev_err(dev, "failed to map shrdsem IO space.\n");
+		iounmap(smbox_base);
 		return -EINVAL;
 	}
 
@@ -272,28 +280,6 @@ static int tegra_aon_probe(struct platform_device *pdev)
 	aon->mbox.ops = &tegra_aon_mbox_chan_ops;
 	aon->mbox.txdone_poll = true;
 	aon->mbox.txpoll_period = 1;
-
-	/* Initialize ASTs */
-	ast0 = tegra_ast_add_ref(dn, NV("ast0"), 0);
-	if (IS_ERR(ast0)) {
-		dev_warn(dev, "ast0 not found");
-		ret = -EPROBE_DEFER;
-		goto exit;
-	}
-
-	ast1 = tegra_ast_add_ref(dn, NV("ast1"), 0);
-	if (IS_ERR(ast1)) {
-		dev_warn(dev, "ast1 not found");
-		ret = -EPROBE_DEFER;
-		goto exit;
-	}
-
-	tegra_ast_region_enable(ast0, 2,
-		AON_SLAVE_ADDR, (aon_ipcbuf_size - 1), (u64)aon_ipcbuf_phys);
-
-	tegra_ast_region_enable(ast1, 2,
-		AON_SLAVE_ADDR, (aon_ipcbuf_size - 1), (u64)aon_ipcbuf_phys);
-
 	i = 0;
 	/* Parse out all channels from DT */
 	for_each_child_of_node(dn, child) {
@@ -310,11 +296,15 @@ static int tegra_aon_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to register mailbox: %d\n", ret);
 		goto exit;
 	}
-
+	writel((u32)aon_ipcbuf_phys, shrdsem_base + SHRD_SEM_SET);
+	writel((u32)aon_ipcbuf_size, shrdsem_base + SHRD_SEM_OFFSET
+					+ SHRD_SEM_SET);
 	writel(SMBOX_IVC_READY_MSG, smbox_base + SMBOX1_OFFSET);
+
 	dev_dbg(&pdev->dev, "tegra aon driver probe OK\n");
 
 exit:
+	iounmap(shrdsem_base);
 	iounmap(smbox_base);
 	return ret;
 }

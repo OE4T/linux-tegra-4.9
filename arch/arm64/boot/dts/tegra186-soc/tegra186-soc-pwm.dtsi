@@ -23,6 +23,8 @@
 		clocks = <&tegra_car TEGRA186_CLK_PWM1>;
 		clock-names = "pwm";
 		#pwm-cells = <2>;
+		resets = <&tegra_car TEGRA186_RESET_PWM1>;
+		reset-names = "pwm";
 		status = "disabled";
 	};
 
@@ -32,6 +34,8 @@
 		clocks = <&tegra_car TEGRA186_CLK_PWM2>;
 		clock-names = "pwm";
 		#pwm-cells = <2>;
+		resets = <&tegra_car TEGRA186_RESET_PWM2>;
+		reset-names = "pwm";
 		status = "disabled";
 	};
 
@@ -41,6 +45,8 @@
 		clocks = <&tegra_car TEGRA186_CLK_PWM3>;
 		clock-names = "pwm";
 		#pwm-cells = <2>;
+		resets = <&tegra_car TEGRA186_RESET_PWM3>;
+		reset-names = "pwm";
 		status = "disabled";
 	};
 
@@ -50,6 +56,8 @@
 		clocks = <&tegra_car TEGRA186_CLK_PWM4>;
 		clock-names = "pwm";
 		#pwm-cells = <2>;
+		resets = <&tegra_car TEGRA186_RESET_PWM4>;
+		reset-names = "pwm";
 		status = "disabled";
 	};
 
@@ -59,6 +67,8 @@
 		clocks = <&tegra_car TEGRA186_CLK_PWM5>;
 		clock-names = "pwm";
 		#pwm-cells = <2>;
+		resets = <&tegra_car TEGRA186_RESET_PWM5>;
+		reset-names = "pwm";
 		status = "disabled";
 	};
 
@@ -68,6 +78,8 @@
 		clocks = <&tegra_car TEGRA186_CLK_PWM6>;
 		clock-names = "pwm";
 		#pwm-cells = <2>;
+		resets = <&tegra_car TEGRA186_RESET_PWM6>;
+		reset-names = "pwm";
 		status = "disabled";
 	};
 
@@ -77,6 +89,8 @@
 		clocks = <&tegra_car TEGRA186_CLK_PWM7>;
 		clock-names = "pwm";
 		#pwm-cells = <2>;
+		resets = <&tegra_car TEGRA186_RESET_PWM7>;
+		reset-names = "pwm";
 		status = "disabled";
 	};
 
@@ -86,6 +100,8 @@
 		clocks = <&tegra_car TEGRA186_CLK_PWM8>;
 		clock-names = "pwm";
 		#pwm-cells = <2>;
+		resets = <&tegra_car TEGRA186_RESET_PWM8>;
+		reset-names = "pwm";
 		status = "disabled";
 	};
 };

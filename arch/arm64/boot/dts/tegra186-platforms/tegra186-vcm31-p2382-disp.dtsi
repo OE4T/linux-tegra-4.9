@@ -1,0 +1,71 @@
+/*
+ * tegra186-vcm31-p2382-disp.dtsi: VCM3.1 based P2382(sunstreaker)
+ * display dtsi.
+ *
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include <dt-bindings/display/tegra-dc.h>
+#include <dt-bindings/display/tegra-panel.h>
+
+//#include "tegra210-display-p2393-0000-a00-panel-dsi-1080p.dtsi"
+#include "tegra186-hdmi.dtsi"
+
+/ {
+	host1x {
+		status = "okay";
+
+		nvdisplay@15200000 {
+			status = "okay";
+			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
+			nvidia,emc-clk-rate = <300000000>;
+			nvidia,fb-bpp = <32>; /* bits per pixel */
+			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
+			nvidia,fb-win = <0>;
+			nvidia,dc-ctrlnum = <0>;
+			nvidia,dc-or-node = "/host1x/sor1";
+		};
+
+		dsi {   /* dsi@15300000 */
+			status = "disabled";
+			nvidia,dsi-controller-vs = <DSI_VS_1>;
+			panel-s-wuxga-8-0 {
+				status = "disabled";
+			};
+			panel-dsi-1080p-p2393 {
+				status = "okay";
+				nvidia,dsi-edp-bridge = <TEGRA_DSI_ENABLE>;
+				nvidia,panel-bridge-en-0-gpio = <&tegra_gpio TEGRA_GPIO(O, 1) 0>; /* PO1 */
+				disp-default-out {
+					nvidia,out-type = <TEGRA_DC_OUT_DSI>;
+				};
+			};
+		};
+
+		sor1 {
+			status = "okay";
+			nvidia,xbar-ctrl = <2 1 0 3 4>;
+
+			hdmi-display {
+				status = "okay";
+				compatible = "hdmi,display";
+				disp-default-out {
+					nvidia,out-type = <TEGRA_DC_OUT_HDMI>;
+					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_LOW>;
+					nvidia,out-parent-clk = "plld2";
+					nvidia,out-align = <TEGRA_DC_ALIGN_MSB>;
+					nvidia,out-order = <TEGRA_DC_ORDER_RED_BLUE>;
+				};
+			};
+		};
+	};
+};

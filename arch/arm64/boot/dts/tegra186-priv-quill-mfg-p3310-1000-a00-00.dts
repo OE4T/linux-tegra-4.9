@@ -17,5 +17,14 @@
 #include "tegra186-platforms/tegra186-quill-shim-p3310-1000-a00-00.dtsi"
 
 / {
+	model = "quill-mfg";
+	compatible = "nvidia,quill-mfg", "nvidia,tegra186";
 	nvidia,dtsfilename = __FILE__;
+
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "quill-mfg";
+		};
+	};
 };

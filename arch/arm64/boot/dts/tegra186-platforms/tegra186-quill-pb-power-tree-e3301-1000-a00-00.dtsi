@@ -23,6 +23,9 @@
 			avdd_lcd-supply = <&en_avdd_disp_3v3>;
 			dvdd_lcd-supply = <&en_vdd_disp_1v8>;
 			avdd_dsi_csi-supply = <&spmic_sd1>;
+			vdd_ts_3v3-supply = <&en_vdd_ts_hv_3v3>;
+			vdd_ts_1v8-supply = <&en_vdd_ts_1v8>;
+			avdd_lcd_1v2-supply = <&dis_vdd_1v2>;
 		};
 		nvdisplay@15210000 {
 			avdd_hdmi-supply = <&spmic_ldo7>;
@@ -53,5 +56,67 @@
 
 	ahci-sata@3507000 {
 		target-3v3-supply = <&vdd_3v3_sata>;
+	};
+
+	xhci@3530000 {
+		avddio_usb-supply = <&spmic_sd3>;
+		avdd_pll_utmip-supply = <&spmic_ldo0>;
+		hvdd_usb-supply =  <&vdd_1v8_sw>;
+	};
+
+	xudc@3550000 {
+		avdd-usb-supply = <&spmic_sd3>;
+		dvdd-pex-supply = <&spmic_ldo7>;
+		hvdd-pex-supply =  <&vdd_1v8_sw>;
+		dvdd-pex-pll-supply = <&spmic_ldo7>;
+		hvdd-pex-pll-supply = <&vdd_1v8_sw>;
+	};
+
+	pinctrl@3520000 {
+		vbus-0-supply = <&vdd_usb0_5v>;
+		vbus-1-supply = <&vdd_usb1_5v>;
+		vbus-2-supply = <&vdd_usb2_5v>;
+		vbus-3-supply = <&battery_reg>;
+		vddio-hsic-supply = <&spmic_sd1>;
+		hvdd_pex_pll-supply = <&vdd_1v8_sw>;
+		hvdd_pex-supply = <&vdd_1v8_sw>;
+		dvdd_pex-supply = <&spmic_ldo7>;
+		avdd_usb-supply = <&spmic_sd3>;
+		vclamp_usb-supply = <&vdd_1v8_sw>;
+		avdd_pll_erefeut-supply = <&spmic_ldo0>;
+	};
+
+	spi@c260000 {
+		spi-touch-sharp19x12@0 {
+			avdd-supply = <&en_vdd_ts_hv_3v3>;
+			dvdd-supply = <&en_vdd_ts_1v8>;
+		};
+	};
+
+	pcie-controller@10003000 {
+		dvdd-pex-supply = <&spmic_ldo7>;
+		hvdd-pex-pll-supply = <&spmic_sd2>;
+		hvdd-pex-supply = <&spmic_sd2>;
+		vddio-pexctl-aud-supply = <&spmic_sd2>;
+	};
+
+	pmc-iopower {
+		iopower-sys-supply = <&spmic_ldo6>;
+		iopower-uart-supply = <&vdd_1v8_sw>;
+		iopower-conn-supply = <&vdd_1v8_sw>;
+		iopower-edp-supply = <&vdd_1v8_sw>;
+		iopower-ufs-supply = <&spmic_sd1>;
+		iopower-cam-supply = <&vdd_1v8_sw>;
+		iopower-pex-ctrl-supply = <&vdd_1v8_sw>;
+		iopower-sdmmc4-supply = <&vdd_1v8_sw>;
+		iopower-sdmmc1-hv-supply = <&spmic_ldo3>;
+		iopower-audio-hv-supply = <&spmic_sd3>;
+		iopower-dbg-supply = <&spmic_ldo6>;
+		iopower-spi-supply = <&vdd_1v8_sw>;
+		iopower-ao-supply = <&spmic_ldo6>;
+		iopower-ao-hv-supply = <&spmic_ldo2>;
+		iopower-dmic-hv-supply =  <&spmic_sd3>;
+		iopower-sdmmc2-hv-supply = <&spmic_sd3>;
+		iopower-sdmmc3-hv-supply =  <&spmic_ldo5>;
 	};
 };

@@ -15,11 +15,72 @@
 
 #include "tegra186-platforms/tegra186-sunstreaker-common-e3340-0000-a00.dtsi"
 #include "tegra186-platforms/tegra186-sunstreaker-char-power-tree-e3340-1080-a00-00.dtsi"
+#include "tegra186-platforms/tegra186-sunstreaker-char-e3340-a00-disp.dsti"
 
 / {
 	nvidia,dtsfilename = __FILE__;
 	nvidia,boardids = "3340:1080:A0";
 	nvidia,proc-boardid = "3340:1080:A0";
+
+	spi@3270000 {/* QSPI NOR */
+		status = "okay";
+		spi@0 {
+			compatible = "spidev";
+			reg = <1>;
+			spi-max-frequency = <13000000>;
+			controller-data {
+					nvidia,x1-len-limit = <16>;
+					nvidia,x1-bus-speed = <133000000>; /* In Mhz */
+					nvidia,x1-dymmy-cycle = <0>;
+					nvidia,x4-bus-speed = <133000000>;
+					nvidia,x4-dymmy-cycle = <8>;
+					nvidia,ifddr-div2-sdr = <1>;
+					nvidia,x4-is-ddr=<1>;
+			};
+		};
+
+		spiflash@1 {
+			#address-cells = <1>;
+			#size-cells = <1>;
+			compatible = "s25fl512s";
+			reg = <0>;
+			spi-max-frequency = <133000000>;
+			partition@0 {
+				label = "Whole_flash";
+				reg = <0x00000000 0x4000000>;
+			};
+			controller-data {
+				nvidia,x1-len-limit = <16>;
+				nvidia,x1-bus-speed = <133000000>; /* In Mhz */
+				nvidia,x1-dymmy-cycle = <0>;
+				nvidia,x4-bus-speed = <133000000>;
+				nvidia,x4-dymmy-cycle = <8>;
+				nvidia,ifddr-div2-sdr = <1>;
+				nvidia,x4-is-ddr=<1>;
+			};
+		};
+	};
+
+
+	xudc@3550000 {
+		status = "okay";
+		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
+			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>;
+		phy-names = "usb2", "usb3";
+	};
+
+	xhci@3530000 {
+		status = "okay";
+		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
+			<&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
+			<&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
+			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
+			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>,
+			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(2)>,
+			<&padctl_uphy TEGRA_PADCTL_UPHY_HSIC_P(0)>;
+		phy-names = "utmi-0", "utmi-1", "utmi-2", "usb3-1","usb3-0",
+			"usb3-2", "hsic-0";
+	};
 
 	padctl_uphy: pinctrl@3520000 {
 		status = "okay";
@@ -59,6 +120,10 @@
 				nvidia,usb3-port = <2>;
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
 			};
+			hsic {
+				nvidia,lanes = "hsic-0";
+				nvidia,function = "hsic";
+			};
 			pcie {
 				nvidia,lanes = "uphy-lane-3", "uphy-lane-4";
 				nvidia,function = "pcie";
@@ -68,6 +133,19 @@
 				nvidia,lanes = "uphy-lane-5";
 				nvidia,function = "sata";
 			};
+		};
+	};
+	pcie-controller@10003000 {
+		nvidia,lane-map = <0x211>;
+		status = "okay";
+		pci@1,0 {
+			status = "okay";
+		};
+		pci@2,0 {
+			status = "okay";
+		};
+		pci@3,0 {
+			status = "okay";
 		};
 	};
 };

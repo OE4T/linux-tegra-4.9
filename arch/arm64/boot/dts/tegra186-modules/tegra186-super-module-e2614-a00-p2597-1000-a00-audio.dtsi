@@ -14,55 +14,34 @@
  */
 
 / {
-
-	i2c@c240000 {
-		i2cmux@70 {
-			i2c@0 {
-				tas2552: dspk_amp_l@40 {
-					compatible = "ti,tas2552";
-					reg = <0x40>;
-					vbat = <&battery_reg>;
-					iovdd = <&vdd_3v3>;
-					avdd = <&battery_reg>;
-				};
-			};
-		};
-		rt5658: audio-codec@1a {
-			compatible = "realtek,rt5658";
-			reg = <0x1a>;
-		};
-	};
-
 	sound {
 		nvidia,hp-det-gpios = <&gpio TEGRA_GPIO(J , 5) GPIO_ACTIVE_HIGH>;
-		nvidia,num-codec-link = <6>;
+		nvidia,num-codec-link = <3>;
 
 		nvidia,audio-routing =
 			"y Headphone",		"y OUT",
 			"y IN",			"y Mic",
 			"z Headphone",		"z OUT",
 			"z IN",			"z Mic",
-			"m Headphone",		"m OUT",
-			"m IN",			"m Mic",
-			"n Headphone",		"n OUT",
-			"n IN",			"n Mic",
 			"x Headphone Jack",	"x HPO L Playback",
 			"x Headphone Jack",	"x HPO R Playback",
 			"x MICBIAS1",		"x Mic Jack",
 			"x IN1P",		"x Mic Jack",
 			"x Mic Det Power",	"x Mic Jack",
 			"x Int Spk",		"x SPO Playback",
-			"l Headphone",		"l OUT",
-			"l IN",			"l Mic";
+			"x DMIC L1",		"x Int Mic",
+			"x DMIC L2",		"x Int Mic",
+			"x DMIC R1",		"x Int Mic",
+			"x DMIC R2",		"x Int Mic",
+			"n Headphone",		"n OUT",
+			"n IN",			"n Mic";
 
-		nvidia,dai-link-5 {
+		nvidia,dai-link-3 {
 			link-name = "rt565x-playback";
 			cpu-dai = <&tegra_i2s1>;
 			codec-dai = <&rt5658>;
 			cpu-dai-name = "I2S1";
-			codec-dai-name = "rt5658-aif1";
-			tx-mask = <0xFF>;
-			rx-mask = <0xFF>;
+			codec-dai-name = "rt5659-aif1";
 			format = "i2s";
 			bitclock-slave;
 			frame-slave;
@@ -74,7 +53,8 @@
 			num-channel = <2>;
 			name-prefix = "x";
 		};
-		nvidia,dai-link-6 {
+		/* DSPK is disabled by default */
+		nvidia,dai-link-4 {
 			link-name = "dspk-playback";
 			cpu-dai = <&tegra_dspk1>;
 			codec-dai = <&tas2552>;
@@ -84,7 +64,8 @@
 			bit-format = "s16_le";
 			srate = <48000>;
 			num-channel = <2>;
-			name-prefix = "l";
+			codec = "0.spdif-dit.0";
+			name-prefix = "n";
 		};
 	};
 };

@@ -21,12 +21,53 @@
 			reg = <0x76>;
 			gpio-controller;
 			#gpio-cells = <2>;
-			pcie_default_mux {
-				gpio-output-high = <9 10>;
-				gpio-output-low = <12>;
+			xusb_lane0_mux {
+				gpio-output-low = <9>;
+				status = "disabled";
 			};
-			sata_default_mux {
+			pcie1_lane0_mux {
+				gpio-output-high = <9>;
+				status = "okay";
+			};
+			xusb_lane1_mux {
+				gpio-output-low = <10>;
+				status = "okay";
+			};
+			pcie0_lane1_mux {
+				gpio-output-high = <10>;
+				status = "disabled";
+			};
+			xusb_lane2_mux {
+				gpio-output-low = <11>;
+				status = "okay";
+			};
+			pcie0_lane2_mux {
+				gpio-output-high = <11>;
+				status = "disabled";
+			};
+			pcie2_lane3_mux {
+				gpio-output-low = <12>;
+				status = "okay";
+			};
+			pcie0_lane3_mux {
+				gpio-output-high = <12>;
+				status = "disabled";
+			};
+			ufs_lane4_mux {
+				gpio-output-low = <13>;
+				status = "disabled";
+			};
+			pcie0_lane4_mux {
+				gpio-output-high = <13>;
+				status = "okay";
+			};
+			ufs_lane5_mux {
+				gpio-output-low = <14>;
+				status = "disabled";
+			};
+			sata_lane5_mux {
 				gpio-output-high = <14>;
+				status = "okay";
 			};
 		};
 	};
@@ -63,13 +104,14 @@
 		};
 
 		vdd_3v3_sata: regulator@3 {
-			compatible = "regulator-fixed-sync";
+			compatible = "regulator-fixed";
 			reg = <3>;
 			regulator-name = "vdd-3v3-sata";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
 			gpio = <&gpio_i2c_0_76 7 0>;
 			enable-active-high;
+			vin-supply = <&spmic_sd3>;
 		};
 
 		vdd_usb0_5v: regulator@4 {
@@ -157,6 +199,19 @@
 			regulator-max-microvolt = <5000000>;
 			vin-supply = <&vdd_sys_5v>;
 			gpio = <&tegra_gpio TEGRA_GPIO(FF, 3) 0>;
+			enable-active-high;
+		};
+
+		vdd_1v8_sw: regulator@12 {
+			compatible = "regulator-fixed-sync";
+			reg = <12>;
+			regulator-name = "vdd-1v8-sw";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			vin-supply = <&spmic_sd2>;
+			gpio = <&spmic 7 0>;
+			regulator-always-on;
+			regulator-boot-on;
 			enable-active-high;
 		};
 	};

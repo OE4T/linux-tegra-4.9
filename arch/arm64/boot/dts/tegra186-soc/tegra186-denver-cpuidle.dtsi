@@ -10,7 +10,7 @@
 				min-residency-us = <1>;
 				power = <70>;
 				pmstate = <0x1>;
-				status = "enabled";
+				status = "disabled";
 			};
 			DENVER_C6: c6 {
 				compatible = "nvidia,tegra186-cpuidle-denver";
@@ -20,7 +20,7 @@
 				power = <60>;
 				pmstate = <0x6>;
 				arm,psci-suspend-param= <0x6>;
-				status = "enabled";
+				status = "disabled";
 			};
 			DENVER_C7: c7 {
 				compatible = "nvidia,tegra186-cpuidle-denver";
@@ -30,7 +30,7 @@
 				power = <60>;
 				pmstate = <0x7>;
 				arm,psci-suspend-param= <0x10007>;
-				status = "enabled";
+				status = "disabled";
 			};
 		};
 
@@ -42,7 +42,7 @@
 				min-residency-us = <1>;
 				power = <65>;
 				pmstate = <0x1>;
-				status = "enabled";
+				status = "disabled";
 			};
 			cc6 {
 				state-name = "Cluster powergate";

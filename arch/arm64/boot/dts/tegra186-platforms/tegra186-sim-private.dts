@@ -34,7 +34,7 @@
 	compatible = "nvidia,tegra186";
 
 	chosen {
-		bootargs ="mem=1024M@2048M console=ttyS0,115200 earlyprintk=uart8250-32bit,0x70006000";
+		bootargs ="mem=1024M@2048M console=ttyS0,115200 earlyprintk=uart8250-32bit,0x03100000";
 		stdout-path = &uarta;
 	};
 
@@ -49,16 +49,7 @@
 
 	memory@80000000 {
 		device_type = "memory";
-		reg = < 0x0 0x80000000 0x0 0x80000000 >;
-	};
-
-	timer {
-		compatible = "arm,armv8-timer";
-		interrupts = <1 13 0xf01
-			      1 14 0xf01
-			      1 11 0xf01
-			      1 10 0xf01>;
-		clock-frequency = <38400000>;
+		reg = < 0x0 0x80000000 0x0 0xc0000000 >;
 	};
 
 	clock@5000000 {
@@ -352,19 +343,21 @@
 
 	host1x {
 		nvdisplay@15200000 {
-			status = "okay";
+			status = "disabled";
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 			nvidia,fb-win = <0>;
 			nvidia,dc-ctrlnum = <0>;
+			nvidia,dc-or-node = "/host1x/sor";
 		};
 
 		nvdisplay@15210000 {
-			status = "okay";
+			status = "disabled";
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 			nvidia,fb-win = <3>;
 			nvidia,dc-ctrlnum = <1>;
+			nvidia,dc-or-node = "/host1x/sor1";
 		};
 
 		nvdisplay@15220000 {
@@ -375,20 +368,20 @@
 			nvidia,dc-ctrlnum = <2>;
 		};
 
-		sor@15540000 {
-			status = "okay";
+		sor {
+			status = "disabled";
 		};
 
-		sor1@15580000 {
-			status = "okay";
+		sor1 {
+			status = "disabled";
 		};
 
 		dpaux@155c0000 {
-			status = "okay";
+			status = "disabled";
 		};
 
 		dpaux@15040000 {
-			status = "okay";
+			status = "disabled";
 		};
 	};
 };

@@ -15,156 +15,39 @@
 
 #include "tegra186-platforms/tegra186-quill-common-p3310-1000-a00.dtsi"
 #include "tegra186-platforms/tegra186-quill-power-tree-p3310-1000-a00-00.dtsi"
+#include "tegra186-platforms/tegra186-quill-camera-e3323-a00.dtsi"
+#include "tegra186-modules/tegra186-cvb-e3320-1000-a00.dtsi"
+#include "tegra186-platforms/tegra186-quill-p3310-1000-a00-00-eqos-pinmux-manual.dtsi"
 
 /* comms dtsi file should be included after gpio dtsi file */
 #include "tegra186-platforms/tegra186-quill-comms.dtsi"
 
 / {
+	model = "quill";
+	compatible = "nvidia,quill", "nvidia,tegra186";
+
 	nvidia,dtsfilename = __FILE__;
 	nvidia,boardids = "3310:0000:A0";
 	nvidia,proc-boardid = "3310:0000:A0";
 
-	adsp_audio {
-		compr-ops = <1>;
-		num-plugin = <4>;
-		plugin-info-1 {
-			plugin-name = "mp3-dec1";
-			firmware-name = "nvmp3dec.elf";
-			widget-name = "MP3-DEC1";
-		};
-		plugin-info-2 {
-			plugin-name = "spkprot";
-			firmware-name = "nvspkprot.elf";
-			widget-name = "SPKPROT-SW";
-		};
-		plugin-info-3 {
-			plugin-name = "src";
-			firmware-name = "nvsrc.elf";
-			widget-name = "SRC";
-		};
-		plugin-info-4 {
-			plugin-name = "aac-dec1";
-			firmware-name = "nvaacdec.elf";
-			widget-name = "AAC-DEC1";
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "quill";
 		};
 	};
 
-	ahub {
-		i2s@02901000 {
-			fsync-width = <31>;
-		};
-
-		i2s@02901100 {
-			fsync-width = <31>;
-		};
-
-		i2s@02901200 {
-			fsync-width = <31>;
-		};
-
-		i2s@02901300 {
-			fsync-width = <31>;
-		};
-
-		i2s@02901400 {
-			fsync-width = <31>;
-		};
-
-		i2s@02901500 {
-			fsync-width = <31>;
-		};
+	xudc@3550000 {
+		status = "okay";
+		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
+		phy-names = "usb2";
 	};
 
-	adma@2930000 {
-		dma-channels = <10>;
-	};
-
-	tegra_sound: sound {
-		compatible = "nvidia,tegra-audio-t186ref-mobile-rt565x";
-		nvidia,model = "tegra-snd-t186ref-mobile-rt565x";
-		nvidia,num-codec-link = <4>;
-
-		nvidia,audio-routing =
-			"y Headphone",		"y OUT",
-			"y IN",			"y Mic",
-			"z Headphone",		"z OUT",
-			"z IN",			"z Mic",
-			"m Headphone",		"m OUT",
-			"m IN",			"m Mic",
-			"n Headphone",		"n OUT",
-			"n IN",			"n Mic";
-
-		nvidia,xbar = <&tegra_axbar>;
-
-		nvidia,dai-link-1 {
-			link-name = "spdif-dit-0";
-			cpu-dai = <&tegra_i2s2>;
-			codec-dai = <&spdif_dit0>;
-			cpu-dai-name = "I2S2";
-			codec-dai-name = "dit-hifi";
-			tx-mask = <0xFF>;
-			rx-mask = <0xFF>;
-			format = "dsp_a";
-			bitclock-slave;
-			frame-slave;
-			bitclock-inversion;
-			frame-inversion;
-			bit-format = "s16_le";
-			bclk_ratio = <4>;
-			srate = <48000>;
-			num-channel = <1>;
-			name-prefix = "y";
-		};
-		nvidia,dai-link-2 {
-			link-name = "spdif-dit-1";
-			cpu-dai = <&tegra_i2s3>;
-			codec-dai = <&spdif_dit1>;
-			cpu-dai-name = "I2S3";
-			codec-dai-name = "dit-hifi";
-			tx-mask = <0xFF>;
-			rx-mask = <0xFF>;
-			format = "dsp_a";
-			bitclock-slave;
-			frame-slave;
-			bitclock-noninversion;
-			frame-noninversion;
-			bit-format = "s32_le";
-			bclk_ratio = <1>;
-			srate = <48000>;
-			num-channel = <8>;
-			name-prefix = "z";
-		};
-		nvidia,dai-link-3 {
-			link-name = "spdif-dit-2";
-			cpu-dai = <&tegra_dmic3>;
-			codec-dai = <&spdif_dit2>;
-			cpu-dai-name = "DMIC3";
-			codec-dai-name = "dit-hifi";
-			format = "i2s";
-			bit-format = "s16_le";
-			srate = <48000>;
-			num-channel = <2>;
-			name-prefix = "m";
-		};
-		nvidia,dai-link-4 {
-			link-name = "spdif-dit-3";
-			cpu-dai = <&tegra_i2s4>;
-			codec-dai = <&spdif_dit3>;
-			cpu-dai-name = "I2S4";
-			codec-dai-name = "dit-hifi";
-			tx-mask = <0xFF>;
-			rx-mask = <0xFF>;
-			format = "i2s";
-			bitclock-slave;
-			frame-slave;
-			bitclock-noninversion;
-			frame-noninversion;
-			bit-format = "s16_le";
-			bclk_ratio = <2>;
-			srate = <48000>;
-			num-channel = <2>;
-			name-prefix = "n";
-		};
+	xhci@3530000 {
+		status = "okay";
+		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
+			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>;
+		phy-names = "utmi-1", "usb3-1";
 	};
 
 	padctl_uphy: pinctrl@3520000 {
@@ -198,6 +81,19 @@
 				nvidia,lanes = "uphy-lane-5";
 				nvidia,function = "sata";
 			};
+		};
+	};
+	pcie-controller@10003000 {
+		nvidia,lane-map = <0x211>;
+		status = "okay";
+		pci@1,0 {
+			status = "okay";
+		};
+		pci@2,0 {
+			status = "okay";
+		};
+		pci@3,0 {
+			status = "okay";
 		};
 	};
 };

@@ -25,7 +25,7 @@
 #include "../../../../include/dt-bindings/reset/tegra186-reset.h"
 #include "../../../../include/dt-bindings/interrupt/tegra186-irq.h"
 #include "../../../../include/dt-bindings/padctrl/tegra186-pads.h"
-#include "tegra186-soc/tegra186-sdhci.dtsi"
+#include "tegra186-soc/tegra186-soc-sdhci.dtsi"
 #include "tegra186-soc/tegra186-soc-ufshc.dtsi"
 #include "tegra186-soc/tegra186-soc-i2c.dtsi"
 #include "tegra186-soc/tegra186-soc-spi.dtsi"
@@ -55,8 +55,8 @@
 			compatible = "nvidia,generic_carveout";
 			size = <0 0x20000000>;
 			alignment = <0 0x100000>;
+			alloc-ranges = <0 0 0x1 0>;
 			no-map;
-			status = "disabled";
 		};
 
 		aon_reserved_ivc_buf: aon-ivc {
@@ -66,6 +66,30 @@
 			alloc-ranges = <0x0 0x0 0x1 0x0>;
 			status = "disabled";
 		};
+
+	        adsp_reserved_mem: adsp_carveout {
+                        compatible = "nvidia,tegra18x-adsp-carveout";
+                        reg = <0x0 0xd8300000 0x0 0x01000000>;
+                        no-map;
+                };
+
+		ramoops_reserved: ramoops_carveout {
+			compatible = "nvidia,ramoops";
+			size = <0x0 0x200000>;
+			alignment = <0x0 0x10000>;
+			alloc-ranges = <0x0 0x0 0x1 0x0>;
+			no-map;
+		};
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		interrupts = <1 13 0xf01
+			      1 14 0xf01
+			      1 11 0xf01
+			      1 10 0xf01>;
+		clock-frequency = <38400000>;
+		status = "disabled";
 	};
 
 	mc_clk_pd: mc-clk-pd {
@@ -201,7 +225,6 @@
 	tegra-carveouts {
 		compatible = "nvidia,carveouts";
 		memory-region = <&generic_reserved>;
-		status = "disabled";
 	};
 
 	mc_sid@2c00000 {
@@ -219,15 +242,14 @@
 		interrupts = <0 170 4>,
 			     <0 171 4>;
 
-		mmu-masters = <&{/gp10b}		TEGRA_SWGROUP_GPUB>,
-			      <&host1x			TEGRA_SWGROUP_HC>,
+		mmu-masters = <&host1x				TEGRA_SWGROUP_HC>,
 			      <&{/host1x/nvcsi@150c0000}	TEGRA_SWGROUP_NVCSI>,
 			      <&{/host1x/vic@15340000}		TEGRA_SWGROUP_VIC>,
 			      <&{/host1x/vi@15700000}		TEGRA_SWGROUP_VI>,
 			      <&{/host1x/isp@15600000}		TEGRA_SWGROUP_ISP>,
 			      <&{/host1x/nvdec@15480000}	TEGRA_SWGROUP_NVDEC>,
 			      <&{/host1x/nvenc@154c0000}	TEGRA_SWGROUP_NVENC>,
-			      <&{/host1x/nvjpg@15380000}		TEGRA_SWGROUP_NVJPG>,
+			      <&{/host1x/nvjpg@15380000}	TEGRA_SWGROUP_NVJPG>,
 			      <&{/host1x/nvdisplay@15200000}	TEGRA_SWGROUP_NVDISPLAY>,
 			      <&{/host1x/nvdisplay@15210000}	TEGRA_SWGROUP_NVDISPLAY>,
 			      <&{/host1x/nvdisplay@15220000}	TEGRA_SWGROUP_NVDISPLAY>,
@@ -236,7 +258,9 @@
 			      <&{/host1x/se@15810000}		TEGRA_SWGROUP_SE>,
 			      <&{/host1x/se@15820000}		TEGRA_SWGROUP_SE1>,
 			      <&{/host1x/se@15830000}		TEGRA_SWGROUP_SE2>,
-			      <&{/host1x/se@15840000}		TEGRA_SWGROUP_SE3>,
+			      <&{/host1x/se@15840000}		TEGRA_SWGROUP_SE3>;
+			      /*
+			      <&{/gp10b}		TEGRA_SWGROUP_GPUB>,
 			      <&{/sdhci@3460000}	TEGRA_SWGROUP_SDMMC4A>,
 			      <&{/sdhci@3440000}	TEGRA_SWGROUP_SDMMC3A>,
 			      <&{/sdhci@3420000}	TEGRA_SWGROUP_SDMMC2A>,
@@ -245,7 +269,26 @@
 			      <&{/xudc@3550000}		TEGRA_SWGROUP_XUSB_DEV>,
 			      <&{/ahci-sata@3507000}	TEGRA_SWGROUP_SATA2>,
 			      <&{/bpmp}			TEGRA_SWGROUP_BPMP>,
-			      <&{/dma@2600000}		TEGRA_SWGROUP_AXIS>,
+			      <&{/sound}		TEGRA_SWGROUP_APE>,
+			      <&{/dma@2600000}		TEGRA_SID_GPCDMA_0>,
+			      <&{/spi@3210000}		TEGRA_SID_GPCDMA_0>,
+			      <&{/spi@3230000}		TEGRA_SID_GPCDMA_0>,
+			      <&{/spi@3240000}		TEGRA_SID_GPCDMA_0>,
+			      <&{/spi@3270000}		TEGRA_SID_GPCDMA_0>,
+			      <&{/spi@c260000}		TEGRA_SID_GPCDMA_0>,
+			      <&{/serial@3100000}	TEGRA_SID_GPCDMA_0>,
+			      <&{/serial@3110000}	TEGRA_SID_GPCDMA_0>,
+			      <&{/serial@c280000}	TEGRA_SID_GPCDMA_0>,
+			      <&{/serial@3130000}	TEGRA_SID_GPCDMA_0>,
+			      <&{/serial@3140000}	TEGRA_SID_GPCDMA_0>,
+			      <&{/serial@3150000}	TEGRA_SID_GPCDMA_0>,
+			      <&{/serial@c290000}	TEGRA_SID_GPCDMA_0>,
+			      <&{/i2c@3160000}		TEGRA_SID_GPCDMA_0>,
+			      <&{/i2c@3180000}		TEGRA_SID_GPCDMA_0>,
+			      <&{/i2c@3190000}		TEGRA_SID_GPCDMA_0>,
+			      <&{/i2c@31b0000}		TEGRA_SID_GPCDMA_0>,
+			      <&{/i2c@31c0000}		TEGRA_SID_GPCDMA_0>,
+			      <&{/i2c@31e0000}		TEGRA_SID_GPCDMA_0>,
 			      <&host1x_ctx0		TEGRA_SWGROUP_HOST1X_CTX0>,
 			      <&host1x_ctx1		TEGRA_SWGROUP_HOST1X_CTX1>,
 			      <&host1x_ctx2		TEGRA_SWGROUP_HOST1X_CTX2>,
@@ -254,6 +297,7 @@
 			      <&host1x_ctx5		TEGRA_SWGROUP_HOST1X_CTX5>,
 			      <&host1x_ctx6		TEGRA_SWGROUP_HOST1X_CTX6>,
 			      <&host1x_ctx7		TEGRA_SWGROUP_HOST1X_CTX7>;
+			      */
 
 		domains = <&ppcs_as TEGRA_SWGROUP_CELLS3(PPCS, PPCS1, PPCS2)>,
 			  <&gpu_as TEGRA_SWGROUP_CELLS(GPUB)>,
@@ -327,7 +371,7 @@
 	};
 
 	mc {
-		compatible = "nvidia,tegra-mc";
+		compatible = "nvidia,tegra-t18x-mc";
 
 		reg-ranges = <1>;
 		reg        = <0x0 0x2c10000 0x0 0x1000   /* Broadcast channel */
@@ -341,7 +385,6 @@
 		int_mask   = <0xf3140>;
 
 		channels   = <4>;
-		status = "disabled";
         };
 
 	usb_cd: usb_cd@7009f000 {
@@ -369,12 +412,28 @@
 		mbox-names = "xusb";
 		#stream-id-cells = <1>;
 		status = "disabled";
+		clocks = <&tegra_car TEGRA186_CLK_XUSB_HOST>,
+			<&tegra_car TEGRA186_CLK_XUSB_FALCON>,
+			<&tegra_car TEGRA186_CLK_XUSB_SS>,
+			<&tegra_car TEGRA186_CLK_XUSB_CORE_SS>,
+			<&tegra_car TEGRA186_CLK_CLK_MAX>, /* FIXME: HS souce */
+			<&tegra_car TEGRA186_CLK_XUSB_FS>,
+			<&tegra_car TEGRA186_CLK_PLLU>,
+			<&tegra_car TEGRA186_CLK_CLK_M>,
+			<&tegra_car TEGRA186_CLK_PLLE>;
+		clock-names = "host", "falcon_src", "ss", "ss_src", "hs_src",
+			"fs_src", "pll_u_480M", "clk_m", "pll_e";
 	};
 
 	xudc@3550000 {
 		compatible = "nvidia,tegra186-xudc";
 		reg = <0x0 0x03550000 0x0 0x8000>,
 			<0x0 0x03558000 0x0 0x1000>;
+		clocks = <&tegra_car TEGRA186_CLK_PLLU>,
+			<&tegra_car TEGRA186_CLK_XUSB_DEV>,
+			<&tegra_car TEGRA186_CLK_XUSB_SS>,
+			<&tegra_car TEGRA186_CLK_PLLE>;
+		clock-names = "pll_u_480M", "dev", "ss", "pll_e";
 		interrupts = <0 166 0x4>;
 		#stream-id-cells = <1>;
 		status = "disabled";
@@ -387,6 +446,7 @@
 			<0x0 0x02500000 0x0 0xa0000>;
 		reg-names = "padctl", "ao", "uphy";
 		resets = <&tegra_car TEGRA186_RESET_UPHY>,
+			<&tegra_car TEGRA186_RESET_XUSB_PADCTL>,
 			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY>,
 			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_PLL0>,
 			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_PLL1>,
@@ -396,16 +456,83 @@
 			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_L3>,
 			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_L4>,
 			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_L5>;
-		reset-names = "uphy_rst", "uphy_master_rst", "uphy_pll0_rst", "uphy_pll1_rst", "uphy_lane0_rst",
-			"uphy_lane1_rst", "uphy_lane2_rst", "uphy_lane3_rst", "uphy_lane4_rst", "uphy_lane5_rst";
-		clocks = <&tegra_car TEGRA186_CLK_USB2_TRK>,
-			<&tegra_car TEGRA186_CLK_HSIC_TRK>;
-		clock-names = "usb2_trk", "hsic_trk";
+		reset-names = "uphy_rst", "padctl_rst", "uphy_master_rst",
+			"uphy_pll0_rst", "uphy_pll1_rst", "uphy_lane0_rst",
+			"uphy_lane1_rst", "uphy_lane2_rst", "uphy_lane3_rst",
+			"uphy_lane4_rst", "uphy_lane5_rst";
+		clocks = <&tegra_car TEGRA186_CLK_PLLP_UPHY>,
+			<&tegra_car TEGRA186_CLK_XUSB>,
+			<&tegra_car TEGRA186_CLK_PLLE>,
+			<&tegra_car TEGRA186_CLK_PLLE_PWRSEQ>,
+			<&tegra_car TEGRA186_CLK_PLLREFE_OUT1>,
+			<&tegra_car TEGRA186_CLK_PLLU>,
+			<&tegra_car TEGRA186_CLK_USB2_TRK>,
+			<&tegra_car TEGRA186_CLK_HSIC_TRK>,
+			<&tegra_car TEGRA186_CLK_PEX_USB_PAD0_MGMT>,
+			<&tegra_car TEGRA186_CLK_PEX_USB_PAD1_MGMT>,
+			<&tegra_car TEGRA186_CLK_UPHY_PLL0_PWRSEQ>,
+			<&tegra_car TEGRA186_CLK_UPHY_PLL1_PWRSEQ>;
+
+		clock-names = "pllp", "xusb_clk", "plle", "plle_pwrseq",
+			"pllrefe", "utmipll", "usb2_trk", "hsic_trk",
+			"uphy_pll0_mgmt", "uphy_pll1_mgmt",
+			"uphy_pll0_pwrseq", "uphy_pll1_pwrseq";
 		interrupts = <0 167 0x4>;
 		mboxes = <&xusb_mbox>;
 		mbox-names = "xusb";
 		#phy-cells = <1>;
 		status = "disabled";
+		prod-settings {
+			#prod-cells = <4>;
+			prod_c_bias {
+				prod = <0 0x284 0xffffffc7 0x38>;
+			};
+			prod_c_hsic0 {
+				prod = <0 0x344 0xffffff80 0x2d>;
+			};
+			prod_c_ss0 {
+				prod = <0 0x14 0x08000000 0x1010002
+					0 0x14 0x08000000 0x1040032
+					0 0x14 0x08000000 0x1070022
+					0 0x14 0x08000000 0x1352587
+					0 0x14 0x08000000 0x1490fc7
+					0 0x14 0x08000000 0x1533c0c
+					0 0x14 0x08000000 0x156c0ff
+					0 0x14 0x08000000 0x1520001
+					0 0x14 0x08000000 0x1533c0f
+					0 0x14 0x08000000 0x156c0ff
+					0 0x14 0x08000000 0x15dff07
+					0 0x14 0x08000000 0x15e141a>;
+			};
+			prod_c_ss1 {
+				prod = <1 0x14 0x08000000 0x1010002
+					1 0x14 0x08000000 0x1040032
+					1 0x14 0x08000000 0x1070022
+					1 0x14 0x08000000 0x1352587
+					1 0x14 0x08000000 0x1490fc7
+					1 0x14 0x08000000 0x1533c0c
+					1 0x14 0x08000000 0x156c0ff
+					1 0x14 0x08000000 0x1520001
+					1 0x14 0x08000000 0x1533c0f
+					1 0x14 0x08000000 0x156c0ff
+					1 0x14 0x08000000 0x15dff07
+					1 0x14 0x08000000 0x15e141a>;
+			};
+			prod_c_ss2 {
+				prod = <2 0x14 0x08000000 0x1010002
+					2 0x14 0x08000000 0x1040032
+					2 0x14 0x08000000 0x1070022
+					2 0x14 0x08000000 0x1352587
+					2 0x14 0x08000000 0x1490fc7
+					2 0x14 0x08000000 0x1533c0c
+					2 0x14 0x08000000 0x156c0ff
+					2 0x14 0x08000000 0x1520001
+					2 0x14 0x08000000 0x1533c0f
+					2 0x14 0x08000000 0x156c0ff
+					2 0x14 0x08000000 0x15dff07
+					2 0x14 0x08000000 0x15e141a>;
+			};
+		};
 	};
 
 	kfuse@0x3830000 {
@@ -432,6 +559,12 @@
 		compatible = "nvidia,tegra186-pmc";
 		reg = <0x0 0xC360000 0x0 0x400>;
 		#padcontroller-cells = <1>;
+		status = "disabled";
+	};
+
+	tegra_aowake: pmc@c370000 {
+		compatible = "nvidia,tegra186-aowake";
+		reg = <0x0 0xc370000 0x0 0x600>;
 		status = "disabled";
 	};
 
@@ -473,7 +606,6 @@
 		#size-cells = <2>;
 
 		ranges;
-		status = "disabled";
 
 		host1x_ctx0: ctx0 {
 			compatible = "nvidia,tegra186-iommu-context";
@@ -529,8 +661,11 @@
 			reg = <0x0 0x150c0000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_NVCSI>;
 			clocks = <&tegra_car TEGRA186_CLK_NVCSI>,
-				 <&tegra_car TEGRA186_CLK_NVCSILP>;
-			clock-names = "nvcsi", "nvcsilp";
+				 <&tegra_car TEGRA186_CLK_NVCSILP>,
+				 <&tegra_car TEGRA186_CLK_PLLP_GRTCBB>,
+				 <&tegra_car TEGRA186_CLK_PLLP_GRTCBB>;
+			clock-names = "nvcsi", "nvcsilp", "nvcsi_parent",
+				      "nvcsilp_parent";
 			interrupts = <0 119 0x04>;
 			#stream-id-cells = <1>;
 			status = "disabled";
@@ -545,8 +680,10 @@
                                       0 203 0x04>;
 			resets = <&tegra_car TEGRA186_RESET_VI>;
 			clocks = <&tegra_car TEGRA186_CLK_VI>,
+				 <&tegra_car TEGRA186_CLK_NVCSI>,
+				 <&tegra_car TEGRA186_CLK_NVCSILP>,
 				 <&tegra_car TEGRA186_CLK_EMC>;
-			clock-names = "vi", "emc";
+			clock-names = "vi", "nvcsi", "nvcsilp", "emc";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -557,9 +694,16 @@
                         reg = <0x0 0x15600000 0x0 0x00040000>;
                         interrupts = <0 205 0x04>;
 			resets = <&tegra_car TEGRA186_RESET_ISP>;
-			clocks = <&tegra_car TEGRA186_CLK_ISP>;
-			clock-names = "isp";
+			clocks = <&tegra_car TEGRA186_CLK_ISP>,
+				 <&tegra_car TEGRA186_CLK_EMC>;
+			clock-names = "isp", "emc";
 			#stream-id-cells = <1>;
+			status = "disabled";
+		};
+
+		vii2c@156c0000 {
+			compatible = "nvidia,tegra186-vii2c";
+			reg = <0x0 0x156c0000 0x0 0x00040000>;
 			status = "disabled";
 		};
 
@@ -574,12 +718,17 @@
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P0>,
+				 <&tegra_car TEGRA186_CLK_PLLP_DISPLAY>,
 				 <&tegra_car TEGRA186_CLK_PLLD2>,
+				 <&tegra_car TEGRA186_CLK_PLLD3>,
+				 <&tegra_car TEGRA186_CLK_PLLD>,
+				 <&tegra_car TEGRA186_CLK_PLLD_OUT1>,
 				 <&tegra_car TEGRA186_CLK_EMC>,
 				 <&tegra_car TEGRA186_CLK_EMC_LATENCY>;
 			clock-names = "clk32k_in", "nvdisplay_disp",
-				      "nvdisplayhub", "nvdisplay_p0", "plld2",
-				      "emc", "emc_latency";
+				      "nvdisplayhub", "nvdisplay_p0",
+				      "pllp_display", "plld2", "plld3",
+				      "pll_d", "pll_d_out1", "emc", "emc_latency";
 			resets = <&tegra_car TEGRA186_RESET_NVDISPLAY0_MISC>,
 				 <&tegra_car TEGRA186_RESET_NVDISPLAY0_WGRP0>,
 				 <&tegra_car TEGRA186_RESET_NVDISPLAY0_WGRP1>,
@@ -589,7 +738,7 @@
 				 <&tegra_car TEGRA186_RESET_NVDISPLAY0_WGRP5>,
 				 <&tegra_car TEGRA186_RESET_NVDISPLAY0_HEAD0>;
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
-				      "wrgp3", "wgrp4", "wgrp5", "head0";
+				      "wgrp3", "wgrp4", "wgrp5", "head0";
 			status = "disabled";
 		};
 
@@ -604,11 +753,14 @@
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P1>,
+				 <&tegra_car TEGRA186_CLK_PLLP_DISPLAY>,
 				 <&tegra_car TEGRA186_CLK_PLLD2>,
+				 <&tegra_car TEGRA186_CLK_PLLD3>,
 				 <&tegra_car TEGRA186_CLK_EMC>,
 				 <&tegra_car TEGRA186_CLK_EMC_LATENCY>;
 			clock-names = "clk32k_in", "nvdisplay_disp",
-				      "nvdisplayhub", "nvdisplay_p1", "plld2",
+				      "nvdisplayhub", "nvdisplay_p1",
+				      "pllp_display", "plld2", "plld3",
 				      "emc", "emc_latency";
 			resets = <&tegra_car TEGRA186_RESET_NVDISPLAY0_MISC>,
 				 <&tegra_car TEGRA186_RESET_NVDISPLAY0_WGRP0>,
@@ -619,7 +771,7 @@
 				 <&tegra_car TEGRA186_RESET_NVDISPLAY0_WGRP5>,
 				 <&tegra_car TEGRA186_RESET_NVDISPLAY0_HEAD1>;
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
-				      "wrgp3", "wgrp4", "wgrp5", "head1";
+				      "wgrp3", "wgrp4", "wgrp5", "head1";
 			status = "disabled";
 		};
 
@@ -634,11 +786,14 @@
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P2>,
+				 <&tegra_car TEGRA186_CLK_PLLP_DISPLAY>,
 				 <&tegra_car TEGRA186_CLK_PLLD2>,
+				 <&tegra_car TEGRA186_CLK_PLLD3>,
 				 <&tegra_car TEGRA186_CLK_EMC>,
 				 <&tegra_car TEGRA186_CLK_EMC_LATENCY>;
 			clock-names = "clk32k_in", "nvdisplay_disp",
-				      "nvdisplayhub", "nvdisplay_p2", "plld2",
+				      "nvdisplayhub", "nvdisplay_p2",
+				      "pllp_display", "plld2", "plld3",
 				      "emc", "emc_latency";
 			resets = <&tegra_car TEGRA186_RESET_NVDISPLAY0_MISC>,
 				 <&tegra_car TEGRA186_RESET_NVDISPLAY0_WGRP0>,
@@ -649,7 +804,7 @@
 				 <&tegra_car TEGRA186_RESET_NVDISPLAY0_WGRP5>,
 				 <&tegra_car TEGRA186_RESET_NVDISPLAY0_HEAD2>;
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
-				      "wrgp3", "wgrp4", "wgrp5", "head2";
+				      "wgrp3", "wgrp4", "wgrp5", "head2";
 			status = "disabled";
 		};
 
@@ -677,7 +832,7 @@
 				<&tegra_car TEGRA186_RESET_DSIC>,
 				<&tegra_car TEGRA186_RESET_DSID>,
 				<&tegra_car TEGRA186_RESET_DSIPADCTL>;
-			reset-names = "dsi";
+			reset-names = "dsia", "dsib", "dsic", "dsid", "dsi_padctrl";
 			status = "disabled";
 		};
 
@@ -756,28 +911,34 @@
 			status = "disabled";
 		};
 
-		sor@15540000 {
+		sor {
 			compatible = "nvidia,tegra186-sor";
 			reg = <0x0 0x15540000 0x0 0x00040000>;
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
 			clocks = <&clk32k_in>,
 				 <&tegra_car TEGRA186_CLK_SOR0>,
-				 <&tegra_car TEGRA186_CLK_SOR_SAFE>;
-			clock-names = "clk32k_in", "sor0", "sor_safe";
+				 <&tegra_car TEGRA186_CLK_SOR_SAFE>,
+				 <&tegra_car TEGRA186_CLK_SOR0_PAD_CLKOUT>,
+				 <&tegra_car TEGRA186_CLK_SOR0_OUT>;
+			clock-names = "clk32k_in", "sor0", "sor_safe",
+				      "sor0_pad_clkout", "sor0_out";
 			resets = <&tegra_car TEGRA186_RESET_SOR0>;
 			reset-names = "sor0";
 			status = "disabled";
 		};
 
-		sor1@15580000 {
+		sor1 {
 			compatible = "nvidia,tegra186-sor1";
 			reg = <0x0 0x15580000 0x0 0x00040000>;
 			interrupts = <0 158 0x4>; /* INT_SOR_1 */
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
 			clocks = <&clk32k_in>,
 				 <&tegra_car TEGRA186_CLK_SOR1>,
-				 <&tegra_car TEGRA186_CLK_SOR_SAFE>;
-			clock-names = "clk32k_in", "sor1", "sor_safe";
+				 <&tegra_car TEGRA186_CLK_SOR_SAFE>,
+				 <&tegra_car TEGRA186_CLK_SOR1_PAD_CLKOUT>,
+				 <&tegra_car TEGRA186_CLK_SOR1_OUT>;
+			clock-names = "clk32k_in", "sor1", "sor_safe",
+				      "sor1_pad_clkout", "sor1_out";
 			resets = <&tegra_car TEGRA186_RESET_SOR1>;
 			reset-names = "sor1";
 			status = "disabled";
@@ -862,6 +1023,18 @@
 		};
 	};
 
+	mipical {
+		compatible = "nvidia, tegra186-mipical";
+		reg = <0x0 0x03990000 0x0 0x00010000>;
+		clocks = <&clk32k_in>,
+			<&tegra_car TEGRA186_CLK_MIPI_CAL>,
+			<&tegra_car TEGRA186_CLK_UART_FST_MIPI_CAL>;
+		clock-names = "clk32k_in", "mipi_cal", "uart_fs_mipi_cal";
+		resets = <&tegra_car TEGRA186_RESET_MIPI_CAL>;
+		reset-names = "mipi_cal";
+		status = "disabled";
+	};
+
 	gp10b {
 		compatible = "nvidia,tegra186-gp10b", "nvidia,gp10b";
 		power-domains = <&gpu_pd>;
@@ -874,7 +1047,10 @@
 		nvidia,host1x = <&host1x>;
 		#stream-id-cells = <1>;
 		access-vpr-phys;
-		status = "disabled";
+		resets = <&tegra_car TEGRA186_RESET_GPU>;
+		clocks = <&tegra_car TEGRA186_CLK_GPC2CLK>,
+			<&tegra_car TEGRA186_CLK_GPU>;
+		clock-names = "gpu", "gpu_sys";
 	};
 
 	psci {
@@ -884,6 +1060,12 @@
 		cpu_on = <0xC4000003>;
 		cpu_suspend = <0xC4000001>;
 		status = "disabled";
+	};
+
+	tlk {
+		compatible = "nvidia,trusted-little-kernel";
+		logger = "enabled";
+		storage = "enabled";
 	};
 
 	intc: interrupt-controller@3881000 {
@@ -910,14 +1092,22 @@
 		status = "disabled";
 	};
 
-	timer@60005000 {
-		compatible = "nvidia,tegra210-timer";
-		reg = <0x0 0x60005000 0x0 0x400>;
-		interrupts = <0 176 4>,
-			     <0 177 4>,
-			     <0 178 4>,
-			     <0 179 4>;
+	timer@3020000 {
+		compatible = "nvidia,tegra186-timer";
+		interrupts = <0 0 4>,
+			     <0 1 4>,
+			     <0 2 4>,
+			     <0 3 4>,
+			     <0 4 4>,
+			     <0 5 4>,
+			     <0 6 4>,
+			     <0 7 4>,
+			     <0 8 4>,
+			     <0 9 4>;
 		clock-frequency = <38400000>;
+		reg = <0x0 0x03010000 0x0 0x000e0000>;
+		tmr-count = <10>;
+		wdt-count = <3>;
 		status = "disabled";
 	};
 
@@ -941,12 +1131,14 @@
 		interrupts = < 0 35 0x04 >;
 		#address-cells = <1>;
 		#size-cells = <0>;
+		#stream-id-cells = <1>;
                 nvidia,dma-request-selector = <&gpcdma 5>;
-		iommus = <&smmu TEGRA_SWGROUP_AXIS>;
 		dmas = <&gpcdma 5>, <&gpcdma 5>;
 		dma-names = "rx", "tx";
-		clocks = <&tegra_car TEGRA186_CLK_QSPI>;
-		clock-names = "qspi";
+		clocks = <&tegra_car TEGRA186_CLK_QSPI>,
+			<&tegra_car TEGRA186_CLK_PLLP_GRTBA>,
+			<&tegra_car TEGRA186_CLK_CLK_M>;
+		clock-names = "qspi","pll_p","clk_m";
 		resets = <&tegra_car TEGRA186_RESET_QSPI>;
 		reset-names = "qspi";
 		status = "disabled";
@@ -1048,27 +1240,11 @@
                         0 180 0x04
                         0 60 0x04>; /*AON GPIO */
                 status = "disabled";
-                gpio-ranges = <&pinmux 0 0 246>;
+                gpio-ranges = <&pinmux 0 0 253>;
                 #gpio-cells = <2>;
                 gpio-controller;
-		clocks = <&tegra_car TEGRA186_CLK_GPIO_CTL0>,
-			 <&tegra_car TEGRA186_CLK_GPIO_CTL1>,
-			 <&tegra_car TEGRA186_CLK_GPIO_CTL2>,
-			 <&tegra_car TEGRA186_CLK_GPIO_CTL3>,
-			 <&tegra_car TEGRA186_CLK_GPIO_CTL4>,
-			 <&tegra_car TEGRA186_CLK_GPIO_CTL5>;
-		clock-names = "gpio0-clk", "gpio1-clk",
-			      "gpio2-clk", "gpio3-clk",
-			      "gpio4-clk", "gpio5-clk";
-		resets = <&tegra_car TEGRA186_RESET_GPIO_CTL0>,
-			<&tegra_car TEGRA186_RESET_GPIO_CTL1>,
-			<&tegra_car TEGRA186_RESET_GPIO_CTL2>,
-			<&tegra_car TEGRA186_RESET_GPIO_CTL3>,
-			<&tegra_car TEGRA186_RESET_GPIO_CTL4>,
-			<&tegra_car TEGRA186_RESET_GPIO_CTL0>;
-		reset-names = "gpio0", "gpio1",
-				"gpio2", "gpio3",
-				"gpio4", "gpio5";
+		#interrupt-cells = <2>;
+		interrupt-controller;
 
                 nvidia,gpio_mapping = < 0 0x12000
                                         0 0x13000
@@ -1096,7 +1272,7 @@
                                         0 0x11400
                                         0 0x11600
                                         1 0x1E00
-                                        1 0x1A00
+                                        1 0x1C00
                                         0 0x12600
                                         0 0x15400
                                         (-1) (-1)
@@ -1135,8 +1311,9 @@
 		reg-names = "pads", "afi", "cs";
 
 		clocks = <&tegra_car TEGRA186_CLK_AFI>,
-			<&tegra_car TEGRA186_CLK_PCIE>;
-		clock-names = "afi", "pcie";
+			<&tegra_car TEGRA186_CLK_PCIE>,
+			<&tegra_car TEGRA186_CLK_CLK_M>;
+		clock-names = "afi", "pcie", "clk_m";
 
 		resets = <&tegra_car TEGRA186_RESET_AFI>,
 			<&tegra_car TEGRA186_RESET_PCIE>,
@@ -1162,6 +1339,9 @@
 			  0x82000000 0 0x50100000 0x0 0x50100000 0 0x07F00000   /* non-prefetchable memory (127 MiB) */
 			  0xc2000000 0 0x58000000 0x0 0x58000000 0 0x28000000>; /* prefetchable memory (640 MiB) */
 
+		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_PCIE_P(0)>;
+		phy-names = "pcie-phy";
+
 		nvidia,lane-map = <0x04>;
 		status = "disabled";
 
@@ -1176,6 +1356,7 @@
 			ranges;
 
 			nvidia,num-lanes = <4>;
+			nvidia,afi-ctl-offset = <0x110>;
 		};
 
 		pci@2,0 {
@@ -1189,6 +1370,7 @@
 			ranges;
 
 			nvidia,num-lanes = <1>;
+			nvidia,afi-ctl-offset = <0x118>;
 		};
 
 		pci@3,0 {
@@ -1202,8 +1384,21 @@
 			ranges;
 
 			nvidia,num-lanes = <1>;
+			nvidia,afi-ctl-offset = <0x19C>;
 		};
 
+	};
+
+	sound {
+		iommus = <&smmu TEGRA_SWGROUP_APE>;
+		#stream-id-cells = <1>;
+		status = "disabled";
+	};
+
+	sound_ref {
+		iommus = <&smmu TEGRA_SWGROUP_APE>;
+		#stream-id-cells = <1>;
+		status = "disabled";
 	};
 
 	adma: adma@2930000 {
@@ -1213,6 +1408,9 @@
 		      <0x0 0x02950000 0x0 0x10000>,	/* PAGE2 */
 		      <0x0 0x02960000 0x0 0x10000>,	/* PAGE3 */
 		      <0x0 0x02970000 0x0 0x10000>;	/* PAGE4 */
+		clocks = <&tegra_car TEGRA186_CLK_AHUB>,
+			<&tegra_car TEGRA186_CLK_APE>;
+		clock-names = "ahub", "adma.ape";
 		interrupts = <0 0 0x04
 			      0 1 0x04
 			      0 2 0x04
@@ -1253,6 +1451,10 @@
 	tegra_axbar: ahub {
 		compatible = "nvidia,tegra210-axbar";
 		reg = <0x0 0x02900800 0x0 0x800>;
+		clocks = <&tegra_car TEGRA186_CLK_AHUB>,
+			<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+			<&tegra_car TEGRA186_CLK_APE>;
+		clock-names = "ahub", "pll_a_out0", "xbar.ape";
 		status = "disabled";
 
 		#address-cells = <1>;
@@ -1262,6 +1464,8 @@
 		tegra_admaif: admaif@0290F000 {
 			compatible = "nvidia,tegra210-admaif";
 			reg = <0x0290F000 0x1000>;
+			clocks = <&tegra_car TEGRA186_CLK_AHUB>;
+			clock-names = "ahub";
 			dmas = <&adma 1>, <&adma 1>, <&adma 2>, <&adma 2>,
 				<&adma 3>, <&adma 3>, <&adma 4>, <&adma 4>,
 				<&adma 5>, <&adma 5>, <&adma 6>, <&adma 6>,
@@ -1310,7 +1514,7 @@
 			status = "disabled";
 		};
 
-		tegra_spkprot: spkprot@702d8c00 {
+		tegra_spkprot: spkprot@02908C00 {
 			compatible = "nvidia,tegra210-spkprot";
 			reg = <0x702d8c00 0x400>;
 			nvidia,ahub-spkprot-id = <0>;
@@ -1328,6 +1532,16 @@
 			compatible = "nvidia,tegra210-i2s";
 			reg = <0x02901000 0x100>;
 			nvidia,ahub-i2s-id = <0>;
+			clocks = <&tegra_car TEGRA186_CLK_I2S1>,
+				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+				<&tegra_car TEGRA186_CLK_I2S1_SYNC_INPUT>,
+				<&tegra_car TEGRA186_CLK_SYNC_I2S1>;
+			clock-names = "i2s1", "pll_a_out0", "ext_audio_sync",
+						"audio_sync";
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			fsync-width = <31>;
 			status = "disabled";
 		};
 
@@ -1335,6 +1549,16 @@
 			compatible = "nvidia,tegra210-i2s";
 			reg = <0x02901100 0x100>;
 			nvidia,ahub-i2s-id = <1>;
+			clocks = <&tegra_car TEGRA186_CLK_I2S2>,
+				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+				<&tegra_car TEGRA186_CLK_I2S2_SYNC_INPUT>,
+				<&tegra_car TEGRA186_CLK_SYNC_I2S2>;
+			clock-names = "i2s2", "pll_a_out0", "ext_audio_sync",
+						"audio_sync";
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			fsync-width = <0>;
 			status = "disabled";
 		};
 
@@ -1342,6 +1566,16 @@
 			compatible = "nvidia,tegra210-i2s";
 			reg = <0x02901200 0x100>;
 			nvidia,ahub-i2s-id = <2>;
+			clocks = <&tegra_car TEGRA186_CLK_I2S3>,
+				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+				<&tegra_car TEGRA186_CLK_I2S3_SYNC_INPUT>,
+				<&tegra_car TEGRA186_CLK_SYNC_I2S3>;
+			clock-names = "i2s3", "pll_a_out0", "ext_audio_sync",
+						"audio_sync";
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			fsync-width = <31>;
 			status = "disabled";
 		};
 
@@ -1349,6 +1583,16 @@
 			compatible = "nvidia,tegra210-i2s";
 			reg = <0x02901300 0x100>;
 			nvidia,ahub-i2s-id = <3>;
+			clocks = <&tegra_car TEGRA186_CLK_I2S4>,
+				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+				<&tegra_car TEGRA186_CLK_I2S4_SYNC_INPUT>,
+				<&tegra_car TEGRA186_CLK_SYNC_I2S4>;
+			clock-names = "i2s4", "pll_a_out0", "ext_audio_sync",
+						"audio_sync";
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			fsync-width = <31>;
 			status = "disabled";
 		};
 
@@ -1356,6 +1600,16 @@
 			compatible = "nvidia,tegra210-i2s";
 			reg = <0x02901400 0x100>;
 			nvidia,ahub-i2s-id = <4>;
+			clocks = <&tegra_car TEGRA186_CLK_I2S5>,
+				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+				<&tegra_car TEGRA186_CLK_I2S5_SYNC_INPUT>,
+				<&tegra_car TEGRA186_CLK_SYNC_I2S5>;
+			clock-names = "i2s5", "pll_a_out0", "ext_audio_sync",
+						"audio_sync";
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			fsync-width = <31>;
 			status = "disabled";
 		};
 
@@ -1363,6 +1617,16 @@
 			compatible = "nvidia,tegra210-i2s";
 			reg = <0x02901500 0x100>;
 			nvidia,ahub-i2s-id = <5>;
+			clocks = <&tegra_car TEGRA186_CLK_I2S6>,
+				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+				<&tegra_car TEGRA186_CLK_I2S6_SYNC_INPUT>,
+				<&tegra_car TEGRA186_CLK_SYNC_I2S6>;
+			clock-names = "i2s6", "pll_a_out0", "ext_audio_sync",
+						"audio_sync";
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			fsync-width = <31>;
 			status = "disabled";
 		};
 
@@ -1426,6 +1690,10 @@
 			compatible = "nvidia,tegra210-dmic";
 			reg = <0x02904000 0x100>;
 			nvidia,ahub-dmic-id = <0>;
+			clocks = <&tegra_car TEGRA186_CLK_DMIC1>,
+				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+				<&tegra_car TEGRA186_CLK_SYNC_DMIC1>;
+			clock-names = "dmic1", "pll_a_out0", "sync_dmic1";
 			status = "disabled";
 		};
 
@@ -1433,6 +1701,10 @@
 			compatible = "nvidia,tegra210-dmic";
 			reg = <0x02904100 0x100>;
 			nvidia,ahub-dmic-id = <1>;
+			clocks = <&tegra_car TEGRA186_CLK_DMIC2>,
+				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+				<&tegra_car TEGRA186_CLK_SYNC_DMIC2>;
+			clock-names = "dmic2", "pll_a_out0", "sync_dmic2";
 			status = "disabled";
 		};
 
@@ -1440,6 +1712,10 @@
 			compatible = "nvidia,tegra210-dmic";
 			reg = <0x02904200 0x100>;
 			nvidia,ahub-dmic-id = <2>;
+			clocks = <&tegra_car TEGRA186_CLK_DMIC3>,
+				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+				<&tegra_car TEGRA186_CLK_SYNC_DMIC3>;
+			clock-names = "dmic3", "pll_a_out0", "sync_dmic3";
 			status = "disabled";
 		};
 
@@ -1447,6 +1723,10 @@
 			compatible = "nvidia,tegra210-dmic";
 			reg = <0x02904300 0x100>;
 			nvidia,ahub-dmic-id = <3>;
+			clocks = <&tegra_car TEGRA186_CLK_DMIC4>,
+				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+				<&tegra_car TEGRA186_CLK_SYNC_DMIC4>;
+			clock-names = "dmic4", "pll_a_out0", "sync_dmic4";
 			status = "disabled";
 		};
 
@@ -1510,6 +1790,12 @@
 			compatible = "nvidia,tegra210-spdif";
 			reg = <0x02906000 0x200>;
 			nvidia,ahub-spdif-id = <0>;
+			clocks = <&tegra_car TEGRA186_CLK_SPDIF_IN>,
+				<&tegra_car TEGRA186_CLK_SPDIF_OUT>,
+				<&tegra_car TEGRA186_CLK_SPDIF_DOUBLER>,
+				<&tegra_car TEGRA186_CLK_SYNC_SPDIF>;
+			clock-names = "spdif_in", "spdif_out",
+					"spdif_doubler", "sync_spdif";
 			status = "disabled";
 		};
 
@@ -1517,6 +1803,8 @@
 			compatible = "nvidia,tegra210-iqc";
 			reg = <0x2290E000 0x200>;
 			nvidia,ahub-iqc-id = <0>;
+			clocks = <&tegra_car TEGRA186_CLK_IQC1>;
+			clock-names = "iqc";
 			status = "disabled";
 		};
 
@@ -1548,6 +1836,10 @@
 			compatible = "nvidia,tegra186-dspk";
 			reg = <0x02905000 0x100>;
 			nvidia,ahub-dspk-id = <0>;
+			clocks = <&tegra_car TEGRA186_CLK_DSPK1>,
+				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+				<&tegra_car TEGRA186_CLK_SYNC_DSPK1>;
+			clock-names = "dspk1", "pll_a_out0", "sync_dspk1";
 			status = "disabled";
 		};
 
@@ -1555,6 +1847,10 @@
 			compatible = "nvidia,tegra186-dspk";
 			reg = <0x02905100 0x100>;
 			nvidia,ahub-dspk-id = <1>;
+			clocks = <&tegra_car TEGRA186_CLK_DSPK2>,
+				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+				<&tegra_car TEGRA186_CLK_SYNC_DSPK2>;
+			clock-names = "dspk2", "pll_a_out0", "sync_dspk2";
 			status = "disabled";
 		};
 	};
@@ -1562,21 +1858,25 @@
 	spdif_dit0: spdif-dit.0@0 {
 		compatible = "linux,spdif-dit";
 		reg = <0x0 0x0 0x0 0x0>;
+		status = "okay";
 	};
 
 	spdif_dit1: spdif-dit.1@1 {
 		compatible = "linux,spdif-dit";
 		reg = <0x0 0x1 0x0 0x0>;
+		status = "okay";
 	};
 
 	spdif_dit2: spdif-dit.2@2 {
 		compatible = "linux,spdif-dit";
 		reg = <0x0 0x2 0x0 0x0>;
+		status = "okay";
 	};
 
 	spdif_dit3: spdif-dit.3@3 {
 		compatible = "linux,spdif-dit";
 		reg = <0x0 0x03 0x0 0x0>;
+		status = "okay";
 	};
 
 	agic-controller@2a41000 {
@@ -1590,54 +1890,83 @@
 		status = "disabled";
 	};
 
+	hda@3510000 {
+		compatible = "nvidia,tegra30-hda";
+		power-domains = <&mc_clk_pd>;
+		iommus = <&smmu TEGRA_SWGROUP_HDA>;
+		#stream-id-cells = <1>;
+		reg = <0x0 0x3510000 0x0 0x10000>;
+		clocks = <&tegra_car TEGRA186_CLK_HDA>,
+			 <&tegra_car TEGRA186_CLK_HDA2CODEC_2X>,
+			 <&tegra_car TEGRA186_CLK_HDA2HDMICODEC>;
+		clock-names = "hda", "hda2codec_2x", "hda2hdmi";
+		resets = <&tegra_car TEGRA186_RESET_HDA>,
+			<&tegra_car TEGRA186_RESET_HDA2CODEC_2X>,
+			<&tegra_car TEGRA186_RESET_HDA2HDMICODEC>;
+		reset-names = "hda_rst", "hda2codec_2x_rst", "hda2hdmi_rst";
+		interrupts = <0 81 0x04>;
+		status = "disabled";
+	};
+
 	tegra_adsp_audio: adsp_audio {
 		compatible = "nvidia,tegra210-adsp-audio";
 		power-domains = <&ape_pd>;
+		iommus = <&smmu TEGRA_SWGROUP_APE>;
+		#stream-id-cells = <1>;
 		status = "disabled";
         };
 
 	adsp@2993000 {
-	     compatible = "nvidia,tegra18x-adsp";
-	     power-domains = <&ape_pd>;
-	     reg = <0x0 0x02993000 0x0 0x1000>, /* AMC */
-		   <0x0 0x02990000 0x0 0x2000>, /* AMISC */
-		   <0x0 0x0 0x0 0x1>, /* ABRIDGE */
-		   <0x0 0x0290C800 0x0 0x1>, /* FPGA RESET REG */
-		   <0x0 0x40000000 0x0 0xC0000000>, /* DRAM MAP1 */
-		   <0x0 0x0 0x0 0x1>; /* DRAM MAP2 */
-	     nvidia,adsp_unit_fpga;
-	     nvidia,adsp_unit_fpga_reset = <0x07F00040 0x00000040>;
-	     nvidia,adsp_mem = <0x8f000000 0x01000000>, /* ADSP OS */
-			       <0x8f800000 0x00800000>, /* ADSP APP */
-			       <0x3F800000 0x00018000>; /* ARAM ALIAS 0 */
-	     status = "disabled";
+		status = "disabled";
+		memory-region = <&adsp_reserved_mem>;
+		compatible = "nvidia,tegra18x-adsp";
+		power-domains = <&ape_pd>;
+		reg = <0x0 0x02993000 0x0 0x1000>, /* AMC */
+			<0x0 0x02990000 0x0 0x2000>, /* AMISC */
+			<0x0 0x0 0x0 0x1>, /* ABRIDGE */
+			<0x0 0x0290C800 0x0 0x1>, /* FPGA RESET REG */
+			<0x0 0x029B0000 0x0 0x90000>, /* AHSP */
+			<0x0 0x40000000 0x0 0xC0000000>, /* DRAM MAP1 */
+			<0x0 0x0 0x0 0x1>; /* DRAM MAP2 */
+		nvidia,adsp_mem = <0xd8300000 0x01000000>, /* ADSP OS */
+			<0xd8B00000 0x00800000>, /* ADSP APP */
+			<0x3F813000 0x18000>; /* ARAM ALIAS 0 */
+		nvidia,adsp_unit_fpga_reset = <0x07F00040 0x00000040>;
+		clocks = <&tegra_car TEGRA186_CLK_APE>,
+			<&tegra_car TEGRA186_CLK_APB2APE>,
+			<&tegra_car TEGRA186_CLK_ADSPNEON>,
+			<&tegra_car TEGRA186_CLK_ADSP>,
+			<&tegra_car TEGRA186_CLK_EMC>;
+		clock-names = "adsp.ape", "adsp.apb2ape", "adspneon", "adsp", "adsp.emc";
+		resets = <&tegra_car TEGRA186_RESET_ADSP>;
+		reset-names = "adspall";
 	};
 
 	watchdog@30c0000 {
 		compatible = "nvidia,tegra-wdt-t18x";
 		reg = <0x0 0x030c0000 0x0 0x10000>, /* WDT0 */
-		      <0x0 0x03090000 0x0 0x10000>; /* TMR7 */
-		interrupts = <1 15 0xf01>;
-		nvidia,wdt-cpu-id = <4>; /* denver cpu */
+		      <0x0 0x03090000 0x0 0x10000>, /* TMR7 */
+		      <0x0 0x03010000 0x0 0x10000>; /* TKE */
+		interrupts = <0 7 0x4>; /* TKE shared int */
+		nvidia,wdt-cluster-id = <0>; /* M/Denver cluster */
 		nvidia,expiry-count = <5>;
 		nvidia,enable-on-init;
 		nvidia,heartbeat-init = <120>;
 		nvidia,disable-debug-reset;
-		nvidia,disable-por-reset;
 		status = "disabled";
 	};
 
 	watchdog@30d0000 {
 		compatible = "nvidia,tegra-wdt-t18x";
 		reg = <0x0 0x030d0000 0x0 0x10000>, /* WDT1 */
-		      <0x0 0x030a0000 0x0 0x10000>; /* TMR8 */
-		interrupts = <1 15 0xf01>;
-		nvidia,wdt-cpu-id = <0>; /* ARM cpu */
+		      <0x0 0x030a0000 0x0 0x10000>, /* TMR8 */
+		      <0x0 0x03010000 0x0 0x10000>; /* TKE */
+		interrupts = <0 8 0x4>; /* TKE shared int */
+		nvidia,wdt-cluster-id = <1>; /* B/ARM cluster */
 		nvidia,expiry-count = <5>;
 		nvidia,enable-on-init;
 		nvidia,heartbeat-init = <120>;
 		nvidia,disable-debug-reset;
-		nvidia,disable-por-reset;
 		status = "disabled";
 	};
 
@@ -1671,10 +2000,16 @@
 		compatible = "bosch,mttcan";
 		reg = <0x00 0x0c310000 0x00 0x400>,
 		      <0x00 0x0c311000 0x00 0x32>,
-		      <0x00 0x0c312000 0x00 0x1000>,
-		      <0x00 0x05b10004 0x00 0x08>;
-		reg-names = "can-regs", "glue-regs", "msg-ram", "car-reg";
+		      <0x00 0x0c312000 0x00 0x1000>;
+		reg-names = "can-regs", "glue-regs", "msg-ram";
 		interrupts = <0 40 0x04 >;
+		pll_source = "pllaon";
+		clocks = <&tegra_car TEGRA186_CLK_CAN1>,
+			<&tegra_car TEGRA186_CLK_CAN1_HOST>,
+			<&tegra_car TEGRA186_CLK_PLLAON>;
+		clock-names = "can","can_host","pllaon";
+		resets = <&tegra_car TEGRA186_RESET_CAN1>;
+		reset-names = "can";
 		status = "disabled";
 	};
 
@@ -1682,10 +2017,16 @@
 		compatible = "bosch,mttcan";
 		reg = <0x00 0x0c320000 0x00 0x400>,
 		      <0x00 0x0c321000 0x00 0x32>,
-		      <0x00 0x0c322000 0x00 0x1000>,
-		      <0x00 0x05b20004 0x00 0x08>;
-		reg-names = "can-regs", "glue-regs", "msg-ram", "car-reg";
+		      <0x00 0x0c322000 0x00 0x1000>;
+		reg-names = "can-regs", "glue-regs", "msg-ram";
 		interrupts = <0 42 0x04 >;
+		pll_source = "pllaon";
+		clocks = <&tegra_car TEGRA186_CLK_CAN2>,
+			<&tegra_car TEGRA186_CLK_CAN2_HOST>,
+			<&tegra_car TEGRA186_CLK_PLLAON>;
+		clock-names = "can","can_host","pllaon";
+		resets = <&tegra_car TEGRA186_RESET_CAN2>;
+		reset-names = "can";
 		status = "disabled";
 	};
 
@@ -1728,10 +2069,19 @@
 		status = "disabled";
 	};
 
-	rtc@c2a0000 {
-		compatible = "nvidia,tegra-rtc";
-		reg = <0x0 0x0c2a0000 0x0 0x100>;
-		interrupts = <0 18 0x04>;
+	bwmgr {
+		compatible = "nvidia,bwmgr";
+		clocks = <&tegra_car TEGRA186_CLK_EMC>;
+		clock-names = "emc";
+		status = "disabled";
+	};
+
+	efuse@3820000 {
+		compatible = "nvidia,tegra186-efuse";
+		reg = <0x0 0x03820000 0x0 0x600>;
+		clocks = <&tegra_car TEGRA186_CLK_FUSE>,
+		       <&tegra_car TEGRA186_CLK_CLK_M>;
+		clock-names = "fuse", "clk_m";
 		status = "disabled";
 	};
 
@@ -1744,6 +2094,7 @@
 		#address-cells = <2>;
 		#size-cells = <2>;
 		#mbox-cells = <1>;
+		status = "disabled";
 		ranges;
 		ivc_aon_echo {
 			ivc-tx = <0x0 0x1000>;
@@ -1752,5 +2103,20 @@
 			ivc-num-frames = <0x10>;
 			ivc-frame-size = <64>;
 		};
+
+	};
+
+	cluster_clk_priv@e0a0000 {
+		compatible = "nvidia,t18x-cluster-clk-priv";
+			#address-cells = <2>;
+			#size-cells = <2>;
+		reg = < 0x0 0x0e0a0000 0x0 0x64 >, /* B cluster clk priv base */
+		      < 0x0 0x0e0b0000 0x0 0x64 >; /* m cluster clk priv base */
+		status = "disabled";
+	};
+
+	generic-system-config {
+		compatible = "nvidia,tegra186-system-config";
+		status = "disabled";
 	};
 };

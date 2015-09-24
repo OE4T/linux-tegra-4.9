@@ -1,0 +1,32 @@
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include <dt-bindings/pinctrl/pinctrl-tegra.h>
+
+/ {
+	pinmux@2430000 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinmux_default>;
+		pinmux_default: common {
+			eqos {
+				nvidia,pins = "eqos_td3_pe4", "eqos_td2_pe3",
+				"eqos_td1_pe2", "eqos_td0_pe1", "eqos_rd3_pf1",
+				"eqos_rd2_pf0",	"eqos_rd1_pe7", "eqos_mdio_pf4",
+				"eqos_rd0_pe6", "eqos_mdc_pf5", "eqos_txc_pe0",
+				"eqos_rxc_pf3",	"eqos_tx_ctl_pe5", "eqos_rx_ctl_pf2";
+				nvidia,drive-type = <1>;
+			};
+		};
+	};
+};

@@ -1,5 +1,5 @@
 / {
-	regulators {
+	fixed-regulators {
 		compatible = "simple-bus";
 		device_type = "fixed-regulators";
 

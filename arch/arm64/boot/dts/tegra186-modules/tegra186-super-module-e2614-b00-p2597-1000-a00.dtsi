@@ -16,3 +16,33 @@
 
 #include "tegra186-super-module-e2614-a00-p2597-1000-a00-common.dtsi"
 #include "tegra186-super-module-e2614-a00-p2597-1000-a00-audio.dtsi"
+/ {
+	i2c@c240000 {
+		i2cmux@70 {
+			i2c@0 {
+				tas2552: tas2552.9-0040@40 {
+					compatible = "ti,tas2552";
+					reg = <0x40>;
+					vbat-supply = <&battery_reg>;
+					iovdd-supply = <&vdd_3v3>;
+					avdd-supply = <&vdd_1v8_aud2>;
+				};
+			};
+			i2c@3 {
+				rt5658: rt5659.12-001a@1a {
+					compatible = "realtek,rt5658";
+					reg = <0x1a>;
+				};
+			};
+		};
+	};
+
+	sound {
+		nvidia,dai-link-3 {
+			codec = "rt5659.12-001a";
+		};
+		nvidia,dai-link-4 {
+			codec = "tas2552.9-0040";
+		};
+	};
+};

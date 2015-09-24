@@ -69,4 +69,11 @@
 	sdhci@3400000 {
 		vddio_sdmmc-supply = <&spmic_ldo3>;
 	};
+
+	pcie-controller@10003000 {
+		dvdd-pex-supply = <&spmic_ldo7>;
+		hvdd-pex-pll-supply = <&spmic_sd2>;
+		hvdd-pex-supply = <&spmic_sd2>;
+		vddio-pexctl-aud-supply = <&spmic_sd2>;
+	};
 };

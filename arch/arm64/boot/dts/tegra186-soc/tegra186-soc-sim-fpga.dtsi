@@ -29,6 +29,10 @@
 		status = "okay";
 	};
 
+	timer {
+		status = "okay";
+	};
+
 	mc_sid@2c00000 {
 		status = "okay";
 	};
@@ -89,6 +93,10 @@
 		};
 
 		isp@15600000 {
+			status = "okay";
+		};
+
+		vii2c@156c0000 {
 			status = "okay";
 		};
 
@@ -153,7 +161,7 @@
 		status = "okay";
 	};
 
-	timer@60005000 {
+	timer@3020000 {
 		status = "okay";
 	};
 
@@ -162,11 +170,11 @@
 	};
 
         ether_qos@2490000 {
-		status = "okay";
+		status = "disabled";
         };
 
         ether_qos_virt_test@2490000 {
-		status = "okay";
+		status = "disabled";
         };
 
 	tegra-hsp@3c00000 {
@@ -274,6 +282,10 @@
 	};
 
 	ast@c050000 {
+		status = "okay";
+	};
+
+	efuse@3820000 {
 		status = "okay";
 	};
 };

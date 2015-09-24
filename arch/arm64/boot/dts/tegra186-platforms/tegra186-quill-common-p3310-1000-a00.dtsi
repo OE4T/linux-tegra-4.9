@@ -15,6 +15,7 @@
 
 #include "tegra186-quill-common.dtsi"
 #include "tegra186-quill-p3310-1000-a00-powermon.dtsi"
+#include "tegra186-quill-thermal.dtsi"
 
 / {
         model = "quill-3310";
@@ -22,6 +23,20 @@
 
         #address-cells = <2>;
         #size-cells = <2>;
+
+	pmc@c360000 {
+		io-pad-defaults {
+			sdmmc1-hv {
+				nvidia,enable-dynamic-pad-voltage;
+			};
+			sdmmc2-hv {
+				nvidia,enable-dynamic-pad-voltage;
+			};
+			sdmmc3-hv {
+				nvidia,enable-dynamic-pad-voltage;
+			};
+		};
+	};
 
 	spi@3210000 {
 		status = "okay";

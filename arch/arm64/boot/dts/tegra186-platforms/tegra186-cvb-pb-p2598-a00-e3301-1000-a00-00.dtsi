@@ -14,6 +14,7 @@
  */
 
 #include <dt-bindings/gpio/tegra-gpio.h>
+#include <dt-bindings/input/input.h>
 
 / {
 	i2c@3160000 {
@@ -23,14 +24,14 @@
 			gpio-controller;
 			#gpio-cells = <2>;
 		};
-
+/*
 		gpio_i2c_0_21: gpio@21 {
 			compatible = "ti,tca9539";
 			reg = <0x21>;
 			gpio-controller;
 			#gpio-cells = <2>;
 		};
-
+*/
 		gpio_i2c_0_22: gpio@22 {
 			compatible = "ti,tca9539";
 			reg = <0x22>;
@@ -212,6 +213,30 @@
 			regulator-name = "vdd-usb2-5v-con";
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
+		};
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		gpio-keys,name = "gpio-keys";
+
+		power {
+			label = "Power";
+			gpios = <&tegra_gpio TEGRA_GPIO(FF, 0) GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_POWER>;
+			gpio-key,wakeup;
+		};
+
+		volume_up {
+			label = "Volume up";
+			gpios = <&tegra_gpio TEGRA_GPIO(FF, 1) GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_VOLUMEUP>;
+		};
+
+		volume_down {
+			label = "Volume Down";
+			gpios = <&tegra_gpio TEGRA_GPIO(FF, 2) GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_VOLUMEDOWN>;
 		};
 	};
 };

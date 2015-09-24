@@ -20,12 +20,13 @@
 /memreserve/ 0x80000000 0x00010000;
 
 #include "tegra186-soc/tegra186-soc-cvm.dtsi"
-#include "tegra186-cvm-simple-bus.dtsi"
+#include "tegra186-platforms-simple-bus.dtsi"
 #include "panel-s-wuxga-8-0.dtsi"
 #include "tegra186-platforms/tegra186-quill-eqos.dtsi"
 #include "tegra186-hdmi.dtsi"
 #include "tegra186-dp.dtsi"
 #include "panel-s-edp-uhdtv-15-6.dtsi"
+#include "tegra186-platforms/tegra186-platform-sdmmc-pinmux-manual-common.dtsi"
 
 / {
         compatible = "nvidia,tegra186";
@@ -48,29 +49,94 @@
 
 	serial@3130000 {
 		compatible = "nvidia,tegra186-hsuart";
-		status = "okay";
-	};
-
-	watchdog@30c0000 {
+		dma-names = "tx";
 		status = "okay";
 	};
 
 	watchdog@30d0000 {
 		status = "okay";
 	};
+
+	i2c@3180000 {
+		status = "okay";
+	};
+
+	vi-bypass@15700000{
+		compatible = "nvidia,tegra186-vi-bypass";
+		status = "okay";
+	};
+
+	tachometer@39c0000 {
+		status = "okay";
+	};
+
+	pmc@c370000 {
+		nvidia,invert-pmic-interrupt-polarity;
+	};
+
+        mipical {
+                status = "okay";
+        };
+
 	host1x {
-		sor@15540000 {
+		nvdisplay@15200000 {
+                        status = "okay";
+                        nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
+                        nvidia,emc-rate = <300000000>;
+                        nvidia,fb-bpp = <32>;
+                        nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
+			nvidia,fb-win = <0>;
+			nvidia,dc-ctrlnum = <0>;
+			nvidia,dc-or-node = "/host1x/dsi";
+                };
+
+		nvdisplay@15210000 {
 			status = "okay";
+			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
+			nvidia,emc-clk-rate = <300000000>;
+			nvidia,fb-bpp = <32>; /* bits per pixel */
+			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
+			nvidia,fb-win = <3>;
+			nvidia,dc-ctrlnum = <1>;
+			nvidia,dc-or-node = "/host1x/sor1";
+		};
+
+		dsi {	/* dsi@15300000 */
+			nvidia,dsi-controller-vs = <DSI_VS_1>;
+			status = "okay";
+			panel-s-wuxga-8-0 {
+				status = "okay";
+				nvidia,panel-rst-gpio = <&tegra_gpio TEGRA_GPIO(P, 3) 1>; /* PP3 */
+				nvidia,panel-bl-pwm-gpio = <&tegra_gpio TEGRA_GPIO(U, 0) 1>; /* PU0 */
+				nvidia,panel-bl-en-gpio = <&tegra_gpio TEGRA_GPIO(U, 3) 1>; /* PU3 */
+				nvidia,panel-en-gpio = <&gpio_i2c_0_77 4 1>; /* tca9539 7h77 pin4 */
+				nvidia,en-vmm-vpp-with-i2c-config;
+				disp-default-out {
+					nvidia,out-rotation = <180>;
+				};
+			};
+		};
+
+		sor{
+			status = "okay";
+			nvidia,xbar-ctrl = <0 1 2 3 4>;
 			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 0) 0>;
 			panel-s-edp-uhdtv-15-6 {
 				nvidia,panel-bl-pwm-gpio = <&tegra_gpio TEGRA_GPIO(U, 5) 0>;
 			};
 		};
-		sor1@15580000 {
+		sor1 {
 			status = "okay";
-			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 1) 1>;
+			nvidia,xbar-ctrl = <0 1 2 3 4>;
+			/* BRINGUP HACK - disable gpio temporarily */
+			/*nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 1) 1>;*/
+			hdmi-display {
+				status = "disabled";
+			};
+
 			dp-display {
 				nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 1) 1>;
+				status = "disabled";
 			};
 		};
 		dpaux@155c0000 {
@@ -99,37 +165,99 @@
 		status = "okay";
 	};
 
-	host1x {
-		dsi {	/* dsi@15300000 */
-			nvidia,dsi-controller-vs = <DSI_VS_1>;
-			status = "okay";
-			panel-s-wuxga-8-0 {
-				nvidia,panel-rst-gpio = <&tegra_gpio TEGRA_GPIO(P, 3) 1>; /* PP3 */
-				nvidia,panel-bl-pwm-gpio = <&tegra_gpio TEGRA_GPIO(U, 0) 1>; /* PU0 */
-				nvidia,dsi-refresh-rate = <75>;
-				disp-default-out {
-					nvidia,out-rotation = <180>;
-				};
-				vrr-settings {
-					nvidia,vrr_min_fps = <30>;
-					nvidia,frame_len_fluct = <6667>;
-				};
-				display-timings {
-					1200x1920-32-75Hz {
-						clock-frequency = <193224000>;
-						hactive = <1200>;
-						vactive = <1920>;
-						hfront-porch = <107>;
-						hback-porch = <20>;
-						hsync-len = <1>;
-						vfront-porch = <12>;
-						vback-porch = <7>;
-						vsync-len = <1>;
-						nvidia,h-ref-to-sync = <1>;
-						nvidia,v-ref-to-sync = <11>;
-					};
-				};
-			};
+	adsp_audio {
+		compr-ops = <1>;
+		num-plugin = <4>;
+		plugin-info-1 {
+			plugin-name = "mp3-dec1";
+			firmware-name = "nvmp3dec.elf";
+			widget-name = "MP3-DEC1";
+		};
+		plugin-info-2 {
+			plugin-name = "spkprot";
+			firmware-name = "nvspkprot.elf";
+			widget-name = "SPKPROT-SW";
+		};
+		plugin-info-3 {
+			plugin-name = "src";
+			firmware-name = "nvsrc.elf";
+			widget-name = "SRC";
+		};
+		plugin-info-4 {
+			plugin-name = "aac-dec1";
+			firmware-name = "nvaacdec.elf";
+			widget-name = "AAC-DEC1";
+		};
+	};
+
+	adma@2930000 {
+		dma-channels = <10>;
+	};
+
+	hda@3510000 {
+		status = "okay";
+       };
+
+	sound {
+		compatible = "nvidia,tegra-audio-t186ref-mobile-rt565x";
+		nvidia,model = "tegra-snd-t186ref-mobile-rt565x";
+		nvidia,num-codec-link = <2>;
+		clocks = <&tegra_car TEGRA186_CLK_PLLP_AUDIO>,
+			<&tegra_car TEGRA186_CLK_PLLA>,
+			<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+			<&tegra_car TEGRA186_CLK_CLK_M>,
+			<&tegra_car TEGRA186_CLK_AUD_MCLK>;
+		clock-names = "pll_p_out1", "pll_a", "pll_a_out0", "clk_m",
+				"extern1";
+		resets = <&tegra_car TEGRA186_RESET_AUD_MCLK>;
+		reset-names = "extern1_rst";
+
+		status = "okay";
+		nvidia,audio-routing =
+			"y Headphone",		"y OUT",
+			"y IN",			"y Mic",
+			"z Headphone",		"z OUT",
+			"z IN",			"z Mic";
+
+		nvidia,xbar = <&tegra_axbar>;
+
+		nvidia,dai-link-1 {
+			link-name = "spdif-dit-0";
+			cpu-dai = <&tegra_i2s2>;
+			codec-dai = <&spdif_dit0>;
+			cpu-dai-name = "I2S2";
+			codec-dai-name = "dit-hifi";
+			tx-mask = <0xFF>;
+			rx-mask = <0xFF>;
+			format = "dsp_a";
+			bitclock-slave;
+			frame-slave;
+			bitclock-inversion;
+			frame-inversion;
+			bit-format = "s16_le";
+			bclk_ratio = <4>;
+			srate = <48000>;
+			num-channel = <1>;
+			codec = "0.spdif-dit.0";
+			name-prefix = "y";
+		};
+		nvidia,dai-link-2 {
+			link-name = "spdif-dit-1";
+			cpu-dai = <&tegra_i2s3>;
+			codec-dai = <&spdif_dit1>;
+			cpu-dai-name = "I2S3";
+			codec-dai-name = "dit-hifi";
+			format = "i2s";
+			bitclock-slave;
+			frame-slave;
+			bitclock-noninversion;
+			frame-noninversion;
+			bit-format = "s16_le";
+			bclk_ratio = <1>;
+			srate = <48000>;
+			num-channel = <2>;
+			codec = "1.spdif-dit.1";
+			name-prefix = "z";
 		};
 	};
 
@@ -154,6 +282,11 @@
 		status = "okay";
 	};
 
+	soft_watchdog {
+		compatible = "softdog-platform";
+		status = "okay";
+	};
+
 	external-connection {
 		vbus_id_extcon: extcon@1 {
 			compatible = "extcon-gpio-states";
@@ -167,5 +300,25 @@
 			extcon-gpio,out-cable-names = "USB", "USB-Host";
 			#extcon-cells = <1>;
 		};
+	};
+
+	mailbox@3538000 {
+		status = "okay";
+	};
+
+	xudc@3550000 {
+		extcon-cables = <&vbus_id_extcon 0>;
+		extcon-cable-names = "vbus";
+		#extcon-cells = <1>;
+	};
+
+	xhci@3530000 {
+		extcon-cables = <&vbus_id_extcon 1>;
+		extcon-cable-names = "id";
+		#extcon-cells = <1>;
+	};
+
+	bwmgr {
+		status = "okay";
 	};
 };

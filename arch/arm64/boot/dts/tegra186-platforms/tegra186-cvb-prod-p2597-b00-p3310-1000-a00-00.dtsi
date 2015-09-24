@@ -73,26 +73,17 @@
 			reg = <0x74>;
 			gpio-controller;
 			#gpio-cells = <2>;
-			interrupt-parent = <&tegra_gpio>;
-			interrupts = <TEGRA_GPIO(Y, 0) 0x0>;
 		};
 
 		gpio_i2c_0_77: gpio@77 {
 			compatible = "ti,tca9539";
-			reg = <0x74>;
+			reg = <0x77>;
 			gpio-controller;
 			#gpio-cells = <2>;
-			interrupt-parent = <&tegra_gpio>;
-			interrupts = <TEGRA_GPIO(Y, 7) 0x0>;
 		};
 	};
 
 	fixed-regulators {
-		compatible = "simple-bus";
-		device_type = "fixed-regulators";
-		#address-cells = <1>;
-		#size-cells = <0>;
-
 		battery_reg: regulator@0 {
 			compatible = "regulator-fixed";
 			reg = <0>;
@@ -218,7 +209,7 @@
 			regulator-name = "en-vdd-cam-1v2";
 			regulator-min-microvol = <1200000>;
 			regulator-max-microvol = <1200000>;
-			gpio = <&gpio_i2c_0_77 10 1>;
+			gpio = <&gpio_i2c_0_77 3 1>;
 			enable-active-high;
 		};
 
@@ -249,6 +240,16 @@
 			gpio = <&gpio_i2c_0_74 10 1>;
 			enable-active-high;
 		};
+
+		en_vdd_vcm_2v8: regulator@16 {
+			compatible = "regulator-fixed-sync";
+			reg = <16>;
+			regulator-name = "en-vdd-vcm-2v8";
+			regulator-min-microvol = <2800000>;
+			regulator-max-microvol = <2800000>;
+			gpio = <&gpio TEGRA_GPIO(R, 5) 0>;
+			enable-active-high;
+		};
 	};
 
 	gpio-keys {
@@ -257,20 +258,20 @@
 
 		power {
 			label = "Power";
-			gpios = <&tegra_gpio TEGRA_GPIO(FF, 0) 0>;
+			gpios = <&tegra_gpio TEGRA_GPIO(FF, 0) GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_POWER>;
 			gpio-key,wakeup;
 		};
 
 		volume_up {
-			label = "Volume Down";
-			gpios = <&tegra_gpio TEGRA_GPIO(FF, 1) 0>;
+			label = "Volume Up";
+			gpios = <&tegra_gpio TEGRA_GPIO(FF, 1) GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_VOLUMEUP>;
 		};
 
 		volume_down {
 			label = "Volume Down";
-			gpios = <&tegra_gpio TEGRA_GPIO(FF, 2) 0>;
+			gpios = <&tegra_gpio TEGRA_GPIO(FF, 2) GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_VOLUMEDOWN>;
 		};
 	};

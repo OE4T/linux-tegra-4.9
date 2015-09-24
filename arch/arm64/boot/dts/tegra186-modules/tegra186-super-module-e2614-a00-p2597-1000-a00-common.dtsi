@@ -12,7 +12,6 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
-
 #include "tegra186-super-module-e2614-gps.dtsi"
 
 / {
@@ -22,6 +21,7 @@
 			reg = <0x70>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			vcc-supply = <&vdd_3v3>;
 			i2c@0 {
 				reg = <0>;
 				i2c-mux,deselect-on-exit;
@@ -160,4 +160,17 @@
 			status = "disabled";
                 };
 	};
+
+	fixed-regulators {
+		vdd_1v8_aud2: regulator@200 {
+			compatible = "regulator-fixed-sync";
+			reg = <200>;
+			regulator-name = "vdd-1v8-aud2";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			gpio = <&gpio_i2c_1_20 0 1>;
+			enable-active-high;
+		};
+	};
+
 };

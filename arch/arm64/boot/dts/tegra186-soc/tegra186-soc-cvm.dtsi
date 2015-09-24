@@ -67,6 +67,10 @@
 		};
 	};
 
+	timer {
+		status = "okay";
+	};
+
 	mc_sid@2c00000 {
 		status = "okay";
 	};
@@ -124,6 +128,11 @@
 		isp@15600000 {
 			status = "okay";
 		};
+
+		vii2c@156c0000 {
+			status = "okay";
+		};
+
 
 		dsi {	/* dsi@15300000 */
 			status = "okay";
@@ -186,7 +195,11 @@
 		status = "okay";
 	};
 
-	timer@60005000 {
+	agic-controller@2a41000 {
+		status = "okay";
+	};
+
+	timer@3020000 {
 		status = "okay";
 	};
 
@@ -199,7 +212,7 @@
 	};
 
 	ether_qos_virt_test@2490000 {
-		status = "okay";
+		status = "disabled";
 	};
 
 	tegra-hsp@3c00000 {
@@ -215,6 +228,10 @@
 	};
 
 	dma@2600000 {
+		status = "okay";
+	};
+
+	adsp@2993000 {
 		status = "okay";
 	};
 
@@ -301,7 +318,32 @@
 		status = "okay";
 	};
 
+	pmc@c370000 {
+		status = "okay";
+	};
+
 	pmc-iopower {
+		status = "okay";
+	};
+
+	cpufreq@e070000 {
+		status = "okay";
+	};
+
+	efuse@3820000 {
+		status = "okay";
+	};
+
+	generic-system-config {
+		reg = <0x0 0x02130000 0x0 0x10000>;
+		status = "okay";
+		spi-dma {
+			/*AONRMU_BR_ERROR_CONFIG_0 */
+			nvidia,reg-update = <0 0x000000f4 0x00000004 0x00000000>;
+		};
+	};
+
+	cluster_clk_priv@e0a0000 {
 		status = "okay";
 	};
 };

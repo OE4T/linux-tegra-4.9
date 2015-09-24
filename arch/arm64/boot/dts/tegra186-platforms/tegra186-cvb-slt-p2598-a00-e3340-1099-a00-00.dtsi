@@ -197,20 +197,20 @@
 
 		power {
 			label = "Power";
-			gpios = <&tegra_gpio TEGRA_GPIO(FF, 0) 0>;
+			gpios = <&tegra_gpio TEGRA_GPIO(FF, 0) GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_POWER>;
 			gpio-key,wakeup;
 		};
 
 		volume_up {
-			label = "Volume Down";
-			gpios = <&tegra_gpio TEGRA_GPIO(FF, 1) 0>;
+			label = "Volume Up";
+			gpios = <&tegra_gpio TEGRA_GPIO(FF, 1) GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_VOLUMEUP>;
 		};
 
 		volume_down {
 			label = "Volume Down";
-			gpios = <&tegra_gpio TEGRA_GPIO(FF, 2) 0>;
+			gpios = <&tegra_gpio TEGRA_GPIO(FF, 2) GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_VOLUMEDOWN>;
 		};
 	};

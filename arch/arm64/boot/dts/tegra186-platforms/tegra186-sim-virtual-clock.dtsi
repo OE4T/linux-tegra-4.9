@@ -35,13 +35,14 @@
 
 		vi@15700000 {
 
-			clocks = <&clk32k_in>, <&clk32k_in>;
-			clock-names = "vi", "emc";
+			clocks = <&clk32k_in>, <&clk32k_in>,
+				 <&clk32k_in>, <&clk32k_in>;
+			clock-names = "vi", "nvcsi", "nvcsilp", "emc";
 		};
 
 		isp@15600000 {
-			clocks = <&clk32k_in>;
-			clock-names = "isp";
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "isp", "emc";
 		};
 
 		dsi {

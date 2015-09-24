@@ -1,0 +1,72 @@
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+/ {
+	pmc@c360000 {
+		io-pad-defaults {
+			audio_hv {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_3_3V>;
+			};
+
+			dmic_hv {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_3_3V>;
+			};
+
+			sdmmc1_hv {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_3_3V>;
+			};
+
+			sdmmc2_hv {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_3_3V>;
+			};
+
+			sdmmc3_hv {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_3_3V>;
+			};
+
+			ao_hv {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_3_3V>;
+			};
+
+			spi {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
+			};
+
+			dbg {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
+			};
+
+			mem1 {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_3_3V>;
+			};
+
+			mem {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_3_3V>;
+			};
+
+			spi {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
+			};
+
+			dbg {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
+			};
+
+			ufs {
+				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
+			};
+		};
+	};
+};
+

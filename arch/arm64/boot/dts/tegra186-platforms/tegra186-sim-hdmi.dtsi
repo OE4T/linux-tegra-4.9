@@ -22,7 +22,7 @@
 
 / {
 	host1x {
-		sor1@15580000 {
+		sor1 {
 			status = "okay";
 			/*nvidia,ddc-i2c-bus = <&hdmi_ddc>;*/
 			/*nvidia,hpd-gpio = <&tegra_gpio 0xFFFFFFFF 1>;*/ /* hotplug less */
@@ -102,7 +102,7 @@
 			};
 		};
 
-		sor@15540000 {
+		sor {
 			status = "okay";
 			hdmi-display {
 				status = "okay";

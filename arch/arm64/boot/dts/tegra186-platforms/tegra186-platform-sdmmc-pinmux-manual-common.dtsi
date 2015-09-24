@@ -1,0 +1,48 @@
+/*
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include <dt-bindings/pinctrl/pinctrl-tegra.h>
+
+/ {
+	pinmux@2430000 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinmux_default>;
+		pinmux_default: common {
+			sdmmc3 {
+				nvidia,pins = "sdmmc3_dat3_pg5", "sdmmc3_dat2_pg4",
+				"sdmmc3_dat1_pg3", "sdmmc3_dat0_pg2",
+				"sdmmc3_cmd_pg1", "sdmmc3_clk_pg0";
+				nvidia,drive-type = <1>;
+			};
+
+			sdmmc1 {
+				nvidia,pins = "sdmmc1_dat3_pd5", "sdmmc1_dat2_pd4",
+				"sdmmc1_dat1_pd3", "sdmmc1_dat0_pd2",
+				"sdmmc1_cmd_pd1", "sdmmc1_clk_pd0";
+				nvidia,drive-type = <1>;
+			};
+
+		};
+
+		prod-settings {
+			#prod-cells = <4>;
+			sdmmc_lpbk {
+				status = "okay";
+				nvidia,prod-boot-init;
+				 prod = <0 0xa02c 0xFFFFFFDF 0x00000020
+					 0 0x8000 0xFFFFFFDF 0x00000020>;
+			};
+		};
+	};
+};

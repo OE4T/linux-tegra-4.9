@@ -100,16 +100,16 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 
 #ifndef CONFIG_TEGRA_NVDISPLAY
 static struct of_device_id tegra_disa_pd[] = {
-	{ .compatible = "nvidia, tegra186-disa-pd", },
-	{ .compatible = "nvidia, tegra210-disa-pd", },
-	{ .compatible = "nvidia, tegra132-disa-pd", },
+	{ .compatible = "nvidia,tegra186-disa-pd", },
+	{ .compatible = "nvidia,tegra210-disa-pd", },
+	{ .compatible = "nvidia,tegra132-disa-pd", },
 	{},
 };
 
 static struct of_device_id tegra_disb_pd[] = {
-	{ .compatible = "nvidia, tegra186-disb-pd", },
-	{ .compatible = "nvidia, tegra210-disb-pd", },
-	{ .compatible = "nvidia, tegra132-disb-pd", },
+	{ .compatible = "nvidia,tegra186-disb-pd", },
+	{ .compatible = "nvidia,tegra210-disb-pd", },
+	{ .compatible = "nvidia,tegra132-disb-pd", },
 	{},
 };
 #endif

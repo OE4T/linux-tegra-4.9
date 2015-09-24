@@ -58,18 +58,6 @@ static inline u32 ctxsw_prog_main_image_num_gpcs_o(void)
 {
 	return 0x00000008;
 }
-static inline u32 ctxsw_prog_main_image_ctl_o(void)
-{
-	return 0x0000000c;
-}
-static inline u32 ctxsw_prog_main_image_ctl_cde_enabled_f(void)
-{
-	return 0x400;
-}
-static inline u32 ctxsw_prog_main_image_ctl_cde_disabled_f(void)
-{
-	return 0x0;
-}
 static inline u32 ctxsw_prog_main_image_patch_count_o(void)
 {
 	return 0x00000010;

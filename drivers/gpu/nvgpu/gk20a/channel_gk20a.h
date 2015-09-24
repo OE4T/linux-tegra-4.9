@@ -91,7 +91,6 @@ struct channel_gk20a {
 	bool bound;
 	bool first_init;
 	bool vpr;
-	bool cde;
 	pid_t pid;
 	struct mutex ioctl_lock;
 

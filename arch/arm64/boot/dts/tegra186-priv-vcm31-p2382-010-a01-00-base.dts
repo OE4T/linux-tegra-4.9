@@ -33,4 +33,11 @@
 			size = <0 0x40000000>;
 		};
 	};
+
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "p2382_t186";
+		};
+	};
 };

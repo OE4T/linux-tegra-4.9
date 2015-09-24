@@ -247,49 +247,49 @@
 	};
 
 	pcie_pd: pcie-pd {
-		compatible = "nvidia, tegra210-pcie-pd";
+		compatible = "nvidia,tegra210-pcie-pd";
 		#power-domain-cells = <0>;
 		partition-id = <TEGRA_POWERGATE_PCIE>;
 	};
 
 	sata_pd: sata-pd {
-		compatible = "nvidia, tegra210-sata-pd";
+		compatible = "nvidia,tegra210-sata-pd";
 		#power-domain-cells = <0>;
 		partition-id = <TEGRA_POWERGATE_SATA>;
 	};
 
 	sor_pd: sor-pd {
-		compatible = "nvidia, tegra210-sor-pd";
+		compatible = "nvidia,tegra210-sor-pd";
 		#power-domain-cells = <0>;
 		partition-id = <TEGRA_POWERGATE_SOR>;
 	};
 
 	disa_pd: disa-pd {
-		compatible = "nvidia, tegra210-disa-pd";
+		compatible = "nvidia,tegra210-disa-pd";
 		#power-domain-cells = <0>;
 		partition-id = <TEGRA_POWERGATE_DISA>;
 	};
 
 	disb_pd: disb-pd {
-		compatible = "nvidia, tegra210-disb-pd";
+		compatible = "nvidia,tegra210-disb-pd";
 		#power-domain-cells = <0>;
 		partition-id = <TEGRA_POWERGATE_DISB>;
 	};
 
 	xusba_pd: xusba-pd {
-		compatible = "nvidia, tegra210-xusba-pd";
+		compatible = "nvidia,tegra210-xusba-pd";
 		#power-domain-cells = <0>;
 		partition-id = <TEGRA_POWERGATE_XUSBA>;
 	};
 
 	xusbb_pd: xusbb-pd {
-		compatible = "nvidia, tegra210-xusbb-pd";
+		compatible = "nvidia,tegra210-xusbb-pd";
 		#power-domain-cells = <0>;
 		partition-id = <TEGRA_POWERGATE_XUSBB>;
 	};
 
 	xusbc_pd: xusbc-pd {
-		compatible = "nvidia, tegra210-xusbc-pd";
+		compatible = "nvidia,tegra210-xusbc-pd";
 		#power-domain-cells = <0>;
 		partition-id = <TEGRA_POWERGATE_XUSBC>;
 	};

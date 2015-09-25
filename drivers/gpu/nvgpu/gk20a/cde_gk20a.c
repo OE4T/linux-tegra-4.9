@@ -1035,6 +1035,7 @@ __releases(&cde_app->mutex)
 				goto exit_unlock;
 		}
 
+		__cpuc_flush_dcache_area(scatter_buffer, scatterbuffer_size);
 		dma_buf_vunmap(compbits_scatter_buf, surface);
 		surface = NULL;
 	}

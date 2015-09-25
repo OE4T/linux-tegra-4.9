@@ -811,8 +811,13 @@ enum {
         CMD_CLK_NUM_POSSIBLE_PARENTS = 11,
         CMD_CLK_GET_POSSIBLE_PARENT = 12,
 	CMD_CLK_RESET_REFCOUNTS = 13,
+	CMD_CLK_GET_ALL_INFO = 14,
+	CMD_CLK_GET_MAX_CLK_ID = 15,
         CMD_CLK_MAX,
 };
+
+#define MRQ_CLK_NAME_MAXLEN	40
+#define MRQ_CLK_MAX_PARENTS	16
 
 struct cmd_clk_get_rate_request {
 	EMPTY
@@ -896,7 +901,7 @@ struct cmd_clk_possible_parents_request {
 struct cmd_clk_possible_parents_response {
 	uint8_t num_parents;
 	uint8_t reserved[3];
-	uint32_t parent_id[16];
+	uint32_t parent_id[MRQ_CLK_MAX_PARENTS];
 } __PACKED;
 
 struct cmd_clk_num_possible_parents_request {
@@ -918,6 +923,27 @@ struct cmd_clk_get_possible_parent_response {
 struct cmd_clk_reset_refcounts {
 	EMPTY
 } __PACKED;
+
+struct cmd_clk_get_all_info_request {
+	EMPTY
+} __PACKED;
+
+struct cmd_clk_get_all_info_response {
+	uint32_t flags;
+	uint32_t parent;
+	uint32_t parents[MRQ_CLK_MAX_PARENTS];
+	uint8_t num_parents;
+	uint8_t name[MRQ_CLK_NAME_MAXLEN];
+} __PACKED;
+
+struct cmd_clk_get_max_clk_id_request {
+	EMPTY
+} __PACKED;
+
+struct cmd_clk_get_max_clk_id_response {
+	uint32_t max_id;
+} __PACKED;
+
 
 /**
  * struct mrq_clk_request
@@ -958,6 +984,8 @@ struct mrq_clk_request {
 		struct cmd_clk_possible_parents_request clk_possible_parents;
 		struct cmd_clk_num_possible_parents_request clk_num_possible_parents;
 		struct cmd_clk_get_possible_parent_request clk_get_possible_parent;
+		struct cmd_clk_get_all_info_request clk_get_all_info;
+		struct cmd_clk_get_max_clk_id_request clk_get_max_clk_id;
 	};
 } __PACKED;
 
@@ -981,6 +1009,8 @@ struct mrq_clk_response {
 		struct cmd_clk_possible_parents_response clk_possible_parents;
 		struct cmd_clk_num_possible_parents_response clk_num_possible_parents;
 		struct cmd_clk_get_possible_parent_response clk_get_possible_parent;
+		struct cmd_clk_get_all_info_response clk_get_all_info;
+		struct cmd_clk_get_max_clk_id_response clk_get_max_clk_id;
 	};
 } __PACKED;
 

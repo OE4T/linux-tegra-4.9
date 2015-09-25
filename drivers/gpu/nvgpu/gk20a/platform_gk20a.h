@@ -49,6 +49,7 @@ struct gk20a_platform {
 
 	/* Should be populated by probe. */
 	struct dentry *debugfs;
+	struct dentry *debugfs_alias;
 
 	/* Clock configuration is stored here. Platform probe is responsible
 	 * for filling this data. */

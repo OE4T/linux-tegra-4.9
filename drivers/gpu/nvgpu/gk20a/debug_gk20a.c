@@ -410,6 +410,10 @@ void gk20a_debug_init(struct platform_device *pdev)
 		gk20a_device = pdev;
 
 	platform->debugfs = debugfs_create_dir(pdev->name, NULL);
+	if (platform->debugfs) {
+		platform->debugfs_alias =
+			debugfs_create_symlink("gpu.0", NULL, pdev->name);
+	}
 
 	debugfs_create_file("status", S_IRUGO, platform->debugfs,
 			pdev, &gk20a_debug_fops);

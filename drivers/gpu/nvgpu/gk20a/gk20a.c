@@ -1562,6 +1562,7 @@ static int __exit gk20a_remove(struct platform_device *dev)
 	gk20a_user_deinit(dev);
 
 	debugfs_remove_recursive(platform->debugfs);
+	debugfs_remove_recursive(platform->debugfs_alias);
 
 	gk20a_remove_sysfs(&dev->dev);
 

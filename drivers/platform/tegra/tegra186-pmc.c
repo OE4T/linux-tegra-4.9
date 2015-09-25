@@ -96,6 +96,9 @@
 #define PMC_THERMTRIP_CFG		0x104
 #define PMC_THERMTRIP_CFG_LOCK_MASK		BIT(5)
 
+#define PMC_IMPL_RAMDUMP_CTL_STATUS	0x10c
+#define PMC_IMPL_HALT_IN_FIQ_MASK	BIT(28)
+
 #define PMC_DDR_CNTRL			0x11C
 
 static DEFINE_SPINLOCK(tegra186_pmc_access_lock);
@@ -357,6 +360,13 @@ void tegra_pmc_fuse_control_ps18_latch_clear(void)
 	mdelay(1);
 }
 EXPORT_SYMBOL(tegra_pmc_fuse_control_ps18_latch_clear);
+
+bool tegra_pmc_is_halt_in_fiq(void)
+{
+	return !!(PMC_IMPL_HALT_IN_FIQ_MASK &
+		tegra186_pmc_readl(PMC_IMPL_RAMDUMP_CTL_STATUS));
+}
+EXPORT_SYMBOL(tegra_pmc_is_halt_in_fiq);
 
 static const struct of_device_id tegra186_pmc[] __initconst = {
 	{ .compatible = "nvidia,tegra186-pmc" },

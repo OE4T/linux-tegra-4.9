@@ -252,7 +252,7 @@ static int set_cursor_blend(struct tegra_dc *dc, u32 blendfmt)
 	dc->cursor.blendfmt = blendfmt;
 
 #if defined(CONFIG_TEGRA_NVDISPLAY)
-/*	nvdisp_set_cursor_colorfmt(dc);*/ /* color fmt */
+	nvdisp_set_cursor_colorfmt(dc); /* color fmt */
 #endif
 	return ret;
 }

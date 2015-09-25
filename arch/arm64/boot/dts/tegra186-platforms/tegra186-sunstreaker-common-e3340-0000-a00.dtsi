@@ -266,9 +266,11 @@
 			reg = <0x1>;
 			extcon-gpio,name = "VBUS";
 			extcon-gpio,out-cable-names = "USB", "USB-Host";
-			extcon-gpio,cable-states = <0x0 0x2
-						    0x1 0x1>;
-			gpios = <&spmic 0 0>;
+			extcon-gpio,cable-states = <0x3 0x0
+						    0x0 0x2
+						    0x1 0x2
+						    0x2 0x1>;
+			gpios = <&tegra_gpio TEGRA_GPIO(FF, 4) 0 &spmic 0 0>;
 			#extcon-cells = <1>;
 		};
 	};

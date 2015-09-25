@@ -1192,7 +1192,7 @@ stream_manage_send:
 		/* Num of streams = 1, only video, big endian */
 		hdcp_context->msg.k = 0x0100;
 		/* STREAM_ID = 0 and Type = 0  */
-		hdcp_context->msg.streamid_type[0] = 0x0000;
+		hdcp_context->msg.streamid_type[0] = 0x0100;
 
 		err = nvhdcp_rptr_stream_manage_send(nvhdcp,
 			&hdcp_context->msg.rptr_auth_stream_manage_msg_id);

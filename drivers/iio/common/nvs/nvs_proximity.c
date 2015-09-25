@@ -48,7 +48,16 @@
  */
 /* If the NVS proximity driver is not configured for binary output, then
  * there are two calibration mechanisms that can be used:
- * Method 1 (preferred):
+ * Method 1 is required if the driver is using dynamic resolution since the
+ * resolution cannot be read by the NVS HAL on every data value read due to
+ * buffering.  So instead.a mechanism allows floating point to be calculated
+ * here in the kernel by shifting up to integer the floating point significant
+ * amount.  This allows real-time resolution changes without the NVS HAL having
+ * to synchronize to the actual resolution for each datum.  The scale.fval must
+ * be a 10 base value, e.g. 0.1, 0.01, ... 0.000001, etc. as the significant
+ * amount.  The NVS HAL will then convert the value to float by multiplying the
+ * integer float-data with scale.
+ * Method 1:
  * This method uses interpolation and requires a low and high uncalibrated
  * value along with the corresponding low and high calibrated values.  The
  * uncalibrated values are what is read from the sensor in the steps below.
@@ -110,6 +119,10 @@
  * disable and reenable the device to exit calibration mode and test the new
  * calibration values.
  *
+ * Method 2 can only be used if dynamic resolution is not used by the HW
+ * driver.  The data passed up to the HAL is the HW value read so that the HAL
+ * can multiply the HW value with the scale (resolution).
+ * As a baseline, scale would be the same value as the static resolution.
  * Method 2:
  * 1. Disable device.
  * 2. Write 1 to the scale sysfs attribute.
@@ -125,11 +138,6 @@
  *    proximity_offset_ival = the integer value of the offset.
  *    proximity_offset_fval = the floating value of the offset.
  *    The values are in the NVS_FLOAT_SIGNIFICANCE_ format (see nvs.h).
- */
-/* The reason calibration method 1 is preferred is that the NVS proximity
- * driver already sets the scaling to coordinate with the resolution by
- * multiplying the HW data value read with resolution * scaling and then
- * divides it back down with the scaling so that no significance is lost.
  */
 /* If the NVS proximity driver is configured for binary output, then
  * interpolation is not used and the thresholds are used to trigger either the
@@ -183,6 +191,11 @@
 
 #include <linux/of.h>
 #include <linux/nvs_proximity.h>
+
+
+/* to allow 1980's code style rules: */
+#define NVS_FS_NANO			NVS_FLOAT_SIGNIFICANCE_NANO
+#define NVS_FS_MICRO			NVS_FLOAT_SIGNIFICANCE_MICRO
 
 
 static void nvs_proximity_interpolate(int x1, s64 x2, int x3,
@@ -284,7 +297,7 @@ int nvs_proximity_read(struct nvs_proximity *np)
 			np->report = np->cfg->report_n;
 		}
 		if (np->calibration_en)
-			np->proximity = np->hw;
+			np->report = np->cfg->report_n;
 		if (np->report && report_delay_min) {
 			np->report--;
 			np->timestamp_report = np->timestamp;
@@ -383,34 +396,50 @@ int nvs_proximity_read(struct nvs_proximity *np)
 		if (np->report && report_delay_min) {
 			np->report--;
 			np->timestamp_report = np->timestamp;
-			/* reverse the value in the range */
-			hw_distance = np->hw_mask - np->hw;
+			if (np->proximity_reverse_range_dis)
+				hw_distance = np->hw;
+			else
+				/* reverse the value in the range */
+				hw_distance = np->hw_mask - np->hw;
 			/* distance = HW * (resolution *
 			 *                  NVS_FLOAT_SIGNIFICANCE_) / scale
 			 */
+			calc_i = hw_distance;
 			calc_f = 0;
-			if (np->cfg->resolution.fval) {
-				calc_f = (u64)(hw_distance *
-					       np->cfg->resolution.fval);
-				if (np->cfg->scale.fval)
+			if (np->cfg->scale.fval &&
+						 !np->dynamic_resolution_dis) {
+				/* The mechanism below allows floating point to
+				 * be calculated here in the kernel by shifting
+				 * up to integer the floating point significant
+				 * amount.
+				 * The nl->cfg->scale.fval must be a 10 base
+				 * value, e.g. 0.1, 0.01, ... 0.000001, etc.
+				 * The significance is calculated as:
+				 * s = (NVS_FLOAT_SIGNIFICANCE_* / scale.fval)
+				 * so that proximity = HW * resolution * s
+				 * The NVS HAL will then convert the value to
+				 * float by multiplying the data with scale.
+				 */
+				if (np->cfg->resolution.fval) {
+					calc_f = (u64)(hw_distance *
+						     np->cfg->resolution.fval);
 					do_div(calc_f, np->cfg->scale.fval);
-			}
-			calc_i = 0;
-			if (np->cfg->resolution.ival) {
-				if (np->cfg->float_significance)
-					calc_i = NVS_FLOAT_SIGNIFICANCE_NANO /
-							   np->cfg->scale.fval;
-				else
-					calc_i = NVS_FLOAT_SIGNIFICANCE_MICRO /
-							   np->cfg->scale.fval;
-				calc_i *= (u64)(hw_distance *
-						np->cfg->resolution.ival);
+				}
+				if (np->cfg->resolution.ival) {
+					if (np->cfg->float_significance)
+						calc_i = NVS_FS_NANO;
+					else
+						calc_i = NVS_FS_MICRO;
+					do_div(calc_i, np->cfg->scale.fval);
+					calc_i *= (u64)(hw_distance *
+						     np->cfg->resolution.ival);
+				}
 			}
 			calc = (s64)(calc_i + calc_f);
-			if (np->calibration_en) {
+			if (np->calibration_en)
 				/* when in calibration mode just return calc */
 				np->proximity = (u32)calc;
-			} else {
+			else
 				/* get calibrated value */
 				nvs_proximity_interpolate(np->cfg->uncal_lo,
 							  calc,
@@ -418,7 +447,6 @@ int nvs_proximity_read(struct nvs_proximity *np)
 							  np->cfg->cal_lo,
 							  &np->proximity,
 							  np->cfg->cal_hi);
-			}
 			/* report proximity */
 			np->handler(np->nvs_st, &np->proximity,
 				    np->timestamp_report);
@@ -442,8 +470,7 @@ int nvs_proximity_read(struct nvs_proximity *np)
 			}
 		}
 	}
-	return nvs_proximity_poll_delay(np, ret, poll_delay,
-					report_delay_min);
+	return nvs_proximity_poll_delay(np, ret, poll_delay, report_delay_min);
 }
 
 /**

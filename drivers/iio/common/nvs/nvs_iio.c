@@ -76,7 +76,7 @@
 #include <linux/iio/trigger.h>
 #include <linux/nvs.h>
 
-#define NVS_IIO_DRIVER_VERSION		(206)
+#define NVS_IIO_DRIVER_VERSION		(207)
 #define NVS_ATTRS_ARRAY_SIZE		(12)
 
 enum NVS_ATTR {
@@ -493,6 +493,14 @@ static int nvs_buf_push(struct iio_dev *indio_dev, unsigned char *data, s64 ts)
 	}
 	if (iio_buffer_enabled(indio_dev)) {
 		ret = iio_push_to_buffers(indio_dev, st->buf);
+		i = st->cfg->flags & SENSOR_FLAG_READONLY_MASK;
+		if (i == SENSOR_FLAG_ONE_SHOT_MODE && ts && !ret) {
+			/* one-shot sensor sent sensor data so disable */
+			ret = st->fn_dev->enable(st->client,
+						 st->cfg->snsr_id, 0);
+			if (!ret)
+				st->enabled = 0;
+		}
 		if (*st->fn_dev->sts & NVS_STS_SPEW_BUF) {
 			for (i = 0; i < bytes; i++)
 				dev_info(st->dev, "buf[%u]=%x\n",
@@ -587,6 +595,7 @@ static ssize_t nvs_attr_store(struct device *dev,
 		break;
 
 	case NVS_ATTR_FLAGS:
+		msg = "ATTR_FLAGS";
 		old = st->cfg->flags;
 		st->cfg->flags &= SENSOR_FLAG_READONLY_MASK;
 		new &= ~SENSOR_FLAG_READONLY_MASK;

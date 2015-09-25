@@ -42,12 +42,31 @@
  * @thresh_valid_lo: NVS determines if cfg.thresh_lo valid.
  * @thresh_valid_hi: NVS determines if cfg.thresh_hi valid.
  * @thresholds_valid: NVS determines if both thresholds valid.
+ * @calibration_en: NVS determines if calibration is enabled.
+ * @dynamic_resolution_dis: Driver can set this to true if the
+ *                          resolution is static.
+ * Note: dynamic resolution allows floating point to be
+ *       calculated in the kernel by shifting up to integer the
+ *       floating point significant amount. This allows
+ *       real-time resolution changes without the NVS HAL having
+ *       to synchronize to the actual resolution per data value.
+ *       The scale.fval must be a 10 base value, e.g. 0.1, 0.01,
+ *       ... 0.000001, etc. as the significant amount.  The NVS
+ *       HAL will then convert the integer float-data to a float
+ *       value by multiplying it with scale.
+ * @proximity_reverse_range_dis: Driver sets this if the
+ *                               proximity range is not
+ *                               reversed.
+ * Note: Typically, the proximity HW value gets larger the
+ *       closer an object gets.  By default NVS reverses this by
+ *       subtracting the value from the maximum possible value.
+ *       The driver can disable this feature by setting the
+ *       proximity_reverse_range_dis to true.
  * @proximity_binary_en: NVS determines if binary reporting is
  *                       enabled.
- * @proximity_binary_en: NVS determines if HW binary reporting is
- *                       enabled via device tree, or driver enables
- *                       this by setting hw_mask to 1.
- * @calibration_en: NVS determines if calibration is enabled.
+ * @proximity_binary_hw: NVS determines if HW binary reporting
+ *                       is enabled via device tree, or driver
+ *                       enables this by setting hw_mask to 1.
  * @poll_delay_ms: NVS writes the poll time needed if polling.
  * @delay_us: Driver writes the requested sample time.
  * @report: NVS writes the report count.
@@ -69,6 +88,8 @@ struct nvs_proximity {
 	bool thresh_valid_hi;		/* valid cfg.thresh_hi */
 	bool thresholds_valid;		/* both thresholds valid */
 	bool calibration_en;		/* if calibration enabled */
+	bool dynamic_resolution_dis;	/* disable float significance */
+	bool proximity_reverse_range_dis; /* if proximity range not reversed */
 	bool proximity_binary_en;	/* if binary proximity enabled */
 	bool proximity_binary_hw;	/* if HW binary proximity enabled */
 	unsigned int poll_delay_ms;	/* HW polling delay (ms) */

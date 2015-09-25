@@ -45,14 +45,23 @@
  * two issues with this method:
  * 1) that's a lot of overhead for each sample, and 2) the lux range isn't
  * exactly linear.  Lux values in a dark room will probably want to be reported
- * every +/- 10 or 100 if not less.  This is opposed to a bright room or even
+ * every +/- 100 or 10 if not less.  This is opposed to a bright room or even
  * outside on a sunny day where lux value changes can be reported every
  * +/- 1000 or even 10000.  Since many ALS's have dynamic resolution, changing
  * the range depending on the lux reading, it makes sense to use HW threshold
  * values that will automatically scale with the HW resolution used.
  */
-/* NVS light drivers have two calibration mechanisms:
- * Method 1 (preferred):
+/* NVS light drivers have two calibration mechanisms.  Method 1 is required if
+ * the driver is using dynamic resolution since the resolution cannot be read
+ * by the NVS HAL on every data value read due to buffering.  So instead.a
+ * mechanism allows floating point to be calculated here in the kernel by
+ * shifting up to integer the floating point significant amount.  This allows
+ * real-time resolution changes without the NVS HAL having to synchronize to
+ * the actual resolution for each datum.  The scale.fval must be a 10 base
+ * value, e.g. 0.1, 0.01, ... 0.000001, etc. as the significant amount.
+ * The NVS HAL will then convert the value to float by multiplying the integer
+ * float-data with scale.
+ * Method 1:
  * This method uses interpolation and requires a low and high uncalibrated
  * value along with the corresponding low and high calibrated values.  The
  * uncalibrated values are what is read from the sensor in the steps below.
@@ -114,7 +123,11 @@
  * disable and reenable the device to exit calibration mode and test the new
  * calibration values.
  *
- * Method 2 (not recommended):
+ * Method 2 can only be used if dynamic resolution is not used by the HW
+ * driver.  The data passed up to the HAL is the HW value read so that the HAL
+ * can multiply the HW value with the scale (resolution).
+ * As a baseline, scale would be the same value as the static resolution.
+ * Method 2:
  * 1. Disable device.
  * 2. Write 1 to the scale sysfs attribute.
  * 3. Enable device.
@@ -129,11 +142,6 @@
  *    light_offset_ival = the integer value of the offset.
  *    light_offset_fval = the floating value of the offset.
  *    The values are in the NVS_FLOAT_SIGNIFICANCE_ format (see nvs.h).
- */
-/* The reason calibration method 1 is preferred is that the NVS ALS driver
- * already sets the scaling to coordinate with the resolution by multiplying
- * the HW data value read with resolution * scaling and then divides it back
- * down with the scaling so that no significance is lost.
  */
 
 
@@ -346,35 +354,46 @@ int nvs_light_read(struct nvs_light *nl)
 	if (nl->report && report_delay_min) {
 		nl->report--;
 		nl->timestamp_report = nl->timestamp;
-		/* lux = HW * (resolution * NVS_FLOAT_SIGNIFICANCE_) / scale */
+		calc_i = nl->hw;
 		calc_f = 0;
-		if (nl->cfg->resolution.fval) {
-			calc_f = (u64)(nl->hw * nl->cfg->resolution.fval);
-			if (nl->cfg->scale.fval)
+		if (nl->cfg->scale.fval && !nl->dynamic_resolution_dis) {
+			/* The mechanism below allows floating point to be
+			 * calculated here in the kernel by shifting up to
+			 * integer the floating point significant amount.
+			 * The nl->cfg->scale.fval must be a 10 base value,
+			 * e.g. 0.1, 0.01, ... 0.000001, etc.
+			 * The significance is calculated as:
+			 * s = (NVS_FLOAT_SIGNIFICANCE_* / scale.fval) so that
+			 * lux = HW * resolution * s
+			 * The NVS HAL will then convert the value to float
+			 * by multiplying the data with scale.
+			 */
+			if (nl->cfg->resolution.fval) {
+				calc_f = (u64)
+					 (nl->hw * nl->cfg->resolution.fval);
 				do_div(calc_f, nl->cfg->scale.fval);
-		}
-		calc_i = 0;
-		if (nl->cfg->resolution.ival) {
-			if (nl->cfg->float_significance)
-				calc_i = NVS_FLOAT_SIGNIFICANCE_NANO /
-							   nl->cfg->scale.fval;
-			else
-				calc_i = NVS_FLOAT_SIGNIFICANCE_MICRO /
-							   nl->cfg->scale.fval;
-			calc_i *= (u64)(nl->hw * nl->cfg->resolution.ival);
+			}
+			if (nl->cfg->resolution.ival) {
+				if (nl->cfg->float_significance)
+					calc_i = NVS_FLOAT_SIGNIFICANCE_NANO;
+				else
+					calc_i = NVS_FLOAT_SIGNIFICANCE_MICRO;
+				do_div(calc_i, nl->cfg->scale.fval);
+				calc_i *= (u64)
+					  (nl->hw * nl->cfg->resolution.ival);
+			}
 		}
 		calc = (s64)(calc_i + calc_f);
-		if (nl->calibration_en) {
+		if (nl->calibration_en)
 			/* when in calibration mode just return lux value */
 			nl->lux = (u32)calc;
-		} else {
+		else
 			/* get calibrated value if not in calibration mode */
 			nl->lux = nvs_light_interpolate(nl->cfg->uncal_lo,
 							calc,
 							nl->cfg->uncal_hi,
 							nl->cfg->cal_lo,
 							nl->cfg->cal_hi);
-		}
 		/* report lux */
 		nl->handler(nl->nvs_st, &nl->lux, nl->timestamp_report);
 		if ((nl->thresholds_valid) && !nl->report) {

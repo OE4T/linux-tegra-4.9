@@ -68,7 +68,7 @@
 #define SENSOR_FLAG_ONE_SHOT_MODE		(0x4)
 #define SENSOR_FLAG_SPECIAL_REPORTING_MODE	(0x6)
 /* end AOS sensors.h */
-#define SENSOR_FLAG_READONLY_MASK	(0x6) /* unconfigurable flags */
+#define SENSOR_FLAG_READONLY_MASK	(0xE) /* unconfigurable flags */
 
 enum nvs_float_significance {
 	NVS_FLOAT_MICRO			= 0, /* IIO_VAL_INT_PLUS_MICRO */

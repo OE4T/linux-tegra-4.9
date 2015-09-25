@@ -755,7 +755,7 @@ static int stm_probe(struct i2c_client *client,
 
 	stm_pm(st, false);
 	ret = nvs_of_dt(client->dev.of_node, &st->cfg, NULL);
-	if (ret)
+	if (ret < 0)
 		dev_info(&client->dev, "%s nvs_of_dt ERR\n", __func__);
 	stm_fn_dev.errs = &st->errs;
 	stm_fn_dev.sts = &st->sts;

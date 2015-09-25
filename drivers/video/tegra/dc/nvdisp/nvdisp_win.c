@@ -321,32 +321,42 @@ static int tegra_nvdisp_enable_cde(struct tegra_dc_win *win)
 static inline u32 tegra_nvdisp_win_swap_uv(struct tegra_dc_win *win)
 {
 
-	u32 swap_uv;
+	u32 swap_uv = 0;
 
 	switch (tegra_dc_fmt(win->fmt)) {
-	case TEGRA_WIN_FMT_YCrCb420SP:
+	case TEGRA_WIN_FMT_YCbCr420SP:
 		swap_uv = 1;
+		break;
+
+	case TEGRA_WIN_FMT_YCrCb420SP:
 		win->fmt = TEGRA_WIN_FMT_YCbCr420SP;
 		break;
 
-	case TEGRA_WIN_FMT_YCbCr422SP:
+	case TEGRA_WIN_FMT_YCrCb422SP:
 		swap_uv = 1;
+		break;
+
+	case TEGRA_WIN_FMT_YCbCr422SP:
 		win->fmt = TEGRA_WIN_FMT_YCrCb422SP;
 		break;
 
-	case TEGRA_WIN_FMT_YCbCr422RSP:
+	case TEGRA_WIN_FMT_YCrCb422RSP:
 		swap_uv = 1;
+		break;
+
+	case TEGRA_WIN_FMT_YCbCr422RSP:
 		win->fmt = TEGRA_WIN_FMT_YCrCb422RSP;
 		break;
 
-	case TEGRA_WIN_FMT_YCbCr444SP:
+	case TEGRA_WIN_FMT_YCrCb444SP:
 		swap_uv = 1;
+		break;
+
+	case TEGRA_WIN_FMT_YCbCr444SP:
 		win->fmt = TEGRA_WIN_FMT_YCrCb444SP;
 		break;
-	default:
-		swap_uv = 0;
-		break;
 	}
+
 	return swap_uv;
 }
 

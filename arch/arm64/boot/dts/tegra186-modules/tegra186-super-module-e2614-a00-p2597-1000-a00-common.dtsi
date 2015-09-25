@@ -168,7 +168,7 @@
 			regulator-name = "vdd-1v8-aud2";
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
-			gpio = <&gpio_i2c_1_20 0 1>;
+			gpio = <&gpio_i2c_1_20 11 1>; /*DSPK EN*/
 			enable-active-high;
 		};
 	};

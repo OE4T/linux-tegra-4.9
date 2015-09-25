@@ -64,7 +64,6 @@
 			bit-format = "s16_le";
 			srate = <48000>;
 			num-channel = <2>;
-			codec = "0.spdif-dit.0";
 			name-prefix = "n";
 		};
 	};

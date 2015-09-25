@@ -66,6 +66,17 @@ struct nvs_light_dynamic {
  * @nld_i_change: NVS determined dynamic resolution changed.
  *                Driver needs to update HW.
  * @calibration_en: NVS determines if calibration is enabled.
+ * @dynamic_resolution_dis: Driver can set this to true if the
+ *                          resolution is static.
+ * Note: dynamic resolution allows floating point to be
+ *       calculated in the kernel by shifting up to integer the
+ *       floating point significant amount. This allows
+ *       real-time resolution changes without the NVS HAL having
+ *       to synchronize to the actual resolution per data value.
+ *       The scale.fval must be a 10 base value, e.g. 0.1, 0.01,
+ *       ... 0.000001, etc. as the significant amount.  The NVS
+ *       HAL will then convert the integer float-data to a float
+ *       value by multiplying it with scale.
  * @poll_delay_ms: NVS writes the poll time needed if polling.
  * @delay_us: Driver writes the requested sample time.
  * @report: NVS writes the report count.
@@ -98,6 +109,7 @@ struct nvs_light {
 	bool thresholds_valid;		/* both thresholds valid */
 	bool nld_i_change;		/* flag that dynamic index changed */
 	bool calibration_en;		/* if calibration enabled */
+	bool dynamic_resolution_dis;	/* disable float significance */
 	unsigned int poll_delay_ms;	/* HW polling delay (ms) */
 	unsigned int delay_us;		/* OS requested sample delay */
 	unsigned int report;		/* report count */

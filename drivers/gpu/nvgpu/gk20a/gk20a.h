@@ -215,6 +215,7 @@ struct gpu_ops {
 		void (*blcg_ltc_load_gating_prod)(struct gk20a *g, bool prod);
 		void (*blcg_pwr_csb_load_gating_prod)(struct gk20a *g, bool prod);
 		void (*blcg_pmu_load_gating_prod)(struct gk20a *g, bool prod);
+		void (*blcg_xbar_load_gating_prod)(struct gk20a *g, bool prod);
 		void (*pg_gr_load_gating_prod)(struct gk20a *g, bool prod);
 	} clock_gating;
 	struct {

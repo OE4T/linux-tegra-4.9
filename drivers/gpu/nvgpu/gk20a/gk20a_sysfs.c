@@ -115,6 +115,9 @@ static ssize_t blcg_enable_store(struct device *device,
 		g->ops.clock_gating.blcg_ltc_load_gating_prod(g, g->blcg_enabled);
 	if (g->ops.clock_gating.blcg_pmu_load_gating_prod)
 		g->ops.clock_gating.blcg_pmu_load_gating_prod(g, g->blcg_enabled);
+	if (g->ops.clock_gating.blcg_xbar_load_gating_prod)
+		g->ops.clock_gating.blcg_xbar_load_gating_prod(g,
+			g->blcg_enabled);
 	gk20a_idle(g->dev);
 
 	dev_info(device, "BLCG is %s.\n", g->blcg_enabled ? "enabled" :

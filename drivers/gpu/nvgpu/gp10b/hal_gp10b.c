@@ -84,6 +84,8 @@ static struct gpu_ops gp10b_ops = {
 			gp10b_blcg_pwr_csb_load_gating_prod,
 		.blcg_pmu_load_gating_prod =
 			gp10b_blcg_pmu_load_gating_prod,
+		.blcg_xbar_load_gating_prod =
+			gp10b_blcg_xbar_load_gating_prod,
 		.pg_gr_load_gating_prod =
 			gr_gp10b_pg_gr_load_gating_prod,
 	}

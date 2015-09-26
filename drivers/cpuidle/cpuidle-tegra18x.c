@@ -228,7 +228,6 @@ static void suspend_all_device_irqs(void)
 
                 raw_spin_lock_irqsave(&desc->lock, flags);
                 __disable_irq(desc, irq);
-                desc->istate |= IRQS_SUSPENDED;
                 raw_spin_unlock_irqrestore(&desc->lock, flags);
         }
 
@@ -236,8 +235,7 @@ static void suspend_all_device_irqs(void)
                 if (is_timer_irq(desc))
                         continue;
 
-                if (desc->istate & IRQS_SUSPENDED)
-                        synchronize_irq(irq);
+		synchronize_irq(irq);
         }
 }
 
@@ -274,15 +272,13 @@ static int denver_idle_write(void *data, u64 val)
 
 	wake_time = (u32) (val / USEC_PER_TSC_TICK);
 
-        preempt_disable();
-
         if (denver_idle_state >= t18x_denver_idle_driver.state_count) {
                 pr_err("%s: Requested invalid forced idle state\n", __func__);
-                preempt_enable_no_resched();
                 return -EINVAL;
         }
 
         suspend_all_device_irqs();
+        preempt_disable();
         tick_nohz_idle_enter();
         stop_critical_timings();
         local_fiq_disable();
@@ -312,8 +308,8 @@ static int denver_idle_write(void *data, u64 val)
         local_fiq_enable();
         start_critical_timings();
         tick_nohz_idle_exit();
-        resume_all_device_irqs();
         preempt_enable_no_resched();
+        resume_all_device_irqs();
 
         return 0;
 }
@@ -327,15 +323,14 @@ static int a57_idle_write(void *data, u64 val)
 
 	wake_time = (u32) (val / USEC_PER_TSC_TICK);
 
-        preempt_disable();
-
         if (a57_idle_state >= t18x_a57_idle_driver.state_count) {
                 pr_err("%s: Requested invalid forced idle state\n", __func__);
-                preempt_enable_no_resched();
                 return -EINVAL;
         }
 
         suspend_all_device_irqs();
+        preempt_disable();
+
         tick_nohz_idle_enter();
         stop_critical_timings();
         local_fiq_disable();
@@ -363,8 +358,8 @@ static int a57_idle_write(void *data, u64 val)
         local_fiq_enable();
         start_critical_timings();
         tick_nohz_idle_exit();
-        resume_all_device_irqs();
         preempt_enable_no_resched();
+        resume_all_device_irqs();
 
         return 0;
 }

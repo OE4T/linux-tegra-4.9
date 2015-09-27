@@ -761,6 +761,22 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 			return -ENOMEM;
 		}
 
+		/* Get an additional dmabuf refcount. This is to workaround the
+		 * dma buf use after free issue. This leaks dma buf but only in
+		 * the IVM duplication path.
+		 *
+		 * In nvmap_free_handle(..), dma_buf_put(..) is followed by
+		 * nvmap_handle_put(..) which implies nvmap handle is valid
+		 * between the 2 calls but dma buf related to that handle is
+		 * freed. So, in nvmap_ioctl_create_from_ivc(..), it is
+		 * possible that there is a valid handle but dmabuf
+		 * corresponding to the same is freed. So, during the creation
+		 * of the handle itself, we increment the dma buf refcount to
+		 * avoid use after free. The other paths do not encounter this
+		 * issue. For example, nvmap_handle_get_from_dmabuf_fd(..)
+		 * first gets the dma buf and then gets reference to the handle.
+		 */
+		get_dma_buf(ref->handle->dmabuf);
 		ref->handle->heap_type = NVMAP_HEAP_CARVEOUT_IVM;
 		ref->handle->heap_pgalloc = false;
 		ref->handle->ivm_id = op.id;

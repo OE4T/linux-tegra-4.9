@@ -190,10 +190,21 @@ int flcn_setup_ucode_image(struct platform_device *dev,
 		ucode.fce_header = (struct ucode_fce_header_v1_flcn *)
 			(((void *)ucode_ptr) +
 			 ucode.bin_header->fce_bin_header_offset);
+
 		nvhost_dbg_info("fce ucode header: offset, buffer_size, size: 0x%x 0x%x 0x%x",
 				ucode.fce_header->fce_ucode_offset,
 				ucode.fce_header->fce_ucode_buffer_size,
 				ucode.fce_header->fce_ucode_size);
+
+		v->fce_mapped = nvhost_vm_allocate_firmware_area(dev,
+			 ucode.fce_header->fce_ucode_size, &v->fce_dma_addr);
+		if (!v->fce_mapped)
+			return -ENOMEM;
+
+		memcpy(v->fce_mapped, (u8 *)v->mapped +
+			ucode.bin_header->fce_bin_data_offset,
+			ucode.fce_header->fce_ucode_size);
+
 		v->fce.size        = ucode.fce_header->fce_ucode_size;
 		v->fce.data_offset =
 			ucode.bin_header->fce_bin_data_offset;
@@ -385,27 +396,38 @@ static int nvhost_flcn_init_sw(struct platform_device *dev)
 	return err;
 }
 
-int nvhost_vic_finalize_poweron(struct platform_device *pdev)
+int nvhost_vic_init_context(struct platform_device *pdev,
+			    struct nvhost_cdma *cdma)
 {
-	struct flcn *v;
-	int err;
+	struct flcn *v = get_flcn(pdev);
 
-	err = nvhost_flcn_finalize_poweron(pdev);
-	if (err)
-		return err;
+	/* load application id */
+	nvhost_cdma_push(cdma,
+		nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID,
+			VIC_UCLASS_METHOD_OFFSET, 1),
+		NVA0B6_VIDEO_COMPOSITOR_SET_APPLICATION_ID >> 2);
+	nvhost_cdma_push(cdma,
+		nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID,
+				       VIC_UCLASS_METHOD_DATA, 1), 1);
 
-	v = get_flcn(pdev);
+	/* set fce ucode size */
+	nvhost_cdma_push(cdma,
+		nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID,
+			VIC_UCLASS_METHOD_OFFSET, 1),
+		NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_SIZE >> 2);
+	nvhost_cdma_push(cdma,
+		nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID,
+			VIC_UCLASS_METHOD_DATA, 1), v->fce.size);
 
-	host1x_writel(pdev, VIC_UCLASS_METHOD_OFFSET * 4,
-		      NVA0B6_VIDEO_COMPOSITOR_SET_APPLICATION_ID >> 2);
-	host1x_writel(pdev, VIC_UCLASS_METHOD_DATA * 4, 1);
-	host1x_writel(pdev, VIC_UCLASS_METHOD_OFFSET * 4,
-		      NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_SIZE >> 2);
-	host1x_writel(pdev, VIC_UCLASS_METHOD_DATA * 4, v->fce.size);
-	host1x_writel(pdev, VIC_UCLASS_METHOD_OFFSET * 4,
-		      NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_OFFSET >> 2);
-	host1x_writel(pdev, VIC_UCLASS_METHOD_DATA * 4,
-		      (v->dma_addr + v->fce.data_offset) >> 8);
+	/* set fce ucode offset */
+	nvhost_cdma_push(cdma,
+		nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID,
+			VIC_UCLASS_METHOD_OFFSET, 1),
+		NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_OFFSET >> 2);
+	nvhost_cdma_push(cdma,
+		nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID,
+			VIC_UCLASS_METHOD_DATA, 1),
+		v->fce_dma_addr >> 8);
 
 	return 0;
 }

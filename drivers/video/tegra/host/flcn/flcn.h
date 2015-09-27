@@ -82,6 +82,9 @@ struct flcn {
 
 	dma_addr_t dma_addr;
 	u32 *mapped;
+
+	dma_addr_t fce_dma_addr;
+	u32 *fce_mapped;
 };
 
 static inline struct flcn *get_flcn(struct platform_device *dev)
@@ -95,7 +98,7 @@ static inline void set_flcn(struct platform_device *dev, struct flcn *flcn)
 
 int nvhost_vic_prepare_poweroff(struct platform_device *);
 int nvhost_flcn_finalize_poweron(struct platform_device *);
-int nvhost_vic_finalize_poweron(struct platform_device *);
+int nvhost_vic_init_context(struct platform_device *, struct nvhost_cdma *);
 int nvhost_flcn_prepare_poweroff(struct platform_device *);
 
 int nvhost_vic_aggregate_constraints(struct platform_device *dev,

@@ -430,7 +430,7 @@ static long nvhost_ctrlctl(struct file *filp,
 		(_IOC_NR(cmd) == 0) ||
 		(_IOC_NR(cmd) > NVHOST_IOCTL_CTRL_LAST) ||
 		(_IOC_SIZE(cmd) > NVHOST_IOCTL_CTRL_MAX_ARG_SIZE))
-		return -EFAULT;
+		return -ENOIOCTLCMD;
 
 	if (_IOC_DIR(cmd) & _IOC_WRITE) {
 		if (copy_from_user(buf, (void __user *)arg, _IOC_SIZE(cmd)))
@@ -501,7 +501,7 @@ static long nvhost_ctrlctl(struct file *filp,
 		err = nvhost_ioctl_ctrl_get_characteristics(priv, (void *)buf);
 		break;
 	default:
-		err = -ENOTTY;
+		err = -ENOIOCTLCMD;
 		break;
 	}
 

@@ -22,6 +22,7 @@
 #define __NVHOST_NVDEC_H__
 
 #include <linux/types.h>
+#include <linux/dma-attrs.h>
 #include <linux/nvhost.h>
 
 extern const struct file_operations tegra_nvdec_ctrl_ops;
@@ -60,6 +61,7 @@ struct nvdec {
 	} os;
 
 	struct sg_table *pa;
+	struct dma_attrs attrs;
 	dma_addr_t phys;
 	u32 *mapped;
 };

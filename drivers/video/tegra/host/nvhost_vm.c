@@ -98,11 +98,6 @@ int nvhost_vm_init(struct platform_device *pdev)
 	if (!firmware_area->vaddr)
 		return -ENOMEM;
 
-	/* if firmware pinning is disabled, assume that engines come
-	 * up using Host1x address space */
-	if (!IS_ENABLED(CONFIG_TEGRA_GRHOST_VM_FIRMWARE_REMAP))
-		return 0;
-
 	/* ..otherwise pin the firmware to all address spaces */
 	nvhost_vm_map_static(pdev, firmware_area->vaddr,
 			     firmware_area->dma_addr,

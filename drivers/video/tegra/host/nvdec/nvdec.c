@@ -399,6 +399,7 @@ static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name,
 
 	m->phys = 0;
 	m->mapped = NULL;
+	init_dma_attrs(&m->attrs);
 
 	ucode_fw  = nvhost_client_request_firmware(dev, fw_name);
 	if (!ucode_fw) {
@@ -409,8 +410,11 @@ static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name,
 	}
 
 	m->size = ucode_fw->size;
-	m->mapped = nvhost_vm_allocate_firmware_area(dev, m->size,
-						     &m->phys);
+	dma_set_attr(DMA_ATTR_READ_ONLY, &m->attrs);
+
+	m->mapped = dma_alloc_attrs(&dev->dev,
+			m->size, &m->phys,
+			GFP_KERNEL, &m->attrs);
 	if (!m->mapped) {
 		dev_err(&dev->dev, "dma memory allocation failed");
 		err = -ENOMEM;
@@ -432,8 +436,9 @@ static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name,
 
 clean_up:
 	if (m->mapped) {
-		nvhost_vm_release_firmware_area(dev, m->size,
-						m->phys);
+		dma_free_attrs(&dev->dev,
+				m->size, m->mapped,
+				m->phys, &m->attrs);
 		m->mapped = NULL;
 	}
 	release_firmware(ucode_fw);

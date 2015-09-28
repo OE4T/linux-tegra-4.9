@@ -1052,6 +1052,15 @@ static void gr_gm20b_init_cyclestats(struct gk20a *g)
 #endif
 }
 
+void gr_gm20b_enable_cde_in_fecs(void *ctx_ptr)
+{
+	u32 cde_v;
+	
+	cde_v = gk20a_mem_rd32(ctx_ptr + ctxsw_prog_main_image_ctl_o(), 0);
+	cde_v |=  ctxsw_prog_main_image_ctl_cde_enabled_f();
+	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_ctl_o(), 0, cde_v);
+}
+
 void gm20b_init_gr(struct gpu_ops *gops)
 {
 	gops->gr.init_gpc_mmu = gr_gm20b_init_gpc_mmu;
@@ -1107,4 +1116,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.init_sm_dsm_reg_info = gr_gm20b_init_sm_dsm_reg_info;
 	gops->gr.wait_empty = gr_gk20a_wait_idle;
 	gops->gr.init_cyclestats = gr_gm20b_init_cyclestats;
+	gops->gr.enable_cde_in_fecs = gr_gm20b_enable_cde_in_fecs;
 }

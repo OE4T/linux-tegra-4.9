@@ -180,6 +180,7 @@ struct gpu_ops {
 		int (*wait_empty)(struct gk20a *g, unsigned long end_jiffies,
 		       u32 expect_delay);
 		void (*init_cyclestats)(struct gk20a *g);
+		void (*enable_cde_in_fecs)(void *ctx_ptr);
 	} gr;
 	const char *name;
 	struct {

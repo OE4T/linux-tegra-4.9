@@ -231,6 +231,8 @@ struct nvhost_device_data t18_msenc_info = {
 	.devfs_name		= "msenc",
 	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVENC},
+	.can_powergate          = true,
+	.powergate_delay        = 500,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.clocks			= {
 		{"nvenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
@@ -259,6 +261,8 @@ struct nvhost_device_data t18_nvdec_info = {
 	.devfs_name		= "nvdec",
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVDEC},
 	.class			= NV_NVDEC_CLASS_ID,
+	.can_powergate          = true,
+	.powergate_delay        = 500,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.clocks			= {
 		{"nvdec", UINT_MAX, 0, TEGRA_MC_CLIENT_NVDEC},
@@ -289,6 +293,8 @@ struct nvhost_device_data t18_nvjpg_info = {
 	.devfs_name		= "nvjpg",
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVJPG},
 	.class			= NV_NVJPG_CLASS_ID,
+	.can_powergate          = true,
+	.powergate_delay        = 500,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay	= 500,
 	.clocks			= {

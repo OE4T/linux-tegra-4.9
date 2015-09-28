@@ -326,6 +326,7 @@ struct nvhost_device_data t18_vic_info = {
 		{"emc_shared", 0, NVHOST_MODULE_ID_EMC_SHARED},
 	},
 	.engine_cg_regs		= t18x_vic_gating_registers,
+	.engine_can_cg		= true,
 	.version		= NVHOST_ENCODE_FLCN_VER(4, 0),
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid		= NVHOST_MODULE_VIC,

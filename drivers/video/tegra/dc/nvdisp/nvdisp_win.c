@@ -252,11 +252,11 @@ static int tegra_nvdisp_scaling(struct tegra_dc_win *win)
 	if (!hbypass) {
 		/* Convert phase_incr from fixed20.12 to fixed 8.24 */
 		hphase_incr = compute_phase_incr(hscalar, win->out_w) & ~0x1;
-		dev_info(&win->dc->ndev->dev,
+		dev_dbg(&win->dc->ndev->dev,
 			"hphase_incr: 0x%x.\n", hphase_incr);
 
 		h_init_phase = (1 << (NFB - 1)) + (hphase_incr >> 1);
-		dev_info(&win->dc->ndev->dev,
+		dev_dbg(&win->dc->ndev->dev,
 			"h_init_phase: 0x%x.\n", h_init_phase);
 
 		nvdisp_win_write(win,
@@ -272,11 +272,11 @@ static int tegra_nvdisp_scaling(struct tegra_dc_win *win)
 	if (!vbypass) {
 		/* Convert phase_incr from fixed20.12 to fixed8.24 */
 		vphase_incr = compute_phase_incr(vscalar, win->out_h)& ~0x1;
-		dev_info(&win->dc->ndev->dev,
+		dev_dbg(&win->dc->ndev->dev,
 			"vphase_incr: 0x%x.\n", vphase_incr);
 
 		v_init_phase = (1 << (NFB - 1)) + (vphase_incr >> 1);
-		dev_info(&win->dc->ndev->dev,
+		dev_dbg(&win->dc->ndev->dev,
 			"v_init_phase: 0x%x.\n", v_init_phase);
 
 		nvdisp_win_write(win,

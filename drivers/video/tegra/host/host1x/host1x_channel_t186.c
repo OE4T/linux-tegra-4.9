@@ -294,10 +294,15 @@ static void submit_work(struct nvhost_job *job)
 
 			/* update current class */
 			cur_class = g->class_id;
-		}
+			if (g->class_id != NV_HOST1X_CLASS_ID)
+				submit_setstreamid(job);
 
-		if (g->class_id != NV_HOST1X_CLASS_ID)
-			submit_setstreamid(job);
+			/* initialize class context */
+			if (cur_class != NV_HOST1X_CLASS_ID &&
+			    pdata->init_class_context)
+				pdata->init_class_context(job->ch->dev,
+							  &job->ch->cdma);
+		}
 
 		/* If register is specified, add a gather with incr/nonincr.
 		 * This allows writing large amounts of data directly from

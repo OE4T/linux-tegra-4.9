@@ -1,0 +1,4 @@
+config T186_CSI_MIPI_CAL
+	bool "Tegra186 CSI MIPI Calibration driver"
+	help
+     Say Y or M if you want to add support for T186 CSI MIPI Calibration

@@ -275,6 +275,7 @@ struct nvhost_device_data t18_tsec_info = {
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
 	},
 	.engine_cg_regs		= t18x_tsec_gating_registers,
+	.engine_can_cg		= true,
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.keepalive		= true,
@@ -302,6 +303,7 @@ struct nvhost_device_data t18_tsecb_info = {
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER}
 	},
 	.engine_cg_regs		= t18x_tsec_gating_registers,
+	.engine_can_cg		= true,
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.keepalive		= true,

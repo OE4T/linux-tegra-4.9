@@ -377,6 +377,17 @@
 		status = "disabled";
 	};
 
+	csi_mipical {
+		compatible = "nvidia, tegra186_csi_mipical";
+		reg = <0x0 0x03990000 0x0 0x100>;
+		clocks = <&tegra_car TEGRA186_CLK_MIPI_CAL>,
+			<&tegra_car TEGRA186_CLK_UART_FST_MIPI_CAL>;
+		clock-names = "mipi_cal", "uart_fs_mipi_cal";
+		resets = <&tegra_car TEGRA186_RESET_MIPI_CAL>;
+		reset-names = "mipi_cal";
+		status = "okay";
+	};
+
 	isc-mgr.0 {
 		compatible = "nvidia,isc-mgr";
 		i2c-bus = <7>;

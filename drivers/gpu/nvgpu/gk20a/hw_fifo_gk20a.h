@@ -110,6 +110,10 @@ static inline u32 fifo_eng_runlist_length_f(u32 v)
 {
 	return (v & 0xffff) << 0;
 }
+static inline u32 fifo_eng_runlist_length_max_v(void)
+{
+	return 0x0000ffff;
+}
 static inline u32 fifo_eng_runlist_pending_true_f(void)
 {
 	return 0x100000;

@@ -303,7 +303,13 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 	if (!runlist->active_tsgs)
 		goto clean_up_runlist_info;
 
-	runlist_size  = ram_rl_entry_size_v() * f->num_channels;
+	runlist->high_prio_channels =
+		kzalloc(DIV_ROUND_UP(f->num_channels, BITS_PER_BYTE),
+			GFP_KERNEL);
+	if (!runlist->high_prio_channels)
+		goto clean_up_runlist_info;
+
+	runlist_size  = ram_rl_entry_size_v() * f->num_runlist_entries;
 	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
 		int err = gk20a_gmmu_alloc(g, runlist_size, &runlist->mem[i]);
 		if (err) {
@@ -324,10 +330,16 @@ clean_up_runlist:
 	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++)
 		gk20a_gmmu_free(g, &runlist->mem[i]);
 
+clean_up_runlist_info:
 	kfree(runlist->active_channels);
 	runlist->active_channels = NULL;
 
-clean_up_runlist_info:
+	kfree(runlist->active_tsgs);
+	runlist->active_tsgs = NULL;
+
+	kfree(runlist->high_prio_channels);
+	runlist->high_prio_channels = NULL;
+
 	kfree(f->runlist_info);
 	f->runlist_info = NULL;
 
@@ -483,6 +495,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	gk20a_init_fifo_pbdma_intr_descs(f); /* just filling in data/tables */
 
 	f->num_channels = g->ops.fifo.get_num_fifos(g);
+	f->num_runlist_entries = fifo_eng_runlist_length_max_v();
 	f->num_pbdma = proj_host_num_pbdma_v();
 	f->max_engines = ENGINE_INVAL_GK20A;
 
@@ -2149,6 +2162,34 @@ static inline u32 gk20a_get_tsg_runlist_entry_0(struct tsg_gk20a *tsg)
 	return runlist_entry_0;
 }
 
+/* add all active high priority channels */
+static inline u32 gk20a_fifo_runlist_add_high_prio_entries(
+		struct fifo_gk20a *f,
+		struct fifo_runlist_info_gk20a *runlist,
+		u32 *runlist_entry)
+{
+	struct channel_gk20a *ch = NULL;
+	unsigned long high_prio_chid;
+	u32 count = 0;
+
+	for_each_set_bit(high_prio_chid,
+			runlist->high_prio_channels, f->num_channels) {
+		ch = &f->channel[high_prio_chid];
+
+		if (!gk20a_is_channel_marked_as_tsg(ch) &&
+		     test_bit(high_prio_chid, runlist->active_channels) == 1) {
+			gk20a_dbg_info("add high prio channel %lu to runlist",
+					high_prio_chid);
+			runlist_entry[0] = ram_rl_entry_chid_f(high_prio_chid);
+			runlist_entry[1] = 0;
+			runlist_entry += 2;
+			count++;
+		}
+	}
+
+	return count;
+}
+
 static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 					    u32 hw_chid, bool add,
 					    bool wait_for_finish)
@@ -2158,7 +2199,7 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	struct fifo_runlist_info_gk20a *runlist = NULL;
 	u32 *runlist_entry_base = NULL;
 	u32 *runlist_entry = NULL;
-	phys_addr_t runlist_pa;
+	u64 runlist_iova;
 	u32 old_buf, new_buf;
 	u32 chid, tsgid;
 	struct channel_gk20a *ch = NULL;
@@ -2194,11 +2235,13 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	old_buf = runlist->cur_buffer;
 	new_buf = !runlist->cur_buffer;
 
-	gk20a_dbg_info("runlist_id : %d, switch to new buffer 0x%16llx",
-		runlist_id, (u64)gk20a_mem_phys(&runlist->mem[new_buf]));
+	runlist_iova = g->ops.mm.get_iova_addr(
+			g, runlist->mem[new_buf].sgt->sgl, 0);
 
-	runlist_pa = gk20a_mem_phys(&runlist->mem[new_buf]);
-	if (!runlist_pa) {
+	gk20a_dbg_info("runlist_id : %d, switch to new buffer 0x%16llx",
+		runlist_id, (u64)runlist_iova);
+
+	if (!runlist_iova) {
 		ret = -EINVAL;
 		goto clean_up;
 	}
@@ -2213,25 +2256,52 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	    add /* resume to add all channels back */) {
 		runlist_entry = runlist_entry_base;
 
-		/* add non-TSG channels first */
+		/* Runlist manipulation:
+		   Insert an entry of all high priority channels inbetween
+		   all lower priority channels. This ensure that the maximum
+		   delay a runnable high priority channel has to wait is one
+		   medium timeslice + any context switching overhead +
+		   wait on other high priority channels.
+		   add non-TSG channels first */
 		for_each_set_bit(chid,
 			runlist->active_channels, f->num_channels) {
 			ch = &f->channel[chid];
 
-			if (!gk20a_is_channel_marked_as_tsg(ch)) {
-				gk20a_dbg_info("add channel %d to runlist",
+			if (!gk20a_is_channel_marked_as_tsg(ch) &&
+				!ch->interleave) {
+				u32 added;
+
+				gk20a_dbg_info("add normal prio channel %d to runlist",
 					chid);
 				runlist_entry[0] = ram_rl_entry_chid_f(chid);
 				runlist_entry[1] = 0;
 				runlist_entry += 2;
 				count++;
+
+				added =	gk20a_fifo_runlist_add_high_prio_entries(
+						f,
+						runlist,
+						runlist_entry);
+				count += added;
+				runlist_entry += 2 * added;
 			}
+		}
+
+		/* if there were no lower priority channels, then just
+		 * add the high priority channels once. */
+		if (count == 0) {
+			count =	gk20a_fifo_runlist_add_high_prio_entries(
+					f,
+					runlist,
+					runlist_entry);
+			runlist_entry += 2 * count;
 		}
 
 		/* now add TSG entries and channels bound to TSG */
 		mutex_lock(&f->tsg_inuse_mutex);
 		for_each_set_bit(tsgid,
 				runlist->active_tsgs, f->num_channels) {
+			u32 added;
 			tsg = &f->tsg[tsgid];
 			/* add TSG entry */
 			gk20a_dbg_info("add TSG %d to runlist", tsg->tsgid);
@@ -2260,6 +2330,13 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 
 			WARN_ON(tsg->num_active_channels !=
 				count_channels_in_tsg);
+
+			added = gk20a_fifo_runlist_add_high_prio_entries(
+					f,
+					runlist,
+					runlist_entry);
+			count += added;
+			runlist_entry += 2 * added;
 		}
 		mutex_unlock(&f->tsg_inuse_mutex);
 	} else	/* suspend to remove all channels */
@@ -2267,7 +2344,7 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 
 	if (count != 0) {
 		gk20a_writel(g, fifo_runlist_base_r(),
-			fifo_runlist_base_ptr_f(u64_lo32(runlist_pa >> 12)) |
+			fifo_runlist_base_ptr_f(u64_lo32(runlist_iova >> 12)) |
 			fifo_runlist_base_target_vid_mem_f());
 	}
 
@@ -2414,6 +2491,42 @@ static u32 gk20a_fifo_get_num_fifos(struct gk20a *g)
 u32 gk20a_fifo_get_pbdma_signature(struct gk20a *g)
 {
 	return pbdma_signature_hw_valid_f() | pbdma_signature_sw_zero_f();
+}
+
+int gk20a_fifo_set_channel_priority(
+		struct gk20a *g,
+		u32 runlist_id,
+		u32 hw_chid,
+		bool interleave)
+{
+	struct fifo_runlist_info_gk20a *runlist = NULL;
+	struct fifo_gk20a *f = &g->fifo;
+	struct channel_gk20a *ch = NULL;
+
+	if (hw_chid >= f->num_channels)
+		return -EINVAL;
+
+	if (runlist_id >= f->max_runlists)
+		return -EINVAL;
+
+	ch = &f->channel[hw_chid];
+
+	gk20a_dbg_fn("");
+
+	runlist = &f->runlist_info[runlist_id];
+
+	mutex_lock(&runlist->mutex);
+
+	if (ch->interleave)
+		set_bit(hw_chid, runlist->high_prio_channels);
+	else
+		clear_bit(hw_chid, runlist->high_prio_channels);
+
+	gk20a_dbg_fn("done");
+
+	mutex_unlock(&runlist->mutex);
+
+	return 0;
 }
 
 void gk20a_init_fifo(struct gpu_ops *gops)

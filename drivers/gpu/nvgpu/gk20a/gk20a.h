@@ -54,6 +54,8 @@ struct acr_gm20b;
     32 ns is the resolution of ptimer. */
 #define PTIMER_REF_FREQ_HZ                      31250000
 
+#define MAX_INTERLEAVED_CHANNELS                32
+
 struct cooling_device_gk20a {
 	struct thermal_cooling_device *gk20a_cooling_dev;
 	unsigned int gk20a_freq_state;
@@ -512,6 +514,10 @@ struct gk20a {
 	u32 timeslice_low_priority_us;
 	u32 timeslice_medium_priority_us;
 	u32 timeslice_high_priority_us;
+	u32 interleave_high_priority;
+
+	struct mutex interleave_lock;
+	u32 num_interleaved_channels;
 
 	bool slcg_enabled;
 	bool blcg_enabled;
@@ -533,9 +539,11 @@ struct gk20a {
 	struct dentry *debugfs_disable_bigpage;
 	struct dentry *debugfs_gr_default_attrib_cb_size;
 
-	struct dentry * debugfs_timeslice_low_priority_us;
-	struct dentry * debugfs_timeslice_medium_priority_us;
-	struct dentry * debugfs_timeslice_high_priority_us;
+	struct dentry *debugfs_timeslice_low_priority_us;
+	struct dentry *debugfs_timeslice_medium_priority_us;
+	struct dentry *debugfs_timeslice_high_priority_us;
+	struct dentry *debugfs_interleave_high_priority;
+
 #endif
 	struct gk20a_ctxsw_ucode_info ctxsw_ucode_info;
 

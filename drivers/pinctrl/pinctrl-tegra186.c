@@ -2999,7 +2999,7 @@ static const char * const pe2_groups[] = {
 };
 
 static const char * const sata_groups[] = {
-	"pex_l2_clkreq_n",
+	"pex_l2_clkreq_n_pa6",
 	"pex_l2_rst_n_pa5",
 };
 

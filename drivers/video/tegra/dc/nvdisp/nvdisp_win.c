@@ -452,7 +452,9 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 			win_set_planar_storage_uv_r());
 	}
 
-	win_params = win_win_set_params_in_range_full_f();
+	/* setting full range and clamp before blend as default */
+	win_params = win_win_set_params_in_range_full_f() |
+		win_win_set_params_clamp_before_blend_enable_f();
 
 	/* setting input-range */
 	if (win->flags & TEGRA_WIN_FLAG_INPUT_RANGE_BYPASS)
@@ -464,14 +466,12 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 		/* yuv8_10 for rec601/709/2020-10 and
 		 * yuv12 for rec2020-12 yuv inputs
 		 */
-#if 0
 		if (tegra_dc_is_yuv_12bpc(win->fmt))
 			win_params |=
 				win_win_set_params_degamma_range_yuv12_f();
 		else
 			win_params |=
 				win_win_set_params_degamma_range_yuv8_10_f();
-#endif
 
 		/* color_space settings */
 		if (win->flags & TEGRA_WIN_FLAG_CS_REC601)
@@ -482,7 +482,6 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 			win_params |= win_win_set_params_cs_range_yuv_709_f();
 
 	} else {
-#if 0
 		/* srgb for rgb, none for I8 */
 		if (win->fmt == TEGRA_WIN_FMT_P8)
 			win_params |=
@@ -490,13 +489,9 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 		else
 			win_params |=
 				win_win_set_params_degamma_range_srgb_f();
-#endif
 
 		win_params |= win_win_set_params_cs_range_rgb_f();
 	}
-
-    win_params |=
-        win_win_set_params_degamma_range_none_f();
 
 	nvdisp_win_write(win, win_params, win_win_set_params_r());
 

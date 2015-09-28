@@ -174,7 +174,7 @@ static void wke_clear_wake_status(void)
 	u32 reg = WAKE_AOWAKE_STATUS_R_31_0_0;
 	u32 mask = WAKE_AOWAKE_TIER2_ROUTING_31_0_0;
 
-	for (i = 0; i < WAKE_NR_EVENTS; i++, reg += 4, mask += 4) {
+	for (i = 0; i < WAKE_NR_VECTORS; i++, reg += 4, mask += 4) {
 		status = tegra_aowake_read(reg);
 		status = status & tegra_aowake_read(reg);
 		regw = WAKE_AOWAKE_STATUS_W_0 + i * 32 * 4;

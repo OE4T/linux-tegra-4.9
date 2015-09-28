@@ -370,6 +370,8 @@ struct nvhost_device_data t18_vic_info = {
 	.engine_cg_regs		= t18x_vic_gating_registers,
 	.engine_can_cg		= true,
 	.version		= NVHOST_ENCODE_FLCN_VER(4, 0),
+	.can_powergate          = true,
+	.powergate_delay        = 500,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid		= NVHOST_MODULE_VIC,
 	.poweron_reset		= true,

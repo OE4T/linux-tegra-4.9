@@ -15,7 +15,7 @@
 #define TEGRA186_AOWAKE_H
 
 extern unsigned long tegra_aowake_read(unsigned int reg_offset);
-extern int tegra_aowake_write(unsigned int val, unsigned long reg_offset);
+extern int tegra_aowake_write(unsigned long val, unsigned int reg_offset);
 extern int tegra_aowake_update(unsigned int reg_offset, unsigned long mask,
 		unsigned long val);
 #ifdef CONFIG_PM_SLEEP

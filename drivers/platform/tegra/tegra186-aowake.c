@@ -46,8 +46,7 @@ unsigned long tegra_aowake_read(unsigned int reg_offset)
 }
 EXPORT_SYMBOL(tegra_aowake_read);
 
-int tegra_aowake_write(unsigned int reg_offset,
-		unsigned long val)
+int tegra_aowake_write(unsigned long val, unsigned int reg_offset)
 {
 	if (!tegra186_aowake) {
 		WARN_ON(!tegra186_aowake);

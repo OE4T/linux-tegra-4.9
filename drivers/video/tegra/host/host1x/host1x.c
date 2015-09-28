@@ -423,7 +423,7 @@ static long nvhost_ctrlctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
 	struct nvhost_ctrl_userctx *priv = filp->private_data;
-	u8 buf[NVHOST_IOCTL_CTRL_MAX_ARG_SIZE];
+	u8 buf[NVHOST_IOCTL_CTRL_MAX_ARG_SIZE] __aligned(sizeof(u64));
 	int err = 0;
 
 	if ((_IOC_TYPE(cmd) != NVHOST_IOCTL_MAGIC) ||

@@ -1112,7 +1112,7 @@ static long nvhost_channelctl(struct file *filp,
 	struct nvhost_channel_userctx *priv = filp->private_data;
 	struct nvhost_master *host;
 	struct device *dev;
-	u8 buf[NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE];
+	u8 buf[NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE] __aligned(sizeof(u64));
 	int err = 0;
 
 	if ((_IOC_TYPE(cmd) != NVHOST_IOCTL_MAGIC) ||

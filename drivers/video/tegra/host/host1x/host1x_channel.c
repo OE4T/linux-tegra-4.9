@@ -231,10 +231,17 @@ static void submit_gathers(struct nvhost_job *job)
 		if (pdata->resource_policy == RESOURCE_PER_DEVICE)
 			add_sync_waits(job->ch, g->pre_fence);
 
-		if (g->class_id)
+		if (g->class_id) {
 			nvhost_cdma_push(&job->ch->cdma,
 				nvhost_opcode_setclass(g->class_id, 0, 0),
 				NVHOST_OPCODE_NOOP);
+
+			/* initialize class context */
+			if (g->class_id != NV_HOST1X_CLASS_ID &&
+			    pdata->init_class_context)
+				pdata->init_class_context(job->ch->dev,
+							  &job->ch->cdma);
+		}
 
 		/* If register is specified, add a gather with incr/nonincr.
 		 * This allows writing large amounts of data directly from

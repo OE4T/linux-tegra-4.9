@@ -35,6 +35,7 @@
 
 struct nvhost_channel;
 struct nvhost_master;
+struct nvhost_cdma;
 struct nvhost_hwctx;
 struct nvhost_device_power_attr;
 struct nvhost_device_profile;
@@ -249,6 +250,10 @@ struct nvhost_device_data {
 
 	/* Finalize power on. Can be used for context restore. */
 	int (*finalize_poweron)(struct platform_device *dev);
+
+	/* Called each time we enter the class */
+	int (*init_class_context)(struct platform_device *dev,
+				  struct nvhost_cdma *cdma);
 
 	/*
 	 * Reset the unit. Used for timeout recovery, resetting the unit on

@@ -4179,7 +4179,6 @@ int gk20a_pmu_destroy(struct gk20a *g)
 	g->pg_gating_cnt += gating_cnt;
 
 	mutex_lock(&pmu->isr_mutex);
-	pmu_enable(pmu, false);
 	pmu->isr_enabled = false;
 	mutex_unlock(&pmu->isr_mutex);
 

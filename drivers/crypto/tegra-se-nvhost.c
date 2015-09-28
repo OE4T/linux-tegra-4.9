@@ -2617,7 +2617,6 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
-	pdata->pd.name = "tegra-se-nvhost";
 	err = nvhost_module_add_domain(&pdata->pd, pdev);
 	if (err) {
 		dev_err(se_dev->dev,
@@ -2837,8 +2836,19 @@ static struct platform_driver tegra_se_driver = {
 	},
 };
 
+static struct of_device_id tegra_se_domain_match[] = {
+	{.compatible = "nvidia,tegra186-se-pd",
+	.data = (struct nvhost_device_data *)&nvhost_se1_info},
+	{},
+};
+
 static int __init tegra_se_module_init(void)
 {
+	int ret;
+
+	ret = nvhost_domain_init(tegra_se_domain_match);
+	if (ret)
+		return ret;
 	return  platform_driver_register(&tegra_se_driver);
 }
 

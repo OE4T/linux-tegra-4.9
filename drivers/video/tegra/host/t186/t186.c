@@ -165,6 +165,8 @@ struct nvhost_device_data t18_isp_info = {
 	.exclusive		= true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive		= true,
+	.can_powergate          = true,
+	.powergate_delay        = 500,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.poweron_reset		= true,
 	.clocks			= {
@@ -191,6 +193,8 @@ struct nvhost_device_data t18_vi_info = {
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_VI},
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive		= true,
+	.can_powergate          = true,
+	.powergate_delay        = 500,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.poweron_reset		= true,
 	.moduleid		= NVHOST_MODULE_VI,
@@ -418,6 +422,8 @@ struct nvhost_device_data t18_nvcsi_info = {
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVCSI},
 	.class			= NV_VIDEO_STREAMING_NVCSI_CLASS_ID,
 	.ctrl_ops		= &tegra_nvcsi_ctrl_ops,
+	.can_powergate          = true,
+	.powergate_delay        = 500,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.finalize_poweron	= nvcsi_finalize_poweron,
 	.prepare_poweroff	= nvcsi_prepare_poweroff,

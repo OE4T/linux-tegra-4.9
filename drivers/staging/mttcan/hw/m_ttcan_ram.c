@@ -286,7 +286,7 @@ void ttcan_set_xtd_id_filter(struct ttcan_controller *ttcan, int filter_index,
 		MTT_XTD_FLTR_F0_EFID1_MASK;
 	xfilter_elem.f1 = (eft << MTT_XTD_FLTR_F1_EFT_SHIFT) &
 		MTT_XTD_FLTR_F1_EFT_MASK;
-	xfilter_elem.f1 = (efid2 << MTT_XTD_FLTR_F1_EFID2_SHIFT) &
+	xfilter_elem.f1 |= (efid2 << MTT_XTD_FLTR_F1_EFID2_SHIFT) &
 		MTT_XTD_FLTR_F1_EFID2_MASK;
 
 	writel(xfilter_elem.f0,

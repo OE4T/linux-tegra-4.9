@@ -2073,9 +2073,15 @@ void tegra_dc_sor_set_internal_panel(struct tegra_dc_sor_data *sor, bool is_int)
 	tegra_sor_writel(sor, NV_SOR_DP_SPARE(sor->portnum), reg_val);
 
 	if (sor->dc->out->type == TEGRA_DC_OUT_HDMI)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 		tegra_sor_write_field(sor, NV_SOR_DP_SPARE(sor->portnum),
-				NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_ENABLE,
+				NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_MASK,
+				NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_DISABLE);
+#else
+		tegra_sor_write_field(sor, NV_SOR_DP_SPARE(sor->portnum),
+				NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_MASK,
 				NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_ENABLE);
+#endif
 }
 
 void tegra_dc_sor_read_link_config(struct tegra_dc_sor_data *sor, u8 *link_bw,

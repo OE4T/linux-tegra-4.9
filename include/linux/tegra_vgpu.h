@@ -19,6 +19,10 @@
 #ifndef __TEGRA_VGPU_H
 #define __TEGRA_VGPU_H
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#include <linux/tegra_vgpu_t18x.h>
+#endif
+
 enum {
 	TEGRA_VGPU_MODULE_GPU = 0,
 };
@@ -65,7 +69,8 @@ enum {
 	TEGRA_VGPU_CMD_GET_ZCULL_INFO,
 	TEGRA_VGPU_CMD_ZBC_SET_TABLE,
 	TEGRA_VGPU_CMD_ZBC_QUERY_TABLE,
-	TEGRA_VGPU_CMD_AS_MAP_EX
+	TEGRA_VGPU_CMD_AS_MAP_EX,
+	TEGRA_VGPU_CMD_CHANNEL_BIND_GR_CTXSW_BUFFERS
 };
 
 struct tegra_vgpu_connect_params {
@@ -245,6 +250,15 @@ struct tegra_vgpu_zbc_query_table_params {
 	u32 index_size;       /* [out] size, [in] index */
 };
 
+#define TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAX 4
+
+struct tegra_vgpu_gr_bind_ctxsw_buffers_params {
+	u64 handle;
+	u64 gpu_va[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAX];
+	u64 size[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAX];
+	u32 mode;
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -268,6 +282,8 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_zcull_info_params zcull_info;
 		struct tegra_vgpu_zbc_set_table_params zbc_set_table;
 		struct tegra_vgpu_zbc_query_table_params zbc_query_table;
+		struct tegra_vgpu_gr_bind_ctxsw_buffers_params gr_bind_ctxsw_buffers;
+		char padding[192];
 	} params;
 };
 
@@ -335,6 +351,7 @@ struct tegra_vgpu_intr_msg {
 		struct tegra_vgpu_fifo_intr_info fifo_intr;
 		struct tegra_vgpu_fifo_nonstall_intr_info fifo_nonstall_intr;
 		struct tegra_vgpu_ce2_nonstall_intr_info ce2_nonstall_intr;
+		char padding[32];
 	} info;
 };
 

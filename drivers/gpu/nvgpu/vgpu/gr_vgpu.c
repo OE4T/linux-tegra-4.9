@@ -70,9 +70,10 @@ static int vgpu_gr_load_golden_ctx_image(struct gk20a *g,
 	return (err || msg.ret) ? -1 : 0;
 }
 
-static int vgpu_gr_init_ctx_state(struct gk20a *g, struct gr_gk20a *gr)
+int vgpu_gr_init_ctx_state(struct gk20a *g)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct gr_gk20a *gr = &g->gr;
 
 	gk20a_dbg_fn("");
 
@@ -233,15 +234,17 @@ static void vgpu_gr_unmap_global_ctx_buffers(struct channel_gk20a *c)
 	c->ch_ctx.global_ctx_buffer_mapped = false;
 }
 
-static int vgpu_gr_alloc_channel_gr_ctx(struct gk20a *g,
-					struct channel_gk20a *c)
+int vgpu_gr_alloc_gr_ctx(struct gk20a *g,
+			struct gr_ctx_desc **__gr_ctx,
+			struct vm_gk20a *vm,
+			u32 class,
+			u32 flags)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_gr_ctx_params *p = &msg.params.gr_ctx;
 	struct gr_gk20a *gr = &g->gr;
-	struct gr_ctx_desc *gr_ctx;
-	struct vm_gk20a *ch_vm = c->vm;
+	struct gr_ctx_desc *gr_ctx = *__gr_ctx;
 	int err;
 
 	gk20a_dbg_fn("");
@@ -253,12 +256,8 @@ static int vgpu_gr_alloc_channel_gr_ctx(struct gk20a *g,
 	gr->ctx_vars.buffer_size = gr->ctx_vars.golden_image_size;
 	gr->ctx_vars.buffer_total_size = gr->ctx_vars.golden_image_size;
 
-	gr_ctx = kzalloc(sizeof(*gr_ctx), GFP_KERNEL);
-	if (!gr_ctx)
-		return -ENOMEM;
-
 	gr_ctx->mem.size = gr->ctx_vars.buffer_total_size;
-	gr_ctx->mem.gpu_va = gk20a_vm_alloc_va(ch_vm, gr_ctx->mem.size, 0);
+	gr_ctx->mem.gpu_va = gk20a_vm_alloc_va(vm, gr_ctx->mem.size, 0);
 
 	if (!gr_ctx->mem.gpu_va) {
 		kfree(gr_ctx);
@@ -267,46 +266,75 @@ static int vgpu_gr_alloc_channel_gr_ctx(struct gk20a *g,
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_ALLOC_GR_CTX;
 	msg.handle = platform->virt_handle;
-	p->handle = c->virt_ctx;
+	p->handle = gr_ctx->virt_ctx;
 	p->gr_ctx_va = gr_ctx->mem.gpu_va;
-	p->class_num = c->obj_class;
+	p->class_num = class;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 
 	if (err || msg.ret) {
 		kfree(gr_ctx);
-		gk20a_vm_free_va(ch_vm, gr_ctx->mem.gpu_va,
+		gk20a_vm_free_va(vm, gr_ctx->mem.gpu_va,
 				 gr_ctx->mem.size, 0);
 		err = -ENOMEM;
-	} else
-		c->ch_ctx.gr_ctx = gr_ctx;
+	}
 
 	return err;
 }
 
-static void vgpu_gr_free_channel_gr_ctx(struct channel_gk20a *c)
+static int vgpu_gr_alloc_channel_gr_ctx(struct gk20a *g,
+				struct channel_gk20a *c,
+				u32 class,
+				u32 flags)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(c->g->dev);
-	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
-	struct vm_gk20a *ch_vm = c->vm;
+	struct gr_ctx_desc **gr_ctx = &c->ch_ctx.gr_ctx;
+	struct gr_ctx_desc *__gr_ctx = kzalloc(sizeof(*__gr_ctx), GFP_KERNEL);
+	int err;
 
 	gk20a_dbg_fn("");
 
-	if (ch_ctx->gr_ctx && ch_ctx->gr_ctx->mem.gpu_va) {
+	if (!__gr_ctx)
+		return -ENOMEM;
+
+	__gr_ctx->virt_ctx = c->virt_ctx;
+	*gr_ctx = __gr_ctx;
+	err = g->ops.gr.alloc_gr_ctx(g, gr_ctx, c->vm, class, flags);
+	if (err) {
+		kfree(__gr_ctx);
+		return err;
+	}
+
+	c->ch_ctx.gr_ctx = __gr_ctx;
+	return 0;
+}
+
+void vgpu_gr_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
+			struct gr_ctx_desc *gr_ctx)
+{
+	gk20a_dbg_fn("");
+
+	if (gr_ctx && gr_ctx->mem.gpu_va) {
+		struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 		struct tegra_vgpu_cmd_msg msg;
 		struct tegra_vgpu_gr_ctx_params *p = &msg.params.gr_ctx;
 		int err;
 
 		msg.cmd = TEGRA_VGPU_CMD_CHANNEL_FREE_GR_CTX;
 		msg.handle = platform->virt_handle;
-		p->handle = c->virt_ctx;
+		p->handle = gr_ctx->virt_ctx;
 		err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 		WARN_ON(err || msg.ret);
 
-		gk20a_vm_free_va(ch_vm, ch_ctx->gr_ctx->mem.gpu_va,
-				ch_ctx->gr_ctx->mem.size, 0);
-		ch_ctx->gr_ctx->mem.gpu_va = 0;
-		kfree(ch_ctx->gr_ctx);
+		gk20a_vm_free_va(vm, gr_ctx->mem.gpu_va, gr_ctx->mem.size, 0);
+		kfree(gr_ctx);
 	}
+}
+
+static void vgpu_gr_free_channel_gr_ctx(struct channel_gk20a *c)
+{
+	gk20a_dbg_fn("");
+
+	c->g->ops.gr.free_gr_ctx(c->g, c->vm, c->ch_ctx.gr_ctx);
+	c->ch_ctx.gr_ctx = NULL;
 }
 
 static int vgpu_gr_alloc_channel_patch_ctx(struct gk20a *g,
@@ -416,7 +444,9 @@ static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 
 	/* allocate gr ctx buffer */
 	if (!ch_ctx->gr_ctx) {
-		err = vgpu_gr_alloc_channel_gr_ctx(g, c);
+		err = vgpu_gr_alloc_channel_gr_ctx(g, c,
+					    args->class_num,
+					    args->flags);
 		if (err) {
 			gk20a_err(dev_from_gk20a(g),
 				"fail to allocate gr ctx buffer");
@@ -785,7 +815,7 @@ static int vgpu_gr_init_gr_setup_sw(struct gk20a *g)
 	if (err)
 		goto clean_up;
 
-	err = vgpu_gr_init_ctx_state(g, gr);
+	err = g->ops.gr.init_ctx_state(g);
 	if (err)
 		goto clean_up;
 
@@ -894,6 +924,8 @@ void vgpu_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.free_channel_ctx = vgpu_gr_free_channel_ctx;
 	gops->gr.alloc_obj_ctx = vgpu_gr_alloc_obj_ctx;
 	gops->gr.free_obj_ctx = vgpu_gr_free_obj_ctx;
+	gops->gr.alloc_gr_ctx = vgpu_gr_alloc_gr_ctx;
+	gops->gr.free_gr_ctx = vgpu_gr_free_gr_ctx;
 	gops->gr.bind_ctxsw_zcull = vgpu_gr_bind_ctxsw_zcull;
 	gops->gr.get_zcull_info = vgpu_gr_get_zcull_info;
 	gops->gr.get_gpc_tpc_mask = vgpu_gr_get_gpc_tpc_mask;
@@ -904,4 +936,5 @@ void vgpu_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.get_rop_l2_en_mask = vgpu_gr_rop_l2_en_mask;
 	gops->gr.zbc_set_table = vgpu_gr_add_zbc;
 	gops->gr.zbc_query_table = vgpu_gr_query_zbc;
+	gops->gr.init_ctx_state = vgpu_gr_init_ctx_state;
 }

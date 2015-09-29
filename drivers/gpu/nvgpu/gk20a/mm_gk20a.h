@@ -91,6 +91,9 @@ struct gr_ctx_desc {
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct gr_ctx_desc_t18x t18x;
 #endif
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+	u64 virt_ctx;
+#endif
 };
 
 #define NVGPU_GR_PREEMPTION_MODE_WFI		0

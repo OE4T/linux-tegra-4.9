@@ -29,6 +29,14 @@ u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt, u64 size);
 int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info);
 int vgpu_gr_nonstall_isr(struct gk20a *g,
 			struct tegra_vgpu_gr_nonstall_intr_info *info);
+int vgpu_gr_alloc_gr_ctx(struct gk20a *g,
+			struct gr_ctx_desc **__gr_ctx,
+			struct vm_gk20a *vm,
+			u32 class,
+			u32 flags);
+void vgpu_gr_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
+			struct gr_ctx_desc *gr_ctx);
+int vgpu_gr_init_ctx_state(struct gk20a *g);
 int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info);
 int vgpu_fifo_nonstall_isr(struct gk20a *g,
 			struct tegra_vgpu_fifo_nonstall_intr_info *info);
@@ -76,6 +84,22 @@ static inline int vgpu_gr_isr(struct gk20a *g,
 			struct tegra_vgpu_gr_intr_info *info)
 {
 	return 0;
+}
+static inline int vgpu_gr_alloc_gr_ctx(struct gk20a *g,
+				struct gr_ctx_desc **__gr_ctx,
+				struct vm_gk20a *vm,
+				u32 class,
+				u32 flags)
+{
+	return -ENOSYS;
+}
+static inline void vgpu_gr_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
+				struct gr_ctx_desc *gr_ctx)
+{
+}
+static inline int vgpu_gr_init_ctx_state(struct gk20a *g)
+{
+	return -ENOSYS;
 }
 static inline int vgpu_fifo_isr(struct gk20a *g,
 			struct tegra_vgpu_fifo_intr_info *info)

@@ -2144,7 +2144,7 @@ static int update_gmmu_pde_locked(struct vm_gk20a *vm,
 			   struct scatterlist **sgl,
 			   u64 *offset,
 			   u64 *iova,
-			   u32 kind_v, u32 *ctag,
+			   u32 kind_v, u64 *ctag,
 			   bool cacheable, bool unammped_pte,
 			   int rw_flag, bool sparse, bool priv)
 {
@@ -2194,12 +2194,12 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			   struct scatterlist **sgl,
 			   u64 *offset,
 			   u64 *iova,
-			   u32 kind_v, u32 *ctag,
+			   u32 kind_v, u64 *ctag,
 			   bool cacheable, bool unmapped_pte,
 			   int rw_flag, bool sparse, bool priv)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	u32 ctag_granularity = g->ops.fb.compression_page_size(g);
+	u64 ctag_granularity = g->ops.fb.compression_page_size(g);
 	u32 page_size  = vm->gmmu_page_sizes[gmmu_pgsz_idx];
 	u32 pte_w[2] = {0, 0}; /* invalid pte */
 
@@ -2218,7 +2218,7 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 
 		pte_w[1] = gmmu_pte_aperture_video_memory_f() |
 			gmmu_pte_kind_f(kind_v) |
-			gmmu_pte_comptagline_f(*ctag / ctag_granularity);
+			gmmu_pte_comptagline_f((u32)(*ctag / ctag_granularity));
 
 		if (rw_flag == gk20a_mem_flag_read_only) {
 			pte_w[0] |= gmmu_pte_read_only_true_f();
@@ -2244,7 +2244,7 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 		gk20a_dbg(gpu_dbg_pte,
 			"pte=%d iova=0x%llx kind=%d ctag=%d vol=%d [0x%08x, 0x%08x]",
 			   i, *iova,
-			   kind_v, *ctag / ctag_granularity, !cacheable,
+			   kind_v, (u32)(*ctag / ctag_granularity), !cacheable,
 			   pte_w[1], pte_w[0]);
 
 		if (*ctag)
@@ -2287,7 +2287,7 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 				    u64 *offset,
 				    u64 *iova,
 				    u64 gpu_va, u64 gpu_end,
-				    u8 kind_v, u32 *ctag,
+				    u8 kind_v, u64 *ctag,
 				    bool cacheable, bool unmapped_pte,
 				    int rw_flag,
 				    bool sparse,
@@ -2390,7 +2390,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	int ctag_granularity = g->ops.fb.compression_page_size(g);
-	u32 ctag = ctag_offset * ctag_granularity;
+	u64 ctag = (u64)ctag_offset * (u64)ctag_granularity;
 	u64 iova = 0;
 	u64 space_to_skip = buffer_offset;
 	u32 page_size  = vm->gmmu_page_sizes[pgsz_idx];

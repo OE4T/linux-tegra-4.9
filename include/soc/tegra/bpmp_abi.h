@@ -21,8 +21,8 @@
 #include <stdint.h>
 #endif
 
-#ifndef __PACKED
-#define __PACKED __attribute__((packed))
+#ifndef __ABI_PACKED
+#define __ABI_PACKED __attribute__((packed))
 #endif
 
 #ifdef NO_GCC_EXTENSIONS
@@ -114,7 +114,7 @@ struct mrq_request {
 	uint32_t mrq;
 	uint32_t flags;
 	/* MRQ specific request payload begins starts here */
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * 1.2 Response messages
@@ -127,7 +127,7 @@ struct mrq_response {
 	int32_t err;
 	uint32_t flags;
 	/* MRQ specific response payload begins here */
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * Minimum needed size for message buffers
@@ -235,7 +235,7 @@ struct mrq_response {
 struct mrq_ping_request
 {
 	uint32_t challenge;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * struct mrq_ping_response
@@ -249,7 +249,7 @@ struct mrq_ping_request
 struct mrq_ping_response
 {
 	uint32_t reply;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * 3.1 TAG query (MRQ_QUERY_TAG)
@@ -272,7 +272,7 @@ struct mrq_ping_response
 struct mrq_query_tag_request
 {
 	uint32_t addr;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * There is no payload data to be sent as a response for
@@ -330,7 +330,7 @@ struct mrq_module_load_request
 {
 	uint32_t phys_addr;/* (void *) */
 	uint32_t size;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * struct mrq_module_load_response
@@ -342,7 +342,7 @@ struct mrq_module_load_request
 struct mrq_module_load_response
 {
 	uint32_t base;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * 3.5 Module unload (MRQ_MODULE_UNLOAD)
@@ -362,7 +362,7 @@ struct mrq_module_load_response
 struct mrq_module_unload_request
 {
 	uint32_t base;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * 3.6 Switch cluster (MRQ_SWITCH_CLUSTER)
@@ -394,7 +394,7 @@ struct mrq_trace_modify_request
 {
 	uint32_t clr;
 	uint32_t set;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * struct mrq_trace_modify_response
@@ -408,7 +408,7 @@ struct mrq_trace_modify_request
 struct mrq_trace_modify_response
 {
 	uint32_t mask;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * 3.8 Write trace (MRQ_WRITE_TRACE)
@@ -438,7 +438,7 @@ struct mrq_write_trace_request
 {
 	uint32_t area; /* (char *) */
 	uint32_t size;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * struct mrq_write_trace_response
@@ -459,7 +459,7 @@ struct mrq_write_trace_request
 struct mrq_write_trace_response
 {
 	uint32_t eof;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * 3.9 Threaded ping (MRQ_THREADED_PING)
@@ -472,12 +472,12 @@ struct mrq_write_trace_response
 struct mrq_threaded_ping_request
 {
 	uint32_t challenge;
-} __PACKED;
+} __ABI_PACKED;
 
 struct mrq_threaded_ping_response
 {
 	uint32_t reply;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * 3.10 Cpuidle usage (MRQ_CPUIDLE_USAGE)
@@ -504,12 +504,12 @@ struct mrq_module_mail_request
 {
 	uint32_t base;
 	uint8_t data[EMPTY_ARRAY]; /* module mail specific payload */
-} __PACKED;
+} __ABI_PACKED;
 
 struct mrq_module_mail_response
 {
 	uint8_t data[EMPTY_ARRAY]; /* module mail specific response */
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * 3.12 SCx enable (MRQ_SCX_ENABLE)
@@ -547,13 +547,13 @@ struct mrq_module_mail_response
 struct mrq_bpmpidle_usage_request
 {
 	uint32_t state;
-} __PACKED;
+} __ABI_PACKED;
 
 struct mrq_bpmpidle_usage_response
 {
 	uint64_t count;
 	uint64_t time;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * 3.15 Heap usage (MRQ_HEAP_USAGE)
@@ -566,7 +566,7 @@ struct mrq_bpmpidle_usage_response
 struct mrq_heap_usage_request
 {
 	EMPTY
-} __PACKED;
+} __ABI_PACKED;
 
 struct mrq_heap_usage_response
 {
@@ -575,7 +575,7 @@ struct mrq_heap_usage_response
 	uint32_t heap_free;
 	uint32_t heap_max_chunk;
 	uint32_t heap_low_watermark;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * 3.16 SCLK skip set rate (MRQ_SCLK_SKIP_SET_RATE)
@@ -626,22 +626,22 @@ struct cmd_debugfs_fileop_request {
 	uint32_t fnamelen;
 	uint32_t dataaddr;
 	uint32_t datalen;
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_debugfs_dumpdir_request {
 	uint32_t dataaddr;
 	uint32_t datalen;
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_debugfs_fileop_response {
 	uint32_t reserved; /* always 0 */
 	uint32_t nbytes;
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_debugfs_dumpdir_response {
 	uint32_t reserved; /* always 0 */
 	uint32_t nbytes;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * struct mrq_debugfs_request
@@ -655,7 +655,7 @@ struct mrq_debugfs_request {
 		struct cmd_debugfs_fileop_request fop;
 		struct cmd_debugfs_dumpdir_request dumpdir;
 	};
-} __PACKED;
+} __ABI_PACKED;
 
 struct mrq_debugfs_response {
 	int32_t reserved; /* always 0 */
@@ -663,7 +663,7 @@ struct mrq_debugfs_response {
 		struct cmd_debugfs_fileop_response fop;
 		struct cmd_debugfs_dumpdir_response dumpdir;
 	};
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * Debugfs enumerations
@@ -700,7 +700,7 @@ enum mrq_reset_commands {
 struct mrq_reset_request {
 	uint32_t cmd;
 	uint32_t reset_id;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * There is no payload data to be sent as a response for
@@ -756,7 +756,7 @@ struct cmd_i2c_xfer_request {
 	uint32_t bus_id;
 	uint32_t data_size;
 	uint8_t data_buf[TEGRA_I2C_IPC_MAX_IN_BUF_SIZE];
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * struct cmd_i2c_xfer_response
@@ -766,7 +766,7 @@ struct cmd_i2c_xfer_request {
 struct cmd_i2c_xfer_response {
 	uint32_t data_size;
 	uint8_t data_buf[TEGRA_I2C_IPC_MAX_OUT_BUF_SIZE];
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * struct mrq_i2c_request
@@ -778,7 +778,7 @@ struct mrq_i2c_request
 {
 	uint32_t cmd;
 	struct cmd_i2c_xfer_request xfer;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * struct mrq_i2c_response
@@ -788,7 +788,7 @@ struct mrq_i2c_request
 struct mrq_i2c_response
 {
 	struct cmd_i2c_xfer_response xfer;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * 3.22 Clock (MRQ_CLK)
@@ -821,112 +821,112 @@ enum {
 
 struct cmd_clk_get_rate_request {
 	EMPTY
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_get_rate_response {
 	int64_t rate;
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_set_rate_request {
 	int32_t unused;
 	int64_t rate;
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_set_rate_response {
 	int64_t rate;
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_round_rate_request {
 	int32_t unused;
 	int64_t rate;
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_round_rate_response {
 	int64_t rate;
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_get_parent_request {
 	EMPTY
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_get_parent_response {
 	uint32_t parent_id;
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_set_parent_request {
 	uint32_t parent_id;
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_set_parent_response {
 	uint32_t parent_id;
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_is_enabled_request {
 	EMPTY
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_is_enabled_response {
 	int32_t state;
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_enable_request {
 	EMPTY
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_enable_response {
 	EMPTY
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_disable_request {
 	EMPTY
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_disable_response {
 	EMPTY
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_properties_request {
 	EMPTY
-} __PACKED;
+} __ABI_PACKED;
 
 /* TODO: flags need to be spelled out here */
 struct cmd_clk_properties_response {
 	uint32_t flags;
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_possible_parents_request {
 	EMPTY
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_possible_parents_response {
 	uint8_t num_parents;
 	uint8_t reserved[3];
 	uint32_t parent_id[MRQ_CLK_MAX_PARENTS];
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_num_possible_parents_request {
 	EMPTY
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_num_possible_parents_response {
 	uint8_t num_parents;
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_get_possible_parent_request {
 	uint8_t parent_idx;
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_get_possible_parent_response {
 	uint32_t parent_id;
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_reset_refcounts {
 	EMPTY
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_get_all_info_request {
 	EMPTY
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_get_all_info_response {
 	uint32_t flags;
@@ -934,15 +934,15 @@ struct cmd_clk_get_all_info_response {
 	uint32_t parents[MRQ_CLK_MAX_PARENTS];
 	uint8_t num_parents;
 	uint8_t name[MRQ_CLK_NAME_MAXLEN];
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_get_max_clk_id_request {
 	EMPTY
-} __PACKED;
+} __ABI_PACKED;
 
 struct cmd_clk_get_max_clk_id_response {
 	uint32_t max_id;
-} __PACKED;
+} __ABI_PACKED;
 
 
 /**
@@ -987,7 +987,7 @@ struct mrq_clk_request {
 		struct cmd_clk_get_all_info_request clk_get_all_info;
 		struct cmd_clk_get_max_clk_id_request clk_get_max_clk_id;
 	};
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * struct mrq_clk_response
@@ -1012,7 +1012,7 @@ struct mrq_clk_response {
 		struct cmd_clk_get_all_info_response clk_get_all_info;
 		struct cmd_clk_get_max_clk_id_response clk_get_max_clk_id;
 	};
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * 3.23 ABI Query (MRQ_QUERY_ABI)
@@ -1032,7 +1032,7 @@ struct mrq_clk_response {
 
 struct mrq_query_abi_request {
 	uint32_t mrq;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * struct mrq_query_abi_response
@@ -1043,7 +1043,7 @@ struct mrq_query_abi_request {
  */
 struct mrq_query_abi_response {
 	int32_t status;
-} __PACKED;
+} __ABI_PACKED;
 
 
 /**
@@ -1083,7 +1083,7 @@ enum mc_flush_req {
  */
 struct mrq_pg_read_state_request {
 	uint32_t partition_id;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * struct mrq_pg_read_state_response
@@ -1097,7 +1097,7 @@ struct mrq_pg_read_state_request {
 struct mrq_pg_read_state_response {
 	uint32_t sram_state;
 	uint32_t logic_state;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * 3.26 PG update state (MRQ_PG_UPDATE_STATE)
@@ -1129,7 +1129,7 @@ struct mrq_pg_update_state_request {
 	uint32_t sram_state;
 	uint32_t logic_state;
 	uint32_t clock_state;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * BPMP responds to %MRQ_PG_UPDATE_STATE_REQUEST message without
@@ -1223,7 +1223,7 @@ enum mrq_thermal_bpmp_to_host_cmd {
  */
 struct cmd_thermal_query_abi_request {
 	uint32_t type;
-} __PACKED;
+} __ABI_PACKED;
 
 /*
  * Host->BPMP request data for request type CMD_THERMAL_GET_TEMP
@@ -1232,7 +1232,7 @@ struct cmd_thermal_query_abi_request {
  */
 struct cmd_thermal_get_temp_request {
 	uint32_t zone;
-} __PACKED;
+} __ABI_PACKED;
 
 /*
  * BPMP->Host reply data for request CMD_THERMAL_GET_TEMP
@@ -1245,7 +1245,7 @@ struct cmd_thermal_get_temp_request {
  */
 struct cmd_thermal_get_temp_response {
 	int32_t temp;
-} __PACKED;
+} __ABI_PACKED;
 
 /*
  * Host->BPMP request data for request type CMD_THERMAL_SET_TRIP
@@ -1260,7 +1260,7 @@ struct cmd_thermal_set_trip_request {
 	int32_t low;
 	int32_t high;
 	uint32_t enabled;
-} __PACKED;
+} __ABI_PACKED;
 
 /*
  * BPMP->Host request data for request type CMD_THERMAL_HOST_TRIP_REACHED
@@ -1269,7 +1269,7 @@ struct cmd_thermal_set_trip_request {
  */
 struct cmd_thermal_host_trip_reached_request {
 	uint32_t zone;
-} __PACKED;
+} __ABI_PACKED;
 
 /*
  * BPMP->Host reply data for request type CMD_THERMAL_GET_NUM_ZONES
@@ -1279,7 +1279,7 @@ struct cmd_thermal_host_trip_reached_request {
  */
 struct cmd_thermal_get_num_zones_response {
 	uint32_t num;
-} __PACKED;
+} __ABI_PACKED;
 
 /*
  * Host->BPMP request data.
@@ -1296,7 +1296,7 @@ struct mrq_thermal_host_to_bpmp_request {
 		struct cmd_thermal_get_temp_request get_temp;
 		struct cmd_thermal_set_trip_request set_trip;
 	};
-} __PACKED;
+} __ABI_PACKED;
 
 /*
  * BPMP->Host request data.
@@ -1309,7 +1309,7 @@ struct mrq_thermal_bpmp_to_host_request {
 	union {
 		struct cmd_thermal_host_trip_reached_request host_trip_reached;
 	};
-} __PACKED;
+} __ABI_PACKED;
 
 /*
  * Data in reply to a Host->BPMP request.
@@ -1317,7 +1317,7 @@ struct mrq_thermal_bpmp_to_host_request {
 union mrq_thermal_bpmp_to_host_response {
 	struct cmd_thermal_get_temp_response get_temp;
 	struct cmd_thermal_get_num_zones_response get_num_zones;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  *   3.28 CPU DVFS voltage hint (MRQ_CPU_VHINT)
@@ -1340,7 +1340,7 @@ union mrq_thermal_bpmp_to_host_response {
 struct mrq_cpu_vhint_request {
 	uint32_t addr; /* struct cpu_vhint_data * */
 	uint32_t cluster_id; /* enum cluster_id */
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * As a response to %MRQ_CPU_VHINT message, BPMP populates the struct
@@ -1365,7 +1365,7 @@ struct cpu_vhint_data {
 	uint16_t ndiv_max;
 	uint16_t ndiv[80];
 	uint16_t reserved[328]; /* reserved for future use */
-} __PACKED;
+} __ABI_PACKED;
 
 
 /**
@@ -1444,7 +1444,7 @@ struct mrq_abi_ratchet_response {
  */
 struct mrq_ipc_reset {
 	int32_t channel;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * 3.32 Waypoint2 (MRQ_SC7_WAYPOINT2)
@@ -1463,7 +1463,7 @@ struct mrq_ipc_reset {
  */
 struct mrq_sc7_waypoint2_request {
 	uint32_t cpu_id; /* enum cpu_id */
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * DMCE responds to %MRQ_SC7_WAYPOINT2 message without additional
@@ -1508,7 +1508,7 @@ struct mrq_sc7_entry_start_request {
 	uint32_t cpu_id; /* enum cpu_id */
 	uint32_t state_id; /* enum state_id */
 	uint32_t sleep_time;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * There is no payload data to be sent as a response for
@@ -1555,7 +1555,7 @@ struct mrq_sc7_entry_start_request {
  */
 struct mrq_cc7_entry_request {
 	uint32_t cluster_id; /* enum cluster_id */
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * BPMP responds to %MRQ_CC7_ENTRY message without additional payload data.
@@ -1580,7 +1580,7 @@ struct mrq_cc7_entry_request {
  */
 struct mrq_cc7_exit_request {
 	uint32_t cluster_id; /* enum cluster_id */
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * BPMP responds to %MRQ_CC7_EXIT message without additional payload data.
@@ -1605,7 +1605,7 @@ struct mrq_cc7_exit_request {
  */
 struct mrq_cc7_exit_done_request {
 	uint32_t cluster_id; /* enum cluster_id */
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * DMCE responds to %MRQ_CC7_EXIT_DONE message without additional payload data.
@@ -1653,7 +1653,7 @@ struct mrq_cc7_exit_done_request {
  */
 struct mrq_scx_entry_request {
 	uint32_t state_id; /* enum state_id */
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * BPMP responds to %MRQ_SCX_ENTRY message without additional payload
@@ -1715,7 +1715,7 @@ struct mrq_scx_exit_request {
  */
 struct mrq_scx_wake {
 	uint32_t cpu_id;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * DMCE responds to %MRQ_SCX_WAKE message without additional payload data.
@@ -1769,7 +1769,7 @@ struct mrq_simon_enable_request {
 struct mrq_avfs_init_request {
 	uint64_t phys_addr; /* struct avfs_init_data * */
 	uint32_t cluster_id; /* enum cluster_id */
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * struct avfs_init_data
@@ -1780,7 +1780,7 @@ struct mrq_avfs_init_request {
  */
 struct avfs_init_data {
 	uint32_t lut[200];
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * BPMP responds to %MRQ_AVFS_INIT message without additional payload
@@ -1838,7 +1838,7 @@ struct mrq_avfs_freq_caps_request {
 	uint16_t ndivM_0[4];
 	uint16_t ndivMB_1[64];
 	uint16_t ndivB_1[16];
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * DMCE respond to %MRQ_AVFS_FREQ_CAPS message without additional
@@ -1866,7 +1866,7 @@ struct mrq_avfs_freq_caps_request {
 struct mrq_avfs_temp_index_request {
 	uint32_t temp_index;
 	uint32_t cluster_mask;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * DMCE responds to %MRQ_AVFS_TEMP_IDX message without additional
@@ -1901,7 +1901,7 @@ struct mrq_avfs_temp_index_request {
 struct mrq_fw_booted_response {
 	uint32_t cpus_present;
 	uint32_t bsp;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  * 3.49 System shutdown
@@ -1925,7 +1925,7 @@ struct mrq_fw_booted_response {
 
 struct mrq_shutdown_request {
 	uint32_t state;
-} __PACKED;
+} __ABI_PACKED;
 
 /**
  *  4. Enumerations

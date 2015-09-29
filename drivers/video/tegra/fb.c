@@ -719,8 +719,9 @@ void tegra_fb_update_fix(struct tegra_fb_info *fb_info,
 
 	mutex_lock(&fb_info->info->lock);
 
-	fix->capabilities = (tegra_edid_get_cd_flag(dc_edid) <<
-			FB_CAP_FOURCC) & FB_CAP_DC_MASK;
+	fix->capabilities = ((tegra_edid_get_cd_flag(dc_edid) <<
+			FB_CAP_FOURCC) | tegra_edid_get_ex_hdr_cap(dc_edid))
+			& FB_CAP_DC_MASK;
 	if (tegra_edid_support_yuv422(dc_edid))
 		fix->capabilities |= FB_CAP_Y422;
 	if (tegra_edid_support_yuv444(dc_edid))

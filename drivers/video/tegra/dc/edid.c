@@ -516,6 +516,20 @@ u16 tegra_edid_get_cd_flag(struct tegra_edid *edid)
 	return edid->data->color_depth_flag;
 }
 
+u16 tegra_edid_get_ex_hdr_cap(struct tegra_edid *edid)
+{
+	u16 ret = 0;
+	if (!edid || !edid->data) {
+		pr_warn("edid invalid\n");
+		return -EFAULT;
+	}
+
+	if (edid->data->hdr_present)
+		ret |= FB_CAP_HDR;
+
+	return ret;
+}
+
 /* hdmi spec mandates sink to specify correct max_tmds_clk only for >165MHz */
 u16 tegra_edid_get_max_clk_rate(struct tegra_edid *edid)
 {

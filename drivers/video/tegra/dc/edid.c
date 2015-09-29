@@ -245,10 +245,10 @@ bool tegra_edid_is_vrr_capable(struct tegra_edid *edid)
 {
 	if (!edid || !edid->data) {
 		pr_warn("edid invalid\n");
-		return -EFAULT;
+		return false;
 	}
 
-	return edid->data->min_vrr_fps;
+	return !!(edid->data->min_vrr_fps);
 }
 
 static int tegra_edid_parse_ext_block(const u8 *raw, int idx,

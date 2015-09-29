@@ -1231,11 +1231,7 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 	max_ac = (hblank - rekey - 18) / 32;
 
 	val = 0;
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	val |= hdmi->dvi ? 0x0 : NV_SOR_HDMI_CTRL_ENABLE;
-#else
-	pr_info("HDMI DVI is set %d running in DVI MODE\n", hdmi->dvi);
-#endif
 	/* The register wants "-2" of the required rekey val */
 	val |= NV_SOR_HDMI_CTRL_REKEY(rekey - 2);
 	val |= NV_SOR_HDMI_CTRL_MAX_AC_PACKET(max_ac);

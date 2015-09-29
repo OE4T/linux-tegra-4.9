@@ -15,6 +15,8 @@
 
 #include <linux/types.h>
 
+#include <dt-bindings/memory/tegra-swgroup.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/gk20a_allocator.h"
 #include "gm20b/ltc_gm20b.h"
@@ -149,7 +151,7 @@ static void gp10b_ltc_init_fs_state(struct gk20a *g)
 	gm20b_ltc_init_fs_state(g);
 
 	gk20a_writel(g, ltc_ltca_g_axi_pctrl_r(),
-			ltc_ltca_g_axi_pctrl_user_sid_f(31));
+			ltc_ltca_g_axi_pctrl_user_sid_f(TEGRA_SID_GPUB));
 }
 
 void gp10b_init_ltc(struct gpu_ops *gops)
@@ -172,4 +174,3 @@ void gp10b_init_ltc(struct gpu_ops *gops)
 	gops->ltc.sync_debugfs = gk20a_ltc_sync_debugfs;
 #endif
 }
-

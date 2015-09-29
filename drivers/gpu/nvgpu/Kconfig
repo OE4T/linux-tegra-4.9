@@ -8,7 +8,7 @@ config GK20A
 config GK20A_DEFAULT_TIMEOUT
 	depends on GK20A
 	int "Default timeout for submits"
-	default 5000
+	default 3000
 	help
 	  Default timeout for jobs in milliseconds. Set to zero for no timeout.
 

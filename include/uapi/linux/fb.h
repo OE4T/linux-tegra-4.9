@@ -155,14 +155,17 @@
 #define FB_CAP_Y420_DC_30	2	/* YCbCr 4:2:0 deep color 30bpp */
 #define FB_CAP_Y420_DC_36	4	/* YCbCr 4:2:0 deep color 36bpp */
 #define FB_CAP_Y420_DC_48	8	/* YCbCr 4:2:0 deep color 48bpp */
+#define FB_CAP_HDR		16	/* Device supports HDR*/
 #define FB_CAP_DC_Y420_MASK		(FB_CAP_Y420_DC_30 | \
-				FB_CAP_Y420_DC_36 | FB_CAP_Y420_DC_48)
+				FB_CAP_Y420_DC_36 | FB_CAP_Y420_DC_48 | \
+				FB_CAP_HDR)
 
 #define FB_CAP_Y422_DC_30	16	/* YCbCr 4:2:2 deep color 30bpp */
 #define FB_CAP_Y422_DC_36	32	/* YCbCr 4:2:2 deep color 36bpp */
 #define FB_CAP_Y422_DC_48	64	/* YCbCr 4:2:2 deep color 48bpp */
 #define FB_CAP_DC_Y422_MASK		(FB_CAP_Y422_DC_30 | \
-				FB_CAP_Y422_DC_36 | FB_CAP_Y422_DC_48)
+				FB_CAP_Y422_DC_36 | FB_CAP_Y422_DC_48 | \
+                FB_CAP_HDR)
 
 #define FB_CAP_Y444_DC_30	128	/* YCbCr 4:4:4 deep color 30bpp */
 #define FB_CAP_Y444_DC_36	256	/* YCbCr 4:4:4 deep color 36bpp */

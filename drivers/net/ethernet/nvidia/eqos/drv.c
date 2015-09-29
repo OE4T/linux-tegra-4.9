@@ -1661,8 +1661,10 @@ void free_multi_irqs(struct DWC_ETH_QOS_prv_data *pdata)
 			irq_set_affinity_hint(pdata->rx_irqs[i], NULL);
 			free_irq(pdata->rx_irqs[i], pdata);
 		}
-		if (pdata->tx_irq_alloc_mask & (1 << i))
+		if (pdata->tx_irq_alloc_mask & (1 << i)) {
+			irq_set_affinity_hint(pdata->tx_irqs[i], NULL);
 			free_irq(pdata->tx_irqs[i], pdata);
+		}
 	}
 	DBGPR("<--%s()\n", __func__);
 }

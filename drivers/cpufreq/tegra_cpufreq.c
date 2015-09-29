@@ -491,21 +491,23 @@ static int get_hint(void *data, u64 *hint)
 	return 0;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(ndiv_vindex_fops, get_hint, set_hint, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(ndiv_vindex_fops, get_hint, set_hint, "%08llx\n");
 
 static void dump_lut(struct seq_file *s, struct cpu_vhint_table *vht)
 {
-	uint16_t i, j;
+	uint16_t i;
 
 	seq_printf(s, "reference clk(hz): %u\n", vht->ref_clk_hz);
 	seq_printf(s, "pdiv: %u\n", vht->pdiv);
 	seq_printf(s, "mdiv: %u\n", vht->mdiv);
-	for (i = 0, j = 0; i < MAX_NDIV; i++) {
-		if (vht->vindx[i] == 0)
-			continue;
-		else
-			seq_printf(s, "ndiv[%u]: %u\n", j++, vht->vindx[i]);
-	}
+	seq_printf(s, "vfloor: %u\n", vht->vfloor);
+	seq_printf(s, "vceil: %u\n", vht->vceil);
+	seq_printf(s, "ndiv_max: %u\n", vht->ndiv_max);
+	seq_printf(s, "ndiv_min: %u\n", vht->ndiv_min);
+	seq_printf(s, "vindex_mult: %u\n", vht->vindex_mult);
+	seq_printf(s, "vindex_div: %u\n", vht->vindex_div);
+	for (i = 0; i < MAX_NDIV; i++)
+		seq_printf(s, "vindex[ndiv==%u]: %u\n", i, vht->vindx[i]);
 	seq_puts(s, "\n");
 }
 
@@ -516,7 +518,7 @@ static int show_bpmp_to_cpu_lut(struct seq_file *s, void *data)
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
 		vht = &tfreq_data.pcluster[cl].dvfs_tbl;
-		seq_printf(s, "\n%s:\n", CLUSTER_STR(cl));
+		seq_printf(s, "%s:\n", CLUSTER_STR(cl));
 		dump_lut(s, vht);
 	}
 
@@ -785,7 +787,7 @@ static int __init create_ndiv_to_vindex_table(void)
 		i = 0;
 		for (vindx = 0; vindx < MAX_VINDEX; vindx++) {
 			mid_ndiv = lut->ndiv[vindx];
-			for (; ((mid_ndiv < MAX_NDIV) && (i < mid_ndiv)); i++)
+			for (; ((mid_ndiv < MAX_NDIV) && (i <= mid_ndiv)); i++)
 				vhtbl->vindx[i] = vindx;
 		}
 		/* Fill remaining vindex table by last vindex value */

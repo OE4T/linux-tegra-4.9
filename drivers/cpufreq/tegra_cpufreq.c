@@ -646,6 +646,7 @@ static int tegra_cpu_exit(struct cpufreq_policy *policy)
 	if (emc_clk) {
 		clk_disable_unprepare(emc_clk);
 		clk_put(emc_clk);
+		tfreq_data.pcluster[cl].emc_clk = 0;
 	}
 
 	mutex_unlock(mlock);

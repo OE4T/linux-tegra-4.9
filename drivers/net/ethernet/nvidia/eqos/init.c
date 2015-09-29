@@ -263,6 +263,11 @@ static int eqos_clock_init(struct DWC_ETH_QOS_prv_data *pdata)
 		"ptp_ref_clk read failed %d, setting default to 125MHz\n", ret);
 		/* take default as 125MHz */
 		ptp_ref_clock_speed = 125;
+	} else if (ptp_ref_clock_speed > 625) { /* max parent clock is 625MHz */
+		dev_warn(&pdev->dev,
+		"ptp_ref_clk read set to more than 625MHz\n");
+		/* take default as 125MHz */
+		ptp_ref_clock_speed = 125;
 	}
 
 	ret = clk_set_rate(pdata->ptp_ref_clk, ptp_ref_clock_speed * 1000000);
@@ -589,27 +594,35 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 
 	if (unlikely(res == NULL)) {
-  	dev_err(&pdev->dev, "invalid resource\n");
-  	return -EINVAL;
+		dev_err(&pdev->dev, "invalid resource\n");
+		return -EINVAL;
 	}
 
-	/*get IRQ*/
+	/* get IRQ */
 	irq = platform_get_irq(pdev, 0);
-	if (irq < 0)
+	if (irq < 0) {
+		dev_err(&pdev->dev, "invalid irq at index 0\n");
 		return irq;
+	}
 
 	power_irq = platform_get_irq(pdev, 1);
-	if (power_irq < 0)
+	if (power_irq < 0) {
+		dev_err(&pdev->dev, "invalid irq at index 1\n");
 		return power_irq;
+	}
 
 	for (i = IRQ_CHAN0_RX_IDX, j = 0; i <= IRQ_MAX_IDX; i += 2, j++) {
 		rx_irqs[j] = platform_get_irq(pdev, i);
-		if (rx_irqs[j] < 0)
+		if (rx_irqs[j] < 0) {
+			dev_err(&pdev->dev, "invalid irq at index %d\n", i);
 			return rx_irqs[j];
+		}
 
-		tx_irqs[j] = platform_get_irq(pdev, i+1);
-		if (tx_irqs[j] < 0)
+		tx_irqs[j] = platform_get_irq(pdev, i + 1);
+		if (tx_irqs[j] < 0) {
+			dev_err(&pdev->dev, "invalid irq at index %d\n", i + 1);
 			return tx_irqs[j];
+		}
 	}
 
 #if defined(CONFIG_PHYS_ADDR_T_64BIT)
@@ -819,12 +832,15 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	for (i = 0; i < MAX_CHANS; i++)
 		pdata->napi_quota_all_chans += pdt_cfg->chan_napi_quota[i];
 
-	ret = of_property_read_u32(node, "nvidia,csr_clock_speed",
-			&csr_clock_speed);
-	if (ret < 0)
-		printk(KERN_ALERT "csr_clock_speed read failed %d\n", ret);
-
-	MAC_1US_TIC_RgWr(csr_clock_speed - 1);
+	/* csr_clock_speed is axi_cbb_clk rate */
+	csr_clock_speed = clk_get_rate(pdata->axi_cbb_clk) / 1000000;
+	if (csr_clock_speed <= 0) {
+		dev_err(&pdev->dev, "fail to read axi_cbb_clk rate\n");
+	} else {
+		dev_info(&pdev->dev, "setting MAC_1US_TIC to %d MHz\n",
+			csr_clock_speed);
+		MAC_1US_TIC_RgWr(csr_clock_speed - 1);
+	}
 
 	ret = eqos_get_mac_address_dtb("/chosen", "nvidia,ether-mac", mac_addr);
 	if (ret < 0) {

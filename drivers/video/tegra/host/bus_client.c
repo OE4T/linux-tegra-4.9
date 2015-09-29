@@ -1508,7 +1508,7 @@ static struct device *nvhost_client_device_create(
 	if (err < 0) {
 		dev_err(&pdev->dev,
 			"failed to add cdev\n");
-		return NULL;
+		return ERR_PTR(err);
 	}
 	use_dev_name = get_device_name_for_dev(pdev);
 
@@ -1520,11 +1520,9 @@ static struct device *nvhost_client_device_create(
 			cdev_name, use_dev_name, pdev->id);
 
 	if (IS_ERR(dev)) {
-		err = PTR_ERR(dev);
 		dev_err(&pdev->dev,
 			"failed to create %s %s device for %s\n",
 			use_dev_name, cdev_name, pdev->name);
-		return NULL;
 	}
 
 	return dev;
@@ -1542,14 +1540,14 @@ int nvhost_client_user_init(struct platform_device *dev)
 	err = alloc_chrdev_region(&devno, 0, NVHOST_NUM_CDEV, IFACE_NAME);
 	if (err < 0) {
 		dev_err(&dev->dev, "failed to allocate devno\n");
-		goto fail;
+		return err;
 	}
 	pdata->cdev_region = devno;
 
 	pdata->node = nvhost_client_device_create(dev, &pdata->cdev,
 				"", devno, &nvhost_channelops);
-	if (pdata->node == NULL)
-		goto fail;
+	if (IS_ERR(pdata->node))
+		return PTR_ERR(pdata->node);
 
 	/* module control (npn-channel based, global) interface */
 	if (pdata->ctrl_ops) {
@@ -1557,13 +1555,11 @@ int nvhost_client_user_init(struct platform_device *dev)
 		pdata->ctrl_node = nvhost_client_device_create(dev,
 					&pdata->ctrl_cdev, "ctrl-",
 					devno, pdata->ctrl_ops);
-		if (pdata->ctrl_node == NULL)
-			goto fail;
+		if (IS_ERR(pdata->ctrl_node))
+			return PTR_ERR(pdata->ctrl_node);
 	}
 
 	return 0;
-fail:
-	return err;
 }
 
 static void nvhost_client_user_deinit(struct platform_device *dev)
@@ -1571,17 +1567,17 @@ static void nvhost_client_user_deinit(struct platform_device *dev)
 	struct nvhost_master *nvhost_master = nvhost_get_host(dev);
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	if (pdata->node) {
+	if (!IS_ERR_OR_NULL(pdata->node)) {
 		device_destroy(nvhost_master->nvhost_class, pdata->cdev.dev);
 		cdev_del(&pdata->cdev);
 	}
 
-	if (pdata->as_node) {
+	if (!IS_ERR_OR_NULL(pdata->as_node)) {
 		device_destroy(nvhost_master->nvhost_class, pdata->as_cdev.dev);
 		cdev_del(&pdata->as_cdev);
 	}
 
-	if (pdata->ctrl_node) {
+	if (!IS_ERR_OR_NULL(pdata->ctrl_node)) {
 		device_destroy(nvhost_master->nvhost_class,
 			       pdata->ctrl_cdev.dev);
 		cdev_del(&pdata->ctrl_cdev);

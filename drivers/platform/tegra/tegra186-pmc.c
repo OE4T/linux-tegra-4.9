@@ -375,10 +375,22 @@ static const struct of_device_id tegra186_pmc[] __initconst = {
 
 static int tegra186_pmc_parse_dt(struct device_node *np)
 {
+	bool halt_in_fiq;
+	u32 rval;
+
 	if (!np)
 		return -EINVAL;
 
 	tegra186_pmc_base = of_iomap(np, 0);
+
+	halt_in_fiq = of_property_read_bool(np, "nvidia,enable-halt-in-fiq");
+
+	rval = tegra186_pmc_readl(PMC_IMPL_RAMDUMP_CTL_STATUS);
+	if (halt_in_fiq)
+		rval |= PMC_IMPL_HALT_IN_FIQ_MASK;
+	else
+		rval &= ~PMC_IMPL_HALT_IN_FIQ_MASK;
+	tegra186_pmc_writel(rval, PMC_IMPL_RAMDUMP_CTL_STATUS);
 
 	return 0;
 }

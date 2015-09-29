@@ -648,8 +648,8 @@ static int nvhost_user_init(struct nvhost_master *host)
 	err = cdev_add(&host->cdev, devno, 1);
 	if (err < 0)
 		goto fail;
-	host->ctrl = device_create(host->nvhost_class, NULL, devno, NULL,
-			IFACE_NAME "-ctrl");
+	host->ctrl = device_create(host->nvhost_class, &host->dev->dev, devno,
+					NULL, IFACE_NAME "-ctrl");
 	if (IS_ERR(host->ctrl)) {
 		err = PTR_ERR(host->ctrl);
 		dev_err(&host->dev->dev, "failed to create ctrl device\n");

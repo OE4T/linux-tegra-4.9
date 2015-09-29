@@ -1513,7 +1513,7 @@ static struct device *nvhost_client_device_create(
 	use_dev_name = get_device_name_for_dev(pdev);
 
 	dev = device_create(host->nvhost_class,
-			NULL, devno, NULL,
+			&pdev->dev, devno, NULL,
 			(pdev->id <= 0) ?
 			IFACE_NAME "-%s%s" :
 			IFACE_NAME "-%s%s.%d",

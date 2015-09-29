@@ -223,7 +223,7 @@ struct sid_to_oids
 
 static struct sid_to_oids sid_to_oids[] = {
 	{
-		.sid	= TEGRA_SWGROUP_AFI,
+		.sid	= TEGRA_SID_AFI,
 		.noids	= 2,
 		.oid	= {
 			AFIR,
@@ -233,7 +233,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "AFI",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_HDA,
+		.sid	= TEGRA_SID_HDA,
 		.noids	= 2,
 		.oid	= {
 			HDAR,
@@ -243,7 +243,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "HDA",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_SATA2,
+		.sid	= TEGRA_SID_SATA2,
 		.noids	= 2,
 		.oid	= {
 			SATAR,
@@ -253,7 +253,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "SATA2",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_XUSB_HOST,
+		.sid	= TEGRA_SID_XUSB_HOST,
 		.noids	= 2,
 		.oid	= {
 			XUSB_HOSTR,
@@ -263,7 +263,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "XUSB_HOST",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_XUSB_DEV,
+		.sid	= TEGRA_SID_XUSB_DEV,
 		.noids	= 2,
 		.oid	= {
 			XUSB_DEVR,
@@ -273,7 +273,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "XUSB_DEV",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_TSEC,
+		.sid	= TEGRA_SID_TSEC,
 		.noids	= 2,
 		.oid	= {
 			TSECSRD,
@@ -283,7 +283,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "TSEC",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_GPUB,
+		.sid	= TEGRA_SID_GPUB,
 		.noids	= 4,
 		.oid	= {
 			GPUSRD,
@@ -295,7 +295,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "GPU",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_SDMMC1A,
+		.sid	= TEGRA_SID_SDMMC1A,
 		.noids	= 2,
 		.oid	= {
 			SDMMCRA,
@@ -305,7 +305,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "SDMMC1A",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_SDMMC2A,
+		.sid	= TEGRA_SID_SDMMC2A,
 		.noids	= 2,
 		.oid	= {
 			SDMMCRAA,
@@ -315,7 +315,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "SDMMC2A",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_SDMMC3A,
+		.sid	= TEGRA_SID_SDMMC3A,
 		.noids	= 2,
 		.oid	= {
 			SDMMCR,
@@ -325,7 +325,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "SDMMC3A",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_SDMMC4A,
+		.sid	= TEGRA_SID_SDMMC4A,
 		.noids	= 2,
 		.oid	= {
 			SDMMCRAB,
@@ -335,7 +335,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "SDMMC4A",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_APE,
+		.sid	= TEGRA_SID_APE,
 		.noids	= 4,
 		.oid	= {
 			APER,
@@ -347,7 +347,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "APE",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_SE,
+		.sid	= TEGRA_SID_SE,
 		.noids	= 2,
 		.oid	= {
 			SESRD,
@@ -357,7 +357,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "SE",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_ETR,
+		.sid	= TEGRA_SID_ETR,
 		.noids	= 2,
 		.oid	= {
 			ETRR,
@@ -367,7 +367,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "ETR",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_TSECB,
+		.sid	= TEGRA_SID_TSECB,
 		.noids	= 2,
 		.oid	= {
 			TSECSRDB,
@@ -377,7 +377,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "TSECB",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_AXIS,
+		.sid	= TEGRA_SID_GPCDMA_0, /* AXIS */
 		.noids	= 2,
 		.oid	= {
 			AXISR,
@@ -387,7 +387,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "GPCDMA",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_EQOS,
+		.sid	= TEGRA_SID_EQOS,
 		.noids	= 2,
 		.oid	= {
 			EQOSR,
@@ -397,7 +397,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "EQOS",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_UFSHC,
+		.sid	= TEGRA_SID_UFSHC,
 		.noids	= 2,
 		.oid	= {
 			UFSHCR,
@@ -407,7 +407,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "UFSHC",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_NVDISPLAY,
+		.sid	= TEGRA_SID_NVDISPLAY,
 		.noids	= 2,
 		.oid	= {
 			NVDISPLAYR,
@@ -417,7 +417,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "NVDISPLAY",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_BPMP,
+		.sid	= TEGRA_SID_BPMP,
 		.noids	= 4,
 		.oid	= {
 			BPMPR,
@@ -429,7 +429,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "BPMP",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_AON,
+		.sid	= TEGRA_SID_AON,
 		.noids	= 4,
 		.oid	= {
 			AONR,
@@ -441,7 +441,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "AON",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_SCE,
+		.sid	= TEGRA_SID_SCE,
 		.noids	= 4,
 		.oid	= {
 			SCER,
@@ -453,7 +453,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "SCE",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_HC,
+		.sid	= TEGRA_SID_HC,
 		.noids	= 1,
 		.oid	= {
 			HOST1XDMAR,
@@ -462,7 +462,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "HC",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_VIC,
+		.sid	= TEGRA_SID_VIC,
 		.noids	= 3,
 		.oid = {
 			VICSRD1,
@@ -473,7 +473,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "VIC",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_VI,
+		.sid	= TEGRA_SID_VI,
 		.noids	= 1,
 		.oid	= {
 			VIW,
@@ -482,7 +482,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "VI",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_ISP,
+		.sid	= TEGRA_SID_ISP,
 		.noids	= 3,
 		.oid	= {
 			ISPRA,
@@ -493,7 +493,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "ISP",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_NVDEC,
+		.sid	= TEGRA_SID_NVDEC,
 		.noids	= 3,
 		.oid	= {
 			NVDECSRD1,
@@ -504,7 +504,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "NVDEC",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_NVENC,
+		.sid	= TEGRA_SID_NVENC,
 		.noids	= 2,
 		.oid	= {
 			NVENCSRD,
@@ -514,7 +514,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.name = "NVENC",
 	},
 	{
-		.sid	= TEGRA_SWGROUP_NVJPG,
+		.sid	= TEGRA_SID_NVJPG,
 		.noids	= 2,
 		.oid	= {
 			NVJPGSRD,

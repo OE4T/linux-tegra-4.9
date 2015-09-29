@@ -75,6 +75,11 @@ enum {
 
 struct tegra_edid_pvt;
 
+#define EDID_BASE_HEADER_SIZE 8
+static const unsigned char edid_base_header[EDID_BASE_HEADER_SIZE] = {
+	0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00
+};
+
 typedef int (*i2c_transfer_func_t)(struct tegra_dc *dc, struct i2c_msg *msgs,
 	int num);
 

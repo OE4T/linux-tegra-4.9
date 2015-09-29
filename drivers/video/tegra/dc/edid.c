@@ -174,6 +174,14 @@ int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data)
 		if (status != msg_len)
 			return -EIO;
 
+		/* fix base block header if corrupted */
+		if (!block) {
+			for (i = 0; i < EDID_BASE_HEADER_SIZE; i++) {
+				if (data[i] != edid_base_header[i])
+					data[i] = edid_base_header[i];
+			}
+		}
+
 		for (i = 0; i < 128; i++)
 			checksum += data[i];
 		if (checksum != 0) {

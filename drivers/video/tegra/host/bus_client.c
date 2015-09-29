@@ -1337,6 +1337,7 @@ static struct device *nvhost_client_device_create(
 		dev_err(&pdev->dev,
 			"failed to create %s %s device for %s\n",
 			use_dev_name, cdev_name, pdev->name);
+		cdev_del(cdev);
 	}
 
 	return dev;

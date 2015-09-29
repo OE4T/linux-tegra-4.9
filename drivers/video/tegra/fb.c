@@ -334,9 +334,6 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 		return 0;
 
 	case FB_BLANK_NORMAL:
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	case FB_BLANK_POWERDOWN:
-#endif
 		dev_info(&tegra_fb->ndev->dev, "blank - normal\n");
 		/* To pan fb at the unblank */
 		if (dc->enabled)
@@ -344,7 +341,7 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 		dc->blanked = true;
 		tegra_dc_blank(dc, BLANK_ALL);
 		return 0;
-#ifndef CONFIG_TEGRA_NVDISPLAY
+
 	case FB_BLANK_VSYNC_SUSPEND:
 	case FB_BLANK_HSYNC_SUSPEND:
 	case FB_BLANK_POWERDOWN:
@@ -357,7 +354,7 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 			tegra_dc_disable(dc);
 		dc->blanked = true;
 		return 0;
-#endif
+
 	default:
 		return -ENOTTY;
 	}

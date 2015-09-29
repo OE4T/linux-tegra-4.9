@@ -549,19 +549,26 @@ static void tegra_dc_sor_instance(struct tegra_dc *dc, int out_type)
 
 void tegra_dc_get(struct tegra_dc *dc)
 {
-	tegra_dc_io_start(dc);
+	BUG_ON(dc->enable_count < 0);
+	if (dc->enable_count++ == 0) {
+		tegra_dc_io_start(dc);
 
-	/* extra reference to dc clk */
-	tegra_disp_clk_prepare_enable(dc->clk);
+		/* extra reference to dc clk */
+		tegra_disp_clk_prepare_enable(dc->clk);
+	}
 }
 EXPORT_SYMBOL(tegra_dc_get);
 
 void tegra_dc_put(struct tegra_dc *dc)
 {
-	/* balance extra dc clk reference */
-	tegra_disp_clk_disable_unprepare(dc->clk);
+	if (WARN_ONCE(dc->enable_count == 0, "unbalanced clock calls"))
+		return;
+	if (--dc->enable_count == 0) {
+		/* balance extra dc clk reference */
+		tegra_disp_clk_disable_unprepare(dc->clk);
 
-	tegra_dc_io_end(dc);
+		tegra_dc_io_end(dc);
+	}
 }
 EXPORT_SYMBOL(tegra_dc_put);
 
@@ -4070,6 +4077,7 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 
 	tegra_dc_put(dc);
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	/* disable always on dc clk in continuous mode */
 	if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE))
 		tegra_dc_clk_disable(dc);
@@ -4077,6 +4085,7 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 		tegra_dvfs_set_rate(dc->clk, 0);
 
 	tegra_disp_clk_disable_unprepare(dc->emc_la_clk);
+#endif
 }
 
 void tegra_dc_stats_enable(struct tegra_dc *dc, bool enable)
@@ -4271,7 +4280,7 @@ static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq)
 	trace_display_mode(dc, &dc->mode);
 
 	/* disable pending clks due to uncompleted frames */
-	while (tegra_platform_is_silicon() && tegra_dc_is_clk_enabled(dc->clk))
+	while (tegra_platform_is_silicon() && dc->enable_count)
 		tegra_dc_put(dc);
 }
 

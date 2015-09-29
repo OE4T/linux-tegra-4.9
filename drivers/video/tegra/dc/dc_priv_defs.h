@@ -329,5 +329,7 @@ struct tegra_dc {
 	struct notifier_block slgc_notifier;
 	bool	vedid;
 	u8	*vedid_data;
+
+	int	enable_count;
 };
 #endif

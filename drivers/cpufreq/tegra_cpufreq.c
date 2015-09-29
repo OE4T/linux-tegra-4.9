@@ -149,6 +149,30 @@ static uint32_t get_refclk_count(uint8_t cpu)
 	return tcpufreq_readl(reg_base, phy_cpu) & REF_CLOCK_MASK;
 }
 
+struct tegra_cpu_ctr {
+	uint32_t cpu;
+	uint32_t coreclk_cnt, last_coreclk_cnt;
+	uint32_t refclk_cnt, last_refclk_cnt;
+};
+
+static void tegra_cpu_spin(void *arg)
+{
+	struct tegra_cpu_ctr *c = arg;
+	unsigned long flags;
+	spinlock_t *slock;
+
+	slock = &per_cpu(pcpu_slock, c->cpu);
+	spin_lock_irqsave(slock, flags);
+
+	c->last_coreclk_cnt = get_coreclk_count(c->cpu);
+	c->last_refclk_cnt = get_refclk_count(c->cpu);
+	udelay(tfreq_data.freq_compute_delay);
+	c->coreclk_cnt = get_coreclk_count(c->cpu);
+	c->refclk_cnt = get_refclk_count(c->cpu);
+
+	spin_unlock_irqrestore(slock, flags);
+}
+
 /**
  * Return instantaneous cpu speed
  * Instantaneous freq is calculated as -
@@ -172,37 +196,24 @@ static uint32_t get_refclk_count(uint8_t cpu)
  */
 static unsigned int tegra_get_speed(uint32_t cpu)
 {
-	uint32_t coreclk_cnt, last_coreclk_cnt, delta_ccnt;
-	uint32_t refclk_cnt, last_refclk_cnt, delta_refcnt;
+	uint32_t delta_ccnt;
+	uint32_t delta_refcnt;
 	unsigned long rate_mhz = 0;
-	unsigned long flags;
-	spinlock_t *slock;
+	struct tegra_cpu_ctr c;
 
+	get_online_cpus();
 	if (cpu_online(cpu)) {
-		slock = &per_cpu(pcpu_slock, cpu);
-		spin_lock_irqsave(slock, flags);
-
-		last_coreclk_cnt = get_coreclk_count(cpu);
-		last_refclk_cnt = get_refclk_count(cpu);
-
-		udelay(tfreq_data.freq_compute_delay);
-
-		coreclk_cnt = get_coreclk_count(cpu);
-		refclk_cnt = get_refclk_count(cpu);
-
-		delta_ccnt = (coreclk_cnt > last_coreclk_cnt ?
-			(coreclk_cnt - last_coreclk_cnt) :
-			(last_coreclk_cnt - coreclk_cnt));
-
-		delta_refcnt = (refclk_cnt > last_refclk_cnt ?
-			(refclk_cnt - last_refclk_cnt) :
-			(last_refclk_cnt - refclk_cnt));
-
-		rate_mhz = ((unsigned long) delta_ccnt * REF_CLK_MHZ)
+		c.cpu = cpu;
+		if (!smp_call_function_single(cpu, tegra_cpu_spin, &c, 1)) {
+			delta_ccnt = c.coreclk_cnt - c.last_coreclk_cnt;
+			/* ref clock is 28 bits */
+			delta_refcnt = ((c.refclk_cnt - c.last_refclk_cnt)
+					% (1 << 28));
+			rate_mhz = ((unsigned long) delta_ccnt * REF_CLK_MHZ)
 				/ delta_refcnt;
-
-		spin_unlock_irqrestore(slock, flags);
+		}
 	}
+	put_online_cpus();
 	/* Do we have to align rate as nearest freq step ? */
 	return (unsigned int) (rate_mhz * 1000); /* in KHz */
 }

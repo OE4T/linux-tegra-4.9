@@ -45,7 +45,7 @@
 #define HOST_EMC_FLOOR 204000000
 #define HOST_NVDEC_EMC_FLOOR 102000000
 
-int nvhost_nvdec_t186_finalize_poweron(struct platform_device *dev)
+static int nvhost_nvdec_t186_finalize_poweron(struct platform_device *dev)
 {
 	int ret;
 
@@ -60,7 +60,7 @@ int nvhost_nvdec_t186_finalize_poweron(struct platform_device *dev)
 	return ret;
 }
 
-int nvhost_nvdec_t186_prepare_poweroff(struct platform_device *dev)
+static int nvhost_nvdec_t186_prepare_poweroff(struct platform_device *dev)
 {
 	tegra_kfuse_disable_sensing();
 

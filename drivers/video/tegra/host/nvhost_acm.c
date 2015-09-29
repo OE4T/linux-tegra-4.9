@@ -644,7 +644,7 @@ int nvhost_clk_get(struct platform_device *dev, char *name, struct clk **clk)
 	return -EINVAL;
 }
 
-int nvhost_module_set_parent(struct platform_device *dev,
+static int nvhost_module_set_parent(struct platform_device *dev,
 			     struct nvhost_clock *clock, struct clk *clk)
 {
 	struct clk *parent_clk;

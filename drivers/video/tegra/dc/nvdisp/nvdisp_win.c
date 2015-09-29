@@ -28,8 +28,6 @@
 /* Num Fractional Bits in 8.24 fixed point phase and phase increment values */
 #define NFB 24
 
-static bool is_scaler_coeff_set = false;
-
 /*
  * Generated from gen_vic_filter.py and taking only
  * the data needed for 3 scaling ratios - 1x,2x,4x for 5 taps.
@@ -230,12 +228,6 @@ static int tegra_nvdisp_scaling(struct tegra_dc_win *win)
 
 	hbypass = (dfixed_trunc(hscalar) == win->out_w);
 	vbypass = (dfixed_trunc(vscalar) == win->out_h);
-
-	/* set coefficients only once	*/
-	if (!is_scaler_coeff_set){
-		tegra_nvdisp_set_scaler_coeff(win);
-		is_scaler_coeff_set = true;
-	}
 
 	/* default set to 5-taps coeff - have to check
          * whether this should be changed based on use case
@@ -772,6 +764,12 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 
 	/* attach window idx */
 	nvdisp_win_write(win, dc->ctrl_num, win_set_control_r());
+
+	/* set the windows scaler coeff value */
+	if (!win->is_scaler_coeff_set) {
+		tegra_nvdisp_set_scaler_coeff(win);
+		win->is_scaler_coeff_set = true;
+	}
 
 	mutex_unlock(&tegra_nvdisp_lock);
 	return 0;

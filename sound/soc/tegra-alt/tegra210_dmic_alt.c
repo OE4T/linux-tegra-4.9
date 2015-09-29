@@ -234,7 +234,7 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 static int tegra210_dmic_get_boost_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_dmic *dmic = snd_soc_codec_get_drvdata(codec);
 
 	ucontrol->value.integer.value[0] = dmic->boost_gain;
@@ -245,7 +245,7 @@ static int tegra210_dmic_get_boost_gain(struct snd_kcontrol *kcontrol,
 static int tegra210_dmic_put_boost_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_dmic *dmic = snd_soc_codec_get_drvdata(codec);
 
 	dmic->boost_gain = ucontrol->value.integer.value[0];

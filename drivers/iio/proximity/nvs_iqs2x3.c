@@ -32,7 +32,7 @@
 #include <linux/nvs_proximity.h>
 
 
-#define IQS_DRIVER_VERSION		(16)
+#define IQS_DRIVER_VERSION		(17)
 #define IQS_VENDOR			"Azoteq"
 #define IQS_NAME			"iqs2x3"
 #define IQS_NAME_IQS253			"iqs253"
@@ -529,6 +529,10 @@ struct iqs_state {
 	unsigned int stream;		/* configured for stream mode only */
 	unsigned int delta_ch_msk;	/* delta sensors enable channel mask */
 	unsigned int delta_avg_n;	/* delta sensors moving average cnt */
+	unsigned int dbnc_lo[IQS_DEV_HW_N]; /* binary low debounce */
+	unsigned int dbnc_hi[IQS_DEV_HW_N]; /* binary high debounce */
+	unsigned int dbnc_lo_n[IQS_DEV_HW_N]; /* binary low debounce count */
+	unsigned int dbnc_hi_n[IQS_DEV_HW_N]; /* binary high debounce count */
 	unsigned int ati_redo_n;	/* ATI redo count */
 	unsigned int wd_to_ms;		/* watchdog timeout ms */
 	unsigned int gpio_rdy_retry;	/* GPIO RDY assert loop limit */
@@ -1101,9 +1105,12 @@ static int iqs_en(struct iqs_state *st, int snsr_id)
 	if (snsr_id >= IQS_DEV_N)
 		return -EINVAL;
 
-	if (snsr_id < IQS_DEV_HW_N)
+	if (snsr_id < IQS_DEV_HW_N) {
+		st->dbnc_lo_n[snsr_id] = st->dbnc_lo[snsr_id];
+		st->dbnc_hi_n[snsr_id] = 0;
 		ret = iqs_write(st, st->dt_en[st->part_i][snsr_id],
 				false, false);
+	}
 	if (!ret)
 		ret = nvs_proximity_enable(&st->prox[snsr_id]);
 	return ret;
@@ -1329,43 +1336,49 @@ static int iqs_rd_delta(struct iqs_state *st, s64 ts)
 	return 0;
 }
 
-static int iqs_rd_touch(struct iqs_state *st, s64 ts)
+static int iqs_rd_snsr(struct iqs_state *st, s64 ts, int dev,
+		       const struct iqs_hal_iom *tch,
+		       const struct iqs_hal_iom *cnt)
 {
 	u16 hw;
+	u16 rp;				/* reported proximity */
 	int ret;
 
-	if (st->prox[IQS_DEV_TOUCH].proximity_binary_hw)
+	if (st->prox[dev].proximity_binary_hw) {
+		hw = (iqs_bits_rd(st, tch, 0));
+		rp = hw;
+		if (rp) {
+			st->dbnc_lo_n[dev] = 0;
+			if (st->dbnc_hi[dev]) {
+				if (st->dbnc_hi_n[dev] < st->dbnc_hi[dev]) {
+					st->dbnc_hi_n[dev]++;
+					rp = 0;
+				}
+			}
+		} else {
+			st->dbnc_hi_n[dev] = 0;
+			if (st->dbnc_lo[dev]) {
+				if (st->dbnc_lo_n[dev] < st->dbnc_lo[dev]) {
+					st->dbnc_lo_n[dev]++;
+					rp = 1;
+				}
+			}
+		}
 		/* reverse polarity for Android (0=close 1=far) */
-		hw = !(iqs_bits_rd(st, &st->hal_bit->touch_tch, 0));
-	else
-		hw = (u16)st->rc[iqs_rc_i(st, &st->hal_bit->count_tch)];
+		rp = !rp;
+	} else {
+		hw = (u16)st->rc[iqs_rc_i(st, cnt)];
+		rp = hw;
+	}
+	st->prox[dev].hw = rp;
+	st->prox[dev].timestamp = ts;
+	ret = nvs_proximity_read(&st->prox[dev]);
 	if (st->sts & NVS_STS_SPEW_DATA)
-		dev_info(&st->i2c->dev, "%s hw=%hu  %lld  diff=%d %lldns\n",
-			 __func__, hw, ts, hw - st->prox[IQS_DEV_TOUCH].hw,
-			 ts - st->prox[IQS_DEV_TOUCH].timestamp);
-	st->prox[IQS_DEV_TOUCH].hw = hw;
-	st->prox[IQS_DEV_TOUCH].timestamp = ts;
-	ret = nvs_proximity_read(&st->prox[IQS_DEV_TOUCH]);
-	return ret;
-}
-
-static int iqs_rd_proximity(struct iqs_state *st, s64 ts)
-{
-	u16 hw;
-	int ret;
-
-	if (st->prox[IQS_DEV_PROX].proximity_binary_hw)
-		/* reverse polarity for Android (0=close 1=far) */
-		hw = !(iqs_bits_rd(st, &st->hal_bit->touch_prx, 0));
-	else
-		hw = (u16)st->rc[iqs_rc_i(st, &st->hal_bit->count_prx)];
-	if (st->sts & NVS_STS_SPEW_DATA)
-		dev_info(&st->i2c->dev, "%s hw=%hu  %lld  diff=%d %lldns\n",
-			 __func__, hw, ts, hw - st->prox[IQS_DEV_PROX].hw,
+		dev_info(&st->i2c->dev,
+			 "%s: hw=%hu rp=%hu %lld  lo_n=%u hi_n=%u  %lldns\n",
+			 iqs_sensor_cfg_name[dev], hw, rp, ts,
+			 st->dbnc_lo_n[dev], st->dbnc_hi_n[dev],
 			 ts - st->prox[IQS_DEV_PROX].timestamp);
-	st->prox[IQS_DEV_PROX].hw = hw;
-	st->prox[IQS_DEV_PROX].timestamp = ts;
-	ret = nvs_proximity_read(&st->prox[IQS_DEV_PROX]);
 	return ret;
 }
 
@@ -1470,9 +1483,13 @@ static int iqs_rd(struct iqs_state *st, bool poll)
 		/* read data */
 		ts = iqs_get_time_ns();
 		if (st->enabled & (1 << IQS_DEV_PROX))
-			ret |= iqs_rd_proximity(st, ts);
+			ret |= iqs_rd_snsr(st, ts, IQS_DEV_PROX,
+					   &st->hal_bit->touch_prx,
+					   &st->hal_bit->count_prx);
 		if (st->enabled & (1 << IQS_DEV_TOUCH))
-			ret |= iqs_rd_touch(st, ts);
+			ret |= iqs_rd_snsr(st, ts, IQS_DEV_TOUCH,
+					   &st->hal_bit->touch_tch,
+					   &st->hal_bit->count_tch);
 		if (st->enabled & (st->delta_ch_msk << IQS_DEV_DELTA0))
 			ret |= iqs_rd_delta(st, ts);
 		/* TODO: Expect the PO pin used for proximity_binary_hw.
@@ -1482,15 +1499,20 @@ static int iqs_rd(struct iqs_state *st, bool poll)
 		if (st->gpio_sar_dev_asrt < IQS_DEV_N) {
 			/* SAR GPIO assert and deassert can be controlled by
 			 * separate sources.
+			 * GPIO  polarity | XOR  asserted
+			 *  0        0    |  0      1
+			 *  0        1    |  1      0
+			 *  1        0    |  1      0
+			 *  1        1    |  0      1
 			 */
 			if (st->gpio_sar_val ^ st->gpio_sar_asrt_pol)
-				/* currently asserted */
-				iqs_gpio_sar(st, !st->prox[st->
-					     gpio_sar_dev_dasrt].proximity);
-			else
 				/* currently deasserted */
 				iqs_gpio_sar(st, !st->prox[st->
 					     gpio_sar_dev_asrt].proximity);
+			else
+				/* currently asserted */
+				iqs_gpio_sar(st, !st->prox[st->
+					     gpio_sar_dev_dasrt].proximity);
 		}
 	}
 	if (st->stream == IQS_STREAM_ALWAYS) {
@@ -2038,6 +2060,16 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 		t += sprintf(buf + t, "deferred_resume_ms=%u\n",
 			     st->dfr_rsm_ms);
 		t += sprintf(buf + t, "resume=%x\n", st->resume);
+		for (i = 0; i < IQS_DEV_HW_N; i++) {
+			if (st->dbnc_lo[i])
+				t += sprintf(buf + t, "%s_debounce_lo=%u\n",
+					     iqs_sensor_cfg_name[i],
+					     st->dbnc_lo[i]);
+			if (st->dbnc_hi[i])
+				t += sprintf(buf + t, "%s_debounce_hi=%u\n",
+					     iqs_sensor_cfg_name[i],
+					     st->dbnc_hi[i]);
+		}
 		t += sprintf(buf + t, "SAR_delta_channel_mask=%u\n",
 			     st->delta_ch_msk);
 		if (st->delta_ch_msk)
@@ -2397,6 +2429,14 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 	/* device tree parameters */
 	if (dn) {
 		/* device specific parameters */
+		for (i = 0; i < IQS_DEV_HW_N; i++) {
+			sprintf(str, "%s_debounce_lo",
+				iqs_sensor_cfg_name[i]);
+			of_property_read_u32(dn, str, &st->dbnc_lo[i]);
+			sprintf(str, "%s_debounce_hi",
+				iqs_sensor_cfg_name[i]);
+			of_property_read_u32(dn, str, &st->dbnc_hi[i]);
+		}
 		of_property_read_u32(dn, "SAR_delta_average_count",
 				     &st->delta_avg_n);
 		if (st->delta_avg_n < 2)

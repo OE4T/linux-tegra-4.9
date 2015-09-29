@@ -179,7 +179,7 @@ For overall status information:
 #echo 10 > nvs
 #cat nvs
 The results will be something like:
-	IQS driver v. 16
+	IQS driver v. 17
 	ATI redo count=0
 	os_options=0
 	stream_mode=2
@@ -237,21 +237,52 @@ Optional properties:
 	the GPIO assert value is low since low is the SAR GPIO assert default.
 	It may still be defined as low (gpio_sar_assert_polarity = <0>;)
 	however.
-- gpio_sar_dev: Which IQS device controls the SAR GPIO.  In other words, the
-		SAR GPIO will assert according to the gpio_sar_assert_polarity
-		when the sensor specified in gpio_sar_dev asserts.
+- gpio_sar_dev_deassert: Which IQS device controls the deassertion of the SAR
+                         GPIO.  In other words, the SAR GPIO will deassert
+			 according to the gpio_sar_assert_polarity when the
+			 sensor specified in gpio_sar_dev_deassert deasserts.
+- gpio_sar_dev_assert: Which IQS device controls the assertion of the SAR GPIO.
+                       In other words, the SAR GPIO will assert according to
+		       the gpio_sar_assert_polarity when the sensor specified
+		       in gpio_sar_dev_assert asserts.
   Note: The SAR GPIO can also be used for debug purposes.  When set to one of
         the debug options, the SAR GPIO will not be controlled by one of the
 	SAR sensors but instead the debug function.
 	The gpio_sar_dev options are:
 	- SAR_proximity
 	- SAR_touch
+	- SAR_delta
 	- debug_i2c
 	SAR_proximity is the default if no entry is made.
 	Due to this device's I2C "issues", the debug_i2c option will assert the
 	SAR GPIO (according to the gpio_sar_assert_polarity) when an I2C
 	transaction is about to start and deasserts when the I2C transaction
 	finishes.
+- SAR_<device>_debounce_lo: Each SAR sensor (proximity and touch) in HW binary
+                            mode can be debounced.  To enable this feature, set
+			    this option to a value > 0.  The lo feature will
+			    allow the data state to go low only after the
+			    number of consecutive low reads defined here.
+- SAR_<device>_debounce_hi: Each SAR sensor (proximity and touch) in HW binary
+                            mode can be debounced.  To enable this feature, set
+			    this option to a value > 0.  The hi feature will
+			    allow the data state to go high only after the
+			    number of consecutive high reads defined here.
+ Note: For the SAR_<device>_debounce_X feature the following devices are:
+       - proximity
+       - touch
+       It is allowed to define only one level.  For example, if only:
+       SAR_proximity_debounce_hi = <5>;
+       is defined, then the SAR_proximity device's data output will only
+       go high after 5 consecutive reads of it being high.  When the
+       SAR_proximity goes low, it is immediately reported as low.  If the lo is
+       defined, then it would only go back to low after the consecutive low
+       reads defined.
+       When the device is enabled with this feature enabled, the data state is
+       assumed low.  In other words, if the device's data state when enabled
+       is low, it will be reported as low.
+       The default value for this is 0 which disables the feature.
+
 - gpio_sar_suspend_assert: If the device is not configured to operate during
 			   suspend then this determines the SAR GPIO setting
 			   during suspend:
@@ -334,7 +365,10 @@ Optional properties:
 	then repeat above steps. This is done i2c_retry times before exiting as
 	a failure.
 	BTW, this is all done according to the Azotec spec.
-
+- i2c_ss_delay_ns: The I2C bus must be idle for 100us after an I2C transaction
+                   with the IQS device or it will hold the I2C clock low.  This
+		   WAR is already accounted for in the driver but the delay can
+		   be redefined here.
 There may a situation where intermittent noise on a channel is causing
 unreliable data.  If this is the case, the delta options below can help
 determine the proximity state.  This is accomplished by creating virtual delta

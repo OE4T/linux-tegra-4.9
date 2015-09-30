@@ -1099,6 +1099,7 @@ struct desc_if_struct {
 	INT(*alloc_queue_struct) (struct DWC_ETH_QOS_prv_data *);
 	void(*free_queue_struct) (struct DWC_ETH_QOS_prv_data *);
 	INT(*alloc_buff_and_desc) (struct DWC_ETH_QOS_prv_data *);
+	void(*free_buff_and_desc) (struct DWC_ETH_QOS_prv_data *);
 	void (*realloc_skb) (struct DWC_ETH_QOS_prv_data *, UINT);
 	void (*unmap_rx_skb) (struct DWC_ETH_QOS_prv_data *,
 			      struct DWC_ETH_QOS_rx_buffer *);

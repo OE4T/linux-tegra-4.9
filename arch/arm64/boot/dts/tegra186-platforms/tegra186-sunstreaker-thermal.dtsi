@@ -73,6 +73,15 @@
 			thermal-zone-params {
 				governor-name = "pid_thermal_gov";
 			};
+
+			trips {
+				trip_critical {
+					/* keep this below HW shutdown to log alerts */
+					temperature = <108000>;
+					type = "critical";
+					hysteresis = <0>;
+				};
+			};
 		};
 	};
 };

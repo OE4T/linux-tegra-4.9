@@ -45,9 +45,6 @@
 #define __DWC_ETH_QOS__INIT_H__
 #include <linux/platform_device.h>
 
-extern void DWC_ETH_QOS_configure_rx_fun_ptr(
-	struct DWC_ETH_QOS_prv_data *pdata);
-
 int DWC_ETH_QOS_probe(struct platform_device *);
 
 int DWC_ETH_QOS_remove(struct platform_device *);

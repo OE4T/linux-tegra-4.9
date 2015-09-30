@@ -1492,7 +1492,7 @@ static int DWC_ETH_QOS_alloc_rx_buf(struct DWC_ETH_QOS_prv_data *pdata,
  * \return void
  */
 
-void DWC_ETH_QOS_configure_rx_fun_ptr(struct DWC_ETH_QOS_prv_data *pdata)
+static void DWC_ETH_QOS_configure_rx_fun_ptr(struct DWC_ETH_QOS_prv_data *pdata)
 {
 	DBGPR("-->DWC_ETH_QOS_configure_rx_fun_ptr\n");
 
@@ -1813,6 +1813,7 @@ static int DWC_ETH_QOS_open(struct net_device *dev)
 	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
 	int ret = Y_SUCCESS;
 	struct hw_if_struct *hw_if = &pdata->hw_if;
+	struct desc_if_struct *desc_if = &pdata->desc_if;
 
 	DBGPR("-->DWC_ETH_QOS_open\n");
 
@@ -1842,6 +1843,14 @@ static int DWC_ETH_QOS_open(struct net_device *dev)
 		}
 	}
 
+	ret = desc_if->alloc_buff_and_desc(pdata);
+	if (ret < 0) {
+		printk(KERN_ALERT
+			"failed to allocate buffer/descriptor memory\n");
+		ret = -ENOMEM;
+		goto err_out_desc_buf_alloc_failed;
+	}
+
 	alloc_poll_timers(pdata);
 	/* default configuration */
 #ifdef DWC_ETH_QOS_CONFIG_PGTEST
@@ -1851,6 +1860,9 @@ static int DWC_ETH_QOS_open(struct net_device *dev)
 	DWC_ETH_QOS_default_tx_confs(pdata);
 	DWC_ETH_QOS_default_rx_confs(pdata);
 	DWC_ETH_QOS_configure_rx_fun_ptr(pdata);
+
+	desc_if->wrapper_tx_desc_init(pdata);
+	desc_if->wrapper_rx_desc_init(pdata);
 
 	DWC_ETH_QOS_napi_enable_mq(pdata);
 #endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
@@ -1888,6 +1900,13 @@ static int DWC_ETH_QOS_open(struct net_device *dev)
 
 	return ret;
 
+ err_out_desc_buf_alloc_failed:
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
+		free_multi_irqs(pdata);
+	else if (pdata->irq_number != 0) {
+		free_irq(pdata->irq_number, pdata);
+		pdata->irq_number = 0;
+	}
  err_irq_0:
 	DBGPR("<--DWC_ETH_QOS_open\n");
 	return ret;
@@ -1910,6 +1929,7 @@ static int DWC_ETH_QOS_close(struct net_device *dev)
 {
 	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &pdata->hw_if;
+	struct desc_if_struct *desc_if = &pdata->desc_if;
 
 	DBGPR("-->DWC_ETH_QOS_close\n");
 
@@ -1954,6 +1974,9 @@ static int DWC_ETH_QOS_close(struct net_device *dev)
 	del_timer(&pdata->pg_timer);
 #endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
 
+	/* free rx skb's */
+	desc_if->rx_skb_free_mem(pdata, DWC_ETH_QOS_RX_QUEUE_CNT);
+	desc_if->free_buff_and_desc(pdata);
 	DBGPR("<--DWC_ETH_QOS_close\n");
 
 	return Y_SUCCESS;

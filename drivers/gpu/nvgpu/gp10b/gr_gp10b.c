@@ -415,17 +415,26 @@ static void gr_gp10b_set_circular_buffer_size(struct gk20a *g, u32 data)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 gpc_index, ppc_index, stride, val;
-	u32 cb_size = data * 4;
+	u32 cb_size_steady = data * 4, cb_size;
 
 	gk20a_dbg_fn("");
 
-	if (cb_size > gr->attrib_cb_size)
-		cb_size = gr->attrib_cb_size;
+	if (cb_size_steady > gr->attrib_cb_size)
+		cb_size_steady = gr->attrib_cb_size;
+	if (gk20a_readl(g, gr_gpc0_ppc0_cbm_beta_cb_size_r()) !=
+		gk20a_readl(g,
+			gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_r())) {
+		cb_size = cb_size_steady +
+			(gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v() -
+			 gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v());
+	} else {
+		cb_size = cb_size_steady;
+	}
 
 	gk20a_writel(g, gr_ds_tga_constraintlogic_beta_r(),
 		(gk20a_readl(g, gr_ds_tga_constraintlogic_beta_r()) &
 		 ~gr_ds_tga_constraintlogic_beta_cbsize_f(~0)) |
-		 gr_ds_tga_constraintlogic_beta_cbsize_f(cb_size));
+		 gr_ds_tga_constraintlogic_beta_cbsize_f(cb_size_steady));
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
 		stride = proj_gpc_stride_v() * gpc_index;
@@ -446,12 +455,19 @@ static void gr_gp10b_set_circular_buffer_size(struct gk20a *g, u32 data)
 				stride +
 				proj_ppc_in_gpc_stride_v() * ppc_index, val);
 
+			gk20a_writel(g, proj_ppc_in_gpc_stride_v() * ppc_index +
+				gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_r() +
+				stride,
+				gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_v_f(
+					cb_size_steady));
+
 			val = gk20a_readl(g, gr_gpcs_swdx_tc_beta_cb_size_r(
 						ppc_index + gpc_index));
 
 			val = set_field(val,
 				gr_gpcs_swdx_tc_beta_cb_size_v_m(),
-				gr_gpcs_swdx_tc_beta_cb_size_v_f(cb_size *
+				gr_gpcs_swdx_tc_beta_cb_size_v_f(
+					cb_size_steady *
 					gr->gpc_ppc_count[gpc_index]));
 
 			gk20a_writel(g, gr_gpcs_swdx_tc_beta_cb_size_r(

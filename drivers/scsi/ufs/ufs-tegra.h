@@ -24,7 +24,7 @@
 
 #define NV_ADDRESS_MAP_MPHY_L0_BASE	0x02470000
 #define NV_ADDRESS_MAP_MPHY_L1_BASE	0x02480000
-#define NV_ADDRESS_MAP_UFSHC_AUX_BASE		0x2460000
+#define NV_ADDRESS_MAP_UFSHC_AUX_BASE	0x02460000
 
 /*
  * M-PHY Registers
@@ -47,7 +47,12 @@
 #define MPHY_RX_APB_VENDOR2_0_RX_CAL_EN		(1 << 15)
 #define MPHY_RX_APB_VENDOR2_0_RX_CAL_DONE	(1 << 19)
 
-#define MPHY_ADDR_RANGE		400
+#define MPHY_ADDR_RANGE		0x1fc
+#define UFS_AUX_ADDR_RANGE	0x18
+
+/*UFS Clock Defines*/
+#define UFSHC_CLK_FREQ		51000000
+#define UFSDEV_CLK_FREQ		38400000
 
 enum ufs_state {
 	UFSHC_INIT,
@@ -222,10 +227,14 @@ struct ufs_tegra_host {
 	void __iomem *mphy_l0_base;
 	void __iomem *mphy_l1_base;
 	void __iomem *ufs_aux_base;
+	struct reset_control *ufs_rst;
+	struct reset_control *ufs_axi_m_rst;
+	struct reset_control *ufshc_lp_rst;
 	struct reset_control *mphy_l0_rx_rst;
 	struct reset_control *mphy_l0_tx_rst;
 	struct reset_control *mphy_l1_rx_rst;
 	struct reset_control *mphy_l1_tx_rst;
+	struct reset_control *mphy_clk_ctl_rst;
 	struct clk *mphy_core_pll_fixed;
 	struct clk *mphy_l0_tx_symb;
 	struct clk *mphy_tx_1mhz_ref;
@@ -234,6 +243,13 @@ struct ufs_tegra_host {
 	struct clk *mphy_l0_tx_ls_3xbit;
 	struct clk *mphy_l0_rx_ls_bit;
 	struct clk *mphy_l1_rx_ana;
+	struct clk *ufshc_parent;
+	struct clk *ufsdev_parent;
+	struct clk *ufshc_clk;
+	struct clk *ufsdev_ref_clk;
+	struct regulator *vddio_ufs;
+	struct regulator *vddio_ufs_ap;
+
 };
 
 extern struct ufs_hba_variant_ops ufs_hba_tegra_vops;

@@ -396,10 +396,42 @@ static int nvhost_flcn_init_sw(struct platform_device *dev)
 	return err;
 }
 
+int nvhost_vic_finalize_poweron(struct platform_device *pdev)
+{
+	struct flcn *v;
+	int err;
+
+	err = nvhost_flcn_finalize_poweron(pdev);
+	if (err)
+		return err;
+
+	v = get_flcn(pdev);
+
+	host1x_writel(pdev, VIC_UCLASS_METHOD_OFFSET * 4,
+		      NVA0B6_VIDEO_COMPOSITOR_SET_APPLICATION_ID >> 2);
+	host1x_writel(pdev, VIC_UCLASS_METHOD_DATA * 4, 1);
+	host1x_writel(pdev, VIC_UCLASS_METHOD_OFFSET * 4,
+		      NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_SIZE >> 2);
+	host1x_writel(pdev, VIC_UCLASS_METHOD_DATA * 4, v->fce.size);
+	host1x_writel(pdev, VIC_UCLASS_METHOD_OFFSET * 4,
+		      NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_OFFSET >> 2);
+	host1x_writel(pdev, VIC_UCLASS_METHOD_DATA * 4,
+		      (v->dma_addr + v->fce.data_offset) >> 8);
+
+	return 0;
+}
+
 int nvhost_vic_init_context(struct platform_device *pdev,
 			    struct nvhost_cdma *cdma)
 {
-	struct flcn *v = get_flcn(pdev);
+	struct flcn *v;
+	int err;
+
+	err = nvhost_flcn_init_sw(pdev);
+	if (err)
+		return err;
+
+	v = get_flcn(pdev);
 
 	/* load application id */
 	nvhost_cdma_push(cdma,

@@ -1909,11 +1909,9 @@ static int DWC_ETH_QOS_open(struct net_device *dev)
 static int DWC_ETH_QOS_close(struct net_device *dev)
 {
 	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct hw_if_struct *hw_if = &pdata->hw_if;
 
 	DBGPR("-->DWC_ETH_QOS_close\n");
-
-	if (pdata->phydev)
-		phy_stop(pdata->phydev);
 
 	/* FIXME don't issue software reset to device
 	 * but make sure DMA is stopped correctly
@@ -1924,6 +1922,22 @@ static int DWC_ETH_QOS_close(struct net_device *dev)
 	netif_tx_disable(dev);
 	DWC_ETH_QOS_all_ch_napi_disable(pdata);
 #endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
+
+	/* stop DMA TX */
+	DWC_ETH_QOS_stop_all_ch_tx_dma(pdata);
+
+	/* disable MAC TX */
+	hw_if->stop_mac_tx();
+
+	/* stop the PHY */
+	if (pdata->phydev)
+		phy_stop(pdata->phydev);
+
+	/* disable MAC RX */
+	hw_if->stop_mac_rx();
+
+	/* stop DMA RX */
+	DWC_ETH_QOS_stop_all_ch_rx_dma(pdata);
 
 	free_poll_timers(pdata);
 

@@ -89,6 +89,12 @@ struct cpu_vhint_table {
 	uint32_t ref_clk_hz;
 	uint16_t pdiv; /* post divider */
 	uint16_t mdiv; /* input divider */
+	uint16_t vfloor;
+	uint16_t vceil;
+	uint16_t ndiv_max;
+	uint16_t ndiv_min;
+	uint16_t vindex_mult;
+	uint16_t vindex_div;
 	uint8_t *vindx;
 };
 
@@ -329,13 +335,17 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 	if ((rate * KHZ_TO_HZ) % vhtbl->ref_clk_hz)
 		ndiv++;
 
+	if (ndiv < vhtbl->ndiv_min) /* ndiv > 8 needed for stable operation */
+		ndiv = vhtbl->ndiv_min;
+	if (ndiv > vhtbl->ndiv_max)
+		ndiv = vhtbl->ndiv_max;
+
 	val |= (ndiv << EDVD_COREX_NDIV_VAL_SHIFT);
 	vindx = vhtbl->vindx[ndiv];
-	if (vindx == -1) {
-		pr_err("unable to find Vhint for Ndiv %u setting Vhint : 0\n",
-			ndiv);
-		vindx = 0;
-	}
+	if (vindx < vhtbl->vfloor)
+		vindx = vhtbl->vfloor;
+	else if (vindx > vhtbl->vceil)
+		vindx = vhtbl->vceil;
 	val |= (vindx << EDVD_COREX_VINDEX_VAL_SHIFT);
 	phy_cpu = logical_to_phys_map(cpu);
 
@@ -742,7 +752,7 @@ static int __init init_freqtbls(void)
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
 		vhtbl = &tfreq_data.pcluster[cl].dvfs_tbl;
-		rem  = adjust_remainder(vhtbl->lut->ndiv_max,
+		rem  = adjust_remainder(vhtbl->ndiv_max,
 					&max_freq_steps);
 
 		ftbl = kzalloc(sizeof(struct cpufreq_frequency_table) *
@@ -760,7 +770,7 @@ static int __init init_freqtbls(void)
 				CPUFREQ_TBL_STEP_SIZE * vhtbl->ref_clk_hz) /
 				(vhtbl->pdiv * vhtbl->mdiv * 1000);
 		if (rem)
-			ftbl[ndiv++].frequency = (vhtbl->lut->ndiv_max *
+			ftbl[ndiv++].frequency = (vhtbl->ndiv_max *
 			vhtbl->ref_clk_hz) /
 			(vhtbl->pdiv * vhtbl->mdiv * 1000);
 
@@ -796,18 +806,31 @@ static int __init create_ndiv_to_vindex_table(void)
 		}
 
 		i = 0;
+		vhtbl->vfloor = lut->vfloor;
+		vhtbl->vceil = lut->vceil;
 		for (vindx = 0; vindx < MAX_VINDEX; vindx++) {
 			mid_ndiv = lut->ndiv[vindx];
+			if (mid_ndiv == lut->vceil)
+				continue;
+			if (mid_ndiv == lut->vfloor)
+				break;
+			if (vindx < vhtbl->vfloor)
+				vhtbl->vfloor = vindx;
+			if (vindx > vhtbl->vceil)
+				vhtbl->vceil = vindx;
 			for (; ((mid_ndiv < MAX_NDIV) && (i <= mid_ndiv)); i++)
 				vhtbl->vindx[i] = vindx;
 		}
+
 		/* Fill remaining vindex table by last vindex value */
 		for (; i < MAX_NDIV; i++)
-			vhtbl->vindx[i] = vindx - 1;
+			vhtbl->vindx[i] = vhtbl->vceil;
 
 		vhtbl->ref_clk_hz =  lut->ref_clk_hz;
 		vhtbl->pdiv = lut->pdiv;
 		vhtbl->mdiv = lut->mdiv;
+		vhtbl->ndiv_min = lut->ndiv_min;
+		vhtbl->ndiv_max = lut->ndiv_max;
 	}
 err_out:
 	return ret;

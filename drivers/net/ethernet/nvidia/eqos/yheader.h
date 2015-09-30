@@ -758,6 +758,7 @@ struct hw_if_struct {
 	INT(*set_mii_speed_100) (struct eqos_prv_data *);
 	INT(*set_mii_speed_10) (struct eqos_prv_data *);
 	INT(*set_gmii_speed) (struct eqos_prv_data *);
+	INT (*set_tx_clk_speed) (struct eqos_prv_data *, INT);
 	/* for PMT */
 	INT(*start_dma_rx) (UINT);
 	INT(*stop_dma_rx) (UINT);

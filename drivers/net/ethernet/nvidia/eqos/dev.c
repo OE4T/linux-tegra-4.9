@@ -4463,6 +4463,7 @@ static int enable_mac_interrupts(void)
 
 static INT configure_mac(struct DWC_ETH_QOS_prv_data *pdata)
 {
+	struct eqos_cfg *pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
 	ULONG varMAC_MCR;
 	UINT qInx;
 
@@ -4481,35 +4482,35 @@ static INT configure_mac(struct DWC_ETH_QOS_prv_data *pdata)
 		switch(qInx) {
 		case 0:
 			MAC_TQPM0R_PSTQ0_UdfWr(0);
-			MAC_RQC2R_PSRQ0_UdfWr(0x1 << qInx);
+			MAC_RQC2R_PSRQ0_UdfWr(0x1 << pdt_cfg->q_prio[qInx]);
 			break;
 		case 1:
 			MAC_TQPM0R_PSTQ1_UdfWr(1);
-			MAC_RQC2R_PSRQ1_UdfWr(0x1 << qInx);
+			MAC_RQC2R_PSRQ1_UdfWr(0x1 << pdt_cfg->q_prio[qInx]);
 			break;
 		case 2:
 			MAC_TQPM0R_PSTQ2_UdfWr(2);
-			MAC_RQC2R_PSRQ2_UdfWr(0x1 << qInx);
+			MAC_RQC2R_PSRQ2_UdfWr(0x1 << pdt_cfg->q_prio[qInx]);
 			break;
 		case 3:
 			MAC_TQPM0R_PSTQ3_UdfWr(3);
-			MAC_RQC2R_PSRQ3_UdfWr(0x1 << qInx);
+			MAC_RQC2R_PSRQ3_UdfWr(0x1 << pdt_cfg->q_prio[qInx]);
 			break;
 		case 4:
 			MAC_TQPM1R_PSTQ4_UdfWr(4);
-			MAC_RQC3R_PSRQ4_UdfWr(0x1 << qInx);
+			MAC_RQC3R_PSRQ4_UdfWr(0x1 << pdt_cfg->q_prio[qInx]);
 			break;
 		case 5:
 			MAC_TQPM1R_PSTQ5_UdfWr(5);
-			MAC_RQC3R_PSRQ5_UdfWr(0x1 << qInx);
+			MAC_RQC3R_PSRQ5_UdfWr(0x1 << pdt_cfg->q_prio[qInx]);
 			break;
 		case 6:
 			MAC_TQPM1R_PSTQ6_UdfWr(6);
-			MAC_RQC3R_PSRQ6_UdfWr(0x1 << qInx);
+			MAC_RQC3R_PSRQ6_UdfWr(0x1 << pdt_cfg->q_prio[qInx]);
 			break;
 		case 7:
 			MAC_TQPM1R_PSTQ7_UdfWr(7);
-			MAC_RQC3R_PSRQ7_UdfWr(0x1 << qInx);
+			MAC_RQC3R_PSRQ7_UdfWr(0x1 << pdt_cfg->q_prio[qInx]);
 			break;
 		}
 

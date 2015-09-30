@@ -5853,10 +5853,17 @@ u16	DWC_ETH_QOS_select_queue(struct net_device *dev,
 {
 	static u16 txqueue_select = 0;
 	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_cfg *pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
+	UINT i;
 
 	DBGPR("-->DWC_ETH_QOS_select_queue\n");
 
-	txqueue_select = (skb->priority < DWC_ETH_QOS_TX_QUEUE_CNT) ? skb->priority : 0;
+	for (i = 0; i <= DWC_ETH_QOS_TX_QUEUE_CNT; i++) {
+		if (pdt_cfg->q_prio[i] == skb->priority) {
+			txqueue_select = i;
+			break;
+		}
+	}
 
 	DBGPR("<--DWC_ETH_QOS_select_queue txqueue-select:%d\n",
 		txqueue_select);

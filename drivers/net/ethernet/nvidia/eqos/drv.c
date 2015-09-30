@@ -90,7 +90,7 @@ void DWC_ETH_QOS_stop_all_ch_tx_dma(struct DWC_ETH_QOS_prv_data *pdata)
 	DBGPR("-->DWC_ETH_QOS_stop_all_ch_tx_dma\n");
 
 	for(qInx = 0; qInx < DWC_ETH_QOS_TX_QUEUE_CNT; qInx++)
-		hw_if->stop_dma_tx(qInx);
+		hw_if->stop_dma_tx(pdata, qInx);
 
 	DBGPR("<--DWC_ETH_QOS_stop_all_ch_tx_dma\n");
 }
@@ -445,7 +445,7 @@ static void DWC_ETH_QOS_restart_dev(struct DWC_ETH_QOS_prv_data *pdata,
 	napi_disable(&rx_queue->napi);
 
 	/* stop DMA TX/RX */
-	hw_if->stop_dma_tx(qInx);
+	hw_if->stop_dma_tx(pdata, qInx);
 	hw_if->stop_dma_rx(qInx);
 
 	/* free tx skb's */

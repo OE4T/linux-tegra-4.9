@@ -886,7 +886,7 @@ static void DWC_ETH_QOS_pg_timer_fun(unsigned long data)
 		desc_data = GET_TX_WRAPPER_DESC(qInx);
 		/* disable only that channel for which ENABLE bit is set */
 		if ((pdata->pg->ch_SelMask) & (1 << qInx)) {
-			hw_if->stop_dma_tx(qInx);
+			hw_if->stop_dma_tx(pdata, qInx);
 		}
 		DMA_TDTP_TPDR_RgRd(qInx, tail_ptr);
 		DMA_CHTDR_RgRd(qInx, head_ptr);

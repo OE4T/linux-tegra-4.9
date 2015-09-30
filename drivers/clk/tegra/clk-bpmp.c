@@ -44,7 +44,7 @@ static const char **clk_names;
 static int max_clk_id;
 static struct clk_onecell_data clk_data;
 
-static int bpmp_send_clk_message(struct bpmp_clk_req *req, int size,
+static int bpmp_send_clk_message_atomic(struct bpmp_clk_req *req, int size,
 				 u8 *reply, int reply_size)
 {
 	unsigned long flags;
@@ -52,10 +52,27 @@ static int bpmp_send_clk_message(struct bpmp_clk_req *req, int size,
 
 	local_irq_save(flags);
 	err = tegra_bpmp_send_receive_atomic(MRQ_CLK, req, size, reply,
-					     reply_size);
+			reply_size);
 	local_irq_restore(flags);
 
 	return err;
+}
+
+static int bpmp_send_clk_message(struct bpmp_clk_req *req, int size,
+				 u8 *reply, int reply_size)
+{
+	int err;
+
+	err = tegra_bpmp_send_receive(MRQ_CLK, req, size, reply, reply_size);
+	if (err != -EAGAIN)
+		return err;
+
+	/*
+	 * in case the mail systems worker threads haven't been started yet,
+	 * use the atomic send/receive interface. This happens because the
+	 * clocks are initialized before the IPC mechanism.
+         */
+	return bpmp_send_clk_message_atomic(req, size, reply, reply_size);
 }
 
 static int clk_bpmp_enable(struct clk_hw *hw)
@@ -87,7 +104,8 @@ static int clk_bpmp_is_enabled(struct clk_hw *hw)
 
 	req.cmd = BPMP_CLK_CMD(MRQ_CLK_IS_ENABLED, bpmp_clk->clk_num);
 
-	err = bpmp_send_clk_message(&req, sizeof(req), reply, sizeof(reply));
+	err = bpmp_send_clk_message_atomic(&req, sizeof(req),
+			reply, sizeof(reply));
 	if (err < 0)
 		return err;
 

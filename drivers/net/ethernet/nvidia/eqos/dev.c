@@ -2654,8 +2654,28 @@ static INT start_dma_rx(UINT qInx)
 * \retval -1 Failure
 */
 
-static INT stop_dma_tx(UINT qinx)
+static INT stop_dma_tx(struct DWC_ETH_QOS_prv_data *pdata, UINT qinx)
 {
+	struct DWC_ETH_QOS_tx_wrapper_descriptor *tx_desc_data =
+		GET_TX_WRAPPER_DESC(qinx);
+	INT start = tx_desc_data->dirty_tx;
+	INT end = tx_desc_data->cur_tx;
+	struct s_TX_NORMAL_DESC *TX_NORMAL_DESC;
+	UINT own, i;
+
+	/* set OWN to 0 for all TX descriptor currently owned by HW */
+	for (i = start;; i++) {
+		if (i > TX_DESC_CNT)
+			i = 0;
+		if (i == end)
+			break;
+		TX_NORMAL_DESC = GET_TX_DESC_PTR(qinx, i);
+		TX_NORMAL_DESC_TDES3_OWN_Mlf_Rd(TX_NORMAL_DESC->TDES3, own);
+		if (own)
+			TX_NORMAL_DESC_TDES3_OWN_Mlf_Wr(
+				TX_NORMAL_DESC->TDES3, 0x0);
+	}
+
 	/* wait for dma to get idle or suspended */
 	wait_for_dma_to_get_idle(qinx, false);
 

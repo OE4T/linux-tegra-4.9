@@ -2564,6 +2564,52 @@ static INT enable_rx_flow_ctrl(void)
 	return Y_SUCCESS;
 }
 
+static void wait_for_dma_to_get_idle(UINT qinx, bool is_rx)
+{
+	ULONG dma_dsr0;
+	ULONG dma_dsr1;
+	ULONG dma_dsr2;
+	unsigned long timeout = jiffies + msecs_to_jiffies(10);
+	bool wait_for_idle;
+	ULONG val;
+
+	/* make sure DMA is suspended or stopped before stop command */
+	do {
+		if (qinx <= 2) {
+			DMA_DSR0_RgRd(dma_dsr0);
+			val = GET_VALUE(dma_dsr0,
+			is_rx ? DMA_DSR0_RPS0_LPOS : DMA_DSR0_TPS0_LPOS
+			+ (qinx * 8),
+			is_rx ? DMA_DSR0_RPS0_HPOS : DMA_DSR0_TPS0_HPOS
+			+ (qinx * 8));
+		} else if (qinx <= 6) {
+			DMA_DSR1_RgRd(dma_dsr1);
+			val = GET_VALUE(dma_dsr1,
+			is_rx ? DMA_DSR1_RPS3_LPOS : DMA_DSR1_TPS3_LPOS
+			+ (qinx - 3) * 8,
+			is_rx ? DMA_DSR1_RPS3_HPOS : DMA_DSR1_TPS3_HPOS
+			+ (qinx - 3) * 8);
+		} else {
+			DMA_DSR2_RgRd(dma_dsr2);
+			val = GET_VALUE(dma_dsr2,
+			is_rx ? DMA_DSR2_RPS7_LPOS : DMA_DSR2_TPS7_LPOS,
+			is_rx ? DMA_DSR2_RPS7_HPOS : DMA_DSR2_TPS7_HPOS);
+		}
+		/* wait if dma status is not suspended yet */
+		if ((is_rx && (val == 0x0 || val == 0x3 || val == 0x4)) ||
+			(!is_rx && (val == 0x0 || val == 0x6))) {
+			wait_for_idle = false;
+		} else {
+			wait_for_idle = true;
+			usleep_range(50, 60);
+		}
+	} while (wait_for_idle && time_is_after_jiffies(timeout));
+
+	if (time_is_before_jiffies(timeout) && wait_for_idle)
+		printk(KERN_ALERT "%s%dDMA is not suspended\n",
+			is_rx ? "Rx" : "Tx", qinx);
+}
+
 /*!
 * \param[in] qInx
 * \return Success or Failure
@@ -2571,183 +2617,18 @@ static INT enable_rx_flow_ctrl(void)
 * \retval -1 Failure
 */
 
-static INT stop_dma_rx(UINT qInx)
+static INT stop_dma_rx(UINT qinx)
 {
-  ULONG retryCount = 10;
-  ULONG vy_count;
-  volatile ULONG varDMA_DSR0;
-  volatile ULONG varDMA_DSR1;
-  volatile ULONG varDMA_DSR2;
+	/* wait for dma to get idle or suspended */
+	wait_for_dma_to_get_idle(qinx, true);
 
-  /* issue Rx dma stop command */
-  DMA_RCR_ST_UdfWr(qInx, 0);
+	/* issue Rx dma stop command */
+	DMA_RCR_ST_UdfWr(qinx, 0);
 
-  /* wait for Rx DMA to stop, ie wait till Rx DMA
-   * goes in either Running or Suspend state.
-   * */
-  if (qInx == 0) {
+	/* wait for dma to get idle or suspended */
+	wait_for_dma_to_get_idle(qinx, true);
 
-    /*Poll*/
-    vy_count = 0;
-    while(1){
-      if(vy_count > retryCount) {
-        printk(KERN_ALERT "ERROR: Rx Channel 0 stop failed, DSR0 = %#lx\n",
-			varDMA_DSR0);
-        return -Y_FAILURE;
-      }
-
-      DMA_DSR0_RgRd(varDMA_DSR0);
-      if ((GET_VALUE(varDMA_DSR0, DMA_DSR0_RPS0_LPOS, DMA_DSR0_RPS0_HPOS) == 0x3)
-	|| (GET_VALUE(varDMA_DSR0, DMA_DSR0_RPS0_LPOS, DMA_DSR0_RPS0_HPOS) == 0x4)
-	|| (GET_VALUE(varDMA_DSR0, DMA_DSR0_RPS0_LPOS, DMA_DSR0_RPS0_HPOS) == 0x0)) {
-        break;
-      }
-      vy_count++;
-      mdelay(1);
-    }
-  } else if (qInx == 1) {
-
-    /*Poll*/
-    vy_count = 0;
-    while(1){
-      if(vy_count > retryCount) {
-        printk(KERN_ALERT "ERROR: Rx Channel 1 stop failed, DSR0 = %#lx\n",
-			varDMA_DSR0);
-        return -Y_FAILURE;
-      }
-
-      DMA_DSR0_RgRd(varDMA_DSR0);
-      if ((GET_VALUE(varDMA_DSR0, DMA_DSR0_RPS1_LPOS, DMA_DSR0_RPS1_HPOS) == 0x3)
-	|| (GET_VALUE(varDMA_DSR0, DMA_DSR0_RPS1_LPOS, DMA_DSR0_RPS1_HPOS) == 0x4)
-	|| (GET_VALUE(varDMA_DSR0, DMA_DSR0_RPS1_LPOS, DMA_DSR0_RPS1_HPOS) == 0x0)) {
-        break;
-      }
-      vy_count++;
-      mdelay(1);
-    }
-  } else if (qInx == 2) {
-
-    /*Poll*/
-    vy_count = 0;
-    while(1){
-      if(vy_count > retryCount) {
-        printk(KERN_ALERT "ERROR: Rx Channel 2 stop failed, DSR0 = %#lx\n",
-			varDMA_DSR0);
-        return -Y_FAILURE;
-      }
-
-      DMA_DSR0_RgRd(varDMA_DSR0);
-      if ((GET_VALUE(varDMA_DSR0, DMA_DSR0_RPS2_LPOS, DMA_DSR0_RPS2_HPOS) == 0x3)
-	|| (GET_VALUE(varDMA_DSR0, DMA_DSR0_RPS2_LPOS, DMA_DSR0_RPS2_HPOS) == 0x4)
-	|| (GET_VALUE(varDMA_DSR0, DMA_DSR0_RPS2_LPOS, DMA_DSR0_RPS2_HPOS) == 0x0)) {
-        break;
-      }
-      vy_count++;
-      mdelay(1);
-    }
-  } else if (qInx == 3) {
-
-    /*Poll*/
-    vy_count = 0;
-    while(1){
-      if(vy_count > retryCount) {
-        printk(KERN_ALERT "ERROR: Rx Channel 3 stop failed, DSR0 = %#lx\n",
-			varDMA_DSR1);
-        return -Y_FAILURE;
-      }
-
-      DMA_DSR1_RgRd(varDMA_DSR1);
-      if ((GET_VALUE(varDMA_DSR1, DMA_DSR1_RPS3_LPOS, DMA_DSR1_RPS3_HPOS) == 0x3)
-	|| (GET_VALUE(varDMA_DSR1, DMA_DSR1_RPS3_LPOS, DMA_DSR1_RPS3_HPOS) == 0x4)
-	|| (GET_VALUE(varDMA_DSR1, DMA_DSR1_RPS3_LPOS, DMA_DSR1_RPS3_HPOS) == 0x0)) {
-        break;
-      }
-      vy_count++;
-      mdelay(1);
-    }
-  } else if (qInx == 4) {
-
-    /*Poll*/
-    vy_count = 0;
-    while(1){
-      if(vy_count > retryCount) {
-        printk(KERN_ALERT "ERROR: Rx Channel 4 stop failed, DSR0 = %#lx\n",
-			varDMA_DSR1);
-        return -Y_FAILURE;
-      }
-
-      DMA_DSR1_RgRd(varDMA_DSR1);
-      if ((GET_VALUE(varDMA_DSR1, DMA_DSR1_RPS4_LPOS, DMA_DSR1_RPS4_HPOS) == 0x3)
-	|| (GET_VALUE(varDMA_DSR1, DMA_DSR1_RPS4_LPOS, DMA_DSR1_RPS4_HPOS) == 0x4)
-	|| (GET_VALUE(varDMA_DSR1, DMA_DSR1_RPS4_LPOS, DMA_DSR1_RPS4_HPOS) == 0x0)) {
-        break;
-      }
-      vy_count++;
-      mdelay(1);
-    }
-  } else if (qInx == 5) {
-
-    /*Poll*/
-    vy_count = 0;
-    while(1){
-      if(vy_count > retryCount) {
-        printk(KERN_ALERT "ERROR: Rx Channel 5 stop failed, DSR0 = %#lx\n",
-			varDMA_DSR1);
-        return -Y_FAILURE;
-      }
-
-      DMA_DSR1_RgRd(varDMA_DSR1);
-      if ((GET_VALUE(varDMA_DSR1, DMA_DSR1_RPS5_LPOS, DMA_DSR1_RPS5_HPOS) == 0x3)
-	|| (GET_VALUE(varDMA_DSR1, DMA_DSR1_RPS5_LPOS, DMA_DSR1_RPS5_HPOS) == 0x4)
-	|| (GET_VALUE(varDMA_DSR1, DMA_DSR1_RPS5_LPOS, DMA_DSR1_RPS5_HPOS) == 0x0)) {
-        break;
-      }
-      vy_count++;
-      mdelay(1);
-    }
-  } else if (qInx == 6) {
-
-    /*Poll*/
-    vy_count = 0;
-    while(1){
-      if(vy_count > retryCount) {
-        printk(KERN_ALERT "ERROR: Rx Channel 6 stop failed, DSR0 = %#lx\n",
-			varDMA_DSR1);
-        return -Y_FAILURE;
-      }
-
-      DMA_DSR1_RgRd(varDMA_DSR1);
-      if ((GET_VALUE(varDMA_DSR1, DMA_DSR1_RPS6_LPOS, DMA_DSR1_RPS6_HPOS) == 0x3)
-	|| (GET_VALUE(varDMA_DSR1, DMA_DSR1_RPS6_LPOS, DMA_DSR1_RPS6_HPOS) == 0x4)
-	|| (GET_VALUE(varDMA_DSR1, DMA_DSR1_RPS6_LPOS, DMA_DSR1_RPS6_HPOS) == 0x0)) {
-        break;
-      }
-      vy_count++;
-      mdelay(1);
-    }
-  } else if (qInx == 7) {
-
-    /*Poll*/
-    vy_count = 0;
-    while(1){
-      if(vy_count > retryCount) {
-        printk(KERN_ALERT "ERROR: Rx Channel 7 stop failed, DSR0 = %#lx\n",
-			varDMA_DSR2);
-        return -Y_FAILURE;
-      }
-
-      DMA_DSR2_RgRd(varDMA_DSR2);
-      if ((GET_VALUE(varDMA_DSR2, DMA_DSR2_RPS7_LPOS, DMA_DSR2_RPS7_HPOS) == 0x3)
-	|| (GET_VALUE(varDMA_DSR2, DMA_DSR2_RPS7_LPOS, DMA_DSR2_RPS7_HPOS) == 0x4)
-	|| (GET_VALUE(varDMA_DSR2, DMA_DSR2_RPS7_LPOS, DMA_DSR2_RPS7_HPOS) == 0x0)) {
-        break;
-      }
-      vy_count++;
-      mdelay(1);
-    }
-  }
-
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
 
 
@@ -2773,167 +2654,18 @@ static INT start_dma_rx(UINT qInx)
 * \retval -1 Failure
 */
 
-static INT stop_dma_tx(UINT qInx)
+static INT stop_dma_tx(UINT qinx)
 {
-  ULONG retryCount = 10;
-  ULONG vy_count;
-  volatile ULONG varDMA_DSR0;
-  volatile ULONG varDMA_DSR1;
-  volatile ULONG varDMA_DSR2;
+	/* wait for dma to get idle or suspended */
+	wait_for_dma_to_get_idle(qinx, false);
 
-  /* issue Tx dma stop command */
-  DMA_TCR_ST_UdfWr(qInx, 0);
+	/* issue Tx dma stop command */
+	DMA_TCR_ST_UdfWr(qinx, 0);
 
-  /* wait for Tx DMA to stop, ie wait till Tx DMA
-   * goes in Suspend state or stopped state.
-   */
-  if (qInx == 0) {
-    /*Poll*/
-    vy_count = 0;
-    while(1){
-      if(vy_count > retryCount) {
-	printk(KERN_ALERT "ERROR: Channel 0 stop failed, DSR0 = %lx\n",
-	  varDMA_DSR0);
-        return -Y_FAILURE;
-      }
+	/* wait for dma to get idle or suspended */
+	wait_for_dma_to_get_idle(qinx, false);
 
-      DMA_DSR0_RgRd(varDMA_DSR0);
-      if ((GET_VALUE(varDMA_DSR0, DMA_DSR0_TPS0_LPOS, DMA_DSR0_TPS0_HPOS) == 0x6) ||
-        (GET_VALUE(varDMA_DSR0, DMA_DSR0_TPS0_LPOS, DMA_DSR0_TPS0_HPOS) == 0x0)) {
-        break;
-      }
-      vy_count++;
-      mdelay(1);
-    }
-  } else if (qInx == 1) {
-    /*Poll*/
-    vy_count = 0;
-    while(1){
-      if(vy_count > retryCount) {
-	printk(KERN_ALERT "ERROR: Channel 1 stop failed, DSR0 = %lx\n",
-	  varDMA_DSR0);
-        return -Y_FAILURE;
-      }
-
-      DMA_DSR0_RgRd(varDMA_DSR0);
-      if ((GET_VALUE(varDMA_DSR0, DMA_DSR0_TPS1_LPOS, DMA_DSR0_TPS1_HPOS) == 0x6) ||
-        (GET_VALUE(varDMA_DSR0, DMA_DSR0_TPS1_LPOS, DMA_DSR0_TPS1_HPOS) == 0x0)) {
-        break;
-      }
-      vy_count++;
-      mdelay(1);
-    }
-  } else if (qInx == 2) {
-    /*Poll*/
-    vy_count = 0;
-    while(1){
-      if(vy_count > retryCount) {
-	printk(KERN_ALERT "ERROR: Channel 2 stop failed, DSR0 = %lx\n",
-	  varDMA_DSR0);
-        return -Y_FAILURE;
-      }
-
-      DMA_DSR0_RgRd(varDMA_DSR0);
-      if ((GET_VALUE(varDMA_DSR0, DMA_DSR0_TPS2_LPOS, DMA_DSR0_TPS2_HPOS) == 0x6) ||
-        (GET_VALUE(varDMA_DSR0, DMA_DSR0_TPS2_LPOS, DMA_DSR0_TPS2_HPOS) == 0x0)) {
-        break;
-      }
-      vy_count++;
-      mdelay(1);
-    }
-  } else if (qInx == 3) {
-    /*Poll*/
-    vy_count = 0;
-    while(1){
-      if(vy_count > retryCount) {
-	printk(KERN_ALERT "ERROR: Channel 3 stop failed, DSR0 = %lx\n",
-	  varDMA_DSR1);
-        return -Y_FAILURE;
-      }
-
-      DMA_DSR1_RgRd(varDMA_DSR1);
-      if ((GET_VALUE(varDMA_DSR1, DMA_DSR1_TPS3_LPOS, DMA_DSR1_TPS3_HPOS) == 0x6) ||
-        (GET_VALUE(varDMA_DSR1, DMA_DSR1_TPS3_LPOS, DMA_DSR1_TPS3_HPOS) == 0x0)) {
-        break;
-      }
-      vy_count++;
-      mdelay(1);
-    }
-  } else if (qInx == 4) {
-    /*Poll*/
-    vy_count = 0;
-    while(1){
-      if(vy_count > retryCount) {
-	printk(KERN_ALERT "ERROR: Channel 4 stop failed, DSR0 = %lx\n",
-	  varDMA_DSR1);
-        return -Y_FAILURE;
-      }
-
-      DMA_DSR1_RgRd(varDMA_DSR1);
-      if ((GET_VALUE(varDMA_DSR1, DMA_DSR1_TPS4_LPOS, DMA_DSR1_TPS4_HPOS) == 0x6) ||
-        (GET_VALUE(varDMA_DSR1, DMA_DSR1_TPS4_LPOS, DMA_DSR1_TPS4_HPOS) == 0x0)) {
-        break;
-      }
-      vy_count++;
-      mdelay(1);
-    }
-  } else if (qInx == 5) {
-    /*Poll*/
-    vy_count = 0;
-    while(1){
-      if(vy_count > retryCount) {
-	printk(KERN_ALERT "ERROR: Channel 5 stop failed, DSR0 = %lx\n",
-	  varDMA_DSR1);
-        return -Y_FAILURE;
-      }
-
-      DMA_DSR1_RgRd(varDMA_DSR1);
-      if ((GET_VALUE(varDMA_DSR1, DMA_DSR1_TPS5_LPOS, DMA_DSR1_TPS5_HPOS) == 0x6) ||
-        (GET_VALUE(varDMA_DSR1, DMA_DSR1_TPS5_LPOS, DMA_DSR1_TPS5_HPOS) == 0x0)) {
-        break;
-      }
-      vy_count++;
-      mdelay(1);
-    }
-  } else if (qInx == 6) {
-    /*Poll*/
-    vy_count = 0;
-    while(1){
-      if(vy_count > retryCount) {
-	printk(KERN_ALERT "ERROR: Channel 6 stop failed, DSR0 = %lx\n",
-	  varDMA_DSR1);
-        return -Y_FAILURE;
-      }
-
-      DMA_DSR1_RgRd(varDMA_DSR1);
-      if ((GET_VALUE(varDMA_DSR1, DMA_DSR1_TPS6_LPOS, DMA_DSR1_TPS6_HPOS) == 0x6) ||
-        (GET_VALUE(varDMA_DSR1, DMA_DSR1_TPS6_LPOS, DMA_DSR1_TPS6_HPOS) == 0x0)) {
-        break;
-      }
-      vy_count++;
-      mdelay(1);
-    }
-  } else if (qInx == 7) {
-    /*Poll*/
-    vy_count = 0;
-    while(1){
-      if(vy_count > retryCount) {
-	printk(KERN_ALERT "ERROR: Channel 7 stop failed, DSR0 = %lx\n",
-	  varDMA_DSR2);
-        return -Y_FAILURE;
-      }
-
-      DMA_DSR2_RgRd(varDMA_DSR2);
-      if ((GET_VALUE(varDMA_DSR2, DMA_DSR2_TPS7_LPOS, DMA_DSR2_TPS7_HPOS) == 0x6) ||
-        (GET_VALUE(varDMA_DSR2, DMA_DSR2_TPS7_LPOS, DMA_DSR2_TPS7_HPOS) == 0x0)) {
-        break;
-      }
-      vy_count++;
-      mdelay(1);
-    }
-  }
-
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
 
 /*!

@@ -2956,15 +2956,29 @@ static INT start_dma_tx(UINT qInx)
 * \retval  0 Success
 * \retval -1 Failure
 */
-
-static INT stop_mac_tx_rx(void)
+static INT stop_mac_tx(void)
 {
-	ULONG varMAC_MCR;
+	ULONG mac_mcr;
 
-	MAC_MCR_RgRd(varMAC_MCR);
-	varMAC_MCR = varMAC_MCR & (ULONG) (0xffffff7c);
-	varMAC_MCR = varMAC_MCR | ((0) << 1) | ((0) << 0);
-	MAC_MCR_RgWr(varMAC_MCR);
+	MAC_MCR_RgRd(mac_mcr);
+	mac_mcr = mac_mcr & (ULONG) (0xffffff7d);
+	MAC_MCR_RgWr(mac_mcr);
+
+	return Y_SUCCESS;
+}
+
+/*!
+* \return Success or Failure
+* \retval  0 Success
+* \retval -1 Failure
+*/
+static INT stop_mac_rx(void)
+{
+	ULONG mac_mcr;
+
+	MAC_MCR_RgRd(mac_mcr);
+	mac_mcr = mac_mcr & (ULONG) (0xffffff7e);
+	MAC_MCR_RgWr(mac_mcr);
 
 	return Y_SUCCESS;
 }
@@ -5045,7 +5059,8 @@ void DWC_ETH_QOS_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->start_dma_tx = start_dma_tx;
 	hw_if->stop_dma_tx = stop_dma_tx;
 	hw_if->start_mac_tx_rx = start_mac_tx_rx;
-	hw_if->stop_mac_tx_rx = stop_mac_tx_rx;
+	hw_if->stop_mac_tx = stop_mac_tx;
+	hw_if->stop_mac_rx = stop_mac_rx;
 
 	hw_if->pre_xmit = pre_transmit;
 	hw_if->dev_read = device_read;

@@ -30,12 +30,23 @@
 
 /* XXX: move ioctls to include/linux/ (after T18X merge) */
 #include <linux/nvhost_vi_ioctl.h>
+
+struct tegra_vi_syncpt_incr_req {
+	u8 tag;
+	u8 pad1;
+	u16 pad2;
+	u32 syncpt_id;
+};
+
 #define NVHOST_VI_SET_IGN_MASK _IOW(NVHOST_VI_IOCTL_MAGIC, 10, u32)
 #define NVHOST_VI_SET_PRI_MASK _IOW(NVHOST_VI_IOCTL_MAGIC, 11, u32)
+#define NVHOST_VI_ADD_SYNCPT_INCR \
+	_IOW(NVHOST_VI_IOCTL_MAGIC, 12, struct tegra_vi_syncpt_incr_req)
 
 struct vi_notify_channel {
 	struct vi_notify_dev *vnd;
 	atomic_t ign_mask;
+	u32 syncpt_mask;
 	u32 pri_mask;
 
 	wait_queue_head_t readq;
@@ -66,6 +77,7 @@ static int vi_notify_dev_classify(struct vi_notify_dev *vnd)
 		chan = rcu_access_pointer(vnd->channels[i]);
 		if (chan != NULL) {
 			ign_mask &= atomic_read(&chan->ign_mask);
+			ign_mask &= ~chan->syncpt_mask;
 			pri_mask |= chan->pri_mask;
 		}
 	}
@@ -220,6 +232,7 @@ static long vi_notify_ioctl(struct file *file, unsigned int cmd,
 {
 	struct vi_notify_channel *chan = file->private_data;
 	struct vi_notify_dev *vnd = chan->vnd;
+	unsigned channel = iminor(file_inode(file));
 
 	switch (cmd) {
 	case FIONREAD: {
@@ -268,6 +281,34 @@ static long vi_notify_ioctl(struct file *file, unsigned int cmd,
 		mutex_unlock(&vnd->lock);
 		return err;
 	}
+
+	case NVHOST_VI_ADD_SYNCPT_INCR: {
+		struct tegra_vi_syncpt_incr_req req;
+		int err = 0;
+
+		if (copy_from_user(&req, (void __user *)arg, sizeof(req)))
+			return -EFAULT;
+		if (req.tag >= 32 || req.pad1 || req.pad2)
+			return -EINVAL;
+		if (vi_notify_is_broadcast(req.tag))
+			return -EINVAL;
+		if (mutex_lock_interruptible(&vnd->lock))
+			return -ERESTARTSYS;
+
+		if (!likely((1u << req.tag) & chan->syncpt_mask)) {
+			chan->syncpt_mask |= 1u << req.tag;
+
+			err = vi_notify_dev_classify(vnd);
+			if (err)
+				chan->syncpt_mask &= ~(1u << req.tag);
+		}
+
+		if (likely(err == 0))
+			err = vnd->driver->program_increment(vnd->device,
+					channel, req.tag, req.syncpt_id);
+		mutex_unlock(&vnd->lock);
+		return err;
+	}
 	}
 
 	return -ENOIOCTLCMD;
@@ -305,6 +346,7 @@ static int vi_notify_open(struct inode *inode, struct file *file)
 	chan->vnd = vnd;
 	atomic_set(&chan->ign_mask, 0xffffffff);
 	chan->pri_mask = 0;
+	chan->syncpt_mask = 0;
 	init_waitqueue_head(&chan->readq);
 	mutex_init(&chan->read_lock);
 
@@ -333,6 +375,9 @@ static int vi_notify_release(struct inode *inode, struct file *file)
 	struct vi_notify_channel *chan = file->private_data;
 	struct vi_notify_dev *vnd = chan->vnd;
 	unsigned channel = iminor(inode);
+
+	if (vnd->driver->reset_channel)
+		vnd->driver->reset_channel(vnd->device, channel);
 
 	mutex_lock(&vnd->lock);
 	WARN_ON(rcu_access_pointer(vnd->channels[channel]) != chan);

@@ -19,6 +19,7 @@
 #include <linux/debugfs.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
+#include <linux/slab.h>
 
 #include "dev.h"
 #include "nvhost_acm.h"
@@ -68,6 +69,12 @@
 
 #define VI_NOTIFY_TAG_DATA_FE			0x20
 #define VI_NOTIFY_TAG_DATA_LOAD_FRAMED		0x08000000
+
+struct nvhost_vi_syncpt_incr {
+	struct list_head node;
+	u8 tag;
+	u32 syncpt_id;
+};
 
 static void nvhost_vi_notify_dump_status(struct platform_device *pdev)
 {
@@ -133,6 +140,35 @@ static irqreturn_t nvhost_vi_prio_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static void nvhost_vi_notify_do_increment(struct platform_device *pdev,
+						u8 ch, u8 tag)
+{
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
+	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
+	struct nvhost_vi_syncpt_incr *incr, *n;
+	unsigned long flags;
+
+	if (unlikely(ch >= ARRAY_SIZE(hvnd->incr)))
+		return;
+
+	spin_lock_irqsave(&hvnd->incr[ch].lock, flags);
+	list_for_each_entry_safe(incr, n, &hvnd->incr[ch].list, node) {
+		struct nvhost_master *master;
+
+		if (incr->tag != tag)
+			continue;
+
+		list_del(&incr->node);
+
+		master = nvhost_get_host(pdev);
+		nvhost_syncpt_cpu_incr(&master->syncpt, incr->syncpt_id);
+		kfree(incr);
+		break;
+	}
+
+	spin_unlock_irqrestore(&hvnd->incr[ch].lock, flags);
+}
+
 static irqreturn_t nvhost_vi_notify_isr(int irq, void *dev_id)
 {
 	struct platform_device *pdev = dev_id;
@@ -196,6 +232,9 @@ static irqreturn_t nvhost_vi_notify_isr(int irq, void *dev_id)
 			break;
 		}
 
+		ch = VI_NOTIFY_TAG_CHANNEL(msg.tag);
+		nvhost_vi_notify_do_increment(pdev, ch, tag);
+
 		vi_notify_dev_recv(hvnd->vnd, &msg);
 	}
 
@@ -232,6 +271,7 @@ static int nvhost_vi_notify_probe(struct device *dev,
 	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
+	unsigned i;
 
 	hvnd->vnd = vnd;
 	hvnd->mask = 0;
@@ -244,6 +284,11 @@ static int nvhost_vi_notify_probe(struct device *dev,
 					vi->debug_dir, &hvnd->notify_overflow);
 		debugfs_create_atomic_t("fmlite-overflow", S_IRUGO,
 					vi->debug_dir, &hvnd->fmlite_overflow);
+	}
+
+	for (i = 0; i < ARRAY_SIZE(hvnd->incr); i++) {
+		spin_lock_init(&hvnd->incr[i].lock);
+		INIT_LIST_HEAD(&hvnd->incr[i].list);
 	}
 
 	hvnd->error_irq = nvhost_vi_get_irq(pdev, 0, nvhost_vi_error_isr);
@@ -335,8 +380,63 @@ static int nvhost_vi_notify_classify(struct device *dev,
 	return 0;
 }
 
+static int nvhost_vi_notify_program_increment(struct device *dev, u8 ch,
+						u8 tag, u32 id)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct nvhost_master *master = nvhost_get_host(pdev);
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
+	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
+	struct nvhost_vi_syncpt_incr *incr;
+	unsigned long flags;
+
+	if (!nvhost_syncpt_is_valid_pt(&master->syncpt, id))
+		return -EINVAL;
+	if (ch >= ARRAY_SIZE(hvnd->incr))
+		return -EOPNOTSUPP;
+
+	incr = kmalloc(sizeof(*incr), GFP_KERNEL);
+	if (unlikely(incr == NULL))
+		return -ENOMEM;
+
+	incr->tag = tag;
+	incr->syncpt_id = id;
+
+	spin_lock_irqsave(&hvnd->incr[ch].lock, flags);
+	list_add_tail(&incr->node, &hvnd->incr[ch].list);
+	spin_unlock_irqrestore(&hvnd->incr[ch].lock, flags);
+	return 0;
+}
+
+static void nvhost_vi_notify_reset(struct device *dev, u8 ch)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
+	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
+	struct list_head list;
+	unsigned long flags;
+
+	INIT_LIST_HEAD(&list);
+
+	spin_lock_irqsave(&hvnd->incr[ch].lock, flags);
+	list_splice_init(&hvnd->incr[ch].list, &list);
+	spin_unlock_irqrestore(&hvnd->incr[ch].lock, flags);
+
+	synchronize_irq(hvnd->norm_irq);
+
+	while (!list_empty(&list)) {
+		struct nvhost_vi_syncpt_incr *entry;
+
+		entry = list_first_entry(&list, typeof(*entry), node);
+		list_del(&entry->node);
+		kfree(entry);
+	}
+}
+
 struct vi_notify_driver nvhost_vi_notify_driver = {
 	.owner = THIS_MODULE,
 	.probe = nvhost_vi_notify_probe,
 	.classify = nvhost_vi_notify_classify,
+	.program_increment = nvhost_vi_notify_program_increment,
+	.reset_channel = nvhost_vi_notify_reset,
 };

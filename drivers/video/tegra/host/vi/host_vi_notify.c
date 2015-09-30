@@ -31,7 +31,7 @@
 
 #include "dev.h"
 #include "t186/t186.h"
-#include "vi/vi.h"
+#include "vi/vi4.h"
 #include "nvhost_acm.h"
 
 /* XXX: move ioctls to include/linux/ (after T18X merge) */
@@ -333,8 +333,8 @@ static int vi_notify_get_irq(struct vi_notify_dev *dev, unsigned num,
 
 int nvhost_vi_notify_prepare_poweroff(struct platform_device *pdev)
 {
-	struct vi *tegra_vi = nvhost_get_private_data(pdev);
-	struct vi_notify_dev *dev = tegra_vi->vi_notify;
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
+	struct vi_notify_dev *dev = vi->notify;
 
 	disable_irq(dev->error_irq);
 	disable_irq(dev->prio_irq);
@@ -345,8 +345,8 @@ int nvhost_vi_notify_prepare_poweroff(struct platform_device *pdev)
 
 int nvhost_vi_notify_finalize_poweron(struct platform_device *pdev)
 {
-	struct vi *tegra_vi = nvhost_get_private_data(pdev);
-	struct vi_notify_dev *dev = tegra_vi->vi_notify;
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
+	struct vi_notify_dev *dev = vi->notify;
 
 	enable_irq(dev->error_irq);
 	enable_irq(dev->prio_irq);
@@ -556,8 +556,8 @@ static int vi_notify_open(struct inode *inode, struct file *file)
 {
 	struct nvhost_device_data *pdata = container_of(inode->i_cdev,
 					struct nvhost_device_data, ctrl_cdev);
-	struct vi *vi = nvhost_get_private_data(pdata->pdev);
-	struct vi_notify_dev *dev = vi->vi_notify;
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdata->pdev);
+	struct vi_notify_dev *dev = vi->notify;
 
 	if (unlikely(IS_ERR(dev)))
 		return PTR_ERR(dev);
@@ -605,7 +605,7 @@ const struct file_operations tegra_vi_notify_ctrl_ops = {
 /* Platform device */
 int nvhost_vi_notify_dev_probe(struct platform_device *pdev)
 {
-	struct vi *tegra_vi = nvhost_get_private_data(pdev);
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 	struct vi_notify_dev *dev;
 #ifdef CONFIG_TEGRA_VI_NOTIFY
 	int ret;
@@ -616,7 +616,7 @@ int nvhost_vi_notify_dev_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	dev->pdev = pdev;
-	tegra_vi->vi_notify = dev;
+	vi->notify = dev;
 
 #ifdef CONFIG_TEGRA_VI_NOTIFY
 	mutex_init(&dev->lock);
@@ -645,8 +645,8 @@ int nvhost_vi_notify_dev_probe(struct platform_device *pdev)
 
 int nvhost_vi_notify_dev_remove(struct platform_device *pdev)
 {
-	struct vi *tegra_vi = nvhost_get_private_data(pdev);
-	struct vi_notify_dev *dev = tegra_vi->vi_notify;
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
+	struct vi_notify_dev *dev = vi->notify;
 
 	if (unlikely(dev == NULL))
 		return 0;

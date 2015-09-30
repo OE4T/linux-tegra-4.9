@@ -29,4 +29,10 @@ int nvhost_vi_notify_finalize_poweron(struct platform_device *pdev);
 int nvhost_vi_notify_dev_probe(struct platform_device *);
 int nvhost_vi_notify_dev_remove(struct platform_device *);
 
+struct nvhost_vi_dev {
+#ifdef CONFIG_TEGRA_VI_NOTIFY
+	struct vi_notify_dev *notify;
+#endif
+};
+
 #endif

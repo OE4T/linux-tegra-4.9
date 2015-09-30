@@ -173,7 +173,29 @@ void get_dt_u32_array(struct device_node *pnode, char *pdt_prop, u32 *pval,
 			pval[i] = val_def;
 	}
 	for (i = 0; i < num_entries; i++) {
-		if (pval[i] > val_max) {
+		if (!strcmp(pdt_prop, "nvidia,queue_prio")) {
+			int j;
+
+			if (pval[i] > val_max) {
+				printk(KERN_ALERT "%d is invalid value for"
+				" queue_prio[%d], using default %d\n",
+				pval[i], i, i + val_def);
+				pval[i] = val_def + i;
+			}
+			/* q_prio need to be exclusive for each queue */
+			for (j = 0; j < i; j++) {
+				if (i == j)
+					continue;
+				/* use default if two priorities are same */
+				if (pval[i] == pval[j]) {
+					printk(KERN_ALERT "queue_prio %d same"
+					" for q%d and q%d, using default\n",
+					pval[i], i, j);
+					pval[i] = val_def + i;
+					pval[j] = val_def + j;
+				}
+			}
+		} else if (pval[i] > val_max) {
 			printk(KERN_ALERT "%d is invalid value for \"%s[%d]\"."
 				"  Using default.\n",
 				pval[i], pdt_prop, i);
@@ -802,6 +824,8 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 			CHAN_NAPI_QUOTA_DEFAULT, CHAN_NAPI_QUOTA_MAX, 4);
 	get_dt_u32_array(node, "nvidia,rxq_enable_ctrl", pdt_cfg->rxq_ctrl,
 			RXQ_CTRL_DEFAULT, RXQ_CTRL_MAX, 4);
+	get_dt_u32_array(node, "nvidia,queue_prio", pdt_cfg->q_prio,
+			QUEUE_PRIO_DEFAULT, QUEUE_PRIO_MAX, 4);
 
 	for (i = 0; i < MAX_CHANS; i++) {
 		pchinfo = &pdata->chinfo[i];

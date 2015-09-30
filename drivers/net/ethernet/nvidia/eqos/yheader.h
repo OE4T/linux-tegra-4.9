@@ -762,7 +762,7 @@ struct hw_if_struct {
 	INT(*start_dma_rx) (UINT);
 	INT(*stop_dma_rx) (UINT);
 	INT(*start_dma_tx) (UINT);
-	INT(*stop_dma_tx) (UINT);
+	INT(*stop_dma_tx) (struct DWC_ETH_QOS_prv_data *, UINT);
 	INT(*start_mac_tx_rx) (VOID);
 	INT(*stop_mac_tx) (VOID);
 	INT(*stop_mac_rx) (VOID);

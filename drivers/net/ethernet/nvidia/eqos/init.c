@@ -1003,8 +1003,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		DWC_ETH_QOS_mdio_unregister(ndev);
 
  err_out_mdio_reg:
-	desc_if->tx_free_mem(pdata);
-	desc_if->rx_free_mem(pdata);
+	desc_if->free_buff_and_desc(pdata);
 
  err_out_desc_buf_alloc_failed:
 	desc_if->free_queue_struct(pdata);
@@ -1100,8 +1099,7 @@ int DWC_ETH_QOS_remove(struct platform_device *pdev)
 	if (1 == pdata->hw_feat.sma_sel)
 		DWC_ETH_QOS_mdio_unregister(ndev);
 
-	desc_if->tx_free_mem(pdata);
-	desc_if->rx_free_mem(pdata);
+	desc_if->free_buff_and_desc(pdata);
 
 	desc_if->free_queue_struct(pdata);
 

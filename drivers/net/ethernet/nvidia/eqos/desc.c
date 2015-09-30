@@ -195,6 +195,23 @@ static void DWC_ETH_QOS_free_queue_struct(struct DWC_ETH_QOS_prv_data *pdata)
 	DBGPR("<--DWC_ETH_QOS_free_queue_struct\n");
 }
 
+/*!
+* \brief API to free the memory for descriptor & buffers.
+*
+* \details This function is used to free the memory for device
+* descriptors & buffers
+* which are used by device for data transmission & reception.
+*
+* \param[in] pdata - pointer to private data structure.
+*
+* \return void
+*
+*/
+static void free_buffer_and_desc(struct DWC_ETH_QOS_prv_data *pdata)
+{
+	DWC_ETH_QOS_tx_free_mem(pdata);
+	DWC_ETH_QOS_rx_free_mem(pdata);
+}
 
 /*!
 * \brief API to allocate the memory for descriptor & buffers.
@@ -1471,6 +1488,7 @@ void DWC_ETH_QOS_init_function_ptrs_desc(struct desc_if_struct *desc_if)
 	desc_if->alloc_queue_struct = DWC_ETH_QOS_alloc_queue_struct;
 	desc_if->free_queue_struct = DWC_ETH_QOS_free_queue_struct;
 	desc_if->alloc_buff_and_desc = allocate_buffer_and_desc;
+	desc_if->free_buff_and_desc = free_buffer_and_desc;
 	desc_if->realloc_skb = DWC_ETH_QOS_re_alloc_skb;
 	desc_if->unmap_rx_skb = DWC_ETH_QOS_unmap_rx_skb;
 	desc_if->unmap_tx_skb = DWC_ETH_QOS_unmap_tx_skb;

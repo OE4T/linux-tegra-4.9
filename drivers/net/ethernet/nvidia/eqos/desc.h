@@ -45,6 +45,7 @@
 #define __DWC_ETH_QOS_DESC_H__
 
 static INT allocate_buffer_and_desc(struct DWC_ETH_QOS_prv_data *);
+static void free_buffer_and_desc(struct DWC_ETH_QOS_prv_data *);
 
 static void DWC_ETH_QOS_wrapper_tx_descriptor_init(struct DWC_ETH_QOS_prv_data
 						   *pdata);

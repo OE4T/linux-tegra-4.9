@@ -40,6 +40,8 @@ struct vi_notify_driver {
 	int (*probe)(struct device *, struct vi_notify_dev *);
 	void (*remove)(struct device *);
 	int (*classify)(struct device *, u32, u32);
+	int (*program_increment)(struct device *, u8, u8, u32);
+	void (*reset_channel)(struct device *, u8);
 };
 
 void vi_notify_dev_error(struct vi_notify_dev *);

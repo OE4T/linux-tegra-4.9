@@ -765,6 +765,16 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 	/* attach window idx */
 	nvdisp_win_write(win, dc->ctrl_num, win_set_control_r());
 
+	/* promote the state */
+	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_common_act_update_enable_f() |
+		nvdisp_cmd_state_ctrl_win_a_update_enable_f() << win->idx,
+		nvdisp_cmd_state_ctrl_r());
+	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
+	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_common_act_req_enable_f() |
+		nvdisp_cmd_state_ctrl_a_act_req_enable_f() << win->idx,
+		nvdisp_cmd_state_ctrl_r());
+	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
+
 	/* set the windows scaler coeff value */
 	if (!win->is_scaler_coeff_set) {
 		tegra_nvdisp_set_scaler_coeff(win);

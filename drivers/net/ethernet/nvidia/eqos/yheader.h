@@ -1361,12 +1361,15 @@ typedef enum {
 } pause_frames_e;
 #define PAUSE_FRAMES_DEFAULT PAUSE_FRAMES_ENABLED
 
+#define QUEUE_PRIO_DEFAULT 0
+#define QUEUE_PRIO_MAX 7
 #define CHAN_NAPI_QUOTA_DEFAULT	64
 #define CHAN_NAPI_QUOTA_MAX	CHAN_NAPI_QUOTA_DEFAULT
 struct eqos_cfg {
 	intr_mode_e	intr_mode;
 	chan_mode_e	chan_mode[MAX_CHANS];
 	rxq_ctrl_e	rxq_ctrl[MAX_CHANS];
+	uint		q_prio[MAX_CHANS];
 	uint		chan_napi_quota[MAX_CHANS];
 	pause_frames_e	pause_frames;
 };

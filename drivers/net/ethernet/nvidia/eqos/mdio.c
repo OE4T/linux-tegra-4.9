@@ -357,7 +357,7 @@ static void eqos_adjust_link(struct net_device *dev)
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct phy_device *phydev = pdata->phydev;
 	unsigned long flags;
-	int new_state = 0;
+	int new_state = 0, speed_changed = 0;
 
 	if (phydev == NULL)
 		return;
@@ -403,6 +403,7 @@ static void eqos_adjust_link(struct net_device *dev)
 
 		if (phydev->speed != pdata->speed) {
 			new_state = 1;
+			speed_changed  = 1;
 			switch (phydev->speed) {
 			case SPEED_1000:
 				hw_if->set_gmii_speed(pdata);
@@ -441,6 +442,8 @@ static void eqos_adjust_link(struct net_device *dev)
 #endif
 
 	spin_unlock_irqrestore(&pdata->lock, flags);
+	if (speed_changed)
+		hw_if->set_tx_clk_speed(pdata, phydev->speed);
 
 	DBGPR_MDIO("<--eqos_adjust_link\n");
 }

@@ -2824,6 +2824,31 @@ static INT enable_dma_interrupts(UINT qinx,
 	return Y_SUCCESS;
 }
 
+/*!
+* \brief This sequence is used to change tx clock speed
+* \return Success or Failure
+* \retval  0 Success
+* \retval -1 Failure
+*/
+
+static INT set_tx_clk_speed(struct eqos_prv_data *pdata, INT speed)
+{
+	/* set eqos_tx clock to 125/25/2.5MHz based on speed */
+	if (tegra_platform_is_silicon()) {
+		struct platform_device *pdev = pdata->pdev;
+		int ret;
+		ret = clk_set_rate(pdata->tx_clk,
+			(speed == SPEED_10) ? 2500 * 1000 :
+			(speed == SPEED_100) ? 25000 * 1000 : 125000 * 1000);
+		if (ret) {
+			dev_err(&pdev->dev, "failed to set tx_clk to %sMHz\n",
+				(speed == SPEED_10) ? "2.5" :
+				(speed == SPEED_100) ? "25" : "125");
+			return Y_FAILURE;
+		}
+	}
+	return Y_SUCCESS;
+}
 
 /*!
 * \brief This sequence is used to configure the MAC registers for
@@ -2840,17 +2865,6 @@ static INT set_gmii_speed(struct eqos_prv_data *pdata)
 	MAC_MCR_FES_WR(0);
 	if (tegra_platform_is_unit_fpga())
 		CLK_CRTL0_TX_CLK_WR(0);
-
-	/* set eqos_tx clock to 125MHz */
-	if (tegra_platform_is_silicon()) {
-		struct platform_device *pdev = pdata->pdev;
-		int ret;
-		ret = clk_set_rate(pdata->tx_clk, 125000 * 1000);
-		if (ret) {
-			dev_err(&pdev->dev, "failed to set tx_clk to 125Mhz\n");
-			return Y_FAILURE;
-		}
-	}
 
 	return Y_SUCCESS;
 }
@@ -2871,17 +2885,6 @@ static INT set_mii_speed_10(struct eqos_prv_data *pdata)
 	if (tegra_platform_is_unit_fpga())
 		CLK_CRTL0_TX_CLK_WR(1);
 
-	/* set eqos_tx clock to 2.5MHz */
-	if (tegra_platform_is_silicon()) {
-		struct platform_device *pdev = pdata->pdev;
-		int ret;
-		ret = clk_set_rate(pdata->tx_clk, 2500 * 1000);
-		if (ret) {
-			dev_err(&pdev->dev, "failed to set tx_clk to 2.5Mhz\n");
-			return Y_FAILURE;
-		}
-	}
-
 	return Y_SUCCESS;
 }
 
@@ -2900,17 +2903,6 @@ static INT set_mii_speed_100(struct eqos_prv_data *pdata)
 	MAC_MCR_FES_WR(0x1);
 	if (tegra_platform_is_unit_fpga())
 		CLK_CRTL0_TX_CLK_WR(0);
-
-	/* set eqos_tx clock to 25MHz */
-	if (tegra_platform_is_silicon()) {
-		struct platform_device *pdev = pdata->pdev;
-		int ret;
-		ret = clk_set_rate(pdata->tx_clk, 25000 * 1000);
-		if (ret) {
-			dev_err(&pdev->dev, "failed to set tx_clk to 25Mhz\n");
-			return Y_FAILURE;
-		}
-	}
 
 	return Y_SUCCESS;
 }
@@ -4806,6 +4798,7 @@ void eqos_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->set_mii_speed_100 = set_mii_speed_100;
 	hw_if->set_mii_speed_10 = set_mii_speed_10;
 	hw_if->set_gmii_speed = set_gmii_speed;
+	hw_if->set_tx_clk_speed = set_tx_clk_speed;
 	/* for PMT */
 	hw_if->start_dma_rx = start_dma_rx;
 	hw_if->stop_dma_rx = stop_dma_rx;

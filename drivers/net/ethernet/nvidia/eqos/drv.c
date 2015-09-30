@@ -2403,15 +2403,6 @@ static int DWC_ETH_QOS_start_xmit(struct sk_buff *skb, struct net_device *dev)
 		goto tx_netdev_return;
 	}
 
-	if ((skb_shinfo(skb)->gso_size == 0) &&
-		(skb->len > DWC_ETH_QOS_MAX_SUPPORTED_MTU)) {
-		printk(KERN_ERR "%s : big packet = %d\n", dev->name,
-			(u16)skb->len);
-		dev_kfree_skb_any(skb);
-		dev->stats.tx_dropped++;
-		goto tx_netdev_return;
-	}
-
 	if ((pdata->eee_enabled) && (pdata->tx_path_in_lpi_mode) &&
 		(!pdata->use_lpi_tx_automate))
 		DWC_ETH_QOS_disable_eee_mode(pdata);

@@ -66,6 +66,7 @@ static struct of_device_id tegra_vi_of_match[] = {
 
 static struct i2c_camera_ctrl *i2c_ctrl;
 
+#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 static void (*mfi_callback)(void *);
 static void *mfi_callback_arg;
 static DEFINE_MUTEX(vi_isr_lock);
@@ -112,6 +113,7 @@ static void vi_mfi_worker(struct work_struct *vi_work)
 	mutex_unlock(&vi_isr_lock);
 	return;
 }
+#endif
 
 #if defined(CONFIG_TEGRA_ISOMGR)
 static int vi_isomgr_unregister(struct vi *tegra_vi)
@@ -123,6 +125,7 @@ static int vi_isomgr_unregister(struct vi *tegra_vi)
 }
 #endif
 
+#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 static int vi_out_show(struct seq_file *s, void *unused)
 {
 	struct vi *vi = s->private;
@@ -184,6 +187,7 @@ create_debugfs_fail:
 	dev_err(&vi->ndev->dev, "%s: could not create debugfs", __func__);
 	vi_remove_debugfs(vi);
 }
+#endif
 
 static int nvhost_vi_slcg_handler(struct notifier_block *nb,
 		unsigned long action, void *data)
@@ -285,6 +289,7 @@ static int vi_probe(struct platform_device *dev)
 
 	tegra_vi->ndev = dev;
 
+#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	/* create workqueue for mfi callback */
 	tegra_vi->vi_workqueue = alloc_workqueue("vi_workqueue",
 					WQ_HIGHPRI | WQ_UNBOUND, 1);
@@ -303,6 +308,7 @@ static int vi_probe(struct platform_device *dev)
 		goto vi_probe_fail;
 
 	vi_create_debugfs(tegra_vi);
+#endif
 
 	i2c_ctrl = pdata->private_data;
 	pdata->private_data = tegra_vi;
@@ -394,7 +400,9 @@ static int __exit vi_remove(struct platform_device *dev)
 		vi_isomgr_unregister(tegra_vi);
 #endif
 
+#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	vi_remove_debugfs(tegra_vi);
+#endif
 
 	nvhost_client_device_release(dev);
 
@@ -403,11 +411,15 @@ static int __exit vi_remove(struct platform_device *dev)
 		slcg_unregister_notifier(pdata->powergate_id,
 					 &pdata->toggle_slcg_notifier);
 
+#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	vi_intr_free(tegra_vi);
+#endif
 
 	pdata->aperture[0] = NULL;
+#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	flush_workqueue(tegra_vi->vi_workqueue);
 	destroy_workqueue(tegra_vi->vi_workqueue);
+#endif
 #ifdef CONFIG_TEGRA_CAMERA
 	err = tegra_camera_unregister(tegra_vi->camera);
 	if (err)

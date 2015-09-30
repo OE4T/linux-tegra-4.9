@@ -102,10 +102,12 @@ int nvhost_vi_finalize_poweron(struct platform_device *dev)
 	}
 #endif
 
+#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	ret = vi_enable_irq(tegra_vi);
 	if (ret)
 		dev_err(&tegra_vi->ndev->dev, "%s: vi_enable_irq failed\n",
 			__func__);
+#endif
 
 	return ret;
 }
@@ -123,12 +125,14 @@ int nvhost_vi_prepare_poweroff(struct platform_device *dev)
 	if (tegra_vi->master_deinitialized)
 		return 0;
 
+#ifndef CONFIG_ARCH_TEGRA_18x_SOC
 	ret = vi_disable_irq(tegra_vi);
 	if (ret) {
 		dev_err(&tegra_vi->ndev->dev, "%s: vi_disable_irq failed\n",
 			__func__);
 		return ret;
 	}
+#endif
 
 	if (tegra_vi->reg) {
 		ret = regulator_disable(tegra_vi->reg);

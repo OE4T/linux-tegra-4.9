@@ -188,7 +188,7 @@ static int ari_serr_hook(struct pt_regs *regs, int reason,
 	raw_spin_lock_irqsave(&ari_mca_lock, flags);
 	list_for_each_entry(bank, &ari_mca_list, node) {
 		if (read_bank_status(bank, &status) != 0)
-			return 0;
+			continue;
 		if (status & SERRi_STATUS_VAL)
 			print_bank(bank, status);
 	}

@@ -23,13 +23,17 @@ struct bridge_mca_bank {
 	char *name;
 	phys_addr_t bank;
 	void __iomem *vaddr;
+	unsigned int (*error_status)(void __iomem *addr);
+	unsigned int (*error_fifo_count)(void __iomem *addr);
 	struct bridge_mca_error *errors;
+	int seen_error;
 	int max_error;
 };
 
 struct tegra_bridge_data {
 	char *name;
-	unsigned long offset;
+	unsigned int (*error_status)(void __iomem *addr);
+	unsigned int (*error_fifo_count)(void __iomem *addr);
 	struct bridge_mca_error *errors;
 	int max_error;
 };

@@ -20,6 +20,7 @@
 
 #define BUS_ADDR_MASK 0x3fffffff
 #define BUS_ERROR_TYPE_MASK 0x3e0
+#define BUS_ERROR_TYPE_SHIFT 5
 
 static LIST_HEAD(bridge_list);
 static DEFINE_RAW_SPINLOCK(bridge_lock);
@@ -28,19 +29,27 @@ static void bus_print_error(struct bridge_mca_bank *bank) {
 	int bus_addr;
 	int bus_status;
 	int error_type;
+	int count = 0;
 
-	bus_addr = readl(bank->vaddr) & BUS_ADDR_MASK;
-	writel(1, bank->vaddr);
-	bus_status = readl(bank->vaddr);
-	error_type = bus_status & BUS_ERROR_TYPE_MASK;
+	if (bank->error_fifo_count(bank->vaddr) == 0)
+		return;
 
 	pr_crit("**************************************\n");
-	pr_crit("Machine check error in %s@0x%llx:\n",
-		bank->name, bank->bank);
-	pr_crit("Bus addr: 0x%x\n", bus_addr);
-	pr_crit("Error status 0x%x: %s\n", bus_status,
-		(error_type > bank->max_error ? "Unknown" :
-		bank->errors[error_type].desc));
+	pr_crit("CPU%d Machine check error in %s@0x%llx:\n",
+		smp_processor_id(), bank->name, bank->bank);
+
+	while (bank->error_fifo_count(bank->vaddr)) {
+		bus_addr = bank->error_status(bank->vaddr) & BUS_ADDR_MASK;
+		bus_status = bank->error_status(bank->vaddr);
+		error_type = (bus_status & BUS_ERROR_TYPE_MASK) >>
+			     BUS_ERROR_TYPE_SHIFT;
+		pr_crit("Bus addr[%d]: 0x%x\n", count, bus_addr);
+		pr_crit("Error status[%d] 0x%x: %s\n", count, bus_status,
+			(error_type >= bank->max_error ? "Unknown" :
+			 bank->errors[error_type].desc));
+		count += 1;
+	}
+
 	pr_crit("**************************************\n");
 }
 
@@ -50,21 +59,78 @@ static int bridge_serr_hook(struct pt_regs *regs, int reason,
 {
 	struct bridge_mca_bank *bank = priv;
 
-	if(readl(bank->vaddr))
+	if (!bank->seen_error &&
+	    bank->error_fifo_count(bank->vaddr)) {
 		bus_print_error(bank);
+		bank->seen_error = 1;
+	}
 	return 0;
+}
+
+#define AXI2APB_ERROR_STATUS	0x2ec
+#define AXI2APB_FIFO_STATUS3	0x2f8
+#define AXI2APB_FIFO_ERROR_SHIFT	13
+#define AXI2APB_FIFO_ERROR_MASK		0x1f
+
+static unsigned int axi2apb_error_status(void __iomem *addr)
+{
+	unsigned int error_status;
+
+	error_status = readl(addr+AXI2APB_ERROR_STATUS);
+
+	writel(0xFFFFFFFF, addr+AXI2APB_ERROR_STATUS);
+	return error_status;
+}
+
+static unsigned int axi2apb_error_fifo_count(void __iomem *addr)
+{
+	unsigned int fifo_status;
+
+	fifo_status = readl(addr+AXI2APB_FIFO_STATUS3);
+
+	fifo_status >>= AXI2APB_FIFO_ERROR_SHIFT;
+	fifo_status &= AXI2APB_FIFO_ERROR_MASK;
+	return fifo_status;
 }
 
 static struct tegra_bridge_data axi2apb_data = {
 	.name = "AXI2APB",
-	.offset = 0x2ec,
+	.error_status = axi2apb_error_status,
+	.error_fifo_count = axi2apb_error_fifo_count,
 	.errors = t18x_axi_errors,
 	.max_error = ARRAY_SIZE(t18x_axi_errors)
 };
 
+#define AXIP2P_ERROR_STATUS	0x11c
+#define AXIP2P_FIFO_STATUS	0x120
+#define AXIP2P_FIFO_ERROR_SHIFT 26
+#define AXIP2P_FIFO_ERROR_MASK  0x3f
+
+static unsigned int axip2p_error_status(void __iomem *addr)
+{
+	unsigned int error_status;
+
+	error_status = readl(addr+AXIP2P_ERROR_STATUS);
+
+	writel(0xFFFFFFFF, addr+AXIP2P_ERROR_STATUS);
+	return error_status;
+}
+
+static unsigned int axip2p_error_fifo_count(void __iomem *addr)
+{
+	unsigned int fifo_status;
+
+	fifo_status = readl(addr+AXIP2P_FIFO_STATUS);
+
+	fifo_status >>= AXIP2P_FIFO_ERROR_SHIFT;
+	fifo_status &= AXIP2P_FIFO_ERROR_MASK;
+	return fifo_status;
+}
+
 static struct tegra_bridge_data axip2p_data = {
 	.name = "AXIP2P",
-	.offset = 0x11c,
+	.error_status = axip2p_error_status,
+	.error_fifo_count = axip2p_error_fifo_count,
 	.errors = t18x_axi_errors,
 	.max_error = ARRAY_SIZE(t18x_axi_errors)
 };
@@ -109,10 +175,13 @@ static int tegra18_bridge_probe(struct platform_device *pdev)
 	bank->vaddr = devm_ioremap_resource(&pdev->dev, res_base);
 	if(IS_ERR(bank->vaddr))
 		return -EPERM;
-	bank->vaddr += bdata->offset;
+
 	bank->name = bdata->name;
+	bank->error_status = bdata->error_status;
+	bank->error_fifo_count = bdata->error_fifo_count;
 	bank->errors = bdata->errors;
 	bank->max_error = bdata->max_error;
+	bank->seen_error = 0;
 
 	hook = devm_kzalloc(&pdev->dev, sizeof(*hook), GFP_KERNEL);
 	hook->fn = bridge_serr_hook;

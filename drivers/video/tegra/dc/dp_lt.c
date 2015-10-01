@@ -303,7 +303,7 @@ static void set_lt_config(struct tegra_dp_lt_data *lt_data)
 			mask = NV_SOR_PR_LANE2_DP_LANE0_MASK;
 			shift = NV_SOR_PR_LANE2_DP_LANE0_SHIFT;
 			/* TODO: Fix lane config */
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)  || defined(CONFIG_TEGRA_NVDISPLAY)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 			mask = NV_SOR_PR_LANE0_DP_LANE2_MASK;
 			shift = NV_SOR_PR_LANE0_DP_LANE2_SHIFT;
 #endif
@@ -316,7 +316,7 @@ static void set_lt_config(struct tegra_dp_lt_data *lt_data)
 			mask = NV_SOR_PR_LANE0_DP_LANE2_MASK;
 			shift = NV_SOR_PR_LANE0_DP_LANE2_SHIFT;
 			/* TODO: Fix lane config */
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)  || defined(CONFIG_TEGRA_NVDISPLAY)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 			mask = NV_SOR_PR_LANE2_DP_LANE0_MASK;
 			shift = NV_SOR_PR_LANE2_DP_LANE0_SHIFT;
 #endif

@@ -82,6 +82,18 @@ void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
 {
 	int flag = tegra_dc_is_clk_enabled(sor->sor_clk);
 
+	/* BRINGUP HACK: DIRECTLY ENABLE SOR SAFE CLK
+	 *
+	 * Calling tegra_clk_cfg_ex() currently results in a kernel panic.
+	 * HDMI hacks around tegra_hdmi_config_clk(), which is the only HDMI
+	 * codepath where tegra_clk_cfg_ex() is called. HDMI also doesn't use
+	 * tegra_sor_config_safe_clk at all.
+	 */
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	tegra_sor_safe_clk_enable(sor);
+	return;
+#endif
+
 	if (sor->clk_type == TEGRA_SOR_SAFE_CLK)
 		return;
 
@@ -1022,6 +1034,11 @@ static void tegra_dc_sor_io_set_dpd(struct tegra_dc_sor_data *sor, bool up)
 
 	if (tegra_platform_is_linsim())
 		return;
+
+	/* BRINGUP HACK: DISABLE DPD SEQUENCE FOR NOW */
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	return;
+#endif
 
 	if (up) {
 		writel(APBDEV_PMC_DPD_SAMPLE_ON_ENABLE,
@@ -2162,7 +2179,7 @@ void tegra_sor_precharge_lanes(struct tegra_dc_sor_data *sor)
 	/* T210 boards need to swap lanes 0 and 2 */
 	case 4:
 		val |= (NV_SOR_DP_PADCTL_PD_TXD_3_NO |
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 			NV_SOR_DP_PADCTL_PD_TXD_0_NO);
 #else
 			NV_SOR_DP_PADCTL_PD_TXD_2_NO);
@@ -2171,7 +2188,7 @@ void tegra_sor_precharge_lanes(struct tegra_dc_sor_data *sor)
 	case 2:
 		val |= NV_SOR_DP_PADCTL_PD_TXD_1_NO;
 	case 1:
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 		val |= NV_SOR_DP_PADCTL_PD_TXD_2_NO;
 #else
 		val |= NV_SOR_DP_PADCTL_PD_TXD_0_NO;
@@ -2200,7 +2217,6 @@ void tegra_dc_sor_modeset_notifier(struct tegra_dc_sor_data *sor, bool is_lvds)
 {
 	if (!sor->clk_type)
 		tegra_sor_config_safe_clk(sor);
-
 	tegra_sor_clk_enable(sor);
 
 	tegra_dc_sor_config_panel(sor, is_lvds);

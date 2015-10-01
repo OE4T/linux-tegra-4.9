@@ -2502,6 +2502,7 @@ static struct tegra_dc_mode *tegra_dc_get_override_mode(struct tegra_dc *dc)
 
 	if (dc->out->type == TEGRA_DC_OUT_RGB  ||
 		dc->out->type == TEGRA_DC_OUT_HDMI ||
+		dc->out->type == TEGRA_DC_OUT_DP ||
 		dc->out->type == TEGRA_DC_OUT_DSI  ||
 		dc->out->type == TEGRA_DC_OUT_NULL)
 		return override_disp_mode[dc->out->type].pclk ?
@@ -3941,6 +3942,9 @@ static int _tegra_dc_set_default_videomode(struct tegra_dc *dc)
 			 */
 			break;
 		case TEGRA_DC_OUT_DP:
+#ifdef CONFIG_TEGRA_NVDISPLAY
+			break;
+#endif
 		case TEGRA_DC_OUT_NVSR_DP:
 		case TEGRA_DC_OUT_FAKE_DP:
 		case TEGRA_DC_OUT_NULL:

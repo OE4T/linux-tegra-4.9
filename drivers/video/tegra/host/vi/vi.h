@@ -71,7 +71,6 @@ struct vi {
 #if defined(CONFIG_TEGRA_ISOMGR)
 	tegra_isomgr_handle isomgr_handle;
 #endif
-	bool master_deinitialized;
 };
 
 extern const struct file_operations tegra_vi_ctrl_ops;

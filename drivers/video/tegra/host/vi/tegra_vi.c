@@ -63,11 +63,6 @@ int nvhost_vi_finalize_poweron(struct platform_device *dev)
 	if (!tegra_vi)
 		return -EINVAL;
 
-	/* skip power-on routine for slave if the master device is no longer
-	 * available */
-	if (tegra_vi->master_deinitialized)
-		return 0;
-
 	if (tegra_vi->reg) {
 		ret = regulator_enable(tegra_vi->reg);
 		if (ret) {
@@ -117,11 +112,6 @@ int nvhost_vi_prepare_poweroff(struct platform_device *dev)
 
 	if (!tegra_vi)
 		return -EINVAL;
-
-	/* skip power-off routine for slave if the master device is no longer
-	 * available */
-	if (tegra_vi->master_deinitialized)
-		return 0;
 
 	ret = vi_disable_irq(tegra_vi);
 	if (ret) {

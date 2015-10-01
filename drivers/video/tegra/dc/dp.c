@@ -58,8 +58,6 @@
 
 #include <linux/tegra_prod.h>
 
-#define PROD_NODE	"/host1x/sor1"
-
 static bool tegra_dp_debug = true;
 module_param(tegra_dp_debug, bool, 0644);
 MODULE_PARM_DESC(tegra_dp_debug, "Enable to print all link configs");
@@ -1922,7 +1920,9 @@ static int tegra_dc_dp_hotplug_init(struct tegra_dc *dc)
 
 static int tegra_dp_prods_init(struct tegra_dc_dp_data *dp)
 {
-	struct device_node *np_prod = of_find_node_by_path(PROD_NODE);
+	struct device_node *np_prod =
+		of_find_node_by_path(tegra_dc_which_sor(dp->dc) ? "/host1x/sor1"
+					: "/host1x/sor");
 
 	if (!np_prod) {
 		dev_warn(&dp->dc->ndev->dev,

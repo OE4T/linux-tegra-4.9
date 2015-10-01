@@ -33,6 +33,8 @@
 
 			maxim,enable-clock32k-out;
 
+			maxim,enable-sleep;
+
 			maxim,avoid-rtc-bulk-register-write;
 
 			maxim,hot-die-threshold-temp = <110000>;

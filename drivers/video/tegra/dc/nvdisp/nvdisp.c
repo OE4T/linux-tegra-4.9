@@ -895,6 +895,34 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 		 * once the clock id is added.
 		 */
 		writel(0xf, ioremap(0x05801000, 0x4));
+	} else if (dc->out->type == TEGRA_DC_OUT_DP) {
+		parent_clk = tegra_disp_clk_get(&dc->ndev->dev,
+						dc->out->parent_clk);
+		if (IS_ERR_OR_NULL(parent_clk)) {
+			dev_err(&dc->ndev->dev,
+				"plld2 parent clock get failed\n");
+			ret = -ENOENT;
+			return ret; /*TODO: Add proper cleanup later */
+		}
+		pr_info("DP Parent Clock set for DC %s\n",
+				dc->out->parent_clk);
+		/* Set parent for DC clock */
+		clk_set_parent(dc->clk, parent_clk);
+
+		/* comp clk will be maximum of head0/1/2 */
+		if (dc->mode.pclk >= compclk_rate) {
+			compclk_rate = dc->mode.pclk;
+			compclk_parent = dc->clk;
+			pr_info(" rate get on compclk %d\n", compclk_rate);
+			/* Set parent for Display clock */
+			clk_set_parent(compclk, dc->clk);
+		}
+		/* Set rate on DC rate same pclk */
+		clk_set_rate(dc->clk, dc->mode.pclk);
+		/* Enable DC clock */
+		tegra_disp_clk_prepare_enable(dc->clk);
+		/* Enable Display clock */
+		tegra_disp_clk_prepare_enable(compclk);
 	}
 
 	tegra_dc_get(dc);

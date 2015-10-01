@@ -218,6 +218,7 @@ struct sid_to_oids
 	int noids;			/* # of override IDs */
 	int oid[MAX_OIDS_IN_SID];	/* Override IDs */
 	enum mc_overrides ord;		/* MC or Device overrides SID? */
+	const char *name;		/* Name associated with the SID. */
 };
 
 static struct sid_to_oids sid_to_oids[] = {
@@ -229,6 +230,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			AFIW,
 		},
 		.ord = OVERRIDE,
+		.name = "AFI",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_HDA,
@@ -238,6 +240,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			HDAW,
 		},
 		.ord = OVERRIDE,
+		.name = "HDA",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_SATA2,
@@ -247,6 +250,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			SATAW,
 		},
 		.ord = OVERRIDE,
+		.name = "SATA2",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_XUSB_HOST,
@@ -256,6 +260,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			XUSB_HOSTW,
 		},
 		.ord = OVERRIDE,
+		.name = "XUSB_HOST",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_XUSB_DEV,
@@ -265,6 +270,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			XUSB_DEVW,
 		},
 		.ord = OVERRIDE,
+		.name = "XUSB_DEV",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_TSEC,
@@ -274,6 +280,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			TSECSWR,
 		},
 		.ord = SIM_OVERRIDE,
+		.name = "TSEC",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_GPUB,
@@ -285,6 +292,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			GPUSWR2,
 		},
 		.ord = NO_OVERRIDE,
+		.name = "GPU",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_SDMMC1A,
@@ -294,6 +302,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			SDMMCWA,
 		},
 		.ord = OVERRIDE,
+		.name = "SDMMC1A",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_SDMMC2A,
@@ -303,6 +312,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			SDMMCWAA,
 		},
 		.ord = OVERRIDE,
+		.name = "SDMMC2A",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_SDMMC3A,
@@ -312,6 +322,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			SDMMCW,
 		},
 		.ord = OVERRIDE,
+		.name = "SDMMC3A",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_SDMMC4A,
@@ -321,6 +332,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			SDMMCWAB,
 		},
 		.ord = OVERRIDE,
+		.name = "SDMMC4A",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_APE,
@@ -332,6 +344,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			APEDMAW,
 		},
 		.ord = OVERRIDE,
+		.name = "APE",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_SE,
@@ -341,6 +354,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			SESWR,
 		},
 		.ord = OVERRIDE,
+		.name = "SE",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_ETR,
@@ -350,6 +364,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			ETRW,
 		},
 		.ord = OVERRIDE,
+		.name = "ETR",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_TSECB,
@@ -359,6 +374,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			TSECSWRB,
 		},
 		.ord = SIM_OVERRIDE,
+		.name = "TSECB",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_AXIS,
@@ -368,6 +384,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			AXISW,
 		},
 		.ord = OVERRIDE,
+		.name = "GPCDMA",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_EQOS,
@@ -377,6 +394,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			EQOSW,
 		},
 		.ord = OVERRIDE,
+		.name = "EQOS",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_UFSHC,
@@ -386,6 +404,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			UFSHCW,
 		},
 		.ord = OVERRIDE,
+		.name = "UFSHC",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_NVDISPLAY,
@@ -395,6 +414,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			NVDISPLAYR1,
 		},
 		.ord = OVERRIDE,
+		.name = "NVDISPLAY",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_BPMP,
@@ -406,6 +426,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			BPMPDMAW,
 		},
 		.ord = NO_OVERRIDE,
+		.name = "BPMP",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_AON,
@@ -417,6 +438,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			AONDMAW,
 		},
 		.ord = OVERRIDE,
+		.name = "AON",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_SCE,
@@ -428,6 +450,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			SCEDMAW,
 		},
 		.ord = OVERRIDE,
+		.name = "SCE",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_HC,
@@ -436,6 +459,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			HOST1XDMAR,
 		},
 		.ord = SIM_OVERRIDE,
+		.name = "HC",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_VIC,
@@ -446,6 +470,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			VICSWR,
 		},
 		.ord = SIM_OVERRIDE,
+		.name = "VIC",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_VI,
@@ -454,6 +479,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			VIW,
 		},
 		.ord = OVERRIDE,
+		.name = "VI",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_ISP,
@@ -464,6 +490,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			ISPWB,
 		},
 		.ord = OVERRIDE,
+		.name = "ISP",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_NVDEC,
@@ -474,6 +501,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			NVDECSWR,
 		},
 		.ord = SIM_OVERRIDE,
+		.name = "NVDEC",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_NVENC,
@@ -483,6 +511,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			NVENCSWR,
 		},
 		.ord = SIM_OVERRIDE,
+		.name = "NVENC",
 	},
 	{
 		.sid	= TEGRA_SWGROUP_NVJPG,
@@ -492,6 +521,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			NVJPGSWR,
 		},
 		.ord = SIM_OVERRIDE,
+		.name = "NVJPG",
 	},
 };
 
@@ -520,6 +550,24 @@ int tegra_mc_get_smmu_bypass_sid(void)
 	return smmu_bypass_sid;
 }
 EXPORT_SYMBOL(tegra_mc_get_smmu_bypass_sid);
+
+/*
+ * Return a string with the name associated with the passed StreamID.
+ */
+const char *tegra_mc_get_sid_name(int sid)
+{
+	int i;
+	struct sid_to_oids *entry;
+
+	for (i = 0; i < ARRAY_SIZE(sid_to_oids); i++) {
+		entry = &sid_to_oids[i];
+
+		if (entry->sid == sid)
+			return entry->name;
+	}
+
+	return NULL;
+}
 
 static void __mc_override_sid(int sid, int oid, enum mc_overrides ord)
 {

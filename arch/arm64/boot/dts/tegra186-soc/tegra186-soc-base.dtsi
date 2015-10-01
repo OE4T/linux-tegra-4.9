@@ -482,12 +482,12 @@
 			<&tegra_car TEGRA186_CLK_PEX_USB_PAD0_MGMT>,
 			<&tegra_car TEGRA186_CLK_PEX_USB_PAD1_MGMT>,
 			<&tegra_car TEGRA186_CLK_UPHY_PLL0_PWRSEQ>,
-			<&tegra_car TEGRA186_CLK_UPHY_PLL1_PWRSEQ>;
-
+			<&tegra_car TEGRA186_CLK_UPHY_PLL1_PWRSEQ>,
+			<&tegra_car TEGRA186_CLK_PEX_SATA_USB_RX_BYP>;
 		clock-names = "pllp", "xusb_clk", "plle", "plle_pwrseq",
 			"pllrefe", "utmipll", "usb2_trk", "hsic_trk",
 			"uphy_pll0_mgmt", "uphy_pll1_mgmt",
-			"uphy_pll0_pwrseq", "uphy_pll1_pwrseq";
+			"uphy_pll0_pwrseq", "uphy_pll1_pwrseq", "rx_byp";
 		interrupts = <0 167 0x4>;
 		mboxes = <&xusb_mbox>;
 		mbox-names = "xusb";

@@ -151,7 +151,7 @@ int gp10b_init_hal(struct gk20a *g)
 	c->compute_class = PASCAL_COMPUTE_A;
 	c->gpfifo_class = PASCAL_CHANNEL_GPFIFO_A;
 	c->inline_to_memory_class = KEPLER_INLINE_TO_MEMORY_B;
-	c->dma_copy_class = MAXWELL_DMA_COPY_A;
+	c->dma_copy_class = PASCAL_DMA_COPY_A;
 
 	return 0;
 }

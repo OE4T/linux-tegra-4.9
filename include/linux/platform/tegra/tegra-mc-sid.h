@@ -18,5 +18,6 @@
 #define __TEGRA_MC_SID_H
 
 int tegra_mc_get_smmu_bypass_sid(void);
+const char *tegra_mc_get_sid_name(int sid);
 
 #endif

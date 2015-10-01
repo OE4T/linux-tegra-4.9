@@ -145,9 +145,8 @@
 						nvidia,v-ref-to-sync = <1>;
 					};
 				};
-                               
-                        };
-                };
+			};
+		};
 
 		sor {
 			status = "okay";
@@ -271,9 +270,10 @@
 						nvidia,v-ref-to-sync = <1>;
 					};
 
+
 				};
 			};
 		};
-        };
+	};
 };
 

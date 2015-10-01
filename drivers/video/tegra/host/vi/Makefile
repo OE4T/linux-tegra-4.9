@@ -16,3 +16,10 @@ nvhost-vi-objs = \
 		vi.o \
 
 obj-$(CONFIG_TEGRA_GRHOST_VI) += nvhost-vi.o
+
+ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
+obj-$(CONFIG_TEGRA_GRHOST_VI) += \
+	../../../../../../kernel-t18x/drivers/video/tegra/host/vi/vi4.o
+obj-$(CONFIG_TEGRA_VI_NOTIFY) += \
+	../../../../../../kernel-t18x/drivers/video/tegra/host/vi/host_vi_notify.o
+endif

@@ -138,6 +138,17 @@
 #define   TX_DRV_POST_SEL3(x)			(((x) & 0x3f) << 16)
 #define   TX_DRV_PRE_SEL3(x)			(((x) & 0x3f) << 24)
 
+#define UPHY_LANE_MPHY_CTL_1	0x240
+#define   TX_BYP_MODE(x)	(((x) & 0x3) << 4)
+#define   TX_RATE_PDIV(x)	(((x) & 0x3) << 1)
+
+#define UPHY_LANE_MPHY_CTL_2	0x244
+#define   RX_BYP_MODE(x)	(((x) & 0x3) << 4)
+#define   RX_RATE_PDIV(x)	(((x) & 0x3) << 1)
+
+#define UPHY_LANE_MISC_CTL_2	0x8
+#define   RX_BYP_REFCLK_EN	(1 << 11)
+
 /* FUSE USB_CALIB registers */
 /* FUSE_USB_CALIB_0 */
 #define HS_CURR_LEVEL_PADX_SHIFT(x)		((x) ? (11 + (x - 1) * 6) : 0)
@@ -620,6 +631,7 @@ struct tegra_padctl_uphy {
 	struct clk *utmipll; /* utmi pads */
 	struct clk *usb2_trk_clk; /* utmi tracking circuit clock */
 	struct clk *hsic_trk_clk; /* hsic tracking circuit clock */
+	struct clk *rx_byp_clk; /* rx bypass clock */
 	struct clk *uphy_pll_mgmt[T186_UPHY_PLLS];
 	struct clk *uphy_pll_pwrseq[T186_UPHY_PLLS];
 
@@ -2937,6 +2949,10 @@ static int tegra186_ufs_fuse_calibration(struct tegra_padctl_uphy *uphy,
 	idx = SATA_MPHY_ODM_CALIB_0_1(uphy->fuse_calib.sata_mphy_odm);
 
 	reg = uphy_lane_readl(uphy, lane, UPHY_LANE_DYN_CTL_1);
+	reg &= ~TX_DRV_AMP_SEL0(~0);
+	reg &= ~TX_DRV_AMP_SEL1(~0);
+	reg &= ~TX_DRV_AMP_SEL2(~0);
+	reg &= ~TX_DRV_AMP_SEL3(~0);
 	reg |= TX_DRV_AMP_SEL0(mphy_data[idx].tx_drv_amp_sel0);
 	reg |= TX_DRV_AMP_SEL1(mphy_data[idx].tx_drv_amp_sel1);
 	reg |= TX_DRV_AMP_SEL2(mphy_data[idx].tx_drv_amp_sel2);
@@ -2944,6 +2960,10 @@ static int tegra186_ufs_fuse_calibration(struct tegra_padctl_uphy *uphy,
 	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DYN_CTL_1);
 
 	reg = uphy_lane_readl(uphy, lane, UPHY_LANE_DYN_CTL_2);
+	reg &= ~TX_DRV_AMP_SEL4(~0);
+	reg &= ~TX_DRV_AMP_SEL5(~0);
+	reg &= ~TX_DRV_AMP_SEL6(~0);
+	reg &= ~TX_DRV_AMP_SEL7(~0);
 	reg |= TX_DRV_AMP_SEL4(mphy_data[idx].tx_drv_amp_sel4);
 	reg |= TX_DRV_AMP_SEL5(mphy_data[idx].tx_drv_amp_sel5);
 	reg |= TX_DRV_AMP_SEL6(mphy_data[idx].tx_drv_amp_sel6);
@@ -2951,22 +2971,51 @@ static int tegra186_ufs_fuse_calibration(struct tegra_padctl_uphy *uphy,
 	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DYN_CTL_2);
 
 	reg = uphy_lane_readl(uphy, lane, UPHY_LANE_DYN_CTL_3);
+	reg &= ~TX_DRV_AMP_SEL8(~0);
+	reg &= ~TX_DRV_AMP_SEL9(~0);
 	reg |= TX_DRV_AMP_SEL8(mphy_data[idx].tx_drv_amp_sel8);
 	reg |= TX_DRV_AMP_SEL9(mphy_data[idx].tx_drv_amp_sel9);
 	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DYN_CTL_3);
 
 	reg = uphy_lane_readl(uphy, lane, UPHY_LANE_DYN_CTL_4);
+	reg &= ~TX_DRV_POST_SEL0(~0);
+	reg &= ~TX_DRV_POST_SEL1(~0);
 	reg |= TX_DRV_POST_SEL0(mphy_data[idx].tx_drv_post_sel0);
 	reg |= TX_DRV_POST_SEL1(mphy_data[idx].tx_drv_post_sel1);
 	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DYN_CTL_4);
 
 	reg = uphy_lane_readl(uphy, lane, UPHY_LANE_DYN_CTL_5);
+	reg &= ~TX_DRV_POST_SEL2(~0);
+	reg &= ~TX_DRV_POST_SEL3(~0);
+	reg &= ~TX_DRV_PRE_SEL3(~0);
 	reg |= TX_DRV_POST_SEL2(mphy_data[idx].tx_drv_post_sel2);
 	reg |= TX_DRV_POST_SEL3(mphy_data[idx].tx_drv_post_sel3);
 	reg |= TX_DRV_PRE_SEL3(mphy_data[idx].tx_drv_pre_sel3);
 	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DYN_CTL_5);
 
 	return 0;
+}
+
+static void ufs_lane_pad_macro_configuration(struct tegra_padctl_uphy *uphy,
+						int lane)
+{
+	u32 reg;
+
+	reg = uphy_lane_readl(uphy, lane, UPHY_LANE_MPHY_CTL_2);
+	reg &= ~RX_BYP_MODE(~0);
+	reg |= RX_BYP_MODE(0x2);
+	reg &= ~RX_RATE_PDIV(~0);
+	reg |= RX_RATE_PDIV(0x2);
+	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_MPHY_CTL_2);
+
+	reg = uphy_lane_readl(uphy, lane, UPHY_LANE_MPHY_CTL_1);
+	reg &= ~RX_RATE_PDIV(~0);
+	reg |= RX_RATE_PDIV(0x2);
+	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_MPHY_CTL_1);
+
+	reg = uphy_lane_readl(uphy, lane, UPHY_LANE_MISC_CTL_2);
+	reg |= RX_BYP_REFCLK_EN;
+	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_MISC_CTL_2);
 }
 
 static int tegra186_ufs_phy_power_on(struct phy *phy)
@@ -2986,6 +3035,13 @@ static int tegra186_ufs_phy_power_on(struct phy *phy)
 		reg &= ~SEL(~0);
 		reg |= SEL_MPHY;
 		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
+	}
+
+	/* step 5.2: Bias PWM detector logic */
+	rc = clk_prepare_enable(uphy->rx_byp_clk);
+	if (rc) {
+		dev_err(uphy->dev, "failed to enable rx_byp reference clock %d\n",
+			rc);
 	}
 
 	/* step 5.3: Reset release of lanes and PLL1. */
@@ -3018,6 +3074,8 @@ static int tegra186_ufs_phy_power_on(struct phy *phy)
 	ufs_pll_rateid_init(uphy);
 	for_each_set_bit(uphy_lane, &uphy->ufs_lanes, T186_UPHY_LANES)
 		ufs_lane_rateid_init(uphy, uphy_lane);
+	for_each_set_bit(uphy_lane, &uphy->ufs_lanes, T186_UPHY_LANES)
+		ufs_lane_pad_macro_configuration(uphy, uphy_lane);
 
 	/* step 8: Uphy pll1 calibration */
 	rc = uphy_pll_init(uphy, TEGRA186_FUNC_MPHY);
@@ -3060,6 +3118,8 @@ static int tegra186_ufs_phy_power_off(struct phy *phy)
 	uphy_lanes_reset_assert(uphy, uphy->ufs_lanes);
 	uphy_pll_reset_assert(uphy, 0);
 	uphy_pll_reset_assert(uphy, 1);
+
+	clk_disable_unprepare(uphy->rx_byp_clk);
 
 	/* Disable pllrefe and pllp */
 #else
@@ -4643,6 +4703,12 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 	if (IS_ERR(uphy->hsic_trk_clk)) {
 		dev_err(dev, "failed to get hsic_trk clock\n");
 		return PTR_ERR(uphy->hsic_trk_clk);
+	}
+
+	uphy->rx_byp_clk = devm_clk_get(dev, "rx_byp");
+	if (IS_ERR(uphy->rx_byp_clk)) {
+		dev_err(dev, "failed to get rx_byp clock\n");
+		return PTR_ERR(uphy->rx_byp_clk);
 	}
 
 	err = tegra186_padctl_uphy_regulators_init(uphy);

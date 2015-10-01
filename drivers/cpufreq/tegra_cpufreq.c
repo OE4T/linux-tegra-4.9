@@ -27,7 +27,7 @@
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/bpmp_abi.h>
 #include <linux/delay.h>
-#include <linux/clk-provider.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 
 #define MAX_NDIV		512 /* No of NDIV */
 #define MAX_VINDEX		80 /* No of voltage index */
@@ -102,7 +102,7 @@ struct per_cluster_data {
 	struct cpufreq_frequency_table *clft;
 	void __iomem *edvd_pub;
 	struct cpu_vhint_table dvfs_tbl;
-	struct clk *emc_clk;
+	struct tegra_bwmgr_client *bwmgr;
 };
 
 struct tegra_cpufreq_data {
@@ -286,8 +286,7 @@ static void set_cpufreq_to_emcfreq(enum cluster cl,
 	unsigned long emc_freq;
 	uint32_t cluster_freq;
 
-	tfreq_data.emc_max_rate =
-		clk_round_rate(tfreq_data.pcluster[cl].emc_clk, ULONG_MAX);
+	tfreq_data.emc_max_rate = tegra_bwmgr_get_max_emc_rate();
 	cluster_freq = get_cluster_freq(cl, policy->cur);
 
 	if (M_CLUSTER == cl)
@@ -295,8 +294,8 @@ static void set_cpufreq_to_emcfreq(enum cluster cl,
 	else
 		emc_freq = b_cluster_cpu_to_emc_freq(cluster_freq);
 
-	clk_set_rate(tfreq_data.pcluster[cl].emc_clk, emc_freq);
-
+	tegra_bwmgr_set_emc(tfreq_data.pcluster[cl].bwmgr, emc_freq,
+		TEGRA_BWMGR_SET_EMC_FLOOR);
 	pr_debug("cpu: %d, cluster %s, emc freq(KHz): %lu cluster_freq(kHz): %u\n",
 		policy->cpu, CLUSTER_STR(cl), emc_freq / 1000, cluster_freq);
 }
@@ -643,10 +642,8 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 	tfreq_data.cpu_freq[policy->cpu] = policy->cur;
 
 	cl = get_cpu_cluster(policy->cpu);
-	if (tfreq_data.pcluster[cl].emc_clk) {
-		clk_prepare_enable(tfreq_data.pcluster[cl].emc_clk);
+	if (tfreq_data.pcluster[cl].bwmgr)
 		set_cpufreq_to_emcfreq(cl, policy);
-	}
 
 	policy->cpuinfo.transition_latency =
 	TEGRA_CPUFREQ_TRANSITION_LATENCY;
@@ -661,22 +658,13 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 static int tegra_cpu_exit(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *ftbl;
-	struct clk *emc_clk;
 	struct mutex *mlock;
-	enum cluster cl;
 
 	mlock = &per_cpu(pcpu_mlock, policy->cpu);
 	mutex_lock(mlock);
 
 	ftbl = get_freqtable(policy->cpu);
 	cpufreq_frequency_table_cpuinfo(policy, ftbl);
-	cl = get_cpu_cluster(policy->cpu);
-	emc_clk = tfreq_data.pcluster[cl].emc_clk;
-	if (emc_clk) {
-		clk_disable_unprepare(emc_clk);
-		clk_put(emc_clk);
-		tfreq_data.pcluster[cl].emc_clk = 0;
-	}
 
 	mutex_unlock(mlock);
 	return 0;
@@ -721,8 +709,12 @@ static void free_resources(void)
 		/* free ndiv_to_vindex mem */
 		kfree(tfreq_data.pcluster[cl].dvfs_tbl.vindx);
 
-		/* free table*/
+		/* free table */
 		kfree(tfreq_data.pcluster[cl].clft);
+
+		/* unregister from emc bw manager */
+		tegra_bwmgr_unregister(tfreq_data.pcluster[cl].bwmgr);
+
 	}
 }
 
@@ -906,28 +898,31 @@ err_out:
 	return ret;
 }
 
-static int __init get_emc_clk(struct device_node *dn)
+static int __init register_with_emc_bwmgr(void)
 {
-	struct clk *emc_clk;
+	struct tegra_bwmgr_client *bwmgr;
+	enum tegra_bwmgr_client_id bw_id = TEGRA_BWMGR_CLIENT_CPU_0;
 	enum cluster cl;
 	int ret = 0;
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
-		emc_clk = of_clk_get(dn, cl);
-		if (IS_ERR(emc_clk)) {
-			pr_warn("Failed to get emc clk for %s\n",
+		bwmgr = tegra_bwmgr_register(bw_id);
+		if (IS_ERR_OR_NULL(bwmgr)) {
+			pr_warn("emc bw manager registration failed for %s\n",
 			CLUSTER_STR(cl));
 			ret = -ENODEV;
 			while (cl--)
-				clk_put(tfreq_data.pcluster[cl].emc_clk);
+				tegra_bwmgr_unregister(
+				tfreq_data.pcluster[cl].bwmgr);
 			goto err_out;
 		}
-
-		tfreq_data.pcluster[cl].emc_clk = emc_clk;
+		tfreq_data.pcluster[cl].bwmgr = bwmgr;
+		bw_id = TEGRA_BWMGR_CLIENT_CPU_1;
 	}
 err_out:
 	return ret;
 }
+
 static int __init tegra_cpufreq_init(void)
 {
 	struct device_node *dn;
@@ -947,9 +942,9 @@ static int __init tegra_cpufreq_init(void)
 		goto err_out;
 	}
 
-	ret = get_emc_clk(dn);
+	ret = register_with_emc_bwmgr();
 	if (ret) {
-		pr_err("tegra18x-cpufreq: unable to get emc clk\n");
+		pr_err("tegra18x-cpufreq: unable to register with emc bw manager\n");
 		goto err_out;
 	}
 

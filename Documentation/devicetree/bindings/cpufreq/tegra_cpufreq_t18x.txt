@@ -15,34 +15,19 @@ Tegra18x cpufreq driver considers these EDVD registers as device to measure
 and adjust cpu freq. There is one instance of EDVD for the Denver cluster
 and one for the A57 cluster.
 
-The Tegra18x cpufreq driver also adjusts emc freq as the result of per cluster
-cpu_to_emc request. Per cluster freq is max(online cpu freq). It adds two
-"clocks" property of "tegra_car" device tree node, one for Denver cluster and
-another for ARM cluster for adjusting emc clock.
-
 Required properties:
 - compatible: should be "nvidia,tegra18x-cpufreq".
 - reg: an array of four 64-bit unsigned integers:
        the base address and size for Denver EDVD aperture and the base
        address and size for the A57 EDVD aperture.
-- clocks: < "tegra car node", "clock number">,
-          < "tegra car node", "clock number">;
 
 - status: "okay" or "disabled" to enable/disable the node.
 
-Optional properties:
-- clock-names: name of emc clock for each cluster;
-
 Example:
 --------
-       cpufreq@0x0e070000 {
+       cpufreq@e070000 {
                compatible = "nvidia,tegra18x-cpufreq";
                reg = <0x0 0x0e070000 0x0 0x1000>, /* M/Denver cluster */
                      <0x0 0x0e060000 0x0 0x1000>; /* B/ARM cluster */
-               clocks = <&tegra_car TEGRA186_CLK_EMC>, /* emc clock instance for
-							 Denver cluster */
-			<&tegra_car TEGRA186_CLK_EMC>; /* emc clock instance for
-							 ARM cluster */
-               clock-names = "emc0", "emc1";
                status = "disabled";
        };

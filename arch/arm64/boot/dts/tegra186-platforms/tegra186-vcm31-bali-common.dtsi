@@ -61,7 +61,7 @@
 		status = "okay";
 	};
 
-	spi@3210000 { /* Tegra SPI1: RH, slave */
+	spi@c260000 { /* Tegra SPI1: RH, slave */
 		status = "okay";
 		compatible = "nvidia,tegra210-spi-slave";
 		spi@0 {
@@ -76,7 +76,7 @@
 		};
 	};
 
-	spi@c260000 { /* Tegra SPI2: master */
+	spi@3210000 { /* Tegra SPI2: master */
 		status = "okay";
 		spi@0 {				/* gyro */
 			compatible = "spidev";

@@ -3537,7 +3537,19 @@ static int loopback(struct seq_file *s, void *data)
 	port->loopback_stat = 0;
 	port->loopback_err = 0;
 
-	rp_writel(port, 0x90800011, NV_PCIE2_RP_VEND_XP_BIST);
+	new = rp_readl(port, RP_VEND_XP);
+	new &= ~RP_VEND_XP_PRBS_EN;
+	rp_writel(port, new, RP_VEND_XP);
+
+	new = rp_readl(port, NV_PCIE2_RP_XP_CTL_1);
+	new &= ~PCIE2_RP_XP_CTL_1_OLD_IOBIST_EN_BIT25;
+	rp_writel(port, new, NV_PCIE2_RP_XP_CTL_1);
+
+	rp_writel(port, 0x10000001, NV_PCIE2_RP_VEND_XP_BIST);
+
+	mdelay(1);
+
+	rp_writel(port, 0x90820001, NV_PCIE2_RP_VEND_XP_BIST);
 	new = rp_readl(port, NV_PCIE2_RP_VEND_XP_BIST);
 
 	new = rp_readl(port, NV_PCIE2_RP_XP_CTL_1);
@@ -3548,7 +3560,7 @@ static int loopback(struct seq_file *s, void *data)
 	new |= RP_VEND_XP_PRBS_EN;
 	rp_writel(port, new, RP_VEND_XP);
 
-	mdelay(10);
+	mdelay(1000);
 
 	new = rp_readl(port, NV_PCIE2_RP_PRBS);
 	pr_info("loopback locked bit %x\n", (new & PCIE2_RP_PRBS_LOCKED) >> 16);

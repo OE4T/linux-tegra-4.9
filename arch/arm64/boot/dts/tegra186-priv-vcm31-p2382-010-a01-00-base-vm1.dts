@@ -71,6 +71,10 @@
 		status = "disabled";
 	};
 
+	sdhci@3440000 {
+		status = "disabled";
+	};
+
 	i2c@3160000 {
 		tegra_nct72: onsemi,nct72@4c {
 			status = "disabled";

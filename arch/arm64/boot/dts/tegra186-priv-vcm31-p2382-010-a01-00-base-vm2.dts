@@ -74,10 +74,6 @@
 		status = "disabled";
 	};
 
-	sdhci@3440000 {
-		status = "disabled";
-	};
-
 	sdhci@3420000 { /* Should be used for eMMC. HS400 mode is not supported */
 		status = "disabled";
 	};

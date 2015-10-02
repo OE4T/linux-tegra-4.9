@@ -247,6 +247,9 @@ struct device_node *tegra_primary_panel_get_dt_node(
 			/*np_primary = of_find_node_by_path(SOR_NODE);*/
 			if (of_device_is_available(np_primary))
 				np_panel = of_get_child_by_name(np_primary,
+					"dp-display");
+			if (!of_device_is_available(np_panel))
+				np_panel = of_get_child_by_name(np_primary,
 					"panel-s-edp-uhdtv-15-6");
 		}
 	} else {/* for linsim or no display panel case */
@@ -286,6 +289,9 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 		if (!of_device_is_available(np_panel)) {
 			/*np_secondary = of_find_node_by_path(SOR_NODE);*/
 			if (of_device_is_available(np_secondary))
+				np_panel = of_get_child_by_name(np_secondary,
+					"dp-display");
+			if (!of_device_is_available(np_panel))
 				np_panel = of_get_child_by_name(np_secondary,
 					"panel-s-edp-uhdtv-15-6");
 			if (of_device_is_available(np_panel) && dc_out)

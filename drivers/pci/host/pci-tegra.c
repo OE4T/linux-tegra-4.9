@@ -262,6 +262,16 @@
 #define PCIE2_RP_LTSSM_DBGREG_LINKFSM16		(1 << 16)
 #define PCIE2_RP_LTSSM_DBGREG_LINKFSM17		(1 << 17)
 
+#define NV_PCIE2_RP_LTSSM_TRACE_CONTROL				0x00000E50
+#define LTSSM_TRACE_CONTROL_CLEAR_RAM				(1 << 2)
+
+#define NV_PCIE2_RP_LTSSM_TRACE_STATUS				0x00000E54
+#define LTSSM_TRACE_STATUS_PRX_MINOR(reg)			(((reg) >> 19) & 0x7)
+#define LTSSM_TRACE_STATUS_PTX_MINOR(reg)			(((reg) >> 16) & 0x7)
+#define LTSSM_TRACE_STATUS_MAJOR(reg)				(((reg) >> 12) & 0xf)
+#define LTSSM_TRACE_STATUS_READ_ADDR(reg)			((reg) << 6)
+#define LTSSM_TRACE_STATUS_WRITE_POINTER(reg)			(((reg) >> 1) & 0x1f)
+
 #define NV_PCIE2_RP_XP_REF					0x00000F30
 #define PCIE2_RP_XP_REF_MICROSECOND_LIMIT_MASK			(0xFF)
 #define PCIE2_RP_XP_REF_MICROSECOND_LIMIT			(0x14)
@@ -3525,7 +3535,7 @@ out:
 static int loopback(struct seq_file *s, void *data)
 {
 	struct tegra_pcie_port *port = (struct tegra_pcie_port *)(s->private);
-	unsigned int new;
+	unsigned int new, i;
 
 	new = rp_readl(port, RP_LINK_CONTROL_STATUS);
 
@@ -3563,20 +3573,22 @@ static int loopback(struct seq_file *s, void *data)
 	mdelay(1000);
 
 	new = rp_readl(port, NV_PCIE2_RP_PRBS);
-	pr_info("loopback locked bit %x\n", (new & PCIE2_RP_PRBS_LOCKED) >> 16);
+	pr_info("loopback locked bit 0x%08x\n", new);
 
 	new = rp_readl(port, RP_VEND_XP);
 	port->loopback_stat = (new & RP_VEND_XP_PRBS_STAT) >> 2;
 	pr_info("loopback status %x\n", port->loopback_stat);
 
-	new |= PCIE2_RP_XP_CTL_1_OLD_IOBIST_EN_BIT25;
+	new = rp_readl(port, NV_PCIE2_RP_XP_CTL_1);
+	new &= ~PCIE2_RP_XP_CTL_1_OLD_IOBIST_EN_BIT25;
 	rp_writel(port, new, NV_PCIE2_RP_XP_CTL_1);
 
-	rp_writel(port, port->index - 1, NV_PCIE2_RP_LANE_PRBS_ERR_COUNT);
-
-	new = rp_readl(port, NV_PCIE2_RP_LANE_PRBS_ERR_COUNT);
-	port->loopback_err = new >> 16;
-	pr_info("loopback error %x\n", port->loopback_err);
+	for (i = 0; i < 16; ++i) {
+		rp_writel(port, i, NV_PCIE2_RP_LANE_PRBS_ERR_COUNT);
+		new = rp_readl(port, NV_PCIE2_RP_LANE_PRBS_ERR_COUNT);
+		port->loopback_err = new >> 16;
+		pr_info("[%u] loopback error %u\n", i, port->loopback_err);
+	}
 
 	rp_writel(port, 0x90000001, NV_PCIE2_RP_VEND_XP_BIST);
 
@@ -3889,6 +3901,84 @@ static int aspm_l1ss(struct seq_file *s, void *data)
 	pr_info("PCIE aspm l1ss test END..\n");
 	return 0;
 }
+
+struct ltssm_major_state {
+	const char *name;
+	const char *minor[8];
+};
+
+struct ltssm_state {
+	struct ltssm_major_state major[12];
+};
+
+static struct ltssm_state ltssm_state = {
+	.major[0]  = {"detect", {"quiet", "active", "retry", "wait", "entry"}},
+	.major[1]  = {"polling", {"active", "config", "idle", NULL, "compliance", "cspeed"}},
+	.major[2]  = {"config", {"link start", "link accept", "lane accept", "lane wait", "idle", "pwrup", "complete"}},
+	.major[3]  = {NULL, {NULL}},
+	.major[4]  = {"l0", {"normal", "l0s entry", "l0s idle", "l0s wait", "l0s fts", "pwrup"}},
+	.major[5]  = {"l1", {"entry", "waitrx", "idle", "wait", "pwrup", "beacon entry", "beacon exit"}},
+	.major[6]  = {"l2", {"entry", "waitrx", "transmitwake", "idle"}},
+	.major[7]  = {"recovery", {"rcvrlock", "rcvrcfg", "speed", "idle", NULL, NULL, NULL, "finish pkt"}},
+	.major[8]  = {"loopback", {"entry", "active", "idle", "exit", "speed", "pre speed"}},
+	.major[9]  = {"hotreset", {NULL}},
+	.major[10] = {"disabled", {NULL}},
+	.major[11] = {"txchar", {NULL}},
+};
+
+static const char *ltssm_get_major(unsigned int major)
+{
+	const char *state;
+
+	state = ltssm_state.major[major].name;
+	if (!state)
+		return "unknown";
+	return state;
+}
+
+static const char *ltssm_get_minor(unsigned int major, unsigned int minor)
+{
+	const char *state;
+
+	state = ltssm_state.major[major].minor[minor];
+	if (!state)
+		return "unknown";
+	return state;
+}
+
+static int dump_ltssm_trace(struct seq_file *s, void *data)
+{
+	struct tegra_pcie_port *port = (struct tegra_pcie_port *)(s->private);
+	unsigned int val, ridx, widx;
+
+	seq_printf(s, "LTSSM trace dump:\n");
+	val = rp_readl(port, NV_PCIE2_RP_LTSSM_TRACE_STATUS);
+	widx = LTSSM_TRACE_STATUS_WRITE_POINTER(val);
+	ridx = 0;
+	while (1) {
+		val = LTSSM_TRACE_STATUS_READ_ADDR(ridx);
+		rp_writel(port, val, NV_PCIE2_RP_LTSSM_TRACE_STATUS);
+		val = rp_readl(port, NV_PCIE2_RP_LTSSM_TRACE_STATUS);
+
+		seq_printf(s, "  [0x%08x] major: %-10s minor_tx: %-15s minor_rx: %s\n", val,
+			ltssm_get_major(LTSSM_TRACE_STATUS_MAJOR(val)),
+			ltssm_get_minor(LTSSM_TRACE_STATUS_MAJOR(val),  LTSSM_TRACE_STATUS_PTX_MINOR(val)),
+			ltssm_get_minor(LTSSM_TRACE_STATUS_MAJOR(val),  LTSSM_TRACE_STATUS_PRX_MINOR(val)));
+
+		ridx = (ridx + 1) % 32;
+		if (ridx == widx)
+			break;
+	}
+	/* clear trace ram */
+	val = rp_readl(port, NV_PCIE2_RP_LTSSM_TRACE_CONTROL);
+	val |= LTSSM_TRACE_CONTROL_CLEAR_RAM;
+	rp_writel(port, val, NV_PCIE2_RP_LTSSM_TRACE_CONTROL);
+	val &= ~LTSSM_TRACE_CONTROL_CLEAR_RAM;
+	rp_writel(port, val, NV_PCIE2_RP_LTSSM_TRACE_CONTROL);
+
+	return 0;
+}
+
 static struct dentry *create_tegra_pcie_debufs_file(char *name,
 		const struct file_operations *ops,
 		struct dentry *parent,
@@ -3935,6 +4025,7 @@ DEFINE_ENTRY(list_aspm_states)
 DEFINE_ENTRY(apply_aspm_state)
 DEFINE_ENTRY(get_aspm_duration)
 DEFINE_ENTRY(secondary_bus_reset)
+DEFINE_ENTRY(dump_ltssm_trace)
 
 static int tegra_pcie_port_debugfs_init(struct tegra_pcie_port *port)
 {
@@ -3998,6 +4089,12 @@ static int tegra_pcie_port_debugfs_init(struct tegra_pcie_port *port)
 	d = debugfs_create_file("list_aspm_states", S_IRUGO,
 					port->port_debugfs, (void *)port,
 					&list_aspm_states_fops);
+	if (!d)
+		goto remove;
+
+	d = debugfs_create_file("dump_ltssm_trace", S_IRUGO,
+					port->port_debugfs, (void *)port,
+					&dump_ltssm_trace_fops);
 	if (!d)
 		goto remove;
 

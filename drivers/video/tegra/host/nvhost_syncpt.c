@@ -207,12 +207,22 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	int err = 0, check_count = 0, low_timeout = 0;
 	u32 val, old_val, new_val;
 	struct nvhost_master *host = syncpt_to_dev(sp);
+	bool syncpt_poll = false;
 	bool (*syncpt_is_expired)(struct nvhost_syncpt *sp,
 			u32 id,
 			u32 thresh);
 
 	if (!id || !nvhost_syncpt_is_valid_hw_pt(sp, id))
 		return -EINVAL;
+
+
+	/*
+	 * In case when syncpoint belongs to a remote VM host1x hardware
+	 * does not allow to set up threshold interrupt locally and polling
+	 * is required.
+	 */
+	if (!nvhost_dev_is_virtual(host->dev))
+		syncpt_poll = !nvhost_syncpt_is_valid_pt(sp, id);
 
 	if (value)
 		*value = 0;
@@ -248,22 +258,27 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 
 	old_val = val;
 
-	/* schedule a wakeup when the syncpoint value is reached */
-	waiter = nvhost_intr_alloc_waiter();
-	if (!waiter) {
-		err = -ENOMEM;
-		goto done;
-	}
+	/* Set up a threshold interrupt waiter */
+	if (!syncpt_poll) {
 
-	err = nvhost_intr_add_action(&(syncpt_to_dev(sp)->intr), id, thresh,
+		/* schedule a wakeup when the syncpoint value is reached */
+		waiter = nvhost_intr_alloc_waiter();
+		if (!waiter) {
+			err = -ENOMEM;
+			goto done;
+		}
+
+		err = nvhost_intr_add_action(&(syncpt_to_dev(sp)->intr), id,
+				thresh,
 				interruptible ?
 				  NVHOST_INTR_ACTION_WAKEUP_INTERRUPTIBLE :
 				  NVHOST_INTR_ACTION_WAKEUP,
 				&wq,
 				waiter,
 				&ref);
-	if (err)
-		goto done;
+		if (err)
+			goto done;
+	}
 
 	err = -EAGAIN;
 	/* Caller-specified timeout may be impractically low */
@@ -279,7 +294,38 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	while (timeout) {
 		u32 check = min_t(u32, SYNCPT_CHECK_PERIOD, timeout);
 		int remain;
-		if (interruptible)
+
+		if (syncpt_poll) {
+			unsigned int check_ms;
+			unsigned int loops;
+			unsigned int mdelay_thresh;
+			int i;
+
+			check_ms = jiffies_to_msecs(check);
+			loops = DIV_ROUND_UP(check_ms, SYNCPT_POLL_PERIOD);
+
+			/*
+			 * Try mdelay for 16 ms and then downgrade to a less
+			 * intense polling with msleep. 16ms is a typical display
+			 * frame interval assuming 60fps refresh rate.
+			 */
+			mdelay_thresh = DIV_ROUND_UP(16, SYNCPT_POLL_PERIOD);
+
+			for (i = 0; i < loops; i++) {
+				if (syncpt_is_expired(sp, id, thresh))
+					break;
+
+				if (i < mdelay_thresh)
+					mdelay(SYNCPT_POLL_PERIOD);
+				else
+					msleep(SYNCPT_POLL_PERIOD);
+
+			}
+
+			remain = msecs_to_jiffies((loops - i) *
+							SYNCPT_POLL_PERIOD);
+
+		} else if (interruptible)
 			remain = wait_event_interruptible_timeout(wq,
 				syncpt_is_expired(sp, id, thresh),
 				check);
@@ -334,7 +380,9 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 			check_count++;
 		}
 	}
-	nvhost_intr_put_ref(&(syncpt_to_dev(sp)->intr), id, ref);
+
+	if (!syncpt_poll)
+		nvhost_intr_put_ref(&(syncpt_to_dev(sp)->intr), id, ref);
 
 done:
 	nvhost_module_idle(syncpt_to_dev(sp)->dev);

@@ -1041,10 +1041,10 @@ static void gr_gm20b_init_cyclestats(struct gk20a *g)
 #endif
 }
 
-void gr_gm20b_enable_cde_in_fecs(void *ctx_ptr)
+static void gr_gm20b_enable_cde_in_fecs(void *ctx_ptr)
 {
 	u32 cde_v;
-	
+
 	cde_v = gk20a_mem_rd32(ctx_ptr + ctxsw_prog_main_image_ctl_o(), 0);
 	cde_v |=  ctxsw_prog_main_image_ctl_cde_enabled_f();
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_ctl_o(), 0, cde_v);

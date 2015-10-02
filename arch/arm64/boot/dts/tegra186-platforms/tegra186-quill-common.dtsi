@@ -53,10 +53,6 @@
 		status = "okay";
 	};
 
-	watchdog@30d0000 {
-		status = "okay";
-	};
-
 	i2c@3180000 {
 		status = "okay";
 	};
@@ -148,6 +144,7 @@
 	};
 
 	sdhci@3460000 {
+		uhs-mask = <0x40>; /*enable HS200 mode*/
 		status = "okay";
 	};
 
@@ -282,24 +279,9 @@
 		status = "okay";
 	};
 
-	soft_watchdog {
+	soft_wdt:soft_watchdog {
 		compatible = "softdog-platform";
 		status = "okay";
-	};
-
-	external-connection {
-		vbus_id_extcon: extcon@1 {
-			compatible = "extcon-gpio-states";
-			reg = <0x1>;
-			extcon-gpio,name = "VBUS";
-			extcon-gpio,cable-states = <0x3 0x0
-						    0x0 0x2
-						    0x1 0x2
-						    0x2 0x1>;
-			gpios = <&tegra_gpio TEGRA_GPIO(X, 7) 0 &spmic 0 0>;
-			extcon-gpio,out-cable-names = "USB", "USB-Host";
-			#extcon-cells = <1>;
-		};
 	};
 
 	mailbox@3538000 {

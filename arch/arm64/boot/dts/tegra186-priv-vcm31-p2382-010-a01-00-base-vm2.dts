@@ -90,10 +90,6 @@
 		status = "disabled";
 	};
 
-	pmc@c360000 {
-		status = "okay";
-	};
-
 	pinctrl@3520000 {
 		status = "disabled";
 	};
@@ -236,21 +232,9 @@
 		status = "disabled";
 	};
 
-	psci {
-		status = "okay";
-	};
-
-	interrupt-controller@3881000 {
-		status = "okay";
-	};
-
 	interrupt-controller@3000000 {
 		compatible = "arm,cortex-a15-gic-none";
 		status = "disabled";
-	};
-
-	clock@5000000 {
-		status = "okay";
 	};
 
 	se_elp@3ad0000 {
@@ -308,10 +292,6 @@
 		status = "disabled";
 	};
 
-	serial@3110000 {
-		status = "okay";
-	};
-
 	serial@c280000 {
 		status = "disabled";
 	};
@@ -332,14 +312,6 @@
 		status = "disabled";
 	};
 
-	pinmux@2430000 {
-                status = "disabled";
-        };
-
-        gpio@2200000 {
-                status = "disabled";
-        };
-
 	i2c@3160000 {
 		status = "disabled";
 	};
@@ -353,10 +325,6 @@
 	};
 
 	i2c@3190000 {
-		status = "disabled";
-	};
-
-	bpmp_i2c {
 		status = "disabled";
 	};
 
@@ -452,11 +420,6 @@
 		status = "disabled";
 	};
 
-	efuse@3820000 {
-                compatible = "nvidia,tegra186-efuse-none";
-		status = "disabled";
-	};
-
 	tachometer@39c0000 {
 		status = "disabled";
 	};
@@ -494,171 +457,171 @@
 	ahub {
 		status = "disabled";
 
-		admaif@0290F000 {
+		admaif@290f000 {
 			status = "disabled";
 		};
 
-		sfc@02902000 {
+		sfc@2902000 {
 			status = "disabled";
 		};
 
-		sfc@02902200 {
+		sfc@2902200 {
 			status = "disabled";
 		};
 
-		sfc@02902400 {
+		sfc@2902400 {
 			status = "disabled";
 		};
 
-		sfc@02902600 {
+		sfc@2902600 {
 			status = "disabled";
 		};
 
-		spkprot@02908c00 {
+		spkprot@2908c00 {
 			status = "disabled";
 		};
 
-		amixer@0290BB00 {
+		amixer@290bb00 {
 			status = "disabled";
 		};
 
-		i2s@02901000 {
+		i2s@2901000 {
 			status = "disabled";
 		};
 
-		i2s@02901100 {
+		i2s@2901100 {
 			status = "disabled";
 		};
 
-		i2s@02901200 {
+		i2s@2901200 {
 			status = "disabled";
 		};
 
-		i2s@02901300 {
+		i2s@2901300 {
 			status = "disabled";
 		};
 
-		i2s@02901400 {
+		i2s@2901400 {
 			status = "disabled";
 		};
 
-		i2s@02901500 {
+		i2s@2901500 {
 			status = "disabled";
 		};
 
-		amx@02903000 {
+		amx@2903000 {
 			status = "disabled";
 		};
 
-		amx@02903100 {
+		amx@2903100 {
 			status = "disabled";
 		};
 
-		amx@02903200 {
+		amx@2903200 {
 			status = "disabled";
 		};
 
-		amx@02903300 {
+		amx@2903300 {
 			status = "disabled";
 		};
 
-		adx@02903800 {
+		adx@2903800 {
 			status = "disabled";
 		};
 
-		adx@02903900 {
+		adx@2903900 {
 			status = "disabled";
 		};
 
-		adx@02903a00 {
+		adx@2903a00 {
 			status = "disabled";
 		};
 
-		adx@02903b00 {
+		adx@2903b00 {
 			status = "disabled";
 		};
 
-		dmic@02904000 {
+		dmic@2904000 {
 			status = "disabled";
 		};
 
-		dmic@02904100 {
+		dmic@2904100 {
 			status = "disabled";
 		};
 
-		dmic@02904200 {
+		dmic@2904200 {
 			status = "disabled";
 		};
 
-		dmic@02904300 {
+		dmic@2904300 {
 			status = "disabled";
 		};
 
-		afc@02907000 {
+		afc@2907000 {
 			status = "disabled";
 		};
 
-		afc@02907100 {
+		afc@2907100 {
 			status = "disabled";
 		};
 
-		afc@02907200 {
+		afc@2907200 {
 			status = "disabled";
 		};
 
-		afc@02907300 {
+		afc@2907300 {
 			status = "disabled";
 		};
 
-		afc@02907400 {
+		afc@2907400 {
 			status = "disabled";
 		};
 
-		afc@02907500 {
+		afc@2907500 {
 			status = "disabled";
 		};
 
-		mvc@0290A000 {
+		mvc@290a000 {
 			status = "disabled";
 		};
 
-		mvc@0290A200 {
+		mvc@290a200 {
 			status = "disabled";
 		};
 
-		spdif@02906000 {
+		spdif@2906000 {
 			status = "disabled";
 		};
 
-		iqc@2290E000 {
+		iqc@290e000 {
 			status = "disabled";
 		};
 
-		asrc@02910000 {
+		asrc@2910000 {
 			status = "disabled";
 		};
 
-		arad@0290E400 {
+		arad@290e400 {
 			status = "disabled";
 		};
 
-		ope@02908000 {
+		ope@2908000 {
 			status = "disabled";
 
-			peq@02908100 {
+			peq@2908100 {
 				status = "disabled";
 			};
 
-			mbdrc@02908200 {
+			mbdrc@2908200 {
 				status = "disabled";
 			};
 		};
 
-		dspk@02905000 {
+		dspk@2905000 {
 			status = "disabled";
 		};
 
-		dspk@02905100 {
+		dspk@2905100 {
 			status = "disabled";
 		};
 
@@ -666,11 +629,11 @@
 			status = "disabled";
 		};
 
-		adx@02903A00 {
+		adx@2903a00 {
 			status = "disabled";
 		};
 
-		adx@02903B00 {
+		adx@2903b00 {
 			status = "disabled";
 		};
 	};
@@ -706,5 +669,9 @@
 		ivc-queue3 = <&tegra_hv 49>;
 		ivc-queue4 = <&tegra_hv 50>;
 		mempool3 = <&tegra_hv 2>;
+	};
+
+	adsp_audio {
+		status = "disabled";
 	};
 };

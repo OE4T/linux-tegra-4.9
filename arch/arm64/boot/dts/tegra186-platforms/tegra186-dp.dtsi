@@ -23,10 +23,12 @@
 
 / {
         host1x {
-                sor1 {
+                sor {
                         dp-display {
                                 status = "disabled";
                                 compatible = "dp, display";
+                                nvidia,is_ext_dp_panel = <1>;
+				nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 1) 1>;
                                 disp-default-out {
                                         nvidia,out-type = <TEGRA_DC_OUT_DP>;
                                         nvidia,out-align = <TEGRA_DC_ALIGN_MSB>;
@@ -36,8 +38,54 @@
                                                            TEGRA_DC_OUT_PIN_V_SYNC TEGRA_DC_OUT_PIN_POL_LOW
                                                            TEGRA_DC_OUT_PIN_PIXEL_CLOCK TEGRA_DC_OUT_PIN_POL_LOW
                                                            TEGRA_DC_OUT_PIN_DATA_ENABLE TEGRA_DC_OUT_PIN_POL_HIGH>;
-                                        nvidia,out-parent-clk = "pll_d2";
+                                        nvidia,out-parent-clk = "plld2";
+					nvidia,out-xres = <1920>;
+					nvidia,out-yres = <1080>;
                                 };
+				/* Setting the default value for testing */
+				display-timings {
+					1920x1080-32 {
+						clock-frequency = <148500000>;
+						hactive = <1920>;
+						vactive = <1080>;
+						hfront-porch = <88>;
+						hback-porch = <148>;
+						hsync-len = <44>;
+						vfront-porch = <4>;
+						vback-porch = <36>;
+						vsync-len = <5>;
+						nvidia,h-ref-to-sync = <1>;
+						nvidia,v-ref-to-sync = <1>;
+					};
+					720x480-32 {
+						clock-frequency = <27000000>;
+						hactive = <720>;
+						vactive = <480>;
+						hfront-porch = <16>;
+						hback-porch = <60>;
+						hsync-len = <62>;
+						vfront-porch = <9>;
+						vback-porch = <30>;
+						vsync-len = <6>;
+						nvidia,h-ref-to-sync = <1>;
+						nvidia,v-ref-to-sync = <1>;
+					};
+					3840x2160-32 {
+						clock-frequency = <594000000>;
+					//	clock-frequency = <533250000>;
+						hactive = <3840>;
+						vactive = <2160>;
+						hfront-porch = <48>;
+						hback-porch = <80>;
+						hsync-len = <32>;
+						vfront-porch = <3>;
+						vback-porch = <54>;
+						vsync-len = <5>;
+						nvidia,h-ref-to-sync = <1>;
+						nvidia,v-ref-to-sync = <1>;
+					};
+				};
+
                                 dp-lt-settings {
                                         lt-setting@0 {
                                                 nvidia,drive-current = <DRIVE_CURRENT_L0 DRIVE_CURRENT_L0 DRIVE_CURRENT_L0 DRIVE_CURRENT_L0>;
@@ -60,8 +108,22 @@
                                                 nvidia,tx-pu = <0>;
                                                 nvidia,load-adj = <0x6>;
                                         };
-                                };
-                        };
-                };
+                                };//dp-lt_settings
+                        };//dp-display
+			prod-settings {
+				prod_c_dp {
+					prod = <
+					0x0000058c 0xf0fff0ef 0x01000310 // SOR_NV_PDISP_SOR_PLL0_0      27:24=ICHPMP       0x01
+									//                              11:08=VCOCAP       0x03
+									//                              04:04=RESISTORSEL  0x01
+					0x00000590 0xfcfffeff 0x00000100 // SOR_NV_PDISP_SOR_PLL1_0      25:24=LVDSCM       0x00
+									//                              08:08=TMDS_TERM    0x01
+					0x00000598 0xffffdfff 0x00002000 // SOR_NV_PDISP_SOR_PLL3_0      13:13=PLVVDD_MODE  0x01
+					0x00000070 0x00000000 0x00000000 // SOR_NV_PDISP_SOR_LVDS_0
+					0x00000180 0xfffffffe 0x00000001 // SOR_NV_PDISP_SOR_DP_SPARE0_0 00:00=SEQ_ENABLE   0x01
+					>;
+				};//prod_c_dp
+			};//prod-settings
+                };//sor
         };
 };

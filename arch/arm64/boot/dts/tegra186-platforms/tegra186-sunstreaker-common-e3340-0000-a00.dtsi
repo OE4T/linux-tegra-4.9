@@ -27,6 +27,7 @@
 #include "tegra186-hdmi.dtsi"
 #include "tegra186-dp.dtsi"
 #include "tegra186-platforms/tegra186-platform-sdmmc-pinmux-manual-common.dtsi"
+#include "tegra186-platforms/tegra186-sunstreaker-thermal.dtsi"
 
 / {
         model = "sunstreaker-3340";
@@ -88,6 +89,7 @@
 	};
 
 	sdhci@3460000 {
+		uhs-mask = <0x40>; /*enable HS200 mode*/
 		status = "okay";
 	};
 

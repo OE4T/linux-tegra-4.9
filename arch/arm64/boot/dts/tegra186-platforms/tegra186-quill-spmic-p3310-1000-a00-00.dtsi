@@ -140,11 +140,13 @@
 				spmic_ldo0: ldo0 {
 					regulator-name = "spmic-ldo0";
 					maxim,fps-source = <FPS_SRC_DEF>;
+					regulator-enable-ramp-delay = <1000>;
 				};
 
 				spmic_ldo1: ldo1 {
 					regulator-name = "spmic-ldo1";
 					maxim,fps-source = <FPS_SRC_DEF>;
+					regulator-enable-ramp-delay = <1000>;
 				};
 
 				spmic_ldo2: ldo2 {
@@ -194,14 +196,6 @@
 				spmic_ldo8: ldo8 {
 					regulator-name = "spmic-ldo8";
 					maxim,fps-source = <FPS_SRC_DEF>;
-				};
-
-				vdd_dummy_1v8: dummy_1v8 {
-					compatible = "regulator-fixed";
-					regulator-name = "vdd_dummy_1v8";
-					regulator-min-microvolt = <1800000>;
-					regulator-max-microvolt = <1800000>;
-					regulator-always-on;
 				};
 			};
 		};

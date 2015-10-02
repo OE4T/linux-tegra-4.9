@@ -13,32 +13,48 @@
  * more details.
  */
 
+#include "../../../../include/dt-bindings/pinctrl/pinctrl-tegra-padctl-uphy.h"
+
 / {
 
 	ufshci@2450000 {
 		compatible = "jedec,ufs-1.1";
 		reg = <0x0 0x02450000 0x0 0x4000>;
 		interrupts = < 0 TEGRA186_IRQ_UFSHC 0x04 >;
-		clocks = <&tegra_car TEGRA186_CLK_UFSHC>, <&tegra_car TEGRA186_CLK_UFSDEV_REF>;
-		clock-names = "core_clk", "ref_clk";
-		status = "disabled";
-
-		ufs_variant {
-			compatible = "tegra,ufs_variant";
-			clocks = <&tegra_car TEGRA186_CLK_MPHY_CORE_PLL_FIXED>,
+		clocks = <&tegra_car TEGRA186_CLK_MPHY_CORE_PLL_FIXED>,
 				<&tegra_car TEGRA186_CLK_MPHY_L0_TX_SYMB>,
 				<&tegra_car TEGRA186_CLK_MPHY_TX_1MHZ_REF> ,
 				<&tegra_car TEGRA186_CLK_MPHY_L0_RX_ANA>,
 				<&tegra_car TEGRA186_CLK_MPHY_L0_RX_SYMB>,
 				<&tegra_car TEGRA186_CLK_MPHY_L0_TX_LS_3XBIT>,
 				<&tegra_car TEGRA186_CLK_MPHY_L0_RX_LS_BIT>,
-				<&tegra_car TEGRA186_CLK_MPHY_L1_RX_ANA>;
-			clock-names = "mphy_core_pll_fixed", "mpy_l0_tx_symb", "mphy_tx_1mhz_ref",
-				"mphy_l0_rx_ana", "mphy_l0_rx_symb", "mphy_l0_tx_ls_3xbit", "mphy_ll0_rx_ls_bit",
-				"mphy_l1_rx_ana";
-			resets = <&tegra_car TEGRA186_RESET_MPHY_L0_RX>, <&tegra_car TEGRA186_RESET_MPHY_L0_TX>,
-				<&tegra_car TEGRA186_RESET_MPHY_L1_RX>, <&tegra_car TEGRA186_RESET_MPHY_L1_TX>;
-			reset-names = "mphy_l0_rx_rst", "mphy_l0_tx_rst", "mphy_l1_rx_rst", "mphy_l1_tx_rst";
+				<&tegra_car TEGRA186_CLK_MPHY_L1_RX_ANA>,
+				<&tegra_car TEGRA186_CLK_UFSHC>,
+				<&tegra_car TEGRA186_CLK_UFSDEV_REF>,
+				<&tegra_car TEGRA186_CLK_PLLP_UPHY>,
+				<&tegra_car TEGRA186_CLK_CLK_M>;
+		clock-names = "mphy_core_pll_fixed", "mphy_l0_tx_symb",
+				"mphy_tx_1mhz_ref", "mphy_l0_rx_ana",
+				"mphy_l0_rx_symb", "mphy_l0_tx_ls_3xbit",
+				"mphy_ll0_rx_ls_bit", "mphy_l1_rx_ana",
+				"ufshc", "ufsdev_ref", "pll_p", "clk_m";
+		resets = <&tegra_car TEGRA186_RESET_MPHY_L0_RX>,
+				<&tegra_car TEGRA186_RESET_MPHY_L0_TX>,
+				<&tegra_car TEGRA186_RESET_MPHY_L1_RX>,
+				<&tegra_car TEGRA186_RESET_MPHY_L1_TX>,
+				<&tegra_car TEGRA186_RESET_MPHY_CLK_CTL>,
+				<&tegra_car TEGRA186_RESET_UFSHC>,
+				<&tegra_car TEGRA186_RESET_UFSHC_AXI_M>,
+				<&tegra_car TEGRA186_RESET_UFSHC_LP>;
+		reset-names = "mphy_l0_rx_rst", "mphy_l0_tx_rst", "mphy_l1_rx_rst",
+				"mphy_l1_tx_rst", "mphy_clk_ctl_rst", "ufs_rst",
+				"ufs_axi_m_rst", "ufshc_lp_rst";
+		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UFS_P(0)>;
+		phy-names = "uphy";
+		status = "disabled";
+
+		ufs_variant {
+			compatible = "tegra,ufs_variant";
 		};
 	};
 };

@@ -16,6 +16,7 @@
 #include "tegra186-quill-common.dtsi"
 #include "tegra186-quill-p3310-1000-a00-powermon.dtsi"
 #include "tegra186-quill-thermal.dtsi"
+#include "tegra186-platform-sata-pinmux-manual-common.dtsi"
 
 / {
         model = "quill-3310";
@@ -53,7 +54,25 @@
 	};
 
 	ahci-sata@3507000 {
+		pinctrl-names = "devslp_active", "devslp_pullup";
+		pinctrl-0 = <&devslp_active_state>;
+		pinctrl-1 = <&devslp_pullup_state>;
 		status = "okay";
+	};
+
+	external-connection {
+		vbus_id_extcon: extcon@1 {
+			compatible = "extcon-gpio-states";
+			reg = <0x1>;
+			extcon-gpio,name = "VBUS";
+			extcon-gpio,cable-states = <0x3 0x0
+						    0x0 0x2
+						    0x1 0x2
+						    0x2 0x1>;
+			gpios = <&tegra_gpio TEGRA_GPIO(X, 7) 0 &spmic 0 0>;
+			extcon-gpio,out-cable-names = "USB", "USB-Host";
+			#extcon-cells = <1>;
+		};
 	};
 };
 

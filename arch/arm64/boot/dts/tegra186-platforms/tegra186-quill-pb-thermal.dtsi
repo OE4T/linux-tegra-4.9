@@ -17,10 +17,9 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/tegra-gpio.h>
 #include <dt-bindings/thermal/thermal.h>
-#include "tegra186-quill-pb-spmic-e3301-1000-a00-00.dtsi"
 
 /* THERMAL gpio definitions */
-#define TEMP_ALERT		TEGRA_GPIO(X, 4)
+#define TEMP_ALERT		TEGRA_GPIO(V, 0)
 
 / {
 	i2c@c250000 {
@@ -36,12 +35,12 @@
 			offset = <0>;
 			conv-rate = <0x06>;
 			extended-rage = <1>;
-			/*
-			 * interrupt-parent = <&tegra_gpio>;
-			 * interrupts = <TEMP_ALERT IRQ_TYPE_LEVEL_LOW>;
-			 * temp-alert-gpio = <&tegra_gpio TEMP_ALERT 0>;
-			 */
-			vdd-supply = <&vdd_dummy_1v8>;
+
+			interrupt-parent = <&tegra_gpio>;
+			interrupts = <TEMP_ALERT IRQ_TYPE_LEVEL_LOW>;
+			temp-alert-gpio = <&tegra_gpio TEMP_ALERT 0>;
+
+			/* vdd-supply configured in power tree */
 			loc {
 				/* set to maximum for not having local  shutdown */
 				shutdown-limit = <110>;
@@ -64,14 +63,6 @@
 			thermal-zone-params {
 				governor-name = "pid_thermal_gov";
 			};
-
-			trips {
-				trip@0 {
-					type = "critical";
-					temperature = <110000>;
-					hysteresis = <1>;
-				};
-			};
 		};
 
 		Tdiode_tegra {
@@ -82,14 +73,6 @@
 
 			thermal-zone-params {
 				governor-name = "pid_thermal_gov";
-			};
-
-			trips {
-				trip@0 {
-					type = "critical";
-					temperature = <110000>;
-					hysteresis = <1>;
-				};
 			};
 		};
 	};

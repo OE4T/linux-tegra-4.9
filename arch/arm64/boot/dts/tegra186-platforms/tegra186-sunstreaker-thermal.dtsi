@@ -23,8 +23,8 @@
 
 / {
 	i2c@c250000 {
-		status = "okay";
 
+		status = "okay";
 		tegra_nct72: onsemi,nct72@4c {
 			status = "okay";
 			#thermal-sensor-cells = <1>;
@@ -35,16 +35,15 @@
 			offset = <0>;
 			conv-rate = <0x06>;
 			extended-rage = <1>;
-
 			interrupt-parent = <&tegra_gpio>;
 			interrupts = <TEMP_ALERT IRQ_TYPE_LEVEL_LOW>;
 			temp-alert-gpio = <&tegra_gpio TEMP_ALERT 0>;
 
-			/* vdd-supply configured in power tree */
+			/* vdd-supply defined in power tree */
 
 			loc {
 				/* set to maximum for not having local  shutdown */
-				shutdown-limit = <110>;
+				shutdown-limit = <190>;
 			};
 			ext {
 				shutdown-limit = <110>;
@@ -53,17 +52,16 @@
 	};
 
 	thermal-zones {
-		status = "okay";
-
 		Tboard_tegra {
 			status = "okay";
 			polling-delay = <0>;
-			polling-delay-passive = <1000>;
+			polling-delay-passive = <0>;
 			thermal-sensors = <&tegra_nct72 0>;
 
 			thermal-zone-params {
 				governor-name = "pid_thermal_gov";
 			};
+
 		};
 
 		Tdiode_tegra {
@@ -78,3 +76,4 @@
 		};
 	};
 };
+

@@ -293,12 +293,16 @@
 		gpio_can_stb = <&tegra_gpio TEGRA_GPIO(AA, 0) GPIO_ACTIVE_HIGH>;
 		gpio_can_en = <&tegra_gpio TEGRA_GPIO(AA, 1) GPIO_ACTIVE_HIGH>;
 		mram-params = <0 16 16 8 8 8 16 16 16>;
+		tx-config = <8 8 0 64>;
+		rx-config = <64 64 64>;
 	};
 
 	mttcan@c320000 {
 		gpio_can_stb = <&tegra_gpio TEGRA_GPIO(AA, 6) GPIO_ACTIVE_HIGH>;
 		gpio_can_en = <&tegra_gpio TEGRA_GPIO(AA, 7) GPIO_ACTIVE_HIGH>;
 		mram-params = <0 16 16 8 8 8 16 16 16>;
+		tx-config = <8 8 0 64>;
+		rx-config = <64 64 64>;
 	};
 	ahci-sata@3507000 {
 		status = "okay";
@@ -484,6 +488,23 @@
 			num-channel = <8>;
 			name-prefix = "d";
 			codec = "2.spdif-dit.2";
+		};
+	};
+
+	adsp_audio {
+		compr-ops = <0>;
+		status = "okay";
+		num-plugin = <2>;
+		plugin-info-1 {
+			plugin-name = "reverb";
+			firmware-name = "libnvreverbfx.elf";
+			widget-name = "REVERB";
+			param-type = <2>; /* SNDRV_CTL_ELEM_TYPE_INTEGER */
+		};
+		plugin-info-2 {
+			plugin-name = "wire";
+			firmware-name = "libnvwirefx.elf";
+			widget-name = "WIRE";
 		};
 	};
 };

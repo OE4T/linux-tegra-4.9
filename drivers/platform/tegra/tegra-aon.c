@@ -34,6 +34,7 @@
 struct tegra_aon {
 	struct mbox_controller mbox;
 	int hsp_master;
+	struct work_struct ch_rx_work;
 };
 
 struct tegra_aon_ivc_chan {
@@ -58,16 +59,16 @@ static void tegra_aon_notify_remote(struct ivc *ivc)
 	tegra_hsp_db_ring(ivc_chan->hsp_db);
 }
 
-static void hsp_irq_handler(int master, void *data)
+static void tegra_aon_rx_worker(struct work_struct *work)
 {
-	struct tegra_aon *aon;
 	struct mbox_chan *mbox_chan;
 	struct tegra_aon_ivc_chan *ivc_chan;
 	struct tegra_aon_mbox_msg msg;
 	u32 *buf;
 	int i;
+	struct tegra_aon *aon = container_of(work,
+					struct tegra_aon, ch_rx_work);
 
-	aon = (struct tegra_aon *)data;
 	for (i = 0; i < aon->mbox.num_chans; i++) {
 		mbox_chan = &aon->mbox.chans[i];
 		ivc_chan = (struct tegra_aon_ivc_chan *)mbox_chan->con_priv;
@@ -79,6 +80,13 @@ static void hsp_irq_handler(int master, void *data)
 			tegra_ivc_read_advance(&ivc_chan->ivc);
 		}
 	}
+}
+
+static void hsp_irq_handler(int master, void *data)
+{
+	struct tegra_aon *aon = data;
+
+	schedule_work(&aon->ch_rx_work);
 }
 
 #define NV(p) "nvidia," p
@@ -251,6 +259,9 @@ static int tegra_aon_probe(struct platform_device *pdev)
 	}
 
 	aon->hsp_master = hsp_data[0];
+
+	/* Init IVC channels ch_rx_work */
+	INIT_WORK(&aon->ch_rx_work, tegra_aon_rx_worker);
 
 	/* Listen to the remote's notification */
 	ret = tegra_hsp_db_add_handler(aon->hsp_master, hsp_irq_handler, aon);

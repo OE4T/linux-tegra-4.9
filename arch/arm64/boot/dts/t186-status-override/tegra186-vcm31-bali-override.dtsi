@@ -126,10 +126,6 @@
 		};
 	};
 
-	i2c@3190000 {
-		status = "disabled";
-	};
-
 	i2c@31b0000 {
 		status = "disabled";
 	};
@@ -547,36 +543,4 @@
 		status = "disabled";
 	};
 
-	isc-mgr.0 {
-		compatible = "nvidia,isc-mgr";
-		i2c-bus = <7>;
-		csi-port = <0>;
-		pwdn-gpios = < &tegra_gpio TEGRA_GPIO(S, 4) GPIO_ACTIVE_HIGH	/* GMSL_IN1_PDN */
-			&tegra_gpio TEGRA_GPIO(I, 4) GPIO_ACTIVE_HIGH		/* CSI1_TV_EN1 */
-			&tegra_gpio TEGRA_GPIO(I, 5) GPIO_ACTIVE_HIGH		/* CSI1_TV_EN2 */
-			&tegra_gpio TEGRA_GPIO(I, 6) GPIO_ACTIVE_HIGH		/* CSI1_TV_EN3 */
-			&tegra_gpio TEGRA_GPIO(I, 7) GPIO_ACTIVE_HIGH		/* CSI1_TV_EN4 */>;
-		status = "okay";
-	};
-
-	isc-mgr.1 {
-		compatible = "nvidia,isc-mgr";
-		i2c-bus = <6>;
-		csi-port = <2>;
-		pwdn-gpios = < &tegra_gpio TEGRA_GPIO(V, 5) GPIO_ACTIVE_HIGH	/* GMSL_IN2_PDN */
-			&tegra_gpio TEGRA_GPIO(Y, 1) GPIO_ACTIVE_HIGH		/* CSI2_TV_EN1 */
-			&tegra_gpio TEGRA_GPIO(Y, 5) GPIO_ACTIVE_HIGH		/* CSI2_TV_EN2 */
-			&tegra_gpio TEGRA_GPIO(B, 4) GPIO_ACTIVE_HIGH		/* CSI2_TV_EN3 */
-			&tegra_gpio TEGRA_GPIO(B, 5) GPIO_ACTIVE_HIGH		/* CSI2_TV_EN4 */>;
-		status = "okay";
-	};
-
-	isc-mgr.2 {
-		compatible = "nvidia,isc-mgr";
-		i2c-bus = <6>;
-		csi-port = <4>;
-		pwdn-gpios = < &tegra_gpio TEGRA_GPIO(A, 5) GPIO_ACTIVE_HIGH >;
-		default-power-on;
-		status = "okay";
-	};
 };

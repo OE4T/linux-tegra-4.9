@@ -714,4 +714,8 @@
 			status = "disabled";
 		};
 	};
+
+	csi_mipical {
+		status = "disabled";
+	};
 };

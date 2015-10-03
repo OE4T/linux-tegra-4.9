@@ -1091,11 +1091,11 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	tegra_sor_writel(sor, NV_SOR_SEQ_INST(0), 0x0080A001);
 	tegra_sor_writel(sor, NV_SOR_LANE_SEQ_CTL, 0x80000000);
-	tegra_sor_writel(sor, NV_SOR_PLL3, 0x00002000);
 	tegra_sor_writel(sor, NV_SOR_PLL2, 0x00020000);
 	tegra_sor_writel(sor, NV_SOR_PLL0, 0x00000000);
 
 	tegra_sor_writel(sor, NV_SOR_CSTM, 0x02005000);
+
 
 #else
 	tegra_sor_write_field(sor, NV_SOR_PLL2,
@@ -1313,11 +1313,7 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 	int out_type = dc->out->type;
 
 	if (out_type == TEGRA_DC_OUT_HDMI)
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 		reg_val |= NV_SOR_STATE1_ASY_PROTOCOL_SINGLE_TMDS_A;
-#else /* TESTING PURPOSE ONLY */
-		reg_val |= NV_SOR_STATE1_ASY_PROTOCOL_CUSTOM;
-#endif
 	else if ((out_type == TEGRA_DC_OUT_DP) ||
 		(out_type == TEGRA_DC_OUT_NVSR_DP) ||
 		(out_type == TEGRA_DC_OUT_FAKE_DP))

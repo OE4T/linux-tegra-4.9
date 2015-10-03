@@ -949,6 +949,16 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 		tegra_sor_writel(sor, NV_SOR_PLL1, 0x00301500);
 		tegra_sor_writel(sor, NV_SOR_LANE4_DRIVE_CURRENT(0),
 					0x33333333);
+	} else {
+		pr_info("Running on 2160p\n");
+		tegra_sor_writel(sor, NV_SOR_LANE_DRIVE_CURRENT(0),
+					0x333F3F3F);
+		tegra_sor_writel(sor, NV_SOR_PR(0), 0x00070707);
+		tegra_sor_writel(sor, NV_SOR_PLL0, 0x05050300);
+		tegra_sor_writel(sor, NV_SOR_PLL1, 0x00301300);
+		tegra_sor_writel(sor, NV_SOR_PLL3, 0x3C000440);
+		tegra_sor_writel(sor, NV_SOR_LANE4_DRIVE_CURRENT(0),
+					0x333F3F3F);
 	}
 	return 0;
 #endif
@@ -1936,6 +1946,23 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_BRICK_CLK);
+#else
+	/* Divide rate to half if rate higher than 340Mhz */
+	if (dc->mode.pclk > 340000000) {
+		int val = 0;
+		long rate = clk_get_rate(sor->sor_clk);
+		rate = rate >> 1;
+		pr_info("Modified sor_clk %ld\n", rate);
+
+		/* Set Rate to SOR_CLK*/
+		clk_set_rate(sor->sor_clk, rate);
+
+		val = NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G5_4 |
+			NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK;
+		tegra_sor_writel(hdmi->sor, NV_SOR_CLK_CNTRL, val);
+		usleep_range(250, 300); /* sor brick pll stabilization delay */
+	}
+
 #endif
 	tegra_dc_sor_attach(sor);
 
@@ -2124,6 +2151,7 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	clk_set_parent(sor->sor_clk, parent_clk);
 	/* Set Rate to SOR_CLK*/
 	clk_set_rate(sor->sor_clk, rate);
+
 	/* Enable SOR_CLK*/
 	tegra_sor_clk_enable(sor);
 	pr_info("rate get on sor_clk %ld\n", clk_get_rate(sor->sor_clk));

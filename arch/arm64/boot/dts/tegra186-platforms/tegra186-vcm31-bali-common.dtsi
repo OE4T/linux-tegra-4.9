@@ -124,7 +124,7 @@
 		};
 	};
 
-	i2c@3180000 { /* Tegra I2C3 (I2CC) */
+	i2c@c250000 { /* Tegra I2C8 (I2CC) */
 		status = "okay";
 		max9288@d0 {	/* RVC/parkman */
 			reg = <0xd0>;
@@ -137,8 +137,9 @@
 		};
 	};
 
-	i2c@3190000 { /* Tegra I2C4 (I2CD) */
+	i2c@3180000 { /* Tegra I2C3 (I2CD) */
 		status = "okay";
+		clock-frequency = <40000>;
 		apple {
 			reg = <0x20>;
 		};

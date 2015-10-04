@@ -305,35 +305,7 @@
 			status = "disabled";
 		};
 
-		nvdisplay@15210000 {
-			status = "disabled";
-		};
-
 		nvdisplay@15220000 {
-			status = "disabled";
-		};
-
-                sor {
-                        status = "disabled";
-
-                        hdmi-display {
-                                status = "disabled";
-                        };
-
-                        panel-s-edp-uhdtv-15-6 {
-                                status = "disabled";
-
-                                smartdimmer {
-                                        status = "disabled";
-                                };
-                        };
-                };
-
-		dpaux@155c0000 {
-			status = "disabled";
-		};
-
-		dpaux@15040000 {
 			status = "disabled";
 		};
 

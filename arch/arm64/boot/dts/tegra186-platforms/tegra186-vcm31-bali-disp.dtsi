@@ -16,7 +16,8 @@
 #include <dt-bindings/display/tegra-dc.h>
 #include <dt-bindings/display/tegra-panel.h>
 
-#include "tegra186-hdmi.dtsi"
+#include <dt-bindings/display/tegra-dc.h>
+#include <dt-bindings/gpio/tegra-gpio.h>
 
 / {
 	host1x {
@@ -30,29 +31,42 @@
 			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
 			nvidia,fb-win = <0>;
 			nvidia,dc-ctrlnum = <0>;
-			nvidia,dc-or-node = "/host1x/sor1";
+			nvidia,dc-or-node = "/host1x/sor";
+			//win-mask = <0x07>;
 		};
 
-		sor1 {
+		nvdisplay@15210000 {
+			status = "okay";
+			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
+			nvidia,emc-clk-rate = <300000000>;
+			nvidia,fb-bpp = <32>; /* bits per pixel */
+			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
+			nvidia,fb-win = <3>;
+			nvidia,dc-ctrlnum = <1>;
+			nvidia,dc-or-node = "/host1x/sor1";
+			//win-mask = <0x38>;
+		};
+
+		sor {
 			status = "okay";
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
+                        nvidia,ddc-i2c-bus = <&dp_aux_ch0_i2c>;
+			//nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(?, ?) 0>;
 
 			hdmi-display {
 				status = "okay";
 				compatible = "hdmi,display";
+
 				disp-default-out {
 					nvidia,out-type = <TEGRA_DC_OUT_HDMI>;
-					//nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_LOW>;
+					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
 					nvidia,out-parent-clk = "plld2";
 					nvidia,out-align = <TEGRA_DC_ALIGN_MSB>;
 					nvidia,out-order = <TEGRA_DC_ORDER_RED_BLUE>;
 					nvidia,out-xres = <1920>;
 					nvidia,out-yres = <720>;
 				};
-				/*
-				 *  default display timing for test
-				 *  (only the first entry will be effective)
-				 */
+
 				display-timings {
 					1920x720-32 {
 						clock-frequency = <89600000>;
@@ -67,10 +81,56 @@
 						nvidia,h-ref-to-sync = <1>;
 						nvidia,v-ref-to-sync = <1>;
 					};
+				};
+			};
+		};
 
+
+		sor1 {
+			status = "okay";
+			nvidia,xbar-ctrl = <2 1 0 3 4>;
+			nvidia,ddc-i2c-bus = <&dp_aux_ch1_i2c>;
+			//nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(?, ?) 0>;
+
+			hdmi-display {
+				status = "okay";
+				compatible = "hdmi,display";
+
+				disp-default-out {
+					nvidia,out-type = <TEGRA_DC_OUT_HDMI>;
+					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
+					nvidia,out-parent-clk = "plld2";
+					nvidia,out-align = <TEGRA_DC_ALIGN_MSB>;
+					nvidia,out-order = <TEGRA_DC_ORDER_RED_BLUE>;
+					nvidia,out-xres = <1920>;
+					nvidia,out-yres = <720>;
 				};
 
+				display-timings {
+					1920x720-32 {
+						clock-frequency = <89600000>;
+						hactive = <1920>;
+						vactive = <720>;
+						hfront-porch = <0>;
+						hback-porch = <88>;
+						hsync-len = <40>;
+						vfront-porch = <2>;
+						vback-porch = <5>;
+						vsync-len = <2>;
+						nvidia,h-ref-to-sync = <1>;
+						nvidia,v-ref-to-sync = <1>;
+					};
+				};
 			};
+
+		};
+
+		dpaux@155c0000 {
+			status = "okay";
+		};
+
+		dpaux@15040000 {
+			status = "okay";
 		};
 	};
 };

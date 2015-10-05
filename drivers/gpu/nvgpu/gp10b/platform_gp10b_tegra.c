@@ -220,6 +220,8 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 	/* ptimer scaling constant */
 	.ptimerscaling10x	= 10,
 
+	.ch_wdt_timeout_ms = 5000,
+
 	.probe = gp10b_tegra_probe,
 	.late_probe = gp10b_tegra_late_probe,
 

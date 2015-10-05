@@ -1310,6 +1310,7 @@
 		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_SATA_P(0)>;
 		phy-names = "sata-phy";
 		nvidia,disable-features = "devslp";
+		nvidia,link-flags = "min_power";
 		status = "disabled";
 	};
 

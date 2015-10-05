@@ -24,6 +24,7 @@ static void tegra_ahci_power_off(struct ahci_host_priv *hpriv);
 static int tegra_ahci_controller_init(struct ahci_host_priv *hpriv);
 static void tegra_ahci_controller_deinit(struct ahci_host_priv *hpriv);
 static int tegra_ahci_quirks(struct ahci_host_priv *hpriv);
+static int tegra_ahci_disable_features(struct ahci_host_priv *hpriv);
 static struct ahci_host_priv *
 tegra_ahci_platform_get_resources(struct tegra_ahci_priv *);
 #ifdef CONFIG_PM_RUNTIME
@@ -73,6 +74,7 @@ static int tegra_ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 	struct ata_device *dev;
 	int ret = 0;
 	u32 port_status = 0;
+	enum tegra_ahci_port_runtime_status lpm_state;
 	int i;
 
 	ata_for_each_link(link, ap, PMP_FIRST) {
@@ -85,24 +87,36 @@ static int tegra_ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 			bool dipm = ata_id_has_dipm(dev->id) &&
 				(!(link->ap->flags & ATA_FLAG_NO_DIPM));
 
+			if (ap->target_lpm_policy == ATA_LPM_MIN_POWER) {
+				if ((hpriv->cap2 & HOST_CAP2_SDS) &&
+				(hpriv->cap2 & HOST_CAP2_SADM) &&
+				(link->device->flags & ATA_DFLAG_DEVSLP))
+					lpm_state =
+						TEGRA_AHCI_PORT_RUNTIME_DEVSLP;
+				else
+					lpm_state =
+						TEGRA_AHCI_PORT_RUNTIME_SLUMBER;
+			} else if (ap->target_lpm_policy == ATA_LPM_MED_POWER) {
+				lpm_state = TEGRA_AHCI_PORT_RUNTIME_PARTIAL;
+			} else {
+				lpm_state = TEGRA_AHCI_PORT_RUNTIME_ACTIVE;
+			}
+
 			if (hipm || dipm) {
-				for (i = 0; i < TEGRA_AHCI_SLUMBER_TIMEOUT;
-									i++) {
+				for (i = 0; i < TEGRA_AHCI_LPM_TIMEOUT; i++) {
 					port_status = tegra_ahci_bar5_readl(
 						hpriv, T_AHCI_PORT_PXSSTS);
 					port_status =
 						(port_status &
 						T_AHCI_PORT_PXSSTS_IPM_MASK)
 						>> T_AHCI_PORT_PXSSTS_IPM_SHIFT;
-					if (port_status <
-						TEGRA_AHCI_PORT_RUNTIME_SLUMBER)
+					if (port_status < lpm_state)
 						mdelay(10);
 					else
 						break;
 				}
 
-				if (port_status <
-					TEGRA_AHCI_PORT_RUNTIME_SLUMBER) {
+				if (port_status < lpm_state) {
 					ata_link_err(link,
 						"Link didn't enter LPM\n");
 					return -EBUSY;
@@ -177,7 +191,7 @@ static struct ata_port_operations ahci_tegra_port_ops = {
 	.port_resume	= tegra_ahci_port_resume,
 };
 
-static const struct ata_port_info ahci_tegra_port_info = {
+static struct ata_port_info ahci_tegra_port_info = {
 	.flags		= AHCI_FLAG_COMMON,
 	.pio_mask	= ATA_PIO4,
 	.udma_mask	= ATA_UDMA6,
@@ -370,6 +384,8 @@ static int tegra_ahci_elpg_exit(struct ata_host *host)
 	struct ahci_host_priv *hpriv =  host->private_data;
 	struct tegra_ahci_priv *tegra = hpriv->plat_data;
 	int ret = 0;
+	u32 val;
+	u32 mask;
 	int i;
 
 	/* 1. unpowergate */
@@ -391,8 +407,12 @@ static int tegra_ahci_elpg_exit(struct ata_host *host)
 			T_SATA0_CFG_POWER_GATE);
 
 	/* 3. If devslp asserted, de-assert devslp */
-	if (tegra->devslp_override)
+	if (tegra->devslp_override) {
 		tegra_ahci_override_devslp(hpriv, false);
+
+		val = mask = MDAT_TIMER_AFTER_PG_VALID;
+		tegra_ahci_aux_update(hpriv, val, mask, SATA_AUX_SPARE_CFG0_0);
+	}
 
 	/* 4. Program a register in the PMC to indicate to SATA that it is
 	 *    entering power gating. This shall drive the pmc2sata_pg_info
@@ -401,6 +421,12 @@ static int tegra_ahci_elpg_exit(struct ata_host *host)
 	tegra_pmc_sata_pwrgt_update(PMC_IMPL_SATA_PWRGT_0_PG_INFO,
 						~PMC_IMPL_SATA_PWRGT_0_PG_INFO);
 
+	if (tegra->devslp_override) {
+		tegra->devslp_override = false;
+		val = mask = T_SATA0_CFG_POWER_GATE_POWER_UNGATE_COMP;
+		tegra_ahci_scfg_update(hpriv, val, mask,
+						T_SATA0_CFG_POWER_GATE);
+	}
 	/*
 	 * 5. Program the UPHY_LANE registers to bring up UPHY from IDDQ
 	 */
@@ -693,6 +719,12 @@ static int tegra_ahci_controller_init(struct ahci_host_priv *hpriv)
 			T_SATA0_CFG_PHY_1_PAD_PLL_IDDQ_EN);
 	tegra_ahci_scfg_update(hpriv, val, val, T_SATA0_CFG_PHY_1);
 
+	/*
+	 *  Indicate Sata only has the capability to enter DevSleep
+	 * from slumber link.
+	 */
+	tegra_ahci_aux_update(hpriv, DESO_SUPPORT, DESO_SUPPORT,
+						SATA_AUX_MISC_CNTL_1_0);
 	/* Enabling IPFS Clock Gating */
 	mask = SATA_CONFIGURATION_CLK_OVERRIDE;
 	val = (u32) ~SATA_CONFIGURATION_CLK_OVERRIDE;
@@ -701,7 +733,9 @@ static int tegra_ahci_controller_init(struct ahci_host_priv *hpriv)
 	val = IP_INT_MASK;
 	tegra_ahci_sata_update(hpriv, val, val, SATA_INTR_MASK_0);
 
-	return 0;
+	ret = tegra_ahci_disable_features(hpriv);
+
+	return ret;
 }
 
 static void tegra_ahci_controller_deinit(struct ahci_host_priv *hpriv)
@@ -714,6 +748,75 @@ static void tegra_ahci_controller_deinit(struct ahci_host_priv *hpriv)
 		tegra->soc_data->ops.tegra_ahci_power_off(hpriv);
 	pm_runtime_put_sync(dev);
 	pm_runtime_disable(dev);
+}
+
+static void tegra_ahci_disable_devslp(struct ahci_host_priv *hpriv)
+{
+	u32 val = 0;
+	u32 mask = SDS_SUPPORT;
+
+	val = 0xFFFFFFFF & ~SDS_SUPPORT;
+	tegra_ahci_aux_update(hpriv, val, mask, SATA_AUX_MISC_CNTL_1_0);
+}
+
+static void tegra_ahci_disable_hipm(struct ahci_host_priv *hpriv)
+{
+	u32 val = 0;
+	u32 mask = T_SATA0_AHCI_HBA_CAP_BKDR_SALP;
+
+	val = 0xFFFFFFFF & ~T_SATA0_AHCI_HBA_CAP_BKDR_SALP;
+	tegra_ahci_scfg_update(hpriv, val, mask, T_SATA0_AHCI_HBA_CAP_BKDR);
+}
+
+static void tegra_ahci_disable_ncq(struct ahci_host_priv *hpriv)
+{
+	u32 val = 0;
+	u32 mask = T_SATA0_AHCI_HBA_CAP_BKDR_SNCQ;
+
+	val = 0xFFFFFFFF & ~T_SATA0_AHCI_HBA_CAP_BKDR_SNCQ;
+	tegra_ahci_scfg_update(hpriv, val, mask, T_SATA0_AHCI_HBA_CAP_BKDR);
+}
+
+static int tegra_ahci_disable_features(struct ahci_host_priv *hpriv)
+{
+	struct tegra_ahci_priv *tegra = hpriv->plat_data;
+	struct platform_device *pdev = tegra->pdev;
+	struct device *dev = &pdev->dev;
+	struct device_node *np = dev->of_node;
+	struct property *prop;
+	const char *feature;
+	bool devslp_enabled = true;
+	int ret = 0;
+
+	if (of_property_count_strings(np, "nvidia,disable-features") <= 0)
+		return 0;
+
+	of_property_for_each_string(np, "nvidia,disable-features", prop,
+						feature) {
+		if (!strcmp(feature, "devslp")) {
+			tegra_ahci_disable_devslp(hpriv);
+			devslp_enabled = false;
+		} else if (!strcmp(feature, "hipm")) {
+			tegra_ahci_disable_hipm(hpriv);
+		} else if (!strcmp(feature, "ncq")) {
+			tegra_ahci_disable_ncq(hpriv);
+		} else if (!strcmp(feature, "dipm")) {
+			ahci_tegra_port_info.flags |= ATA_FLAG_NO_DIPM;
+		}
+	}
+
+	if (devslp_enabled) {
+		if (tegra->devslp_pin) {
+			ret = pinctrl_select_state(tegra->devslp_pin,
+							tegra->devslp_active);
+			if (ret < 0) {
+				dev_err(&pdev->dev,
+					"setting devslp pin state failed\n");
+				return ret;
+			}
+		}
+	}
+	return ret;
 }
 
 static int tegra_ahci_quirks(struct ahci_host_priv *hpriv)
@@ -842,6 +945,45 @@ err_out:
 	return ret;
 }
 
+static int tegra_ahci_set_lpm(struct ahci_host_priv *hpriv)
+{
+	struct tegra_ahci_priv *tegra = hpriv->plat_data;
+	struct platform_device *pdev = tegra->pdev;
+	struct device *dev = &pdev->dev;
+	struct ata_host *host = dev_get_drvdata(dev);
+	struct device_node *np = dev->of_node;
+	struct property *prop;
+	const char *feature;
+	enum ata_lpm_policy policy = ATA_LPM_MAX_POWER;
+	int ret = 0;
+	int i;
+
+	if (of_property_count_strings(np, "nvidia,link-flags") <= 0)
+		return 0;
+
+	of_property_for_each_string(np, "nvidia,link-flags", prop,
+			feature) {
+		if (!strcmp(feature, "min_power"))
+			policy = ATA_LPM_MIN_POWER;
+		else if (!strcmp(feature, "max_power"))
+			policy = ATA_LPM_MAX_POWER;
+		else if (!strcmp(feature, "med_power"))
+			policy = ATA_LPM_MED_POWER;
+	}
+
+	if (policy > ATA_LPM_MAX_POWER) {
+		for (i = 0; i < host->n_ports; i++) {
+			struct ata_port *ap = host->ports[i];
+
+			ap->target_lpm_policy = policy;
+			ata_port_schedule_eh(ap);
+		}
+
+	}
+	return ret;
+}
+
+
 static	struct ahci_host_priv *
 tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 {
@@ -853,10 +995,35 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 	int i;
 
 	hpriv = devm_kzalloc(dev, sizeof(*hpriv), GFP_KERNEL);
-	if (!hpriv)
+	if (!hpriv) {
+		ret = PTR_ERR(hpriv);
 		goto err_out;
+	}
 
 	hpriv->plat_data = tegra;
+
+	tegra->devslp_pin = devm_pinctrl_get(dev);
+	 if (IS_ERR(tegra->devslp_pin)) {
+		dev_warn(dev, "Missing devslp pinctrl\n");
+		tegra->devslp_pin = NULL;
+	}
+
+	if (tegra->devslp_pin) {
+		tegra->devslp_active = pinctrl_lookup_state(tegra->devslp_pin,
+						"devslp_active");
+		if (IS_ERR(tegra->devslp_active)) {
+			dev_err(dev, "Missing devslp-active state\n");
+			ret = PTR_ERR(tegra->devslp_active);
+			goto err_out;
+		}
+		tegra->devslp_pullup = pinctrl_lookup_state(tegra->devslp_pin,
+						"devslp_pullup");
+		if (IS_ERR(tegra->devslp_pullup)) {
+			dev_err(dev, "Missing devslp-pullup state\n");
+			ret = PTR_ERR(tegra->devslp_pullup);
+			goto err_out;
+		}
+	}
 
 	ret = tegra_ahci_platform_get_memory_resources(tegra);
 	if (ret)
@@ -968,6 +1135,13 @@ static int tegra_ahci_probe(struct platform_device *pdev)
 	ret = ahci_platform_init_host(pdev, hpriv, &ahci_tegra_port_info);
 	if (ret)
 		goto poweroff_controller;
+
+	ret = tegra_ahci_set_lpm(hpriv);
+	if (ret) {
+		dev_err(&pdev->dev,
+		"Failed to set lpm\n");
+		goto poweroff_controller;
+	}
 
 	ret = pm_runtime_set_active(&pdev->dev);
 	if (ret) {

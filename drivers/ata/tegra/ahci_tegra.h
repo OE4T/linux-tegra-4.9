@@ -40,6 +40,11 @@
 
 #define SATA_AUX_MISC_CNTL_1_0				0x8
 #define DEVSLP_OVERRIDE					BIT(17)
+#define SDS_SUPPORT					BIT(13)
+#define DESO_SUPPORT					BIT(15)
+
+#define SATA_AUX_SPARE_CFG0_0				0x18
+#define MDAT_TIMER_AFTER_PG_VALID			BIT(14)
 
 /* IPFS Register Space */
 #define SATA_CONFIGURATION_0				0x180
@@ -81,6 +86,7 @@
 #define T_SATA0_AHCI_HBA_CAP_BKDR_SLUMBER_ST_CAP	BIT(14)
 #define T_SATA0_AHCI_HBA_CAP_BKDR_SALP			BIT(26)
 #define T_SATA0_AHCI_HBA_CAP_BKDR_SUPP_PM		BIT(17)
+#define T_SATA0_AHCI_HBA_CAP_BKDR_SNCQ			BIT(30)
 
 #define T_SATA_CFG_PHY_0				0x120
 #define T_SATA_CFG_PHY_0_MASK_SQUELCH			BIT(24)
@@ -120,6 +126,7 @@
 
 #define T_SATA0_CFG_POWER_GATE				0x4AC
 #define T_SATA0_CFG_POWER_GATE_SSTS_RESTORED		BIT(23)
+#define T_SATA0_CFG_POWER_GATE_POWER_UNGATE_COMP	BIT(1)
 
 
 /* AHCI registers */
@@ -137,7 +144,7 @@
 
 #define TEGRA_AHCI_MAX_CLKS				2
 #define TEGRA_AHCI_DEFAULT_IDLE_TIME			10000
-#define TEGRA_AHCI_SLUMBER_TIMEOUT			50
+#define TEGRA_AHCI_LPM_TIMEOUT				500
 
 enum tegra_sata_bars {
 	TEGRA_SATA_IPFS = 0,
@@ -167,6 +174,9 @@ struct tegra_ahci_priv {
 	struct clk		   *sata_oob_clk;
 	struct clk		   *pllp_clk; /* sata_oob clk parent */
 	struct clk		   *pllp_uphy_clk; /* sata_clk parent */
+	struct pinctrl		   *devslp_pin;
+	struct pinctrl_state	   *devslp_active;
+	struct pinctrl_state	   *devslp_pullup;
 	bool			   devslp_override;
 	bool			   devslp_pinmux_override;
 };

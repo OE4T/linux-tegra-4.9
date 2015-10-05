@@ -683,7 +683,6 @@ int nvhost_module_init(struct platform_device *dev)
 	int i = 0, err = 0;
 	struct kobj_attribute *attr = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	int partition_id = -1;
 	struct device_node *dn;
 	struct generic_pm_domain *gpd;
 
@@ -770,28 +769,31 @@ int nvhost_module_init(struct platform_device *dev)
 		return PTR_ERR(gpd);
 
 	dn = gpd->of_node;
-	of_property_read_u32(dn, "partition-id", &partition_id);
+
+	/* Update partition-id from DT and for failure case assign -1 id */
+	if (of_property_read_u32(dn, "partition-id", &pdata->powergate_id))
+		pdata->powergate_id = -1;
 
 	/* needed to WAR MBIST issue */
 	if (pdata->poweron_toggle_slcg) {
 		pdata->toggle_slcg_notifier.notifier_call =
 			&nvhost_module_toggle_slcg;
-		if (partition_id != -1)
-			slcg_register_notifier(partition_id,
-					       &pdata->toggle_slcg_notifier);
+		if (pdata->powergate_id != -1)
+			slcg_register_notifier(pdata->powergate_id,
+				&pdata->toggle_slcg_notifier);
 	}
 
 	/* Ensure that the above or device specific MBIST WAR gets applied */
 	if (pdata->poweron_toggle_slcg || pdata->slcg_notifier_enable) {
-		do_powergate_locked(partition_id);
-		do_unpowergate_locked(partition_id);
+		do_powergate_locked(pdata->powergate_id);
+		do_unpowergate_locked(pdata->powergate_id);
 	}
 
 	/* power gate units that we can power gate */
 	if (pdata->can_powergate) {
-		do_powergate_locked(partition_id);
+		do_powergate_locked(pdata->powergate_id);
 	} else {
-		do_unpowergate_locked(partition_id);
+		do_unpowergate_locked(pdata->powergate_id);
 	}
 
 	/* set pm runtime delays */
@@ -1119,18 +1121,14 @@ static int nvhost_module_suspend(struct device *dev)
 static int nvhost_module_power_on(struct generic_pm_domain *domain)
 {
 	struct nvhost_device_data *pdata;
-	int partition_id = -1;
-	struct device_node *dn;
 
 	pdata = container_of(domain, struct nvhost_device_data, pd);
-	dn = domain->of_node;
-	of_property_read_u32(dn, "partition-id", &partition_id);
 
 	mutex_lock(&pdata->lock);
 	if (pdata->can_powergate) {
 		trace_nvhost_module_power_on(pdata->pdev->name,
-			partition_id);
-		do_unpowergate_locked(partition_id);
+			pdata->powergate_id);
+		do_unpowergate_locked(pdata->powergate_id);
 	}
 
 	mutex_unlock(&pdata->lock);
@@ -1141,18 +1139,14 @@ static int nvhost_module_power_on(struct generic_pm_domain *domain)
 static int nvhost_module_power_off(struct generic_pm_domain *domain)
 {
 	struct nvhost_device_data *pdata;
-	int partition_id = -1;
-	struct device_node *dn;
 
 	pdata = container_of(domain, struct nvhost_device_data, pd);
-	dn = domain->of_node;
-	of_property_read_u32(dn, "partition-id", &partition_id);
 
 	mutex_lock(&pdata->lock);
 	if (pdata->can_powergate) {
 		trace_nvhost_module_power_off(pdata->pdev->name,
-			partition_id);
-		do_powergate_locked(partition_id);
+			pdata->powergate_id);
+		do_powergate_locked(pdata->powergate_id);
 	}
 	mutex_unlock(&pdata->lock);
 

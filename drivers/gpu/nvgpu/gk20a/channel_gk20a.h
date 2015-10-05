@@ -38,8 +38,6 @@ struct gk20a_fence;
 #include "gr_gk20a.h"
 #include "fence_gk20a.h"
 
-#define NVGPU_CHANNEL_WATCHDOG_DEFAULT_TIMEOUT_MS	5000
-
 struct gpfifo {
 	u32 entry0;
 	u32 entry1;

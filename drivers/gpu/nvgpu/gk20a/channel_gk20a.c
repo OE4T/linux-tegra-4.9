@@ -1476,8 +1476,11 @@ bool gk20a_channel_update_and_check_timeout(struct channel_gk20a *ch,
 
 static u32 gk20a_get_channel_watchdog_timeout(struct channel_gk20a *ch)
 {
-	if (ch->g->timeouts_enabled && ch->g->ch_wdt_enabled)
-		return NVGPU_CHANNEL_WATCHDOG_DEFAULT_TIMEOUT_MS;
+	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
+
+	if (ch->g->timeouts_enabled && ch->g->ch_wdt_enabled &&
+				platform->ch_wdt_timeout_ms)
+		return platform->ch_wdt_timeout_ms;
 	else
 		return (u32)MAX_SCHEDULE_TIMEOUT;
 }

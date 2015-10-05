@@ -79,6 +79,9 @@ struct gk20a_platform {
 	/* Adaptative ELPG: true = enable flase = disable */
 	bool enable_aelpg;
 
+	/* Timeout for per-channel watchdog (in mS) */
+	u32 ch_wdt_timeout_ms;
+
 	/* Enable SMMU bypass by default */
 	bool bypass_smmu;
 

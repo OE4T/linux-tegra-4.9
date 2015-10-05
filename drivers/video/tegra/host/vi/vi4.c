@@ -19,6 +19,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
+#include <linux/reset.h>
 #include <linux/slab.h>
 #include <linux/tegra_pm_domains.h>
 
@@ -26,6 +27,17 @@
 #include "nvhost_acm.h"
 #include "vi/vi4.h"
 #include "t186/t186.h"
+
+/* NV host device */
+void nvhost_vi4_reset(struct platform_device *pdev)
+{
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
+
+	if (!IS_ERR(vi->vi_reset))
+		reset_control_reset(vi->vi_reset);
+	if (!IS_ERR(vi->vi_tsc_reset))
+		reset_control_reset(vi->vi_tsc_reset);
+}
 
 /* Platform device */
 static struct of_device_id tegra_vi4_of_match[] = {
@@ -54,6 +66,9 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 	vi = devm_kzalloc(&pdev->dev, sizeof(*vi), GFP_KERNEL);
 	if (unlikely(vi == NULL))
 		return -ENOMEM;
+
+	vi->vi_reset = devm_reset_control_get(&pdev->dev, "vi");
+	vi->vi_tsc_reset = devm_reset_control_get(&pdev->dev, "tsctnvi");
 
 	nvhost_set_private_data(pdev, vi);
 	err = nvhost_client_device_get_resources(pdev);

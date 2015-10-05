@@ -209,6 +209,7 @@ struct nvhost_device_data t18_vi_info = {
 	.prepare_poweroff	= nvhost_vi_notify_prepare_poweroff,
 	.finalize_poweron	= nvhost_vi_notify_finalize_poweron,
 #endif
+	.reset			= nvhost_vi4_reset,
 	.vm_regs		= {{0x4000 * 4, true},
 				   {0x8000 * 4, true},
 				   {0xc000 * 4, true},

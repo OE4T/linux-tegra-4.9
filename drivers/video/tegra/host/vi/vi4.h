@@ -26,6 +26,8 @@ extern const struct file_operations tegra_vi_notify_ctrl_ops;
 int nvhost_vi_notify_prepare_poweroff(struct platform_device *pdev);
 int nvhost_vi_notify_finalize_poweron(struct platform_device *pdev);
 
+struct reset_control;
+
 int nvhost_vi_notify_dev_probe(struct platform_device *);
 int nvhost_vi_notify_dev_remove(struct platform_device *);
 
@@ -33,6 +35,10 @@ struct nvhost_vi_dev {
 #ifdef CONFIG_TEGRA_VI_NOTIFY
 	struct vi_notify_dev *notify;
 #endif
+	struct reset_control *vi_reset;
+	struct reset_control *vi_tsc_reset;
 };
+
+void nvhost_vi4_reset(struct platform_device *);
 
 #endif

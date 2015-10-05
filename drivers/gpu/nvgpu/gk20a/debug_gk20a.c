@@ -418,6 +418,9 @@ void gk20a_debug_init(struct platform_device *pdev)
 	debugfs_create_u32("trace_cmdbuf", S_IRUGO|S_IWUSR, platform->debugfs,
 			&gk20a_debug_trace_cmdbuf);
 
+	debugfs_create_u32("ch_wdt_timeout_ms", S_IRUGO|S_IWUSR,
+			platform->debugfs, &platform->ch_wdt_timeout_ms);
+
 #if defined(GK20A_DEBUG)
 	debugfs_create_u32("dbg_mask", S_IRUGO|S_IWUSR, platform->debugfs,
 			&gk20a_dbg_mask);

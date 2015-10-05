@@ -1573,6 +1573,21 @@ static void gk20a_channel_timeout_stop(struct channel_gk20a *ch)
 	mutex_unlock(&ch->timeout.lock);
 }
 
+void gk20a_channel_timeout_stop_all_channels(struct gk20a *g)
+{
+	u32 chid;
+	struct fifo_gk20a *f = &g->fifo;
+
+	for (chid = 0; chid < f->num_channels; chid++) {
+		struct channel_gk20a *ch = &f->channel[chid];
+
+		if (gk20a_channel_get(ch)) {
+			gk20a_channel_timeout_stop(ch);
+			gk20a_channel_put(ch);
+		}
+	}
+}
+
 static void gk20a_channel_timeout_handler(struct work_struct *work)
 {
 	struct channel_gk20a_job *job;

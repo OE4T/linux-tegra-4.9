@@ -34,6 +34,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/tegra-powergate.h>
 #include <linux/tegra_pm_domains.h>
+#include <linux/reset.h>
 
 #include <sound/core.h>
 #include <sound/initval.h>
@@ -43,6 +44,7 @@
 
 
 static struct of_device_id tegra_disb_pd[] = {
+	{ .compatible = "nvidia,tegra186-disb-pd", },
 	{ .compatible = "nvidia,tegra210-disb-pd", },
 	{ .compatible = "nvidia,tegra132-disb-pd", },
 	{ .compatible = "nvidia,tegra124-disb-pd", },
@@ -86,6 +88,11 @@ struct hda_tegra {
 	int partition_id;
 	void __iomem *regs;
 	struct work_struct probe_work;
+#if defined(CONFIG_COMMON_CLK)
+	struct reset_control *hda_rst;
+	struct reset_control *hda2codec_2x_rst;
+	struct reset_control *hda2hdmi_rst;
+#endif
 };
 
 #ifdef CONFIG_PM
@@ -228,6 +235,12 @@ static int hda_tegra_enable_clocks(struct hda_tegra *data)
 
 	tegra_unpowergate_partition(data->partition_id);
 
+#if defined(CONFIG_COMMON_CLK)
+	reset_control_reset(data->hda_rst);
+	reset_control_reset(data->hda2codec_2x_rst);
+	reset_control_reset(data->hda2hdmi_rst);
+#endif
+
 	rc = clk_prepare_enable(data->hda_clk);
 	if (rc)
 		return rc;
@@ -249,13 +262,13 @@ disable_hda:
 }
 
 #ifdef CONFIG_PM_SLEEP
-static void hda_tegra_disable_clocks(struct hda_tegra *data)
+static void hda_tegra_disable_clocks(struct hda_tegra *hda)
 {
-	clk_disable_unprepare(data->hda2hdmi_clk);
-	clk_disable_unprepare(data->hda2codec_2x_clk);
-	clk_disable_unprepare(data->hda_clk);
+	clk_disable_unprepare(hda->hda2hdmi_clk);
+	clk_disable_unprepare(hda->hda2codec_2x_clk);
+	clk_disable_unprepare(hda->hda_clk);
 
-	tegra_powergate_partition(data->partition_id);
+	tegra_powergate_partition(hda->partition_id);
 }
 
 /*
@@ -383,6 +396,31 @@ static int hda_tegra_init_chip(struct azx *chip, struct platform_device *pdev)
 	struct device *dev = hda->dev;
 	struct resource *res;
 	int err;
+
+#if defined(CONFIG_COMMON_CLK)
+	hda->hda_rst = devm_reset_control_get(&pdev->dev, "hda_rst");
+	if (IS_ERR(hda->hda_rst)) {
+		dev_err(dev, "Reset control is not found, err: %ld\n",
+				PTR_ERR(hda->hda_rst));
+		return PTR_ERR(hda->hda_rst);
+	}
+
+	hda->hda2codec_2x_rst =
+		devm_reset_control_get(&pdev->dev, "hda2codec_2x_rst");
+	if (IS_ERR(hda->hda2codec_2x_rst)) {
+		dev_err(dev, "Reset control is not found, err: %ld\n",
+				PTR_ERR(hda->hda2codec_2x_rst));
+		return PTR_ERR(hda->hda2codec_2x_rst);
+	}
+
+	hda->hda2hdmi_rst =
+		devm_reset_control_get(&pdev->dev, "hda2hdmi_rst");
+	if (IS_ERR(hda->hda2hdmi_rst)) {
+		dev_err(dev, "Reset control is not found, err: %ld\n",
+				PTR_ERR(hda->hda2hdmi_rst));
+		return PTR_ERR(hda->hda2hdmi_rst);
+	}
+#endif
 
 	hda->hda_clk = devm_clk_get(dev, "hda");
 	if (IS_ERR(hda->hda_clk)) {
@@ -561,7 +599,6 @@ static int hda_tegra_probe(struct platform_device *pdev)
 	struct azx *chip;
 	struct hda_tegra *hda;
 	int err;
-	const unsigned int driver_flags = 0;
 
 	hda = devm_kzalloc(&pdev->dev, sizeof(*hda), GFP_KERNEL);
 	if (!hda)
@@ -602,6 +639,8 @@ static void hda_tegra_probe_work(struct work_struct *work)
 	struct hda_tegra *hda = container_of(work, struct hda_tegra, probe_work);
 	struct azx *chip = &hda->chip;
 	struct platform_device *pdev = to_platform_device(hda->dev);
+	struct device_node *np = pdev->dev.of_node;
+	int num_codec_slots = 0;
 	int err;
 
 	err = hda_tegra_first_init(chip, pdev);
@@ -610,8 +649,12 @@ static void hda_tegra_probe_work(struct work_struct *work)
 
 	tegra_pd_add_device(hda->dev);
 
+	if (of_property_read_u32(np, "nvidia,max-codec-slot",
+			&num_codec_slots) < 0)
+		num_codec_slots = 0;
+
 	/* create codec instances */
-	err = azx_probe_codecs(chip, 0);
+	err = azx_probe_codecs(chip, num_codec_slots);
 	if (err < 0)
 		goto out_free;
 

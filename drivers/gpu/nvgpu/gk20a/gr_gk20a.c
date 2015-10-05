@@ -1622,11 +1622,11 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	if (!ctx_ptr)
 		return -ENOMEM;
 
-	if (g->ops.gr.enable_cde_in_fecs && c->cde)
-		g->ops.gr.enable_cde_in_fecs(ctx_ptr);
-
 	for (i = 0; i < gr->ctx_vars.golden_image_size / 4; i++)
 		gk20a_mem_wr32(ctx_ptr, i, gr->ctx_vars.local_golden_image[i]);
+
+	if (g->ops.gr.enable_cde_in_fecs && c->cde)
+		g->ops.gr.enable_cde_in_fecs(ctx_ptr);
 
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_num_save_ops_o(), 0, 0);
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_num_restore_ops_o(), 0, 0);

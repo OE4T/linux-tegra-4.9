@@ -571,7 +571,7 @@ enum uphy_pll_state {
 	UPHY_PLL_POWER_UP_HW_SEQ,
 };
 
-const char *uphy_pll_states[] = {
+static const char * const uphy_pll_states[] = {
 	"UPHY_PLL_POWER_DOWN",
 	"UPHY_PLL_POWER_UP_PARTIAL",
 	"UPHY_PLL_POWER_UP_FULL",
@@ -584,7 +584,7 @@ enum source_pll_state {
 	PLL_POWER_UP_HW_SEQ, /* only valid for plle */
 };
 
-const char *source_pll_states[] = {
+static const char * const source_pll_states[] = {
 	"PLL_POWER_DOWN",
 	"PLL_POWER_UP_SW_CTL",
 	"PLL_POWER_UP_HW_SEQ",
@@ -3741,7 +3741,8 @@ static ssize_t hsic_power_store(struct device *dev,
 
 	return n;
 }
-DEVICE_ATTR(hsic_power, S_IRUGO | S_IWUSR, hsic_power_show, hsic_power_store);
+static DEVICE_ATTR(hsic_power, S_IRUGO | S_IWUSR,
+		   hsic_power_show, hsic_power_store);
 
 static struct attribute *padctl_uphy_attrs[] = {
 	&dev_attr_hsic_power.attr,

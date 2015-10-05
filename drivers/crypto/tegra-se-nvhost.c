@@ -769,7 +769,7 @@ static int tegra_se_send_sha_data(struct tegra_se_dev *se_dev,
 
 	sha_opcode_start_addr = SE4_SHA_CONFIG_REG_OFFSET;
 
-	cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev, SZ_4K, &cmdbuf_iova,
+	cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent, SZ_4K, &cmdbuf_iova,
 				GFP_KERNEL, &attrs);
 	if (!cmdbuf_cpuvaddr)
 		return -ENOMEM;
@@ -802,7 +802,7 @@ static int tegra_se_send_sha_data(struct tegra_se_dev *se_dev,
 	err = tegra_se_channel_submit_gather(se_dev, NULL,
 			cmdbuf_cpuvaddr, cmdbuf_iova,
 			0, cmdbuf_num_words, true);
-	dma_free_attrs(se_dev->dev, SZ_4K,
+	dma_free_attrs(se_dev->dev->parent, SZ_4K,
 			cmdbuf_cpuvaddr, cmdbuf_iova, &attrs);
 	return err;
 }
@@ -1941,7 +1941,7 @@ static int tegra_se_send_rsa_data(struct tegra_se_dev *se_dev,
 	u32 cmdbuf_num_words = 0, i = 0;
 	int err = 0;
 	u32 val = 0;
-	cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev, SZ_4K, &cmdbuf_iova,
+	cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent, SZ_4K, &cmdbuf_iova,
 				GFP_KERNEL, &attrs);
 	if (!cmdbuf_cpuvaddr)
 		return -ENOMEM;
@@ -1974,7 +1974,7 @@ static int tegra_se_send_rsa_data(struct tegra_se_dev *se_dev,
 			cmdbuf_cpuvaddr, cmdbuf_iova,
 			0, cmdbuf_num_words, true);
 
-	dma_free_attrs(se_dev->dev,
+	dma_free_attrs(se_dev->dev->parent,
 		SZ_4K, cmdbuf_cpuvaddr, cmdbuf_iova, &attrs);
 	return err;
 }
@@ -2025,7 +2025,7 @@ static int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 
 	rsa_opcode_start_addr = SE3_RSA_CONFIG_REG_OFFSET;
 
-	cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev, SZ_64K, &cmdbuf_iova,
+	cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent, SZ_64K, &cmdbuf_iova,
 				GFP_KERNEL, &attrs);
 	if (!cmdbuf_cpuvaddr)
 		return -ENOMEM;
@@ -2083,7 +2083,7 @@ static int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 			cmdbuf_cpuvaddr, cmdbuf_iova,
 			0, cmdbuf_num_words, true);
 
-	dma_free_attrs(se_dev->dev,
+	dma_free_attrs(se_dev->dev->parent,
 		SZ_64K, cmdbuf_cpuvaddr, cmdbuf_iova, &attrs);
 	return err;
 }

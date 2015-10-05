@@ -381,7 +381,7 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 		return;
 	}
 
-	cpuvaddr = dma_alloc_attrs(&tsec->dev, HDCP_MTHD_BUF_SIZE,
+	cpuvaddr = dma_alloc_attrs(tsec->dev.parent, HDCP_MTHD_BUF_SIZE,
 			&dma_handle, GFP_KERNEL,
 			&attrs);
 	if (!cpuvaddr) {
@@ -445,7 +445,7 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 
 	nvhost_syncpt_put_ref_ext(tsec, id);
 
-	dma_free_attrs(&tsec->dev,
+	dma_free_attrs(tsec->dev.parent,
 		HDCP_MTHD_BUF_SIZE, cpuvaddr,
 		dma_handle, &attrs);
 }

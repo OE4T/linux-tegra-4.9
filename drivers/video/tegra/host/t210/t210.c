@@ -90,11 +90,6 @@ struct nvhost_device_data t21_isp_info = {
 	.exclusive		= true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive		= true,
-#ifdef TEGRA_POWERGATE_VE
-	.powergate_id		= TEGRA_POWERGATE_VE,
-#else
-	NVHOST_MODULE_NO_POWERGATE_ID,
-#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay	= 500,
 	.can_powergate		= true,
@@ -117,11 +112,6 @@ struct nvhost_device_data t21_ispb_info = {
 	.exclusive		= true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive		= true,
-#ifdef TEGRA_POWERGATE_VE2
-	.powergate_id		= TEGRA_POWERGATE_VE2,
-#else
-	NVHOST_MODULE_NO_POWERGATE_ID,
-#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay	= 500,
 	.can_powergate		= true,
@@ -144,11 +134,6 @@ struct nvhost_device_data t21_vi_info = {
 	.class			= NV_VIDEO_STREAMING_VI_CLASS_ID,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive		= true,
-#ifdef TEGRA_POWERGATE_VE
-	.powergate_id		= TEGRA_POWERGATE_VE,
-#else
-	NVHOST_MODULE_NO_POWERGATE_ID,
-#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay	= 500,
 	.can_powergate		= true,
@@ -177,11 +162,6 @@ struct nvhost_device_data t21_msenc_info = {
 	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,
 	.modulemutexes		= {NVMODMUTEX_MSENC},
 	.devfs_name		= "msenc",
-#ifdef TEGRA_POWERGATE_NVENC
-	.powergate_id		= TEGRA_POWERGATE_NVENC,
-#else
-	NVHOST_MODULE_NO_POWERGATE_ID,
-#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay	= 500,
 	.can_powergate		= true,
@@ -211,11 +191,6 @@ struct nvhost_device_data t21_nvdec_info = {
 	.class			= NV_NVDEC_CLASS_ID,
 	.modulemutexes		= {NVMODMUTEX_NVDEC},
 	.devfs_name		= "nvdec",
-#ifdef TEGRA_POWERGATE_NVDEC
-	.powergate_id		= TEGRA_POWERGATE_NVDEC,
-#else
-	NVHOST_MODULE_NO_POWERGATE_ID,
-#endif
 	.clockgate_delay	= 10,
 	.powergate_delay	= 500,
 	.can_powergate		= true,
@@ -246,11 +221,6 @@ struct nvhost_device_data t21_nvjpg_info = {
 	.class			= NV_NVJPG_CLASS_ID,
 	.modulemutexes		= {NVMODMUTEX_NVJPG},
 	.devfs_name		= "nvjpg",
-#ifdef TEGRA_POWERGATE_NVJPG
-	.powergate_id		= TEGRA_POWERGATE_NVJPG,
-#else
-	NVHOST_MODULE_NO_POWERGATE_ID,
-#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay	= 500,
 	.can_powergate		= true,
@@ -336,11 +306,6 @@ struct nvhost_device_data t21_vic_info = {
 				   {"emc_shared", 0,
 				   NVHOST_MODULE_ID_EMC_SHARED}, {} },
 	.version		= NVHOST_ENCODE_FLCN_VER(4, 0),
-#ifdef TEGRA_POWERGATE_VIC
-	.powergate_id	= TEGRA_POWERGATE_VIC,
-#else
-	NVHOST_MODULE_NO_POWERGATE_ID,
-#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.can_powergate		= true,
 	.powergate_delay	= 500,

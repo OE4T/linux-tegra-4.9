@@ -46,19 +46,26 @@ tegra_ahci_dbg_print_regs(struct seq_file *s, u32 *ptr, u32 base, u32 regs)
 
 int tegra_ahci_dbg_dump_show(struct seq_file *s, void *data)
 {
-	struct ahci_host_priv *hpriv = s->private;
+	struct ahci_host_priv *hpriv = NULL;
 	struct tegra_ahci_priv *tegra = NULL;
 	u32 base;
 	u32 *ptr;
 	u32 i;
 
+	if (s)
+		hpriv = s->private;
+	else
+		hpriv = data;
+
 	tegra = hpriv->plat_data;
+
+	tegra_ahci_scfg_writel(hpriv, T_SATA0_INDEX_CH1, T_SATA0_INDEX);
 
 	base = tegra->res[TEGRA_SATA_CONFIG]->start;
 	ptr = tegra->base_list[TEGRA_SATA_CONFIG];
 	TEGRA_AHCI_DUMP_STRING(s, "SATA CONFIG Registers:\n");
 	TEGRA_AHCI_DUMP_STRING(s, "----------------------\n");
-	tegra_ahci_dbg_print_regs(s, ptr, base, 0x200);
+	tegra_ahci_dbg_print_regs(s, ptr, base, 0x400);
 
 	base = tegra->res[TEGRA_SATA_AHCI]->start;
 	ptr = hpriv->mmio;
@@ -73,6 +80,9 @@ int tegra_ahci_dbg_dump_show(struct seq_file *s, void *data)
 		TEGRA_AHCI_DUMP_STRING(s, "---------------\n");
 		tegra_ahci_dbg_print_regs(s, ptr, base, 20);
 	}
+
+	tegra_ahci_scfg_writel(hpriv, T_SATA0_INDEX_NONE_SELECTED,
+								T_SATA0_INDEX);
 
 	return 0;
 }

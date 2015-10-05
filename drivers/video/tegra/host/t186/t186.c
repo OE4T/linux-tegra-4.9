@@ -126,11 +126,6 @@ struct nvhost_device_data t18_isp_info = {
 	.exclusive		= true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive		= true,
-#ifdef TEGRA186_POWER_DOMAIN_ISPA
-	.powergate_id		= TEGRA186_POWER_DOMAIN_ISPA,
-#else
-	NVHOST_MODULE_NO_POWERGATE_ID,
-#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.poweron_reset		= true,
 	.clocks			= {
@@ -156,11 +151,6 @@ struct nvhost_device_data t18_vi_info = {
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_VI},
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive		= true,
-#ifdef TEGRA186_POWER_DOMAIN_VE
-	.powergate_id		= TEGRA186_POWER_DOMAIN_VE,
-#else
-	NVHOST_MODULE_NO_POWERGATE_ID,
-#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.poweron_reset		= true,
 	.moduleid		= NVHOST_MODULE_VI,
@@ -197,11 +187,6 @@ struct nvhost_device_data t18_msenc_info = {
 	.devfs_name		= "msenc",
 	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVENC},
-#ifdef TEGRA186_POWER_DOMAIN_NVENC
-	.powergate_id		= TEGRA186_POWER_DOMAIN_NVENC,
-#else
-	NVHOST_MODULE_NO_POWERGATE_ID,
-#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.clocks			= {
 		{"nvenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
@@ -227,11 +212,6 @@ struct nvhost_device_data t18_nvdec_info = {
 	.devfs_name		= "nvdec",
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVDEC},
 	.class			= NV_NVDEC_CLASS_ID,
-#ifdef TEGRA186_POWER_DOMAIN_NVDEC
-	.powergate_id		= TEGRA186_POWER_DOMAIN_NVDEC,
-#else
-	NVHOST_MODULE_NO_POWERGATE_ID,
-#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.clocks			= {
 		{"nvdec", UINT_MAX, 0, TEGRA_MC_CLIENT_NVDEC},
@@ -259,11 +239,6 @@ struct nvhost_device_data t18_nvjpg_info = {
 	.devfs_name		= "nvjpg",
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVJPG},
 	.class			= NV_NVJPG_CLASS_ID,
-#ifdef TEGRA186_POWER_DOMAIN_NVJPG
-	.powergate_id		= TEGRA186_POWER_DOMAIN_NVJPG,
-#else
-	NVHOST_MODULE_NO_POWERGATE_ID,
-#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay	= 500,
 	.clocks			= {
@@ -349,11 +324,6 @@ struct nvhost_device_data t18_vic_info = {
 	},
 	.engine_cg_regs		= t18x_vic_gating_registers,
 	.version		= NVHOST_ENCODE_FLCN_VER(4, 0),
-#ifdef TEGRA186_POWER_DOMAIN_VIC
-	.powergate_id	= TEGRA186_POWER_DOMAIN_VIC,
-#else
-	NVHOST_MODULE_NO_POWERGATE_ID,
-#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid		= NVHOST_MODULE_VIC,
 	.poweron_reset		= true,
@@ -379,12 +349,7 @@ struct nvhost_device_data t18_nvcsi_info = {
 	.devfs_name		= "nvcsi",
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVCSI},
 	.class			= NV_VIDEO_STREAMING_NVCSI_CLASS_ID,
-#ifdef TEGRA186_POWER_DOMAIN_VE
-	.powergate_id		= TEGRA186_POWER_DOMAIN_VE,
-#else
 	.ctrl_ops		= &tegra_nvcsi_ctrl_ops,
-	NVHOST_MODULE_NO_POWERGATE_ID,
-#endif
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.finalize_poweron	= nvcsi_finalize_poweron,
 	.prepare_poweroff	= nvcsi_prepare_poweroff,

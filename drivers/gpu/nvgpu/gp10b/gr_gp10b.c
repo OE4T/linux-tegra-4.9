@@ -1066,6 +1066,23 @@ static void gr_gp10b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 		tegra_fuse_writel(0x0, FUSE_OPT_GPU_TPC0_DISABLE_0);
 }
 
+static void gr_gp10b_get_access_map(struct gk20a *g,
+				   u32 **whitelist, int *num_entries)
+{
+	static u32 wl_addr_gp10b[] = {
+		/* this list must be sorted (low to high) */
+		0x404468, /* gr_pri_mme_max_instructions       */
+		0x418800, /* gr_pri_gpcs_setup_debug           */
+		0x419a04, /* gr_pri_gpcs_tpcs_tex_lod_dbg      */
+		0x419a08, /* gr_pri_gpcs_tpcs_tex_samp_dbg     */
+		0x419e10, /* gr_pri_gpcs_tpcs_sm_dbgr_control0 */
+		0x419f78, /* gr_pri_gpcs_tpcs_sm_disp_ctrl     */
+	};
+
+	*whitelist = wl_addr_gp10b;
+	*num_entries = ARRAY_SIZE(wl_addr_gp10b);
+}
+
 void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
@@ -1095,4 +1112,5 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.wait_empty = gr_gp10b_wait_empty;
 	gops->gr.init_cyclestats = gr_gp10b_init_cyclestats;
 	gops->gr.set_gpc_tpc_mask = gr_gp10b_set_gpc_tpc_mask;
+	gops->gr.get_access_map = gr_gp10b_get_access_map;
 }

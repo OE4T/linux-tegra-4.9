@@ -11,7 +11,7 @@
 				min-residency-us = <1>;
 				power = <70>;
 				pmstate = <0x1>;
-				status = "disabled";
+				status = "okay";
 			};
 			A57_C7: c7 {
 				compatible = "nvidia,tegra186-cpuidle-a57";
@@ -33,7 +33,7 @@
 				min-residency-us = <1>;
 				power = <65>;
 				pmstate = <0x1>;
-				status = "disabled";
+				status = "okay";
 			};
 			cc6 {
 				state-name = "Cluster powergate";

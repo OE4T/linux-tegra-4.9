@@ -10,7 +10,7 @@
 				min-residency-us = <1>;
 				power = <70>;
 				pmstate = <0x1>;
-				status = "disabled";
+				status = "okay";
 			};
 			DENVER_C6: c6 {
 				compatible = "nvidia,tegra186-cpuidle-denver";
@@ -42,7 +42,7 @@
 				min-residency-us = <1>;
 				power = <65>;
 				pmstate = <0x1>;
-				status = "disabled";
+				status = "okay";
 			};
 			cc6 {
 				state-name = "Cluster powergate";

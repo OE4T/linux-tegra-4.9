@@ -195,6 +195,10 @@
 		status = "okay";
 	};
 
+	cpuidle {
+		status = "okay";
+	};
+
 	interrupt-controller@3881000 {
 		status = "okay";
 	};

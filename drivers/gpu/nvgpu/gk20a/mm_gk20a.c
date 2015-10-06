@@ -1198,10 +1198,9 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 	struct device *d = dev_from_vm(vm);
 	struct gk20a *g = gk20a_from_vm(vm);
 	int ctag_granularity = g->ops.fb.compression_page_size(g);
+	u32 ctag_lines = DIV_ROUND_UP_ULL(size, ctag_granularity);
 
 	if (clear_ctags && ctag_offset) {
-		u32 ctag_lines = DIV_ROUND_UP_ULL(size, ctag_granularity);
-
 		/* init/clear the ctag buffer */
 		g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_clear,
 				ctag_offset, ctag_offset + ctag_lines - 1);
@@ -1218,6 +1217,19 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 		}
 		allocated = true;
 	}
+
+	gk20a_dbg(gpu_dbg_map,
+	   "as=%d pgsz=%d "
+	   "kind=0x%x flags=0x%x "
+	   "ctags=%d start=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x",
+	   vm_aspace_id(vm), pgsz_idx,
+	   kind_v, flags,
+	   ctag_lines, ctag_offset,
+	   hi32(map_offset), lo32(map_offset),
+	   hi32((u64)sg_dma_address(sgt->sgl)),
+	   lo32((u64)sg_dma_address(sgt->sgl)),
+	   hi32((u64)sg_phys(sgt->sgl)),
+	   lo32((u64)sg_phys(sgt->sgl)));
 
 	err = update_gmmu_ptes_locked(vm, pgsz_idx,
 				      sgt,

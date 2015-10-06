@@ -25,6 +25,7 @@
 #include <linux/nvmap.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/reset.h>
+#include <soc/tegra/tegra_bpmp.h>
 #include "gk20a/platform_gk20a.h"
 #include "gk20a/gk20a.h"
 #include "platform_tegra.h"
@@ -136,7 +137,7 @@ static bool gp10b_tegra_is_railgated(struct platform_device *pdev)
 {
 	bool ret = false;
 
-	if (!tegra_platform_is_linsim())
+	if (tegra_bpmp_running())
 		ret = !tegra_powergate_is_powered(TEGRA_POWERGATE_GPU);
 
 	return ret;
@@ -146,7 +147,7 @@ static int gp10b_tegra_railgate(struct platform_device *pdev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(pdev);
 
-	if (!tegra_platform_is_linsim() &&
+	if (tegra_bpmp_running() &&
 	    tegra_powergate_is_powered(TEGRA_POWERGATE_GPU)) {
 		int i;
 		for (i = 0; i < platform->num_clks; i++) {
@@ -163,7 +164,7 @@ static int gp10b_tegra_unrailgate(struct platform_device *pdev)
 	int ret = 0;
 	struct gk20a_platform *platform = gk20a_get_platform(pdev);
 
-	if (!tegra_platform_is_linsim()) {
+	if (tegra_bpmp_running()) {
 		int i;
 		ret = tegra_unpowergate_partition(TEGRA_POWERGATE_GPU);
 		for (i = 0; i < platform->num_clks; i++) {

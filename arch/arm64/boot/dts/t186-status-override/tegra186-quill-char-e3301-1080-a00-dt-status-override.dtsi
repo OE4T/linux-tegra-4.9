@@ -210,14 +210,6 @@
 		status = "disabled";
 	};
 
-	pinmux@2430000 {
-		status = "disabled";
-	};
-
-	gpio@2200000 {
-		status = "disabled";
-	};
-
 	ahci-sata@3507000 {
 		status = "disabled";
 	};

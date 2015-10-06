@@ -541,7 +541,11 @@ static void vgpu_fifo_set_ctx_mmu_error(struct gk20a *g,
 int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info)
 {
 	struct fifo_gk20a *f = &g->fifo;
-	struct channel_gk20a *ch = &f->channel[info->chid];
+	struct channel_gk20a *ch = gk20a_channel_get(&f->channel[info->chid]);
+
+	gk20a_dbg_fn("");
+	if (!ch)
+		return 0;
 
 	gk20a_err(dev_from_gk20a(g), "fifo intr (%d) on ch %u",
 		info->type, info->chid);
@@ -555,14 +559,15 @@ int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info)
 					NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
 		break;
 	case TEGRA_VGPU_FIFO_INTR_MMU_FAULT:
-		gk20a_channel_abort(ch);
 		vgpu_fifo_set_ctx_mmu_error(g, ch);
+		gk20a_channel_abort(ch);
 		break;
 	default:
 		WARN_ON(1);
 		break;
 	}
 
+	gk20a_channel_put(ch);
 	return 0;
 }
 

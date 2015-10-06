@@ -851,9 +851,12 @@ int vgpu_init_gr_support(struct gk20a *g)
 int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
 {
 	struct fifo_gk20a *f = &g->fifo;
-	struct channel_gk20a *ch = &f->channel[info->chid];
+	struct channel_gk20a *ch = gk20a_channel_get(&f->channel[info->chid]);
 
 	gk20a_dbg_fn("");
+	if (!ch)
+		return 0;
+
 	if (info->type != TEGRA_VGPU_GR_INTR_NOTIFY &&
 		info->type != TEGRA_VGPU_GR_INTR_SEMAPHORE)
 		gk20a_err(dev_from_gk20a(g), "gr intr (%d) on ch %u",
@@ -899,6 +902,7 @@ int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
 		break;
 	}
 
+	gk20a_channel_put(ch);
 	return 0;
 }
 

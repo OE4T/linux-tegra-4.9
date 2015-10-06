@@ -1354,6 +1354,7 @@ void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
 void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
 		u32 src, u8 *dst, u32 size, u8 port);
 int pmu_reset(struct pmu_gk20a *pmu);
+int pmu_bootstrap(struct pmu_gk20a *pmu);
 int gk20a_init_pmu(struct pmu_gk20a *pmu);
 void pmu_dump_falcon_stats(struct pmu_gk20a *pmu);
 void gk20a_remove_pmu_support(struct pmu_gk20a *pmu);

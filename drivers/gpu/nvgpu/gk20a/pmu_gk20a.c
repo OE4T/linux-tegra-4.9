@@ -1811,7 +1811,7 @@ int pmu_reset(struct pmu_gk20a *pmu)
 	return 0;
 }
 
-static int pmu_bootstrap(struct pmu_gk20a *pmu)
+int pmu_bootstrap(struct pmu_gk20a *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct gk20a_platform *platform = platform_get_drvdata(g->dev);

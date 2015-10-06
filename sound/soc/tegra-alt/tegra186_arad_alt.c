@@ -32,6 +32,7 @@
 #include <sound/soc.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/of_device.h>
+#include <linux/tegra186_ahc.h>
 
 #include "tegra186_asrc_alt.h"
 #include "tegra210_xbar_alt.h"
@@ -667,15 +668,14 @@ static const struct of_device_id tegra186_arad_of_match[] = {
 };
 
 #ifdef CONFIG_SND_SOC_TEGRA186_ARAD_WAR
-static irqreturn_t tegra186_arad_interrupt_handler(int irq, void *data)
+void tegra186_arad_ahc_cb(void *data)
 {
 	unsigned long flags;
-	int i = 0, inte = 0, frac = 0;
-	unsigned int status = 0, val = 0;
+	int i = 0;
+	unsigned int val = 0, status;
 	struct tegra186_arad *arad = dev_get_drvdata(
 					(struct device *) data);
 
-	spin_lock_irqsave(&arad->int_lock, flags);
 	/* WAR for Bug 200102368 */
 	regmap_read(arad->regmap,
 		TEGRA186_ARAD_LANE_INT_STATUS, &status);
@@ -692,9 +692,6 @@ static irqreturn_t tegra186_arad_interrupt_handler(int irq, void *data)
 				TEGRA186_ARAD_LANE_SOFT_RESET, 1<<i);
 			regmap_write(arad->regmap,
 				TEGRA186_ARAD_LANE_ENABLE, val);
-#ifdef CONFIG_SND_SOC_TEGRA186_ASRC_WAR
-			tegra186_asrc_event(i, STREAM_DISABLE, 0);
-#endif
 			/* In case ratio change is masked becasue of
 				 previous locking, unmask it*/
 			regmap_update_bits(arad->regmap,
@@ -718,8 +715,30 @@ static irqreturn_t tegra186_arad_interrupt_handler(int irq, void *data)
 			regmap_write(arad->regmap,
 				TEGRA186_ARAD_LANE_INT_CLEAR,
 				1<<(TEGRA186_ARAD_LANE_INT_RATIO_CHANGE_SHIFT+i));
+		}
+	}
+	spin_lock(&arad->status_lock);
+	arad->int_status = status;
+	spin_unlock(&arad->status_lock);
+}
 
 #ifdef CONFIG_SND_SOC_TEGRA186_ASRC_WAR
+void tegra186_arad_ahc_deferred_cb(void *data)
+{
+	struct tegra186_arad *arad = dev_get_drvdata(
+									(struct device *)data);
+	int i = 0, inte = 0, frac = 0;
+	unsigned int status;
+
+	spin_lock(&arad->status_lock);
+	status = &arad->int_status;
+	spin_unlock(&arad->status_lock);
+
+	for (i = 0; i < TEGRA186_ARAD_LANE_MAX; i++) {
+		if ((1 << i) & status)
+			tegra186_asrc_handle_arad_unlock(i, 0);
+		else if (tegra186_arad_get_lane_lock_status(arad, i) &&
+				tegra186_arad_get_lane_ratio_change_status(arad, i)) {
 			regmap_read(arad->regmap, ARAD_LANE_REG(
 				TEGRA186_ARAD_LANE1_RATIO_INTEGER_PART,
 				i), &inte);
@@ -729,16 +748,13 @@ static irqreturn_t tegra186_arad_interrupt_handler(int irq, void *data)
 
 			/* source SW:1 and ARAD:0 */
 			tegra186_asrc_set_source(i, 1);
-			tegra186_update_asrc_ratio(i, inte, frac);
+			tegra186_asrc_update_ratio(i, inte, frac);
 			tegra186_asrc_set_source(i, 0);
-			tegra186_asrc_event(i, STREAM_ENABLE, 1);
-#endif
+			tegra186_asrc_handle_arad_unlock(i, 1);
 		}
 	}
-	spin_unlock_irqrestore(&arad->int_lock, flags);
-
-	return IRQ_HANDLED;
 }
+#endif
 #endif
 
 static int tegra186_arad_platform_probe(struct platform_device *pdev)
@@ -821,14 +837,13 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 	}
 
 #ifdef CONFIG_SND_SOC_TEGRA186_ARAD_WAR
-	arad->irq = platform_get_irq(pdev, 0);
-	ret = devm_request_irq(&pdev->dev,
-			tegra_agic_irq_get_virq(arad->irq),
-			tegra186_arad_interrupt_handler,
-			0, pdev->name, &pdev->dev);
-	if (ret)
-		dev_err(&pdev->dev, "Could not register ARAD INTERRUPT\n");
-	spin_lock_init(&arad->int_lock);
+	spin_lock_init(&arad->status_lock);
+	tegra186_ahc_register_cb(tegra186_arad_ahc_cb,
+			TEGRA186_AHC_ARAD1_CB, &pdev->dev);
+#ifdef CONFIG_SND_SOC_TEGRA186_ASRC_WAR
+	tegra186_ahc_register_deferred_cb(tegra186_arad_ahc_deferred_cb,
+			TEGRA186_AHC_ARAD1_CB, &pdev->dev);
+#endif
 #endif
 	return 0;
 

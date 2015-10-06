@@ -153,4 +153,5 @@ struct tegra186_asrc {
 int tegra186_asrc_set_source(int id, int source);
 int tegra186_asrc_event(int id, enum task_event event, int status);
 int tegra186_asrc_update_ratio(int id, int inte, int frac);
+void tegra186_asrc_handle_arad_unlock(int stream_id, int action);
 #endif

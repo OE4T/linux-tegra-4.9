@@ -115,6 +115,7 @@ config SND_SOC_TEGRA_T186REF_AUTO_ALT
 config SND_SOC_TEGRA186_ARAD_WAR
 	def_bool y
 	depends on SND_SOC_TEGRA186_ARAD_ALT
+	depends on TEGRA186_AHC
 
 config SND_SOC_TEGRA186_ASRC_WAR
 	def_bool n

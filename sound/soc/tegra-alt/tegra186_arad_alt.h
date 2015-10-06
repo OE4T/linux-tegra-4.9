@@ -108,9 +108,11 @@ struct tegra186_arad_soc_data {
 
 struct tegra186_arad {
 	struct regmap *regmap;
-	int irq;
 	const struct tegra186_arad_soc_data *soc_data;
-	spinlock_t int_lock;
+#if defined CONFIG_SND_SOC_TEGRA186_ARAD_WAR
+	unsigned int int_status;
+	spinlock_t status_lock;
+#endif
 };
 
 #endif

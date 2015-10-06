@@ -31,6 +31,7 @@
 #include <linux/delay.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/of_device.h>
+#include <linux/tegra186_ahc.h>
 
 #include "tegra210_xbar_alt.h"
 #include "tegra186_asrc_alt.h"
@@ -61,13 +62,6 @@
 	{ ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_OUTSAMPLEBUF_ADDR, id), 0x4b0}, \
 	{ ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_OUTSAMPLEBUF_CONFIG, id), 0x64}
 static struct device *asrc_dev;
-
-struct asrc_task_desc {
-	int stream_id;
-	enum task_event event;
-	int action;
-	struct list_head node;
-};
 
 static const struct reg_default tegra186_asrc_reg_defaults[] = {
 	ASRC_STREAM_REG_DEFAULTS(0),
@@ -111,20 +105,6 @@ static int tegra186_asrc_get_stream_enable_status(struct tegra186_asrc *asrc,
 
 	return val & 0x01;
 
-}
-
-int tegra186_asrc_event(int id, enum task_event event, int action)
-{
-	struct tegra186_asrc *asrc = dev_get_drvdata(asrc_dev);
-	struct asrc_task_desc *task = kzalloc(sizeof(*task), GFP_ATOMIC);
-	task->stream_id = id;
-	task->event = event;
-	task->action = action;
-
-	list_add_tail(&task->node, &asrc->task_desc);
-	tasklet_schedule(&asrc->tasklet);
-
-	return 0;
 }
 
 static int tegra186_asrc_get_ratio_lock_status(struct tegra186_asrc *asrc,
@@ -188,6 +168,9 @@ static int tegra186_asrc_runtime_suspend(struct device *dev)
 {
 	struct tegra186_asrc *asrc = dev_get_drvdata(dev);
 
+#ifdef CONFIG_TEGRA186_AHC
+	regmap_write(asrc->regmap, TEGRA186_ASRC_GLOBAL_INT_MASK, 0x1);
+#endif
 	regcache_cache_only(asrc->regmap, true);
 
 	pm_runtime_put_sync(dev->parent);
@@ -226,6 +209,9 @@ static int tegra186_asrc_runtime_resume(struct device *dev)
 			tegra186_asrc_set_ratio_lock_status(asrc, lane_id);
 		}
 	}
+#ifdef CONFIG_TEGRA186_AHC
+	regmap_write(asrc->regmap, TEGRA186_ASRC_GLOBAL_INT_MASK, 0x0);
+#endif
 
 	return 0;
 }
@@ -827,33 +813,20 @@ static bool tegra186_asrc_volatile_reg(struct device *dev, unsigned int reg)
 		return false;
 	};
 }
-static void tegra_asrc_tasklet(unsigned long data)
+
+void tegra186_asrc_handle_arad_unlock(int stream_id, int action)
 {
-	struct tegra186_asrc *asrc =
-		(struct tegra186_asrc *)data;
-	struct asrc_task_desc *desc;
+	struct tegra186_asrc *asrc = dev_get_drvdata(asrc_dev);
+	int dcnt = 10;
 
-	while (!list_empty(&asrc->task_desc)) {
-		int dcnt = 10;
-		desc = list_first_entry(&asrc->task_desc,
-				typeof(*desc), node);
-		/* Currently we have event for stream enable/disable
-		, so bypassing event check. In future if more events gets
-		added this should be handled in switch */
-		regmap_write(asrc->regmap, ASRC_STREAM_REG
-			(TEGRA186_ASRC_STREAM1_ENABLE, desc->stream_id),
-			desc->action);
-		if (!desc->action)
-			udelay(2000);
+	regmap_write(asrc->regmap, ASRC_STREAM_REG
+			(TEGRA186_ASRC_STREAM1_ENABLE, stream_id), action);
+	if (!action)
+		udelay(2000);
 
-		while ((tegra186_asrc_get_stream_enable_status(
-				asrc, desc->stream_id)
-			!= desc->action) && dcnt--)
-			udelay(100);
-
-		list_del(&desc->node);
-		kfree(desc);
-	}
+	while ((tegra186_asrc_get_stream_enable_status(asrc,
+					stream_id) != action) && dcnt--)
+		udelay(100);
 }
 
 static const struct regmap_config tegra186_asrc_regmap_config = {
@@ -868,6 +841,21 @@ static const struct regmap_config tegra186_asrc_regmap_config = {
 	.num_reg_defaults = ARRAY_SIZE(tegra186_asrc_reg_defaults),
 	.cache_type = REGCACHE_FLAT,
 };
+
+#ifdef CONFIG_TEGRA186_AHC
+void tegra186_asrc_ahc_cb(void *data)
+{
+	struct device *dev = (struct device *)data;
+	struct tegra186_asrc *asrc = dev_get_drvdata(dev);
+
+	regcache_cache_bypass(asrc->regmap, true);
+	regmap_write(asrc->regmap, TEGRA186_ASRC_GLOBAL_INT_CLEAR, 0x1);
+	regmap_write(asrc->regmap, TEGRA186_ASRC_GLOBAL_ENB, 0x0);
+	udelay(100);
+	regmap_write(asrc->regmap, TEGRA186_ASRC_GLOBAL_ENB, 0x1);
+	regcache_cache_bypass(asrc->regmap, false);
+}
+#endif
 
 static const struct tegra186_asrc_soc_data soc_data_tegra186 = {
 	.set_audio_cif = tegra210_xbar_set_cif,
@@ -946,6 +934,11 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 
+#ifdef CONFIG_TEGRA186_AHC
+	tegra186_ahc_register_cb(tegra186_asrc_ahc_cb,
+			TEGRA186_AHC_ASRC1_CB, &pdev->dev);
+#endif
+
 	pm_runtime_enable(&pdev->dev);
 	tegra186_asrc_runtime_resume(&pdev->dev);
 
@@ -971,11 +964,6 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 			ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_CONFIG, i), 1, 1);
 	}
 
-	INIT_LIST_HEAD(&asrc->task_desc);
-
-	tasklet_init(&asrc->tasklet, tegra_asrc_tasklet,
-			(unsigned long)asrc);
-
 	ret = snd_soc_register_codec(&pdev->dev, &tegra186_asrc_codec,
 				     tegra186_asrc_dais,
 				     ARRAY_SIZE(tegra186_asrc_dais));
@@ -999,7 +987,6 @@ static int tegra186_asrc_platform_remove(struct platform_device *pdev)
 {
 	struct tegra186_asrc *asrc =
 		dev_get_drvdata(&pdev->dev);
-	tasklet_kill(&asrc->tasklet);
 
 	snd_soc_unregister_codec(&pdev->dev);
 

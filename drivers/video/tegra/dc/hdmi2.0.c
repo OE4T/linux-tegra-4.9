@@ -2405,9 +2405,46 @@ static int tegra_hdmi_hotplug_dbg_show(struct seq_file *m, void *unused)
 	if (WARN_ON(!hdmi || !dc || !dc->out))
 		return -EINVAL;
 
+	rmb();
 	seq_printf(m, "hdmi hpd state: %d\n", dc->out->hotplug_state);
 
 	return 0;
+}
+
+int tegra_hdmi_get_hotplug_state(struct tegra_hdmi *hdmi)
+{
+	rmb();
+	return hdmi->dc->out->hotplug_state;
+}
+
+void tegra_hdmi_set_hotplug_state(struct tegra_hdmi *hdmi, int new_hpd_state)
+{
+	struct tegra_dc *dc = hdmi->dc;
+	int hotplug_state;
+
+	rmb();
+	hotplug_state = dc->out->hotplug_state;
+
+	if (hotplug_state == TEGRA_HPD_STATE_NORMAL &&
+			new_hpd_state != TEGRA_HPD_STATE_NORMAL &&
+			tegra_dc_hotplug_supported(dc)) {
+		disable_irq(gpio_to_irq(dc->out->hotplug_gpio));
+	} else if (hotplug_state != TEGRA_HPD_STATE_NORMAL &&
+			new_hpd_state == TEGRA_HPD_STATE_NORMAL &&
+			tegra_dc_hotplug_supported(dc)) {
+		enable_irq(gpio_to_irq(dc->out->hotplug_gpio));
+	}
+
+	dc->out->hotplug_state = new_hpd_state;
+	wmb();
+
+	/*
+	 * sw controlled plug/unplug.
+	 * wait for any already executing hpd worker thread.
+	 * No debounce delay, schedule immedately
+	 */
+	cancel_delayed_work_sync(&hdmi->hpd_worker);
+	schedule_delayed_work(&hdmi->hpd_worker, 0);
 }
 
 /*
@@ -2434,25 +2471,7 @@ static ssize_t tegra_hdmi_hotplug_dbg_write(struct file *file,
 	if (ret < 0)
 		return ret;
 
-	if (dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL &&
-		new_hpd_state != TEGRA_HPD_STATE_NORMAL &&
-		tegra_dc_hotplug_supported(dc)) {
-		disable_irq(gpio_to_irq(dc->out->hotplug_gpio));
-	} else if (dc->out->hotplug_state != TEGRA_HPD_STATE_NORMAL &&
-		new_hpd_state == TEGRA_HPD_STATE_NORMAL &&
-		tegra_dc_hotplug_supported(dc)) {
-		enable_irq(gpio_to_irq(dc->out->hotplug_gpio));
-	}
-
-	dc->out->hotplug_state = new_hpd_state;
-
-	/*
-	 * sw controlled plug/unplug.
-	 * wait for any already executing hpd worker thread.
-	 * No debounce delay, schedule immedately
-	 */
-	cancel_delayed_work_sync(&hdmi->hpd_worker);
-	schedule_delayed_work(&hdmi->hpd_worker, 0);
+	tegra_hdmi_set_hotplug_state(hdmi, new_hpd_state);
 
 	return len;
 }

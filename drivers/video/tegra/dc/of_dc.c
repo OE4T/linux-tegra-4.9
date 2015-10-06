@@ -504,6 +504,7 @@ static int parse_disp_default_out(struct platform_device *ndev,
 	if (!of_property_read_u32(np,
 			"nvidia,out-hotplug-state", &temp)) {
 			default_out->hotplug_state = (unsigned) temp;
+			wmb();
 			OF_DC_LOG("out-hotplug-state %d\n", temp);
 	}
 

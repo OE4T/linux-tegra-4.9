@@ -155,6 +155,10 @@
 			status = "okay";
 		};
 
+		ahc@290b900 {
+			status = "okay";
+		};
+
 		ope@2908000 {
 			status = "okay";
 

@@ -31,3 +31,4 @@ obj-$(CONFIG_CPU_IDLE) += cpuidle/
 obj-y += padctrl/
 obj-y += tachometer/
 obj-$(CONFIG_T186_CSI_MIPI_CAL) += misc/csi_mipi_cal/
+obj-$(CONFIG_TEGRA186_AHC) += misc/tegra186-ahc/

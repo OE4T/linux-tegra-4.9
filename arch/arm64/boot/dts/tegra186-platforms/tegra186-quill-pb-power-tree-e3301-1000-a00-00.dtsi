@@ -64,6 +64,11 @@
 		hvdd_usb-supply =  <&vdd_1v8_sw>;
 	};
 
+	ufshci@2450000 {
+		vddio-ufs-supply = <&spmic_sd1>;
+		vddio-ufs-ap-supply = <&spmic_ldo7>;
+	};
+
 	xudc@3550000 {
 		avdd-usb-supply = <&spmic_sd3>;
 		dvdd-pex-supply = <&spmic_ldo7>;

@@ -187,6 +187,8 @@ struct gpu_ops {
 		void (*enable_cde_in_fecs)(void *ctx_ptr);
 		void (*bpt_reg_info)(struct gk20a *g,
 				struct warpstate *w_state);
+		void (*get_access_map)(struct gk20a *g,
+				      u32 **whitelist, int *num_entries);
 	} gr;
 	const char *name;
 	struct {

@@ -1127,6 +1127,23 @@ void gr_gm20b_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
 	}
 }
 
+static void gr_gm20b_get_access_map(struct gk20a *g,
+				   u32 **whitelist, int *num_entries)
+{
+	static u32 wl_addr_gm20b[] = {
+		/* this list must be sorted (low to high) */
+		0x404468, /* gr_pri_mme_max_instructions       */
+		0x418800, /* gr_pri_gpcs_setup_debug           */
+		0x419a04, /* gr_pri_gpcs_tpcs_tex_lod_dbg      */
+		0x419a08, /* gr_pri_gpcs_tpcs_tex_samp_dbg     */
+		0x419e10, /* gr_pri_gpcs_tpcs_sm_dbgr_control0 */
+		0x419f78, /* gr_pri_gpcs_tpcs_sm_disp_ctrl     */
+	};
+
+	*whitelist = wl_addr_gm20b;
+	*num_entries = ARRAY_SIZE(wl_addr_gm20b);
+}
+
 void gm20b_init_gr(struct gpu_ops *gops)
 {
 	gops->gr.init_gpc_mmu = gr_gm20b_init_gpc_mmu;
@@ -1184,4 +1201,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.init_cyclestats = gr_gm20b_init_cyclestats;
 	gops->gr.enable_cde_in_fecs = gr_gm20b_enable_cde_in_fecs;
 	gops->gr.bpt_reg_info = gr_gm20b_bpt_reg_info;
+	gops->gr.get_access_map = gr_gm20b_get_access_map;
 }

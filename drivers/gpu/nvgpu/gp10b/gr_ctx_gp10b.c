@@ -69,5 +69,5 @@ static bool gr_gp10b_is_firmware_defined(void)
 void gp10b_init_gr_ctx(struct gpu_ops *gops) {
 	gops->gr_ctx.get_netlist_name = gr_gp10b_get_netlist_name;
 	gops->gr_ctx.is_fw_defined = gr_gp10b_is_firmware_defined;
-	gops->gr_ctx.use_dma_for_fw_bootstrap = false;
+	gops->gr_ctx.use_dma_for_fw_bootstrap = true;
 }

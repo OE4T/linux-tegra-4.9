@@ -285,8 +285,10 @@ void nvhost_register_dump_device(
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	if (pdata == NULL)
+	if (pdata == NULL) {
 		pr_warn("%s: Invalid device\n", __func__);
+		return;
+	}
 
 	pdata->debug_dump_device = nvgpu_debug_dump_device;
 }
@@ -296,8 +298,10 @@ void nvhost_unregister_dump_device(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	if (pdata == NULL)
+	if (pdata == NULL) {
 		pr_warn("%s: Invalid device\n", __func__);
+		return;
+	}
 
 	pdata->debug_dump_device = NULL;
 }

@@ -166,7 +166,8 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 				       bool wfi_cmd,
 				       bool register_irq,
 				       struct priv_cmd_entry **entry,
-				       struct gk20a_fence **fence)
+				       struct gk20a_fence **fence,
+				       bool need_sync_fence)
 {
 	u32 thresh;
 	int incr_cmd_size;
@@ -239,7 +240,7 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 	}
 
 	*fence = gk20a_fence_from_syncpt(sp->host1x_pdev, sp->id, thresh,
-					 wfi_cmd);
+					 wfi_cmd, need_sync_fence);
 	*entry = incr_cmd;
 	return 0;
 }
@@ -251,33 +252,35 @@ static int gk20a_channel_syncpt_incr_wfi(struct gk20a_channel_sync *s,
 	return __gk20a_channel_syncpt_incr(s,
 			true /* wfi */,
 			false /* no irq handler */,
-			entry, fence);
+			entry, fence, true);
 }
 
 static int gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 			      struct priv_cmd_entry **entry,
-			      struct gk20a_fence **fence)
+			      struct gk20a_fence **fence,
+			      bool need_sync_fence)
 {
 	/* Don't put wfi cmd to this one since we're not returning
 	 * a fence to user space. */
 	return __gk20a_channel_syncpt_incr(s,
 			false /* no wfi */,
 			true /* register irq */,
-			entry, fence);
+			entry, fence, need_sync_fence);
 }
 
 static int gk20a_channel_syncpt_incr_user(struct gk20a_channel_sync *s,
 				   int wait_fence_fd,
 				   struct priv_cmd_entry **entry,
 				   struct gk20a_fence **fence,
-				   bool wfi)
+				   bool wfi,
+				   bool need_sync_fence)
 {
 	/* Need to do 'wfi + host incr' since we return the fence
 	 * to user space. */
 	return __gk20a_channel_syncpt_incr(s,
 			wfi,
 			true /* register irq */,
-			entry, fence);
+			entry, fence, need_sync_fence);
 }
 
 static void gk20a_channel_syncpt_set_min_eq_max(struct gk20a_channel_sync *s)
@@ -513,7 +516,8 @@ static int __gk20a_channel_semaphore_incr(
 		struct gk20a_channel_sync *s, bool wfi_cmd,
 		struct sync_fence *dependency,
 		struct priv_cmd_entry **entry,
-		struct gk20a_fence **fence)
+		struct gk20a_fence **fence,
+		bool need_sync_fence)
 {
 	u64 va;
 	int incr_cmd_size;
@@ -560,18 +564,19 @@ static int gk20a_channel_semaphore_incr_wfi(
 	return __gk20a_channel_semaphore_incr(s,
 			true /* wfi */,
 			NULL,
-			entry, fence);
+			entry, fence, true);
 }
 
 static int gk20a_channel_semaphore_incr(
 		struct gk20a_channel_sync *s,
 		struct priv_cmd_entry **entry,
-		struct gk20a_fence **fence)
+		struct gk20a_fence **fence,
+		bool need_sync_fence)
 {
 	/* Don't put wfi cmd to this one since we're not returning
 	 * a fence to user space. */
 	return __gk20a_channel_semaphore_incr(s, false /* no wfi */,
-					      NULL, entry, fence);
+				      NULL, entry, fence, need_sync_fence);
 }
 
 static int gk20a_channel_semaphore_incr_user(
@@ -579,7 +584,8 @@ static int gk20a_channel_semaphore_incr_user(
 		int wait_fence_fd,
 		struct priv_cmd_entry **entry,
 		struct gk20a_fence **fence,
-		bool wfi)
+		bool wfi,
+		bool need_sync_fence)
 {
 #ifdef CONFIG_SYNC
 	struct sync_fence *dependency = NULL;
@@ -592,7 +598,7 @@ static int gk20a_channel_semaphore_incr_user(
 	}
 
 	err = __gk20a_channel_semaphore_incr(s, wfi, dependency,
-					     entry, fence);
+					     entry, fence, need_sync_fence);
 	if (err) {
 		if (dependency)
 			sync_fence_put(dependency);

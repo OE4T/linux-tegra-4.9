@@ -3,7 +3,7 @@
  *
  * GK20A Fences
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -56,7 +56,8 @@ struct gk20a_fence *gk20a_fence_from_semaphore(
 
 struct gk20a_fence *gk20a_fence_from_syncpt(
 		struct platform_device *host1x_pdev,
-		u32 id, u32 value, bool wfi);
+		u32 id, u32 value, bool wfi,
+		bool need_sync_fence);
 
 /* Fence operations */
 void gk20a_fence_put(struct gk20a_fence *f);

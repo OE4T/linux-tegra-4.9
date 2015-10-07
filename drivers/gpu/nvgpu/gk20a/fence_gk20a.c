@@ -194,7 +194,8 @@ static const struct gk20a_fence_ops gk20a_syncpt_fence_ops = {
 };
 
 struct gk20a_fence *gk20a_fence_from_syncpt(struct platform_device *host1x_pdev,
-					    u32 id, u32 value, bool wfi)
+					    u32 id, u32 value, bool wfi,
+					    bool need_sync_fence)
 {
 	struct gk20a_fence *f;
 	struct sync_fence *sync_fence = NULL;
@@ -205,10 +206,12 @@ struct gk20a_fence *gk20a_fence_from_syncpt(struct platform_device *host1x_pdev,
 		.thresh = value
 	};
 
-	sync_fence = nvhost_sync_create_fence(host1x_pdev, &pt, 1,
-					      "fence");
-	if (IS_ERR(sync_fence))
-		return NULL;
+	if (need_sync_fence) {
+		sync_fence = nvhost_sync_create_fence(host1x_pdev, &pt, 1,
+						      "fence");
+		if (IS_ERR(sync_fence))
+			return NULL;
+	}
 #endif
 
 	f = alloc_fence(&gk20a_syncpt_fence_ops, sync_fence, wfi);

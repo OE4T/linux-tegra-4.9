@@ -244,7 +244,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				u32 num_entries,
 				u32 flags,
 				struct nvgpu_fence *fence,
-				struct gk20a_fence **fence_out);
+				struct gk20a_fence **fence_out,
+				bool force_need_sync_fence);
 
 int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 			       struct nvgpu_alloc_gpfifo_args *args);

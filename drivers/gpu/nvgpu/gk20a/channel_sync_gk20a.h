@@ -3,7 +3,7 @@
  *
  * GK20A Channel Synchronization Abstraction
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -54,7 +54,8 @@ struct gk20a_channel_sync {
 	 */
 	int (*incr)(struct gk20a_channel_sync *s,
 		    struct priv_cmd_entry **entry,
-		    struct gk20a_fence **fence);
+		    struct gk20a_fence **fence,
+		    bool need_sync_fence);
 
 	/* Increment syncpoint/semaphore, preceded by a wfi.
 	 * Returns
@@ -76,7 +77,8 @@ struct gk20a_channel_sync {
 			 int wait_fence_fd,
 			 struct priv_cmd_entry **entry,
 			 struct gk20a_fence **fence,
-			 bool wfi);
+			 bool wfi,
+			 bool need_sync_fence);
 
 	/* Reset the channel syncpoint/semaphore. */
 	void (*set_min_eq_max)(struct gk20a_channel_sync *s);

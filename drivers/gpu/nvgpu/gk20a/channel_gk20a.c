@@ -1830,7 +1830,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				u32 num_entries,
 				u32 flags,
 				struct nvgpu_fence *fence,
-				struct gk20a_fence **fence_out)
+				struct gk20a_fence **fence_out,
+				bool force_need_sync_fence)
 {
 	struct gk20a *g = c->g;
 	struct device *d = dev_from_gk20a(g);
@@ -1848,6 +1849,14 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	struct nvgpu_gpfifo *gpfifo_mem = c->gpfifo.mem.cpu_va;
 	bool skip_buffer_refcounting = (flags &
 			NVGPU_SUBMIT_GPFIFO_FLAGS_SKIP_BUFFER_REFCOUNTING);
+	bool need_sync_fence = false;
+
+	/*
+	 * If user wants to allocate sync_fence_fd always, then respect that;
+	 * otherwise, allocate sync_fence_fd based on user flags only
+	 */
+	if (force_need_sync_fence)
+		need_sync_fence = true;
 
 	if (c->has_timedout)
 		return -ETIMEDOUT;
@@ -1970,15 +1979,18 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		goto clean_up;
 	}
 
+	if ((flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET) &&
+			(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE))
+		need_sync_fence = true;
 
 	/* always insert syncpt increment at end of gpfifo submission
 	   to keep track of method completion for idle railgating */
 	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET)
 		err = c->sync->incr_user(c->sync, wait_fence_fd, &incr_cmd,
-					 &post_fence, need_wfi);
+				 &post_fence, need_wfi, need_sync_fence);
 	else
 		err = c->sync->incr(c->sync, &incr_cmd,
-				    &post_fence);
+				    &post_fence, need_sync_fence);
 	if (err) {
 		mutex_unlock(&c->submit_lock);
 		goto clean_up;
@@ -2578,7 +2590,7 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 
 	ret = gk20a_submit_channel_gpfifo(ch, NULL, args, args->num_entries,
 					  args->flags, &args->fence,
-					  &fence_out);
+					  &fence_out, false);
 
 	if (ret)
 		goto clean_up;

@@ -22,21 +22,29 @@
 #include "vhost.h"
 #include "../host1x/host1x.h"
 
-static inline int vhost_comm_init(struct platform_device *pdev)
+static inline int vhost_comm_init(struct platform_device *pdev,
+					  bool channel_management_in_guest)
 {
 	size_t queue_sizes[] = { TEGRA_VHOST_QUEUE_SIZES };
+	unsigned int num_queues =
+		channel_management_in_guest ?
+		1 : ARRAY_SIZE(queue_sizes);
 
-	return tegra_gr_comm_init(pdev, TEGRA_GR_COMM_CTX_CLIENT, 3,
+	return tegra_gr_comm_init(pdev, TEGRA_GR_COMM_CTX_CLIENT, num_queues,
 				queue_sizes, TEGRA_VHOST_QUEUE_CMD,
-				ARRAY_SIZE(queue_sizes));
+				num_queues);
 }
 
-static inline void vhost_comm_deinit(void)
+static inline void vhost_comm_deinit(bool channel_management_in_guest)
 {
 	size_t queue_sizes[] = { TEGRA_VHOST_QUEUE_SIZES };
+	unsigned int num_queues =
+		channel_management_in_guest ?
+		1 : ARRAY_SIZE(queue_sizes);
 
-	tegra_gr_comm_deinit(TEGRA_GR_COMM_CTX_CLIENT, TEGRA_VHOST_QUEUE_CMD,
-			ARRAY_SIZE(queue_sizes));
+	tegra_gr_comm_deinit(TEGRA_GR_COMM_CTX_CLIENT,
+				  TEGRA_VHOST_QUEUE_CMD,
+				  num_queues);
 }
 
 int vhost_virt_moduleid(int moduleid)
@@ -150,25 +158,33 @@ int nvhost_virt_init(struct platform_device *dev, int moduleid)
 	struct nvhost_virt_ctx *virt_ctx =
 				kzalloc(sizeof(*virt_ctx), GFP_KERNEL);
 	int err;
+	bool channel_management_in_guest = false;
+	struct nvhost_master *host = nvhost_get_host(dev);
+
+	if (host->info.vmserver_owns_engines)
+		channel_management_in_guest = true;
 
 	if (!virt_ctx)
 		return -ENOMEM;
 
 	/* If host1x, init comm */
 	if (moduleid == NVHOST_MODULE_NONE) {
-		err = vhost_comm_init(dev);
+		err = vhost_comm_init(dev, channel_management_in_guest);
 		if (err) {
 			dev_err(&dev->dev, "failed to init comm interface\n");
 			goto fail;
 		}
 	}
 
+	if (channel_management_in_guest)
+		return 0;
+
 	virt_ctx->handle = vhost_virt_connect(moduleid);
 	if (!virt_ctx->handle) {
 		dev_err(&dev->dev,
 			"failed to connect to server node\n");
 		if (moduleid == NVHOST_MODULE_NONE)
-			vhost_comm_deinit();
+			vhost_comm_deinit(channel_management_in_guest);
 		err = -ENOMEM;
 		goto fail;
 	}
@@ -184,10 +200,11 @@ fail:
 void nvhost_virt_deinit(struct platform_device *dev)
 {
 	struct nvhost_virt_ctx *virt_ctx = nvhost_get_virt_data(dev);
+	struct nvhost_master *host = nvhost_get_host(dev);
 
 	if (virt_ctx) {
 		/* FIXME: add virt disconnect */
-		vhost_comm_deinit();
+		vhost_comm_deinit(host->info.vmserver_owns_engines);
 		kfree(virt_ctx);
 	}
 }

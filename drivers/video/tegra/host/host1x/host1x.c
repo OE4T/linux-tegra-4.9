@@ -795,6 +795,11 @@ static int of_nvhost_parse_platform_data(struct platform_device *dev,
 			pdata->virtual_dev = true;
 	}
 
+	if (!of_property_read_u32(np, "vmserver-owns-engines", &value)) {
+		if (value)
+			host->info.vmserver_owns_engines = true;
+	}
+
 	if (!of_property_read_u32(np, "nvidia,ch-base", &value))
 		host->info.ch_base = value;
 
@@ -924,13 +929,15 @@ static int nvhost_probe(struct platform_device *dev)
 		return err;
 	}
 
-	if (pdata->virtual_dev) {
+	if (pdata->virtual_dev || host->info.vmserver_owns_engines) {
 		err = nvhost_virt_init(dev, NVHOST_MODULE_NONE);
 		if (err) {
 			dev_err(&dev->dev, "failed to init virt support\n");
 			goto fail;
 		}
-	} else {
+	}
+
+	if (!pdata->virtual_dev) {
 		err = nvhost_device_get_resources(dev);
 		if (err) {
 			dev_err(&dev->dev, "failed to get resources\n");

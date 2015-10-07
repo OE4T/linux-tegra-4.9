@@ -78,6 +78,8 @@ struct host1x_device_info {
 						struct nvhost_chip_support *);
 	int		nb_actmons;
 	size_t		firmware_area_size;
+	/* true if host1x access direct but engines are not owned */
+	bool		vmserver_owns_engines;
 };
 
 struct nvhost_vm_firmware_area {

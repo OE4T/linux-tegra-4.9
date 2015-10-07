@@ -329,7 +329,7 @@ static int __nvhost_channelopen(struct inode *inode,
 		goto fail_power_on;
 	nvhost_module_idle(pdev);
 
-	if (nvhost_dev_is_virtual(pdev)) {
+	if (nvhost_dev_is_virtual(pdev) && !host->info.vmserver_owns_engines) {
 		/* If virtual, allocate a client id on the server side. This is
 		 * needed for channel recovery, to distinguish which clients
 		 * own which gathers.

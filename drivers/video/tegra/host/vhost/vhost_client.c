@@ -27,6 +27,9 @@
 
 #include "vhost.h"
 #include "t124/t124.h"
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#include "t186/t186.h"
+#endif
 
 static int nvhost_vhost_client_finalize_poweron(struct platform_device *pdev)
 {
@@ -48,6 +51,22 @@ static struct of_device_id tegra_client_of_match[] = {
 #endif
 	{ .compatible = "nvidia,tegra124-vhost-msenc",
 		.data = (struct nvhost_device_data *)&t124_msenc_info },
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	{ .compatible = "nvidia,tegra186-vhost-vic",
+		.data = (struct nvhost_device_data *)&t18_vic_info },
+	{ .compatible = "nvidia,tegra186-vhost-vi",
+		.data = (struct nvhost_device_data *)&t18_vi_info },
+	{ .compatible = "nvidia,tegra186-vhost-isp",
+		.data = (struct nvhost_device_data *)&t18_isp_info },
+	{ .compatible = "nvidia,tegra186-vhost-nvenc",
+		.data = (struct nvhost_device_data *)&t18_msenc_info },
+	{ .compatible = "nvidia,tegra186-vhost-nvdec",
+		.data = (struct nvhost_device_data *)&t18_nvdec_info },
+	{ .compatible = "nvidia,tegra186-vhost-nvjpg",
+		.data = (struct nvhost_device_data *)&t18_nvjpg_info },
+	{ .compatible = "nvidia,tegra186-vhost-nvcsi",
+		.data = (struct nvhost_device_data *)&t18_nvcsi_info },
+#endif
 	{ },
 };
 

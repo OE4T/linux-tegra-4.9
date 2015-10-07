@@ -138,6 +138,7 @@
 		cd-gpios = <&tegra_gpio TEGRA_GPIO(P, 5) 0>;
 		wp-gpios = <&tegra_gpio TEGRA_GPIO(P, 3) 0>;
 		mmc-ocr-mask = <3>;
+		/delete-property/ non-removable;
 	};
 
 	sdhci@3400000 { /* SDMMC_A  sd card 4-bit*/

@@ -107,6 +107,14 @@ static int imo_probe(void)
 		return init_native_override();
 	}
 
+#ifdef CONFIG_TEGRA_HV_MANAGER
+	np = of_find_compatible_node(NULL, NULL, ofm_virt);
+	if (np) {
+		of_node_put(np);
+		return init_virt_override();
+	}
+#endif
+
 	WARN_ON(1);
 	return -ENODEV;
 }
@@ -119,4 +127,6 @@ struct mail_ops mail_ops = {
 	.return_data = imo_return_data,
 	.signal_slave = imo_signal_slave,
 	.slave_signalled = imo_rx_ready
+	/* remaining functions will be populated in the override fn
+	 */
 };

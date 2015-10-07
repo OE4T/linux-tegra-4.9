@@ -1,6 +1,7 @@
 #include <linux/types.h>
 #include <asm/cputype.h>
 #include <asm/cpu.h>
+#include <asm/smp_plat.h>
 
 static inline u8 tegra18_logical_to_cluster(u8 cpu) {
 	return MPIDR_AFFINITY_LEVEL(cpu_logical_map(cpu), 1);

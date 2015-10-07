@@ -21,7 +21,7 @@
 #include <linux/slab.h>
 #include <soc/tegra/tegra_bpmp.h>
 
-#include "reset-t186.h"
+#include <dt-bindings/reset/tegra186-reset.h>
 #include "reset.h"
 
 static int tegra18x_reset_probe(struct platform_device *pdev)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION. All rights reserved.
  *
  * this program is free software; you can redistribute it and/or modify
  * it under the terms of the gnu general public license as published by
@@ -17,14 +17,14 @@
  */
 
 #include <linux/tegra-soc.h>
-#include "fuse.h"
+#include <linux/tegra-pmc.h>
 
 #ifndef __TEGRA18x_FUSE_OFFSETS_H
 #define __TEGRA18x_FUSE_OFFSETS_H
 
 /* private_key4 */
-#define DEVKEY_START_OFFSET			0x2A
-#define DEVKEY_START_BIT			12
+#define DEVKEY_START_OFFSET		0x2A
+#define DEVKEY_START_BIT		12
 
 /* arm_debug_dis */
 #define JTAG_START_OFFSET		0x0
@@ -35,29 +35,30 @@
 #define ODM_PROD_START_BIT		11
 
 /* boot_device_info */
-#define SB_DEVCFG_START_OFFSET		0x2C
-#define SB_DEVCFG_START_BIT		20
+#define SB_DEVCFG_START_OFFSET		0x4f
+#define SB_DEVCFG_START_BIT		23
+#define SB_BOOT_DEV_CFG_SIZE_BITS	24
 
 /* reserved_sw[2:0] */
 #define SB_DEVSEL_START_OFFSET		0x2C
 #define SB_DEVSEL_START_BIT		28
 
 /* private_key0 -> private_key3 (SBK) */
-#define SBK_START_OFFSET	0x22
-#define SBK_START_BIT		20
+#define SBK_START_OFFSET		0x4b
+#define SBK_START_BIT			23
 
 /* reserved_sw[7:4] */
-#define SW_RESERVED_START_OFFSET	0x2E
-#define SW_RESERVED_START_BIT		4
+#define SW_RESERVED_START_OFFSET	0x50
+#define SW_RESERVED_START_BIT		15
 #define SW_RESERVED_SIZE_BITS		12
 
 /* reserved_sw[3] */
 #define IGNORE_DEVSEL_START_OFFSET	0x2E
-#define IGNORE_DEVSEL_START_BIT	7
+#define IGNORE_DEVSEL_START_BIT		7
 
 /* public key */
-#define PUBLIC_KEY_START_OFFSET	0xC
-#define PUBLIC_KEY_START_BIT		6
+#define PUBLIC_KEY_START_OFFSET		0x43
+#define PUBLIC_KEY_START_BIT		23
 
 /* pkc_disable */
 #define PKC_DISABLE_START_OFFSET	0x52
@@ -72,8 +73,8 @@
 #define ODM_LOCK_START_BIT		6
 
 /* reserved_odm0 -> reserved_odm7 */
-#define ODM_RESERVED_DEVSEL_START_OFFSET	0x2E
-#define ODM_RESERVED_START_BIT			17
+#define ODM_RESERVED_DEVSEL_START_OFFSET	0x2
+#define ODM_RESERVED_START_BIT			2
 
 #define FUSE_VENDOR_CODE		0x200
 #define FUSE_VENDOR_CODE_MASK		0xf

@@ -72,16 +72,21 @@ static int tegra186_pmc_padctrl_set_voltage(struct padctrl_dev *pad_dev,
 	int i;
 
 	if ((voltage != 1200000) && (voltage != 1800000)
-			&& (voltage != 3300000))
+			&& (voltage != 3300000)) {
+		pr_err("Pad voltage %u is not valid\n", voltage);
 		return -EINVAL;
+	}
 
 	for (i = 0; i < ARRAY_SIZE(tegra186_pads); ++i) {
 		if (tegra186_pads[i].pad_id == pad_id)
 			break;
 	}
 
-	if (i == ARRAY_SIZE(tegra186_pads))
+	if (i == ARRAY_SIZE(tegra186_pads)) {
+		pr_err("Pad ID %d does not support for dynamic voltage\n",
+			pad_id);
 		return -EINVAL;
+	}
 
 	if (!tegra186_pads[i].dynamic_pad_voltage) {
 		offset = BIT(tegra186_pads[i].bit_position);

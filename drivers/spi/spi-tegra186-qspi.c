@@ -175,7 +175,7 @@
 #define DATA_DIR_RX				(1 << 1)
 
 #define QSPI_DMA_TIMEOUT			(msecs_to_jiffies(10000))
-#define DEFAULT_SPI_DMA_BUF_LEN			(256*1024)
+#define DEFAULT_SPI_DMA_BUF_LEN			(64*1024)
 #define TX_FIFO_EMPTY_COUNT_MAX			SPI_TX_FIFO_EMPTY_COUNT(0x40)
 #define RX_FIFO_FULL_COUNT_ZERO			SPI_RX_FIFO_FULL_COUNT(0)
 
@@ -520,7 +520,7 @@ static unsigned tegra_qspi_fill_tx_fifo_from_client_txbuf(
 			x = 0;
 			for (i = 0; nbytes && (i < tqspi->bytes_per_word);
 					i++, nbytes--)
-				x |= ((*tx_buf++) << i*8);
+				x |= (*tx_buf++) << (i*8);
 			tegra_qspi_writel(tqspi, x, QSPI_TX_FIFO);
 		}
 	}
@@ -1106,18 +1106,21 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 
 	tqspi->command1_reg = command1;
 
-	if (!cdata) {
-		u32 command2_reg;
+	if (cdata) {
+		u32 command2_reg = 0;
 		int rx_tap_delay;
 		int tx_tap_delay;
 
-
-		rx_tap_delay = cdata->rx_clk_tap_delay;
-		tx_tap_delay = min(cdata->tx_clk_tap_delay, 63);
-
-		command2_reg = QSPI_TX_TAP_DELAY(tx_tap_delay) |
-			QSPI_RX_TAP_DELAY(rx_tap_delay);
-		tegra_qspi_writel(tqspi, command2_reg, QSPI_COMMAND2);
+		if(cdata->rx_tap_delay) {
+			rx_tap_delay = min(cdata->tx_clk_tap_delay, 63);
+			command2_reg = QSPI_RX_TAP_DELAY(rx_tap_delay);
+		}
+		if(cdata->tx_tap_delay) {
+			tx_tap_delay = min(cdata->tx_clk_tap_delay, 63);
+			command2_reg |= QSPI_TX_TAP_DELAY(tx_tap_delay);
+		}
+		if((cdata->rx_tap_delay) || (cdata->tx_tap_delay))
+			tegra_qspi_writel(tqspi, command2_reg, QSPI_COMMAND2);
 	}
 
 	if (tqspi->dcycle_non_cmbseq_mode) {
@@ -1135,6 +1138,13 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 		ret = tegra_qspi_start_cpu_based_transfer(tqspi, t);
 
 	return ret;
+}
+
+static void tegra_qspi_clean(struct spi_device *spi)
+{
+	if (spi->controller_data)
+		kfree(spi->controller_data);
+	spi->controller_data = NULL;
 }
 
 static int tegra_qspi_setup(struct spi_device *spi)
@@ -1307,6 +1317,8 @@ static int tegra_qspi_combined_sequence_transfer(struct tegra_qspi_data *tqspi,
 					(tqspi->cur_direction & DATA_DIR_RX))
 					dmaengine_terminate_all(
 						tqspi->rx_dma_chan);
+				/* Reset controller in case of timeout happens */
+				reset_control_reset(tqspi->rstc);
 				ret = -EIO;
 				return ret;
 			}
@@ -1365,6 +1377,8 @@ static int tegra_qspi_non_combined_sequence_transfer
 				(tqspi->cur_direction & DATA_DIR_RX))
 				dmaengine_terminate_all(tqspi->rx_dma_chan);
 
+			/* Reset controller in case of timeout happens */
+			reset_control_reset(tqspi->rstc);
 				ret = -EIO;
 				return ret;
 		}
@@ -1606,8 +1620,7 @@ static struct tegra_qspi_device_controller_data
 		return NULL;
 	}
 
-	cdata = devm_kzalloc(&spi->dev, sizeof(*cdata),
-			GFP_KERNEL);
+	cdata = kzalloc(sizeof(*cdata), GFP_KERNEL);
 	if (!cdata) {
 		dev_err(&spi->dev, "Memory alloc for cdata failed\n");
 		return NULL;
@@ -1620,6 +1633,12 @@ static struct tegra_qspi_device_controller_data
 	prop = of_get_property(data_np, "nvidia,tx-clk-tap-delay", NULL);
 	if (prop)
 		cdata->tx_clk_tap_delay = be32_to_cpup(prop);
+
+	if (of_find_property(data_np, "nvidia,tx_tap_delay", NULL))
+		cdata->tx_tap_delay = true;
+
+	if (of_find_property(data_np, "nvidia,rx_tap_delay", NULL))
+		cdata->rx_tap_delay = true;
 
 	prop = of_get_property(data_np, "nvidia,x1-len-limit", NULL);
 	if (prop)
@@ -1719,7 +1738,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	}
 
 	if (!pdata->qspi_max_frequency)
-		pdata->qspi_max_frequency = 10000000; /* 133MHz */
+		pdata->qspi_max_frequency = 133000000; /* 133MHz */
 
 	master = spi_alloc_master(&pdev->dev, sizeof(*tqspi));
 	if (!master) {
@@ -1729,6 +1748,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 
 	master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH;
 	master->setup = tegra_qspi_setup;
+	master->cleanup = tegra_qspi_clean;
 	master->transfer_one_message = tegra_qspi_transfer_one_message;
 	master->num_chipselect = MAX_CHIP_SELECT;
 	master->bus_num = bus_num;

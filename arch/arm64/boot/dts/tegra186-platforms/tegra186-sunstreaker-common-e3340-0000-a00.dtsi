@@ -37,10 +37,6 @@
         #address-cells = <2>;
         #size-cells = <2>;
 
-	watchdog@30d0000 {
-		status = "okay";
-	};
-
 	pmc@c360000 {
 		io-pad-defaults {
 			sdmmc1-hv {
@@ -261,7 +257,7 @@
 		status = "okay";
 	};
 
-	soft_watchdog {
+	soft_wdt: soft_watchdog {
 		compatible = "softdog-platform";
 		status = "okay";
 	};

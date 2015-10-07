@@ -787,13 +787,6 @@ static int tegra_hdmi_hpd_init(struct tegra_hdmi *hdmi)
 	int hotplug_irq;
 	int err;
 
-	/* TEMPORARILY DISABLING HPD FOR INITIAL
-	 * BRINGUP HACK - WILL ENABLE AND TEST LATER
-	 */
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	return 0;
-#endif
-
 	if (!gpio_is_valid(hotplug_gpio)) {
 		dev_err(&dc->ndev->dev, "hdmi: invalid hotplug gpio\n");
 		return -EINVAL;
@@ -2230,10 +2223,6 @@ static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 	if (tegra_platform_is_linsim())
 		return true;
 
-	/* BRINGUP HACK DISABLE HDMI DETECT NOW*/
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	return true;
-#endif
 	if (dc->out->hotplug_state != TEGRA_HPD_STATE_NORMAL)
 		delay = 0;
 

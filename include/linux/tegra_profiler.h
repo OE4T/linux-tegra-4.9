@@ -19,8 +19,8 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	34
-#define QUADD_IO_VERSION	18
+#define QUADD_SAMPLES_VERSION	35
+#define QUADD_IO_VERSION	19
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
 #define QUADD_IO_VERSION_RB_MAX_FILL_COUNT	6
@@ -36,6 +36,7 @@
 #define QUADD_IO_VERSION_STACK_OFFSET		16
 #define QUADD_IO_VERSION_SECTIONS_INFO		17
 #define QUADD_IO_VERSION_UNW_METHODS_OPT	18
+#define QUADD_IO_VERSION_PER_CPU_SETUP          19
 
 #define QUADD_SAMPLE_VERSION_THUMB_MODE_FLAG	17
 #define QUADD_SAMPLE_VERSION_GROUP_SAMPLES	18
@@ -53,6 +54,7 @@
 #define QUADD_SAMPLE_VERSION_SCHED_TASK_STATE	32
 #define QUADD_SAMPLE_VERSION_URCS		33
 #define QUADD_SAMPLE_VERSION_HOTPLUG		34
+#define QUADD_SAMPLE_VERSION_PER_CPU_SETUP      35
 
 #define QUADD_MMAP_HEADER_VERSION		1
 
@@ -112,6 +114,20 @@
  * Send sections info
  */
 #define IOCTL_SET_SECTIONS_INFO _IOW(QUADD_IOCTL, 8, struct quadd_sections)
+
+/*
+ * Per CPU PMU setup
+ */
+#define IOCTL_SETUP_PMU_FOR_CPU _IOW(QUADD_IOCTL, 9,\
+				     struct quadd_pmu_setup_for_cpu)
+
+/*
+ * Per CPU capabilities
+ */
+#define IOCTL_GET_CAP_FOR_CPU _IOWR(QUADD_IOCTL, 10,\
+				    struct quadd_comm_cap_for_cpu)
+
+
 
 #define QUADD_CPUMODE_TEGRA_POWER_CLUSTER_LP	(1 << 29)	/* LP CPU */
 #define QUADD_CPUMODE_THUMB			(1 << 30)	/* thumb mode */
@@ -331,6 +347,7 @@ struct quadd_debug_data {
 #define QUADD_HDR_USE_ARCH_TIMER	(1 << 3)
 #define QUADD_HDR_STACK_OFFSET		(1 << 4)
 #define QUADD_HDR_BT_DWARF		(1 << 5)
+#define QUADD_HDR_HAS_CPUID		(1 << 6)
 
 struct quadd_header_data {
 	u16 magic;
@@ -387,6 +404,7 @@ enum {
 #define QUADD_PARAM_EXTRA_STACK_OFFSET		(1 << 5)
 #define QUADD_PARAM_EXTRA_BT_UT_CE		(1 << 6)
 #define QUADD_PARAM_EXTRA_BT_DWARF		(1 << 7)
+#define QUADD_PARAM_EXTRA_PER_PMU_SETUP		(1 << 8)
 
 struct quadd_parameters {
 	u32 freq;
@@ -409,6 +427,14 @@ struct quadd_parameters {
 	u32 reserved[16];	/* reserved fields for future extensions */
 };
 
+struct quadd_pmu_setup_for_cpu {
+	u32 cpuid;
+	u32 events[QUADD_MAX_COUNTERS];
+	u32 nr_events;
+
+	u32 reserved[16];
+};
+
 struct quadd_events_cap {
 	u32	cpu_cycles:1,
 		instructions:1,
@@ -427,6 +453,7 @@ struct quadd_events_cap {
 
 enum {
 	QUADD_COMM_CAP_IDX_EXTRA = 0,
+	QUADD_COMM_CAP_IDX_CPU_MASK = 1,
 };
 
 #define QUADD_COMM_CAP_EXTRA_BT_KERNEL_CTX	(1 << 0)
@@ -439,6 +466,7 @@ enum {
 #define QUADD_COMM_CAP_EXTRA_UNW_ENTRY_TYPE	(1 << 7)
 #define QUADD_COMM_CAP_EXTRA_ARCH_TIMER		(1 << 8)
 #define QUADD_COMM_CAP_EXTRA_RB_MMAP_OP		(1 << 9)
+#define QUADD_COMM_CAP_EXTRA_CPU_MASK		(1 << 10)
 
 struct quadd_comm_cap {
 	u32	pmu:1,
@@ -448,9 +476,16 @@ struct quadd_comm_cap {
 		tegra_lp_cluster:1,
 		blocked_read:1;
 
-	struct quadd_events_cap events_cap;
+	struct quadd_events_cap events_cap; /* Deprecated. */
 
 	u32 reserved[16];	/* reserved fields for future extensions */
+};
+
+struct quadd_comm_cap_for_cpu {
+	u32	l2_cache:1,
+		l2_multiple_events:1;
+	int cpuid;
+	struct quadd_events_cap events_cap;
 };
 
 enum {

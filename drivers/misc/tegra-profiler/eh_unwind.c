@@ -256,15 +256,14 @@ add_ex_region(struct regions_data *rd,
 			i_min = mid + 1;
 	}
 
-	if (array[i_max].vm_start == new_entry->vm_start) {
+	if (array[i_max].vm_start == new_entry->vm_start)
 		return 0;
-	} else {
-		memmove(array + i_max + 1,
-			array + i_max,
-			(size - i_max) * sizeof(*array));
-		memcpy(&array[i_max], new_entry, sizeof(*new_entry));
-		return 1;
-	}
+
+	memmove(array + i_max + 1,
+		array + i_max,
+		(size - i_max) * sizeof(*array));
+	memcpy(&array[i_max], new_entry, sizeof(*new_entry));
+	return 1;
 }
 
 static int
@@ -408,7 +407,7 @@ static struct regions_data *rd_alloc(unsigned long size)
 	if (!rd)
 		return NULL;
 
-	rd->entries = kzalloc(size * sizeof(*rd->entries), GFP_ATOMIC);
+	rd->entries = kcalloc(size, sizeof(*rd->entries), GFP_ATOMIC);
 	if (!rd->entries) {
 		kfree(rd);
 		return NULL;
@@ -431,6 +430,7 @@ static void rd_free(struct regions_data *rd)
 static void rd_free_rcu(struct rcu_head *rh)
 {
 	struct regions_data *rd = container_of(rh, struct regions_data, rcu);
+
 	rd_free(rd);
 }
 

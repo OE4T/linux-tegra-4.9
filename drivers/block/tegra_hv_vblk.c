@@ -233,6 +233,13 @@ static int next_transfer(struct vblk_dev *vblkdev)
 			size = bvec.bv_len;
 			vblkdev->cur_buffer  = page_address(bvec.bv_page) +
 						bvec.bv_offset;
+
+			if ((total_size + size) > (vblkdev->cur_nsect *
+				vblkdev->config.hardsect_size))
+				size = (vblkdev->cur_nsect *
+					vblkdev->config.hardsect_size) -
+					total_size;
+
 			memcpy((void *)ivc_blk_req +
 				sizeof(struct ivc_blk_request) + total_size,
 				vblkdev->cur_buffer , size);
@@ -288,6 +295,13 @@ static int get_data_from_io_server(struct vblk_dev *vblkdev)
 				vblkdev->cur_buffer =
 					page_address(bvec.bv_page) +
 					bvec.bv_offset;
+
+				if ((total_size + size) > (vblkdev->cur_nsect *
+					vblkdev->config.hardsect_size))
+					size = (vblkdev->cur_nsect *
+						vblkdev->config.hardsect_size) -
+						total_size;
+
 				memcpy(vblkdev->cur_buffer ,
 					(void *)ivc_blk_res +
 					sizeof(struct ivc_blk_result) +

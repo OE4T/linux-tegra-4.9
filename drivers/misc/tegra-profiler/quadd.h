@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/quadd.h
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -33,10 +33,10 @@ struct quadd_event_source_interface {
 	void (*start)(void);
 	void (*stop)(void);
 	int (*read)(struct event_data *events, int max_events);
-	int (*set_events)(int *events, int size);
-	int (*get_supported_events)(int *events, int max_events);
-	int (*get_current_events)(int *events, int max_events);
-	struct quadd_arch_info * (*get_arch)(void);
+	int (*set_events)(int cpuid, int *events, int size);
+	int (*get_supported_events)(int cpuid, int *events, int max_events);
+	int (*get_current_events)(int cpuid, int *events, int max_events);
+	struct quadd_arch_info * (*get_arch)(int cpuid);
 };
 
 struct source_info {
@@ -51,7 +51,8 @@ struct quadd_ctx {
 	struct quadd_comm_cap cap;
 
 	struct quadd_event_source_interface *pmu;
-	struct source_info pmu_info;
+	struct source_info * (*get_pmu_info)(void);
+	struct quadd_comm_cap_for_cpu * (*get_capabilities_for_cpu)(int cpuid);
 
 	struct quadd_event_source_interface *pl310;
 	struct source_info pl310_info;

@@ -49,6 +49,7 @@ static long
 quadd_arm_imm(u32 val)
 {
 	unsigned int rot = (val & 0xf00) >> 7, imm = (val & 0xff);
+
 	return ((imm << (32 - rot)) | (imm >> rot)) & 0xffffffff;
 }
 

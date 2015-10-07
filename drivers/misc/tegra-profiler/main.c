@@ -47,6 +47,18 @@
 #endif
 
 static struct quadd_ctx ctx;
+static DEFINE_PER_CPU(struct source_info, ctx_pmu_info);
+static DEFINE_PER_CPU(struct quadd_comm_cap_for_cpu, per_cpu_caps);
+
+static struct source_info *get_pmu_info_for_current_cpu(void)
+{
+	return &__get_cpu_var(ctx_pmu_info);
+}
+
+static struct quadd_comm_cap_for_cpu *get_capabilities_for_cpu_int(int cpuid)
+{
+	return &per_cpu(per_cpu_caps, cpuid);
+}
 
 static int get_default_properties(void)
 {
@@ -60,6 +72,8 @@ static int get_default_properties(void)
 
 	ctx.param.pids[0] = 0;
 	ctx.param.nr_pids = 1;
+	ctx.get_capabilities_for_cpu = get_capabilities_for_cpu_int;
+	ctx.get_pmu_info = get_pmu_info_for_current_cpu;
 
 	return 0;
 }
@@ -178,13 +192,49 @@ validate_freq(unsigned int freq)
 }
 
 static int
+set_parameters_for_cpu(struct quadd_pmu_setup_for_cpu *params)
+{
+	int i;
+	int err;
+	int nr_pmu = 0;
+	int cpuid = params->cpuid;
+
+	struct source_info *pmu_info = &per_cpu(ctx_pmu_info, cpuid);
+	int pmu_events_id[QUADD_MAX_COUNTERS];
+
+	for (i = 0; i < params->nr_events; i++) {
+		int event = params->events[i];
+
+		if (pmu_info->nr_supported_events > 0
+			&& is_event_supported(pmu_info, event)) {
+			pmu_events_id[nr_pmu++] = event;
+			pr_info("PMU active event for cpu %d: %s\n",
+					cpuid,
+					quadd_get_event_str(event));
+		} else {
+			pr_err("Bad event: %s\n",
+			       quadd_get_event_str(event));
+			return -EINVAL;
+		}
+	}
+
+	err = ctx.pmu->set_events(cpuid, pmu_events_id, nr_pmu);
+	if (err) {
+		pr_err("PMU set parameters: error\n");
+		return err;
+	}
+	per_cpu(ctx_pmu_info, cpuid).active = 1;
+
+	return err;
+}
+
+static int
 set_parameters(struct quadd_parameters *p)
 {
 	int i, err, uid = 0;
 	uid_t task_uid, current_uid;
-	int pmu_events_id[QUADD_MAX_COUNTERS];
 	int pl310_events_id;
-	int nr_pmu = 0, nr_pl310 = 0;
+	int nr_pl310 = 0;
 	struct task_struct *task;
 	u64 *low_addr_p;
 
@@ -240,15 +290,9 @@ set_parameters(struct quadd_parameters *p)
 	for (i = 0; i < p->nr_events; i++) {
 		int event = p->events[i];
 
-		if (ctx.pmu && ctx.pmu_info.nr_supported_events > 0
-			&& is_event_supported(&ctx.pmu_info, event)) {
-			pmu_events_id[nr_pmu++] = p->events[i];
-
-			pr_info("PMU active event: %s\n",
-				quadd_get_event_str(event));
-		} else if (ctx.pl310 &&
-			   ctx.pl310_info.nr_supported_events > 0 &&
-			   is_event_supported(&ctx.pl310_info, event)) {
+		if (ctx.pl310 &&
+		    ctx.pl310_info.nr_supported_events > 0 &&
+		    is_event_supported(&ctx.pl310_info, event)) {
 			pl310_events_id = p->events[i];
 
 			pr_info("PL310 active event: %s\n",
@@ -265,23 +309,11 @@ set_parameters(struct quadd_parameters *p)
 		}
 	}
 
-	if (ctx.pmu) {
-		if (nr_pmu > 0) {
-			err = ctx.pmu->set_events(pmu_events_id, nr_pmu);
-			if (err) {
-				pr_err("PMU set parameters: error\n");
-				return err;
-			}
-			ctx.pmu_info.active = 1;
-		} else {
-			ctx.pmu_info.active = 0;
-			ctx.pmu->set_events(NULL, 0);
-		}
-	}
-
 	if (ctx.pl310) {
+		int cpuid = 0; /* We don't need cpuid for pl310.  */
+
 		if (nr_pl310 == 1) {
-			err = ctx.pl310->set_events(&pl310_events_id, 1);
+			err = ctx.pl310->set_events(cpuid, &pl310_events_id, 1);
 			if (err) {
 				pr_info("pl310 set_parameters: error\n");
 				return err;
@@ -289,7 +321,7 @@ set_parameters(struct quadd_parameters *p)
 			ctx.pl310_info.active = 1;
 		} else {
 			ctx.pl310_info.active = 0;
-			ctx.pl310->set_events(NULL, 0);
+			ctx.pl310->set_events(cpuid, NULL, 0);
 		}
 	}
 
@@ -306,9 +338,90 @@ set_parameters(struct quadd_parameters *p)
 	return 0;
 }
 
-static void get_capabilities(struct quadd_comm_cap *cap)
+static void
+get_capabilities_for_cpu(int cpuid, struct quadd_comm_cap_for_cpu *cap)
 {
-	int i, event;
+	int i;
+	struct quadd_events_cap *events_cap = &cap->events_cap;
+	struct source_info *s = &per_cpu(ctx_pmu_info, cpuid);
+
+	cap->cpuid = cpuid;
+	events_cap->cpu_cycles = 0;
+	events_cap->l1_dcache_read_misses = 0;
+	events_cap->l1_dcache_write_misses = 0;
+	events_cap->l1_icache_misses = 0;
+
+	events_cap->instructions = 0;
+	events_cap->branch_instructions = 0;
+	events_cap->branch_misses = 0;
+	events_cap->bus_cycles = 0;
+
+	events_cap->l2_dcache_read_misses = 0;
+	events_cap->l2_dcache_write_misses = 0;
+	events_cap->l2_icache_misses = 0;
+
+	for (i = 0; i < s->nr_supported_events; i++) {
+		int event = s->supported_events[i];
+
+		if (event == QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES ||
+		    event == QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES ||
+		    event == QUADD_EVENT_TYPE_L2_ICACHE_MISSES) {
+			cap->l2_cache = 1;
+			cap->l2_multiple_events = 1;
+			break;
+		}
+
+
+		switch (event) {
+		case QUADD_EVENT_TYPE_CPU_CYCLES:
+			events_cap->cpu_cycles = 1;
+			break;
+		case QUADD_EVENT_TYPE_INSTRUCTIONS:
+			events_cap->instructions = 1;
+			break;
+		case QUADD_EVENT_TYPE_BRANCH_INSTRUCTIONS:
+			events_cap->branch_instructions = 1;
+			break;
+		case QUADD_EVENT_TYPE_BRANCH_MISSES:
+			events_cap->branch_misses = 1;
+			break;
+		case QUADD_EVENT_TYPE_BUS_CYCLES:
+			events_cap->bus_cycles = 1;
+			break;
+
+		case QUADD_EVENT_TYPE_L1_DCACHE_READ_MISSES:
+			events_cap->l1_dcache_read_misses = 1;
+			break;
+		case QUADD_EVENT_TYPE_L1_DCACHE_WRITE_MISSES:
+			events_cap->l1_dcache_write_misses = 1;
+			break;
+		case QUADD_EVENT_TYPE_L1_ICACHE_MISSES:
+			events_cap->l1_icache_misses = 1;
+			break;
+
+		case QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES:
+			events_cap->l2_dcache_read_misses = 1;
+			break;
+		case QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES:
+			events_cap->l2_dcache_write_misses = 1;
+			break;
+		case QUADD_EVENT_TYPE_L2_ICACHE_MISSES:
+			events_cap->l2_icache_misses = 1;
+			break;
+
+		default:
+			pr_err_once("%s: error: invalid event\n",
+						__func__);
+			return;
+		}
+	}
+}
+
+static void
+get_capabilities(struct quadd_comm_cap *cap)
+{
+	int i;
+	int cpuid;
 	unsigned int extra = 0;
 	struct quadd_events_cap *events_cap = &cap->events_cap;
 
@@ -318,18 +431,6 @@ static void get_capabilities(struct quadd_comm_cap *cap)
 	if (ctx.pl310) {
 		cap->l2_cache = 1;
 		cap->l2_multiple_events = 0;
-	} else if (ctx.pmu) {
-		struct source_info *s = &ctx.pmu_info;
-		for (i = 0; i < s->nr_supported_events; i++) {
-			event = s->supported_events[i];
-			if (event == QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES ||
-			    event == QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES ||
-			    event == QUADD_EVENT_TYPE_L2_ICACHE_MISSES) {
-				cap->l2_cache = 1;
-				cap->l2_multiple_events = 1;
-				break;
-			}
-		}
 	}
 
 	events_cap->cpu_cycles = 0;
@@ -348,60 +449,11 @@ static void get_capabilities(struct quadd_comm_cap *cap)
 
 	if (ctx.pl310) {
 		struct source_info *s = &ctx.pl310_info;
+
 		for (i = 0; i < s->nr_supported_events; i++) {
 			int event = s->supported_events[i];
 
 			switch (event) {
-			case QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES:
-				events_cap->l2_dcache_read_misses = 1;
-				break;
-			case QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES:
-				events_cap->l2_dcache_write_misses = 1;
-				break;
-			case QUADD_EVENT_TYPE_L2_ICACHE_MISSES:
-				events_cap->l2_icache_misses = 1;
-				break;
-
-			default:
-				pr_err_once("%s: error: invalid event\n",
-					    __func__);
-				return;
-			}
-		}
-	}
-
-	if (ctx.pmu) {
-		struct source_info *s = &ctx.pmu_info;
-		for (i = 0; i < s->nr_supported_events; i++) {
-			int event = s->supported_events[i];
-
-			switch (event) {
-			case QUADD_EVENT_TYPE_CPU_CYCLES:
-				events_cap->cpu_cycles = 1;
-				break;
-			case QUADD_EVENT_TYPE_INSTRUCTIONS:
-				events_cap->instructions = 1;
-				break;
-			case QUADD_EVENT_TYPE_BRANCH_INSTRUCTIONS:
-				events_cap->branch_instructions = 1;
-				break;
-			case QUADD_EVENT_TYPE_BRANCH_MISSES:
-				events_cap->branch_misses = 1;
-				break;
-			case QUADD_EVENT_TYPE_BUS_CYCLES:
-				events_cap->bus_cycles = 1;
-				break;
-
-			case QUADD_EVENT_TYPE_L1_DCACHE_READ_MISSES:
-				events_cap->l1_dcache_read_misses = 1;
-				break;
-			case QUADD_EVENT_TYPE_L1_DCACHE_WRITE_MISSES:
-				events_cap->l1_dcache_write_misses = 1;
-				break;
-			case QUADD_EVENT_TYPE_L1_ICACHE_MISSES:
-				events_cap->l1_icache_misses = 1;
-				break;
-
 			case QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES:
 				events_cap->l2_dcache_read_misses = 1;
 				break;
@@ -433,11 +485,15 @@ static void get_capabilities(struct quadd_comm_cap *cap)
 	extra |= QUADD_COMM_CAP_EXTRA_UNWIND_MIXED;
 	extra |= QUADD_COMM_CAP_EXTRA_UNW_ENTRY_TYPE;
 	extra |= QUADD_COMM_CAP_EXTRA_RB_MMAP_OP;
+	extra |= QUADD_COMM_CAP_EXTRA_CPU_MASK;
 
 	if (ctx.hrt->tc)
 		extra |= QUADD_COMM_CAP_EXTRA_ARCH_TIMER;
 
 	cap->reserved[QUADD_COMM_CAP_IDX_EXTRA] = extra;
+	cap->reserved[QUADD_COMM_CAP_IDX_CPU_MASK] = 0;
+	for_each_possible_cpu(cpuid)
+		cap->reserved[QUADD_COMM_CAP_IDX_CPU_MASK] |= (1 << cpuid);
 }
 
 void quadd_get_state(struct quadd_module_state *state)
@@ -472,7 +528,9 @@ static struct quadd_comm_control_interface control = {
 	.start			= start,
 	.stop			= stop,
 	.set_parameters		= set_parameters,
+	.set_parameters_for_cpu = set_parameters_for_cpu,
 	.get_capabilities	= get_capabilities,
+	.get_capabilities_for_cpu = get_capabilities_for_cpu,
 	.get_state		= quadd_get_state,
 	.set_extab		= set_extab,
 	.delete_mmap		= delete_mmap,
@@ -482,6 +540,7 @@ static int __init quadd_module_init(void)
 {
 	int i, nr_events, err;
 	int *events;
+	int cpuid;
 
 	pr_info("Branch: %s\n", QUADD_MODULE_BRANCH);
 	pr_info("Version: %s\n", QUADD_MODULE_VERSION);
@@ -497,7 +556,11 @@ static int __init quadd_module_init(void)
 
 	get_default_properties();
 
-	ctx.pmu_info.active = 0;
+	for_each_possible_cpu(cpuid) {
+		struct source_info *pmu_info = &per_cpu(ctx_pmu_info, cpuid);
+
+		pmu_info->active = 1;
+	}
 	ctx.pl310_info.active = 0;
 
 #ifdef CONFIG_ARM64
@@ -508,16 +571,24 @@ static int __init quadd_module_init(void)
 	if (!ctx.pmu) {
 		pr_err("PMU init failed\n");
 		return -ENODEV;
-	} else {
-		events = ctx.pmu_info.supported_events;
-		nr_events = ctx.pmu->get_supported_events(events,
-							  QUADD_MAX_COUNTERS);
-		ctx.pmu_info.nr_supported_events = nr_events;
+	}
 
-		pr_debug("PMU: amount of events: %d\n", nr_events);
+	for_each_possible_cpu(cpuid) {
+		struct source_info *pmu_info = &per_cpu(ctx_pmu_info,
+							cpuid);
+
+		events = pmu_info->supported_events;
+		nr_events =
+		    ctx.pmu->get_supported_events(cpuid, events,
+						  QUADD_MAX_COUNTERS);
+
+		pmu_info->nr_supported_events = nr_events;
+
+		pr_debug("CPU: %d PMU: amount of events: %d\n",
+			 cpuid, nr_events);
 
 		for (i = 0; i < nr_events; i++)
-			pr_debug("PMU event: %s\n",
+			pr_debug("CPU: %d PMU event: %s\n", cpuid,
 				 quadd_get_event_str(events[i]));
 	}
 
@@ -528,7 +599,7 @@ static int __init quadd_module_init(void)
 #endif
 	if (ctx.pl310) {
 		events = ctx.pl310_info.supported_events;
-		nr_events = ctx.pl310->get_supported_events(events,
+		nr_events = ctx.pl310->get_supported_events(0, events,
 							    QUADD_MAX_COUNTERS);
 		ctx.pl310_info.nr_supported_events = nr_events;
 
@@ -573,6 +644,10 @@ static int __init quadd_module_init(void)
 	}
 
 	get_capabilities(&ctx.cap);
+
+	for_each_possible_cpu(cpuid)
+		get_capabilities_for_cpu(cpuid, &per_cpu(per_cpu_caps, cpuid));
+
 	quadd_proc_init(&ctx);
 
 	return 0;

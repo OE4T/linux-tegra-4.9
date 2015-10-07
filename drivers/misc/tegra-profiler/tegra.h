@@ -18,7 +18,7 @@
 #define __QUADD_TEGRA_H
 
 #include <linux/smp.h>
-#include <asm/ptrace.h>
+#include <linux/ptrace.h>
 
 #ifdef CONFIG_TEGRA_CLUSTER_CONTROL
 #include <linux/io.h>

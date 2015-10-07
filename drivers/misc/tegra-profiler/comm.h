@@ -55,7 +55,10 @@ struct quadd_comm_control_interface {
 	int (*start)(void);
 	void (*stop)(void);
 	int (*set_parameters)(struct quadd_parameters *param);
+	int (*set_parameters_for_cpu)(struct quadd_pmu_setup_for_cpu *param);
 	void (*get_capabilities)(struct quadd_comm_cap *cap);
+	void (*get_capabilities_for_cpu)(int cpuid,
+					 struct quadd_comm_cap_for_cpu *cap);
 	void (*get_state)(struct quadd_module_state *state);
 	int (*set_extab)(struct quadd_sections *extabs,
 			 struct quadd_mmap_area *mmap);

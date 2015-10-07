@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/pl310.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -134,6 +134,7 @@ static u32 l2x0_read_perf_event(void)
 static void l2x0_clear_values(void)
 {
 	int cpu_id;
+
 	for (cpu_id = 0; cpu_id < nr_cpu_ids; cpu_id++)
 		per_cpu(pl310_prev_val, cpu_id) = 0;
 }
@@ -195,9 +196,9 @@ l2x0_events_read(struct event_data *events, int max_events)
 	events[0].val = l2x0_read_perf_event();
 	spin_unlock_irqrestore(&l2x0_ctx.lock, flags);
 
-	events[0].prev_val = __get_cpu_var(pl310_prev_val);
+	events[0].prev_val = this_cpu_ptr(pl310_prev_val);
 
-	__get_cpu_var(pl310_prev_val) = events[0].val;
+	this_cpu_ptr(pl310_prev_val) = events[0].val;
 
 	qm_debug_read_counter(l2x0_ctx.event_id, events[0].prev_val,
 			      events[0].val);
@@ -206,7 +207,7 @@ l2x0_events_read(struct event_data *events, int max_events)
 }
 
 static int __maybe_unused
-l2x0_events_read_emulate(struct event_data *events, int max_events)
+l2x0_events_read_emulate(int cpuid, struct event_data *events, int max_events)
 {
 	static u32 val;
 
@@ -220,16 +221,16 @@ l2x0_events_read_emulate(struct event_data *events, int max_events)
 	events[0].event_id = QUADD_L2X0_TYPE_DATA_READ_MISSES;
 
 	events[0].val = val;
-	events[0].prev_val = __get_cpu_var(pl310_prev_val);
+	events[0].prev_val = this_cpu_ptr(pl310_prev_val);
 
-	__get_cpu_var(pl310_prev_val) = val;
+	this_cpu_ptr(pl310_prev_val) = val;
 
 	val += 10;
 
 	return 1;
 }
 
-static int __maybe_unused l2x0_set_events(int *events, int size)
+static int __maybe_unused l2x0_set_events(int cpuid, int *events, int size)
 {
 	if (!events || size == 0) {
 		l2x0_ctx.l2x0_event_type = -1;
@@ -263,7 +264,7 @@ static int __maybe_unused l2x0_set_events(int *events, int size)
 	return 0;
 }
 
-static int get_supported_events(int *events, int max_events)
+static int get_supported_events(int cpuid, int *events, int max_events)
 {
 	if (max_events < 3)
 		return 0;
@@ -275,7 +276,7 @@ static int get_supported_events(int *events, int max_events)
 	return 3;
 }
 
-static int get_current_events(int *events, int max_events)
+static int get_current_events(int cpuid, int *events, int max_events)
 {
 	if (max_events == 0)
 		return 0;

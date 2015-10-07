@@ -595,7 +595,7 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	if (_IOC_DIR(cmd) & _IOC_READ)
 		err = !access_ok(VERIFY_WRITE, uarg, _IOC_SIZE(cmd));
-	if (_IOC_DIR(cmd) & _IOC_WRITE)
+	if (!err && (_IOC_DIR(cmd) & _IOC_WRITE))
 		err = !access_ok(VERIFY_READ, uarg, _IOC_SIZE(cmd));
 
 	if (err)

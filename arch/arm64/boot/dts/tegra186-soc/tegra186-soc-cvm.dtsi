@@ -67,6 +67,10 @@
 		};
 	};
 
+	aon@c160000 {
+		status = "okay";
+	};
+
 	timer {
 		status = "okay";
 	};
@@ -177,6 +181,10 @@
 		se@15840000 {
 			status = "okay";
 		};
+	};
+
+	hsp_top {
+		status = "okay";
 	};
 
 	gp10b {

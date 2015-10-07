@@ -23,6 +23,7 @@ config TEGRA_AST
 config TEGRA_AON
 	bool "Tegra AON driver"
 	depends on ARCH_TEGRA_18x_SOC
+	default y
 	select TEGRA_IVC
 	select TEGRA_HSP
 

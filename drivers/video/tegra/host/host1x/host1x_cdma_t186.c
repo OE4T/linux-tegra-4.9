@@ -407,7 +407,8 @@ static void cdma_timeout_release_mlock(struct nvhost_cdma *cdma)
 	nvhost_channel_remove_identifier(pdata, &ch);
 
 	/* allocate a command buffer */
-	cpuvaddr = dma_alloc_attrs(&pdev->dev, SZ_4K, &dma_handle, GFP_KERNEL,
+	cpuvaddr = dma_alloc_attrs(pdev->dev.parent, SZ_4K,
+				   &dma_handle, GFP_KERNEL,
 				   &attrs);
 	if (!cpuvaddr) {
 		nvhost_err(&pdev->dev, "mlock release failed: failed to allocate release buffer\n");
@@ -484,7 +485,7 @@ err_add_gather:
 err_job_alloc:
 	nvhost_syncpt_put_ref(syncpt, syncpt_id);
 err_alloc_syncpt:
-	dma_free_attrs(&pdev->dev, SZ_4K, cpuvaddr, dma_handle, &attrs);
+	dma_free_attrs(pdev->dev.parent, SZ_4K, cpuvaddr, dma_handle, &attrs);
 err_alloc_buffer:
 	nvhost_putchannel(ch, 1);
 }

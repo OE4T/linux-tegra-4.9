@@ -538,6 +538,10 @@ static inline u32 gr_fe_go_idle_timeout_count_disabled_f(void)
 {
 	return 0x0;
 }
+static inline u32 gr_fe_go_idle_timeout_count_prod_f(void)
+{
+	return 0x7fffffff;
+}
 static inline u32 gr_fe_object_table_r(u32 i)
 {
 	return 0x00404200 + i*4;

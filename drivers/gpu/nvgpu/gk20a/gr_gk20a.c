@@ -1400,13 +1400,9 @@ static u32 gk20a_init_sw_bundle(struct gk20a *g)
 	int i;
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
-	u32 fe_go_idle_timeout_save;
 
-	/* save and disable fe_go_idle */
-	fe_go_idle_timeout_save =
-		gk20a_readl(g, gr_fe_go_idle_timeout_r());
+	/* disable fe_go_idle */
 	gk20a_writel(g, gr_fe_go_idle_timeout_r(),
-		(fe_go_idle_timeout_save & gr_fe_go_idle_timeout_count_f(0)) |
 		gr_fe_go_idle_timeout_count_disabled_f());
 	/* enable pipe mode override */
 	gk20a_writel(g, gr_pipe_bundle_config_r(),
@@ -1439,7 +1435,8 @@ static u32 gk20a_init_sw_bundle(struct gk20a *g)
 		     gr_pipe_bundle_config_override_pipe_mode_disabled_f());
 
 	/* restore fe_go_idle */
-	gk20a_writel(g, gr_fe_go_idle_timeout_r(), fe_go_idle_timeout_save);
+	gk20a_writel(g, gr_fe_go_idle_timeout_r(),
+		     gr_fe_go_idle_timeout_count_prod_f());
 
 	return err;
 }
@@ -4077,7 +4074,6 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	u64 addr;
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
-	u32 fe_go_idle_timeout_save;
 	u32 last_method_data = 0;
 	u32 i, err;
 
@@ -4166,11 +4162,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	if (err)
 		goto out;
 
-	/* save and disable fe_go_idle */
-	fe_go_idle_timeout_save =
-		gk20a_readl(g, gr_fe_go_idle_timeout_r());
+	/* disable fe_go_idle */
 	gk20a_writel(g, gr_fe_go_idle_timeout_r(),
-		(fe_go_idle_timeout_save & gr_fe_go_idle_timeout_count_f(0)) |
 		gr_fe_go_idle_timeout_count_disabled_f());
 
 	/* override a few ctx state registers */
@@ -4185,7 +4178,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 restore_fe_go_idle:
 	/* restore fe_go_idle */
-	gk20a_writel(g, gr_fe_go_idle_timeout_r(), fe_go_idle_timeout_save);
+	gk20a_writel(g, gr_fe_go_idle_timeout_r(),
+		     gr_fe_go_idle_timeout_count_prod_f());
 
 	if (err || gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT))
 		goto out;

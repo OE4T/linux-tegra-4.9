@@ -999,9 +999,6 @@ static int gr_gp10b_init_fs_state(struct gk20a *g)
 			 gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_disable_f());
 	gk20a_writel(g, gr_gpcs_tpcs_sm_disp_ctrl_r(), data);
 
-	/* disable deep binning */
-	gk20a_writel(g, gr_fe_go_idle_timeout_r(), 0x800);
-
 	return gr_gm20b_ctx_state_floorsweep(g);
 }
 

@@ -219,13 +219,6 @@ static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi, int edid_src)
 		.addr = 0x50,
 	};
 
-	/* TEMPORARILY DISABLING DDC FOR INITIAL
-	 * BRINGUP HACK - WILL ENABLE AND TEST LATER
-	 */
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	return 0;
-#endif
-
 	if (edid_src == 0)
 		hdmi->edid = tegra_edid_create(dc, tegra_hdmi_ddc_i2c_xfer);
 	else if (edid_src == 1)
@@ -277,13 +270,6 @@ static int tegra_hdmi_scdc_init(struct tegra_hdmi *hdmi)
 		.type = "tegra_hdmi_scdc",
 		.addr = 0x54,
 	};
-
-	/* TEMPORARILY DISABLING SCDC FOR INITIAL
-	 * BRINGUP HACK - WILL ENABLE AND TEST LATER
-	 */
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	return 0;
-#endif
 
 	i2c_adap = i2c_get_adapter(dc->out->ddc_bus);
 	if (!i2c_adap) {
@@ -514,17 +500,7 @@ static void tegra_hdmi_edid_config(struct tegra_hdmi *hdmi)
 
 	dc->out->h_size = CM_TO_MM(hdmi->mon_spec.max_x);
 	dc->out->v_size = CM_TO_MM(hdmi->mon_spec.max_y);
-/* BRINGUP HACK - HDMI has issue in bringup, as
- * astro not showing any valid signals.
- * Disabling HDMI till the issue is sorted out
- */
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	hdmi->dvi = !tegra_hdmi_is_connected(hdmi);
-#else
-	pr_info("HDMI DVI enabled %d\n", hdmi->dvi);
-	if (hdmi->dvi)
-		hdmi->dvi = 0;
-#endif
 
 #undef CM_TO_MM
 }
@@ -963,6 +939,90 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 	return 0;
 }
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+static struct resource *hdmi_dpaux_res[2];
+static void __iomem *hdmi_dpaux_base[2];
+
+static int tegra_hdmi_dpaux_init(struct tegra_dc *dc)
+{
+	struct resource *base_res;
+	struct resource of_dpaux_res;
+	int err = 0;
+	struct reset_control *dpaux_rst;
+
+	int sor_num = tegra_dc_which_sor(dc);
+	struct device_node *np_dpaux =
+		sor_num ? of_find_node_by_path(DPAUX1_NODE)
+		: of_find_node_by_path(DPAUX_NODE);
+
+	if (np_dpaux && (of_device_is_available(np_dpaux))) {
+		of_address_to_resource(np_dpaux, 0, &of_dpaux_res);
+		hdmi_dpaux_res[sor_num] = &of_dpaux_res;
+	} else {
+		dev_err(&dc->ndev->dev, "dp: no dpaux node found\n");
+		err = -EFAULT;
+		return err;
+	}
+
+	if (!hdmi_dpaux_res[sor_num]) {
+		dev_err(&dc->ndev->dev, "dp: no mem resources for dpaux\n");
+		err = -EFAULT;
+		goto err_free_dpaux;
+	}
+
+	base_res = devm_request_mem_region(&dc->ndev->dev,
+		hdmi_dpaux_res[sor_num]->start,
+		resource_size(hdmi_dpaux_res[sor_num]),
+		dc->ndev->name);
+	if (!base_res) {
+		dev_err(&dc->ndev->dev, "dp: request_mem_region failed\n");
+		err = -EFAULT;
+		goto err_free_dpaux;
+	}
+
+	hdmi_dpaux_base[sor_num] = devm_ioremap(&dc->ndev->dev,
+			hdmi_dpaux_res[sor_num]->start,
+			resource_size(hdmi_dpaux_res[sor_num]));
+	if (!hdmi_dpaux_base[sor_num]) {
+		dev_err(&dc->ndev->dev, "dp: registers can't be mapped\n");
+		err = -EFAULT;
+		goto err_release_resource_reg;
+	}
+
+	/* check for dpaux clock reset control */
+	if (tegra_bpmp_running()) {
+		dpaux_rst =
+			of_reset_control_get(np_dpaux,
+				(sor_num) ? "dpaux1" : "dpaux");
+		if (IS_ERR_OR_NULL(dpaux_rst)) {
+			dev_err(&dc->ndev->dev,
+				"Unable to get dpaux%u reset control\n",
+				sor_num);
+			err = PTR_ERR(dpaux_rst);
+			goto dpaux_fail;
+		}
+		reset_control_deassert(dpaux_rst);
+	}
+
+	tegra_set_dpaux_addr(hdmi_dpaux_base[sor_num], sor_num);
+	of_node_put(np_dpaux);
+	return 0;
+
+dpaux_fail:
+	devm_iounmap(&dc->ndev->dev, hdmi_dpaux_base[sor_num]);
+
+err_release_resource_reg:
+	devm_release_mem_region(&dc->ndev->dev,
+		hdmi_dpaux_res[sor_num]->start,
+		resource_size(hdmi_dpaux_res[sor_num]));
+
+err_free_dpaux:
+	of_node_put(np_dpaux);
+
+	return err;
+}
+#endif
+
 static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi;
@@ -976,11 +1036,23 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	struct device_node *np_panel = NULL;
 	int edid_src = 0;
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	int sor_num = tegra_dc_which_sor(dc);
+#endif
+
 	hdmi = devm_kzalloc(&dc->ndev->dev, sizeof(*hdmi), GFP_KERNEL);
 	if (!hdmi) {
 		of_node_put(np_hdmi);
 		return -ENOMEM;
 	}
+
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	err = tegra_hdmi_dpaux_init(dc);
+	if (err) {
+		of_node_put(np_hdmi);
+		return err;
+	}
+#endif
 
 	hdmi->sor = tegra_dc_sor_init(dc, NULL);
 	if (IS_ERR_OR_NULL(hdmi->sor)) {
@@ -1100,6 +1172,14 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	of_node_put(np_hdmi);
 	return 0;
 fail:
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	devm_iounmap(&dc->ndev->dev, hdmi_dpaux_base[sor_num]);
+
+	devm_release_mem_region(&dc->ndev->dev,
+		hdmi_dpaux_res[sor_num]->start,
+		resource_size(hdmi_dpaux_res[sor_num]));
+#endif
+
 	devm_kfree(&dc->ndev->dev, hdmi);
 	of_node_put(np_hdmi);
 	return err;

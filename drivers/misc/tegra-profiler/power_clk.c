@@ -479,7 +479,8 @@ int quadd_power_clk_start(void)
 	s->clkp = clk_get_sys("3d", NULL);
 	if (!IS_ERR_OR_NULL(s->clkp)) {
 #ifdef CONFIG_COMMON_CLK
-		status = clk_notifier_register(s->clkp, s->nb);
+		int status = clk_notifier_register(s->clkp, s->nb);
+
 		if (status < 0) {
 			pr_err("error: could not setup gpu freq\n");
 			clk_put(s->clkp);
@@ -499,7 +500,8 @@ int quadd_power_clk_start(void)
 	s->clkp = clk_get_sys("cpu", "emc");
 	if (!IS_ERR_OR_NULL(s->clkp)) {
 #ifdef CONFIG_COMMON_CLK
-		status = clk_notifier_register(s->clkp, s->nb);
+		int status = clk_notifier_register(s->clkp, s->nb);
+
 		if (status < 0) {
 			pr_err("error: could not setup emc freq\n");
 			clk_put(s->clkp);
@@ -548,7 +550,7 @@ void quadd_power_clk_stop(void)
 	if (atomic_cmpxchg(&s->active, 1, 0)) {
 #ifdef CONFIG_COMMON_CLK
 		if (s->clkp)
-			clk_notifier_unregister(s->clkp, &s->nb);
+			clk_notifier_unregister(s->clkp, s->nb);
 #endif
 	}
 	mutex_unlock(&s->lock);
@@ -558,7 +560,7 @@ void quadd_power_clk_stop(void)
 	if (atomic_cmpxchg(&s->active, 1, 0)) {
 #ifdef CONFIG_COMMON_CLK
 		if (s->clkp)
-			clk_notifier_unregister(s->clkp, &s->nb);
+			clk_notifier_unregister(s->clkp, s->nb);
 #endif
 	}
 	mutex_unlock(&s->lock);

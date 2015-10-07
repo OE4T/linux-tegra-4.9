@@ -67,6 +67,9 @@ static int host1x_vm_init_device(struct platform_device *pdev)
 	int streamid = host1x_vm_get_id_dev(pdev);
 	int i;
 
+	if (pdata->virtual_dev)
+		return 0;
+
 	for (i = 0; i < ARRAY_SIZE(pdata->vm_regs); i++) {
 		if (!pdata->vm_regs[i].addr)
 			return 0;

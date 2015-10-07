@@ -94,6 +94,10 @@
 		nvidia,pts-base = <288>;
 		nvidia,nb-pts = <288>;
 
+		vmserver-owns-engines = <1>;
+
+		ivc-queue0 = <&tegra_hv 47>;
+
 		ctx0 {
 			status = "disabled";
 		};
@@ -127,15 +131,18 @@
 		};
 
 		nvcsi@150c0000 {
-			status = "disabled";
+			compatible = "nvidia,tegra186-vhost-nvcsi";
+			status = "okay";
 		};
 
 		vi@15700000 {
-			status = "disabled";
+			compatible = "nvidia,tegra186-vhost-vi";
+			status = "okay";
 		};
 
 		isp@15600000 {
-			status = "disabled";
+			compatible = "nvidia,tegra186-vhost-isp";
+			status = "okay";
 		};
 
 		vii2c@156c0000 {
@@ -159,19 +166,23 @@
 		};
 
 		vic@15340000 {
-			status = "disabled";
+			compatible = "nvidia,tegra186-vhost-vic";
+			status = "okay";
 		};
 
 		nvenc@154c0000 {
-			status = "disabled";
+			compatible = "nvidia,tegra186-vhost-nvenc";
+			status = "okay";
 		};
 
 		nvdec@15480000 {
-			status = "disabled";
+			compatible = "nvidia,tegra186-vhost-nvdec";
+			status = "okay";
 		};
 
 		nvjpg@15380000 {
-			status = "disabled";
+			compatible = "nvidia,tegra186-vhost-nvjpg";
+			status = "okay";
 		};
 
 		tsec@15500000 {

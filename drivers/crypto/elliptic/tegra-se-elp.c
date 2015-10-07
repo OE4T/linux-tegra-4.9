@@ -177,8 +177,8 @@ static DEFINE_SPINLOCK(key_slot_lock);
 
 static u32 pka_op_size[16] = {512, 768, 1024, 1536, 2048, 3072, 4096, 160, 192,
 				224, 256, 384, 512, 640};
-struct timeval tv;
-long usec;
+static struct timeval tv;
+static long usec;
 
 static inline u32 num_words(int mode)
 {
@@ -1537,6 +1537,7 @@ rel_mutex:
 	tegra_se_release_rng_mutex(se_dev);
 	return ret;
 }
+EXPORT_SYMBOL(tegra_se_elp_rng_op);
 
 int tegra_se_elp_pka_op(struct tegra_se_elp_pka_request *req)
 {

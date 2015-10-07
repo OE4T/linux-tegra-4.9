@@ -4516,12 +4516,8 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 	}
 
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	dsi->pad_ctrl = tegra_dsi_padctrl_init(dc);
-	if (IS_ERR(dsi->pad_ctrl)) {
-		dev_err(&dc->ndev->dev, "dsi: Padctrl init failed\n");
-		err = PTR_ERR(dsi->pad_ctrl);
-		goto fail;
-	}
+	if (dsi->pad_ctrl)
+		tegra_dsi_padctrl_enable(dsi->pad_ctrl);
 #endif
 	/* Stop DC stream before configuring DSI registers
 	 * to avoid visible glitches on panel during transition
@@ -5659,10 +5655,22 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 		goto err_mipi;
 	}
 
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	dsi->pad_ctrl = tegra_dsi_padctrl_init(dc);
+	if (IS_ERR(dsi->pad_ctrl)) {
+		dev_err(&dc->ndev->dev, "dsi: Padctrl init failed\n");
+		err = PTR_ERR(dsi->pad_ctrl);
+		goto err_padctrl;
+	}
+#endif
 	sprintf(sysedp_name, "dsi_%d", dsi->dc->ndev->id);
 	dsi->sysedpc = sysedp_create_consumer(sysedp_name, sysedp_name);
 
 	return 0;
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+err_padctrl:
+	tegra_mipi_cal_destroy(dc);
+#endif
 err_mipi:
 	if (dsi->avdd_dsi_csi)
 		regulator_put(dsi->avdd_dsi_csi);

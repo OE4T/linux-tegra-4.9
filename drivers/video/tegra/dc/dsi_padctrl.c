@@ -62,6 +62,34 @@ static void tegra_dsi_padctrl_reset(struct tegra_dsi_padctrl *dsi_padctrl)
 	reset_control_reset(dsi_padctrl->reset);
 }
 
+void tegra_dsi_padctrl_enable(struct tegra_dsi_padctrl *dsi_padctrl)
+{
+	int val;
+	u8 i;
+
+	/* Clear all pwr downs for all controllers */
+	for (i = 0; i < ARRAY_SIZE(dsi_padctrl_pwr_down_regs); i++) {
+		val = tegra_dsi_padctrl_read(dsi_padctrl,
+			dsi_padctrl_pwr_down_regs[i]);
+		val &= ~(DSI_PADCTRL_PWR_DOWN_PD_CLK_EN |
+			DSI_PADCTRL_PWR_DOWN_PD_IO_0_EN |
+			DSI_PADCTRL_PWR_DOWN_PD_IO_1_EN);
+		tegra_dsi_padctrl_write(dsi_padctrl, val,
+			dsi_padctrl_pwr_down_regs[i]);
+	}
+
+	/* Clear all pull downs for all controllers */
+	for (i = 0; i < ARRAY_SIZE(dsi_padctrl_pull_down_regs); i++) {
+		val = tegra_dsi_padctrl_read(dsi_padctrl,
+			dsi_padctrl_pull_down_regs[i]);
+		val &= ~(DSI_PADCTRL_E_PULL_DWN_PD_CLK_EN |
+			DSI_PADCTRL_E_PULL_DWN_PD_IO_0_EN |
+			DSI_PADCTRL_E_PULL_DWN_PD_IO_1_EN);
+		tegra_dsi_padctrl_write(dsi_padctrl, val,
+			dsi_padctrl_pull_down_regs[i]);
+	}
+}
+
 struct tegra_dsi_padctrl *tegra_dsi_padctrl_init(struct tegra_dc *dc)
 {
 	struct tegra_dsi_padctrl *dsi_padctrl;
@@ -69,8 +97,6 @@ struct tegra_dsi_padctrl *tegra_dsi_padctrl_init(struct tegra_dc *dc)
 	struct resource padctrl_res;
 	struct device_node *np_dsi = of_find_node_by_path(DSI_NODE);
 	int err;
-	int val;
-	u8 i;
 
 	/* Padctrl module doesn't exist on fpga */
 	if (tegra_platform_is_linsim() || tegra_platform_is_fpga()) {
@@ -125,26 +151,6 @@ struct tegra_dsi_padctrl *tegra_dsi_padctrl_init(struct tegra_dc *dc)
 
 	/* Reset dsi padctrl module */
 	tegra_dsi_padctrl_reset(dsi_padctrl);
-
-	/* Clear all pwr downs for all controllers */
-	val = 0;
-	for (i = 0; i < ARRAY_SIZE(dsi_padctrl_pwr_down_regs); i++) {
-		val &= ~(DSI_PADCTRL_PWR_DOWN_PD_CLK_EN |
-			DSI_PADCTRL_PWR_DOWN_PD_IO_0_EN |
-			DSI_PADCTRL_PWR_DOWN_PD_IO_1_EN);
-		tegra_dsi_padctrl_write(dsi_padctrl, val,
-			dsi_padctrl_pwr_down_regs[i]);
-	} 
-
-	/* Clear all pull downs for all controllers */
-	val = 0;
-	for (i = 0; i < ARRAY_SIZE(dsi_padctrl_pull_down_regs); i++) {
-		val &= ~(DSI_PADCTRL_E_PULL_DWN_PD_CLK_EN |
-			DSI_PADCTRL_E_PULL_DWN_PD_IO_0_EN |
-			DSI_PADCTRL_E_PULL_DWN_PD_IO_1_EN);
-		tegra_dsi_padctrl_write(dsi_padctrl, val,
-			dsi_padctrl_pull_down_regs[i]);
-	} 
 
 	return dsi_padctrl;
 fail:

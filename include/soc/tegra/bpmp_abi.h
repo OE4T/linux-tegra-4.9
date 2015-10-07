@@ -1354,6 +1354,11 @@ struct mrq_cpu_vhint_request {
  * @mdiv: input divider value
  * @ndiv_max: fMAX expressed with max NDIV value
  * @ndiv: table of ndiv values as a function of vINDEX (voltage index)
+ * @ndiv_min: minimum allowed NDIV value
+ * @vfloor: minimum allowed voltage hint value (as in vINDEX)
+ * @vceil: maximum allowed voltage hint value (as in vINDEX)
+ * @vindex_mult: post-multiplier for vindex value
+ * @vindex_div: post-divider for vindex value
  *
  * Used by %MRQ_CPU_VHINT call to carry data pointed by @addr of
  * struct mrq_cpu_vhint_request
@@ -1364,6 +1369,11 @@ struct cpu_vhint_data {
 	uint16_t mdiv;
 	uint16_t ndiv_max;
 	uint16_t ndiv[80];
+	uint16_t ndiv_min;
+	uint16_t vfloor;
+	uint16_t vceil;
+	uint16_t vindex_mult;
+	uint16_t vindex_div;
 	uint16_t reserved[328]; /* reserved for future use */
 } __ABI_PACKED;
 

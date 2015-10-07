@@ -132,6 +132,7 @@ int flcn_setup_ucode_image(struct platform_device *dev,
 				   u32 *ucode_ptr,
 				   const struct firmware *ucode_fw)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	struct flcn *v = get_flcn(dev);
 	/* image data is little endian. */
 	struct ucode_v1_flcn ucode;
@@ -196,14 +197,23 @@ int flcn_setup_ucode_image(struct platform_device *dev,
 				ucode.fce_header->fce_ucode_buffer_size,
 				ucode.fce_header->fce_ucode_size);
 
-		v->fce_mapped = nvhost_vm_allocate_firmware_area(dev,
-			 ucode.fce_header->fce_ucode_size, &v->fce_dma_addr);
-		if (!v->fce_mapped)
-			return -ENOMEM;
+		/* if isolation is enabled.. */
+		if (pdata->isolate_contexts) {
+			/* create and map fce shadow to all contexts */
+			v->fce_mapped = nvhost_vm_allocate_firmware_area(dev,
+				ucode.fce_header->fce_ucode_size,
+				&v->fce_dma_addr);
+			if (!v->fce_mapped)
+				return -ENOMEM;
 
-		memcpy(v->fce_mapped, (u8 *)v->mapped +
-			ucode.bin_header->fce_bin_data_offset,
-			ucode.fce_header->fce_ucode_size);
+			memcpy(v->fce_mapped, (u8 *)v->mapped +
+				ucode.bin_header->fce_bin_data_offset,
+				ucode.fce_header->fce_ucode_size);
+		} else {
+			/* ..otherwise use the one in firmware image */
+			v->fce_dma_addr = v->dma_addr +
+				ucode.bin_header->fce_bin_data_offset;
+		}
 
 		v->fce.size        = ucode.fce_header->fce_ucode_size;
 		v->fce.data_offset =

@@ -53,6 +53,8 @@ static char debugfs_buf[DEBUGFS_MAX_SIZE];
 struct DWC_ETH_QOS_prv_data *pdata;
 
 static void do_transmit_alignment_test(struct DWC_ETH_QOS_prv_data *pdata);
+static void bcm_regs_clause45_write(int dev, int reg, unsigned int data);
+static void bcm_regs_clause45_read(int dev, int reg, unsigned int *data);
 
 /*
  * This structure hold information about the /debug file
@@ -2868,8 +2870,23 @@ static ssize_t DWC_ETH_QOS_write(struct file *file, const char __user * buf,
 		} else if (!strcmp(regName, "reg_offset")) {
 			reg_offset_val = (int)integer_value;
 		} else if (!strcmp(regName, "gen_reg")) {
-			gen_reg_val = (int)integer_value;
-			iowrite32(gen_reg_val, (void *)(volatile ULONG *)(BASE_ADDRESS + reg_offset_val));
+			if (reg_offset_val & 0x10000) {
+				/* write clause45 phy reg */
+				gen_reg_val = (int)integer_value;
+				bcm_regs_clause45_write(2,
+				(reg_offset_val & 0xffff), gen_reg_val);
+			} else if (reg_offset_val & 0x20000) {
+				/* write phy reg */
+				gen_reg_val = (int)integer_value;
+				DWC_ETH_QOS_mdio_write_direct(pdata,
+				pdata->phyaddr, (reg_offset_val & 0xffff),
+				gen_reg_val);
+			} else  {
+				/* write mac reg */
+				gen_reg_val = (int)integer_value;
+				iowrite32(gen_reg_val, (void *)(ULONG *)
+				(BASE_ADDRESS + reg_offset_val));
+			}
 		} else if (!strcmp(regName, "do_tx_align_tst")) {
 			do_tx_align_tst_val = (int)integer_value;
 			do_transmit_alignment_test(pdata);
@@ -19268,11 +19285,32 @@ static ssize_t gen_reg_read(struct file *file, char __user * userbuf,
 			     size_t count, loff_t * ppos)
 {
 	ssize_t ret;
-	gen_reg_val = ioread32((void *)(volatile ULONG *)(BASE_ADDRESS + reg_offset_val));
-	sprintf(debugfs_buf, "reg(%#x) = %#x\n", reg_offset_val, gen_reg_val);
-	ret =
-	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
-				    strlen(debugfs_buf));
+	unsigned int data_val;
+
+	if (reg_offset_val & 0x10000) {
+		/* read clause45 phy reg */
+		bcm_regs_clause45_read(2, (reg_offset_val & 0xffff), &data_val);
+		sprintf(debugfs_buf, "reg(%#x) = %#x\n",
+			reg_offset_val, data_val);
+		ret = simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
+			strlen(debugfs_buf));
+	} else if (reg_offset_val & 0x20000) {
+		/* read phy reg */
+		DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr,
+			(reg_offset_val & 0xffff), &data_val);
+		sprintf(debugfs_buf, "reg(%#x) = %#x\n",
+			reg_offset_val, data_val);
+		ret = simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
+			strlen(debugfs_buf));
+	} else  {
+		/* read mac reg */
+		gen_reg_val = ioread32((void *)(ULONG *)
+			(BASE_ADDRESS + reg_offset_val));
+		sprintf(debugfs_buf, "reg(%#x) = %#x\n", reg_offset_val,
+			gen_reg_val);
+		ret = simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
+				strlen(debugfs_buf));
+	}
 	return ret;
 }
 
@@ -20870,7 +20908,7 @@ static const struct file_operations RX_NORMAL_DESC_STATUS_fops = {
 	.read = RX_NORMAL_DESC_STATUS_read,
 };
 
-static void BCM_REGS_CLAUSE45_read(int dev, int reg, unsigned int *data)
+static void bcm_regs_clause45_read(int dev, int reg, unsigned int *data)
 {
 	/* Write the desired MMD devAddr */
 	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, MMD_CTRL_REG, dev);
@@ -20885,6 +20923,25 @@ static void BCM_REGS_CLAUSE45_read(int dev, int reg, unsigned int *data)
 
 	/* read the content of the MMD's selected register */
 	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MMD_ADDR_DATA_REG,
+		data);
+}
+
+
+static void bcm_regs_clause45_write(int dev, int reg, unsigned int data)
+{
+	/* Write the desired MMD devAddr */
+	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, MMD_CTRL_REG, dev);
+
+	/* Write the desired MMD regAddr */
+	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, MMD_ADDR_DATA_REG,
+		reg);
+
+	/* Select the Function : DATA with no post increment */
+	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, MMD_CTRL_REG,
+		dev | MMD_CTRL_FUNC_DATA_NOINCR);
+
+	/* read the content of the MMD's selected register */
+	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, MMD_ADDR_DATA_REG,
 		data);
 }
 
@@ -20966,15 +21023,15 @@ static ssize_t BCM_REGS_read(struct file *file, char __user * userbuf,
 	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, BCM_EXPANSION_CTRL_REG, 0x000);
 
 	/* EEE advertisement regs */
-	BCM_REGS_CLAUSE45_read(MDIO_MMD_AN, CL45_ADV_EEE_REG,
+	bcm_regs_clause45_read(MDIO_MMD_AN, CL45_ADV_EEE_REG,
 		&BCM_EEE_ADV_REG_val);
 
 	/* EEE resolution status regs */
-	BCM_REGS_CLAUSE45_read(MDIO_MMD_AN, CL45_RES_EEE_REG,
+	bcm_regs_clause45_read(MDIO_MMD_AN, CL45_RES_EEE_REG,
 		&BCM_EEE_RES_STS_REG_val);
 
 	/* EEE resolution status regs */
-	BCM_REGS_CLAUSE45_read(MDIO_MMD_AN, CL45_LPI_COUNTER_REG,
+	bcm_regs_clause45_read(MDIO_MMD_AN, CL45_LPI_COUNTER_REG,
 		&BCM_LPI_COUNTER_REG_val);
 
 	sprintf(debug_buf,

@@ -148,4 +148,22 @@
 			status = "okay";
 		};
 	};
+
+	i2c@3160000 {
+		gpio@22 {
+			disable-sdcard1-power-enable {
+				gpio-input = <6>;
+			};
+		};
+	};
+
+	fixed-regulators {
+		regulator@110 {
+			status = "disabled";
+		};
+
+		regulator@111 {
+			status = "disabled";
+		};
+	};
 };

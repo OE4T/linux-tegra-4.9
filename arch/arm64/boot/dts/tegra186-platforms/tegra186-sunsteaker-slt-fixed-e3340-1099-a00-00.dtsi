@@ -162,7 +162,7 @@
 			regulator-name = "vdd-sdcard1";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
-			gpio = <&tegra_gpio TEGRA_GPIO(P, 5) 0>;
+			gpio = <&tegra_gpio TEGRA_GPIO(N, 0) 0>;
 			enable-active-high;
 			vin-supply = <&spmic_sd3>;
 		};

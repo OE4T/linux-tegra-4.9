@@ -360,7 +360,6 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 	bool yuv = tegra_dc_is_yuv(win->fmt);
 	bool yuvp = tegra_dc_is_yuv_planar(win->fmt);
 	bool yuvsp = tegra_dc_is_yuv_semi_planar(win->fmt);
-	bool enable_blx4 = false;
 
 	struct tegra_dc *dc = win->dc;
 
@@ -387,10 +386,8 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 	}
 
 	win_options = win_options_win_enable_enable_f();
-	if (win->flags & TEGRA_WIN_FLAG_SCAN_COLUMN) {
+	if (win->flags & TEGRA_WIN_FLAG_SCAN_COLUMN)
 		win_options |= win_options_scan_column_enable_f();
-		enable_blx4 = true;
-	}
 	if (win->flags & TEGRA_WIN_FLAG_INVERT_H)
 		win_options |= win_options_h_direction_decrement_f();
 	if (win->flags & TEGRA_WIN_FLAG_INVERT_V)
@@ -400,10 +397,6 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 	if (win->ppflags & TEGRA_WIN_PPFLAG_CP_ENABLE)
 		win_options |= win_options_cp_enable_enable_f();
 	nvdisp_win_write(win, win_options, win_options_r());
-
-	/* enable BLx4 for CDE support */
-	if (win->cde.cde_addr)
-		enable_blx4 = true;
 
 	nvdisp_win_write(win,
 		win_set_cropped_size_in_height_f(dfixed_trunc(win->h)) |
@@ -570,15 +563,6 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 			win_surface_kind_r());
 	}
 
-	if (enable_blx4)
-		nvdisp_win_write(win,
-				win_ihub_linebuf_config_mode_four_lines_f(),
-				win_ihub_linebuf_config_r());
-	else
-		nvdisp_win_write(win,
-				win_ihub_linebuf_config_mode_two_lines_f(),
-				win_ihub_linebuf_config_r());
-
 	return 0;
 }
 
@@ -742,6 +726,7 @@ int tegra_nvdisp_detach_win(struct tegra_dc *dc, unsigned idx)
 int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 {
 	struct tegra_dc_win *win = tegra_dc_get_window(dc, idx);
+	bool enable_blx4 = true; /* TODO: configure defaults from DT or IMP */
 
 	if (win && win->dc == dc) /* already assigned to current head */
 		return 0;
@@ -765,6 +750,16 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 	/* attach window idx */
 	nvdisp_win_write(win, dc->ctrl_num, win_set_control_r());
 
+	/* configure some IHUB related settings  */
+	if (enable_blx4)
+		nvdisp_win_write(win,
+				win_ihub_linebuf_config_mode_four_lines_f(),
+				win_ihub_linebuf_config_r());
+	else
+		nvdisp_win_write(win,
+				win_ihub_linebuf_config_mode_two_lines_f(),
+				win_ihub_linebuf_config_r());
+
 	/* promote the state */
 	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_common_act_update_enable_f() |
 		nvdisp_cmd_state_ctrl_win_a_update_enable_f() << win->idx,
@@ -773,7 +768,11 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_common_act_req_enable_f() |
 		nvdisp_cmd_state_ctrl_a_act_req_enable_f() << win->idx,
 		nvdisp_cmd_state_ctrl_r());
-	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
+	/* wait for COMMON_ACT_REQ to complete or time out */
+	if (tegra_dc_poll_register(dc, DC_CMD_STATE_CONTROL,
+			COMMON_ACT_REQ, 0, 1, NVDISP_TEGRA_POLL_TIMEOUT_MS))
+		dev_err(&dc->ndev->dev,
+			"dc timeout waiting for DC to stop\n");
 
 	/* set the windows scaler coeff value */
 	if (!win->is_scaler_coeff_set) {

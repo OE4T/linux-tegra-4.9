@@ -2053,14 +2053,9 @@ void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds)
 	if (tegra_platform_is_linsim())
 		return;
 
+	/* Reset SOR */
+	tegra_sor_reset(sor);
 	tegra_sor_clk_disable(sor);
-	/* Reset SOR clk */
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	if (sor->rst)
-		reset_control_assert(sor->rst);
-#else
-	tegra_periph_reset_assert(sor->sor_clk);
-#endif
 }
 
 void tegra_dc_sor_set_internal_panel(struct tegra_dc_sor_data *sor, bool is_int)

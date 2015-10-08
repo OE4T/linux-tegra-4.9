@@ -76,6 +76,7 @@ static int tegra_ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 	u32 port_status = 0;
 	enum tegra_ahci_port_runtime_status lpm_state;
 	int i;
+	u32 val, mask;
 
 	ata_for_each_link(link, ap, PMP_FIRST) {
 		if (link->flags & ATA_LFLAG_NO_LPM) {
@@ -119,10 +120,12 @@ static int tegra_ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 				if (port_status < lpm_state) {
 					ata_link_err(link,
 						"Link didn't enter LPM\n");
-					return -EBUSY;
+					ret = -EBUSY;
+				} else {
+					port_status = 0;
+					ata_link_info(link,
+						"Link entered LPM\n");
 				}
-				port_status = 0;
-				ata_link_info(link, "Link entered LPM\n");
 			} else {
 				ata_dev_info(dev,
 						"does not support HIPM/DIPM\n");
@@ -130,11 +133,24 @@ static int tegra_ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 		}
 	}
 
-	ret = ahci_ops.port_suspend(ap, mesg);
+	if (tegra->host_naking_war_applied) {
+		/* Revert HOST NAKing WAR once link enters low power mode */
+		mask = val = T_SATA0_AHCI_HBA_CTL_0_PSM2LL_DENY_PMREQ;
+		tegra_ahci_scfg_update(hpriv, val, mask,
+				T_SATA0_AHCI_HBA_CTL_0);
 
-	if (ret == 0) {
-		pm_runtime_mark_last_busy(&tegra->pdev->dev);
-		pm_runtime_put_sync_autosuspend(&tegra->pdev->dev);
+		mask = val = T_SATA0_CFG_LINK_0_WAIT_FOR_PSM_FOR_PMOFF;
+		tegra_ahci_scfg_update(hpriv, val, mask,
+				T_SATA0_CFG_LINK_0);
+		tegra->host_naking_war_applied = false;
+	}
+
+	if (!ret) {
+		ret = ahci_ops.port_suspend(ap, mesg);
+		if (ret == 0) {
+			pm_runtime_mark_last_busy(&tegra->pdev->dev);
+			pm_runtime_put_sync_autosuspend(&tegra->pdev->dev);
+		}
 	}
 
 	return ret;
@@ -184,8 +200,37 @@ static int tegra_ahci_port_resume(struct ata_port *ap)
 	return ret;
 }
 
+static unsigned int tegra_ahci_qc_issue(struct ata_queued_cmd *qc)
+{
+
+	if (qc->tf.command == ATA_CMD_STANDBYNOW1) {
+		struct scsi_device *sdev = qc->scsicmd->device;
+		struct ata_port *ap = ata_shost_to_port(sdev->host);
+		struct ata_host *host = ap->host;
+		struct ahci_host_priv *hpriv =  host->private_data;
+		struct tegra_ahci_priv *tegra = hpriv->plat_data;
+		u32 val = 0;
+		u32 mask = T_SATA0_AHCI_HBA_CTL_0_PSM2LL_DENY_PMREQ;
+
+		/* Apply HOST NAKing WAR */
+		val = ~mask;
+		tegra_ahci_scfg_update(hpriv, val, mask,
+				T_SATA0_AHCI_HBA_CTL_0);
+
+		mask = T_SATA0_CFG_LINK_0_WAIT_FOR_PSM_FOR_PMOFF;
+		val = ~mask;
+		tegra_ahci_scfg_update(hpriv, val, mask,
+						T_SATA0_CFG_LINK_0);
+
+		tegra->host_naking_war_applied = true;
+	}
+	return ahci_ops.qc_issue(qc);
+
+}
+
 static struct ata_port_operations ahci_tegra_port_ops = {
 	.inherits	= &ahci_ops,
+	.qc_issue	= tegra_ahci_qc_issue,
 	.host_stop	= tegra_ahci_host_stop,
 	.port_suspend	= tegra_ahci_port_suspend,
 	.port_resume	= tegra_ahci_port_resume,

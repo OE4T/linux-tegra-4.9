@@ -26,6 +26,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/reset.h>
 #include <scsi/scsi_device.h>
+#include <scsi/scsi_cmnd.h>
 #include <linux/tegra-powergate.h>
 #include <linux/tegra-pmc.h>
 #include <linux/tegra-soc.h>
@@ -87,6 +88,12 @@
 #define T_SATA0_AHCI_HBA_CAP_BKDR_SALP			BIT(26)
 #define T_SATA0_AHCI_HBA_CAP_BKDR_SUPP_PM		BIT(17)
 #define T_SATA0_AHCI_HBA_CAP_BKDR_SNCQ			BIT(30)
+
+#define T_SATA0_AHCI_HBA_CTL_0				0x30C
+#define T_SATA0_AHCI_HBA_CTL_0_PSM2LL_DENY_PMREQ	BIT(26)
+
+#define T_SATA0_CFG_LINK_0				0x174
+#define T_SATA0_CFG_LINK_0_WAIT_FOR_PSM_FOR_PMOFF	BIT(20)
 
 #define T_SATA_CFG_PHY_0				0x120
 #define T_SATA_CFG_PHY_0_MASK_SQUELCH			BIT(24)
@@ -179,6 +186,7 @@ struct tegra_ahci_priv {
 	struct pinctrl_state	   *devslp_pullup;
 	bool			   devslp_override;
 	bool			   devslp_pinmux_override;
+	bool			   host_naking_war_applied;
 };
 
 struct tegra_ahci_ops {

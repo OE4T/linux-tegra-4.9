@@ -67,5 +67,10 @@ extern struct mail_ops mail_ops;
 extern struct transport_layer_ops trans_ops;
 
 int init_native_override(void);
+#ifdef CONFIG_TEGRA_HV_MANAGER
+int init_virt_override(void);
+
+extern const char *ofm_virt;
+#endif
 
 #endif

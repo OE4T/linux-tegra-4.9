@@ -116,6 +116,7 @@ static void tegra186_timer_setup(struct tegra186_tmr *tmr)
 		BUG();
 	}
 #endif
+	enable_irq(tmr->evt.irq);
 }
 
 static void tegra186_timer_stop(struct tegra186_tmr *tmr)
@@ -211,6 +212,7 @@ static void __init tegra186_timer_init(struct device_node *np)
 
 		/* want to be preferred over arch timers */
 		tmr->evt.rating = 460;
+		irq_set_status_flags(tmr->evt.irq, IRQ_NOAUTOEN | IRQ_PER_CPU);
 		if (request_irq(tmr->evt.irq, tegra186_timer_isr,
 				  IRQF_TIMER | IRQF_TRIGGER_HIGH
 				| IRQF_NOBALANCING, tmr->name, tmr)) {

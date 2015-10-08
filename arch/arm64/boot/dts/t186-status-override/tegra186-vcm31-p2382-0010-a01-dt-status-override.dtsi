@@ -172,82 +172,6 @@
 		status = "disabled";
 	};
 
-	mc-clk-pd {
-		status = "disabled";
-	};
-
-	ape-pd {
-		status = "disabled";
-	};
-
-	host-pd {
-		status = "disabled";
-	};
-
-	tsec-pd {
-		status = "disabled";
-	};
-
-	nvdec-pd {
-		status = "disabled";
-	};
-
-	ispa-pd {
-		status = "disabled";
-	};
-
-	ve-pd {
-		status = "disabled";
-	};
-
-	vic03-pd {
-		status = "disabled";
-	};
-
-	msenc-pd {
-		status = "disabled";
-	};
-
-	nvjpg-pd {
-		status = "disabled";
-	};
-
-	gpu-pd {
-		status = "disabled";
-	};
-
-	pcie-pd {
-		status = "disabled";
-	};
-
-	sata-pd {
-		status = "disabled";
-	};
-
-	disa-pd {
-		status = "disabled";
-	};
-
-	disb-pd {
-		status = "disabled";
-	};
-
-	disc-pd {
-		status = "disabled";
-	};
-
-	xusba-pd {
-		status = "disabled";
-	};
-
-	xusbb-pd {
-		status = "disabled";
-	};
-
-	xusbc-pd {
-		status = "disabled";
-	};
-
 	usb_cd@7009f000 {
 		status = "disabled";
 	};
@@ -282,35 +206,11 @@
 			status = "disabled";
 		};
 
-		nvdisplay@15210000 {
-			status = "disabled";
-		};
-
 		nvdisplay@15220000 {
 			status = "disabled";
 		};
 
-		sor {
-			status = "disabled";
-
-			hdmi-display {
-				status = "disabled";
-			};
-
-			panel-s-edp-uhdtv-15-6 {
-				status = "disabled";
-
-				smartdimmer {
-					status = "disabled";
-				};
-			};
-		};
-
-		dpaux@155c0000 {
-			status = "disabled";
-		};
-
-		dpaux@15040000 {
+		vii2c {
 			status = "disabled";
 		};
 	};
@@ -333,10 +233,6 @@
 		bpmpthermal {
 			status = "disabled";
 		};
-	};
-
-	adsp_audio {
-		status = "disabled";
 	};
 
 	watchdog@30c0000 {

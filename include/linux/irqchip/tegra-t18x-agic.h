@@ -21,6 +21,11 @@
 
 #define TEGRA_AGIC_COMPAT "nvidia,tegra18x-agic"
 
+enum tegra_agic_cpu {
+	TEGRA_AGIC_APE_HOST = 0,
+	TEGRA_AGIC_ADSP = 4,
+};
+
 /* INT_ADMA Channel End of Transfer Interrupt */
 #define INT_ADMA_EOT0			32
 #define INT_ADMA_EOT1			33

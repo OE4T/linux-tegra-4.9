@@ -15,8 +15,8 @@
 
 #include "tegra186-quill-common.dtsi"
 #include "tegra186-quill-e3301-powermon.dtsi"
-#include "tegra186-quill-pb-thermal.dtsi"
 #include "tegra186-quill-pb-e3301-0000-a00-pinmux-manual.dtsi"
+#include "tegra186-quill-pb-thermal.dtsi"
 
 / {
         model = "quill-3301";
@@ -68,6 +68,19 @@
 			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(2)>,
 			<&padctl_uphy TEGRA_PADCTL_UPHY_HSIC_P(0)>;
 		phy-names = "utmi-2", "usb3-2", "hsic-0";
+	};
+
+	external-connection {
+		vbus_id_extcon: extcon@1 {
+			compatible = "extcon-gpio-states";
+			reg = <0x1>;
+			extcon-gpio,name = "VBUS";
+			extcon-gpio,cable-states = <0x0 0x2
+						    0x1 0x1>;
+			gpios = <&spmic 0 0>;
+			extcon-gpio,out-cable-names = "USB", "USB-Host";
+			#extcon-cells = <1>;
+		};
 	};
 };
 

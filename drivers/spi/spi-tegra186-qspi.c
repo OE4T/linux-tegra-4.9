@@ -1140,6 +1140,13 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 	return ret;
 }
 
+static void tegra_qspi_clean(struct spi_device *spi)
+{
+	if (spi->controller_data)
+		kfree(spi->controller_data);
+	spi->controller_data = NULL;
+}
+
 static int tegra_qspi_setup(struct spi_device *spi)
 {
 	struct tegra_qspi_data *tqspi = spi_master_get_devdata(spi->master);
@@ -1613,8 +1620,7 @@ static struct tegra_qspi_device_controller_data
 		return NULL;
 	}
 
-	cdata = devm_kzalloc(&spi->dev, sizeof(*cdata),
-			GFP_KERNEL);
+	cdata = kzalloc(sizeof(*cdata), GFP_KERNEL);
 	if (!cdata) {
 		dev_err(&spi->dev, "Memory alloc for cdata failed\n");
 		return NULL;
@@ -1732,7 +1738,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	}
 
 	if (!pdata->qspi_max_frequency)
-		pdata->qspi_max_frequency = 10000000; /* 133MHz */
+		pdata->qspi_max_frequency = 133000000; /* 133MHz */
 
 	master = spi_alloc_master(&pdev->dev, sizeof(*tqspi));
 	if (!master) {
@@ -1742,6 +1748,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 
 	master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH;
 	master->setup = tegra_qspi_setup;
+	master->cleanup = tegra_qspi_clean;
 	master->transfer_one_message = tegra_qspi_transfer_one_message;
 	master->num_chipselect = MAX_CHIP_SELECT;
 	master->bus_num = bus_num;

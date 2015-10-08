@@ -35,7 +35,7 @@
 #define TEGRA_CPUFREQ_TRANSITION_LATENCY	(300 * 1000)
 
 #define KHZ_TO_HZ		1000
-#define REF_CLK_KHZ		408000 /* 408 MHz */
+#define REF_CLK_MHZ		408 /* 408 MHz */
 #define US_DELAY		20
 #define CPUFREQ_TBL_STEP_SIZE	4
 
@@ -48,8 +48,8 @@
 #define EDVD_CL_NDIV_VHINT_OFFSET	0x20
 #define EDVD_COREX_NDIV_VAL_SHIFT	(0)
 #define EDVD_COREX_NDIV_MASK		(0x1ff << 0)
-#define EDVD_COREX_VINDEX_VAL_SHIFT	(26)
-#define EDVD_COREX_VINDEX_MASK		(0xff << 26)
+#define EDVD_COREX_VINDEX_VAL_SHIFT	(16)
+#define EDVD_COREX_VINDEX_MASK		(0xff << 16)
 
 /* ACTMON counter register details */
 #define CORECLK_OFFSET			(0x0)
@@ -174,7 +174,7 @@ static unsigned int tegra_get_speed(uint32_t cpu)
 {
 	uint32_t coreclk_cnt, last_coreclk_cnt, delta_ccnt;
 	uint32_t refclk_cnt, last_refclk_cnt, delta_refcnt;
-	unsigned int rate_khz = 0;
+	unsigned long rate_mhz = 0;
 	unsigned long flags;
 	spinlock_t *slock;
 
@@ -198,16 +198,17 @@ static unsigned int tegra_get_speed(uint32_t cpu)
 			(refclk_cnt - last_refclk_cnt) :
 			(last_refclk_cnt - refclk_cnt));
 
-		rate_khz = (delta_ccnt * REF_CLK_KHZ) / delta_refcnt;
+		rate_mhz = ((unsigned long) delta_ccnt * REF_CLK_MHZ)
+				/ delta_refcnt;
 
 		spin_unlock_irqrestore(slock, flags);
 	}
 	/* Do we have to align rate as nearest freq step ? */
-	return rate_khz; /* in KHz */
+	return (unsigned int) (rate_mhz * 1000); /* in KHz */
 }
 
 /* Denver cluster cpu_to_emc freq */
-static unsigned long m_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
+unsigned long m_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
 {
 	unsigned long emc_rate;
 
@@ -220,7 +221,7 @@ static unsigned long m_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
 }
 
 /* Arm cluster cpu_to_emc freq */
-static unsigned long b_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
+unsigned long b_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
 {
 	if (cpu_rate >= 1300000)
 		return tfreq_data.emc_max_rate;	/* cpu >= 1.3GHz, emc max */
@@ -894,6 +895,12 @@ static int __init tegra_cpufreq_init(void)
 	if (dn == NULL) {
 		pr_err("tegra18x-cpufreq: dt node not found\n");
 		ret = -ENODEV;
+		goto err_out;
+	}
+
+	if (!of_device_is_available(dn)) {
+		ret = -ENODEV;
+		pr_err("tegra18x-cpufreq: device is disabled\n");
 		goto err_out;
 	}
 

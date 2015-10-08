@@ -368,6 +368,15 @@ static void gp10b_mm_init_pdb(struct gk20a *g, void *inst_ptr, u64 pdb_addr)
 		ram_in_page_dir_base_hi_f(pdb_addr_hi));
 }
 
+static void gp10b_remove_bar2_vm(struct gk20a *g)
+{
+	struct mm_gk20a *mm = &g->mm;
+
+	gp10b_replayable_pagefault_buffer_deinit(g);
+	gk20a_remove_vm(&mm->bar2.vm, &mm->bar2.inst_block);
+}
+
+
 void gp10b_init_mm(struct gpu_ops *gops)
 {
 	gm20b_init_mm(gops);
@@ -378,4 +387,5 @@ void gp10b_init_mm(struct gpu_ops *gops)
 	gops->mm.get_iova_addr = gp10b_mm_iova_addr;
 	gops->mm.get_mmu_levels = gp10b_mm_get_mmu_levels;
 	gops->mm.init_pdb = gp10b_mm_init_pdb;
+	gops->mm.remove_bar2_vm = gp10b_remove_bar2_vm;
 }

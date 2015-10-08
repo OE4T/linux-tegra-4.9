@@ -53,6 +53,8 @@
 
 	serial@c280000 { /* TEGRA UARTC: Bluetooth */
 		compatible = "nvidia,tegra186-hsuart";
+		nvidia,adjust-baud-rates = <115200 170
+					    3000000 170>;
 		status = "okay";
 	};
 

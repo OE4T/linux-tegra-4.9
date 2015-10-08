@@ -33,11 +33,14 @@ int gp10b_replayable_pagefault_buffer_init(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	err = gk20a_gmmu_alloc_map(vm, rbfb_size, &g->mm.bar2_desc);
-	if (err) {
-		dev_err(dev_from_gk20a(g), "%s Error in replayable fault buffer\n",
-			__func__);
-		return err;
+	if (!g->mm.bar2_desc.gpu_va) {
+		err = gk20a_gmmu_alloc_map(vm, rbfb_size,
+						&g->mm.bar2_desc);
+		if (err) {
+			dev_err(dev_from_gk20a(g),
+			"%s Error in replayable fault buffer\n", __func__);
+			return err;
+		}
 	}
 	addr_lo = u64_lo32(g->mm.bar2_desc.gpu_va >> 12);
 	addr_hi = u64_hi32(g->mm.bar2_desc.gpu_va);
@@ -47,7 +50,6 @@ int gp10b_replayable_pagefault_buffer_init(struct gk20a *g)
 	gk20a_writel(g, fifo_replay_fault_buffer_lo_r(),
 			fifo_replay_fault_buffer_lo_base_f(addr_lo) |
 			fifo_replay_fault_buffer_lo_enable_true_v());
-
 	gk20a_dbg_fn("done");
 	return 0;
 }
@@ -55,12 +57,14 @@ int gp10b_replayable_pagefault_buffer_init(struct gk20a *g)
 void gp10b_replayable_pagefault_buffer_deinit(struct gk20a *g)
 {
 	struct vm_gk20a *vm = &g->mm.bar2.vm;
+
 	gk20a_gmmu_unmap_free(vm, &g->mm.bar2_desc);
 }
 
 u32 gp10b_replayable_pagefault_buffer_get_index(struct gk20a *g)
 {
 	u32 get_idx = 0;
+
 	gk20a_dbg_fn("");
 
 	get_idx = gk20a_readl(g, fifo_replay_fault_buffer_get_r());

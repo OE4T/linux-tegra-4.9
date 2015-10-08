@@ -474,18 +474,6 @@
 		status = "disabled";
 	};
 
-	thermal-zones {
-		status = "disabled";
-
-		Tboard_tegra {
-			status = "disabled";
-		};
-
-		Tdiode_tegra {
-			status = "disabled";
-		};
-	};
-
 	gpio-keys {
 		status = "disabled";
 	};

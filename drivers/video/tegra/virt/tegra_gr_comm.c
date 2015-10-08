@@ -245,7 +245,7 @@ static int setup_mempool(u32 virt_ctx, struct platform_device *pdev,
 			}
 
 			queue->mempool_ctx = ctx;
-			ctx->ptr = ioremap_cached(ctx->cookie->ipa,
+			ctx->ptr = ioremap_cache(ctx->cookie->ipa,
 						ctx->cookie->size);
 			if (!ctx->ptr) {
 				ret = -ENOMEM;

@@ -162,6 +162,8 @@ static inline void tegra_hdmi_reset(struct tegra_hdmi *hdmi)
 
 static inline void _tegra_hdmi_ddc_enable(struct tegra_hdmi *hdmi)
 {
+	int sor_num = tegra_dc_which_sor(hdmi->dc);
+
 	mutex_lock(&hdmi->ddc_refcount_lock);
 	if (hdmi->ddc_refcount++)
 		goto fail;
@@ -170,7 +172,7 @@ static inline void _tegra_hdmi_ddc_enable(struct tegra_hdmi *hdmi)
 	 * hdmi uses i2c lane muxed on dpaux1 pad.
 	 * Enable dpaux1 pads and configure the mux.
 	 */
-	tegra_dpaux_config_pad_mode(hdmi->dc, TEGRA_DPAUX_INSTANCE_1,
+	tegra_dpaux_config_pad_mode(hdmi->dc, sor_num,
 					TEGRA_DPAUX_PAD_MODE_I2C);
 
 fail:
@@ -179,6 +181,8 @@ fail:
 
 static inline void _tegra_hdmi_ddc_disable(struct tegra_hdmi *hdmi)
 {
+	int sor_num = tegra_dc_which_sor(hdmi->dc);
+
 	mutex_lock(&hdmi->ddc_refcount_lock);
 
 	if (WARN_ONCE(hdmi->ddc_refcount <= 0, "ddc refcount imbalance"))
@@ -190,7 +194,7 @@ static inline void _tegra_hdmi_ddc_disable(struct tegra_hdmi *hdmi)
 	 * hdmi uses i2c lane muxed on dpaux1 pad.
 	 * Disable dpaux1 pads.
 	 */
-	tegra_dpaux_pad_power(hdmi->dc, TEGRA_DPAUX_INSTANCE_1, false);
+	tegra_dpaux_pad_power(hdmi->dc, sor_num, false);
 	tegra_hdmi_put(hdmi->dc);
 
 fail:

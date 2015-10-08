@@ -983,11 +983,14 @@ static int DWC_ETH_QOS_map_page_buffs_64(struct DWC_ETH_QOS_prv_data *pdata,
 			unsigned int offset,
 			unsigned int size)
 {
+	unsigned int page_idx = (frag->page_offset + offset) >> PAGE_SHIFT;
+	unsigned int page_offset = (frag->page_offset + offset) & ~PAGE_MASK;
+
 	DBGPR("-->DWC_ETH_QOS_map_page_buffs_64\n");
 	/* fill the first buffer pointer in buffer->dma */
 	buffer->dma = dma_map_page((&pdata->pdev->dev),
-				frag->page.p,
-				frag->page_offset + offset,
+				(frag->page.p + page_idx),
+				page_offset,
 				ALIGN_SIZE(size), DMA_TO_DEVICE);
 	if (dma_mapping_error((&pdata->pdev->dev),
 				buffer->dma)) {

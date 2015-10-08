@@ -3,7 +3,7 @@
  *
  * GK20A Tegra Platform Interface
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -296,7 +296,7 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 
 	/* power management configuration */
 	.can_railgate           = false,
-	.enable_elpg            = false,
+	.enable_elpg            = true,
 	.enable_blcg		= true,
 	.enable_slcg		= true,
 	.enable_elcg		= true,

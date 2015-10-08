@@ -9,8 +9,21 @@
 
 		ape_pd: ape-pd {
 			compatible = "nvidia,tegra186-ape-pd";
+			is_off;
 			#power-domain-cells = <0>;
 			power-domains = <&mc_clk_pd>;
+			partition-id = <TEGRA186_POWER_DOMAIN_AUD>;
+			clocks = <&tegra_car TEGRA186_CLK_APE>,
+				<&tegra_car TEGRA186_CLK_APB2APE>,
+				<&tegra_car TEGRA186_CLK_ADSP>;
+			clock-names = "ape", "apb2ape", "adsp";
+		};
+
+		adsp_pd: adsp-pd {
+			compatible = "nvidia,tegra186-adsp-pd";
+			is_off;
+			#power-domain-cells = <0>;
+			power-domains = <&ape_pd>;
 		};
 
 		host1x_pd: host-pd {

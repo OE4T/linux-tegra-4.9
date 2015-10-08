@@ -1927,7 +1927,7 @@
 
 	tegra_adsp_audio: adsp_audio {
 		compatible = "nvidia,tegra210-adsp-audio";
-		power-domains = <&ape_pd>;
+		power-domains = <&adsp_pd>;
 		iommus = <&smmu TEGRA_SWGROUP_APE>;
 		#stream-id-cells = <1>;
 		status = "disabled";
@@ -1936,7 +1936,7 @@
 	adsp@2993000 {
 		status = "disabled";
 		compatible = "nvidia,tegra18x-adsp";
-		power-domains = <&ape_pd>;
+		power-domains = <&adsp_pd>;
 		interrupt-parent = <&tegra_agic>;
 		reg = <0x0 0x02993000 0x0 0x1000>, /* AMC */
 			<0x0 0x02990000 0x0 0x2000>, /* AMISC */

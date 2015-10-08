@@ -325,7 +325,7 @@ static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-static void gk20a_remove_vm(struct vm_gk20a *vm, struct mem_desc *inst_block)
+void gk20a_remove_vm(struct vm_gk20a *vm, struct mem_desc *inst_block)
 {
 	struct gk20a *g = vm->mm->g;
 
@@ -337,6 +337,10 @@ static void gk20a_remove_vm(struct vm_gk20a *vm, struct mem_desc *inst_block)
 
 static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 {
+	struct gk20a *g = gk20a_from_mm(mm);
+
+	if (g->ops.mm.remove_bar2_vm)
+		g->ops.mm.remove_bar2_vm(g);
 	gk20a_remove_vm(&mm->bar1.vm, &mm->bar1.inst_block);
 	gk20a_remove_vm(&mm->pmu.vm, &mm->pmu.inst_block);
 	gk20a_free_inst_block(gk20a_from_mm(mm), &mm->hwpm.inst_block);

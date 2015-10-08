@@ -379,6 +379,7 @@ struct gpu_ops {
 		int (*init_mm_setup_hw)(struct gk20a *g);
 		int (*init_bar2_vm)(struct gk20a *g);
 		int (*init_bar2_mm_hw_setup)(struct gk20a *g);
+		void (*remove_bar2_vm)(struct gk20a *g);
 		const struct gk20a_mmu_level *
 			(*get_mmu_levels)(struct gk20a *g, u32 big_page_size);
 		void (*init_pdb)(struct gk20a *g, void *inst_ptr, u64 pdb_addr);

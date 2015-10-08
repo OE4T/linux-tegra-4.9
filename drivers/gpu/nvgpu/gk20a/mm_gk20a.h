@@ -649,6 +649,8 @@ const struct gk20a_mmu_level *gk20a_mm_get_mmu_levels(struct gk20a *g,
 						      u32 big_page_size);
 void gk20a_mm_init_pdb(struct gk20a *g, void *inst_ptr, u64 pdb_addr);
 
+void gk20a_remove_vm(struct vm_gk20a *vm, struct mem_desc *inst_block);
+
 extern const struct gk20a_mmu_level gk20a_mm_levels_64k[];
 extern const struct gk20a_mmu_level gk20a_mm_levels_128k[];
 

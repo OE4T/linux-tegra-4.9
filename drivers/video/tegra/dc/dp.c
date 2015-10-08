@@ -1879,13 +1879,10 @@ static void _tegra_dpaux_init(struct tegra_dc_dp_data *dp)
 
 	tegra_dpaux_enable(dp);
 
-	/* BRINGUP HACK: DISABLE HPD */
-#ifndef CONFIG_TEGRA_NVDISPLAY
 	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
 		tegra_dp_hpd_config(dp);
 		tegra_dp_default_int(dp, true);
 	}
-#endif
 
 	tegra_dc_io_end(dp->dc);
 }
@@ -2706,11 +2703,6 @@ static bool tegra_dc_dp_hpd_state(struct tegra_dc *dc)
 		tegra_platform_is_linsim())
 		return true;
 
-	/* BRINGUP HACK: DISABLE HPD */
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	return true;
-#endif
-
 	tegra_dpaux_clk_enable(dp);
 	tegra_dc_io_start(dc);
 	val = tegra_dpaux_readl(dp, DPAUX_DP_AUXSTAT);
@@ -2726,11 +2718,6 @@ static bool tegra_dc_dp_detect(struct tegra_dc *dc)
 
 	if (tegra_platform_is_linsim())
 		return true;
-
-	/* BRINGUP HACK: DISABLE HPD */
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	return true;
-#endif
 
 	tegra_dp_pending_hpd(dp);
 

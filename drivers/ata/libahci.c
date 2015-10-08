@@ -779,8 +779,14 @@ static int ahci_set_lpm(struct ata_link *link, enum ata_lpm_policy policy,
 				return 0;
 		} else {
 			cmd |= PORT_CMD_ALPE;
-			if (policy == ATA_LPM_MIN_POWER)
+			if ((policy == ATA_LPM_MIN_POWER) &&
+						(hpriv->cap & HOST_CAP_SSC)) {
 				cmd |= PORT_CMD_ASP;
+				cmd |= PORT_CMD_ICC_SLUMBER;
+			} else if (hpriv->cap & HOST_CAP_PART) {
+				cmd &= ~PORT_CMD_ASP;
+				cmd |= PORT_CMD_ICC_PARTIAL;
+			}
 
 			/* write out new cmd value */
 			writel(cmd, port_mmio + PORT_CMD);

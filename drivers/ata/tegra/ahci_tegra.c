@@ -768,6 +768,24 @@ static void tegra_ahci_disable_hipm(struct ahci_host_priv *hpriv)
 	tegra_ahci_scfg_update(hpriv, val, mask, T_SATA0_AHCI_HBA_CAP_BKDR);
 }
 
+static void tegra_ahci_disable_partial(struct ahci_host_priv *hpriv)
+{
+	u32 val = 0;
+	u32 mask = T_SATA0_AHCI_HBA_CAP_BKDR_PARTIAL_ST_CAP;
+
+	val = 0xFFFFFFFF & ~T_SATA0_AHCI_HBA_CAP_BKDR_PARTIAL_ST_CAP;
+	tegra_ahci_scfg_update(hpriv, val, mask, T_SATA0_AHCI_HBA_CAP_BKDR);
+}
+
+static void tegra_ahci_disable_slumber(struct ahci_host_priv *hpriv)
+{
+	u32 val = 0;
+	u32 mask = T_SATA0_AHCI_HBA_CAP_BKDR_SLUMBER_ST_CAP;
+
+	val = 0xFFFFFFFF & ~T_SATA0_AHCI_HBA_CAP_BKDR_SLUMBER_ST_CAP;
+	tegra_ahci_scfg_update(hpriv, val, mask, T_SATA0_AHCI_HBA_CAP_BKDR);
+}
+
 static void tegra_ahci_disable_ncq(struct ahci_host_priv *hpriv)
 {
 	u32 val = 0;
@@ -802,6 +820,10 @@ static int tegra_ahci_disable_features(struct ahci_host_priv *hpriv)
 			tegra_ahci_disable_ncq(hpriv);
 		} else if (!strcmp(feature, "dipm")) {
 			ahci_tegra_port_info.flags |= ATA_FLAG_NO_DIPM;
+		} else if (!strcmp(feature, "partial")) {
+			tegra_ahci_disable_partial(hpriv);
+		} else if (!strcmp(feature, "slumber")) {
+			tegra_ahci_disable_slumber(hpriv);
 		}
 	}
 

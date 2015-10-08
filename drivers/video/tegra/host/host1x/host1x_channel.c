@@ -80,6 +80,28 @@ static void lock_device(struct nvhost_job *job, bool lock)
 	}
 }
 
+static void push_wait(struct nvhost_cdma *cdma, unsigned int id,
+		      unsigned int thresh)
+{
+	/*
+	 * Force serialization by inserting a host wait for the
+	 * previous job to finish before this one can commence.
+	 *
+	 * NOTE! This cannot be packed because otherwise we might
+	 * overwrite the RESTART opcode at the end of the push
+	 * buffer.
+	 */
+
+	nvhost_cdma_push(cdma,
+		nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
+			host1x_uclass_load_syncpt_payload_32_r(), 1),
+			thresh);
+	nvhost_cdma_push(cdma,
+		nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
+			host1x_uclass_wait_syncpt_32_r(), 1),
+			id);
+}
+
 static void serialize(struct nvhost_job *job)
 {
 	struct nvhost_channel *ch = job->ch;
@@ -90,24 +112,9 @@ static void serialize(struct nvhost_job *job)
 	if (!job->serialize && !pdata->serialize)
 		return;
 
-	/*
-	 * Force serialization by inserting a host wait for the
-	 * previous job to finish before this one can commence.
-	 *
-	 * NOTE! This cannot be packed because otherwise we might
-	 * overwrite the RESTART opcode at the end of the push
-	 * buffer.
-	 */
-
-	for (i = 0; i < job->num_syncpts; ++i) {
-		u32 id = job->sp[i].id;
-		u32 max = nvhost_syncpt_read_max(sp, id);
-
-		nvhost_cdma_push(&ch->cdma,
-			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-				host1x_uclass_wait_syncpt_r(), 1),
-			nvhost_class_host_wait_syncpt(id, max));
-	}
+	for (i = 0; i < job->num_syncpts; ++i)
+		push_wait(&ch->cdma, job->sp[i].id,
+			  nvhost_syncpt_read_max(sp, job->sp[i].id));
 }
 
 static void add_sync_waits(struct nvhost_channel *ch, int fd)
@@ -156,11 +163,9 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 		if (nvhost_syncpt_is_expired(sp, id, thresh))
 			continue;
 
-		nvhost_cdma_push(&ch->cdma,
-			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-				host1x_uclass_wait_syncpt_r(), 1),
-			nvhost_class_host_wait_syncpt(id, thresh));
+		push_wait(&ch->cdma, id, thresh);
 	}
+
 	sync_fence_put(fence);
 }
 
@@ -185,20 +190,11 @@ static void push_waits(struct nvhost_job *job)
 					     wait->thresh))
 			continue;
 
-		nvhost_cdma_push(&ch->cdma,
-			nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
-				host1x_uclass_wait_syncpt_r(), 1),
-			nvhost_class_host_wait_syncpt(
-				wait->syncpt_id, wait->thresh));
+		push_wait(&ch->cdma, wait->syncpt_id, wait->thresh);
 	}
 
-	if (pdata->resource_policy == RESOURCE_PER_DEVICE)
-		return;
-
-	for (i = 0; i < job->num_gathers; i++) {
-		struct nvhost_job_gather *g = &job->gathers[i];
-		add_sync_waits(job->ch, g->pre_fence);
-	}
+	for (i = 0; i < job->num_gathers; i++)
+		add_sync_waits(job->ch, job->gathers[i].pre_fence);
 }
 
 static inline u32 gather_regnum(u32 word)
@@ -216,11 +212,17 @@ static inline u32 gather_count(u32 word)
 	return word & 0x3fff;
 }
 
-static void submit_gathers(struct nvhost_job *job)
+static void submit_work(struct nvhost_job *job)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
 	void *cpuva = NULL;
+	bool use_locking =
+		pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE;
+	u32 cur_class = 0;
 	int i;
+
+	/* make all waits in the beginning */
+	push_waits(job);
 
 	/* push user gathers */
 	for (i = 0 ; i < job->num_gathers; i++) {
@@ -228,16 +230,28 @@ static void submit_gathers(struct nvhost_job *job)
 		u32 op1;
 		u32 op2;
 
-		if (pdata->resource_policy == RESOURCE_PER_DEVICE)
-			add_sync_waits(job->ch, g->pre_fence);
+		/* handle class changing */
+		if (!cur_class || cur_class != g->class_id) {
+			/* first, release current class */
+			if (use_locking && cur_class &&
+			    cur_class != NV_HOST1X_CLASS_ID) {
+				lock_device(job, false);
+				dev_warn(&job->ch->dev->dev, "%s changes out from engine class",
+					 current->comm);
+			}
 
-		if (g->class_id) {
+			/* acquire lock of the new class */
+			if (use_locking && g->class_id != NV_HOST1X_CLASS_ID)
+				lock_device(job, true);
+
+			/* update current class */
 			nvhost_cdma_push(&job->ch->cdma,
 				nvhost_opcode_setclass(g->class_id, 0, 0),
 				NVHOST_OPCODE_NOOP);
+			cur_class = g->class_id;
 
 			/* initialize class context */
-			if (g->class_id != NV_HOST1X_CLASS_ID &&
+			if (cur_class != NV_HOST1X_CLASS_ID &&
 			    pdata->init_class_context)
 				pdata->init_class_context(job->ch->dev,
 							  &job->ch->cdma);
@@ -265,6 +279,16 @@ static void submit_gathers(struct nvhost_job *job)
 		if (cpuva)
 			dma_buf_vunmap(g->buf, cpuva);
 	}
+
+	/* wait all work to complete */
+	serialize(job);
+
+	/* make final increment */
+	submit_work_done_increment(job);
+
+	/* release the engine */
+	if (use_locking && cur_class && cur_class != NV_HOST1X_CLASS_ID)
+		lock_device(job, false);
 }
 
 static int host1x_channel_prio_check(struct nvhost_job *job)
@@ -355,9 +379,6 @@ static int host1x_channel_submit(struct nvhost_job *job)
 		goto error;
 	}
 
-	push_waits(job);
-	lock_device(job, true);
-
 	/* determine fences for all syncpoints */
 	for (i = 0; i < job->num_syncpts; ++i) {
 		u32 incrs = job->sp[i].incrs;
@@ -386,10 +407,8 @@ static int host1x_channel_submit(struct nvhost_job *job)
 		nvhost_syncpt_mark_used(sp, ch->chid,
 					job->client_managed_syncpt);
 
-	submit_gathers(job);
-	serialize(job);
-	lock_device(job, false);
-	submit_work_done_increment(job);
+	/* push work to hardware */
+	submit_work(job);
 
 	/* end CDMA submit & stash pinned hMems into sync queue */
 	nvhost_cdma_end(&ch->cdma, job);

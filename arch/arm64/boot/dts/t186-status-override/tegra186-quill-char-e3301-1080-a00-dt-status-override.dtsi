@@ -467,6 +467,10 @@
 		Tdiode_tegra {
 			status = "disabled";
 		};
+
+		AO-therm {
+			status = "disabled";
+		};
 	};
 
 	gpio-keys {

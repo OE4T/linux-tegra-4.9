@@ -343,6 +343,9 @@
 #define MC_MSE_PTSA_MAX                                         0x4cc
 #define MC_NIC_PTSA_MIN                                         0x73c
 #define MC_GK_PTSA_RATE                                         0x53c
+#define MC_SMMU_SMMU_PTSA_MIN					0x45c
+#define MC_SMMU_SMMU_PTSA_RATE					0x458
+#define MC_SMMU_SMMU_PTSA_MAX					0x460
 #define MC_PTSA_GRANT_DECREMENT                                 0x960
 #define MC_LATENCY_ALLOWANCE_AON_0                              0x714
 #define MC_LATENCY_ALLOWANCE_BPMP_0                             0x70c
@@ -1068,6 +1071,7 @@
 #define MC_SYSRAM_REG_CTRL                                      0x185c
 #define MC_ECC_CONTROL                                          0x1880
 #define MC_ECC_CFG                                              0x1884
+#define MC_EMEM_ADR_CFG_CHANNEL_ENABLE				0xdf8
 #define MC_TR_BIT_CTL                                           0xed0
 #define MC_CH_INTSTATUS                                         0xe54
 #define MC_LATENCY_ALLOWANCE_WCAM                               0xe5c
@@ -1100,8 +1104,10 @@
 #define MC_MEM_SCRUBBER_ECC_ADDR                                0xf18
 #define MC_MEM_SCRUBBER_ECC_REG_CTRL                            0xf20
 #define MC_CCITRX_ENABLE_CONFIG                                 0xf3c
+#define MC_CCI_WR_LATENCY_ALLOWANCE_CONFIG			0xf40
+#define MC_EMEM_ARB_THROTTLE_CFG				0xf44
 
 /* TODO: Is this correct? */
-#define T18X_MC_LATENCY_ALLOWANCE_NUM_REGS			41
+#define T18X_MC_LATENCY_ALLOWANCE_NUM_REGS			40
 
 #endif

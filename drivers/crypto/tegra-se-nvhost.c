@@ -572,7 +572,7 @@ static int tegra_se_send_ctr_seed(struct tegra_se_dev *se_dev, u32 *pdata)
 	int err = 0;
 	u32 cmdbuf_num_words = 0, i = 0;
 
-	aes_cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev,
+	aes_cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent,
 			SZ_16K, &aes_cmdbuf_iova, GFP_KERNEL, &attrs);
 	if (!aes_cmdbuf_cpuvaddr)
 		return -ENOMEM;
@@ -613,7 +613,7 @@ static int tegra_se_send_key_data(u8 *pdata, u32 data_len,
 		quad = QUAD_KEYS_128;
 
 	if (!host1x_submit_sz) {
-		aes_cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev,
+		aes_cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent,
 				SZ_16K, &aes_cmdbuf_iova, GFP_KERNEL, &attrs);
 		cmdbuf_cnt = 0;
 		if (!aes_cmdbuf_cpuvaddr)
@@ -654,7 +654,7 @@ static int tegra_se_send_key_data(u8 *pdata, u32 data_len,
 		err = tegra_se_channel_submit_gather(se_dev, NULL,
 				aes_cmdbuf_cpuvaddr, aes_cmdbuf_iova,
 				0, cmdbuf_num_words, true);
-		dma_free_attrs(se_dev->dev,
+		dma_free_attrs(se_dev->dev->parent,
 			SZ_16K, aes_cmdbuf_cpuvaddr, aes_cmdbuf_iova, &attrs);
 		aes_cmdbuf_cpuvaddr = NULL;
 	}
@@ -868,7 +868,7 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 	/* Create Gather Buffer Command */
 
 	if (req_ctx->op_mode == SE_AES_OP_MODE_RNG_DRBG) {
-		aes_cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev,
+		aes_cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent,
 				SZ_16K, &aes_cmdbuf_iova, GFP_KERNEL, &attrs);
 		if (!aes_cmdbuf_cpuvaddr)
 			return -ENOMEM;
@@ -971,7 +971,7 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 			aes_cmdbuf_cpuvaddr, aes_cmdbuf_iova,
 			0, cmdbuf_num_words, true);
 
-	dma_free_attrs(se_dev->dev, SZ_16K,
+	dma_free_attrs(se_dev->dev->parent, SZ_16K,
 			aes_cmdbuf_cpuvaddr, aes_cmdbuf_iova, &attrs);
 	aes_cmdbuf_cpuvaddr = NULL;
 	cmdbuf_cnt = 0;

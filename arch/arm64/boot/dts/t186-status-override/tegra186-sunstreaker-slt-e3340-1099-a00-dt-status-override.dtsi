@@ -18,81 +18,6 @@
 		status = "disabled";
 	};
 
-	sdhci@3400000 {
-		status = "disabled";
-	};
-
-	i2c@3160000 {
-		status = "disabled";
-
-		gpio@76 {
-
-			xusb_lane0_mux {
-				status = "disabled";
-			};
-
-			xusb_lane1_mux {
-				status = "disabled";
-			};
-
-			xusb_lane2_mux {
-				status = "disabled";
-			};
-
-			pcie2_lane3_mux {
-				status = "disabled";
-			};
-
-			pcie0_lane4_mux {
-				status = "disabled";
-			};
-
-			sata_lane5_mux {
-				status = "disabled";
-			};
-		};
-	};
-
-	i2c@c240000 {
-		status = "disabled";
-	};
-
-	i2c@3180000 {
-		status = "disabled";
-	};
-
-	i2c@3190000 {
-		status = "disabled";
-	};
-
-	bpmp_i2c {
-		status = "disabled";
-	};
-
-	i2c@31b0000 {
-		status = "disabled";
-	};
-
-	i2c@31c0000 {
-		status = "disabled";
-	};
-
-	i2c@31e0000 {
-		status = "disabled";
-	};
-
-	spi@3210000 {
-		status = "disabled";
-	};
-
-	spi@3230000 {
-		status = "disabled";
-	};
-
-	spi@3240000 {
-		status = "disabled";
-	};
-
 	pwm@3280000 {
 		status = "disabled";
 	};
@@ -105,36 +30,11 @@
 		status = "disabled";
 	};
 
-	serial@3110000 {
-		status = "disabled";
-	};
-
-	serial@3130000 {
-		status = "disabled";
-	};
-
-	mailbox@3538000 {
-		status = "disabled";
-	};
-
-	xhci@3530000 {
-		status = "disabled";
-	};
-
-	xudc@3550000 {
-		status = "disabled";
-	};
-
-	pinctrl@3520000 {
-		status = "disabled";
-	};
-
 	pmc-iopower {
 		status = "disabled";
 	};
 
 	host1x {
-
 		nvcsi@150c0000 {
 			status = "disabled";
 		};
@@ -153,36 +53,15 @@
 
 		dsi {
 			status = "disabled";
-
 			panel-s-wuxga-8-0 {
 				smartdimmer {
 					status = "disabled";
 				};
 			};
 		};
-
-		sor {
-			status = "disabled";
-
-			hdmi-display {
-				status = "disabled";
-			};
-		};
-
-		sor1 {
-			status = "disabled";
-
-			hdmi-display {
-				status = "disabled";
-			};
-		};
 	};
 
 	interrupt-controller@3000000 {
-		status = "disabled";
-	};
-
-	spi@3270000 {
 		status = "disabled";
 	};
 
@@ -192,34 +71,6 @@
 
 	chipid@100000 {
 		status = "disabled";
-	};
-
-	dma@2600000 {
-		status = "disabled";
-	};
-
-	pinmux@2430000 {
-		status = "disabled";
-	};
-
-	gpio@2200000 {
-		status = "disabled";
-	};
-
-	ahci-sata@3507000 {
-		status = "disabled";
-	};
-
-	pcie-controller@10003000 {
-		status = "disabled";
-
-		pci@1,0 {
-			status = "disabled";
-		};
-
-		pci@2,0 {
-			status = "disabled";
-		};
 	};
 
 	adma@2930000 {
@@ -317,10 +168,6 @@
 			status = "disabled";
 		};
 
-		dmic@2904100 {
-			status = "disabled";
-		};
-
 		afc@2907000 {
 			status = "disabled";
 		};
@@ -414,10 +261,6 @@
 		status = "disabled";
 	};
 
-	watchdog@30d0000 {
-		status = "disabled";
-	};
-
 	roc-flush@e080000 {
 		status = "disabled";
 	};
@@ -430,23 +273,7 @@
 		status = "disabled";
 	};
 
-        efuse@3820000 {
-                status = "disabled";
-        };
-
-	fixed-regulators {
-		status = "disabled";
-	};
-
-	external-connection {
-		status = "disabled";
-	};
-
 	dummy-cool-dev {
-		status = "disabled";
-	};
-
-	gpio-keys {
 		status = "disabled";
 	};
 

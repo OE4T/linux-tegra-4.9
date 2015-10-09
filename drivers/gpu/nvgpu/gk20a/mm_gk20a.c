@@ -105,6 +105,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 static int __must_check gk20a_init_system_vm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_bar1_vm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_hwpm(struct mm_gk20a *mm);
+static int __must_check gk20a_init_cde_vm(struct mm_gk20a *mm);
 
 
 struct gk20a_dmabuf_priv {
@@ -344,6 +345,7 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 	gk20a_remove_vm(&mm->bar1.vm, &mm->bar1.inst_block);
 	gk20a_remove_vm(&mm->pmu.vm, &mm->pmu.inst_block);
 	gk20a_free_inst_block(gk20a_from_mm(mm), &mm->hwpm.inst_block);
+	gk20a_vm_remove_support_nofree(&mm->cde.vm);
 }
 
 int gk20a_init_mm_setup_sw(struct gk20a *g)
@@ -383,6 +385,10 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 		return err;
 
 	err = gk20a_init_hwpm(mm);
+	if (err)
+		return err;
+
+	err = gk20a_init_cde_vm(mm);
 	if (err)
 		return err;
 
@@ -3266,6 +3272,19 @@ static int gk20a_init_hwpm(struct mm_gk20a *mm)
 	gk20a_init_inst_block(inst_block, vm, 0);
 
 	return 0;
+}
+
+static int gk20a_init_cde_vm(struct mm_gk20a *mm)
+{
+	struct vm_gk20a *vm = &mm->cde.vm;
+	struct gk20a *g = gk20a_from_mm(mm);
+	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
+
+	return gk20a_init_vm(mm, vm, big_page_size,
+			SZ_4K * 16,
+			NV_MM_DEFAULT_KERNEL_SIZE,
+			NV_MM_DEFAULT_KERNEL_SIZE + NV_MM_DEFAULT_USER_SIZE,
+			false, "cde");
 }
 
 void gk20a_mm_init_pdb(struct gk20a *g, void *inst_ptr, u64 pdb_addr)

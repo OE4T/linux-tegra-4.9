@@ -318,6 +318,9 @@ struct mm_gk20a {
 		struct mem_desc inst_block;
 	} hwpm;
 
+	struct {
+		struct vm_gk20a vm;
+	} cde;
 
 	struct mutex l2_op_lock;
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC

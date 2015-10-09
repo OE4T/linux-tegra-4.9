@@ -1194,8 +1194,8 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	}
 
 	/* bind the channel to the vm */
-	gk20a_vm_get(&g->mm.pmu.vm);
-	ch->vm = &g->mm.pmu.vm;
+	gk20a_vm_get(&g->mm.cde.vm);
+	ch->vm = &g->mm.cde.vm;
 	err = channel_gk20a_commit_va(ch);
 	if (err) {
 		gk20a_warn(&cde_ctx->pdev->dev, "cde: could not bind vm");

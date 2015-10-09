@@ -77,7 +77,10 @@
 
 	i2c@3160000 {
 		tegra_nct72: onsemi,nct72@4c {
-			status = "disabled";
+			status = "okay";
+			/delete-property/ interrupt-parent;
+			/delete-property/ interrupts;
+			/delete-property/ temp-alert-gpio;
 		};
 	};
 

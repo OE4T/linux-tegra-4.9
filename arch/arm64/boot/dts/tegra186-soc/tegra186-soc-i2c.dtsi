@@ -40,8 +40,9 @@
 		sda-gpio = <&tegra_gpio 22 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
-		clocks = <&tegra_car TEGRA186_CLK_I2C1>;
-		clock-names = "div-clk";
+		clocks = <&tegra_car TEGRA186_CLK_I2C1
+			&tegra_car TEGRA186_CLK_PLLP_GRTTB>;
+		clock-names = "div-clk", "parent";
 		resets = <&tegra_car TEGRA186_RESET_I2C1>;
 		reset-names = "i2c";
 	};
@@ -55,8 +56,9 @@
 		interrupts = <0 TEGRA186_IRQ_I2C2 0x04>;
 		status = "disabled";
 		clock-frequency = <100000>;
-		clocks = <&tegra_car TEGRA186_CLK_I2C2>;
-		clock-names = "div-clk";
+		clocks = <&tegra_car TEGRA186_CLK_I2C2
+			&tegra_car TEGRA186_CLK_PLLP_AON>;
+		clock-names = "div-clk", "parent";
 		resets = <&tegra_car TEGRA186_RESET_I2C2>;
 		reset-names = "i2c";
 	};
@@ -72,8 +74,9 @@
 		sda-gpio = <&tegra_gpio 115 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
-		clocks = <&tegra_car TEGRA186_CLK_I2C3>;
-		clock-names = "div-clk";
+		clocks = <&tegra_car TEGRA186_CLK_I2C3
+			&tegra_car TEGRA186_CLK_PLLP_GRTBA>;
+		clock-names = "div-clk", "parent";
 		resets = <&tegra_car TEGRA186_RESET_I2C3>;
 		reset-names = "i2c";
 	};
@@ -87,8 +90,9 @@
 		interrupts = <0 TEGRA186_IRQ_I2C4 0x04>;
 		status = "disabled";
 		clock-frequency = <100000>;
-		clocks = <&tegra_car TEGRA186_CLK_I2C4>;
-		clock-names = "div-clk";
+		clocks = <&tegra_car TEGRA186_CLK_I2C4
+			&tegra_car TEGRA186_CLK_PLLP_GRTTB>;
+		clock-names = "div-clk", "parent";
 		resets = <&tegra_car TEGRA186_RESET_I2C4>;
 		reset-names = "i2c";
 	};
@@ -110,8 +114,9 @@
 		interrupts = <0 TEGRA186_IRQ_I2C6 0x04>;
 		status = "disabled";
 		clock-frequency = <400000>;
-		clocks = <&tegra_car TEGRA186_CLK_I2C6>;
-		clock-names = "div-clk";
+		clocks = <&tegra_car TEGRA186_CLK_I2C6
+			&tegra_car TEGRA186_CLK_PLLP_GRTTB>;
+		clock-names = "div-clk", "parent";
 		resets = <&tegra_car TEGRA186_RESET_I2C6>;
 		reset-names = "i2c";
 	};
@@ -127,8 +132,9 @@
 		sda-gpio = <&tegra_gpio 89 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
-		clocks = <&tegra_car TEGRA186_CLK_I2C7>;
-		clock-names = "div-clk";
+		clocks = <&tegra_car TEGRA186_CLK_I2C7
+			&tegra_car TEGRA186_CLK_PLLP_GRTBA>;
+		clock-names = "div-clk", "parent";
 		resets = <&tegra_car TEGRA186_RESET_I2C7>;
 		reset-names = "i2c";
 	};
@@ -144,8 +150,9 @@
 		sda-gpio = <&tegra_gpio 177 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
-		clocks = <&tegra_car TEGRA186_CLK_I2C8>;
-		clock-names = "div-clk";
+		clocks = <&tegra_car TEGRA186_CLK_I2C8
+			&tegra_car TEGRA186_CLK_PLLP_AON>;
+		clock-names = "div-clk", "parent";
 		resets = <&tegra_car TEGRA186_RESET_I2C8>;
 		reset-names = "i2c";
 	};
@@ -161,8 +168,9 @@
 		sda-gpio = <&tegra_gpio 91 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
-		clocks = <&tegra_car TEGRA186_CLK_I2C9>;
-		clock-names = "div-clk";
+		clocks = <&tegra_car TEGRA186_CLK_I2C9
+			&tegra_car TEGRA186_CLK_PLLP_GRTBA>;
+		clock-names = "div-clk", "parent";
 		resets = <&tegra_car TEGRA186_RESET_I2C9>;
 		reset-names = "i2c";
 	};

@@ -151,6 +151,7 @@
 			      <&{/xhci@3530000}		TEGRA_SWGROUP_XUSB_HOST>,
 			      <&{/xudc@3550000}		TEGRA_SWGROUP_XUSB_DEV>,
 			      <&{/sound}		TEGRA_SWGROUP_APE>,
+			      <&{/sound_ref}		TEGRA_SWGROUP_APE>,
 			      <&{/bpmp}			TEGRA_SWGROUP_BPMP>;
 
 			      /*

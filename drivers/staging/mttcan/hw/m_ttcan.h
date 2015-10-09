@@ -474,7 +474,7 @@ int ttcan_set_bitrate(struct ttcan_controller *ttcan);
 void ttcan_disable_auto_retransmission(
 		struct ttcan_controller *ttcan,
 		bool enable);
-int ttcan_set_bus_monitoring_mode(struct ttcan_controller *ttcan);
+int ttcan_set_bus_monitoring_mode(struct ttcan_controller *ttcan, bool enable);
 int ttcan_set_loopback(struct ttcan_controller *ttcan);
 int ttcan_set_normal_mode(struct ttcan_controller *ttcan);
 

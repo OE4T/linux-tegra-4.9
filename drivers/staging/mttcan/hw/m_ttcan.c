@@ -233,7 +233,7 @@ int ttcan_set_loopback(struct ttcan_controller *ttcan)
 
 }
 
-int ttcan_set_bus_monitoring_mode(struct ttcan_controller *ttcan)
+int ttcan_set_bus_monitoring_mode(struct ttcan_controller *ttcan, bool enable)
 {
 	u32 cccr_reg;
 
@@ -241,8 +241,10 @@ int ttcan_set_bus_monitoring_mode(struct ttcan_controller *ttcan)
 	cccr_reg = ttcan_read32(ttcan, ADR_MTTCAN_CCCR);
 	if (ttcan_protected(cccr_reg))
 		return -EPERM;
-
-	cccr_reg |= MTT_CCCR_MON_MASK;
+	if (enable)
+		cccr_reg |= MTT_CCCR_MON_MASK;
+	else
+		cccr_reg &= ~MTT_CCCR_MON_MASK;
 	return ttcan_write32_check(ttcan, ADR_MTTCAN_CCCR,
 				   cccr_reg, MTTCAN_CCCR_MSK);
 }

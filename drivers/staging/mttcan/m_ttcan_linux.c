@@ -841,16 +841,17 @@ static void mttcan_controller_config(struct net_device *dev)
 	if ((priv->can.ctrlmode & CAN_CTRLMODE_LOOPBACK) &&
 	    (priv->can.ctrlmode & CAN_CTRLMODE_LISTENONLY)) {
 		/* internal loopback mode : useful for self-test function */
-		ttcan_set_bus_monitoring_mode(priv->ttcan);
+		ttcan_set_bus_monitoring_mode(priv->ttcan, true);
 		ttcan_set_loopback(priv->ttcan);
 
 	} else if (priv->can.ctrlmode & CAN_CTRLMODE_LOOPBACK) {
 		/* external loopback mode : useful for self-test function */
+		ttcan_set_bus_monitoring_mode(priv->ttcan, false);
 		ttcan_set_loopback(priv->ttcan);
 
 	} else if (priv->can.ctrlmode & CAN_CTRLMODE_LISTENONLY) {
 		/* silent mode : bus-monitoring mode */
-		ttcan_set_bus_monitoring_mode(priv->ttcan);
+		ttcan_set_bus_monitoring_mode(priv->ttcan, true);
 	} else
 		/* clear bus montor or external loopback mode */
 		ttcan_set_normal_mode(priv->ttcan);

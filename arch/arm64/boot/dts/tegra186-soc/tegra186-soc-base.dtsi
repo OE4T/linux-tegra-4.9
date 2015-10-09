@@ -147,6 +147,7 @@
 			      <&{/sdhci@3440000}	TEGRA_SWGROUP_SDMMC3A>,
 			      <&{/sdhci@3420000}	TEGRA_SWGROUP_SDMMC2A>,
 			      <&{/sdhci@3400000}	TEGRA_SWGROUP_SDMMC1A>,
+			      <&{/ufshci@2450000}	TEGRA_SWGROUP_UFSHC>,
 			      <&{/xhci@3530000}		TEGRA_SWGROUP_XUSB_HOST>,
 			      <&{/xudc@3550000}		TEGRA_SWGROUP_XUSB_DEV>,
 			      <&{/sound}		TEGRA_SWGROUP_APE>,

@@ -250,7 +250,7 @@
 			regulator-name = "en-vdd-cam-1v2";
 			regulator-min-microvol = <1200000>;
 			regulator-max-microvol = <1200000>;
-			gpio = <&gpio_i2c_0_77 3 1>;
+			gpio = <&gpio_i2c_0_77 10 0>;
 			enable-active-high;
 		};
 
@@ -299,6 +299,15 @@
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 			gpio = <&gpio_i2c_0_74 0 0>;
+		};
+
+		en_vdd_sys: regulator@118 {
+			compatible = "regulator-fixed-sync";
+			reg = <118>;
+			regulator-name = "en-vdd-sys";
+			regulator-min-microvol = <1200000>;
+			regulator-max-microvol = <1200000>;
+			gpio = <&gpio_i2c_0_77 3 1>;
 		};
 	};
 

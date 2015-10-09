@@ -41,7 +41,7 @@
 			reset-gpios = <&tegra_gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;   //also for VCM_2V8 en
 			pwdn-gpios = <&tegra_gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
 			vana-supply = <&en_vdd_cam_hv_2v8>;
-			vdig-supply = <&en_vdd_cam_1v2>;
+			vdig-supply = <&en_vdd_sys>;
 			vif-supply = <&en_vdd_cam>;
 			vvcm-suply = <&en_vdd_vcm_2v8>;
 		};
@@ -62,7 +62,7 @@
 			reset-gpios = <&tegra_gpio CAM1_RST_L GPIO_ACTIVE_HIGH>;   //also for VCM_2V8 en
 			pwdn-gpios = <&tegra_gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
 			vana-supply = <&en_vdd_cam_hv_2v8>;
-			vdig-supply = <&en_vdd_cam_1v2>;
+			vdig-supply = <&en_vdd_sys>;
 			vif-supply = <&en_vdd_cam>;
 			vvcm-suply = <&en_vdd_vcm_2v8>;
 		};
@@ -78,6 +78,12 @@
 				CAM0_PWDN
 				CAM1_RST_L
 				CAM1_PWDN>;
+		};
+	};
+
+	fixed-regulators {
+		en_vdd_sys: regulator@118 {
+			enable-active-high;
 		};
 	};
 };

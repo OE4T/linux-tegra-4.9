@@ -277,7 +277,11 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 		nvmap_stats_read(NS_ALLOC));
 	h->userflags = flags;
 	nr_page = ((h->size + PAGE_SIZE - 1) >> PAGE_SHIFT);
-	h->flags = (flags & NVMAP_HANDLE_CACHE_FLAG);
+	/* Force mapping to uncached for VPR memory. */
+	if (heap_mask & NVMAP_HEAP_CARVEOUT_VPR)
+		h->flags = NVMAP_HANDLE_UNCACHEABLE;
+	else
+		h->flags = (flags & NVMAP_HANDLE_CACHE_FLAG);
 	h->align = max_t(size_t, align, L1_CACHE_BYTES);
 	h->kind = kind;
 	h->peer = peer;

@@ -249,6 +249,24 @@
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
 		};
+
+		en_vdd_vcm_2v8: regulator@117 {
+			compatible = "regulator-fixed-sync";
+			reg = <117>;
+			regulator-name = "en-vdd-vcm-2v8";
+			regulator-min-microvol = <2800000>;
+			regulator-max-microvol = <2800000>;
+			enable-active-high;
+		};
+
+		en_vdd_sys: regulator@118 {
+			compatible = "regulator-fixed-sync";
+			reg = <118>;
+			regulator-name = "en-vdd-sys";
+			regulator-min-microvol = <1200000>;
+			regulator-max-microvol = <1200000>;
+			gpio = <&gpio_i2c_0_77 3 1>;
+		};
 	};
 
 	gpio-keys {

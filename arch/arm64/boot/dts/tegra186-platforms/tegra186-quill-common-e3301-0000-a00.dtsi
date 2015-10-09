@@ -92,17 +92,6 @@
 	};
 
 	host1x {
-		nvcsi@150c0000 {
-			status = "disabled";
-		};
-		vi@15700000 {
-			status = "disabled";
-		};
-
-		isp@15600000 {
-			status = "disabled";
-		};
-
 		dsi {
 			panel-s-wuxga-8-0 {
 				smartdimmer {

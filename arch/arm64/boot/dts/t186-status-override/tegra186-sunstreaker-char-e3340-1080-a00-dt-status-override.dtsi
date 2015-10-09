@@ -280,4 +280,10 @@
 	sound {
 		status = "disabled";
 	};
+
+	thermal-zones {
+		AO-therm {
+			status = "disabled";
+		};
+	};
 };

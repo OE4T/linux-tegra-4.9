@@ -174,6 +174,10 @@ static inline u32 pbdma_pb_header_type_inc_f(void)
 {
 	return 0x20000000;
 }
+static inline u32 pbdma_pb_header_type_non_inc_f(void)
+{
+	return 0x60000000;
+}
 static inline u32 pbdma_hdr_shadow_r(u32 i)
 {
 	return 0x00040118 + i*8192;
@@ -197,6 +201,42 @@ static inline u32 pbdma_subdevice_channel_dma_enable_f(void)
 static inline u32 pbdma_method0_r(u32 i)
 {
 	return 0x000400c0 + i*8192;
+}
+static inline u32 pbdma_method0_fifo_size_v(void)
+{
+	return 0x00000004;
+}
+static inline u32 pbdma_method0_addr_f(u32 v)
+{
+	return (v & 0xfff) << 2;
+}
+static inline u32 pbdma_method0_addr_v(u32 r)
+{
+	return (r >> 2) & 0xfff;
+}
+static inline u32 pbdma_method0_subch_v(u32 r)
+{
+	return (r >> 16) & 0x7;
+}
+static inline u32 pbdma_method0_first_true_f(void)
+{
+	return 0x400000;
+}
+static inline u32 pbdma_method0_valid_true_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 pbdma_method1_r(u32 i)
+{
+	return 0x000400c8 + i*8192;
+}
+static inline u32 pbdma_method2_r(u32 i)
+{
+	return 0x000400d0 + i*8192;
+}
+static inline u32 pbdma_method3_r(u32 i)
+{
+	return 0x000400d8 + i*8192;
 }
 static inline u32 pbdma_data0_r(u32 i)
 {

@@ -46,6 +46,8 @@
 				TEGRA_GPIO(Y, 4)
 				TEGRA_GPIO(Y, 5)
 				TEGRA_GPIO(Y, 6)
+				TEGRA_GPIO(L, 4)
+				TEGRA_GPIO(L, 5)
 				TEGRA_GPIO(L, 6)
 				TEGRA_GPIO(L, 7)
 				TEGRA_GPIO(V, 0)
@@ -80,4 +82,3 @@
 		};
 	};
 };
-

@@ -182,13 +182,11 @@ err_module_busy:
 	/* drop reference to the vm */
 	nvhost_vm_put(ch->vm);
 
-	mutex_lock(&host->chlist_mutex);
 	index = nvhost_channel_get_index_from_id(host, ch->chid);
 	clear_bit(index, host->allocated_channels);
 
 	ch->dev = NULL;
 	ch->identifier = NULL;
-	mutex_unlock(&host->chlist_mutex);
 }
 
 /* Maps free channel with device */
@@ -305,13 +303,26 @@ void nvhost_getchannel(struct nvhost_channel *ch)
 
 void nvhost_putchannel(struct nvhost_channel *ch, int cnt)
 {
-	int i;
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
+	struct nvhost_master *host = nvhost_get_host(pdata->pdev);
 
 	trace_nvhost_putchannel(pdata->pdev->name,
 				atomic_read(&ch->refcount.refcount), ch->chid);
-	for (i = 0; i < cnt; i++)
-		kref_put(&ch->refcount, nvhost_channel_unmap_locked);
+
+	/* Avoid race in case where one thread is acquiring a channel with
+	 * the same identifier that we are dropping now; If we first drop
+	 * the reference counter and then acquire the mutex, channel map
+	 * routine may have acquired another channel with the same identifier.
+	 * This may happen if all submits from one user get finished - and
+	 * the very same user submits more work.
+	 *
+	 * In order to avoid above race, always acquire chlist mutex before
+	 * entering channel unmap routine.
+	 */
+
+	mutex_lock(&host->chlist_mutex);
+	kref_sub(&ch->refcount, cnt, nvhost_channel_unmap_locked);
+	mutex_unlock(&host->chlist_mutex);
 }
 EXPORT_SYMBOL(nvhost_putchannel);
 

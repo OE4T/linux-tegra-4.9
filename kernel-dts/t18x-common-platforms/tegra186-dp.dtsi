@@ -70,6 +70,7 @@
 						nvidia,h-ref-to-sync = <1>;
 						nvidia,v-ref-to-sync = <1>;
 					};
+/*
 					3840x2160-32 {
 						clock-frequency = <594000000>;
 					//	clock-frequency = <533250000>;
@@ -84,6 +85,7 @@
 						nvidia,h-ref-to-sync = <1>;
 						nvidia,v-ref-to-sync = <1>;
 					};
+*/
 				};
 
                                 dp-lt-settings {

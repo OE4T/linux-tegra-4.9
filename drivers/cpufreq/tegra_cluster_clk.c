@@ -51,7 +51,7 @@ static struct tcl_clk_drv_data *cl_clk_drv_data;
 #define REG_SIZE		4
 #define RW_MODE		(S_IWUSR | S_IRUGO)
 #define RO_MODE		(S_IRUGO)
-enum cluster a57, d;
+static enum cluster a57, d;
 
 struct denver_creg {
 	unsigned long offset;
@@ -59,7 +59,7 @@ struct denver_creg {
 	u64 val;
 };
 
-struct denver_creg denver_cregs[] = {
+static struct denver_creg denver_cregs[] = {
 	{0x00001005, "CREG_DPMU_PCLUSTER0_PWR_CTRL", 0},
 	{0x00001006, "CREG_DPMU_PCLUSTER1_PWR_CTRL", 0},
 };
@@ -70,7 +70,7 @@ enum creg_command {
 	CREG_READ,
 	CREG_WRITE
 };
-struct cpumask denver_cpumask;
+static struct cpumask denver_cpumask;
 
 static ssize_t cl_clk_write(struct file *file, const char __user *user_buf,
 		size_t count, loff_t *ppos)

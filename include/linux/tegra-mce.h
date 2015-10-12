@@ -90,8 +90,8 @@ enum {
 typedef union {
 	struct {
 		u8 cmd;
-		u8 idx;
 		u8 subidx;
+		u8 idx;
 	};
 	struct {
 		u32 low;

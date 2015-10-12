@@ -18,18 +18,6 @@
 		status = "disabled";
 	};
 
-	pwm@3280000 {
-		status = "disabled";
-	};
-
-	pwm@32a0000 {
-		status = "disabled";
-	};
-
-	pwm@c340000 {
-		status = "disabled";
-	};
-
 	pmc-iopower {
 		status = "disabled";
 	};

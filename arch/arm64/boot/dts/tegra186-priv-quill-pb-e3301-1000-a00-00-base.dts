@@ -23,20 +23,6 @@
 	nvidia,boardids = "3301:1000:A0";
 	nvidia,proc-boardid = "3301:1000:A0";
 
-	pcie-controller@10003000 {
-		nvidia,lane-map = <0x111>;
-		status = "okay";
-		pci@1,0 {
-			status = "okay";
-		};
-		pci@2,0 {
-			status = "okay";
-		};
-		pci@3,0 {
-			status = "okay";
-		};
-	};
-
 	padctl_uphy: pinctrl@3520000 {
 		status = "okay";
 		pinctrl-0 = <&quill_default>;

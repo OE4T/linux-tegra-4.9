@@ -726,7 +726,8 @@ int tegra_nvdisp_detach_win(struct tegra_dc *dc, unsigned idx)
 int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 {
 	struct tegra_dc_win *win = tegra_dc_get_window(dc, idx);
-	bool enable_blx4 = true; /* TODO: configure defaults from DT or IMP */
+	/* Pulls configuration in from TEGRA_DC_FEATURE_INVERT_TYPE field */
+	bool enable_blx4 = tegra_dc_feature_has_scan_column(dc, idx);
 
 	if (win && win->dc == dc) /* already assigned to current head */
 		return 0;

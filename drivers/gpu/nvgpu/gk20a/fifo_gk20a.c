@@ -1450,7 +1450,7 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 		struct channel_gk20a *ch = &f->channel[id];
 
 		if (is_tsg) {
-			gk20a_channel_timeout_stop_all_channels(g);
+			gk20a_channel_timeout_restart_all_channels(g);
 			gk20a_fifo_recover(g, BIT(engine_id), id, true,
 					true, true);
 			ret = true;
@@ -1472,7 +1472,7 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 			 * Cancel all channels' timeout since SCHED error might
 			 * trigger multiple watchdogs at a time
 			 */
-			gk20a_channel_timeout_stop_all_channels(g);
+			gk20a_channel_timeout_restart_all_channels(g);
 			gk20a_fifo_recover(g, BIT(engine_id), id, false,
 				true, ch->timeout_debug_dump);
 			ret = true;

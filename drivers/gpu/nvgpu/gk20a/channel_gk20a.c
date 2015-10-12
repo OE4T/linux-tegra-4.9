@@ -1574,7 +1574,7 @@ static void gk20a_channel_timeout_stop(struct channel_gk20a *ch)
 	mutex_unlock(&ch->timeout.lock);
 }
 
-void gk20a_channel_timeout_stop_all_channels(struct gk20a *g)
+void gk20a_channel_timeout_restart_all_channels(struct gk20a *g)
 {
 	u32 chid;
 	struct fifo_gk20a *f = &g->fifo;
@@ -1583,7 +1583,20 @@ void gk20a_channel_timeout_stop_all_channels(struct gk20a *g)
 		struct channel_gk20a *ch = &f->channel[chid];
 
 		if (gk20a_channel_get(ch)) {
-			gk20a_channel_timeout_stop(ch);
+			mutex_lock(&ch->timeout.lock);
+			if (!ch->timeout.initialized) {
+				mutex_unlock(&ch->timeout.lock);
+				gk20a_channel_put(ch);
+				continue;
+			}
+			mutex_unlock(&ch->timeout.lock);
+
+			cancel_delayed_work_sync(&ch->timeout.wq);
+			if (!ch->has_timedout)
+				schedule_delayed_work(&ch->timeout.wq,
+				       msecs_to_jiffies(
+				       gk20a_get_channel_watchdog_timeout(ch)));
+
 			gk20a_channel_put(ch);
 		}
 	}

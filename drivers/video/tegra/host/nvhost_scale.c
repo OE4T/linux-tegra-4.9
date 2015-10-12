@@ -67,19 +67,23 @@ static DEVICE_ATTR(load, S_IRUGO, nvhost_scale_load_show, NULL);
 
 static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 {
-	unsigned long *freqs;
-	int num_freqs, err, low_end_cnt = 0;
+	unsigned long *freqs = NULL;
+	int num_freqs = 0, err = 0, low_end_cnt = 0;
 	unsigned long max_freq =  clk_round_rate(profile->clk, UINT_MAX);
 	unsigned long min_freq =  clk_round_rate(profile->clk, 0);
+	struct nvhost_device_data *pdata = platform_get_drvdata(profile->pdev);
 
-#ifdef CONFIG_ARCH_TEGRA
+#if defined(CONFIG_PLATFORM_TEGRA) && !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	err = tegra_dvfs_get_freqs(clk_get_parent(profile->clk),
 				   &freqs, &num_freqs);
-#else
-	err = -ENOSYS;
-#endif
 	if (err)
-		return -ENOSYS;
+		return err;
+#endif
+
+	if (pdata->freqs[0]) {
+		num_freqs = NVHOST_MODULE_MAX_FREQS;
+		freqs = pdata->freqs;
+	}
 
 	/* check for duplicate frequencies at higher end */
 	while (((num_freqs >= 2) &&
@@ -101,7 +105,7 @@ static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 	profile->devfreq_profile.freq_table = (unsigned long *)freqs;
 	profile->devfreq_profile.max_state = num_freqs;
 
-	return 0;
+	return err;
 }
 
 /*

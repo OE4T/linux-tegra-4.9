@@ -39,8 +39,8 @@ static void bus_print_error(struct bridge_mca_bank *bank) {
 		smp_processor_id(), bank->name, bank->bank);
 
 	while (bank->error_fifo_count(bank->vaddr)) {
-		bus_addr = bank->error_status(bank->vaddr) & BUS_ADDR_MASK;
 		bus_status = bank->error_status(bank->vaddr);
+		bus_addr = bank->error_status(bank->vaddr) & BUS_ADDR_MASK;
 		error_type = (bus_status & BUS_ERROR_TYPE_MASK) >>
 			     BUS_ERROR_TYPE_SHIFT;
 		pr_crit("Bus addr[%d]: 0x%x\n", count, bus_addr);

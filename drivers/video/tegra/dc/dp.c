@@ -1411,19 +1411,6 @@ bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 
 	cfg->is_valid = false;
 	rate = tegra_dc_pclk_round_rate(dp->sor->dc, dp->sor->dc->mode.pclk);
-	/* BRINGUP HACK: FORCE RATE TO BE ~1% LOWER THAN PCLK
-	 *
-	 * Either pclk or SOR link clock is off. Need to
-	 * adjust rate accordingly. Only do this for 1080p and 2160p
-	 * since those are the only resolutions we need to support right now.
-	 * See bug 1687035 for more details.
-	 */
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (dp->dc->mode.pclk == 148500000)
-		rate = 147000000;
-	else if (dp->dc->mode.pclk == 594000000)
-		rate = 593000000;
-#endif
 
 	if (!link_rate || !cfg->lane_count || !rate ||
 		!cfg->bits_per_pixel)

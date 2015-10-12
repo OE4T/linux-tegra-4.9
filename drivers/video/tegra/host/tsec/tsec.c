@@ -316,6 +316,7 @@ static void tsec_execute_method(dma_addr_t dma_handle,
 		return;
 	}
 
+	channel->syncpts[0] = syncpt_id;
 	job->sp->id = syncpt_id;
 	job->sp->incrs = syncpt_incrs;
 	job->num_syncpts = 1;

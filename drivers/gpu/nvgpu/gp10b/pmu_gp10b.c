@@ -336,8 +336,8 @@ void gp10b_init_pmu_ops(struct gpu_ops *gops)
 			gm20b_init_nspmu_setup_hw1;
 		gops->pmu.load_lsfalcon_ucode = NULL;
 		gops->pmu.init_wpr_region = NULL;
+		gops->pmu.pmu_setup_hw_and_bootstrap = gp10b_init_pmu_setup_hw1;
 	}
-	gops->pmu.pmu_setup_hw_and_bootstrap = gp10b_init_pmu_setup_hw1;
 	gops->pmu.pmu_setup_elpg = gp10b_pmu_setup_elpg;
 	gops->pmu.lspmuwprinitdone = false;
 	gops->pmu.fecsbootstrapdone = false;

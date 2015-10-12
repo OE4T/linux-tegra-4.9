@@ -59,14 +59,18 @@ static bool gp10b_kind_compressible(u8 k)
 		 k <= gmmu_pte_kind_z16_ms8_2cz_v()) ||
 		k == gmmu_pte_kind_z16_ms16_2cz_v() ||
 	       (k >= gmmu_pte_kind_z16_4cz_v() &&
-		 k <= gmmu_pte_kind_z16_ms16_4cz_v());
+		 k <= gmmu_pte_kind_z16_ms16_4cz_v()) ||
+		k == gmmu_pte_kind_c32_ms4_4cbra_v() ||
+		k == gmmu_pte_kind_c64_ms4_4cbra_v();
 }
 
 static bool gp10b_kind_zbc(u8 k)
 {
 	return (k >= gmmu_pte_kind_z16_2cz_v() &&
 		 k <= gmmu_pte_kind_z16_ms8_2cz_v()) ||
-		k == gmmu_pte_kind_z16_ms16_2cz_v();
+		k == gmmu_pte_kind_z16_ms16_2cz_v() ||
+		k == gmmu_pte_kind_c32_ms4_4cbra_v() ||
+		k == gmmu_pte_kind_c64_ms4_4cbra_v();
 }
 
 static void gp10b_init_kind_attr(void)

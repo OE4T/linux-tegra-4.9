@@ -134,6 +134,19 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 	else
 		prot = TEGRA_VGPU_MAP_PROT_NONE;
 
+	if (pgsz_idx == gmmu_page_size_kernel) {
+		if (page_size == vm->gmmu_page_sizes[gmmu_page_size_small]) {
+			pgsz_idx = gmmu_page_size_small;
+		} else if (page_size ==
+				vm->gmmu_page_sizes[gmmu_page_size_big]) {
+			pgsz_idx = gmmu_page_size_big;
+		} else {
+			gk20a_err(d, "invalid kernel page size %d\n",
+				page_size);
+			goto fail;
+		}
+	}
+
 	msg.cmd = TEGRA_VGPU_CMD_AS_MAP_EX;
 	msg.handle = platform->virt_handle;
 	p->handle = vm->handle;

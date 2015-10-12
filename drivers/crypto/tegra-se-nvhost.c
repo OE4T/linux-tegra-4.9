@@ -202,6 +202,7 @@ static struct workqueue_struct *se_work_q;
 
 static DEFINE_DMA_ATTRS(attrs);
 static u32 *aes_cmdbuf_cpuvaddr;
+static DEFINE_MUTEX(aes_cmdbuf_lock);
 static int cmdbuf_cnt;
 static dma_addr_t aes_cmdbuf_iova;
 static unsigned int aes_opcode_start_addr;
@@ -573,16 +574,20 @@ static int tegra_se_send_ctr_seed(struct tegra_se_dev *se_dev, u32 *pdata)
 	int err = 0;
 	u32 cmdbuf_num_words = 0, i = 0;
 
+	mutex_lock(&aes_cmdbuf_lock);
 	aes_cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent,
 			SZ_16K, &aes_cmdbuf_iova, GFP_KERNEL, &attrs);
-	if (!aes_cmdbuf_cpuvaddr)
+	if (!aes_cmdbuf_cpuvaddr) {
+		mutex_unlock(&aes_cmdbuf_lock);
 		return -ENOMEM;
+	}
 
 	aes_cmdbuf_cpuvaddr[i++] =
 		__nvhost_opcode_incr(aes_opcode_start_addr + 0x18, 4);
 
 	for (j = 0; j < SE_CRYPTO_CTR_REG_COUNT; j++)
 		aes_cmdbuf_cpuvaddr[i++] = pdata[j];
+	mutex_unlock(&aes_cmdbuf_lock);
 
 	cmdbuf_num_words = i;
 	cmdbuf_cnt = i;
@@ -600,11 +605,16 @@ static int tegra_se_send_key_data(u8 *pdata, u32 data_len,
 	u32 cmdbuf_num_words = 0, i = 0;
 	int err = 0;
 
-	if (pdata_buf == NULL)
+	mutex_lock(&aes_cmdbuf_lock);
+	if (pdata_buf == NULL) {
+		mutex_unlock(&aes_cmdbuf_lock);
 		return -ENOMEM;
+	}
 
-	if ((type == SE_KEY_TABLE_TYPE_KEY) && (slot_num == ssk_slot.slot_num))
+	if ((type == SE_KEY_TABLE_TYPE_KEY) && (slot_num == ssk_slot.slot_num)) {
+		mutex_unlock(&aes_cmdbuf_lock);
 		return -EINVAL;
+	}
 
 	if (type == SE_KEY_TABLE_TYPE_ORGIV)
 		quad = QUAD_ORG_IV;
@@ -617,8 +627,10 @@ static int tegra_se_send_key_data(u8 *pdata, u32 data_len,
 		aes_cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent,
 				SZ_16K, &aes_cmdbuf_iova, GFP_KERNEL, &attrs);
 		cmdbuf_cnt = 0;
-		if (!aes_cmdbuf_cpuvaddr)
+		if (!aes_cmdbuf_cpuvaddr) {
+			mutex_unlock(&aes_cmdbuf_lock);
 			return -ENOMEM;
+		}
 	}
 
 	i = cmdbuf_cnt;
@@ -660,6 +672,7 @@ static int tegra_se_send_key_data(u8 *pdata, u32 data_len,
 		aes_cmdbuf_cpuvaddr = NULL;
 	}
 
+	mutex_unlock(&aes_cmdbuf_lock);
 	return err;
 }
 
@@ -868,11 +881,14 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 	total = nbytes;
 	/* Create Gather Buffer Command */
 
+	mutex_lock(&aes_cmdbuf_lock);
 	if (req_ctx->op_mode == SE_AES_OP_MODE_RNG_DRBG) {
 		aes_cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent,
 				SZ_16K, &aes_cmdbuf_iova, GFP_KERNEL, &attrs);
-		if (!aes_cmdbuf_cpuvaddr)
+		if (!aes_cmdbuf_cpuvaddr) {
+			mutex_unlock(&aes_cmdbuf_lock);
 			return -ENOMEM;
+		}
 	}
 
 	aes_cmdbuf_cpuvaddr[i++] =
@@ -958,6 +974,7 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 	if (se_dev->queue.qlen) {
 		host1x_submit_sz++;
 		if (host1x_submit_sz < SE_TASKS_PER_SUBMIT) {
+			mutex_unlock(&aes_cmdbuf_lock);
 			return 0;
 		} else {
 			host1x_submit_sz = 0;
@@ -976,6 +993,7 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 			aes_cmdbuf_cpuvaddr, aes_cmdbuf_iova, &attrs);
 	aes_cmdbuf_cpuvaddr = NULL;
 	cmdbuf_cnt = 0;
+	mutex_unlock(&aes_cmdbuf_lock);
 	return err;
 }
 

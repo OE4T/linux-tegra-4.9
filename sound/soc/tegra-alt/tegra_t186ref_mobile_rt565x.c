@@ -44,6 +44,7 @@
 #include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"
 #include "tegra_asoc_machine_alt_t18x.h"
+#include "tegra210_xbar_alt.h"
 
 #define DRV_NAME "tegra-snd-t186ref-mobile-rt565x"
 
@@ -253,7 +254,7 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	case 88200:
 	case 176400:
 		clk_out_rate = 11289600; /* Codec rate */
-		mclk = 11289600; /* PLL_A rate */
+		mclk = 11289600 * 4; /* PLL_A rate */
 		break;
 	case 8000:
 	case 16000:
@@ -264,7 +265,7 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	case 192000:
 	default:
 		clk_out_rate = 12288000;
-		mclk = 12288000;
+		mclk = 12288000 * 3;
 		break;
 	}
 
@@ -274,6 +275,13 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		dev_err(card->dev,
 			"Can't configure clocks clk_rate %dHz pll_a = %dHz clk_out = %dHz\n",
 			clk_rate, mclk, clk_out_rate);
+		return err;
+	}
+
+	err = tegra210_xbar_set_clock(mclk);
+	if (err < 0) {
+		dev_err(card->dev,
+			"Can't configure xbar clock = %d Hz\n", mclk);
 		return err;
 	}
 

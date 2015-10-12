@@ -1561,15 +1561,16 @@ static void gk20a_channel_timeout_start(struct channel_gk20a *ch,
 static void gk20a_channel_timeout_stop(struct channel_gk20a *ch)
 {
 	mutex_lock(&ch->timeout.lock);
-
 	if (!ch->timeout.initialized) {
 		mutex_unlock(&ch->timeout.lock);
 		return;
 	}
+	mutex_unlock(&ch->timeout.lock);
 
-	ch->timeout.initialized = false;
 	cancel_delayed_work_sync(&ch->timeout.wq);
 
+	mutex_lock(&ch->timeout.lock);
+	ch->timeout.initialized = false;
 	mutex_unlock(&ch->timeout.lock);
 }
 

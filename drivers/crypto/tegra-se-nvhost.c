@@ -528,6 +528,7 @@ static int tegra_se_channel_submit_gather(struct tegra_se_dev *se_dev,
 	syncpt_id = se_dev->syncpt_ids[tegra_se_engine];
 
 	/* initialize job data */
+	se_dev->channel->syncpts[0] = syncpt_id;
 	job->sp->id = syncpt_id;
 	job->sp->incrs = 1;
 	job->num_syncpts = 1;

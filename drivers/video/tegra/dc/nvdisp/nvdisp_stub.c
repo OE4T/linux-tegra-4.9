@@ -343,6 +343,7 @@ struct device_node *tegra_primary_panel_get_dt_node(
 			if (!of_device_is_available(np_panel))
 				np_panel = of_get_child_by_name(np_primary,
 					"dp-display");
+			/* eDP */
 			if (!of_device_is_available(np_panel)) {
 				np_panel = of_get_child_by_name(np_primary,
 					"panel-s-edp-uhdtv-15-6");
@@ -390,10 +391,11 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 			/* HDMI */
 			np_panel = of_get_child_by_name(np_secondary,
 				"hdmi-display");
-			/* eDP */
+			/* DP */
 			if (!of_device_is_available(np_panel))
 				np_panel = of_get_child_by_name(np_secondary,
 					"dp-display");
+			/* eDP */
 			if (!of_device_is_available(np_panel)) {
 				np_panel = of_get_child_by_name(np_secondary,
 					"panel-s-edp-uhdtv-15-6");
@@ -445,28 +447,26 @@ struct device_node *tegra_tertiary_panel_get_dt_node(
 		dc_out = pdata->default_out;
 
 	if (tegra_platform_is_silicon()) {
-
 		np_tertiary = of_find_node_by_path(dc_or_node_names[2]);
-
-		/* eDP */
 		if (of_device_is_available(np_tertiary)) {
-				np_panel = of_get_child_by_name(np_tertiary,
+			/* DP */
+			np_panel = of_get_child_by_name(np_tertiary,
 					"dp-display");
-			if (!of_device_is_available(np_panel))
+			/* eDP */
+			if (!of_device_is_available(np_panel)) {
 				np_panel = of_get_child_by_name(np_tertiary,
 					"panel-s-edp-uhdtv-15-6");
-			if (of_device_is_available(np_panel) && dc_out)
-				tegra_panel_register_ops(dc_out,
-					&edp_s_uhdtv_15_6_ops);
-		}
-		/* HDMI */
-		if (!of_device_is_available(np_panel)) {
-			if (of_device_is_available(np_tertiary))
+				if (of_device_is_available(np_panel) && dc_out)
+					tegra_panel_register_ops(dc_out,
+						&edp_s_uhdtv_15_6_ops);
+			}
+			/* HDMI */
+			if (!of_device_is_available(np_panel))
 				np_panel = of_get_child_by_name(np_tertiary,
 					"hdmi-display");
 		}
-
 	} else {
+		/* HDMI for non-silicon */
 		np_tertiary = of_find_node_by_path(HDMI_NODE);
 		np_panel = of_get_child_by_name(np_tertiary, "hdmi-display");
 	}

@@ -247,6 +247,7 @@
                         nvidia,fb-bpp = <32>;
                         nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
 			nvidia,fb-win = <0>;
+			win-mask = <0x7>;
 			nvidia,dc-ctrlnum = <0>;
 			nvidia,dc-or-node = "/host1x/dsi";
                 };
@@ -258,8 +259,20 @@
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
 			nvidia,fb-win = <3>;
+			win-mask = <0x38>;
 			nvidia,dc-ctrlnum = <1>;
 			nvidia,dc-or-node = "/host1x/sor1";
+		};
+
+		nvdisplay@15220000 {
+			status = "disabled";
+			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
+			nvidia,emc-clk-rate = <300000000>;
+			nvidia,fb-bpp = <32>; /* bits per pixel */
+			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
+			win-mask = <0x0>;
+			nvidia,dc-ctrlnum = <2>;
+			nvidia,dc-or-node = "/host1x/sor";
 		};
 
 		dsi {	/* dsi@15300000 */
@@ -529,6 +542,12 @@
 			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 0) GPIO_ACTIVE_LOW>;
 			panel-s-edp-uhdtv-15-6 {
 				nvidia,panel-bl-pwm-gpio = <&tegra_gpio TEGRA_GPIO(U, 5) 0>;
+			};
+
+			dp-display {
+				disp-default-out {
+					nvidia,out-parent-clk = "plld3";
+				};
 			};
 		};
 		sor1 {

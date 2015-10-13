@@ -5414,12 +5414,14 @@ static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event)
 
 int gk20a_gr_isr(struct gk20a *g)
 {
+	struct device *dev = dev_from_gk20a(g);
 	struct gr_isr_data isr_data;
 	u32 grfifo_ctl;
 	u32 obj_table;
 	int need_reset = 0;
 	u32 gr_intr = gk20a_readl(g, gr_intr_r());
 	struct channel_gk20a *ch = NULL;
+	int tsgid = NVGPU_INVALID_TSG_ID;
 
 	gk20a_dbg_fn("");
 	gk20a_dbg(gpu_dbg_intr, "pgraph intr %08x", gr_intr);
@@ -5445,7 +5447,7 @@ int gk20a_gr_isr(struct gk20a *g)
 		gr_fe_object_table_r(isr_data.sub_chan)) : 0;
 	isr_data.class_num = gr_fe_object_table_nvclass_v(obj_table);
 
-	ch = gk20a_gr_get_channel_from_ctx(g, isr_data.curr_ctx, NULL);
+	ch = gk20a_gr_get_channel_from_ctx(g, isr_data.curr_ctx, &tsgid);
 	if (!ch) {
 		gk20a_err(dev_from_gk20a(g), "invalid channel ctx 0x%08x",
 			   isr_data.curr_ctx);
@@ -5538,16 +5540,16 @@ int gk20a_gr_isr(struct gk20a *g)
 
 		if (exception & gr_exception_fe_m()) {
 			u32 fe = gk20a_readl(g, gr_fe_hww_esr_r());
-			gk20a_dbg(gpu_dbg_intr, "fe warning %08x\n", fe);
+			gk20a_err(dev, "fe warning %08x", fe);
 			gk20a_writel(g, gr_fe_hww_esr_r(), fe);
 			need_reset |= -EFAULT;
 		}
 
 		if (exception & gr_exception_memfmt_m()) {
 			u32 memfmt = gk20a_readl(g, gr_memfmt_hww_esr_r());
-			gk20a_dbg(gpu_dbg_intr, "memfmt exception %08x\n",
-					memfmt);
+			gk20a_err(dev, "memfmt exception %08x", memfmt);
 			gk20a_writel(g, gr_memfmt_hww_esr_r(), memfmt);
+			need_reset |= -EFAULT;
 		}
 
 		/* check if a gpc exception has occurred */
@@ -5582,17 +5584,23 @@ int gk20a_gr_isr(struct gk20a *g)
 
 		if (exception & gr_exception_ds_m()) {
 			u32 ds = gk20a_readl(g, gr_ds_hww_esr_r());
-			gk20a_dbg(gpu_dbg_intr, "ds exception %08x\n", ds);
+			gk20a_err(dev, "ds exception %08x", ds);
 			gk20a_writel(g, gr_ds_hww_esr_r(), ds);
+			need_reset |= -EFAULT;
 		}
 
 		gk20a_writel(g, gr_intr_r(), gr_intr_exception_reset_f());
 		gr_intr &= ~gr_intr_exception_pending_f();
 	}
 
-	if (need_reset)
-		gk20a_fifo_recover(g, BIT(ENGINE_GR_GK20A),
-				   ~(u32)0, false, false, true);
+	if (need_reset) {
+		if (tsgid != NVGPU_INVALID_TSG_ID)
+			gk20a_fifo_recover(g, BIT(ENGINE_GR_GK20A),
+					   tsgid, true, true, true);
+		else
+			gk20a_fifo_recover(g, BIT(ENGINE_GR_GK20A),
+					   ch->hw_chid, false, true, true);
+	}
 
 clean_up:
 	if (gr_intr && !ch) {

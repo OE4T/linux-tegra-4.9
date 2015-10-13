@@ -108,9 +108,12 @@
 			gpio-init-0 = <&tmpm32xi2c_default>;
 			gpio-init-1 = <&tmpm32xi2c_default_pwr_on>;
 			tmpm32xi2c_default: default {
+				gpio-output-low = <
+					TMPM32X_GPIO(C, 1)
+					TMPM32X_GPIO(E, 5)
+					>;
 				gpio-output-high = <
-					TMPM32X_GPIO(D, 1) /* FIXME: D1 is BT_HOST_wake, supposed to be input */
-					TMPM32X_GPIO(L, 6)
+					TMPM32X_GPIO(C, 0)
 					>;
 			};
 			tmpm32xi2c_default_pwr_on: pwr_on_default {
@@ -140,8 +143,14 @@
 	bluedroid_pm { /* BCM89359 */
 		compatible = "nvidia,tegra-bluedroid_pm";
 		id = <0>;
-		bluedroid_pm,shutdown-gpio = <&tmpm32xi2c_61 TMPM32X_GPIO(D, 1) 0>;
+		bluedroid_pm,shutdown-gpio = <&tmpm32xi2c_61 TMPM32X_GPIO(C, 1) 0>;
 		avdd-supply = <&vdd_wl_bt>;
+	};
+
+	bcmdhd_wlan {
+		compatible = "android,bcmdhd_wlan";
+		wlan-pwr-gpio = <&tmpm32xi2c_61 TMPM32X_GPIO(C, 0) GPIO_ACTIVE_HIGH>;
+		status = "okay";
 	};
 
 	fixed-regulators {
@@ -150,11 +159,6 @@
 			gpio = <&tmpm32xi2c_61 TMPM32X_GPIO(E, 5) 0>;
 		};
 
-		bcmdhd_wlan {
-			compatible = "android,bcmdhd_wlan";
-			wlan-pwr-gpio = <&tmpm32xi2c_61 TMPM32X_GPIO(L, 6) GPIO_ACTIVE_HIGH>;
-			status = "okay";
-		};
 	};
 
 	saf775x { /* dirana3 */
@@ -284,6 +288,10 @@
 		 */
 		nvidia,lane-map = <0x111>;
 		status = "okay";
+		pci@1,0 {
+			status = "okay";
+			nvidia,num-lanes = <0x1>;
+		};
 		pci@2,0 {
 			status = "okay";
 		};

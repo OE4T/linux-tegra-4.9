@@ -369,14 +369,6 @@
 		status = "disabled";
 	};
 
-	bluedroid_pm {
-		status = "disabled";
-	};
-
-	bcmdhd_wlan {
-		status = "disabled";
-	};
-
 	sound {
 		status = "disabled";
 	};

@@ -93,8 +93,8 @@
 
 				spmic_sd0: sd0 {
 					regulator-name = "vddio-ddr";
-					regulator-min-microvolt = <1100000>;
-					regulator-max-microvolt = <1100000>;
+					regulator-always-on;
+					regulator-boot-on;
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
 					maxim,fps-source = <FPS_SRC_DEF>;
 				};

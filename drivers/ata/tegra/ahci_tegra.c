@@ -225,6 +225,40 @@ static unsigned int tegra_ahci_qc_issue(struct ata_queued_cmd *qc)
 		tegra->host_naking_war_applied = true;
 	}
 	return ahci_ops.qc_issue(qc);
+}
+
+static int tegra_ahci_hardreset(struct ata_link *link, unsigned int *class,
+			  unsigned long deadline)
+{
+	struct ata_host *host = link->ap->host;
+	struct ahci_host_priv *hpriv =  host->private_data;
+	int ret;
+	u32 val;
+	u32 mask;
+
+	ret = ahci_ops.hardreset(link, class, deadline);
+	if (ret < 0) {
+		mask = val = T_SATA0_CFG_LINK_0_USE_POSEDGE_SCTL_DET;
+		tegra_ahci_scfg_update(hpriv, val, mask, T_SATA0_CFG_LINK_0);
+	}
+	return ret;
+}
+
+static int tegra_ahci_softreset(struct ata_link *link, unsigned int *class,
+			  unsigned long deadline)
+{
+	struct ata_host *host = link->ap->host;
+	struct ahci_host_priv *hpriv =  host->private_data;
+	int ret;
+	u32 val;
+	u32 mask;
+
+	ret = ahci_ops.softreset(link, class, deadline);
+	if (ret < 0) {
+		mask = val = T_SATA0_CFG_LINK_0_USE_POSEDGE_SCTL_DET;
+		tegra_ahci_scfg_update(hpriv, val, mask, T_SATA0_CFG_LINK_0);
+	}
+	return ret;
 
 }
 
@@ -234,6 +268,8 @@ static struct ata_port_operations ahci_tegra_port_ops = {
 	.host_stop	= tegra_ahci_host_stop,
 	.port_suspend	= tegra_ahci_port_suspend,
 	.port_resume	= tegra_ahci_port_resume,
+	.hardreset	= tegra_ahci_hardreset,
+	.softreset	= tegra_ahci_softreset,
 };
 
 static struct ata_port_info ahci_tegra_port_info = {
@@ -906,6 +942,11 @@ static int tegra_ahci_quirks(struct ahci_host_priv *hpriv)
 	val = (T_SATA0_NVOOB_COMMA_CNT | T_SATA0_NVOOB_SQUELCH_FILTER_LENGTH |
 			T_SATA0_NVOOB_SQUELCH_FILTER_MODE);
 	tegra_ahci_scfg_update(hpriv, val, mask, T_SATA0_NVOOB);
+
+	/* Change CFG2NVOOB_2_COMWAKE_IDLE_CNT_LOW from 83.3 ns to 58.8ns */
+	mask = T_SATA0_CFG2NVOOB_2_COMWAKE_IDLE_CNT_LOW_MASK;
+	val = T_SATA0_CFG2NVOOB_2_COMWAKE_IDLE_CNT_LOW;
+	tegra_ahci_scfg_update(hpriv, val, mask, T_SATA0_CFG2NVOOB_2);
 
 	return 0;
 }

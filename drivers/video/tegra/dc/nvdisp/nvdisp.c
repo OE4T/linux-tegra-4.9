@@ -952,6 +952,8 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	tegra_dc_ext_enable(dc->ext);
 	trace_display_enable(dc);
 
+	tegra_dc_dsc_init(dc);
+
 	if (dc->out->postpoweron)
 		dc->out->postpoweron(&dc->ndev->dev);
 

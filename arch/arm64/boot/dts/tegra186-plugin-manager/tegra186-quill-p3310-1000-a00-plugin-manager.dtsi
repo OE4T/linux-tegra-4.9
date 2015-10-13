@@ -14,15 +14,6 @@
  */
 
 / {
-
-	chosen {
-		plugin-manager {
-			odm-data {
-				enable-tegra-wdt;
-			};
-		};
-	};
-
 	plugin-manager {
 		fragement@0 {
 			odm-data = "enable-tegra-wdt";

@@ -28,7 +28,6 @@
                                 status = "okay";
                                 compatible = "dp, display";
                                 nvidia,is_ext_dp_panel = <1>;
-				nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 1) 1>;
                                 disp-default-out {
                                         nvidia,out-type = <TEGRA_DC_OUT_DP>;
                                         nvidia,out-align = <TEGRA_DC_ALIGN_MSB>;

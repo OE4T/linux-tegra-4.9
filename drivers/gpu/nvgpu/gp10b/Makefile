@@ -2,6 +2,7 @@ GCOV_PROFILE := y
 
 ccflags-$(CONFIG_GK20A) += -I$(srctree)/drivers/gpu/nvgpu
 ccflags-$(CONFIG_GK20A) += -I$(srctree)/include
+ccflags-$(CONFIG_GK20A) += -I$(srctree)/drivers/devfreq
 ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/drivers/gpu/nvgpu
 ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/include
 ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/include/uapi

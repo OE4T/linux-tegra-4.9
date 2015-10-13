@@ -541,6 +541,16 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 	if (!h)
 		return -EINVAL;
 
+	/*
+	 * Don't allow mmap on VPR memory as it would be mapped
+	 * as device memory. User space shouldn't be accessing
+	 * device memory.
+	 */
+	if (h->heap_type == NVMAP_HEAP_CARVEOUT_VPR)  {
+		nvmap_handle_put(h);
+		return -EPERM;
+	}
+
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
 		nvmap_handle_put(h);

@@ -30,6 +30,9 @@
 #include "gk20a/gk20a.h"
 #include "platform_tegra.h"
 
+#define GP10B_MAX_SUPPORTED_FREQS 11
+unsigned long gp10b_freq_table[GP10B_MAX_SUPPORTED_FREQS];
+
 static struct {
 	char *name;
 	unsigned long default_rate;
@@ -130,7 +133,19 @@ static int gp10b_tegra_probe(struct platform_device *pdev)
 
 static int gp10b_tegra_late_probe(struct platform_device *pdev)
 {
+	/* Make gk20a power domain a subdomain of host1x */
+	nvhost_register_client_domain(dev_to_genpd(&pdev->dev));
+
 	return 0;
+}
+
+static int gp10b_tegra_remove(struct platform_device *pdev)
+{
+	/* remove gk20a power subdomain from host1x */
+	nvhost_unregister_client_domain(dev_to_genpd(&pdev->dev));
+
+	return 0;
+
 }
 
 static bool gp10b_tegra_is_railgated(struct platform_device *pdev)
@@ -206,6 +221,72 @@ static int gp10b_tegra_reset_deassert(struct platform_device *dev)
 	return ret;
 }
 
+static void gp10b_tegra_prescale(struct platform_device *pdev)
+{
+	struct gk20a *g = get_gk20a(pdev);
+	u32 avg = 0;
+
+	gk20a_dbg_fn("");
+
+	gk20a_pmu_load_norm(g, &avg);
+	/* TBD - Notify EDP about changed constrains */
+
+	gk20a_dbg_fn("done");
+}
+
+static void gp10b_tegra_postscale(struct platform_device *pdev,
+					unsigned long freq)
+{
+	/* TBD -  notify EMC about frequency change */
+	gk20a_dbg_fn("");
+}
+
+static unsigned long gp10b_get_clk_rate(struct platform_device *dev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+
+	return clk_get_rate(platform->clk[0]);
+
+}
+
+static long gp10b_round_clk_rate(struct platform_device *dev,
+						unsigned long rate)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+
+	return clk_round_rate(platform->clk[0], rate);
+}
+
+static int gp10b_set_clk_rate(struct platform_device *dev, unsigned long rate)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+
+	return clk_set_rate(platform->clk[0], rate);
+}
+
+static int gp10b_clk_get_freqs(struct platform_device *pdev,
+				unsigned long **freqs, int *num_freqs)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	unsigned long min_rate, max_rate, freq_step, rate;
+	int i;
+
+	min_rate = clk_round_rate(platform->clk[0], 0);
+	max_rate = clk_round_rate(platform->clk[0], (UINT_MAX - 1));
+	freq_step = (max_rate - min_rate)/(GP10B_MAX_SUPPORTED_FREQS - 1);
+	gk20a_dbg_info("min rate: %ld max rate: %ld freq step %ld\n",
+						min_rate, max_rate, freq_step);
+
+	for (i = 0; i < GP10B_MAX_SUPPORTED_FREQS; i++) {
+		rate = min_rate + i * freq_step;
+		gp10b_freq_table[i] = clk_round_rate(platform->clk[0], rate);
+	}
+	/* Fill freq table */
+	*freqs = gp10b_freq_table;
+	*num_freqs = GP10B_MAX_SUPPORTED_FREQS;
+	return 0;
+}
+
 struct gk20a_platform t18x_gpu_tegra_platform = {
 	.has_syncpoints = true,
 
@@ -227,6 +308,7 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 
 	.probe = gp10b_tegra_probe,
 	.late_probe = gp10b_tegra_late_probe,
+	.remove = gp10b_tegra_remove,
 
 	/* power management callbacks */
 	.suspend = gp10b_tegra_suspend,
@@ -242,6 +324,18 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 	.default_big_page_size	= SZ_64K,
 
 	.has_cde = true,
+
+	.clk_get_rate = gp10b_get_clk_rate,
+	.clk_round_rate = gp10b_round_clk_rate,
+	.clk_set_rate = gp10b_set_clk_rate,
+	.get_clk_freqs = gp10b_clk_get_freqs,
+
+	/* frequency scaling configuration */
+	.prescale = gp10b_tegra_prescale,
+	.postscale = gp10b_tegra_postscale,
+
+	.devfreq_governor = "nvhost_podgov",
+	.qos_id = PM_QOS_GPU_FREQ_MIN,
 
 	.secure_alloc = gk20a_tegra_secure_alloc,
 	.secure_page_alloc = gk20a_tegra_secure_page_alloc,

@@ -1305,7 +1305,7 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 	struct tegra_dc *dc = sor->dc;
 	const struct tegra_dc_mode *dc_mode = &dc->mode;
 	int head_num = dc->ctrl_num;
-	u32 reg_val = NV_SOR_STATE1_ASY_OWNER_HEAD0 << head_num;
+	u32 reg_val = NV_SOR_HEADNUM(head_num);
 	u32 vtotal, htotal;
 	u32 vsync_end, hsync_end;
 	u32 vblank_end, hblank_end;

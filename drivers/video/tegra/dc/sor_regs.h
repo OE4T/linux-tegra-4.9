@@ -96,6 +96,8 @@
 #define NV_SOR_STATE1_ASY_OWNER_HEAD0				(1)
 #define NV_SOR_STATE1_ASY_OWNER_HEAD1				(2)
 #define NV_SOR_STATE1_ASY_OWNER_HEAD2				(3)
+#define NV_SOR_HEADNUM(i)					(i+1)
+
 
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 #define NV_HEAD_STATE0(i)					(0x151 + i)

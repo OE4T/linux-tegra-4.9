@@ -154,6 +154,18 @@ struct gk20a_platform {
 	/* Called to check state of device */
 	bool (*is_railgated)(struct platform_device *dev);
 
+	/* get supported frequency list */
+	int (*get_clk_freqs)(struct platform_device *pdev,
+				unsigned long **freqs, int *num_freqs);
+
+	/* clk related supported functions */
+	unsigned long (*clk_get_rate)(struct platform_device *pdev);
+	long (*clk_round_rate)(struct platform_device *pdev,
+				unsigned long rate);
+	int (*clk_set_rate)(struct platform_device *pdev,
+				unsigned long rate);
+
+
 	/* Postscale callback is called after frequency change */
 	void (*postscale)(struct platform_device *pdev,
 			  unsigned long freq);

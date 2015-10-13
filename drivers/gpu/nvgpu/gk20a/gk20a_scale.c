@@ -56,7 +56,8 @@ static int gk20a_scale_qos_notify(struct notifier_block *nb,
 
 	/* get the frequency requirement. if devfreq is enabled, check if it
 	 * has higher demand than qos */
-	freq = gk20a_clk_round_rate(g, pm_qos_request(platform->qos_id));
+	freq = platform->clk_round_rate(profile->pdev,
+				pm_qos_request(platform->qos_id));
 	if (g->devfreq)
 		freq = max(g->devfreq->previous_freq, freq);
 
@@ -76,17 +77,13 @@ static int gk20a_scale_qos_notify(struct notifier_block *nb,
 
 static int gk20a_scale_make_freq_table(struct gk20a_scale_profile *profile)
 {
-	struct gk20a *g = get_gk20a(profile->pdev);
-	unsigned long *freqs;
+	struct gk20a_platform *platform = platform_get_drvdata(profile->pdev);
 	int num_freqs, err;
+	unsigned long *freqs;
 
-	/* make sure the clock is available */
-	if (!gk20a_clk_get(g))
-		return -ENOSYS;
-
-	/* get gpu dvfs table */
-	err = tegra_dvfs_get_freqs(clk_get_parent(g->clk.tegra_clk),
-				   &freqs, &num_freqs);
+	/* get gpu frequency table */
+	err = platform->get_clk_freqs(profile->pdev, &freqs,
+					&num_freqs);
 	if (err)
 		return -ENOSYS;
 
@@ -105,23 +102,23 @@ static int gk20a_scale_make_freq_table(struct gk20a_scale_profile *profile)
 static int gk20a_scale_target(struct device *dev, unsigned long *freq,
 			      u32 flags)
 {
-	struct gk20a *g = get_gk20a(to_platform_device(dev));
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	struct gk20a_scale_profile *profile = g->scale_profile;
-	unsigned long rounded_rate = gk20a_clk_round_rate(g, *freq);
+	struct platform_device *pdev = to_platform_device(dev);
+	unsigned long rounded_rate =
+		platform->clk_round_rate(pdev, *freq);
 
-	if (gk20a_clk_get_rate(g) == rounded_rate)
+	if (platform->clk_get_rate(pdev) == rounded_rate)
 		*freq = rounded_rate;
 	else {
-		gk20a_clk_set_rate(g, rounded_rate);
-		*freq = gk20a_clk_get_rate(g);
+		platform->clk_set_rate(pdev, rounded_rate);
+		*freq = platform->clk_get_rate(pdev);
 	}
 
 	/* postscale will only scale emc (dram clock) if evaluating
 	 * gk20a_tegra_get_emc_rate() produces a new or different emc
 	 * target because the load or_and gpufreq has changed */
 	if (platform->postscale)
-		platform->postscale(profile->pdev, rounded_rate);
+		platform->postscale(pdev, rounded_rate);
 
 	return 0;
 }
@@ -237,9 +234,12 @@ static int gk20a_scale_get_dev_status(struct device *dev,
 {
 	struct gk20a *g = get_gk20a(to_platform_device(dev));
 	struct gk20a_scale_profile *profile = g->scale_profile;
+	struct platform_device *pdev = to_platform_device(dev);
+	struct gk20a_platform *platform = platform_get_drvdata(pdev);
 
 	/* Make sure there are correct values for the current frequency */
-	profile->dev_stat.current_frequency = gk20a_clk_get_rate(g);
+	profile->dev_stat.current_frequency =
+				platform->clk_get_rate(profile->pdev);
 
 	/* Update load estimate */
 	update_load_estimate_gpmu(to_platform_device(dev));

@@ -800,6 +800,49 @@ static int gk20a_tegra_suspend(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
+static unsigned long gk20a_get_clk_rate(struct platform_device *dev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a *g = platform->g;
+
+	return gk20a_clk_get_rate(g);
+
+}
+
+static long gk20a_round_clk_rate(struct platform_device *dev,
+						unsigned long rate)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a *g = platform->g;
+
+	return gk20a_clk_round_rate(g, rate);
+}
+
+int gk20a_set_clk_rate(struct platform_device *dev, unsigned long rate)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a *g = platform->g;
+
+	return gk20a_clk_set_rate(g, rate);
+}
+
+static int gk20a_clk_get_freqs(struct platform_device *dev,
+				unsigned long **freqs, int *num_freqs)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a *g = platform->g;
+
+	/* make sure the clock is available */
+	if (!gk20a_clk_get(g))
+		return -ENOSYS;
+
+	return tegra_dvfs_get_freqs(clk_get_parent(g->clk.tegra_clk),
+				freqs, num_freqs);
+}
+#endif
+
+
 struct gk20a_platform gk20a_tegra_platform = {
 	.has_syncpoints = true,
 
@@ -837,6 +880,13 @@ struct gk20a_platform gk20a_tegra_platform = {
 
 	.reset_assert = gk20a_tegra_reset_assert,
 	.reset_deassert = gk20a_tegra_reset_deassert,
+
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
+	.clk_get_rate = gk20a_get_clk_rate,
+	.clk_round_rate = gk20a_round_clk_rate,
+	.clk_set_rate = gk20a_set_clk_rate,
+	.get_clk_freqs = gk20a_clk_get_freqs,
+#endif
 
 	/* frequency scaling configuration */
 	.prescale = gk20a_tegra_prescale,
@@ -886,6 +936,13 @@ struct gk20a_platform gm20b_tegra_platform = {
 
 	.reset_assert = gm20b_tegra_reset_assert,
 	.reset_deassert = gk20a_tegra_reset_deassert,
+
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
+	.clk_get_rate = gk20a_get_clk_rate,
+	.clk_round_rate = gk20a_round_clk_rate,
+	.clk_set_rate = gk20a_set_clk_rate,
+	.get_clk_freqs = gk20a_clk_get_freqs,
+#endif
 
 	/* frequency scaling configuration */
 	.prescale = gk20a_tegra_prescale,

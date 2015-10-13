@@ -44,20 +44,21 @@ static int vhost_pb_sendrecv(struct tegra_vhost_cmd_msg *msg, size_t size_in,
 	return err;
 }
 
-static int vhost_channel_submit(u64 handle, u32 client_id, u32 timeout,
+static int vhost_channel_submit(u64 handle, struct nvhost_job *job,
 		u32 *pb_base, u32 start, u32 end, u32 job_id)
 {
 	struct tegra_vhost_cmd_msg *msg;
 	struct tegra_vhost_channel_submit_params *p;
-	u32 num_entries;
+	u32 num_entries, i;
 	size_t size;
 	char *ptr;
+	u32 *ptr32;
 	int err;
 
 	/* number of opcode/data pairs (8 bytes each) */
 	num_entries = ((end - start) & (PUSH_BUFFER_SIZE - 1)) / 8;
 
-	size = sizeof(*msg) + 8 * num_entries;
+	size = sizeof(*msg) + 8 * (num_entries + job->num_syncpts);
 	msg = kmalloc(size, GFP_KERNEL);
 	if (!msg)
 		return -1;
@@ -66,18 +67,32 @@ static int vhost_channel_submit(u64 handle, u32 client_id, u32 timeout,
 	msg->handle = handle;
 	msg->ret = 0;
 	p = &msg->params.cdma_submit;
-	p->clientid = client_id;
+	p->clientid = job->clientid;
 	p->job_id = job_id;
-	p->timeout = timeout;
+	p->timeout = job->timeout;
 	p->num_entries = num_entries;
+	p->num_syncpts = job->num_syncpts;
 
 	ptr = (char *)msg + sizeof(*msg);
-	if ((start < end) || (end == 0))
+
+	/* Copy pushbuffer contents first */
+	if ((start < end) || (end == 0)) {
 		memcpy(ptr, (u8 *)pb_base + start, 8 * num_entries);
+		ptr += 8 * num_entries;
+	}
 	else {
 		memcpy(ptr, (u8 *)pb_base + start, PUSH_BUFFER_SIZE - start);
 		ptr += PUSH_BUFFER_SIZE - start;
 		memcpy(ptr, pb_base, end);
+		ptr += end;
+	}
+
+	/* Now update syncpt information */
+	ptr32 = (u32 *)ptr;
+	for (i = 0; i < p->num_syncpts; i++) {
+		struct nvhost_job_syncpt *sp = job->sp + i;
+		*ptr32++ = sp->id;
+		*ptr32++ = sp->fence;
 	}
 
 	err = vhost_pb_sendrecv(msg, size, sizeof(*msg));
@@ -144,9 +159,7 @@ static void vhost_cdma_kick(struct nvhost_cdma *cdma)
 		 * for this to complete
 		 */
 		mutex_unlock(&cdma->lock);
-		err = vhost_channel_submit(virt_ctx->handle,
-					(u32)job->clientid,
-					job->timeout,
+		err = vhost_channel_submit(virt_ctx->handle, job,
 					cdma->push_buffer.mapped,
 					start, end, cdma->last_put);
 		mutex_lock(&cdma->lock);
@@ -157,37 +170,6 @@ static void vhost_cdma_kick(struct nvhost_cdma *cdma)
 	}
 }
 
-static void vhost_cdma_timeout_local(struct work_struct *work)
-{
-	struct nvhost_cdma *cdma;
-	struct nvhost_master *dev;
-	struct nvhost_job *job;
-	int i;
-
-	cdma = container_of(to_delayed_work(work), struct nvhost_cdma,
-			    timeout.wq);
-	dev = cdma_to_dev(cdma);
-
-	mutex_lock(&cdma->lock);
-
-	job = list_first_entry_or_null(&cdma->sync_queue,
-					struct nvhost_job, list);
-	if (!job)
-		goto out;
-	/* set notifier to userspace about submit timeout */
-	nvhost_job_set_notifier(job, NVHOST_CHANNEL_SUBMIT_TIMEOUT);
-
-	for (i = 0; i < job->num_syncpts; ++i) {
-		struct nvhost_job_syncpt *sp = job->sp + i;
-		nvhost_syncpt_update_min(&dev->syncpt, sp->id);
-		if (nvhost_syncpt_is_expired(&dev->syncpt, sp->id, sp->fence))
-			continue;
-		nvhost_cdma_finalize_job_incrs(&dev->syncpt, sp);
-	}
-out:
-	mutex_unlock(&cdma->lock);
-}
-
 /*
  * Timeout functions are only to detect the case that push buffer finished
  * running, but sync points did not all get incremented.
@@ -195,20 +177,11 @@ out:
 static int vhost_cdma_timeout_init(struct nvhost_cdma *cdma,
 				 u32 syncpt_id)
 {
-	if (syncpt_id == NVSYNCPT_INVALID)
-		return -EINVAL;
-
-	INIT_DELAYED_WORK(&cdma->timeout.wq, vhost_cdma_timeout_local);
-	cdma->timeout.initialized = true;
-
 	return 0;
 }
 
 static void vhost_cdma_timeout_destroy(struct nvhost_cdma *cdma)
 {
-	if (cdma->timeout.initialized)
-		cancel_delayed_work(&cdma->timeout.wq);
-	cdma->timeout.initialized = false;
 }
 
 static void vhost_cdma_timeout_pb_cleanup(struct nvhost_cdma *cdma, u32 getptr,
@@ -263,7 +236,7 @@ void vhost_cdma_timeout(struct nvhost_master *dev,
 	cdma = &chan->cdma;
 	mutex_lock(&cdma->lock);
 
-	/* whether all timeout jobs have been unpined */
+	/* whether all timeout jobs have been unpinned */
 	list_for_each_entry(job, &cdma->sync_queue, list) {
 		if (job->first_get == info->job_id_start)
 			start_job = job;
@@ -283,9 +256,11 @@ void vhost_cdma_timeout(struct nvhost_master *dev,
 		/* set notifier to userspace about submit timeout */
 		nvhost_job_set_notifier(job, NVHOST_CHANNEL_SUBMIT_TIMEOUT);
 
-		for (i = 0; i < job->num_syncpts; ++i)
-			nvhost_cdma_finalize_job_incrs(&dev->syncpt,
-							job->sp + i);
+		for (i = 0; i < job->num_syncpts; ++i) {
+			struct nvhost_job_syncpt *sp = job->sp + i;
+
+			nvhost_syncpt_update_min(&dev->syncpt, sp->id);
+		}
 
 		if (job == end_job)
 			break;

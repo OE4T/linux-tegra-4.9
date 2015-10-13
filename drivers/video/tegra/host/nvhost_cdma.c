@@ -217,6 +217,10 @@ unsigned int nvhost_cdma_wait_locked(struct nvhost_cdma *cdma,
 static void cdma_start_timer_locked(struct nvhost_cdma *cdma,
 		struct nvhost_job *job)
 {
+	/* In the virtual case, timeouts are handled by the server */
+	if (nvhost_dev_is_virtual(cdma_to_dev(cdma)->dev))
+		return;
+
 	if (cdma->timeout.clientid) {
 		/* timer already started */
 		return;
@@ -229,12 +233,6 @@ static void cdma_start_timer_locked(struct nvhost_cdma *cdma,
 	cdma->timeout.timeout_debug_dump = job->timeout_debug_dump;
 	cdma->timeout.timeout = job->timeout;
 	cdma->timeout.allow_dependency = true;
-
-	/* vhost local timeout handler better run later than RM server
-	 * timeout handler
-	 */
-	if (nvhost_dev_is_virtual(cdma_to_dev(cdma)->dev))
-		cdma->timeout.timeout += 500;
 
 	schedule_delayed_work(&cdma->timeout.wq,
 			msecs_to_jiffies(cdma->timeout.timeout));

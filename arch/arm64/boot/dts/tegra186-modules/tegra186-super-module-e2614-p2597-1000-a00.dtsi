@@ -228,7 +228,7 @@
 			link-name = "dspk-playback";
 			cpu-dai = <&tegra_dspk2>;
 			codec-dai = <&e2614_tas2552>;
-			codec = "tas2552.9-0040";
+			codec = "0.spdif-dit.0";
 			cpu-dai-name = "DSPK2";
 			codec-dai-name = "tas2552-amplifier";
 			format = "i2s";

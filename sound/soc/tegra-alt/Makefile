@@ -85,3 +85,7 @@ obj-$(CONFIG_SND_SOC_TEGRA_T210REF_ALT) += snd-soc-tegra-alt-t210ref.o
 obj-$(CONFIG_SND_SOC_TEGRA_T210REF_ALT) += snd-soc-tegra-alt-machine.o
 obj-$(CONFIG_SND_SOC_TEGRA_T210REF_P2382_ALT) += snd-soc-tegra-alt-t210ref-p2382.o
 obj-$(CONFIG_SND_SOC_TEGRA_T210REF_P2382_ALT) += snd-soc-tegra-alt-machine.o
+
+
+snd-soc-tegra-maui-alt-objs := tegra_maui_alt.o
+obj-$(CONFIG_SND_SOC_TEGRA_T210REF_MAUI_ALT) += snd-soc-tegra-maui-alt.o

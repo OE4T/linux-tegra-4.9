@@ -1545,6 +1545,11 @@ static int uphy_pll_hw_sequencer_enable(struct tegra_padctl_uphy *uphy, int pll,
 
 	dev_dbg(dev, "PLL%d enable HW sequencer by function %d\n", pll, func);
 
+	if (func == TEGRA186_FUNC_SATA && pll == 1) {
+		pr_info("%s skip enabling uphy pll hw power sequencer\n", __func__);
+		return 0;
+	}
+
 	/* remove SW overrides to allow HW sequencer to run */
 	uphy_pll_clear_sw_overrides(uphy, pll, func);
 

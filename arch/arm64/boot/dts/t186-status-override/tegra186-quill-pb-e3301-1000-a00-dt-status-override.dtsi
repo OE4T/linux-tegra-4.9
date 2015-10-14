@@ -40,10 +40,6 @@
 			status = "disabled";
 		};
 
-		nvdisplay@15210000 {
-			status = "disabled";
-		};
-
 		dsi {
 			panel-s-wuxga-8-0 {
 				smartdimmer {

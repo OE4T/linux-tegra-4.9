@@ -198,7 +198,7 @@
 		compatible = "nvidia,tegra-audio-t186ref-mobile-rt565x";
 		nvidia,model = "tegra-snd-t186ref-mobile-rt565x";
 		nvidia,num-codec-link = <2>;
-		clocks = <&tegra_car TEGRA186_CLK_PLLP_AUDIO>,
+		clocks = <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 			<&tegra_car TEGRA186_CLK_PLLA>,
 			<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
 			<&tegra_car TEGRA186_CLK_CLK_M>,

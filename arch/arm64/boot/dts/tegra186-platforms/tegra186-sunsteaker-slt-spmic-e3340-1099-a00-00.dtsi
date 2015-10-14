@@ -75,7 +75,7 @@
 				gpio-output-high = <6 7>;
 			};
 
-			watchdog {
+			spmic_wdt:watchdog {
 				maxim,wdt-boot-timeout = <32>;
 				maxim,wdt-suspend-timeout = <120>;
 				status = "disabled";

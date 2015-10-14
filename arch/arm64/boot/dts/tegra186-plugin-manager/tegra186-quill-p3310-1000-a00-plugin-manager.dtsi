@@ -32,12 +32,6 @@
 					status = "okay";
 				};
 			};
-			override@1 {
-				target = <&soft_wdt>;
-				_overlay_ {
-					status = "disabled";
-				};
-			};
 		};
 
 		fragement@1 {
@@ -46,6 +40,38 @@
 				target = <&tegra_pmc>;
 				_overlay_ {
 					nvidia,enable-halt-in-fiq;
+				};
+			};
+		};
+
+		fragement@2 {
+			odm-data = "enable-pmic-wdt";
+			override@0 {
+				target = <&spmic_wdt>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+		};
+
+		fragement@3 {
+			odm-data = "enable-denver-wdt";
+			override@0 {
+				target = <&tegra_denver_wdt>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+		};
+
+		fragement@4 {
+			odm-data = "enable-tegra-wdt",
+					"enable-pmic-wdt",
+					"enable-denver-wdt";
+			override@0 {
+				target = <&soft_wdt>;
+				_overlay_ {
+					status = "disabled";
 				};
 			};
 		};

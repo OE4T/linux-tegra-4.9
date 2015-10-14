@@ -76,7 +76,7 @@
 				gpio-output-high = <6 7>;
 			};
 
-			watchdog {
+			spmic_wdt:watchdog {
 				maxim,wdt-timeout = <16>;
 				maxim,wdt-clear-time = <13>;
 				dt-override-status-odm-data = <0x00020000 0x00020000>;

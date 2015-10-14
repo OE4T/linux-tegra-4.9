@@ -348,14 +348,9 @@ void nvhost_cdma_finalize_job_incrs(struct nvhost_syncpt *syncpt,
 {
 	u32 id = sp->id;
 	u32 fence = sp->fence;
-	u32 syncpt_val = nvhost_syncpt_update_min(syncpt, id);
-	u32 syncpt_incrs = fence - syncpt_val;
 
-	/* do CPU increments */
-	while (syncpt_incrs--)
-		nvhost_syncpt_cpu_incr(syncpt, id);
-
-	/* ensure shadow is up to date */
+	atomic_set(&syncpt->min_val[id], fence);
+	syncpt_op().reset(syncpt, id);
 	nvhost_syncpt_update_min(syncpt, id);
 }
 

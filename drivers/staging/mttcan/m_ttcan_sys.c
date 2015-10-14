@@ -388,7 +388,7 @@ static ssize_t store_tttmc(struct device *dev,
 		tme = 64;
 
 	tttmc = ttcan_get_tttmc(priv->ttcan);
-	tttmc &= MTT_TTTMC_TME_MASK;
+	tttmc &= ~MTT_TTTMC_TME_MASK;
 	tttmc |= (tme << MTT_TTTMC_TME_SHIFT) &
 		MTT_TTTMC_TME_MASK;
 

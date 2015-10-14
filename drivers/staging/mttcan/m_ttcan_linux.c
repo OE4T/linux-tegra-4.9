@@ -394,6 +394,13 @@ static int mttcan_handle_bus_err(struct net_device *dev,
 	stats->rx_packets++;
 	stats->rx_bytes += cf->can_dlc;
 
+	/* drop all echo_skb cache */
+	while (priv->tx_object) {
+		u32 msg_no = ffs(priv->tx_object) - 1;
+		if (priv->can.echo_skb[msg_no])
+			can_free_echo_skb(dev, msg_no);
+		priv->tx_object &= ~(1 << msg_no);
+	}
 	return 1;
 }
 
@@ -449,14 +456,6 @@ static void mttcan_tx_event(struct net_device *dev)
 	}
 }
 
-static void mttcan_echo_mesg(struct net_device *dev, u32 msg_no)
-{
-	struct can_priv *prv = netdev_priv(dev);
-	struct sk_buff *skb = prv->echo_skb[msg_no];
-	if (skb != NULL)
-		can_get_echo_skb(dev, msg_no);
-}
-
 static void mttcan_tx_complete(struct net_device *dev)
 {
 	u32 completed_tx;
@@ -477,7 +476,8 @@ static void mttcan_tx_complete(struct net_device *dev)
 				stats->tx_bytes +=
 					priv->ttcan->tx_buf_dlc[msg_no];
 				stats->tx_packets++;
-				mttcan_echo_mesg(dev, msg_no);
+				if (priv->can.echo_skb[msg_no])
+					can_get_echo_skb(dev, msg_no);
 				can_led_event(dev, CAN_LED_EVENT_TX);
 			}
 		} else {
@@ -804,10 +804,6 @@ static int mttcan_do_set_bittiming(struct net_device *dev)
 	memcpy(&priv->ttcan->bt_config.data, dbt,
 		sizeof(struct can_bittiming));
 
-	/* memcpy(&priv->ttcan->bt_config.nominal, &nominal_bt_config,
-	       sizeof(struct ttcan_bittiming)); */
-	/* memcpy(&priv->ttcan->bt_config.data, &data_bt_config,
-	       sizeof(struct ttcan_bittiming)); */
 	if (priv->can.ctrlmode & CAN_CTRLMODE_FD)
 		priv->ttcan->bt_config.fd_flags = CAN_FD_FLAG  | CAN_BRS_FLAG;
 	else
@@ -1221,6 +1217,61 @@ void free_mttcan_dev(struct net_device *dev)
 	free_candev(dev);
 }
 
+static int set_can_clk_src_and_rate(struct mttcan_priv *priv, ulong rate)
+{
+	int ret  = 0;
+	unsigned long new_rate = 0;
+	struct clk *hclk, *cclk;
+	struct clk *pclk;
+	const char *pclk_name;
+	/* get the appropriate clk */
+	hclk = devm_clk_get(priv->device, "can_host");
+	cclk = devm_clk_get(priv->device, "can");
+	if (IS_ERR(hclk) || IS_ERR(cclk)) {
+		dev_err(priv->device, "no clock defined\n");
+		return -ENODEV;
+	}
+
+	ret = of_property_read_string(priv->device->of_node,
+		"pll_source", &pclk_name);
+	if (ret) {
+		dev_warn(priv->device, "clk-source not changed\n");
+		goto pclk_exit;
+	}
+
+	pclk = clk_get(priv->device, pclk_name);
+	if (IS_ERR(pclk)) {
+		dev_warn(priv->device, "clk-source cannot change\n");
+		goto pclk_exit;
+	}
+
+	ret = clk_set_parent(cclk, pclk);
+	if (ret) {
+		dev_warn(priv->device, "unable to change parent clk\n");
+		goto pclk_exit;
+	}
+
+	new_rate = clk_round_rate(cclk, rate);
+	if (new_rate < 0)
+		dev_warn(priv->device, "incorrect clock rate\n");
+
+pclk_exit:
+	ret = clk_set_rate(cclk, new_rate > 0 ? new_rate : rate);
+	if (ret) {
+		dev_warn(priv->device, "unable to set clock rate\n");
+		return -EINVAL;
+	}
+	ret = clk_set_rate(hclk, new_rate > 0 ? new_rate : rate);
+	if (ret) {
+		dev_warn(priv->device, "unable to set clock rate\n");
+		return -EINVAL;
+	}
+	priv->can.clock.freq = clk_get_rate(cclk);
+	priv->cclk = cclk;
+	priv->hclk = hclk;
+	return 0;
+}
+
 static int mttcan_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -1229,9 +1280,7 @@ static int mttcan_probe(struct platform_device *pdev)
 	void __iomem *mram_addr = NULL;
 	struct net_device *dev;
 	struct mttcan_priv *priv;
-	struct pinctrl *pinctrl;
 	struct resource *ext_res;
-	struct clk *hclk, *cclk;
 	struct reset_control *rstc;
 	struct resource *mesg_ram, *ctrl_res;
 	const struct of_device_id *match;
@@ -1249,19 +1298,6 @@ static int mttcan_probe(struct platform_device *pdev)
 	if (!np) {
 		dev_err(&pdev->dev, "No valid device node, probe failed\n");
 		return -EINVAL;
-	}
-
-	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
-	if (IS_ERR(pinctrl))
-		dev_warn(&pdev->dev, "failed to configure pins from driver\n");
-
-	/* get the appropriate clk */
-	hclk = devm_clk_get(&pdev->dev, "can_host");
-	cclk = devm_clk_get(&pdev->dev, "can");
-	if (IS_ERR(hclk) || IS_ERR(cclk)) {
-		dev_err(&pdev->dev, "no clock defined\n");
-		ret = -ENODEV;
-		goto exit;
 	}
 
 	/* get the platform data */
@@ -1320,13 +1356,14 @@ static int mttcan_probe(struct platform_device *pdev)
 
 	dev->irq = irq;
 	priv->device = &pdev->dev;
+
+	if (set_can_clk_src_and_rate(priv, 40000000))
+		goto exit_free_device;
+
 	priv->gpio_can_en = of_get_named_gpio(np, "gpio_can_en", 0);
 	priv->gpio_can_stb = of_get_named_gpio(np, "gpio_can_stb", 0);
 	priv->instance = of_alias_get_id(np, "mttcan");
 	priv->poll = of_property_read_bool(np, "use-polling");
-	priv->can.clock.freq = clk_get_rate(cclk);
-	priv->cclk = cclk;
-	priv->hclk = hclk;
 	of_property_read_u32_array(np, "tt-param", priv->tt_param, 2);
 	if (of_property_read_u32_array(np, "tx-config",
 		priv->tx_conf, TX_CONF_MAX)) {
@@ -1339,7 +1376,7 @@ static int mttcan_probe(struct platform_device *pdev)
 		goto exit_free_device;
 	}
 	if (of_property_read_u32_array(np, "mram-params",
-			priv->mram_param, MRAM_ELEMS)) {
+			priv->mram_param, MTT_CAN_MAX_MRAM_ELEMS)) {
 		dev_err(priv->device, "mram-param missing\n");
 		goto exit_free_device;
 	}

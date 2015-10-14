@@ -407,7 +407,7 @@ int ttcan_mesg_ram_config(struct ttcan_controller *ttcan,
 
 	if ((MTTCAN_RAM_SIZE <=
 		ttcan->mram_cfg[MRAM_TMC].off + ttcan->mram_cfg[MRAM_TMC].num *
-		       MAX_TXB_ELEM_SIZE - ttcan->mram_cfg[MRAM_SIDF].off)) {
+		       TRIG_ELEM_SIZE - ttcan->mram_cfg[MRAM_SIDF].off)) {
 		pr_err("%s: Incorrect config for Message RAM\n", __func__);
 		return -EINVAL;
 	}

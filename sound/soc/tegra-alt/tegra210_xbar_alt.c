@@ -800,7 +800,7 @@ static struct of_dev_auxdata tegra210_xbar_auxdata[] = {
 	OF_DEV_AUXDATA("nvidia,tegra210-spdif", SPDIF1_BASE_ADDR, "tegra210-spdif", NULL),
 	{}
 };
-
+#endif
 
 int tegra210_xbar_set_clock(unsigned long rate)
 {
@@ -818,6 +818,7 @@ int tegra210_xbar_set_clock(unsigned long rate)
 }
 EXPORT_SYMBOL_GPL(tegra210_xbar_set_clock);
 
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 static int tegra210_xbar_registration(struct platform_device *pdev)
 {
 	int ret;

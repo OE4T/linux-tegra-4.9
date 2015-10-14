@@ -298,27 +298,17 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 		if (syncpt_poll) {
 			unsigned int check_ms;
 			unsigned int loops;
-			unsigned int mdelay_thresh;
 			int i;
 
 			check_ms = jiffies_to_msecs(check);
 			loops = DIV_ROUND_UP(check_ms, SYNCPT_POLL_PERIOD);
 
-			/*
-			 * Try mdelay for 16 ms and then downgrade to a less
-			 * intense polling with msleep. 16ms is a typical display
-			 * frame interval assuming 60fps refresh rate.
-			 */
-			mdelay_thresh = DIV_ROUND_UP(16, SYNCPT_POLL_PERIOD);
-
 			for (i = 0; i < loops; i++) {
 				if (syncpt_is_expired(sp, id, thresh))
 					break;
 
-				if (i < mdelay_thresh)
-					mdelay(SYNCPT_POLL_PERIOD);
-				else
-					msleep(SYNCPT_POLL_PERIOD);
+				usleep_range(SYNCPT_POLL_PERIOD*1000,
+						SYNCPT_POLL_PERIOD*1000);
 
 			}
 

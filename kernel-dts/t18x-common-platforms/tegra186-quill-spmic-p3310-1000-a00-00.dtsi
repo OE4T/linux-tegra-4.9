@@ -82,7 +82,7 @@
 				gpio-input = <5 6 7>;
 			};
 
-			watchdog {
+			spmic_wdt:watchdog {
 				maxim,wdt-timeout = <16>;
 				maxim,wdt-clear-time = <13>;
 				status = "disabled";

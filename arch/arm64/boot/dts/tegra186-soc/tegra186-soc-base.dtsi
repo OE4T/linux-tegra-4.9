@@ -448,7 +448,7 @@
 			"uphy_pll0_rst", "uphy_pll1_rst", "uphy_lane0_rst",
 			"uphy_lane1_rst", "uphy_lane2_rst", "uphy_lane3_rst",
 			"uphy_lane4_rst", "uphy_lane5_rst";
-		clocks = <&tegra_car TEGRA186_CLK_PLLP_UPHY>,
+		clocks = <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 			<&tegra_car TEGRA186_CLK_XUSB>,
 			<&tegra_car TEGRA186_CLK_PLLE>,
 			<&tegra_car TEGRA186_CLK_PLLE_PWRSEQ>,
@@ -663,8 +663,8 @@
 			resets = <&tegra_car TEGRA186_RESET_NVCSI>;
 			clocks = <&tegra_car TEGRA186_CLK_NVCSI>,
 				 <&tegra_car TEGRA186_CLK_NVCSILP>,
-				 <&tegra_car TEGRA186_CLK_PLLP_GRTCBB>,
-				 <&tegra_car TEGRA186_CLK_PLLP_GRTCBB>;
+				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
+				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 			clock-names = "nvcsi", "nvcsilp", "nvcsi_parent",
 				      "nvcsilp_parent";
 			interrupts = <0 119 0x04>;
@@ -721,7 +721,7 @@
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P0>,
-				 <&tegra_car TEGRA186_CLK_PLLP_DISPLAY>,
+				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 				 <&tegra_car TEGRA186_CLK_PLLD2>,
 				 <&tegra_car TEGRA186_CLK_PLLD3>,
 				 <&tegra_car TEGRA186_CLK_PLLD>,
@@ -756,7 +756,7 @@
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P1>,
-				 <&tegra_car TEGRA186_CLK_PLLP_DISPLAY>,
+				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 				 <&tegra_car TEGRA186_CLK_PLLD2>,
 				 <&tegra_car TEGRA186_CLK_PLLD3>,
 				 <&tegra_car TEGRA186_CLK_EMC>,
@@ -789,7 +789,7 @@
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P2>,
-				 <&tegra_car TEGRA186_CLK_PLLP_DISPLAY>,
+				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 				 <&tegra_car TEGRA186_CLK_PLLD2>,
 				 <&tegra_car TEGRA186_CLK_PLLD3>,
 				 <&tegra_car TEGRA186_CLK_EMC>,
@@ -1170,7 +1170,7 @@
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_QSPI>,
 			<&tegra_car TEGRA186_CLK_QSPI_OUT>,
-			<&tegra_car TEGRA186_CLK_PLLP_GRTBA>,
+			<&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 			<&tegra_car TEGRA186_CLK_CLK_M>;
 		clock-names = "qspi","qspi_out","pll_p","clk_m";
 		resets = <&tegra_car TEGRA186_RESET_QSPI>;

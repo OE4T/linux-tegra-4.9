@@ -25,7 +25,7 @@
 		dmas = <&gpcdma 8>, <&gpcdma 8>;
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTA>,
-			<&tegra_car TEGRA186_CLK_PLLP_GRTBA>;
+			<&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA186_RESET_UARTA>;
 		reset-names = "serial";
@@ -43,7 +43,7 @@
 		dmas = <&gpcdma 9>, <&gpcdma 9>;
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTB>,
-			<&tegra_car TEGRA186_CLK_PLLP_GRTBA>;
+			<&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA186_RESET_UARTB>;
 		reset-names = "serial";
@@ -61,7 +61,7 @@
 		dmas = <&gpcdma 3>, <&gpcdma 3>;
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTC>,
-			<&tegra_car TEGRA186_CLK_PLLP_AON>;
+			<&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA186_RESET_UARTC>;
 		reset-names = "serial";
@@ -79,7 +79,7 @@
 		dmas = <&gpcdma 19>, <&gpcdma 19>;
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTD>,
-			<&tegra_car TEGRA186_CLK_PLLP_GRTTA>;
+			<&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA186_RESET_UARTD>;
 		reset-names = "serial";
@@ -97,7 +97,7 @@
 		dmas = <&gpcdma 20>, <&gpcdma 20>;
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTE>,
-			<&tegra_car TEGRA186_CLK_PLLP_GRTBA>;
+			<&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA186_RESET_UARTE>;
 		reset-names = "serial";
@@ -115,7 +115,7 @@
 		dmas = <&gpcdma 12>, <&gpcdma 12>;
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTF>,
-			<&tegra_car TEGRA186_CLK_PLLP_GRTTB>;
+			<&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA186_RESET_UARTF>;
 		reset-names = "serial";
@@ -133,7 +133,7 @@
 		dmas = <&gpcdma 2>, <&gpcdma 2>;
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTG>,
-			<&tegra_car TEGRA186_CLK_PLLP_AON>;
+			<&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA186_RESET_UARTG>;
 		reset-names = "serial";

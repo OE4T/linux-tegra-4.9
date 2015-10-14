@@ -54,7 +54,7 @@
 		resets = <&tegra_car TEGRA186_RESET_SDMMC4>;
 		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC4>,
-		       <&tegra_car TEGRA186_CLK_PLLP_GRTTA>,
+		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 		       <&tegra_car TEGRA186_CLK_PLLC4_OUT2>;
 		clock-names = "sdmmc4", "pll_p", "pll_c4_out2";
 		nvidia,clk-name = "sdmmc4";
@@ -86,7 +86,7 @@
 		resets = <&tegra_car TEGRA186_RESET_SDMMC3>;
 		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC3>,
-		       <&tegra_car TEGRA186_CLK_PLLP_GRTTB>;
+		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "sdmmc3", "pll_p";
 		nvidia,clk-name = "sdmmc3";
 		#stream-id-cells = <1>;
@@ -124,7 +124,7 @@
 		resets = <&tegra_car TEGRA186_RESET_SDMMC2>;
 		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC2>,
-		       <&tegra_car TEGRA186_CLK_PLLP_GRTBB>;
+		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "sdmmc2", "pll_p";
 		nvidia,clk-name = "sdmmc2";
 		#stream-id-cells = <1>;
@@ -158,7 +158,7 @@
 		resets = <&tegra_car TEGRA186_RESET_SDMMC1>;
 		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC1>,
-		       <&tegra_car TEGRA186_CLK_PLLP_GRTTA>;
+		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "sdmmc1", "pll_p";
 		nvidia,clk-name = "sdmmc1";
 		#stream-id-cells = <1>;

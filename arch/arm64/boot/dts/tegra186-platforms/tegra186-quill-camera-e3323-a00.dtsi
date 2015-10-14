@@ -33,7 +33,7 @@
 		/* Define any required hw resources needed by driver */
 		/* ie. clocks, io pins, power sources */
 		clocks = <&tegra_car TEGRA186_CLK_EXTPERIPH1>,
-				 <&tegra_car TEGRA186_CLK_PLLP_GRTBA>;
+				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "extperiph1", "pllp_grtba";
 		mclk = "extperiph1";
 
@@ -49,7 +49,7 @@
 		/* Define any required hw resources needed by driver */
 		/* ie. clocks, io pins, power sources */
 		clocks = <&tegra_car TEGRA186_CLK_EXTPERIPH2>,
-				 <&tegra_car TEGRA186_CLK_PLLP_GRTBA>;
+				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "extperiph2", "pllp_grtba";
 		mclk = "extperiph2";
 

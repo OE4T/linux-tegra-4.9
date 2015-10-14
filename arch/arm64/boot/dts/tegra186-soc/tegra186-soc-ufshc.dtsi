@@ -32,7 +32,7 @@
 				<&tegra_car TEGRA186_CLK_MPHY_L1_RX_ANA>,
 				<&tegra_car TEGRA186_CLK_UFSHC>,
 				<&tegra_car TEGRA186_CLK_UFSDEV_REF>,
-				<&tegra_car TEGRA186_CLK_PLLP_UPHY>,
+				<&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 				<&tegra_car TEGRA186_CLK_CLK_M>;
 		clock-names = "mphy_core_pll_fixed", "mphy_l0_tx_symb",
 				"mphy_tx_1mhz_ref", "mphy_l0_rx_ana",

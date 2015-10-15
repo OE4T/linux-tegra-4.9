@@ -349,6 +349,8 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 		vindx = vhtbl->vfloor;
 	else if (vindx > vhtbl->vceil)
 		vindx = vhtbl->vceil;
+	if (vhtbl->vindex_div > 0)
+		vindx = vhtbl->vindex_mult * vindx / vhtbl->vindex_div;
 	val |= (vindx << EDVD_COREX_VINDEX_VAL_SHIFT);
 	phy_cpu = logical_to_phys_map(cpu);
 
@@ -530,7 +532,7 @@ static void dump_lut(struct seq_file *s, struct cpu_vhint_table *vht)
 	seq_printf(s, "ndiv_min: %u\n", vht->ndiv_min);
 	seq_printf(s, "vindex_mult: %u\n", vht->vindex_mult);
 	seq_printf(s, "vindex_div: %u\n", vht->vindex_div);
-	for (i = 0; i < MAX_NDIV; i++)
+	for (i = vht->ndiv_min; i <= vht->ndiv_max; i++)
 		seq_printf(s, "vindex[ndiv==%u]: %u\n", i, vht->vindx[i]);
 	seq_puts(s, "\n");
 }
@@ -807,16 +809,8 @@ static int __init create_ndiv_to_vindex_table(void)
 		i = 0;
 		vhtbl->vfloor = lut->vfloor;
 		vhtbl->vceil = lut->vceil;
-		for (vindx = 0; vindx < MAX_VINDEX; vindx++) {
+		for (vindx = vhtbl->vfloor; vindx <= vhtbl->vceil; ++vindx) {
 			mid_ndiv = lut->ndiv[vindx];
-			if (mid_ndiv == lut->vceil)
-				continue;
-			if (mid_ndiv == lut->vfloor)
-				break;
-			if (vindx < vhtbl->vfloor)
-				vhtbl->vfloor = vindx;
-			if (vindx > vhtbl->vceil)
-				vhtbl->vceil = vindx;
 			for (; ((mid_ndiv < MAX_NDIV) && (i <= mid_ndiv)); i++)
 				vhtbl->vindx[i] = vindx;
 		}
@@ -830,6 +824,8 @@ static int __init create_ndiv_to_vindex_table(void)
 		vhtbl->mdiv = lut->mdiv;
 		vhtbl->ndiv_min = lut->ndiv_min;
 		vhtbl->ndiv_max = lut->ndiv_max;
+		vhtbl->vindex_mult = lut->vindex_mult;
+		vhtbl->vindex_div = lut->vindex_div;
 	}
 err_out:
 	return ret;

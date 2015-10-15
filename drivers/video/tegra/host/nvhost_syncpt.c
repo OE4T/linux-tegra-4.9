@@ -171,7 +171,11 @@ int nvhost_syncpt_incr(struct nvhost_syncpt *sp, u32 id)
 
 	if (nvhost_syncpt_client_managed(sp, id))
 		nvhost_syncpt_incr_max(sp, id, 1);
+
+	mutex_lock(&sp->cpu_increment_mutex);
 	nvhost_syncpt_cpu_incr(sp, id);
+	mutex_unlock(&sp->cpu_increment_mutex);
+
 	nvhost_module_idle(syncpt_to_dev(sp)->dev);
 
 	return 0;
@@ -1045,6 +1049,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 	}
 
 	mutex_init(&sp->syncpt_mutex);
+	mutex_init(&sp->cpu_increment_mutex);
 
 	/* Allocate two attributes for each sync point: min and max */
 	sp->syncpt_attrs = kzalloc(sizeof(*sp->syncpt_attrs)
@@ -1268,7 +1273,10 @@ void nvhost_syncpt_cpu_incr_ext(struct platform_device *dev, u32 id)
 {
 	struct nvhost_master *master = nvhost_get_host(dev);
 	struct nvhost_syncpt *sp = &master->syncpt;
+
+	mutex_lock(&sp->cpu_increment_mutex);
 	nvhost_syncpt_cpu_incr(sp, id);
+	mutex_unlock(&sp->cpu_increment_mutex);
 }
 EXPORT_SYMBOL(nvhost_syncpt_cpu_incr_ext);
 

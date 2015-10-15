@@ -52,6 +52,7 @@ struct nvhost_syncpt {
 	atomic_t *max_val;
 	atomic_t *lock_counts;
 	atomic_t *ref;
+	struct mutex cpu_increment_mutex;
 	const char **syncpt_names;
 	const char **last_used_by;
 	struct nvhost_syncpt_attr *syncpt_attrs;

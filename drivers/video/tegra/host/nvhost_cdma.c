@@ -364,6 +364,9 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 
 	bitmap_zero(syncpt_used, nb_pts);
 
+	/* ensure that no-one in CPU updates syncpoint values */
+	mutex_lock(&syncpt->cpu_increment_mutex);
+
 	/*
 	 * Move the sync_queue read pointer to the first entry that hasn't
 	 * completed based on the current HW syncpt value. It's likely there
@@ -439,6 +442,8 @@ out:
 		cdma_op().timeout_pb_cleanup(cdma, job->first_get,
 			job->num_slots);
 	}
+
+	mutex_unlock(&syncpt->cpu_increment_mutex);
 
 	list_for_each_entry_from(job, &cdma->sync_queue, list)
 		if (job->clientid == cdma->timeout.clientid)

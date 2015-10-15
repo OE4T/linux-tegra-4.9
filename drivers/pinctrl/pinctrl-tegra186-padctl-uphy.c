@@ -1577,9 +1577,6 @@ static int uphy_pll_hw_sequencer_enable(struct tegra_padctl_uphy *uphy, int pll,
 		return 0;
 	}
 
-	/* remove SW overrides to allow HW sequencer to run */
-	uphy_pll_clear_sw_overrides(uphy, pll, func);
-
 	dev_dbg(dev, "enable PLL%d Power sequencer\n", pll);
 	rc = clk_prepare_enable(uphy->uphy_pll_pwrseq[pll]);
 	if (rc) {
@@ -1588,6 +1585,9 @@ static int uphy_pll_hw_sequencer_enable(struct tegra_padctl_uphy *uphy, int pll,
 		return rc;
 	}
 	uphy->uphy_pll_state[pll] = UPHY_PLL_POWER_UP_HW_SEQ;
+
+	/* remove SW overrides to allow HW sequencer to run */
+	uphy_pll_clear_sw_overrides(uphy, pll, func);
 
 	if ((uphy->uphy_pll_state[0] == UPHY_PLL_POWER_UP_HW_SEQ) &&
 		(uphy->uphy_pll_state[1] == UPHY_PLL_POWER_UP_HW_SEQ)) {
@@ -3061,12 +3061,12 @@ static void ufs_lane_pad_macro_configuration(struct tegra_padctl_uphy *uphy,
 	reg &= ~RX_BYP_MODE(~0);
 	reg |= RX_BYP_MODE(0x2);
 	reg &= ~RX_RATE_PDIV(~0);
-	reg |= RX_RATE_PDIV(0x2);
+	reg |= RX_RATE_PDIV(0x1);
 	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_MPHY_CTL_2);
 
 	reg = uphy_lane_readl(uphy, lane, UPHY_LANE_MPHY_CTL_1);
-	reg &= ~RX_RATE_PDIV(~0);
-	reg |= RX_RATE_PDIV(0x2);
+	reg &= ~TX_RATE_PDIV(~0);
+	reg |= TX_RATE_PDIV(0x1);
 	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_MPHY_CTL_1);
 
 	reg = uphy_lane_readl(uphy, lane, UPHY_LANE_MISC_CTL_2);

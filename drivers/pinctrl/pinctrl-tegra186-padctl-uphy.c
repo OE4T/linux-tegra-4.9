@@ -677,6 +677,7 @@ struct tegra_padctl_uphy {
 	struct mbox_client mbox_client;
 	struct mbox_chan *mbox_chan;
 
+	bool host_mode_phy_disabled; /* set true if mailbox is not available */
 	unsigned int utmi_enable;
 	unsigned int hs_curr_level_offset[TEGRA_UTMI_PHYS];
 	/* TODO: should move to host controller driver? */
@@ -3919,6 +3920,11 @@ static ssize_t hsic_power_store(struct device *dev,
 	if (kstrtouint(buf, 10, &on))
 		return -EINVAL;
 
+	if (uphy->host_mode_phy_disabled) {
+		dev_err(dev, "doesn't support HSIC PHY because mailbox is not available\n");
+		return -EINVAL;
+	}
+
 	if (on)
 		msg.cmd = MBOX_CMD_AIRPLANE_MODE_DISABLED;
 	else
@@ -4617,6 +4623,12 @@ static int tegra_xusb_setup_usb(struct tegra_padctl_uphy *uphy)
 	unsigned int i;
 
 	for (i = 0; i < TEGRA_USB3_PHYS; i++) {
+		if (uphy->usb3_ports[i].port_cap == CAP_DISABLED)
+			continue;
+		if (uphy->host_mode_phy_disabled &&
+			(uphy->usb3_ports[i].port_cap == HOST_ONLY))
+			continue; /* no mailbox support */
+
 		phy = devm_phy_create(uphy->dev, NULL, &usb3_phy_ops, NULL);
 		if (IS_ERR(phy))
 			return PTR_ERR(phy);
@@ -4627,6 +4639,12 @@ static int tegra_xusb_setup_usb(struct tegra_padctl_uphy *uphy)
 
 	for (i = 0; i < TEGRA_UTMI_PHYS; i++) {
 		char reg_name[sizeof("vbus-N")];
+
+		if (uphy->utmi_ports[i].port_cap == CAP_DISABLED)
+			continue;
+		if (uphy->host_mode_phy_disabled &&
+			(uphy->utmi_ports[i].port_cap == HOST_ONLY))
+			continue; /* no mailbox support */
 
 		sprintf(reg_name, "vbus-%d", i);
 		uphy->vbus[i] = devm_regulator_get_optional(uphy->dev,
@@ -4646,6 +4664,9 @@ static int tegra_xusb_setup_usb(struct tegra_padctl_uphy *uphy)
 		phy_set_drvdata(phy, uphy);
 	}
 
+	if (uphy->host_mode_phy_disabled)
+		goto skip_hsic; /* no mailbox support */
+
 	uphy->vddio_hsic = devm_regulator_get(uphy->dev, "vddio-hsic");
 	if (IS_ERR(uphy->vddio_hsic))
 		return PTR_ERR(uphy->vddio_hsic);
@@ -4659,6 +4680,7 @@ static int tegra_xusb_setup_usb(struct tegra_padctl_uphy *uphy)
 		phy_set_drvdata(phy, uphy);
 	}
 
+skip_hsic:
 	return 0;
 }
 
@@ -4946,17 +4968,19 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 	if (IS_ERR(uphy->mbox_chan)) {
 		err = PTR_ERR(uphy->mbox_chan);
 		if (err == -EPROBE_DEFER) {
-			dev_info(&pdev->dev, "mailbox is not ready yet");
+			dev_info(&pdev->dev, "mailbox is not ready yet\n");
 			goto unregister;
 		} else {
 			dev_warn(&pdev->dev,
-				 "failed to get mailbox, USB support disabled");
+				 "failed to get mailbox, USB Host PHY support disabled\n");
+			uphy->host_mode_phy_disabled = true;
 		}
-	} else {
-		err = tegra_xusb_setup_usb(uphy);
-		if (err)
-			goto free_mailbox;
 	}
+
+	err = tegra_xusb_setup_usb(uphy);
+	if (err)
+		goto free_mailbox;
+
 
 	uphy->provider = devm_of_phy_provider_register(dev,
 					tegra186_padctl_uphy_xlate);
@@ -5180,30 +5204,19 @@ EXPORT_SYMBOL_GPL(tegra_phy_xusb_clear_id_override);
 bool tegra_phy_xusb_has_otg_cap(struct phy *phy)
 {
 	struct tegra_padctl_uphy *uphy;
-	int i;
 
 	if (!phy)
 		return false;
 
 	uphy = phy_get_drvdata(phy);
 	if (is_utmi_phy(phy)) {
-		for (i = 0; i < TEGRA_UTMI_PHYS; i++) {
-			if (uphy->utmi_phys[i] == phy) {
-				if ((i + 1) == uphy->utmi_otg_port_base_1)
-					return true;
-				else
-					return false;
-			}
-		}
+		if ((uphy->utmi_otg_port_base_1) &&
+			uphy->utmi_phys[uphy->utmi_otg_port_base_1 - 1] == phy)
+			return true;
 	} else if (is_usb3_phy(phy)) {
-		for (i = 0; i < TEGRA_USB3_PHYS; i++) {
-			if (uphy->usb3_phys[i] == phy) {
-				if ((i + 1) == uphy->usb3_otg_port_base_1)
-					return true;
-				else
-					return false;
-			}
-		}
+		if ((uphy->usb3_otg_port_base_1) &&
+			uphy->usb3_phys[uphy->usb3_otg_port_base_1 - 1] == phy)
+			return true;
 	}
 
 	return false;

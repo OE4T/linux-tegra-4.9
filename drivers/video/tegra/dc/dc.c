@@ -2154,6 +2154,7 @@ unsigned long tegra_dc_poll_register(struct tegra_dc *dc, u32 reg, u32 mask,
 
 	do {
 		usleep_range(poll_interval_us, poll_interval_us << 1);
+/*		usleep_range(1000, 1500);*/
 		reg_val = tegra_dc_readl(dc, reg);
 	} while (((reg_val & mask) != exp_val) &&
 		time_after(timeout_jf, jiffies));
@@ -2259,11 +2260,12 @@ int tegra_dc_get_stride(struct tegra_dc *dc, unsigned win)
 	BUG_ON(win > DC_N_WINDOWS);
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
-	tegra_dc_writel(dc, WINDOW_A_SELECT << win,
-		DC_CMD_DISPLAY_WINDOW_HEADER);
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	stride = tegra_nvdisp_get_linestride(dc, win);
 #else
+	tegra_dc_writel(dc, WINDOW_A_SELECT << win,
+		DC_CMD_DISPLAY_WINDOW_HEADER);
+
 	stride = tegra_dc_readl(dc, DC_WIN_LINE_STRIDE);
 #endif
 	tegra_dc_put(dc);
@@ -5258,6 +5260,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #endif
 		if (!test_bit(i, &dc->valid_windows))
 			win->flags |= TEGRA_WIN_FLAG_INVALID;
+		else {
 		win->idx = i;
 		tmp_win->idx = i;
 		tmp_win->dc = dc;
@@ -5265,6 +5268,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		tegra_dc_init_csc_defaults(&win->csc);
 #endif
 		tegra_dc_init_lut_defaults(&win->lut);
+		}
 	}
 
 	platform_set_drvdata(ndev, dc);

@@ -1905,7 +1905,6 @@ static void tegra_dsi_stop_dc_stream(struct tegra_dc *dc,
 					struct tegra_dc_dsi_data *dsi)
 {
 	tegra_dc_get(dc);
-
 	tegra_dc_writel(dc, DISP_CTRL_MODE_STOP, DC_CMD_DISPLAY_COMMAND);
 	tegra_dc_writel(dc, 0, DC_DISP_DISP_WIN_OPTIONS);
 	tegra_dc_writel(dc, GENERAL_ACT_REQ , DC_CMD_STATE_CONTROL);
@@ -1993,9 +1992,7 @@ static void tegra_dsi_start_dc_stream(struct tegra_dc *dc,
 	tegra_dc_writel(dc, DSI_ENABLE, DC_DISP_DISP_WIN_OPTIONS);
 
 	/* TODO: clean up */
-	tegra_dc_writel(dc, PW0_ENABLE | PW1_ENABLE | PW2_ENABLE | PW3_ENABLE |
-			PW4_ENABLE | PM0_ENABLE | PM1_ENABLE,
-			DC_CMD_DISPLAY_POWER_CONTROL);
+	tegra_dc_power_on(dc);
 
 	if (dc->out->dsc_en)
 		tegra_dc_en_dis_dsc(dc, true);
@@ -5781,10 +5778,6 @@ static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	
 	shift_clk_div_avail = false;
 
-	/* Enable the hubparent clock */
-	hubparent_clk = tegra_disp_clk_get(&dc->ndev->dev,
-		"pllp_display");
-	tegra_disp_clk_prepare_enable(hubparent_clk);
 	for (i = 0; i < dsi->max_instances; i++)
 		tegra_disp_clk_prepare_enable(dsi->dsi_clk[i]);
 

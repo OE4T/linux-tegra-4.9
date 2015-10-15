@@ -53,27 +53,42 @@
 #include <linux/tegra_prod.h>
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
-#define TMDS_NODE	"/host1x/sor1"
-
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 static struct of_device_id tegra_sor_pd[] = {
 	{ .compatible = "nvidia,tegra186-sor-pd", },
 	{ .compatible = "nvidia,tegra210-sor-pd", },
 	{ .compatible = "nvidia,tegra132-sor-pd", },
 	{},
 };
+#endif
 
-__attribute__((unused)) static ssize_t hdmi_ddc_power_toggle(struct kobject *kobj,
+/* Possibly should be moved to hdmi_common.h */
+static struct fb_videomode tegra_dc_vga_mode = {
+	.refresh = 60,
+	.xres = 640,
+	.yres = 480,
+	.pixclock = KHZ2PICOS(25200),
+	.hsync_len = 96,	/* h_sync_width */
+	.vsync_len = 2,		/* v_sync_width */
+	.left_margin = 48,	/* h_back_porch */
+	.upper_margin = 33,	/* v_back_porch */
+	.right_margin = 16,	/* h_front_porch */
+	.lower_margin = 10,	/* v_front_porch */
+	.vmode = 0,
+	.sync = 0,
+};
+
+static ssize_t hdmi_ddc_power_toggle(struct kobject *kobj,
 	struct kobj_attribute *attr, const char *buf, size_t count);
 
-__attribute__((unused)) static ssize_t hdmi_ddc_power_show(struct kobject *kobj,
+static ssize_t hdmi_ddc_power_show(struct kobject *kobj,
 	struct kobj_attribute *attr, char *buf);
 
-/*@@
 static struct kobj_attribute hdmi_ddc_power_config =
 	__ATTR(config, 0640, hdmi_ddc_power_show, hdmi_ddc_power_toggle);
 
 static struct kobject *hdmi_ddc;
-*/
+
 
 struct tmds_prod_pair {
 	int clk;
@@ -398,21 +413,35 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 	return true;
 }
 
-__attribute__((unused)) static void tegra_hdmi_ddc_power_toggle(int value)
+static void tegra_hdmi_ddc_power_toggle(int value)
 {
-	int partition_id;
-	if (dc_hdmi == NULL)
-		return;
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 
-	partition_id = tegra_pd_get_powergate_id(tegra_sor_pd);
+	int partition_id = tegra_pd_get_powergate_id(tegra_sor_pd);
 	if (partition_id < 0)
+		return;
+#endif
+
+	if (dc_hdmi == NULL)
 		return;
 
 	if (value == 0) {
 		_tegra_hdmi_ddc_disable(dc_hdmi);
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 		tegra_powergate_partition(partition_id);
+#else
+		/* No specific powerdomain for SORs */
+		tegra_dc_powergate_locked(dc_hdmi->dc);
+#endif
+
+
 	} else if (value == 1) {
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 		tegra_unpowergate_partition(partition_id);
+#else
+		/* No specific powerdomain for SORs */
+		tegra_dc_unpowergate_locked(dc_hdmi->dc);
+#endif
 		_tegra_hdmi_ddc_enable(dc_hdmi);
 	}
 
@@ -535,9 +564,8 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 	dc->connected = is_asserted;
 	tegra_dc_ext_process_hotplug(dc->ndev->id, is_asserted);
 
-#if 0//@@ def CONFIG_SWITCH
 	switch_set_state(&hdmi->hpd_switch, is_asserted ? 1 : 0);
-#endif
+
 }
 
 static int tegra_hdmi_vrr_authentication(struct tegra_hdmi *hdmi)
@@ -629,9 +657,7 @@ static int tegra_hdmi_disable(struct tegra_hdmi *hdmi)
 	if (!hdmi->enabled) {
 		dc->connected = false;
 		tegra_dc_ext_process_hotplug(dc->ndev->id, false);
-#if 0//@@ def CONFIG_SWITCH
 		switch_set_state(&hdmi->hpd_switch, 0);
-#endif
 		return 0;
 	}
 
@@ -841,7 +867,9 @@ static int tegra_hdmi_vrr_init(struct tegra_hdmi *hdmi)
 
 static int tegra_hdmi_tmds_init(struct tegra_hdmi *hdmi)
 {
-	struct device_node *np_prod = of_find_node_by_path(TMDS_NODE);
+	int sor_num = tegra_dc_which_sor(hdmi->dc);
+	struct device_node *np_prod = of_find_node_by_path(
+			sor_num ? SOR1_NODE : SOR_NODE);
 
 	if (!np_prod) {
 		dev_warn(&hdmi->dc->ndev->dev,
@@ -1025,17 +1053,15 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	struct tegra_hdmi *hdmi;
 	int err;
 	struct device_node *np = dc->ndev->dev.of_node;
+	int sor_num = tegra_dc_which_sor(dc);
 #ifdef CONFIG_OF
-	struct device_node *np_hdmi = of_find_node_by_path(HDMI_NODE);
+	struct device_node *np_hdmi = of_find_node_by_path(
+			sor_num ? SOR1_NODE : SOR_NODE);
 #else
 	struct device_node *np_hdmi = NULL;
 #endif
 	struct device_node *np_panel = NULL;
 	int edid_src = 0;
-
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	int sor_num = tegra_dc_which_sor(dc);
-#endif
 
 	hdmi = devm_kzalloc(&dc->ndev->dev, sizeof(*hdmi), GFP_KERNEL);
 	if (!hdmi) {
@@ -1139,13 +1165,13 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false);
 	}
 
-#if 0//@@ def CONFIG_SWITCH
 	hdmi->hpd_switch.name = "hdmi";
 	err = switch_dev_register(&hdmi->hpd_switch);
 	if (err)
 		dev_err(&dc->ndev->dev,
 			"hdmi: failed to register hpd switch %d\n", err);
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	hdmi->audio_switch.name = "hdmi_audio";
 	err = switch_dev_register(&hdmi->audio_switch);
 	if (err)
@@ -1153,7 +1179,6 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			"hdmi: failed to register audio switch %d\n", err);
 #endif
 
-/*@@
 	hdmi_ddc = kobject_create_and_add("hdmi_ddc_power_toggle", kernel_kobj);
 	if (!hdmi_ddc) {
 		pr_warn("kobject create_and_add hdmi_ddc_power_toggle failed\n");
@@ -1164,7 +1189,6 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		pr_warn("sysfs create file hdmi_ddc_power_toggle failed\n");
 		return 0;
 	}
-*/
 
 	of_node_put(np_hdmi);
 	return 0;
@@ -1194,8 +1218,8 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	devm_kfree(&dc->ndev->dev, hdmi);
 	tegra_prod_release(&hdmi->prod_list);
 
-#if 0//@@ def CONFIG_SWITCH
 	switch_dev_unregister(&hdmi->hpd_switch);
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	switch_dev_unregister(&hdmi->audio_switch);
 #endif
 }
@@ -1959,10 +1983,8 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	/* BRINGUP HACK - Disabling HDA */
 	tegra_hda_set_data(hdmi, SINK_HDMI);
-#if 0//@@ def CONFIG_SWITCH
 	if (!hdmi->dvi)
 		switch_set_state(&hdmi->audio_switch, 1);
-#endif
 #endif
 }
 
@@ -2197,7 +2219,7 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 
 	hdmi->enabled = false;
 
-#if 0//@@ def CONFIG_SWITCH
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	switch_set_state(&hdmi->audio_switch, 0);
 #endif
 
@@ -2207,7 +2229,10 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 	clk_set_parent(sor->src_switch_clk, sor->safe_clk);
 #endif
 	tegra_hdmi_controller_disable(hdmi);
+
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_hda_reset_data();
+#endif
 	return;
 }
 

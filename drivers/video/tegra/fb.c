@@ -433,7 +433,7 @@ static int tegra_get_modedb(struct tegra_dc *dc, struct tegra_fb_modedb *modedb,
 	struct fb_info *info)
 {
 	unsigned i;
-	struct fb_var_screeninfo *modedb_ptr;
+	struct fb_var_screeninfo __user *modedb_ptr;
 	struct fb_modelist *modelist;
 
 	i = 0;
@@ -488,7 +488,7 @@ static int tegra_fb_ioctl(struct fb_info *info,
 	int res;
 	struct tegra_fb_info *tegra_fb = (struct tegra_fb_info *)info->par;
 	struct tegra_dc *dc = tegra_fb->win.dc;
-	struct tegra_fb_modedb modedb;
+	struct tegra_fb_modedb __user modedb;
 	struct fb_vblank vblank = {};
 
 	switch (cmd) {

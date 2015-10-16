@@ -220,8 +220,8 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 	.enable_slcg		= true,
 	.enable_elcg		= true,
 
-	/* ptimer scaling constant */
-	.ptimerscaling10x	= 10,
+	/* ptimer src frequency in hz*/
+	.ptimer_src_freq	= 31250000,
 
 	.ch_wdt_timeout_ms = 5000,
 

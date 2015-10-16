@@ -1053,16 +1053,11 @@ static bool gk20a_fifo_handle_mmu_fault(
 				verbose =
 				       gk20a_fifo_set_ctx_mmu_error_tsg(g, tsg);
 
-			gk20a_fifo_abort_tsg(g, ch->tsgid);
+			gk20a_fifo_abort_tsg(g, tsg->tsgid);
 
 			/* put back the ref taken early above */
-			if (referenced_channel) {
+			if (referenced_channel)
 				gk20a_channel_put(ch);
-			} else {
-				gk20a_err(dev_from_gk20a(g),
-						"mmu error in freed tsg channel %d on tsgid %d",
-						ch->hw_chid, ch->tsgid);
-			}
 		} else if (ch) {
 			if (referenced_channel) {
 				if (!g->fifo.deferred_reset_pending)

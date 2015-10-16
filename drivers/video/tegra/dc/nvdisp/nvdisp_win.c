@@ -600,6 +600,7 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 		}
 
 		if (!WIN_IS_ENABLED(win)) {
+#ifndef CONFIG_MODS
 			u32 win_options;
 
 			/* TODO: only program if the window was already disabled */
@@ -616,6 +617,10 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 			nvdisp_win_write(win, win_options, win_options_r());
 
 			dc_win->dirty = no_vsync ? 0 : 1;
+#else
+			dc_win->dirty = no_vsync ? 0 : 1;
+			continue;
+#endif
 		} else {
 			update_mask |= nvdisp_cmd_state_ctrl_win_a_update_enable_f()
 				<< win->idx;

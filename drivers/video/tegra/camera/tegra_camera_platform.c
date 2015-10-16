@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/camera/tegra_camera_platform.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -21,6 +21,9 @@
 #include <linux/miscdevice.h>
 #include <linux/clk.h>
 #include <linux/platform/tegra/mc.h>
+
+#include "vi.h"
+#include "tegra_camera_dev_mfi.h"
 #include "tegra_camera_platform.h"
 
 #define CAMDEV_NAME "tegra_camera_ctrl"
@@ -405,6 +408,9 @@ static int tegra_camera_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	tegra_camera_dev_mfi_init();
+	tegra_vi_register_mfi_cb(tegra_camera_dev_mfi_cb, NULL);
+
 	platform_set_drvdata(pdev, info);
 
 	return 0;
@@ -415,7 +421,9 @@ static int tegra_camera_remove(struct platform_device *pdev)
 	struct tegra_camera_info *info = platform_get_drvdata(pdev);
 	dev_info(&pdev->dev, "%s:camera_platform_driver remove\n", __func__);
 
-	tegra_camera_isomgr_unregister(info);
+	tegra_vi_unregister_mfi_cb();
+
+    tegra_camera_isomgr_unregister(info);
 
 	return misc_deregister(&tegra_camera_misc);
 }

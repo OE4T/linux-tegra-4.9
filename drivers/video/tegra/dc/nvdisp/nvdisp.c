@@ -65,6 +65,7 @@ static struct of_device_id nvdisp_disc_pd[] = {
 	{},
 };
 
+static struct nvdisp_pd_info nvdisp_pg[NVDISP_PD_COUNT];
 static unsigned int default_sRGB_OutLUT[] = {
 	0x00006000,  0x000060ce,  0x0000619d,  0x0000626c,  0x0000632d,
 	0x000063d4,  0x00006469,  0x000064f0,  0x0000656b,  0x000065df,
@@ -288,15 +289,16 @@ int tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
 	return 0;
 }
 
-static int nvdisp_allocate_lut(struct tegra_dc *dc,
-				struct tegra_dc_lut *lut)
+static int nvdisp_alloc_output_lut(struct tegra_dc *dc)
 {
+	struct tegra_dc_lut *lut;
 	int i = 0;
 	u64 r = 0;
 
+	lut = &dc->cmu;
+
 	if (!lut)
 		return -ENOMEM;
-
 	/* Allocate the memory for LUT */
 	lut->size = NVDISP_OUTPUT_LUT_SIZE * sizeof(u64);
 	lut->rgb = (u64 *)dma_zalloc_coherent(&dc->ndev->dev, lut->size,
@@ -313,18 +315,6 @@ static int nvdisp_allocate_lut(struct tegra_dc *dc,
 	}
 
 	return 0;
-}
-
-static int nvdisp_alloc_output_lut(struct tegra_dc *dc)
-{
-	struct tegra_dc_lut *lut;
-
-	lut = &dc->cmu;
-
-	if (nvdisp_allocate_lut(dc, lut))
-		return -ENOMEM;
-
-	return 0;
 
 }
 
@@ -339,7 +329,14 @@ static int nvdisp_alloc_input_lut(struct tegra_dc *dc,
 	else
 		lut = &dc->fb_lut;
 
-	if (nvdisp_allocate_lut(dc, lut))
+	if (!lut)
+		return -ENOMEM;
+
+	/* Allocate the memory for LUT */
+	lut->size = NVDISP_INPUT_LUT_SIZE * sizeof(u64);
+	lut->rgb = (u64 *)dma_zalloc_coherent(&dc->ndev->dev, lut->size,
+			&lut->phy_addr, GFP_KERNEL);
+	if (!lut->rgb)
 		return -ENOMEM;
 
 	return 0;
@@ -347,10 +344,9 @@ static int nvdisp_alloc_input_lut(struct tegra_dc *dc,
 
 /*	Deassert all the common nvdisplay resets.
  *      Misc and all windows groups are placed in common.
- *	Window groups can be moved per head based on winmask later
- *      as needed.
  */
-static int tegra_nvdisp_common_reset_deassert(struct tegra_dc *dc)
+static int __maybe_unused
+	tegra_nvdisp_common_reset_deassert(struct tegra_dc *dc)
 {
 	u8 i;
 	int err;
@@ -391,6 +387,36 @@ static int __maybe_unused tegra_nvdisp_common_reset_assert(struct tegra_dc *dc)
 		}
 	}
 	return 0;
+}
+
+static int __maybe_unused tegra_nvdisp_wgrp_reset_assert(struct tegra_dc *dc)
+{
+	int idx, err = 0;
+	for_each_set_bit(idx, &dc->valid_windows, DC_N_WINDOWS) {
+		err = reset_control_assert(nvdisp_common_rst[idx+1]);
+		if (err)
+			dev_err(&dc->ndev->dev, "Failed window %d rst\n", idx);
+	}
+
+	return err;
+}
+
+static int tegra_nvdisp_wgrp_reset_deassert(struct tegra_dc *dc)
+{
+	int idx, err = 0;
+
+	/* Misc deassert is common for  all windows */
+	err = reset_control_deassert(nvdisp_common_rst[0]);
+	if (err)
+		dev_err(&dc->ndev->dev, "Failed Misc deassert\n");
+
+	for_each_set_bit(idx, &dc->valid_windows, DC_N_WINDOWS) {
+		err = reset_control_deassert(nvdisp_common_rst[idx+1]);
+		if (err)
+			dev_err(&dc->ndev->dev, "Failed window deassert\n");
+	}
+
+	return err;
 }
 
 static int tegra_nvdisp_reset_prepare(struct tegra_dc *dc)
@@ -435,11 +461,6 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 	if (ret)
 		return ret;
 
-	/* deassert the common reset for misc and window groups */
-	ret = tegra_nvdisp_common_reset_deassert(dc);
-	if (ret)
-		return ret;
-
 	/* Get the nvdisplay_hub and nvdisplay_disp clock and enable
 	 * it by default. Change the rates based on requirement later
 	 */
@@ -474,6 +495,14 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 	}
 
 	dc->valid_windows = 0;
+
+	/* Assign powergate id for each partition*/
+	nvdisp_pg[NVDISP_PD_INDEX].powergate_id =
+			tegra_pd_get_powergate_id(nvdisp_disa_pd);
+	nvdisp_pg[NVDISPB_PD_INDEX].powergate_id =
+			tegra_pd_get_powergate_id(nvdisp_disb_pd);
+	nvdisp_pg[NVDISPC_PD_INDEX].powergate_id =
+			tegra_pd_get_powergate_id(nvdisp_disc_pd);
 
 	goto INIT_EXIT;
 
@@ -591,6 +620,10 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 
 	/* TODO: MIPI/CRT/HDMI clock cals */
 	/* TODO: confirm shift clock still exists in Parker */
+	if (dc->mode.pclk != mode->pclk)
+		pr_info("Redo Clock pclk 0x%x != dc-pclk 0x%x\n",
+				mode->pclk, dc->mode.pclk);
+
 
 #ifdef CONFIG_SWITCH
 	switch_set_state(&dc->modeset_switch,
@@ -617,6 +650,13 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 	char rst_name[6];
 	int err;
 
+	/* Only need init once no matter how many dc objects */
+	if (!dc->ndev->id) {
+		err = _tegra_nvdisp_init_once(dc);
+		if (err)
+			return err;
+	}
+
 	/*Lut alloc is needed per dc */
 	if (!dc->fb_lut.rgb) {
 		if (nvdisp_alloc_input_lut(dc, NULL, false))
@@ -629,18 +669,15 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 			return -ENOMEM;
 	}
 
+	/* Set the valid windows as per mask */
+	dc->valid_windows = dc->pdata->win_mask;
+
 	/* Assign powergate id for each partition*/
-	switch (dc->ctrl_num) {
-	case 0:
-		dc->powergate_id = tegra_pd_get_powergate_id(nvdisp_disa_pd);
-		break;
-	case 1:
-		dc->powergate_id = tegra_pd_get_powergate_id(nvdisp_disb_pd);
-		break;
-	case 2:
-		dc->powergate_id = tegra_pd_get_powergate_id(nvdisp_disc_pd);
-		break;
-	}
+	dc->powergate_id = nvdisp_pg[dc->ctrl_num].powergate_id;
+
+	/* Save for powermgmt purpose */
+	/* valid_windows should be updated on dynamically changing windows */
+	nvdisp_pg[dc->ctrl_num].valid_windows = dc->valid_windows;
 
 	/* Take the controller out of reset if bpmp is loaded*/
 	if (tegra_bpmp_running() && tegra_platform_is_silicon()) {
@@ -651,19 +688,9 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 				rst_name);
 			return PTR_ERR(dc->rst);
 		}
-		err = reset_control_deassert(dc->rst);
-		if (err) {
-			dev_err(&dc->ndev->dev,"Unable to reset %s\n",
-					rst_name);
-			return err;
-		}
 	}
 
-	/* Only need init once no matter how many dc objects */
-	if (dc->ndev->id)
-		return 0;
-
-	return _tegra_nvdisp_init_once(dc);
+	return err;
 }
 
 static int tegra_nvdisp_set_control(struct tegra_dc *dc)
@@ -831,13 +858,6 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	/* TODO: confirm power domains for parker */
 	tegra_dc_unpowergate_locked(dc);
 
-	/* Enable OR -- need to enable the connection first */
-	if (dc->out->enable)
-		dc->out->enable(&dc->ndev->dev);
-
-	if (dc->out_ops->setup_clk)
-		pclk = dc->out_ops->setup_clk(dc, dc->clk);
-
 	/* Set HUB CLOCK PARENT as PLLP/ ENABLE */
 	/* Change the HUB to HUBPLL for higher clocks */
 	hubparent_clk = tegra_disp_clk_get(&dc->ndev->dev, "pllp_display");
@@ -850,10 +870,18 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	tegra_disp_clk_prepare_enable(hubclk);
 	pr_info(" rate get on hub %ld\n", clk_get_rate(hubclk));
 
+	/* Enable OR -- need to enable the connection first */
+	if (dc->out->enable)
+		dc->out->enable(&dc->ndev->dev);
+
+	if (dc->out_ops->setup_clk)
+		pclk = dc->out_ops->setup_clk(dc, dc->clk);
+
 	/* Setting clock separately now will cleanup once it
 	 * is stable
 	 */
-	if (dc->out->type == TEGRA_DC_OUT_HDMI)	{
+	if ((dc->out->type == TEGRA_DC_OUT_HDMI) ||
+		(dc->out->type == TEGRA_DC_OUT_DP)) {
 		parent_clk = tegra_disp_clk_get(&dc->ndev->dev,
 						dc->out->parent_clk);
 		if (IS_ERR_OR_NULL(parent_clk)) {
@@ -862,7 +890,7 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 			ret = -ENOENT;
 			return ret; /*TODO: Add proper cleanup later */
 		}
-		pr_info("HDMI Parent Clock set for DC %s\n",
+		pr_info("Parent Clock set for DC %s\n",
 				dc->out->parent_clk);
 		/* Set parent for DC clock */
 		clk_set_parent(dc->clk, parent_clk);
@@ -895,37 +923,22 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 		 * once the clock id is added.
 		 */
 		writel(0xf, ioremap(0x05801000, 0x4));
-	} else if (dc->out->type == TEGRA_DC_OUT_DP) {
-		parent_clk = tegra_disp_clk_get(&dc->ndev->dev,
-						dc->out->parent_clk);
-		if (IS_ERR_OR_NULL(parent_clk)) {
-			dev_err(&dc->ndev->dev,
-				"plld2 parent clock get failed\n");
-			ret = -ENOENT;
-			return ret; /*TODO: Add proper cleanup later */
-		}
-		pr_info("DP Parent Clock set for DC %s\n",
-				dc->out->parent_clk);
-		/* Set parent for DC clock */
-		clk_set_parent(dc->clk, parent_clk);
-
-		/* comp clk will be maximum of head0/1/2 */
-		if (dc->mode.pclk >= compclk_rate) {
-			compclk_rate = dc->mode.pclk;
-			compclk_parent = dc->clk;
-			pr_info(" rate get on compclk %d\n", compclk_rate);
-			/* Set parent for Display clock */
-			clk_set_parent(compclk, dc->clk);
-		}
-		/* Set rate on DC rate same pclk */
-		clk_set_rate(dc->clk, dc->mode.pclk);
-		/* Enable DC clock */
-		tegra_disp_clk_prepare_enable(dc->clk);
-		/* Enable Display clock */
-		tegra_disp_clk_prepare_enable(compclk);
 	}
 
 	tegra_dc_get(dc);
+
+	if (ret)
+		return ret;
+
+	/* Deassert the dc reset */
+	res = reset_control_deassert(dc->rst);
+	if (res) {
+		dev_err(&dc->ndev->dev, "Unable to deassert dc %d\n",
+				dc->ctrl_num);
+		return res;
+	}
+
+	tegra_nvdisp_wgrp_reset_deassert(dc);
 
 	/* Mask interrupts during init */
 	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
@@ -1138,6 +1151,152 @@ void tegra_nvdisp_underflow_handler(struct tegra_dc *dc)
 	/* Do we need to see whether the reset is done */
 }
 
+int tegra_nvdisp_powergate_partition(int pg_id)
+{
+	int i , ret = 0;
+	int pd_index = -1;
+	bool disable_disp[NVDISP_PD_COUNT] = {
+			false, false, false };
+
+	/* DISP - common for all IHUB, ORs, head0, win 0
+	 * Request from DISPB or DISPC - disable DISP last
+	 * Check DISPB and DISPC valid_windows
+	 * in addition to the request for HEAD 1 and 2 powergate
+	 */
+
+	for (i = 0; i < NVDISP_PD_COUNT; i++) {
+		if (nvdisp_pg[i].powergate_id == pg_id) {
+			pd_index = i;
+			break;
+		}
+	}
+
+	if (pd_index < 0) {
+		pr_info("Not a disp powerdomain\n");
+		return 0;
+	}
+
+	if (!nvdisp_pg[pd_index].ref_cnt) {
+		pr_info("Already powergated DISP id %d\n",
+				 nvdisp_pg[i].powergate_id);
+		return 0;
+	}
+
+	mutex_lock(&tegra_nvdisp_lock);
+	/* Check any valid_windows resides in another PD
+	 * the check whether those head are in use before
+	 * powering off those PDs
+	 */
+	for_each_set_bit(i, &nvdisp_pg[pd_index].valid_windows, DC_N_WINDOWS) {
+		if (i == 0 && nvdisp_pg[NVDISP_PD_INDEX].windows_inuse) {
+			nvdisp_pg[NVDISP_PD_INDEX].windows_inuse -= 1;
+			disable_disp[NVDISP_PD_INDEX] = true;
+		} else if (((i == 1) || (i == 2)) &&
+			nvdisp_pg[NVDISPB_PD_INDEX].windows_inuse) {
+			nvdisp_pg[NVDISPB_PD_INDEX].windows_inuse -= 1;
+			disable_disp[NVDISPB_PD_INDEX] = true;
+		} else if (nvdisp_pg[NVDISPC_PD_INDEX].windows_inuse) {
+			nvdisp_pg[NVDISPC_PD_INDEX].windows_inuse -= 1;
+			disable_disp[NVDISPC_PD_INDEX] = true;
+		}
+	}
+
+	/* Check head is in use */
+	if (nvdisp_pg[pd_index].head_inuse)
+		disable_disp[pd_index] = true;
+
+	nvdisp_pg[pd_index].head_inuse = false;
+
+	for (i = NVDISP_PD_COUNT - 1; i >= 0; i--) {
+		if (disable_disp[i] && (--nvdisp_pg[i].ref_cnt == 0)) {
+
+			if (nvdisp_pg[i].windows_inuse &&
+				nvdisp_pg[i].head_inuse)
+				pr_err("Error in Windows/Head ref_count\n");
+
+			pr_info("PD DISP%d index%d DOWN\n",
+					 i, nvdisp_pg[i].powergate_id);
+			/* User when using pg with clk_on */
+			ret = tegra_powergate_partition_with_clk_off(
+						nvdisp_pg[i].powergate_id);
+			/*ret = tegra_powergate_partition(
+						nvdisp_pg[i].powergate_id);*/
+			if (ret)
+				pr_err("Fail to powergate DISP%d\n", i);
+		}
+	}
+	mutex_unlock(&tegra_nvdisp_lock);
+
+	return ret;
+}
+
+int tegra_nvdisp_unpowergate_partition(int pg_id)
+{
+	int i, ret = 0;
+	int pd_index = -1;
+	bool enable_disp[NVDISP_PD_COUNT] = {
+			false , false, false};
+
+	/* DISP - common for all IHUB, ORs, head0, win 0
+	 * Request from DISPB or DISPC - enable DISP first
+	 * Enable DISPB and DISPC based on valid_windows
+	 * checking
+	 */
+
+	for (i = 0; i < NVDISP_PD_COUNT; i++) {
+		if (nvdisp_pg[i].powergate_id == pg_id) {
+			pd_index = i;
+			break;
+		}
+	}
+
+	if (pd_index < 0) {
+		pr_info(" Not a disp powerdomain\n");
+		return 0;
+	}
+
+	nvdisp_pg[pd_index].head_inuse = true;
+	enable_disp[pd_index] = true;
+	/* Request from DISPB or DISPC - enable DISP first */
+	if ((pd_index == 1) || (pd_index == 2))
+		enable_disp[NVDISP_PD_INDEX] = true;
+
+	/* Check the for valid_windows per head
+	 * win0 is in DISP, win1&2 in DISPB and
+	 * win3,win4 &win5 in DISPC domains
+	 */
+
+	for_each_set_bit(i, &nvdisp_pg[pd_index].valid_windows, DC_N_WINDOWS) {
+		if (i == 0) {
+			enable_disp[NVDISP_PD_INDEX] = true;
+			nvdisp_pg[NVDISP_PD_INDEX].windows_inuse += 1;
+		} else if ((i == 1) || (i == 2)) {
+			enable_disp[NVDISPB_PD_INDEX] = true;
+			nvdisp_pg[NVDISPB_PD_INDEX].windows_inuse += 1;
+		} else { /* win 3/4/5 */
+			enable_disp[NVDISPC_PD_INDEX] = true;
+			nvdisp_pg[NVDISPC_PD_INDEX].windows_inuse += 1;
+		}
+	}
+
+	for (i = 0; i < NVDISP_PD_COUNT; i++) {
+		if (enable_disp[i] && (nvdisp_pg[i].ref_cnt++ == 0)) {
+			pr_info("PD DISP%d index%d UP\n",
+					i, nvdisp_pg[i].powergate_id);
+			/* use clk_off with clk_on  */
+			ret = tegra_unpowergate_partition_with_clk_on(
+						nvdisp_pg[i].powergate_id);
+			/*ret = tegra_unpowergate_partition(
+						nvdisp_pg[i].powergate_id);*/
+			if (ret) {
+				pr_err("Fail to Unpowergate DISP%d\n", i);
+				return ret;
+			}
+		}
+	}
+
+	return ret;
+}
 static int tegra_nvdisp_set_color_control(struct tegra_dc *dc)
 {
 	u32 color_control;

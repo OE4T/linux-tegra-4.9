@@ -410,7 +410,8 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 		g->ops.fifo.apply_pb_timeout(g);
 
 	timeout = GRFIFO_TIMEOUT_CHECK_PERIOD_US;
-	timeout = scale_ptimer(timeout, platform->ptimerscaling10x);
+	timeout = scale_ptimer(timeout,
+		ptimer_scalingfactor10x(platform->ptimer_src_freq));
 	timeout |= fifo_eng_timeout_detection_enabled_f();
 	gk20a_writel(g, fifo_eng_timeout_r(), timeout);
 

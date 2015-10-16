@@ -50,6 +50,10 @@ struct acr_gm20b;
 #include "cde_gk20a.h"
 #include "debug_gk20a.h"
 
+/* PTIMER_REF_FREQ_HZ corresponds to a period of 32 nanoseconds.
+    32 ns is the resolution of ptimer. */
+#define PTIMER_REF_FREQ_HZ                      31250000
+
 struct cooling_device_gk20a {
 	struct thermal_cooling_device *gk20a_cooling_dev;
 	unsigned int gk20a_freq_state;
@@ -901,6 +905,10 @@ void gk20a_user_deinit(struct platform_device *dev);
 
 extern void gk20a_debug_dump_device(struct platform_device *pdev);
 
+static inline u32 ptimer_scalingfactor10x(u32 ptimer_src_freq)
+{
+	return (u32)(((u64)(PTIMER_REF_FREQ_HZ * 10)) / ptimer_src_freq);
+}
 static inline u32 scale_ptimer(u32 timeout , u32 scale10x)
 {
 	if (((timeout*10) % scale10x) >= (scale10x/2))

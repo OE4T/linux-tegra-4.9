@@ -23,7 +23,6 @@
 #include <linux/kernel.h>
 #include <linux/fb.h>
 #include <linux/gk20a.h>
-
 #include <mach/clk.h>
 
 #include "gk20a.h"
@@ -33,9 +32,6 @@
 
 
 #define PTIMER_FP_FACTOR			1000000
-/* PTIMER_REF_FREQ_HZ corresponds to a period of 32 nanoseconds. 32 ns is
-   the resolution of ptimer. */
-#define PTIMER_REF_FREQ_HZ			31250000
 
 #define ROOTRW (S_IRWXU|S_IRGRP|S_IROTH)
 
@@ -208,17 +204,27 @@ static ssize_t ptimer_scale_factor_show(struct device *dev,
 						struct device_attribute *attr,
 						char *buf)
 {
-	u32 tsc_freq_hz = clk_get_rate(clk_get_sys(NULL, "clk_m"));
-	u32 scaling_factor_fp = (u32)(PTIMER_REF_FREQ_HZ) /
-				((u32)(tsc_freq_hz) /
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	u32 src_freq_hz = platform->ptimer_src_freq;
+	u32 scaling_factor_fp;
+	ssize_t res;
+
+	if (!src_freq_hz) {
+		dev_err(dev, "reference clk_m rate is not set correctly\n");
+		return -EINVAL;
+	}
+
+	scaling_factor_fp = (u32)(PTIMER_REF_FREQ_HZ) /
+				((u32)(src_freq_hz) /
 				(u32)(PTIMER_FP_FACTOR));
-	ssize_t res = snprintf(buf,
+	res = snprintf(buf,
 				PAGE_SIZE,
 				"%u.%u\n",
 				scaling_factor_fp / PTIMER_FP_FACTOR,
 				scaling_factor_fp % PTIMER_FP_FACTOR);
 
 	return res;
+
 }
 
 static DEVICE_ATTR(ptimer_scale_factor,

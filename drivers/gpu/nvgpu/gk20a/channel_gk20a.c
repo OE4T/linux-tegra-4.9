@@ -138,7 +138,7 @@ int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 {
 	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
 	int value = scale_ptimer(timeslice_period,
-			platform->ptimerscaling10x);
+			ptimer_scalingfactor10x(platform->ptimer_src_freq));
 	int shift = 3;
 
 	/* value field is 8 bits long */

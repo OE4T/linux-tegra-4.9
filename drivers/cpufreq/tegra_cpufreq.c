@@ -289,12 +289,16 @@ static void set_cpufreq_to_emcfreq(enum cluster cl,
 	tfreq_data.emc_max_rate =
 		clk_round_rate(tfreq_data.pcluster[cl].emc_clk, ULONG_MAX);
 	cluster_freq = get_cluster_freq(cl, policy->cur);
+
 	if (M_CLUSTER == cl)
 		emc_freq = m_cluster_cpu_to_emc_freq(cluster_freq);
 	else
 		emc_freq = b_cluster_cpu_to_emc_freq(cluster_freq);
 
 	clk_set_rate(tfreq_data.pcluster[cl].emc_clk, emc_freq);
+
+	pr_debug("cpu: %d, cluster %s, emc freq(KHz): %lu cluster_freq(kHz): %u\n",
+		policy->cpu, CLUSTER_STR(cl), emc_freq / 1000, cluster_freq);
 }
 
 static struct cpufreq_frequency_table *get_freqtable(uint8_t cpu)
@@ -335,7 +339,7 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 	if ((rate * KHZ_TO_HZ) % vhtbl->ref_clk_hz)
 		ndiv++;
 
-	if (ndiv < vhtbl->ndiv_min) /* ndiv > 8 needed for stable operation */
+	if (ndiv < vhtbl->ndiv_min)
 		ndiv = vhtbl->ndiv_min;
 	if (ndiv > vhtbl->ndiv_max)
 		ndiv = vhtbl->ndiv_max;
@@ -628,7 +632,7 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 
 	/* clip boot frequency to table entry */
 	ret = cpufreq_frequency_table_target(policy, ftbl, freq,
-		CPUFREQ_RELATION_H, &idx);
+		CPUFREQ_RELATION_L, &idx);
 	if (!ret && (freq != ftbl[idx].frequency)) {
 		freq = ftbl[idx].frequency;
 		tegra_update_cpu_speed(freq, policy->cpu);

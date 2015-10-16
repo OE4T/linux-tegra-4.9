@@ -178,6 +178,11 @@ struct nvs_fn_dev {
  * @resolution: resolution value
  *
  * Returns 0 on success or a negative error code.
+ * If a value > 0 is returned then sensor_cfg->resolution is
+ * updated as described in the below note.  This allows drivers
+ * with multiple sensors to only have to implement the device
+ * specific function for certain sensors and allow the NVS
+ * layer to handle the others.
  *
  * Note that if not implemented, resolution changes will change
  * sensor_cfg->resolution.  If implemented, it is expected
@@ -193,6 +198,11 @@ struct nvs_fn_dev {
  * @max_range: max_range value
  *
  * Returns 0 on success or a negative error code.
+ * If a value > 0 is returned then sensor_cfg->max_range is
+ * updated as described in the below note.  This allows drivers
+ * with multiple sensors to only have to implement the device
+ * specific function for certain sensors and allow the NVS
+ * layer to handle the others.
  *
  * Note that if not implemented, max_range changes will change
  * sensor_cfg->max_range.  If implemented, it is expected
@@ -209,6 +219,11 @@ struct nvs_fn_dev {
  * @scale: scale value
  *
  * Returns 0 on success or a negative error code.
+ * If a value > 0 is returned then sensor_cfg->scale is updated
+ * as described in the below note.  This allows drivers with
+ * multiple sensors to only have to implement the device
+ * specific function for certain sensors and allow the NVS
+ * layer to handle the others.
  *
  * Note that if not implemented, scale changes will change
  * sensor_cfg->scale.  If implemented, it is expected
@@ -225,6 +240,11 @@ struct nvs_fn_dev {
  * @offset: offset value
  *
  * Returns 0 on success or a negative error code.
+ * If a value > 0 is returned then sensor_cfg->offset is updated
+ * as described in the below note.  This allows drivers with
+ * multiple sensors to only have to implement the device
+ * specific function for certain sensors and allow the NVS
+ * layer to handle the others.
  *
  * Note that if not implemented, offset changes will change
  * sensor_cfg->offset.  If implemented, it is expected
@@ -240,6 +260,11 @@ struct nvs_fn_dev {
  * @thresh_lo: low threshold value
  *
  * Returns 0 on success or a negative error code.
+ * If a value > 0 is returned then sensor_cfg->thresh_lo is
+ * updated as described in the below note.  This allows drivers
+ * with multiple sensors to only have to implement the device
+ * specific function for certain sensors and allow the NVS
+ * layer to handle the others.
  *
  * Note that if not implemented, thresh_lo changes will change
  * sensor_cfg->thresh_lo.  If implemented, it is expected
@@ -254,6 +279,11 @@ struct nvs_fn_dev {
  * @thresh_hi: high threshold value
  *
  * Returns 0 on success or a negative error code.
+ * If a value > 0 is returned then sensor_cfg->thresh_hi is
+ * updated as described in the below note.  This allows drivers
+ * with multiple sensors to only have to implement the device
+ * specific function for certain sensors and allow the NVS
+ * layer to handle the others.
  *
  * Note that if not implemented, thresh_hi changes will change
  * sensor_cfg->thresh_hi.  If implemented, it is expected

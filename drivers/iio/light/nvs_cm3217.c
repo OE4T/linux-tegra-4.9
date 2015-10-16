@@ -40,8 +40,8 @@
 #define CM_LIGHT_SCALE_MICRO		(10000)
 #define CM_LIGHT_OFFSET_IVAL		(0)
 #define CM_LIGHT_OFFSET_MICRO		(0)
-#define CM_LIGHT_THRESHOLD_LO		(100)
-#define CM_LIGHT_THRESHOLD_HI		(100)
+#define CM_LIGHT_THRESHOLD_LO		(5)
+#define CM_LIGHT_THRESHOLD_HI		(5)
 #define CM_POLL_DLY_MS_MIN		(100)
 #define CM_POLL_DLY_MS_MAX		(4000)
 /* HW registers */
@@ -358,12 +358,19 @@ static int cm_regs(void *client, int snsr_id, char *buf)
 	return t;
 }
 
+static int cm_dbg(void *client, int snsr_id, char *buf)
+{
+	struct cm_state *st = (struct cm_state *)client;
+	return nvs_light_dbg(&st->light, buf);
+}
+
 static struct nvs_fn_dev cm_fn_dev = {
 	.enable				= cm_enable,
 	.batch				= cm_batch,
 	.thresh_lo			= cm_thresh_lo,
 	.thresh_hi			= cm_thresh_hi,
 	.regs				= cm_regs,
+	.nvs_read			= cm_dbg,
 };
 
 static int cm_suspend(struct device *dev)
@@ -472,6 +479,10 @@ static int cm_of_dt(struct cm_state *st, struct device_node *dn)
 		st->light.nld_i_lo = 0;
 		st->light.nld_i_hi = ARRAY_SIZE(cm_nld_tbl) - 1;
 	}
+	if (st->light.nld_i_lo >= ARRAY_SIZE(cm_nld_tbl))
+		st->light.nld_i_lo = ARRAY_SIZE(cm_nld_tbl) - 1;
+	if (st->light.nld_i_hi >= ARRAY_SIZE(cm_nld_tbl))
+		st->light.nld_i_hi = ARRAY_SIZE(cm_nld_tbl) - 1;
 	i = st->light.nld_i_lo;
 	st->cfg.resolution.ival = cm_nld_tbl[i].resolution.ival;
 	st->cfg.resolution.fval = cm_nld_tbl[i].resolution.fval;

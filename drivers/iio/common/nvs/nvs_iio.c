@@ -76,7 +76,7 @@
 #include <linux/iio/trigger.h>
 #include <linux/nvs.h>
 
-#define NVS_IIO_DRIVER_VERSION		(207)
+#define NVS_IIO_DRIVER_VERSION		(208)
 #define NVS_ATTRS_ARRAY_SIZE		(12)
 
 enum NVS_ATTR {
@@ -355,6 +355,8 @@ static ssize_t nvs_dbg_cfg(struct iio_dev *indio_dev, char *buf)
 	t += sprintf(buf + t, "ch_n=%u\n", st->cfg->ch_n);
 	t += sprintf(buf + t, "ch_sz=%d\n", st->cfg->ch_sz);
 	t += sprintf(buf + t, "ch_inf=%p\n", st->cfg->ch_inf);
+	t += sprintf(buf + t, "delay_us_min=%u\n", st->cfg->delay_us_min);
+	t += sprintf(buf + t, "delay_us_max=%u\n", st->cfg->delay_us_max);
 	t += sprintf(buf + t, "uncal_lo=%d\n", st->cfg->uncal_lo);
 	t += sprintf(buf + t, "uncal_hi=%d\n", st->cfg->uncal_hi);
 	t += sprintf(buf + t, "cal_lo=%d\n", st->cfg->cal_lo);
@@ -479,12 +481,13 @@ static int nvs_buf_push(struct iio_dev *indio_dev, unsigned char *data, s64 ts)
 		st->ts_diff = ts - st->ts;
 		st->ts = ts;
 		if (st->ts_diff < 0)
-			dev_err(st->dev, "%s ts_diff=%lld\n",
-				__func__, st->ts_diff);
+			dev_err(st->dev, "%s %s ts_diff=%lld\n",
+				__func__, st->cfg->name, st->ts_diff);
 	} else {
 		st->flush = false;
 		if (*st->fn_dev->sts & (NVS_STS_SPEW_MSG | NVS_STS_SPEW_DATA))
-			dev_info(st->dev, "%s FLUSH\n", __func__);
+			dev_info(st->dev, "%s %s FLUSH\n",
+				 __func__, st->cfg->name);
 	}
 	if (indio_dev->buffer->scan_timestamp) {
 		n = sizeof(ts);
@@ -503,15 +506,15 @@ static int nvs_buf_push(struct iio_dev *indio_dev, unsigned char *data, s64 ts)
 		}
 		if (*st->fn_dev->sts & NVS_STS_SPEW_BUF) {
 			for (i = 0; i < bytes; i++)
-				dev_info(st->dev, "buf[%u]=%x\n",
-					 i, st->buf[i]);
-			dev_info(st->dev,
-				 "ts=%lld  diff=%lld\n", ts, st->ts_diff);
+				dev_info(st->dev, "%s buf[%u]=%x\n",
+					 st->cfg->name, i, st->buf[i]);
+			dev_info(st->dev, "%s ts=%lld  diff=%lld\n",
+				 st->cfg->name, ts, st->ts_diff);
 		}
 	}
 	if ((*st->fn_dev->sts & NVS_STS_SPEW_DATA) && ts) {
 		nvs_dbg_data(indio_dev, char_buf);
-		dev_info(st->dev, "%s", char_buf);
+		dev_info(st->dev, "%s %s", st->cfg->name, char_buf);
 	}
 	if (!ret)
 		/* return pushed byte count from data if no error.
@@ -554,7 +557,8 @@ static int nvs_enable(struct iio_dev *indio_dev, bool en)
 	if (!ret)
 		st->enabled = enable;
 	if (*st->fn_dev->sts & NVS_STS_SPEW_MSG)
-		dev_info(st->dev, "%s %d ret=%d", __func__, enable, ret);
+		dev_info(st->dev, "%s %s enable=%d ret=%d",
+			 __func__, st->cfg->name, enable, ret);
 	return ret;
 }
 
@@ -635,11 +639,11 @@ static ssize_t nvs_attr_store(struct device *dev,
 	mutex_unlock(&indio_dev->mlock);
 	if (*st->fn_dev->sts & NVS_STS_SPEW_MSG) {
 		if (ret)
-			dev_err(st->dev, "%s %s %d->%d ERR=%d\n",
-				__func__, msg, old, new, ret);
+			dev_err(st->dev, "%s %s %s %d->%d ERR=%d\n",
+				__func__, st->cfg->name, msg, old, new, ret);
 		else
-			dev_info(st->dev, "%s %s %d->%d\n",
-				 __func__, msg, old, new);
+			dev_info(st->dev, "%s %s %s %d->%d\n",
+				 __func__, st->cfg->name, msg, old, new);
 	}
 	if (ret)
 		return ret;
@@ -770,7 +774,7 @@ static ssize_t nvs_info_store(struct device *dev,
 						    st->cfg->snsr_id, dbg);
 			if (ret < 0)
 				return ret;
-		} else {
+		} else if (!st->fn_dev->nvs_read) {
 			st->dbg = NVS_INFO_DATA;
 			return -EINVAL;
 		}
@@ -1067,6 +1071,7 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 {
 	struct nvs_state *st = iio_priv(indio_dev);
 	char *msg;
+	int ch = chan->scan_index;
 	int old = 0;
 	int old2 = 0;
 	int ret = 0;
@@ -1129,20 +1134,24 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 	case IIO_CHAN_INFO_SCALE:
 		msg = "IIO_CHAN_INFO_SCALE";
 		if (st->cfg->ch_n_max) {
-			if (chan->scan_index >= st->cfg->ch_n_max) {
+			if (ch >= st->cfg->ch_n_max) {
 				ret = -EINVAL;
 				break;
 			}
 
-			old = st->cfg->scales[chan->scan_index].ival;
-			old2 = st->cfg->scales[chan->scan_index].fval;
+			old = st->cfg->scales[ch].ival;
+			old2 = st->cfg->scales[ch].fval;
 			if (st->fn_dev->scale) {
 				ret = st->fn_dev->scale(st->client,
-							st->cfg->snsr_id,
-							chan->scan_index, val);
+						    st->cfg->snsr_id, ch, val);
+				if (ret > 0) {
+					st->cfg->scales[ch].ival = val;
+					st->cfg->scales[ch].fval = val2;
+					ret = 0;
+				}
 			} else {
-				st->cfg->scales[chan->scan_index].ival = val;
-				st->cfg->scales[chan->scan_index].fval = val2;
+				st->cfg->scales[ch].ival = val;
+				st->cfg->scales[ch].fval = val2;
 			}
 		} else {
 			old = st->cfg->scale.ival;
@@ -1151,6 +1160,11 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 				ret = st->fn_dev->scale(st->client,
 							st->cfg->snsr_id,
 							-1, val);
+				if (ret > 0) {
+					st->cfg->scale.ival = val;
+					st->cfg->scale.fval = val2;
+					ret = 0;
+				}
 			} else {
 				st->cfg->scale.ival = val;
 				st->cfg->scale.fval = val2;
@@ -1161,20 +1175,24 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 	case IIO_CHAN_INFO_OFFSET:
 		msg = "IIO_CHAN_INFO_OFFSET";
 		if (st->cfg->ch_n_max) {
-			if (chan->scan_index >= st->cfg->ch_n_max) {
+			if (ch >= st->cfg->ch_n_max) {
 				ret = -EINVAL;
 				break;
 			}
 
-			old = st->cfg->offsets[chan->scan_index].ival;
-			old2 = st->cfg->offsets[chan->scan_index].fval;
+			old = st->cfg->offsets[ch].ival;
+			old2 = st->cfg->offsets[ch].fval;
 			if (st->fn_dev->offset) {
 				ret = st->fn_dev->offset(st->client,
-							 st->cfg->snsr_id,
-							chan->scan_index, val);
+						    st->cfg->snsr_id, ch, val);
+				if (ret > 0) {
+					st->cfg->offsets[ch].ival = val;
+					st->cfg->offsets[ch].fval = val2;
+					ret = 0;
+				}
 			} else {
-				st->cfg->offsets[chan->scan_index].ival = val;
-				st->cfg->offsets[chan->scan_index].fval = val2;
+				st->cfg->offsets[ch].ival = val;
+				st->cfg->offsets[ch].fval = val2;
 			}
 		} else {
 			old = st->cfg->offset.ival;
@@ -1183,6 +1201,11 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 				ret = st->fn_dev->offset(st->client,
 							 st->cfg->snsr_id,
 							 -1 , val);
+				if (ret > 0) {
+					st->cfg->offset.ival = val;
+					st->cfg->offset.fval = val2;
+					ret = 0;
+				}
 			} else {
 				st->cfg->offset.ival = val;
 				st->cfg->offset.fval = val2;
@@ -1193,21 +1216,31 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 	case IIO_CHAN_INFO_THRESHOLD_LOW:
 		msg = "IIO_CHAN_INFO_THRESHOLD_LOW";
 		old = st->cfg->thresh_lo;
-		if (st->fn_dev->thresh_lo)
+		if (st->fn_dev->thresh_lo) {
 			ret = st->fn_dev->thresh_lo(st->client,
 						    st->cfg->snsr_id, val);
-		else
+			if (ret > 0) {
+				st->cfg->thresh_lo = val;
+				ret = 0;
+			}
+		} else {
 			st->cfg->thresh_lo = val;
+		}
 		break;
 
 	case IIO_CHAN_INFO_THRESHOLD_HIGH:
 		msg = "IIO_CHAN_INFO_THRESHOLD_HIGH";
 		old = st->cfg->thresh_hi;
-		if (st->fn_dev->thresh_hi)
+		if (st->fn_dev->thresh_hi) {
 			ret = st->fn_dev->thresh_hi(st->client,
 						    st->cfg->snsr_id, val);
-		else
+			if (ret > 0) {
+				st->cfg->thresh_hi = val;
+				ret = 0;
+			}
+		} else {
 			st->cfg->thresh_hi = val;
+		}
 		break;
 
 	case IIO_CHAN_INFO_PEAK:
@@ -1217,6 +1250,11 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 		if (st->fn_dev->max_range) {
 			ret = st->fn_dev->max_range(st->client,
 						    st->cfg->snsr_id, val);
+			if (ret > 0) {
+				st->cfg->max_range.ival = val;
+				st->cfg->max_range.fval = val2;
+				ret = 0;
+			}
 		} else {
 			st->cfg->max_range.ival = val;
 			st->cfg->max_range.fval = val2;
@@ -1230,6 +1268,11 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 		if (st->fn_dev->resolution) {
 			ret = st->fn_dev->resolution(st->client,
 						     st->cfg->snsr_id, val);
+			if (ret > 0) {
+				st->cfg->resolution.ival = val;
+				st->cfg->resolution.fval = val2;
+				ret = 0;
+			}
 		} else {
 			st->cfg->resolution.ival = val;
 			st->cfg->resolution.fval = val2;
@@ -1238,15 +1281,15 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 
 	case IIO_CHAN_INFO_RAW:
 		/* writing to raw is a debug feature allowing a sticky data
-		   value to be pushed up and the same value pushed until the
-		   device is turned off.
+		 * value to be pushed up and the same value pushed until the
+		 * device is turned off.
 		 */
 		msg = "IIO_CHAN_INFO_RAW";
-		ret = nvs_buf_i(indio_dev, chan->scan_index);
+		ret = nvs_buf_i(indio_dev, ch);
 		if (ret >= 0) {
 			memcpy(&st->buf[ret], &val,
 			       chan->scan_type.storagebits / 8);
-			st->dbg_data_lock |= (1 << chan->scan_index);
+			st->dbg_data_lock |= (1 << ch);
 			st->ts++;
 			ret = nvs_buf_push(indio_dev, st->buf, st->ts);
 			if (ret > 0)
@@ -1262,13 +1305,13 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 	mutex_unlock(&indio_dev->mlock);
 	if (*st->fn_dev->sts & NVS_STS_SPEW_MSG) {
 		if (ret)
-			dev_err(st->dev, "%s %s c=%d %d:%d->%d:%d ERR=%d\n",
-				__func__, msg, chan->scan_index,
-				old, old2, val, val2, ret);
+			dev_err(st->dev, "%s %s %s c=%d %d:%d->%d:%d ERR=%d\n",
+				__func__, st->cfg->name, msg,
+				ch, old, old2, val, val2, ret);
 		else
-			dev_info(st->dev, "%s %s chan=%d %d:%d->%d:%d\n",
-				 __func__, msg, chan->scan_index,
-				 old, old2, val, val2);
+			dev_info(st->dev, "%s %s %s chan=%d %d:%d->%d:%d\n",
+				 __func__, st->cfg->name, msg,
+				 ch, old, old2, val, val2);
 	}
 	return ret;
 }
@@ -1549,7 +1592,12 @@ static int nvs_remove(void *handle)
 		devm_kfree(st->dev, st->ch);
 	if (st->buf)
 		devm_kfree(st->dev, st->buf);
-	dev_info(st->dev, "%s\n", __func__);
+	if (st->cfg->name)
+		dev_info(st->dev, "%s %s snsr_id=%d\n",
+			 __func__, st->cfg->name, st->cfg->snsr_id);
+	else
+		dev_info(st->dev, "%s snsr_id=%d\n",
+			 __func__, st->cfg->snsr_id);
 	iio_device_free(indio_dev);
 	return 0;
 }
@@ -1651,11 +1699,16 @@ static int nvs_probe(void **handle, void *dev_client, struct device *dev,
 	}
 
 	*handle = indio_dev;
-	dev_info(st->dev, "%s done\n", __func__);
+	dev_info(st->dev, "%s %s done\n", __func__, st->cfg->name);
 	return 0;
 
 nvs_probe_err:
-	dev_err(st->dev, "%s ERR %d\n", __func__, ret);
+	if (st->cfg->name)
+		dev_err(st->dev, "%s %s snsr_id=%d EXIT ERR=%d\n",
+			__func__, st->cfg->name, st->cfg->snsr_id, ret);
+	else
+		dev_err(st->dev, "%s snsr_id=%d EXIT ERR=%d\n",
+			__func__, st->cfg->snsr_id, ret);
 	nvs_remove(indio_dev);
 	return ret;
 }

@@ -147,15 +147,15 @@ static int tegra210_i2s_sw_reset(struct tegra210_i2s *i2s,
 	regmap_read(i2s->regmap, TEGRA210_I2S_CTRL, &ctrl);
 
 	if (direction == SNDRV_PCM_STREAM_PLAYBACK) {
-		sw_reset_reg = TEGRA210_I2S_AXBAR_TX_SOFT_RESET;
-		sw_reset_mask = TEGRA210_I2S_AXBAR_TX_SOFT_RESET_MASK;
-		sw_reset_en = TEGRA210_I2S_AXBAR_TX_SOFT_RESET_EN;
-		sw_reset_default = TEGRA210_I2S_AXBAR_TX_SOFT_RESET_DEFAULT;
-	} else {
 		sw_reset_reg = TEGRA210_I2S_AXBAR_RX_SOFT_RESET;
 		sw_reset_mask = TEGRA210_I2S_AXBAR_RX_SOFT_RESET_MASK;
 		sw_reset_en = TEGRA210_I2S_AXBAR_RX_SOFT_RESET_EN;
 		sw_reset_default = TEGRA210_I2S_AXBAR_RX_SOFT_RESET_DEFAULT;
+	} else {
+		sw_reset_reg = TEGRA210_I2S_AXBAR_TX_SOFT_RESET;
+		sw_reset_mask = TEGRA210_I2S_AXBAR_TX_SOFT_RESET_MASK;
+		sw_reset_en = TEGRA210_I2S_AXBAR_TX_SOFT_RESET_EN;
+		sw_reset_default = TEGRA210_I2S_AXBAR_TX_SOFT_RESET_DEFAULT;
 	}
 
 	regmap_update_bits(i2s->regmap, sw_reset_reg, sw_reset_mask, sw_reset_en);
@@ -759,6 +759,7 @@ static bool tegra210_i2s_wr_reg(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
 	case TEGRA210_I2S_AXBAR_RX_ENABLE:
+	case TEGRA210_I2S_AXBAR_RX_SOFT_RESET:
 	case TEGRA210_I2S_AXBAR_RX_INT_MASK:
 	case TEGRA210_I2S_AXBAR_RX_INT_SET:
 	case TEGRA210_I2S_AXBAR_RX_INT_CLEAR:
@@ -767,6 +768,7 @@ static bool tegra210_i2s_wr_reg(struct device *dev, unsigned int reg)
 	case TEGRA210_I2S_AXBAR_RX_SLOT_CTRL:
 	case TEGRA210_I2S_AXBAR_RX_CLK_TRIM:
 	case TEGRA210_I2S_AXBAR_TX_ENABLE:
+	case TEGRA210_I2S_AXBAR_TX_SOFT_RESET:
 	case TEGRA210_I2S_AXBAR_TX_INT_MASK:
 	case TEGRA210_I2S_AXBAR_TX_INT_SET:
 	case TEGRA210_I2S_AXBAR_TX_INT_CLEAR:

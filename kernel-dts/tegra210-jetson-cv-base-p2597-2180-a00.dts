@@ -229,6 +229,17 @@
 				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
 			};
 		};
+
+		i2c@546c0000 {
+			status = "okay";
+			bus-pullup-supply = <&max77620_sd3>;
+			avdd_dsi_csi-supply = <&max77620_sd3>;
+		};
+
+		vi {
+			status = "okay";
+			avdd_dsi_csi_supply = <&max77620_sd3>;
+		};
 	};
 
 	serial@70006040 {
@@ -538,11 +549,6 @@
 			#interrupt-cells = <2>;
 			interrupt-controller;
 		};
-	};
-
-	i2c@546c0000 {
-		bus-pullup-supply = <&max77620_sd3>;
-		avdd_dsi_csi-supply = <&max77620_sd3>;
 	};
 
 	sysedp {

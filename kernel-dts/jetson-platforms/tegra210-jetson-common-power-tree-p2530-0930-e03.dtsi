@@ -199,10 +199,6 @@
 		};
 	};
 
-	i2c@546c0000 {
-		bus-pullup-supply = <&battery_reg>;
-	};
-
 	efuse@7000f800 {
 		vpp_fuse-supply = <&max77620_sd3>;
 	};
@@ -226,6 +222,10 @@
 
 		vi {
 			avdd_dsi_csi-supply = <&max77620_gpio7>;
+		};
+
+		i2c@546c0000 {
+			bus-pullup-supply = <&battery_reg>;
 		};
 	};
 

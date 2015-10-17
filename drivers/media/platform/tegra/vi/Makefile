@@ -13,9 +13,7 @@ obj-y += tegra_vi.o
 obj-y += camera_common.o
 endif
 
-nvhost-vi-objs = \
-		vi.o \
-
+nvhost-vi-objs += vi.o vi_common.o core.o channel.o graph.o
 obj-$(CONFIG_VIDEO_TEGRA_VI) += nvhost-vi.o
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
@@ -25,4 +23,7 @@ obj-$(CONFIG_VIDEO_TEGRA_VI) += \
 	../../../../../../kernel-t18x/drivers/video/tegra/host/vi/vi4.o
 obj-$(CONFIG_TEGRA_VI_NOTIFY) += \
 	../../../../../../kernel-t18x/drivers/video/tegra/host/vi/host_vi_notify.o
+else
+nvhost-csi-objs += csi.o
+obj-$(CONFIG_VIDEO_TEGRA_VI) += nvhost-csi.o
 endif

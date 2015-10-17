@@ -22,8 +22,7 @@
 #include <linux/nvhost_vi_ioctl.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
-
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 
 #include <mach/clk.h>
 #include <linux/platform/tegra/latency_allowance.h>

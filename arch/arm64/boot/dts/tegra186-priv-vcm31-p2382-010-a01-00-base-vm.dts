@@ -32,13 +32,6 @@
 		nvidia,tegra-hypervisor-mode;
 	};
 
-	reserved-memory {
-		generic_carveout {
-			status = "okay";
-			size = <0 0x40000000>;
-		};
-	};
-
 	bpmp {
 		compatible = "nvidia,tegra186-bpmp-hv";
 		ivc_queue = <&tegra_hv 0 14>;

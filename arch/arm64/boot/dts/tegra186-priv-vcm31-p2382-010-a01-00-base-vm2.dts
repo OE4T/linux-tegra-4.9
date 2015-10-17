@@ -32,11 +32,6 @@
 	};
 
 	reserved-memory {
-		generic_carveout {
-			status = "okay";
-			size = <0 0x40000000>;
-		};
-
 		ivm0: carveout0 {
 			status = "okay";
 			compatible = "nvidia,ivm_carveout";
@@ -49,16 +44,12 @@
 
 	tegra-carveouts {
 		status = "okay";
-		memory-region = <&generic_reserved &ivm0>;
+		memory-region = <&ivm0>;
 	};
 
 	mc_sid@2c00000 {
 		nvidia,by-pass-smmu-streamid = <0x7d>;
 		status = "okay";
-	};
-
-	iommu@12000000 {
-		status = "disabled";
 	};
 
 	mc {

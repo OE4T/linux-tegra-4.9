@@ -33,11 +33,6 @@
 	};
 
 	reserved-memory {
-		generic_carveout {
-			status = "okay";
-			size = <0 0x40000000>;
-		};
-
 		ivm0: carveout0 {
 			status = "okay";
 			compatible = "nvidia,ivm_carveout";
@@ -50,7 +45,7 @@
 
 	tegra-carveouts {
 		status = "okay";
-		memory-region = <&generic_reserved &ivm0>;
+		memory-region = <&ivm0>;
 	};
 
 	bpmp {

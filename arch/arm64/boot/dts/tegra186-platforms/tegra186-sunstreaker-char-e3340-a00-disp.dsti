@@ -48,13 +48,13 @@
 		sor{
 			status = "okay";
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
-//			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(?, ?) 0>;
+			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 0) GPIO_ACTIVE_HIGH>;
 			hdmi-display {
 				status = "okay";
 				compatible = "hdmi,display";
 				disp-default-out {
 					nvidia,out-type = <TEGRA_DC_OUT_HDMI>;
-					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_LOW>;
+					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
 					nvidia,out-parent-clk = "plld2";
 					nvidia,out-align = <TEGRA_DC_ALIGN_MSB>;
 					nvidia,out-order = <TEGRA_DC_ORDER_RED_BLUE>;
@@ -69,14 +69,14 @@
 		sor1 {
 			status = "okay";
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
-			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 1) 1>;
+			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 1) GPIO_ACTIVE_HIGH>;
 			hdmi-display {
 				status = "okay";
 				compatible = "hdmi,display";
 				disp-default-out {
 					nvidia,out-type = <TEGRA_DC_OUT_HDMI>;
-					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_LOW>;
-					nvidia,out-parent-clk = "plld2";
+					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
+					nvidia,out-parent-clk = "plld3";
 					nvidia,out-align = <TEGRA_DC_ALIGN_MSB>;
 					nvidia,out-order = <TEGRA_DC_ORDER_RED_BLUE>;
 				};

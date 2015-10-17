@@ -237,6 +237,9 @@
 			status = "disabled";
 		};
 
+		i2c@546c0000 {
+			status = "okay";
+		};
 	};
 
 	gpu {
@@ -431,10 +434,6 @@
 	};
 
 	i2c@7000d100 {
-		status = "okay";
-	};
-
-	i2c@546c0000 {
 		status = "okay";
 	};
 

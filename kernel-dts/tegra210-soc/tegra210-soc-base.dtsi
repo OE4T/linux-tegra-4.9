@@ -19,6 +19,7 @@
 #include <dt-bindings/gpio/tegra-gpio.h>
 #include <dt-bindings/padctrl/tegra210-pads.h>
 #include <dt-bindings/ata/ahci-tegra.h>
+#include <dt-bindings/clk/tegra210-clk.h>
 #include <dt-bindings/soc/nvidia,tegra210-powergate.h>
 #include <dt-bindings/interrupt-controller/tegra-t21x-agic.h>
 #include "tegra210-platforms/tegra210-soc-power-domain.dtsi"
@@ -184,6 +185,7 @@
 		compatible = "nvidia,tegra210-car";
 		reg = <0x0 0x60006000 0x0 0x1000>;
 		#clock-cells = <1>;
+		#reset-cells = <1>;
 		status = "disabled";
 	};
 
@@ -630,12 +632,140 @@
 		nvidia,nb-pts = <192>;
 
 		vi {
-			compatible = "nvidia,tegra210-vi";
+			compatible = "nvidia,tegra210-vi", "simple-bus";
 			power-domains = <&ve_pd>;
-			reg = <0x0 0x54080000 0x0 0x00040000>;
-			interrupts = <0 69 0x04>;
+			reg = <0x0 0x54080000 0x0 0x40000>;
+			interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
 			iommus = <&smmu TEGRA_SWGROUP_VI>;
 			status = "disabled";
+			clocks = <&tegra_car TEGRA210_CLK_ID_VI>,
+				 <&tegra_car TEGRA210_CLK_ID_CSI>,
+				 <&tegra_car TEGRA210_CLK_ID_PLL_C>;
+			clock-names = "vi", "csi", "parent";
+			resets = <&tegra_car 20>;
+			reset-names = "vi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ports {
+				port@0 {
+					reg = <0>;
+
+					vi_in0: endpoint {
+						remote-endpoint = <&csi_out0>;
+					};
+				};
+				port@1 {
+					reg = <1>;
+
+					vi_in1: endpoint {
+						remote-endpoint = <&csi_out1>;
+					};
+				};
+				port@2 {
+					reg = <2>;
+
+					vi_in2: endpoint {
+						remote-endpoint = <&csi_out2>;
+					};
+				};
+				port@3 {
+					reg = <3>;
+
+					vi_in3: endpoint {
+						remote-endpoint = <&csi_out3>;
+					};
+				};
+				port@4 {
+					reg = <4>;
+
+					vi_in4: endpoint {
+						remote-endpoint = <&csi_out4>;
+					};
+				};
+				port@5 {
+					reg = <5>;
+
+					vi_in5: endpoint {
+						remote-endpoint = <&csi_out5>;
+					};
+				};
+			};
+
+			csia@54080838 {
+				compatible = "nvidia,tegra210-csi";
+				reg = <0x0 0x54080838 0x0 0x700>;
+				clocks = <&tegra_car TEGRA210_CLK_ID_CILAB>;
+				clock-names = "cil";
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@1 {
+						reg = <1>;
+						csi_out0: endpoint@1 {
+							remote-endpoint = <&vi_in0>;
+						};
+					};
+					port@3 {
+						reg = <3>;
+						csi_out1: endpoint@3 {
+							remote-endpoint = <&vi_in1>;
+						};
+					};
+				};
+			};
+
+			csic@54081038 {
+				compatible = "nvidia,tegra210-csi";
+				reg = <0x0 0x54081038 0x0 0x700>;
+				clocks = <&tegra_car TEGRA210_CLK_ID_CILCD>;
+				clock-names = "cil";
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@1 {
+						reg = <1>;
+						csi_out2: endpoint@1 {
+							remote-endpoint = <&vi_in2>;
+						};
+					};
+					port@3 {
+						reg = <3>;
+						csi_out3: endpoint@3 {
+							remote-endpoint = <&vi_in3>;
+						};
+					};
+				};
+			};
+
+			csie@54081838 {
+				compatible = "nvidia,tegra210-csi";
+				reg = <0x0 0x54081838 0x0 0x700>;
+				clocks = <&tegra_car TEGRA210_CLK_ID_CILE>;
+				clock-names = "cil";
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@1 {
+						reg = <1>;
+						csi_out4: endpoint@1 {
+							remote-endpoint = <&vi_in4>;
+						};
+					};
+					port@3 {
+						reg = <3>;
+						csi_out5: endpoint@3 {
+							remote-endpoint = <&vi_in5>;
+						};
+					};
+				};
+			};
 		};
 
 		vi-bypass {
@@ -771,7 +901,18 @@
 			interrupts = <0 11 0x4>; /* INT_DPAUX_1 */
 			status = "disabled";
 		};
-
+		i2c7: i2c@546c0000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "nvidia,tegra210-vii2c";
+			reg = <0x0 0x546C0000 0x0 0x00034000>;
+			iommus = <&smmu TEGRA_SWGROUP_VII2C>;
+			interrupts = <0 17 0x04>;
+			scl-gpio = <&gpio TEGRA_GPIO(S, 2) 0>;
+			sda-gpio = <&gpio TEGRA_GPIO(S, 3) 0>;
+			status = "disabled";
+			clock-frequency = <400000>;
+		};
 	};
 
 	gpu {
@@ -1296,19 +1437,6 @@
 		reg = <0x0 0x7000d100 0x0 0x100>;
 		interrupts = <0 63 0x04>;
 		iommus = <&smmu TEGRA_SWGROUP_PPCS>;
-		status = "disabled";
-		clock-frequency = <400000>;
-	};
-
-	i2c7: i2c@546c0000 {
-		#address-cells = <1>;
-		#size-cells = <0>;
-		compatible = "nvidia,tegra210-vii2c";
-		reg = <0x0 0x546C0000 0x0 0x00034000>;
-		iommus = <&smmu TEGRA_SWGROUP_VII2C>;
-		interrupts = <0 17 0x04>;
-		scl-gpio = <&gpio TEGRA_GPIO(S, 2) 0>;
-		sda-gpio = <&gpio TEGRA_GPIO(S, 3) 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
 	};

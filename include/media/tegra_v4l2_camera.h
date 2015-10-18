@@ -30,8 +30,6 @@ enum tegra_camera_port {
 	TEGRA_CAMERA_PORT_VIP,
 };
 
-#define TEGRA_CAMERA_NUM_CSI_PORT	6
-
 struct tegra_camera_platform_data {
 	int			(*enable_camera)(struct platform_device *pdev);
 	void			(*disable_camera)(struct platform_device *pdev);

@@ -15,7 +15,7 @@
 
 / {
 	sound {
-		nvidia,hp-det-gpios = <&gpio TEGRA_GPIO(J , 5) GPIO_ACTIVE_HIGH>;
+		nvidia,hp-det-gpios = <&tegra_gpio TEGRA_GPIO(J , 5) GPIO_ACTIVE_HIGH>;
 		nvidia,num-codec-link = <4>;
 
 		nvidia,audio-routing =

@@ -18,8 +18,8 @@
 		compatible = "nvidia,tegra-gps-wake";
 		id = <0>;
 		gps-en = <&gpio_i2c_1_20 8 0>;
-		gps-host-wake = <&gpio TEGRA_GPIO(Q, 5) 0>;
-		interrupt-parent = <&gpio>;
+		gps-host-wake = <&tegra_gpio TEGRA_GPIO(Q, 5) 0>;
+		interrupt-parent = <&tegra_gpio>;
 		interrupts = <TEGRA_GPIO(Q, 5) 0x01>;
 		status = "disabled";
 	};

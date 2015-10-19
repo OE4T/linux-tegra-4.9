@@ -538,13 +538,14 @@ static void tegra_se_write_key_table(u8 *pdata, u32 data_len,
 		do {
 			pkt = SE_KEYTABLE_SLOT(slot_num) |
 					SE_KEYTABLE_QUAD(quad);
-			val = SE_KEYTABLE_PKT(pkt);
 
-			se_writel(se_dev, val, SE_KEYTABLE_REG_OFFSET);
-
-			for (i = 0; i < data_size; i += 4, data_len -= 4)
+			for (i = 0; i < data_size; i += 4, data_len -= 4) {
+				val = SE_KEYTABLE_PKT(pkt) |
+					SE_KEYTABLE_IV_WORD(i/4);
+				se_writel(se_dev, val, SE_KEYTABLE_REG_OFFSET);
 				se_writel(se_dev, *pdata_buf++,
-						SE_KEYTABLE_DATA_REG_OFFSET);
+					SE_KEYTABLE_DATA_REG_OFFSET);
+			}
 
 			data_size = data_len;
 			quad = QUAD_KEYS_256;

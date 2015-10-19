@@ -167,8 +167,16 @@
 		status = "okay";
 	};
 
+	i2c@31c0000 { /* Tegra I2C7 */
+		status = "disabled";
+	};
+
 	i2c@c250000 { /* Tegra I2C8 - VCM I2CC */
 		status = "okay";
+	};
+
+	i2c@31e0000 { /* Tegra I2C9 */
+		status = "disabled";
 	};
 
 	pmc@c370000 {

@@ -97,16 +97,16 @@
 	};
 
 	adma@702e2000  {
-		interrupts = <0 24 0x04
-			      0 25 0x04
-			      0 26 0x04
-			      0 27 0x04
-			      0 28 0x04
-			      0 29 0x04
-			      0 30 0x04
-			      0 31 0x04
-			      0 32 0x04
-			      0 33 0x04>;
+		interrupts =  <GIC_SPI INT_ADMA_EOT0 IRQ_TYPE_LEVEL_HIGH>,
+			      <GIC_SPI INT_ADMA_EOT1 IRQ_TYPE_LEVEL_HIGH>,
+			      <GIC_SPI INT_ADMA_EOT2 IRQ_TYPE_LEVEL_HIGH>,
+			      <GIC_SPI INT_ADMA_EOT3 IRQ_TYPE_LEVEL_HIGH>,
+			      <GIC_SPI INT_ADMA_EOT4 IRQ_TYPE_LEVEL_HIGH>,
+			      <GIC_SPI INT_ADMA_EOT5 IRQ_TYPE_LEVEL_HIGH>,
+			      <GIC_SPI INT_ADMA_EOT6 IRQ_TYPE_LEVEL_HIGH>,
+			      <GIC_SPI INT_ADMA_EOT7 IRQ_TYPE_LEVEL_HIGH>,
+			      <GIC_SPI INT_ADMA_EOT8 IRQ_TYPE_LEVEL_HIGH>,
+			      <GIC_SPI INT_ADMA_EOT9 IRQ_TYPE_LEVEL_HIGH>;
 		dma-channels = <10>;
 		status = "okay";
 	};

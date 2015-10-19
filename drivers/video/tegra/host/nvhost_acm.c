@@ -770,10 +770,11 @@ int nvhost_module_init(struct platform_device *dev)
 	for (i = 0; i < pdata->num_clks; ++i)
 		clk_disable_unprepare(pdata->clk[i]);
 
-	/* disable railgating if pm runtime is not available */
+	/* disable railgating if pm runtime is not available
+	 * and for linsim platform */
 	pdata->can_powergate = IS_ENABLED(CONFIG_PM_RUNTIME) &&
 		IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS) &&
-		pdata->can_powergate;
+		pdata->can_powergate && !tegra_platform_is_linsim();
 
 
 	gpd = dev_to_genpd(&dev->dev);

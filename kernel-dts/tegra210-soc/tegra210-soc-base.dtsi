@@ -1142,6 +1142,7 @@
 	adsp {
 	     compatible = "nvidia,tegra210-adsp";
 	     power-domains = <&adsp_pd>;
+	     interrupt-parent = <&tegra_agic>;
 	     reg = <0x0 0x702ef000 0x0 0x1000>, /* AMC */
 		   <0x0 0x702ec000 0x0 0x2000>, /* AMISC */
 		   <0x0 0x702ee000 0x0 0x1000>, /* ABRIDGE */
@@ -1152,6 +1153,12 @@
 	     nvidia,adsp_mem = <0x80300000 0x01000000>, /* ADSP OS */
 			       <0x80B00000 0x00800000>, /* ADSP APP */
 			       <0x00400000 0x00010000>; /* ARAM ALIAS 0 */
+	     interrupts = <GIC_SPI INT_AMISC_MBOX_EMPTY1 IRQ_TYPE_LEVEL_HIGH>, /* MBOX SEND */
+			     <GIC_SPI INT_AMISC_MBOX_FULL0 IRQ_TYPE_LEVEL_HIGH>, /* MBOX RECV */
+			     <GIC_SPI INT_ADSP_WDT IRQ_TYPE_LEVEL_HIGH>, /* Watchdog */
+			     <GIC_SPI INT_WFI IRQ_TYPE_LEVEL_HIGH>, /* WFI */
+			     <GIC_SPI INT_AMC_ERR IRQ_TYPE_LEVEL_HIGH>, /* AMC ERR IRQ */
+			     <GIC_SPI INT_ADSP_ACTMON IRQ_TYPE_LEVEL_HIGH>; /* ADSP ACTMON IRQ */
 	     nvidia,adsp_unit_fpga_reset = <0x0 0x00000040>;
 	     status = "disabled";
 	};

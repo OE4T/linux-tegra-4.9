@@ -19,7 +19,7 @@
 
 / {
 	/* Need to enable wifi_en pin during boot for PCIe enumeration */
-	gpio: gpio@2200000 {
+	gpio@2200000 {
 		gpio-init-1 = <&wlan_default>;
 
 		wlan_default: wlan-default {
@@ -35,18 +35,18 @@
 	bluedroid_pm {
 		compatible = "nvidia,tegra-bluedroid_pm";
 		id = <0>;
-		bluedroid_pm,reset-gpio = <&gpio TEGRA_GPIO(L, 7) 0>;
-		bluedroid_pm,host-wake-gpio = <&gpio TEGRA_GPIO(FF, 4) 0>;
-		bluedroid_pm,ext-wake-gpio = <&gpio TEGRA_GPIO(Y, 4) 0>;
-		interrupt-parent = <&gpio>;
+		bluedroid_pm,reset-gpio = <&tegra_gpio TEGRA_GPIO(L, 7) 0>;
+		bluedroid_pm,host-wake-gpio = <&tegra_gpio TEGRA_GPIO(FF, 4) 0>;
+		bluedroid_pm,ext-wake-gpio = <&tegra_gpio TEGRA_GPIO(Y, 4) 0>;
+		interrupt-parent = <&tegra_gpio>;
 		interrupts = <TEGRA_GPIO(FF, 4) 0x01>;
 	};
 
 	bcmdhd_wlan {
 		compatible = "android,bcmdhd_wlan";
-		interrupt-parent = <&gpio>;
+		interrupt-parent = <&tegra_gpio>;
 		interrupts = <TEGRA_GPIO(FF, 3) 0x14>;
-		wlan-pwr-gpio = <&gpio TEGRA_GPIO(N, 0) 0>;
+		wlan-pwr-gpio = <&tegra_gpio TEGRA_GPIO(N, 0) 0>;
 		status = "okay";
 	};
 };

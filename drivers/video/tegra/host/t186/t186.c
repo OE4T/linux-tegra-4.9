@@ -180,7 +180,6 @@ struct nvhost_device_data t18_isp_info = {
 	.serialize		= 1,
 	.push_work_done		= 1,
 	.vm_regs		= {{0x50, true} },
-	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_ISPA,
 };
 #endif
 
@@ -222,7 +221,6 @@ struct nvhost_device_data t18_vi_info = {
 				   {0x28000 * 4, true},
 				   {0x2c000 * 4, true},
 				   {0x30000 * 4, true} },
-	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_VI,
 };
 #endif
 
@@ -269,7 +267,7 @@ struct nvhost_device_data t18_nvdec_info = {
 		{"kfuse", 0, 0},
 		{"emc", HOST_NVDEC_EMC_FLOOR,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
-		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO}
+		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
 	},
 	.engine_cg_regs		= t18x_nvdec_gating_registers,
 	.engine_can_cg		= true,

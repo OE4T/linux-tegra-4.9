@@ -20,6 +20,7 @@
 #include <dt-bindings/padctrl/tegra210-pads.h>
 #include <dt-bindings/ata/ahci-tegra.h>
 #include <dt-bindings/soc/nvidia,tegra210-powergate.h>
+#include <dt-bindings/interrupt-controller/tegra-t21x-agic.h>
 #include "tegra210-platforms/tegra210-soc-power-domain.dtsi"
 
 / {
@@ -340,9 +341,10 @@
 		status = "disabled";
 	};
 
-	agic-controller {
+	tegra_agic: agic-controller {
 		compatible = "nvidia,tegra210-agic";
 		interrupt-controller;
+		#interrupt-cells = <3>;
 		no-gic-extension;
 		not-per-cpu;
 		reg = <0x0 0x702f9000 0x0 0x2000>,

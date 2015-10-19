@@ -142,15 +142,15 @@
                         reg = <0x68>;
                         interrupt-parent = <&tegra_gpio>;
                         interrupts = <TEGRA_GPIO(AA, 2) 0x01>;
-                        accelerometer_matrix = [00 ff 00 01 00 00 00 00 01];
-                        gyroscope_matrix = [00 ff 00 01 00 00 00 00 01];
+                        accelerometer_matrix	= [01 00 00 00 01 00 00 00 01];
+                        gyroscope_matrix	= [01 00 00 00 01 00 00 00 01];
 			status = "okay";
                 };
 
                 e2614_ak8963: ak8963@0d {
                         compatible = "ak,ak89xx";
                         reg = <0x0d>;
-                        magnetic_field_matrix = [00 ff 00 01 00 00 00 00 01];
+                        magnetic_field_matrix	= [01 00 00 00 01 00 00 00 01];
 			status = "okay";
                 };
 

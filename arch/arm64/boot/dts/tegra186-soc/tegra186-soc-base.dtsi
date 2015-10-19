@@ -24,6 +24,7 @@
 #include "../../../../include/dt-bindings/clock/tegra186-clock.h"
 #include "../../../../include/dt-bindings/reset/tegra186-reset.h"
 #include "../../../../include/dt-bindings/interrupt/tegra186-irq.h"
+#include "../../../../include/dt-bindings/interrupt-controller/tegra-t18x-agic.h"
 #include "../../../../include/dt-bindings/padctrl/tegra186-pads.h"
 #include "tegra186-soc/tegra186-soc-sdhci.dtsi"
 #include "tegra186-soc/tegra186-soc-sata.dtsi"
@@ -1754,9 +1755,10 @@
 		status = "okay";
 	};
 
-	agic-controller@2a41000 {
+	tegra_agic: agic-controller@2a41000 {
 		compatible = "nvidia,tegra18x-agic";
 		interrupt-controller;
+		#interrupt-cells = <3>;
 		no-gic-extension;
 		not-per-cpu;
 		reg = <0x0 0x02a41000 0x0 0x1000>,

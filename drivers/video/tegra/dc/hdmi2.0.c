@@ -1829,8 +1829,10 @@ static inline u32 tegra_hdmi_get_bpp(struct tegra_hdmi *hdmi)
 
 	if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30))
 		return 30;
-
-	return 24;
+	else if (!(yuv_flag & YUV_MASK) && (yuv_flag == FB_VMODE_Y36))
+		return 36;
+	else
+		return 24;
 }
 
 static u32 tegra_hdmi_gcp_color_depth(struct tegra_hdmi *hdmi)
@@ -1840,7 +1842,7 @@ static u32 tegra_hdmi_gcp_color_depth(struct tegra_hdmi *hdmi)
 	switch (tegra_hdmi_get_bpp(hdmi)) {
 	case 0: /* fall through */
 	case 24:
-		gcp_cd = TEGRA_HDMI_BPP_UNKNOWN;
+		gcp_cd = TEGRA_HDMI_BPP_24;
 		break;
 	case 30:
 		gcp_cd = TEGRA_HDMI_BPP_30;
@@ -1867,11 +1869,10 @@ static u32 tegra_hdmi_gcp_packing_phase(struct tegra_hdmi *hdmi)
 	if (!tegra_hdmi_gcp_color_depth(hdmi))
 		return 0;
 
-	/* 10P4 for yuv420 10bpc */
-	if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30))
+	if (!(yuv_flag & YUV_MASK) && (yuv_flag == FB_VMODE_Y36))
+		return 2;
+	else
 		return 0;
-
-	 return 0;
 }
 
 static bool tegra_hdmi_gcp_default_phase_en(struct tegra_hdmi *hdmi)
@@ -1881,10 +1882,11 @@ static bool tegra_hdmi_gcp_default_phase_en(struct tegra_hdmi *hdmi)
 	if (!tegra_hdmi_gcp_color_depth(hdmi))
 		return false;
 
-	if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30))
+	if ((yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30)) ||
+			(!(yuv_flag & YUV_MASK) && (yuv_flag == FB_VMODE_Y36)))
 		return true;
-
-	return false;
+	else
+		return false;
 }
 
 /* general control packet */

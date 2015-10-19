@@ -53,6 +53,15 @@
 		ivc_queue = <&tegra_hv 0 14>;
 	};
 
+	bpmp_i2c {
+                spmic: spmic@3c {
+			/delete-node/ backup-battery;
+			regulators {
+				/delete-node/ ldo5;
+			};
+		};
+	};
+
 	aon@c160000 {
 		status = "disabled";
 	};
@@ -67,7 +76,15 @@
 	};
 
 	sdhci@3440000 {
+		/delete-property/ vddio_sdmmc-supply;
+		/delete-property/ vddio_sd_slot-supply;
 		status = "disabled";
+	};
+
+	fixed-regulators {
+		regulator@5 {
+			status = "disabled";
+		};
 	};
 
 	i2c@3160000 {

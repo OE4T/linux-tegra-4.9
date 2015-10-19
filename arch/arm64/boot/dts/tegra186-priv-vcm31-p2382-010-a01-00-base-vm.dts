@@ -37,6 +37,12 @@
 		ivc_queue = <&tegra_hv 0 14>;
 	};
 
+	bpmp_i2c {
+                spmic: spmic@3c {
+			/delete-node/ backup-battery;
+		};
+	};
+
 	aon@c160000 {
 		status = "disabled";
 	};

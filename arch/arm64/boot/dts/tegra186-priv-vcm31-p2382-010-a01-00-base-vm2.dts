@@ -65,7 +65,15 @@
 	};
 
 	sdhci@3400000 {
+		/delete-property/ vddio_sdmmc-supply;
+		/delete-property/ vddio_sd_slot-supply;
 		status = "disabled";
+	};
+
+	fixed-regulators {
+		regulator@4 {
+			status = "disabled";
+		};
 	};
 
 	xudc@3550000 {
@@ -278,6 +286,15 @@
 
 		bpmpthermal {
 			status = "disabled";
+		};
+	};
+
+	bpmp_i2c {
+                spmic: spmic@3c {
+			/delete-node/ backup-battery;
+			regulators {
+				/delete-node/ ldo3;
+			};
 		};
 	};
 

@@ -1611,6 +1611,7 @@
 		nvidia,has-hostpc;
 		nvidia,power-off-on-suspend;
 		nvidia,remote-wakeup-supported;
+		nvidia,skip_resume;
 		status = "disabled";
 	};
 

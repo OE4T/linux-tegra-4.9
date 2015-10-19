@@ -84,8 +84,9 @@ static inline int tegra_dc_is_clk_enabled(struct clk *clk)
 		return 1;
 	else
 		return __clk_is_enabled(clk);
-#endif
+#else
 	return tegra_is_clk_enabled(clk);
+#endif
 }
 
 static inline unsigned long tegra_dc_is_accessible(struct tegra_dc *dc)

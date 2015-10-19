@@ -23,7 +23,6 @@
 #include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
-#include <linux/irqchip/tegra-agic.h>
 #include <linux/regmap.h>
 #include <linux/slab.h>
 #include <sound/core.h>

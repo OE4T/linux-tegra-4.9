@@ -245,9 +245,9 @@
 
 		nvidia,dai-link-1 {
 			link-name = "spdif-dit-0";
-			cpu-dai = <&tegra_i2s2>;
+			cpu-dai = <&tegra_i2s6>;
 			codec-dai = <&spdif_dit0>;
-			cpu-dai-name = "I2S2";
+			cpu-dai-name = "I2S6";
 			codec-dai-name = "dit-hifi";
 			tx-mask = <0xFF>;
 			rx-mask = <0xFF>;
@@ -258,7 +258,7 @@
 			frame-inversion;
 			bit-format = "s16_le";
 			bclk_ratio = <4>;
-			srate = <48000>;
+			srate = <8000>;
 			num-channel = <1>;
 			codec = "0.spdif-dit.0";
 			name-prefix = "y";

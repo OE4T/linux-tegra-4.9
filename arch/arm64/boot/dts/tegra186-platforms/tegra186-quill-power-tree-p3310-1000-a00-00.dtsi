@@ -149,4 +149,7 @@
 			vdd-supply = <&vdd_1v8_ap>;
 		};
 	};
+	pwm-fan {
+		vdd-fan-supply = <&vdd_fan>;
+	};
 };

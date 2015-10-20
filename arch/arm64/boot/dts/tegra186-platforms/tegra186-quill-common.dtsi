@@ -27,6 +27,8 @@
 #include "tegra186-dp.dtsi"
 #include "panel-s-edp-uhdtv-15-6.dtsi"
 #include "tegra186-platforms/tegra186-platform-sdmmc-pinmux-manual-common.dtsi"
+#include "tegra186-quill-pwm-fan.dtsi"
+#include "tegra186-quill-thermal-fan-est.dtsi"
 
 / {
         compatible = "nvidia,tegra186";
@@ -293,6 +295,10 @@
 	};
 
 	tegra_pwm1: pwm@3280000 {
+		status = "okay";
+	};
+
+	tegra_pwm2: pwm@3290000 {
 		status = "okay";
 	};
 

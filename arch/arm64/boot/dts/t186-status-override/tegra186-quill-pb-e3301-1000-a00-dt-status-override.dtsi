@@ -108,5 +108,9 @@
 			status = "disabled";
 		};
 	};
+
+	pwm-fan {
+		status = "disabled";
+	};
 };
 

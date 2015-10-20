@@ -1517,7 +1517,7 @@
 			pinctrl-names = "dap_active", "dap_inactive";
 			pinctrl-0 = <>;
 			pinctrl-1 = <>;
-			fsync-width = <31>;
+			fsync-width = <0>;
 			status = "disabled";
 		};
 

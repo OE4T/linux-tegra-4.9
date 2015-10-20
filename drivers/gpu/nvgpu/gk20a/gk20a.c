@@ -1290,7 +1290,7 @@ static int gk20a_pm_init(struct platform_device *dev)
 	 * turn on the rail now. */
 	if (platform->can_railgate && IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
 		_gk20a_pm_railgate(dev);
-	else
+	else if (!IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
 		_gk20a_pm_unrailgate(dev);
 
 	/* genpd will take care of runtime power management if it is enabled */

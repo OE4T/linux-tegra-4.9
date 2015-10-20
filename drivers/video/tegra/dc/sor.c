@@ -55,7 +55,7 @@
 #define APBDEV_PMC_IO_DPD2_STATUS_LVDS_OFF		(0 << 25)
 #define APBDEV_PMC_IO_DPD2_STATUS_LVDS_ON		(1 << 25)
 
-static unsigned long
+unsigned long
 tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 				u32 reg, u32 mask, u32 exp_val,
 				u32 poll_interval_us, u32 timeout_ms)
@@ -230,6 +230,9 @@ static int dbg_sor_show(struct seq_file *s, void *unused)
 #endif
 	DUMP_REG(NV_SOR_HDMI2_CTRL);
 #ifdef CONFIG_TEGRA_NVDISPLAY
+	DUMP_REG(NV_SOR_DP_MISC1_OVERRIDE);
+	DUMP_REG(NV_SOR_DP_MISC1_BIT6_0);
+
 	if (tegra_platform_is_linsim())
 		DUMP_REG(NV_SOR_FPGA_HDMI_HEAD_SEL);
 	hdmi_dump = 1; /* SOR and SOR1 have same registers */

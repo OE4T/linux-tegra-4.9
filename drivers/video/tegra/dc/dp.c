@@ -1648,6 +1648,12 @@ static int tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 		cfg->edp_cap = (dpcd_data &
 			NV_DPCD_EDP_CONFIG_CAP_DISPLAY_CONTROL_CAP_YES) ?
 			true : false;
+
+		CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_FEATURE_ENUM_LIST,
+			&dpcd_data));
+		cfg->support_vsc_ext_colorimetry = (dpcd_data &
+			NV_DPCD_FEATURE_ENUM_LIST_VSC_EXT_COLORIMETRY) ?
+			true : false;
 	}
 
 	cfg->bits_per_pixel = dp->dc->out->depth ? : 24;
@@ -2407,6 +2413,110 @@ static int tegra_edp_wait_plug_hpd(struct tegra_dc_dp_data *dp)
 	return err;
 
 #undef TEGRA_DP_HPD_PLUG_TIMEOUT_MS
+}
+
+#define VSC_PKT_ID (0x07)
+#define VSC_REV (0x05)
+#define VSC_N_VALID_DATA_BYTES (0x13)
+static void tegra_dp_vsc_col_ext_header(struct tegra_dc_dp_data *dp)
+{
+	u32 val = (VSC_N_VALID_DATA_BYTES << 24) |
+		(VSC_REV << 16) | (VSC_PKT_ID << 8);
+
+	tegra_sor_writel(dp->sor, NV_SOR_DP_GENERIC_INFOFRAME_HEADER, val);
+}
+#undef VSC_N_VALID_DATA_BYTES
+#undef VSC_REV
+#undef VSC_PKT_ID
+
+static void tegra_dp_vsc_col_ext_payload(struct tegra_dc_dp_data *dp,
+					u8 vsc_pix_encoding, u8 colorimetry,
+					u8 dynamic_range, u8 bpc,
+					u8 content_type)
+{
+	u8 db16 = 0;
+	u8 db17 = 0;
+	u8 db18 = 0;
+	struct tegra_dc_sor_data *sor = dp->sor;
+
+	db16 = (vsc_pix_encoding << 4) | colorimetry;
+	db17 = (dynamic_range << 7) | bpc;
+	db18 = content_type;
+
+	tegra_sor_writel(sor, NV_SOR_DP_GENERIC_INFOFRAME_SUBPACK(0), 0);
+	tegra_sor_writel(sor, NV_SOR_DP_GENERIC_INFOFRAME_SUBPACK(1), 0);
+	tegra_sor_writel(sor, NV_SOR_DP_GENERIC_INFOFRAME_SUBPACK(2), 0);
+	tegra_sor_writel(sor, NV_SOR_DP_GENERIC_INFOFRAME_SUBPACK(3), 0);
+	tegra_sor_writel(sor, NV_SOR_DP_GENERIC_INFOFRAME_SUBPACK(4),
+			(db18 << 16) | (db17 << 8) | db16);
+	tegra_sor_writel(sor, NV_SOR_DP_GENERIC_INFOFRAME_SUBPACK(5), 0);
+	tegra_sor_writel(sor, NV_SOR_DP_GENERIC_INFOFRAME_SUBPACK(6), 0);
+}
+
+static int tegra_dp_vsc_col_ext_enable(struct tegra_dc_dp_data *dp)
+{
+	struct tegra_dc_sor_data *sor = dp->sor;
+	unsigned long ret;
+
+	ret = tegra_dc_sor_poll_register(sor, NV_SOR_DP_MISC1_OVERRIDE,
+					NV_SOR_DP_MISC1_OVERRIDE_CNTL_TRIGGER,
+					NV_SOR_DP_MISC1_OVERRIDE_CNTL_DONE,
+					100, TEGRA_SOR_TIMEOUT_MS);
+	if (!ret) {
+		tegra_sor_writel(sor, NV_SOR_DP_MISC1_BIT6_0,
+				NV_SOR_DP_MISC1_BIT6_0_SET);
+		tegra_sor_writel(sor, NV_SOR_DP_MISC1_OVERRIDE,
+				NV_SOR_DP_MISC1_OVERRIDE_CNTL_TRIGGER |
+				NV_SOR_DP_MISC1_OVERRIDE_ENABLE);
+
+		tegra_sor_write_field(sor, NV_SOR_DP_AUDIO_CTRL,
+			NV_SOR_DP_AUDIO_CTRL_GENERIC_INFOFRAME_ENABLE |
+			NV_SOR_DP_AUDIO_CTRL_NEW_SETTINGS_TRIGGER,
+			NV_SOR_DP_AUDIO_CTRL_GENERIC_INFOFRAME_ENABLE |
+			NV_SOR_DP_AUDIO_CTRL_NEW_SETTINGS_TRIGGER);
+	}
+
+	return !ret ? 0 : -ETIMEDOUT;
+}
+
+static int tegra_dp_vsc_col_ext_disable(struct tegra_dc_dp_data *dp)
+{
+	struct tegra_dc_sor_data *sor = dp->sor;
+	unsigned long ret;
+
+	ret = tegra_dc_sor_poll_register(sor, NV_SOR_DP_MISC1_OVERRIDE,
+					NV_SOR_DP_MISC1_OVERRIDE_CNTL_TRIGGER,
+					NV_SOR_DP_MISC1_OVERRIDE_CNTL_DONE,
+					100, TEGRA_SOR_TIMEOUT_MS);
+	if (!ret) {
+		tegra_sor_writel(sor, NV_SOR_DP_MISC1_OVERRIDE,
+				NV_SOR_DP_MISC1_OVERRIDE_CNTL_TRIGGER |
+				NV_SOR_DP_MISC1_OVERRIDE_DISABLE);
+
+		tegra_sor_write_field(sor, NV_SOR_DP_AUDIO_CTRL,
+			NV_SOR_DP_AUDIO_CTRL_GENERIC_INFOFRAME_ENABLE |
+			NV_SOR_DP_AUDIO_CTRL_NEW_SETTINGS_TRIGGER,
+			NV_SOR_DP_AUDIO_CTRL_GENERIC_INFOFRAME_DISABLE |
+			NV_SOR_DP_AUDIO_CTRL_NEW_SETTINGS_TRIGGER);
+	}
+
+	return !ret ? 0 : -ETIMEDOUT;
+}
+
+__maybe_unused
+static void tegra_dp_vsc_col_ext(struct tegra_dc_dp_data *dp,
+			u8 vsc_pix_encoding, u8 colorimetry,
+			u8 dynamic_range, u8 bpc,
+			u8 content_type)
+{
+	tegra_dp_vsc_col_ext_disable(dp);
+
+	tegra_dp_vsc_col_ext_header(dp);
+	tegra_dp_vsc_col_ext_payload(dp, vsc_pix_encoding,
+				colorimetry, dynamic_range,
+				bpc, content_type);
+
+	tegra_dp_vsc_col_ext_enable(dp);
 }
 
 static void tegra_dc_dp_enable(struct tegra_dc *dc)

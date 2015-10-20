@@ -52,6 +52,7 @@ struct tegra_dc_dp_link_config {
 	u8	max_lane_count;
 	bool	downspread;
 	bool	support_enhanced_framing;
+	bool	support_vsc_ext_colorimetry;
 	u32	bits_per_pixel;
 	bool	alt_scramber_reset_cap; /* true for eDP */
 	bool	only_enhanced_framing;	/* enhanced_frame_en ignored */
@@ -179,6 +180,10 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor);
 void tegra_sor_hdmi_pad_power_down(struct tegra_dc_sor_data *sor);
 void tegra_sor_config_hdmi_clk(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_termination_cal(struct tegra_dc_sor_data *sor);
+unsigned long tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
+					u32 reg, u32 mask, u32 exp_val,
+					u32 poll_interval_us,
+					u32 timeout_ms);
 
 static inline u32 tegra_sor_readl(struct tegra_dc_sor_data *sor, u32 reg)
 {

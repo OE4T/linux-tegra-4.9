@@ -120,6 +120,28 @@ extern const struct file_operations test_settings_fops;
 };
 #endif
 
+enum {
+	VSC_RGB = 0,
+	VSC_YUV444 = 1,
+	VSC_YUV422 = 2,
+	VSC_YUV420 = 3,
+	VSC_YONLY = 4,
+	VSC_RAW = 5,
+};
+
+enum {
+	VSC_VESA_RANGE = 0,
+	VSC_CEA_RANGE = 1,
+};
+
+enum {
+	VSC_6BPC = 0,
+	VSC_8BPC = 1,
+	VSC_10BPC = 2,
+	VSC_12BPC = 3,
+	VSC_16BPC = 4,
+};
+
 int tegra_dp_dpcd_write_field(struct tegra_dc_dp_data *dp, u32 cmd,
 	u8 mask, u8 data);
 int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
@@ -264,6 +286,8 @@ bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 #define NV_DPCD_SET_POWER_VAL_RESERVED			(0x00000000)
 #define NV_DPCD_SET_POWER_VAL_D0_NORMAL			(0x00000001)
 #define NV_DPCD_SET_POWER_VAL_D3_PWRDWN			(0x00000002)
+#define NV_DPCD_FEATURE_ENUM_LIST			(0x00002210)
+#define NV_DPCD_FEATURE_ENUM_LIST_VSC_EXT_COLORIMETRY	(1 << 3)
 #define NV_DPCD_HDCP_BKSV_OFFSET			(0x00068000)
 #define NV_DPCD_HDCP_RPRIME_OFFSET			(0x00068005)
 #define NV_DPCD_HDCP_AKSV_OFFSET			(0x00068007)

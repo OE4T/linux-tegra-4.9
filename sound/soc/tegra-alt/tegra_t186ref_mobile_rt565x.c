@@ -292,7 +292,8 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
 			tegra_machine_get_bclk_ratio_t18x(&card->rtd[idx]));
 		if (err < 0) {
-			dev_err(card->dev, "Failed to set cpu dai bclk ratio\n");
+			dev_err(card->dev, "Failed to set cpu dai bclk ratio for %s\n",
+				card->rtd[idx].dai_link->name);
 			return err;
 		}
 
@@ -309,6 +310,14 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 
+		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
+			tegra_machine_get_bclk_ratio_t18x(&card->rtd[idx]));
+		if (err < 0) {
+			dev_err(card->dev, "Failed to set cpu dai bclk ratio for %s\n",
+				card->rtd[idx].dai_link->name);
+			return err;
+		}
+
 		err = tegra_t186ref_set_params(dai_params,
 						card->rtd[idx].cpu_dai,
 						&card->rtd[idx], card,
@@ -321,6 +330,14 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	if (idx != -EINVAL) {
 		dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+
+		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
+			tegra_machine_get_bclk_ratio_t18x(&card->rtd[idx]));
+		if (err < 0) {
+			dev_err(card->dev, "Failed to set cpu dai bclk ratio for %s\n",
+				card->rtd[idx].dai_link->name);
+			return err;
+		}
 
 		err = tegra_t186ref_set_params(dai_params,
 						card->rtd[idx].cpu_dai,

@@ -6,7 +6,7 @@
  *         Colin Cross <ccross@android.com>
  *         Travis Geiselbrecht <travis@palm.com>
  *
- * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -637,11 +637,15 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 {
 	struct fb_event event;
 	int i;
+	int blank = FB_BLANK_UNBLANK;
 
 	mutex_lock(&fb_info->info->lock);
 	fb_destroy_modedb(fb_info->info->monspecs.modedb);
 
 	fb_destroy_modelist(&fb_info->info->modelist);
+
+	event.info = fb_info->info;
+	event.data = &blank;
 
 	/* Notify layers above fb.c that the hardware is unavailable */
 	fb_info->info->state = FBINFO_STATE_SUSPENDED;
@@ -659,8 +663,12 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 		fb_info->info->mode = (struct fb_videomode*) NULL;
 
 #ifdef CONFIG_FRAMEBUFFER_CONSOLE
+		blank = FB_BLANK_POWERDOWN;
+		console_lock();
 		fb_add_videomode(&tegra_dc_vga_mode, &fb_info->info->modelist);
 		fb_videomode_to_var(&fb_info->info->var, &tegra_dc_vga_mode);
+		fb_notifier_call_chain(FB_EVENT_BLANK, &event);
+		console_unlock();
 #endif
 		/* For L4T - After the next hotplug, framebuffer console will
 		 * use the old variable screeninfo by default, only video-mode
@@ -693,7 +701,6 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 		}
 	}
 
-	event.info = fb_info->info;
 	/* Restoring to state running. */
 	fb_info->info->state =  FBINFO_STATE_RUNNING;
 #ifdef CONFIG_FRAMEBUFFER_CONSOLE
@@ -702,6 +709,7 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 	fb_videomode_to_var(&fb_info->info->var, &specs->modedb[0]);
 	fb_notifier_call_chain(FB_EVENT_MODE_CHANGE_ALL, &event);
 	fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
+	fb_notifier_call_chain(FB_EVENT_BLANK, &event);
 	console_unlock();
 #else
 	fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);

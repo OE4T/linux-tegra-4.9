@@ -587,6 +587,10 @@ struct tegra_xusb_utmi_port {
 	enum xusb_port_cap port_cap;
 };
 
+struct tegra_xusb_hsic_port {
+	bool pretend_connected;
+};
+
 enum uphy_pll_state {
 	UPHY_PLL_POWER_DOWN = 0,
 	UPHY_PLL_POWER_UP_PARTIAL,
@@ -654,6 +658,7 @@ struct tegra_padctl_uphy {
 	struct phy *pcie_phys[TEGRA_PCIE_PHYS];
 	struct phy *sata_phys[TEGRA_SATA_PHYS];
 	struct phy *ufs_phys[TEGRA_UFS_PHYS];
+	struct tegra_xusb_hsic_port hsic_ports[TEGRA_HSIC_PHYS];
 	struct tegra_xusb_utmi_port utmi_ports[TEGRA_UTMI_PHYS];
 	int utmi_otg_port_base_1; /* one based utmi port number */
 	struct tegra_xusb_usb3_port usb3_ports[TEGRA_USB3_PHYS];
@@ -2083,6 +2088,7 @@ enum tegra_xusb_padctl_param {
 	TEGRA_PADCTL_UPHY_USB3_PORT,
 	TEGRA_PADCTL_UPHY_PORT_CAP,
 	TEGRA_PADCTL_UPHY_PCIE_CONTROLLER_NUM,
+	TEGRA_PADCTL_UPHY_HSIC_PRETEND_CONNECTED,
 };
 
 static const struct tegra_padctl_uphy_property {
@@ -2092,6 +2098,7 @@ static const struct tegra_padctl_uphy_property {
 	{"nvidia,usb3-port", TEGRA_PADCTL_UPHY_USB3_PORT},
 	{"nvidia,port-cap", TEGRA_PADCTL_UPHY_PORT_CAP},
 	{"nvidia,pcie-controller", TEGRA_PADCTL_UPHY_PCIE_CONTROLLER_NUM},
+	{"nvidia,pretend-connected", TEGRA_PADCTL_UPHY_HSIC_PRETEND_CONNECTED},
 };
 
 #define TEGRA_XUSB_PADCTL_PACK(param, value) ((param) << 16 | (value))
@@ -2440,6 +2447,23 @@ static int tegra_padctl_uphy_pinconf_group_set(struct pinctrl_dev *pinctrl,
 			}
 
 			break;
+
+		case TEGRA_PADCTL_UPHY_HSIC_PRETEND_CONNECTED:
+			if (lane_is_hsic(group)) {
+				int port = group - PIN_HSIC_0;
+
+				uphy->hsic_ports[port].pretend_connected =
+									  value;
+				TRACE(dev, "HSIC port %d pretend-connected %ld",
+				      port, value);
+			} else {
+				dev_err(dev, "pretend-connected is not applicable for pin %d\n",
+					group);
+				return -EINVAL;
+			}
+
+			break;
+
 		case TEGRA_PADCTL_UPHY_PCIE_CONTROLLER_NUM:
 			if (value >= TEGRA_PCIE_PHYS) {
 				dev_err(dev, "Invalid PCIE controller: %lu\n",
@@ -3980,6 +4004,25 @@ static struct attribute_group padctl_uphy_attr_group = {
 	.attrs = padctl_uphy_attrs,
 };
 
+static int tegra186_hsic_phy_pretend_connected(struct tegra_padctl_uphy *uphy
+					, int port)
+{
+	struct device *dev = uphy->dev;
+	struct tegra_xusb_mbox_msg msg;
+	int rc;
+
+	if (!uphy->hsic_ports[port].pretend_connected)
+		return 0; /* pretend-connected is not enabled */
+
+	msg.cmd = MBOX_CMD_HSIC_PRETEND_CONNECT;
+	msg.data = BIT(uphy->soc->hsic_port_offset + port + 1);
+	rc = mbox_send_message(uphy->mbox_chan, &msg);
+	if (rc < 0)
+		dev_err(dev, "failed to send message to firmware %d\n", rc);
+
+	return rc;
+}
+
 static int tegra186_hsic_phy_enable_sleepwalk(struct tegra_padctl_uphy *uphy,
 					      int port)
 {
@@ -5430,6 +5473,29 @@ int tegra_phy_xusb_remote_wake_detected(struct phy *phy)
 		return -EINVAL;
 }
 EXPORT_SYMBOL_GPL(tegra_phy_xusb_remote_wake_detected);
+
+
+int tegra_phy_xusb_pretend_connected(struct phy *phy)
+{
+	struct tegra_padctl_uphy *uphy;
+	int port;
+
+	if (!phy)
+		return 0;
+
+	uphy = phy_get_drvdata(phy);
+
+	/* applicable to HSIC only */
+	if (is_hsic_phy(phy)) {
+		port = hsic_phy_to_port(phy);
+		if (port < 0)
+			return -EINVAL;
+		return tegra186_hsic_phy_pretend_connected(uphy, port);
+	}
+
+	return -EINVAL;
+}
+EXPORT_SYMBOL_GPL(tegra_phy_xusb_pretend_connected);
 
 MODULE_AUTHOR("JC Kuo <jckuo@nvidia.com>");
 MODULE_DESCRIPTION("Tegra 186 XUSB PADCTL and UPHY PLL/Lane driver");

@@ -141,4 +141,12 @@
 			status = "okay";
 		};
 	};
+
+	i2c@3160000 { /* Tegra I2C1 - VCM I2CA */
+		ds1050-backlight@2f {
+			 compatible = "maxim,ds1050";
+			 reg = <0x2f>;
+			 status = "okay";
+		};
+	};
 };

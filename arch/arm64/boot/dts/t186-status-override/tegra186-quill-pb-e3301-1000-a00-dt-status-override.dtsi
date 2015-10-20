@@ -64,19 +64,6 @@
 				};
 			};
 		};
-
-		sor1 {
-			hdmi-display {
-				status = "okay";
-			};
-		};
-
-		dpaux@155c0000 {
-			status = "disabled";
-		};
-		dpaux@15040000 {
-			status = "disabled";
-		};
 	};
 
 	interrupt-controller@3000000 {

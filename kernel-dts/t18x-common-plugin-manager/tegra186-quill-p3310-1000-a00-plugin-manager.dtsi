@@ -66,6 +66,22 @@
 				};
 			};
 		};
+
+		fragement@6 {
+			odm-data = "mods-build";
+			override@0 {
+				target = <&xusb_mbox>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+			override@1 {
+				target = <&padctl_uphy>;
+				_overlay_ {
+					delete-target-property = "mboxes";
+				};
+			};
+		};
 	};
 };
 

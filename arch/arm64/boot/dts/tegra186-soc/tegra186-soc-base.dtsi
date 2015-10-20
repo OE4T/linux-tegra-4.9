@@ -133,6 +133,7 @@
 			      <&{/host1x/se@15820000}		TEGRA_SID_SE1>,
 			      <&{/host1x/se@15830000}		TEGRA_SID_SE2>,
 			      <&{/host1x/se@15840000}		TEGRA_SID_SE3>,
+			      <&{/smmu_test}			TEGRA_SID_SMMU_TEST>,
 			      <&{/gp10b}			TEGRA_SID_GPUB>,
 			      <&host1x_ctx0			TEGRA_SID_HOST1X_CTX0>,
 			      <&host1x_ctx1			TEGRA_SID_HOST1X_CTX1>,
@@ -305,6 +306,11 @@
 				sid-list = <TEGRA_SID_SATA2>;
 				sid-list-len = <1>;
 			};
+			smmu_test_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_SMMU_TEST>;
+				sid-list-len = <1>;
+			};
 		};
 
 		address-space-prop {
@@ -337,6 +343,11 @@
 				gap-page = <1>;
 			};
 		};
+	};
+
+	smmu_test: smmu_test {
+		compatible = "nvidia,smmu_test";
+		#stream-id-cells = <1>;
 	};
 
 	mc {

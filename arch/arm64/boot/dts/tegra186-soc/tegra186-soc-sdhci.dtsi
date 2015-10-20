@@ -15,7 +15,15 @@
  */
 
 / {
-	sdhci@3460000 { /* Used for eMMC */
+
+	aliases {
+		sdhci0 = &sdmmc1;
+		sdhci1 = &sdmmc2;
+		sdhci2 = &sdmmc3;
+		sdhci3 = &sdmmc4;
+	};
+
+	sdmmc4: sdhci@3460000 { /* Used for eMMC */
 		compatible = "nvidia,tegra186-sdhci";
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x3460000 0x0 0x210>;
@@ -54,7 +62,7 @@
 		status = "disabled";
 	};
 
-	sdhci@3440000 {
+	sdmmc3: sdhci@3440000 {
 		compatible = "nvidia,tegra186-sdhci";
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x3440000 0x0 0x210>;
@@ -87,7 +95,7 @@
 		status = "disabled";
 	};
 
-	sdhci@3420000 { /* Should be used for eMMC. HS400 mode is not supported */
+	sdmmc2: sdhci@3420000 { /* Should be used for eMMC. HS400 mode is not supported */
 		compatible = "nvidia,tegra186-sdhci";
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x3420000 0x0 0x210>;
@@ -125,7 +133,7 @@
 		status = "disabled";
 	};
 
-	sdhci@3400000 {
+	sdmmc1: sdhci@3400000 {
 		compatible = "nvidia,tegra186-sdhci";
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x3400000 0x0 0x210>;

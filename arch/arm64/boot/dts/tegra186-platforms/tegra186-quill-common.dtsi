@@ -169,6 +169,15 @@
 		status = "okay";
 	};
 
+	tegra_cec {
+		status = "okay";
+		compatible = "nvidia,tegra186-cec";
+		reg = <0x0 0x03960000 0x0 0x00001000>;
+		interrupts = <0 162 0x04>;
+		clocks = <&tegra_car TEGRA186_CLK_CEC>;
+		clock-names = "cec";
+	};
+
 	pmc@c370000 {
 		nvidia,invert-pmic-interrupt-polarity;
 	};

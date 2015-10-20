@@ -1854,23 +1854,23 @@ int __gk20a_do_idle(struct platform_device *pdev, bool force_reset)
 	} else {
 		/*
 		 * Case 2 : GPU railgate is not supported or we explicitly
-		 * do not want to do railgate
+		 * do not want to depend on runtime PM
 		 *
 		 * if GPU is now idle, call prepare_poweroff() to save the
-		 * state and then assert the reset
+		 * state and then do explicit railgate
 		 *
-		 * __gk20a_do_unidle() needs to deassert reset, call
+		 * __gk20a_do_unidle() needs to unrailgate, call
 		 * finalize_poweron(), and then call pm_runtime_put_sync()
 		 * to balance the GPU usage counter
 		 */
-		if (!platform->reset_assert || !platform->reset_deassert)
-			goto fail_drop_usage_count;
 
 		/* Save the GPU state */
 		gk20a_pm_prepare_poweroff(&pdev->dev);
 
-		/* assert GPU reset */
-		platform->reset_assert(pdev);
+		gk20a_pm_disable_clk(&pdev->dev);
+
+		/* railgate GPU */
+		platform->railgate(pdev);
 
 		udelay(10);
 
@@ -1915,10 +1915,12 @@ int __gk20a_do_unidle(struct platform_device *pdev)
 
 	if (g->forced_reset) {
 		/*
-		 * If we did a reset (and not railgate),
-		 * then deassert the GPU reset here first
+		 * If we did a forced-reset/railgate
+		 * then unrailgate the GPU here first
 		 */
-		platform->reset_deassert(pdev);
+		platform->unrailgate(pdev);
+
+		gk20a_pm_enable_clk(&pdev->dev);
 
 		/* restore the GPU state */
 		gk20a_pm_finalize_poweron(&pdev->dev);

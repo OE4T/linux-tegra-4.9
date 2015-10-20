@@ -2266,6 +2266,8 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, tegra_dc_hpd(dc));
 	tegra_dc_io_end(dc);
+
+	tegra_hdmi_setup_hda_presence();
 }
 
 static void tegra_dc_hdmi_disable(struct tegra_dc *dc)

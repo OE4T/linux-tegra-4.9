@@ -370,11 +370,15 @@ static void write_mthd(u32 *buf, u32 op1, u32 op2, u32 *offset)
 void tsec_send_method(struct hdcp_context_t *hdcp_context,
 	u32 method, u32 flags)
 {
+	struct platform_device *host_dev =
+		to_platform_device(tsec->dev.parent);
+	struct nvhost_master *host = nvhost_get_private_data(host_dev);
 	u32 opcode_len = 0;
 	u32 *cpuvaddr = NULL;
 	u32 id = 0;
 	dma_addr_t dma_handle = 0;
 	DEFINE_DMA_ATTRS(attrs);
+	u32 increment_opcode;
 
 	id = nvhost_get_syncpt_host_managed(tsec, 0, "tsec_hdcp");
 	if (!id) {
@@ -437,11 +441,21 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 			EXECUTE,
 			0x100,
 			&opcode_len);
+
+	/* check the width of the syncpoint field */
+	if (host->info.nb_hw_pts > 255)
+		increment_opcode =
+			host1x_uclass_incr_syncpt_cond_op_done_v() << 10;
+	else
+		increment_opcode =
+			host1x_uclass_incr_syncpt_cond_op_done_v() << 8;
+
+	increment_opcode |= id;
+
 	write_mthd(&cpuvaddr[opcode_len],
-		nvhost_opcode_imm_incr_syncpt(
-			host1x_uclass_incr_syncpt_cond_op_done_v(), id),
-		NVHOST_OPCODE_NOOP,
-		&opcode_len);
+		   nvhost_opcode_nonincr(host1x_uclass_incr_syncpt_r(), 1),
+		   increment_opcode, &opcode_len);
+
 	tsec_execute_method(dma_handle, cpuvaddr, opcode_len, id, 1);
 
 	nvhost_syncpt_put_ref_ext(tsec, id);

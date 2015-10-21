@@ -33,12 +33,10 @@
 				TEGRA_GPIO(FF, 2)
 				TEGRA_GPIO(FF, 3)
 				TEGRA_GPIO(FF, 4)
-				TEGRA_GPIO(U, 0)
 				TEGRA_GPIO(U, 1)
 				TEGRA_GPIO(U, 2)
 				TEGRA_GPIO(U, 3)
 				TEGRA_GPIO(U, 4)
-				TEGRA_GPIO(U, 5)
 				TEGRA_GPIO(FF, 0)
 				TEGRA_GPIO(S, 2)
 				TEGRA_GPIO(X, 3)
@@ -77,7 +75,6 @@
 				TEGRA_GPIO(H, 4)
 				TEGRA_GPIO(H, 5)
 				TEGRA_GPIO(H, 6)
-				TEGRA_GPIO(AA, 2)
 				>;
 			gpio-output-high = <
 				>;

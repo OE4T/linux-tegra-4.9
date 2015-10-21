@@ -179,31 +179,127 @@
 			      <&{/i2c@31e0000}		TEGRA_SID_GPCDMA_0>;
 			      */
 
-		domains = <&gpu_as TEGRA_SID(GPUB)>,
-			  <&ape_as TEGRA_SID(APE)>,
-			  <&host1x_as 0x0000FDFE 0x0>,	/* HC, VIC,VI, NVDEC,NVENC,NVJPG,
-							   ISP, TSEC,TSECB, NVCSI,
-							   NVDISPLAY, SE,SE1,SE2,SE3 */
-			  <&host1x_as TEGRA_SID(HOST1X_CTX0)>,
-			  <&host1x_as TEGRA_SID(HOST1X_CTX1)>,
-			  <&host1x_as TEGRA_SID(HOST1X_CTX2)>,
-			  <&host1x_as TEGRA_SID(HOST1X_CTX3)>,
-			  <&host1x_as TEGRA_SID(HOST1X_CTX4)>,
-			  <&host1x_as TEGRA_SID(HOST1X_CTX5)>,
-			  <&host1x_as TEGRA_SID(HOST1X_CTX6)>,
-			  <&host1x_as TEGRA_SID(HOST1X_CTX7)>,
-			  <&common_as TEGRA_SID(SDMMC1A)>,
-			  <&common_as TEGRA_SID(SDMMC2A)>,
-			  <&common_as TEGRA_SID(SDMMC3A)>,
-			  <&common_as TEGRA_SID(SDMMC4A)>,
-			  <&common_as TEGRA_SID(XUSB_HOST)>,
-			  <&common_as TEGRA_SID(XUSB_DEV)>,
-			  <&common_as TEGRA_SID(GPCDMA_0)>,
-			  <&common_as TEGRA_SID(BPMP)>,
-			  <&common_as TEGRA_SID(AFI)>,
-			  <&common_as TEGRA_SID(SATA2)>;
-
 		status = "disabled";
+
+		/*
+		 * These are the domains and the descriptions of the domain's virtual
+		 * address ranges. Each domain is one logical address space (and
+		 * therefore corresponds to one context bank. Multiple SIDs may map
+		 * to a single domain.
+		 */
+		domains {
+			gpu_domain {
+				address-space = <&gpu_as>;
+				sid-list = <TEGRA_SID_GPUB>;
+				sid-list-len = <1>;
+			};
+			host1x_domain {
+				address-space = <&host1x_as>;
+				sid-list = <TEGRA_SID(HC) TEGRA_SID(VIC) TEGRA_SID(VI)
+					    TEGRA_SID(NVDEC) TEGRA_SID(NVENC) TEGRA_SID(NVJPG)
+					    TEGRA_SID(ISP) TEGRA_SID(TSEC) TEGRA_SID(TSECB)
+					    TEGRA_SID(NVDISPLAY) TEGRA_SID(NVCSI)
+					    TEGRA_SID(SE) TEGRA_SID(SE1)
+					    TEGRA_SID(SE2) TEGRA_SID(SE3)>;
+				sid-list-len = <15>;
+			};
+			host1x0_domain {
+				address-space = <&host1x_as>;
+				sid-list = <TEGRA_SID_HOST1X_CTX0>;
+				sid-list-len = <1>;
+			};
+			host1x1_domain {
+				address-space = <&host1x_as>;
+				sid-list = <TEGRA_SID_HOST1X_CTX1>;
+				sid-list-len = <1>;
+			};
+			host1x2_domain {
+				address-space = <&host1x_as>;
+				sid-list = <TEGRA_SID_HOST1X_CTX2>;
+				sid-list-len = <1>;
+			};
+			host1x3_domain {
+				address-space = <&host1x_as>;
+				sid-list = <TEGRA_SID_HOST1X_CTX3>;
+				sid-list-len = <1>;
+			};
+			host1x4_domain {
+				address-space = <&host1x_as>;
+				sid-list = <TEGRA_SID_HOST1X_CTX4>;
+				sid-list-len = <1>;
+			};
+			host1x5_domain {
+				address-space = <&host1x_as>;
+				sid-list = <TEGRA_SID_HOST1X_CTX5>;
+				sid-list-len = <1>;
+			};
+			host1x6_domain {
+				address-space = <&host1x_as>;
+				sid-list = <TEGRA_SID_HOST1X_CTX6>;
+				sid-list-len = <1>;
+			};
+			host1x7_domain {
+				address-space = <&host1x_as>;
+				sid-list = <TEGRA_SID_HOST1X_CTX7>;
+				sid-list-len = <1>;
+			};
+
+			sdmmc1a_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_SDMMC1A>;
+				sid-list-len = <1>;
+			};
+			sdmmc2a_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_SDMMC2A>;
+				sid-list-len = <1>;
+			};
+			sdmmc3a_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_SDMMC3A>;
+				sid-list-len = <1>;
+			};
+			sdmmc4a_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_SDMMC4A>;
+				sid-list-len = <1>;
+			};
+			ape_domain {
+				address-space = <&ape_as>;
+				sid-list = <TEGRA_SID_APE>;
+				sid-list-len = <1>;
+			};
+			xusb_host_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_XUSB_HOST>;
+				sid-list-len = <1>;
+			};
+			xusb_dev_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_XUSB_DEV>;
+				sid-list-len = <1>;
+			};
+			gpcdma_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_GPCDMA_0>;
+				sid-list-len = <1>;
+			};
+			bpmp_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_BPMP>;
+				sid-list-len = <1>;
+			};
+			afi_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_AFI>;
+				sid-list-len = <1>;
+			};
+			sata2_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_SATA2>;
+				sid-list-len = <1>;
+			};
+		};
 
 		address-space-prop {
 			host1x_as: host1x {
@@ -219,20 +315,6 @@
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;
 				gap-page = <1>;
-			};
-			ppcs_as: ppcs {
-				iova-start = <0x0 0x80000000>;
-				iova-size = <0x0 0x7FF00000>;
-				alignment = <0xFFFFF>;
-				num-pf-page = <1>;
-				gap-page = <1>;
-			};
-			dc_as: dc {
-				iova-start = <0x0 0x00010000>;
-				iova-size = <0x0 0xFFFEFFFF>;
-				alignment = <0xFFFFF>;
-				num-pf-page = <0>;
-				gap-page = <0>;
 			};
 			gpu_as: gpu {
 				iova-start = <0x0 0x00100000>;

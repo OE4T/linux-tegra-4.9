@@ -497,7 +497,6 @@ struct nvi_state {
 #endif /* NVI_I2C_DEBUG_INTERFACE */
 };
 
-s64 nvi_get_time_ns(void);
 int nvi_i2c_read(struct nvi_state *st, u16 addr, u8 reg, u16 len, u8 *buf);
 int nvi_i2c_rd(struct nvi_state *st, u8 bank, u8 reg, u16 len, u8 *buf);
 int nvi_i2c_write(struct nvi_state *st, u16 addr, u16 len, u8 *buf);

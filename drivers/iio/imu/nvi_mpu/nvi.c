@@ -19,7 +19,6 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
-#include <linux/ktime.h>
 #include <linux/interrupt.h>
 #include <linux/regulator/consumer.h>
 #include <linux/of.h>
@@ -87,14 +86,6 @@ static int (* const nvi_nb_vreg_pf[])(struct notifier_block *nb,
 	nvi_nb_vreg_vdd,
 	nvi_nb_vreg_vlogic,
 };
-
-s64 nvi_get_time_ns(void)
-{
-	struct timespec ts;
-
-	ktime_get_ts(&ts);
-	return timespec_to_ns(&ts);
-}
 
 static void nvi_err(struct nvi_state *st)
 {
@@ -1252,7 +1243,7 @@ static int nvi_nb_vreg(struct nvi_state *st,
 		       unsigned long event, unsigned int i)
 {
 	if (event & REGULATOR_EVENT_POST_ENABLE)
-		st->vreg_en_ts[i] = nvi_get_time_ns();
+		st->vreg_en_ts[i] = nvs_timestamp();
 	else if (event & (REGULATOR_EVENT_DISABLE |
 			  REGULATOR_EVENT_FORCE_DISABLE))
 		st->vreg_en_ts[i] = 0;
@@ -1278,7 +1269,7 @@ int nvi_pm_wr(struct nvi_state *st, u8 pwr_mgmt_1, u8 pwr_mgmt_2, u8 lp)
 		st->rc_dis = true;
 		delay_ms = 0;
 		for (i = 0; i < ARRAY_SIZE(nvi_vregs); i++) {
-			por_ns = nvi_get_time_ns() - st->vreg_en_ts[i];
+			por_ns = nvs_timestamp() - st->vreg_en_ts[i];
 			if ((por_ns < 0) || (!st->vreg_en_ts[i])) {
 				delay_ms = (POR_MS * 1000000);
 				break;
@@ -1503,7 +1494,7 @@ int nvi_pm(struct nvi_state *st, int pm_req)
 		if (pm > NVI_PM_ON_CYCLE)
 			nvi_user_ctrl_en(st, true, true);
 		if ((pm == NVI_PM_ON_FULL) && (!st->ts_gyro))
-			st->ts_gyro = nvi_get_time_ns() +
+			st->ts_gyro = nvs_timestamp() +
 					   st->chip_config.gyro_start_delay_ns;
 	} else {
 		/* interrupts are disabled until NVI_PM_AUTO */
@@ -1764,7 +1755,7 @@ static void nvi_aux_read(struct nvi_state *st)
 	if (ret)
 		return;
 
-	ts = nvi_get_time_ns();
+	ts = nvs_timestamp();
 	for (i = 0; i < AUX_PORT_IO; i++) {
 		ap = &st->aux.port[i];
 		if ((st->rc.i2c_slv_ctrl[i] & BIT_SLV_EN) && (!ap->fifo_en) &&
@@ -1980,7 +1971,7 @@ static int nvi_reset(struct nvi_state *st,
 	else
 		ret |= nvi_user_ctrl_en(st, true, true);
 	if (reset_fifo && (st->rc.user_ctrl & BIT_FIFO_EN))
-		st->ts_last = nvi_get_time_ns();
+		st->ts_last = nvs_timestamp();
 	if (irq)
 		ret |= nvi_int_able(st, true);
 	return ret;
@@ -2058,13 +2049,13 @@ static int nvi_aux_bypass_request(struct nvi_state *st, bool enable)
 	int ret = 0;
 
 	if ((bool)(st->rc.int_pin_cfg & BIT_BYPASS_EN) == enable) {
-		st->aux.bypass_timeout_ns = nvi_get_time_ns();
+		st->aux.bypass_timeout_ns = nvs_timestamp();
 		st->aux.bypass_lock++;
 		if (!st->aux.bypass_lock)
 			dev_err(&st->i2c->dev, "%s rollover ERR\n", __func__);
 	} else {
 		if (st->aux.bypass_lock) {
-			ns = nvi_get_time_ns() - st->aux.bypass_timeout_ns;
+			ns = nvs_timestamp() - st->aux.bypass_timeout_ns;
 			to = st->chip_config.bypass_timeout_ms * 1000000;
 			if (ns > to)
 				st->aux.bypass_lock = 0;
@@ -2678,7 +2669,7 @@ static irqreturn_t nvi_irq_thread(int irq, void *dev_id)
 
 	/* if only accelermeter data */
 	if (st->rc.pwr_mgmt_1 & BIT_CYCLE) {
-		ts = nvi_get_time_ns();
+		ts = nvs_timestamp();
 		ret = nvi_accel_read(st, ts);
 		goto nvi_irq_thread_exit_ts;
 	}
@@ -2689,7 +2680,7 @@ static irqreturn_t nvi_irq_thread(int irq, void *dev_id)
 	if (!fifo_sample_size)
 		goto nvi_irq_thread_exit;
 
-	ts_now = nvi_get_time_ns();
+	ts_now = nvs_timestamp();
 	ret = nvi_i2c_rd(st, st->hal->reg->fifo_count_h.bank,
 			 st->hal->reg->fifo_count_h.reg, 2, st->buf);
 	if (ret)
@@ -2794,7 +2785,7 @@ nvi_irq_thread_exit_reset:
 static irqreturn_t nvi_irq_handler(int irq, void *dev_id)
 {
 	struct nvi_state *st = (struct nvi_state *)dev_id;
-	u64 ts = nvi_get_time_ns();
+	u64 ts = nvs_timestamp();
 	u64 ts_old = atomic64_xchg(&st->ts_irq, ts);
 	u64 ts_diff = ts - ts_old;
 

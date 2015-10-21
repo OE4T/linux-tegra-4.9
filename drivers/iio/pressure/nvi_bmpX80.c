@@ -46,14 +46,12 @@
 /* See Nvs.cpp in the HAL for the NVS implementation of batch/flush. */
 /* See NvsIio.cpp in the HAL for the IIO enable/disable extension mechanism. */
 
-#define BMP_NVI_MPU_SUPPORT		(1) /* includes NVI MPU code */
 
 #include <linux/i2c.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
-#include <linux/ktime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/of.h>
@@ -268,14 +266,6 @@ struct bmp_hal {
 	unsigned int mpu_id;
 };
 
-
-static s64 bmp_get_time_ns(void)
-{
-	struct timespec ts;
-
-	ktime_get_ts(&ts);
-	return timespec_to_ns(&ts);
-}
 
 static void bmp_err(struct bmp_state *st)
 {
@@ -621,7 +611,7 @@ static int bmp_read_180(struct bmp_state *st)
 	if (ret)
 		return ret;
 
-	ts = bmp_get_time_ns();
+	ts = nvs_timestamp();
 	ret = bmp_read_sts_180(st, data, ts);
 	if (ret > 0) {
 		if (st->nvs_st[BMP_DEV_PRES])
@@ -745,7 +735,7 @@ static int bmp_read_280(struct bmp_state *st)
 	if (ret)
 		return ret;
 
-	ts = bmp_get_time_ns();
+	ts = nvs_timestamp();
 	ret = bmp_read_sts_280(st, data, ts);
 	if (ret > 0) {
 		if (st->nvs_st[BMP_DEV_PRES])

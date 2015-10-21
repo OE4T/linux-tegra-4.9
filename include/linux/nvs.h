@@ -386,5 +386,6 @@ void nvs_vregs_exit(struct device *dev, struct regulator_bulk_data *vregs,
 int nvs_vregs_init(struct device *dev, struct regulator_bulk_data *vregs,
 		   unsigned int vregs_n, char **vregs_name);
 int nvs_vregs_sts(struct regulator_bulk_data *vregs, unsigned int vregs_n);
+s64 nvs_timestamp(void);
 
 #endif /* _NVS_H_ */

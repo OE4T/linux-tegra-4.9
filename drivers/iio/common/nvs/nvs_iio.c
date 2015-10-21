@@ -76,7 +76,7 @@
 #include <linux/iio/trigger.h>
 #include <linux/nvs.h>
 
-#define NVS_IIO_DRIVER_VERSION		(208)
+#define NVS_IIO_DRIVER_VERSION		(209)
 #define NVS_ATTRS_ARRAY_SIZE		(12)
 
 enum NVS_ATTR {

@@ -54,14 +54,12 @@
 /* See Nvs.cpp in the HAL for the NVS implementation of batch/flush. */
 /* See NvsIio.cpp in the HAL for the IIO enable/disable extension mechanism. */
 
-#define AKM_NVI_MPU_SUPPORT		(1) /* includes NVI MPU code */
 
 #include <linux/i2c.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
-#include <linux/ktime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
@@ -195,14 +193,6 @@ struct akm_hal {
 	unsigned int mpu_id;
 };
 
-
-static s64 akm_get_time_ns(void)
-{
-	struct timespec ts;
-
-	ktime_get_ts(&ts);
-	return timespec_to_ns(&ts);
-}
 
 static void akm_err(struct akm_state *st)
 {
@@ -551,7 +541,7 @@ static int akm_read(struct akm_state *st)
 	if (ret)
 		return ret;
 
-	ts = akm_get_time_ns();
+	ts = nvs_timestamp();
 	ret = akm_read_sts(st, data);
 	if (ret > 0) {
 		akm_calc(st, data);

@@ -20,7 +20,6 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
-#include <linux/ktime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
@@ -152,14 +151,6 @@ struct cm_state {
 	u16 rc[CM_REG_N];		/* register cache for reg dump */
 };
 
-
-static s64 cm_get_time_ns(void)
-{
-	struct timespec ts;
-
-	ktime_get_ts(&ts);
-	return timespec_to_ns(&ts);
-}
 
 static void cm_err(struct cm_state *st)
 {
@@ -352,7 +343,7 @@ static int cm_rd(struct cm_state *st)
 	if (ret)
 		return ret;
 
-	ts = cm_get_time_ns();
+	ts = nvs_timestamp();
 	if (st->sts & NVS_STS_SPEW_DATA)
 		dev_info(&st->i2c->dev,
 			 "poll light hw %hu %lld  diff=%d %lldns  index=%u\n",

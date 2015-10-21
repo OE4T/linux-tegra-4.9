@@ -19,7 +19,6 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
-#include <linux/ktime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
@@ -257,14 +256,6 @@ static struct stm_odr stm_odr_tbl[] = {
 };
 
 
-static s64 stm_get_ts_ns(void)
-{
-	struct timespec ts;
-
-	ktime_get_ts(&ts);
-	return timespec_to_ns(&ts);
-}
-
 static void stm_err(struct stm_state *st)
 {
 	st->errs++;
@@ -399,7 +390,7 @@ static int stm_rd(struct stm_state *st)
 		return ret;
 
 	if (st->buf[0] & STM_REG_STATUS_DA_MASK)
-		st->nvs->handler(st->nvs_st, &st->buf[1], stm_get_ts_ns());
+		st->nvs->handler(st->nvs_st, &st->buf[1], nvs_timestamp());
 	else
 		ret = -EAGAIN;
 	return ret;

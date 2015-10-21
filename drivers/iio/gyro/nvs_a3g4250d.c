@@ -19,7 +19,6 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
-#include <linux/ktime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
@@ -214,14 +213,6 @@ static struct stm_odr stm_odr_tbl[] = {
 };
 
 
-static s64 stm_get_ts_ns(void)
-{
-	struct timespec ts;
-
-	ktime_get_ts(&ts);
-	return timespec_to_ns(&ts);
-}
-
 static void stm_err(struct stm_state *st)
 {
 	st->errs++;
@@ -310,7 +301,7 @@ static int stm_cmd(struct stm_state *st, int enable)
 		ret_t |= stm_i2c_wr(st, STM_REG_CTRL3, st->ru_ctrl3);
 		ret_t |= stm_i2c_wr(st, STM_REG_CTRL4, st->ru_ctrl4);
 		ret_t |= stm_i2c_wr(st, STM_REG_CTRL5, st->ru_ctrl5);
-		st->ts_last = stm_get_ts_ns();
+		st->ts_last = nvs_timestamp();
 	}
 	ret = stm_i2c_wr(st, STM_REG_CTRL1, ctrl1);
 	if (ret) {
@@ -395,7 +386,7 @@ static int stm_rd(struct stm_state *st)
 		st->ts_last += ts;
 		st->nvs->handler(st->nvs_st, &st->buf[1], st->ts_last);
 #endif
-		ts = stm_get_ts_ns();
+		ts = nvs_timestamp();
 		st->nvs->handler(st->nvs_st, &st->buf[1], ts);
 	} else {
 		ret = -EAGAIN;
@@ -435,7 +426,7 @@ static irqreturn_t stm_irq_handler(int irq, void *dev_id)
 {
 	struct stm_state *st = (struct stm_state *)dev_id;
 
-	st->ts_irq = stm_get_ts_ns();
+	st->ts_irq = nvs_timestamp();
 	if (st->sts & NVS_STS_SPEW_IRQ)
 		dev_info(&st->i2c->dev, "%s %lld\n", __func__, st->ts_irq);
 	return IRQ_WAKE_THREAD;

@@ -21,7 +21,6 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
-#include <linux/ktime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
@@ -134,14 +133,6 @@ struct isl_state {
 	u8 rc_cfg;			/* cache of main configuration */
 };
 
-
-static s64 isl_get_time_ns(void)
-{
-	struct timespec ts;
-
-	ktime_get_ts(&ts);
-	return timespec_to_ns(&ts);
-}
 
 static void isl_err(struct isl_state *st)
 {
@@ -456,7 +447,7 @@ static int isl_rd(struct isl_state *st)
 	s64 ts;
 	int ret = 0;
 
-	ts = isl_get_time_ns();
+	ts = nvs_timestamp();
 	if (st->enabled & (1 << ISL_DEV_PROX))
 		ret |= isl_rd_prox(st, ts);
 	if (st->enabled & (1 << ISL_DEV_LIGHT))

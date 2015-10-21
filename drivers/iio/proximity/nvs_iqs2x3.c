@@ -21,7 +21,6 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
-#include <linux/ktime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
@@ -567,14 +566,6 @@ struct iqs_state {
 };
 
 
-static s64 iqs_get_time_ns(void)
-{
-	struct timespec ts;
-
-	ktime_get_ts(&ts);
-	return timespec_to_ns(&ts);
-}
-
 static void iqs_err(struct iqs_state *st)
 {
 	st->errs++;
@@ -611,7 +602,7 @@ static unsigned int iqs_i2c_stop_ms(struct iqs_state *st)
 	s64 i2c_stop_t;
 	unsigned int ms = 0;
 
-	i2c_stop_t = iqs_get_time_ns() - st->i2c_stop_ts;
+	i2c_stop_t = nvs_timestamp() - st->i2c_stop_ts;
 	if (i2c_stop_t < st->i2c_ss_war_ns) {
 		i2c_stop_t = st->i2c_ss_war_ns - i2c_stop_t;
 		do_div(i2c_stop_t, 1000000); /* ns => ms */
@@ -813,7 +804,7 @@ static int iqs_i2c(struct iqs_state *st, bool poll)
 					   &st->msg[n], st->msg_n);
 			if (st->gpio_sar_dev_asrt == IQS_GPIO_SAR_DBG_I2C)
 				iqs_gpio_sar(st, 0);
-			st->i2c_stop_ts = iqs_get_time_ns();
+			st->i2c_stop_ts = nvs_timestamp();
 			if (ret == st->msg_n) {
 				ret = 0;
 				break;
@@ -1481,7 +1472,7 @@ static int iqs_rd(struct iqs_state *st, bool poll)
 			}
 		}
 		/* read data */
-		ts = iqs_get_time_ns();
+		ts = nvs_timestamp();
 		if (st->enabled & (1 << IQS_DEV_PROX))
 			ret |= iqs_rd_snsr(st, ts, IQS_DEV_PROX,
 					   &st->hal_bit->touch_prx,
@@ -2107,7 +2098,7 @@ static int iqs_suspend(struct device *dev)
 	s64 ts = 0; /* = 0 to fix compile */
 
 	if (st->sts & NVS_STS_SPEW_MSG)
-		ts = iqs_get_time_ns();
+		ts = nvs_timestamp();
 	/* Due to the device's horrendous communication protocol that causes
 	 * unacceptable delays, suspend flag is used to exit pending actions.
 	 */
@@ -2141,7 +2132,7 @@ static int iqs_suspend(struct device *dev)
 	iqs_mutex_unlock(st);
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s elapsed t=%lldns  err=%d\n",
-			 __func__, iqs_get_time_ns() - ts, ret);
+			 __func__, nvs_timestamp() - ts, ret);
 	return 0;
 }
 
@@ -2153,7 +2144,7 @@ static int iqs_resume(struct device *dev)
 	int ret = 0;
 
 	if (st->sts & NVS_STS_SPEW_MSG)
-		ts = iqs_get_time_ns();
+		ts = nvs_timestamp();
 	st->susrsm = true;
 	iqs_mutex_lock(st);
 	st->susrsm = false;
@@ -2173,7 +2164,7 @@ static int iqs_resume(struct device *dev)
 	iqs_mutex_unlock(st);
 	if (st->sts & NVS_STS_SPEW_MSG)
 		dev_info(&client->dev, "%s elapsed t=%lldns  err=%d\n",
-			 __func__, iqs_get_time_ns() - ts, ret);
+			 __func__, nvs_timestamp() - ts, ret);
 	return 0;
 }
 

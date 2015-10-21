@@ -21,7 +21,6 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
-#include <linux/ktime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
@@ -207,14 +206,6 @@ struct mx_state {
 	u8 rc_amb_cfg;			/* cache of ambient configuration */
 };
 
-
-static s64 mx_get_time_ns(void)
-{
-	struct timespec ts;
-
-	ktime_get_ts(&ts);
-	return timespec_to_ns(&ts);
-}
 
 static void mx_err(struct mx_state *st)
 {
@@ -547,7 +538,7 @@ static int mx_rd(struct mx_state *st)
 		return RET_POLL_NEXT;
 	}
 
-	ts = mx_get_time_ns();
+	ts = nvs_timestamp();
 	if (st->enabled & (1 << MX_DEV_PROX))
 		ret |= mx_rd_prox(st, ts);
 	if (st->enabled & (1 << MX_DEV_LIGHT))

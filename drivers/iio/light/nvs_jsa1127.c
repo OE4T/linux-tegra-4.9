@@ -20,7 +20,6 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
-#include <linux/ktime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/of.h>
@@ -87,14 +86,6 @@ struct jsa_state {
 	u8 rc_cmd;			/* store for register dump */
 };
 
-
-static s64 jsa_get_time_ns(void)
-{
-	struct timespec ts;
-
-	ktime_get_ts(&ts);
-	return timespec_to_ns(&ts);
-}
 
 static void jsa_err(struct jsa_state *st)
 {
@@ -246,7 +237,7 @@ static int jsa_rd(struct jsa_state *st)
 		return -EINVAL;
 
 	hw &= ~(1 << JSA_VAL_VALID);
-	ts = jsa_get_time_ns();
+	ts = nvs_timestamp();
 	if (st->sts & NVS_STS_SPEW_DATA)
 		dev_info(&st->i2c->dev,
 			 "%s hw: %hu %lld diff: %d %lldns nld_i(index)=%u hw_it=%x\n",

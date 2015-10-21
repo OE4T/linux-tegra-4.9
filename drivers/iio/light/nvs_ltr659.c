@@ -21,7 +21,6 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
-#include <linux/ktime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
@@ -174,13 +173,6 @@ struct ltr_state {
 	u8 rc_interrupt;		/* cache of INTERRUPT */
 };
 
-static s64 ltr_get_time_ns(void)
-{
-	struct timespec ts;
-
-	ktime_get_ts(&ts);
-	return timespec_to_ns(&ts);
-}
 
 static void ltr_err(struct ltr_state *st)
 {
@@ -546,7 +538,7 @@ static int ltr_rd(struct ltr_state *st)
 		return ret;
 
 	if (sts & LTR_REG_STATUS_DATA_MASK) {
-		ts = ltr_get_time_ns();
+		ts = nvs_timestamp();
 		if (st->enabled & (1 << LTR_DEV_PROX))
 			ret |= ltr_rd_prox(st, ts);
 		if (st->enabled & (1 << LTR_DEV_LIGHT))

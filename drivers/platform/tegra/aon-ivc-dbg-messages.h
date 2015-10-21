@@ -33,6 +33,8 @@ enum aon_pm_request {
 	AON_PM_STATE_HISTORY = 4,
 	/* Extract the power states histogram of AON */
 	AON_PM_STATE_HISTOGRAM = 5,
+	/* Query/set whether VDD_RTC should go to retention in deep dormant */
+	AON_PM_VDD_RTC_RETENTION = 9,
 };
 
 /* This enum indicates the power states of the target.
@@ -83,7 +85,7 @@ enum aon_mods {
  */
 enum aon_ping {
 	AON_PING_TEST = 8,
-	AON_REQUEST_TYPE_MAX = 8,
+	AON_REQUEST_TYPE_MAX = 9,
 };
 
 /* The following enum indicates if we are reading from or writing
@@ -177,6 +179,18 @@ struct aon_pm_state_history {
 	struct aon_pstate_capture buffer[8];
 };
 
+/* This struct is used to query or set whether VDD_RTC will be lowered to
+   retention level when SPE is in deep dormant state.
+ * Fields:
+ * flag:	to indicate read or write
+ * enable:	to indicate whether retention is enabled or not
+ */
+struct aon_pm_vdd_rtc_retention {
+	/* enum aon_xfer_flag */
+	u16 flag;
+	u16 enable;
+};
+
 /* This struct is used to send the loop count to perform the mods test
  * on the target.
  * Fields:
@@ -203,6 +217,7 @@ struct aon_pm_dbg_xfer {
 		struct aon_pm_force_sleep force_sleep;
 		struct aon_pm_state_histogram histogram;
 		struct aon_pm_state_history history;
+		struct aon_pm_vdd_rtc_retention retention;
 	} type;
 };
 

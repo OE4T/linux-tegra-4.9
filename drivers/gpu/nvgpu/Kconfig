@@ -56,6 +56,7 @@ config GK20A_CYCLE_STATS
 
 config TEGRA_GK20A
 	bool "Enable the GK20A GPU on Tegra"
+	depends on TEGRA_GRHOST || TEGRA_HOST1X
 	depends on GK20A
 	default y
 	help

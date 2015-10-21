@@ -166,6 +166,7 @@ struct channel_gk20a {
 	struct nvgpu_notification *error_notifier;
 	void *error_notifier_va;
 
+	struct mutex sync_lock;
 	struct gk20a_channel_sync *sync;
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION

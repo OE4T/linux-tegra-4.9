@@ -3254,6 +3254,7 @@ static const struct tegra_function tegra186_functions[] = {
 			},								\
 		.mux_reg = PINGROUP_REG_Y(r), \
 		.drvdn_bit = -1,				\
+		.parked_reg = -1,				\
 		.drvup_bit = -1,				\
 		.slwr_bit = -1,					\
 		.slwf_bit = -1,					\

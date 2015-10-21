@@ -63,6 +63,10 @@ static int tegra186_dspk_runtime_suspend(struct device *dev)
 {
 	struct tegra186_dspk *dspk = dev_get_drvdata(dev);
 	regcache_cache_only(dspk->regmap, true);
+
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
+		clk_disable_unprepare(dspk->clk_dspk);
+
 	pm_runtime_put_sync(dev->parent);
 	return 0;
 }
@@ -77,6 +81,15 @@ static int tegra186_dspk_runtime_resume(struct device *dev)
 		dev_err(dev, "parent get_sync failed: %d\n", ret);
 		return ret;
 	}
+
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		ret = clk_prepare_enable(dspk->clk_dspk);
+		if (ret) {
+			dev_err(dev, "clk_enable failed: %d\n", ret);
+			return ret;
+		}
+	}
+
 	regcache_cache_only(dspk->regmap, false);
 	regcache_sync(dspk->regmap);
 	return 0;
@@ -347,7 +360,7 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 			goto err;
 		}
 
-		dspk->clk_pll_a_out0 = clk_get_sys(NULL, "pll_a_out0");
+		dspk->clk_pll_a_out0 = devm_clk_get(&pdev->dev, "pll_a_out0");
 		if (IS_ERR_OR_NULL(dspk->clk_pll_a_out0)) {
 			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
 			ret = -ENOENT;

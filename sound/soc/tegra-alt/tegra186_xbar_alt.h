@@ -19,7 +19,6 @@
 #ifndef __TEGRA186_XBAR_ALT_H__
 #define __TEGRA186_XBAR_ALT_H__
 
-/* TODO: remove 2900800.ahub after clock driver available */
 #define DRV_NAME_T18X "2900800.ahub"
 
 #define NUM_DAIS		110

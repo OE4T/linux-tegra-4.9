@@ -3798,6 +3798,7 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 
 	tegra_dc_sor_instance(dc, dc->out->type);
 
+#if !defined(CONFIG_ARCH_TEGRA_21x_SOC) && !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	if (dc->out->type != TEGRA_DC_OUT_DP) {
 		int sor_num = tegra_dc_which_sor(dc);
 		np_dpaux = of_find_node_by_path(
@@ -3808,6 +3809,7 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 			TEGRA_DPAUX_INSTANCE_0, false);
 		of_node_put(np_dpaux);
 	}
+#endif
 
 	if (dc->out_ops && dc->out_ops->enable)
 		dc->out_ops->enable(dc);

@@ -45,10 +45,6 @@
 		stdout-path = &uartb;
 	};
 
-	serial@c290000 { /* Tegra UARTG <-> VCM UARTE */
-		status = "okay";
-	};
-
 	spi@3210000 {
 		status = "disabled";
 		spi@0 {

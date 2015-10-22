@@ -58,6 +58,7 @@
 #include <linux/reset.h>
 #include <linux/gpio.h>
 #include <linux/delay.h>
+#include <linux/workqueue.h>
 
 #define LP_SUPPORTED 0
 static const struct of_device_id eqos_of_match[] = {
@@ -600,7 +601,6 @@ int eqos_probe(struct platform_device *pdev)
 	struct resource *res;
 	const struct of_device_id *match;
 	struct device_node *node = pdev->dev.of_node;
-	u32 csr_clock_speed;
 	u8 mac_addr[6];
 
 	struct eqos_cfg *pdt_cfg;
@@ -849,13 +849,13 @@ int eqos_probe(struct platform_device *pdev)
 		pdata->napi_quota_all_chans += pdt_cfg->chan_napi_quota[i];
 
 	/* csr_clock_speed is axi_cbb_clk rate */
-	csr_clock_speed = clk_get_rate(pdata->axi_cbb_clk) / 1000000;
-	if (csr_clock_speed <= 0) {
+	pdata->csr_clock_speed = clk_get_rate(pdata->axi_cbb_clk) / 1000000;
+	if (pdata->csr_clock_speed <= 0) {
 		dev_err(&pdev->dev, "fail to read axi_cbb_clk rate\n");
 	} else {
 		dev_info(&pdev->dev, "setting MAC_1US_TIC to %d MHz\n",
-			csr_clock_speed);
-		MAC_1US_TIC_WR(csr_clock_speed - 1);
+			pdata->csr_clock_speed);
+		MAC_1US_TIC_WR(pdata->csr_clock_speed - 1);
 	}
 
 	ret = eqos_get_mac_address_dtb("/chosen", "nvidia,ether-mac", mac_addr);
@@ -984,6 +984,13 @@ int eqos_probe(struct platform_device *pdev)
 		ret = -EBUSY;
 		goto err_out_pmt_irq_failed;
 	}
+
+	pdata->fbe_wq = alloc_workqueue("FBE WQ\n", WQ_HIGHPRI|WQ_UNBOUND, 0);
+	if (!pdata->fbe_wq) {
+		dev_err(&pdev->dev, "Work Queue Allocation Failed\n");
+		goto err_out_pmt_irq_failed;
+	}
+	INIT_WORK(&pdata->fbe_work, eqos_fbe_work);
 
 	return 0;
 

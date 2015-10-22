@@ -427,9 +427,14 @@ static inline void tegra_dc_update_scaling(struct tegra_dc *dc,
 	}
 }
 
-#if !defined(CONFIG_TEGRA_NVDISPLAY)
-static bool update_is_hsync_safe(struct tegra_dc_win *cur_win,
-				 struct tegra_dc_win *new_win)
+
+/*
+ * The immediate flip with hsync can change only few registers, so this call
+ * should filter out changes from previous flip that may cause a change to
+ * these registers.
+ */
+bool  update_is_hsync_safe(struct tegra_dc_win *cur_win,
+			   struct tegra_dc_win *new_win)
 {
 	return ((cur_win->fmt == new_win->fmt) &&
 		(cur_win->flags == new_win->flags) &&
@@ -442,10 +447,11 @@ static bool update_is_hsync_safe(struct tegra_dc_win *cur_win,
 		(cur_win->out_w == new_win->out_w) &&
 		(cur_win->out_h == new_win->out_h) &&
 		(cur_win->z == new_win->z) &&
-		(!memcmp(&cur_win->csc, &new_win->csc,
-			sizeof(struct tegra_dc_csc))));
+		(cur_win->dc == new_win->dc) &&
+		(!memcmp(&cur_win->csc, &new_win->csc, sizeof(cur_win->csc)))
+		);
 }
-#endif
+
 
 void tegra_dc_win_partial_update(struct tegra_dc *dc, struct tegra_dc_win *win,
 	unsigned int xoff, unsigned int yoff, unsigned int width,

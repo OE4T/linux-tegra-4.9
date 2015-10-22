@@ -643,8 +643,10 @@ void tegra_dc_set_lut(struct tegra_dc *dc, struct tegra_dc_win *win);
 void tegra_dc_init_csc_defaults(struct tegra_dc_csc *csc);
 void tegra_dc_set_csc(struct tegra_dc *dc, struct tegra_dc_csc *csc);
 
-/* defined in window.c, used in dc.c */
+/* defined in window.c, used in dc.c and nvdisp_win.c */
 void tegra_dc_trigger_windows(struct tegra_dc *dc);
+bool update_is_hsync_safe(struct tegra_dc_win *cur_win,
+	struct tegra_dc_win *new_win);
 
 void tegra_dc_set_color_control(struct tegra_dc *dc);
 #if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)

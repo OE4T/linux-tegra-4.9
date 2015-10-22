@@ -40,238 +40,238 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
-/*!@file: DWC_ETH_QOS_ethtool.c
+/*!@file: eqos_ethtool.c
  * @brief: Driver functions.
  */
 #include "yheader.h"
 #include "ethtool.h"
 
-struct DWC_ETH_QOS_stats {
+struct eqos_stats {
 	char stat_string[ETH_GSTRING_LEN];
 	int sizeof_stat;
 	int stat_offset;
 };
 
 /* HW extra status */
-#define DWC_ETH_QOS_EXTRA_STAT(m) \
-	{#m, FIELD_SIZEOF(struct DWC_ETH_QOS_extra_stats, m), \
-	offsetof(struct DWC_ETH_QOS_prv_data, xstats.m)}
+#define EQOS_EXTRA_STAT(m) \
+	{#m, FIELD_SIZEOF(struct eqos_extra_stats, m), \
+	offsetof(struct eqos_prv_data, xstats.m)}
 
-static const struct DWC_ETH_QOS_stats DWC_ETH_QOS_gstrings_stats[] = {
-	DWC_ETH_QOS_EXTRA_STAT(q_re_alloc_rx_buf_failed[0]),
-	DWC_ETH_QOS_EXTRA_STAT(q_re_alloc_rx_buf_failed[1]),
-	DWC_ETH_QOS_EXTRA_STAT(q_re_alloc_rx_buf_failed[2]),
-	DWC_ETH_QOS_EXTRA_STAT(q_re_alloc_rx_buf_failed[3]),
-	DWC_ETH_QOS_EXTRA_STAT(q_re_alloc_rx_buf_failed[4]),
-	DWC_ETH_QOS_EXTRA_STAT(q_re_alloc_rx_buf_failed[5]),
-	DWC_ETH_QOS_EXTRA_STAT(q_re_alloc_rx_buf_failed[6]),
-	DWC_ETH_QOS_EXTRA_STAT(q_re_alloc_rx_buf_failed[7]),
+static const struct eqos_stats eqos_gstrings_stats[] = {
+	EQOS_EXTRA_STAT(q_re_alloc_rx_buf_failed[0]),
+	EQOS_EXTRA_STAT(q_re_alloc_rx_buf_failed[1]),
+	EQOS_EXTRA_STAT(q_re_alloc_rx_buf_failed[2]),
+	EQOS_EXTRA_STAT(q_re_alloc_rx_buf_failed[3]),
+	EQOS_EXTRA_STAT(q_re_alloc_rx_buf_failed[4]),
+	EQOS_EXTRA_STAT(q_re_alloc_rx_buf_failed[5]),
+	EQOS_EXTRA_STAT(q_re_alloc_rx_buf_failed[6]),
+	EQOS_EXTRA_STAT(q_re_alloc_rx_buf_failed[7]),
 
 	/* Tx/Rx IRQ error info */
-	DWC_ETH_QOS_EXTRA_STAT(tx_process_stopped_irq_n[0]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_process_stopped_irq_n[1]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_process_stopped_irq_n[2]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_process_stopped_irq_n[3]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_process_stopped_irq_n[4]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_process_stopped_irq_n[5]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_process_stopped_irq_n[6]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_process_stopped_irq_n[7]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_process_stopped_irq_n[0]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_process_stopped_irq_n[1]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_process_stopped_irq_n[2]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_process_stopped_irq_n[3]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_process_stopped_irq_n[4]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_process_stopped_irq_n[5]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_process_stopped_irq_n[6]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_process_stopped_irq_n[7]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_buf_unavailable_irq_n[0]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_buf_unavailable_irq_n[1]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_buf_unavailable_irq_n[2]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_buf_unavailable_irq_n[3]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_buf_unavailable_irq_n[4]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_buf_unavailable_irq_n[5]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_buf_unavailable_irq_n[6]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_buf_unavailable_irq_n[7]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_buf_unavailable_irq_n[0]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_buf_unavailable_irq_n[1]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_buf_unavailable_irq_n[2]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_buf_unavailable_irq_n[3]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_buf_unavailable_irq_n[4]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_buf_unavailable_irq_n[5]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_buf_unavailable_irq_n[6]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_buf_unavailable_irq_n[7]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_watchdog_irq_n),
-	DWC_ETH_QOS_EXTRA_STAT(fatal_bus_error_irq_n),
-	DWC_ETH_QOS_EXTRA_STAT(pmt_irq_n),
+	EQOS_EXTRA_STAT(tx_process_stopped_irq_n[0]),
+	EQOS_EXTRA_STAT(tx_process_stopped_irq_n[1]),
+	EQOS_EXTRA_STAT(tx_process_stopped_irq_n[2]),
+	EQOS_EXTRA_STAT(tx_process_stopped_irq_n[3]),
+	EQOS_EXTRA_STAT(tx_process_stopped_irq_n[4]),
+	EQOS_EXTRA_STAT(tx_process_stopped_irq_n[5]),
+	EQOS_EXTRA_STAT(tx_process_stopped_irq_n[6]),
+	EQOS_EXTRA_STAT(tx_process_stopped_irq_n[7]),
+	EQOS_EXTRA_STAT(rx_process_stopped_irq_n[0]),
+	EQOS_EXTRA_STAT(rx_process_stopped_irq_n[1]),
+	EQOS_EXTRA_STAT(rx_process_stopped_irq_n[2]),
+	EQOS_EXTRA_STAT(rx_process_stopped_irq_n[3]),
+	EQOS_EXTRA_STAT(rx_process_stopped_irq_n[4]),
+	EQOS_EXTRA_STAT(rx_process_stopped_irq_n[5]),
+	EQOS_EXTRA_STAT(rx_process_stopped_irq_n[6]),
+	EQOS_EXTRA_STAT(rx_process_stopped_irq_n[7]),
+	EQOS_EXTRA_STAT(tx_buf_unavailable_irq_n[0]),
+	EQOS_EXTRA_STAT(tx_buf_unavailable_irq_n[1]),
+	EQOS_EXTRA_STAT(tx_buf_unavailable_irq_n[2]),
+	EQOS_EXTRA_STAT(tx_buf_unavailable_irq_n[3]),
+	EQOS_EXTRA_STAT(tx_buf_unavailable_irq_n[4]),
+	EQOS_EXTRA_STAT(tx_buf_unavailable_irq_n[5]),
+	EQOS_EXTRA_STAT(tx_buf_unavailable_irq_n[6]),
+	EQOS_EXTRA_STAT(tx_buf_unavailable_irq_n[7]),
+	EQOS_EXTRA_STAT(rx_buf_unavailable_irq_n[0]),
+	EQOS_EXTRA_STAT(rx_buf_unavailable_irq_n[1]),
+	EQOS_EXTRA_STAT(rx_buf_unavailable_irq_n[2]),
+	EQOS_EXTRA_STAT(rx_buf_unavailable_irq_n[3]),
+	EQOS_EXTRA_STAT(rx_buf_unavailable_irq_n[4]),
+	EQOS_EXTRA_STAT(rx_buf_unavailable_irq_n[5]),
+	EQOS_EXTRA_STAT(rx_buf_unavailable_irq_n[6]),
+	EQOS_EXTRA_STAT(rx_buf_unavailable_irq_n[7]),
+	EQOS_EXTRA_STAT(rx_watchdog_irq_n),
+	EQOS_EXTRA_STAT(fatal_bus_error_irq_n),
+	EQOS_EXTRA_STAT(pmt_irq_n),
 	/* Tx/Rx IRQ Events */
-	DWC_ETH_QOS_EXTRA_STAT(tx_normal_irq_n[0]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_normal_irq_n[1]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_normal_irq_n[2]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_normal_irq_n[3]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_normal_irq_n[4]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_normal_irq_n[5]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_normal_irq_n[6]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_normal_irq_n[7]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_normal_irq_n[0]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_normal_irq_n[1]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_normal_irq_n[2]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_normal_irq_n[3]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_normal_irq_n[4]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_normal_irq_n[5]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_normal_irq_n[6]),
-	DWC_ETH_QOS_EXTRA_STAT(rx_normal_irq_n[7]),
-	DWC_ETH_QOS_EXTRA_STAT(napi_poll_n),
-	DWC_ETH_QOS_EXTRA_STAT(tx_clean_n[0]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_clean_n[1]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_clean_n[2]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_clean_n[3]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_clean_n[4]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_clean_n[5]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_clean_n[6]),
-	DWC_ETH_QOS_EXTRA_STAT(tx_clean_n[7]),
+	EQOS_EXTRA_STAT(tx_normal_irq_n[0]),
+	EQOS_EXTRA_STAT(tx_normal_irq_n[1]),
+	EQOS_EXTRA_STAT(tx_normal_irq_n[2]),
+	EQOS_EXTRA_STAT(tx_normal_irq_n[3]),
+	EQOS_EXTRA_STAT(tx_normal_irq_n[4]),
+	EQOS_EXTRA_STAT(tx_normal_irq_n[5]),
+	EQOS_EXTRA_STAT(tx_normal_irq_n[6]),
+	EQOS_EXTRA_STAT(tx_normal_irq_n[7]),
+	EQOS_EXTRA_STAT(rx_normal_irq_n[0]),
+	EQOS_EXTRA_STAT(rx_normal_irq_n[1]),
+	EQOS_EXTRA_STAT(rx_normal_irq_n[2]),
+	EQOS_EXTRA_STAT(rx_normal_irq_n[3]),
+	EQOS_EXTRA_STAT(rx_normal_irq_n[4]),
+	EQOS_EXTRA_STAT(rx_normal_irq_n[5]),
+	EQOS_EXTRA_STAT(rx_normal_irq_n[6]),
+	EQOS_EXTRA_STAT(rx_normal_irq_n[7]),
+	EQOS_EXTRA_STAT(napi_poll_n),
+	EQOS_EXTRA_STAT(tx_clean_n[0]),
+	EQOS_EXTRA_STAT(tx_clean_n[1]),
+	EQOS_EXTRA_STAT(tx_clean_n[2]),
+	EQOS_EXTRA_STAT(tx_clean_n[3]),
+	EQOS_EXTRA_STAT(tx_clean_n[4]),
+	EQOS_EXTRA_STAT(tx_clean_n[5]),
+	EQOS_EXTRA_STAT(tx_clean_n[6]),
+	EQOS_EXTRA_STAT(tx_clean_n[7]),
 	/* EEE */
-	DWC_ETH_QOS_EXTRA_STAT(tx_path_in_lpi_mode_irq_n),
-	DWC_ETH_QOS_EXTRA_STAT(tx_path_exit_lpi_mode_irq_n),
-	DWC_ETH_QOS_EXTRA_STAT(rx_path_in_lpi_mode_irq_n),
-	DWC_ETH_QOS_EXTRA_STAT(rx_path_exit_lpi_mode_irq_n),
+	EQOS_EXTRA_STAT(tx_path_in_lpi_mode_irq_n),
+	EQOS_EXTRA_STAT(tx_path_exit_lpi_mode_irq_n),
+	EQOS_EXTRA_STAT(rx_path_in_lpi_mode_irq_n),
+	EQOS_EXTRA_STAT(rx_path_exit_lpi_mode_irq_n),
 	/* Tx/Rx frames */
-	DWC_ETH_QOS_EXTRA_STAT(tx_pkt_n),
-	DWC_ETH_QOS_EXTRA_STAT(rx_pkt_n),
-	DWC_ETH_QOS_EXTRA_STAT(tx_vlan_pkt_n),
-	DWC_ETH_QOS_EXTRA_STAT(rx_vlan_pkt_n),
-	DWC_ETH_QOS_EXTRA_STAT(tx_timestamp_captured_n),
-	DWC_ETH_QOS_EXTRA_STAT(rx_timestamp_captured_n),
-	DWC_ETH_QOS_EXTRA_STAT(tx_tso_pkt_n),
-	DWC_ETH_QOS_EXTRA_STAT(rx_split_hdr_pkt_n),
+	EQOS_EXTRA_STAT(tx_pkt_n),
+	EQOS_EXTRA_STAT(rx_pkt_n),
+	EQOS_EXTRA_STAT(tx_vlan_pkt_n),
+	EQOS_EXTRA_STAT(rx_vlan_pkt_n),
+	EQOS_EXTRA_STAT(tx_timestamp_captured_n),
+	EQOS_EXTRA_STAT(rx_timestamp_captured_n),
+	EQOS_EXTRA_STAT(tx_tso_pkt_n),
+	EQOS_EXTRA_STAT(rx_split_hdr_pkt_n),
 
 	/* Tx/Rx frames per channels/queues */
-	DWC_ETH_QOS_EXTRA_STAT(q_tx_pkt_n[0]),
-	DWC_ETH_QOS_EXTRA_STAT(q_tx_pkt_n[1]),
-	DWC_ETH_QOS_EXTRA_STAT(q_tx_pkt_n[2]),
-	DWC_ETH_QOS_EXTRA_STAT(q_tx_pkt_n[3]),
-	DWC_ETH_QOS_EXTRA_STAT(q_tx_pkt_n[4]),
-	DWC_ETH_QOS_EXTRA_STAT(q_tx_pkt_n[5]),
-	DWC_ETH_QOS_EXTRA_STAT(q_tx_pkt_n[6]),
-	DWC_ETH_QOS_EXTRA_STAT(q_tx_pkt_n[7]),
-	DWC_ETH_QOS_EXTRA_STAT(q_rx_pkt_n[0]),
-	DWC_ETH_QOS_EXTRA_STAT(q_rx_pkt_n[1]),
-	DWC_ETH_QOS_EXTRA_STAT(q_rx_pkt_n[2]),
-	DWC_ETH_QOS_EXTRA_STAT(q_rx_pkt_n[3]),
-	DWC_ETH_QOS_EXTRA_STAT(q_rx_pkt_n[4]),
-	DWC_ETH_QOS_EXTRA_STAT(q_rx_pkt_n[5]),
-	DWC_ETH_QOS_EXTRA_STAT(q_rx_pkt_n[6]),
-	DWC_ETH_QOS_EXTRA_STAT(q_rx_pkt_n[7]),
-	DWC_ETH_QOS_EXTRA_STAT(link_disconnect_count),
-	DWC_ETH_QOS_EXTRA_STAT(link_connect_count),
+	EQOS_EXTRA_STAT(q_tx_pkt_n[0]),
+	EQOS_EXTRA_STAT(q_tx_pkt_n[1]),
+	EQOS_EXTRA_STAT(q_tx_pkt_n[2]),
+	EQOS_EXTRA_STAT(q_tx_pkt_n[3]),
+	EQOS_EXTRA_STAT(q_tx_pkt_n[4]),
+	EQOS_EXTRA_STAT(q_tx_pkt_n[5]),
+	EQOS_EXTRA_STAT(q_tx_pkt_n[6]),
+	EQOS_EXTRA_STAT(q_tx_pkt_n[7]),
+	EQOS_EXTRA_STAT(q_rx_pkt_n[0]),
+	EQOS_EXTRA_STAT(q_rx_pkt_n[1]),
+	EQOS_EXTRA_STAT(q_rx_pkt_n[2]),
+	EQOS_EXTRA_STAT(q_rx_pkt_n[3]),
+	EQOS_EXTRA_STAT(q_rx_pkt_n[4]),
+	EQOS_EXTRA_STAT(q_rx_pkt_n[5]),
+	EQOS_EXTRA_STAT(q_rx_pkt_n[6]),
+	EQOS_EXTRA_STAT(q_rx_pkt_n[7]),
+	EQOS_EXTRA_STAT(link_disconnect_count),
+	EQOS_EXTRA_STAT(link_connect_count),
 };
-#define DWC_ETH_QOS_EXTRA_STAT_LEN ARRAY_SIZE(DWC_ETH_QOS_gstrings_stats)
+#define EQOS_EXTRA_STAT_LEN ARRAY_SIZE(eqos_gstrings_stats)
 
 /* HW MAC Management counters (if supported) */
-#define DWC_ETH_QOS_MMC_STAT(m)	\
-	{ #m, FIELD_SIZEOF(struct DWC_ETH_QOS_mmc_counters, m),	\
-	offsetof(struct DWC_ETH_QOS_prv_data, mmc.m)}
+#define EQOS_MMC_STAT(m)	\
+	{ #m, FIELD_SIZEOF(struct eqos_mmc_counters, m),	\
+	offsetof(struct eqos_prv_data, mmc.m)}
 
-static const struct DWC_ETH_QOS_stats DWC_ETH_QOS_mmc[] = {
+static const struct eqos_stats eqos_mmc[] = {
 	/* MMC TX counters */
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_octetcount_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_framecount_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_broadcastframe_g),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_multicastframe_g),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_64_octets_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_65_to_127_octets_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_128_to_255_octets_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_256_to_511_octets_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_512_to_1023_octets_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_1024_to_max_octets_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_unicast_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_multicast_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_broadcast_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_underflow_error),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_singlecol_g),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_multicol_g),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_deferred),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_latecol),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_exesscol),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_carrier_error),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_octetcount_g),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_framecount_g),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_excessdef),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_pause_frame),
-	DWC_ETH_QOS_MMC_STAT(mmc_tx_vlan_frame_g),
+	EQOS_MMC_STAT(mmc_tx_octetcount_gb),
+	EQOS_MMC_STAT(mmc_tx_framecount_gb),
+	EQOS_MMC_STAT(mmc_tx_broadcastframe_g),
+	EQOS_MMC_STAT(mmc_tx_multicastframe_g),
+	EQOS_MMC_STAT(mmc_tx_64_octets_gb),
+	EQOS_MMC_STAT(mmc_tx_65_to_127_octets_gb),
+	EQOS_MMC_STAT(mmc_tx_128_to_255_octets_gb),
+	EQOS_MMC_STAT(mmc_tx_256_to_511_octets_gb),
+	EQOS_MMC_STAT(mmc_tx_512_to_1023_octets_gb),
+	EQOS_MMC_STAT(mmc_tx_1024_to_max_octets_gb),
+	EQOS_MMC_STAT(mmc_tx_unicast_gb),
+	EQOS_MMC_STAT(mmc_tx_multicast_gb),
+	EQOS_MMC_STAT(mmc_tx_broadcast_gb),
+	EQOS_MMC_STAT(mmc_tx_underflow_error),
+	EQOS_MMC_STAT(mmc_tx_singlecol_g),
+	EQOS_MMC_STAT(mmc_tx_multicol_g),
+	EQOS_MMC_STAT(mmc_tx_deferred),
+	EQOS_MMC_STAT(mmc_tx_latecol),
+	EQOS_MMC_STAT(mmc_tx_exesscol),
+	EQOS_MMC_STAT(mmc_tx_carrier_error),
+	EQOS_MMC_STAT(mmc_tx_octetcount_g),
+	EQOS_MMC_STAT(mmc_tx_framecount_g),
+	EQOS_MMC_STAT(mmc_tx_excessdef),
+	EQOS_MMC_STAT(mmc_tx_pause_frame),
+	EQOS_MMC_STAT(mmc_tx_vlan_frame_g),
 
 	/* MMC RX counters */
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_framecount_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_octetcount_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_octetcount_g),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_broadcastframe_g),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_multicastframe_g),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_crc_errror),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_align_error),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_run_error),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_jabber_error),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_undersize_g),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_oversize_g),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_64_octets_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_65_to_127_octets_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_128_to_255_octets_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_256_to_511_octets_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_512_to_1023_octets_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_1024_to_max_octets_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_unicast_g),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_length_error),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_outofrangetype),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_pause_frames),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_fifo_overflow),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_vlan_frames_gb),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_watchdog_error),
+	EQOS_MMC_STAT(mmc_rx_framecount_gb),
+	EQOS_MMC_STAT(mmc_rx_octetcount_gb),
+	EQOS_MMC_STAT(mmc_rx_octetcount_g),
+	EQOS_MMC_STAT(mmc_rx_broadcastframe_g),
+	EQOS_MMC_STAT(mmc_rx_multicastframe_g),
+	EQOS_MMC_STAT(mmc_rx_crc_errror),
+	EQOS_MMC_STAT(mmc_rx_align_error),
+	EQOS_MMC_STAT(mmc_rx_run_error),
+	EQOS_MMC_STAT(mmc_rx_jabber_error),
+	EQOS_MMC_STAT(mmc_rx_undersize_g),
+	EQOS_MMC_STAT(mmc_rx_oversize_g),
+	EQOS_MMC_STAT(mmc_rx_64_octets_gb),
+	EQOS_MMC_STAT(mmc_rx_65_to_127_octets_gb),
+	EQOS_MMC_STAT(mmc_rx_128_to_255_octets_gb),
+	EQOS_MMC_STAT(mmc_rx_256_to_511_octets_gb),
+	EQOS_MMC_STAT(mmc_rx_512_to_1023_octets_gb),
+	EQOS_MMC_STAT(mmc_rx_1024_to_max_octets_gb),
+	EQOS_MMC_STAT(mmc_rx_unicast_g),
+	EQOS_MMC_STAT(mmc_rx_length_error),
+	EQOS_MMC_STAT(mmc_rx_outofrangetype),
+	EQOS_MMC_STAT(mmc_rx_pause_frames),
+	EQOS_MMC_STAT(mmc_rx_fifo_overflow),
+	EQOS_MMC_STAT(mmc_rx_vlan_frames_gb),
+	EQOS_MMC_STAT(mmc_rx_watchdog_error),
 
 	/* IPC */
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipc_intr_mask),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipc_intr),
+	EQOS_MMC_STAT(mmc_rx_ipc_intr_mask),
+	EQOS_MMC_STAT(mmc_rx_ipc_intr),
 
 	/* IPv4 */
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipv4_gd),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipv4_hderr),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipv4_nopay),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipv4_frag),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipv4_udsbl),
+	EQOS_MMC_STAT(mmc_rx_ipv4_gd),
+	EQOS_MMC_STAT(mmc_rx_ipv4_hderr),
+	EQOS_MMC_STAT(mmc_rx_ipv4_nopay),
+	EQOS_MMC_STAT(mmc_rx_ipv4_frag),
+	EQOS_MMC_STAT(mmc_rx_ipv4_udsbl),
 
 	/* IPV6 */
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipv6_gd_octets),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipv6_hderr_octets),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipv6_nopay_octets),
+	EQOS_MMC_STAT(mmc_rx_ipv6_gd_octets),
+	EQOS_MMC_STAT(mmc_rx_ipv6_hderr_octets),
+	EQOS_MMC_STAT(mmc_rx_ipv6_nopay_octets),
 
 	/* Protocols */
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_udp_gd),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_udp_err),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_tcp_gd),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_tcp_err),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_icmp_gd),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_icmp_err),
+	EQOS_MMC_STAT(mmc_rx_udp_gd),
+	EQOS_MMC_STAT(mmc_rx_udp_err),
+	EQOS_MMC_STAT(mmc_rx_tcp_gd),
+	EQOS_MMC_STAT(mmc_rx_tcp_err),
+	EQOS_MMC_STAT(mmc_rx_icmp_gd),
+	EQOS_MMC_STAT(mmc_rx_icmp_err),
 
 	/* IPv4 */
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipv4_gd_octets),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipv4_hderr_octets),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipv4_nopay_octets),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipv4_frag_octets),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipv4_udsbl_octets),
+	EQOS_MMC_STAT(mmc_rx_ipv4_gd_octets),
+	EQOS_MMC_STAT(mmc_rx_ipv4_hderr_octets),
+	EQOS_MMC_STAT(mmc_rx_ipv4_nopay_octets),
+	EQOS_MMC_STAT(mmc_rx_ipv4_frag_octets),
+	EQOS_MMC_STAT(mmc_rx_ipv4_udsbl_octets),
 
 	/* IPV6 */
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipv6_gd),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipv6_hderr),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_ipv6_nopay),
+	EQOS_MMC_STAT(mmc_rx_ipv6_gd),
+	EQOS_MMC_STAT(mmc_rx_ipv6_hderr),
+	EQOS_MMC_STAT(mmc_rx_ipv6_nopay),
 
 	/* Protocols */
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_udp_gd_octets),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_udp_err_octets),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_tcp_gd_octets),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_tcp_err_octets),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_icmp_gd_octets),
-	DWC_ETH_QOS_MMC_STAT(mmc_rx_icmp_err_octets),
+	EQOS_MMC_STAT(mmc_rx_udp_gd_octets),
+	EQOS_MMC_STAT(mmc_rx_udp_err_octets),
+	EQOS_MMC_STAT(mmc_rx_tcp_gd_octets),
+	EQOS_MMC_STAT(mmc_rx_tcp_err_octets),
+	EQOS_MMC_STAT(mmc_rx_icmp_gd_octets),
+	EQOS_MMC_STAT(mmc_rx_icmp_err_octets),
 };
-#define DWC_ETH_QOS_MMC_STATS_LEN ARRAY_SIZE(DWC_ETH_QOS_mmc)
+#define EQOS_MMC_STATS_LEN ARRAY_SIZE(eqos_mmc)
 
-static int DWC_ETH_QOS_get_ts_info(struct net_device *net,
+static int eqos_get_ts_info(struct net_device *net,
                                  struct ethtool_ts_info *info)
 {
         info->so_timestamping =
@@ -300,30 +300,30 @@ static int DWC_ETH_QOS_get_ts_info(struct net_device *net,
         return 0;
 }
 
-static const struct ethtool_ops DWC_ETH_QOS_ethtool_ops = {
-	//.get_tso = DWC_ETH_QOS_get_tso,
-	//.set_tso = DWC_ETH_QOS_set_tso,
+static const struct ethtool_ops eqos_ethtool_ops = {
+	//.get_tso = eqos_get_tso,
+	//.set_tso = eqos_set_tso,
 	//.get_sg = ethtool_op_get_sg,
 	//.set_sg = ethtool_op_set_sg,
 	//.get_flags = ethtool_op_get_flags,
 	.get_link = ethtool_op_get_link,
-	.get_pauseparam = DWC_ETH_QOS_get_pauseparam,
-	.set_pauseparam = DWC_ETH_QOS_set_pauseparam,
-	.get_settings = DWC_ETH_QOS_getsettings,
-	.set_settings = DWC_ETH_QOS_setsettings,
-	.get_wol = DWC_ETH_QOS_get_wol,
-	.set_wol = DWC_ETH_QOS_set_wol,
-	.get_coalesce = DWC_ETH_QOS_get_coalesce,
-	.set_coalesce = DWC_ETH_QOS_set_coalesce,
-	.get_ethtool_stats = DWC_ETH_QOS_get_ethtool_stats,
-	.get_strings = DWC_ETH_QOS_get_strings,
-	.get_sset_count = DWC_ETH_QOS_get_sset_count,
-	.get_ts_info = DWC_ETH_QOS_get_ts_info,
+	.get_pauseparam = eqos_get_pauseparam,
+	.set_pauseparam = eqos_set_pauseparam,
+	.get_settings = eqos_getsettings,
+	.set_settings = eqos_setsettings,
+	.get_wol = eqos_get_wol,
+	.set_wol = eqos_set_wol,
+	.get_coalesce = eqos_get_coalesce,
+	.set_coalesce = eqos_set_coalesce,
+	.get_ethtool_stats = eqos_get_ethtool_stats,
+	.get_strings = eqos_get_strings,
+	.get_sset_count = eqos_get_sset_count,
+	.get_ts_info = eqos_get_ts_info,
 };
 
-struct ethtool_ops *DWC_ETH_QOS_get_ethtool_ops(void)
+struct ethtool_ops *eqos_get_ethtool_ops(void)
 {
-	return (struct ethtool_ops *)&DWC_ETH_QOS_ethtool_ops;
+	return (struct ethtool_ops *)&eqos_ethtool_ops;
 }
 
 
@@ -337,15 +337,15 @@ struct ethtool_ops *DWC_ETH_QOS_get_ethtool_ops(void)
  * \return void
  */
 
-static void DWC_ETH_QOS_get_pauseparam(struct net_device *dev,
+static void eqos_get_pauseparam(struct net_device *dev,
 				       struct ethtool_pauseparam *pause)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct phy_device *phydev = pdata->phydev;
 	unsigned int data;
 
-	DBGPR("-->DWC_ETH_QOS_get_pauseparam\n");
+	DBGPR("-->eqos_get_pauseparam\n");
 
 	pause->rx_pause = 0;
 	pause->tx_pause = 0;
@@ -364,15 +364,15 @@ static void DWC_ETH_QOS_get_pauseparam(struct net_device *dev,
 			return;
 	}
 
-	if ((pdata->flow_ctrl & DWC_ETH_QOS_FLOW_CTRL_RX) ==
-	    DWC_ETH_QOS_FLOW_CTRL_RX)
+	if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_RX) ==
+	    EQOS_FLOW_CTRL_RX)
 		pause->rx_pause = 1;
 
-	if ((pdata->flow_ctrl & DWC_ETH_QOS_FLOW_CTRL_TX) ==
-	    DWC_ETH_QOS_FLOW_CTRL_TX)
+	if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_TX) ==
+	    EQOS_FLOW_CTRL_TX)
 		pause->tx_pause = 1;
 
-	DBGPR("<--DWC_ETH_QOS_get_pauseparam\n");
+	DBGPR("<--eqos_get_pauseparam\n");
 }
 
 /*!
@@ -387,17 +387,17 @@ static void DWC_ETH_QOS_get_pauseparam(struct net_device *dev,
  * \retval zero on success and -ve number on failure.
  */
 
-static int DWC_ETH_QOS_set_pauseparam(struct net_device *dev,
+static int eqos_set_pauseparam(struct net_device *dev,
 				      struct ethtool_pauseparam *pause)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct phy_device *phydev = pdata->phydev;
-	int new_pause = DWC_ETH_QOS_FLOW_CTRL_OFF;
+	int new_pause = EQOS_FLOW_CTRL_OFF;
 	unsigned int data;
 	int ret = 0;
 
-	DBGPR("-->DWC_ETH_QOS_set_pauseparam: "\
+	DBGPR("-->eqos_set_pauseparam: "\
 	      "autoneg = %d tx_pause = %d rx_pause = %d\n",
 	      pause->autoneg, pause->tx_pause, pause->rx_pause);
 
@@ -413,9 +413,9 @@ static int DWC_ETH_QOS_set_pauseparam(struct net_device *dev,
 	}
 
 	if (pause->rx_pause)
-		new_pause |= DWC_ETH_QOS_FLOW_CTRL_RX;
+		new_pause |= EQOS_FLOW_CTRL_RX;
 	if (pause->tx_pause)
-		new_pause |= DWC_ETH_QOS_FLOW_CTRL_TX;
+		new_pause |= EQOS_FLOW_CTRL_TX;
 
 	if (new_pause == pdata->flow_ctrl && !pause->autoneg)
 		return -EINVAL;
@@ -423,31 +423,31 @@ static int DWC_ETH_QOS_set_pauseparam(struct net_device *dev,
 	pdata->flow_ctrl = new_pause;
 
 	if (pdata->hw_feat.pcs_sel) {
-		DWC_ETH_QOS_configure_flow_ctrl(pdata);
+		eqos_configure_flow_ctrl(pdata);
 	} else {
 		phydev->autoneg = pause->autoneg;
 		if (phydev->autoneg) {
 			if (netif_running(dev))
 				ret = phy_start_aneg(phydev);
 		} else {
-			DWC_ETH_QOS_configure_flow_ctrl(pdata);
+			eqos_configure_flow_ctrl(pdata);
 		}
 	}
 
-	DBGPR("<--DWC_ETH_QOS_set_pauseparam\n");
+	DBGPR("<--eqos_set_pauseparam\n");
 
 	return ret;
 }
 
-void DWC_ETH_QOS_configure_flow_ctrl(struct DWC_ETH_QOS_prv_data *pdata)
+void eqos_configure_flow_ctrl(struct eqos_prv_data *pdata)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	UINT qInx;
+	UINT qinx;
 
-	DBGPR("-->DWC_ETH_QOS_configure_flow_ctrl\n");
+	DBGPR("-->eqos_configure_flow_ctrl\n");
 
-	if ((pdata->flow_ctrl & DWC_ETH_QOS_FLOW_CTRL_RX) ==
-	    DWC_ETH_QOS_FLOW_CTRL_RX) {
+	if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_RX) ==
+	    EQOS_FLOW_CTRL_RX) {
 		hw_if->enable_rx_flow_ctrl();
 	} else {
 		hw_if->disable_rx_flow_ctrl();
@@ -455,18 +455,18 @@ void DWC_ETH_QOS_configure_flow_ctrl(struct DWC_ETH_QOS_prv_data *pdata)
 
 	/* As ethtool does not provide queue level configuration
 	   Tx flow control is disabled/enabled for all transmit queues */
-	if ((pdata->flow_ctrl & DWC_ETH_QOS_FLOW_CTRL_TX) ==
-	    DWC_ETH_QOS_FLOW_CTRL_TX) {
-		for (qInx = 0; qInx < DWC_ETH_QOS_TX_QUEUE_CNT; qInx++)
-			hw_if->enable_tx_flow_ctrl(qInx);
+	if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_TX) ==
+	    EQOS_FLOW_CTRL_TX) {
+		for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++)
+			hw_if->enable_tx_flow_ctrl(qinx);
 	} else {
-		for (qInx = 0; qInx < DWC_ETH_QOS_TX_QUEUE_CNT; qInx++)
-			hw_if->disable_tx_flow_ctrl(qInx);
+		for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++)
+			hw_if->disable_tx_flow_ctrl(qinx);
 	}
 
 	pdata->oldflow_ctrl = pdata->flow_ctrl;
 
-	DBGPR("<--DWC_ETH_QOS_configure_flow_ctrl\n");
+	DBGPR("<--eqos_configure_flow_ctrl\n");
 }
 
 /*!
@@ -484,16 +484,16 @@ void DWC_ETH_QOS_configure_flow_ctrl(struct DWC_ETH_QOS_prv_data *pdata)
  */
 #define SPEED_UNKNOWN -1
 #define DUPLEX_UNKNOWN 0xff
-static int DWC_ETH_QOS_getsettings(struct net_device *dev,
+static int eqos_getsettings(struct net_device *dev,
 				   struct ethtool_cmd *cmd)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	unsigned int pause, duplex;
 	unsigned int lp_pause, lp_duplex;
 	int ret = 0;
 
-	DBGPR("-->DWC_ETH_QOS_getsettings\n");
+	DBGPR("-->eqos_getsettings\n");
 
 	if (pdata->hw_feat.pcs_sel) {
 		if (!pdata->pcs_link) {
@@ -570,7 +570,7 @@ static int DWC_ETH_QOS_getsettings(struct net_device *dev,
 		spin_unlock_irq(&pdata->lock);
 	}
 
-	DBGPR("<--DWC_ETH_QOS_getsettings\n");
+	DBGPR("<--eqos_getsettings\n");
 
 	return ret;
 }
@@ -589,17 +589,17 @@ static int DWC_ETH_QOS_getsettings(struct net_device *dev,
  * \retval zero on success and -ve number on failure.
  */
 
-static int DWC_ETH_QOS_setsettings(struct net_device *dev,
+static int eqos_setsettings(struct net_device *dev,
 				   struct ethtool_cmd *cmd)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	unsigned int speed;
 	//unsigned int pause, duplex, speed;
 	//unsigned int lp_pause, lp_duplex;
 	int ret = 0;
 
-	printk(KERN_ALERT "-->DWC_ETH_QOS_setsettings\n");
+	printk(KERN_ALERT "-->eqos_setsettings\n");
 
 	if (pdata->hw_feat.pcs_sel) {
 		speed = ethtool_cmd_speed(cmd);
@@ -632,7 +632,7 @@ static int DWC_ETH_QOS_setsettings(struct net_device *dev,
 		spin_unlock_irq(&pdata->lock);
 	}
 
-	printk(KERN_ALERT "<--DWC_ETH_QOS_setsettings\n");
+	printk(KERN_ALERT "<--eqos_setsettings\n");
 
 	return ret;
 }
@@ -647,12 +647,12 @@ static int DWC_ETH_QOS_setsettings(struct net_device *dev,
  * \return void
  */
 
-static void DWC_ETH_QOS_get_wol(struct net_device *dev,
+static void eqos_get_wol(struct net_device *dev,
 				struct ethtool_wolinfo *wol)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 
-	DBGPR("-->DWC_ETH_QOS_get_wol\n");
+	DBGPR("-->eqos_get_wol\n");
 
 	wol->supported = 0;
 	spin_lock_irq(&pdata->lock);
@@ -665,7 +665,7 @@ static void DWC_ETH_QOS_get_wol(struct net_device *dev,
 	}
 	spin_unlock_irq(&pdata->lock);
 
-	DBGPR("<--DWC_ETH_QOS_get_wol\n");
+	DBGPR("<--eqos_get_wol\n");
 
 	return;
 }
@@ -682,14 +682,14 @@ static void DWC_ETH_QOS_get_wol(struct net_device *dev,
  * \retval zero on success and -ve number on failure.
  */
 
-static int DWC_ETH_QOS_set_wol(struct net_device *dev,
+static int eqos_set_wol(struct net_device *dev,
 			       struct ethtool_wolinfo *wol)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 	u32 support = WAKE_MAGIC | WAKE_UCAST;
 	int ret = 0;
 
-	DBGPR("-->DWC_ETH_QOS_set_wol\n");
+	DBGPR("-->eqos_set_wol\n");
 
 	/* By default almost all GMAC devices support the WoL via
 	 * magic frame but we can disable it if the HW capability
@@ -719,16 +719,16 @@ static int DWC_ETH_QOS_set_wol(struct net_device *dev,
 	pdata->wolopts = wol->wolopts;
 	spin_unlock_irq(&pdata->lock);
 
-	DBGPR("<--DWC_ETH_QOS_set_wol\n");
+	DBGPR("<--eqos_set_wol\n");
 
 	return ret;
 }
 
-u32 DWC_ETH_QOS_usec2riwt(u32 usec, struct DWC_ETH_QOS_prv_data *pdata)
+u32 eqos_usec2riwt(u32 usec, struct eqos_prv_data *pdata)
 {
 	u32 ret = 0;
 
-	DBGPR("-->DWC_ETH_QOS_usec2riwt\n");
+	DBGPR("-->eqos_usec2riwt\n");
 
 	/* Eg:
 	 * System clock is 62.5MHz, each clock cycle would then be 16ns
@@ -738,23 +738,23 @@ u32 DWC_ETH_QOS_usec2riwt(u32 usec, struct DWC_ETH_QOS_prv_data *pdata)
 	 * So formula with above values is,
 	 * ret = usec/4 */
 
-	ret = (usec * (DWC_ETH_QOS_SYSCLOCK/1000000))/256;
+	ret = (usec * (EQOS_SYSCLOCK/1000000))/256;
 
-	DBGPR("<--DWC_ETH_QOS_usec2riwt\n");
+	DBGPR("<--eqos_usec2riwt\n");
 
 	return ret;
 }
 
-static u32 DWC_ETH_QOS_riwt2usec(u32 riwt, struct DWC_ETH_QOS_prv_data *pdata)
+static u32 eqos_riwt2usec(u32 riwt, struct eqos_prv_data *pdata)
 {
 	u32 ret = 0;
 
-	DBGPR("-->DWC_ETH_QOS_riwt2usec\n");
+	DBGPR("-->eqos_riwt2usec\n");
 
-	/* using formula from 'DWC_ETH_QOS_usec2riwt' */
-	ret = (riwt * 256)/(DWC_ETH_QOS_SYSCLOCK/1000000);
+	/* using formula from 'eqos_usec2riwt' */
+	ret = (riwt * 256)/(EQOS_SYSCLOCK/1000000);
 
-	DBGPR("<--DWC_ETH_QOS_riwt2usec\n");
+	DBGPR("<--eqos_riwt2usec\n");
 
 	return ret;
 }
@@ -773,22 +773,22 @@ static u32 DWC_ETH_QOS_riwt2usec(u32 riwt, struct DWC_ETH_QOS_prv_data *pdata)
  * \retval 0
  */
 
-static int DWC_ETH_QOS_get_coalesce(struct net_device *dev,
+static int eqos_get_coalesce(struct net_device *dev,
 				    struct ethtool_coalesce *ec)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
-	struct DWC_ETH_QOS_rx_wrapper_descriptor *rx_desc_data =
+	struct eqos_prv_data *pdata = netdev_priv(dev);
+	struct eqos_rx_wrapper_descriptor *rx_desc_data =
 	    GET_RX_WRAPPER_DESC(0);
 
-	DBGPR("-->DWC_ETH_QOS_get_coalesce\n");
+	DBGPR("-->eqos_get_coalesce\n");
 
 	memset(ec, 0, sizeof(struct ethtool_coalesce));
 
 	ec->rx_coalesce_usecs =
-	    DWC_ETH_QOS_riwt2usec(rx_desc_data->rx_riwt, pdata);
+	    eqos_riwt2usec(rx_desc_data->rx_riwt, pdata);
 	ec->rx_max_coalesced_frames = rx_desc_data->rx_coal_frames;
 
-	DBGPR("<--DWC_ETH_QOS_get_coalesce\n");
+	DBGPR("<--eqos_get_coalesce\n");
 
 	return 0;
 }
@@ -807,16 +807,16 @@ static int DWC_ETH_QOS_get_coalesce(struct net_device *dev,
  * \retval zero on success and -ve number on failure.
  */
 
-static int DWC_ETH_QOS_set_coalesce(struct net_device *dev,
+static int eqos_set_coalesce(struct net_device *dev,
 				    struct ethtool_coalesce *ec)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
-	struct DWC_ETH_QOS_rx_wrapper_descriptor *rx_desc_data =
+	struct eqos_prv_data *pdata = netdev_priv(dev);
+	struct eqos_rx_wrapper_descriptor *rx_desc_data =
 	    GET_RX_WRAPPER_DESC(0);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	unsigned int rx_riwt, rx_usec, local_use_riwt, qInx;
+	unsigned int rx_riwt, rx_usec, local_use_riwt, qinx;
 
-	DBGPR("-->DWC_ETH_QOS_set_coalesce\n");
+	DBGPR("-->eqos_set_coalesce\n");
 
 	/* Check for not supported parameters  */
 	if ((ec->rx_coalesce_usecs_irq) ||
@@ -844,11 +844,11 @@ static int DWC_ETH_QOS_set_coalesce(struct net_device *dev,
 	printk(KERN_ALERT "RX COALESCING is %s\n",
 	       (local_use_riwt ? "ENABLED" : "DISABLED"));
 
-	rx_riwt = DWC_ETH_QOS_usec2riwt(ec->rx_coalesce_usecs, pdata);
+	rx_riwt = eqos_usec2riwt(ec->rx_coalesce_usecs, pdata);
 
 	/* Check the bounds of values for RX */
-	if (rx_riwt > DWC_ETH_QOS_MAX_DMA_RIWT) {
-		rx_usec = DWC_ETH_QOS_riwt2usec(DWC_ETH_QOS_MAX_DMA_RIWT,
+	if (rx_riwt > EQOS_MAX_DMA_RIWT) {
+		rx_usec = eqos_riwt2usec(EQOS_MAX_DMA_RIWT,
 		    pdata);
 		printk(KERN_ALERT "RX Coalesing is limited to %d usecs\n",
 		       rx_usec);
@@ -856,7 +856,7 @@ static int DWC_ETH_QOS_set_coalesce(struct net_device *dev,
 	}
 	if (ec->rx_max_coalesced_frames > RX_DESC_CNT) {
 		printk(KERN_ALERT "RX Coalesing is limited to %d frames\n",
-		       DWC_ETH_QOS_RX_MAX_FRAMES);
+		       EQOS_RX_MAX_FRAMES);
 		return -EINVAL;
 	}
 	if (rx_desc_data->rx_coal_frames != ec->rx_max_coalesced_frames
@@ -868,15 +868,15 @@ static int DWC_ETH_QOS_set_coalesce(struct net_device *dev,
 	/* The selected parameters are applied to all the
 	 * receive queues equally, so all the queue configurations
 	 * are in sync */
-	for (qInx = 0; qInx < DWC_ETH_QOS_RX_QUEUE_CNT; qInx++) {
-		rx_desc_data = GET_RX_WRAPPER_DESC(qInx);
+	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
+		rx_desc_data = GET_RX_WRAPPER_DESC(qinx);
 		rx_desc_data->use_riwt = local_use_riwt;
 		rx_desc_data->rx_riwt = rx_riwt;
 		rx_desc_data->rx_coal_frames = ec->rx_max_coalesced_frames;
-		hw_if->config_rx_watchdog(qInx, rx_desc_data->rx_riwt);
+		hw_if->config_rx_watchdog(qinx, rx_desc_data->rx_riwt);
 	}
 
-	DBGPR("<--DWC_ETH_QOS_set_coalesce\n");
+	DBGPR("<--eqos_set_coalesce\n");
 
 	return 0;
 }
@@ -893,34 +893,34 @@ static int DWC_ETH_QOS_set_coalesce(struct net_device *dev,
  * \return void
  */
 
-static void DWC_ETH_QOS_get_ethtool_stats(struct net_device *dev,
+static void eqos_get_ethtool_stats(struct net_device *dev,
 	struct ethtool_stats *dummy, u64 *data)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 	int i, j = 0;
 
-	DBGPR("-->DWC_ETH_QOS_get_ethtool_stats\n");
+	DBGPR("-->eqos_get_ethtool_stats\n");
 
 	if (pdata->hw_feat.mmc_sel) {
-		DWC_ETH_QOS_mmc_read(&pdata->mmc);
+		eqos_mmc_read(&pdata->mmc);
 
-		for (i = 0; i < DWC_ETH_QOS_MMC_STATS_LEN; i++) {
+		for (i = 0; i < EQOS_MMC_STATS_LEN; i++) {
 			char *p = (char *)pdata +
-					DWC_ETH_QOS_mmc[i].stat_offset;
+					eqos_mmc[i].stat_offset;
 
-			data[j++] = (DWC_ETH_QOS_mmc[i].sizeof_stat ==
+			data[j++] = (eqos_mmc[i].sizeof_stat ==
 				sizeof(u64)) ? (*(u64 *)p) : (*(u32 *)p);
 		}
 	}
 
-	for (i = 0; i < DWC_ETH_QOS_EXTRA_STAT_LEN; i++) {
+	for (i = 0; i < EQOS_EXTRA_STAT_LEN; i++) {
 		char *p = (char *)pdata +
-				DWC_ETH_QOS_gstrings_stats[i].stat_offset;
-		data[j++] = (DWC_ETH_QOS_gstrings_stats[i].sizeof_stat ==
+				eqos_gstrings_stats[i].stat_offset;
+		data[j++] = (eqos_gstrings_stats[i].sizeof_stat ==
 				sizeof(u64)) ? (*(u64 *)p) : (*(u32 *)p);
 	}
 
-	DBGPR("<--DWC_ETH_QOS_get_ethtool_stats\n");
+	DBGPR("<--eqos_get_ethtool_stats\n");
 }
 
 
@@ -934,26 +934,26 @@ static void DWC_ETH_QOS_get_ethtool_stats(struct net_device *dev,
  * \return void
  */
 
-static void DWC_ETH_QOS_get_strings(struct net_device *dev, u32 stringset, u8 *data)
+static void eqos_get_strings(struct net_device *dev, u32 stringset, u8 *data)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 	int i;
 	u8 *p = data;
 
-	DBGPR("-->DWC_ETH_QOS_get_strings\n");
+	DBGPR("-->eqos_get_strings\n");
 
 	switch(stringset) {
 	case ETH_SS_STATS:
 		if (pdata->hw_feat.mmc_sel) {
-			for (i = 0; i < DWC_ETH_QOS_MMC_STATS_LEN; i++) {
-				memcpy(p, DWC_ETH_QOS_mmc[i].stat_string,
+			for (i = 0; i < EQOS_MMC_STATS_LEN; i++) {
+				memcpy(p, eqos_mmc[i].stat_string,
 					ETH_GSTRING_LEN);
 				p += ETH_GSTRING_LEN;
 			}
 		}
 
-		for (i = 0; i < DWC_ETH_QOS_EXTRA_STAT_LEN; i++) {
-			memcpy(p, DWC_ETH_QOS_gstrings_stats[i].stat_string,
+		for (i = 0; i < EQOS_EXTRA_STAT_LEN; i++) {
+			memcpy(p, eqos_gstrings_stats[i].stat_string,
 				ETH_GSTRING_LEN);
 			p += ETH_GSTRING_LEN;
 		}
@@ -962,7 +962,7 @@ static void DWC_ETH_QOS_get_strings(struct net_device *dev, u32 stringset, u8 *d
 		WARN_ON(1);
 	}
 
-	DBGPR("<--DWC_ETH_QOS_get_strings\n");
+	DBGPR("<--eqos_get_strings\n");
 }
 
 
@@ -978,24 +978,24 @@ static void DWC_ETH_QOS_get_strings(struct net_device *dev, u32 stringset, u8 *d
  * defined and -ve on failure.
  */
 
-static int DWC_ETH_QOS_get_sset_count(struct net_device *dev, int sset)
+static int eqos_get_sset_count(struct net_device *dev, int sset)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 	int len = 0;
 
-	DBGPR("-->DWC_ETH_QOS_get_sset_count\n");
+	DBGPR("-->eqos_get_sset_count\n");
 
 	switch(sset) {
 	case ETH_SS_STATS:
 		if (pdata->hw_feat.mmc_sel)
-			len = DWC_ETH_QOS_MMC_STATS_LEN;
-		len += DWC_ETH_QOS_EXTRA_STAT_LEN;
+			len = EQOS_MMC_STATS_LEN;
+		len += EQOS_EXTRA_STAT_LEN;
 		break;
 	default:
 		len = -EOPNOTSUPP;
 	}
 
-	DBGPR("<--DWC_ETH_QOS_get_sset_count\n");
+	DBGPR("<--eqos_get_sset_count\n");
 
 	return len;
 }
@@ -1013,11 +1013,11 @@ static int DWC_ETH_QOS_get_sset_count(struct net_device *dev, int sset)
  * \retval 0 on success and -ve on failure.
  */
 #if 0
-static int DWC_ETH_QOS_set_tso(struct net_device *dev, u32 data)
+static int eqos_set_tso(struct net_device *dev, u32 data)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 
-	DBGPR("-->DWC_ETH_QOS_set_tso\n");
+	DBGPR("-->eqos_set_tso\n");
 
 	if (pdata->hw_feat.tso_en == 0)
 			return -EOPNOTSUPP;
@@ -1027,7 +1027,7 @@ static int DWC_ETH_QOS_set_tso(struct net_device *dev, u32 data)
 	else
 		dev->features &= ~NETIF_F_TSO;
 
-	DBGPR("<--DWC_ETH_QOS_set_tso\n");
+	DBGPR("<--eqos_set_tso\n");
 
 	return 0;
 }
@@ -1044,16 +1044,16 @@ static int DWC_ETH_QOS_set_tso(struct net_device *dev, u32 data)
  * \retval  +ve no. on success and -ve no. on failure.
  */
 
-static u32 DWC_ETH_QOS_get_tso(struct net_device *dev)
+static u32 eqos_get_tso(struct net_device *dev)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 
-	DBGPR("-->DWC_ETH_QOS_get_tso\n");
+	DBGPR("-->eqos_get_tso\n");
 
 	if (pdata->hw_feat.tso_en == 0)
 			return 0;
 
-	DBGPR("<--DWC_ETH_QOS_get_tso\n");
+	DBGPR("<--eqos_get_tso\n");
 
 	return ((dev->features & NETIF_F_TSO) != 0);
 }

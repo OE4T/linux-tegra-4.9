@@ -20,7 +20,7 @@
 
 / {
         ether_qos@2490000 {
-                compatible = "synopsys,dwc_eth_qos";
+                compatible = "nvidia,eqos";
                 reg = <0x0 0x02490000 0x0 0x10000>;
 		interrupts = 	<0 194 0x4>,	/* common */
 				<0 195 0x4>,	/* power */

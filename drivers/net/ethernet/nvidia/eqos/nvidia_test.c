@@ -41,7 +41,7 @@
  * more details.
  */
 
-/*!@file: DWC_ETH_QOS_wrapper.c
+/*!@file: eqos_wrapper.c
  * @brief: wrapper test functions.
  */
 
@@ -49,22 +49,22 @@
 #include "yapphdr.h"
 
 
-int DWC_ETH_QOS_handle_mem_iso_ioctl(struct DWC_ETH_QOS_prv_data *pdata, void *ptr)
+int eqos_handle_mem_iso_ioctl(struct eqos_prv_data *pdata, void *ptr)
 {
 		printk(KERN_ALERT "==== mem iso ioctl called ====\n");
 		return 0;
 }
 
-int DWC_ETH_QOS_handle_csr_iso_ioctl(struct DWC_ETH_QOS_prv_data *pdata, void *ptr)
+int eqos_handle_csr_iso_ioctl(struct eqos_prv_data *pdata, void *ptr)
 {
 		printk(KERN_ALERT "==== csr iso ioctl called ====\n");
 		return 0;
 }
 
-int DWC_ETH_QOS_handle_phy_loopback(struct DWC_ETH_QOS_prv_data *pdata, void *ptr)
+int eqos_handle_phy_loopback(struct eqos_prv_data *pdata, void *ptr)
 {
 		printk(KERN_ALERT "==== handle phy loopback called ====\n");
-		DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, MII_BMCR, 0x2100);
-		DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr, DWC_ETH_QOS_AUX_CTL, 0x8400);
+		eqos_mdio_write_direct(pdata, pdata->phyaddr, MII_BMCR, 0x2100);
+		eqos_mdio_write_direct(pdata, pdata->phyaddr, EQOS_AUX_CTL, 0x8400);
 		return 0;
 }

@@ -40,21 +40,21 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
-/*!@file: DWC_ETH_QOS_eee.c
+/*!@file: eqos_eee.c
  * @brief: Driver functions.
  */
 #include "yheader.h"
 
-void DWC_ETH_QOS_enable_eee_mode(struct DWC_ETH_QOS_prv_data *pdata)
+void eqos_enable_eee_mode(struct eqos_prv_data *pdata)
 {
-	struct DWC_ETH_QOS_tx_wrapper_descriptor *tx_desc_data = NULL;
+	struct eqos_tx_wrapper_descriptor *tx_desc_data = NULL;
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	int tx_idle = 0, qInx;
+	int tx_idle = 0, qinx;
 
-	DBGPR_EEE("-->DWC_ETH_QOS_enable_eee_mode\n");
+	DBGPR_EEE("-->eqos_enable_eee_mode\n");
 
-	for (qInx = 0; qInx < pdata->tx_queue_cnt; qInx++) {
-		tx_desc_data = GET_TX_WRAPPER_DESC(qInx);
+	for (qinx = 0; qinx < pdata->tx_queue_cnt; qinx++) {
+		tx_desc_data = GET_TX_WRAPPER_DESC(qinx);
 
 		if ((tx_desc_data->dirty_tx == tx_desc_data->cur_tx) &&
 			(pdata->tx_path_in_lpi_mode == false)) {
@@ -68,20 +68,20 @@ void DWC_ETH_QOS_enable_eee_mode(struct DWC_ETH_QOS_prv_data *pdata)
 	if (tx_idle)
 		hw_if->set_eee_mode();
 
-	DBGPR_EEE("<--DWC_ETH_QOS_enable_eee_mode\n");
+	DBGPR_EEE("<--eqos_enable_eee_mode\n");
 }
 
-void DWC_ETH_QOS_disable_eee_mode(struct DWC_ETH_QOS_prv_data *pdata)
+void eqos_disable_eee_mode(struct eqos_prv_data *pdata)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 
-	DBGPR_EEE("-->DWC_ETH_QOS_disable_eee_mode\n");
+	DBGPR_EEE("-->eqos_disable_eee_mode\n");
 
 	hw_if->reset_eee_mode();
 	del_timer_sync(&pdata->eee_ctrl_timer);
 	pdata->tx_path_in_lpi_mode = false;
 
-	DBGPR_EEE("-->DWC_ETH_QOS_disable_eee_mode\n");
+	DBGPR_EEE("-->eqos_disable_eee_mode\n");
 }
 
 
@@ -96,33 +96,33 @@ void DWC_ETH_QOS_disable_eee_mode(struct DWC_ETH_QOS_prv_data *pdata)
 * \return void
 */
 
-static void DWC_ETH_QOS_eee_ctrl_timer(unsigned long data)
+static void eqos_eee_ctrl_timer(unsigned long data)
 {
-	struct DWC_ETH_QOS_prv_data *pdata =
-		(struct DWC_ETH_QOS_prv_data *)data;
+	struct eqos_prv_data *pdata =
+		(struct eqos_prv_data *)data;
 
-	DBGPR_EEE("-->DWC_ETH_QOS_eee_ctrl_timer\n");
+	DBGPR_EEE("-->eqos_eee_ctrl_timer\n");
 
-	DWC_ETH_QOS_enable_eee_mode(pdata);
+	eqos_enable_eee_mode(pdata);
 
-	DBGPR_EEE("<--DWC_ETH_QOS_eee_ctrl_timer\n");
+	DBGPR_EEE("<--eqos_eee_ctrl_timer\n");
 }
 
 
-static void DWC_ETH_QOS_mmd_phy_indirect(struct mii_bus *bus,
-					 int regAddr,
-					 int devAddr,
-					 int phyAddr)
+static void eqos_mmd_phy_indirect(struct mii_bus *bus,
+					 int reg_addr,
+					 int dev_addr,
+					 int phy_addr)
 {
-	/* Write the desired MMD devAddr */
-	bus->write(bus, phyAddr, MMD_CTRL_REG, devAddr);
+	/* Write the desired MMD dev_addr */
+	bus->write(bus, phy_addr, MMD_CTRL_REG, dev_addr);
 
-	/* Write the desired MMD regAddr */
-	bus->write(bus, phyAddr, MMD_ADDR_DATA_REG, regAddr);
+	/* Write the desired MMD reg_addr */
+	bus->write(bus, phy_addr, MMD_ADDR_DATA_REG, reg_addr);
 
 	/* Select the Function : DATA with no post increment */
-	bus->write(bus, phyAddr, MMD_CTRL_REG,
-		(devAddr | MMD_CTRL_FUNC_DATA_NOINCR));
+	bus->write(bus, phy_addr, MMD_CTRL_REG,
+		(dev_addr | MMD_CTRL_FUNC_DATA_NOINCR));
 }
 
 
@@ -137,26 +137,26 @@ static void DWC_ETH_QOS_mmd_phy_indirect(struct mii_bus *bus,
 * 4. Read the content of the MMD's selected reg through reg 14
 *
 * \param[in] bus - the target MII bus
-* \param[in] regAddr - desired MMD reg addr to be read
-* \param[in] devAddr - desired MMD address
-* \param[in] phyAddr - PHY addr/id on the MII bus
+* \param[in] reg_addr - desired MMD reg addr to be read
+* \param[in] dev_addr - desired MMD address
+* \param[in] phy_addr - PHY addr/id on the MII bus
 *
 * \return integer
 */
-static int DWC_ETH_QOS_phy_read_mmd_indirect(struct mii_bus *bus,
-					     int regAddr,
-					     int devAddr,
-					     int phyAddr)
+static int eqos_phy_read_mmd_indirect(struct mii_bus *bus,
+					     int reg_addr,
+					     int dev_addr,
+					     int phy_addr)
 {
 	u32 ret;
 
-	DBGPR_EEE("-->DWC_ETH_QOS_phy_read_mmd_indirect\n");
+	DBGPR_EEE("-->eqos_phy_read_mmd_indirect\n");
 
-	DWC_ETH_QOS_mmd_phy_indirect(bus, regAddr, devAddr, phyAddr);
+	eqos_mmd_phy_indirect(bus, reg_addr, dev_addr, phy_addr);
 	/* read the content of the MMD's selected register */
-	ret = bus->read(bus, phyAddr, MMD_ADDR_DATA_REG);
+	ret = bus->read(bus, phy_addr, MMD_ADDR_DATA_REG);
 
-	DBGPR_EEE("<--DWC_ETH_QOS_phy_read_mmd_indirect\n");
+	DBGPR_EEE("<--eqos_phy_read_mmd_indirect\n");
 
 	return ret;
 }
@@ -173,26 +173,26 @@ static int DWC_ETH_QOS_phy_read_mmd_indirect(struct mii_bus *bus,
 * 4. Write the data into MMD's selected reg through reg 14
 *
 * \param[in] bus - the target MII bus
-* \param[in] regAddr - desired MMD reg addr to be written
-* \param[in] devAddr - desired MMD address
-* \param[in] phyAddr - PHY addr/id on the MII bus
+* \param[in] reg_addr - desired MMD reg addr to be written
+* \param[in] dev_addr - desired MMD address
+* \param[in] phy_addr - PHY addr/id on the MII bus
 * \param[in] data - data to write into the MMD register
 *
 * \return void
 */
-static void DWC_ETH_QOS_phy_write_mmd_indirect(struct mii_bus *bus,
-					     int regAddr,
-					     int devAddr,
-					     int phyAddr,
+static void eqos_phy_write_mmd_indirect(struct mii_bus *bus,
+					     int reg_addr,
+					     int dev_addr,
+					     int phy_addr,
 					     u32 data)
 {
-	DBGPR_EEE("-->DWC_ETH_QOS_phy_write_mmd_indirect\n");
+	DBGPR_EEE("-->eqos_phy_write_mmd_indirect\n");
 
-	DWC_ETH_QOS_mmd_phy_indirect(bus, regAddr, devAddr, phyAddr);
+	eqos_mmd_phy_indirect(bus, reg_addr, dev_addr, phy_addr);
 	/* Write the data into MMD's selected register */
-	bus->write(bus, phyAddr, MMD_ADDR_DATA_REG, data);
+	bus->write(bus, phy_addr, MMD_ADDR_DATA_REG, data);
 
-	DBGPR_EEE("<--DWC_ETH_QOS_phy_write_mmd_indirect\n");
+	DBGPR_EEE("<--eqos_phy_write_mmd_indirect\n");
 }
 
 #if 0
@@ -207,7 +207,7 @@ static void DWC_ETH_QOS_phy_write_mmd_indirect(struct mii_bus *bus,
  /* A small helper function that translates MMD EEE Capability (3.20) bits
  * to ethtool supported settings.
  * */
-static u32 DWC_ETH_QOS_mmd_eee_cap_to_ethtool_sup_t(u16 eee_cap)
+static u32 eqos_mmd_eee_cap_to_ethtool_sup_t(u16 eee_cap)
 {
 	u32 supported = 0;
 
@@ -231,7 +231,7 @@ static u32 DWC_ETH_QOS_mmd_eee_cap_to_ethtool_sup_t(u16 eee_cap)
   * and MMD EEE Link Partner Ability (7.61) bits to ethtool advertisement
   * settings.
   * */
-static inline u32 DWC_ETH_QOS_mmd_eee_adv_to_ethtool_adv_t(u16 eee_adv)
+static inline u32 eqos_mmd_eee_adv_to_ethtool_adv_t(u16 eee_adv)
 {
 	u32 adv = 0;
 
@@ -266,12 +266,12 @@ static inline u32 DWC_ETH_QOS_mmd_eee_adv_to_ethtool_adv_t(u16 eee_adv)
 *
 * \retval zero if EEE is supported else return -ve number.
 */
-static int DWC_ETH_QOS_phy_init_eee(struct phy_device *phydev,
+static int eqos_phy_init_eee(struct phy_device *phydev,
 		bool clk_stop_enable)
 {
 	int ret = -EPROTONOSUPPORT;
 
-	DBGPR_EEE("-->DWC_ETH_QOS_phy_init_eee\n");
+	DBGPR_EEE("-->eqos_phy_init_eee\n");
 
 	/* According to 802.3az,the EEE is supported only in full duplex-mode.
 	 * Also EEE feature is active when core is operating with MII, GMII,
@@ -292,29 +292,29 @@ static int DWC_ETH_QOS_phy_init_eee(struct phy_device *phydev,
 			return status;
 
 		/* First check if the EEE ability is supported */
-		eee_cap = DWC_ETH_QOS_phy_read_mmd_indirect(phydev->bus,
+		eee_cap = eqos_phy_read_mmd_indirect(phydev->bus,
 				CL45_PCS_EEE_ABLE, MDIO_MMD_PCS, phydev->addr);
 		if (eee_cap < 0)
 			return eee_cap;
 /*
-		cap = DWC_ETH_QOS_mmd_eee_cap_to_ethtool_sup_t(eee_cap);
+		cap = eqos_mmd_eee_cap_to_ethtool_sup_t(eee_cap);
 		if (!cap)
 			goto eee_exit;
 */
 		/* check whether link Partner support EEE or not */
-		eee_lp = DWC_ETH_QOS_phy_read_mmd_indirect(phydev->bus,
+		eee_lp = eqos_phy_read_mmd_indirect(phydev->bus,
 				CL45_AN_EEE_LPABLE_REG, MDIO_MMD_AN, phydev->addr);
 		if (eee_lp < 0)
 			return eee_lp;
 
-		eee_adv = DWC_ETH_QOS_phy_read_mmd_indirect(phydev->bus,
+		eee_adv = eqos_phy_read_mmd_indirect(phydev->bus,
 				CL45_ADV_EEE_REG, MDIO_MMD_AN, phydev->addr);
 		if (eee_adv < 0)
 			return eee_adv;
 /*
 		//TODO:check this
-		adv = DWC_ETH_QOS_mmd_eee_adv_to_ethtool_adv_t(eee_adv);
-		lp = DWC_ETH_QOS_mmd_eee_adv_to_ethtool_adv_t(eee_lp);
+		adv = eqos_mmd_eee_adv_to_ethtool_adv_t(eee_adv);
+		lp = eqos_mmd_eee_adv_to_ethtool_adv_t(eee_lp);
 		idx = phy_find_setting(phydev->speed, phydev->duplex);
 		if ((lp & adv & settings[idx].setting))
 			goto eee_exit;
@@ -323,14 +323,14 @@ static int DWC_ETH_QOS_phy_init_eee(struct phy_device *phydev,
 			/* Configure the PHY to stop receiving xMII
 			 * clock while it is signaling LPI.
 			 */
-			int val = DWC_ETH_QOS_phy_read_mmd_indirect(phydev->bus,
+			int val = eqos_phy_read_mmd_indirect(phydev->bus,
 					CL45_CLK_STOP_EN_REG, MDIO_MMD_PCS,
 					phydev->addr);
 			if (val < 0)
 				return val;
 
 			val |= CL45_CLK_STOP_EN;
-			DWC_ETH_QOS_phy_write_mmd_indirect(phydev->bus,
+			eqos_phy_write_mmd_indirect(phydev->bus,
 					CL45_CLK_STOP_EN_REG, MDIO_MMD_PCS,
 					phydev->addr, val);
 		}
@@ -338,7 +338,7 @@ static int DWC_ETH_QOS_phy_init_eee(struct phy_device *phydev,
 		ret = 0; /* EEE supported */
 	}
 
-	DBGPR_EEE("<--DWC_ETH_QOS_phy_init_eee\n");
+	DBGPR_EEE("<--eqos_phy_init_eee\n");
 
 //eee_exit:
 	return ret;
@@ -359,33 +359,33 @@ static int DWC_ETH_QOS_phy_init_eee(struct phy_device *phydev,
 *
 * \retval true on success & false on failure.
 */
-bool DWC_ETH_QOS_eee_init(struct DWC_ETH_QOS_prv_data *pdata)
+bool eqos_eee_init(struct eqos_prv_data *pdata)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	bool ret = false;
 	unsigned int val;
 
-	DBGPR_EEE("-->DWC_ETH_QOS_eee_init\n");
+	DBGPR_EEE("-->eqos_eee_init\n");
 
 	/* HW supports the EEE feature */
 	if (pdata->hw_feat.eee_sel) {
-#ifndef DWC_ETH_QOS_CUSTOMIZED_EEE_TEST
+#ifndef EQOS_CUSTOMIZED_EEE_TEST
 		/* check if the PHY supports EEE */
-		if (DWC_ETH_QOS_phy_init_eee(pdata->phydev, 1))
+		if (eqos_phy_init_eee(pdata->phydev, 1))
 			goto phy_eee_failed;
-#endif /* DWC_ETH_QOS_CUSTOMIZED_EEE_TEST */
+#endif /* EQOS_CUSTOMIZED_EEE_TEST */
 
 		if (!pdata->eee_active) {
 			pdata->eee_active = 1;
 			init_timer(&pdata->eee_ctrl_timer);
-			pdata->eee_ctrl_timer.function = DWC_ETH_QOS_eee_ctrl_timer;
+			pdata->eee_ctrl_timer.function = eqos_eee_ctrl_timer;
 			pdata->eee_ctrl_timer.data = (unsigned long)pdata;
 			pdata->eee_ctrl_timer.expires =
-				DWC_ETH_QOS_LPI_TIMER(DWC_ETH_QOS_DEFAULT_LPI_TIMER);
+				EQOS_LPI_TIMER(EQOS_DEFAULT_LPI_TIMER);
 			add_timer(&pdata->eee_ctrl_timer);
 
-			hw_if->set_eee_timer(DWC_ETH_QOS_DEFAULT_LPI_LS_TIMER,
-				DWC_ETH_QOS_DEFAULT_LPI_TWT_TIMER);
+			hw_if->set_eee_timer(EQOS_DEFAULT_LPI_LS_TIMER,
+				EQOS_DEFAULT_LPI_TWT_TIMER);
 			if (pdata->use_lpi_tx_automate)
 				hw_if->set_lpi_tx_automate();
 		} else {
@@ -402,18 +402,18 @@ bool DWC_ETH_QOS_eee_init(struct DWC_ETH_QOS_prv_data *pdata)
 	}
 
 	/* disable AUTOEEEgr in TOP level expansion register 0x40 */
-	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr,
+	eqos_mdio_write_direct(pdata, pdata->phyaddr,
 		BCM_EXPANSION_CTRL_REG,
 		BCM_EXP_REG_SEL_TOPL | BCM_TOPL_E40);
-	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr,
+	eqos_mdio_read_direct(pdata, pdata->phyaddr,
 		BCM_EXPANSION_REG, &val);
 	DBGPR_EEE("Default value in top-level exp reg 0x40h : 0x%x\n", val);
-	DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr,
+	eqos_mdio_write_direct(pdata, pdata->phyaddr,
 		BCM_EXPANSION_REG, val & ~(BCM_TOPL_E40_AUTOGREEE_EN));
 
-	DBGPR_EEE("<--DWC_ETH_QOS_eee_init\n");
+	DBGPR_EEE("<--eqos_eee_init\n");
 
-#ifndef DWC_ETH_QOS_CUSTOMIZED_EEE_TEST
+#ifndef EQOS_CUSTOMIZED_EEE_TEST
  phy_eee_failed:
 #endif
 
@@ -424,12 +424,12 @@ bool DWC_ETH_QOS_eee_init(struct DWC_ETH_QOS_prv_data *pdata)
 #define MAC_LPS_TLPIEX 0x00000002
 #define MAC_LPS_RLPIEN 0x00000004
 #define MAC_LPS_RLPIEX 0x00000008
-void DWC_ETH_QOS_handle_eee_interrupt(struct DWC_ETH_QOS_prv_data *pdata)
+void eqos_handle_eee_interrupt(struct eqos_prv_data *pdata)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	u32 lpi_status;
 
-	DBGPR_EEE("-->DWC_ETH_QOS_handle_eee_interrupt\n");
+	DBGPR_EEE("-->eqos_handle_eee_interrupt\n");
 
 	lpi_status = hw_if->get_lpi_status();
 	DBGPR_EEE("MAC_LPI_Control_Status = %#x\n", lpi_status);
@@ -456,5 +456,5 @@ void DWC_ETH_QOS_handle_eee_interrupt(struct DWC_ETH_QOS_prv_data *pdata)
 		DBGPR_EEE("MAC Receiver has exited the LPI state\n");
 	}
 
-	DBGPR_EEE("<--DWC_ETH_QOS_handle_eee_interrupt\n");
+	DBGPR_EEE("<--eqos_handle_eee_interrupt\n");
 }

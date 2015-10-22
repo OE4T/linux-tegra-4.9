@@ -40,102 +40,102 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
-#ifndef __DWC_ETH_QOS_DRV_H__
+#ifndef __EQOS_DRV_H__
 
-#define __DWC_ETH_QOS_DRV_H__
+#define __EQOS_DRV_H__
 
-static int DWC_ETH_QOS_open(struct net_device *);
+static int eqos_open(struct net_device *);
 
-static int DWC_ETH_QOS_close(struct net_device *);
+static int eqos_close(struct net_device *);
 
-static void DWC_ETH_QOS_set_rx_mode(struct net_device *);
+static void eqos_set_rx_mode(struct net_device *);
 
-static int DWC_ETH_QOS_start_xmit(struct sk_buff *, struct net_device *);
+static int eqos_start_xmit(struct sk_buff *, struct net_device *);
 
-static void DWC_ETH_QOS_tx_interrupt(struct net_device *,
-				     struct DWC_ETH_QOS_prv_data *,
-				     UINT qInx);
+static void eqos_tx_interrupt(struct net_device *,
+				     struct eqos_prv_data *,
+				     UINT qinx);
 
-static struct net_device_stats *DWC_ETH_QOS_get_stats(struct net_device *);
+static struct net_device_stats *eqos_get_stats(struct net_device *);
 
 #ifdef CONFIG_NET_POLL_CONTROLLER
-static void DWC_ETH_QOS_poll_controller(struct net_device *);
+static void eqos_poll_controller(struct net_device *);
 #endif				/*end of CONFIG_NET_POLL_CONTROLLER */
 
-static int DWC_ETH_QOS_set_features(struct net_device *dev, netdev_features_t features);
+static int eqos_set_features(struct net_device *dev, netdev_features_t features);
 
-static netdev_features_t DWC_ETH_QOS_fix_features(struct net_device *dev, netdev_features_t features);
+static netdev_features_t eqos_fix_features(struct net_device *dev, netdev_features_t features);
 
-INT DWC_ETH_QOS_configure_remotewakeup(struct net_device *,
+INT eqos_configure_remotewakeup(struct net_device *,
 				       struct ifr_data_struct *);
 
-static void DWC_ETH_QOS_program_dcb_algorithm(struct DWC_ETH_QOS_prv_data *pdata,
+static void eqos_program_dcb_algorithm(struct eqos_prv_data *pdata,
 		struct ifr_data_struct *req);
 
-static void DWC_ETH_QOS_program_avb_algorithm(struct DWC_ETH_QOS_prv_data *pdata,
+static void eqos_program_avb_algorithm(struct eqos_prv_data *pdata,
 		struct ifr_data_struct *req);
 
-static void DWC_ETH_QOS_config_tx_pbl(struct DWC_ETH_QOS_prv_data *pdata,
+static void eqos_config_tx_pbl(struct eqos_prv_data *pdata,
 				      UINT tx_pbl, UINT ch_no);
-static void DWC_ETH_QOS_config_rx_pbl(struct DWC_ETH_QOS_prv_data *pdata,
+static void eqos_config_rx_pbl(struct eqos_prv_data *pdata,
 				      UINT rx_pbl, UINT ch_no);
 
-static int DWC_ETH_QOS_handle_prv_ioctl(struct DWC_ETH_QOS_prv_data *pdata,
+static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 					struct ifr_data_struct *req);
 
-static int DWC_ETH_QOS_ioctl(struct net_device *, struct ifreq *, int);
+static int eqos_ioctl(struct net_device *, struct ifreq *, int);
 
-irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS(int, void *);
+irqreturn_t eqos_isr(int, void *);
 
-static INT DWC_ETH_QOS_change_mtu(struct net_device *dev, INT new_mtu);
+static INT eqos_change_mtu(struct net_device *dev, INT new_mtu);
 
-static int DWC_ETH_QOS_clean_split_hdr_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
-					  int quota, UINT qInx);
+static int eqos_clean_split_hdr_rx_irq(struct eqos_prv_data *pdata,
+					  int quota, UINT qinx);
 
-static int DWC_ETH_QOS_clean_jumbo_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
-					  int quota, UINT qInx);
+static int eqos_clean_jumbo_rx_irq(struct eqos_prv_data *pdata,
+					  int quota, UINT qinx);
 
-static int DWC_ETH_QOS_clean_rx_irq(struct DWC_ETH_QOS_prv_data *pdata,
-				    int quota, UINT qInx);
+static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
+				    int quota, UINT qinx);
 
-static void DWC_ETH_QOS_consume_page(struct DWC_ETH_QOS_rx_buffer *buffer,
+static void eqos_consume_page(struct eqos_rx_buffer *buffer,
 				     struct sk_buff *skb,
 				     u16 length, u16 buf2_len);
 
-static void DWC_ETH_QOS_receive_skb(struct DWC_ETH_QOS_prv_data *pdata,
+static void eqos_receive_skb(struct eqos_prv_data *pdata,
 				    struct net_device *dev,
 				    struct sk_buff *skb,
-				    UINT qInx);
+				    UINT qinx);
 
-static void DWC_ETH_QOS_configure_rx_fun_ptr(struct DWC_ETH_QOS_prv_data
+static void eqos_configure_rx_fun_ptr(struct eqos_prv_data
 					     *pdata);
 
 
-static int DWC_ETH_QOS_alloc_split_hdr_rx_buf(struct DWC_ETH_QOS_prv_data *pdata,
-					  struct DWC_ETH_QOS_rx_buffer *buffer,
+static int eqos_alloc_split_hdr_rx_buf(struct eqos_prv_data *pdata,
+					  struct eqos_rx_buffer *buffer,
 					  gfp_t gfp);
 
-static int DWC_ETH_QOS_alloc_jumbo_rx_buf(struct DWC_ETH_QOS_prv_data *pdata,
-					  struct DWC_ETH_QOS_rx_buffer *buffer,
+static int eqos_alloc_jumbo_rx_buf(struct eqos_prv_data *pdata,
+					  struct eqos_rx_buffer *buffer,
 					  gfp_t gfp);
 
-static int DWC_ETH_QOS_alloc_rx_buf(struct DWC_ETH_QOS_prv_data *pdata,
-				    struct DWC_ETH_QOS_rx_buffer *buffer,
+static int eqos_alloc_rx_buf(struct eqos_prv_data *pdata,
+				    struct eqos_rx_buffer *buffer,
 				    gfp_t gfp);
 
-static void DWC_ETH_QOS_default_common_confs(struct DWC_ETH_QOS_prv_data
+static void eqos_default_common_confs(struct eqos_prv_data
 					     *pdata);
-static void DWC_ETH_QOS_default_tx_confs(struct DWC_ETH_QOS_prv_data *pdata);
-static void DWC_ETH_QOS_default_tx_confs_single_q(struct DWC_ETH_QOS_prv_data
-						  *pdata, UINT qInx);
-static void DWC_ETH_QOS_default_rx_confs(struct DWC_ETH_QOS_prv_data *pdata);
-static void DWC_ETH_QOS_default_rx_confs_single_q(struct DWC_ETH_QOS_prv_data
-						  *pdata, UINT qInx);
+static void eqos_default_tx_confs(struct eqos_prv_data *pdata);
+static void eqos_default_tx_confs_single_q(struct eqos_prv_data
+						  *pdata, UINT qinx);
+static void eqos_default_rx_confs(struct eqos_prv_data *pdata);
+static void eqos_default_rx_confs_single_q(struct eqos_prv_data
+						  *pdata, UINT qinx);
 
-int DWC_ETH_QOS_poll(struct DWC_ETH_QOS_prv_data *pdata, int budget, int qInx);
+int eqos_poll(struct eqos_prv_data *pdata, int budget, int qinx);
 
-static void DWC_ETH_QOS_mmc_setup(struct DWC_ETH_QOS_prv_data *pdata);
-inline unsigned int DWC_ETH_QOS_reg_read(volatile ULONG *ptr);
-static int DWC_ETH_QOS_vlan_rx_add_vid(struct net_device *dev, __be16 proto, u16 vid);
-static int DWC_ETH_QOS_vlan_rx_kill_vid(struct net_device *dev, __be16 proto, u16 vid);
+static void eqos_mmc_setup(struct eqos_prv_data *pdata);
+inline unsigned int eqos_reg_read(volatile ULONG *ptr);
+static int eqos_vlan_rx_add_vid(struct net_device *dev, __be16 proto, u16 vid);
+static int eqos_vlan_rx_kill_vid(struct net_device *dev, __be16 proto, u16 vid);
 #endif

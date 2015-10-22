@@ -40,7 +40,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
-/*!@file: DWC_ETH_QOS_dev.c
+/*!@file: eqos_dev.c
  * @brief: Driver functions.
  */
 #include <linux/tegra-soc.h>
@@ -49,40 +49,40 @@
 #include "yheader.h"
 #include "yapphdr.h"
 
-extern ULONG dwc_eth_qos_base_addr;
+extern ULONG eqos_base_addr;
 #include "yregacc.h"
 #include "nvregacc.h"
 
-#ifdef DWC_ETH_QOS_CONFIG_PGTEST
+#ifdef EQOS_CONFIG_PGTEST
 
-static INT prepare_dev_pktgen(struct DWC_ETH_QOS_prv_data *pdata)
+static INT prepare_dev_pktgen(struct eqos_prv_data *pdata)
 {
-	UINT qInx = 0;
+	UINT qinx = 0;
 
 	/* set MAC loop back mode */
-	MAC_MCR_LM_UdfWr(0x1);
+	MAC_MCR_LM_WR(0x1);
 
 	/* Do not strip received VLAN tag */
-	MAC_VLANTR_EVLS_UdfWr(0x0);
+	MAC_VLANTR_EVLS_WR(0x0);
 
 	/* set promiscuous mode */
-	MAC_MPFR_PR_UdfWr(0x1);
+	MAC_MPFR_PR_WR(0x1);
 
 	/* disable autopad or CRC stripping */
-	MAC_MCR_ACS_UdfWr(0);
+	MAC_MCR_ACS_WR(0);
 
 	/* enable drop tx status */
-	MTL_OMR_DTXSTS_UdfWr(0x1);
+	MTL_OMR_DTXSTS_WR(0x1);
 
-	for (qInx = 0; qInx < DWC_ETH_QOS_TX_QUEUE_CNT; qInx++) {
+	for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++) {
 		/* enable avg bits per slot interrupt */
-		MTL_QECR_ABPSSIE_UdfWr(qInx, 0x1);
+		MTL_QECR_ABPSSIE_WR(qinx, 0x1);
 
 		/* enable OSF mode */
-		DMA_TCR_OSP_UdfWr(qInx, 0x1);
+		DMA_TCR_OSP_WR(qinx, 0x1);
 
 		/* disable slot checks */
-		DMA_SFCSR_RgWr(qInx, 0);
+		DMA_SFCSR_WR(qinx, 0);
 	}
 
 	return Y_SUCCESS;
@@ -96,31 +96,31 @@ static INT prepare_dev_pktgen(struct DWC_ETH_QOS_prv_data *pdata)
 * can program the number of slots(of duration 125us) over which the
 * average transmitted bits per slot need to be computed for
 * channel 1 to 7 when CBS alogorithm is enabled.
-* \param[in] qInx
+* \param[in] qinx
 * \param[in] slot_count
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
-static INT set_slot_count(UINT qInx,
+static INT set_slot_count(UINT qinx,
                           UCHAR slot_count)
 {
 
   if (slot_count == 1) {
-    MTL_QECR_SLC_UdfWr(qInx, 0);
+    MTL_QECR_SLC_WR(qinx, 0);
   }
   else if (slot_count == 2) {
-    MTL_QECR_SLC_UdfWr(qInx, 0x1);
+    MTL_QECR_SLC_WR(qinx, 0x1);
   }
   else if (slot_count == 4) {
-    MTL_QECR_SLC_UdfWr(qInx, 0x3);
+    MTL_QECR_SLC_WR(qinx, 0x3);
   }
   else if (slot_count == 8) {
-    MTL_QECR_SLC_UdfWr(qInx, 0x4);
+    MTL_QECR_SLC_WR(qinx, 0x4);
   }
   else if (slot_count == 16) {
-    MTL_QECR_SLC_UdfWr(qInx, 0x5);
+    MTL_QECR_SLC_WR(qinx, 0x5);
   }
 
   return Y_SUCCESS;
@@ -133,16 +133,16 @@ static INT set_slot_count(UINT qInx,
 * \brief This sequence is used to enable/disable slot interrupt:
 * When this bit is set,the MAC asserts an interrupt when the average
 * bits per slot status is updated for channel 1 to 7.
-* \param[in] qInx
+* \param[in] qinx
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
-static INT config_slot_interrupt(UINT qInx, UCHAR slot_int)
+static INT config_slot_interrupt(UINT qinx, UCHAR slot_int)
 {
 
-  MTL_QECR_ABPSSIE_UdfWr(qInx, slot_int);
+  MTL_QECR_ABPSSIE_WR(qinx, slot_int);
 
   return Y_SUCCESS;
 }
@@ -164,7 +164,7 @@ static INT config_slot_interrupt(UINT qInx, UCHAR slot_int)
 static INT set_tx_rx_prio_ratio(UCHAR prio_ratio)
 {
 
-  DMA_BMR_PR_UdfWr(prio_ratio);
+  DMA_BMR_PR_WR(prio_ratio);
 
   return Y_SUCCESS;
 }
@@ -183,7 +183,7 @@ static INT set_tx_rx_prio_ratio(UCHAR prio_ratio)
 static INT set_dma_tx_arb_algorithm(UCHAR arb_algo)
 {
 
-  DMA_BMR_TAA_UdfWr(arb_algo);
+  DMA_BMR_TAA_WR(arb_algo);
 
   return Y_SUCCESS;
 }
@@ -204,7 +204,7 @@ static INT set_dma_tx_arb_algorithm(UCHAR arb_algo)
 static INT set_tx_rx_prio(UCHAR prio)
 {
 
-  DMA_BMR_TXPR_UdfWr(prio);
+  DMA_BMR_TXPR_WR(prio);
 
   return Y_SUCCESS;
 }
@@ -225,7 +225,7 @@ static INT set_tx_rx_prio(UCHAR prio)
 static INT set_tx_rx_prio_policy(UCHAR prio_policy)
 {
 
-  DMA_BMR_DA_UdfWr(prio_policy);
+  DMA_BMR_DA_WR(prio_policy);
 
   return Y_SUCCESS;
 }
@@ -235,45 +235,45 @@ static INT set_tx_rx_prio_policy(UCHAR prio_policy)
 
 /*!
 * \brief This sequence is used to configure TX Channel Weight
-* \param[in] qInx
+* \param[in] qinx
 * \param[in] weight
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
-static INT set_ch_arb_weights(UINT qInx,
+static INT set_ch_arb_weights(UINT qinx,
                                UCHAR weight)
 {
 
   if (weight == 1) {
-    DMA_TCR_TCW_UdfWr(qInx, 0);
+    DMA_TCR_TCW_WR(qinx, 0);
   }
   else if (weight == 2) {
-    DMA_TCR_TCW_UdfWr(qInx, 0x1);
+    DMA_TCR_TCW_WR(qinx, 0x1);
   }
   else if (weight == 3) {
-    DMA_TCR_TCW_UdfWr(qInx, 0x2);
+    DMA_TCR_TCW_WR(qinx, 0x2);
   }
   else if (weight == 4) {
-    DMA_TCR_TCW_UdfWr(qInx, 0x3);
+    DMA_TCR_TCW_WR(qinx, 0x3);
   }
   else if (weight == 5) {
-    DMA_TCR_TCW_UdfWr(qInx, 0x4);
+    DMA_TCR_TCW_WR(qinx, 0x4);
   }
   else if (weight == 6) {
-    DMA_TCR_TCW_UdfWr(qInx, 0x5);
+    DMA_TCR_TCW_WR(qinx, 0x5);
   }
   else if (weight == 7) {
-    DMA_TCR_TCW_UdfWr(qInx, 0x6);
+    DMA_TCR_TCW_WR(qinx, 0x6);
   }
   else if (weight == 8) {
-    DMA_TCR_TCW_UdfWr(qInx, 0x7);
+    DMA_TCR_TCW_WR(qinx, 0x7);
   }
 
   return Y_SUCCESS;
 }
-#endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
+#endif /* end of EQOS_CONFIG_PGTEST */
 
 
 
@@ -288,7 +288,7 @@ static INT set_ch_arb_weights(UINT qInx,
 static INT config_mac_loopback_mode(UINT enb_dis)
 {
 
-  MAC_MCR_LM_UdfWr(enb_dis);
+  MAC_MCR_LM_WR(enb_dis);
 
   return Y_SUCCESS;
 }
@@ -297,7 +297,7 @@ static INT config_mac_loopback_mode(UINT enb_dis)
 /* enable/disable PFC(Priority Based Flow Control) */
 static void config_pfc(int enb_dis)
 {
-	MAC_RFCR_PFCE_UdfWr(enb_dis);
+	MAC_RFCR_PFCE_WR(enb_dis);
 }
 
 /*!
@@ -312,14 +312,14 @@ static INT config_tx_outer_vlan(UINT op_type, UINT outer_vlt)
 {
 	printk(KERN_ALERT "--> config_tx_outer_vlan()\n");
 
-	MAC_VLANTIRR_VLTI_UdfWr(0x0);
-	MAC_VLANTIRR_VLT_UdfWr(outer_vlt);
-	MAC_VLANTIRR_VLP_UdfWr(0x1);
-	MAC_VLANTIRR_VLC_UdfWr(op_type);
+	MAC_VLANTIRR_VLTI_WR(0x0);
+	MAC_VLANTIRR_VLT_WR(outer_vlt);
+	MAC_VLANTIRR_VLP_WR(0x1);
+	MAC_VLANTIRR_VLC_WR(op_type);
 
-	if (op_type == DWC_ETH_QOS_DVLAN_NONE) {
-		MAC_VLANTIRR_VLP_UdfWr(0x0);
-		MAC_VLANTIRR_VLT_UdfWr(0x0);
+	if (op_type == EQOS_DVLAN_NONE) {
+		MAC_VLANTIRR_VLP_WR(0x0);
+		MAC_VLANTIRR_VLT_WR(0x0);
 	}
 
 	printk(KERN_ALERT "<-- config_tx_outer_vlan()\n");
@@ -331,14 +331,14 @@ static INT config_tx_inner_vlan(UINT op_type, UINT inner_vlt)
 {
 	printk(KERN_ALERT "--> config_tx_inner_vlan()\n");
 
-	MAC_IVLANTIRR_VLTI_UdfWr(0x0);
-	MAC_IVLANTIRR_VLT_UdfWr(inner_vlt);
-	MAC_IVLANTIRR_VLP_UdfWr(0x1);
-	MAC_IVLANTIRR_VLC_UdfWr(op_type);
+	MAC_IVLANTIRR_VLTI_WR(0x0);
+	MAC_IVLANTIRR_VLT_WR(inner_vlt);
+	MAC_IVLANTIRR_VLP_WR(0x1);
+	MAC_IVLANTIRR_VLC_WR(op_type);
 
-	if (op_type == DWC_ETH_QOS_DVLAN_NONE) {
-		MAC_IVLANTIRR_VLP_UdfWr(0x0);
-		MAC_IVLANTIRR_VLT_UdfWr(0x0);
+	if (op_type == EQOS_DVLAN_NONE) {
+		MAC_IVLANTIRR_VLP_WR(0x0);
+		MAC_IVLANTIRR_VLT_WR(0x0);
 	}
 
 	printk(KERN_ALERT "<-- config_tx_inner_vlan()\n");
@@ -352,18 +352,18 @@ static INT config_svlan(UINT flags)
 
 	printk(KERN_ALERT "--> config_svlan()\n");
 
-	MAC_VLANTR_ESVL_UdfWr(1);
-	if (flags == DWC_ETH_QOS_DVLAN_NONE) {
-		MAC_VLANTR_ESVL_UdfWr(0);
-		MAC_IVLANTIRR_CSVL_UdfWr(0);
-		MAC_VLANTIRR_CSVL_UdfWr(0);
-	} else if (flags == DWC_ETH_QOS_DVLAN_INNER) {
-		MAC_IVLANTIRR_CSVL_UdfWr(1);
-	} else if (flags == DWC_ETH_QOS_DVLAN_OUTER) {
-		MAC_VLANTIRR_CSVL_UdfWr(1);
-	} else if (flags == DWC_ETH_QOS_DVLAN_BOTH) {
-		MAC_IVLANTIRR_CSVL_UdfWr(1);
-		MAC_VLANTIRR_CSVL_UdfWr(1);
+	MAC_VLANTR_ESVL_WR(1);
+	if (flags == EQOS_DVLAN_NONE) {
+		MAC_VLANTR_ESVL_WR(0);
+		MAC_IVLANTIRR_CSVL_WR(0);
+		MAC_VLANTIRR_CSVL_WR(0);
+	} else if (flags == EQOS_DVLAN_INNER) {
+		MAC_IVLANTIRR_CSVL_WR(1);
+	} else if (flags == EQOS_DVLAN_OUTER) {
+		MAC_VLANTIRR_CSVL_WR(1);
+	} else if (flags == EQOS_DVLAN_BOTH) {
+		MAC_IVLANTIRR_CSVL_WR(1);
+		MAC_VLANTIRR_CSVL_WR(1);
 	} else {
 		printk(KERN_ALERT "ERROR : double VLAN enable SVLAN configuration - Invalid argument");
 		ret = Y_FAILURE;
@@ -376,7 +376,7 @@ static INT config_svlan(UINT flags)
 
 static VOID config_dvlan(bool enb_dis)
 {
-	MAC_VLANTR_EDVLP_UdfWr(enb_dis);
+	MAC_VLANTR_EDVLP_WR(enb_dis);
 }
 
 
@@ -391,7 +391,7 @@ static VOID config_dvlan(bool enb_dis)
 static int config_arp_offload(int enb_dis)
 {
 
-  MAC_MCR_ARPEN_UdfWr(enb_dis);
+  MAC_MCR_ARPEN_WR(enb_dis);
 
   return Y_SUCCESS;
 }
@@ -411,7 +411,7 @@ static int config_arp_offload(int enb_dis)
 static int update_arp_offload_ip_addr(UCHAR addr[])
 {
 
-  MAC_ARPA_RgWr((addr[3] | (addr[2] << 8) | (addr[1] << 16) | addr[0] << 24));
+  MAC_ARPA_WR((addr[3] | (addr[2] << 8) | (addr[1] << 16) | addr[0] << 24));
 
   return Y_SUCCESS;
 }
@@ -430,7 +430,7 @@ static u32 get_lpi_status(void)
 {
   u32 varmac_lps;
 
-  MAC_LPS_RgRd(varmac_lps);
+  MAC_LPS_RD(varmac_lps);
 
   return varmac_lps;
 }
@@ -449,7 +449,7 @@ static int set_eee_mode(void)
 {
 
   DBGPR_EEE("set_eee_mode\n");
-  MAC_LPS_LPIEN_UdfWr(0x1);
+  MAC_LPS_LPIEN_WR(0x1);
 
   return Y_SUCCESS;
 }
@@ -467,8 +467,8 @@ static int set_eee_mode(void)
 static int reset_eee_mode(void)
 {
 
-  MAC_LPS_LPITXA_UdfWr(0);
-  MAC_LPS_LPIEN_UdfWr(0);
+  MAC_LPS_LPITXA_WR(0);
+  MAC_LPS_LPIEN_WR(0);
 
   return Y_SUCCESS;
 }
@@ -488,10 +488,10 @@ static int set_eee_pls(int phy_link)
 {
 
   if (phy_link == 1) {
-    MAC_LPS_PLS_UdfWr(0x1);
+    MAC_LPS_PLS_WR(0x1);
   }
   else {
-    MAC_LPS_PLS_UdfWr(0);
+    MAC_LPS_PLS_WR(0);
   }
 
   return Y_SUCCESS;
@@ -515,10 +515,10 @@ static int set_eee_timer(int lpi_lst,
 
   /* mim time(us) for which the MAC waits after it stops transmitting */
   /* the LPI pattern to the PHY and before it resumes the normal transmission. */
-  MAC_LPC_TWT_UdfWr(lpi_twt);
+  MAC_LPC_TWT_WR(lpi_twt);
   /* mim time(ms) for which the link status from the PHY should be Up before */
   /* the LPI pattern can be transmitted to the PHY. */
-  MAC_LPC_TLPIEX_UdfWr(lpi_lst);
+  MAC_LPC_TLPIEX_WR(lpi_lst);
 
   return Y_SUCCESS;
 }
@@ -528,7 +528,7 @@ static int set_eee_timer(int lpi_lst,
 
 static int set_lpi_tx_automate(void)
 {
-	MAC_LPS_LPITXA_UdfWr(0x1);
+	MAC_LPS_LPITXA_WR(0x1);
 
 	return Y_SUCCESS;
 }
@@ -547,8 +547,8 @@ static int set_lpi_tx_automate(void)
 static int control_an(bool enable, bool restart)
 {
 
-  MAC_ANC_ANE_UdfWr(enable);
-  MAC_ANC_RAN_UdfWr(restart);
+  MAC_ANC_ANE_WR(enable);
+  MAC_ANC_RAN_WR(restart);
 
   return Y_SUCCESS;
 }
@@ -568,7 +568,7 @@ static int get_an_adv_pause_param(void)
 {
   unsigned long varmac_aad;
 
-  MAC_AAD_RgRd(varmac_aad);
+  MAC_AAD_RD(varmac_aad);
 
   return GET_VALUE(varmac_aad, MAC_AAD_PSE_LPOS, MAC_AAD_PSE_HPOS);
 }
@@ -589,7 +589,7 @@ static int get_an_adv_duplex_param(void)
 {
   unsigned long varmac_aad;
 
-  MAC_AAD_RgRd(varmac_aad);
+  MAC_AAD_RD(varmac_aad);
   if (GET_VALUE(varmac_aad, MAC_AAD_FD_LPOS, MAC_AAD_FD_HPOS) == 1) {
     return 1;
   }
@@ -613,7 +613,7 @@ static int get_lp_an_adv_pause_param(void)
 {
   unsigned long varmac_alpa;
 
-  MAC_ALPA_RgRd(varmac_alpa);
+  MAC_ALPA_RD(varmac_alpa);
 
   return GET_VALUE(varmac_alpa, MAC_ALPA_PSE_LPOS, MAC_ALPA_PSE_HPOS);
 }
@@ -634,7 +634,7 @@ static int get_lp_an_adv_duplex_param(void)
 {
   unsigned long varmac_alpa;
 
-  MAC_ALPA_RgRd(varmac_alpa);
+  MAC_ALPA_RD(varmac_alpa);
   if (GET_VALUE(varmac_alpa, MAC_ALPA_FD_LPOS, MAC_ALPA_FD_HPOS) == 1) {
     return 1;
   }
@@ -648,7 +648,7 @@ static UINT get_vlan_tag_comparison(void)
 {
 	UINT etv;
 
-	MAC_VLANTR_ETV_UdfRd(etv);
+	MAC_VLANTR_ETV_RD(etv);
 
 	return etv;
 }
@@ -667,23 +667,23 @@ static INT config_vlan_filtering(INT filter_enb_dis,
                                  INT perfect_hash_filtering,
 				 INT perfect_inverse_match)
 {
-  MAC_MPFR_VTFE_UdfWr(filter_enb_dis);
-  MAC_VLANTR_VTIM_UdfWr(perfect_inverse_match);
-  MAC_VLANTR_VTHM_UdfWr(perfect_hash_filtering);
+  MAC_MPFR_VTFE_WR(filter_enb_dis);
+  MAC_VLANTR_VTIM_WR(perfect_inverse_match);
+  MAC_VLANTR_VTHM_WR(perfect_hash_filtering);
   /* To enable only HASH filtering then VL/VID
    * should be > zero. Hence we are writting 1 into VL.
    * It also means that MAC will always receive VLAN pkt with
    * VID = 1 if inverse march is not set.
    * */
   if (perfect_hash_filtering)
-    MAC_VLANTR_VL_UdfWr(0x1);
+    MAC_VLANTR_VL_WR(0x1);
 
   /* By default enable MAC to calculate vlan hash on
    * only 12-bits of received VLAN tag (ie only on
    * VLAN id and ignore priority and other fields)
    * */
   if (perfect_hash_filtering)
-	  MAC_VLANTR_ETV_UdfWr(0x1);
+	  MAC_VLANTR_ETV_WR(0x1);
 
   return Y_SUCCESS;
 }
@@ -702,7 +702,7 @@ static INT config_vlan_filtering(INT filter_enb_dis,
 static INT update_vlan_id(USHORT vid)
 {
 
-  MAC_VLANTR_VL_UdfWr(vid);
+  MAC_VLANTR_VL_WR(vid);
 
   return Y_SUCCESS;
 }
@@ -721,7 +721,7 @@ static INT update_vlan_id(USHORT vid)
 static INT update_vlan_hash_table_reg(USHORT data)
 {
 
-  MAC_VLANHTR_VLHT_UdfWr(data);
+  MAC_VLANHTR_VLHT_WR(data);
 
   return Y_SUCCESS;
 }
@@ -738,11 +738,11 @@ static INT update_vlan_hash_table_reg(USHORT data)
 
 static INT get_vlan_hash_table_reg(void)
 {
-  ULONG varMAC_VLANHTR;
+  ULONG mac_vlanhtr;
 
-  MAC_VLANHTR_RgRd(varMAC_VLANHTR);
+  MAC_VLANHTR_RD(mac_vlanhtr);
 
-  return GET_VALUE(varMAC_VLANHTR, MAC_VLANHTR_VLHT_LPOS, MAC_VLANHTR_VLHT_HPOS);
+  return GET_VALUE(mac_vlanhtr, MAC_VLANHTR_VLHT_LPOS, MAC_VLANHTR_VLHT_HPOS);
 }
 
 
@@ -762,7 +762,7 @@ static INT update_l4_da_port_no(INT filter_no,
                                 USHORT port_no)
 {
 
-  MAC_L4AR_L4DP0_UdfWr(filter_no, port_no);
+  MAC_L4AR_L4DP0_WR(filter_no, port_no);
 
   return Y_SUCCESS;
 }
@@ -784,7 +784,7 @@ static INT update_l4_sa_port_no(INT filter_no,
                                 USHORT port_no)
 {
 
-  MAC_L4AR_L4SP0_UdfWr(filter_no, port_no);
+  MAC_L4AR_L4SP0_WR(filter_no, port_no);
 
   return Y_SUCCESS;
 }
@@ -811,30 +811,30 @@ static INT config_l4_filters(INT filter_no,
                              INT perfect_inverse_match)
 {
 
-  MAC_L3L4CR_L4PEN0_UdfWr(filter_no, tcp_udp_match);
+  MAC_L3L4CR_L4PEN0_WR(filter_no, tcp_udp_match);
 
   if (src_dst_port_match == 0) {
 	if (enb_dis == 1) {
 		/* Enable L4 filters for SOURCE Port No matching */
-		MAC_L3L4CR_L4SPM0_UdfWr(filter_no, 0x1);
-		MAC_L3L4CR_L4SPIM0_UdfWr(filter_no, perfect_inverse_match);
+		MAC_L3L4CR_L4SPM0_WR(filter_no, 0x1);
+		MAC_L3L4CR_L4SPIM0_WR(filter_no, perfect_inverse_match);
     }
     else {
 		/* Disable L4 filters for SOURCE Port No matching */
-		MAC_L3L4CR_L4SPM0_UdfWr(filter_no, 0x0);
-		MAC_L3L4CR_L4SPIM0_UdfWr(filter_no, 0x0);
+		MAC_L3L4CR_L4SPM0_WR(filter_no, 0x0);
+		MAC_L3L4CR_L4SPIM0_WR(filter_no, 0x0);
 	}
   }
   else {
 	if (enb_dis == 1) {
 		/* Enable L4 filters for DESTINATION port No matching */
-		MAC_L3L4CR_L4DPM0_UdfWr(filter_no, 0x1);
-		MAC_L3L4CR_L4DPIM0_UdfWr(filter_no, perfect_inverse_match);
+		MAC_L3L4CR_L4DPM0_WR(filter_no, 0x1);
+		MAC_L3L4CR_L4DPIM0_WR(filter_no, perfect_inverse_match);
 	}
 	else {
 		/* Disable L4 filters for DESTINATION port No matching */
-		MAC_L3L4CR_L4DPM0_UdfWr(filter_no, 0x0);
-		MAC_L3L4CR_L4DPIM0_UdfWr(filter_no, 0x0);
+		MAC_L3L4CR_L4DPM0_WR(filter_no, 0x0);
+		MAC_L3L4CR_L4DPIM0_WR(filter_no, 0x0);
 	}
   }
 
@@ -857,13 +857,13 @@ static INT update_ip6_addr(INT filter_no,
                            USHORT addr[])
 {
   /* update Bits[31:0] of 128-bit IP addr */
-  MAC_L3A0R_RgWr(filter_no, (addr[7] | (addr[6] << 16)));
+  MAC_L3A0R_WR(filter_no, (addr[7] | (addr[6] << 16)));
   /* update Bits[63:32] of 128-bit IP addr */
-  MAC_L3A1R_RgWr(filter_no, (addr[5] | (addr[4] << 16)));
+  MAC_L3A1R_WR(filter_no, (addr[5] | (addr[4] << 16)));
   /* update Bits[95:64] of 128-bit IP addr */
-  MAC_L3A2R_RgWr(filter_no, (addr[3] | (addr[2] << 16)));
+  MAC_L3A2R_WR(filter_no, (addr[3] | (addr[2] << 16)));
   /* update Bits[127:96] of 128-bit IP addr */
-  MAC_L3A3R_RgWr(filter_no, (addr[1] | (addr[0] << 16)));
+  MAC_L3A3R_WR(filter_no, (addr[1] | (addr[0] << 16)));
 
   return Y_SUCCESS;
 }
@@ -883,7 +883,7 @@ static INT update_ip6_addr(INT filter_no,
 static INT update_ip4_addr1(INT filter_no,
                             UCHAR addr[])
 {
-  MAC_L3A1R_RgWr(filter_no, (addr[3] | (addr[2] << 8) | (addr[1] << 16) | (addr[0] << 24)));
+  MAC_L3A1R_WR(filter_no, (addr[3] | (addr[2] << 8) | (addr[1] << 16) | (addr[0] << 24)));
 
   return Y_SUCCESS;
 }
@@ -903,7 +903,7 @@ static INT update_ip4_addr1(INT filter_no,
 static INT update_ip4_addr0(INT filter_no,
                             UCHAR addr[])
 {
-  MAC_L3A0R_RgWr(filter_no, (addr[3] | (addr[2] << 8) | (addr[1] << 16) | (addr[0] << 24)));
+  MAC_L3A0R_WR(filter_no, (addr[3] | (addr[2] << 8) | (addr[1] << 16) | (addr[0] << 24)));
 
   return Y_SUCCESS;
 }
@@ -929,58 +929,58 @@ static INT config_l3_filters(INT filter_no,
                              INT src_dst_addr_match,
                              INT perfect_inverse_match)
 {
-	MAC_L3L4CR_L3PEN0_UdfWr(filter_no, ipv4_ipv6_match);
+	MAC_L3L4CR_L3PEN0_WR(filter_no, ipv4_ipv6_match);
 
 	/* For IPv6 either SA/DA can be checked, not both */
 	if (ipv4_ipv6_match == 1) {
 		if (enb_dis == 1) {
 			if (src_dst_addr_match == 0) {
 				/* Enable L3 filters for IPv6 SOURCE addr matching */
-				MAC_L3L4CR_L3SAM0_UdfWr(filter_no, 0x1);
-				MAC_L3L4CR_L3SAIM0_UdfWr(filter_no, perfect_inverse_match);
-				MAC_L3L4CR_L3DAM0_UdfWr(filter_no, 0x0);
-				MAC_L3L4CR_L3DAIM0_UdfWr(filter_no, 0x0);
+				MAC_L3L4CR_L3SAM0_WR(filter_no, 0x1);
+				MAC_L3L4CR_L3SAIM0_WR(filter_no, perfect_inverse_match);
+				MAC_L3L4CR_L3DAM0_WR(filter_no, 0x0);
+				MAC_L3L4CR_L3DAIM0_WR(filter_no, 0x0);
 			}
 			else {
 				/* Enable L3 filters for IPv6 DESTINATION addr matching */
-				MAC_L3L4CR_L3SAM0_UdfWr(filter_no, 0x0);
-				MAC_L3L4CR_L3SAIM0_UdfWr(filter_no, 0x0);
-				MAC_L3L4CR_L3DAM0_UdfWr(filter_no, 0x1);
-				MAC_L3L4CR_L3DAIM0_UdfWr(filter_no, perfect_inverse_match);
+				MAC_L3L4CR_L3SAM0_WR(filter_no, 0x0);
+				MAC_L3L4CR_L3SAIM0_WR(filter_no, 0x0);
+				MAC_L3L4CR_L3DAM0_WR(filter_no, 0x1);
+				MAC_L3L4CR_L3DAIM0_WR(filter_no, perfect_inverse_match);
 			}
 		}
 		else {
 			/* Disable L3 filters for IPv6 SOURCE/DESTINATION addr matching */
-			MAC_L3L4CR_L3PEN0_UdfWr(filter_no, 0x0);
-			MAC_L3L4CR_L3SAM0_UdfWr(filter_no, 0x0);
-			MAC_L3L4CR_L3SAIM0_UdfWr(filter_no, 0x0);
-			MAC_L3L4CR_L3DAM0_UdfWr(filter_no, 0x0);
-			MAC_L3L4CR_L3DAIM0_UdfWr(filter_no, 0x0);
+			MAC_L3L4CR_L3PEN0_WR(filter_no, 0x0);
+			MAC_L3L4CR_L3SAM0_WR(filter_no, 0x0);
+			MAC_L3L4CR_L3SAIM0_WR(filter_no, 0x0);
+			MAC_L3L4CR_L3DAM0_WR(filter_no, 0x0);
+			MAC_L3L4CR_L3DAIM0_WR(filter_no, 0x0);
 		}
 	}
 	else {
 		if (src_dst_addr_match == 0) {
 			if (enb_dis == 1) {
 				/* Enable L3 filters for IPv4 SOURCE addr matching */
-				MAC_L3L4CR_L3SAM0_UdfWr(filter_no, 0x1);
-				MAC_L3L4CR_L3SAIM0_UdfWr(filter_no, perfect_inverse_match);
+				MAC_L3L4CR_L3SAM0_WR(filter_no, 0x1);
+				MAC_L3L4CR_L3SAIM0_WR(filter_no, perfect_inverse_match);
 			}
 			else {
 				/* Disable L3 filters for IPv4 SOURCE addr matching */
-				MAC_L3L4CR_L3SAM0_UdfWr(filter_no, 0x0);
-				MAC_L3L4CR_L3SAIM0_UdfWr(filter_no, 0x0);
+				MAC_L3L4CR_L3SAM0_WR(filter_no, 0x0);
+				MAC_L3L4CR_L3SAIM0_WR(filter_no, 0x0);
 			}
 		}
 		else {
 			if (enb_dis == 1) {
 				/* Enable L3 filters for IPv4 DESTINATION addr matching */
-				MAC_L3L4CR_L3DAM0_UdfWr(filter_no, 0x1);
-				MAC_L3L4CR_L3DAIM0_UdfWr(filter_no, perfect_inverse_match);
+				MAC_L3L4CR_L3DAM0_WR(filter_no, 0x1);
+				MAC_L3L4CR_L3DAIM0_WR(filter_no, perfect_inverse_match);
 			}
 			else {
 				/* Disable L3 filters for IPv4 DESTINATION addr matching */
-				MAC_L3L4CR_L3DAM0_UdfWr(filter_no, 0x0);
-				MAC_L3L4CR_L3DAIM0_UdfWr(filter_no, 0x0);
+				MAC_L3L4CR_L3DAM0_WR(filter_no, 0x0);
+				MAC_L3L4CR_L3DAIM0_WR(filter_no, 0x0);
 			}
 		}
 	}
@@ -1009,16 +1009,16 @@ static INT config_mac_pkt_filter_reg(UCHAR pr_mode,
                                      UCHAR pm_mode,
                                      UCHAR hpf_mode)
 {
-  ULONG varMAC_MPFR;
+  ULONG mac_mpfr;
 
   /* configure device in differnet modes */
   /* promiscuous, hash unicast, hash multicast, */
   /* all multicast and perfect/hash filtering mode. */
-  MAC_MPFR_RgRd(varMAC_MPFR);
-  varMAC_MPFR = varMAC_MPFR & (ULONG)(0x803103e8);
-  varMAC_MPFR = varMAC_MPFR | ((pr_mode) << 0) | ((huc_mode) << 1) | ((hmc_mode) << 2) |
+  MAC_MPFR_RD(mac_mpfr);
+  mac_mpfr = mac_mpfr & (ULONG)(0x803103e8);
+  mac_mpfr = mac_mpfr | ((pr_mode) << 0) | ((huc_mode) << 1) | ((hmc_mode) << 2) |
                 ((pm_mode) << 4) | ((hpf_mode) << 10);
-  MAC_MPFR_RgWr(varMAC_MPFR);
+  MAC_MPFR_WR(mac_mpfr);
 
 
   return Y_SUCCESS;
@@ -1037,7 +1037,7 @@ static INT config_mac_pkt_filter_reg(UCHAR pr_mode,
 static INT config_l3_l4_filter_enable(INT filter_enb_dis)
 {
 
-  MAC_MPFR_IPFE_UdfWr(filter_enb_dis);
+  MAC_MPFR_IPFE_WR(filter_enb_dis);
 
   return Y_SUCCESS;
 }
@@ -1056,7 +1056,7 @@ static INT config_l3_l4_filter_enable(INT filter_enb_dis)
 static INT config_l2_da_perfect_inverse_match(INT perfect_inverse_match)
 {
 
-  MAC_MPFR_DAIF_UdfWr(perfect_inverse_match);
+  MAC_MPFR_DAIF_WR(perfect_inverse_match);
 
   return Y_SUCCESS;
 }
@@ -1078,9 +1078,9 @@ static INT update_mac_addr32_127_low_high_reg(INT idx,
                                               UCHAR addr[])
 {
 
-  MAC_MA32_127LR_RgWr(idx, (addr[0] | (addr[1] << 8) | (addr[2] << 16) | (addr[3] << 24)));
-  MAC_MA32_127HR_ADDRHI_UdfWr(idx, (addr[4] | (addr[5] << 8)));
-  MAC_MA32_127HR_AE_UdfWr(idx, 0x1);
+  MAC_MA32_127LR_WR(idx, (addr[0] | (addr[1] << 8) | (addr[2] << 16) | (addr[3] << 24)));
+  MAC_MA32_127HR_ADDRHI_WR(idx, (addr[4] | (addr[5] << 8)));
+  MAC_MA32_127HR_AE_WR(idx, 0x1);
 
   return Y_SUCCESS;
 }
@@ -1102,9 +1102,9 @@ static INT update_mac_addr1_31_low_high_reg(INT idx,
                                             UCHAR addr[])
 {
 
-  MAC_MA1_31LR_RgWr(idx, (addr[0] | (addr[1] << 8) | (addr[2] << 16) | (addr[3] << 24)));
-  MAC_MA1_31HR_ADDRHI_UdfWr(idx, (addr[4] | (addr[5] << 8)));
-  MAC_MA1_31HR_AE_UdfWr(idx, 0x1);
+  MAC_MA1_31LR_WR(idx, (addr[0] | (addr[1] << 8) | (addr[2] << 16) | (addr[3] << 24)));
+  MAC_MA1_31HR_ADDRHI_WR(idx, (addr[4] | (addr[5] << 8)));
+  MAC_MA1_31HR_AE_WR(idx, 0x1);
 
   return Y_SUCCESS;
 }
@@ -1126,7 +1126,7 @@ static INT update_hash_table_reg(INT idx,
                                  UINT data)
 {
 
-  MAC_HTR_RgWr(idx, data);
+  MAC_HTR_WR(idx, data);
 
   return Y_SUCCESS;
 }
@@ -1145,11 +1145,11 @@ static INT update_hash_table_reg(INT idx,
 
 static INT drop_tx_status_enabled(void)
 {
-  ULONG varMTL_OMR;
+  ULONG mtl_omr;
 
-  MTL_OMR_RgRd(varMTL_OMR);
+  MTL_OMR_RD(mtl_omr);
 
-  return GET_VALUE(varMTL_OMR, MTL_OMR_DTXSTS_LPOS, MTL_OMR_DTXSTS_HPOS);
+  return GET_VALUE(mtl_omr, MTL_OMR_DTXSTS_LPOS, MTL_OMR_DTXSTS_HPOS);
 }
 
 
@@ -1166,15 +1166,15 @@ static INT drop_tx_status_enabled(void)
 static INT config_sub_second_increment(ULONG ptp_clock)
 {
   ULONG val;
-  ULONG varMAC_TCR;
+  ULONG mac_tcr;
 
-  MAC_TCR_RgRd(varMAC_TCR);
+  MAC_TCR_RD(mac_tcr);
 
   /* convert the PTP_CLOCK to nano second */
   /*  formula is : ((1/ptp_clock) * 1000000000) */
 	/*  where, ptp_clock = 50MHz if FINE correction */
-	/*  and ptp_clock = DWC_ETH_QOS_SYSCLOCK if COARSE correction */
-  if (GET_VALUE(varMAC_TCR, MAC_TCR_TSCFUPDT_LPOS, MAC_TCR_TSCFUPDT_HPOS) == 1) {
+	/*  and ptp_clock = EQOS_SYSCLOCK if COARSE correction */
+  if (GET_VALUE(mac_tcr, MAC_TCR_TSCFUPDT_LPOS, MAC_TCR_TSCFUPDT_HPOS) == 1) {
 	val = ((1 * 1000000000ull) / 62500000);
   }
   else {
@@ -1182,10 +1182,10 @@ static INT config_sub_second_increment(ULONG ptp_clock)
   }
 
   /* 0.465ns accurecy */
-  if (GET_VALUE(varMAC_TCR, MAC_TCR_TSCTRLSSR_LPOS, MAC_TCR_TSCTRLSSR_HPOS) == 0) {
+  if (GET_VALUE(mac_tcr, MAC_TCR_TSCTRLSSR_LPOS, MAC_TCR_TSCTRLSSR_HPOS) == 0) {
     val = (val * 1000) / 465;
   }
-  MAC_SSIR_SSINC_UdfWr(val);
+  MAC_SSIR_SSINC_WR(val);
 
   return Y_SUCCESS;
 }
@@ -1204,10 +1204,10 @@ static ULONG_LONG get_systime(void)
   ULONG varmac_stnsr;
   ULONG varmac_stsr;
 
-  MAC_STNSR_RgRd(varmac_stnsr);
+  MAC_STNSR_RD(varmac_stnsr);
   ns = GET_VALUE(varmac_stnsr, MAC_STNSR_TSSS_LPOS, MAC_STNSR_TSSS_HPOS);
   /* convert sec/high time value to nanosecond */
-  MAC_STSR_RgRd(varmac_stsr);
+  MAC_STSR_RD(varmac_stsr);
   ns = ns + (varmac_stsr * 1000000000ull);
 
   return ns;
@@ -1232,21 +1232,21 @@ static INT adjust_systime(UINT sec,
 			  			INT add_sub,
 						bool one_nsec_accuracy)
 {
-  ULONG retryCount = 100000;
+  ULONG retry_cnt = 100000;
   ULONG vy_count;
-  volatile ULONG varMAC_TCR;
+  volatile ULONG mac_tcr;
 
   /* wait for previous(if any) time adjust/update to complete. */
 
   /*Poll*/
   vy_count = 0;
   while(1){
-    if(vy_count > retryCount) {
+    if(vy_count > retry_cnt) {
       return -Y_FAILURE;
     }
 
-    MAC_TCR_RgRd(varMAC_TCR);
-    if (GET_VALUE(varMAC_TCR, MAC_TCR_TSUPDT_LPOS, MAC_TCR_TSUPDT_HPOS) == 0) {
+    MAC_TCR_RD(mac_tcr);
+    if (GET_VALUE(mac_tcr, MAC_TCR_TSUPDT_LPOS, MAC_TCR_TSUPDT_HPOS) == 0) {
       break;
     }
     vy_count++;
@@ -1272,24 +1272,24 @@ static INT adjust_systime(UINT sec,
       nsec = (0x80000000 - nsec);
   }
 
-  MAC_STSUR_RgWr(sec);
-  MAC_STNSUR_TSSS_UdfWr(nsec);
-  MAC_STNSUR_ADDSUB_UdfWr(add_sub);
+  MAC_STSUR_WR(sec);
+  MAC_STNSUR_TSSS_WR(nsec);
+  MAC_STNSUR_ADDSUB_WR(add_sub);
 
   /* issue command to initialize system time with the value */
   /* specified in MAC_STSUR and MAC_STNSUR. */
-  MAC_TCR_TSUPDT_UdfWr(0x1);
+  MAC_TCR_TSUPDT_WR(0x1);
   /* wait for present time initialize to complete. */
 
   /*Poll*/
   vy_count = 0;
   while(1){
-    if(vy_count > retryCount) {
+    if(vy_count > retry_cnt) {
       return -Y_FAILURE;
     }
 
-    MAC_TCR_RgRd(varMAC_TCR);
-    if (GET_VALUE(varMAC_TCR, MAC_TCR_TSUPDT_LPOS, MAC_TCR_TSUPDT_HPOS) == 0) {
+    MAC_TCR_RD(mac_tcr);
+    if (GET_VALUE(mac_tcr, MAC_TCR_TSUPDT_LPOS, MAC_TCR_TSUPDT_HPOS) == 0) {
       break;
     }
     vy_count++;
@@ -1310,40 +1310,40 @@ static INT adjust_systime(UINT sec,
 
 static INT config_addend(UINT data)
 {
-  ULONG retryCount = 100000;
+  ULONG retry_cnt = 100000;
   ULONG vy_count;
-  volatile ULONG varMAC_TCR;
+  volatile ULONG mac_tcr;
 
   /* wait for previous(if any) added update to complete. */
 
   /*Poll*/
   vy_count = 0;
   while(1){
-    if(vy_count > retryCount) {
+    if(vy_count > retry_cnt) {
       return -Y_FAILURE;
     }
 
-    MAC_TCR_RgRd(varMAC_TCR);
-    if (GET_VALUE(varMAC_TCR, MAC_TCR_TSADDREG_LPOS, MAC_TCR_TSADDREG_HPOS) == 0) {
+    MAC_TCR_RD(mac_tcr);
+    if (GET_VALUE(mac_tcr, MAC_TCR_TSADDREG_LPOS, MAC_TCR_TSADDREG_HPOS) == 0) {
       break;
     }
     vy_count++;
     mdelay(1);
   }
 
-  MAC_TAR_RgWr(data);
+  MAC_TAR_WR(data);
   /* issue command to update the added value */
-  MAC_TCR_TSADDREG_UdfWr(0x1);
+  MAC_TCR_TSADDREG_WR(0x1);
   /* wait for present added update to complete. */
 
   /*Poll*/
   vy_count = 0;
   while(1){
-    if(vy_count > retryCount) {
+    if(vy_count > retry_cnt) {
       return -Y_FAILURE;
     }
-    MAC_TCR_RgRd(varMAC_TCR);
-    if (GET_VALUE(varMAC_TCR, MAC_TCR_TSADDREG_LPOS, MAC_TCR_TSADDREG_HPOS) == 0) {
+    MAC_TCR_RD(mac_tcr);
+    if (GET_VALUE(mac_tcr, MAC_TCR_TSADDREG_LPOS, MAC_TCR_TSADDREG_HPOS) == 0) {
       break;
     }
     vy_count++;
@@ -1368,42 +1368,42 @@ static INT config_addend(UINT data)
 static INT init_systime(UINT sec,
                         UINT nsec)
 {
-  ULONG retryCount = 100000;
+  ULONG retry_cnt = 100000;
   ULONG vy_count;
-  volatile ULONG varMAC_TCR;
+  volatile ULONG mac_tcr;
 
   /* wait for previous(if any) time initialize to complete. */
 
   /*Poll*/
   vy_count = 0;
   while(1){
-    if(vy_count > retryCount) {
+    if(vy_count > retry_cnt) {
       return -Y_FAILURE;
     }
 
-    MAC_TCR_RgRd(varMAC_TCR);
-    if (GET_VALUE(varMAC_TCR, MAC_TCR_TSINIT_LPOS, MAC_TCR_TSINIT_HPOS) == 0) {
+    MAC_TCR_RD(mac_tcr);
+    if (GET_VALUE(mac_tcr, MAC_TCR_TSINIT_LPOS, MAC_TCR_TSINIT_HPOS) == 0) {
       break;
     }
     vy_count++;
     mdelay(1);
   }
-  MAC_STSUR_RgWr(sec);
-  MAC_STNSUR_RgWr(nsec);
+  MAC_STSUR_WR(sec);
+  MAC_STNSUR_WR(nsec);
   /* issue command to initialize system time with the value */
   /* specified in MAC_STSUR and MAC_STNSUR. */
-  MAC_TCR_TSINIT_UdfWr(0x1);
+  MAC_TCR_TSINIT_WR(0x1);
   /* wait for present time initialize to complete. */
 
   /*Poll*/
   vy_count = 0;
   while(1){
-    if(vy_count > retryCount) {
+    if(vy_count > retry_cnt) {
       return -Y_FAILURE;
     }
 
-    MAC_TCR_RgRd(varMAC_TCR);
-    if (GET_VALUE(varMAC_TCR, MAC_TCR_TSINIT_LPOS, MAC_TCR_TSINIT_HPOS) == 0) {
+    MAC_TCR_RD(mac_tcr);
+    if (GET_VALUE(mac_tcr, MAC_TCR_TSINIT_LPOS, MAC_TCR_TSINIT_HPOS) == 0) {
       break;
     }
     vy_count++;
@@ -1429,7 +1429,7 @@ static INT init_systime(UINT sec,
 static INT config_hw_time_stamping(UINT config_val)
 {
 
-  MAC_TCR_RgWr(config_val);
+  MAC_TCR_WR(config_val);
 
   return Y_SUCCESS;
 }
@@ -1447,13 +1447,13 @@ static INT config_hw_time_stamping(UINT config_val)
 * \retval ns
 */
 
-static ULONG_LONG get_rx_tstamp(t_RX_CONTEXT_DESC *rxdesc)
+static ULONG_LONG get_rx_tstamp(t_rx_context_desc *rxdesc)
 {
   ULONG_LONG ns;
   ULONG varrdes1;
 
-  RX_CONTEXT_DESC_RDES0_Ml_Rd(rxdesc->RDES0, ns);
-  RX_CONTEXT_DESC_RDES1_Ml_Rd(rxdesc->RDES1, varrdes1);
+  RX_CONTEXT_DESC_RDES0_RD(rxdesc->RDES0, ns);
+  RX_CONTEXT_DESC_RDES1_RD(rxdesc->RDES1, varrdes1);
   ns = ns + (varrdes1 * 1000000000ull);
 
   return ns;
@@ -1475,19 +1475,19 @@ static ULONG_LONG get_rx_tstamp(t_RX_CONTEXT_DESC *rxdesc)
 * \retval -1 Failure
 */
 
-static UINT get_rx_tstamp_status(t_RX_CONTEXT_DESC *rxdesc)
+static UINT get_rx_tstamp_status(t_rx_context_desc *rxdesc)
 {
-  UINT varOWN;
-  UINT varCTXT;
+  UINT own;
+  UINT ctxt;
   UINT varRDES0;
   UINT varRDES1;
 
   /* check for own bit and CTXT bit */
-  RX_CONTEXT_DESC_RDES3_OWN_Mlf_Rd(rxdesc->RDES3, varOWN);
-  RX_CONTEXT_DESC_RDES3_CTXT_Mlf_Rd(rxdesc->RDES3, varCTXT);
-  if ((varOWN == 0) && (varCTXT == 0x1)) {
-    RX_CONTEXT_DESC_RDES0_Ml_Rd(rxdesc->RDES0, varRDES0);
-    RX_CONTEXT_DESC_RDES1_Ml_Rd(rxdesc->RDES1, varRDES1);
+  RX_CONTEXT_DESC_RDES3_OWN_RD(rxdesc->RDES3, own);
+  RX_CONTEXT_DESC_RDES3_CTXT_RD(rxdesc->RDES3, ctxt);
+  if ((own == 0) && (ctxt == 0x1)) {
+    RX_CONTEXT_DESC_RDES0_RD(rxdesc->RDES0, varRDES0);
+    RX_CONTEXT_DESC_RDES1_RD(rxdesc->RDES1, varRDES1);
     if ((varRDES0 == 0xffffffff) && (varRDES1 == 0xffffffff)) {
       /* time stamp is corrupted */
       return 2;
@@ -1516,15 +1516,15 @@ static UINT get_rx_tstamp_status(t_RX_CONTEXT_DESC *rxdesc)
 * \retval -1 Failure
 */
 
-static UINT rx_tstamp_available(t_RX_NORMAL_DESC *rxdesc)
+static UINT rx_tstamp_available(t_rx_normal_desc *rxdesc)
 {
   UINT varRS1V;
-  UINT varTSA;
+  UINT tsa;
 
-  RX_NORMAL_DESC_RDES3_RS1V_Mlf_Rd(rxdesc->RDES3, varRS1V);
+  RX_NORMAL_DESC_RDES3_RS1V_RD(rxdesc->RDES3, varRS1V);
   if (varRS1V == 1) {
-    RX_NORMAL_DESC_RDES1_TSA_Mlf_Rd(rxdesc->RDES1, varTSA);
-    return varTSA;
+    RX_NORMAL_DESC_RDES1_TSA_RD(rxdesc->RDES1, tsa);
+    return tsa;
   }
   else {
     return 0;
@@ -1546,8 +1546,8 @@ static ULONG_LONG get_tx_tstamp_via_reg(void)
   ULONG_LONG ns;
   ULONG varmac_ttn;
 
-  MAC_TTSN_TXTSSTSLO_UdfRd(ns);
-  MAC_TTN_TXTSSTSHI_UdfRd(varmac_ttn);
+  MAC_TTSN_TXTSSTSLO_RD(ns);
+  MAC_TTN_TXTSSTSHI_RD(varmac_ttn);
   ns = ns + (varmac_ttn * 1000000000ull);
 
   return ns;
@@ -1569,19 +1569,19 @@ static ULONG_LONG get_tx_tstamp_via_reg(void)
 
 static UINT get_tx_tstamp_status_via_reg(void)
 {
-  ULONG varMAC_TCR;
-  ULONG varMAC_TTSN;
+  ULONG mac_tcr;
+  ULONG mac_ttsn;
 
   /* device is configured to overwrite the timesatmp of */
   /* eariler packet if driver has not yet read it. */
-  MAC_TCR_RgRd(varMAC_TCR);
-  if (GET_VALUE(varMAC_TCR, MAC_TCR_TXTSSTSM_LPOS, MAC_TCR_TXTSSTSM_HPOS) == 1) {
+  MAC_TCR_RD(mac_tcr);
+  if (GET_VALUE(mac_tcr, MAC_TCR_TXTSSTSM_LPOS, MAC_TCR_TXTSSTSM_HPOS) == 1) {
     /* nothing to do */
   }
   else {
     /* timesatmp of the current pkt is ignored or not captured */
-    MAC_TTSN_RgRd(varMAC_TTSN);
-    if (GET_VALUE(varMAC_TTSN, MAC_TTSN_TXTSSTSMIS_LPOS, MAC_TTSN_TXTSSTSMIS_HPOS) == 1) {
+    MAC_TTSN_RD(mac_ttsn);
+    if (GET_VALUE(mac_ttsn, MAC_TTSN_TXTSSTSMIS_LPOS, MAC_TTSN_TXTSSTSMIS_HPOS) == 1) {
       return 0;
     }
     else {
@@ -1604,13 +1604,13 @@ static UINT get_tx_tstamp_status_via_reg(void)
 * \retval ns
 */
 
-static ULONG_LONG get_tx_tstamp(t_TX_NORMAL_DESC *txdesc)
+static ULONG_LONG get_tx_tstamp(t_tx_normal_desc *txdesc)
 {
   ULONG_LONG ns;
   ULONG vartdes1;
 
-  TX_NORMAL_DESC_TDES0_Ml_Rd(txdesc->TDES0, ns);
-  TX_NORMAL_DESC_TDES1_Ml_Rd(txdesc->TDES1, vartdes1);
+  TX_NORMAL_DESC_TDES0_RD(txdesc->TDES0, ns);
+  TX_NORMAL_DESC_TDES1_RD(txdesc->TDES1, vartdes1);
   ns = ns + (vartdes1 * 1000000000ull);
 
   return ns;
@@ -1629,11 +1629,11 @@ static ULONG_LONG get_tx_tstamp(t_TX_NORMAL_DESC *txdesc)
 * \retval -1 Failure
 */
 
-static UINT get_tx_tstamp_status(t_TX_NORMAL_DESC *txdesc)
+static UINT get_tx_tstamp_status(t_tx_normal_desc *txdesc)
 {
   UINT varTDES3;
 
-  TX_NORMAL_DESC_TDES3_Ml_Rd(txdesc->TDES3, varTDES3);
+  TX_NORMAL_DESC_TDES3_RD(txdesc->TDES3, varTDES3);
 
   return (varTDES3 & 0x20000);
 }
@@ -1643,18 +1643,18 @@ static UINT get_tx_tstamp_status(t_TX_NORMAL_DESC *txdesc)
 
 /*!
 * \brief This sequence is used to enable/disable split header feature
-* \param[in] qInx
+* \param[in] qinx
 * \param[in] sph_en
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
-static INT config_split_header_mode(UINT qInx,
+static INT config_split_header_mode(UINT qinx,
                              USHORT sph_en)
 {
 
-  DMA_CR_SPH_UdfWr(qInx, sph_en);
+  DMA_CR_SPH_WR(qinx, sph_en);
 
   return Y_SUCCESS;
 }
@@ -1674,19 +1674,19 @@ static INT config_header_size(USHORT header_size)
 {
 
   if (header_size == 64) {
-    MAC_MECR_HDSMS_UdfWr(0);
+    MAC_MECR_HDSMS_WR(0);
   }
   else if (header_size == 128) {
-    MAC_MECR_HDSMS_UdfWr(0x1);
+    MAC_MECR_HDSMS_WR(0x1);
   }
   else if (header_size == 256) {
-    MAC_MECR_HDSMS_UdfWr(0x2);
+    MAC_MECR_HDSMS_WR(0x2);
   }
   else if (header_size == 512) {
-    MAC_MECR_HDSMS_UdfWr(0x3);
+    MAC_MECR_HDSMS_WR(0x3);
   }
   else {
-    MAC_MECR_HDSMS_UdfWr(0x4);
+    MAC_MECR_HDSMS_WR(0x4);
   }
 
   return Y_SUCCESS;
@@ -1697,18 +1697,18 @@ static INT config_header_size(USHORT header_size)
 
 /*!
 * \brief This sequence is used to set tx queue operating mode for Queue[0 - 7]
-* \param[in] qInx
+* \param[in] qinx
 * \param[in] q_mode
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
-static INT set_tx_queue_operating_mode(UINT qInx,
+static INT set_tx_queue_operating_mode(UINT qinx,
                                        UINT q_mode)
 {
 
-  MTL_QTOMR_TXQEN_UdfWr(qInx, q_mode);
+  MTL_QTOMR_TXQEN_WR(qinx, q_mode);
 
   return Y_SUCCESS;
 }
@@ -1724,26 +1724,26 @@ static INT set_tx_queue_operating_mode(UINT qInx,
 * \retval -1 Failure
 */
 
-static INT set_avb_algorithm(UINT qInx, UCHAR avb_algo)
+static INT set_avb_algorithm(UINT qinx, UCHAR avb_algo)
 {
 
-  MTL_QECR_AVALG_UdfWr(qInx, avb_algo);
+  MTL_QECR_AVALG_WR(qinx, avb_algo);
 
   return Y_SUCCESS;
 }
 
 /*!
 * \brief This sequence is used to configure credit-control for Queue[1 - 7]
-* \param[in] qInx
+* \param[in] qinx
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
-static INT config_credit_control(UINT qInx, UINT cc)
+static INT config_credit_control(UINT qinx, UINT cc)
 {
 
-  MTL_QECR_CC_UdfWr(qInx, cc);
+  MTL_QECR_CC_WR(qinx, cc);
 
   return Y_SUCCESS;
 }
@@ -1753,18 +1753,18 @@ static INT config_credit_control(UINT qInx, UINT cc)
 /*!
 * \brief This sequence is used to configure send slope credit value
 * required for the credit-based shaper alogorithm for Queue[1 - 7]
-* \param[in] qInx
-* \param[in] sendSlope
+* \param[in] qinx
+* \param[in] send_slope
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
-static INT config_send_slope(UINT qInx,
-                          UINT sendSlope)
+static INT config_send_slope(UINT qinx,
+                          UINT send_slope)
 {
 
-  MTL_QSSCR_SSC_UdfWr(qInx, sendSlope);
+  MTL_QSSCR_SSC_WR(qinx, send_slope);
 
   return Y_SUCCESS;
 }
@@ -1775,18 +1775,18 @@ static INT config_send_slope(UINT qInx,
 /*!
 * \brief This sequence is used to configure idle slope credit value
 * required for the credit-based shaper alogorithm for Queue[1 - 7]
-* \param[in] qInx
-* \param[in] idleSlope
+* \param[in] qinx
+* \param[in] idle_slope
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
-static INT config_idle_slope(UINT qInx,
-                          UINT idleSlope)
+static INT config_idle_slope(UINT qinx,
+                          UINT idle_slope)
 {
 
-  MTL_QW_ISCQW_UdfWr(qInx, idleSlope);
+  MTL_QW_ISCQW_WR(qinx, idle_slope);
 
   return Y_SUCCESS;
 }
@@ -1797,18 +1797,18 @@ static INT config_idle_slope(UINT qInx,
 /*!
 * \brief This sequence is used to configure low credit value
 * required for the credit-based shaper alogorithm for Queue[1 - 7]
-* \param[in] qInx
-* \param[in] lowCredit
+* \param[in] qinx
+* \param[in] low_credit
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
-static INT config_low_credit(UINT qInx,
-			UINT lowCredit)
+static INT config_low_credit(UINT qinx,
+			UINT low_credit)
 {
 
-  MTL_QLCR_LC_UdfWr(qInx, lowCredit);
+  MTL_QLCR_LC_WR(qinx, low_credit);
 
   return Y_SUCCESS;
 }
@@ -1821,7 +1821,7 @@ static INT config_low_credit(UINT qInx,
 * the data from the corresponding buffer only when the slot number is: equal to
 * the reference slot number or  ahead of the reference slot number by one.
 *
-* \param[in] qInx
+* \param[in] qinx
 * \param[in] slot_check
 *
 * \return Success or Failure
@@ -1829,10 +1829,10 @@ static INT config_low_credit(UINT qInx,
 * \retval -1 Failure
 */
 
-static INT config_slot_num_check(UINT qInx, UCHAR slot_check)
+static INT config_slot_num_check(UINT qinx, UCHAR slot_check)
 {
 
-  DMA_SFCSR_ESC_UdfWr(qInx, slot_check);
+  DMA_SFCSR_ESC_WR(qinx, slot_check);
 
   return Y_SUCCESS;
 }
@@ -1846,7 +1846,7 @@ static INT config_slot_num_check(UINT qInx, UCHAR slot_check)
 * number programmed in TX descriptor is equal to the reference slot number
 * given in RSN field or ahead of the reference number by upto two slots
 *
-* \param[in] qInx
+* \param[in] qinx
 * \param[in] adv_slot_check
 *
 * \return Success or Failure
@@ -1854,10 +1854,10 @@ static INT config_slot_num_check(UINT qInx, UCHAR slot_check)
 * \retval -1 Failure
 */
 
-static INT config_advance_slot_num_check(UINT qInx, UCHAR adv_slot_check)
+static INT config_advance_slot_num_check(UINT qinx, UCHAR adv_slot_check)
 {
 
-  DMA_SFCSR_ASC_UdfWr(qInx, adv_slot_check);
+  DMA_SFCSR_ASC_WR(qinx, adv_slot_check);
 
   return Y_SUCCESS;
 }
@@ -1868,36 +1868,36 @@ static INT config_advance_slot_num_check(UINT qInx, UCHAR adv_slot_check)
 /*!
 * \brief This sequence is used to configure high credit value required
 * for the credit-based shaper alogorithm for Queue[1 - 7]
-* \param[in] qInx
-* \param[in] hiCredit
+* \param[in] qinx
+* \param[in] hi_credit
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
-static INT config_high_credit(UINT qInx,
-                           UINT hiCredit)
+static INT config_high_credit(UINT qinx,
+                           UINT hi_credit)
 {
 
-  MTL_QHCR_HC_UdfWr(qInx, hiCredit);
+  MTL_QHCR_HC_WR(qinx, hi_credit);
 
   return Y_SUCCESS;
 }
 
 /*!
 * \brief This sequence is used to set weights for DCB feature for Queue[0 - 7]
-* \param[in] qInx
+* \param[in] qinx
 * \param[in] q_weight
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
-static INT set_dcb_queue_weight(UINT qInx,
+static INT set_dcb_queue_weight(UINT qinx,
                                 UINT q_weight)
 {
 
-  MTL_QW_ISCQW_UdfWr(qInx, q_weight);
+  MTL_QW_ISCQW_WR(qinx, q_weight);
 
   return Y_SUCCESS;
 }
@@ -1916,7 +1916,7 @@ static INT set_dcb_queue_weight(UINT qInx,
 static INT set_dcb_algorithm(UCHAR dcb_algo)
 {
 
-  MTL_OMR_SCHALG_UdfWr(dcb_algo);
+  MTL_OMR_SCHALG_WR(dcb_algo);
 
   return Y_SUCCESS;
 }
@@ -1934,7 +1934,7 @@ UCHAR get_tx_queue_count(void)
 	UCHAR count;
   ULONG varMAC_HFR2;
 
-  MAC_HFR2_RgRd(varMAC_HFR2);
+  MAC_HFR2_RD(varMAC_HFR2);
   count = GET_VALUE(varMAC_HFR2, MAC_HFR2_TXQCNT_LPOS, MAC_HFR2_TXQCNT_HPOS);
 
   return (count + 1);
@@ -1956,7 +1956,7 @@ UCHAR get_rx_queue_count(void)
 	UCHAR count;
   ULONG varMAC_HFR2;
 
-  MAC_HFR2_RgRd(varMAC_HFR2);
+  MAC_HFR2_RD(varMAC_HFR2);
   count = GET_VALUE(varMAC_HFR2, MAC_HFR2_RXQCNT_LPOS, MAC_HFR2_RXQCNT_HPOS);
 
   return (count + 1);
@@ -1976,10 +1976,10 @@ static INT disable_mmc_interrupts(void)
 {
 
   /* disable all TX interrupts */
-  MMC_INTR_MASK_TX_RgWr(0xffffffff);
+  MMC_INTR_MASK_TX_WR(0xffffffff);
   /* disable all RX interrupts */
-  MMC_INTR_MASK_RX_RgWr(0xffffffff);
-  MMC_IPC_INTR_MASK_RX_RgWr(0xffffffff); /* Disable MMC Rx Interrupts for IPC */
+  MMC_INTR_MASK_RX_WR(0xffffffff);
+  MMC_IPC_INTR_MASK_RX_WR(0xffffffff); /* Disable MMC Rx Interrupts for IPC */
   return Y_SUCCESS;
 }
 
@@ -1995,17 +1995,17 @@ static INT disable_mmc_interrupts(void)
 
 static INT config_mmc_counters(void)
 {
-  ULONG varMMC_CNTRL;
+  ULONG mmc_cntrl;
 
   /* set COUNTER RESET */
   /* set RESET ON READ */
   /* set COUNTER PRESET */
   /* set FULL_HALF PRESET */
-  MMC_CNTRL_RgRd(varMMC_CNTRL);
-  varMMC_CNTRL = varMMC_CNTRL & (ULONG)(0x10a);
-  varMMC_CNTRL = varMMC_CNTRL | ((0x1) << 0) | ((0x1) << 2) | ((0x1) << 4) |
+  MMC_CNTRL_RD(mmc_cntrl);
+  mmc_cntrl = mmc_cntrl & (ULONG)(0x10a);
+  mmc_cntrl = mmc_cntrl | ((0x1) << 0) | ((0x1) << 2) | ((0x1) << 4) |
                 ((0x1) << 5);
-  MMC_CNTRL_RgWr(varMMC_CNTRL);
+  MMC_CNTRL_WR(mmc_cntrl);
 
 
   return Y_SUCCESS;
@@ -2015,27 +2015,27 @@ static INT config_mmc_counters(void)
 
 /*!
 * \brief This sequence is used to disable given DMA channel rx interrupts
-* \param[in] qInx
+* \param[in] qinx
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
 static INT disable_rx_interrupt(
-	UINT qInx, struct DWC_ETH_QOS_prv_data *pdata)
+	UINT qinx, struct eqos_prv_data *pdata)
 {
 	u32 reg;
 
 	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
-		VIRT_INTR_CH_CRTL_RgRd(qInx, reg);
-		reg &= ~VIRT_INTR_CH_CRTL_RX_Wr_Mask;
-		VIRT_INTR_CH_CRTL_RgWr(qInx, reg);
+		VIRT_INTR_CH_CRTL_RD(qinx, reg);
+		reg &= ~VIRT_INTR_CH_CRTL_RX_WR_MASK;
+		VIRT_INTR_CH_CRTL_WR(qinx, reg);
 
 	} else {
-		DMA_IER_RgRd(qInx, reg);
-		reg &= DMA_IER_RBUE_Wr_Mask;
-		reg &= DMA_IER_RIE_Wr_Mask;
-		DMA_IER_RgWr(qInx, reg);
+		DMA_IER_RD(qinx, reg);
+		reg &= DMA_IER_RBUE_WR_MASK;
+		reg &= DMA_IER_RIE_WR_MASK;
+		DMA_IER_WR(qinx, reg);
 	}
 
   	return Y_SUCCESS;
@@ -2046,26 +2046,26 @@ static INT disable_rx_interrupt(
 
 /*!
 * \brief This sequence is used to enable given DMA channel rx interrupts
-* \param[in] qInx
+* \param[in] qinx
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
 static INT enable_rx_interrupt(
-	UINT qInx, struct DWC_ETH_QOS_prv_data *pdata)
+	UINT qinx, struct eqos_prv_data *pdata)
 {
 	u32 reg;
 
 	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
-		VIRT_INTR_CH_CRTL_RgRd(qInx, reg);
-		reg |= VIRT_INTR_CH_CRTL_RX_Wr_Mask;
-		VIRT_INTR_CH_CRTL_RgWr(qInx, reg);
+		VIRT_INTR_CH_CRTL_RD(qinx, reg);
+		reg |= VIRT_INTR_CH_CRTL_RX_WR_MASK;
+		VIRT_INTR_CH_CRTL_WR(qinx, reg);
 	} else {
-		DMA_IER_RgRd(qInx, reg);
-		reg |= ~DMA_IER_RBUE_Wr_Mask;
-		reg |= ~DMA_IER_RIE_Wr_Mask;
-		DMA_IER_RgWr(qInx, reg);
+		DMA_IER_RD(qinx, reg);
+		reg |= ~DMA_IER_RBUE_WR_MASK;
+		reg |= ~DMA_IER_RIE_WR_MASK;
+		DMA_IER_WR(qinx, reg);
 	}
 
   	return Y_SUCCESS;
@@ -2074,77 +2074,77 @@ static INT enable_rx_interrupt(
 
 /*!
 * \brief This sequence is used to disable given DMA channel tx/rx interrupts
-* \param[in] qInx
+* \param[in] qinx
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
 static INT disable_chan_interrupts(
-	UINT qInx, struct DWC_ETH_QOS_prv_data *pdata)
+	UINT qinx, struct eqos_prv_data *pdata)
 {
 	u32 reg;
 
-	VIRT_INTR_CH_CRTL_RgRd(qInx, reg);
-	reg &= ~pdata->chinfo[qInx].int_mask;
-	VIRT_INTR_CH_CRTL_RgWr(qInx, reg);
+	VIRT_INTR_CH_CRTL_RD(qinx, reg);
+	reg &= ~pdata->chinfo[qinx].int_mask;
+	VIRT_INTR_CH_CRTL_WR(qinx, reg);
 
 	return Y_SUCCESS;
 }
 
 /*!
 * \brief This sequence is used to enable given DMA channel tx/rx interrupts
-* \param[in] qInx
+* \param[in] qinx
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
 static INT enable_chan_interrupts(
-	UINT qInx, struct DWC_ETH_QOS_prv_data *pdata)
+	UINT qinx, struct eqos_prv_data *pdata)
 {
 	u32 reg;
 
-	VIRT_INTR_CH_CRTL_RgRd(qInx, reg);
-	reg |= pdata->chinfo[qInx].int_mask;
-	VIRT_INTR_CH_CRTL_RgWr(qInx, reg);
+	VIRT_INTR_CH_CRTL_RD(qinx, reg);
+	reg |= pdata->chinfo[qinx].int_mask;
+	VIRT_INTR_CH_CRTL_WR(qinx, reg);
 
 	return Y_SUCCESS;
 }
 
 static VOID configure_sa_via_reg(u32 cmd)
 {
-	MAC_MCR_SARC_UdfWr(cmd);
+	MAC_MCR_SARC_WR(cmd);
 }
 
 static VOID configure_mac_addr1_reg(UCHAR *mac_addr)
 {
-	MAC_MA1HR_RgWr(((mac_addr[5] << 8) | (mac_addr[4])));
-	MAC_MA1LR_RgWr(((mac_addr[3] << 24) | (mac_addr[2] << 16) |
+	MAC_MA1HR_WR(((mac_addr[5] << 8) | (mac_addr[4])));
+	MAC_MA1LR_WR(((mac_addr[3] << 24) | (mac_addr[2] << 16) |
 			(mac_addr[1] << 8) | (mac_addr[0])));
 }
 
 static VOID configure_mac_addr0_reg(UCHAR *mac_addr)
 {
-	MAC_MA0HR_RgWr(((mac_addr[5] << 8) | (mac_addr[4])));
-	MAC_MA0LR_RgWr(((mac_addr[3] << 24) | (mac_addr[2] << 16) |
+	MAC_MA0HR_WR(((mac_addr[5] << 8) | (mac_addr[4])));
+	MAC_MA0LR_WR(((mac_addr[3] << 24) | (mac_addr[2] << 16) |
 			(mac_addr[1] << 8) | (mac_addr[0])));
 }
 
 static VOID config_rx_outer_vlan_stripping(u32 cmd)
 {
-	MAC_VLANTR_EVLS_UdfWr(cmd);
+	MAC_VLANTR_EVLS_WR(cmd);
 }
 
 static VOID config_rx_inner_vlan_stripping(u32 cmd)
 {
-	MAC_VLANTR_EIVLS_UdfWr(cmd);
+	MAC_VLANTR_EIVLS_WR(cmd);
 }
 
 static VOID config_ptpoffload_engine(UINT pto_cr, UINT mc_uc)
 {
-	MAC_PTO_CR_RgWr(pto_cr);
-    MAC_TCR_TSENMACADDR_UdfWr(mc_uc);
+	MAC_PTO_CR_WR(pto_cr);
+    MAC_TCR_TSENMACADDR_WR(mc_uc);
 }
 
 static VOID config_ptp_channel(UINT ptp_ch_id, UINT addr_index)
@@ -2154,9 +2154,9 @@ static VOID config_ptp_channel(UINT ptp_ch_id, UINT addr_index)
 	DBGPR_FILTER("-->config_ptp_channel\n");
 
 	/* Set Q0 to do DA MAC based DMA Channel selection if not already set */
-	MTL_RQDCM0R_RXQ0DADMACH_UdfRd(dynamic_map_on);
+	MTL_RQDCM0R_RXQ0DADMACH_RD(dynamic_map_on);
 	if (!dynamic_map_on)
-		MTL_RQDCM0R_RXQ0DADMACH_UdfWr(0x1);
+		MTL_RQDCM0R_RXQ0DADMACH_WR(0x1);
 
 	/* We do not need to explictly set the MAC DA based DMA Channel select
 	 * bit (DCS) in all otherMAC Address filter registers. the reset value
@@ -2165,24 +2165,24 @@ static VOID config_ptp_channel(UINT ptp_ch_id, UINT addr_index)
 
 	/* Set the DMA channel selection for the PTP addresses */
 	if (addr_index < 32)
-		MAC_MA1_31HR_DCS_UdfWr(addr_index, ptp_ch_id);
+		MAC_MA1_31HR_DCS_WR(addr_index, ptp_ch_id);
 	else
-		MAC_MA32_127HR_DCS_UdfWr(addr_index, ptp_ch_id);
+		MAC_MA32_127HR_DCS_WR(addr_index, ptp_ch_id);
 
 	DBGPR_FILTER("<--config_ptp_channel\n");
 }
 
-static VOID configure_reg_vlan_control(struct DWC_ETH_QOS_tx_wrapper_descriptor *desc_data)
+static VOID configure_reg_vlan_control(struct eqos_tx_wrapper_descriptor *desc_data)
 {
 	USHORT vlan_id = desc_data->vlan_tag_id;
 	UINT vlan_control = desc_data->tx_vlan_tag_ctrl;
 
-	MAC_VLANTIRR_RgWr(((1 << 18) | (vlan_control << 16) | (vlan_id << 0)));
+	MAC_VLANTIRR_WR(((1 << 18) | (vlan_control << 16) | (vlan_id << 0)));
 }
 
-static VOID configure_desc_vlan_control(struct DWC_ETH_QOS_prv_data *pdata)
+static VOID configure_desc_vlan_control(struct eqos_prv_data *pdata)
 {
-	MAC_VLANTIRR_RgWr((1 << 20));
+	MAC_VLANTIRR_WR((1 << 20));
 }
 
 /*!
@@ -2190,26 +2190,26 @@ static VOID configure_desc_vlan_control(struct DWC_ETH_QOS_prv_data *pdata)
 * \retval  0 Success
 * \retval -1 Failure
 */
-#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
+#ifdef EQOS_ENABLE_VLAN_TAG
 static INT configure_mac_for_vlan_pkt(void)
 {
 
 	/* Enable VLAN Tag stripping always */
-	MAC_VLANTR_EVLS_UdfWr(0x3);
+	MAC_VLANTR_EVLS_WR(0x3);
 	/* Enable operation on the outer VLAN Tag, if present */
-	MAC_VLANTR_ERIVLT_UdfWr(0);
+	MAC_VLANTR_ERIVLT_WR(0);
 	/* Disable double VLAN Tag processing on TX and RX */
-	MAC_VLANTR_EDVLP_UdfWr(0);
+	MAC_VLANTR_EDVLP_WR(0);
 	/* Enable VLAN Tag in RX Status. */
-	MAC_VLANTR_EVLRXS_UdfWr(0x1);
+	MAC_VLANTR_EVLRXS_WR(0x1);
 	/* Disable VLAN Type Check */
-	MAC_VLANTR_DOVLTC_UdfWr(0x1);
+	MAC_VLANTR_DOVLTC_WR(0x1);
 
 	/* configure MAC to get VLAN Tag to be inserted/replaced from */
 	/* TX descriptor(context desc) */
-	MAC_VLANTIRR_VLTI_UdfWr(0x1);
+	MAC_VLANTIRR_VLTI_WR(0x1);
 	/* insert/replace C_VLAN in 13th ans 14th bytes of transmitted frames */
-	MAC_VLANTIRR_CSVL_UdfWr(0);
+	MAC_VLANTIRR_CSVL_WR(0);
 
 	return Y_SUCCESS;
 }
@@ -2220,9 +2220,9 @@ static INT configure_mac_for_vlan_pkt(void)
 * \retval -1 Failure
 */
 
-static INT config_pblx8(UINT qInx, UINT val)
+static INT config_pblx8(UINT qinx, UINT val)
 {
-	DMA_CR_PBLx8_UdfWr(qInx, val);
+	DMA_CR_PBLX8_WR(qinx, val);
 
 	return Y_SUCCESS;
 }
@@ -2232,11 +2232,11 @@ static INT config_pblx8(UINT qInx, UINT val)
 * \retval programmed Tx PBL value
 */
 
-static INT get_tx_pbl_val(UINT qInx)
+static INT get_tx_pbl_val(UINT qinx)
 {
 	UINT tx_pbl;
 
-	DMA_TCR_PBL_UdfRd(qInx, tx_pbl);
+	DMA_TCR_PBL_RD(qinx, tx_pbl);
 
 	return tx_pbl;
 }
@@ -2247,9 +2247,9 @@ static INT get_tx_pbl_val(UINT qInx)
 * \retval -1 Failure
 */
 
-static INT config_tx_pbl_val(UINT qInx, UINT tx_pbl)
+static INT config_tx_pbl_val(UINT qinx, UINT tx_pbl)
 {
-	DMA_TCR_PBL_UdfWr(qInx, tx_pbl);
+	DMA_TCR_PBL_WR(qinx, tx_pbl);
 
 	return Y_SUCCESS;
 }
@@ -2259,11 +2259,11 @@ static INT config_tx_pbl_val(UINT qInx, UINT tx_pbl)
 * \retval programmed Rx PBL value
 */
 
-static INT get_rx_pbl_val(UINT qInx)
+static INT get_rx_pbl_val(UINT qinx)
 {
 	UINT rx_pbl;
 
-	DMA_RCR_PBL_UdfRd(qInx, rx_pbl);
+	DMA_RCR_PBL_RD(qinx, rx_pbl);
 
 	return rx_pbl;
 }
@@ -2274,9 +2274,9 @@ static INT get_rx_pbl_val(UINT qInx)
 * \retval -1 Failure
 */
 
-static INT config_rx_pbl_val(UINT qInx, UINT rx_pbl)
+static INT config_rx_pbl_val(UINT qinx, UINT rx_pbl)
 {
-	DMA_RCR_PBL_UdfWr(qInx, rx_pbl);
+	DMA_RCR_PBL_WR(qinx, rx_pbl);
 
 	return Y_SUCCESS;
 }
@@ -2290,7 +2290,7 @@ static INT config_rx_pbl_val(UINT qInx, UINT rx_pbl)
 
 static INT config_axi_rorl_val(UINT axi_rorl)
 {
-	DMA_SBUS_RD_OSR_LMT_UdfWr(axi_rorl);
+	DMA_SBUS_RD_OSR_LMT_WR(axi_rorl);
 
 	return Y_SUCCESS;
 }
@@ -2304,7 +2304,7 @@ static INT config_axi_rorl_val(UINT axi_rorl)
 
 static INT config_axi_worl_val(UINT axi_worl)
 {
-	DMA_SBUS_WR_OSR_LMT_UdfWr(axi_worl);
+	DMA_SBUS_WR_OSR_LMT_WR(axi_worl);
 
 	return Y_SUCCESS;
 }
@@ -2318,12 +2318,12 @@ static INT config_axi_worl_val(UINT axi_worl)
 
 static INT config_axi_pbl_val(UINT axi_pbl)
 {
-	UINT varDMA_SBUS;
+	UINT dma_sbus;
 
-	DMA_SBUS_RgRd(varDMA_SBUS);
-	varDMA_SBUS &= ~DMA_SBUS_AXI_PBL_MASK;
-	varDMA_SBUS |= axi_pbl;
-	DMA_SBUS_RgWr(varDMA_SBUS);
+	DMA_SBUS_RD(dma_sbus);
+	dma_sbus &= ~DMA_SBUS_AXI_PBL_MASK;
+	dma_sbus |= axi_pbl;
+	DMA_SBUS_WR(dma_sbus);
 
 	return Y_SUCCESS;
 }
@@ -2337,7 +2337,7 @@ static INT config_axi_pbl_val(UINT axi_pbl)
 
 static INT config_incr_incrx_mode(UINT val)
 {
-	DMA_SBUS_UNDEF_FB_UdfWr(val);
+	DMA_SBUS_UNDEF_FB_WR(val);
 
 	return Y_SUCCESS;
 }
@@ -2348,9 +2348,9 @@ static INT config_incr_incrx_mode(UINT val)
 * \retval -1 Failure
 */
 
-static INT config_osf_mode(UINT qInx, UINT val)
+static INT config_osf_mode(UINT qinx, UINT val)
 {
-	DMA_TCR_OSP_UdfWr(qInx, val);
+	DMA_TCR_OSP_WR(qinx, val);
 
 	return Y_SUCCESS;
 }
@@ -2361,13 +2361,13 @@ static INT config_osf_mode(UINT qInx, UINT val)
 * \retval -1 Failure
 */
 
-static INT config_rsf_mode(UINT qInx, UINT val)
+static INT config_rsf_mode(UINT qinx, UINT val)
 {
-	//if (qInx == 0) {
-		//MTL_Q0ROMR_RSF_UdfWr(val);
+	//if (qinx == 0) {
+		//MTL_Q0ROMR_RSF_WR(val);
 	//}
 	//else {
-		MTL_QROMR_RSF_UdfWr(qInx, val);
+		MTL_QROMR_RSF_WR(qinx, val);
 	//}
 
 	return Y_SUCCESS;
@@ -2379,9 +2379,9 @@ static INT config_rsf_mode(UINT qInx, UINT val)
 * \retval -1 Failure
 */
 
-static INT config_tsf_mode(UINT qInx, UINT val)
+static INT config_tsf_mode(UINT qinx, UINT val)
 {
-	MTL_QTOMR_TSF_UdfWr(qInx, val);
+	MTL_QTOMR_TSF_WR(qinx, val);
 
 	return Y_SUCCESS;
 }
@@ -2392,9 +2392,9 @@ static INT config_tsf_mode(UINT qInx, UINT val)
 * \retval -1 Failure
 */
 
-static INT config_rx_threshold(UINT qInx, UINT val)
+static INT config_rx_threshold(UINT qinx, UINT val)
 {
-	MTL_QROMR_RTC_UdfWr(qInx, val);
+	MTL_QROMR_RTC_WR(qinx, val);
 
 	return Y_SUCCESS;
 }
@@ -2405,9 +2405,9 @@ static INT config_rx_threshold(UINT qInx, UINT val)
 * \retval -1 Failure
 */
 
-static INT config_tx_threshold(UINT qInx, UINT val)
+static INT config_tx_threshold(UINT qinx, UINT val)
 {
-	MTL_QTOMR_TTC_UdfWr(qInx, val);
+	MTL_QTOMR_TTC_WR(qinx, val);
 
 	return Y_SUCCESS;
 }
@@ -2418,9 +2418,9 @@ static INT config_tx_threshold(UINT qInx, UINT val)
 * \retval -1 Failure
 */
 
-static INT config_rx_watchdog_timer(UINT qInx, u32 riwt)
+static INT config_rx_watchdog_timer(UINT qinx, u32 riwt)
 {
-	DMA_RIWTR_RWT_UdfWr(qInx, riwt);
+	DMA_RIWTR_RWT_WR(qinx, riwt);
 
 	return Y_SUCCESS;
 }
@@ -2433,8 +2433,8 @@ static INT config_rx_watchdog_timer(UINT qInx, u32 riwt)
 
 static INT enable_magic_pmt_operation(void)
 {
-	MAC_PMTCSR_MGKPKTEN_UdfWr(0x1);
-	MAC_PMTCSR_PWRDWN_UdfWr(0x1);
+	MAC_PMTCSR_MGKPKTEN_WR(0x1);
+	MAC_PMTCSR_PWRDWN_WR(0x1);
 
 	return Y_SUCCESS;
 }
@@ -2447,12 +2447,12 @@ static INT enable_magic_pmt_operation(void)
 
 static INT disable_magic_pmt_operation(void)
 {
-	UINT varPMTCSR_PWRDWN;
+	UINT pmtcsr_pwrdn;
 
-	MAC_PMTCSR_MGKPKTEN_UdfWr(0x0);
-	MAC_PMTCSR_PWRDWN_UdfRd(varPMTCSR_PWRDWN);
-	if (varPMTCSR_PWRDWN == 0x1) {
-		MAC_PMTCSR_PWRDWN_UdfWr(0x0);
+	MAC_PMTCSR_MGKPKTEN_WR(0x0);
+	MAC_PMTCSR_PWRDWN_RD(pmtcsr_pwrdn);
+	if (pmtcsr_pwrdn == 0x1) {
+		MAC_PMTCSR_PWRDWN_WR(0x0);
 	}
 
 	return Y_SUCCESS;
@@ -2466,8 +2466,8 @@ static INT disable_magic_pmt_operation(void)
 
 static INT enable_remote_pmt_operation(void)
 {
-	MAC_PMTCSR_RWKPKTEN_UdfWr(0x1);
-	MAC_PMTCSR_PWRDWN_UdfWr(0x1);
+	MAC_PMTCSR_RWKPKTEN_WR(0x1);
+	MAC_PMTCSR_PWRDWN_WR(0x1);
 
 	return Y_SUCCESS;
 }
@@ -2480,12 +2480,12 @@ static INT enable_remote_pmt_operation(void)
 
 static INT disable_remote_pmt_operation(void)
 {
-	UINT varPMTCSR_PWRDWN;
+	UINT pmtcsr_pwrdn;
 
-	MAC_PMTCSR_RWKPKTEN_UdfWr(0x0);
-	MAC_PMTCSR_PWRDWN_UdfRd(varPMTCSR_PWRDWN);
-	if (varPMTCSR_PWRDWN == 0x1) {
-		MAC_PMTCSR_PWRDWN_UdfWr(0x0);
+	MAC_PMTCSR_RWKPKTEN_WR(0x0);
+	MAC_PMTCSR_PWRDWN_RD(pmtcsr_pwrdn);
+	if (pmtcsr_pwrdn == 0x1) {
+		MAC_PMTCSR_PWRDWN_WR(0x0);
 	}
 
 	return Y_SUCCESS;
@@ -2501,9 +2501,9 @@ static INT configure_rwk_filter_registers(UINT *value, UINT count)
 {
 	UINT i;
 
-	MAC_PMTCSR_RWKFILTRST_UdfWr(1);
+	MAC_PMTCSR_RWKFILTRST_WR(1);
 	for (i = 0; i < count; i++)
-		MAC_RWPFFR_RgWr(value[i]);
+		MAC_RWPFFR_WR(value[i]);
 
 	return Y_SUCCESS;
 }
@@ -2514,10 +2514,10 @@ static INT configure_rwk_filter_registers(UINT *value, UINT count)
 * \retval -1 Failure
 */
 
-static INT disable_tx_flow_ctrl(UINT qInx)
+static INT disable_tx_flow_ctrl(UINT qinx)
 {
 
-	MAC_QTFCR_TFE_UdfWr(qInx, 0);
+	MAC_QTFCR_TFE_WR(qinx, 0);
 
 	return Y_SUCCESS;
 }
@@ -2528,10 +2528,10 @@ static INT disable_tx_flow_ctrl(UINT qInx)
 * \retval -1 Failure
 */
 
-static INT enable_tx_flow_ctrl(UINT qInx)
+static INT enable_tx_flow_ctrl(UINT qinx)
 {
 
-	MAC_QTFCR_TFE_UdfWr(qInx, 1);
+	MAC_QTFCR_TFE_WR(qinx, 1);
 
 	return Y_SUCCESS;
 }
@@ -2545,7 +2545,7 @@ static INT enable_tx_flow_ctrl(UINT qInx)
 static INT disable_rx_flow_ctrl(void)
 {
 
-	MAC_RFCR_RFE_UdfWr(0);
+	MAC_RFCR_RFE_WR(0);
 
 	return Y_SUCCESS;
 }
@@ -2559,7 +2559,7 @@ static INT disable_rx_flow_ctrl(void)
 static INT enable_rx_flow_ctrl(void)
 {
 
-	MAC_RFCR_RFE_UdfWr(0x1);
+	MAC_RFCR_RFE_WR(0x1);
 
 	return Y_SUCCESS;
 }
@@ -2576,21 +2576,21 @@ static void wait_for_dma_to_get_idle(UINT qinx, bool is_rx)
 	/* make sure DMA is suspended or stopped before stop command */
 	do {
 		if (qinx <= 2) {
-			DMA_DSR0_RgRd(dma_dsr0);
+			DMA_DSR0_RD(dma_dsr0);
 			val = GET_VALUE(dma_dsr0,
 			is_rx ? DMA_DSR0_RPS0_LPOS : DMA_DSR0_TPS0_LPOS
 			+ (qinx * 8),
 			is_rx ? DMA_DSR0_RPS0_HPOS : DMA_DSR0_TPS0_HPOS
 			+ (qinx * 8));
 		} else if (qinx <= 6) {
-			DMA_DSR1_RgRd(dma_dsr1);
+			DMA_DSR1_RD(dma_dsr1);
 			val = GET_VALUE(dma_dsr1,
 			is_rx ? DMA_DSR1_RPS3_LPOS : DMA_DSR1_TPS3_LPOS
 			+ (qinx - 3) * 8,
 			is_rx ? DMA_DSR1_RPS3_HPOS : DMA_DSR1_TPS3_HPOS
 			+ (qinx - 3) * 8);
 		} else {
-			DMA_DSR2_RgRd(dma_dsr2);
+			DMA_DSR2_RD(dma_dsr2);
 			val = GET_VALUE(dma_dsr2,
 			is_rx ? DMA_DSR2_RPS7_LPOS : DMA_DSR2_TPS7_LPOS,
 			is_rx ? DMA_DSR2_RPS7_HPOS : DMA_DSR2_TPS7_HPOS);
@@ -2611,7 +2611,7 @@ static void wait_for_dma_to_get_idle(UINT qinx, bool is_rx)
 }
 
 /*!
-* \param[in] qInx
+* \param[in] qinx
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
@@ -2623,7 +2623,7 @@ static INT stop_dma_rx(UINT qinx)
 	wait_for_dma_to_get_idle(qinx, true);
 
 	/* issue Rx dma stop command */
-	DMA_RCR_ST_UdfWr(qinx, 0);
+	DMA_RCR_ST_WR(qinx, 0);
 
 	/* wait for dma to get idle or suspended */
 	wait_for_dma_to_get_idle(qinx, true);
@@ -2633,34 +2633,34 @@ static INT stop_dma_rx(UINT qinx)
 
 
 /*!
-* \param[in] qInx
+* \param[in] qinx
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
-static INT start_dma_rx(UINT qInx)
+static INT start_dma_rx(UINT qinx)
 {
 
-  DMA_RCR_ST_UdfWr(qInx, 0x1);
+  DMA_RCR_ST_WR(qinx, 0x1);
 
   return Y_SUCCESS;
 }
 
 /*!
-* \param[in] qInx
+* \param[in] qinx
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
-static INT stop_dma_tx(struct DWC_ETH_QOS_prv_data *pdata, UINT qinx)
+static INT stop_dma_tx(struct eqos_prv_data *pdata, UINT qinx)
 {
-	struct DWC_ETH_QOS_tx_wrapper_descriptor *tx_desc_data =
+	struct eqos_tx_wrapper_descriptor *tx_desc_data =
 		GET_TX_WRAPPER_DESC(qinx);
 	INT start = tx_desc_data->dirty_tx;
 	INT end = tx_desc_data->cur_tx;
-	struct s_TX_NORMAL_DESC *TX_NORMAL_DESC;
+	struct s_tx_normal_desc *TX_NORMAL_DESC;
 	UINT own, i;
 
 	/* set OWN to 0 for all TX descriptor currently owned by HW */
@@ -2670,9 +2670,9 @@ static INT stop_dma_tx(struct DWC_ETH_QOS_prv_data *pdata, UINT qinx)
 		if (i == end)
 			break;
 		TX_NORMAL_DESC = GET_TX_DESC_PTR(qinx, i);
-		TX_NORMAL_DESC_TDES3_OWN_Mlf_Rd(TX_NORMAL_DESC->TDES3, own);
+		TX_NORMAL_DESC_TDES3_OWN_RD(TX_NORMAL_DESC->TDES3, own);
 		if (own)
-			TX_NORMAL_DESC_TDES3_OWN_Mlf_Wr(
+			TX_NORMAL_DESC_TDES3_OWN_WR(
 				TX_NORMAL_DESC->TDES3, 0x0);
 	}
 
@@ -2680,7 +2680,7 @@ static INT stop_dma_tx(struct DWC_ETH_QOS_prv_data *pdata, UINT qinx)
 	wait_for_dma_to_get_idle(qinx, false);
 
 	/* issue Tx dma stop command */
-	DMA_TCR_ST_UdfWr(qinx, 0);
+	DMA_TCR_ST_WR(qinx, 0);
 
 	/* wait for dma to get idle or suspended */
 	wait_for_dma_to_get_idle(qinx, false);
@@ -2689,16 +2689,16 @@ static INT stop_dma_tx(struct DWC_ETH_QOS_prv_data *pdata, UINT qinx)
 }
 
 /*!
-* \param[in] qInx
+* \param[in] qinx
 * \return Success or Failure
 * \retval  0 Success
 * \retval -1 Failure
 */
 
-static INT start_dma_tx(UINT qInx)
+static INT start_dma_tx(UINT qinx)
 {
 
-  DMA_TCR_ST_UdfWr(qInx, 0x1);
+  DMA_TCR_ST_WR(qinx, 0x1);
 
   return Y_SUCCESS;
 }
@@ -2712,9 +2712,9 @@ static INT stop_mac_tx(void)
 {
 	ULONG mac_mcr;
 
-	MAC_MCR_RgRd(mac_mcr);
+	MAC_MCR_RD(mac_mcr);
 	mac_mcr = mac_mcr & (ULONG) (0xffffff7d);
-	MAC_MCR_RgWr(mac_mcr);
+	MAC_MCR_WR(mac_mcr);
 
 	return Y_SUCCESS;
 }
@@ -2728,9 +2728,9 @@ static INT stop_mac_rx(void)
 {
 	ULONG mac_mcr;
 
-	MAC_MCR_RgRd(mac_mcr);
+	MAC_MCR_RD(mac_mcr);
 	mac_mcr = mac_mcr & (ULONG) (0xffffff7e);
-	MAC_MCR_RgWr(mac_mcr);
+	MAC_MCR_WR(mac_mcr);
 
 	return Y_SUCCESS;
 }
@@ -2743,12 +2743,12 @@ static INT stop_mac_rx(void)
 
 static INT start_mac_tx_rx(void)
 {
-	ULONG varMAC_MCR;
+	ULONG mac_mcr;
 
-	MAC_MCR_RgRd(varMAC_MCR);
-	varMAC_MCR = varMAC_MCR & (ULONG) (0xffffff7c);
-	varMAC_MCR = varMAC_MCR | ((0x1) << 1) | ((0x1) << 0);
-	MAC_MCR_RgWr(varMAC_MCR);
+	MAC_MCR_RD(mac_mcr);
+	mac_mcr = mac_mcr & (ULONG) (0xffffff7c);
+	mac_mcr = mac_mcr | ((0x1) << 1) | ((0x1) << 0);
+	MAC_MCR_WR(mac_mcr);
 
 	return Y_SUCCESS;
 }
@@ -2761,65 +2761,65 @@ static INT start_mac_tx_rx(void)
 * \retval -1 Failure
 */
 
-static INT enable_dma_interrupts(UINT qInx,
-			struct DWC_ETH_QOS_prv_data *pdata)
+static INT enable_dma_interrupts(UINT qinx,
+			struct eqos_prv_data *pdata)
 {
 	UINT tmp;
-	ULONG varDMA_SR;
-	ULONG varDMA_IER;
+	ULONG dma_sr;
+	ULONG dma_ier;
 
 	/* clear all the interrupts which are set */
-	DMA_SR_RgRd(qInx, varDMA_SR);
-	tmp = varDMA_SR;
-	DMA_SR_RgWr(qInx, tmp);
+	DMA_SR_RD(qinx, dma_sr);
+	tmp = dma_sr;
+	DMA_SR_WR(qinx, tmp);
 	/* Enable following interrupts for Queue 0 */
 	/* RIE - Receive Interrupt Enable */
 	/* RBUE - Receive Buffer Unavailable Enable  */
 	/* AIE - Abnormal Interrupt Summary Enable */
 	/* NIE - Normal Interrupt Summary Enable */
 	/* FBE - Fatal Bus Error Enable */
-	DMA_IER_RgRd(qInx, varDMA_IER);
-	varDMA_IER = varDMA_IER & (ULONG) (0x2e00);
-#ifdef DWC_ETH_QOS_VER_4_0    
-	varDMA_IER = varDMA_IER |
+	DMA_IER_RD(qinx, dma_ier);
+	dma_ier = dma_ier & (ULONG) (0x2e00);
+#ifdef EQOS_VER_4_0    
+	dma_ier = dma_ier |
 	    ((0x1) << 6) | ((0x1) << 7) | ((0x1) << 15) |
 	    ((0x1) << 16) | ((0x1) << 12);
 #else
-	varDMA_IER = varDMA_IER |
+	dma_ier = dma_ier |
 	    ((0x1) << 6) | ((0x1) << 7) |  ((0x1) << 14) |
 	    ((0x1) << 15) | ((0x1) << 12);
 #endif 
 
-#ifdef DWC_ETH_QOS_TXPOLLING_MODE_ENABLE
+#ifdef EQOS_TXPOLLING_MODE_ENABLE
 	/* Disable TIE and TBUE */
 	/* TIE - Transmit Interrupt Enable */
 	/* TBUE - Transmit Buffer Unavailable Enable */
-	varDMA_IER &= ~(((0x1) << 0) | ((0x1) << 2));
+	dma_ier &= ~(((0x1) << 0) | ((0x1) << 2));
 #else
 	/* Enable TIE and TBUE */
 	/* TIE - Transmit Interrupt Enable */
 	/* TBUE - Transmit Buffer Unavailable Enable */
-	varDMA_IER |= ((0x1) << 0) | ((0x1) << 2);
+	dma_ier |= ((0x1) << 0) | ((0x1) << 2);
 #endif
 	/* For multi-irqs to work nie needs to be disabled.
 	 * And disable tx ints for now
 	 */
 	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
-		varDMA_IER &= ~((0x1) << 15);
+		dma_ier &= ~((0x1) << 15);
 
 #ifdef ALL_POLLING
 	if (pdata->dt_cfg.intr_mode == MODE_ALL_POLLING) {
-		varDMA_IER &= ~((0x1) << 0) | ((0x1) << 2);
-		varDMA_IER &= ~((0x1) << 6) | ((0x1) << 7);
+		dma_ier &= ~((0x1) << 0) | ((0x1) << 2);
+		dma_ier &= ~((0x1) << 6) | ((0x1) << 7);
 	}
 
 #endif
-	if (pdata->dt_cfg.chan_mode[qInx] == CHAN_MODE_POLLING) {
-		varDMA_IER &= ~((0x1) << 0) | ((0x1) << 2);
-		varDMA_IER &= ~((0x1) << 6) | ((0x1) << 7);
+	if (pdata->dt_cfg.chan_mode[qinx] == CHAN_MODE_POLLING) {
+		dma_ier &= ~((0x1) << 0) | ((0x1) << 2);
+		dma_ier &= ~((0x1) << 6) | ((0x1) << 7);
 	}
 
-	DMA_IER_RgWr(qInx, varDMA_IER);
+	DMA_IER_WR(qinx, dma_ier);
 
 	return Y_SUCCESS;
 }
@@ -2833,13 +2833,13 @@ static INT enable_dma_interrupts(UINT qInx,
 * \retval -1 Failure
 */
 
-static INT set_gmii_speed(struct DWC_ETH_QOS_prv_data *pdata)
+static INT set_gmii_speed(struct eqos_prv_data *pdata)
 {
 
-	MAC_MCR_PS_UdfWr(0);
-	MAC_MCR_FES_UdfWr(0);
+	MAC_MCR_PS_WR(0);
+	MAC_MCR_FES_WR(0);
 	if (tegra_platform_is_unit_fpga())
-		CLK_CRTL0_TX_CLK_UdfWr(0);
+		CLK_CRTL0_TX_CLK_WR(0);
 
 	/* set eqos_tx clock to 125MHz */
 	if (tegra_platform_is_silicon()) {
@@ -2863,13 +2863,13 @@ static INT set_gmii_speed(struct DWC_ETH_QOS_prv_data *pdata)
 * \retval -1 Failure
 */
 
-static INT set_mii_speed_10(struct DWC_ETH_QOS_prv_data *pdata)
+static INT set_mii_speed_10(struct eqos_prv_data *pdata)
 {
 
-	MAC_MCR_PS_UdfWr(0x1);
-	MAC_MCR_FES_UdfWr(0);
+	MAC_MCR_PS_WR(0x1);
+	MAC_MCR_FES_WR(0);
 	if (tegra_platform_is_unit_fpga())
-		CLK_CRTL0_TX_CLK_UdfWr(1);
+		CLK_CRTL0_TX_CLK_WR(1);
 
 	/* set eqos_tx clock to 2.5MHz */
 	if (tegra_platform_is_silicon()) {
@@ -2893,13 +2893,13 @@ static INT set_mii_speed_10(struct DWC_ETH_QOS_prv_data *pdata)
 * \retval -1 Failure
 */
 
-static INT set_mii_speed_100(struct DWC_ETH_QOS_prv_data *pdata)
+static INT set_mii_speed_100(struct eqos_prv_data *pdata)
 {
 
-	MAC_MCR_PS_UdfWr(0x1);
-	MAC_MCR_FES_UdfWr(0x1);
+	MAC_MCR_PS_WR(0x1);
+	MAC_MCR_FES_WR(0x1);
 	if (tegra_platform_is_unit_fpga())
-		CLK_CRTL0_TX_CLK_UdfWr(0);
+		CLK_CRTL0_TX_CLK_WR(0);
 
 	/* set eqos_tx clock to 25MHz */
 	if (tegra_platform_is_silicon()) {
@@ -2926,7 +2926,7 @@ static INT set_mii_speed_100(struct DWC_ETH_QOS_prv_data *pdata)
 static INT set_half_duplex(void)
 {
 
-	MAC_MCR_DM_UdfWr(0);
+	MAC_MCR_DM_WR(0);
 
 	return Y_SUCCESS;
 }
@@ -2942,7 +2942,7 @@ static INT set_half_duplex(void)
 static INT set_full_duplex(void)
 {
 
-	MAC_MCR_DM_UdfWr(0x1);
+	MAC_MCR_DM_WR(0x1);
 
 	return Y_SUCCESS;
 }
@@ -2958,7 +2958,7 @@ static INT set_full_duplex(void)
 static INT set_multicast_list_mode(void)
 {
 
-	MAC_MPFR_HMC_UdfWr(0);
+	MAC_MPFR_HMC_WR(0);
 
 	return Y_SUCCESS;
 }
@@ -2973,7 +2973,7 @@ static INT set_multicast_list_mode(void)
 static INT set_unicast_mode(void)
 {
 
-	MAC_MPFR_HUC_UdfWr(0);
+	MAC_MPFR_HUC_WR(0);
 
 	return Y_SUCCESS;
 }
@@ -2988,7 +2988,7 @@ static INT set_unicast_mode(void)
 static INT set_all_multicast_mode(void)
 {
 
-	MAC_MPFR_PM_UdfWr(0x1);
+	MAC_MPFR_PM_WR(0x1);
 
 	return Y_SUCCESS;
 }
@@ -3003,7 +3003,7 @@ static INT set_all_multicast_mode(void)
 static INT set_promiscuous_mode(void)
 {
 
-	MAC_MPFR_PR_UdfWr(0x1);
+	MAC_MPFR_PR_WR(0x1);
 
 	return Y_SUCCESS;
 }
@@ -3020,40 +3020,40 @@ static INT set_promiscuous_mode(void)
 
 static INT write_phy_regs(INT phy_id, INT phy_reg, INT phy_reg_data)
 {
-	ULONG retryCount = 1000;
+	ULONG retry_cnt = 1000;
 	ULONG vy_count;
-	volatile ULONG varMAC_GMIIAR;
+	volatile ULONG mac_gmiiar;
 
 	/* wait for any previous MII read/write operation to complete */
 
 	/*Poll Until Poll Condition */
 	vy_count = 0;
 	while (1) {
-		if (vy_count > retryCount) {
+		if (vy_count > retry_cnt) {
 			return -Y_FAILURE;
 		} else {
 			vy_count++;
 			mdelay(1);
 		}
-		MAC_GMIIAR_RgRd(varMAC_GMIIAR);
-		if (GET_VALUE(varMAC_GMIIAR, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
+		MAC_GMIIAR_RD(mac_gmiiar);
+		if (GET_VALUE(mac_gmiiar, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
 			break;
 		}
 	}
 	/* write the data */
-	MAC_GMIIDR_GD_UdfWr(phy_reg_data);
+	MAC_GMIIDR_GD_WR(phy_reg_data);
 	/* initiate the MII write operation by updating desired */
 	/* phy address/id (0 - 31) */
 	/* phy register offset */
 	/* CSR Clock Range (20 - 35MHz) */
 	/* Select write operation */
 	/* set busy bit */
-	MAC_GMIIAR_RgRd(varMAC_GMIIAR);
-	varMAC_GMIIAR = varMAC_GMIIAR & (ULONG) (0x12);
-	varMAC_GMIIAR =
-	    varMAC_GMIIAR | ((phy_id) << 21) | ((phy_reg) << 16) | ((0x2) << 8)
+	MAC_GMIIAR_RD(mac_gmiiar);
+	mac_gmiiar = mac_gmiiar & (ULONG) (0x12);
+	mac_gmiiar =
+	    mac_gmiiar | ((phy_id) << 21) | ((phy_reg) << 16) | ((0x2) << 8)
 	    | ((0x1) << 2) | ((0x1) << 0);
-	MAC_GMIIAR_RgWr(varMAC_GMIIAR);
+	MAC_GMIIAR_WR(mac_gmiiar);
 
 	/*DELAY IMPLEMENTATION USING udelay() */
 	udelay(10);
@@ -3062,14 +3062,14 @@ static INT write_phy_regs(INT phy_id, INT phy_reg, INT phy_reg_data)
 	/*Poll Until Poll Condition */
 	vy_count = 0;
 	while (1) {
-		if (vy_count > retryCount) {
+		if (vy_count > retry_cnt) {
 			return -Y_FAILURE;
 		} else {
 			vy_count++;
 			mdelay(1);
 		}
-		MAC_GMIIAR_RgRd(varMAC_GMIIAR);
-		if (GET_VALUE(varMAC_GMIIAR, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
+		MAC_GMIIAR_RD(mac_gmiiar);
+		if (GET_VALUE(mac_gmiiar, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
 			break;
 		}
 	}
@@ -3089,24 +3089,24 @@ static INT write_phy_regs(INT phy_id, INT phy_reg, INT phy_reg_data)
 
 static INT read_phy_regs(INT phy_id, INT phy_reg, INT *phy_reg_data)
 {
-	ULONG retryCount = 1000;
+	ULONG retry_cnt = 1000;
 	ULONG vy_count;
-	volatile ULONG varMAC_GMIIAR;
-	ULONG varMAC_GMIIDR;
+	volatile ULONG mac_gmiiar;
+	ULONG mac_gmiidr;
 
 	/* wait for any previous MII read/write operation to complete */
 
 	/*Poll Until Poll Condition */
 	vy_count = 0;
 	while (1) {
-		if (vy_count > retryCount) {
+		if (vy_count > retry_cnt) {
 			return -Y_FAILURE;
 		} else {
 			vy_count++;
 			mdelay(1);
 		}
-		MAC_GMIIAR_RgRd(varMAC_GMIIAR);
-		if (GET_VALUE(varMAC_GMIIAR, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
+		MAC_GMIIAR_RD(mac_gmiiar);
+		if (GET_VALUE(mac_gmiiar, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
 			break;
 		}
 	}
@@ -3116,12 +3116,12 @@ static INT read_phy_regs(INT phy_id, INT phy_reg, INT *phy_reg_data)
 	/* CSR Clock Range (20 - 35MHz) */
 	/* Select read operation */
 	/* set busy bit */
-	MAC_GMIIAR_RgRd(varMAC_GMIIAR);
-	varMAC_GMIIAR = varMAC_GMIIAR & (ULONG) (0x12);
-	varMAC_GMIIAR =
-	    varMAC_GMIIAR | ((phy_id) << 21) | ((phy_reg) << 16) | ((0x2) << 8)
+	MAC_GMIIAR_RD(mac_gmiiar);
+	mac_gmiiar = mac_gmiiar & (ULONG) (0x12);
+	mac_gmiiar =
+	    mac_gmiiar | ((phy_id) << 21) | ((phy_reg) << 16) | ((0x2) << 8)
 	    | ((0x3) << 2) | ((0x1) << 0);
-	MAC_GMIIAR_RgWr(varMAC_GMIIAR);
+	MAC_GMIIAR_WR(mac_gmiiar);
 
 	/*DELAY IMPLEMENTATION USING udelay() */
 	udelay(10);
@@ -3130,21 +3130,21 @@ static INT read_phy_regs(INT phy_id, INT phy_reg, INT *phy_reg_data)
 	/*Poll Until Poll Condition */
 	vy_count = 0;
 	while (1) {
-		if (vy_count > retryCount) {
+		if (vy_count > retry_cnt) {
 			return -Y_FAILURE;
 		} else {
 			vy_count++;
 			mdelay(1);
 		}
-		MAC_GMIIAR_RgRd(varMAC_GMIIAR);
-		if (GET_VALUE(varMAC_GMIIAR, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
+		MAC_GMIIAR_RD(mac_gmiiar);
+		if (GET_VALUE(mac_gmiiar, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
 			break;
 		}
 	}
 	/* read the data */
-	MAC_GMIIDR_RgRd(varMAC_GMIIDR);
+	MAC_GMIIDR_RD(mac_gmiidr);
 	*phy_reg_data =
-	    GET_VALUE(varMAC_GMIIDR, MAC_GMIIDR_GD_LPOS, MAC_GMIIDR_GD_HPOS);
+	    GET_VALUE(mac_gmiidr, MAC_GMIIDR_GD_LPOS, MAC_GMIIDR_GD_HPOS);
 
 	return Y_SUCCESS;
 }
@@ -3159,12 +3159,12 @@ static INT read_phy_regs(INT phy_id, INT phy_reg, INT *phy_reg_data)
 * \retval -1 Failure
 */
 
-static INT tx_fifo_underrun(t_TX_NORMAL_DESC *txdesc)
+static INT tx_fifo_underrun(t_tx_normal_desc *txdesc)
 {
 	UINT varTDES3;
 
 	/* check TDES3.UF bit */
-	TX_NORMAL_DESC_TDES3_Ml_Rd(txdesc->TDES3, varTDES3);
+	TX_NORMAL_DESC_TDES3_RD(txdesc->TDES3, varTDES3);
 	if ((varTDES3 & 0x4) == 0x4) {
 		return 1;
 	} else {
@@ -3181,12 +3181,12 @@ static INT tx_fifo_underrun(t_TX_NORMAL_DESC *txdesc)
 * \retval -1 Failure
 */
 
-static INT tx_carrier_lost_error(t_TX_NORMAL_DESC *txdesc)
+static INT tx_carrier_lost_error(t_tx_normal_desc *txdesc)
 {
 	UINT varTDES3;
 
 	/* check TDES3.LoC and TDES3.NC bits */
-	TX_NORMAL_DESC_TDES3_Ml_Rd(txdesc->TDES3, varTDES3);
+	TX_NORMAL_DESC_TDES3_RD(txdesc->TDES3, varTDES3);
 	if (((varTDES3 & 0x800) == 0x800) || ((varTDES3 & 0x400) == 0x400)) {
 		return 1;
 	} else {
@@ -3203,12 +3203,12 @@ static INT tx_carrier_lost_error(t_TX_NORMAL_DESC *txdesc)
 * \retval -1 Failure
 */
 
-static INT tx_aborted_error(t_TX_NORMAL_DESC *txdesc)
+static INT tx_aborted_error(t_tx_normal_desc *txdesc)
 {
 	UINT varTDES3;
 
 	/* check for TDES3.LC and TDES3.EC */
-	TX_NORMAL_DESC_TDES3_Ml_Rd(txdesc->TDES3, varTDES3);
+	TX_NORMAL_DESC_TDES3_RD(txdesc->TDES3, varTDES3);
 	if (((varTDES3 & 0x200) == 0x200) || ((varTDES3 & 0x100) == 0x100)) {
 		return 1;
 	} else {
@@ -3225,12 +3225,12 @@ static INT tx_aborted_error(t_TX_NORMAL_DESC *txdesc)
 * \retval -1 Failure
 */
 
-static INT tx_complete(t_TX_NORMAL_DESC *txdesc)
+static INT tx_complete(t_tx_normal_desc *txdesc)
 {
-	UINT varOWN;
+	UINT own;
 
-	TX_NORMAL_DESC_TDES3_OWN_Mlf_Rd(txdesc->TDES3, varOWN);
-	if (varOWN == 0) {
+	TX_NORMAL_DESC_TDES3_OWN_RD(txdesc->TDES3, own);
+	if (own == 0) {
 		return 1;
 	} else {
 		return 0;
@@ -3247,10 +3247,10 @@ static INT tx_complete(t_TX_NORMAL_DESC *txdesc)
 
 static INT get_rx_csum_status(void)
 {
-	ULONG varMAC_MCR;
+	ULONG mac_mcr;
 
-	MAC_MCR_RgRd(varMAC_MCR);
-	if (GET_VALUE(varMAC_MCR, MAC_MCR_IPC_LPOS, MAC_MCR_IPC_HPOS) == 0x1) {
+	MAC_MCR_RD(mac_mcr);
+	if (GET_VALUE(mac_mcr, MAC_MCR_IPC_LPOS, MAC_MCR_IPC_HPOS) == 0x1) {
 		return 1;
 	} else {
 		return 0;
@@ -3268,7 +3268,7 @@ static INT disable_rx_csum(void)
 {
 
 	/* enable rx checksum */
-	MAC_MCR_IPC_UdfWr(0);
+	MAC_MCR_IPC_WR(0);
 
 	return Y_SUCCESS;
 }
@@ -3284,7 +3284,7 @@ static INT enable_rx_csum(void)
 {
 
 	/* enable rx checksum */
-	MAC_MCR_IPC_UdfWr(0x1);
+	MAC_MCR_IPC_WR(0x1);
 
 	return Y_SUCCESS;
 }
@@ -3299,22 +3299,22 @@ static INT enable_rx_csum(void)
 * \retval -1 Failure
 */
 
-static INT tx_descriptor_reset(UINT idx, struct DWC_ETH_QOS_prv_data *pdata,
-				UINT qInx)
+static INT tx_descriptor_reset(UINT idx, struct eqos_prv_data *pdata,
+				UINT qinx)
 {
-	struct s_TX_NORMAL_DESC *TX_NORMAL_DESC =
-		GET_TX_DESC_PTR(qInx, idx);
+	struct s_tx_normal_desc *TX_NORMAL_DESC =
+		GET_TX_DESC_PTR(qinx, idx);
 
 	DBGPR("-->tx_descriptor_reset\n");
 
 	/* update buffer 1 address pointer to zero */
-	TX_NORMAL_DESC_TDES0_Ml_Wr(TX_NORMAL_DESC->TDES0, 0);
+	TX_NORMAL_DESC_TDES0_WR(TX_NORMAL_DESC->TDES0, 0);
 	/* update buffer 2 address pointer to zero */
-	TX_NORMAL_DESC_TDES1_Ml_Wr(TX_NORMAL_DESC->TDES1, 0);
+	TX_NORMAL_DESC_TDES1_WR(TX_NORMAL_DESC->TDES1, 0);
 	/* set all other control bits (IC, TTSE, B2L & B1L) to zero */
-	TX_NORMAL_DESC_TDES2_Ml_Wr(TX_NORMAL_DESC->TDES2, 0);
+	TX_NORMAL_DESC_TDES2_WR(TX_NORMAL_DESC->TDES2, 0);
 	/* set all other control bits (OWN, CTXT, FD, LD, CPC, CIC etc) to zero */
-	TX_NORMAL_DESC_TDES3_Ml_Wr(TX_NORMAL_DESC->TDES3, 0);
+	TX_NORMAL_DESC_TDES3_WR(TX_NORMAL_DESC->TDES3, 0);
 
 	DBGPR("<--tx_descriptor_reset\n");
 
@@ -3329,32 +3329,32 @@ static INT tx_descriptor_reset(UINT idx, struct DWC_ETH_QOS_prv_data *pdata,
 */
 
 static void rx_descriptor_reset(UINT idx,
-				struct DWC_ETH_QOS_prv_data *pdata,
+				struct eqos_prv_data *pdata,
 				unsigned int inte,
-				UINT qInx)
+				UINT qinx)
 {
-	struct DWC_ETH_QOS_rx_buffer *buffer = GET_RX_BUF_PTR(qInx, idx);
-	struct s_RX_NORMAL_DESC *RX_NORMAL_DESC = GET_RX_DESC_PTR(qInx, idx);
+	struct eqos_rx_buffer *buffer = GET_RX_BUF_PTR(qinx, idx);
+	struct s_rx_normal_desc *RX_NORMAL_DESC = GET_RX_DESC_PTR(qinx, idx);
 
 	DBGPR("-->rx_descriptor_reset\n");
 
-	memset(RX_NORMAL_DESC, 0, sizeof(struct s_RX_NORMAL_DESC));
+	memset(RX_NORMAL_DESC, 0, sizeof(struct s_rx_normal_desc));
 	/* update buffer 1 address pointer */
-	RX_NORMAL_DESC_RDES0_Ml_Wr(RX_NORMAL_DESC->RDES0, L32(buffer->dma));
-	RX_NORMAL_DESC_RDES1_Ml_Wr(RX_NORMAL_DESC->RDES1, H32(buffer->dma));
+	RX_NORMAL_DESC_RDES0_WR(RX_NORMAL_DESC->RDES0, L32(buffer->dma));
+	RX_NORMAL_DESC_RDES1_WR(RX_NORMAL_DESC->RDES1, H32(buffer->dma));
 
-	if ((pdata->dev->mtu > DWC_ETH_QOS_ETH_FRAME_LEN) ||
+	if ((pdata->dev->mtu > EQOS_ETH_FRAME_LEN) ||
 			(pdata->rx_split_hdr == 1)) {
 		/* update buffer 2 address pointer */
-		RX_NORMAL_DESC_RDES2_Ml_Wr(RX_NORMAL_DESC->RDES2, buffer->dma2);
+		RX_NORMAL_DESC_RDES2_WR(RX_NORMAL_DESC->RDES2, buffer->dma2);
 		/* set control bits - OWN, INTE, BUF1V and BUF2V */
-		RX_NORMAL_DESC_RDES3_Ml_Wr(RX_NORMAL_DESC->RDES3,
+		RX_NORMAL_DESC_RDES3_WR(RX_NORMAL_DESC->RDES3,
 					   (0x83000000 | inte));
 	} else {
 		/* set buffer 2 address pointer to zero */
-		RX_NORMAL_DESC_RDES2_Ml_Wr(RX_NORMAL_DESC->RDES2, 0);
+		RX_NORMAL_DESC_RDES2_WR(RX_NORMAL_DESC->RDES2, 0);
 		/* set control bits - OWN, INTE and BUF1V */
-		RX_NORMAL_DESC_RDES3_Ml_Wr(RX_NORMAL_DESC->RDES3,
+		RX_NORMAL_DESC_RDES3_WR(RX_NORMAL_DESC->RDES3,
 					   (0x81000000 | inte));
 	}
 
@@ -3366,14 +3366,14 @@ static void rx_descriptor_reset(UINT idx,
 * \param[in] pdata
 */
 
-static void rx_descriptor_init(struct DWC_ETH_QOS_prv_data *pdata, UINT qInx)
+static void rx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 {
-	struct DWC_ETH_QOS_rx_wrapper_descriptor *rx_desc_data =
-	    GET_RX_WRAPPER_DESC(qInx);
-	struct DWC_ETH_QOS_rx_buffer *buffer =
-	    GET_RX_BUF_PTR(qInx, rx_desc_data->cur_rx);
-	struct s_RX_NORMAL_DESC *RX_NORMAL_DESC =
-	    GET_RX_DESC_PTR(qInx, rx_desc_data->cur_rx);
+	struct eqos_rx_wrapper_descriptor *rx_desc_data =
+	    GET_RX_WRAPPER_DESC(qinx);
+	struct eqos_rx_buffer *buffer =
+	    GET_RX_BUF_PTR(qinx, rx_desc_data->cur_rx);
+	struct s_rx_normal_desc *RX_NORMAL_DESC =
+	    GET_RX_DESC_PTR(qinx, rx_desc_data->cur_rx);
 	INT i;
 	INT start_index = rx_desc_data->cur_rx;
 	INT last_index;
@@ -3383,28 +3383,28 @@ static void rx_descriptor_init(struct DWC_ETH_QOS_prv_data *pdata, UINT qInx)
 	/* initialize all desc */
 
 	for (i = 0; i < RX_DESC_CNT; i++) {
-		memset(RX_NORMAL_DESC, 0, sizeof(struct s_RX_NORMAL_DESC));
+		memset(RX_NORMAL_DESC, 0, sizeof(struct s_rx_normal_desc));
 		/* update buffer 1 address pointer */
-		RX_NORMAL_DESC_RDES0_Ml_Wr(RX_NORMAL_DESC->RDES0, (L32(buffer->dma)));
+		RX_NORMAL_DESC_RDES0_WR(RX_NORMAL_DESC->RDES0, (L32(buffer->dma)));
 		/* set to zero  */
-		RX_NORMAL_DESC_RDES1_Ml_Wr(RX_NORMAL_DESC->RDES1, (H32(buffer->dma)));
+		RX_NORMAL_DESC_RDES1_WR(RX_NORMAL_DESC->RDES1, (H32(buffer->dma)));
 
-#ifdef DWC_ETH_QOS_DMA_32BIT
-		if ((pdata->dev->mtu > DWC_ETH_QOS_ETH_FRAME_LEN) ||
+#ifdef EQOS_DMA_32BIT
+		if ((pdata->dev->mtu > EQOS_ETH_FRAME_LEN) ||
 			(pdata->rx_split_hdr == 1)) {
 			/* update buffer 2 address pointer */
-			RX_NORMAL_DESC_RDES2_Ml_Wr(RX_NORMAL_DESC->RDES2,
+			RX_NORMAL_DESC_RDES2_WR(RX_NORMAL_DESC->RDES2,
 						   L32(buffer->dma2));
 			/* set control bits - OWN, INTE, BUF1V and BUF2V */
-			RX_NORMAL_DESC_RDES3_Ml_Wr(RX_NORMAL_DESC->RDES3,
+			RX_NORMAL_DESC_RDES3_WR(RX_NORMAL_DESC->RDES3,
 						   (0xc3000000)|(H32(buffer->dma2)));
 		} else 
 #endif
 		{
 			/* set buffer 2 address pointer to zero */
-			RX_NORMAL_DESC_RDES2_Ml_Wr(RX_NORMAL_DESC->RDES2, 0);
+			RX_NORMAL_DESC_RDES2_WR(RX_NORMAL_DESC->RDES2, 0);
 			/* set control bits - OWN, INTE and BUF1V */
-			RX_NORMAL_DESC_RDES3_Ml_Wr(RX_NORMAL_DESC->RDES3,
+			RX_NORMAL_DESC_RDES3_WR(RX_NORMAL_DESC->RDES3,
 						   (0xc1000000));
 		}
 		buffer->inte = (1 << 30);
@@ -3413,10 +3413,10 @@ static void rx_descriptor_init(struct DWC_ETH_QOS_prv_data *pdata, UINT qInx)
 		if (rx_desc_data->use_riwt) {
 			if ((i % rx_desc_data->rx_coal_frames) != 0) {
 				UINT varRDES3 = 0;
-				RX_NORMAL_DESC_RDES3_Ml_Rd(RX_NORMAL_DESC->RDES3,
+				RX_NORMAL_DESC_RDES3_RD(RX_NORMAL_DESC->RDES3,
 					varRDES3);
 				/* reset INTE */
-				RX_NORMAL_DESC_RDES3_Ml_Wr(RX_NORMAL_DESC->RDES3,
+				RX_NORMAL_DESC_RDES3_WR(RX_NORMAL_DESC->RDES3,
 						(varRDES3 & ~(1 << 30)));
 				buffer->inte = 0;
 			}
@@ -3424,16 +3424,16 @@ static void rx_descriptor_init(struct DWC_ETH_QOS_prv_data *pdata, UINT qInx)
 
 		INCR_RX_DESC_INDEX(rx_desc_data->cur_rx, 1);
 		RX_NORMAL_DESC =
-			GET_RX_DESC_PTR(qInx, rx_desc_data->cur_rx);
-		buffer = GET_RX_BUF_PTR(qInx, rx_desc_data->cur_rx);
+			GET_RX_DESC_PTR(qinx, rx_desc_data->cur_rx);
+		buffer = GET_RX_BUF_PTR(qinx, rx_desc_data->cur_rx);
 	}
 	/* update the total no of Rx descriptors count */
-	DMA_RDRLR_RgWr(qInx, (RX_DESC_CNT - 1));
+	DMA_RDRLR_WR(qinx, (RX_DESC_CNT - 1));
 	/* update the Rx Descriptor Tail Pointer */
 	last_index = GET_CURRENT_RCVD_LAST_DESC_INDEX(start_index, 0);
-	DMA_RDTP_RPDR_RgWr(qInx, GET_RX_DESC_DMA_ADDR(qInx, last_index));
+	DMA_RDTP_RPDR_WR(qinx, GET_RX_DESC_DMA_ADDR(qinx, last_index));
 	/* update the starting address of desc chain/ring */
-	DMA_RDLAR_RgWr(qInx, GET_RX_DESC_DMA_ADDR(qInx, start_index));
+	DMA_RDLAR_WR(qinx, GET_RX_DESC_DMA_ADDR(qinx, start_index));
 
 	DBGPR("<--rx_descriptor_init\n");
 }
@@ -3443,13 +3443,13 @@ static void rx_descriptor_init(struct DWC_ETH_QOS_prv_data *pdata, UINT qInx)
 * \param[in] pdata
 */
 
-static void tx_descriptor_init(struct DWC_ETH_QOS_prv_data *pdata,
-				UINT qInx)
+static void tx_descriptor_init(struct eqos_prv_data *pdata,
+				UINT qinx)
 {
-	struct DWC_ETH_QOS_tx_wrapper_descriptor *tx_desc_data =
-		GET_TX_WRAPPER_DESC(qInx);
-	struct s_TX_NORMAL_DESC *TX_NORMAL_DESC =
-		GET_TX_DESC_PTR(qInx, tx_desc_data->cur_tx);
+	struct eqos_tx_wrapper_descriptor *tx_desc_data =
+		GET_TX_WRAPPER_DESC(qinx);
+	struct s_tx_normal_desc *TX_NORMAL_DESC =
+		GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
 	INT i;
 	INT start_index = tx_desc_data->cur_tx;
 
@@ -3459,21 +3459,21 @@ static void tx_descriptor_init(struct DWC_ETH_QOS_prv_data *pdata,
 
 	for (i = 0; i < TX_DESC_CNT; i++) {
 		/* update buffer 1 address pointer to zero */
-		TX_NORMAL_DESC_TDES0_Ml_Wr(TX_NORMAL_DESC->TDES0, 0);
+		TX_NORMAL_DESC_TDES0_WR(TX_NORMAL_DESC->TDES0, 0);
 		/* update buffer 2 address pointer to zero */
-		TX_NORMAL_DESC_TDES1_Ml_Wr(TX_NORMAL_DESC->TDES1, 0);
+		TX_NORMAL_DESC_TDES1_WR(TX_NORMAL_DESC->TDES1, 0);
 		/* set all other control bits (IC, TTSE, B2L & B1L) to zero */
-		TX_NORMAL_DESC_TDES2_Ml_Wr(TX_NORMAL_DESC->TDES2, 0);
+		TX_NORMAL_DESC_TDES2_WR(TX_NORMAL_DESC->TDES2, 0);
 		/* set all other control bits (OWN, CTXT, FD, LD, CPC, CIC etc) to zero */
-		TX_NORMAL_DESC_TDES3_Ml_Wr(TX_NORMAL_DESC->TDES3, 0);
+		TX_NORMAL_DESC_TDES3_WR(TX_NORMAL_DESC->TDES3, 0);
 
 		INCR_TX_DESC_INDEX(tx_desc_data->cur_tx, 1);
-		TX_NORMAL_DESC = GET_TX_DESC_PTR(qInx, tx_desc_data->cur_tx);
+		TX_NORMAL_DESC = GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
 	}
 	/* update the total no of Tx descriptors count */
-	DMA_TDRLR_RgWr(qInx, (TX_DESC_CNT - 1));
+	DMA_TDRLR_WR(qinx, (TX_DESC_CNT - 1));
 	/* update the starting address of desc chain/ring */
-	DMA_TDLAR_RgWr(qInx, GET_TX_DESC_DMA_ADDR(qInx, start_index));
+	DMA_TDLAR_WR(qinx, GET_TX_DESC_DMA_ADDR(qinx, start_index));
 
 	DBGPR("<--tx_descriptor_init\n");
 }
@@ -3486,19 +3486,19 @@ static void tx_descriptor_init(struct DWC_ETH_QOS_prv_data *pdata,
 * \param[in] pdata
 */
 
-static void pre_transmit(struct DWC_ETH_QOS_prv_data *pdata,
-				UINT qInx)
+static void pre_transmit(struct eqos_prv_data *pdata,
+				UINT qinx)
 {
-	struct DWC_ETH_QOS_tx_wrapper_descriptor *tx_desc_data =
-	    GET_TX_WRAPPER_DESC(qInx);
-	struct DWC_ETH_QOS_tx_buffer *buffer =
-	    GET_TX_BUF_PTR(qInx, tx_desc_data->cur_tx);
-	struct s_TX_NORMAL_DESC *TX_NORMAL_DESC =
-	    GET_TX_DESC_PTR(qInx, tx_desc_data->cur_tx);
-	struct s_TX_CONTEXT_DESC *TX_CONTEXT_DESC =
-	    GET_TX_DESC_PTR(qInx, tx_desc_data->cur_tx);
+	struct eqos_tx_wrapper_descriptor *tx_desc_data =
+	    GET_TX_WRAPPER_DESC(qinx);
+	struct eqos_tx_buffer *buffer =
+	    GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
+	struct s_tx_normal_desc *TX_NORMAL_DESC =
+	    GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
+	struct s_tx_context_desc *TX_CONTEXT_DESC =
+	    GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
 	UINT varcsum_enable;
-#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
+#ifdef EQOS_ENABLE_VLAN_TAG
 	UINT varvlan_pkt;
 	UINT varvt;
 #endif
@@ -3506,9 +3506,9 @@ static void pre_transmit(struct DWC_ETH_QOS_prv_data *pdata,
 	INT start_index = tx_desc_data->cur_tx;
 	INT last_index, original_start_index = tx_desc_data->cur_tx;
 	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR;
-#ifdef DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT
+#ifdef EQOS_CERTIFICATION_PKTBURSTCNT
 	INT update_tail = 0;
-	UINT varQTDR;
+	UINT qtdr;
 #endif
 	UINT vartso_enable = 0;
 	UINT varmss = 0;
@@ -3517,231 +3517,231 @@ static void pre_transmit(struct DWC_ETH_QOS_prv_data *pdata,
 	UINT varptp_enable = 0;
 	INT total_len = 0;
 
-	DBGPR("-->pre_transmit: qInx = %u\n", qInx);
+	DBGPR("-->pre_transmit: qinx = %u\n", qinx);
 
-#ifdef DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT
-	if (qInx == 0)
-		MTL_Q0TDR_TXQSTS_UdfRd(varQTDR);
+#ifdef EQOS_CERTIFICATION_PKTBURSTCNT
+	if (qinx == 0)
+		MTL_Q0TDR_TXQSTS_RD(qtdr);
 	else
-		MTL_QTDR_TXQSTS_UdfRd(qInx, varQTDR);
+		MTL_QTDR_TXQSTS_RD(qinx, qtdr);
 
 	/* No activity on MAC Tx-Fifo and fifo is empty */
-	if (0 == varQTDR) {
+	if (0 == qtdr) {
 		/* disable MAC Transmit */
-		MAC_MCR_TE_UdfWr(0);
+		MAC_MCR_TE_WR(0);
 		update_tail = 1;
 	}
 #endif
 
-#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
-	TX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_Mlf_Rd(
+#ifdef EQOS_ENABLE_VLAN_TAG
+	TX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_RD(
 		tx_pkt_features->pkt_attributes, varvlan_pkt);
 	if (varvlan_pkt == 0x1) {
 		/* put vlan tag in contex descriptor and set other control
 		 * bits accordingly */
-		TX_PKT_FEATURES_VLAN_TAG_VT_Mlf_Rd(tx_pkt_features->vlan_tag,
+		TX_PKT_FEATURES_VLAN_TAG_VT_RD(tx_pkt_features->vlan_tag,
 						   varvt);
-		TX_CONTEXT_DESC_TDES3_VT_Mlf_Wr(TX_CONTEXT_DESC->TDES3, varvt);
-		TX_CONTEXT_DESC_TDES3_VLTV_Mlf_Wr(TX_CONTEXT_DESC->TDES3, 0x1);
-		TX_CONTEXT_DESC_TDES3_CTXT_Mlf_Wr(TX_CONTEXT_DESC->TDES3, 0x1);
-		TX_CONTEXT_DESC_TDES3_OWN_Mlf_Wr(TX_CONTEXT_DESC->TDES3, 0x1);
+		TX_CONTEXT_DESC_TDES3_VT_WR(TX_CONTEXT_DESC->TDES3, varvt);
+		TX_CONTEXT_DESC_TDES3_VLTV_WR(TX_CONTEXT_DESC->TDES3, 0x1);
+		TX_CONTEXT_DESC_TDES3_CTXT_WR(TX_CONTEXT_DESC->TDES3, 0x1);
+		TX_CONTEXT_DESC_TDES3_OWN_WR(TX_CONTEXT_DESC->TDES3, 0x1);
 
 		original_start_index = tx_desc_data->cur_tx;
 		INCR_TX_DESC_INDEX(tx_desc_data->cur_tx, 1);
 		start_index = tx_desc_data->cur_tx;
 		TX_NORMAL_DESC =
-			GET_TX_DESC_PTR(qInx, tx_desc_data->cur_tx);
-		buffer = GET_TX_BUF_PTR(qInx, tx_desc_data->cur_tx);
+			GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
+		buffer = GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
 	}
-#endif	/* DWC_ETH_QOS_ENABLE_VLAN_TAG */
-#ifdef DWC_ETH_QOS_ENABLE_DVLAN
-	if (pdata->via_reg_or_desc == DWC_ETH_QOS_VIA_DESC) {
+#endif	/* EQOS_ENABLE_VLAN_TAG */
+#ifdef EQOS_ENABLE_DVLAN
+	if (pdata->via_reg_or_desc == EQOS_VIA_DESC) {
 		/* put vlan tag in contex descriptor and set other control
 		 * bits accordingly */
 
-		if (pdata->in_out & DWC_ETH_QOS_DVLAN_OUTER) {
-			TX_CONTEXT_DESC_TDES3_VT_Mlf_Wr(TX_CONTEXT_DESC->TDES3,
+		if (pdata->in_out & EQOS_DVLAN_OUTER) {
+			TX_CONTEXT_DESC_TDES3_VT_WR(TX_CONTEXT_DESC->TDES3,
 					pdata->outer_vlan_tag);
-			TX_CONTEXT_DESC_TDES3_VLTV_Mlf_Wr(TX_CONTEXT_DESC->TDES3, 0x1);
+			TX_CONTEXT_DESC_TDES3_VLTV_WR(TX_CONTEXT_DESC->TDES3, 0x1);
 			/* operation (insertion/replacement/deletion/none) will be
  			 * specified in normal descriptor TDES2
  			 * */
 		}
-		if (pdata->in_out & DWC_ETH_QOS_DVLAN_INNER) {
-			TX_CONTEXT_DESC_TDES2_IVT_Mlf_Wr(TX_CONTEXT_DESC->TDES2,
+		if (pdata->in_out & EQOS_DVLAN_INNER) {
+			TX_CONTEXT_DESC_TDES2_IVT_WR(TX_CONTEXT_DESC->TDES2,
 								pdata->inner_vlan_tag);
-			TX_CONTEXT_DESC_TDES3_IVLTV_Mlf_Wr(TX_CONTEXT_DESC->TDES3, 0x1);
-			TX_CONTEXT_DESC_TDES3_IVTIR_Mlf_Wr(TX_CONTEXT_DESC->TDES3,
+			TX_CONTEXT_DESC_TDES3_IVLTV_WR(TX_CONTEXT_DESC->TDES3, 0x1);
+			TX_CONTEXT_DESC_TDES3_IVTIR_WR(TX_CONTEXT_DESC->TDES3,
 								pdata->op_type);
 		}
-		TX_CONTEXT_DESC_TDES3_CTXT_Mlf_Wr(TX_CONTEXT_DESC->TDES3, 0x1);
-		TX_CONTEXT_DESC_TDES3_OWN_Mlf_Wr(TX_CONTEXT_DESC->TDES3, 0x1);
+		TX_CONTEXT_DESC_TDES3_CTXT_WR(TX_CONTEXT_DESC->TDES3, 0x1);
+		TX_CONTEXT_DESC_TDES3_OWN_WR(TX_CONTEXT_DESC->TDES3, 0x1);
 
 		original_start_index = tx_desc_data->cur_tx;
 		INCR_TX_DESC_INDEX(tx_desc_data->cur_tx, 1);
 		start_index = tx_desc_data->cur_tx;
-		TX_NORMAL_DESC = GET_TX_DESC_PTR(qInx, tx_desc_data->cur_tx);
-		buffer = GET_TX_BUF_PTR(qInx, tx_desc_data->cur_tx);
+		TX_NORMAL_DESC = GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
+		buffer = GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
 	}
-#endif /* End of DWC_ETH_QOS_ENABLE_DVLAN */
+#endif /* End of EQOS_ENABLE_DVLAN */
 
 	/* prepare CONTEXT descriptor for TSO */
-	TX_PKT_FEATURES_PKT_ATTRIBUTES_TSO_ENABLE_Mlf_Rd(
+	TX_PKT_FEATURES_PKT_ATTRIBUTES_TSO_ENABLE_RD(
 		tx_pkt_features->pkt_attributes, vartso_enable);
 	if (vartso_enable && (tx_pkt_features->mss != tx_desc_data->default_mss)) {
 		/* get MSS and update */
-		TX_PKT_FEATURES_MSS_MSS_Mlf_Rd(tx_pkt_features->mss, varmss);
-		TX_CONTEXT_DESC_TDES2_MSS_Mlf_Wr(TX_CONTEXT_DESC->TDES2, varmss);
+		TX_PKT_FEATURES_MSS_MSS_RD(tx_pkt_features->mss, varmss);
+		TX_CONTEXT_DESC_TDES2_MSS_WR(TX_CONTEXT_DESC->TDES2, varmss);
 		/* set MSS valid, CTXT and OWN bits */
-		TX_CONTEXT_DESC_TDES3_TCMSSV_Mlf_Wr(TX_CONTEXT_DESC->TDES3, 0x1);
-		TX_CONTEXT_DESC_TDES3_CTXT_Mlf_Wr(TX_CONTEXT_DESC->TDES3, 0x1);
-		TX_CONTEXT_DESC_TDES3_OWN_Mlf_Wr(TX_CONTEXT_DESC->TDES3, 0x1);
+		TX_CONTEXT_DESC_TDES3_TCMSSV_WR(TX_CONTEXT_DESC->TDES3, 0x1);
+		TX_CONTEXT_DESC_TDES3_CTXT_WR(TX_CONTEXT_DESC->TDES3, 0x1);
+		TX_CONTEXT_DESC_TDES3_OWN_WR(TX_CONTEXT_DESC->TDES3, 0x1);
 
 		/* DMA uses the MSS value programed in DMA_CR if driver
 		 * doesn't provided the CONTEXT descriptor */
-		DMA_CR_MSS_UdfWr(qInx, tx_pkt_features->mss);
+		DMA_CR_MSS_WR(qinx, tx_pkt_features->mss);
 
 		tx_desc_data->default_mss = tx_pkt_features->mss;
 
 		original_start_index = tx_desc_data->cur_tx;
 		INCR_TX_DESC_INDEX(tx_desc_data->cur_tx, 1);
 		start_index = tx_desc_data->cur_tx;
-		TX_NORMAL_DESC = GET_TX_DESC_PTR(qInx, tx_desc_data->cur_tx);
-		buffer = GET_TX_BUF_PTR(qInx, tx_desc_data->cur_tx);
+		TX_NORMAL_DESC = GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
+		buffer = GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
 	}
 
 	/* update the first buffer pointer and length */
-#if defined(DWC_ETH_QOS_DMA_32BIT)
-	TX_NORMAL_DESC_TDES0_Ml_Wr(TX_NORMAL_DESC->TDES0, buffer->dma);
+#if defined(EQOS_DMA_32BIT)
+	TX_NORMAL_DESC_TDES0_WR(TX_NORMAL_DESC->TDES0, buffer->dma);
 #else
-	TX_NORMAL_DESC_TDES0_Ml_Wr(TX_NORMAL_DESC->TDES0, (buffer->dma)&0xFFFFFFFF);
-	TX_NORMAL_DESC_TDES1_Ml_Wr(TX_NORMAL_DESC->TDES1, (((buffer->dma)&0xFFFFFFFF00000000)>>32)&0xFFFFFFFF);
+	TX_NORMAL_DESC_TDES0_WR(TX_NORMAL_DESC->TDES0, (buffer->dma)&0xFFFFFFFF);
+	TX_NORMAL_DESC_TDES1_WR(TX_NORMAL_DESC->TDES1, (((buffer->dma)&0xFFFFFFFF00000000)>>32)&0xFFFFFFFF);
 #endif
-	TX_NORMAL_DESC_TDES2_HL_B1L_Mlf_Wr(TX_NORMAL_DESC->TDES2, buffer->len);
+	TX_NORMAL_DESC_TDES2_HL_B1L_WR(TX_NORMAL_DESC->TDES2, buffer->len);
 	if (buffer->dma2 != 0) {
 		/* update the second buffer pointer and length */
-		TX_NORMAL_DESC_TDES1_Ml_Wr(TX_NORMAL_DESC->TDES1, buffer->dma2);
-		TX_NORMAL_DESC_TDES2_B2L_Mlf_Wr(TX_NORMAL_DESC->TDES2, buffer->len2);
+		TX_NORMAL_DESC_TDES1_WR(TX_NORMAL_DESC->TDES1, buffer->dma2);
+		TX_NORMAL_DESC_TDES2_B2L_WR(TX_NORMAL_DESC->TDES2, buffer->len2);
 	}
 
 	if (vartso_enable) {
 		/* update TCP payload length (only for the descriptor with FD set) */
-		TX_PKT_FEATURES_PAY_LEN_Ml_Rd(tx_pkt_features->pay_len, varpay_len);
+		TX_PKT_FEATURES_PAY_LEN_RD(tx_pkt_features->pay_len, varpay_len);
 		/* TDES3[17:0] will be TCP payload length */
 		TX_NORMAL_DESC->TDES3 |= varpay_len;
 	} else {
 		/* update total length of packet */
-		GET_TX_TOT_LEN(GET_TX_BUF_PTR(qInx, 0), tx_desc_data->cur_tx,
-				GET_CURRENT_XFER_DESC_CNT(qInx), total_len);
-		TX_NORMAL_DESC_TDES3_FL_Mlf_Wr(TX_NORMAL_DESC->TDES3, total_len);
+		GET_TX_TOT_LEN(GET_TX_BUF_PTR(qinx, 0), tx_desc_data->cur_tx,
+				GET_CURRENT_XFER_DESC_CNT(qinx), total_len);
+		TX_NORMAL_DESC_TDES3_FL_WR(TX_NORMAL_DESC->TDES3, total_len);
 	}
 
-#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
+#ifdef EQOS_ENABLE_VLAN_TAG
 	/* Insert a VLAN tag with a tag value programmed in MAC Reg 24 or
 	 * CONTEXT descriptor
 	 * */
 	if (tx_desc_data->vlan_tag_present && Y_FALSE == tx_desc_data->tx_vlan_tag_via_reg) {
 		//printk(KERN_ALERT "VLAN control info update via descriptor\n\n");
-		TX_NORMAL_DESC_TDES2_VTIR_Mlf_Wr(TX_NORMAL_DESC->TDES2,
+		TX_NORMAL_DESC_TDES2_VTIR_WR(TX_NORMAL_DESC->TDES2,
 						 tx_desc_data->tx_vlan_tag_ctrl);
 	}
-#endif	/* DWC_ETH_QOS_ENABLE_VLAN_TAG */
+#endif	/* EQOS_ENABLE_VLAN_TAG */
 
-#ifdef DWC_ETH_QOS_ENABLE_DVLAN
-	if (pdata->via_reg_or_desc == DWC_ETH_QOS_VIA_DESC) {
-		if (pdata->in_out & DWC_ETH_QOS_DVLAN_OUTER) {
-			TX_NORMAL_DESC_TDES2_VTIR_Mlf_Wr(TX_NORMAL_DESC->TDES2,
+#ifdef EQOS_ENABLE_DVLAN
+	if (pdata->via_reg_or_desc == EQOS_VIA_DESC) {
+		if (pdata->in_out & EQOS_DVLAN_OUTER) {
+			TX_NORMAL_DESC_TDES2_VTIR_WR(TX_NORMAL_DESC->TDES2,
 								pdata->op_type);
 		}
 	}
-#endif /* End of DWC_ETH_QOS_ENABLE_DVLAN */
+#endif /* End of EQOS_ENABLE_DVLAN */
 
 
 	/* Mark it as First Descriptor */
-	TX_NORMAL_DESC_TDES3_FD_Mlf_Wr(TX_NORMAL_DESC->TDES3, 0x1);
+	TX_NORMAL_DESC_TDES3_FD_WR(TX_NORMAL_DESC->TDES3, 0x1);
 	/* Enable CRC and Pad Insertion (NOTE: set this only
 	 * for FIRST descriptor) */
-	TX_NORMAL_DESC_TDES3_CPC_Mlf_Wr(TX_NORMAL_DESC->TDES3, 0);
+	TX_NORMAL_DESC_TDES3_CPC_WR(TX_NORMAL_DESC->TDES3, 0);
 	/* Mark it as NORMAL descriptor */
-	TX_NORMAL_DESC_TDES3_CTXT_Mlf_Wr(TX_NORMAL_DESC->TDES3, 0);
+	TX_NORMAL_DESC_TDES3_CTXT_WR(TX_NORMAL_DESC->TDES3, 0);
 	/* Enable HW CSUM */
-	TX_PKT_FEATURES_PKT_ATTRIBUTES_CSUM_ENABLE_Mlf_Rd(tx_pkt_features->pkt_attributes,
+	TX_PKT_FEATURES_PKT_ATTRIBUTES_CSUM_ENABLE_RD(tx_pkt_features->pkt_attributes,
 		varcsum_enable);
 	if (varcsum_enable == 0x1) {
-		TX_NORMAL_DESC_TDES3_CIC_Mlf_Wr(TX_NORMAL_DESC->TDES3, 0x3);
+		TX_NORMAL_DESC_TDES3_CIC_WR(TX_NORMAL_DESC->TDES3, 0x3);
 	}
 	/* configure SA Insertion Control */
-	TX_NORMAL_DESC_TDES3_SAIC_Mlf_Wr(TX_NORMAL_DESC->TDES3,
+	TX_NORMAL_DESC_TDES3_SAIC_WR(TX_NORMAL_DESC->TDES3,
 					 pdata->tx_sa_ctrl_via_desc);
 	if (vartso_enable) {
 		/* set TSE bit */
-		TX_NORMAL_DESC_TDES3_TSE_Mlf_Wr(TX_NORMAL_DESC->TDES3, 0x1);
+		TX_NORMAL_DESC_TDES3_TSE_WR(TX_NORMAL_DESC->TDES3, 0x1);
 
 		/* update tcp data offset or tcp hdr len */
-		TX_PKT_FEATURES_TCP_HDR_LEN_Ml_Rd(tx_pkt_features->tcp_hdr_len, vartcp_hdr_len);
+		TX_PKT_FEATURES_TCP_HDR_LEN_RD(tx_pkt_features->tcp_hdr_len, vartcp_hdr_len);
 		/* convert to bit value */
 		vartcp_hdr_len = vartcp_hdr_len/4;
-		TX_NORMAL_DESC_TDES3_SLOTNUM_TCPHDRLEN_Mlf_Wr(TX_NORMAL_DESC->TDES3, vartcp_hdr_len);
+		TX_NORMAL_DESC_TDES3_SLOTNUM_TCPHDRLEN_WR(TX_NORMAL_DESC->TDES3, vartcp_hdr_len);
 	}
 
 	/* enable timestamping */
-	TX_PKT_FEATURES_PKT_ATTRIBUTES_PTP_ENABLE_Mlf_Rd(tx_pkt_features->pkt_attributes, varptp_enable);
+	TX_PKT_FEATURES_PKT_ATTRIBUTES_PTP_ENABLE_RD(tx_pkt_features->pkt_attributes, varptp_enable);
 	if (varptp_enable) {
-		TX_NORMAL_DESC_TDES2_TTSE_Mlf_Wr(TX_NORMAL_DESC->TDES2, 0x1);
+		TX_NORMAL_DESC_TDES2_TTSE_WR(TX_NORMAL_DESC->TDES2, 0x1);
 	}
 
 	INCR_TX_DESC_INDEX(tx_desc_data->cur_tx, 1);
-	TX_NORMAL_DESC = GET_TX_DESC_PTR(qInx, tx_desc_data->cur_tx);
-	buffer = GET_TX_BUF_PTR(qInx, tx_desc_data->cur_tx);
+	TX_NORMAL_DESC = GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
+	buffer = GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
 
-	for (i = 1; i < GET_CURRENT_XFER_DESC_CNT(qInx); i++) {
+	for (i = 1; i < GET_CURRENT_XFER_DESC_CNT(qinx); i++) {
 		/* update the first buffer pointer and length */
-#if defined(DWC_ETH_QOS_DMA_32BIT)
-		TX_NORMAL_DESC_TDES0_Ml_Wr(TX_NORMAL_DESC->TDES0, buffer->dma);
+#if defined(EQOS_DMA_32BIT)
+		TX_NORMAL_DESC_TDES0_WR(TX_NORMAL_DESC->TDES0, buffer->dma);
 #else
-		TX_NORMAL_DESC_TDES0_Ml_Wr(TX_NORMAL_DESC->TDES0, (buffer->dma)&0xFFFFFFFF);
-		TX_NORMAL_DESC_TDES1_Ml_Wr(TX_NORMAL_DESC->TDES1, (((buffer->dma)&0xFFFFFFFF00000000)>>32)&0xFFFFFFFF);
+		TX_NORMAL_DESC_TDES0_WR(TX_NORMAL_DESC->TDES0, (buffer->dma)&0xFFFFFFFF);
+		TX_NORMAL_DESC_TDES1_WR(TX_NORMAL_DESC->TDES1, (((buffer->dma)&0xFFFFFFFF00000000)>>32)&0xFFFFFFFF);
 #endif
-		TX_NORMAL_DESC_TDES2_HL_B1L_Mlf_Wr(TX_NORMAL_DESC->TDES2, buffer->len);
+		TX_NORMAL_DESC_TDES2_HL_B1L_WR(TX_NORMAL_DESC->TDES2, buffer->len);
 		if (buffer->dma2 != 0) {
 			/* update the second buffer pointer and length */
-			TX_NORMAL_DESC_TDES1_Ml_Wr(TX_NORMAL_DESC->TDES1, buffer->dma2);
-			TX_NORMAL_DESC_TDES2_B2L_Mlf_Wr(TX_NORMAL_DESC->TDES2, buffer->len2);
+			TX_NORMAL_DESC_TDES1_WR(TX_NORMAL_DESC->TDES1, buffer->dma2);
+			TX_NORMAL_DESC_TDES2_B2L_WR(TX_NORMAL_DESC->TDES2, buffer->len2);
 		}
 
 		/* set own bit */
-		TX_NORMAL_DESC_TDES3_OWN_Mlf_Wr(TX_NORMAL_DESC->TDES3, 0x1);
+		TX_NORMAL_DESC_TDES3_OWN_WR(TX_NORMAL_DESC->TDES3, 0x1);
 		/* Mark it as NORMAL descriptor */
-		TX_NORMAL_DESC_TDES3_CTXT_Mlf_Wr(TX_NORMAL_DESC->TDES3, 0);
+		TX_NORMAL_DESC_TDES3_CTXT_WR(TX_NORMAL_DESC->TDES3, 0);
 
 		INCR_TX_DESC_INDEX(tx_desc_data->cur_tx, 1);
-		TX_NORMAL_DESC = GET_TX_DESC_PTR(qInx, tx_desc_data->cur_tx);
-		buffer = GET_TX_BUF_PTR(qInx, tx_desc_data->cur_tx);
+		TX_NORMAL_DESC = GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
+		buffer = GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
 	}
 	/* Mark it as LAST descriptor */
 	last_index =
-		GET_CURRENT_XFER_LAST_DESC_INDEX(qInx, start_index, 0);
-	TX_NORMAL_DESC = GET_TX_DESC_PTR(qInx, last_index);
-	TX_NORMAL_DESC_TDES3_LD_Mlf_Wr(TX_NORMAL_DESC->TDES3, 0x1);
+		GET_CURRENT_XFER_LAST_DESC_INDEX(qinx, start_index, 0);
+	TX_NORMAL_DESC = GET_TX_DESC_PTR(qinx, last_index);
+	TX_NORMAL_DESC_TDES3_LD_WR(TX_NORMAL_DESC->TDES3, 0x1);
 	/* set Interrupt on Completion for last descriptor */
-#ifdef DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT
+#ifdef EQOS_CERTIFICATION_PKTBURSTCNT
 	pdata->mac_enable_count += 1;
 	if ((pdata->mac_enable_count % pdata->drop_tx_pktburstcnt) == 0)
-		TX_NORMAL_DESC_TDES2_IC_Mlf_Wr(TX_NORMAL_DESC->TDES2, 0x1);
+		TX_NORMAL_DESC_TDES2_IC_WR(TX_NORMAL_DESC->TDES2, 0x1);
 #else
-	TX_NORMAL_DESC_TDES2_IC_Mlf_Wr(TX_NORMAL_DESC->TDES2, 0x1);
+	TX_NORMAL_DESC_TDES2_IC_WR(TX_NORMAL_DESC->TDES2, 0x1);
 #endif
 
 	/* set OWN bit of FIRST descriptor at end to avoid race condition */
-	TX_NORMAL_DESC = GET_TX_DESC_PTR(qInx, start_index);
-	TX_NORMAL_DESC_TDES3_OWN_Mlf_Wr(TX_NORMAL_DESC->TDES3, 0x1);
+	TX_NORMAL_DESC = GET_TX_DESC_PTR(qinx, start_index);
+	TX_NORMAL_DESC_TDES3_OWN_WR(TX_NORMAL_DESC->TDES3, 0x1);
 
-#ifdef DWC_ETH_QOS_ENABLE_TX_DESC_DUMP
+#ifdef EQOS_ENABLE_TX_DESC_DUMP
 	dump_tx_desc(pdata, original_start_index, (tx_desc_data->cur_tx - 1),
-			1, qInx);
+			1, qinx);
 #endif
 
-#ifdef DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT
+#ifdef EQOS_CERTIFICATION_PKTBURSTCNT
 	/* updating descriptor tail pointer for DMA Transmit under two conditions,
 	 * 1. if burst number of packets are present in descriptor list
 	 * 2. MAC has no activity on Tx fifo
@@ -3751,22 +3751,22 @@ static void pre_transmit(struct DWC_ETH_QOS_prv_data *pdata,
 		pdata->mac_enable_count -= pdata->drop_tx_pktburstcnt;
 		/* issue a poll command to Tx DMA by writing address
 		 * of next immediate free descriptor */
-		last_index = GET_CURRENT_XFER_LAST_DESC_INDEX(qInx, start_index, 1);
-		DMA_TDTP_TPDR_RgWr(qInx,
-				GET_TX_DESC_DMA_ADDR(qInx, last_index));
+		last_index = GET_CURRENT_XFER_LAST_DESC_INDEX(qinx, start_index, 1);
+		DMA_TDTP_TPDR_WR(qinx,
+				GET_TX_DESC_DMA_ADDR(qinx, last_index));
 	}
 #else
 	/* issue a poll command to Tx DMA by writing address
 	 * of next immediate free descriptor */
-	last_index = GET_CURRENT_XFER_LAST_DESC_INDEX(qInx, start_index, 1);
-	DMA_TDTP_TPDR_RgWr(qInx,
-			GET_TX_DESC_DMA_ADDR(qInx, last_index));
+	last_index = GET_CURRENT_XFER_LAST_DESC_INDEX(qinx, start_index, 1);
+	DMA_TDTP_TPDR_WR(qinx,
+			GET_TX_DESC_DMA_ADDR(qinx, last_index));
 #endif
 
 	if (pdata->eee_enabled) {
 		/* restart EEE timer */
 		mod_timer(&pdata->eee_ctrl_timer,
-			DWC_ETH_QOS_LPI_TIMER(DWC_ETH_QOS_DEFAULT_LPI_TIMER));
+			EQOS_LPI_TIMER(EQOS_DEFAULT_LPI_TIMER));
 	}
   
 	DBGPR("<--pre_transmit\n");
@@ -3778,99 +3778,99 @@ static void pre_transmit(struct DWC_ETH_QOS_prv_data *pdata,
 * \param[in] pdata
 */
 
-static void device_read(struct DWC_ETH_QOS_prv_data *pdata, UINT qInx)
+static void device_read(struct eqos_prv_data *pdata, UINT qinx)
 {
-	struct DWC_ETH_QOS_rx_wrapper_descriptor *rx_desc_data =
-	    GET_RX_WRAPPER_DESC(qInx);
-	struct s_RX_NORMAL_DESC *RX_NORMAL_DESC =
-	    GET_RX_DESC_PTR(qInx, rx_desc_data->cur_rx);
-	UINT varOWN;
-	UINT varES;
-	struct DWC_ETH_QOS_rx_buffer *buffer =
-	    GET_RX_BUF_PTR(qInx, rx_desc_data->cur_rx);
+	struct eqos_rx_wrapper_descriptor *rx_desc_data =
+	    GET_RX_WRAPPER_DESC(qinx);
+	struct s_rx_normal_desc *RX_NORMAL_DESC =
+	    GET_RX_DESC_PTR(qinx, rx_desc_data->cur_rx);
+	UINT own;
+	UINT es;
+	struct eqos_rx_buffer *buffer =
+	    GET_RX_BUF_PTR(qinx, rx_desc_data->cur_rx);
 	UINT varRS1V;
-	UINT varIPPE;
-	UINT varIPCB;
-	UINT varIPHE;
+	UINT ippe;
+	UINT ipcb;
+	UINT iphe;
 	struct s_rx_pkt_features *rx_pkt_features = GET_RX_PKT_FEATURES_PTR;
-#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
+#ifdef EQOS_ENABLE_VLAN_TAG
 	UINT varRS0V;
-	UINT varLT;
+	UINT lt;
 	UINT varRDES0;
 #endif
-	UINT varOE;
+	UINT oe;
 	struct s_rx_error_counters *rx_error_counters =
 	    GET_RX_ERROR_COUNTERS_PTR;
-	UINT varCE;
-	UINT varRE;
-	UINT varLD;
+	UINT ce;
+	UINT re;
+	UINT ld;
 
 	DBGPR("-->device_read: cur_rx = %d\n", rx_desc_data->cur_rx);
 
 	/* check for data availability */
-	RX_NORMAL_DESC_RDES3_OWN_Mlf_Rd(RX_NORMAL_DESC->RDES3, varOWN);
-	if (varOWN == 0) {
+	RX_NORMAL_DESC_RDES3_OWN_RD(RX_NORMAL_DESC->RDES3, own);
+	if (own == 0) {
 		/* check whether it is good packet or bad packet */
-		RX_NORMAL_DESC_RDES3_ES_Mlf_Rd(RX_NORMAL_DESC->RDES3, varES);
-		RX_NORMAL_DESC_RDES3_LD_Mlf_Rd(RX_NORMAL_DESC->RDES3, varLD);
-#ifdef DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
+		RX_NORMAL_DESC_RDES3_ES_RD(RX_NORMAL_DESC->RDES3, es);
+		RX_NORMAL_DESC_RDES3_LD_RD(RX_NORMAL_DESC->RDES3, ld);
+#ifdef EQOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
 		/* Synopsys testing and debugging purposes only */
-		if (varES == 1 && varLD == 1) {
-			varES = 0;
+		if (es == 1 && ld == 1) {
+			es = 0;
 			DBGPR("Forwarding error packets as good packets to stack\n");
 		}
 #endif
-		if ((varES == 0) && (varLD == 1)) {
+		if ((es == 0) && (ld == 1)) {
 			/* get the packet length */
-			RX_NORMAL_DESC_RDES3_FL_Mlf_Rd(RX_NORMAL_DESC->RDES3, buffer->len);
-			RX_NORMAL_DESC_RDES3_RS1V_Mlf_Rd(RX_NORMAL_DESC->RDES3, varRS1V);
+			RX_NORMAL_DESC_RDES3_FL_RD(RX_NORMAL_DESC->RDES3, buffer->len);
+			RX_NORMAL_DESC_RDES3_RS1V_RD(RX_NORMAL_DESC->RDES3, varRS1V);
 			if (varRS1V == 0x1) {
 				/* check whether device has done csum correctly or not */
-				RX_NORMAL_DESC_RDES1_IPPE_Mlf_Rd(RX_NORMAL_DESC->RDES1, varIPPE);
-				RX_NORMAL_DESC_RDES1_IPCB_Mlf_Rd(RX_NORMAL_DESC->RDES1, varIPCB);
-				RX_NORMAL_DESC_RDES1_IPHE_Mlf_Rd(RX_NORMAL_DESC->RDES1, varIPHE);
-				if ((varIPPE == 0) && (varIPCB == 0) && (varIPHE == 0)) {
+				RX_NORMAL_DESC_RDES1_IPPE_RD(RX_NORMAL_DESC->RDES1, ippe);
+				RX_NORMAL_DESC_RDES1_IPCB_RD(RX_NORMAL_DESC->RDES1, ipcb);
+				RX_NORMAL_DESC_RDES1_IPHE_RD(RX_NORMAL_DESC->RDES1, iphe);
+				if ((ippe == 0) && (ipcb == 0) && (iphe == 0)) {
 					/* IPC Checksum done */
-					RX_PKT_FEATURES_PKT_ATTRIBUTES_CSUM_DONE_Mlf_Wr(
+					RX_PKT_FEATURES_PKT_ATTRIBUTES_CSUM_DONE_WR(
 						rx_pkt_features->pkt_attributes, 0x1);
 				}
 			}
-#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
-			RX_NORMAL_DESC_RDES3_RS0V_Mlf_Rd(RX_NORMAL_DESC->RDES3,
+#ifdef EQOS_ENABLE_VLAN_TAG
+			RX_NORMAL_DESC_RDES3_RS0V_RD(RX_NORMAL_DESC->RDES3,
 							 varRS0V);
 			if (varRS0V == 0x1) {
 				/*  device received frame with VLAN Tag or double VLAN Tag ? */
-				RX_NORMAL_DESC_RDES3_LT_Mlf_Rd(RX_NORMAL_DESC->RDES3, varLT);
-				if ((varLT == 0x4) || (varLT == 0x5)) {
-					RX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_Mlf_Wr(
+				RX_NORMAL_DESC_RDES3_LT_RD(RX_NORMAL_DESC->RDES3, lt);
+				if ((lt == 0x4) || (lt == 0x5)) {
+					RX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_WR(
 						rx_pkt_features->pkt_attributes, 0x1);
 					/* get the VLAN Tag */
-					RX_NORMAL_DESC_RDES0_Ml_Rd(RX_NORMAL_DESC->RDES0, varRDES0);
-					RX_PKT_FEATURES_VLAN_TAG_VT_Mlf_Wr(rx_pkt_features->vlan_tag,
+					RX_NORMAL_DESC_RDES0_RD(RX_NORMAL_DESC->RDES0, varRDES0);
+					RX_PKT_FEATURES_VLAN_TAG_VT_WR(rx_pkt_features->vlan_tag,
 						(varRDES0 & 0xffff));
 				}
 			}
 #endif
 		} else {
-#ifdef DWC_ETH_QOS_ENABLE_RX_DESC_DUMP
-			dump_rx_desc(qInx, RX_NORMAL_DESC, rx_desc_data->cur_rx);
+#ifdef EQOS_ENABLE_RX_DESC_DUMP
+			dump_rx_desc(qinx, RX_NORMAL_DESC, rx_desc_data->cur_rx);
 #endif
 			/* not a good packet, hence check for appropriate errors. */
-			RX_NORMAL_DESC_RDES3_OE_Mlf_Rd(RX_NORMAL_DESC->RDES3, varOE);
-			if (varOE == 1) {
-				RX_ERROR_COUNTERS_RX_ERRORS_OVERRUN_ERROR_Mlf_Wr(rx_error_counters->rx_errors, 1);
+			RX_NORMAL_DESC_RDES3_OE_RD(RX_NORMAL_DESC->RDES3, oe);
+			if (oe == 1) {
+				RX_ERROR_COUNTERS_RX_ERRORS_OVERRUN_ERROR_WR(rx_error_counters->rx_errors, 1);
 			}
-			RX_NORMAL_DESC_RDES3_CE_Mlf_Rd(RX_NORMAL_DESC->RDES3, varCE);
-			if (varCE == 1) {
-				RX_ERROR_COUNTERS_RX_ERRORS_CRC_ERROR_Mlf_Wr(rx_error_counters->rx_errors, 1);
+			RX_NORMAL_DESC_RDES3_CE_RD(RX_NORMAL_DESC->RDES3, ce);
+			if (ce == 1) {
+				RX_ERROR_COUNTERS_RX_ERRORS_CRC_ERROR_WR(rx_error_counters->rx_errors, 1);
 			}
-			RX_NORMAL_DESC_RDES3_RE_Mlf_Rd(RX_NORMAL_DESC->RDES3, varRE);
-			if (varRE == 1) {
-				RX_ERROR_COUNTERS_RX_ERRORS_FRAME_ERROR_Mlf_Wr(rx_error_counters->rx_errors, 1);
+			RX_NORMAL_DESC_RDES3_RE_RD(RX_NORMAL_DESC->RDES3, re);
+			if (re == 1) {
+				RX_ERROR_COUNTERS_RX_ERRORS_FRAME_ERROR_WR(rx_error_counters->rx_errors, 1);
 			}
-			RX_NORMAL_DESC_RDES3_LD_Mlf_Rd(RX_NORMAL_DESC->RDES3, varLD);
-			if (varRE == 0) {
-				RX_ERROR_COUNTERS_RX_ERRORS_OVERRUN_ERROR_Mlf_Wr(rx_error_counters->rx_errors, 1);
+			RX_NORMAL_DESC_RDES3_LD_RD(RX_NORMAL_DESC->RDES3, ld);
+			if (re == 0) {
+				RX_ERROR_COUNTERS_RX_ERRORS_OVERRUN_ERROR_WR(rx_error_counters->rx_errors, 1);
 			}
 		}
 	}
@@ -3878,9 +3878,9 @@ static void device_read(struct DWC_ETH_QOS_prv_data *pdata, UINT qInx)
 	DBGPR("<--device_read: cur_rx = %d\n", rx_desc_data->cur_rx);
 }
 
-static void update_rx_tail_ptr(unsigned int qInx, unsigned int dma_addr)
+static void update_rx_tail_ptr(unsigned int qinx, unsigned int dma_addr)
 {
-	DMA_RDTP_RPDR_RgWr(qInx, dma_addr);
+	DMA_RDTP_RPDR_WR(qinx, dma_addr);
 }
 
 /*!
@@ -3892,13 +3892,13 @@ static void update_rx_tail_ptr(unsigned int qInx, unsigned int dma_addr)
 * \retval -1 Failure
 */
 
-static INT get_tx_descriptor_ctxt(t_TX_NORMAL_DESC *txdesc)
+static INT get_tx_descriptor_ctxt(t_tx_normal_desc *txdesc)
 {
-	ULONG varCTXT;
+	ULONG ctxt;
 
 	/* check TDES3.CTXT bit */
-	TX_NORMAL_DESC_TDES3_CTXT_Mlf_Rd(txdesc->TDES3, varCTXT);
-	if (varCTXT == 1) {
+	TX_NORMAL_DESC_TDES3_CTXT_RD(txdesc->TDES3, ctxt);
+	if (ctxt == 1) {
 		return 1;
 	} else {
 		return 0;
@@ -3914,20 +3914,20 @@ static INT get_tx_descriptor_ctxt(t_TX_NORMAL_DESC *txdesc)
 * \retval -1 Failure
 */
 
-static INT get_tx_descriptor_last(t_TX_NORMAL_DESC *txdesc)
+static INT get_tx_descriptor_last(t_tx_normal_desc *txdesc)
 {
-	ULONG varLD;
+	ULONG ld;
 
 	/* check TDES3.LD bit */
-	TX_NORMAL_DESC_TDES3_LD_Mlf_Rd(txdesc->TDES3, varLD);
-	if (varLD == 1) {
+	TX_NORMAL_DESC_TDES3_LD_RD(txdesc->TDES3, ld);
+	if (ld == 1) {
 		return 1;
 	} else {
 		return 0;
 	}
 }
 
-static INT DWC_ETH_QOS_pad_calibrate(struct DWC_ETH_QOS_prv_data *pdata)
+static INT eqos_pad_calibrate(struct eqos_prv_data *pdata)
 {
 	struct platform_device *pdev = pdata->pdev;
 	int ret;
@@ -3942,7 +3942,7 @@ static INT DWC_ETH_QOS_pad_calibrate(struct DWC_ETH_QOS_prv_data *pdata)
 	/* 1. Set field PAD_E_INPUT_OR_E_PWRD in
 	 * reg ETHER_QOS_SDMEMCOMPPADCTRL_0
 	 */
-	PAD_CRTL_E_INPUT_OR_E_PWRD_UdfWr(1);
+	PAD_CRTL_E_INPUT_OR_E_PWRD_WR(1);
 
 	/* 2. delay for 1 usec */
 	usleep_range(1, 3);
@@ -3950,18 +3950,18 @@ static INT DWC_ETH_QOS_pad_calibrate(struct DWC_ETH_QOS_prv_data *pdata)
 	/* 3. Set AUTO_CAL_ENABLE and AUTO_CAL_START in
 	 * reg ETHER_QOS_AUTO_CAL_CONFIG_0.
 	 */
-	PAD_AUTO_CAL_CFG_RgRd(hwreg);
+	PAD_AUTO_CAL_CFG_RD(hwreg);
 	hwreg |=
 		((PAD_AUTO_CAL_CFG_START_MASK) |
 			(PAD_AUTO_CAL_CFG_ENABLE_MASK));
 
-	PAD_AUTO_CAL_CFG_RgWr(hwreg);
+	PAD_AUTO_CAL_CFG_WR(hwreg);
 
 	/* 4. Wait on AUTO_CAL_ACTIVE until it is 1. 10us timeout */
 	i = 10;
 	while (i--) {
 		usleep_range(1, 3);
-		PAD_AUTO_CAL_STAT_RgRd(hwreg);
+		PAD_AUTO_CAL_STAT_RD(hwreg);
 
 		/* calibration started when CAL_STAT_ACTIVE is set */
 		if (hwreg & PAD_AUTO_CAL_STAT_ACTIVE_MASK)
@@ -3978,7 +3978,7 @@ static INT DWC_ETH_QOS_pad_calibrate(struct DWC_ETH_QOS_prv_data *pdata)
 	i = 10;
 	while (i--) {
 		usleep_range(20, 30);
-		PAD_AUTO_CAL_STAT_RgRd(hwreg);
+		PAD_AUTO_CAL_STAT_RD(hwreg);
 
 		/* calibration done when CAL_STAT_ACTIVE is zero */
 		if (!(hwreg & PAD_AUTO_CAL_STAT_ACTIVE_MASK))
@@ -3996,20 +3996,20 @@ calibration_failed:
 	/* 6. Disable field PAD_E_INPUT_OR_E_PWRD in
 	 * reg ETHER_QOS_SDMEMCOMPPADCTRL_0 to save power.
 	 */
-	PAD_CRTL_E_INPUT_OR_E_PWRD_UdfWr(0);
+	PAD_CRTL_E_INPUT_OR_E_PWRD_WR(0);
 
 	DBGPR("<--%s()\n", __func__);
 
 	return ret;
 }
 
-static INT DWC_ETH_QOS_car_reset(struct DWC_ETH_QOS_prv_data *pdata)
+static INT eqos_car_reset(struct eqos_prv_data *pdata)
 {
-	ULONG retryCount = 1000;
+	ULONG retry_cnt = 1000;
 	ULONG vy_count;
-	volatile ULONG varDMA_BMR;
+	volatile ULONG dma_bmr;
 
-	DBGPR("-->DWC_ETH_QOS_car_reset\n");
+	DBGPR("-->eqos_car_reset\n");
 
 	/* Issue a CAR reset */
 	if (!IS_ERR_OR_NULL(pdata->eqos_rst))
@@ -4021,7 +4021,7 @@ static INT DWC_ETH_QOS_car_reset(struct DWC_ETH_QOS_prv_data *pdata)
 	/* Poll Until Poll Condition */
 	vy_count = 0;
 	while (1) {
-		if (vy_count > retryCount) {
+		if (vy_count > retry_cnt) {
 			printk(
 				"%s():%d: Timed out polling on DMA_BMR_SWR\n",
 				__func__, __LINE__);
@@ -4030,13 +4030,13 @@ static INT DWC_ETH_QOS_car_reset(struct DWC_ETH_QOS_prv_data *pdata)
 			vy_count++;
 			mdelay(1);
 		}
-		DMA_BMR_RgRd(varDMA_BMR);
-		if (GET_VALUE(varDMA_BMR, DMA_BMR_SWR_LPOS, DMA_BMR_SWR_HPOS) == 0) {
+		DMA_BMR_RD(dma_bmr);
+		if (GET_VALUE(dma_bmr, DMA_BMR_SWR_LPOS, DMA_BMR_SWR_HPOS) == 0) {
 			break;
 		}
 	}
 
-	DBGPR("<--DWC_ETH_QOS_car_reset\n");
+	DBGPR("<--eqos_car_reset\n");
 
 	return Y_SUCCESS;
 }
@@ -4050,17 +4050,17 @@ static INT DWC_ETH_QOS_car_reset(struct DWC_ETH_QOS_prv_data *pdata)
 * \retval Y_SUCCESS Function executed successfully
 */
 
-static INT DWC_ETH_QOS_yexit(void)
+static INT eqos_yexit(void)
 {
-	ULONG retryCount = 1000;
+	ULONG retry_cnt = 1000;
 	ULONG vy_count;
-	volatile ULONG varDMA_BMR;
+	volatile ULONG dma_bmr;
 	int i, j;
 
-	DBGPR("-->DWC_ETH_QOS_yexit\n");
+	DBGPR("-->eqos_yexit\n");
 
 	/* issue a software reset */
-	DMA_BMR_SWR_UdfWr(0x1);
+	DMA_BMR_SWR_WR(0x1);
 
 	/*DELAY IMPLEMENTATION USING udelay() */
 	udelay(10);
@@ -4068,7 +4068,7 @@ static INT DWC_ETH_QOS_yexit(void)
 	/*Poll Until Poll Condition */
 	vy_count = 0;
 	while (1) {
-		if (vy_count > retryCount) {
+		if (vy_count > retry_cnt) {
 			printk(
 				"%s():%d: Timed out polling on DMA_BMR_SWR\n",
 				__func__, __LINE__);
@@ -4077,20 +4077,20 @@ static INT DWC_ETH_QOS_yexit(void)
 			vy_count++;
 			mdelay(1);
 		}
-		DMA_BMR_RgRd(varDMA_BMR);
-		if (GET_VALUE(varDMA_BMR, DMA_BMR_SWR_LPOS, DMA_BMR_SWR_HPOS) == 0) {
+		DMA_BMR_RD(dma_bmr);
+		if (GET_VALUE(dma_bmr, DMA_BMR_SWR_LPOS, DMA_BMR_SWR_HPOS) == 0) {
 			break;
 		}
 	}
 
 	/* ack and disable all wrapper ints */
-	i = (VIRT_INTR_CH_CRTL_RX_Wr_Mask | VIRT_INTR_CH_CRTL_TX_Wr_Mask);
+	i = (VIRT_INTR_CH_CRTL_RX_WR_MASK | VIRT_INTR_CH_CRTL_TX_WR_MASK);
 	for (j = 0; j < MAX_CHANS; j++) {
-		VIRT_INTR_CH_CRTL_RgWr(j, ~i);
-		VIRT_INTR_CH_STAT_RgWr(j, i);
+		VIRT_INTR_CH_CRTL_WR(j, ~i);
+		VIRT_INTR_CH_STAT_WR(j, i);
 	}
 
-	DBGPR("<--DWC_ETH_QOS_yexit\n");
+	DBGPR("<--eqos_yexit\n");
 
 	return Y_SUCCESS;
 }
@@ -4115,25 +4115,25 @@ static UINT calculate_dma_pbl(ULONG p_fifo)
 	 * pbl is in granulatiries of 16 bytes
 	 */
 	switch (p_fifo) {
-	case eDWC_ETH_QOS_32k:
-	case eDWC_ETH_QOS_16k:
-	case eDWC_ETH_QOS_8k:
+	case eqos_32k:
+	case eqos_16k:
+	case eqos_8k:
 		/* this is max which can be specified */
 		pbl = 32;
 		break;
-	case eDWC_ETH_QOS_4k:
+	case eqos_4k:
 		pbl = 16;
 		break;
-	case eDWC_ETH_QOS_2k:
+	case eqos_2k:
 		pbl = 8;
 		break;
-	case eDWC_ETH_QOS_1k:
+	case eqos_1k:
 		pbl = 4;
 		break;
-	case eDWC_ETH_QOS_512:
+	case eqos_512:
 		pbl = 2;
 		break;
-	case eDWC_ETH_QOS_256:
+	case eqos_256:
 		pbl = 1;
 		break;
 	default:
@@ -4156,7 +4156,7 @@ static UINT calculate_dma_pbl(ULONG p_fifo)
 static UINT calculate_per_queue_fifo(ULONG fifo_size, UCHAR queue_count)
 {
 	ULONG q_fifo_size = 0;	/* calculated fifo size per queue */
-	ULONG p_fifo = eDWC_ETH_QOS_256; /* per queue fifo size programmable value */
+	ULONG p_fifo = eqos_256; /* per queue fifo size programmable value */
 
 	/* calculate Tx/Rx fifo share per queue */
 	switch (fifo_size) {
@@ -4201,50 +4201,50 @@ static UINT calculate_per_queue_fifo(ULONG fifo_size, UCHAR queue_count)
 	q_fifo_size = q_fifo_size/queue_count;
 
 	if (q_fifo_size >= FIFO_SIZE_KB(32)) {
-		p_fifo = eDWC_ETH_QOS_32k;
+		p_fifo = eqos_32k;
 	} else if (q_fifo_size >= FIFO_SIZE_KB(16)) {
-		p_fifo = eDWC_ETH_QOS_16k;
+		p_fifo = eqos_16k;
 	} else if (q_fifo_size >= FIFO_SIZE_KB(8)) {
-		p_fifo = eDWC_ETH_QOS_8k;
+		p_fifo = eqos_8k;
 	} else if (q_fifo_size >= FIFO_SIZE_KB(4)) {
-		p_fifo = eDWC_ETH_QOS_4k;
+		p_fifo = eqos_4k;
 	} else if (q_fifo_size >= FIFO_SIZE_KB(2)) {
-		p_fifo = eDWC_ETH_QOS_2k;
+		p_fifo = eqos_2k;
 	} else if (q_fifo_size >= FIFO_SIZE_KB(1)) {
-		p_fifo = eDWC_ETH_QOS_1k;
+		p_fifo = eqos_1k;
 	} else if (q_fifo_size >= FIFO_SIZE_B(512)) {
-		p_fifo = eDWC_ETH_QOS_512;
+		p_fifo = eqos_512;
 	} else if (q_fifo_size >= FIFO_SIZE_B(256)) {
-		p_fifo = eDWC_ETH_QOS_256;
+		p_fifo = eqos_256;
 	}
 
 	return p_fifo;
 }
 
-static INT configure_mtl_queue(UINT qInx, struct DWC_ETH_QOS_prv_data *pdata)
+static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 {
-	struct DWC_ETH_QOS_tx_queue *queue_data = GET_TX_QUEUE_PTR(qInx);
-	ULONG retryCount = 1000;
+	struct eqos_tx_queue *queue_data = GET_TX_QUEUE_PTR(qinx);
+	ULONG retry_cnt = 1000;
 	ULONG vy_count;
-	volatile ULONG varMTL_QTOMR;
-	UINT p_rx_fifo = eDWC_ETH_QOS_256, p_tx_fifo = eDWC_ETH_QOS_256;
+	volatile ULONG mtl_qtomr;
+	UINT p_rx_fifo = eqos_256, p_tx_fifo = eqos_256;
 
 	DBGPR("-->configure_mtl_queue\n");
 
 	/*Flush Tx Queue */
-	MTL_QTOMR_FTQ_UdfWr(qInx, 0x1);
+	MTL_QTOMR_FTQ_WR(qinx, 0x1);
 
 	/*Poll Until Poll Condition */
 	vy_count = 0;
 	while (1) {
-		if (vy_count > retryCount) {
+		if (vy_count > retry_cnt) {
 			return -Y_FAILURE;
 		} else {
 			vy_count++;
 			mdelay(1);
 		}
-		MTL_QTOMR_RgRd(qInx, varMTL_QTOMR);
-		if (GET_VALUE(varMTL_QTOMR, MTL_QTOMR_FTQ_LPOS, MTL_QTOMR_FTQ_HPOS)
+		MTL_QTOMR_RD(qinx, mtl_qtomr);
+		if (GET_VALUE(mtl_qtomr, MTL_QTOMR_FTQ_LPOS, MTL_QTOMR_FTQ_HPOS)
 				== 0) {
 			break;
 		}
@@ -4252,60 +4252,60 @@ static INT configure_mtl_queue(UINT qInx, struct DWC_ETH_QOS_prv_data *pdata)
 
 
 	/*Enable Store and Forward mode for TX */
-	MTL_QTOMR_TSF_UdfWr(qInx, 0x1);
+	MTL_QTOMR_TSF_WR(qinx, 0x1);
 	/* Program Tx operating mode */
-	MTL_QTOMR_TXQEN_UdfWr(qInx, queue_data->q_op_mode);
+	MTL_QTOMR_TXQEN_WR(qinx, queue_data->q_op_mode);
 	/* Transmit Queue weight */
-	MTL_QW_ISCQW_UdfWr(qInx, (0x10 + qInx));
+	MTL_QW_ISCQW_WR(qinx, (0x10 + qinx));
 
-	MTL_QROMR_FEP_UdfWr(qInx, 0x1);
+	MTL_QROMR_FEP_WR(qinx, 0x1);
 
 	/* Configure for Jumbo frame in MTL */
-	if (pdata->dev->mtu > DWC_ETH_QOS_ETH_FRAME_LEN) {
+	if (pdata->dev->mtu > EQOS_ETH_FRAME_LEN) {
 		/* Disable RX Store and Forward mode */
-		MTL_QROMR_RSF_UdfWr(qInx, 0x0);
+		MTL_QROMR_RSF_WR(qinx, 0x0);
 		printk(KERN_ALERT "RX is configured in threshold mode and threshold = 64Byte\n");
 	}
 
-	p_rx_fifo = calculate_per_queue_fifo(pdata->hw_feat.rx_fifo_size, DWC_ETH_QOS_RX_QUEUE_CNT);
-	p_tx_fifo = calculate_per_queue_fifo(pdata->hw_feat.tx_fifo_size, DWC_ETH_QOS_TX_QUEUE_CNT);
+	p_rx_fifo = calculate_per_queue_fifo(pdata->hw_feat.rx_fifo_size, EQOS_RX_QUEUE_CNT);
+	p_tx_fifo = calculate_per_queue_fifo(pdata->hw_feat.tx_fifo_size, EQOS_TX_QUEUE_CNT);
 
 	/* Transmit/Receive queue fifo size programmed */
-	MTL_QROMR_RQS_UdfWr(qInx, p_rx_fifo);
-	MTL_QTOMR_TQS_UdfWr(qInx, p_tx_fifo);
+	MTL_QROMR_RQS_WR(qinx, p_rx_fifo);
+	MTL_QTOMR_TQS_WR(qinx, p_tx_fifo);
 	printk(KERN_ALERT "Queue%d Tx fifo size %d, Rx fifo size %d\n",
-			qInx, ((p_tx_fifo + 1) * 256), ((p_rx_fifo + 1) * 256));
+			qinx, ((p_tx_fifo + 1) * 256), ((p_rx_fifo + 1) * 256));
 
 	/* flow control will be used only if
 	 * each channel gets 8KB or more fifo */
-	if (p_rx_fifo >= eDWC_ETH_QOS_4k) {
+	if (p_rx_fifo >= eqos_4k) {
 		/* Enable Rx FLOW CTRL in MTL and MAC
 			 Programming is valid only if Rx fifo size is greater than
 			 or equal to 8k */
-		if ((pdata->flow_ctrl & DWC_ETH_QOS_FLOW_CTRL_TX) ==
-			DWC_ETH_QOS_FLOW_CTRL_TX) {
+		if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_TX) ==
+			EQOS_FLOW_CTRL_TX) {
 
-			MTL_QROMR_EHFC_UdfWr(qInx, 0x1);
+			MTL_QROMR_EHFC_WR(qinx, 0x1);
 
-#ifdef DWC_ETH_QOS_VER_4_0
-			if (p_rx_fifo == eDWC_ETH_QOS_4k) {
+#ifdef EQOS_VER_4_0
+			if (p_rx_fifo == eqos_4k) {
 				/* This violates the above formula because of FIFO size limit
 				 * therefore overflow may occur inspite of this
 				 * */
-				MTL_QROMR_RFD_UdfWr(qInx, 0x2);
-				MTL_QROMR_RFA_UdfWr(qInx, 0x1);
+				MTL_QROMR_RFD_WR(qinx, 0x2);
+				MTL_QROMR_RFA_WR(qinx, 0x1);
 			}
-			else if (p_rx_fifo == eDWC_ETH_QOS_8k) {
-				MTL_QROMR_RFD_UdfWr(qInx, 0x4);
-				MTL_QROMR_RFA_UdfWr(qInx, 0x2);
+			else if (p_rx_fifo == eqos_8k) {
+				MTL_QROMR_RFD_WR(qinx, 0x4);
+				MTL_QROMR_RFA_WR(qinx, 0x2);
 			}
-			else if (p_rx_fifo == eDWC_ETH_QOS_16k) {
-				MTL_QROMR_RFD_UdfWr(qInx, 0x5);
-				MTL_QROMR_RFA_UdfWr(qInx, 0x2);
+			else if (p_rx_fifo == eqos_16k) {
+				MTL_QROMR_RFD_WR(qinx, 0x5);
+				MTL_QROMR_RFA_WR(qinx, 0x2);
 			}
-			else if (p_rx_fifo == eDWC_ETH_QOS_32k) {
-				MTL_QROMR_RFD_UdfWr(qInx, 0x7);
-				MTL_QROMR_RFA_UdfWr(qInx, 0x2);
+			else if (p_rx_fifo == eqos_32k) {
+				MTL_QROMR_RFD_WR(qinx, 0x7);
+				MTL_QROMR_RFA_WR(qinx, 0x2);
 			}
 #else
 			/* Set Threshold for Activating Flow Contol space for min 2 frames
@@ -4313,24 +4313,24 @@ static INT configure_mtl_queue(UINT qInx, struct DWC_ETH_QOS_prv_data *pdata)
 			 *
 			 * Set Threshold for Deactivating Flow Contol for space of
 			 * min 1 frame (frame size 1500bytes) in receive fifo */
-			if (p_rx_fifo == eDWC_ETH_QOS_4k) {
+			if (p_rx_fifo == eqos_4k) {
 				/* This violates the above formula because of FIFO size limit
 				 * therefore overflow may occur inspite of this
 				 * */
-				MTL_QROMR_RFD_UdfWr(qInx, 0x3); //Full - 3K
-				MTL_QROMR_RFA_UdfWr(qInx, 0x1); //Full - 1.5K
+				MTL_QROMR_RFD_WR(qinx, 0x3); //Full - 3K
+				MTL_QROMR_RFA_WR(qinx, 0x1); //Full - 1.5K
 			}
-			else if (p_rx_fifo == eDWC_ETH_QOS_8k) {
-				MTL_QROMR_RFD_UdfWr(qInx, 0x6); //Full - 4K
-				MTL_QROMR_RFA_UdfWr(qInx, 0xA); //Full - 6K
+			else if (p_rx_fifo == eqos_8k) {
+				MTL_QROMR_RFD_WR(qinx, 0x6); //Full - 4K
+				MTL_QROMR_RFA_WR(qinx, 0xA); //Full - 6K
 			}
-			else if (p_rx_fifo == eDWC_ETH_QOS_16k) {
-				MTL_QROMR_RFD_UdfWr(qInx, 0x6); //Full - 4K
-				MTL_QROMR_RFA_UdfWr(qInx, 0x12); //Full - 10K
+			else if (p_rx_fifo == eqos_16k) {
+				MTL_QROMR_RFD_WR(qinx, 0x6); //Full - 4K
+				MTL_QROMR_RFA_WR(qinx, 0x12); //Full - 10K
 			}
-			else if (p_rx_fifo == eDWC_ETH_QOS_32k) {
-				MTL_QROMR_RFD_UdfWr(qInx, 0x6); //Full - 4K
-				MTL_QROMR_RFA_UdfWr(qInx, 0x1E); //Full - 16K
+			else if (p_rx_fifo == eqos_32k) {
+				MTL_QROMR_RFD_WR(qinx, 0x6); //Full - 4K
+				MTL_QROMR_RFA_WR(qinx, 0x1E); //Full - 16K
 			}
 
 #endif
@@ -4343,71 +4343,71 @@ static INT configure_mtl_queue(UINT qInx, struct DWC_ETH_QOS_prv_data *pdata)
 }
 
 
-static INT configure_dma_channel(UINT qInx,
-			struct DWC_ETH_QOS_prv_data *pdata)
+static INT configure_dma_channel(UINT qinx,
+			struct eqos_prv_data *pdata)
 {
-	struct DWC_ETH_QOS_rx_wrapper_descriptor *rx_desc_data =
-		GET_RX_WRAPPER_DESC(qInx);
+	struct eqos_rx_wrapper_descriptor *rx_desc_data =
+		GET_RX_WRAPPER_DESC(qinx);
 	ULONG p_fifo, pbl;
 
 	DBGPR("-->configure_dma_channel\n");
 
 	/*Enable OSF mode */
-	DMA_TCR_OSP_UdfWr(qInx, 0x1);
+	DMA_TCR_OSP_WR(qinx, 0x1);
 
 	/*Select Rx Buffer size = 2048bytes */
 	switch (pdata->rx_buffer_len) {
 	case 16384:
-		DMA_RCR_RBSZ_UdfWr(qInx, 16384);
+		DMA_RCR_RBSZ_WR(qinx, 16384);
 		break;
 	case 8192:
-		DMA_RCR_RBSZ_UdfWr(qInx, 8192);
+		DMA_RCR_RBSZ_WR(qinx, 8192);
 		break;
 	case 4096:
-		DMA_RCR_RBSZ_UdfWr(qInx, 4096);
+		DMA_RCR_RBSZ_WR(qinx, 4096);
 		break;
 	default:		/* default is 2K */
-		DMA_RCR_RBSZ_UdfWr(qInx, 2048);
+		DMA_RCR_RBSZ_WR(qinx, 2048);
 		break;
 	}
 	/* program RX watchdog timer */
 	if (rx_desc_data->use_riwt) {
-		DMA_RIWTR_RWT_UdfWr(qInx, rx_desc_data->rx_riwt);
+		DMA_RIWTR_RWT_WR(qinx, rx_desc_data->rx_riwt);
 	}
 	else {
-		DMA_RIWTR_RWT_UdfWr(qInx, 0);
+		DMA_RIWTR_RWT_WR(qinx, 0);
 	}
 	printk(KERN_ALERT "%s Rx watchdog timer\n",
 		(rx_desc_data->use_riwt ? "Enabled" : "Disabled"));
 
-	enable_dma_interrupts(qInx, pdata);
+	enable_dma_interrupts(qinx, pdata);
 	/* set PBLx8 */
-	DMA_CR_PBLx8_UdfWr(qInx, 0x1);
+	DMA_CR_PBLX8_WR(qinx, 0x1);
 
-	p_fifo = calculate_per_queue_fifo(pdata->hw_feat.tx_fifo_size, DWC_ETH_QOS_TX_QUEUE_CNT);
+	p_fifo = calculate_per_queue_fifo(pdata->hw_feat.tx_fifo_size, EQOS_TX_QUEUE_CNT);
 	pbl = calculate_dma_pbl(p_fifo);
-	DMA_TCR_PBL_UdfWr(qInx, pbl);
+	DMA_TCR_PBL_WR(qinx, pbl);
 
-	p_fifo = calculate_per_queue_fifo(pdata->hw_feat.rx_fifo_size, DWC_ETH_QOS_RX_QUEUE_CNT);
-	DMA_RCR_PBL_UdfWr(qInx, min(RXPBL, MAX_RXPBL));
+	p_fifo = calculate_per_queue_fifo(pdata->hw_feat.rx_fifo_size, EQOS_RX_QUEUE_CNT);
+	DMA_RCR_PBL_WR(qinx, min(RXPBL, MAX_RXPBL));
 
 	/* To get Best Performance */
-	DMA_SBUS_BLEN16_UdfWr(1);
-	DMA_SBUS_BLEN8_UdfWr(1);
-	DMA_SBUS_BLEN4_UdfWr(1);
-	DMA_SBUS_RD_OSR_LMT_UdfWr(2);
-#ifndef DWC_ETH_QOS_DMA_32BIT
-	DMA_SBUS_EAME_UdfWr(1);
+	DMA_SBUS_BLEN16_WR(1);
+	DMA_SBUS_BLEN8_WR(1);
+	DMA_SBUS_BLEN4_WR(1);
+	DMA_SBUS_RD_OSR_LMT_WR(2);
+#ifndef EQOS_DMA_32BIT
+	DMA_SBUS_EAME_WR(1);
 #endif
 
 	/* enable TSO if HW supports */
 	if (pdata->hw_feat.tso_en)
-		DMA_TCR_TSE_UdfWr(qInx, 0x1);
+		DMA_TCR_TSE_WR(qinx, 0x1);
 	printk(KERN_ALERT "%s TSO\n",
 		(pdata->hw_feat.tso_en ? "Enabled" : "Disabled"));
 
 	/* program split header mode */
-	DMA_CR_SPH_UdfWr(qInx, pdata->rx_split_hdr);
+	DMA_CR_SPH_WR(qinx, pdata->rx_split_hdr);
 	printk(KERN_ALERT "%s Rx Split header mode\n",
 		(pdata->rx_split_hdr ? "Enabled" : "Disabled"));
 
@@ -4417,12 +4417,12 @@ static INT configure_dma_channel(UINT qInx,
 	/*
 	 * For PG don't start TX DMA now.
 	 */
-#ifndef DWC_ETH_QOS_CONFIG_PGTEST
+#ifndef EQOS_CONFIG_PGTEST
 	/* start TX DMA */
-	DMA_TCR_ST_UdfWr(qInx, 0x1);
+	DMA_TCR_ST_WR(qinx, 0x1);
 #endif
 	/* start RX DMA */
-	DMA_RCR_ST_UdfWr(qInx, 0x1);
+	DMA_RCR_ST_WR(qinx, 0x1);
 
 	DBGPR("<--configure_dma_channel\n");
 
@@ -4449,11 +4449,11 @@ static int enable_mac_interrupts(void)
   /* PCSANCIM - PCS AN Completion Interrupt Enable */
   /* PMTIM - PMT Interrupt Enable */
   /* LPIIM - LPI Interrupt Enable */
-  MAC_IMR_RgRd(varmac_imr);
+  MAC_IMR_RD(varmac_imr);
   varmac_imr = varmac_imr & (unsigned long)(0x1008);
   varmac_imr = varmac_imr | ((0x1) << 0) | ((0x1) << 1) | ((0x1) << 2) |
                 ((0x1) << 4) | ((0x1) << 5);
-  MAC_IMR_RgWr(varmac_imr);
+  MAC_IMR_WR(varmac_imr);
 
 
   return Y_SUCCESS;
@@ -4461,105 +4461,105 @@ static int enable_mac_interrupts(void)
 
 
 
-static INT configure_mac(struct DWC_ETH_QOS_prv_data *pdata)
+static INT configure_mac(struct eqos_prv_data *pdata)
 {
 	struct eqos_cfg *pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
-	ULONG varMAC_MCR;
-	UINT qInx;
+	ULONG mac_mcr;
+	UINT qinx;
 
 	DBGPR("-->configure_mac\n");
 
-	for (qInx = 0; qInx < DWC_ETH_QOS_RX_QUEUE_CNT; qInx++) {
-		MAC_RQC0R_RXQEN_UdfWr(qInx, pdata->dt_cfg.rxq_ctrl[qInx] & 0x3);
+	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
+		MAC_RQC0R_RXQEN_WR(qinx, pdata->dt_cfg.rxq_ctrl[qinx] & 0x3);
 	}
 
 	/* Set Tx flow control parameters */
-	for (qInx = 0; qInx < DWC_ETH_QOS_TX_QUEUE_CNT; qInx++) {
+	for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++) {
 		/* set Pause Time */
-		MAC_QTFCR_PT_UdfWr(qInx, 0xffff);
+		MAC_QTFCR_PT_WR(qinx, 0xffff);
 		/* Assign priority for RX flow control */
 		/* Assign priority for TX flow control */
-		switch(qInx) {
+		switch(qinx) {
 		case 0:
-			MAC_TQPM0R_PSTQ0_UdfWr(0);
-			MAC_RQC2R_PSRQ0_UdfWr(0x1 << pdt_cfg->q_prio[qInx]);
+			MAC_TQPM0R_PSTQ0_WR(0);
+			MAC_RQC2R_PSRQ0_WR(0x1 << pdt_cfg->q_prio[qinx]);
 			break;
 		case 1:
-			MAC_TQPM0R_PSTQ1_UdfWr(1);
-			MAC_RQC2R_PSRQ1_UdfWr(0x1 << pdt_cfg->q_prio[qInx]);
+			MAC_TQPM0R_PSTQ1_WR(1);
+			MAC_RQC2R_PSRQ1_WR(0x1 << pdt_cfg->q_prio[qinx]);
 			break;
 		case 2:
-			MAC_TQPM0R_PSTQ2_UdfWr(2);
-			MAC_RQC2R_PSRQ2_UdfWr(0x1 << pdt_cfg->q_prio[qInx]);
+			MAC_TQPM0R_PSTQ2_WR(2);
+			MAC_RQC2R_PSRQ2_WR(0x1 << pdt_cfg->q_prio[qinx]);
 			break;
 		case 3:
-			MAC_TQPM0R_PSTQ3_UdfWr(3);
-			MAC_RQC2R_PSRQ3_UdfWr(0x1 << pdt_cfg->q_prio[qInx]);
+			MAC_TQPM0R_PSTQ3_WR(3);
+			MAC_RQC2R_PSRQ3_WR(0x1 << pdt_cfg->q_prio[qinx]);
 			break;
 		case 4:
-			MAC_TQPM1R_PSTQ4_UdfWr(4);
-			MAC_RQC3R_PSRQ4_UdfWr(0x1 << pdt_cfg->q_prio[qInx]);
+			MAC_TQPM1R_PSTQ4_WR(4);
+			MAC_RQC3R_PSRQ4_WR(0x1 << pdt_cfg->q_prio[qinx]);
 			break;
 		case 5:
-			MAC_TQPM1R_PSTQ5_UdfWr(5);
-			MAC_RQC3R_PSRQ5_UdfWr(0x1 << pdt_cfg->q_prio[qInx]);
+			MAC_TQPM1R_PSTQ5_WR(5);
+			MAC_RQC3R_PSRQ5_WR(0x1 << pdt_cfg->q_prio[qinx]);
 			break;
 		case 6:
-			MAC_TQPM1R_PSTQ6_UdfWr(6);
-			MAC_RQC3R_PSRQ6_UdfWr(0x1 << pdt_cfg->q_prio[qInx]);
+			MAC_TQPM1R_PSTQ6_WR(6);
+			MAC_RQC3R_PSRQ6_WR(0x1 << pdt_cfg->q_prio[qinx]);
 			break;
 		case 7:
-			MAC_TQPM1R_PSTQ7_UdfWr(7);
-			MAC_RQC3R_PSRQ7_UdfWr(0x1 << pdt_cfg->q_prio[qInx]);
+			MAC_TQPM1R_PSTQ7_WR(7);
+			MAC_RQC3R_PSRQ7_WR(0x1 << pdt_cfg->q_prio[qinx]);
 			break;
 		}
 
 		if (pdata->dt_cfg.pause_frames == PAUSE_FRAMES_ENABLED) {
-			if ((pdata->flow_ctrl & DWC_ETH_QOS_FLOW_CTRL_TX) 
-				== DWC_ETH_QOS_FLOW_CTRL_TX)
-				enable_tx_flow_ctrl(qInx);
+			if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_TX) 
+				== EQOS_FLOW_CTRL_TX)
+				enable_tx_flow_ctrl(qinx);
 			else
-				disable_tx_flow_ctrl(qInx);
+				disable_tx_flow_ctrl(qinx);
 		}
 	}
 
 	/* Set Rx flow control parameters */
 	if (pdata->dt_cfg.pause_frames == PAUSE_FRAMES_ENABLED) {
-		if ((pdata->flow_ctrl & DWC_ETH_QOS_FLOW_CTRL_RX) == DWC_ETH_QOS_FLOW_CTRL_RX)
+		if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_RX) == EQOS_FLOW_CTRL_RX)
 			enable_rx_flow_ctrl();
 		else
 			disable_rx_flow_ctrl();
 	}
 
 	/* Configure for Jumbo frame in MAC */
-	if (pdata->dev->mtu > DWC_ETH_QOS_ETH_FRAME_LEN) {
-		if (pdata->dev->mtu < DWC_ETH_QOS_MAX_GPSL) {
-			MAC_MCR_JE_UdfWr(0x1);
-			MAC_MCR_WD_UdfWr(0x0);
-			MAC_MCR_GPSLCE_UdfWr(0x0);
-			MAC_MCR_JD_UdfWr(0x0);
+	if (pdata->dev->mtu > EQOS_ETH_FRAME_LEN) {
+		if (pdata->dev->mtu < EQOS_MAX_GPSL) {
+			MAC_MCR_JE_WR(0x1);
+			MAC_MCR_WD_WR(0x0);
+			MAC_MCR_GPSLCE_WR(0x0);
+			MAC_MCR_JD_WR(0x0);
 		} else {
-			MAC_MCR_JE_UdfWr(0x0);
-			MAC_MCR_WD_UdfWr(0x1);
-			MAC_MCR_GPSLCE_UdfWr(0x1);
-			MAC_MECR_GPSL_UdfWr(DWC_ETH_QOS_MAX_SUPPORTED_MTU);
-			MAC_MCR_JD_UdfWr(0x1);
+			MAC_MCR_JE_WR(0x0);
+			MAC_MCR_WD_WR(0x1);
+			MAC_MCR_GPSLCE_WR(0x1);
+			MAC_MECR_GPSL_WR(EQOS_MAX_SUPPORTED_MTU);
+			MAC_MCR_JD_WR(0x1);
 			printk(KERN_ALERT "Configured Gaint Packet Size Limit to %d\n",
-				DWC_ETH_QOS_MAX_SUPPORTED_MTU);
+				EQOS_MAX_SUPPORTED_MTU);
 		}
 		printk(KERN_ALERT "Enabled JUMBO pkt\n");
 	} else {
-		MAC_MCR_JE_UdfWr(0x0);
-		MAC_MCR_WD_UdfWr(0x0);
-		MAC_MCR_GPSLCE_UdfWr(0x0);
-		MAC_MCR_JD_UdfWr(0x0);
+		MAC_MCR_JE_WR(0x0);
+		MAC_MCR_WD_WR(0x0);
+		MAC_MCR_GPSLCE_WR(0x0);
+		MAC_MCR_JD_WR(0x0);
 		printk(KERN_ALERT "Disabled JUMBO pkt\n");
 	}
 
 	/* update the MAC address */
-	MAC_MA0HR_RgWr(((pdata->dev->dev_addr[5] << 8) |
+	MAC_MA0HR_WR(((pdata->dev->dev_addr[5] << 8) |
 			(pdata->dev->dev_addr[4])));
-	MAC_MA0LR_RgWr(((pdata->dev->dev_addr[3] << 24) |
+	MAC_MA0LR_WR(((pdata->dev->dev_addr[3] << 24) |
 			(pdata->dev->dev_addr[2] << 16) |
 			(pdata->dev->dev_addr[1] << 8) |
 			(pdata->dev->dev_addr[0])));
@@ -4568,19 +4568,19 @@ static INT configure_mac(struct DWC_ETH_QOS_prv_data *pdata)
 	/*Enable MAC Receive process */
 	/*Enable padding - disabled */
 	/*Enable CRC stripping - disabled */
-	MAC_MCR_RgRd(varMAC_MCR);
-	varMAC_MCR = varMAC_MCR & (ULONG) (0xffcfff7c);
-	varMAC_MCR = varMAC_MCR | ((0x1) << 0) | ((0x1) << 20) | ((0x1) << 21);
-#ifndef DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT
-	varMAC_MCR |= ((0x1) << 1);
+	MAC_MCR_RD(mac_mcr);
+	mac_mcr = mac_mcr & (ULONG) (0xffcfff7c);
+	mac_mcr = mac_mcr | ((0x1) << 0) | ((0x1) << 20) | ((0x1) << 21);
+#ifndef EQOS_CERTIFICATION_PKTBURSTCNT
+	mac_mcr |= ((0x1) << 1);
 #endif
-	MAC_MCR_RgWr(varMAC_MCR);
+	MAC_MCR_WR(mac_mcr);
 
 	if (pdata->hw_feat.rx_coe_sel &&
 	     ((pdata->dev_state & NETIF_F_RXCSUM) == NETIF_F_RXCSUM))
-		MAC_MCR_IPC_UdfWr(0x1);
+		MAC_MCR_IPC_WR(0x1);
 
-#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
+#ifdef EQOS_ENABLE_VLAN_TAG
 	configure_mac_for_vlan_pkt();
 	if (pdata->hw_feat.vlan_hash_en)
 			config_vlan_filtering(1, 1, 0);
@@ -4608,80 +4608,80 @@ static INT configure_mac(struct DWC_ETH_QOS_prv_data *pdata)
 * \return none
 */
 
-static INT DWC_ETH_QOS_yinit(struct DWC_ETH_QOS_prv_data *pdata)
+static INT eqos_yinit(struct eqos_prv_data *pdata)
 {
-	UINT qInx;
+	UINT qinx;
 	int i, j;
 
-	DBGPR("-->DWC_ETH_QOS_yinit\n");
+	DBGPR("-->eqos_yinit\n");
 
 	/* reset mmc counters */
-	MMC_CNTRL_RgWr(0x1);
+	MMC_CNTRL_WR(0x1);
 
-	for (qInx = 0; qInx < DWC_ETH_QOS_TX_QUEUE_CNT; qInx++) {
-		configure_mtl_queue(qInx, pdata);
+	for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++) {
+		configure_mtl_queue(qinx, pdata);
 	}
 	//Mapping MTL Rx queue and DMA Rx channel.
-	MTL_RQDCM0R_RgWr(0x3020100);
-	MTL_RQDCM1R_RgWr(0x7060504);
-#ifdef DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT
+	MTL_RQDCM0R_WR(0x3020100);
+	MTL_RQDCM1R_WR(0x7060504);
+#ifdef EQOS_CERTIFICATION_PKTBURSTCNT
 	/* enable tx drop status */
-	MTL_OMR_DTXSTS_UdfWr(0x1);
+	MTL_OMR_DTXSTS_WR(0x1);
 #endif
 
-	i = (VIRT_INTR_CH_CRTL_RX_Wr_Mask | VIRT_INTR_CH_CRTL_TX_Wr_Mask);
+	i = (VIRT_INTR_CH_CRTL_RX_WR_MASK | VIRT_INTR_CH_CRTL_TX_WR_MASK);
 	for (j = 0; j < MAX_CHANS; j++) {
 
 		if ((pdata->dt_cfg.chan_mode[j] == CHAN_MODE_NAPI) ||
 			(pdata->dt_cfg.chan_mode[j] == CHAN_MODE_INTR)) {
-			VIRT_INTR_CH_STAT_RgWr(j, i);
-			VIRT_INTR_CH_CRTL_RgWr(j, VIRT_INTR_CH_CRTL_RX_Wr_Mask);
+			VIRT_INTR_CH_STAT_WR(j, i);
+			VIRT_INTR_CH_CRTL_WR(j, VIRT_INTR_CH_CRTL_RX_WR_MASK);
 			if (pdata->ptp_cfg.ptp_dma_ch_id == j) {
-				VIRT_INTR_CH_CRTL_RgWr(j,
-				(VIRT_INTR_CH_CRTL_RX_Wr_Mask |
-				VIRT_INTR_CH_CRTL_TX_Wr_Mask));
+				VIRT_INTR_CH_CRTL_WR(j,
+				(VIRT_INTR_CH_CRTL_RX_WR_MASK |
+				VIRT_INTR_CH_CRTL_TX_WR_MASK));
 			}
 		} else {
 			/* ensure wrapper ints are disabled */
-			VIRT_INTR_CH_CRTL_RgWr(j, 0);
-			VIRT_INTR_CH_STAT_RgWr(j, i);
+			VIRT_INTR_CH_CRTL_WR(j, 0);
+			VIRT_INTR_CH_STAT_WR(j, i);
 		}
 	}
 	configure_mac(pdata);
 
 	/* Setting INCRx */
-	DMA_SBUS_RgWr(0x0);
-	for (qInx = 0; qInx < DWC_ETH_QOS_TX_QUEUE_CNT; qInx++) {
-		configure_dma_channel(qInx, pdata);
+	DMA_SBUS_WR(0x0);
+	for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++) {
+		configure_dma_channel(qinx, pdata);
 	}
 
-#ifdef DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
-	MTL_Q0ROMR_FEP_UdfWr(0x1);
-	MAC_MPFR_RA_UdfWr(0x1);
-	MAC_MCR_BE_UdfWr(0x1);
+#ifdef EQOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
+	MTL_Q0ROMR_FEP_WR(0x1);
+	MAC_MPFR_RA_WR(0x1);
+	MAC_MCR_BE_WR(0x1);
 #endif
 
-	DBGPR("<--DWC_ETH_QOS_yinit\n");
+	DBGPR("<--eqos_yinit\n");
 
 	return Y_SUCCESS;
 }
 
-#ifdef DWC_ETH_QOS_CONFIG_PGTEST
+#ifdef EQOS_CONFIG_PGTEST
 
 /*!
 * \brief This sequence is used to initialize the tx descriptors.
 * \param[in] pdata
 */
 
-static void tx_descriptor_init_pg(struct DWC_ETH_QOS_prv_data *pdata,
-					UINT qInx)
+static void tx_descriptor_init_pg(struct eqos_prv_data *pdata,
+					UINT qinx)
 {
-	struct DWC_ETH_QOS_tx_wrapper_descriptor *tx_desc_data =
-		GET_TX_WRAPPER_DESC(qInx);
-	struct s_TX_NORMAL_DESC *TX_NORMAL_DESC =
-		GET_TX_DESC_PTR(qInx, tx_desc_data->cur_tx);
-	struct DWC_ETH_QOS_tx_buffer *buffer =
-		GET_TX_BUF_PTR(qInx, tx_desc_data->cur_tx);
+	struct eqos_tx_wrapper_descriptor *tx_desc_data =
+		GET_TX_WRAPPER_DESC(qinx);
+	struct s_tx_normal_desc *TX_NORMAL_DESC =
+		GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
+	struct eqos_tx_buffer *buffer =
+		GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
 	INT i;
 	INT start_index = tx_desc_data->cur_tx;
 
@@ -4691,22 +4691,22 @@ static void tx_descriptor_init_pg(struct DWC_ETH_QOS_prv_data *pdata,
 
 	for (i = 0; i < TX_DESC_CNT; i++) {
 		/* update buffer 1 address pointer to zero */
-		TX_NORMAL_DESC_TDES0_Ml_Wr(TX_NORMAL_DESC->TDES0, 0);
+		TX_NORMAL_DESC_TDES0_WR(TX_NORMAL_DESC->TDES0, 0);
 		/* update buffer 2 address pointer to zero */
-		TX_NORMAL_DESC_TDES1_Ml_Wr(TX_NORMAL_DESC->TDES1, 0);
+		TX_NORMAL_DESC_TDES1_WR(TX_NORMAL_DESC->TDES1, 0);
 		/* set all other control bits (IC, TTSE, B2L & B1L) to zero */
-		TX_NORMAL_DESC_TDES2_Ml_Wr(TX_NORMAL_DESC->TDES2, 0);
+		TX_NORMAL_DESC_TDES2_WR(TX_NORMAL_DESC->TDES2, 0);
 		/* set all other control bits (OWN, CTXT, FD, LD, CPC, CIC etc) to zero */
-		TX_NORMAL_DESC_TDES3_Ml_Wr(TX_NORMAL_DESC->TDES3, 0);
+		TX_NORMAL_DESC_TDES3_WR(TX_NORMAL_DESC->TDES3, 0);
 
 		INCR_TX_DESC_INDEX(tx_desc_data->cur_tx, 1);
-		TX_NORMAL_DESC = GET_TX_DESC_PTR(qInx, tx_desc_data->cur_tx);
-		buffer = GET_TX_BUF_PTR(qInx, tx_desc_data->cur_tx);
+		TX_NORMAL_DESC = GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
+		buffer = GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
 	}
 	/* update the total no of Tx descriptors count */
-	DMA_TDRLR_RgWr(qInx, (TX_DESC_CNT - 1));
+	DMA_TDRLR_WR(qinx, (TX_DESC_CNT - 1));
 	/* update the starting address of desc chain/ring */
-	DMA_TDLAR_RgWr(qInx, GET_TX_DESC_DMA_ADDR(qInx, start_index));
+	DMA_TDLAR_WR(qinx, GET_TX_DESC_DMA_ADDR(qinx, start_index));
 
 	DBGPR("<--tx_descriptor_init_pg\n");
 }
@@ -4716,14 +4716,14 @@ static void tx_descriptor_init_pg(struct DWC_ETH_QOS_prv_data *pdata,
 * \param[in] pdata
 */
 
-static void rx_descriptor_init_pg(struct DWC_ETH_QOS_prv_data *pdata, UINT qInx)
+static void rx_descriptor_init_pg(struct eqos_prv_data *pdata, UINT qinx)
 {
-	struct DWC_ETH_QOS_rx_wrapper_descriptor *rx_desc_data =
-	    GET_RX_WRAPPER_DESC(qInx);
-	struct DWC_ETH_QOS_rx_buffer *buffer =
-	    GET_RX_BUF_PTR(qInx, rx_desc_data->cur_rx);
-	struct s_RX_NORMAL_DESC *RX_NORMAL_DESC =
-	    GET_RX_DESC_PTR(qInx, rx_desc_data->cur_rx);
+	struct eqos_rx_wrapper_descriptor *rx_desc_data =
+	    GET_RX_WRAPPER_DESC(qinx);
+	struct eqos_rx_buffer *buffer =
+	    GET_RX_BUF_PTR(qinx, rx_desc_data->cur_rx);
+	struct s_rx_normal_desc *RX_NORMAL_DESC =
+	    GET_RX_DESC_PTR(qinx, rx_desc_data->cur_rx);
 	INT i;
 	INT start_index = rx_desc_data->cur_rx;
 	INT last_index;
@@ -4733,34 +4733,34 @@ static void rx_descriptor_init_pg(struct DWC_ETH_QOS_prv_data *pdata, UINT qInx)
 	/* initialize all desc */
 
 	for (i = 0; i < RX_DESC_CNT; i++) {
-		memset(RX_NORMAL_DESC, 0, sizeof(struct s_RX_NORMAL_DESC));
+		memset(RX_NORMAL_DESC, 0, sizeof(struct s_rx_normal_desc));
 		/* update buffer 1 address pointer */
-		RX_NORMAL_DESC_RDES0_Ml_Wr(RX_NORMAL_DESC->RDES0, buffer->dma);
+		RX_NORMAL_DESC_RDES0_WR(RX_NORMAL_DESC->RDES0, buffer->dma);
 		/* set to zero  */
-		RX_NORMAL_DESC_RDES1_Ml_Wr(RX_NORMAL_DESC->RDES1, 0);
+		RX_NORMAL_DESC_RDES1_WR(RX_NORMAL_DESC->RDES1, 0);
 
 		/* set buffer 2 address pointer to zero */
-		RX_NORMAL_DESC_RDES2_Ml_Wr(RX_NORMAL_DESC->RDES2, 0);
+		RX_NORMAL_DESC_RDES2_WR(RX_NORMAL_DESC->RDES2, 0);
 		/* set control bits - OWN, INTE and BUF1V */
-		RX_NORMAL_DESC_RDES3_Ml_Wr(RX_NORMAL_DESC->RDES3, (0xc1000000));
+		RX_NORMAL_DESC_RDES3_WR(RX_NORMAL_DESC->RDES3, (0xc1000000));
 
 		INCR_RX_DESC_INDEX(rx_desc_data->cur_rx, 1);
 		RX_NORMAL_DESC =
-			GET_RX_DESC_PTR(qInx, rx_desc_data->cur_rx);
-		buffer = GET_RX_BUF_PTR(qInx, rx_desc_data->cur_rx);
+			GET_RX_DESC_PTR(qinx, rx_desc_data->cur_rx);
+		buffer = GET_RX_BUF_PTR(qinx, rx_desc_data->cur_rx);
 	}
 	/* update the total no of Rx descriptors count */
-	DMA_RDRLR_RgWr(qInx, (RX_DESC_CNT - 1));
+	DMA_RDRLR_WR(qinx, (RX_DESC_CNT - 1));
 	/* update the Rx Descriptor Tail Pointer */
 	last_index = GET_CURRENT_RCVD_LAST_DESC_INDEX(start_index, 0);
-	DMA_RDTP_RPDR_RgWr(qInx, GET_RX_DESC_DMA_ADDR(qInx, last_index));
+	DMA_RDTP_RPDR_WR(qinx, GET_RX_DESC_DMA_ADDR(qinx, last_index));
 	/* update the starting address of desc chain/ring */
-	DMA_RDLAR_RgWr(qInx, GET_RX_DESC_DMA_ADDR(qInx, start_index));
+	DMA_RDLAR_WR(qinx, GET_RX_DESC_DMA_ADDR(qinx, start_index));
 
 	DBGPR("<--rx_descriptor_init_pg\n");
 }
 
-#endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
+#endif /* end of EQOS_CONFIG_PGTEST */
 
 
 /*!
@@ -4775,10 +4775,10 @@ static void rx_descriptor_init_pg(struct DWC_ETH_QOS_prv_data *pdata, UINT qInx)
 * \return void.
 */
 
-void DWC_ETH_QOS_init_function_ptrs_dev(struct hw_if_struct *hw_if)
+void eqos_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 {
 
-	DBGPR("-->DWC_ETH_QOS_init_function_ptrs_dev\n");
+	DBGPR("-->eqos_init_function_ptrs_dev\n");
 
 	hw_if->tx_complete = tx_complete;
 	hw_if->tx_window_error = NULL;
@@ -4817,10 +4817,10 @@ void DWC_ETH_QOS_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 
 	hw_if->pre_xmit = pre_transmit;
 	hw_if->dev_read = device_read;
-	hw_if->init = DWC_ETH_QOS_yinit;
-	hw_if->exit = DWC_ETH_QOS_yexit;
-	hw_if->car_reset = DWC_ETH_QOS_car_reset;
-	hw_if->pad_calibrate = DWC_ETH_QOS_pad_calibrate;
+	hw_if->init = eqos_yinit;
+	hw_if->exit = eqos_yexit;
+	hw_if->car_reset = eqos_car_reset;
+	hw_if->pad_calibrate = eqos_pad_calibrate;
 	/* Descriptor related Sequences have to be initialized here */
 	hw_if->tx_desc_init = tx_descriptor_init;
 	hw_if->rx_desc_init = rx_descriptor_init;
@@ -4913,7 +4913,7 @@ void DWC_ETH_QOS_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->config_low_credit = config_low_credit;
 	hw_if->config_slot_num_check = config_slot_num_check;
 	hw_if->config_advance_slot_num_check = config_advance_slot_num_check;
-#ifdef DWC_ETH_QOS_CONFIG_PGTEST
+#ifdef EQOS_CONFIG_PGTEST
 	hw_if->tx_desc_init_pg = tx_descriptor_init_pg;
 	hw_if->rx_desc_init_pg = rx_descriptor_init_pg;
 	hw_if->set_ch_arb_weights = set_ch_arb_weights;
@@ -4924,7 +4924,7 @@ void DWC_ETH_QOS_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->set_tx_rx_prio_ratio = set_tx_rx_prio_ratio;
 	hw_if->set_dma_tx_arb_algorithm = set_dma_tx_arb_algorithm;
 	hw_if->prepare_dev_pktgen = prepare_dev_pktgen;
-#endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
+#endif /* end of EQOS_CONFIG_PGTEST */
 
 	/* for hw time stamping */
 	hw_if->config_hw_time_stamping = config_hw_time_stamping;
@@ -4962,7 +4962,7 @@ void DWC_ETH_QOS_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->update_vlan_hash_table_reg = update_vlan_hash_table_reg;
 	hw_if->update_vlan_id = update_vlan_id;
 	hw_if->config_vlan_filtering = config_vlan_filtering;
-#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
+#ifdef EQOS_ENABLE_VLAN_TAG
  	hw_if->config_mac_for_vlan_pkt = configure_mac_for_vlan_pkt;
 #endif
   hw_if->get_vlan_tag_comparison = get_vlan_tag_comparison;
@@ -5007,5 +5007,5 @@ void DWC_ETH_QOS_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	/*for PTP channel routingi*/
 	hw_if->config_ptp_channel = config_ptp_channel;
 
-	DBGPR("<--DWC_ETH_QOS_init_function_ptrs_dev\n");
+	DBGPR("<--eqos_init_function_ptrs_dev\n");
 }

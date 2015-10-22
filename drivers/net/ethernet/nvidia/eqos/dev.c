@@ -4259,6 +4259,7 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 	ULONG vy_count;
 	volatile ULONG mtl_qtomr;
 	UINT p_rx_fifo = eqos_256, p_tx_fifo = eqos_256;
+	uint i;
 
 	DBGPR("-->configure_mtl_queue\n");
 
@@ -4292,11 +4293,13 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 	MTL_QROMR_FEP_WR(qinx, 0x1);
 
 	/* Configure for Jumbo frame in MTL */
+	i = 1;
 	if (pdata->dev->mtu > EQOS_ETH_FRAME_LEN) {
 		/* Disable RX Store and Forward mode */
-		MTL_QROMR_RSF_WR(qinx, 0x0);
+		i = 0;
 		printk(KERN_ALERT "RX is configured in threshold mode and threshold = 64Byte\n");
 	}
+	MTL_QROMR_RSF_WR(qinx, i);
 
 	p_rx_fifo = calculate_per_queue_fifo(pdata->hw_feat.rx_fifo_size, EQOS_RX_QUEUE_CNT);
 	p_tx_fifo = calculate_per_queue_fifo(pdata->hw_feat.tx_fifo_size, EQOS_TX_QUEUE_CNT);

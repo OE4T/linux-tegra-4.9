@@ -351,7 +351,7 @@
 			"extern1";
 		resets = <&tegra_car TEGRA186_RESET_AUD_MCLK>;
 		reset-names = "extern1_rst";
-		nvidia,num-codec-link = <3>;
+		nvidia,num-codec-link = <4>;
 		nvidia,num-amx = <4>;
 		nvidia,num-adx = <4>;
 		nvidia,amx-slot-size = <32 32 32 32>;
@@ -449,7 +449,9 @@
 			"Headphone-y", "y OUT",
 			"y IN", "LineIn-y",
 			"Headphone-d", "d OUT",
-			"d IN", "LineIn-d";
+			"d IN", "LineIn-d",
+			"BT-out", "b OUT",
+			"b IN", "BT-in";
 
 		nvidia,xbar = <&tegra_axbar>;
 
@@ -514,6 +516,23 @@
 			num-channel = <8>;
 			name-prefix = "d";
 			codec = "2.spdif-dit.2";
+		};
+
+		nvidia,dai-link-4 {
+			link-name = "p2382-btsco";
+			cpu-dai = <&tegra_i2s6>;
+			codec-dai = <&spdif_dit3>;
+			cpu-dai-name = "I2S6";
+			codec-dai-name = "dit-hifi";
+			format = "i2s";
+			bitclock-master;
+			frame-master;
+			bit-format = "s16_le";
+			bclk_ratio = <1>;
+			srate = <8000>;
+			num-channel = <2>;
+			name-prefix = "b";
+			codec = "3.spdif-dit.3";
 		};
 	};
 

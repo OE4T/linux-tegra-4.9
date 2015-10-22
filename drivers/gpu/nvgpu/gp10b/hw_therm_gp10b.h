@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -54,17 +54,113 @@ static inline u32 therm_use_a_r(void)
 {
 	return 0x00020798;
 }
+static inline u32 therm_use_a_ext_therm_0_enable_f(void)
+{
+	return 0x1;
+}
+static inline u32 therm_use_a_ext_therm_1_enable_f(void)
+{
+	return 0x2;
+}
+static inline u32 therm_use_a_ext_therm_2_enable_f(void)
+{
+	return 0x4;
+}
 static inline u32 therm_evt_ext_therm_0_r(void)
 {
 	return 0x00020700;
+}
+static inline u32 therm_evt_ext_therm_0_slow_factor_f(u32 v)
+{
+	return (v & 0x3f) << 24;
+}
+static inline u32 therm_evt_ext_therm_0_slow_factor_init_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 therm_evt_ext_therm_0_mode_f(u32 v)
+{
+	return (v & 0x3) << 30;
+}
+static inline u32 therm_evt_ext_therm_0_mode_normal_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_0_mode_inverted_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 therm_evt_ext_therm_0_mode_forced_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 therm_evt_ext_therm_0_mode_cleared_v(void)
+{
+	return 0x00000003;
 }
 static inline u32 therm_evt_ext_therm_1_r(void)
 {
 	return 0x00020704;
 }
+static inline u32 therm_evt_ext_therm_1_slow_factor_f(u32 v)
+{
+	return (v & 0x3f) << 24;
+}
+static inline u32 therm_evt_ext_therm_1_slow_factor_init_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 therm_evt_ext_therm_1_mode_f(u32 v)
+{
+	return (v & 0x3) << 30;
+}
+static inline u32 therm_evt_ext_therm_1_mode_normal_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_1_mode_inverted_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 therm_evt_ext_therm_1_mode_forced_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 therm_evt_ext_therm_1_mode_cleared_v(void)
+{
+	return 0x00000003;
+}
 static inline u32 therm_evt_ext_therm_2_r(void)
 {
 	return 0x00020708;
+}
+static inline u32 therm_evt_ext_therm_2_slow_factor_f(u32 v)
+{
+	return (v & 0x3f) << 24;
+}
+static inline u32 therm_evt_ext_therm_2_slow_factor_init_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 therm_evt_ext_therm_2_mode_f(u32 v)
+{
+	return (v & 0x3) << 30;
+}
+static inline u32 therm_evt_ext_therm_2_mode_normal_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_2_mode_inverted_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 therm_evt_ext_therm_2_mode_forced_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 therm_evt_ext_therm_2_mode_cleared_v(void)
+{
+	return 0x00000003;
 }
 static inline u32 therm_weight_1_r(void)
 {

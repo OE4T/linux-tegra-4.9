@@ -602,6 +602,15 @@
 #define IRQ_CHAN3_TX_IDX	9
 #define IRQ_MAX_IDX		9
 
+/* Tx DMA States */
+#define DMA_TX_STATE_STOPPED	0
+#define DMA_TX_STATE_SUSPENDED	6
+
+/* Rx DMA States */
+#define DMA_RX_STATE_STOPPED	0
+#define DMA_RX_STATE_IDLE	3
+#define DMA_RX_STATE_SUSPENDED	4
+
 /* C data types typedefs */
 
 typedef unsigned short BOOL;
@@ -1595,6 +1604,12 @@ struct eqos_prv_data {
 	 * */
 	int tcp_pkt;
 
+	u32 csr_clock_speed;
+
+	struct workqueue_struct *fbe_wq;
+	struct work_struct fbe_work;
+	u8	fbe_chan_mask;
+
 #ifdef DO_TX_ALIGN_TEST
 	u8 *ptst_buf;
 	u32 tst_buf_dma_addr;
@@ -1676,6 +1691,7 @@ int eqos_alloc_tx_buf_pg(struct eqos_prv_data *pdata,
 int eqos_handle_mem_iso_ioctl(struct eqos_prv_data *pdata, void *ptr);
 int eqos_handle_csr_iso_ioctl(struct eqos_prv_data *pdata, void *ptr);
 int eqos_handle_phy_loopback(struct eqos_prv_data *pdata, void *ptr);
+void eqos_fbe_work(struct work_struct *work);
 
 /* For debug prints*/
 #define DRV_NAME "eqos_drv.c"

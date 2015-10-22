@@ -2564,48 +2564,63 @@ static INT enable_rx_flow_ctrl(void)
 	return Y_SUCCESS;
 }
 
-static void wait_for_dma_to_get_idle(UINT qinx, bool is_rx)
+static uint get_dma_state(uint qinx, bool is_rx)
 {
-	ULONG dma_dsr0;
-	ULONG dma_dsr1;
-	ULONG dma_dsr2;
-	unsigned long timeout = jiffies + msecs_to_jiffies(10);
+	u32 dma_dsr0;
+	u32 dma_dsr1;
+	u32 dma_dsr2;
+	uint val;
+	uint lpos, hpos;
+
+	if (qinx <= 2) {
+		lpos = (is_rx ? DMA_DSR0_RPS0_LPOS : DMA_DSR0_TPS0_LPOS)
+				+ (qinx * 8);
+		hpos = (is_rx ? DMA_DSR0_RPS0_HPOS : DMA_DSR0_TPS0_HPOS)
+				+ (qinx * 8);
+		DMA_DSR0_RD(dma_dsr0);
+		val = GET_VALUE(dma_dsr0, lpos, hpos);
+	} else if (qinx <= 6) {
+		lpos = (is_rx ? DMA_DSR1_RPS3_LPOS : DMA_DSR1_TPS3_LPOS)
+				+ ((qinx-3) * 8);
+		hpos = (is_rx ? DMA_DSR1_RPS3_HPOS : DMA_DSR1_TPS3_HPOS)
+				+ ((qinx-3) * 8);
+		DMA_DSR1_RD(dma_dsr1);
+		val = GET_VALUE(dma_dsr1, lpos, hpos);
+	} else {
+		lpos = (is_rx ? DMA_DSR2_RPS7_LPOS : DMA_DSR2_TPS7_LPOS)
+				+ ((qinx-3) * 8);
+		hpos = (is_rx ? DMA_DSR2_RPS7_HPOS : DMA_DSR2_TPS7_HPOS)
+				+ ((qinx-3) * 8);
+		DMA_DSR2_RD(dma_dsr2);
+		val = GET_VALUE(dma_dsr2, lpos, hpos);
+	}
+
+	return val;
+}
+
+static void wait_for_dma_to_go_idle(uint qinx, bool is_rx)
+{
+	unsigned long timeout = jiffies + msecs_to_jiffies(20);
 	bool wait_for_idle;
-	ULONG val;
+	uint val;
 
 	/* make sure DMA is suspended or stopped before stop command */
 	do {
-		if (qinx <= 2) {
-			DMA_DSR0_RD(dma_dsr0);
-			val = GET_VALUE(dma_dsr0,
-			is_rx ? DMA_DSR0_RPS0_LPOS : DMA_DSR0_TPS0_LPOS
-			+ (qinx * 8),
-			is_rx ? DMA_DSR0_RPS0_HPOS : DMA_DSR0_TPS0_HPOS
-			+ (qinx * 8));
-		} else if (qinx <= 6) {
-			DMA_DSR1_RD(dma_dsr1);
-			val = GET_VALUE(dma_dsr1,
-			is_rx ? DMA_DSR1_RPS3_LPOS : DMA_DSR1_TPS3_LPOS
-			+ (qinx - 3) * 8,
-			is_rx ? DMA_DSR1_RPS3_HPOS : DMA_DSR1_TPS3_HPOS
-			+ (qinx - 3) * 8);
-		} else {
-			DMA_DSR2_RD(dma_dsr2);
-			val = GET_VALUE(dma_dsr2,
-			is_rx ? DMA_DSR2_RPS7_LPOS : DMA_DSR2_TPS7_LPOS,
-			is_rx ? DMA_DSR2_RPS7_HPOS : DMA_DSR2_TPS7_HPOS);
-		}
+		val = get_dma_state(qinx, is_rx);
+
 		/* wait if dma status is not suspended yet */
-		if ((is_rx && (val == 0x0 || val == 0x3 || val == 0x4)) ||
-			(!is_rx && (val == 0x0 || val == 0x6))) {
+		if ((is_rx &&
+		     ((val == DMA_RX_STATE_IDLE) ||
+		     (val == DMA_RX_STATE_SUSPENDED))) ||
+		    (!is_rx && (val == DMA_TX_STATE_SUSPENDED)))
 			wait_for_idle = false;
-		} else {
+		else {
 			wait_for_idle = true;
 			usleep_range(50, 60);
 		}
 	} while (wait_for_idle && time_is_after_jiffies(timeout));
 
-	if (time_is_before_jiffies(timeout) && wait_for_idle)
+	if (wait_for_idle)
 		printk(KERN_ALERT "%s%dDMA is not suspended\n",
 			is_rx ? "Rx" : "Tx", qinx);
 }
@@ -2620,13 +2635,10 @@ static void wait_for_dma_to_get_idle(UINT qinx, bool is_rx)
 static INT stop_dma_rx(UINT qinx)
 {
 	/* wait for dma to get idle or suspended */
-	wait_for_dma_to_get_idle(qinx, true);
+	wait_for_dma_to_go_idle(qinx, true);
 
 	/* issue Rx dma stop command */
 	DMA_RCR_ST_WR(qinx, 0);
-
-	/* wait for dma to get idle or suspended */
-	wait_for_dma_to_get_idle(qinx, true);
 
 	return Y_SUCCESS;
 }
@@ -2656,34 +2668,61 @@ static INT start_dma_rx(UINT qinx)
 
 static INT stop_dma_tx(struct eqos_prv_data *pdata, UINT qinx)
 {
-	struct eqos_tx_wrapper_descriptor *tx_desc_data =
+	struct eqos_tx_wrapper_descriptor *ptxdwr =
 		GET_TX_WRAPPER_DESC(qinx);
-	INT start = tx_desc_data->dirty_tx;
-	INT end = tx_desc_data->cur_tx;
-	struct s_tx_normal_desc *TX_NORMAL_DESC;
-	UINT own, i;
 
-	/* set OWN to 0 for all TX descriptor currently owned by HW */
-	for (i = start;; i++) {
-		if (i > TX_DESC_CNT)
-			i = 0;
-		if (i == end)
-			break;
-		TX_NORMAL_DESC = GET_TX_DESC_PTR(qinx, i);
-		TX_NORMAL_DESC_TDES3_OWN_RD(TX_NORMAL_DESC->TDES3, own);
+	int start_idx = ptxdwr->dirty_tx;
+	int end_idx = ptxdwr->cur_tx;
+	uint own, fd, idx, cnt;
+	t_tx_normal_desc *ptxd;
+
+	/* find desc hw is working on */
+	idx = start_idx;
+	while (idx != end_idx) {
+		ptxd = GET_TX_DESC_PTR(qinx, idx);
+		TX_NORMAL_DESC_TDES3_OWN_RD(ptxd->TDES3, own);
 		if (own)
-			TX_NORMAL_DESC_TDES3_OWN_WR(
-				TX_NORMAL_DESC->TDES3, 0x0);
+			break;
+		idx = INCR_TX_LOCAL_INDEX(idx, 1);
+	}
+	if (idx == end_idx)
+		goto done;
+
+	/* skip past 4 descriptors to avoid possible race condtions */
+	cnt = 4;
+	while (cnt) {
+		idx = INCR_TX_LOCAL_INDEX(idx, 1);
+		if (idx == end_idx)
+			goto done;
+		cnt--;
 	}
 
+	/* find desc which is start of packet */
+	while (idx != end_idx) {
+		ptxd = GET_TX_DESC_PTR(qinx, idx);
+		TX_NORMAL_DESC_TDES3_FD_RD(ptxd->TDES3, fd);
+		if (fd) {
+			/* turn off ownership bit */
+			TX_NORMAL_DESC_TDES3_OWN_WR(ptxd->TDES3, 0);
+			idx = INCR_TX_LOCAL_INDEX(idx, 1);
+			break;
+		}
+		idx = INCR_TX_LOCAL_INDEX(idx, 1);
+	}
+
+	/* turn off ownership bit of remaining desc in hw owned region */
+	while (idx != end_idx) {
+		ptxd = GET_TX_DESC_PTR(qinx, idx);
+		TX_NORMAL_DESC_TDES3_OWN_WR(ptxd->TDES3, 0);
+		idx = INCR_TX_LOCAL_INDEX(idx, 1);
+	}
+done:
+
 	/* wait for dma to get idle or suspended */
-	wait_for_dma_to_get_idle(qinx, false);
+	wait_for_dma_to_go_idle(qinx, false);
 
 	/* issue Tx dma stop command */
 	DMA_TCR_ST_WR(qinx, 0);
-
-	/* wait for dma to get idle or suspended */
-	wait_for_dma_to_get_idle(qinx, false);
 
 	return Y_SUCCESS;
 }

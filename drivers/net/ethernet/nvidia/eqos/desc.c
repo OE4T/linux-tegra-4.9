@@ -557,14 +557,23 @@ static void eqos_tx_free_mem(struct eqos_prv_data *pdata)
 static void eqos_tx_skb_free_mem_single_q(struct eqos_prv_data *pdata,
 							UINT qinx)
 {
-	UINT i;
+	struct eqos_tx_wrapper_descriptor *desc_data =
+	    GET_TX_WRAPPER_DESC(qinx);
 
-	DBGPR("-->eqos_tx_skb_free_mem_single_q: qinx = %u\n", qinx);
+	DBGPR("-->%s(): qInx = %u\n", __func__, qInx);
 
-	for (i = 0; i < TX_DESC_CNT; i++)
-		eqos_unmap_tx_skb(pdata, GET_TX_BUF_PTR(qinx, i));
+	/* Unmap and return skb for tx desc/bufs owned by hw.
+	 * Caller ensures that hw is no longer accessing these descriptors
+	 */
+	while (desc_data->tx_pkt_queued > 0) {
+		eqos_unmap_tx_skb(pdata,
+				  GET_TX_BUF_PTR(qinx, desc_data->dirty_tx));
 
-	DBGPR("<--eqos_tx_skb_free_mem_single_q\n");
+		INCR_TX_DESC_INDEX(desc_data->dirty_tx, 1);
+		desc_data->free_desc_cnt++;
+		desc_data->tx_pkt_queued--;
+	}
+	DBGPR("<--%s()\n", __func__);
 }
 
 /*!

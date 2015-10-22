@@ -194,7 +194,7 @@
  * no EEE supported PHY card
  * */
 //#define DWC_ETH_QOS_CUSTOMIZED_EEE_TEST
-//#define DWC_ETH_QOS_ENABLE_EEE
+#define DWC_ETH_QOS_ENABLE_EEE
 
 /* Uncomment below enable tx buffer alignment test code */
 /* #define DO_TX_ALIGN_TEST */

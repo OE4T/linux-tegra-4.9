@@ -41,7 +41,7 @@
  * more details.
  */
 
-/*!@file: DWC_ETH_QOS_mdio.c
+/*!@file: eqos_mdio.c
  * @brief: Driver functions.
  */
 #include "yheader.h"
@@ -64,13 +64,13 @@
 * \retval  1 - if the feature is not defined.
 */
 
-INT DWC_ETH_QOS_mdio_read_direct(struct DWC_ETH_QOS_prv_data *pdata,
+INT eqos_mdio_read_direct(struct eqos_prv_data *pdata,
 				 int phyaddr, int phyreg, int *phydata)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	int phy_reg_read_status;
 
-	DBGPR_MDIO("--> DWC_ETH_QOS_mdio_read_direct\n");
+	DBGPR_MDIO("--> eqos_mdio_read_direct\n");
 
 	if (hw_if->read_phy_regs) {
 		phy_reg_read_status =
@@ -81,7 +81,7 @@ INT DWC_ETH_QOS_mdio_read_direct(struct DWC_ETH_QOS_prv_data *pdata,
 		       DEV_NAME);
 	}
 
-	DBGPR_MDIO("<-- DWC_ETH_QOS_mdio_read_direct\n");
+	DBGPR_MDIO("<-- eqos_mdio_read_direct\n");
 
 	return phy_reg_read_status;
 }
@@ -104,13 +104,13 @@ INT DWC_ETH_QOS_mdio_read_direct(struct DWC_ETH_QOS_prv_data *pdata,
 * \retval  1 - if the feature is not defined.
 */
 
-INT DWC_ETH_QOS_mdio_write_direct(struct DWC_ETH_QOS_prv_data *pdata,
+INT eqos_mdio_write_direct(struct eqos_prv_data *pdata,
 				  int phyaddr, int phyreg, int phydata)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	int phy_reg_write_status;
 
-	DBGPR_MDIO("--> DWC_ETH_QOS_mdio_write_direct\n");
+	DBGPR_MDIO("--> eqos_mdio_write_direct\n");
 
 	if (hw_if->write_phy_regs) {
 		phy_reg_write_status =
@@ -121,7 +121,7 @@ INT DWC_ETH_QOS_mdio_write_direct(struct DWC_ETH_QOS_prv_data *pdata,
 		       DEV_NAME);
 	}
 
-	DBGPR_MDIO("<-- DWC_ETH_QOS_mdio_write_direct\n");
+	DBGPR_MDIO("<-- eqos_mdio_write_direct\n");
 
 	return phy_reg_write_status;
 }
@@ -141,14 +141,14 @@ INT DWC_ETH_QOS_mdio_write_direct(struct DWC_ETH_QOS_prv_data *pdata,
 * \retval  - value read from given phy register
 */
 
-static INT DWC_ETH_QOS_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
+static INT eqos_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 {
 	struct net_device *dev = bus->priv;
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	int phydata;
 
-	DBGPR_MDIO("--> DWC_ETH_QOS_mdio_read: phyaddr = %d, phyreg = %d\n",
+	DBGPR_MDIO("--> eqos_mdio_read: phyaddr = %d, phyreg = %d\n",
 	      phyaddr, phyreg);
 
 	if (hw_if->read_phy_regs) {
@@ -158,7 +158,7 @@ static INT DWC_ETH_QOS_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 		       DEV_NAME);
 	}
 
-	DBGPR_MDIO("<-- DWC_ETH_QOS_mdio_read: phydata = %#x\n", phydata);
+	DBGPR_MDIO("<-- eqos_mdio_read: phydata = %#x\n", phydata);
 
 	return phydata;
 }
@@ -178,15 +178,15 @@ static INT DWC_ETH_QOS_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 * \return 0 on success and -ve number on failure.
 */
 
-static INT DWC_ETH_QOS_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
+static INT eqos_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 				  u16 phydata)
 {
 	struct net_device *dev = bus->priv;
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	INT ret = Y_SUCCESS;
 
-	DBGPR_MDIO("--> DWC_ETH_QOS_mdio_write\n");
+	DBGPR_MDIO("--> eqos_mdio_write\n");
 
 	if (hw_if->write_phy_regs) {
 		hw_if->write_phy_regs(phyaddr, phyreg, phydata);
@@ -196,7 +196,7 @@ static INT DWC_ETH_QOS_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 		       DEV_NAME);
 	}
 
-	DBGPR_MDIO("<-- DWC_ETH_QOS_mdio_write\n");
+	DBGPR_MDIO("<-- eqos_mdio_write\n");
 
 	return ret;
 }
@@ -213,16 +213,16 @@ static INT DWC_ETH_QOS_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 * \return 0 on success and -ve number on failure.
 */
 
-static INT DWC_ETH_QOS_mdio_reset(struct mii_bus *bus)
+static INT eqos_mdio_reset(struct mii_bus *bus)
 {
 	struct net_device *dev = bus->priv;
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	INT phydata;
 
-	DBGPR_MDIO("-->DWC_ETH_QOS_mdio_reset: phyaddr : %d\n", pdata->phyaddr);
+	DBGPR_MDIO("-->eqos_mdio_reset: phyaddr : %d\n", pdata->phyaddr);
 
-#if 0 //def DWC_ETH_QOS_CONFIG_PGTEST
+#if 0 //def EQOS_CONFIG_PGTEST
 	printk(KERN_ALERT "PHY Programming for Autoneg disable\n");
 	hw_if->read_phy_regs(pdata->phyaddr, MII_BMCR, &phydata);
 	phydata &= ~(1 << 12);
@@ -243,14 +243,14 @@ static INT DWC_ETH_QOS_mdio_reset(struct mii_bus *bus)
 		hw_if->read_phy_regs(pdata->phyaddr, MII_BMCR, &phydata);
 	} while ((phydata >= 0) && (phydata & BMCR_RESET));
 
-#if 0 //def DWC_ETH_QOS_CONFIG_PGTEST
+#if 0 //def EQOS_CONFIG_PGTEST
 	printk(KERN_ALERT "PHY Programming for Loopback\n");
 	hw_if->read_phy_regs(pdata->phyaddr, MII_BMCR, &phydata);
 	phydata |= (1 << 14);
 	hw_if->write_phy_regs(pdata->phyaddr, MII_BMCR, phydata);
 #endif
 
-	DBGPR_MDIO("<--DWC_ETH_QOS_mdio_reset\n");
+	DBGPR_MDIO("<--eqos_mdio_reset\n");
 
 	return 0;
 }
@@ -264,75 +264,75 @@ static INT DWC_ETH_QOS_mdio_reset(struct mii_bus *bus)
  * \return 0
  */
 
-void dump_phy_registers(struct DWC_ETH_QOS_prv_data *pdata)
+void dump_phy_registers(struct eqos_prv_data *pdata)
 {
 	int phydata = 0;
 
 	printk(KERN_ALERT
 	       "\n************* PHY Reg dump *************************\n");
-	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_BMCR, &phydata);
+	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_BMCR, &phydata);
 	printk(KERN_ALERT
 	       "Phy Control Reg(Basic Mode Control Reg) (%#x) = %#x\n",
 	       MII_BMCR, phydata);
 
-	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_BMSR, &phydata);
+	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_BMSR, &phydata);
 	printk(KERN_ALERT "Phy Status Reg(Basic Mode Status Reg) (%#x) = %#x\n",
 	       MII_BMSR, phydata);
 
-	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_PHYSID1,
+	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_PHYSID1,
 	    &phydata);
 	printk(KERN_ALERT "Phy Id (PHYS ID 1) (%#x)= %#x\n", MII_PHYSID1,
 	    phydata);
 
-	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_PHYSID2,
+	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_PHYSID2,
 	    &phydata);
 	printk(KERN_ALERT "Phy Id (PHYS ID 2) (%#x)= %#x\n", MII_PHYSID2,
 	    phydata);
 
-	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_ADVERTISE,
+	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_ADVERTISE,
 	    &phydata);
 	printk(KERN_ALERT "Auto-nego Adv (Advertisement Control Reg)"\
 	    " (%#x) = %#x\n", MII_ADVERTISE, phydata);
 
 	/* read Phy Control Reg */
-	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_LPA,
+	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_LPA,
 	    &phydata);
 	printk(KERN_ALERT "Auto-nego Lap (Link Partner Ability Reg)"\
 	    " (%#x)= %#x\n", MII_LPA, phydata);
 
-	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_EXPANSION,
+	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_EXPANSION,
 	    &phydata);
 	printk(KERN_ALERT "Auto-nego Exp (Extension Reg)"\
 	    "(%#x) = %#x\n", MII_EXPANSION, phydata);
 
-	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr,
-	    DWC_ETH_QOS_AUTO_NEGO_NP, &phydata);
+	eqos_mdio_read_direct(pdata, pdata->phyaddr,
+	    EQOS_AUTO_NEGO_NP, &phydata);
 	printk(KERN_ALERT "Auto-nego Np (%#x) = %#x\n",
-	    DWC_ETH_QOS_AUTO_NEGO_NP, phydata);
+	    EQOS_AUTO_NEGO_NP, phydata);
 
-	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_ESTATUS,
+	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_ESTATUS,
 				     &phydata);
 	printk(KERN_ALERT "Extended Status Reg (%#x) = %#x\n", MII_ESTATUS,
 	       phydata);
 
-	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_CTRL1000,
+	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_CTRL1000,
 	    &phydata);
 	printk(KERN_ALERT "1000 Ctl Reg (1000BASE-T Control Reg)"\
 	    "(%#x) = %#x\n", MII_CTRL1000, phydata);
 
-	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, MII_STAT1000,
+	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_STAT1000,
 	    &phydata);
 	printk(KERN_ALERT "1000 Sts Reg (1000BASE-T Status)(%#x) = %#x\n",
 	       MII_STAT1000, phydata);
 
-	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr, DWC_ETH_QOS_PHY_CTL,
+	eqos_mdio_read_direct(pdata, pdata->phyaddr, EQOS_PHY_CTL,
 			&phydata);
-	printk(KERN_ALERT "PHY Ctl Reg (%#x) = %#x\n", DWC_ETH_QOS_PHY_CTL,
+	printk(KERN_ALERT "PHY Ctl Reg (%#x) = %#x\n", EQOS_PHY_CTL,
 	    phydata);
 
-	DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr,
-	    DWC_ETH_QOS_PHY_STS, &phydata);
-	printk(KERN_ALERT "PHY Sts Reg (%#x) = %#x\n", DWC_ETH_QOS_PHY_STS,
+	eqos_mdio_read_direct(pdata, pdata->phyaddr,
+	    EQOS_PHY_STS, &phydata);
+	printk(KERN_ALERT "PHY Sts Reg (%#x) = %#x\n", EQOS_PHY_STS,
 	    phydata);
 
 	printk(KERN_ALERT
@@ -351,9 +351,9 @@ void dump_phy_registers(struct DWC_ETH_QOS_prv_data *pdata)
 * \return void
 */
 
-static void DWC_ETH_QOS_adjust_link(struct net_device *dev)
+static void eqos_adjust_link(struct net_device *dev)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct phy_device *phydev = pdata->phydev;
 	unsigned long flags;
@@ -362,7 +362,7 @@ static void DWC_ETH_QOS_adjust_link(struct net_device *dev)
 	if (phydev == NULL)
 		return;
 
-	DBGPR_MDIO("-->DWC_ETH_QOS_adjust_link. address %d link %d\n", phydev->addr,
+	DBGPR_MDIO("-->eqos_adjust_link. address %d link %d\n", phydev->addr,
 	      phydev->link);
 
 	spin_lock_irqsave(&pdata->lock, flags);
@@ -376,18 +376,18 @@ static void DWC_ETH_QOS_adjust_link(struct net_device *dev)
 				hw_if->set_full_duplex();
 			else {
 				hw_if->set_half_duplex();
-#ifdef DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
+#ifdef EQOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
 				/* For Synopsys testing and debugging only */
 				{
 					UINT phydata;
 
 					/* setting 'Assert CRS on transmit' */
 					phydata = 0;
-					DWC_ETH_QOS_mdio_read_direct(pdata, pdata->phyaddr,
-						DWC_ETH_QOS_PHY_CTL, &phydata);
+					eqos_mdio_read_direct(pdata, pdata->phyaddr,
+						EQOS_PHY_CTL, &phydata);
 					phydata |= (1 << 11);
-					DWC_ETH_QOS_mdio_write_direct(pdata, pdata->phyaddr,
-						DWC_ETH_QOS_PHY_CTL, phydata);
+					eqos_mdio_write_direct(pdata, pdata->phyaddr,
+						EQOS_PHY_CTL, phydata);
 				}
 #endif
 			}
@@ -398,7 +398,7 @@ static void DWC_ETH_QOS_adjust_link(struct net_device *dev)
 		if (pdata->dt_cfg.pause_frames == PAUSE_FRAMES_ENABLED)
 			if (phydev->pause || phydev->asym_pause) {
 				if (pdata->flow_ctrl != pdata->oldflow_ctrl)
-					DWC_ETH_QOS_configure_flow_ctrl(pdata);
+					eqos_configure_flow_ctrl(pdata);
 			}
 
 		if (phydev->speed != pdata->speed) {
@@ -436,13 +436,13 @@ static void DWC_ETH_QOS_adjust_link(struct net_device *dev)
 	/* At this stage, it could be need to setup the EEE or adjust some
 	 * MAC related HW registers.
 	 * */
-#ifdef DWC_ETH_QOS_ENABLE_EEE
-	pdata->eee_enabled = DWC_ETH_QOS_eee_init(pdata);
+#ifdef EQOS_ENABLE_EEE
+	pdata->eee_enabled = eqos_eee_init(pdata);
 #endif
 
 	spin_unlock_irqrestore(&pdata->lock, flags);
 
-	DBGPR_MDIO("<--DWC_ETH_QOS_adjust_link\n");
+	DBGPR_MDIO("<--eqos_adjust_link\n");
 }
 
 /*!
@@ -458,14 +458,14 @@ static void DWC_ETH_QOS_adjust_link(struct net_device *dev)
 * \retval 0 on success & negative number on failure.
 */
 
-static int DWC_ETH_QOS_init_phy(struct net_device *dev)
+static int eqos_init_phy(struct net_device *dev)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct phy_device *phydev = NULL;
 	char phy_id_fmt[MII_BUS_ID_SIZE + 3];
 	char bus_id[MII_BUS_ID_SIZE];
 
-	DBGPR_MDIO("-->DWC_ETH_QOS_init_phy\n");
+	DBGPR_MDIO("-->eqos_init_phy\n");
 
 	pdata->oldlink = 0;
 	pdata->speed = 0;
@@ -478,7 +478,7 @@ static int DWC_ETH_QOS_init_phy(struct net_device *dev)
 
 	DBGPR_MDIO("trying to attach to %s\n", phy_id_fmt);
 
-	phydev = phy_connect(dev, phy_id_fmt, &DWC_ETH_QOS_adjust_link,
+	phydev = phy_connect(dev, phy_id_fmt, &eqos_adjust_link,
 			     pdata->interface);
 	if (IS_ERR(phydev)) {
 		printk(KERN_ALERT "%s: Could not attach to PHY\n", dev->name);
@@ -493,7 +493,7 @@ static int DWC_ETH_QOS_init_phy(struct net_device *dev)
 	if ((pdata->interface == PHY_INTERFACE_MODE_GMII) ||
 		(pdata->interface == PHY_INTERFACE_MODE_RGMII)) {
 		phydev->supported = PHY_GBIT_FEATURES;
-#ifdef DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
+#ifdef EQOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
 		phydev->supported &= ~SUPPORTED_1000baseT_Full;
 #endif
 	} else if ((pdata->interface == PHY_INTERFACE_MODE_MII) ||
@@ -501,14 +501,14 @@ static int DWC_ETH_QOS_init_phy(struct net_device *dev)
 		phydev->supported = PHY_BASIC_FEATURES;
 	}
 
-#ifndef DWC_ETH_QOS_CONFIG_PGTEST
+#ifndef EQOS_CONFIG_PGTEST
 	phydev->supported |= (SUPPORTED_Pause | SUPPORTED_Asym_Pause);
 #endif
 	if (pdata->dt_cfg.pause_frames == PAUSE_FRAMES_DISABLED)
 		phydev->supported &= ~(SUPPORTED_Pause | SUPPORTED_Asym_Pause);
 
     /* Lets Make the code support for both 100M and Giga bit */
-//#ifdef DWC_ETH_QOS_CONFIG_PGTEST
+//#ifdef EQOS_CONFIG_PGTEST
 //	phydev->supported = PHY_BASIC_FEATURES;
 //#endif
 
@@ -520,7 +520,7 @@ static int DWC_ETH_QOS_init_phy(struct net_device *dev)
 	pdata->phydev = phydev;
 	phy_start(pdata->phydev);
 
-	DBGPR_MDIO("<--DWC_ETH_QOS_init_phy\n");
+	DBGPR_MDIO("<--eqos_init_phy\n");
 
 	return 0;
 }
@@ -536,22 +536,22 @@ static int DWC_ETH_QOS_init_phy(struct net_device *dev)
 * \return 0 on success and -ve on failure.
 */
 
-int DWC_ETH_QOS_mdio_register(struct net_device *dev)
+int eqos_mdio_register(struct net_device *dev)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct mii_bus *new_bus = NULL;
 	int phyaddr = 0;
 	unsigned short phy_detected = 0;
 	int ret = Y_SUCCESS, i;
 
-	DBGPR_MDIO("-->DWC_ETH_QOS_mdio_register\n");
+	DBGPR_MDIO("-->eqos_mdio_register\n");
 
 	/* find the phy ID or phy address which is connected to our MAC */
 	for (phyaddr = 0; phyaddr < 32; phyaddr++) {
 		int phy_reg_read_status, mii_status;
 
 		phy_reg_read_status =
-		    DWC_ETH_QOS_mdio_read_direct(pdata, phyaddr, MII_BMSR,
+		    eqos_mdio_read_direct(pdata, phyaddr, MII_BMSR,
 			&mii_status);
 		if (phy_reg_read_status == 0) {
 			if (mii_status != 0x0000 && mii_status != 0xffff) {
@@ -582,9 +582,9 @@ int DWC_ETH_QOS_mdio_register(struct net_device *dev)
 	}
 
 	new_bus->name = "dwc_phy";
-	new_bus->read = DWC_ETH_QOS_mdio_read;
-	new_bus->write = DWC_ETH_QOS_mdio_write;
-	new_bus->reset = DWC_ETH_QOS_mdio_reset;
+	new_bus->read = eqos_mdio_read;
+	new_bus->write = eqos_mdio_write;
+	new_bus->reset = eqos_mdio_reset;
 	snprintf(new_bus->id, MII_BUS_ID_SIZE, "%s-%x", new_bus->name,
 		 pdata->bus_id);
 	new_bus->priv = dev;
@@ -615,18 +615,18 @@ int DWC_ETH_QOS_mdio_register(struct net_device *dev)
 	}
 	pdata->mii = new_bus;
 
-	ret = DWC_ETH_QOS_init_phy(dev);
+	ret = eqos_init_phy(dev);
 	if (unlikely(ret)) {
 		printk(KERN_ALERT "Cannot attach to PHY (error: %d)\n", ret);
 		goto err_out_phy_connect;
 	}
 
-	DBGPR_MDIO("<--DWC_ETH_QOS_mdio_register\n");
+	DBGPR_MDIO("<--eqos_mdio_register\n");
 
 	return ret;
 
  err_out_phy_connect:
-	DWC_ETH_QOS_mdio_unregister(dev);
+	eqos_mdio_unregister(dev);
 	return ret;
 }
 
@@ -641,11 +641,11 @@ int DWC_ETH_QOS_mdio_register(struct net_device *dev)
 * \return void
 */
 
-void DWC_ETH_QOS_mdio_unregister(struct net_device *dev)
+void eqos_mdio_unregister(struct net_device *dev)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 
-	DBGPR_MDIO("-->DWC_ETH_QOS_mdio_unregister\n");
+	DBGPR_MDIO("-->eqos_mdio_unregister\n");
 
 	if (pdata->phydev) {
 		phy_stop(pdata->phydev);
@@ -658,5 +658,5 @@ void DWC_ETH_QOS_mdio_unregister(struct net_device *dev)
 	mdiobus_free(pdata->mii);
 	pdata->mii = NULL;
 
-	DBGPR_MDIO("<--DWC_ETH_QOS_mdio_unregister\n");
+	DBGPR_MDIO("<--eqos_mdio_unregister\n");
 }

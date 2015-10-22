@@ -40,9 +40,9 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
-#ifndef __DWC_ETH_QOS__YHEADER__
+#ifndef __EQOS__YHEADER__
 
-#define __DWC_ETH_QOS__YHEADER__
+#define __EQOS__YHEADER__
 
 /* OS Specific declarations and definitions */
 
@@ -94,10 +94,10 @@
 #define L32(data) ((data)&0xFFFFFFFF)
 #define H32(data) (((data)&0xFFFFFFFF00000000)>>32)
 #else
-#define DWC_ETH_QOS_DMA_32BIT
+#define EQOS_DMA_32BIT
 #endif
 #if defined(CONFIG_VLAN_8021Q) || defined(CONFIG_VLAN_8021Q_MODULE)
-#define DWC_ETH_QOS_ENABLE_VLAN_TAG
+#define EQOS_ENABLE_VLAN_TAG
 //#define ENABLE_VLAN_FILTER
 #include <linux/if_vlan.h>
 #endif
@@ -110,37 +110,37 @@
 #include <linux/platform_device.h>
 
 /* QOS Version Control Macros */
-//#define DWC_ETH_QOS_VER_4_0  /* Default Configuration is for QOS version 4.1 and above */
+//#define EQOS_VER_4_0  /* Default Configuration is for QOS version 4.1 and above */
 
 /* Macro definitions*/
 
 #include <asm-generic/errno.h>
 
 #ifdef CONFIG_PGTEST_OBJ
-#define DWC_ETH_QOS_CONFIG_PGTEST
+#define EQOS_CONFIG_PGTEST
 #endif
 
 #ifdef CONFIG_PTPSUPPORT_OBJ
-#define DWC_ETH_QOS_CONFIG_PTP
+#define EQOS_CONFIG_PTP
 #endif
 
 #ifdef CONFIG_DEBUGFS_OBJ
-#define DWC_ETH_QOS_CONFIG_DEBUGFS
+#define EQOS_CONFIG_DEBUGFS
 #endif
 
-#ifdef DWC_ETH_QOS_CONFIG_PGTEST
+#ifdef EQOS_CONFIG_PGTEST
 
-#define DWC_ETH_QOS_DA_SA 12
-#define DWC_ETH_QOS_TYPE 2
-#define DWC_ETH_QOS_VLAN_TAG 4
-#define DWC_ETH_QOS_ETH_HDR_AVB (DWC_ETH_QOS_DA_SA + \
-		DWC_ETH_QOS_TYPE + \
-		DWC_ETH_QOS_VLAN_TAG)
+#define EQOS_DA_SA 12
+#define EQOS_TYPE 2
+#define EQOS_VLAN_TAG 4
+#define EQOS_ETH_HDR_AVB (EQOS_DA_SA + \
+		EQOS_TYPE + \
+		EQOS_VLAN_TAG)
 
-#define DWC_ETH_QOS_PG_FRAME_SIZE (pdata->dev->mtu + DWC_ETH_QOS_ETH_HDR_AVB)
-#define DWC_ETH_QOS_AVTYPE 0x22f0
+#define EQOS_PG_FRAME_SIZE (pdata->dev->mtu + EQOS_ETH_HDR_AVB)
+#define EQOS_AVTYPE 0x22f0
 
-#endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
+#endif /* end of EQOS_CONFIG_PGTEST */
 
 /* Enable PBLx8 setting */
 #define PBLx8
@@ -164,56 +164,56 @@
 #endif
 
 /* NOTE: Uncomment below line for TX and RX DESCRIPTOR DUMP in KERNEL LOG */
-//#define DWC_ETH_QOS_ENABLE_TX_DESC_DUMP
-//#define DWC_ETH_QOS_ENABLE_RX_DESC_DUMP
+//#define EQOS_ENABLE_TX_DESC_DUMP
+//#define EQOS_ENABLE_RX_DESC_DUMP
 
 /* NOTE: Uncomment below line for TX and RX PACKET DUMP in KERNEL LOG */
-//#define DWC_ETH_QOS_ENABLE_TX_PKT_DUMP
-//#define DWC_ETH_QOS_ENABLE_RX_PKT_DUMP
+//#define EQOS_ENABLE_TX_PKT_DUMP
+//#define EQOS_ENABLE_RX_PKT_DUMP
 
 //#define ENABLE_CHANNEL_DATA_CHECK
 #define ENABLE_VLAN_TAG_INSERTION
 
 /* Uncomment below macro definitions for testing corresponding IP features in driver */
-#define DWC_ETH_QOS_QUEUE_SELECT_ALGO
-//#define DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT
-//#define DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
-#define DWC_ETH_QOS_TXPOLLING_MODE_ENABLE
+#define EQOS_QUEUE_SELECT_ALGO
+//#define EQOS_CERTIFICATION_PKTBURSTCNT
+//#define EQOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
+#define EQOS_TXPOLLING_MODE_ENABLE
 
-//#ifdef DWC_ETH_QOS_CONFIG_PTP
-//#undef DWC_ETH_QOS_TXPOLLING_MODE_ENABLE
+//#ifdef EQOS_CONFIG_PTP
+//#undef EQOS_TXPOLLING_MODE_ENABLE
 //#endif
 
 /* Enable this to have support for only 1588 V2 VLAN un-TAGGED ptp packets */
 //#define DWC_1588_VLAN_UNTAGGED
 
 /* Uncomment below macro to enable Double VLAN support. */
-//#define DWC_ETH_QOS_ENABLE_DVLAN
+//#define EQOS_ENABLE_DVLAN
 
 /* Uncomment below macro to test EEE feature Tx path with
  * no EEE supported PHY card
  * */
-//#define DWC_ETH_QOS_CUSTOMIZED_EEE_TEST
-#define DWC_ETH_QOS_ENABLE_EEE
+//#define EQOS_CUSTOMIZED_EEE_TEST
+#define EQOS_ENABLE_EEE
 
 /* Uncomment below enable tx buffer alignment test code */
 /* #define DO_TX_ALIGN_TEST */
 
-#ifdef DWC_ETH_QOS_CUSTOMIZED_EEE_TEST
-#undef DWC_ETH_QOS_TXPOLLING_MODE_ENABLE
+#ifdef EQOS_CUSTOMIZED_EEE_TEST
+#undef EQOS_TXPOLLING_MODE_ENABLE
 #endif
 
 
-#ifdef DWC_ETH_QOS_CONFIG_PGTEST
-#undef DWC_ETH_QOS_TXPOLLING_MODE_ENABLE
+#ifdef EQOS_CONFIG_PGTEST
+#undef EQOS_TXPOLLING_MODE_ENABLE
 #endif
 
-#ifdef DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
-#define DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT
+#ifdef EQOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
+#define EQOS_CERTIFICATION_PKTBURSTCNT
 #endif
 
-#ifdef DWC_ETH_QOS_CERTIFICATION_PKTBURSTCNT
-#undef DWC_ETH_QOS_TXPOLLING_MODE_ENABLE
+#ifdef EQOS_CERTIFICATION_PKTBURSTCNT
+#undef EQOS_TXPOLLING_MODE_ENABLE
 #endif
 
 /* NOTE: Uncomment below line for function trace log messages in KERNEL LOG */
@@ -264,8 +264,8 @@
 #define MIN_RX_DESC_CNT 16
 #define TX_BUF_SIZE 1536
 #define RX_BUF_SIZE 1568
-#define DWC_ETH_QOS_MAX_LRO_DESC 16
-#define DWC_ETH_QOS_MAX_LRO_AGGR 32
+#define EQOS_MAX_LRO_DESC 16
+#define EQOS_MAX_LRO_AGGR 32
 
 #define MIN_PACKET_SIZE 60
 
@@ -273,7 +273,7 @@
 #define MAX_CHANS	4
 
 /*
-#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
+#ifdef EQOS_ENABLE_VLAN_TAG
 #define MAX_PACKET_SIZE VLAN_ETH_FRAME_LEN
 #else
 #define MAX_PACKET_SIZE 1514
@@ -281,21 +281,21 @@
 */
 
 /* RX header size for split header */
-#define DWC_ETH_QOS_HDR_SIZE_64B   64   /* 64 bytes */
-#define DWC_ETH_QOS_HDR_SIZE_128B  128  /* 128 bytes */
-#define DWC_ETH_QOS_HDR_SIZE_256B  256  /* 256 bytes */
-#define DWC_ETH_QOS_HDR_SIZE_512B  512  /* 512 bytes */
-#define DWC_ETH_QOS_HDR_SIZE_1024B 1024 /* 1024 bytes */
+#define EQOS_HDR_SIZE_64B   64   /* 64 bytes */
+#define EQOS_HDR_SIZE_128B  128  /* 128 bytes */
+#define EQOS_HDR_SIZE_256B  256  /* 256 bytes */
+#define EQOS_HDR_SIZE_512B  512  /* 512 bytes */
+#define EQOS_HDR_SIZE_1024B 1024 /* 1024 bytes */
 
-#define DWC_ETH_QOS_MAX_HDR_SIZE DWC_ETH_QOS_HDR_SIZE_256B
+#define EQOS_MAX_HDR_SIZE EQOS_HDR_SIZE_256B
 
 #define MAX_MULTICAST_LIST 14
 #define RX_DESC_DATA_LENGTH_LBIT 0
 #define RX_DESC_DATA_LENGTH 0x7fff
-#define DWC_ETH_QOS_TX_FLAGS_IP_PKT 0x00000001
-#define DWC_ETH_QOS_TX_FLAGS_TCP_PKT 0x00000002
+#define EQOS_TX_FLAGS_IP_PKT 0x00000001
+#define EQOS_TX_FLAGS_TCP_PKT 0x00000002
 
-#define DEV_NAME "DWC_ETH_QOS"
+#define DEV_NAME "eqos"
 #define DEV_ADDRESS 0xffffffff
 #define DEV_REG_MMAP_SIZE 0x14e8
 
@@ -319,10 +319,10 @@
 
 
 /* MII/GMII register offset */
-#define DWC_ETH_QOS_AUTO_NEGO_NP    0x0007
-#define DWC_ETH_QOS_PHY_CTL     0x0010
-#define DWC_ETH_QOS_PHY_STS     0x0011
-#define DWC_ETH_QOS_AUX_CTL     0x0018
+#define EQOS_AUTO_NEGO_NP    0x0007
+#define EQOS_PHY_CTL     0x0010
+#define EQOS_PHY_STS     0x0011
+#define EQOS_AUX_CTL     0x0018
 
 /* Broadcom phy regs */
 #define BCM_RX_ERR_CNT_REG			0x12
@@ -370,76 +370,76 @@
 #define CL45_CLK_STOP_EN	0x400 /* Enable xMII Clock Stop */
 
 /* Default MTL queue operation mode values */
-#define DWC_ETH_QOS_Q_DISABLED	0x0
-#define DWC_ETH_QOS_Q_AVB 			0x1
-#define DWC_ETH_QOS_Q_DCB 			0x2
-#define DWC_ETH_QOS_Q_GENERIC 	0x3
+#define EQOS_Q_DISABLED	0x0
+#define EQOS_Q_AVB 			0x1
+#define EQOS_Q_DCB 			0x2
+#define EQOS_Q_GENERIC 	0x3
 
 /* Driver PMT macros */
-#define DWC_ETH_QOS_DRIVER_CONTEXT 1
-#define DWC_ETH_QOS_IOCTL_CONTEXT 2
-#define DWC_ETH_QOS_MAGIC_WAKEUP	(1 << 0)
-#define DWC_ETH_QOS_REMOTE_WAKEUP	(1 << 1)
-#define DWC_ETH_QOS_POWER_DOWN_TYPE(x)	\
-		((x->power_down_type & DWC_ETH_QOS_MAGIC_WAKEUP) ? \
+#define EQOS_DRIVER_CONTEXT 1
+#define EQOS_IOCTL_CONTEXT 2
+#define EQOS_MAGIC_WAKEUP	(1 << 0)
+#define EQOS_REMOTE_WAKEUP	(1 << 1)
+#define EQOS_POWER_DOWN_TYPE(x)	\
+		((x->power_down_type & EQOS_MAGIC_WAKEUP) ? \
 		"Magic packet" : \
-		((x->power_down_type & DWC_ETH_QOS_REMOTE_WAKEUP) ? \
+		((x->power_down_type & EQOS_REMOTE_WAKEUP) ? \
 		"Remote wakeup packet" : \
 		"<error>"))
 
-#define DWC_ETH_QOS_MAC_ADDR_LEN 6
-#define DWC_ETH_QOS_ETH_FRAME_LEN (ETH_FRAME_LEN + ETH_FCS_LEN + VLAN_HLEN)
+#define EQOS_MAC_ADDR_LEN 6
+#define EQOS_ETH_FRAME_LEN (ETH_FRAME_LEN + ETH_FCS_LEN + VLAN_HLEN)
 
 #define FIFO_SIZE_B(x) (x)
 #define FIFO_SIZE_KB(x) (x*1024)
 
-//#define DWC_ETH_QOS_MAX_DATA_PER_TX_BUF (1 << 13)     /* 8 KB Maximum data per buffer pointer(in Bytes) */
-#define DWC_ETH_QOS_MAX_DATA_PER_TX_BUF (1 << 12)	/* for testing purpose: 4 KB Maximum data per buffer pointer(in Bytes) */
-#if defined(DWC_ETH_QOS_DMA_32BIT)
-#define DWC_ETH_QOS_MAX_DATA_PER_TXD (DWC_ETH_QOS_MAX_DATA_PER_TX_BUF * 2)	/* Maxmimum data per descriptor(in Bytes) */
+//#define EQOS_MAX_DATA_PER_TX_BUF (1 << 13)     /* 8 KB Maximum data per buffer pointer(in Bytes) */
+#define EQOS_MAX_DATA_PER_TX_BUF (1 << 12)	/* for testing purpose: 4 KB Maximum data per buffer pointer(in Bytes) */
+#if defined(EQOS_DMA_32BIT)
+#define EQOS_MAX_DATA_PER_TXD (EQOS_MAX_DATA_PER_TX_BUF * 2)	/* Maxmimum data per descriptor(in Bytes) */
 #else
-#define DWC_ETH_QOS_MAX_DATA_PER_TXD (DWC_ETH_QOS_MAX_DATA_PER_TX_BUF)
+#define EQOS_MAX_DATA_PER_TXD (EQOS_MAX_DATA_PER_TX_BUF)
 #endif
 
-#define DWC_ETH_QOS_MAX_SUPPORTED_MTU 1500
-#define DWC_ETH_QOS_MAX_GPSL 9000 /* Default maximum Gaint Packet Size Limit */
-#define DWC_ETH_QOS_MIN_SUPPORTED_MTU (ETH_ZLEN + ETH_FCS_LEN + VLAN_HLEN)
+#define EQOS_MAX_SUPPORTED_MTU 1500
+#define EQOS_MAX_GPSL 9000 /* Default maximum Gaint Packet Size Limit */
+#define EQOS_MIN_SUPPORTED_MTU (ETH_ZLEN + ETH_FCS_LEN + VLAN_HLEN)
 
-#define DWC_ETH_QOS_RDESC3_OWN	0x80000000
-#define DWC_ETH_QOS_RDESC3_FD		0x20000000
-#define DWC_ETH_QOS_RDESC3_LD		0x10000000
-#define DWC_ETH_QOS_RDESC3_RS2V	0x08000000
-#define DWC_ETH_QOS_RDESC3_RS1V	0x04000000
-#define DWC_ETH_QOS_RDESC3_RS0V	0x02000000
-#define DWC_ETH_QOS_RDESC3_LT		0x00070000
-#define DWC_ETH_QOS_RDESC3_ES		0x00008000
-#define DWC_ETH_QOS_RDESC3_PL		0x00007FFF
+#define EQOS_RDESC3_OWN	0x80000000
+#define EQOS_RDESC3_FD		0x20000000
+#define EQOS_RDESC3_LD		0x10000000
+#define EQOS_RDESC3_RS2V	0x08000000
+#define EQOS_RDESC3_RS1V	0x04000000
+#define EQOS_RDESC3_RS0V	0x02000000
+#define EQOS_RDESC3_LT		0x00070000
+#define EQOS_RDESC3_ES		0x00008000
+#define EQOS_RDESC3_PL		0x00007FFF
 
-#define DWC_ETH_QOS_RDESC2_HL	0x000003FF
+#define EQOS_RDESC2_HL	0x000003FF
 
-#define DWC_ETH_QOS_RDESC1_PT		0x00000007 /* Payload type */
-#define DWC_ETH_QOS_RDESC1_PT_TCP	0x00000002 /* Payload type = TCP */
+#define EQOS_RDESC1_PT		0x00000007 /* Payload type */
+#define EQOS_RDESC1_PT_TCP	0x00000002 /* Payload type = TCP */
 
 /* Maximum size of pkt that is copied to a new buffer on receive */
-#define DWC_ETH_QOS_COPYBREAK_DEFAULT 256
-#define DWC_ETH_QOS_SYSCLOCK	62500000 /* System clock is 62.5MHz */
-#define DWC_ETH_QOS_SYSTIMEPERIOD	16 /* System time period is 16ns */
+#define EQOS_COPYBREAK_DEFAULT 256
+#define EQOS_SYSCLOCK	62500000 /* System clock is 62.5MHz */
+#define EQOS_SYSTIMEPERIOD	16 /* System time period is 16ns */
 
-#define DWC_ETH_QOS_TX_QUEUE_CNT (pdata->tx_queue_cnt)
-#define DWC_ETH_QOS_RX_QUEUE_CNT (pdata->rx_queue_cnt)
-#define DWC_ETH_QOS_QUEUE_CNT min(DWC_ETH_QOS_TX_QUEUE_CNT, DWC_ETH_QOS_RX_QUEUE_CNT)
+#define EQOS_TX_QUEUE_CNT (pdata->tx_queue_cnt)
+#define EQOS_RX_QUEUE_CNT (pdata->rx_queue_cnt)
+#define EQOS_QUEUE_CNT min(EQOS_TX_QUEUE_CNT, EQOS_RX_QUEUE_CNT)
 
 /* Helper macros for TX descriptor handling */
 
-#define GET_TX_QUEUE_PTR(qInx) (&(pdata->tx_queue[(qInx)]))
+#define GET_TX_QUEUE_PTR(qinx) (&(pdata->tx_queue[(qinx)]))
 
-#define GET_TX_DESC_PTR(qInx, dInx) (pdata->tx_queue[(qInx)].tx_desc_data.tx_desc_ptrs[(dInx)])
+#define GET_TX_DESC_PTR(qinx, dinx) (pdata->tx_queue[(qinx)].tx_desc_data.tx_desc_ptrs[(dinx)])
 
-#define GET_TX_DESC_DMA_ADDR(qInx, dInx) (pdata->tx_queue[(qInx)].tx_desc_data.tx_desc_dma_addrs[(dInx)])
+#define GET_TX_DESC_DMA_ADDR(qinx, dinx) (pdata->tx_queue[(qinx)].tx_desc_data.tx_desc_dma_addrs[(dinx)])
 
-#define GET_TX_WRAPPER_DESC(qInx) (&(pdata->tx_queue[(qInx)].tx_desc_data))
+#define GET_TX_WRAPPER_DESC(qinx) (&(pdata->tx_queue[(qinx)].tx_desc_data))
 
-#define GET_TX_BUF_PTR(qInx, dInx) (pdata->tx_queue[(qInx)].tx_desc_data.tx_buf_ptrs[(dInx)])
+#define GET_TX_BUF_PTR(qinx, dinx) (pdata->tx_queue[(qinx)].tx_desc_data.tx_buf_ptrs[(dinx)])
 
 #define INCR_TX_DESC_INDEX(inx, offset) do {\
 	(inx) += (offset);\
@@ -457,12 +457,12 @@
 	(((inx) + (offset)) >= TX_DESC_CNT ?\
 	((inx) + (offset) - TX_DESC_CNT) : ((inx) + (offset)))
 
-#define GET_CURRENT_XFER_DESC_CNT(qInx) (pdata->tx_queue[(qInx)].tx_desc_data.packet_count)
+#define GET_CURRENT_XFER_DESC_CNT(qinx) (pdata->tx_queue[(qinx)].tx_desc_data.packet_count)
 
-#define GET_CURRENT_XFER_LAST_DESC_INDEX(qInx, start_index, offset)\
-	(GET_CURRENT_XFER_DESC_CNT((qInx)) == 0) ? (TX_DESC_CNT - 1) :\
-	((GET_CURRENT_XFER_DESC_CNT((qInx)) == 1) ? (INCR_TX_LOCAL_INDEX((start_index), (offset))) :\
-	INCR_TX_LOCAL_INDEX((start_index), (GET_CURRENT_XFER_DESC_CNT((qInx)) + (offset) - 1)))
+#define GET_CURRENT_XFER_LAST_DESC_INDEX(qinx, start_index, offset)\
+	(GET_CURRENT_XFER_DESC_CNT((qinx)) == 0) ? (TX_DESC_CNT - 1) :\
+	((GET_CURRENT_XFER_DESC_CNT((qinx)) == 1) ? (INCR_TX_LOCAL_INDEX((start_index), (offset))) :\
+	INCR_TX_LOCAL_INDEX((start_index), (GET_CURRENT_XFER_DESC_CNT((qinx)) + (offset) - 1)))
 
 #define GET_TX_TOT_LEN(buffer, start_index, packet_count, total_len) do {\
   int i, pkt_idx = (start_index);\
@@ -474,15 +474,15 @@
 
 /* Helper macros for RX descriptor handling */
 
-#define GET_RX_QUEUE_PTR(qInx) (&(pdata->rx_queue[(qInx)]))
+#define GET_RX_QUEUE_PTR(qinx) (&(pdata->rx_queue[(qinx)]))
 
-#define GET_RX_DESC_PTR(qInx, dInx) (pdata->rx_queue[(qInx)].rx_desc_data.rx_desc_ptrs[(dInx)])
+#define GET_RX_DESC_PTR(qinx, dinx) (pdata->rx_queue[(qinx)].rx_desc_data.rx_desc_ptrs[(dinx)])
 
-#define GET_RX_DESC_DMA_ADDR(qInx, dInx) (pdata->rx_queue[(qInx)].rx_desc_data.rx_desc_dma_addrs[(dInx)])
+#define GET_RX_DESC_DMA_ADDR(qinx, dinx) (pdata->rx_queue[(qinx)].rx_desc_data.rx_desc_dma_addrs[(dinx)])
 
-#define GET_RX_WRAPPER_DESC(qInx) (&(pdata->rx_queue[(qInx)].rx_desc_data))
+#define GET_RX_WRAPPER_DESC(qinx) (&(pdata->rx_queue[(qinx)].rx_desc_data))
 
-#define GET_RX_BUF_PTR(qInx, dInx) (pdata->rx_queue[(qInx)].rx_desc_data.rx_buf_ptrs[(dInx)])
+#define GET_RX_BUF_PTR(qinx, dinx) (pdata->rx_queue[(qinx)].rx_desc_data.rx_buf_ptrs[(dinx)])
 
 #define INCR_RX_DESC_INDEX(inx, offset) do {\
   (inx) += (offset);\
@@ -500,35 +500,35 @@
 	(((inx) + (offset)) >= RX_DESC_CNT ?\
 	((inx) + (offset) - RX_DESC_CNT) : ((inx) + (offset)))
 
-#define GET_CURRENT_RCVD_DESC_CNT(qInx) (pdata->rx_queue[(qInx)].rx_desc_data.pkt_received)
+#define GET_CURRENT_RCVD_DESC_CNT(qinx) (pdata->rx_queue[(qinx)].rx_desc_data.pkt_received)
 
 #define GET_CURRENT_RCVD_LAST_DESC_INDEX(start_index, offset) (RX_DESC_CNT - 1)
 
-#define GET_TX_DESC_IDX(qInx, desc) (((desc) - GET_TX_DESC_DMA_ADDR((qInx), 0))/(sizeof(struct s_TX_NORMAL_DESC)))
+#define GET_TX_DESC_IDX(qinx, desc) (((desc) - GET_TX_DESC_DMA_ADDR((qinx), 0))/(sizeof(struct s_tx_normal_desc)))
 
-#define GET_RX_DESC_IDX(qInx, desc) (((desc) - GET_RX_DESC_DMA_ADDR((qInx), 0))/(sizeof(struct s_RX_NORMAL_DESC)))
+#define GET_RX_DESC_IDX(qinx, desc) (((desc) - GET_RX_DESC_DMA_ADDR((qinx), 0))/(sizeof(struct s_rx_normal_desc)))
 
 /* Helper macro for handling coalesce parameters via ethtool */
 /* Obtained by trial and error  */
-#define DWC_ETH_QOS_OPTIMAL_DMA_RIWT_USEC  124
+#define EQOS_OPTIMAL_DMA_RIWT_USEC  124
 /* Max delay before RX interrupt after a pkt is received Max
  * delay in usecs is 1020 for 62.5MHz device clock */
-#define DWC_ETH_QOS_MAX_DMA_RIWT  0xff
+#define EQOS_MAX_DMA_RIWT  0xff
 /* Max no of pkts to be received before an RX interrupt */
-#define DWC_ETH_QOS_RX_MAX_FRAMES 16
+#define EQOS_RX_MAX_FRAMES 16
 
 #define DMA_SBUS_AXI_PBL_MASK 0xFE
 
 /* Helper macros for handling receive error */
-#define DWC_ETH_QOS_RX_LENGTH_ERR        0x00000001
-#define DWC_ETH_QOS_RX_BUF_OVERFLOW_ERR  0x00000002
-#define DWC_ETH_QOS_RX_CRC_ERR           0x00000004
-#define DWC_ETH_QOS_RX_FRAME_ERR         0x00000008
-#define DWC_ETH_QOS_RX_FIFO_OVERFLOW_ERR 0x00000010
-#define DWC_ETH_QOS_RX_MISSED_PKT_ERR    0x00000020
+#define EQOS_RX_LENGTH_ERR        0x00000001
+#define EQOS_RX_BUF_OVERFLOW_ERR  0x00000002
+#define EQOS_RX_CRC_ERR           0x00000004
+#define EQOS_RX_FRAME_ERR         0x00000008
+#define EQOS_RX_FIFO_OVERFLOW_ERR 0x00000010
+#define EQOS_RX_MISSED_PKT_ERR    0x00000020
 
-#define DWC_ETH_QOS_RX_CHECKSUM_DONE 0x00000001
-#define DWC_ETH_QOS_RX_VLAN_PKT      0x00000002
+#define EQOS_RX_CHECKSUM_DONE 0x00000001
+#define EQOS_RX_VLAN_PKT      0x00000002
 
 /* MAC Time stamp contorl reg bit fields */
 #define MAC_TCR_TSENA         0x00000001 /* Enable timestamp */
@@ -553,31 +553,31 @@
 
 
 /* Hash Table Reg count */
-#define DWC_ETH_QOS_HTR_CNT (pdata->max_hash_table_size/32)
+#define EQOS_HTR_CNT (pdata->max_hash_table_size/32)
 
 /* For handling VLAN filtering */
-#define DWC_ETH_QOS_VLAN_PERFECT_FILTERING 0
-#define DWC_ETH_QOS_VLAN_HASH_FILTERING 1
+#define EQOS_VLAN_PERFECT_FILTERING 0
+#define EQOS_VLAN_HASH_FILTERING 1
 
 /* Enabling perfect filter for L2. If disabled has filter will be used */
 #define ENABLE_PERFECT_L2_FILTER
 
 /* For handling differnet PHY interfaces */
-#define DWC_ETH_QOS_GMII_MII	0x0
-#define DWC_ETH_QOS_RGMII	0x1
-#define DWC_ETH_QOS_SGMII	0x2
-#define DWC_ETH_QOS_TBI		0x3
-#define DWC_ETH_QOS_RMII	0x4
-#define DWC_ETH_QOS_RTBI	0x5
-#define DWC_ETH_QOS_SMII	0x6
-#define DWC_ETH_QOS_RevMII	0x7
+#define EQOS_GMII_MII	0x0
+#define EQOS_RGMII	0x1
+#define EQOS_SGMII	0x2
+#define EQOS_TBI		0x3
+#define EQOS_RMII	0x4
+#define EQOS_RTBI	0x5
+#define EQOS_SMII	0x6
+#define EQOS_REV_MII	0x7
 
 /* for EEE */
-#define DWC_ETH_QOS_DEFAULT_LPI_LS_TIMER 0x3E8 /* 1000 in decimal */
-#define DWC_ETH_QOS_DEFAULT_LPI_TWT_TIMER 0x0
+#define EQOS_DEFAULT_LPI_LS_TIMER 0x3E8 /* 1000 in decimal */
+#define EQOS_DEFAULT_LPI_TWT_TIMER 0x0
 
-#define DWC_ETH_QOS_DEFAULT_LPI_TIMER 1000 /* LPI Tx local expiration time in msec */
-#define DWC_ETH_QOS_LPI_TIMER(x) (jiffies + msecs_to_jiffies(x))
+#define EQOS_DEFAULT_LPI_TIMER 1000 /* LPI Tx local expiration time in msec */
+#define EQOS_LPI_TIMER(x) (jiffies + msecs_to_jiffies(x))
 
 /* Error and status macros defined below */
 
@@ -629,41 +629,41 @@ typedef unsigned short *USHORTP;
 typedef void VOID;
 typedef void *VOIDP;
 
-struct s_RX_CONTEXT_DESC {
+struct s_rx_context_desc {
 	UINT RDES0;
 	UINT RDES1;
 	UINT RDES2;
 	UINT RDES3;
 };
 
-typedef struct s_RX_CONTEXT_DESC t_RX_CONTEXT_DESC;
+typedef struct s_rx_context_desc t_rx_context_desc;
 
-struct s_TX_CONTEXT_DESC {
+struct s_tx_context_desc {
 	UINT TDES0;
 	UINT TDES1;
 	UINT TDES2;
 	UINT TDES3;
 };
 
-typedef struct s_TX_CONTEXT_DESC t_TX_CONTEXT_DESC;
+typedef struct s_tx_context_desc t_tx_context_desc;
 
-struct s_RX_NORMAL_DESC {
+struct s_rx_normal_desc {
 	UINT RDES0;
 	UINT RDES1;
 	UINT RDES2;
 	UINT RDES3;
 };
 
-typedef struct s_RX_NORMAL_DESC t_RX_NORMAL_DESC;
+typedef struct s_rx_normal_desc t_rx_normal_desc;
 
-struct s_TX_NORMAL_DESC {
+struct s_tx_normal_desc {
 	UINT TDES0;
 	UINT TDES1;
 	UINT TDES2;
 	UINT TDES3;
 };
 
-typedef struct s_TX_NORMAL_DESC t_TX_NORMAL_DESC;
+typedef struct s_tx_normal_desc t_tx_normal_desc;
 
 struct s_tx_error_counters {
 	UINT tx_errors;
@@ -703,42 +703,42 @@ struct s_tx_pkt_features {
 typedef struct s_tx_pkt_features t_tx_pkt_features;
 
 typedef enum {
-	eDWC_ETH_QOS_DMA_ISR_DC0IS,
-	eDWC_ETH_QOS_DMA_SR0_TI,
-	eDWC_ETH_QOS_DMA_SR0_TPS,
-	eDWC_ETH_QOS_DMA_SR0_TBU,
-	eDWC_ETH_QOS_DMA_SR0_RI,
-	eDWC_ETH_QOS_DMA_SR0_RBU,
-	eDWC_ETH_QOS_DMA_SR0_RPS,
-	eDWC_ETH_QOS_DMA_SR0_FBE,
-	eDWC_ETH_QOS_ALL
-} e_DWC_ETH_QOS_int_id;
+	EQOS_DMA_ISR_DC0IS,
+	EQOS_DMA_SR0_TI,
+	EQOS_DMA_SR0_TPS,
+	EQOS_DMA_SR0_TBU,
+	EQOS_DMA_SR0_RI,
+	EQOS_DMA_SR0_RBU,
+	EQOS_DMA_SR0_RPS,
+	EQOS_DMA_SR0_FBE,
+	EQOS_ALL
+} e_eqos_int_id;
 
 typedef enum {
-	eDWC_ETH_QOS_256 = 0x0,
-	eDWC_ETH_QOS_512 = 0x1,
-	eDWC_ETH_QOS_1k = 0x3,
-	eDWC_ETH_QOS_2k = 0x7,
-	eDWC_ETH_QOS_4k = 0xf,
-	eDWC_ETH_QOS_8k = 0x1f,
-	eDWC_ETH_QOS_16k = 0x3f,
-	eDWC_ETH_QOS_32k = 0x7f
-} eDWC_ETH_QOS_mtl_fifo_size;
+	eqos_256 = 0x0,
+	eqos_512 = 0x1,
+	eqos_1k = 0x3,
+	eqos_2k = 0x7,
+	eqos_4k = 0xf,
+	eqos_8k = 0x1f,
+	eqos_16k = 0x3f,
+	eqos_32k = 0x7f
+} eqos_mtl_fifo_size;
 
 /* do forward declaration of private data structure */
-struct DWC_ETH_QOS_prv_data;
-struct DWC_ETH_QOS_tx_wrapper_descriptor;
+struct eqos_prv_data;
+struct eqos_tx_wrapper_descriptor;
 
 struct hw_if_struct {
 
-	INT(*tx_complete) (struct s_TX_NORMAL_DESC *);
-	INT(*tx_window_error) (struct s_TX_NORMAL_DESC *);
-	INT(*tx_aborted_error) (struct s_TX_NORMAL_DESC *);
-	INT(*tx_carrier_lost_error) (struct s_TX_NORMAL_DESC *);
-	INT(*tx_fifo_underrun) (struct s_TX_NORMAL_DESC *);
-	INT(*tx_get_collision_count) (struct s_TX_NORMAL_DESC *);
-	INT(*tx_handle_aborted_error) (struct s_TX_NORMAL_DESC *);
-	INT(*tx_update_fifo_threshold) (struct s_TX_NORMAL_DESC *);
+	INT(*tx_complete) (struct s_tx_normal_desc *);
+	INT(*tx_window_error) (struct s_tx_normal_desc *);
+	INT(*tx_aborted_error) (struct s_tx_normal_desc *);
+	INT(*tx_carrier_lost_error) (struct s_tx_normal_desc *);
+	INT(*tx_fifo_underrun) (struct s_tx_normal_desc *);
+	INT(*tx_get_collision_count) (struct s_tx_normal_desc *);
+	INT(*tx_handle_aborted_error) (struct s_tx_normal_desc *);
+	INT(*tx_update_fifo_threshold) (struct s_tx_normal_desc *);
 	/*tx threshold config */
 	INT(*tx_config_threshold) (UINT);
 
@@ -755,35 +755,35 @@ struct hw_if_struct {
 	INT(*write_phy_regs) (INT, INT, INT);
 	INT(*set_full_duplex) (VOID);
 	INT(*set_half_duplex) (VOID);
-	INT(*set_mii_speed_100) (struct DWC_ETH_QOS_prv_data *);
-	INT(*set_mii_speed_10) (struct DWC_ETH_QOS_prv_data *);
-	INT(*set_gmii_speed) (struct DWC_ETH_QOS_prv_data *);
+	INT(*set_mii_speed_100) (struct eqos_prv_data *);
+	INT(*set_mii_speed_10) (struct eqos_prv_data *);
+	INT(*set_gmii_speed) (struct eqos_prv_data *);
 	/* for PMT */
 	INT(*start_dma_rx) (UINT);
 	INT(*stop_dma_rx) (UINT);
 	INT(*start_dma_tx) (UINT);
-	INT(*stop_dma_tx) (struct DWC_ETH_QOS_prv_data *, UINT);
+	INT(*stop_dma_tx) (struct eqos_prv_data *, UINT);
 	INT(*start_mac_tx_rx) (VOID);
 	INT(*stop_mac_tx) (VOID);
 	INT(*stop_mac_rx) (VOID);
 
-	INT(*init) (struct DWC_ETH_QOS_prv_data *);
+	INT(*init) (struct eqos_prv_data *);
 	INT(*exit) (void);
-	INT(*car_reset) (struct DWC_ETH_QOS_prv_data *);
-	INT(*pad_calibrate) (struct DWC_ETH_QOS_prv_data *);
-	INT(*enable_int) (e_DWC_ETH_QOS_int_id);
-	INT(*disable_int) (e_DWC_ETH_QOS_int_id);
-	void (*pre_xmit) (struct DWC_ETH_QOS_prv_data *, UINT qInx);
-	void (*dev_read) (struct DWC_ETH_QOS_prv_data *, UINT qInx);
-	void (*tx_desc_init) (struct DWC_ETH_QOS_prv_data *, UINT qInx);
-	void (*rx_desc_init) (struct DWC_ETH_QOS_prv_data *, UINT qInx);
-	void (*rx_desc_reset) (UINT, struct DWC_ETH_QOS_prv_data *,
-			       UINT, UINT qInx);
-	 INT(*tx_desc_reset) (UINT, struct DWC_ETH_QOS_prv_data *, UINT qInx);
+	INT(*car_reset) (struct eqos_prv_data *);
+	INT(*pad_calibrate) (struct eqos_prv_data *);
+	INT(*enable_int) (e_eqos_int_id);
+	INT(*disable_int) (e_eqos_int_id);
+	void (*pre_xmit) (struct eqos_prv_data *, UINT qinx);
+	void (*dev_read) (struct eqos_prv_data *, UINT qinx);
+	void (*tx_desc_init) (struct eqos_prv_data *, UINT qinx);
+	void (*rx_desc_init) (struct eqos_prv_data *, UINT qinx);
+	void (*rx_desc_reset) (UINT, struct eqos_prv_data *,
+			       UINT, UINT qinx);
+	 INT(*tx_desc_reset) (UINT, struct eqos_prv_data *, UINT qinx);
 	/* last tx segmnet reports the tx status */
-	 INT(*get_tx_desc_ls) (struct s_TX_NORMAL_DESC *);
-	 INT(*get_tx_desc_ctxt) (struct s_TX_NORMAL_DESC *);
-	void (*update_rx_tail_ptr) (unsigned int qInx, unsigned int dma_addr);
+	 INT(*get_tx_desc_ls) (struct s_tx_normal_desc *);
+	 INT(*get_tx_desc_ctxt) (struct s_tx_normal_desc *);
+	void (*update_rx_tail_ptr) (unsigned int qinx, unsigned int dma_addr);
 
 	/* for FLOW ctrl */
 	 INT(*enable_rx_flow_ctrl) (VOID);
@@ -829,8 +829,8 @@ struct hw_if_struct {
 	 INT(*config_pblx8) (UINT ch_no, UINT val);
 
 	/* for TX vlan control */
-	 VOID(*enable_vlan_reg_control) (struct DWC_ETH_QOS_tx_wrapper_descriptor *desc_data);
-	 VOID(*enable_vlan_desc_control) (struct DWC_ETH_QOS_prv_data *pdata);
+	 VOID(*enable_vlan_reg_control) (struct eqos_tx_wrapper_descriptor *desc_data);
+	 VOID(*enable_vlan_desc_control) (struct eqos_prv_data *pdata);
 
 	/* for rx vlan stripping */
 //	 VOID(*config_rx_outer_vlan_stripping) (u32);
@@ -842,44 +842,44 @@ struct hw_if_struct {
 	 VOID(*configure_sa_via_reg) (u32);
 
 	/* for handling multi-queue */
-	INT(*disable_rx_interrupt)(UINT, struct DWC_ETH_QOS_prv_data *);
-	INT(*enable_rx_interrupt)(UINT, struct DWC_ETH_QOS_prv_data *);
-	INT (*disable_chan_interrupts)(UINT, struct DWC_ETH_QOS_prv_data *);
-	INT (*enable_chan_interrupts)(UINT, struct DWC_ETH_QOS_prv_data *);
+	INT(*disable_rx_interrupt)(UINT, struct eqos_prv_data *);
+	INT(*enable_rx_interrupt)(UINT, struct eqos_prv_data *);
+	INT (*disable_chan_interrupts)(UINT, struct eqos_prv_data *);
+	INT (*enable_chan_interrupts)(UINT, struct eqos_prv_data *);
 
 	/* for handling MMC */
 	INT(*disable_mmc_interrupts)(VOID);
 	INT(*config_mmc_counters)(VOID);
 
 	/* for handling split header */
-	INT(*config_split_header_mode)(UINT qInx, USHORT sph_en);
+	INT(*config_split_header_mode)(UINT qinx, USHORT sph_en);
 	INT(*config_header_size)(USHORT header_size);
 
 	/* for handling DCB and AVB */
 	INT(*set_dcb_algorithm)(UCHAR dcb_algorithm);
-	INT(*set_dcb_queue_weight)(UINT qInx, UINT q_weight);
+	INT(*set_dcb_queue_weight)(UINT qinx, UINT q_weight);
 
-	INT(*set_tx_queue_operating_mode)(UINT qInx, UINT q_mode);
-	INT(*set_avb_algorithm)(UINT qInx, UCHAR avb_algorithm);
-	INT(*config_credit_control)(UINT qInx, UINT cc);
-	INT(*config_send_slope)(UINT qInx, UINT send_slope);
-	INT(*config_idle_slope)(UINT qInx, UINT idle_slope);
-	INT(*config_high_credit)(UINT qInx, UINT hi_credit);
-	INT(*config_low_credit)(UINT qInx, UINT lo_credit);
-	INT(*config_slot_num_check)(UINT qInx, UCHAR slot_check);
-	INT(*config_advance_slot_num_check)(UINT qInx, UCHAR adv_slot_check);
-#ifdef DWC_ETH_QOS_CONFIG_PGTEST
-	void(*tx_desc_init_pg)(struct DWC_ETH_QOS_prv_data *, UINT qInx);
-	void(*rx_desc_init_pg)(struct DWC_ETH_QOS_prv_data *, UINT qInx);
-	INT(*set_ch_arb_weights)(UINT qInx, UCHAR weight);
-	INT(*config_slot_interrupt)(UINT qInx, UCHAR config);
-	INT(*set_slot_count)(UINT qInx, UCHAR slotCount);
+	INT(*set_tx_queue_operating_mode)(UINT qinx, UINT q_mode);
+	INT(*set_avb_algorithm)(UINT qinx, UCHAR avb_algorithm);
+	INT(*config_credit_control)(UINT qinx, UINT cc);
+	INT(*config_send_slope)(UINT qinx, UINT send_slope);
+	INT(*config_idle_slope)(UINT qinx, UINT idle_slope);
+	INT(*config_high_credit)(UINT qinx, UINT hi_credit);
+	INT(*config_low_credit)(UINT qinx, UINT lo_credit);
+	INT(*config_slot_num_check)(UINT qinx, UCHAR slot_check);
+	INT(*config_advance_slot_num_check)(UINT qinx, UCHAR adv_slot_check);
+#ifdef EQOS_CONFIG_PGTEST
+	void(*tx_desc_init_pg)(struct eqos_prv_data *, UINT qinx);
+	void(*rx_desc_init_pg)(struct eqos_prv_data *, UINT qinx);
+	INT(*set_ch_arb_weights)(UINT qinx, UCHAR weight);
+	INT(*config_slot_interrupt)(UINT qinx, UCHAR config);
+	INT(*set_slot_count)(UINT qinx, UCHAR slot_count);
 	INT(*set_tx_rx_prio_policy)(UCHAR prio_policy);
 	INT(*set_tx_rx_prio)(UCHAR prio);
 	INT(*set_tx_rx_prio_ratio)(UCHAR prio_ratio);
 	INT(*set_dma_tx_arb_algorithm)(UCHAR arb_algo);
-	INT(*prepare_dev_pktgen)(struct DWC_ETH_QOS_prv_data *);
-#endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
+	INT(*prepare_dev_pktgen)(struct eqos_prv_data *);
+#endif /* end of EQOS_CONFIG_PGTEST */
 
 	/* for hw time stamping */
 	INT(*config_hw_time_stamping)(UINT);
@@ -888,13 +888,13 @@ struct hw_if_struct {
 	INT(*config_addend)(UINT);
 	INT(*adjust_systime)(UINT, UINT, INT, bool);
 	ULONG_LONG(*get_systime)(void);
-	UINT(*get_tx_tstamp_status)(struct s_TX_NORMAL_DESC *txdesc);
-	ULONG_LONG(*get_tx_tstamp)(struct s_TX_NORMAL_DESC *txdesc);
+	UINT(*get_tx_tstamp_status)(struct s_tx_normal_desc *txdesc);
+	ULONG_LONG(*get_tx_tstamp)(struct s_tx_normal_desc *txdesc);
 	UINT(*get_tx_tstamp_status_via_reg)(void);
 	ULONG_LONG(*get_tx_tstamp_via_reg)(void);
-	UINT(*rx_tstamp_available)(struct s_RX_NORMAL_DESC *rxdesc);
-	UINT(*get_rx_tstamp_status)(struct s_RX_CONTEXT_DESC *rxdesc);
-	ULONG_LONG(*get_rx_tstamp)(struct s_RX_CONTEXT_DESC *rxdesc);
+	UINT(*rx_tstamp_available)(struct s_rx_normal_desc *rxdesc);
+	UINT(*get_rx_tstamp_status)(struct s_rx_context_desc *rxdesc);
+	ULONG_LONG(*get_rx_tstamp)(struct s_rx_context_desc *rxdesc);
 	INT(*drop_tx_status_enabled)(void);
 
 	/* for l2, l3 and l4 layer filtering */
@@ -966,7 +966,7 @@ struct hw_if_struct {
 };
 
 /* wrapper buffer structure to hold transmit pkt details */
-struct DWC_ETH_QOS_tx_buffer {
+struct eqos_tx_buffer {
 	dma_addr_t dma;		/* dma address of skb */
 	struct sk_buff *skb;	/* virtual address of skb */
 	unsigned short len;	/* length of first skb */
@@ -976,18 +976,18 @@ struct DWC_ETH_QOS_tx_buffer {
 	unsigned short len2; /* length of second skb */
 	unsigned char buf2_mapped_as_page;
 
-#ifdef DWC_ETH_QOS_CONFIG_PGTEST
+#ifdef EQOS_CONFIG_PGTEST
 	unsigned char slot_number;
 #endif
 };
 
-struct DWC_ETH_QOS_tx_wrapper_descriptor {
+struct eqos_tx_wrapper_descriptor {
 	char *desc_name;	/* ID of descriptor */
 
 	void *tx_desc_ptrs[TX_DESC_CNT];
 	dma_addr_t tx_desc_dma_addrs[TX_DESC_CNT];
 
-	struct DWC_ETH_QOS_tx_buffer *tx_buf_ptrs[TX_DESC_CNT];
+	struct eqos_tx_buffer *tx_buf_ptrs[TX_DESC_CNT];
 
 	unsigned char contigous_mem;
 
@@ -1021,14 +1021,14 @@ struct DWC_ETH_QOS_tx_wrapper_descriptor {
 	u32 default_mss;
 };
 
-struct DWC_ETH_QOS_tx_queue {
+struct eqos_tx_queue {
 	/* Tx descriptors */
-	struct DWC_ETH_QOS_tx_wrapper_descriptor tx_desc_data;
+	struct eqos_tx_wrapper_descriptor tx_desc_data;
 	int q_op_mode;
 };
 
 /* wrapper buffer structure to hold received pkt details */
-struct DWC_ETH_QOS_rx_buffer {
+struct eqos_rx_buffer {
 	dma_addr_t dma;		/* dma address of skb */
 	struct sk_buff *skb;	/* virtual address of skb */
 	unsigned short len;	/* length of received packet */
@@ -1046,13 +1046,13 @@ struct DWC_ETH_QOS_rx_buffer {
 	unsigned short rx_hdr_size; /* header buff size in case of split header */
 };
 
-struct DWC_ETH_QOS_rx_wrapper_descriptor {
+struct eqos_rx_wrapper_descriptor {
 	char *desc_name;	/* ID of descriptor */
 
 	void *rx_desc_ptrs[RX_DESC_CNT];
 	dma_addr_t rx_desc_dma_addrs[RX_DESC_CNT];
 
-	struct DWC_ETH_QOS_rx_buffer *rx_buf_ptrs[RX_DESC_CNT];
+	struct eqos_rx_buffer *rx_buf_ptrs[RX_DESC_CNT];
 
 	unsigned char contigous_mem;
 
@@ -1083,42 +1083,42 @@ struct DWC_ETH_QOS_rx_wrapper_descriptor {
 	u32 rx_outer_vlan_strip;
 };
 
-struct DWC_ETH_QOS_rx_queue {
+struct eqos_rx_queue {
 	/* Rx descriptors */
-	struct DWC_ETH_QOS_rx_wrapper_descriptor rx_desc_data;
+	struct eqos_rx_wrapper_descriptor rx_desc_data;
 	struct napi_struct napi;
-	struct DWC_ETH_QOS_prv_data *pdata;
+	struct eqos_prv_data *pdata;
 	uint	chan_num;
 
 	struct net_lro_mgr lro_mgr;
-	struct net_lro_desc lro_arr[DWC_ETH_QOS_MAX_LRO_DESC];
+	struct net_lro_desc lro_arr[EQOS_MAX_LRO_DESC];
 	int lro_flush_needed;
 };
 
 struct desc_if_struct {
-	INT(*alloc_queue_struct) (struct DWC_ETH_QOS_prv_data *);
-	void(*free_queue_struct) (struct DWC_ETH_QOS_prv_data *);
-	INT(*alloc_buff_and_desc) (struct DWC_ETH_QOS_prv_data *);
-	void(*free_buff_and_desc) (struct DWC_ETH_QOS_prv_data *);
-	void (*realloc_skb) (struct DWC_ETH_QOS_prv_data *, UINT);
-	void (*unmap_rx_skb) (struct DWC_ETH_QOS_prv_data *,
-			      struct DWC_ETH_QOS_rx_buffer *);
-	void (*unmap_tx_skb) (struct DWC_ETH_QOS_prv_data *,
-			      struct DWC_ETH_QOS_tx_buffer *);
+	INT(*alloc_queue_struct) (struct eqos_prv_data *);
+	void(*free_queue_struct) (struct eqos_prv_data *);
+	INT(*alloc_buff_and_desc) (struct eqos_prv_data *);
+	void(*free_buff_and_desc) (struct eqos_prv_data *);
+	void (*realloc_skb) (struct eqos_prv_data *, UINT);
+	void (*unmap_rx_skb) (struct eqos_prv_data *,
+			      struct eqos_rx_buffer *);
+	void (*unmap_tx_skb) (struct eqos_prv_data *,
+			      struct eqos_tx_buffer *);
 	unsigned int (*map_tx_skb) (struct net_device *, struct sk_buff *);
-	void (*tx_free_mem) (struct DWC_ETH_QOS_prv_data *);
-	void (*rx_free_mem) (struct DWC_ETH_QOS_prv_data *);
-	void (*wrapper_tx_desc_init) (struct DWC_ETH_QOS_prv_data *);
-	void (*wrapper_tx_desc_init_single_q) (struct DWC_ETH_QOS_prv_data *,
+	void (*tx_free_mem) (struct eqos_prv_data *);
+	void (*rx_free_mem) (struct eqos_prv_data *);
+	void (*wrapper_tx_desc_init) (struct eqos_prv_data *);
+	void (*wrapper_tx_desc_init_single_q) (struct eqos_prv_data *,
 					       UINT);
-	void (*wrapper_rx_desc_init) (struct DWC_ETH_QOS_prv_data *);
-	void (*wrapper_rx_desc_init_single_q) (struct DWC_ETH_QOS_prv_data *,
+	void (*wrapper_rx_desc_init) (struct eqos_prv_data *);
+	void (*wrapper_rx_desc_init_single_q) (struct eqos_prv_data *,
 					       UINT);
 
-	void (*rx_skb_free_mem) (struct DWC_ETH_QOS_prv_data *, UINT);
-	void (*rx_skb_free_mem_single_q) (struct DWC_ETH_QOS_prv_data *, UINT);
-	void (*tx_skb_free_mem) (struct DWC_ETH_QOS_prv_data *, UINT);
-	void (*tx_skb_free_mem_single_q) (struct DWC_ETH_QOS_prv_data *, UINT);
+	void (*rx_skb_free_mem) (struct eqos_prv_data *, UINT);
+	void (*rx_skb_free_mem_single_q) (struct eqos_prv_data *, UINT);
+	void (*tx_skb_free_mem) (struct eqos_prv_data *, UINT);
+	void (*tx_skb_free_mem_single_q) (struct eqos_prv_data *, UINT);
 
 	int (*handle_tso) (struct net_device *dev, struct sk_buff *skb);
 };
@@ -1127,7 +1127,7 @@ struct desc_if_struct {
  * This structure contains different flags and each flags will indicates
  * different hardware features.
  */
-struct DWC_ETH_QOS_hw_features {
+struct eqos_hw_features {
 	/* HW Feature Register0 */
 	unsigned int mii_sel;	/* 10/100 Mbps support */
 	unsigned int gmii_sel;	/* 1000 Mbps support */
@@ -1177,7 +1177,7 @@ struct DWC_ETH_QOS_hw_features {
 };
 
 /* structure to hold MMC values */
-struct DWC_ETH_QOS_mmc_counters {
+struct eqos_mmc_counters {
 	/* MMC TX counters */
 	unsigned long mmc_tx_octetcount_gb;
 	unsigned long mmc_tx_framecount_gb;
@@ -1279,7 +1279,7 @@ struct DWC_ETH_QOS_mmc_counters {
 	unsigned long mmc_rx_icmp_err_octets;
 };
 
-struct DWC_ETH_QOS_extra_stats {
+struct eqos_extra_stats {
 	unsigned long q_re_alloc_rx_buf_failed[8];
 
 	/* Tx/Rx IRQ error info */
@@ -1384,7 +1384,7 @@ struct chan_data {
 	struct	timer_list	poll_timer;
 };
 
-struct DWC_ETH_QOS_prv_data {
+struct eqos_prv_data {
 	struct net_device *dev;
 	struct platform_device *pdev;
 
@@ -1431,14 +1431,14 @@ struct DWC_ETH_QOS_prv_data {
 	struct s_tx_pkt_features tx_pkt_features;
 
 	/* TX Queue */
-	struct DWC_ETH_QOS_tx_queue *tx_queue;
+	struct eqos_tx_queue *tx_queue;
 	UCHAR tx_queue_cnt;
-	UINT tx_qInx;
+	UINT tx_qinx;
 
 	/* RX Queue */
-	struct DWC_ETH_QOS_rx_queue *rx_queue;
+	struct eqos_rx_queue *rx_queue;
 	UCHAR rx_queue_cnt;
-	UINT rx_qInx;
+	UINT rx_qinx;
 
 	struct mii_bus *mii;
 	struct phy_device *phydev;
@@ -1454,23 +1454,23 @@ struct DWC_ETH_QOS_prv_data {
 	int wolopts;
 
 /* Helper macros for handling FLOW control in HW */
-#define DWC_ETH_QOS_FLOW_CTRL_OFF 0
-#define DWC_ETH_QOS_FLOW_CTRL_RX  1
-#define DWC_ETH_QOS_FLOW_CTRL_TX  2
-#define DWC_ETH_QOS_FLOW_CTRL_TX_RX (DWC_ETH_QOS_FLOW_CTRL_TX |\
-					DWC_ETH_QOS_FLOW_CTRL_RX)
+#define EQOS_FLOW_CTRL_OFF 0
+#define EQOS_FLOW_CTRL_RX  1
+#define EQOS_FLOW_CTRL_TX  2
+#define EQOS_FLOW_CTRL_TX_RX (EQOS_FLOW_CTRL_TX |\
+					EQOS_FLOW_CTRL_RX)
 
 	unsigned int flow_ctrl;
 
 	/* keeps track of previous programmed flow control options */
 	unsigned int oldflow_ctrl;
 
-	struct DWC_ETH_QOS_hw_features hw_feat;
+	struct eqos_hw_features hw_feat;
 
 	/* for sa(source address) insert/replace */
 	u32 tx_sa_ctrl_via_desc;
 	u32 tx_sa_ctrl_via_reg;
-	unsigned char mac_addr[DWC_ETH_QOS_MAC_ADDR_LEN];
+	unsigned char mac_addr[EQOS_MAC_ADDR_LEN];
 
 	/* keeps track of power mode for API based PMT control */
 	u32 power_down;
@@ -1489,9 +1489,9 @@ struct DWC_ETH_QOS_prv_data {
 	UINT axi_rorl;
 
 	/* for handling jumbo frames and split header feature on rx path */
-	int (*clean_rx) (struct DWC_ETH_QOS_prv_data *pdata, int quota, UINT qInx);
-	int (*alloc_rx_buf) (struct DWC_ETH_QOS_prv_data *pdata,
-			     struct DWC_ETH_QOS_rx_buffer *buffer, gfp_t gfp);
+	int (*clean_rx) (struct eqos_prv_data *pdata, int quota, UINT qinx);
+	int (*alloc_rx_buf) (struct eqos_prv_data *pdata,
+			     struct eqos_rx_buffer *buffer, gfp_t gfp);
 	unsigned int rx_buffer_len;
 
 	/* variable frame burst size */
@@ -1499,16 +1499,16 @@ struct DWC_ETH_QOS_prv_data {
 	unsigned int mac_enable_count;	/* counter for enabling MAC transmit at
 					drop tx packet  */
 
-	struct DWC_ETH_QOS_mmc_counters mmc;
-	struct DWC_ETH_QOS_extra_stats xstats;
+	struct eqos_mmc_counters mmc;
+	struct eqos_extra_stats xstats;
 
-#ifdef DWC_ETH_QOS_CONFIG_PGTEST
-	struct DWC_ETH_QOS_PGStruct *pg;
+#ifdef EQOS_CONFIG_PGTEST
+	struct eqos_pg_struct *pg;
 	struct timer_list pg_timer;
 	INT prepare_pg_packet;
 	INT run_test;
 	INT max_counter;
-#endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
+#endif /* end of EQOS_CONFIG_PGTEST */
 
 	/* rx split header mode */
 	unsigned char rx_split_hdr;
@@ -1602,82 +1602,82 @@ struct DWC_ETH_QOS_prv_data {
 };
 
 typedef enum {
-	eSAVE,
-	eRESTORE
+	save,
+	restore
 } e_int_state;
 
 /* Function prototypes*/
 
-void DWC_ETH_QOS_init_function_ptrs_dev(struct hw_if_struct *);
-void DWC_ETH_QOS_init_function_ptrs_desc(struct desc_if_struct *);
-struct net_device_ops *DWC_ETH_QOS_get_netdev_ops(void);
-struct ethtool_ops *DWC_ETH_QOS_get_ethtool_ops(void);
-int DWC_ETH_QOS_poll_mq_napi(struct napi_struct *, int);
-int DWC_ETH_QOS_poll_mq(struct napi_struct *, int);
+void eqos_init_function_ptrs_dev(struct hw_if_struct *);
+void eqos_init_function_ptrs_desc(struct desc_if_struct *);
+struct net_device_ops *eqos_get_netdev_ops(void);
+struct ethtool_ops *eqos_get_ethtool_ops(void);
+int eqos_poll_mq_napi(struct napi_struct *, int);
+int eqos_poll_mq(struct napi_struct *, int);
 
-void DWC_ETH_QOS_get_pdata(struct DWC_ETH_QOS_prv_data *pdata);
+void eqos_get_pdata(struct eqos_prv_data *pdata);
 
 /* Debugfs related functions. */
 int create_debug_files(void);
 void remove_debug_files(void);
 
-int DWC_ETH_QOS_mdio_register(struct net_device *dev);
-void DWC_ETH_QOS_mdio_unregister(struct net_device *dev);
-INT DWC_ETH_QOS_mdio_read_direct(struct DWC_ETH_QOS_prv_data *pdata,
+int eqos_mdio_register(struct net_device *dev);
+void eqos_mdio_unregister(struct net_device *dev);
+INT eqos_mdio_read_direct(struct eqos_prv_data *pdata,
 				 int phyaddr, int phyreg, int *phydata);
-INT DWC_ETH_QOS_mdio_write_direct(struct DWC_ETH_QOS_prv_data *pdata,
+INT eqos_mdio_write_direct(struct eqos_prv_data *pdata,
 				  int phyaddr, int phyreg, int phydata);
 void dbgpr_regs(void);
-void dump_phy_registers(struct DWC_ETH_QOS_prv_data *);
-void dump_tx_desc(struct DWC_ETH_QOS_prv_data *pdata, int first_desc_idx,
-		  int last_desc_idx, int flag, UINT qInx);
-void dump_rx_desc(UINT, struct s_RX_NORMAL_DESC *desc, int cur_rx);
+void dump_phy_registers(struct eqos_prv_data *);
+void dump_tx_desc(struct eqos_prv_data *pdata, int first_desc_idx,
+		  int last_desc_idx, int flag, UINT qinx);
+void dump_rx_desc(UINT, struct s_rx_normal_desc *desc, int cur_rx);
 void print_pkt(struct sk_buff *skb, int len, bool tx_rx, int desc_idx);
-void DWC_ETH_QOS_get_all_hw_features(struct DWC_ETH_QOS_prv_data *pdata);
-void DWC_ETH_QOS_print_all_hw_features(struct DWC_ETH_QOS_prv_data *pdata);
-void DWC_ETH_QOS_configure_flow_ctrl(struct DWC_ETH_QOS_prv_data *pdata);
-INT DWC_ETH_QOS_powerup(struct net_device *, UINT);
-INT DWC_ETH_QOS_powerdown(struct net_device *, UINT, UINT);
-u32 DWC_ETH_QOS_usec2riwt(u32 usec, struct DWC_ETH_QOS_prv_data *pdata);
-void DWC_ETH_QOS_init_rx_coalesce(struct DWC_ETH_QOS_prv_data *pdata);
-void DWC_ETH_QOS_enable_all_ch_rx_interrpt(struct DWC_ETH_QOS_prv_data *pdata);
-void DWC_ETH_QOS_disable_all_ch_rx_interrpt(struct DWC_ETH_QOS_prv_data *pdata);
-void DWC_ETH_QOS_update_rx_errors(struct net_device *, unsigned int);
-void DWC_ETH_QOS_stop_all_ch_tx_dma(struct DWC_ETH_QOS_prv_data *pdata);
+void eqos_get_all_hw_features(struct eqos_prv_data *pdata);
+void eqos_print_all_hw_features(struct eqos_prv_data *pdata);
+void eqos_configure_flow_ctrl(struct eqos_prv_data *pdata);
+INT eqos_powerup(struct net_device *, UINT);
+INT eqos_powerdown(struct net_device *, UINT, UINT);
+u32 eqos_usec2riwt(u32 usec, struct eqos_prv_data *pdata);
+void eqos_init_rx_coalesce(struct eqos_prv_data *pdata);
+void eqos_enable_all_ch_rx_interrpt(struct eqos_prv_data *pdata);
+void eqos_disable_all_ch_rx_interrpt(struct eqos_prv_data *pdata);
+void eqos_update_rx_errors(struct net_device *, unsigned int);
+void eqos_stop_all_ch_tx_dma(struct eqos_prv_data *pdata);
 UCHAR get_tx_queue_count(void);
 UCHAR get_rx_queue_count(void);
-void DWC_ETH_QOS_mmc_read(struct DWC_ETH_QOS_mmc_counters *mmc);
-UINT DWC_ETH_QOS_get_total_desc_cnt(struct DWC_ETH_QOS_prv_data *pdata,
-		struct sk_buff *skb, UINT qInx);
+void eqos_mmc_read(struct eqos_mmc_counters *mmc);
+UINT eqos_get_total_desc_cnt(struct eqos_prv_data *pdata,
+		struct sk_buff *skb, UINT qinx);
 
-int DWC_ETH_QOS_ptp_init(struct DWC_ETH_QOS_prv_data *pdata);
-void DWC_ETH_QOS_ptp_remove(struct DWC_ETH_QOS_prv_data *pdata);
-phy_interface_t DWC_ETH_QOS_get_phy_interface(struct DWC_ETH_QOS_prv_data *pdata);
-bool DWC_ETH_QOS_eee_init(struct DWC_ETH_QOS_prv_data *pdata);
-void DWC_ETH_QOS_handle_eee_interrupt(struct DWC_ETH_QOS_prv_data *pdata);
-void DWC_ETH_QOS_disable_eee_mode(struct DWC_ETH_QOS_prv_data *pdata);
-void DWC_ETH_QOS_enable_eee_mode(struct DWC_ETH_QOS_prv_data *pdata);
+int eqos_ptp_init(struct eqos_prv_data *pdata);
+void eqos_ptp_remove(struct eqos_prv_data *pdata);
+phy_interface_t eqos_get_phy_interface(struct eqos_prv_data *pdata);
+bool eqos_eee_init(struct eqos_prv_data *pdata);
+void eqos_handle_eee_interrupt(struct eqos_prv_data *pdata);
+void eqos_disable_eee_mode(struct eqos_prv_data *pdata);
+void eqos_enable_eee_mode(struct eqos_prv_data *pdata);
 
-#ifdef DWC_ETH_QOS_CONFIG_PGTEST
-irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_pg(int irq, void *device_id);
-void DWC_ETH_QOS_default_confs(struct DWC_ETH_QOS_prv_data *pdata);
-int DWC_ETH_QOS_handle_pg_ioctl(struct DWC_ETH_QOS_prv_data *pdata, void *ptr);
-int DWC_ETH_QOS_alloc_pg(struct DWC_ETH_QOS_prv_data *pdata);
-void DWC_ETH_QOS_free_pg(struct DWC_ETH_QOS_prv_data *pdata);
-int DWC_ETH_QOS_alloc_rx_buf_pg(struct DWC_ETH_QOS_prv_data *pdata,
-				struct DWC_ETH_QOS_rx_buffer *buffer,
+#ifdef EQOS_CONFIG_PGTEST
+irqreturn_t eqos_pg_isr(int irq, void *device_id);
+void eqos_default_confs(struct eqos_prv_data *pdata);
+int eqos_handle_pg_ioctl(struct eqos_prv_data *pdata, void *ptr);
+int eqos_alloc_pg(struct eqos_prv_data *pdata);
+void eqos_free_pg(struct eqos_prv_data *pdata);
+int eqos_alloc_rx_buf_pg(struct eqos_prv_data *pdata,
+				struct eqos_rx_buffer *buffer,
 				gfp_t gfp);
-int DWC_ETH_QOS_alloc_tx_buf_pg(struct DWC_ETH_QOS_prv_data *pdata,
-				struct DWC_ETH_QOS_tx_buffer *buffer,
+int eqos_alloc_tx_buf_pg(struct eqos_prv_data *pdata,
+				struct eqos_tx_buffer *buffer,
 				gfp_t gfp);
-#endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
+#endif /* end of EQOS_CONFIG_PGTEST */
 
-int DWC_ETH_QOS_handle_mem_iso_ioctl(struct DWC_ETH_QOS_prv_data *pdata, void *ptr);
-int DWC_ETH_QOS_handle_csr_iso_ioctl(struct DWC_ETH_QOS_prv_data *pdata, void *ptr);
-int DWC_ETH_QOS_handle_phy_loopback(struct DWC_ETH_QOS_prv_data *pdata, void *ptr);
+int eqos_handle_mem_iso_ioctl(struct eqos_prv_data *pdata, void *ptr);
+int eqos_handle_csr_iso_ioctl(struct eqos_prv_data *pdata, void *ptr);
+int eqos_handle_phy_loopback(struct eqos_prv_data *pdata, void *ptr);
 
 /* For debug prints*/
-#define DRV_NAME "DWC_ETH_QOS_drv.c"
+#define DRV_NAME "eqos_drv.c"
 
 #ifdef YDEBUG
 #define DBGPR(x...) printk(KERN_ALERT x)

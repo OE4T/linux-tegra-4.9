@@ -40,27 +40,27 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
-#ifndef __DWC_ETH_QOS__INIT_H__
+#ifndef __EQOS__INIT_H__
 
-#define __DWC_ETH_QOS__INIT_H__
+#define __EQOS__INIT_H__
 #include <linux/platform_device.h>
 
-int DWC_ETH_QOS_probe(struct platform_device *);
+int eqos_probe(struct platform_device *);
 
-int DWC_ETH_QOS_remove(struct platform_device *);
+int eqos_remove(struct platform_device *);
 
-static void DWC_ETH_QOS_shutdown(struct platform_device *);
+static void eqos_shutdown(struct platform_device *);
 
 #if 0
-static INT DWC_ETH_QOS_suspend_late(struct platform_device *, pm_message_t);
+static INT eqos_suspend_late(struct platform_device *, pm_message_t);
 
-static INT DWC_ETH_QOS_resume_early(struct platform_device *);
+static INT eqos_resume_early(struct platform_device *);
 #endif
 
 #ifdef CONFIG_PM
-static INT DWC_ETH_QOS_suspend(struct platform_device *, pm_message_t);
+static INT eqos_suspend(struct platform_device *, pm_message_t);
 
-static INT DWC_ETH_QOS_resume(struct platform_device *);
+static INT eqos_resume(struct platform_device *);
 #endif				/* end of CONFIG_PM */
 
 #endif

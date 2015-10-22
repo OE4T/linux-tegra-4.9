@@ -42,7 +42,7 @@
  */
 
 
-/*!@file: DWC_ETH_QOS_init.c
+/*!@file: eqos_init.c
  * @brief: Driver functions.
  */
 #include "yheader.h"
@@ -60,18 +60,18 @@
 #include <linux/delay.h>
 
 #define LP_SUPPORTED 0
-static const struct of_device_id dwc_eth_qos_of_match[] = {
-	{ .compatible = "synopsys,dwc_eth_qos" },
+static const struct of_device_id eqos_of_match[] = {
+	{ .compatible = "nvidia,eqos" },
 	{},
 };
-MODULE_DEVICE_TABLE(of, dwc_eth_qos_of_match);
+MODULE_DEVICE_TABLE(of, eqos_of_match);
 
-ULONG dwc_eth_qos_base_addr;
+ULONG eqos_base_addr;
 
-void DWC_ETH_QOS_init_all_fptrs(struct DWC_ETH_QOS_prv_data *pdata)
+void eqos_init_all_fptrs(struct eqos_prv_data *pdata)
 {
-	DWC_ETH_QOS_init_function_ptrs_dev(&pdata->hw_if);
-	DWC_ETH_QOS_init_function_ptrs_desc(&pdata->desc_if);
+	eqos_init_function_ptrs_dev(&pdata->hw_if);
+	eqos_init_function_ptrs_desc(&pdata->desc_if);
 }
 
 /*!
@@ -83,44 +83,44 @@ void DWC_ETH_QOS_init_all_fptrs(struct DWC_ETH_QOS_prv_data *pdata)
 * \return returns positive integer
 * \retval IRQ_HANDLED
 */
-irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_POWER(int irq, void *device_id)
+irqreturn_t EQOS_ISR_SW_EQOS_POWER(int irq, void *device_id)
 {
-	struct DWC_ETH_QOS_prv_data *pdata = (struct DWC_ETH_QOS_prv_data *)device_id;
-	ULONG varMAC_ISR;
-	ULONG varMAC_IMR;
-	ULONG varMAC_PMTCSR;
-	ULONG varCLK_CTRL = 0;
+	struct eqos_prv_data *pdata = (struct eqos_prv_data *)device_id;
+	ULONG mac_isr;
+	ULONG mac_imr;
+	ULONG mac_pmtcsr;
+	ULONG clk_ctrl = 0;
 
 	if (tegra_platform_is_unit_fpga())
-		CLK_CRTL0_RgRd(varCLK_CTRL);
+		CLK_CRTL0_RD(clk_ctrl);
 
-	if (varCLK_CTRL & BIT(31)) {
+	if (clk_ctrl & BIT(31)) {
 		pr_info("power_isr: phy_intr received\n");
 		return IRQ_NONE;
 	} else {
-		MAC_ISR_RgRd(varMAC_ISR);
-		MAC_IMR_RgRd(varMAC_IMR);
+		MAC_ISR_RD(mac_isr);
+		MAC_IMR_RD(mac_imr);
 		pr_info("power_isr: power_intr received, MAC_ISR =%#lx, MAC_IMR =%#lx\n",
-				varMAC_ISR, varMAC_IMR);
+				mac_isr, mac_imr);
 
-		varMAC_ISR = (varMAC_ISR & varMAC_IMR);
+		mac_isr = (mac_isr & mac_imr);
 
 		/* RemoteWake and MagicPacket events will be received by PHY supporting
 		 * these features on silicon and can be used to wake up Tegra.
 		 * Still let the below code be there in case we ever get this interrupt.
 		 */
-		if (GET_VALUE(varMAC_ISR, MAC_ISR_PMTIS_LPOS, MAC_ISR_PMTIS_HPOS) & 1) {
+		if (GET_VALUE(mac_isr, MAC_ISR_PMTIS_LPOS, MAC_ISR_PMTIS_HPOS) & 1) {
 			pdata->xstats.pmt_irq_n++;
-			MAC_PMTCSR_RgRd(varMAC_PMTCSR);
-			pr_info("power_isr: PMTCSR : %#lx\n", varMAC_PMTCSR);
+			MAC_PMTCSR_RD(mac_pmtcsr);
+			pr_info("power_isr: PMTCSR : %#lx\n", mac_pmtcsr);
 			if (pdata->power_down)
-				DWC_ETH_QOS_powerup(pdata->dev, DWC_ETH_QOS_IOCTL_CONTEXT);
+				eqos_powerup(pdata->dev, EQOS_IOCTL_CONTEXT);
 		}
 
 		/* RxLPI exit EEE interrupts */
-		if (GET_VALUE(varMAC_ISR, MAC_ISR_LPI_LPOS, MAC_ISR_LPI_HPOS) & 1) {
+		if (GET_VALUE(mac_isr, MAC_ISR_LPI_LPOS, MAC_ISR_LPI_HPOS) & 1) {
 			pr_info("power_isr: LPI intr received\n");
-			DWC_ETH_QOS_handle_eee_interrupt(pdata);
+			eqos_handle_eee_interrupt(pdata);
 #ifdef HWA_NV_1650337
 		/* FIXME: remove this once root cause of HWA_NV_1650337 is known */
 		} else {
@@ -129,7 +129,7 @@ irqreturn_t DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_POWER(int irq, void *device_id)
 			 * get rid of interrupt storm issue.
 			 */
 			pr_info("power_isr: LPIIS not set in MAC_ISR but still reading MAC_LPI_CONTROL_STS\n");
-			DWC_ETH_QOS_handle_eee_interrupt(pdata);
+			eqos_handle_eee_interrupt(pdata);
 #endif
 		}
 
@@ -206,7 +206,7 @@ void get_dt_u32_array(struct device_node *pnode, char *pdt_prop, u32 *pval,
 		pdt_prop, pval[0], pval[1], pval[2], pval[3]);
 }
 
-static void eqos_clock_deinit(struct DWC_ETH_QOS_prv_data *pdata)
+static void eqos_clock_deinit(struct eqos_prv_data *pdata)
 {
 	struct platform_device *pdev = pdata->pdev;
 
@@ -223,7 +223,7 @@ static void eqos_clock_deinit(struct DWC_ETH_QOS_prv_data *pdata)
 	devm_clk_put(&pdev->dev, pdata->axi_cbb_clk);
 }
 
-static int eqos_clock_init(struct DWC_ETH_QOS_prv_data *pdata)
+static int eqos_clock_init(struct eqos_prv_data *pdata)
 {
 	struct platform_device *pdev = pdata->pdev;
 	struct device_node *node = pdev->dev.of_node;
@@ -331,7 +331,7 @@ axi_get_fail:
 	return ret;
 }
 
-static void eqos_regulator_deinit(struct DWC_ETH_QOS_prv_data *pdata)
+static void eqos_regulator_deinit(struct eqos_prv_data *pdata)
 {
 	if (!IS_ERR_OR_NULL(pdata->vddio_sys_enet_bias)) {
 		regulator_disable(pdata->vddio_sys_enet_bias);
@@ -355,7 +355,7 @@ static void eqos_regulator_deinit(struct DWC_ETH_QOS_prv_data *pdata)
 	}
 }
 
-static int eqos_regulator_init(struct DWC_ETH_QOS_prv_data *pdata)
+static int eqos_regulator_init(struct eqos_prv_data *pdata)
 {
 	struct platform_device *pdev = pdata->pdev;
 	int ret = 0;
@@ -452,7 +452,7 @@ phy_ovdd_rgmii_get_failed:
 	return ret;
 }
 
-static int eqos_get_phyreset_from_gpio(struct DWC_ETH_QOS_prv_data *pdata)
+static int eqos_get_phyreset_from_gpio(struct eqos_prv_data *pdata)
 {
 	struct platform_device *pdev = pdata->pdev;
 	struct device_node *node = pdev->dev.of_node;
@@ -478,7 +478,7 @@ static int eqos_get_phyreset_from_gpio(struct DWC_ETH_QOS_prv_data *pdata)
 	return 0;
 }
 
-static int eqos_get_phyirq_from_gpio(struct DWC_ETH_QOS_prv_data *pdata)
+static int eqos_get_phyirq_from_gpio(struct eqos_prv_data *pdata)
 {
 	struct platform_device *pdev = pdata->pdev;
 	struct device_node *node = pdev->dev.of_node;
@@ -585,10 +585,10 @@ err_out:
 * \retval 0 on success & -ve number on failure.
 */
 
-int DWC_ETH_QOS_probe(struct platform_device *pdev)
+int eqos_probe(struct platform_device *pdev)
 {
 
-	struct DWC_ETH_QOS_prv_data *pdata = NULL;
+	struct eqos_prv_data *pdata = NULL;
 	struct net_device *ndev = NULL;
 	int i, j, ret = 0;
 	int irq, power_irq;
@@ -608,7 +608,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 
 	DBGPR("-->%s()\n", __func__);
 
-	match = of_match_device(dwc_eth_qos_of_match, &pdev->dev);
+	match = of_match_device(eqos_of_match, &pdev->dev);
 	if(!match)
 		return -EINVAL;
 
@@ -662,14 +662,14 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 			j, rx_irqs[j], j, tx_irqs[j]);
 
 	DBGPR("==========================================================\n");
-	DBGPR("Sizeof rx context desc is %lu\n", sizeof(struct s_RX_CONTEXT_DESC));
-	DBGPR("Sizeof tx context desc is %lu\n", sizeof(struct s_TX_CONTEXT_DESC));
-	DBGPR("Sizeof rx normal desc is %lu\n", sizeof(struct s_RX_NORMAL_DESC));
-	DBGPR("Sizeof tx normal desc is %lu\n\n", sizeof(struct s_TX_NORMAL_DESC));
+	DBGPR("Sizeof rx context desc is %lu\n", sizeof(struct s_rx_context_desc));
+	DBGPR("Sizeof tx context desc is %lu\n", sizeof(struct s_tx_context_desc));
+	DBGPR("Sizeof rx normal desc is %lu\n", sizeof(struct s_rx_normal_desc));
+	DBGPR("Sizeof tx normal desc is %lu\n\n", sizeof(struct s_tx_normal_desc));
 	DBGPR("==========================================================\n");
 
 	/* remap base address */
-	dwc_eth_qos_base_addr = (ULONG) devm_ioremap_nocache(&pdev->dev,
+	eqos_base_addr = (ULONG) devm_ioremap_nocache(&pdev->dev,
 		res->start, (res->end - res->start) + 1);
 
 	/* Set DMA addressing limitations */
@@ -679,7 +679,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	}
 
 	/* allocate and set up the ethernet device */
-	ndev = alloc_etherdev_mqs(sizeof(struct DWC_ETH_QOS_prv_data),
+	ndev = alloc_etherdev_mqs(sizeof(struct eqos_prv_data),
 				MAX_CHANS, MAX_CHANS);
 	if (ndev == NULL) {
 		printk(KERN_ALERT "%s:Unable to alloc new net device\n",
@@ -688,10 +688,10 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		goto err_out_dev_failed;
 	}
 
-	ndev->base_addr = dwc_eth_qos_base_addr;
+	ndev->base_addr = eqos_base_addr;
 	SET_NETDEV_DEV(ndev, &pdev->dev);
 	pdata = netdev_priv(ndev);
-	DWC_ETH_QOS_init_all_fptrs(pdata);
+	eqos_init_all_fptrs(pdata);
 	hw_if = &(pdata->hw_if);
 	desc_if = &(pdata->desc_if);
 
@@ -766,9 +766,9 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	pdata->tx_queue_cnt = get_tx_queue_count();
 	pdata->rx_queue_cnt = get_rx_queue_count();
 
-#ifdef DWC_ETH_QOS_CONFIG_DEBUGFS
+#ifdef EQOS_CONFIG_DEBUGFS
 	/* to give prv data to debugfs */
-	DWC_ETH_QOS_get_pdata(pdata);
+	eqos_get_pdata(pdata);
 #endif
 
 	ndev->irq = irq;
@@ -782,8 +782,8 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		pdata->tx_irqs[j] = tx_irqs[j];
 	}
 
-	DWC_ETH_QOS_get_all_hw_features(pdata);
-	DWC_ETH_QOS_print_all_hw_features(pdata);
+	eqos_get_all_hw_features(pdata);
+	eqos_print_all_hw_features(pdata);
 
 	ret = desc_if->alloc_queue_struct(pdata);
 	if (ret < 0) {
@@ -791,12 +791,12 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		goto err_out_q_alloc_failed;
 	}
 
-	ndev->netdev_ops = DWC_ETH_QOS_get_netdev_ops();
+	ndev->netdev_ops = eqos_get_netdev_ops();
 
-	pdata->interface = DWC_ETH_QOS_get_phy_interface(pdata);
+	pdata->interface = eqos_get_phy_interface(pdata);
 	/* Bypass PHYLIB for TBI, RTBI and SGMII interface */
 	if (1 == pdata->hw_feat.sma_sel) {
-		ret = DWC_ETH_QOS_mdio_register(ndev);
+		ret = eqos_mdio_register(ndev);
 		if (ret < 0) {
 			printk(KERN_ALERT "MDIO bus (id %d) registration failed\n",
 			       pdata->bus_id);
@@ -831,11 +831,11 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		pchinfo = &pdata->chinfo[i];
 		pchinfo->chan_num = i;
 		pchinfo->poll_interval = 1000;
-		pchinfo->int_mask = VIRT_INTR_CH_CRTL_RX_Wr_Mask;
+		pchinfo->int_mask = VIRT_INTR_CH_CRTL_RX_WR_MASK;
 
 		/* enable tx interrupts for ptp chan */
 		if (i == pdata->ptp_cfg.ptp_dma_ch_id)
-			pchinfo->int_mask |= VIRT_INTR_CH_CRTL_TX_Wr_Mask;
+			pchinfo->int_mask |= VIRT_INTR_CH_CRTL_TX_WR_MASK;
 	}
 
 	if (pdata->dt_cfg.intr_mode == MODE_COMMON_IRQ) {
@@ -855,7 +855,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	} else {
 		dev_info(&pdev->dev, "setting MAC_1US_TIC to %d MHz\n",
 			csr_clock_speed);
-		MAC_1US_TIC_RgWr(csr_clock_speed - 1);
+		MAC_1US_TIC_WR(csr_clock_speed - 1);
 	}
 
 	ret = eqos_get_mac_address_dtb("/chosen", "nvidia,ether-mac", mac_addr);
@@ -873,7 +873,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		ndev->dev_addr[4] = mac_addr[4];
 		ndev->dev_addr[5] = mac_addr[5];
 	}
-#ifndef DWC_ETH_QOS_CONFIG_PGTEST
+#ifndef EQOS_CONFIG_PGTEST
 	/* enabling and registration of irq with magic wakeup */
 	if (1 == pdata->hw_feat.mgk_sel) {
 		device_set_wakeup_capable(&pdev->dev, 1);
@@ -881,21 +881,21 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		enable_irq_wake(ndev->irq);
 	}
 
-	for (i = 0; i < DWC_ETH_QOS_RX_QUEUE_CNT; i++) {
-		struct DWC_ETH_QOS_rx_queue *rx_queue = GET_RX_QUEUE_PTR(i);
+	for (i = 0; i < EQOS_RX_QUEUE_CNT; i++) {
+		struct eqos_rx_queue *rx_queue = GET_RX_QUEUE_PTR(i);
 
 		if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
 			netif_napi_add(ndev, &rx_queue->napi,
-					DWC_ETH_QOS_poll_mq_napi,
+					eqos_poll_mq_napi,
 					pdata->napi_quota_all_chans);
 		} else
 			netif_napi_add(ndev, &rx_queue->napi,
-					DWC_ETH_QOS_poll_mq,
+					eqos_poll_mq,
 					pdata->napi_quota_all_chans);
 		rx_queue->chan_num = i;
 	}
 
-	ndev->ethtool_ops = (DWC_ETH_QOS_get_ethtool_ops());
+	ndev->ethtool_ops = (eqos_get_ethtool_ops());
 
 	if (pdata->hw_feat.tso_en) {
 		ndev->hw_features = NETIF_F_TSO;
@@ -915,7 +915,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		ndev->hw_features |= NETIF_F_LRO;
 		printk(KERN_ALERT "Supports RX COE and LRO\n");
 	}
-#ifdef DWC_ETH_QOS_ENABLE_VLAN_TAG
+#ifdef EQOS_ENABLE_VLAN_TAG
 	ndev->vlan_features |= ndev->hw_features;
 	ndev->hw_features |= NETIF_F_HW_VLAN_CTAG_RX;
 	if (pdata->hw_feat.sa_vlan_ins) {
@@ -926,17 +926,17 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		ndev->hw_features |= NETIF_F_HW_VLAN_CTAG_FILTER;
 		printk(KERN_ALERT "VLAN HASH Filtering enabled\n");
 	}
-#endif /* end of DWC_ETH_QOS_ENABLE_VLAN_TAG */
+#endif /* end of EQOS_ENABLE_VLAN_TAG */
 	ndev->features |= ndev->hw_features;
 	pdata->dev_state |= ndev->features;
 
-	DWC_ETH_QOS_init_rx_coalesce(pdata);
+	eqos_init_rx_coalesce(pdata);
 
-#ifdef DWC_ETH_QOS_CONFIG_PTP
-	DWC_ETH_QOS_ptp_init(pdata);
-#endif	/* end of DWC_ETH_QOS_CONFIG_PTP */
+#ifdef EQOS_CONFIG_PTP
+	eqos_ptp_init(pdata);
+#endif	/* end of EQOS_CONFIG_PTP */
 
-#endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
+#endif /* end of EQOS_CONFIG_PGTEST */
 
 	spin_lock_init(&pdata->lock);
 	spin_lock_init(&pdata->tx_lock);
@@ -945,8 +945,8 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	for (i = 0; i < MAX_CHANS; i++)
 		spin_lock_init(&pdata->chinfo[i].chan_lock);
 
-#ifdef DWC_ETH_QOS_CONFIG_PGTEST
-	ret = DWC_ETH_QOS_alloc_pg(pdata);
+#ifdef EQOS_CONFIG_PGTEST
+	ret = eqos_alloc_pg(pdata);
 	if (ret < 0) {
 		printk(KERN_ALERT "ERROR:Unable to allocate PG memory\n");
 		goto err_out_pg_failed;
@@ -958,7 +958,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	printk(KERN_ALERT "*\n");
 	printk(KERN_ALERT "*******************************************/\n");
 	printk(KERN_ALERT "\n");
-#endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
+#endif /* end of EQOS_CONFIG_PGTEST */
 
 	ret = register_netdev(ndev);
 	if (ret) {
@@ -967,7 +967,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 		goto err_out_netdev_failed;
 	}
 
-	DBGPR("<-- DWC_ETH_QOS_probe\n");
+	DBGPR("<-- eqos_probe\n");
 
 	if (pdata->hw_feat.pcs_sel) {
 		netif_carrier_off(ndev);
@@ -976,7 +976,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	else
 		printk(KERN_ALERT "Net device registration sucessful\n");
 
-	ret = request_irq(power_irq, DWC_ETH_QOS_ISR_SW_DWC_ETH_QOS_POWER,
+	ret = request_irq(power_irq, EQOS_ISR_SW_EQOS_POWER,
 		IRQF_SHARED, DEV_NAME, pdata);
 
 	if (ret != 0) {
@@ -995,24 +995,24 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	unregister_netdev(ndev);
  err_out_netdev_failed:
 
-#ifdef DWC_ETH_QOS_CONFIG_PGTEST
-	DWC_ETH_QOS_free_pg(pdata);
+#ifdef EQOS_CONFIG_PGTEST
+	eqos_free_pg(pdata);
  err_out_pg_failed:
 #endif
 
-#ifndef DWC_ETH_QOS_CONFIG_PGTEST
-#ifdef DWC_ETH_QOS_CONFIG_PTP
-	DWC_ETH_QOS_ptp_remove(pdata);
-#endif	/* end of DWC_ETH_QOS_CONFIG_PTP */
+#ifndef EQOS_CONFIG_PGTEST
+#ifdef EQOS_CONFIG_PTP
+	eqos_ptp_remove(pdata);
+#endif	/* end of EQOS_CONFIG_PTP */
 
 	/* remove rx napi */
-	for (i = 0; i < DWC_ETH_QOS_RX_QUEUE_CNT; i++) {
-		struct DWC_ETH_QOS_rx_queue *rx_queue = GET_RX_QUEUE_PTR(i);
+	for (i = 0; i < EQOS_RX_QUEUE_CNT; i++) {
+		struct eqos_rx_queue *rx_queue = GET_RX_QUEUE_PTR(i);
 		netif_napi_del(&rx_queue->napi);
 	}
 #endif
 	if (1 == pdata->hw_feat.sma_sel)
-		DWC_ETH_QOS_mdio_unregister(ndev);
+		eqos_mdio_unregister(ndev);
 
  err_out_mdio_reg:
 	desc_if->free_queue_struct(pdata);
@@ -1040,7 +1040,7 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 
  err_out_dev_failed:
-	devm_iounmap(&pdev->dev, (void *) dwc_eth_qos_base_addr);
+	devm_iounmap(&pdev->dev, (void *) eqos_base_addr);
 
 	return ret;
 }
@@ -1059,14 +1059,14 @@ int DWC_ETH_QOS_probe(struct platform_device *pdev)
 * \return void
 */
 
-int DWC_ETH_QOS_remove(struct platform_device *pdev)
+int eqos_remove(struct platform_device *pdev)
 {
 	struct net_device *ndev;
-	struct DWC_ETH_QOS_prv_data *pdata;
+	struct eqos_prv_data *pdata;
 	struct desc_if_struct *desc_if;
 	int i, ret_val = 0;
 
-	DBGPR("--> DWC_ETH_QOS_remove\n");
+	DBGPR("--> eqos_remove\n");
 
 	if (pdev == NULL) {
 		DBGPR("Remove called on invalid device\n");
@@ -1078,7 +1078,7 @@ int DWC_ETH_QOS_remove(struct platform_device *pdev)
 	desc_if = &(pdata->desc_if);
 
 	/* free tx skb's */
-	desc_if->tx_skb_free_mem(pdata, DWC_ETH_QOS_TX_QUEUE_CNT);
+	desc_if->tx_skb_free_mem(pdata, EQOS_TX_QUEUE_CNT);
 
 	if (pdata->power_irq != 0) {
 		free_irq(pdata->power_irq, pdata);
@@ -1087,24 +1087,24 @@ int DWC_ETH_QOS_remove(struct platform_device *pdev)
 
 	unregister_netdev(ndev);
 
-#ifdef DWC_ETH_QOS_CONFIG_PGTEST
-	DWC_ETH_QOS_free_pg(pdata);
-#endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
+#ifdef EQOS_CONFIG_PGTEST
+	eqos_free_pg(pdata);
+#endif /* end of EQOS_CONFIG_PGTEST */
 
-#ifndef DWC_ETH_QOS_CONFIG_PGTEST
-#ifdef DWC_ETH_QOS_CONFIG_PTP
-	DWC_ETH_QOS_ptp_remove(pdata);
-#endif	/* end of DWC_ETH_QOS_CONFIG_PTP */
+#ifndef EQOS_CONFIG_PGTEST
+#ifdef EQOS_CONFIG_PTP
+	eqos_ptp_remove(pdata);
+#endif	/* end of EQOS_CONFIG_PTP */
 
 	/* remove rx napi */
-	for (i = 0; i < DWC_ETH_QOS_RX_QUEUE_CNT; i++) {
-		struct DWC_ETH_QOS_rx_queue *rx_queue = GET_RX_QUEUE_PTR(i);
+	for (i = 0; i < EQOS_RX_QUEUE_CNT; i++) {
+		struct eqos_rx_queue *rx_queue = GET_RX_QUEUE_PTR(i);
 		netif_napi_del(&rx_queue->napi);
 	}
 #endif
 
 	if (1 == pdata->hw_feat.sma_sel)
-		DWC_ETH_QOS_mdio_unregister(ndev);
+		eqos_mdio_unregister(ndev);
 
 	desc_if->free_queue_struct(pdata);
 
@@ -1122,57 +1122,57 @@ int DWC_ETH_QOS_remove(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, NULL);
 
-	devm_iounmap(&pdev->dev, (void *) dwc_eth_qos_base_addr);
+	devm_iounmap(&pdev->dev, (void *) eqos_base_addr);
 
-	DBGPR("<-- DWC_ETH_QOS_remove\n");
+	DBGPR("<-- eqos_remove\n");
 
 	return ret_val;
 }
 
-static struct platform_driver DWC_ETH_QOS_driver = {
+static struct platform_driver eqos_driver = {
 
-	.probe = DWC_ETH_QOS_probe,
-	.remove = DWC_ETH_QOS_remove,
-	.shutdown = DWC_ETH_QOS_shutdown,
+	.probe = eqos_probe,
+	.remove = eqos_remove,
+	.shutdown = eqos_shutdown,
 #if 0
-	.suspend_late = DWC_ETH_QOS_suspend_late,
-	.resume_early = DWC_ETH_QOS_resume_early,
+	.suspend_late = eqos_suspend_late,
+	.resume_early = eqos_resume_early,
 #endif
 #ifdef CONFIG_PM
-	.suspend = DWC_ETH_QOS_suspend,
-	.resume = DWC_ETH_QOS_resume,
+	.suspend = eqos_suspend,
+	.resume = eqos_resume,
 #endif
 	.driver = {
 		   .name = DEV_NAME,
 		   .owner = THIS_MODULE,
-			 .of_match_table = dwc_eth_qos_of_match,
+			 .of_match_table = eqos_of_match,
 	},
 };
 
-static void DWC_ETH_QOS_shutdown(struct platform_device *pdev)
+static void eqos_shutdown(struct platform_device *pdev)
 {
-	printk(KERN_ALERT "-->DWC_ETH_QOS_shutdown\n");
+	printk(KERN_ALERT "-->eqos_shutdown\n");
 	printk(KERN_ALERT "Handle the shutdown\n");
-	printk(KERN_ALERT ">--DWC_ETH_QOS_shutdown\n");
+	printk(KERN_ALERT ">--eqos_shutdown\n");
 
 	return;
 }
 
 #if 0
-static INT DWC_ETH_QOS_suspend_late(struct platform_device *pdev, pm_message_t state)
+static INT eqos_suspend_late(struct platform_device *pdev, pm_message_t state)
 {
-	printk(KERN_ALERT "-->DWC_ETH_QOS_suspend_late\n");
+	printk(KERN_ALERT "-->eqos_suspend_late\n");
 	printk(KERN_ALERT "Handle the suspend_late\n");
-	printk(KERN_ALERT "<--DWC_ETH_QOS_suspend_late\n");
+	printk(KERN_ALERT "<--eqos_suspend_late\n");
 
 	return 0;
 }
 
-static INT DWC_ETH_QOS_resume_early(struct platform_device *pdev)
+static INT eqos_resume_early(struct platform_device *pdev)
 {
-	printk(KERN_ALERT "-->DWC_ETH_QOS_resume_early\n");
+	printk(KERN_ALERT "-->eqos_resume_early\n");
 	printk(KERN_ALERT "Handle the resume_early\n");
-	printk(KERN_ALERT "<--DWC_ETH_QOS_resume_early\n");
+	printk(KERN_ALERT "<--eqos_resume_early\n");
 
 	return 0;
 }
@@ -1203,10 +1203,10 @@ static INT DWC_ETH_QOS_resume_early(struct platform_device *pdev)
  * \retval 0
  */
 
-static INT DWC_ETH_QOS_suspend(struct platform_device *pdev, pm_message_t state)
+static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct net_device *dev = platform_get_drvdata(pdev);
-	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	INT ret, pmt_flags = 0;
 	unsigned int rwk_filter_values[] = {
@@ -1238,29 +1238,29 @@ static INT DWC_ETH_QOS_suspend(struct platform_device *pdev, pm_message_t state)
 		0x9b8a5506,
 	};
 
-	DBGPR("-->DWC_ETH_QOS_suspend\n");
+	DBGPR("-->eqos_suspend\n");
 
 	if (!dev || !netif_running(dev) || (!pdata->hw_feat.mgk_sel &&
 			!pdata->hw_feat.rwk_sel)) {
-		DBGPR("<--DWC_ETH_QOS_dev_suspend\n");
+		DBGPR("<--eqos_dev_suspend\n");
 		return -EINVAL;
 	}
 
 	if (pdata->hw_feat.rwk_sel && (pdata->wolopts & WAKE_UCAST)) {
-		pmt_flags |= DWC_ETH_QOS_REMOTE_WAKEUP;
+		pmt_flags |= EQOS_REMOTE_WAKEUP;
 		hw_if->configure_rwk_filter(rwk_filter_values, 8);
 	}
 
 	if (pdata->hw_feat.mgk_sel && (pdata->wolopts & WAKE_MAGIC))
-		pmt_flags |= DWC_ETH_QOS_MAGIC_WAKEUP;
+		pmt_flags |= EQOS_MAGIC_WAKEUP;
 
-	ret = DWC_ETH_QOS_powerdown(dev, pmt_flags, DWC_ETH_QOS_DRIVER_CONTEXT);
+	ret = eqos_powerdown(dev, pmt_flags, EQOS_DRIVER_CONTEXT);
 #if (LP_SUPPORTED)
 	pci_save_state(pdev);
 	pci_set_power_state(pdev, pci_choose_state(pdev, state));
 #endif
 
-	DBGPR("<--DWC_ETH_QOS_suspend\n");
+	DBGPR("<--eqos_suspend\n");
 
 	return ret;
 }
@@ -1287,15 +1287,15 @@ static INT DWC_ETH_QOS_suspend(struct platform_device *pdev, pm_message_t state)
  * \retval 0
  */
 
-static INT DWC_ETH_QOS_resume(struct platform_device *pdev)
+static INT eqos_resume(struct platform_device *pdev)
 {
 	struct net_device *dev = platform_get_drvdata(pdev);
 	INT ret;
 
-	DBGPR("-->DWC_ETH_QOS_resume\n");
+	DBGPR("-->eqos_resume\n");
 
 	if (!dev || !netif_running(dev)) {
-		DBGPR("<--DWC_ETH_QOS_dev_resume\n");
+		DBGPR("<--eqos_dev_resume\n");
 		return -EINVAL;
 	}
 #if (LP_SUPPORTED)
@@ -1303,9 +1303,9 @@ static INT DWC_ETH_QOS_resume(struct platform_device *pdev)
 	pci_restore_state(pdev);
 #endif
 
-	ret = DWC_ETH_QOS_powerup(dev, DWC_ETH_QOS_DRIVER_CONTEXT);
+	ret = eqos_powerup(dev, EQOS_DRIVER_CONTEXT);
 
-	DBGPR("<--DWC_ETH_QOS_resume\n");
+	DBGPR("<--eqos_resume\n");
 
 	return ret;
 }
@@ -1321,24 +1321,24 @@ static INT DWC_ETH_QOS_resume(struct platform_device *pdev)
 * \return void.
 */
 
-static int DWC_ETH_QOS_init_module(void)
+static int eqos_init_module(void)
 {
 	INT ret = 0;
 
-	DBGPR("-->DWC_ETH_QOS_init_module\n");
+	DBGPR("-->eqos_init_module\n");
 
-	ret = platform_driver_register(&DWC_ETH_QOS_driver);
+	ret = platform_driver_register(&eqos_driver);
 	if (ret < 0) {
-		printk(KERN_ALERT "DWC_ETH_QOS:driver registration failed");
+		printk(KERN_ALERT "eqos:driver registration failed");
 		return ret;
 	}
-	printk(KERN_ALERT "DWC_ETH_QOS:driver registration sucessful");
+	printk(KERN_ALERT "eqos:driver registration sucessful");
 
-#ifdef DWC_ETH_QOS_CONFIG_DEBUGFS
+#ifdef EQOS_CONFIG_DEBUGFS
 	create_debug_files();
 #endif
 
-	DBGPR("<--DWC_ETH_QOS_init_module\n");
+	DBGPR("<--eqos_init_module\n");
 
 	return ret;
 }
@@ -1352,17 +1352,17 @@ static int DWC_ETH_QOS_init_module(void)
 * \return void.
 */
 
-static void __exit DWC_ETH_QOS_exit_module(void)
+static void __exit eqos_exit_module(void)
 {
-	DBGPR("-->DWC_ETH_QOS_exit_module\n");
+	DBGPR("-->eqos_exit_module\n");
 
-#ifdef DWC_ETH_QOS_CONFIG_DEBUGFS
+#ifdef EQOS_CONFIG_DEBUGFS
 	remove_debug_files();
 #endif
 
-	platform_driver_unregister(&DWC_ETH_QOS_driver);
+	platform_driver_unregister(&eqos_driver);
 
-	DBGPR("<--DWC_ETH_QOS_exit_module\n");
+	DBGPR("<--eqos_exit_module\n");
 }
 
 /*!
@@ -1375,7 +1375,7 @@ static void __exit DWC_ETH_QOS_exit_module(void)
 * entry function returns and the module does nothing until the kernel wants
 * to do something with the code that the module provides.
 */
-module_init(DWC_ETH_QOS_init_module);
+module_init(eqos_init_module);
 
 /*!
 * \brief Macro to register the driver un-registration function.
@@ -1385,7 +1385,7 @@ module_init(DWC_ETH_QOS_init_module);
 * it undoes whatever entry function did. It unregisters the functionality
 * that the entry function registered.
 */
-module_exit(DWC_ETH_QOS_exit_module);
+module_exit(eqos_exit_module);
 
 /*!
 * \brief Macro to declare the module author.
@@ -1399,7 +1399,7 @@ MODULE_AUTHOR("Synopsys India Pvt Ltd");
 *
 * \details This macro is used to describe what the module does.
 */
-MODULE_DESCRIPTION("DWC_ETH_QOS Driver");
+MODULE_DESCRIPTION("eqos Driver");
 
 /*!
 * \brief Macro to describe the module license.

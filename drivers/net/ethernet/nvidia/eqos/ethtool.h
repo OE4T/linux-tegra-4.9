@@ -40,38 +40,38 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
-#ifndef __DWC_ETH_QOS_ETHTOOL_H__
+#ifndef __EQOS_ETHTOOL_H__
 
-#define __DWC_ETH_QOS_ETHTOOL_H__
+#define __EQOS_ETHTOOL_H__
 
-static void DWC_ETH_QOS_get_pauseparam(struct net_device *dev,
+static void eqos_get_pauseparam(struct net_device *dev,
 				       struct ethtool_pauseparam *pause);
-static int DWC_ETH_QOS_set_pauseparam(struct net_device *dev,
+static int eqos_set_pauseparam(struct net_device *dev,
 				      struct ethtool_pauseparam *pause);
 
-static int DWC_ETH_QOS_getsettings(struct net_device *dev,
+static int eqos_getsettings(struct net_device *dev,
 				   struct ethtool_cmd *cmd);
-static int DWC_ETH_QOS_setsettings(struct net_device *dev,
+static int eqos_setsettings(struct net_device *dev,
 				   struct ethtool_cmd *cmd);
-static void DWC_ETH_QOS_get_wol(struct net_device *dev,
+static void eqos_get_wol(struct net_device *dev,
 				struct ethtool_wolinfo *wol);
-static int DWC_ETH_QOS_set_wol(struct net_device *dev,
+static int eqos_set_wol(struct net_device *dev,
 			       struct ethtool_wolinfo *wol);
 
-static int DWC_ETH_QOS_set_coalesce(struct net_device *dev,
+static int eqos_set_coalesce(struct net_device *dev,
 				    struct ethtool_coalesce *ec);
-static int DWC_ETH_QOS_get_coalesce(struct net_device *dev,
+static int eqos_get_coalesce(struct net_device *dev,
 				    struct ethtool_coalesce *ec);
 
-static int DWC_ETH_QOS_get_sset_count(struct net_device *dev, int sset);
+static int eqos_get_sset_count(struct net_device *dev, int sset);
 
-static void DWC_ETH_QOS_get_strings(struct net_device *dev, u32 stringset, u8 *data);
+static void eqos_get_strings(struct net_device *dev, u32 stringset, u8 *data);
 
-static void DWC_ETH_QOS_get_ethtool_stats(struct net_device *dev,
+static void eqos_get_ethtool_stats(struct net_device *dev,
 	struct ethtool_stats *dummy, u64 *data);
 #if 0
-static int DWC_ETH_QOS_set_tso(struct net_device *dev, u32 data);
-static u32 DWC_ETH_QOS_get_tso(struct net_device *dev);
+static int eqos_set_tso(struct net_device *dev, u32 data);
+static u32 eqos_get_tso(struct net_device *dev);
 #endif
 
 #endif

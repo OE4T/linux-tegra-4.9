@@ -60,17 +60,17 @@
  * \retval 0 on success and -ve number on failure.
  */
 
-static int DWC_ETH_QOS_adjust_freq(struct ptp_clock_info *ptp, s32 ppb)
+static int eqos_adjust_freq(struct ptp_clock_info *ptp, s32 ppb)
 {
-	struct DWC_ETH_QOS_prv_data *pdata =
-		container_of(ptp, struct DWC_ETH_QOS_prv_data, ptp_clock_ops);
+	struct eqos_prv_data *pdata =
+		container_of(ptp, struct eqos_prv_data, ptp_clock_ops);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	unsigned long flags;
 	u64 adj;
 	u32 diff, addend;
 	int neg_adj = 0;
 
-	DBGPR_PTP("-->DWC_ETH_QOS_adjust_freq: %d\n", ppb);
+	DBGPR_PTP("-->eqos_adjust_freq: %d\n", ppb);
 
 	if (ppb < 0) {
 		neg_adj = 1;
@@ -93,7 +93,7 @@ static int DWC_ETH_QOS_adjust_freq(struct ptp_clock_info *ptp, s32 ppb)
 
 	spin_unlock_irqrestore(&pdata->ptp_lock, flags);
 
-	DBGPR_PTP("<--DWC_ETH_QOS_adjust_freq\n");
+	DBGPR_PTP("<--eqos_adjust_freq\n");
 
 	return 0;
 }
@@ -113,17 +113,17 @@ static int DWC_ETH_QOS_adjust_freq(struct ptp_clock_info *ptp, s32 ppb)
  * \retval 0 on success and -ve number on failure.
  */
 
-static int DWC_ETH_QOS_adjust_time(struct ptp_clock_info *ptp, s64 delta)
+static int eqos_adjust_time(struct ptp_clock_info *ptp, s64 delta)
 {
-	struct DWC_ETH_QOS_prv_data *pdata =
-		container_of(ptp, struct DWC_ETH_QOS_prv_data, ptp_clock_ops);
+	struct eqos_prv_data *pdata =
+		container_of(ptp, struct eqos_prv_data, ptp_clock_ops);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	unsigned long flags;
 	u32 sec, nsec;
 	u32 quotient, reminder;
 	int neg_adj = 0;
 
-	DBGPR_PTP("-->DWC_ETH_QOS_adjust_time: delta = %lld\n", delta);
+	DBGPR_PTP("-->eqos_adjust_time: delta = %lld\n", delta);
 
 	if (delta < 0) {
 		neg_adj = 1;
@@ -140,7 +140,7 @@ static int DWC_ETH_QOS_adjust_time(struct ptp_clock_info *ptp, s64 delta)
 
 	spin_unlock_irqrestore(&pdata->ptp_lock, flags);
 
-	DBGPR_PTP("<--DWC_ETH_QOS_adjust_time\n");
+	DBGPR_PTP("<--eqos_adjust_time\n");
 
 	return 0;
 }
@@ -160,17 +160,17 @@ static int DWC_ETH_QOS_adjust_time(struct ptp_clock_info *ptp, s64 delta)
  * \retval 0 on success and -ve number on failure.
  */
 
-static int DWC_ETH_QOS_get_time(struct ptp_clock_info *ptp,
+static int eqos_get_time(struct ptp_clock_info *ptp,
 	struct timespec *ts)
 {
-	struct DWC_ETH_QOS_prv_data *pdata =
-		container_of(ptp, struct DWC_ETH_QOS_prv_data, ptp_clock_ops);
+	struct eqos_prv_data *pdata =
+		container_of(ptp, struct eqos_prv_data, ptp_clock_ops);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	u64 ns;
 	u32 reminder;
 	unsigned long flags;
 
-	DBGPR_PTP("-->DWC_ETH_QOS_get_time\n");
+	DBGPR_PTP("-->eqos_get_time\n");
 
 	spin_lock_irqsave(&pdata->ptp_lock, flags);
 
@@ -181,7 +181,7 @@ static int DWC_ETH_QOS_get_time(struct ptp_clock_info *ptp,
 	ts->tv_sec = div_u64_rem(ns, 1000000000ULL, &reminder);
 	ts->tv_nsec = reminder;
 
-	DBGPR_PTP("<--DWC_ETH_QOS_get_time: ts->tv_sec = %ld,"
+	DBGPR_PTP("<--eqos_get_time: ts->tv_sec = %ld,"
 		"ts->tv_nsec = %ld\n", ts->tv_sec, ts->tv_nsec);
 
 	return 0;
@@ -202,15 +202,15 @@ static int DWC_ETH_QOS_get_time(struct ptp_clock_info *ptp,
  * \retval 0 on success and -ve number on failure.
  */
 
-static int DWC_ETH_QOS_set_time(struct ptp_clock_info *ptp,
+static int eqos_set_time(struct ptp_clock_info *ptp,
 	const struct timespec *ts)
 {
-	struct DWC_ETH_QOS_prv_data *pdata =
-		container_of(ptp, struct DWC_ETH_QOS_prv_data, ptp_clock_ops);
+	struct eqos_prv_data *pdata =
+		container_of(ptp, struct eqos_prv_data, ptp_clock_ops);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	unsigned long flags;
 
-	DBGPR_PTP("-->DWC_ETH_QOS_set_time: ts->tv_sec = %ld,"
+	DBGPR_PTP("-->eqos_set_time: ts->tv_sec = %ld,"
 		"ts->tv_nsec = %ld\n", ts->tv_sec, ts->tv_nsec);
 
 	spin_lock_irqsave(&pdata->ptp_lock, flags);
@@ -219,7 +219,7 @@ static int DWC_ETH_QOS_set_time(struct ptp_clock_info *ptp,
 
 	spin_unlock_irqrestore(&pdata->ptp_lock, flags);
 
-	DBGPR_PTP("<--DWC_ETH_QOS_set_time\n");
+	DBGPR_PTP("<--eqos_set_time\n");
 
 	return 0;
 }
@@ -240,7 +240,7 @@ static int DWC_ETH_QOS_set_time(struct ptp_clock_info *ptp,
  * \retval 0 on success and -ve(EINVAL or EOPNOTSUPP) number on failure.
  */
 
-static int DWC_ETH_QOS_enable(struct ptp_clock_info *ptp,
+static int eqos_enable(struct ptp_clock_info *ptp,
 	struct ptp_clock_request *rq, int on)
 {
 	return -EOPNOTSUPP;
@@ -249,20 +249,20 @@ static int DWC_ETH_QOS_enable(struct ptp_clock_info *ptp,
 /*
  * structure describing a PTP hardware clock.
  */
-static struct ptp_clock_info DWC_ETH_QOS_ptp_clock_ops = {
+static struct ptp_clock_info eqos_ptp_clock_ops = {
 	.owner = THIS_MODULE,
-	.name = "DWC_ETH_QOS_clk",
-	.max_adj = DWC_ETH_QOS_SYSCLOCK, /* the max possible frequency adjustment,
+	.name = "eqos_clk",
+	.max_adj = EQOS_SYSCLOCK, /* the max possible frequency adjustment,
 				in parts per billion */
 	.n_alarm = 0,	/* the number of programmable alarms */
 	.n_ext_ts = 0,	/* the number of externel time stamp channels */
 	.n_per_out = 0, /* the number of programmable periodic signals */
 	.pps = 0,	/* indicates whether the clk supports a PPS callback */
-	.adjfreq = DWC_ETH_QOS_adjust_freq,
-	.adjtime = DWC_ETH_QOS_adjust_time,
-	.gettime = DWC_ETH_QOS_get_time,
-	.settime = DWC_ETH_QOS_set_time,
-	.enable = DWC_ETH_QOS_enable,
+	.adjfreq = eqos_adjust_freq,
+	.adjtime = eqos_adjust_time,
+	.gettime = eqos_get_time,
+	.settime = eqos_set_time,
+	.enable = eqos_enable,
 };
 
 
@@ -279,11 +279,11 @@ static struct ptp_clock_info DWC_ETH_QOS_ptp_clock_ops = {
  * \retval 0 on success and -ve number on failure.
  */
 
-int DWC_ETH_QOS_ptp_init(struct DWC_ETH_QOS_prv_data *pdata)
+int eqos_ptp_init(struct eqos_prv_data *pdata)
 {
 	int ret = 0;
 
-	DBGPR_PTP("-->DWC_ETH_QOS_ptp_init\n");
+	DBGPR_PTP("-->eqos_ptp_init\n");
 
 	if (!pdata->hw_feat.tsstssel) {
 		ret = -1;
@@ -295,7 +295,7 @@ int DWC_ETH_QOS_ptp_init(struct DWC_ETH_QOS_prv_data *pdata)
 
 	spin_lock_init(&pdata->ptp_lock);
 
-	pdata->ptp_clock_ops = DWC_ETH_QOS_ptp_clock_ops;
+	pdata->ptp_clock_ops = eqos_ptp_clock_ops;
 
 	pdata->ptp_clock = ptp_clock_register(&pdata->ptp_clock_ops, &pdata->pdev->dev);
 	if (IS_ERR(pdata->ptp_clock)) {
@@ -304,7 +304,7 @@ int DWC_ETH_QOS_ptp_init(struct DWC_ETH_QOS_prv_data *pdata)
 	} else
 		printk(KERN_ALERT "Added PTP HW clock successfully\n");
 
-	DBGPR_PTP("<--DWC_ETH_QOS_ptp_init\n");
+	DBGPR_PTP("<--eqos_ptp_init\n");
 
 	return ret;
 
@@ -324,15 +324,15 @@ no_hw_ptp:
  * \return void
  */
 
-void DWC_ETH_QOS_ptp_remove(struct DWC_ETH_QOS_prv_data *pdata)
+void eqos_ptp_remove(struct eqos_prv_data *pdata)
 {
-	DBGPR_PTP("-->DWC_ETH_QOS_ptp_remove\n");
+	DBGPR_PTP("-->eqos_ptp_remove\n");
 
 	if (pdata->ptp_clock) {
 		ptp_clock_unregister(pdata->ptp_clock);
 		printk(KERN_ALERT "Removed PTP HW clock successfully\n");
 	}
 
-	DBGPR_PTP("<--DWC_ETH_QOS_ptp_remove\n");
+	DBGPR_PTP("<--eqos_ptp_remove\n");
 }
 

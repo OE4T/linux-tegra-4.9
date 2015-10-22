@@ -72,6 +72,7 @@
  *   3.28 CPU DVFS voltage hint (MRQ_CPU_VHINT)
  *   3.29 ABI ratchet (MRQ_ABI_RATCHET)
  *   3.30 Reset IPC channel (MRQ_IPC_RESET)
+ *   3.31 EMC DVFS Latency (MRQ_EMC_DVFS_LATENCY)
  *   3.32 Waypoint2 (MRQ_SC7_WAYPOINT2)
  *   3.33 Start deep sleep entry (MRQ_SC7_ENTRY_START)
  *   3.34 MRQ_SC7_ENTRY_READY
@@ -174,6 +175,7 @@ struct mrq_response {
 #define MRQ_ABI_RATCHET		29
 #define MRQ_IPC_RESET		30
 
+#define MRQ_EMC_DVFS_LATENCY	31
 #define MRQ_SC7_WAYPOINT2	32
 #define MRQ_SC7_ENTRY_START	33
 #define MRQ_SC7_ENTRY_READY	34
@@ -1454,6 +1456,38 @@ struct mrq_abi_ratchet_response {
  */
 struct mrq_ipc_reset {
 	int32_t channel;
+} __ABI_PACKED;
+
+/**
+ * 3.31 EMC DVFS Latency (MRQ_EMC_DVFS_LATENCY)
+ *
+ * Platforms: T186
+ * Initiators: CCPLEX
+ * Targets: BPMP
+ */
+
+/**
+ * struct emc_dvfs_latency
+ * @freq: EMC frequency in Khz
+ * @latency: EMC DVFS latency in nano secs
+ *
+ * Used by %MRQ_EMC_DVFS_LATENCY call to carry data pointed by @pairs of
+ * struct mrq_emc_dvfs_latency_response
+ */
+struct emc_dvfs_latency {
+	uint32_t freq;
+	uint32_t latency;
+} __ABI_PACKED;
+
+#define EMC_DVFS_LATENCY_MAX_SIZE	14
+/**
+ * struct mrq_emc_dvfs_latency_response
+ * @num_pairs: The number of pairs supported
+ * @pairs: Array of pair {freq, latency}
+ */
+struct mrq_emc_dvfs_latency_response {
+	uint32_t num_pairs;
+	struct emc_dvfs_latency pairs[EMC_DVFS_LATENCY_MAX_SIZE];
 } __ABI_PACKED;
 
 /**

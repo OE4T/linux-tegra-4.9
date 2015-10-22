@@ -15,6 +15,7 @@
  */
 
 
+#include <linux/delay.h>
 #include <mach/dc.h>
 
 #include "nvdisp.h"
@@ -352,7 +353,9 @@ static inline u32 tegra_nvdisp_win_swap_uv(struct tegra_dc_win *win)
 	return swap_uv;
 }
 
-static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
+
+static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
+				      bool wait_for_vblank)
 {
 	u32 win_options, win_params, swap_uv;
 	fixed20_12 h_offset, v_offset;
@@ -578,11 +581,13 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 	return 0;
 }
 
+
 int tegra_nvdisp_get_linestride(struct tegra_dc *dc, int win)
 {
 	return nvdisp_win_read(tegra_dc_get_window(dc, win),
 		win_set_planar_storage_r()) << 6;
 }
+
 
 int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	struct tegra_dc_win *windows[], int n,
@@ -592,6 +597,24 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	u32 update_mask = nvdisp_cmd_state_ctrl_general_update_enable_f();
 	u32 act_req_mask = nvdisp_cmd_state_ctrl_general_act_req_enable_f();
 	u32 act_control = 0;
+
+	/* If any of the window updates requires vsync to program the window
+	   update safely, vsync all windows in this flip.  Safety overrides both
+	   the requested wait_for_vblank, and also the no_vsync global.
+	   The HSync Flip has some restrictions on changes from previous frame.
+	   The update_is_hsync_safe() call is used to filter out flips to force
+	   the VSync instead. */
+	for (i = 0; i < n; i++) {
+		struct tegra_dc_win *win = windows[i];
+
+		if ((!wait_for_vblank
+			&& !update_is_hsync_safe(
+				&dc->shadow_windows[win->idx], win))
+			/*|| do_partial_update*/)
+			wait_for_vblank = true;
+
+		memcpy(&dc->shadow_windows[win->idx], win, sizeof(*win));
+	}
 
 	for (i = 0; i < n; i++) {
 		struct tegra_dc_win *win = windows[i];
@@ -687,7 +710,7 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 				/* 	width, height); */
 			/* } */
 
-			tegra_nvdisp_win_attribute(win);
+			tegra_nvdisp_win_attribute(win, wait_for_vblank);
 
 			if (dc_win->csc_dirty) {
 				tegra_nvdisp_set_csc(win, &dc_win->csc);
@@ -739,6 +762,31 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	if (act_req_mask) {
 		tegra_dc_writel(dc, act_req_mask, nvdisp_cmd_state_ctrl_r());
 		tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
+	}
+
+	if (!wait_for_vblank) {
+		/* Don't use a interrupt handler for the update, but leave
+		   vblank interrupts unmasked since they could be used by other
+		   windows.  One window could flip on HBLANK while others flip
+		   on VBLANK.  Poll HW until this window update is completed
+		   which could take up to 16 scan lines for T18x or time out
+		   about a frame period. */
+		unsigned int  winmask = act_req_mask &
+			((0x3f & dc->pdata->win_mask) << 1)/*WIN_ALL_ACT_REQ*/;
+		int  i = 17000;  /* 60Hz frame period in uSec */
+
+		while (tegra_dc_windows_are_dirty(dc, winmask) && i--)
+			udelay(1);
+
+		if (i) {
+			for_each_set_bit(i, &dc->valid_windows, n)
+				tegra_dc_get_window(dc,
+					windows[i]->idx)->dirty = 0;
+		} else {  /* time out */
+			for_each_set_bit(i, &dc->valid_windows, n)
+				tegra_dc_get_window(dc,
+					windows[i]->idx)->dirty = 0;
+		}
 	}
 
 	return 0;

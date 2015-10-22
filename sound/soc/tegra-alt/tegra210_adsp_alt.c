@@ -49,6 +49,7 @@
 #include <sound/tegra_nvfx.h>
 #include <sound/tegra_nvfx_apm.h>
 #include <sound/tegra_nvfx_plugin.h>
+#include "tegra_isomgr_bw_alt.h"
 
 #include "tegra210_adsp_alt.h"
 
@@ -1308,6 +1309,8 @@ static int tegra210_adsp_pcm_open(struct snd_pcm_substream *substream)
 
 	dev_vdbg(adsp->dev, "%s", __func__);
 
+	tegra_isomgr_adma_setbw(substream, true);
+
 	if (!adsp->pcm_path[fe_reg][substream->stream].fe_reg ||
 		!adsp->pcm_path[fe_reg][substream->stream].be_reg) {
 		dev_err(adsp->dev, "Broken Path%d - FE not linked to BE", fe_reg);
@@ -1376,6 +1379,8 @@ static int tegra210_adsp_pcm_close(struct snd_pcm_substream *substream)
 	unsigned long flags;
 
 	dev_vdbg(prtd->dev, "%s", __func__);
+
+	tegra_isomgr_adma_setbw(substream, false);
 
 	if (prtd) {
 		tegra210_adsp_send_reset_msg(prtd->fe_apm,

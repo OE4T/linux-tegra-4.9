@@ -1,0 +1,164 @@
+/*
+ * tegra_isomgr_bw_alt.c - ADMA bandwidth calculation
+ *
+ * Copyright (c) 2016 NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <sound/pcm_params.h>
+#include <sound/soc.h>
+#include <linux/platform/tegra/isomgr.h>
+#include "tegra_isomgr_bw_alt.h"
+
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+
+#define MAX_BW	393216 /*Maximum KiloByte*/
+
+static long tegra_adma_calc_min_bandwidth(void);
+
+static struct adma_isomgr {
+	int current_bandwidth;
+	struct mutex mutex;
+	/* iso manager handle */
+	tegra_isomgr_handle isomgr_handle;
+} *adma;
+
+static long tegra_adma_calc_min_bandwidth(void)
+{
+	int max_srate = 192; /*Khz*/
+	int max_bpp = 4; /* Bytes per sample*/
+	int slot = 8; /* Max Channel per stream*/
+	int num_streams = 4; /* Min simultaneous usecase consideration*/
+	long min_bw;
+
+	min_bw = max_srate * max_bpp * slot * num_streams;
+
+	return min_bw;
+}
+
+static void adma_isomgr_request(uint adma_bw, uint lt)
+{
+	int ret = 0;
+
+	if (!adma->isomgr_handle) {
+		pr_err("%s: adma iso handle not initialized\n", __func__);
+		return;
+	}
+
+	/* return value of tegra_isomgr_reserve is dvfs latency in usec */
+	ret = tegra_isomgr_reserve(adma->isomgr_handle,
+				adma_bw,	/* KB/sec */
+				lt);	/* usec */
+	if (!ret) {
+		pr_err("%s: failed to reserve %u KBps\n", __func__, adma_bw);
+		return;
+	}
+
+	/* return value of tegra_isomgr_realize is dvfs latency in usec */
+	ret = tegra_isomgr_realize(adma->isomgr_handle);
+	if (!ret) {
+		pr_err("%s: failed to realize %u KBps\n", __func__, adma_bw);
+		return;
+	}
+}
+
+void tegra_isomgr_adma_setbw(struct snd_pcm_substream *substream,
+				bool is_playback)
+{
+	int bandwidth, sample_bytes;
+	struct snd_pcm_runtime *runtime = substream->runtime;
+
+	if (!adma || !runtime)
+		return;
+
+	mutex_lock(&adma->mutex);
+
+	sample_bytes = snd_pcm_format_width(runtime->format)/8;
+	if (sample_bytes < 0)
+		sample_bytes = 0;
+
+	/* KB/s kilo bytes per sec */
+	bandwidth = runtime->channels * (runtime->rate/1000) *
+			sample_bytes;
+
+	if (is_playback)
+		adma->current_bandwidth += bandwidth;
+	else
+		adma->current_bandwidth -= bandwidth;
+
+	if (adma->current_bandwidth < 0) {
+		pr_err("%s: ADMA ISO BW can't be less than zero\n", __func__);
+		adma->current_bandwidth = 0;
+	} else if (adma->current_bandwidth > MAX_BW) {
+		pr_err("%s: ADMA ISO BW can't be more than %d\n", __func__,
+			MAX_BW);
+		adma->current_bandwidth = MAX_BW;
+	}
+
+	mutex_unlock(&adma->mutex);
+
+	adma_isomgr_request(adma->current_bandwidth, 1000);
+}
+
+void tegra_isomgr_adma_renegotiate(void *p, u32 avail_bw)
+{
+	/* For Audio usecase there is no possibility of renegotiation
+	as it may lead to glitches. So currently dummy renegotiate call
+	is added to support bandwidth request more than registered bw which
+	got initialized during register call */
+}
+
+void tegra_isomgr_adma_register(void)
+{
+	adma = kzalloc(sizeof(struct adma_isomgr), GFP_KERNEL);
+	if (!adma) {
+		pr_err("%s: Failed to allocate adma isomgr struct\n", __func__);
+		return;
+	}
+
+	adma->current_bandwidth = 0;
+
+	mutex_init(&adma->mutex);
+
+	/* Register the required BW for adma usecases.*/
+	adma->isomgr_handle = tegra_isomgr_register(TEGRA_ISO_CLIENT_APE_ADMA,
+					tegra_adma_calc_min_bandwidth(),
+					tegra_isomgr_adma_renegotiate,
+					adma);
+	if (IS_ERR(adma->isomgr_handle)) {
+		pr_err("%s: Failed to register adma isomgr client. err=%ld\n",
+			__func__, PTR_ERR(adma->isomgr_handle));
+		adma->isomgr_handle = NULL;
+		mutex_destroy(&adma->mutex);
+		kfree(adma);
+		adma = NULL;
+	}
+}
+
+void tegra_isomgr_adma_unregister(void)
+{
+	if (!adma)
+		return;
+
+	mutex_destroy(&adma->mutex);
+
+	if (adma->isomgr_handle) {
+		tegra_isomgr_unregister(adma->isomgr_handle);
+		adma->isomgr_handle = NULL;
+	}
+
+	kfree(adma);
+	adma = NULL;
+}
+#endif

@@ -60,6 +60,9 @@ static void eqos_all_chans_timer(unsigned long data);
 static int handle_txrx_completions(struct eqos_prv_data *pdata,
 					int qinx);
 
+static void eqos_stop_dev(struct eqos_prv_data *pdata);
+static void eqos_start_dev(struct eqos_prv_data *pdata);
+
 /* SA(Source Address) operations on TX */
 unsigned char mac_addr0[6] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55 };
 unsigned char mac_addr1[6] = { 0x00, 0x66, 0x77, 0x88, 0x99, 0xaa };
@@ -89,7 +92,7 @@ void eqos_stop_all_ch_tx_dma(struct eqos_prv_data *pdata)
 
 	DBGPR("-->eqos_stop_all_ch_tx_dma\n");
 
-	for(qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++)
+	for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++)
 		hw_if->stop_dma_tx(pdata, qinx);
 
 	DBGPR("<--eqos_stop_all_ch_tx_dma\n");
@@ -204,284 +207,6 @@ static void eqos_all_ch_napi_disable(struct eqos_prv_data *pdata)
 	DBGPR("<--eqos_napi_disable\n");
 }
 
-/*!
- * \details This function is invoked to stop device operation
- * Following operations are performed in this function.
- * - Stop the queue.
- * - Stops DMA TX and RX.
- * - Free the TX and RX skb's.
- * - Issues soft reset to device.
- *
- * \param[in] pdata – pointer to private data structure.
- *
- * \return void
- */
-
-static void eqos_stop_dev(struct eqos_prv_data *pdata)
-{
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	struct desc_if_struct *desc_if = &(pdata->desc_if);
-
-	DBGPR("-->eqos_stop_dev\n");
-
-	netif_tx_disable(pdata->dev);
-
-	eqos_all_ch_napi_disable(pdata);
-
-	/* stop DMA TX/RX */
-	eqos_stop_all_ch_tx_dma(pdata);
-	eqos_stop_all_ch_rx_dma(pdata);
-
-	/* issue software reset to device */
-	hw_if->exit();
-
-	/* free tx skb's */
-	desc_if->tx_skb_free_mem(pdata, EQOS_TX_QUEUE_CNT);
-	/* free rx skb's */
-	desc_if->rx_skb_free_mem(pdata, EQOS_RX_QUEUE_CNT);
-
-	DBGPR("<--eqos_stop_dev\n");
-}
-
-
-static void eqos_tx_desc_mang_ds_dump(struct eqos_prv_data *pdata)
-{
-	struct eqos_tx_wrapper_descriptor *tx_desc_data = NULL;
-	struct s_tx_normal_desc *tx_desc = NULL;
-	int qinx, i;
-
-#ifndef YDEBUG
-	return;
-#endif
-	printk(KERN_ALERT "/**** TX DESC MANAGEMENT DATA STRUCTURE DUMP ****/\n");
-
-	printk(KERN_ALERT "TX_DESC_QUEUE_CNT = %d\n", EQOS_TX_QUEUE_CNT);
-	for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++) {
-		tx_desc_data = GET_TX_WRAPPER_DESC(qinx);
-
-		printk(KERN_ALERT "DMA CHANNEL = %d\n", qinx);
-
-		printk(KERN_ALERT "\tcur_tx           = %d\n",
-			tx_desc_data->cur_tx);
-		printk(KERN_ALERT "\tdirty_tx         = %d\n",
-			tx_desc_data->dirty_tx);
-		printk(KERN_ALERT "\tfree_desc_cnt    = %d\n",
-			tx_desc_data->free_desc_cnt);
-		printk(KERN_ALERT "\ttx_pkt_queued    = %d\n",
-			tx_desc_data->tx_pkt_queued);
-		printk(KERN_ALERT "\tqueue_stopped    = %d\n",
-			tx_desc_data->queue_stopped);
-		printk(KERN_ALERT "\tpacket_count     = %d\n",
-			tx_desc_data->packet_count);
-		printk(KERN_ALERT "\ttx_threshold_val = %d\n",
-			tx_desc_data->tx_threshold_val);
-		printk(KERN_ALERT "\ttsf_on           = %d\n",
-			tx_desc_data->tsf_on);
-		printk(KERN_ALERT "\tosf_on           = %d\n",
-			tx_desc_data->osf_on);
-		printk(KERN_ALERT "\ttx_pbl           = %d\n",
-			tx_desc_data->tx_pbl);
-
-		printk(KERN_ALERT "\t[<desc_add>  <dma_add> <index >] = <TDES0> : <TDES1> : <TDES2> : <TDES3>\n");
-		for (i = 0; i < TX_DESC_CNT; i++) {
-			tx_desc = GET_TX_DESC_PTR(qinx, i);
-			printk(KERN_ALERT "\t[%4p %4p %03d] = %#x : %#x : %#x : %#x\n",
-				tx_desc, (void *)(GET_TX_DESC_DMA_ADDR(qinx, i)), i, tx_desc->TDES0, tx_desc->TDES1,
-				tx_desc->TDES2, tx_desc->TDES3);
-		}
-	}
-
-	printk(KERN_ALERT "/************************************************/\n");
-}
-
-
-static void eqos_rx_desc_mang_ds_dump(struct eqos_prv_data *pdata)
-{
-	struct eqos_rx_wrapper_descriptor *rx_desc_data = NULL;
-	struct s_rx_normal_desc *rx_desc = NULL;
-	int qinx, i;
-
-#ifndef YDEBUG
-	return;
-#endif
-	printk(KERN_ALERT "/**** RX DESC MANAGEMENT DATA STRUCTURE DUMP ****/\n");
-
-	printk(KERN_ALERT "RX_DESC_QUEUE_CNT = %d\n", EQOS_RX_QUEUE_CNT);
-	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
-		rx_desc_data = GET_RX_WRAPPER_DESC(qinx);
-
-		printk(KERN_ALERT "DMA CHANNEL = %d\n", qinx);
-
-		printk(KERN_ALERT "\tcur_rx                = %d\n",
-			rx_desc_data->cur_rx);
-		printk(KERN_ALERT "\tdirty_rx              = %d\n",
-			rx_desc_data->dirty_rx);
-		printk(KERN_ALERT "\tpkt_received          = %d\n",
-			rx_desc_data->pkt_received);
-		printk(KERN_ALERT "\tskb_realloc_idx       = %d\n",
-			rx_desc_data->skb_realloc_idx);
-		printk(KERN_ALERT "\tskb_realloc_threshold = %d\n",
-			rx_desc_data->skb_realloc_threshold);
-		printk(KERN_ALERT "\tuse_riwt              = %d\n",
-			rx_desc_data->use_riwt);
-		printk(KERN_ALERT "\trx_riwt               = %d\n",
-			rx_desc_data->rx_riwt);
-		printk(KERN_ALERT "\trx_coal_frames        = %d\n",
-			rx_desc_data->rx_coal_frames);
-		printk(KERN_ALERT "\trx_threshold_val      = %d\n",
-			rx_desc_data->rx_threshold_val);
-		printk(KERN_ALERT "\trsf_on                = %d\n",
-			rx_desc_data->rsf_on);
-		printk(KERN_ALERT "\trx_pbl                = %d\n",
-			rx_desc_data->rx_pbl);
-
-		printk(KERN_ALERT "\t[<desc_add> <dma_add> <index >] = <RDES0> : <RDES1> : <RDES2> : <RDES3>\n");
-		for (i = 0; i < RX_DESC_CNT; i++) {
-			rx_desc = GET_RX_DESC_PTR(qinx, i);
-			printk(KERN_ALERT "\t[%4p %4p %03d] = %#x : %#x : %#x : %#x\n",
-				rx_desc, (void *)(GET_RX_DESC_DMA_ADDR(qinx, i)), i, rx_desc->RDES0, rx_desc->RDES1,
-				rx_desc->RDES2, rx_desc->RDES3);
-		}
-	}
-
-	printk(KERN_ALERT "/************************************************/\n");
-}
-
-
-static void eqos_restart_phy(struct eqos_prv_data *pdata)
-{
-	DBGPR("-->eqos_restart_phy\n");
-
-	pdata->oldlink = 0;
-	pdata->speed = 0;
-	pdata->oldduplex = -1;
-
-	if (pdata->phydev)
-		phy_start_aneg(pdata->phydev);
-
-	DBGPR("<--eqos_restart_phy\n");
-}
-
-
-/*!
- * \details This function is invoked to start the device operation
- * Following operations are performed in this function.
- * - Initialize software states
- * - Initialize the TX and RX descriptors queue.
- * - Initialize the device to know state
- * - Start the queue.
- *
- * \param[in] pdata – pointer to private data structure.
- *
- * \return void
- */
-
-static void eqos_start_dev(struct eqos_prv_data *pdata)
-{
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	struct desc_if_struct *desc_if = &(pdata->desc_if);
-
-	DBGPR("-->eqos_start_dev\n");
-
-	/* reset all variables */
-	eqos_default_common_confs(pdata);
-	eqos_default_tx_confs(pdata);
-	eqos_default_rx_confs(pdata);
-
-	eqos_configure_rx_fun_ptr(pdata);
-
-	eqos_napi_enable_mq(pdata);
-
-	/* reinit descriptor */
-	desc_if->wrapper_tx_desc_init(pdata);
-	desc_if->wrapper_rx_desc_init(pdata);
-
-	eqos_tx_desc_mang_ds_dump(pdata);
-	eqos_rx_desc_mang_ds_dump(pdata);
-
-	/* initializes MAC and DMA */
-	hw_if->init(pdata);
-
-	if (pdata->vlan_hash_filtering)
-		hw_if->update_vlan_hash_table_reg(pdata->vlan_ht_or_id);
-	else
-		hw_if->update_vlan_id(pdata->vlan_ht_or_id);
-
-	eqos_restart_phy(pdata);
-
-#ifdef EQOS_ENABLE_EEE
-	pdata->eee_enabled = eqos_eee_init(pdata);
-#else
-	pdata->eee_enabled = false;
-#endif
-
-	netif_tx_wake_all_queues(pdata->dev);
-
-	DBGPR("<--eqos_start_dev\n");
-}
-
-/*!
- * \details This function is invoked by isr handler when device issues an FATAL
- * bus error interrupt.  Following operations are performed in this function.
- * - Stop the device.
- * - Start the device
- *
- * \param[in] pdata – pointer to private data structure.
- * \param[in] qinx – queue number.
- *
- * \return void
- */
-
-static void eqos_restart_dev(struct eqos_prv_data *pdata,
-					UINT qinx)
-{
-	struct desc_if_struct *desc_if = &(pdata->desc_if);
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	struct eqos_rx_queue *rx_queue = GET_RX_QUEUE_PTR(qinx);
-
-	DBGPR("-->eqos_restart_dev\n");
-
-	netif_stop_subqueue(pdata->dev, qinx);
-	napi_disable(&rx_queue->napi);
-
-	/* stop DMA TX/RX */
-	hw_if->stop_dma_tx(pdata, qinx);
-	hw_if->stop_dma_rx(qinx);
-
-	/* free tx skb's */
-	desc_if->tx_skb_free_mem_single_q(pdata, qinx);
-	/* free rx skb's */
-	desc_if->rx_skb_free_mem_single_q(pdata, qinx);
-
-	if ((EQOS_TX_QUEUE_CNT == 0) &&
-		(EQOS_RX_QUEUE_CNT == 0)) {
-		/* issue software reset to device */
-		hw_if->exit();
-
-		eqos_configure_rx_fun_ptr(pdata);
-		eqos_default_common_confs(pdata);
-	}
-	/* reset all variables */
-	eqos_default_tx_confs_single_q(pdata, qinx);
-	eqos_default_rx_confs_single_q(pdata, qinx);
-
-	/* reinit descriptor */
-	desc_if->wrapper_tx_desc_init_single_q(pdata, qinx);
-	desc_if->wrapper_rx_desc_init_single_q(pdata, qinx);
-
-	napi_enable(&rx_queue->napi);
-
-	/* initializes MAC and DMA
-	 * NOTE : Do we need to init only one channel
-	 * which generate FBE*/
-	hw_if->init(pdata);
-
-	eqos_restart_phy(pdata);
-
-	netif_wake_subqueue(pdata->dev, qinx);
-
-	DBGPR("<--eqos_restart_dev\n");
-}
 
 void eqos_disable_all_ch_rx_interrpt(
 			struct eqos_prv_data *pdata)
@@ -575,8 +300,9 @@ void handle_non_ti_ri_chan_intrs(struct eqos_prv_data *pdata, int qinx)
 	}
 	if (GET_VALUE(dma_sr, DMA_SR_FBE_LPOS, DMA_SR_FBE_HPOS) & 1) {
 		pdata->xstats.fatal_bus_error_irq_n++;
+		pdata->fbe_chan_mask |= (1 << qinx);
 		eqos_status = -E_DMA_SR_FBE;
-		eqos_restart_dev(pdata, qinx);
+		queue_work(pdata->fbe_wq, &pdata->fbe_work);
 	}
 
 	DBGPR("<--%s()\n", __func__);
@@ -1648,28 +1374,34 @@ static void eqos_default_rx_confs(struct eqos_prv_data *pdata)
 }
 
 
-void free_multi_irqs(struct eqos_prv_data *pdata)
+void free_txrx_irqs(struct eqos_prv_data *pdata)
 {
 	uint i;
 
 	DBGPR("-->%s()\n", __func__);
 
-	free_irq(pdata->common_irq, pdata);
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
+		free_irq(pdata->common_irq, pdata);
 
-	for (i = 0; i < MAX_CHANS; i++) {
-		if (pdata->rx_irq_alloc_mask & (1 << i)) {
-			irq_set_affinity_hint(pdata->rx_irqs[i], NULL);
-			free_irq(pdata->rx_irqs[i], pdata);
+		for (i = 0; i < MAX_CHANS; i++) {
+			if (pdata->rx_irq_alloc_mask & (1 << i)) {
+				irq_set_affinity_hint(pdata->rx_irqs[i], NULL);
+				free_irq(pdata->rx_irqs[i], pdata);
+			}
+			if (pdata->tx_irq_alloc_mask & (1 << i)) {
+				irq_set_affinity_hint(pdata->tx_irqs[i], NULL);
+				free_irq(pdata->tx_irqs[i], pdata);
+			}
 		}
-		if (pdata->tx_irq_alloc_mask & (1 << i)) {
-			irq_set_affinity_hint(pdata->tx_irqs[i], NULL);
-			free_irq(pdata->tx_irqs[i], pdata);
-		}
+	} else if (pdata->irq_number != 0) {
+		free_irq(pdata->irq_number, pdata);
+		pdata->irq_number = 0;
 	}
+
 	DBGPR("<--%s()\n", __func__);
 }
 
-int request_multi_irqs(struct eqos_prv_data *pdata)
+int request_txrx_irqs(struct eqos_prv_data *pdata)
 {
 	int ret = Y_SUCCESS;
 	uint i;
@@ -1677,9 +1409,30 @@ int request_multi_irqs(struct eqos_prv_data *pdata)
 
 	DBGPR("-->%s()\n", __func__);
 
+	pdata->irq_number = pdata->dev->irq;
+
+	if (pdata->dt_cfg.intr_mode != MODE_MULTI_IRQ) {
+#ifdef EQOS_CONFIG_PGTEST
+		ret = request_irq(pdata->irq_number,
+				eqos_pg_isr,
+				IRQF_SHARED, DEV_NAME, pdata);
+#else
+		ret = request_irq(pdata->irq_number,
+				eqos_isr,
+				IRQF_SHARED, DEV_NAME, pdata);
+#endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
+
+		if (ret != 0) {
+			dev_err(&pdata->pdev->dev,
+				"Unable to register IRQ %d\n",
+				pdata->irq_number);
+			return -EBUSY;
+		}
+		return Y_SUCCESS;
+	}
+
 	ret = request_irq(pdata->common_irq,
-			eqos_common_isr,
-			IRQF_SHARED, DEV_NAME, pdata);
+			eqos_common_isr, IRQF_SHARED, DEV_NAME, pdata);
 	if (ret != Y_SUCCESS) {
 		printk(KERN_ALERT "Unable to register  %d\n",
 			pdata->common_irq);
@@ -1692,8 +1445,7 @@ int request_multi_irqs(struct eqos_prv_data *pdata)
 			continue;
 
 		ret = request_irq(pdata->rx_irqs[i],
-				eqos_ch_isr,
-				0, DEV_NAME, pdata);
+				eqos_ch_isr, 0, DEV_NAME, pdata);
 		if (ret != 0) {
 			printk(KERN_ALERT "Unable to register  %d\n",
 				pdata->rx_irqs[i]);
@@ -1701,8 +1453,7 @@ int request_multi_irqs(struct eqos_prv_data *pdata)
 			goto err_chan_irq;
 		}
 		ret = request_irq(pdata->tx_irqs[i],
-				  eqos_ch_isr,
-				  0, DEV_NAME, pdata);
+				  eqos_ch_isr, 0, DEV_NAME, pdata);
 		if (ret != 0) {
 			printk(KERN_ALERT "Unable to register  %d\n",
 			       pdata->tx_irqs[i]);
@@ -1724,7 +1475,7 @@ int request_multi_irqs(struct eqos_prv_data *pdata)
 	return ret;
 
  err_chan_irq:
-	free_multi_irqs(pdata);
+	free_txrx_irqs(pdata);
 	free_irq(pdata->common_irq, pdata);
 
  err_common_irq:
@@ -1733,7 +1484,7 @@ int request_multi_irqs(struct eqos_prv_data *pdata)
 }
 
 
-void alloc_poll_timers(struct eqos_prv_data *pdata)
+void init_txrx_poll_timers(struct eqos_prv_data *pdata)
 {
 	uint i;
 	struct chan_data *pchinfo;
@@ -1769,8 +1520,31 @@ void alloc_poll_timers(struct eqos_prv_data *pdata)
 	DBGPR("<--%s()\n", __func__);
 }
 
+void start_txrx_poll_timers(struct eqos_prv_data *pdata)
+{
+	uint i;
+	struct chan_data *pchinfo;
 
-void free_poll_timers(struct eqos_prv_data *pdata)
+	DBGPR("-->%s()\n", __func__);
+
+#ifdef ALL_POLLING
+	if (pdata->dt_cfg.intr_mode == MODE_ALL_POLLING)
+		add_timer(&pdata->all_chans_timer);
+#endif
+	if (pdata->dt_cfg.intr_mode != MODE_MULTI_IRQ)
+		return;
+
+	for (i = 0; i < MAX_CHANS; i++) {
+		pchinfo = &pdata->chinfo[i];
+
+		if (pdata->dt_cfg.chan_mode[i] == CHAN_MODE_POLLING)
+			add_timer(&pchinfo->poll_timer);
+	}
+	DBGPR("<--%s()\n", __func__);
+}
+
+
+void stop_txrx_poll_timers(struct eqos_prv_data *pdata)
 {
 	uint i;
 	struct chan_data *pchinfo;
@@ -1812,7 +1586,6 @@ static int eqos_open(struct net_device *dev)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	int ret = Y_SUCCESS;
-	struct hw_if_struct *hw_if = &pdata->hw_if;
 	struct desc_if_struct *desc_if = &pdata->desc_if;
 
 	DBGPR("-->eqos_open\n");
@@ -1820,95 +1593,28 @@ static int eqos_open(struct net_device *dev)
 	if (!is_valid_ether_addr(dev->dev_addr))
 		return -EADDRNOTAVAIL;
 
-	pdata->irq_number = dev->irq;
-	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
-		ret = request_multi_irqs(pdata);
-		if (ret != Y_SUCCESS)
-			goto err_irq_0;
-	} else {
-#ifdef EQOS_CONFIG_PGTEST
-		ret = request_irq(pdata->irq_number,
-				eqos_pg_isr,
-				IRQF_SHARED, DEV_NAME, pdata);
-#else
-		ret = request_irq(pdata->irq_number,
-				eqos_isr,
-				IRQF_SHARED, DEV_NAME, pdata);
-#endif /* end of EQOS_CONFIG_PGTEST */
-		if (ret != 0) {
-			printk(KERN_ALERT "Unable to register IRQ %d\n",
-				pdata->irq_number);
-			ret = -EBUSY;
-			goto err_irq_0;
-		}
-	}
+	ret = request_txrx_irqs(pdata);
+	if (ret != Y_SUCCESS)
+		goto err_irq_0;
 
 	ret = desc_if->alloc_buff_and_desc(pdata);
 	if (ret < 0) {
-		printk(KERN_ALERT
-			"failed to allocate buffer/descriptor memory\n");
+		dev_err(&pdata->pdev->dev,
+			"Failed to allocate buffer/descriptor memory\n");
 		ret = -ENOMEM;
 		goto err_out_desc_buf_alloc_failed;
 	}
+	init_txrx_poll_timers(pdata);
+	eqos_start_dev(pdata);
 
-	alloc_poll_timers(pdata);
-	/* default configuration */
-#ifdef EQOS_CONFIG_PGTEST
-	eqos_default_confs(pdata);
-#else
-	eqos_default_common_confs(pdata);
-	eqos_default_tx_confs(pdata);
-	eqos_default_rx_confs(pdata);
-	eqos_configure_rx_fun_ptr(pdata);
+	DBGPR("<--%s()\n", __func__);
+	return Y_SUCCESS;
 
-	desc_if->wrapper_tx_desc_init(pdata);
-	desc_if->wrapper_rx_desc_init(pdata);
+err_out_desc_buf_alloc_failed:
+	free_txrx_irqs(pdata);
 
-	eqos_napi_enable_mq(pdata);
-#endif /* end of EQOS_CONFIG_PGTEST */
-
-	eqos_set_rx_mode(dev);
-	eqos_mmc_setup(pdata);
-
-	/* initializes MAC and DMA */
-	hw_if->init(pdata);
-
-	if (pdata->hw_feat.pcs_sel)
-		hw_if->control_an(1, 0);
-
-#ifdef EQOS_CONFIG_PGTEST
-	hw_if->prepare_dev_pktgen(pdata);
-#endif
-
-	if (pdata->phydev)
-		phy_start(pdata->phydev);
-
-#ifdef EQOS_ENABLE_EEE
-	pdata->eee_enabled = eqos_eee_init(pdata);
-#else
-	pdata->eee_enabled = false;
-#endif
-
-#ifndef EQOS_CONFIG_PGTEST
-	if (pdata->phydev)
-		netif_tx_start_all_queues(dev);
-#else
-	netif_tx_disable(dev);
-#endif /* end of EQOS_CONFIG_PGTEST */
-
-	DBGPR("<--eqos_open\n");
-
-	return ret;
-
- err_out_desc_buf_alloc_failed:
-	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
-		free_multi_irqs(pdata);
-	else if (pdata->irq_number != 0) {
-		free_irq(pdata->irq_number, pdata);
-		pdata->irq_number = 0;
-	}
- err_irq_0:
-	DBGPR("<--eqos_open\n");
+err_irq_0:
+	DBGPR("<--%s()\n", __func__);
 	return ret;
 }
 
@@ -1928,57 +1634,16 @@ static int eqos_open(struct net_device *dev)
 static int eqos_close(struct net_device *dev)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
-	struct hw_if_struct *hw_if = &pdata->hw_if;
 	struct desc_if_struct *desc_if = &pdata->desc_if;
 
-	DBGPR("-->eqos_close\n");
+	DBGPR("-->%s\n", __func__);
 
-	/* FIXME don't issue software reset to device
-	 * but make sure DMA is stopped correctly
-	 */
-	/* hw_if->exit(); */
+	eqos_stop_dev(pdata);
 
-#ifndef EQOS_CONFIG_PGTEST
-	netif_tx_disable(dev);
-	eqos_all_ch_napi_disable(pdata);
-#endif /* end of EQOS_CONFIG_PGTEST */
-
-	/* stop DMA TX */
-	eqos_stop_all_ch_tx_dma(pdata);
-
-	/* disable MAC TX */
-	hw_if->stop_mac_tx();
-
-	/* stop the PHY */
-	if (pdata->phydev)
-		phy_stop(pdata->phydev);
-
-	/* disable MAC RX */
-	hw_if->stop_mac_rx();
-
-	/* stop DMA RX */
-	eqos_stop_all_ch_rx_dma(pdata);
-
-	free_poll_timers(pdata);
-
-	if (pdata->eee_enabled)
-		del_timer_sync(&pdata->eee_ctrl_timer);
-
-	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
-		free_multi_irqs(pdata);
-	} else if (pdata->irq_number != 0) {
-		free_irq(pdata->irq_number, pdata);
-		pdata->irq_number = 0;
-	}
-#ifdef EQOS_CONFIG_PGTEST
-	del_timer(&pdata->pg_timer);
-#endif /* end of EQOS_CONFIG_PGTEST */
-
-	/* free rx skb's */
-	desc_if->rx_skb_free_mem(pdata, EQOS_RX_QUEUE_CNT);
 	desc_if->free_buff_and_desc(pdata);
-	DBGPR("<--eqos_close\n");
+	free_txrx_irqs(pdata);
 
+	DBGPR("<--%s\n", __func__);
 	return Y_SUCCESS;
 }
 
@@ -7534,4 +7199,166 @@ static void eqos_all_chans_timer(unsigned long data)
 	pdata->all_chans_timer.expires = jiffies +
 					msecs_to_jiffies(1000);  /* 1s */
 	add_timer(&pdata->all_chans_timer);
+}
+
+static void eqos_disable_all_irqs(struct eqos_prv_data *pdata)
+{
+	struct hw_if_struct *hw_if = &pdata->hw_if;
+	int	i;
+
+	DBGPR("-->%s()\n", __func__);
+
+	/* disable all interrupts */
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
+		for (i = 0; i < MAX_CHANS; i++)
+			hw_if->disable_chan_interrupts(i, pdata);
+	} else {
+		for (i = 0; i < MAX_CHANS; i++) {
+			DMA_IER_WR(i, 0);
+			DMA_SR_WR(i, 0xffffffff);
+		}
+	}
+	/* disable mac interrupts */
+	MAC_IMR_WR(0);
+
+	/* ensure irqs are not executing */
+	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
+		synchronize_irq(pdata->common_irq);
+		for (i = 0; i < MAX_CHANS; i++) {
+			if (pdata->rx_irq_alloc_mask & (1 << i))
+				synchronize_irq(pdata->rx_irqs[i]);
+			if (pdata->tx_irq_alloc_mask & (1 << i))
+				synchronize_irq(pdata->tx_irqs[i]);
+		}
+	} else {
+		if (pdata->irq_number != 0)
+			synchronize_irq(pdata->irq_number);
+	}
+
+	DBGPR("<--%s()\n", __func__);
+}
+
+static void eqos_stop_dev(struct eqos_prv_data *pdata)
+{
+	struct hw_if_struct *hw_if = &pdata->hw_if;
+	struct desc_if_struct *desc_if = &pdata->desc_if;
+
+	DBGPR("-->%s()\n", __func__);
+
+	/* turn off sources of data into dev */
+	netif_tx_disable(pdata->dev);
+	hw_if->stop_mac_rx();
+
+	eqos_disable_all_irqs(pdata);
+	stop_txrx_poll_timers(pdata);
+
+	eqos_all_ch_napi_disable(pdata);
+
+	/* stop DMA TX */
+	eqos_stop_all_ch_tx_dma(pdata);
+
+	/* disable MAC TX */
+	hw_if->stop_mac_tx();
+
+	/* stop the PHY */
+	if (pdata->phydev)
+		phy_stop(pdata->phydev);
+
+	/* stop DMA RX */
+	eqos_stop_all_ch_rx_dma(pdata);
+
+	if (pdata->eee_enabled)
+		del_timer_sync(&pdata->eee_ctrl_timer);
+
+	/* return tx skbs */
+	desc_if->tx_skb_free_mem(pdata, MAX_CHANS);
+
+	/* free rx skb's */
+	desc_if->rx_skb_free_mem(pdata, MAX_CHANS);
+
+	DBGPR("<--%s()\n", __func__);
+}
+
+static void eqos_start_dev(struct eqos_prv_data *pdata)
+{
+	struct hw_if_struct *hw_if = &pdata->hw_if;
+	struct desc_if_struct *desc_if = &pdata->desc_if;
+
+	DBGPR("-->%s()\n", __func__);
+
+	/* issue CAR reset to device */
+	hw_if->car_reset(pdata);
+	hw_if->pad_calibrate(pdata);
+
+	/* default configuration */
+	eqos_default_common_confs(pdata);
+	eqos_default_tx_confs(pdata);
+	eqos_default_rx_confs(pdata);
+	eqos_configure_rx_fun_ptr(pdata);
+
+	desc_if->wrapper_tx_desc_init(pdata);
+	desc_if->wrapper_rx_desc_init(pdata);
+
+	eqos_napi_enable_mq(pdata);
+
+	eqos_set_rx_mode(pdata->dev);
+	eqos_mmc_setup(pdata);
+
+	start_txrx_poll_timers(pdata);
+
+	/* initializes MAC and DMA */
+	hw_if->init(pdata);
+
+	MAC_1US_TIC_WR(pdata->csr_clock_speed - 1);
+
+	if (pdata->hw_feat.pcs_sel)
+		hw_if->control_an(1, 0);
+
+	if (pdata->phydev) {
+		pdata->oldlink = 0;
+		pdata->speed = 0;
+		pdata->oldduplex = -1;
+
+		phy_start(pdata->phydev);
+		phy_start_machine(pdata->phydev);
+	}
+
+#ifdef DWC_ETH_QOS_ENABLE_EEE
+	pdata->eee_enabled = DWC_ETH_QOS_eee_init(pdata);
+#else
+	pdata->eee_enabled = false;
+#endif
+
+	if (pdata->phydev)
+		netif_tx_start_all_queues(pdata->dev);
+
+	DBGPR("<--%s()\n", __func__);
+}
+
+void eqos_fbe_work(struct work_struct *work)
+{
+	struct eqos_prv_data *pdata =
+			container_of(work, struct eqos_prv_data, fbe_work);
+	int i;
+	u32 dma_sr_reg;
+
+	DBGPR("-->%s()\n", __func__);
+
+	i = 0;
+	while (pdata->fbe_chan_mask) {
+		if (pdata->fbe_chan_mask & 1) {
+			DMA_SR_RD(i, dma_sr_reg);
+
+			dev_err(&pdata->pdev->dev,
+				"Fatal Bus Error on chan %d, SRreg=0x%.8x\n",
+				i, dma_sr_reg);
+		}
+		pdata->fbe_chan_mask >>= 1;
+		i++;
+	}
+
+	eqos_stop_dev(pdata);
+	eqos_start_dev(pdata);
+
+	DBGPR("<--%s()\n", __func__);
 }

@@ -32,6 +32,7 @@
 
 #include "tegra_pcm_alt.h"
 #include "tegra210_xbar_alt.h"
+#include "tegra_isomgr_bw_alt.h"
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 #include <sound/tegra_audio.h>
 #endif
@@ -287,6 +288,26 @@ static int tegra210_admaif_set_pack_mode(struct regmap *map, unsigned int reg,
 	return 0;
 }
 
+static int tegra210_admaif_prepare(struct snd_pcm_substream *substream,
+				struct snd_soc_dai *dai)
+{
+	tegra_isomgr_adma_setbw(substream, true);
+
+	return 0;
+}
+
+static int tegra210_admaif_startup(struct snd_pcm_substream *substream,
+				struct snd_soc_dai *dai)
+{
+	return 0;
+}
+
+static void tegra210_admaif_shutdown(struct snd_pcm_substream *substream,
+				struct snd_soc_dai *dai)
+{
+	tegra_isomgr_adma_setbw(substream, false);
+}
+
 static int tegra210_admaif_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
@@ -463,6 +484,9 @@ static int tegra210_admaif_trigger(struct snd_pcm_substream *substream, int cmd,
 static struct snd_soc_dai_ops tegra210_admaif_dai_ops = {
 	.hw_params	= tegra210_admaif_hw_params,
 	.trigger	= tegra210_admaif_trigger,
+	.startup	= tegra210_admaif_startup,
+	.shutdown	= tegra210_admaif_shutdown,
+	.prepare	= tegra210_admaif_prepare,
 };
 
 static int tegra210_admaif_get_channels(struct snd_kcontrol *kcontrol,
@@ -857,6 +881,8 @@ static int tegra210_admaif_probe(struct platform_device *pdev)
 			goto err_pm_disable;
 	}
 
+	tegra_isomgr_adma_register();
+
 	for (i = 0; i < admaif->soc_data->num_ch; i++) {
 		admaif->playback_dma_data[i].addr = res->start +
 				TEGRA210_ADMAIF_XBAR_TX_FIFO_WRITE +
@@ -940,6 +966,8 @@ err:
 
 static int tegra210_admaif_remove(struct platform_device *pdev)
 {
+	tegra_isomgr_adma_unregister();
+
 	snd_soc_unregister_component(&pdev->dev);
 
 	snd_soc_unregister_codec(&pdev->dev);

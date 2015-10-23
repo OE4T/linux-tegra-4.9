@@ -203,11 +203,7 @@ struct nvhost_device_data t18_vi_info = {
 		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO}
 	},
 	.num_channels		= 12,
-#ifdef CONFIG_TEGRA_VI_NOTIFY
-	.ctrl_ops		= &tegra_vi_notify_ctrl_ops,
-	.prepare_poweroff	= nvhost_vi_notify_prepare_poweroff,
-	.finalize_poweron	= nvhost_vi_notify_finalize_poweron,
-#endif
+	.ctrl_ops               = &nvhost_vi4_ctrl_ops,
 	.reset			= nvhost_vi4_reset,
 	.vm_regs		= {{0x4000 * 4, true},
 				   {0x8000 * 4, true},

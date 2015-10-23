@@ -23,11 +23,15 @@
 #include <linux/reset.h>
 #include <linux/slab.h>
 #include <linux/tegra_pm_domains.h>
+#include <linux/tegra-soc.h>
+#include <linux/uaccess.h>
 
 #include "dev.h"
 #include "nvhost_acm.h"
+#include "vi/vi_notify.h"
 #include "vi/vi4.h"
 #include "t186/t186.h"
+#include <linux/nvhost_vi_ioctl.h>
 
 /* NV host device */
 void nvhost_vi4_reset(struct platform_device *pdev)
@@ -39,6 +43,65 @@ void nvhost_vi4_reset(struct platform_device *pdev)
 	if (!IS_ERR(vi->vi_tsc_reset))
 		reset_control_reset(vi->vi_tsc_reset);
 }
+
+static long nvhost_vi4_ioctl(struct file *file, unsigned int cmd,
+				unsigned long arg)
+{
+	struct platform_device *pdev = file->private_data;
+
+	switch (cmd) {
+	case NVHOST_VI_IOCTL_SET_VI_CLK: {
+		long rate;
+
+		if (!(file->f_mode & FMODE_WRITE))
+			return -EINVAL;
+		if (get_user(rate, (long __user *)arg))
+			return -EFAULT;
+
+		return nvhost_module_set_rate(pdev, file, rate, 0,
+						NVHOST_CLOCK);
+	}
+	}
+
+	return -ENOIOCTLCMD;
+}
+
+static int nvhost_vi4_open(struct inode *inode, struct file *file)
+{
+	struct nvhost_device_data *pdata = container_of(inode->i_cdev,
+					struct nvhost_device_data, ctrl_cdev);
+	struct platform_device *pdev = pdata->pdev;
+	int err;
+
+	if ((file->f_flags & O_ACCMODE) != O_WRONLY)
+		return -EACCES;
+
+	err = nvhost_module_add_client(pdev, file);
+	if (err)
+		return err;
+
+	file->private_data = pdev;
+	return nonseekable_open(inode, file);
+}
+
+static int nvhost_vi4_release(struct inode *inode, struct file *file)
+{
+	struct platform_device *pdev = file->private_data;
+
+	nvhost_module_remove_client(pdev, file);
+	return 0;
+}
+
+const struct file_operations nvhost_vi4_ctrl_ops = {
+	.owner = THIS_MODULE,
+	.llseek = no_llseek,
+	.unlocked_ioctl = nvhost_vi4_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = nvhost_vi4_ioctl,
+#endif
+	.open = nvhost_vi4_open,
+	.release = nvhost_vi4_release,
+};
 
 /* Platform device */
 static struct of_device_id tegra_vi4_of_match[] = {
@@ -81,15 +144,23 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 	nvhost_module_add_domain(&pdata->pd, pdev);
 #endif
+	err = nvhost_client_device_init(pdev);
+	if (err) {
+		nvhost_module_deinit(pdev);
+		return err;
+	}
 
 #ifdef CONFIG_TEGRA_VI_NOTIFY
-	nvhost_vi_notify_dev_probe(pdev);
-#endif
+	if (tegra_platform_is_unit_fpga())
+		return 0;
 
-	err = nvhost_client_device_init(pdev);
-	if (err)
-		nvhost_module_deinit(pdev);
-	return err;
+	err = vi_notify_register(&nvhost_vi_notify_driver, &pdev->dev, 12);
+	if (err) {
+		nvhost_client_device_release(pdev);
+		return err;
+	}
+#endif
+	return 0;
 }
 
 static int __exit tegra_vi4_remove(struct platform_device *pdev)
@@ -99,7 +170,8 @@ static int __exit tegra_vi4_remove(struct platform_device *pdev)
 	debugfs_remove_recursive(vi->debug_dir);
 
 #ifdef CONFIG_TEGRA_VI_NOTIFY
-	nvhost_vi_notify_dev_remove(pdev);
+	if (!tegra_platform_is_unit_fpga())
+		vi_notify_unregister(&nvhost_vi_notify_driver, &pdev->dev);
 #endif
 
 	nvhost_client_device_release(pdev);

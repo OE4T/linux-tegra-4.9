@@ -18,22 +18,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __NVHOST_VI_NOTIFY_H__
-#define __NVHOST_VI_NOTIFY_H__
+#ifndef __TEGRA_VI4_H__
+#define __TEGRA_VI4_H__
 
-extern const struct file_operations tegra_vi_notify_ctrl_ops;
-
-int nvhost_vi_notify_prepare_poweroff(struct platform_device *pdev);
-int nvhost_vi_notify_finalize_poweron(struct platform_device *pdev);
+struct nvhost_vi_notify_dev {
+	struct vi_notify_dev *vnd;
+	u32 mask;
+	u32 ld_mask;
+	int error_irq;
+	int prio_irq;
+	int norm_irq;
+	atomic_t overflow;
+	atomic_t notify_overflow;
+	atomic_t fmlite_overflow;
+};
 
 struct reset_control;
 
-int nvhost_vi_notify_dev_probe(struct platform_device *);
-int nvhost_vi_notify_dev_remove(struct platform_device *);
+extern struct vi_notify_driver nvhost_vi_notify_driver;
 
 struct nvhost_vi_dev {
 #ifdef CONFIG_TEGRA_VI_NOTIFY
-	struct vi_notify_dev *notify;
+	struct nvhost_vi_notify_dev notify;
 #endif
 	struct reset_control *vi_reset;
 	struct reset_control *vi_tsc_reset;
@@ -41,5 +47,6 @@ struct nvhost_vi_dev {
 };
 
 void nvhost_vi4_reset(struct platform_device *);
+extern const struct file_operations nvhost_vi4_ctrl_ops;
 
 #endif

@@ -98,7 +98,7 @@
 		};
 
 		vdd_ddrio_ch0: regulator@2 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <2>;
 			regulator-name = "vdd-ddrio-ch0";
 			regulator-min-microvolt = <1100000>;
@@ -186,7 +186,7 @@
 		};
 
 		vdd_hdmi0_5v5: regulator@10 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <10>;
 			regulator-name = "vdd-hdmi0-5v5";
 			regulator-min-microvolt = <5000000>;
@@ -197,7 +197,7 @@
 		};
 
 		vdd_hdmi1_5v5: regulator@11 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <11>;
 			regulator-name = "vdd-hdmi1-5v5";
 			regulator-min-microvolt = <5000000>;

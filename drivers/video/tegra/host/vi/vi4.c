@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/debugfs.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
@@ -69,6 +70,7 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 
 	vi->vi_reset = devm_reset_control_get(&pdev->dev, "vi");
 	vi->vi_tsc_reset = devm_reset_control_get(&pdev->dev, "tsctnvi");
+	vi->debug_dir = debugfs_create_dir("tegra_vi", NULL);
 
 	nvhost_set_private_data(pdev, vi);
 	err = nvhost_client_device_get_resources(pdev);
@@ -92,6 +94,10 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 
 static int __exit tegra_vi4_remove(struct platform_device *pdev)
 {
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
+
+	debugfs_remove_recursive(vi->debug_dir);
+
 #ifdef CONFIG_TEGRA_VI_NOTIFY
 	nvhost_vi_notify_dev_remove(pdev);
 #endif

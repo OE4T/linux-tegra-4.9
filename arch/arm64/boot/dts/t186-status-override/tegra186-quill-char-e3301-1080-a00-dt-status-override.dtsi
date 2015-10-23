@@ -458,16 +458,6 @@
 	};
 
 	thermal-zones {
-		status = "disabled";
-
-		Tboard_tegra {
-			status = "disabled";
-		};
-
-		Tdiode_tegra {
-			status = "disabled";
-		};
-
 		AO-therm {
 			status = "disabled";
 		};

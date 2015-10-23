@@ -193,21 +193,12 @@ static int tegra_t186ref_p2382_i2s_dai_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	unsigned int fmt = rtd->dai_link->dai_fmt;
-	unsigned int mclk, clk_out_rate, srate;
+	unsigned int srate;
 	unsigned int tx_mask = (1 << 8) - 1, rx_mask = (1 << 8) - 1;
 	int err = 0;
 
-	/* Default sampling rate*/
 	srate = dai_params->rate_min;
-	clk_out_rate = srate * 256;
-	mclk = clk_out_rate;
 
-	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
-				srate, mclk, clk_out_rate);
-	if (err < 0) {
-		dev_err(card->dev, "Can't configure clocks\n");
-		return err;
-	}
 	/* set sys clk */
 	if (cpu_dai->driver->ops->set_sysclk) {
 		err = snd_soc_dai_set_sysclk(cpu_dai, 0, srate,
@@ -257,8 +248,24 @@ static int tegra_t186ref_p2382_audio_dsp_tdm1_hw_params(
 				("p2382-audio-dsp-tdm1-1");
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+	struct tegra_t186ref_p2382 *machine = snd_soc_card_get_drvdata(card);
+	unsigned int mclk, clk_out_rate, srate;
+	int err = 0;
+
 	/* update dai params rate for audio dsp TDM link */
 	dai_params->rate_min = params_rate(params);
+
+	/* Default sampling rate*/
+	srate = dai_params->rate_min;
+	clk_out_rate = srate * 256;
+	mclk = clk_out_rate;
+
+	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
+				srate, mclk, clk_out_rate);
+	if (err < 0) {
+		dev_err(card->dev, "Can't configure clocks\n");
+		return err;
+	}
 
 	return 0;
 }
@@ -294,10 +301,31 @@ static int tegra_t186ref_p2382_spdif_hw_params(
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 
 	/* dummy hw_params; clocks set in the init function */
-	dai_params->rate_min = params_rate(params);
+	/* dai_params->rate_min = params_rate(params);*/
+	dai_params->rate_min = 8000;
 
 	return 0;
 }
+
+static int tegra_t186ref_p2382_btsco_hw_params(
+					struct snd_pcm_substream *substream,
+					struct snd_pcm_hw_params *params)
+{
+
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_card *card = rtd->card;
+	unsigned int idx =
+		tegra_machine_get_codec_dai_link_idx_t18x
+				("p2382-btsco");
+	struct snd_soc_pcm_stream *dai_params =
+		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+
+	/* dummy hw_params; clocks set in the init function */
+	dai_params->rate_min = 8000;
+
+	return 0;
+}
+
 
 static struct snd_soc_ops tegra_t186ref_p2382_audio_dsp_tdm1_ops = {
 	.hw_params = tegra_t186ref_p2382_audio_dsp_tdm1_hw_params,
@@ -310,13 +338,19 @@ static struct snd_soc_ops tegra_t186ref_p2382_spdif_ops = {
 	.hw_params = tegra_t186ref_p2382_spdif_hw_params,
 };
 
+static struct snd_soc_ops tegra_t186ref_p2382_btsco_ops = {
+	.hw_params = tegra_t186ref_p2382_btsco_hw_params,
+};
+
 static const struct snd_soc_dapm_widget tegra_p2382_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone-x", NULL),
 	SND_SOC_DAPM_HP("Headphone-y", NULL),
 	SND_SOC_DAPM_HP("Headphone-d", NULL),
+	SND_SOC_DAPM_HP("BT-out", NULL),
 	SND_SOC_DAPM_LINE("LineIn-x", NULL),
 	SND_SOC_DAPM_LINE("LineIn-y", NULL),
 	SND_SOC_DAPM_LINE("LineIn-d", NULL),
+	SND_SOC_DAPM_LINE("BT-in", NULL),
 };
 
 static int tegra_t186ref_p2382_suspend_pre(struct snd_soc_card *card)
@@ -584,6 +618,10 @@ static int tegra_t186ref_p2382_driver_probe(struct platform_device *pdev)
 					j <= TEGRA186_DAI_LINK_ADMAIF8; j++)
 					tegra_machine_set_dai_ops(j,
 						&tegra_t186ref_p2382_audio_dsp_tdm2_ops);
+			} else if (strstr(tegra_t186ref_p2382_codec_links[i].name,
+				"p2382-btsco")) {
+				tegra_machine_set_dai_ops(TEGRA186_DAI_LINK_ADMAIF9,
+					&tegra_t186ref_p2382_btsco_ops);
 			}
 		}
 	}

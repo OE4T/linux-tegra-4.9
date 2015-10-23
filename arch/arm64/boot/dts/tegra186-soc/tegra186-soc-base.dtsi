@@ -26,6 +26,7 @@
 #include "../../../../include/dt-bindings/interrupt/tegra186-irq.h"
 #include "../../../../include/dt-bindings/padctrl/tegra186-pads.h"
 #include "tegra186-soc/tegra186-soc-sdhci.dtsi"
+#include "tegra186-soc/tegra186-soc-sata.dtsi"
 #include "tegra186-soc/tegra186-soc-ufshc.dtsi"
 #include "tegra186-soc/tegra186-soc-i2c.dtsi"
 #include "tegra186-soc/tegra186-soc-spi.dtsi"
@@ -1172,29 +1173,6 @@
                                         1 0x1600
                                         1 0x1000>;
         };
-
-	ahci-sata@3507000 {
-		compatible = "nvidia,tegra186-ahci-sata";
-		reg = <0x0 0x03507000 0x0 0x00002000>, /* SATA AHCI */
-			<0x0 0x03501000 0x0 0x00006000>, /* SATA Config */
-			<0x0 0x03500000 0x0 0x00001000>, /* SATA IPFS */
-			<0x0 0x03A90000 0x0 0x00010000>; /* SATA AUX */
-		interrupts = <0 197 0x04>;
-		#stream-id-cells = <1>;
-		clocks = <&tegra_car TEGRA186_CLK_SATA>,
-			<&tegra_car TEGRA186_CLK_SATA_OOB>,
-			<&tegra_car TEGRA186_CLK_PLLP>,
-			<&tegra_car TEGRA186_CLK_PLLP_UPHY>;
-		clock-names = "sata", "sata_oob", "pllp", "pllp_uphy";
-		resets = <&tegra_car TEGRA186_RESET_SATA>,
-			<&tegra_car TEGRA186_RESET_SATACOLD>;
-		reset-names = "sata", "satacold";
-		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_SATA_P(0)>;
-		phy-names = "sata-phy";
-		nvidia,disable-features = "devslp";
-		nvidia,link-flags = "min_power";
-		status = "disabled";
-	};
 
 	pcie-controller@10003000 {
 		compatible = "nvidia,tegra186-pcie";

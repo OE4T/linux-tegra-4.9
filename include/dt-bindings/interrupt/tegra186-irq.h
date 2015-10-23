@@ -31,5 +31,6 @@
 #define TEGRA186_IRQ_UARTE			116
 #define TEGRA186_IRQ_UARTF			117
 #define TEGRA186_IRQ_UARTG			118
+#define TEGRA186_IRQ_SATA			197
 
 #endif

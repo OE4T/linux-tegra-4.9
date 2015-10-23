@@ -1,0 +1,369 @@
+/*
+ * tegra186-super-module-e2614-p2597-1000-a00.dtsi: E2600 DTSI file.
+ *
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+/ {
+	i2c@c240000 {
+		e2614_i2c_mux: i2cmux@70 {
+			compatible = "nxp,pca9546";
+			reg = <0x70>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			vcc-supply = <&vdd_3v3>;
+			status = "disabled";
+			i2c@0 {
+				reg = <0>;
+				i2c-mux,deselect-on-exit;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				e2614_tas2552:tas2552.9-0040@40 {
+					compatible = "ti,tas2552";
+					reg = <0x40>;
+					vbat-supply = <&battery_reg>;
+					iovdd-supply = <&vdd_3v3>;
+					avdd-supply = <&vdd_1v8_aud2>;
+				};
+			};
+			i2c@1 {
+				reg = <1>;
+				i2c-mux,deselect-on-exit;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				ina3221x@40 {
+					compatible = "ti,ina3221x";
+					reg = <0x40>;
+					ti,trigger-config = <0x7003>;
+					ti,continuous-config = <0x7c07>;
+					#address-cells = <1>;
+					#size-cells = <0>;
+					channel@0 {
+						reg = <0x0>;
+						ti,rail-name = "VDD_5V";
+						ti,shunt-resistor-mohm = <10>;
+					};
+					channel@1 {
+						reg = <0x1>;
+						ti,rail-name = "VDD_3V3";
+						ti,shunt-resistor-mohm = <10>;
+					};
+					channel@2 {
+						reg = <0x2>;
+						ti,rail-name = "VDD_1V8";
+						ti,shunt-resistor-mohm = <1>;
+					};
+				};
+				ina3221x@41 {
+					compatible = "ti,ina3221x";
+					reg = <0x41>;
+					ti,trigger-config = <0x7003>;
+					ti,continuous-config = <0x7c07>;
+					#address-cells = <1>;
+					#size-cells = <0>;
+					channel@0 {
+						reg = <0x0>;
+						ti,rail-name = "VDD_5V_AUD";
+						ti,shunt-resistor-mohm = <1>;
+					};
+					channel@1 {
+						reg = <0x1>;
+						ti,rail-name = "VDD_3V3_AUD";
+						ti,shunt-resistor-mohm = <10>;
+					};
+					channel@2 {
+						reg = <0x2>;
+						ti,rail-name = "VDD_1V8_AUD";
+						ti,shunt-resistor-mohm = <10>;
+					};
+				};
+				ina3221x@42 {
+					compatible = "ti,ina3221x";
+					reg = <0x42>;
+					ti,trigger-config = <0x7003>;
+					ti,continuous-config = <0x7c07>;
+					#address-cells = <1>;
+					#size-cells = <0>;
+					channel@0 {
+						reg = <0x0>;
+						ti,rail-name = "VDD_3V3_GPS";
+						ti,shunt-resistor-mohm = <10>;
+					};
+					channel@1 {
+						reg = <0x1>;
+						ti,rail-name = "VDD_3V3_NFC";
+						ti,shunt-resistor-mohm = <10>;
+					};
+					channel@2 {
+						reg = <0x2>;
+						ti,rail-name = "VDD_3V3_GYRO";
+						ti,shunt-resistor-mohm = <10>;
+					};
+				};
+			};
+			i2c@2 {
+				reg = <2>;
+				i2c-mux,deselect-on-exit;
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+			i2c@3 {
+				reg = <3>;
+				i2c-mux,deselect-on-exit;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				e2614_rt5658_i2c3: rt5659.12-001a@1a {
+					compatible = "realtek,rt5658";
+					reg = <0x1a>;
+					status = "disabled";
+				};
+			};
+		};
+
+		e2614_gpio_i2c_1_20: gpio@20 {
+			compatible = "ti,tca6416";
+			reg = <0x20>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			status = "disabled";
+		};
+
+                e2614_icm20628: icm20628@68 {
+                        compatible = "invensense,mpu6xxx";
+                        reg = <0x68>;
+                        interrupt-parent = <&gpio>;
+                        interrupts = <TEGRA_GPIO(X, 2) 0x01>;
+                        accelerometer_matrix = [00 ff 00 01 00 00 00 00 01];
+                        gyroscope_matrix = [00 ff 00 01 00 00 00 00 01];
+			status = "disabled";
+                };
+
+                e2614_ak8963: ak8963@0d {
+                        compatible = "ak,ak89xx";
+                        reg = <0x0d>;
+                        magnetic_field_matrix = [00 ff 00 01 00 00 00 00 01];
+			status = "disabled";
+                };
+
+                e2614_bmp280: bmp280@77 {
+                        compatible = "bmp,bmpX80";
+                        reg = <0x77>;
+			status = "disabled";
+                };
+
+                e2614_cm32180: cm32180@48 {
+                        compatible = "capella,cm32180";
+                        reg = <0x48>;
+                        gpio_irq = <&gpio TEGRA_GPIO(X, 3) GPIO_ACTIVE_LOW>;
+                        light_uncalibrated_lo = <1>;
+                        light_calibrated_lo = <150>;
+                        light_uncalibrated_hi = <95000>;
+                        light_calibrated_hi = <1750000>;
+			status = "disabled";
+                };
+
+                e2614_iqs263: iqs263@44 {
+			status = "disabled";
+                };
+
+		e2614_rt5658: rt5659.1-001a@1a {
+			compatible = "realtek,rt5658";
+			reg = <0x1a>;
+			status = "disabled";
+		};
+	};
+
+	fixed-regulators {
+		vdd_1v8_aud2: regulator@200 {
+			compatible = "regulator-fixed-sync";
+			reg = <200>;
+			regulator-name = "vdd-1v8-aud2";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			gpio = <&e2614_gpio_i2c_1_20 11 1>; /*DSPK EN*/
+			enable-active-high;
+			status = "disabled";
+		};
+	};
+
+	e2614_gps_wake: gps_wake {
+		compatible = "nvidia,tegra-gps-wake";
+		id = <0>;
+		gps-en = <&e2614_gpio_i2c_1_20 8 0>;
+		gps-host-wake = <&tegra_gpio TEGRA_GPIO(Q, 5) 0>;
+		interrupt-parent = <&tegra_gpio>;
+		interrupts = <TEGRA_GPIO(Q, 5) 0x01>;
+		status = "disabled";
+	};
+
+	tegra_sound: sound {
+		e2614_dai_link3: nvidia,dai-link-3 {
+			link-name = "rt565x-playback";
+			cpu-dai = <&tegra_i2s1>;
+			cpu-dai-name = "I2S1";
+			codec-dai-name = "rt5659-aif1";
+			format = "i2s";
+			bitclock-slave;
+			frame-slave;
+			bitclock-noninversion;
+			frame-noninversion;
+			bit-format = "s16_le";
+			bclk_ratio = <0>;
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "x";
+			status = "disabled";
+		};
+
+		e2614_dai_link4: nvidia,dai-link-4 {
+			link-name = "dspk-playback";
+			cpu-dai = <&tegra_dspk2>;
+			codec-dai = <&e2614_tas2552>;
+			codec = "tas2552.9-0040";
+			cpu-dai-name = "DSPK2";
+			codec-dai-name = "tas2552-amplifier";
+			format = "i2s";
+			bit-format = "s16_le";
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "n";
+			status = "disabled";
+		};
+	};
+
+	plugin-manager {
+		fragment-e2614-common@0 {
+			ids = "2614-0000-a00", "2614-0000-b00";
+			overrides@0 {
+				target = <&e2614_i2c_mux>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			overrides@1 {
+				target = <&e2614_gpio_i2c_1_20>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			overrides@2 {
+				target = <&e2614_icm20628>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			overrides@3 {
+				target = <&e2614_ak8963>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			overrides@4 {
+				target = <&e2614_ak8963>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			overrides@5 {
+				target = <&e2614_bmp280>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			overrides@6 {
+				target = <&e2614_cm32180>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			overrides@8 {
+				target = <&vdd_1v8_aud2>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+
+			overrides@10 {
+				target = <&tegra_sound>;
+				_overlay_ {
+					nvidia,hp-det-gpios = <&tegra_gpio TEGRA_GPIO(J , 5) GPIO_ACTIVE_HIGH>;
+					nvidia,num-codec-link = <4>;
+					nvidia,audio-routing =
+						"y Headphone",		"y OUT",
+						"y IN",			"y Mic",
+						"z Headphone",		"z OUT",
+						"z IN",			"z Mic",
+						"x Headphone Jack",	"x HPO L Playback",
+						"x Headphone Jack",	"x HPO R Playback",
+						"x MICBIAS1",		"x Mic Jack",
+						"x IN1P",		"x Mic Jack",
+						"x Mic Det Power",	"x Mic Jack",
+						"x Int Spk",		"x SPO Playback",
+						"x DMIC L1",		"x Int Mic",
+						"x DMIC L2",		"x Int Mic",
+						"x DMIC R1",		"x Int Mic",
+						"x DMIC R2",		"x Int Mic",
+						"n Headphone",		"n OUT",
+						"n IN",			"n Mic";
+				};
+			};
+
+			overrides@11 {
+				target = <&e2614_dai_link3>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			overrides@12 {
+				target = <&e2614_dai_link4>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+		};
+
+		fragment-e2614-a00@1 {
+			ids = "2614-0000-a00";
+			overrides@0 {
+				target = <&e2614_rt5658>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			overrides@1 {
+				target = <&e2614_dai_link3>;
+				_overlay_ {
+					codec-dai = <&e2614_rt5658>;
+					codec = "rt5659.1-001a";
+				};
+			};
+		};
+
+		fragment-e2614-b00@2 {
+			ids = "2614-0000-b00";
+			overrides@0 {
+				target = <&e2614_rt5658_i2c3>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+
+			overrides@1 {
+				target = <&e2614_dai_link3>;
+				_overlay_ {
+					codec-dai = <&e2614_rt5658_i2c3>;
+					codec = "rt5659.12-001a";
+				};
+			};
+		};
+	};
+};

@@ -37,6 +37,7 @@ struct nvhost_vi_dev {
 #endif
 	struct reset_control *vi_reset;
 	struct reset_control *vi_tsc_reset;
+	struct dentry *debug_dir;
 };
 
 void nvhost_vi4_reset(struct platform_device *);

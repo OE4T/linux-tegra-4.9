@@ -19,6 +19,7 @@
 #include <linux/export.h>
 #include <linux/module.h>
 #include <asm/ioctls.h>
+#include <linux/debugfs.h>
 #include <linux/kfifo.h>
 #include <linux/fs.h>
 #include <linux/platform_device.h>
@@ -39,6 +40,12 @@
 #define NVHOST_VI_SET_IGN_MASK _IOW(NVHOST_VI_IOCTL_MAGIC, 10, u32)
 #define NVHOST_VI_SET_PRI_MASK _IOW(NVHOST_VI_IOCTL_MAGIC, 11, u32)
 
+#define VI_CFG_INTERRUPT_STATUS_0		0x0044
+#define VI_CFG_INTERRUPT_MASK_0			0x0048
+
+#define VI_ISPBUFA_ERROR_0			0x1000
+
+#define VI_FMLITE_ERROR_0			0x313C
 
 #define VI_NOTIFY_FIFO_TAG_0_0			0x4000
 #define VI_NOTIFY_FIFO_TIMESTAMP_0_0		(VI_NOTIFY_FIFO_TAG_0_0 + 4)
@@ -56,6 +63,13 @@
 #define VI_CH_REG(n, r)				((n+1) * 0x10000 + (r))
 #define VI_CH_CHANNEL_COMMAND(n)		VI_CH_REG(n, 0x04)
 #define VI_CH_CONTROL(n)			VI_CH_REG(n, 0x1c)
+
+#define VI_HOST_PKTINJECT_STALL_ERR_MASK	0x00000080
+#define VI_CSIMUX_FIFO_OVFL_ERR_MASK		0x00000040
+#define VI_ATOMP_PACKER_OVFL_ERR_MASK		0x00000020
+#define VI_FMLITE_BUF_OVFL_ERR_MASK		0x00000010
+#define VI_NOTIFY_FIFO_OVFL_ERR_MASK		0x00000008
+#define VI_ISPBUFA_ERR_MASK			0x00000001
 
 #define VI_CH_CHANNEL_COMMAND_LOAD		0x01
 #define VI_CH_CONTROL_ENABLE			0x01
@@ -108,6 +122,9 @@ struct vi_notify_dev {
 	int error_irq;
 	int prio_irq;
 	int norm_irq;
+	atomic_t overflow;
+	atomic_t notify_overflow;
+	atomic_t fmlite_overflow;
 #endif
 };
 
@@ -191,25 +208,43 @@ static irqreturn_t vi_notify_error_isr(int irq, void *dev_id)
 	struct vi_notify_dev *dev = dev_id;
 	struct platform_device *pdev = dev->pdev;
 	struct vi_notify_private *priv;
-	u32 err;
+	u32 r;
 
-	err = host1x_readl(pdev, VI_NOTIFY_ERROR_0);
-	host1x_writel(pdev, VI_NOTIFY_ERROR_0, err);
-	dev_err(&pdev->dev, "master error 0x%08X\n", err);
+	r = host1x_readl(pdev, VI_NOTIFY_ERROR_0);
+	if (r) {
+		host1x_writel(pdev, VI_NOTIFY_ERROR_0, 1);
+		dev_err(&pdev->dev, "notify buffer overflow\n");
+		atomic_inc(&dev->notify_overflow);
 
-	err = host1x_readl(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_ERROR_0);
-	host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_ERROR_0, err);
-	if (err)
-		dev_err(&pdev->dev, "safety error mask 0x%08X\n", err);
+		rcu_read_lock();
+		priv = rcu_dereference(dev->priv);
 
-	rcu_read_lock();
-	priv = rcu_dereference(dev->priv);
-
-	if (priv != NULL) {
-		atomic_set(&priv->errors, 1);
-		wake_up(&priv->readq);
+		if (priv != NULL) {
+			atomic_set(&priv->errors, 1);
+			wake_up(&priv->readq);
+		}
+		rcu_read_unlock();
 	}
-	rcu_read_unlock();
+
+	r = host1x_readl(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_ERROR_0);
+	if (r) {
+		host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_ERROR_0, r);
+		dev_err(&pdev->dev, "safety error mask 0x%08X\n", r);
+	}
+
+	r = host1x_readl(pdev, VI_FMLITE_ERROR_0);
+	if (r) {
+		host1x_writel(pdev, VI_FMLITE_ERROR_0, 1);
+		dev_err(&pdev->dev, "FM-Lite buffer overflow\n");
+		atomic_inc(&dev->fmlite_overflow);
+	}
+
+	r = host1x_readl(pdev, VI_CFG_INTERRUPT_STATUS_0);
+	if (r) {
+		host1x_writel(pdev, VI_CFG_INTERRUPT_STATUS_0, 1);
+		dev_err(&pdev->dev, "master error\n");
+		atomic_inc(&dev->overflow);
+	}
 
 	return IRQ_HANDLED;
 }
@@ -336,6 +371,7 @@ int nvhost_vi_notify_prepare_poweroff(struct platform_device *pdev)
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 	struct vi_notify_dev *dev = vi->notify;
 
+	host1x_writel(pdev, VI_CFG_INTERRUPT_MASK_0, 0x00000000);
 	disable_irq(dev->error_irq);
 	disable_irq(dev->prio_irq);
 	disable_irq(dev->norm_irq);
@@ -351,7 +387,13 @@ int nvhost_vi_notify_finalize_poweron(struct platform_device *pdev)
 	enable_irq(dev->error_irq);
 	enable_irq(dev->prio_irq);
 	enable_irq(dev->norm_irq);
-
+	host1x_writel(pdev, VI_CFG_INTERRUPT_MASK_0,
+			VI_HOST_PKTINJECT_STALL_ERR_MASK |
+			VI_CSIMUX_FIFO_OVFL_ERR_MASK |
+			VI_ATOMP_PACKER_OVFL_ERR_MASK |
+			VI_FMLITE_BUF_OVFL_ERR_MASK |
+			VI_NOTIFY_FIFO_OVFL_ERR_MASK |
+			VI_ISPBUFA_ERR_MASK);
 	return 0;
 }
 
@@ -619,6 +661,15 @@ int nvhost_vi_notify_dev_probe(struct platform_device *pdev)
 	vi->notify = dev;
 
 #ifdef CONFIG_TEGRA_VI_NOTIFY
+	if (vi->debug_dir != NULL) {
+		debugfs_create_atomic_t("overflow", S_IRUGO, vi->debug_dir,
+					&dev->overflow);
+		debugfs_create_atomic_t("notify-overflow", S_IRUGO,
+					vi->debug_dir, &dev->notify_overflow);
+		debugfs_create_atomic_t("fmlite-overflow", S_IRUGO,
+					vi->debug_dir, &dev->fmlite_overflow);
+	}
+
 	mutex_init(&dev->lock);
 
 	dev->error_irq = vi_notify_get_irq(dev, 0, vi_notify_error_isr);

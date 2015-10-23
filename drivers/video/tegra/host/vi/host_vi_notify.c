@@ -378,8 +378,6 @@ static ssize_t vi_notify_read(struct file *file, char __user *buf, size_t len,
 			return ret;
 		if (copied > 0)
 			return copied;
-		if (file->f_flags & O_NONBLOCK)
-			return -EAGAIN;
 
 		prepare_to_wait(&priv->readq, &wait, TASK_INTERRUPTIBLE);
 
@@ -389,6 +387,8 @@ static ssize_t vi_notify_read(struct file *file, char __user *buf, size_t len,
 			ret = -EIO;
 		else if (signal_pending(current))
 			ret = -ERESTARTSYS;
+		else if (file->f_flags & O_NONBLOCK)
+			ret = -EAGAIN;
 		else if (!vi_notify_occupancy(file))
 			schedule();
 

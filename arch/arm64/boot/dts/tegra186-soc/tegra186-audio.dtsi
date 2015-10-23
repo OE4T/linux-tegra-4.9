@@ -174,9 +174,17 @@
 		dspk@2905000 {
 			status = "okay";
 		};
+
+		dspk@2905100 {
+		       status = "okay";
+	       };
 	};
 
 	adma@2930000{
+		status = "okay";
+	};
+
+	sound {
 		status = "okay";
 	};
 

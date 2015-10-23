@@ -16,7 +16,7 @@
 / {
 	sound {
 		nvidia,hp-det-gpios = <&gpio TEGRA_GPIO(J , 5) GPIO_ACTIVE_HIGH>;
-		nvidia,num-codec-link = <3>;
+		nvidia,num-codec-link = <4>;
 
 		nvidia,audio-routing =
 			"y Headphone",		"y OUT",
@@ -56,9 +56,9 @@
 		/* DSPK is disabled by default */
 		nvidia,dai-link-4 {
 			link-name = "dspk-playback";
-			cpu-dai = <&tegra_dspk1>;
+			cpu-dai = <&tegra_dspk2>;
 			codec-dai = <&tas2552>;
-			cpu-dai-name = "DSPK1";
+			cpu-dai-name = "DSPK2";
 			codec-dai-name = "tas2552-amplifier";
 			format = "i2s";
 			bit-format = "s16_le";

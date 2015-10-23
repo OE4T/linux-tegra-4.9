@@ -147,12 +147,12 @@
 			      <&{/sdhci@3400000}	TEGRA_SWGROUP_SDMMC1A>,
 			      <&{/xhci@3530000}		TEGRA_SWGROUP_XUSB_HOST>,
 			      <&{/xudc@3550000}		TEGRA_SWGROUP_XUSB_DEV>,
+			      <&{/sound}		TEGRA_SWGROUP_APE>,
 			      <&{/bpmp}			TEGRA_SWGROUP_BPMP>;
 
 			      /*
 			      <&{/gp10b}		TEGRA_SWGROUP_GPUB>,
 			      <&{/ahci-sata@3507000}	TEGRA_SWGROUP_SATA2>,
-			      <&{/sound}		TEGRA_SWGROUP_APE>,
 			      <&{/dma@2600000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/spi@3210000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/spi@3230000}		TEGRA_SID_GPCDMA_0>,
@@ -1726,7 +1726,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_DSPK1>,
 				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
 				<&tegra_car TEGRA186_CLK_SYNC_DSPK1>;
-			clock-names = "dspk1", "pll_a_out0", "sync_dspk1";
+			clock-names = "dspk", "pll_a_out0", "sync_dspk";
 			status = "disabled";
 		};
 
@@ -1737,7 +1737,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_DSPK2>,
 				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
 				<&tegra_car TEGRA186_CLK_SYNC_DSPK2>;
-			clock-names = "dspk2", "pll_a_out0", "sync_dspk2";
+			clock-names = "dspk", "pll_a_out0", "sync_dspk";
 			status = "disabled";
 		};
 	};

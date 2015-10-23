@@ -54,17 +54,65 @@ static inline u32 therm_use_a_r(void)
 {
 	return 0x00020798;
 }
+static inline u32 therm_use_a_ext_therm_0_enable_f(void)
+{
+	return 0x1;
+}
+static inline u32 therm_use_a_ext_therm_1_enable_f(void)
+{
+	return 0x2;
+}
+static inline u32 therm_use_a_ext_therm_2_enable_f(void)
+{
+	return 0x4;
+}
 static inline u32 therm_evt_ext_therm_0_r(void)
 {
 	return 0x00020700;
+}
+static inline u32 therm_evt_ext_therm_0_slow_factor_f(u32 v)
+{
+	return (v & 0x3f) << 8;
+}
+static inline u32 therm_evt_ext_therm_0_slow_factor_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_0_priority_f(u32 v)
+{
+	return (v & 0x1f) << 24;
 }
 static inline u32 therm_evt_ext_therm_1_r(void)
 {
 	return 0x00020704;
 }
+static inline u32 therm_evt_ext_therm_1_slow_factor_f(u32 v)
+{
+	return (v & 0x3f) << 8;
+}
+static inline u32 therm_evt_ext_therm_1_slow_factor_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_1_priority_f(u32 v)
+{
+	return (v & 0x1f) << 24;
+}
 static inline u32 therm_evt_ext_therm_2_r(void)
 {
 	return 0x00020708;
+}
+static inline u32 therm_evt_ext_therm_2_slow_factor_f(u32 v)
+{
+	return (v & 0x3f) << 8;
+}
+static inline u32 therm_evt_ext_therm_2_slow_factor_init_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 therm_evt_ext_therm_2_priority_f(u32 v)
+{
+	return (v & 0x1f) << 24;
 }
 static inline u32 therm_weight_1_r(void)
 {

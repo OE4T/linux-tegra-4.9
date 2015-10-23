@@ -33,6 +33,7 @@
 #include "regops_gm20b.h"
 #include "debug_gm20b.h"
 #include "cde_gm20b.h"
+#include "therm_gm20b.h"
 
 #define FUSE_OPT_PRIV_SEC_DIS_0 0x264
 #define PRIV_SECURITY_DISABLE 0x01
@@ -136,6 +137,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gm20b_init_regops(gops);
 	gm20b_init_debug_ops(gops);
 	gm20b_init_cde_ops(gops);
+	gm20b_init_therm_ops(gops);
 	gops->name = "gm20b";
 
 	c->twod_class = FERMI_TWOD_A;

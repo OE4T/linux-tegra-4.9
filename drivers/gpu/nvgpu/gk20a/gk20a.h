@@ -388,6 +388,9 @@ struct gpu_ops {
 					 u32 flags);
 	} mm;
 	struct {
+		int (*init_therm_setup_hw)(struct gk20a *g);
+	} therm;
+	struct {
 		int (*prepare_ucode)(struct gk20a *g);
 		int (*pmu_setup_hw_and_bootstrap)(struct gk20a *g);
 		int (*pmu_nsbootstrap)(struct pmu_gk20a *pmu);

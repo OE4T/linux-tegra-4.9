@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/gk20a/therm_gk20a.c
+ * GM20B THERMAL
  *
- * GK20A Therm
- *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,45 +11,27 @@
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "gk20a.h"
-#include "hw_gr_gk20a.h"
-#include "hw_therm_gk20a.h"
+#include "gk20a/gk20a.h"
+#include "hw_therm_gm20b.h"
 
-static int gk20a_init_therm_reset_enable_hw(struct gk20a *g)
-{
-	return 0;
-}
-
-static int gk20a_init_therm_setup_sw(struct gk20a *g)
-{
-	return 0;
-}
-
-static int gk20a_init_therm_setup_hw(struct gk20a *g)
+static int gm20b_init_therm_setup_hw(struct gk20a *g)
 {
 	u32 v;
+
+	gk20a_dbg_fn("");
 
 	/* program NV_THERM registers */
 	gk20a_writel(g, therm_use_a_r(), therm_use_a_ext_therm_0_enable_f() |
 			therm_use_a_ext_therm_1_enable_f()  |
 			therm_use_a_ext_therm_2_enable_f());
-	/* priority for EXT_THERM_0 event set to highest */
 	gk20a_writel(g, therm_evt_ext_therm_0_r(),
-		therm_evt_ext_therm_0_slow_factor_f(1) |
-		therm_evt_ext_therm_0_priority_f(3));
+			therm_evt_ext_therm_0_slow_factor_f(1));
 	gk20a_writel(g, therm_evt_ext_therm_1_r(),
-		therm_evt_ext_therm_1_slow_factor_f(2) |
-		therm_evt_ext_therm_1_priority_f(2));
+			therm_evt_ext_therm_1_slow_factor_f(2));
 	gk20a_writel(g, therm_evt_ext_therm_2_r(),
-		therm_evt_ext_therm_2_slow_factor_f(3) |
-		therm_evt_ext_therm_2_priority_f(1));
-
+			therm_evt_ext_therm_2_slow_factor_f(3));
 
 	gk20a_writel(g, therm_grad_stepping_table_r(0),
 		therm_grad_stepping_table_slowdown_factor0_f(therm_grad_stepping_table_slowdown_factor0_fpdiv_by1p5_f()) |
@@ -85,29 +65,8 @@ static int gk20a_init_therm_setup_hw(struct gk20a *g)
 	return 0;
 }
 
-int gk20a_init_therm_support(struct gk20a *g)
+void gm20b_init_therm_ops(struct gpu_ops *gops)
 {
-	u32 err;
+	gops->therm.init_therm_setup_hw = gm20b_init_therm_setup_hw;
 
-	gk20a_dbg_fn("");
-
-	err = gk20a_init_therm_reset_enable_hw(g);
-	if (err)
-		return err;
-
-	err = gk20a_init_therm_setup_sw(g);
-	if (err)
-		return err;
-
-	if (g->ops.therm.init_therm_setup_hw)
-		err = g->ops.therm.init_therm_setup_hw(g);
-	if (err)
-		return err;
-
-	return err;
-}
-
-void gk20a_init_therm_ops(struct gpu_ops *gops)
-{
-	gops->therm.init_therm_setup_hw = gk20a_init_therm_setup_hw;
 }

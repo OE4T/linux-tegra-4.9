@@ -50,6 +50,10 @@
 				"mphy_l1_tx_rst", "mphy_clk_ctl_rst", "ufs_rst",
 				"ufs_axi_m_rst", "ufshc_lp_rst";
 		nvidia,enable-x2-config;
+		nvidia,mask-fast-auto-mode;
+		nvidia,mask-hs-mode-b;
+		nvidia,max-hs-gear = <1>;
+		nvidia,max-pwm-gear = <4>;
 		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UFS_P(0)>;
 		phy-names = "uphy";
 		status = "disabled";

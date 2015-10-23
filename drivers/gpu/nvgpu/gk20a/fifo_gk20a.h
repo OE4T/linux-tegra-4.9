@@ -105,6 +105,7 @@ struct fifo_gk20a {
 	struct mem_desc userd;
 	u32 userd_entry_size;
 
+	int used_channels;
 	struct channel_gk20a *channel;
 	/* zero-kref'd channels here */
 	struct list_head free_chs;

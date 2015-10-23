@@ -47,6 +47,9 @@ struct gk20a_platform {
 	/* Should be populated at probe. */
 	bool has_syncpoints;
 
+	/* flag to set sync destroy aggressiveness */
+	bool aggressive_sync_destroy;
+
 	/* Should be populated by probe. */
 	struct dentry *debugfs;
 	struct dentry *debugfs_alias;

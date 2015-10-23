@@ -345,8 +345,6 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 	sp->ops.syncpt_id		= gk20a_channel_syncpt_id;
 	sp->ops.destroy			= gk20a_channel_syncpt_destroy;
 
-	sp->ops.aggressive_destroy	= true;
-
 	return &sp->ops;
 }
 #endif /* CONFIG_TEGRA_GK20A */
@@ -689,10 +687,6 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c)
 	sema->ops.signal_timeline = gk20a_channel_semaphore_signal_timeline;
 	sema->ops.syncpt_id	= gk20a_channel_semaphore_syncpt_id;
 	sema->ops.destroy	= gk20a_channel_semaphore_destroy;
-
-	/* Aggressively destroying the semaphore sync would cause overhead
-	 * since the pool needs to be mapped to GMMU. */
-	sema->ops.aggressive_destroy = false;
 
 	return &sema->ops;
 clean_up:

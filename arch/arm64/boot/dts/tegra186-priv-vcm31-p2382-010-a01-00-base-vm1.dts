@@ -141,4 +141,34 @@
 		ivc-queue4 = <&tegra_hv 46>;
 		mempool3 = <&tegra_hv 1>;
 	};
+
+	thermal-zones {
+		BCPU-therm {
+			status = "disabled";
+		};
+
+		MCPU-therm {
+			status = "disabled";
+		};
+
+		GPU-therm {
+			status = "disabled";
+		};
+
+		PLL-therm {
+			status = "disabled";
+		};
+
+		AO-therm {
+			status = "disabled";
+		};
+
+		Tboard_tegra {
+			status = "disabled";
+		};
+
+		Tdiode_tegra {
+			status = "disabled";
+		};
+	};
 };

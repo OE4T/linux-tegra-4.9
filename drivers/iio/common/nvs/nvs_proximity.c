@@ -192,11 +192,42 @@
 #include <linux/of.h>
 #include <linux/nvs_proximity.h>
 
-
-/* to allow 1980's code style rules: */
+#define NVS_PROXIMITY_VERSION		(100)
 #define NVS_FS_NANO			NVS_FLOAT_SIGNIFICANCE_NANO
 #define NVS_FS_MICRO			NVS_FLOAT_SIGNIFICANCE_MICRO
 
+
+ssize_t nvs_proximity_dbg(struct nvs_proximity *np, char *buf)
+{
+	ssize_t t;
+
+	t = sprintf(buf, "%s v.%u:\n", __func__, NVS_PROXIMITY_VERSION);
+	t += sprintf(buf + t, "timestamp=%lld\n", np->timestamp);
+	t += sprintf(buf + t, "timestamp_report=%lld\n", np->timestamp_report);
+	t += sprintf(buf + t, "proximity=%u\n", np->proximity);
+	t += sprintf(buf + t, "hw=%u\n", np->hw);
+	t += sprintf(buf + t, "hw_mask=%x\n", np->hw_mask);
+	t += sprintf(buf + t, "hw_thresh_lo=%u\n", np->hw_thresh_lo);
+	t += sprintf(buf + t, "hw_thresh_hi=%u\n", np->hw_thresh_hi);
+	t += sprintf(buf + t, "hw_limit_lo=%x\n", np->hw_limit_lo);
+	t += sprintf(buf + t, "hw_limit_hi=%x\n", np->hw_limit_hi);
+	t += sprintf(buf + t, "thresh_valid_lo=%x\n", np->thresh_valid_lo);
+	t += sprintf(buf + t, "thresh_valid_hi=%x\n", np->thresh_valid_hi);
+	t += sprintf(buf + t, "thresholds_valid=%x\n", np->thresholds_valid);
+	t += sprintf(buf + t, "calibration_en=%x\n", np->calibration_en);
+	t += sprintf(buf + t, "dynamic_resolution_dis=%x\n",
+		     np->dynamic_resolution_dis);
+	t += sprintf(buf + t, "proximity_reverse_range_dis=%x\n",
+		     np->proximity_reverse_range_dis);
+	t += sprintf(buf + t, "proximity_binary_en=%x\n",
+		     np->proximity_binary_en);
+	t += sprintf(buf + t, "proximity_binary_hw=%x\n",
+		     np->proximity_binary_hw);
+	t += sprintf(buf + t, "poll_delay_ms=%u\n", np->poll_delay_ms);
+	t += sprintf(buf + t, "delay_us=%u\n", np->delay_us);
+	t += sprintf(buf + t, "report=%u\n", np->report);
+	return t;
+}
 
 static void nvs_proximity_interpolate(int x1, s64 x2, int x3,
 				      int y1, u32 *y2, int y3)

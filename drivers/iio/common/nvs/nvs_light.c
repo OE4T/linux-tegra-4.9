@@ -148,39 +148,35 @@
 #include <linux/of.h>
 #include <linux/nvs_light.h>
 
+#define NVS_LIGHT_VERSION		(100)
+
 
 ssize_t nvs_light_dbg(struct nvs_light *nl, char *buf)
 {
 	ssize_t t;
 	unsigned int i;
 
-	t = sprintf(buf, "%s:\n", __func__);
-	t += sprintf(buf + t, "nvs_light.timestamp=%lld\n", nl->timestamp);
-	t += sprintf(buf + t, "nvs_light.timestamp_report=%lld\n",
-		     nl->timestamp_report);
-	t += sprintf(buf + t, "nvs_light.lux=%u\n", nl->lux);
-	t += sprintf(buf + t, "nvs_light.hw=%u\n", nl->hw);
-	t += sprintf(buf + t, "nvs_light.hw_mask=%x\n", nl->hw_mask);
-	t += sprintf(buf + t, "nvs_light.hw_thresh_lo=%u\n", nl->hw_thresh_lo);
-	t += sprintf(buf + t, "nvs_light.hw_thresh_hi=%u\n", nl->hw_thresh_hi);
-	t += sprintf(buf + t, "nvs_light.hw_limit_lo=%x\n", nl->hw_limit_lo);
-	t += sprintf(buf + t, "nvs_light.hw_limit_hi=%x\n", nl->hw_limit_hi);
-	t += sprintf(buf + t, "nvs_light.thresh_valid_lo=%x\n",
-		     nl->thresh_valid_lo);
-	t += sprintf(buf + t, "nvs_light.thresh_valid_hi=%x\n",
-		     nl->thresh_valid_hi);
-	t += sprintf(buf + t, "nvs_light.thresholds_valid=%x\n",
-		     nl->thresholds_valid);
-	t += sprintf(buf + t, "nvs_light.nld_i_change=%x\n", nl->nld_i_change);
-	t += sprintf(buf + t, "nvs_light.calibration_en=%x\n",
-		     nl->calibration_en);
-	t += sprintf(buf + t, "nvs_light.poll_delay_ms=%u\n",
-		     nl->poll_delay_ms);
-	t += sprintf(buf + t, "nvs_light.delay_us=%u\n", nl->delay_us);
-	t += sprintf(buf + t, "nvs_light.report=%u\n", nl->report);
-	t += sprintf(buf + t, "nvs_light.nld_i=%u\n", nl->nld_i);
-	t += sprintf(buf + t, "nvs_light.nld_i_lo=%u\n", nl->nld_i_lo);
-	t += sprintf(buf + t, "nvs_light.nld_i_hi=%u\n", nl->nld_i_hi);
+	t = sprintf(buf, "%s v.%u:\n", __func__, NVS_LIGHT_VERSION);
+	t += sprintf(buf + t, "timestamp=%lld\n", nl->timestamp);
+	t += sprintf(buf + t, "timestamp_report=%lld\n", nl->timestamp_report);
+	t += sprintf(buf + t, "lux=%u\n", nl->lux);
+	t += sprintf(buf + t, "hw=%u\n", nl->hw);
+	t += sprintf(buf + t, "hw_mask=%x\n", nl->hw_mask);
+	t += sprintf(buf + t, "hw_thresh_lo=%u\n", nl->hw_thresh_lo);
+	t += sprintf(buf + t, "hw_thresh_hi=%u\n", nl->hw_thresh_hi);
+	t += sprintf(buf + t, "hw_limit_lo=%x\n", nl->hw_limit_lo);
+	t += sprintf(buf + t, "hw_limit_hi=%x\n", nl->hw_limit_hi);
+	t += sprintf(buf + t, "thresh_valid_lo=%x\n", nl->thresh_valid_lo);
+	t += sprintf(buf + t, "thresh_valid_hi=%x\n", nl->thresh_valid_hi);
+	t += sprintf(buf + t, "thresholds_valid=%x\n", nl->thresholds_valid);
+	t += sprintf(buf + t, "nld_i_change=%x\n", nl->nld_i_change);
+	t += sprintf(buf + t, "calibration_en=%x\n", nl->calibration_en);
+	t += sprintf(buf + t, "poll_delay_ms=%u\n", nl->poll_delay_ms);
+	t += sprintf(buf + t, "delay_us=%u\n", nl->delay_us);
+	t += sprintf(buf + t, "report=%u\n", nl->report);
+	t += sprintf(buf + t, "nld_i=%u\n", nl->nld_i);
+	t += sprintf(buf + t, "nld_i_lo=%u\n", nl->nld_i_lo);
+	t += sprintf(buf + t, "nld_i_hi=%u\n", nl->nld_i_hi);
 	if (nl->nld_tbl) {
 		for (i = nl->nld_i_lo; i <= nl->nld_i_hi; i++) {
 			if (nl->cfg->float_significance) {
@@ -459,8 +455,7 @@ int nvs_light_enable(struct nvs_light *nl)
 	nl->hw_thresh_lo = -1;
 	if (nl->nld_tbl)
 		nvs_light_nld(nl, nl->nld_i_hi);
-	else
-		nl->poll_delay_ms = nl->cfg->delay_us_min / 1000;
+	nl->poll_delay_ms = nl->cfg->delay_us_min / 1000;
 	if (nl->cfg->scale.ival == 1 && !nl->cfg->scale.fval)
 		nl->calibration_en = true;
 	else

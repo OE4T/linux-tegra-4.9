@@ -29,7 +29,7 @@
 #include <linux/nvs.h>
 #include <linux/nvs_light.h>
 
-#define CM_DRIVER_VERSION		(300)
+#define CM_DRIVER_VERSION		(301)
 #define CM_VENDOR			"Capella Microsystems, Inc."
 #define CM_NAME				"cm3218x"
 #define CM_NAME_CM3218			"cm3218"
@@ -142,6 +142,7 @@ struct cm_state {
 	unsigned int errs;		/* error count */
 	unsigned int enabled;		/* enable status */
 	int gpio_irq;			/* interrupt GPIO */
+	bool ara_war;			/* force ARA on every I2C */
 	u16 i2c_addr;			/* I2C address */
 	u8 dev_id;			/* device ID */
 	u16 als_cfg_mask;		/* ALS register 0 user mask */
@@ -191,7 +192,7 @@ static int cm_i2c_rd(struct cm_state *st, u8 reg, u16 *val)
 	struct i2c_msg msg[2];
 	int ret;
 
-	cm_irq_ack(st, false);
+	cm_irq_ack(st, st->ara_war);
 	msg[0].addr = st->i2c_addr;
 	msg[0].flags = 0;
 	msg[0].len = 1;
@@ -573,16 +574,17 @@ static int cm_nvs_read(void *client, int snsr_id, char *buf)
 	ssize_t t;
 	int ret;
 
-	t = sprintf(buf, "driver v. %u\n", CM_DRIVER_VERSION);
+	t = sprintf(buf, "driver v.%u\n", CM_DRIVER_VERSION);
 	if (st->ara && st->gpio_irq >= 0) {
 		ret = gpio_get_value(st->gpio_irq);
 		t += sprintf(buf + t, "gpio_irq %d=%d\n", st->gpio_irq, ret);
+		t += sprintf(buf + t, "ARA_WAR=%x\n", st->ara_war);
 	}
 	t += sprintf(buf + t, "irq=%d\n", st->i2c->irq);
 	t += sprintf(buf + t, "als_cfg=%hx\n", st->als_cfg);
 	if (st->dev_id == CM_DEVID_CM32181)
 		t += sprintf(buf + t, "als_psm=%hx\n", st->als_psm);
-	return t;
+	return nvs_light_dbg(&st->light, buf + t);
 }
 
 static struct nvs_fn_dev cm_fn_dev = {
@@ -823,6 +825,10 @@ static int cm_of_dt(struct cm_state *st, struct device_node *dn)
 		of_property_read_u16(dn, "als_psm", &st->als_psm);
 		st->als_psm &= CM_REG_PSM_MASK;
 		of_property_read_u32(dn, "Rset", &st->r_set);
+		ret = 0;
+		of_property_read_s32(dn, "ARA_WAR", &ret);
+		if (ret)
+			st->ara_war = true;
 		st->gpio_irq = of_get_named_gpio(dn, "gpio_irq", 0);
 	}
 

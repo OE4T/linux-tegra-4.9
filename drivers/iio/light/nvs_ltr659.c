@@ -30,6 +30,7 @@
 #include <linux/nvs_proximity.h>
 
 
+#define LTR_DRIVER_VERSION		(2)
 #define LTR_VENDOR			"Lite-On Technology Corp."
 #define LTR_NAME			"ltrX5X"
 #define LTR_NAME_LTR558ALS		"ltr558als"
@@ -131,7 +132,10 @@
 /* regulator names in order of powering on */
 static char *ltr_vregs[] = {
 	"vdd",
+	"vled"
 };
+#define LTR_PM_ON			(1)
+#define LTR_PM_LED			(ARRAY_SIZE(ltr_vregs))
 
 static u8 ltr_ids[] = {
 	LTR_DEVID_558ALS,
@@ -159,6 +163,7 @@ struct ltr_state {
 	unsigned int sts;		/* status flags */
 	unsigned int errs;		/* error count */
 	unsigned int enabled;		/* enable status */
+	bool irq_set_irq_wake;		/* IRQ suspend active */
 	u16 i2c_addr;			/* I2C address */
 	u8 dev_id;			/* device ID */
 	u8 ps_contr;			/* PS_CONTR register default */
@@ -279,28 +284,38 @@ static int ltr_reset_sw(struct ltr_state *st)
 	buf[3] = st->ps_meas_rate;
 	buf[4] = st->als_meas_rate;
 	ret |= ltr_i2c_write(st, sizeof(buf), buf);
-	ret |= ltr_i2c_wr(st, LTR_REG_INTERRUPT_PERSIST, st->interrupt_persist);
+	ret |= ltr_i2c_wr(st, LTR_REG_INTERRUPT_PERSIST,
+			  st->interrupt_persist);
 	return ret;
 }
 
-static int ltr_pm(struct ltr_state *st, bool enable)
+static int ltr_pm(struct ltr_state *st, unsigned int en_msk)
 {
+	unsigned int vreg_n;
+	unsigned int vreg_n_dis;
 	int ret = 0;
 
-	if (enable) {
-		ret = nvs_vregs_enable(&st->i2c->dev, st->vreg,
-				 ARRAY_SIZE(ltr_vregs));
+	if (en_msk) {
+		if (en_msk & (1 < LTR_DEV_PROX))
+			vreg_n = LTR_PM_LED;
+		else
+			vreg_n = LTR_PM_ON;
+		ret = nvs_vregs_enable(&st->i2c->dev, st->vreg, vreg_n);
 		if (ret > 0)
 			mdelay(LTR_HW_DELAY_MS);
 		ret = ltr_reset_sw(st);
+		vreg_n_dis = ARRAY_SIZE(ltr_vregs) - vreg_n;
+		if (vreg_n_dis)
+			ret |= nvs_vregs_disable(&st->i2c->dev,
+						 &st->vreg[vreg_n],
+						 vreg_n_dis);
 	} else {
-		ret = nvs_vregs_sts(st->vreg, ARRAY_SIZE(ltr_vregs));
-		if ((ret < 0) || (ret == ARRAY_SIZE(ltr_vregs))) {
+		ret = nvs_vregs_sts(st->vreg, LTR_PM_ON);
+		if ((ret < 0) || (ret == LTR_PM_ON)) {
 			ret = ltr_i2c_wr(st, LTR_REG_ALS_CONTR, 0);
 			ret |= ltr_i2c_wr(st, LTR_REG_PS_CONTR, 0);
 		} else if (ret > 0) {
-			nvs_vregs_enable(&st->i2c->dev, st->vreg,
-					 ARRAY_SIZE(ltr_vregs));
+			nvs_vregs_enable(&st->i2c->dev, st->vreg, LTR_PM_ON);
 			mdelay(LTR_HW_DELAY_MS);
 			ret = ltr_i2c_wr(st, LTR_REG_ALS_CONTR, 0);
 			ret |= ltr_i2c_wr(st, LTR_REG_PS_CONTR, 0);
@@ -311,19 +326,19 @@ static int ltr_pm(struct ltr_state *st, bool enable)
 	if (ret > 0)
 		ret = 0;
 	if (ret) {
-		dev_err(&st->i2c->dev, "%s pwr=%x ERR=%d\n",
-			__func__, enable, ret);
+		dev_err(&st->i2c->dev, "%s en_msk=%x ERR=%d\n",
+			__func__, en_msk, ret);
 	} else {
 		if (st->sts & NVS_STS_SPEW_MSG)
-			dev_info(&st->i2c->dev, "%s pwr=%x\n",
-				 __func__, enable);
+			dev_info(&st->i2c->dev, "%s en_msk=%x\n",
+				 __func__, en_msk);
 	}
 	return ret;
 }
 
 static void ltr_pm_exit(struct ltr_state *st)
 {
-	ltr_pm(st, false);
+	ltr_pm(st, 0);
 	nvs_vregs_exit(&st->i2c->dev, st->vreg, ARRAY_SIZE(ltr_vregs));
 }
 
@@ -334,7 +349,7 @@ static int ltr_pm_init(struct ltr_state *st)
 	st->enabled = 0;
 	nvs_vregs_init(&st->i2c->dev,
 		       st->vreg, ARRAY_SIZE(ltr_vregs), ltr_vregs);
-	ret = ltr_pm(st, true);
+	ret = ltr_pm(st, (1 << LTR_DEV_N));
 	return ret;
 }
 
@@ -384,7 +399,7 @@ static int ltr_cmd_wr(struct ltr_state *st, unsigned int enable, bool irq_en)
 		else
 			st->rc_ps_contr = ps_contr;
 	}
-	if (st->i2c->irq) {
+	if (st->i2c->irq > 0) {
 		interrupt = st->interrupt;
 		if (irq_en) {
 			if (enable & (1 << LTR_DEV_LIGHT))
@@ -408,7 +423,7 @@ static int ltr_thr_wr(struct ltr_state *st, u8 reg, u16 thr_lo, u16 thr_hi)
 	int ret;
 
 	ret = ltr_interrupt_wr(st, st->interrupt); /* irq disable */
-	if (st->i2c->irq) {
+	if (st->i2c->irq > 0) {
 		buf[0] = reg;
 		buf[1] = thr_hi & 0xFF;
 		buf[2] = thr_hi >> 8;
@@ -612,11 +627,12 @@ static int ltr_disable(struct ltr_state *st, int snsr_id)
 				ret = ltr_i2c_wr(st, LTR_REG_ALS_CONTR, 0);
 			else if (snsr_id == LTR_DEV_PROX)
 				ret = ltr_i2c_wr(st, LTR_REG_PS_CONTR, 0);
+			ret |= ltr_pm(st, st->enabled);
 		}
 	}
 	if (disable) {
 		cancel_delayed_work(&st->dw);
-		ret |= ltr_pm(st, false);
+		ret |= ltr_pm(st, 0);
 		if (!ret)
 			st->enabled = 0;
 	}
@@ -633,7 +649,7 @@ static int ltr_enable(void *client, int snsr_id, int enable)
 
 	if (enable) {
 		enable = st->enabled | (1 << snsr_id);
-		ret = ltr_pm(st, true);
+		ret = ltr_pm(st, enable);
 		if (!ret) {
 			ret = ltr_en(st, enable);
 			if (ret < 0) {
@@ -641,7 +657,7 @@ static int ltr_enable(void *client, int snsr_id, int enable)
 			} else {
 				st->enabled = enable;
 				schedule_delayed_work(&st->dw,
-					 msecs_to_jiffies(LTR_POLL_DLY_MS_MIN));
+					msecs_to_jiffies(LTR_POLL_DLY_MS_MIN));
 			}
 		}
 	} else {
@@ -779,12 +795,36 @@ static int ltr_regs(void *client, int snsr_id, char *buf)
 	return t;
 }
 
+static int ltr_nvs_read(void *client, int snsr_id, char *buf)
+{
+	struct ltr_state *st = (struct ltr_state *)client;
+	ssize_t t;
+
+	t = sprintf(buf, "driver v.%u\n", LTR_DRIVER_VERSION);
+	t += sprintf(buf + t, "irq=%d\n", st->i2c->irq);
+	t += sprintf(buf + t, "irq_set_irq_wake=%x\n", st->irq_set_irq_wake);
+	t += sprintf(buf + t, "reg_ps_contr=%x\n", st->ps_contr);
+	t += sprintf(buf + t, "reg_ps_led=%x\n", st->ps_led);
+	t += sprintf(buf + t, "reg_ps_n_pulses=%x\n", st->ps_n_pulses);
+	t += sprintf(buf + t, "reg_ps_meas_rate=%x\n", st->ps_meas_rate);
+	t += sprintf(buf + t, "reg_als_meas_rate=%x\n", st->als_meas_rate);
+	t += sprintf(buf + t, "reg_interrupt=%x\n", st->interrupt);
+	t += sprintf(buf + t, "reg_interrupt_persist=%x\n",
+		     st->interrupt_persist);
+	if (snsr_id == LTR_DEV_LIGHT)
+		t += nvs_light_dbg(&st->light, buf + t);
+	else if (snsr_id == LTR_DEV_PROX)
+		t += nvs_proximity_dbg(&st->prox, buf + t);
+	return t;
+}
+
 static struct nvs_fn_dev ltr_fn_dev = {
 	.enable				= ltr_enable,
 	.batch				= ltr_batch,
 	.thresh_lo			= ltr_thresh_lo,
 	.thresh_hi			= ltr_thresh_hi,
 	.regs				= ltr_regs,
+	.nvs_read			= ltr_nvs_read,
 };
 
 static int ltr_suspend(struct device *dev)
@@ -801,8 +841,20 @@ static int ltr_suspend(struct device *dev)
 				ret |= st->nvs->suspend(st->nvs_st[i]);
 		}
 	}
+
+	/* determine if we'll be operational during suspend */
+	for (i = 0; i < LTR_DEV_N; i++) {
+		if ((st->enabled & (1 << i)) && (st->cfg[i].flags &
+						 SENSOR_FLAG_WAKE_UP))
+			break;
+	}
+	if (i < LTR_DEV_N) {
+		irq_set_irq_wake(st->i2c->irq, 1);
+		st->irq_set_irq_wake = true;
+	}
 	if (st->sts & NVS_STS_SPEW_MSG)
-		dev_info(&client->dev, "%s\n", __func__);
+		dev_info(&client->dev, "%s WAKE_ON=%x\n",
+			 __func__, st->irq_set_irq_wake);
 	return ret;
 }
 
@@ -813,6 +865,10 @@ static int ltr_resume(struct device *dev)
 	unsigned int i;
 	int ret = 0;
 
+	if (st->irq_set_irq_wake) {
+		irq_set_irq_wake(st->i2c->irq, 0);
+		st->irq_set_irq_wake = false;
+	}
 	if (st->nvs) {
 		for (i = 0; i < LTR_DEV_N; i++) {
 			if (st->nvs_st[i])
@@ -1050,19 +1106,19 @@ static int ltr_of_dt(struct ltr_state *st, struct device_node *dn)
 		}
 
 		/* device specific parameters */
-		of_property_read_u8(dn, "register_ps_contr", &st->ps_contr);
+		of_property_read_u8(dn, "reg_ps_contr", &st->ps_contr);
 		st->ps_contr &= LTR_REG_PS_CONTR_POR_MASK;
-		of_property_read_u8(dn, "register_ps_led", &st->ps_led);
+		of_property_read_u8(dn, "reg_ps_led", &st->ps_led);
 		of_property_read_u8(dn, "register_ps_n_pulses",
 				    &st->ps_n_pulses);
-		of_property_read_u8(dn, "register_ps_meas_rate",
+		of_property_read_u8(dn, "reg_ps_meas_rate",
 				    &st->ps_meas_rate);
-		of_property_read_u8(dn, "register_als_meas_rate",
+		of_property_read_u8(dn, "reg_als_meas_rate",
 				    &st->als_meas_rate);
-		of_property_read_u8(dn, "register_interrupt", &st->interrupt);
+		of_property_read_u8(dn, "reg_interrupt", &st->interrupt);
 		/* just interrupt polarity */
 		st->interrupt &= LTR_REG_INTERRUPT_POLARITY;
-		of_property_read_u8(dn, "register_interrupt_persist",
+		of_property_read_u8(dn, "reg_interrupt_persist",
 				    &st->interrupt_persist);
 	}
 	/* this device supports these programmable parameters */
@@ -1109,7 +1165,7 @@ static int ltr_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto ltr_probe_exit;
 	}
 
-	ltr_pm(st, false);
+	ltr_pm(st, 0);
 	ltr_fn_dev.sts = &st->sts;
 	ltr_fn_dev.errs = &st->errs;
 	st->nvs = nvs_iio();
@@ -1120,6 +1176,12 @@ static int ltr_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	st->light.handler = st->nvs->handler;
 	st->prox.handler = st->nvs->handler;
+	if (client->irq < 1) {
+		/* disable WAKE_ON ability when no interrupt */
+		for (i = 0; i < LTR_DEV_N; i++)
+			st->cfg[i].flags &= ~SENSOR_FLAG_WAKE_UP;
+	}
+
 	n = 0;
 	for (i = 0; i < LTR_DEV_N; i++) {
 		ret = st->nvs->probe(&st->nvs_st[i], st, &client->dev,

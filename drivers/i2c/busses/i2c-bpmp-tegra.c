@@ -194,6 +194,10 @@ static int deserialize_i2c(char *buf, size_t bufsize,
 static int tegra_bpmp_i2c(struct mrq_i2c_data_in *in,
 			  struct mrq_i2c_data_out *out)
 {
+	if (irqs_disabled())
+		return tegra_bpmp_send_receive_atomic(MRQ_I2C,
+				in, sizeof(*in), out, sizeof(*out));
+
 	return tegra_bpmp_send_receive(MRQ_I2C,
 			      in, sizeof(*in), out, sizeof(*out));
 }

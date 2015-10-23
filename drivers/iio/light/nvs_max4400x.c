@@ -30,6 +30,7 @@
 #include <linux/nvs_proximity.h>
 
 
+#define MX_DRIVER_VERSION		(2)
 #define MX_VENDOR			"Maxim"
 #define MX_NAME				"max4400x"
 #define MX_NAME_MAX44005		"max44005"
@@ -138,7 +139,10 @@
 /* regulator names in order of powering on */
 static char *mx_vregs[] = {
 	"vdd",
+	"vled"
 };
+#define MX_PM_ON			(1)
+#define MX_PM_LED			(ARRAY_SIZE(mx_vregs))
 
 static unsigned short mx_i2c_addrs[] = {
 	0x40,
@@ -197,6 +201,7 @@ struct mx_state {
 	unsigned int sts;		/* status flags */
 	unsigned int errs;		/* error count */
 	unsigned int enabled;		/* enable status */
+	bool irq_set_irq_wake;		/* IRQ suspend active */
 	u16 i2c_addr;			/* I2C address */
 	u8 dev_id;			/* device ID */
 	u8 amb_cfg;			/* ambient configuration register */
@@ -320,24 +325,33 @@ static int mx_reset_sw(struct mx_state *st)
 	return ret;
 }
 
-static int mx_pm(struct mx_state *st, bool enable)
+static int mx_pm(struct mx_state *st, unsigned int en_msk)
 {
+	unsigned int vreg_n;
+	unsigned int vreg_n_dis;
 	int ret = 0;
 
-	if (enable) {
-		nvs_vregs_enable(&st->i2c->dev, st->vreg,
-				 ARRAY_SIZE(mx_vregs));
+	if (en_msk) {
+		if (en_msk & (1 < MX_DEV_PROX))
+			vreg_n = MX_PM_LED;
+		else
+			vreg_n = MX_PM_ON;
+		nvs_vregs_enable(&st->i2c->dev, st->vreg, vreg_n);
 		if (ret)
 			mdelay(MX_HW_DELAY_MS);
 		ret = mx_reset_sw(st);
+		vreg_n_dis = ARRAY_SIZE(mx_vregs) - vreg_n;
+		if (vreg_n_dis)
+			ret |= nvs_vregs_disable(&st->i2c->dev,
+						 &st->vreg[vreg_n],
+						 vreg_n_dis);
 	} else {
-		ret = nvs_vregs_sts(st->vreg, ARRAY_SIZE(mx_vregs));
-		if ((ret < 0) || (ret == ARRAY_SIZE(mx_vregs))) {
+		ret = nvs_vregs_sts(st->vreg, MX_PM_ON);
+		if ((ret < 0) || (ret == MX_PM_ON)) {
 			ret = mx_i2c_wr(st, MX_REG_CFG_PRX, 0);
 			ret |= mx_i2c_wr(st, MX_REG_STS, 1 << MX_REG_STS_SHDN);
 		} else if (ret > 0) {
-			nvs_vregs_enable(&st->i2c->dev, st->vreg,
-					 ARRAY_SIZE(mx_vregs));
+			nvs_vregs_enable(&st->i2c->dev, st->vreg, MX_PM_ON);
 			mdelay(MX_HW_DELAY_MS);
 			ret = mx_i2c_wr(st, MX_REG_CFG_PRX, 0);
 			ret |= mx_i2c_wr(st, MX_REG_STS, 1 << MX_REG_STS_SHDN);
@@ -348,19 +362,19 @@ static int mx_pm(struct mx_state *st, bool enable)
 	if (ret > 0)
 		ret = 0;
 	if (ret) {
-		dev_err(&st->i2c->dev, "%s pwr=%x ERR=%d\n",
-			__func__, enable, ret);
+		dev_err(&st->i2c->dev, "%s en_msk=%x ERR=%d\n",
+			__func__, en_msk, ret);
 	} else {
 		if (st->sts & NVS_STS_SPEW_MSG)
-			dev_info(&st->i2c->dev, "%s pwr=%x\n",
-				 __func__, enable);
+			dev_info(&st->i2c->dev, "%s en_msk=%x\n",
+				 __func__, en_msk);
 	}
 	return ret;
 }
 
 static void mx_pm_exit(struct mx_state *st)
 {
-	mx_pm(st, false);
+	mx_pm(st, 0);
 	nvs_vregs_exit(&st->i2c->dev, st->vreg, ARRAY_SIZE(mx_vregs));
 }
 
@@ -371,7 +385,7 @@ static int mx_pm_init(struct mx_state *st)
 	st->enabled = 0;
 	nvs_vregs_init(&st->i2c->dev,
 		       st->vreg, ARRAY_SIZE(mx_vregs), mx_vregs);
-	ret = mx_pm(st, true);
+	ret = mx_pm(st, (1 << MX_DEV_N));
 	return ret;
 }
 
@@ -396,7 +410,7 @@ static int mx_cmd_wr(struct mx_state *st, unsigned int enable, bool irq_en)
 				 __func__, amb_cfg, ret);
 	}
 	main_cfg = mx_mode_tbl[enable];
-	if (irq_en && st->i2c->irq) {
+	if (irq_en && (st->i2c->irq > 0)) {
 		if (enable & (1 << MX_DEV_LIGHT))
 			main_cfg |= (1 << MX_REG_CFG_MAIN_AMBINTE);
 		if (enable & (1 << MX_DEV_PROX))
@@ -423,7 +437,7 @@ static int mx_thr_wr(struct mx_state *st, u8 reg, u16 thr_lo, u16 thr_hi)
 	u16 thr_be;
 	int ret = RET_POLL_NEXT;
 
-	if (st->i2c->irq) {
+	if (st->i2c->irq > 0) {
 		buf[0] = reg;
 		thr_be = cpu_to_be16(thr_hi);
 		buf[1] = thr_be & 0xFF;
@@ -607,11 +621,12 @@ static int mx_disable(struct mx_state *st, int snsr_id)
 			disable = false;
 			if (snsr_id == MX_DEV_PROX)
 				ret = mx_i2c_wr(st, MX_REG_CFG_PRX, 0);
+			ret |= mx_pm(st, st->enabled);
 		}
 	}
 	if (disable) {
 		cancel_delayed_work(&st->dw);
-		ret |= mx_pm(st, false);
+		ret = mx_pm(st, 0);
 		if (!ret)
 			st->enabled = 0;
 	}
@@ -628,7 +643,7 @@ static int mx_enable(void *client, int snsr_id, int enable)
 
 	if (enable) {
 		enable = st->enabled | (1 << snsr_id);
-		ret = mx_pm(st, true);
+		ret = mx_pm(st, enable);
 		if (!ret) {
 			ret = mx_en(st, enable);
 			if (ret < 0) {
@@ -724,12 +739,31 @@ static int mx_regs(void *client, int snsr_id, char *buf)
 	return t;
 }
 
+static int mx_nvs_read(void *client, int snsr_id, char *buf)
+{
+	struct mx_state *st = (struct mx_state *)client;
+	ssize_t t;
+
+	t = sprintf(buf, "driver v.%u\n", MX_DRIVER_VERSION);
+	t += sprintf(buf + t, "irq=%d\n", st->i2c->irq);
+	t += sprintf(buf + t, "irq_set_irq_wake=%x\n", st->irq_set_irq_wake);
+	t += sprintf(buf + t, "reg_ambient_cfg=%x\n", st->amb_cfg);
+	t += sprintf(buf + t, "reg_proximity_cfg=%x\n", st->prx_cfg);
+	t += sprintf(buf + t, "reg_threshold_persist=%x\n", st->thr_cfg);
+	if (snsr_id == MX_DEV_LIGHT)
+		t += nvs_light_dbg(&st->light, buf + t);
+	else if (snsr_id == MX_DEV_PROX)
+		t += nvs_proximity_dbg(&st->prox, buf + t);
+	return t;
+}
+
 static struct nvs_fn_dev mx_fn_dev = {
 	.enable				= mx_enable,
 	.batch				= mx_batch,
 	.thresh_lo			= mx_thresh_lo,
 	.thresh_hi			= mx_thresh_hi,
 	.regs				= mx_regs,
+	.nvs_read			= mx_nvs_read,
 };
 
 static int mx_suspend(struct device *dev)
@@ -746,8 +780,20 @@ static int mx_suspend(struct device *dev)
 				ret |= st->nvs->suspend(st->nvs_st[i]);
 		}
 	}
+
+	/* determine if we'll be operational during suspend */
+	for (i = 0; i < MX_DEV_N; i++) {
+		if ((st->enabled & (1 << i)) && (st->cfg[i].flags &
+						 SENSOR_FLAG_WAKE_UP))
+			break;
+	}
+	if (i < MX_DEV_N) {
+		irq_set_irq_wake(st->i2c->irq, 1);
+		st->irq_set_irq_wake = true;
+	}
 	if (st->sts & NVS_STS_SPEW_MSG)
-		dev_info(&client->dev, "%s\n", __func__);
+		dev_info(&client->dev, "%s WAKE_ON=%x\n",
+			 __func__, st->irq_set_irq_wake);
 	return ret;
 }
 
@@ -758,6 +804,10 @@ static int mx_resume(struct device *dev)
 	unsigned int i;
 	int ret = 0;
 
+	if (st->irq_set_irq_wake) {
+		irq_set_irq_wake(st->i2c->irq, 0);
+		st->irq_set_irq_wake = false;
+	}
 	if (st->nvs) {
 		for (i = 0; i < MX_DEV_N; i++) {
 			if (st->nvs_st[i])
@@ -980,9 +1030,9 @@ static int mx_of_dt(struct mx_state *st, struct device_node *dn)
 		}
 
 		/* device specific parameters */
-		of_property_read_u8(dn, "ambient_cfg_reg", &st->amb_cfg);
-		of_property_read_u8(dn, "proximity_cfg_reg", &st->prx_cfg);
-		of_property_read_u8(dn, "threshold_persist_reg", &st->thr_cfg);
+		of_property_read_u8(dn, "reg_ambient_cfg", &st->amb_cfg);
+		of_property_read_u8(dn, "reg_proximity_cfg", &st->prx_cfg);
+		of_property_read_u8(dn, "reg_threshold_persist", &st->thr_cfg);
 	}
 	/* this device supports these programmable parameters */
 	if (nvs_light_of_dt(&st->light, dn, NULL)) {
@@ -1028,7 +1078,7 @@ static int mx_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto mx_probe_exit;
 	}
 
-	mx_pm(st, false);
+	mx_pm(st, 0);
 	mx_fn_dev.sts = &st->sts;
 	mx_fn_dev.errs = &st->errs;
 	st->nvs = nvs_iio();
@@ -1039,6 +1089,12 @@ static int mx_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	st->light.handler = st->nvs->handler;
 	st->prox.handler = st->nvs->handler;
+	if (client->irq < 1) {
+		/* disable WAKE_ON ability when no interrupt */
+		for (i = 0; i < MX_DEV_N; i++)
+			st->cfg[i].flags &= ~SENSOR_FLAG_WAKE_UP;
+	}
+
 	n = 0;
 	for (i = 0; i < MX_DEV_N; i++) {
 		if (st->dev_id != MX_DEVID_MAX44005) {

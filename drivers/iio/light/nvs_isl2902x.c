@@ -30,6 +30,7 @@
 #include <linux/nvs_proximity.h>
 
 
+#define ISL_DRIVER_VERSION		(2)
 #define ISL_VENDOR			"InterSil"
 #define ISL_NAME			"isl2902x"
 #define ISL_NAME_ISL29028		"isl29028"
@@ -126,6 +127,7 @@ struct isl_state {
 	unsigned int errs;		/* error count */
 	unsigned int enabled;		/* enable status */
 	bool irq_dis;			/* interrupt host disable flag */
+	bool irq_set_irq_wake;		/* IRQ suspend active */
 	u16 i2c_addr;			/* I2C address */
 	u8 dev_id;			/* device ID */
 	u8 reg_cfg;			/* configuration register default */
@@ -320,7 +322,7 @@ static int isl_cmd_wr(struct isl_state *st, unsigned int enable, bool irq_en)
 	int ret;
 	int ret_t = 0;
 
-	if (st->i2c->irq && !irq_en) {
+	if ((st->i2c->irq > 0) && !irq_en) {
 		isl_disable_irq(st);
 		/* clear possible IRQ */
 		ret_t = isl_i2c_wr(st, ISL_REG_INT, st->reg_int);
@@ -339,7 +341,7 @@ static int isl_cmd_wr(struct isl_state *st, unsigned int enable, bool irq_en)
 			dev_info(&st->i2c->dev, "%s reg_cfg=%hhx err=%d\n",
 				 __func__, reg_cfg, ret);
 	}
-	if (st->i2c->irq && irq_en) {
+	if (irq_en && (st->i2c->irq > 0)) {
 		/* clear possible IRQ */
 		ret_t |= isl_i2c_wr(st, ISL_REG_INT, st->reg_int);
 		if (!ret_t)
@@ -356,7 +358,7 @@ static int isl_thr_wr(struct isl_state *st, bool als, u16 thr_lo, u16 thr_hi)
 	u16 thr_le;
 	int ret = 0;
 
-	if (st->i2c->irq) {
+	if (st->i2c->irq > 0) {
 		if (als) {
 			buf[0] = ISL_REG_ALSIR_TH1;
 			thr_le = cpu_to_le16(thr_lo);
@@ -517,7 +519,7 @@ static int isl_disable(struct isl_state *st, int snsr_id)
 		}
 	}
 	if (disable) {
-		if (st->i2c->irq)
+		if (st->i2c->irq > 0)
 			isl_disable_irq(st);
 		cancel_delayed_work(&st->dw);
 		ret |= isl_pm(st, false);
@@ -611,12 +613,30 @@ static int isl_regs(void *client, int snsr_id, char *buf)
 	return t;
 }
 
+static int isl_nvs_read(void *client, int snsr_id, char *buf)
+{
+	struct isl_state *st = (struct isl_state *)client;
+	ssize_t t;
+
+	t = sprintf(buf, "driver v.%u\n", ISL_DRIVER_VERSION);
+	t += sprintf(buf + t, "irq=%d\n", st->i2c->irq);
+	t += sprintf(buf + t, "irq_set_irq_wake=%x\n", st->irq_set_irq_wake);
+	t += sprintf(buf + t, "reg_configure=%x\n", st->reg_cfg);
+	t += sprintf(buf + t, "reg_interrupt=%x\n", st->reg_int);
+	if (snsr_id == ISL_DEV_LIGHT)
+		t += nvs_light_dbg(&st->light, buf + t);
+	else if (snsr_id == ISL_DEV_PROX)
+		t += nvs_proximity_dbg(&st->prox, buf + t);
+	return t;
+}
+
 static struct nvs_fn_dev isl_fn_dev = {
 	.enable				= isl_enable,
 	.batch				= isl_batch,
 	.thresh_lo			= isl_thresh_lo,
 	.thresh_hi			= isl_thresh_hi,
 	.regs				= isl_regs,
+	.nvs_read			= isl_nvs_read,
 };
 
 static int isl_suspend(struct device *dev)
@@ -633,8 +653,20 @@ static int isl_suspend(struct device *dev)
 				ret |= st->nvs->suspend(st->nvs_st[i]);
 		}
 	}
+
+	/* determine if we'll be operational during suspend */
+	for (i = 0; i < ISL_DEV_N; i++) {
+		if ((st->enabled & (1 << i)) && (st->cfg[i].flags &
+						 SENSOR_FLAG_WAKE_UP))
+			break;
+	}
+	if (i < ISL_DEV_N) {
+		irq_set_irq_wake(st->i2c->irq, 1);
+		st->irq_set_irq_wake = true;
+	}
 	if (st->sts & NVS_STS_SPEW_MSG)
-		dev_info(&client->dev, "%s\n", __func__);
+		dev_info(&client->dev, "%s WAKE_ON=%x\n",
+			 __func__, st->irq_set_irq_wake);
 	return ret;
 }
 
@@ -645,6 +677,10 @@ static int isl_resume(struct device *dev)
 	unsigned int i;
 	int ret = 0;
 
+	if (st->irq_set_irq_wake) {
+		irq_set_irq_wake(st->i2c->irq, 0);
+		st->irq_set_irq_wake = false;
+	}
 	if (st->nvs) {
 		for (i = 0; i < ISL_DEV_N; i++) {
 			if (st->nvs_st[i])
@@ -856,8 +892,8 @@ static int isl_of_dt(struct isl_state *st, struct device_node *dn)
 		}
 
 		/* device specific parameters */
-		of_property_read_u8(dn, "configure_reg", &st->reg_cfg);
-		of_property_read_u8(dn, "interrupt_reg", &st->reg_int);
+		of_property_read_u8(dn, "reg_configure", &st->reg_cfg);
+		of_property_read_u8(dn, "reg_interrupt", &st->reg_int);
 	}
 	/* this device supports these programmable parameters */
 	if (nvs_light_of_dt(&st->light, dn, NULL)) {
@@ -924,6 +960,12 @@ static int isl_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	st->light.handler = st->nvs->handler;
 	st->prox.handler = st->nvs->handler;
+	if (client->irq < 1) {
+		/* disable WAKE_ON ability when no interrupt */
+		for (i = 0; i < ISL_DEV_N; i++)
+			st->cfg[i].flags &= ~SENSOR_FLAG_WAKE_UP;
+	}
+
 	n = 0;
 	for (i = 0; i < ISL_DEV_N; i++) {
 		ret = st->nvs->probe(&st->nvs_st[i], st, &client->dev,

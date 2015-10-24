@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,6 +21,7 @@
 #include <linux/notifier.h>
 #include <linux/tegra-mce.h>
 #include <linux/tegra-soc.h>
+#include <linux/mce_ari.h>
 
 #include <asm/smp_plat.h>
 
@@ -334,32 +335,32 @@ EXPORT_SYMBOL(tegra_mce_write_uncore_mca);
 
 #ifdef CONFIG_DEBUG_FS
 
-#define CSTAT_ENTRY(stat) [TEGRA_MCE_CSTATS_##stat] = #stat
+#define CSTAT_ENTRY(stat) [MCE_ARI_READ_CSTATE_STATS_##stat] = #stat
 
 static const char * const cstats_table[] = {
-	CSTAT_ENTRY(ENTRIES_SC7),
-	CSTAT_ENTRY(ENTRIES_SC4),
-	CSTAT_ENTRY(ENTRIES_SC3),
-	CSTAT_ENTRY(ENTRIES_SC2),
-	CSTAT_ENTRY(ENTRIES_CCP3),
-	CSTAT_ENTRY(ENTRIES_A57_CC6),
-	CSTAT_ENTRY(ENTRIES_A57_CC7),
-	CSTAT_ENTRY(ENTRIES_D15_CC6),
-	CSTAT_ENTRY(ENTRIES_D15_CC7),
-	CSTAT_ENTRY(ENTRIES_D15_CORE0_C6),
-	CSTAT_ENTRY(ENTRIES_D15_CORE1_C6),
-	CSTAT_ENTRY(ENTRIES_D15_CORE0_C7),
-	CSTAT_ENTRY(ENTRIES_D15_CORE1_C7),
-	CSTAT_ENTRY(ENTRIES_A57_CORE0_C7),
-	CSTAT_ENTRY(ENTRIES_A57_CORE1_C7),
-	CSTAT_ENTRY(ENTRIES_A57_CORE2_C7),
-	CSTAT_ENTRY(ENTRIES_A57_CORE3_C7),
-	CSTAT_ENTRY(LAST_ENTRY_D15_CORE0),
-	CSTAT_ENTRY(LAST_ENTRY_D15_CORE1),
-	CSTAT_ENTRY(LAST_ENTRY_A57_CORE0),
-	CSTAT_ENTRY(LAST_ENTRY_A57_CORE1),
-	CSTAT_ENTRY(LAST_ENTRY_A57_CORE2),
-	CSTAT_ENTRY(LAST_ENTRY_A57_CORE3),
+	CSTAT_ENTRY(SC7_ENTRIES),
+	CSTAT_ENTRY(SC4_ENTRIES),
+	CSTAT_ENTRY(SC3_ENTRIES),
+	CSTAT_ENTRY(SC2_ENTRIES),
+	CSTAT_ENTRY(CCP3_ENTRIES),
+	CSTAT_ENTRY(A57_CC6_ENTRIES),
+	CSTAT_ENTRY(A57_CC7_ENTRIES),
+	CSTAT_ENTRY(D15_CC6_ENTRIES),
+	CSTAT_ENTRY(D15_CC7_ENTRIES),
+	CSTAT_ENTRY(D15_0_C6_ENTRIES),
+	CSTAT_ENTRY(D15_1_C6_ENTRIES),
+	CSTAT_ENTRY(D15_0_C7_ENTRIES),
+	CSTAT_ENTRY(D15_1_C7_ENTRIES),
+	CSTAT_ENTRY(A57_0_C7_ENTRIES),
+	CSTAT_ENTRY(A57_1_C7_ENTRIES),
+	CSTAT_ENTRY(A57_2_C7_ENTRIES),
+	CSTAT_ENTRY(A57_3_C7_ENTRIES),
+	CSTAT_ENTRY(LAST_CSTATE_ENTRY_D15_0),
+	CSTAT_ENTRY(LAST_CSTATE_ENTRY_D15_1),
+	CSTAT_ENTRY(LAST_CSTATE_ENTRY_A57_0),
+	CSTAT_ENTRY(LAST_CSTATE_ENTRY_A57_1),
+	CSTAT_ENTRY(LAST_CSTATE_ENTRY_A57_2),
+	CSTAT_ENTRY(LAST_CSTATE_ENTRY_A57_3),
 };
 
 static int mce_echo_set(void *data, u64 val)
@@ -390,14 +391,13 @@ static int mce_dbg_cstats_show(struct seq_file *s, void *data)
 	u32 val;
 	seq_printf(s, "%-30s%-10s\n", "name", "count");
 	seq_printf(s, "----------------------------------------\n");
-	for(st = 1; st <= TEGRA_MCE_CSTATS_MAX; st++) {
+	for (st = 1; st <= MCE_ARI_READ_CSTATE_STATS_MAX; st++) {
 		if (!cstats_table[st])
 			continue;
-		if (tegra_mce_read_cstate_stats(st, &val)) {
+		if (tegra_mce_read_cstate_stats(st, &val))
 			pr_err("mce: failed to read cstat: %d\n", st);
-			break;
-		}
-		seq_printf(s, "%-30s%-10d\n", cstats_table[st], val);
+		else
+			seq_printf(s, "%-30s%-10d\n", cstats_table[st], val);
 	}
 	return 0;
 }

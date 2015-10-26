@@ -13,6 +13,8 @@
 
 #include <linux/platform/tegra/bwmgr_mc.h>
 #include <linux/io.h>
+#include <soc/tegra/bpmp_abi.h>
+#include <soc/tegra/tegra_bpmp.h>
 
 static u8 bwmgr_dram_efficiency;
 static u32 *bwmgr_dram_iso_eff_table;
@@ -73,6 +75,7 @@ enum bwmgr_dram_types {
 };
 
 static enum bwmgr_dram_types bwmgr_dram_type;
+static struct mrq_emc_dvfs_latency_response bwmgr_emc_dvfs;
 
 #define MC_BASE 0x02c10000
 #define EMC_BASE 0x02c60000
@@ -170,6 +173,9 @@ void bwmgr_eff_init(void)
 			break;
 		}
 	}
+
+	tegra_bpmp_send_receive(MRQ_EMC_DVFS_LATENCY, NULL, 0,
+			&bwmgr_emc_dvfs, sizeof(bwmgr_emc_dvfs));
 }
 
 static inline int get_iso_bw_table_idx(unsigned long iso_bw)
@@ -229,10 +235,26 @@ unsigned long bwmgr_bw_to_freq(unsigned long bw)
 	return (bw + BW_TO_FREQ_RATIO_2CH - 1) / BW_TO_FREQ_RATIO_2CH;
 }
 
-/* TODO: Bug 1694795: Get DVFS latency table from BPMP */
 u32 bwmgr_dvfs_latency(u32 ufreq)
 {
-	return 4;
+	u32 lt = 4000; /* default value of 4000 nsec */
+	int i;
+
+	if (bwmgr_emc_dvfs.num_pairs <= 0)
+		return lt / 1000; /* convert nsec to usec, Bug 1697424 */
+
+	for (i = 0; i < bwmgr_emc_dvfs.num_pairs; i++) {
+		if (ufreq <= bwmgr_emc_dvfs.pairs[i].freq) {
+			lt = bwmgr_emc_dvfs.pairs[i].latency;
+			break;
+		}
+	}
+
+	if (i >= bwmgr_emc_dvfs.num_pairs)
+		lt =
+		bwmgr_emc_dvfs.pairs[bwmgr_emc_dvfs.num_pairs - 1].latency;
+
+	return lt / 1000; /* convert nsec to usec, Bug 1697424 */
 }
 
 int bwmgr_iso_bw_percentage_max(void)

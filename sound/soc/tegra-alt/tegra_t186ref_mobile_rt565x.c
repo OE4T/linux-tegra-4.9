@@ -209,11 +209,10 @@ static int tegra_t186ref_set_params(struct snd_soc_pcm_stream *dai_params,
 					int channels,
 					u64 formats)
 {
-	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
 	unsigned int fmt = rtd->dai_link->dai_fmt;
 	unsigned int tx_mask = (1 << channels) - 1;
 	unsigned int rx_mask = (1 << channels) - 1;
-	int err;
+	int err = 0;
 
 	/* update link_param to update hw_param for DAPM */
 	dai_params->rate_min = rate;

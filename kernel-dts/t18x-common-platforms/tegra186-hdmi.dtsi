@@ -95,55 +95,6 @@
                                         nvidia,out-order = <TEGRA_DC_ORDER_RED_BLUE>;
 					nvidia,out-xres = <4096>; /* 4096 p*/
 					nvidia,out-yres = <2160>; /* 2160 p*/
-//					nvidia,out-xres = <1280>; /*720 p*/
-//					nvidia,out-yres = <720>;  /*720 p*/
-//					nvidia,out-xres = <720>;  /*480 p*/
-//					nvidia,out-yres = <480>;  /*480 p */
-				};
-				/* Setting the default value for testing */
-				display-timings {
-/*					720x480-32 {
-						clock-frequency = <27000000>;
-						hactive = <720>;
-						vactive = <480>;
-						hfront-porch = <16>;
-						hback-porch = <60>;
-						hsync-len = <62>;
-						vfront-porch = <9>;
-						vback-porch = <30>;
-						vsync-len = <6>;
-						nvidia,h-ref-to-sync = <1>;
-						nvidia,v-ref-to-sync = <1>;
-					};
-
-*/
-/*					1280x720-32 {
-						clock-frequency = <74250000>;
-						hactive = <1280>;
-						vactive = <720>;
-						hfront-porch = <110>;
-						hback-porch = <220>;
-						hsync-len = <40>;
-						vfront-porch = <5>;
-						vback-porch = <20>;
-						vsync-len = <5>;
-						nvidia,h-ref-to-sync = <1>;
-						nvidia,v-ref-to-sync = <1>;
-					};
-*/
-					1920x1080-32 {
-						clock-frequency = <148500000>;
-						hactive = <1920>;
-						vactive = <1080>;
-						hfront-porch = <88>;
-						hback-porch = <148>;
-						hsync-len = <44>;
-						vfront-porch = <4>;
-						vback-porch = <36>;
-						vsync-len = <5>;
-						nvidia,h-ref-to-sync = <1>;
-						nvidia,v-ref-to-sync = <1>;
-					};
 				};
 			};
 		};
@@ -218,59 +169,8 @@
 					nvidia,out-parent-clk = "plld3";
 					nvidia,out-align = <TEGRA_DC_ALIGN_MSB>;
 					nvidia,out-order = <TEGRA_DC_ORDER_RED_BLUE>;
-					nvidia,out-xres = <1920>; /* 1080 p*/
-					nvidia,out-yres = <1080>; /* 1080 p*/
-//					nvidia,out-xres = <1280>; /*720 p*/
-//					nvidia,out-yres = <720>;  /*720 p*/
-//					nvidia,out-xres = <720>;  /*480 p*/
-//					nvidia,out-yres = <480>;  /*480 p */
-				};
-				/* Setting the default value for testing */
-				display-timings {
-/*					720x480-32 {
-						clock-frequency = <27000000>;
-						hactive = <720>;
-						vactive = <480>;
-						hfront-porch = <16>;
-						hback-porch = <60>;
-						hsync-len = <62>;
-						vfront-porch = <9>;
-						vback-porch = <30>;
-						vsync-len = <6>;
-						nvidia,h-ref-to-sync = <1>;
-						nvidia,v-ref-to-sync = <1>;
-					};
-
-*/
-/*					1280x720-32 {
-						clock-frequency = <74250000>;
-						hactive = <1280>;
-						vactive = <720>;
-						hfront-porch = <110>;
-						hback-porch = <220>;
-						hsync-len = <40>;
-						vfront-porch = <5>;
-						vback-porch = <20>;
-						vsync-len = <5>;
-						nvidia,h-ref-to-sync = <1>;
-						nvidia,v-ref-to-sync = <1>;
-					};
-*/
-					1920x1080-32 {
-						clock-frequency = <148500000>;
-						hactive = <1920>;
-						vactive = <1080>;
-						hfront-porch = <88>;
-						hback-porch = <148>;
-						hsync-len = <44>;
-						vfront-porch = <4>;
-						vback-porch = <36>;
-						vsync-len = <5>;
-						nvidia,h-ref-to-sync = <1>;
-						nvidia,v-ref-to-sync = <1>;
-					};
-
-
+					nvidia,out-xres = <4096>; /* 4096 p*/
+					nvidia,out-yres = <2160>; /* 2160 p*/
 				};
 			};
 		};

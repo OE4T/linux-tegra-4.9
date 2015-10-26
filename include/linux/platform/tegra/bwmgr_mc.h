@@ -16,8 +16,6 @@
 
 #include <linux/types.h>
 
-extern int bwmgr_iso_bw_percentage;
-
 unsigned long bwmgr_apply_efficiency(
 		unsigned long bw, unsigned long iso_bw,
 		unsigned long emc_max, u64 usage_flags,
@@ -29,5 +27,6 @@ unsigned long bwmgr_freq_to_bw(unsigned long freq);
 unsigned long bwmgr_bw_to_freq(unsigned long bw);
 
 u32 bwmgr_dvfs_latency(u32 ufreq);
+int bwmgr_iso_bw_percentage_max(void);
 
 #endif /* __BWMGR_MC_H */

@@ -184,10 +184,6 @@
 		status = "okay";
 	};
 
-	sound {
-		status = "okay";
-	};
-
         adsp_audio {
                 status = "okay";
         };

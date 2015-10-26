@@ -208,6 +208,8 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 	actmon_writel(actmon, 0, actmon_glb_intr_en_r());
 	actmon_writel(actmon, 0, actmon_local_intr_en_r());
 	actmon_writel(actmon, 0, actmon_local_ctrl_r());
+	actmon_writel(actmon, 0, actmon_local_avg_lower_wmark_r());
+	actmon_writel(actmon, 0, actmon_local_avg_upper_wmark_r());
 
 	/* Write (normalised) sample period. */
 	actmon_update_sample_period_safe(actmon);
@@ -231,6 +233,10 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 	actmon->above_wmark_worker.type = ACTMON_INTR_ABOVE_WMARK;
 	INIT_WORK(&actmon->above_wmark_worker.work, host1x_actmon_event_fn);
 
+	/* Enable global interrupt */
+	if (engine_pdata->actmon_irq)
+		actmon_writel(actmon, 0x1, actmon_glb_intr_en_r());
+
 	nvhost_intr_enable_host_irq(&nvhost_get_host(host_pdev)->intr,
 				    engine_pdata->actmon_irq,
 				    host1x_actmon_process_isr,
@@ -252,10 +258,21 @@ static void host1x_actmon_deinit(struct host1x_actmon *actmon)
 	if (actmon->init != ACTMON_READY)
 		return;
 
-	actmon->init = ACTMON_SLEEP;
+	/* Disable interrupts */
+	if (engine_pdata->actmon_irq) {
+		actmon_writel(actmon, 0x0, actmon_glb_intr_en_r());
+		actmon_writel(actmon, 0x0, actmon_local_intr_en_r());
+	}
 
-	actmon_writel(actmon, 0, actmon_glb_ctrl_r());
+	/* clear intrrupt status registers */
 	actmon_writel(actmon, 0xffffffff, actmon_glb_intr_status_r());
+	actmon_writel(actmon, 0xffffffff, actmon_local_intr_status_r());
+
+	/* Disable actmon */
+	actmon_writel(actmon, 0x0, actmon_local_ctrl_r());
+	actmon_writel(actmon, 0x0, actmon_glb_ctrl_r());
+
+	actmon->init = ACTMON_SLEEP;
 
 	nvhost_intr_disable_host_irq(&nvhost_get_host(host_pdev)->intr,
 				     engine_pdata->actmon_irq);

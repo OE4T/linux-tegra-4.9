@@ -233,7 +233,7 @@ static int tegra_nvdisp_scaling(struct tegra_dc_win *win)
          * whether this should be changed based on use case
 	 */
 	nvdisp_win_write(win, win_scaler_input_h_taps_5_f() |
-				win_scaler_input_h_taps_5_f(),
+				win_scaler_input_v_taps_5_f(),
 				win_scaler_input_r());
 
 	nvdisp_win_write(win, win_scaler_usage_hbypass_f(hbypass) |
@@ -577,8 +577,8 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	u16 *dirty_rect, bool wait_for_vblank)
 {
 	int i;
-	u32 update_mask = nvdisp_cmd_state_ctrl_general_act_req_enable_f();
-	u32 act_req_mask = 0;
+	u32 update_mask = nvdisp_cmd_state_ctrl_general_update_enable_f();
+	u32 act_req_mask = nvdisp_cmd_state_ctrl_general_act_req_enable_f();
 	u32 act_control = 0;
 
 	for (i = 0; i < n; i++) {

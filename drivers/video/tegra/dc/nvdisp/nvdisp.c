@@ -877,52 +877,47 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	if (dc->out_ops->setup_clk)
 		pclk = dc->out_ops->setup_clk(dc, dc->clk);
 
-	/* Setting clock separately now will cleanup once it
-	 * is stable
+	/* Setting DC clocks, DC, COMPCLK
+	 * Set maximum of DC clock for COMPCLK
 	 */
-	if ((dc->out->type == TEGRA_DC_OUT_HDMI) ||
-		(dc->out->type == TEGRA_DC_OUT_DP)) {
+	if (dc->out->type == TEGRA_DC_OUT_DSI) {
+		parent_clk = tegra_disp_clk_get(&dc->ndev->dev,
+						"pll_d_out1");
+	} else	{
 		parent_clk = tegra_disp_clk_get(&dc->ndev->dev,
 						dc->out->parent_clk);
-		if (IS_ERR_OR_NULL(parent_clk)) {
-			dev_err(&dc->ndev->dev,
-				"plld2 parent clock get failed\n");
-			ret = -ENOENT;
-			return ret; /*TODO: Add proper cleanup later */
-		}
 		pr_info("Parent Clock set for DC %s\n",
 				dc->out->parent_clk);
-		/* Set parent for DC clock */
-		clk_set_parent(dc->clk, parent_clk);
+	}
 
-		/* comp clk will be maximum of head0/1/2 */
-		if (dc->mode.pclk >= compclk_rate) {
-			compclk_rate = dc->mode.pclk;
-			compclk_parent = dc->clk;
-			pr_info(" rate get on compclk %d\n", compclk_rate);
-			/* Set parent for Display clock */
-			clk_set_parent(compclk, dc->clk);
-		}
+	if (IS_ERR_OR_NULL(parent_clk)) {
+		dev_err(&dc->ndev->dev,
+			"Failed to get DC Parent clock\n");
+		ret = -ENOENT;
+		return ret; /*TODO: Add proper cleanup later */
+	}
 
-		/* Set rate on DC same as pclk */
-		clk_set_rate(dc->clk, dc->mode.pclk);
-		/* Enable DC clock */
-		tegra_disp_clk_prepare_enable(dc->clk);
-		/* Enable Display clock */
-		tegra_disp_clk_prepare_enable(compclk);
+	/* Set parent for DC clock */
+	clk_set_parent(dc->clk, parent_clk);
 
-	} else if (dc->out->type == TEGRA_DC_OUT_DSI) {
-		/*tegra_disp_clk_prepare_enable(dc->clk);*/
-		tegra_disp_clk_prepare_enable(compclk);
+	/* Set rate on DC same as pclk */
+	clk_set_rate(dc->clk, dc->mode.pclk);
 
+	/* Enable DC clock */
+	tegra_disp_clk_prepare_enable(dc->clk);
 
-		/*
-		 * Fix me: Nvdisplay0 clk is missing from clk ids table.
-		 * This needs to be enabled for head0. Directly programming
-		 * into CAR registerfor now. This needs to be removed
-		 * once the clock id is added.
-		 */
-		writel(0xf, ioremap(0x05801000, 0x4));
+	/* Enable Display comp clock */
+	tegra_disp_clk_prepare_enable(compclk);
+
+	pr_info(" dc clk %ld\n", clk_get_rate(dc->clk));
+
+	/* comp clk will be maximum of head0/1/2 */
+	if (dc->mode.pclk >= compclk_rate) {
+		compclk_rate = dc->mode.pclk;
+		compclk_parent = dc->clk;
+		pr_info(" rate get on compclk %d\n", compclk_rate);
+		/* Set parent for Display clock */
+		clk_set_parent(compclk, dc->clk);
 	}
 
 	tegra_dc_get(dc);

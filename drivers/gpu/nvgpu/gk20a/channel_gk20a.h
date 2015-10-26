@@ -237,6 +237,7 @@ void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a);
 
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvgpu_gpfifo *gpfifo,
+				struct nvgpu_submit_gpfifo_args *args,
 				u32 num_entries,
 				u32 flags,
 				struct nvgpu_fence *fence,

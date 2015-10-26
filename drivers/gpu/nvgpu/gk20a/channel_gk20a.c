@@ -1551,14 +1551,42 @@ static void trace_write_pushbuffer(struct channel_gk20a *c,
 
 static void trace_write_pushbuffer_range(struct channel_gk20a *c,
 					 struct nvgpu_gpfifo *g,
+					 struct nvgpu_submit_gpfifo_args *args,
+					 int offset,
 					 int count)
 {
-	if (gk20a_debug_trace_cmdbuf) {
-		int i;
-		struct nvgpu_gpfifo *gp = g;
-		for (i = 0; i < count; i++, gp++)
-			trace_write_pushbuffer(c, gp);
+	u32 size;
+	int i;
+	struct nvgpu_gpfifo *gp;
+	bool gpfifo_allocated = false;
+
+	if (!gk20a_debug_trace_cmdbuf)
+		return;
+
+	if (!g && !args)
+		return;
+
+	if (!g) {
+		size = args->num_entries * sizeof(struct nvgpu_gpfifo);
+		if (size) {
+			g = nvgpu_alloc(size, false);
+			if (!g)
+				return;
+
+			if (copy_from_user(g,
+				(void __user *)(uintptr_t)args->gpfifo,	size)) {
+				return;
+			}
+		}
+		gpfifo_allocated = true;
 	}
+
+	gp = g + offset;
+	for (i = 0; i < count; i++, gp++)
+		trace_write_pushbuffer(c, gp);
+
+	if (gpfifo_allocated)
+		nvgpu_free(g);
 }
 
 static void gk20a_channel_timeout_start(struct channel_gk20a *ch,
@@ -1810,6 +1838,7 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvgpu_gpfifo *gpfifo,
+				struct nvgpu_submit_gpfifo_args *args,
 				u32 num_entries,
 				u32 flags,
 				struct nvgpu_fence *fence,
@@ -1841,6 +1870,9 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		gk20a_err(d, "not enough gpfifo space allocated");
 		return -ENOMEM;
 	}
+
+	if (!gpfifo && !args)
+		return -EINVAL;
 
 	if ((flags & (NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT |
 		      NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET)) &&
@@ -1986,24 +2018,69 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	start = c->gpfifo.put;
 	end = start + num_entries;
 
-	if (end > c->gpfifo.entry_num) {
-		int length0 = c->gpfifo.entry_num - start;
-		int length1 = num_entries - length0;
+	if (gpfifo) {
+		if (end > c->gpfifo.entry_num) {
+			int length0 = c->gpfifo.entry_num - start;
+			int length1 = num_entries - length0;
 
-		memcpy(gpfifo_mem + start, gpfifo,
-		       length0 * sizeof(*gpfifo));
+			memcpy(gpfifo_mem + start, gpfifo,
+			       length0 * sizeof(*gpfifo));
 
-		memcpy(gpfifo_mem, gpfifo + length0,
-		       length1 * sizeof(*gpfifo));
+			memcpy(gpfifo_mem, gpfifo + length0,
+			       length1 * sizeof(*gpfifo));
 
-		trace_write_pushbuffer_range(c, gpfifo, length0);
-		trace_write_pushbuffer_range(c, gpfifo + length0, length1);
+			trace_write_pushbuffer_range(c, gpfifo, NULL,
+					0, length0);
+			trace_write_pushbuffer_range(c, gpfifo, NULL,
+					length0, length1);
+		} else {
+			memcpy(gpfifo_mem + start, gpfifo,
+			       num_entries * sizeof(*gpfifo));
+
+			trace_write_pushbuffer_range(c, gpfifo, NULL,
+					0, num_entries);
+		}
 	} else {
-		memcpy(gpfifo_mem + start, gpfifo,
-		       num_entries * sizeof(*gpfifo));
+		struct nvgpu_gpfifo __user *user_gpfifo =
+			(struct nvgpu_gpfifo __user *)(uintptr_t)args->gpfifo;
+		if (end > c->gpfifo.entry_num) {
+			int length0 = c->gpfifo.entry_num - start;
+			int length1 = num_entries - length0;
 
-		trace_write_pushbuffer_range(c, gpfifo, num_entries);
+			err = copy_from_user(gpfifo_mem + start,
+				user_gpfifo,
+				length0 * sizeof(*user_gpfifo));
+			if (err) {
+				mutex_unlock(&c->submit_lock);
+				goto clean_up;
+			}
+
+			err = copy_from_user(gpfifo_mem,
+				user_gpfifo + length0,
+				length1 * sizeof(*user_gpfifo));
+			if (err) {
+				mutex_unlock(&c->submit_lock);
+				goto clean_up;
+			}
+
+			trace_write_pushbuffer_range(c, NULL, args,
+					0, length0);
+			trace_write_pushbuffer_range(c, NULL, args,
+					length0, length1);
+		} else {
+			err = copy_from_user(gpfifo_mem + start,
+				user_gpfifo,
+				num_entries * sizeof(*user_gpfifo));
+			if (err) {
+				mutex_unlock(&c->submit_lock);
+				goto clean_up;
+			}
+
+			trace_write_pushbuffer_range(c, NULL, args,
+					0, num_entries);
+		}
 	}
+
 	c->gpfifo.put = (c->gpfifo.put + num_entries) &
 		(c->gpfifo.entry_num - 1);
 
@@ -2501,8 +2578,6 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	struct nvgpu_submit_gpfifo_args *args)
 {
 	struct gk20a_fence *fence_out;
-	void *gpfifo = NULL;
-	u32 size;
 	int ret = 0;
 
 	gk20a_dbg_fn("");
@@ -2510,23 +2585,7 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	if (ch->has_timedout)
 		return -ETIMEDOUT;
 
-	/* zero-sized submits are allowed, since they can be used for
-	 * synchronization; we might still wait and do an increment */
-	size = args->num_entries * sizeof(struct nvgpu_gpfifo);
-	if (size) {
-		gpfifo = nvgpu_alloc(size, false);
-		if (!gpfifo)
-			return -ENOMEM;
-
-		if (copy_from_user(gpfifo,
-					(void __user *)(uintptr_t)args->gpfifo,
-					size)) {
-			ret = -EINVAL;
-			goto clean_up;
-		}
-	}
-
-	ret = gk20a_submit_channel_gpfifo(ch, gpfifo, args->num_entries,
+	ret = gk20a_submit_channel_gpfifo(ch, NULL, args, args->num_entries,
 					  args->flags, &args->fence,
 					  &fence_out);
 
@@ -2549,7 +2608,6 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	gk20a_fence_put(fence_out);
 
 clean_up:
-	nvgpu_free(gpfifo);
 	return ret;
 }
 

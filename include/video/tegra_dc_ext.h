@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2011-2016, NVIDIA Corporation. All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  * Some code based on fbdev extensions written by:
@@ -330,6 +330,7 @@ struct tegra_dc_ext_flip_3 {
 enum tegra_dc_ext_flip_data_type {
 	TEGRA_DC_EXT_FLIP_USER_DATA_NONE, /* dummy value - do not use */
 	TEGRA_DC_EXT_FLIP_USER_DATA_HDR_DATA,
+	TEGRA_DC_EXT_FLIP_USER_DATA_IMP_DATA,
 };
 
 /*
@@ -343,6 +344,35 @@ struct tegra_dc_ext_hdr {
 	__u8 static_metadata[24];
 };
 
+#define TEGRA_DC_EXT_N_WINDOWS	6
+struct tegra_dc_ext_imp_head_results {
+	__u32	num_windows;
+	__u8	cursor_active;
+	__u32	win_ids[TEGRA_DC_EXT_N_WINDOWS];
+	__u32	thread_group_win[TEGRA_DC_EXT_N_WINDOWS];
+	__u32	metering_slots_value_win[TEGRA_DC_EXT_N_WINDOWS];
+	__u32	thresh_lwm_dvfs_win[TEGRA_DC_EXT_N_WINDOWS];
+	__u32	pipe_meter_value_win[TEGRA_DC_EXT_N_WINDOWS];
+	__u32	pool_config_entries_win[TEGRA_DC_EXT_N_WINDOWS];
+	__u32	metering_slots_value_cursor;
+	__u32	pipe_meter_value_cursor;
+	__u32	pool_config_entries_cursor;
+	__u64	hubclk;
+	__u32	window_slots_value;
+	__u32	cursor_slots_value;
+	__u64	total_display_iso_bw_bytes;
+};
+#undef TEGRA_DC_EXT_N_WINDOWS
+
+/*
+ * Variable results is a pointer to a struct tegra_dc_ext_imp_head_results
+ * array. reserved is padding so that the total struct size is 26 bytes.
+ */
+struct tegra_dc_ext_imp_ptr {
+	__u64 __user results;
+	__u16 reserved[9]; /* unused - must be 0 */
+};
+
 /* size of the this sturct is 32 bytes */
 struct tegra_dc_ext_flip_user_data {
 	__u8 data_type;
@@ -352,8 +382,8 @@ struct tegra_dc_ext_flip_user_data {
 	union { /* data to be packed into 26 bytes */
 		__u8 data8[26];
 		__u16 data16[13];
-		/*Add HDR data struct here*/
 		struct tegra_dc_ext_hdr hdr_info;
+		struct tegra_dc_ext_imp_ptr imp_ptr;
 	};
 };
 

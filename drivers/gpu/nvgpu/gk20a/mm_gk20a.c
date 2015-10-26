@@ -120,6 +120,8 @@ struct gk20a_dmabuf_priv {
 	int pin_count;
 
 	struct list_head states;
+
+	u64 buffer_id;
 };
 
 static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm);
@@ -3044,6 +3046,7 @@ int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev)
 {
 	struct gk20a_dmabuf_priv *priv;
 	static DEFINE_MUTEX(priv_lock);
+	static u64 priv_count = 0;
 
 	priv = dma_buf_get_drvdata(dmabuf, dev);
 	if (likely(priv))
@@ -3060,6 +3063,7 @@ int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev)
 	}
 	mutex_init(&priv->lock);
 	INIT_LIST_HEAD(&priv->states);
+	priv->buffer_id = ++priv_count;
 	dma_buf_set_drvdata(dmabuf, dev, priv, gk20a_mm_delete_priv);
 priv_exist_or_err:
 	mutex_unlock(&priv_lock);
@@ -3145,8 +3149,11 @@ int gk20a_vm_map_buffer(struct vm_gk20a *vm,
 
 	/* get ref to the mem handle (released on unmap_locked) */
 	dmabuf = dma_buf_get(dmabuf_fd);
-	if (IS_ERR(dmabuf))
+	if (IS_ERR(dmabuf)) {
+		dev_warn(dev_from_vm(vm), "%s: fd %d is not a dmabuf",
+			 __func__, dmabuf_fd);
 		return PTR_ERR(dmabuf);
+	}
 
 	err = gk20a_dmabuf_alloc_drvdata(dmabuf, dev_from_vm(vm));
 	if (err) {
@@ -3651,6 +3658,37 @@ const struct gk20a_mmu_level *gk20a_mm_get_mmu_levels(struct gk20a *g,
 {
 	return (big_page_size == SZ_64K) ?
 		 gk20a_mm_levels_64k : gk20a_mm_levels_128k;
+}
+
+int gk20a_mm_get_buffer_info(struct device *dev, int dmabuf_fd,
+			     u64 *buffer_id, u64 *buffer_len)
+{
+	struct dma_buf *dmabuf;
+	struct gk20a_dmabuf_priv *priv;
+	int err = 0;
+
+	dmabuf = dma_buf_get(dmabuf_fd);
+	if (IS_ERR(dmabuf)) {
+		dev_warn(dev, "%s: fd %d is not a dmabuf", __func__, dmabuf_fd);
+		return PTR_ERR(dmabuf);
+	}
+
+	err = gk20a_dmabuf_alloc_drvdata(dmabuf, dev);
+	if (err) {
+		dev_warn(dev, "Failed to allocate dmabuf drvdata (err = %d)",
+			 err);
+		goto clean_up;
+	}
+
+	priv = dma_buf_get_drvdata(dmabuf, dev);
+	if (likely(priv)) {
+		*buffer_id = priv->buffer_id;
+		*buffer_len = dmabuf->size;
+	}
+
+clean_up:
+	dma_buf_put(dmabuf);
+	return err;
 }
 
 void gk20a_init_mm(struct gpu_ops *gops)

@@ -688,4 +688,7 @@ static inline void nvgpu_free(void *p)
 		vfree(p);
 }
 
+int gk20a_mm_get_buffer_info(struct device *dev, int dmabuf_fd,
+			     u64 *buffer_id, u64 *buffer_len);
+
 #endif /* MM_GK20A_H */

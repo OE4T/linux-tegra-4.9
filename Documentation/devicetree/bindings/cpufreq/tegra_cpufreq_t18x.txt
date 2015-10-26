@@ -17,7 +17,7 @@ and one for the A57 cluster.
 
 Required properties:
 - compatible: should be "nvidia,tegra18x-cpufreq".
-- reg: an array of four 64-bit unsigned integers:
+- reg: an array of four 64-bit unsigned integers.
        the base address and size for Denver EDVD aperture and the base
        address and size for the A57 EDVD aperture.
 
@@ -47,9 +47,13 @@ Optional properties:
   Similarly, freq_table_step_size of value 3 will skip every 2nd and 3rd entries
   in groups of 3 entries consecutively.
 
+- nvidia,enable-autocc3: Enable auto_cc3.
+  Auto cc3 is the idle state where freq request is not considered for the cpus
+  in WFI/WFE.
+
 
 Example 1:
---------
+----------
        cpufreq@e070000 {
                compatible = "nvidia,tegra18x-cpufreq";
                reg = <0x0 0x0e070000 0x0 0x1000>, /* M/Denver cluster */
@@ -64,4 +68,14 @@ Example 2:
                reg = <0x0 0x0e070000 0x0 0x1000>, /* M/Denver cluster */
                      <0x0 0x0e060000 0x0 0x1000>; /* B/ARM cluster */
                freq_table_step_size = /bits/ 16 <1>;
+       };
+
+Example 3: cpufreq and auto-cc3 enabled
+----------
+       cpufreq@e070000 {
+               compatible = "nvidia,tegra18x-cpufreq";
+               reg = <0x0 0x0e070000 0x0 0x1000>, /* M/Denver cluster */
+                     <0x0 0x0e060000 0x0 0x1000>; /* B/ARM cluster */
+               status = "okay";
+               nvidia,enable-autocc3;
        };

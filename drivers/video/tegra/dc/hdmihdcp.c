@@ -1835,7 +1835,9 @@ static int tegra_nvhdcp_on(struct tegra_nvhdcp *nvhdcp)
 	u8 hdcp2version = 0;
 	int e;
 	nvhdcp->state = STATE_UNAUTHENTICATED;
-	if (nvhdcp_is_plugged(nvhdcp)) {
+	if (nvhdcp_is_plugged(nvhdcp) &&
+		atomic_read(&nvhdcp->policy) !=
+		TEGRA_DC_HDCP_POLICY_ALWAYS_OFF) {
 		nvhdcp->fail_count = 0;
 		e = nvhdcp_i2c_read8(nvhdcp, HDCP_HDCP2_VERSION, &hdcp2version);
 		if (e)
@@ -1888,11 +1890,17 @@ void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd)
 
 int tegra_nvhdcp_set_policy(struct tegra_nvhdcp *nvhdcp, int pol)
 {
-	if (pol == TEGRA_NVHDCP_POLICY_ALWAYS_ON) {
+	if (pol == TEGRA_DC_HDCP_POLICY_ALWAYS_ON) {
 		nvhdcp_info("using \"always on\" policy.\n");
 		if (atomic_xchg(&nvhdcp->policy, pol) != pol) {
 			/* policy changed, start working */
 			tegra_nvhdcp_on(nvhdcp);
+		}
+	} else if (pol == TEGRA_DC_HDCP_POLICY_ALWAYS_OFF) {
+		nvhdcp_info("using \"always off\" policy.\n");
+		if (atomic_xchg(&nvhdcp->policy, pol) != pol) {
+			/* policy changed, stop working */
+			tegra_nvhdcp_off(nvhdcp);
 		}
 	} else {
 		/* unsupported policy */
@@ -2081,6 +2089,7 @@ struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_hdmi *hdmi,
 	nvhdcp->info.platform_data = nvhdcp;
 	nvhdcp->fail_count = 0;
 	nvhdcp->max_retries = HDCP_MAX_RETRIES;
+	atomic_set(&nvhdcp->policy, hdmi->dc->pdata->default_out->hdcp_policy);
 
 	adapter = i2c_get_adapter(bus);
 	if (!adapter) {

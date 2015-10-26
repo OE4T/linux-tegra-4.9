@@ -404,6 +404,13 @@ static int parse_disp_default_out(struct platform_device *ndev,
 		default_out->flags |= (unsigned) u;
 	}
 
+	if (!of_property_read_u32(np, "nvidia,out-hdcp-policy", &temp)) {
+		default_out->hdcp_policy = (unsigned)temp;
+		OF_DC_LOG("hdcp_policy = %u\n", default_out->hdcp_policy);
+	} else {
+		default_out->hdcp_policy = TEGRA_DC_HDCP_POLICY_ALWAYS_ON;
+	}
+
 	if (tegra_platform_is_linsim())
 		default_out->hotplug_gpio = -1;
 

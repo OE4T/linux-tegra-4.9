@@ -1,7 +1,7 @@
 /*
  * include/video/nvhdcp.h
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -81,6 +81,7 @@ struct tegra_nvhdcp_packet {
 /* parameters to TEGRAIO_NVHDCP_SET_POLICY */
 #define TEGRA_NVHDCP_POLICY_ON_DEMAND	0
 #define TEGRA_NVHDCP_POLICY_ALWAYS_ON	1
+#define TEGRA_NVHDCP_POLICY_ALWAYS_OFF	2
 
 /* ioctls */
 #define TEGRAIO_NVHDCP_ON		_IO('F', 0x70)

@@ -23,6 +23,7 @@
 
 #include "dc_config.h"
 
+#define NVDISP_TEGRA_POLL_TIMEOUT_MS       50
 
 /* Num Fractional Bits in 8.24 fixed point phase and phase increment values */
 #define NFB 24
@@ -317,9 +318,41 @@ static int tegra_nvdisp_enable_cde(struct tegra_dc_win *win)
 	return 0;
 }
 
+static inline u32 tegra_nvdisp_win_swap_uv(struct tegra_dc_win *win)
+{
+
+	u32 swap_uv;
+
+	switch (tegra_dc_fmt(win->fmt)) {
+	case TEGRA_WIN_FMT_YCrCb420SP:
+		swap_uv = 1;
+		win->fmt = TEGRA_WIN_FMT_YCbCr420SP;
+		break;
+
+	case TEGRA_WIN_FMT_YCbCr422SP:
+		swap_uv = 1;
+		win->fmt = TEGRA_WIN_FMT_YCrCb422SP;
+		break;
+
+	case TEGRA_WIN_FMT_YCbCr422RSP:
+		swap_uv = 1;
+		win->fmt = TEGRA_WIN_FMT_YCrCb422RSP;
+		break;
+
+	case TEGRA_WIN_FMT_YCbCr444SP:
+		swap_uv = 1;
+		win->fmt = TEGRA_WIN_FMT_YCrCb444SP;
+		break;
+	default:
+		swap_uv = 0;
+		break;
+	}
+	return swap_uv;
+}
+
 static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 {
-	u32 win_options, win_params;
+	u32 win_options, win_params, swap_uv;
 	fixed20_12 h_offset, v_offset;
 
 	bool yuv = tegra_dc_is_yuv(win->fmt);
@@ -329,7 +362,11 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 
 	struct tegra_dc *dc = win->dc;
 
+	swap_uv = tegra_nvdisp_win_swap_uv(win);
 	nvdisp_win_write(win, tegra_dc_fmt(win->fmt), win_color_depth_r());
+	nvdisp_win_write(win, win_wgrp_params_swap_uv_f(swap_uv),
+		 win_wgrp_params_r());
+
 	nvdisp_win_write(win,
 		win_position_v_position_f(win->out_y) |
 		win_position_h_position_f(win->out_x),
@@ -417,12 +454,14 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 		/* yuv8_10 for rec601/709/2020-10 and
 		 * yuv12 for rec2020-12 yuv inputs
 		 */
+#if 0
 		if (tegra_dc_is_yuv_12bpc(win->fmt))
 			win_params |=
 				win_win_set_params_degamma_range_yuv12_f();
 		else
 			win_params |=
 				win_win_set_params_degamma_range_yuv8_10_f();
+#endif
 
 		/* color_space settings */
 		if (win->flags & TEGRA_WIN_FLAG_CS_REC601)
@@ -433,6 +472,7 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 			win_params |= win_win_set_params_cs_range_yuv_709_f();
 
 	} else {
+#if 0
 		/* srgb for rgb, none for I8 */
 		if (win->fmt == TEGRA_WIN_FMT_P8)
 			win_params |=
@@ -440,9 +480,13 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 		else
 			win_params |=
 				win_win_set_params_degamma_range_srgb_f();
+#endif
 
 		win_params |= win_win_set_params_cs_range_rgb_f();
 	}
+
+    win_params |=
+        win_win_set_params_degamma_range_none_f();
 
 	nvdisp_win_write(win, win_params, win_win_set_params_r());
 
@@ -553,6 +597,7 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 {
 	int i;
 	u32 update_mask = nvdisp_cmd_state_ctrl_general_act_req_enable_f();
+	u32 act_req_mask = 0;
 	u32 act_control = 0;
 
 	for (i = 0; i < n; i++) {
@@ -574,40 +619,55 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 		}
 
 		if (!WIN_IS_ENABLED(win)) {
+			u32 win_options;
+
+			/* TODO: only program if the window was already disabled */
+			update_mask |=
+				nvdisp_cmd_state_ctrl_win_a_update_enable_f()
+				<< win->idx;
+			act_req_mask |=
+				nvdisp_cmd_state_ctrl_a_act_req_enable_f()
+				<< win->idx;
+
+			/* disable the window without altering other flags */
+			win_options = nvdisp_win_read(win, win_options_r());
+			win_options &= ~win_options_win_enable_enable_f();
+			nvdisp_win_write(win, win_options, win_options_r());
+
 			dc_win->dirty = no_vsync ? 0 : 1;
-			/* TODO: disable this window */
-			continue;
+		} else {
+			update_mask |= nvdisp_cmd_state_ctrl_win_a_update_enable_f()
+				<< win->idx;
+			act_req_mask |=  nvdisp_cmd_state_ctrl_a_act_req_enable_f()
+				<< win->idx;
+
+			if (wait_for_vblank)
+				act_control = win_act_control_ctrl_sel_vcounter_f();
+			else
+				act_control = win_act_control_ctrl_sel_hcounter_f();
+
+			nvdisp_win_write(win, act_control, win_act_control_r());
+
+			tegra_nvdisp_blend(win);
+			tegra_nvdisp_scaling(win);
+			tegra_nvdisp_enable_cde(win);
+
+			/* if (do_partial_update) { */
+				/* /\* calculate the xoff, yoff etc values *\/ */
+				/* tegra_dc_win_partial_update(dc, win, xoff, yoff, */
+				/* 	width, height); */
+			/* } */
+
+			tegra_nvdisp_win_attribute(win);
+
+			if (dc_win->csc_dirty) {
+				tegra_nvdisp_set_csc(win, &dc_win->csc);
+				dc_win->csc_dirty = false;
+			}
+
+			dc_win->dirty = 1;
+			win->dirty = 1;
 		}
-
-		update_mask |=
-			nvdisp_cmd_state_ctrl_a_act_req_enable_f() << win->idx;
-
-		if (wait_for_vblank)
-			act_control = win_act_control_ctrl_sel_vcounter_f();
-		else
-			act_control = win_act_control_ctrl_sel_hcounter_f();
-
-		nvdisp_win_write(win, act_control, win_act_control_r());
-
-		tegra_nvdisp_blend(win);
-		tegra_nvdisp_scaling(win);
-		tegra_nvdisp_enable_cde(win);
-
-		/* if (do_partial_update) { */
-			/* /\* calculate the xoff, yoff etc values *\/ */
-			/* tegra_dc_win_partial_update(dc, win, xoff, yoff, */
-			/* 	width, height); */
-		/* } */
-
-		tegra_nvdisp_win_attribute(win);
-
-		if (dc_win->csc_dirty) {
-			tegra_nvdisp_set_csc(win, &dc_win->csc);
-			dc_win->csc_dirty = false;
-		}
-
-		dc_win->dirty = 1;
-		win->dirty = 1;
 
 		trace_window_update(dc, win);
 	}
@@ -635,16 +695,22 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	dc->crc_pending = true;
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
-		update_mask |= (nvdisp_cmd_state_ctrl_host_trig_enable_f() |
+		act_req_mask |= (nvdisp_cmd_state_ctrl_host_trig_enable_f() |
 			nvdisp_cmd_state_ctrl_common_act_req_enable_f());
 
-	/* setting common active request as default now to
-	   get scan_column feature working */
-	update_mask |= (update_mask << 8) |
-		nvdisp_cmd_state_ctrl_common_act_update_enable_f() |
-		nvdisp_cmd_state_ctrl_common_act_req_enable_f();
+	update_mask |= nvdisp_cmd_state_ctrl_common_act_update_enable_f();
 
+	/* setting common active request as default now to
+	 * get scan_column feature working */
+	act_req_mask |= nvdisp_cmd_state_ctrl_common_act_req_enable_f(),
+
+	/* cannot set fields related to UPDATE and ACT_REQ in the same write */
 	tegra_dc_writel(dc, update_mask, nvdisp_cmd_state_ctrl_r());
+	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
+	if (act_req_mask) {
+		tegra_dc_writel(dc, act_req_mask, nvdisp_cmd_state_ctrl_r());
+		tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
+	}
 
 	return 0;
 }

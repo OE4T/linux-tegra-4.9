@@ -16,7 +16,7 @@
 
 static u8 bwmgr_dram_efficiency;
 static u32 *bwmgr_dram_iso_eff_table;
-int bwmgr_iso_bw_percentage;
+static int bwmgr_iso_bw_percentage;
 
 static u32 bwmgr_t186_iso_bw_table[] = { /* MHz */
 	  5,  10,  20,  30,  40,  60,  80, 100, 120, 140,
@@ -165,8 +165,10 @@ void bwmgr_eff_init(void)
 	}
 
 	for (i = ARRAY_SIZE(bwmgr_t186_iso_bw_table) - 1; i >= 0; i--) {
-		if (bwmgr_dram_iso_eff_table[i] > 1)
+		if (bwmgr_dram_iso_eff_table[i] > 1) {
 			bwmgr_iso_bw_percentage = bwmgr_dram_iso_eff_table[i];
+			break;
+		}
 	}
 }
 
@@ -233,3 +235,7 @@ u32 bwmgr_dvfs_latency(u32 ufreq)
 	return 4;
 }
 
+int bwmgr_iso_bw_percentage_max(void)
+{
+	return bwmgr_iso_bw_percentage;
+}

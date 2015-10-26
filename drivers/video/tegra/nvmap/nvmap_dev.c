@@ -989,9 +989,9 @@ static int nvmap_debug_orphan_handles_show(struct seq_file *s, void *unused)
 
 
 	spin_lock(&nvmap_dev->handle_lock);
-	seq_printf(s, "%8s %11s %9s %6s %6s %6s %6s %8s\n",
+	seq_printf(s, "%8s %11s %9s %6s %6s %6s %8s\n",
 			"BASE", "SIZE", "USERFLAGS", "REFS",
-			"KMAPS", "UMAPS", "SHARE", "UID");
+			"KMAPS", "UMAPS", "UID");
 
 	/* for each handle */
 	n = rb_first(&nvmap_dev->handles);

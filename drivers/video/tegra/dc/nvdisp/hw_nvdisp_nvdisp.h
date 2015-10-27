@@ -778,19 +778,19 @@ static inline u32 nvdisp_color_ctl_dither_phase_f(u32 v)
 {
 	return (v & 0x3) << 6;
 }
-static inline u32 nvdisp_color_ctl_base_color_size_6bits_f(void)
+static inline u32 nvdisp_color_ctl_base_color_size_18bits_f(void)
 {
 	return 0x0;
 }
-static inline u32 nvdisp_color_ctl_base_color_size_18bits_f(void)
+static inline u32 nvdisp_color_ctl_base_color_size_24bits_f(void)
 {
 	return 0x8;
 }
-static inline u32 nvdisp_color_ctl_base_color_size_24bits_f(void)
+static inline u32 nvdisp_color_ctl_base_color_size_30bits_f(void)
 {
 	return 0xa;
 }
-static inline u32 nvdisp_color_ctl_base_color_size_30bits_f(void)
+static inline u32 nvdisp_color_ctl_base_color_size_36bits_f(void)
 {
 	return 0xc;
 }

@@ -634,7 +634,6 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 			#undef RGB_TO_YUV422_10BPC_BLACK_PIX
 			#undef RGB_TO_YUV420_8BPC_BLACK_PIX
 
-			/* TODO: only program if the window was already disabled */
 			update_mask |=
 				nvdisp_cmd_state_ctrl_win_a_update_enable_f()
 				<< win->idx;
@@ -642,13 +641,22 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 				nvdisp_cmd_state_ctrl_a_act_req_enable_f()
 				<< win->idx;
 
-			/* detach the window from the head */
+			/* detach the window from the head
+			 * this must be written before other window regs */
 			nvdisp_win_write(win, win_set_control_owner_none_f(),
 					win_set_control_r());
 
-			/* disable the window without altering other flags */
-			win_options = nvdisp_win_read(win, win_options_r());
-			win_options &= ~win_options_win_enable_enable_f();
+			/* disable scaler (bypass mode) */
+			nvdisp_win_write(win, win_scaler_usage_hbypass_f(1) |
+				win_scaler_usage_vbypass_f(1) |
+				win_scaler_usage_use422_disable_f(),
+				win_scaler_usage_r());
+
+			/* disable cde */
+			nvdisp_win_write(win, 0, win_cde_ctrl_r());
+
+			/* disable window */
+			win_options = win_options_win_enable_disable_f();
 			nvdisp_win_write(win, win_options, win_options_r());
 
 			dc_win->dirty = no_vsync ? 0 : 1;

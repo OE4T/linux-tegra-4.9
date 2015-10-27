@@ -808,12 +808,16 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err;
 	}
+	tegra186_arad_runtime_resume(&pdev->dev);
 
 	pm_runtime_enable(&pdev->dev);
-	if (!pm_runtime_enabled(&pdev->dev)) {
-		ret = tegra186_arad_runtime_resume(&pdev->dev);
-		if (ret)
-			goto err_pm_disable;
+
+	ret = snd_soc_register_codec(&pdev->dev, &tegra186_arad_codec,
+				     tegra186_arad_dais,
+				     ARRAY_SIZE(tegra186_arad_dais));
+	if (ret != 0) {
+		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
+		goto err_suspend;
 	}
 
 #ifdef CONFIG_SND_SOC_TEGRA186_ARAD_WAR
@@ -826,14 +830,6 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Could not register ARAD INTERRUPT\n");
 	spin_lock_init(&arad->int_lock);
 #endif
-	ret = snd_soc_register_codec(&pdev->dev, &tegra186_arad_codec,
-				     tegra186_arad_dais,
-				     ARRAY_SIZE(tegra186_arad_dais));
-	if (ret != 0) {
-		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
-		goto err_suspend;
-	}
-
 	return 0;
 
 err_suspend:

@@ -209,6 +209,8 @@ static int tegra186_asrc_runtime_resume(struct device *dev)
 	regcache_cache_only(asrc->regmap, false);
 	regcache_sync(asrc->regmap);
 
+	regmap_write(asrc->regmap, TEGRA186_ASRC_GLOBAL_INT_CLEAR,
+		0x01);
 	for (lane_id = 0; lane_id < 6; lane_id++) {
 		if (asrc->lane[lane_id].ratio_source == RATIO_SW) {
 			regmap_write(asrc->regmap,
@@ -619,37 +621,37 @@ static const struct snd_kcontrol_new tegra186_asrc_controls[] = {
 		0, TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK, 0,
 		tegra186_asrc_get_ratio_int, tegra186_asrc_put_ratio_int),
 	SOC_SINGLE_EXT("Ratio1 Frac", TEGRA186_ASRC_STREAM1_RATIO_FRAC_PART,
-		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK, 0,
+		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MAX, 0,
 		tegra186_asrc_get_ratio_frac, tegra186_asrc_put_ratio_frac),
 	SOC_SINGLE_EXT("Ratio2 Int", TEGRA186_ASRC_STREAM2_RATIO_INTEGER_PART,
 		0, TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK, 0,
 		tegra186_asrc_get_ratio_int, tegra186_asrc_put_ratio_int),
 	SOC_SINGLE_EXT("Ratio2 Frac", TEGRA186_ASRC_STREAM2_RATIO_FRAC_PART,
-		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK, 0,
+		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MAX, 0,
 		tegra186_asrc_get_ratio_frac, tegra186_asrc_put_ratio_frac),
 	SOC_SINGLE_EXT("Ratio3 Int", TEGRA186_ASRC_STREAM3_RATIO_INTEGER_PART,
 		0, TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK, 0,
 		tegra186_asrc_get_ratio_int, tegra186_asrc_put_ratio_int),
 	SOC_SINGLE_EXT("Ratio3 Frac", TEGRA186_ASRC_STREAM3_RATIO_FRAC_PART,
-		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK, 0,
+		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MAX, 0,
 		tegra186_asrc_get_ratio_frac, tegra186_asrc_put_ratio_frac),
 	SOC_SINGLE_EXT("Ratio4 Int", TEGRA186_ASRC_STREAM4_RATIO_INTEGER_PART,
 		0, TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK, 0,
 		tegra186_asrc_get_ratio_int, tegra186_asrc_put_ratio_int),
 	SOC_SINGLE_EXT("Ratio4 Frac", TEGRA186_ASRC_STREAM4_RATIO_FRAC_PART,
-		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK, 0,
+		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MAX, 0,
 		tegra186_asrc_get_ratio_frac, tegra186_asrc_put_ratio_frac),
 	SOC_SINGLE_EXT("Ratio5 Int", TEGRA186_ASRC_STREAM5_RATIO_INTEGER_PART,
 		0, TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK, 0,
 		tegra186_asrc_get_ratio_int, tegra186_asrc_put_ratio_int),
 	SOC_SINGLE_EXT("Ratio5 Frac", TEGRA186_ASRC_STREAM5_RATIO_FRAC_PART,
-		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK, 0,
+		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MAX, 0,
 		tegra186_asrc_get_ratio_frac, tegra186_asrc_put_ratio_frac),
 	SOC_SINGLE_EXT("Ratio6 Int", TEGRA186_ASRC_STREAM6_RATIO_INTEGER_PART,
 		0, TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK, 0,
 		tegra186_asrc_get_ratio_int, tegra186_asrc_put_ratio_int),
 	SOC_SINGLE_EXT("Ratio6 Frac", TEGRA186_ASRC_STREAM6_RATIO_FRAC_PART,
-		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK, 0,
+		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MAX, 0,
 		tegra186_asrc_get_ratio_frac, tegra186_asrc_put_ratio_frac),
 
 	SOC_ENUM_EXT("Ratio1 SRC", src_select1,
@@ -945,11 +947,7 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 	}
 
 	pm_runtime_enable(&pdev->dev);
-	if (!pm_runtime_enabled(&pdev->dev)) {
-		ret = tegra186_asrc_runtime_resume(&pdev->dev);
-		if (ret)
-			goto err_pm_disable;
-	}
+	tegra186_asrc_runtime_resume(&pdev->dev);
 
 	regmap_write(asrc->regmap, TEGRA186_ASRC_GLOBAL_CONFIG,
 		TEGRA186_ASRC_GLOBAL_CONFIG_FRAC_32BIT_PRECISION);
@@ -959,10 +957,11 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 		TEGRA186_ASRC_GLOBAL_SCRATCH_ADDR,
 		ASRC_ARAM_START_ADDR);
 
+	regmap_write(asrc->regmap, TEGRA186_ASRC_GLOBAL_INT_MASK,
+		0x01);
 	/* set global enable */
 	regmap_write(asrc->regmap,
 		TEGRA186_ASRC_GLOBAL_ENB, TEGRA186_ASRC_GLOBAL_EN);
-
 	/* initialize default output srate */
 	for (i = 0; i < 6; i++) {
 		asrc->lane[i].int_part = 1;

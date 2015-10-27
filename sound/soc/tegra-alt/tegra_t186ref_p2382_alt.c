@@ -190,7 +190,7 @@ static int tegra_t186ref_p2382_i2s_dai_init(struct snd_soc_pcm_runtime *rtd)
 	/* Default sampling rate*/
 	srate = dai_params->rate_min;
 	clk_out_rate = srate * 256;
-	mclk = clk_out_rate * 2;
+	mclk = clk_out_rate;
 
 	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
 				srate, mclk, clk_out_rate);
@@ -273,7 +273,18 @@ static int tegra_t186ref_p2382_spdif_hw_params(
 					struct snd_pcm_substream *substream,
 					struct snd_pcm_hw_params *params)
 {
+
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_card *card = rtd->card;
+	unsigned int idx =
+		tegra_machine_get_codec_dai_link_idx_t18x
+				("dummy-playback");
+	struct snd_soc_pcm_stream *dai_params =
+		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+
 	/* dummy hw_params; clocks set in the init function */
+	dai_params->rate_min = params_rate(params);
+
 	return 0;
 }
 

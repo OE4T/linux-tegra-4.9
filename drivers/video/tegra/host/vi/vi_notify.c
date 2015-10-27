@@ -35,7 +35,7 @@
 
 struct vi_notify_channel {
 	struct vi_notify_dev *vnd;
-	u32 ign_mask;
+	atomic_t ign_mask;
 	u32 pri_mask;
 
 	wait_queue_head_t readq;
@@ -44,7 +44,7 @@ struct vi_notify_channel {
 
 	atomic_t overruns;
 	atomic_t errors;
-	DECLARE_KFIFO(fifo, struct vi_notify_msg, 256);
+	DECLARE_KFIFO(fifo, struct vi_notify_msg, 128);
 };
 
 struct vi_notify_dev {
@@ -53,42 +53,25 @@ struct vi_notify_dev {
 	dev_t major;
 	u8 num_channels;
 	struct mutex lock;
-	struct vi_notify_channel __rcu *channel;
+	struct vi_notify_channel __rcu *channels[];
 };
 
 static int vi_notify_dev_classify(struct vi_notify_dev *vnd)
 {
 	struct vi_notify_channel *chan;
-	u32 ign_mask = 0xffffffff, pri_mask = 0;
+	u32 ign_mask = -1, pri_mask = 0;
+	unsigned i;
 
-	chan = rcu_access_pointer(vnd->channel);
-
-	if (chan != NULL) {
-		ign_mask &= chan->ign_mask;
-		pri_mask |= chan->pri_mask;
+	for (i = 0; i < vnd->num_channels; i++) {
+		chan = rcu_access_pointer(vnd->channels[i]);
+		if (chan != NULL) {
+			ign_mask &= atomic_read(&chan->ign_mask);
+			pri_mask |= chan->pri_mask;
+		}
 	}
 
 	WARN_ON(ign_mask & pri_mask);
 	return vnd->driver->classify(vnd->device, ign_mask, pri_mask);
-}
-
-static int vi_notify_classify(struct vi_notify_channel *chan,
-				u32 ign_mask, u32 pri_mask)
-{
-	u32 old_ign_mask, old_pri_mask;
-	int err;
-
-	old_ign_mask = chan->ign_mask;
-	old_pri_mask = chan->pri_mask;
-	chan->ign_mask = ign_mask;
-	chan->pri_mask = pri_mask;
-
-	err = vi_notify_dev_classify(chan->vnd);
-	if (err) {
-		chan->ign_mask = old_ign_mask;
-		chan->pri_mask = old_pri_mask;
-	}
-	return err;
 }
 
 static unsigned vi_notify_occupancy(struct vi_notify_channel *chan)
@@ -106,44 +89,69 @@ static unsigned vi_notify_occupancy(struct vi_notify_channel *chan)
 void vi_notify_dev_error(struct vi_notify_dev *vnd)
 {
 	struct vi_notify_channel *chan;
+	unsigned i;
 
 	rcu_read_lock();
-	chan = rcu_dereference(vnd->channel);
+	for (i = 0; i < vnd->num_channels; i++) {
+		chan = rcu_dereference(vnd->channels[i]);
 
-	if (chan != NULL) {
-		atomic_set(&chan->errors, 1);
-		wake_up(&chan->readq);
+		if (chan != NULL) {
+			atomic_set(&chan->errors, 1);
+			wake_up(&chan->readq);
+		}
 	}
 	rcu_read_unlock();
 }
 EXPORT_SYMBOL(vi_notify_dev_error);
 
-void vi_notify_dev_recv(struct vi_notify_dev *vnd,
-			const struct vi_notify_msg *msg)
+static bool vi_notify_is_broadcast(u8 tag)
+{
+	return (1u << tag) & (
+		(1u <<  0) /* CSI mux frame start */ |
+		(1u <<  1) /* CSI mux frame end */ |
+		(1u <<  2) /* CSI mux frame fault */ |
+		(1u <<  3) /* CSI mux stream fault */ |
+		(1u << 11) /* No match fault */ |
+		(1u << 12) /* Match collision fault */ |
+		(1u << 13) /* Short frame fault */ |
+		(1u << 14) /* Load collision */);
+}
+
+static void vi_notify_recv(struct vi_notify_dev *vnd,
+				const struct vi_notify_msg *msg, u8 channel)
 {
 	struct vi_notify_channel *chan;
-	u8 channel = VI_NOTIFY_TAG_CHANNEL(msg->tag);
-
-	if (channel >= vnd->num_channels) {
-		dev_warn(vnd->device, "Channel %u out of range!\n", channel);
-		return;
-	}
-
-	dev_dbg(vnd->device, "Message: tag:%2u channel:%02X frame:%04X\n",
-		VI_NOTIFY_TAG_TAG(msg->tag), channel,
-		VI_NOTIFY_TAG_FRAME(msg->tag));
-	dev_dbg(vnd->device, "         timestamp %u data 0x%08x",
-		msg->stamp, msg->data);
+	u8 tag = VI_NOTIFY_TAG_TAG(msg->tag);
 
 	rcu_read_lock();
-	chan = rcu_dereference(vnd->channel);
+	chan = rcu_dereference(vnd->channels[channel]);
 
-	if (chan != NULL) {
+	if (chan != NULL && !((1u << tag) & atomic_read(&chan->ign_mask))) {
 		if (!kfifo_put(&chan->fifo, *msg))
 			atomic_set(&chan->overruns, 1);
 		wake_up(&chan->readq);
 	}
 	rcu_read_unlock();
+}
+
+void vi_notify_dev_recv(struct vi_notify_dev *vnd,
+			const struct vi_notify_msg *msg)
+{
+	u8 channel = VI_NOTIFY_TAG_CHANNEL(msg->tag);
+	u8 tag = VI_NOTIFY_TAG_TAG(msg->tag);
+
+	dev_dbg(vnd->device, "Message: tag:%2u channel:%02X frame:%04X\n",
+		tag, channel, VI_NOTIFY_TAG_FRAME(msg->tag));
+	dev_dbg(vnd->device, "         timestamp %u data 0x%08x",
+		msg->stamp, msg->data);
+
+	if (vi_notify_is_broadcast(tag)) {
+		for (channel = 0; channel < vnd->num_channels; channel++)
+			vi_notify_recv(vnd, msg, channel);
+	} else if (channel >= vnd->num_channels)
+		dev_warn(vnd->device, "Channel %u out of range!\n", channel);
+	else
+		vi_notify_recv(vnd, msg, channel);
 }
 EXPORT_SYMBOL(vi_notify_dev_recv);
 
@@ -223,7 +231,7 @@ static long vi_notify_ioctl(struct file *file, unsigned int cmd,
 	}
 
 	case NVHOST_VI_SET_IGN_MASK: {
-		u32 mask;
+		u32 mask, old_mask;
 		int err;
 
 		if (get_user(mask, (u32 __user *)arg))
@@ -231,13 +239,18 @@ static long vi_notify_ioctl(struct file *file, unsigned int cmd,
 		if (mutex_lock_interruptible(&vnd->lock))
 			return -ERESTARTSYS;
 
-		err = vi_notify_classify(chan, mask, chan->pri_mask);
+		old_mask = atomic_xchg(&chan->ign_mask, mask);
+
+		err = vi_notify_dev_classify(vnd);
+		if (err)
+			atomic_set(&chan->ign_mask, old_mask);
+
 		mutex_unlock(&vnd->lock);
 		return err;
 	}
 
 	case NVHOST_VI_SET_PRI_MASK: {
-		u32 mask;
+		u32 mask, old_mask;
 		int err;
 
 		if (get_user(mask , (u32 __user *)arg))
@@ -245,7 +258,13 @@ static long vi_notify_ioctl(struct file *file, unsigned int cmd,
 		if (mutex_lock_interruptible(&vnd->lock))
 			return -ERESTARTSYS;
 
-		err = vi_notify_classify(chan, chan->ign_mask, mask);
+		old_mask = chan->pri_mask;
+		chan->pri_mask = mask;
+
+		err = vi_notify_dev_classify(vnd);
+		if (err)
+			chan->pri_mask = old_mask;
+
 		mutex_unlock(&vnd->lock);
 		return err;
 	}
@@ -261,6 +280,7 @@ static int vi_notify_open(struct inode *inode, struct file *file)
 {
 	struct vi_notify_dev *vnd;
 	struct vi_notify_channel *chan;
+	unsigned channel = iminor(inode);
 
 	if ((file->f_flags & O_ACCMODE) != O_RDONLY)
 		return -EINVAL;
@@ -269,7 +289,7 @@ static int vi_notify_open(struct inode *inode, struct file *file)
 
 	vnd = vnd_;
 
-	if (vnd == NULL || iminor(inode) > 0 ||
+	if (vnd == NULL || channel >= vnd->num_channels ||
 		!try_module_get(vnd->driver->owner)) {
 		mutex_unlock(&vnd_lock);
 		return -ENODEV;
@@ -283,7 +303,7 @@ static int vi_notify_open(struct inode *inode, struct file *file)
 	}
 
 	chan->vnd = vnd;
-	chan->ign_mask = 0;
+	atomic_set(&chan->ign_mask, 0xffffffff);
 	chan->pri_mask = 0;
 	init_waitqueue_head(&chan->readq);
 	mutex_init(&chan->read_lock);
@@ -293,14 +313,14 @@ static int vi_notify_open(struct inode *inode, struct file *file)
 	INIT_KFIFO(chan->fifo);
 
 	mutex_lock(&vnd->lock);
-	if (rcu_access_pointer(vnd->channel) != NULL) {
+	if (rcu_access_pointer(vnd->channels[channel]) != NULL) {
 		mutex_unlock(&vnd->lock);
 		kfree(chan);
 		module_put(vnd->driver->owner);
 		return -EBUSY;
 	}
 
-	rcu_assign_pointer(vnd->channel, chan);
+	rcu_assign_pointer(vnd->channels[channel], chan);
 	vi_notify_dev_classify(vnd);
 	mutex_unlock(&vnd->lock);
 	file->private_data = chan;
@@ -312,10 +332,11 @@ static int vi_notify_release(struct inode *inode, struct file *file)
 {
 	struct vi_notify_channel *chan = file->private_data;
 	struct vi_notify_dev *vnd = chan->vnd;
+	unsigned channel = iminor(inode);
 
 	mutex_lock(&vnd->lock);
-	WARN_ON(rcu_access_pointer(vnd->channel) != chan);
-	RCU_INIT_POINTER(vnd->channel, NULL);
+	WARN_ON(rcu_access_pointer(vnd->channels[channel]) != chan);
+	RCU_INIT_POINTER(vnd->channels[channel], NULL);
 
 	vi_notify_dev_classify(vnd);
 	mutex_unlock(&vnd->lock);
@@ -346,8 +367,10 @@ int vi_notify_register(struct vi_notify_driver *drv, struct device *dev,
 {
 	struct vi_notify_dev *vnd;
 	int err;
+	unsigned i;
 
-	vnd = devm_kzalloc(dev, sizeof(*vnd), GFP_KERNEL);
+	vnd = devm_kzalloc(dev, sizeof(*vnd) + num_channels *
+			sizeof(struct vi_notify_channel *), GFP_KERNEL);
 	if (unlikely(vnd == NULL))
 		return -ENOMEM;
 
@@ -369,8 +392,12 @@ int vi_notify_register(struct vi_notify_driver *drv, struct device *dev,
 	vnd_ = vnd;
 	mutex_unlock(&vnd_lock);
 
-	device_create(vi_notify_class, vnd->device, MKDEV(vi_notify_major, 0),
-			NULL, "tegra-vi-notify0");
+	for (i = 0; i < vnd->num_channels; i++) {
+		dev_t devt = MKDEV(vi_notify_major, i);
+
+		device_create(vi_notify_class, vnd->device, devt, NULL,
+				"tegra-vi0-channel%u", i);
+	}
 
 	return 0;
 error:
@@ -383,6 +410,7 @@ EXPORT_SYMBOL(vi_notify_register);
 void vi_notify_unregister(struct vi_notify_driver *drv, struct device *dev)
 {
 	struct vi_notify_dev *vnd;
+	unsigned i;
 
 	mutex_lock(&vnd_lock);
 	vnd = vnd_;
@@ -391,7 +419,11 @@ void vi_notify_unregister(struct vi_notify_driver *drv, struct device *dev)
 	WARN_ON(vnd->device != dev);
 	mutex_unlock(&vnd_lock);
 
-	device_destroy(vi_notify_class, MKDEV(vi_notify_major, 0));
+	for (i = 0; i < vnd->num_channels; i++) {
+		dev_t devt = MKDEV(vi_notify_major, i);
+
+		device_destroy(vi_notify_class, devt);
+	}
 
 	if (vnd->driver->remove)
 		vnd->driver->remove(vnd->device);

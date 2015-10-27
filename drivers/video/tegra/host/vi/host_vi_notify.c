@@ -288,6 +288,14 @@ static int nvhost_vi_notify_classify(struct device *dev,
 	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
 	int err;
 
+	if (ign_mask != 0xffffffff)
+		/* Unmask events handled by the interrupt handler */
+		ign_mask &= ~((1u << VI_NOTIFY_TAG_CHANSEL_COLLISION)
+			| (1u << VI_NOTIFY_TAG_CHANSEL_SHORT_FRAME)
+			| (1u << VI_NOTIFY_TAG_CHANSEL_LOAD_FRAMED)
+			| (1u << VI_NOTIFY_TAG_ATOMP_FE)
+			| (1u << VI_NOTIFY_TAG_ISPBUF_FE));
+
 	if (hvnd->mask == 0) {
 		err = nvhost_module_busy(pdev);
 		if (err) {

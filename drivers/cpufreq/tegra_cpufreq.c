@@ -753,8 +753,9 @@ static int __init init_freqtbls(void)
 		rem  = adjust_remainder(vhtbl->ndiv_max,
 					&max_freq_steps);
 
+		/* Allocate memory 1 + max_freq_steps to write END_OF_TABLE */
 		ftbl = kzalloc(sizeof(struct cpufreq_frequency_table) *
-			max_freq_steps, GFP_KERNEL);
+			(max_freq_steps + 1), GFP_KERNEL);
 		if (!ftbl) {
 			ret = -ENOMEM;
 			while (cl--)

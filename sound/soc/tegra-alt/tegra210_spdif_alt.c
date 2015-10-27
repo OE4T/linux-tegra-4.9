@@ -1,7 +1,7 @@
 /*
  * tegra210_spdif_alt.c - Tegra210 SPDIF driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -232,6 +232,12 @@ static int tegra210_spdif_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+static int tegra210_spdif_set_dai_bclk_ratio(struct snd_soc_dai *dai,
+		unsigned int ratio)
+{
+	return 0;
+}
+
 static int tegra210_spdif_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_spdif *spdif = snd_soc_codec_get_drvdata(codec);
@@ -244,6 +250,7 @@ static int tegra210_spdif_codec_probe(struct snd_soc_codec *codec)
 static struct snd_soc_dai_ops tegra210_spdif_dai_ops = {
 	.hw_params	= tegra210_spdif_hw_params,
 	.set_sysclk	= tegra210_spdif_set_dai_sysclk,
+	.set_bclk_ratio	= tegra210_spdif_set_dai_bclk_ratio,
 };
 
 static struct snd_soc_dai_driver tegra210_spdif_dais[] = {
@@ -284,6 +291,39 @@ static struct snd_soc_dai_driver tegra210_spdif_dais[] = {
 	}
 };
 
+static int tegra210_spdif_loopback_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra210_spdif *spdif = snd_soc_codec_get_drvdata(codec);
+
+	ucontrol->value.integer.value[0] = spdif->loopback;
+
+	return 0;
+}
+
+static int tegra210_spdif_loopback_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra210_spdif *spdif = snd_soc_codec_get_drvdata(codec);
+
+	spdif->loopback = ucontrol->value.integer.value[0];
+
+	pm_runtime_get_sync(codec->dev);
+	regmap_update_bits(spdif->regmap, TEGRA210_SPDIF_CTRL,
+		TEGRA210_SPDIF_CTRL_LBK_EN_ENABLE_MASK,
+		spdif->loopback << TEGRA210_SPDIF_CTRL_LBK_EN_ENABLE_SHIFT);
+	pm_runtime_put(codec->dev);
+
+	return 0;
+}
+
+static const struct snd_kcontrol_new tegra210_spdif_controls[] = {
+	SOC_SINGLE_EXT("Loopback", SND_SOC_NOPM, 0, 1, 0,
+		tegra210_spdif_loopback_get, tegra210_spdif_loopback_put),
+};
+
 static const struct snd_soc_dapm_widget tegra210_spdif_widgets[] = {
 	SND_SOC_DAPM_AIF_IN("CIF RX", NULL, 0, SND_SOC_NOPM, 0, 0),
 	SND_SOC_DAPM_AIF_OUT("CIF TX", NULL, 0, SND_SOC_NOPM, 0, 0),
@@ -307,6 +347,8 @@ static struct snd_soc_codec_driver tegra210_spdif_codec = {
 	.num_dapm_widgets = ARRAY_SIZE(tegra210_spdif_widgets),
 	.dapm_routes = tegra210_spdif_routes,
 	.num_dapm_routes = ARRAY_SIZE(tegra210_spdif_routes),
+	.controls = tegra210_spdif_controls,
+	.num_controls = ARRAY_SIZE(tegra210_spdif_controls),
 	.idle_bias_off = 1,
 };
 

@@ -1,7 +1,7 @@
 /*
  * tegra210_spdif.h - Definitions for Tegra210 SPDIF driver
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -66,7 +66,8 @@
 #define TEGRA210_SPDIF_CTRL_IE_B_RSVD_ENABLE	(1<<22)
 #define TEGRA210_SPDIF_CTRL_IE_C_RSVD_ENABLE	(1<<21)
 #define TEGRA210_SPDIF_CTRL_IE_U_RSVD_ENABLE	(1<<20)
-#define TEGRA210_SPDIF_CTRL_LBK_EN_ENABLE	(1<<15)
+#define TEGRA210_SPDIF_CTRL_LBK_EN_ENABLE_MASK	(1<<15)
+#define TEGRA210_SPDIF_CTRL_LBK_EN_ENABLE_SHIFT	15
 #define TEGRA210_SPDIF_CTRL_PACK_ENABLE		(1<<14)
 
 #define TEGRA210_SPDIF_BIT_MODE16		0
@@ -254,6 +255,7 @@ struct tegra210_spdif {
 	struct clk *clk_spdif_out;
 	struct clk *clk_spdif_in;
 	struct regmap *regmap;
+	unsigned int loopback;
 	const struct tegra210_spdif_soc_data *soc_data;
 };
 

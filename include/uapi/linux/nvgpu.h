@@ -377,11 +377,13 @@ struct nvgpu_gpu_vsms_mapping {
 	_IO(NVGPU_TSG_IOCTL_MAGIC, 4)
 #define NVGPU_IOCTL_TSG_PREEMPT \
 	_IO(NVGPU_TSG_IOCTL_MAGIC, 5)
+#define NVGPU_IOCTL_TSG_SET_PRIORITY \
+	_IOW(NVGPU_TSG_IOCTL_MAGIC, 6, struct nvgpu_set_priority_args)
 
 #define NVGPU_TSG_IOCTL_MAX_ARG_SIZE	\
-	sizeof(int)
+	sizeof(struct nvgpu_set_priority_args)
 #define NVGPU_TSG_IOCTL_LAST		\
-	_IOC_NR(NVGPU_IOCTL_TSG_PREEMPT)
+	_IOC_NR(NVGPU_IOCTL_TSG_SET_PRIORITY)
 /*
  * /dev/nvhost-dbg-gpu device
  *

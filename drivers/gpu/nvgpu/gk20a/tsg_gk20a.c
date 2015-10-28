@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -122,6 +122,34 @@ int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid)
 
 	INIT_LIST_HEAD(&tsg->ch_list);
 	mutex_init(&tsg->ch_list_lock);
+
+	return 0;
+}
+
+static int gk20a_tsg_set_priority(struct gk20a *g, struct tsg_gk20a *tsg,
+				u32 priority)
+{
+	int timeslice_period;
+
+	switch (priority) {
+	case NVGPU_PRIORITY_LOW:
+		timeslice_period = g->timeslice_low_priority_us;
+		break;
+	case NVGPU_PRIORITY_MEDIUM:
+		timeslice_period = g->timeslice_medium_priority_us;
+		break;
+	case NVGPU_PRIORITY_HIGH:
+		timeslice_period = g->timeslice_high_priority_us;
+		break;
+	default:
+		pr_err("Unsupported priority");
+		return -EINVAL;
+	}
+
+	gk20a_channel_get_timescale_from_timeslice(g, timeslice_period,
+			&tsg->timeslice_timeout, &tsg->timeslice_scale);
+
+	g->ops.fifo.update_runlist(g, 0, ~0, true, true);
 
 	return 0;
 }
@@ -317,6 +345,13 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		/* preempt TSG */
 		err = gk20a_fifo_preempt_tsg(g, tsg->tsgid);
 		gk20a_idle(g->dev);
+		break;
+		}
+
+	case NVGPU_IOCTL_TSG_SET_PRIORITY:
+		{
+		err = gk20a_tsg_set_priority(g, tsg,
+			((struct nvgpu_set_priority_args *)buf)->priority);
 		break;
 		}
 

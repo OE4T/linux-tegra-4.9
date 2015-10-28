@@ -132,24 +132,14 @@ static int channel_gk20a_commit_userd(struct channel_gk20a *c)
 	return 0;
 }
 
-static int channel_gk20a_set_schedule_params(struct channel_gk20a *c,
-				u32 timeslice_timeout)
+int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
+		int timeslice_period,
+		int *__timeslice_timeout, int *__timeslice_scale)
 {
-	void *inst_ptr;
-	struct gk20a_platform *platform = platform_get_drvdata(c->g->dev);
-	int shift = 3;
-	int value = scale_ptimer(timeslice_timeout,
+	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
+	int value = scale_ptimer(timeslice_period,
 			platform->ptimerscaling10x);
-
-	inst_ptr = c->inst_block.cpu_va;
-	if (!inst_ptr)
-		return -ENOMEM;
-
-	/* disable channel */
-	c->g->ops.fifo.disable_channel(c);
-
-	/* preempt the channel */
-	WARN_ON(c->g->ops.fifo.preempt_channel(c->g, c->hw_chid));
+	int shift = 3;
 
 	/* value field is 8 bits long */
 	while (value >= 1 << 8) {
@@ -163,6 +153,31 @@ static int channel_gk20a_set_schedule_params(struct channel_gk20a *c,
 		value = 255;
 		shift = 10;
 	}
+
+	*__timeslice_timeout = value;
+	*__timeslice_scale = shift;
+
+	return 0;
+}
+
+static int channel_gk20a_set_schedule_params(struct channel_gk20a *c,
+				u32 timeslice_period)
+{
+	void *inst_ptr;
+	int shift = 0, value = 0;
+
+	inst_ptr = c->inst_block.cpu_va;
+	if (!inst_ptr)
+		return -ENOMEM;
+
+	gk20a_channel_get_timescale_from_timeslice(c->g, timeslice_period,
+				&value, &shift);
+
+	/* disable channel */
+	c->g->ops.fifo.disable_channel(c);
+
+	/* preempt the channel */
+	WARN_ON(c->g->ops.fifo.preempt_channel(c->g, c->hw_chid));
 
 	/* set new timeslice */
 	gk20a_mem_wr32(inst_ptr, ram_fc_runlist_timeslice_w(),
@@ -2350,6 +2365,13 @@ static int gk20a_channel_set_priority(struct channel_gk20a *ch,
 		u32 priority)
 {
 	u32 timeslice_timeout;
+
+	if (gk20a_is_channel_marked_as_tsg(ch)) {
+		gk20a_err(dev_from_gk20a(ch->g),
+			"invalid operation for TSG!\n");
+		return -EINVAL;
+	}
+
 	/* set priority of graphics channel */
 	switch (priority) {
 	case NVGPU_PRIORITY_LOW:
@@ -2714,7 +2736,7 @@ long gk20a_channel_ioctl(struct file *filp,
 				__func__, cmd);
 			break;
 		}
-		gk20a_channel_set_priority(ch,
+		err = gk20a_channel_set_priority(ch,
 			((struct nvgpu_set_priority_args *)buf)->priority);
 		gk20a_idle(dev);
 		break;

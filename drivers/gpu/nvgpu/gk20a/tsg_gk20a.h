@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -41,6 +41,9 @@ struct tsg_gk20a {
 	struct list_head ch_list;
 	int num_active_channels;
 	struct mutex ch_list_lock;
+
+	int timeslice_timeout;
+	int timeslice_scale;
 
 	struct gr_ctx_desc *tsg_gr_ctx;
 

@@ -253,4 +253,9 @@ int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 			u64 gpfifo_base, u32 gpfifo_entries, u32 flags);
 void channel_gk20a_enable(struct channel_gk20a *ch);
 void gk20a_channel_timeout_restart_all_channels(struct gk20a *g);
+
+int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
+		int timeslice_period,
+		int *__timeslice_timeout, int *__timeslice_scale);
+
 #endif /* CHANNEL_GK20A_H */

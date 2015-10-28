@@ -61,6 +61,17 @@ struct tegra_wdt_t18x {
 #define WDT_ENABLED_USERSPACE	2
 };
 
+/* Cluster ids */
+#define WDT_CLUSTER_ID_DENVER	0
+#define WDT_CLUSTER_ID_ARM	1
+#define WDT_CLUSTER_ID_COUNT	2
+
+/*
+ * Global variable to store wdt pointer for all clusters
+ * required by nvdumper and pmic to change wdt state
+ */
+static struct tegra_wdt_t18x *t18x_wdt_array[WDT_CLUSTER_ID_COUNT];
+
 /*
  * The total expiry count of Tegra WDTs is limited to HW design and depends
  * on skip configuration if supported. To be safe, we set the default expiry
@@ -161,7 +172,7 @@ static inline void tegra_wdt_t18x_skip(struct tegra_wdt_t18x *tegra_wdt_t18x)
 	u32 val = 0;
 
 	/* Skip the 2nd expiry of WDT for ARM cluster */
-	if (tegra_wdt_t18x->cluster_id == 1)
+	if (tegra_wdt_t18x->cluster_id == WDT_CLUSTER_ID_ARM)
 		val = WDT_SKIP_VAL(1, 1);
 
 	/* Skip the 4th expiry if debug reset is disabled */
@@ -270,17 +281,49 @@ static inline int tegra_wdt_t18x_update_config_bit(struct tegra_wdt_t18x
 	return 0;
 }
 
-void tegra_wdt_t18x_debug_reset(struct tegra_wdt_t18x *tegra_wdt_t18x, bool on)
+void tegra_wdt_t18x_debug_reset(bool state)
 {
-	tegra_wdt_t18x_update_config_bit(tegra_wdt_t18x,
-					WDT_CFG_DBG_RST_EN, on);
-}
+	struct tegra_wdt_t18x *tegra_wdt_t18x;
+	int i;
 
-void tegra_wdt_t18x_por_reset(struct tegra_wdt_t18x *tegra_wdt_t18x, bool on)
-{
-	tegra_wdt_t18x_update_config_bit(tegra_wdt_t18x,
-					WDT_CFG_SYS_PORST_EN, on);
+	for (i = 0; i < WDT_CLUSTER_ID_COUNT; i++) {
+		tegra_wdt_t18x = t18x_wdt_array[i];
+		if (!tegra_wdt_t18x)
+			continue;
+		tegra_wdt_t18x_update_config_bit(tegra_wdt_t18x,
+						WDT_CFG_DBG_RST_EN, state);
+	}
 }
+EXPORT_SYMBOL(tegra_wdt_t18x_debug_reset);
+
+void tegra_wdt_t18x_por_reset(bool state)
+{
+	struct tegra_wdt_t18x *tegra_wdt_t18x;
+	int i;
+
+	for (i = 0; i < WDT_CLUSTER_ID_COUNT; i++) {
+		tegra_wdt_t18x = t18x_wdt_array[i];
+		if (!tegra_wdt_t18x)
+			continue;
+		tegra_wdt_t18x_update_config_bit(tegra_wdt_t18x,
+						WDT_CFG_SYS_PORST_EN, state);
+	}
+}
+EXPORT_SYMBOL(tegra_wdt_t18x_por_reset);
+
+void tegra_wdt_t18x_disable_all(void)
+{
+	struct tegra_wdt_t18x *tegra_wdt_t18x;
+	int i;
+
+	for (i = 0; i < WDT_CLUSTER_ID_COUNT; i++) {
+		tegra_wdt_t18x = t18x_wdt_array[i];
+		if (!tegra_wdt_t18x)
+			continue;
+		__tegra_wdt_t18x_disable(tegra_wdt_t18x);
+	}
+}
+EXPORT_SYMBOL(tegra_wdt_t18x_disable_all);
 
 #ifdef CONFIG_DEBUG_FS
 
@@ -468,6 +511,10 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 	tegra_wdt_t18x->cluster_id = pval;
+	if (pval < WDT_CLUSTER_ID_COUNT)
+		t18x_wdt_array[pval] = tegra_wdt_t18x;
+	else
+		dev_warn(&pdev->dev, "Cluster ID out of bound\n");
 
 	res_src = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	res_wdt = platform_get_resource(pdev, IORESOURCE_MEM, 1);
@@ -510,7 +557,7 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	tegra_wdt_t18x->config |= WDT_CFG_INT_EN;
 
 	/* Enable local FIQ and remote interrupt for debug dump */
-	if (tegra_wdt_t18x->cluster_id == 0)
+	if (tegra_wdt_t18x->cluster_id == WDT_CLUSTER_ID_DENVER)
 		tegra_wdt_t18x->config |= WDT_CFG_FINT_EN;
 	tegra_wdt_t18x->config |= WDT_CFG_REMOTE_INT_EN;
 

@@ -30,7 +30,6 @@
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 			nvidia,emc-clk-rate = <300000000>;
 			nvidia,fb-bpp = <32>; /* bits per pixel */
-			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
 			nvidia,fb-win = <0>;
 			nvidia,dc-ctrlnum = <0>;
 			nvidia,dc-or-node = "/host1x/sor";
@@ -41,7 +40,6 @@
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 			nvidia,emc-clk-rate = <300000000>;
 			nvidia,fb-bpp = <32>; /* bits per pixel */
-			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
 			nvidia,fb-win = <3>;
 			nvidia,dc-ctrlnum = <1>;
 			nvidia,dc-or-node = "/host1x/sor1";

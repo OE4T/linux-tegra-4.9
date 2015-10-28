@@ -37,6 +37,7 @@
 #include "tegra186-soc/tegra186-soc-uart.dtsi"
 #include "tegra186-soc/tegra186-soc-eqos.dtsi"
 #include "tegra186-soc/tegra186-soc-power-domain.dtsi"
+#include "tegra186-soc/tegra186-trusty.dtsi"
 #include <../../../../include/dt-bindings/hsp/tegra-hsp.h>
 #include "tegra186-soc/tegra186-soc-thermal.dtsi"
 

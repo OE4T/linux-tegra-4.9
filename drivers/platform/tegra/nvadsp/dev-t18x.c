@@ -21,7 +21,7 @@
 
 #include "dev.h"
 
-int nvadsp_t18x_clocks_disable(struct platform_device *pdev)
+static int nvadsp_t18x_clocks_disable(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
@@ -58,7 +58,7 @@ int nvadsp_t18x_clocks_disable(struct platform_device *pdev)
 	return 0;
 }
 
-int nvadsp_t18x_clocks_enable(struct platform_device *pdev)
+static int nvadsp_t18x_clocks_enable(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
@@ -140,7 +140,7 @@ int nvadsp_t18x_clocks_enable(struct platform_device *pdev)
 	return ret;
 }
 
-int __nvadsp_t18x_runtime_resume(struct device *dev)
+static int __nvadsp_t18x_runtime_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 
@@ -149,7 +149,7 @@ int __nvadsp_t18x_runtime_resume(struct device *dev)
 	return nvadsp_t18x_clocks_enable(pdev);
 }
 
-int __nvadsp_t18x_runtime_suspend(struct device *dev)
+static int __nvadsp_t18x_runtime_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 
@@ -158,13 +158,13 @@ int __nvadsp_t18x_runtime_suspend(struct device *dev)
 	return nvadsp_t18x_clocks_disable(pdev);
 }
 
-int __nvadsp_t18x_runtime_idle(struct device *dev)
+static int __nvadsp_t18x_runtime_idle(struct device *dev)
 {
 	dev_dbg(dev, "at %s:%d\n", __func__, __LINE__);
 	return 0;
 }
 
-int __assert_t18x_adsp(struct nvadsp_drv_data *d)
+static int __assert_t18x_adsp(struct nvadsp_drv_data *d)
 {
 	struct platform_device *pdev = d->pdev;
 	struct device *dev = &pdev->dev;
@@ -183,7 +183,7 @@ int __assert_t18x_adsp(struct nvadsp_drv_data *d)
 	return ret;
 }
 
-int __deassert_t18x_adsp(struct nvadsp_drv_data *d)
+static int __deassert_t18x_adsp(struct nvadsp_drv_data *d)
 {
 	struct platform_device *pdev = d->pdev;
 	struct device *dev = &pdev->dev;

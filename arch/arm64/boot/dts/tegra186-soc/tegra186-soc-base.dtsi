@@ -937,7 +937,7 @@
 		#stream-id-cells = <1>;
 		access-vpr-phys;
 		resets = <&tegra_car TEGRA186_RESET_GPU>;
-		clocks = <&tegra_car TEGRA186_CLK_GPC2CLK>,
+		clocks = <&tegra_car TEGRA186_CLK_GPCCLK>,
 			<&tegra_car TEGRA186_CLK_GPU>;
 		clock-names = "gpu", "gpu_sys";
 	};

@@ -1163,7 +1163,6 @@ static int snd_atvr_pcm_copy(struct snd_pcm_substream *substream,
 			  void __user *dst, snd_pcm_uframes_t count)
 {
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
-	short *output = (short *)dst;
 
 	/* TODO Needs to be modified if we support more than 1 channel. */
 	/*
@@ -1172,21 +1171,21 @@ static int snd_atvr_pcm_copy(struct snd_pcm_substream *substream,
 	 */
 	if ((pos + count) > atvr_snd->frames_per_buffer) {
 		const int16_t *source = &atvr_snd->pcm_buffer[pos];
-		int16_t *destination = output;
+		int16_t __user *destination = dst;
 		size_t num_frames = atvr_snd->frames_per_buffer - pos;
 		size_t num_bytes = num_frames * sizeof(int16_t);
-		memcpy(destination, source, num_bytes);
+		copy_to_user(destination, source, num_bytes);
 
 		source = &atvr_snd->pcm_buffer[0];
 		destination += num_frames;
 		num_frames = count - num_frames;
 		num_bytes = num_frames * sizeof(int16_t);
-		memcpy(destination, source, num_bytes);
+		copy_to_user(destination, source, num_bytes);
 	} else {
 		const int16_t *source = &atvr_snd->pcm_buffer[pos];
-		int16_t *destination = output;
+		int16_t __user *destination = dst;
 		size_t num_bytes = count * sizeof(int16_t);
-		memcpy(destination, source, num_bytes);
+		copy_to_user(destination, source, num_bytes);
 	}
 
 	return 0;

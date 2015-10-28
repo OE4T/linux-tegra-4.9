@@ -610,6 +610,10 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 				nvdisp_cmd_state_ctrl_a_act_req_enable_f()
 				<< win->idx;
 
+			/* detach the window from the head */
+			nvdisp_win_write(win, win_set_control_owner_none_f(),
+					win_set_control_r());
+
 			/* disable the window without altering other flags */
 			win_options = nvdisp_win_read(win, win_options_r());
 			win_options &= ~win_options_win_enable_enable_f();
@@ -617,6 +621,10 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 
 			dc_win->dirty = no_vsync ? 0 : 1;
 		} else {
+			/* attach window to the head */
+			nvdisp_win_write(win, dc->ctrl_num,
+					win_set_control_r());
+
 			update_mask |= nvdisp_cmd_state_ctrl_win_a_update_enable_f()
 				<< win->idx;
 			act_req_mask |=  nvdisp_cmd_state_ctrl_a_act_req_enable_f()

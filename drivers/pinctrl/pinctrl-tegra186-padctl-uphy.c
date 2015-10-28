@@ -692,6 +692,7 @@ struct tegra_padctl_uphy {
 	/* vbus/id based OTG */
 	struct work_struct otg_vbus_work;
 	bool otg_vbus_on;
+	bool otg_vbus_alwayson;
 
 	struct regulator_bulk_data *supplies;
 };
@@ -3915,8 +3916,64 @@ static ssize_t hsic_power_store(struct device *dev,
 static DEVICE_ATTR(hsic_power, S_IRUGO | S_IWUSR,
 		   hsic_power_show, hsic_power_store);
 
+static ssize_t otg_vbus_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct tegra_padctl_uphy *uphy = platform_get_drvdata(pdev);
+	int port = uphy->utmi_otg_port_base_1 - 1;
+
+	if (!uphy->utmi_otg_port_base_1)
+		return sprintf(buf, "No UTMI OTG port\n");
+
+	return sprintf(buf, "OTG port %d vbus always-on: %s\n",
+			port, uphy->otg_vbus_alwayson ? "yes" : "no");
+}
+
+static ssize_t otg_vbus_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t n)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct tegra_padctl_uphy *uphy = platform_get_drvdata(pdev);
+	int port = uphy->utmi_otg_port_base_1 - 1;
+	unsigned int on;
+	int err = 0;
+
+	if (kstrtouint(buf, 10, &on))
+		return -EINVAL;
+
+	if (!uphy->utmi_otg_port_base_1) {
+		dev_err(dev, "No UTMI OTG port\n");
+		return -EINVAL;
+	}
+
+	if (!uphy->vbus[port]) {
+		dev_err(dev, "UTMI OTG port %d has no vbus regulator\n", port);
+		return -EINVAL;
+	}
+
+	if (on && !uphy->otg_vbus_alwayson) {
+		err = regulator_enable(uphy->vbus[port]);
+		if (!err)
+			uphy->otg_vbus_alwayson = true;
+	} else if (!on && uphy->otg_vbus_alwayson) {
+		err = regulator_disable(uphy->vbus[port]);
+		if (!err)
+			uphy->otg_vbus_alwayson = false;
+	}
+
+	if (err)
+		dev_err(dev, "failed to %s OTG port %d vbus always-on: %d\n",
+				on ? "enable" : "disable", port, err);
+
+	return n;
+}
+
+DEVICE_ATTR(otg_vbus, S_IRUGO | S_IWUSR, otg_vbus_show, otg_vbus_store);
+
 static struct attribute *padctl_uphy_attrs[] = {
 	&dev_attr_hsic_power.attr,
+	&dev_attr_otg_vbus.attr,
 	NULL,
 };
 static struct attribute_group padctl_uphy_attr_group = {
@@ -4503,7 +4560,7 @@ static void tegra_xusb_otg_vbus_work(struct work_struct *work)
 		if (uphy->vbus[port] && uphy->otg_vbus_on) {
 			rc = regulator_disable(uphy->vbus[port]);
 			if (rc) {
-				dev_err(dev, "failed to enable otg port vbus %d\n"
+				dev_err(dev, "failed to disable otg port vbus %d\n"
 					, rc);
 			}
 			uphy->otg_vbus_on = false;

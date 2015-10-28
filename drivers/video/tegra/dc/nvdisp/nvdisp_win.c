@@ -396,6 +396,11 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 		win_options |= win_options_color_expand_enable_f();
 	if (win->ppflags & TEGRA_WIN_PPFLAG_CP_ENABLE)
 		win_options |= win_options_cp_enable_enable_f();
+
+	if (dc->yuv_bypass) {
+		win_options &= ~win_options_cp_enable_enable_f();
+	}
+
 	nvdisp_win_write(win, win_options, win_options_r());
 
 	nvdisp_win_write(win,
@@ -476,6 +481,13 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win)
 				win_win_set_params_degamma_range_srgb_f();
 
 		win_params |= win_win_set_params_cs_range_rgb_f();
+	}
+
+	/* over-ride the win params for yuv bypass */
+	if (dc->yuv_bypass) {
+		win_params = win_win_set_params_in_range_bypass_f();
+		win_params |=
+			win_win_set_params_degamma_range_none_f();
 	}
 
 	nvdisp_win_write(win, win_params, win_win_set_params_r());
@@ -601,6 +613,26 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 
 		if (!WIN_IS_ENABLED(win)) {
 			u32 win_options;
+			/* Support for YUV bypass */
+			#define RGB_TO_YUV420_8BPC_BLACK_PIX 0x00801010
+			#define RGB_TO_YUV422_10BPC_BLACK_PIX 0x00001080
+
+			if (dc->yuv_bypass) {
+				if (dc->mode.vmode &
+					(FB_VMODE_Y420 | FB_VMODE_Y420_ONLY |
+					 FB_VMODE_Y24))
+					tegra_dc_writel(dc,
+					RGB_TO_YUV420_8BPC_BLACK_PIX,
+					nvdisp_background_color_r());
+				else if (dc->mode.vmode &
+					(FB_VMODE_Y422 | FB_VMODE_Y30))
+					tegra_dc_writel(dc,
+					RGB_TO_YUV422_10BPC_BLACK_PIX,
+					nvdisp_background_color_r());
+			}
+
+			#undef RGB_TO_YUV422_10BPC_BLACK_PIX
+			#undef RGB_TO_YUV420_8BPC_BLACK_PIX
 
 			/* TODO: only program if the window was already disabled */
 			update_mask |=

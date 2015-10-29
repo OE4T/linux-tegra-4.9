@@ -33,6 +33,7 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/platform/tegra/tegra18_cpu_map.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 
 static DEFINE_MUTEX(bthrot_list_lock);
 static LIST_HEAD(bthrot_list);
@@ -41,6 +42,7 @@ enum throttle_type {
 	THROT_DEFAULT,
 	THROT_MCPU,
 	THROT_BCPU,
+	THROT_EMC,
 };
 
 /* Tracks the final throttle freq. for the given clk */
@@ -65,6 +67,7 @@ struct balanced_throttle {
 	u32 *throt_tab;
 };
 
+static struct tegra_bwmgr_client *emc_throt_handle;
 
 #define CAP_TBL_CAP_NAME(index)	(cap_freqs_table[index].cap_name)
 #define CAP_TBL_CAP_CLK(index)	(cap_freqs_table[index].cap_clk)
@@ -206,6 +209,13 @@ static void tegra_throttle_set_cap_clk(unsigned long cap_rate,
 	case THROT_BCPU:
 		tegra_throttle_update_cpu_cap(type, max_rate);
 		CAP_TBL_CAP_FREQ(cap_clk_index) = max_rate;
+		break;
+	case THROT_EMC:
+		if (!IS_ERR_OR_NULL(emc_throt_handle)) {
+			tegra_bwmgr_set_emc(emc_throt_handle, max_rate,
+						TEGRA_BWMGR_SET_EMC_CAP);
+			CAP_TBL_CAP_FREQ(cap_clk_index) = max_rate;
+		}
 		break;
 	default:
 		break;
@@ -446,6 +456,8 @@ static int parse_throttle_dt_data(struct device *dev)
 			CAP_TBL_CAP_TYPE(i) = THROT_MCPU;
 		else if (!strcmp("bcpu", CAP_TBL_CAP_NAME(i)))
 			CAP_TBL_CAP_TYPE(i) = THROT_BCPU;
+		else if (!strcmp("emc", CAP_TBL_CAP_NAME(i)))
+			CAP_TBL_CAP_TYPE(i) = THROT_EMC;
 
 		pr_info("%s: clk=%s type=%d\n", __func__, CAP_TBL_CAP_NAME(i),
 			CAP_TBL_CAP_TYPE(i));
@@ -516,6 +528,10 @@ static int tegra_throttle_probe(struct platform_device *pdev)
 	cpufreq_register_notifier(&tegra_throttle_cpufreq_nb,
 					CPUFREQ_POLICY_NOTIFIER);
 
+	emc_throt_handle = tegra_bwmgr_register(TEGRA_BWMGR_CLIENT_THERMAL_CAP);
+	if (IS_ERR_OR_NULL(emc_throt_handle))
+		pr_err("%s: No valid bwmgr handle for emc\n", __func__);
+
 	list_for_each_entry(bthrot, &bthrot_list, node) {
 		ret = balanced_throttle_register(bthrot);
 		if (ret) {
@@ -542,6 +558,8 @@ static int tegra_throttle_remove(struct platform_device *pdev)
 	mutex_lock(&bthrot_list_lock);
 	balanced_throttle_unregister();
 	mutex_unlock(&bthrot_list_lock);
+
+	tegra_bwmgr_unregister(emc_throt_handle);
 
 	tegra_throttle_exit_debugfs();
 

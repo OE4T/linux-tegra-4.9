@@ -15,3 +15,27 @@
 
 #include "tegra186-quill-p3310-1000-a00-plugin-manager.dtsi"
 
+/ {
+	plugin-manager {
+		e3301-a02-slt-char@0 {
+			id = "3301-1080-02", "3301-1099-02";
+			override@0 {
+				target = <&spmic_ldo1>;
+				_overlay_ {
+					regulator-min-microvolt = <3300000>;
+					regulator-max-microvolt = <3300000>;
+					regulator-always-on;
+					regulator-boot-on;
+					status = "okay";
+				};
+			};
+			override@1 {
+				target = <&tegra_pmc_iopower>;
+				_overlay_ {
+					iopower-dmic-hv-supply =  <&spmic_ldo1>;
+					iopower-audio-hv-supply = <&spmic_ldo1>;
+				};
+			};
+		};
+	};
+};

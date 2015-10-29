@@ -454,7 +454,7 @@
 		status = "disabled";
 	};
 
-	pmc-iopower {
+	tegra_pmc_iopower: pmc-iopower {
 		compatible = "nvidia,tegra186-pmc-iopower";
 		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_UFS
 					TEGRA_IO_PAD_GROUP_DBG

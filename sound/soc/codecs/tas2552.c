@@ -83,6 +83,7 @@ struct tas2552_data {
 
 	unsigned int dai_fmt;
 	unsigned int tdm_delay;
+	unsigned int edge_select; /* PDM data edge select */
 };
 
 static int tas2552_post_event(struct snd_soc_dapm_widget *w,
@@ -159,6 +160,13 @@ static void tas2552_sw_shutdown(struct tas2552_data *tas2552, int sw_shutdown)
 			    cfg1_reg);
 }
 #endif
+
+/* edge select info is passed from DT. This is needed to configure mono amps differently
+for a true stereo playback */
+static int tas2552_parse_dt(struct tas2552_data *tas2552, struct device_node *np)
+{
+	return of_property_read_u32(np, "tas2552,pdm_edge_select", &tas2552->edge_select);
+}
 
 static int tas2552_setup_pll(struct snd_soc_codec *codec,
 			     struct snd_pcm_hw_params *params)
@@ -604,6 +612,10 @@ static int tas2552_codec_probe(struct snd_soc_codec *codec)
 	snd_soc_write(codec, TAS2552_CFG_2, TAS2552_BOOST_EN | TAS2552_APT_EN |
 					    TAS2552_LIM_EN);
 
+	if (tas2552->edge_select)
+		snd_soc_write(codec, TAS2552_PDM_CFG, TAS2552_PDM_IV_CLK_SEL |
+			TAS2552_PDM_DATA_ES);
+
 	return 0;
 
 probe_fail:
@@ -712,6 +724,15 @@ static int tas2552_probe(struct i2c_client *client,
 		dev_err(&client->dev, "Failed to allocate register map: %d\n",
 			ret);
 		return ret;
+	}
+
+	if (data->tas2552_client) {
+		ret = tas2552_parse_dt(data, client->dev.of_node);
+		if (ret) {
+			dev_err(&client->dev,
+				"Failed to parse device tree: %d\n", ret);
+			return ret;
+		}
 	}
 
 	for (i = 0; i < ARRAY_SIZE(data->supplies); i++)

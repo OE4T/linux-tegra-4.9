@@ -2040,8 +2040,19 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 			NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK;
 		tegra_sor_writel(hdmi->sor, NV_SOR_CLK_CNTRL, val);
 		usleep_range(250, 300); /* sor brick pll stabilization delay */
-	}
+	} else {
+		int val = 0;
+		long rate = clk_get_rate(sor->sor_clk);
+		pr_info("Modified sor_clk %ld\n", rate);
 
+		/* Set Rate to SOR_CLK*/
+		clk_set_rate(sor->sor_clk, rate);
+
+		val = NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G2_7 |
+			NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK;
+		tegra_sor_writel(hdmi->sor, NV_SOR_CLK_CNTRL, val);
+		usleep_range(250, 300); /* sor brick pll stabilization delay */
+	}
 #endif
 	tegra_dc_sor_attach(sor);
 

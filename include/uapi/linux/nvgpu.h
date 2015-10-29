@@ -669,6 +669,8 @@ struct nvgpu_fence {
 #define NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE	(1 << 3)
 /* suppress WFI before fence trigger */
 #define NVGPU_SUBMIT_GPFIFO_FLAGS_SUPPRESS_WFI	(1 << 4)
+/* skip buffer refcounting during submit */
+#define NVGPU_SUBMIT_GPFIFO_FLAGS_SKIP_BUFFER_REFCOUNTING	(1 << 5)
 
 struct nvgpu_submit_gpfifo_args {
 	__u64 gpfifo;

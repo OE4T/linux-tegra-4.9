@@ -166,7 +166,7 @@ int dma_set_resizable_heap_floor_size(struct device *dev, size_t floor_size)
 	ret = update_vpr_config(h);
 	if (!ret) {
 		dev_dbg(&h->dev,
-			"grow heap base from=0x%pa to=0x%pa,"
+			"grow heap base from=%pa to=%pa,"
 			" len from=0x%zx to=0x%zx\n",
 			&orig_base, &h->curr_base, orig_len, h->curr_len);
 		goto success_set_floor;
@@ -274,11 +274,11 @@ static int declare_coherent_heap(struct device *dev, phys_addr_t base,
 	err = dma_declare_coherent_memory(dev, 0,
 			base, size, DMA_MEMORY_NOMAP);
 	if (err & DMA_MEMORY_NOMAP) {
-		dev_dbg(dev, "dma coherent mem base (0x%pa) size (0x%zx)\n",
+		dev_dbg(dev, "dma coherent mem base (%pa) size (0x%zx)\n",
 			&base, size);
 		return 0;
 	}
-	dev_err(dev, "declare dma coherent_mem fail 0x%pa 0x%zx\n",
+	dev_err(dev, "declare dma coherent_mem fail %pa 0x%zx\n",
 		&base, size);
 	return -ENOMEM;
 }
@@ -306,7 +306,7 @@ int dma_declare_coherent_resizable_cma_memory(struct device *dev,
 	}
 
 	dma_get_contiguous_stats(dma_info->cma_dev, &stats);
-	pr_info("resizable heap=%s, base=0x%pa, size=0x%zx\n",
+	pr_info("resizable heap=%s, base=%pa, size=0x%zx\n",
 		dma_info->name, &stats.base, stats.size);
 	strcpy(heap_info->name, dma_info->name);
 	dev_set_name(dev, "dma-%s", heap_info->name);
@@ -422,7 +422,7 @@ static phys_addr_t alloc_from_contiguous_heap(
 	struct page *page;
 	unsigned long order;
 
-	dev_dbg(h->cma_dev, "req at base (0x%pa) size (0x%zx)\n",
+	dev_dbg(h->cma_dev, "req at base (%pa) size (0x%zx)\n",
 		&base, len);
 	order = get_order(len);
 	count = PAGE_ALIGN(len) >> PAGE_SHIFT;
@@ -434,7 +434,7 @@ static phys_addr_t alloc_from_contiguous_heap(
 	}
 
 	base = page_to_phys(page);
-	dev_dbg(h->cma_dev, "allocated at base (0x%pa) size (0x%zx)\n",
+	dev_dbg(h->cma_dev, "allocated at base (%pa) size (0x%zx)\n",
 		&base, len);
 	BUG_ON(base < h->cma_base ||
 		base - h->cma_base + len > h->cma_len);
@@ -452,7 +452,7 @@ static void release_from_contiguous_heap(
 	size_t count = PAGE_ALIGN(len) >> PAGE_SHIFT;
 
 	dma_release_from_contiguous(h->cma_dev, page, count);
-	dev_dbg(h->cma_dev, "released at base (0x%pa) size (0x%zx)\n",
+	dev_dbg(h->cma_dev, "released at base (%pa) size (0x%zx)\n",
 		&base, len);
 }
 
@@ -546,7 +546,7 @@ alloc_success:
 		goto fail_update;
 
 	dev_dbg(&h->dev,
-		"grow heap base from=0x%pa to=0x%pa,"
+		"grow heap base from=%pa to=%pa,"
 		" len from=0x%zx to=0x%zx\n",
 		&prev_base, &h->curr_base, prev_len, h->curr_len);
 	return 0;
@@ -791,7 +791,7 @@ retry_alloc:
 	if (dma_alloc_from_coherent_dev_at(
 		&h->dev, len, dma_handle, ret, attrs,
 		(h->curr_base - h->cma_base) >> PAGE_SHIFT)) {
-		dev_dbg(&h->dev, "allocated addr 0x%pa len 0x%zx\n",
+		dev_dbg(&h->dev, "allocated addr %pa len 0x%zx\n",
 			dma_handle, len);
 		h->curr_used += len;
 		goto out;
@@ -871,7 +871,7 @@ static bool shrink_chunk_locked(struct heap_info *h, int idx)
 		goto out;
 	} else {
 		dev_dbg(&h->dev,
-			"prep to remove chunk b=0x%pa, s=0x%zx\n",
+			"prep to remove chunk b=%pa, s=0x%zx\n",
 			&dev_base, chunk_size);
 		resize_err = dma_release_from_coherent_dev(
 				&h->dev, chunk_size,
@@ -904,8 +904,8 @@ static bool shrink_chunk_locked(struct heap_info *h, int idx)
 		h->curr_len -= chunk_size;
 		update_alloc_range(h);
 		release_from_contiguous_heap(h, dev_base, chunk_size);
-		dev_dbg(&h->dev, "removed chunk b=0x%pa, s=0x%zx"
-			" new heap b=0x%pa, s=0x%zx\n", &dev_base,
+		dev_dbg(&h->dev, "removed chunk b=%pa, s=0x%zx"
+			" new heap b=%pa, s=0x%zx\n", &dev_base,
 			chunk_size, &h->curr_base, h->curr_len);
 		return true;
 	}

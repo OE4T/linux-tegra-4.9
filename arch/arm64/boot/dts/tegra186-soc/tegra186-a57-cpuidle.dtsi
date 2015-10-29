@@ -16,8 +16,8 @@
 			A57_C7: c7 {
 				compatible = "nvidia,tegra186-cpuidle-a57";
 				state-name = "Core powergate";
-				wakeup-latency-us = <20>;
-				min-residency-us = <50>;
+				wakeup-latency-us = <2500>;
+				min-residency-us = <200>;
 				power = <60>;
 				pmstate = <0x7>;
 				arm,psci-suspend-param= <0x10007>;

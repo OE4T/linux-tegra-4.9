@@ -33,6 +33,7 @@
 					vbat-supply = <&battery_reg>;
 					iovdd-supply = <&vdd_3v3>;
 					avdd-supply = <&vdd_1v8_aud2>;
+					tas2552,pdm_edge_select = <0>;
 				};
 				e2614_tas2552_l:tas2552.9-0041@41 {
                                         compatible = "ti,tas2552";
@@ -40,6 +41,7 @@
                                         vbat-supply = <&battery_reg>;
                                         iovdd-supply = <&vdd_3v3>;
                                         avdd-supply = <&vdd_1v8_aud2>;
+					tas2552,pdm_edge_select = <1>;
                                 };
 			};
 			i2c@1 {

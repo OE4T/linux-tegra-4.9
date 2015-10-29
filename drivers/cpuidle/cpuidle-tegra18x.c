@@ -70,6 +70,7 @@ static bool check_mce_version(void)
 
 static void tegra186_denver_enter_c6(u32 wake_time)
 {
+	tegra_mce_update_cstate_info(0, 0, 0, 0, DENVER_CORE_WAKE_MASK, 1);
 	tegra_mce_enter_cstate(TEGRA186_CPUIDLE_C6, wake_time);
 	asm volatile("wfi\n");
 }

@@ -20,8 +20,7 @@
 #include <linux/bitmap.h>
 #include <linux/slab.h>
 #include <asm/cputype.h>
-#include <linux/pmu.h>
-#include <linux/cpu.h>
+#include <asm/cpu.h>
 
 #include <linux/tegra_profiler.h>
 
@@ -767,9 +766,9 @@ static struct quadd_event_source_interface pmu_armv7_int = {
 	.get_arch		= get_arch,
 };
 
-struct quadd_event_source_interface *quadd_armv7_pmu_init_for_cpu(int cpuid)
+static int quadd_armv7_pmu_init_for_cpu(int cpuid)
 {
-	struct quadd_event_source_interface *pmu = NULL;
+	int err = 0;
 	unsigned long cpu_id, cpu_implementer, part_number;
 
 	struct cpuinfo_arm *local_cpu_data = &per_cpu(cpu_data, cpuid);
@@ -794,7 +793,6 @@ struct quadd_event_source_interface *quadd_armv7_pmu_init_for_cpu(int cpuid)
 			local_pmu_ctx->counters_mask =
 				QUADD_ARMV7_COUNTERS_MASK_CORTEX_A9;
 			local_pmu_ctx->current_map = quadd_armv7_a9_events_map;
-			pmu = &pmu_armv7_int;
 			break;
 
 		case ARM_CPU_PART_CORTEX_A15:
@@ -807,14 +805,16 @@ struct quadd_event_source_interface *quadd_armv7_pmu_init_for_cpu(int cpuid)
 			local_pmu_ctx->counters_mask =
 				QUADD_ARMV7_COUNTERS_MASK_CORTEX_A15;
 			local_pmu_ctx->current_map = quadd_armv7_a15_events_map;
-			pmu = &pmu_armv7_int;
 			break;
 
 		default:
 			local_pmu_ctx->arch.type = QUADD_ARM_CPU_TYPE_UNKNOWN;
 			local_pmu_ctx->current_map = NULL;
+			err = 1;
 			break;
 		}
+	} else {
+		err = 1;
 	}
 
 	INIT_LIST_HEAD(&local_pmu_ctx->used_events);
@@ -824,7 +824,7 @@ struct quadd_event_source_interface *quadd_armv7_pmu_init_for_cpu(int cpuid)
 		local_pmu_ctx->arch.name, local_pmu_ctx->arch.type,
 		local_pmu_ctx->arch.ver);
 
-	return pmu;
+	return err;
 }
 
 struct quadd_event_source_interface *quadd_armv7_pmu_init(void)

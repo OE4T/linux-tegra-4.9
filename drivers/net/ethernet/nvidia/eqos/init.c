@@ -806,6 +806,9 @@ int eqos_probe(struct platform_device *pdev)
 		printk(KERN_ALERT "%s: MDIO is not present\n\n", DEV_NAME);
 	}
 
+	if (pdata->phydev)
+		phy_stop(pdata->phydev);
+
 	pdata->ptp_cfg.use_tagged_ptp = of_property_read_bool(node,
 			"nvidia,use_tagged_ptp");
 	get_dt_u32(node, "nvidia,ptp_dma_ch",

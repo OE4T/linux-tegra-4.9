@@ -343,15 +343,17 @@ static bool check_mode_timings(const struct tegra_dc *dc,
 			/* HDMI controller requires h_ref=1, v_ref=1 */
 		mode->h_ref_to_sync = 1;
 		mode->v_ref_to_sync = 1;
-	} else if (dc->out->vrr) {
-		mode->h_ref_to_sync =
-			dc->out->modes[dc->out->n_modes-1].h_ref_to_sync;
-		mode->v_ref_to_sync =
-			dc->out->modes[dc->out->n_modes-1].v_ref_to_sync;
 	} else {
 		calc_ref_to_sync(mode);
 	}
 #endif
+
+	if (dc->out->type == TEGRA_DC_OUT_DSI && dc->out->vrr) {
+		mode->h_ref_to_sync =
+			dc->out->modes[dc->out->n_modes-1].h_ref_to_sync;
+		mode->v_ref_to_sync =
+			dc->out->modes[dc->out->n_modes-1].v_ref_to_sync;
+	}
 
 	if (dc->out->type == TEGRA_DC_OUT_DP) {
 		mode->h_ref_to_sync = 1;

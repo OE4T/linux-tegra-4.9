@@ -3480,6 +3480,7 @@ static void tegra_dc_prism_update_backlight(struct tegra_dc *dc)
 void tegra_dc_set_act_vfp(struct tegra_dc *dc, int vfp)
 {
 	WARN_ON(!mutex_is_locked(&dc->lock));
+	WARN_ON(vfp < dc->mode.v_ref_to_sync + 1);
 
 	tegra_dc_writel(dc, WRITE_MUX_ACTIVE | READ_MUX_ACTIVE,
 			DC_CMD_STATE_ACCESS);

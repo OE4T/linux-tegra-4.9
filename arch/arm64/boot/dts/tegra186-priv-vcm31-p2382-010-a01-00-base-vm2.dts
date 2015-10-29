@@ -52,11 +52,6 @@
 		status = "okay";
 	};
 
-	mc {
-		compatible = "nvidia,tegra-mc-none";
-		status = "disabled";
-        };
-
 	mailbox@3538000 {
 		status = "disabled";
 	};

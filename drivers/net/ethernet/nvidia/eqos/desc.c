@@ -560,7 +560,7 @@ static void eqos_tx_skb_free_mem_single_q(struct eqos_prv_data *pdata,
 	struct eqos_tx_wrapper_descriptor *desc_data =
 	    GET_TX_WRAPPER_DESC(qinx);
 
-	DBGPR("-->%s(): qInx = %u\n", __func__, qInx);
+	DBGPR("-->%s(): qinx = %u\n", __func__, qinx);
 
 	/* Unmap and return skb for tx desc/bufs owned by hw.
 	 * Caller ensures that hw is no longer accessing these descriptors

@@ -144,7 +144,7 @@ static int eqos_poll_pg_sq(struct eqos_prv_data *pdata,
 	struct eqos_rx_wrapper_descriptor *desc_data =
 		GET_RX_WRAPPER_DESC(qinx);
 	struct net_device *dev = pdata->dev;
-	struct s_rx_normal_desc *RX_NORMAL_DESC = NULL;
+	struct s_rx_normal_desc *rx_normal_desc = NULL;
 	struct eqos_rx_buffer *buffer = NULL;
 	unsigned int varrx_error_counters = 0;
 	struct eqos_pg_ch_input *pg_ch_input =
@@ -157,7 +157,7 @@ static int eqos_poll_pg_sq(struct eqos_prv_data *pdata,
 
 	while (1) {
 		DBGPR_PG("cur_rx = %d\n", desc_data->cur_rx);
-		RX_NORMAL_DESC = GET_RX_DESC_PTR(qinx, desc_data->cur_rx);
+		rx_normal_desc = GET_RX_DESC_PTR(qinx, desc_data->cur_rx);
 		buffer = GET_RX_BUF_PTR(qinx, desc_data->cur_rx);
 
 		/* reset rx packets attributes */
@@ -190,7 +190,7 @@ static int eqos_poll_pg_sq(struct eqos_prv_data *pdata,
 #ifdef EQOS_ENABLE_RX_PKT_DUMP
 			if (0 == (pg_ch_input->ch_framecount_rx % 500)) {
 				//print_pkt(skb, buffer->len, 0, (desc_data->cur_rx));
-				dump_rx_desc(qinx, RX_NORMAL_DESC, desc_data->cur_rx);
+				dump_rx_desc(qinx, rx_normal_desc, desc_data->cur_rx);
 			}
 #endif
 		} else {
@@ -202,13 +202,13 @@ static int eqos_poll_pg_sq(struct eqos_prv_data *pdata,
 		/* Reassign same buffer pointer and give ownership to DMA */
 		//memset(buffer->skb->data, 0, buffer->len);
 		/* update buffer 1 address pointer */
-		RX_NORMAL_DESC_RDES0_WR(RX_NORMAL_DESC->RDES0, buffer->dma);
+		RX_NORMAL_DESC_RDES0_WR(rx_normal_desc->rdes0, buffer->dma);
 		/* set to zero */
-		RX_NORMAL_DESC_RDES1_WR(RX_NORMAL_DESC->RDES1, 0);
+		RX_NORMAL_DESC_RDES1_WR(rx_normal_desc->rdes1, 0);
 		/* set buffer 2 address pointer to zero */
-		RX_NORMAL_DESC_RDES2_WR(RX_NORMAL_DESC->RDES2, 0);
+		RX_NORMAL_DESC_RDES2_WR(rx_normal_desc->rdes2, 0);
 		/* set control bits - OWN, INTE and BUF1V */
-		RX_NORMAL_DESC_RDES3_WR(RX_NORMAL_DESC->RDES3, (0xc1000000));
+		RX_NORMAL_DESC_RDES3_WR(rx_normal_desc->rdes3, (0xc1000000));
 
 		/* update the Rx Tail Pointer Register with address of
 		 * descriptors from which data is read */
@@ -302,7 +302,7 @@ static void eqos_tx_interrupt_pg(struct eqos_prv_data *pdata,
 		 * */
 		if ((hw_if->get_tx_desc_ls(txptr)) && !(hw_if->get_tx_desc_ctxt(txptr))) {
 			err_incremented = 0;
-			if (txptr->TDES3 & 0x8000)
+			if (txptr->tdes3 & 0x8000)
 				dump_tx_desc(pdata, desc_data->dirty_tx, desc_data->dirty_tx, 0, qinx);
 
 			if (hw_if->tx_window_error) {
@@ -589,25 +589,25 @@ static void eqos_prepare_desc(struct eqos_prv_data *pdata,
 	//DBGPR_PG("-->eqos_prepare_desc\n");
 
 	/* update packet address */
-	TX_NORMAL_DESC_TDES0_WR(txptr->TDES0, buffer->dma);
+	TX_NORMAL_DESC_TDES0_WR(txptr->tdes0, buffer->dma);
 	/* update the packet length */
-	TX_NORMAL_DESC_TDES2_HL_B1L_WR(txptr->TDES2, buffer->len);
+	TX_NORMAL_DESC_TDES2_HL_B1L_WR(txptr->tdes2, buffer->len);
 	/* update the frame length */
-	TX_NORMAL_DESC_TDES3_FL_WR(txptr->TDES3, buffer->len);
+	TX_NORMAL_DESC_TDES3_FL_WR(txptr->tdes3, buffer->len);
 	/* set Interrupt on Completion for last descriptor */
-	TX_NORMAL_DESC_TDES2_IC_WR(txptr->TDES2, 0x1);
+	TX_NORMAL_DESC_TDES2_IC_WR(txptr->tdes2, 0x1);
 	/* Mark it as First Descriptor */
-	TX_NORMAL_DESC_TDES3_FD_WR(txptr->TDES3, 0x1);
+	TX_NORMAL_DESC_TDES3_FD_WR(txptr->tdes3, 0x1);
 	/* Mark it as LAST descriptor */
-	TX_NORMAL_DESC_TDES3_LD_WR(txptr->TDES3, 0x1);
+	TX_NORMAL_DESC_TDES3_LD_WR(txptr->tdes3, 0x1);
 	/* Disable CRC and Pad Insertion */
-	TX_NORMAL_DESC_TDES3_CPC_WR(txptr->TDES3, 0);
+	TX_NORMAL_DESC_TDES3_CPC_WR(txptr->tdes3, 0);
 	/* Mark it as NORMAL descriptor */
-	TX_NORMAL_DESC_TDES3_CTXT_WR(txptr->TDES3, 0);
+	TX_NORMAL_DESC_TDES3_CTXT_WR(txptr->tdes3, 0);
 	/* set slot number */
-	TX_NORMAL_DESC_TDES3_SLOTNUM_TCPHDRLEN_WR(txptr->TDES3, buffer->slot_number);
+	TX_NORMAL_DESC_TDES3_SLOTNUM_TCPHDRLEN_WR(txptr->tdes3, buffer->slot_number);
 	/* set OWN bit at end to avoid race condition */
-	TX_NORMAL_DESC_TDES3_OWN_WR(txptr->TDES3, 0x1);
+	TX_NORMAL_DESC_TDES3_OWN_WR(txptr->tdes3, 0x1);
 
 #ifdef EQOS_ENABLE_TX_DESC_DUMP
 	dump_tx_desc(pdata, i, i, 1, qinx);

@@ -49,7 +49,7 @@ static int tegra_camera_isomgr_register(struct tegra_camera_info *info)
 	dev_dbg(info->dev, "%s++\n", __func__);
 
 	/* TODO: Extract these values from DT */
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	num_csi_lanes = 2;
 	max_num_streams = 6;
 	max_lane_speed = LANE_SPEED_1_5_GBPS;
@@ -272,14 +272,12 @@ static int tegra_camera_release(struct inode *inode, struct file *file)
 #endif
 
 	/* nullify isomgr request */
-	if (info->isomgr_handle) {
-		ret = tegra_camera_isomgr_release(info);
-		if (ret) {
-			dev_err(info->dev,
-			"%s: failed to deallocate memory in isomgr\n",
-			__func__);
-			return -ENOMEM;
-		}
+	ret = tegra_camera_isomgr_release(info);
+	if (ret) {
+		dev_err(info->dev,
+		"%s: failed to deallocate memory in isomgr\n",
+		__func__);
+		return -ENOMEM;
 	}
 
 	return 0;
@@ -417,8 +415,7 @@ static int tegra_camera_remove(struct platform_device *pdev)
 	struct tegra_camera_info *info = platform_get_drvdata(pdev);
 	dev_info(&pdev->dev, "%s:camera_platform_driver remove\n", __func__);
 
-	if (info->isomgr_handle)
-		tegra_camera_isomgr_unregister(info);
+	tegra_camera_isomgr_unregister(info);
 
 	return misc_deregister(&tegra_camera_misc);
 }

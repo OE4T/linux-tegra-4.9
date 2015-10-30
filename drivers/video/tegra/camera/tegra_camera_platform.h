@@ -45,8 +45,10 @@ struct tegra_camera_info {
 #else
 	struct clk *clks[NUM_CLKS];
 #endif
+#if defined(CONFIG_TEGRA_ISOMGR)
 	tegra_isomgr_handle isomgr_handle;
 	u64 max_bw;
+#endif
 };
 
 struct bw_info {

@@ -2513,9 +2513,8 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 	struct eqos_rx_buffer *buffer = NULL;
 	struct s_rx_normal_desc *rx_normal_desc = NULL;
 	UINT pkt_len;
-#ifdef HWA_NV_1618922
-	UINT err_bits = 0x1200000;
-#endif
+	UINT err_bits = EQOS_RDESC3_ES;
+
 	int ret;
 
 	DBGPR("-->eqos_clean_rx_irq: qinx = %u, quota = %d\n",
@@ -2556,13 +2555,11 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 			 * error is valid only for last descriptor
 			 * (OWN + LD bit set).
 			 */
-#ifdef HWA_NV_1618922
+			if (tegra_platform_is_unit_fpga())
+				err_bits = EQOS_RDESC3_CRC | EQOS_RDESC3_OF;
+
 			if (!(rx_normal_desc->rdes3 & err_bits) &&
 			    (rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
-#else
-			if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_ES) &&
-			    (rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
-#endif
 				/* pkt_len = pkt_len - 4; */ /* CRC stripping */
 
 				/* code added for copybreak, this should improve

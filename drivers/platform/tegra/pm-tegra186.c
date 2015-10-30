@@ -49,6 +49,7 @@ static void tegra_get_suspend_time(void)
 
 static int tegra186_suspend_enter(suspend_state_t state)
 {
+	pr_info("Entered SC7\n");
 	trace_cpu_suspend(CPU_SUSPEND_START, arch_timer_read_counter());
 	tegra_get_suspend_time();
 

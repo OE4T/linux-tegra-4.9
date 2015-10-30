@@ -296,7 +296,6 @@ struct nvhost_device_data t18_nvjpg_info = {
 	.can_powergate          = true,
 	.powergate_delay        = 500,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.powergate_delay	= 500,
 	.clocks			= {
 		{"nvjpg", UINT_MAX, 0, TEGRA_MC_CLIENT_NVJPG},
 		{"emc", HOST_EMC_FLOOR,

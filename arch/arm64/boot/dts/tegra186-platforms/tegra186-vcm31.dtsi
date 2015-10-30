@@ -37,7 +37,6 @@
 	serial@3110000 { /* Tegra UARTB <->  VCM UART B: Debug console*/
 		compatible = "nvidia,tegra210-uart";
 		status = "okay";
-		clock-frequency = <408000000>;
 	};
 
 	chosen {

@@ -142,8 +142,8 @@
 
 #endif /* end of EQOS_CONFIG_PGTEST */
 
-/* Enable PBLx8 setting */
-#define PBLx8
+/* Enable PBLX8 setting */
+#define PBLX8
 
 /* EQOS DMA Burst size in bytes */
 #define EQOS_DMA_BURST_SIZE 128
@@ -157,7 +157,7 @@
 #define ALIGN_BOUNDARY (EQOS_DMA_BURST_SIZE - 1)
 #define ALIGN_SIZE(size) ((size + ALIGN_BOUNDARY) & (~ALIGN_BOUNDARY))
 
-#ifdef PBLx8
+#ifdef PBLX8
 #define RXPBL (EQOS_DMA_BURST_SIZE / (AXI_BUS_WIDTH * 8))
 #else
 #define RXPBL (EQOS_DMA_BURST_SIZE / (AXI_BUS_WIDTH))
@@ -639,37 +639,37 @@ typedef void VOID;
 typedef void *VOIDP;
 
 struct s_rx_context_desc {
-	UINT RDES0;
-	UINT RDES1;
-	UINT RDES2;
-	UINT RDES3;
+	UINT rdes0;
+	UINT rdes1;
+	UINT rdes2;
+	UINT rdes3;
 };
 
 typedef struct s_rx_context_desc t_rx_context_desc;
 
 struct s_tx_context_desc {
-	UINT TDES0;
-	UINT TDES1;
-	UINT TDES2;
-	UINT TDES3;
+	UINT tdes0;
+	UINT tdes1;
+	UINT tdes2;
+	UINT tdes3;
 };
 
 typedef struct s_tx_context_desc t_tx_context_desc;
 
 struct s_rx_normal_desc {
-	UINT RDES0;
-	UINT RDES1;
-	UINT RDES2;
-	UINT RDES3;
+	UINT rdes0;
+	UINT rdes1;
+	UINT rdes2;
+	UINT rdes3;
 };
 
 typedef struct s_rx_normal_desc t_rx_normal_desc;
 
 struct s_tx_normal_desc {
-	UINT TDES0;
-	UINT TDES1;
-	UINT TDES2;
-	UINT TDES3;
+	UINT tdes0;
+	UINT tdes1;
+	UINT tdes2;
+	UINT tdes3;
 };
 
 typedef struct s_tx_normal_desc t_tx_normal_desc;
@@ -724,14 +724,14 @@ typedef enum {
 } e_eqos_int_id;
 
 typedef enum {
-	eqos_256 = 0x0,
-	eqos_512 = 0x1,
-	eqos_1k = 0x3,
-	eqos_2k = 0x7,
-	eqos_4k = 0xf,
-	eqos_8k = 0x1f,
-	eqos_16k = 0x3f,
-	eqos_32k = 0x7f
+	EQOS_256 = 0x0,
+	EQOS_512 = 0x1,
+	EQOS_1K = 0x3,
+	EQOS_2K = 0x7,
+	EQOS_4K = 0xf,
+	EQOS_8K = 0x1f,
+	EQOS_16K = 0x3f,
+	EQOS_32K = 0x7f
 } eqos_mtl_fifo_size;
 
 /* do forward declaration of private data structure */

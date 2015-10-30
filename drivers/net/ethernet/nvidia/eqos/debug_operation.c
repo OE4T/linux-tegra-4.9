@@ -19360,16 +19360,16 @@ static ssize_t RX_NORMAL_DESC_descriptor_read0(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"RX_NORMAL_DESC.RDES3             :%x\n"
-			"RX_NORMAL_DESC.RDES2             :%x\n"
-			"RX_NORMAL_DESC.RDES1             :%x\n"
-			"RX_NORMAL_DESC.RDES0             :%x\n",
+			"rx_normal_desc.rdes3             :%x\n"
+			"rx_normal_desc.rdes2             :%x\n"
+			"rx_normal_desc.rdes1             :%x\n"
+			"rx_normal_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num)
-			, p_rx_normal_desc[desc_num].RDES3,
-			p_rx_normal_desc[desc_num].RDES2,
-			p_rx_normal_desc[desc_num].RDES1,
-			p_rx_normal_desc[desc_num].RDES0);
+			, p_rx_normal_desc[desc_num].rdes3,
+			p_rx_normal_desc[desc_num].rdes2,
+			p_rx_normal_desc[desc_num].rdes1,
+			p_rx_normal_desc[desc_num].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19411,16 +19411,16 @@ static ssize_t RX_NORMAL_DESC_descriptor_read1(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"RX_NORMAL_DESC.RDES3             :%x\n"
-			"RX_NORMAL_DESC.RDES2             :%x\n"
-			"RX_NORMAL_DESC.RDES1             :%x\n"
-			"RX_NORMAL_DESC.RDES0             :%x\n",
+			"rx_normal_desc.rdes3             :%x\n"
+			"rx_normal_desc.rdes2             :%x\n"
+			"rx_normal_desc.rdes1             :%x\n"
+			"rx_normal_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 20)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 20)
-			, p_rx_normal_desc[desc_num + 20].RDES3,
-			p_rx_normal_desc[desc_num + 20].RDES2,
-			p_rx_normal_desc[desc_num + 20].RDES1,
-			p_rx_normal_desc[desc_num + 20].RDES0);
+			, p_rx_normal_desc[desc_num + 20].rdes3,
+			p_rx_normal_desc[desc_num + 20].rdes2,
+			p_rx_normal_desc[desc_num + 20].rdes1,
+			p_rx_normal_desc[desc_num + 20].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19462,16 +19462,16 @@ static ssize_t RX_NORMAL_DESC_descriptor_read2(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"RX_NORMAL_DESC.RDES3             :%x\n"
-			"RX_NORMAL_DESC.RDES2             :%x\n"
-			"RX_NORMAL_DESC.RDES1             :%x\n"
-			"RX_NORMAL_DESC.RDES0             :%x\n",
+			"rx_normal_desc.rdes3             :%x\n"
+			"rx_normal_desc.rdes2             :%x\n"
+			"rx_normal_desc.rdes1             :%x\n"
+			"rx_normal_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 40)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 40)
-			, p_rx_normal_desc[desc_num + 40].RDES3,
-			p_rx_normal_desc[desc_num + 40].RDES2,
-			p_rx_normal_desc[desc_num + 40].RDES1,
-			p_rx_normal_desc[desc_num + 40].RDES0);
+			, p_rx_normal_desc[desc_num + 40].rdes3,
+			p_rx_normal_desc[desc_num + 40].rdes2,
+			p_rx_normal_desc[desc_num + 40].rdes1,
+			p_rx_normal_desc[desc_num + 40].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19513,16 +19513,16 @@ static ssize_t RX_NORMAL_DESC_descriptor_read3(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"RX_NORMAL_DESC.RDES3             :%x\n"
-			"RX_NORMAL_DESC.RDES2             :%x\n"
-			"RX_NORMAL_DESC.RDES1             :%x\n"
-			"RX_NORMAL_DESC.RDES0             :%x\n",
+			"rx_normal_desc.rdes3             :%x\n"
+			"rx_normal_desc.rdes2             :%x\n"
+			"rx_normal_desc.rdes1             :%x\n"
+			"rx_normal_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 60)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 60)
-			, p_rx_normal_desc[desc_num + 60].RDES3,
-			p_rx_normal_desc[desc_num + 60].RDES2,
-			p_rx_normal_desc[desc_num + 60].RDES1,
-			p_rx_normal_desc[desc_num + 60].RDES0);
+			, p_rx_normal_desc[desc_num + 60].rdes3,
+			p_rx_normal_desc[desc_num + 60].rdes2,
+			p_rx_normal_desc[desc_num + 60].rdes1,
+			p_rx_normal_desc[desc_num + 60].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19564,16 +19564,16 @@ static ssize_t RX_NORMAL_DESC_descriptor_read4(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"RX_NORMAL_DESC.RDES3             :%x\n"
-			"RX_NORMAL_DESC.RDES2             :%x\n"
-			"RX_NORMAL_DESC.RDES1             :%x\n"
-			"RX_NORMAL_DESC.RDES0             :%x\n",
+			"rx_normal_desc.rdes3             :%x\n"
+			"rx_normal_desc.rdes2             :%x\n"
+			"rx_normal_desc.rdes1             :%x\n"
+			"rx_normal_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 80)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 80)
-			, p_rx_normal_desc[desc_num + 80].RDES3,
-			p_rx_normal_desc[desc_num + 80].RDES2,
-			p_rx_normal_desc[desc_num + 80].RDES1,
-			p_rx_normal_desc[desc_num + 80].RDES0);
+			, p_rx_normal_desc[desc_num + 80].rdes3,
+			p_rx_normal_desc[desc_num + 80].rdes2,
+			p_rx_normal_desc[desc_num + 80].rdes1,
+			p_rx_normal_desc[desc_num + 80].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19615,16 +19615,16 @@ static ssize_t RX_NORMAL_DESC_descriptor_read5(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"RX_NORMAL_DESC.RDES3             :%x\n"
-			"RX_NORMAL_DESC.RDES2             :%x\n"
-			"RX_NORMAL_DESC.RDES1             :%x\n"
-			"RX_NORMAL_DESC.RDES0             :%x\n",
+			"rx_normal_desc.rdes3             :%x\n"
+			"rx_normal_desc.rdes2             :%x\n"
+			"rx_normal_desc.rdes1             :%x\n"
+			"rx_normal_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 100)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 100)
-			, p_rx_normal_desc[desc_num + 100].RDES3,
-			p_rx_normal_desc[desc_num + 100].RDES2,
-			p_rx_normal_desc[desc_num + 100].RDES1,
-			p_rx_normal_desc[desc_num + 100].RDES0);
+			, p_rx_normal_desc[desc_num + 100].rdes3,
+			p_rx_normal_desc[desc_num + 100].rdes2,
+			p_rx_normal_desc[desc_num + 100].rdes1,
+			p_rx_normal_desc[desc_num + 100].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19666,16 +19666,16 @@ static ssize_t RX_NORMAL_DESC_descriptor_read6(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"RX_NORMAL_DESC.RDES3             :%x\n"
-			"RX_NORMAL_DESC.RDES2             :%x\n"
-			"RX_NORMAL_DESC.RDES1             :%x\n"
-			"RX_NORMAL_DESC.RDES0             :%x\n",
+			"rx_normal_desc.rdes3             :%x\n"
+			"rx_normal_desc.rdes2             :%x\n"
+			"rx_normal_desc.rdes1             :%x\n"
+			"rx_normal_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 120)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 120)
-			, p_rx_normal_desc[desc_num + 120].RDES3,
-			p_rx_normal_desc[desc_num + 120].RDES2,
-			p_rx_normal_desc[desc_num + 120].RDES1,
-			p_rx_normal_desc[desc_num + 120].RDES0);
+			, p_rx_normal_desc[desc_num + 120].rdes3,
+			p_rx_normal_desc[desc_num + 120].rdes2,
+			p_rx_normal_desc[desc_num + 120].rdes1,
+			p_rx_normal_desc[desc_num + 120].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19717,16 +19717,16 @@ static ssize_t RX_NORMAL_DESC_descriptor_read7(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"RX_NORMAL_DESC.RDES3             :%x\n"
-			"RX_NORMAL_DESC.RDES2             :%x\n"
-			"RX_NORMAL_DESC.RDES1             :%x\n"
-			"RX_NORMAL_DESC.RDES0             :%x\n",
+			"rx_normal_desc.rdes3             :%x\n"
+			"rx_normal_desc.rdes2             :%x\n"
+			"rx_normal_desc.rdes1             :%x\n"
+			"rx_normal_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 140)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 140)
-			, p_rx_normal_desc[desc_num + 140].RDES3,
-			p_rx_normal_desc[desc_num + 140].RDES2,
-			p_rx_normal_desc[desc_num + 140].RDES1,
-			p_rx_normal_desc[desc_num + 140].RDES0);
+			, p_rx_normal_desc[desc_num + 140].rdes3,
+			p_rx_normal_desc[desc_num + 140].rdes2,
+			p_rx_normal_desc[desc_num + 140].rdes1,
+			p_rx_normal_desc[desc_num + 140].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19768,16 +19768,16 @@ static ssize_t RX_NORMAL_DESC_descriptor_read8(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"RX_NORMAL_DESC.RDES3             :%x\n"
-			"RX_NORMAL_DESC.RDES2             :%x\n"
-			"RX_NORMAL_DESC.RDES1             :%x\n"
-			"RX_NORMAL_DESC.RDES0             :%x\n",
+			"rx_normal_desc.rdes3             :%x\n"
+			"rx_normal_desc.rdes2             :%x\n"
+			"rx_normal_desc.rdes1             :%x\n"
+			"rx_normal_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 160)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 160)
-			, p_rx_normal_desc[desc_num + 160].RDES3,
-			p_rx_normal_desc[desc_num + 160].RDES2,
-			p_rx_normal_desc[desc_num + 160].RDES1,
-			p_rx_normal_desc[desc_num + 160].RDES0);
+			, p_rx_normal_desc[desc_num + 160].rdes3,
+			p_rx_normal_desc[desc_num + 160].rdes2,
+			p_rx_normal_desc[desc_num + 160].rdes1,
+			p_rx_normal_desc[desc_num + 160].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19819,16 +19819,16 @@ static ssize_t RX_NORMAL_DESC_descriptor_read9(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"RX_NORMAL_DESC.RDES3             :%x\n"
-			"RX_NORMAL_DESC.RDES2             :%x\n"
-			"RX_NORMAL_DESC.RDES1             :%x\n"
-			"RX_NORMAL_DESC.RDES0             :%x\n",
+			"rx_normal_desc.rdes3             :%x\n"
+			"rx_normal_desc.rdes2             :%x\n"
+			"rx_normal_desc.rdes1             :%x\n"
+			"rx_normal_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 180)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 180)
-			, p_rx_normal_desc[desc_num + 180].RDES3,
-			p_rx_normal_desc[desc_num + 180].RDES2,
-			p_rx_normal_desc[desc_num + 180].RDES1,
-			p_rx_normal_desc[desc_num + 180].RDES0);
+			, p_rx_normal_desc[desc_num + 180].rdes3,
+			p_rx_normal_desc[desc_num + 180].rdes2,
+			p_rx_normal_desc[desc_num + 180].rdes1,
+			p_rx_normal_desc[desc_num + 180].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19870,16 +19870,16 @@ static ssize_t RX_NORMAL_DESC_descriptor_read10(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"RX_NORMAL_DESC.RDES3             :%x\n"
-			"RX_NORMAL_DESC.RDES2             :%x\n"
-			"RX_NORMAL_DESC.RDES1             :%x\n"
-			"RX_NORMAL_DESC.RDES0             :%x\n",
+			"rx_normal_desc.rdes3             :%x\n"
+			"rx_normal_desc.rdes2             :%x\n"
+			"rx_normal_desc.rdes1             :%x\n"
+			"rx_normal_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 200)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 200)
-			, p_rx_normal_desc[desc_num + 200].RDES3,
-			p_rx_normal_desc[desc_num + 200].RDES2,
-			p_rx_normal_desc[desc_num + 200].RDES1,
-			p_rx_normal_desc[desc_num + 200].RDES0);
+			, p_rx_normal_desc[desc_num + 200].rdes3,
+			p_rx_normal_desc[desc_num + 200].rdes2,
+			p_rx_normal_desc[desc_num + 200].rdes1,
+			p_rx_normal_desc[desc_num + 200].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19921,16 +19921,16 @@ static ssize_t RX_NORMAL_DESC_descriptor_read11(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"RX_NORMAL_DESC.RDES3             :%x\n"
-			"RX_NORMAL_DESC.RDES2             :%x\n"
-			"RX_NORMAL_DESC.RDES1             :%x\n"
-			"RX_NORMAL_DESC.RDES0             :%x\n",
+			"rx_normal_desc.rdes3             :%x\n"
+			"rx_normal_desc.rdes2             :%x\n"
+			"rx_normal_desc.rdes1             :%x\n"
+			"rx_normal_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 220)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 220)
-			, p_rx_normal_desc[desc_num + 220].RDES3,
-			p_rx_normal_desc[desc_num + 220].RDES2,
-			p_rx_normal_desc[desc_num + 220].RDES1,
-			p_rx_normal_desc[desc_num + 220].RDES0);
+			, p_rx_normal_desc[desc_num + 220].rdes3,
+			p_rx_normal_desc[desc_num + 220].rdes2,
+			p_rx_normal_desc[desc_num + 220].rdes1,
+			p_rx_normal_desc[desc_num + 220].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19972,16 +19972,16 @@ static ssize_t RX_NORMAL_DESC_descriptor_read12(struct file *file,
 	for (desc_num = 0; desc_num < 16; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"RX_NORMAL_DESC.RDES3             :%x\n"
-			"RX_NORMAL_DESC.RDES2             :%x\n"
-			"RX_NORMAL_DESC.RDES1             :%x\n"
-			"RX_NORMAL_DESC.RDES0             :%x\n",
+			"rx_normal_desc.rdes3             :%x\n"
+			"rx_normal_desc.rdes2             :%x\n"
+			"rx_normal_desc.rdes1             :%x\n"
+			"rx_normal_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 240)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 240)
-			, p_rx_normal_desc[desc_num + 240].RDES3,
-			p_rx_normal_desc[desc_num + 240].RDES2,
-			p_rx_normal_desc[desc_num + 240].RDES1,
-			p_rx_normal_desc[desc_num + 240].RDES0);
+			, p_rx_normal_desc[desc_num + 240].rdes3,
+			p_rx_normal_desc[desc_num + 240].rdes2,
+			p_rx_normal_desc[desc_num + 240].rdes1,
+			p_rx_normal_desc[desc_num + 240].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20023,16 +20023,16 @@ static ssize_t TX_NORMAL_DESC_descriptor_read0(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"TX_NORMAL_DESC.TDES3             :%x\n"
-			"TX_NORMAL_DESC.TDES2             :%x\n"
-			"TX_NORMAL_DESC.TDES1             :%x\n"
-			"TX_NORMAL_DESC.TDES0             :%x\n",
+			"tx_normal_desc.tdes3             :%x\n"
+			"tx_normal_desc.tdes2             :%x\n"
+			"tx_normal_desc.tdes1             :%x\n"
+			"tx_normal_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num)
-			, p_tx_normal_desc[desc_num].TDES3,
-			p_tx_normal_desc[desc_num].TDES2,
-			p_tx_normal_desc[desc_num].TDES1,
-			p_tx_normal_desc[desc_num].TDES0);
+			, p_tx_normal_desc[desc_num].tdes3,
+			p_tx_normal_desc[desc_num].tdes2,
+			p_tx_normal_desc[desc_num].tdes1,
+			p_tx_normal_desc[desc_num].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20074,16 +20074,16 @@ static ssize_t TX_NORMAL_DESC_descriptor_read1(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"TX_NORMAL_DESC.TDES3             :%x\n"
-			"TX_NORMAL_DESC.TDES2             :%x\n"
-			"TX_NORMAL_DESC.TDES1             :%x\n"
-			"TX_NORMAL_DESC.TDES0             :%x\n",
+			"tx_normal_desc.tdes3             :%x\n"
+			"tx_normal_desc.tdes2             :%x\n"
+			"tx_normal_desc.tdes1             :%x\n"
+			"tx_normal_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 20)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 20)
-			, p_tx_normal_desc[desc_num + 20].TDES3,
-			p_tx_normal_desc[desc_num + 20].TDES2,
-			p_tx_normal_desc[desc_num + 20].TDES1,
-			p_tx_normal_desc[desc_num + 20].TDES0);
+			, p_tx_normal_desc[desc_num + 20].tdes3,
+			p_tx_normal_desc[desc_num + 20].tdes2,
+			p_tx_normal_desc[desc_num + 20].tdes1,
+			p_tx_normal_desc[desc_num + 20].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20125,16 +20125,16 @@ static ssize_t TX_NORMAL_DESC_descriptor_read2(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"TX_NORMAL_DESC.TDES3             :%x\n"
-			"TX_NORMAL_DESC.TDES2             :%x\n"
-			"TX_NORMAL_DESC.TDES1             :%x\n"
-			"TX_NORMAL_DESC.TDES0             :%x\n",
+			"tx_normal_desc.tdes3             :%x\n"
+			"tx_normal_desc.tdes2             :%x\n"
+			"tx_normal_desc.tdes1             :%x\n"
+			"tx_normal_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 40)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 40)
-			, p_tx_normal_desc[desc_num + 40].TDES3,
-			p_tx_normal_desc[desc_num + 40].TDES2,
-			p_tx_normal_desc[desc_num + 40].TDES1,
-			p_tx_normal_desc[desc_num + 40].TDES0);
+			, p_tx_normal_desc[desc_num + 40].tdes3,
+			p_tx_normal_desc[desc_num + 40].tdes2,
+			p_tx_normal_desc[desc_num + 40].tdes1,
+			p_tx_normal_desc[desc_num + 40].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20176,16 +20176,16 @@ static ssize_t TX_NORMAL_DESC_descriptor_read3(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"TX_NORMAL_DESC.TDES3             :%x\n"
-			"TX_NORMAL_DESC.TDES2             :%x\n"
-			"TX_NORMAL_DESC.TDES1             :%x\n"
-			"TX_NORMAL_DESC.TDES0             :%x\n",
+			"tx_normal_desc.tdes3             :%x\n"
+			"tx_normal_desc.tdes2             :%x\n"
+			"tx_normal_desc.tdes1             :%x\n"
+			"tx_normal_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 60)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 60)
-			, p_tx_normal_desc[desc_num + 60].TDES3,
-			p_tx_normal_desc[desc_num + 60].TDES2,
-			p_tx_normal_desc[desc_num + 60].TDES1,
-			p_tx_normal_desc[desc_num + 60].TDES0);
+			, p_tx_normal_desc[desc_num + 60].tdes3,
+			p_tx_normal_desc[desc_num + 60].tdes2,
+			p_tx_normal_desc[desc_num + 60].tdes1,
+			p_tx_normal_desc[desc_num + 60].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20227,16 +20227,16 @@ static ssize_t TX_NORMAL_DESC_descriptor_read4(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"TX_NORMAL_DESC.TDES3             :%x\n"
-			"TX_NORMAL_DESC.TDES2             :%x\n"
-			"TX_NORMAL_DESC.TDES1             :%x\n"
-			"TX_NORMAL_DESC.TDES0             :%x\n",
+			"tx_normal_desc.tdes3             :%x\n"
+			"tx_normal_desc.tdes2             :%x\n"
+			"tx_normal_desc.tdes1             :%x\n"
+			"tx_normal_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 80)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 80)
-			, p_tx_normal_desc[desc_num + 80].TDES3,
-			p_tx_normal_desc[desc_num + 80].TDES2,
-			p_tx_normal_desc[desc_num + 80].TDES1,
-			p_tx_normal_desc[desc_num + 80].TDES0);
+			, p_tx_normal_desc[desc_num + 80].tdes3,
+			p_tx_normal_desc[desc_num + 80].tdes2,
+			p_tx_normal_desc[desc_num + 80].tdes1,
+			p_tx_normal_desc[desc_num + 80].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20278,16 +20278,16 @@ static ssize_t TX_NORMAL_DESC_descriptor_read5(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"TX_NORMAL_DESC.TDES3             :%x\n"
-			"TX_NORMAL_DESC.TDES2             :%x\n"
-			"TX_NORMAL_DESC.TDES1             :%x\n"
-			"TX_NORMAL_DESC.TDES0             :%x\n",
+			"tx_normal_desc.tdes3             :%x\n"
+			"tx_normal_desc.tdes2             :%x\n"
+			"tx_normal_desc.tdes1             :%x\n"
+			"tx_normal_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 100)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 100)
-			, p_tx_normal_desc[desc_num + 100].TDES3,
-			p_tx_normal_desc[desc_num + 100].TDES2,
-			p_tx_normal_desc[desc_num + 100].TDES1,
-			p_tx_normal_desc[desc_num + 100].TDES0);
+			, p_tx_normal_desc[desc_num + 100].tdes3,
+			p_tx_normal_desc[desc_num + 100].tdes2,
+			p_tx_normal_desc[desc_num + 100].tdes1,
+			p_tx_normal_desc[desc_num + 100].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20329,16 +20329,16 @@ static ssize_t TX_NORMAL_DESC_descriptor_read6(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"TX_NORMAL_DESC.TDES3             :%x\n"
-			"TX_NORMAL_DESC.TDES2             :%x\n"
-			"TX_NORMAL_DESC.TDES1             :%x\n"
-			"TX_NORMAL_DESC.TDES0             :%x\n",
+			"tx_normal_desc.tdes3             :%x\n"
+			"tx_normal_desc.tdes2             :%x\n"
+			"tx_normal_desc.tdes1             :%x\n"
+			"tx_normal_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 120)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 120)
-			, p_tx_normal_desc[desc_num + 120].TDES3,
-			p_tx_normal_desc[desc_num + 120].TDES2,
-			p_tx_normal_desc[desc_num + 120].TDES1,
-			p_tx_normal_desc[desc_num + 120].TDES0);
+			, p_tx_normal_desc[desc_num + 120].tdes3,
+			p_tx_normal_desc[desc_num + 120].tdes2,
+			p_tx_normal_desc[desc_num + 120].tdes1,
+			p_tx_normal_desc[desc_num + 120].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20380,16 +20380,16 @@ static ssize_t TX_NORMAL_DESC_descriptor_read7(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"TX_NORMAL_DESC.TDES3             :%x\n"
-			"TX_NORMAL_DESC.TDES2             :%x\n"
-			"TX_NORMAL_DESC.TDES1             :%x\n"
-			"TX_NORMAL_DESC.TDES0             :%x\n",
+			"tx_normal_desc.tdes3             :%x\n"
+			"tx_normal_desc.tdes2             :%x\n"
+			"tx_normal_desc.tdes1             :%x\n"
+			"tx_normal_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 140)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 140)
-			, p_tx_normal_desc[desc_num + 140].TDES3,
-			p_tx_normal_desc[desc_num + 140].TDES2,
-			p_tx_normal_desc[desc_num + 140].TDES1,
-			p_tx_normal_desc[desc_num + 140].TDES0);
+			, p_tx_normal_desc[desc_num + 140].tdes3,
+			p_tx_normal_desc[desc_num + 140].tdes2,
+			p_tx_normal_desc[desc_num + 140].tdes1,
+			p_tx_normal_desc[desc_num + 140].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20431,16 +20431,16 @@ static ssize_t TX_NORMAL_DESC_descriptor_read8(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"TX_NORMAL_DESC.TDES3             :%x\n"
-			"TX_NORMAL_DESC.TDES2             :%x\n"
-			"TX_NORMAL_DESC.TDES1             :%x\n"
-			"TX_NORMAL_DESC.TDES0             :%x\n",
+			"tx_normal_desc.tdes3             :%x\n"
+			"tx_normal_desc.tdes2             :%x\n"
+			"tx_normal_desc.tdes1             :%x\n"
+			"tx_normal_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 160)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 160)
-			, p_tx_normal_desc[desc_num + 160].TDES3,
-			p_tx_normal_desc[desc_num + 160].TDES2,
-			p_tx_normal_desc[desc_num + 160].TDES1,
-			p_tx_normal_desc[desc_num + 160].TDES0);
+			, p_tx_normal_desc[desc_num + 160].tdes3,
+			p_tx_normal_desc[desc_num + 160].tdes2,
+			p_tx_normal_desc[desc_num + 160].tdes1,
+			p_tx_normal_desc[desc_num + 160].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20482,16 +20482,16 @@ static ssize_t TX_NORMAL_DESC_descriptor_read9(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"TX_NORMAL_DESC.TDES3             :%x\n"
-			"TX_NORMAL_DESC.TDES2             :%x\n"
-			"TX_NORMAL_DESC.TDES1             :%x\n"
-			"TX_NORMAL_DESC.TDES0             :%x\n",
+			"tx_normal_desc.tdes3             :%x\n"
+			"tx_normal_desc.tdes2             :%x\n"
+			"tx_normal_desc.tdes1             :%x\n"
+			"tx_normal_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 180)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 180)
-			, p_tx_normal_desc[desc_num + 180].TDES3,
-			p_tx_normal_desc[desc_num + 180].TDES2,
-			p_tx_normal_desc[desc_num + 180].TDES1,
-			p_tx_normal_desc[desc_num + 180].TDES0);
+			, p_tx_normal_desc[desc_num + 180].tdes3,
+			p_tx_normal_desc[desc_num + 180].tdes2,
+			p_tx_normal_desc[desc_num + 180].tdes1,
+			p_tx_normal_desc[desc_num + 180].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20533,16 +20533,16 @@ static ssize_t TX_NORMAL_DESC_descriptor_read10(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"TX_NORMAL_DESC.TDES3             :%x\n"
-			"TX_NORMAL_DESC.TDES2             :%x\n"
-			"TX_NORMAL_DESC.TDES1             :%x\n"
-			"TX_NORMAL_DESC.TDES0             :%x\n",
+			"tx_normal_desc.tdes3             :%x\n"
+			"tx_normal_desc.tdes2             :%x\n"
+			"tx_normal_desc.tdes1             :%x\n"
+			"tx_normal_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 200)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 200)
-			, p_tx_normal_desc[desc_num + 200].TDES3,
-			p_tx_normal_desc[desc_num + 200].TDES2,
-			p_tx_normal_desc[desc_num + 200].TDES1,
-			p_tx_normal_desc[desc_num + 200].TDES0);
+			, p_tx_normal_desc[desc_num + 200].tdes3,
+			p_tx_normal_desc[desc_num + 200].tdes2,
+			p_tx_normal_desc[desc_num + 200].tdes1,
+			p_tx_normal_desc[desc_num + 200].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20584,16 +20584,16 @@ static ssize_t TX_NORMAL_DESC_descriptor_read11(struct file *file,
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"TX_NORMAL_DESC.TDES3             :%x\n"
-			"TX_NORMAL_DESC.TDES2             :%x\n"
-			"TX_NORMAL_DESC.TDES1             :%x\n"
-			"TX_NORMAL_DESC.TDES0             :%x\n",
+			"tx_normal_desc.tdes3             :%x\n"
+			"tx_normal_desc.tdes2             :%x\n"
+			"tx_normal_desc.tdes1             :%x\n"
+			"tx_normal_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 220)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 220)
-			, p_tx_normal_desc[desc_num + 220].TDES3,
-			p_tx_normal_desc[desc_num + 220].TDES2,
-			p_tx_normal_desc[desc_num + 220].TDES1,
-			p_tx_normal_desc[desc_num + 220].TDES0);
+			, p_tx_normal_desc[desc_num + 220].tdes3,
+			p_tx_normal_desc[desc_num + 220].tdes2,
+			p_tx_normal_desc[desc_num + 220].tdes1,
+			p_tx_normal_desc[desc_num + 220].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20635,16 +20635,16 @@ static ssize_t TX_NORMAL_DESC_descriptor_read12(struct file *file,
 	for (desc_num = 0; desc_num < 16; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"TX_NORMAL_DESC.TDES3             :%x\n"
-			"TX_NORMAL_DESC.TDES2             :%x\n"
-			"TX_NORMAL_DESC.TDES1             :%x\n"
-			"TX_NORMAL_DESC.TDES0             :%x\n",
+			"tx_normal_desc.tdes3             :%x\n"
+			"tx_normal_desc.tdes2             :%x\n"
+			"tx_normal_desc.tdes1             :%x\n"
+			"tx_normal_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 240)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 240)
-			, p_tx_normal_desc[desc_num + 240].TDES3,
-			p_tx_normal_desc[desc_num + 240].TDES2,
-			p_tx_normal_desc[desc_num + 240].TDES1,
-			p_tx_normal_desc[desc_num + 240].TDES0);
+			, p_tx_normal_desc[desc_num + 240].tdes3,
+			p_tx_normal_desc[desc_num + 240].tdes2,
+			p_tx_normal_desc[desc_num + 240].tdes1,
+			p_tx_normal_desc[desc_num + 240].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20662,7 +20662,7 @@ static const struct file_operations TX_NORMAL_DESC_desc_fops12 = {
 	.write = descriptor_write,
 };
 
-static ssize_t tx_normal_desc_status_read(struct file *file,
+static ssize_t TX_NORMAL_DESC_status_read(struct file *file,
 					  char __user * userbuf, size_t count,
 					  loff_t * ppos)
 {
@@ -20681,7 +20681,7 @@ static ssize_t tx_normal_desc_status_read(struct file *file,
 	unsigned int tmp_cur_tx = 0;
 	unsigned int tmp_dirty_tx = 0;
 
-	DBGPR("--> tx_normal_desc_status_read\n");
+	DBGPR("--> TX_NORMAL_DESC_status_read\n");
 
 	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf) {
@@ -20815,15 +20815,15 @@ static ssize_t tx_normal_desc_status_read(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- tx_normal_desc_status_read\n");
+	DBGPR("<-- TX_NORMAL_DESC_status_read\n");
 	return ret;
 }
 
-static const struct file_operations tx_normal_desc_status_fops = {
-	.read = tx_normal_desc_status_read,
+static const struct file_operations TX_NORMAL_DESC_status_fops = {
+	.read = TX_NORMAL_DESC_status_read,
 };
 
-static ssize_t rx_normal_desc_status_read(struct file *file,
+static ssize_t RX_NORMAL_DESC_status_read(struct file *file,
 					  char __user * userbuf, size_t count,
 					  loff_t * ppos)
 {
@@ -20841,7 +20841,7 @@ static ssize_t rx_normal_desc_status_read(struct file *file,
 	UINT dev_desc_cnt = 0;
 	unsigned int cur_rx = desc_data->cur_rx;
 
-	DBGPR("-->rx_normal_desc_status_read\n");
+	DBGPR("-->RX_NORMAL_DESC_status_read\n");
 
 	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf) {
@@ -20900,12 +20900,12 @@ static ssize_t rx_normal_desc_status_read(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<--rx_normal_desc_status_read\n");
+	DBGPR("<--RX_NORMAL_DESC_status_read\n");
 	return ret;
 }
 
-static const struct file_operations rx_normal_desc_status_fops = {
-	.read = rx_normal_desc_status_read,
+static const struct file_operations RX_NORMAL_DESC_status_fops = {
+	.read = RX_NORMAL_DESC_status_read,
 };
 
 static void bcm_regs_clause45_read(int dev, int reg, unsigned int *data)
@@ -29206,7 +29206,7 @@ int create_debug_files()
 
 	TX_NORMAL_DESC_STATUS =
 	    debugfs_create_file("TX_NORMAL_DESC_STATUS", 744, dir, NULL,
-				&tx_normal_desc_status_fops);
+				&TX_NORMAL_DESC_status_fops);
 	if (TX_NORMAL_DESC_STATUS == NULL) {
 		printk(KERN_INFO
 		       "error while creating file: TX_NORMAL_DESC_STATUS\n");
@@ -29216,7 +29216,7 @@ int create_debug_files()
 
 	RX_NORMAL_DESC_STATUS =
 	    debugfs_create_file("RX_NORMAL_DESC_STATUS", 744, dir, NULL,
-				&rx_normal_desc_status_fops);
+				&RX_NORMAL_DESC_status_fops);
 	if (RX_NORMAL_DESC_STATUS == NULL) {
 		printk(KERN_INFO
 		       "error while creating file: RX_NORMAL_DESC_STATUS\n");

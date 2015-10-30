@@ -628,52 +628,52 @@ irqreturn_t eqos_ch_isr(int irq, void *device_id)
 
 void eqos_get_all_hw_features(struct eqos_prv_data *pdata)
 {
-	unsigned int varMAC_HFR0;
+	unsigned int mac_hfr0;
 	unsigned int mac_hfr1;
-	unsigned int varMAC_HFR2;
+	unsigned int mac_hfr2;
 
 	DBGPR("-->eqos_get_all_hw_features\n");
 
-	MAC_HFR0_RD(varMAC_HFR0);
+	MAC_HFR0_RD(mac_hfr0);
 	MAC_HFR1_RD(mac_hfr1);
-	MAC_HFR2_RD(varMAC_HFR2);
+	MAC_HFR2_RD(mac_hfr2);
 
 	memset(&pdata->hw_feat, 0, sizeof(pdata->hw_feat));
-	pdata->hw_feat.mii_sel = ((varMAC_HFR0 >> 0) & MAC_HFR0_MIISEL_MASK);
-	pdata->hw_feat.gmii_sel = ((varMAC_HFR0 >> 1) & MAC_HFR0_GMIISEL_MASK);
-	pdata->hw_feat.hd_sel = ((varMAC_HFR0 >> 2) & MAC_HFR0_HDSEL_MASK);
-	pdata->hw_feat.pcs_sel = ((varMAC_HFR0 >> 3) & MAC_HFR0_PCSSEL_MASK);
+	pdata->hw_feat.mii_sel = ((mac_hfr0 >> 0) & MAC_HFR0_MIISEL_MASK);
+	pdata->hw_feat.gmii_sel = ((mac_hfr0 >> 1) & MAC_HFR0_GMIISEL_MASK);
+	pdata->hw_feat.hd_sel = ((mac_hfr0 >> 2) & MAC_HFR0_HDSEL_MASK);
+	pdata->hw_feat.pcs_sel = ((mac_hfr0 >> 3) & MAC_HFR0_PCSSEL_MASK);
 #ifdef ENABLE_VLAN_FILTER
 	pdata->hw_feat.vlan_hash_en =
-	    ((varMAC_HFR0 >> 4) & MAC_HFR0_VLANHASEL_MASK);
+	    ((mac_hfr0 >> 4) & MAC_HFR0_VLANHASEL_MASK);
 #else
 	pdata->hw_feat.vlan_hash_en = 0;
 #endif
-	pdata->hw_feat.sma_sel = ((varMAC_HFR0 >> 5) & MAC_HFR0_SMASEL_MASK);
-	pdata->hw_feat.rwk_sel = ((varMAC_HFR0 >> 6) & MAC_HFR0_RWKSEL_MASK);
-	pdata->hw_feat.mgk_sel = ((varMAC_HFR0 >> 7) & MAC_HFR0_MGKSEL_MASK);
-	pdata->hw_feat.mmc_sel = ((varMAC_HFR0 >> 8) & MAC_HFR0_MMCSEL_MASK);
+	pdata->hw_feat.sma_sel = ((mac_hfr0 >> 5) & MAC_HFR0_SMASEL_MASK);
+	pdata->hw_feat.rwk_sel = ((mac_hfr0 >> 6) & MAC_HFR0_RWKSEL_MASK);
+	pdata->hw_feat.mgk_sel = ((mac_hfr0 >> 7) & MAC_HFR0_MGKSEL_MASK);
+	pdata->hw_feat.mmc_sel = ((mac_hfr0 >> 8) & MAC_HFR0_MMCSEL_MASK);
 	pdata->hw_feat.arp_offld_en =
-	    ((varMAC_HFR0 >> 9) & MAC_HFR0_ARPOFFLDEN_MASK);
+	    ((mac_hfr0 >> 9) & MAC_HFR0_ARPOFFLDEN_MASK);
 	pdata->hw_feat.ts_sel =
-	    ((varMAC_HFR0 >> 12) & MAC_HFR0_TSSSEL_MASK);
-	pdata->hw_feat.eee_sel = ((varMAC_HFR0 >> 13) & MAC_HFR0_EEESEL_MASK);
+	    ((mac_hfr0 >> 12) & MAC_HFR0_TSSSEL_MASK);
+	pdata->hw_feat.eee_sel = ((mac_hfr0 >> 13) & MAC_HFR0_EEESEL_MASK);
 	pdata->hw_feat.tx_coe_sel =
-	    ((varMAC_HFR0 >> 14) & MAC_HFR0_TXCOESEL_MASK);
+	    ((mac_hfr0 >> 14) & MAC_HFR0_TXCOESEL_MASK);
 	pdata->hw_feat.rx_coe_sel =
-	    ((varMAC_HFR0 >> 16) & MAC_HFR0_RXCOE_MASK);
+	    ((mac_hfr0 >> 16) & MAC_HFR0_RXCOE_MASK);
 	pdata->hw_feat.mac_addr16_sel =
-	    ((varMAC_HFR0 >> 18) & MAC_HFR0_ADDMACADRSEL_MASK);
+	    ((mac_hfr0 >> 18) & MAC_HFR0_ADDMACADRSEL_MASK);
 	pdata->hw_feat.mac_addr32_sel =
-	    ((varMAC_HFR0 >> 23) & MAC_HFR0_MACADR32SEL_MASK);
+	    ((mac_hfr0 >> 23) & MAC_HFR0_MACADR32SEL_MASK);
 	pdata->hw_feat.mac_addr64_sel =
-	    ((varMAC_HFR0 >> 24) & MAC_HFR0_MACADR64SEL_MASK);
+	    ((mac_hfr0 >> 24) & MAC_HFR0_MACADR64SEL_MASK);
 	pdata->hw_feat.tsstssel =
-	    ((varMAC_HFR0 >> 25) & MAC_HFR0_TSINTSEL_MASK);
+	    ((mac_hfr0 >> 25) & MAC_HFR0_TSINTSEL_MASK);
 	pdata->hw_feat.sa_vlan_ins =
-	    ((varMAC_HFR0 >> 27) & MAC_HFR0_SAVLANINS_MASK);
+	    ((mac_hfr0 >> 27) & MAC_HFR0_SAVLANINS_MASK);
 	pdata->hw_feat.act_phy_sel =
-	    ((varMAC_HFR0 >> 28) & MAC_HFR0_ACTPHYSEL_MASK);
+	    ((mac_hfr0 >> 28) & MAC_HFR0_ACTPHYSEL_MASK);
 
 	pdata->hw_feat.rx_fifo_size =
 	    ((mac_hfr1 >> 0) & MAC_HFR1_RXFIFOSIZE_MASK);
@@ -700,16 +700,16 @@ void eqos_get_all_hw_features(struct eqos_prv_data *pdata)
 	pdata->hw_feat.l3l4_filter_num =
 	    ((mac_hfr1 >> 27) & MAC_HFR1_L3L4FILTERNUM_MASK);
 
-	pdata->hw_feat.rx_q_cnt = ((varMAC_HFR2 >> 0) & MAC_HFR2_RXQCNT_MASK);
-	pdata->hw_feat.tx_q_cnt = ((varMAC_HFR2 >> 6) & MAC_HFR2_TXQCNT_MASK);
+	pdata->hw_feat.rx_q_cnt = ((mac_hfr2 >> 0) & MAC_HFR2_RXQCNT_MASK);
+	pdata->hw_feat.tx_q_cnt = ((mac_hfr2 >> 6) & MAC_HFR2_TXQCNT_MASK);
 	pdata->hw_feat.rx_ch_cnt =
-	    ((varMAC_HFR2 >> 12) & MAC_HFR2_RXCHCNT_MASK);
+	    ((mac_hfr2 >> 12) & MAC_HFR2_RXCHCNT_MASK);
 	pdata->hw_feat.tx_ch_cnt =
-	    ((varMAC_HFR2 >> 18) & MAC_HFR2_TXCHCNT_MASK);
+	    ((mac_hfr2 >> 18) & MAC_HFR2_TXCHCNT_MASK);
 	pdata->hw_feat.pps_out_num =
-	    ((varMAC_HFR2 >> 24) & MAC_HFR2_PPSOUTNUM_MASK);
+	    ((mac_hfr2 >> 24) & MAC_HFR2_PPSOUTNUM_MASK);
 	pdata->hw_feat.aux_snap_num =
-	    ((varMAC_HFR2 >> 28) & MAC_HFR2_AUXSNAPNUM_MASK);
+	    ((mac_hfr2 >> 28) & MAC_HFR2_AUXSNAPNUM_MASK);
 
 	DBGPR("<--eqos_get_all_hw_features\n");
 }
@@ -2204,11 +2204,11 @@ static void eqos_print_rx_tstamp_info(struct s_rx_normal_desc *rxdesc,
 
 	DBGPR_PTP("-->eqos_print_rx_tstamp_info\n");
 
-	/* status in RDES1 is not valid */
-	if (!(rxdesc->RDES3 & EQOS_RDESC3_RS1V))
+	/* status in rdes1 is not valid */
+	if (!(rxdesc->rdes3 & EQOS_RDESC3_RS1V))
 		return;
 
-	ptp_status = rxdesc->RDES1;
+	ptp_status = rxdesc->rdes1;
 	tstamp_dropped = ((ptp_status & 0x8000) ? "YES" : "NO");
 	tstamp_available = ((ptp_status & 0x4000) ? "YES" : "NO");
 	ptp_version = ((ptp_status & 0x2000) ? "v2 (1588-2008)" : "v1 (1588-2002)");
@@ -2315,9 +2315,9 @@ static unsigned char eqos_get_rx_hwtstamp(
 
 	DBGPR_PTP("\nRX_CONTEX_DESC[%d %4p %d RECEIVED FROM DEVICE]"\
 			" = %#x:%#x:%#x:%#x",
-			qinx, rx_context_desc, desc_data->cur_rx, rx_context_desc->RDES0,
-			rx_context_desc->RDES1,
-			rx_context_desc->RDES2, rx_context_desc->RDES3);
+			qinx, rx_context_desc, desc_data->cur_rx, rx_context_desc->rdes0,
+			rx_context_desc->rdes1,
+			rx_context_desc->rdes2, rx_context_desc->rdes3);
 
 	/* check rx tsatmp */
 	for (retry = 0; retry < 10; retry++) {
@@ -2583,12 +2583,12 @@ static void eqos_tx_interrupt(struct net_device *dev,
 }
 
 #ifdef YDEBUG_FILTER
-static void eqos_check_rx_filter_status(struct s_rx_normal_desc *RX_NORMAL_DESC)
+static void eqos_check_rx_filter_status(struct s_rx_normal_desc *rx_normal_desc)
 {
-	u32 rdes2 = RX_NORMAL_DESC->RDES2;
-	u32 rdes3 = RX_NORMAL_DESC->RDES3;
+	u32 rdes2 = rx_normal_desc->rdes2;
+	u32 rdes3 = rx_normal_desc->rdes3;
 
-	/* Receive Status RDES2 Valid ? */
+	/* Receive Status rdes2 Valid ? */
 	if ((rdes3 & 0x8000000) == 0x8000000) {
 		if ((rdes2 & 0x400) == 0x400)
 			printk(KERN_ALERT "ARP pkt received\n");
@@ -2665,16 +2665,16 @@ static inline void eqos_config_rx_csum(struct eqos_prv_data *pdata,
 		struct sk_buff *skb,
 		struct s_rx_normal_desc *rx_normal_desc)
 {
-	UINT varRDES1;
+	UINT rdes1;
 
 	skb->ip_summed = CHECKSUM_NONE;
 
 	if ((pdata->dev_state & NETIF_F_RXCSUM) == NETIF_F_RXCSUM) {
-		/* Receive Status RDES1 Valid ? */
-		if ((rx_normal_desc->RDES3 & EQOS_RDESC3_RS1V)) {
-			/* check(RDES1.IPCE bit) whether device has done csum correctly or not */
-			RX_NORMAL_DESC_RDES1_RD(rx_normal_desc->RDES1, varRDES1);
-			if ((varRDES1 & 0xC8) == 0x0)
+		/* Receive Status rdes1 Valid ? */
+		if ((rx_normal_desc->rdes3 & EQOS_RDESC3_RS1V)) {
+			/* check(rdes1.IPCE bit) whether device has done csum correctly or not */
+			RX_NORMAL_DESC_RDES1_RD(rx_normal_desc->rdes1, rdes1);
+			if ((rdes1 & 0xC8) == 0x0)
 				skb->ip_summed = CHECKSUM_UNNECESSARY;	/* csum done by device */
 		}
 	}
@@ -2687,13 +2687,13 @@ static inline void eqos_get_rx_vlan(struct eqos_prv_data *pdata,
 	USHORT vlan_tag = 0;
 
 	if ((pdata->dev_state & NETIF_F_HW_VLAN_CTAG_RX) == NETIF_F_HW_VLAN_CTAG_RX) {
-		/* Receive Status RDES0 Valid ? */
-		if ((rx_normal_desc->RDES3 & EQOS_RDESC3_RS0V)) {
+		/* Receive Status rdes0 Valid ? */
+		if ((rx_normal_desc->rdes3 & EQOS_RDESC3_RS0V)) {
 			/* device received frame with VLAN Tag or
 			 * double VLAN Tag ? */
-			if (((rx_normal_desc->RDES3 & EQOS_RDESC3_LT) == 0x40000)
-				|| ((rx_normal_desc->RDES3 & EQOS_RDESC3_LT) == 0x50000)) {
-				vlan_tag = rx_normal_desc->RDES0 & 0xffff;
+			if (((rx_normal_desc->rdes3 & EQOS_RDESC3_LT) == 0x40000)
+				|| ((rx_normal_desc->rdes3 & EQOS_RDESC3_LT) == 0x50000)) {
+				vlan_tag = rx_normal_desc->rdes0 & 0xffff;
 				/* insert VLAN tag into skb */
 				__vlan_hwaccel_put_tag(skb, htons(ETH_P_8021Q), vlan_tag);
 				pdata->xstats.rx_vlan_pkt_n++;
@@ -2710,8 +2710,8 @@ static int eqos_check_for_tcp_payload(struct s_rx_normal_desc *rxdesc)
 		u32 pt_type = 0;
 		int ret = 0;
 
-		if (rxdesc->RDES3 & EQOS_RDESC3_RS1V) {
-				pt_type = rxdesc->RDES1 & EQOS_RDESC1_PT;
+		if (rxdesc->rdes3 & EQOS_RDESC3_RS1V) {
+				pt_type = rxdesc->rdes1 & EQOS_RDESC1_PT;
 				if (pt_type == EQOS_RDESC1_PT_TCP)
 						ret = 1;
 		}
@@ -2751,7 +2751,7 @@ static int eqos_clean_split_hdr_rx_irq(
 	struct sk_buff *skb = NULL;
 	int received = 0;
 	struct eqos_rx_buffer *buffer = NULL;
-	struct s_rx_normal_desc *RX_NORMAL_DESC = NULL;
+	struct s_rx_normal_desc *rx_normal_desc = NULL;
 	u16 pkt_len;
 	unsigned short hdr_len = 0;
 	unsigned short payload_len = 0;
@@ -2767,12 +2767,12 @@ static int eqos_clean_split_hdr_rx_irq(
 
 	while (received < quota) {
 		buffer = GET_RX_BUF_PTR(qinx, desc_data->cur_rx);
-		RX_NORMAL_DESC = GET_RX_DESC_PTR(qinx, desc_data->cur_rx);
+		rx_normal_desc = GET_RX_DESC_PTR(qinx, desc_data->cur_rx);
 
 		/* check for data availability */
-		if (!(RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_OWN)) {
+		if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_OWN)) {
 #ifdef EQOS_ENABLE_RX_DESC_DUMP
-			dump_rx_desc(qinx, RX_NORMAL_DESC, desc_data->cur_rx);
+			dump_rx_desc(qinx, rx_normal_desc, desc_data->cur_rx);
 #endif
 			/* assign it to new skb */
 			skb = buffer->skb;
@@ -2791,13 +2791,13 @@ static int eqos_clean_split_hdr_rx_irq(
 
 			/* get the packet length */
 			pkt_len =
-			    (RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_PL);
+			    (rx_normal_desc->rdes3 & EQOS_RDESC3_PL);
 
-			/* FIRST desc and Receive Status RDES2 Valid ? */
-			if ((RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_FD) &&
-				(RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_RS2V)) {
+			/* FIRST desc and Receive Status rdes2 Valid ? */
+			if ((rx_normal_desc->rdes3 & EQOS_RDESC3_FD) &&
+				(rx_normal_desc->rdes3 & EQOS_RDESC3_RS2V)) {
 				/* get header length */
-				hdr_len = (RX_NORMAL_DESC->RDES2 & EQOS_RDESC2_HL);
+				hdr_len = (rx_normal_desc->rdes2 & EQOS_RDESC2_HL);
 				DBGPR("Device has %s HEADER SPLIT: hdr_len = %d\n",
 						(hdr_len ? "done" : "not done"), hdr_len);
 				if (hdr_len)
@@ -2808,17 +2808,17 @@ static int eqos_clean_split_hdr_rx_irq(
 			 * error is valid only for last descriptor(OWN + LD bit set).
 			 * */
 #ifdef HWA_NV_1618922
-			if ((RX_NORMAL_DESC->RDES3 & err_bits) &&
-			    (RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_LD)) {
+			if ((rx_normal_desc->rdes3 & err_bits) &&
+			    (rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
 #else
-			if ((RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_ES) &&
-			    (RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_LD)) {
+			if ((rx_normal_desc->rdes3 & EQOS_RDESC3_ES) &&
+			    (rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
 #endif
 				DBGPR("Error in rcved pkt, failed to pass it to upper layer\n");
-				dump_rx_desc(qinx, RX_NORMAL_DESC, desc_data->cur_rx);
+				dump_rx_desc(qinx, rx_normal_desc, desc_data->cur_rx);
 				dev->stats.rx_errors++;
 				eqos_update_rx_errors(dev,
-					RX_NORMAL_DESC->RDES3);
+					rx_normal_desc->rdes3);
 
 				/* recycle both page/buff and skb */
 				buffer->skb = skb;
@@ -2829,11 +2829,11 @@ static int eqos_clean_split_hdr_rx_irq(
 				goto next_desc;
 			}
 
-			if (!(RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_LD)) {
+			if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
 				intermediate_desc_cnt++;
 				buf2_used = 1;
 				/* this descriptor is only the beginning/middle */
-				if (RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_FD) {
+				if (rx_normal_desc->rdes3 & EQOS_RDESC3_FD) {
 					/* this is the beginning of a chain */
 
 					/* here skb/skb_top may contain
@@ -2878,7 +2878,7 @@ static int eqos_clean_split_hdr_rx_irq(
 							 payload_len, buf2_used);
 				goto next_desc;
 			} else {
-				if (!(RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_FD)) {
+				if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_FD)) {
 					buf2_used = 1;
 					/* end of the chain */
 					if (hdr_len) {
@@ -2942,19 +2942,19 @@ static int eqos_clean_split_hdr_rx_irq(
 				hdr_len = 0;
 			}
 
-			eqos_config_rx_csum(pdata, skb, RX_NORMAL_DESC);
+			eqos_config_rx_csum(pdata, skb, rx_normal_desc);
 
 #ifdef EQOS_ENABLE_VLAN_TAG
-			eqos_get_rx_vlan(pdata, skb, RX_NORMAL_DESC);
+			eqos_get_rx_vlan(pdata, skb, rx_normal_desc);
 #endif
 
 #ifdef YDEBUG_FILTER
-			eqos_check_rx_filter_status(RX_NORMAL_DESC);
+			eqos_check_rx_filter_status(rx_normal_desc);
 #endif
 
 			if ((pdata->hw_feat.tsstssel) && (pdata->hwts_rx_en)) {
 				/* get rx tstamp if available */
-				if (hw_if->rx_tstamp_available(RX_NORMAL_DESC)) {
+				if (hw_if->rx_tstamp_available(rx_normal_desc)) {
 					ret = eqos_get_rx_hwtstamp(pdata,
 							skb, desc_data, qinx);
 					if (ret == 0) {
@@ -2980,7 +2980,7 @@ static int eqos_clean_split_hdr_rx_irq(
 			if (!(dev->features & NETIF_F_GRO) &&
 						(dev->features & NETIF_F_LRO)) {
 					pdata->tcp_pkt =
-							eqos_check_for_tcp_payload(RX_NORMAL_DESC);
+							eqos_check_for_tcp_payload(rx_normal_desc);
 			}
 
 			dev->last_rx = jiffies;
@@ -3045,7 +3045,7 @@ static int eqos_clean_jumbo_rx_irq(struct eqos_prv_data *pdata,
 	struct sk_buff *skb = NULL;
 	int received = 0;
 	struct eqos_rx_buffer *buffer = NULL;
-	struct s_rx_normal_desc *RX_NORMAL_DESC = NULL;
+	struct s_rx_normal_desc *rx_normal_desc = NULL;
 	u16 pkt_len;
 	UCHAR intermediate_desc_cnt = 0;
 	unsigned int buf2_used = 0;
@@ -3058,12 +3058,12 @@ static int eqos_clean_jumbo_rx_irq(struct eqos_prv_data *pdata,
 
 	while (received < quota) {
 		buffer = GET_RX_BUF_PTR(qinx, desc_data->cur_rx);
-		RX_NORMAL_DESC = GET_RX_DESC_PTR(qinx, desc_data->cur_rx);
+		rx_normal_desc = GET_RX_DESC_PTR(qinx, desc_data->cur_rx);
 
 		/* check for data availability */
-		if (!(RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_OWN)) {
+		if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_OWN)) {
 #ifdef EQOS_ENABLE_RX_DESC_DUMP
-			dump_rx_desc(qinx, RX_NORMAL_DESC, desc_data->cur_rx);
+			dump_rx_desc(qinx, rx_normal_desc, desc_data->cur_rx);
 #endif
 			/* assign it to new skb */
 			skb = buffer->skb;
@@ -3082,23 +3082,23 @@ static int eqos_clean_jumbo_rx_irq(struct eqos_prv_data *pdata,
 #endif
 			/* get the packet length */
 			pkt_len =
-				(RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_PL);
+				(rx_normal_desc->rdes3 & EQOS_RDESC3_PL);
 
 			/* check for bad packet,
 			 * error is valid only for last descriptor (OWN + LD bit set).
 			 * */
 #ifdef HWA_NV_1618922
-			if ((RX_NORMAL_DESC->RDES3 & err_bits) &&
-			    (RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_LD)) {
+			if ((rx_normal_desc->rdes3 & err_bits) &&
+			    (rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
 #else
-			if ((RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_ES) &&
-			    (RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_LD)) {
+			if ((rx_normal_desc->rdes3 & EQOS_RDESC3_ES) &&
+			    (rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
 #endif
 				DBGPR("Error in rcved pkt, failed to pass it to upper layer\n");
-				dump_rx_desc(qinx, RX_NORMAL_DESC, desc_data->cur_rx);
+				dump_rx_desc(qinx, rx_normal_desc, desc_data->cur_rx);
 				dev->stats.rx_errors++;
 				eqos_update_rx_errors(dev,
-					RX_NORMAL_DESC->RDES3);
+					rx_normal_desc->rdes3);
 
 				/* recycle both page and skb */
 				buffer->skb = skb;
@@ -3109,11 +3109,11 @@ static int eqos_clean_jumbo_rx_irq(struct eqos_prv_data *pdata,
 				goto next_desc;
 			}
 
-			if (!(RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_LD)) {
+			if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
 				intermediate_desc_cnt++;
 				buf2_used = 1;
 				/* this descriptor is only the beginning/middle */
-				if (RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_FD) {
+				if (rx_normal_desc->rdes3 & EQOS_RDESC3_FD) {
 					/* this is the beginning of a chain */
 					desc_data->skb_top = skb;
 					skb_fill_page_desc(skb, 0,
@@ -3151,7 +3151,7 @@ static int eqos_clean_jumbo_rx_irq(struct eqos_prv_data *pdata,
 							 buf2_used);
 				goto next_desc;
 			} else {
-				if (!(RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_FD)) {
+				if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_FD)) {
 					/* end of the chain */
 					pkt_len =
 						(pkt_len - (pdata->rx_buffer_len * intermediate_desc_cnt));
@@ -3231,19 +3231,19 @@ static int eqos_clean_jumbo_rx_irq(struct eqos_prv_data *pdata,
 				intermediate_desc_cnt = 0;
 			}
 
-			eqos_config_rx_csum(pdata, skb, RX_NORMAL_DESC);
+			eqos_config_rx_csum(pdata, skb, rx_normal_desc);
 
 #ifdef EQOS_ENABLE_VLAN_TAG
-			eqos_get_rx_vlan(pdata, skb, RX_NORMAL_DESC);
+			eqos_get_rx_vlan(pdata, skb, rx_normal_desc);
 #endif
 
 #ifdef YDEBUG_FILTER
-			eqos_check_rx_filter_status(RX_NORMAL_DESC);
+			eqos_check_rx_filter_status(rx_normal_desc);
 #endif
 
 			if ((pdata->hw_feat.tsstssel) && (pdata->hwts_rx_en)) {
 				/* get rx tstamp if available */
-				if (hw_if->rx_tstamp_available(RX_NORMAL_DESC)) {
+				if (hw_if->rx_tstamp_available(rx_normal_desc)) {
 					ret = eqos_get_rx_hwtstamp(pdata,
 							skb, desc_data, qinx);
 					if (ret == 0) {
@@ -3269,7 +3269,7 @@ static int eqos_clean_jumbo_rx_irq(struct eqos_prv_data *pdata,
 			if (!(dev->features & NETIF_F_GRO) &&
 						(dev->features & NETIF_F_LRO)) {
 					pdata->tcp_pkt =
-							eqos_check_for_tcp_payload(RX_NORMAL_DESC);
+							eqos_check_for_tcp_payload(rx_normal_desc);
 			}
 
 			dev->last_rx = jiffies;
@@ -3339,7 +3339,7 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 	struct sk_buff *skb = NULL;
 	int received = 0;
 	struct eqos_rx_buffer *buffer = NULL;
-	struct s_rx_normal_desc *RX_NORMAL_DESC = NULL;
+	struct s_rx_normal_desc *rx_normal_desc = NULL;
 	UINT pkt_len;
 #ifdef HWA_NV_1618922
 	UINT err_bits = 0x1200000;
@@ -3351,12 +3351,12 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 
 	while (received < quota) {
 		buffer = GET_RX_BUF_PTR(qinx, desc_data->cur_rx);
-		RX_NORMAL_DESC = GET_RX_DESC_PTR(qinx, desc_data->cur_rx);
+		rx_normal_desc = GET_RX_DESC_PTR(qinx, desc_data->cur_rx);
 
 		/* check for data availability */
-		if (!(RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_OWN)) {
+		if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_OWN)) {
 #ifdef EQOS_ENABLE_RX_DESC_DUMP
-			dump_rx_desc(qinx, RX_NORMAL_DESC, desc_data->cur_rx);
+			dump_rx_desc(qinx, rx_normal_desc, desc_data->cur_rx);
 #endif
 			/* assign it to new skb */
 			skb = buffer->skb;
@@ -3370,7 +3370,7 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 
 			/* get the packet length */
 			pkt_len =
-			    (RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_PL);
+			    (rx_normal_desc->rdes3 & EQOS_RDESC3_PL);
 
 #ifdef EQOS_ENABLE_RX_PKT_DUMP
 			print_pkt(skb, pkt_len, 0, (desc_data->cur_rx));
@@ -3384,11 +3384,11 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 			 * error is valid only for last descriptor (OWN + LD bit set).
 			 * */
 #ifdef HWA_NV_1618922
-			if (!(RX_NORMAL_DESC->RDES3 & err_bits) &&
-			    (RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_LD)) {
+			if (!(rx_normal_desc->rdes3 & err_bits) &&
+			    (rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
 #else
-			if (!(RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_ES) &&
-			    (RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_LD)) {
+			if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_ES) &&
+			    (rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
 #endif
 				/* pkt_len = pkt_len - 4; */ /* CRC stripping */
 
@@ -3415,19 +3415,19 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 				skb_put(skb, pkt_len);
 
 				eqos_config_rx_csum(pdata, skb,
-							RX_NORMAL_DESC);
+							rx_normal_desc);
 
 #ifdef EQOS_ENABLE_VLAN_TAG
-				eqos_get_rx_vlan(pdata, skb, RX_NORMAL_DESC);
+				eqos_get_rx_vlan(pdata, skb, rx_normal_desc);
 #endif
 
 #ifdef YDEBUG_FILTER
-				eqos_check_rx_filter_status(RX_NORMAL_DESC);
+				eqos_check_rx_filter_status(rx_normal_desc);
 #endif
 
 				if ((pdata->hw_feat.tsstssel) && (pdata->hwts_rx_en)) {
 					/* get rx tstamp if available */
-					if (hw_if->rx_tstamp_available(RX_NORMAL_DESC)) {
+					if (hw_if->rx_tstamp_available(rx_normal_desc)) {
 						ret = eqos_get_rx_hwtstamp(pdata,
 								skb, desc_data, qinx);
 						if (ret == 0) {
@@ -3455,7 +3455,7 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 				if (!(dev->features & NETIF_F_GRO) &&
 						(dev->features & NETIF_F_LRO)) {
 						pdata->tcp_pkt =
-								eqos_check_for_tcp_payload(RX_NORMAL_DESC);
+								eqos_check_for_tcp_payload(rx_normal_desc);
 				}
 
 				dev->last_rx = jiffies;
@@ -3465,15 +3465,15 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 				eqos_receive_skb(pdata, dev, skb, qinx);
 				received++;
 			} else {
-				dump_rx_desc(qinx, RX_NORMAL_DESC, desc_data->cur_rx);
-				if (!(RX_NORMAL_DESC->RDES3 & EQOS_RDESC3_LD))
+				dump_rx_desc(qinx, rx_normal_desc, desc_data->cur_rx);
+				if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_LD))
 					DBGPR("Received oversized pkt, spanned across multiple desc\n");
 
 				/* recycle skb */
 				buffer->skb = skb;
 				dev->stats.rx_errors++;
 				eqos_update_rx_errors(dev,
-					RX_NORMAL_DESC->RDES3);
+					rx_normal_desc->rdes3);
 			}
 
 			desc_data->dirty_rx++;
@@ -6829,15 +6829,15 @@ void dump_tx_desc(struct eqos_prv_data *pdata, int first_desc_idx,
 	if (first_desc_idx == last_desc_idx) {
 		desc = GET_TX_DESC_PTR(qinx, first_desc_idx);
 
-		TX_NORMAL_DESC_TDES3_CTXT_RD(desc->TDES3, ctxt);
+		TX_NORMAL_DESC_TDES3_CTXT_RD(desc->tdes3, ctxt);
 
 		printk(KERN_ALERT "\n%s[%02d %4p %03d %s] = %#x:%#x:%#x:%#x\n",
-		       (ctxt == 1) ? "TX_CONTXT_DESC" : "TX_NORMAL_DESC",
+		       (ctxt == 1) ? "TX_CONTXT_DESC" : "tx_normal_desc",
 		       qinx, desc, first_desc_idx,
 		       ((flag == 1) ? "QUEUED FOR TRANSMISSION" :
 			((flag == 0) ? "FREED/FETCHED BY DEVICE" : "DEBUG DESC DUMP")),
-			desc->TDES0, desc->TDES1,
-			desc->TDES2, desc->TDES3);
+			desc->tdes0, desc->tdes1,
+			desc->tdes2, desc->tdes3);
 	} else {
 		int lp_cnt;
 		if (first_desc_idx > last_desc_idx)
@@ -6848,14 +6848,14 @@ void dump_tx_desc(struct eqos_prv_data *pdata, int first_desc_idx,
 		for (i = first_desc_idx; lp_cnt >= 0; lp_cnt--) {
 			desc = GET_TX_DESC_PTR(qinx, i);
 
-			TX_NORMAL_DESC_TDES3_CTXT_RD(desc->TDES3, ctxt);
+			TX_NORMAL_DESC_TDES3_CTXT_RD(desc->tdes3, ctxt);
 
 			printk(KERN_ALERT "\n%s[%02d %4p %03d %s] = %#x:%#x:%#x:%#x\n",
-			       (ctxt == 1) ? "TX_CONTXT_DESC" : "TX_NORMAL_DESC",
+			       (ctxt == 1) ? "TX_CONTXT_DESC" : "tx_normal_desc",
 			       qinx, desc, i,
 			       ((flag == 1) ? "QUEUED FOR TRANSMISSION" :
-				"FREED/FETCHED BY DEVICE"), desc->TDES0,
-			       desc->TDES1, desc->TDES2, desc->TDES3);
+				"FREED/FETCHED BY DEVICE"), desc->tdes0,
+			       desc->tdes1, desc->tdes2, desc->tdes3);
 			INCR_TX_DESC_INDEX(i, 1);
 		}
 	}
@@ -6874,10 +6874,10 @@ void dump_tx_desc(struct eqos_prv_data *pdata, int first_desc_idx,
 
 void dump_rx_desc(UINT qinx, struct s_rx_normal_desc *desc, int desc_idx)
 {
-	printk(KERN_ALERT "\nRX_NORMAL_DESC[%02d %4p %03d RECEIVED FROM DEVICE]"\
+	printk(KERN_ALERT "\nrx_normal_desc[%02d %4p %03d RECEIVED FROM DEVICE]"\
 		" = %#x:%#x:%#x:%#x",
-		qinx, desc, desc_idx, desc->RDES0, desc->RDES1,
-		desc->RDES2, desc->RDES3);
+		qinx, desc, desc_idx, desc->rdes0, desc->rdes1,
+		desc->rdes2, desc->rdes3);
 }
 
 /*!

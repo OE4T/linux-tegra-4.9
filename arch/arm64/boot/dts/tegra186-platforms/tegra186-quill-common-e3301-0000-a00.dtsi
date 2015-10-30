@@ -64,10 +64,12 @@
 
 	xhci@3530000 {
 		status = "okay";
-		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
+		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
+			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
+			<&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
 			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(2)>,
 			<&padctl_uphy TEGRA_PADCTL_UPHY_HSIC_P(0)>;
-		phy-names = "utmi-2", "usb3-2", "hsic-0";
+		phy-names = "utmi-0", "usb3-1", "utmi-2", "usb3-2", "hsic-0";
 	};
 
 	external-connection {

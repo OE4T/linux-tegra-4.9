@@ -20,7 +20,6 @@
 		reg = <0x0 0x03100000 0x0 0x40>;
 		reg-shift = <2>;
 		interrupts = <0 TEGRA186_IRQ_UARTA 0x04>;
-		clock-frequency = <408000000>;
 		nvidia,memory-clients = <14>;
 		nvidia,dma-request-selector = <&gpcdma 8>;
 		dmas = <&gpcdma 8>, <&gpcdma 8>;

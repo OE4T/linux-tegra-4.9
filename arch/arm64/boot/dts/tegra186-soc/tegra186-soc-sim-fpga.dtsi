@@ -203,6 +203,7 @@
 
 	serial@3100000 {
 		status = "okay";
+		clock-frequency = <408000000>;
 	};
 
 	pinmux@2430000 {

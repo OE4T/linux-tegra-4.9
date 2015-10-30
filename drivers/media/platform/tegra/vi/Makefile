@@ -10,6 +10,7 @@ endif
 ifneq (,$(filter $(CONFIG_VIDEO_TEGRA_VI),y m))
 obj-y += vi_irq.o
 obj-y += tegra_vi.o
+obj-y += camera_common.o
 endif
 
 nvhost-vi-objs = \

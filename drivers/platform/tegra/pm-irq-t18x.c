@@ -377,6 +377,11 @@ int tegra_pm_irq_set_wake_type(int wake, int flow_type)
 	return wke_irq_set_wake_level(wake, flow_type);
 }
 
+int tegra_pm_irq_set_wake(int wake, int enable)
+{
+	return wke_irq_set_wake(wake, enable);
+}
+
 int pm_irq_init(void)
 {
 	/* Hook into GIC ops */

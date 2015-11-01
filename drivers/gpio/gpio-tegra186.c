@@ -209,6 +209,12 @@ static inline void tegra_gpio_update(u32 gpio, u32 reg_offset,
 	__raw_writel(rval, (tegra_gpio->regs[address_map[port][0]]) + addr);
 }
 
+int tegra_gpio_get_bank_int_nr(int gpio)
+{
+	return gpio_to_irq(gpio);
+}
+EXPORT_SYMBOL(tegra_gpio_get_bank_int_nr);
+
 /*
  * This function will return if the GPIO is accessible by CPU
  */
@@ -437,6 +443,19 @@ static int tegra_gpio_irq_set_type(struct irq_data *d, unsigned int type)
 	return 0;
 }
 
+static int tegra_gpio_irq_set_wake(struct irq_data *d, unsigned int enable)
+{
+	int ret = 0;
+	int wake;
+
+	wake = tegra_gpio_to_wake(d->hwirq);
+	ret = tegra_pm_irq_set_wake(wake, enable);
+	if (ret)
+		pr_err("Failed gpio lp0 %s for irq=%d, error=%d\n",
+			(enable ? "enable" : "disable"), d->irq, ret);
+	return ret;
+}
+
 static struct gpio_chip tegra_gpio_chip = {
 	.label			= "tegra-gpio",
 	.request		= tegra_gpio_request,
@@ -456,6 +475,7 @@ static struct irq_chip tegra_gpio_irq_chip = {
 	.irq_mask	= tegra_gpio_irq_mask,
 	.irq_unmask	= tegra_gpio_irq_unmask,
 	.irq_set_type	= tegra_gpio_irq_set_type,
+	.irq_set_wake	= tegra_gpio_irq_set_wake,
 	.flags		= IRQCHIP_MASK_ON_SUSPEND,
 };
 

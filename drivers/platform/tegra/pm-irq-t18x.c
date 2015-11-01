@@ -347,7 +347,7 @@ static int pm_irq_set_type(struct irq_data *d, unsigned int flow_type)
 	return err;
 }
 
-static int pm_irq_set_wake(struct irq_data *d, unsigned int enable)
+int pm_irq_set_wake(struct irq_data *d, unsigned int enable)
 {
 	int i;
 	int ret;
@@ -384,6 +384,7 @@ int tegra_pm_irq_set_wake(int wake, int enable)
 
 int pm_irq_init(void)
 {
+	tegra_wakeup_table_init();
 	/* Hook into GIC ops */
 	gic_arch_extn.irq_set_type = pm_irq_set_type;
 	gic_arch_extn.irq_set_wake = pm_irq_set_wake;

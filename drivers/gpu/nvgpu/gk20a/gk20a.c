@@ -552,6 +552,7 @@ void gk20a_pbus_isr(struct gk20a *g)
 			bus_intr_0_pri_timeout_m())) {
 		gk20a_err(dev_from_gk20a(g), "pmc_enable : 0x%x",
 			gk20a_readl(g, mc_enable_r()));
+		gk20a_err(dev_from_gk20a(g), "NV_PBUS_INTR_0 : 0x%x", val);
 		gk20a_err(&g->dev->dev,
 			"NV_PTIMER_PRI_TIMEOUT_SAVE_0: 0x%x\n",
 			gk20a_readl(g, timer_pri_timeout_save_0_r()));

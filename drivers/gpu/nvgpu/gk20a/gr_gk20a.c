@@ -2779,6 +2779,14 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		u32 lockboost_mask;
 		u32 lockboost;
 
+		if (support_gk20a_pmu(g->dev)) {
+			err = gk20a_pmu_disable_elpg(g);
+			if (err) {
+				gk20a_err(dev_from_gk20a(g),
+						"failed to set disable elpg");
+			}
+		}
+
 		tex_lock_disable_mask =
 			gr_gpcs_tpcs_sm_sch_texlock_tex_hash_m()         |
 			gr_gpcs_tpcs_sm_sch_texlock_tex_hash_tile_m()    |
@@ -2824,6 +2832,9 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 			gr_gk20a_ctx_patch_write_end(g, ch_ctx);
 
 		args->flags |= NVGPU_ALLOC_OBJ_FLAGS_LOCKBOOST_ZERO;
+
+		if (support_gk20a_pmu(g->dev))
+			gk20a_pmu_enable_elpg(g);
 	}
 
 	/* init golden image, ELPG enabled after this is done */

@@ -3735,13 +3735,11 @@ static const struct tegra_pingroup tegra186_groups[] = {
 
 static int tegra186_pinctrl_suspend(u32 *pg_data)
 {
-	WARN_ON(1);
 	return 0;
 }
 
 static void tegra186_pinctrl_resume(u32 *pg_data)
 {
-	WARN_ON(1);
 }
 
 static int tegra186_gpio_request_enable(unsigned pin)

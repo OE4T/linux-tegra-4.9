@@ -69,6 +69,11 @@
 				gpio-output-high = <14>;
 				status = "okay";
 			};
+			enable_fan_tach: pwm_mux {
+				gpio-output-low = <0>;
+				gpio-output-high = <1>;
+				status = "disabled";
+			};
 		};
 	};
 

@@ -36,6 +36,18 @@
 					iopower-audio-hv-supply = <&spmic_ldo1>;
 				};
 			};
+			override@2 {
+				target = <&enable_fan_tach>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@3 {
+				target = <&tegra_pwm5>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
 		};
 	};
 };

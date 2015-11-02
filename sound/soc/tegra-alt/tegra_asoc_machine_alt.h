@@ -268,6 +268,10 @@ unsigned int tegra_machine_get_codec_dai_link_idx(const char *codec_name);
 
 unsigned int tegra_machine_get_bclk_ratio(
 	struct snd_soc_pcm_runtime *rtd);
+unsigned int tegra_machine_get_rx_mask(
+	struct snd_soc_pcm_runtime *rtd);
+unsigned int tegra_machine_get_tx_mask(
+	struct snd_soc_pcm_runtime *rtd);
 
 void tegra_machine_set_num_dai_links(unsigned int val);
 
@@ -282,5 +286,7 @@ void tegra_machine_set_machine_codec_conf(struct snd_soc_codec_conf *codec_conf)
 struct snd_soc_codec_conf *tegra_machine_get_machine_codec_conf(void);
 
 unsigned int *tegra_machine_get_bclk_ratio_array(void);
+unsigned int *tegra_machine_get_rx_mask_array(void);
+unsigned int *tegra_machine_get_tx_mask_array(void);
 
 #endif

@@ -1651,3 +1651,52 @@ err:
 	return -EINVAL;
 }
 EXPORT_SYMBOL_GPL(tegra_machine_get_bclk_ratio_t18x);
+
+unsigned int tegra_machine_get_rx_mask_t18x(
+	struct snd_soc_pcm_runtime *rtd)
+{
+	struct snd_soc_dai_link *codec_dai_link = rtd->dai_link;
+	char *codec_name = (char *)codec_dai_link->name;
+	unsigned int idx =
+		tegra_machine_get_codec_dai_link_idx_t18x(codec_name);
+	unsigned int *rx_mask =
+		tegra_machine_get_rx_mask_array();
+	if (idx == -EINVAL)
+		goto err;
+
+	if (!rx_mask)
+		goto err;
+
+	idx = idx - TEGRA186_XBAR_DAI_LINKS;
+
+	return rx_mask[idx];
+
+err:
+	return -EINVAL;
+}
+EXPORT_SYMBOL_GPL(tegra_machine_get_rx_mask_t18x);
+
+unsigned int tegra_machine_get_tx_mask_t18x(
+	struct snd_soc_pcm_runtime *rtd)
+{
+	struct snd_soc_dai_link *codec_dai_link = rtd->dai_link;
+	char *codec_name = (char *)codec_dai_link->name;
+	unsigned int idx =
+		tegra_machine_get_codec_dai_link_idx_t18x(codec_name);
+	unsigned int *tx_mask =
+		tegra_machine_get_tx_mask_array();
+
+	if (idx == -EINVAL)
+		goto err;
+
+	if (!tx_mask)
+		goto err;
+
+	idx = idx - TEGRA186_XBAR_DAI_LINKS;
+
+	return tx_mask[idx];
+
+err:
+	return -EINVAL;
+}
+EXPORT_SYMBOL_GPL(tegra_machine_get_tx_mask_t18x);

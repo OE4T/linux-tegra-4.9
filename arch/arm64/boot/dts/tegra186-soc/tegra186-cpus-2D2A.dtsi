@@ -68,5 +68,7 @@
 			     /* The boot loader may override these two. */
 			     <0 296 0x4>,
 			     <0 297 0x4>;
+		interrupt-affinity = <&{/cpus/cpu@0} &{/cpus/cpu@1}
+				      &{/cpus/cpu@2} &{/cpus/cpu@3}>;
 	};
 };

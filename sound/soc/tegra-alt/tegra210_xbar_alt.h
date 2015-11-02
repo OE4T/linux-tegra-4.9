@@ -220,6 +220,7 @@ struct tegra210_xbar {
 	struct clk *clk;
 	struct clk *clk_parent;
 	struct clk *clk_ape;
+	struct clk *clk_apb2ape;
 	struct regmap *regmap;
 	const struct tegra210_xbar_soc_data *soc_data;
 };

@@ -174,12 +174,19 @@ $echo 0x??1B > nvs
 writes ?? to the gpio_rdy GPIO.
 $echo 0x1A > nvs
 switches the gpio_rdy GPIO to input.
+#echo 0x19 > nvs
+toggles SAR GPIO status message spew.
+#echo 0x18 > nvs
+toggles external state status message spew.
+The external state is the sar_external_status function that an external driver
+can call to notify the IQS driver of an external status.  It's purpose is for
+WARs and is therefore defined by the WAR implemented.
 
 For overall status information:
 #echo 10 > nvs
 #cat nvs
 The results will be something like:
-	IQS driver v. 17
+	IQS driver v. 19
 	ATI redo count=0
 	os_options=0
 	stream_mode=2
@@ -293,12 +300,21 @@ Optional properties:
 		           1 = ASSERT: GPIO is asserted according to
 		                       gpio_sar_assert_polarity.
 - os_options: If the IQS device is to be controlled by the OS then set this
-	      value to 1.  The default is 0.
-  Note: The SAR_proximity and SAR_touch sensors can still be exposed to
-	the OS via the NVS framework's NvspDriver structure.  However, unless
-	os_options is > 0, the OS will be tricked into thinking is has control.
-	In other words, when os_options is 0 (the default), the device will
-	always be enabled.
+	      value to 2.  The default is 0.
+	      The options are:
+	      0 = IQS_OS_NONE: SAR sensor names all begin with "SAR".
+	      1 = IQS_OS_VISIBLE: SAR sensor names all begin with "sar".
+	      2 = IQS_OS_CONTROL: SAR sensor names all begin with "sar" and the
+	                          OS can control enable.
+  Note: The visibility to the OS is controlled by changing the case of the
+        "SAR" part of the sensor's name.  The NVS HAL looks for the lower case
+	version of the sensor name via the NVS framework's NvspDriver
+	structure.  When os_options is > 0 the NVS HAL is able to find the SAR
+	sensors and populate the OS sensor list.  However, unless os_options is
+	set to IQS_OS_CONTROL, the OS will be tricked into thinking it has
+	control.  In other words, if os_options is not set to IQS_OS_CONTROL
+	the SAR is automatically enabled when the driver loads and the enable
+	control is ignored.
 - irq_trigger_edge: Set to 1 if interrupt is to configured as
 		    IRQF_TRIGGER_FALLING.  Otherwise the interrupt will be
 		    configured as IRQF_TRIGGER_LOW.  Using IRQF_TRIGGER_LOW

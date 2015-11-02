@@ -27,11 +27,15 @@
 #include <linux/gpio.h>
 #include <linux/of.h>
 #include <linux/of_gpio.h>
+#include <linux/string.h>
+#include <linux/ctype.h>
 #include <linux/nvs.h>
 #include <linux/nvs_proximity.h>
+#include <linux/nvs_iqs2x3.h>
+#include <asm/atomic.h>
 
 
-#define IQS_DRIVER_VERSION		(17)
+#define IQS_DRIVER_VERSION		(19)
 #define IQS_VENDOR			"Azoteq"
 #define IQS_NAME			"iqs2x3"
 #define IQS_NAME_IQS253			"iqs253"
@@ -80,12 +84,15 @@
 #define IQS_DEV_DELTA3			(6)
 #define IQS_DEV_N			(7)
 #define IQS_CH_N			(4)
-/* to allow pin-head's code style rules: */
+/* to allow code style rules */
 #define IQS_FS_NANO			NVS_FLOAT_SIGNIFICANCE_NANO
 #define IQS_FS_MICRO			NVS_FLOAT_SIGNIFICANCE_MICRO
 /* delta test conditions */
 #define IQS_DELTA_TEST0_N		(3)
 #define IQS_DELTA_TEST1_N		(4)
+/* debug message spew flags */
+#define IQS_STS_GPIO_SAR		(1 << NVS_STS_EXT_N)
+#define IQS_STS_EXT_STATE		(1 << (NVS_STS_EXT_N + 1))
 
 /* regulator names in order of powering on */
 static char *iqs_vregs[] = {
@@ -106,7 +113,7 @@ static const struct i2c_device_id iqs_i2c_device_id[] = {
 	{}
 };
 
-static const char * const iqs_sensor_cfg_name[] = {
+static char * const iqs_snsr_names[] = {
 	IQS_NAME_SAR_PROXIMITY,
 	IQS_NAME_SAR_TOUCH,
 	IQS_NAME_SAR_DELTA,
@@ -120,14 +127,22 @@ static const char * const iqs_sensor_cfg_name[] = {
 enum IQS_GPIO_SAR_DBG {
 	IQS_GPIO_SAR_DBG_I2C = IQS_DEV_N, /* IQS_GPIO_SAR_DBG_I2C_STR align */
 	/* Additional debug uses for the SAR GPIO can be added here.  Be sure
-	 * to add the gpio_sar_dev_asrt enable string to iqs_sensor_cfg_name.
+	 * to add the gpio_sar_dev_asrt enable string to iqs_snsr_names.
 	 */
 	IQS_GPIO_SAR_DBG_N,
 };
 
+enum IQS_OS {
+	IQS_OS_NONE = 0,
+	IQS_OS_VISIBLE,			/* OS sees sensors */
+	IQS_OS_CONTROL,			/* OS has control of sensors */
+};
+
 enum IQS_INFO {
 	IQS_INFO_STS = 0,
-	IQS_INFO_GPIO_RDY_INPUT = 16,
+	IQS_INFO_EXT_STATE_SPEW = 14,
+	IQS_INFO_GPIO_SAR_SPEW,
+	IQS_INFO_GPIO_RDY_INPUT,
 	IQS_INFO_GPIO_RDY_OUTPUT,
 	IQS_INFO_GPIO_SAR_OUTPUT,
 	IQS_INFO_REG_WR,
@@ -566,6 +581,10 @@ struct iqs_state {
 };
 
 
+static int iqs_ext_sts;
+static atomic_t iqs_ext_sts_chg = ATOMIC_INIT(0);
+
+
 static void iqs_err(struct iqs_state *st)
 {
 	st->errs++;
@@ -679,7 +698,8 @@ static int iqs_gpio_sar(struct iqs_state *st, int assert)
 					gpio_sar_val, ret);
 			} else {
 				st->gpio_sar_val = gpio_sar_val;
-				if (st->sts & NVS_STS_SPEW_MSG)
+				if (st->sts & (NVS_STS_SPEW_MSG |
+					       IQS_STS_GPIO_SAR))
 					dev_info(&st->i2c->dev,
 					       "%s assert=%d gpio_sar %d=%d\n",
 						 __func__, assert,
@@ -1367,10 +1387,21 @@ static int iqs_rd_snsr(struct iqs_state *st, s64 ts, int dev,
 	if (st->sts & NVS_STS_SPEW_DATA)
 		dev_info(&st->i2c->dev,
 			 "%s: hw=%hu rp=%hu %lld  lo_n=%u hi_n=%u  %lldns\n",
-			 iqs_sensor_cfg_name[dev], hw, rp, ts,
+			 iqs_snsr_names[dev], hw, rp, ts,
 			 st->dbnc_lo_n[dev], st->dbnc_hi_n[dev],
 			 ts - st->prox[IQS_DEV_PROX].timestamp);
 	return ret;
+}
+
+static int iqs_ati_redo(struct iqs_state *st)
+{
+	iqs_wr(st, st->wr_ati_redo);
+	st->ati_redo_n++;
+	if (!st->ati_redo_n)
+		st->ati_redo_n--;
+	/* restart read cycle to get status */
+	st->op_i = st->op_read_n;
+	return RET_NO_CHANGE;
 }
 
 static int iqs_rd(struct iqs_state *st, bool poll)
@@ -1388,6 +1419,8 @@ static int iqs_rd(struct iqs_state *st, bool poll)
 		iqs_i2c_rd(st, st->op_read_reg[i], 0);
 	ret = iqs_i2c(st, true);
 #else /* IQS_I2C_M_NO_RD_ACK */
+	if (atomic_xchg(&iqs_ext_sts_chg, 0))
+		iqs_ati_redo(st);
 	st->op_i++;
 	if (st->op_i >= st->op_read_n) {
 		st->op_i = 0; /* restart read cycle */
@@ -1436,16 +1469,9 @@ static int iqs_rd(struct iqs_state *st, bool poll)
 				return RET_NO_CHANGE;
 			}
 
-			if (iqs_bits_rd(st, &st->hal_bit->ati_err, 0)) {
+			if (iqs_bits_rd(st, &st->hal_bit->ati_err, 0))
 				/* ATI redo on next I2C access */
-				iqs_wr(st, st->wr_ati_redo);
-				st->ati_redo_n++;
-				if (!st->ati_redo_n)
-					st->ati_redo_n--;
-				/* restart read cycle to get status */
-				st->op_i = st->op_read_n;
-				return RET_NO_CHANGE;
-			}
+				return iqs_ati_redo(st);
 		}
 
 		/* test for partial ATI */
@@ -1690,7 +1716,8 @@ static int iqs_enable_os(void *client, int snsr_id, int enable)
 	if (enable < 0)
 		return st->enabled & (1 << snsr_id);
 
-	if (st->os || st->sts & (NVS_STS_SHUTDOWN | NVS_STS_SUSPEND))
+	if (st->os == IQS_OS_CONTROL || st->sts & (NVS_STS_SHUTDOWN |
+						   NVS_STS_SUSPEND))
 		return iqs_enable(st, snsr_id, enable);
 
 	if (enable)
@@ -1804,6 +1831,18 @@ static int iqs_nvs_write(void *client, int snsr_id, unsigned int nvs)
 	case IQS_INFO_STS:
 	case IQS_INFO_DBG:
 		st->dbg = nvs;
+		return 0;
+
+	case IQS_INFO_EXT_STATE_SPEW:
+		st->sts ^= IQS_STS_EXT_STATE;
+		dev_info(&st->i2c->dev, "%s EXT_STATE_SPEW=%x\n",
+			 __func__, !!(st->sts & IQS_STS_EXT_STATE));
+		return 0;
+
+	case IQS_INFO_GPIO_SAR_SPEW:
+		st->sts ^= IQS_STS_GPIO_SAR;
+		dev_info(&st->i2c->dev, "%s GPIO_SAR_SPEW=%x\n",
+			 __func__, !!(st->sts & IQS_STS_GPIO_SAR));
 		return 0;
 
 	case IQS_INFO_GPIO_RDY_INPUT:
@@ -1991,7 +2030,7 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 			for (j = dev; j < n; j++) {
 				t += sprintf(buf + t, "%s %s enable:\n",
 					     iqs_i2c_device_id[i].name,
-					     iqs_sensor_cfg_name[j]);
+					     iqs_snsr_names[j]);
 				t += iqs_nvs_dbg_db(st, buf, t,
 						    st->dt_en[i][j]);
 			}
@@ -2000,7 +2039,7 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 			for (j = dev; j < n; j++) {
 				t += sprintf(buf + t, "%s %s disable:\n",
 					     iqs_i2c_device_id[i].name,
-					     iqs_sensor_cfg_name[j]);
+					     iqs_snsr_names[j]);
 				t += iqs_nvs_dbg_db(st, buf, t,
 						    st->dt_dis[i][j]);
 			}
@@ -2043,9 +2082,9 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 		t += sprintf(buf + t, "gpio_sar_assert_polarity=%d\n",
 			     st->gpio_sar_asrt_pol);
 		t += sprintf(buf + t, "gpio_sar_dev_assert=%s\n",
-			     iqs_sensor_cfg_name[st->gpio_sar_dev_asrt]);
+			     iqs_snsr_names[st->gpio_sar_dev_asrt]);
 		t += sprintf(buf + t, "gpio_sar_dev_deassert=%s\n",
-			     iqs_sensor_cfg_name[st->gpio_sar_dev_dasrt]);
+			     iqs_snsr_names[st->gpio_sar_dev_dasrt]);
 		t += sprintf(buf + t, "gpio_sar_suspend_assert=%d\n",
 			     st->gpio_sar_sus_asrt);
 		t += sprintf(buf + t, "deferred_resume_ms=%u\n",
@@ -2054,11 +2093,11 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 		for (i = 0; i < IQS_DEV_HW_N; i++) {
 			if (st->dbnc_lo[i])
 				t += sprintf(buf + t, "%s_debounce_lo=%u\n",
-					     iqs_sensor_cfg_name[i],
+					     iqs_snsr_names[i],
 					     st->dbnc_lo[i]);
 			if (st->dbnc_hi[i])
 				t += sprintf(buf + t, "%s_debounce_hi=%u\n",
-					     iqs_sensor_cfg_name[i],
+					     iqs_snsr_names[i],
 					     st->dbnc_hi[i]);
 		}
 		t += sprintf(buf + t, "SAR_delta_channel_mask=%u\n",
@@ -2072,7 +2111,7 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 			     st->irq_trigger_edge);
 		for (i = 0; i < IQS_DEV_HW_N; i++)
 			t += sprintf(buf + t, "%s_binary_hw=%x\n",
-				     iqs_sensor_cfg_name[i],
+				     iqs_snsr_names[i],
 				     st->prox[i].proximity_binary_hw);
 	}
 
@@ -2088,6 +2127,20 @@ static struct nvs_fn_dev iqs_fn_dev = {
 	.nvs_write			= iqs_nvs_write,
 	.nvs_read			= iqs_nvs_read,
 };
+
+
+int sar_external_status(int status)
+{
+	iqs_ext_sts = status;
+	atomic_set(&iqs_ext_sts_chg, 1);
+	if (iqs_fn_dev.sts) {
+		if (*iqs_fn_dev.sts & (NVS_STS_SPEW_MSG | IQS_STS_EXT_STATE))
+			pr_info("%s status=%d\n", __func__, status);
+	}
+	return 0;
+}
+EXPORT_SYMBOL(sar_external_status);
+
 
 static int iqs_suspend(struct device *dev)
 {
@@ -2393,7 +2446,7 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 	/* default device specific parameters */
 	for (i = 0; i < IQS_DEV_N; i++) {
 		memcpy(&st->cfg[i], &iqs_cfg_dflt, sizeof(st->cfg[0]));
-		st->cfg[i].name = iqs_sensor_cfg_name[i];
+		st->cfg[i].name = iqs_snsr_names[i];
 		st->prox[i].cfg = &st->cfg[i];
 		st->prox[i].hw_mask = 0xFFFF;
 		st->prox[i].proximity_binary_hw = true;
@@ -2421,11 +2474,9 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 	if (dn) {
 		/* device specific parameters */
 		for (i = 0; i < IQS_DEV_HW_N; i++) {
-			sprintf(str, "%s_debounce_lo",
-				iqs_sensor_cfg_name[i]);
+			sprintf(str, "%s_debounce_lo", iqs_snsr_names[i]);
 			of_property_read_u32(dn, str, &st->dbnc_lo[i]);
-			sprintf(str, "%s_debounce_hi",
-				iqs_sensor_cfg_name[i]);
+			sprintf(str, "%s_debounce_hi", iqs_snsr_names[i]);
 			of_property_read_u32(dn, str, &st->dbnc_hi[i]);
 		}
 		of_property_read_u32(dn, "SAR_delta_average_count",
@@ -2478,9 +2529,8 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 		st->gpio_sar = of_get_named_gpio(dn, "gpio_sar", 0);
 		if (!of_property_read_string(dn, "gpio_sar_dev_assert",
 					     &pchar)) {
-			for (i = 0; i < ARRAY_SIZE(iqs_sensor_cfg_name); i++) {
-				if (!strcasecmp(pchar,
-						iqs_sensor_cfg_name[i])) {
+			for (i = 0; i < ARRAY_SIZE(iqs_snsr_names); i++) {
+				if (!strcasecmp(pchar, iqs_snsr_names[i])) {
 					st->gpio_sar_dev_asrt = i;
 					break;
 				}
@@ -2489,9 +2539,8 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 
 		if (!of_property_read_string(dn, "gpio_sar_dev_deassert",
 					     &pchar)) {
-			for (i = 0; i < ARRAY_SIZE(iqs_sensor_cfg_name); i++) {
-				if (!strcasecmp(pchar,
-						iqs_sensor_cfg_name[i])) {
+			for (i = 0; i < ARRAY_SIZE(iqs_snsr_names); i++) {
+				if (!strcasecmp(pchar, iqs_snsr_names[i])) {
 					st->gpio_sar_dev_dasrt = i;
 					break;
 				}
@@ -2546,6 +2595,19 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 				of_property_read_s32(dn, str,
 						     &st->delta_tst[i][j].gt);
 			}
+		}
+	}
+
+	for (i = 0; i < IQS_DEV_N; i++) {
+		for (j = 0; j < 3; j++) {
+			if (st->os)
+				/* change 'SAR' to 'sar' for OS visibility */
+				iqs_snsr_names[i][j] = tolower((unsigned char)
+							 iqs_snsr_names[i][j]);
+			else
+				/* change 'sar' to 'SAR' */
+				iqs_snsr_names[i][j] = toupper((unsigned char)
+							 iqs_snsr_names[i][j]);
 		}
 	}
 
@@ -2691,7 +2753,7 @@ static int iqs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 
 	iqs_mutex_lock(st);
-	if (st->os) {
+	if (st->os == IQS_OS_CONTROL) {
 		iqs_disable(st, -1);
 	} else {
 		ret = iqs_enables(st, en);

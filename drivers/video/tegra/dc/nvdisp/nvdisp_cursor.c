@@ -51,7 +51,7 @@ int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y)
 	u16 point_in_y;
 
 	if (!dc) {
-		dev_err(&dc->ndev->dev, "Invalid *dc\n");
+		pr_err("%s: Invalid *dc\n", __func__);
 		return -EINVAL;
 	}
 	switch (dc->cursor.size) {
@@ -141,7 +141,7 @@ int nvdisp_set_cursor_colorfmt(struct tegra_dc *dc)
 	int ret = -EINVAL;
 
 	if (!dc) {
-		dev_err(&dc->ndev->dev, "Invalid *dc\n");
+		pr_err("%s: Invalid *dc\n", __func__);
 		return ret;
 	}
 

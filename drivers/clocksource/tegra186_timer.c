@@ -14,7 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/clk.h>
 #include <linux/clockchips.h>
 #include <linux/cpu.h>
 #include <linux/cpumask.h>
@@ -152,7 +151,6 @@ static void __init tegra186_timer_init(struct device_node *np)
 	u32 freq;
 	int irq_count;
 	unsigned long tmr_index, irq_index;
-	struct clk *clk;
 
 	/* Allocate the driver struct */
 	tke = vmalloc(sizeof(*tke));
@@ -171,12 +169,6 @@ static void __init tegra186_timer_init(struct device_node *np)
 	irq_count = of_irq_count(np);
 
 	BUG_ON(of_property_read_u32(np, "clock-frequency", &freq));
-
-	/* Read the actual TSC rate if available */
-	clk = clk_get_sys("tsc", NULL);
-	if (!IS_ERR(clk)) {
-		freq = clk_get_rate(clk);
-	}
 
 	tmr_index = 0;
 	for_each_possible_cpu(cpu) {
@@ -199,8 +191,8 @@ static void __init tegra186_timer_init(struct device_node *np)
 		tmr->evt.irq = irq_of_parse_and_map(np, irq_index);
 		BUG_ON(!tmr->evt.irq);
 
-		/* Configure TSC as the TKE source */
-		__raw_writel(2, tmr->reg_base + TMRCSSR);
+		/* Configure OSC as the TKE source */
+		__raw_writel(1, tmr->reg_base + TMRCSSR);
 
 		snprintf(tmr->name, sizeof(tmr->name), "tegra186_timer%d", cpu);
 		tmr->evt.name = tmr->name;

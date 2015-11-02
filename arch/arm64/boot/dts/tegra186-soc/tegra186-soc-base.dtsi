@@ -1413,8 +1413,9 @@
 		      <0x0 0x02960000 0x0 0x10000>,	/* PAGE3 */
 		      <0x0 0x02970000 0x0 0x10000>;	/* PAGE4 */
 		clocks = <&tegra_car TEGRA186_CLK_AHUB>,
+			<&tegra_car TEGRA186_CLK_APB2APE>,
 			<&tegra_car TEGRA186_CLK_APE>;
-		clock-names = "ahub", "adma.ape";
+		clock-names = "ahub", "apb2ape", "adma.ape";
 		interrupts =  <GIC_SPI INT_ADMA_EOT0 IRQ_TYPE_LEVEL_HIGH>,
 			      <GIC_SPI INT_ADMA_EOT1 IRQ_TYPE_LEVEL_HIGH>,
 			      <GIC_SPI INT_ADMA_EOT2 IRQ_TYPE_LEVEL_HIGH>,
@@ -1458,8 +1459,9 @@
 		reg = <0x0 0x02900800 0x0 0x800>;
 		clocks = <&tegra_car TEGRA186_CLK_AHUB>,
 			<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+			<&tegra_car TEGRA186_CLK_APB2APE>,
 			<&tegra_car TEGRA186_CLK_APE>;
-		clock-names = "ahub", "pll_a_out0", "xbar.ape";
+		clock-names = "ahub", "pll_a_out0", "apb2ape", "xbar.ape";
 		status = "disabled";
 
 		#address-cells = <1>;

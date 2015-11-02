@@ -27,8 +27,7 @@
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTA>,
 			<&tegra_car TEGRA186_CLK_PLLP_GRTBA>;
-		clock-names = "serial", "pll_p";
-		nvidia,clk-parent = "pll_p";
+		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA186_RESET_UARTA>;
 		reset-names = "serial";
 		status = "disabled";
@@ -46,8 +45,7 @@
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTB>,
 			<&tegra_car TEGRA186_CLK_PLLP_GRTBA>;
-		clock-names = "serial", "pll_p";
-		nvidia,clk-parent = "pll_p";
+		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA186_RESET_UARTB>;
 		reset-names = "serial";
 		status = "disabled";
@@ -65,8 +63,7 @@
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTC>,
 			<&tegra_car TEGRA186_CLK_PLLP_AON>;
-		clock-names = "serial", "pll_p";
-		nvidia,clk-parent = "pll_p";
+		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA186_RESET_UARTC>;
 		reset-names = "serial";
 		status = "disabled";
@@ -84,8 +81,7 @@
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTD>,
 			<&tegra_car TEGRA186_CLK_PLLP_GRTTA>;
-		clock-names = "serial", "pll_p";
-		nvidia,clk-parent = "pll_p";
+		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA186_RESET_UARTD>;
 		reset-names = "serial";
 		status = "disabled";
@@ -103,8 +99,7 @@
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTE>,
 			<&tegra_car TEGRA186_CLK_PLLP_GRTBA>;
-		               clock-names = "serial", "pll_p";
-		nvidia,clk-parent = "pll_p";
+		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA186_RESET_UARTE>;
 		reset-names = "serial";
 		status = "disabled";
@@ -122,8 +117,7 @@
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTF>,
 			<&tegra_car TEGRA186_CLK_PLLP_GRTTB>;
-		clock-names = "serial", "pll_p";
-		nvidia,clk-parent = "pll_p";
+		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA186_RESET_UARTF>;
 		reset-names = "serial";
 		status = "disabled";
@@ -141,8 +135,7 @@
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_UARTG>,
 			<&tegra_car TEGRA186_CLK_PLLP_AON>;
-		clock-names = "serial", "pll_p";
-		nvidia,clk-parent = "pll_p";
+		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA186_RESET_UARTG>;
 		reset-names = "serial";
 		status = "disabled";

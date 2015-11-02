@@ -179,9 +179,6 @@ static int tegra_t186ref_p2382_i2s_dai_init(struct snd_soc_pcm_runtime *rtd)
 	struct tegra_t186ref_p2382 *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
-	struct device_node *np =
-		(struct device_node *)rtd->dai_link->cpu_of_node;
-	struct device_node *parentnp = np->parent;
 	unsigned int fmt = rtd->dai_link->dai_fmt;
 	unsigned int mclk, clk_out_rate, srate;
 	unsigned int tx_mask = (1 << 8) - 1, rx_mask = (1 << 8) - 1;
@@ -219,11 +216,12 @@ static int tegra_t186ref_p2382_i2s_dai_init(struct snd_soc_pcm_runtime *rtd)
 		return err;
 	}
 
-	/* set TDM slot mask */
-	if (parentnp) {
-		of_property_read_u32(np, "tx-mask", (u32 *)&tx_mask);
-		of_property_read_u32(np, "rx-mask", (u32 *)&rx_mask);
-	}
+	if (tegra_machine_get_tx_mask_t18x(rtd))
+		tx_mask = tegra_machine_get_tx_mask_t18x(rtd);
+
+	if (tegra_machine_get_rx_mask_t18x(rtd))
+		rx_mask = tegra_machine_get_rx_mask_t18x(rtd);
+
 	if ((fmt & SND_SOC_DAIFMT_FORMAT_MASK) == SND_SOC_DAIFMT_DSP_A) {
 		err = snd_soc_dai_set_tdm_slot(cpu_dai,
 				tx_mask, rx_mask, 0, 0);

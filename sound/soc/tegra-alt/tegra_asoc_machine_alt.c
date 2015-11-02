@@ -27,6 +27,8 @@
 static struct snd_soc_dai_link *tegra_asoc_machine_links;
 static struct snd_soc_codec_conf *tegra_asoc_codec_conf;
 static unsigned int *bclk_ratio;
+static unsigned int *tx_mask;
+static unsigned int *rx_mask;
 static unsigned int num_dai_links;
 
 static const struct snd_soc_pcm_stream default_link_params = {
@@ -1993,6 +1995,23 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 		}
 	}
 
+	if (rx_mask == NULL) {
+		rx_mask = devm_kzalloc(&pdev->dev, num_codec_links *
+			sizeof(unsigned int), GFP_KERNEL);
+		if (!rx_mask) {
+			dev_err(&pdev->dev, "Can't allocate rx_mask\n");
+			goto err;
+		}
+	}
+
+	if (tx_mask == NULL) {
+		tx_mask = devm_kzalloc(&pdev->dev, num_codec_links *
+			sizeof(unsigned int), GFP_KERNEL);
+		if (!tx_mask) {
+			dev_err(&pdev->dev, "Can't allocate tx_mask\n");
+			goto err;
+		}
+	}
 	/* variable i is for DAP and j is for CIF */
 	for (i = 0, j = num_codec_links; i < num_codec_links; i++, j++) {
 		memset((void *)dai_link_name, '\0', MAX_STR_SIZE);
@@ -2078,6 +2097,11 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 
 			of_property_read_u32(subnp,
 				"bclk_ratio", (u32 *)&bclk_ratio[i]);
+
+			of_property_read_u32(subnp,
+				"rx-mask", (u32 *)&rx_mask[i]);
+			of_property_read_u32(subnp,
+				"tx-mask", (u32 *)&tx_mask[i]);
 
 			/* CIF configuration */
 			tegra_codec_links[j].codec_of_node =
@@ -2231,6 +2255,56 @@ err:
 }
 EXPORT_SYMBOL_GPL(tegra_machine_get_bclk_ratio);
 
+unsigned int tegra_machine_get_rx_mask(
+	struct snd_soc_pcm_runtime *rtd)
+{
+	struct snd_soc_dai_link *codec_dai_link = rtd->dai_link;
+	char *codec_name = (char *)codec_dai_link->name;
+	unsigned int idx =
+		tegra_machine_get_codec_dai_link_idx(codec_name);
+
+	if (idx == -EINVAL)
+		goto err;
+
+	if (!rx_mask)
+		goto err;
+
+	idx = idx - (of_machine_is_compatible("nvidia,tegra210") ?
+			TEGRA210_XBAR_DAI_LINKS :
+			TEGRA124_XBAR_DAI_LINKS);
+
+	return rx_mask[idx];
+
+err:
+	return -EINVAL;
+}
+EXPORT_SYMBOL_GPL(tegra_machine_get_rx_mask);
+
+unsigned int tegra_machine_get_tx_mask(
+	struct snd_soc_pcm_runtime *rtd)
+{
+	struct snd_soc_dai_link *codec_dai_link = rtd->dai_link;
+	char *codec_name = (char *)codec_dai_link->name;
+	unsigned int idx =
+		tegra_machine_get_codec_dai_link_idx(codec_name);
+
+	if (idx == -EINVAL)
+		goto err;
+
+	if (!tx_mask)
+		goto err;
+
+	idx = idx - (of_machine_is_compatible("nvidia,tegra210") ?
+			TEGRA210_XBAR_DAI_LINKS :
+			TEGRA124_XBAR_DAI_LINKS);
+
+	return tx_mask[idx];
+
+err:
+	return -EINVAL;
+}
+EXPORT_SYMBOL_GPL(tegra_machine_get_tx_mask);
+
 void tegra_machine_set_num_dai_links(unsigned int val)
 {
 	num_dai_links = val;
@@ -2249,5 +2323,15 @@ unsigned int *tegra_machine_get_bclk_ratio_array(void)
 }
 EXPORT_SYMBOL_GPL(tegra_machine_get_bclk_ratio_array);
 
+unsigned int *tegra_machine_get_rx_mask_array(void)
+{
+	return rx_mask;
+}
+EXPORT_SYMBOL_GPL(tegra_machine_get_rx_mask_array);
+unsigned int *tegra_machine_get_tx_mask_array(void)
+{
+	return tx_mask;
+}
+EXPORT_SYMBOL_GPL(tegra_machine_get_tx_mask_array);
 MODULE_AUTHOR("Arun Shamanna Lakshmi <aruns@nvidia.com>");
 MODULE_AUTHOR("Junghyun Kim <juskim@nvidia.com>");

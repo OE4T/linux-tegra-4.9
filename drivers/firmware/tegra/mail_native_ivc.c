@@ -94,6 +94,8 @@ static void native_resume(void)
 	size_t sz;
 	int i;
 
+	tegra_hsp_db_enable_master(HSP_MASTER_BPMP);
+
 	pr_info("bpmp: waiting for handshake\n");
 	while (!tegra_hsp_db_can_ring(HSP_DB_BPMP))
 		;

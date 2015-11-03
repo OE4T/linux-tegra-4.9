@@ -69,8 +69,8 @@ enum bwmgr_dram_types {
 	DRAM_TYPE_LPDDR4_2CH_ECC,
 	DRAM_TYPE_LPDDR4_4CH,
 	DRAM_TYPE_LPDDR4_2CH,
-	DRAM_TYPE_LPDDR3,
-	DRAM_TYPE_DDR3,
+	DRAM_TYPE_LPDDR3_2CH,
+	DRAM_TYPE_DDR3_2CH,
 	DRAM_TYPE_DDR2
 };
 
@@ -95,9 +95,6 @@ static struct mrq_emc_dvfs_latency_response bwmgr_emc_dvfs;
 #define DRAM_LPDDR4 1
 #define DRAM_LPDDR3 2 /* On T186 this value is LPDDR3 */
 #define DRAM_DDR2 3
-
-#define BW_TO_FREQ_RATIO_4CH 32
-#define BW_TO_FREQ_RATIO_2CH 16
 
 void bwmgr_eff_init(void)
 {
@@ -146,14 +143,14 @@ void bwmgr_eff_init(void)
 		break;
 
 	case DRAM_LPDDR3:
-		bwmgr_dram_type = DRAM_TYPE_LPDDR3;
+		bwmgr_dram_type = DRAM_TYPE_LPDDR3_2CH;
 		bwmgr_dram_efficiency = 80;
 		bwmgr_dram_iso_eff_table =
 			bwmgr_t186_lpddr3_iso_eff;
 		break;
 
 	case DRAM_DDR3:
-		bwmgr_dram_type = DRAM_TYPE_DDR3;
+		bwmgr_dram_type = DRAM_TYPE_DDR3_2CH;
 		bwmgr_dram_efficiency = 80;
 		bwmgr_dram_iso_eff_table =
 			bwmgr_t186_ddr3_iso_eff;
@@ -220,19 +217,23 @@ unsigned long bwmgr_apply_efficiency(
 unsigned long bwmgr_freq_to_bw(unsigned long freq)
 {
 	if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH_ECC ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH)
-		return freq * BW_TO_FREQ_RATIO_4CH;
+			bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH ||
+			bwmgr_dram_type == DRAM_TYPE_LPDDR3_2CH ||
+			bwmgr_dram_type == DRAM_TYPE_DDR3_2CH)
+		return freq * 32;
 
-	return freq * BW_TO_FREQ_RATIO_2CH;
+	return freq * 16;
 }
 
 unsigned long bwmgr_bw_to_freq(unsigned long bw)
 {
 	if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH_ECC ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH)
-		return (bw + DRAM_TYPE_LPDDR4_4CH - 1) / DRAM_TYPE_LPDDR4_4CH;
+			bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH ||
+			bwmgr_dram_type == DRAM_TYPE_LPDDR3_2CH ||
+			bwmgr_dram_type == DRAM_TYPE_DDR3_2CH)
+		return (bw + 32 - 1) / 32;
 
-	return (bw + BW_TO_FREQ_RATIO_2CH - 1) / BW_TO_FREQ_RATIO_2CH;
+	return (bw + 16 - 1) / 16;
 }
 
 u32 bwmgr_dvfs_latency(u32 ufreq)

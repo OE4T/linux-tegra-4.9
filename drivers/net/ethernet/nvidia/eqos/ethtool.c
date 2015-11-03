@@ -142,7 +142,6 @@ static const struct eqos_stats eqos_gstrings_stats[] = {
 	EQOS_EXTRA_STAT(tx_timestamp_captured_n),
 	EQOS_EXTRA_STAT(rx_timestamp_captured_n),
 	EQOS_EXTRA_STAT(tx_tso_pkt_n),
-	EQOS_EXTRA_STAT(rx_split_hdr_pkt_n),
 
 	/* Tx/Rx frames per channels/queues */
 	EQOS_EXTRA_STAT(q_tx_pkt_n[0]),
@@ -553,13 +552,13 @@ static int eqos_getsettings(struct net_device *dev,
 		cmd->port = PORT_OTHER;
 	} else {
 		if (pdata->phydev == NULL) {
-			printk(KERN_ALERT "%s: PHY is not registered\n", dev->name);
+			DBGPR_ETHTOOL("%s: PHY is not registered\n", dev->name);
 			return -ENODEV;
 		}
 
 		if (!netif_running(dev)) {
-			printk(KERN_ALERT "%s: interface is disabled: we cannot track "\
-			       "link speed / duplex settings\n", dev->name);
+			DBGPR_ETHTOOL("%s: interface is disabled: we cannot "
+			"track link speed / duplex settings\n", dev->name);
 			return -EBUSY;
 		}
 
@@ -599,7 +598,7 @@ static int eqos_setsettings(struct net_device *dev,
 	//unsigned int lp_pause, lp_duplex;
 	int ret = 0;
 
-	printk(KERN_ALERT "-->eqos_setsettings\n");
+	DBGPR_ETHTOOL("-->eqos_setsettings\n");
 
 	if (pdata->hw_feat.pcs_sel) {
 		speed = ethtool_cmd_speed(cmd);
@@ -632,7 +631,7 @@ static int eqos_setsettings(struct net_device *dev,
 		spin_unlock_irq(&pdata->lock);
 	}
 
-	printk(KERN_ALERT "<--eqos_setsettings\n");
+	DBGPR_ETHTOOL("<--eqos_setsettings\n");
 
 	return ret;
 }
@@ -706,11 +705,11 @@ static int eqos_set_wol(struct net_device *dev,
 		return -EINVAL;
 
 	if (wol->wolopts) {
-		printk(KERN_ALERT "Wakeup enable\n");
+		DBGPR_ETHTOOL("Wakeup enable\n");
 		device_set_wakeup_enable(&pdata->pdev->dev, 1);
 		enable_irq_wake(pdata->irq_number);
 	} else {
-		printk(KERN_ALERT "Wakeup disable\n");
+		DBGPR_ETHTOOL("Wakeup disable\n");
 		device_set_wakeup_enable(&pdata->pdev->dev, 0);
 		disable_irq_wake(pdata->irq_number);
 	}
@@ -841,7 +840,7 @@ static int eqos_set_coalesce(struct net_device *dev,
 	else
 		local_use_riwt = 1;
 
-	printk(KERN_ALERT "RX COALESCING is %s\n",
+	DBGPR_ETHTOOL("RX COALESCING is %s\n",
 	       (local_use_riwt ? "ENABLED" : "DISABLED"));
 
 	rx_riwt = eqos_usec2riwt(ec->rx_coalesce_usecs, pdata);
@@ -850,18 +849,18 @@ static int eqos_set_coalesce(struct net_device *dev,
 	if (rx_riwt > EQOS_MAX_DMA_RIWT) {
 		rx_usec = eqos_riwt2usec(EQOS_MAX_DMA_RIWT,
 		    pdata);
-		printk(KERN_ALERT "RX Coalesing is limited to %d usecs\n",
+		DBGPR_ETHTOOL("RX Coalesing is limited to %d usecs\n",
 		       rx_usec);
 		return -EINVAL;
 	}
 	if (ec->rx_max_coalesced_frames > RX_DESC_CNT) {
-		printk(KERN_ALERT "RX Coalesing is limited to %d frames\n",
+		DBGPR_ETHTOOL("RX Coalesing is limited to %d frames\n",
 		       EQOS_RX_MAX_FRAMES);
 		return -EINVAL;
 	}
 	if (rx_desc_data->rx_coal_frames != ec->rx_max_coalesced_frames
 	    && netif_running(dev)) {
-		printk(KERN_ALERT
+		DBGPR_ETHTOOL(
 		 "Coalesce frame parameter can be changed only if interface is down\n");
 		return -EINVAL;
 	}

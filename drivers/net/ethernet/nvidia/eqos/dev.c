@@ -53,230 +53,6 @@ extern ULONG eqos_base_addr;
 #include "yregacc.h"
 #include "nvregacc.h"
 
-#ifdef EQOS_CONFIG_PGTEST
-
-static INT prepare_dev_pktgen(struct eqos_prv_data *pdata)
-{
-	UINT qinx = 0;
-
-	/* set MAC loop back mode */
-	MAC_MCR_LM_WR(0x1);
-
-	/* Do not strip received VLAN tag */
-	MAC_VLANTR_EVLS_WR(0x0);
-
-	/* set promiscuous mode */
-	MAC_MPFR_PR_WR(0x1);
-
-	/* disable autopad or CRC stripping */
-	MAC_MCR_ACS_WR(0);
-
-	/* enable drop tx status */
-	MTL_OMR_DTXSTS_WR(0x1);
-
-	for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++) {
-		/* enable avg bits per slot interrupt */
-		MTL_QECR_ABPSSIE_WR(qinx, 0x1);
-
-		/* enable OSF mode */
-		DMA_TCR_OSP_WR(qinx, 0x1);
-
-		/* disable slot checks */
-		DMA_SFCSR_WR(qinx, 0);
-	}
-
-	return Y_SUCCESS;
-}
-
-
-
-
-/*!
-* \brief This sequence is used to configure slot count The software
-* can program the number of slots(of duration 125us) over which the
-* average transmitted bits per slot need to be computed for
-* channel 1 to 7 when CBS alogorithm is enabled.
-* \param[in] qinx
-* \param[in] slot_count
-* \return Success or Failure
-* \retval  0 Success
-* \retval -1 Failure
-*/
-
-static INT set_slot_count(UINT qinx,
-                          UCHAR slot_count)
-{
-
-  if (slot_count == 1) {
-    MTL_QECR_SLC_WR(qinx, 0);
-  }
-  else if (slot_count == 2) {
-    MTL_QECR_SLC_WR(qinx, 0x1);
-  }
-  else if (slot_count == 4) {
-    MTL_QECR_SLC_WR(qinx, 0x3);
-  }
-  else if (slot_count == 8) {
-    MTL_QECR_SLC_WR(qinx, 0x4);
-  }
-  else if (slot_count == 16) {
-    MTL_QECR_SLC_WR(qinx, 0x5);
-  }
-
-  return Y_SUCCESS;
-}
-
-
-
-
-/*!
-* \brief This sequence is used to enable/disable slot interrupt:
-* When this bit is set,the MAC asserts an interrupt when the average
-* bits per slot status is updated for channel 1 to 7.
-* \param[in] qinx
-* \return Success or Failure
-* \retval  0 Success
-* \retval -1 Failure
-*/
-
-static INT config_slot_interrupt(UINT qinx, UCHAR slot_int)
-{
-
-  MTL_QECR_ABPSSIE_WR(qinx, slot_int);
-
-  return Y_SUCCESS;
-}
-
-
-
-
-
-/*!
-* \brief This sequence is used to configure DMA Tx:Rx/Rx:Tx
-* Priority Ratio These bits control the priority ratio in WRR
-* arbitration between the TX and RX DAM.
-* \param[in] prio_ratio
-* \return Success or Failure
-* \retval  0 Success
-* \retval -1 Failure
-*/
-
-static INT set_tx_rx_prio_ratio(UCHAR prio_ratio)
-{
-
-  DMA_BMR_PR_WR(prio_ratio);
-
-  return Y_SUCCESS;
-}
-
-
-
-
-/*!
-* \brief This sequence is used to configure DMA Transmit Arbitration algorithm
-* \param[in] arb_algo
-* \return Success or Failure
-* \retval  0 Success
-* \retval -1 Failure
-*/
-
-static INT set_dma_tx_arb_algorithm(UCHAR arb_algo)
-{
-
-  DMA_BMR_TAA_WR(arb_algo);
-
-  return Y_SUCCESS;
-}
-
-
-
-
-/*!
-* \brief This sequence is used to configure DMA Tx Priority When this
-* bit is set, it indicates that the TX DMA has higher priority than
-* the RX DMA during arbitration for the system-side bus.
-* \param[in] prio
-* \return Success or Failure
-* \retval  0 Success
-* \retval -1 Failure
-*/
-
-static INT set_tx_rx_prio(UCHAR prio)
-{
-
-  DMA_BMR_TXPR_WR(prio);
-
-  return Y_SUCCESS;
-}
-
-
-
-
-/*!
-* \brief This sequence is used to configure DMA Tx/Rx Arbitration Scheme
-* This bit specifies the arbitration scheme between the Tx and Rx paths
-* of all channels.
-* \param[in] prio_policy
-* \return Success or Failure
-* \retval  0 Success
-* \retval -1 Failure
-*/
-
-static INT set_tx_rx_prio_policy(UCHAR prio_policy)
-{
-
-  DMA_BMR_DA_WR(prio_policy);
-
-  return Y_SUCCESS;
-}
-
-
-
-
-/*!
-* \brief This sequence is used to configure TX Channel Weight
-* \param[in] qinx
-* \param[in] weight
-* \return Success or Failure
-* \retval  0 Success
-* \retval -1 Failure
-*/
-
-static INT set_ch_arb_weights(UINT qinx,
-                               UCHAR weight)
-{
-
-  if (weight == 1) {
-    DMA_TCR_TCW_WR(qinx, 0);
-  }
-  else if (weight == 2) {
-    DMA_TCR_TCW_WR(qinx, 0x1);
-  }
-  else if (weight == 3) {
-    DMA_TCR_TCW_WR(qinx, 0x2);
-  }
-  else if (weight == 4) {
-    DMA_TCR_TCW_WR(qinx, 0x3);
-  }
-  else if (weight == 5) {
-    DMA_TCR_TCW_WR(qinx, 0x4);
-  }
-  else if (weight == 6) {
-    DMA_TCR_TCW_WR(qinx, 0x5);
-  }
-  else if (weight == 7) {
-    DMA_TCR_TCW_WR(qinx, 0x6);
-  }
-  else if (weight == 8) {
-    DMA_TCR_TCW_WR(qinx, 0x7);
-  }
-
-  return Y_SUCCESS;
-}
-#endif /* end of EQOS_CONFIG_PGTEST */
-
-
-
 /*!
 * \brief This sequence is used to enable/disable MAC loopback mode
 * \param[in] enb_dis
@@ -298,85 +74,6 @@ static INT config_mac_loopback_mode(UINT enb_dis)
 static void config_pfc(int enb_dis)
 {
 	MAC_RFCR_PFCE_WR(enb_dis);
-}
-
-/*!
-* \brief This sequence is used to configure mac double vlan processing feature.
-* \param[in] enb_dis
-* \return Success or Failure
-* \retval  0 Success
-* \retval -1 Failure
-*/
-
-static INT config_tx_outer_vlan(UINT op_type, UINT outer_vlt)
-{
-	printk(KERN_ALERT "--> config_tx_outer_vlan()\n");
-
-	MAC_VLANTIRR_VLTI_WR(0x0);
-	MAC_VLANTIRR_VLT_WR(outer_vlt);
-	MAC_VLANTIRR_VLP_WR(0x1);
-	MAC_VLANTIRR_VLC_WR(op_type);
-
-	if (op_type == EQOS_DVLAN_NONE) {
-		MAC_VLANTIRR_VLP_WR(0x0);
-		MAC_VLANTIRR_VLT_WR(0x0);
-	}
-
-	printk(KERN_ALERT "<-- config_tx_outer_vlan()\n");
-
-	return Y_SUCCESS;
-}
-
-static INT config_tx_inner_vlan(UINT op_type, UINT inner_vlt)
-{
-	printk(KERN_ALERT "--> config_tx_inner_vlan()\n");
-
-	MAC_IVLANTIRR_VLTI_WR(0x0);
-	MAC_IVLANTIRR_VLT_WR(inner_vlt);
-	MAC_IVLANTIRR_VLP_WR(0x1);
-	MAC_IVLANTIRR_VLC_WR(op_type);
-
-	if (op_type == EQOS_DVLAN_NONE) {
-		MAC_IVLANTIRR_VLP_WR(0x0);
-		MAC_IVLANTIRR_VLT_WR(0x0);
-	}
-
-	printk(KERN_ALERT "<-- config_tx_inner_vlan()\n");
-
-	return Y_SUCCESS;
-}
-
-static INT config_svlan(UINT flags)
-{
-	INT ret = Y_SUCCESS;
-
-	printk(KERN_ALERT "--> config_svlan()\n");
-
-	MAC_VLANTR_ESVL_WR(1);
-	if (flags == EQOS_DVLAN_NONE) {
-		MAC_VLANTR_ESVL_WR(0);
-		MAC_IVLANTIRR_CSVL_WR(0);
-		MAC_VLANTIRR_CSVL_WR(0);
-	} else if (flags == EQOS_DVLAN_INNER) {
-		MAC_IVLANTIRR_CSVL_WR(1);
-	} else if (flags == EQOS_DVLAN_OUTER) {
-		MAC_VLANTIRR_CSVL_WR(1);
-	} else if (flags == EQOS_DVLAN_BOTH) {
-		MAC_IVLANTIRR_CSVL_WR(1);
-		MAC_VLANTIRR_CSVL_WR(1);
-	} else {
-		printk(KERN_ALERT "ERROR : double VLAN enable SVLAN configuration - Invalid argument");
-		ret = Y_FAILURE;
-	}
-
-	printk(KERN_ALERT "<-- config_svlan()\n");
-
-	return ret;
-}
-
-static VOID config_dvlan(bool enb_dis)
-{
-	MAC_VLANTR_EDVLP_WR(enb_dis);
 }
 
 
@@ -1637,62 +1334,6 @@ static UINT get_tx_tstamp_status(t_tx_normal_desc *txdesc)
 
   return (tdes3 & 0x20000);
 }
-
-
-
-
-/*!
-* \brief This sequence is used to enable/disable split header feature
-* \param[in] qinx
-* \param[in] sph_en
-* \return Success or Failure
-* \retval  0 Success
-* \retval -1 Failure
-*/
-
-static INT config_split_header_mode(UINT qinx,
-                             USHORT sph_en)
-{
-
-  DMA_CR_SPH_WR(qinx, sph_en);
-
-  return Y_SUCCESS;
-}
-
-
-
-
-/*!
-* \brief This sequence is used to configure header size in case of split header feature
-* \param[in] header_size
-* \return Success or Failure
-* \retval  0 Success
-* \retval -1 Failure
-*/
-
-static INT config_header_size(USHORT header_size)
-{
-
-  if (header_size == 64) {
-    MAC_MECR_HDSMS_WR(0);
-  }
-  else if (header_size == 128) {
-    MAC_MECR_HDSMS_WR(0x1);
-  }
-  else if (header_size == 256) {
-    MAC_MECR_HDSMS_WR(0x2);
-  }
-  else if (header_size == 512) {
-    MAC_MECR_HDSMS_WR(0x3);
-  }
-  else {
-    MAC_MECR_HDSMS_WR(0x4);
-  }
-
-  return Y_SUCCESS;
-}
-
-
 
 
 /*!
@@ -3374,10 +3015,9 @@ static void rx_descriptor_reset(UINT idx,
 	RX_NORMAL_DESC_RDES0_WR(rx_normal_desc->rdes0, L32(buffer->dma));
 	RX_NORMAL_DESC_RDES1_WR(rx_normal_desc->rdes1, H32(buffer->dma));
 
-	if ((pdata->dev->mtu > EQOS_ETH_FRAME_LEN) ||
-			(pdata->rx_split_hdr == 1)) {
+	if (pdata->dev->mtu > EQOS_ETH_FRAME_LEN) {
 		/* update buffer 2 address pointer */
-		RX_NORMAL_DESC_RDES2_WR(rx_normal_desc->rdes2, buffer->dma2);
+		RX_NORMAL_DESC_RDES2_WR(rx_normal_desc->rdes2, 0);
 		/* set control bits - OWN, INTE, BUF1V and BUF2V */
 		RX_NORMAL_DESC_RDES3_WR(rx_normal_desc->rdes3,
 					   (0x83000000 | inte));
@@ -3420,24 +3060,11 @@ static void rx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 		/* set to zero  */
 		RX_NORMAL_DESC_RDES1_WR(rx_normal_desc->rdes1, (H32(buffer->dma)));
 
-#ifdef EQOS_DMA_32BIT
-		if ((pdata->dev->mtu > EQOS_ETH_FRAME_LEN) ||
-			(pdata->rx_split_hdr == 1)) {
-			/* update buffer 2 address pointer */
-			RX_NORMAL_DESC_RDES2_WR(rx_normal_desc->rdes2,
-						   L32(buffer->dma2));
-			/* set control bits - OWN, INTE, BUF1V and BUF2V */
-			RX_NORMAL_DESC_RDES3_WR(rx_normal_desc->rdes3,
-						   (0xc3000000)|(H32(buffer->dma2)));
-		} else 
-#endif
-		{
-			/* set buffer 2 address pointer to zero */
-			RX_NORMAL_DESC_RDES2_WR(rx_normal_desc->rdes2, 0);
-			/* set control bits - OWN, INTE and BUF1V */
-			RX_NORMAL_DESC_RDES3_WR(rx_normal_desc->rdes3,
-						   (0xc1000000));
-		}
+		/* set buffer 2 address pointer to zero */
+		RX_NORMAL_DESC_RDES2_WR(rx_normal_desc->rdes2, 0);
+		/* set control bits - OWN, INTE and BUF1V */
+		RX_NORMAL_DESC_RDES3_WR(rx_normal_desc->rdes3, 0xc1000000);
+
 		buffer->inte = (1 << 30);
 
 		/* reconfigure INTE bit if RX watchdog timer is enabled */
@@ -3537,10 +3164,6 @@ static void pre_transmit(struct eqos_prv_data *pdata,
 	INT start_index = tx_desc_data->cur_tx;
 	INT last_index, original_start_index = tx_desc_data->cur_tx;
 	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR;
-#ifdef EQOS_CERTIFICATION_PKTBURSTCNT
-	INT update_tail = 0;
-	UINT qtdr;
-#endif
 	UINT vartso_enable = 0;
 	UINT varmss = 0;
 	UINT varpay_len = 0;
@@ -3549,20 +3172,6 @@ static void pre_transmit(struct eqos_prv_data *pdata,
 	INT total_len = 0;
 
 	DBGPR("-->pre_transmit: qinx = %u\n", qinx);
-
-#ifdef EQOS_CERTIFICATION_PKTBURSTCNT
-	if (qinx == 0)
-		MTL_Q0TDR_TXQSTS_RD(qtdr);
-	else
-		MTL_QTDR_TXQSTS_RD(qinx, qtdr);
-
-	/* No activity on MAC Tx-Fifo and fifo is empty */
-	if (0 == qtdr) {
-		/* disable MAC Transmit */
-		MAC_MCR_TE_WR(0);
-		update_tail = 1;
-	}
-#endif
 
 #ifdef EQOS_ENABLE_VLAN_TAG
 	TX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_RD(
@@ -3585,36 +3194,6 @@ static void pre_transmit(struct eqos_prv_data *pdata,
 		buffer = GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
 	}
 #endif	/* EQOS_ENABLE_VLAN_TAG */
-#ifdef EQOS_ENABLE_DVLAN
-	if (pdata->via_reg_or_desc == EQOS_VIA_DESC) {
-		/* put vlan tag in contex descriptor and set other control
-		 * bits accordingly */
-
-		if (pdata->in_out & EQOS_DVLAN_OUTER) {
-			TX_CONTEXT_DESC_TDES3_VT_WR(TX_CONTEXT_DESC->tdes3,
-					pdata->outer_vlan_tag);
-			TX_CONTEXT_DESC_TDES3_VLTV_WR(TX_CONTEXT_DESC->tdes3, 0x1);
-			/* operation (insertion/replacement/deletion/none) will be
- 			 * specified in normal descriptor tdes2
- 			 * */
-		}
-		if (pdata->in_out & EQOS_DVLAN_INNER) {
-			TX_CONTEXT_DESC_TDES2_IVT_WR(TX_CONTEXT_DESC->tdes2,
-								pdata->inner_vlan_tag);
-			TX_CONTEXT_DESC_TDES3_IVLTV_WR(TX_CONTEXT_DESC->tdes3, 0x1);
-			TX_CONTEXT_DESC_TDES3_IVTIR_WR(TX_CONTEXT_DESC->tdes3,
-								pdata->op_type);
-		}
-		TX_CONTEXT_DESC_TDES3_CTXT_WR(TX_CONTEXT_DESC->tdes3, 0x1);
-		TX_CONTEXT_DESC_TDES3_OWN_WR(TX_CONTEXT_DESC->tdes3, 0x1);
-
-		original_start_index = tx_desc_data->cur_tx;
-		INCR_TX_DESC_INDEX(tx_desc_data->cur_tx, 1);
-		start_index = tx_desc_data->cur_tx;
-		tx_normal_desc = GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
-		buffer = GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
-	}
-#endif /* End of EQOS_ENABLE_DVLAN */
 
 	/* prepare CONTEXT descriptor for TSO */
 	TX_PKT_FEATURES_PKT_ATTRIBUTES_TSO_ENABLE_RD(
@@ -3642,18 +3221,9 @@ static void pre_transmit(struct eqos_prv_data *pdata,
 	}
 
 	/* update the first buffer pointer and length */
-#if defined(EQOS_DMA_32BIT)
-	TX_NORMAL_DESC_TDES0_WR(tx_normal_desc->tdes0, buffer->dma);
-#else
 	TX_NORMAL_DESC_TDES0_WR(tx_normal_desc->tdes0, (buffer->dma)&0xFFFFFFFF);
 	TX_NORMAL_DESC_TDES1_WR(tx_normal_desc->tdes1, (((buffer->dma)&0xFFFFFFFF00000000)>>32)&0xFFFFFFFF);
-#endif
 	TX_NORMAL_DESC_TDES2_HL_B1L_WR(tx_normal_desc->tdes2, buffer->len);
-	if (buffer->dma2 != 0) {
-		/* update the second buffer pointer and length */
-		TX_NORMAL_DESC_TDES1_WR(tx_normal_desc->tdes1, buffer->dma2);
-		TX_NORMAL_DESC_TDES2_B2L_WR(tx_normal_desc->tdes2, buffer->len2);
-	}
 
 	if (vartso_enable) {
 		/* update TCP payload length (only for the descriptor with FD set) */
@@ -3672,20 +3242,10 @@ static void pre_transmit(struct eqos_prv_data *pdata,
 	 * CONTEXT descriptor
 	 * */
 	if (tx_desc_data->vlan_tag_present && Y_FALSE == tx_desc_data->tx_vlan_tag_via_reg) {
-		//printk(KERN_ALERT "VLAN control info update via descriptor\n\n");
 		TX_NORMAL_DESC_TDES2_VTIR_WR(tx_normal_desc->tdes2,
 						 tx_desc_data->tx_vlan_tag_ctrl);
 	}
 #endif	/* EQOS_ENABLE_VLAN_TAG */
-
-#ifdef EQOS_ENABLE_DVLAN
-	if (pdata->via_reg_or_desc == EQOS_VIA_DESC) {
-		if (pdata->in_out & EQOS_DVLAN_OUTER) {
-			TX_NORMAL_DESC_TDES2_VTIR_WR(tx_normal_desc->tdes2,
-								pdata->op_type);
-		}
-	}
-#endif /* End of EQOS_ENABLE_DVLAN */
 
 
 	/* Mark it as First Descriptor */
@@ -3727,18 +3287,9 @@ static void pre_transmit(struct eqos_prv_data *pdata,
 
 	for (i = 1; i < GET_CURRENT_XFER_DESC_CNT(qinx); i++) {
 		/* update the first buffer pointer and length */
-#if defined(EQOS_DMA_32BIT)
-		TX_NORMAL_DESC_TDES0_WR(tx_normal_desc->tdes0, buffer->dma);
-#else
 		TX_NORMAL_DESC_TDES0_WR(tx_normal_desc->tdes0, (buffer->dma)&0xFFFFFFFF);
 		TX_NORMAL_DESC_TDES1_WR(tx_normal_desc->tdes1, (((buffer->dma)&0xFFFFFFFF00000000)>>32)&0xFFFFFFFF);
-#endif
 		TX_NORMAL_DESC_TDES2_HL_B1L_WR(tx_normal_desc->tdes2, buffer->len);
-		if (buffer->dma2 != 0) {
-			/* update the second buffer pointer and length */
-			TX_NORMAL_DESC_TDES1_WR(tx_normal_desc->tdes1, buffer->dma2);
-			TX_NORMAL_DESC_TDES2_B2L_WR(tx_normal_desc->tdes2, buffer->len2);
-		}
 
 		/* set own bit */
 		TX_NORMAL_DESC_TDES3_OWN_WR(tx_normal_desc->tdes3, 0x1);
@@ -3754,14 +3305,9 @@ static void pre_transmit(struct eqos_prv_data *pdata,
 		GET_CURRENT_XFER_LAST_DESC_INDEX(qinx, start_index, 0);
 	tx_normal_desc = GET_TX_DESC_PTR(qinx, last_index);
 	TX_NORMAL_DESC_TDES3_LD_WR(tx_normal_desc->tdes3, 0x1);
+
 	/* set Interrupt on Completion for last descriptor */
-#ifdef EQOS_CERTIFICATION_PKTBURSTCNT
-	pdata->mac_enable_count += 1;
-	if ((pdata->mac_enable_count % pdata->drop_tx_pktburstcnt) == 0)
-		TX_NORMAL_DESC_TDES2_IC_WR(tx_normal_desc->tdes2, 0x1);
-#else
 	TX_NORMAL_DESC_TDES2_IC_WR(tx_normal_desc->tdes2, 0x1);
-#endif
 
 	/* set OWN bit of FIRST descriptor at end to avoid race condition */
 	tx_normal_desc = GET_TX_DESC_PTR(qinx, start_index);
@@ -3772,27 +3318,11 @@ static void pre_transmit(struct eqos_prv_data *pdata,
 			1, qinx);
 #endif
 
-#ifdef EQOS_CERTIFICATION_PKTBURSTCNT
-	/* updating descriptor tail pointer for DMA Transmit under two conditions,
-	 * 1. if burst number of packets are present in descriptor list
-	 * 2. MAC has no activity on Tx fifo
-	 * */
-	if ((pdata->mac_enable_count >= pdata->drop_tx_pktburstcnt)
-		&& (1 == update_tail)) {
-		pdata->mac_enable_count -= pdata->drop_tx_pktburstcnt;
-		/* issue a poll command to Tx DMA by writing address
-		 * of next immediate free descriptor */
-		last_index = GET_CURRENT_XFER_LAST_DESC_INDEX(qinx, start_index, 1);
-		DMA_TDTP_TPDR_WR(qinx,
-				GET_TX_DESC_DMA_ADDR(qinx, last_index));
-	}
-#else
 	/* issue a poll command to Tx DMA by writing address
 	 * of next immediate free descriptor */
 	last_index = GET_CURRENT_XFER_LAST_DESC_INDEX(qinx, start_index, 1);
 	DMA_TDTP_TPDR_WR(qinx,
 			GET_TX_DESC_DMA_ADDR(qinx, last_index));
-#endif
 
 	if (pdata->eee_enabled) {
 		/* restart EEE timer */
@@ -3844,13 +3374,6 @@ static void device_read(struct eqos_prv_data *pdata, UINT qinx)
 		/* check whether it is good packet or bad packet */
 		RX_NORMAL_DESC_RDES3_ES_RD(rx_normal_desc->rdes3, es);
 		RX_NORMAL_DESC_RDES3_LD_RD(rx_normal_desc->rdes3, ld);
-#ifdef EQOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
-		/* Synopsys testing and debugging purposes only */
-		if (es == 1 && ld == 1) {
-			es = 0;
-			DBGPR("Forwarding error packets as good packets to stack\n");
-		}
-#endif
 		if ((es == 0) && (ld == 1)) {
 			/* get the packet length */
 			RX_NORMAL_DESC_RDES3_FL_RD(rx_normal_desc->rdes3, buffer->len);
@@ -4053,7 +3576,7 @@ static INT eqos_car_reset(struct eqos_prv_data *pdata)
 	vy_count = 0;
 	while (1) {
 		if (vy_count > retry_cnt) {
-			printk(
+			dev_err(&pdata->pdev->dev,
 				"%s():%d: Timed out polling on DMA_BMR_SWR\n",
 				__func__, __LINE__);
 			return -Y_FAILURE;
@@ -4297,7 +3820,6 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 	if (pdata->dev->mtu > EQOS_ETH_FRAME_LEN) {
 		/* Disable RX Store and Forward mode */
 		i = 0;
-		printk(KERN_ALERT "RX is configured in threshold mode and threshold = 64Byte\n");
 	}
 	MTL_QROMR_RSF_WR(qinx, i);
 
@@ -4307,8 +3829,6 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 	/* Transmit/Receive queue fifo size programmed */
 	MTL_QROMR_RQS_WR(qinx, p_rx_fifo);
 	MTL_QTOMR_TQS_WR(qinx, p_tx_fifo);
-	printk(KERN_ALERT "Queue%d Tx fifo size %d, Rx fifo size %d\n",
-			qinx, ((p_tx_fifo + 1) * 256), ((p_rx_fifo + 1) * 256));
 
 	/* flow control will be used only if
 	 * each channel gets 8KB or more fifo */
@@ -4411,8 +3931,6 @@ static INT configure_dma_channel(UINT qinx,
 	else {
 		DMA_RIWTR_RWT_WR(qinx, 0);
 	}
-	printk(KERN_ALERT "%s Rx watchdog timer\n",
-		(rx_desc_data->use_riwt ? "Enabled" : "Disabled"));
 
 	enable_dma_interrupts(qinx, pdata);
 	/* set PBLX8 */
@@ -4430,31 +3948,17 @@ static INT configure_dma_channel(UINT qinx,
 	DMA_SBUS_BLEN8_WR(1);
 	DMA_SBUS_BLEN4_WR(1);
 	DMA_SBUS_RD_OSR_LMT_WR(2);
-#ifndef EQOS_DMA_32BIT
 	DMA_SBUS_EAME_WR(1);
-#endif
 
 	/* enable TSO if HW supports */
 	if (pdata->hw_feat.tso_en)
 		DMA_TCR_TSE_WR(qinx, 0x1);
-	printk(KERN_ALERT "%s TSO\n",
-		(pdata->hw_feat.tso_en ? "Enabled" : "Disabled"));
-
-	/* program split header mode */
-	DMA_CR_SPH_WR(qinx, pdata->rx_split_hdr);
-	printk(KERN_ALERT "%s Rx Split header mode\n",
-		(pdata->rx_split_hdr ? "Enabled" : "Disabled"));
 
 	/* Add 10us delay as per bug 1611959 */
 	udelay(10);
 
-	/*
-	 * For PG don't start TX DMA now.
-	 */
-#ifndef EQOS_CONFIG_PGTEST
 	/* start TX DMA */
 	DMA_TCR_ST_WR(qinx, 0x1);
-#endif
 	/* start RX DMA */
 	DMA_RCR_ST_WR(qinx, 0x1);
 
@@ -4530,22 +4034,6 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 			MAC_TQPM0R_PSTQ3_WR(3);
 			MAC_RQC2R_PSRQ3_WR(0x1 << pdt_cfg->q_prio[qinx]);
 			break;
-		case 4:
-			MAC_TQPM1R_PSTQ4_WR(4);
-			MAC_RQC3R_PSRQ4_WR(0x1 << pdt_cfg->q_prio[qinx]);
-			break;
-		case 5:
-			MAC_TQPM1R_PSTQ5_WR(5);
-			MAC_RQC3R_PSRQ5_WR(0x1 << pdt_cfg->q_prio[qinx]);
-			break;
-		case 6:
-			MAC_TQPM1R_PSTQ6_WR(6);
-			MAC_RQC3R_PSRQ6_WR(0x1 << pdt_cfg->q_prio[qinx]);
-			break;
-		case 7:
-			MAC_TQPM1R_PSTQ7_WR(7);
-			MAC_RQC3R_PSRQ7_WR(0x1 << pdt_cfg->q_prio[qinx]);
-			break;
 		}
 
 		if (pdata->dt_cfg.pause_frames == PAUSE_FRAMES_ENABLED) {
@@ -4565,8 +4053,8 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 			disable_rx_flow_ctrl();
 	}
 
-	/* Configure for Jumbo frame in MAC */
 	if (pdata->dev->mtu > EQOS_ETH_FRAME_LEN) {
+		/* Configure for Jumbo frame in MAC */
 		if (pdata->dev->mtu < EQOS_MAX_GPSL) {
 			MAC_MCR_JE_WR(0x1);
 			MAC_MCR_WD_WR(0x0);
@@ -4578,16 +4066,12 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 			MAC_MCR_GPSLCE_WR(0x1);
 			MAC_MECR_GPSL_WR(EQOS_MAX_SUPPORTED_MTU);
 			MAC_MCR_JD_WR(0x1);
-			printk(KERN_ALERT "Configured Gaint Packet Size Limit to %d\n",
-				EQOS_MAX_SUPPORTED_MTU);
 		}
-		printk(KERN_ALERT "Enabled JUMBO pkt\n");
 	} else {
 		MAC_MCR_JE_WR(0x0);
 		MAC_MCR_WD_WR(0x0);
 		MAC_MCR_GPSLCE_WR(0x0);
 		MAC_MCR_JD_WR(0x0);
-		printk(KERN_ALERT "Disabled JUMBO pkt\n");
 	}
 
 	/* update the MAC address */
@@ -4605,9 +4089,7 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 	MAC_MCR_RD(mac_mcr);
 	mac_mcr = mac_mcr & (ULONG) (0xffcfff7c);
 	mac_mcr = mac_mcr | ((0x1) << 0) | ((0x1) << 20) | ((0x1) << 21);
-#ifndef EQOS_CERTIFICATION_PKTBURSTCNT
 	mac_mcr |= ((0x1) << 1);
-#endif
 	MAC_MCR_WR(mac_mcr);
 
 	if (pdata->hw_feat.rx_coe_sel &&
@@ -4658,10 +4140,6 @@ static INT eqos_yinit(struct eqos_prv_data *pdata)
 	//Mapping MTL Rx queue and DMA Rx channel.
 	MTL_RQDCM0R_WR(0x3020100);
 	MTL_RQDCM1R_WR(0x7060504);
-#ifdef EQOS_CERTIFICATION_PKTBURSTCNT
-	/* enable tx drop status */
-	MTL_OMR_DTXSTS_WR(0x1);
-#endif
 
 	i = (VIRT_INTR_CH_CRTL_RX_WR_MASK | VIRT_INTR_CH_CRTL_TX_WR_MASK);
 	for (j = 0; j < MAX_CHANS; j++) {
@@ -4689,113 +4167,10 @@ static INT eqos_yinit(struct eqos_prv_data *pdata)
 		configure_dma_channel(qinx, pdata);
 	}
 
-#ifdef EQOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
-	MTL_Q0ROMR_FEP_WR(0x1);
-	MAC_MPFR_RA_WR(0x1);
-	MAC_MCR_BE_WR(0x1);
-#endif
-
 	DBGPR("<--eqos_yinit\n");
 
 	return Y_SUCCESS;
 }
-
-#ifdef EQOS_CONFIG_PGTEST
-
-/*!
-* \brief This sequence is used to initialize the tx descriptors.
-* \param[in] pdata
-*/
-
-static void tx_descriptor_init_pg(struct eqos_prv_data *pdata,
-					UINT qinx)
-{
-	struct eqos_tx_wrapper_descriptor *tx_desc_data =
-		GET_TX_WRAPPER_DESC(qinx);
-	struct s_tx_normal_desc *tx_normal_desc =
-		GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
-	struct eqos_tx_buffer *buffer =
-		GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
-	INT i;
-	INT start_index = tx_desc_data->cur_tx;
-
-	DBGPR("-->tx_descriptor_init_pg\n");
-
-	/* initialze all descriptors. */
-
-	for (i = 0; i < TX_DESC_CNT; i++) {
-		/* update buffer 1 address pointer to zero */
-		TX_NORMAL_DESC_TDES0_WR(tx_normal_desc->tdes0, 0);
-		/* update buffer 2 address pointer to zero */
-		TX_NORMAL_DESC_TDES1_WR(tx_normal_desc->tdes1, 0);
-		/* set all other control bits (IC, TTSE, B2L & B1L) to zero */
-		TX_NORMAL_DESC_TDES2_WR(tx_normal_desc->tdes2, 0);
-		/* set all other control bits (OWN, CTXT, FD, LD, CPC, CIC etc) to zero */
-		TX_NORMAL_DESC_TDES3_WR(tx_normal_desc->tdes3, 0);
-
-		INCR_TX_DESC_INDEX(tx_desc_data->cur_tx, 1);
-		tx_normal_desc = GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
-		buffer = GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
-	}
-	/* update the total no of Tx descriptors count */
-	DMA_TDRLR_WR(qinx, (TX_DESC_CNT - 1));
-	/* update the starting address of desc chain/ring */
-	DMA_TDLAR_WR(qinx, GET_TX_DESC_DMA_ADDR(qinx, start_index));
-
-	DBGPR("<--tx_descriptor_init_pg\n");
-}
-
-/*!
-* \brief This sequence is used to initialize the rx descriptors.
-* \param[in] pdata
-*/
-
-static void rx_descriptor_init_pg(struct eqos_prv_data *pdata, UINT qinx)
-{
-	struct eqos_rx_wrapper_descriptor *rx_desc_data =
-	    GET_RX_WRAPPER_DESC(qinx);
-	struct eqos_rx_buffer *buffer =
-	    GET_RX_BUF_PTR(qinx, rx_desc_data->cur_rx);
-	struct s_rx_normal_desc *rx_normal_desc =
-	    GET_RX_DESC_PTR(qinx, rx_desc_data->cur_rx);
-	INT i;
-	INT start_index = rx_desc_data->cur_rx;
-	INT last_index;
-
-	DBGPR("-->rx_descriptor_init_pg\n");
-
-	/* initialize all desc */
-
-	for (i = 0; i < RX_DESC_CNT; i++) {
-		memset(rx_normal_desc, 0, sizeof(struct s_rx_normal_desc));
-		/* update buffer 1 address pointer */
-		RX_NORMAL_DESC_RDES0_WR(rx_normal_desc->rdes0, buffer->dma);
-		/* set to zero  */
-		RX_NORMAL_DESC_RDES1_WR(rx_normal_desc->rdes1, 0);
-
-		/* set buffer 2 address pointer to zero */
-		RX_NORMAL_DESC_RDES2_WR(rx_normal_desc->rdes2, 0);
-		/* set control bits - OWN, INTE and BUF1V */
-		RX_NORMAL_DESC_RDES3_WR(rx_normal_desc->rdes3, (0xc1000000));
-
-		INCR_RX_DESC_INDEX(rx_desc_data->cur_rx, 1);
-		rx_normal_desc =
-			GET_RX_DESC_PTR(qinx, rx_desc_data->cur_rx);
-		buffer = GET_RX_BUF_PTR(qinx, rx_desc_data->cur_rx);
-	}
-	/* update the total no of Rx descriptors count */
-	DMA_RDRLR_WR(qinx, (RX_DESC_CNT - 1));
-	/* update the Rx Descriptor Tail Pointer */
-	last_index = GET_CURRENT_RCVD_LAST_DESC_INDEX(start_index, 0);
-	DMA_RDTP_RPDR_WR(qinx, GET_RX_DESC_DMA_ADDR(qinx, last_index));
-	/* update the starting address of desc chain/ring */
-	DMA_RDLAR_WR(qinx, GET_RX_DESC_DMA_ADDR(qinx, start_index));
-
-	DBGPR("<--rx_descriptor_init_pg\n");
-}
-
-#endif /* end of EQOS_CONFIG_PGTEST */
-
 
 /*!
 * \brief API to initialize the function pointers.
@@ -4932,10 +4307,6 @@ void eqos_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->disable_mmc_interrupts = disable_mmc_interrupts;
 	hw_if->config_mmc_counters = config_mmc_counters;
 
-	/* for handling split header */
-	hw_if->config_split_header_mode = config_split_header_mode;
-	hw_if->config_header_size = config_header_size;
-
 	hw_if->set_dcb_algorithm = set_dcb_algorithm;
 	hw_if->set_dcb_queue_weight = set_dcb_queue_weight;
 
@@ -4948,18 +4319,6 @@ void eqos_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->config_low_credit = config_low_credit;
 	hw_if->config_slot_num_check = config_slot_num_check;
 	hw_if->config_advance_slot_num_check = config_advance_slot_num_check;
-#ifdef EQOS_CONFIG_PGTEST
-	hw_if->tx_desc_init_pg = tx_descriptor_init_pg;
-	hw_if->rx_desc_init_pg = rx_descriptor_init_pg;
-	hw_if->set_ch_arb_weights = set_ch_arb_weights;
-	hw_if->config_slot_interrupt = config_slot_interrupt;
-	hw_if->set_slot_count = set_slot_count;
-	hw_if->set_tx_rx_prio_policy = set_tx_rx_prio_policy;
-	hw_if->set_tx_rx_prio = set_tx_rx_prio;
-	hw_if->set_tx_rx_prio_ratio = set_tx_rx_prio_ratio;
-	hw_if->set_dma_tx_arb_algorithm = set_dma_tx_arb_algorithm;
-	hw_if->prepare_dev_pktgen = prepare_dev_pktgen;
-#endif /* end of EQOS_CONFIG_PGTEST */
 
 	/* for hw time stamping */
 	hw_if->config_hw_time_stamping = config_hw_time_stamping;
@@ -5029,10 +4388,6 @@ void eqos_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 
 
     /* for MAC Double VLAN Processing config */
-	hw_if->config_tx_outer_vlan = config_tx_outer_vlan;
-	hw_if->config_tx_inner_vlan = config_tx_inner_vlan;
-	hw_if->config_svlan = config_svlan;
-	hw_if->config_dvlan = config_dvlan;
 	hw_if->config_rx_outer_vlan_stripping = config_rx_outer_vlan_stripping;
 	hw_if->config_rx_inner_vlan_stripping = config_rx_inner_vlan_stripping;
 

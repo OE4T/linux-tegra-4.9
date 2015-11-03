@@ -64,8 +64,6 @@ static void eqos_poll_controller(struct net_device *);
 
 static int eqos_set_features(struct net_device *dev, netdev_features_t features);
 
-static netdev_features_t eqos_fix_features(struct net_device *dev, netdev_features_t features);
-
 INT eqos_configure_remotewakeup(struct net_device *,
 				       struct ifr_data_struct *);
 
@@ -89,18 +87,8 @@ irqreturn_t eqos_isr(int, void *);
 
 static INT eqos_change_mtu(struct net_device *dev, INT new_mtu);
 
-static int eqos_clean_split_hdr_rx_irq(struct eqos_prv_data *pdata,
-					  int quota, UINT qinx);
-
-static int eqos_clean_jumbo_rx_irq(struct eqos_prv_data *pdata,
-					  int quota, UINT qinx);
-
 static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 				    int quota, UINT qinx);
-
-static void eqos_consume_page(struct eqos_rx_buffer *buffer,
-				     struct sk_buff *skb,
-				     u16 length, u16 buf2_len);
 
 static void eqos_receive_skb(struct eqos_prv_data *pdata,
 				    struct net_device *dev,
@@ -110,14 +98,6 @@ static void eqos_receive_skb(struct eqos_prv_data *pdata,
 static void eqos_configure_rx_fun_ptr(struct eqos_prv_data
 					     *pdata);
 
-
-static int eqos_alloc_split_hdr_rx_buf(struct eqos_prv_data *pdata,
-					  struct eqos_rx_buffer *buffer,
-					  gfp_t gfp);
-
-static int eqos_alloc_jumbo_rx_buf(struct eqos_prv_data *pdata,
-					  struct eqos_rx_buffer *buffer,
-					  gfp_t gfp);
 
 static int eqos_alloc_rx_buf(struct eqos_prv_data *pdata,
 				    struct eqos_rx_buffer *buffer,

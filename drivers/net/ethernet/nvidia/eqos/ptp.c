@@ -301,8 +301,7 @@ int eqos_ptp_init(struct eqos_prv_data *pdata)
 	if (IS_ERR(pdata->ptp_clock)) {
 		pdata->ptp_clock = NULL;
 		printk(KERN_ALERT "ptp_clock_register() failed\n");
-	} else
-		printk(KERN_ALERT "Added PTP HW clock successfully\n");
+	}
 
 	DBGPR_PTP("<--eqos_ptp_init\n");
 

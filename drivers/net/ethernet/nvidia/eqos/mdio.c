@@ -222,13 +222,6 @@ static INT eqos_mdio_reset(struct mii_bus *bus)
 
 	DBGPR_MDIO("-->eqos_mdio_reset: phyaddr : %d\n", pdata->phyaddr);
 
-#if 0 //def EQOS_CONFIG_PGTEST
-	printk(KERN_ALERT "PHY Programming for Autoneg disable\n");
-	hw_if->read_phy_regs(pdata->phyaddr, MII_BMCR, &phydata);
-	phydata &= ~(1 << 12);
-	hw_if->write_phy_regs(pdata->phyaddr, MII_BMCR, phydata);
-#endif
-
 	hw_if->read_phy_regs(pdata->phyaddr, MII_BMCR, &phydata);
 
 	if (phydata < 0)
@@ -242,13 +235,6 @@ static INT eqos_mdio_reset(struct mii_bus *bus)
 	do {
 		hw_if->read_phy_regs(pdata->phyaddr, MII_BMCR, &phydata);
 	} while ((phydata >= 0) && (phydata & BMCR_RESET));
-
-#if 0 //def EQOS_CONFIG_PGTEST
-	printk(KERN_ALERT "PHY Programming for Loopback\n");
-	hw_if->read_phy_regs(pdata->phyaddr, MII_BMCR, &phydata);
-	phydata |= (1 << 14);
-	hw_if->write_phy_regs(pdata->phyaddr, MII_BMCR, phydata);
-#endif
 
 	DBGPR_MDIO("<--eqos_mdio_reset\n");
 
@@ -376,20 +362,6 @@ static void eqos_adjust_link(struct net_device *dev)
 				hw_if->set_full_duplex();
 			else {
 				hw_if->set_half_duplex();
-#ifdef EQOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
-				/* For Synopsys testing and debugging only */
-				{
-					UINT phydata;
-
-					/* setting 'Assert CRS on transmit' */
-					phydata = 0;
-					eqos_mdio_read_direct(pdata, pdata->phyaddr,
-						EQOS_PHY_CTL, &phydata);
-					phydata |= (1 << 11);
-					eqos_mdio_write_direct(pdata, pdata->phyaddr,
-						EQOS_PHY_CTL, phydata);
-				}
-#endif
 			}
 			pdata->oldduplex = phydev->duplex;
 		}
@@ -496,24 +468,14 @@ static int eqos_init_phy(struct net_device *dev)
 	if ((pdata->interface == PHY_INTERFACE_MODE_GMII) ||
 		(pdata->interface == PHY_INTERFACE_MODE_RGMII)) {
 		phydev->supported = PHY_GBIT_FEATURES;
-#ifdef EQOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
-		phydev->supported &= ~SUPPORTED_1000baseT_Full;
-#endif
 	} else if ((pdata->interface == PHY_INTERFACE_MODE_MII) ||
 		(pdata->interface == PHY_INTERFACE_MODE_RMII)) {
 		phydev->supported = PHY_BASIC_FEATURES;
 	}
 
-#ifndef EQOS_CONFIG_PGTEST
 	phydev->supported |= (SUPPORTED_Pause | SUPPORTED_Asym_Pause);
-#endif
 	if (pdata->dt_cfg.pause_frames == PAUSE_FRAMES_DISABLED)
 		phydev->supported &= ~(SUPPORTED_Pause | SUPPORTED_Asym_Pause);
-
-    /* Lets Make the code support for both 100M and Giga bit */
-//#ifdef EQOS_CONFIG_PGTEST
-//	phydev->supported = PHY_BASIC_FEATURES;
-//#endif
 
 	phydev->advertising = phydev->supported;
 
@@ -558,8 +520,6 @@ int eqos_mdio_register(struct net_device *dev)
 			&mii_status);
 		if (phy_reg_read_status == 0) {
 			if (mii_status != 0x0000 && mii_status != 0xffff) {
-				printk(KERN_ALERT "%s: Phy detected at"\
-				    " ID/ADDR %d\n", DEV_NAME, phyaddr);
 				phy_detected = 1;
 				break;
 			}

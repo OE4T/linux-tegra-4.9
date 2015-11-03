@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dp_lt.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -277,7 +277,7 @@ static void set_lt_config(struct tegra_dp_lt_data *lt_data)
 	struct tegra_dc_sor_data *sor = dp->sor;
 	u32 n_lanes = lt_data->n_lanes;
 	bool pc_supported = lt_data->tps3_supported;
-	int cnt;
+	int i, cnt;
 	u32 val;
 	u32 *vs = lt_data->drive_current;
 	u32 *pe = lt_data->pre_emphasis;
@@ -293,20 +293,16 @@ static void set_lt_config(struct tegra_dp_lt_data *lt_data)
 	 * apply voltage swing, preemphasis, postcursor2 and tx_pu
 	 * prod settings to each lane based on levels
 	 */
-	for (cnt = 0; cnt < n_lanes; cnt++) {
+	for (i = 0; i < n_lanes; i++) {
 		u32 mask = 0;
 		u32 pe_reg, vs_reg, pc_reg;
 		u32 shift = 0;
+		cnt = sor->xbar_ctrl[i];
 
 		switch (cnt) {
 		case 0:
 			mask = NV_SOR_PR_LANE2_DP_LANE0_MASK;
 			shift = NV_SOR_PR_LANE2_DP_LANE0_SHIFT;
-			/* TODO: Fix lane config */
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)  || defined(CONFIG_TEGRA_NVDISPLAY)
-			mask = NV_SOR_PR_LANE0_DP_LANE2_MASK;
-			shift = NV_SOR_PR_LANE0_DP_LANE2_SHIFT;
-#endif
 			break;
 		case 1:
 			mask = NV_SOR_PR_LANE1_DP_LANE1_MASK;
@@ -315,11 +311,6 @@ static void set_lt_config(struct tegra_dp_lt_data *lt_data)
 		case 2:
 			mask = NV_SOR_PR_LANE0_DP_LANE2_MASK;
 			shift = NV_SOR_PR_LANE0_DP_LANE2_SHIFT;
-			/* TODO: Fix lane config */
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)  || defined(CONFIG_TEGRA_NVDISPLAY)
-			mask = NV_SOR_PR_LANE2_DP_LANE0_MASK;
-			shift = NV_SOR_PR_LANE2_DP_LANE0_SHIFT;
-#endif
 			break;
 		case 3:
 			mask = NV_SOR_PR_LANE3_DP_LANE3_MASK;
@@ -330,9 +321,9 @@ static void set_lt_config(struct tegra_dp_lt_data *lt_data)
 				"dp: incorrect lane cnt\n");
 		}
 
-		pe_reg = tegra_dp_pe_regs[pc[cnt]][vs[cnt]][pe[cnt]];
-		vs_reg = tegra_dp_vs_regs[pc[cnt]][vs[cnt]][pe[cnt]];
-		pc_reg = tegra_dp_pc_regs[pc[cnt]][vs[cnt]][pe[cnt]];
+		pe_reg = tegra_dp_pe_regs[pc[i]][vs[i]][pe[i]];
+		vs_reg = tegra_dp_vs_regs[pc[i]][vs[i]][pe[i]];
+		pc_reg = tegra_dp_pc_regs[pc[i]][vs[i]][pe[i]];
 
 		tegra_sor_write_field(sor, NV_SOR_PR(sor->portnum),
 						mask, (pe_reg << shift));
@@ -346,7 +337,7 @@ static void set_lt_config(struct tegra_dp_lt_data *lt_data)
 
 		pr_info("dp lt: config: lane %d: "
 			"vs level: %d, pe level: %d, pc2 level: %d\n",
-			cnt, vs[cnt], pe[cnt], pc_supported ? pc[cnt] : 0);
+			i, vs[i], pe[i], pc_supported ? pc[i] : 0);
 	}
 	set_tx_pu(lt_data);
 	usleep_range(15, 20); /* HW stabilization delay */

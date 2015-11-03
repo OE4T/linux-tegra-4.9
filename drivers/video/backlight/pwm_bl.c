@@ -163,7 +163,7 @@ static int pwm_backlight_parse_dt(struct device *dev,
 
 		data->max_brightness = value;
 
-#ifdef CONFIG_ANDROID
+#if defined(CONFIG_ANDROID) && defined(CONFIG_TEGRA_COMMON)
 		if (get_androidboot_mode_charger())
 			ret = of_property_read_u32(bl_node,
 						   "default-charge-brightness",

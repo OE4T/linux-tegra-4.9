@@ -493,7 +493,7 @@ static int lp855x_probe(struct i2c_client *cl, const struct i2c_device_id *id)
 	}
 
 	gn = (struct generic_bl_data_dt_ops *)dev_get_drvdata(lp->dev);
-	if (gn->notify)
+	if (gn && gn->notify)
 		lp->notify = gn->notify;
 
 	i2c_set_clientdata(cl, lp);

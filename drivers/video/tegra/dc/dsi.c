@@ -5774,7 +5774,6 @@ static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	u8 i;
-	struct clk *hubparent_clk;
 	
 	shift_clk_div_avail = false;
 
